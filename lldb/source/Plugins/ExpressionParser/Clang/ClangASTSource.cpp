@@ -293,7 +293,7 @@ void ClangASTSource::CompleteType(clang::ObjCInterfaceDecl *interface_decl) {
 
   LLDB_LOG(log,
            "    [CompleteObjCInterfaceDecl] on (ASTContext*){0:x} '{1}' "
-           "Completing an ObjCInterfaceDecl named {1}",
+           "Completing an ObjCInterfaceDecl named {2}",
            m_ast_context, m_clang_ast_context->getDisplayName(),
            interface_decl->getName());
   LLDB_LOG(log, "      [COID] Before:\n{0}",

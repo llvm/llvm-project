@@ -6607,12 +6607,9 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
   case Instruction::FCmp: {
     Type *ValTy = I->getOperand(0)->getType();
 
-    Instruction *Op0AsInstruction = dyn_cast<Instruction>(I->getOperand(0));
-    (void)Op0AsInstruction;
-    assert((!canTruncateToMinimalBitwidth(Op0AsInstruction, VF) ||
-            canTruncateToMinimalBitwidth(I, VF)) &&
-           "truncating Op0 must imply truncating the compare");
     if (canTruncateToMinimalBitwidth(I, VF)) {
+      Instruction *Op0AsInstruction = dyn_cast<Instruction>(I->getOperand(0));
+      (void)Op0AsInstruction;
       assert(!canTruncateToMinimalBitwidth(Op0AsInstruction, VF) ||
              MinBWs[I] == MinBWs[Op0AsInstruction] &&
                  "if both the operand and the compare are marked for "
