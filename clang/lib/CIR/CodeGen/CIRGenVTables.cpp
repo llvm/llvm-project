@@ -217,8 +217,7 @@ void CIRGenVTables::addVTableComponent(ConstantArrayBuilder &builder,
       llvm_unreachable("NYI");
     }
 
-    [[maybe_unused]] auto getSpecialVirtualFn =
-        [&](StringRef name) -> mlir::Attribute {
+    auto getSpecialVirtualFn = [&](StringRef name) -> mlir::cir::FuncOp {
       // FIXME(PR43094): When merging comdat groups, lld can select a local
       // symbol as the signature symbol even though it cannot be accessed
       // outside that symbol's TU. The relative vtables ABI would make
@@ -235,45 +234,41 @@ void CIRGenVTables::addVTableComponent(ConstantArrayBuilder &builder,
           CGM.getTriple().isNVPTX())
         llvm_unreachable("NYI");
 
-      llvm_unreachable("NYI");
-      // llvm::FunctionType *fnTy =
-      //     llvm::FunctionType::get(CGM.VoidTy, /*isVarArg=*/false);
-      // llvm::Constant *fn = cast<llvm::Constant>(
-      //     CGM.CreateRuntimeFunction(fnTy, name).getCallee());
-      // if (auto f = dyn_cast<llvm::Function>(fn))
-      //   f->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
-      // return llvm::ConstantExpr::getBitCast(fn, CGM.Int8PtrTy);
+      mlir::cir::FuncType fnTy =
+          CGM.getBuilder().getFuncType({}, CGM.getBuilder().getVoidTy());
+      mlir::cir::FuncOp fnPtr = CGM.createRuntimeFunction(fnTy, name);
+      // LLVM codegen handles unnamedAddr
+      assert(!MissingFeatures::unnamedAddr());
+      return fnPtr;
     };
 
     mlir::cir::FuncOp fnPtr;
-    // Pure virtual member functions.
     if (cast<CXXMethodDecl>(GD.getDecl())->isPureVirtual()) {
-      llvm_unreachable("NYI");
-      // if (!PureVirtualFn)
-      //   PureVirtualFn =
-      //       getSpecialVirtualFn(CGM.getCXXABI().GetPureVirtualCallName());
-      // fnPtr = PureVirtualFn;
+      // Pure virtual member functions.
+      if (!PureVirtualFn)
+        PureVirtualFn =
+            getSpecialVirtualFn(CGM.getCXXABI().getPureVirtualCallName());
+      fnPtr = PureVirtualFn;
 
-      // Deleted virtual member functions.
     } else if (cast<CXXMethodDecl>(GD.getDecl())->isDeleted()) {
-      llvm_unreachable("NYI");
-      // if (!DeletedVirtualFn)
-      //   DeletedVirtualFn =
-      //       getSpecialVirtualFn(CGM.getCXXABI().GetDeletedVirtualCallName());
-      // fnPtr = DeletedVirtualFn;
+      // Deleted virtual member functions.
+      if (!DeletedVirtualFn)
+        DeletedVirtualFn =
+            getSpecialVirtualFn(CGM.getCXXABI().getDeletedVirtualCallName());
+      fnPtr = DeletedVirtualFn;
 
-      // Thunks.
     } else if (nextVTableThunkIndex < layout.vtable_thunks().size() &&
                layout.vtable_thunks()[nextVTableThunkIndex].first ==
                    componentIndex) {
+      // Thunks.
       llvm_unreachable("NYI");
       // auto &thunkInfo = layout.vtable_thunks()[nextVTableThunkIndex].second;
 
       // nextVTableThunkIndex++;
       // fnPtr = maybeEmitThunk(GD, thunkInfo, /*ForVTable=*/true);
 
-      // Otherwise we can use the method definition directly.
     } else {
+      // Otherwise we can use the method definition directly.
       auto fnTy = CGM.getTypes().GetFunctionTypeForVTable(GD);
       fnPtr = CGM.GetAddrOfFunction(GD, fnTy, /*ForVTable=*/true);
     }
