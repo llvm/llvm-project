@@ -107,6 +107,13 @@ llvm::Error Status::ToError() const {
 
 Status::~Status() = default;
 
+const Status &Status::operator=(Status &&other) {
+  m_code = other.m_code;
+  m_type = other.m_type;
+  m_string = std::move(other.m_string);
+  return *this;
+}
+
 #ifdef _WIN32
 static std::string RetrieveWin32ErrorString(uint32_t error_code) {
   char *buffer = nullptr;

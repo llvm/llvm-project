@@ -1363,7 +1363,7 @@ SBError SBDebugger::SetInternalVariable(const char *var_name, const char *value,
         "invalid debugger instance name '%s'", debugger_instance_name);
   }
   if (error.Fail())
-    sb_error.SetError(error);
+    sb_error.SetError(std::move(error));
   return sb_error;
 }
 

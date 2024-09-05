@@ -1405,7 +1405,7 @@ SBTarget::WatchpointCreateByAddress(lldb::addr_t addr, size_t size,
     CompilerType *type = nullptr;
     watchpoint_sp =
         target_sp->CreateWatchpoint(addr, size, type, watch_type, cw_error);
-    error.SetError(cw_error);
+    error.SetError(std::move(cw_error));
     sb_watchpoint.SetSP(watchpoint_sp);
   }
 
@@ -2384,7 +2384,8 @@ lldb::SBValue SBTarget::EvaluateExpression(const char *expr,
           Status error;
           error = Status::FromErrorString("can't evaluate expressions when the "
                                           "process is running.");
-          expr_value_sp = ValueObjectConstResult::Create(nullptr, error);
+          expr_value_sp =
+              ValueObjectConstResult::Create(nullptr, std::move(error));
         }
       } else {
         target->EvaluateExpression(expr, frame, expr_value_sp, options.ref());

@@ -463,7 +463,7 @@ public:
       return;
     }
 
-    Status valobj_error = valobj_sp->GetError();
+    Status valobj_error = valobj_sp->GetError().Clone();
 
     if (valobj_error.Fail()) {
       err = Status::FromErrorStringWithFormat(

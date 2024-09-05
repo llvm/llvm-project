@@ -1450,7 +1450,7 @@ lldb::SBError SBProcess::DeallocateMemory(lldb::addr_t ptr) {
       std::lock_guard<std::recursive_mutex> guard(
           process_sp->GetTarget().GetAPIMutex());
       Status error = process_sp->DeallocateMemory(ptr);
-      sb_error.SetError(error);
+      sb_error.SetError(std::move(error));
     } else {
       sb_error = Status::FromErrorString("process is running");
     }
