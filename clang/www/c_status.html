@@ -1057,8 +1057,8 @@ conforms by not defining the <code>__STDC_IEC_559_COMPLEX__</code> macro.
           conformance to Annex G.<br />
           <br />
           <code>_Complex</code> support requires an underlying support library
-          such as compiler-rt to provide functions like <code>__divsc3</code>,
-          but compiler-rt is not supported on Windows.
+          such as compiler-rt to provide functions like <code>__divsc3</code>.
+          Compiler-rt isn't linked in automatically in MSVC style environments.
         </details>
       </td>
     </tr>
