@@ -4714,6 +4714,7 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
         getEncodedGVSummaryFlags(FS->flags(), shouldImportValueAsDecl(FS)));
     NameVals.push_back(FS->instCount());
     NameVals.push_back(getEncodedFFlags(FS->fflags()));
+    // TODO: Stop writing entry count and bump bitcode version.
     NameVals.push_back(0 /* EntryCount */);
 
     // Fill in below

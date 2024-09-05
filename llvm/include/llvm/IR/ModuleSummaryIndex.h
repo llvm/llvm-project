@@ -1567,9 +1567,6 @@ public:
     return WithAttributePropagation && GVS->maybeWriteOnly();
   }
 
-  bool hasSyntheticEntryCounts() const { return HasSyntheticEntryCounts; }
-  void setHasSyntheticEntryCounts() { HasSyntheticEntryCounts = true; }
-
   bool withSupportsHotColdNew() const { return WithSupportsHotColdNew; }
   void setWithSupportsHotColdNew() { WithSupportsHotColdNew = true; }
 
