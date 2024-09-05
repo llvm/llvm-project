@@ -235,6 +235,12 @@ public:
                                   BaseSubobject Base,
                                   const CXXRecordDecl *NearestVBase) = 0;
 
+  /// Gets the pure virtual member call function.
+  virtual StringRef getPureVirtualCallName() = 0;
+
+  /// Gets the deleted virtual member call name.
+  virtual StringRef getDeletedVirtualCallName() = 0;
+
   /// Specify how one should pass an argument of a record type.
   enum class RecordArgABI {
     /// Pass it using the normal C aggregate rules for the ABI, potentially

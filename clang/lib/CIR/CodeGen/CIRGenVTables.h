@@ -19,6 +19,7 @@
 #include "clang/AST/GlobalDecl.h"
 #include "clang/AST/VTableBuilder.h"
 #include "clang/Basic/ABI.h"
+#include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "llvm/ADT/DenseMap.h"
 
 namespace clang {
@@ -52,11 +53,11 @@ class CIRGenVTables {
   /// indices.
   SecondaryVirtualPointerIndicesMapTy SecondaryVirtualPointerIndices;
 
-  //   /// Cache for the pure virtual member call function.
-  //   llvm::Constant *PureVirtualFn = nullptr;
+  /// Cache for the pure virtual member call function.
+  mlir::cir::FuncOp PureVirtualFn = nullptr;
 
-  //   /// Cache for the deleted virtual member call function.
-  //   llvm::Constant *DeletedVirtualFn = nullptr;
+  /// Cache for the deleted virtual member call function.
+  mlir::cir::FuncOp DeletedVirtualFn = nullptr;
 
   //   /// Get the address of a thunk and emit it if necessary.
   //   llvm::Constant *maybeEmitThunk(GlobalDecl GD,

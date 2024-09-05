@@ -215,6 +215,11 @@ public:
     return false;
   }
 
+  StringRef getPureVirtualCallName() override { return "__cxa_pure_virtual"; }
+  StringRef getDeletedVirtualCallName() override {
+    return "__cxa_deleted_virtual";
+  }
+
   /// TODO(cir): seems like could be shared between LLVM IR and CIR codegen.
   bool mayNeedDestruction(const VarDecl *VD) const {
     if (VD->needsDestruction(getContext()))
