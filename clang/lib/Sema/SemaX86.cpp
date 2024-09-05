@@ -430,6 +430,8 @@ bool SemaX86::CheckBuiltinRoundingOrSAE(unsigned BuiltinID, CallExpr *TheCall) {
   case X86::BI__builtin_ia32_vfmulcph512_mask:
   case X86::BI__builtin_ia32_vfcmulcsh_mask:
   case X86::BI__builtin_ia32_vfcmulcph512_mask:
+  case X86::BI__builtin_ia32_vcvt2ps2phx256_mask:
+  case X86::BI__builtin_ia32_vcvt2ps2phx512_mask:
     ArgNum = 4;
     HasRC = true;
     break;
@@ -873,6 +875,9 @@ bool SemaX86::CheckBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
   case X86::BI__builtin_ia32_rndscaleps_mask:
   case X86::BI__builtin_ia32_rndscalepd_mask:
   case X86::BI__builtin_ia32_rndscaleph_mask:
+  case X86::BI__builtin_ia32_vrndscalenepbf16_128_mask:
+  case X86::BI__builtin_ia32_vrndscalenepbf16_256_mask:
+  case X86::BI__builtin_ia32_vrndscalenepbf16_mask:
   case X86::BI__builtin_ia32_reducepd128_mask:
   case X86::BI__builtin_ia32_reducepd256_mask:
   case X86::BI__builtin_ia32_reducepd512_mask:
@@ -882,6 +887,9 @@ bool SemaX86::CheckBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
   case X86::BI__builtin_ia32_reduceph128_mask:
   case X86::BI__builtin_ia32_reduceph256_mask:
   case X86::BI__builtin_ia32_reduceph512_mask:
+  case X86::BI__builtin_ia32_vreducenepbf16128_mask:
+  case X86::BI__builtin_ia32_vreducenepbf16256_mask:
+  case X86::BI__builtin_ia32_vreducenepbf16512_mask:
   case X86::BI__builtin_ia32_vreducepd256_round_mask:
   case X86::BI__builtin_ia32_vreduceps256_round_mask:
   case X86::BI__builtin_ia32_vreduceph256_round_mask:
@@ -909,6 +917,9 @@ bool SemaX86::CheckBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
   case X86::BI__builtin_ia32_fpclassph128_mask:
   case X86::BI__builtin_ia32_fpclassph256_mask:
   case X86::BI__builtin_ia32_fpclassph512_mask:
+  case X86::BI__builtin_ia32_vfpclasspbf16128_mask:
+  case X86::BI__builtin_ia32_vfpclasspbf16256_mask:
+  case X86::BI__builtin_ia32_vfpclasspbf16512_mask:
   case X86::BI__builtin_ia32_fpclasssd_mask:
   case X86::BI__builtin_ia32_fpclassss_mask:
   case X86::BI__builtin_ia32_fpclasssh_mask:

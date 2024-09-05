@@ -74,6 +74,7 @@
 #include <cassert>
 #include <cstdint>
 #include <cstdlib>
+#include <deque>
 #include <limits>
 #include <optional>
 #include <set>
@@ -503,13 +504,26 @@ bool ISD::isVPBinaryOp(unsigned Opcode) {
 bool ISD::isVPReduction(unsigned Opcode) {
   switch (Opcode) {
   default:
-    break;
-#define BEGIN_REGISTER_VP_SDNODE(VPSD, ...) case ISD::VPSD:
-#define VP_PROPERTY_REDUCTION(STARTPOS, ...) return true;
-#define END_REGISTER_VP_SDNODE(VPSD) break;
-#include "llvm/IR/VPIntrinsics.def"
+    return false;
+  case ISD::VP_REDUCE_ADD:
+  case ISD::VP_REDUCE_MUL:
+  case ISD::VP_REDUCE_AND:
+  case ISD::VP_REDUCE_OR:
+  case ISD::VP_REDUCE_XOR:
+  case ISD::VP_REDUCE_SMAX:
+  case ISD::VP_REDUCE_SMIN:
+  case ISD::VP_REDUCE_UMAX:
+  case ISD::VP_REDUCE_UMIN:
+  case ISD::VP_REDUCE_FMAX:
+  case ISD::VP_REDUCE_FMIN:
+  case ISD::VP_REDUCE_FMAXIMUM:
+  case ISD::VP_REDUCE_FMINIMUM:
+  case ISD::VP_REDUCE_FADD:
+  case ISD::VP_REDUCE_FMUL:
+  case ISD::VP_REDUCE_SEQ_FADD:
+  case ISD::VP_REDUCE_SEQ_FMUL:
+    return true;
   }
-  return false;
 }
 
 /// The operand position of the vector mask.
@@ -550,10 +564,10 @@ std::optional<unsigned> ISD::getBaseOpcodeForVP(unsigned VPOpcode,
   return std::nullopt;
 }
 
-unsigned ISD::getVPForBaseOpcode(unsigned Opcode) {
+std::optional<unsigned> ISD::getVPForBaseOpcode(unsigned Opcode) {
   switch (Opcode) {
   default:
-    llvm_unreachable("can not translate this Opcode to VP.");
+    return std::nullopt;
 #define BEGIN_REGISTER_VP_SDNODE(VPOPC, ...) break;
 #define VP_PROPERTY_FUNCTIONAL_SDOPC(SDOPC) case ISD::SDOPC:
 #define END_REGISTER_VP_SDNODE(VPOPC) return ISD::VPOPC;
@@ -2424,6 +2438,35 @@ SDValue SelectionDAG::getShiftAmountOperand(EVT LHSTy, SDValue Op) {
   if (OpTy == ShTy || OpTy.isVector()) return Op;
 
   return getZExtOrTrunc(Op, SDLoc(Op), ShTy);
+}
+
+SDValue SelectionDAG::getPartialReduceAdd(SDLoc DL, EVT ReducedTy, SDValue Op1,
+                                          SDValue Op2) {
+  EVT FullTy = Op2.getValueType();
+
+  unsigned Stride = ReducedTy.getVectorMinNumElements();
+  unsigned ScaleFactor = FullTy.getVectorMinNumElements() / Stride;
+
+  // Collect all of the subvectors
+  std::deque<SDValue> Subvectors = {Op1};
+  for (unsigned I = 0; I < ScaleFactor; I++) {
+    auto SourceIndex = getVectorIdxConstant(I * Stride, DL);
+    Subvectors.push_back(
+        getNode(ISD::EXTRACT_SUBVECTOR, DL, ReducedTy, {Op2, SourceIndex}));
+  }
+
+  // Flatten the subvector tree
+  while (Subvectors.size() > 1) {
+    Subvectors.push_back(
+        getNode(ISD::ADD, DL, ReducedTy, {Subvectors[0], Subvectors[1]}));
+    Subvectors.pop_front();
+    Subvectors.pop_front();
+  }
+
+  assert(Subvectors.size() == 1 &&
+         "There should only be one subvector after tree flattening");
+
+  return Subvectors[0];
 }
 
 SDValue SelectionDAG::expandVAArg(SDNode *Node) {
@@ -5436,6 +5479,8 @@ bool SelectionDAG::isKnownNeverNaN(SDValue Op, bool SNaN, unsigned Depth) const 
   case ISD::FCEIL:
   case ISD::FROUND:
   case ISD::FROUNDEVEN:
+  case ISD::LROUND:
+  case ISD::LLROUND:
   case ISD::FRINT:
   case ISD::LRINT:
   case ISD::LLRINT:
@@ -7894,8 +7939,8 @@ static SDValue getMemcpyLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl,
     // optimization.
     const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
     if (!TRI->hasStackRealignment(MF))
-      while (NewAlign > Alignment && DL.exceedsNaturalStackAlignment(NewAlign))
-        NewAlign = NewAlign.previous();
+      if (MaybeAlign StackAlign = DL.getStackAlignment())
+        NewAlign = std::min(NewAlign, *StackAlign);
 
     if (NewAlign > Alignment) {
       // Give the stack frame object a larger alignment if needed.
@@ -8089,8 +8134,8 @@ static SDValue getMemmoveLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl,
     // optimization.
     const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
     if (!TRI->hasStackRealignment(MF))
-      while (NewAlign > Alignment && DL.exceedsNaturalStackAlignment(NewAlign))
-        NewAlign = NewAlign.previous();
+      if (MaybeAlign StackAlign = DL.getStackAlignment())
+        NewAlign = std::min(NewAlign, *StackAlign);
 
     if (NewAlign > Alignment) {
       // Give the stack frame object a larger alignment if needed.
@@ -8207,8 +8252,8 @@ static SDValue getMemsetStores(SelectionDAG &DAG, const SDLoc &dl,
     // optimization.
     const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
     if (!TRI->hasStackRealignment(MF))
-      while (NewAlign > Alignment && DL.exceedsNaturalStackAlignment(NewAlign))
-        NewAlign = NewAlign.previous();
+      if (MaybeAlign StackAlign = DL.getStackAlignment())
+        NewAlign = std::min(NewAlign, *StackAlign);
 
     if (NewAlign > Alignment) {
       // Give the stack frame object a larger alignment if needed.
@@ -13252,7 +13297,9 @@ SDValue SelectionDAG::getNeutralElement(unsigned Opcode, const SDLoc &DL,
   case ISD::SMIN:
     return getConstant(APInt::getSignedMaxValue(VT.getSizeInBits()), DL, VT);
   case ISD::FADD:
-    return getConstantFP(-0.0, DL, VT);
+    // If flags allow, prefer positive zero since it's generally cheaper
+    // to materialize on most targets.
+    return getConstantFP(Flags.hasNoSignedZeros() ? 0.0 : -0.0, DL, VT);
   case ISD::FMUL:
     return getConstantFP(1.0, DL, VT);
   case ISD::FMINNUM:

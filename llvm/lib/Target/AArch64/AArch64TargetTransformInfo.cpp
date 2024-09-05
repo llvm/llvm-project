@@ -605,7 +605,7 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       return LT.first;
     break;
   }
-  case Intrinsic::experimental_stepvector: {
+  case Intrinsic::stepvector: {
     InstructionCost Cost = 1; // Cost of the `index' instruction
     auto LT = getTypeLegalizationCost(RetTy);
     // Legalisation of illegal vectors involves an `index' instruction plus
@@ -1073,6 +1073,33 @@ static bool isAllActivePredicate(Value *Pred) {
                          m_ConstantInt<AArch64SVEPredPattern::all>()));
 }
 
+// Simplify unary operation where predicate has all inactive lanes by replacing
+// instruction with its operand
+static std::optional<Instruction *>
+instCombineSVENoActiveReplace(InstCombiner &IC, IntrinsicInst &II,
+                              bool hasInactiveVector) {
+  int PredOperand = hasInactiveVector ? 1 : 0;
+  int ReplaceOperand = hasInactiveVector ? 0 : 1;
+  if (match(II.getOperand(PredOperand), m_ZeroInt())) {
+    IC.replaceInstUsesWith(II, II.getOperand(ReplaceOperand));
+    return IC.eraseInstFromFunction(II);
+  }
+  return std::nullopt;
+}
+
+// Simplify unary operation where predicate has all inactive lanes or
+// replace unused first operand with undef when all lanes are active
+static std::optional<Instruction *>
+instCombineSVEAllOrNoActiveUnary(InstCombiner &IC, IntrinsicInst &II) {
+  if (isAllActivePredicate(II.getOperand(1)) &&
+      !isa<llvm::UndefValue>(II.getOperand(0)) &&
+      !isa<llvm::PoisonValue>(II.getOperand(0))) {
+    Value *Undef = llvm::UndefValue::get(II.getType());
+    return IC.replaceOperand(II, 0, Undef);
+  }
+  return instCombineSVENoActiveReplace(IC, II, true);
+}
+
 // Erase unary operation where predicate has all inactive lanes
 static std::optional<Instruction *>
 instCombineSVENoActiveUnaryErase(InstCombiner &IC, IntrinsicInst &II,
@@ -1160,6 +1187,10 @@ static std::optional<Instruction *> instCombineSVECmpNE(InstCombiner &IC,
                                                         IntrinsicInst &II) {
   LLVMContext &Ctx = II.getContext();
 
+  // Replace by zero constant when all lanes are inactive
+  if (auto II_NA = instCombineSVENoActiveUnaryZero(IC, II))
+    return II_NA;
+
   // Check that the predicate is all active
   auto *Pg = dyn_cast<IntrinsicInst>(II.getArgOperand(0));
   if (!Pg || Pg->getIntrinsicID() != Intrinsic::aarch64_sve_ptrue)
@@ -1183,7 +1214,8 @@ static std::optional<Instruction *> instCombineSVECmpNE(InstCombiner &IC,
     return std::nullopt;
 
   // Where the dupq is a lane 0 replicate of a vector insert
-  if (!cast<ConstantInt>(DupQLane->getArgOperand(1))->isZero())
+  auto *DupQLaneIdx = dyn_cast<ConstantInt>(DupQLane->getArgOperand(1));
+  if (!DupQLaneIdx || !DupQLaneIdx->isZero())
     return std::nullopt;
 
   auto *VecIns = dyn_cast<IntrinsicInst>(DupQLane->getArgOperand(0));
@@ -2104,7 +2136,41 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
   switch (IID) {
   default:
     break;
-
+  case Intrinsic::aarch64_sve_fcvt_bf16f32:
+  case Intrinsic::aarch64_sve_fcvt_f16f32:
+  case Intrinsic::aarch64_sve_fcvt_f16f64:
+  case Intrinsic::aarch64_sve_fcvt_f32f16:
+  case Intrinsic::aarch64_sve_fcvt_f32f64:
+  case Intrinsic::aarch64_sve_fcvt_f64f16:
+  case Intrinsic::aarch64_sve_fcvt_f64f32:
+  case Intrinsic::aarch64_sve_fcvtlt_f32f16:
+  case Intrinsic::aarch64_sve_fcvtlt_f64f32:
+  case Intrinsic::aarch64_sve_fcvtnt_bf16f32:
+  case Intrinsic::aarch64_sve_fcvtnt_f16f32:
+  case Intrinsic::aarch64_sve_fcvtnt_f32f64:
+  case Intrinsic::aarch64_sve_fcvtx_f32f64:
+  case Intrinsic::aarch64_sve_fcvtxnt_f32f64:
+  case Intrinsic::aarch64_sve_fcvtzs:
+  case Intrinsic::aarch64_sve_fcvtzs_i32f16:
+  case Intrinsic::aarch64_sve_fcvtzs_i32f64:
+  case Intrinsic::aarch64_sve_fcvtzs_i64f16:
+  case Intrinsic::aarch64_sve_fcvtzs_i64f32:
+  case Intrinsic::aarch64_sve_fcvtzu:
+  case Intrinsic::aarch64_sve_fcvtzu_i32f16:
+  case Intrinsic::aarch64_sve_fcvtzu_i32f64:
+  case Intrinsic::aarch64_sve_fcvtzu_i64f16:
+  case Intrinsic::aarch64_sve_fcvtzu_i64f32:
+  case Intrinsic::aarch64_sve_scvtf:
+  case Intrinsic::aarch64_sve_scvtf_f16i32:
+  case Intrinsic::aarch64_sve_scvtf_f16i64:
+  case Intrinsic::aarch64_sve_scvtf_f32i64:
+  case Intrinsic::aarch64_sve_scvtf_f64i32:
+  case Intrinsic::aarch64_sve_ucvtf:
+  case Intrinsic::aarch64_sve_ucvtf_f16i32:
+  case Intrinsic::aarch64_sve_ucvtf_f16i64:
+  case Intrinsic::aarch64_sve_ucvtf_f32i64:
+  case Intrinsic::aarch64_sve_ucvtf_f64i32:
+    return instCombineSVEAllOrNoActiveUnary(IC, II);
   case Intrinsic::aarch64_sve_st1_scatter:
   case Intrinsic::aarch64_sve_st1_scatter_scalar_offset:
   case Intrinsic::aarch64_sve_st1_scatter_sxtw:
@@ -2131,6 +2197,27 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
   case Intrinsic::aarch64_sve_st4:
   case Intrinsic::aarch64_sve_st4q:
     return instCombineSVENoActiveUnaryErase(IC, II, 4);
+  case Intrinsic::aarch64_sve_cmpeq:
+  case Intrinsic::aarch64_sve_cmpeq_wide:
+  case Intrinsic::aarch64_sve_cmpge:
+  case Intrinsic::aarch64_sve_cmpge_wide:
+  case Intrinsic::aarch64_sve_cmpgt:
+  case Intrinsic::aarch64_sve_cmpgt_wide:
+  case Intrinsic::aarch64_sve_cmphi:
+  case Intrinsic::aarch64_sve_cmphi_wide:
+  case Intrinsic::aarch64_sve_cmphs:
+  case Intrinsic::aarch64_sve_cmphs_wide:
+  case Intrinsic::aarch64_sve_cmple_wide:
+  case Intrinsic::aarch64_sve_cmplo_wide:
+  case Intrinsic::aarch64_sve_cmpls_wide:
+  case Intrinsic::aarch64_sve_cmplt_wide:
+  case Intrinsic::aarch64_sve_facge:
+  case Intrinsic::aarch64_sve_facgt:
+  case Intrinsic::aarch64_sve_fcmpeq:
+  case Intrinsic::aarch64_sve_fcmpge:
+  case Intrinsic::aarch64_sve_fcmpgt:
+  case Intrinsic::aarch64_sve_fcmpne:
+  case Intrinsic::aarch64_sve_fcmpuo:
   case Intrinsic::aarch64_sve_ld1_gather:
   case Intrinsic::aarch64_sve_ld1_gather_scalar_offset:
   case Intrinsic::aarch64_sve_ld1_gather_sxtw:
@@ -3137,8 +3224,8 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
     }
     [[fallthrough]];
   case ISD::UDIV: {
+    auto VT = TLI->getValueType(DL, Ty);
     if (Op2Info.isConstant() && Op2Info.isUniform()) {
-      auto VT = TLI->getValueType(DL, Ty);
       if (TLI->isOperationLegalOrCustom(ISD::MULHU, VT)) {
         // Vector signed division by constant are expanded to the
         // sequence MULHS + ADD/SUB + SRA + SRL + ADD, and unsigned division
@@ -3152,6 +3239,12 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
         return MulCost * 2 + AddCost * 2 + ShrCost * 2 + 1;
       }
     }
+
+    // div i128's are lowered as libcalls.  Pass nullptr as (u)divti3 calls are
+    // emitted by the backend even when those functions are not declared in the
+    // module.
+    if (!VT.isVector() && VT.getSizeInBits() > 64)
+      return getCallInstrCost(/*Function*/ nullptr, Ty, {Ty, Ty}, CostKind);
 
     InstructionCost Cost = BaseT::getArithmeticInstrCost(
         Opcode, Ty, CostKind, Op1Info, Op2Info);
@@ -3242,6 +3335,15 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
     return LT.first;
 
   case ISD::FNEG:
+    // Scalar fmul(fneg) or fneg(fmul) can be converted to fnmul
+    if ((Ty->isFloatTy() || Ty->isDoubleTy() ||
+         (Ty->isHalfTy() && ST->hasFullFP16())) &&
+        CxtI &&
+        ((CxtI->hasOneUse() &&
+          match(*CxtI->user_begin(), m_FMul(m_Value(), m_Value()))) ||
+         match(CxtI->getOperand(0), m_FMul(m_Value(), m_Value()))))
+      return 0;
+    [[fallthrough]];
   case ISD::FADD:
   case ISD::FSUB:
     // Increase the cost for half and bfloat types if not architecturally

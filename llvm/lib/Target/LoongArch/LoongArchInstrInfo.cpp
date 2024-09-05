@@ -39,7 +39,9 @@ MCInst LoongArchInstrInfo::getNop() const {
 void LoongArchInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                      MachineBasicBlock::iterator MBBI,
                                      const DebugLoc &DL, MCRegister DstReg,
-                                     MCRegister SrcReg, bool KillSrc) const {
+                                     MCRegister SrcReg, bool KillSrc,
+                                     bool RenamableDest,
+                                     bool RenamableSrc) const {
   if (LoongArch::GPRRegClass.contains(DstReg, SrcReg)) {
     BuildMI(MBB, MBBI, DL, get(LoongArch::OR), DstReg)
         .addReg(SrcReg, getKillRegState(KillSrc))
@@ -206,6 +208,14 @@ void LoongArchInstrInfo::movImm(MachineBasicBlock &MBB,
       BuildMI(MBB, MBBI, DL, get(Inst.Opc), DstReg)
           .addReg(SrcReg, RegState::Kill)
           .addImm(Inst.Imm)
+          .setMIFlag(Flag);
+      break;
+    case LoongArch::BSTRINS_D:
+      BuildMI(MBB, MBBI, DL, get(Inst.Opc), DstReg)
+          .addReg(SrcReg, RegState::Kill)
+          .addReg(SrcReg, RegState::Kill)
+          .addImm(Inst.Imm >> 32)
+          .addImm(Inst.Imm & 0xFF)
           .setMIFlag(Flag);
       break;
     default:

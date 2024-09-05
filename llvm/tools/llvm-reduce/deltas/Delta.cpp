@@ -22,6 +22,7 @@
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_ENABLE_THREADS
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/MC/TargetRegistry.h"

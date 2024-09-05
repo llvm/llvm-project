@@ -426,12 +426,17 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   // FIXME: These IS_FPCLASS vector fp types are marked custom so it reaches
   // scalarization code. Can be removed when IS_FPCLASS expand isn't called by
   // default unless marked custom/legal.
-  setOperationAction(
-      ISD::IS_FPCLASS,
-      {MVT::v2f16, MVT::v3f16, MVT::v4f16, MVT::v16f16, MVT::v2f32, MVT::v3f32,
-       MVT::v4f32, MVT::v5f32, MVT::v6f32, MVT::v7f32, MVT::v8f32, MVT::v16f32,
-       MVT::v2f64, MVT::v3f64, MVT::v4f64, MVT::v8f64, MVT::v16f64},
-      Custom);
+  setOperationAction(ISD::IS_FPCLASS,
+                     {MVT::v2f32, MVT::v3f32, MVT::v4f32, MVT::v5f32,
+                      MVT::v6f32, MVT::v7f32, MVT::v8f32, MVT::v16f32,
+                      MVT::v2f64, MVT::v3f64, MVT::v4f64, MVT::v8f64,
+                      MVT::v16f64},
+                     Custom);
+
+  if (isTypeLegal(MVT::f16))
+    setOperationAction(ISD::IS_FPCLASS,
+                       {MVT::v2f16, MVT::v3f16, MVT::v4f16, MVT::v16f16},
+                       Custom);
 
   // Expand to fneg + fadd.
   setOperationAction(ISD::FSUB, MVT::f64, Expand);
@@ -4346,6 +4351,7 @@ AMDGPUTargetLowering::performMulLoHiCombine(SDNode *N,
   SelectionDAG &DAG = DCI.DAG;
   SDLoc DL(N);
 
+  bool Signed = N->getOpcode() == ISD::SMUL_LOHI;
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
 
@@ -4360,20 +4366,25 @@ AMDGPUTargetLowering::performMulLoHiCombine(SDNode *N,
 
   // Try to use two fast 24-bit multiplies (one for each half of the result)
   // instead of one slow extending multiply.
-  unsigned LoOpcode, HiOpcode;
-  if (Subtarget->hasMulU24() && isU24(N0, DAG) && isU24(N1, DAG)) {
-    N0 = DAG.getZExtOrTrunc(N0, DL, MVT::i32);
-    N1 = DAG.getZExtOrTrunc(N1, DL, MVT::i32);
-    LoOpcode = AMDGPUISD::MUL_U24;
-    HiOpcode = AMDGPUISD::MULHI_U24;
-  } else if (Subtarget->hasMulI24() && isI24(N0, DAG) && isI24(N1, DAG)) {
-    N0 = DAG.getSExtOrTrunc(N0, DL, MVT::i32);
-    N1 = DAG.getSExtOrTrunc(N1, DL, MVT::i32);
-    LoOpcode = AMDGPUISD::MUL_I24;
-    HiOpcode = AMDGPUISD::MULHI_I24;
+  unsigned LoOpcode = 0;
+  unsigned HiOpcode = 0;
+  if (Signed) {
+    if (Subtarget->hasMulI24() && isI24(N0, DAG) && isI24(N1, DAG)) {
+      N0 = DAG.getSExtOrTrunc(N0, DL, MVT::i32);
+      N1 = DAG.getSExtOrTrunc(N1, DL, MVT::i32);
+      LoOpcode = AMDGPUISD::MUL_I24;
+      HiOpcode = AMDGPUISD::MULHI_I24;
+    }
   } else {
-    return SDValue();
+    if (Subtarget->hasMulU24() && isU24(N0, DAG) && isU24(N1, DAG)) {
+      N0 = DAG.getZExtOrTrunc(N0, DL, MVT::i32);
+      N1 = DAG.getZExtOrTrunc(N1, DL, MVT::i32);
+      LoOpcode = AMDGPUISD::MUL_U24;
+      HiOpcode = AMDGPUISD::MULHI_U24;
+    }
   }
+  if (!LoOpcode)
+    return SDValue();
 
   SDValue Lo = DAG.getNode(LoOpcode, DL, MVT::i32, N0, N1);
   SDValue Hi = DAG.getNode(HiOpcode, DL, MVT::i32, N0, N1);
@@ -5500,7 +5511,6 @@ const char* AMDGPUTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(CONST_DATA_PTR)
   NODE_NAME_CASE(PC_ADD_REL_OFFSET)
   NODE_NAME_CASE(LDS)
-  NODE_NAME_CASE(FPTRUNC_ROUND)
   NODE_NAME_CASE(DUMMY_CHAIN)
   case AMDGPUISD::FIRST_MEM_OPCODE_NUMBER: break;
   NODE_NAME_CASE(LOAD_D16_HI)

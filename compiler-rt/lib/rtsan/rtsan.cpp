@@ -58,12 +58,18 @@ SANITIZER_INTERFACE_ATTRIBUTE void __rtsan_realtime_exit() {
   __rtsan::GetContextForThisThread().RealtimePop();
 }
 
-SANITIZER_INTERFACE_ATTRIBUTE void __rtsan_off() {
+SANITIZER_INTERFACE_ATTRIBUTE void __rtsan_disable() {
   __rtsan::GetContextForThisThread().BypassPush();
 }
 
-SANITIZER_INTERFACE_ATTRIBUTE void __rtsan_on() {
+SANITIZER_INTERFACE_ATTRIBUTE void __rtsan_enable() {
   __rtsan::GetContextForThisThread().BypassPop();
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE void
+__rtsan_expect_not_realtime(const char *intercepted_function_name) {
+  __rtsan_ensure_initialized();
+  ExpectNotRealtime(GetContextForThisThread(), intercepted_function_name);
 }
 
 } // extern "C"

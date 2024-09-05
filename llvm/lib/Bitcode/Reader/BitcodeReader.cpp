@@ -2679,7 +2679,11 @@ Error BitcodeReader::parseTypeTableBody() {
           return error("Integer parameter too large");
         IntParams.push_back(Record[i]);
       }
-      ResultTy = TargetExtType::get(Context, TypeName, TypeParams, IntParams);
+      auto TTy =
+          TargetExtType::getOrError(Context, TypeName, TypeParams, IntParams);
+      if (auto E = TTy.takeError())
+        return E;
+      ResultTy = *TTy;
       TypeName.clear();
       break;
     }
@@ -7604,9 +7608,14 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       TheIndex.setFlags(Record[0]);
       break;
     }
-    case bitc::FS_VALUE_GUID: { // [valueid, refguid]
+    case bitc::FS_VALUE_GUID: { // [valueid, refguid_upper32, refguid_lower32]
       uint64_t ValueID = Record[0];
-      GlobalValue::GUID RefGUID = Record[1];
+      GlobalValue::GUID RefGUID;
+      if (Version >= 11) {
+        RefGUID = Record[1] << 32 | Record[2];
+      } else {
+        RefGUID = Record[1];
+      }
       ValueIdToValueInfoMap[ValueID] = std::make_tuple(
           TheIndex.getOrInsertValueInfo(RefGUID), RefGUID, RefGUID);
       break;

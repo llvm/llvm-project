@@ -235,11 +235,6 @@ getUnderlyingObjectSet(Value pointerValue) {
     if (auto addrCast = val.getDefiningOp<LLVM::AddrSpaceCastOp>())
       return WalkContinuation::advanceTo(addrCast.getOperand());
 
-    // TODO: Add a SelectLikeOpInterface and use it in the slicing utility.
-    if (auto selectOp = val.getDefiningOp<LLVM::SelectOp>())
-      return WalkContinuation::advanceTo(
-          {selectOp.getTrueValue(), selectOp.getFalseValue()});
-
     // Attempt to advance to control flow predecessors.
     std::optional<SmallVector<Value>> controlFlowPredecessors =
         getControlFlowPredecessors(val);

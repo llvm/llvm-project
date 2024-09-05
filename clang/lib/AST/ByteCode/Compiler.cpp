@@ -214,7 +214,7 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
     unsigned DerivedOffset = collectBaseOffset(QualType(ToMP->getClass(), 0),
                                                QualType(FromMP->getClass(), 0));
 
-    if (!this->visit(SubExpr))
+    if (!this->delegate(SubExpr))
       return false;
 
     return this->emitGetMemberPtrBasePop(DerivedOffset, CE);
@@ -229,14 +229,14 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
     unsigned DerivedOffset = collectBaseOffset(QualType(FromMP->getClass(), 0),
                                                QualType(ToMP->getClass(), 0));
 
-    if (!this->visit(SubExpr))
+    if (!this->delegate(SubExpr))
       return false;
     return this->emitGetMemberPtrBasePop(-DerivedOffset, CE);
   }
 
   case CK_UncheckedDerivedToBase:
   case CK_DerivedToBase: {
-    if (!this->visit(SubExpr))
+    if (!this->delegate(SubExpr))
       return false;
 
     const auto extractRecordDecl = [](QualType Ty) -> const CXXRecordDecl * {
@@ -265,7 +265,7 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
   }
 
   case CK_BaseToDerived: {
-    if (!this->visit(SubExpr))
+    if (!this->delegate(SubExpr))
       return false;
 
     unsigned DerivedOffset =
@@ -298,8 +298,8 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
       return false;
 
     const auto *TargetSemantics = &Ctx.getFloatSemantics(CE->getType());
-    llvm::RoundingMode RM = getRoundingMode(CE);
-    return this->emitCastIntegralFloating(*FromT, TargetSemantics, RM, CE);
+    return this->emitCastIntegralFloating(*FromT, TargetSemantics,
+                                          getFPOptions(CE), CE);
   }
 
   case CK_FloatingToBoolean:
@@ -317,12 +317,12 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
 
     if (ToT == PT_IntAP)
       return this->emitCastFloatingIntegralAP(Ctx.getBitWidth(CE->getType()),
-                                              CE);
+                                              getFPOptions(CE), CE);
     if (ToT == PT_IntAPS)
       return this->emitCastFloatingIntegralAPS(Ctx.getBitWidth(CE->getType()),
-                                               CE);
+                                               getFPOptions(CE), CE);
 
-    return this->emitCastFloatingIntegral(*ToT, CE);
+    return this->emitCastFloatingIntegral(*ToT, getFPOptions(CE), CE);
   }
 
   case CK_NullToPointer:
@@ -391,8 +391,6 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
       return this->emitPop(T, CE);
 
     QualType PtrType = CE->getType();
-    assert(PtrType->isPointerType());
-
     const Descriptor *Desc;
     if (std::optional<PrimType> T = classify(PtrType->getPointeeType()))
       Desc = P.createDescriptor(SubExpr, *T);
@@ -507,14 +505,9 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
   case CK_MemberPointerToBoolean: {
     PrimType PtrT = classifyPrim(SubExpr->getType());
 
-    // Just emit p != nullptr for this.
     if (!this->visit(SubExpr))
       return false;
-
-    if (!this->emitNull(PtrT, nullptr, CE))
-      return false;
-
-    return this->emitNE(PtrT, CE);
+    return this->emitIsNonNull(PtrT, CE);
   }
 
   case CK_IntegralComplexToBoolean:
@@ -817,21 +810,21 @@ bool Compiler<Emitter>::VisitBinaryOperator(const BinaryOperator *BO) {
     return MaybeCastToBool(this->emitGE(*LT, BO));
   case BO_Sub:
     if (BO->getType()->isFloatingType())
-      return Discard(this->emitSubf(getRoundingMode(BO), BO));
+      return Discard(this->emitSubf(getFPOptions(BO), BO));
     return Discard(this->emitSub(*T, BO));
   case BO_Add:
     if (BO->getType()->isFloatingType())
-      return Discard(this->emitAddf(getRoundingMode(BO), BO));
+      return Discard(this->emitAddf(getFPOptions(BO), BO));
     return Discard(this->emitAdd(*T, BO));
   case BO_Mul:
     if (BO->getType()->isFloatingType())
-      return Discard(this->emitMulf(getRoundingMode(BO), BO));
+      return Discard(this->emitMulf(getFPOptions(BO), BO));
     return Discard(this->emitMul(*T, BO));
   case BO_Rem:
     return Discard(this->emitRem(*T, BO));
   case BO_Div:
     if (BO->getType()->isFloatingType())
-      return Discard(this->emitDivf(getRoundingMode(BO), BO));
+      return Discard(this->emitDivf(getFPOptions(BO), BO));
     return Discard(this->emitDiv(*T, BO));
   case BO_Assign:
     if (DiscardResult)
@@ -887,12 +880,21 @@ bool Compiler<Emitter>::VisitPointerArithBinOp(const BinaryOperator *E) {
   if (!LT || !RT)
     return false;
 
+  // Visit the given pointer expression and optionally convert to a PT_Ptr.
+  auto visitAsPointer = [&](const Expr *E, PrimType T) -> bool {
+    if (!this->visit(E))
+      return false;
+    if (T != PT_Ptr)
+      return this->emitDecayPtr(T, PT_Ptr, E);
+    return true;
+  };
+
   if (LHS->getType()->isPointerType() && RHS->getType()->isPointerType()) {
     if (Op != BO_Sub)
       return false;
 
     assert(E->getType()->isIntegerType());
-    if (!visit(RHS) || !visit(LHS))
+    if (!visitAsPointer(RHS, *RT) || !visitAsPointer(LHS, *LT))
       return false;
 
     return this->emitSubPtr(classifyPrim(E->getType()), E);
@@ -900,21 +902,38 @@ bool Compiler<Emitter>::VisitPointerArithBinOp(const BinaryOperator *E) {
 
   PrimType OffsetType;
   if (LHS->getType()->isIntegerType()) {
-    if (!visit(RHS) || !visit(LHS))
+    if (!visitAsPointer(RHS, *RT))
+      return false;
+    if (!this->visit(LHS))
       return false;
     OffsetType = *LT;
   } else if (RHS->getType()->isIntegerType()) {
-    if (!visit(LHS) || !visit(RHS))
+    if (!visitAsPointer(LHS, *LT))
+      return false;
+    if (!this->visit(RHS))
       return false;
     OffsetType = *RT;
   } else {
     return false;
   }
 
-  if (Op == BO_Add)
-    return this->emitAddOffset(OffsetType, E);
-  else if (Op == BO_Sub)
-    return this->emitSubOffset(OffsetType, E);
+  // Do the operation and optionally transform to
+  // result pointer type.
+  if (Op == BO_Add) {
+    if (!this->emitAddOffset(OffsetType, E))
+      return false;
+
+    if (classifyPrim(E) != PT_Ptr)
+      return this->emitDecayPtr(PT_Ptr, classifyPrim(E), E);
+    return true;
+  } else if (Op == BO_Sub) {
+    if (!this->emitSubOffset(OffsetType, E))
+      return false;
+
+    if (classifyPrim(E) != PT_Ptr)
+      return this->emitDecayPtr(PT_Ptr, classifyPrim(E), E);
+    return true;
+  }
 
   return false;
 }
@@ -1134,7 +1153,7 @@ bool Compiler<Emitter>::VisitComplexBinOp(const BinaryOperator *E) {
       if (!loadComplexValue(RHSIsComplex, true, ElemIndex, RHSOffset, RHS))
         return false;
       if (ResultElemT == PT_Float) {
-        if (!this->emitAddf(getRoundingMode(E), E))
+        if (!this->emitAddf(getFPOptions(E), E))
           return false;
       } else {
         if (!this->emitAdd(ResultElemT, E))
@@ -1148,7 +1167,7 @@ bool Compiler<Emitter>::VisitComplexBinOp(const BinaryOperator *E) {
       if (!loadComplexValue(RHSIsComplex, true, ElemIndex, RHSOffset, RHS))
         return false;
       if (ResultElemT == PT_Float) {
-        if (!this->emitSubf(getRoundingMode(E), E))
+        if (!this->emitSubf(getFPOptions(E), E))
           return false;
       } else {
         if (!this->emitSub(ResultElemT, E))
@@ -1163,7 +1182,7 @@ bool Compiler<Emitter>::VisitComplexBinOp(const BinaryOperator *E) {
         return false;
 
       if (ResultElemT == PT_Float) {
-        if (!this->emitMulf(getRoundingMode(E), E))
+        if (!this->emitMulf(getFPOptions(E), E))
           return false;
       } else {
         if (!this->emitMul(ResultElemT, E))
@@ -1179,7 +1198,7 @@ bool Compiler<Emitter>::VisitComplexBinOp(const BinaryOperator *E) {
         return false;
 
       if (ResultElemT == PT_Float) {
-        if (!this->emitDivf(getRoundingMode(E), E))
+        if (!this->emitDivf(getFPOptions(E), E))
           return false;
       } else {
         if (!this->emitDiv(ResultElemT, E))
@@ -1216,12 +1235,6 @@ bool Compiler<Emitter>::VisitImplicitValueInitExpr(
     assert(RD);
     if (RD->isInvalidDecl())
       return false;
-    if (RD->isUnion()) {
-      // C++11 [dcl.init]p5: If T is a (possibly cv-qualified) union type, the
-      // object's first non-static named data member is zero-initialized
-      // FIXME
-      return false;
-    }
 
     if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(RD);
         CXXRD && CXXRD->getNumVBases() > 0) {
@@ -1320,14 +1333,15 @@ bool Compiler<Emitter>::VisitArraySubscriptExpr(const ArraySubscriptExpr *E) {
 template <class Emitter>
 bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
                                       const Expr *ArrayFiller, const Expr *E) {
-
   QualType QT = E->getType();
-
   if (const auto *AT = QT->getAs<AtomicType>())
     QT = AT->getValueType();
 
-  if (QT->isVoidType())
+  if (QT->isVoidType()) {
+    if (Inits.size() == 0)
+      return true;
     return this->emitInvalid(E);
+  }
 
   // Handle discarding first.
   if (DiscardResult) {
@@ -2049,22 +2063,21 @@ bool Compiler<Emitter>::VisitFloatCompoundAssignOperator(
   if (!this->emitGetLocal(*RT, TempOffset, E))
     return false;
 
-  llvm::RoundingMode RM = getRoundingMode(E);
   switch (E->getOpcode()) {
   case BO_AddAssign:
-    if (!this->emitAddf(RM, E))
+    if (!this->emitAddf(getFPOptions(E), E))
       return false;
     break;
   case BO_SubAssign:
-    if (!this->emitSubf(RM, E))
+    if (!this->emitSubf(getFPOptions(E), E))
       return false;
     break;
   case BO_MulAssign:
-    if (!this->emitMulf(RM, E))
+    if (!this->emitMulf(getFPOptions(E), E))
       return false;
     break;
   case BO_DivAssign:
-    if (!this->emitDivf(RM, E))
+    if (!this->emitDivf(getFPOptions(E), E))
       return false;
     break;
   default:
@@ -2242,8 +2255,6 @@ bool Compiler<Emitter>::VisitExprWithCleanups(const ExprWithCleanups *E) {
   LocalScope<Emitter> ES(this);
   const Expr *SubExpr = E->getSubExpr();
 
-  assert(E->getNumObjects() == 0 && "TODO: Implement cleanups");
-
   return this->delegate(SubExpr) && ES.destroyLocals(E);
 }
 
@@ -2300,8 +2311,8 @@ bool Compiler<Emitter>::VisitMaterializeTemporaryExpr(
 
   // For everyhing else, use local variables.
   if (SubExprT) {
-    unsigned LocalIndex = allocateLocalPrimitive(
-        SubExpr, *SubExprT, /*IsConst=*/true, /*IsExtended=*/true);
+    unsigned LocalIndex = allocateLocalPrimitive(E, *SubExprT, /*IsConst=*/true,
+                                                 /*IsExtended=*/true);
     if (!this->visit(SubExpr))
       return false;
     if (!this->emitSetLocal(*SubExprT, LocalIndex, E))
@@ -2329,6 +2340,9 @@ bool Compiler<Emitter>::VisitCXXBindTemporaryExpr(
 template <class Emitter>
 bool Compiler<Emitter>::VisitCompoundLiteralExpr(const CompoundLiteralExpr *E) {
   const Expr *Init = E->getInitializer();
+  if (DiscardResult)
+    return this->discard(Init);
+
   if (Initializing) {
     // We already have a value, just initialize that.
     return this->visitInitializer(Init) && this->emitFinishInit(E);
@@ -2382,9 +2396,6 @@ bool Compiler<Emitter>::VisitCompoundLiteralExpr(const CompoundLiteralExpr *E) {
       if (!this->visitInitializer(Init) || !this->emitFinishInit(E))
         return false;
     }
-
-    if (DiscardResult)
-      return this->emitPopPtr(E);
     return true;
   }
 
@@ -2560,7 +2571,7 @@ bool Compiler<Emitter>::VisitCXXConstructExpr(const CXXConstructExpr *E) {
 
     if (DiscardResult)
       return this->emitPopPtr(E);
-    return true;
+    return this->emitFinishInit(E);
   }
 
   if (T->isArrayType()) {
@@ -2914,6 +2925,17 @@ bool Compiler<Emitter>::VisitCXXDeleteExpr(const CXXDeleteExpr *E) {
 }
 
 template <class Emitter>
+bool Compiler<Emitter>::VisitBlockExpr(const BlockExpr *E) {
+  const Function *Func = nullptr;
+  if (auto F = Compiler<ByteCodeEmitter>(Ctx, P).compileObjCBlock(E))
+    Func = F;
+
+  if (!Func)
+    return false;
+  return this->emitGetFnPtr(Func, E);
+}
+
+template <class Emitter>
 bool Compiler<Emitter>::VisitExpressionTraitExpr(const ExpressionTraitExpr *E) {
   assert(Ctx.getLangOpts().CPlusPlus);
   return this->emitConstBool(E->getValue(), E);
@@ -3231,9 +3253,6 @@ template <class Emitter> bool Compiler<Emitter>::discard(const Expr *E) {
 }
 
 template <class Emitter> bool Compiler<Emitter>::delegate(const Expr *E) {
-  if (E->containsErrors())
-    return this->emitError(E);
-
   // We're basically doing:
   // OptionScope<Emitter> Scope(this, DicardResult, Initializing);
   // but that's unnecessary of course.
@@ -3270,9 +3289,6 @@ template <class Emitter>
 bool Compiler<Emitter>::visitInitializer(const Expr *E) {
   assert(!classify(E->getType()));
 
-  if (E->containsErrors())
-    return this->emitError(E);
-
   if (!this->checkLiteralType(E))
     return false;
 
@@ -3308,7 +3324,7 @@ template <class Emitter> bool Compiler<Emitter>::visitBool(const Expr *E) {
 
   // Or Floats.
   if (T == PT_Float)
-    return this->emitCastFloatingIntegralBool(E);
+    return this->emitCastFloatingIntegralBool(getFPOptions(E), E);
 
   // Or anything else we can.
   return this->emitCast(*T, PT_Bool, E);
@@ -3411,6 +3427,8 @@ bool Compiler<Emitter>::visitZeroRecordInitializer(const Record *R,
     if (!this->emitFinishInitPop(E))
       return false;
 
+    // C++11 [dcl.init]p5: If T is a (possibly cv-qualified) union type, the
+    // object's first non-static named data member is zero-initialized
     if (R->isUnion())
       break;
   }
@@ -3749,7 +3767,6 @@ VarCreationState Compiler<Emitter>::visitVarDecl(const VarDecl *VD,
 
     auto initGlobal = [&](unsigned GlobalIndex) -> bool {
       assert(Init);
-      DeclScope<Emitter> LocalScope(this, VD);
 
       if (VarT) {
         if (!this->visit(Init))
@@ -3772,6 +3789,8 @@ VarCreationState Compiler<Emitter>::visitVarDecl(const VarDecl *VD,
 
       return this->emitPopPtr(Init);
     };
+
+    DeclScope<Emitter> LocalScope(this, VD);
 
     // We've already seen and initialized this global.
     if (std::optional<unsigned> GlobalIndex = P.getGlobal(VD)) {
@@ -4357,11 +4376,6 @@ bool Compiler<Emitter>::visitReturnStmt(const ReturnStmt *RS) {
 }
 
 template <class Emitter> bool Compiler<Emitter>::visitIfStmt(const IfStmt *IS) {
-  if (IS->isNonNegatedConsteval())
-    return visitStmt(IS->getThen());
-  if (IS->isNegatedConsteval())
-    return IS->getElse() ? visitStmt(IS->getElse()) : true;
-
   if (auto *CondInit = IS->getInit())
     if (!visitStmt(CondInit))
       return false;
@@ -4370,8 +4384,19 @@ template <class Emitter> bool Compiler<Emitter>::visitIfStmt(const IfStmt *IS) {
     if (!visitDeclStmt(CondDecl))
       return false;
 
-  if (!this->visitBool(IS->getCond()))
-    return false;
+  // Compile condition.
+  if (IS->isNonNegatedConsteval()) {
+    if (!this->emitIsConstantContext(IS))
+      return false;
+  } else if (IS->isNegatedConsteval()) {
+    if (!this->emitIsConstantContext(IS))
+      return false;
+    if (!this->emitInv(IS))
+      return false;
+  } else {
+    if (!this->visitBool(IS->getCond()))
+      return false;
+  }
 
   if (const Stmt *Else = IS->getElse()) {
     LabelTy LabelElse = this->getLabel();
@@ -4957,6 +4982,8 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
   const Expr *SubExpr = E->getSubExpr();
   if (SubExpr->getType()->isAnyComplexType())
     return this->VisitComplexUnaryOperator(E);
+  if (SubExpr->getType()->isVectorType())
+    return this->VisitVectorUnaryOperator(E);
   std::optional<PrimType> T = classify(SubExpr->getType());
 
   switch (E->getOpcode()) {
@@ -4977,8 +5004,8 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
     }
 
     if (T == PT_Float) {
-      return DiscardResult ? this->emitIncfPop(getRoundingMode(E), E)
-                           : this->emitIncf(getRoundingMode(E), E);
+      return DiscardResult ? this->emitIncfPop(getFPOptions(E), E)
+                           : this->emitIncf(getFPOptions(E), E);
     }
 
     return DiscardResult ? this->emitIncPop(*T, E) : this->emitInc(*T, E);
@@ -5000,8 +5027,8 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
     }
 
     if (T == PT_Float) {
-      return DiscardResult ? this->emitDecfPop(getRoundingMode(E), E)
-                           : this->emitDecf(getRoundingMode(E), E);
+      return DiscardResult ? this->emitDecfPop(getFPOptions(E), E)
+                           : this->emitDecf(getFPOptions(E), E);
     }
 
     return DiscardResult ? this->emitDecPop(*T, E) : this->emitDec(*T, E);
@@ -5028,7 +5055,7 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
     // Post-inc and pre-inc are the same if the value is to be discarded.
     if (DiscardResult) {
       if (T == PT_Float)
-        return this->emitIncfPop(getRoundingMode(E), E);
+        return this->emitIncfPop(getFPOptions(E), E);
       return this->emitIncPop(*T, E);
     }
 
@@ -5038,7 +5065,7 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
         return false;
       if (!this->emitConstFloat(llvm::APFloat(TargetSemantics, 1), E))
         return false;
-      if (!this->emitAddf(getRoundingMode(E), E))
+      if (!this->emitAddf(getFPOptions(E), E))
         return false;
       if (!this->emitStoreFloat(E))
         return false;
@@ -5077,7 +5104,7 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
     // Post-dec and pre-dec are the same if the value is to be discarded.
     if (DiscardResult) {
       if (T == PT_Float)
-        return this->emitDecfPop(getRoundingMode(E), E);
+        return this->emitDecfPop(getFPOptions(E), E);
       return this->emitDecPop(*T, E);
     }
 
@@ -5087,7 +5114,7 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
         return false;
       if (!this->emitConstFloat(llvm::APFloat(TargetSemantics, 1), E))
         return false;
-      if (!this->emitSubf(getRoundingMode(E), E))
+      if (!this->emitSubf(getFPOptions(E), E))
         return false;
       if (!this->emitStoreFloat(E))
         return false;
@@ -5279,6 +5306,110 @@ bool Compiler<Emitter>::VisitComplexUnaryOperator(const UnaryOperator *E) {
 }
 
 template <class Emitter>
+bool Compiler<Emitter>::VisitVectorUnaryOperator(const UnaryOperator *E) {
+  const Expr *SubExpr = E->getSubExpr();
+  assert(SubExpr->getType()->isVectorType());
+
+  if (DiscardResult)
+    return this->discard(SubExpr);
+
+  auto UnaryOp = E->getOpcode();
+  if (UnaryOp != UO_Plus && UnaryOp != UO_Minus && UnaryOp != UO_LNot &&
+      UnaryOp != UO_Not && UnaryOp != UO_AddrOf)
+    return this->emitInvalid(E);
+
+  // Nothing to do here.
+  if (UnaryOp == UO_Plus || UnaryOp == UO_AddrOf)
+    return this->delegate(SubExpr);
+
+  if (!Initializing) {
+    std::optional<unsigned> LocalIndex = allocateLocal(SubExpr);
+    if (!LocalIndex)
+      return false;
+    if (!this->emitGetPtrLocal(*LocalIndex, E))
+      return false;
+  }
+
+  // The offset of the temporary, if we created one.
+  unsigned SubExprOffset =
+      this->allocateLocalPrimitive(SubExpr, PT_Ptr, true, false);
+  if (!this->visit(SubExpr))
+    return false;
+  if (!this->emitSetLocal(PT_Ptr, SubExprOffset, E))
+    return false;
+
+  const auto *VecTy = SubExpr->getType()->getAs<VectorType>();
+  PrimType ElemT = classifyVectorElementType(SubExpr->getType());
+  auto getElem = [=](unsigned Offset, unsigned Index) -> bool {
+    if (!this->emitGetLocal(PT_Ptr, Offset, E))
+      return false;
+    return this->emitArrayElemPop(ElemT, Index, E);
+  };
+
+  switch (UnaryOp) {
+  case UO_Minus:
+    for (unsigned I = 0; I != VecTy->getNumElements(); ++I) {
+      if (!getElem(SubExprOffset, I))
+        return false;
+      if (!this->emitNeg(ElemT, E))
+        return false;
+      if (!this->emitInitElem(ElemT, I, E))
+        return false;
+    }
+    break;
+  case UO_LNot: { // !x
+    // In C++, the logic operators !, &&, || are available for vectors. !v is
+    // equivalent to v == 0.
+    //
+    // The result of the comparison is a vector of the same width and number of
+    // elements as the comparison operands with a signed integral element type.
+    //
+    // https://gcc.gnu.org/onlinedocs/gcc/Vector-Extensions.html
+    QualType ResultVecTy = E->getType();
+    PrimType ResultVecElemT =
+        classifyPrim(ResultVecTy->getAs<VectorType>()->getElementType());
+    for (unsigned I = 0; I != VecTy->getNumElements(); ++I) {
+      if (!getElem(SubExprOffset, I))
+        return false;
+      // operator ! on vectors returns -1 for 'truth', so negate it.
+      if (!this->emitPrimCast(ElemT, PT_Bool, Ctx.getASTContext().BoolTy, E))
+        return false;
+      if (!this->emitInv(E))
+        return false;
+      if (!this->emitPrimCast(PT_Bool, ElemT, VecTy->getElementType(), E))
+        return false;
+      if (!this->emitNeg(ElemT, E))
+        return false;
+      if (ElemT != ResultVecElemT &&
+          !this->emitPrimCast(ElemT, ResultVecElemT, ResultVecTy, E))
+        return false;
+      if (!this->emitInitElem(ResultVecElemT, I, E))
+        return false;
+    }
+    break;
+  }
+  case UO_Not: // ~x
+    for (unsigned I = 0; I != VecTy->getNumElements(); ++I) {
+      if (!getElem(SubExprOffset, I))
+        return false;
+      if (ElemT == PT_Bool) {
+        if (!this->emitInv(E))
+          return false;
+      } else {
+        if (!this->emitComp(ElemT, E))
+          return false;
+      }
+      if (!this->emitInitElem(ElemT, I, E))
+        return false;
+    }
+    break;
+  default:
+    llvm_unreachable("Unsupported unary operators should be handled up front");
+  }
+  return true;
+}
+
+template <class Emitter>
 bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
   if (DiscardResult)
     return true;
@@ -5447,13 +5578,15 @@ bool Compiler<Emitter>::emitPrimCast(PrimType FromT, PrimType ToT,
     }
 
     if (ToT == PT_IntAP)
-      return this->emitCastFloatingIntegralAP(Ctx.getBitWidth(ToQT), E);
+      return this->emitCastFloatingIntegralAP(Ctx.getBitWidth(ToQT),
+                                              getFPOptions(E), E);
     if (ToT == PT_IntAPS)
-      return this->emitCastFloatingIntegralAPS(Ctx.getBitWidth(ToQT), E);
+      return this->emitCastFloatingIntegralAPS(Ctx.getBitWidth(ToQT),
+                                               getFPOptions(E), E);
 
     // Float to integral.
     if (isIntegralType(ToT) || ToT == PT_Bool)
-      return this->emitCastFloatingIntegral(ToT, E);
+      return this->emitCastFloatingIntegral(ToT, getFPOptions(E), E);
   }
 
   if (isIntegralType(FromT) || FromT == PT_Bool) {
@@ -5469,8 +5602,7 @@ bool Compiler<Emitter>::emitPrimCast(PrimType FromT, PrimType ToT,
     if (ToT == PT_Float) {
       // Integral to floating.
       const llvm::fltSemantics *ToSem = &Ctx.getFloatSemantics(ToQT);
-      return this->emitCastIntegralFloating(FromT, ToSem, getRoundingMode(E),
-                                            E);
+      return this->emitCastIntegralFloating(FromT, ToSem, getFPOptions(E), E);
     }
   }
 
@@ -5507,7 +5639,7 @@ bool Compiler<Emitter>::emitComplexBoolCast(const Expr *E) {
   if (!this->emitArrayElem(ElemT, 0, E))
     return false;
   if (ElemT == PT_Float) {
-    if (!this->emitCastFloatingIntegral(PT_Bool, E))
+    if (!this->emitCastFloatingIntegral(PT_Bool, getFPOptions(E), E))
       return false;
   } else {
     if (!this->emitCast(ElemT, PT_Bool, E))
@@ -5522,7 +5654,7 @@ bool Compiler<Emitter>::emitComplexBoolCast(const Expr *E) {
   if (!this->emitArrayElemPop(ElemT, 1, E))
     return false;
   if (ElemT == PT_Float) {
-    if (!this->emitCastFloatingIntegral(PT_Bool, E))
+    if (!this->emitCastFloatingIntegral(PT_Bool, getFPOptions(E), E))
       return false;
   } else {
     if (!this->emitCast(ElemT, PT_Bool, E))

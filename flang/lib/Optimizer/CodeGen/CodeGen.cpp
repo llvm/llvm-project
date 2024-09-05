@@ -1201,7 +1201,9 @@ struct EmboxCommonConversion : public fir::FIROpConversion<OP> {
                                 mlir::Location loc,
                                 fir::RecordType recType) const {
     std::string name =
-        fir::NameUniquer::getTypeDescriptorName(recType.getName());
+        this->options.typeDescriptorsRenamedForAssembly
+            ? fir::NameUniquer::getTypeDescriptorAssemblyName(recType.getName())
+            : fir::NameUniquer::getTypeDescriptorName(recType.getName());
     mlir::Type llvmPtrTy = ::getLlvmPtrType(mod.getContext());
     if (auto global = mod.template lookupSymbol<fir::GlobalOp>(name)) {
       return rewriter.create<mlir::LLVM::AddressOfOp>(loc, llvmPtrTy,
@@ -1260,7 +1262,7 @@ struct EmboxCommonConversion : public fir::FIROpConversion<OP> {
       } else {
         auto maskAttr = mlir::IntegerAttr::get(
             rewriter.getIntegerType(8, /*isSigned=*/false),
-            llvm::APInt(8, (uint64_t)~_CFI_ADDENDUM_FLAG, /*isSigned=*/false));
+            llvm::APInt(8, (uint64_t)~_CFI_ADDENDUM_FLAG, /*isSigned=*/true));
         mlir::LLVM::ConstantOp mask = rewriter.create<mlir::LLVM::ConstantOp>(
             loc, rewriter.getI8Type(), maskAttr);
         extraField = rewriter.create<mlir::LLVM::AndOp>(loc, extraField, mask);
@@ -1271,7 +1273,7 @@ struct EmboxCommonConversion : public fir::FIROpConversion<OP> {
     } else {
       // Compute the value of the extra field based on allocator_idx and
       // addendum present using a Descriptor object.
-      Fortran::runtime::StaticDescriptor<0> staticDescriptor;
+      Fortran::runtime::StaticDescriptor staticDescriptor;
       Fortran::runtime::Descriptor &desc{staticDescriptor.descriptor()};
       desc.raw().extra = 0;
       desc.SetAllocIdx(allocatorIdx);
@@ -2704,7 +2706,10 @@ struct TypeDescOpConversion : public fir::FIROpConversion<fir::TypeDescOp> {
     auto recordType = mlir::dyn_cast<fir::RecordType>(inTy);
     auto module = typeDescOp.getOperation()->getParentOfType<mlir::ModuleOp>();
     std::string typeDescName =
-        fir::NameUniquer::getTypeDescriptorName(recordType.getName());
+        this->options.typeDescriptorsRenamedForAssembly
+            ? fir::NameUniquer::getTypeDescriptorAssemblyName(
+                  recordType.getName())
+            : fir::NameUniquer::getTypeDescriptorName(recordType.getName());
     auto llvmPtrTy = ::getLlvmPtrType(typeDescOp.getContext());
     if (auto global = module.lookupSymbol<mlir::LLVM::GlobalOp>(typeDescName)) {
       rewriter.replaceOpWithNewOp<mlir::LLVM::AddressOfOp>(
@@ -3652,6 +3657,10 @@ public:
 
     if (!forcedTargetFeatures.empty())
       fir::setTargetFeatures(mod, forcedTargetFeatures);
+
+    if (typeDescriptorsRenamedForAssembly)
+      options.typeDescriptorsRenamedForAssembly =
+          typeDescriptorsRenamedForAssembly;
 
     // Run dynamic pass pipeline for converting Math dialect
     // operations into other dialects (llvm, func, etc.).

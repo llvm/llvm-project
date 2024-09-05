@@ -200,9 +200,9 @@ int64_t RISCV::getImplicitAddend(const uint8_t *buf, RelType type) const {
 
 void RISCV::writeGotHeader(uint8_t *buf) const {
   if (config->is64)
-    write64le(buf, mainPart->dynamic->getVA());
+    write64le(buf, ctx.mainPart->dynamic->getVA());
   else
-    write32le(buf, mainPart->dynamic->getVA());
+    write32le(buf, ctx.mainPart->dynamic->getVA());
 }
 
 void RISCV::writeGotPlt(uint8_t *buf, const Symbol &s) const {
@@ -235,7 +235,7 @@ void RISCV::writePltHeader(uint8_t *buf) const {
   write32le(buf + 0, utype(AUIPC, X_T2, hi20(offset)));
   write32le(buf + 4, rtype(SUB, X_T1, X_T1, X_T3));
   write32le(buf + 8, itype(load, X_T3, X_T2, lo12(offset)));
-  write32le(buf + 12, itype(ADDI, X_T1, X_T1, -target->pltHeaderSize - 12));
+  write32le(buf + 12, itype(ADDI, X_T1, X_T1, -ctx.target->pltHeaderSize - 12));
   write32le(buf + 16, itype(ADDI, X_T0, X_T2, lo12(offset)));
   write32le(buf + 20, itype(SRLI, X_T1, X_T1, config->is64 ? 1 : 2));
   write32le(buf + 24, itype(load, X_T0, X_T0, config->wordsize));
@@ -256,8 +256,8 @@ void RISCV::writePlt(uint8_t *buf, const Symbol &sym,
 }
 
 RelType RISCV::getDynRel(RelType type) const {
-  return type == target->symbolicRel ? type
-                                     : static_cast<RelType>(R_RISCV_NONE);
+  return type == ctx.target->symbolicRel ? type
+                                         : static_cast<RelType>(R_RISCV_NONE);
 }
 
 RelExpr RISCV::getRelExpr(const RelType type, const Symbol &s,
