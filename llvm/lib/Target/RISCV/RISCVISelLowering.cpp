@@ -19227,6 +19227,16 @@ bool RISCV::CC_RISCV(const DataLayout &DL, RISCVABI::ABI ABI, unsigned ValNo,
 
   ArrayRef<MCPhysReg> ArgGPRs = RISCV::getArgGPRs(ABI);
 
+  const RISCVSubtarget &STI =
+      State.getMachineFunction().getSubtarget<RISCVSubtarget>();
+  if ((ValVT == MVT::f32 && XLen == 32 && STI.hasStdExtZfinx()) ||
+      (ValVT == MVT::f64 && XLen == 64 && STI.hasStdExtZdinx())) {
+    if (MCRegister Reg = State.AllocateReg(ArgGPRs)) {
+      State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
+      return false;
+    }
+  }
+
   if (UseGPRForF16_F32 && (ValVT == MVT::f16 || ValVT == MVT::bf16 ||
                            (ValVT == MVT::f32 && XLen == 64))) {
     MCRegister Reg = State.AllocateReg(ArgGPRs);
