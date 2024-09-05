@@ -62,7 +62,7 @@ define i1 @nnan_fadd(double %arg0, double %arg1) {
 define i1 @nnan_fadd_maybe_nan_lhs(double %arg0, double %arg1) {
 ; CHECK-LABEL: @nnan_fadd_maybe_nan_lhs(
 ; CHECK-NEXT:    [[NNAN_ARG1:%.*]] = fadd nnan double [[ARG1:%.*]], 1.000000e+00
-; CHECK-NEXT:    [[OP:%.*]] = fadd double [[NNAN_ARG1]], [[ARG0:%.*]]
+; CHECK-NEXT:    [[OP:%.*]] = fadd double [[ARG0:%.*]], [[NNAN_ARG1]]
 ; CHECK-NEXT:    [[TMP:%.*]] = fcmp ord double [[OP]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[TMP]]
 ;

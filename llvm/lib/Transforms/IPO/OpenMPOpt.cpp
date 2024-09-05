@@ -3760,6 +3760,11 @@ struct AAKernelInfoFunction : AAKernelInfo {
     A.registerGlobalVariableSimplificationCallback(
         *KernelEnvGV, KernelConfigurationSimplifyCB);
 
+    // We cannot change to SPMD mode if the runtime functions aren't availible.
+    bool CanChangeToSPMD = OMPInfoCache.runtimeFnsAvailable(
+        {OMPRTL___kmpc_get_hardware_thread_id_in_block,
+         OMPRTL___kmpc_barrier_simple_spmd});
+
     // Check if we know we are in SPMD-mode already.
     ConstantInt *ExecModeC =
         KernelInfo::getExecModeFromKernelEnvironment(KernelEnvC);
@@ -3768,7 +3773,7 @@ struct AAKernelInfoFunction : AAKernelInfo {
         ExecModeC->getSExtValue() | OMP_TGT_EXEC_MODE_GENERIC_SPMD);
     if (ExecModeC->getSExtValue() & OMP_TGT_EXEC_MODE_SPMD)
       SPMDCompatibilityTracker.indicateOptimisticFixpoint();
-    else if (DisableOpenMPOptSPMDization)
+    else if (DisableOpenMPOptSPMDization || !CanChangeToSPMD)
       // This is a generic region but SPMDization is disabled so stop
       // tracking.
       SPMDCompatibilityTracker.indicatePessimisticFixpoint();
@@ -4214,12 +4219,6 @@ struct AAKernelInfoFunction : AAKernelInfo {
 
   bool changeToSPMDMode(Attributor &A, ChangeStatus &Changed) {
     auto &OMPInfoCache = static_cast<OMPInformationCache &>(A.getInfoCache());
-
-    // We cannot change to SPMD mode if the runtime functions aren't availible.
-    if (!OMPInfoCache.runtimeFnsAvailable(
-            {OMPRTL___kmpc_get_hardware_thread_id_in_block,
-             OMPRTL___kmpc_barrier_simple_spmd}))
-      return false;
 
     if (!SPMDCompatibilityTracker.isAssumed()) {
       for (Instruction *NonCompatibleI : SPMDCompatibilityTracker) {

@@ -132,7 +132,7 @@ define i32 @n3_extrause(i32 %x, i32 %nbits) {
 ; CHECK-NEXT:    [[T0:%.*]] = add i32 [[NBITS:%.*]], -1
 ; CHECK-NEXT:    [[T1:%.*]] = shl nsw i32 -1, [[T0]]
 ; CHECK-NEXT:    [[T2:%.*]] = xor i32 [[T1]], -1
-; CHECK-NEXT:    [[T3:%.*]] = and i32 [[T2]], [[X:%.*]]
+; CHECK-NEXT:    [[T3:%.*]] = and i32 [[X:%.*]], [[T2]]
 ; CHECK-NEXT:    [[T4:%.*]] = sub i32 32, [[NBITS]]
 ; CHECK-NEXT:    call void @use32(i32 [[T0]])
 ; CHECK-NEXT:    call void @use32(i32 [[T1]])

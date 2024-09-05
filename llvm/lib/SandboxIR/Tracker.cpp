@@ -160,6 +160,16 @@ void RemoveFromParent::dump() const {
 }
 #endif
 
+CatchSwitchAddHandler::CatchSwitchAddHandler(CatchSwitchInst *CSI)
+    : CSI(CSI), HandlerIdx(CSI->getNumHandlers()) {}
+
+void CatchSwitchAddHandler::revert(Tracker &Tracker) {
+  // TODO: This should ideally use sandboxir::CatchSwitchInst::removeHandler()
+  // once it gets implemented.
+  auto *LLVMCSI = cast<llvm::CatchSwitchInst>(CSI->Val);
+  LLVMCSI->removeHandler(LLVMCSI->handler_begin() + HandlerIdx);
+}
+
 void SwitchRemoveCase::revert(Tracker &Tracker) { Switch->addCase(Val, Dest); }
 
 #ifndef NDEBUG
@@ -219,6 +229,30 @@ void CreateAndInsertInst::revert(Tracker &Tracker) { NewI->eraseFromParent(); }
 
 #ifndef NDEBUG
 void CreateAndInsertInst::dump() const {
+  dump(dbgs());
+  dbgs() << "\n";
+}
+#endif
+
+ShuffleVectorSetMask::ShuffleVectorSetMask(ShuffleVectorInst *SVI)
+    : SVI(SVI), PrevMask(SVI->getShuffleMask()) {}
+
+void ShuffleVectorSetMask::revert(Tracker &Tracker) {
+  SVI->setShuffleMask(PrevMask);
+}
+
+#ifndef NDEBUG
+void ShuffleVectorSetMask::dump() const {
+  dump(dbgs());
+  dbgs() << "\n";
+}
+#endif
+
+CmpSwapOperands::CmpSwapOperands(CmpInst *Cmp) : Cmp(Cmp) {}
+
+void CmpSwapOperands::revert(Tracker &Tracker) { Cmp->swapOperands(); }
+#ifndef NDEBUG
+void CmpSwapOperands::dump() const {
   dump(dbgs());
   dbgs() << "\n";
 }

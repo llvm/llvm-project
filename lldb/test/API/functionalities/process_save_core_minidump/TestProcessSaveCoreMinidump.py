@@ -17,6 +17,7 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
         expected_modules,
         expected_threads,
         stacks_to_sps_map,
+        stacks_to_registers_map,
     ):
         # To verify, we'll launch with the mini dump
         target = self.dbg.CreateTarget(None)
@@ -62,6 +63,17 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             # Try to read just past the red zone and fail
             process.ReadMemory(sp - red_zone - 1, 1, error)
             self.assertTrue(error.Fail(), "No failure when reading past the red zone")
+            # Verify the registers are the same
+            self.assertIn(thread_id, stacks_to_registers_map)
+            register_val_list = stacks_to_registers_map[thread_id]
+            frame_register_list = frame.GetRegisters()
+            for x in register_val_list:
+                self.assertEqual(
+                    x.GetValueAsUnsigned(),
+                    frame_register_list.GetFirstValueByName(
+                        x.GetName()
+                    ).GetValueAsUnsigned(),
+                )
 
         self.dbg.DeleteTarget(target)
 
@@ -93,12 +105,16 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             expected_number_of_threads = process.GetNumThreads()
             expected_threads = []
             stacks_to_sp_map = {}
+            stakcs_to_registers_map = {}
 
             for thread_idx in range(process.GetNumThreads()):
                 thread = process.GetThreadAtIndex(thread_idx)
                 thread_id = thread.GetThreadID()
                 expected_threads.append(thread_id)
                 stacks_to_sp_map[thread_id] = thread.GetFrameAtIndex(0).GetSP()
+                stakcs_to_registers_map[thread_id] = thread.GetFrameAtIndex(
+                    0
+                ).GetRegisters()
 
             # save core and, kill process and verify corefile existence
             base_command = "process save-core --plugin-name=minidump "
@@ -110,6 +126,7 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
                 expected_modules,
                 expected_threads,
                 stacks_to_sp_map,
+                stakcs_to_registers_map,
             )
 
             self.runCmd(base_command + " --style=modified-memory '%s'" % (core_dirty))
@@ -120,6 +137,7 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
                 expected_modules,
                 expected_threads,
                 stacks_to_sp_map,
+                stakcs_to_registers_map,
             )
 
             self.runCmd(base_command + " --style=full '%s'" % (core_full))
@@ -130,6 +148,7 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
                 expected_modules,
                 expected_threads,
                 stacks_to_sp_map,
+                stakcs_to_registers_map,
             )
 
             options = lldb.SBSaveCoreOptions()
@@ -147,6 +166,7 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
                 expected_modules,
                 expected_threads,
                 stacks_to_sp_map,
+                stakcs_to_registers_map,
             )
 
             options = lldb.SBSaveCoreOptions()
@@ -163,6 +183,7 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
                 expected_modules,
                 expected_threads,
                 stacks_to_sp_map,
+                stakcs_to_registers_map,
             )
 
             # Minidump can now save full core files, but they will be huge and
@@ -181,6 +202,7 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
                 expected_modules,
                 expected_threads,
                 stacks_to_sp_map,
+                stakcs_to_registers_map,
             )
 
             self.assertSuccess(process.Kill())
@@ -276,13 +298,16 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             expected_threads = []
             stacks_to_sp_map = {}
             expected_pid = process.GetProcessInfo().GetProcessID()
+            stacks_to_registers_map = {}
 
             for thread_idx in range(process.GetNumThreads()):
                 thread = process.GetThreadAtIndex(thread_idx)
                 thread_id = thread.GetThreadID()
                 expected_threads.append(thread_id)
                 stacks_to_sp_map[thread_id] = thread.GetFrameAtIndex(0).GetSP()
-
+                stacks_to_registers_map[thread_id] = thread.GetFrameAtIndex(
+                    0
+                ).GetRegisters()
 
             # This is almost identical to the single thread test case because
             # minidump defaults to stacks only, so we want to see if the
@@ -294,7 +319,14 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             error = process.SaveCore(options)
             self.assertTrue(error.Success())
 
-            self.verify_core_file(default_value_file, expected_pid, expected_modules, expected_threads, stacks_to_sp_map)
+            self.verify_core_file(
+                default_value_file,
+                expected_pid,
+                expected_modules,
+                expected_threads,
+                stacks_to_sp_map,
+                stacks_to_registers_map,
+            )
 
         finally:
             self.assertTrue(self.dbg.DeleteTarget(target))

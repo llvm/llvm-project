@@ -72,6 +72,31 @@ func.func @test_pad_non_const(%arg0: tensor<13x21x3xi8>, %arg1: tensor<i8>) -> t
 
 // -----
 
+func.func @test_pad_io_rank_mismatch(%arg0: tensor<13x21xf32>, %arg1: tensor<2x2xi32>) {
+  // expected-error@+1 {{'tosa.pad' op expect same input and output tensor rank.}}
+  %1 = tosa.pad %arg0, %arg1 : (tensor<13x21xf32>, tensor<2x2xi32>) -> tensor<13x21x3xf32>
+  return
+}
+
+// -----
+
+func.func @test_pad_invalid_padding_rank(%arg0: tensor<13x21xf32>, %arg1: tensor<2xi32>) {
+  // expected-error@+1 {{'tosa.pad' op expect 'padding' tensor rank equal to 2.}}
+  %1 = tosa.pad %arg0, %arg1 : (tensor<13x21xf32>, tensor<2xi32>) -> tensor<13x21xf32>
+  return
+}
+
+// -----
+
+func.func @test_pad_invalid_padConst_rank(%arg0: tensor<13x21xf32>, %arg1: tensor<2x2xi32>) {
+  %0 = "tosa.const"() {value = dense<3.14> : tensor<1xf32>} : () -> tensor<1xf32>
+  // expected-error@+1 {{'tosa.pad' op operand #2 must be 0D tensor of number values, but got 'tensor<1xf32>'}}
+  %1 = tosa.pad %arg0, %arg1, %0 : (tensor<13x21xf32>, tensor<2x2xi32>, tensor<1xf32>) -> tensor<13x21xf32>
+  return
+}
+
+// -----
+
 func.func @test_transpose_non_const(%arg0: tensor<13x21x3xf32>, %arg1: tensor<3xi32>) -> tensor<3x13x21xf32> {
   // expected-error@+1 {{'tosa.transpose' op perms of transpose is not constant}}
   %0 = tosa.transpose %arg0, %arg1 : (tensor<13x21x3xf32>, tensor<3xi32>) -> tensor<3x13x21xf32>
@@ -419,6 +444,24 @@ func.func @test_tile_invalid_multiples() {
   %0 = tensor.empty() : tensor<4x31x31xf32>
   // expected-error@+1 {{'tosa.tile' op expect 'multiples' array to have length 3 but got 0.}}
   %1 = tosa.tile %0 {multiples = array<i64>} : (tensor<4x31x31xf32>) -> tensor<4x31x31xf32>
+  return
+}
+
+// -----
+
+func.func @test_tile_invalid_multiples_value() {
+  %0 = tensor.empty() : tensor<4x31xf32>
+  // expected-error@+1 {{'tosa.tile' op expect element of 'multiples' to be positive integer or -1.}}
+  %1 = tosa.tile %0 {multiples = array<i64: 2, -2>} : (tensor<4x31xf32>) -> tensor<4x31xf32>
+  return
+}
+
+// -----
+
+func.func @test_tile_io_rank_mismatch() {
+  %0 = tensor.empty() : tensor<4x31xf32>
+  // expected-error@+1 {{'tosa.tile' op expect same input and output tensor rank.}}
+  %1 = tosa.tile %0 {multiples = array<i64: 2, 2>} : (tensor<4x31xf32>) -> tensor<4x31x31xf32>
   return
 }
 
