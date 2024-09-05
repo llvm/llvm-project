@@ -42,8 +42,9 @@ for header in public_headers:
 #include <{header}>
 """)
 
-print(f"""\
-//--- __std_clang_module.compile.pass.mm
+print(
+    f"""\
+//--- import_std.compile.pass.mm
 // RUN: %{{cxx}} %s %{{flags}} %{{compile_flags}} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only
 
 // REQUIRES: clang-modules-build
@@ -63,4 +64,5 @@ print(f"""\
 
 @import std;
 
-""")
+"""
+)
