@@ -56,6 +56,8 @@
 #include <utility>
 #include <vector>
 
+#include <sstream>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "mem2reg"
@@ -64,6 +66,9 @@ STATISTIC(NumLocalPromoted, "Number of alloca's promoted within one block");
 STATISTIC(NumSingleStore,   "Number of alloca's promoted with a single store");
 STATISTIC(NumDeadAlloca,    "Number of dead alloca's removed");
 STATISTIC(NumPHIInsert,     "Number of PHI nodes inserted");
+
+static cl::opt<bool> UseVectorizedLivenessAnalysis("use-vectorized-liveness-analysis", cl::init(true),
+                                                  cl::Hidden);
 
 bool llvm::isAllocaPromotable(const AllocaInst *AI) {
   // Only allow direct and non-volatile loads and stores...
@@ -448,295 +453,215 @@ private:
 /// that if they share similar liveness range the number of total BB visits can
 /// be reduced.
 class VectorizedLivenessAnalysis {
-
   // Max number of allocas per batch for each round of computation.
   static constexpr size_t MaxAllocaNum = 64;
 
+  typedef decltype(std::declval<BasicBlock>().getNumber()) BBNumberTy;
+
+  // Packed bits indicating the state of each alloca in Allocas.
   typedef std::bitset<MaxAllocaNum> AllocaState;
-  typedef std::vector<AllocaState> StateVector;
 
-  typedef unsigned BBNumberTy;
+  // Each enum corresponds to one of the several states used by this analysis.
+  // Each basic block has an AllocaState for each enum value, and it can be
+  // accessed by get() method.
+  enum StateSelector {
 
-  const PromoteMem2Reg *Mem2Reg;
+    // This state is expected to be updated into one of the other states when
+    // a BB is popped from the worklist of BBs to be processed. This state is
+    // not stored inside the worklist because multiple BB may update the same
+    // predecessor/successor, and we want to merge these update states so that
+    // the same BB is only queued once. It is an invariant that
+    // get<UPDATE_STATE>(BB) != 0 iff Worklist for liveness analysis or PQ for
+    // IDF contains BB.
+    UPDATE_STATE,
+
+    // These states indicate for each alloca in Allocas, whether it is a def,
+    // live-in, or available (as computed by IDF) in a BB. The i-th position of the state bits
+    // corresponds to the i-th alloca. For example get<DEF_STATE>[1][2] ==
+    // true means basic block #1 has a def of Allocas[2].
+    DEF_STATE,
+    LIVEIN_STATE,
+    IDF_STATE,
+  };
+
+  // Encapsulating various states used by this analysis, making the data layout
+  // of state bits opaque so that we can optimize it without affecting the
+  // analysis algorithm.
+  struct State {
+    // A vector containing a state for each BB in the function, indexed by its
+    // BB number.
+    typedef std::vector<AllocaState> StateVector;
+
+    StateVector BlockUpdateStates;
+    StateVector BlockDefStates;
+    StateVector BlockLiveInStates;
+    StateVector BlockPhiStates;
+
+    State(size_t MaxBlockNumber) : BlockUpdateStates(MaxBlockNumber),
+          BlockDefStates(MaxBlockNumber), BlockLiveInStates(MaxBlockNumber),
+          BlockPhiStates(MaxBlockNumber) {
+    }
+
+    ~State() {
+      assert(llvm::all_of(BlockUpdateStates,
+                          [](const AllocaState &V){ return V.none(); }));
+    }
+
+    // Select which type of state to access. BN is the index of the basic block.
+    template <enum StateSelector Kind>
+    AllocaState &get(BBNumberTy BN) {
+      if constexpr (Kind == UPDATE_STATE)
+        return BlockUpdateStates[BN];
+      else if constexpr (Kind == DEF_STATE)
+        return BlockDefStates[BN];
+      else if constexpr (Kind == LIVEIN_STATE)
+        return BlockLiveInStates[BN];
+      else if constexpr (Kind == IDF_STATE)
+        return BlockPhiStates[BN];
+      else
+        static_assert(Kind != Kind, "Invalid StateSelector enum");
+    }
+
+    void Clear() {
+      assert(llvm::all_of(BlockUpdateStates, [](const AllocaState &V){ return V.none(); }));
+      for (AllocaState &State : BlockDefStates)
+        State.reset();
+      for (AllocaState &State : BlockLiveInStates)
+        State.reset();
+      for (AllocaState &State : BlockPhiStates)
+        State.reset();
+    }
+  };
+
+  // Pointers to crucial objects of this pass.
+  DominatorTree *DT;
+  Function *F;
 
   // Alloca instructions in the order they are gathered.
   llvm::SmallVector<AllocaInst*, MaxAllocaNum> Allocas;
 
-  // List of BBs in this function.
+  // Reverse mapping from BB number to blocks.
   std::vector<BasicBlock *> BBList;
 
   // CSR adjacency matrices for basic blocks, using their BB number as indices
-  // and values. They are precomputed since this pass does not modify CFG.
+  // and values. They are materialized at initialization since this pass does
+  // not modify CFG and usually almost every basic block contains at least one
+  // value alive.
   std::vector<llvm::SmallVector<BBNumberTy, 2>> Predecessors;
   std::vector<llvm::SmallVector<BBNumberTy, 2>> Successors;
+
+  // The analysis states of every basic block.
+  State BlockStates;
+
+  // The output vectors of blocks to be added with PHI for each alloca by its index.
+  std::vector<BBNumberTy> PHIBlocks[MaxAllocaNum];
 
   // Temporary storage for BB to be processed.
   std::vector<BBNumberTy> Worklist;
 
-  // State vectors of each BB's state expected to be updated into one of the
-  // output vectors below on its turn when being popped from the worklist. It is
-  // an invariant that BlockUpdateStates[BN] != 0 iff Worklist contains BN.
-  StateVector BlockUpdateStates;
+  // See GenericIteratedDominanceFrontier.h, this is the vectorized version
+  // using bit vectors indexed by BB number.
+  // Use a priority queue keyed on dominator tree level so that inserted nodes
+  // are handled from the bottom of the dominator tree upwards. We also augment
+  // the level with a DFS number to ensure that the blocks are ordered in a
+  // deterministic way.
+  using DomTreeNodePair = std::pair<DomTreeNodeBase<BasicBlock> *, std::pair<unsigned, unsigned>>;
+  using IDFPriorityQueue =
+      std::priority_queue<DomTreeNodePair, std::vector<DomTreeNodePair>,
+                          less_second>;
+  IDFPriorityQueue PQ;
 
-  // State vectors of each BB's def, live-in, and DF for PHI nodes. It is
-  // indexed by the BB's assigned number. For each state vector, the i-th
-  // position corresponds to the i-th alloca. For example BlockDefStates[1][2]
-  // = true means BB1 has a def of Allocas[2].
-  StateVector BlockDefStates;
-  StateVector BlockLiveInStates;
-  StateVector BlockPhiStates;
-
-  // Compacted vector of BBs if its corresponding state is non-zero after each
-  // round of computation.
-  std::vector<BasicBlock *> CompactedBBList;
-
-  BBNumberTy GetBBNumber(const BasicBlock *BB) const {
-    return Mem2Reg->BBNumbers.at(BB);
-  }
-
-  BasicBlock *GetBB(BBNumberTy BN) {
-    return BBList[BN];
-  }
-
-  // Add a block and its state to be updated into the output to the worklist.
-  void AddToWorklist(BBNumberTy BN, const AllocaState &UpdateState) {
-    // If the update state is previously zero, it is a new block, add it to the
-    // worklist, otherwise it is already in the worklist, so we just need to
-    // merge the existing update state.
-    if (BlockUpdateStates[BN].none())
+  // Add a block to the worklist for DFS traversal to compute live-in info, also
+  // update the value of its state that will be merged into its successors.
+  void PushWorkList(BBNumberTy BN, const AllocaState &UpdateState) {
+    assert(UpdateState.any());
+    // If the update state is previously zero, this BB is newly encountered or
+    // has been previously processed, add it to the worklist. Otherwise it is
+    // already in the worklist, so we just need to merge the existing update state.
+    if (BlockStates.get<UPDATE_STATE>(BN).none())
       Worklist.push_back(BN);
-    BlockUpdateStates[BN] |= UpdateState;
+    BlockStates.get<UPDATE_STATE>(BN) |= UpdateState;
   }
 
-  // Compact the state vector in place, skipping all zero-valued states, and
-  // gather BB for non-zero states into CompactedBBList. This action destroys
-  // existing contents in the state vector.
-  void CompactResults(StateVector &States) {
-    CompactedBBList.clear();
-    for (size_t I = 0; I < States.size(); I++) {
-      if (States[I].any()) {
-        States[CompactedBBList.size()] = States[I];
-        CompactedBBList.push_back(BBList[I]);
-      }
-    }
+  // Get a block number and its associated update state from the worklist.
+  std::pair<BBNumberTy, AllocaState> PopWorkList() {
+    assert(!Worklist.empty());
+    BBNumberTy BN = Worklist.back();
+    Worklist.pop_back();
+    AllocaState State = BlockStates.get<UPDATE_STATE>(BN);
+    BlockStates.get<UPDATE_STATE>(BN).reset();
+    return {BN, State};
   }
 
+  // Add a node of the DT to the priority queue for IDF computation, also update
+  // its state carrying info of new defs that is to be expanded into its DF
+  // nodes.
+  void PushPQ(DomTreeNodeBase<BasicBlock> *Node, const AllocaState &UpdateState) {
+    assert(UpdateState.any());
+    // If the update state is previously zero, this node is newly encountered or
+    // has been previously processed, add it to the PQ. Otherwise it is already
+    // in the PQ, so we just need to merge the existing update state.
+    unsigned BN = Node->getBlock()->getNumber();
+    if (BlockStates.get<UPDATE_STATE>(BN).none())
+      PQ.push({Node, std::make_pair(Node->getLevel(), Node->getDFSNumIn())});
+    BlockStates.get<UPDATE_STATE>(BN) |= UpdateState;
+  }
 
-  /// This class provides an abstraction to iterate through a boolean matrix in
-  /// row-column order where Matrix[r, c] == true means the element
-  /// (RowTy[r], ColumnTy[c]) exists, and iteration skips non-existent element.
-  ///
-  /// The usage should be like this:
-  /// for (auto &[RowEltIt, ColRef] : MatrixRef) {
-  ///   auto &RowElt = *RowEltIt;
-  ///   for (auto &ColElt : ColRef) {
-  ///     doWork(RowElt, ColElt);
-  ///   }
-  /// }
-  ///
-  /// \param MatrixStorageTy The data type of the boolean matrix. It should
-  ///   support two levels of array subscription and returns a boolean
-  ///   indicating whether the element at this row and column exists.
-  /// \param RowTy The element type mapped to each row.
-  /// \param RowStorageTy The container type storing elements mapped to each
-  ///   row.
-  /// \param ColumnTy The element type mapped to each column.
-  /// \param ColumnStorageTy The container type storing elements mapped to each
-  ///   column. It should support array subscription.
-    template <typename MatrixStorageTy, typename RowTy, typename RowStorageTy, typename ColumnTy,  typename ColumnStorageTy, bool IsTransposed>
-  struct BooleanMatrixRef {
-    const MatrixStorageTy &Matrix;
-    const RowStorageTy &RowElements;
-    const ColumnStorageTy &ColumnElements;
+  // Get the head node of the PQ and its associated update state.
+  std::tuple<DomTreeNodeBase<BasicBlock>*, AllocaState> PopPQ() {
+    assert(!PQ.empty());
+    auto Node = PQ.top().first;
+    BBNumberTy BN = Node->getBlock()->getNumber();
+    PQ.pop();
+    AllocaState State = BlockStates.get<UPDATE_STATE>(BN);
+    BlockStates.get<UPDATE_STATE>(BN).reset();
+    return {Node, State};
+  }
 
-    struct ColumnIterator {
-      const MatrixStorageTy &Matrix;
-      const ColumnStorageTy &ColumnElements;
-      const size_t RowNum;
-      size_t ColNum;
-
-      ColumnIterator(const MatrixStorageTy &Matrix,
-                     const ColumnStorageTy &ColumnElements,
-                     const size_t RowNum,
-                     size_t ColNum) :
-            Matrix(Matrix), ColumnElements(ColumnElements), RowNum(RowNum), ColNum(ColNum) {}
-
-      bool operator!=(const ColumnIterator &Other) const {
-        assert(&Matrix == &Other.Matrix && &ColumnElements == &Other.ColumnElements && "Invalid comparison of iterators from two different containers");
-        return ColNum == Other.ColNum;
-      }
-
-      ColumnIterator& operator++() {
-        if constexpr (IsTransposed)
-          do {
-            ++ColNum;
-          } while(!Matrix[ColNum][RowNum]);
-        else
-          do {
-            ++ColNum;
-          } while(Matrix[RowNum][ColNum]);
-        return *this;
-      }
-
-      ColumnTy operator*() {
-        return ColumnElements[ColNum];
+  std::vector<DomTreeNodePair> &GetPQContainer() {
+    struct Getter : IDFPriorityQueue {
+      static typename std::vector<DomTreeNodePair> &Get(IDFPriorityQueue &Object) {
+        return Object.*&Getter::c;
       }
     };
-
-    struct RowIterator {
-      const MatrixStorageTy &Matrix;
-      const ColumnStorageTy &ColumnElements;
-      typename RowStorageTy::const_iterator RowIt;
-      size_t RowNum;
-
-      RowIterator(const MatrixStorageTy &Matrix,
-                  const ColumnStorageTy &ColumnElements,
-                  const typename RowStorageTy::const_iterator &RowIt) :
-            Matrix(Matrix), ColumnElements(ColumnElements), RowIt(RowIt), RowNum(0) {}
-
-      bool operator!=(const RowIterator &Other) const {
-        assert(&Matrix == &Other.Matrix && "Invalid comparison of iterators from two different containers");
-        return RowIt != Other.RowIt;
-      }
-
-      RowIterator& operator++() {
-        ++RowIt;
-        ++RowNum;
-        return *this;
-      }
-
-      std::pair<typename RowStorageTy::const_iterator, llvm::iterator_range<ColumnIterator>> operator*() {
-        return std::make_pair(RowIt, llvm::make_range(ColumnIterator(Matrix, ColumnElements, RowNum, 0),
-                                                      ColumnIterator(Matrix, ColumnElements, RowNum, ColumnElements.size())
-                                          ));
-      }
-    };
-
-    BooleanMatrixRef(const MatrixStorageTy &Matrix, const RowStorageTy &RowElements, const ColumnStorageTy &ColElements) :
-          Matrix(Matrix), RowElements(RowElements), ColumnElements(ColElements) {
-    }
-
-    RowIterator begin() {
-      return RowIterator(Matrix, ColumnElements, RowElements.begin());
-    }
-
-    RowIterator end() {
-      return RowIterator(Matrix, ColumnElements, RowElements.end());
-    }
-  };
-/*
-  struct ResultTy {
-
-    struct ResultTyColumnIterator {
-      const ResultTy &Result;
-      const size_t AllocaIdx;
-      size_t Pos;
-
-      ResultTyColumnIterator(const ResultTy &Result, size_t AllocaIdx, size_t pos) : Result(Result), AllocaIdx(AllocaIdx), Pos(Pos) {}
-
-      bool operator!=(const ResultTyColumnIterator &Other) const {
-        return Pos != Other.Pos;
-      }
-
-      /// Iterate through the state vector until the AllocaIdx-th bit is set.
-      ResultTyColumnIterator& operator++() {
-
-        do {
-          Pos++;
-        } while (!Result.CompactedState[Pos].test(AllocaIdx));
-        return *this;
-      }
-
-      BasicBlock* operator*() {
-        return Result.CompactedBBList[Pos];
-      }
-    };
-
-    struct ResultTyRowIterator {
-      ResultTy &Result;
-      size_t AllocaIdx;
-
-      ResultTyRowIterator(ResultTy &Result, size_t AllocaIdx) : Result(Result), AllocaIdx(AllocaIdx) {}
-
-      bool operator!=(const ResultTyRowIterator &Other) const {
-        return AllocaIdx != Other.AllocaIdx;
-      }
-
-      ResultTyRowIterator& operator++() {
-        AllocaIdx++;
-        return *this;
-      }
-
-      std::pair<AllocaInst*, llvm::iterator_range<ResultTyColumnIterator>> operator*() {
-        return std::make_pair(Result.Allocas[AllocaIdx],
-                              llvm::iterator_range<ResultTyColumnIterator>(ResultTyColumnIterator(Result, AllocaIdx, 0),
-                                                                           ResultTyColumnIterator(Result, AllocaIdx, Result.CompactedBBList.size())));
-      }
-    };
-
-    const llvm::SmallVector<AllocaInst*, MaxAllocaNum> &Allocas;
-    const std::vector<BasicBlock *> &CompactedBBList;
-    const StateVector &CompactedState;
-
-    ResultTy(const llvm::SmallVector<AllocaInst*, MaxAllocaNum> &Allocas,
-             const std::vector<BasicBlock *> &CompactedBBList,
-             const StateVector &CompactedState)
-        : Allocas(Allocas), CompactedBBList(CompactedBBList), CompactedState(CompactedState) {
-    }
-
-    ResultTyRowIterator begin() {
-      return ResultTyRowIterator(*this, 0);
-    }
-
-    ResultTyRowIterator end() {
-      return ResultTyRowIterator(*this, Allocas.size());
-    }
-  };
-*/
+    return Getter::Get(PQ);
+  }
 
 public:
-    typedef   BooleanMatrixRef<StateVector, AllocaInst*, decltype(Allocas),
-                             BasicBlock*, decltype(CompactedBBList), true> ResultTy;
-
-  VectorizedLivenessAnalysis(const PromoteMem2Reg *Mem2Reg) :
-        Mem2Reg(Mem2Reg),
-        BBList(Mem2Reg->BBNumbers.size()),
-        Predecessors(Mem2Reg->BBNumbers.size()),
-        Successors(Mem2Reg->BBNumbers.size()),
-        BlockUpdateStates(Mem2Reg->BBNumbers.size()),
-        BlockDefStates(Mem2Reg->BBNumbers.size()),
-        BlockLiveInStates(Mem2Reg->BBNumbers.size()),
-        BlockPhiStates(Mem2Reg->BBNumbers.size())
+  VectorizedLivenessAnalysis(PromoteMem2Reg *Mem2Reg) :
+    DT(&Mem2Reg->DT), F(DT->getRoot()->getParent()),
+          BBList(F->getMaxBlockNumber()),
+          Predecessors(F->getMaxBlockNumber()),
+          Successors(F->getMaxBlockNumber()),
+          BlockStates(F->getMaxBlockNumber())
   {
-    for (const auto &[BB, BN] : Mem2Reg->BBNumbers) {
-      BBList[BN] = BB;
+    for (BasicBlock &BB : *F) {
+      BBNumberTy BN = BB.getNumber();
+      BBList[BN] = &BB;
 
-      for (const BasicBlock *Successor : successors(BB)) {
-        Successors[BN].push_back(GetBBNumber(Successor));
+      for (const BasicBlock *Predecessor : predecessors(&BB)) {
+        Predecessors[BN].push_back(Predecessor->getNumber());
       }
 
-      for (const BasicBlock *Predecessor : predecessors(BB)) {
-        Predecessors[BN].push_back(GetBBNumber(Predecessor));
+      for (const BasicBlock *Successor : successors(&BB)) {
+        Successors[BN].push_back(Successor->getNumber());
       }
     }
     Worklist.reserve(BBList.size());
-    CompactedBBList.reserve(BBList.size());
+    GetPQContainer().reserve(BBList.size());
+
+    DT->updateDFSNumbers();
   }
 
   ~VectorizedLivenessAnalysis() {
     assert(Worklist.size() == 0 && "Some nodes have not been processed.");
-    assert(llvm::all_of(BlockUpdateStates, [](const AllocaState &V){ return V.none(); }));
   }
 
   /// Clear allocas and their states for next round of computation.
   void Clear() {
     assert(Worklist.size() == 0 && "Some nodes have not been processed.");
-    assert(llvm::all_of(BlockUpdateStates, [](const AllocaState &V){ return V.none(); }));
-
     Allocas.clear();
-    std::fill(BlockDefStates.begin(), BlockDefStates.end(), AllocaState());
-    std::fill(BlockLiveInStates.begin(), BlockLiveInStates.end(), AllocaState());
-    std::fill(BlockPhiStates.begin(), BlockPhiStates.end(), AllocaState());
+    BlockStates.Clear();
   }
 
   /// Add an alloca to be processed, and perform some pre-processing to populate
@@ -747,7 +672,46 @@ public:
   bool GatherAlloca(AllocaInst *AI, const AllocaInfo &Info);
 
   /// Calculate live in blocks and IDF on the current batch of allocas.
-  ResultTy Calculate();
+  void Calculate();
+
+  auto GetPHIBlocks(size_t AllocaIndex) {
+    assert(AllocaIndex < Allocas.size());
+    return llvm::map_range(PHIBlocks[AllocaIndex], [this](BBNumberTy BB) {
+      return BBList[BB];
+    });
+  }
+
+  std::string dump() {
+    std::vector<std::string> AllocaNames;
+    for (AllocaInst *A: Allocas) {
+      AllocaNames.push_back(A->getNameOrAsOperand());
+    }
+
+    auto AllocaStateToString = [&](AllocaState A) {
+      std::stringstream r;
+      auto V =  A.to_ullong();
+      while (V) {
+        int idx = llvm::countr_zero(V);
+        r << AllocaNames[idx] << ' ';
+        V ^= (1u << idx);
+      }
+      return r.str();
+    };
+
+    std::stringstream result;
+    for (size_t I = 0; I < BBList.size(); ++I) {
+      AllocaState Def = BlockStates.get<DEF_STATE>(I);
+      AllocaState Live = BlockStates.get<LIVEIN_STATE>(I);
+      AllocaState Update = BlockStates.get<UPDATE_STATE>(I);
+      AllocaState IDF = BlockStates.get<IDF_STATE>(I);
+
+      result << "BB" << I << "{ DEF[" << AllocaStateToString(Def)
+             << "] LIVE[" << AllocaStateToString(Live)
+             << "] UPDATE[" << AllocaStateToString(Update)
+             << "] IDF[" << AllocaStateToString(IDF) <<"]} \n";
+    }
+    return result.str();
+  }
 };
 
 } // end anonymous namespace
@@ -1064,6 +1028,23 @@ void PromoteMem2Reg::run() {
 
   NoSignedZeros = F.getFnAttribute("no-signed-zeros-fp-math").getValueAsBool();
 
+
+  VectorizedLivenessAnalysis VLA(this);
+
+  llvm::SmallVector<unsigned, 64> AllocaNums;
+
+  auto ProcessAllocaBatch = [&]() {
+    VLA.Calculate();
+    for (size_t I = 0; I < AllocaNums.size(); ++I) {
+      unsigned CurrentVersion = 0;
+      for (BasicBlock *BB : VLA.GetPHIBlocks(I)) {
+        QueuePhiNode(BB, AllocaNums[I], CurrentVersion);
+      }
+    }
+    VLA.Clear();
+    AllocaNums.clear();
+  };
+
   for (unsigned AllocaNum = 0; AllocaNum != Allocas.size(); ++AllocaNum) {
     AllocaInst *AI = Allocas[AllocaNum];
 
@@ -1124,6 +1105,13 @@ void PromoteMem2Reg::run() {
     // Keep the reverse mapping of the 'Allocas' array for the rename pass.
     AllocaLookup[Allocas[AllocaNum]] = AllocaNum;
 
+    if (UseVectorizedLivenessAnalysis) {
+      AllocaNums.push_back(AllocaNum);
+      if (VLA.GatherAlloca(AI, Info))
+        ProcessAllocaBatch();
+      continue;
+    }
+
     // Unique the set of defining blocks for efficient lookup.
     SmallPtrSet<BasicBlock *, 32> DefBlocks(Info.DefiningBlocks.begin(),
                                             Info.DefiningBlocks.end());
@@ -1148,6 +1136,9 @@ void PromoteMem2Reg::run() {
     unsigned CurrentVersion = 0;
     for (BasicBlock *BB : PHIBlocks)
       QueuePhiNode(BB, AllocaNum, CurrentVersion);
+  }
+  if (UseVectorizedLivenessAnalysis) {
+    ProcessAllocaBatch();
   }
 
   if (Allocas.empty()) {
@@ -1380,7 +1371,13 @@ bool VectorizedLivenessAnalysis::GatherAlloca(AllocaInst *AI,
 
   // Populate def states.
   for (BasicBlock* Def : Info.DefiningBlocks) {
-    BlockDefStates[GetBBNumber(Def)][Index] = true;
+    // We need to calculate IDF of every DEF block, adding them to the PQ here
+    // so that a BB is only added once at most.
+    if (BlockStates.get<DEF_STATE>(Def->getNumber()).none())
+      if (DomTreeNodeBase<BasicBlock> *Node = DT->getNode(Def))
+        PQ.push({Node, std::make_pair(Node->getLevel(), Node->getDFSNumIn())});
+
+    BlockStates.get<DEF_STATE>(Def->getNumber())[Index] = true;
   }
 
   // Initialize the worklist to compute live-in blocks.
@@ -1388,14 +1385,14 @@ bool VectorizedLivenessAnalysis::GatherAlloca(AllocaInst *AI,
   // where the def is live.  Blocks are added to the worklist if we need to
   // check their predecessors.  Start with all the using blocks.
   for (BasicBlock *Use : Info.UsingBlocks) {
-    BBNumberTy BN = GetBBNumber(Use);
+    BBNumberTy BN = Use->getNumber();
 
     // If the use block is not the def block, the use block is live-in. It is
     // possible that a previous alloca lives in this block, so we should merge
     // the update state of both allocas.
-    if (!BlockDefStates[BN][Index]) {
-      AddToWorklist(BN, AllocaState().set(Index));
-      break;
+    if (!BlockStates.get<DEF_STATE>(BN)[Index]) {
+      PushWorkList(BN, AllocaState().set(Index));
+      continue;
     }
 
     // If any of the using blocks is also a definition block, check to see if the
@@ -1415,7 +1412,7 @@ bool VectorizedLivenessAnalysis::GatherAlloca(AllocaInst *AI,
         // Okay, we found a load before a store to the alloca.  It is actually
         // live into this block. Add it to the worklist.
         if (LI->getOperand(0) == AI) {
-          AddToWorklist(BN, AllocaState().set(Index));
+          PushWorkList(BN, AllocaState().set(Index));
           break;
         }
     }
@@ -1424,7 +1421,10 @@ bool VectorizedLivenessAnalysis::GatherAlloca(AllocaInst *AI,
   return Allocas.size() == MaxAllocaNum;
 }
 
-VectorizedLivenessAnalysis::ResultTy VectorizedLivenessAnalysis::Calculate() {
+void VectorizedLivenessAnalysis::Calculate() {
+  for (size_t I = 0; I < Allocas.size(); ++I)
+    PHIBlocks[I].clear();
+
   // @TODO: Assign BB number in a way such that the BB deepest in the CFG gets
   // the largest number, so that it is traverse first. This allows faster
   // convergence to the fixed-point.
@@ -1438,16 +1438,13 @@ VectorizedLivenessAnalysis::ResultTy VectorizedLivenessAnalysis::Calculate() {
   while (!Worklist.empty()) {
     // Take a BB from the worklist and get its state to be updated into the
     // output.
-    BBNumberTy BN = Worklist.back();
-    Worklist.pop_back();
-    AllocaState State = BlockUpdateStates[BN];
-    BlockUpdateStates[BN].reset();
+    auto [BN, State] = PopWorkList();
 
     // Update the live-in state of this block. If the state after udpate is
     // unchanged, we reached a fixed-point, there is no more new live-in info to
     // be propagated to its predecessors.
-    AllocaState OldState = BlockLiveInStates[BN];
-    AllocaState NewState = (BlockLiveInStates[BN] |= State);
+    AllocaState OldState = BlockStates.get<LIVEIN_STATE>(BN);
+    AllocaState NewState = (BlockStates.get<LIVEIN_STATE>(BN) |= State);
     if (NewState == OldState)
       continue;
 
@@ -1458,20 +1455,102 @@ VectorizedLivenessAnalysis::ResultTy VectorizedLivenessAnalysis::Calculate() {
     for (BBNumberTy P : Predecessors[BN]) {
       // The value is not live into a predecessor if it defines the value, so we
       // only need to find which values are not defined in this block.
-      AllocaState UpdateState = NewState & ~BlockDefStates[P];
-      // If all values of this block is defined in predecessor P, then there is
-      // no value living in P.
-      if (UpdateState.none())
-        continue;
-
-      // Otherwise there are, add to the worklist.
-      AddToWorklist(P, UpdateState);
+      AllocaState UpdateState = NewState & ~BlockStates.get<DEF_STATE>(P);
+      // If there is any value in this block not defined in predecessor P, then
+      // there exists values living in P, so add it to the worklist.
+      if (UpdateState.any())
+        PushWorkList(P, UpdateState);
     }
   }
 
-  // Compact the results.
-  CompactResults(BlockLiveInStates);
-  return ResultTy(BlockLiveInStates, Allocas, CompactedBBList);
+  // Initialize Update states of blocks in PQ to maintain invaraince.
+  for (auto &Node : GetPQContainer()) {
+    unsigned BN = Node.first->getBlock()->getNumber();
+    BlockStates.get<UPDATE_STATE>(BN) = BlockStates.get<DEF_STATE>(BN);
+  }
+
+  // Compute IDF for every block containing alloca defs. Visiting blocks from
+  // the largest to the smallest DT level number.
+  while (!PQ.empty()) {
+    // RootState is the values available at Root, which will be propagated to
+    // the successors of its dominatees per the algorithm of IDF.
+    auto [Root, RootState] = PopPQ();
+    unsigned RootLevel = Root->getLevel();
+    BBNumberTy RootBN = Root->getBlock()->getNumber();
+
+    // Perform one iteration of dominance frontier computation on all blocks
+    // dominated by root. Here Worklist is not associated with UPDATE state
+    // because visited nodes are updated with RootState instead.
+    Worklist.push_back(RootBN);
+    while (!Worklist.empty()) {
+      unsigned BN = Worklist.back();
+      Worklist.pop_back();
+
+      for (BBNumberTy Succ : Successors[BN]) {
+        // DT is 1-indexed.
+        auto SuccNode = DT->getNode(Succ + 1);
+        BBNumberTy SuccBN = SuccNode->getBlock()->getNumber();
+        unsigned SuccLevel = SuccNode->getLevel();
+
+        // Successor node Succ with higher level in DT must be dominated by
+        // current node BN, so PHI will not be placed in it.
+        if (SuccLevel > RootLevel)
+          continue;
+
+        // If no value is alive at Succ, there is no need to insert PHI.
+        AllocaState LiveInState = BlockStates.get<LIVEIN_STATE>(SuccBN);
+        if ((RootState & LiveInState).none())
+          continue;
+
+        // Update IDF state of Succ by merging its previous state with available
+        // values from root.
+        AllocaState OldState = BlockStates.get<IDF_STATE>(SuccBN);
+        AllocaState NewState = (BlockStates.get<IDF_STATE>(SuccBN) |= (RootState & LiveInState));
+        // If IDF state is unchanged, we reached a fixed point, so we do not
+        // need to iterate Succ.
+        if (NewState == OldState)
+          continue;
+        // Any newly set bit in IDF state represents inserted PHI, add it to the
+        // output.
+        AllocaState Inserted = NewState ^ OldState;
+        do {
+          size_t Index = 0;
+          if constexpr (MaxAllocaNum <= sizeof(unsigned long long) * CHAR_BIT) {
+            Index = llvm::countr_zero(Inserted.to_ullong());
+          } else {
+            while (!Inserted.test(Index))
+              ++Index;
+          }
+          PHIBlocks[Index].push_back(SuccBN);
+          Inserted.reset(Index);
+        } while (Inserted.any());
+
+        // If new PHI is inserted at Succ, we need to iterate it too. An existing
+        // value is killed by DEF so the UPDATE state should exclude it.
+        NewState &= ~BlockStates.get<DEF_STATE>(Succ);
+        if (NewState.any())
+          PushPQ(SuccNode, NewState);
+      }
+
+      // Visit every node in DT subtree. DT is 1-indexed.
+      for (auto DomChild : *(DT->getNode(BN + 1))) {
+        BBNumberTy DomChildBN = DomChild->getBlock()->getNumber();
+        // Since any value available at the dominator is available at the child
+        // node, we merge the dominator's IDF state into it. If the child's IDF
+        // state is unchanged, we reached a fixed point, so we do not need to
+        // visit it.
+        AllocaState OldState = BlockStates.get<IDF_STATE>(DomChildBN);
+        AllocaState NewState = BlockStates.get<IDF_STATE>(DomChildBN) |= ((BlockStates.get<IDF_STATE>(BN) | RootState) & ~BlockStates.get<DEF_STATE>(DomChildBN));
+        // Since DT is a tree, there will be no dups in Worklist.
+        if (OldState != NewState)
+          Worklist.push_back(DomChildBN);
+      }
+    }
+  }
+
+  // Order inserted PHI nodes in a deterministic way.
+  for (size_t I = 0; I < Allocas.size(); ++I)
+    std::sort(PHIBlocks[I].begin(), PHIBlocks[I].end());
 }
 
 /// Queue a phi-node to be added to a basic-block for a specific Alloca.

@@ -409,6 +409,13 @@ public:
     return getNode(BB);
   }
 
+  /// getNode using direct index access when it is available.
+  DomTreeNodeBase<NodeT> *getNode(unsigned Idx) const {
+    if (Idx < DomTreeNodes.size())
+      return DomTreeNodes[Idx].get();
+    return nullptr;
+  }
+
   /// getRootNode - This returns the entry node for the CFG of the function.  If
   /// this tree represents the post-dominance relations for a function, however,
   /// this root may be a node with the block == NULL.  This is the case when
