@@ -8233,6 +8233,7 @@ static Instruction *foldFCmpWithFloorAndCeil(FCmpInst &I,
       return new FCmpInst(FCmpInst::FCMP_ULE, LHS,
                           ConstantFP::getInfinity(LHS->getType(), false), "",
                           &I);
+    break;
   case FCmpInst::FCMP_UGT:
     // fcmp ugt floor(x), x => fcmp ugt -inf, x
     // fcmp ugt x, ceil(x) => fcmp ugt x, inf
@@ -8244,6 +8245,7 @@ static Instruction *foldFCmpWithFloorAndCeil(FCmpInst &I,
       return new FCmpInst(FCmpInst::FCMP_UGT, LHS,
                           ConstantFP::getInfinity(LHS->getType(), false), "",
                           &I);
+    break;
   case FCmpInst::FCMP_UGE:
     // fcmp uge x, floor(x) => fcmp uge x, -inf
     // fcmp uge ceil(x), x => fcmp uge inf, x
@@ -8255,6 +8257,7 @@ static Instruction *foldFCmpWithFloorAndCeil(FCmpInst &I,
       return new FCmpInst(FCmpInst::FCMP_UGE,
                           ConstantFP::getInfinity(RHS->getType(), false), RHS,
                           "", &I);
+    break;
   case FCmpInst::FCMP_ULT:
     // fcmp ult x, floor(x) => fcmp ult x, -inf
     // fcmp ult ceil(x), x => fcmp ult inf, x
@@ -8266,6 +8269,7 @@ static Instruction *foldFCmpWithFloorAndCeil(FCmpInst &I,
       return new FCmpInst(FCmpInst::FCMP_ULT,
                           ConstantFP::getInfinity(RHS->getType(), false), RHS,
                           "", &I);
+    break;
   default:
     break;
   }
