@@ -71,7 +71,7 @@ int i4[~(2+3i) == 2-3i ? 1 : -1]; // expected-warning {{fold}}
 int i5[(3i == -(-3i) ? ((void)3, 1i - 1) : 0) == 1i - 1 ? 1 : -1]; // expected-warning {{fold}}
 
 int f1[(2.0+3.0i)*(5.0+7.0i) == 29.0i-11.0 ? 1 : -1]; // expected-warning {{fold}}
-int f2[(29.0i-11.0)/(5.0+7.0i) == 2.0+3.0i ? 1 : -1]; // expected-warning {{fold}}
+int f2[(29.0i-11.0)/(5.0+7.0i) == 2.0+3.0i ? 1 : -1]; // expected-warning {{fold}} // expected-warning {{higher precision floating-point type requested by user size has the same sizethan floating-point type size; overflow may occur}}
 int f3[-(2.0+3.0i) == +(-3.0i-2.0) ? 1 : -1]; // expected-warning {{fold}}
 int f4[~(2.0+3.0i) == 2.0-3.0i ? 1 : -1]; // expected-warning {{fold}}
 int f5[(3.0i == -(-3.0i) ? ((void)3.0, __extension__ (1.0i - 1.0)) : 0) == 1.0i - 1.0 ? 1 : -1]; // expected-warning {{fold}}
