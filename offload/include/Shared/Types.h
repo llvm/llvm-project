@@ -1,4 +1,4 @@
-//===--------- LibC.h - Simple implementation of libc functions --- C++ -*-===//
+//===-- Shared/Types.h - Type defs shared between host and device - C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,19 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 //
+// Environments shared between host and device.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef OMPTARGET_LIBC_H
-#define OMPTARGET_LIBC_H
+#ifndef OMPTARGET_SHARED_TYPES_H
+#define OMPTARGET_SHARED_TYPES_H
 
+#ifndef OMPTARGET_DEVICE_RUNTIME
+#include <cstdint>
+#else
 #include "DeviceTypes.h"
-
-extern "C" {
-
-int memcmp(const void *lhs, const void *rhs, size_t count);
-void memset(void *dst, int C, size_t count);
-int printf(const char *format, ...);
-}
-
 #endif
+
+#endif // OMPTARGET_SHARED_TYPES_H
