@@ -1742,7 +1742,7 @@ Status GDBRemoteCommunicationClient::LoadQXferMemoryMap() {
 
   llvm::Expected<std::string> xml = ReadExtFeature("memory-map", "");
   if (!xml)
-    return Status(xml.takeError());
+    return Status::FromError(xml.takeError());
 
   XMLDocument xml_document;
 

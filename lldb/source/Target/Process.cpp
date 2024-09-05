@@ -6662,13 +6662,13 @@ Status Process::WriteMemoryTags(lldb::addr_t addr, size_t len,
   llvm::Expected<const MemoryTagManager *> tag_manager_or_err =
       GetMemoryTagManager();
   if (!tag_manager_or_err)
-    return Status(tag_manager_or_err.takeError());
+    return Status::FromError(tag_manager_or_err.takeError());
 
   const MemoryTagManager *tag_manager = *tag_manager_or_err;
   llvm::Expected<std::vector<uint8_t>> packed_tags =
       tag_manager->PackTags(tags);
   if (!packed_tags) {
-    return Status(packed_tags.takeError());
+    return Status::FromError(packed_tags.takeError());
   }
 
   return DoWriteMemoryTags(addr, len, tag_manager->GetAllocationTagType(),

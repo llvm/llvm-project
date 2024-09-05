@@ -847,7 +847,7 @@ Status GDBRemoteCommunication::StartListenThread(const char *hostname,
   llvm::Expected<HostThread> listen_thread = ThreadLauncher::LaunchThread(
       listen_url, [this] { return GDBRemoteCommunication::ListenThread(); });
   if (!listen_thread)
-    return Status(listen_thread.takeError());
+    return Status::FromError(listen_thread.takeError());
   m_listen_thread = *listen_thread;
 
   return Status();

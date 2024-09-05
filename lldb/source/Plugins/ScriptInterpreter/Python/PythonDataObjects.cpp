@@ -1105,7 +1105,7 @@ public:
     if (!m_borrowed) {
       auto r = m_py_obj.CallMethod("close");
       if (!r)
-        py_error = Status(r.takeError());
+        py_error = Status::FromError(r.takeError());
     }
     base_error = Base::Close();
     if (py_error.Fail())
@@ -1196,7 +1196,7 @@ public:
       return Flush();
     auto r = m_py_obj.CallMethod("close");
     if (!r)
-      return Status(r.takeError());
+      return Status::FromError(r.takeError());
     return Status();
   }
 
@@ -1204,7 +1204,7 @@ public:
     GIL takeGIL;
     auto r = m_py_obj.CallMethod("flush");
     if (!r)
-      return Status(r.takeError());
+      return Status::FromError(r.takeError());
     return Status();
   }
 
@@ -1240,12 +1240,12 @@ public:
     PyObject *pybuffer_p = PyMemoryView_FromMemory(
         const_cast<char *>((const char *)buf), num_bytes, PyBUF_READ);
     if (!pybuffer_p)
-      return Status(llvm::make_error<PythonException>());
+      return Status::FromError(llvm::make_error<PythonException>());
     auto pybuffer = Take<PythonObject>(pybuffer_p);
     num_bytes = 0;
     auto bytes_written = As<long long>(m_py_obj.CallMethod("write", pybuffer));
     if (!bytes_written)
-      return Status(bytes_written.takeError());
+      return Status::FromError(bytes_written.takeError());
     if (bytes_written.get() < 0)
       return Status::FromErrorString(
           ".write() method returned a negative number!");
@@ -1260,7 +1260,7 @@ public:
     auto pybuffer_obj =
         m_py_obj.CallMethod("read", (unsigned long long)num_bytes);
     if (!pybuffer_obj)
-      return Status(pybuffer_obj.takeError());
+      return Status::FromError(pybuffer_obj.takeError());
     num_bytes = 0;
     if (pybuffer_obj.get().IsNone()) {
       // EOF
@@ -1269,7 +1269,7 @@ public:
     }
     auto pybuffer = PythonBuffer::Create(pybuffer_obj.get());
     if (!pybuffer)
-      return Status(pybuffer.takeError());
+      return Status::FromError(pybuffer.takeError());
     memcpy(buf, pybuffer.get().get().buf, pybuffer.get().get().len);
     num_bytes = pybuffer.get().get().len;
     return Status();
@@ -1295,12 +1295,12 @@ public:
     auto pystring =
         PythonString::FromUTF8(llvm::StringRef((const char *)buf, num_bytes));
     if (!pystring)
-      return Status(pystring.takeError());
+      return Status::FromError(pystring.takeError());
     num_bytes = 0;
     auto bytes_written =
         As<long long>(m_py_obj.CallMethod("write", pystring.get()));
     if (!bytes_written)
-      return Status(bytes_written.takeError());
+      return Status::FromError(bytes_written.takeError());
     if (bytes_written.get() < 0)
       return Status::FromErrorString(
           ".write() method returned a negative number!");
@@ -1321,14 +1321,14 @@ public:
     auto pystring = As<PythonString>(
         m_py_obj.CallMethod("read", (unsigned long long)num_chars));
     if (!pystring)
-      return Status(pystring.takeError());
+      return Status::FromError(pystring.takeError());
     if (pystring.get().IsNone()) {
       // EOF
       return Status();
     }
     auto stringref = pystring.get().AsUTF8();
     if (!stringref)
-      return Status(stringref.takeError());
+      return Status::FromError(stringref.takeError());
     num_bytes = stringref.get().size();
     memcpy(buf, stringref.get().begin(), num_bytes);
     return Status();

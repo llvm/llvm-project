@@ -684,7 +684,7 @@ Status Scalar::SetValueFromCString(const char *value_str, Encoding encoding,
       m_type = e_float;
       m_float = std::move(f);
     } else
-      error = op.takeError();
+      error = Status::FromError(op.takeError());
     break;
   }
 

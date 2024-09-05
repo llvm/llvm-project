@@ -186,7 +186,7 @@ void ProcessMinidump::Terminate() {
 Status ProcessMinidump::DoLoadCore() {
   auto expected_parser = MinidumpParser::Create(m_core_data);
   if (!expected_parser)
-    return Status(expected_parser.takeError());
+    return Status::FromError(expected_parser.takeError());
   m_minidump_parser = std::move(*expected_parser);
 
   Status error;

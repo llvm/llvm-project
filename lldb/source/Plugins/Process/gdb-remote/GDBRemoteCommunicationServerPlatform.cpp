@@ -167,7 +167,7 @@ Status GDBRemoteCommunicationServerPlatform::LaunchGDBServer(
     if (available_port)
       port = *available_port;
     else
-      return Status(available_port.takeError());
+      return Status::FromError(available_port.takeError());
   }
 
   // Spawn a new thread to accept the port that gets bound after binding to

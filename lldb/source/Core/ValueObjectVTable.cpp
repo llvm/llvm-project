@@ -220,7 +220,7 @@ bool ValueObjectVTable::UpdateValue() {
   llvm::Expected<LanguageRuntime::VTableInfo> vtable_info_or_err =
       language_runtime->GetVTableInfo(*parent, /*check_type=*/true);
   if (!vtable_info_or_err) {
-    m_error = vtable_info_or_err.takeError();
+    m_error = Status::FromError(vtable_info_or_err.takeError());
     return false;
   }
 

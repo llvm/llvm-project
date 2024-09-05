@@ -1110,7 +1110,7 @@ Status ScriptInterpreterPythonImpl::ExecuteMultipleLines(
           options.GetEnableIO(), m_debugger, /*result=*/nullptr);
 
   if (!io_redirect_or_error)
-    return Status(io_redirect_or_error.takeError());
+    return Status::FromError(io_redirect_or_error.takeError());
 
   ScriptInterpreterIORedirect &io_redirect = **io_redirect_or_error;
 
@@ -1144,7 +1144,7 @@ Status ScriptInterpreterPythonImpl::ExecuteMultipleLines(
             E.Restore();
           return error;
         });
-    return Status(std::move(error));
+    return Status::FromError(std::move(error));
   }
 
   return Status();
@@ -2393,7 +2393,7 @@ bool ScriptInterpreterPythonImpl::LoadScriptingModule(
           exc_options.GetEnableIO(), m_debugger, /*result=*/nullptr);
 
   if (!io_redirect_or_error) {
-    error = io_redirect_or_error.takeError();
+    error = Status::FromError(io_redirect_or_error.takeError());
     return false;
   }
 
@@ -2435,7 +2435,7 @@ bool ScriptInterpreterPythonImpl::LoadScriptingModule(
 
   if (extra_search_dir) {
     if (llvm::Error e = ExtendSysPath(extra_search_dir.GetPath())) {
-      error = std::move(e);
+      error = Status::FromError(std::move(e));
       return false;
     }
   } else {
@@ -2465,7 +2465,7 @@ bool ScriptInterpreterPythonImpl::LoadScriptingModule(
       }
       if (llvm::Error e =
               ExtendSysPath(module_file.GetDirectory().GetCString())) {
-        error = std::move(e);
+        error = Status::FromError(std::move(e));
         return false;
       }
       module_name = module_file.GetFilename().GetCString();

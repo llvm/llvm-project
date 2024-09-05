@@ -156,7 +156,7 @@ Status TCPSocket::Connect(llvm::StringRef name) {
   Status error;
   llvm::Expected<HostAndPort> host_port = DecodeHostAndPort(name);
   if (!host_port)
-    return Status(host_port.takeError());
+    return Status::FromError(host_port.takeError());
 
   std::vector<SocketAddress> addresses =
       SocketAddress::GetAddressInfo(host_port->hostname.c_str(), nullptr,
@@ -195,7 +195,7 @@ Status TCPSocket::Listen(llvm::StringRef name, int backlog) {
   Status error;
   llvm::Expected<HostAndPort> host_port = DecodeHostAndPort(name);
   if (!host_port)
-    return Status(host_port.takeError());
+    return Status::FromError(host_port.takeError());
 
   if (host_port->hostname == "*")
     host_port->hostname = "0.0.0.0";
@@ -310,7 +310,7 @@ Status TCPSocket::Accept(Socket *&conn_socket) {
                accept_loop.RequestTermination();
              });
   if (!expected_handles)
-    return Status(expected_handles.takeError());
+    return Status::FromError(expected_handles.takeError());
   return accept_loop.Run();
 }
 
