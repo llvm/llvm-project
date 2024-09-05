@@ -3222,16 +3222,10 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
                                      Op1Info.getNoProps(), Op2Info.getNoProps());
       return Cost;
     }
-
-    // sdiv i128 are lowered as a libcall, which was microbenchmarked on an
-    // Apple M2 Max as taking around 16 cycles.
-    if (TLI->getValueType(DL, Ty) == MVT::i128)
-      return 16;
-
     [[fallthrough]];
   case ISD::UDIV: {
+    auto VT = TLI->getValueType(DL, Ty);
     if (Op2Info.isConstant() && Op2Info.isUniform()) {
-      auto VT = TLI->getValueType(DL, Ty);
       if (TLI->isOperationLegalOrCustom(ISD::MULHU, VT)) {
         // Vector signed division by constant are expanded to the
         // sequence MULHS + ADD/SUB + SRA + SRL + ADD, and unsigned division
@@ -3246,10 +3240,11 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
       }
     }
 
-    // udiv i128 are lowered as a libcall, which was microbenchmarked on an
-    // Apple M2 Max as taking around 14 cycles.
-    if (TLI->getValueType(DL, Ty) == MVT::i128)
-      return 14;
+    // div i128's are lowered as libcalls.  Pass nullptr as (u)divti3 calls are
+    // emitted by the backend even when those functions are not declared in the
+    // module.
+    if (!VT.isVector() && VT.getSizeInBits() > 64)
+      return getCallInstrCost(/*Function*/ nullptr, Ty, {Ty, Ty}, CostKind);
 
     InstructionCost Cost = BaseT::getArithmeticInstrCost(
         Opcode, Ty, CostKind, Op1Info, Op2Info);
