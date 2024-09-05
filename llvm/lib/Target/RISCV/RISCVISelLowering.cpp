@@ -2288,7 +2288,7 @@ bool RISCVTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
     return true;
 
   // Building an integer and then converting requires a fmv at the end of
-  // the integer sequence. The fmv is not requires for Zfinx.
+  // the integer sequence. The fmv is not required for Zfinx.
   const int FmvCost = Subtarget.hasStdExtZfinx() ? 0 : 1;
   const int Cost =
       FmvCost + RISCVMatInt::getIntMatCost(Imm.bitcastToAPInt(),
