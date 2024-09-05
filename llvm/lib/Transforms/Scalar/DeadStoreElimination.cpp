@@ -165,6 +165,7 @@ static cl::opt<bool>
     OptimizeMemorySSA("dse-optimize-memoryssa", cl::init(true), cl::Hidden,
                       cl::desc("Allow DSE to optimize memory accesses."));
 
+// TODO: turn on and remove this flag.
 static cl::opt<bool> EnableInitializesImprovement(
     "enable-dse-initializes-attr-improvement", cl::init(false), cl::Hidden,
     cl::desc("Enable the initializes attr improvement in DSE"));
@@ -2364,6 +2365,9 @@ DSEState::eliminateDeadDefs(const MemoryLocationWrapper &KillingLocWrapper) {
       }
       continue;
     }
+    // We cannot apply the initializes attribute to DeadAccess/DeadDef.
+    // It would incorrectly consider a call instruction as redundant store
+    // and remove this call instruction.
     MemoryDefWrapper DeadDefWrapper(
         cast<MemoryDef>(DeadAccess),
         getLocForInst(cast<MemoryDef>(DeadAccess)->getMemoryInst(),
