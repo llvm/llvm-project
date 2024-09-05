@@ -98,23 +98,36 @@ class ROCDL_IntrOp<string mnemonic, list<int> overloadedResults,
 // ROCDL special register op definitions
 //===----------------------------------------------------------------------===//
 
-class ROCDL_SpecialRegisterOp<string mnemonic,
-    list<Trait> traits = []> :
-  ROCDL_Op<mnemonic, !listconcat(traits, [Pure])>,
-  Results<(outs LLVM_Type:$res)>, Arguments<(ins)> {
-  string llvmBuilder = "$res = createIntrinsicCallWithRange(builder,"
-    # "llvm::Intrinsic::amdgcn_" # !subst(".","_", mnemonic)
-    # ", op->getAttrOfType<::mlir::DenseI32ArrayAttr>(\"range\"));";
-  let assemblyFormat = "attr-dict `:` type($res)";
+class ROCDL_SpecialIdRegisterOp<string mnemonic> :
+    ROCDL_IntrPure1Op<mnemonic>,
+    Arguments<(ins OptionalAttr<LLVM_ConstantRangeAttr>:$range)> {
+  string llvmBuilder = baseLlvmBuilder # setRangeRetAttrCode # baseLlvmBuilderCoda;
+  string mlirBuilder = baseMlirBuilder # importRangeRetAttrCode # baseMlirBuilderCoda;
+
+  let assemblyFormat = "(`range` $range^)? attr-dict `:` type($res)";
+
+    // Temporaly builder until Nvidia ops also support range attributes.
+  let builders = [
+    OpBuilder<(ins "Type":$resultType), [{
+      build($_builder, $_state, resultType, ::mlir::LLVM::ConstantRangeAttr{});
+    }]>
+  ];
 }
 
-class ROCDL_DeviceFunctionOp<string mnemonic, string device_function,
+class ROCDL_DimGetterFunctionOp<string mnemonic, string device_function,
                              int parameter, list<Trait> traits = []> :
   ROCDL_Op<mnemonic, !listconcat(traits, [Pure])>,
-  Results<(outs LLVM_Type:$res)>, Arguments<(ins)> {
-  string llvmBuilder = "$res = createDeviceFunctionCall(builder, \""
+  Results<(outs LLVM_Type:$res)>, Arguments<(ins OptionalAttr<LLVM_ConstantRangeAttr>:$range)> {
+  string llvmBuilder = "$res = createDimGetterFunctionCall(builder, op, \""
   # device_function # "\", " # parameter # ");";
-  let assemblyFormat = "attr-dict `:` type($res)";
+  let assemblyFormat = "(`range` $range^)? attr-dict `:` type($res)";
+
+  // Temporaly builder until Nvidia ops also support range attributes.
+  let builders = [
+    OpBuilder<(ins "Type":$resultType), [{
+      build($_builder, $_state, resultType, ::mlir::LLVM::ConstantRangeAttr{});
+    }]>
+  ];
 }
 
 //===----------------------------------------------------------------------===//
@@ -181,33 +194,33 @@ def ROCDL_BallotOp :
 //===----------------------------------------------------------------------===//
 // Thread index and Block index
 
-def ROCDL_ThreadIdXOp : ROCDL_SpecialRegisterOp<"workitem.id.x">;
-def ROCDL_ThreadIdYOp : ROCDL_SpecialRegisterOp<"workitem.id.y">;
-def ROCDL_ThreadIdZOp : ROCDL_SpecialRegisterOp<"workitem.id.z">;
+def ROCDL_ThreadIdXOp : ROCDL_SpecialIdRegisterOp<"workitem.id.x">;
+def ROCDL_ThreadIdYOp : ROCDL_SpecialIdRegisterOp<"workitem.id.y">;
+def ROCDL_ThreadIdZOp : ROCDL_SpecialIdRegisterOp<"workitem.id.z">;
 
-def ROCDL_BlockIdXOp : ROCDL_SpecialRegisterOp<"workgroup.id.x">;
-def ROCDL_BlockIdYOp : ROCDL_SpecialRegisterOp<"workgroup.id.y">;
-def ROCDL_BlockIdZOp : ROCDL_SpecialRegisterOp<"workgroup.id.z">;
+def ROCDL_BlockIdXOp : ROCDL_SpecialIdRegisterOp<"workgroup.id.x">;
+def ROCDL_BlockIdYOp : ROCDL_SpecialIdRegisterOp<"workgroup.id.y">;
+def ROCDL_BlockIdZOp : ROCDL_SpecialIdRegisterOp<"workgroup.id.z">;
 
 //===----------------------------------------------------------------------===//
 // Thread range and Block range
 
-def ROCDL_BlockDimXOp : ROCDL_DeviceFunctionOp<"workgroup.dim.x",
+def ROCDL_BlockDimXOp : ROCDL_DimGetterFunctionOp<"workgroup.dim.x",
                                                "__ockl_get_local_size", 0>;
 
-def ROCDL_BlockDimYOp : ROCDL_DeviceFunctionOp<"workgroup.dim.y",
+def ROCDL_BlockDimYOp : ROCDL_DimGetterFunctionOp<"workgroup.dim.y",
                                                "__ockl_get_local_size", 1>;
 
-def ROCDL_BlockDimZOp : ROCDL_DeviceFunctionOp<"workgroup.dim.z",
+def ROCDL_BlockDimZOp : ROCDL_DimGetterFunctionOp<"workgroup.dim.z",
                                                "__ockl_get_local_size", 2>;
 
-def ROCDL_GridDimXOp : ROCDL_DeviceFunctionOp<"grid.dim.x",
+def ROCDL_GridDimXOp : ROCDL_DimGetterFunctionOp<"grid.dim.x",
                                                "__ockl_get_num_groups", 0>;
 
-def ROCDL_GridDimYOp : ROCDL_DeviceFunctionOp<"grid.dim.y",
+def ROCDL_GridDimYOp : ROCDL_DimGetterFunctionOp<"grid.dim.y",
                                                "__ockl_get_num_groups", 1>;
 
-def ROCDL_GridDimZOp : ROCDL_DeviceFunctionOp<"grid.dim.z",
+def ROCDL_GridDimZOp : ROCDL_DimGetterFunctionOp<"grid.dim.z",
                                                "__ockl_get_num_groups", 2>;
 
 //===----------------------------------------------------------------------===//

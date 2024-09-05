@@ -216,6 +216,28 @@ DICompositeTypeAttr::getRecSelf(DistinctAttr recId) {
 }
 
 //===----------------------------------------------------------------------===//
+// ConstantRangeAttr
+//===----------------------------------------------------------------------===//
+ConstantRangeAttr ConstantRangeAttr::get(MLIRContext *context,
+                                         uint32_t bitWidth, int64_t lower,
+                                         int64_t upper) {
+  Type widthType = IntegerType::get(context, bitWidth);
+  auto lowerAttr = IntegerAttr::get(widthType, lower);
+  auto upperAttr = IntegerAttr::get(widthType, upper);
+  return get(context, lowerAttr, upperAttr);
+}
+
+LogicalResult
+ConstantRangeAttr::verify(llvm::function_ref<InFlightDiagnostic()> emitError,
+                          IntegerAttr lower, IntegerAttr upper) {
+  if (lower.getType() != upper.getType())
+    return emitError()
+           << "expected lower and upper to have matching types but got "
+           << lower.getType() << " vs. " << upper.getType();
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // TargetFeaturesAttr
 //===----------------------------------------------------------------------===//
 
