@@ -8450,10 +8450,12 @@ private:
     if (Obj.first.isInvalid() || Obj.second.isInvalid())
       return {ExprError(), ExprError()};
     CXXCastPath Path = {Base};
-    return {S.ImpCastExprToType(Obj.first.get(), Base->getType(),
-                                CK_DerivedToBase, VK_LValue, &Path),
-            S.ImpCastExprToType(Obj.second.get(), Base->getType(),
-                                CK_DerivedToBase, VK_LValue, &Path)};
+    const auto CastToBase = [&](Expr *E) {
+      QualType ToType = S.Context.getQualifiedType(
+          Base->getType(), E->getType().getQualifiers());
+      return S.ImpCastExprToType(E, ToType, CK_DerivedToBase, VK_LValue, &Path);
+    };
+    return {CastToBase(Obj.first.get()), CastToBase(Obj.second.get())};
   }
 
   ExprPair getField(FieldDecl *Field) {
@@ -10871,7 +10873,8 @@ bool Sema::CheckDestructor(CXXDestructorDecl *Destructor) {
           ExprResult This =
               ActOnCXXThis(OperatorDelete->getParamDecl(0)->getLocation());
           assert(!This.isInvalid() && "couldn't form 'this' expr in dtor?");
-          This = PerformImplicitConversion(This.get(), ParamType, AA_Passing);
+          This = PerformImplicitConversion(This.get(), ParamType,
+                                           AssignmentAction::Passing);
           if (This.isInvalid()) {
             // FIXME: Register this as a context note so that it comes out
             // in the right order.

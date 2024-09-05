@@ -845,6 +845,13 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
   if (SanOpts.has(SanitizerKind::ShadowCallStack))
     Fn->addFnAttr(llvm::Attribute::ShadowCallStack);
 
+  if (SanOpts.has(SanitizerKind::Realtime))
+    if (FD && FD->getASTContext().hasAnyFunctionEffects())
+      for (const FunctionEffectWithCondition &Fe : FD->getFunctionEffects()) {
+        if (Fe.Effect.kind() == FunctionEffect::Kind::NonBlocking)
+          Fn->addFnAttr(llvm::Attribute::SanitizeRealtime);
+      }
+
   // Apply fuzzing attribute to the function.
   if (SanOpts.hasOneOf(SanitizerKind::Fuzzer | SanitizerKind::FuzzerNoLink))
     Fn->addFnAttr(llvm::Attribute::OptForFuzzing);
@@ -1057,13 +1064,17 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
   // OpenCL C 2.0 v2.2-11 s6.9.i:
   //     Recursion is not supported.
   //
+  // HLSL
+  //     Recursion is not supported.
+  //
   // SYCL v1.2.1 s3.10:
   //     kernels cannot include RTTI information, exception classes,
   //     recursive code, virtual functions or make use of C++ libraries that
   //     are not compiled for the device.
-  if (FD && ((getLangOpts().CPlusPlus && FD->isMain()) ||
-             getLangOpts().OpenCL || getLangOpts().SYCLIsDevice ||
-             (getLangOpts().CUDA && FD->hasAttr<CUDAGlobalAttr>())))
+  if (FD &&
+      ((getLangOpts().CPlusPlus && FD->isMain()) || getLangOpts().OpenCL ||
+       getLangOpts().HLSL || getLangOpts().SYCLIsDevice ||
+       (getLangOpts().CUDA && FD->hasAttr<CUDAGlobalAttr>())))
     Fn->addFnAttr(llvm::Attribute::NoRecurse);
 
   llvm::RoundingMode RM = getLangOpts().getDefaultRoundingMode();
@@ -2482,6 +2493,7 @@ void CodeGenFunction::EmitVariablyModifiedType(QualType type) {
     case Type::UnaryTransform:
     case Type::Attributed:
     case Type::BTFTagAttributed:
+    case Type::HLSLAttributedResource:
     case Type::SubstTemplateTypeParm:
     case Type::MacroQualified:
     case Type::CountAttributed:

@@ -655,7 +655,7 @@ bool Debugger::LoadPlugin(const FileSpec &spec, Status &error) {
     // The g_load_plugin_callback is registered in SBDebugger::Initialize() and
     // if the public API layer isn't available (code is linking against all of
     // the internal LLDB static libraries), then we can't load plugins
-    error.SetErrorString("Public API layer is not available");
+    error = Status::FromErrorString("Public API layer is not available");
   }
   return false;
 }
@@ -1002,18 +1002,18 @@ Status Debugger::SetInputString(const char *data) {
   int fds[2] = {-1, -1};
 
   if (data == nullptr) {
-    result.SetErrorString("String data is null");
+    result = Status::FromErrorString("String data is null");
     return result;
   }
 
   size_t size = strlen(data);
   if (size == 0) {
-    result.SetErrorString("String data is empty");
+    result = Status::FromErrorString("String data is empty");
     return result;
   }
 
   if (OpenPipe(fds, size) != 0) {
-    result.SetErrorString(
+    result = Status::FromErrorString(
         "can't create pipe file descriptors for LLDB commands");
     return result;
   }
@@ -1028,9 +1028,10 @@ Status Debugger::SetInputString(const char *data) {
   // handle.
   FILE *commands_file = fdopen(fds[READ], "rb");
   if (commands_file == nullptr) {
-    result.SetErrorStringWithFormat("fdopen(%i, \"rb\") failed (errno = %i) "
-                                    "when trying to open LLDB commands pipe",
-                                    fds[READ], errno);
+    result = Status::FromErrorStringWithFormat(
+        "fdopen(%i, \"rb\") failed (errno = %i) "
+        "when trying to open LLDB commands pipe",
+        fds[READ], errno);
     llvm::sys::Process::SafelyCloseFileDescriptor(fds[READ]);
     return result;
   }
@@ -1869,7 +1870,8 @@ void Debugger::HandleThreadEvent(const EventSP &event_sp) {
     ThreadSP thread_sp(
         Thread::ThreadEventData::GetThreadFromEvent(event_sp.get()));
     if (thread_sp) {
-      thread_sp->GetStatus(*GetAsyncOutputStream(), 0, 1, 1, stop_format);
+      thread_sp->GetStatus(*GetAsyncOutputStream(), 0, 1, 1, stop_format,
+                           /*show_hidden*/ true);
     }
   }
 }
@@ -2200,11 +2202,11 @@ Status Debugger::RunREPL(LanguageType language, const char *repl_options) {
     if (auto single_lang = repl_languages.GetSingularLanguage()) {
       language = *single_lang;
     } else if (repl_languages.Empty()) {
-      err.SetErrorString(
+      err = Status::FromErrorString(
           "LLDB isn't configured with REPL support for any languages.");
       return err;
     } else {
-      err.SetErrorString(
+      err = Status::FromErrorString(
           "Multiple possible REPL languages.  Please specify a language.");
       return err;
     }
@@ -2220,8 +2222,9 @@ Status Debugger::RunREPL(LanguageType language, const char *repl_options) {
   }
 
   if (!repl_sp) {
-    err.SetErrorStringWithFormat("couldn't find a REPL for %s",
-                                 Language::GetNameForLanguageType(language));
+    err = Status::FromErrorStringWithFormat(
+        "couldn't find a REPL for %s",
+        Language::GetNameForLanguageType(language));
     return err;
   }
 

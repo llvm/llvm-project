@@ -107,6 +107,7 @@ static cl::opt<int> MaxPotentialValuesIterations(
     cl::init(64));
 
 STATISTIC(NumAAs, "Number of abstract attributes created");
+STATISTIC(NumIndirectCallsPromoted, "Number of indirect calls promoted");
 
 // Some helper macros to deal with statistics tracking.
 //
@@ -12350,6 +12351,7 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
       auto *NewCallee = AssumedCallees.front();
       if (isLegalToPromote(*CB, NewCallee)) {
         promoteCall(*CB, NewCallee, nullptr);
+        NumIndirectCallsPromoted++;
         return ChangeStatus::CHANGED;
       }
       Instruction *NewCall =
@@ -12406,6 +12408,7 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
         auto *CBClone = cast<CallBase>(CB->clone());
         CBClone->insertBefore(ThenTI);
         NewCall = &cast<CallInst>(promoteCall(*CBClone, NewCallee, &RetBC));
+        NumIndirectCallsPromoted++;
       } else {
         NewCall = CallInst::Create(FunctionCallee(CSFT, NewCallee), CSArgs,
                                    CB->getName(), ThenTI->getIterator());

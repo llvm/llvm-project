@@ -470,6 +470,12 @@ def warn_c17_compat_static_assert_no_message : Warning<
   "'_Static_assert' with no message is incompatible with C standards before "
   "C23">,
   DefaultIgnore, InGroup<CPre23Compat>;
+def ext_cxx_static_assert_user_generated_message : ExtWarn<
+  "'static_assert' with a user-generated message is a C++26 extension">,
+  InGroup<CXX26>;
+def warn_cxx20_compat_static_assert_user_generated_message : Warning<
+  "'static_assert' with a user-generated message is incompatible with "
+  "C++ standards before C++26">, DefaultIgnore, InGroup<CXXPre26Compat>;
 def err_function_definition_not_allowed : Error<
   "function definition is not allowed here">;
 def err_expected_end_of_enumerator : Error<
@@ -973,6 +979,9 @@ def ext_variadic_friends : ExtWarn<
 def warn_cxx23_variadic_friends : Warning<
   "variadic 'friend' declarations are incompatible with C++ standards before C++2c">,
   DefaultIgnore, InGroup<CXXPre26Compat>;
+
+def err_friend_concept : Error<
+  "friend declaration cannot be a concept">;
 
 // C++11 default member initialization
 def ext_nonstatic_member_init : ExtWarn<

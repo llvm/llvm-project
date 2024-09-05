@@ -36,7 +36,15 @@ set(RTSAN_UNITTEST_LINK_FLAGS
   ${SANITIZER_TEST_CXX_LIBRARIES}
   -no-pie)
 
-append_list_if(COMPILER_RT_HAS_LIBATOMIC -latomic RTSAN_UNITTEST_LINK_FLAGS)
+if (COMPILER_RT_USE_ATOMIC_LIBRARY)
+  list(APPEND RTSAN_UNITTEST_LINK_FLAGS ${COMPILER_RT_ATOMIC_LIBRARY})
+  if (NOT WIN32)
+    get_filename_component(atomic_dir ${COMPILER_RT_ATOMIC_LIBRARY} DIRECTORY)
+    list(APPEND RTSAN_UNITTEST_LINK_FLAGS "-Wl,-rpath,${atomic_dir}")
+  endif()
+else()
+  append_list_if(COMPILER_RT_HAS_LIBATOMIC -latomic RTSAN_UNITTEST_LINK_FLAGS)
+endif()
 append_list_if(COMPILER_RT_HAS_LIBDL -ldl RTSAN_UNITTEST_LINK_FLAGS)
 append_list_if(COMPILER_RT_HAS_LIBRT -lrt RTSAN_UNITTEST_LINK_FLAGS)
 append_list_if(COMPILER_RT_HAS_LIBM -lm RTSAN_UNITTEST_LINK_FLAGS)
@@ -60,14 +68,13 @@ endif()
 foreach(arch ${RTSAN_TEST_ARCH})
   set(RtsanTestObjects)
 
-  # TODO: Re-enable once -fsanitize=realtime exists in clang driver
-  #generate_compiler_rt_tests(RtsanTestObjects
-  #  RtsanUnitTests "Rtsan-${arch}-Test" ${arch}
-  #  COMPILE_DEPS ${RTSAN_UNITTEST_HEADERS}
-  #  SOURCES ${RTSAN_INST_TEST_SOURCES} ${COMPILER_RT_GOOGLETEST_SOURCES}
-  #  DEPS rtsan
-  #  CFLAGS ${RTSAN_UNITTEST_CFLAGS} -fsanitize=realtime
-  #  LINK_FLAGS ${RTSAN_UNITTEST_LINK_FLAGS} -fsanitize=realtime)
+  generate_compiler_rt_tests(RtsanTestObjects
+    RtsanUnitTests "Rtsan-${arch}-Test" ${arch}
+    COMPILE_DEPS ${RTSAN_UNITTEST_HEADERS}
+    SOURCES ${RTSAN_INST_TEST_SOURCES} ${COMPILER_RT_GOOGLETEST_SOURCES}
+    DEPS rtsan
+    CFLAGS ${RTSAN_UNITTEST_CFLAGS} -fsanitize=realtime
+    LINK_FLAGS ${RTSAN_UNITTEST_LINK_FLAGS} -fsanitize=realtime)
 
   set(RTSAN_TEST_RUNTIME RTRtsanTest.${arch})
   if(APPLE)

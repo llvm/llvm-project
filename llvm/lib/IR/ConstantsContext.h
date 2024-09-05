@@ -246,7 +246,7 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(ShuffleVectorConstantExpr, Value)
 
 template <>
 struct OperandTraits<GetElementPtrConstantExpr>
-    : public VariadicOperandTraits<GetElementPtrConstantExpr, 1> {};
+    : public VariadicOperandTraits<GetElementPtrConstantExpr> {};
 
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(GetElementPtrConstantExpr, Value)
 
@@ -292,6 +292,7 @@ template <class ConstantClass> struct ConstantAggrKeyType {
   ConstantAggrKeyType(const ConstantClass *C,
                       SmallVectorImpl<Constant *> &Storage) {
     assert(Storage.empty() && "Expected empty storage");
+    Storage.reserve(C->getNumOperands());
     for (unsigned I = 0, E = C->getNumOperands(); I != E; ++I)
       Storage.push_back(C->getOperand(I));
     Operands = Storage;

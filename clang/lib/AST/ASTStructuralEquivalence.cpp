@@ -799,6 +799,16 @@ static bool IsEquivalentExceptionSpec(StructuralEquivalenceContext &Context,
   return true;
 }
 
+// Determine structural equivalence of two instances of
+// HLSLAttributedResourceType::Attributes
+static bool
+IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
+                         const HLSLAttributedResourceType::Attributes &Attrs1,
+                         const HLSLAttributedResourceType::Attributes &Attrs2) {
+  return std::tie(Attrs1.ResourceClass, Attrs1.IsROV) ==
+         std::tie(Attrs2.ResourceClass, Attrs2.IsROV);
+}
+
 /// Determine structural equivalence of two types.
 static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
                                      QualType T1, QualType T2) {
@@ -1090,6 +1100,21 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
     if (!IsStructurallyEquivalent(
             Context, cast<BTFTagAttributedType>(T1)->getWrappedType(),
             cast<BTFTagAttributedType>(T2)->getWrappedType()))
+      return false;
+    break;
+
+  case Type::HLSLAttributedResource:
+    if (!IsStructurallyEquivalent(
+            Context, cast<HLSLAttributedResourceType>(T1)->getWrappedType(),
+            cast<HLSLAttributedResourceType>(T2)->getWrappedType()))
+      return false;
+    if (!IsStructurallyEquivalent(
+            Context, cast<HLSLAttributedResourceType>(T1)->getContainedType(),
+            cast<HLSLAttributedResourceType>(T2)->getContainedType()))
+      return false;
+    if (!IsStructurallyEquivalent(
+            Context, cast<HLSLAttributedResourceType>(T1)->getAttrs(),
+            cast<HLSLAttributedResourceType>(T2)->getAttrs()))
       return false;
     break;
 

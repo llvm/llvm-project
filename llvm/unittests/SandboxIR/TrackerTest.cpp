@@ -542,6 +542,40 @@ define void @foo(ptr %ptr) {
   EXPECT_EQ(It, BB->end());
 }
 
+TEST_F(TrackerTest, FenceInstSetters) {
+  parseIR(C, R"IR(
+define void @foo() {
+  fence syncscope("singlethread") seq_cst
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  sandboxir::Function *F = Ctx.createFunction(LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *Fence = cast<sandboxir::FenceInst>(&*It++);
+
+  // Check setOrdering().
+  auto OrigOrdering = Fence->getOrdering();
+  auto NewOrdering = AtomicOrdering::Release;
+  EXPECT_NE(NewOrdering, OrigOrdering);
+  Ctx.save();
+  Fence->setOrdering(NewOrdering);
+  EXPECT_EQ(Fence->getOrdering(), NewOrdering);
+  Ctx.revert();
+  EXPECT_EQ(Fence->getOrdering(), OrigOrdering);
+  // Check setSyncScopeID().
+  auto OrigSSID = Fence->getSyncScopeID();
+  auto NewSSID = SyncScope::System;
+  EXPECT_NE(NewSSID, OrigSSID);
+  Ctx.save();
+  Fence->setSyncScopeID(NewSSID);
+  EXPECT_EQ(Fence->getSyncScopeID(), NewSSID);
+  Ctx.revert();
+  EXPECT_EQ(Fence->getSyncScopeID(), OrigSSID);
+}
+
 TEST_F(TrackerTest, CallBaseSetters) {
   parseIR(C, R"IR(
 declare void @bar1(i8)
@@ -713,6 +747,142 @@ define void @foo(i32 %cond0, i32 %cond1) {
   EXPECT_EQ(*HIt++, Handler1);
 }
 
+TEST_F(TrackerTest, LandingPadInstSetters) {
+  parseIR(C, R"IR(
+define void @foo() {
+entry:
+  invoke void @foo()
+      to label %bb unwind label %unwind
+unwind:
+  %lpad = landingpad { ptr, i32 }
+            catch ptr null
+  ret void
+bb:
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  auto *LLVMUnwind = getBasicBlockByName(LLVMF, "unwind");
+
+  sandboxir::Context Ctx(C);
+  [[maybe_unused]] auto &F = *Ctx.createFunction(&LLVMF);
+  auto *Unwind = cast<sandboxir::BasicBlock>(Ctx.getValue(LLVMUnwind));
+  auto It = Unwind->begin();
+  auto *LPad = cast<sandboxir::LandingPadInst>(&*It++);
+  [[maybe_unused]] auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
+
+  // Check setCleanup().
+  auto OrigIsCleanup = LPad->isCleanup();
+  auto NewIsCleanup = true;
+  EXPECT_NE(NewIsCleanup, OrigIsCleanup);
+  Ctx.save();
+  LPad->setCleanup(NewIsCleanup);
+  EXPECT_EQ(LPad->isCleanup(), NewIsCleanup);
+  Ctx.revert();
+  EXPECT_EQ(LPad->isCleanup(), OrigIsCleanup);
+}
+
+TEST_F(TrackerTest, CatchReturnInstSetters) {
+  parseIR(C, R"IR(
+define void @foo() {
+dispatch:
+  %cs = catchswitch within none [label %catch] unwind to caller
+catch:
+  %catchpad = catchpad within %cs [ptr @foo]
+  catchret from %catchpad to label %continue
+continue:
+  ret void
+catch2:
+  %catchpad2 = catchpad within %cs [ptr @foo]
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  BasicBlock *LLVMCatch = getBasicBlockByName(LLVMF, "catch");
+  auto LLVMIt = LLVMCatch->begin();
+  [[maybe_unused]] auto *LLVMCP = cast<llvm::CatchPadInst>(&*LLVMIt++);
+
+  sandboxir::Context Ctx(C);
+  [[maybe_unused]] auto &F = *Ctx.createFunction(&LLVMF);
+  auto *Catch = cast<sandboxir::BasicBlock>(Ctx.getValue(LLVMCatch));
+  auto *Catch2 = cast<sandboxir::BasicBlock>(
+      Ctx.getValue(getBasicBlockByName(LLVMF, "catch2")));
+  auto It = Catch->begin();
+  [[maybe_unused]] auto *CP = cast<sandboxir::CatchPadInst>(&*It++);
+  auto *CR = cast<sandboxir::CatchReturnInst>(&*It++);
+  auto *CP2 = cast<sandboxir::CatchPadInst>(&*Catch2->begin());
+
+  // Check setCatchPad().
+  auto *OrigCP = CR->getCatchPad();
+  auto *NewCP = CP2;
+  EXPECT_NE(NewCP, OrigCP);
+  Ctx.save();
+  CR->setCatchPad(NewCP);
+  EXPECT_EQ(CR->getCatchPad(), NewCP);
+  Ctx.revert();
+  EXPECT_EQ(CR->getCatchPad(), OrigCP);
+  // Check setSuccessor().
+  auto *OrigSucc = CR->getSuccessor();
+  auto *NewSucc = Catch;
+  EXPECT_NE(NewSucc, OrigSucc);
+  Ctx.save();
+  CR->setSuccessor(NewSucc);
+  EXPECT_EQ(CR->getSuccessor(), NewSucc);
+  Ctx.revert();
+  EXPECT_EQ(CR->getSuccessor(), OrigSucc);
+}
+
+TEST_F(TrackerTest, CleanupReturnInstSetters) {
+  parseIR(C, R"IR(
+define void @foo() {
+dispatch:
+  invoke void @foo()
+              to label %throw unwind label %cleanup
+throw:
+  ret void
+cleanup:
+  %cleanuppad = cleanuppad within none []
+  cleanupret from %cleanuppad unwind label %cleanup2
+cleanup2:
+  %cleanuppad2 = cleanuppad within none []
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  BasicBlock *LLVMCleanup = getBasicBlockByName(LLVMF, "cleanup");
+
+  sandboxir::Context Ctx(C);
+  [[maybe_unused]] auto &F = *Ctx.createFunction(&LLVMF);
+  auto *Throw = cast<sandboxir::BasicBlock>(
+      Ctx.getValue(getBasicBlockByName(LLVMF, "throw")));
+  auto *Cleanup = cast<sandboxir::BasicBlock>(Ctx.getValue(LLVMCleanup));
+  auto *Cleanup2 = cast<sandboxir::BasicBlock>(
+      Ctx.getValue(getBasicBlockByName(LLVMF, "cleanup2")));
+  auto It = Cleanup->begin();
+  [[maybe_unused]] auto *CP = cast<sandboxir::CleanupPadInst>(&*It++);
+  auto *CRI = cast<sandboxir::CleanupReturnInst>(&*It++);
+  auto *CP2 = cast<sandboxir::CleanupPadInst>(&*Cleanup2->begin());
+
+  // Check setCleanupPad().
+  auto *OrigCleanupPad = CRI->getCleanupPad();
+  auto *NewCleanupPad = CP2;
+  EXPECT_NE(NewCleanupPad, OrigCleanupPad);
+  Ctx.save();
+  CRI->setCleanupPad(NewCleanupPad);
+  EXPECT_EQ(CRI->getCleanupPad(), NewCleanupPad);
+  Ctx.revert();
+  EXPECT_EQ(CRI->getCleanupPad(), OrigCleanupPad);
+  // Check setUnwindDest().
+  auto *OrigUnwindDest = CRI->getUnwindDest();
+  auto *NewUnwindDest = Throw;
+  EXPECT_NE(NewUnwindDest, OrigUnwindDest);
+  Ctx.save();
+  CRI->setUnwindDest(NewUnwindDest);
+  EXPECT_EQ(CRI->getUnwindDest(), NewUnwindDest);
+  Ctx.revert();
+  EXPECT_EQ(CRI->getUnwindDest(), OrigUnwindDest);
+}
+
 TEST_F(TrackerTest, SwitchInstSetters) {
   parseIR(C, R"IR(
 define void @foo(i32 %cond0, i32 %cond1) {
@@ -768,9 +938,10 @@ define void @foo(i32 %cond0, i32 %cond1) {
   Ctx.revert();
   EXPECT_EQ(Switch->getSuccessor(0), OrigSucc);
   // Check addCase().
-  auto *Zero = sandboxir::ConstantInt::get(Type::getInt32Ty(C), 0, Ctx);
-  auto *One = sandboxir::ConstantInt::get(Type::getInt32Ty(C), 1, Ctx);
-  auto *FortyTwo = sandboxir::ConstantInt::get(Type::getInt32Ty(C), 42, Ctx);
+  auto *Zero = sandboxir::ConstantInt::get(sandboxir::Type::getInt32Ty(Ctx), 0);
+  auto *One = sandboxir::ConstantInt::get(sandboxir::Type::getInt32Ty(Ctx), 1);
+  auto *FortyTwo =
+      sandboxir::ConstantInt::get(sandboxir::Type::getInt32Ty(Ctx), 42);
   Ctx.save();
   Switch->addCase(FortyTwo, Entry);
   EXPECT_EQ(Switch->getNumCases(), 3u);
@@ -793,7 +964,7 @@ define void @foo(i32 %cond0, i32 %cond1) {
   EXPECT_EQ(Switch->findCaseDest(BB1), One);
 }
 
-TEST_F(TrackerTest, ShuffleVectorInstSetters) {
+TEST_F(TrackerTest, ShuffleVectorInst) {
   parseIR(C, R"IR(
 define void @foo(<2 x i8> %v1, <2 x i8> %v2) {
   %shuf = shufflevector <2 x i8> %v1, <2 x i8> %v2, <2 x i32> <i32 1, i32 2>
@@ -812,10 +983,74 @@ define void @foo(<2 x i8> %v1, <2 x i8> %v2) {
   SmallVector<int, 2> OrigMask(SVI->getShuffleMask());
   Ctx.save();
   SVI->setShuffleMask(ArrayRef<int>({0, 0}));
-  EXPECT_THAT(SVI->getShuffleMask(),
-              testing::Not(testing::ElementsAreArray(OrigMask)));
+  EXPECT_NE(SVI->getShuffleMask(), ArrayRef<int>(OrigMask));
   Ctx.revert();
-  EXPECT_THAT(SVI->getShuffleMask(), testing::ElementsAreArray(OrigMask));
+  EXPECT_EQ(SVI->getShuffleMask(), ArrayRef<int>(OrigMask));
+
+  // Check commute.
+  auto *Op0 = SVI->getOperand(0);
+  auto *Op1 = SVI->getOperand(1);
+  Ctx.save();
+  SVI->commute();
+  EXPECT_EQ(SVI->getOperand(0), Op1);
+  EXPECT_EQ(SVI->getOperand(1), Op0);
+  EXPECT_NE(SVI->getShuffleMask(), ArrayRef<int>(OrigMask));
+  Ctx.revert();
+  EXPECT_EQ(SVI->getOperand(0), Op0);
+  EXPECT_EQ(SVI->getOperand(1), Op1);
+  EXPECT_EQ(SVI->getShuffleMask(), ArrayRef<int>(OrigMask));
+}
+
+TEST_F(TrackerTest, PossiblyDisjointInstSetters) {
+  parseIR(C, R"IR(
+define void @foo(i8 %arg0, i8 %arg1) {
+  %or = or i8 %arg0, %arg1
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto *BB = &*F.begin();
+  auto It = BB->begin();
+  auto *PDI = cast<sandboxir::PossiblyDisjointInst>(&*It++);
+
+  // Check setIsDisjoint().
+  auto OrigIsDisjoint = PDI->isDisjoint();
+  auto NewIsDisjoint = true;
+  EXPECT_NE(NewIsDisjoint, OrigIsDisjoint);
+  Ctx.save();
+  PDI->setIsDisjoint(NewIsDisjoint);
+  EXPECT_EQ(PDI->isDisjoint(), NewIsDisjoint);
+  Ctx.revert();
+  EXPECT_EQ(PDI->isDisjoint(), OrigIsDisjoint);
+}
+
+TEST_F(TrackerTest, PossiblyNonNegInstSetters) {
+  parseIR(C, R"IR(
+define void @foo(i32 %arg) {
+  %zext = zext i32 %arg to i64
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto *BB = &*F.begin();
+  auto It = BB->begin();
+  auto *PNNI = cast<sandboxir::PossiblyNonNegInst>(&*It++);
+
+  // Check setNonNeg().
+  auto OrigNonNeg = PNNI->hasNonNeg();
+  auto NewNonNeg = true;
+  EXPECT_NE(NewNonNeg, OrigNonNeg);
+  Ctx.save();
+  PNNI->setNonNeg(NewNonNeg);
+  EXPECT_EQ(PNNI->hasNonNeg(), NewNonNeg);
+  Ctx.revert();
+  EXPECT_EQ(PNNI->hasNonNeg(), OrigNonNeg);
 }
 
 TEST_F(TrackerTest, AtomicRMWSetters) {
@@ -965,7 +1200,7 @@ define void @foo(i8 %arg) {
   // Check setAllocatedType().
   Ctx.save();
   auto *OrigTy = Alloca->getAllocatedType();
-  auto *NewTy = Type::getInt64Ty(C);
+  auto *NewTy = sandboxir::Type::getInt64Ty(Ctx);
   EXPECT_NE(NewTy, OrigTy);
   Alloca->setAllocatedType(NewTy);
   EXPECT_EQ(Alloca->getAllocatedType(), NewTy);
@@ -1215,6 +1450,49 @@ bb2:
   EXPECT_EQ(PHI->getIncomingValue(0), Arg0);
   EXPECT_EQ(PHI->getIncomingBlock(1), BB1);
   EXPECT_EQ(PHI->getIncomingValue(1), Arg1);
+}
+
+void checkCmpInst(sandboxir::Context &Ctx, sandboxir::CmpInst *Cmp) {
+  Ctx.save();
+  auto OrigP = Cmp->getPredicate();
+  auto NewP = Cmp->getSwappedPredicate();
+  Cmp->setPredicate(NewP);
+  EXPECT_EQ(Cmp->getPredicate(), NewP);
+  Ctx.revert();
+  EXPECT_EQ(Cmp->getPredicate(), OrigP);
+
+  Ctx.save();
+  auto OrigOp0 = Cmp->getOperand(0);
+  auto OrigOp1 = Cmp->getOperand(1);
+  Cmp->swapOperands();
+  EXPECT_EQ(Cmp->getPredicate(), NewP);
+  EXPECT_EQ(Cmp->getOperand(0), OrigOp1);
+  EXPECT_EQ(Cmp->getOperand(1), OrigOp0);
+  Ctx.revert();
+  EXPECT_EQ(Cmp->getPredicate(), OrigP);
+  EXPECT_EQ(Cmp->getOperand(0), OrigOp0);
+  EXPECT_EQ(Cmp->getOperand(1), OrigOp1);
+}
+
+TEST_F(TrackerTest, CmpInst) {
+  SCOPED_TRACE("TrackerTest sandboxir::CmpInst tests");
+  parseIR(C, R"IR(
+define void @foo(i64 %i0, i64 %i1, float %f0, float %f1) {
+  %foeq = fcmp ogt float %f0, %f1
+  %ioeq = icmp uge i64 %i0, %i1
+
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto *BB = &*F.begin();
+  auto It = BB->begin();
+  auto *FCmp = cast<sandboxir::CmpInst>(&*It++);
+  checkCmpInst(Ctx, FCmp);
+  auto *ICmp = cast<sandboxir::CmpInst>(&*It++);
+  checkCmpInst(Ctx, ICmp);
 }
 
 TEST_F(TrackerTest, SetVolatile) {

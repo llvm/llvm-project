@@ -1503,11 +1503,21 @@ public:
       return isCounterBase(*Instr) || isMCDCBitmapBase(*Instr);
     return false;
   }
-  // The name of the instrumented function.
+
+  // The name of the instrumented function, assuming it is a global variable.
   GlobalVariable *getName() const {
-    return cast<GlobalVariable>(
-        const_cast<Value *>(getArgOperand(0))->stripPointerCasts());
+    return cast<GlobalVariable>(getNameValue());
   }
+
+  // The "name" operand of the profile instrumentation instruction - this is the
+  // operand that can be used to relate the instruction to the function it
+  // belonged to at instrumentation time.
+  Value *getNameValue() const {
+    return const_cast<Value *>(getArgOperand(0))->stripPointerCasts();
+  }
+
+  void setNameValue(Value *V) { setArgOperand(0, V); }
+
   // The hash of the CFG for the instrumented function.
   ConstantInt *getHash() const {
     return cast<ConstantInt>(const_cast<Value *>(getArgOperand(1)));
@@ -1527,6 +1537,7 @@ public:
   ConstantInt *getNumCounters() const;
   // The index of the counter that this instruction acts on.
   ConstantInt *getIndex() const;
+  void setIndex(uint32_t Idx);
 };
 
 /// This represents the llvm.instrprof.cover intrinsic.
@@ -1577,6 +1588,7 @@ public:
     return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
   }
   Value *getCallee() const;
+  void setCallee(Value *Callee);
 };
 
 /// This represents the llvm.instrprof.timestamp intrinsic.

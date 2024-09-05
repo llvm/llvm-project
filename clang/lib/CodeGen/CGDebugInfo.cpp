@@ -3561,6 +3561,7 @@ llvm::DIType *CGDebugInfo::CreateTypeDefinition(const EnumType *Ty) {
 
   SmallVector<llvm::Metadata *, 16> Enumerators;
   ED = ED->getDefinition();
+  assert(ED && "An enumeration definition is required");
   for (const auto *Enum : ED->enumerators()) {
     Enumerators.push_back(
         DBuilder.createEnumerator(Enum->getName(), Enum->getInitVal()));
@@ -3850,6 +3851,7 @@ llvm::DIType *CGDebugInfo::CreateTypeNode(QualType Ty, llvm::DIFile *Unit) {
   case Type::Auto:
   case Type::Attributed:
   case Type::BTFTagAttributed:
+  case Type::HLSLAttributedResource:
   case Type::Adjusted:
   case Type::Decayed:
   case Type::DeducedTemplateSpecialization:
