@@ -220,7 +220,7 @@ lldb::SBError SBDebugger::InitializeWithErrorHandling() {
   SBError error;
   if (auto e = g_debugger_lifetime->Initialize(
           std::make_unique<SystemInitializerFull>(), LoadPlugin)) {
-    error.SetError(Status(std::move(e)));
+    error.SetError(Status::FromError(std::move(e)));
   }
   return error;
 }

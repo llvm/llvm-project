@@ -247,7 +247,7 @@ define <1 x i32> @abs_v1i32(<1 x i32> %a){
 ; CHECK-GI-NEXT:    fmov w9, s0
 ; CHECK-GI-NEXT:    cmp w8, #0
 ; CHECK-GI-NEXT:    cneg w8, w9, le
-; CHECK-GI-NEXT:    fmov s0, w8
+; CHECK-GI-NEXT:    mov v0.s[0], w8
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -299,10 +299,8 @@ define <3 x i8> @abs_v3i8(<3 x i8> %a){
 ; CHECK-GI-LABEL: abs_v3i8:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    fmov s0, w0
-; CHECK-GI-NEXT:    fmov s1, w1
-; CHECK-GI-NEXT:    mov v0.b[1], v1.b[0]
-; CHECK-GI-NEXT:    fmov s1, w2
-; CHECK-GI-NEXT:    mov v0.b[2], v1.b[0]
+; CHECK-GI-NEXT:    mov v0.b[1], w1
+; CHECK-GI-NEXT:    mov v0.b[2], w2
 ; CHECK-GI-NEXT:    abs v0.8b, v0.8b
 ; CHECK-GI-NEXT:    umov w0, v0.b[0]
 ; CHECK-GI-NEXT:    umov w1, v0.b[1]

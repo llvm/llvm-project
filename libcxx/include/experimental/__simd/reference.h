@@ -10,6 +10,7 @@
 #ifndef _LIBCPP_EXPERIMENTAL___SIMD_REFERENCE_H
 #define _LIBCPP_EXPERIMENTAL___SIMD_REFERENCE_H
 
+#include <__type_traits/enable_if.h>
 #include <__type_traits/is_assignable.h>
 #include <__type_traits/is_same.h>
 #include <__utility/declval.h>

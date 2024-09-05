@@ -504,8 +504,7 @@ void SourceManager::File::CommonInitializer(SupportFileSP support_file_sp,
               SymbolContext sc;
               sc_list.GetContextAtIndex(0, sc);
               if (sc.comp_unit)
-                SetSupportFile(std::make_shared<SupportFile>(
-                    sc.comp_unit->GetPrimaryFile()));
+                SetSupportFile(sc.comp_unit->GetPrimarySupportFile());
             }
           }
         }
