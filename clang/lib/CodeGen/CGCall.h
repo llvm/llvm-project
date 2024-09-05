@@ -449,12 +449,12 @@ inline FnInfoOpts operator&(FnInfoOpts A, FnInfoOpts B) {
                                  llvm::to_underlying(B));
 }
 
-inline FnInfoOpts operator|=(FnInfoOpts A, FnInfoOpts B) {
+inline FnInfoOpts &operator|=(FnInfoOpts &A, FnInfoOpts B) {
   A = A | B;
   return A;
 }
 
-inline FnInfoOpts operator&=(FnInfoOpts A, FnInfoOpts B) {
+inline FnInfoOpts &operator&=(FnInfoOpts &A, FnInfoOpts B) {
   A = A & B;
   return A;
 }
