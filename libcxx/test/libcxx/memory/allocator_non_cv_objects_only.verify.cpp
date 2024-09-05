@@ -25,3 +25,6 @@ std::allocator<int()> A5;
 std::allocator<int(int)> A6;
 std::allocator<int(int, int)> A7;
 // expected-error@*:* 3 {{'std::allocator' cannot allocate functions}}
+
+// Spurious errors
+// expected-error@*:* 1+ {{declared as a pointer to a reference}}

@@ -388,7 +388,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Tp, class _Allocator /* = allocator<_Tp> */>
 class _LIBCPP_TEMPLATE_VIS vector {
 private:
-  _LIBCPP_CHECK_CONTAINER_VALUE_TYPE_REQUIREMENTS("vector", _Tp);
+  static_assert(__container_requirements<vector, _Tp>::value);
 
   typedef allocator<_Tp> __default_allocator_type;
 
@@ -1021,6 +1021,8 @@ private:
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __move_assign_alloc(vector&, false_type) _NOEXCEPT {}
 };
+
+_LIBCPP_CHECK_CONTAINER_VALUE_TYPE_REQUIREMENTS(vector);
 
 #if _LIBCPP_STD_VER >= 17
 template <class _InputIterator,

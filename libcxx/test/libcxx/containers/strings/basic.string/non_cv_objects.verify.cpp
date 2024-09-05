@@ -39,3 +39,15 @@ std::basic_string<int[]> C9;
 
 std::basic_string<int[2]> C10;
 // expected-error@*:*{{'std::basic_string' cannot hold C arrays}}
+
+// Bogus errors
+// expected-error@*:* 1+ {{cannot form a reference to 'void'}}
+// expected-error@*:* 1+ {{declared as a pointer}}
+// expected-error@*:* 1+ {{no matching function}}
+// expected-error@*:* 1+ {{no function template}}
+// expected-error@*:* 1+ {{no member named 'rebind'}}
+// expected-error@*:* 1+ {{call to implicitly-deleted}}
+// expected-error@*:* 1+ {{implicit instantiation of undefined template 'std::char_traits}}
+// expected-error@*:* 1+ {{must be standard-layout}}
+// expected-error@*:* 1+ {{'std::allocator' cannot allocate}}
+// expected-warning@*:* 1+ {{volatile-qualified parameter type}}

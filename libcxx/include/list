@@ -467,7 +467,7 @@ public:
 
 template <class _Tp, class _Alloc>
 class __list_imp {
-  _LIBCPP_CHECK_CONTAINER_VALUE_TYPE_REQUIREMENTS("list", _Tp);
+  static_assert(__container_requirements<list, _Tp>::value);
 
 public:
   __list_imp(const __list_imp&) = delete;
@@ -594,6 +594,8 @@ private:
 
   _LIBCPP_HIDE_FROM_ABI void __move_assign_alloc(__list_imp&, false_type) _NOEXCEPT {}
 };
+
+_LIBCPP_CHECK_CONTAINER_VALUE_TYPE_REQUIREMENTS(list);
 
 // Unlink nodes [__f, __l]
 template <class _Tp, class _Alloc>

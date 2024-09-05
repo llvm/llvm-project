@@ -757,7 +757,7 @@ private:
   // always emitted for both 'basic_string<char[]>' and 'basic_string<char[10]>', and doesn't say
   // "before C++20").
   static_assert(!is_array<_CharT>::value, "'std::basic_string' cannot hold C arrays");
-  _LIBCPP_CHECK_CONTAINER_VALUE_TYPE_REQUIREMENTS("basic_string", _CharT);
+  static_assert(__container_requirements<basic_string, _CharT>::value);
 
   using __default_allocator_type = allocator<_CharT>;
 
@@ -2258,6 +2258,8 @@ private:
   friend inline _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI bool
   operator==(const basic_string<_CharT2, _Traits2, _Allocator2>&, const _CharT2*) _NOEXCEPT;
 };
+
+_LIBCPP_CHECK_CONTAINER_VALUE_TYPE_REQUIREMENTS(basic_string);
 
 // These declarations must appear before any functions are implicitly used
 // so that they have the correct visibility specifier.

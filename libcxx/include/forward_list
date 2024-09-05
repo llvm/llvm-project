@@ -477,7 +477,7 @@ public:
 
 template <class _Tp, class _Alloc>
 class __forward_list_base {
-  _LIBCPP_CHECK_CONTAINER_VALUE_TYPE_REQUIREMENTS("forward_list", _Tp);
+  static_assert(__container_requirements<forward_list, _Tp>::value);
 
 protected:
   typedef _Tp value_type;
@@ -589,6 +589,8 @@ private:
     __alloc() = std::move(__x.__alloc());
   }
 };
+
+_LIBCPP_CHECK_CONTAINER_VALUE_TYPE_REQUIREMENTS(forward_list);
 
 #ifndef _LIBCPP_CXX03_LANG
 

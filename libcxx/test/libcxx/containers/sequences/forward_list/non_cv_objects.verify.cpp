@@ -37,9 +37,17 @@ std::forward_list<int[2]> C10;
 // expected-error@*:*{{'std::forward_list' cannot hold C arrays before C++20}}
 #endif
 
-// Spurious errors below
-
-// expected-error@*:*  0+ {{multiple overloads of}}
-// expected-error@*:*  7+ {{'std::allocator'}}
-// expected-error@*:*  9+ {{cannot form a reference to 'void'}}
-// expected-error@*:* 77+ {{no type named}}
+// Spurious errors
+// expected-error@*:* 0+ {{[allocator.requirements]}}
+// expected-error@*:* 0+ {{object expression of non-scalar type}}
+// expected-error@*:* 1+ {{cannot form a reference to 'void'}}
+// expected-error@*:* 1+ {{declared as a pointer}}
+// expected-error@*:* 1+ {{multiple overloads of}}
+// expected-error@*:* 1+ {{no matching function}}
+// expected-error@*:* 1+ {{no member named}}
+// expected-error@*:* 1+ {{no type named 'type' in 'std::enable_if}}
+// expected-error@*:* 1+ {{__node_}}
+// expected-error@*:* 1+ {{data member instantiated}}
+// expected-error@*:* 1+ {{pointer}}
+// expected-error@*:* 1+ {{iterator}}
+// expected-error@*:* 1+ {{'std::allocator' cannot allocate}}

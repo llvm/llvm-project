@@ -75,7 +75,7 @@ struct __non_trivial_if<true, _Unique> {
 
 template <class _Tp>
 class _LIBCPP_TEMPLATE_VIS allocator : private __non_trivial_if<!is_void<_Tp>::value, allocator<_Tp> > {
-  _LIBCPP_CHECK_ALLOCATOR_VALUE_TYPE_REQUIREMENTS("allocator", _Tp, "allocate");
+  static_assert(__allocator_requirements<allocator, _Tp>::value);
 
 public:
   typedef size_t size_type;
@@ -167,6 +167,8 @@ inline _LIBCPP_HIDE_FROM_ABI bool operator!=(const allocator<_Tp>&, const alloca
 }
 
 #endif
+
+_LIBCPP_CHECK_ALLOCATOR_VALUE_TYPE_REQUIREMENTS(allocator, "allocate");
 
 _LIBCPP_END_NAMESPACE_STD
 

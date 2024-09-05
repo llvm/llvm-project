@@ -46,3 +46,15 @@ std::unordered_multiset<int[2], test_hash<int[2]> > C10;
 #if TEST_STD_VER < 20
 // expected-error@*:*{{'std::unordered_multiset' cannot hold C arrays before C++20}}
 #endif
+
+// Spurious errors
+// expected-error@__hash_table:* 1+ {{}}
+// expected-error@*:* 1+ {{call to implicitly-deleted}}
+// expected-error@*:* 1+ {{cannot form a reference to 'void'}}
+// expected-error@*:* 1+ {{declared as a pointer}}
+// expected-error@*:* 1+ {{multiple overloads of}}
+// expected-error@*:* 1+ {{no matching function}}
+// expected-error@*:* 1+ {{no member named 'rebind'}}
+// expected-error@*:* 1+ {{no type named 'const_iterator'}}
+// expected-error@*:* 1+ {{no type named 'const_local_iterator'}}
+// expected-error@*:* 1+ {{'std::allocator' cannot allocate}}

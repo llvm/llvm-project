@@ -10,10 +10,13 @@
 #define _LIBCPP___TYPE_TRAITS_DIAGNOSTIC_UTILITIES_H
 
 #include <__config>
+#include <__type_traits/decay.h>
+#include <__type_traits/integral_constant.h>
 #include <__type_traits/is_bounded_array.h>
 #include <__type_traits/is_const.h>
 #include <__type_traits/is_function.h>
 #include <__type_traits/is_reference.h>
+#include <__type_traits/is_same.h>
 #include <__type_traits/is_unbounded_array.h>
 #include <__type_traits/is_void.h>
 #include <__type_traits/is_volatile.h>
@@ -22,29 +25,69 @@
 #  pragma GCC system_header
 #endif
 
+// // Per https://eel.is/c++draft/containers#container.reqmts-64, allocator-aware containers must have an
+// // allocator that meets the Cpp17Allocator requirements (https://eel.is/c++draft/allocator.requirements).
+// // In particular, this means that containers should only accept non-cv-qualified object types, and
+// // types that are Cpp17Erasable.
+// #define _LIBCPP_CHECK_ALLOCATOR_VALUE_TYPE_REQUIREMENTS(_Template, _Tp, _Verb) \
+//   static_assert(!is_const<_Tp>::value, "'std::" _Template "' cannot " _Verb " const types"); \
+//   static_assert(!is_volatile<_Tp>::value, "'std::" _Template "' cannot " _Verb " volatile types"); \
+//   static_assert(!is_reference<_Tp>::value, "'std::" _Template "' cannot " _Verb " references"); \
+//   static_assert(!is_function<_Tp>::value, "'std::" _Template "' cannot " _Verb " functions") \
+//       _LIBCPP_CHECK_CONTAINER_VALUE_TYPE_IS_NOT_ARRAY_BEFORE_CXX20(_Template, _Tp, _Verb)
+
+// #define _LIBCPP_CHECK_CONTAINER_VALUE_TYPE_REQUIREMENTS(_Container, _Tp)                                               \
+//   static_assert(                                                                                                       \
+//       !__libcpp_is_unbounded_array<_Tp>::value, "'std::" _Container "' cannot hold C arrays of an unknown size");      \
+//   _LIBCPP_CHECK_ALLOCATOR_VALUE_TYPE_REQUIREMENTS(_Container, _Tp, "hold");                                            \
+//   static_assert(!is_void<_Tp>::value, "'std::" _Container "' cannot hold 'void'")
+
+_LIBCPP_BEGIN_NAMESPACE_STD
+
+template <template <class...> class _Template, class _Tp, bool = is_same<typename decay<_Tp>::type, _Tp>::value>
+struct __allocator_requirements : true_type {};
+
 #if _LIBCPP_STD_VER >= 20
-#  define _LIBCPP_CHECK_CONTAINER_VALUE_TYPE_IS_NOT_ARRAY_BEFORE_CXX20(_Template, _Tp, _Verb)
+template <class _Tp>
+struct __bounded_arrays_allowed_only_after_cxx20 : false_type {};
 #else
-#  define _LIBCPP_CHECK_CONTAINER_VALUE_TYPE_IS_NOT_ARRAY_BEFORE_CXX20(_Template, _Tp, _Verb)                          \
-    ;                                                                                                                  \
-    static_assert(!__libcpp_is_bounded_array<_Tp>::value, "'std::" _Template "' cannot " _Verb " C arrays before C++20")
+template <class _Tp>
+struct __bounded_arrays_allowed_only_after_cxx20 : integral_constant<bool, __libcpp_is_bounded_array<_Tp>::value> {};
 #endif
 
-// Per https://eel.is/c++draft/containers#container.reqmts-64, allocator-aware containers must have an
-// allocator that meets the Cpp17Allocator requirements (https://eel.is/c++draft/allocator.requirements).
-// In particular, this means that containers should only accept non-cv-qualified object types, and
-// types that are Cpp17Erasable.
-#define _LIBCPP_CHECK_ALLOCATOR_VALUE_TYPE_REQUIREMENTS(_Template, _Tp, _Verb)                                         \
-  static_assert(!is_const<_Tp>::value, "'std::" _Template "' cannot " _Verb " const types");                           \
-  static_assert(!is_volatile<_Tp>::value, "'std::" _Template "' cannot " _Verb " volatile types");                     \
-  static_assert(!is_reference<_Tp>::value, "'std::" _Template "' cannot " _Verb " references");                        \
-  static_assert(!is_function<_Tp>::value, "'std::" _Template "' cannot " _Verb " functions")                           \
-      _LIBCPP_CHECK_CONTAINER_VALUE_TYPE_IS_NOT_ARRAY_BEFORE_CXX20(_Template, _Tp, _Verb)
+#define _LIBCPP_CHECK_ALLOCATOR_VALUE_TYPE_REQUIREMENTS(_Template, _Verb)                                              \
+  template <class _Tp>                                                                                                 \
+  struct __allocator_requirements<_Template, _Tp, false>                                                               \
+      : integral_constant<bool,                                                                                        \
+                          !(is_const<_Tp>::value || is_volatile<_Tp>::value || is_reference<_Tp>::value ||             \
+                            is_function<_Tp>::value || __bounded_arrays_allowed_only_after_cxx20<_Tp>::value)> {       \
+    static_assert(!is_const<_Tp>::value, "'std::" #_Template "' cannot " _Verb " const types");                        \
+    static_assert(!is_volatile<_Tp>::value, "'std::" #_Template "' cannot " _Verb " volatile types");                  \
+    static_assert(!is_reference<_Tp>::value, "'std::" #_Template "' cannot " _Verb " references");                     \
+    static_assert(!is_function<_Tp>::value, "'std::" #_Template "' cannot " _Verb " functions");                       \
+    static_assert(!__bounded_arrays_allowed_only_after_cxx20<_Tp>::value,                                              \
+                  "'std::" #_Template "' cannot " _Verb " C arrays before C++20");                                     \
+  }
 
-#define _LIBCPP_CHECK_CONTAINER_VALUE_TYPE_REQUIREMENTS(_Container, _Tp)                                               \
-  static_assert(                                                                                                       \
-      !__libcpp_is_unbounded_array<_Tp>::value, "'std::" _Container "' cannot hold C arrays of an unknown size");      \
-  _LIBCPP_CHECK_ALLOCATOR_VALUE_TYPE_REQUIREMENTS(_Container, _Tp, "hold");                                            \
-  static_assert(!is_void<_Tp>::value, "'std::" _Container "' cannot hold 'void'")
+template <template <class...> class, class>
+struct __container_requirements : false_type {
+  static_assert(false,
+                "a new container has been defined; please define '_LIBCPP_CHECK_CONTAINER_VALUE_TYPE_REQUIREMENTS' for "
+                "that container");
+};
+
+#define _LIBCPP_CHECK_CONTAINER_VALUE_TYPE_REQUIREMENTS(_Template)                                                     \
+  _LIBCPP_CHECK_ALLOCATOR_VALUE_TYPE_REQUIREMENTS(_Template, "hold");                                                  \
+  template <class _Tp>                                                                                                 \
+  struct __container_requirements<_Template, _Tp>                                                                      \
+      : integral_constant<bool,                                                                                        \
+                          __allocator_requirements<_Template, _Tp>::value &&                                           \
+                              !(is_void<_Tp>::value || __libcpp_is_unbounded_array<_Tp>::value)> {                     \
+    static_assert(!is_void<_Tp>::value, "'std::" #_Template "' cannot hold 'void'");                                   \
+    static_assert(!__libcpp_is_unbounded_array<_Tp>::value,                                                            \
+                  "'std::" #_Template "' cannot hold C arrays of an unknown size");                                    \
+  }
+
+_LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP___TYPE_TRAITS_DIAGNOSTIC_UTILITIES_H

@@ -562,7 +562,7 @@ class multiset;
 
 template <class _Key, class _Compare = less<_Key>, class _Allocator = allocator<_Key> >
 class _LIBCPP_TEMPLATE_VIS set {
-  _LIBCPP_CHECK_CONTAINER_VALUE_TYPE_REQUIREMENTS("set", _Key);
+  static_assert(__container_requirements<set, _Key>::value);
 
 public:
   // types:
@@ -894,6 +894,8 @@ public:
 #endif
 };
 
+_LIBCPP_CHECK_CONTAINER_VALUE_TYPE_REQUIREMENTS(set);
+
 #if _LIBCPP_STD_VER >= 17
 template <class _InputIterator,
           class _Compare   = less<__iter_value_type<_InputIterator>>,
@@ -1018,7 +1020,7 @@ erase_if(set<_Key, _Compare, _Allocator>& __c, _Predicate __pred) {
 
 template <class _Key, class _Compare = less<_Key>, class _Allocator = allocator<_Key> >
 class _LIBCPP_TEMPLATE_VIS multiset {
-  _LIBCPP_CHECK_CONTAINER_VALUE_TYPE_REQUIREMENTS("multiset", _Key);
+  static_assert(__container_requirements<multiset, _Key>::value);
 
 public:
   // types:
@@ -1352,6 +1354,8 @@ public:
   }
 #endif
 };
+
+_LIBCPP_CHECK_CONTAINER_VALUE_TYPE_REQUIREMENTS(multiset);
 
 #if _LIBCPP_STD_VER >= 17
 template <class _InputIterator,
