@@ -91,9 +91,9 @@ public:
 
   ~Status();
 
-  // llvm::Error support
-  explicit Status(llvm::Error error) { *this = std::move(error); }
-  const Status &operator=(llvm::Error error);
+  /// Avoid using this in new code. Migrate APIs to llvm::Expected instead.
+  static Status FromError(llvm::Error error);
+  /// FIXME: Replace this with a takeError method.
   llvm::Error ToError() const;
 
   /// Get the error string associated with the current error.
@@ -145,6 +145,7 @@ public:
   bool Success() const;
 
 protected:
+  Status(llvm::Error error);
   /// Status code as an integer value.
   ValueType m_code = 0;
   /// The type of the above error code.

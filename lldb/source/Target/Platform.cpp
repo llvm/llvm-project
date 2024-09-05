@@ -1131,7 +1131,7 @@ Status Platform::PutFile(const FileSpec &source, const FileSpec &destination,
   auto source_file = FileSystem::Instance().Open(source, source_open_options,
                                                  lldb::eFilePermissionsUserRW);
   if (!source_file)
-    return Status(source_file.takeError());
+    return Status::FromError(source_file.takeError());
   Status error;
 
   bool requires_upload = true;

@@ -1694,7 +1694,7 @@ SBError SBTarget::SetLabel(const char *label) {
   if (!target_sp)
     return Status::FromErrorString("Couldn't get internal target object.");
 
-  return Status(target_sp->SetLabel(label));
+  return Status::FromError(target_sp->SetLabel(label));
 }
 
 uint32_t SBTarget::GetDataByteSize() {
