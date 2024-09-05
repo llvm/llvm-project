@@ -33,8 +33,8 @@ RISCVConstantPoolValue *RISCVConstantPoolValue::Create(const GlobalValue *GV) {
 }
 
 RISCVConstantPoolValue *RISCVConstantPoolValue::Create(LLVMContext &C,
-                                                       StringRef s) {
-  return new RISCVConstantPoolValue(C, s);
+                                                       StringRef S) {
+  return new RISCVConstantPoolValue(C, S);
 }
 
 int RISCVConstantPoolValue::getExistingMachineCPValue(MachineConstantPool *CP,

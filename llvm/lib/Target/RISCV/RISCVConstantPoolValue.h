@@ -30,7 +30,7 @@ class RISCVConstantPoolValue : public MachineConstantPoolValue {
   const StringRef S;
 
   RISCVConstantPoolValue(Type *Ty, const GlobalValue *GV);
-  RISCVConstantPoolValue(LLVMContext &C, StringRef s);
+  RISCVConstantPoolValue(LLVMContext &C, StringRef S);
 
 private:
   enum class RISCVCPKind { ExtSymbol, GlobalValue };
@@ -40,7 +40,7 @@ public:
   ~RISCVConstantPoolValue() = default;
 
   static RISCVConstantPoolValue *Create(const GlobalValue *GV);
-  static RISCVConstantPoolValue *Create(LLVMContext &C, StringRef s);
+  static RISCVConstantPoolValue *Create(LLVMContext &C, StringRef S);
 
   bool isGlobalValue() const { return Kind == RISCVCPKind::GlobalValue; }
   bool isExtSymbol() const { return Kind == RISCVCPKind::ExtSymbol; }
