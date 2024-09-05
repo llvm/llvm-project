@@ -55,7 +55,7 @@ add_entrypoint_object(
   signal
   ALIAS
   DEPENDS
-     libc.include.llvm-libc-types.__sighandler_t 
+     .${LIBC_TARGET_OS}.signal
 )
 
 add_entrypoint_object(
