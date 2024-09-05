@@ -2133,9 +2133,9 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
   // (The new location might be an explicit line 0, which we do emit.)
   if (DL.getLine() == 0 && LastAsmLine == 0)
     return;
-  if (DL == PrologEndLoc) {
+  if (MI == PrologEndLoc) {
     Flags |= DWARF2_FLAG_PROLOGUE_END | DWARF2_FLAG_IS_STMT;
-    PrologEndLoc = DebugLoc();
+    PrologEndLoc = nullptr;
   }
   // If the line changed, we call that a new statement; unless we went to
   // line 0 and came back, in which case it is not a new statement. We also
@@ -2153,10 +2153,11 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
     PrevInstLoc = DL;
 }
 
-static std::pair<DebugLoc, bool> findPrologueEndLoc(const MachineFunction *MF) {
+static std::pair<const MachineInstr *, bool>
+findPrologueEndLoc(const MachineFunction *MF) {
   // First known non-DBG_VALUE and non-frame setup location marks
   // the beginning of the function body.
-  DebugLoc LineZeroLoc;
+  const MachineInstr *LineZeroLoc = nullptr;
   const Function &F = MF->getFunction();
 
   // Some instructions may be inserted into prologue after this function. Must
@@ -2173,9 +2174,9 @@ static std::pair<DebugLoc, bool> findPrologueEndLoc(const MachineFunction *MF) {
           // meaningful breakpoint. If none is found, return the first
           // location after the frame setup.
           if (MI.getDebugLoc().getLine())
-            return std::make_pair(MI.getDebugLoc(), IsEmptyPrologue);
+            return std::make_pair(&MI, IsEmptyPrologue);
 
-          LineZeroLoc = MI.getDebugLoc();
+          LineZeroLoc = &MI;
         }
         IsEmptyPrologue = false;
       }
@@ -2206,10 +2207,10 @@ static void recordSourceLine(AsmPrinter &Asm, unsigned Line, unsigned Col,
                                          Discriminator, Fn);
 }
 
-DebugLoc DwarfDebug::emitInitialLocDirective(const MachineFunction &MF,
-                                             unsigned CUID) {
-  std::pair<DebugLoc, bool> PrologEnd = findPrologueEndLoc(&MF);
-  DebugLoc PrologEndLoc = PrologEnd.first;
+const MachineInstr *
+DwarfDebug::emitInitialLocDirective(const MachineFunction &MF, unsigned CUID) {
+  std::pair<const MachineInstr *, bool> PrologEnd = findPrologueEndLoc(&MF);
+  const MachineInstr *PrologEndLoc = PrologEnd.first;
   bool IsEmptyPrologue = PrologEnd.second;
 
   // Get beginning of function.
@@ -2228,7 +2229,7 @@ DebugLoc DwarfDebug::emitInitialLocDirective(const MachineFunction &MF,
                        CUID, getDwarfVersion(), getUnits());
     return PrologEndLoc;
   }
-  return DebugLoc();
+  return nullptr;
 }
 
 // Gather pre-function debug information.  Assumes being called immediately
