@@ -1690,6 +1690,18 @@ let SubtargetPredicate = HasAshrPkInsts in {
   def : AshrPkU8Pat<V_ASHR_PK_U8_I32_e64, 0, 255>;
 }
 
+def VOP_WAVE_MATCH_B32 : VOP3_Profile<VOP_I32_I32_I32> {
+  let HasSrc0IntMods = 0;
+  let HasExtSDWA = 0;
+  let HasExtDPP = 0;
+  let HasExtVOP3DPP = 0;
+  let HasExt64BitDPP = 0;
+}
+
+let SubtargetPredicate = HasExclusiveScanInsts, SubtargetPredicate = isGFX13Plus in {
+  defm V_WAVE_MATCH_B32 : VOP3Inst<"v_wave_match_b32", VOP_WAVE_MATCH_B32, int_amdgcn_wave_match_b32>;
+}
+
 class VOP_EXCLUSIVE_SCAN<VOPProfile p, VOP3Features f> : VOP3_Profile<p, f> {
   let HasExtVOP3DPP = 0;
 }
@@ -1788,6 +1800,7 @@ defm V_MINIMUM3_F16           : VOP3Only_Realtriple_t16_gfx12_gfx13<0x22f>;
 defm V_MAXIMUM3_F16           : VOP3Only_Realtriple_t16_gfx12_gfx13<0x230>;
 defm V_MED3_NUM_F32           : VOP3_Realtriple_with_name_gfx12_gfx13<0x231, 0x231, "V_MED3_F32", "v_med3_num_f32">;
 defm V_MED3_NUM_F16           : VOP3_Realtriple_with_name_gfx12_gfx13<0x232, 0x357, "V_MED3_F16", "v_med3_num_f16">;
+defm V_WAVE_MATCH_B32         : VOP3_Real_Base<GFX13Gen, 0x241>;
 defm V_EXCLUSIVE_SCAN_SUM_I32 : VOP3_Real_Base<GFX13Gen, 0x242>;
 defm V_EXCLUSIVE_SCAN_SUM_U32 : VOP3_Real_Base<GFX13Gen, 0x243>;
 defm V_EXCLUSIVE_SCAN_XOR_B32 : VOP3_Real_Base<GFX13Gen, 0x244>;

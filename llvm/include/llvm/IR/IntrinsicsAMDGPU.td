@@ -3083,10 +3083,10 @@ def int_amdgcn_wave_id_in_wavegroup :
   DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable]>,
   ClangBuiltin<"__builtin_amdgcn_wave_id_in_wavegroup">;
 
-// i32 @llvm.amdgcn.wave.match <src>
-def int_amdgcn_wave_match :
-  DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty], [IntrNoMem, IntrConvergent]>,
-  ClangBuiltin<"__builtin_amdgcn_wave_match">;
+// i32 @llvm.amdgcn.wave.match.b32 <src0> <src1>
+def int_amdgcn_wave_match_b32 :
+  DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem, IntrConvergent]>,
+  ClangBuiltin<"__builtin_amdgcn_wave_match_b32">;
 
 // i32 @llvm.amdgcn.exclusive.scan.sum.i32 <src0> <src1> <clamp>
 def int_amdgcn_exclusive_scan_sum_i32 :
