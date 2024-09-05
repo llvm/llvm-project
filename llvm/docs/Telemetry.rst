@@ -86,4 +86,128 @@ The framework is consisted of four important classes:
 How to implement and interact with the API
 ------------------------------------------
 
-// TODO: walk through a simple usage here.
+To use Telemetry in your tool, you need to provide a concrete implementation of the `Telemeter` class and `Destination`.
+
+1) Define a custom `Telemeter` and `Destination`
+
+.. code-block:: c++
+    // This destiantion just prints the given entry to a stdout.
+    // In "real life", this would be where you forward the data to your
+    // custom data storage.
+    class MyStdoutDestination : public llvm::telemetry::Destiantion {
+    public:
+      Error emitEntry(const TelemetryInfo* Entry) override {
+         return sendToBlackBox(Entry);
+         
+      }
+      
+    private:
+      Error sendToBlackBox(const TelemetryInfo* Entry) {
+          // This could send the data anywhere.
+          // But we're simply sending it to stdout for the example.
+          llvm::outs() << entryToString(Entry) << "\n";
+          return llvm::success();
+      }
+      
+      std::string entryToString(const TelemetryInfo* Entry) {
+        // make a string-representation of the given entry.
+      }
+    };
+    
+    // This defines a custom TelemetryInfo that has an addition Msg field.
+    struct MyTelemetryInfo : public llvm::telemetry::TelemetryInfo {
+      std::string Msg;
+      
+      json::Object serializeToJson() const {
+        json::Object Ret = TelemeteryInfo::serializeToJson();
+        Ret.emplace_back("MyMsg", Msg);
+        return std::move(Ret);
+      }
+      
+      // TODO: implement getKind() and classof() to support dyn_cast operations.
+    };
+    
+    class MyTelemeter : public llvm::telemery::Telemeter {
+    public:
+      static std::unique_ptr<MyTelemeter> createInstatnce(llvm::telemetry::Config* config) {
+        // If Telemetry is not enabled, then just return null;
+        if (!config->EnableTelemetry) return nullptr;
+        
+        std::make_unique<MyTelemeter>();
+      }
+      MyTelemeter() = default;
+      
+      void logStartup(llvm::StringRef ToolName, TelemetryInfo* Entry) override {
+        if (MyTelemetryInfo* M = dyn_cast<MyTelemetryInfo>(Entry)) {
+          M->Msg = "Starting up tool with name: " + ToolName;
+          emitToAllDestinations(M);
+        } else {
+          emitToAllDestinations(Entry);
+        }
+      }
+      
+      void logExit(llvm::StringRef ToolName, TelemetryInfo* Entry) override {
+        if (MyTelemetryInfo* M = dyn_cast<MyTelemetryInfo>(Entry)) {
+          M->Msg = "Exitting tool with name: " + ToolName;
+          emitToAllDestinations(M);
+        } else {
+          emitToAllDestinations(Entry);
+        }
+      }
+      
+      void addDestination(Destination* dest) override {
+        destinations.push_back(dest);
+      }
+      
+      // You can also define additional instrumentation points.)
+      void logAdditionalPoint(TelemetryInfo* Entry) {
+          // .... code here
+      }
+    private:
+      void emitToAllDestinations(const TelemetryInfo* Entry) {
+        // Note: could do this in paralle, if needed.
+        for (Destination* Dest : Destinations)
+          Dest->emitEntry(Entry);
+      }
+      std::vector<Destination> Destinations;
+    };
+    
+2) Use the library in your tool.
+
+Logging the tool init-process:
+
+.. code-block:: c++
+
+  // At tool's init code
+  auto StartTime = std::chrono::time_point<std::chrono::steady_clock>::now();
+  llvm::telemetry::Config MyConfig = makeConfig(); // build up the appropriate Config struct here.
+  auto Telemeter = MyTelemeter::createInstance(&MyConfig);
+  std::string CurrentSessionId = ...; // Make some unique ID corresponding to the current session here.
+  
+  // Any other tool's init code can go here
+  // ...
+  
+  // Finally, take a snapshot of the time now so we know how long it took the
+  // init process to finish
+  auto EndTime = std::chrono::time_point<std::chrono::steady_clock>::now();
+  MyTelemetryInfo Entry;
+  Entry.SessionId = CurrentSessionId ; // Assign some unique ID here.
+  Entry.Stats = {StartTime, EndTime};
+  Telemeter->logStartup("MyTool", &Entry);
+
+Similar code can be used for logging the tool's exit.
+
+Additionall, at any other point in the tool's lifetime, it can also log telemetry:
+
+.. code-block:: c++
+
+   // At some execution point:
+   auto StartTime = std::chrono::time_point<std::chrono::steady_clock>::now();
+   
+   // ... other events happening here
+   
+   auto EndTime = std::chrono::time_point<std::chrono::steady_clock>::now();
+  MyTelemetryInfo Entry;
+  Entry.SessionId = CurrentSessionId ; // Assign some unique ID here.
+  Entry.Stats = {StartTime, EndTime};
+  Telemeter->logAdditionalPoint(&Entry);

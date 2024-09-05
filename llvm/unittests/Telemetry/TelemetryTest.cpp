@@ -318,8 +318,6 @@ public:
   TestTelemeter(std::string SessionId) : Uuid(SessionId), Counter(0) {}
 
   static std::unique_ptr<TestTelemeter> createInstance(Config *config) {
-    llvm::errs() << "============================== createInstance is called"
-                 << "\n";
     if (!config->EnableTelemetry)
       return nullptr;
     CurrentContext->ExpectedUuid = nextUuid();
@@ -348,7 +346,7 @@ public:
 
     // The vendor can add additional stuff to the entry before logging.
     if (auto *S = dyn_cast<StartupEvent>(Entry)) {
-      S->MagicStartupMsg = llvm::Twine("One_", ToolPath).str();
+      S->MagicStartupMsg = llvm::Twine("Startup_", ToolPath).str();
     }
     emitToDestinations(Entry);
   }
@@ -364,7 +362,7 @@ public:
 
     // The vendor can add additional stuff to the entry before logging.
     if (auto *E = dyn_cast<ExitEvent>(Entry)) {
-      E->MagicExitMsg = llvm::Twine("Three_", ToolPath).str();
+      E->MagicExitMsg = llvm::Twine("Exit_", ToolPath).str();
     }
 
     emitToDestinations(Entry);
@@ -549,11 +547,11 @@ TEST(TelemetryTest, TelemetryEnabled) {
   {
     std::string ExpectedBuffer =
         ("SessionId:" + llvm::Twine(CurrentContext->ExpectedUuid) + "\n" +
-         "MagicStartupMsg:One_" + llvm::Twine(ToolName) + "\n" +
+         "MagicStartupMsg:Startup_" + llvm::Twine(ToolName) + "\n" +
          "SessionId:" + llvm::Twine(CurrentContext->ExpectedUuid) + "\n" +
          "MSG_0:Two\n" + "MSG_1:Deux\n" + "MSG_2:Zwei\n" +
          "SessionId:" + llvm::Twine(CurrentContext->ExpectedUuid) + "\n" +
-         "MagicExitMsg:Three_" + llvm::Twine(ToolName) + "\n")
+         "MagicExitMsg:Exit_" + llvm::Twine(ToolName) + "\n")
             .str();
 
     EXPECT_STREQ(ExpectedBuffer.c_str(), CurrentContext->Buffer.c_str());
@@ -570,7 +568,7 @@ TEST(TelemetryTest, TelemetryEnabled) {
     ASSERT_NE(StartupEntry, nullptr);
     EXPECT_STREQ(
         ("[[\"SessionId\",\"" + llvm::Twine(CurrentContext->ExpectedUuid) +
-         "\"],[\"MagicStartupMsg\",\"One_" + llvm::Twine(ToolName) + "\"]]")
+         "\"],[\"MagicStartupMsg\",\"Startup_" + llvm::Twine(ToolName) + "\"]]")
             .str()
             .c_str(),
         ValueToString(StartupEntry).c_str());
@@ -592,7 +590,7 @@ TEST(TelemetryTest, TelemetryEnabled) {
     ASSERT_NE(ExitEntry, nullptr);
     EXPECT_STREQ(
         ("[[\"SessionId\",\"" + llvm::Twine(CurrentContext->ExpectedUuid) +
-         "\"],[\"MagicExitMsg\",\"Three_" + llvm::Twine(ToolName) + "\"]]")
+         "\"],[\"MagicExitMsg\",\"Exit_" + llvm::Twine(ToolName) + "\"]]")
             .str()
             .c_str(),
         ValueToString(ExitEntry).c_str());
@@ -629,12 +627,12 @@ TEST(TelemetryTest, TelemetryEnabledSanitizeData) {
     // The StringDestination should have removed the odd-positioned msgs.
     std::string ExpectedBuffer =
         ("SessionId:" + llvm::Twine(CurrentContext->ExpectedUuid) + "\n" +
-         "MagicStartupMsg:One_" + llvm::Twine(ToolName) + "\n" +
+         "MagicStartupMsg:Startup_" + llvm::Twine(ToolName) + "\n" +
          "SessionId:" + llvm::Twine(CurrentContext->ExpectedUuid) + "\n" +
          "MSG_0:Two\n" + "MSG_1:\n" + // <<< was sanitized away.
          "MSG_2:Zwei\n" +
          "SessionId:" + llvm::Twine(CurrentContext->ExpectedUuid) + "\n" +
-         "MagicExitMsg:Three_" + llvm::Twine(ToolName) + "\n")
+         "MagicExitMsg:Exit_" + llvm::Twine(ToolName) + "\n")
             .str();
     EXPECT_STREQ(ExpectedBuffer.c_str(), CurrentContext->Buffer.c_str());
   }
@@ -650,7 +648,7 @@ TEST(TelemetryTest, TelemetryEnabledSanitizeData) {
     ASSERT_NE(StartupEntry, nullptr);
     EXPECT_STREQ(
         ("[[\"SessionId\",\"" + llvm::Twine(CurrentContext->ExpectedUuid) +
-         "\"],[\"MagicStartupMsg\",\"One_" + llvm::Twine(ToolName) + "\"]]")
+         "\"],[\"MagicStartupMsg\",\"Startup_" + llvm::Twine(ToolName) + "\"]]")
             .str()
             .c_str(),
         ValueToString(StartupEntry).c_str());
@@ -670,7 +668,7 @@ TEST(TelemetryTest, TelemetryEnabledSanitizeData) {
     ASSERT_NE(ExitEntry, nullptr);
     EXPECT_STREQ(
         ("[[\"SessionId\",\"" + llvm::Twine(CurrentContext->ExpectedUuid) +
-         "\"],[\"MagicExitMsg\",\"Three_" + llvm::Twine(ToolName) + "\"]]")
+         "\"],[\"MagicExitMsg\",\"Exit_" + llvm::Twine(ToolName) + "\"]]")
             .str()
             .c_str(),
         ValueToString(ExitEntry).c_str());

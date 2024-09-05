@@ -93,7 +93,7 @@ struct EntryKind {
 };
 
 /// TelemetryInfo is the data courier, used to move instrumented data
-/// the tool being monitored to the Telemery framework.
+/// from the tool being monitored to the Telemery framework.
 ///
 /// This base class contains only the basic set of telemetry data.
 /// Downstream implementations can add more fields as needed to describe
