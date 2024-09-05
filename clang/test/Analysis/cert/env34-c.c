@@ -3,6 +3,7 @@
 // RUN:  -analyzer-config security.cert.env.InvalidPtr:InvalidatingGetEnv=true \
 // RUN:  -analyzer-output=text -verify -Wno-unused %s
 
+#include <time.h>
 #include "../Inputs/system-header-simulator.h"
 char *getenv(const char *name);
 char *setlocale(int category, const char *locale);
