@@ -41,10 +41,14 @@ public:
     AliasKind,
   };
 
-  // Enum that describes the kind of ICF folding that a symbol is involved in.
-  // We need to keep track of this to correctly display symbol sizes in the map
-  // file.
-  enum ICFFoldKind { None, Folded_Body, Folded_Thunk };
+  // Enum that describes the type of Identical Code Folding (ICF) applied to a
+  // symbol. This information is crucial for accurately representing symbol
+  // sizes in the map file.
+  enum ICFFoldKind {
+    None, // No folding is applied.
+    Body, // The entire body (function or data) is folded.
+    Thunk // The function body is folded into a single branch thunk.
+  };
 
   virtual ~Symbol() {}
 
@@ -159,7 +163,7 @@ public:
   bool privateExtern : 1;
   // Whether this symbol should appear in the output symbol table.
   bool includeInSymtab : 1;
-  // The ICF folding kind of this symbol: None / Folded / Folded_Thunk.
+  // The ICF folding kind of this symbol: None / Body / Thunk.
   ICFFoldKind identicalCodeFoldingKind : 2;
   // Symbols marked referencedDynamically won't be removed from the output's
   // symbol table by tools like strip. In theory, this could be set on arbitrary

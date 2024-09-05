@@ -119,7 +119,7 @@ public:
 
   void foldIdentical(
       ConcatInputSection *redundant,
-      Symbol::ICFFoldKind foldKind = Symbol::ICFFoldKind::Folded_Body);
+      Symbol::ICFFoldKind foldKind = Symbol::ICFFoldKind::Body);
   ConcatInputSection *canonical() override {
     return replacement ? replacement : this;
   }
