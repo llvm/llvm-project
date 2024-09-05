@@ -10,6 +10,7 @@
 #define _LIBCPP___TUPLE_MAKE_TUPLE_TYPES_H
 
 #include <__config>
+#include <__cstddef/size_t.h>
 #include <__fwd/array.h>
 #include <__fwd/tuple.h>
 #include <__tuple/tuple_element.h>
@@ -19,7 +20,6 @@
 #include <__type_traits/copy_cvref.h>
 #include <__type_traits/remove_cv.h>
 #include <__type_traits/remove_reference.h>
-#include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
