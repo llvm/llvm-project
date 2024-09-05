@@ -31,7 +31,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/Delinearization.h"
-#include "llvm/Analysis/DependenceAnalysis.h"
+#include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -211,10 +211,9 @@ IndexedReference::hasSpacialReuse(const IndexedReference &Other, unsigned CLS,
   return InSameCacheLine;
 }
 
-std::optional<bool>
-IndexedReference::hasTemporalReuse(const IndexedReference &Other,
-                                   unsigned MaxDistance, const Loop &L,
-                                   DependenceInfo &DI, AAResults &AA) const {
+std::optional<bool> IndexedReference::hasTemporalReuse(
+    const IndexedReference &Other, unsigned MaxDistance, const Loop &L,
+    const LoopAccessInfo &LAI, AAResults &AA) const {
   assert(IsValid && "Expecting a valid reference");
 
   if (BasePointer != Other.getBasePointer() && !isAliased(Other, AA)) {
@@ -223,46 +222,33 @@ IndexedReference::hasTemporalReuse(const IndexedReference &Other,
     return false;
   }
 
-  std::unique_ptr<Dependence> D =
-      DI.depends(&StoreOrLoadInst, &Other.StoreOrLoadInst, true);
-
-  if (D == nullptr) {
+  auto DepChecker = LAI.getDepChecker();
+  auto *Deps = DepChecker.getDependences();
+  if (!Deps) {
     LLVM_DEBUG(dbgs().indent(2) << "No temporal reuse: no dependence\n");
     return false;
   }
 
-  if (D->isLoopIndependent()) {
-    LLVM_DEBUG(dbgs().indent(2) << "Found temporal reuse\n");
-    return true;
+  std::optional<MemoryDepChecker::Dependence> D;
+  for (auto &C : *Deps)
+    if (C.getSource(DepChecker) == &StoreOrLoadInst &&
+        C.getDestination(DepChecker) == &Other.StoreOrLoadInst)
+      D = C;
+
+  if (!D || D->Type == MemoryDepChecker::Dependence::NoDep) {
+    LLVM_DEBUG(dbgs().indent(2) << "No temporal reuse: no dependence\n");
+    return false;
   }
-
-  // Check the dependence distance at every loop level. There is temporal reuse
-  // if the distance at the given loop's depth is small (|d| <= MaxDistance) and
-  // it is zero at every other loop level.
-  int LoopDepth = L.getLoopDepth();
-  int Levels = D->getLevels();
-  for (int Level = 1; Level <= Levels; ++Level) {
-    const SCEV *Distance = D->getDistance(Level);
-    const SCEVConstant *SCEVConst = dyn_cast_or_null<SCEVConstant>(Distance);
-
-    if (SCEVConst == nullptr) {
-      LLVM_DEBUG(dbgs().indent(2) << "No temporal reuse: distance unknown\n");
-      return std::nullopt;
-    }
-
-    const ConstantInt &CI = *SCEVConst->getValue();
-    if (Level != LoopDepth && !CI.isZero()) {
-      LLVM_DEBUG(dbgs().indent(2)
-                 << "No temporal reuse: distance is not zero at depth=" << Level
-                 << "\n");
-      return false;
-    } else if (Level == LoopDepth && CI.getSExtValue() > MaxDistance) {
-      LLVM_DEBUG(
-          dbgs().indent(2)
-          << "No temporal reuse: distance is greater than MaxDistance at depth="
-          << Level << "\n");
-      return false;
-    }
+  if (D->Type == MemoryDepChecker::Dependence::Unknown ||
+      D->Type == MemoryDepChecker::Dependence::IndirectUnsafe) {
+    LLVM_DEBUG(dbgs().indent(2) << "No temporal reuse: distance unknown\n");
+    return std::nullopt;
+  }
+  if (DepChecker.getMinDepDist() > MaxDistance) {
+    LLVM_DEBUG(dbgs().indent(2)
+               << "No temporal reuse: distance is greater than MaxDistance"
+               << "\n");
+    return false;
   }
 
   LLVM_DEBUG(dbgs().indent(2) << "Found temporal reuse\n");
@@ -561,10 +547,10 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, const CacheCost &CC) {
 
 CacheCost::CacheCost(const LoopVectorTy &Loops, const LoopInfo &LI,
                      ScalarEvolution &SE, TargetTransformInfo &TTI,
-                     AAResults &AA, DependenceInfo &DI,
+                     AAResults &AA, LoopAccessInfoManager &LAIs,
                      std::optional<unsigned> TRT)
     : Loops(Loops), TRT(TRT.value_or(TemporalReuseThreshold)), LI(LI), SE(SE),
-      TTI(TTI), AA(AA), DI(DI) {
+      TTI(TTI), AA(AA), LAIs(LAIs) {
   assert(!Loops.empty() && "Expecting a non-empty loop vector.");
 
   for (const Loop *L : Loops) {
@@ -578,7 +564,8 @@ CacheCost::CacheCost(const LoopVectorTy &Loops, const LoopInfo &LI,
 
 std::unique_ptr<CacheCost>
 CacheCost::getCacheCost(Loop &Root, LoopStandardAnalysisResults &AR,
-                        DependenceInfo &DI, std::optional<unsigned> TRT) {
+                        LoopAccessInfoManager &LAIs,
+                        std::optional<unsigned> TRT) {
   if (!Root.isOutermost()) {
     LLVM_DEBUG(dbgs() << "Expecting the outermost loop in a loop nest\n");
     return nullptr;
@@ -593,7 +580,8 @@ CacheCost::getCacheCost(Loop &Root, LoopStandardAnalysisResults &AR,
     return nullptr;
   }
 
-  return std::make_unique<CacheCost>(Loops, AR.LI, AR.SE, AR.TTI, AR.AA, DI, TRT);
+  return std::make_unique<CacheCost>(Loops, AR.LI, AR.SE, AR.TTI, AR.AA, LAIs,
+                                     TRT);
 }
 
 void CacheCost::calculateCacheFootprint() {
@@ -654,7 +642,8 @@ bool CacheCost::populateReferenceGroups(ReferenceGroupsTy &RefGroups) const {
        // should have a cost closer to 2x the second due to the two cache
        // access per iteration from opposite ends of the array
         std::optional<bool> HasTemporalReuse =
-            R->hasTemporalReuse(Representative, *TRT, *InnerMostLoop, DI, AA);
+            R->hasTemporalReuse(Representative, *TRT, *InnerMostLoop,
+                                LAIs.getInfo(*InnerMostLoop), AA);
         std::optional<bool> HasSpacialReuse =
             R->hasSpacialReuse(Representative, CLS, AA);
 
@@ -735,10 +724,8 @@ CacheCostTy CacheCost::computeRefGroupCacheCost(const ReferenceGroupTy &RG,
 PreservedAnalyses LoopCachePrinterPass::run(Loop &L, LoopAnalysisManager &AM,
                                             LoopStandardAnalysisResults &AR,
                                             LPMUpdater &U) {
-  Function *F = L.getHeader()->getParent();
-  DependenceInfo DI(F, &AR.AA, &AR.SE, &AR.LI);
-
-  if (auto CC = CacheCost::getCacheCost(L, AR, DI))
+  LoopAccessInfoManager LAIs(AR.SE, AR.AA, AR.DT, AR.LI, &AR.TTI, nullptr);
+  if (auto CC = CacheCost::getCacheCost(L, AR, LAIs))
     OS << *CC;
 
   return PreservedAnalyses::all();

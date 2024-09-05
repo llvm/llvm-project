@@ -270,6 +270,8 @@ public:
     return PointerBounds;
   }
 
+  uint64_t getMinDepDist() const { return MinDepDistBytes; }
+
 private:
   /// A wrapper around ScalarEvolution, used to add runtime SCEV checks, and
   /// applies dynamic knowledge to simplify SCEV expressions and convert them

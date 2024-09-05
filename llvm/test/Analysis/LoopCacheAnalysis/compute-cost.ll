@@ -121,12 +121,8 @@ for.neg.end:                                          ; preds = %for.neg.cond
 ;   for (int i = 40960; i > 0; i--)
 ;     B[i] = B[40960 - i];
 
-; FIXME: Currently negative access functions are treated the same as positive
-; access functions. When this is fixed this testcase should have a cost
-; approximately 2x higher.
-
-; SMALLER-CACHELINE: Loop 'for.cond2' has cost = 10241
-; LARGER-CACHELINE: Loop 'for.cond2' has cost = 1281
+; SMALLER-CACHELINE: Loop 'for.cond2' has cost = 20482
+; LARGER-CACHELINE: Loop 'for.cond2' has cost = 2562
 define void @Test2(ptr %B) {
 entry:
   br label %for.cond2

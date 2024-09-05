@@ -1714,10 +1714,11 @@ PreservedAnalyses LoopInterchangePass::run(LoopNest &LN,
                                            LPMUpdater &U) {
   Function &F = *LN.getParent();
 
-  DependenceInfo DI(&F, &AR.AA, &AR.SE, &AR.LI);
+  LoopAccessInfoManager LAIs(AR.SE, AR.AA, AR.DT, AR.LI, &AR.TTI, nullptr);
   std::unique_ptr<CacheCost> CC =
-      CacheCost::getCacheCost(LN.getOutermostLoop(), AR, DI);
+      CacheCost::getCacheCost(LN.getOutermostLoop(), AR, LAIs);
   OptimizationRemarkEmitter ORE(&F);
+  DependenceInfo DI(&F, &AR.AA, &AR.SE, &AR.LI);
   if (!LoopInterchange(&AR.SE, &AR.LI, &DI, &AR.DT, CC, &ORE).run(LN))
     return PreservedAnalyses::all();
   U.markLoopNestChanged(true);

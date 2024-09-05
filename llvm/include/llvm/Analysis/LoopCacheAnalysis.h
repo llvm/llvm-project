@@ -14,6 +14,7 @@
 #ifndef LLVM_ANALYSIS_LOOPCACHEANALYSIS_H
 #define LLVM_ANALYSIS_LOOPCACHEANALYSIS_H
 
+#include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/IR/PassManager.h"
 #include <optional>
@@ -82,7 +83,8 @@ public:
   /// MaxDistance and std::nullopt if unsure.
   std::optional<bool> hasTemporalReuse(const IndexedReference &Other,
                                        unsigned MaxDistance, const Loop &L,
-                                       DependenceInfo &DI, AAResults &AA) const;
+                                       const LoopAccessInfo &LAI,
+                                       AAResults &AA) const;
 
   /// Compute the cost of the reference w.r.t. the given loop \p L when it is
   /// considered in the innermost position in the loop nest.
@@ -199,7 +201,8 @@ public:
   /// between array elements accessed in a loop so that the elements are
   /// classified to have temporal reuse.
   CacheCost(const LoopVectorTy &Loops, const LoopInfo &LI, ScalarEvolution &SE,
-            TargetTransformInfo &TTI, AAResults &AA, DependenceInfo &DI,
+            TargetTransformInfo &TTI, AAResults &AA,
+            LoopAccessInfoManager &LAIs,
             std::optional<unsigned> TRT = std::nullopt);
 
   /// Create a CacheCost for the loop nest rooted by \p Root.
@@ -207,7 +210,8 @@ public:
   /// between array elements accessed in a loop so that the elements are
   /// classified to have temporal reuse.
   static std::unique_ptr<CacheCost>
-  getCacheCost(Loop &Root, LoopStandardAnalysisResults &AR, DependenceInfo &DI,
+  getCacheCost(Loop &Root, LoopStandardAnalysisResults &AR,
+               LoopAccessInfoManager &LAIs,
                std::optional<unsigned> TRT = std::nullopt);
 
   /// Return the estimated cost of loop \p L if the given loop is part of the
@@ -276,7 +280,7 @@ private:
   ScalarEvolution &SE;
   TargetTransformInfo &TTI;
   AAResults &AA;
-  DependenceInfo &DI;
+  LoopAccessInfoManager &LAIs;
 };
 
 raw_ostream &operator<<(raw_ostream &OS, const IndexedReference &R);
