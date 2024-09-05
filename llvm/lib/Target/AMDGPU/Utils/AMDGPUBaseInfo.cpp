@@ -844,10 +844,6 @@ int ComponentProps::getBitOp3OperandIdx() const {
   return getNamedOperandIdx(Opcode, OpName::bitop3);
 }
 
-bool ComponentProps::isRevOpcode() const {
-  return Opcode == AMDGPU::V_LSHL_ADD_U64_e64;
-}
-
 unsigned ComponentInfo::getIndexInParsedOperands(unsigned CompOprIdx) const {
   assert(CompOprIdx < Component::MAX_OPR_NUM);
 
