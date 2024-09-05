@@ -3867,11 +3867,6 @@ public:
   bool isCompletelySLP() const { return CompletelySLP; }
 };
 
-namespace vputils {
-
-
-} // end namespace vputils
-
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_VECTORIZE_VPLAN_H
