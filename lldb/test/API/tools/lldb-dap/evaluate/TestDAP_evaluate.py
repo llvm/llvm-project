@@ -60,7 +60,10 @@ class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
 
         # Expressions at breakpoint 1, which is in main
         self.assertEvaluate("var1", "20")
+        # Empty expression should equate to the previous expression.
+        self.assertEvaluate("", "20")
         self.assertEvaluate("var2", "21")
+        self.assertEvaluate("", "21")
         self.assertEvaluate("static_int", "42")
         self.assertEvaluate("non_static_int", "43")
         self.assertEvaluate("struct1.foo", "15")
