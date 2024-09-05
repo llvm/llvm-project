@@ -109,6 +109,9 @@ C++ Language Changes
   constant expression. Supports the `V.xyzw` syntax and other tidbits
   as seen in OpenCL. Selecting multiple elements is left as a future work.
 
+- Accept C++26 user-defined ``static_assert`` messages in C++11 as an extension.
+
+
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
@@ -121,6 +124,9 @@ C++2c Feature Support
 - Implemented `P2893R3 Variadic Friends <https://wg21.link/P2893>`_
 
 - Implemented `P2747R2 constexpr placement new <https://wg21.link/P2747R2>`_.
+
+- Added the ``__builtin_is_within_lifetime`` builtin, which supports
+  `P2641R4 Checking if a union alternative is active <https://wg21.link/p2641r4>`_
 
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -153,6 +159,10 @@ Resolutions to C++ Defect Reports
 
 - Allow ``void{}`` as a prvalue of type ``void``.
   (`CWG2351: void{} <https://cplusplus.github.io/CWG/issues/2351.html>`_).
+
+- Clang now allows comparing unequal object pointers that have been cast to ``void *``
+  in constant expressions. These comparisons always worked in non-constant expressions.
+  (`CWG2749: Treatment of "pointer to void" for relational comparisons <https://cplusplus.github.io/CWG/issues/2749.html>`_).
 
 C Language Changes
 ------------------
