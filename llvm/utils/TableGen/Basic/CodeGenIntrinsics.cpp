@@ -25,20 +25,20 @@ using namespace llvm;
 // CodeGenIntrinsic Implementation
 //===----------------------------------------------------------------------===//
 
-CodeGenIntrinsicTable::CodeGenIntrinsicTable(const RecordKeeper &RC) {
-  std::vector<Record *> IntrProperties =
-      RC.getAllDerivedDefinitions("IntrinsicProperty");
-
-  std::vector<const Record *> DefaultProperties;
-  for (const Record *Rec : IntrProperties)
+CodeGenIntrinsicContext::CodeGenIntrinsicContext(const RecordKeeper &RC) {
+  for (const Record *Rec : RC.getAllDerivedDefinitions("IntrinsicProperty"))
     if (Rec->getValueAsBit("IsDefault"))
       DefaultProperties.push_back(Rec);
+}
+
+CodeGenIntrinsicTable::CodeGenIntrinsicTable(const RecordKeeper &RC) {
+  CodeGenIntrinsicContext Ctx(RC);
 
   std::vector<Record *> Defs = RC.getAllDerivedDefinitions("Intrinsic");
   Intrinsics.reserve(Defs.size());
 
   for (const Record *Def : Defs)
-    Intrinsics.push_back(CodeGenIntrinsic(Def, DefaultProperties));
+    Intrinsics.push_back(CodeGenIntrinsic(Def, Ctx));
 
   llvm::sort(Intrinsics,
              [](const CodeGenIntrinsic &LHS, const CodeGenIntrinsic &RHS) {
@@ -54,8 +54,18 @@ CodeGenIntrinsicTable::CodeGenIntrinsicTable(const RecordKeeper &RC) {
   Targets.back().Count = Intrinsics.size() - Targets.back().Offset;
 }
 
+CodeGenIntrinsic &CodeGenIntrinsicMap::operator[](const Record *Record) {
+  if (!Record->isSubClassOf("Intrinsic"))
+    PrintFatalError("Intrinsic defs should be subclass of 'Intrinsic' class");
+
+  auto [Iter, Inserted] = Map.try_emplace(Record);
+  if (Inserted)
+    Iter->second = std::make_unique<CodeGenIntrinsic>(Record, Ctx);
+  return *Iter->second;
+}
+
 CodeGenIntrinsic::CodeGenIntrinsic(const Record *R,
-                                   ArrayRef<const Record *> DefaultProperties)
+                                   const CodeGenIntrinsicContext &Ctx)
     : TheDef(R) {
   StringRef DefName = TheDef->getName();
   ArrayRef<SMLoc> DefLoc = R->getLoc();
@@ -96,17 +106,22 @@ CodeGenIntrinsic::CodeGenIntrinsic(const Record *R,
                                   TargetPrefix + ".'!");
   }
 
-  if (auto *Types = R->getValue("Types")) {
-    auto *TypeList = cast<ListInit>(Types->getValue());
-    isOverloaded = R->getValueAsBit("isOverloaded");
+  const Record *TypeInfo = R->getValueAsDef("TypeInfo");
+  if (!TypeInfo->isSubClassOf("TypeInfoGen"))
+    PrintFatalError(DefLoc, "TypeInfo field in " + DefName +
+                                " should be of subclass of TypeInfoGen!");
 
-    unsigned I = 0;
-    for (unsigned E = R->getValueAsListInit("RetTypes")->size(); I < E; ++I)
-      IS.RetTys.push_back(TypeList->getElementAsRecord(I));
+  isOverloaded = TypeInfo->getValueAsBit("isOverloaded");
+  const ListInit *TypeList = TypeInfo->getValueAsListInit("Types");
 
-    for (unsigned E = TypeList->size(); I < E; ++I)
-      IS.ParamTys.push_back(TypeList->getElementAsRecord(I));
-  }
+  // Types field is a concatenation of Return types followed by Param types.
+  unsigned Idx = 0;
+  unsigned NumRet = R->getValueAsListInit("RetTypes")->size();
+  for (; Idx < NumRet; ++Idx)
+    IS.RetTys.push_back(TypeList->getElementAsRecord(Idx));
+
+  for (unsigned E = TypeList->size(); Idx < E; ++Idx)
+    IS.ParamTys.push_back(TypeList->getElementAsRecord(Idx));
 
   // Parse the intrinsic properties.
   ListInit *PropList = R->getValueAsListInit("IntrProperties");
@@ -119,7 +134,7 @@ CodeGenIntrinsic::CodeGenIntrinsic(const Record *R,
   }
 
   // Set default properties to true.
-  setDefaultProperties(DefaultProperties);
+  setDefaultProperties(Ctx.DefaultProperties);
 
   // Also record the SDPatternOperator Properties.
   Properties = parseSDPatternOperatorProperties(R);

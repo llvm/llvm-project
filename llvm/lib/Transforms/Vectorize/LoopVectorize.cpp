@@ -6606,9 +6606,20 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
   case Instruction::ICmp:
   case Instruction::FCmp: {
     Type *ValTy = I->getOperand(0)->getType();
+
     Instruction *Op0AsInstruction = dyn_cast<Instruction>(I->getOperand(0));
-    if (canTruncateToMinimalBitwidth(Op0AsInstruction, VF))
-      ValTy = IntegerType::get(ValTy->getContext(), MinBWs[Op0AsInstruction]);
+    (void)Op0AsInstruction;
+    assert((!canTruncateToMinimalBitwidth(Op0AsInstruction, VF) ||
+            canTruncateToMinimalBitwidth(I, VF)) &&
+           "truncating Op0 must imply truncating the compare");
+    if (canTruncateToMinimalBitwidth(I, VF)) {
+      assert(!canTruncateToMinimalBitwidth(Op0AsInstruction, VF) ||
+             MinBWs[I] == MinBWs[Op0AsInstruction] &&
+                 "if both the operand and the compare are marked for "
+                 "truncation, they must have the same bitwidth");
+      ValTy = IntegerType::get(ValTy->getContext(), MinBWs[I]);
+    }
+
     VectorTy = ToVectorTy(ValTy, VF);
     return TTI.getCmpSelInstrCost(I->getOpcode(), VectorTy, nullptr,
                                   cast<CmpInst>(I)->getPredicate(), CostKind,

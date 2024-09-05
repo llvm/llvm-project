@@ -669,12 +669,7 @@ class Intrinsic<list<LLVMType> ret_types,
   // IntrinsicProperty<1>
   bit DisableDefaultAttributes = disable_default_attributes;
 
-  bit isTarget = false;
-
   TypeInfoGen TypeInfo = TypeInfoGen<RetTypes, ParamTypes>;
-  bit isOverloaded = TypeInfo.isOverloaded;
-  list<LLVMType> Types = TypeInfo.Types;
-  list<list<int>> TypeSig = TypeInfo.TypeSig;
 }
 
 // Intrinsic with default attributes (disable_default_attributes = false).
