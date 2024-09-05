@@ -3360,8 +3360,8 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
           MachineMemOperand::MOStore, Size, Alignment));
       MIB.addReg(PnReg);
       MIB.addReg(AArch64::SP)
-          .addImm(RPI.Offset / 2) // [sp, #offset*2*scale],
-                                  // where scale is implicit
+          .addImm(RPI.Offset / 2) // [sp, #imm*2*scale],
+                                  // where 2*scale is implicit
           .setMIFlag(MachineInstr::FrameSetup);
       MIB.addMemOperand(MF.getMachineMemOperand(
           MachinePointerInfo::getFixedStack(MF, FrameIdxReg1),
@@ -3382,8 +3382,8 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
       }
       MIB.addReg(Reg1, getPrologueDeath(MF, Reg1))
           .addReg(AArch64::SP)
-          .addImm(RPI.Offset) // [sp, #offset*scale],
-                              // where factor*scale is implicit
+          .addImm(RPI.Offset) // [sp, #offset*vscale],
+                              // where factor*vscale is implicit
           .setMIFlag(MachineInstr::FrameSetup);
       MIB.addMemOperand(MF.getMachineMemOperand(
           MachinePointerInfo::getFixedStack(MF, FrameIdxReg1),
@@ -3527,8 +3527,8 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
           MachineMemOperand::MOLoad, Size, Alignment));
       MIB.addReg(PnReg);
       MIB.addReg(AArch64::SP)
-          .addImm(RPI.Offset / 2) // [sp, #offset*2*scale]
-                                  // where scale is implicit
+          .addImm(RPI.Offset / 2) // [sp, #imm*2*vscale]
+                                  // where 2*vscale is implicit
           .setMIFlag(MachineInstr::FrameDestroy);
       MIB.addMemOperand(MF.getMachineMemOperand(
           MachinePointerInfo::getFixedStack(MF, FrameIdxReg1),
