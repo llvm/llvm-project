@@ -239,6 +239,7 @@ protected:
   bool HasVALUTransUseHazard = false;
   bool HasForceStoreSC0SC1 = false;
   bool HasRequiredExportPriority = false;
+  bool HasVmemWriteVgprInOrder = false;
 
   bool RequiresCOV6 = false;
 
@@ -1246,6 +1247,8 @@ public:
 
   bool hasVALUMaskWriteHazard() const { return getGeneration() == GFX11; }
 
+  bool hasVALUReadSGPRHazard() const { return getGeneration() == GFX12; }
+
   /// Return if operations acting on VGPR tuples require even alignment.
   bool needsAlignedVGPRs() const { return GFX90AInsts; }
 
@@ -1284,6 +1287,8 @@ public:
   bool hasRestrictedSOffset() const { return HasRestrictedSOffset; }
 
   bool hasRequiredExportPriority() const { return HasRequiredExportPriority; }
+
+  bool hasVmemWriteVgprInOrder() const { return HasVmemWriteVgprInOrder; }
 
   /// \returns true if the target uses LOADcnt/SAMPLEcnt/BVHcnt, DScnt/KMcnt
   /// and STOREcnt rather than VMcnt, LGKMcnt and VScnt respectively.

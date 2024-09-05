@@ -64,3 +64,12 @@ namespace Bitfield {
   // CHECK: store ptr @_ZGRN8Bitfield1rE_, ptr @_ZN8Bitfield1rE, align 8
   int &&r = S().a;
 }
+
+namespace Null {
+  decltype(nullptr) null();
+  // CHECK: call {{.*}} @_ZN4Null4nullEv(
+  int *p = null();
+  struct S {};
+  // CHECK: call {{.*}} @_ZN4Null4nullEv(
+  int S::*q = null();
+}

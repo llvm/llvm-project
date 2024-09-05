@@ -237,7 +237,10 @@ void tools::PS5cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (!D.SysRoot.empty())
     CmdArgs.push_back(Args.MakeArgString("--sysroot=" + D.SysRoot));
 
-  if (Args.hasArg(options::OPT_pie))
+  // Default to PIE for non-static executables.
+  const bool PIE =
+      !Args.hasArg(options::OPT_r, options::OPT_shared, options::OPT_static);
+  if (Args.hasFlag(options::OPT_pie, options::OPT_no_pie, PIE))
     CmdArgs.push_back("-pie");
 
   if (Args.hasArg(options::OPT_static))
@@ -351,9 +354,7 @@ toolchains::PS4PS5Base::PS4PS5Base(const Driver &D, const llvm::Triple &Triple,
 
   SmallString<512> SDKLibDir(SDKRootDir);
   llvm::sys::path::append(SDKLibDir, "target/lib");
-  if (!Args.hasArg(options::OPT_nostdlib) &&
-      !Args.hasArg(options::OPT_nodefaultlibs) &&
-      !Args.hasArg(options::OPT__sysroot_EQ) && !Args.hasArg(options::OPT_E) &&
+  if (!Args.hasArg(options::OPT__sysroot_EQ) && !Args.hasArg(options::OPT_E) &&
       !Args.hasArg(options::OPT_c) && !Args.hasArg(options::OPT_S) &&
       !Args.hasArg(options::OPT_emit_ast) &&
       !llvm::sys::fs::exists(SDKLibDir)) {

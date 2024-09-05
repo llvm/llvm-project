@@ -598,7 +598,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
     // F16 - VOP1 Actions.
     setOperationAction({ISD::FP_ROUND, ISD::STRICT_FP_ROUND, ISD::FCOS,
-                        ISD::FSIN, ISD::FROUND, ISD::FPTRUNC_ROUND},
+                        ISD::FSIN, ISD::FROUND},
                        MVT::f16, Custom);
 
     setOperationAction({ISD::FP_TO_SINT, ISD::FP_TO_UINT}, MVT::f16, Promote);
@@ -1351,20 +1351,16 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
                   MachineMemOperand::MODereferenceable;
     return true;
   }
-  case Intrinsic::amdgcn_global_atomic_fadd:
   case Intrinsic::amdgcn_global_atomic_fmin:
   case Intrinsic::amdgcn_global_atomic_fmax:
   case Intrinsic::amdgcn_global_atomic_fmin_num:
   case Intrinsic::amdgcn_global_atomic_fmax_num:
   case Intrinsic::amdgcn_global_atomic_ordered_add_b64:
-  case Intrinsic::amdgcn_flat_atomic_fadd:
   case Intrinsic::amdgcn_flat_atomic_fmin:
   case Intrinsic::amdgcn_flat_atomic_fmax:
   case Intrinsic::amdgcn_flat_atomic_fmin_num:
   case Intrinsic::amdgcn_flat_atomic_fmax_num:
-  case Intrinsic::amdgcn_global_atomic_fadd_v2bf16:
-  case Intrinsic::amdgcn_atomic_cond_sub_u32:
-  case Intrinsic::amdgcn_flat_atomic_fadd_v2bf16: {
+  case Intrinsic::amdgcn_atomic_cond_sub_u32: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::getVT(CI.getType());
     Info.ptrVal = CI.getOperand(0);
@@ -1466,15 +1462,11 @@ bool SITargetLowering::getAddrModeArguments(IntrinsicInst *II,
   case Intrinsic::amdgcn_ds_consume:
   case Intrinsic::amdgcn_ds_ordered_add:
   case Intrinsic::amdgcn_ds_ordered_swap:
-  case Intrinsic::amdgcn_flat_atomic_fadd:
-  case Intrinsic::amdgcn_flat_atomic_fadd_v2bf16:
   case Intrinsic::amdgcn_flat_atomic_fmax:
   case Intrinsic::amdgcn_flat_atomic_fmax_num:
   case Intrinsic::amdgcn_flat_atomic_fmin:
   case Intrinsic::amdgcn_flat_atomic_fmin_num:
   case Intrinsic::amdgcn_global_atomic_csub:
-  case Intrinsic::amdgcn_global_atomic_fadd:
-  case Intrinsic::amdgcn_global_atomic_fadd_v2bf16:
   case Intrinsic::amdgcn_global_atomic_fmax:
   case Intrinsic::amdgcn_global_atomic_fmax_num:
   case Intrinsic::amdgcn_global_atomic_fmin:
@@ -1703,7 +1695,8 @@ bool SITargetLowering::allowsMisalignedMemoryAccessesImpl(
     if (!Subtarget->hasUnalignedDSAccessEnabled() && Alignment < Align(4))
       return false;
 
-    Align RequiredAlignment(PowerOf2Ceil(Size/8)); // Natural alignment.
+    Align RequiredAlignment(
+        PowerOf2Ceil(divideCeil(Size, 8))); // Natural alignment.
     if (Subtarget->hasLDSMisalignedBug() && Size > 32 &&
         Alignment < RequiredAlignment)
       return false;
@@ -5804,8 +5797,6 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::FP_ROUND:
   case ISD::STRICT_FP_ROUND:
     return lowerFP_ROUND(Op, DAG);
-  case ISD::FPTRUNC_ROUND:
-    return lowerFPTRUNC_ROUND(Op, DAG);
   case ISD::TRAP:
     return lowerTRAP(Op, DAG);
   case ISD::DEBUGTRAP:
@@ -6653,30 +6644,6 @@ SDValue SITargetLowering::getFPExtOrFPRound(SelectionDAG &DAG,
       DAG.getNode(ISD::FP_EXTEND, DL, VT, Op) :
     DAG.getNode(ISD::FP_ROUND, DL, VT, Op,
                 DAG.getTargetConstant(0, DL, MVT::i32));
-}
-
-SDValue SITargetLowering::lowerFPTRUNC_ROUND(SDValue Op,
-                                             SelectionDAG &DAG) const {
-  if (Op.getOperand(0)->getValueType(0) != MVT::f32)
-    return SDValue();
-
-  // Only support towardzero, tonearest, upward and downward.
-  int RoundMode = Op.getConstantOperandVal(1);
-  if (RoundMode != (int)RoundingMode::TowardZero &&
-      RoundMode != (int)RoundingMode::NearestTiesToEven &&
-      RoundMode != (int)RoundingMode::TowardPositive &&
-      RoundMode != (int)RoundingMode::TowardNegative)
-    return SDValue();
-
-  // "round.towardzero" -> TowardZero 0        -> FP_ROUND_ROUND_TO_ZERO 3
-  // "round.tonearest"  -> NearestTiesToEven 1 -> FP_ROUND_ROUND_TO_NEAREST 0
-  // "round.upward"     -> TowardPositive 2    -> FP_ROUND_ROUND_TO_INF 1
-  // "round.downward    -> TowardNegative 3    -> FP_ROUND_ROUND_TO_NEGINF 2
-  unsigned HW_Mode = (RoundMode + 3) % 4;
-  SDLoc DL(Op);
-  SDValue RoundFlag = DAG.getTargetConstant(HW_Mode, DL, MVT::i32);
-  return DAG.getNode(AMDGPUISD::FPTRUNC_ROUND, DL, Op.getNode()->getVTList(),
-                     Op->getOperand(0), RoundFlag);
 }
 
 SDValue SITargetLowering::lowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
@@ -13358,12 +13325,15 @@ bool SITargetLowering::shouldExpandVectorDynExt(unsigned EltSize,
 
   // On some architectures (GFX9) movrel is not available and it's better
   // to expand.
-  if (!Subtarget->hasMovrel())
+  if (Subtarget->useVGPRIndexMode())
     return NumInsts <= 16;
 
   // If movrel is available, use it instead of expanding for vector of 8
   // elements.
-  return NumInsts <= 15;
+  if (Subtarget->hasMovrel())
+    return NumInsts <= 15;
+
+  return true;
 }
 
 bool SITargetLowering::shouldExpandVectorDynExt(SDNode *N) const {
@@ -15758,16 +15728,12 @@ void SITargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     case Intrinsic::amdgcn_mbcnt_hi: {
       const GCNSubtarget &ST =
           DAG.getMachineFunction().getSubtarget<GCNSubtarget>();
-      // These return at most the (wavefront size - 1) + src1
-      // As long as src1 is an immediate we can calc known bits
-      KnownBits Src1Known = DAG.computeKnownBits(Op.getOperand(2), Depth + 1);
-      unsigned Src1ValBits = Src1Known.countMaxActiveBits();
-      unsigned MaxActiveBits = std::max(Src1ValBits, ST.getWavefrontSizeLog2());
-      // Cater for potential carry
-      MaxActiveBits += Src1ValBits ? 1 : 0;
-      unsigned Size = Op.getValueType().getSizeInBits();
-      if (MaxActiveBits < Size)
-        Known.Zero.setHighBits(Size - MaxActiveBits);
+      // Wave64 mbcnt_lo returns at most 32 + src1. Otherwise these return at
+      // most 31 + src1.
+      Known.Zero.setBitsFrom(
+          IID == Intrinsic::amdgcn_mbcnt_lo ? ST.getWavefrontSizeLog2() : 5);
+      KnownBits Known2 = DAG.computeKnownBits(Op.getOperand(2), Depth + 1);
+      Known = KnownBits::add(Known, Known2);
       return;
     }
     }
@@ -15802,7 +15768,8 @@ void SITargetLowering::computeKnownBitsForTargetInstr(
   switch (MI->getOpcode()) {
   case AMDGPU::G_INTRINSIC:
   case AMDGPU::G_INTRINSIC_CONVERGENT: {
-    switch (cast<GIntrinsic>(MI)->getIntrinsicID()) {
+    Intrinsic::ID IID = cast<GIntrinsic>(MI)->getIntrinsicID();
+    switch (IID) {
     case Intrinsic::amdgcn_workitem_id_x:
       knownBitsForWorkitemID(*getSubtarget(), KB, Known, 0);
       break;
@@ -15814,9 +15781,15 @@ void SITargetLowering::computeKnownBitsForTargetInstr(
       break;
     case Intrinsic::amdgcn_mbcnt_lo:
     case Intrinsic::amdgcn_mbcnt_hi: {
-      // These return at most the wavefront size - 1.
-      unsigned Size = MRI.getType(R).getSizeInBits();
-      Known.Zero.setHighBits(Size - getSubtarget()->getWavefrontSizeLog2());
+      // Wave64 mbcnt_lo returns at most 32 + src1. Otherwise these return at
+      // most 31 + src1.
+      Known.Zero.setBitsFrom(IID == Intrinsic::amdgcn_mbcnt_lo
+                                 ? getSubtarget()->getWavefrontSizeLog2()
+                                 : 5);
+      KnownBits Known2;
+      KB.computeKnownBitsImpl(MI->getOperand(3).getReg(), Known2, DemandedElts,
+                              Depth + 1);
+      Known = KnownBits::add(Known, Known2);
       break;
     }
     case Intrinsic::amdgcn_groupstaticsize: {

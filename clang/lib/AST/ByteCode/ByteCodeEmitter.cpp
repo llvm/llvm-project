@@ -21,17 +21,6 @@
 using namespace clang;
 using namespace clang::interp;
 
-/// Unevaluated builtins don't get their arguments put on the stack
-/// automatically. They instead operate on the AST of their Call
-/// Expression.
-/// Similar information is available via ASTContext::BuiltinInfo,
-/// but that is not correct for our use cases.
-static bool isUnevaluatedBuiltin(unsigned BuiltinID) {
-  return BuiltinID == Builtin::BI__builtin_classify_type ||
-         BuiltinID == Builtin::BI__builtin_os_log_format_buffer_size ||
-         BuiltinID == Builtin::BI__builtin_constant_p;
-}
-
 Function *ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
 
   // Manually created functions that haven't been assigned proper
@@ -147,14 +136,11 @@ Function *ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
   // Create a handle over the emitted code.
   Function *Func = P.getFunction(FuncDecl);
   if (!Func) {
-    bool IsUnevaluatedBuiltin = false;
-    if (unsigned BI = FuncDecl->getBuiltinID())
-      IsUnevaluatedBuiltin = isUnevaluatedBuiltin(BI);
-
+    unsigned BuiltinID = FuncDecl->getBuiltinID();
     Func =
         P.createFunction(FuncDecl, ParamOffset, std::move(ParamTypes),
                          std::move(ParamDescriptors), std::move(ParamOffsets),
-                         HasThisPointer, HasRVO, IsUnevaluatedBuiltin);
+                         HasThisPointer, HasRVO, BuiltinID);
   }
 
   assert(Func);
@@ -191,6 +177,48 @@ Function *ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
   // Set the function's code.
   Func->setCode(NextLocalOffset, std::move(Code), std::move(SrcMap),
                 std::move(Scopes), FuncDecl->hasBody());
+  Func->setIsFullyCompiled(true);
+  return Func;
+}
+
+/// Compile an ObjC block, i.e. ^(){}, that thing.
+///
+/// FIXME: We do not support calling the block though, so we create a function
+/// here but do not compile any code for it.
+Function *ByteCodeEmitter::compileObjCBlock(const BlockExpr *BE) {
+  const BlockDecl *BD = BE->getBlockDecl();
+  // Set up argument indices.
+  unsigned ParamOffset = 0;
+  SmallVector<PrimType, 8> ParamTypes;
+  SmallVector<unsigned, 8> ParamOffsets;
+  llvm::DenseMap<unsigned, Function::ParamDescriptor> ParamDescriptors;
+
+  // Assign descriptors to all parameters.
+  // Composite objects are lowered to pointers.
+  for (const ParmVarDecl *PD : BD->parameters()) {
+    std::optional<PrimType> T = Ctx.classify(PD->getType());
+    PrimType PT = T.value_or(PT_Ptr);
+    Descriptor *Desc = P.createDescriptor(PD, PT);
+    ParamDescriptors.insert({ParamOffset, {PT, Desc}});
+    Params.insert({PD, {ParamOffset, T != std::nullopt}});
+    ParamOffsets.push_back(ParamOffset);
+    ParamOffset += align(primSize(PT));
+    ParamTypes.push_back(PT);
+  }
+
+  if (BD->hasCaptures())
+    return nullptr;
+
+  // Create a handle over the emitted code.
+  Function *Func =
+      P.createFunction(BE, ParamOffset, std::move(ParamTypes),
+                       std::move(ParamDescriptors), std::move(ParamOffsets),
+                       /*HasThisPointer=*/false, /*HasRVO=*/false,
+                       /*IsUnevaluatedBuiltin=*/false);
+
+  assert(Func);
+  Func->setDefined(true);
+  // We don't compile the BlockDecl code at all right now.
   Func->setIsFullyCompiled(true);
   return Func;
 }

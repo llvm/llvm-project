@@ -255,7 +255,8 @@ public:
 
   void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
                    const DebugLoc &DL, MCRegister DestReg, MCRegister SrcReg,
-                   bool KillSrc) const override;
+                   bool KillSrc, bool RenamableDest = false,
+                   bool RenamableSrc = false) const override;
 
   void materializeImmediate(MachineBasicBlock &MBB,
                             MachineBasicBlock::iterator MI, const DebugLoc &DL,
@@ -1307,14 +1308,6 @@ public:
 
   bool mayAccessFlatAddressSpace(const MachineInstr &MI) const;
 
-  bool isNonUniformBranchInstr(MachineInstr &Instr) const;
-
-  void convertNonUniformIfRegion(MachineBasicBlock *IfEntry,
-                                 MachineBasicBlock *IfEnd) const;
-
-  void convertNonUniformLoopRegion(MachineBasicBlock *LoopEntry,
-                                   MachineBasicBlock *LoopEnd) const;
-
   std::pair<unsigned, unsigned>
   decomposeMachineOperandsTargetFlags(unsigned TF) const override;
 
@@ -1444,6 +1437,8 @@ public:
   // This is used if an operand is a 32 bit register but needs to be aligned
   // regardless.
   void enforceOperandRCAlignment(MachineInstr &MI, unsigned OpName) const;
+
+  static Register findSetInactiveMask(const MachineInstr &MI);
 };
 
 /// \brief Returns true if a reg:subreg pair P has a TRC class

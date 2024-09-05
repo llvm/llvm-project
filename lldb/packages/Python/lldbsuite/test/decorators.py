@@ -467,9 +467,8 @@ def apple_simulator_test(platform):
         if lldbplatformutil.getHostPlatform() not in ["darwin", "macosx"]:
             return "simulator tests are run only on darwin hosts."
         try:
-            DEVNULL = open(os.devnull, "w")
             output = subprocess.check_output(
-                ["xcodebuild", "-showsdks"], stderr=DEVNULL
+                ["xcodebuild", "-showsdks"], stderr=subprocess.DEVNULL
             ).decode("utf-8")
             if re.search("%ssimulator" % platform, output):
                 return None
@@ -1094,9 +1093,8 @@ def skipUnlessFeature(feature):
     def is_feature_enabled():
         if platform.system() == "Darwin":
             try:
-                DEVNULL = open(os.devnull, "w")
                 output = subprocess.check_output(
-                    ["/usr/sbin/sysctl", feature], stderr=DEVNULL
+                    ["/usr/sbin/sysctl", feature], stderr=subprocess.DEVNULL
                 ).decode("utf-8")
                 # If 'feature: 1' was output, then this feature is available and
                 # the test should not be skipped.

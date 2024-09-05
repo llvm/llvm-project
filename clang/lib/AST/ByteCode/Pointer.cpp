@@ -463,6 +463,17 @@ bool Pointer::hasSameArray(const Pointer &A, const Pointer &B) {
          A.getFieldDesc()->IsArray;
 }
 
+bool Pointer::pointsToLiteral() const {
+  if (isZero() || !isBlockPointer())
+    return false;
+
+  const Expr *E = block()->getDescriptor()->asExpr();
+  if (block()->isDynamic())
+    return false;
+
+  return E && !isa<MaterializeTemporaryExpr, StringLiteral>(E);
+}
+
 std::optional<APValue> Pointer::toRValue(const Context &Ctx,
                                          QualType ResultType) const {
   const ASTContext &ASTCtx = Ctx.getASTContext();

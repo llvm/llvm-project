@@ -7,14 +7,8 @@
 
 // RUN: %{compile} | %{run} | FileCheck %s
 
-// NOTE: QEMU gives incorrect result for SME SMOPA 4-way outer product
-// instruction (version <= 8.2.0, latest version at time of writing), see:
-// https://gitlab.com/qemu-project/qemu/-/issues/2083 This test is expected to
-// fail (CHECK lines are correct) until a fixed version of QEMU can be used.
-
-// FIXME: Remove the 'XFAIL' below once a fixed QEMU version is available
-// (and installed on CI buildbot).
-// XFAIL: *
+// NOTE: QEMU <= 8.2.0 gives incorrect result for SME SMOPA 4-way outer product
+// instruction see: https://gitlab.com/qemu-project/qemu/-/issues/2083.
 
 // NOTE: there is no non-widening variant for these types and this test can't
 // be lowered without the widening pass, therefore we can't check if the result

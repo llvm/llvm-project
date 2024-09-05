@@ -10,11 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Helper class to find the largest legal scalable vector type that can hold VT.
-// Non-matches return VT, which often means VT is the container type.
-class SVEContainerVT<ValueType VT> {
-  ValueType Value = !cond(
-    // fixed length vectors
+// Helper class to hold conversions of legal fixed-length vector types.
+class NEONType<ValueType VT> {
+  // The largest legal scalable vector type that can hold VT.
+  ValueType SVEContainer = !cond(
     !eq(VT, v8i8): nxv16i8,
     !eq(VT, v16i8): nxv16i8,
     !eq(VT, v4i16): nxv8i16,
@@ -31,13 +30,35 @@ class SVEContainerVT<ValueType VT> {
     !eq(VT, v2f64): nxv2f64,
     !eq(VT, v4bf16): nxv8bf16,
     !eq(VT, v8bf16): nxv8bf16,
-    // unpacked scalable vectors
+    true : untyped);
+}
+
+// Helper class to hold conversions of legal scalable vector types.
+class SVEType<ValueType VT> {
+  // The largest legal scalable vector type that can hold VT.
+  // Non-matches return VT because only packed types remain.
+  ValueType Packed = !cond(
     !eq(VT, nxv2f16): nxv8f16,
     !eq(VT, nxv4f16): nxv8f16,
     !eq(VT, nxv2f32): nxv4f32,
     !eq(VT, nxv2bf16): nxv8bf16,
     !eq(VT, nxv4bf16): nxv8bf16,
     true : VT);
+
+  // The legal scalable vector that is half the length of VT.
+  ValueType HalfLength = !cond(
+    !eq(VT, nxv8f16): nxv4f16,
+    !eq(VT, nxv4f16): nxv2f16,
+    !eq(VT, nxv4f32): nxv2f32,
+    !eq(VT, nxv8bf16): nxv4bf16,
+    !eq(VT, nxv4bf16): nxv2bf16,
+    true : untyped);
+
+  // The legal scalable vector that is quarter the length of VT.
+  ValueType QuarterLength = !cond(
+    !eq(VT, nxv8f16): nxv2f16,
+    !eq(VT, nxv8bf16): nxv2bf16,
+    true : untyped);
 }
 
 def SDT_AArch64Setcc : SDTypeProfile<1, 4, [
@@ -2959,10 +2980,10 @@ multiclass sve_fp_2op_p_zd<bits<7> opc, string asm,
   def NAME : sve_fp_2op_p_zd<opc, asm, i_zprtype, o_zprtype, Sz>,
              SVEPseudo2Instr<NAME, 1>;
   // convert vt1 to a packed type for the intrinsic patterns
-  defvar packedvt1 = SVEContainerVT<vt1>.Value;
+  defvar packedvt1 = SVEType<vt1>.Packed;
 
   // convert vt3 to a packed type for the intrinsic patterns
-  defvar packedvt3 = SVEContainerVT<vt3>.Value;
+  defvar packedvt3 = SVEType<vt3>.Packed;
 
   def : SVE_3_Op_Pat<packedvt1, int_op, packedvt1, vt2, packedvt3, !cast<Instruction>(NAME)>;
   def : SVE_1_Op_Passthru_Pat<vt1, ir_op, vt2, vt3, !cast<Instruction>(NAME)>;
@@ -2982,7 +3003,7 @@ multiclass sve_fp_2op_p_zdr<bits<7> opc, string asm,
              SVEPseudo2Instr<NAME, 1>;
 
   // convert vt1 to a packed type for the intrinsic patterns
-  defvar packedvt1 = SVEContainerVT<vt1>.Value;
+  defvar packedvt1 = SVEType<vt1>.Packed;
 
   def : SVE_3_Op_Pat<packedvt1, int_op, packedvt1, vt2, vt3, !cast<Instruction>(NAME)>;
   def : SVE_1_Op_Passthru_Round_Pat<vt1, ir_op, vt2, vt3, !cast<Instruction>(NAME)>;
@@ -10391,6 +10412,15 @@ multiclass sve2_luti2_vector_index<string mnemonic> {
     let Inst{23-22} = idx{2-1};
     let Inst{12}    = idx{0};
   }
+
+  def : SVE_3_Op_Imm_Pat<nxv16i8, int_aarch64_sve_luti2_lane, nxv16i8, nxv16i8,
+                         i32, timm32_0_3, !cast<Instruction>(NAME # _B)>;
+  def : SVE_3_Op_Imm_Pat<nxv8i16, int_aarch64_sve_luti2_lane, nxv8i16, nxv16i8,
+                         i32, timm32_0_7, !cast<Instruction>(NAME # _H)>;
+  def : SVE_3_Op_Imm_Pat<nxv8f16, int_aarch64_sve_luti2_lane, nxv8f16, nxv16i8,
+                         i32, timm32_0_7, !cast<Instruction>(NAME # _H)>;
+  def : SVE_3_Op_Imm_Pat<nxv8bf16, int_aarch64_sve_luti2_lane, nxv8bf16, nxv16i8,
+                         i32, timm32_0_7, !cast<Instruction>(NAME # _H)>;
 }
 
 // FP8 Look up table read with 4-bit indices
@@ -10403,14 +10433,39 @@ multiclass sve2_luti4_vector_index<string mnemonic> {
     bits<2> idx;
     let Inst{23-22} = idx;
   }
+
+  def : SVE_3_Op_Imm_Pat<nxv16i8, int_aarch64_sve_luti4_lane, nxv16i8, nxv16i8,
+                        i32, timm32_0_1, !cast<Instruction>(NAME # _B)>;
+  def : SVE_3_Op_Imm_Pat<nxv8i16, int_aarch64_sve_luti4_lane, nxv8i16, nxv16i8,
+                         i32, timm32_0_3, !cast<Instruction>(NAME # _H)>;
+  def : SVE_3_Op_Imm_Pat<nxv8f16, int_aarch64_sve_luti4_lane, nxv8f16, nxv16i8,
+                         i32, timm32_0_3, !cast<Instruction>(NAME # _H)>;
+  def : SVE_3_Op_Imm_Pat<nxv8bf16, int_aarch64_sve_luti4_lane, nxv8bf16, nxv16i8,
+                         i32, timm32_0_3, !cast<Instruction>(NAME # _H)>;
 }
 
 // FP8 Look up table read with 4-bit indices (two contiguous registers)
 multiclass sve2_luti4_vector_vg2_index<string mnemonic> {
-  def _H : sve2_lut_vector_index<ZPR16, ZZ_h, VectorIndexS32b, {?, 0b101}, mnemonic> {
+  def NAME : sve2_lut_vector_index<ZPR16, ZZ_h, VectorIndexS32b, {?, 0b101}, mnemonic> {
     bits<2> idx;
     let Inst{23-22} = idx;
   }
+
+  def : Pat<(nxv8i16 (int_aarch64_sve_luti4_lane_x2 nxv8i16:$Op1, nxv8i16:$Op2,
+                      nxv16i8:$Op3, (i32 timm32_0_3:$Op4))),
+            (nxv8i16 (!cast<Instruction>(NAME) (REG_SEQUENCE ZPR2, nxv8i16:$Op1, zsub0,
+                                                                   nxv8i16:$Op2, zsub1),
+                                                nxv16i8:$Op3, timm32_0_3:$Op4))>;
+  def : Pat<(nxv8f16 (int_aarch64_sve_luti4_lane_x2 nxv8f16:$Op1, nxv8f16:$Op2,
+                      nxv16i8:$Op3, (i32 timm32_0_3:$Op4))),
+            (nxv8f16 (!cast<Instruction>(NAME) (REG_SEQUENCE ZPR2, nxv8f16:$Op1, zsub0,
+                                                                   nxv8f16:$Op2, zsub1),
+                                                nxv16i8:$Op3, timm32_0_3:$Op4))>;
+  def : Pat<(nxv8bf16 (int_aarch64_sve_luti4_lane_x2 nxv8bf16:$Op1, nxv8bf16:$Op2,
+                      nxv16i8:$Op3, (i32 timm32_0_3:$Op4))),
+            (nxv8bf16 (!cast<Instruction>(NAME) (REG_SEQUENCE ZPR2, nxv8bf16:$Op1, zsub0,
+                                                                    nxv8bf16:$Op2, zsub1),
+                                                nxv16i8:$Op3, timm32_0_3:$Op4))>;
 }
 
 //===----------------------------------------------------------------------===//

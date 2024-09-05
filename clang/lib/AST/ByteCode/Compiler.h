@@ -139,6 +139,7 @@ public:
   bool VisitGNUNullExpr(const GNUNullExpr *E);
   bool VisitCXXThisExpr(const CXXThisExpr *E);
   bool VisitUnaryOperator(const UnaryOperator *E);
+  bool VisitVectorUnaryOperator(const UnaryOperator *E);
   bool VisitComplexUnaryOperator(const UnaryOperator *E);
   bool VisitDeclRefExpr(const DeclRefExpr *E);
   bool VisitImplicitValueInitExpr(const ImplicitValueInitExpr *E);
@@ -199,6 +200,7 @@ public:
   bool VisitStmtExpr(const StmtExpr *E);
   bool VisitCXXNewExpr(const CXXNewExpr *E);
   bool VisitCXXDeleteExpr(const CXXDeleteExpr *E);
+  bool VisitBlockExpr(const BlockExpr *E);
 
   // Statements.
   bool visitCompoundStmt(const CompoundStmt *S);
@@ -339,6 +341,10 @@ private:
     return FPO.getRoundingMode();
   }
 
+  uint32_t getFPOptions(const Expr *E) const {
+    return E->getFPFeaturesInEffect(Ctx.getLangOpts()).getAsOpaqueInt();
+  }
+
   bool emitPrimCast(PrimType FromT, PrimType ToT, QualType ToQT, const Expr *E);
   PrimType classifyComplexElementType(QualType T) const {
     assert(T->isAnyComplexType());
@@ -346,6 +352,11 @@ private:
     QualType ElemType = T->getAs<ComplexType>()->getElementType();
 
     return *this->classify(ElemType);
+  }
+
+  PrimType classifyVectorElementType(QualType T) const {
+    assert(T->isVectorType());
+    return *this->classify(T->getAs<VectorType>()->getElementType());
   }
 
   bool emitComplexReal(const Expr *SubExpr);

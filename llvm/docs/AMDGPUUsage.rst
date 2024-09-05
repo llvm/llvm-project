@@ -392,12 +392,12 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                                         work-item                       Add product
                                                                         IDs                             names.
 
-     ``gfx942``                  ``amdgcn``   dGPU  - sramecc         - Architected                   *TBA*
-                                                    - tgsplit           flat
-                                                    - xnack             scratch                       .. TODO::
+     ``gfx942``                  ``amdgcn``   dGPU  - sramecc         - Architected                   - AMD Instinct MI300X
+                                                    - tgsplit           flat                          - AMD Instinct MI300A
+                                                    - xnack             scratch
                                                     - kernarg preload - Packed
-                                                                        work-item                       Add product
-                                                                        IDs                             names.
+                                                                        work-item
+                                                                        IDs
 
      **GCN GFX10.1 (RDNA 1)** [AMD-GCN-GFX10-RDNA1]_
      -----------------------------------------------------------------------------------------------------------------------
@@ -424,6 +424,8 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
      ``gfx1030``                 ``amdgcn``   dGPU  - cumode          - Absolute      - *rocm-amdhsa* - Radeon RX 6800
                                                     - wavefrontsize64   flat          - *pal-amdhsa*  - Radeon RX 6800 XT
                                                                         scratch       - *pal-amdpal*  - Radeon RX 6900 XT
+                                                                                                      - Radeon PRO W6800
+                                                                                                      - Radeon PRO V620
      ``gfx1031``                 ``amdgcn``   dGPU  - cumode          - Absolute      - *rocm-amdhsa* - Radeon RX 6700 XT
                                                     - wavefrontsize64   flat          - *pal-amdhsa*
                                                                         scratch       - *pal-amdpal*
@@ -462,12 +464,12 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
 
      **GCN GFX11 (RDNA 3)** [AMD-GCN-GFX11-RDNA3]_
      -----------------------------------------------------------------------------------------------------------------------
-     ``gfx1100``                 ``amdgcn``   dGPU  - cumode          - Architected   - *pal-amdpal*  *TBA*
-                                                    - wavefrontsize64   flat
-                                                                        scratch                       .. TODO::
-                                                                      - Packed
-                                                                        work-item                       Add product
-                                                                        IDs                             names.
+     ``gfx1100``                 ``amdgcn``   dGPU  - cumode          - Architected   - *pal-amdpal*  - Radeon PRO W7900 Dual Slot
+                                                    - wavefrontsize64   flat                          - Radeon PRO W7900
+                                                                        scratch                       - Radeon PRO W7800
+                                                                      - Packed                        - Radeon RX 7900 XTX
+                                                                        work-item                     - Radeon RX 7900 XT
+                                                                        IDs                           - Radeon RX 7900 GRE
 
      ``gfx1101``                 ``amdgcn``   dGPU  - cumode          - Architected                   *TBA*
                                                     - wavefrontsize64   flat
@@ -2917,6 +2919,36 @@ In AMDGPU expressions, ``DW_OP_LLVM_select_bit_piece`` is used by the
 controlled by the execution mask. An undefined location description together
 with ``DW_OP_LLVM_extend`` is used to indicate the lane was not active on entry
 to the subprogram. See :ref:`amdgpu-dwarf-dw-at-llvm-lane-pc` for an example.
+
+.. _amdgpu-dwarf-base-type-conversions:
+
+Base Type Conversions
+---------------------
+
+For AMDGPU expressions, ``DW_OP_convert`` may be used to convert between
+``DW_ATE_address``-encoded base types in different address spaces.
+
+Conversions are defined as in :ref:`amdgpu-address-spaces` when all relevant
+conditions described there are met, and otherwise result in an evaluation
+error.
+
+.. note::
+
+  For a target which does not support a particular address space, converting to
+  or from that address space is always an evaluation error.
+
+  For targets which support the generic address space, converting from
+  ``DW_ASPACE_AMDGPU_generic`` to ``DW_ASPACE_LLVM_none`` is defined when the
+  generic address is in the global address space. The conversion requires no
+  change to the literal value of the address.
+
+  Converting from ``DW_ASPACE_AMDGPU_generic`` to any of
+  ``DW_ASPACE_AMDGPU_local``, ``DW_ASPACE_AMDGPU_private_wave`` or
+  ``DW_ASPACE_AMDGPU_private_lane`` is defined when the relevant hardware
+  support is present, any required hardware setup has been completed, and the
+  generic address is in the corresponding address space. Conversion to
+  ``DW_ASPACE_AMDGPU_private_lane`` additionally requires the context to
+  include the active lane.
 
 Debugger Information Entry Attributes
 -------------------------------------

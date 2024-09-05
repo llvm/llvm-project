@@ -4203,7 +4203,7 @@ static bool inferStaticShape(PackOp packOp, SmallVectorImpl<int64_t> &srcShape,
 }
 
 LogicalResult PackOp::canonicalize(PackOp packOp, PatternRewriter &rewriter) {
-  // Fold an unpack(pack(x)) to x.
+  // Fold an pack(unpack(x)) to x.
   if (auto unPackOp = packOp.getSource().getDefiningOp<UnPackOp>()) {
     if (unPackOp.getSourceType() != packOp.getDestType())
       return failure();
@@ -4437,9 +4437,9 @@ static bool inferStaticShape(UnPackOp op, SmallVectorImpl<int64_t> &srcShape,
 
 LogicalResult UnPackOp::canonicalize(UnPackOp unPackOp,
                                      PatternRewriter &rewriter) {
-  /// pack(unpack(x)) -> x
+  /// unpack(pack(x)) -> x
   if (PackOp packOp = unPackOp.getSource().getDefiningOp<tensor::PackOp>()) {
-    if (packOp.getDestType() != unPackOp.getSourceType())
+    if (packOp.getSourceType() != unPackOp.getDestType())
       return failure();
     if (packOp.getPaddingValue() ||
         !hasSameInnerOuterAttribute(packOp, unPackOp) ||
