@@ -458,7 +458,6 @@ struct ArgUseChecker : PtrUseVisitor<ArgUseChecker> {
   using Base = PtrUseVisitor<ArgUseChecker>;
 
   bool IsGridConstant;
-  SmallPtrSet<Value *, 16> AllArgUsers;
   // Set of phi/select instructions using the Arg
   SmallPtrSet<Instruction *, 4> Conditionals;
 
@@ -471,13 +470,11 @@ struct ArgUseChecker : PtrUseVisitor<ArgUseChecker> {
     IsOffsetKnown = false;
     Offset = APInt(IntIdxTy->getBitWidth(), 0);
     PI.reset();
-    AllArgUsers.clear();
     Conditionals.clear();
 
     LLVM_DEBUG(dbgs() << "Checking Argument " << A << "\n");
     // Enqueue the uses of this pointer.
     enqueueUsers(A);
-    AllArgUsers.insert(&A);
 
     // Visit all the uses off the worklist until it is empty.
     // Note that unlike PtrUseVisitor we're intentionally do not track offset.
@@ -486,7 +483,6 @@ struct ArgUseChecker : PtrUseVisitor<ArgUseChecker> {
       UseToVisit ToVisit = Worklist.pop_back_val();
       U = ToVisit.UseAndIsOffsetKnown.getPointer();
       Instruction *I = cast<Instruction>(U->getUser());
-      AllArgUsers.insert(I);
       if (isa<PHINode>(I) || isa<SelectInst>(I))
         Conditionals.insert(I);
       LLVM_DEBUG(dbgs() << "Processing " << *I << "\n");
@@ -498,8 +494,8 @@ struct ArgUseChecker : PtrUseVisitor<ArgUseChecker> {
     else if (PI.isAborted())
       LLVM_DEBUG(dbgs() << "Pointer use needs a copy: " << *PI.getAbortingInst()
                         << "\n");
-    LLVM_DEBUG(dbgs() << "Traversed " << AllArgUsers.size() << " with "
-                      << Conditionals.size() << " conditionals\n");
+    LLVM_DEBUG(dbgs() << "Traversed " << Conditionals.size()
+                      << " conditionals\n");
     return PI;
   }
 
@@ -535,25 +531,17 @@ struct ArgUseChecker : PtrUseVisitor<ArgUseChecker> {
   void visitMemTransferInst(MemTransferInst &II) {
     if (*U == II.getRawDest() && !IsGridConstant)
       PI.setAborted(&II);
-
-    // TODO: memcpy from arg is OK as it can get unrolled into ld.param.
-    // However, memcpys are currently expected to be unrolled before we
-    // get here, so we never see them in practice, and we do not currently
-    // handle them when we convert IR to access param space directly. So,
-    // we'll mark it as an escape for now. It would still force a copy on
-    // pre-sm_70 GPUs where we can't take address of a parameter w/o a copy.
-    //
-    // PI.setEscaped(&II);
+    // memcpy/memmove are OK when the pointer is source. We can convert them to
+    // AS-specific memcpy.
   }
 
   void visitMemSetInst(MemSetInst &II) {
-    if (*U == II.getRawDest() && !IsGridConstant)
+    if (!IsGridConstant)
       PI.setAborted(&II);
   }
-  // debug only helper.
-  auto &getVisitedUses() { return VisitedUses; }
-};
+}; // struct ArgUseChecker
 } // namespace
+
 void NVPTXLowerArgs::handleByValParam(const NVPTXTargetMachine &TM,
                                       Argument *Arg) {
   Function *Func = Arg->getParent();
@@ -566,8 +554,9 @@ void NVPTXLowerArgs::handleByValParam(const NVPTXTargetMachine &TM,
 
   ArgUseChecker AUC(DL, IsGridConstant);
   ArgUseChecker::PtrInfo PI = AUC.visitArgPtr(*Arg);
+  bool ArgUseIsReadOnly  = !(PI.isEscaped() || PI.isAborted());
   // Easy case, accessing parameter directly is fine.
-  if (!(PI.isEscaped() || PI.isAborted()) && AUC.Conditionals.empty()) {
+  if (ArgUseIsReadOnly && AUC.Conditionals.empty()) {
     // Convert all loads and intermediate operations to use parameter AS and
     // skip creation of a local copy of the argument.
     SmallVector<Use *, 16> UsesToUpdate;
@@ -595,7 +584,7 @@ void NVPTXLowerArgs::handleByValParam(const NVPTXTargetMachine &TM,
   // `__grid_constant__` for the argument, we'll consider escaped pointer as
   // read-only.
   unsigned AS = DL.getAllocaAddrSpace();
-  if (HasCvtaParam && (!(PI.isEscaped() || PI.isAborted()) || IsGridConstant)) {
+  if (HasCvtaParam && (ArgUseIsReadOnly || IsGridConstant)) {
     LLVM_DEBUG(dbgs() << "Using non-copy pointer to " << *Arg << "\n");
     // Replace all argument pointer uses (which might include a device function
     // call) with a cast to the generic address space using cvta.param
