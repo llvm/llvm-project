@@ -652,7 +652,7 @@ ConnectionFileDescriptor::ConnectUDP(llvm::StringRef s,
       Socket::UdpConnect(s, m_child_processes_inherit);
   if (!socket) {
     if (error_ptr)
-      *error_ptr = socket.takeError();
+      *error_ptr = Status::FromError(socket.takeError());
     else
       LLDB_LOG_ERROR(GetLog(LLDBLog::Connection), socket.takeError(),
                      "tcp connect failed: {0}");
@@ -769,7 +769,7 @@ ConnectionStatus ConnectionFileDescriptor::ConnectSerialPort(
       SerialPort::OptionsFromURL(qs);
   if (!serial_options) {
     if (error_ptr)
-      *error_ptr = serial_options.takeError();
+      *error_ptr = Status::FromError(serial_options.takeError());
     else
       llvm::consumeError(serial_options.takeError());
     return eConnectionStatusError;
@@ -786,7 +786,7 @@ ConnectionStatus ConnectionFileDescriptor::ConnectSerialPort(
       fd, File::eOpenOptionReadWrite, serial_options.get(), true);
   if (!serial_sp) {
     if (error_ptr)
-      *error_ptr = serial_sp.takeError();
+      *error_ptr = Status::FromError(serial_sp.takeError());
     else
       llvm::consumeError(serial_sp.takeError());
     return eConnectionStatusError;
