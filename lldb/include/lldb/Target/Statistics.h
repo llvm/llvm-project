@@ -28,6 +28,9 @@ namespace lldb_private {
 
 using StatsClock = std::chrono::high_resolution_clock;
 using StatsTimepoint = std::chrono::time_point<StatsClock>;
+class SummaryStatistics;
+// Declaring here as there is no private forward
+typedef std::shared_ptr<SummaryStatistics> SummaryStatisticsSP;
 
 class StatsDuration {
 public:
@@ -201,7 +204,7 @@ public:
   /// Basic RAII class to increment the summary count when the call is complete.
   class SummaryInvocation {
   public:
-    SummaryInvocation(std::shared_ptr<SummaryStatistics> summary_stats)
+    SummaryInvocation(SummaryStatisticsSP summary_stats)
         : m_stats(summary_stats),
           m_elapsed_time(summary_stats->GetDurationReference()) {}
     ~SummaryInvocation() { m_stats->OnInvoked(); }
@@ -214,7 +217,7 @@ public:
     /// @}
 
   private:
-    std::shared_ptr<SummaryStatistics> m_stats;
+    SummaryStatisticsSP m_stats;
     ElapsedTime m_elapsed_time;
   };
 
@@ -225,9 +228,6 @@ private:
   const std::string m_name;
   std::atomic<uint64_t> m_count;
 };
-
-// Declaring here as there is no private forward
-typedef std::shared_ptr<SummaryStatistics> SummaryStatisticsSP;
 
 /// A class that wraps a std::map of SummaryStatistics objects behind a mutex.
 class SummaryStatisticsCache {

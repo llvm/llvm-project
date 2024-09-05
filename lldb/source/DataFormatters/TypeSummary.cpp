@@ -48,6 +48,19 @@ TypeSummaryOptions::SetCapping(lldb::TypeSummaryCapping cap) {
 TypeSummaryImpl::TypeSummaryImpl(Kind kind, const TypeSummaryImpl::Flags &flags)
     : m_flags(flags), m_kind(kind) {}
 
+std::string TypeSummaryImpl::GetSummaryKindName() {
+  switch (m_kind) {
+  case Kind::eSummaryString:
+    return "string";
+  case Kind::eCallback:
+    return "callback";
+  case Kind::eScript:
+    return "python";
+  case Kind::eInternal:
+    return "c++";
+  }
+}
+
 StringSummaryFormat::StringSummaryFormat(const TypeSummaryImpl::Flags &flags,
                                          const char *format_cstr)
     : TypeSummaryImpl(Kind::eSummaryString, flags), m_format_str() {
@@ -117,7 +130,6 @@ std::string StringSummaryFormat::GetDescription() {
 }
 
 std::string StringSummaryFormat::GetName() { return m_format_str; }
-std::string StringSummaryFormat::GetSummaryKindName() { return "string"; }
 
 CXXFunctionSummaryFormat::CXXFunctionSummaryFormat(
     const TypeSummaryImpl::Flags &flags, Callback impl, const char *description)
@@ -149,8 +161,6 @@ std::string CXXFunctionSummaryFormat::GetDescription() {
 }
 
 std::string CXXFunctionSummaryFormat::GetName() { return m_description; }
-
-std::string CXXFunctionSummaryFormat::GetSummaryKindName() { return "c++"; }
 
 ScriptSummaryFormat::ScriptSummaryFormat(const TypeSummaryImpl::Flags &flags,
                                          const char *function_name,
@@ -220,10 +230,3 @@ std::string ScriptSummaryFormat::GetDescription() {
 }
 
 std::string ScriptSummaryFormat::GetName() { return m_script_formatter_name; }
-
-std::string ScriptSummaryFormat::GetSummaryKindName() {
-  if (!m_python_script.empty())
-    return "python";
-
-  return "script";
-}
