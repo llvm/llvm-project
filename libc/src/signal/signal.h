@@ -9,8 +9,8 @@
 #ifndef LLVM_LIBC_SRC_SIGNAL_SIGNAL_H
 #define LLVM_LIBC_SRC_SIGNAL_SIGNAL_H
 
-#include "src/__support/macros/config.h"
 #include "include/llvm-libc-types/__sighandler_t.h"
+#include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
