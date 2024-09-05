@@ -1,5 +1,4 @@
 # RUN: llc -mtriple amdgcn-amd-amdhsa -run-pass=liveintervals,pipeliner -verify-machineinstrs -o - %s | FileCheck %s
-# REQUIRES: amdgpu-registered-target
 
 # This test checks that the verifier doesn't crash on early clobbered subreg arguments.
 

@@ -50,7 +50,6 @@ class MemoryHolesTestCase(TestBase):
         ]
         self.assertEqual(len(self.positions), 5)
 
-    @expectedFailureWindows
     def test_memory_read(self):
         self._prepare_inferior()
 

@@ -46,3 +46,23 @@ PointerType *PointerType::get(Context &Ctx, unsigned AddressSpace) {
   return cast<PointerType>(
       Ctx.getType(llvm::PointerType::get(Ctx.LLVMCtx, AddressSpace)));
 }
+
+StructType *StructType::get(Context &Ctx, ArrayRef<Type *> Elements,
+                            bool IsPacked) {
+  SmallVector<llvm::Type *> LLVMElements;
+  LLVMElements.reserve(Elements.size());
+  for (Type *Elm : Elements)
+    LLVMElements.push_back(Elm->LLVMTy);
+  return cast<StructType>(
+      Ctx.getType(llvm::StructType::get(Ctx.LLVMCtx, LLVMElements, IsPacked)));
+}
+
+VectorType *VectorType::get(Type *ElementType, ElementCount EC) {
+  return cast<VectorType>(ElementType->getContext().getType(
+      llvm::VectorType::get(ElementType->LLVMTy, EC)));
+}
+
+IntegerType *IntegerType::get(Context &Ctx, unsigned NumBits) {
+  return cast<IntegerType>(
+      Ctx.getType(llvm::IntegerType::get(Ctx.LLVMCtx, NumBits)));
+}
