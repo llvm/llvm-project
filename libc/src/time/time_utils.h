@@ -62,9 +62,6 @@ struct TimeConstants {
   static constexpr int ASCTIME_BUFFER_SIZE = 256;
   static constexpr int ASCTIME_MAX_BYTES = 26;
 
-  static constexpr int CTIME_BUFFER_SIZE = 256;
-  static constexpr int CTIME_MAX_BYTES = 26;
-
   /* 2000-03-01 (mod 400 year, immediately after feb29 */
   static constexpr int64_t SECONDS_UNTIL2000_MARCH_FIRST =
       (946684800LL + SECONDS_PER_DAY * (31 + 29));
