@@ -949,6 +949,7 @@ void ModuleSanitizerCoverage::InjectCoverageAtBlock(Function &F, BasicBlock &BB,
   DebugLoc EntryLoc;
   if (IsEntryBB) {
     if (auto SP = F.getSubprogram())
+      // Use a compile-generated source-location for all coverage calls.
       EntryLoc = DILocation::get(SP->getContext(), 0, 0, SP);
     // Keep static allocas and llvm.localescape calls in the entry block.  Even
     // if we aren't splitting the block, it's nice for allocas to be before
