@@ -138,6 +138,7 @@ std::unique_ptr<Pass> createCompositeFixedPointPass(
     std::string name, llvm::function_ref<void(OpPassManager &)> populateFunc,
     int maxIterations = 10);
 
+std::unique_ptr<Pass> createTosaAffineFusionPass();
 //===----------------------------------------------------------------------===//
 // Registration
 //===----------------------------------------------------------------------===//

@@ -37,8 +37,11 @@ void mlir::createTosaFuserPipeline(OpPassManager &pm, const TosaFuserPipelineOpt
     pm.addPass(bufferization::createEmptyTensorEliminationPass());
     pm.addNestedPass<func::FuncOp>(bufferization::createEmptyTensorToAllocTensorPass());
     pm.addPass(bufferization::createOneShotBufferizePass());
+    pm.addPass(func::createFuncBufferizePass());
     pm.addPass(createCanonicalizerPass());
     pm.addPass(createConvertLinalgToAffineLoopsPass());
+
+    pm.addPass(createTosaAffineFusionPass());
 }
 
 static void tosaFuser3(OpPassManager &pm, const TosaFuserPipelineOptions &options) {

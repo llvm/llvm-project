@@ -20,6 +20,7 @@ add_mlir_library(MLIRTransforms
   SymbolPrivatize.cpp
   TopologicalSort.cpp
   ViewOpGraph.cpp
+  TosaAffineFusion.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Transforms
@@ -29,6 +30,8 @@ add_mlir_library(MLIRTransforms
 
   LINK_LIBS PUBLIC
   MLIRAnalysis
+  MLIRAffineDialect
+  MLIRFuncDialect
   MLIRCopyOpInterface
   MLIRFunctionInterfaces
   MLIRLoopLikeInterface

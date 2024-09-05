@@ -577,4 +577,10 @@ def CompositeFixedPointPass : Pass<"composite-fixed-point-pass"> {
   ];
 }
 
+def TosaAffineFusion : Pass<"tosa-affine-fusion"> {
+  let summary = "Fuse Loops lowered from tosa";
+  let constructor = "mlir::createTosaAffineFusionPass()";
+  let dependentDialects = ["affine::AffineDialect"];
+}
+
 #endif // MLIR_TRANSFORMS_PASSES
