@@ -162,7 +162,8 @@ protected:
 
   void reset(const MachineInstr &MI, const LiveRegSet *LiveRegsCopy,
              bool After);
-  
+
+  /// Mostly copy/paste from CodeGen/RegisterPressure.cpp
   void bumpDeadDefs(ArrayRef<RegisterMaskPair> DeadDefs);
 
   LaneBitmask getLastUsedLanes(Register RegUnit, SlotIndex Pos) const;
@@ -217,6 +218,11 @@ public:
   /// to false allows for an externally managed iterator / program order.
   void recede(const MachineInstr &MI);
 
+  /// Mostly copy/paste from CodeGen/RegisterPressure.cpp
+  /// Calculate the impact \p MI will have on CurPressure and MaxPressure. This
+  /// does not rely on the implicit program ordering in the LiveIntervals to
+  /// support RP Speculation. It leaves the state of pressure inconsistent with
+  /// the current position
   void bumpUpwardPressure(const MachineInstr *MI, const SIRegisterInfo *TRI);
 
   /// \p returns whether the tracker's state after receding MI corresponds
@@ -301,6 +307,11 @@ public:
                MachineBasicBlock::const_iterator End,
                const LiveRegSet *LiveRegsCopy = nullptr);
 
+  /// Mostly copy/paste from CodeGen/RegisterPressure.cpp
+  /// Calculate the impact \p MI will have on CurPressure and MaxPressure. This
+  /// does not rely on the implicit program ordering in the LiveIntervals to
+  /// support RP Speculation. It leaves the state of pressure inconsistent with
+  /// the current position
   void bumpDownwardPressure(const MachineInstr *MI, const SIRegisterInfo *TRI);
 };
 
