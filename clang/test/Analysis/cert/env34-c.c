@@ -3,7 +3,6 @@
 // RUN:  -analyzer-config security.cert.env.InvalidPtr:InvalidatingGetEnv=true \
 // RUN:  -analyzer-output=text -verify -Wno-unused %s
 
-#include <time.h>
 #include "../Inputs/system-header-simulator.h"
 char *getenv(const char *name);
 char *setlocale(int category, const char *locale);
@@ -17,7 +16,6 @@ lconv *localeconv(void);
 typedef struct {
 } tm;
 char *asctime(const tm *timeptr);
-char *ctime(const time_t *timeptr);
 
 int strcmp(const char*, const char*);
 extern void foo(char *e);
