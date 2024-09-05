@@ -4054,11 +4054,11 @@ bool Sema::usesPartialOrExplicitSpecialization(
 /// Get the instantiation pattern to use to instantiate the definition of a
 /// given ClassTemplateSpecializationDecl (either the pattern of the primary
 /// template or of a partial specialization).
-static ActionResult<CXXRecordDecl *>
-getPatternForClassTemplateSpecialization(
+static ActionResult<CXXRecordDecl *> getPatternForClassTemplateSpecialization(
     Sema &S, SourceLocation PointOfInstantiation,
     ClassTemplateSpecializationDecl *ClassTemplateSpec,
-    TemplateSpecializationKind TSK) {
+    TemplateSpecializationKind TSK,
+    bool PrimaryHasMatchedPackOnParmToNonPackOnArg) {
   Sema::InstantiatingTemplate Inst(S, PointOfInstantiation, ClassTemplateSpec);
   if (Inst.isInvalid())
     return {/*Invalid=*/true};
@@ -4081,7 +4081,7 @@ getPatternForClassTemplateSpecialization(
     //   specialization with the template argument lists of the partial
     //   specializations.
     typedef PartialSpecMatchResult MatchResult;
-    SmallVector<MatchResult, 4> Matched;
+    SmallVector<MatchResult, 4> Matched, ExtraMatched;
     SmallVector<ClassTemplatePartialSpecializationDecl *, 4> PartialSpecs;
     Template->getPartialSpecializations(PartialSpecs);
     TemplateSpecCandidateSet FailedCandidates(PointOfInstantiation);
@@ -4111,11 +4111,13 @@ getPatternForClassTemplateSpecialization(
             MakeDeductionFailureInfo(S.Context, Result, Info));
         (void)Result;
       } else {
-        Matched.push_back(PartialSpecMatchResult());
-        Matched.back().Partial = Partial;
-        Matched.back().Args = Info.takeCanonical();
+        auto &List =
+            Info.hasMatchedPackOnParmToNonPackOnArg() ? ExtraMatched : Matched;
+        List.push_back(MatchResult{Partial, Info.takeCanonical()});
       }
     }
+    if (Matched.empty() && PrimaryHasMatchedPackOnParmToNonPackOnArg)
+      Matched = std::move(ExtraMatched);
 
     // If we're dealing with a member template where the template parameters
     // have been instantiated, this provides the original template parameters
@@ -4218,7 +4220,8 @@ getPatternForClassTemplateSpecialization(
 bool Sema::InstantiateClassTemplateSpecialization(
     SourceLocation PointOfInstantiation,
     ClassTemplateSpecializationDecl *ClassTemplateSpec,
-    TemplateSpecializationKind TSK, bool Complain) {
+    TemplateSpecializationKind TSK, bool Complain,
+    bool PrimaryHasMatchedPackOnParmToNonPackOnArg) {
   // Perform the actual instantiation on the canonical declaration.
   ClassTemplateSpec = cast<ClassTemplateSpecializationDecl>(
       ClassTemplateSpec->getCanonicalDecl());
@@ -4226,8 +4229,9 @@ bool Sema::InstantiateClassTemplateSpecialization(
     return true;
 
   ActionResult<CXXRecordDecl *> Pattern =
-      getPatternForClassTemplateSpecialization(*this, PointOfInstantiation,
-                                               ClassTemplateSpec, TSK);
+      getPatternForClassTemplateSpecialization(
+          *this, PointOfInstantiation, ClassTemplateSpec, TSK,
+          PrimaryHasMatchedPackOnParmToNonPackOnArg);
   if (!Pattern.isUsable())
     return Pattern.isInvalid();
 
