@@ -486,3 +486,19 @@ add_fp_unittest(
   LINK_LIBRARIES
     -lpthread
 )
+
+add_fp_unittest(
+  cbrtf_test
+  NO_RUN_POSTBUILD
+  NEED_MPFR
+  SUITE
+    libc_math_exhaustive_tests
+  SRCS
+    cbrtf_test.cpp
+  DEPENDS
+    .exhaustive_test
+    libc.src.math.cbrtf
+    libc.src.__support.FPUtil.fp_bits
+  LINK_LIBRARIES
+    -lpthread
+)

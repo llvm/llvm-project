@@ -65,6 +65,7 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/MC/MCRegister.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
@@ -112,7 +113,7 @@ class CopyTracker {
     bool Avail;
   };
 
-  DenseMap<MCRegister, CopyInfo> Copies;
+  DenseMap<MCRegUnit, CopyInfo> Copies;
 
 public:
   /// Mark all of the given registers and their subregisters as unavailable for
@@ -251,7 +252,7 @@ public:
     return !Copies.empty();
   }
 
-  MachineInstr *findCopyForUnit(MCRegister RegUnit,
+  MachineInstr *findCopyForUnit(MCRegUnit RegUnit,
                                 const TargetRegisterInfo &TRI,
                                 bool MustBeAvailable = false) {
     auto CI = Copies.find(RegUnit);
@@ -262,7 +263,7 @@ public:
     return CI->second.MI;
   }
 
-  MachineInstr *findCopyDefViaUnit(MCRegister RegUnit,
+  MachineInstr *findCopyDefViaUnit(MCRegUnit RegUnit,
                                    const TargetRegisterInfo &TRI) {
     auto CI = Copies.find(RegUnit);
     if (CI == Copies.end())
@@ -1052,7 +1053,7 @@ void MachineCopyPropagation::BackwardCopyPropagateBlock(
     // Ignore non-trivial COPYs.
     std::optional<DestSourcePair> CopyOperands =
         isCopyInstr(MI, *TII, UseCopyInstr);
-    if (CopyOperands && MI.getNumOperands() == 2) {
+    if (CopyOperands) {
       Register DefReg = CopyOperands->Destination->getReg();
       Register SrcReg = CopyOperands->Source->getReg();
 

@@ -18,10 +18,12 @@
 
 #include "llvm/ADT/SlowDynamicAPInt.h"
 #include "llvm/Support/MathExtras.h"
-#include "llvm/Support/raw_ostream.h"
 #include <numeric>
 
 namespace llvm {
+
+class raw_ostream;
+
 /// This class provides support for dynamic arbitrary-precision arithmetic.
 ///
 /// Unlike APInt, this extends the precision as necessary to prevent overflows
@@ -241,13 +243,6 @@ LLVM_ATTRIBUTE_ALWAYS_INLINE DynamicAPInt dynamicAPIntFromInt64(int64_t X) {
 LLVM_ATTRIBUTE_ALWAYS_INLINE DynamicAPInt mod(const DynamicAPInt &LHS,
                                               const DynamicAPInt &RHS);
 
-namespace detail {
-// Division overflows only when trying to negate the minimal signed value.
-LLVM_ATTRIBUTE_ALWAYS_INLINE bool divWouldOverflow(int64_t X, int64_t Y) {
-  return X == std::numeric_limits<int64_t>::min() && Y == -1;
-}
-} // namespace detail
-
 /// We define the operations here in the header to facilitate inlining.
 
 /// ---------------------------------------------------------------------------
@@ -348,7 +343,7 @@ LLVM_ATTRIBUTE_ALWAYS_INLINE DynamicAPInt
 DynamicAPInt::operator/(const DynamicAPInt &O) const {
   if (LLVM_LIKELY(isSmall() && O.isSmall())) {
     // Division overflows only occur when negating the minimal possible value.
-    if (LLVM_UNLIKELY(detail::divWouldOverflow(getSmall(), O.getSmall())))
+    if (LLVM_UNLIKELY(divideSignedWouldOverflow(getSmall(), O.getSmall())))
       return -*this;
     return DynamicAPInt(getSmall() / O.getSmall());
   }
@@ -363,7 +358,8 @@ LLVM_ATTRIBUTE_ALWAYS_INLINE DynamicAPInt abs(const DynamicAPInt &X) {
 LLVM_ATTRIBUTE_ALWAYS_INLINE DynamicAPInt ceilDiv(const DynamicAPInt &LHS,
                                                   const DynamicAPInt &RHS) {
   if (LLVM_LIKELY(LHS.isSmall() && RHS.isSmall())) {
-    if (LLVM_UNLIKELY(detail::divWouldOverflow(LHS.getSmall(), RHS.getSmall())))
+    if (LLVM_UNLIKELY(
+            divideSignedWouldOverflow(LHS.getSmall(), RHS.getSmall())))
       return -LHS;
     return DynamicAPInt(divideCeilSigned(LHS.getSmall(), RHS.getSmall()));
   }
@@ -373,7 +369,8 @@ LLVM_ATTRIBUTE_ALWAYS_INLINE DynamicAPInt ceilDiv(const DynamicAPInt &LHS,
 LLVM_ATTRIBUTE_ALWAYS_INLINE DynamicAPInt floorDiv(const DynamicAPInt &LHS,
                                                    const DynamicAPInt &RHS) {
   if (LLVM_LIKELY(LHS.isSmall() && RHS.isSmall())) {
-    if (LLVM_UNLIKELY(detail::divWouldOverflow(LHS.getSmall(), RHS.getSmall())))
+    if (LLVM_UNLIKELY(
+            divideSignedWouldOverflow(LHS.getSmall(), RHS.getSmall())))
       return -LHS;
     return DynamicAPInt(divideFloorSigned(LHS.getSmall(), RHS.getSmall()));
   }
@@ -483,7 +480,7 @@ LLVM_ATTRIBUTE_ALWAYS_INLINE DynamicAPInt &
 DynamicAPInt::operator/=(const DynamicAPInt &O) {
   if (LLVM_LIKELY(isSmall() && O.isSmall())) {
     // Division overflows only occur when negating the minimal possible value.
-    if (LLVM_UNLIKELY(detail::divWouldOverflow(getSmall(), O.getSmall())))
+    if (LLVM_UNLIKELY(divideSignedWouldOverflow(getSmall(), O.getSmall())))
       return *this = -*this;
     getSmall() /= O.getSmall();
     return *this;

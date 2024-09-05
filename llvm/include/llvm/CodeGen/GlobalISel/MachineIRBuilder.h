@@ -1273,6 +1273,34 @@ public:
                                 const SrcOp &Op0, const SrcOp &Op1,
                                 std::optional<unsigned> Flags = std::nullopt);
 
+  /// Build and insert a \p Res = G_SCMP \p Op0, \p Op1
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+
+  /// \pre \p Res must be a generic virtual register with scalar or
+  ///      vector type. Typically this starts as s2 or <N x s2>.
+  /// \pre \p Op0 and Op1 must be generic virtual registers with the
+  ///      same number of elements as \p Res. If \p Res is a scalar,
+  ///      \p Op0 must be a scalar.
+  ///
+  /// \return a MachineInstrBuilder for the newly created instruction.
+  MachineInstrBuilder buildSCmp(const DstOp &Res, const SrcOp &Op0,
+                                const SrcOp &Op1);
+
+  /// Build and insert a \p Res = G_UCMP \p Op0, \p Op1
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+
+  /// \pre \p Res must be a generic virtual register with scalar or
+  ///      vector type. Typically this starts as s2 or <N x s2>.
+  /// \pre \p Op0 and Op1 must be generic virtual registers with the
+  ///      same number of elements as \p Res. If \p Res is a scalar,
+  ///      \p Op0 must be a scalar.
+  ///
+  /// \return a MachineInstrBuilder for the newly created instruction.
+  MachineInstrBuilder buildUCmp(const DstOp &Res, const SrcOp &Op0,
+                                const SrcOp &Op1);
+
   /// Build and insert a \p Res = G_IS_FPCLASS \p Src, \p Mask
   MachineInstrBuilder buildIsFPClass(const DstOp &Res, const SrcOp &Src,
                                      unsigned Mask) {

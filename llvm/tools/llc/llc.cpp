@@ -130,8 +130,12 @@ static cl::opt<std::string> SplitDwarfFile(
 static cl::opt<bool> NoVerify("disable-verify", cl::Hidden,
                               cl::desc("Do not verify input module"));
 
-static cl::opt<bool> DisableSimplifyLibCalls("disable-simplify-libcalls",
-                                             cl::desc("Disable simplify-libcalls"));
+static cl::opt<bool> VerifyEach("verify-each",
+                                cl::desc("Verify after each transform"));
+
+static cl::opt<bool>
+    DisableSimplifyLibCalls("disable-simplify-libcalls",
+                            cl::desc("Disable simplify-libcalls"));
 
 static cl::opt<bool> ShowMCEncoding("show-mc-encoding", cl::Hidden,
                                     cl::desc("Show encoding in .s output"));
@@ -342,7 +346,6 @@ int main(int argc, char **argv) {
   initializeVectorization(*Registry);
   initializeScalarizeMaskedMemIntrinLegacyPassPass(*Registry);
   initializeExpandReductionsPass(*Registry);
-  initializeExpandVectorPredicationPass(*Registry);
   initializeHardwareLoopsLegacyPass(*Registry);
   initializeTransformUtils(*Registry);
   initializeReplaceWithVeclibLegacyPass(*Registry);
@@ -647,10 +650,16 @@ static int compileModule(char **argv, LLVMContext &Context) {
     WithColor::warning(errs(), argv[0])
         << ": warning: ignoring -mc-relax-all because filetype != obj";
 
+  VerifierKind VK = VerifierKind::InputOutput;
+  if (NoVerify)
+    VK = VerifierKind::None;
+  else if (VerifyEach)
+    VK = VerifierKind::EachPass;
+
   if (EnableNewPassManager || !PassPipeline.empty()) {
     return compileModuleWithNewPM(argv[0], std::move(M), std::move(MIR),
                                   std::move(Target), std::move(Out),
-                                  std::move(DwoOut), Context, TLII, NoVerify,
+                                  std::move(DwoOut), Context, TLII, VK,
                                   PassPipeline, codegen::getFileType());
   }
 

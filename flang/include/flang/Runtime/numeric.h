@@ -377,6 +377,8 @@ CppTypeFor<TypeCategory::Integer, 4> RTDECL(SelectedCharKind)(
 // SELECTED_INT_KIND
 CppTypeFor<TypeCategory::Integer, 4> RTDECL(SelectedIntKind)(
     const char *, int, void *, int);
+CppTypeFor<TypeCategory::Integer, 4> RTDECL(SelectedIntKindMasked)(
+    const char *, int, void *, int, int);
 
 // SELECTED_LOGICAL_KIND
 CppTypeFor<TypeCategory::Integer, 4> RTDECL(SelectedLogicalKind)(
@@ -385,8 +387,25 @@ CppTypeFor<TypeCategory::Integer, 4> RTDECL(SelectedLogicalKind)(
 // SELECTED_REAL_KIND
 CppTypeFor<TypeCategory::Integer, 4> RTDECL(SelectedRealKind)(
     const char *, int, void *, int, void *, int, void *, int);
+CppTypeFor<TypeCategory::Integer, 4> RTDECL(SelectedRealKindMasked)(
+    const char *, int, void *, int, void *, int, void *, int, int);
 
 // SPACING
+// The variants Spacing2By4 and Spacing3By4 compute SPACING for REAL(2/3)
+// but accept and return REAL(4) values, for use in environments where
+// std::float16_t or std::bfloat16_t are unavailable.
+#if HAS_FP16
+CppTypeFor<TypeCategory::Real, 2> RTDECL(Spacing2)(
+    CppTypeFor<TypeCategory::Real, 2>);
+#endif
+CppTypeFor<TypeCategory::Real, 4> RTDECL(Spacing2By4)(
+    CppTypeFor<TypeCategory::Real, 4>);
+#if HAS_BF16
+CppTypeFor<TypeCategory::Real, 3> RTDECL(Spacing3)(
+    CppTypeFor<TypeCategory::Real, 3>);
+#endif
+CppTypeFor<TypeCategory::Real, 4> RTDECL(Spacing3By4)(
+    CppTypeFor<TypeCategory::Real, 4>);
 CppTypeFor<TypeCategory::Real, 4> RTDECL(Spacing4)(
     CppTypeFor<TypeCategory::Real, 4>);
 CppTypeFor<TypeCategory::Real, 8> RTDECL(Spacing8)(

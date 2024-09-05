@@ -124,6 +124,21 @@ bool LLParser::parseTypeAtBeginning(Type *&Ty, unsigned &Read,
   return false;
 }
 
+bool LLParser::parseDIExpressionBodyAtBeginning(MDNode *&Result, unsigned &Read,
+                                                const SlotMapping *Slots) {
+  restoreParsingState(Slots);
+  Lex.Lex();
+
+  Read = 0;
+  SMLoc Start = Lex.getLoc();
+  Result = nullptr;
+  bool Status = parseDIExpressionBody(Result, /*IsDistinct=*/false);
+  SMLoc End = Lex.getLoc();
+  Read = End.getPointer() - Start.getPointer();
+
+  return Status;
+}
+
 void LLParser::restoreParsingState(const SlotMapping *Slots) {
   if (!Slots)
     return;
@@ -3094,8 +3109,8 @@ bool LLParser::parseRangeAttr(AttrBuilder &B) {
   if (ParseAPSInt(BitWidth, Lower) ||
       parseToken(lltok::comma, "expected ','") || ParseAPSInt(BitWidth, Upper))
     return true;
-  if (Lower == Upper)
-    return tokError("the range should not represent the full or empty set!");
+  if (Lower == Upper && !Lower.isZero())
+    return tokError("the range represent the empty set but limits aren't 0!");
 
   if (parseToken(lltok::rparen, "expected ')'"))
     return true;
@@ -5823,12 +5838,9 @@ bool LLParser::parseDILabel(MDNode *&Result, bool IsDistinct) {
   return false;
 }
 
-/// parseDIExpression:
-///   ::= !DIExpression(0, 7, -1)
-bool LLParser::parseDIExpression(MDNode *&Result, bool IsDistinct) {
-  assert(Lex.getKind() == lltok::MetadataVar && "Expected metadata type name");
-  Lex.Lex();
-
+/// parseDIExpressionBody:
+///   ::= (0, 7, -1)
+bool LLParser::parseDIExpressionBody(MDNode *&Result, bool IsDistinct) {
   if (parseToken(lltok::lparen, "expected '(' here"))
     return true;
 
@@ -5869,6 +5881,16 @@ bool LLParser::parseDIExpression(MDNode *&Result, bool IsDistinct) {
 
   Result = GET_OR_DISTINCT(DIExpression, (Context, Elements));
   return false;
+}
+
+/// parseDIExpression:
+///   ::= !DIExpression(0, 7, -1)
+bool LLParser::parseDIExpression(MDNode *&Result, bool IsDistinct) {
+  assert(Lex.getKind() == lltok::MetadataVar && "Expected metadata type name");
+  assert(Lex.getStrVal() == "DIExpression" && "Expected '!DIExpression'");
+  Lex.Lex();
+
+  return parseDIExpressionBody(Result, IsDistinct);
 }
 
 /// ParseDIArgList:
@@ -7238,13 +7260,13 @@ bool LLParser::parseIndirectBr(Instruction *&Inst, PerFunctionState &PFS) {
 // If RetType is a non-function pointer type, then this is the short syntax
 // for the call, which means that RetType is just the return type.  Infer the
 // rest of the function argument types from the arguments that are present.
-bool LLParser::resolveFunctionType(Type *RetType,
-                                   const SmallVector<ParamInfo, 16> &ArgList,
+bool LLParser::resolveFunctionType(Type *RetType, ArrayRef<ParamInfo> ArgList,
                                    FunctionType *&FuncTy) {
   FuncTy = dyn_cast<FunctionType>(RetType);
   if (!FuncTy) {
     // Pull out the types of all of the arguments...
-    std::vector<Type*> ParamTypes;
+    SmallVector<Type *, 8> ParamTypes;
+    ParamTypes.reserve(ArgList.size());
     for (const ParamInfo &Arg : ArgList)
       ParamTypes.push_back(Arg.V->getType());
 

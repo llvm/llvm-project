@@ -76,6 +76,13 @@ ExtraDeclarations = dict()
 # This declaration is in the ostream header.
 ExtraDeclarations["system_error"] = ["std::operator<<"]
 
+# TODO MODULES avoid this work-around
+# This is a work-around for the special math functions. They are declared in
+# __math/special_functions.h. Adding this as an ExtraHeader works for the std
+# module. However these functions are special; they are not available in the
+# global namespace.
+ExtraDeclarations["cmath"] = ["std::hermite", "std::hermitef", "std::hermitel"]
+
 ### ExtraHeader
 
 # Adds extra headers file to scan

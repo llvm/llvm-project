@@ -413,12 +413,20 @@ constexpr uint64_t divideCeil(uint64_t Numerator, uint64_t Denominator) {
   return (Numerator - Bias) / Denominator + Bias;
 }
 
+// Check whether divideCeilSigned or divideFloorSigned would overflow. This
+// happens only when Numerator = INT_MIN and Denominator = -1.
+template <typename U, typename V>
+constexpr bool divideSignedWouldOverflow(U Numerator, V Denominator) {
+  return Numerator == std::numeric_limits<U>::min() && Denominator == -1;
+}
+
 /// Returns the integer ceil(Numerator / Denominator). Signed version.
-/// Guaranteed to never overflow, unless Numerator is INT64_MIN and Denominator
-/// is -1.
+/// Overflow is explicitly forbidden with an assert.
 template <typename U, typename V, typename T = common_sint<U, V>>
 constexpr T divideCeilSigned(U Numerator, V Denominator) {
   assert(Denominator && "Division by zero");
+  assert(!divideSignedWouldOverflow(Numerator, Denominator) &&
+         "Divide would overflow");
   if (!Numerator)
     return 0;
   // C's integer division rounds towards 0.
@@ -429,11 +437,12 @@ constexpr T divideCeilSigned(U Numerator, V Denominator) {
 }
 
 /// Returns the integer floor(Numerator / Denominator). Signed version.
-/// Guaranteed to never overflow, unless Numerator is INT64_MIN and Denominator
-/// is -1.
+/// Overflow is explicitly forbidden with an assert.
 template <typename U, typename V, typename T = common_sint<U, V>>
 constexpr T divideFloorSigned(U Numerator, V Denominator) {
   assert(Denominator && "Division by zero");
+  assert(!divideSignedWouldOverflow(Numerator, Denominator) &&
+         "Divide would overflow");
   if (!Numerator)
     return 0;
   // C's integer division rounds towards 0.
@@ -488,13 +497,21 @@ constexpr uint64_t alignTo(uint64_t Value, uint64_t Align) {
   return CeilDiv * Align;
 }
 
+/// Will overflow only if result is not representable in T.
+template <typename U, typename V, typename T = common_uint<U, V>>
+constexpr T alignToPowerOf2(U Value, V Align) {
+  assert(Align != 0 && (Align & (Align - 1)) == 0 &&
+         "Align must be a power of 2");
+  T NegAlign = static_cast<T>(0) - Align;
+  return (Value + (Align - 1)) & NegAlign;
+}
+
+/// Fallback when arguments aren't integral.
 constexpr uint64_t alignToPowerOf2(uint64_t Value, uint64_t Align) {
   assert(Align != 0 && (Align & (Align - 1)) == 0 &&
          "Align must be a power of 2");
-  // Replace unary minus to avoid compilation error on Windows:
-  // "unary minus operator applied to unsigned type, result still unsigned"
-  uint64_t NegAlign = (~Align) + 1;
-  return (Value + Align - 1) & NegAlign;
+  uint64_t NegAlign = 0 - Align;
+  return (Value + (Align - 1)) & NegAlign;
 }
 
 /// If non-zero \p Skew is specified, the return value will be a minimal integer
@@ -760,6 +777,14 @@ std::enable_if_t<std::is_signed_v<T>, T> MulOverflow(T X, T Y, T &Result) {
     return UX > (static_cast<U>(std::numeric_limits<T>::max())) / UY;
 #endif
 }
+
+/// Type to force float point values onto the stack, so that x86 doesn't add
+/// hidden precision, avoiding rounding differences on various platforms.
+#if defined(__i386__) || defined(_M_IX86)
+using stack_float_t = volatile float;
+#else
+using stack_float_t = float;
+#endif
 
 } // namespace llvm
 

@@ -378,6 +378,12 @@ public:
   /// \param[in] file_name - The name of the file to save the core file to.
   lldb::SBError SaveCore(const char *file_name);
 
+  /// Save the state of the process with the desired settings
+  /// as defined in the options object.
+  ///
+  /// \param[in] options - The options to use when saving the core file.
+  lldb::SBError SaveCore(SBSaveCoreOptions &options);
+
   /// Query the address load_addr and store the details of the memory
   /// region that contains it in the supplied SBMemoryRegionInfo object.
   /// To iterate over all memory regions use GetMemoryRegionList.
@@ -580,6 +586,7 @@ protected:
   friend class SBBreakpointCallbackBaton;
   friend class SBBreakpointLocation;
   friend class SBCommandInterpreter;
+  friend class SBSaveCoreOptions;
   friend class SBDebugger;
   friend class SBExecutionContext;
   friend class SBFunction;

@@ -1599,6 +1599,7 @@ cc_library(
         ":Analysis",
         ":BitReader",
         ":Core",
+        ":Demangle",
         ":FrontendOffloading",
         ":MC",
         ":Scalar",
@@ -4159,6 +4160,7 @@ cc_library(
         ":Option",
         ":Support",
         ":WindowsManifest",
+        ":config",
     ],
 )
 
@@ -4600,6 +4602,7 @@ cc_binary(
         ":Target",
         ":TargetParser",
         ":TransformUtils",
+        ":config",
     ],
 )
 

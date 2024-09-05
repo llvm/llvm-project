@@ -7,7 +7,7 @@
 define amdgpu_kernel void @test_insert_extract(i32 %p, i32 %q) {
 ; GFX90A-LABEL: test_insert_extract:
 ; GFX90A:       ; %bb.0: ; %entry
-; GFX90A-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
+; GFX90A-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
 ; GFX90A-NEXT:    s_mov_b32 s2, 0
 ; GFX90A-NEXT:    s_and_b64 vcc, exec, -1
 ; GFX90A-NEXT:    s_mov_b32 s3, 0
@@ -55,7 +55,7 @@ define amdgpu_kernel void @test_insert_extract(i32 %p, i32 %q) {
 ;
 ; GFX940-LABEL: test_insert_extract:
 ; GFX940:       ; %bb.0: ; %entry
-; GFX940-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
+; GFX940-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x0
 ; GFX940-NEXT:    s_mov_b32 s2, 0
 ; GFX940-NEXT:    s_and_b64 vcc, exec, -1
 ; GFX940-NEXT:    s_mov_b32 s3, 0
@@ -103,7 +103,7 @@ define amdgpu_kernel void @test_insert_extract(i32 %p, i32 %q) {
 ;
 ; GFX1030-LABEL: test_insert_extract:
 ; GFX1030:       ; %bb.0: ; %entry
-; GFX1030-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
+; GFX1030-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
 ; GFX1030-NEXT:    s_mov_b32 s2, 0
 ; GFX1030-NEXT:    s_mov_b32 s3, 0
 ; GFX1030-NEXT:    s_mov_b32 s4, 0
@@ -151,7 +151,7 @@ define amdgpu_kernel void @test_insert_extract(i32 %p, i32 %q) {
 ;
 ; GFX1100-LABEL: test_insert_extract:
 ; GFX1100:       ; %bb.0: ; %entry
-; GFX1100-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX1100-NEXT:    s_load_b64 s[0:1], s[2:3], 0x0
 ; GFX1100-NEXT:    s_mov_b32 s2, 0
 ; GFX1100-NEXT:    s_mov_b32 s3, 0
 ; GFX1100-NEXT:    s_mov_b32 s4, 0

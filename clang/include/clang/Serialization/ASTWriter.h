@@ -500,8 +500,8 @@ private:
   std::vector<SourceRange> NonAffectingRanges;
   std::vector<SourceLocation::UIntTy> NonAffectingOffsetAdjustments;
 
-  /// A list of classes which need to emit the VTable in the corresponding
-  /// object file.
+  /// A list of classes in named modules which need to emit the VTable in
+  /// the corresponding object file.
   llvm::SmallVector<CXXRecordDecl *> PendingEmittingVTables;
 
   /// Computes input files that didn't affect compilation of the current module,
@@ -869,6 +869,7 @@ private:
   void IdentifierRead(serialization::IdentifierID ID, IdentifierInfo *II) override;
   void MacroRead(serialization::MacroID ID, MacroInfo *MI) override;
   void TypeRead(serialization::TypeIdx Idx, QualType T) override;
+  void PredefinedDeclBuilt(PredefinedDeclIDs ID, const Decl *D) override;
   void SelectorRead(serialization::SelectorID ID, Selector Sel) override;
   void MacroDefinitionRead(serialization::PreprocessedEntityID ID,
                            MacroDefinitionRecord *MD) override;

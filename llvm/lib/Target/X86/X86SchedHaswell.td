@@ -1247,10 +1247,10 @@ def: InstRW<[HWWriteResGroup53_1], (instrs VPMOVSXBWYrm,
                                            VPMOVSXWDYrm,
                                            VPMOVZXWDYrm)>;
 
-def HWWriteResGroup57 : SchedWriteRes<[HWPort5,HWPort0156]> {
+def HWWriteResGroup57 : SchedWriteRes<[HWPort5]> {
   let Latency = 3;
-  let NumMicroOps = 3;
-  let ReleaseAtCycles = [2,1];
+  let NumMicroOps = 2;
+  let ReleaseAtCycles = [2];
 }
 def: InstRW<[HWWriteResGroup57], (instrs MMX_PACKSSDWrr,
                                          MMX_PACKSSWBrr,

@@ -45,7 +45,7 @@ using namespace llvm;
 #define DEBUG_TYPE "tile-pre-config"
 
 static void emitErrorMsg(MachineFunction &MF) {
-  LLVMContext &Context = MF.getMMI().getModule()->getContext();
+  LLVMContext &Context = MF.getFunction().getContext();
   Context.emitError(
       MF.getName() +
       ": Failed to config tile register, please define the shape earlier");
@@ -181,7 +181,7 @@ public:
   /// X86PreTileConfig analysis usage.
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
-    AU.addRequired<MachineLoopInfo>();
+    AU.addRequired<MachineLoopInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -204,7 +204,7 @@ char X86PreTileConfig::ID = 0;
 
 INITIALIZE_PASS_BEGIN(X86PreTileConfig, "tilepreconfig",
                       "Tile Register Pre-configure", false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
+INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_END(X86PreTileConfig, "tilepreconfig",
                     "Tile Register Pre-configure", false, false)
 
@@ -254,7 +254,7 @@ bool X86PreTileConfig::runOnMachineFunction(MachineFunction &MF) {
 
   // Iterate MF to collect information.
   MRI = &MF.getRegInfo();
-  MLI = &getAnalysis<MachineLoopInfo>();
+  MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   SmallSet<MIRef, 8> CfgNeedInsert;
   SmallVector<MachineBasicBlock *, 8> CfgLiveInBBs;
   for (auto &MBB : MF) {

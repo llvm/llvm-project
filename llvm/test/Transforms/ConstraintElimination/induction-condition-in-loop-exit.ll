@@ -19,8 +19,7 @@ define i1 @multi_exiting_loop_eq_same_unique_exit_const_compare_known(ptr %s) {
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
 ; CHECK-NEXT:    br i1 [[LATCH_C]], label %[[LOOP_HEADER]], label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[T:%.*]] = icmp ult i32 [[IV]], 1235
-; CHECK-NEXT:    ret i1 [[T]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   br label %loop.header
@@ -99,8 +98,7 @@ define i1 @multi_exiting_loop_eq_same_unique_exit_const_compare_known_due_to_pre
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
 ; CHECK-NEXT:    br i1 [[LATCH_C]], label %[[LOOP_HEADER]], label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[T:%.*]] = icmp ult i32 [[IV]], 1235
-; CHECK-NEXT:    ret i1 [[T]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %pre.c = icmp ule i32 %start, 1234
@@ -341,8 +339,7 @@ define i1 @multi_exiting_loop_eq_same_unique_exit_var_compare_known(ptr %s, i32 
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
 ; CHECK-NEXT:    br i1 [[LATCH_C]], label %[[LOOP_HEADER]], label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[T:%.*]] = icmp ule i32 [[IV]], [[N]]
-; CHECK-NEXT:    ret i1 [[T]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   br label %loop.header
@@ -419,8 +416,7 @@ define i1 @multi_exiting_loop_ne_same_unique_exit_const_compare_known(ptr %s) {
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
 ; CHECK-NEXT:    br i1 [[LATCH_C]], label %[[LOOP_HEADER]], label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[T:%.*]] = icmp ult i32 [[IV]], 1235
-; CHECK-NEXT:    ret i1 [[T]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   br label %loop.header
@@ -545,8 +541,7 @@ define i1 @multi_exiting_loop_eq_different_exits_2_const_compare_known(ptr %s, i
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
 ; CHECK-NEXT:    br i1 [[LATCH_C]], label %[[LOOP_HEADER]], label %[[EXIT_2]]
 ; CHECK:       [[EXIT_1]]:
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ult i32 [[IV]], 1235
-; CHECK-NEXT:    ret i1 [[T_1]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       [[EXIT_2]]:
 ; CHECK-NEXT:    ret i1 true
 ;

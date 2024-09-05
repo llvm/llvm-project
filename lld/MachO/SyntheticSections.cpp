@@ -544,6 +544,14 @@ static void flushOpcodes(const BindIR &op, raw_svector_ostream &os) {
   }
 }
 
+static bool needsWeakBind(const Symbol &sym) {
+  if (auto *dysym = dyn_cast<DylibSymbol>(&sym))
+    return dysym->isWeakDef();
+  if (auto *defined = dyn_cast<Defined>(&sym))
+    return defined->isExternalWeakDef();
+  return false;
+}
+
 // Non-weak bindings need to have their dylib ordinal encoded as well.
 static int16_t ordinalForDylibSymbol(const DylibSymbol &dysym) {
   if (config->namespaceKind == NamespaceKind::flat || dysym.isDynamicLookup())
@@ -553,6 +561,8 @@ static int16_t ordinalForDylibSymbol(const DylibSymbol &dysym) {
 }
 
 static int16_t ordinalForSymbol(const Symbol &sym) {
+  if (config->emitChainedFixups && needsWeakBind(sym))
+    return BIND_SPECIAL_DYLIB_WEAK_LOOKUP;
   if (const auto *dysym = dyn_cast<DylibSymbol>(&sym))
     return ordinalForDylibSymbol(*dysym);
   assert(cast<Defined>(&sym)->interposable);
@@ -2000,11 +2010,8 @@ void ObjCMethListSection::setUp() {
     while (methodNameOff < isec->data.size()) {
       const Reloc *reloc = isec->getRelocAt(methodNameOff);
       assert(reloc && "Relocation expected at method list name slot");
-      auto *def = dyn_cast_or_null<Defined>(reloc->referent.get<Symbol *>());
-      assert(def && "Expected valid Defined at method list name slot");
-      auto *cisec = cast<CStringInputSection>(def->isec());
-      assert(cisec && "Expected method name to be in a CStringInputSection");
-      auto methname = cisec->getStringRefAtOffset(def->value);
+
+      StringRef methname = reloc->getReferentString();
       if (!ObjCSelRefsHelper::getSelRef(methname))
         ObjCSelRefsHelper::makeSelRef(methname);
 
@@ -2104,19 +2111,23 @@ void ObjCMethListSection::writeRelativeOffsetForIsec(
     uint32_t &outSecOff, bool useSelRef) const {
   const Reloc *reloc = isec->getRelocAt(inSecOff);
   assert(reloc && "Relocation expected at __objc_methlist Offset");
-  auto *def = dyn_cast_or_null<Defined>(reloc->referent.get<Symbol *>());
-  assert(def && "Expected all syms in __objc_methlist to be defined");
-  uint32_t symVA = def->getVA();
 
+  uint32_t symVA = 0;
   if (useSelRef) {
-    auto *cisec = cast<CStringInputSection>(def->isec());
-    auto methname = cisec->getStringRefAtOffset(def->value);
+    StringRef methname = reloc->getReferentString();
     ConcatInputSection *selRef = ObjCSelRefsHelper::getSelRef(methname);
     assert(selRef && "Expected all selector names to already be already be "
                      "present in __objc_selrefs");
     symVA = selRef->getVA();
-    assert(selRef->data.size() == sizeof(target->wordSize) &&
+    assert(selRef->data.size() == target->wordSize &&
            "Expected one selref per ConcatInputSection");
+  } else if (reloc->referent.is<Symbol *>()) {
+    auto *def = dyn_cast_or_null<Defined>(reloc->referent.get<Symbol *>());
+    assert(def && "Expected all syms in __objc_methlist to be defined");
+    symVA = def->getVA();
+  } else {
+    auto *isec = reloc->referent.get<InputSection *>();
+    symVA = isec->getVA(reloc->addend);
   }
 
   uint32_t currentVA = isec->getVA() + outSecOff;
@@ -2276,14 +2287,6 @@ bool ChainedFixupsSection::isNeeded() const {
   return true;
 }
 
-static bool needsWeakBind(const Symbol &sym) {
-  if (auto *dysym = dyn_cast<DylibSymbol>(&sym))
-    return dysym->isWeakDef();
-  if (auto *defined = dyn_cast<Defined>(&sym))
-    return defined->isExternalWeakDef();
-  return false;
-}
-
 void ChainedFixupsSection::addBinding(const Symbol *sym,
                                       const InputSection *isec, uint64_t offset,
                                       int64_t addend) {
@@ -2312,7 +2315,7 @@ ChainedFixupsSection::getBinding(const Symbol *sym, int64_t addend) const {
   return {it->second, 0};
 }
 
-static size_t writeImport(uint8_t *buf, int format, uint32_t libOrdinal,
+static size_t writeImport(uint8_t *buf, int format, int16_t libOrdinal,
                           bool weakRef, uint32_t nameOffset, int64_t addend) {
   switch (format) {
   case DYLD_CHAINED_IMPORT: {
@@ -2430,11 +2433,8 @@ void ChainedFixupsSection::writeTo(uint8_t *buf) const {
   uint64_t nameOffset = 0;
   for (auto [import, idx] : bindings) {
     const Symbol &sym = *import.first;
-    int16_t libOrdinal = needsWeakBind(sym)
-                             ? (int64_t)BIND_SPECIAL_DYLIB_WEAK_LOOKUP
-                             : ordinalForSymbol(sym);
-    buf += writeImport(buf, importFormat, libOrdinal, sym.isWeakRef(),
-                       nameOffset, import.second);
+    buf += writeImport(buf, importFormat, ordinalForSymbol(sym),
+                       sym.isWeakRef(), nameOffset, import.second);
     nameOffset += sym.getName().size() + 1;
   }
 
@@ -2459,7 +2459,12 @@ void ChainedFixupsSection::finalizeContents() {
     error("cannot encode chained fixups: imported symbols table size " +
           Twine(symtabSize) + " exceeds 4 GiB");
 
-  if (needsLargeAddend || !isUInt<23>(symtabSize))
+  bool needsLargeOrdinal = any_of(bindings, [](const auto &p) {
+    // 0xF1 - 0xFF are reserved for special ordinals in the 8-bit encoding.
+    return ordinalForSymbol(*p.first.first) > 0xF0;
+  });
+
+  if (needsLargeAddend || !isUInt<23>(symtabSize) || needsLargeOrdinal)
     importFormat = DYLD_CHAINED_IMPORT_ADDEND64;
   else if (needsAddend)
     importFormat = DYLD_CHAINED_IMPORT_ADDEND;

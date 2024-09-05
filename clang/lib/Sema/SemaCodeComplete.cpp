@@ -1805,7 +1805,8 @@ static void AddTypeSpecifierResults(const LangOptions &LangOpts,
   if (LangOpts.C99) {
     // C99-specific
     Results.AddResult(Result("_Complex", CCP_Type));
-    Results.AddResult(Result("_Imaginary", CCP_Type));
+    if (!LangOpts.C2y)
+      Results.AddResult(Result("_Imaginary", CCP_Type));
     Results.AddResult(Result("_Bool", CCP_Type));
     Results.AddResult(Result("restrict", CCP_Type));
   }
@@ -6863,7 +6864,7 @@ void SemaCodeCompletion::CodeCompleteNamespaceDecl(Scope *S) {
              NS(Ctx->decls_begin()),
          NSEnd(Ctx->decls_end());
          NS != NSEnd; ++NS)
-      OrigToLatest[NS->getOriginalNamespace()] = *NS;
+      OrigToLatest[NS->getFirstDecl()] = *NS;
 
     // Add the most recent definition (or extended definition) of each
     // namespace to the list of results.

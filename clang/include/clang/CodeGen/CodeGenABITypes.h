@@ -108,6 +108,10 @@ unsigned getLLVMFieldNumber(CodeGenModule &CGM,
 /// Return a declaration discriminator for the given global decl.
 uint16_t getPointerAuthDeclDiscriminator(CodeGenModule &CGM, GlobalDecl GD);
 
+/// Return a type discriminator for the given function type.
+uint16_t getPointerAuthTypeDiscriminator(CodeGenModule &CGM,
+                                         QualType FunctionType);
+
 /// Given the language and code-generation options that Clang was configured
 /// with, set the default LLVM IR attributes for a function definition.
 /// The attributes set here are mostly global target-configuration and

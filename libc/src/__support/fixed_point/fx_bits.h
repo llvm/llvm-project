@@ -13,6 +13,7 @@
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/macros/attributes.h"   // LIBC_INLINE
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 #include "src/__support/math_extras.h"
 
@@ -20,7 +21,8 @@
 
 #ifdef LIBC_COMPILER_HAS_FIXED_POINT
 
-namespace LIBC_NAMESPACE::fixed_point {
+namespace LIBC_NAMESPACE_DECL {
+namespace fixed_point {
 
 template <typename T> struct FXBits {
 private:
@@ -161,7 +163,8 @@ template <typename T> LIBC_INLINE constexpr T round(T x, int n) {
   return bit_and((x + round_bit), rounding_mask);
 }
 
-} // namespace LIBC_NAMESPACE::fixed_point
+} // namespace fixed_point
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LIBC_COMPILER_HAS_FIXED_POINT
 

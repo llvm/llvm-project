@@ -9,14 +9,15 @@
 #ifndef LLVM_LIBC_SRC_STDIO_VFPRINTF_H
 #define LLVM_LIBC_SRC_STDIO_VFPRINTF_H
 
+#include "hdr/types/FILE.h"
+#include "src/__support/macros/config.h"
 #include <stdarg.h>
-#include <stdio.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 int vfprintf(::FILE *__restrict stream, const char *__restrict format,
              va_list vlist);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STDIO_VFPRINTF_H

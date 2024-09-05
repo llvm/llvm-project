@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "ABIInfoImpl.h"
 #include "CGBlocks.h"
 #include "CGCXXABI.h"
 #include "CGDebugInfo.h"
@@ -208,7 +209,7 @@ CodeGenModule::GetNonVirtualBaseClassOffset(const CXXRecordDecl *ClassDecl,
     return nullptr;
 
   llvm::Type *PtrDiffTy =
-  Types.ConvertType(getContext().getPointerDiffType());
+      getTypes().ConvertType(getContext().getPointerDiffType());
 
   return llvm::ConstantInt::get(PtrDiffTy, Offset.getQuantity());
 }
@@ -933,7 +934,7 @@ namespace {
     }
 
     void addMemcpyableField(FieldDecl *F) {
-      if (F->isZeroSize(CGF.getContext()))
+      if (isEmptyFieldForLayout(CGF.getContext(), F))
         return;
       if (!FirstField)
         addInitialField(F);
@@ -1815,7 +1816,7 @@ namespace {
                               const CXXDestructorDecl *DD)
        : Context(Context), EHStack(EHStack), DD(DD), StartIndex(std::nullopt) {}
    void PushCleanupForField(const FieldDecl *Field) {
-     if (Field->isZeroSize(Context))
+     if (isEmptyFieldForLayout(Context, Field))
        return;
      unsigned FieldIndex = Field->getFieldIndex();
      if (FieldHasTrivialDestructorBody(Context, Field)) {

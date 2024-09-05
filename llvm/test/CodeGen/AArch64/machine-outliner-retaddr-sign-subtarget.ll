@@ -10,7 +10,8 @@ define void @a() #0 {
 ; CHECK:            // %bb.0:
 ; CHECK-NEXT:               .cfi_b_key_frame
 ; CHECK-NEXT:               pacibsp
-; CHECK-NEXT:               .cfi_negate_ra_state
+; CHECK:                    .cfi_negate_ra_state
+; CHECK-NEXT:               .cfi_def_cfa_offset
 ; CHECK-NOT:                OUTLINED_FUNCTION_
   %1 = alloca i32, align 4
   %2 = alloca i32, align 4
@@ -34,7 +35,8 @@ define void @b() #0 {
 ; CHECK:            // %bb.0:
 ; CHECK-NEXT:               .cfi_b_key_frame
 ; CHECK-NEXT:               pacibsp
-; CHECK-NEXT:               .cfi_negate_ra_state
+; CHECK:                    .cfi_negate_ra_state
+; CHECK-NEXT:               .cfi_def_cfa_offset
 ; CHECK-NOT:                OUTLINED_FUNCTION_
   %1 = alloca i32, align 4
   %2 = alloca i32, align 4
@@ -58,7 +60,8 @@ define void @c() #1 {
 ; CHECK:            // %bb.0:
 ; CHECK-NEXT:               .cfi_b_key_frame
 ; CHECK-NEXT:               hint #27
-; CHECK-NEXT:               .cfi_negate_ra_state
+; CHECK:                    .cfi_negate_ra_state
+; CHECK-NEXT:               .cfi_def_cfa_offset
 ; CHECK-NOT:                OUTLINED_FUNCTION_
   %1 = alloca i32, align 4
   %2 = alloca i32, align 4
