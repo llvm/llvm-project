@@ -293,21 +293,6 @@ public:
 
   unsigned getTailDuplicateSize(CodeGenOptLevel OptLevel) const override;
 
-  unsigned getUndefInitOpcode(unsigned RegClassID) const override {
-    switch (RegClassID) {
-    case RISCV::VRRegClassID:
-      return RISCV::PseudoRVVInitUndefM1;
-    case RISCV::VRM2RegClassID:
-      return RISCV::PseudoRVVInitUndefM2;
-    case RISCV::VRM4RegClassID:
-      return RISCV::PseudoRVVInitUndefM4;
-    case RISCV::VRM8RegClassID:
-      return RISCV::PseudoRVVInitUndefM8;
-    default:
-      llvm_unreachable("Unexpected register class.");
-    }
-  }
-
 protected:
   const RISCVSubtarget &STI;
 
