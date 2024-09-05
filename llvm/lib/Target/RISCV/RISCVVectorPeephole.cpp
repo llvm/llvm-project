@@ -61,7 +61,7 @@ public:
   }
 
 private:
-  bool tryToReduceVL(MachineInstr &MI) const;
+  bool tryToReduceVL(MachineInstr &MI);
   bool convertToVLMAX(MachineInstr &MI) const;
   bool convertToWholeRegister(MachineInstr &MI) const;
   bool convertToUnmasked(MachineInstr &MI) const;
@@ -72,7 +72,7 @@ private:
   bool hasSameEEW(const MachineInstr &User, const MachineInstr &Src) const;
   bool isAllOnesMask(const MachineInstr *MaskDef) const;
   std::optional<unsigned> getConstant(const MachineOperand &VL) const;
-  bool ensureDominates(const MachineOperand &Use, MachineInstr &Src) const;
+  bool ensureDominates(const MachineOperand &Use, MachineInstr &Src);
 
   /// Maps uses of V0 to the corresponding def of V0.
   DenseMap<const MachineInstr *, const MachineInstr *> V0Defs;
@@ -115,7 +115,7 @@ bool RISCVVectorPeephole::hasSameEEW(const MachineInstr &User,
 // Attempt to reduce the VL of an instruction whose sole use is feeding a
 // instruction with a narrower VL.  This currently works backwards from the
 // user instruction (which might have a smaller VL).
-bool RISCVVectorPeephole::tryToReduceVL(MachineInstr &MI) const {
+bool RISCVVectorPeephole::tryToReduceVL(MachineInstr &MI) {
   // Note that the goal here is a bit multifaceted.
   // 1) For store's reducing the VL of the value being stored may help to
   //    reduce VL toggles.  This is somewhat of an artifact of the fact we
@@ -465,17 +465,18 @@ static bool dominates(MachineBasicBlock::const_iterator A,
 /// does. Returns false if doesn't dominate and we can't move. \p MO must be in
 /// the same basic block as \Src.
 bool RISCVVectorPeephole::ensureDominates(const MachineOperand &MO,
-                                          MachineInstr &Src) const {
+                                          MachineInstr &Src) {
   assert(MO.getParent()->getParent() == Src.getParent());
   if (!MO.isReg() || MO.getReg() == RISCV::NoRegister)
     return true;
 
   MachineInstr *Def = MRI->getVRegDef(MO.getReg());
   if (Def->getParent() == Src.getParent() && !dominates(Def, Src)) {
-    if (!isSafeToMove(Src, *Def->getNextNode()))
+    MachineInstr *AfterDef = Def->getNextNode();
+    if (!isSafeToMove(Src, *AfterDef))
       return false;
-    // FIXME: Update V0Defs
-    Src.moveBefore(Def->getNextNode());
+    V0Defs[&Src] = V0Defs[AfterDef];
+    Src.moveBefore(AfterDef);
   }
 
   return true;
