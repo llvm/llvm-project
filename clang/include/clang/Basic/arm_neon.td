@@ -2093,19 +2093,31 @@ let ArchGuard = "defined(__aarch64__) || defined(__arm64ec__)", TargetGuard = "r
 
 // Lookup table read with 2-bit/4-bit indices
 let ArchGuard = "defined(__aarch64__)", TargetGuard = "lut" in {
-  def VLUTI2_B    : SInst<"vluti2_lane",    "Q.(qU)I",   "cUcPcQcQUcQPc">;
-  def VLUTI2_B_Q  : SInst<"vluti2_laneq",   "Q.(QU)I",   "cUcPcQcQUcQPc">;
-  def VLUTI2_H    : SInst<"vluti2_lane",    "Q.(<qU)I",   "sUsPshQsQUsQPsQh">;
-  def VLUTI2_H_Q  : SInst<"vluti2_laneq",   "Q.(<QU)I",   "sUsPshQsQUsQPsQh">;
-  def VLUTI4_B    : SInst<"vluti4_lane",    "..(qU)I",   "QcQUcQPc">;
-  def VLUTI4_B_Q    : SInst<"vluti4_laneq",    "..UI",   "QcQUcQPc">;
-  def VLUTI4_H_X2 : SInst<"vluti4_lane_x2", ".2(<qU)I", "QsQUsQPsQh">;
-  def VLUTI4_H_X2_Q : SInst<"vluti4_laneq_x2", ".2(<U)I", "QsQUsQPsQh">;
-    
-  let ArchGuard = "defined(__aarch64__)", TargetGuard= "lut,bf16" in {
-    def VLUTI2_BF      : SInst<"vluti2_lane",     "Q.(<qU)I",   "bQb">;
-    def VLUTI2_BF_Q    : SInst<"vluti2_laneq",    "Q.(<QU)I",   "bQb">;
-    def VLUTI4_BF_X2   : SInst<"vluti4_lane_x2", ".2(<qU)I", "Qb">;
-    def VLUTI4_BF_X2_Q   : SInst<"vluti4_laneq_x2", ".2(<U)I", "Qb">;
+  def VLUTI2_B    : SInst<"vluti2_lane", "Q.(qU)I", "cUcPcQcQUcQPc",
+                         [ImmCheck<2, ImmCheck0_1>]>;
+  def VLUTI2_B_Q  : SInst<"vluti2_laneq", "Q.(QU)I", "cUcPcQcQUcQPc",
+                         [ImmCheck<2, ImmCheck0_3>]>;
+  def VLUTI2_H    : SInst<"vluti2_lane", "Q.(<qU)I", "sUsPshQsQUsQPsQh",
+                         [ImmCheck<2, ImmCheck0_3>]>;
+  def VLUTI2_H_Q  : SInst<"vluti2_laneq", "Q.(<QU)I", "sUsPshQsQUsQPsQh",
+                         [ImmCheck<2, ImmCheck0_7>]>;
+  def VLUTI4_B    : SInst<"vluti4_lane", "..(qU)I", "QcQUcQPc",
+                         [ImmCheck<2, ImmCheck0_0>]>;
+  def VLUTI4_B_Q  : SInst<"vluti4_laneq", "..UI", "QcQUcQPc",
+                         [ImmCheck<2, ImmCheck0_1>]>;
+  def VLUTI4_H_X2 : SInst<"vluti4_lane_x2", ".2(<qU)I", "QsQUsQPsQh",
+                          [ImmCheck<3, ImmCheck0_1>]>;
+  def VLUTI4_H_X2_Q : SInst<"vluti4_laneq_x2", ".2(<U)I", "QsQUsQPsQh",
+                          [ImmCheck<3, ImmCheck0_3>]>;
+
+  let TargetGuard = "lut,bf16" in {
+    def VLUTI2_BF      : SInst<"vluti2_lane", "Q.(<qU)I", "bQb",
+                              [ImmCheck<2, ImmCheck0_3>]>;
+    def VLUTI2_BF_Q    : SInst<"vluti2_laneq", "Q.(<QU)I", "bQb",
+                              [ImmCheck<2, ImmCheck0_7>]>;
+    def VLUTI4_BF_X2   : SInst<"vluti4_lane_x2", ".2(<qU)I", "Qb",
+                              [ImmCheck<3, ImmCheck0_1>]>;
+    def VLUTI4_BF_X2_Q   : SInst<"vluti4_laneq_x2", ".2(<U)I", "Qb",
+                              [ImmCheck<3, ImmCheck0_3>]>;
   }
 }

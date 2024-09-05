@@ -1505,7 +1505,7 @@ Intrinsic::DagEmitter::emitDagCall(DagInit *DI, bool MatchMangledName) {
     N = emitDagArg(DI->getArg(0), "").second;
   std::optional<std::string> MangledName;
   if (MatchMangledName) {
-    if (Intr.getRecord()->getValueAsString("Name").ends_with("laneq"))
+    if (Intr.getRecord()->getValueAsString("Name").contains("laneq"))
       N += "q";
     MangledName = Intr.mangleName(N, ClassS);
   }
