@@ -1663,6 +1663,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     for (auto VT : {MVT::nxv2bf16, MVT::nxv4bf16, MVT::nxv8bf16}) {
       setOperationAction(ISD::BITCAST, VT, Custom);
       setOperationAction(ISD::CONCAT_VECTORS, VT, Custom);
+      setOperationAction(ISD::FP_EXTEND, VT, Custom);
       setOperationAction(ISD::MLOAD, VT, Custom);
       setOperationAction(ISD::INSERT_SUBVECTOR, VT, Custom);
       setOperationAction(ISD::SPLAT_VECTOR, VT, Legal);
@@ -4298,8 +4299,28 @@ static SDValue LowerPREFETCH(SDValue Op, SelectionDAG &DAG) {
 SDValue AArch64TargetLowering::LowerFP_EXTEND(SDValue Op,
                                               SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
-  if (VT.isScalableVector())
+  if (VT.isScalableVector()) {
+    SDValue SrcVal = Op.getOperand(0);
+
+    if (SrcVal.getValueType().getScalarType() == MVT::bf16) {
+      // bf16 and f32 share the same exponent range so the conversion requires
+      // them to be aligned with the new mantissa bits zero'd. This is just a
+      // left shift that is best to isel directly.
+      if (VT == MVT::nxv2f32 || VT == MVT::nxv4f32)
+        return Op;
+
+      if (VT != MVT::nxv2f64)
+        return SDValue();
+
+      // Break other conversions in two with the first part converting to f32
+      // and the second using native f32->VT instructions.
+      SDLoc DL(Op);
+      return DAG.getNode(ISD::FP_EXTEND, DL, VT,
+                         DAG.getNode(ISD::FP_EXTEND, DL, MVT::nxv2f32, SrcVal));
+    }
+
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::FP_EXTEND_MERGE_PASSTHRU);
+  }
 
   if (useSVEForFixedLengthVectorVT(VT, !Subtarget->isNeonAvailable()))
     return LowerFixedLengthFPExtendToSVE(Op, DAG);
@@ -22240,6 +22261,70 @@ static SDValue performZExtDeinterleaveShuffleCombine(SDNode *N,
       DAG.getConstant((1 << InVT.getScalarSizeInBits()) - 1, DL, VT));
 }
 
+// This comes up similar to the above when lowering deinterleaving shuffles from
+// zexts. We have legalized the operations in the generally case to
+// zext(extract_subvector(uzp(a, b))), which can be converted to and(a, mask) if
+// the extract is to the low half and the uzp is uzp1. There would be an extra
+// shift if the uzp was uzp2 to grab the upper half. Due to the combine above
+// there could also be an existing and / shift that can be combined in, either
+// before of after the extract.
+static SDValue performZExtUZPCombine(SDNode *N, SelectionDAG &DAG) {
+  EVT VT = N->getValueType(0);
+  if (N->getOpcode() != ISD::ZERO_EXTEND ||
+      (VT != MVT::v2i64 && VT != MVT::v4i32 && VT != MVT::v8i16))
+    return SDValue();
+
+  SDValue Op = N->getOperand(0);
+  unsigned ExtOffset = (unsigned)-1;
+  if (Op.getOpcode() == ISD::EXTRACT_SUBVECTOR) {
+    ExtOffset = Op.getConstantOperandVal(1);
+    Op = Op.getOperand(0);
+  }
+
+  unsigned Shift = 0;
+  APInt Mask = APInt::getLowBitsSet(VT.getScalarSizeInBits(),
+                                    Op.getValueType().getScalarSizeInBits());
+
+  if (Op.getOpcode() == AArch64ISD::VLSHR) {
+    Shift = Op.getConstantOperandVal(1);
+    Op = Op.getOperand(0);
+    Mask = Mask.lshr(Shift);
+  }
+  if (Op.getOpcode() == ISD::AND &&
+      ISD::isConstantSplatVector(Op.getOperand(1).getNode(), Mask)) {
+    Op = Op.getOperand(0);
+    Mask = Mask.zext(VT.getScalarSizeInBits());
+  } else if (Op.getOpcode() == AArch64ISD::BICi) {
+    Mask = ~APInt(Op.getValueType().getScalarSizeInBits(),
+                  Op.getConstantOperandVal(1) << Op.getConstantOperandVal(2));
+    Mask = Mask.zext(VT.getScalarSizeInBits());
+    Op = Op.getOperand(0);
+  }
+
+  if (ExtOffset == (unsigned)-1) {
+    if (Op.getOpcode() == ISD::EXTRACT_SUBVECTOR) {
+      ExtOffset = Op.getConstantOperandVal(1);
+      Op = Op.getOperand(0);
+    } else
+      return SDValue();
+  }
+  if (ExtOffset != 0 && ExtOffset != VT.getVectorNumElements())
+    return SDValue();
+
+  if (Op.getOpcode() != AArch64ISD::UZP1 && Op.getOpcode() != AArch64ISD::UZP2)
+    return SDValue();
+  if (Op.getOpcode() == AArch64ISD::UZP2)
+    Shift += VT.getScalarSizeInBits() / 2;
+
+  SDLoc DL(N);
+  SDValue BC = DAG.getNode(AArch64ISD::NVCAST, DL, VT,
+                           Op.getOperand(ExtOffset == 0 ? 0 : 1));
+  if (Shift != 0)
+    BC = DAG.getNode(AArch64ISD::VLSHR, DL, VT, BC,
+                     DAG.getConstant(Shift, DL, MVT::i32));
+  return DAG.getNode(ISD::AND, DL, VT, BC, DAG.getConstant(Mask, DL, VT));
+}
+
 static SDValue performExtendCombine(SDNode *N,
                                     TargetLowering::DAGCombinerInfo &DCI,
                                     SelectionDAG &DAG) {
@@ -22261,6 +22346,8 @@ static SDValue performExtendCombine(SDNode *N,
   }
 
   if (SDValue R = performZExtDeinterleaveShuffleCombine(N, DAG))
+    return R;
+  if (SDValue R = performZExtUZPCombine(N, DAG))
     return R;
 
   if (N->getValueType(0).isFixedLengthVector() &&

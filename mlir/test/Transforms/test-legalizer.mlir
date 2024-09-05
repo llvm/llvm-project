@@ -452,3 +452,14 @@ func.func @convert_detached_signature() {
   }) : () -> ()
   "test.return"() : () -> ()
 }
+
+// -----
+
+// CHECK-LABEL: func @circular_mapping()
+//  CHECK-NEXT:   "test.valid"() : () -> ()
+func.func @circular_mapping() {
+  // Regression test that used to crash due to circular
+  // unrealized_conversion_cast ops.
+  %0 = "test.erase_op"() : () -> (i64)
+  "test.drop_operands_and_replace_with_valid"(%0) : (i64) -> ()
+}

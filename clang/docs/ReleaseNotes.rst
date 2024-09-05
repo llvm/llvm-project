@@ -109,6 +109,9 @@ C++ Language Changes
   constant expression. Supports the `V.xyzw` syntax and other tidbits
   as seen in OpenCL. Selecting multiple elements is left as a future work.
 
+- Accept C++26 user-defined ``static_assert`` messages in C++11 as an extension.
+
+
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
@@ -366,6 +369,7 @@ Bug Fixes to C++ Support
 - Clang no longer tries to capture non-odr used default arguments of template parameters of generic lambdas (#GH107048)
 - Fixed a bug where defaulted comparison operators would remove ``const`` from base classes. (#GH102588)
 
+- Fix a crash when using ``source_location`` in the trailing return type of a lambda expression. (#GH67134)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

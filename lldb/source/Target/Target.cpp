@@ -1986,7 +1986,6 @@ size_t Target::ReadCStringFromMemory(const Address &addr, char *dst,
     result_error.Clear();
     // NULL out everything just to be safe
     memset(dst, 0, dst_max_len);
-    Status error;
     addr_t curr_addr = addr.GetLoadAddress(this);
     Address address(addr);
 
@@ -2003,11 +2002,12 @@ size_t Target::ReadCStringFromMemory(const Address &addr, char *dst,
           cache_line_size - (curr_addr % cache_line_size);
       addr_t bytes_to_read =
           std::min<addr_t>(bytes_left, cache_line_bytes_left);
+      Status error;
       size_t bytes_read = ReadMemory(address, curr_dst, bytes_to_read, error,
                                      force_live_memory);
 
       if (bytes_read == 0) {
-        result_error = error;
+        result_error = std::move(error);
         dst[total_cstr_len] = '\0';
         break;
       }
@@ -2401,7 +2401,7 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &orig_module_spec,
     }
   }
   if (error_ptr)
-    *error_ptr = error;
+    *error_ptr = std::move(error);
   return module_sp;
 }
 
@@ -2730,7 +2730,7 @@ ExpressionResults Target::EvaluateExpression(
     // Pass up the error by wrapping it inside an error result.
     if (error.Fail() && !result_valobj_sp)
       result_valobj_sp = ValueObjectConstResult::Create(
-          exe_ctx.GetBestExecutionContextScope(), error);
+          exe_ctx.GetBestExecutionContextScope(), std::move(error));
   }
 
   if (execution_results == eExpressionCompleted)
@@ -3348,10 +3348,8 @@ Status Target::Launch(ProcessLaunchInfo &launch_info, Stream *stream) {
     else
       error = m_process_sp->Resume();
     if (!error.Success()) {
-      Status error2;
-      error2 = Status::FromErrorStringWithFormat(
+      error = Status::FromErrorStringWithFormat(
           "process resume at entry point failed: %s", error.AsCString());
-      error = error2;
     }
   } break;
   case eStateExited: {
