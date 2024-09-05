@@ -16,7 +16,9 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tosa/Utils/ShapeUtils.h"
+#include "mlir/Dialect/Tosa/Utils/ShapeUtils.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
+#include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/PatternMatch.h"
 #include <optional>
@@ -87,11 +89,11 @@ LogicalResult EqualizeRanks(ImplicitLocOpBuilder &builder, Value &input1,
 namespace {
 
 // Creates a TOSA operation and performs shape inference on the individual
-// op. This allows shape inference during the TFLite to TOSA lowering.
+// op. This allows shape inference when lowering down to TOSA.
 template <typename TosaOp, typename... Args>
-TosaOp createOpAndInferShape(ImplicitLocOpBuilder &builder, Type result_ty,
+TosaOp createOpAndInferShape(ImplicitLocOpBuilder &builder, Type resultTy,
                              Args &&...args) {
-  auto op = builder.create<TosaOp>(result_ty, args...);
+  auto op = builder.create<TosaOp>(resultTy, args...);
 
   InferShapedTypeOpInterface shapeInterface =
       dyn_cast<InferShapedTypeOpInterface>(op.getOperation());
@@ -113,11 +115,11 @@ TosaOp createOpAndInferShape(ImplicitLocOpBuilder &builder, Type result_ty,
   // target type.
   auto result = op->getResult(0);
   auto predictedShape = returnedShapes[0];
-  auto currentKnowledge = ValueKnowledge::getKnowledgeFromType(result_ty);
+  auto currentKnowledge = ValueKnowledge::getKnowledgeFromType(resultTy);
 
   // Compute the knowledge based on the inferred type.
   auto inferredKnowledge = ValueKnowledge::getPessimisticValueState();
-  inferredKnowledge.dtype = mlir::cast<ShapedType>(result_ty).getElementType();
+  inferredKnowledge.dtype = mlir::cast<ShapedType>(resultTy).getElementType();
   inferredKnowledge.hasRank = predictedShape.hasRank();
   if (predictedShape.hasRank()) {
     for (auto dim : predictedShape.getDims()) {
@@ -127,12 +129,12 @@ TosaOp createOpAndInferShape(ImplicitLocOpBuilder &builder, Type result_ty,
 
   // Compute the new type based on the joined version.
   auto newKnowledge = ValueKnowledge::join(currentKnowledge, inferredKnowledge);
-  Type new_ty =
+  Type newTy =
       newKnowledge.hasRank
           ? Type{mlir::RankedTensorType::get(llvm::ArrayRef(newKnowledge.sizes),
                                              newKnowledge.dtype)}
           : Type{mlir::UnrankedTensorType::get(newKnowledge.dtype)};
-  result.setType(new_ty);
+  result.setType(newTy);
   return op;
 }
 
@@ -143,7 +145,7 @@ TosaOp createOpAndInferShape(ImplicitLocOpBuilder &builder, Type result_ty,
 //   - create operator
 //   - performs shape inference on this operator
 template <typename TosaOp, typename... Args>
-TosaOp CreateOpAndInferShape(ImplicitLocOpBuilder &builder, Type result_ty,
+TosaOp CreateOpAndInferShape(ImplicitLocOpBuilder &builder, Type resultTy,
                              Args &&...args) {
   if (TosaOp::template hasTrait<OpTrait::SameOperandsAndResultRank>()) {
     // op requires same ranks for tensor operands
@@ -160,7 +162,7 @@ TosaOp CreateOpAndInferShape(ImplicitLocOpBuilder &builder, Type result_ty,
           // incompatible broadcast shapes, no reshape is inserted
           // ResultsBroadcastableShape verify will handle this
         }
-        return createOpAndInferShape<TosaOp>(builder, result_ty, x, y);
+        return createOpAndInferShape<TosaOp>(builder, resultTy, x, y);
       }
     }
     if constexpr (sizeof...(Args) == 3) {
@@ -180,7 +182,7 @@ TosaOp CreateOpAndInferShape(ImplicitLocOpBuilder &builder, Type result_ty,
           // incompatible broadcast shapes, no reshape is inserted
           // ResultsBroadcastableShape verify will handle this
         }
-        return createOpAndInferShape<TosaOp>(builder, result_ty, x, y, round);
+        return createOpAndInferShape<TosaOp>(builder, resultTy, x, y, round);
       }
       if constexpr (std::is_same_v<ArgX, Value> &&
                     std::is_same_v<ArgY, Value> &&
@@ -197,12 +199,12 @@ TosaOp CreateOpAndInferShape(ImplicitLocOpBuilder &builder, Type result_ty,
           // ResultsBroadcastableShape verify will handle this
         }
 
-        return createOpAndInferShape<TosaOp>(builder, result_ty, x, y, z);
+        return createOpAndInferShape<TosaOp>(builder, resultTy, x, y, z);
       }
     }
   }
 
-  return createOpAndInferShape<TosaOp>(builder, result_ty, args...);
+  return createOpAndInferShape<TosaOp>(builder, resultTy, args...);
 }
 
 // Creates a TOSA operation by:
@@ -211,9 +213,9 @@ TosaOp CreateOpAndInferShape(ImplicitLocOpBuilder &builder, Type result_ty,
 //   - performs shape inference on this operator
 template <typename TosaOp, typename... Args>
 TosaOp CreateOpAndInferShape(PatternRewriter &rewriter, Location loc,
-                             Type result_ty, Args &&...args) {
+                             Type resultTy, Args &&...args) {
   ImplicitLocOpBuilder builder(loc, rewriter);
-  return CreateOpAndInferShape<TosaOp>(builder, result_ty, args...);
+  return CreateOpAndInferShape<TosaOp>(builder, resultTy, args...);
 }
 
 } // namespace tosa
