@@ -106,17 +106,22 @@ CodeGenIntrinsic::CodeGenIntrinsic(const Record *R,
                                   TargetPrefix + ".'!");
   }
 
-  if (auto *Types = R->getValue("Types")) {
-    auto *TypeList = cast<ListInit>(Types->getValue());
-    isOverloaded = R->getValueAsBit("isOverloaded");
+  const Record *TypeInfo = R->getValueAsDef("TypeInfo");
+  if (!TypeInfo->isSubClassOf("TypeInfoGen"))
+    PrintFatalError(DefLoc, "TypeInfo field in " + DefName +
+                                " should be of subclass of TypeInfoGen!");
 
-    unsigned I = 0;
-    for (unsigned E = R->getValueAsListInit("RetTypes")->size(); I < E; ++I)
-      IS.RetTys.push_back(TypeList->getElementAsRecord(I));
+  isOverloaded = TypeInfo->getValueAsBit("isOverloaded");
+  const ListInit *TypeList = TypeInfo->getValueAsListInit("Types");
 
-    for (unsigned E = TypeList->size(); I < E; ++I)
-      IS.ParamTys.push_back(TypeList->getElementAsRecord(I));
-  }
+  // Types field is a concatenation of Return types followed by Param types.
+  unsigned Idx = 0;
+  unsigned NumRet = R->getValueAsListInit("RetTypes")->size();
+  for (; Idx < NumRet; ++Idx)
+    IS.RetTys.push_back(TypeList->getElementAsRecord(Idx));
+
+  for (unsigned E = TypeList->size(); Idx < E; ++Idx)
+    IS.ParamTys.push_back(TypeList->getElementAsRecord(Idx));
 
   // Parse the intrinsic properties.
   ListInit *PropList = R->getValueAsListInit("IntrProperties");
