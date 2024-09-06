@@ -62,7 +62,10 @@ llvm.func @nvvm_special_regs() -> i32 {
   %29 = nvvm.read.ptx.sreg.clock : i32
   // CHECK: call i64 @llvm.nvvm.read.ptx.sreg.clock64
   %30 = nvvm.read.ptx.sreg.clock64 : i64
-  
+
+  // CHECK: %31 = call range(i32 0, 64) i32 @llvm.nvvm.read.ptx.sreg.tid.x()
+  %31 = nvvm.read.ptx.sreg.tid.x range <0 : i32, 64 : i32> : i32
+
   llvm.return %1 : i32
 }
 
@@ -84,7 +87,7 @@ llvm.func @llvm_nvvm_barrier0() {
 // CHECK-SAME: i32 %[[barId:.*]], i32 %[[numThreads:.*]])
 llvm.func @llvm_nvvm_barrier(%barID : i32, %numberOfThreads : i32) {
   // CHECK: call void @llvm.nvvm.barrier0()
-  nvvm.barrier 
+  nvvm.barrier
   // CHECK: call void @llvm.nvvm.barrier.n(i32 %[[barId]])
   nvvm.barrier id = %barID
   // CHECK: call void @llvm.nvvm.barrier(i32 %[[barId]], i32 %[[numThreads]])

@@ -699,9 +699,21 @@ gpu.module @test_module_32 {
 }
 
 gpu.module @test_module_33 {
-// CHECK-LABEL: func @kernel_with_block_size()
-// CHECK: attributes {gpu.kernel, gpu.known_block_size = array<i32: 128, 1, 1>, nvvm.kernel, nvvm.maxntid = array<i32: 128, 1, 1>}
-  gpu.func @kernel_with_block_size() kernel attributes {known_block_size = array<i32: 128, 1, 1>} {
+// CHECK-LABEL: func @kernel_with_block_size(
+// CHECK: attributes {gpu.kernel, gpu.known_block_size = array<i32: 32, 4, 2>, nvvm.kernel, nvvm.maxntid = array<i32: 32, 4, 2>}
+  gpu.func @kernel_with_block_size(%arg0: !llvm.ptr) kernel attributes {known_block_size = array<i32: 32, 4, 2>} {
+    // CHECK: = nvvm.read.ptx.sreg.tid.x range <0 : i32, 32 : i32> : i32
+    %0 = gpu.thread_id x
+    // CHECK: = nvvm.read.ptx.sreg.tid.y range <0 : i32, 4 : i32> : i32
+    %1 = gpu.thread_id y
+    // CHECK: = nvvm.read.ptx.sreg.tid.z range <0 : i32, 2 : i32> : i32
+    %2 = gpu.thread_id z
+
+    // Fake usage to prevent dead code elimination
+    %3 = arith.addi %0, %1 : index
+    %4 = arith.addi %3, %2 : index
+    %5 = arith.index_cast %4 : index to i64
+    llvm.store %5, %arg0 : i64, !llvm.ptr
     gpu.return
   }
 }
