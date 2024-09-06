@@ -106,10 +106,40 @@ template <IR IRTy> static void GetType(benchmark::State &State) {
     benchmark::DoNotOptimize(I->getType());
 }
 
+static std::string generateRAUWIR(unsigned Size) {
+  std::stringstream SS;
+  SS << "define void @foo(i32 %v1, i32 %v2) {\n";
+  SS << "  %def1 = add i32 %v1, %v2\n";
+  SS << "  %def2 = add i32 %v1, %v2\n";
+  for (auto Cnt : seq<unsigned>(0, Size))
+    SS << "  %add" << Cnt << " = add i32 %def1, %def1\n";
+  SS << "ret void";
+  SS << "}";
+  return SS.str();
+}
+
+template <IR IRTy> static void RAUW(benchmark::State &State) {
+  LLVMContext LLVMCtx;
+  sandboxir::Context Ctx(LLVMCtx);
+  std::unique_ptr<llvm::Module> LLVMM;
+  unsigned NumInstrs = State.range(0);
+  auto *BB = genIR<IRTy>(LLVMM, LLVMCtx, Ctx, generateRAUWIR, NumInstrs);
+  auto It = BB->begin();
+  auto *Def1 = &*It++;
+  auto *Def2 = &*It++;
+  for (auto _ : State) {
+    Def1->replaceAllUsesWith(Def2);
+    Def2->replaceAllUsesWith(Def1);
+  }
+}
+
 BENCHMARK(GetType<IR::LLVM>);
 BENCHMARK(GetType<IR::SBox>);
 
 BENCHMARK(BBWalk<IR::LLVM>)->Args({1024});
 BENCHMARK(BBWalk<IR::SBox>)->Args({1024});
+
+BENCHMARK(RAUW<IR::LLVM>)->Args({512});
+BENCHMARK(RAUW<IR::SBox>)->Args({512});
 
 BENCHMARK_MAIN();

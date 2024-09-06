@@ -12376,6 +12376,7 @@ def err_hlsl_packoffset_cross_reg_boundary : Error<"packoffset cannot cross regi
 def err_hlsl_packoffset_alignment_mismatch : Error<"packoffset at 'y' not match alignment %0 required by %1">;
 def err_hlsl_pointers_unsupported : Error<
   "%select{pointers|references}0 are unsupported in HLSL">;
+def err_hlsl_missing_resource_class : Error<"HLSL resource needs to have [[hlsl::resource_class()]] attribute">;
 
 def err_hlsl_operator_unsupported : Error<
   "the '%select{&|*|->}0' operator is unsupported in HLSL">;
@@ -12424,6 +12425,13 @@ def warn_unsafe_buffer_operation : Warning<
   "unsafe buffer access|function introduces unsafe buffer manipulation|unsafe invocation of span::data|"
   "field %1 prone to unsafe buffer manipulation}0">,
   InGroup<UnsafeBufferUsage>, DefaultIgnore;
+def warn_unsafe_buffer_libc_call : Warning<
+  "function %0 is unsafe">,
+  InGroup<UnsafeBufferUsageInLibcCall>, DefaultIgnore;
+def note_unsafe_buffer_printf_call : Note<
+  "%select{|change to 'snprintf' for explicit bounds checking | buffer pointer and size may not match"
+          "|string argument is not guaranteed to be null-terminated"
+          "|'va_list' is unsafe}0">;
 def note_unsafe_buffer_operation : Note<
   "used%select{| in pointer arithmetic| in buffer access}0 here">;
 def note_unsafe_buffer_variable_fixit_group : Note<

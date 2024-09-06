@@ -68,6 +68,7 @@ enum class ICFLevel {
   unknown,
   none,
   safe,
+  safe_thunks,
   all,
 };
 
