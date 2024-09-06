@@ -351,17 +351,30 @@ bool AtomicExpandImpl::run(Function &F, const TargetMachine *TM) {
 
   bool MadeChange = false;
 
-  SmallVector<Instruction *, 1> AtomicInsts;
+  for (Function::iterator BBI = F.begin(), BBE = F.end(); BBI != BBE;) {
+    BasicBlock *BB = &*BBI;
+    ++BBI;
 
-  // Changing control-flow while iterating through it is a bad idea, so gather a
-  // list of all atomic instructions before we start.
-  for (Instruction &I : instructions(F))
-    if (I.isAtomic() && !isa<FenceInst>(&I))
-      AtomicInsts.push_back(&I);
+    BasicBlock::reverse_iterator Next;
 
-  for (auto *I : AtomicInsts) {
-    if (processAtomicInstr(I))
-      MadeChange = true;
+    for (BasicBlock::reverse_iterator I = BB->rbegin(), E = BB->rend(); I != E;
+         I = Next) {
+      Instruction &Inst = *I;
+      Next = std::next(I);
+
+      if (processAtomicInstr(&Inst)) {
+        MadeChange = true;
+
+        // Detect control flow change and resume iteration from the original
+        // block to inspect any newly inserted blocks. This allows incremental
+        // legalization of atomicrmw and cmpxchg.
+        if (Next != E && BB != Next->getParent()) {
+          BBI = BB->getIterator();
+          BBE = F.end();
+          break;
+        }
+      }
+    }
   }
 
   return MadeChange;
