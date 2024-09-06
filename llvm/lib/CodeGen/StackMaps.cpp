@@ -37,6 +37,7 @@
 #include <iterator>
 #include <sstream>
 #include <utility>
+#include <set>
 
 using namespace llvm;
 
@@ -224,7 +225,7 @@ MachineInstr::const_mop_iterator
 StackMaps::parseOperand(MachineInstr::const_mop_iterator MOI,
                         MachineInstr::const_mop_iterator MOE,
                         LiveVarsVec &LiveVars, LiveOutVec &LiveOuts,
-                        std::map<Register, int64_t> SpillOffsets) const {
+                        std::map<Register, std::set<int64_t>> SpillOffsets) const {
   LocationVec &Locs = LiveVars.back();
   const TargetRegisterInfo *TRI = AP.MF->getSubtarget().getRegisterInfo();
   if (MOI->isImm()) {
@@ -289,7 +290,6 @@ StackMaps::parseOperand(MachineInstr::const_mop_iterator MOI,
 
 
     signed Offset = 0;
-    int RHS = 0;
     // Check for any additional mappings in the spillmap and add them to his
     // location to be later encoded into stackmaps. A typical case where we need
     // to record multiple sources is the following (annotated with SpillMap
@@ -307,41 +307,16 @@ StackMaps::parseOperand(MachineInstr::const_mop_iterator MOI,
     int ExtraReg = 0;
     Register R = MOI->getReg();
     if (MOI->isReg()) {
-      if (MOI->isKill()) {
-        // There's no point in tracking a killed register. Instead, try and
-        // find a copy of the register and use that to increase the likelyhood
-        // of us tracking that value.
-        // YKFIXME: This is likely only a temporary fix. In the future we might
-        // want to allow stackmaps to track arbitrarily many locations per live
-        // variable. Currently, we can only track two.
-        for (auto I : SpillOffsets) {
-          if (I.second == R) {
-            R = I.first;
-            break;
-          }
-        }
-      }
       if (SpillOffsets.count(R) > 0) {
-        RHS = SpillOffsets[R];
-        assert(SpillOffsets[R] != 0);
-        if (RHS > 0) {
-          // The additional location is another register: encode its DWARF id.
-          // Also temporarily add 1 since 0 means there is no additional
-          // location.
-          ExtraReg = getDwarfRegNum(RHS, TRI) + 1;
-          // Check if the other register also has a mapping and add it.
-          if (SpillOffsets.count(RHS) > 0) {
-            Offset = SpillOffsets[RHS];
-          }
-        }  else {
-          // The other location is an offset.
-          Offset = RHS;
-          // Find any additional mappings where the current register appears on
-          // the right hand side.
-          for (auto I = SpillOffsets.begin(); I != SpillOffsets.end(); I++) {
-            if (I->second == R) {
-              ExtraReg = getDwarfRegNum(I->first, TRI) + 1;
-            }
+        auto Extras = SpillOffsets[R];
+        // We currently can only deal with 2 additional locations. If there's
+        // more than that, we have a problem.
+        assert(Extras.size() <= 2);
+        for (int64_t RHS : Extras) {
+          if (RHS > 0) {
+            ExtraReg = getDwarfRegNum(RHS, TRI) + 1;
+          } else {
+            Offset = RHS;
           }
         }
       }
@@ -584,7 +559,7 @@ void StackMaps::recordStackMapOpers(const MCSymbol &MILabel,
                                     const MachineInstr &MI, uint64_t ID,
                                     MachineInstr::const_mop_iterator MOI,
                                     MachineInstr::const_mop_iterator MOE,
-                                    std::map<Register, int64_t> SpillOffsets,
+                                    std::map<Register, std::set<int64_t>> SpillOffsets,
                                     bool recordResult) {
   MCContext &OutContext = AP.OutStreamer->getContext();
 
@@ -676,7 +651,9 @@ void StackMaps::recordStackMapOpers(const MCSymbol &MILabel,
   }
 }
 
-void StackMaps::recordStackMap(const MCSymbol &L, const MachineInstr &MI, std::map<Register, int64_t> SpillOffsets) {
+void StackMaps::recordStackMap(const MCSymbol &L,
+                               const MachineInstr &MI,
+                               std::map<Register, std::set<int64_t>> SpillOffsets) {
   assert(MI.getOpcode() == TargetOpcode::STACKMAP && "expected stackmap");
 
   StackMapOpers opers(&MI);
