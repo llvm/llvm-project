@@ -8,6 +8,7 @@ class kernel_name_2;
 typedef kernel_name_2 kernel_name_TD;
 class kernel_name_3;
 class kernel_name_4;
+class kernel_name_5;
 typedef kernel_name_4 kernel_name_TD2;
 
 struct constexpr_kernel_name;
@@ -32,6 +33,14 @@ struct SYCLKernel {
   void operator()() const {}
 };
 
+template<typename KernelName>
+void test_template() {
+  SYCLKernel Obj;
+  kernel_single_task<KernelName>(Obj);
+  const char* test6 = __builtin_sycl_kernel_name(kernel_id_t<KernelName>());
+  constexpr const char* test7 = __builtin_sycl_kernel_name(kernel_id_t<KernelName>());
+}
+
 void test() {
   SYCLKernel Obj;
   kernel_single_task<kernel_name_1>(Obj);
@@ -44,6 +53,7 @@ void test() {
   const char* test3 = __builtin_sycl_kernel_name(kernel_id_nt());
   const char* test4 = __builtin_sycl_kernel_name(kernel_id_t<kernel_name_4>());
   constexpr const char* test5 = __builtin_sycl_kernel_name(kernel_id_t<constexpr_kernel_name>());
+  test_template<kernel_name_5>();
 }
 
 // Kernel names retrieved from KernelInfo map
@@ -52,6 +62,7 @@ void test() {
 // CHECK: @2 = private unnamed_addr constant [44 x i8] c"_Z20__sycl_kernel_callerI13kernel_name_3Evv\00", align 1
 // CHECK: @3 = private unnamed_addr constant [44 x i8] c"_Z20__sycl_kernel_callerI13kernel_name_4Evv\00", align 1
 // CHECK: @.str = private unnamed_addr constant [52 x i8] c"_Z20__sycl_kernel_callerI21constexpr_kernel_nameEvv\00", align 1
+// CHECK: @4 = private unnamed_addr constant [44 x i8] c"_Z20__sycl_kernel_callerI13kernel_name_5Evv\00", align 1
 
 // CHECK: define dso_local void @_Z4testv()
 // CHECK: %test1 = alloca ptr, align 8
@@ -65,3 +76,8 @@ void test() {
 // CHECK: store ptr @3, ptr %test4, align 8
 // CHECK: store ptr @.str, ptr %test5, align 8
 
+// CHECK: define linkonce_odr void @_Z13test_templateI13kernel_name_5Evv()
+// CHECK: %test6 = alloca ptr, align 8
+// CHECK: %test7 = alloca ptr, align 8
+// CHECK: store ptr @4, ptr %test6, align 8
+// CHECK: store ptr @4, ptr %test7, align 8
