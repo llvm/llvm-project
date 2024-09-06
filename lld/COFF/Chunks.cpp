@@ -842,14 +842,9 @@ const uint8_t arm64Thunk[] = {
     0x00, 0x02, 0x1f, 0xd6, // br   x16
 };
 
-size_t RangeExtensionThunkARM64::getSize() const {
-  assert(ctx.config.machine == ARM64);
-  (void)&ctx;
-  return sizeof(arm64Thunk);
-}
+size_t RangeExtensionThunkARM64::getSize() const { return sizeof(arm64Thunk); }
 
 void RangeExtensionThunkARM64::writeTo(uint8_t *buf) const {
-  assert(ctx.config.machine == ARM64);
   memcpy(buf, arm64Thunk, sizeof(arm64Thunk));
   applyArm64Addr(buf + 0, target->getRVA(), rva, 12);
   applyArm64Imm(buf + 4, target->getRVA() & 0xfff, 0);
@@ -1005,16 +1000,7 @@ void BaserelChunk::writeTo(uint8_t *buf) const {
 }
 
 uint8_t Baserel::getDefaultType(llvm::COFF::MachineTypes machine) {
-  switch (machine) {
-  case AMD64:
-  case ARM64:
-    return IMAGE_REL_BASED_DIR64;
-  case I386:
-  case ARMNT:
-    return IMAGE_REL_BASED_HIGHLOW;
-  default:
-    llvm_unreachable("unknown machine type");
-  }
+  return is64Bit(machine) ? IMAGE_REL_BASED_DIR64 : IMAGE_REL_BASED_HIGHLOW;
 }
 
 MergeChunk::MergeChunk(uint32_t alignment)

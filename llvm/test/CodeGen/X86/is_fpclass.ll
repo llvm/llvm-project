@@ -2116,24 +2116,19 @@ entry:
 define i1 @is_plus_inf_or_nan_f(float %x) {
 ; X86-LABEL: is_plus_inf_or_nan_f:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
-; X86-NEXT:    sete %cl
-; X86-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
-; X86-NEXT:    cmpl $2139095041, %eax # imm = 0x7F800001
-; X86-NEXT:    setge %al
-; X86-NEXT:    orb %cl, %al
+; X86-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
+; X86-NEXT:    fucompp
+; X86-NEXT:    fnstsw %ax
+; X86-NEXT:    # kill: def $ah killed $ah killed $ax
+; X86-NEXT:    sahf
+; X86-NEXT:    sete %al
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: is_plus_inf_or_nan_f:
 ; X64:       # %bb.0:
-; X64-NEXT:    movd %xmm0, %eax
-; X64-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
-; X64-NEXT:    sete %cl
-; X64-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
-; X64-NEXT:    cmpl $2139095041, %eax # imm = 0x7F800001
-; X64-NEXT:    setge %al
-; X64-NEXT:    orb %cl, %al
+; X64-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-NEXT:    sete %al
 ; X64-NEXT:    retq
   %class = tail call i1 @llvm.is.fpclass.f32(float %x, i32 515)  ; 0x200|0x3 = "+inf|nan"
   ret i1 %class
@@ -2142,24 +2137,19 @@ define i1 @is_plus_inf_or_nan_f(float %x) {
 define i1 @is_minus_inf_or_nan_f(float %x) {
 ; X86-LABEL: is_minus_inf_or_nan_f:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    cmpl $-8388608, %eax # imm = 0xFF800000
-; X86-NEXT:    sete %cl
-; X86-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
-; X86-NEXT:    cmpl $2139095041, %eax # imm = 0x7F800001
-; X86-NEXT:    setge %al
-; X86-NEXT:    orb %cl, %al
+; X86-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
+; X86-NEXT:    fucompp
+; X86-NEXT:    fnstsw %ax
+; X86-NEXT:    # kill: def $ah killed $ah killed $ax
+; X86-NEXT:    sahf
+; X86-NEXT:    sete %al
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: is_minus_inf_or_nan_f:
 ; X64:       # %bb.0:
-; X64-NEXT:    movd %xmm0, %eax
-; X64-NEXT:    cmpl $-8388608, %eax # imm = 0xFF800000
-; X64-NEXT:    sete %cl
-; X64-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
-; X64-NEXT:    cmpl $2139095041, %eax # imm = 0x7F800001
-; X64-NEXT:    setge %al
-; X64-NEXT:    orb %cl, %al
+; X64-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-NEXT:    sete %al
 ; X64-NEXT:    retq
   %class = tail call i1 @llvm.is.fpclass.f32(float %x, i32 7)  ; "-inf|nan"
   ret i1 %class
@@ -2168,24 +2158,19 @@ define i1 @is_minus_inf_or_nan_f(float %x) {
 define i1 @not_is_plus_inf_or_nan_f(float %x) {
 ; X86-LABEL: not_is_plus_inf_or_nan_f:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    cmpl $-8388608, %eax # imm = 0xFF800000
-; X86-NEXT:    sete %cl
-; X86-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
-; X86-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
-; X86-NEXT:    setl %al
-; X86-NEXT:    orb %cl, %al
+; X86-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
+; X86-NEXT:    fucompp
+; X86-NEXT:    fnstsw %ax
+; X86-NEXT:    # kill: def $ah killed $ah killed $ax
+; X86-NEXT:    sahf
+; X86-NEXT:    setne %al
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: not_is_plus_inf_or_nan_f:
 ; X64:       # %bb.0:
-; X64-NEXT:    movd %xmm0, %eax
-; X64-NEXT:    cmpl $-8388608, %eax # imm = 0xFF800000
-; X64-NEXT:    sete %cl
-; X64-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
-; X64-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
-; X64-NEXT:    setl %al
-; X64-NEXT:    orb %cl, %al
+; X64-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-NEXT:    setne %al
 ; X64-NEXT:    retq
   %class = tail call i1 @llvm.is.fpclass.f32(float %x, i32 508)  ; ~(0x200|0x3) = "~(+inf|nan)"
   ret i1 %class
@@ -2194,24 +2179,19 @@ define i1 @not_is_plus_inf_or_nan_f(float %x) {
 define i1 @not_is_minus_inf_or_nan_f(float %x) {
 ; X86-LABEL: not_is_minus_inf_or_nan_f:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
-; X86-NEXT:    sete %cl
-; X86-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
-; X86-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
-; X86-NEXT:    setl %al
-; X86-NEXT:    orb %cl, %al
+; X86-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
+; X86-NEXT:    fucompp
+; X86-NEXT:    fnstsw %ax
+; X86-NEXT:    # kill: def $ah killed $ah killed $ax
+; X86-NEXT:    sahf
+; X86-NEXT:    setne %al
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: not_is_minus_inf_or_nan_f:
 ; X64:       # %bb.0:
-; X64-NEXT:    movd %xmm0, %eax
-; X64-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
-; X64-NEXT:    sete %cl
-; X64-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
-; X64-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
-; X64-NEXT:    setl %al
-; X64-NEXT:    orb %cl, %al
+; X64-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-NEXT:    setne %al
 ; X64-NEXT:    retq
   %class = tail call i1 @llvm.is.fpclass.f32(float %x, i32 1016)  ; "~(-inf|nan)"
   ret i1 %class

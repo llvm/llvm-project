@@ -615,20 +615,22 @@ private:
   COFFLinkerContext &ctx;
 };
 
+// A ragnge extension thunk used for both ARM64EC and ARM64 machine types.
 class RangeExtensionThunkARM64 : public NonSectionCodeChunk {
 public:
-  explicit RangeExtensionThunkARM64(COFFLinkerContext &ctx, Defined *t)
-      : target(t), ctx(ctx) {
+  explicit RangeExtensionThunkARM64(MachineTypes machine, Defined *t)
+      : target(t), machine(machine) {
     setAlignment(4);
+    assert(llvm::COFF::isAnyArm64(machine));
   }
   size_t getSize() const override;
   void writeTo(uint8_t *buf) const override;
-  MachineTypes getMachine() const override { return ARM64; }
+  MachineTypes getMachine() const override { return machine; }
 
   Defined *target;
 
 private:
-  COFFLinkerContext &ctx;
+  MachineTypes machine;
 };
 
 // Windows-specific.
@@ -711,7 +713,7 @@ public:
   Baserel(uint32_t v, uint8_t ty) : rva(v), type(ty) {}
   explicit Baserel(uint32_t v, llvm::COFF::MachineTypes machine)
       : Baserel(v, getDefaultType(machine)) {}
-  uint8_t getDefaultType(llvm::COFF::MachineTypes machine);
+  static uint8_t getDefaultType(llvm::COFF::MachineTypes machine);
 
   uint32_t rva;
   uint8_t type;

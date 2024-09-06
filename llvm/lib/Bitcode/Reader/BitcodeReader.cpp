@@ -2093,8 +2093,6 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::NoSanitizeBounds;
   case bitc::ATTR_KIND_NO_SANITIZE_COVERAGE:
     return Attribute::NoSanitizeCoverage;
-  case bitc::ATTR_KIND_NO_SANITIZE_REALTIME:
-    return Attribute::NoSanitizeRealtime;
   case bitc::ATTR_KIND_NULL_POINTER_IS_VALID:
     return Attribute::NullPointerIsValid;
   case bitc::ATTR_KIND_OPTIMIZE_FOR_DEBUGGING:
@@ -2681,7 +2679,11 @@ Error BitcodeReader::parseTypeTableBody() {
           return error("Integer parameter too large");
         IntParams.push_back(Record[i]);
       }
-      ResultTy = TargetExtType::get(Context, TypeName, TypeParams, IntParams);
+      auto TTy =
+          TargetExtType::getOrError(Context, TypeName, TypeParams, IntParams);
+      if (auto E = TTy.takeError())
+        return E;
+      ResultTy = *TTy;
       TypeName.clear();
       break;
     }

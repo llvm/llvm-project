@@ -488,22 +488,41 @@ static void DoEmitAvailabilityWarning(Sema &S, AvailabilityResult K,
       // Don't offer a fixit for declarations with availability attributes.
       if (Enclosing->hasAttr<AvailabilityAttr>())
         return;
-      if (!S.getPreprocessor().isMacroDefined("API_AVAILABLE"))
+      Preprocessor &PP = S.getPreprocessor();
+      if (!PP.isMacroDefined("API_AVAILABLE"))
         return;
       std::optional<AttributeInsertion> Insertion = createAttributeInsertion(
           Enclosing, S.getSourceManager(), S.getLangOpts());
       if (!Insertion)
         return;
-      std::string PlatformName =
-          AvailabilityAttr::getPlatformNameSourceSpelling(
-              S.getASTContext().getTargetInfo().getPlatformName())
-              .lower();
+      StringRef PlatformName =
+          S.getASTContext().getTargetInfo().getPlatformName();
+
+      // Apple's API_AVAILABLE macro expands roughly like this.
+      // API_AVAILABLE(ios(17.0))
+      // __attribute__((availability(__API_AVAILABLE_PLATFORM_ios(17.0)))
+      // __attribute__((availability(ios,introduced=17.0)))
+      // In order to figure out which platform name to use in the API_AVAILABLE
+      // macro, the associated __API_AVAILABLE_PLATFORM_ macro needs to be
+      // found. The __API_AVAILABLE_PLATFORM_ macros aren't consistent about
+      // using the canonical platform name, source spelling name, or one of the
+      // other supported names (i.e. one of the keys in canonicalizePlatformName
+      // that's neither). Check all of the supported names for a match.
+      std::vector<StringRef> EquivalentPlatforms =
+          AvailabilityAttr::equivalentPlatformNames(PlatformName);
+      llvm::Twine MacroPrefix = "__API_AVAILABLE_PLATFORM_";
+      auto AvailablePlatform =
+          llvm::find_if(EquivalentPlatforms, [&](StringRef EquivalentPlatform) {
+            return PP.isMacroDefined((MacroPrefix + EquivalentPlatform).str());
+          });
+      if (AvailablePlatform == EquivalentPlatforms.end())
+        return;
       std::string Introduced =
           OffendingDecl->getVersionIntroduced().getAsString();
       FixitNoteDiag << FixItHint::CreateInsertion(
           Insertion->Loc,
-          (llvm::Twine(Insertion->Prefix) + "API_AVAILABLE(" + PlatformName +
-           "(" + Introduced + "))" + Insertion->Suffix)
+          (llvm::Twine(Insertion->Prefix) + "API_AVAILABLE(" +
+           *AvailablePlatform + "(" + Introduced + "))" + Insertion->Suffix)
               .str());
     }
     return;

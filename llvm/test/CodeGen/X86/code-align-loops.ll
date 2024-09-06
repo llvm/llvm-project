@@ -96,8 +96,8 @@ for.body5:                                        ; preds = %for.body, %for.body
   br i1 %exitcond16.not, label %for.cond.cleanup4, label %for.body5, !llvm.loop !2
 }
 
-; test3 is to check if .p2align can be correctly set on loops with multi latches.
-; The test IR is generated from below simple C file:
+; test3 and test4 is to check if .p2align can be correctly set on loops with
+; multi latches. The IR is generated from below simple C file:
 ; $ clang -O0 -S -emit-llvm loop.c
 ; $ cat loop.c
 ; int test3() {
@@ -111,7 +111,7 @@ for.body5:                                        ; preds = %for.body, %for.body
 ;     }
 ; }
 ; CHECK-LABEL: test3_multilatch:
-; ALIGN: .p2align 4, 0x90
+; ALIGN: .p2align 6, 0x90
 ; ALIGN-NEXT: .LBB2_1: # %while.cond
 define dso_local i32 @test3_multilatch() #0 {
 entry:
@@ -144,6 +144,37 @@ if.end:                                           ; preds = %while.body
 while.end:                                        ; preds = %while.cond
   %3 = load i32, ptr %retval, align 4
   ret i32 %3
+}
+
+; CHECK-LABEL: test4_multilatch:
+; ALIGN: .p2align 6, 0x90
+; ALIGN-NEXT: .LBB3_4: # %bb4
+define void @test4_multilatch(i32 %a, i32 %b, i32 %c, i32 %d) nounwind {
+entry:
+  br label %bb1
+
+bb1:                               ; preds = %bb2, %bb4, %entry
+  call void @bar()
+  %cmp3 = icmp sgt i32 %c, 10
+  br i1 %cmp3, label %bb3, label %bb4
+
+bb2:                                ; preds = %bb3
+  call void @bar()
+  %cmp1 = icmp sgt i32 %a, 11
+  br i1 %cmp1, label %bb1, label %exit, !llvm.loop !0
+
+bb3:                                ; preds = %bb1
+  call void @bar()
+  %cmp2 = icmp sgt i32 %b, 12
+  br i1 %cmp2, label %bb2, label %exit
+
+bb4:                                ; preds = %bb1
+  call void @bar()
+  %cmp4 = icmp sgt i32 %d, 14
+  br i1 %cmp4, label %bb1, label %exit
+
+exit:                               ; preds = %bb2, %bb3, %bb4
+  ret void
 }
 
 declare void @bar()

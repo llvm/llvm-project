@@ -148,8 +148,6 @@ def note_constexpr_var_init_weak : Note<
 def note_constexpr_typeid_polymorphic : Note<
   "typeid applied to expression of polymorphic type %0 is "
   "not allowed in a constant expression in C++ standards before C++20">;
-def note_constexpr_void_comparison : Note<
-  "comparison between unequal pointers to void has unspecified result">;
 def note_constexpr_temporary_here : Note<"temporary created here">;
 def note_constexpr_dynamic_alloc_here : Note<"heap allocation performed here">;
 def note_constexpr_conditional_never_const : Note<
@@ -169,14 +167,14 @@ def note_constexpr_this : Note<
 def access_kind : TextSubstitution<
   "%select{read of|read of|assignment to|increment of|decrement of|"
   "member call on|dynamic_cast of|typeid applied to|construction of|"
-  "destruction of}0">;
+  "destruction of|read of}0">;
 def access_kind_subobject : TextSubstitution<
   "%select{read of|read of|assignment to|increment of|decrement of|"
   "member call on|dynamic_cast of|typeid applied to|"
-  "construction of subobject of|destruction of}0">;
+  "construction of subobject of|destruction of|read of}0">;
 def access_kind_volatile : TextSubstitution<
   "%select{read of|read of|assignment to|increment of|decrement of|"
-  "<ERROR>|<ERROR>|<ERROR>|<ERROR>|<ERROR>}0">;
+  "<ERROR>|<ERROR>|<ERROR>|<ERROR>|<ERROR>|<ERROR>}0">;
 def note_constexpr_lifetime_ended : Note<
   "%sub{access_kind}0 %select{temporary|variable}1 whose "
   "%plural{8:storage duration|:lifetime}0 has ended">;
@@ -408,6 +406,12 @@ def note_unimplemented_constexpr_lambda_feature_ast : Note<
 def warn_is_constant_evaluated_always_true_constexpr : Warning<
   "'%0' will always evaluate to 'true' in a manifestly constant-evaluated expression">,
   InGroup<DiagGroup<"constant-evaluated">>;
+
+def err_invalid_is_within_lifetime : Note<
+  "'%0' cannot be called with "
+  "%select{a null pointer|a one-past-the-end pointer|"
+  "a pointer to an object whose lifetime has not yet begun}1"
+>;
 
 // inline asm related.
 let CategoryName = "Inline Assembly Issue" in {

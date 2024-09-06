@@ -2189,10 +2189,6 @@ example:
 ``nosanitize_coverage``
     This attribute indicates that SanitizerCoverage instrumentation is disabled
     for this function.
-``nosanitize_realtime``
-    This attribute indicates that the Realtime Sanitizer instrumentation is
-    disabled for this function.
-    This attribute is incompatible with the ``sanitize_realtime`` attribute.
 ``null_pointer_is_valid``
    If ``null_pointer_is_valid`` is set, then the ``null`` address
    in address-space 0 is considered to be a valid address for memory loads and
@@ -2319,7 +2315,6 @@ example:
     This attribute indicates that RealtimeSanitizer checks
     (realtime safety analysis - no allocations, syscalls or exceptions) are enabled
     for this function.
-    This attribute is incompatible with the ``nosanitize_realtime`` attribute.
 ``speculative_load_hardening``
     This attribute indicates that
     `Speculative Load Hardening <https://llvm.org/docs/SpeculativeLoadHardening.html>`_
@@ -19581,27 +19576,27 @@ vector <N x eltty>, imm is a signed integer constant in the range
 -N <= imm < N. For a scalable vector <vscale x N x eltty>, imm is a signed
 integer constant in the range -X <= imm < X where X=vscale_range_min * N.
 
-'``llvm.experimental.stepvector``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+'``llvm.stepvector``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-This is an overloaded intrinsic. You can use ``llvm.experimental.stepvector``
+This is an overloaded intrinsic. You can use ``llvm.stepvector``
 to generate a vector whose lane values comprise the linear sequence
 <0, 1, 2, ...>. It is primarily intended for scalable vectors.
 
 ::
 
-      declare <vscale x 4 x i32> @llvm.experimental.stepvector.nxv4i32()
-      declare <vscale x 8 x i16> @llvm.experimental.stepvector.nxv8i16()
+      declare <vscale x 4 x i32> @llvm.stepvector.nxv4i32()
+      declare <vscale x 8 x i16> @llvm.stepvector.nxv8i16()
 
-The '``llvm.experimental.stepvector``' intrinsics are used to create vectors
+The '``llvm.stepvector``' intrinsics are used to create vectors
 of integers whose elements contain a linear sequence of values starting from 0
-with a step of 1.  This experimental intrinsic can only be used for vectors
-with integer elements that are at least 8 bits in size. If the sequence value
-exceeds the allowed limit for the element type then the result for that lane is
-undefined.
+with a step of 1. This intrinsic can only be used for vectors with integer
+elements that are at least 8 bits in size. If the sequence value exceeds
+the allowed limit for the element type then the result for that lane is
+a poison value.
 
 These intrinsics work for both fixed and scalable vectors. While this intrinsic
-is marked as experimental, the recommended way to express this operation for
+supports all vector types, the recommended way to express this operation for
 fixed-width vectors is still to generate a constant vector instead.
 
 
@@ -29476,6 +29471,42 @@ Semantics:
 execution, but is unknown at compile time.
 If the result value does not fit in the result type, then the result is
 a :ref:`poison value <poisonvalues>`.
+
+.. _llvm_fake_use:
+
+'``llvm.fake.use``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare void @llvm.fake.use(...)
+
+Overview:
+"""""""""
+
+The ``llvm.fake.use`` intrinsic is a no-op. It takes a single
+value as an operand and is treated as a use of that operand, to force the
+optimizer to preserve that value prior to the fake use. This is used for
+extending the lifetimes of variables, where this intrinsic placed at the end of
+a variable's scope helps prevent that variable from being optimized out.
+
+Arguments:
+""""""""""
+
+The ``llvm.fake.use`` intrinsic takes one argument, which may be any
+function-local SSA value. Note that the signature is variadic so that the
+intrinsic can take any type of argument, but passing more than one argument will
+result in an error.
+
+Semantics:
+""""""""""
+
+This intrinsic does nothing, but optimizers must consider it a use of its single
+operand and should try to preserve the intrinsic and its position in the
+function.
 
 
 Stack Map Intrinsics

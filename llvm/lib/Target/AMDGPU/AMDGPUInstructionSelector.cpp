@@ -5541,7 +5541,12 @@ void AMDGPUInstructionSelector::renderPopcntImm(MachineInstrBuilder &MIB,
 void AMDGPUInstructionSelector::renderTruncTImm(MachineInstrBuilder &MIB,
                                                 const MachineInstr &MI,
                                                 int OpIdx) const {
-  MIB.addImm(MI.getOperand(OpIdx).getImm());
+  const MachineOperand &Op = MI.getOperand(OpIdx);
+  int64_t Imm;
+  if (Op.isReg() && mi_match(Op.getReg(), *MRI, m_ICst(Imm)))
+    MIB.addImm(Imm);
+  else
+    MIB.addImm(Op.getImm());
 }
 
 void AMDGPUInstructionSelector::renderOpSelTImm(MachineInstrBuilder &MIB,
@@ -5592,6 +5597,16 @@ void AMDGPUInstructionSelector::renderFPPow2ToExponent(MachineInstrBuilder &MIB,
   int ExpVal = APF.getExactLog2Abs();
   assert(ExpVal != INT_MIN);
   MIB.addImm(ExpVal);
+}
+
+void AMDGPUInstructionSelector::renderRoundMode(MachineInstrBuilder &MIB,
+                                                const MachineInstr &MI,
+                                                int OpIdx) const {
+  // "round.towardzero" -> TowardZero 0        -> FP_ROUND_ROUND_TO_ZERO 3
+  // "round.tonearest"  -> NearestTiesToEven 1 -> FP_ROUND_ROUND_TO_NEAREST 0
+  // "round.upward"     -> TowardPositive 2    -> FP_ROUND_ROUND_TO_INF 1
+  // "round.downward    -> TowardNegative 3    -> FP_ROUND_ROUND_TO_NEGINF 2
+  MIB.addImm((MI.getOperand(OpIdx).getImm() + 3) % 4);
 }
 
 bool AMDGPUInstructionSelector::isInlineImmediate(const APInt &Imm) const {

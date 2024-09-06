@@ -125,6 +125,12 @@
 /* Define to 1 if you have the `pthread_setname_np' function. */
 #cmakedefine HAVE_PTHREAD_SETNAME_NP ${HAVE_PTHREAD_SETNAME_NP}
 
+/* Define to 1 if you have the `pthread_get_name_np' function. */
+#cmakedefine HAVE_PTHREAD_GET_NAME_NP ${HAVE_PTHREAD_GET_NAME_NP}
+
+/* Define to 1 if you have the `pthread_set_name_np' function. */
+#cmakedefine HAVE_PTHREAD_SET_NAME_NP ${HAVE_PTHREAD_SET_NAME_NP}
+
 /* Define to 1 if you have the <mach/mach.h> header file. */
 #cmakedefine HAVE_MACH_MACH_H ${HAVE_MACH_MACH_H}
 

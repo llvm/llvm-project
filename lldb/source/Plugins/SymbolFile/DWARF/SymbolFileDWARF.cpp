@@ -4480,7 +4480,7 @@ Status SymbolFileDWARF::CalculateFrameVariableError(StackFrame &frame) {
   dwarf_cu->ExtractUnitDIEIfNeeded();
   const Status &dwo_error = dwarf_cu->GetDwoError();
   if (dwo_error.Fail())
-    return dwo_error;
+    return dwo_error.Clone();
 
   // Don't return an error for assembly files as they typically don't have
   // varaible information.
