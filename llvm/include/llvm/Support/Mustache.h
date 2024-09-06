@@ -114,15 +114,15 @@ public:
     InvertSection,
   };
 
-  ASTNode() : T(Type::Root), LocalContext(nullptr){};
+  ASTNode() : T(Type::Root), LocalContext(nullptr) {};
 
   ASTNode(StringRef Body, std::shared_ptr<ASTNode> Parent)
-      : T(Type::Text), Body(Body), Parent(Parent), LocalContext(nullptr){};
+      : T(Type::Text), Body(Body), Parent(Parent), LocalContext(nullptr) {};
 
   // Constructor for Section/InvertSection/Variable/UnescapeVariable
   ASTNode(Type T, Accessor Accessor, std::shared_ptr<ASTNode> Parent)
       : T(T), Accessor(Accessor), Parent(Parent), LocalContext(nullptr),
-        Children({}){};
+        Children({}) {};
 
   void addChild(std::shared_ptr<ASTNode> Child) {
     Children.emplace_back(Child);
