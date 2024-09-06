@@ -2539,6 +2539,10 @@ public:
     llvm_unreachable("VPWidenMemoryRecipe should not be instantiated.");
   }
 
+  /// Return the cost of this VPWidenMemoryRecipe.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
+
   Instruction &getIngredient() const { return Ingredient; }
 };
 

@@ -16,21 +16,21 @@ TEST(TestRtsanContext, CanCreateContext) { __rtsan::Context context{}; }
 
 TEST(TestRtsanContext, ExpectNotRealtimeDoesNotDieBeforeRealtimePush) {
   __rtsan::Context context{};
-  context.ExpectNotRealtime("do_some_stuff");
+  ExpectNotRealtime(context, "do_some_stuff");
 }
 
 TEST(TestRtsanContext, ExpectNotRealtimeDoesNotDieAfterPushAndPop) {
   __rtsan::Context context{};
   context.RealtimePush();
   context.RealtimePop();
-  context.ExpectNotRealtime("do_some_stuff");
+  ExpectNotRealtime(context, "do_some_stuff");
 }
 
 TEST(TestRtsanContext, ExpectNotRealtimeDiesAfterRealtimePush) {
   __rtsan::Context context{};
 
   context.RealtimePush();
-  EXPECT_DEATH(context.ExpectNotRealtime("do_some_stuff"), "");
+  EXPECT_DEATH(ExpectNotRealtime(context, "do_some_stuff"), "");
 }
 
 TEST(TestRtsanContext,
@@ -42,7 +42,7 @@ TEST(TestRtsanContext,
   context.RealtimePush();
   context.RealtimePop();
   context.RealtimePop();
-  EXPECT_DEATH(context.ExpectNotRealtime("do_some_stuff"), "");
+  EXPECT_DEATH(ExpectNotRealtime(context, "do_some_stuff"), "");
 }
 
 TEST(TestRtsanContext, ExpectNotRealtimeDoesNotDieAfterBypassPush) {
@@ -50,7 +50,7 @@ TEST(TestRtsanContext, ExpectNotRealtimeDoesNotDieAfterBypassPush) {
 
   context.RealtimePush();
   context.BypassPush();
-  context.ExpectNotRealtime("do_some_stuff");
+  ExpectNotRealtime(context, "do_some_stuff");
 }
 
 TEST(TestRtsanContext,
@@ -63,7 +63,7 @@ TEST(TestRtsanContext,
   context.BypassPush();
   context.BypassPop();
   context.BypassPop();
-  context.ExpectNotRealtime("do_some_stuff");
+  ExpectNotRealtime(context, "do_some_stuff");
   context.BypassPop();
-  EXPECT_DEATH(context.ExpectNotRealtime("do_some_stuff"), "");
+  EXPECT_DEATH(ExpectNotRealtime(context, "do_some_stuff"), "");
 }

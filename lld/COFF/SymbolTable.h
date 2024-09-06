@@ -102,7 +102,7 @@ public:
   Symbol *addCommon(InputFile *f, StringRef n, uint64_t size,
                     const llvm::object::coff_symbol_generic *s = nullptr,
                     CommonChunk *c = nullptr);
-  Symbol *addImportData(StringRef n, ImportFile *f);
+  DefinedImportData *addImportData(StringRef n, ImportFile *f);
   Symbol *addImportThunk(StringRef name, DefinedImportData *s,
                          uint16_t machine);
   void addLibcall(StringRef name);
