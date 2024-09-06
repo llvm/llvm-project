@@ -5479,6 +5479,7 @@ void Sema::InstantiateVariableInitializer(
         *this, Sema::ExpressionEvaluationContext::PotentiallyEvaluated, Var);
 
     keepInLifetimeExtendingContext();
+    keepInRebuildDefaultArgOrInitContext();
     // Instantiate the initializer.
     ExprResult Init;
 

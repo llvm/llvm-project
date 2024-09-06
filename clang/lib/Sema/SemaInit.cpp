@@ -752,23 +752,18 @@ void InitListChecker::FillInEmptyInitForField(unsigned Init, FieldDecl *Field,
         return;
       ExprResult DIE;
       {
-        // Enter a lifetime extending context, then we can support lifetime
-        // extension of temporary created by aggregate initialization using a
-        // default member initializer (CWG1815 https://wg21.link/CWG1815).
-        //
-        // In a lifetime extension context, BuildCXXDefaultInitExpr will clone
-        // the initializer expression for each use and the temporaries which
-        // binds to a reference member should be extended here.
-        EnterExpressionEvaluationContext LifetimeExtendingContext(
+        // Enter a default initializer rebuild context, then we can support
+        // lifetime extension of temporary created by aggregate initialization
+        // using a default member initializer.
+        // CWG1815 (https://wg21.link/CWG1815).
+        EnterExpressionEvaluationContext RebuildDefaultInit(
             SemaRef, Sema::ExpressionEvaluationContext::PotentiallyEvaluated,
             /*LambdaContextDecl=*/nullptr,
             Sema::ExpressionEvaluationContextRecord::EK_Other, true);
-
-        // Lifetime extension in default-member-init.
-        // Just copy parent record, make sure we haven't forget anything.
+        // Just copy previous record, make sure we haven't forget anything.
         SemaRef.currentEvaluationContext() = SemaRef.parentEvaluationContext();
-        SemaRef.currentEvaluationContext().InLifetimeExtendingContext =
-            Sema::LifetimeExtendingContext::FlagOnly;
+        SemaRef.currentEvaluationContext().RebuildDefaultArgOrDefaultInit =
+            true;
         DIE = SemaRef.BuildCXXDefaultInitExpr(Loc, Field);
       }
       if (DIE.isInvalid()) {
@@ -7494,7 +7489,7 @@ Sema::CreateMaterializeTemporaryExpr(QualType T, Expr *Temporary,
   // are done in both CreateMaterializeTemporaryExpr and MaybeBindToTemporary,
   // but there may be a chance to merge them.
   Cleanup.setExprNeedsCleanups(false);
-  if (getLifetimeExtendingContext() == LifetimeExtendingContext::CollectTemp)
+  if (isInLifetimeExtendingContext())
     currentEvaluationContext().ForRangeLifetimeExtendTemps.push_back(MTE);
   return MTE;
 }

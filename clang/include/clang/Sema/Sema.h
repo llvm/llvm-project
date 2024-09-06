@@ -6298,15 +6298,6 @@ public:
 
   using ImmediateInvocationCandidate = llvm::PointerIntPair<ConstantExpr *, 1>;
 
-  enum class LifetimeExtendingContext {
-    None,       // Not in a lifetime extending context.
-    FlagOnly,   // A flag indicating whether we are in lifetime extending
-                // context.
-    CollectTemp // A flag indicating whether we are in lifetime
-                // extending context, additional, collects
-                // temporary variables created in this context.
-  };
-
   /// Data structure used to record current or nested
   /// expression evaluation contexts.
   struct ExpressionEvaluationContextRecord {
@@ -6389,8 +6380,10 @@ public:
     /// Whether we are currently in a context in which all temporaries must be
     /// lifetime-extended, even if they're not bound to a reference (for
     /// example, in a for-range initializer).
-    LifetimeExtendingContext InLifetimeExtendingContext =
-        LifetimeExtendingContext::None;
+    bool InLifetimeExtendingContext = false;
+
+    /// Whether we should rebuild CXXDefaultArgExpr and CXXDefaultInitExpr.
+    bool RebuildDefaultArgOrDefaultInit = false;
 
     // When evaluating immediate functions in the initializer of a default
     // argument or default member initializer, this is the declaration whose
@@ -7812,16 +7805,11 @@ public:
   }
 
   bool isInLifetimeExtendingContext() const {
-    assert(!ExprEvalContexts.empty() &&
-           "Must be in an expression evaluation context");
-    return currentEvaluationContext().InLifetimeExtendingContext !=
-           LifetimeExtendingContext::None;
+    return currentEvaluationContext().InLifetimeExtendingContext;
   }
 
-  LifetimeExtendingContext getLifetimeExtendingContext() const {
-    assert(!ExprEvalContexts.empty() &&
-           "Must be in an expression evaluation context");
-    return currentEvaluationContext().InLifetimeExtendingContext;
+  bool needRebuildDefaultArgOrInit() const {
+    return currentEvaluationContext().RebuildDefaultArgOrDefaultInit;
   }
 
   bool isCheckingDefaultArgumentOrInitializer() const {
@@ -7866,12 +7854,17 @@ public:
   /// keepInLifetimeExtendingContext - Pull down InLifetimeExtendingContext
   /// flag from previous context.
   void keepInLifetimeExtendingContext() {
-    if (ExprEvalContexts.size() > 2 &&
-        parentEvaluationContext().InLifetimeExtendingContext !=
-            LifetimeExtendingContext::None) {
+    if (ExprEvalContexts.size() > 2)
       currentEvaluationContext().InLifetimeExtendingContext =
           parentEvaluationContext().InLifetimeExtendingContext;
-    }
+  }
+
+  /// keepInRebuildDefaultArgInitContext - Pull down
+  /// RebuildDefaultArgOrDefaultInit flag from previous context.
+  void keepInRebuildDefaultArgOrInitContext() {
+    if (ExprEvalContexts.size() > 2)
+      currentEvaluationContext().RebuildDefaultArgOrDefaultInit =
+          parentEvaluationContext().RebuildDefaultArgOrDefaultInit;
   }
 
   DefaultedComparisonKind getDefaultedComparisonKind(const FunctionDecl *FD) {

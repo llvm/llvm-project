@@ -4255,6 +4255,7 @@ ExprResult TreeTransform<Derived>::TransformInitializer(Expr *Init,
       Construct->isListInitialization());
 
   getSema().keepInLifetimeExtendingContext();
+  getSema().keepInRebuildDefaultArgOrInitContext();
   SmallVector<Expr*, 8> NewArgs;
   bool ArgChanged = false;
   if (getDerived().TransformExprs(Construct->getArgs(), Construct->getNumArgs(),
@@ -8892,9 +8893,11 @@ TreeTransform<Derived>::TransformCXXForRangeStmt(CXXForRangeStmt *S) {
       getSema().getLangOpts().CPlusPlus23);
 
   // P2718R0 - Lifetime extension in range-based for loops.
-  if (getSema().getLangOpts().CPlusPlus23)
-    getSema().currentEvaluationContext().InLifetimeExtendingContext =
-        Sema::LifetimeExtendingContext::CollectTemp;
+  if (getSema().getLangOpts().CPlusPlus23) {
+    auto &LastRecord = getSema().currentEvaluationContext();
+    LastRecord.InLifetimeExtendingContext = true;
+    LastRecord.RebuildDefaultArgOrDefaultInit = true;
+  }
   StmtResult Init =
       S->getInit() ? getDerived().TransformStmt(S->getInit()) : StmtResult();
   if (Init.isInvalid())
