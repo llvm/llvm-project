@@ -434,7 +434,6 @@ bool RISCVCallLowering::canLowerReturn(MachineFunction &MF,
                                        SmallVectorImpl<BaseArgInfo> &Outs,
                                        bool IsVarArg) const {
   SmallVector<CCValAssign, 16> ArgLocs;
-  const auto &TLI = *getTLI<RISCVTargetLowering>();
   CCState CCInfo(CallConv, IsVarArg, MF, ArgLocs,
                  MF.getFunction().getContext());
 

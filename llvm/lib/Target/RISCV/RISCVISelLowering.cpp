@@ -19172,8 +19172,8 @@ bool RISCV::CC_RISCV(unsigned ValNo, MVT ValVT, MVT LocVT,
                      CCState &State, bool IsFixed, bool IsRet, Type *OrigTy) {
   const MachineFunction &MF = State.getMachineFunction();
   const DataLayout &DL = MF.getDataLayout();
-  const RISCVSubtarget &STI = MF.getSubtarget<RISCVSubtarget>();
-  const RISCVTargetLowering &TLI = *STI.getTargetLowering();
+  const RISCVSubtarget &Subtarget = MF.getSubtarget<RISCVSubtarget>();
+  const RISCVTargetLowering &TLI = *Subtarget.getTargetLowering();
 
   unsigned XLen = DL.getLargestLegalIntTypeSizeInBits();
   assert(XLen == 32 || XLen == 64);
@@ -19200,7 +19200,7 @@ bool RISCV::CC_RISCV(unsigned ValNo, MVT ValVT, MVT LocVT,
   // variadic argument, or if no F64 argument registers are available.
   bool UseGPRForF64 = true;
 
-  RISCVABI::ABI ABI = STI.getTargetABI();
+  RISCVABI::ABI ABI = Subtarget.getTargetABI();
   switch (ABI) {
   default:
     llvm_unreachable("Unexpected ABI");
@@ -19641,9 +19641,9 @@ bool RISCV::CC_RISCV_FastCC(unsigned ValNo, MVT ValVT, MVT LocVT,
                             ISD::ArgFlagsTy ArgFlags, CCState &State,
                             bool IsFixed, bool IsRet, Type *OrigTy) {
   const MachineFunction &MF = State.getMachineFunction();
-  const RISCVSubtarget &STI = MF.getSubtarget<RISCVSubtarget>();
-  const RISCVTargetLowering &TLI = *STI.getTargetLowering();
-  RISCVABI::ABI ABI = STI.getTargetABI();
+  const RISCVSubtarget &Subtarget = MF.getSubtarget<RISCVSubtarget>();
+  const RISCVTargetLowering &TLI = *Subtarget.getTargetLowering();
+  RISCVABI::ABI ABI = Subtarget.getTargetABI();
 
   if (LocVT == MVT::i32 || LocVT == MVT::i64) {
     if (MCRegister Reg = State.AllocateReg(getFastCCArgGPRs(ABI))) {
@@ -19651,8 +19651,6 @@ bool RISCV::CC_RISCV_FastCC(unsigned ValNo, MVT ValVT, MVT LocVT,
       return false;
     }
   }
-
-  const RISCVSubtarget &Subtarget = TLI.getSubtarget();
 
   if (LocVT == MVT::f16 && Subtarget.hasStdExtZfhmin()) {
     static const MCPhysReg FPR16List[] = {
