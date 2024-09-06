@@ -25,7 +25,6 @@
 #  pragma GCC system_header
 #endif
 
-
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 // Per https://eel.is/c++draft/containers#container.reqmts-64, allocator-aware containers must have an
