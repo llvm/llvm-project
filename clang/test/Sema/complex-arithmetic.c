@@ -1,5 +1,10 @@
-// RUN: %clang_cc1 -verify=div-precision %s
+// RUN: %clang_cc1 -verify=no-diag %s
+// RUN: %clang_cc1 -complex-range=promoted -verify=div-precision %s
+// RUN: %clang_cc1 -complex-range=promoted -triple x86_64-unknown-windows \
+// RUN: -verify=div-precision %s
 
+
+// no-diag-no-diagnostics
 // This tests evaluation of _Complex arithmetic at compile time.
 
 #define APPROX_EQ(a, b) (                             \

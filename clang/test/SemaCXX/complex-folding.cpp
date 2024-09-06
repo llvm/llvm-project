@@ -54,9 +54,7 @@ static_assert(((1.25 + 0.5j) * (0.25 - 0.75j)) == (0.6875 - 0.8125j));
 static_assert(((1.25 + 0.5j) * 0.25) == (0.3125 + 0.125j));
 static_assert((1.25 * (0.25 - 0.75j)) == (0.3125 - 0.9375j));
 
-  // expected-warning@+1 {{higher precision floating-point type requested by user size has the same sizethan floating-point type size; overflow may occur}}
 static_assert(((1.25 + 0.5j) / (0.25 - 0.75j)) == (-0.1 + 1.7j));
-  // expected-warning@+1 {{higher precision floating-point type requested by user size has the same sizethan floating-point type size; overflow may occur}}
 static_assert(((1.25 + 0.5j) / 0.25) == (5.0 + 2.0j));
 static_assert((1.25 / (0.25 - 0.75j)) == (0.5 + 1.5j));
 
@@ -82,39 +80,27 @@ static_assert(__builtin_isinf_sign(__real__((1.0 + 1.0j) * (1.0 + InfC))) == -1)
 static_assert(__builtin_isinf_sign(__imag__((1.0 + 1.0j) * (1.0 + InfC))) == 1);
 static_assert(__builtin_isinf_sign(__real__((1.0 + InfC) * (1.0 + InfC))) == -1);
 static_assert(__builtin_isinf_sign(__real__(InfInf * InfInf)) == 0);
-  // expected-warning@+1 {{higher precision floating-point type requested by user size has the same sizethan floating-point type size; overflow may occur}}
 static_assert(__builtin_isinf_sign(__real__((__builtin_inf() + 1.0j) / (1.0 + 1.0j))) == 1);
 static_assert(__builtin_isinf_sign(__imag__(1.0 + (InfC) / (1.0 + 1.0j))) == 1);
 static_assert(__builtin_isinf_sign(__imag__((InfInf) / (1.0 + 1.0j))) == 0);
-  // expected-warning@+1 {{higher precision floating-point type requested by user size has the same sizethan floating-point type size; overflow may occur}}
 static_assert(__builtin_isinf_sign(__real__((__builtin_inf() + 1.0j) / 1.0)) == 1);
 static_assert(__builtin_isinf_sign(__imag__(1.0 + (InfC) / 1.0)) == 1);
 static_assert(__builtin_isinf_sign(__imag__((InfInf) / 1.0)) == 1);
-  // expected-warning@+1 {{higher precision floating-point type requested by user size has the same sizethan floating-point type size; overflow may occur}}
 static_assert(((1.0 + 1.0j) / (__builtin_inf() + 1.0j)) == (0.0 + 0.0j));
-  // expected-warning@+1 {{higher precision floating-point type requested by user size has the same sizethan floating-point type size; overflow may occur}}
 static_assert(((1.0 + 1.0j) / (1.0 + InfC)) == (0.0 + 0.0j));
-  // expected-warning@+1 {{higher precision floating-point type requested by user size has the same sizethan floating-point type size; overflow may occur}}
 static_assert(((1.0 + 1.0j) / (InfInf)) == (0.0 + 0.0j));
-  // expected-warning@+1 {{higher precision floating-point type requested by user size has the same sizethan floating-point type size; overflow may occur}}
 static_assert(((1.0 + 1.0j) / __builtin_inf()) == (0.0 + 0.0j));
-  // expected-warning@+1 {{higher precision floating-point type requested by user size has the same sizethan floating-point type size; overflow may occur}}
+
 static_assert(1.0j / 0.0 == 1); // expected-error {{static assertion}} \
                                 // expected-note {{division by zero}}
-  // expected-warning@+1 {{higher precision floating-point type requested by user size has the same sizethan floating-point type size; overflow may occur}}
 static_assert(__builtin_isinf_sign(__real__((1.0 + 1.0j) / (0.0 + 0.0j))) == 1);
-  // expected-warning@+1 {{higher precision floating-point type requested by user size has the same sizethan floating-point type size; overflow may occur}}
 static_assert(__builtin_isinf_sign(__real__((1.0 + 1.0j) / 0.0)) == 1); // expected-error {{static assertion}} \
                                                                         // expected-note {{division by zero}}
-  // expected-warning@+1 {{higher precision floating-point type requested by user size has the same sizethan floating-point type size; overflow may occur}}
 static_assert(__builtin_isinf_sign(__real__((__builtin_inf() + 1.0j) / (0.0 + 0.0j))) == 1);
-  // expected-warning@+1 {{higher precision floating-point type requested by user size has the same sizethan floating-point type size; overflow may occur}}
 static_assert(__builtin_isinf_sign(__imag__((1.0 + InfC) / (0.0 + 0.0j))) == 1);
 static_assert(__builtin_isinf_sign(__imag__((InfInf) / (0.0 + 0.0j))) == 1);
-  // expected-warning@+1 {{higher precision floating-point type requested by user size has the same sizethan floating-point type size; overflow may occur}}
 static_assert(__builtin_isinf_sign(__real__((__builtin_inf() + 1.0j) / 0.0)) == 1); // expected-error {{static assertion}} \
                                                                                     // expected-note {{division by zero}}
-    // expected-warning@+1 {{higher precision floating-point type requested by user size has the same sizethan floating-point type size; overflow may occur}}
 static_assert(__builtin_isinf_sign(__imag__((1.0 + InfC) / 0.0)) == 1); // expected-error {{static assertion}} \
                                                                         // expected-note {{division by zero}}
 static_assert(__builtin_isinf_sign(__imag__((InfInf) / 0.0)) == 1); // expected-error {{static assertion}} \
