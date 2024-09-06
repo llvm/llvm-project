@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <time.h>
-
 #include "src/time/ctime_r.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
