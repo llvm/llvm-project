@@ -504,9 +504,6 @@ bool SemaARM::CheckImmediateArg(CallExpr *TheCall, unsigned CheckTy,
         SemaRef.BuiltinConstantArgMultiple(TheCall, ArgIdx, 2))
       return true;
     break;
-  default:
-    llvm_unreachable("Invalid immediate range typeflag!");
-    break;
   }
   return false;
 }

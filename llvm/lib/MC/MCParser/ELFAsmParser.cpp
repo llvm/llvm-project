@@ -677,6 +677,8 @@ EndStmt:
       Type = ELF::SHT_LLVM_OFFLOADING;
     else if (TypeName == "llvm_lto")
       Type = ELF::SHT_LLVM_LTO;
+    else if (TypeName == "llvm_jt_sizes")
+      Type = ELF::SHT_LLVM_JT_SIZES;
     else if (TypeName.getAsInteger(0, Type))
       return TokError("unknown section type");
   }
