@@ -146,6 +146,9 @@ public:
 
   std::chrono::seconds GetPacketTimeout() const { return m_packet_timeout; }
 
+  // Get the debugserver path and check that it exist.
+  FileSpec GetDebugserverPath(Platform *platform);
+
   // Start a debugserver instance on the current host using the
   // supplied connection URL.
   Status StartDebugserverProcess(
