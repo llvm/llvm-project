@@ -19706,8 +19706,6 @@ bool RISCV::CC_RISCV_FastCC(const DataLayout &DL, RISCVABI::ABI ABI,
             CCValAssign::getCustomReg(ValNo, ValVT, Reg, LocVT, LocInfo));
         return false;
       }
-      LocVT = Subtarget.getXLenVT();
-      LocInfo = CCValAssign::BCvt;
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
       return false;
     }
