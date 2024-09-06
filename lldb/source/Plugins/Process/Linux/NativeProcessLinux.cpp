@@ -1098,7 +1098,7 @@ Status NativeProcessLinux::Detach() {
     Status e = Detach(thread->GetID());
      // Save the error, but still attempt to detach from other threads.
     if (e.Fail())
-      error = e.Clone;
+      error = e.Clone();
   }
 
   m_intel_pt_collector.Clear();
