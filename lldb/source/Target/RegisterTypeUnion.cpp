@@ -15,24 +15,34 @@ using namespace lldb_private;
 RegisterTypeUnion::RegisterTypeUnion(std::string id,
                                      const RegisterTypeUnion::Fields &fields)
     : RegisterType(eRegisterTypeKindUnion, id), m_fields(fields) {
+  // We assume the XML processor also checked this, so this assert is only for
+  // unions created directly from C++ (or in other words, for lldb's built in
+  // register types).
+  assert(ValidateFields(m_fields) &&
+         "All fields of a union must have the same size, "
+         "and their size must be non-zero.");
+
   std::vector<const RegisterType *> dependencies;
-  std::optional<unsigned> size;
-  UNUSED_IF_ASSERT_DISABLED(size);
-
-  for (const auto &field : m_fields) {
-    // All fields of the union must have the same size. When this class is
-    // constructed from XML, we assume that the XML parser has verified that.
-    // This assert is here in case these are constructed directly from C++.
-    if (size)
-      assert(field.second->GetSize() == *size &&
-             "All fields of a union must have the same size.");
-    else
-      size = field.second->GetSize();
-
+  for (const auto &field : m_fields)
     dependencies.push_back(field.second);
-  }
 
   SetDependencies(dependencies);
+}
+
+bool RegisterTypeUnion::ValidateFields(
+    const RegisterTypeUnion::Fields &fields) {
+  std::optional<unsigned> size;
+  for (const auto &field : fields) {
+    // All fields of the union must have the same size, and no field can have 0
+    // size.
+    if (size) {
+      if (!size || field.second->GetSize() != *size)
+        return false;
+    } else
+      size = field.second->GetSize();
+  }
+
+  return true;
 }
 
 void RegisterTypeUnion::ToXMLElement(Stream &strm,

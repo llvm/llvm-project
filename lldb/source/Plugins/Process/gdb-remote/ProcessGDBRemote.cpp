@@ -5017,9 +5017,19 @@ void ParseUnions(
               // union could reference, then parse unions. In future we might
               // want to parse everything then walk all the types to make sure
               // all references are valid.
-              register_types.insert_or_assign(
-                  *id, std::make_unique<RegisterTypeUnion>(id->str(),
-                                                           std::move(fields)));
+
+              if (RegisterTypeUnion::ValidateFields(fields))
+                register_types.insert_or_assign(
+                    *id, std::make_unique<RegisterTypeUnion>(
+                             id->str(), std::move(fields)));
+              else {
+                LLDB_LOG(
+                    log,
+                    "ProcessGDBRemote::ParseUnions not all fields of "
+                    "union \"{0}\" "
+                    "have the same size and have non-zero size, ignoring union",
+                    id->data());
+              }
             }
           } else {
             LLDB_LOG(

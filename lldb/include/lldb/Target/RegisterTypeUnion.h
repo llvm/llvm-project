@@ -33,6 +33,14 @@ public:
 
   virtual unsigned GetSize() const override;
 
+  const Fields &GetFields() const { return m_fields; }
+
+  static bool classof(const RegisterType *register_type) {
+    return register_type->getKind() == RegisterType::eRegisterTypeKindUnion;
+  }
+
+  static bool ValidateFields(const Fields &fields);
+
 private:
   Fields m_fields;
 };

@@ -142,6 +142,49 @@ CompilerType RegisterTypeBuilderClang::BuildFlagsType(
   return flags_type;
 }
 
+CompilerType
+RegisterTypeBuilderClang::BuildUnionType(const lldb_private::RegisterTypeUnion &union_info,
+               uint32_t register_byte_size,
+               lldb::TypeSystemClangSP type_system) {
+  std::string union_type_name = MakeTypeName(union_info, register_byte_size);
+
+  // Reuse existing type if we can.
+  if (CompilerType union_type =
+          type_system->GetTypeForIdentifier<clang::CXXRecordDecl>(
+              type_system->getASTContext(), union_type_name))
+    return union_type;
+
+  CompilerType union_type = type_system->CreateRecordType(
+      nullptr, OptionalClangModuleID(), union_type_name,
+      llvm::to_underlying(clang::TagTypeKind::Union), lldb::eLanguageTypeC);
+  type_system->StartTagDeclarationDefinition(union_type);
+
+  for (const RegisterTypeUnion::Field &field : union_info.GetFields()) {
+    auto [name, type_info] = field;
+    // Unions can in theory reference any other type, but we will start by only
+    // supporting flags here.
+    CompilerType field_type;
+
+    switch (type_info->getKind()) {
+    case RegisterType::eRegisterTypeKindEnum:
+      break;
+    case RegisterType::eRegisterTypeKindUnion:
+      break;
+    case RegisterType::eRegisterTypeKindFlags:
+      field_type = BuildFlagsType(*llvm::dyn_cast<RegisterTypeFlags>(type_info),
+                                  register_byte_size, type_system);
+      break;
+    }
+
+    if (field_type.IsValid())
+      type_system->AddFieldToRecordType(union_type, name, field_type, 0);
+  }
+
+  type_system->CompleteTagDeclarationDefinition(union_type);
+
+  return union_type;
+}
+
 CompilerType RegisterTypeBuilderClang::GetRegisterType(
     const lldb_private::RegisterType &type_info, uint32_t register_byte_size) {
   lldb::TypeSystemClangSP type_system =
@@ -158,7 +201,8 @@ CompilerType RegisterTypeBuilderClang::GetRegisterType(
     return BuildFlagsType(*llvm::dyn_cast<RegisterTypeFlags>(&type_info),
                           register_byte_size, type_system);
   case RegisterType::eRegisterTypeKindUnion:
-    return {};
+    return BuildUnionType(*llvm::dyn_cast<RegisterTypeUnion>(&type_info),
+                          register_byte_size, type_system);
   case RegisterType::eRegisterTypeKindEnum:
     return {};
   }
