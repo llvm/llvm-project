@@ -1499,6 +1499,11 @@ DeduceTemplateBases(Sema &S, const CXXRecordDecl *RD,
   return TemplateDeductionResult::Success;
 }
 
+static PartialOrderingKind
+degradeCallPartialOrderingKind(PartialOrderingKind POK) {
+  return std::min(POK, PartialOrderingKind::NonCall);
+}
+
 /// Deduce the template arguments by comparing the parameter type and
 /// the argument type (C++ [temp.deduct.type]).
 ///
@@ -1810,9 +1815,7 @@ static TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
         return TemplateDeductionResult::NonDeducedMismatch;
       return DeduceTemplateArgumentsByTypeMatch(
           S, TemplateParams, CP->getElementType(), CA->getElementType(), Info,
-          Deduced, TDF,
-          POK != PartialOrderingKind::None ? PartialOrderingKind::NonCall
-                                           : PartialOrderingKind::None,
+          Deduced, TDF, degradeCallPartialOrderingKind(POK),
           /*DeducedFromArrayBound=*/false, HasDeducedAnyParam);
     }
 
@@ -1823,9 +1826,7 @@ static TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
         return TemplateDeductionResult::NonDeducedMismatch;
       return DeduceTemplateArgumentsByTypeMatch(
           S, TemplateParams, PA->getValueType(), AA->getValueType(), Info,
-          Deduced, TDF,
-          POK != PartialOrderingKind::None ? PartialOrderingKind::NonCall
-                                           : PartialOrderingKind::None,
+          Deduced, TDF, degradeCallPartialOrderingKind(POK),
           /*DeducedFromArrayBound=*/false, HasDeducedAnyParam);
     }
 
@@ -1843,8 +1844,7 @@ static TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
           S, TemplateParams, P->castAs<PointerType>()->getPointeeType(),
           PointeeType, Info, Deduced,
           TDF & (TDF_IgnoreQualifiers | TDF_DerivedClass),
-          POK != PartialOrderingKind::None ? PartialOrderingKind::NonCall
-                                           : PartialOrderingKind::None,
+          degradeCallPartialOrderingKind(POK),
           /*DeducedFromArrayBound=*/false, HasDeducedAnyParam);
     }
 
@@ -1857,9 +1857,7 @@ static TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
 
       return DeduceTemplateArgumentsByTypeMatch(
           S, TemplateParams, RP->getPointeeType(), RA->getPointeeType(), Info,
-          Deduced, 0,
-          POK != PartialOrderingKind::None ? PartialOrderingKind::NonCall
-                                           : PartialOrderingKind::None,
+          Deduced, 0, degradeCallPartialOrderingKind(POK),
           /*DeducedFromArrayBound=*/false, HasDeducedAnyParam);
     }
 
@@ -1872,9 +1870,7 @@ static TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
 
       return DeduceTemplateArgumentsByTypeMatch(
           S, TemplateParams, RP->getPointeeType(), RA->getPointeeType(), Info,
-          Deduced, 0,
-          POK != PartialOrderingKind::None ? PartialOrderingKind::NonCall
-                                           : PartialOrderingKind::None,
+          Deduced, 0, degradeCallPartialOrderingKind(POK),
           /*DeducedFromArrayBound=*/false, HasDeducedAnyParam);
     }
 
@@ -1890,8 +1886,7 @@ static TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
       return DeduceTemplateArgumentsByTypeMatch(
           S, TemplateParams, IAP->getElementType(), IAA->getElementType(), Info,
           Deduced, TDF & TDF_IgnoreQualifiers,
-          POK != PartialOrderingKind::None ? PartialOrderingKind::NonCall
-                                           : PartialOrderingKind::None,
+          degradeCallPartialOrderingKind(POK),
           /*DeducedFromArrayBound=*/false, HasDeducedAnyParam);
     }
 
@@ -1906,8 +1901,7 @@ static TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
       return DeduceTemplateArgumentsByTypeMatch(
           S, TemplateParams, CAP->getElementType(), CAA->getElementType(), Info,
           Deduced, TDF & TDF_IgnoreQualifiers,
-          POK != PartialOrderingKind::None ? PartialOrderingKind::NonCall
-                                           : PartialOrderingKind::None,
+          degradeCallPartialOrderingKind(POK),
           /*DeducedFromArrayBound=*/false, HasDeducedAnyParam);
     }
 
@@ -1923,8 +1917,7 @@ static TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
       if (auto Result = DeduceTemplateArgumentsByTypeMatch(
               S, TemplateParams, DAP->getElementType(), AA->getElementType(),
               Info, Deduced, TDF & TDF_IgnoreQualifiers,
-              POK != PartialOrderingKind::None ? PartialOrderingKind::NonCall
-                                               : PartialOrderingKind::None,
+              degradeCallPartialOrderingKind(POK),
               /*DeducedFromArrayBound=*/false, HasDeducedAnyParam);
           Result != TemplateDeductionResult::Success)
         return Result;
@@ -1973,9 +1966,7 @@ static TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
       // Check return types.
       if (auto Result = DeduceTemplateArgumentsByTypeMatch(
               S, TemplateParams, FPP->getReturnType(), FPA->getReturnType(),
-              Info, Deduced, 0,
-              POK != PartialOrderingKind::None ? PartialOrderingKind::NonCall
-                                               : PartialOrderingKind::None,
+              Info, Deduced, 0, degradeCallPartialOrderingKind(POK),
               /*DeducedFromArrayBound=*/false, HasDeducedAnyParam);
           Result != TemplateDeductionResult::Success)
         return Result;
@@ -2107,16 +2098,14 @@ static TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
       unsigned SubTDF = TDF & TDF_IgnoreQualifiers;
       if (auto Result = DeduceTemplateArgumentsByTypeMatch(
               S, TemplateParams, PPT, APT, Info, Deduced, SubTDF,
-              POK != PartialOrderingKind::None ? PartialOrderingKind::NonCall
-                                               : PartialOrderingKind::None,
+              degradeCallPartialOrderingKind(POK),
               /*DeducedFromArrayBound=*/false, HasDeducedAnyParam);
           Result != TemplateDeductionResult::Success)
         return Result;
       return DeduceTemplateArgumentsByTypeMatch(
           S, TemplateParams, QualType(MPP->getClass(), 0),
           QualType(MPA->getClass(), 0), Info, Deduced, SubTDF,
-          POK != PartialOrderingKind::None ? PartialOrderingKind::NonCall
-                                           : PartialOrderingKind::None,
+          degradeCallPartialOrderingKind(POK),
           /*DeducedFromArrayBound=*/false, HasDeducedAnyParam);
     }
 
@@ -2132,9 +2121,7 @@ static TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
         return TemplateDeductionResult::NonDeducedMismatch;
       return DeduceTemplateArgumentsByTypeMatch(
           S, TemplateParams, BPP->getPointeeType(), BPA->getPointeeType(), Info,
-          Deduced, 0,
-          POK != PartialOrderingKind::None ? PartialOrderingKind::NonCall
-                                           : PartialOrderingKind::None,
+          Deduced, 0, degradeCallPartialOrderingKind(POK),
           /*DeducedFromArrayBound=*/false, HasDeducedAnyParam);
     }
 
@@ -2160,9 +2147,7 @@ static TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
       // Perform deduction on the element types.
       return DeduceTemplateArgumentsByTypeMatch(
           S, TemplateParams, VP->getElementType(), ElementType, Info, Deduced,
-          TDF,
-          POK != PartialOrderingKind::None ? PartialOrderingKind::NonCall
-                                           : PartialOrderingKind::None,
+          TDF, degradeCallPartialOrderingKind(POK),
           /*DeducedFromArrayBound=*/false, HasDeducedAnyParam);
     }
 
@@ -2173,9 +2158,7 @@ static TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
         // Perform deduction on the element types.
         if (auto Result = DeduceTemplateArgumentsByTypeMatch(
                 S, TemplateParams, VP->getElementType(), VA->getElementType(),
-                Info, Deduced, TDF,
-                POK != PartialOrderingKind::None ? PartialOrderingKind::NonCall
-                                                 : PartialOrderingKind::None,
+                Info, Deduced, TDF, degradeCallPartialOrderingKind(POK),
                 /*DeducedFromArrayBound=*/false, HasDeducedAnyParam);
             Result != TemplateDeductionResult::Success)
           return Result;
@@ -2201,9 +2184,7 @@ static TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
         // Perform deduction on the element types.
         if (auto Result = DeduceTemplateArgumentsByTypeMatch(
                 S, TemplateParams, VP->getElementType(), VA->getElementType(),
-                Info, Deduced, TDF,
-                POK != PartialOrderingKind::None ? PartialOrderingKind::NonCall
-                                                 : PartialOrderingKind::None,
+                Info, Deduced, TDF, degradeCallPartialOrderingKind(POK),
                 /*DeducedFromArrayBound=*/false, HasDeducedAnyParam);
             Result != TemplateDeductionResult::Success)
           return Result;
@@ -2232,9 +2213,7 @@ static TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
         // Perform deduction on the element types.
         if (auto Result = DeduceTemplateArgumentsByTypeMatch(
                 S, TemplateParams, VP->getElementType(), VA->getElementType(),
-                Info, Deduced, TDF,
-                POK != PartialOrderingKind::None ? PartialOrderingKind::NonCall
-                                                 : PartialOrderingKind::None,
+                Info, Deduced, TDF, degradeCallPartialOrderingKind(POK),
                 /*DeducedFromArrayBound=*/false, HasDeducedAnyParam);
             Result != TemplateDeductionResult::Success)
           return Result;
@@ -2259,9 +2238,7 @@ static TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
         // Perform deduction on the element types.
         if (auto Result = DeduceTemplateArgumentsByTypeMatch(
                 S, TemplateParams, VP->getElementType(), VA->getElementType(),
-                Info, Deduced, TDF,
-                POK != PartialOrderingKind::None ? PartialOrderingKind::NonCall
-                                                 : PartialOrderingKind::None,
+                Info, Deduced, TDF, degradeCallPartialOrderingKind(POK),
                 /*DeducedFromArrayBound=*/false, HasDeducedAnyParam);
             Result != TemplateDeductionResult::Success)
           return Result;
@@ -2298,9 +2275,7 @@ static TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
       // Perform deduction on element types.
       return DeduceTemplateArgumentsByTypeMatch(
           S, TemplateParams, MP->getElementType(), MA->getElementType(), Info,
-          Deduced, TDF,
-          POK != PartialOrderingKind::None ? PartialOrderingKind::NonCall
-                                           : PartialOrderingKind::None,
+          Deduced, TDF, degradeCallPartialOrderingKind(POK),
           /*DeducedFromArrayBound=*/false, HasDeducedAnyParam);
     }
 
@@ -2313,9 +2288,7 @@ static TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
       // Check the element type of the matrixes.
       if (auto Result = DeduceTemplateArgumentsByTypeMatch(
               S, TemplateParams, MP->getElementType(), MA->getElementType(),
-              Info, Deduced, TDF,
-              POK != PartialOrderingKind::None ? PartialOrderingKind::NonCall
-                                               : PartialOrderingKind::None,
+              Info, Deduced, TDF, degradeCallPartialOrderingKind(POK),
               /*DeducedFromArrayBound=*/false, HasDeducedAnyParam);
           Result != TemplateDeductionResult::Success)
         return Result;
@@ -2389,9 +2362,7 @@ static TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
         // Perform deduction on the pointer type.
         if (auto Result = DeduceTemplateArgumentsByTypeMatch(
                 S, TemplateParams, ASP->getPointeeType(), ASA->getPointeeType(),
-                Info, Deduced, TDF,
-                POK != PartialOrderingKind::None ? PartialOrderingKind::NonCall
-                                                 : PartialOrderingKind::None,
+                Info, Deduced, TDF, degradeCallPartialOrderingKind(POK),
                 /*DeducedFromArrayBound=*/false, HasDeducedAnyParam);
             Result != TemplateDeductionResult::Success)
           return Result;
@@ -2416,8 +2387,7 @@ static TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
         if (auto Result = DeduceTemplateArgumentsByTypeMatch(
                 S, TemplateParams, ASP->getPointeeType(),
                 S.Context.removeAddrSpaceQualType(A), Info, Deduced, TDF,
-                POK != PartialOrderingKind::None ? PartialOrderingKind::NonCall
-                                                 : PartialOrderingKind::None,
+                degradeCallPartialOrderingKind(POK),
                 /*DeducedFromArrayBound=*/false, HasDeducedAnyParam);
             Result != TemplateDeductionResult::Success)
           return Result;
@@ -2484,8 +2454,7 @@ static TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
       if (PIT->hasSelectedType()) {
         return DeduceTemplateArgumentsByTypeMatch(
             S, TemplateParams, PIT->getSelectedType(), A, Info, Deduced, TDF,
-            POK != PartialOrderingKind::None ? PartialOrderingKind::NonCall
-                                             : PartialOrderingKind::None,
+            degradeCallPartialOrderingKind(POK),
             /*DeducedFromArrayBound=*/false, HasDeducedAnyParam);
       }
       return TemplateDeductionResult::IncompletePack;
