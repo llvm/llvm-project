@@ -478,6 +478,16 @@ CINDEX_LINKAGE size_t clang_experimental_DepGraph_getNumModules(CXDepGraph);
 CINDEX_LINKAGE CXDepGraphModule
 clang_experimental_DepGraph_getModule(CXDepGraph, size_t Index);
 
+/**
+ * \returns the \c CXDepGraphModule object at the given \p Index in
+ * a topologically sorted list.
+ *
+ * The \c CXDepGraphModule object is only valid to use while \c CXDepGraph is
+ * valid. Must be disposed with \c clang_experimental_DepGraphModule_dispose.
+ */
+CINDEX_LINKAGE CXDepGraphModule
+clang_experimental_DepGraph_getModuleTopological(CXDepGraph, size_t Index);
+
 CINDEX_LINKAGE void clang_experimental_DepGraphModule_dispose(CXDepGraphModule);
 
 /**

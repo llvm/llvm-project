@@ -519,6 +519,7 @@ LLVM_16 {
     clang_experimental_DepGraph_dispose;
     clang_experimental_DepGraph_getDiagnostics;
     clang_experimental_DepGraph_getModule;
+    clang_experimental_DepGraph_getModuleTopological;
     clang_experimental_DepGraph_getNumModules;
     clang_experimental_DepGraph_getNumTUCommands;
     clang_experimental_DepGraph_getTUCommand;

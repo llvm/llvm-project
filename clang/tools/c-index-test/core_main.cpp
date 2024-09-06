@@ -801,7 +801,8 @@ static int scanDeps(ArrayRef<const char *> Args, std::string WorkingDirectory,
     llvm::outs() << "modules:\n";
     for (size_t I = 0, E = clang_experimental_DepGraph_getNumModules(Graph);
          I < E; ++I) {
-      CXDepGraphModule Mod = clang_experimental_DepGraph_getModule(Graph, I);
+      CXDepGraphModule Mod =
+          clang_experimental_DepGraph_getModuleTopological(Graph, I);
       const char *Name = clang_experimental_DepGraphModule_getName(Mod);
       const char *ContextHash =
           clang_experimental_DepGraphModule_getContextHash(Mod);

@@ -10,6 +10,13 @@
 // RUN: diff %t/output1 %t/output2
 // RUN: diff %t/output1 %t/output3
 
+// And that module dependencies are in topological order.
+// RUN: FileCheck --input-file %t/output1 %s
+// CHECK:     modules
+// CHECK-DAG:     name: FromMod1
+// CHECK-DAG:     name: FromMod2
+// CHECK:         name: FromMain1
+
 //--- module.modulemap
 module FromMain1 { header "FromMain1.h" }
 module FromMain2 { header "FromMain2.h" }

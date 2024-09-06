@@ -545,6 +545,12 @@ size_t clang_experimental_DepGraph_getNumModules(CXDepGraph Graph) {
 
 CXDepGraphModule clang_experimental_DepGraph_getModule(CXDepGraph Graph,
                                                        size_t Index) {
+  return clang_experimental_DepGraph_getModuleTopological(Graph, Index);
+}
+
+CXDepGraphModule
+clang_experimental_DepGraph_getModuleTopological(CXDepGraph Graph,
+                                                 size_t Index) {
   TranslationUnitDeps &TUDeps = unwrap(Graph)->TUDeps;
   return wrap(new DependencyGraphModule{&TUDeps.ModuleGraph[Index]});
 }
