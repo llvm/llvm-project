@@ -88,7 +88,6 @@ getOrCreateFuncAnalysisState(OneShotAnalysisState &state) {
 
 /// Return the unique ReturnOp that terminates `funcOp`.
 /// Return nullptr if there is no such unique ReturnOp.
-/// Return `funcOp` it self if there is no ReturnOp.
 static Operation* getAssumedUniqueReturnOp(FunctionOpInterface funcOp) {
   Operation *returnOp = nullptr;
   for (Block &b : funcOp.getFunctionBody()) {
@@ -99,8 +98,6 @@ static Operation* getAssumedUniqueReturnOp(FunctionOpInterface funcOp) {
       returnOp = candidateOp;
     }
   }
-  if (!returnOp)
-    return funcOp;
   return returnOp;
 }
 
@@ -132,7 +129,7 @@ static void annotateEquivalentReturnBbArg(OpOperand &returnVal,
 static LogicalResult
 aliasingFuncOpBBArgsAnalysis(FunctionOpInterface funcOp, OneShotAnalysisState &state,
                              FuncAnalysisState &funcState) {
-  if (funcOp.getFunctionBody().empty()) {
+  if (funcOp.getFunctionBody().empty() || funcOp.getNumResults() == 0) {
     // No function body available. Conservatively assume that every tensor
     // return value may alias with any tensor bbArg.
     for (const auto &inputIt : llvm::enumerate(funcOp.getArgumentTypes())) {
@@ -150,10 +147,7 @@ aliasingFuncOpBBArgsAnalysis(FunctionOpInterface funcOp, OneShotAnalysisState &s
   }
 
   // Support only single return-terminated block in the function.
-  // If funcOp has no returnOp, skip the following analysis.
   Operation *returnOp = getAssumedUniqueReturnOp(funcOp);
-  if (returnOp == funcOp)
-    return success();
   assert(returnOp && "expected func with single return op");
 
   for (OpOperand &returnVal : returnOp->getOpOperands())
@@ -304,9 +298,9 @@ getFuncOpsOrderedByCalls(ModuleOp moduleOp,
   // For each FuncOp, the number of func::CallOp it contains.
   DenseMap<FunctionOpInterface, unsigned> numberCallOpsContainedInFuncOp;
   WalkResult res = moduleOp.walk([&](FunctionOpInterface funcOp) -> WalkResult {
-    if (!funcOp.getFunctionBody().empty()) {
+    if (!funcOp.getFunctionBody().empty() && funcOp.getNumResults() != 0) {
       Operation *returnOp = getAssumedUniqueReturnOp(funcOp);
-      if (!returnOp && returnOp != funcOp)
+      if (!returnOp)
         return funcOp->emitError()
                << "cannot bufferize a FuncOp with tensors and "
                   "without a unique ReturnOp";
@@ -355,14 +349,10 @@ getFuncOpsOrderedByCalls(ModuleOp moduleOp,
 /// entire function body, a more concise memref type can potentially be used for
 /// the return type of the function.
 static void foldMemRefCasts(FunctionOpInterface funcOp) {
-  if (funcOp.getFunctionBody().empty())
+  if (funcOp.getFunctionBody().empty() || funcOp.getNumResults() == 0)
     return;
 
   Operation *returnOp = getAssumedUniqueReturnOp(funcOp);
-
-  if (!returnOp || returnOp == funcOp)
-    return;
-
   SmallVector<Type> resultTypes;
 
   for (OpOperand &operand : returnOp->getOpOperands()) {
@@ -398,7 +388,6 @@ mlir::bufferization::analyzeModuleOp(ModuleOp moduleOp,
 
   // Analyze ops.
   for (FunctionOpInterface funcOp : orderedFuncOps) {
-
     if (!state.getOptions().isOpAllowed(funcOp))
       continue;
 
