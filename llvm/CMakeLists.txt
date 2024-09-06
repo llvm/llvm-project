@@ -873,7 +873,6 @@ cmake_dependent_option(LLVM_DYLIB_EXPORT_INLINES "Force inline members of classe
                        OFF
                        "MSVC;LLVM_BUILD_LLVM_DYLIB_VIS" OFF)
 
-# Build llvm dynamic library with explicit symbol visibility on windows and default hidden symbol visibility on Linux
 if(LLVM_BUILD_LLVM_DYLIB_VIS)
   set(LLVM_BUILD_LLVM_DYLIB ON)
 endif()
