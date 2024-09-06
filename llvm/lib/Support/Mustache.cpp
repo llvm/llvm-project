@@ -137,16 +137,16 @@ std::vector<Token> tokenize(StringRef Template) {
     if (I > 0 && Tokens[I - 1].getType() == Token::Type::Text &&
         RequiresCleanUp) {
       Token &PrevToken = Tokens[I - 1];
-      StringRef TokenBody = PrevToken.getTokenBody().rtrim(" \t\v\t");
+      StringRef TokenBody = PrevToken.getRawBody().rtrim(" \t\v\t");
       if (TokenBody.ends_with("\n") || TokenBody.ends_with("\r\n") ||
-          TokenBody.empty()) {
+          (TokenBody.empty() && I == 1)) {
         NoTextBehind = true;
       }
     }
     if (I < Tokens.size() - 1 && Tokens[I + 1].getType() == Token::Type::Text &&
         RequiresCleanUp) {
       Token &NextToken = Tokens[I + 1];
-      StringRef TokenBody = NextToken.getTokenBody().ltrim(" ");
+      StringRef TokenBody = NextToken.getRawBody().ltrim(" ");
       if (TokenBody.starts_with("\r\n") || TokenBody.starts_with("\n")) {
         NoTextAhead = true;
       }
@@ -363,8 +363,9 @@ ASTNode::render(Value Data,
       StringRef LambdaStr = printJson(LambdaResult);
       Parser P = Parser(LambdaStr);
       std::shared_ptr<ASTNode> LambdaNode = P.parse();
-      return LambdaNode->render(Data, Partials, Lambdas, SectionLambdas,
-                                Escapes);
+      SmallString<128> RenderStr =
+          LambdaNode->render(Data, Partials, Lambdas, SectionLambdas, Escapes);
+      return escapeString(RenderStr, Escapes);
     }
     return escapeString(printJson(Context), Escapes);
   }

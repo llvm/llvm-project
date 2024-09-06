@@ -768,9 +768,9 @@ TEST(MustachePartials, SurroundingWhitespace) {
 TEST(MustachePartials, InlineIndentation) {
   Value D = Object{{"data", "|"}};
   auto T = Template::createTemplate("  {{data}}  {{> partial}}\n");
-  T.registerPartial("partial", "(\n(");
+  T.registerPartial("partial", "<\n<");
   auto Out = T.render(D);
-  EXPECT_EQ("  |  (\n(\n", Out);
+  EXPECT_EQ("  |  <\n<\n", Out);
 }
 
 TEST(MustachePartials, PaddingWhitespace) {
