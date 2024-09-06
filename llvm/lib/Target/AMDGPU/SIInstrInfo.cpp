@@ -4058,7 +4058,7 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
       (ST.getConstantBusLimit(Opc) > 1 || !Src0->isReg() ||
        !RI.isSGPRReg(MBB.getParent()->getRegInfo(), Src0->getReg()))) {
     MachineInstr *DefMI;
-    const auto killDef = [&](SlotIndex OldUseIdx) -> void {
+    const auto killDef = [&]() -> void {
       MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
       // The only user is the instruction which will be killed.
       Register DefReg = DefMI->getOperand(0).getReg();
@@ -4107,10 +4107,9 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
                   .addImm(Imm)
                   .setMIFlags(MI.getFlags());
         updateLiveVariables(LV, MI, *MIB);
-        SlotIndex NewIdx;
         if (LIS)
-          NewIdx = LIS->ReplaceMachineInstrInMaps(MI, *MIB);
-        killDef(NewIdx);
+          LIS->ReplaceMachineInstrInMaps(MI, *MIB);
+        killDef();
         return MIB;
       }
     }
@@ -4129,10 +4128,9 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
                   .setMIFlags(MI.getFlags());
         updateLiveVariables(LV, MI, *MIB);
 
-        SlotIndex NewIdx;
         if (LIS)
-          NewIdx = LIS->ReplaceMachineInstrInMaps(MI, *MIB);
-        killDef(NewIdx);
+          LIS->ReplaceMachineInstrInMaps(MI, *MIB);
+        killDef();
         return MIB;
       }
     }
@@ -4153,11 +4151,10 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
                   .setMIFlags(MI.getFlags());
         updateLiveVariables(LV, MI, *MIB);
 
-        SlotIndex NewIdx;
         if (LIS)
-          NewIdx = LIS->ReplaceMachineInstrInMaps(MI, *MIB);
+          LIS->ReplaceMachineInstrInMaps(MI, *MIB);
         if (DefMI)
-          killDef(NewIdx);
+          killDef();
         return MIB;
       }
     }
