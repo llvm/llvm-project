@@ -417,14 +417,16 @@ std::vector<const minidump::Module *> MinidumpParser::GetFilteredModuleList() {
   return filtered_modules;
 }
 
-const minidump::ExceptionStream *MinidumpParser::GetExceptionStream() {
-  auto ExpectedStream = GetMinidumpFile().getExceptionStream();
+std::optional<std::vector<const minidump::ExceptionStream *>>
+MinidumpParser::GetExceptionStreams() {
+  auto ExpectedStream = GetMinidumpFile().getExceptionStreams();
   if (ExpectedStream)
-    return &*ExpectedStream;
+    return ExpectedStream.get();
 
   LLDB_LOG_ERROR(GetLog(LLDBLog::Process), ExpectedStream.takeError(),
                  "Failed to read minidump exception stream: {0}");
-  return nullptr;
+
+  return std::nullopt;
 }
 
 std::optional<minidump::Range>
