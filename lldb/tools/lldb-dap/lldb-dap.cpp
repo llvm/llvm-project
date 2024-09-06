@@ -1363,14 +1363,13 @@ void request_evaluate(const llvm::json::Object &request) {
   lldb::SBFrame frame = g_dap.GetLLDBFrame(*arguments);
   std::string expression = GetString(arguments, "expression").str();
   llvm::StringRef context = GetString(arguments, "context");
-  static std::string last_nonempty_expression;
 
   // Remember the last non-empty expression from the user, and use that if
   // the current expression is empty (i.e. the user hit plain 'return').
   if (!expression.empty())
-    last_nonempty_expression = expression;
+    g_dap.last_nonempty_expression = expression;
   else
-    expression = last_nonempty_expression;
+    expression = g_dap.last_nonempty_expression;
 
   if (context == "repl" && g_dap.DetectExpressionContext(frame, expression) ==
                                ExpressionContext::Command) {

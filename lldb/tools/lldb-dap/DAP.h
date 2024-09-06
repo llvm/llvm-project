@@ -205,6 +205,7 @@ struct DAP {
   std::string command_escape_prefix = "`";
   lldb::SBFormat frame_format;
   lldb::SBFormat thread_format;
+  std::string last_nonempty_expression;
 
   DAP();
   ~DAP();
