@@ -58077,14 +58077,12 @@ SDValue combineConstantCanonicalize(SDNode *Node, SelectionDAG &DAG) {
           DAG.getMachineFunction().getDenormalMode(C.getSemantics());
       assert((Mode != DenormalMode::getPositiveZero()) &&
              "Positive denormal mode is not valid for X86 target.");
-      if (Mode == DenormalMode::getPreserveSign()) {
-        SDValue SDZero =
-            DAG.getConstantFP((C.isNegative() ? -0.0 : 0.0), dl, VT);
-        return SDZero;
-      } else if (Mode == DenormalMode::getIEEE()) {
+      if (Mode == DenormalMode::getPreserveSign())
+        return DAG.getConstantFP((C.isNegative() ? -0.0 : 0.0), dl, VT);
+      if (Mode == DenormalMode::getIEEE() || Mode == DenormalMode::getDynamic())
         return Operand;
-      }
-    } else if (C.isNaN() && C.isSignaling()) {
+    }
+    if (C.isNaN() && C.isSignaling()) {
       APFloat CanonicalQNaN = APFloat::getQNaN(C.getSemantics());
       SDValue QuitNaN = DAG.getConstantFP(CanonicalQNaN, dl, VT);
       return QuitNaN;
@@ -58094,7 +58092,7 @@ SDValue combineConstantCanonicalize(SDNode *Node, SelectionDAG &DAG) {
 }
 
 SDValue findLastStrictOpChain(SDNode *N, SelectionDAG &DAG) {
-  assert(N!=nullptr && "Trying to find last chain for a NULL Node");
+  assert(N != nullptr && "Trying to find last chain for a NULL Node");
   for (unsigned i = 0, e = N->getNumOperands(); i != e; ++i) {
     SDValue Op = N->getOperand(i);
     if (Op.getValueType() == MVT::Other && Op.getNode()->isStrictFPOpcode())
@@ -58104,10 +58102,10 @@ SDValue findLastStrictOpChain(SDNode *N, SelectionDAG &DAG) {
 }
 
 bool isNonCanonicalizingOperation(SDNode *N) {
-  assert(N!=nullptr && "Trying to check canonical opcode for a NULL Node");
+  assert(N != nullptr && "Trying to check canonical opcode for a NULL Node");
   unsigned Opc = N->getOpcode();
   switch (Opc) {
-  // Ensure these are the exasustive set of non canonicalizing opcodes. Add more
+  // Ensure these are the exhaustive set of non canonicalizing opcodes. Add more
   // if not.
   case X86::RET:
   case ISD::STORE:
