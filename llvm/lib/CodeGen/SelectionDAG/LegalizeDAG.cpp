@@ -1275,56 +1275,6 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
       }
     }
     break;
-    case ISD::FCANONICALIZE: {
-      const Triple &TT = DAG.getTarget().getTargetTriple();
-      if (TT.getArch() == Triple::x86 || TT.getArch() == Triple::x86_64) {
-        SDValue Operand = Node->getOperand(0);
-        SDLoc dl(Node);
-        EVT VT = Operand.getValueType();
-
-        if (ConstantFPSDNode *CFP = dyn_cast<ConstantFPSDNode>(Operand)) {
-          const APFloat &C = CFP->getValueAPF();
-          if (C.isDenormal()) {
-            DenormalMode Mode =
-                DAG.getMachineFunction().getDenormalMode(C.getSemantics());
-            assert((Mode != DenormalMode::getPositiveZero()) &&
-                   "Positive denormal mode is not valid for X86 target.");
-            if (Mode == DenormalMode::getPreserveSign()) {
-              SDValue SDZero =
-                  DAG.getConstantFP((C.isNegative() ? -0.0 : 0.0), dl, VT);
-              ConstantFPSDNode *ZeroConstFP = cast<ConstantFPSDNode>(SDZero);
-              SDValue CanonZeroFPLoad = ExpandConstantFP(ZeroConstFP, true);
-              DAG.ReplaceAllUsesWith(Node, CanonZeroFPLoad.getNode());
-              LLVM_DEBUG(dbgs()
-                         << "Legalized Denormal under mode PreserveSign\n");
-              return;
-            } else if (Mode == DenormalMode::getIEEE()) {
-              DAG.ReplaceAllUsesWith(Node, Operand.getNode());
-              LLVM_DEBUG(dbgs() << "Legalized Denormal under mode IEEE\n");
-              return;
-            }
-          } else if (C.isNaN() && C.isSignaling()) {
-            APFloat CanonicalQNaN = APFloat::getQNaN(C.getSemantics());
-            SDValue QuitNaN = DAG.getConstantFP(CanonicalQNaN, dl, VT);
-            ConstantFPSDNode *QNaNConstFP = cast<ConstantFPSDNode>(QuitNaN);
-            SDValue QNanLoad = ExpandConstantFP(QNaNConstFP, true);
-            DAG.ReplaceAllUsesWith(Node, QNanLoad.getNode());
-            LLVM_DEBUG(dbgs() << "Legalized Signaling NaN to Quiet NaN\n");
-            return;
-          }
-        } else if (Operand.isUndef()) {
-          APFloat CanonicalQNaN = APFloat::getQNaN(VT.getFltSemantics());
-          SDValue QuitNaN = DAG.getConstantFP(CanonicalQNaN, dl, VT);
-          ConstantFPSDNode *QNaNConstFP = cast<ConstantFPSDNode>(QuitNaN);
-          SDValue QNanLoad = ExpandConstantFP(QNaNConstFP, true);
-          DAG.ReplaceAllUsesWith(Node, QNanLoad.getNode());
-          LLVM_DEBUG(dbgs() << "Legalized Undef to Quiet NaN\n");
-          return;
-        }
-        break;
-      }
-      break;
-    }
     case ISD::FSHL:
     case ISD::FSHR:
     case ISD::SRL_PARTS:

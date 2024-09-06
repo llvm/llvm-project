@@ -5271,52 +5271,6 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     }
     break;
   }
-  case ISD::FCANONICALIZE: {
-    SDValue Operand = Node->getOperand(0);
-    EVT VT = Node->getValueType(0);
-
-    // Perform canonicalization for constants. Replace the operand by a load
-    // from constant pool for this constant. At this point subnoraml values like
-    // denormals, snans have been canonicalized so no need to deal with those
-    // cases.
-    if (LoadSDNode *Load = dyn_cast<LoadSDNode>(Operand)) {
-      const X86TargetLowering *X86Lowering =
-          static_cast<const X86TargetLowering *>(TLI);
-      if (const Constant *CV = X86Lowering->getTargetConstantFromLoad(Load)) {
-        const ConstantFP *CFP = dyn_cast<ConstantFP>(CV);
-        if (CFP) {
-          ReplaceNode(Node, Load);
-          return;
-        }
-      }
-    }
-
-    // Canonicalize normal non-constant/non-undef FP Nodes.
-    SDValue MulNode;
-    SDValue One;
-    if (VT == MVT::f32 || VT == MVT::f64) {
-      One = CurDAG->getConstantFP(1.0f, dl, VT);
-    } else if (VT == MVT::f80) {
-      APFloat Val = APFloat::getOne(APFloat::x87DoubleExtended());
-      One = CurDAG->getConstantFP(Val, dl, VT);
-    } else if (VT == MVT::f16) {
-      APFloat Val(APFloat::IEEEhalf(), "1.0");
-      One = CurDAG->getConstantFP(Val, dl, VT);
-    } else if (VT == MVT::bf16) {
-      APFloat Val(APFloat::BFloat(), "1.0");
-      One = CurDAG->getConstantFP(Val, dl, VT);
-    } else {
-      // Is it better to assert? when we encounter an unknown FP type,Than to
-      // just replace with the operand! As this might be our last attempt at
-      // legalization.
-      ReplaceNode(Node, Operand.getNode());
-      return;
-    }
-    // TODO : Follow-up with tablegen pattern to generate mul * 1.0.
-    MulNode = CurDAG->getNode(ISD::FMUL, dl, VT, Operand, One);
-    ReplaceNode(Node, MulNode.getNode());
-    return;
-  }
   case ISD::BRIND:
   case X86ISD::NT_BRIND: {
     if (Subtarget->isTargetNaCl())

@@ -2533,6 +2533,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
                        ISD::STRICT_FMA,
                        ISD::FMINNUM,
                        ISD::FMAXNUM,
+                       ISD::FCANONICALIZE,
                        ISD::SUB,
                        ISD::LOAD,
                        ISD::LRINT,
@@ -57976,6 +57977,124 @@ static SDValue combineINTRINSIC_VOID(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+SDValue combineConstantCanonicalize(SDNode *Node, SelectionDAG &DAG) {
+  SDValue Operand = Node->getOperand(0);
+  SDLoc dl(Node);
+  EVT VT = Operand.getValueType();
+  if (ConstantFPSDNode *CFP = dyn_cast<ConstantFPSDNode>(Operand)) {
+    const APFloat &C = CFP->getValueAPF();
+    if (C.isDenormal()) {
+      DenormalMode Mode =
+          DAG.getMachineFunction().getDenormalMode(C.getSemantics());
+      assert((Mode != DenormalMode::getPositiveZero()) &&
+             "Positive denormal mode is not valid for X86 target.");
+      if (Mode == DenormalMode::getPreserveSign()) {
+        SDValue SDZero =
+            DAG.getConstantFP((C.isNegative() ? -0.0 : 0.0), dl, VT);
+        return SDZero;
+      } else if (Mode == DenormalMode::getIEEE()) {
+        return Operand;
+      }
+    } else if (C.isNaN() && C.isSignaling()) {
+      APFloat CanonicalQNaN = APFloat::getQNaN(C.getSemantics());
+      SDValue QuitNaN = DAG.getConstantFP(CanonicalQNaN, dl, VT);
+      return QuitNaN;
+    }
+  }
+  return Operand;
+}
+
+SDValue findLastStrictOpChain(SDNode *N, SelectionDAG &DAG) {
+  assert(N!=nullptr && "Trying to find last chain for a NULL Node");
+  for (unsigned i = 0, e = N->getNumOperands(); i != e; ++i) {
+    SDValue Op = N->getOperand(i);
+    if (Op.getValueType() == MVT::Other && Op.getNode()->isStrictFPOpcode())
+      return Op;
+  }
+  return DAG.getEntryNode();
+}
+
+bool isNonCanonicalizingOperation(SDNode *N) {
+  assert(N!=nullptr && "Trying to check canonical opcode for a NULL Node");
+  unsigned Opc = N->getOpcode();
+  switch (Opc) {
+  // Ensure these are the exasustive set of non canonicalizing opcodes. Add more
+  // if not.
+  case X86::RET:
+  case ISD::STORE:
+  case ISD::SETCC:
+  case X86ISD::FCMP:
+    return true;
+  default:
+    return false;
+  }
+}
+
+bool isUsedByNonCanonicalizingOp(SDNode *N) {
+  for (SDNode::use_iterator UI = N->use_begin(), E = N->use_end(); UI != E;
+       ++UI) {
+    SDNode *User = *UI;
+    if (isNonCanonicalizingOperation(User))
+      return true;
+  }
+  return false;
+}
+
+SDValue combineCanonicalize(SDNode *Node, SelectionDAG &DAG) {
+  SDValue Operand = Node->getOperand(0);
+  EVT VT = Operand.getValueType();
+  SDLoc dl(Node);
+
+  if (auto *CFP = dyn_cast<ConstantFPSDNode>(Operand))
+    return combineConstantCanonicalize(Node, DAG);
+
+  if (Operand.isUndef()) {
+    APFloat CanonicalQNaN = APFloat::getQNaN(VT.getFltSemantics());
+    SDValue QuitNaN = DAG.getConstantFP(CanonicalQNaN, dl, VT);
+    return QuitNaN;
+  }
+
+  // Canonicalize scalar variable FP Nodes.
+  SDValue MulNode;
+  SDValue One;
+  if (VT == MVT::f32 || VT == MVT::f64) {
+    One = DAG.getConstantFP(1.0f, dl, VT);
+  } else if (VT == MVT::f80) {
+    APFloat Val = APFloat::getOne(APFloat::x87DoubleExtended());
+    One = DAG.getConstantFP(Val, dl, VT);
+  } else if (VT == MVT::f16) {
+    APFloat Val(APFloat::IEEEhalf(), "1.0");
+    One = DAG.getConstantFP(Val, dl, VT);
+  } else if (VT == MVT::bf16) {
+    APFloat Val(APFloat::BFloat(), "1.0");
+    One = DAG.getConstantFP(Val, dl, VT);
+  } else {
+    // Is it better to assert? when we encounter an unknown FP type,Than to
+    // just replace with the operand! As this might be our last attempt at
+    // legalization.
+    return Operand;
+  }
+
+  // Store, return, and compare are non-canonicalizing operations. If a
+  // non-canonicalizing operation uses the rest then mul * 1.0 must be generated
+  // int those cases.
+  // TODO: For now Preventing bf16 from generating strict_fmul as it
+  // leads to a crash SoftPromoteHalfResult #0: t11: bf16,ch = strict_fmul t0,
+  // ConstantFP:bf16<APFloat(16256)>, t5 LLVM ERROR: Do not know how to soft
+  // promote this operator's result!
+  if (isUsedByNonCanonicalizingOp(Node) && VT != MVT::bf16) {
+    SDValue Chain = findLastStrictOpChain(Node, DAG);
+    // TODO : Follow-up with tablegen pattern to generate mul * 1.0.
+    SDValue StrictFmul = DAG.getNode(ISD::STRICT_FMUL, dl, {VT, MVT::Other},
+                                     {Chain, One, Operand});
+
+    return StrictFmul;
+  }
+
+  return Operand;
+  // TODO : Hanlde vectors.
+}
+
 SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
                                              DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -58015,6 +58134,7 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::AND:            return combineAnd(N, DAG, DCI, Subtarget);
   case ISD::OR:             return combineOr(N, DAG, DCI, Subtarget);
   case ISD::XOR:            return combineXor(N, DAG, DCI, Subtarget);
+  case ISD::FCANONICALIZE:  return combineCanonicalize(N,DAG);
   case ISD::BITREVERSE:     return combineBITREVERSE(N, DAG, DCI, Subtarget);
   case ISD::AVGCEILS:
   case ISD::AVGCEILU:
