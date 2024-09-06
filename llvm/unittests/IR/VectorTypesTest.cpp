@@ -125,6 +125,10 @@ TEST(VectorTypesTest, FixedLength) {
   EltCnt = V8Int64Ty->getElementCount();
   EXPECT_EQ(EltCnt.getKnownMinValue(), 8U);
   ASSERT_FALSE(EltCnt.isScalable());
+
+  auto *SubTy = VectorType::getSubdividedVectorType(V16Int8Ty, 2);
+  EXPECT_EQ(SubTy->getElementCount(), ElementCount::getFixed(64));
+  EXPECT_TRUE(SubTy->getElementType()->isIntegerTy(2));
 }
 
 TEST(VectorTypesTest, Scalable) {

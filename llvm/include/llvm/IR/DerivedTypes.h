@@ -492,9 +492,9 @@ public:
     return VectorType::get(EltTy, VTy->getElementCount());
   }
 
-  // This static method returns a VectorType with a smaller number of elements
-  // of a larger type than the input element type. For example, a <16 x i8>
-  // subdivided twice would return <4 x i32>
+  // This static method returns a VectorType with a larger number of elements
+  // of a smaller type than the input element type. For example, a <16 x i8>
+  // subdivided twice would return <64 x i2>
   static VectorType *getSubdividedVectorType(VectorType *VTy, int NumSubdivs) {
     for (int i = 0; i < NumSubdivs; ++i) {
       VTy = VectorType::getDoubleElementsVectorType(VTy);
