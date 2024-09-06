@@ -386,6 +386,9 @@ end
   probably by a C or C++ external definition.
 * An automatic data object may be declared in the specification part
   of the main program.
+* A local data object may appear in a specification expression, even
+  when it is not a dummy argument or in COMMON, so long as it is
+  has the SAVE attribute and was initialized.
 
 ### Extensions supported when enabled by options
 
