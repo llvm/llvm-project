@@ -22,7 +22,8 @@ class Log;
 
 class RegisterTypeUnion : public RegisterType {
 public:
-  typedef std::vector<std::pair<std::string, const RegisterType *>> Fields;
+  typedef std::pair<std::string, const RegisterType *> Field;
+  typedef std::vector<Field> Fields;
   RegisterTypeUnion(std::string id, const Fields &fields);
 
   virtual void ToXMLElement(Stream &strm,

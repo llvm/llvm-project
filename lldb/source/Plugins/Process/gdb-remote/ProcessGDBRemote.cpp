@@ -56,6 +56,7 @@
 #include "lldb/Target/DynamicLoader.h"
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/RegisterTypeFlags.h"
+#include "lldb/Target/RegisterTypeUnion.h"
 #include "lldb/Target/SystemRuntime.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/TargetList.h"
@@ -4923,6 +4924,116 @@ void ParseFlags(
       });
 }
 
+RegisterTypeUnion::Fields ParseUnionFields(
+    XMLNode feature_node,
+    llvm::StringMap<std::unique_ptr<RegisterType>> &register_types) {
+  Log *log(GetLog(GDBRLog::Process));
+
+  RegisterTypeUnion::Fields fields;
+
+  feature_node.ForEachChildElementWithName(
+      "field",
+      [&log, &register_types, &fields](const XMLNode &field_node) -> bool {
+        LLDB_LOG(log,
+                 "ProcessGDBRemote::ParseUnionFields Found field node \"{0}\"",
+                 field_node.GetAttributeValue("name").c_str());
+
+        std::optional<llvm::StringRef> field_name;
+        std::optional<llvm::StringRef> field_type;
+
+        field_node.ForEachAttribute(
+            [&field_name, &field_type, &log](const llvm::StringRef &name,
+                                             const llvm::StringRef &value) {
+              if (name == "name")
+                field_name = value;
+              else if (name == "type")
+                field_type = value;
+              else {
+                LLDB_LOG(log,
+                         "ProcessGDBRemote::ParseUnionFields Ignoring unknown "
+                         "attribute \"{0}\" in field node",
+                         name.data());
+              }
+              return true; // Walk all attributes.
+            });
+
+        if (field_name && field_type) {
+          auto referenced_type = register_types.find(*field_type);
+          if (referenced_type != register_types.end()) {
+            fields.push_back(RegisterTypeUnion::Field(
+                *field_name, referenced_type->second.get()));
+          } else {
+            LLDB_LOG(log,
+                     "ProcessGDBRemote::ParseUnionFields field \"{0}\" "
+                     "references unknown type \"{1}\", ignoring field",
+                     field_name->data(), field_type->data());
+          }
+        }
+
+        return true; // Walk all fields.
+      });
+
+  return fields;
+}
+
+void ParseUnions(
+    XMLNode feature_node,
+    llvm::StringMap<std::unique_ptr<RegisterType>> &register_types) {
+  Log *log(GetLog(GDBRLog::Process));
+
+  feature_node.ForEachChildElementWithName(
+      "union", [&log, &register_types](const XMLNode &union_node) -> bool {
+        LLDB_LOG(log, "ProcessGDBRemote::ParseUnions Found union node \"{0}\"",
+                 union_node.GetAttributeValue("id").c_str());
+
+        std::optional<llvm::StringRef> id;
+        union_node.ForEachAttribute([&id, &log](const llvm::StringRef &name,
+                                                const llvm::StringRef &value) {
+          if (name == "id")
+            id = value;
+          else {
+            LLDB_LOG(log,
+                     "ProcessGDBRemote::ParseUnions Ignoring unknown "
+                     "attribute \"{0}\" in union node",
+                     name.data());
+          }
+          return true; // Walk all attributes.
+        });
+
+        if (id) {
+          RegisterTypeUnion::Fields fields =
+              ParseUnionFields(union_node, register_types);
+          if (fields.size()) {
+            if (register_types.contains(*id)) {
+              LLDB_LOG(
+                  log,
+                  "ProcessGDBRemote::ParseUnions Definition of union with ID "
+                  "\"{0}\" shadows "
+                  "previous use of that ID, using original definition "
+                  "instead.",
+                  id->data());
+            } else {
+              // TODO: for now we're assuming that we parse all the things a
+              // union could reference, then parse unions. In future we might
+              // want to parse everything then walk all the types to make sure
+              // all references are valid.
+              register_types.insert_or_assign(
+                  *id, std::make_unique<RegisterTypeUnion>(id->str(),
+                                                           std::move(fields)));
+            }
+          } else {
+            LLDB_LOG(
+                log,
+                "ProcessGDBRemote::ParseUnions Ignoring definition of union "
+                "\"{0}\" because it contains no valid fields.",
+                id->data());
+          }
+        }
+
+        return true; // Keep iterating through all "union" elements.
+      });
+}
+
 bool ParseRegisters(
     XMLNode feature_node, GdbServerTargetInfo &target_info,
     std::vector<DynamicRegisterInfo::Register> &registers,
@@ -4935,6 +5046,8 @@ bool ParseRegisters(
   // Enums first because they are referenced by fields in the flags.
   ParseEnums(feature_node, register_types);
   ParseFlags(feature_node, register_types);
+  // TODO: this has to be last as it may reference the others.
+  ParseUnions(feature_node, register_types);
   for (const auto &register_type : register_types)
     register_type.second->DumpToLog(log);
 
