@@ -3320,6 +3320,10 @@ bool Compiler<Emitter>::VisitCXXStdInitializerListExpr(
 
   if (!this->visit(SubExpr))
     return false;
+  if (!this->emitConstUint8(0, E))
+    return false;
+  if (!this->emitArrayElemPtrPopUint8(E))
+    return false;
   if (!this->emitInitFieldPtr(R->getField(0u)->Offset, E))
     return false;
 
@@ -3333,6 +3337,8 @@ bool Compiler<Emitter>::VisitCXXStdInitializerListExpr(
   assert(SecondFieldT == PT_Ptr);
 
   if (!this->emitGetFieldPtr(R->getField(0u)->Offset, E))
+    return false;
+  if (!this->emitExpandPtr(E))
     return false;
   if (!this->emitConst(static_cast<APSInt>(ArrayType->getSize()), PT_Uint64, E))
     return false;

@@ -1993,7 +1993,9 @@ bool OffsetHelper(InterpState &S, CodePtr OpPC, const T &Offset,
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool AddOffset(InterpState &S, CodePtr OpPC) {
   const T &Offset = S.Stk.pop<T>();
-  const Pointer &Ptr = S.Stk.pop<Pointer>();
+  Pointer Ptr = S.Stk.pop<Pointer>();
+  if (Ptr.isBlockPointer())
+    Ptr = Ptr.expand();
   return OffsetHelper<T, ArithOp::Add>(S, OpPC, Offset, Ptr);
 }
 
