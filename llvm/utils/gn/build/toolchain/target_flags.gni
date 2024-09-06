@@ -47,7 +47,7 @@ if (current_os == "android") {
       rebase_path(mac_sdk_path, root_build_dir),
       # TODO(lgrey): We should be getting this from `compiler_defaults`. Why
       # aren't we?
-    "-mmacos-version-min=10.10",
+    "-mmacos-version-min=$mac_deployment_target",
     ]
   }
 } else if (current_os == "baremetal") {
