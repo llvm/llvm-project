@@ -215,17 +215,17 @@ Status NativeProcessProtocol::RemoveWatchpoint(lldb::addr_t addr) {
   for (const auto &thread : m_threads) {
     assert(thread && "thread list should not have a NULL thread!");
 
-    const Status thread_error = thread->RemoveWatchpoint(addr);
+    Status thread_error = thread->RemoveWatchpoint(addr);
     if (thread_error.Fail()) {
       // Keep track of the first thread error if any threads fail. We want to
       // try to remove the watchpoint from every thread, though, even if one or
       // more have errors.
       if (!overall_error.Fail())
-        overall_error = thread_error;
+        overall_error = std::move(thread_error);
     }
   }
-  const Status error = m_watchpoint_list.Remove(addr);
-  return overall_error.Fail() ? overall_error : error;
+  Status error = m_watchpoint_list.Remove(addr);
+  return overall_error.Fail() ? std::move(overall_error) : std::move(error);
 }
 
 const HardwareBreakpointMap &
@@ -350,7 +350,7 @@ Status NativeProcessProtocol::SetSoftwareBreakpoint(lldb::addr_t addr,
   }
   auto expected_bkpt = EnableSoftwareBreakpoint(addr, size_hint);
   if (!expected_bkpt)
-    return Status(expected_bkpt.takeError());
+    return Status::FromError(expected_bkpt.takeError());
 
   m_software_breakpoints.emplace(addr, std::move(*expected_bkpt));
   return Status();

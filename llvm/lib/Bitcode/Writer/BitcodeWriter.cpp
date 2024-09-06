@@ -668,6 +668,10 @@ static unsigned getEncodedRMWOperation(AtomicRMWInst::BinOp Op) {
     return bitc::RMW_UINC_WRAP;
   case AtomicRMWInst::UDecWrap:
     return bitc::RMW_UDEC_WRAP;
+  case AtomicRMWInst::USubCond:
+    return bitc::RMW_USUB_COND;
+  case AtomicRMWInst::USubSat:
+    return bitc::RMW_USUB_SAT;
   }
 }
 
@@ -795,8 +799,6 @@ static uint64_t getAttrKindEncoding(Attribute::AttrKind Kind) {
     return bitc::ATTR_KIND_NO_SANITIZE_BOUNDS;
   case Attribute::NoSanitizeCoverage:
     return bitc::ATTR_KIND_NO_SANITIZE_COVERAGE;
-  case llvm::Attribute::NoSanitizeRealtime:
-    return bitc::ATTR_KIND_NO_SANITIZE_REALTIME;
   case Attribute::NullPointerIsValid:
     return bitc::ATTR_KIND_NULL_POINTER_IS_VALID;
   case Attribute::OptimizeForDebugging:

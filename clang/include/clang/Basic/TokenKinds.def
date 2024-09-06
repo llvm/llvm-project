@@ -660,8 +660,9 @@ KEYWORD(out                         , KEYHLSL)
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) KEYWORD(Name, KEYHLSL)
 #include "clang/Basic/HLSLIntangibleTypes.def"
 
-// HLSL Type traits.
+// HLSL Type traits
 TYPE_TRAIT_2(__builtin_hlsl_is_scalarized_layout_compatible, IsScalarizedLayoutCompatible, KEYHLSL)
+TYPE_TRAIT_1(__builtin_hlsl_is_intangible, IsIntangibleType, KEYHLSL)
 
 // OpenMP Type Traits
 UNARY_EXPR_OR_TYPE_TRAIT(__builtin_omp_required_simd_align, OpenMPRequiredSimdAlign, KEYALL)

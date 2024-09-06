@@ -606,6 +606,9 @@ template <class Key, class T, class Hash, class Pred, class Alloc>
 #include <__type_traits/is_function.h>
 #include <__type_traits/is_reference.h>
 #include <__type_traits/is_void.h>
+#include <__type_traits/enable_if.h>
+#include <__type_traits/is_allocator.h>
+#include <__type_traits/is_integral.h>
 #include <__type_traits/type_identity.h>
 #include <__utility/forward.h>
 #include <stdexcept>

@@ -104,9 +104,17 @@ New check aliases
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Improved :doc:`bugprone-casting-through-void
+  <clang-tidy/checks/bugprone/casting-through-void>` check to suggest replacing
+  the offending code with ``reinterpret_cast``, to more clearly express intent.
+
 - Improved :doc:`modernize-use-std-format
   <clang-tidy/checks/modernize/use-std-format>` check to support replacing
   member function calls too.
+
+- Improved :doc:`misc-unconventional-assign-operator
+  <clang-tidy/checks/misc/unconventional-assign-operator>` check to avoid
+  false positive for C++23 deducing this.
 
 - Improved :doc:`modernize-use-std-print
   <clang-tidy/checks/modernize/use-std-print>` check to support replacing

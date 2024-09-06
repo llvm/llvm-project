@@ -228,6 +228,9 @@ bool llvm::isTriviallyDead(const MachineInstr &MI,
   // Don't delete frame allocation labels.
   if (MI.getOpcode() == TargetOpcode::LOCAL_ESCAPE)
     return false;
+  // Don't delete fake uses.
+  if (MI.getOpcode() == TargetOpcode::FAKE_USE)
+    return false;
   // LIFETIME markers should be preserved even if they seem dead.
   if (MI.getOpcode() == TargetOpcode::LIFETIME_START ||
       MI.getOpcode() == TargetOpcode::LIFETIME_END)

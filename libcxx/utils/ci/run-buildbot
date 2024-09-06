@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-#===----------------------------------------------------------------------===##
+# ===----------------------------------------------------------------------===##
 #
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #
-#===----------------------------------------------------------------------===##
+# ===----------------------------------------------------------------------===##
 
 set -ex
 set -o pipefail
@@ -154,19 +154,6 @@ function check-runtimes() {
 
     echo "+++ Running the libunwind tests"
     ${NINJA} -vC "${BUILD_DIR}" check-unwind
-
-    # TODO: On macOS 13.5, the linker seems to have an issue where it will pick up
-    #       a library if it exists inside a -L search path, even if we don't link
-    #       against that library. This happens with libunwind.dylib if it is built
-    #       at the point when we run the libc++ tests, which causes issues cause we
-    #       are also linking against the system unwinder.
-    #
-    #       I believe this is a linker regression and I reported it as rdar://115842730.
-    #       It should be possible to move this installation step back to the top once
-    #       that issue has been resolved, but in the meantime it doesn't really hurt to
-    #       have it here.
-    echo "--- Installing libc++, libc++abi and libunwind to a fake location"
-    ${NINJA} -vC "${BUILD_DIR}" install-cxx install-cxxabi install-unwind
 }
 
 # TODO: The goal is to test this against all configurations. We should also move
@@ -727,6 +714,29 @@ mingw-dll-i686)
           -DCMAKE_CXX_COMPILER=i686-w64-mingw32-clang++ \
           -C "${MONOREPO_ROOT}/libcxx/cmake/caches/MinGW.cmake"
     check-runtimes
+;;
+mingw-incomplete-sysroot)
+    # When bringing up a new cross compiler from scratch, we build
+    # libunwind/libcxx in a setup where the toolchain is incomplete and
+    # unable to perform the normal linker checks; this requires a few
+    # special cases in the CMake files.
+    #
+    # Building in an incomplete setup requires setting CMAKE_*_COMPILER_WORKS,
+    # as CMake fails to probe the compiler. This case also requires
+    # setting CMAKE_CXX_COMPILER_TARGET, as LLVM's heuristics for setting
+    # the triple fails when CMake hasn't been able to probe the environment.
+    # (This is what one has to do when building the initial libunwind/libcxx
+    # for a new toolchain.)
+    clean
+    generate-cmake \
+          -DCMAKE_C_COMPILER_WORKS=TRUE \
+          -DCMAKE_CXX_COMPILER_WORKS=TRUE \
+          -DCMAKE_C_COMPILER_TARGET=x86_64-w64-windows-gnu \
+          -DCMAKE_CXX_COMPILER_TARGET=x86_64-w64-windows-gnu \
+          -C "${MONOREPO_ROOT}/libcxx/cmake/caches/MinGW.cmake"
+    # Only test that building succeeds; there's not much extra value in running
+    # the tests here, as it would be equivalent to the mingw-dll config above.
+    ${NINJA} -vC "${BUILD_DIR}"
 ;;
 aix)
     clean

@@ -6687,10 +6687,10 @@ TreeTransform<Derived>::TransformPackIndexingType(TypeLocBuilder &TLB,
   bool NotYetExpanded = Types.empty();
   bool FullySubstituted = true;
 
-  if (Types.empty())
+  if (Types.empty() && !PIT->expandsToEmptyPack())
     Types = llvm::ArrayRef<QualType>(&Pattern, 1);
 
-  for (const QualType &T : Types) {
+  for (QualType T : Types) {
     if (!T->containsUnexpandedParameterPack()) {
       QualType Transformed = getDerived().TransformType(T);
       if (Transformed.isNull())
@@ -7457,6 +7457,31 @@ QualType TreeTransform<Derived>::TransformBTFTagAttributedType(
     TypeLocBuilder &TLB, BTFTagAttributedTypeLoc TL) {
   // The BTFTagAttributedType is available for C only.
   llvm_unreachable("Unexpected TreeTransform for BTFTagAttributedType");
+}
+
+template <typename Derived>
+QualType TreeTransform<Derived>::TransformHLSLAttributedResourceType(
+    TypeLocBuilder &TLB, HLSLAttributedResourceTypeLoc TL) {
+
+  const HLSLAttributedResourceType *oldType = TL.getTypePtr();
+
+  QualType WrappedTy = getDerived().TransformType(TLB, TL.getWrappedLoc());
+  if (WrappedTy.isNull())
+    return QualType();
+
+  QualType ContainedTy = QualType();
+  if (!oldType->getContainedType().isNull())
+    ContainedTy = getDerived().TransformType(TLB, TL.getContainedLoc());
+
+  QualType Result = TL.getType();
+  if (getDerived().AlwaysRebuild() || WrappedTy != oldType->getWrappedType() ||
+      ContainedTy != oldType->getContainedType()) {
+    Result = SemaRef.Context.getHLSLAttributedResourceType(
+        WrappedTy, ContainedTy, oldType->getAttrs());
+  }
+
+  TLB.push<HLSLAttributedResourceTypeLoc>(Result);
+  return Result;
 }
 
 template<typename Derived>
@@ -16690,6 +16715,13 @@ TreeTransform<Derived>::TransformCapturedStmt(CapturedStmt *S) {
   }
 
   return getSema().ActOnCapturedRegionEnd(Body.get());
+}
+
+template <typename Derived>
+ExprResult TreeTransform<Derived>::TransformHLSLOutArgExpr(HLSLOutArgExpr *E) {
+  // We can transform the base expression and allow argument resolution to fill
+  // in the rest.
+  return getDerived().TransformExpr(E->getArgLValue());
 }
 
 } // end namespace clang
