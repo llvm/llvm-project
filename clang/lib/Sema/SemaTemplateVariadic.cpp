@@ -38,6 +38,7 @@ namespace {
 
     bool InLambda = false;
     unsigned DepthLimit = (unsigned)-1;
+    bool ContainsFunctionParmPackExpr = false;
 
     void addUnexpanded(NamedDecl *ND, SourceLocation Loc = SourceLocation()) {
       if (auto *VD = dyn_cast<VarDecl>(ND)) {
@@ -280,6 +281,15 @@ namespace {
 
       return inherited::TraverseLambdaCapture(Lambda, C, Init);
     }
+
+    bool TraverseFunctionParmPackExpr(FunctionParmPackExpr *) {
+      ContainsFunctionParmPackExpr = true;
+      return true;
+    }
+
+    bool containsFunctionParmPackExpr() const {
+      return ContainsFunctionParmPackExpr;
+    }
   };
 }
 
@@ -414,16 +424,21 @@ bool Sema::DiagnoseUnexpandedParameterPack(Expr *E,
   if (!E->containsUnexpandedParameterPack())
     return false;
 
-  // CollectUnexpandedParameterPacksVisitor does not expect to see a
-  // FunctionParmPackExpr, but diagnosing unexpected parameter packs may still
-  // see such an expression in a lambda body.
-  // We'll bail out early in this case to avoid triggering an assertion.
-  if (isa<FunctionParmPackExpr>(E) && getEnclosingLambda())
-    return false;
-
+  // FunctionParmPackExprs are special:
+  //
+  // 1) they're used to model DeclRefExprs to packs that have been expanded but
+  // had that expansion held off in the process of transformation.
+  //
+  // 2) they always have the unexpanded dependencies but don't introduce new
+  // unexpanded packs.
+  //
+  // We might encounter a FunctionParmPackExpr being a full expression, which a
+  // larger CXXFoldExpr would expand.
   SmallVector<UnexpandedParameterPack, 2> Unexpanded;
-  CollectUnexpandedParameterPacksVisitor(Unexpanded).TraverseStmt(E);
-  assert(!Unexpanded.empty() && "Unable to find unexpanded parameter packs");
+  CollectUnexpandedParameterPacksVisitor Visitor(Unexpanded);
+  Visitor.TraverseStmt(E);
+  assert((!Unexpanded.empty() || Visitor.containsFunctionParmPackExpr()) &&
+         "Unable to find unexpanded parameter packs");
   return DiagnoseUnexpandedParameterPacks(E->getBeginLoc(), UPPC, Unexpanded);
 }
 

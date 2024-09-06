@@ -68,3 +68,25 @@ void f() {
 }
 
 }
+
+namespace GH61460 {
+
+template<typename... Ts>
+void f1(Ts... ts);
+
+template <typename... Ts> void g(Ts... p1s) {
+  (void)[&](auto... p2s) {
+    (
+        [&] {
+          p1s;
+          f1(p1s);
+          sizeof(p1s);
+          p2s;
+        },
+        ...);
+  };
+}
+
+void f1() { g(); }
+
+} // namespace GH61460
