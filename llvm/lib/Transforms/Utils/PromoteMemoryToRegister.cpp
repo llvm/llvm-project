@@ -463,7 +463,7 @@ private:
 /// the sum of each alloca being processed individually.
 class VectorizedMem2Reg {
   // Max number of allocas per batch for each round of computation.
-  static constexpr size_t MaxAllocaNum = 64;
+  static constexpr size_t MaxAllocaNum = 32;
 
   typedef decltype(std::declval<BasicBlock>().getNumber()) BBNumberTy;
 
@@ -499,47 +499,47 @@ class VectorizedMem2Reg {
   // state bits opaque so that we can optimize it without affecting the
   // algorithm implementation.
   struct State {
+    struct BlockState {
+      AllocaState UpdateState;
+      AllocaState DefState;
+      AllocaState AliveState;
+      AllocaState IDFState;
+    };
+
     // A vector containing a state for each block in the function, indexed by
     // its BB Number.
-    typedef std::vector<AllocaState> StateVector;
+    std::vector<BlockState> StateVector;
 
-    StateVector BlockUpdateStates;
-    StateVector BlockDefStates;
-    StateVector BlockAliveStates;
-    StateVector BlockPhiStates;
-
-    State(size_t MaxBlockNumber)
-        : BlockUpdateStates(MaxBlockNumber), BlockDefStates(MaxBlockNumber),
-          BlockAliveStates(MaxBlockNumber), BlockPhiStates(MaxBlockNumber) {}
+    State(size_t MaxBlockNumber) : StateVector(MaxBlockNumber) {}
 
     ~State() {
-      assert(llvm::all_of(BlockUpdateStates,
-                          [](const AllocaState &V) { return V.none(); }));
+      assert(llvm::all_of(StateVector,
+                          [](const BlockState &V) {
+                            return V.UpdateState.none();
+                          }));
     }
 
     // Select which kind of state to access. BN is the index of the basic block.
     template <enum StateSelector Kind> AllocaState &get(BBNumberTy BN) {
       if constexpr (Kind == UPDATE_STATE)
-        return BlockUpdateStates[BN];
+        return StateVector[BN].UpdateState;
       else if constexpr (Kind == DEF_STATE)
-        return BlockDefStates[BN];
+        return StateVector[BN].DefState;
       else if constexpr (Kind == ALIVE_STATE)
-        return BlockAliveStates[BN];
+        return StateVector[BN].AliveState;
       else if constexpr (Kind == IDF_STATE)
-        return BlockPhiStates[BN];
+        return StateVector[BN].IDFState;
       else
         static_assert(Kind != Kind, "Invalid StateSelector enum");
     }
 
     void Clear() {
-      assert(llvm::all_of(BlockUpdateStates,
-                          [](const AllocaState &V) { return V.none(); }));
-      for (AllocaState &State : BlockDefStates)
-        State.reset();
-      for (AllocaState &State : BlockAliveStates)
-        State.reset();
-      for (AllocaState &State : BlockPhiStates)
-        State.reset();
+      for (BlockState &State : StateVector) {
+        assert(State.UpdateState.none());
+        State.DefState.reset();
+        State.AliveState.reset();
+        State.IDFState.reset();
+      }
     }
   };
 
