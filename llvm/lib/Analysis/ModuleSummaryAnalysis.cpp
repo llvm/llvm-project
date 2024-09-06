@@ -673,9 +673,9 @@ static void computeFunctionSummary(
   if (auto *SSI = GetSSICallback(F))
     ParamAccesses = SSI->getParamAccesses(Index);
   auto FuncSummary = std::make_unique<FunctionSummary>(
-      Flags, NumInsts, FunFlags, /*EntryCount=*/0, std::move(Refs),
-      CallGraphEdges.takeVector(), TypeTests.takeVector(),
-      TypeTestAssumeVCalls.takeVector(), TypeCheckedLoadVCalls.takeVector(),
+      Flags, NumInsts, FunFlags, std::move(Refs), CallGraphEdges.takeVector(),
+      TypeTests.takeVector(), TypeTestAssumeVCalls.takeVector(),
+      TypeCheckedLoadVCalls.takeVector(),
       TypeTestAssumeConstVCalls.takeVector(),
       TypeCheckedLoadConstVCalls.takeVector(), std::move(ParamAccesses),
       std::move(Callsites), std::move(Allocs));
@@ -963,7 +963,7 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
                         /* MayThrow */ true,
                         /* HasUnknownCall */ true,
                         /* MustBeUnreachable */ false},
-                    /*EntryCount=*/0, SmallVector<ValueInfo, 0>{},
+                    SmallVector<ValueInfo, 0>{},
                     ArrayRef<FunctionSummary::EdgeTy>{},
                     ArrayRef<GlobalValue::GUID>{},
                     ArrayRef<FunctionSummary::VFuncId>{},
