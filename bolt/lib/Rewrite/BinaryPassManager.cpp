@@ -11,6 +11,7 @@
 #include "bolt/Passes/Aligner.h"
 #include "bolt/Passes/AllocCombiner.h"
 #include "bolt/Passes/AsmDump.h"
+#include "bolt/Passes/ContinuityStats.h"
 #include "bolt/Passes/CMOVConversion.h"
 #include "bolt/Passes/FixRISCVCallsPass.h"
 #include "bolt/Passes/FixRelaxationPass.h"
@@ -153,6 +154,11 @@ static cl::opt<bool>
     PrintProfileStats("print-profile-stats",
                       cl::desc("print profile quality/bias analysis"),
                       cl::cat(BoltCategory));
+
+static cl::opt<bool>
+    PrintContinuityStats("print-continuity-stats",
+                      cl::desc("print profile function CFG continuity stats"),
+                      cl::init(true), cl::cat(BoltCategory));
 
 static cl::opt<bool>
     PrintRegReAssign("print-regreassign",
@@ -372,6 +378,9 @@ Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
 
   if (opts::PrintProfileStats)
     Manager.registerPass(std::make_unique<PrintProfileStats>(NeverPrint));
+
+  if (opts::PrintContinuityStats)
+    Manager.registerPass(std::make_unique<PrintContinuityStats>(NeverPrint));
 
   Manager.registerPass(std::make_unique<ValidateInternalCalls>(NeverPrint));
 
