@@ -44,6 +44,7 @@ add_entrypoint_object(
     ctime.h
   DEPENDS
     .time_utils
+    libc.hdr.types.time_t
     libc.include.time
 )
 
@@ -55,6 +56,7 @@ add_entrypoint_object(
     ctime_r.h
   DEPENDS
     .time_utils
+    libc.hdr.types.time_t
     libc.include.time
 )
 
