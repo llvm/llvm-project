@@ -24295,6 +24295,13 @@ SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
       isOneConstant(Cond.getOperand(1)))
     Cond = Cond.getOperand(0);
 
+  // Attempt to fold "raw cond" cases by treating them as:
+  // (select (and X, 1), Op1, Op2  --> (select (icmpeq (and X, 1), 0), Op2, Op1)
+  if (Cond.getOpcode() == ISD::AND && isOneConstant(Cond.getOperand(1)))
+    if (SDValue R = LowerSELECTWithCmpZero(Cond, Op2, Op1, X86::COND_E, DL, DAG,
+                                           Subtarget))
+      return R;
+
   // If condition flag is set by a X86ISD::CMP, then use it as the condition
   // setting operand in place of the X86ISD::SETCC.
   unsigned CondOpcode = Cond.getOpcode();
