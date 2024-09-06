@@ -1127,13 +1127,12 @@ struct ConversionConfig {
 
   /// If set to "true", the dialect conversion attempts to build source/target/
   /// argument materializations through the type converter API in lieu of
-  /// builtin.unrealized_conversion_cast ops. The conversion process fails if
+  /// "builtin.unrealized_conversion_cast ops". The conversion process fails if
   /// at least one materialization could not be built.
   ///
-  /// If set to "false", the dialect conversion does not does not build any
-  /// custom materializations and instead inserts
-  /// builtin.unrealized_conversion_cast ops to ensure that the resulting IR
-  /// is valid.
+  /// If set to "false", the dialect conversion does not build any custom
+  /// materializations and instead inserts "builtin.unrealized_conversion_cast"
+  /// ops to ensure that the resulting IR is valid.
   bool buildMaterializations = true;
 };
 
