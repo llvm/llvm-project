@@ -940,7 +940,7 @@ FileSpec GDBRemoteCommunication::GetDebugserverPath(Platform *platform) {
 
 Status GDBRemoteCommunication::StartDebugserverProcess(
     const char *url, Platform *platform, ProcessLaunchInfo &launch_info,
-    uint16_t *port, const Args *inferior_args, int pass_comm_fd) {
+    uint16_t *port, const Args *inferior_args, shared_fd_t pass_comm_fd) {
   Log *log = GetLog(GDBRLog::Process);
   LLDB_LOGF(log, "GDBRemoteCommunication::%s(url=%s, port=%" PRIu16 ")",
             __FUNCTION__, url ? url : "<empty>", port ? *port : uint16_t(0));
@@ -962,16 +962,19 @@ Status GDBRemoteCommunication::StartDebugserverProcess(
 #endif
 
     // If a url is supplied then use it
-    if (url)
+    if (url && url[0])
       debugserver_args.AppendArgument(llvm::StringRef(url));
 
-    if (pass_comm_fd >= 0) {
+    if (pass_comm_fd != SharedSocket::kInvalidFD) {
       StreamString fd_arg;
-      fd_arg.Printf("--fd=%i", pass_comm_fd);
+      fd_arg.Printf("--fd=%" PRIi64, (int64_t)pass_comm_fd);
       debugserver_args.AppendArgument(fd_arg.GetString());
       // Send "pass_comm_fd" down to the inferior so it can use it to
-      // communicate back with this process
-      launch_info.AppendDuplicateFileAction(pass_comm_fd, pass_comm_fd);
+      // communicate back with this process. Ignored on Windows.
+#ifndef _WIN32
+      launch_info.AppendDuplicateFileAction((int)pass_comm_fd,
+                                            (int)pass_comm_fd);
+#endif
     }
 
     // use native registers, not the GDB registers
@@ -991,7 +994,7 @@ Status GDBRemoteCommunication::StartDebugserverProcess(
     // port is null when debug server should listen on domain socket - we're
     // not interested in port value but rather waiting for debug server to
     // become available.
-    if (pass_comm_fd == -1) {
+    if (pass_comm_fd == SharedSocket::kInvalidFD) {
       if (url) {
 // Create a temporary file to get the stdout/stderr and redirect the output of
 // the command into this file. We will later read this file if all goes well
@@ -1137,7 +1140,7 @@ Status GDBRemoteCommunication::StartDebugserverProcess(
 
     if (error.Success() &&
         (launch_info.GetProcessID() != LLDB_INVALID_PROCESS_ID) &&
-        pass_comm_fd == -1) {
+        pass_comm_fd == SharedSocket::kInvalidFD) {
       if (named_pipe_path.size() > 0) {
         error = socket_pipe.OpenAsReader(named_pipe_path, false);
         if (error.Fail())
