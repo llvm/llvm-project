@@ -67,6 +67,23 @@ struct PadOpTiling : public TilingInterface::ExternalModel<PadOpTiling, PadOp> {
     resultSizes.assign(sizes.begin(), sizes.end());
     return success();
   }
+
+  LogicalResult getIterationDomainTileFromResultTile(
+      Operation *op, OpBuilder &b, unsigned resultNumber,
+      ArrayRef<OpFoldResult> offsets, ArrayRef<OpFoldResult> sizes,
+      SmallVectorImpl<OpFoldResult> &iterDomainOffsets,
+      SmallVectorImpl<OpFoldResult> &iterDomainSizes) const {
+    iterDomainOffsets.assign(offsets.begin(), offsets.end());
+    iterDomainSizes.assign(sizes.begin(), sizes.end());
+    return success();
+  }
+
+  FailureOr<TilingResult>
+  generateResultTileValue(Operation *op, OpBuilder &b, unsigned resultNumber,
+                          ArrayRef<OpFoldResult> offsets,
+                          ArrayRef<OpFoldResult> sizes) const {
+    return getTiledImplementation(op, b, offsets, sizes);
+  }
 };
 
 template <typename OpTy>
@@ -269,7 +286,7 @@ struct PackOpTiling
     SmallVector<OpFoldResult> outerDimOffsets, outerDimSizes;
     DenseMap<int64_t, OpFoldResult> dimAndTileMapping =
         packOp.getDimAndTileMapping();
-    for (auto dim : packOp.getOuterDimsPerm()) {
+    for (auto dim : llvm::seq<int64_t>(packOp.getSourceRank())) {
       if (dimAndTileMapping.count(dim)) {
         FailureOr<int64_t> cstSize =
             ValueBoundsConstraintSet::computeConstantBound(
@@ -310,7 +327,7 @@ struct PackOpTiling
         outerDimSizes.push_back(sizes[dim]);
       }
     }
-
+    applyPermToRange(outerDimOffsets, outerDimSizes, packOp.getOuterDimsPerm());
     resultOffsets = outerDimOffsets;
     resultSizes = outerDimSizes;
     return success();

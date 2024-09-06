@@ -306,6 +306,7 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasAVX10_1_512 = true;
     } else if (Feature == "+avx10.2-256") {
       HasAVX10_2 = true;
+      HasFullBFloat16 = true;
     } else if (Feature == "+avx10.2-512") {
       HasAVX10_2_512 = true;
     } else if (Feature == "+avx512cd") {

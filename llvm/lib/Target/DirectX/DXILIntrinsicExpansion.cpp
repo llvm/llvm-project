@@ -16,6 +16,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
@@ -38,6 +39,7 @@ static bool isIntrinsicExpansion(Function &F) {
   case Intrinsic::log:
   case Intrinsic::log10:
   case Intrinsic::pow:
+  case Intrinsic::dx_all:
   case Intrinsic::dx_any:
   case Intrinsic::dx_clamp:
   case Intrinsic::dx_uclamp:
@@ -47,6 +49,7 @@ static bool isIntrinsicExpansion(Function &F) {
   case Intrinsic::dx_fdot:
   case Intrinsic::dx_sdot:
   case Intrinsic::dx_udot:
+  case Intrinsic::dx_sign:
     return true;
   }
   return false;
@@ -54,8 +57,7 @@ static bool isIntrinsicExpansion(Function &F) {
 
 static Value *expandAbs(CallInst *Orig) {
   Value *X = Orig->getOperand(0);
-  IRBuilder<> Builder(Orig->getParent());
-  Builder.SetInsertPoint(Orig);
+  IRBuilder<> Builder(Orig);
   Type *Ty = X->getType();
   Type *EltTy = Ty->getScalarType();
   Constant *Zero = Ty->isVectorTy()
@@ -148,8 +150,7 @@ static Value *expandIntegerDotIntrinsic(CallInst *Orig,
 
 static Value *expandExpIntrinsic(CallInst *Orig) {
   Value *X = Orig->getOperand(0);
-  IRBuilder<> Builder(Orig->getParent());
-  Builder.SetInsertPoint(Orig);
+  IRBuilder<> Builder(Orig);
   Type *Ty = X->getType();
   Type *EltTy = Ty->getScalarType();
   Constant *Log2eConst =
@@ -166,12 +167,20 @@ static Value *expandExpIntrinsic(CallInst *Orig) {
   return Exp2Call;
 }
 
-static Value *expandAnyIntrinsic(CallInst *Orig) {
+static Value *expandAnyOrAllIntrinsic(CallInst *Orig,
+                                      Intrinsic::ID intrinsicId) {
   Value *X = Orig->getOperand(0);
-  IRBuilder<> Builder(Orig->getParent());
-  Builder.SetInsertPoint(Orig);
+  IRBuilder<> Builder(Orig);
   Type *Ty = X->getType();
   Type *EltTy = Ty->getScalarType();
+
+  auto ApplyOp = [&Builder](Intrinsic::ID IntrinsicId, Value *Result,
+                            Value *Elt) {
+    if (IntrinsicId == Intrinsic::dx_any)
+      return Builder.CreateOr(Result, Elt);
+    assert(IntrinsicId == Intrinsic::dx_all);
+    return Builder.CreateAnd(Result, Elt);
+  };
 
   Value *Result = nullptr;
   if (!Ty->isVectorTy()) {
@@ -193,7 +202,7 @@ static Value *expandAnyIntrinsic(CallInst *Orig) {
     Result = Builder.CreateExtractElement(Cond, (uint64_t)0);
     for (unsigned I = 1; I < XVec->getNumElements(); I++) {
       Value *Elt = Builder.CreateExtractElement(Cond, I);
-      Result = Builder.CreateOr(Result, Elt);
+      Result = ApplyOp(intrinsicId, Result, Elt);
     }
   }
   return Result;
@@ -201,8 +210,7 @@ static Value *expandAnyIntrinsic(CallInst *Orig) {
 
 static Value *expandLengthIntrinsic(CallInst *Orig) {
   Value *X = Orig->getOperand(0);
-  IRBuilder<> Builder(Orig->getParent());
-  Builder.SetInsertPoint(Orig);
+  IRBuilder<> Builder(Orig);
   Type *Ty = X->getType();
   Type *EltTy = Ty->getScalarType();
 
@@ -230,8 +238,7 @@ static Value *expandLerpIntrinsic(CallInst *Orig) {
   Value *X = Orig->getOperand(0);
   Value *Y = Orig->getOperand(1);
   Value *S = Orig->getOperand(2);
-  IRBuilder<> Builder(Orig->getParent());
-  Builder.SetInsertPoint(Orig);
+  IRBuilder<> Builder(Orig);
   auto *V = Builder.CreateFSub(Y, X);
   V = Builder.CreateFMul(S, V);
   return Builder.CreateFAdd(X, V, "dx.lerp");
@@ -240,8 +247,7 @@ static Value *expandLerpIntrinsic(CallInst *Orig) {
 static Value *expandLogIntrinsic(CallInst *Orig,
                                  float LogConstVal = numbers::ln2f) {
   Value *X = Orig->getOperand(0);
-  IRBuilder<> Builder(Orig->getParent());
-  Builder.SetInsertPoint(Orig);
+  IRBuilder<> Builder(Orig);
   Type *Ty = X->getType();
   Type *EltTy = Ty->getScalarType();
   Constant *Ln2Const =
@@ -266,8 +272,7 @@ static Value *expandNormalizeIntrinsic(CallInst *Orig) {
   Value *X = Orig->getOperand(0);
   Type *Ty = Orig->getType();
   Type *EltTy = Ty->getScalarType();
-  IRBuilder<> Builder(Orig->getParent());
-  Builder.SetInsertPoint(Orig);
+  IRBuilder<> Builder(Orig);
 
   auto *XVec = dyn_cast<FixedVectorType>(Ty);
   if (!XVec) {
@@ -305,8 +310,7 @@ static Value *expandPowIntrinsic(CallInst *Orig) {
   Value *X = Orig->getOperand(0);
   Value *Y = Orig->getOperand(1);
   Type *Ty = X->getType();
-  IRBuilder<> Builder(Orig->getParent());
-  Builder.SetInsertPoint(Orig);
+  IRBuilder<> Builder(Orig);
 
   auto *Log2Call =
       Builder.CreateIntrinsic(Ty, Intrinsic::log2, {X}, nullptr, "elt.log2");
@@ -350,17 +354,43 @@ static Value *expandClampIntrinsic(CallInst *Orig,
   Value *Min = Orig->getOperand(1);
   Value *Max = Orig->getOperand(2);
   Type *Ty = X->getType();
-  IRBuilder<> Builder(Orig->getParent());
-  Builder.SetInsertPoint(Orig);
+  IRBuilder<> Builder(Orig);
   auto *MaxCall = Builder.CreateIntrinsic(
       Ty, getMaxForClamp(Ty, ClampIntrinsic), {X, Min}, nullptr, "dx.max");
   return Builder.CreateIntrinsic(Ty, getMinForClamp(Ty, ClampIntrinsic),
                                  {MaxCall, Max}, nullptr, "dx.min");
 }
 
+static Value *expandSignIntrinsic(CallInst *Orig) {
+  Value *X = Orig->getOperand(0);
+  Type *Ty = X->getType();
+  Type *ScalarTy = Ty->getScalarType();
+  Type *RetTy = Orig->getType();
+  Constant *Zero = Constant::getNullValue(Ty);
+
+  IRBuilder<> Builder(Orig);
+
+  Value *GT;
+  Value *LT;
+  if (ScalarTy->isFloatingPointTy()) {
+    GT = Builder.CreateFCmpOLT(Zero, X);
+    LT = Builder.CreateFCmpOLT(X, Zero);
+  } else {
+    assert(ScalarTy->isIntegerTy());
+    GT = Builder.CreateICmpSLT(Zero, X);
+    LT = Builder.CreateICmpSLT(X, Zero);
+  }
+
+  Value *ZextGT = Builder.CreateZExt(GT, RetTy);
+  Value *ZextLT = Builder.CreateZExt(LT, RetTy);
+
+  return Builder.CreateSub(ZextGT, ZextLT);
+}
+
 static bool expandIntrinsic(Function &F, CallInst *Orig) {
   Value *Result = nullptr;
-  switch (F.getIntrinsicID()) {
+  Intrinsic::ID IntrinsicId = F.getIntrinsicID();
+  switch (IntrinsicId) {
   case Intrinsic::abs:
     Result = expandAbs(Orig);
     break;
@@ -376,12 +406,13 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
   case Intrinsic::pow:
     Result = expandPowIntrinsic(Orig);
     break;
+  case Intrinsic::dx_all:
   case Intrinsic::dx_any:
-    Result = expandAnyIntrinsic(Orig);
+    Result = expandAnyOrAllIntrinsic(Orig, IntrinsicId);
     break;
   case Intrinsic::dx_uclamp:
   case Intrinsic::dx_clamp:
-    Result = expandClampIntrinsic(Orig, F.getIntrinsicID());
+    Result = expandClampIntrinsic(Orig, IntrinsicId);
     break;
   case Intrinsic::dx_lerp:
     Result = expandLerpIntrinsic(Orig);
@@ -397,7 +428,10 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
     break;
   case Intrinsic::dx_sdot:
   case Intrinsic::dx_udot:
-    Result = expandIntegerDotIntrinsic(Orig, F.getIntrinsicID());
+    Result = expandIntegerDotIntrinsic(Orig, IntrinsicId);
+    break;
+  case Intrinsic::dx_sign:
+    Result = expandSignIntrinsic(Orig);
     break;
   }
 

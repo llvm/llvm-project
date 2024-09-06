@@ -745,8 +745,8 @@ GCNTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   case Intrinsic::copysign:
     return NElts * getFullRateInstrCost();
   case Intrinsic::canonicalize: {
-    InstRate =
-        SLT == MVT::f64 ? get64BitInstrCost(CostKind) : getFullRateInstrCost();
+    assert(SLT != MVT::f64);
+    InstRate = getFullRateInstrCost();
     break;
   }
   case Intrinsic::uadd_sat:

@@ -47,7 +47,7 @@ public:
     typedef allocator<_Up> other;
   };
 };
-#endif   // _LIBCPP_STD_VER <= 17
+#endif // _LIBCPP_STD_VER <= 17
 
 // This class provides a non-trivial default constructor to the class that derives from it
 // if the condition is satisfied.
