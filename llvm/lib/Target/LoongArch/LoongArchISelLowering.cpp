@@ -283,6 +283,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
                          ISD::SETUGE, ISD::SETUGT},
                         VT, Expand);
     }
+    setOperationAction(ISD::CTPOP, GRLenVT, Legal);
   }
 
   // Set operations for 'LASX' feature.
@@ -4488,6 +4489,44 @@ emitPseudoXVINSGR2VR(MachineInstr &MI, MachineBasicBlock *BB,
   return BB;
 }
 
+static MachineBasicBlock *emitPseudoCTPOP(MachineInstr &MI,
+                                          MachineBasicBlock *BB,
+                                          const LoongArchSubtarget &Subtarget) {
+  assert(Subtarget.hasExtLSX());
+  const TargetInstrInfo *TII = Subtarget.getInstrInfo();
+  const TargetRegisterClass *RC = &LoongArch::LSX128RegClass;
+  DebugLoc DL = MI.getDebugLoc();
+  MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src = MI.getOperand(1).getReg();
+  Register ScratchReg1 = MRI.createVirtualRegister(RC);
+  Register ScratchReg2 = MRI.createVirtualRegister(RC);
+  Register ScratchReg3 = MRI.createVirtualRegister(RC);
+
+  BuildMI(*BB, MI, DL, TII->get(LoongArch::VLDI), ScratchReg1).addImm(0);
+  BuildMI(*BB, MI, DL,
+          TII->get(Subtarget.is64Bit() ? LoongArch::VINSGR2VR_D
+                                       : LoongArch::VINSGR2VR_W),
+          ScratchReg2)
+      .addReg(ScratchReg1)
+      .addReg(Src)
+      .addImm(0);
+  BuildMI(
+      *BB, MI, DL,
+      TII->get(Subtarget.is64Bit() ? LoongArch::VPCNT_D : LoongArch::VPCNT_W),
+      ScratchReg3)
+      .addReg(ScratchReg2);
+  BuildMI(*BB, MI, DL,
+          TII->get(Subtarget.is64Bit() ? LoongArch::VPICKVE2GR_D
+                                       : LoongArch::VPICKVE2GR_W),
+          Dst)
+      .addReg(ScratchReg3)
+      .addImm(0);
+
+  MI.eraseFromParent();
+  return BB;
+}
+
 MachineBasicBlock *LoongArchTargetLowering::EmitInstrWithCustomInserter(
     MachineInstr &MI, MachineBasicBlock *BB) const {
   const TargetInstrInfo *TII = Subtarget.getInstrInfo();
@@ -4546,6 +4585,8 @@ MachineBasicBlock *LoongArchTargetLowering::EmitInstrWithCustomInserter(
   case LoongArch::PseudoXVINSGR2VR_B:
   case LoongArch::PseudoXVINSGR2VR_H:
     return emitPseudoXVINSGR2VR(MI, BB, Subtarget);
+  case LoongArch::PseudoCTPOP:
+    return emitPseudoCTPOP(MI, BB, Subtarget);
   }
 }
 
