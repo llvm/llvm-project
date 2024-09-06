@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "ctime.h"
-#include "../__support/common.h"
-#include "../__support/macros/config.h"
+#include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "time_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
