@@ -409,10 +409,11 @@ public:
     return getNode(BB);
   }
 
-  /// getNode using direct index access when it is available.
+  /// getNode - Access a node directly when its node number is known.
   DomTreeNodeBase<NodeT> *getNode(unsigned Idx) const {
-    if (Idx < DomTreeNodes.size())
-      return DomTreeNodes[Idx].get();
+    // DT is 1-indexed.
+    if (Idx + 1 < DomTreeNodes.size())
+      return DomTreeNodes[Idx + 1].get();
     return nullptr;
   }
 
