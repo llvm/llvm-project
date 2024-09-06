@@ -940,7 +940,7 @@ FileSpec GDBRemoteCommunication::GetDebugserverPath(Platform *platform) {
 
 Status GDBRemoteCommunication::StartDebugserverProcess(
     const char *url, Platform *platform, ProcessLaunchInfo &launch_info,
-    uint16_t *port, const Args *inferior_args, shared_fd_t pass_comm_fd) {
+    uint16_t *port, const Args *inferior_args, int pass_comm_fd) {
   Log *log = GetLog(GDBRLog::Process);
   LLDB_LOGF(log, "GDBRemoteCommunication::%s(url=%s, port=%" PRIu16 ")",
             __FUNCTION__, url ? url : "<empty>", port ? *port : uint16_t(0));
