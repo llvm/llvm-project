@@ -5475,7 +5475,7 @@ SwiftASTContext::CreateGenericTypeParamType(unsigned int depth,
                                                  unsigned int index) {
   ThreadSafeASTContext ast_ctx = GetASTContext();
   return ToCompilerType(
-      swift::GenericTypeParamType::get(false, depth, index, **ast_ctx));
+      swift::GenericTypeParamType::getType(depth, index, **ast_ctx));
 }
 
 CompilerType SwiftASTContext::GetErrorType() {
