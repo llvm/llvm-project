@@ -61,10 +61,10 @@ using namespace lldb_private;
 CoreSimulatorSupport::Process::Process(lldb::pid_t p) : m_pid(p), m_error() {}
 
 CoreSimulatorSupport::Process::Process(Status error)
-    : m_pid(LLDB_INVALID_PROCESS_ID), m_error(error) {}
+    : m_pid(LLDB_INVALID_PROCESS_ID), m_error(std::move(error)) {}
 
 CoreSimulatorSupport::Process::Process(lldb::pid_t p, Status error)
-    : m_pid(p), m_error(error) {}
+    : m_pid(p), m_error(std::move(error)) {}
 
 CoreSimulatorSupport::DeviceType::DeviceType() : m_model_identifier() {}
 
@@ -498,19 +498,19 @@ CoreSimulatorSupport::Device::Spawn(ProcessLaunchInfo &launch_info) {
                            STDIN_FILENO, stdin_file);
 
   if (error.Fail())
-    return CoreSimulatorSupport::Process(error);
+    return CoreSimulatorSupport::Process(std::move(error));
 
   error = HandleFileAction(launch_info, options, kSimDeviceSpawnStdout,
                            STDOUT_FILENO, stdout_file);
 
   if (error.Fail())
-    return CoreSimulatorSupport::Process(error);
+    return CoreSimulatorSupport::Process(std::move(error));
 
   error = HandleFileAction(launch_info, options, kSimDeviceSpawnStderr,
                            STDERR_FILENO, stderr_file);
 
   if (error.Fail())
-    return CoreSimulatorSupport::Process(error);
+    return CoreSimulatorSupport::Process(std::move(error));
 
 #undef kSimDeviceSpawnEnvironment
 #undef kSimDeviceSpawnStdin
@@ -539,7 +539,7 @@ CoreSimulatorSupport::Device::Spawn(ProcessLaunchInfo &launch_info) {
                                                    : "unable to launch");
   }
 
-  return CoreSimulatorSupport::Process(pid, error);
+  return CoreSimulatorSupport::Process(pid, std::move(error));
 }
 
 CoreSimulatorSupport::DeviceSet

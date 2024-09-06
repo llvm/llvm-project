@@ -268,10 +268,10 @@ UserExpression::Evaluate(ExecutionContext &exe_ctx,
   const bool generate_debug_info = options.GetGenerateDebugInfo();
 
   if (options.InvokeCancelCallback(lldb::eExpressionEvaluationParse)) {
-    error = Status::FromErrorString(
+    Status error = Status::FromErrorString(
         "expression interrupted by callback before parse");
     result_valobj_sp = ValueObjectConstResult::Create(
-        exe_ctx.GetBestExecutionContextScope(), error);
+        exe_ctx.GetBestExecutionContextScope(), std::move(error));
     return lldb::eExpressionInterrupted;
   }
 
@@ -371,7 +371,7 @@ UserExpression::Evaluate(ExecutionContext &exe_ctx,
             lldb::eExpressionInterrupted,
             "expression interrupted by callback before execution");
         result_valobj_sp = ValueObjectConstResult::Create(
-            exe_ctx.GetBestExecutionContextScope(), error);
+            exe_ctx.GetBestExecutionContextScope(), std::move(error));
         return lldb::eExpressionInterrupted;
       }
 
@@ -422,7 +422,7 @@ UserExpression::Evaluate(ExecutionContext &exe_ctx,
 
   if (result_valobj_sp.get() == nullptr) {
     result_valobj_sp = ValueObjectConstResult::Create(
-        exe_ctx.GetBestExecutionContextScope(), error);
+        exe_ctx.GetBestExecutionContextScope(), std::move(error));
   }
 
   return execution_results;

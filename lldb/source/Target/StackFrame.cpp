@@ -1124,7 +1124,7 @@ bool StackFrame::GetFrameBaseValue(Scalar &frame_base, Status *error_ptr) {
     frame_base = m_frame_base;
 
   if (error_ptr)
-    *error_ptr = m_frame_base_error;
+    *error_ptr = m_frame_base_error.Clone();
   return m_frame_base_error.Success();
 }
 
