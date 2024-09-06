@@ -13,10 +13,13 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/Type.h"
 #include "clang/Basic/AttrKinds.h"
 #include "clang/Basic/HLSLRuntime.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Sema.h"
+#include "clang/Sema/SemaHLSL.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Frontend/HLSL/HLSLResource.h"
 
 #include <functional>
@@ -107,7 +110,7 @@ struct BuiltinTypeDeclBuilder {
   }
 
   BuiltinTypeDeclBuilder &
-  addHandleMember(ResourceClass RC, ResourceKind RK, bool IsROV,
+  addHandleMember(Sema &S, ResourceClass RC, ResourceKind RK, bool IsROV,
                   AccessSpecifier Access = AccessSpecifier::AS_private) {
     if (Record->isCompleteDefinition())
       return *this;
@@ -118,16 +121,16 @@ struct BuiltinTypeDeclBuilder {
         Ty = Record->getASTContext().getPointerType(
             QualType(TTD->getTypeForDecl(), 0));
     }
-    // add handle member
-    Attr *ResourceClassAttr =
-        HLSLResourceClassAttr::CreateImplicit(Record->getASTContext(), RC);
+
+    // add handle member with resource type attributes
+    QualType AttributedResTy = QualType();
+    SmallVector<const Attr *> Attrs = {
+        HLSLResourceClassAttr::CreateImplicit(Record->getASTContext(), RC),
+        IsROV ? HLSLROVAttr::CreateImplicit(Record->getASTContext()) : nullptr};
     Attr *ResourceAttr =
         HLSLResourceAttr::CreateImplicit(Record->getASTContext(), RK);
-    Attr *ROVAttr =
-        IsROV ? HLSLROVAttr::CreateImplicit(Record->getASTContext()) : nullptr;
-    addMemberVariable("h", Ty, {ResourceClassAttr, ResourceAttr, ROVAttr},
-                      Access);
-
+    if (CreateHLSLAttributedResourceType(S, Ty, Attrs, AttributedResTy))
+      addMemberVariable("h", AttributedResTy, {ResourceAttr}, Access);
     return *this;
   }
 
@@ -494,7 +497,7 @@ static BuiltinTypeDeclBuilder setupBufferType(CXXRecordDecl *Decl, Sema &S,
                                               ResourceClass RC, ResourceKind RK,
                                               bool IsROV) {
   return BuiltinTypeDeclBuilder(Decl)
-      .addHandleMember(RC, RK, IsROV)
+      .addHandleMember(S, RC, RK, IsROV)
       .addDefaultHandleConstructor(S, RC);
 }
 

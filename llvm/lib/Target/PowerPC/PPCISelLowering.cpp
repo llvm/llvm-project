@@ -18858,6 +18858,8 @@ PPCTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
   switch (AI->getOperation()) {
   case AtomicRMWInst::UIncWrap:
   case AtomicRMWInst::UDecWrap:
+  case AtomicRMWInst::USubCond:
+  case AtomicRMWInst::USubSat:
     return AtomicExpansionKind::CmpXChg;
   default:
     return TargetLowering::shouldExpandAtomicRMWInIR(AI);

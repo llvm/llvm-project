@@ -15,8 +15,7 @@ namespace llvm {
 // DirectiveBase.td and provides helper methods for accessing it.
 class DirectiveLanguage {
 public:
-  explicit DirectiveLanguage(const llvm::RecordKeeper &Records)
-      : Records(Records) {
+  explicit DirectiveLanguage(llvm::RecordKeeper &Records) : Records(Records) {
     const auto &DirectiveLanguages = getDirectiveLanguages();
     Def = DirectiveLanguages[0];
   }
@@ -71,7 +70,7 @@ public:
 
 private:
   const llvm::Record *Def;
-  const llvm::RecordKeeper &Records;
+  llvm::RecordKeeper &Records;
 
   std::vector<Record *> getDirectiveLanguages() const {
     return Records.getAllDerivedDefinitions("DirectiveLanguage");
