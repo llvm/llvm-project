@@ -538,10 +538,13 @@ private:
   /// (either by the initializer of a global variable, or referenced
   /// from within a function). This does not include functions called, which
   /// are listed in the derived FunctionSummary object.
-  std::vector<ValueInfo> RefEdgeList;
+  /// We use SmallVector<ValueInfo, 0> instead of std::vector<ValueInfo> for its
+  /// smaller memory footprint.
+  SmallVector<ValueInfo, 0> RefEdgeList;
 
 protected:
-  GlobalValueSummary(SummaryKind K, GVFlags Flags, std::vector<ValueInfo> Refs)
+  GlobalValueSummary(SummaryKind K, GVFlags Flags,
+                     SmallVectorImpl<ValueInfo> &&Refs)
       : Kind(K), Flags(Flags), RefEdgeList(std::move(Refs)) {
     assert((K != AliasKind || Refs.empty()) &&
            "Expect no references for AliasSummary");
@@ -641,7 +644,7 @@ class AliasSummary : public GlobalValueSummary {
 
 public:
   AliasSummary(GVFlags Flags)
-      : GlobalValueSummary(AliasKind, Flags, ArrayRef<ValueInfo>{}),
+      : GlobalValueSummary(AliasKind, Flags, SmallVector<ValueInfo, 0>{}),
         AliaseeSummary(nullptr) {}
 
   /// Check if this is an alias summary.
@@ -856,8 +859,9 @@ public:
             GlobalValue::DefaultVisibility,
             /*NotEligibleToImport=*/true, /*Live=*/true, /*IsLocal=*/false,
             /*CanAutoHide=*/false, GlobalValueSummary::ImportKind::Definition),
-        /*NumInsts=*/0, FunctionSummary::FFlags{}, std::vector<ValueInfo>(),
-        std::move(Edges), std::vector<GlobalValue::GUID>(),
+        /*NumInsts=*/0, FunctionSummary::FFlags{},
+        SmallVector<ValueInfo, 0>(), std::move(Edges),
+        std::vector<GlobalValue::GUID>(),
         std::vector<FunctionSummary::VFuncId>(),
         std::vector<FunctionSummary::VFuncId>(),
         std::vector<FunctionSummary::ConstVCall>(),
@@ -907,7 +911,8 @@ private:
 
 public:
   FunctionSummary(GVFlags Flags, unsigned NumInsts, FFlags FunFlags,
-                  std::vector<ValueInfo> Refs, std::vector<EdgeTy> CGEdges,
+                  SmallVectorImpl<ValueInfo> &&Refs,
+                  std::vector<EdgeTy> CGEdges,
                   std::vector<GlobalValue::GUID> TypeTests,
                   std::vector<VFuncId> TypeTestAssumeVCalls,
                   std::vector<VFuncId> TypeCheckedLoadVCalls,
@@ -1153,7 +1158,7 @@ public:
   } VarFlags;
 
   GlobalVarSummary(GVFlags Flags, GVarFlags VarFlags,
-                   std::vector<ValueInfo> Refs)
+                   SmallVectorImpl<ValueInfo> &&Refs)
       : GlobalValueSummary(GlobalVarKind, Flags, std::move(Refs)),
         VarFlags(VarFlags) {}
 

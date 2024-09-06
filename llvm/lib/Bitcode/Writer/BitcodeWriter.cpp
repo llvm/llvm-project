@@ -668,6 +668,10 @@ static unsigned getEncodedRMWOperation(AtomicRMWInst::BinOp Op) {
     return bitc::RMW_UINC_WRAP;
   case AtomicRMWInst::UDecWrap:
     return bitc::RMW_UDEC_WRAP;
+  case AtomicRMWInst::USubCond:
+    return bitc::RMW_USUB_COND;
+  case AtomicRMWInst::USubSat:
+    return bitc::RMW_USUB_SAT;
   }
 }
 
