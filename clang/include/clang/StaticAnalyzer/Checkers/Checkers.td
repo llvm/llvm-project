@@ -257,6 +257,11 @@ def NonnullGlobalConstantsChecker: Checker<"NonnilStringConstants">,
   Documentation<NotDocumented>,
   Hidden;
 
+def PointerSubChecker : Checker<"PointerSub">,
+  HelpText<"Check for pointer subtractions on two pointers pointing to "
+           "different memory chunks">,
+  Documentation<HasDocumentation>;
+
 } // end "core"
 
 let ParentPackage = CoreAlpha in {
@@ -289,11 +294,6 @@ def FixedAddressChecker : Checker<"FixedAddr">,
 def PointerArithChecker : Checker<"PointerArithm">,
   HelpText<"Check for pointer arithmetic on locations other than array "
            "elements">,
-  Documentation<HasDocumentation>;
-
-def PointerSubChecker : Checker<"PointerSub">,
-  HelpText<"Check for pointer subtractions on two pointers pointing to "
-           "different memory chunks">,
   Documentation<HasDocumentation>;
 
 def TestAfterDivZeroChecker : Checker<"TestAfterDivZero">,
