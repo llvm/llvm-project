@@ -1,4 +1,4 @@
-//===-- Definition of macros from stack_t.h -------------------------------===//
+//===-- Definition of stack_t.h -------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https:llvm.or/LICENSE.txt for license information.

@@ -10,10 +10,10 @@
 #include "src/__support/macros/config.h"
 #include "src/errno/libc_errno.h"
 #include "src/signal/linux/signal_utils.h"
+#include "hdr/types/stack_t.h"
 
 #include "src/__support/common.h"
 
-#include <signal.h>
 #include <sys/syscall.h>
 
 namespace LIBC_NAMESPACE_DECL {
