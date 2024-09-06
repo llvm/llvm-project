@@ -19,9 +19,8 @@ public:
   ~RegisterTypeBuilder() override = default;
 
   virtual CompilerType
-  GetRegisterType(const std::string &name,
-                  const lldb_private::RegisterType &type_info,
-                  uint32_t byte_size) = 0;
+  GetRegisterType(const lldb_private::RegisterType &type_info,
+                  uint32_t register_byte_size) = 0;
 
 protected:
   RegisterTypeBuilder() = default;
