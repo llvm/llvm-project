@@ -18,11 +18,15 @@ using namespace lld::macho;
 static_assert(sizeof(void *) != 8 || sizeof(Symbol) == 56,
               "Try to minimize Symbol's size; we create many instances");
 
+// TODO: Fix this for all platforms or remove it.
+// https://github.com/llvm/llvm-project/issues/107511
+#if 0
 // The Microsoft ABI doesn't support using parent class tail padding for child
 // members, hence the _MSC_VER check.
 #if !defined(_MSC_VER)
 static_assert(sizeof(void *) != 8 || sizeof(Defined) == 88,
               "Try to minimize Defined's size; we create many instances");
+#endif
 #endif
 
 static_assert(sizeof(SymbolUnion) == sizeof(Defined),
