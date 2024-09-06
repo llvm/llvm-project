@@ -487,7 +487,7 @@ static bool allCallersPassValidPointerForArgument(
 
 // Try to prove that all Calls to F do not modify the memory pointed to by Arg,
 // using alias analysis local to each caller of F.
-static bool isArgUnmodifiedByAllCalls(Argument *Arg,
+static bool isArgUnmodifiedByAllCalls(Argument *Arg, const LocationSize &Size,
                                       FunctionAnalysisManager &FAM) {
   for (User *U : Arg->getParent()->users()) {
 
@@ -498,6 +498,9 @@ static bool isArgUnmodifiedByAllCalls(Argument *Arg,
 
     MemoryLocation Loc =
         MemoryLocation::getForArgument(Call, Arg->getArgNo(), nullptr);
+
+    // Refine the MemoryLocation Size using information from Loads of Arg.
+    Loc = Loc.getWithNewSize(Size);
 
     AAResults &AAR = FAM.getResult<AAManager>(*Call->getFunction());
     // Bail as soon as we find a Call where Arg may be modified.
@@ -743,10 +746,16 @@ static bool findArgParts(Argument *Arg, const DataLayout &DL, AAResults &AAR,
   // Okay, now we know that the argument is only used by load instructions, and
   // it is safe to unconditionally perform all of them.
 
-  // If we can determine that no call to the Function modifies the memory
-  // pointed to by Arg, through alias analysis using actual arguments in the
+  // If we can determine that no call to the Function modifies the memory region
+  // accessed through Arg, through alias analysis using actual arguments in the
   // callers, we know that it is guaranteed to be safe to promote the argument.
-  if (isArgUnmodifiedByAllCalls(Arg, FAM))
+
+  // Compute the size of the memory region accessed by the Loads through Arg.
+  LocationSize Size = LocationSize::precise(0);
+  for (LoadInst *Load : Loads) {
+    Size = Size.unionWith(MemoryLocation::get(Load).Size);
+  }
+  if (isArgUnmodifiedByAllCalls(Arg, Size, FAM))
     return true;
 
   // Otherwise, use alias analysis to check if the pointer is guaranteed to not
