@@ -413,7 +413,7 @@ bool RISCVVectorPeephole::convertSameMaskVMergeToVMv(MachineInstr &MI) const {
 
   const MachineInstr *TrueV0Def = V0Defs.lookup(True);
   const MachineInstr *MIV0Def = V0Defs.lookup(&MI);
-  assert(TrueV0Def->isCopy() && MIV0Def->isCopy());
+  assert(TrueV0Def && TrueV0Def->isCopy() && MIV0Def && MIV0Def->isCopy());
   if (TrueV0Def->getOperand(1).getReg() != MIV0Def->getOperand(1).getReg())
     return false;
 
