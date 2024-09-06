@@ -83,13 +83,26 @@ public:
     return getListStream<minidump::Thread>(minidump::StreamType::ThreadList);
   }
 
-  /// Returns the contents of the Exception stream.  An error is returned if the
-  /// file does not contain this stream, or the stream is smaller than the size
-  /// of the ExceptionStream structure.  The internal consistency of the stream
-  /// is not checked in any way.
+  /// Returns the contents of the Exception stream. An error is returned if the
+  /// associated stream is smaller than the size of the ExceptionStream
+  /// structure. Or the directory supplied is not of kind exception stream.
+  Expected<const minidump::ExceptionStream &>
+  getExceptionStream(minidump::Directory Directory) const {
+    if (Directory.Type != minidump::StreamType::Exception) {
+      return createError("Not an exception stream");
+    }
+
+    return getStreamFromDirectory<minidump::ExceptionStream>(Directory);
+  }
+
+  /// Returns the first exception stream in the file. An error is returned if
+  /// the associated stream is smaller than the size of the ExceptionStream
+  /// structure. Or the directory supplied is not of kind exception stream.
   Expected<const minidump::ExceptionStream &> getExceptionStream() const {
-    return getStream<minidump::ExceptionStream>(
-        minidump::StreamType::Exception);
+    auto it = getExceptionStreams();
+    if (it.begin() == it.end())
+      return createError("No exception streams");
+    return *it.begin();
   }
 
   /// Returns the list of descriptors embedded in the MemoryList stream. The
@@ -216,7 +229,43 @@ public:
     bool IsEnd;
   };
 
+  class ExceptionStreamsIterator {
+  public:
+    ExceptionStreamsIterator(ArrayRef<minidump::Directory> Streams,
+                             const MinidumpFile *File)
+        : Streams(Streams), File(File) {}
+
+    bool operator==(const ExceptionStreamsIterator &R) const {
+      return Streams.size() == R.Streams.size();
+    }
+
+    bool operator!=(const ExceptionStreamsIterator &R) const {
+      return !(*this == R);
+    }
+
+    Expected<const minidump::ExceptionStream &> operator*() {
+      return File->getExceptionStream(Streams.front());
+    }
+
+    ExceptionStreamsIterator &operator++() {
+      if (!Streams.empty())
+        Streams = Streams.drop_front();
+
+      return *this;
+    }
+
+  private:
+    ArrayRef<minidump::Directory> Streams;
+    const MinidumpFile *File;
+  };
+
   using FallibleMemory64Iterator = llvm::fallible_iterator<Memory64Iterator>;
+
+  /// Returns an iterator that reads each exception stream independently. The
+  /// contents of the exception strema are not validated before being read, an
+  /// error will be returned if the stream is not large enough to contain an
+  /// exception stream, or if the stream points beyond the end of the file.
+  iterator_range<ExceptionStreamsIterator> getExceptionStreams() const;
 
   /// Returns an iterator that pairs each descriptor with it's respective
   /// content from the Memory64List stream. An error is returned if the file
@@ -256,13 +305,21 @@ private:
 
   MinidumpFile(MemoryBufferRef Source, const minidump::Header &Header,
                ArrayRef<minidump::Directory> Streams,
-               DenseMap<minidump::StreamType, std::size_t> StreamMap)
+               DenseMap<minidump::StreamType, std::size_t> StreamMap,
+               std::vector<minidump::Directory> ExceptionStreams)
       : Binary(ID_Minidump, Source), Header(Header), Streams(Streams),
-        StreamMap(std::move(StreamMap)) {}
+        StreamMap(std::move(StreamMap)),
+        ExceptionStreams(std::move(ExceptionStreams)) {}
 
   ArrayRef<uint8_t> getData() const {
     return arrayRefFromStringRef(Data.getBuffer());
   }
+
+  /// Return the stream of the given type, cast to the appropriate type. Checks
+  /// that the stream is large enough to hold an object of this type.
+  template <typename T>
+  Expected<const T &>
+  getStreamFromDirectory(minidump::Directory Directory) const;
 
   /// Return the stream of the given type, cast to the appropriate type. Checks
   /// that the stream is large enough to hold an object of this type.
@@ -277,7 +334,17 @@ private:
   const minidump::Header &Header;
   ArrayRef<minidump::Directory> Streams;
   DenseMap<minidump::StreamType, std::size_t> StreamMap;
+  std::vector<minidump::Directory> ExceptionStreams;
 };
+
+template <typename T>
+Expected<const T &>
+MinidumpFile::getStreamFromDirectory(minidump::Directory Directory) const {
+  ArrayRef<uint8_t> Stream = getRawStream(Directory);
+  if (Stream.size() >= sizeof(T))
+    return *reinterpret_cast<const T *>(Stream.data());
+  return createEOFError();
+}
 
 template <typename T>
 Expected<const T &> MinidumpFile::getStream(minidump::StreamType Type) const {

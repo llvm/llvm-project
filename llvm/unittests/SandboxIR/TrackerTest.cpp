@@ -1452,6 +1452,49 @@ bb2:
   EXPECT_EQ(PHI->getIncomingValue(1), Arg1);
 }
 
+void checkCmpInst(sandboxir::Context &Ctx, sandboxir::CmpInst *Cmp) {
+  Ctx.save();
+  auto OrigP = Cmp->getPredicate();
+  auto NewP = Cmp->getSwappedPredicate();
+  Cmp->setPredicate(NewP);
+  EXPECT_EQ(Cmp->getPredicate(), NewP);
+  Ctx.revert();
+  EXPECT_EQ(Cmp->getPredicate(), OrigP);
+
+  Ctx.save();
+  auto OrigOp0 = Cmp->getOperand(0);
+  auto OrigOp1 = Cmp->getOperand(1);
+  Cmp->swapOperands();
+  EXPECT_EQ(Cmp->getPredicate(), NewP);
+  EXPECT_EQ(Cmp->getOperand(0), OrigOp1);
+  EXPECT_EQ(Cmp->getOperand(1), OrigOp0);
+  Ctx.revert();
+  EXPECT_EQ(Cmp->getPredicate(), OrigP);
+  EXPECT_EQ(Cmp->getOperand(0), OrigOp0);
+  EXPECT_EQ(Cmp->getOperand(1), OrigOp1);
+}
+
+TEST_F(TrackerTest, CmpInst) {
+  SCOPED_TRACE("TrackerTest sandboxir::CmpInst tests");
+  parseIR(C, R"IR(
+define void @foo(i64 %i0, i64 %i1, float %f0, float %f1) {
+  %foeq = fcmp ogt float %f0, %f1
+  %ioeq = icmp uge i64 %i0, %i1
+
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto *BB = &*F.begin();
+  auto It = BB->begin();
+  auto *FCmp = cast<sandboxir::CmpInst>(&*It++);
+  checkCmpInst(Ctx, FCmp);
+  auto *ICmp = cast<sandboxir::CmpInst>(&*It++);
+  checkCmpInst(Ctx, ICmp);
+}
+
 TEST_F(TrackerTest, SetVolatile) {
   parseIR(C, R"IR(
 define void @foo(ptr %arg0, i8 %val) {

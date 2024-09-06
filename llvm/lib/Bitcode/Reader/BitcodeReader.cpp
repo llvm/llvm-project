@@ -1349,6 +1349,10 @@ static AtomicRMWInst::BinOp getDecodedRMWOperation(unsigned Val) {
     return AtomicRMWInst::UIncWrap;
   case bitc::RMW_UDEC_WRAP:
     return AtomicRMWInst::UDecWrap;
+  case bitc::RMW_USUB_COND:
+    return AtomicRMWInst::USubCond;
+  case bitc::RMW_USUB_SAT:
+    return AtomicRMWInst::USubSat;
   }
 }
 
@@ -2679,7 +2683,11 @@ Error BitcodeReader::parseTypeTableBody() {
           return error("Integer parameter too large");
         IntParams.push_back(Record[i]);
       }
-      ResultTy = TargetExtType::get(Context, TypeName, TypeParams, IntParams);
+      auto TTy =
+          TargetExtType::getOrError(Context, TypeName, TypeParams, IntParams);
+      if (auto E = TTy.takeError())
+        return E;
+      ResultTy = *TTy;
       TypeName.clear();
       break;
     }

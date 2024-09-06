@@ -3530,7 +3530,12 @@ bool LLParser::parseTargetExtType(Type *&Result) {
   if (parseToken(lltok::rparen, "expected ')' in target extension type"))
     return true;
 
-  Result = TargetExtType::get(Context, TypeName, TypeParams, IntParams);
+  auto TTy =
+      TargetExtType::getOrError(Context, TypeName, TypeParams, IntParams);
+  if (auto E = TTy.takeError())
+    return tokError(toString(std::move(E)));
+
+  Result = *TTy;
   return false;
 }
 
@@ -8351,6 +8356,12 @@ int LLParser::parseAtomicRMW(Instruction *&Inst, PerFunctionState &PFS) {
     break;
   case lltok::kw_udec_wrap:
     Operation = AtomicRMWInst::UDecWrap;
+    break;
+  case lltok::kw_usub_cond:
+    Operation = AtomicRMWInst::USubCond;
+    break;
+  case lltok::kw_usub_sat:
+    Operation = AtomicRMWInst::USubSat;
     break;
   case lltok::kw_fadd:
     Operation = AtomicRMWInst::FAdd;

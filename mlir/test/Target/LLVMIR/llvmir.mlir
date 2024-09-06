@@ -39,6 +39,9 @@ llvm.mlir.global internal constant @string_const("foobar") : !llvm.array<6 x i8>
 // CHECK: @int_global_undef = internal global i64 undef
 llvm.mlir.global internal @int_global_undef() : i64
 
+// CHECK: @externally_initialized_global = internal externally_initialized global i32 0
+llvm.mlir.global internal @externally_initialized_global(0 : i32) {externally_initialized} : i32
+
 // CHECK: @f8E3M4_global_as_i8 = internal global i8 56
 llvm.mlir.global internal @f8E3M4_global_as_i8(1.5 : f8E3M4) : i8
 
@@ -1519,11 +1522,15 @@ llvm.func @atomicrmw(
   %15 = llvm.atomicrmw uinc_wrap %i32_ptr, %i32 monotonic : !llvm.ptr, i32
   // CHECK: atomicrmw udec_wrap ptr %{{.*}}, i32 %{{.*}} monotonic
   %16 = llvm.atomicrmw udec_wrap %i32_ptr, %i32 monotonic : !llvm.ptr, i32
+  // CHECK: atomicrmw usub_cond ptr %{{.*}}, i32 %{{.*}} monotonic
+  %17 = llvm.atomicrmw usub_cond %i32_ptr, %i32 monotonic : !llvm.ptr, i32
+  // CHECK: atomicrmw usub_sat ptr %{{.*}}, i32 %{{.*}} monotonic
+  %18 = llvm.atomicrmw usub_sat %i32_ptr, %i32 monotonic : !llvm.ptr, i32
 
   // CHECK: atomicrmw volatile
   // CHECK-SAME:  syncscope("singlethread")
   // CHECK-SAME:  align 8
-  %17 = llvm.atomicrmw volatile udec_wrap %i32_ptr, %i32 syncscope("singlethread") monotonic {alignment = 8 : i64} : !llvm.ptr, i32
+  %19 = llvm.atomicrmw volatile udec_wrap %i32_ptr, %i32 syncscope("singlethread") monotonic {alignment = 8 : i64} : !llvm.ptr, i32
   llvm.return
 }
 

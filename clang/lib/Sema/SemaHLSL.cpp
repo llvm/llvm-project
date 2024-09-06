@@ -9,9 +9,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Sema/SemaHLSL.h"
+#include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/DeclBase.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/Type.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
@@ -19,7 +23,9 @@
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/Sema.h"
+#include "clang/Sema/Template.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
@@ -27,6 +33,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TargetParser/Triple.h"
 #include <iterator>
+#include <utility>
 
 using namespace clang;
 
@@ -556,46 +563,125 @@ void SemaHLSL::handleShaderAttr(Decl *D, const ParsedAttr &AL) {
     D->addAttr(NewAttr);
 }
 
-void SemaHLSL::handleResourceClassAttr(Decl *D, const ParsedAttr &AL) {
-  if (!AL.isArgIdent(0)) {
-    Diag(AL.getLoc(), diag::err_attribute_argument_type)
-        << AL << AANT_ArgumentIdentifier;
-    return;
+bool clang::CreateHLSLAttributedResourceType(Sema &S, QualType Wrapped,
+                                             ArrayRef<const Attr *> AttrList,
+                                             QualType &ResType) {
+  assert(AttrList.size() && "expected list of resource attributes");
+
+  QualType Contained = QualType();
+  HLSLAttributedResourceType::Attributes ResAttrs = {};
+
+  bool HasResourceClass = false;
+  for (const Attr *A : AttrList) {
+    if (!A)
+      continue;
+    switch (A->getKind()) {
+    case attr::HLSLResourceClass: {
+      llvm::dxil::ResourceClass RC =
+          cast<HLSLResourceClassAttr>(A)->getResourceClass();
+      if (HasResourceClass) {
+        S.Diag(A->getLocation(), ResAttrs.ResourceClass == RC
+                                     ? diag::warn_duplicate_attribute_exact
+                                     : diag::warn_duplicate_attribute)
+            << A;
+        return false;
+      }
+      ResAttrs.ResourceClass = RC;
+      HasResourceClass = true;
+      break;
+    }
+    case attr::HLSLROV:
+      ResAttrs.IsROV = true;
+      break;
+    default:
+      llvm_unreachable("unhandled resource attribute type");
+    }
   }
 
-  IdentifierLoc *Loc = AL.getArgAsIdent(0);
-  StringRef Identifier = Loc->Ident->getName();
-  SourceLocation ArgLoc = Loc->Loc;
-
-  // Validate.
-  llvm::dxil::ResourceClass RC;
-  if (!HLSLResourceClassAttr::ConvertStrToResourceClass(Identifier, RC)) {
-    Diag(ArgLoc, diag::warn_attribute_type_not_supported)
-        << "ResourceClass" << Identifier;
-    return;
+  if (!HasResourceClass) {
+    S.Diag(AttrList.back()->getRange().getEnd(),
+           diag::err_hlsl_missing_resource_class);
+    return false;
   }
 
-  D->addAttr(HLSLResourceClassAttr::Create(getASTContext(), RC, ArgLoc));
-}
-
-// Validates HLSL resource type attribute and adds it to the list to be
-// processed into a single HLSLAttributedResourceType later on.
-// Returns false if the attribute is invalid.
-bool SemaHLSL::handleResourceTypeAttr(const ParsedAttr &AL) {
-  // FIXME: placeholder - not yet implemented
+  ResType = S.getASTContext().getHLSLAttributedResourceType(Wrapped, Contained,
+                                                            ResAttrs);
   return true;
 }
 
-// Combines all resource type attributes and create HLSLAttributedResourceType.
+// Validates and creates an HLSL attribute that is applied as type attribute on
+// HLSL resource. The attributes are collected in HLSLResourcesTypeAttrs and at
+// the end of the declaration they are applied to the declaration type by
+// wrapping it in HLSLAttributedResourceType.
+bool SemaHLSL::handleResourceTypeAttr(const ParsedAttr &AL) {
+  Attr *A = nullptr;
+
+  // validate number of arguments
+  if (!AL.checkExactlyNumArgs(SemaRef, AL.getMinArgs()))
+    return false;
+
+  switch (AL.getKind()) {
+  case ParsedAttr::AT_HLSLResourceClass: {
+    if (!AL.isArgIdent(0)) {
+      Diag(AL.getLoc(), diag::err_attribute_argument_type)
+          << AL << AANT_ArgumentIdentifier;
+      return false;
+    }
+
+    IdentifierLoc *Loc = AL.getArgAsIdent(0);
+    StringRef Identifier = Loc->Ident->getName();
+    SourceLocation ArgLoc = Loc->Loc;
+
+    // Validate resource class value
+    llvm::dxil::ResourceClass RC;
+    if (!HLSLResourceClassAttr::ConvertStrToResourceClass(Identifier, RC)) {
+      Diag(ArgLoc, diag::warn_attribute_type_not_supported)
+          << "ResourceClass" << Identifier;
+      return false;
+    }
+    A = HLSLResourceClassAttr::Create(getASTContext(), RC, AL.getLoc());
+    break;
+  }
+  case ParsedAttr::AT_HLSLROV:
+    A = HLSLROVAttr::Create(getASTContext(), AL.getLoc());
+    break;
+  default:
+    llvm_unreachable("unhandled HLSL attribute");
+  }
+
+  HLSLResourcesTypeAttrs.emplace_back(A);
+  return true;
+}
+
+// Combines all resource type attributes and creates HLSLAttributedResourceType.
 QualType SemaHLSL::ProcessResourceTypeAttributes(QualType CurrentType) {
-  // FIXME: placeholder - not yet implemented
-  return CurrentType;
+  if (!HLSLResourcesTypeAttrs.size())
+    return CurrentType;
+
+  QualType QT = CurrentType;
+  if (CreateHLSLAttributedResourceType(SemaRef, CurrentType,
+                                       HLSLResourcesTypeAttrs, QT)) {
+    const HLSLAttributedResourceType *RT =
+        dyn_cast<HLSLAttributedResourceType>(QT.getTypePtr());
+    // Use the location of the first attribute as the location of the aggregated
+    // type. The attributes are stored in HLSLResourceTypeAttrs in the same
+    // order as they are parsed.
+    SourceLocation Loc = HLSLResourcesTypeAttrs[0]->getLoc();
+    LocsForHLSLAttributedResources.insert(std::pair(RT, Loc));
+  }
+  HLSLResourcesTypeAttrs.clear();
+  return QT;
 }
 
 // Returns source location for the HLSLAttributedResourceType
 SourceLocation
 SemaHLSL::TakeLocForHLSLAttribute(const HLSLAttributedResourceType *RT) {
-  // FIXME: placeholder - not yet implemented
+  auto I = LocsForHLSLAttributedResources.find(RT);
+  if (I != LocsForHLSLAttributedResources.end()) {
+    SourceLocation Loc = I->second;
+    LocsForHLSLAttributedResources.erase(I);
+    return Loc;
+  }
   return SourceLocation();
 }
 
@@ -653,31 +739,17 @@ static void updateResourceClassFlagsFromDeclResourceClass(
   }
 }
 
-template <typename T>
-static const T *getSpecifiedHLSLAttrFromRecordDecl(RecordDecl *TheRecordDecl) {
-  if (!TheRecordDecl)
-    return nullptr;
-
-  if (TheRecordDecl->hasAttr<T>())
-    return TheRecordDecl->getAttr<T>();
-  for (auto *FD : TheRecordDecl->fields()) {
-    const T *Attr = FD->getAttr<T>();
-    if (Attr)
-      return Attr;
+const HLSLAttributedResourceType *
+findAttributedResourceTypeOnField(VarDecl *VD) {
+  assert(VD != nullptr && "expected VarDecl");
+  if (RecordDecl *RD = getRecordDeclFromVarDecl(VD)) {
+    for (auto *FD : RD->fields()) {
+      if (const HLSLAttributedResourceType *AttrResType =
+              dyn_cast<HLSLAttributedResourceType>(FD->getType().getTypePtr()))
+        return AttrResType;
+    }
   }
   return nullptr;
-}
-
-template <typename T>
-static const T *getSpecifiedHLSLAttrFromVarDecl(VarDecl *VD) {
-  RecordDecl *TheRecordDecl = nullptr;
-  if (VD) {
-    TheRecordDecl = getRecordDeclFromVarDecl(VD);
-    if (!TheRecordDecl)
-      return nullptr;
-  }
-
-  return getSpecifiedHLSLAttrFromRecordDecl<T>(TheRecordDecl);
 }
 
 static void updateResourceClassFlagsFromRecordType(RegisterBindingFlags &Flags,
@@ -699,10 +771,11 @@ static void updateResourceClassFlagsFromRecordType(RegisterBindingFlags &Flags,
 
     const RecordDecl *RD = RT->getDecl();
     for (FieldDecl *FD : RD->fields()) {
-      if (HLSLResourceClassAttr *RCAttr =
-              FD->getAttr<HLSLResourceClassAttr>()) {
+      const Type *FieldTy = FD->getType().getTypePtr();
+      if (const HLSLAttributedResourceType *AttrResType =
+              dyn_cast<HLSLAttributedResourceType>(FieldTy)) {
         updateResourceClassFlagsFromDeclResourceClass(
-            Flags, RCAttr->getResourceClass());
+            Flags, AttrResType->getAttrs().ResourceClass);
         continue;
       }
       TypesToScan.emplace_back(FD->getType().getTypePtr());
@@ -729,11 +802,10 @@ static RegisterBindingFlags HLSLFillRegisterBindingFlags(Sema &S,
   }
   // Samplers, UAVs, and SRVs are VarDecl types
   else if (VarDecl *TheVarDecl = dyn_cast<VarDecl>(TheDecl)) {
-    const HLSLResourceClassAttr *resClassAttr =
-        getSpecifiedHLSLAttrFromVarDecl<HLSLResourceClassAttr>(TheVarDecl);
-    if (resClassAttr) {
+    if (const HLSLAttributedResourceType *AttrResType =
+            findAttributedResourceTypeOnField(TheVarDecl)) {
       Flags.Resource = true;
-      Flags.ResourceClass = resClassAttr->getResourceClass();
+      Flags.ResourceClass = AttrResType->getAttrs().ResourceClass;
     } else {
       const clang::Type *TheBaseType = TheVarDecl->getType().getTypePtr();
       while (TheBaseType->isArrayType())
@@ -834,17 +906,10 @@ static void ValidateMultipleRegisterAnnotations(Sema &S, Decl *TheDecl,
 static void DiagnoseHLSLRegisterAttribute(Sema &S, SourceLocation &ArgLoc,
                                           Decl *TheDecl, RegisterType regType) {
 
-  // Samplers, UAVs, and SRVs are VarDecl types
-  VarDecl *TheVarDecl = dyn_cast<VarDecl>(TheDecl);
-  // Cbuffers and Tbuffers are HLSLBufferDecl types
-  HLSLBufferDecl *CBufferOrTBuffer = dyn_cast<HLSLBufferDecl>(TheDecl);
-
   // exactly one of these two types should be set
-  assert(((TheVarDecl && !CBufferOrTBuffer) ||
-          (!TheVarDecl && CBufferOrTBuffer)) &&
-         "either TheVarDecl or CBufferOrTBuffer should be set");
-  (void)TheVarDecl;
-  (void)CBufferOrTBuffer;
+  assert(((isa<VarDecl>(TheDecl) && !isa<HLSLBufferDecl>(TheDecl)) ||
+          (!isa<VarDecl>(TheDecl) && isa<HLSLBufferDecl>(TheDecl))) &&
+         "expecting VarDecl or HLSLBufferDecl");
 
   RegisterBindingFlags Flags = HLSLFillRegisterBindingFlags(S, TheDecl);
   assert((int)Flags.Other + (int)Flags.Resource + (int)Flags.Basic +
@@ -1607,6 +1672,31 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   }
   }
   return false;
+}
+
+bool SemaHLSL::IsIntangibleType(clang::QualType QT) {
+  if (QT.isNull())
+    return false;
+
+  const Type *Ty = QT->getUnqualifiedDesugaredType();
+
+  // check if it's a builtin type first (simple check, no need to cache it)
+  if (Ty->isBuiltinType())
+    return Ty->isHLSLIntangibleType();
+
+  // unwrap arrays
+  while (isa<ConstantArrayType>(Ty))
+    Ty = Ty->getArrayElementTypeNoTypeQual();
+
+  const RecordType *RT =
+      dyn_cast<RecordType>(Ty->getUnqualifiedDesugaredType());
+  if (!RT)
+    return false;
+
+  CXXRecordDecl *RD = RT->getAsCXXRecordDecl();
+  assert(RD != nullptr &&
+         "all HLSL struct and classes should be CXXRecordDecl");
+  return RD->isHLSLIntangible();
 }
 
 static void BuildFlattenedTypeList(QualType BaseTy,
