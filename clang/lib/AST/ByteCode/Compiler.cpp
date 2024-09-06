@@ -1264,16 +1264,16 @@ bool Compiler<Emitter>::VisitVectorBinOp(const BinaryOperator *E) {
   if (!this->emitSetLocal(PT_Ptr, RHSOffset, E))
     return false;
 
-  auto getElem = [=](unsigned Offset, unsigned Index, PrimType ElemT) -> bool {
+  auto getElem = [=](unsigned Offset, unsigned Index) {
     if (!this->emitGetLocal(PT_Ptr, Offset, E))
       return false;
     return this->emitArrayElemPop(ElemT, Index, E);
   };
 
   for (unsigned I = 0; I != VecTy->getNumElements(); ++I) {
-    if (!getElem(LHSOffset, I, ElemT))
+    if (!getElem(LHSOffset, I))
       return false;
-    if (!getElem(RHSOffset, I, ElemT))
+    if (!getElem(RHSOffset, I))
       return false;
     switch (E->getOpcode()) {
     case BO_EQ:
