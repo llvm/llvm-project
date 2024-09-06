@@ -69,8 +69,7 @@ SANITIZER_INTERFACE_ATTRIBUTE void __rtsan_enable() {
 SANITIZER_INTERFACE_ATTRIBUTE void
 __rtsan_expect_not_realtime(const char *intercepted_function_name) {
   __rtsan_ensure_initialized();
-  __rtsan::GetContextForThisThread().ExpectNotRealtime(
-      intercepted_function_name);
+  ExpectNotRealtime(GetContextForThisThread(), intercepted_function_name);
 }
 
 } // extern "C"

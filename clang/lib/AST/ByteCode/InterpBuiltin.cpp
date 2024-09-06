@@ -1593,6 +1593,10 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
       return false;
     break;
 
+  case Builtin::BI__noop:
+    pushInteger(S, 0, Call->getType());
+    break;
+
   default:
     S.FFDiag(S.Current->getLocation(OpPC),
              diag::note_invalid_subexpr_in_const_expr)

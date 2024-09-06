@@ -70,7 +70,7 @@ int main(int argc, char **argv) {
 // CHECK1-NEXT:    [[VLA:%.*]] = alloca i16, i64 [[TMP2]], align 16
 // CHECK1-NEXT:    store i64 [[TMP2]], ptr [[__VLA_EXPR0]], align 8
 // CHECK1-NEXT:    call void @__kmpc_taskgroup(ptr @[[GLOB1]], i32 [[TMP0]])
-// CHECK1-NEXT:    [[DOTRD_INPUT_GEP_:%.*]] = getelementptr inbounds [3 x %struct.kmp_taskred_input_t], ptr [[DOTRD_INPUT_]], i64 0, i64 0
+// CHECK1-NEXT:    [[DOTRD_INPUT_GEP_:%.*]] = getelementptr inbounds nuw [3 x %struct.kmp_taskred_input_t], ptr [[DOTRD_INPUT_]], i64 0, i64 0
 // CHECK1-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASKRED_INPUT_T:%.*]], ptr [[DOTRD_INPUT_GEP_]], i32 0, i32 0
 // CHECK1-NEXT:    store ptr [[A]], ptr [[TMP4]], align 8
 // CHECK1-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASKRED_INPUT_T]], ptr [[DOTRD_INPUT_GEP_]], i32 0, i32 1
@@ -85,7 +85,7 @@ int main(int argc, char **argv) {
 // CHECK1-NEXT:    store ptr @.red_comb., ptr [[TMP11]], align 8
 // CHECK1-NEXT:    [[TMP12:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASKRED_INPUT_T]], ptr [[DOTRD_INPUT_GEP_]], i32 0, i32 6
 // CHECK1-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[TMP12]], i8 0, i64 4, i1 false)
-// CHECK1-NEXT:    [[DOTRD_INPUT_GEP_1:%.*]] = getelementptr inbounds [3 x %struct.kmp_taskred_input_t], ptr [[DOTRD_INPUT_]], i64 0, i64 1
+// CHECK1-NEXT:    [[DOTRD_INPUT_GEP_1:%.*]] = getelementptr inbounds nuw [3 x %struct.kmp_taskred_input_t], ptr [[DOTRD_INPUT_]], i64 0, i64 1
 // CHECK1-NEXT:    [[TMP14:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASKRED_INPUT_T]], ptr [[DOTRD_INPUT_GEP_1]], i32 0, i32 0
 // CHECK1-NEXT:    store ptr [[B]], ptr [[TMP14]], align 8
 // CHECK1-NEXT:    [[TMP16:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASKRED_INPUT_T]], ptr [[DOTRD_INPUT_GEP_1]], i32 0, i32 1
@@ -100,7 +100,7 @@ int main(int argc, char **argv) {
 // CHECK1-NEXT:    store ptr @.red_comb..2, ptr [[TMP21]], align 8
 // CHECK1-NEXT:    [[TMP22:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASKRED_INPUT_T]], ptr [[DOTRD_INPUT_GEP_1]], i32 0, i32 6
 // CHECK1-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[TMP22]], i8 0, i64 4, i1 false)
-// CHECK1-NEXT:    [[DOTRD_INPUT_GEP_2:%.*]] = getelementptr inbounds [3 x %struct.kmp_taskred_input_t], ptr [[DOTRD_INPUT_]], i64 0, i64 2
+// CHECK1-NEXT:    [[DOTRD_INPUT_GEP_2:%.*]] = getelementptr inbounds nuw [3 x %struct.kmp_taskred_input_t], ptr [[DOTRD_INPUT_]], i64 0, i64 2
 // CHECK1-NEXT:    [[TMP24:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASKRED_INPUT_T]], ptr [[DOTRD_INPUT_GEP_2]], i32 0, i32 0
 // CHECK1-NEXT:    store ptr [[ARGC_ADDR]], ptr [[TMP24]], align 8
 // CHECK1-NEXT:    [[TMP26:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASKRED_INPUT_T]], ptr [[DOTRD_INPUT_GEP_2]], i32 0, i32 1
@@ -118,7 +118,7 @@ int main(int argc, char **argv) {
 // CHECK1-NEXT:    [[TMP35:%.*]] = call ptr @__kmpc_taskred_init(i32 [[TMP0]], i32 3, ptr [[DOTRD_INPUT_]])
 // CHECK1-NEXT:    store ptr [[TMP35]], ptr [[DOTTASK_RED_]], align 8
 // CHECK1-NEXT:    call void @__kmpc_taskgroup(ptr @[[GLOB1]], i32 [[TMP0]])
-// CHECK1-NEXT:    [[DOTRD_INPUT_GEP_4:%.*]] = getelementptr inbounds [2 x %struct.kmp_taskred_input_t.0], ptr [[DOTRD_INPUT_3]], i64 0, i64 0
+// CHECK1-NEXT:    [[DOTRD_INPUT_GEP_4:%.*]] = getelementptr inbounds nuw [2 x %struct.kmp_taskred_input_t.0], ptr [[DOTRD_INPUT_3]], i64 0, i64 0
 // CHECK1-NEXT:    [[TMP36:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASKRED_INPUT_T_0:%.*]], ptr [[DOTRD_INPUT_GEP_4]], i32 0, i32 0
 // CHECK1-NEXT:    store ptr [[C]], ptr [[TMP36]], align 8
 // CHECK1-NEXT:    [[TMP38:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASKRED_INPUT_T_0]], ptr [[DOTRD_INPUT_GEP_4]], i32 0, i32 1
@@ -133,7 +133,7 @@ int main(int argc, char **argv) {
 // CHECK1-NEXT:    store ptr @.red_comb..6, ptr [[TMP43]], align 8
 // CHECK1-NEXT:    [[TMP44:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASKRED_INPUT_T_0]], ptr [[DOTRD_INPUT_GEP_4]], i32 0, i32 6
 // CHECK1-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[TMP44]], i8 0, i64 4, i1 false)
-// CHECK1-NEXT:    [[DOTRD_INPUT_GEP_5:%.*]] = getelementptr inbounds [2 x %struct.kmp_taskred_input_t.0], ptr [[DOTRD_INPUT_3]], i64 0, i64 1
+// CHECK1-NEXT:    [[DOTRD_INPUT_GEP_5:%.*]] = getelementptr inbounds nuw [2 x %struct.kmp_taskred_input_t.0], ptr [[DOTRD_INPUT_3]], i64 0, i64 1
 // CHECK1-NEXT:    [[TMP46:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASKRED_INPUT_T_0]], ptr [[DOTRD_INPUT_GEP_5]], i32 0, i32 0
 // CHECK1-NEXT:    store ptr [[VLA]], ptr [[TMP46]], align 8
 // CHECK1-NEXT:    [[TMP48:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASKRED_INPUT_T_0]], ptr [[DOTRD_INPUT_GEP_5]], i32 0, i32 1

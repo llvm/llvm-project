@@ -1638,6 +1638,8 @@ Status GDBRemoteCommunicationClient::GetMemoryRegionInfo(
           for (llvm::StringRef entry : llvm::split(value, ',')) {
             if (entry == "stack")
               region_info.SetIsStackMemory(MemoryRegionInfo::eYes);
+            else if (entry == "heap")
+              region_info.SetIsStackMemory(MemoryRegionInfo::eNo);
           }
         } else if (name == "error") {
           StringExtractorGDBRemote error_extractor(value);
@@ -1743,7 +1745,7 @@ Status GDBRemoteCommunicationClient::LoadQXferMemoryMap() {
 
   llvm::Expected<std::string> xml = ReadExtFeature("memory-map", "");
   if (!xml)
-    return Status(xml.takeError());
+    return Status::FromError(xml.takeError());
 
   XMLDocument xml_document;
 

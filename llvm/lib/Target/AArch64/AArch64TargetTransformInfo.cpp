@@ -3224,8 +3224,8 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
     }
     [[fallthrough]];
   case ISD::UDIV: {
+    auto VT = TLI->getValueType(DL, Ty);
     if (Op2Info.isConstant() && Op2Info.isUniform()) {
-      auto VT = TLI->getValueType(DL, Ty);
       if (TLI->isOperationLegalOrCustom(ISD::MULHU, VT)) {
         // Vector signed division by constant are expanded to the
         // sequence MULHS + ADD/SUB + SRA + SRL + ADD, and unsigned division
@@ -3239,6 +3239,12 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
         return MulCost * 2 + AddCost * 2 + ShrCost * 2 + 1;
       }
     }
+
+    // div i128's are lowered as libcalls.  Pass nullptr as (u)divti3 calls are
+    // emitted by the backend even when those functions are not declared in the
+    // module.
+    if (!VT.isVector() && VT.getSizeInBits() > 64)
+      return getCallInstrCost(/*Function*/ nullptr, Ty, {Ty, Ty}, CostKind);
 
     InstructionCost Cost = BaseT::getArithmeticInstrCost(
         Opcode, Ty, CostKind, Op1Info, Op2Info);

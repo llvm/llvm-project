@@ -1073,6 +1073,36 @@ static llvm::StringRef canonicalizePlatformName(llvm::StringRef Platform) {
              .Case("ShaderModel", "shadermodel")
              .Default(Platform);
 }
+static std::vector<llvm::StringRef> equivalentPlatformNames(llvm::StringRef Platform) {
+    return llvm::StringSwitch<std::vector<llvm::StringRef>>(Platform)
+             .Case("ios", {"ios", "iOS"})
+             .Case("iOS", {"ios", "iOS"})
+             .Case("macos", {"macos", "macOS"})
+             .Case("macOS", {"macos", "macOS"})
+             .Case("tvos", {"tvos", "tvOS"})
+             .Case("tvOS", {"tvos", "tvOS"})
+             .Case("watchos", {"watchos", "watchOS"})
+             .Case("watchOS", {"watchos", "watchOS"})
+             .Case("ios_app_extension", {"iOSApplicationExtension", "ios_app_extension"})
+             .Case("iOSApplicationExtension", {"iOSApplicationExtension", "ios_app_extension"})
+             .Case("macos_app_extension", {"macOSApplicationExtension", "macos_app_extension"})
+             .Case("macOSApplicationExtension", {"macOSApplicationExtension", "macos_app_extension"})
+             .Case("tvos_app_extension", {"tvOSApplicationExtension", "tvos_app_extension"})
+             .Case("tvOSApplicationExtension", {"tvOSApplicationExtension", "tvos_app_extension"})
+             .Case("watchos_app_extension", {"watchOSApplicationExtension", "watchos_app_extension"})
+             .Case("watchOSApplicationExtension", {"watchOSApplicationExtension", "watchos_app_extension"})
+             .Case("maccatalyst", {"macCatalyst", "maccatalyst"})
+             .Case("macCatalyst", {"macCatalyst", "maccatalyst"})
+             .Case("maccatalyst_app_extension", {"macCatalystApplicationExtension", "maccatalyst_app_extension"})
+             .Case("macCatalystApplicationExtension", {"macCatalystApplicationExtension", "maccatalyst_app_extension"})
+             .Case("xros", {"visionos", "visionOS", "xros"})
+             .Case("visionOS", {"visionos", "visionOS", "xros"})
+             .Case("visionos", {"visionos", "visionOS", "xros"})
+             .Case("xros_app_extension", {"visionOSApplicationExtension", "visionos_app_extension", "xros_app_extension"})
+             .Case("visionOSApplicationExtension", {"visionOSApplicationExtension", "visionos_app_extension", "xros_app_extension"})
+             .Case("visionos_app_extension", {"visionOSApplicationExtension", "visionos_app_extension", "xros_app_extension"})
+             .Default({Platform});
+}
 static llvm::Triple::EnvironmentType getEnvironmentType(llvm::StringRef Environment) {
     return llvm::StringSwitch<llvm::Triple::EnvironmentType>(Environment)
              .Case("pixel", llvm::Triple::Pixel)
@@ -4613,16 +4643,14 @@ def HLSLResource : InheritableAttr {
   let Documentation = [InternalOnly];
 }
 
-def HLSLROV : InheritableAttr {
+def HLSLROV : TypeAttr {
   let Spellings = [CXX11<"hlsl", "is_rov">];
-  let Subjects = SubjectList<[Struct]>;
   let LangOpts = [HLSL]; 
   let Documentation = [InternalOnly];
 }
 
-def HLSLResourceClass : InheritableAttr {
+def HLSLResourceClass : TypeAttr {
   let Spellings = [CXX11<"hlsl", "resource_class">];
-  let Subjects = SubjectList<[Field]>;
   let LangOpts = [HLSL];
   let Args = [
 	EnumArgument<"ResourceClass", "llvm::hlsl::ResourceClass",

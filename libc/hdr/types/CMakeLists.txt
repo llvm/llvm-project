@@ -171,3 +171,13 @@ add_proxy_header_library(
     libc.include.llvm-libc-types.locale_t
     libc.include.locale
 )
+
+add_proxy_header_library(
+  __sighandler_t
+  HDRS
+    sighandler_t.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.__sighandler_t
+    libc.include.signal
+)
+
