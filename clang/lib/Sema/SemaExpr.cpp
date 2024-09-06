@@ -5603,7 +5603,6 @@ ExprResult Sema::BuildCXXDefaultInitExpr(SourceLocation Loc, FieldDecl *Field) {
     keepInLifetimeExtendingContext();
     EnsureImmediateInvocationInDefaultArgs Immediate(*this);
     ExprResult Res;
-
     runWithSufficientStackSpace(Loc, [&] {
       Res = Immediate.TransformInitializer(Field->getInClassInitializer(),
                                            /*CXXDirectInit=*/false);
