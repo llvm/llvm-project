@@ -20,13 +20,14 @@ public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
 };
+
 class EarlyMachineLICMPass
     : public MachineLICMBasePass<EarlyMachineLICMPass, true> {};
 
 class MachineLICMPass : public MachineLICMBasePass<MachineLICMPass, false> {};
 
-template class MachineLICMBasePass<EarlyMachineLICMPass, true>;
-template class MachineLICMBasePass<MachineLICMPass, false>;
+extern template class MachineLICMBasePass<EarlyMachineLICMPass, true>;
+extern template class MachineLICMBasePass<MachineLICMPass, false>;
 
 } // namespace llvm
 

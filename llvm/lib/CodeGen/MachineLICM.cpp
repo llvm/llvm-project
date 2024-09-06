@@ -386,7 +386,7 @@ bool MachineLICMImpl::run(MachineFunction &MF) {
   MRI = &MF.getRegInfo();
   SchedModel.init(&ST);
 
-  // FIXME: Remove this assignment or convert to an assert?
+  // FIXME: Remove this assignment or convert to an assert? (dead variable PreRegAlloc)
   // MachineLICM and PostRAMachineLICM were distinguished by introducing
   // EarlyMachineLICM and MachineLICM respectively to avoid "using an unreliable
   // MRI::isSSA() check to determine whether register allocation has happened"
@@ -1764,6 +1764,9 @@ bool MachineLICMImpl::isTgtHotterThanSrc(MachineBasicBlock *SrcBlock,
   // Compare the block frequency ratio with the threshold
   return Ratio > BlockFrequencyRatioThreshold;
 }
+
+template class MachineLICMBasePass<EarlyMachineLICMPass, true>;
+template class MachineLICMBasePass<MachineLICMPass, false>;
 
 template <typename DerivedT, bool PreRegAlloc>
 PreservedAnalyses MachineLICMBasePass<DerivedT, PreRegAlloc>::run(
