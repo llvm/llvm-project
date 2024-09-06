@@ -32,6 +32,7 @@ DEF_CONST(ConstantStruct, ConstantStruct)
 DEF_CONST(ConstantVector, ConstantVector)
 DEF_CONST(ConstantAggregateZero, ConstantAggregateZero)
 DEF_CONST(ConstantPointerNull, ConstantPointerNull)
+DEF_CONST(PoisonValue, PoisonValue)
 
 #ifndef DEF_INSTR
 #define DEF_INSTR(ID, OPCODE, CLASS)
