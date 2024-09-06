@@ -879,19 +879,11 @@ lldb::thread_result_t GDBRemoteCommunication::ListenThread() {
   return {};
 }
 
-Status GDBRemoteCommunication::StartDebugserverProcess(
-    const char *url, Platform *platform, ProcessLaunchInfo &launch_info,
-    uint16_t *port, const Args *inferior_args, int pass_comm_fd) {
+FileSpec GDBRemoteCommunication::GetDebugserverPath(Platform *platform) {
   Log *log = GetLog(GDBRLog::Process);
-  LLDB_LOGF(log, "GDBRemoteCommunication::%s(url=%s, port=%" PRIu16 ")",
-            __FUNCTION__, url ? url : "<empty>", port ? *port : uint16_t(0));
-
-  Status error;
   // If we locate debugserver, keep that located version around
   static FileSpec g_debugserver_file_spec;
-
-  char debugserver_path[PATH_MAX];
-  FileSpec &debugserver_file_spec = launch_info.GetExecutableFile();
+  FileSpec debugserver_file_spec;
 
   Environment host_env = Host::GetEnvironment();
 
@@ -943,9 +935,20 @@ Status GDBRemoteCommunication::StartDebugserverProcess(
       }
     }
   }
+  return debugserver_file_spec;
+}
 
-  if (debugserver_exists) {
-    debugserver_file_spec.GetPath(debugserver_path, sizeof(debugserver_path));
+Status GDBRemoteCommunication::StartDebugserverProcess(
+    const char *url, Platform *platform, ProcessLaunchInfo &launch_info,
+    uint16_t *port, const Args *inferior_args, shared_fd_t pass_comm_fd) {
+  Log *log = GetLog(GDBRLog::Process);
+  LLDB_LOGF(log, "GDBRemoteCommunication::%s(url=%s, port=%" PRIu16 ")",
+            __FUNCTION__, url ? url : "<empty>", port ? *port : uint16_t(0));
+
+  Status error;
+  FileSpec &debugserver_file_spec = launch_info.GetExecutableFile();
+  if (debugserver_file_spec = GetDebugserverPath(platform)) {
+    std::string debugserver_path = debugserver_file_spec.GetPath();
 
     Args &debugserver_args = launch_info.GetArguments();
     debugserver_args.Clear();
@@ -1059,6 +1062,8 @@ Status GDBRemoteCommunication::StartDebugserverProcess(
         }
       }
     }
+
+    Environment host_env = Host::GetEnvironment();
     std::string env_debugserver_log_file =
         host_env.lookup("LLDB_DEBUGSERVER_LOG_FILE");
     if (!env_debugserver_log_file.empty()) {
