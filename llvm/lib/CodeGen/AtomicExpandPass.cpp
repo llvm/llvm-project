@@ -1807,7 +1807,7 @@ static ArrayRef<RTLIB::Libcall> GetRMWLibcall(AtomicRMWInst::BinOp Op) {
   case AtomicRMWInst::UDecWrap:
   case AtomicRMWInst::USubCond:
   case AtomicRMWInst::USubSat:
-    // No atomic libcalls are available for max/min/umax/umin.
+    // No atomic libcalls are available for these.
     return {};
   }
   llvm_unreachable("Unexpected AtomicRMW operation.");

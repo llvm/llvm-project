@@ -751,12 +751,12 @@ public:
     /// *p = ((old == 0) || (old u> v)) ? v : (old - 1)
     UDecWrap,
 
-    /// Subtract only if result would be positive.
+    /// Subtract only if no unsigned overflow.
     /// *p = (old u>= v) ? old - v : old
     USubCond,
 
-    /// Subtract with clamping of negative results to zero.
-    /// *p = (old u>= v) ? old - v : 0
+    /// *p = usub.sat(old, v)
+    /// \p usub.sat matches the behavior of \p llvm.usub.sat.*.
     USubSat,
 
     FIRST_BINOP = Xchg,
