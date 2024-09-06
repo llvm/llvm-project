@@ -147,15 +147,8 @@ GDB-SERVER CONNECTIONS
 
 .. option:: --gdbserver-port <port>
 
- Define a port to be used for gdb-server connections. Can be specified multiple
- times to allow multiple ports. Has no effect if --min-gdbserver-port
- and --max-gdbserver-port are specified.
-
-.. option:: --min-gdbserver-port <port>
-.. option:: --max-gdbserver-port <port>
-
- Specify the range of ports that can be used for gdb-server connections. Both
- options need to be specified simultaneously. Overrides --gdbserver-port.
+ Define a port to be used for gdb-server connections. This port is used for
+ multiple connections.
 
 .. option:: --port-offset <offset>
 
