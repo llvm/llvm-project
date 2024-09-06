@@ -15,6 +15,7 @@
 #define LLVM_LIB_TARGET_RISCV_RISCVISELLOWERING_H
 
 #include "RISCV.h"
+#include "RISCVCallingConv.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -896,14 +897,6 @@ public:
                               MachineBasicBlock::instr_iterator &MBBI,
                               const TargetInstrInfo *TII) const override;
 
-  /// RISCVCCAssignFn - This target-specific function extends the default
-  /// CCValAssign with additional information used to lower RISC-V calling
-  /// conventions.
-  typedef bool RISCVCCAssignFn(unsigned ValNo, MVT ValVT, MVT LocVT,
-                               CCValAssign::LocInfo LocInfo,
-                               ISD::ArgFlagsTy ArgFlags, CCState &State,
-                               bool IsFixed, bool IsRet, Type *OrigTy);
-
 private:
   void analyzeInputArgs(MachineFunction &MF, CCState &CCInfo,
                         const SmallVectorImpl<ISD::InputArg> &Ins, bool IsRet,
@@ -1045,24 +1038,6 @@ private:
   SDValue emitFlushICache(SelectionDAG &DAG, SDValue InChain, SDValue Start,
                           SDValue End, SDValue Flags, SDLoc DL) const;
 };
-
-namespace RISCV {
-
-bool CC_RISCV(unsigned ValNo, MVT ValVT, MVT LocVT,
-              CCValAssign::LocInfo LocInfo, ISD::ArgFlagsTy ArgFlags,
-              CCState &State, bool IsFixed, bool IsRet, Type *OrigTy);
-
-bool CC_RISCV_FastCC(unsigned ValNo, MVT ValVT, MVT LocVT,
-                     CCValAssign::LocInfo LocInfo, ISD::ArgFlagsTy ArgFlags,
-                     CCState &State, bool IsFixed, bool IsRet, Type *OrigTy);
-
-bool CC_RISCV_GHC(unsigned ValNo, MVT ValVT, MVT LocVT,
-                  CCValAssign::LocInfo LocInfo, ISD::ArgFlagsTy ArgFlags,
-                  CCState &State);
-
-ArrayRef<MCPhysReg> getArgGPRs(const RISCVABI::ABI ABI);
-
-} // end namespace RISCV
 
 namespace RISCVVIntrinsicsTable {
 

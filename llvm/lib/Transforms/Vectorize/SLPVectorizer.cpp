@@ -5854,13 +5854,8 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
       }
       // Build a map between user nodes and their operands order to speedup
       // search. The graph currently does not provide this dependency directly.
-      for (EdgeInfo &EI : TE->UserTreeIndices) {
-        TreeEntry *UserTE = EI.UserTE;
-        auto It = Users.find(UserTE);
-        if (It == Users.end())
-          It = Users.insert({UserTE, {}}).first;
-        It->second.emplace_back(EI.EdgeIdx, TE);
-      }
+      for (EdgeInfo &EI : TE->UserTreeIndices)
+        Users[EI.UserTE].emplace_back(EI.EdgeIdx, TE);
     }
     // Erase filtered entries.
     for (TreeEntry *TE : Filtered)
