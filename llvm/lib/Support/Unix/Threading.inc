@@ -49,6 +49,10 @@
 #include <unistd.h> // For getthrid()
 #endif
 
+#if defined(__HAIKU__)
+#include <OS.h> // For team/thread api
+#endif
+
 #if defined(__linux__)
 #include <sched.h>       // For sched_getaffinity
 #include <sys/syscall.h> // For syscall codes
@@ -181,6 +185,8 @@ void llvm::set_thread_name(const Twine &Name) {
                        const_cast<char *>(NameStr.data()));
 #elif defined(__APPLE__)
   ::pthread_setname_np(NameStr.data());
+#elif defined(__HAIKU__)
+  ::rename_thread(::find_thread(nullptr), NameStr.data());
 #else
   ::pthread_setname_np(::pthread_self(), NameStr.data());
 #endif
@@ -244,6 +250,11 @@ void llvm::get_thread_name(SmallVectorImpl<char> &Name) {
   ::pthread_getname_np(::pthread_self(), buf, len);
 
   Name.append(buf, buf + strlen(buf));
+#elif defined(__HAIKU__)
+  thread_info i;
+
+  if (::get_thread_info(::find_thread(nullptr), &i) == B_OK)
+    Name.append(i.name, i.name + strlen(i.name));
 #endif
 }
 
