@@ -456,7 +456,7 @@ namespace cwg1696 { // cwg1696: 7
       // since-cxx14-note@#cwg1696-A1 {{reference member declared here}}
       const int &v; // #cwg1696-A1
     };
-#if 1
+
     struct A2 {
       A2() = default;
       // since-cxx14-error@-1 {{reference member 'v' binds to a temporary object whose lifetime would be shorter than the lifetime of the constructed object}}
@@ -470,7 +470,6 @@ namespace cwg1696 { // cwg1696: 7
     A2 a1;    // #cwg1696-A2-b
     
     A2 a2(1); // OK, unfortunately
-#endif
 #endif
   }
 
