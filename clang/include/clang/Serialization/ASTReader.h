@@ -1188,6 +1188,11 @@ private:
   /// once recursing loading has been completed.
   llvm::SmallVector<NamedDecl *, 16> PendingOdrMergeChecks;
 
+  /// Lambdas that need to be loaded right after the function they belong to.
+  /// It is required to have the right canonical declaration for lambda class
+  /// from the same module as the function.
+  SmallVector<GlobalDeclID, 4> PendingLambdas;
+
   using DataPointers =
       std::pair<CXXRecordDecl *, struct CXXRecordDecl::DefinitionData *>;
   using ObjCInterfaceDataPointers =

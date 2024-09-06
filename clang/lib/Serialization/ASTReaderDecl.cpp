@@ -1156,11 +1156,12 @@ void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
     Params.push_back(readDeclAs<ParmVarDecl>());
   FD->setParams(Reader.getContext(), Params);
 
-  // For the first decl read all lambdas inside, otherwise skip them.
+  // For the first decl add all lambdas inside for loading them later,
+  // otherwise skip them.
   unsigned NumLambdas = Record.readInt();
   if (FD->isFirstDecl()) {
     for (unsigned I = 0; I != NumLambdas; ++I)
-      readDecl();
+      Reader.PendingLambdas.push_back(Record.readDeclID());
   } else {
     (void)Record.readIntArray(NumLambdas);
   }

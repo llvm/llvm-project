@@ -23,7 +23,6 @@ struct B {
     });
   }
 };
-
 // expected-no-diagnostics
 
 //--- main.cpp
