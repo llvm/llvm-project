@@ -1553,7 +1553,7 @@ static bool CheckVectorSelect(Sema *S, CallExpr *TheCall) {
   if (!Arg1->getType()->isVectorType()) {
     S->Diag(Arg1->getBeginLoc(),
 	    diag::err_builtin_non_vector_type)
-      << "Second" << "__builtin_hlsl_select" << Arg1->getType()
+      << "Second" << TheCall->getDirectCallee() << Arg1->getType()
       << Arg1->getSourceRange();
     return true;
   }
@@ -1561,7 +1561,7 @@ static bool CheckVectorSelect(Sema *S, CallExpr *TheCall) {
   if (!Arg2->getType()->isVectorType()) {
     S->Diag(Arg2->getBeginLoc(),
 	    diag::err_builtin_non_vector_type)
-      << "Third" << "__builtin_hlsl_select" << Arg2->getType()
+      << "Third" << TheCall->getDirectCallee() << Arg2->getType()
       << Arg2->getSourceRange();
     return true;
   }

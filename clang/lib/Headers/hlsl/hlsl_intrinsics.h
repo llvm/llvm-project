@@ -1627,7 +1627,7 @@ T select(bool, T, T);
 
 template <typename T, int Sz>
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_select)
-vector<T,Sz> select(vector<bool,Sz>, vector<T,Sz>, vector<T,Sz>);
+vector<T, Sz> select(vector<bool, Sz>, vector<T, Sz>, vector<T, Sz>);
   
 //===----------------------------------------------------------------------===//
 // sin builtins
