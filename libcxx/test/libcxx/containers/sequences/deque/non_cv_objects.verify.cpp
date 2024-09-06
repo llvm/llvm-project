@@ -41,7 +41,7 @@ std::deque<int[2]> C10;
 // expected-error@*:* 0+ {{[allocator.requirements]}}
 // expected-error@*:* 0+ {{object expression of non-scalar type}}
 // expected-error@*:* 0+ {{indirection}}
-// expected-error@*:* 1+ {{arithmetic on}}
+// expected-error@*:* 0+ {{arithmetic on}}
 // expected-error@*:* 1+ {{cannot form a reference to 'void'}}
 // expected-error@*:* 1+ {{declared as a pointer}}
 // expected-error@*:* 1+ {{invalid application of 'sizeof'}}

@@ -49,3 +49,4 @@ std::vector<int[2]> C10;
 // expected-error@*:* 1+ {{no member named 'rebind'}}
 // expected-error@*:* 1+ {{no type named 'type' in 'std::enable_if}}
 // expected-error@*:* 1+ {{'std::allocator' cannot allocate}}
+// expected-warning@*:* 0+ {{is a Microsoft extension}}
