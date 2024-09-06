@@ -5255,7 +5255,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     OpdsMapping[0] = AMDGPU::getValueMapping(Bank, 1);
     break;
   }
-  case AMDGPU::G_FPTRUNC_ROUND:
+  case AMDGPU::G_INTRINSIC_FPTRUNC_ROUND:
     return getDefaultMappingVOP(MI);
   case AMDGPU::G_PREFETCH:
     OpdsMapping[0] = getSGPROpMapping(MI.getOperand(0).getReg(), MRI, *TRI);

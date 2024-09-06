@@ -354,6 +354,34 @@ bool SCCPSolver::removeNonFeasibleEdges(BasicBlock *BB, DomTreeUpdater &DTU,
   return true;
 }
 
+void SCCPSolver::inferReturnAttributes() const {
+  for (const auto &[F, ReturnValue] : getTrackedRetVals()) {
+
+    // If there is a known constant range for the return value, add range
+    // attribute to the return value.
+    if (ReturnValue.isConstantRange() &&
+        !ReturnValue.getConstantRange().isSingleElement()) {
+      // Do not add range metadata if the return value may include undef.
+      if (ReturnValue.isConstantRangeIncludingUndef())
+        continue;
+
+      // Take the intersection of the existing attribute and the inferred range.
+      ConstantRange CR = ReturnValue.getConstantRange();
+      if (F->hasRetAttribute(Attribute::Range))
+        CR = CR.intersectWith(F->getRetAttribute(Attribute::Range).getRange());
+      F->addRangeRetAttr(CR);
+      continue;
+    }
+    // Infer nonnull return attribute.
+    if (F->getReturnType()->isPointerTy() && ReturnValue.isNotConstant() &&
+        ReturnValue.getNotConstant()->isNullValue() &&
+        !F->hasRetAttribute(Attribute::NonNull)) {
+      F->addRetAttr(Attribute::NonNull);
+      continue;
+    }
+  }
+}
+
 /// Helper class for SCCPSolver. This implements the instruction visitor and
 /// holds all the state.
 class SCCPInstVisitor : public InstVisitor<SCCPInstVisitor> {
@@ -820,19 +848,21 @@ public:
       markOverdefined(ValueState[V], V);
   }
 
-  void trackValueOfArgument(Argument *A) {
+  ValueLatticeElement getArgAttributeVL(Argument *A) {
     if (A->getType()->isIntOrIntVectorTy()) {
-      if (std::optional<ConstantRange> Range = A->getRange()) {
-        markConstantRange(ValueState[A], A, *Range);
-        return;
-      }
+      if (std::optional<ConstantRange> Range = A->getRange())
+        return ValueLatticeElement::getRange(*Range);
     }
-    if (A->hasNonNullAttr()) {
-      markNotNull(ValueState[A], A);
-      return;
-    }
+    if (A->hasNonNullAttr())
+      return ValueLatticeElement::getNot(Constant::getNullValue(A->getType()));
     // Assume nothing about the incoming arguments without attributes.
-    markOverdefined(A);
+    return ValueLatticeElement::getOverdefined();
+  }
+
+  void trackValueOfArgument(Argument *A) {
+    if (A->getType()->isStructTy())
+      return (void)markOverdefined(A);
+    mergeInValue(A, getArgAttributeVL(A));
   }
 
   bool isStructLatticeConstant(Function *F, StructType *STy);
@@ -1800,7 +1830,9 @@ void SCCPInstVisitor::handleCallArguments(CallBase &CB) {
                        getMaxWidenStepsOpts());
         }
       } else
-        mergeInValue(&*AI, getValueState(*CAI), getMaxWidenStepsOpts());
+        mergeInValue(&*AI,
+                     getValueState(*CAI).intersect(getArgAttributeVL(&*AI)),
+                     getMaxWidenStepsOpts());
     }
   }
 }
@@ -2164,7 +2196,7 @@ const ValueLatticeElement &SCCPSolver::getLatticeValueFor(Value *V) const {
 }
 
 const MapVector<Function *, ValueLatticeElement> &
-SCCPSolver::getTrackedRetVals() {
+SCCPSolver::getTrackedRetVals() const {
   return Visitor->getTrackedRetVals();
 }
 

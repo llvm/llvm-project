@@ -554,6 +554,52 @@ define i32 @dot_product_i32(ptr %a, ptr %b) {
   ret i32 %add.1
 }
 
+; Same as above, except the reduction order has been perturbed.  This
+; is checking for our ability to reorder.
+define i32 @dot_product_i32_reorder(ptr %a, ptr %b) {
+; CHECK-LABEL: @dot_product_i32_reorder(
+; CHECK-NEXT:    [[GEP_A_0:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i32 0
+; CHECK-NEXT:    [[L_A_0:%.*]] = load i32, ptr [[GEP_A_0]], align 4
+; CHECK-NEXT:    [[GEP_A_1:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 1
+; CHECK-NEXT:    [[L_A_1:%.*]] = load i32, ptr [[GEP_A_1]], align 4
+; CHECK-NEXT:    [[GEP_A_2:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 2
+; CHECK-NEXT:    [[L_A_2:%.*]] = load i32, ptr [[GEP_A_2]], align 4
+; CHECK-NEXT:    [[GEP_B_0:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i32 0
+; CHECK-NEXT:    [[L_B_0:%.*]] = load i32, ptr [[GEP_B_0]], align 4
+; CHECK-NEXT:    [[GEP_B_1:%.*]] = getelementptr inbounds i32, ptr [[B]], i32 1
+; CHECK-NEXT:    [[L_B_1:%.*]] = load i32, ptr [[GEP_B_1]], align 4
+; CHECK-NEXT:    [[GEP_B_2:%.*]] = getelementptr inbounds i32, ptr [[B]], i32 2
+; CHECK-NEXT:    [[L_B_2:%.*]] = load i32, ptr [[GEP_B_2]], align 4
+; CHECK-NEXT:    [[MUL_0:%.*]] = mul nsw i32 [[L_A_0]], [[L_B_0]]
+; CHECK-NEXT:    [[MUL_1:%.*]] = mul nsw i32 [[L_A_1]], [[L_B_1]]
+; CHECK-NEXT:    [[MUL_2:%.*]] = mul nsw i32 [[L_A_2]], [[L_B_2]]
+; CHECK-NEXT:    [[ADD_0:%.*]] = add i32 [[MUL_1]], [[MUL_0]]
+; CHECK-NEXT:    [[ADD_1:%.*]] = add i32 [[ADD_0]], [[MUL_2]]
+; CHECK-NEXT:    ret i32 [[ADD_1]]
+;
+  %gep.a.0 = getelementptr inbounds i32, ptr %a, i32 0
+  %l.a.0 = load i32, ptr %gep.a.0, align 4
+  %gep.a.1 = getelementptr inbounds i32, ptr %a, i32 1
+  %l.a.1 = load i32, ptr %gep.a.1, align 4
+  %gep.a.2 = getelementptr inbounds i32, ptr %a, i32 2
+  %l.a.2 = load i32, ptr %gep.a.2, align 4
+
+  %gep.b.0 = getelementptr inbounds i32, ptr %b, i32 0
+  %l.b.0 = load i32, ptr %gep.b.0, align 4
+  %gep.b.1 = getelementptr inbounds i32, ptr %b, i32 1
+  %l.b.1 = load i32, ptr %gep.b.1, align 4
+  %gep.b.2 = getelementptr inbounds i32, ptr %b, i32 2
+  %l.b.2 = load i32, ptr %gep.b.2, align 4
+
+  %mul.0 = mul nsw i32 %l.a.0, %l.b.0
+  %mul.1 = mul nsw i32 %l.a.1, %l.b.1
+  %mul.2 = mul nsw i32 %l.a.2, %l.b.2
+
+  %add.0 = add i32 %mul.1, %mul.0
+  %add.1 = add i32 %add.0, %mul.2
+  ret i32 %add.1
+}
+
 define float @dot_product_fp32(ptr %a, ptr %b) {
 ; NON-POW2-LABEL: @dot_product_fp32(
 ; NON-POW2-NEXT:    [[GEP_A_0:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i32 0
@@ -603,6 +649,50 @@ define float @dot_product_fp32(ptr %a, ptr %b) {
   %add.1 = fadd fast float %add.0, %mul.2
   ret float %add.1
 }
+
+; Same as above, except the reduction order has been perturbed.  This
+; is checking for our ability to reorder.
+define float @dot_product_fp32_reorder(ptr %a, ptr %b) {
+; CHECK-LABEL: @dot_product_fp32_reorder(
+; CHECK-NEXT:    [[GEP_A_0:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i32 0
+; CHECK-NEXT:    [[GEP_A_2:%.*]] = getelementptr inbounds float, ptr [[A]], i32 2
+; CHECK-NEXT:    [[L_A_2:%.*]] = load float, ptr [[GEP_A_2]], align 4
+; CHECK-NEXT:    [[GEP_B_0:%.*]] = getelementptr inbounds float, ptr [[B:%.*]], i32 0
+; CHECK-NEXT:    [[GEP_B_2:%.*]] = getelementptr inbounds float, ptr [[B]], i32 2
+; CHECK-NEXT:    [[L_B_2:%.*]] = load float, ptr [[GEP_B_2]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr [[GEP_A_0]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x float>, ptr [[GEP_B_0]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul fast <2 x float> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[MUL_2:%.*]] = fmul fast float [[L_A_2]], [[L_B_2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x float> [[TMP3]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x float> [[TMP3]], i32 1
+; CHECK-NEXT:    [[ADD_0:%.*]] = fadd fast float [[TMP5]], [[TMP4]]
+; CHECK-NEXT:    [[ADD_1:%.*]] = fadd fast float [[ADD_0]], [[MUL_2]]
+; CHECK-NEXT:    ret float [[ADD_1]]
+;
+  %gep.a.0 = getelementptr inbounds float, ptr %a, i32 0
+  %l.a.0 = load float, ptr %gep.a.0, align 4
+  %gep.a.1 = getelementptr inbounds float, ptr %a, i32 1
+  %l.a.1 = load float, ptr %gep.a.1, align 4
+  %gep.a.2 = getelementptr inbounds float, ptr %a, i32 2
+  %l.a.2 = load float, ptr %gep.a.2, align 4
+
+  %gep.b.0 = getelementptr inbounds float, ptr %b, i32 0
+  %l.b.0 = load float, ptr %gep.b.0, align 4
+  %gep.b.1 = getelementptr inbounds float, ptr %b, i32 1
+  %l.b.1 = load float, ptr %gep.b.1, align 4
+  %gep.b.2 = getelementptr inbounds float, ptr %b, i32 2
+  %l.b.2 = load float, ptr %gep.b.2, align 4
+
+  %mul.0 = fmul fast float %l.a.0, %l.b.0
+  %mul.1 = fmul fast float %l.a.1, %l.b.1
+  %mul.2 = fmul fast float %l.a.2, %l.b.2
+
+  %add.0 = fadd fast float %mul.1, %mul.0
+  %add.1 = fadd fast float %add.0, %mul.2
+  ret float %add.1
+}
+
 
 define double @dot_product_fp64(ptr %a, ptr %b) {
 ; NON-POW2-LABEL: @dot_product_fp64(

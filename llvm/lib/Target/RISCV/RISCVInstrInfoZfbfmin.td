@@ -26,6 +26,10 @@ def riscv_fpround_bf16
     : SDNode<"RISCVISD::FP_ROUND_BF16", SDT_RISCVFP_ROUND_BF16>;
 def riscv_fpextend_bf16
     : SDNode<"RISCVISD::FP_EXTEND_BF16", SDT_RISCVFP_EXTEND_BF16>;
+def riscv_fpextend_bf16_oneuse : PatFrag<(ops node:$A),
+                                         (riscv_fpextend_bf16 node:$A), [{
+  return N->hasOneUse();
+}]>;
 
 //===----------------------------------------------------------------------===//
 // Instructions
