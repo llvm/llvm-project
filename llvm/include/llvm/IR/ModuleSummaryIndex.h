@@ -640,12 +640,11 @@ class AliasSummary : public GlobalValueSummary {
   /// memory for time). Note that this pointer may be null (and the value info
   /// empty) when we have a distributed index where the alias is being imported
   /// (as a copy of the aliasee), but the aliasee is not.
-  GlobalValueSummary *AliaseeSummary;
+  GlobalValueSummary *AliaseeSummary = nullptr;
 
 public:
   AliasSummary(GVFlags Flags)
-      : GlobalValueSummary(AliasKind, Flags, SmallVector<ValueInfo, 0>{}),
-        AliaseeSummary(nullptr) {}
+      : GlobalValueSummary(AliasKind, Flags, SmallVector<ValueInfo, 0>{}) {}
 
   /// Check if this is an alias summary.
   static bool classof(const GlobalValueSummary *GVS) {
@@ -1420,7 +1419,7 @@ private:
   // used except in the case of a SamplePGO partial profile, and should be
   // reevaluated/redesigned to allow more effective incremental builds in that
   // case.
-  uint64_t BlockCount;
+  uint64_t BlockCount = 0;
 
   // List of unique stack ids (hashes). We use a 4B index of the id in the
   // stack id lists on the alloc and callsite summaries for memory savings,
@@ -1446,7 +1445,7 @@ public:
   ModuleSummaryIndex(bool HaveGVs, bool EnableSplitLTOUnit = false,
                      bool UnifiedLTO = false)
       : HaveGVs(HaveGVs), EnableSplitLTOUnit(EnableSplitLTOUnit),
-        UnifiedLTO(UnifiedLTO), Saver(Alloc), BlockCount(0) {}
+        UnifiedLTO(UnifiedLTO), Saver(Alloc) {}
 
   // Current version for the module summary in bitcode files.
   // The BitcodeSummaryVersion should be bumped whenever we introduce changes
