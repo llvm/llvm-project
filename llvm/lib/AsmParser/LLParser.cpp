@@ -9399,7 +9399,7 @@ bool LLParser::parseFunctionSummary(std::string Name, GlobalValue::GUID GUID,
   std::vector<FunctionSummary::EdgeTy> Calls;
   FunctionSummary::TypeIdInfo TypeIdInfo;
   std::vector<FunctionSummary::ParamAccess> ParamAccesses;
-  std::vector<ValueInfo> Refs;
+  SmallVector<ValueInfo, 0> Refs;
   std::vector<CallsiteInfo> Callsites;
   std::vector<AllocInfo> Allocs;
   // Default is all-zeros (conservative values).
@@ -9487,7 +9487,7 @@ bool LLParser::parseVariableSummary(std::string Name, GlobalValue::GUID GUID,
                                         /* WriteOnly */ false,
                                         /* Constant */ false,
                                         GlobalObject::VCallVisibilityPublic);
-  std::vector<ValueInfo> Refs;
+  SmallVector<ValueInfo, 0> Refs;
   VTableFuncList VTableFuncs;
   if (parseToken(lltok::colon, "expected ':' here") ||
       parseToken(lltok::lparen, "expected '(' here") ||
@@ -9993,7 +9993,7 @@ bool LLParser::parseOptionalParamAccesses(
 
 /// OptionalRefs
 ///   := 'refs' ':' '(' GVReference [',' GVReference]* ')'
-bool LLParser::parseOptionalRefs(std::vector<ValueInfo> &Refs) {
+bool LLParser::parseOptionalRefs(SmallVectorImpl<ValueInfo> &Refs) {
   assert(Lex.getKind() == lltok::kw_refs);
   Lex.Lex();
 
