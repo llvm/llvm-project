@@ -208,26 +208,21 @@ Status ProcessMinidump::DoLoadCore() {
   GetTarget().SetArchitecture(arch, true /*set_platform*/);
 
   m_thread_list = m_minidump_parser->GetThreads();
-  std::optional<std::vector<const minidump::ExceptionStream *>>
-      exception_streams = m_minidump_parser->GetExceptionStreams();
+  auto exception_stream_it = m_minidump_parser->GetExceptionStreams();
+  for (auto exception_stream : exception_stream_it) {
+    // If we can't read an exception stream skip it
+    // We should probably serve a warning
+    if (!exception_stream)
+      continue;
 
-  if (exception_streams) {
-    for (const auto *exception_stream : *exception_streams) {
-      if (!exception_stream) {
-        error.SetErrorString(
-            "Minidump returned null pointer for exception stream");
-        return error;
-      }
-      if (!m_exceptions_by_tid
-               .try_emplace(exception_stream->ThreadId, exception_stream)
-               .second) {
-        // We only cast to avoid the warning around converting little endian in
-        // printf.
-        error.SetErrorStringWithFormat(
-            "Duplicate exception stream for tid %" PRIu32,
-            (uint32_t)exception_stream->ThreadId);
-        return error;
-      }
+    if (!m_exceptions_by_tid
+              .try_emplace(exception_stream->ThreadId, exception_stream.get())
+              .second) {
+      // We only cast to avoid the warning around converting little endian in
+      // printf.
+      return Status::FromErrorStringWithFormat(
+          "Duplicate exception stream for tid %" PRIu32,
+          (uint32_t)exception_stream->ThreadId);
     }
   }
 
@@ -254,7 +249,7 @@ void ProcessMinidump::RefreshStateAfterStop() {
 
   for (const auto &[_, exception_stream] : m_exceptions_by_tid) {
     constexpr uint32_t BreakpadDumpRequested = 0xFFFFFFFF;
-    if (exception_stream->ExceptionRecord.ExceptionCode ==
+    if (exception_stream.ExceptionRecord.ExceptionCode ==
         BreakpadDumpRequested) {
       // This "ExceptionCode" value is a sentinel that is sometimes used
       // when generating a dump for a process that hasn't crashed.
@@ -271,12 +266,12 @@ void ProcessMinidump::RefreshStateAfterStop() {
     lldb::StopInfoSP stop_info;
     lldb::ThreadSP stop_thread;
 
-    Process::m_thread_list.SetSelectedThreadByID(exception_stream->ThreadId);
+    Process::m_thread_list.SetSelectedThreadByID(exception_stream.ThreadId);
     stop_thread = Process::m_thread_list.GetSelectedThread();
     ArchSpec arch = GetArchitecture();
 
     if (arch.GetTriple().getOS() == llvm::Triple::Linux) {
-      uint32_t signo = exception_stream->ExceptionRecord.ExceptionCode;
+      uint32_t signo = exception_stream.ExceptionRecord.ExceptionCode;
       if (signo == 0) {
         // No stop.
         return;
@@ -285,18 +280,18 @@ void ProcessMinidump::RefreshStateAfterStop() {
       stop_info = StopInfo::CreateStopReasonWithSignal(*stop_thread, signo);
     } else if (arch.GetTriple().getVendor() == llvm::Triple::Apple) {
       stop_info = StopInfoMachException::CreateStopReasonWithMachException(
-          *stop_thread, exception_stream->ExceptionRecord.ExceptionCode, 2,
-          exception_stream->ExceptionRecord.ExceptionFlags,
-          exception_stream->ExceptionRecord.ExceptionAddress, 0);
+          *stop_thread, exception_stream.ExceptionRecord.ExceptionCode, 2,
+          exception_stream.ExceptionRecord.ExceptionFlags,
+          exception_stream.ExceptionRecord.ExceptionAddress, 0);
     } else {
       std::string desc;
       llvm::raw_string_ostream desc_stream(desc);
       desc_stream << "Exception "
                   << llvm::format_hex(
-                         exception_stream->ExceptionRecord.ExceptionCode, 8)
+                         exception_stream.ExceptionRecord.ExceptionCode, 8)
                   << " encountered at address "
                   << llvm::format_hex(
-                         exception_stream->ExceptionRecord.ExceptionAddress, 8);
+                         exception_stream.ExceptionRecord.ExceptionAddress, 8);
       stop_info = StopInfo::CreateStopReasonWithException(
           *stop_thread, desc_stream.str().c_str());
     }
@@ -405,7 +400,7 @@ bool ProcessMinidump::DoUpdateThreadList(ThreadList &old_thread_list,
 
     // If the minidump contains an exception context, use it
     if (m_exceptions_by_tid.count(thread.ThreadId) > 0)
-      context_location = m_exceptions_by_tid[thread.ThreadId]->ThreadContext;
+      context_location = m_exceptions_by_tid[thread.ThreadId].ThreadContext;
 
     llvm::ArrayRef<uint8_t> context;
     if (!m_is_wow64)
