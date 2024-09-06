@@ -9929,9 +9929,9 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     return SDValue(NewMI, 0);
   }
   case Intrinsic::amdgcn_s_prefetch_data: {
-    // For non-global address space preserve the chain and remove the call.
     if (!AMDGPU::isFlatGlobalAddrSpace(cast<MemSDNode>(Op)->getAddressSpace()))
-      return Op.getOperand(0);
+      report_fatal_error("s_prefetch_data only supports global or constant"
+                         " memory");
     return Op;
   }
   default: {
