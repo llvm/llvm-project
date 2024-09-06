@@ -246,9 +246,6 @@ def : GCNPat <(f32 (fptrunc_round f64:$src0, (i32 SupportedRoundMode:$round))),
 let Defs = [SCC], isConvergent = 1 in {
 def V_SET_INACTIVE_B32 : VPseudoInstSI <(outs VGPR_32:$vdst),
   (ins VSrc_b32: $src, VSrc_b32:$inactive), []>;
-
-def V_SET_INACTIVE_B64 : VPseudoInstSI <(outs VReg_64:$vdst),
-  (ins VSrc_b64: $src, VSrc_b64:$inactive), []>;
 } // End Defs = [SCC]
 
 foreach vt = Reg32Types.types in {
@@ -256,16 +253,8 @@ def : GCNPat <(vt (int_amdgcn_set_inactive vt:$src, vt:$inactive)),
      (V_SET_INACTIVE_B32 VSrc_b32:$src, VSrc_b32:$inactive)>;
 }
 
-foreach vt = Reg64Types.types in {
-def : GCNPat <(vt (int_amdgcn_set_inactive vt:$src, vt:$inactive)),
-     (V_SET_INACTIVE_B64 VSrc_b64:$src, VSrc_b64:$inactive)>;
-}
-
 def : GCNPat<(i32 (int_amdgcn_set_inactive_chain_arg i32:$src, i32:$inactive)),
     (V_SET_INACTIVE_B32 VGPR_32:$src, VGPR_32:$inactive)>;
-
-def : GCNPat<(i64 (int_amdgcn_set_inactive_chain_arg i64:$src, i64:$inactive)),
-    (V_SET_INACTIVE_B64 VReg_64:$src, VReg_64:$inactive)>;
 
 let usesCustomInserter = 1, hasSideEffects = 0, mayLoad = 0, mayStore = 0, Uses = [EXEC] in {
   def WAVE_REDUCE_UMIN_PSEUDO_U32 : VPseudoInstSI <(outs SGPR_32:$sdst),
