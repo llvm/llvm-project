@@ -3,8 +3,8 @@
 ///
 /// If the user takes control of header or library search, the respective
 /// existence check is skipped. User control of header search is assumed if
-/// `-isysroot`, `-nostdinc` or `-nostdlibinc` is supplied. User control of
-/// library search is assumed if `--sysroot` is supplied.
+/// `--sysroot`, `-isysroot`, `-nostdinc` or `-nostdlibinc` is supplied. User
+/// control of library search is assumed if `--sysroot` is supplied.
 ///
 /// The default sysroot for both headers and libraries is taken from the
 /// SCE_ORBIS_SDK_DIR environment variable.
@@ -41,17 +41,24 @@
 // RUN: env SCE_ORBIS_SDK_DIR=.. %clang @%t.rsp %s -c -nostdinc 2>&1 | FileCheck -check-prefix=NO-WARN %s
 // RUN: env SCE_ORBIS_SDK_DIR=.. %clang @%t.rsp %s -c -nostdlibinc 2>&1 | FileCheck -check-prefix=NO-WARN %s
 // RUN: env SCE_ORBIS_SDK_DIR=.. %clang @%t.rsp %s -c -isysroot . 2>&1 | FileCheck -check-prefixes=NO-WARN %s
+// RUN: env SCE_ORBIS_SDK_DIR=.. %clang @%t.rsp %s -c --sysroot=. 2>&1 | FileCheck -check-prefixes=NO-WARN %s
 
-/// --sysroot disables the existence check for libraries.
-// RUN: touch %t.o
-// RUN: env SCE_ORBIS_SDK_DIR=.. %clang @%t.rsp %s --sysroot=. 2>&1 | FileCheck -check-prefixes=WARN-SYS-HEADERS,NO-WARN %s
+/// --sysroot disables the existence check for libraries and headers.
+// RUN: env SCE_ORBIS_SDK_DIR=.. %clang @%t.rsp %s --sysroot=. 2>&1 | FileCheck -check-prefix=NO-WARN %s
 
-/// Warnings are emitted if non-existent -isysroot/--sysroot are supplied.
-// RUN: env SCE_ORBIS_SDK_DIR=.. %clang @%t.rsp %s -isysroot foo --sysroot=bar 2>&1 | FileCheck -check-prefixes=WARN-SYSROOT,WARN-SYSROOT2,NO-WARN %s
+/// -isysroot overrides --sysroot for header search, but not library search.
+// RUN: env SCE_ORBIS_SDK_DIR=.. %clang @%t.rsp %s -isysroot . --sysroot=.. 2>&1 | FileCheck -check-prefixes=ISYSTEM,NO-WARN %s
+// RUN: env SCE_ORBIS_SDK_DIR=.. %clang @%t.rsp %s --sysroot=.. -isysroot . 2>&1 | FileCheck -check-prefixes=ISYSTEM,NO-WARN %s
+
+/// Warnings are emitted if non-existent --sysroot/-isysroot are supplied.
+// RUN: env SCE_ORBIS_SDK_DIR=.. %clang @%t.rsp %s --sysroot=foo -isysroot . 2>&1 | FileCheck -check-prefixes=WARN-SYSROOT,NO-WARN %s
+// RUN: env SCE_ORBIS_SDK_DIR=.. %clang @%t.rsp %s -isysroot foo --sysroot=. 2>&1 | FileCheck -check-prefixes=WARN-SYSROOT,NO-WARN %s
+// RUN: env SCE_ORBIS_SDK_DIR=.. %clang @%t.rsp %s --sysroot=foo -isysroot bar 2>&1 | FileCheck -check-prefixes=WARN-SYSROOT,WARN-SYSROOT2,NO-WARN %s
 
 // NO-WARN-NOT: {{warning:|error:}}
+// WARN-SYS-LIBS: warning: unable to find PS4 system libraries directory
 // WARN-SYS-HEADERS: warning: unable to find PS4 system headers directory
 // WARN-SYSROOT: warning: no such sysroot directory: 'foo'
 // WARN-SYSROOT2: warning: no such sysroot directory: 'bar'
-// WARN-SYS-LIBS: warning: unable to find PS4 system libraries directory
 // NO-WARN-NOT: {{warning:|error:}}
+// ISYSTEM: "-cc1"{{.*}}"-internal-externc-isystem" "./target/include"

@@ -335,17 +335,29 @@ toolchains::PS4PS5Base::PS4PS5Base(const Driver &D, const llvm::Triple &Triple,
     Whence = "compiler's location";
   }
 
-  auto OverrideRoot = [&](const options::ID &Opt, std::string &Root) {
+  // Allow --sysroot= to override the root directory for header and library
+  // search, and -sysroot to override header search. If both are specified,
+  // -isysroot overrides --sysroot for header search.
+  auto OverrideRoot = [&](const options::ID &Opt, std::string &Root,
+                          StringRef Default) {
     if (const Arg *A = Args.getLastArg(Opt)) {
       Root = A->getValue();
       if (!llvm::sys::fs::exists(Root))
         D.Diag(clang::diag::warn_missing_sysroot) << Root;
       return true;
     }
-    Root = SDKRootDir.str();
+    Root = Default.str();
     return false;
   };
 
+  bool CustomSysroot =
+      OverrideRoot(options::OPT__sysroot_EQ, SDKLibraryRootDir, SDKRootDir);
+  bool CustomISysroot =
+      OverrideRoot(options::OPT_isysroot, SDKHeaderRootDir, SDKLibraryRootDir);
+
+  // Emit warnings if parts of the SDK are missing, unless the user has taken
+  // control of header or library search. If we're not linking, don't check
+  // for missing libraries.
   auto CheckSDKPartExists = [&](StringRef Dir, StringRef Desc) {
     if (llvm::sys::fs::exists(Dir))
       return true;
@@ -354,25 +366,19 @@ toolchains::PS4PS5Base::PS4PS5Base(const Driver &D, const llvm::Triple &Triple,
     return false;
   };
 
-  // Allow -isysroot to override the root directory for header search, which
-  // we interpret as the user taking the reins and removing our obligation to
-  // check for the existence of SDK headers.
-  if (!OverrideRoot(options::OPT_isysroot, SDKHeaderRootDir) &&
-      !Args.hasArg(options::OPT_nostdinc, options::OPT_nostdlibinc)) {
-    SmallString<128> Dir(SDKHeaderRootDir);
-    llvm::sys::path::append(Dir, "target/include");
-    CheckSDKPartExists(Dir, "system headers");
-  }
-
-  // Similarly, allow --sysroot= to override the root directory for library
-  // search.
   bool Linking = !Args.hasArg(options::OPT_E, options::OPT_c, options::OPT_S,
                               options::OPT_emit_ast);
-  if (!OverrideRoot(options::OPT__sysroot_EQ, SDKLibraryRootDir) && Linking) {
+  if (!CustomSysroot && Linking) {
     SmallString<128> Dir(SDKLibraryRootDir);
     llvm::sys::path::append(Dir, "target/lib");
     if (CheckSDKPartExists(Dir, "system libraries"))
       getFilePaths().push_back(std::string(Dir));
+  }
+  if (!CustomSysroot && !CustomISysroot &&
+      !Args.hasArg(options::OPT_nostdinc, options::OPT_nostdlibinc)) {
+    SmallString<128> Dir(SDKHeaderRootDir);
+    llvm::sys::path::append(Dir, "target/include");
+    CheckSDKPartExists(Dir, "system headers");
   }
 }
 
