@@ -29,7 +29,18 @@ PreservedAnalyses SandboxVectorizerPass::run(Function &F,
 }
 
 bool SandboxVectorizerPass::runImpl(Function &F) {
+  // If the target claims to have no vector registers early return.
+  if (!TTI->getNumberOfRegisters(TTI->getRegisterClassForType(true))) {
+    LLVM_DEBUG(dbgs() << "SBVec: Target has no vector registers, return.\n");
+    return false;
+  }
   LLVM_DEBUG(dbgs() << "SBVec: Analyzing " << F.getName() << ".\n");
+  // Early return if the attribute NoImplicitFloat is used.
+  if (F.hasFnAttribute(Attribute::NoImplicitFloat)) {
+    LLVM_DEBUG(dbgs() << "SBVec: NoImplicitFloat attribute, return.\n");
+    return false;
+  }
+
   sandboxir::Context Ctx(F.getContext());
   // Create SandboxIR for `F`.
   sandboxir::Function &SBF = *Ctx.createFunction(&F);
