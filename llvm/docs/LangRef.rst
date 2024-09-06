@@ -8074,7 +8074,7 @@ Example:
     %alloca.cast = addrspacecast ptr addrspace(5) %alloca to ptr
     %rmw.ub = atomicrmw and ptr %alloca.cast, i64 %value seq_cst, !noalias.addrspace !0
 
-    !0 = !{i32 5, i32 6}
+    !0 = !{i32 5, i32 6} ; Exclude addrspace(5) only
 
 
 This is intended for use on targets with a notion of generic address
