@@ -51,7 +51,7 @@ public:
   bool PerformNeonImmChecks(
       CallExpr *TheCall,
       SmallVectorImpl<std::tuple<int, int, int, int>> &ImmChecks,
-      int OverloadType);
+      int OverloadType = -1);
   bool
   PerformSVEImmChecks(CallExpr *TheCall,
                       SmallVectorImpl<std::tuple<int, int, int>> &ImmChecks);

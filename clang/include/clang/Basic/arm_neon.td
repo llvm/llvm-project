@@ -424,17 +424,17 @@ def VQSHLU_N   : SInst<"vqshlu_n", "U.I", "csilQcQsQiQl",
 // is that of the return type (half as wide as the argument in this case), using
 // ImmCheckShiftRightNarrow would return in an upper bound of (sizeinbits(arg)/2)/2.
 // ImmCheckShiftRight produces the correct behavior here.
-def VSHRN_N    : IInst<"vshrn_n", "<QI", "silUsUiUl", 
+def VSHRN_N    : IInst<"vshrn_n", "<QI", "silUsUiUl",
                       [ImmCheck<1, ImmCheckShiftRight>]>;
-def VQSHRUN_N  : SInst<"vqshrun_n", "(<U)QI", "sil", 
+def VQSHRUN_N  : SInst<"vqshrun_n", "(<U)QI", "sil",
                       [ImmCheck<1, ImmCheckShiftRight>]>;
-def VQRSHRUN_N : SInst<"vqrshrun_n", "(<U)QI", "sil", 
+def VQRSHRUN_N : SInst<"vqrshrun_n", "(<U)QI", "sil",
                       [ImmCheck<1, ImmCheckShiftRight>]>;
-def VQSHRN_N   : SInst<"vqshrn_n", "<QI", "silUsUiUl", 
+def VQSHRN_N   : SInst<"vqshrn_n", "<QI", "silUsUiUl",
                       [ImmCheck<1, ImmCheckShiftRight>]>;
-def VRSHRN_N   : IInst<"vrshrn_n", "<QI", "silUsUiUl", 
+def VRSHRN_N   : IInst<"vrshrn_n", "<QI", "silUsUiUl",
                       [ImmCheck<1, ImmCheckShiftRight>]>;
-def VQRSHRN_N  : SInst<"vqrshrn_n", "<QI", "silUsUiUl", 
+def VQRSHRN_N  : SInst<"vqrshrn_n", "<QI", "silUsUiUl",
                       [ImmCheck<1, ImmCheckShiftRight>]>;
 
 // Widening left-shifts should have a range of 0..(sizeinbits(arg)-1).
@@ -466,7 +466,7 @@ def VLD1_X3   : WInst<"vld1_x3", "3(c*!)",
 def VLD1_X4   : WInst<"vld1_x4", "4(c*!)",
                       "cfilsUcUiUlUsQcQfQiQlQsQUcQUiQUlQUsPcPsQPcQPs">;
 def VLD1_LANE : WInst<"vld1_lane", ".(c*!).I",
-                      "QUcQUsQUiQUlQcQsQiQlQfQPcQPsUcUsUiUlcsilfPcPs", 
+                      "QUcQUsQUiQUlQcQsQiQlQfQPcQPsUcUsUiUlcsilfPcPs",
                       [ImmCheck<2, ImmCheckLaneIndex, 1>]>;
 def VLD1_DUP  : WInst<"vld1_dup", ".(c*!)",
                       "QUcQUsQUiQUlQcQsQiQlQfQPcQPsUcUsUiUlcsilfPcPs">;
@@ -479,7 +479,7 @@ def VST1_X3   : WInst<"vst1_x3", "v*(3!)",
 def VST1_X4   : WInst<"vst1_x4", "v*(4!)",
                       "cfilsUcUiUlUsQcQfQiQlQsQUcQUiQUlQUsPcPsQPcQPs">;
 def VST1_LANE : WInst<"vst1_lane", "v*(.!)I",
-                      "QUcQUsQUiQUlQcQsQiQlQfQPcQPsUcUsUiUlcsilfPcPs", 
+                      "QUcQUsQUiQUlQcQsQiQlQfQPcQPsUcUsUiUlcsilfPcPs",
                       [ImmCheck<2, ImmCheckLaneIndex, 1>]>;
 
 let ArchGuard = "(__ARM_FP & 2)" in {
@@ -487,14 +487,14 @@ def VLD1_F16      : WInst<"vld1", ".(c*!)", "hQh">;
 def VLD1_X2_F16   : WInst<"vld1_x2", "2(c*!)", "hQh">;
 def VLD1_X3_F16   : WInst<"vld1_x3", "3(c*!)", "hQh">;
 def VLD1_X4_F16   : WInst<"vld1_x4", "4(c*!)", "hQh">;
-def VLD1_LANE_F16 : WInst<"vld1_lane", ".(c*!).I", "hQh", 
+def VLD1_LANE_F16 : WInst<"vld1_lane", ".(c*!).I", "hQh",
                           [ImmCheck<2, ImmCheckLaneIndex, 1>]>;
 def VLD1_DUP_F16  : WInst<"vld1_dup", ".(c*!)", "hQh">;
 def VST1_F16      : WInst<"vst1", "v*(.!)", "hQh">;
 def VST1_X2_F16   : WInst<"vst1_x2", "v*(2!)", "hQh">;
 def VST1_X3_F16   : WInst<"vst1_x3", "v*(3!)", "hQh">;
 def VST1_X4_F16   : WInst<"vst1_x4", "v*(4!)", "hQh">;
-def VST1_LANE_F16 : WInst<"vst1_lane", "v*(.!)I", "hQh", 
+def VST1_LANE_F16 : WInst<"vst1_lane", "v*(.!)I", "hQh",
                           [ImmCheck<2, ImmCheckLaneIndex, 1>]>;
 }
 
@@ -509,20 +509,20 @@ def VLD3_DUP  : WInst<"vld3_dup", "3(c*!)",
                       "UcUsUiUlcsilfPcPsQcQfQiQlQsQPcQPsQUcQUiQUlQUs">;
 def VLD4_DUP  : WInst<"vld4_dup", "4(c*!)",
                       "UcUsUiUlcsilfPcPsQcQfQiQlQsQPcQPsQUcQUiQUlQUs">;
-def VLD2_LANE : WInst<"vld2_lane", "2(c*!)2I", "QUsQUiQsQiQfQPsUcUsUicsifPcPs", 
+def VLD2_LANE : WInst<"vld2_lane", "2(c*!)2I", "QUsQUiQsQiQfQPsUcUsUicsifPcPs",
                       [ImmCheck<4, ImmCheckLaneIndex, 1>]>;
-def VLD3_LANE : WInst<"vld3_lane", "3(c*!)3I", "QUsQUiQsQiQfQPsUcUsUicsifPcPs", 
+def VLD3_LANE : WInst<"vld3_lane", "3(c*!)3I", "QUsQUiQsQiQfQPsUcUsUicsifPcPs",
                       [ImmCheck<5, ImmCheckLaneIndex, 1>]>;
-def VLD4_LANE : WInst<"vld4_lane", "4(c*!)4I", "QUsQUiQsQiQfQPsUcUsUicsifPcPs", 
+def VLD4_LANE : WInst<"vld4_lane", "4(c*!)4I", "QUsQUiQsQiQfQPsUcUsUicsifPcPs",
                       [ImmCheck<6, ImmCheckLaneIndex, 1>]>;
 def VST2 : WInst<"vst2", "v*(2!)", "QUcQUsQUiQcQsQiQfQPcQPsUcUsUiUlcsilfPcPs">;
 def VST3 : WInst<"vst3", "v*(3!)", "QUcQUsQUiQcQsQiQfQPcQPsUcUsUiUlcsilfPcPs">;
 def VST4 : WInst<"vst4", "v*(4!)", "QUcQUsQUiQcQsQiQfQPcQPsUcUsUiUlcsilfPcPs">;
-def VST2_LANE : WInst<"vst2_lane", "v*(2!)I", "QUsQUiQsQiQfQPsUcUsUicsifPcPs", 
+def VST2_LANE : WInst<"vst2_lane", "v*(2!)I", "QUsQUiQsQiQfQPsUcUsUicsifPcPs",
                       [ImmCheck<3, ImmCheckLaneIndex, 1>]>;
-def VST3_LANE : WInst<"vst3_lane", "v*(3!)I", "QUsQUiQsQiQfQPsUcUsUicsifPcPs", 
+def VST3_LANE : WInst<"vst3_lane", "v*(3!)I", "QUsQUiQsQiQfQPsUcUsUicsifPcPs",
                       [ImmCheck<4, ImmCheckLaneIndex, 1>]>;
-def VST4_LANE : WInst<"vst4_lane", "v*(4!)I", "QUsQUiQsQiQfQPsUcUsUicsifPcPs", 
+def VST4_LANE : WInst<"vst4_lane", "v*(4!)I", "QUsQUiQsQiQfQPsUcUsUicsifPcPs",
                       [ImmCheck<5, ImmCheckLaneIndex, 1>]>;
 let ArchGuard = "(__ARM_FP & 2)" in {
 def VLD2_F16      : WInst<"vld2", "2(c*!)", "hQh">;
@@ -531,20 +531,20 @@ def VLD4_F16      : WInst<"vld4", "4(c*!)", "hQh">;
 def VLD2_DUP_F16  : WInst<"vld2_dup", "2(c*!)", "hQh">;
 def VLD3_DUP_F16  : WInst<"vld3_dup", "3(c*!)", "hQh">;
 def VLD4_DUP_F16  : WInst<"vld4_dup", "4(c*!)", "hQh">;
-def VLD2_LANE_F16 : WInst<"vld2_lane", "2(c*!)2I", "hQh", 
+def VLD2_LANE_F16 : WInst<"vld2_lane", "2(c*!)2I", "hQh",
                           [ImmCheck<4, ImmCheckLaneIndex, 1>]>;
-def VLD3_LANE_F16 : WInst<"vld3_lane", "3(c*!)3I", "hQh", 
+def VLD3_LANE_F16 : WInst<"vld3_lane", "3(c*!)3I", "hQh",
                           [ImmCheck<5, ImmCheckLaneIndex, 1>]>;
-def VLD4_LANE_F16 : WInst<"vld4_lane", "4(c*!)4I", "hQh", 
+def VLD4_LANE_F16 : WInst<"vld4_lane", "4(c*!)4I", "hQh",
                           [ImmCheck<6, ImmCheckLaneIndex, 1>]>;
 def VST2_F16      : WInst<"vst2", "v*(2!)", "hQh">;
 def VST3_F16      : WInst<"vst3", "v*(3!)", "hQh">;
 def VST4_F16      : WInst<"vst4", "v*(4!)", "hQh">;
-def VST2_LANE_F16 : WInst<"vst2_lane", "v*(2!)I", "hQh", 
+def VST2_LANE_F16 : WInst<"vst2_lane", "v*(2!)I", "hQh",
                           [ImmCheck<3, ImmCheckLaneIndex, 1>]>;
-def VST3_LANE_F16 : WInst<"vst3_lane", "v*(3!)I", "hQh", 
+def VST3_LANE_F16 : WInst<"vst3_lane", "v*(3!)I", "hQh",
                          [ImmCheck<4, ImmCheckLaneIndex, 1>]>;
-def VST4_LANE_F16 : WInst<"vst4_lane", "v*(4!)I", "hQh", 
+def VST4_LANE_F16 : WInst<"vst4_lane", "v*(4!)I", "hQh",
                           [ImmCheck<5, ImmCheckLaneIndex, 1>]>;
 }
 
@@ -613,7 +613,7 @@ def VCVT_N_S32   : SInst<"vcvt_n_s32", "S.I", "fQf",
                         [ImmCheck<1, ImmCheck1_32>]>;
 def VCVT_N_U32   : SInst<"vcvt_n_u32", "U.I", "fQf",
                         [ImmCheck<1, ImmCheck1_32>]>;
-def VCVT_N_F32   : SInst<"vcvt_n_f32", "F(.!)I", "iUiQiQUi", 
+def VCVT_N_F32   : SInst<"vcvt_n_f32", "F(.!)I", "iUiQiQUi",
                         [ImmCheck<1, ImmCheck1_32>]>;
 
 def VMOVN        : IInst<"vmovn", "<Q",  "silUsUiUl">;
@@ -661,9 +661,9 @@ def VQDMULH_LANE  : SOpInst<"vqdmulh_lane", "..qI", "siQsQi", OP_QDMULH_LN>;
 def VQRDMULH_LANE : SOpInst<"vqrdmulh_lane", "..qI", "siQsQi", OP_QRDMULH_LN>;
 }
 let ArchGuard = "defined(__aarch64__) || defined(__arm64ec__)" in {
-def A64_VQDMULH_LANE  : SInst<"vqdmulh_lane", "..(!q)I", "siQsQi", 
+def A64_VQDMULH_LANE  : SInst<"vqdmulh_lane", "..(!q)I", "siQsQi",
                               [ImmCheck<2, ImmCheckLaneIndex, 1>]>;
-def A64_VQRDMULH_LANE : SInst<"vqrdmulh_lane", "..(!q)I", "siQsQi", 
+def A64_VQRDMULH_LANE : SInst<"vqrdmulh_lane", "..(!q)I", "siQsQi",
                               [ImmCheck<2, ImmCheckLaneIndex, 1>]>;
 }
 
@@ -985,7 +985,7 @@ def QRSHRN_HIGH_N  : SOpInst<"vqrshrn_high_n", "<(<q).I",
 // Converting vectors
 def VMOVL_HIGH   : SOpInst<"vmovl_high", ">.", "HcHsHiHUcHUsHUi", OP_MOVL_HI>;
 
-def CVTF_N_F64   : SInst<"vcvt_n_f64", "F(.!)I", "lUlQlQUl", 
+def CVTF_N_F64   : SInst<"vcvt_n_f64", "F(.!)I", "lUlQlQUl",
                         [ImmCheck<1, ImmCheck1_64>]>;
 def FCVTZS_N_S64 : SInst<"vcvt_n_s64", "S.I", "dQd",
                         [ImmCheck<1, ImmCheck1_64>]>;
@@ -1065,9 +1065,9 @@ def VMLA_LANEQ   : IOpInst<"vmla_laneq", "...QI",
                            "siUsUifQsQiQUsQUiQf", OP_MLA_LN>;
 def VMLS_LANEQ   : IOpInst<"vmls_laneq", "...QI",
                            "siUsUifQsQiQUsQUiQf", OP_MLS_LN>;
-def VFMA_LANE    : IInst<"vfma_lane", "...qI", "fdQfQd", 
+def VFMA_LANE    : IInst<"vfma_lane", "...qI", "fdQfQd",
                         [ImmCheck<3, ImmCheckLaneIndex, 2>]>;
-def VFMA_LANEQ   : IInst<"vfma_laneq", "...QI", "fdQfQd", 
+def VFMA_LANEQ   : IInst<"vfma_laneq", "...QI", "fdQfQd",
                         [ImmCheck<3, ImmCheckLaneIndex, 2>]>;
 def VFMS_LANE    : IOpInst<"vfms_lane", "...qI", "fdQfQd", OP_FMS_LN>;
 def VFMS_LANEQ   : IOpInst<"vfms_laneq", "...QI", "fdQfQd", OP_FMS_LNQ>;
@@ -1136,7 +1136,7 @@ def FMINNMV : SInst<"vminnmv", "1.", "fQfQd">;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Newly added Vector Extract for f64
-def VEXT_A64 : WInst<"vext", "...I", "dQdPlQPl", 
+def VEXT_A64 : WInst<"vext", "...I", "dQdPlQPl",
                     [ImmCheck<2, ImmCheckLaneIndex, 0>]>;
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1732,11 +1732,11 @@ let TargetGuard = "fullfp16,neon" in {
     def VCLTH      : SOpInst<"vclt", "U..", "hQh", OP_LT>;
 
   // Vector conversion
-    def VCVT_N_F16 : SInst<"vcvt_n_f16", "F(.!)I", "sUsQsQUs", 
+    def VCVT_N_F16 : SInst<"vcvt_n_f16", "F(.!)I", "sUsQsQUs",
                           [ImmCheck<1, ImmCheck1_16>]>;
-    def VCVT_N_S16 : SInst<"vcvt_n_s16", "S.I", "hQh", 
+    def VCVT_N_S16 : SInst<"vcvt_n_s16", "S.I", "hQh",
                           [ImmCheck<1, ImmCheck1_16>]>;
-    def VCVT_N_U16 : SInst<"vcvt_n_u16", "U.I", "hQh", 
+    def VCVT_N_U16 : SInst<"vcvt_n_u16", "U.I", "hQh",
                           [ImmCheck<1, ImmCheck1_16>]>;
 
   // Max/Min
@@ -1867,9 +1867,9 @@ let ArchGuard = "defined(__aarch64__) || defined(__arm64ec__)" in {
   def VZIP2H     : SOpInst<"vzip2", "...", "hQh", OP_ZIP2>;
   def VUZP2H     : SOpInst<"vuzp2", "...", "hQh", OP_UZP2>;
 
-  def SCALAR_VDUP_LANEH  : IInst<"vdup_lane", "1.I", "Sh", 
+  def SCALAR_VDUP_LANEH  : IInst<"vdup_lane", "1.I", "Sh",
                                 [ImmCheck<1, ImmCheckLaneIndex, 0>]>;
-  def SCALAR_VDUP_LANEQH : IInst<"vdup_laneq", "1QI", "Sh", 
+  def SCALAR_VDUP_LANEQH : IInst<"vdup_laneq", "1QI", "Sh",
                                 [ImmCheck<1, ImmCheckLaneIndex, 0>]>;
 }
 

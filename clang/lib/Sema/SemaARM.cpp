@@ -514,7 +514,7 @@ bool SemaARM::CheckImmediateArg(CallExpr *TheCall, unsigned CheckTy,
 bool SemaARM::PerformNeonImmChecks(
     CallExpr *TheCall,
     SmallVectorImpl<std::tuple<int, int, int, int>> &ImmChecks,
-    int OverloadType = -1) {
+    int OverloadType) {
   bool HasError = false;
 
   for (const auto &I : ImmChecks) {
