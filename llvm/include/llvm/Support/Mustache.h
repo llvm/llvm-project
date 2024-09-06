@@ -27,23 +27,21 @@
 // - Dynamic Names
 //
 // Usage:
-// - Creating a simple template and rendering it:
 // \code
+//   // Creating a simple template and rendering it
 //   auto Template = Template::createTemplate("Hello, {{name}}!");
 //   Value Data = {{"name", "World"}};
 //   StringRef Rendered = Template.render(Data);
 //   // Rendered == "Hello, World!"
-// \endcode
-// - Creating a template with a partial and rendering it:
-// \code
+//
+//   // Creating a template with a partial and rendering it
 //   auto Template = Template::createTemplate("{{>partial}}");
 //   Template.registerPartial("partial", "Hello, {{name}}!");
 //   Value Data = {{"name", "World"}};
 //   StringRef Rendered = Template.render(Data);
 //   // Rendered == "Hello, World!"
-// \endcode
-// - Creating a template with a lambda and rendering it:
-// \code
+//
+//   // Creating a template with a lambda and rendering it
 //   auto Template = Template::createTemplate("{{#lambda}}Hello,
 //                                             {{name}}!{{/lambda}}");
 //   Template.registerLambda("lambda", []() { return true; });
