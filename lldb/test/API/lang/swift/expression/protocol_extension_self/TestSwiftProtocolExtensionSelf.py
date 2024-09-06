@@ -14,4 +14,4 @@ class TestSwiftProtocolExtensionSelf(TestBase):
                                           lldb.SBFileSpec('main.swift'))
         # This should work without dynamic types. For discussion, see:
         # https://github.com/apple/llvm-project/pull/2382
-        self.expect("e -d no-run -- f", substrs=[' = 12345'])
+        self.expect("expr -d no-run -- f", substrs=[' = 12345'])

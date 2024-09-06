@@ -65,9 +65,9 @@ class TestLibraryIndirect(TestBase):
             "(SomeLibrary.ContainsTwoInts) container = {\n  wrapped = 0x",
             "\n    value = (first = 2, second = 3)\n  }\n  other = 10\n}",
             "(Int) simple = 1"])
-        self.expect("e container", substrs=["(SomeLibrary.ContainsTwoInts)", "other = 10"])
-        self.expect("e container.wrapped", substrs=["(SomeLibrary.BoxedTwoInts)", "0x", "value = (first = 2, second = 3)"])
-        self.expect("e container.wrapped.value", substrs=["(SomeLibraryCore.TwoInts)", "(first = 2, second = 3)"])
+        self.expect("expr container", substrs=["(SomeLibrary.ContainsTwoInts)", "other = 10"])
+        self.expect("expr container.wrapped", substrs=["(SomeLibrary.BoxedTwoInts)", "0x", "value = (first = 2, second = 3)"])
+        self.expect("expr container.wrapped.value", substrs=["(SomeLibraryCore.TwoInts)", "(first = 2, second = 3)"])
 
     @swiftTest
     def test_implementation_only_import_library_no_library_module(self):
@@ -102,6 +102,6 @@ class TestLibraryIndirect(TestBase):
             "wrapped = 0x",
             "other = 10",
             "(Int) simple = 1"])
-        self.expect("e container", substrs=["(SomeLibrary.ContainsTwoInts)", "wrapped = 0x", "other = 10"])
-        self.expect("e container.wrapped", substrs=["(SomeLibrary.BoxedTwoInts)", "value = (first = 2, second = 3)"])
-        self.expect("e container.wrapped.value", error=True, substrs=["value of type 'BoxedTwoInts' has no member 'value'"])
+        self.expect("expr container", substrs=["(SomeLibrary.ContainsTwoInts)", "wrapped = 0x", "other = 10"])
+        self.expect("expr container.wrapped", substrs=["(SomeLibrary.BoxedTwoInts)", "value = (first = 2, second = 3)"])
+        self.expect("expr container.wrapped.value", error=True, substrs=["value of type 'BoxedTwoInts' has no member 'value'"])
