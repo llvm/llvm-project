@@ -87,6 +87,10 @@ template <typename... Ts> void g(Ts... p1s) {
   };
 }
 
+template <typename... Ts> void g2(Ts... p1s) {
+  (void)[&](auto... p2s) { [&] { p1s; p2s; }; }; // expected-error {{unexpanded parameter pack 'p2s'}}
+}
+
 void f1() { g(); }
 
 } // namespace GH61460
