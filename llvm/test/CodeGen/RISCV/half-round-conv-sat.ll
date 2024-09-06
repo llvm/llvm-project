@@ -28,8 +28,8 @@ define signext i32 @test_floor_si32(half %x) {
 ;
 ; CHECKIZHINX-LABEL: test_floor_si32:
 ; CHECKIZHINX:       # %bb.0:
-; CHECKIZHINX-NEXT:    lui a1, %hi(.LCPI0_0)
-; CHECKIZHINX-NEXT:    lh a1, %lo(.LCPI0_0)(a1)
+; CHECKIZHINX-NEXT:    li a1, 25
+; CHECKIZHINX-NEXT:    slli a1, a1, 10
 ; CHECKIZHINX-NEXT:    fabs.h a2, a0
 ; CHECKIZHINX-NEXT:    flt.h a1, a2, a1
 ; CHECKIZHINX-NEXT:    beqz a1, .LBB0_2
@@ -153,8 +153,8 @@ define i64 @test_floor_si64(half %x) nounwind {
 ;
 ; RV32IZHINX-LABEL: test_floor_si64:
 ; RV32IZHINX:       # %bb.0:
-; RV32IZHINX-NEXT:    lui a1, %hi(.LCPI1_0)
-; RV32IZHINX-NEXT:    lh a1, %lo(.LCPI1_0)(a1)
+; RV32IZHINX-NEXT:    li a1, 25
+; RV32IZHINX-NEXT:    slli a1, a1, 10
 ; RV32IZHINX-NEXT:    fabs.h a2, a0
 ; RV32IZHINX-NEXT:    flt.h a1, a2, a1
 ; RV32IZHINX-NEXT:    beqz a1, .LBB1_2
@@ -174,9 +174,9 @@ define i64 @test_floor_si64(half %x) nounwind {
 ; RV32IZHINX-NEXT:    neg s2, s1
 ; RV32IZHINX-NEXT:    mv a0, s0
 ; RV32IZHINX-NEXT:    call __fixsfdi
-; RV32IZHINX-NEXT:    lui a2, %hi(.LCPI1_1)
-; RV32IZHINX-NEXT:    lw a2, %lo(.LCPI1_1)(a2)
 ; RV32IZHINX-NEXT:    and a0, s2, a0
+; RV32IZHINX-NEXT:    lui a2, 389120
+; RV32IZHINX-NEXT:    addi a2, a2, -1
 ; RV32IZHINX-NEXT:    flt.s a4, a2, s0
 ; RV32IZHINX-NEXT:    neg a2, a4
 ; RV32IZHINX-NEXT:    or a0, a2, a0
@@ -203,8 +203,8 @@ define i64 @test_floor_si64(half %x) nounwind {
 ;
 ; RV64IZHINX-LABEL: test_floor_si64:
 ; RV64IZHINX:       # %bb.0:
-; RV64IZHINX-NEXT:    lui a1, %hi(.LCPI1_0)
-; RV64IZHINX-NEXT:    lh a1, %lo(.LCPI1_0)(a1)
+; RV64IZHINX-NEXT:    li a1, 25
+; RV64IZHINX-NEXT:    slli a1, a1, 10
 ; RV64IZHINX-NEXT:    fabs.h a2, a0
 ; RV64IZHINX-NEXT:    flt.h a1, a2, a1
 ; RV64IZHINX-NEXT:    beqz a1, .LBB1_2
@@ -317,9 +317,9 @@ define i64 @test_floor_si64(half %x) nounwind {
 ; RV32IZHINXMIN-NEXT:    neg s2, s1
 ; RV32IZHINXMIN-NEXT:    mv a0, s0
 ; RV32IZHINXMIN-NEXT:    call __fixsfdi
-; RV32IZHINXMIN-NEXT:    lui a2, %hi(.LCPI1_0)
-; RV32IZHINXMIN-NEXT:    lw a2, %lo(.LCPI1_0)(a2)
 ; RV32IZHINXMIN-NEXT:    and a0, s2, a0
+; RV32IZHINXMIN-NEXT:    lui a2, 389120
+; RV32IZHINXMIN-NEXT:    addi a2, a2, -1
 ; RV32IZHINXMIN-NEXT:    flt.s a4, a2, s0
 ; RV32IZHINXMIN-NEXT:    neg a2, a4
 ; RV32IZHINXMIN-NEXT:    or a0, a2, a0
@@ -381,8 +381,8 @@ define signext i32 @test_floor_ui32(half %x) {
 ;
 ; RV32IZHINX-LABEL: test_floor_ui32:
 ; RV32IZHINX:       # %bb.0:
-; RV32IZHINX-NEXT:    lui a1, %hi(.LCPI2_0)
-; RV32IZHINX-NEXT:    lh a1, %lo(.LCPI2_0)(a1)
+; RV32IZHINX-NEXT:    li a1, 25
+; RV32IZHINX-NEXT:    slli a1, a1, 10
 ; RV32IZHINX-NEXT:    fabs.h a2, a0
 ; RV32IZHINX-NEXT:    flt.h a1, a2, a1
 ; RV32IZHINX-NEXT:    beqz a1, .LBB2_2
@@ -400,8 +400,8 @@ define signext i32 @test_floor_ui32(half %x) {
 ;
 ; RV64IZHINX-LABEL: test_floor_ui32:
 ; RV64IZHINX:       # %bb.0:
-; RV64IZHINX-NEXT:    lui a1, %hi(.LCPI2_0)
-; RV64IZHINX-NEXT:    lh a1, %lo(.LCPI2_0)(a1)
+; RV64IZHINX-NEXT:    li a1, 25
+; RV64IZHINX-NEXT:    slli a1, a1, 10
 ; RV64IZHINX-NEXT:    fabs.h a2, a0
 ; RV64IZHINX-NEXT:    flt.h a1, a2, a1
 ; RV64IZHINX-NEXT:    beqz a1, .LBB2_2
@@ -555,8 +555,8 @@ define i64 @test_floor_ui64(half %x) nounwind {
 ;
 ; RV32IZHINX-LABEL: test_floor_ui64:
 ; RV32IZHINX:       # %bb.0:
-; RV32IZHINX-NEXT:    lui a1, %hi(.LCPI3_0)
-; RV32IZHINX-NEXT:    lh a1, %lo(.LCPI3_0)(a1)
+; RV32IZHINX-NEXT:    li a1, 25
+; RV32IZHINX-NEXT:    slli a1, a1, 10
 ; RV32IZHINX-NEXT:    fabs.h a2, a0
 ; RV32IZHINX-NEXT:    flt.h a1, a2, a1
 ; RV32IZHINX-NEXT:    beqz a1, .LBB3_2
@@ -574,9 +574,9 @@ define i64 @test_floor_ui64(half %x) nounwind {
 ; RV32IZHINX-NEXT:    neg s1, a0
 ; RV32IZHINX-NEXT:    mv a0, s0
 ; RV32IZHINX-NEXT:    call __fixunssfdi
-; RV32IZHINX-NEXT:    lui a2, %hi(.LCPI3_1)
-; RV32IZHINX-NEXT:    lw a2, %lo(.LCPI3_1)(a2)
 ; RV32IZHINX-NEXT:    and a0, s1, a0
+; RV32IZHINX-NEXT:    lui a2, 391168
+; RV32IZHINX-NEXT:    addi a2, a2, -1
 ; RV32IZHINX-NEXT:    flt.s a2, a2, s0
 ; RV32IZHINX-NEXT:    neg a2, a2
 ; RV32IZHINX-NEXT:    or a0, a2, a0
@@ -590,8 +590,8 @@ define i64 @test_floor_ui64(half %x) nounwind {
 ;
 ; RV64IZHINX-LABEL: test_floor_ui64:
 ; RV64IZHINX:       # %bb.0:
-; RV64IZHINX-NEXT:    lui a1, %hi(.LCPI3_0)
-; RV64IZHINX-NEXT:    lh a1, %lo(.LCPI3_0)(a1)
+; RV64IZHINX-NEXT:    li a1, 25
+; RV64IZHINX-NEXT:    slli a1, a1, 10
 ; RV64IZHINX-NEXT:    fabs.h a2, a0
 ; RV64IZHINX-NEXT:    flt.h a1, a2, a1
 ; RV64IZHINX-NEXT:    beqz a1, .LBB3_2
@@ -689,9 +689,9 @@ define i64 @test_floor_ui64(half %x) nounwind {
 ; RV32IZHINXMIN-NEXT:    neg s1, a0
 ; RV32IZHINXMIN-NEXT:    mv a0, s0
 ; RV32IZHINXMIN-NEXT:    call __fixunssfdi
-; RV32IZHINXMIN-NEXT:    lui a2, %hi(.LCPI3_0)
-; RV32IZHINXMIN-NEXT:    lw a2, %lo(.LCPI3_0)(a2)
 ; RV32IZHINXMIN-NEXT:    and a0, s1, a0
+; RV32IZHINXMIN-NEXT:    lui a2, 391168
+; RV32IZHINXMIN-NEXT:    addi a2, a2, -1
 ; RV32IZHINXMIN-NEXT:    flt.s a2, a2, s0
 ; RV32IZHINXMIN-NEXT:    neg a2, a2
 ; RV32IZHINXMIN-NEXT:    or a0, a2, a0
@@ -740,8 +740,8 @@ define signext i32 @test_ceil_si32(half %x) {
 ;
 ; CHECKIZHINX-LABEL: test_ceil_si32:
 ; CHECKIZHINX:       # %bb.0:
-; CHECKIZHINX-NEXT:    lui a1, %hi(.LCPI4_0)
-; CHECKIZHINX-NEXT:    lh a1, %lo(.LCPI4_0)(a1)
+; CHECKIZHINX-NEXT:    li a1, 25
+; CHECKIZHINX-NEXT:    slli a1, a1, 10
 ; CHECKIZHINX-NEXT:    fabs.h a2, a0
 ; CHECKIZHINX-NEXT:    flt.h a1, a2, a1
 ; CHECKIZHINX-NEXT:    beqz a1, .LBB4_2
@@ -865,8 +865,8 @@ define i64 @test_ceil_si64(half %x) nounwind {
 ;
 ; RV32IZHINX-LABEL: test_ceil_si64:
 ; RV32IZHINX:       # %bb.0:
-; RV32IZHINX-NEXT:    lui a1, %hi(.LCPI5_0)
-; RV32IZHINX-NEXT:    lh a1, %lo(.LCPI5_0)(a1)
+; RV32IZHINX-NEXT:    li a1, 25
+; RV32IZHINX-NEXT:    slli a1, a1, 10
 ; RV32IZHINX-NEXT:    fabs.h a2, a0
 ; RV32IZHINX-NEXT:    flt.h a1, a2, a1
 ; RV32IZHINX-NEXT:    beqz a1, .LBB5_2
@@ -886,9 +886,9 @@ define i64 @test_ceil_si64(half %x) nounwind {
 ; RV32IZHINX-NEXT:    neg s2, s1
 ; RV32IZHINX-NEXT:    mv a0, s0
 ; RV32IZHINX-NEXT:    call __fixsfdi
-; RV32IZHINX-NEXT:    lui a2, %hi(.LCPI5_1)
-; RV32IZHINX-NEXT:    lw a2, %lo(.LCPI5_1)(a2)
 ; RV32IZHINX-NEXT:    and a0, s2, a0
+; RV32IZHINX-NEXT:    lui a2, 389120
+; RV32IZHINX-NEXT:    addi a2, a2, -1
 ; RV32IZHINX-NEXT:    flt.s a4, a2, s0
 ; RV32IZHINX-NEXT:    neg a2, a4
 ; RV32IZHINX-NEXT:    or a0, a2, a0
@@ -915,8 +915,8 @@ define i64 @test_ceil_si64(half %x) nounwind {
 ;
 ; RV64IZHINX-LABEL: test_ceil_si64:
 ; RV64IZHINX:       # %bb.0:
-; RV64IZHINX-NEXT:    lui a1, %hi(.LCPI5_0)
-; RV64IZHINX-NEXT:    lh a1, %lo(.LCPI5_0)(a1)
+; RV64IZHINX-NEXT:    li a1, 25
+; RV64IZHINX-NEXT:    slli a1, a1, 10
 ; RV64IZHINX-NEXT:    fabs.h a2, a0
 ; RV64IZHINX-NEXT:    flt.h a1, a2, a1
 ; RV64IZHINX-NEXT:    beqz a1, .LBB5_2
@@ -1029,9 +1029,9 @@ define i64 @test_ceil_si64(half %x) nounwind {
 ; RV32IZHINXMIN-NEXT:    neg s2, s1
 ; RV32IZHINXMIN-NEXT:    mv a0, s0
 ; RV32IZHINXMIN-NEXT:    call __fixsfdi
-; RV32IZHINXMIN-NEXT:    lui a2, %hi(.LCPI5_0)
-; RV32IZHINXMIN-NEXT:    lw a2, %lo(.LCPI5_0)(a2)
 ; RV32IZHINXMIN-NEXT:    and a0, s2, a0
+; RV32IZHINXMIN-NEXT:    lui a2, 389120
+; RV32IZHINXMIN-NEXT:    addi a2, a2, -1
 ; RV32IZHINXMIN-NEXT:    flt.s a4, a2, s0
 ; RV32IZHINXMIN-NEXT:    neg a2, a4
 ; RV32IZHINXMIN-NEXT:    or a0, a2, a0
@@ -1093,8 +1093,8 @@ define signext i32 @test_ceil_ui32(half %x) {
 ;
 ; RV32IZHINX-LABEL: test_ceil_ui32:
 ; RV32IZHINX:       # %bb.0:
-; RV32IZHINX-NEXT:    lui a1, %hi(.LCPI6_0)
-; RV32IZHINX-NEXT:    lh a1, %lo(.LCPI6_0)(a1)
+; RV32IZHINX-NEXT:    li a1, 25
+; RV32IZHINX-NEXT:    slli a1, a1, 10
 ; RV32IZHINX-NEXT:    fabs.h a2, a0
 ; RV32IZHINX-NEXT:    flt.h a1, a2, a1
 ; RV32IZHINX-NEXT:    beqz a1, .LBB6_2
@@ -1112,8 +1112,8 @@ define signext i32 @test_ceil_ui32(half %x) {
 ;
 ; RV64IZHINX-LABEL: test_ceil_ui32:
 ; RV64IZHINX:       # %bb.0:
-; RV64IZHINX-NEXT:    lui a1, %hi(.LCPI6_0)
-; RV64IZHINX-NEXT:    lh a1, %lo(.LCPI6_0)(a1)
+; RV64IZHINX-NEXT:    li a1, 25
+; RV64IZHINX-NEXT:    slli a1, a1, 10
 ; RV64IZHINX-NEXT:    fabs.h a2, a0
 ; RV64IZHINX-NEXT:    flt.h a1, a2, a1
 ; RV64IZHINX-NEXT:    beqz a1, .LBB6_2
@@ -1267,8 +1267,8 @@ define i64 @test_ceil_ui64(half %x) nounwind {
 ;
 ; RV32IZHINX-LABEL: test_ceil_ui64:
 ; RV32IZHINX:       # %bb.0:
-; RV32IZHINX-NEXT:    lui a1, %hi(.LCPI7_0)
-; RV32IZHINX-NEXT:    lh a1, %lo(.LCPI7_0)(a1)
+; RV32IZHINX-NEXT:    li a1, 25
+; RV32IZHINX-NEXT:    slli a1, a1, 10
 ; RV32IZHINX-NEXT:    fabs.h a2, a0
 ; RV32IZHINX-NEXT:    flt.h a1, a2, a1
 ; RV32IZHINX-NEXT:    beqz a1, .LBB7_2
@@ -1286,9 +1286,9 @@ define i64 @test_ceil_ui64(half %x) nounwind {
 ; RV32IZHINX-NEXT:    neg s1, a0
 ; RV32IZHINX-NEXT:    mv a0, s0
 ; RV32IZHINX-NEXT:    call __fixunssfdi
-; RV32IZHINX-NEXT:    lui a2, %hi(.LCPI7_1)
-; RV32IZHINX-NEXT:    lw a2, %lo(.LCPI7_1)(a2)
 ; RV32IZHINX-NEXT:    and a0, s1, a0
+; RV32IZHINX-NEXT:    lui a2, 391168
+; RV32IZHINX-NEXT:    addi a2, a2, -1
 ; RV32IZHINX-NEXT:    flt.s a2, a2, s0
 ; RV32IZHINX-NEXT:    neg a2, a2
 ; RV32IZHINX-NEXT:    or a0, a2, a0
@@ -1302,8 +1302,8 @@ define i64 @test_ceil_ui64(half %x) nounwind {
 ;
 ; RV64IZHINX-LABEL: test_ceil_ui64:
 ; RV64IZHINX:       # %bb.0:
-; RV64IZHINX-NEXT:    lui a1, %hi(.LCPI7_0)
-; RV64IZHINX-NEXT:    lh a1, %lo(.LCPI7_0)(a1)
+; RV64IZHINX-NEXT:    li a1, 25
+; RV64IZHINX-NEXT:    slli a1, a1, 10
 ; RV64IZHINX-NEXT:    fabs.h a2, a0
 ; RV64IZHINX-NEXT:    flt.h a1, a2, a1
 ; RV64IZHINX-NEXT:    beqz a1, .LBB7_2
@@ -1401,9 +1401,9 @@ define i64 @test_ceil_ui64(half %x) nounwind {
 ; RV32IZHINXMIN-NEXT:    neg s1, a0
 ; RV32IZHINXMIN-NEXT:    mv a0, s0
 ; RV32IZHINXMIN-NEXT:    call __fixunssfdi
-; RV32IZHINXMIN-NEXT:    lui a2, %hi(.LCPI7_0)
-; RV32IZHINXMIN-NEXT:    lw a2, %lo(.LCPI7_0)(a2)
 ; RV32IZHINXMIN-NEXT:    and a0, s1, a0
+; RV32IZHINXMIN-NEXT:    lui a2, 391168
+; RV32IZHINXMIN-NEXT:    addi a2, a2, -1
 ; RV32IZHINXMIN-NEXT:    flt.s a2, a2, s0
 ; RV32IZHINXMIN-NEXT:    neg a2, a2
 ; RV32IZHINXMIN-NEXT:    or a0, a2, a0
@@ -1452,8 +1452,8 @@ define signext i32 @test_trunc_si32(half %x) {
 ;
 ; CHECKIZHINX-LABEL: test_trunc_si32:
 ; CHECKIZHINX:       # %bb.0:
-; CHECKIZHINX-NEXT:    lui a1, %hi(.LCPI8_0)
-; CHECKIZHINX-NEXT:    lh a1, %lo(.LCPI8_0)(a1)
+; CHECKIZHINX-NEXT:    li a1, 25
+; CHECKIZHINX-NEXT:    slli a1, a1, 10
 ; CHECKIZHINX-NEXT:    fabs.h a2, a0
 ; CHECKIZHINX-NEXT:    flt.h a1, a2, a1
 ; CHECKIZHINX-NEXT:    beqz a1, .LBB8_2
@@ -1577,8 +1577,8 @@ define i64 @test_trunc_si64(half %x) nounwind {
 ;
 ; RV32IZHINX-LABEL: test_trunc_si64:
 ; RV32IZHINX:       # %bb.0:
-; RV32IZHINX-NEXT:    lui a1, %hi(.LCPI9_0)
-; RV32IZHINX-NEXT:    lh a1, %lo(.LCPI9_0)(a1)
+; RV32IZHINX-NEXT:    li a1, 25
+; RV32IZHINX-NEXT:    slli a1, a1, 10
 ; RV32IZHINX-NEXT:    fabs.h a2, a0
 ; RV32IZHINX-NEXT:    flt.h a1, a2, a1
 ; RV32IZHINX-NEXT:    beqz a1, .LBB9_2
@@ -1598,9 +1598,9 @@ define i64 @test_trunc_si64(half %x) nounwind {
 ; RV32IZHINX-NEXT:    neg s2, s1
 ; RV32IZHINX-NEXT:    mv a0, s0
 ; RV32IZHINX-NEXT:    call __fixsfdi
-; RV32IZHINX-NEXT:    lui a2, %hi(.LCPI9_1)
-; RV32IZHINX-NEXT:    lw a2, %lo(.LCPI9_1)(a2)
 ; RV32IZHINX-NEXT:    and a0, s2, a0
+; RV32IZHINX-NEXT:    lui a2, 389120
+; RV32IZHINX-NEXT:    addi a2, a2, -1
 ; RV32IZHINX-NEXT:    flt.s a4, a2, s0
 ; RV32IZHINX-NEXT:    neg a2, a4
 ; RV32IZHINX-NEXT:    or a0, a2, a0
@@ -1627,8 +1627,8 @@ define i64 @test_trunc_si64(half %x) nounwind {
 ;
 ; RV64IZHINX-LABEL: test_trunc_si64:
 ; RV64IZHINX:       # %bb.0:
-; RV64IZHINX-NEXT:    lui a1, %hi(.LCPI9_0)
-; RV64IZHINX-NEXT:    lh a1, %lo(.LCPI9_0)(a1)
+; RV64IZHINX-NEXT:    li a1, 25
+; RV64IZHINX-NEXT:    slli a1, a1, 10
 ; RV64IZHINX-NEXT:    fabs.h a2, a0
 ; RV64IZHINX-NEXT:    flt.h a1, a2, a1
 ; RV64IZHINX-NEXT:    beqz a1, .LBB9_2
@@ -1741,9 +1741,9 @@ define i64 @test_trunc_si64(half %x) nounwind {
 ; RV32IZHINXMIN-NEXT:    neg s2, s1
 ; RV32IZHINXMIN-NEXT:    mv a0, s0
 ; RV32IZHINXMIN-NEXT:    call __fixsfdi
-; RV32IZHINXMIN-NEXT:    lui a2, %hi(.LCPI9_0)
-; RV32IZHINXMIN-NEXT:    lw a2, %lo(.LCPI9_0)(a2)
 ; RV32IZHINXMIN-NEXT:    and a0, s2, a0
+; RV32IZHINXMIN-NEXT:    lui a2, 389120
+; RV32IZHINXMIN-NEXT:    addi a2, a2, -1
 ; RV32IZHINXMIN-NEXT:    flt.s a4, a2, s0
 ; RV32IZHINXMIN-NEXT:    neg a2, a4
 ; RV32IZHINXMIN-NEXT:    or a0, a2, a0
@@ -1805,8 +1805,8 @@ define signext i32 @test_trunc_ui32(half %x) {
 ;
 ; RV32IZHINX-LABEL: test_trunc_ui32:
 ; RV32IZHINX:       # %bb.0:
-; RV32IZHINX-NEXT:    lui a1, %hi(.LCPI10_0)
-; RV32IZHINX-NEXT:    lh a1, %lo(.LCPI10_0)(a1)
+; RV32IZHINX-NEXT:    li a1, 25
+; RV32IZHINX-NEXT:    slli a1, a1, 10
 ; RV32IZHINX-NEXT:    fabs.h a2, a0
 ; RV32IZHINX-NEXT:    flt.h a1, a2, a1
 ; RV32IZHINX-NEXT:    beqz a1, .LBB10_2
@@ -1824,8 +1824,8 @@ define signext i32 @test_trunc_ui32(half %x) {
 ;
 ; RV64IZHINX-LABEL: test_trunc_ui32:
 ; RV64IZHINX:       # %bb.0:
-; RV64IZHINX-NEXT:    lui a1, %hi(.LCPI10_0)
-; RV64IZHINX-NEXT:    lh a1, %lo(.LCPI10_0)(a1)
+; RV64IZHINX-NEXT:    li a1, 25
+; RV64IZHINX-NEXT:    slli a1, a1, 10
 ; RV64IZHINX-NEXT:    fabs.h a2, a0
 ; RV64IZHINX-NEXT:    flt.h a1, a2, a1
 ; RV64IZHINX-NEXT:    beqz a1, .LBB10_2
@@ -1979,8 +1979,8 @@ define i64 @test_trunc_ui64(half %x) nounwind {
 ;
 ; RV32IZHINX-LABEL: test_trunc_ui64:
 ; RV32IZHINX:       # %bb.0:
-; RV32IZHINX-NEXT:    lui a1, %hi(.LCPI11_0)
-; RV32IZHINX-NEXT:    lh a1, %lo(.LCPI11_0)(a1)
+; RV32IZHINX-NEXT:    li a1, 25
+; RV32IZHINX-NEXT:    slli a1, a1, 10
 ; RV32IZHINX-NEXT:    fabs.h a2, a0
 ; RV32IZHINX-NEXT:    flt.h a1, a2, a1
 ; RV32IZHINX-NEXT:    beqz a1, .LBB11_2
@@ -1998,9 +1998,9 @@ define i64 @test_trunc_ui64(half %x) nounwind {
 ; RV32IZHINX-NEXT:    neg s1, a0
 ; RV32IZHINX-NEXT:    mv a0, s0
 ; RV32IZHINX-NEXT:    call __fixunssfdi
-; RV32IZHINX-NEXT:    lui a2, %hi(.LCPI11_1)
-; RV32IZHINX-NEXT:    lw a2, %lo(.LCPI11_1)(a2)
 ; RV32IZHINX-NEXT:    and a0, s1, a0
+; RV32IZHINX-NEXT:    lui a2, 391168
+; RV32IZHINX-NEXT:    addi a2, a2, -1
 ; RV32IZHINX-NEXT:    flt.s a2, a2, s0
 ; RV32IZHINX-NEXT:    neg a2, a2
 ; RV32IZHINX-NEXT:    or a0, a2, a0
@@ -2014,8 +2014,8 @@ define i64 @test_trunc_ui64(half %x) nounwind {
 ;
 ; RV64IZHINX-LABEL: test_trunc_ui64:
 ; RV64IZHINX:       # %bb.0:
-; RV64IZHINX-NEXT:    lui a1, %hi(.LCPI11_0)
-; RV64IZHINX-NEXT:    lh a1, %lo(.LCPI11_0)(a1)
+; RV64IZHINX-NEXT:    li a1, 25
+; RV64IZHINX-NEXT:    slli a1, a1, 10
 ; RV64IZHINX-NEXT:    fabs.h a2, a0
 ; RV64IZHINX-NEXT:    flt.h a1, a2, a1
 ; RV64IZHINX-NEXT:    beqz a1, .LBB11_2
@@ -2113,9 +2113,9 @@ define i64 @test_trunc_ui64(half %x) nounwind {
 ; RV32IZHINXMIN-NEXT:    neg s1, a0
 ; RV32IZHINXMIN-NEXT:    mv a0, s0
 ; RV32IZHINXMIN-NEXT:    call __fixunssfdi
-; RV32IZHINXMIN-NEXT:    lui a2, %hi(.LCPI11_0)
-; RV32IZHINXMIN-NEXT:    lw a2, %lo(.LCPI11_0)(a2)
 ; RV32IZHINXMIN-NEXT:    and a0, s1, a0
+; RV32IZHINXMIN-NEXT:    lui a2, 391168
+; RV32IZHINXMIN-NEXT:    addi a2, a2, -1
 ; RV32IZHINXMIN-NEXT:    flt.s a2, a2, s0
 ; RV32IZHINXMIN-NEXT:    neg a2, a2
 ; RV32IZHINXMIN-NEXT:    or a0, a2, a0
@@ -2164,8 +2164,8 @@ define signext i32 @test_round_si32(half %x) {
 ;
 ; CHECKIZHINX-LABEL: test_round_si32:
 ; CHECKIZHINX:       # %bb.0:
-; CHECKIZHINX-NEXT:    lui a1, %hi(.LCPI12_0)
-; CHECKIZHINX-NEXT:    lh a1, %lo(.LCPI12_0)(a1)
+; CHECKIZHINX-NEXT:    li a1, 25
+; CHECKIZHINX-NEXT:    slli a1, a1, 10
 ; CHECKIZHINX-NEXT:    fabs.h a2, a0
 ; CHECKIZHINX-NEXT:    flt.h a1, a2, a1
 ; CHECKIZHINX-NEXT:    beqz a1, .LBB12_2
@@ -2289,8 +2289,8 @@ define i64 @test_round_si64(half %x) nounwind {
 ;
 ; RV32IZHINX-LABEL: test_round_si64:
 ; RV32IZHINX:       # %bb.0:
-; RV32IZHINX-NEXT:    lui a1, %hi(.LCPI13_0)
-; RV32IZHINX-NEXT:    lh a1, %lo(.LCPI13_0)(a1)
+; RV32IZHINX-NEXT:    li a1, 25
+; RV32IZHINX-NEXT:    slli a1, a1, 10
 ; RV32IZHINX-NEXT:    fabs.h a2, a0
 ; RV32IZHINX-NEXT:    flt.h a1, a2, a1
 ; RV32IZHINX-NEXT:    beqz a1, .LBB13_2
@@ -2310,9 +2310,9 @@ define i64 @test_round_si64(half %x) nounwind {
 ; RV32IZHINX-NEXT:    neg s2, s1
 ; RV32IZHINX-NEXT:    mv a0, s0
 ; RV32IZHINX-NEXT:    call __fixsfdi
-; RV32IZHINX-NEXT:    lui a2, %hi(.LCPI13_1)
-; RV32IZHINX-NEXT:    lw a2, %lo(.LCPI13_1)(a2)
 ; RV32IZHINX-NEXT:    and a0, s2, a0
+; RV32IZHINX-NEXT:    lui a2, 389120
+; RV32IZHINX-NEXT:    addi a2, a2, -1
 ; RV32IZHINX-NEXT:    flt.s a4, a2, s0
 ; RV32IZHINX-NEXT:    neg a2, a4
 ; RV32IZHINX-NEXT:    or a0, a2, a0
@@ -2339,8 +2339,8 @@ define i64 @test_round_si64(half %x) nounwind {
 ;
 ; RV64IZHINX-LABEL: test_round_si64:
 ; RV64IZHINX:       # %bb.0:
-; RV64IZHINX-NEXT:    lui a1, %hi(.LCPI13_0)
-; RV64IZHINX-NEXT:    lh a1, %lo(.LCPI13_0)(a1)
+; RV64IZHINX-NEXT:    li a1, 25
+; RV64IZHINX-NEXT:    slli a1, a1, 10
 ; RV64IZHINX-NEXT:    fabs.h a2, a0
 ; RV64IZHINX-NEXT:    flt.h a1, a2, a1
 ; RV64IZHINX-NEXT:    beqz a1, .LBB13_2
@@ -2453,9 +2453,9 @@ define i64 @test_round_si64(half %x) nounwind {
 ; RV32IZHINXMIN-NEXT:    neg s2, s1
 ; RV32IZHINXMIN-NEXT:    mv a0, s0
 ; RV32IZHINXMIN-NEXT:    call __fixsfdi
-; RV32IZHINXMIN-NEXT:    lui a2, %hi(.LCPI13_0)
-; RV32IZHINXMIN-NEXT:    lw a2, %lo(.LCPI13_0)(a2)
 ; RV32IZHINXMIN-NEXT:    and a0, s2, a0
+; RV32IZHINXMIN-NEXT:    lui a2, 389120
+; RV32IZHINXMIN-NEXT:    addi a2, a2, -1
 ; RV32IZHINXMIN-NEXT:    flt.s a4, a2, s0
 ; RV32IZHINXMIN-NEXT:    neg a2, a4
 ; RV32IZHINXMIN-NEXT:    or a0, a2, a0
@@ -2517,8 +2517,8 @@ define signext i32 @test_round_ui32(half %x) {
 ;
 ; RV32IZHINX-LABEL: test_round_ui32:
 ; RV32IZHINX:       # %bb.0:
-; RV32IZHINX-NEXT:    lui a1, %hi(.LCPI14_0)
-; RV32IZHINX-NEXT:    lh a1, %lo(.LCPI14_0)(a1)
+; RV32IZHINX-NEXT:    li a1, 25
+; RV32IZHINX-NEXT:    slli a1, a1, 10
 ; RV32IZHINX-NEXT:    fabs.h a2, a0
 ; RV32IZHINX-NEXT:    flt.h a1, a2, a1
 ; RV32IZHINX-NEXT:    beqz a1, .LBB14_2
@@ -2536,8 +2536,8 @@ define signext i32 @test_round_ui32(half %x) {
 ;
 ; RV64IZHINX-LABEL: test_round_ui32:
 ; RV64IZHINX:       # %bb.0:
-; RV64IZHINX-NEXT:    lui a1, %hi(.LCPI14_0)
-; RV64IZHINX-NEXT:    lh a1, %lo(.LCPI14_0)(a1)
+; RV64IZHINX-NEXT:    li a1, 25
+; RV64IZHINX-NEXT:    slli a1, a1, 10
 ; RV64IZHINX-NEXT:    fabs.h a2, a0
 ; RV64IZHINX-NEXT:    flt.h a1, a2, a1
 ; RV64IZHINX-NEXT:    beqz a1, .LBB14_2
@@ -2691,8 +2691,8 @@ define i64 @test_round_ui64(half %x) nounwind {
 ;
 ; RV32IZHINX-LABEL: test_round_ui64:
 ; RV32IZHINX:       # %bb.0:
-; RV32IZHINX-NEXT:    lui a1, %hi(.LCPI15_0)
-; RV32IZHINX-NEXT:    lh a1, %lo(.LCPI15_0)(a1)
+; RV32IZHINX-NEXT:    li a1, 25
+; RV32IZHINX-NEXT:    slli a1, a1, 10
 ; RV32IZHINX-NEXT:    fabs.h a2, a0
 ; RV32IZHINX-NEXT:    flt.h a1, a2, a1
 ; RV32IZHINX-NEXT:    beqz a1, .LBB15_2
@@ -2710,9 +2710,9 @@ define i64 @test_round_ui64(half %x) nounwind {
 ; RV32IZHINX-NEXT:    neg s1, a0
 ; RV32IZHINX-NEXT:    mv a0, s0
 ; RV32IZHINX-NEXT:    call __fixunssfdi
-; RV32IZHINX-NEXT:    lui a2, %hi(.LCPI15_1)
-; RV32IZHINX-NEXT:    lw a2, %lo(.LCPI15_1)(a2)
 ; RV32IZHINX-NEXT:    and a0, s1, a0
+; RV32IZHINX-NEXT:    lui a2, 391168
+; RV32IZHINX-NEXT:    addi a2, a2, -1
 ; RV32IZHINX-NEXT:    flt.s a2, a2, s0
 ; RV32IZHINX-NEXT:    neg a2, a2
 ; RV32IZHINX-NEXT:    or a0, a2, a0
@@ -2726,8 +2726,8 @@ define i64 @test_round_ui64(half %x) nounwind {
 ;
 ; RV64IZHINX-LABEL: test_round_ui64:
 ; RV64IZHINX:       # %bb.0:
-; RV64IZHINX-NEXT:    lui a1, %hi(.LCPI15_0)
-; RV64IZHINX-NEXT:    lh a1, %lo(.LCPI15_0)(a1)
+; RV64IZHINX-NEXT:    li a1, 25
+; RV64IZHINX-NEXT:    slli a1, a1, 10
 ; RV64IZHINX-NEXT:    fabs.h a2, a0
 ; RV64IZHINX-NEXT:    flt.h a1, a2, a1
 ; RV64IZHINX-NEXT:    beqz a1, .LBB15_2
@@ -2825,9 +2825,9 @@ define i64 @test_round_ui64(half %x) nounwind {
 ; RV32IZHINXMIN-NEXT:    neg s1, a0
 ; RV32IZHINXMIN-NEXT:    mv a0, s0
 ; RV32IZHINXMIN-NEXT:    call __fixunssfdi
-; RV32IZHINXMIN-NEXT:    lui a2, %hi(.LCPI15_0)
-; RV32IZHINXMIN-NEXT:    lw a2, %lo(.LCPI15_0)(a2)
 ; RV32IZHINXMIN-NEXT:    and a0, s1, a0
+; RV32IZHINXMIN-NEXT:    lui a2, 391168
+; RV32IZHINXMIN-NEXT:    addi a2, a2, -1
 ; RV32IZHINXMIN-NEXT:    flt.s a2, a2, s0
 ; RV32IZHINXMIN-NEXT:    neg a2, a2
 ; RV32IZHINXMIN-NEXT:    or a0, a2, a0
@@ -2876,8 +2876,8 @@ define signext i32 @test_roundeven_si32(half %x) {
 ;
 ; CHECKIZHINX-LABEL: test_roundeven_si32:
 ; CHECKIZHINX:       # %bb.0:
-; CHECKIZHINX-NEXT:    lui a1, %hi(.LCPI16_0)
-; CHECKIZHINX-NEXT:    lh a1, %lo(.LCPI16_0)(a1)
+; CHECKIZHINX-NEXT:    li a1, 25
+; CHECKIZHINX-NEXT:    slli a1, a1, 10
 ; CHECKIZHINX-NEXT:    fabs.h a2, a0
 ; CHECKIZHINX-NEXT:    flt.h a1, a2, a1
 ; CHECKIZHINX-NEXT:    beqz a1, .LBB16_2
@@ -3001,8 +3001,8 @@ define i64 @test_roundeven_si64(half %x) nounwind {
 ;
 ; RV32IZHINX-LABEL: test_roundeven_si64:
 ; RV32IZHINX:       # %bb.0:
-; RV32IZHINX-NEXT:    lui a1, %hi(.LCPI17_0)
-; RV32IZHINX-NEXT:    lh a1, %lo(.LCPI17_0)(a1)
+; RV32IZHINX-NEXT:    li a1, 25
+; RV32IZHINX-NEXT:    slli a1, a1, 10
 ; RV32IZHINX-NEXT:    fabs.h a2, a0
 ; RV32IZHINX-NEXT:    flt.h a1, a2, a1
 ; RV32IZHINX-NEXT:    beqz a1, .LBB17_2
@@ -3022,9 +3022,9 @@ define i64 @test_roundeven_si64(half %x) nounwind {
 ; RV32IZHINX-NEXT:    neg s2, s1
 ; RV32IZHINX-NEXT:    mv a0, s0
 ; RV32IZHINX-NEXT:    call __fixsfdi
-; RV32IZHINX-NEXT:    lui a2, %hi(.LCPI17_1)
-; RV32IZHINX-NEXT:    lw a2, %lo(.LCPI17_1)(a2)
 ; RV32IZHINX-NEXT:    and a0, s2, a0
+; RV32IZHINX-NEXT:    lui a2, 389120
+; RV32IZHINX-NEXT:    addi a2, a2, -1
 ; RV32IZHINX-NEXT:    flt.s a4, a2, s0
 ; RV32IZHINX-NEXT:    neg a2, a4
 ; RV32IZHINX-NEXT:    or a0, a2, a0
@@ -3051,8 +3051,8 @@ define i64 @test_roundeven_si64(half %x) nounwind {
 ;
 ; RV64IZHINX-LABEL: test_roundeven_si64:
 ; RV64IZHINX:       # %bb.0:
-; RV64IZHINX-NEXT:    lui a1, %hi(.LCPI17_0)
-; RV64IZHINX-NEXT:    lh a1, %lo(.LCPI17_0)(a1)
+; RV64IZHINX-NEXT:    li a1, 25
+; RV64IZHINX-NEXT:    slli a1, a1, 10
 ; RV64IZHINX-NEXT:    fabs.h a2, a0
 ; RV64IZHINX-NEXT:    flt.h a1, a2, a1
 ; RV64IZHINX-NEXT:    beqz a1, .LBB17_2
@@ -3165,9 +3165,9 @@ define i64 @test_roundeven_si64(half %x) nounwind {
 ; RV32IZHINXMIN-NEXT:    neg s2, s1
 ; RV32IZHINXMIN-NEXT:    mv a0, s0
 ; RV32IZHINXMIN-NEXT:    call __fixsfdi
-; RV32IZHINXMIN-NEXT:    lui a2, %hi(.LCPI17_0)
-; RV32IZHINXMIN-NEXT:    lw a2, %lo(.LCPI17_0)(a2)
 ; RV32IZHINXMIN-NEXT:    and a0, s2, a0
+; RV32IZHINXMIN-NEXT:    lui a2, 389120
+; RV32IZHINXMIN-NEXT:    addi a2, a2, -1
 ; RV32IZHINXMIN-NEXT:    flt.s a4, a2, s0
 ; RV32IZHINXMIN-NEXT:    neg a2, a4
 ; RV32IZHINXMIN-NEXT:    or a0, a2, a0
@@ -3229,8 +3229,8 @@ define signext i32 @test_roundeven_ui32(half %x) {
 ;
 ; RV32IZHINX-LABEL: test_roundeven_ui32:
 ; RV32IZHINX:       # %bb.0:
-; RV32IZHINX-NEXT:    lui a1, %hi(.LCPI18_0)
-; RV32IZHINX-NEXT:    lh a1, %lo(.LCPI18_0)(a1)
+; RV32IZHINX-NEXT:    li a1, 25
+; RV32IZHINX-NEXT:    slli a1, a1, 10
 ; RV32IZHINX-NEXT:    fabs.h a2, a0
 ; RV32IZHINX-NEXT:    flt.h a1, a2, a1
 ; RV32IZHINX-NEXT:    beqz a1, .LBB18_2
@@ -3248,8 +3248,8 @@ define signext i32 @test_roundeven_ui32(half %x) {
 ;
 ; RV64IZHINX-LABEL: test_roundeven_ui32:
 ; RV64IZHINX:       # %bb.0:
-; RV64IZHINX-NEXT:    lui a1, %hi(.LCPI18_0)
-; RV64IZHINX-NEXT:    lh a1, %lo(.LCPI18_0)(a1)
+; RV64IZHINX-NEXT:    li a1, 25
+; RV64IZHINX-NEXT:    slli a1, a1, 10
 ; RV64IZHINX-NEXT:    fabs.h a2, a0
 ; RV64IZHINX-NEXT:    flt.h a1, a2, a1
 ; RV64IZHINX-NEXT:    beqz a1, .LBB18_2
@@ -3403,8 +3403,8 @@ define i64 @test_roundeven_ui64(half %x) nounwind {
 ;
 ; RV32IZHINX-LABEL: test_roundeven_ui64:
 ; RV32IZHINX:       # %bb.0:
-; RV32IZHINX-NEXT:    lui a1, %hi(.LCPI19_0)
-; RV32IZHINX-NEXT:    lh a1, %lo(.LCPI19_0)(a1)
+; RV32IZHINX-NEXT:    li a1, 25
+; RV32IZHINX-NEXT:    slli a1, a1, 10
 ; RV32IZHINX-NEXT:    fabs.h a2, a0
 ; RV32IZHINX-NEXT:    flt.h a1, a2, a1
 ; RV32IZHINX-NEXT:    beqz a1, .LBB19_2
@@ -3422,9 +3422,9 @@ define i64 @test_roundeven_ui64(half %x) nounwind {
 ; RV32IZHINX-NEXT:    neg s1, a0
 ; RV32IZHINX-NEXT:    mv a0, s0
 ; RV32IZHINX-NEXT:    call __fixunssfdi
-; RV32IZHINX-NEXT:    lui a2, %hi(.LCPI19_1)
-; RV32IZHINX-NEXT:    lw a2, %lo(.LCPI19_1)(a2)
 ; RV32IZHINX-NEXT:    and a0, s1, a0
+; RV32IZHINX-NEXT:    lui a2, 391168
+; RV32IZHINX-NEXT:    addi a2, a2, -1
 ; RV32IZHINX-NEXT:    flt.s a2, a2, s0
 ; RV32IZHINX-NEXT:    neg a2, a2
 ; RV32IZHINX-NEXT:    or a0, a2, a0
@@ -3438,8 +3438,8 @@ define i64 @test_roundeven_ui64(half %x) nounwind {
 ;
 ; RV64IZHINX-LABEL: test_roundeven_ui64:
 ; RV64IZHINX:       # %bb.0:
-; RV64IZHINX-NEXT:    lui a1, %hi(.LCPI19_0)
-; RV64IZHINX-NEXT:    lh a1, %lo(.LCPI19_0)(a1)
+; RV64IZHINX-NEXT:    li a1, 25
+; RV64IZHINX-NEXT:    slli a1, a1, 10
 ; RV64IZHINX-NEXT:    fabs.h a2, a0
 ; RV64IZHINX-NEXT:    flt.h a1, a2, a1
 ; RV64IZHINX-NEXT:    beqz a1, .LBB19_2
@@ -3537,9 +3537,9 @@ define i64 @test_roundeven_ui64(half %x) nounwind {
 ; RV32IZHINXMIN-NEXT:    neg s1, a0
 ; RV32IZHINXMIN-NEXT:    mv a0, s0
 ; RV32IZHINXMIN-NEXT:    call __fixunssfdi
-; RV32IZHINXMIN-NEXT:    lui a2, %hi(.LCPI19_0)
-; RV32IZHINXMIN-NEXT:    lw a2, %lo(.LCPI19_0)(a2)
 ; RV32IZHINXMIN-NEXT:    and a0, s1, a0
+; RV32IZHINXMIN-NEXT:    lui a2, 391168
+; RV32IZHINXMIN-NEXT:    addi a2, a2, -1
 ; RV32IZHINXMIN-NEXT:    flt.s a2, a2, s0
 ; RV32IZHINXMIN-NEXT:    neg a2, a2
 ; RV32IZHINXMIN-NEXT:    or a0, a2, a0
@@ -3588,8 +3588,8 @@ define signext i32 @test_rint_si32(half %x) {
 ;
 ; CHECKIZHINX-LABEL: test_rint_si32:
 ; CHECKIZHINX:       # %bb.0:
-; CHECKIZHINX-NEXT:    lui a1, %hi(.LCPI20_0)
-; CHECKIZHINX-NEXT:    lh a1, %lo(.LCPI20_0)(a1)
+; CHECKIZHINX-NEXT:    li a1, 25
+; CHECKIZHINX-NEXT:    slli a1, a1, 10
 ; CHECKIZHINX-NEXT:    fabs.h a2, a0
 ; CHECKIZHINX-NEXT:    flt.h a1, a2, a1
 ; CHECKIZHINX-NEXT:    beqz a1, .LBB20_2
@@ -3713,8 +3713,8 @@ define i64 @test_rint_si64(half %x) nounwind {
 ;
 ; RV32IZHINX-LABEL: test_rint_si64:
 ; RV32IZHINX:       # %bb.0:
-; RV32IZHINX-NEXT:    lui a1, %hi(.LCPI21_0)
-; RV32IZHINX-NEXT:    lh a1, %lo(.LCPI21_0)(a1)
+; RV32IZHINX-NEXT:    li a1, 25
+; RV32IZHINX-NEXT:    slli a1, a1, 10
 ; RV32IZHINX-NEXT:    fabs.h a2, a0
 ; RV32IZHINX-NEXT:    flt.h a1, a2, a1
 ; RV32IZHINX-NEXT:    beqz a1, .LBB21_2
@@ -3734,9 +3734,9 @@ define i64 @test_rint_si64(half %x) nounwind {
 ; RV32IZHINX-NEXT:    neg s2, s1
 ; RV32IZHINX-NEXT:    mv a0, s0
 ; RV32IZHINX-NEXT:    call __fixsfdi
-; RV32IZHINX-NEXT:    lui a2, %hi(.LCPI21_1)
-; RV32IZHINX-NEXT:    lw a2, %lo(.LCPI21_1)(a2)
 ; RV32IZHINX-NEXT:    and a0, s2, a0
+; RV32IZHINX-NEXT:    lui a2, 389120
+; RV32IZHINX-NEXT:    addi a2, a2, -1
 ; RV32IZHINX-NEXT:    flt.s a4, a2, s0
 ; RV32IZHINX-NEXT:    neg a2, a4
 ; RV32IZHINX-NEXT:    or a0, a2, a0
@@ -3763,8 +3763,8 @@ define i64 @test_rint_si64(half %x) nounwind {
 ;
 ; RV64IZHINX-LABEL: test_rint_si64:
 ; RV64IZHINX:       # %bb.0:
-; RV64IZHINX-NEXT:    lui a1, %hi(.LCPI21_0)
-; RV64IZHINX-NEXT:    lh a1, %lo(.LCPI21_0)(a1)
+; RV64IZHINX-NEXT:    li a1, 25
+; RV64IZHINX-NEXT:    slli a1, a1, 10
 ; RV64IZHINX-NEXT:    fabs.h a2, a0
 ; RV64IZHINX-NEXT:    flt.h a1, a2, a1
 ; RV64IZHINX-NEXT:    beqz a1, .LBB21_2
@@ -3877,9 +3877,9 @@ define i64 @test_rint_si64(half %x) nounwind {
 ; RV32IZHINXMIN-NEXT:    neg s2, s1
 ; RV32IZHINXMIN-NEXT:    mv a0, s0
 ; RV32IZHINXMIN-NEXT:    call __fixsfdi
-; RV32IZHINXMIN-NEXT:    lui a2, %hi(.LCPI21_0)
-; RV32IZHINXMIN-NEXT:    lw a2, %lo(.LCPI21_0)(a2)
 ; RV32IZHINXMIN-NEXT:    and a0, s2, a0
+; RV32IZHINXMIN-NEXT:    lui a2, 389120
+; RV32IZHINXMIN-NEXT:    addi a2, a2, -1
 ; RV32IZHINXMIN-NEXT:    flt.s a4, a2, s0
 ; RV32IZHINXMIN-NEXT:    neg a2, a4
 ; RV32IZHINXMIN-NEXT:    or a0, a2, a0
@@ -3941,8 +3941,8 @@ define signext i32 @test_rint_ui32(half %x) {
 ;
 ; RV32IZHINX-LABEL: test_rint_ui32:
 ; RV32IZHINX:       # %bb.0:
-; RV32IZHINX-NEXT:    lui a1, %hi(.LCPI22_0)
-; RV32IZHINX-NEXT:    lh a1, %lo(.LCPI22_0)(a1)
+; RV32IZHINX-NEXT:    li a1, 25
+; RV32IZHINX-NEXT:    slli a1, a1, 10
 ; RV32IZHINX-NEXT:    fabs.h a2, a0
 ; RV32IZHINX-NEXT:    flt.h a1, a2, a1
 ; RV32IZHINX-NEXT:    beqz a1, .LBB22_2
@@ -3960,8 +3960,8 @@ define signext i32 @test_rint_ui32(half %x) {
 ;
 ; RV64IZHINX-LABEL: test_rint_ui32:
 ; RV64IZHINX:       # %bb.0:
-; RV64IZHINX-NEXT:    lui a1, %hi(.LCPI22_0)
-; RV64IZHINX-NEXT:    lh a1, %lo(.LCPI22_0)(a1)
+; RV64IZHINX-NEXT:    li a1, 25
+; RV64IZHINX-NEXT:    slli a1, a1, 10
 ; RV64IZHINX-NEXT:    fabs.h a2, a0
 ; RV64IZHINX-NEXT:    flt.h a1, a2, a1
 ; RV64IZHINX-NEXT:    beqz a1, .LBB22_2
@@ -4115,8 +4115,8 @@ define i64 @test_rint_ui64(half %x) nounwind {
 ;
 ; RV32IZHINX-LABEL: test_rint_ui64:
 ; RV32IZHINX:       # %bb.0:
-; RV32IZHINX-NEXT:    lui a1, %hi(.LCPI23_0)
-; RV32IZHINX-NEXT:    lh a1, %lo(.LCPI23_0)(a1)
+; RV32IZHINX-NEXT:    li a1, 25
+; RV32IZHINX-NEXT:    slli a1, a1, 10
 ; RV32IZHINX-NEXT:    fabs.h a2, a0
 ; RV32IZHINX-NEXT:    flt.h a1, a2, a1
 ; RV32IZHINX-NEXT:    beqz a1, .LBB23_2
@@ -4134,9 +4134,9 @@ define i64 @test_rint_ui64(half %x) nounwind {
 ; RV32IZHINX-NEXT:    neg s1, a0
 ; RV32IZHINX-NEXT:    mv a0, s0
 ; RV32IZHINX-NEXT:    call __fixunssfdi
-; RV32IZHINX-NEXT:    lui a2, %hi(.LCPI23_1)
-; RV32IZHINX-NEXT:    lw a2, %lo(.LCPI23_1)(a2)
 ; RV32IZHINX-NEXT:    and a0, s1, a0
+; RV32IZHINX-NEXT:    lui a2, 391168
+; RV32IZHINX-NEXT:    addi a2, a2, -1
 ; RV32IZHINX-NEXT:    flt.s a2, a2, s0
 ; RV32IZHINX-NEXT:    neg a2, a2
 ; RV32IZHINX-NEXT:    or a0, a2, a0
@@ -4150,8 +4150,8 @@ define i64 @test_rint_ui64(half %x) nounwind {
 ;
 ; RV64IZHINX-LABEL: test_rint_ui64:
 ; RV64IZHINX:       # %bb.0:
-; RV64IZHINX-NEXT:    lui a1, %hi(.LCPI23_0)
-; RV64IZHINX-NEXT:    lh a1, %lo(.LCPI23_0)(a1)
+; RV64IZHINX-NEXT:    li a1, 25
+; RV64IZHINX-NEXT:    slli a1, a1, 10
 ; RV64IZHINX-NEXT:    fabs.h a2, a0
 ; RV64IZHINX-NEXT:    flt.h a1, a2, a1
 ; RV64IZHINX-NEXT:    beqz a1, .LBB23_2
@@ -4249,9 +4249,9 @@ define i64 @test_rint_ui64(half %x) nounwind {
 ; RV32IZHINXMIN-NEXT:    neg s1, a0
 ; RV32IZHINXMIN-NEXT:    mv a0, s0
 ; RV32IZHINXMIN-NEXT:    call __fixunssfdi
-; RV32IZHINXMIN-NEXT:    lui a2, %hi(.LCPI23_0)
-; RV32IZHINXMIN-NEXT:    lw a2, %lo(.LCPI23_0)(a2)
 ; RV32IZHINXMIN-NEXT:    and a0, s1, a0
+; RV32IZHINXMIN-NEXT:    lui a2, 391168
+; RV32IZHINXMIN-NEXT:    addi a2, a2, -1
 ; RV32IZHINXMIN-NEXT:    flt.s a2, a2, s0
 ; RV32IZHINXMIN-NEXT:    neg a2, a2
 ; RV32IZHINXMIN-NEXT:    or a0, a2, a0

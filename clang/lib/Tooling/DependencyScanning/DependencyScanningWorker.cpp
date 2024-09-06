@@ -345,6 +345,26 @@ public:
         ScanInstance.getInvocation(), ScanInstance.getDiagnostics(),
         DriverFileMgr->getVirtualFileSystemPtr());
 
+    // Use the dependency scanning optimized file system if requested to do so.
+    if (DepFS) {
+      StringRef ModulesCachePath =
+          ScanInstance.getHeaderSearchOpts().ModuleCachePath;
+
+      DepFS->resetBypassedPathPrefix();
+      if (!ModulesCachePath.empty())
+        DepFS->setBypassedPathPrefix(ModulesCachePath);
+
+      ScanInstance.getPreprocessorOpts().DependencyDirectivesForFile =
+          [LocalDepFS = DepFS](FileEntryRef File)
+          -> std::optional<ArrayRef<dependency_directives_scan::Directive>> {
+        if (llvm::ErrorOr<EntryRef> Entry =
+                LocalDepFS->getOrCreateFileSystemEntry(File.getName()))
+          if (LocalDepFS->ensureDirectiveTokensArePopulated(*Entry))
+            return Entry->getDirectiveTokens();
+        return std::nullopt;
+      };
+    }
+
     // Create a new FileManager to match the invocation's FileSystemOptions.
     auto *FileMgr = ScanInstance.createFileManager(FS);
     ScanInstance.createSourceManager(*FileMgr);
@@ -360,18 +380,6 @@ public:
               ScanInstance.getHeaderSearchOpts().PrebuiltModuleFiles,
               PrebuiltModuleVFSMap, ScanInstance.getDiagnostics()))
         return false;
-
-    // Use the dependency scanning optimized file system if requested to do so.
-    if (DepFS)
-      ScanInstance.getPreprocessorOpts().DependencyDirectivesForFile =
-          [LocalDepFS = DepFS](FileEntryRef File)
-          -> std::optional<ArrayRef<dependency_directives_scan::Directive>> {
-        if (llvm::ErrorOr<EntryRef> Entry =
-                LocalDepFS->getOrCreateFileSystemEntry(File.getName()))
-          if (LocalDepFS->ensureDirectiveTokensArePopulated(*Entry))
-            return Entry->getDirectiveTokens();
-        return std::nullopt;
-      };
 
     // Create the dependency collector that will collect the produced
     // dependencies.

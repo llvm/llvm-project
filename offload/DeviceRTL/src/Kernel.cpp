@@ -14,11 +14,11 @@
 
 #include "Allocator.h"
 #include "Debug.h"
+#include "DeviceTypes.h"
 #include "Interface.h"
 #include "Mapping.h"
 #include "State.h"
 #include "Synchronization.h"
-#include "Types.h"
 #include "Workshare.h"
 
 #include "llvm/Frontend/OpenMP/OMPDeviceConstants.h"

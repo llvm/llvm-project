@@ -16,12 +16,17 @@ class DialectRegistry;
 class LLVMTypeConverter;
 class RewritePatternSet;
 class Pass;
+class TypeConverter;
 
 #define GEN_PASS_DECL_CONVERTGPUOPSTOLLVMSPVOPS
 #include "mlir/Conversion/Passes.h.inc"
 
 void populateGpuToLLVMSPVConversionPatterns(LLVMTypeConverter &converter,
                                             RewritePatternSet &patterns);
+
+/// Populates memory space attribute conversion rules for lowering
+/// gpu.address_space to integer values.
+void populateGpuMemorySpaceAttributeConversions(TypeConverter &typeConverter);
 } // namespace mlir
 
 #endif // MLIR_CONVERSION_GPUTOLLVMSPV_GPUTOLLVMSPVPASS_H_
