@@ -1995,7 +1995,8 @@ bool AArch64TargetLowering::shouldExpandPartialReductionIntrinsic(
     return true;
 
   EVT VT = EVT::getEVT(I->getType());
-  return VT != MVT::nxv4i32 && VT != MVT::nxv2i64;
+  return VT != MVT::nxv4i32 && VT != MVT::nxv2i64 && VT != MVT::v4i32 &&
+         VT != MVT::v2i32;
 }
 
 bool AArch64TargetLowering::shouldExpandCttzElements(EVT VT) const {
@@ -21807,7 +21808,10 @@ SDValue tryLowerPartialReductionToDot(SDNode *N,
              Intrinsic::experimental_vector_partial_reduce_add &&
          "Expected a partial reduction node");
 
-  if (!Subtarget->isSVEorStreamingSVEAvailable())
+  bool Scalable = N->getValueType(0).isScalableVector();
+  if (Scalable && !Subtarget->isSVEorStreamingSVEAvailable())
+    return SDValue();
+  if (!Scalable && (!Subtarget->isNeonAvailable() || !Subtarget->hasDotProd()))
     return SDValue();
 
   SDLoc DL(N);
@@ -21844,11 +21848,11 @@ SDValue tryLowerPartialReductionToDot(SDNode *N,
 
   // Dot products operate on chunks of four elements so there must be four times
   // as many elements in the wide type
-  if (ReducedType == MVT::nxv4i32 && MulSrcType == MVT::nxv16i8)
-    return DAG.getNode(Opcode, DL, MVT::nxv4i32, NarrowOp, A, B);
-
-  if (ReducedType == MVT::nxv2i64 && MulSrcType == MVT::nxv8i16)
-    return DAG.getNode(Opcode, DL, MVT::nxv2i64, NarrowOp, A, B);
+  if ((ReducedType == MVT::nxv4i32 && MulSrcType == MVT::nxv16i8) ||
+      (ReducedType == MVT::nxv2i64 && MulSrcType == MVT::nxv8i16) ||
+      (ReducedType == MVT::v4i32 && MulSrcType == MVT::v16i8) ||
+      (ReducedType == MVT::v2i32 && MulSrcType == MVT::v8i8))
+    return DAG.getNode(Opcode, DL, ReducedType, NarrowOp, A, B);
 
   return SDValue();
 }
