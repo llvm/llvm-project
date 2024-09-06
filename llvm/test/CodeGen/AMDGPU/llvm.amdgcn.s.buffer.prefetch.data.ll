@@ -34,3 +34,17 @@ entry:
   tail call void @llvm.amdgcn.s.buffer.prefetch.data(ptr addrspace(8) inreg %rsrc, i32 128, i32 %len)
   ret void
 }
+
+define amdgpu_ps void @buffer_prefetch_data_vgpr_rsrc_imm_offset_sgpr_len(ptr addrspace(8) %rsrc, i32 inreg %len) {
+; GCN-LABEL: buffer_prefetch_data_vgpr_rsrc_imm_offset_sgpr_len:
+; GCN:       ; %bb.0: ; %entry
+; GCN-NEXT:    v_readfirstlane_b32 s4, v0
+; GCN-NEXT:    v_readfirstlane_b32 s5, v1
+; GCN-NEXT:    v_readfirstlane_b32 s6, v2
+; GCN-NEXT:    v_readfirstlane_b32 s7, v3
+; GCN-NEXT:    s_buffer_prefetch_data s[4:7], 0x80, s0, 0
+; GCN-NEXT:    s_endpgm
+entry:
+  tail call void @llvm.amdgcn.s.buffer.prefetch.data(ptr addrspace(8) inreg %rsrc, i32 128, i32 %len)
+  ret void
+}
