@@ -1275,9 +1275,8 @@ void VPWidenEVLRecipe::execute(VPTransformState &State) {
   State.setDebugLocFrom(getDebugLoc());
   assert(State.UF == 1 && "Expected only UF == 1 when vectorizing with "
                           "explicit vector length.");
-  VPValue *Op0 = getOperand(0);
 
-  assert(State.get(Op0, 0)->getType()->isVectorTy() &&
+  assert(State.get(getOperand(0), 0)->getType()->isVectorTy() &&
          "VPWidenEVLRecipe should not be used for scalars");
 
   VPValue *EVL = getEVL();
