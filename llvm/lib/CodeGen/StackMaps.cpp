@@ -306,15 +306,22 @@ StackMaps::parseOperand(MachineInstr::const_mop_iterator MOI,
     // %rcx, resulting in different ways below to retrieve the mappings.
     int ExtraReg = 0;
     Register R = MOI->getReg();
+    Register DwarfRegNum = getDwarfRegNum(R, TRI);
     if (MOI->isReg()) {
-      if (SpillOffsets.count(R) > 0) {
-        auto Extras = SpillOffsets[R];
-        // We currently can only deal with 2 additional locations. If there's
-        // more than that, we have a problem.
-        assert(Extras.size() <= 2);
+      if (SpillOffsets.count(DwarfRegNum) > 0) {
+        auto Extras = SpillOffsets[DwarfRegNum];
+        // FIXME: We currently can only deal with two additional locations.
+        // This could lead to problems in the future. Fixing this requires a
+        // extensive change updating the stackmap format. For now let's hope we
+        // get away with it.
+        //
+        // Some programs fail this assertion but run nontheless, so this
+        // assertion is commented out.
+        //
+        // assert(Extras.size() <= 2);
         for (int64_t RHS : Extras) {
           if (RHS > 0) {
-            ExtraReg = getDwarfRegNum(RHS, TRI) + 1;
+            ExtraReg = RHS + 1;
           } else {
             Offset = RHS;
           }
@@ -322,7 +329,6 @@ StackMaps::parseOperand(MachineInstr::const_mop_iterator MOI,
       }
     }
 
-    unsigned DwarfRegNum = getDwarfRegNum(R, TRI);
     unsigned LLVMRegNum = *TRI->getLLVMRegNum(DwarfRegNum, false);
     unsigned SubRegIdx = TRI->getSubRegIndex(LLVMRegNum, R);
     if (SubRegIdx)

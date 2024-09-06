@@ -62,6 +62,22 @@ X86AsmPrinter::X86AsmPrinter(TargetMachine &TM,
 const TargetInstrInfo *TII;
 const TargetRegisterInfo *TRI;
 
+/// Go up the super-register chain until we hit a valid dwarf register number.
+///
+/// (duplicated/adapted from StackMaps.cpp so as to not introduce extra link
+/// dependencies)
+static unsigned getDwarfRegNum(unsigned Reg) {
+  int RegNum;
+  for (MCPhysReg SR : TRI->superregs_inclusive(Reg)) {
+    RegNum = TRI->getDwarfRegNum(SR, false);
+    if (RegNum >= 0)
+      break;
+  }
+
+  assert(RegNum >= 0 && "Invalid Dwarf register number.");
+  return (unsigned)RegNum;
+}
+
 /// Clear any mappings that map to the given register.
 void clearRhs(Register Reg, std::map<Register, std::set<int64_t>> &SpillMap) {
   auto I = SpillMap.begin();
@@ -98,7 +114,9 @@ void processInstructions(
       const MachineOperand Rhs = Instr.getOperand(1);
       assert(Lhs.isReg() && "Is register.");
       assert(Rhs.isReg() && "Is register.");
-      if (Lhs.getReg() == Rhs.getReg()) {
+      auto LhsDwReg = getDwarfRegNum(Lhs.getReg());
+      auto RhsDwReg = getDwarfRegNum(Rhs.getReg());
+      if (LhsDwReg == RhsDwReg) {
         // Moves like `mov rax, rax` are effectively a NOP for this analysis.
         continue;
       }
@@ -106,11 +124,11 @@ void processInstructions(
       // and need to be removed. We need to do this before updating the
       // mapping, so the transitive property of the SpillMap isn't violated
       // (see `clearRhs` for more info).
-      clearRhs(Lhs.getReg(), SpillMap);
-      SpillMap[Lhs.getReg()] = {Rhs.getReg()};
+      clearRhs(LhsDwReg, SpillMap);
+      SpillMap[LhsDwReg] = {RhsDwReg};
       // Transitively apply the mappings of `Rhs` to this mapping too.
-      std::set<int64_t> Other = SpillMap[Rhs.getReg()];
-      SpillMap[Lhs.getReg()].insert(Other.begin(), Other.end());
+      std::set<int64_t> Other = SpillMap[RhsDwReg];
+      SpillMap[LhsDwReg].insert(Other.begin(), Other.end());
       // YKFIXME: If the `mov` instruction has a killed-flag, remove the
       // register from the map.
       continue;
@@ -123,11 +141,11 @@ void processInstructions(
       const MachineOperand OffsetOp = Instr.getOperand(3);
       const MachineOperand MO = Instr.getOperand(5);
       assert(MO.isReg() && "Is register.");
-      const Register Reg = MO.getReg();
+      const Register DwReg = getDwarfRegNum(MO.getReg());
       if (OffsetOp.isImm()) {
         const int64_t Offset = OffsetOp.getImm();
-        clearRhs(Reg, SpillMap);
-        SpillMap[Reg] = {Offset};
+        clearRhs(DwReg, SpillMap);
+        SpillMap[DwReg] = {Offset};
       }
       continue;
     }
@@ -138,11 +156,11 @@ void processInstructions(
       const MachineOperand OffsetOp = Instr.getOperand(4);
       const MachineOperand Lhs = Instr.getOperand(0);
       assert(Lhs.isReg() && "Is register.");
-      const Register Reg = Lhs.getReg();
+      const Register DwReg = getDwarfRegNum(Lhs.getReg());
       if (OffsetOp.isImm()) {
         const int64_t Offset = OffsetOp.getImm();
-        clearRhs(Reg, SpillMap);
-        SpillMap[Reg] = {Offset};
+        clearRhs(DwReg, SpillMap);
+        SpillMap[DwReg] = {Offset};
       }
       continue;
     }
@@ -150,8 +168,9 @@ void processInstructions(
     // Any other assignments to tracked registers removes their mapping.
     for (const MachineOperand MO : Instr.defs()) {
       assert(MO.isReg() && "Is register.");
-      SpillMap.erase(MO.getReg());
-      clearRhs(MO.getReg(), SpillMap);
+      auto DwReg = getDwarfRegNum(MO.getReg());
+      SpillMap.erase(DwReg);
+      clearRhs(DwReg, SpillMap);
     }
   }
 }
