@@ -11,7 +11,7 @@ struct NonPOD {        \
   NonPOD(): I(sI++) {} \
 };
 namespace caas { namespace runtime {                            \
-  const char* PrintValueRuntime(const NonPOD* type) {           \
+  const char* to_string(const NonPOD* type) {                   \
   switch (type->I) {                                            \
   default: return "out-of-bounds";                              \
   case 0: return "0"; case 1: return "1"; case 2: return "2";   \
@@ -26,6 +26,10 @@ NonPOD non_pod_arr[2][3];
 // can handle the forward declaration of operator new with placement.
 non_pod_arr
 // CHECK: (NonPOD[2][3]) { { 0, 1, 2 }, { 3, 4, 5 } }
+
+char ch_arr[2][3][1] = {{{'a'}, {'b'}, {'c'}}, {{'d'}, {'e'}, {'f'}}};
+ch_arr
+// CHECK: (char[2][3][1]) {{{'a'}, {'b'}, {'c'}}, {{'d'}, {'e'}, {'f'}}}
 
 struct S3 { int* p; S3() { p = new int(42); } ~S3() { delete p; } };
 S3{}
@@ -148,7 +152,7 @@ struct MyDate {  \
 #include <string>
 
 namespace caas { namespace runtime {                                    \
-    std::string PrintValueRuntime(const MyDate* d) {                    \
+    std::string to_string(const MyDate* d) {                            \
       std::string result;                                               \
       result = std::to_string(d->year) + '-';                           \
       switch(d->month) { default: result += "invalid month"; break;     \

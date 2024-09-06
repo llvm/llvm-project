@@ -41,6 +41,7 @@ class CXXRecordDecl;
 class Decl;
 class IncrementalExecutor;
 class IncrementalParser;
+class LookupResult;
 
 /// Create a pre-configured \c CompilerInstance for incremental processing.
 class IncrementalCompilerBuilder {
@@ -186,6 +187,7 @@ private:
 
   std::string ValueDataToString(const Value &V);
   std::string ValueTypeToString(const Value &V) const;
+  std::string CallUserSpecifiedPrinter(LookupResult &R, const Value &V);
 
   llvm::Expected<Expr *> convertExprToValue(Expr *E);
 

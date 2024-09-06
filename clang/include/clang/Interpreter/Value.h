@@ -178,7 +178,7 @@ protected:
   template <typename T> struct convertFwd {
     static T cast(const Value &V) {
       if (V.isPointerOrObjectType())
-        return (T)(uintptr_t)V.as<void *>();
+        return *(T*)(uintptr_t)V.as<void *>();
       if (!V.isValid() || V.isVoid()) {
         return T();
       }

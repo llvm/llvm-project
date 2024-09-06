@@ -45,7 +45,7 @@ NamespaceDecl *LookupNamespace(Sema &S, llvm::StringRef Name,
                                const DeclContext *Within = nullptr);
 
 NamedDecl *LookupNamed(Sema &S, llvm::StringRef Name,
-                       const DeclContext *Within);
+                       const DeclContext *Within = nullptr);
 
 NestedNameSpecifier *CreateNestedNameSpecifier(const ASTContext &Ctx,
                                                const NamespaceDecl *Namesp);

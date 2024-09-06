@@ -28,13 +28,14 @@
 
 #include <cassert>
 #include <cstdarg>
+#include <sstream>
 #include <string>
 
 #define DEBUG_TYPE "interp-value"
 
 using namespace clang;
 
-static std::string PrintDeclType(const QualType &QT, NamedDecl *D) {
+static std::string DeclTypeToString(const QualType &QT, NamedDecl *D) {
   std::string Str;
   llvm::raw_string_ostream SS(Str);
   if (QT.hasQualifiers())
@@ -43,7 +44,7 @@ static std::string PrintDeclType(const QualType &QT, NamedDecl *D) {
   return Str;
 }
 
-static std::string PrintQualType(ASTContext &Ctx, QualType QT) {
+static std::string QualTypeToString(ASTContext &Ctx, QualType QT) {
   PrintingPolicy Policy(Ctx.getPrintingPolicy());
   // Print the Allocator in STL containers, for instance.
   Policy.SuppressDefaultTemplateArgs = false;
@@ -65,10 +66,10 @@ static std::string PrintQualType(ASTContext &Ctx, QualType QT) {
   const QualType NonRefTy = QT.getNonReferenceType();
 
   if (const auto *TTy = llvm::dyn_cast<TagType>(NonRefTy))
-    return PrintDeclType(NonRefTy, TTy->getDecl());
+    return DeclTypeToString(NonRefTy, TTy->getDecl());
 
   if (const auto *TRy = dyn_cast<RecordType>(NonRefTy))
-    return PrintDeclType(NonRefTy, TRy->getDecl());
+    return DeclTypeToString(NonRefTy, TRy->getDecl());
 
   const QualType Canon = NonRefTy.getCanonicalType();
 
@@ -90,12 +91,12 @@ static std::string PrintQualType(ASTContext &Ctx, QualType QT) {
       return GetFullTypeName(Ctx, Canon);
     else if (llvm::isa<TemplateSpecializationType>(SSDesugar))
       return GetFullTypeName(Ctx, NonRefTy);
-    return PrintDeclType(NonRefTy, TDTy->getDecl());
+    return DeclTypeToString(NonRefTy, TDTy->getDecl());
   }
   return GetFullTypeName(Ctx, NonRefTy);
 }
 
-static std::string PrintEnum(const Value &V) {
+static std::string EnumToString(const Value &V) {
   std::string Str;
   llvm::raw_string_ostream SS(Str);
   ASTContext &Ctx = const_cast<ASTContext &>(V.getASTContext());
@@ -119,11 +120,11 @@ static std::string PrintEnum(const Value &V) {
   }
   llvm::SmallString<64> APStr;
   AP.toString(APStr, /*Radix=*/10);
-  SS << " : " << PrintQualType(Ctx, ED->getIntegerType()) << " " << APStr;
+  SS << " : " << QualTypeToString(Ctx, ED->getIntegerType()) << " " << APStr;
   return Str;
 }
 
-static std::string PrintFunction(const Value &V, const void *Ptr) {
+static std::string FunctionToString(const Value &V, const void *Ptr) {
   std::string Str;
   llvm::raw_string_ostream SS(Str);
   SS << "Function @" << Ptr;
@@ -155,7 +156,7 @@ static std::string PrintFunction(const Value &V, const void *Ptr) {
   return Str;
 }
 
-static std::string PrintAddress(const void *Ptr, char Prefix) {
+static std::string AddressToString(const void *Ptr, char Prefix) {
   std::string Str;
   llvm::raw_string_ostream SS(Str);
   if (!Ptr)
@@ -164,51 +165,10 @@ static std::string PrintAddress(const void *Ptr, char Prefix) {
   return Str;
 }
 
-// FIXME: Encodings. Handle unprintable characters such as control characters.
-static std::string PrintOneChar(char Val) {
-  std::string Str;
-  llvm::raw_string_ostream SS(Str);
-
-  SS << "'" << Val << "'";
-  return Str;
-}
-
-// Char pointers
-// Assumption is this is a string.
-// N is limit to prevent endless loop if Ptr is not really a string.
-static std::string PrintString(const char *const *Ptr, size_t N = 10000) {
-  std::string Str;
-  llvm::raw_string_ostream SS(Str);
-
-  const char *Start = *Ptr;
-  if (!Start)
-    return "nullptr";
-
-  const char *End = Start + N;
-  // If we're gonna do this, better make sure the end is valid too
-  // FIXME: getpagesize() & GetSystemInfo().dwPageSize might be better
-  static constexpr auto PAGE_SIZE = 1024;
-  while (N > 1024) {
-    N -= PAGE_SIZE;
-    End = Start + N;
-  }
-
-  if (*Start == 0)
-    return "\"\"";
-
-  // Copy the bytes until we get a null-terminator
-  SS << "\"";
-  while (Start < End && *Start)
-    SS << *Start++;
-  SS << "\"";
-
-  return Str;
-}
-
 // Build the CallExpr to `PrintValueRuntime`.
-static llvm::Error BuildWrapperBody(LookupResult &R, Sema &S,
-                                    ASTContext &Ctx, FunctionDecl *WrapperFD,
-                                    QualType QT, const void *ValPtr) {
+static llvm::Error BuildWrapperBody(LookupResult &R, Sema &S, ASTContext &Ctx,
+                                    FunctionDecl *WrapperFD, QualType QT,
+                                    const void *ValPtr) {
   Sema::SynthesizedFunctionScope SemaFScope(S, WrapperFD);
   clang::DeclarationName RuntimeCallName;
 
@@ -251,8 +211,8 @@ static llvm::Error BuildWrapperBody(LookupResult &R, Sema &S,
                       SourceLocation());
   if (RuntimeCall.isInvalid()) {
     std::string Name = R.getLookupName().getAsString();
-    return llvm::make_error<llvm::StringError>(
-                                               "Cannot create call to " + Name, llvm::inconvertibleErrorCode());
+    return llvm::make_error<llvm::StringError>("Cannot create call to " + Name,
+                                               llvm::inconvertibleErrorCode());
   }
 
   // Create the ReturnStmt.
@@ -313,211 +273,80 @@ static std::string CreateUniqName(std::string Base) {
   return Base;
 }
 
-REPL_EXTERNAL_VISIBILITY std::string PrintValueRuntime(const void *Ptr) {
-  return PrintAddress(Ptr, '@');
-}
-
-REPL_EXTERNAL_VISIBILITY std::string PrintValueRuntime(const void **Ptr) {
-  return PrintAddress(*Ptr, '@');
-}
-
-REPL_EXTERNAL_VISIBILITY std::string PrintValueRuntime(const bool *Val) {
-  if (*Val)
-    return "true";
-  return "false";
-}
-
-REPL_EXTERNAL_VISIBILITY std::string PrintValueRuntime(const char *Val) {
-  return PrintOneChar(*Val);
-}
-
-REPL_EXTERNAL_VISIBILITY std::string PrintValueRuntime(const signed char *Val) {
-  return PrintOneChar(*Val);
-}
-
-REPL_EXTERNAL_VISIBILITY std::string
-PrintValueRuntime(const unsigned char *Val) {
-  return PrintOneChar(*Val);
-}
-
-REPL_EXTERNAL_VISIBILITY std::string PrintValueRuntime(const short *Val) {
-  std::string Str;
-  llvm::raw_string_ostream SS(Str);
-  SS << *Val;
-  return Str;
-}
-
-REPL_EXTERNAL_VISIBILITY
-std::string PrintValueRuntime(const unsigned short *Val) {
-  std::string Str;
-  llvm::raw_string_ostream SS(Str);
-  SS << *Val;
-  return Str;
-}
-
-REPL_EXTERNAL_VISIBILITY std::string PrintValueRuntime(const int *Val) {
-  std::string Str;
-  llvm::raw_string_ostream SS(Str);
-  SS << *Val;
-  return Str;
-}
-
-REPL_EXTERNAL_VISIBILITY
-std::string PrintValueRuntime(const unsigned int *Val) {
-  std::string Str;
-  llvm::raw_string_ostream SS(Str);
-  SS << *Val;
-  return Str;
-}
-
-REPL_EXTERNAL_VISIBILITY std::string PrintValueRuntime(const long *Val) {
-  std::string Str;
-  llvm::raw_string_ostream SS(Str);
-  SS << *Val;
-  return Str;
-}
-
-REPL_EXTERNAL_VISIBILITY std::string PrintValueRuntime(const long long *Val) {
-  std::string Str;
-  llvm::raw_string_ostream SS(Str);
-  SS << *Val;
-  return Str;
-}
-
-REPL_EXTERNAL_VISIBILITY
-std::string PrintValueRuntime(const unsigned long *Val) {
-  std::string Str;
-  llvm::raw_string_ostream SS(Str);
-  SS << *Val;
-  return Str;
-}
-
-REPL_EXTERNAL_VISIBILITY
-std::string PrintValueRuntime(const unsigned long long *Val) {
-  std::string Str;
-  llvm::raw_string_ostream SS(Str);
-  SS << *Val;
-  return Str;
-}
-
-REPL_EXTERNAL_VISIBILITY std::string PrintValueRuntime(const float *Val) {
-  std::string Str;
-  llvm::raw_string_ostream SS(Str);
-  SS << llvm::format("%#.6g", *Val) << 'f';
-  return Str;
-}
-
-REPL_EXTERNAL_VISIBILITY std::string PrintValueRuntime(const double *Val) {
-  std::string Str;
-  llvm::raw_string_ostream SS(Str);
-  SS << llvm::format("%#.12g", *Val);
-  return Str;
-}
-
-REPL_EXTERNAL_VISIBILITY std::string PrintValueRuntime(const long double *Val) {
-  std::string Str;
-  llvm::raw_string_ostream SS(Str);
-  SS << llvm::format("%#.8Lg", *Val) << 'L';
-  return Str;
-}
-
-REPL_EXTERNAL_VISIBILITY std::string PrintValueRuntime(const char *const *Val) {
-  return PrintString(Val);
-}
-
-REPL_EXTERNAL_VISIBILITY std::string PrintValueRuntime(const char **Val) {
-  return PrintString(Val);
-}
-
 // Check if the user has implemented a function that avoids fallback to
 // defaults.
 static clang::LookupResult LookupUserDefined(Sema &S, QualType QT) {
-  PrintingPolicy Policy = S.getASTContext().getPrintingPolicy();
-  Policy.SuppressElaboration = 1;
-  Policy.SuppressTagKeyword = 1;
-  Policy.FullyQualifiedName = 1;
-  std::string TypeStr = QT.getAsString(Policy);
-  DeclarationName Name = S.PP.getIdentifierInfo("caas_runtime_to_string_" + TypeStr);
+  DeclarationName Name;
+  ASTContext &Ctx = S.getASTContext();
+  if (S.getLangOpts().CPlusPlus) {
+    if (auto *NSD = dyn_cast_or_null<NamespaceDecl>(LookupNamed(S, "caas")))
+      if (NamedDecl* RtD = LookupNamed(S, "runtime", NSD)) {
+        Name = S.PP.getIdentifierInfo("to_string");
+        LookupResult R(S, Name, SourceLocation(), Sema::LookupOrdinaryName);
+        S.LookupQualifiedName(R, cast<DeclContext>(RtD)->getPrimaryContext());
+        LookupResult::Filter F = R.makeFilter();
+        while (F.hasNext()) {
+          NamedDecl* D = F.next();
+          FunctionDecl *FD = dyn_cast<FunctionDecl>(D);
+          if (!FD && isa<FunctionTemplateDecl>(D))
+            FD = cast<FunctionTemplateDecl>(D)->getTemplatedDecl();
+          if (FD)
+            if (FD->getNumParams() == 1) {
+              QualType ParamTy = FD->getParamDecl(0)->getType();
+              if (ParamTy->isPointerOrReferenceType()) {
+                // It is a uninstantiated template, we can't really match types.
+                if (isa<FunctionTemplateDecl>(D))
+                  continue;
+                ParamTy = ParamTy->getPointeeType();
+                if (Ctx.hasSameUnqualifiedType(ParamTy, QT))
+                  continue;
+              }
+            }
 
-  LLVM_DEBUG(llvm::dbgs() << "Looking for user-defined '" << Name <<"'");
+          F.erase();
+        }
+        F.done();
+        return R;
+      }
+  } else {
+    PrintingPolicy Policy = S.getASTContext().getPrintingPolicy();
+    Policy.SuppressElaboration = 1;
+    Policy.SuppressTagKeyword = 1;
+    Policy.FullyQualifiedName = 1;
+    std::string TypeStr = QT.getAsString(Policy);
+    Name = S.PP.getIdentifierInfo("caas_runtime_to_string_" + TypeStr);
 
-  LookupResult R(S, Name, SourceLocation(),Sema::LookupOrdinaryName);
+    LLVM_DEBUG(llvm::dbgs() << "Looking for user-defined '" << Name << "'");
+  }
+  LookupResult R(S, Name, SourceLocation(), Sema::LookupOrdinaryName);
   S.LookupName(R, S.getCurScope());
   return R;
 }
 
 namespace clang {
 
-std::string Interpreter::ValueDataToString(const Value &V) {
+std::string Interpreter::CallUserSpecifiedPrinter(LookupResult &R, const Value &V) {
+  assert(!R.empty());
+  // if (!R.isSingleResult())
+  //   return "{error: multiple results for '" + R.getLookupName().getAsString() +
+  //     "'}";
+
   Sema &S = getCompilerInstance()->getSema();
   ASTContext &Ctx = S.getASTContext();
 
-  QualType QT = V.getType();
-  QualType DesugaredTy = QT.getDesugaredType(Ctx);
-  QualType NonRefTy = DesugaredTy.getNonReferenceType();
-
-  if ((NonRefTy->isPointerType() || NonRefTy->isMemberPointerType()) &&
-      NonRefTy->getPointeeType()->isFunctionProtoType())
-    return PrintFunction(V, V.getPtr());
-
-  if (NonRefTy->isFunctionType())
-    return PrintFunction(V, &V);
-
-  if (NonRefTy->isEnumeralType())
-    return PrintEnum(V);
-
-  if (NonRefTy->isNullPtrType())
-    return "nullptr\n";
-
-  // If it is a builtin type dispatch to the builtin overloads.
-  if (auto *BT = DesugaredTy.getCanonicalType()->getAs<BuiltinType>()) {
-    switch (BT->getKind()) {
-    default:
-      return "{ error: unknown builtin type '" + std::to_string(BT->getKind()) +" '}";
-    case clang::BuiltinType::Bool: { bool val = V.getBool(); return PrintValueRuntime(&val); } case clang::BuiltinType::Char_S: { char val = V.getChar_S(); return PrintValueRuntime(&val); } case clang::BuiltinType::SChar: { signed char val = V.getSChar(); return PrintValueRuntime(&val); } case clang::BuiltinType::Char_U: { unsigned char val = V.getChar_U(); return PrintValueRuntime(&val); } case clang::BuiltinType::UChar: { unsigned char val = V.getUChar(); return PrintValueRuntime(&val); } case clang::BuiltinType::Short: { short val = V.getShort(); return PrintValueRuntime(&val); } case clang::BuiltinType::UShort: { unsigned short val = V.getUShort(); return PrintValueRuntime(&val); } case clang::BuiltinType::Int: { int val = V.getInt(); return PrintValueRuntime(&val); } case clang::BuiltinType::UInt: { unsigned int val = V.getUInt(); return PrintValueRuntime(&val); } case clang::BuiltinType::Long: { long val = V.getLong(); return PrintValueRuntime(&val); } case clang::BuiltinType::ULong: { unsigned long val = V.getULong(); return PrintValueRuntime(&val); } case clang::BuiltinType::LongLong: { long long val = V.getLongLong(); return PrintValueRuntime(&val); } case clang::BuiltinType::ULongLong: { unsigned long long val = V.getULongLong(); return PrintValueRuntime(&val); } case clang::BuiltinType::Float: { float val = V.getFloat(); return PrintValueRuntime(&val); } case clang::BuiltinType::Double: { double val = V.getDouble(); return PrintValueRuntime(&val); } case clang::BuiltinType::LongDouble: { long double val = V.getLongDouble(); return PrintValueRuntime(&val); }
-    }
-  }
-  if (auto *CXXRD = NonRefTy->getAsCXXRecordDecl())
-    if (CXXRD->isLambda())
-      return PrintAddress(V.getPtr(), '@');
-
-  // FIXME: Add support for custom printers in C.
-  if (NonRefTy->isPointerType()) {
-    if (NonRefTy->getPointeeType()->isCharType())
-      return PrintValueRuntime((const char**)V.getPtrAddress());
-    return PrintValueRuntime(V.getPtr());
-  }
-
+  // Check the found candidates.
   QualType RetTy = Ctx.getPointerType(Ctx.CharTy.withConst());
-
-  LookupResult R = LookupUserDefined(S, QT);
-  if (!R.isSingleResult())
-    return "{error: multiple results for '" + R.getLookupName().getAsString() + "'}";
-
-  if (R.empty()) {
-
-    if (!Ctx.getLangOpts().CPlusPlus)
-      return PrintValueRuntime(V.getPtr());
-
-    if (S.StdNamespace && !StdString) {
-
-      // Only include the header on demand because it's very heavy.
-      auto TUorE = Parse("#include <__clang_interpreter_runtime_printvalue.h>");
-      if (llvm::Error E = TUorE.takeError() ) {
-        llvm::logAllUnhandledErrors(std::move(E), llvm::errs(), "Parsing failed");
-        return "{error: cannot parse system header}";
-      }
-
-      // Find and cache std::string.
-      Decl *StdStringDecl = LookupNamed(S, "string", S.getStdNamespace());
-      assert(StdStringDecl && "Cannot find std::string");
-      const auto *StdStringTyDecl = llvm::dyn_cast<TypeDecl>(StdStringDecl);
-      assert(StdStringTyDecl && "Cannot find type of std::string");
-      RetTy = QualType(StdStringTyDecl->getTypeForDecl(), /*Quals=*/0);
+  if (Ctx.getLangOpts().CPlusPlus) {
+    if (!S.StdNamespace)
+      return "{error: user-defined pretty printers require std::string; consider #include <string> }";
+    // Find and cache std::string.
+    if (S.StdNamespace && !StdString)
+      StdString = LookupNamed(S, "string", S.getStdNamespace());
+    if (StdString) {
+      const auto *StdStringTD = llvm::dyn_cast<TypeDecl>(StdString);
+      RetTy = QualType(StdStringTD->getTypeForDecl(), /*Quals=*/0);
     }
   }
-
-  // All fails then generate a runtime call, this is slow.
 
   // Create the wrapper function.
   DeclarationName DeclName = &Ctx.Idents.get(CreateUniqName(WrapperName));
@@ -531,48 +360,161 @@ std::string Interpreter::ValueDataToString(const Value &V) {
 
   // FIXME: We still need to understand why we have to get the pointer to the
   // underlying Value storage for this to work reliabily...
-  if (!V.isManuallyAlloc())
-    ValPtr = V.getPtrAddress();
+  // if (!V.isManuallyAlloc())
+  //   ValPtr = V.getPtrAddress();
 
-  // // Check if the user has implemented a function that avoids fallback to
-  // // defaults.
-  // if (Ctx.getLangOpts().CPlusPlus) {
-  //   RuntimeCallName = S.PP.getIdentifierInfo("PrintValueRuntime");
-  // } else {
-  //   PrintingPolicy Policy = Ctx.getPrintingPolicy();
-  //   Policy.SuppressElaboration = 1;
-  //   Policy.SuppressTagKeyword = 1;
-  //   Policy.FullyQualifiedName = 1;
-  //   std::string TypeStr = QT.getAsString(Policy);
-  //   printf("KKK %s\n", TypeStr.c_str());
-  //   //      clang::TypeName::getFullyQualifiedName(QT, Ctx, Policy);
-  //   RuntimeCallName =
-  //     S.PP.getIdentifierInfo("caas__runtime__PrintValueRuntime__" + TypeStr);
-  // }
-
-  // LookupResult R(S, RuntimeCallName, SourceLocation(),Sema::LookupOrdinaryName);
-  // S.LookupName(R, S.getCurScope());
-
-  if (llvm::Error E = BuildWrapperBody(R, S, Ctx, WrapperFD, V.getType(), ValPtr)) {
+  if (llvm::Error E =
+          BuildWrapperBody(R, S, Ctx, WrapperFD, V.getType(), ValPtr)) {
     llvm::logAllUnhandledErrors(std::move(E), llvm::errs(),
                                 "Fail to build a wrapper function");
-    return "{Unable to print the value!}";
+    return "{error: unable to print the value}";
   }
 
   auto AddrOrErr = CompileDecl(*this, WrapperFD);
   if (!AddrOrErr)
     llvm::logAllUnhandledErrors(AddrOrErr.takeError(), llvm::errs(),
                                 "Fail to get symbol address");
-  if (auto *Main = AddrOrErr->toPtr<std::string (*)()>())
-    return (*Main)();
+  if (StdString) {
+    if (auto *Main = AddrOrErr->toPtr<std::string (*)()>())
+      return (*Main)();
+  } else {
+    if (auto *Main = AddrOrErr->toPtr<const char* (*)()>())
+      return (*Main)();
+  }
   return "{Unable to print the value!}";
+}
+
+struct ValueRef: public Value {
+  ValueRef(Interpreter *In, void *Ty) : Value(In, Ty) {
+    // Tell the base class to not try to deallocate if it manages the value.
+    IsManuallyAlloc = false;
+  }
+  void setData(long double D) { Data.m_LongDouble = D; }
+};
+
+std::string Interpreter::ValueDataToString(const Value &V) {
+  Sema &S = getCompilerInstance()->getSema();
+  ASTContext &Ctx = S.getASTContext();
+
+  QualType QT = V.getType();
+
+  while (const ConstantArrayType *CAT = Ctx.getAsConstantArrayType(QT)) {
+    std::string result = "{ ";
+    for (unsigned Idx = 0, N = CAT->getZExtSize(); Idx < N; ++Idx) {
+      QualType ElemTy = CAT->getElementType();
+      ValueRef InnerV = ValueRef(this, ElemTy.getAsOpaquePtr());
+      const Type* BaseTy = CAT->getBaseElementTypeUnsafe();
+      if (ElemTy->isBuiltinType()) {
+        // Arrays model builtin types as a pointer to the builtin. We should
+        // build the dereference to the element type if it is stored as a
+        // builtin.
+        InnerV.setData(V.convertTo<long double>());
+      } else {
+        uintptr_t offset = (uintptr_t)V.getPtr() + Idx * Ctx.getTypeSize(BaseTy) / 8;
+        InnerV.setPtr((void*)offset);
+      }
+      result += ValueDataToString(InnerV);
+      if (Idx < N - 1)
+        result += ", ";
+    }
+    result+=" }";
+    return result;
+  }
+
+  QualType DesugaredTy = QT.getDesugaredType(Ctx);
+  QualType NonRefTy = DesugaredTy.getNonReferenceType();
+
+  LookupResult R = LookupUserDefined(S, QT);
+  if (!R.empty())
+    return CallUserSpecifiedPrinter(R, V);
+
+  // If it is a builtin type dispatch to the builtin overloads.
+  if (auto *BT = DesugaredTy.getCanonicalType()->getAs<BuiltinType>()) {
+    std::string str;
+    llvm::raw_string_ostream ss(str);
+    switch (BT->getKind()) {
+    default:
+      return "{ error: unknown builtin type '" + std::to_string(BT->getKind()) +
+             " '}";
+    case clang::BuiltinType::Bool:
+      ss << ((V.getBool()) ? "true" : "false");
+      return str;
+    case clang::BuiltinType::Char_S:
+      ss << V.getChar_S();
+      return str;
+    case clang::BuiltinType::SChar:
+      ss << V.getSChar();
+      return str;
+    case clang::BuiltinType::Char_U:
+      ss << V.getChar_U();
+      return str;
+    case clang::BuiltinType::UChar:
+      ss << V.getUChar();
+      return str;
+    case clang::BuiltinType::Short:
+      ss << V.getShort();
+      return str;
+    case clang::BuiltinType::UShort:
+      ss << V.getUShort();
+      return str;
+    case clang::BuiltinType::Int:
+      ss << V.getInt();
+      return str;
+    case clang::BuiltinType::UInt:
+      ss << V.getUInt();
+      return str;
+    case clang::BuiltinType::Long:
+      ss << V.getLong();
+      return str;
+    case clang::BuiltinType::ULong:
+      ss << V.getULong();
+      return str;
+    case clang::BuiltinType::LongLong:
+      ss << V.getLongLong();
+      return str;
+    case clang::BuiltinType::ULongLong:
+      ss << V.getULongLong();
+      return str;
+    case clang::BuiltinType::Float:
+      ss << llvm::format("%#.6g", V.getFloat()) << 'f';
+      return str;
+    case clang::BuiltinType::Double:
+      ss << llvm::format("%#.12g", V.getDouble());
+      return str;
+    case clang::BuiltinType::LongDouble:
+      ss << llvm::format("%#.8Lg", V.getLongDouble()) << 'L';
+      return str;
+    }
+  }
+
+  if ((NonRefTy->isPointerType() || NonRefTy->isMemberPointerType()) &&
+      NonRefTy->getPointeeType()->isFunctionProtoType())
+    return FunctionToString(V, V.getPtr());
+
+  if (NonRefTy->isFunctionType())
+    return FunctionToString(V, &V);
+
+  if (NonRefTy->isEnumeralType())
+    return EnumToString(V);
+
+  if (NonRefTy->isNullPtrType())
+    return "nullptr\n";
+
+  // FIXME: Add support for custom printers in C.
+  if (NonRefTy->isPointerType()) {
+    if (NonRefTy->getPointeeType()->isCharType())
+      return AddressToString((const char **)V.getPtrAddress(), '@');
+  }
+
+  // Fall back to printing just the address of the unknown object.
+  return AddressToString(V.getPtr(), '@');
 }
 
 std::string Interpreter::ValueTypeToString(const Value &V) const {
   ASTContext &Ctx = const_cast<ASTContext &>(V.getASTContext());
   QualType QT = V.getType();
 
-  std::string QTStr = PrintQualType(Ctx, QT);
+  std::string QTStr = QualTypeToString(Ctx, QT);
 
   if (QT->isReferenceType())
     QTStr += " &";
@@ -622,7 +564,8 @@ public:
   InterfaceKind VisitRecordType(const RecordType *Ty) {
     if (S.getLangOpts().CPlusPlus)
       return InterfaceKind::WithAlloc;
-    ExprResult AddrOfE = S.CreateBuiltinUnaryOp(SourceLocation(), UO_AddrOf, E->IgnoreImpCasts());
+    ExprResult AddrOfE = S.CreateBuiltinUnaryOp(SourceLocation(), UO_AddrOf,
+                                                E->IgnoreImpCasts());
     assert(!AddrOfE.isInvalid() && "Can not create unary expression");
     Args.push_back(AddrOfE.get());
     return InterfaceKind::NoAlloc;
@@ -697,9 +640,9 @@ private:
 };
 
 static constexpr llvm::StringRef VPName[] = {
-  "__clang_Interpreter_SetValueNoAlloc",
-  "__clang_Interpreter_SetValueWithAlloc",
-  "__clang_Interpreter_SetValueCopyArr", "__ci_newtag"};
+    "__clang_Interpreter_SetValueNoAlloc",
+    "__clang_Interpreter_SetValueWithAlloc",
+    "__clang_Interpreter_SetValueCopyArr", "__ci_newtag"};
 
 // This synthesizes a call expression to a speciall
 // function that is responsible for generating the Value.
@@ -798,8 +741,9 @@ llvm::Expected<Expr *> Interpreter::convertExprToValue(Expr *E) {
         S.ActOnCallExpr(Scope, ValuePrintingInfo[InterfaceKind::WithAlloc],
                         E->getBeginLoc(), AdjustedArgs, E->getEndLoc());
     if (AllocCall.isInvalid())
-      return llvm::make_error<llvm::StringError>("Cannot call to " + VPName[WithAlloc],
-                          llvm::inconvertibleErrorCode());
+      return llvm::make_error<llvm::StringError>(
+          "Cannot call to " + VPName[WithAlloc],
+          llvm::inconvertibleErrorCode());
 
     TypeSourceInfo *TSI = Ctx.getTrivialTypeSourceInfo(Ty, SourceLocation());
 
@@ -822,10 +766,11 @@ llvm::Expected<Expr *> Interpreter::convertExprToValue(Expr *E) {
           S.ActOnCallExpr(Scope, ValuePrintingInfo[InterfaceKind::CopyArray],
                           SourceLocation(), Args, SourceLocation());
       if (SetValueE.isInvalid())
-        return llvm::make_error<llvm::StringError>("Cannot call to " + VPName[CopyArray],
-                                                   llvm::inconvertibleErrorCode());
+        return llvm::make_error<llvm::StringError>(
+            "Cannot call to " + VPName[CopyArray],
+            llvm::inconvertibleErrorCode());
       break;
-      //return SetValueE.get();
+      // return SetValueE.get();
     }
     Expr *Args[] = {AllocCall.get(), ValuePrintingInfo[InterfaceKind::NewTag]};
     ExprResult CXXNewCall = S.BuildCXXNew(
@@ -837,8 +782,8 @@ llvm::Expected<Expr *> Interpreter::convertExprToValue(Expr *E) {
 
     if (CXXNewCall.isInvalid())
       return llvm::make_error<llvm::StringError>(
-                          "Cannot build a call to placement new",
-                          llvm::inconvertibleErrorCode());
+          "Cannot build a call to placement new",
+          llvm::inconvertibleErrorCode());
 
     SetValueE = S.ActOnFinishFullExpr(CXXNewCall.get(),
                                       /*DiscardedValue=*/false);
