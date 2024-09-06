@@ -1001,8 +1001,8 @@ static void appendOneArg(InputArgList &Args, const Arg *Opt,
   if (Opt->getAlias()) {
     const Arg *Alias = Opt->getAlias();
     unsigned Index = Args.MakeIndex(Alias->getSpelling());
-    auto AliasCopy = std::make_unique<Arg>(Alias->getOption(), Args.getArgString(Index),
-                                 Index, BaseArg);
+    auto AliasCopy = std::make_unique<Arg>(
+        Alias->getOption(), Args.getArgString(Index), Index, BaseArg);
     AliasCopy->getValues() = Alias->getValues();
     AliasCopy->setOwnsValues(false);
     if (Alias->isClaimed())
