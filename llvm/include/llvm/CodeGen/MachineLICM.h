@@ -26,9 +26,6 @@ class EarlyMachineLICMPass
 
 class MachineLICMPass : public MachineLICMBasePass<MachineLICMPass, false> {};
 
-extern template class MachineLICMBasePass<EarlyMachineLICMPass, true>;
-extern template class MachineLICMBasePass<MachineLICMPass, false>;
-
 } // namespace llvm
 
 #endif // LLVM_CODEGEN_MACHINELICM_H

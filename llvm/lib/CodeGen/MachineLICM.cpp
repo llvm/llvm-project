@@ -186,11 +186,8 @@ namespace {
 
   public:
     MachineLICMImpl(bool PreRegAlloc, Pass *LegacyPass,
-                    MachineFunctionAnalysisManager *MFAM, AliasAnalysis *AA,
-                    MachineBlockFrequencyInfo *MBFI, MachineLoopInfo *MLI,
-                    MachineDominatorTree *DT)
-        : PreRegAlloc(PreRegAlloc), LegacyPass(LegacyPass), MFAM(MFAM), AA(AA),
-          MBFI(MBFI), MLI(MLI), DT(DT) {
+                    MachineFunctionAnalysisManager *MFAM)
+        : PreRegAlloc(PreRegAlloc), LegacyPass(LegacyPass), MFAM(MFAM) {
       assert((LegacyPass || MFAM) && "LegacyPass or MFAM must be provided");
       assert(!(LegacyPass && MFAM) &&
              "LegacyPass and MFAM cannot be provided at the same time");
@@ -364,19 +361,27 @@ bool MachineLICMBase::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
 
-  MachineBlockFrequencyInfo *MBFI =
-      DisableHoistingToHotterBlocks != UseBFI::None
-          ? &getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI()
-          : nullptr;
-  MachineLoopInfo *MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
-  MachineDominatorTree *DT =
-      &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
-  AliasAnalysis *AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
-  MachineLICMImpl Impl(PreRegAlloc, this, nullptr, AA, MBFI, MLI, DT);
+  MachineLICMImpl Impl(PreRegAlloc, this, nullptr);
   return Impl.run(MF);
 }
 
+#define GET_RESULT(RESULT, GETTER, INFIX)                                      \
+  ((LegacyPass)                                                                \
+       ? &LegacyPass->getAnalysis<RESULT##INFIX##WrapperPass>().GETTER()       \
+       : &MFAM->getResult<RESULT##Analysis>(MF))
+
 bool MachineLICMImpl::run(MachineFunction &MF) {
+  AA = MFAM != nullptr
+           ? &MFAM->getResult<FunctionAnalysisManagerMachineFunctionProxy>(MF)
+                  .getManager()
+                  .getResult<AAManager>(MF.getFunction())
+           : &LegacyPass->getAnalysis<AAResultsWrapperPass>().getAAResults();
+  DT = GET_RESULT(MachineDominatorTree, getDomTree, );
+  MLI = GET_RESULT(MachineLoop, getLI, Info);
+  MBFI = DisableHoistingToHotterBlocks != UseBFI::None
+             ? GET_RESULT(MachineBlockFrequency, getMBFI, Info)
+             : nullptr;
+
   Changed = FirstInLoop = false;
   const TargetSubtargetInfo &ST = MF.getSubtarget();
   TII = ST.getInstrInfo();
@@ -1765,8 +1770,8 @@ bool MachineLICMImpl::isTgtHotterThanSrc(MachineBasicBlock *SrcBlock,
   return Ratio > BlockFrequencyRatioThreshold;
 }
 
-template class MachineLICMBasePass<EarlyMachineLICMPass, true>;
-template class MachineLICMBasePass<MachineLICMPass, false>;
+template class llvm::MachineLICMBasePass<EarlyMachineLICMPass, true>;
+template class llvm::MachineLICMBasePass<MachineLICMPass, false>;
 
 template <typename DerivedT, bool PreRegAlloc>
 PreservedAnalyses MachineLICMBasePass<DerivedT, PreRegAlloc>::run(
@@ -1774,18 +1779,7 @@ PreservedAnalyses MachineLICMBasePass<DerivedT, PreRegAlloc>::run(
   if (MF.getFunction().hasOptNone())
     return PreservedAnalyses::all();
 
-  auto &FAM = MFAM.getResult<FunctionAnalysisManagerMachineFunctionProxy>(MF)
-                  .getManager();
-
-  auto *DT = &MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
-  auto *MLI = &MFAM.getResult<MachineLoopAnalysis>(MF);
-  auto *MBFI = DisableHoistingToHotterBlocks != UseBFI::None
-                   ? &MFAM.getResult<MachineBlockFrequencyAnalysis>(MF)
-                   : nullptr;
-  auto *AA = &FAM.getResult<AAManager>(MF.getFunction());
-
-  bool Changed =
-      MachineLICMImpl(PreRegAlloc, nullptr, &MFAM, AA, MBFI, MLI, DT).run(MF);
+  bool Changed = MachineLICMImpl(PreRegAlloc, nullptr, &MFAM).run(MF);
   if (!Changed)
     return PreservedAnalyses::all();
   auto PA = getMachineFunctionPassPreservedAnalyses();
