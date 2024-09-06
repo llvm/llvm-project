@@ -46,9 +46,9 @@ class TestSwiftModuleSearchPaths(TestBase):
                     self.getBuildDir())
         
         # import the module
-        self.runCmd("e import Module")
+        self.runCmd("expr import Module")
         
         # Check that we know about the function declared in the module
         self.match(
-            "e plusTen(10)", "error: Couldn't lookup symbols:", error=True)
+            "expr plusTen(10)", "error: Couldn't lookup symbols:", error=True)
 
