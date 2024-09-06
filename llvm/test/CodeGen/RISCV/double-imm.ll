@@ -62,8 +62,8 @@ define double @double_imm_op(double %a) nounwind {
 ;
 ; CHECKRV64ZDINX-LABEL: double_imm_op:
 ; CHECKRV64ZDINX:       # %bb.0:
-; CHECKRV64ZDINX-NEXT:    lui a1, %hi(.LCPI1_0)
-; CHECKRV64ZDINX-NEXT:    ld a1, %lo(.LCPI1_0)(a1)
+; CHECKRV64ZDINX-NEXT:    li a1, 1023
+; CHECKRV64ZDINX-NEXT:    slli a1, a1, 52
 ; CHECKRV64ZDINX-NEXT:    fadd.d a0, a0, a1
 ; CHECKRV64ZDINX-NEXT:    ret
   %1 = fadd double %a, 1.0

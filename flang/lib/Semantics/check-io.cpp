@@ -675,6 +675,7 @@ void IoChecker::Leave(const parser::BackspaceStmt &) {
   CheckForPureSubprogram();
   CheckForRequiredSpecifier(
       flags_.test(Flag::NumberUnit), "UNIT number"); // C1240
+  CheckForUselessIomsg();
   Done();
 }
 
@@ -682,6 +683,7 @@ void IoChecker::Leave(const parser::CloseStmt &) {
   CheckForPureSubprogram();
   CheckForRequiredSpecifier(
       flags_.test(Flag::NumberUnit), "UNIT number"); // C1208
+  CheckForUselessIomsg();
   Done();
 }
 
@@ -689,6 +691,7 @@ void IoChecker::Leave(const parser::EndfileStmt &) {
   CheckForPureSubprogram();
   CheckForRequiredSpecifier(
       flags_.test(Flag::NumberUnit), "UNIT number"); // C1240
+  CheckForUselessIomsg();
   Done();
 }
 
@@ -696,6 +699,7 @@ void IoChecker::Leave(const parser::FlushStmt &) {
   CheckForPureSubprogram();
   CheckForRequiredSpecifier(
       flags_.test(Flag::NumberUnit), "UNIT number"); // C1243
+  CheckForUselessIomsg();
   Done();
 }
 
@@ -708,6 +712,7 @@ void IoChecker::Leave(const parser::InquireStmt &stmt) {
         "UNIT number or FILE"); // C1246
     CheckForProhibitedSpecifier(IoSpecKind::File, IoSpecKind::Unit); // C1246
     CheckForRequiredSpecifier(IoSpecKind::Id, IoSpecKind::Pending); // C1248
+    CheckForUselessIomsg();
   }
   Done();
 }
@@ -742,11 +747,13 @@ void IoChecker::Leave(const parser::OpenStmt &) {
     CheckForProhibitedSpecifier(flags_.test(Flag::AccessStream),
         "STATUS='STREAM'", IoSpecKind::Recl); // 12.5.6.15
   }
+  CheckForUselessIomsg();
   Done();
 }
 
 void IoChecker::Leave(const parser::PrintStmt &) {
   CheckForPureSubprogram();
+  CheckForUselessIomsg();
   Done();
 }
 
@@ -817,6 +824,7 @@ void IoChecker::Leave(const parser::RewindStmt &) {
   CheckForRequiredSpecifier(
       flags_.test(Flag::NumberUnit), "UNIT number"); // C1240
   CheckForPureSubprogram();
+  CheckForUselessIomsg();
   Done();
 }
 
@@ -824,6 +832,7 @@ void IoChecker::Leave(const parser::WaitStmt &) {
   CheckForRequiredSpecifier(
       flags_.test(Flag::NumberUnit), "UNIT number"); // C1237
   CheckForPureSubprogram();
+  CheckForUselessIomsg();
   Done();
 }
 
@@ -883,6 +892,7 @@ void IoChecker::LeaveReadWrite() const {
       "FMT or NML"); // C1227
   CheckForRequiredSpecifier(IoSpecKind::Round, flags_.test(Flag::FmtOrNml),
       "FMT or NML"); // C1227
+  CheckForUselessIomsg();
 }
 
 void IoChecker::SetSpecifier(IoSpecKind specKind) {
@@ -1057,6 +1067,15 @@ void IoChecker::CheckForPureSubprogram() const { // C1597
   }
 }
 
+void IoChecker::CheckForUselessIomsg() const {
+  if (specifierSet_.test(IoSpecKind::Iomsg) &&
+      !specifierSet_.test(IoSpecKind::Err) &&
+      !specifierSet_.test(IoSpecKind::Iostat) &&
+      context_.ShouldWarn(common::UsageWarning::UselessIomsg)) {
+    context_.Say("IOMSG= is useless without either ERR= or IOSTAT="_warn_en_US);
+  }
+}
+
 // Seeks out an allocatable or pointer ultimate component that is not
 // nested in a nonallocatable/nonpointer component with a specific
 // defined I/O procedure.
@@ -1151,6 +1170,12 @@ parser::Message *IoChecker::CheckForBadIoType(const evaluate::DynamicType &type,
         return &context_.Say(where,
             "Derived type '%s' in I/O may not be polymorphic unless using defined I/O"_err_en_US,
             derived.name());
+      }
+      if ((IsBuiltinDerivedType(&derived, "c_ptr") ||
+              IsBuiltinDerivedType(&derived, "c_devptr")) &&
+          !context_.ShouldWarn(common::LanguageFeature::PrintCptr)) {
+        // Bypass the check below for c_ptr and c_devptr.
+        return nullptr;
       }
       if (const Symbol *
           bad{FindInaccessibleComponent(which, derived, scope)}) {

@@ -442,7 +442,10 @@ public:
          continue;
 
        const CXXMethodDecl *Method = VtableComponent.getFunctionDecl();
-       if (!Method->getCanonicalDecl()->isInlined())
+       const FunctionDecl *FD = Method->getDefinition();
+       const bool IsInlined =
+           Method->getCanonicalDecl()->isInlined() || (FD && FD->isInlined());
+       if (!IsInlined)
          continue;
 
        StringRef Name = CGM.getMangledName(VtableComponent.getGlobalDecl());
@@ -582,13 +585,6 @@ CodeGen::CGCXXABI *CodeGen::CreateItaniumCXXABI(CodeGenModule &CGM) {
     return new XLCXXABI(CGM);
 
   case TargetCXXABI::GenericItanium:
-    if (CGM.getContext().getTargetInfo().getTriple().getArch()
-        == llvm::Triple::le32) {
-      // For PNaCl, use ARM-style method pointers so that PNaCl code
-      // does not assume anything about the alignment of function
-      // pointers.
-      return new ItaniumCXXABI(CGM, /*UseARMMethodPtrABI=*/true);
-    }
     return new ItaniumCXXABI(CGM);
 
   case TargetCXXABI::Microsoft:
@@ -2286,8 +2282,18 @@ bool ItaniumCXXABI::canSpeculativelyEmitVTableAsBaseClass(
   if (CGM.getCodeGenOpts().ForceEmitVTables)
     return true;
 
-  // If we don't have any not emitted inline virtual function then we are safe
-  // to emit an available_externally copy of vtable.
+  // A speculative vtable can only be generated if all virtual inline functions
+  // defined by this class are emitted. The vtable in the final program contains
+  // for each virtual inline function not used in the current TU a function that
+  // is equivalent to the unused function. The function in the actual vtable
+  // does not have to be declared under the same symbol (e.g., a virtual
+  // destructor that can be substituted with its base class's destructor). Since
+  // inline functions are emitted lazily and this emissions does not account for
+  // speculative emission of a vtable, we might generate a speculative vtable
+  // with references to inline functions that are not emitted under that name.
+  // This can lead to problems when devirtualizing a call to such a function,
+  // that result in linking errors. Hence, if there are any unused virtual
+  // inline function, we cannot emit the speculative vtable.
   // FIXME we can still emit a copy of the vtable if we
   // can emit definition of the inline functions.
   if (hasAnyUnusedVirtualInlineFunction(RD))
@@ -2313,6 +2319,9 @@ bool ItaniumCXXABI::canSpeculativelyEmitVTableAsBaseClass(
 
 bool ItaniumCXXABI::canSpeculativelyEmitVTable(const CXXRecordDecl *RD) const {
   if (!canSpeculativelyEmitVTableAsBaseClass(RD))
+    return false;
+
+  if (RD->shouldEmitInExternalSource())
     return false;
 
   // For a complete-object vtable (or more specifically, for the VTT), we need
@@ -3630,6 +3639,8 @@ static bool TypeInfoIsInStandardLibrary(const BuiltinType *Ty) {
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
 #define AMDGPU_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/AMDGPUTypes.def"
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/HLSLIntangibleTypes.def"
     case BuiltinType::ShortAccum:
     case BuiltinType::Accum:
     case BuiltinType::LongAccum:

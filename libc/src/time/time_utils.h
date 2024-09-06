@@ -92,7 +92,12 @@ extern int64_t update_from_seconds(int64_t total_seconds, struct tm *tm);
 
 // POSIX.1-2017 requires this.
 LIBC_INLINE time_t out_of_range() {
+#ifdef EOVERFLOW
+  // For non-POSIX uses of the standard C time functions, where EOVERFLOW is
+  // not defined, it's OK not to set errno at all. The plain C standard doesn't
+  // require it.
   libc_errno = EOVERFLOW;
+#endif
   return TimeConstants::OUT_OF_RANGE_RETURN_VALUE;
 }
 

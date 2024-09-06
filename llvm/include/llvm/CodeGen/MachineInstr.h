@@ -642,7 +642,7 @@ public:
   /// Returns true if the instruction has implicit definition.
   bool hasImplicitDef() const {
     for (const MachineOperand &MO : implicit_operands())
-      if (MO.isDef() && MO.isImplicit())
+      if (MO.isDef())
         return true;
     return false;
   }
@@ -1434,6 +1434,8 @@ public:
   bool isExtractSubreg() const {
     return getOpcode() == TargetOpcode::EXTRACT_SUBREG;
   }
+
+  bool isFakeUse() const { return getOpcode() == TargetOpcode::FAKE_USE; }
 
   /// Return true if the instruction behaves like a copy.
   /// This does not include native copy instructions.

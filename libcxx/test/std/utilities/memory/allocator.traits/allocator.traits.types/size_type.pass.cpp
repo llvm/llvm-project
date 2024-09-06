@@ -51,16 +51,10 @@ private:
     typedef void size_type;
 };
 
-namespace std
-{
-
 template <>
-struct pointer_traits<C<char>::pointer>
-{
-    typedef signed char difference_type;
+struct std::pointer_traits<C<char>::pointer> {
+  typedef signed char difference_type;
 };
-
-}
 
 int main(int, char**)
 {

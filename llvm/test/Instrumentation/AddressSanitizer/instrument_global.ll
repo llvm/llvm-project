@@ -7,7 +7,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; If a global is present, __asan_[un]register_globals should be called from
 ; module ctor/dtor
 
-; CHECK: @___asan_gen_ = private constant [8 x i8] c"<stdin>\00", align 1
+; CHECK: @___asan_gen_module = private constant [8 x i8] c"<stdin>\00", align 1
 ; CHECK: @llvm.used = appending global [2 x ptr] [ptr @asan.module_ctor, ptr @asan.module_dtor], section "llvm.metadata"
 ; CHECK: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 1, ptr @asan.module_ctor, ptr @asan.module_ctor }]
 ; CHECK: @llvm.global_dtors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 1, ptr @asan.module_dtor, ptr @asan.module_dtor }]

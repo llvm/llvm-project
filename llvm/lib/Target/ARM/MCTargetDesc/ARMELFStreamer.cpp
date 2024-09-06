@@ -34,6 +34,7 @@
 #include "llvm/MC/MCFragment.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstPrinter.h"
+#include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSection.h"
@@ -991,6 +992,10 @@ void ARMTargetELFStreamer::emitFPUDefaultAttributes() {
   // uses the FP_ARMV8_D16 build attribute.
   case ARM::FK_FPV5_SP_D16:
   case ARM::FK_FPV5_D16:
+  // FPv5 and FP-ARMv8 have the same instructions, so are modeled as one
+  // FPU, but there are two different names for it depending on the CPU.
+  case ARM::FK_FP_ARMV8_FULLFP16_SP_D16:
+  case ARM::FK_FP_ARMV8_FULLFP16_D16:
     S.setAttributeItem(ARMBuildAttrs::FP_arch, ARMBuildAttrs::AllowFPARMv8B,
                        /* OverwriteExisting= */ false);
     break;
@@ -1113,6 +1118,25 @@ void ARMTargetELFStreamer::reset() { AttributeSection = nullptr; }
 void ARMTargetELFStreamer::finish() {
   ARMTargetStreamer::finish();
   finishAttributeSection();
+
+  // The mix of execute-only and non-execute-only at link time is
+  // non-execute-only. To avoid the empty implicitly created .text
+  // section from making the whole .text section non-execute-only, we
+  // mark it execute-only if it is empty and there is at least one
+  // execute-only section in the object.
+  MCContext &Ctx = getStreamer().getContext();
+  auto &Asm = getStreamer().getAssembler();
+  if (any_of(Asm, [](const MCSection &Sec) {
+        return cast<MCSectionELF>(Sec).getFlags() & ELF::SHF_ARM_PURECODE;
+      })) {
+    auto *Text =
+        static_cast<MCSectionELF *>(Ctx.getObjectFileInfo()->getTextSection());
+    for (auto &F : *Text)
+      if (auto *DF = dyn_cast<MCDataFragment>(&F))
+        if (!DF->getContents().empty())
+          return;
+    Text->setFlags(Text->getFlags() | ELF::SHF_ARM_PURECODE);
+  }
 }
 
 void ARMELFStreamer::reset() {

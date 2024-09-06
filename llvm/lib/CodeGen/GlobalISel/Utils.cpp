@@ -228,6 +228,9 @@ bool llvm::isTriviallyDead(const MachineInstr &MI,
   // Don't delete frame allocation labels.
   if (MI.getOpcode() == TargetOpcode::LOCAL_ESCAPE)
     return false;
+  // Don't delete fake uses.
+  if (MI.getOpcode() == TargetOpcode::FAKE_USE)
+    return false;
   // LIFETIME markers should be preserved even if they seem dead.
   if (MI.getOpcode() == TargetOpcode::LIFETIME_START ||
       MI.getOpcode() == TargetOpcode::LIFETIME_END)
@@ -301,6 +304,13 @@ std::optional<APInt> llvm::getIConstantVRegVal(Register VReg,
   if (!ValAndVReg)
     return std::nullopt;
   return ValAndVReg->Value;
+}
+
+APInt llvm::getIConstantFromReg(Register Reg, const MachineRegisterInfo &MRI) {
+  MachineInstr *Const = MRI.getVRegDef(Reg);
+  assert((Const && Const->getOpcode() == TargetOpcode::G_CONSTANT) &&
+         "expected a G_CONSTANT on Reg");
+  return Const->getOperand(1).getCImm()->getValue();
 }
 
 std::optional<int64_t>

@@ -86,7 +86,7 @@ bool ValueObjectCast::UpdateValue() {
 
   // The dynamic value failed to get an error, pass the error along
   if (m_error.Success() && m_parent->GetError().Fail())
-    m_error = m_parent->GetError();
+    m_error = m_parent->GetError().Clone();
   SetValueIsValid(false);
   return false;
 }

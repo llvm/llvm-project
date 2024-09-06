@@ -291,13 +291,12 @@ DWARFDie::findRecursively(ArrayRef<dwarf::Attribute> Attrs) const {
     if (auto Value = Die.find(Attrs))
       return Value;
 
-    if (auto D = Die.getAttributeValueAsReferencedDie(DW_AT_abstract_origin))
-      if (Seen.insert(D).second)
-        Worklist.push_back(D);
-
-    if (auto D = Die.getAttributeValueAsReferencedDie(DW_AT_specification))
-      if (Seen.insert(D).second)
-        Worklist.push_back(D);
+    for (dwarf::Attribute Attr :
+         {DW_AT_abstract_origin, DW_AT_specification, DW_AT_signature}) {
+      if (auto D = Die.getAttributeValueAsReferencedDie(Attr))
+        if (Seen.insert(D).second)
+          Worklist.push_back(D);
+    }
   }
 
   return std::nullopt;
@@ -319,6 +318,10 @@ DWARFDie::getAttributeValueAsReferencedDie(const DWARFFormValue &V) const {
   } else if (Offset = V.getAsDebugInfoReference(); Offset) {
     if (DWARFUnit *SpecUnit = U->getUnitVector().getUnitForOffset(*Offset))
       Result = SpecUnit->getDIEForOffset(*Offset);
+  } else if (std::optional<uint64_t> Sig = V.getAsSignatureReference()) {
+    if (DWARFTypeUnit *TU = U->getContext().getTypeUnitForHash(
+            U->getVersion(), *Sig, U->isDWOUnit()))
+      Result = TU->getDIEForOffset(TU->getTypeOffset() + TU->getOffset());
   }
   return Result;
 }

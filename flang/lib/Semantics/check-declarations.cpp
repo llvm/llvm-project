@@ -247,7 +247,18 @@ void CheckHelper::Check(
   }
 }
 
+static bool IsBlockData(const Scope &scope) {
+  return scope.kind() == Scope::Kind::BlockData;
+}
+
+static bool IsBlockData(const Symbol &symbol) {
+  return symbol.scope() && IsBlockData(*symbol.scope());
+}
+
 void CheckHelper::Check(const Symbol &symbol) {
+  if (symbol.has<UseErrorDetails>()) {
+    return;
+  }
   if (symbol.name().size() > common::maxNameLen &&
       &symbol == &symbol.GetUltimate()) {
     if (context_.ShouldWarn(common::LanguageFeature::LongNames)) {
@@ -397,9 +408,10 @@ void CheckHelper::Check(const Symbol &symbol) {
             messages_.Say(
                 "Result of pure function may not have an impure FINAL subroutine"_err_en_US);
           }
-          if (auto bad{FindPolymorphicAllocatableUltimateComponent(*derived)}) {
+          if (auto bad{
+                  FindPolymorphicAllocatablePotentialComponent(*derived)}) {
             SayWithDeclaration(*bad,
-                "Result of pure function may not have polymorphic ALLOCATABLE ultimate component '%s'"_err_en_US,
+                "Result of pure function may not have polymorphic ALLOCATABLE potential component '%s'"_err_en_US,
                 bad.BuildResultDesignatorName());
           }
         }
@@ -463,6 +475,23 @@ void CheckHelper::Check(const Symbol &symbol) {
       messages_.Say(
           "Automatic data object '%s' may not appear in a module"_err_en_US,
           symbol.name());
+    } else if (IsBlockData(symbol.owner())) {
+      messages_.Say(
+          "Automatic data object '%s' may not appear in a BLOCK DATA subprogram"_err_en_US,
+          symbol.name());
+    } else if (symbol.owner().kind() == Scope::Kind::MainProgram) {
+      if (context_.IsEnabled(common::LanguageFeature::AutomaticInMainProgram)) {
+        if (context_.ShouldWarn(
+                common::LanguageFeature::AutomaticInMainProgram)) {
+          messages_.Say(
+              "Automatic data object '%s' should not appear in the specification part of a main program"_port_en_US,
+              symbol.name());
+        }
+      } else {
+        messages_.Say(
+            "Automatic data object '%s' may not appear in the specification part of a main program"_err_en_US,
+            symbol.name());
+      }
     }
   }
   if (IsProcedure(symbol)) {
@@ -2797,10 +2826,6 @@ static bool IsSubprogramDefinition(const Symbol &symbol) {
   const auto *subp{symbol.detailsIf<SubprogramDetails>()};
   return subp && !subp->isInterface() && symbol.scope() &&
       symbol.scope()->kind() == Scope::Kind::Subprogram;
-}
-
-static bool IsBlockData(const Symbol &symbol) {
-  return symbol.scope() && symbol.scope()->kind() == Scope::Kind::BlockData;
 }
 
 static bool IsExternalProcedureDefinition(const Symbol &symbol) {

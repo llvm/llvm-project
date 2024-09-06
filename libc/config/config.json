@@ -88,5 +88,11 @@
       "value": true,
       "doc": "Make setjmp save the value of x18, and longjmp restore it. The AArch64 ABI delegates this register to platform ABIs, which can choose whether to make it caller-saved."
     }
+  },
+  "time": {
+    "LIBC_CONF_TIME_64BIT": {
+      "value": false,
+      "doc": "Force the size of time_t to 64 bits, even on platforms where compatibility considerations would otherwise make it 32-bit."
+    }
   }
 }

@@ -194,8 +194,7 @@ public:
                       fir::SequenceType declaredType, mlir::Value extent,
                       llvm::ArrayRef<mlir::Value> lengths)
       : StrategyBase{stmtCtx, symMap}, shape{builder.genShape(loc, {extent})},
-        lengthParams{lengths.begin(), lengths.end()},
-        exprType{getExprType(declaredType)} {}
+        lengthParams{lengths}, exprType{getExprType(declaredType)} {}
 
   static hlfir::ExprType getExprType(fir::SequenceType declaredType) {
     // Note: 7.8 point 4: the dynamic type of an array constructor is its static
@@ -331,8 +330,7 @@ public:
       // Prepare the initial state of the allocatable descriptor with a
       // deallocated status and all the available knowledge about the extent
       // and length parameters.
-      llvm::SmallVector<mlir::Value> emboxLengths(lengths.begin(),
-                                                  lengths.end());
+      llvm::SmallVector<mlir::Value> emboxLengths(lengths);
       if (!extent)
         extent = builder.createIntegerConstant(loc, builder.getIndexType(), 0);
       if (missingLengthParameters) {

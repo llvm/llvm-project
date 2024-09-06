@@ -90,6 +90,7 @@ namespace std {
 #include <__type_traits/aligned_storage.h>
 #include <__type_traits/conditional.h>
 #include <__type_traits/decay.h>
+#include <__type_traits/enable_if.h>
 #include <__type_traits/is_constructible.h>
 #include <__type_traits/is_function.h>
 #include <__type_traits/is_nothrow_constructible.h>

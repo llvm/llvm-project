@@ -479,3 +479,49 @@ void testForBug49342()
 {
   auto it = std::iter<char>{} - 2; // Used to be false positive.
 }
+
+namespace GH93386 {
+// verify no duplicated diagnostics are emitted.
+struct [[gsl::Pointer]] S {
+  S(const std::vector<int>& abc [[clang::lifetimebound]]);
+};
+
+S test(std::vector<int> a) {
+  return S(a);  // expected-warning {{address of stack memory associated with}}
+}
+
+auto s = S(std::vector<int>()); // expected-warning {{temporary whose address is used as value of local variable}}
+
+// Verify no regression on the follow case.
+std::string_view test2(int i, std::optional<std::string_view> a) {
+  if (i)
+    return std::move(*a);
+  return std::move(a.value());
+}
+
+struct Foo;
+struct FooView {
+  FooView(const Foo& foo [[clang::lifetimebound]]);
+};
+FooView test3(int i, std::optional<Foo> a) {
+  if (i)
+    return *a; // expected-warning {{address of stack memory}}
+  return a.value(); // expected-warning {{address of stack memory}}
+}
+} // namespace GH93386
+
+namespace GH100549 {
+struct UrlAnalyzed {
+  UrlAnalyzed(std::string_view url [[clang::lifetimebound]]);
+};
+std::string StrCat(std::string_view, std::string_view);
+void test1() {
+  UrlAnalyzed url(StrCat("abc", "bcd")); // expected-warning {{object backing the pointer will be destroyed}}
+}
+
+std::string_view ReturnStringView(std::string_view abc [[clang::lifetimebound]]);
+
+void test() {
+  std::string_view svjkk1 = ReturnStringView(StrCat("bar", "x")); // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}}
+}
+} // namespace GH100549

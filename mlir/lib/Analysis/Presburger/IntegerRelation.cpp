@@ -1515,7 +1515,7 @@ void IntegerRelation::addLocalFloorDiv(ArrayRef<DynamicAPInt> dividend,
 
   appendVar(VarKind::Local);
 
-  SmallVector<DynamicAPInt, 8> dividendCopy(dividend.begin(), dividend.end());
+  SmallVector<DynamicAPInt, 8> dividendCopy(dividend);
   dividendCopy.insert(dividendCopy.end() - 1, DynamicAPInt(0));
   addInequality(
       getDivLowerBound(dividendCopy, divisor, dividendCopy.size() - 2));
@@ -2367,10 +2367,8 @@ bool IntegerRelation::removeDuplicateConstraints() {
   hashTable.insert({row, 0});
   for (unsigned k = 1; k < ineqs; ++k) {
     row = getInequality(k).drop_back();
-    if (!hashTable.contains(row)) {
-      hashTable.insert({row, k});
+    if (hashTable.try_emplace(row, k).second)
       continue;
-    }
 
     // For identical cases, keep only the smaller part of the constant term.
     unsigned l = hashTable[row];

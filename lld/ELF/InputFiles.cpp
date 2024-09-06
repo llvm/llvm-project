@@ -200,10 +200,8 @@ static void updateSupportedARMFeatures(const ARMAttributeParser &attributes) {
       attributes.getAttributeValue(ARMBuildAttrs::ARM_ISA_use);
   std::optional<unsigned> thumb =
       attributes.getAttributeValue(ARMBuildAttrs::THUMB_ISA_use);
-  bool noArmISA = !armISA || *armISA == ARMBuildAttrs::Not_Allowed;
-  bool hasThumb2 = thumb && *thumb >= ARMBuildAttrs::AllowThumb32;
-  if (noArmISA && hasThumb2)
-    config->armThumbPLTs = true;
+  config->armHasArmISA |= armISA && *armISA >= ARMBuildAttrs::Allowed;
+  config->armHasThumb2ISA |= thumb && *thumb >= ARMBuildAttrs::AllowThumb32;
 }
 
 InputFile::InputFile(Kind k, MemoryBufferRef m)
@@ -831,6 +829,7 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
     case SHT_STRTAB:
     case SHT_REL:
     case SHT_RELA:
+    case SHT_CREL:
     case SHT_NULL:
       break;
     case SHT_PROGBITS:
@@ -1745,8 +1744,10 @@ createBitcodeSymbol(Symbol *&sym, const std::vector<bool> &keptComdats,
   uint8_t type = objSym.isTLS() ? STT_TLS : STT_NOTYPE;
   uint8_t visibility = mapVisibility(objSym.getVisibility());
 
+  // Symbols can be duplicated in bitcode files because of '#include' and
+  // linkonce_odr. Use unique_saver to save symbol names for de-duplication.
   if (!sym)
-    sym = symtab.insert(saver().save(objSym.getName()));
+    sym = symtab.insert(unique_saver().save(objSym.getName()));
 
   int c = objSym.getComdatIndex();
   if (objSym.isUndefined() || (c != -1 && !keptComdats[c])) {
@@ -1798,7 +1799,9 @@ void BitcodeFile::parseLazy() {
   symbols = std::make_unique<Symbol *[]>(numSymbols);
   for (auto [i, irSym] : llvm::enumerate(obj->symbols()))
     if (!irSym.isUndefined()) {
-      auto *sym = symtab.insert(saver().save(irSym.getName()));
+      // Symbols can be duplicated in bitcode files because of '#include' and
+      // linkonce_odr. Use unique_saver to save symbol names for de-duplication.
+      auto *sym = symtab.insert(unique_saver().save(irSym.getName()));
       sym->resolve(LazySymbol{*this});
       symbols[i] = sym;
     }

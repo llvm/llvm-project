@@ -1,0 +1,16 @@
+! RUN: bbc -emit-hlfir -fcuda %s -o - | FileCheck %s
+
+! Test CUDA Fortran specific type
+
+subroutine sub1()
+  use iso_c_binding
+  use __fortran_builtins, only : c_devptr => __builtin_c_devptr
+
+  type(c_ptr) :: ptr
+  type(c_devptr) :: dptr
+  print*,ptr
+  print*,dptr
+end
+
+! CHECK-LABEL: func.func @_QPsub1()
+! CHECK-COUNT-2: %{{.*}} = fir.call @_FortranAioOutputDerivedType

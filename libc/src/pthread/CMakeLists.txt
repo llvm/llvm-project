@@ -645,6 +645,71 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  pthread_spin_init
+  SRCS
+    pthread_spin_init.cpp
+  HDRS
+    pthread_spin_init.h
+  DEPENDS
+    libc.include.pthread
+    libc.src.__support.threads.spin_lock
+    libc.src.__support.threads.identifier
+    libc.hdr.errno_macros
+)
+
+add_entrypoint_object(
+  pthread_spin_destroy
+  SRCS
+    pthread_spin_destroy.cpp
+  HDRS
+    pthread_spin_destroy.h
+  DEPENDS
+    libc.include.pthread
+    libc.src.__support.threads.spin_lock
+    libc.src.__support.threads.identifier
+    libc.hdr.errno_macros
+)
+
+add_entrypoint_object(
+  pthread_spin_lock
+  SRCS
+    pthread_spin_lock.cpp
+  HDRS
+    pthread_spin_lock.h
+  DEPENDS
+    libc.include.pthread
+    libc.src.__support.threads.spin_lock
+    libc.src.__support.threads.identifier
+    libc.hdr.errno_macros
+)
+
+add_entrypoint_object(
+  pthread_spin_trylock
+  SRCS
+    pthread_spin_trylock.cpp
+  HDRS
+    pthread_spin_trylock.h
+  DEPENDS
+    libc.include.pthread
+    libc.src.__support.threads.spin_lock
+    libc.src.__support.threads.identifier
+    libc.hdr.errno_macros
+)
+
+add_entrypoint_object(
+  pthread_spin_unlock
+  SRCS
+    pthread_spin_unlock.cpp
+  HDRS
+    pthread_spin_unlock.h
+  DEPENDS
+    libc.include.pthread
+    libc.src.__support.threads.spin_lock
+    libc.src.__support.threads.identifier
+    libc.hdr.errno_macros
+)
+
+add_entrypoint_object(
   pthread_once
   SRCS
     pthread_once.cpp

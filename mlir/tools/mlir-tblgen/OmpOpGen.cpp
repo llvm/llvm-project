@@ -73,12 +73,11 @@ static StringRef extractOmpClauseName(Record *clause) {
 static bool verifyArgument(DagInit *arguments, StringRef argName,
                            Init *argInit) {
   auto range = zip_equal(arguments->getArgNames(), arguments->getArgs());
-  return std::find_if(
-             range.begin(), range.end(),
-             [&](std::tuple<llvm::StringInit *const &, llvm::Init *const &> v) {
-               return std::get<0>(v)->getAsUnquotedString() == argName &&
-                      std::get<1>(v) == argInit;
-             }) != range.end();
+  return llvm::any_of(
+      range, [&](std::tuple<llvm::StringInit *const &, llvm::Init *const &> v) {
+        return std::get<0>(v)->getAsUnquotedString() == argName &&
+               std::get<1>(v) == argInit;
+      });
 }
 
 /// Check that the given string record value, identified by its name \c value,
@@ -150,7 +149,7 @@ static void verifyClause(Record *op, Record *clause) {
 
 /// Verify that all properties of `OpenMP_Clause`s of records deriving from
 /// `OpenMP_Op`s have been inherited by the latter.
-static bool verifyDecls(const RecordKeeper &recordKeeper, raw_ostream &) {
+static bool verifyDecls(RecordKeeper &recordKeeper, raw_ostream &) {
   for (Record *op : recordKeeper.getAllDerivedDefinitions("OpenMP_Op")) {
     for (Record *clause : op->getValueAsListOfDefs("clauseList"))
       verifyClause(op, clause);

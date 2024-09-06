@@ -885,10 +885,20 @@ struct NumTasksT {
 // V5.2: [10.2.1] `num_teams` clause
 template <typename T, typename I, typename E> //
 struct NumTeamsT {
-  using TupleTrait = std::true_type;
   using LowerBound = E;
   using UpperBound = E;
-  std::tuple<OPT(LowerBound), UpperBound> t;
+
+  // The name Range is not a spec name.
+  struct Range {
+    using TupleTrait = std::true_type;
+    std::tuple<OPT(LowerBound), UpperBound> t;
+  };
+
+  // The name List is not a spec name. The list is an extension to allow
+  // specifying a grid with connection with the ompx_bare clause.
+  using List = ListT<Range>;
+  using WrapperTrait = std::true_type;
+  List v;
 };
 
 // V5.2: [10.1.2] `num_threads` clause

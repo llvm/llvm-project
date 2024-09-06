@@ -109,8 +109,8 @@ define i1 @test3(i32 %X) {
 
 define i1 @test4(i32 %X) {
 ; CHECK-LABEL: @test4(
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 933, [[X:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i32 1, [[X:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 933
 ; CHECK-NEXT:    [[R:%.*]] = icmp ne i32 [[TMP2]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
@@ -123,8 +123,8 @@ define i1 @test4(i32 %X) {
 define i1 @test4_i16(i16 %X) {
 ; CHECK-LABEL: @test4_i16(
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i16 [[X:%.*]] to i32
-; CHECK-NEXT:    [[TMP2:%.*]] = lshr i32 933, [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP2]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw i32 1, [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP2]], 933
 ; CHECK-NEXT:    [[R:%.*]] = icmp ne i32 [[TMP3]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
