@@ -49,7 +49,7 @@ struct SubtargetFeatureInfo {
 
   void dump() const;
   static std::vector<std::pair<Record *, SubtargetFeatureInfo>>
-  getAll(const RecordKeeper &Records);
+  getAll(RecordKeeper &Records);
 
   /// Emit the subtarget feature flag definitions.
   ///

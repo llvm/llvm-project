@@ -762,6 +762,36 @@ define double @dot_product_fp64(ptr %a, ptr %b) {
   ret double %add.1
 }
 
+;; Covers a case where SLP would previous crash due to a
+;; missing bailout in TryToFindDuplicates for the case
+;; where a VL=3 list was vectorized directly (without
+;; a root instruction such as a store or reduce).
+define double @no_root_reshuffle(ptr  %ptr) {
+; CHECK-LABEL: @no_root_reshuffle(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load double, ptr [[PTR:%.*]], align 8
+; CHECK-NEXT:    [[MUL:%.*]] = fmul fast double [[TMP0]], [[TMP0]]
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i64 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load double, ptr [[ARRAYIDX2]], align 8
+; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i64 16
+; CHECK-NEXT:    [[TMP2:%.*]] = load double, ptr [[ARRAYIDX3]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul fast double [[TMP2]], [[TMP2]]
+; CHECK-NEXT:    [[MUL6:%.*]] = fmul fast double [[TMP3]], [[TMP1]]
+; CHECK-NEXT:    [[ADD:%.*]] = fadd fast double [[MUL6]], [[MUL]]
+; CHECK-NEXT:    ret double [[ADD]]
+;
+entry:
+  %0 = load double, ptr %ptr, align 8
+  %mul = fmul fast double %0, %0
+  %arrayidx2 = getelementptr inbounds i8, ptr %ptr, i64 8
+  %1 = load double, ptr %arrayidx2, align 8
+  %arrayidx3 = getelementptr inbounds i8, ptr %ptr, i64 16
+  %2 = load double, ptr %arrayidx3, align 8
+  %3 = fmul fast double %2, %2
+  %mul6 = fmul fast double %3, %1
+  %add = fadd fast double %mul6, %mul
+  ret double %add
+}
 
 declare float @llvm.fmuladd.f32(float, float, float)
 

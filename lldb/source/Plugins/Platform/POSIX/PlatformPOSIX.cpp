@@ -544,7 +544,7 @@ Status PlatformPOSIX::EvaluateLibdlExpression(
     return expr_error;
 
   if (result_valobj_sp->GetError().Fail())
-    return result_valobj_sp->GetError();
+    return result_valobj_sp->GetError().Clone();
   return Status();
 }
 
@@ -976,7 +976,7 @@ Status PlatformPOSIX::UnloadImage(lldb_private::Process *process,
     return error;
 
   if (result_valobj_sp->GetError().Fail())
-    return result_valobj_sp->GetError();
+    return result_valobj_sp->GetError().Clone();
 
   Scalar scalar;
   if (result_valobj_sp->ResolveValue(scalar)) {

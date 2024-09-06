@@ -3290,6 +3290,16 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       constrainOpWithReadfirstlane(B, MI, 2);
       return;
     }
+    case Intrinsic::amdgcn_s_prefetch_data: {
+      Register PtrReg = MI.getOperand(1).getReg();
+      unsigned AS = MRI.getType(PtrReg).getAddressSpace();
+      if (AMDGPU::isFlatGlobalAddrSpace(AS)) {
+        constrainOpWithReadfirstlane(B, MI, 1);
+        constrainOpWithReadfirstlane(B, MI, 2);
+      } else
+        MI.eraseFromParent();
+      return;
+    }
     default: {
       if (const AMDGPU::RsrcIntrinsic *RSrcIntrin =
               AMDGPU::lookupRsrcIntrinsic(IntrID)) {
@@ -5151,6 +5161,11 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     }
     case Intrinsic::amdgcn_pops_exiting_wave_id:
       return getDefaultMappingSOP(MI);
+    case Intrinsic::amdgcn_s_prefetch_data: {
+      OpdsMapping[1] = getSGPROpMapping(MI.getOperand(1).getReg(), MRI, *TRI);
+      OpdsMapping[2] = getSGPROpMapping(MI.getOperand(2).getReg(), MRI, *TRI);
+      break;
+    }
     default:
       return getInvalidInstructionMapping();
     }
