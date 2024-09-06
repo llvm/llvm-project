@@ -188,7 +188,10 @@ endfunction()
 function(_get_common_test_compile_options output_var c_test flags)
   _get_compile_options_from_flags(compile_flags ${flags})
 
-  set(compile_options ${LIBC_COMPILE_OPTIONS_DEFAULT} ${compile_flags})
+  set(compile_options
+      ${LIBC_COMPILE_OPTIONS_DEFAULT}
+      ${LIBC_TEST_COMPILE_OPTIONS_DEFAULT}
+      ${compile_flags})
 
   if(LLVM_COMPILER_IS_GCC_COMPATIBLE)
     list(APPEND compile_options "-fpie")
@@ -232,9 +235,12 @@ function(_get_common_test_compile_options output_var c_test flags)
 endfunction()
 
 function(_get_hermetic_test_compile_options output_var flags)
-  _get_compile_options_from_flags(compile_flags ${flags})
-  list(APPEND compile_options ${LIBC_COMPILE_OPTIONS_DEFAULT} ${compile_flags}
-       ${flags} -fpie -ffreestanding -fno-exceptions -fno-rtti)
+  _get_common_test_compile_options(compile_options "" "${flags}")
+
+  list(APPEND compile_options "-fpie")
+  list(APPEND compile_options "-ffreestanding")
+  list(APPEND compile_options "-fno-exceptions")
+  list(APPEND compile_options "-fno-rtti")
 
   # The GPU build requires overriding the default CMake triple and architecture.
   if(LIBC_TARGET_ARCHITECTURE_IS_AMDGPU)
@@ -248,9 +254,5 @@ function(_get_hermetic_test_compile_options output_var flags)
          -nogpulib -march=${LIBC_GPU_TARGET_ARCHITECTURE} -fno-use-cxa-atexit)
   endif()
 
-  if(LLVM_LIBC_FULL_BUILD)
-    list(APPEND compile_options "-DLIBC_FULL_BUILD")
-  endif()
-  
   set(${output_var} ${compile_options} PARENT_SCOPE)
 endfunction()

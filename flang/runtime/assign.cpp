@@ -591,7 +591,7 @@ void RTDEF(AssignTemporary)(Descriptor &to, const Descriptor &from,
     }
   }
 
-  Assign(to, from, terminator, PolymorphicLHS);
+  Assign(to, from, terminator, MaybeReallocate | PolymorphicLHS);
 }
 
 void RTDEF(CopyInAssign)(Descriptor &temp, const Descriptor &var,

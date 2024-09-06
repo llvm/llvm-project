@@ -304,12 +304,6 @@ def SIdenorm_mode : SDNode<"AMDGPUISD::DENORM_MODE",
   [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]
 >;
 
-def SDTFPRoundModeOp  : SDTypeProfile<1, 2, [
-  SDTCisFP<0>, SDTCisFP<1>, SDTCisInt<2>, SDTCisOpSmallerThanOp<0, 1>, SDTCisSameNumEltsAs<0, 1>
-]>;
-
-def SIfptrunc_round : SDNode<"AMDGPUISD::FPTRUNC_ROUND", SDTFPRoundModeOp>;
-
 //===----------------------------------------------------------------------===//
 // ValueType helpers
 //===----------------------------------------------------------------------===//
@@ -317,6 +311,14 @@ def SIfptrunc_round : SDNode<"AMDGPUISD::FPTRUNC_ROUND", SDTFPRoundModeOp>;
 class isIntType<ValueType SrcVT> {
   bit ret = !and(SrcVT.isInteger, !ne(SrcVT.Value, i1.Value));
 }
+
+def SDTSBufferPrefetch : SDTypeProfile<0, 3,
+    [SDTCisVT<0, v4i32>, // rsrc
+     SDTCisVT<1, i32>,   // offset(imm)
+     SDTCisVT<2, i32>]>; // length
+
+def SIsbuffer_prefetch : SDNode<"AMDGPUISD::SBUFFER_PREFETCH_DATA", SDTSBufferPrefetch,
+                                [SDNPMayLoad, SDNPMayStore, SDNPMemOperand, SDNPHasChain]>;
 
 //===----------------------------------------------------------------------===//
 // SDNodes PatFrags for loads/stores with a glue input.
@@ -794,6 +796,22 @@ def frameindex_to_targetframeindex : SDNodeXForm<frameindex, [{
 def bitcast_fpimm_to_i64 : SDNodeXForm<fpimm, [{
 return CurDAG->getTargetConstant(
   N->getValueAPF().bitcastToAPInt().getZExtValue(), SDLoc(N), MVT::i64);
+}]>;
+
+def as_hw_round_mode : SDNodeXForm<timm, [{
+  // "round.towardzero" -> TowardZero 0        -> FP_ROUND_ROUND_TO_ZERO 3
+  // "round.tonearest"  -> NearestTiesToEven 1 -> FP_ROUND_ROUND_TO_NEAREST 0
+  // "round.upward"     -> TowardPositive 2    -> FP_ROUND_ROUND_TO_INF 1
+  // "round.downward    -> TowardNegative 3    -> FP_ROUND_ROUND_TO_NEGINF 2
+  return CurDAG->getTargetConstant((N->getSExtValue() + 3) % 4, SDLoc(N),
+                                    MVT::i32);
+}]>;
+
+def SupportedRoundMode : TImmLeaf<i32, [{
+  return Imm == (int)RoundingMode::TowardZero ||
+         Imm == (int)RoundingMode::NearestTiesToEven ||
+         Imm == (int)RoundingMode::TowardPositive ||
+         Imm == (int)RoundingMode::TowardNegative;
 }]>;
 
 class bitextract_imm<int bitnum> : SDNodeXForm<imm, [{

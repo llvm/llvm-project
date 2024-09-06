@@ -778,8 +778,10 @@ static void processSwitches(MachineFunction &MF, SPIRVGlobalRegistry *GR,
   }
 
   SmallPtrSet<MachineInstr *, 8> ToEraseMI;
+  SmallPtrSet<MachineBasicBlock *, 8> ClearAddressTaken;
   for (auto &SwIt : Switches) {
     MachineInstr &MI = *SwIt.first;
+    MachineBasicBlock *MBB = MI.getParent();
     SmallVector<MachineInstr *, 8> &Ins = SwIt.second;
     SmallVector<MachineOperand, 8> NewOps;
     for (unsigned i = 0; i < Ins.size(); ++i) {
@@ -790,8 +792,11 @@ static void processSwitches(MachineFunction &MF, SPIRVGlobalRegistry *GR,
         if (It == BB2MBB.end())
           report_fatal_error("cannot find a machine basic block by a basic "
                              "block in a switch statement");
-        NewOps.push_back(MachineOperand::CreateMBB(It->second));
-        MI.getParent()->addSuccessor(It->second);
+        MachineBasicBlock *Succ = It->second;
+        ClearAddressTaken.insert(Succ);
+        NewOps.push_back(MachineOperand::CreateMBB(Succ));
+        if (!llvm::is_contained(MBB->successors(), Succ))
+          MBB->addSuccessor(Succ);
         ToEraseMI.insert(Ins[i]);
       } else {
         NewOps.push_back(
@@ -830,6 +835,12 @@ static void processSwitches(MachineFunction &MF, SPIRVGlobalRegistry *GR,
     }
     BlockAddrI->eraseFromParent();
   }
+
+  // BlockAddress operands were used to keep information between passes,
+  // let's undo the "address taken" status to reflect that Succ doesn't
+  // actually correspond to an IR-level basic block.
+  for (MachineBasicBlock *Succ : ClearAddressTaken)
+    Succ->setAddressTakenIRBlock(nullptr);
 }
 
 static bool isImplicitFallthrough(MachineBasicBlock &MBB) {

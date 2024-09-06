@@ -1796,13 +1796,12 @@ inline void OmpStructureChecker::ErrIfLHSAndRHSSymbolsMatch(
   const auto *e{GetExpr(context_, expr)};
   const auto *v{GetExpr(context_, var)};
   if (e && v) {
-    const Symbol &varSymbol = evaluate::GetSymbolVector(*v).front();
+    auto vSyms{evaluate::GetSymbolVector(*v)};
+    const Symbol &varSymbol = vSyms.front();
     for (const Symbol &symbol : evaluate::GetSymbolVector(*e)) {
       if (varSymbol == symbol) {
         context_.Say(expr.source,
-            "RHS expression "
-            "on atomic assignment statement"
-            " cannot access '%s'"_err_en_US,
+            "RHS expression on atomic assignment statement cannot access '%s'"_err_en_US,
             var.GetSource().ToString());
       }
     }
@@ -1942,12 +1941,14 @@ void OmpStructureChecker::CheckAtomicUpdateStmt(
           "Expected scalar variable "
           "on the LHS of atomic update assignment "
           "statement"_err_en_US);
-    const Symbol &varSymbol = evaluate::GetSymbolVector(*v).front();
+    auto vSyms{evaluate::GetSymbolVector(*v)};
+    const Symbol &varSymbol = vSyms.front();
     int numOfSymbolMatches{0};
-    SymbolVector exprSymbols = evaluate::GetSymbolVector(*e);
+    SymbolVector exprSymbols{evaluate::GetSymbolVector(*e)};
     for (const Symbol &symbol : exprSymbols) {
-      if (varSymbol == symbol)
+      if (varSymbol == symbol) {
         numOfSymbolMatches++;
+      }
     }
     if (isIntrinsicProcedure) {
       std::string varName = var.GetSource().ToString();

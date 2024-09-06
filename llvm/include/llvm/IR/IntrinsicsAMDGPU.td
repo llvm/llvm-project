@@ -1723,6 +1723,15 @@ class AMDGPUStructPtrBufferLoadLDS : Intrinsic <
    ImmArg<ArgIndex<7>>, IntrNoCallback, IntrNoFree], "", [SDNPMemOperand]>, AMDGPURsrcIntrinsic<0>;
 def int_amdgcn_struct_ptr_buffer_load_lds : AMDGPUStructPtrBufferLoadLDS;
 
+def int_amdgcn_s_buffer_prefetch_data : DefaultAttrsIntrinsic <
+  [],
+  [AMDGPUBufferRsrcTy, // rsrc(SGPR)
+   llvm_i32_ty,        // offset (imm)
+   llvm_i32_ty],       // len (SGPR/imm)
+  [IntrInaccessibleMemOrArgMemOnly, ImmArg<ArgIndex<1>>], "", [SDNPMemOperand]>,
+  AMDGPURsrcIntrinsic<0>,
+  ClangBuiltin<"__builtin_amdgcn_s_buffer_prefetch_data">;
+
 } // defset AMDGPUBufferIntrinsics
 
 // Uses that do not set the done bit should set IntrWriteMem on the
@@ -2688,6 +2697,14 @@ def int_amdgcn_global_load_tr_b128 : AMDGPULoadIntrinsic<global_ptr_ty>;
 // i32 @llvm.amdgcn.wave.id()
 def int_amdgcn_wave_id :
   DefaultAttrsIntrinsic<[llvm_i32_ty], [], [NoUndef<RetIndex>, IntrNoMem, IntrSpeculatable]>;
+
+def int_amdgcn_s_prefetch_data :
+  Intrinsic<[],
+  [llvm_anyptr_ty, // Pointer to a constant/global memory
+   llvm_i32_ty],   // Length to prefetch 0-31 (1-32 chaunks, units of 128 bytes)
+    [IntrInaccessibleMemOrArgMemOnly, IntrWillReturn, NoCapture<ArgIndex<0>>, IntrNoCallback, IntrNoFree],
+    "", [SDNPMemOperand]
+  >;
 
 //===----------------------------------------------------------------------===//
 // Deep learning intrinsics.

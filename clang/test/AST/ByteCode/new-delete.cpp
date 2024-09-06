@@ -404,7 +404,7 @@ constexpr typename std::remove_reference<T>::type&& move(T &&t) noexcept {
 
 namespace cxx2a {
 struct A {
-  int* p = new int(42); // both-note 7{{heap allocation performed here}}
+  int* p = new int(42); // both-note 3{{heap allocation performed here}}
   consteval int ret_i() const { return p ? *p : 0; }
   consteval A ret_a() const { return A{}; }
   constexpr ~A() { delete p; }
@@ -433,9 +433,7 @@ void test() {
   { A k = to_lvalue_ref(A()); } // both-error {{'cxx2a::to_lvalue_ref' is not a constant expression}} \
                                 // both-note {{reference to temporary is not a constant expression}} \
                                 // both-note {{temporary created here}}
-  { A k = to_lvalue_ref(A().ret_a()); } // both-error {{'cxx2a::A::ret_a' is not a constant expression}} \
-                                        // both-note {{heap-allocated object is not a constant expression}} \
-                                        // both-error {{'cxx2a::to_lvalue_ref' is not a constant expression}} \
+  { A k = to_lvalue_ref(A().ret_a()); } // both-error {{'cxx2a::to_lvalue_ref' is not a constant expression}} \
                                         // both-note {{reference to temporary is not a constant expression}} \
                                         // both-note {{temporary created here}}
   { int k = A().ret_a().ret_i(); } // both-error {{'cxx2a::A::ret_a' is not a constant expression}} \
@@ -445,19 +443,15 @@ void test() {
   { int k = const_a_ref(a); }
   { int k = rvalue_ref(A()); }
   { int k = rvalue_ref(std::move(a)); }
-  { int k = const_a_ref(A().ret_a()); } // both-error {{'cxx2a::A::ret_a' is not a constant expression}} \
-                                        // both-note {{is not a constant expression}}
-  { int k = const_a_ref(to_lvalue_ref(A().ret_a())); } // both-error {{'cxx2a::A::ret_a' is not a constant expression}} \
-                                                       // both-note {{is not a constant expression}}
+  { int k = const_a_ref(A().ret_a()); }
+  { int k = const_a_ref(to_lvalue_ref(A().ret_a())); }
   { int k = const_a_ref(to_lvalue_ref(std::move(a))); }
   { int k = by_value_a(A().ret_a()); }
   { int k = by_value_a(to_lvalue_ref(static_cast<const A&&>(a))); }
   { int k = (A().ret_a(), A().ret_i()); } // both-error {{'cxx2a::A::ret_a' is not a constant expression}} \
                                           // both-note {{is not a constant expression}} \
                                           // both-warning {{left operand of comma operator has no effect}}
-  { int k = (const_a_ref(A().ret_a()), A().ret_i()); }  // both-error {{'cxx2a::A::ret_a' is not a constant expression}} \
-                                                        // both-note {{is not a constant expression}} \
-                                                        // both-warning {{left operand of comma operator has no effect}}
+  { int k = (const_a_ref(A().ret_a()), A().ret_i()); } // both-warning {{left operand of comma operator has no effect}}
 }
 }
 
@@ -583,6 +577,13 @@ namespace CastedDelete {
   }
   static_assert(vdtor_1() == 1); // expected-error {{not an integral constant expression}} \
                                  // expected-note {{in call to}}
+}
+
+constexpr void use_after_free_2() { // both-error {{never produces a constant expression}}
+  struct X { constexpr void f() {} };
+  X *p = new X;
+  delete p;
+  p->f(); // both-note {{member call on heap allocated object that has been deleted}}
 }
 
 #else

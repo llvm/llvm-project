@@ -11,6 +11,7 @@
 //
 //===---------------------------------------------------------------------===//
 
+#include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"

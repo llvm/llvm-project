@@ -111,7 +111,7 @@ genCoIterateBranchNest(PatternRewriter &rewriter, Location loc, CoIterateOp op,
 
 static ValueRange genLoopWithIterator(
     PatternRewriter &rewriter, Location loc, SparseIterator *it,
-    ValueRange reduc, bool iterFirst,
+    ValueRange reduc,
     function_ref<SmallVector<Value>(PatternRewriter &rewriter, Location loc,
                                     Region &loopBody, SparseIterator *it,
                                     ValueRange reduc)>
@@ -138,15 +138,9 @@ static ValueRange genLoopWithIterator(
     }
     return forOp.getResults();
   }
-  SmallVector<Value> ivs;
-  // TODO: always put iterator SSA values at the end of argument list to be
-  // consistent with coiterate operation.
-  if (!iterFirst)
-    llvm::append_range(ivs, it->getCursor());
-  // Appends the user-provided values.
-  llvm::append_range(ivs, reduc);
-  if (iterFirst)
-    llvm::append_range(ivs, it->getCursor());
+
+  SmallVector<Value> ivs(reduc);
+  llvm::append_range(ivs, it->getCursor());
 
   TypeRange types = ValueRange(ivs).getTypes();
   auto whileOp = rewriter.create<scf::WhileOp>(loc, types, ivs);
@@ -164,12 +158,8 @@ static ValueRange genLoopWithIterator(
     Region &dstRegion = whileOp.getAfter();
     Block *after = rewriter.createBlock(&dstRegion, {}, types, l);
     ValueRange aArgs = whileOp.getAfterArguments();
-    if (iterFirst) {
-      aArgs = it->linkNewScope(aArgs);
-    } else {
-      aArgs = aArgs.take_front(reduc.size());
-      it->linkNewScope(aArgs.drop_front(reduc.size()));
-    }
+    it->linkNewScope(aArgs.drop_front(reduc.size()));
+    aArgs = aArgs.take_front(reduc.size());
 
     rewriter.setInsertionPointToStart(after);
     SmallVector<Value> ret = bodyBuilder(rewriter, loc, dstRegion, it, aArgs);
@@ -177,12 +167,8 @@ static ValueRange genLoopWithIterator(
 
     // Forward loops
     SmallVector<Value> yields;
-    ValueRange nx = it->forward(rewriter, loc);
-    if (iterFirst)
-      llvm::append_range(yields, nx);
     llvm::append_range(yields, ret);
-    if (!iterFirst)
-      llvm::append_range(yields, nx);
+    llvm::append_range(yields, it->forward(rewriter, loc));
     rewriter.create<scf::YieldOp>(loc, yields);
   }
   return whileOp.getResults().drop_front(it->getCursor().size());
@@ -258,13 +244,13 @@ public:
 
     Block *block = op.getBody();
     ValueRange ret = genLoopWithIterator(
-        rewriter, loc, it.get(), ivs, /*iterFirst=*/true,
+        rewriter, loc, it.get(), ivs,
         [block](PatternRewriter &rewriter, Location loc, Region &loopBody,
                 SparseIterator *it, ValueRange reduc) -> SmallVector<Value> {
-          SmallVector<Value> blockArgs(it->getCursor());
+          SmallVector<Value> blockArgs(reduc);
           // TODO: Also appends coordinates if used.
           // blockArgs.push_back(it->deref(rewriter, loc));
-          llvm::append_range(blockArgs, reduc);
+          llvm::append_range(blockArgs, it->getCursor());
 
           Block *dstBlock = &loopBody.getBlocks().front();
           rewriter.inlineBlockBefore(block, dstBlock, dstBlock->end(),
@@ -404,7 +390,7 @@ class SparseCoIterateOpConverter
 
         Block *block = &r.getBlocks().front();
         ValueRange curResult = genLoopWithIterator(
-            rewriter, loc, validIters.front(), userReduc, /*iterFirst=*/false,
+            rewriter, loc, validIters.front(), userReduc,
             /*bodyBuilder=*/
             [block](PatternRewriter &rewriter, Location loc, Region &dstRegion,
                     SparseIterator *it,

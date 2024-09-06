@@ -538,10 +538,13 @@ private:
   /// (either by the initializer of a global variable, or referenced
   /// from within a function). This does not include functions called, which
   /// are listed in the derived FunctionSummary object.
-  std::vector<ValueInfo> RefEdgeList;
+  /// We use SmallVector<ValueInfo, 0> instead of std::vector<ValueInfo> for its
+  /// smaller memory footprint.
+  SmallVector<ValueInfo, 0> RefEdgeList;
 
 protected:
-  GlobalValueSummary(SummaryKind K, GVFlags Flags, std::vector<ValueInfo> Refs)
+  GlobalValueSummary(SummaryKind K, GVFlags Flags,
+                     SmallVectorImpl<ValueInfo> &&Refs)
       : Kind(K), Flags(Flags), RefEdgeList(std::move(Refs)) {
     assert((K != AliasKind || Refs.empty()) &&
            "Expect no references for AliasSummary");
@@ -641,7 +644,7 @@ class AliasSummary : public GlobalValueSummary {
 
 public:
   AliasSummary(GVFlags Flags)
-      : GlobalValueSummary(AliasKind, Flags, ArrayRef<ValueInfo>{}),
+      : GlobalValueSummary(AliasKind, Flags, SmallVector<ValueInfo, 0>{}),
         AliaseeSummary(nullptr) {}
 
   /// Check if this is an alias summary.
@@ -857,7 +860,7 @@ public:
             /*NotEligibleToImport=*/true, /*Live=*/true, /*IsLocal=*/false,
             /*CanAutoHide=*/false, GlobalValueSummary::ImportKind::Definition),
         /*NumInsts=*/0, FunctionSummary::FFlags{}, /*EntryCount=*/0,
-        std::vector<ValueInfo>(), std::move(Edges),
+        SmallVector<ValueInfo, 0>(), std::move(Edges),
         std::vector<GlobalValue::GUID>(),
         std::vector<FunctionSummary::VFuncId>(),
         std::vector<FunctionSummary::VFuncId>(),
@@ -913,7 +916,7 @@ private:
 
 public:
   FunctionSummary(GVFlags Flags, unsigned NumInsts, FFlags FunFlags,
-                  uint64_t EntryCount, std::vector<ValueInfo> Refs,
+                  uint64_t EntryCount, SmallVectorImpl<ValueInfo> &&Refs,
                   std::vector<EdgeTy> CGEdges,
                   std::vector<GlobalValue::GUID> TypeTests,
                   std::vector<VFuncId> TypeTestAssumeVCalls,
@@ -1166,7 +1169,7 @@ public:
   } VarFlags;
 
   GlobalVarSummary(GVFlags Flags, GVarFlags VarFlags,
-                   std::vector<ValueInfo> Refs)
+                   SmallVectorImpl<ValueInfo> &&Refs)
       : GlobalValueSummary(GlobalVarKind, Flags, std::move(Refs)),
         VarFlags(VarFlags) {}
 
@@ -1290,6 +1293,11 @@ using ModulePathStringTableTy = StringMap<ModuleHash>;
 /// Map of global value GUID to its summary, used to identify values defined in
 /// a particular module, and provide efficient access to their summary.
 using GVSummaryMapTy = DenseMap<GlobalValue::GUID, GlobalValueSummary *>;
+
+/// Map of a module name to the GUIDs and summaries we will import from that
+/// module.
+using ModuleToSummariesForIndexTy =
+    std::map<std::string, GVSummaryMapTy, std::less<>>;
 
 /// A set of global value summary pointers.
 using GVSummaryPtrSet = std::unordered_set<GlobalValueSummary *>;
@@ -1445,7 +1453,7 @@ public:
   // in the way some record are interpreted, like flags for instance.
   // Note that incrementing this may require changes in both BitcodeReader.cpp
   // and BitcodeWriter.cpp.
-  static constexpr uint64_t BitcodeSummaryVersion = 10;
+  static constexpr uint64_t BitcodeSummaryVersion = 11;
 
   // Regular LTO module name for ASM writer
   static constexpr const char *getRegularLTOModuleName() {
@@ -1808,9 +1816,9 @@ public:
   /// the ThinLTO backends.
   TypeIdSummary &getOrInsertTypeIdSummary(StringRef TypeId) {
     auto TidIter = TypeIdMap.equal_range(GlobalValue::getGUID(TypeId));
-    for (auto It = TidIter.first; It != TidIter.second; ++It)
-      if (It->second.first == TypeId)
-        return It->second.second;
+    for (auto &[GUID, TypeIdPair] : make_range(TidIter))
+      if (TypeIdPair.first == TypeId)
+        return TypeIdPair.second;
     auto It = TypeIdMap.insert(
         {GlobalValue::getGUID(TypeId), {std::string(TypeId), TypeIdSummary()}});
     return It->second.second;
@@ -1820,9 +1828,9 @@ public:
   /// summary map) or null (if not present). This may be used when importing.
   const TypeIdSummary *getTypeIdSummary(StringRef TypeId) const {
     auto TidIter = TypeIdMap.equal_range(GlobalValue::getGUID(TypeId));
-    for (auto It = TidIter.first; It != TidIter.second; ++It)
-      if (It->second.first == TypeId)
-        return &It->second.second;
+    for (const auto &[GUID, TypeIdPair] : make_range(TidIter))
+      if (TypeIdPair.first == TypeId)
+        return &TypeIdPair.second;
     return nullptr;
   }
 

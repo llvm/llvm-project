@@ -268,7 +268,7 @@ private:
 // inlining them.
 class StaticMatcherHelper {
 public:
-  StaticMatcherHelper(raw_ostream &os, const RecordKeeper &recordKeeper,
+  StaticMatcherHelper(raw_ostream &os, RecordKeeper &recordKeeper,
                       RecordOperatorMap &mapper);
 
   // Determine if we should inline the match logic or delegate to a static
@@ -1886,7 +1886,7 @@ void PatternEmitter::createAggregateLocalVarsForOpArgs(
 }
 
 StaticMatcherHelper::StaticMatcherHelper(raw_ostream &os,
-                                         const RecordKeeper &recordKeeper,
+                                         RecordKeeper &recordKeeper,
                                          RecordOperatorMap &mapper)
     : opMap(mapper), staticVerifierEmitter(os, recordKeeper) {}
 
@@ -1951,7 +1951,7 @@ StringRef StaticMatcherHelper::getVerifierName(DagLeaf leaf) {
   return staticVerifierEmitter.getTypeConstraintFn(leaf.getAsConstraint());
 }
 
-static void emitRewriters(const RecordKeeper &recordKeeper, raw_ostream &os) {
+static void emitRewriters(RecordKeeper &recordKeeper, raw_ostream &os) {
   emitSourceFileHeader("Rewriters", os, recordKeeper);
 
   const auto &patterns = recordKeeper.getAllDerivedDefinitions("Pattern");
@@ -2001,7 +2001,7 @@ static void emitRewriters(const RecordKeeper &recordKeeper, raw_ostream &os) {
 
 static mlir::GenRegistration
     genRewriters("gen-rewriters", "Generate pattern rewriters",
-                 [](const RecordKeeper &records, raw_ostream &os) {
+                 [](RecordKeeper &records, raw_ostream &os) {
                    emitRewriters(records, os);
                    return false;
                  });

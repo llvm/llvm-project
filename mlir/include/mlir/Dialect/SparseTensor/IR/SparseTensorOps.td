@@ -1644,7 +1644,7 @@ def IterateOp : SparseTensor_Op<"iterate",
       return getIterSpace().getType().getSpaceDim();
     }
     BlockArgument getIterator() {
-      return getRegion().getArguments().front();
+      return getRegion().getArguments().back();
     }
     std::optional<BlockArgument> getLvlCrd(Level lvl) {
       if (getCrdUsedLvls()[lvl]) {
@@ -1654,9 +1654,8 @@ def IterateOp : SparseTensor_Op<"iterate",
       return std::nullopt;
     }
     Block::BlockArgListType getCrds() {
-      // The first block argument is iterator, the remaining arguments are
-      // referenced coordinates.
-      return getRegion().getArguments().slice(1, getCrdUsedLvls().count());
+      // User-provided iteration arguments -> coords -> iterator.
+      return getRegion().getArguments().slice(getNumRegionIterArgs(), getCrdUsedLvls().count());
     }
     unsigned getNumRegionIterArgs() {
       return getRegion().getArguments().size() - 1 - getCrdUsedLvls().count();

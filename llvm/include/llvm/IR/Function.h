@@ -60,8 +60,7 @@ class User;
 class BranchProbabilityInfo;
 class BlockFrequencyInfo;
 
-class LLVM_EXTERNAL_VISIBILITY Function : public GlobalObject,
-                                          public ilist_node<Function> {
+class LLVM_ABI Function : public GlobalObject, public ilist_node<Function> {
 public:
   using BasicBlockListType = SymbolTableList<BasicBlock>;
 
@@ -1038,8 +1037,7 @@ private:
 /// Return value: true =>  null pointer dereference is not undefined.
 bool NullPointerIsDefined(const Function *F, unsigned AS = 0);
 
-template <>
-struct OperandTraits<Function> : public HungoffOperandTraits<3> {};
+template <> struct OperandTraits<Function> : public HungoffOperandTraits {};
 
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(Function, Value)
 

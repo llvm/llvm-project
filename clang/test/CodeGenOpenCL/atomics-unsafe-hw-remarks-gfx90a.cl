@@ -27,9 +27,10 @@ typedef enum memory_scope {
 #endif
 } memory_scope;
 
-// GFX90A-HW-REMARK: Hardware instruction generated for atomic fadd operation at memory scope workgroup-one-as due to an unsafe request. [-Rpass=si-lower]
-// GFX90A-HW-REMARK: Hardware instruction generated for atomic fadd operation at memory scope agent-one-as due to an unsafe request. [-Rpass=si-lower]
 // GFX90A-HW-REMARK: Hardware instruction generated for atomic fadd operation at memory scope wavefront-one-as due to an unsafe request. [-Rpass=si-lower]
+// GFX90A-HW-REMARK: Hardware instruction generated for atomic fadd operation at memory scope agent-one-as due to an unsafe request. [-Rpass=si-lower]
+// GFX90A-HW-REMARK: Hardware instruction generated for atomic fadd operation at memory scope workgroup-one-as due to an unsafe request. [-Rpass=si-lower]
+
 // GFX90A-HW-REMARK: global_atomic_add_f32 v0, v[0:1], v2, off glc
 // GFX90A-HW-REMARK: global_atomic_add_f32 v0, v[0:1], v2, off glc
 // GFX90A-HW-REMARK: global_atomic_add_f32 v0, v[0:1], v2, off glc
