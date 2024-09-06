@@ -129,8 +129,6 @@ void processInstructions(
       // Transitively apply the mappings of `Rhs` to this mapping too.
       std::set<int64_t> Other = SpillMap[RhsDwReg];
       SpillMap[LhsDwReg].insert(Other.begin(), Other.end());
-      // YKFIXME: If the `mov` instruction has a killed-flag, remove the
-      // register from the map.
       continue;
     }
 
@@ -171,6 +169,17 @@ void processInstructions(
       auto DwReg = getDwarfRegNum(MO.getReg());
       SpillMap.erase(DwReg);
       clearRhs(DwReg, SpillMap);
+    }
+
+    // Delete registers that are "killed" (no longer live) after this
+    // intsruction. This prevents us deopting values at runtime that will never
+    // be used.
+    for (const MachineOperand MO : Instr.uses()) {
+      if (MO.isReg() && MO.isKill()) {
+        auto DwReg = getDwarfRegNum(MO.getReg());
+        SpillMap.erase(DwReg);
+        clearRhs(DwReg, SpillMap);
+      }
     }
   }
 }
