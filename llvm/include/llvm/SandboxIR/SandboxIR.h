@@ -1101,9 +1101,6 @@ public:
   static bool classof(const sandboxir::Value *From) {
     return From->getSubclassID() == ClassID::PoisonValue;
   }
-  unsigned getUseOperandNo(const Use &Use) const final {
-    llvm_unreachable("PoisonValue has no operands!");
-  }
 #ifndef NDEBUG
   void verify() const override {
     assert(isa<llvm::PoisonValue>(Val) && "Expected a PoisonValue!");
