@@ -88,6 +88,7 @@ getOrCreateFuncAnalysisState(OneShotAnalysisState &state) {
 
 /// Return the unique ReturnOp that terminates `funcOp`.
 /// Return nullptr if there is no such unique ReturnOp.
+/// Return `funcOp` it self if there is no ReturnOp.
 static Operation* getAssumedUniqueReturnOp(FunctionOpInterface funcOp) {
   Operation *returnOp = nullptr;
   for (Block &b : funcOp.getFunctionBody()) {
@@ -98,6 +99,8 @@ static Operation* getAssumedUniqueReturnOp(FunctionOpInterface funcOp) {
       returnOp = candidateOp;
     }
   }
+  if (!returnOp)
+    return funcOp;
   return returnOp;
 }
 
@@ -147,9 +150,10 @@ aliasingFuncOpBBArgsAnalysis(FunctionOpInterface funcOp, OneShotAnalysisState &s
   }
 
   // Support only single return-terminated block in the function.
-  if (!isa<func::FuncOp>(funcOp))
-    return success();
+  // If funcOp has no returnOp, skip the following analysis.
   Operation *returnOp = getAssumedUniqueReturnOp(funcOp);
+  if (returnOp == funcOp)
+    return success();
   assert(returnOp && "expected func with single return op");
 
   for (OpOperand &returnVal : returnOp->getOpOperands())
@@ -300,9 +304,9 @@ getFuncOpsOrderedByCalls(ModuleOp moduleOp,
   // For each FuncOp, the number of func::CallOp it contains.
   DenseMap<FunctionOpInterface, unsigned> numberCallOpsContainedInFuncOp;
   WalkResult res = moduleOp.walk([&](FunctionOpInterface funcOp) -> WalkResult {
-    if (!funcOp.getFunctionBody().empty() && isa<func::FuncOp>(funcOp)) {
+    if (!funcOp.getFunctionBody().empty()) {
       Operation *returnOp = getAssumedUniqueReturnOp(funcOp);
-      if (!returnOp)
+      if (!returnOp && returnOp != funcOp)
         return funcOp->emitError()
                << "cannot bufferize a FuncOp with tensors and "
                   "without a unique ReturnOp";
@@ -356,7 +360,7 @@ static void foldMemRefCasts(FunctionOpInterface funcOp) {
 
   Operation *returnOp = getAssumedUniqueReturnOp(funcOp);
 
-  if (!returnOp)
+  if (!returnOp || returnOp == funcOp)
     return;
 
   SmallVector<Type> resultTypes;
