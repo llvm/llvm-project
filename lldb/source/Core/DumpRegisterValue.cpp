@@ -111,8 +111,8 @@ void lldb_private::DumpRegisterValue(const RegisterValue &reg_val, Stream &s,
       (reg_info.byte_size != 4 && reg_info.byte_size != 8))
     return;
 
-  CompilerType register_type = target_sp->GetRegisterType(
-      reg_info.name, *reg_info.register_type, reg_info.byte_size);
+  CompilerType register_type =
+      target_sp->GetRegisterType(*reg_info.register_type, reg_info.byte_size);
   if (!register_type.IsValid())
     return;
 

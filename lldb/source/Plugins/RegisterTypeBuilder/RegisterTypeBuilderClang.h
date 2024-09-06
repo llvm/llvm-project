@@ -11,7 +11,9 @@
 
 #include "clang/AST/ExternalASTSource.h"
 
+#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Target/RegisterTypeBuilder.h"
+#include "lldb/Target/RegisterTypeFlags.h"
 #include "lldb/Target/Target.h"
 
 namespace lldb_private {
@@ -30,9 +32,8 @@ public:
   }
   static lldb::RegisterTypeBuilderSP CreateInstance(Target &target);
 
-  CompilerType GetRegisterType(const std::string &name,
-                               const lldb_private::RegisterType &type_info,
-                               uint32_t byte_size) override;
+  CompilerType GetRegisterType(const lldb_private::RegisterType &type_info,
+                               uint32_t register_byte_size) override;
 
 private:
   /// This external AST is used to override the layout of bitfield structs
@@ -77,6 +78,15 @@ private:
       return true;
     }
   };
+
+private:
+  CompilerType BuildEnumType(const RegisterTypeEnum &enum_type_info,
+                             uint32_t register_byte_size,
+                             lldb::TypeSystemClangSP type_system);
+
+  CompilerType BuildFlagsType(const RegisterTypeFlags &flags_info,
+                              uint32_t register_byte_size,
+                              lldb::TypeSystemClangSP type_system);
 
   // This is created the first time a register type is requested, then handed
   // to the type system. We keep a reference to it so we can add more layouts
