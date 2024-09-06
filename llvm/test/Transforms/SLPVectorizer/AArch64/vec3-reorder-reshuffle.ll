@@ -66,38 +66,69 @@ bb12:                                             ; preds = %bb
 }
 
 define void @extract_mask(ptr %object, double %conv503, double %conv520) {
-; CHECK-LABEL: define void @extract_mask(
-; CHECK-SAME: ptr [[OBJECT:%.*]], double [[CONV503:%.*]], double [[CONV520:%.*]]) {
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[OBJECT]], align 8
-; CHECK-NEXT:    [[BBOX483:%.*]] = getelementptr float, ptr [[TMP0]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr [[BBOX483]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = fpext <2 x float> [[TMP1]] to <2 x double>
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> poison, <2 x i32> <i32 1, i32 0>
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> [[TMP3]], double [[CONV503]], i32 0
-; CHECK-NEXT:    [[TMP5:%.*]] = fcmp ogt <2 x double> [[TMP4]], <double 0.000000e+00, double -2.000000e+10>
-; CHECK-NEXT:    [[TMP6:%.*]] = select <2 x i1> [[TMP5]], <2 x double> [[TMP3]], <2 x double> <double 0.000000e+00, double -2.000000e+10>
-; CHECK-NEXT:    [[TMP7:%.*]] = fsub <2 x double> zeroinitializer, [[TMP6]]
-; CHECK-NEXT:    [[TMP8:%.*]] = fptrunc <2 x double> [[TMP7]] to <2 x float>
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x float> [[TMP8]], i32 0
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x float> [[TMP8]], i32 1
-; CHECK-NEXT:    [[MUL646:%.*]] = fmul float [[TMP9]], [[TMP10]]
-; CHECK-NEXT:    [[CMP663:%.*]] = fcmp olt float [[MUL646]], 0.000000e+00
-; CHECK-NEXT:    br i1 [[CMP663]], label [[IF_THEN665:%.*]], label [[IF_END668:%.*]]
-; CHECK:       if.then665:
-; CHECK-NEXT:    [[ARRAYIDX656:%.*]] = getelementptr float, ptr [[OBJECT]], i64 10
-; CHECK-NEXT:    [[BBOX651:%.*]] = getelementptr float, ptr [[OBJECT]]
-; CHECK-NEXT:    [[CONV621:%.*]] = fptrunc double [[CONV520]] to float
-; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <2 x double> [[TMP6]], <2 x double> poison, <2 x i32> <i32 poison, i32 0>
-; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <2 x double> [[TMP11]], double [[CONV503]], i32 0
-; CHECK-NEXT:    [[TMP13:%.*]] = fptrunc <2 x double> [[TMP12]] to <2 x float>
-; CHECK-NEXT:    store <2 x float> [[TMP13]], ptr [[BBOX651]], align 8
-; CHECK-NEXT:    [[BBOX_SROA_8_0_BBOX666_SROA_IDX:%.*]] = getelementptr float, ptr [[OBJECT]], i64 2
-; CHECK-NEXT:    store float [[CONV621]], ptr [[BBOX_SROA_8_0_BBOX666_SROA_IDX]], align 8
-; CHECK-NEXT:    store <2 x float> [[TMP8]], ptr [[ARRAYIDX656]], align 8
-; CHECK-NEXT:    br label [[IF_END668]]
-; CHECK:       if.end668:
-; CHECK-NEXT:    ret void
+; NON-POW2-LABEL: define void @extract_mask(
+; NON-POW2-SAME: ptr [[OBJECT:%.*]], double [[CONV503:%.*]], double [[CONV520:%.*]]) {
+; NON-POW2-NEXT:  entry:
+; NON-POW2-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[OBJECT]], align 8
+; NON-POW2-NEXT:    [[BBOX483:%.*]] = getelementptr float, ptr [[TMP0]]
+; NON-POW2-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr [[BBOX483]], align 8
+; NON-POW2-NEXT:    [[TMP2:%.*]] = fpext <2 x float> [[TMP1]] to <2 x double>
+; NON-POW2-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> poison, <2 x i32> <i32 1, i32 0>
+; NON-POW2-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> [[TMP3]], double [[CONV503]], i32 0
+; NON-POW2-NEXT:    [[TMP5:%.*]] = fcmp ogt <2 x double> [[TMP4]], <double 0.000000e+00, double -2.000000e+10>
+; NON-POW2-NEXT:    [[TMP6:%.*]] = select <2 x i1> [[TMP5]], <2 x double> [[TMP3]], <2 x double> <double 0.000000e+00, double -2.000000e+10>
+; NON-POW2-NEXT:    [[TMP7:%.*]] = fsub <2 x double> zeroinitializer, [[TMP6]]
+; NON-POW2-NEXT:    [[TMP8:%.*]] = fptrunc <2 x double> [[TMP7]] to <2 x float>
+; NON-POW2-NEXT:    [[TMP9:%.*]] = extractelement <2 x float> [[TMP8]], i32 0
+; NON-POW2-NEXT:    [[TMP10:%.*]] = extractelement <2 x float> [[TMP8]], i32 1
+; NON-POW2-NEXT:    [[MUL646:%.*]] = fmul float [[TMP9]], [[TMP10]]
+; NON-POW2-NEXT:    [[CMP663:%.*]] = fcmp olt float [[MUL646]], 0.000000e+00
+; NON-POW2-NEXT:    br i1 [[CMP663]], label [[IF_THEN665:%.*]], label [[IF_END668:%.*]]
+; NON-POW2:       if.then665:
+; NON-POW2-NEXT:    [[ARRAYIDX656:%.*]] = getelementptr float, ptr [[OBJECT]], i64 10
+; NON-POW2-NEXT:    [[BBOX651:%.*]] = getelementptr float, ptr [[OBJECT]]
+; NON-POW2-NEXT:    [[TMP11:%.*]] = shufflevector <2 x double> [[TMP6]], <2 x double> poison, <3 x i32> <i32 poison, i32 0, i32 poison>
+; NON-POW2-NEXT:    [[TMP12:%.*]] = insertelement <3 x double> [[TMP11]], double [[CONV503]], i32 0
+; NON-POW2-NEXT:    [[TMP13:%.*]] = insertelement <3 x double> [[TMP12]], double [[CONV520]], i32 2
+; NON-POW2-NEXT:    [[TMP14:%.*]] = fptrunc <3 x double> [[TMP13]] to <3 x float>
+; NON-POW2-NEXT:    store <3 x float> [[TMP14]], ptr [[BBOX651]], align 8
+; NON-POW2-NEXT:    store <2 x float> [[TMP8]], ptr [[ARRAYIDX656]], align 8
+; NON-POW2-NEXT:    br label [[IF_END668]]
+; NON-POW2:       if.end668:
+; NON-POW2-NEXT:    ret void
+;
+; POW2-ONLY-LABEL: define void @extract_mask(
+; POW2-ONLY-SAME: ptr [[OBJECT:%.*]], double [[CONV503:%.*]], double [[CONV520:%.*]]) {
+; POW2-ONLY-NEXT:  entry:
+; POW2-ONLY-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[OBJECT]], align 8
+; POW2-ONLY-NEXT:    [[BBOX483:%.*]] = getelementptr float, ptr [[TMP0]]
+; POW2-ONLY-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr [[BBOX483]], align 8
+; POW2-ONLY-NEXT:    [[TMP2:%.*]] = fpext <2 x float> [[TMP1]] to <2 x double>
+; POW2-ONLY-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> poison, <2 x i32> <i32 1, i32 0>
+; POW2-ONLY-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> [[TMP3]], double [[CONV503]], i32 0
+; POW2-ONLY-NEXT:    [[TMP5:%.*]] = fcmp ogt <2 x double> [[TMP4]], <double 0.000000e+00, double -2.000000e+10>
+; POW2-ONLY-NEXT:    [[TMP6:%.*]] = select <2 x i1> [[TMP5]], <2 x double> [[TMP3]], <2 x double> <double 0.000000e+00, double -2.000000e+10>
+; POW2-ONLY-NEXT:    [[TMP7:%.*]] = fsub <2 x double> zeroinitializer, [[TMP6]]
+; POW2-ONLY-NEXT:    [[TMP8:%.*]] = fptrunc <2 x double> [[TMP7]] to <2 x float>
+; POW2-ONLY-NEXT:    [[TMP9:%.*]] = extractelement <2 x float> [[TMP8]], i32 0
+; POW2-ONLY-NEXT:    [[TMP10:%.*]] = extractelement <2 x float> [[TMP8]], i32 1
+; POW2-ONLY-NEXT:    [[MUL646:%.*]] = fmul float [[TMP9]], [[TMP10]]
+; POW2-ONLY-NEXT:    [[CMP663:%.*]] = fcmp olt float [[MUL646]], 0.000000e+00
+; POW2-ONLY-NEXT:    br i1 [[CMP663]], label [[IF_THEN665:%.*]], label [[IF_END668:%.*]]
+; POW2-ONLY:       if.then665:
+; POW2-ONLY-NEXT:    [[ARRAYIDX656:%.*]] = getelementptr float, ptr [[OBJECT]], i64 10
+; POW2-ONLY-NEXT:    [[BBOX651:%.*]] = getelementptr float, ptr [[OBJECT]]
+; POW2-ONLY-NEXT:    [[CONV621:%.*]] = fptrunc double [[CONV520]] to float
+; POW2-ONLY-NEXT:    [[TMP11:%.*]] = shufflevector <2 x double> [[TMP6]], <2 x double> poison, <2 x i32> <i32 poison, i32 0>
+; POW2-ONLY-NEXT:    [[TMP12:%.*]] = insertelement <2 x double> [[TMP11]], double [[CONV503]], i32 0
+; POW2-ONLY-NEXT:    [[TMP13:%.*]] = fptrunc <2 x double> [[TMP12]] to <2 x float>
+; POW2-ONLY-NEXT:    store <2 x float> [[TMP13]], ptr [[BBOX651]], align 8
+; POW2-ONLY-NEXT:    [[BBOX_SROA_8_0_BBOX666_SROA_IDX:%.*]] = getelementptr float, ptr [[OBJECT]], i64 2
+; POW2-ONLY-NEXT:    store float [[CONV621]], ptr [[BBOX_SROA_8_0_BBOX666_SROA_IDX]], align 8
+; POW2-ONLY-NEXT:    store <2 x float> [[TMP8]], ptr [[ARRAYIDX656]], align 8
+; POW2-ONLY-NEXT:    br label [[IF_END668]]
+; POW2-ONLY:       if.end668:
+; POW2-ONLY-NEXT:    ret void
 ;
 entry:
   %0 = load ptr, ptr %object, align 8
