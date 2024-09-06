@@ -391,6 +391,19 @@ float4 asin(float4);
 // atan builtins
 //===----------------------------------------------------------------------===//
 
+__attribute__((__always_inline__, __nodebug__))
+ static inline float asfloat(int __A) {
+  return __builtin_bit_cast(float, __A); // no-warning
+}
+
+ template<int N>
+__attribute__((__always_inline__, __nodebug__))
+ static inline vector<float, N> asfloat(vector<int, N> V) {
+  return __builtin_bit_cast(vector<float, N>, V);
+}
+
+
+
 /// \fn T atan(T Val)
 /// \brief Returns the arctangent of the input value, \a Val.
 /// \param Val The input value.
