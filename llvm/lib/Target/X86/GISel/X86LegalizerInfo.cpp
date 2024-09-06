@@ -539,7 +539,17 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
                ((HasSSE1 && typeIs(1, s32)(Query)) ||
                 (HasSSE2 && typeIs(1, s64)(Query))) &&
                (scalarNarrowerThan(0, 32)(Query) ||
-                (Is64Bit && typeInSet(0, {s32, s64})(Query)));
+                (Is64Bit && typeIs(0, s32)(Query)));
+      })
+      // TODO: replace with customized legalization using
+      // specifics of cvttsd2si. The selection of this node requires
+      // a vector type. Either G_SCALAR_TO_VECTOR is needed or more advanced
+      // support of G_BUILD_VECTOR/G_INSERT_VECTOR_ELT is required beforehand.
+      .lowerIf([=](const LegalityQuery &Query) {
+        return !HasAVX512 &&
+               ((HasSSE1 && typeIs(1, s32)(Query)) ||
+                (HasSSE2 && typeIs(1, s64)(Query))) &&
+               (Is64Bit && typeIs(0, s64)(Query));
       })
       .clampScalar(0, s32, sMaxScalar)
       .widenScalarToNextPow2(0)
@@ -714,29 +724,6 @@ bool X86LegalizerInfo::legalizeFPTOUI(MachineInstr &MI,
     return true;
   }
 
-  if (DstTy == s64) {
-    APInt TwoPExpInt = APInt::getSignMask(DstSizeInBits);
-    APFloat TwoPExpFP(SrcTy == s32 ? APFloat::IEEEsingle()
-                                   : APFloat::IEEEdouble(),
-                      APInt::getZero(SrcTy.getSizeInBits()));
-    TwoPExpFP.convertFromAPInt(TwoPExpInt, /*IsSigned=*/false,
-                               APFloat::rmNearestTiesToEven);
-
-    // For fp Src greater or equal to Threshold(2^Exp), we use FPTOSI on
-    // (Src - 2^Exp) and add 2^Exp by setting highest bit in result to 1.
-    // For fp Src smaller, (Src - 2^Exp) is zeroed by And, the final result
-    // is FPTOSI on Src.
-    auto Casted = MIRBuilder.buildFPTOSI(DstTy, Src);
-    auto Threshold = MIRBuilder.buildFConstant(SrcTy, TwoPExpFP);
-    auto FSub = MIRBuilder.buildFSub(SrcTy, Src, Threshold);
-    auto ResLowBits = MIRBuilder.buildFPTOSI(DstTy, FSub);
-    auto Shift = MIRBuilder.buildConstant(DstTy, DstSizeInBits - 1);
-    auto ResHighBit = MIRBuilder.buildAShr(DstTy, Casted, Shift);
-    auto And = MIRBuilder.buildAnd(DstTy, ResHighBit, ResLowBits);
-    MIRBuilder.buildOr(Dst, And, Casted);
-    MI.eraseFromParent();
-    return true;
-  }
   return false;
 }
 
