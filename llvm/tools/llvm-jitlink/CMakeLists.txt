@@ -38,7 +38,7 @@ if(${CMAKE_SYSTEM_NAME} MATCHES "SunOS")
   target_link_libraries(llvm-jitlink PRIVATE socket)
 endif()
 
-if(MINGW)
+if(WIN32)
   set(builtin_runtime_functions
     llvm_orc_registerEHFrameSectionWrapper
     llvm_orc_deregisterEHFrameSectionWrapper
@@ -63,4 +63,4 @@ if(MINGW)
   add_llvm_symbol_exports(llvm-jitlink ${file_stem}.symbols)
 else()
   export_executable_symbols(llvm-jitlink)
-endif(MINGW)
+endif(WIN32)
