@@ -1397,7 +1397,8 @@ struct AAPointerInfoImpl
   }
 
   ChangeStatus translateAndAddState(Attributor &A, const AAPointerInfo &OtherAA,
-                                    const OffsetInfo &Offsets, CallBase &CB) {
+                                    const OffsetInfo &Offsets, CallBase &CB,
+                                    bool IsMustAcc) {
     using namespace AA::PointerInfo;
     if (!OtherAA.getState().isValidState() || !isValidState())
       return indicatePessimisticFixpoint();
@@ -1410,6 +1411,8 @@ struct AAPointerInfoImpl
     for (const auto &It : State) {
       for (auto Index : It.getSecond()) {
         const auto &RAcc = State.getAccess(Index);
+        if (!IsMustAcc && RAcc.isAssumption())
+          continue;
         for (auto Offset : Offsets) {
           auto NewRanges = Offset == AA::RangeTy::Unknown
                                ? AA::RangeTy::getUnknown()
@@ -1417,9 +1420,11 @@ struct AAPointerInfoImpl
           if (!NewRanges.isUnknown()) {
             NewRanges.addToAllOffsets(Offset);
           }
-          Changed |=
-              addAccess(A, NewRanges, CB, RAcc.getContent(), RAcc.getKind(),
-                        RAcc.getType(), RAcc.getRemoteInst());
+          AccessKind AK = RAcc.getKind();
+          if (!IsMustAcc)
+            AK = AccessKind((AK & ~AK_MUST) | AK_MAY);
+          Changed |= addAccess(A, NewRanges, CB, RAcc.getContent(), AK,
+                               RAcc.getType(), RAcc.getRemoteInst());
         }
       }
     }
@@ -1893,9 +1898,10 @@ ChangeStatus AAPointerInfoFloating::updateImpl(Attributor &A) {
             DepClassTy::REQUIRED);
         if (!CSArgPI)
           return false;
-        Changed =
-            translateAndAddState(A, *CSArgPI, OffsetInfoMap[CurPtr], *CB) |
-            Changed;
+        bool IsMustAcc = (getUnderlyingObject(CurPtr) == &AssociatedValue);
+        Changed = translateAndAddState(A, *CSArgPI, OffsetInfoMap[CurPtr], *CB,
+                                       IsMustAcc) |
+                  Changed;
         return isValidState();
       }
       LLVM_DEBUG(dbgs() << "[AAPointerInfo] Call user not handled " << *CB
@@ -11510,9 +11516,21 @@ struct AAPotentialValuesReturned : public AAPotentialValuesFloating {
           return false;
         if (!AddValues)
           continue;
-        for (const AA::ValueAndContext &VAC : Values)
+
+        bool AllInterAreIntra = false;
+        if (S == AA::Interprocedural)
+          AllInterAreIntra =
+              llvm::all_of(Values, [&](const AA::ValueAndContext &VAC) {
+                return AA::isValidInScope(*VAC.getValue(), AnchorScope);
+              });
+
+        for (const AA::ValueAndContext &VAC : Values) {
           addValue(A, getState(), *VAC.getValue(),
-                   VAC.getCtxI() ? VAC.getCtxI() : CtxI, S, AnchorScope);
+                   VAC.getCtxI() ? VAC.getCtxI() : CtxI,
+                   AllInterAreIntra ? AA::AnyScope : S, AnchorScope);
+        }
+        if (AllInterAreIntra)
+          break;
       }
       return true;
     };
@@ -11539,16 +11557,6 @@ struct AAPotentialValuesReturned : public AAPotentialValuesFloating {
 
     return (AssumedBefore == getAssumed()) ? ChangeStatus::UNCHANGED
                                            : ChangeStatus::CHANGED;
-  }
-
-  void addValue(Attributor &A, StateType &State, Value &V,
-                const Instruction *CtxI, AA::ValueScope S,
-                Function *AnchorScope) const override {
-    Function *F = getAssociatedFunction();
-    if (auto *CB = dyn_cast<CallBase>(&V))
-      if (CB->getCalledOperand() == F)
-        return;
-    Base::addValue(A, State, V, CtxI, S, AnchorScope);
   }
 
   ChangeStatus manifest(Attributor &A) override {
@@ -11645,64 +11653,39 @@ struct AAPotentialValuesCallSiteReturned : AAPotentialValuesImpl {
                          UsedAssumedInformation))
       return indicatePessimisticFixpoint();
 
-    SmallVector<AA::ValueAndContext> Values;
-    if (!A.getAssumedSimplifiedValues(IRPosition::returned(*Callee), this,
-                                      Values, AA::Intraprocedural,
-                                      UsedAssumedInformation))
-      return indicatePessimisticFixpoint();
-
     Function *Caller = CB->getCaller();
 
-    bool AnyNonLocal = false;
-    for (auto &It : Values) {
-      Value *V = It.getValue();
-      std::optional<Value *> CallerV = A.translateArgumentToCallSiteContent(
-          V, *CB, *this, UsedAssumedInformation);
-      if (!CallerV.has_value()) {
-        // Nothing to do as long as no value was determined.
-        continue;
-      }
-      V = *CallerV ? *CallerV : V;
-      if (AA::isDynamicallyUnique(A, *this, *V) &&
-          AA::isValidInScope(*V, Caller)) {
-        if (*CallerV) {
-          SmallVector<AA::ValueAndContext> ArgValues;
-          IRPosition IRP = IRPosition::value(*V);
-          if (auto *Arg = dyn_cast<Argument>(V))
-            if (Arg->getParent() == CB->getCalledOperand())
-              IRP = IRPosition::callsite_argument(*CB, Arg->getArgNo());
-          if (recurseForValue(A, IRP, AA::AnyScope))
-            continue;
-        }
-        addValue(A, getState(), *V, CB, AA::AnyScope, getAnchorScope());
-      } else {
-        AnyNonLocal = true;
-        break;
-      }
-    }
-    if (AnyNonLocal) {
-      Values.clear();
+    auto AddScope = [&](AA::ValueScope S) {
+      SmallVector<AA::ValueAndContext> Values;
       if (!A.getAssumedSimplifiedValues(IRPosition::returned(*Callee), this,
-                                        Values, AA::Interprocedural,
-                                        UsedAssumedInformation))
-        return indicatePessimisticFixpoint();
-      AnyNonLocal = false;
-      getState() = PotentialLLVMValuesState::getBestState();
+                                        Values, S, UsedAssumedInformation))
+        return false;
+
       for (auto &It : Values) {
         Value *V = It.getValue();
-        if (!AA::isDynamicallyUnique(A, *this, *V))
-          return indicatePessimisticFixpoint();
-        if (AA::isValidInScope(*V, Caller)) {
-          addValue(A, getState(), *V, CB, AA::AnyScope, getAnchorScope());
-        } else {
-          AnyNonLocal = true;
-          addValue(A, getState(), *V, CB, AA::Interprocedural,
-                   getAnchorScope());
+        std::optional<Value *> CallerV = A.translateArgumentToCallSiteContent(
+            V, *CB, *this, UsedAssumedInformation);
+        if (!CallerV.has_value()) {
+          // Nothing to do as long as no value was determined.
+          continue;
         }
+        V = *CallerV ? *CallerV : V;
+        if (*CallerV && AA::isDynamicallyUnique(A, *this, *V)) {
+          if (recurseForValue(A, IRPosition::value(*V), S))
+            continue;
+        }
+        if (S == AA::Intraprocedural && !AA::isValidInScope(*V, Caller)) {
+          giveUpOnIntraprocedural(A);
+          return true;
+        }
+        addValue(A, getState(), *V, CB, S, getAnchorScope());
       }
-      if (AnyNonLocal)
-        giveUpOnIntraprocedural(A);
-    }
+      return true;
+    };
+    if (!AddScope(AA::Intraprocedural))
+      return indicatePessimisticFixpoint();
+    if (!AddScope(AA::Interprocedural))
+      return indicatePessimisticFixpoint();
     return (AssumedBefore == getAssumed()) ? ChangeStatus::UNCHANGED
                                            : ChangeStatus::CHANGED;
   }

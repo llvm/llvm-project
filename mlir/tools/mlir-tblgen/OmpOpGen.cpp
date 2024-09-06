@@ -149,7 +149,7 @@ static void verifyClause(Record *op, Record *clause) {
 
 /// Verify that all properties of `OpenMP_Clause`s of records deriving from
 /// `OpenMP_Op`s have been inherited by the latter.
-static bool verifyDecls(const RecordKeeper &recordKeeper, raw_ostream &) {
+static bool verifyDecls(RecordKeeper &recordKeeper, raw_ostream &) {
   for (Record *op : recordKeeper.getAllDerivedDefinitions("OpenMP_Op")) {
     for (Record *clause : op->getValueAsListOfDefs("clauseList"))
       verifyClause(op, clause);
