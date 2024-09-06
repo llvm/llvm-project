@@ -8,6 +8,7 @@
 
 #include "RegisterTypeDetector_arm64.h"
 #include "lldb/Target/RegisterTypeFlags.h"
+#include "lldb/Target/RegisterTypeUnion.h"
 #include "lldb/lldb-private-types.h"
 
 // This file is built on all systems because it is used by native processes and
@@ -295,7 +296,23 @@ const RegisterType *Arm64RegisterTypeDetector::DetectCPSRType(uint64_t hwcap,
 
   cpsr_flags.SetFields(cpsr_fields);
 
-  return &cpsr_flags;
+  static RegisterTypeFlags cpsr_flags_reversed("cpsr_raw_bits", 4, {});
+  const static std::vector<RegisterTypeFlags::Field> raw_bits{
+      {"31", 31}, {"30", 30}, {"29", 29}, {"28", 28}, {"27", 27}, {"26", 26},
+      {"25", 25}, {"24", 24}, {"23", 23}, {"22", 22}, {"21", 21}, {"20", 20},
+      {"19", 19}, {"18", 18}, {"17", 17}, {"16", 16}, {"15", 15}, {"14", 14},
+      {"13", 13}, {"12", 12}, {"11", 11}, {"10", 10}, {"9", 9},   {"8", 8},
+      {"7", 7},   {"6", 6},   {"5", 5},   {"4", 4},   {"3", 3},   {"2", 2},
+      {"1", 1},   {"0", 0},
+  };
+
+  cpsr_flags_reversed.SetFields(raw_bits);
+
+  static RegisterTypeUnion cpsr_union(
+      "cpsr_union",
+      {{"normal", &cpsr_flags}, {"raw_bits", &cpsr_flags_reversed}});
+
+  return &cpsr_union;
 }
 
 void Arm64RegisterTypeDetector::DetectTypes(uint64_t hwcap, uint64_t hwcap2,
