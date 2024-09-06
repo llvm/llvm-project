@@ -108,6 +108,7 @@ void EmitNeonSema(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitVectorTypes(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitNeonTest(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 
+void EmitImmCheckTypes(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitSveHeader(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitSveBuiltins(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitSveBuiltinCG(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
