@@ -630,26 +630,26 @@ defm VCVTTPS2IUBS : avx10_sat_cvt_base<0x6a, "vcvttps2iubs", SchedWriteVecIMul,
 //-------------------------------------------------
 
 // Convert Double to Signed/Unsigned Doubleword with truncation.
-multiclass avx512_cvttpd2dqs<bits<8> opc, string OpcodeStr, SDPatternOperator OpNode,
-           SDNode MaskOpNode, SDNode OpNodeSAE,
-           X86SchedWriteWidths sched> {
-  let Predicates = [HasAVX10_2, HasAVX10_2_512] in {
+multiclass avx10_cvttpd2dqs<bits<8> opc, string OpcodeStr, SDPatternOperator OpNode,
+                            SDNode MaskOpNode, SDNode OpNodeSAE,
+                            X86SchedWriteWidths sched> {
+  let Predicates = [HasAVX10_2_512] in {
     defm Z : avx512_vcvt_fp<opc, OpcodeStr, v8i32x_info, v8f64_info, OpNode,
                             MaskOpNode, sched.ZMM>,
-    avx512_vcvt_fp_sae<opc, OpcodeStr, v8i32x_info, v8f64_info,
-                       OpNodeSAE, sched.ZMM>, EVEX_V512;
+             avx512_vcvt_fp_sae<opc, OpcodeStr, v8i32x_info, v8f64_info,
+                               OpNodeSAE, sched.ZMM>, EVEX_V512;
   }
-  let Predicates = [HasAVX10_2, HasVLX] in {
+  let Predicates = [HasAVX10_2] in {
     defm Z128 : avx512_vcvt_fp<opc, OpcodeStr, v4i32x_info, v2f64x_info,
-                               null_frag, null_frag, sched.XMM, "{1to2}", "{x}",
-                               f128mem, VK2WM>, EVEX_V128;
+                              null_frag, null_frag, sched.XMM, "{1to2}", "{x}",
+                              f128mem, VK2WM>, EVEX_V128;
     defm Z256 : avx512_vcvt_fp<opc, OpcodeStr, v4i32x_info, v4f64x_info, OpNode,
-                               MaskOpNode, sched.YMM, "{1to4}", "{y}">, EVEX_V256;
+                              MaskOpNode, sched.YMM, "{1to4}", "{y}">, EVEX_V256;
   }
 
-  let Predicates = [HasAVX10_2, HasVLX], hasEVEX_U=1 in {
+  let Predicates = [HasAVX10_2], hasEVEX_U=1 in {
     defm Z256 : avx512_vcvt_fp_sae<opc, OpcodeStr, v4i32x_info, v4f64x_info, OpNodeSAE,
-                                   sched.YMM>, EVEX_V256;
+                                  sched.YMM>, EVEX_V256;
   }
 
 
@@ -706,110 +706,111 @@ multiclass avx512_cvttpd2dqs<bits<8> opc, string OpcodeStr, SDPatternOperator Op
 }
 
 // Convert Double to Signed/Unsigned Quardword with truncation saturationn enabled
-multiclass avx512_cvttpd2qqs<bits<8> opc, string OpcodeStr, SDPatternOperator OpNode,
-           SDNode MaskOpNode, SDNode OpNodeRnd,
-           X86SchedWriteWidths sched> {
-   let Predicates = [HasDQI, HasAVX10_2, HasAVX10_2_512] in {
+multiclass avx10_cvttpd2qqs<bits<8> opc, string OpcodeStr, SDPatternOperator OpNode,
+                            SDNode MaskOpNode, SDNode OpNodeRnd,
+                            X86SchedWriteWidths sched> {
+   let Predicates = [HasAVX10_2_512] in {
      defm Z : avx512_vcvt_fp<opc, OpcodeStr, v8i64_info, v8f64_info, OpNode,
-                             MaskOpNode, sched.ZMM>,
-     avx512_vcvt_fp_sae<opc, OpcodeStr, v8i64_info, v8f64_info,
-                        OpNodeRnd, sched.ZMM>, EVEX_V512;
+                            MaskOpNode, sched.ZMM>,
+              avx512_vcvt_fp_sae<opc, OpcodeStr, v8i64_info, v8f64_info,
+                                OpNodeRnd, sched.ZMM>, EVEX_V512;
    }
-   let Predicates = [HasDQI, HasAVX10_2, HasVLX] in {
+   let Predicates = [HasAVX10_2] in {
      defm Z128 : avx512_vcvt_fp<opc, OpcodeStr, v2i64x_info, v2f64x_info, OpNode,
-                                MaskOpNode, sched.XMM>, EVEX_V128;
+                               MaskOpNode, sched.XMM>, EVEX_V128;
      defm Z256 : avx512_vcvt_fp<opc, OpcodeStr, v4i64x_info, v4f64x_info, OpNode,
-                                MaskOpNode, sched.YMM>, EVEX_V256;
+                               MaskOpNode, sched.YMM>, EVEX_V256;
    }
-   let Predicates = [HasDQI, HasAVX10_2, HasVLX], hasEVEX_U=1 in {
+   let Predicates = [HasAVX10_2], hasEVEX_U=1 in {
      defm Z256 : avx512_vcvt_fp_sae<opc, OpcodeStr, v4i64x_info, v4f64x_info,
-                                    OpNodeRnd, sched.YMM>, EVEX_V256;
+                                   OpNodeRnd, sched.YMM>, EVEX_V256;
    }
 }
 
 // Convert Float to Signed/Unsigned Quardword with truncation
-multiclass avx512_cvttps2qqs<bits<8> opc, string OpcodeStr, SDPatternOperator OpNode,
-                             SDNode MaskOpNode, SDNode OpNodeRnd,
-                             X86SchedWriteWidths sched> {
-  let Predicates = [HasDQI, HasAVX10_2, HasAVX10_2_512] in {
+multiclass avx10_cvttps2qqs<bits<8> opc, string OpcodeStr, SDPatternOperator OpNode,
+                            SDNode MaskOpNode, SDNode OpNodeRnd,
+                            X86SchedWriteWidths sched> {
+  let Predicates = [HasAVX10_2_512] in {
     defm Z : avx512_vcvt_fp<opc, OpcodeStr, v8i64_info, v8f32x_info, OpNode,
-                            MaskOpNode, sched.ZMM>,
+                           MaskOpNode, sched.ZMM>,
              avx512_vcvt_fp_sae<opc, OpcodeStr, v8i64_info, v8f32x_info,
-                                OpNodeRnd, sched.ZMM>, EVEX_V512;
+                               OpNodeRnd, sched.ZMM>, EVEX_V512;
   }
-  let Predicates = [HasDQI, HasAVX10_2, HasVLX] in {
+  let Predicates = [HasAVX10_2] in {
     defm Z128 : avx512_vcvt_fp<opc, OpcodeStr, v2i64x_info, v4f32x_info, OpNode,
-                               MaskOpNode, sched.XMM, "{1to2}", "", f64mem, VK2WM,
-                               (v2i64 (OpNode (bc_v4f32 (v2f64
-                                (scalar_to_vector (loadf64 addr:$src)))))),
-                               (v2i64 (MaskOpNode (bc_v4f32 (v2f64
-                                (scalar_to_vector (loadf64 addr:$src))))))>,
-                               EVEX_V128;
+                              MaskOpNode, sched.XMM, "{1to2}", "", f64mem, VK2WM,
+                              (v2i64 (OpNode (bc_v4f32 (v2f64
+                               (scalar_to_vector (loadf64 addr:$src)))))),
+                              (v2i64 (MaskOpNode (bc_v4f32 (v2f64
+                               (scalar_to_vector (loadf64 addr:$src))))))>,
+                              EVEX_V128;
     defm Z256 : avx512_vcvt_fp<opc, OpcodeStr, v4i64x_info, v4f32x_info, OpNode,
-                               MaskOpNode, sched.YMM>, EVEX_V256;
+                              MaskOpNode, sched.YMM>, EVEX_V256;
   }
 
-  let Predicates = [HasDQI, HasAVX10_2, HasVLX], hasEVEX_U=1 in {
+  let Predicates = [HasAVX10_2], hasEVEX_U=1 in {
     defm Z256 : avx512_vcvt_fp_sae<opc, OpcodeStr, v4i64x_info, v4f32x_info, OpNodeRnd,
-                                   sched.YMM>, EVEX_V256;
+                                  sched.YMM>, EVEX_V256;
   }
 }
 
 // Convert Float to Signed/Unsigned Doubleword with truncation
-multiclass avx512_cvttps2dqs<bits<8> opc, string OpcodeStr, SDPatternOperator OpNode,
+multiclass avx10_cvttps2dqs<bits<8> opc, string OpcodeStr, SDPatternOperator OpNode,
                             SDNode MaskOpNode,
                             SDNode OpNodeSAE, X86SchedWriteWidths sched> {
-  let Predicates = [HasAVX10_2, HasAVX10_2_512] in {
+  let Predicates = [HasAVX10_2_512] in {
     defm Z : avx512_vcvt_fp<opc, OpcodeStr, v16i32_info, v16f32_info, OpNode,
-                            MaskOpNode, sched.ZMM>,
-    avx512_vcvt_fp_sae<opc, OpcodeStr, v16i32_info, v16f32_info,
-                       OpNodeSAE, sched.ZMM>, EVEX_V512;
+                           MaskOpNode, sched.ZMM>,
+             avx512_vcvt_fp_sae<opc, OpcodeStr, v16i32_info, v16f32_info,
+                                OpNodeSAE, sched.ZMM>, EVEX_V512;
   }
 
-  let Predicates = [HasAVX10_2, HasVLX] in {
+  let Predicates = [HasAVX10_2] in {
     defm Z128 : avx512_vcvt_fp<opc, OpcodeStr, v4i32x_info, v4f32x_info, OpNode,
-                               MaskOpNode, sched.XMM>, EVEX_V128;
+                              MaskOpNode, sched.XMM>, EVEX_V128;
     defm Z256 : avx512_vcvt_fp<opc, OpcodeStr, v8i32x_info, v8f32x_info, OpNode,
-                               MaskOpNode, sched.YMM>, EVEX_V256;
+                              MaskOpNode, sched.YMM>, EVEX_V256;
   }
 
-  let Predicates = [HasAVX10_2, HasVLX], hasEVEX_U=1 in {
+  let Predicates = [HasAVX10_2], hasEVEX_U=1 in {
     defm Z256 : avx512_vcvt_fp_sae<opc, OpcodeStr, v8i32x_info, v8f32x_info,
-                                   OpNodeSAE, sched.YMM>, EVEX_V256;
+                                  OpNodeSAE, sched.YMM>, EVEX_V256;
   }
 }
 
-defm VCVTTPD2DQS : avx512_cvttpd2dqs<0x6D, "vcvttpd2dqs", X86cvttp2sis,
-                                 X86cvttp2sis, X86cvttp2sisSAE,
-                                 SchedWriteCvtPD2DQ>,
-                                 PD, REX_W, T_MAP5,PS, EVEX_CD8<64, CD8VF>;
-defm VCVTTPD2UDQS : avx512_cvttpd2dqs<0x6C, "vcvttpd2udqs", X86cvttp2uis,
-                                 X86cvttp2uis, X86cvttp2uisSAE,
-                                 SchedWriteCvtPD2DQ>,
-                                 REX_W, T_MAP5,PS, EVEX_CD8<64, CD8VF>;
-defm VCVTTPS2DQS : avx512_cvttps2dqs<0x6D, "vcvttps2dqs", X86cvttp2sis,
-                                 X86cvttp2sis, X86cvttp2sisSAE,
-                                 SchedWriteCvtPS2DQ>, T_MAP5,PS,
-                                 EVEX_CD8<32, CD8VF>;
-defm VCVTTPS2UDQS : avx512_cvttps2dqs<0x6C, "vcvttps2udqs", X86cvttp2uis,
-                       X86cvttp2uis, X86cvttp2uisSAE,
-                       SchedWriteCvtPS2DQ>, T_MAP5,PS, EVEX_CD8<32, CD8VF>;
-defm VCVTTPD2QQS : avx512_cvttpd2qqs<0x6D, "vcvttpd2qqs", X86cvttp2sis,
-                                 X86cvttp2sis, X86cvttp2sisSAE,
-                                 SchedWriteCvtPD2DQ>, REX_W, T_MAP5,PD,
-                                 EVEX_CD8<64, CD8VF>;
-defm VCVTTPS2QQS : avx512_cvttps2qqs<0x6D, "vcvttps2qqs", X86cvttp2sis,
-                                 X86cvttp2sis, X86cvttp2sisSAE,
-                                 SchedWriteCvtPS2DQ>, T_MAP5,PD,
-                                 EVEX_CD8<32, CD8VH>;
-defm VCVTTPD2UQQS : avx512_cvttpd2qqs<0x6C, "vcvttpd2uqqs", X86cvttp2uis,
-                                 X86cvttp2uis, X86cvttp2uisSAE,
-                                 SchedWriteCvtPD2DQ>, REX_W, T_MAP5,PD,
-                                 EVEX_CD8<64, CD8VF>;
-defm VCVTTPS2UQQS : avx512_cvttps2qqs<0x6C, "vcvttps2uqqs", X86cvttp2uis,
-                                 X86cvttp2uis, X86cvttp2uisSAE,
-                                 SchedWriteCvtPS2DQ>, T_MAP5,PD,
-                                 EVEX_CD8<32, CD8VH>;
+defm VCVTTPD2DQS : avx10_cvttpd2dqs<0x6D, "vcvttpd2dqs", X86cvttp2sis,
+                                    X86cvttp2sis, X86cvttp2sisSAE,
+                                    SchedWriteCvtPD2DQ>,
+                                    PD, REX_W, T_MAP5,PS, EVEX_CD8<64, CD8VF>;
+defm VCVTTPD2UDQS : avx10_cvttpd2dqs<0x6C, "vcvttpd2udqs", X86cvttp2uis,
+                                     X86cvttp2uis, X86cvttp2uisSAE,
+                                     SchedWriteCvtPD2DQ>,
+                                     REX_W, T_MAP5,PS, EVEX_CD8<64, CD8VF>;
+defm VCVTTPS2DQS : avx10_cvttps2dqs<0x6D, "vcvttps2dqs", X86cvttp2sis,
+                                    X86cvttp2sis, X86cvttp2sisSAE,
+                                    SchedWriteCvtPS2DQ>, T_MAP5,PS,
+                                    EVEX_CD8<32, CD8VF>;
+defm VCVTTPS2UDQS : avx10_cvttps2dqs<0x6C, "vcvttps2udqs", X86cvttp2uis,
+                                     X86cvttp2uis, X86cvttp2uisSAE,
+                                     SchedWriteCvtPS2DQ>, T_MAP5,PS,
+                                     EVEX_CD8<32, CD8VF>;
+defm VCVTTPD2QQS : avx10_cvttpd2qqs<0x6D, "vcvttpd2qqs", X86cvttp2sis,
+                                    X86cvttp2sis, X86cvttp2sisSAE,
+                                    SchedWriteCvtPD2DQ>, REX_W, T_MAP5,PD,
+                                    EVEX_CD8<64, CD8VF>;
+defm VCVTTPS2QQS : avx10_cvttps2qqs<0x6D, "vcvttps2qqs", X86cvttp2sis,
+                                    X86cvttp2sis, X86cvttp2sisSAE,
+                                    SchedWriteCvtPS2DQ>, T_MAP5,PD,
+                                    EVEX_CD8<32, CD8VH>;
+defm VCVTTPD2UQQS : avx10_cvttpd2qqs<0x6C, "vcvttpd2uqqs", X86cvttp2uis,
+                                     X86cvttp2uis, X86cvttp2uisSAE,
+                                     SchedWriteCvtPD2DQ>, REX_W, T_MAP5,PD,
+                                     EVEX_CD8<64, CD8VF>;
+defm VCVTTPS2UQQS : avx10_cvttps2qqs<0x6C, "vcvttps2uqqs", X86cvttp2uis,
+                                     X86cvttp2uis, X86cvttp2uisSAE,
+                                     SchedWriteCvtPS2DQ>, T_MAP5,PD,
+                                     EVEX_CD8<32, CD8VH>;
 
 let Predicates = [HasAVX10_2] in {
 // Special patterns to allow use of X86mcvttp2si for masking. Instruction
@@ -869,10 +870,10 @@ def : Pat<(X86mcvttp2uis (v2f64 (X86VBroadcastld64 addr:$src)),
 }
 
 // Convert scalar float/double to signed/unsigned int 32/64 with truncation and saturation.
-multiclass avx512_cvt_s_ds<bits<8> opc, string asm, X86VectorVTInfo _SrcRC,
-                              X86VectorVTInfo _DstRC, SDPatternOperator OpNode,
-                              SDNode OpNodeInt, SDNode OpNodeSAE,
-                              X86FoldableSchedWrite sched> {
+multiclass avx10_cvt_s_ds<bits<8> opc, string asm, X86VectorVTInfo _SrcRC,
+                          X86VectorVTInfo _DstRC, SDPatternOperator OpNode,
+                          SDNode OpNodeInt, SDNode OpNodeSAE,
+                          X86FoldableSchedWrite sched> {
   let Predicates = [HasAVX10_2], ExeDomain = _SrcRC.ExeDomain in {
     let isCodeGenOnly = 1 in {
     def rr : AVX512<opc, MRMSrcReg, (outs _DstRC.RC:$dst), (ins _SrcRC.FRC:$src),
@@ -903,38 +904,38 @@ multiclass avx512_cvt_s_ds<bits<8> opc, string asm, X86VectorVTInfo _SrcRC,
   }
 }
 
-defm VCVTTSS2SIS: avx512_cvt_s_ds<0x6D, "vcvttss2sis", f32x_info, i32x_info,
-                                  fp_to_sint_sat, X86cvttss2Int,
-                                  X86cvttss2IntSAE, WriteCvtSS2I>,
+defm VCVTTSS2SIS: avx10_cvt_s_ds<0x6D, "vcvttss2sis", f32x_info, i32x_info,
+                                 fp_to_sint_sat, X86cvttss2Int,
+                                 X86cvttss2IntSAE, WriteCvtSS2I>,
+                                 T_MAP5,XS, EVEX_CD8<32, CD8VT1>;
+defm VCVTTSS2SI64S: avx10_cvt_s_ds<0x6D, "vcvttss2sis", f32x_info, i64x_info,
+                                   fp_to_sint_sat, X86cvttss2Int,
+                                   X86cvttss2IntSAE, WriteCvtSS2I>,
+                                   REX_W, T_MAP5,XS, EVEX_CD8<32, CD8VT1>;
+defm VCVTTSD2SIS: avx10_cvt_s_ds<0x6D, "vcvttsd2sis", f64x_info, i32x_info,
+                                 fp_to_sint_sat, X86cvttss2Int,
+                                 X86cvttss2IntSAE, WriteCvtSD2I>,
+                                 T_MAP5,XD, EVEX_CD8<64, CD8VT1>;
+defm VCVTTSD2SI64S: avx10_cvt_s_ds<0x6D, "vcvttsd2sis", f64x_info, i64x_info,
+                                   fp_to_sint_sat, X86cvttss2Int,
+                                   X86cvttss2IntSAE, WriteCvtSD2I>,
+                                   REX_W, T_MAP5,XD, EVEX_CD8<64, CD8VT1>;
+defm VCVTTSS2USIS: avx10_cvt_s_ds<0x6C, "vcvttss2usis", f32x_info, i32x_info,
+                                  fp_to_uint_sat, X86cvttss2UInt,
+                                  X86cvttss2UIntSAE, WriteCvtSS2I>,
                                   T_MAP5,XS, EVEX_CD8<32, CD8VT1>;
-defm VCVTTSS2SI64S: avx512_cvt_s_ds<0x6D, "vcvttss2sis", f32x_info, i64x_info,
-                                    fp_to_sint_sat, X86cvttss2Int,
-                                    X86cvttss2IntSAE, WriteCvtSS2I>,
-                                    REX_W, T_MAP5,XS, EVEX_CD8<32, CD8VT1>;
-defm VCVTTSD2SIS: avx512_cvt_s_ds<0x6D, "vcvttsd2sis", f64x_info, i32x_info,
-                                  fp_to_sint_sat, X86cvttss2Int,
-                                  X86cvttss2IntSAE, WriteCvtSD2I>,
+defm VCVTTSS2USI64S: avx10_cvt_s_ds<0x6C, "vcvttss2usis", f32x_info, i64x_info,
+                                    fp_to_uint_sat, X86cvttss2UInt,
+                                     X86cvttss2UIntSAE, WriteCvtSS2I>,
+                                    T_MAP5,XS,REX_W, EVEX_CD8<32, CD8VT1>;
+defm VCVTTSD2USIS: avx10_cvt_s_ds<0x6C, "vcvttsd2usis", f64x_info, i32x_info,
+                                  fp_to_uint_sat, X86cvttss2UInt,
+                                  X86cvttss2UIntSAE, WriteCvtSD2I>,
                                   T_MAP5,XD, EVEX_CD8<64, CD8VT1>;
-defm VCVTTSD2SI64S: avx512_cvt_s_ds<0x6D, "vcvttsd2sis", f64x_info, i64x_info,
-                                    fp_to_sint_sat, X86cvttss2Int,
-                                    X86cvttss2IntSAE, WriteCvtSD2I>,
-                                    REX_W, T_MAP5,XD, EVEX_CD8<64, CD8VT1>;
-defm VCVTTSS2USIS: avx512_cvt_s_ds<0x6C, "vcvttss2usis", f32x_info, i32x_info,
-                                   fp_to_uint_sat, X86cvttss2UInt,
-                                   X86cvttss2UIntSAE, WriteCvtSS2I>,
-                                   T_MAP5,XS, EVEX_CD8<32, CD8VT1>;
-defm VCVTTSS2USI64S: avx512_cvt_s_ds<0x6C, "vcvttss2usis", f32x_info, i64x_info,
-                                     fp_to_uint_sat, X86cvttss2UInt,
-                                      X86cvttss2UIntSAE, WriteCvtSS2I>,
-                                     T_MAP5,XS,REX_W, EVEX_CD8<32, CD8VT1>;
-defm VCVTTSD2USIS: avx512_cvt_s_ds<0x6C, "vcvttsd2usis", f64x_info, i32x_info,
-                                   fp_to_uint_sat, X86cvttss2UInt,
-                                   X86cvttss2UIntSAE, WriteCvtSD2I>,
-                                   T_MAP5,XD, EVEX_CD8<64, CD8VT1>;
-defm VCVTTSD2USI64S: avx512_cvt_s_ds<0x6C, "vcvttsd2usis", f64x_info, i64x_info,
-                                     fp_to_uint_sat, X86cvttss2UInt,
-                                     X86cvttss2UIntSAE, WriteCvtSD2I>,
-                                     T_MAP5,XD, REX_W, EVEX_CD8<64, CD8VT1>;
+defm VCVTTSD2USI64S: avx10_cvt_s_ds<0x6C, "vcvttsd2usis", f64x_info, i64x_info,
+                                    fp_to_uint_sat, X86cvttss2UInt,
+                                    X86cvttss2UIntSAE, WriteCvtSD2I>,
+                                    T_MAP5,XD, REX_W, EVEX_CD8<64, CD8VT1>;
 
 //-------------------------------------------------
 // AVX10 CONVERT instructions

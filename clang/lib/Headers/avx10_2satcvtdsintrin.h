@@ -20,10 +20,6 @@
   __attribute__((__always_inline__, __nodebug__, __target__("avx10.2-256"),    \
                  __min_vector_width__(256)))
 
-#define __DEFAULT_FN_ATTRS128                                                  \
-  __attribute__((__always_inline__, __nodebug__, __target__("avx10.2-256"),    \
-                 __min_vector_width__(128)))
-
 #define _mm_cvtts_roundsd_i32(A, R)                                            \
   ((int)__builtin_ia32_vcvttsd2sis32((__v2df)(__m128)(A), (const int)(R)))
 
@@ -83,20 +79,19 @@
       (__v2df)(__m128d)A, (__v4si)(__m128i)_mm_setzero_si128(), (__mmask8)U))
 
 // 256 Bit : Double -> int
-static __inline__ __m128i __DEFAULT_FN_ATTRS128
-_mm256_cvttspd_epi32(__m256d A) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS _mm256_cvttspd_epi32(__m256d A) {
   return ((__m128i)__builtin_ia32_vcvttpd2dqs256_round_mask(
       (__v4df)(__m256d)A, (__v4si)_mm_undefined_si128(), (__mmask8)-1,
       _MM_FROUND_CUR_DIRECTION));
 }
 
-static __inline__ __m128i __DEFAULT_FN_ATTRS128
+static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm256_mask_cvttspd_epi32(__m128i W, __mmask8 U, __m256d A) {
   return ((__m128i)__builtin_ia32_vcvttpd2dqs256_round_mask(
       (__v4df)A, (__v4si)W, U, _MM_FROUND_CUR_DIRECTION));
 }
 
-static __inline__ __m128i __DEFAULT_FN_ATTRS128
+static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm256_maskz_cvttspd_epi32(__mmask8 U, __m256d A) {
   return ((__m128i)__builtin_ia32_vcvttpd2dqs256_round_mask(
       (__v4df)A, (__v4si)_mm_setzero_si128(), U, _MM_FROUND_CUR_DIRECTION));
@@ -131,20 +126,19 @@ _mm256_maskz_cvttspd_epi32(__mmask8 U, __m256d A) {
       (__v2df)(__m128d)A, (__v4si)(__m128i)_mm_setzero_si128(), (__mmask8)U))
 
 // 256 Bit : Double -> uint
-static __inline__ __m128i __DEFAULT_FN_ATTRS128
-_mm256_cvttspd_epu32(__m256d A) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS _mm256_cvttspd_epu32(__m256d A) {
   return ((__m128i)__builtin_ia32_vcvttpd2udqs256_round_mask(
       (__v4df)A, (__v4si)_mm_undefined_si128(), (__mmask8)-1,
       _MM_FROUND_CUR_DIRECTION));
 }
 
-static __inline__ __m128i __DEFAULT_FN_ATTRS128
+static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm256_mask_cvttspd_epu32(__m128i W, __mmask8 U, __m256d A) {
   return ((__m128i)__builtin_ia32_vcvttpd2udqs256_round_mask(
       (__v4df)A, (__v4si)W, U, _MM_FROUND_CUR_DIRECTION));
 }
 
-static __inline__ __m128i __DEFAULT_FN_ATTRS128
+static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm256_maskz_cvttspd_epu32(__mmask8 U, __m256d A) {
   return ((__m128i)__builtin_ia32_vcvttpd2udqs256_round_mask(
       (__v4df)A, (__v4si)_mm_setzero_si128(), U, _MM_FROUND_CUR_DIRECTION));
@@ -438,6 +432,5 @@ _mm256_maskz_cvttsps_epu64(__mmask8 U, __m128 A) {
   ((__m256i)__builtin_ia32_vcvttps2uqqs256_round_mask(                         \
       (__v4sf)(__m128)A, (__v4di)_mm256_setzero_si256(), (__mmask8)U, (int)R))
 
-#undef __DEFAULT_FN_ATTRS128
 #undef __DEFAULT_FN_ATTRS
 #endif // __AVX10_2SATCVTDSINTRIN_H
