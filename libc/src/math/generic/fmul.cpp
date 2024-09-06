@@ -5,25 +5,27 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+#include "src/math/fmul.h"
 #include "hdr/errno_macros.h"
 #include "hdr/fenv_macros.h"
-#include "src/math/fmul.h"
+#include "src/__support/FPUtil/double_double.h"
 #include "src/__support/FPUtil/generic/mul.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
-#include "src/__support/FPUtil/double_double.h"
 
 namespace LIBC_NAMESPACE_DECL {
-  /*
+/*
 LLVM_LIBC_FUNCTION(float, fmul, (double x, double y)) {
-  return fputil::generic::mul<float>(x, y);
+return fputil::generic::mul<float>(x, y);
 }
-  */
+*/
 LLVM_LIBC_FUNCTION(float, fmul, (double x, double y)) {
   fputil::DoubleDouble prod = fputil::exact_mult(x, y);
-  if (LIBC_UNLIKELY(fputil::FPBits<double>(prod.hi).is_inf_or_nan() || fputil::FPBits<double>(prod.hi).is_zero()))
+  if (LIBC_UNLIKELY(fputil::FPBits<double>(prod.hi).is_inf_or_nan() ||
+                    fputil::FPBits<double>(prod.hi).is_zero()))
     return static_cast<float>(prod.hi);
-  if (LIBC_UNLIKELY(fputil::FPBits<double>(prod.hi).is_inf() || fputil::FPBits<double>(prod.hi).is_zero())) {
+  if (LIBC_UNLIKELY(fputil::FPBits<double>(prod.hi).is_inf() ||
+                    fputil::FPBits<double>(prod.hi).is_zero())) {
     fputil::set_errno_if_required(EDOM);
     fputil::raise_except_if_required(FE_INVALID);
     return fputil::FPBits<double>::quiet_nan().get_val();
