@@ -59,7 +59,7 @@ protected:
   uint32_t LaneSharedVGPRSize = 0;
 
   // Number of statically allocated semaphores for each owning rank.
-  unsigned NumSemaphores[WAVEGROUPS_PER_WORKGROUP] = {};
+  unsigned NumSemaphores[MAX_WAVES_PER_WAVEGROUP] = {};
 
   // Flag to check dynamic LDS usage by kernel.
   bool UsesDynamicLDS = false;

@@ -838,6 +838,14 @@ Expected<TargetExtType *> TargetExtType::checkParams(TargetExtType *TTy) {
         "target extension type riscv.vector.tuple should have one "
         "type parameter and one integer parameter");
 
+  // Opaque types in the AMDGPU name space.
+  if (TTy->Name == "amdgcn.semaphore" &&
+      (TTy->getNumTypeParameters() != 0 || TTy->getNumIntParameters() != 1)) {
+    return createStringError(
+        "target extension type amdgcn.semaphore should have no type parameters "
+        "and one integer parameter");
+  }
+
   return TTy;
 }
 

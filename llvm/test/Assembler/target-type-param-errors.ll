@@ -1,6 +1,7 @@
 ; RUN: split-file %s %t
 ; RUN: not llvm-as < %t/aarch64-svcount.ll -o /dev/null 2>&1 | FileCheck --check-prefix=CHECK-AARCH64-SVCOUNT %s
 ; RUN: not llvm-as < %t/riscv-vector-tuple.ll -o /dev/null 2>&1 | FileCheck --check-prefix=CHECK-RISCV-VECTOR-TUPLE %s
+; RUN: not llvm-as < %t/amdgcn-semaphore.ll -o /dev/null 2>&1 | FileCheck --check-prefix=CHECK-AMDGCN-SEMAPHORE %s
 ; Check target extension type properties are verified in the assembler.
 
 ;--- aarch64-svcount.ll
@@ -10,3 +11,7 @@ declare target("aarch64.svcount", i32) @aarch64_svcount()
 ;--- riscv-vector-tuple.ll
 declare target("riscv.vector.tuple", 99) @riscv_vector_tuple()
 ; CHECK-RISCV-VECTOR-TUPLE: target extension type riscv.vector.tuple should have one type parameter and one integer parameter
+
+;--- amdgcn-semaphore.ll
+declare target("amdgcn.semaphore", i32) @amdgcn_semaphore()
+; CHECK-AMDGCN-SEMAPHORE: target extension type amdgcn.semaphore should have no type parameters and one integer parameter
