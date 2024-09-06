@@ -6690,9 +6690,9 @@ When the Owner's lifetime ends, it will consider the Pointer to be dangling.
     P.getInt(); // P is dangling
   }
 
-If a template class is annotated with [[gsl::Owner]], and the first instantiated
-template argument is a pointer type (raw pointer, or [[gsl::Pointer]]), the
-analysis will consider the instantiated class as a container of the pointer.
+If a template class is annotated with ``[[gsl::Owner]]``, and the first
+instantiated template argument is a pointer type (raw pointer, or ``[[gsl::Pointer]]``),
+the analysis will consider the instantiated class as a container of the pointer.
 When constructing such an object from a GSL owner object, the analysis will
 assume that the container holds a pointer to the owner object. Consequently,
 when the owner object is destroyed, the pointer will be considered dangling.
