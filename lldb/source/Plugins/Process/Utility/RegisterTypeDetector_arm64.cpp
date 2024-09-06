@@ -1,4 +1,4 @@
-//===-- RegisterFlagsDetector_arm64.cpp -----------------------------------===//
+//===-- RegisterTypeDetector_arm64.cpp -----------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "RegisterFlagsDetector_arm64.h"
+#include "RegisterTypeDetector_arm64.h"
+#include "lldb/Target/RegisterTypeFlags.h"
 #include "lldb/lldb-private-types.h"
 
 // This file is built on all systems because it is used by native processes and
@@ -31,9 +32,9 @@
 
 using namespace lldb_private;
 
-Arm64RegisterFlagsDetector::Fields
-Arm64RegisterFlagsDetector::DetectPOREL0Fields(uint64_t hwcap, uint64_t hwcap2,
-                                               uint64_t hwcap3) {
+const RegisterType *Arm64RegisterTypeDetector::DetectPOREL0Type(uint64_t hwcap,
+                                                             uint64_t hwcap2,
+                                                             uint64_t hwcap3) {
   (void)hwcap;
   (void)hwcap3;
 
@@ -52,29 +53,33 @@ Arm64RegisterFlagsDetector::DetectPOREL0Fields(uint64_t hwcap, uint64_t hwcap2,
                                                {0b0111, "Read, Write, Execute"},
                                            });
 
-  return {
-      {"Perm15", 60, 63, &por_el0_perm_enum},
-      {"Perm14", 56, 59, &por_el0_perm_enum},
-      {"Perm13", 52, 55, &por_el0_perm_enum},
-      {"Perm12", 48, 51, &por_el0_perm_enum},
-      {"Perm11", 44, 47, &por_el0_perm_enum},
-      {"Perm10", 40, 43, &por_el0_perm_enum},
-      {"Perm9", 36, 39, &por_el0_perm_enum},
-      {"Perm8", 32, 35, &por_el0_perm_enum},
-      {"Perm7", 28, 31, &por_el0_perm_enum},
-      {"Perm6", 24, 27, &por_el0_perm_enum},
-      {"Perm5", 20, 23, &por_el0_perm_enum},
-      {"Perm4", 16, 19, &por_el0_perm_enum},
-      {"Perm3", 12, 15, &por_el0_perm_enum},
-      {"Perm2", 8, 11, &por_el0_perm_enum},
-      {"Perm1", 4, 7, &por_el0_perm_enum},
-      {"Perm0", 0, 3, &por_el0_perm_enum},
-  };
+  static const RegisterTypeFlags por_el0_flags(
+      "por_el0_flags", 8,
+      {
+          {"Perm15", 60, 63, &por_el0_perm_enum},
+          {"Perm14", 56, 59, &por_el0_perm_enum},
+          {"Perm13", 52, 55, &por_el0_perm_enum},
+          {"Perm12", 48, 51, &por_el0_perm_enum},
+          {"Perm11", 44, 47, &por_el0_perm_enum},
+          {"Perm10", 40, 43, &por_el0_perm_enum},
+          {"Perm9", 36, 39, &por_el0_perm_enum},
+          {"Perm8", 32, 35, &por_el0_perm_enum},
+          {"Perm7", 28, 31, &por_el0_perm_enum},
+          {"Perm6", 24, 27, &por_el0_perm_enum},
+          {"Perm5", 20, 23, &por_el0_perm_enum},
+          {"Perm4", 16, 19, &por_el0_perm_enum},
+          {"Perm3", 12, 15, &por_el0_perm_enum},
+          {"Perm2", 8, 11, &por_el0_perm_enum},
+          {"Perm1", 4, 7, &por_el0_perm_enum},
+          {"Perm0", 0, 3, &por_el0_perm_enum},
+      });
+
+  return &por_el0_flags;
 }
 
-Arm64RegisterFlagsDetector::Fields
-Arm64RegisterFlagsDetector::DetectFPMRFields(uint64_t hwcap, uint64_t hwcap2,
-                                             uint64_t hwcap3) {
+const RegisterType *Arm64RegisterTypeDetector::DetectFPMRType(uint64_t hwcap,
+                                                              uint64_t hwcap2,
+                                                              uint64_t hwcap3) {
   (void)hwcap;
   (void)hwcap3;
 
@@ -86,60 +91,59 @@ Arm64RegisterFlagsDetector::DetectFPMRFields(uint64_t hwcap, uint64_t hwcap2,
                                                     {0, "FP8_E5M2"},
                                                     {1, "FP8_E4M3"},
                                                 });
-  return {
-      {"LSCALE2", 32, 37},
-      {"NSCALE", 24, 31},
-      {"LSCALE", 16, 22},
-      {"OSC", 15},
-      {"OSM", 14},
-      {"F8D", 6, 8, &fp8_format_enum},
-      {"F8S2", 3, 5, &fp8_format_enum},
-      {"F8S1", 0, 2, &fp8_format_enum},
-  };
+
+  static const RegisterTypeFlags fpmr_flags("fpmr_flags", 8,
+                                            {{"LSCALE2", 32, 37},
+                                             {"NSCALE", 24, 31},
+                                             {"LSCALE", 16, 22},
+                                             {"OSC", 15},
+                                             {"OSM", 14},
+                                             {"F8D", 6, 8, &fp8_format_enum},
+                                             {"F8S2", 3, 5, &fp8_format_enum},
+                                             {"F8S1", 0, 2, &fp8_format_enum}});
+
+  return &fpmr_flags;
 }
 
-Arm64RegisterFlagsDetector::Fields
-Arm64RegisterFlagsDetector::DetectGCSFeatureFields(uint64_t hwcap,
-                                                   uint64_t hwcap2,
-                                                   uint64_t hwcap3) {
+const RegisterType *Arm64RegisterTypeDetector::DetectGCSFeaturesType(
+    uint64_t hwcap, uint64_t hwcap2, uint64_t hwcap3) {
   (void)hwcap2;
   (void)hwcap3;
 
   if (!(hwcap & HWCAP_GCS))
     return {};
 
-  return {
-      {"PUSH", 2},
-      {"WRITE", 1},
-      {"ENABLE", 0},
-  };
+  static const RegisterTypeFlags gcs_features_flags(
+      "gcs_features_flags", 8, {{"PUSH", 2}, {"WRITE", 1}, {"ENABLE", 0}});
+
+  return &gcs_features_flags;
 }
 
-Arm64RegisterFlagsDetector::Fields
-Arm64RegisterFlagsDetector::DetectSVCRFields(uint64_t hwcap, uint64_t hwcap2,
-                                             uint64_t hwcap3) {
+const RegisterType *Arm64RegisterTypeDetector::DetectSVCRType(uint64_t hwcap,
+                                                              uint64_t hwcap2,
+                                                              uint64_t hwcap3) {
   (void)hwcap;
   (void)hwcap3;
 
   if (!(hwcap2 & HWCAP2_SME))
-    return {};
+    return nullptr;
 
   // Represents the pseudo register that lldb-server builds, which itself
   // matches the architectural register SCVR. The fields match SVCR in the Arm
   // manual.
-  return {
-      {"ZA", 1},
-      {"SM", 0},
-  };
+  static const RegisterTypeFlags svcr_flags("svcr_flags", 8,
+                                            {{"ZA", 1}, {"SM", 0}});
+
+  return &svcr_flags;
 }
 
-Arm64RegisterFlagsDetector::Fields
-Arm64RegisterFlagsDetector::DetectMTECtrlFields(uint64_t hwcap, uint64_t hwcap2,
-                                                uint64_t hwcap3) {
+const RegisterType *
+Arm64RegisterTypeDetector::DetectMTECtrlType(uint64_t hwcap, uint64_t hwcap2,
+                                             uint64_t hwcap3) {
   (void)hwcap;
 
   if (!(hwcap2 & HWCAP2_MTE))
-    return {};
+    return nullptr;
 
   // Represents the contents of NT_ARM_TAGGED_ADDR_CTRL and the value passed
   // to prctl(PR_TAGGED_ADDR_CTRL...). Fields are derived from the defines
@@ -160,16 +164,19 @@ Arm64RegisterFlagsDetector::DetectMTECtrlFields(uint64_t hwcap, uint64_t hwcap2,
        {"TCF", 1, 2, &tcf_enum},
        {"TAGGED_ADDR_ENABLE", 0}});
 
-  return fields;
+  static const RegisterTypeFlags mte_ctrl_flags("mte_ctrl_flags", 8, fields);
+
+  return &mte_ctrl_flags;
 }
 
-Arm64RegisterFlagsDetector::Fields
-Arm64RegisterFlagsDetector::DetectFPCRFields(uint64_t hwcap, uint64_t hwcap2,
-                                             uint64_t hwcap3) {
+const RegisterType *Arm64RegisterTypeDetector::DetectFPCRType(uint64_t hwcap,
+                                                              uint64_t hwcap2,
+                                                              uint64_t hwcap3) {
   (void)hwcap3;
 
   static const RegisterTypeEnum rmode_enum(
       "rmode_enum", {{0, "RN"}, {1, "RP"}, {2, "RM"}, {3, "RZ"}});
+  static RegisterTypeFlags fpcr_flags("fpcr_flags", 4, {});
 
   std::vector<RegisterTypeFlags::Field> fpcr_fields{
       {"AHP", 26},
@@ -205,39 +212,46 @@ Arm64RegisterFlagsDetector::DetectFPCRFields(uint64_t hwcap, uint64_t hwcap2,
     fpcr_fields.push_back({"FIZ", 0});
   }
 
-  return fpcr_fields;
+  fpcr_flags.SetFields(fpcr_fields);
+
+  return &fpcr_flags;
 }
 
-Arm64RegisterFlagsDetector::Fields
-Arm64RegisterFlagsDetector::DetectFPSRFields(uint64_t hwcap, uint64_t hwcap2,
-                                             uint64_t hwcap3) {
+const RegisterType *Arm64RegisterTypeDetector::DetectFPSRType(uint64_t hwcap,
+                                                              uint64_t hwcap2,
+                                                              uint64_t hwcap3) {
   // fpsr's contents are constant.
   (void)hwcap;
   (void)hwcap2;
   (void)hwcap3;
 
-  return {
-      // Bits 31-28 are N/Z/C/V, only used by AArch32.
-      {"QC", 27},
-      // Bits 26-8 reserved.
-      {"IDC", 7},
-      // Bits 6-5 reserved.
-      {"IXC", 4},
-      {"UFC", 3},
-      {"OFC", 2},
-      {"DZC", 1},
-      {"IOC", 0},
-  };
+  static const RegisterTypeFlags fpsr_flags(
+      "fpsr_flags", 4,
+      {
+          // Bits 31-28 are N/Z/C/V, only used by AArch32.
+          {"QC", 27},
+          // Bits 26-8 reserved.
+          {"IDC", 7},
+          // Bits 6-5 reserved.
+          {"IXC", 4},
+          {"UFC", 3},
+          {"OFC", 2},
+          {"DZC", 1},
+          {"IOC", 0},
+      });
+
+  return &fpsr_flags;
 }
 
-Arm64RegisterFlagsDetector::Fields
-Arm64RegisterFlagsDetector::DetectCPSRFields(uint64_t hwcap, uint64_t hwcap2,
-                                             uint64_t hwcap3) {
+const RegisterType *Arm64RegisterTypeDetector::DetectCPSRType(uint64_t hwcap,
+                                                              uint64_t hwcap2,
+                                                              uint64_t hwcap3) {
   (void)hwcap3;
 
   // The fields here are a combination of the Arm manual's SPSR_EL1,
   // plus a few changes where Linux has decided not to make use of them at all,
   // or at least not from userspace.
+  static RegisterTypeFlags cpsr_flags("cpsr_flags", 4, {});
 
   // Status bits that are always present.
   std::vector<RegisterTypeFlags::Field> cpsr_fields{
@@ -279,31 +293,33 @@ Arm64RegisterFlagsDetector::DetectCPSRFields(uint64_t hwcap, uint64_t hwcap2,
   // Bit 1 is unused and expected to be 0.
   cpsr_fields.push_back({"SP", 0});
 
-  return cpsr_fields;
+  cpsr_flags.SetFields(cpsr_fields);
+
+  return &cpsr_flags;
 }
 
-void Arm64RegisterFlagsDetector::DetectFields(uint64_t hwcap, uint64_t hwcap2,
-                                              uint64_t hwcap3) {
+void Arm64RegisterTypeDetector::DetectTypes(uint64_t hwcap, uint64_t hwcap2,
+                                            uint64_t hwcap3) {
   for (auto &reg : m_registers)
-    reg.m_flags.SetFields(reg.m_detector(hwcap, hwcap2, hwcap3));
+    reg.m_type = reg.m_detector(hwcap, hwcap2, hwcap3);
   m_has_detected = true;
 }
 
-void Arm64RegisterFlagsDetector::UpdateRegisterInfo(
-    const RegisterInfo *reg_info, uint32_t num_regs) {
+void Arm64RegisterTypeDetector::UpdateRegisterInfo(const RegisterInfo *reg_info,
+                                                   uint32_t num_regs) {
   assert(m_has_detected &&
-         "Must call DetectFields before updating register info.");
+         "Must call DetectTypes before updating register info.");
 
   // Register names will not be duplicated, so we do not want to compare against
   // one if it has already been found. Each time we find one, we erase it from
   // this list.
-  std::vector<std::pair<llvm::StringRef, const RegisterTypeFlags *>>
+  std::vector<std::pair<llvm::StringRef, const RegisterType *>>
       search_registers;
   for (const auto &reg : m_registers) {
     // It is possible that a register is all extension dependent fields, and
     // none of them are present.
-    if (reg.m_flags.GetFields().size())
-      search_registers.push_back({reg.m_name, &reg.m_flags});
+    if (reg.m_type)
+      search_registers.push_back({reg.m_name, reg.m_type});
   }
 
   // Walk register information while there are registers we know need
