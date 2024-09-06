@@ -818,8 +818,10 @@ DWARFASTParserClang::ParseTypeModifier(const SymbolContext &sc,
                          &attrs.decl, clang_type, resolve_state, payload);
 }
 
-std::string
-DWARFASTParserClang::GetDIEClassTemplateParams(const DWARFDIE &die) {
+std::string DWARFASTParserClang::GetDIEClassTemplateParams(DWARFDIE die) {
+  if (DWARFDIE signature_die = die.GetReferencedDIE(DW_AT_signature))
+    die = signature_die;
+
   if (llvm::StringRef(die.GetName()).contains("<"))
     return {};
 
