@@ -114,7 +114,7 @@ Changes in existing checks
 
 - Improved :doc:`misc-unconventional-assign-operator
   <clang-tidy/checks/misc/unconventional-assign-operator>` check to avoid
-  false positive for c++23 deducing this.
+  false positive for C++23 deducing this.
 
 - Improved :doc:`modernize-use-std-print
   <clang-tidy/checks/modernize/use-std-print>` check to support replacing
