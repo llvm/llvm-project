@@ -626,8 +626,7 @@ bool llvm::CC_RISCV_FastCC(unsigned ValNo, MVT ValVT, MVT LocVT,
     }
 
     // Pass fixed-length vectors on the stack.
-    auto StackAlign =
-        MaybeAlign(ValVT.getScalarSizeInBits() / 8).valueOrOne();
+    auto StackAlign = MaybeAlign(ValVT.getScalarSizeInBits() / 8).valueOrOne();
     unsigned StackOffset =
         State.AllocateStack(ValVT.getStoreSize(), StackAlign);
     State.addLoc(
