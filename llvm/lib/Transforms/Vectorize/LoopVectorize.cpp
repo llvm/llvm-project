@@ -5628,10 +5628,10 @@ LoopVectorizationCostModel::getMemInstScalarizationCost(Instruction *I,
     Cost /= getReciprocalPredBlockProb();
 
     // Add the cost of an i1 extract and a branch
-    auto *Veci1Ty =
+    auto *VecI1Ty =
         VectorType::get(IntegerType::getInt1Ty(ValTy->getContext()), VF);
     Cost += TTI.getScalarizationOverhead(
-        Veci1Ty, APInt::getAllOnes(VF.getKnownMinValue()),
+        VecI1Ty, APInt::getAllOnes(VF.getKnownMinValue()),
         /*Insert=*/false, /*Extract=*/true, CostKind);
     Cost += TTI.getCFInstrCost(Instruction::Br, CostKind);
 
@@ -6445,11 +6445,11 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
       if (VF.isScalable())
         return InstructionCost::getInvalid();
       // Return cost for branches around scalarized and predicated blocks.
-      auto *Veci1Ty =
+      auto *VecI1Ty =
           VectorType::get(IntegerType::getInt1Ty(RetTy->getContext()), VF);
       return (
           TTI.getScalarizationOverhead(
-              Veci1Ty, APInt::getAllOnes(VF.getFixedValue()),
+              VecI1Ty, APInt::getAllOnes(VF.getFixedValue()),
               /*Insert*/ false, /*Extract*/ true, CostKind) +
           (TTI.getCFInstrCost(Instruction::Br, CostKind) * VF.getFixedValue()));
     }
