@@ -87,7 +87,6 @@ public:
   void addCodeGenPrepare() override {
     addPass(createDXILIntrinsicExpansionLegacyPass());
     ScalarizerPassOptions DxilScalarOptions;
-    // The only non-default option we need to set is ScalarizeLoadStore.
     DxilScalarOptions.ScalarizeLoadStore = true;
     addPass(createScalarizerPass(DxilScalarOptions));
     addPass(createDXILOpLoweringLegacyPass());
