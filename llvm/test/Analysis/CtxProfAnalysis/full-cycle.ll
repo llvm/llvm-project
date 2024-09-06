@@ -1,5 +1,4 @@
 ; REQUIRES: x86_64-linux
-; XFAIL: *
 
 ; RUN: rm -rf %t
 ; RUN: split-file %s %t

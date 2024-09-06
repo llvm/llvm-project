@@ -176,10 +176,6 @@ static cl::opt<std::string> WorkloadDefinitions(
 
 extern cl::opt<std::string> UseCtxProfile;
 
-static cl::opt<std::string>
-    ContextualProfile("thinlto-pgo-ctx-prof",
-                      cl::desc("Path to a contextual profile."), cl::Hidden);
-
 namespace llvm {
 extern cl::opt<bool> EnableMemProfContextDisambiguation;
 }
@@ -713,7 +709,7 @@ class WorkloadImportsManager : public ModuleImportsManager {
 
   void loadFromCtxProf() {
     std::error_code EC;
-    auto BufferOrErr = MemoryBuffer::getFileOrSTDIN(ContextualProfile);
+    auto BufferOrErr = MemoryBuffer::getFileOrSTDIN(UseCtxProfile);
     if (std::error_code EC = BufferOrErr.getError()) {
       report_fatal_error("Failed to open contextual profile file");
       return;
@@ -764,12 +760,12 @@ public:
       const ModuleSummaryIndex &Index,
       DenseMap<StringRef, FunctionImporter::ExportSetTy> *ExportLists)
       : ModuleImportsManager(IsPrevailing, Index, ExportLists) {
-    if (ContextualProfile.empty() == WorkloadDefinitions.empty()) {
+    if (UseCtxProfile.empty() == WorkloadDefinitions.empty()) {
       report_fatal_error(
           "Pass only one of: -thinlto-pgo-ctx-prof or -thinlto-workload-def");
       return;
     }
-    if (!ContextualProfile.empty())
+    if (!UseCtxProfile.empty())
       loadFromCtxProf();
     else
       loadFromJson();
@@ -791,7 +787,7 @@ std::unique_ptr<ModuleImportsManager> ModuleImportsManager::create(
         IsPrevailing,
     const ModuleSummaryIndex &Index,
     DenseMap<StringRef, FunctionImporter::ExportSetTy> *ExportLists) {
-  if (WorkloadDefinitions.empty() && ContextualProfile.empty()) {
+  if (WorkloadDefinitions.empty() && UseCtxProfile.empty()) {
     LLVM_DEBUG(dbgs() << "[Workload] Using the regular imports manager.\n");
     return std::unique_ptr<ModuleImportsManager>(
         new ModuleImportsManager(IsPrevailing, Index, ExportLists));
