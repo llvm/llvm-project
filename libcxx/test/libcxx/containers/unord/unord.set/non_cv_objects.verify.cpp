@@ -49,7 +49,8 @@ std::unordered_set<int[2], test_hash<int[2]> > C10;
 
 // Spurious errors
 // expected-error@__hash_table:* 1+ {{}}
-// expected-error@*:* 1+ {{call to implicitly-deleted}}
+// expected-error@*:* 0+ {{call to implicitly-deleted}}
+// expected-error@*:* 0+ {{call to deleted}}
 // expected-error@*:* 1+ {{cannot form a reference to 'void'}}
 // expected-error@*:* 1+ {{declared as a pointer}}
 // expected-error@*:* 1+ {{multiple overloads of}}

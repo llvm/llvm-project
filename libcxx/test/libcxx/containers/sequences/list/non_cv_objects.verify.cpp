@@ -40,6 +40,8 @@ std::list<int[2]> C10;
 // Spurious errors
 // expected-error@*:* 0+ {{[allocator.requirements]}}
 // expected-error@*:* 0+ {{object expression of non-scalar type}}
+// expected-error@*:* 0+ {{data member instantiated}}
+// expected-error@*:* 0+ {{invalid application of 'sizeof'}}
 // expected-error@*:* 1+ {{cannot form a reference to 'void'}}
 // expected-error@*:* 1+ {{declared as a pointer}}
 // expected-error@*:* 1+ {{multiple overloads of}}
@@ -47,7 +49,6 @@ std::list<int[2]> C10;
 // expected-error@*:* 1+ {{no member named}}
 // expected-error@*:* 1+ {{no type named 'type' in 'std::enable_if}}
 // expected-error@*:* 1+ {{__node_}}
-// expected-error@*:* 1+ {{data member instantiated}}
 // expected-error@*:* 1+ {{pointer}}
 // expected-error@*:* 1+ {{iterator}}
 // expected-error@*:* 1+ {{difference_type}}
