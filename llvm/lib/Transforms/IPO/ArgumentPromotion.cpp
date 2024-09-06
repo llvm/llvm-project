@@ -487,20 +487,17 @@ static bool allCallersPassValidPointerForArgument(
 
 // Try to prove that all Calls to F do not modify the memory pointed to by Arg,
 // using alias analysis local to each caller of F.
-static bool isArgUnmodifiedByAllCalls(Function *F, unsigned ArgNo,
+static bool isArgUnmodifiedByAllCalls(Argument *Arg,
                                       FunctionAnalysisManager &FAM) {
-  // Check if all Users of F are Calls which do not modify Arg.
-  for (User *U : F->users()) {
+  for (User *U : Arg->getParent()->users()) {
 
     // Bail if we find an unexpected (non CallInst) use of the function.
     auto *Call = dyn_cast<CallInst>(U);
     if (!Call)
       return false;
 
-    Value *ArgOp = Call->getArgOperand(ArgNo);
-    assert(ArgOp->getType()->isPointerTy() && "Argument must be Pointer Type!");
-
-    MemoryLocation Loc = MemoryLocation::getForArgument(Call, ArgNo, nullptr);
+    MemoryLocation Loc =
+        MemoryLocation::getForArgument(Call, Arg->getArgNo(), nullptr);
 
     AAResults &AAR = FAM.getResult<AAManager>(*Call->getFunction());
     // Bail as soon as we find a Call where Arg may be modified.
@@ -749,7 +746,7 @@ static bool findArgParts(Argument *Arg, const DataLayout &DL, AAResults &AAR,
   // If we can determine that no call to the Function modifies the memory
   // pointed to by Arg, through alias analysis using actual arguments in the
   // callers, we know that it is guaranteed to be safe to promote the argument.
-  if (isArgUnmodifiedByAllCalls(Arg->getParent(), Arg->getArgNo(), FAM))
+  if (isArgUnmodifiedByAllCalls(Arg, FAM))
     return true;
 
   // Otherwise, use alias analysis to check if the pointer is guaranteed to not
