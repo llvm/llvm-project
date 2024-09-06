@@ -14,11 +14,7 @@
 #ifndef SANITIZER_RTSAN_INTERFACE_H
 #define SANITIZER_RTSAN_INTERFACE_H
 
-#if __has_include(<sanitizer/common_interface_defs.h>)
 #include <sanitizer/common_interface_defs.h>
-#else
-#define SANITIZER_CDECL
-#endif // __has_include(<sanitizer/common_interface_defs.h>)
 
 #ifdef __cplusplus
 extern "C" {
@@ -60,6 +56,16 @@ private:
 class ScopedDisabler {
 public:
   ScopedDisabler() {}
+#if __cplusplus >= 201103L
+  ScopedDisabler(const ScopedDisabler &) = delete;
+  ScopedDisabler &operator=(const ScopedDisabler &) = delete;
+  ScopedDisabler(ScopedDisabler &&) = delete;
+  ScopedDisabler &operator=(ScopedDisabler &&) = delete;
+#else
+private:
+  ScopedDisabler(const ScopedDisabler &);
+  ScopedDisabler &operator=(const ScopedDisabler &);
+#endif // __cplusplus >= 201103L
 };
 
 #endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
