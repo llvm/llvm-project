@@ -33,6 +33,7 @@ add_llvm_library(LLVMTableGenCommon STATIC OBJECT EXCLUDE_FROM_ALL
   PredicateExpander.cpp
   SubtargetFeatureInfo.cpp
   Types.cpp
+  Utils.cpp
   VarLenCodeEmitterGen.cpp
 
   LINK_LIBS

@@ -15,6 +15,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/RealpathPrefixes.h"
 #include "lldb/Utility/StreamString.h"
 #include <optional>
 
@@ -290,15 +291,24 @@ Searcher::CallbackReturn BreakpointResolverFileLine::SearchCallback(
   const uint32_t line = m_location_spec.GetLine().value_or(0);
   const std::optional<uint16_t> column = m_location_spec.GetColumn();
 
+  Target &target = GetBreakpoint()->GetTarget();
+  RealpathPrefixes realpath_prefixes = target.GetSourceRealpathPrefixes();
+
   const size_t num_comp_units = context.module_sp->GetNumCompileUnits();
   for (size_t i = 0; i < num_comp_units; i++) {
     CompUnitSP cu_sp(context.module_sp->GetCompileUnitAtIndex(i));
     if (cu_sp) {
       if (filter.CompUnitPasses(*cu_sp))
         cu_sp->ResolveSymbolContext(m_location_spec, eSymbolContextEverything,
-                                    sc_list);
+                                    sc_list, &realpath_prefixes);
     }
   }
+
+  // Gather stats into the Target
+  target.GetStatistics().IncreaseSourceRealpathAttemptCount(
+      realpath_prefixes.GetSourceRealpathAttemptCount());
+  target.GetStatistics().IncreaseSourceRealpathCompatibleCount(
+      realpath_prefixes.GetSourceRealpathCompatibleCount());
 
   FilterContexts(sc_list);
 

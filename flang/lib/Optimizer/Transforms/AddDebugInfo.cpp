@@ -65,7 +65,8 @@ private:
 
   void handleGlobalOp(fir::GlobalOp glocalOp, mlir::LLVM::DIFileAttr fileAttr,
                       mlir::LLVM::DIScopeAttr scope,
-                      mlir::SymbolTable *symbolTable);
+                      mlir::SymbolTable *symbolTable,
+                      fir::cg::XDeclareOp declOp);
   void handleFuncOp(mlir::func::FuncOp funcOp, mlir::LLVM::DIFileAttr fileAttr,
                     mlir::LLVM::DICompileUnitAttr cuAttr,
                     mlir::SymbolTable *symbolTable);
@@ -100,10 +101,9 @@ void AddDebugInfoPass::handleDeclareOp(fir::cg::XDeclareOp declOp,
 
   if (result.first != fir::NameUniquer::NameKind::VARIABLE)
     return;
-
   // If this DeclareOp actually represents a global then treat it as such.
   if (auto global = symbolTable->lookup<fir::GlobalOp>(declOp.getUniqName())) {
-    handleGlobalOp(global, fileAttr, scopeAttr, symbolTable);
+    handleGlobalOp(global, fileAttr, scopeAttr, symbolTable, declOp);
     return;
   }
 
@@ -127,7 +127,7 @@ void AddDebugInfoPass::handleDeclareOp(fir::cg::XDeclareOp declOp,
   }
 
   auto tyAttr = typeGen.convertType(fir::unwrapRefType(declOp.getType()),
-                                    fileAttr, scopeAttr, declOp.getLoc());
+                                    fileAttr, scopeAttr, declOp);
 
   auto localVarAttr = mlir::LLVM::DILocalVariableAttr::get(
       context, scopeAttr, mlir::StringAttr::get(context, result.second.name),
@@ -160,7 +160,8 @@ mlir::LLVM::DIModuleAttr AddDebugInfoPass::getOrCreateModuleAttr(
 void AddDebugInfoPass::handleGlobalOp(fir::GlobalOp globalOp,
                                       mlir::LLVM::DIFileAttr fileAttr,
                                       mlir::LLVM::DIScopeAttr scope,
-                                      mlir::SymbolTable *symbolTable) {
+                                      mlir::SymbolTable *symbolTable,
+                                      fir::cg::XDeclareOp declOp) {
   if (debugInfoIsAlreadySet(globalOp.getLoc()))
     return;
   mlir::ModuleOp module = getOperation();
@@ -200,8 +201,8 @@ void AddDebugInfoPass::handleGlobalOp(fir::GlobalOp globalOp,
     scope = getOrCreateModuleAttr(result.second.modules[0], fileAttr, scope,
                                   line - 1, !globalOp.isInitialized());
   }
-  mlir::LLVM::DITypeAttr diType = typeGen.convertType(
-      globalOp.getType(), fileAttr, scope, globalOp.getLoc());
+  mlir::LLVM::DITypeAttr diType =
+      typeGen.convertType(globalOp.getType(), fileAttr, scope, declOp);
   auto gvAttr = mlir::LLVM::DIGlobalVariableAttr::get(
       context, scope, mlir::StringAttr::get(context, result.second.name),
       mlir::StringAttr::get(context, globalOp.getName()), fileAttr, line,
@@ -246,12 +247,13 @@ void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
   llvm::SmallVector<mlir::LLVM::DITypeAttr> types;
   fir::DebugTypeGenerator typeGen(module);
   for (auto resTy : funcOp.getResultTypes()) {
-    auto tyAttr = typeGen.convertType(resTy, fileAttr, cuAttr, funcOp.getLoc());
+    auto tyAttr =
+        typeGen.convertType(resTy, fileAttr, cuAttr, /*declOp=*/nullptr);
     types.push_back(tyAttr);
   }
   for (auto inTy : funcOp.getArgumentTypes()) {
     auto tyAttr = typeGen.convertType(fir::unwrapRefType(inTy), fileAttr,
-                                      cuAttr, funcOp.getLoc());
+                                      cuAttr, /*declOp=*/nullptr);
     types.push_back(tyAttr);
   }
 
@@ -358,7 +360,8 @@ void AddDebugInfoPass::runOnOperation() {
   if (debugLevel == mlir::LLVM::DIEmissionKind::Full) {
     // Process 'GlobalOp' only if full debug info is requested.
     for (auto globalOp : module.getOps<fir::GlobalOp>())
-      handleGlobalOp(globalOp, fileAttr, cuAttr, &symbolTable);
+      handleGlobalOp(globalOp, fileAttr, cuAttr, &symbolTable,
+                     /*declOp=*/nullptr);
   }
 }
 

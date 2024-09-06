@@ -70,6 +70,38 @@ static bool IsInterrupted() {
 #endif
 }
 
+struct SocketScheme {
+  const char *m_scheme;
+  const Socket::SocketProtocol m_protocol;
+};
+
+static SocketScheme socket_schemes[] = {
+    {"tcp", Socket::ProtocolTcp},
+    {"udp", Socket::ProtocolUdp},
+    {"unix", Socket::ProtocolUnixDomain},
+    {"unix-abstract", Socket::ProtocolUnixAbstract},
+};
+
+const char *
+Socket::FindSchemeByProtocol(const Socket::SocketProtocol protocol) {
+  for (auto s : socket_schemes) {
+    if (s.m_protocol == protocol)
+      return s.m_scheme;
+  }
+  return nullptr;
+}
+
+bool Socket::FindProtocolByScheme(const char *scheme,
+                                  Socket::SocketProtocol &protocol) {
+  for (auto s : socket_schemes) {
+    if (!strcmp(s.m_scheme, scheme)) {
+      protocol = s.m_protocol;
+      return true;
+    }
+  }
+  return false;
+}
+
 Socket::Socket(SocketProtocol protocol, bool should_close,
                bool child_processes_inherit)
     : IOObject(eFDTypeSocket), m_protocol(protocol),

@@ -83,8 +83,8 @@ static mlir::LLVM::DITypeAttr genPlaceholderType(mlir::MLIRContext *context) {
 
 mlir::LLVM::DITypeAttr DebugTypeGenerator::convertBoxedSequenceType(
     fir::SequenceType seqTy, mlir::LLVM::DIFileAttr fileAttr,
-    mlir::LLVM::DIScopeAttr scope, mlir::Location loc, bool genAllocated,
-    bool genAssociated) {
+    mlir::LLVM::DIScopeAttr scope, fir::cg::XDeclareOp declOp,
+    bool genAllocated, bool genAssociated) {
 
   mlir::MLIRContext *context = module.getContext();
   // FIXME: Assumed rank arrays not supported yet
@@ -114,7 +114,7 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertBoxedSequenceType(
 
   llvm::SmallVector<mlir::LLVM::DINodeAttr> elements;
   mlir::LLVM::DITypeAttr elemTy =
-      convertType(seqTy.getEleTy(), fileAttr, scope, loc);
+      convertType(seqTy.getEleTy(), fileAttr, scope, declOp);
   unsigned offset = dimsOffset;
   const unsigned indexSize = dimsSize / 3;
   for ([[maybe_unused]] auto _ : seqTy.getShape()) {
@@ -156,13 +156,14 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertBoxedSequenceType(
 
 mlir::LLVM::DITypeAttr DebugTypeGenerator::convertSequenceType(
     fir::SequenceType seqTy, mlir::LLVM::DIFileAttr fileAttr,
-    mlir::LLVM::DIScopeAttr scope, mlir::Location loc) {
+    mlir::LLVM::DIScopeAttr scope, fir::cg::XDeclareOp declOp) {
   mlir::MLIRContext *context = module.getContext();
 
   llvm::SmallVector<mlir::LLVM::DINodeAttr> elements;
   mlir::LLVM::DITypeAttr elemTy =
-      convertType(seqTy.getEleTy(), fileAttr, scope, loc);
+      convertType(seqTy.getEleTy(), fileAttr, scope, declOp);
 
+  unsigned index = 0;
   for (fir::SequenceType::Extent dim : seqTy.getShape()) {
     if (dim == seqTy.getUnknownExtent()) {
       // FIXME: This path is taken for assumed size arrays but also for arrays
@@ -174,20 +175,20 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertSequenceType(
       elements.push_back(subrangeTy);
     } else {
       auto intTy = mlir::IntegerType::get(context, 64);
-      // FIXME: Only supporting lower bound of 1 at the moment. The
-      // 'SequenceType' has information about the shape but not the shift. In
-      // cases where the conversion originated during the processing of
-      // 'DeclareOp', it may be possible to pass on this information. But the
-      // type conversion should ideally be based on what information present in
-      // the type class so that it works from everywhere (e.g. when it is part
-      // of a module or a derived type.)
+      int64_t shift = 1;
+      if (declOp && declOp.getShift().size() > index) {
+        if (std::optional<std::int64_t> optint =
+                getIntIfConstant(declOp.getShift()[index]))
+          shift = *optint;
+      }
       auto countAttr = mlir::IntegerAttr::get(intTy, llvm::APInt(64, dim));
-      auto lowerAttr = mlir::IntegerAttr::get(intTy, llvm::APInt(64, 1));
+      auto lowerAttr = mlir::IntegerAttr::get(intTy, llvm::APInt(64, shift));
       auto subrangeTy = mlir::LLVM::DISubrangeAttr::get(
           context, countAttr, lowerAttr, /*upperBound=*/nullptr,
           /*stride=*/nullptr);
       elements.push_back(subrangeTy);
     }
+    ++index;
   }
   // Apart from arrays, the `DICompositeTypeAttr` is used for other things like
   // structure types. Many of its fields which are not applicable to arrays
@@ -203,7 +204,8 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertSequenceType(
 
 mlir::LLVM::DITypeAttr DebugTypeGenerator::convertCharacterType(
     fir::CharacterType charTy, mlir::LLVM::DIFileAttr fileAttr,
-    mlir::LLVM::DIScopeAttr scope, mlir::Location loc, bool hasDescriptor) {
+    mlir::LLVM::DIScopeAttr scope, fir::cg::XDeclareOp declOp,
+    bool hasDescriptor) {
   mlir::MLIRContext *context = module.getContext();
 
   // DWARF 5 says the following about the character encoding in 5.1.1.2.
@@ -250,21 +252,21 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertCharacterType(
 
 mlir::LLVM::DITypeAttr DebugTypeGenerator::convertPointerLikeType(
     mlir::Type elTy, mlir::LLVM::DIFileAttr fileAttr,
-    mlir::LLVM::DIScopeAttr scope, mlir::Location loc, bool genAllocated,
-    bool genAssociated) {
+    mlir::LLVM::DIScopeAttr scope, fir::cg::XDeclareOp declOp,
+    bool genAllocated, bool genAssociated) {
   mlir::MLIRContext *context = module.getContext();
 
   // Arrays and character need different treatment because DWARF have special
   // constructs for them to get the location from the descriptor. Rest of
   // types are handled like pointer to underlying type.
   if (auto seqTy = mlir::dyn_cast_or_null<fir::SequenceType>(elTy))
-    return convertBoxedSequenceType(seqTy, fileAttr, scope, loc, genAllocated,
-                                    genAssociated);
+    return convertBoxedSequenceType(seqTy, fileAttr, scope, declOp,
+                                    genAllocated, genAssociated);
   if (auto charTy = mlir::dyn_cast_or_null<fir::CharacterType>(elTy))
-    return convertCharacterType(charTy, fileAttr, scope, loc,
+    return convertCharacterType(charTy, fileAttr, scope, declOp,
                                 /*hasDescriptor=*/true);
 
-  mlir::LLVM::DITypeAttr elTyAttr = convertType(elTy, fileAttr, scope, loc);
+  mlir::LLVM::DITypeAttr elTyAttr = convertType(elTy, fileAttr, scope, declOp);
 
   return mlir::LLVM::DIDerivedTypeAttr::get(
       context, llvm::dwarf::DW_TAG_pointer_type,
@@ -276,7 +278,7 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertPointerLikeType(
 mlir::LLVM::DITypeAttr
 DebugTypeGenerator::convertType(mlir::Type Ty, mlir::LLVM::DIFileAttr fileAttr,
                                 mlir::LLVM::DIScopeAttr scope,
-                                mlir::Location loc) {
+                                fir::cg::XDeclareOp declOp) {
   mlir::MLIRContext *context = module.getContext();
   if (Ty.isInteger()) {
     return genBasicType(context, mlir::StringAttr::get(context, "integer"),
@@ -306,22 +308,22 @@ DebugTypeGenerator::convertType(mlir::Type Ty, mlir::LLVM::DIFileAttr fileAttr,
     return genBasicType(context, mlir::StringAttr::get(context, "complex"),
                         bitWidth * 2, llvm::dwarf::DW_ATE_complex_float);
   } else if (auto seqTy = mlir::dyn_cast_or_null<fir::SequenceType>(Ty)) {
-    return convertSequenceType(seqTy, fileAttr, scope, loc);
+    return convertSequenceType(seqTy, fileAttr, scope, declOp);
   } else if (auto charTy = mlir::dyn_cast_or_null<fir::CharacterType>(Ty)) {
-    return convertCharacterType(charTy, fileAttr, scope, loc,
+    return convertCharacterType(charTy, fileAttr, scope, declOp,
                                 /*hasDescriptor=*/false);
   } else if (auto boxTy = mlir::dyn_cast_or_null<fir::BoxType>(Ty)) {
     auto elTy = boxTy.getElementType();
     if (auto seqTy = mlir::dyn_cast_or_null<fir::SequenceType>(elTy))
-      return convertBoxedSequenceType(seqTy, fileAttr, scope, loc, false,
+      return convertBoxedSequenceType(seqTy, fileAttr, scope, declOp, false,
                                       false);
     if (auto heapTy = mlir::dyn_cast_or_null<fir::HeapType>(elTy))
       return convertPointerLikeType(heapTy.getElementType(), fileAttr, scope,
-                                    loc, /*genAllocated=*/true,
+                                    declOp, /*genAllocated=*/true,
                                     /*genAssociated=*/false);
     if (auto ptrTy = mlir::dyn_cast_or_null<fir::PointerType>(elTy))
       return convertPointerLikeType(ptrTy.getElementType(), fileAttr, scope,
-                                    loc, /*genAllocated=*/false,
+                                    declOp, /*genAllocated=*/false,
                                     /*genAssociated=*/true);
     return genPlaceholderType(context);
   } else {

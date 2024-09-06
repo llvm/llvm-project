@@ -24,6 +24,7 @@
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InlineAsm.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/LegacyPassManager.h"
@@ -144,6 +145,10 @@ unsigned LLVMGetMDKindIDInContext(LLVMContextRef C, const char *Name,
 
 unsigned LLVMGetMDKindID(const char *Name, unsigned SLen) {
   return LLVMGetMDKindIDInContext(LLVMGetGlobalContext(), Name, SLen);
+}
+
+unsigned LLVMGetSyncScopeID(LLVMContextRef C, const char *Name, size_t SLen) {
+  return unwrap(C)->getOrInsertSyncScopeID(StringRef(Name, SLen));
 }
 
 unsigned LLVMGetEnumAttributeKindForName(const char *Name, size_t SLen) {
@@ -1042,6 +1047,10 @@ char* LLVMPrintValueToString(LLVMValueRef Val) {
   os.flush();
 
   return strdup(buf.c_str());
+}
+
+LLVMContextRef LLVMGetValueContext(LLVMValueRef Val) {
+  return wrap(&unwrap(Val)->getContext());
 }
 
 char *LLVMPrintDbgRecordToString(LLVMDbgRecordRef Record) {
@@ -2203,6 +2212,11 @@ LLVMValueRef LLVMGetNamedGlobal(LLVMModuleRef M, const char *Name) {
   return wrap(unwrap(M)->getNamedGlobal(Name));
 }
 
+LLVMValueRef LLVMGetNamedGlobalWithLength(LLVMModuleRef M, const char *Name,
+                                          size_t Length) {
+  return wrap(unwrap(M)->getNamedGlobal(StringRef(Name, Length)));
+}
+
 LLVMValueRef LLVMGetFirstGlobal(LLVMModuleRef M) {
   Module *Mod = unwrap(M);
   Module::global_iterator I = Mod->global_begin();
@@ -2379,6 +2393,11 @@ LLVMValueRef LLVMAddFunction(LLVMModuleRef M, const char *Name,
 
 LLVMValueRef LLVMGetNamedFunction(LLVMModuleRef M, const char *Name) {
   return wrap(unwrap(M)->getFunction(Name));
+}
+
+LLVMValueRef LLVMGetNamedFunctionWithLength(LLVMModuleRef M, const char *Name,
+                                            size_t Length) {
+  return wrap(unwrap(M)->getFunction(StringRef(Name, Length)));
 }
 
 LLVMValueRef LLVMGetFirstFunction(LLVMModuleRef M) {
@@ -3319,6 +3338,10 @@ void LLVMBuilderSetDefaultFPMathTag(LLVMBuilderRef Builder,
                                        : nullptr);
 }
 
+LLVMContextRef LLVMGetBuilderContext(LLVMBuilderRef Builder) {
+  return wrap(&unwrap(Builder)->getContext());
+}
+
 LLVMMetadataRef LLVMBuilderGetDefaultFPMathTag(LLVMBuilderRef Builder) {
   return wrap(unwrap(Builder)->getDefaultFPMathTag());
 }
@@ -3939,8 +3962,6 @@ static LLVMAtomicRMWBinOp mapToLLVMRMWBinOp(AtomicRMWInst::BinOp BinOp) {
   llvm_unreachable("Invalid AtomicRMWBinOp value!");
 }
 
-// TODO: Should this and other atomic instructions support building with
-// "syncscope"?
 LLVMValueRef LLVMBuildFence(LLVMBuilderRef B, LLVMAtomicOrdering Ordering,
                             LLVMBool isSingleThread, const char *Name) {
   return wrap(
@@ -3948,6 +3969,13 @@ LLVMValueRef LLVMBuildFence(LLVMBuilderRef B, LLVMAtomicOrdering Ordering,
                            isSingleThread ? SyncScope::SingleThread
                                           : SyncScope::System,
                            Name));
+}
+
+LLVMValueRef LLVMBuildFenceSyncScope(LLVMBuilderRef B,
+                                     LLVMAtomicOrdering Ordering, unsigned SSID,
+                                     const char *Name) {
+  return wrap(
+      unwrap(B)->CreateFence(mapFromLLVMOrdering(Ordering), SSID, Name));
 }
 
 LLVMValueRef LLVMBuildGEP2(LLVMBuilderRef B, LLVMTypeRef Ty,
@@ -4299,6 +4327,17 @@ LLVMValueRef LLVMBuildAtomicRMW(LLVMBuilderRef B,LLVMAtomicRMWBinOp op,
       singleThread ? SyncScope::SingleThread : SyncScope::System));
 }
 
+LLVMValueRef LLVMBuildAtomicRMWSyncScope(LLVMBuilderRef B,
+                                         LLVMAtomicRMWBinOp op,
+                                         LLVMValueRef PTR, LLVMValueRef Val,
+                                         LLVMAtomicOrdering ordering,
+                                         unsigned SSID) {
+  AtomicRMWInst::BinOp intop = mapFromLLVMRMWBinOp(op);
+  return wrap(unwrap(B)->CreateAtomicRMW(intop, unwrap(PTR), unwrap(Val),
+                                         MaybeAlign(),
+                                         mapFromLLVMOrdering(ordering), SSID));
+}
+
 LLVMValueRef LLVMBuildAtomicCmpXchg(LLVMBuilderRef B, LLVMValueRef Ptr,
                                     LLVMValueRef Cmp, LLVMValueRef New,
                                     LLVMAtomicOrdering SuccessOrdering,
@@ -4310,6 +4349,17 @@ LLVMValueRef LLVMBuildAtomicCmpXchg(LLVMBuilderRef B, LLVMValueRef Ptr,
       mapFromLLVMOrdering(SuccessOrdering),
       mapFromLLVMOrdering(FailureOrdering),
       singleThread ? SyncScope::SingleThread : SyncScope::System));
+}
+
+LLVMValueRef LLVMBuildAtomicCmpXchgSyncScope(LLVMBuilderRef B, LLVMValueRef Ptr,
+                                             LLVMValueRef Cmp, LLVMValueRef New,
+                                             LLVMAtomicOrdering SuccessOrdering,
+                                             LLVMAtomicOrdering FailureOrdering,
+                                             unsigned SSID) {
+  return wrap(unwrap(B)->CreateAtomicCmpXchg(
+      unwrap(Ptr), unwrap(Cmp), unwrap(New), MaybeAlign(),
+      mapFromLLVMOrdering(SuccessOrdering),
+      mapFromLLVMOrdering(FailureOrdering), SSID));
 }
 
 unsigned LLVMGetNumMaskElements(LLVMValueRef SVInst) {
@@ -4326,34 +4376,39 @@ int LLVMGetMaskValue(LLVMValueRef SVInst, unsigned Elt) {
 
 int LLVMGetUndefMaskElem(void) { return PoisonMaskElem; }
 
-LLVMBool LLVMIsAtomicSingleThread(LLVMValueRef AtomicInst) {
-  Value *P = unwrap(AtomicInst);
+LLVMBool LLVMIsAtomic(LLVMValueRef Inst) {
+  return unwrap<Instruction>(Inst)->isAtomic();
+}
 
-  if (AtomicRMWInst *I = dyn_cast<AtomicRMWInst>(P))
-    return I->getSyncScopeID() == SyncScope::SingleThread;
-  else if (FenceInst *FI = dyn_cast<FenceInst>(P))
-    return FI->getSyncScopeID() == SyncScope::SingleThread;
-  else if (StoreInst *SI = dyn_cast<StoreInst>(P))
-    return SI->getSyncScopeID() == SyncScope::SingleThread;
-  else if (LoadInst *LI = dyn_cast<LoadInst>(P))
-    return LI->getSyncScopeID() == SyncScope::SingleThread;
-  return cast<AtomicCmpXchgInst>(P)->getSyncScopeID() ==
-             SyncScope::SingleThread;
+LLVMBool LLVMIsAtomicSingleThread(LLVMValueRef AtomicInst) {
+  // Backwards compatibility: return false for non-atomic instructions
+  Instruction *I = unwrap<Instruction>(AtomicInst);
+  if (!I->isAtomic())
+    return 0;
+
+  return *getAtomicSyncScopeID(I) == SyncScope::SingleThread;
 }
 
 void LLVMSetAtomicSingleThread(LLVMValueRef AtomicInst, LLVMBool NewValue) {
-  Value *P = unwrap(AtomicInst);
-  SyncScope::ID SSID = NewValue ? SyncScope::SingleThread : SyncScope::System;
+  // Backwards compatibility: ignore non-atomic instructions
+  Instruction *I = unwrap<Instruction>(AtomicInst);
+  if (!I->isAtomic())
+    return;
 
-  if (AtomicRMWInst *I = dyn_cast<AtomicRMWInst>(P))
-    return I->setSyncScopeID(SSID);
-  else if (FenceInst *FI = dyn_cast<FenceInst>(P))
-    return FI->setSyncScopeID(SSID);
-  else if (StoreInst *SI = dyn_cast<StoreInst>(P))
-    return SI->setSyncScopeID(SSID);
-  else if (LoadInst *LI = dyn_cast<LoadInst>(P))
-    return LI->setSyncScopeID(SSID);
-  return cast<AtomicCmpXchgInst>(P)->setSyncScopeID(SSID);
+  SyncScope::ID SSID = NewValue ? SyncScope::SingleThread : SyncScope::System;
+  setAtomicSyncScopeID(I, SSID);
+}
+
+unsigned LLVMGetAtomicSyncScopeID(LLVMValueRef AtomicInst) {
+  Instruction *I = unwrap<Instruction>(AtomicInst);
+  assert(I->isAtomic() && "Expected an atomic instruction");
+  return *getAtomicSyncScopeID(I);
+}
+
+void LLVMSetAtomicSyncScopeID(LLVMValueRef AtomicInst, unsigned SSID) {
+  Instruction *I = unwrap<Instruction>(AtomicInst);
+  assert(I->isAtomic() && "Expected an atomic instruction");
+  setAtomicSyncScopeID(I, SSID);
 }
 
 LLVMAtomicOrdering LLVMGetCmpXchgSuccessOrdering(LLVMValueRef CmpXchgInst)  {

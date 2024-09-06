@@ -1694,6 +1694,15 @@ RegisterContextUnwind::SavedLocationForRegister(
     return UnwindLLDB::RegisterSearchResult::eRegisterNotFound;
   }
 
+  if (unwindplan_regloc.IsConstant()) {
+    regloc.type = UnwindLLDB::RegisterLocation::eRegisterValueInferred;
+    regloc.location.inferred_value = unwindplan_regloc.GetConstant();
+    m_registers[regnum.GetAsKind(eRegisterKindLLDB)] = regloc;
+    UnwindLogMsg("supplying caller's register %s (%d) via constant value",
+                 regnum.GetName(), regnum.GetAsKind(eRegisterKindLLDB));
+    return UnwindLLDB::RegisterSearchResult::eRegisterFound;
+  }
+
   UnwindLogMsg("no save location for %s (%d) in this stack frame",
                regnum.GetName(), regnum.GetAsKind(eRegisterKindLLDB));
 

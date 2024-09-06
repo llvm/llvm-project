@@ -814,6 +814,26 @@ enum NodeType {
 
   /// TRUNCATE - Completely drop the high bits.
   TRUNCATE,
+  /// TRUNCATE_[SU]SAT_[SU] - Truncate for saturated operand
+  /// [SU] located in middle, prefix for `SAT` means indicates whether
+  /// existing truncate target was a signed operation. For examples,
+  /// If `truncate(smin(smax(x, C), C))` was saturated then become `S`.
+  /// If `truncate(umin(x, C))` was saturated then become `U`.
+  /// [SU] located in last indicates whether range of truncated values is
+  /// sign-saturated. For example, if `truncate(smin(smax(x, C), C))` is a
+  /// truncation to `i8`, then if value of C ranges from `-128 to 127`, it will
+  /// be saturated against signed values, resulting in `S`, which will combine
+  /// to `TRUNCATE_SSAT_S`. If the value of C ranges from `0 to 255`, it will
+  /// be saturated against unsigned values, resulting in `U`, which will
+  /// combine to `TRUNATE_SSAT_U`. Similarly, in `truncate(umin(x, C))`, if
+  /// value of C ranges from `0 to 255`, it becomes `U` because it is saturated
+  /// for unsigned values. As a result, it combines to `TRUNCATE_USAT_U`.
+  TRUNCATE_SSAT_S, // saturate signed input to signed result -
+                   // truncate(smin(smax(x, C), C))
+  TRUNCATE_SSAT_U, // saturate signed input to unsigned result -
+                   // truncate(smin(smax(x, 0), C))
+  TRUNCATE_USAT_U, // saturate unsigned input to unsigned result -
+                   // truncate(umin(x, C))
 
   /// [SU]INT_TO_FP - These operators convert integers (whose interpreted sign
   /// depends on the first letter) to floating point.
@@ -1026,6 +1046,11 @@ enum NodeType {
   /// semantics, FMINIMUM/FMAXIMUM follow IEEE 754-2019 semantics.
   FMINIMUM,
   FMAXIMUM,
+
+  /// FMINIMUMNUM/FMAXIMUMNUM - minimumnum/maximumnum that is same with
+  /// FMINNUM_IEEE and FMAXNUM_IEEE besides if either operand is sNaN.
+  FMINIMUMNUM,
+  FMAXIMUMNUM,
 
   /// FSINCOS - Compute both fsin and fcos as a single operation.
   FSINCOS,
@@ -1494,7 +1519,7 @@ std::optional<unsigned> getVPExplicitVectorLengthIdx(unsigned Opcode);
 std::optional<unsigned> getBaseOpcodeForVP(unsigned Opcode, bool hasFPExcept);
 
 /// Translate this non-VP Opcode to its corresponding VP Opcode.
-unsigned getVPForBaseOpcode(unsigned Opcode);
+std::optional<unsigned> getVPForBaseOpcode(unsigned Opcode);
 
 //===--------------------------------------------------------------------===//
 /// MemIndexedMode enum - This enum defines the load / store indexed

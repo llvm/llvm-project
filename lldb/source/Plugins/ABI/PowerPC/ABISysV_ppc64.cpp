@@ -641,7 +641,7 @@ private:
 
     DataExtractor de(&raw_data, sizeof(raw_data), m_byte_order, m_addr_size);
 
-    offset_t offset = 0;
+    lldb::offset_t offset = 0;
     std::optional<uint64_t> byte_size = type.GetByteSize(m_process_sp.get());
     if (!byte_size)
       return {};

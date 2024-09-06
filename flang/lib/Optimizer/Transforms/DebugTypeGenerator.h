@@ -13,6 +13,7 @@
 #ifndef FORTRAN_OPTIMIZER_TRANSFORMS_DEBUGTYPEGENERATOR_H
 #define FORTRAN_OPTIMIZER_TRANSFORMS_DEBUGTYPEGENERATOR_H
 
+#include "flang/Optimizer/CodeGen/CGOps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
@@ -28,33 +29,34 @@ public:
   mlir::LLVM::DITypeAttr convertType(mlir::Type Ty,
                                      mlir::LLVM::DIFileAttr fileAttr,
                                      mlir::LLVM::DIScopeAttr scope,
-                                     mlir::Location loc);
+                                     fir::cg::XDeclareOp declOp);
 
 private:
   mlir::LLVM::DITypeAttr convertSequenceType(fir::SequenceType seqTy,
                                              mlir::LLVM::DIFileAttr fileAttr,
                                              mlir::LLVM::DIScopeAttr scope,
-                                             mlir::Location loc);
+                                             fir::cg::XDeclareOp declOp);
 
   /// The 'genAllocated' is true when we want to generate 'allocated' field
   /// in the DICompositeType. It is needed for the allocatable arrays.
   /// Similarly, 'genAssociated' is used with 'pointer' type to generate
   /// 'associated' field.
-  mlir::LLVM::DITypeAttr
-  convertBoxedSequenceType(fir::SequenceType seqTy,
-                           mlir::LLVM::DIFileAttr fileAttr,
-                           mlir::LLVM::DIScopeAttr scope, mlir::Location loc,
-                           bool genAllocated, bool genAssociated);
+  mlir::LLVM::DITypeAttr convertBoxedSequenceType(
+      fir::SequenceType seqTy, mlir::LLVM::DIFileAttr fileAttr,
+      mlir::LLVM::DIScopeAttr scope, fir::cg::XDeclareOp declOp,
+      bool genAllocated, bool genAssociated);
   mlir::LLVM::DITypeAttr convertCharacterType(fir::CharacterType charTy,
                                               mlir::LLVM::DIFileAttr fileAttr,
                                               mlir::LLVM::DIScopeAttr scope,
-                                              mlir::Location loc,
+                                              fir::cg::XDeclareOp declOp,
                                               bool hasDescriptor);
 
-  mlir::LLVM::DITypeAttr
-  convertPointerLikeType(mlir::Type elTy, mlir::LLVM::DIFileAttr fileAttr,
-                         mlir::LLVM::DIScopeAttr scope, mlir::Location loc,
-                         bool genAllocated, bool genAssociated);
+  mlir::LLVM::DITypeAttr convertPointerLikeType(mlir::Type elTy,
+                                                mlir::LLVM::DIFileAttr fileAttr,
+                                                mlir::LLVM::DIScopeAttr scope,
+                                                fir::cg::XDeclareOp declOp,
+                                                bool genAllocated,
+                                                bool genAssociated);
 
   mlir::ModuleOp module;
   KindMapping kindMapping;

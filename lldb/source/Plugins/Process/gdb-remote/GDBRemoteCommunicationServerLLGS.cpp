@@ -714,6 +714,8 @@ static const char *GetStopReasonString(StopReason stop_reason) {
     return "vfork";
   case eStopReasonVForkDone:
     return "vforkdone";
+  case eStopReasonInterrupt:
+    return "async interrupt";
   case eStopReasonInstrumentation:
   case eStopReasonInvalid:
   case eStopReasonPlanComplete:
@@ -4242,6 +4244,10 @@ std::vector<std::string> GDBRemoteCommunicationServerLLGS::HandleFeatures(
             .Case("fork-events+", Extension::fork)
             .Case("vfork-events+", Extension::vfork)
             .Default({});
+
+  // We consume lldb's swbreak/hwbreak feature, but it doesn't change the
+  // behaviour of lldb-server. We always adjust the program counter for targets
+  // like x86
 
   m_extensions_supported &= plugin_features;
 

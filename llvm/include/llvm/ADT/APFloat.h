@@ -19,7 +19,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/float128.h"
 #include <memory>
 
 #define APFLOAT_DISPATCH_ON_SEMANTICS(METHOD_CALL)                             \
@@ -188,6 +187,9 @@ struct APFloatBase {
     // This format's exponent bias is 11, instead of the 7 (2 ** (4 - 1) - 1)
     // that IEEE precedent would imply.
     S_Float8E4M3B11FNUZ,
+    // 8-bit floating point number following IEEE-754 conventions with bit
+    // layout S1E3M4.
+    S_Float8E3M4,
     // Floating point number that occupies 32 bits or less of storage, providing
     // improved range compared to half (16-bit) formats, at (potentially)
     // greater throughput than single precision (32-bit) formats.
@@ -224,6 +226,7 @@ struct APFloatBase {
   static const fltSemantics &Float8E4M3FN() LLVM_READNONE;
   static const fltSemantics &Float8E4M3FNUZ() LLVM_READNONE;
   static const fltSemantics &Float8E4M3B11FNUZ() LLVM_READNONE;
+  static const fltSemantics &Float8E3M4() LLVM_READNONE;
   static const fltSemantics &FloatTF32() LLVM_READNONE;
   static const fltSemantics &Float6E3M2FN() LLVM_READNONE;
   static const fltSemantics &Float6E2M3FN() LLVM_READNONE;
@@ -374,9 +377,6 @@ public:
   Expected<opStatus> convertFromString(StringRef, roundingMode);
   APInt bitcastToAPInt() const;
   double convertToDouble() const;
-#ifdef HAS_IEE754_FLOAT128
-  float128 convertToQuad() const;
-#endif
   float convertToFloat() const;
 
   /// @}
@@ -646,6 +646,7 @@ private:
   APInt convertFloat8E4M3FNAPFloatToAPInt() const;
   APInt convertFloat8E4M3FNUZAPFloatToAPInt() const;
   APInt convertFloat8E4M3B11FNUZAPFloatToAPInt() const;
+  APInt convertFloat8E3M4APFloatToAPInt() const;
   APInt convertFloatTF32APFloatToAPInt() const;
   APInt convertFloat6E3M2FNAPFloatToAPInt() const;
   APInt convertFloat6E2M3FNAPFloatToAPInt() const;
@@ -665,6 +666,7 @@ private:
   void initFromFloat8E4M3FNAPInt(const APInt &api);
   void initFromFloat8E4M3FNUZAPInt(const APInt &api);
   void initFromFloat8E4M3B11FNUZAPInt(const APInt &api);
+  void initFromFloat8E3M4APInt(const APInt &api);
   void initFromFloatTF32APInt(const APInt &api);
   void initFromFloat6E3M2FNAPInt(const APInt &api);
   void initFromFloat6E2M3FNAPInt(const APInt &api);
@@ -1268,14 +1270,9 @@ public:
   /// shorter semantics, like IEEEsingle and others.
   double convertToDouble() const;
 
-  /// Converts this APFloat to host float value.
-  ///
-  /// \pre The APFloat must be built using semantics, that can be represented by
-  /// the host float type without loss of precision. It can be IEEEquad and
-  /// shorter semantics, like IEEEdouble and others.
-#ifdef HAS_IEE754_FLOAT128
-  float128 convertToQuad() const;
-#endif
+  /// Return true if this APFloat has quadruple precision floating point
+  /// semantics
+  bool isValidIEEEQuad() const;
 
   /// Converts this APFloat to host float value.
   ///

@@ -53,7 +53,7 @@ TEST_F(MatchFilePathTest, Newline) {
 
 TEST_F(MatchFilePathTest, Star) {
   EXPECT_TRUE(match(std::string(50, 'a'), "*a*a*a*a*a*a*a*a*a*a"));
-  EXPECT_FALSE(match((std::string(50, 'a') + 'b'), "*a*a*a*a*a*a*a*a*a*a"));
+  EXPECT_FALSE(match(std::string(50, 'a') + 'b', "*a*a*a*a*a*a*a*a*a*a"));
 }
 
 TEST_F(MatchFilePathTest, CaseSensitive) {

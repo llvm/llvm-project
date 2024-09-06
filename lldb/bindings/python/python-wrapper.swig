@@ -813,7 +813,7 @@ PythonObject lldb_private::python::SWIGBridge::LLDBSWIGPython_CreateFrameRecogni
 }
 
 PyObject *lldb_private::python::SWIGBridge::LLDBSwigPython_GetRecognizedArguments(
-    PyObject * implementor, const lldb::StackFrameSP &frame_sp) {
+    PyObject *implementor, const lldb::StackFrameSP &frame_sp) {
   static char callee_name[] = "get_recognized_arguments";
 
   PythonObject arg = SWIGBridge::ToSWIGWrapper(frame_sp);
@@ -822,6 +822,22 @@ PyObject *lldb_private::python::SWIGBridge::LLDBSwigPython_GetRecognizedArgument
   PyObject *result =
       PyObject_CallMethodObjArgs(implementor, str.get(), arg.get(), NULL);
   return result;
+}
+
+bool lldb_private::python::SWIGBridge::LLDBSwigPython_ShouldHide(
+    PyObject *implementor, const lldb::StackFrameSP &frame_sp) {
+  static char callee_name[] = "should_hide";
+
+  PythonObject arg = SWIGBridge::ToSWIGWrapper(frame_sp);
+
+  PythonString str(callee_name);
+
+  PyObject *result =
+      PyObject_CallMethodObjArgs(implementor, str.get(), arg.get(), NULL);
+  bool ret_val = result ? PyObject_IsTrue(result) : false;
+  Py_XDECREF(result);
+
+  return ret_val;
 }
 
 void *lldb_private::python::SWIGBridge::LLDBSWIGPython_GetDynamicSetting(

@@ -460,9 +460,13 @@ genRecordMembersBlock(const llvm::SmallVector<MemberTypeInfo, 4> &Members,
     if (Access != "")
       Access = Access + " ";
     auto LIBody = std::make_unique<TagNode>(HTMLTag::TAG_LI);
-    LIBody->Children.emplace_back(std::make_unique<TextNode>(Access));
-    LIBody->Children.emplace_back(genReference(M.Type, ParentInfoDir));
-    LIBody->Children.emplace_back(std::make_unique<TextNode>(" " + M.Name));
+    auto MemberDecl = std::make_unique<TagNode>(HTMLTag::TAG_DIV);
+    MemberDecl->Children.emplace_back(std::make_unique<TextNode>(Access));
+    MemberDecl->Children.emplace_back(genReference(M.Type, ParentInfoDir));
+    MemberDecl->Children.emplace_back(std::make_unique<TextNode>(" " + M.Name));
+    if (!M.Description.empty())
+      LIBody->Children.emplace_back(genHTML(M.Description));
+    LIBody->Children.emplace_back(std::move(MemberDecl));
     ULBody->Children.emplace_back(std::move(LIBody));
   }
   return Out;
@@ -674,6 +678,19 @@ static std::unique_ptr<HTMLNode> genHTML(const CommentInfo &I) {
     return std::move(ParagraphComment);
   }
 
+  if (I.Kind == "BlockCommandComment") {
+    auto BlockComment = std::make_unique<TagNode>(HTMLTag::TAG_DIV);
+    BlockComment->Children.emplace_back(
+        std::make_unique<TagNode>(HTMLTag::TAG_DIV, I.Name));
+    for (const auto &Child : I.Children) {
+      std::unique_ptr<HTMLNode> Node = genHTML(*Child);
+      if (Node)
+        BlockComment->Children.emplace_back(std::move(Node));
+    }
+    if (BlockComment->Children.empty())
+      return nullptr;
+    return std::move(BlockComment);
+  }
   if (I.Kind == "TextComment") {
     if (I.Text == "")
       return nullptr;

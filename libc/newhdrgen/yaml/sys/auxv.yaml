@@ -5,7 +5,7 @@ enums: []
 objects: []
 functions:
   - name: getauxval
-    standards: 
+    standards:
       - GNUExtensions
     return_type: unsigned long
     arguments:

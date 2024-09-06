@@ -30,7 +30,9 @@ using namespace mlir::dataflow;
 
 LogicalResult AbstractDenseForwardDataFlowAnalysis::initialize(Operation *top) {
   // Visit every operation and block.
-  processOperation(top);
+  if (failed(processOperation(top)))
+    return failure();
+
   for (Region &region : top->getRegions()) {
     for (Block &block : region) {
       visitBlock(&block);
@@ -44,7 +46,7 @@ LogicalResult AbstractDenseForwardDataFlowAnalysis::initialize(Operation *top) {
 
 LogicalResult AbstractDenseForwardDataFlowAnalysis::visit(ProgramPoint point) {
   if (auto *op = llvm::dyn_cast_if_present<Operation *>(point))
-    processOperation(op);
+    return processOperation(op);
   else if (auto *block = llvm::dyn_cast_if_present<Block *>(point))
     visitBlock(block);
   else
@@ -94,10 +96,11 @@ void AbstractDenseForwardDataFlowAnalysis::visitCallOperation(
   }
 }
 
-void AbstractDenseForwardDataFlowAnalysis::processOperation(Operation *op) {
+LogicalResult
+AbstractDenseForwardDataFlowAnalysis::processOperation(Operation *op) {
   // If the containing block is not executable, bail out.
   if (!getOrCreateFor<Executable>(op, op->getBlock())->isLive())
-    return;
+    return success();
 
   // Get the dense lattice to update.
   AbstractDenseLattice *after = getLattice(op);
@@ -111,16 +114,20 @@ void AbstractDenseForwardDataFlowAnalysis::processOperation(Operation *op) {
 
   // If this op implements region control-flow, then control-flow dictates its
   // transfer function.
-  if (auto branch = dyn_cast<RegionBranchOpInterface>(op))
-    return visitRegionBranchOperation(op, branch, after);
+  if (auto branch = dyn_cast<RegionBranchOpInterface>(op)) {
+    visitRegionBranchOperation(op, branch, after);
+    return success();
+  }
 
   // If this is a call operation, then join its lattices across known return
   // sites.
-  if (auto call = dyn_cast<CallOpInterface>(op))
-    return visitCallOperation(call, *before, after);
+  if (auto call = dyn_cast<CallOpInterface>(op)) {
+    visitCallOperation(call, *before, after);
+    return success();
+  }
 
   // Invoke the operation transfer function.
-  visitOperationImpl(op, *before, after);
+  return visitOperationImpl(op, *before, after);
 }
 
 void AbstractDenseForwardDataFlowAnalysis::visitBlock(Block *block) {
@@ -254,7 +261,9 @@ AbstractDenseForwardDataFlowAnalysis::getLatticeFor(ProgramPoint dependent,
 LogicalResult
 AbstractDenseBackwardDataFlowAnalysis::initialize(Operation *top) {
   // Visit every operation and block.
-  processOperation(top);
+  if (failed(processOperation(top)))
+    return failure();
+
   for (Region &region : top->getRegions()) {
     for (Block &block : region) {
       visitBlock(&block);
@@ -269,7 +278,7 @@ AbstractDenseBackwardDataFlowAnalysis::initialize(Operation *top) {
 
 LogicalResult AbstractDenseBackwardDataFlowAnalysis::visit(ProgramPoint point) {
   if (auto *op = llvm::dyn_cast_if_present<Operation *>(point))
-    processOperation(op);
+    return processOperation(op);
   else if (auto *block = llvm::dyn_cast_if_present<Block *>(point))
     visitBlock(block);
   else
@@ -323,10 +332,11 @@ void AbstractDenseBackwardDataFlowAnalysis::visitCallOperation(
                                latticeAtCalleeEntry, latticeBeforeCall);
 }
 
-void AbstractDenseBackwardDataFlowAnalysis::processOperation(Operation *op) {
+LogicalResult
+AbstractDenseBackwardDataFlowAnalysis::processOperation(Operation *op) {
   // If the containing block is not executable, bail out.
   if (!getOrCreateFor<Executable>(op, op->getBlock())->isLive())
-    return;
+    return success();
 
   // Get the dense lattice to update.
   AbstractDenseLattice *before = getLattice(op);
@@ -339,14 +349,17 @@ void AbstractDenseBackwardDataFlowAnalysis::processOperation(Operation *op) {
     after = getLatticeFor(op, op->getBlock());
 
   // Special cases where control flow may dictate data flow.
-  if (auto branch = dyn_cast<RegionBranchOpInterface>(op))
-    return visitRegionBranchOperation(op, branch, RegionBranchPoint::parent(),
-                                      before);
-  if (auto call = dyn_cast<CallOpInterface>(op))
-    return visitCallOperation(call, *after, before);
+  if (auto branch = dyn_cast<RegionBranchOpInterface>(op)) {
+    visitRegionBranchOperation(op, branch, RegionBranchPoint::parent(), before);
+    return success();
+  }
+  if (auto call = dyn_cast<CallOpInterface>(op)) {
+    visitCallOperation(call, *after, before);
+    return success();
+  }
 
   // Invoke the operation transfer function.
-  visitOperationImpl(op, *after, before);
+  return visitOperationImpl(op, *after, before);
 }
 
 void AbstractDenseBackwardDataFlowAnalysis::visitBlock(Block *block) {

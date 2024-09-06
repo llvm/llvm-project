@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++2a -verify %s
+// RUN: %clang_cc1 -std=c++23 -verify %s
 
 namespace usage_invalid {
   // FIXME: Should we diagnose a void return type?
@@ -9,6 +9,7 @@ namespace usage_invalid {
     A() [[clang::lifetimebound]]; // expected-error {{cannot be applied to a constructor}}
     ~A() [[clang::lifetimebound]]; // expected-error {{cannot be applied to a destructor}}
     static int *static_class_member() [[clang::lifetimebound]]; // expected-error {{static member function has no implicit object parameter}}
+    int *explicit_object(this A&) [[clang::lifetimebound]]; // expected-error {{explicit object member function has no implicit object parameter}}
     int not_function [[clang::lifetimebound]]; // expected-error {{only applies to parameters and implicit object parameters}}
     int [[clang::lifetimebound]] also_not_function; // expected-error {{cannot be applied to types}}
   };

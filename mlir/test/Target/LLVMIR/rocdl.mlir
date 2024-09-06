@@ -62,6 +62,20 @@ llvm.func @kernel_func_no_uniform_work_groups() attributes {rocdl.kernel, rocdl.
   llvm.return
 }
 
+llvm.func @kernel_func_waves_per_eu()
+    attributes {rocdl.kernel, rocdl.waves_per_eu = 2 : i32} {
+  // CHECK-LABEL: amdgpu_kernel void @kernel_func_waves_per_eu()
+  // CHECK: #[[$KERNEL_WAVES_PER_EU_ATTR:[0-9]+]]
+  llvm.return
+}
+
+llvm.func @kernel_func_unsafe_fp_atomics()
+    attributes {rocdl.kernel, rocdl.unsafe_fp_atomics = true} {
+  // CHECK-LABEL: amdgpu_kernel void @kernel_func_unsafe_fp_atomics()
+  // CHECK: #[[$KERNEL_UNSAFE_FP_ATOMICS_ATTR:[0-9]+]]
+  llvm.return
+}
+
 llvm.func @rocdl.lane_id() -> i32 {
   // CHECK: [[mbcntlo:%.+]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
   // CHECK-NEXT: call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[mbcntlo]])
@@ -521,3 +535,5 @@ llvm.func @rocdl_8bit_floats(%source: i32, %stoch: i32) -> i32 {
 // CHECK-DAG: attributes #[[$KNOWN_BLOCK_SIZE_ATTRS]] = { "amdgpu-flat-work-group-size"="128,128"
 // CHECK-DAG: attributes #[[$KERNEL_NO_UNIFORM_WORK_GROUPS_ATTRS]] = { "amdgpu-flat-work-group-size"="1,256" "uniform-work-group-size"="false" }
 // CHECK-DAG: ![[$REQD_WORK_GROUP_SIZE]] = !{i32 16, i32 4, i32 2}
+// CHECK-DAG: attributes #[[$KERNEL_WAVES_PER_EU_ATTR]] = { "amdgpu-flat-work-group-size"="1,256" "amdgpu-waves-per-eu"="2" "uniform-work-group-size"="true" }
+// CHECK-DAG: attributes #[[$KERNEL_UNSAFE_FP_ATOMICS_ATTR]] = { "amdgpu-flat-work-group-size"="1,256" "amdgpu-unsafe-fp-atomics"="true" "uniform-work-group-size"="true" }

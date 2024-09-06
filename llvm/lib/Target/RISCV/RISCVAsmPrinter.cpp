@@ -976,7 +976,7 @@ static bool lowerRISCVVMachineInstrToMCInst(const MachineInstr *MI,
     if (hasVLOutput && OpNo == 1)
       continue;
 
-    // Skip merge op. It should be the first operand after the defs.
+    // Skip passthru op. It should be the first operand after the defs.
     if (OpNo == MI->getNumExplicitDefs() && MO.isReg() && MO.isTied()) {
       assert(MCID.getOperandConstraint(OpNo, MCOI::TIED_TO) == 0 &&
              "Expected tied to first def.");
