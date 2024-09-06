@@ -258,7 +258,7 @@ TEST_F(MinidumpParserTest, GetExceptionStream) {
     ASSERT_EQ(16001UL, exception_stream->ThreadId);
     count++;
   }
-  
+
   ASSERT_THAT(1UL, count);
 }
 

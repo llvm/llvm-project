@@ -216,8 +216,8 @@ Status ProcessMinidump::DoLoadCore() {
       continue;
 
     if (!m_exceptions_by_tid
-              .try_emplace(exception_stream->ThreadId, exception_stream.get())
-              .second) {
+             .try_emplace(exception_stream->ThreadId, exception_stream.get())
+             .second) {
       // We only cast to avoid the warning around converting little endian in
       // printf.
       return Status::FromErrorStringWithFormat(
