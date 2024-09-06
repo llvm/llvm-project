@@ -1,4 +1,4 @@
-//===---------- Types.h - OpenMP types ---------------------------- C++ -*-===//
+//===---------- DeviceTypes.h - OpenMP types ---------------------- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -115,9 +115,9 @@ enum kmp_sched_t {
 #define SCHEDULE_WITHOUT_MODIFIERS(s)                                          \
   (enum kmp_sched_t)(                                                          \
       (s) & ~(kmp_sched_modifier_nonmonotonic | kmp_sched_modifier_monotonic))
-#define SCHEDULE_HAS_MONOTONIC(s) (((s)&kmp_sched_modifier_monotonic) != 0)
+#define SCHEDULE_HAS_MONOTONIC(s) (((s) & kmp_sched_modifier_monotonic) != 0)
 #define SCHEDULE_HAS_NONMONOTONIC(s)                                           \
-  (((s)&kmp_sched_modifier_nonmonotonic) != 0)
+  (((s) & kmp_sched_modifier_nonmonotonic) != 0)
 #define SCHEDULE_HAS_NO_MODIFIERS(s)                                           \
   (((s) & (kmp_sched_modifier_nonmonotonic | kmp_sched_modifier_monotonic)) == \
    0)

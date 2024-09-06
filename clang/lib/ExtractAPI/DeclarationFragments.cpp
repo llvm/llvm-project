@@ -276,6 +276,19 @@ DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForType(
 
   DeclarationFragments Fragments;
 
+  if (const MacroQualifiedType *MQT = dyn_cast<MacroQualifiedType>(T)) {
+    Fragments.append(
+        getFragmentsForType(MQT->getUnderlyingType(), Context, After));
+    return Fragments;
+  }
+
+  if (const AttributedType *AT = dyn_cast<AttributedType>(T)) {
+    // FIXME: Serialize Attributes correctly
+    Fragments.append(
+        getFragmentsForType(AT->getModifiedType(), Context, After));
+    return Fragments;
+  }
+
   // An ElaboratedType is a sugar for types that are referred to using an
   // elaborated keyword, e.g., `struct S`, `enum E`, or (in C++) via a
   // qualified name, e.g., `N::M::type`, or both.
