@@ -16,8 +16,8 @@
 #include "Mapping.h"
 #include "State.h"
 #include "Synchronization.h"
-#include "Types.h"
-#include "Utils.h"
+#include "DeviceTypes.h"
+#include "DeviceUtils.h"
 
 #define __XTEAM_SHARED_LDS volatile __attribute__((address_space(3)))
 

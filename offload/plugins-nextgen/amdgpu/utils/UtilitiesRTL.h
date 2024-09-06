@@ -23,7 +23,7 @@ namespace llvm {
 namespace omp {
 namespace target {
 namespace plugin {
-namespace utils {
+namespace hsa_utils {
 
 /// A list of offsets required by the ABI of code object versions 4 and 5.
 enum COV_OFFSETS : uint32_t {
@@ -67,7 +67,7 @@ inline uint32_t getImplicitArgsSize(uint16_t Version) {
 extractXnackModeFromBinary(const __tgt_device_image *TgtImage) {
   assert((TgtImage != nullptr) && "TgtImage is nullptr.");
   StringRef Buffer(reinterpret_cast<const char *>(TgtImage->ImageStart),
-                   target::getPtrDiff(TgtImage->ImageEnd, TgtImage->ImageStart));
+                   utils::getPtrDiff(TgtImage->ImageEnd, TgtImage->ImageStart));
   auto ElfOrErr =
       ELF64LEObjectFile::create(MemoryBufferRef(Buffer, /*Identifier=*/""),
                                 /*InitContent=*/false);
@@ -78,7 +78,7 @@ extractXnackModeFromBinary(const __tgt_device_image *TgtImage) {
   }
   u_int16_t EFlags = ElfOrErr->getPlatformFlags();
 
-  utils::XnackBuildMode XnackFlags = EFlags & ELF::EF_AMDGPU_FEATURE_XNACK_V4;
+  hsa_utils::XnackBuildMode XnackFlags = EFlags & ELF::EF_AMDGPU_FEATURE_XNACK_V4;
 
   if (XnackFlags == ELF::EF_AMDGPU_FEATURE_XNACK_UNSUPPORTED_V4)
     DP("XNACK is not supported on this system!\n");
@@ -88,8 +88,8 @@ extractXnackModeFromBinary(const __tgt_device_image *TgtImage) {
 
 void checkImageCompatibilityWithSystemXnackMode(__tgt_device_image *TgtImage,
                                                 bool IsXnackEnabled) {
-  utils::XnackBuildMode ImageXnackMode =
-      utils::extractXnackModeFromBinary(TgtImage);
+  hsa_utils::XnackBuildMode ImageXnackMode =
+      hsa_utils::extractXnackModeFromBinary(TgtImage);
 
   if (ImageXnackMode == ELF::EF_AMDGPU_FEATURE_XNACK_UNSUPPORTED_V4)
     return;
@@ -121,7 +121,7 @@ inline Error readAMDGPUMetaDataFromImage(
   return Err;
 }
 
-} // namespace utils
+} // namespace hsa_utils
 } // namespace plugin
 } // namespace target
 } // namespace omp

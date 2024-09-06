@@ -4027,7 +4027,8 @@ bool ExpressionAnalyzer::CheckIntrinsicKind(
     return true;
   } else if (foldingContext_.targetCharacteristics().CanSupportType(
                  category, kind)) {
-    if (context_.ShouldWarn(common::UsageWarning::BadTypeForTarget)) {
+    if (context_.ShouldWarn(common::UsageWarning::BadTypeForTarget) &&
+        !context_.IsInModuleFile(GetContextualMessages().at())) {
       Say("%s(KIND=%jd) is not an enabled type for this target"_warn_en_US,
           ToUpperCase(EnumToString(category)), kind);
     }

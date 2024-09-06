@@ -15,10 +15,10 @@
 #include "Shared/Environment.h"
 
 #include "Debug.h"
+#include "DeviceTypes.h"
+#include "DeviceUtils.h"
 #include "Mapping.h"
 #include "Platform.h"
-#include "Types.h"
-#include "Utils.h"
 
 // Forward declaration.
 struct KernelEnvironmentTy;

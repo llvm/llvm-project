@@ -11,10 +11,10 @@
 
 #include "Mapping.h"
 #include "Debug.h"
+#include "DeviceTypes.h"
+#include "DeviceUtils.h"
 #include "Interface.h"
 #include "State.h"
-#include "Types.h"
-#include "Utils.h"
 
 #pragma omp begin declare target device_type(nohost)
 

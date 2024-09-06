@@ -1,4 +1,4 @@
-#include <Types.h>
+#include <DeviceTypes.h>
 
 #pragma omp begin declare target device_type(nohost)
 

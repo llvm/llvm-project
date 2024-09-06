@@ -3278,6 +3278,26 @@ TEST_F(TokenAnnotatorTest, BraceKind) {
   EXPECT_BRACE_KIND(Tokens[10], BK_Block);
   EXPECT_TOKEN(Tokens[11], tok::r_brace, TT_StructRBrace);
   EXPECT_BRACE_KIND(Tokens[11], BK_Block);
+
+  Tokens = annotate("#define MACRO            \\\n"
+                    "  struct hash<type> {    \\\n"
+                    "    void f() { return; } \\\n"
+                    "  };");
+  ASSERT_EQ(Tokens.size(), 20u) << Tokens;
+  EXPECT_TOKEN(Tokens[8], tok::l_brace, TT_StructLBrace);
+  EXPECT_BRACE_KIND(Tokens[8], BK_Block);
+  EXPECT_TOKEN(Tokens[10], tok::identifier, TT_FunctionDeclarationName);
+  EXPECT_TOKEN(Tokens[11], tok::l_paren, TT_FunctionDeclarationLParen);
+  EXPECT_TOKEN(Tokens[13], tok::l_brace, TT_FunctionLBrace);
+  EXPECT_BRACE_KIND(Tokens[13], BK_Block);
+  EXPECT_BRACE_KIND(Tokens[16], BK_Block);
+  EXPECT_TOKEN(Tokens[17], tok::r_brace, TT_StructRBrace);
+  EXPECT_BRACE_KIND(Tokens[17], BK_Block);
+
+  Tokens = annotate("#define MEMBER(NAME) NAME{\"\"}");
+  ASSERT_EQ(Tokens.size(), 11u) << Tokens;
+  EXPECT_BRACE_KIND(Tokens[7], BK_BracedInit);
+  EXPECT_BRACE_KIND(Tokens[9], BK_BracedInit);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsElaboratedTypeSpecifier) {

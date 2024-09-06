@@ -88,8 +88,8 @@ set(include_files
   ${include_directory}/Profiling.h
   ${include_directory}/State.h
   ${include_directory}/Synchronization.h
-  ${include_directory}/Types.h
-  ${include_directory}/Utils.h
+  ${include_directory}/DeviceTypes.h
+  ${include_directory}/DeviceUtils.h
   ${include_directory}/Xteamr.h
   ${include_directory}/Xteams.h
   ${include_directory}/Workshare.h
@@ -110,7 +110,7 @@ set(src_files
   ${source_directory}/State.cpp
   ${source_directory}/Synchronization.cpp
   ${source_directory}/Tasking.cpp
-  ${source_directory}/Utils.cpp
+  ${source_directory}/DeviceUtils.cpp
   ${source_directory}/Workshare.cpp
   ${source_directory}/ExtraMapping.cpp
   ${source_directory}/Xteamr.cpp

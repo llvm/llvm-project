@@ -33,6 +33,7 @@
 #include "Shared/APITypes.h"
 #include "Shared/Debug.h"
 #include "Shared/Environment.h"
+#include "Shared/RefCnt.h"
 #include "Shared/Utils.h"
 #include "Utils/ELF.h"
 
@@ -304,7 +305,7 @@ struct AMDGPUDeviceImageTy;
 struct AMDGPUMemoryManagerTy;
 struct AMDGPUMemoryPoolTy;
 
-namespace utils {
+namespace hsa_utils {
 
 /// Iterate elements using an HSA iterate function. Do not use this function
 /// directly but the specialized ones below instead.
@@ -411,7 +412,7 @@ Error asyncMemCopy(bool UseMultipleSdmaEngines, void *Dst, hsa_agent_t DstAgent,
 
 Expected<std::string> getTargetTripleAndFeatures(hsa_agent_t Agent) {
   std::string Target;
-  auto Err = utils::iterateAgentISAs(Agent, [&](hsa_isa_t ISA) {
+  auto Err = hsa_utils::iterateAgentISAs(Agent, [&](hsa_isa_t ISA) {
     uint32_t Length;
     hsa_status_t Status;
     Status = hsa_isa_get_info_alt(ISA, HSA_ISA_INFO_NAME_LENGTH, &Length);
@@ -494,7 +495,7 @@ unsigned computeOccupancy(
     std::optional<offloading::amdgpu::AMDGPUKernelMetaData> KernelInfo,
     uint32_t NumThreads, uint64_t NumBlocks);
 
-} // namespace utils
+} // namespace hsa_utils
 
 /// Utility class representing generic resource references to AMDGPU resources.
 template <typename ResourceTy>
@@ -877,7 +878,7 @@ struct AMDGPUKernelTy : public GenericKernelTy {
     }
 
     ImplicitArgsSize =
-        utils::getImplicitArgsSize(AMDImage.getELFABIVersion()); // COV 5 patch
+        hsa_utils::getImplicitArgsSize(AMDImage.getELFABIVersion()); // COV 5 patch
 
     DP("ELFABIVersion: %d\n", AMDImage.getELFABIVersion());
 
@@ -2090,13 +2091,14 @@ public:
     // Issue the async memory copy.
     if (InputSignal && InputSignal->load()) {
       hsa_signal_t InputSignalRaw = InputSignal->get();
-      return utils::asyncMemCopy(UseMultipleSdmaEngines, Dst, Agent, Src, Agent,
-                                 CopySize, 1, &InputSignalRaw,
-                                 OutputSignal->get());
+      return hsa_utils::asyncMemCopy(UseMultipleSdmaEngines, Dst, Agent, Src,
+                                     Agent, CopySize, 1, &InputSignalRaw,
+                                     OutputSignal->get());
     }
 
-    return utils::asyncMemCopy(UseMultipleSdmaEngines, Dst, Agent, Src, Agent,
-                               CopySize, 0, nullptr, OutputSignal->get());
+    return hsa_utils::asyncMemCopy(UseMultipleSdmaEngines, Dst, Agent, Src,
+                                   Agent, CopySize, 0, nullptr,
+                                   OutputSignal->get());
   }
 
   /// Push an asynchronous memory copy device-to-host involving an unpinned
@@ -2147,14 +2149,14 @@ public:
     // dependency if already satisfied.
     if (InputSignal && InputSignal->load()) {
       hsa_signal_t InputSignalRaw = InputSignal->get();
-      if (auto Err = utils::asyncMemCopy(
+      if (auto Err = hsa_utils::asyncMemCopy(
               UseMultipleSdmaEngines, Inter, Agent, Src, Agent, CopySize, 1,
               &InputSignalRaw, OutputSignals[0]->get()))
         return Err;
     } else {
-      if (auto Err = utils::asyncMemCopy(UseMultipleSdmaEngines, Inter, Agent,
-                                         Src, Agent, CopySize, 0, nullptr,
-                                         OutputSignals[0]->get()))
+      if (auto Err = hsa_utils::asyncMemCopy(UseMultipleSdmaEngines, Inter,
+                                             Agent, Src, Agent, CopySize, 0,
+                                             nullptr, OutputSignals[0]->get()))
         return Err;
     }
 
@@ -2256,12 +2258,13 @@ public:
     // dependency if already satisfied.
     if (InputSignal && InputSignal->load()) {
       hsa_signal_t InputSignalRaw = InputSignal->get();
-      return utils::asyncMemCopy(UseMultipleSdmaEngines, Dst, Agent, Inter,
-                                 Agent, CopySize, 1, &InputSignalRaw,
-                                 OutputSignal->get());
+      return hsa_utils::asyncMemCopy(UseMultipleSdmaEngines, Dst, Agent, Inter,
+                                     Agent, CopySize, 1, &InputSignalRaw,
+                                     OutputSignal->get());
     }
-    return utils::asyncMemCopy(UseMultipleSdmaEngines, Dst, Agent, Inter, Agent,
-                               CopySize, 0, nullptr, OutputSignal->get());
+    return hsa_utils::asyncMemCopy(UseMultipleSdmaEngines, Dst, Agent, Inter,
+                                   Agent, CopySize, 0, nullptr,
+                                   OutputSignal->get());
   }
 
   // AMDGPUDeviceTy is incomplete here, passing the underlying agent instead
@@ -2297,13 +2300,13 @@ public:
 
     if (InputSignal && InputSignal->load()) {
       hsa_signal_t InputSignalRaw = InputSignal->get();
-      return utils::asyncMemCopy(UseMultipleSdmaEngines, Dst, DstAgent, Src,
-                                 SrcAgent, CopySize, 1, &InputSignalRaw,
-                                 OutputSignal->get());
+      return hsa_utils::asyncMemCopy(UseMultipleSdmaEngines, Dst, DstAgent, Src,
+                                     SrcAgent, CopySize, 1, &InputSignalRaw,
+                                     OutputSignal->get());
     }
-    return utils::asyncMemCopy(UseMultipleSdmaEngines, Dst, DstAgent, Src,
-                               SrcAgent, CopySize, 0, nullptr,
-                               OutputSignal->get());
+    return hsa_utils::asyncMemCopy(UseMultipleSdmaEngines, Dst, DstAgent, Src,
+                                   SrcAgent, CopySize, 0, nullptr,
+                                   OutputSignal->get());
   }
 
   /// Synchronize with the stream. The current thread waits until all operations
@@ -2687,7 +2690,7 @@ struct AMDHostDeviceTy : public AMDGenericDeviceTy {
   Error retrieveAllMemoryPools() override {
     // Iterate through the available pools across the host agents.
     for (hsa_agent_t Agent : Agents) {
-      Error Err = utils::iterateAgentMemoryPools(
+      Error Err = hsa_utils::iterateAgentMemoryPools(
           Agent, [&](hsa_amd_memory_pool_t HSAMemoryPool) {
             AMDGPUMemoryPoolTy *MemoryPool =
                 new AMDGPUMemoryPoolTy(HSAMemoryPool);
@@ -3029,7 +3032,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
     // Detect if XNACK is enabled
     auto TargeTripleAndFeaturesOrError =
-        utils::getTargetTripleAndFeatures(Agent);
+        hsa_utils::getTargetTripleAndFeatures(Agent);
     if (!TargeTripleAndFeaturesOrError)
       return TargeTripleAndFeaturesOrError.takeError();
     if (static_cast<StringRef>(*TargeTripleAndFeaturesOrError)
@@ -3418,7 +3421,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
         return Err;
 
       DP("OMPT-Async: Sync Copy\n");
-      if (auto Err = utils::asyncMemCopy(useMultipleSdmaEngines(), TgtPtr,
+      if (auto Err = hsa_utils::asyncMemCopy(useMultipleSdmaEngines(), TgtPtr,
                                          Agent, PinnedPtr, Agent, Size, 0,
                                          nullptr, Signal.get()))
         return Err;
@@ -3504,9 +3507,9 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
       if (auto Err = Signal.init())
         return Err;
 
-      if (auto Err = utils::asyncMemCopy(useMultipleSdmaEngines(), PinnedPtr,
-                                         Agent, TgtPtr, Agent, Size, 0, nullptr,
-                                         Signal.get()))
+      if (auto Err = hsa_utils::asyncMemCopy(useMultipleSdmaEngines(),
+                                             PinnedPtr, Agent, TgtPtr, Agent,
+                                             Size, 0, nullptr, Signal.get()))
         return Err;
 
       if (auto Err = Signal.wait(getStreamBusyWaitMicroseconds()))
@@ -3562,7 +3565,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
       if (auto Err = Signal.init())
         return Err;
 
-      if (auto Err = utils::asyncMemCopy(
+      if (auto Err = hsa_utils::asyncMemCopy(
               useMultipleSdmaEngines(), DstPtr, DstDevice.getAgent(), SrcPtr,
               getAgent(), (uint64_t)Size, 0, nullptr, Signal.get()))
         return Err;
@@ -3895,7 +3898,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     }
 
     Info.add("ISAs");
-    auto Err = utils::iterateAgentISAs(getAgent(), [&](hsa_isa_t ISA) {
+    auto Err = hsa_utils::iterateAgentISAs(getAgent(), [&](hsa_isa_t ISA) {
       Status = hsa_isa_get_info_alt(ISA, HSA_ISA_INFO_NAME, TmpChar);
       if (Status == HSA_STATUS_SUCCESS)
         Info.add<InfoLevel2>("Name", TmpChar);
@@ -4049,7 +4052,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   /// Retrieve and construct all memory pools of the device agent.
   Error retrieveAllMemoryPools() override {
     // Iterate through the available pools of the device agent.
-    return utils::iterateAgentMemoryPools(
+    return hsa_utils::iterateAgentMemoryPools(
         Agent, [&](hsa_amd_memory_pool_t HSAMemoryPool) {
           AMDGPUMemoryPoolTy *MemoryPool =
               Plugin.allocate<AMDGPUMemoryPoolTy>();
@@ -4083,7 +4086,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
       if (MemoryPool->isCoarseGrained()) {
         DevPtr = nullptr;
-        size_t PreAllocSize = utils::PER_DEVICE_PREALLOC_SIZE;
+        size_t PreAllocSize = hsa_utils::PER_DEVICE_PREALLOC_SIZE;
 
         Err = MemoryPool->allocate(PreAllocSize, &DevPtr);
         if (Err)
@@ -4471,7 +4474,7 @@ Error AMDGPUDeviceImageTy::loadExecutable(const AMDGPUDeviceTy &Device) {
   if (Result)
     return Plugin::error("Loaded HSA executable does not validate");
 
-  if (auto Err = utils::readAMDGPUMetaDataFromImage(
+  if (auto Err = hsa_utils::readAMDGPUMetaDataFromImage(
           getMemoryBuffer(), KernelInfoMap, ELFABIVersion))
     return Err;
 
@@ -4614,7 +4617,7 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
     llvm::SmallVector<hsa_agent_t> HostAgents;
 
     // Count the number of available agents.
-    auto Err = utils::iterateAgents([&](hsa_agent_t Agent) {
+    auto Err = hsa_utils::iterateAgents([&](hsa_agent_t Agent) {
       // Get the device type of the agent.
       hsa_device_type_t DeviceType;
       hsa_status_t Status =
@@ -4663,7 +4666,7 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
 
   /// Deinitialize the plugin.
   Error deinitImpl() override {
-    utils::hostrpc_terminate();
+    hsa_utils::hostrpc_terminate();
     // The HSA runtime was not initialized, so nothing from the plugin was
     // actually initialized.
     if (!Initialized)
@@ -4709,7 +4712,7 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
   }
 
   void checkInvalidImage(__tgt_device_image *TgtImage) override final {
-    utils::checkImageCompatibilityWithSystemXnackMode(TgtImage,
+    hsa_utils::checkImageCompatibilityWithSystemXnackMode(TgtImage,
                                                       IsXnackEnabled());
   }
 
@@ -4727,7 +4730,7 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
       return false;
 
     auto TargeTripleAndFeaturesOrError =
-        utils::getTargetTripleAndFeatures(getKernelAgent(DeviceId));
+        hsa_utils::getTargetTripleAndFeatures(getKernelAgent(DeviceId));
     if (!TargeTripleAndFeaturesOrError)
       return TargeTripleAndFeaturesOrError.takeError();
     return offloading::amdgpu::isImageCompatibleWithEnv(
@@ -4889,11 +4892,11 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
   if (auto Err = GenericDevice.getDeviceStackSize(StackSize))
     return Err;
 
-  utils::AMDGPUImplicitArgsTy *ImplArgs = nullptr;
+  hsa_utils::AMDGPUImplicitArgsTy *ImplArgs = nullptr;
   if (ArgsSize == LaunchParams.Size + getImplicitArgsSize()) {
     // Initialize implicit arguments.
-    ImplArgs = reinterpret_cast<utils::AMDGPUImplicitArgsTy *>(
-        advanceVoidPtr(AllArgs, LaunchParams.Size));
+    ImplArgs = reinterpret_cast<hsa_utils::AMDGPUImplicitArgsTy *>(
+        utils::advancePtr(AllArgs, LaunchParams.Size));
 
     // Initialize the implicit arguments to zero.
     std::memset(ImplArgs, 0, getImplicitArgsSize());
@@ -4917,7 +4920,7 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
     hsa_amd_memory_pool_t DeviceMemPool =
         AMDGPUDevice.getCoarseGrainedMemoryPool()->get();
     hsa_queue_t *HsaQueue = Stream->getHsaQueue();
-    Buffer = utils::hostrpc_assign_buffer(AMDGPUDevice.getAgent(), HsaQueue,
+    Buffer = hsa_utils::hostrpc_assign_buffer(AMDGPUDevice.getAgent(), HsaQueue,
                                           DevID, HostMemPool, DeviceMemPool);
     GlobalTy ServiceThreadHostBufferGlobal("service_thread_buf",
                                            sizeof(uint64_t), &Buffer);
@@ -4940,7 +4943,7 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
 
   // Only COV5 implicitargs needs to be set. COV4 implicitargs are not used.
   if (ImplArgs &&
-      getImplicitArgsSize() == sizeof(utils::AMDGPUImplicitArgsTy)) {
+      getImplicitArgsSize() == sizeof(hsa_utils::AMDGPUImplicitArgsTy)) {
     DP("Setting fields of ImplicitArgs for COV5\n");
     ImplArgs->BlockCountX = NumBlocks;
     ImplArgs->BlockCountY = 1;
@@ -4979,7 +4982,7 @@ void AMDGPUKernelTy::printAMDOneLineKernelTrace(GenericDeviceTy &GenericDevice,
 
   // kernel occupancy
   auto Occupancy =
-      utils::computeOccupancy(GenericDevice, KernelInfo, NumThreads, NumBlocks);
+      hsa_utils::computeOccupancy(GenericDevice, KernelInfo, NumThreads, NumBlocks);
 
   // This line should print exactly as the one in the old plugin.
   fprintf(stderr,
@@ -5218,7 +5221,7 @@ void AMDGPUQueueTy::callbackError(hsa_status_t Status, hsa_queue_t *Source,
   FATAL_MESSAGE(1, "%s", toString(std::move(Err)).data());
 }
 
-namespace utils {
+namespace hsa_utils {
 // TODO: improve the computation logic
 //        with more corner cases
 // split namespace utils for solving the dependency
@@ -5246,7 +5249,7 @@ unsigned computeOccupancy(
 
   // contraint on SGPR
   if (SGPRCount) {
-    Occupancy = utils::getOccupancyWithNumSGPRs(SGPRCount);
+    Occupancy = hsa_utils::getOccupancyWithNumSGPRs(SGPRCount);
   }
 
   Occupancy = std::min(Occupancy, MaxWavesPerEU);
@@ -5263,7 +5266,7 @@ unsigned computeOccupancy(
 
   // constraint on LDS
   if (GroupSegmentSize) {
-    unsigned WaveNumByLDS = utils::getOccupancyWithLDS(
+    unsigned WaveNumByLDS = hsa_utils::getOccupancyWithLDS(
         GroupSegmentSize, MaxWavesPerEU, MaxFlatWorkgroupSize);
     Occupancy = std::min(Occupancy, WaveNumByLDS);
   } else {
@@ -5273,7 +5276,7 @@ unsigned computeOccupancy(
 
   return Occupancy;
 }
-} // namespace utils
+} // namespace hsa_utils
 
 } // namespace plugin
 } // namespace target

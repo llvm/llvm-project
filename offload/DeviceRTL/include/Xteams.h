@@ -18,7 +18,7 @@
 
 #ifndef OMPTARGET_DEVICERTL_XTEAMS_H
 #define OMPTARGET_DEVICERTL_XTEAMS_H
-#include "Types.h"
+#include "DeviceTypes.h"
 
 #define _CD double _Complex
 #define _CF float _Complex

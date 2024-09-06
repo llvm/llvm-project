@@ -14,8 +14,9 @@
 
 #include "Shared/Environment.h"
 
-#include "Types.h"
+#include "DeviceTypes.h"
 #include "extra_allocators.h"
+
 
 /// External API
 ///
