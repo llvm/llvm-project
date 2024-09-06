@@ -1,23 +1,23 @@
-// RUN: %clang_cc1 -triple %itanium_abi_triple %s -fsyntax-only -verify=expected,c99 -pedantic
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu %s -fsyntax-only -std=c23 -verify -pedantic
+// RUN: %clang_cc1 -triple %itanium_abi_triple %s -fsyntax-only -verify=expected,pre-c23 -pedantic
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu %s -fsyntax-only -std=c23 -verify=expected -pedantic
 enum e {A,
-        B = 42LL << 32,        // c99-warning {{enumerator values exceeding range of 'int' are a C23 extension}}
+        B = 42LL << 32,        // pre-c23-warning {{enumerator value which exceeds the range of 'int' is a C23 extension}}
       C = -4, D = 12456 };
 
 enum f { a = -2147483648, b = 2147483647 }; // ok.
 
 enum g {  // too negative
-   c = -2147483649,         // c99-warning {{enumerator values exceeding range of 'int' are a C23 extension}}
+   c = -2147483649,         // pre-c23-warning {{enumerator value which exceeds the range of 'int' is a C23 extension}}
    d = 2147483647 };
 enum h { e = -2147483648, // too pos
-   f = 2147483648,           // c99-warning {{enumerator values exceeding range of 'int' are a C23 extension}}
-  i = 0xFFFF0000 // c99-warning {{too large}}
+   f = 2147483648,           // pre-c23-warning {{enumerator value which exceeds the range of 'int' is a C23 extension}}
+  i = 0xFFFF0000 // pre-c23-warning {{too large}}
 };
 
 // minll maxull
 enum x                      // expected-warning {{enumeration values exceed range of largest integer}}
-{ y = -9223372036854775807LL-1,  // c99-warning {{enumerator values exceeding range of 'int' are a C23 extension}}
-z = 9223372036854775808ULL };    // c99-warning {{enumerator values exceeding range of 'int' are a C23 extension}}
+{ y = -9223372036854775807LL-1,  // pre-c23-warning {{enumerator value which exceeds the range of 'int' is a C23 extension}}
+z = 9223372036854775808ULL };    // pre-c23-warning {{enumerator value which exceeds the range of 'int' is a C23 extension}}
 
 int test(void) {
   return sizeof(enum e) ;
@@ -171,10 +171,7 @@ enum class GH42372_2 {
 
 enum IncOverflow {
   V2 = __INT_MAX__,
-  V3 // c99-warning {{incremented enumerator value that is exceeding range of 'int' is a C23 extension}}
-#if __STDC_VERSION__ >= 202311L
-  // expected-warning@-2 {{incremented enumerator value that is exceeding range of 'int' is incompatible with C standards before C23}}
-#endif
+  V3 // pre-c23-warning {{incremented enumerator value which exceeds the range of 'int' is a C23 extension}}
 };
 
 #if __STDC_VERSION__ >= 202311L
@@ -207,7 +204,7 @@ void fooinc23() {
 
   enum E2 {
     V2 = INT_MAX,
-    V3 // expected-warning {{incremented enumerator value that is exceeding range of 'int' is incompatible with C standards before C23}}
+    V3
   } e2;
 
   enum E3 {

@@ -19479,10 +19479,10 @@ EnumConstantDecl *Sema::CheckEnumConstant(EnumDecl *Enum,
 
           // Complain if the value is not representable in an int.
           if (!isRepresentableIntegerValue(Context, EnumVal, Context.IntTy)) {
-            Diag(IdLoc, (getLangOpts().C23)
+            Diag(IdLoc, getLangOpts().C23
                             ? diag::warn_c17_compat_enum_value_not_int
                             : diag::ext_c23_enum_value_not_int)
-                << toString(EnumVal, 10) << Val->getSourceRange()
+                << 0 << toString(EnumVal, 10) << Val->getSourceRange()
                 << (EnumVal.isUnsigned() || EnumVal.isNonNegative());
           } else if (!Context.hasSameType(Val->getType(), Context.IntTy)) {
             // Force the type of the expression to 'int'.
@@ -19565,16 +19565,16 @@ EnumConstantDecl *Sema::CheckEnumConstant(EnumDecl *Enum,
         // Exclude fixed enumerators since they are diagnosed with an error for
         // this case.
         if (!getLangOpts().CPlusPlus && !T.isNull() && !Enum->isFixed())
-          Diag(IdLoc, (getLangOpts().C23)
-                          ? diag::warn_c17_compat_enum_value_int_overflow
-                          : diag::ext_c23_enum_value_int_overflow);
+          Diag(IdLoc, getLangOpts().C23
+                          ? diag::warn_c17_compat_enum_value_not_int
+                          : diag::ext_c23_enum_value_not_int)
+              << 1 << toString(EnumVal, 10) << 1;
       } else if (!getLangOpts().CPlusPlus && !EltTy->isDependentType() &&
                  !isRepresentableIntegerValue(Context, EnumVal, EltTy)) {
         // Enforce C99 6.7.2.2p2 even when we compute the next value.
-        Diag(IdLoc, (getLangOpts().C23)
-                        ? diag::warn_c17_compat_enum_value_not_int
-                        : diag::ext_c23_enum_value_not_int)
-            << toString(EnumVal, 10) << 1;
+        Diag(IdLoc, getLangOpts().C23 ? diag::warn_c17_compat_enum_value_not_int
+                                      : diag::ext_c23_enum_value_not_int)
+            << 1 << toString(EnumVal, 10) << 1;
       }
     }
   }
