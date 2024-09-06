@@ -935,8 +935,7 @@ void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
   IRBuilder<> Builder(State.CFG.PrevBB->getTerminator());
   // FIXME: Model VF * UF computation completely in VPlan.
   if (VF.getNumUsers()) {
-    Value *RuntimeVF =
-        createStepForVF(Builder, TripCountV->getType(), State.VF, 1);
+    Value *RuntimeVF = getRuntimeVF(Builder, TripCountV->getType(), State.VF);
     VF.setUnderlyingValue(RuntimeVF);
     VFxUF.setUnderlyingValue(
         State.UF > 1
@@ -1257,8 +1256,8 @@ VPlan *VPlan::duplicate() {
         NewPlan->getOrAddLiveIn(OldLiveIn->getLiveInIRValue());
   }
   Old2NewVPValues[&VectorTripCount] = &NewPlan->VectorTripCount;
-  Old2NewVPValues[&VFxUF] = &NewPlan->VFxUF;
   Old2NewVPValues[&VF] = &NewPlan->VF;
+  Old2NewVPValues[&VFxUF] = &NewPlan->VFxUF;
   if (BackedgeTakenCount) {
     NewPlan->BackedgeTakenCount = new VPValue();
     Old2NewVPValues[BackedgeTakenCount] = NewPlan->BackedgeTakenCount;

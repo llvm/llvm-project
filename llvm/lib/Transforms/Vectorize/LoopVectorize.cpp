@@ -8189,11 +8189,11 @@ createWidenInductionRecipes(PHINode *Phi, Instruction *PhiOrTrunc,
   VPValue *Step =
       vputils::getOrCreateVPValueForSCEVExpr(Plan, IndDesc.getStep(), SE);
   if (auto *TruncI = dyn_cast<TruncInst>(PhiOrTrunc)) {
-    return new VPWidenIntOrFpInductionRecipe(Phi, Start, Step, Plan.getVF(),
+    return new VPWidenIntOrFpInductionRecipe(Phi, Start, Step, &Plan.getVF(),
                                              IndDesc, TruncI);
   }
   assert(isa<PHINode>(PhiOrTrunc) && "must be a phi node here");
-  return new VPWidenIntOrFpInductionRecipe(Phi, Start, Step, Plan.getVF(),
+  return new VPWidenIntOrFpInductionRecipe(Phi, Start, Step, &Plan.getVF(),
                                            IndDesc);
 }
 

@@ -60,7 +60,7 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
         VPValue *Step =
             vputils::getOrCreateVPValueForSCEVExpr(*Plan, II->getStep(), SE);
         NewRecipe = new VPWidenIntOrFpInductionRecipe(Phi, Start, Step,
-                                                      Plan->getVF(), *II);
+                                                      &Plan->getVF(), *II);
       } else {
         assert(isa<VPInstruction>(&Ingredient) &&
                "only VPInstructions expected here");

@@ -1812,7 +1812,7 @@ public:
 
   VPWidenIntOrFpInductionRecipe *clone() override {
     return new VPWidenIntOrFpInductionRecipe(
-        IV, getStartValue(), getStepValue(), getOperand(2), IndDesc, Trunc);
+        IV, getStartValue(), getStepValue(), getVFValue(), IndDesc, Trunc);
   }
 
   VP_CLASSOF_IMPL(VPDef::VPWidenIntOrFpInductionSC)
@@ -3417,7 +3417,7 @@ public:
   VPValue &getVectorTripCount() { return VectorTripCount; }
 
   /// Returns the VF of the vector loop region.
-  VPValue *getVF() { return &VF; };
+  VPValue &getVF() { return VF; };
 
   /// Returns VF * UF of the vector loop region.
   VPValue &getVFxUF() { return VFxUF; }
