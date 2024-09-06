@@ -24,7 +24,9 @@
 namespace llvm {
 namespace mustache {
 
-using Accessor = std::vector<std::string>;
+using Accessor = std::vector<SmallString<128>>;
+using Lambda = std::function<llvm::json::Value()>;
+using SectionLambda = std::function<llvm::json::Value(StringRef)>;
 
 class Token {
 public:
@@ -39,20 +41,27 @@ public:
     Comment,
   };
 
-  Token(std::string Str);
+  Token(StringRef Str);
 
-  Token(std::string Str, char Identifier);
+  Token(StringRef RawBody, StringRef Str, char Identifier);
 
-  std::string getTokenBody() const { return TokenBody; };
+  StringRef getTokenBody() const { return TokenBody; };
+
+  StringRef getRawBody() const { return RawBody; };
+
+  void setTokenBody(SmallString<128> NewBody) { TokenBody = NewBody; };
 
   Accessor getAccessor() const { return Accessor; };
 
   Type getType() const { return TokenType; };
 
+  static Type getTokenType(char Identifier);
+
 private:
   Type TokenType;
+  SmallString<128> RawBody;
   Accessor Accessor;
-  std::string TokenBody;
+  SmallString<128> TokenBody;
 };
 
 class ASTNode {
@@ -69,7 +78,7 @@ public:
 
   ASTNode() : T(Type::Root), LocalContext(nullptr){};
 
-  ASTNode(std::string Body, std::shared_ptr<ASTNode> Parent)
+  ASTNode(StringRef Body, std::shared_ptr<ASTNode> Parent)
       : T(Type::Text), Body(Body), Parent(Parent), LocalContext(nullptr){};
 
   // Constructor for Section/InvertSection/Variable/UnescapeVariable
@@ -81,26 +90,56 @@ public:
     Children.emplace_back(Child);
   };
 
-  std::string render(llvm::json::Value Data);
+  SmallString<128> getBody() const { return Body; };
 
+  void setBody(StringRef NewBody) { Body = NewBody; };
+
+  void setRawBody(StringRef NewBody) { RawBody = NewBody; };
+
+  SmallString<128> getRawBody() const { return RawBody; };
+
+  std::shared_ptr<ASTNode> getLastChild() const {
+    return Children.empty() ? nullptr : Children.back();
+  };
+
+  SmallString<128>
+  render(llvm::json::Value Data,
+         DenseMap<StringRef, std::shared_ptr<ASTNode>> &Partials,
+         DenseMap<StringRef, Lambda> &Lambdas,
+         DenseMap<StringRef, SectionLambda> &SectionLambdas,
+         DenseMap<char, StringRef> &Escapes);
+
+private:
   llvm::json::Value findContext();
-
   Type T;
-  std::string Body;
+  SmallString<128> RawBody;
+  SmallString<128> Body;
   std::weak_ptr<ASTNode> Parent;
   std::vector<std::shared_ptr<ASTNode>> Children;
-  Accessor Accessor;
+  const Accessor Accessor;
   llvm::json::Value LocalContext;
 };
 
 class Template {
 public:
-  static Expected<Template> createTemplate(std::string TemplateStr);
+  static Template createTemplate(StringRef TemplateStr);
 
-  std::string render(llvm::json::Value Data);
+  SmallString<128> render(llvm::json::Value Data);
+
+  void registerPartial(StringRef Name, StringRef Partial);
+
+  void registerLambda(StringRef Name, Lambda Lambda);
+
+  void registerLambda(StringRef Name, SectionLambda Lambda);
+
+  void registerEscape(DenseMap<char, StringRef> Escapes);
 
 private:
   Template(std::shared_ptr<ASTNode> Tree) : Tree(Tree){};
+  DenseMap<StringRef, std::shared_ptr<ASTNode>> Partials;
+  DenseMap<StringRef, Lambda> Lambdas;
+  DenseMap<StringRef, SectionLambda> SectionLambdas;
+  DenseMap<char, StringRef> Escapes;
   std::shared_ptr<ASTNode> Tree;
 };
 

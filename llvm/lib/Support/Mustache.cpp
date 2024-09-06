@@ -16,103 +16,172 @@ using namespace llvm;
 using namespace llvm::json;
 using namespace llvm::mustache;
 
-std::string escapeHtml(const std::string &Input) {
-  DenseMap<char, std::string> HtmlEntities = {{'&', "&amp;"},
-                                              {'<', "&lt;"},
-                                              {'>', "&gt;"},
-                                              {'"', "&quot;"},
-                                              {'"', "&#39;"}};
-  std::string EscapedString;
-  EscapedString.reserve(Input.size());
-
+SmallString<128> escapeString(StringRef Input,
+                              DenseMap<char, StringRef> &Escape) {
+  SmallString<128> EscapedString("");
   for (char C : Input) {
-    if (HtmlEntities.find(C) != HtmlEntities.end()) {
-      EscapedString += HtmlEntities[C];
+    if (Escape.find(C) != Escape.end()) {
+      EscapedString += Escape[C];
     } else {
       EscapedString += C;
     }
   }
-
   return EscapedString;
 }
 
-std::vector<std::string> split(const std::string &Str, char Delimiter) {
-  std::vector<std::string> Tokens;
-  std::string Token;
-  std::stringstream SS(Str);
+std::vector<SmallString<128>> split(StringRef Str, char Delimiter) {
+  std::vector<SmallString<128>> Tokens;
   if (Str == ".") {
     Tokens.push_back(Str);
     return Tokens;
   }
-  while (std::getline(SS, Token, Delimiter)) {
-    Tokens.push_back(Token);
+  StringRef Ref(Str);
+  while (!Ref.empty()) {
+    llvm::StringRef Part;
+    std::tie(Part, Ref) = Ref.split(Delimiter);
+    Tokens.push_back(Part.trim());
   }
   return Tokens;
 }
 
-Token::Token(std::string Str, char Identifier) {
-  switch (Identifier) {
-  case '#':
-    TokenType = Type::SectionOpen;
-    break;
-  case '/':
-    TokenType = Type::SectionClose;
-    break;
-  case '^':
-    TokenType = Type::InvertSectionOpen;
-    break;
-  case '!':
-    TokenType = Type::Comment;
-    break;
-  case '>':
-    TokenType = Type::Partial;
-    break;
-  case '&':
-    TokenType = Type::UnescapeVariable;
-    break;
-  default:
-    TokenType = Type::Variable;
-  }
+Token::Token(StringRef RawBody, StringRef InnerBody, char Identifier)
+    : RawBody(RawBody), TokenBody(InnerBody) {
+
+  TokenType = getTokenType(Identifier);
   if (TokenType == Type::Comment)
     return;
 
-  TokenBody = Str;
-  std::string AccessorStr = Str;
+  StringRef AccessorStr = InnerBody;
   if (TokenType != Type::Variable) {
-    AccessorStr = Str.substr(1);
+    AccessorStr = InnerBody.substr(1);
   }
-  Accessor = split(StringRef(AccessorStr).trim().str(), '.');
+  Accessor = split(AccessorStr.trim(), '.');
 }
 
-Token::Token(std::string Str)
-    : TokenType(Type::Text), TokenBody(Str), Accessor({}) {}
+Token::Token(StringRef Str)
+    : RawBody(Str), TokenType(Type::Text), TokenBody(Str), Accessor({}) {}
 
-std::vector<Token> tokenize(std::string Template) {
+Token::Type Token::getTokenType(char Identifier) {
+  switch (Identifier) {
+  case '#':
+    return Type::SectionOpen;
+  case '/':
+    return Type::SectionClose;
+  case '^':
+    return Type::InvertSectionOpen;
+  case '!':
+    return Type::Comment;
+  case '>':
+    return Type::Partial;
+  case '&':
+    return Type::UnescapeVariable;
+  default:
+    return Type::Variable;
+  }
+}
+
+std::vector<Token> tokenize(StringRef Template) {
+  // Simple tokenizer that splits the template into tokens
+  // the mustache spec allows {{{ }}} to unescape variables
+  // but we don't support that here unescape variable
+  // is represented only by {{& variable}}
   std::vector<Token> Tokens;
-  std::regex Re(R"(\{\{(.*?)\}\})");
-  std::sregex_token_iterator Iter(Template.begin(), Template.end(), Re,
-                                  {-1, 0});
-  std::sregex_token_iterator End;
-
-  for (; Iter != End; ++Iter) {
-    if (!Iter->str().empty()) {
-      std::string Token = *Iter;
-      std::smatch Match;
-      if (std::regex_match(Token, Match, Re)) {
-        std::string Group = Match[1];
-        Tokens.emplace_back(Group, Group[0]);
-      } else {
-        Tokens.emplace_back(Token);
-      }
+  SmallString<128> Open("{{");
+  SmallString<128> Close("}}");
+  std::size_t Start = 0;
+  std::size_t DelimiterStart = Template.find(Open);
+  if (DelimiterStart == StringRef::npos) {
+    Tokens.push_back(Token(Template));
+    return Tokens;
+  }
+  while (DelimiterStart != StringRef::npos) {
+    if (DelimiterStart != Start) {
+      Token TextToken = Token(Template.substr(Start, DelimiterStart - Start));
+      Tokens.push_back(TextToken);
     }
+
+    std::size_t DelimiterEnd = Template.find(Close, DelimiterStart);
+    if (DelimiterEnd == StringRef::npos) {
+      break;
+    }
+
+    SmallString<128> Interpolated =
+        Template.substr(DelimiterStart + Open.size(),
+                        DelimiterEnd - DelimiterStart - Close.size());
+    SmallString<128> RawBody;
+    RawBody += Open;
+    RawBody += Interpolated;
+    RawBody += Close;
+
+    Tokens.push_back(Token(RawBody, Interpolated, Interpolated[0]));
+    Start = DelimiterEnd + Close.size();
+    DelimiterStart = Template.find(Open, Start);
   }
 
+  if (Start < Template.size()) {
+    Tokens.push_back(Token(Template.substr(Start)));
+  }
+
+  // fix up white spaces for
+  // open sections/inverted sections/close section/comment
+  for (std::size_t I = 0; I < Tokens.size(); I++) {
+    Token::Type CurrentType = Tokens[I].getType();
+    bool RequiresCleanUp = CurrentType == Token::Type::SectionOpen ||
+                           CurrentType == Token::Type::InvertSectionOpen ||
+                           CurrentType == Token::Type::SectionClose ||
+                           CurrentType == Token::Type::Comment ||
+                           CurrentType == Token::Type::Partial;
+
+    bool NoTextBehind = false;
+    bool NoTextAhead = false;
+    if (I > 0 && Tokens[I - 1].getType() == Token::Type::Text &&
+        RequiresCleanUp) {
+      Token &PrevToken = Tokens[I - 1];
+      StringRef TokenBody = PrevToken.getTokenBody().rtrim(" \t\v\t");
+      if (TokenBody.ends_with("\n") || TokenBody.ends_with("\r\n") ||
+          TokenBody.empty()) {
+        NoTextBehind = true;
+      }
+    }
+    if (I < Tokens.size() - 1 && Tokens[I + 1].getType() == Token::Type::Text &&
+        RequiresCleanUp) {
+      Token &NextToken = Tokens[I + 1];
+      StringRef TokenBody = NextToken.getTokenBody().ltrim(" ");
+      if (TokenBody.starts_with("\r\n") || TokenBody.starts_with("\n")) {
+        NoTextAhead = true;
+      }
+    }
+
+    if (NoTextBehind && NoTextAhead) {
+      Token &PrevToken = Tokens[I - 1];
+      Token &NextToken = Tokens[I + 1];
+      StringRef NextTokenBody = NextToken.getTokenBody();
+      PrevToken.setTokenBody(PrevToken.getTokenBody().rtrim(" \t\v\t"));
+      if (NextTokenBody.starts_with("\r\n")) {
+        NextToken.setTokenBody(NextTokenBody.substr(2));
+      } else if (NextToken.getTokenBody().starts_with("\n")) {
+        NextToken.setTokenBody(NextTokenBody.substr(1));
+      }
+    } else if (NoTextAhead && I == 0) {
+      Token &NextToken = Tokens[I + 1];
+      StringRef NextTokenBody = NextToken.getTokenBody();
+      if (NextTokenBody.starts_with("\r\n")) {
+        NextToken.setTokenBody(NextTokenBody.substr(2));
+      } else if (NextToken.getTokenBody().starts_with("\n")) {
+        NextToken.setTokenBody(NextTokenBody.substr(1));
+      }
+    } else if (NoTextBehind && I == Tokens.size() - 1) {
+      Token &PrevToken = Tokens[I - 1];
+      StringRef PrevTokenBody = PrevToken.getTokenBody();
+      PrevToken.setTokenBody(PrevTokenBody.rtrim(" \t\v\t"));
+    }
+  }
   return Tokens;
 }
 
 class Parser {
 public:
-  Parser(std::string TemplateStr) : TemplateStr(TemplateStr) {}
+  Parser(StringRef TemplateStr) : TemplateStr(TemplateStr) {}
 
   std::shared_ptr<ASTNode> parse();
 
@@ -121,7 +190,7 @@ private:
 
   std::vector<Token> Tokens;
   std::size_t CurrentPtr;
-  std::string TemplateStr;
+  StringRef TemplateStr;
 };
 
 std::shared_ptr<ASTNode> Parser::parse() {
@@ -165,14 +234,34 @@ void Parser::parseMustache(std::shared_ptr<ASTNode> Parent) {
     }
     case Token::Type::SectionOpen: {
       CurrentNode = std::make_shared<ASTNode>(ASTNode::Section, A, Parent);
+      std::size_t Start = CurrentPtr;
       parseMustache(CurrentNode);
+      std::size_t End = CurrentPtr;
+      SmallString<128> RawBody;
+      if (Start + 1 < End - 1)
+        for (std::size_t I = Start + 1; I < End - 1; I++) {
+          RawBody += Tokens[I].getRawBody();
+        }
+      else if (Start + 1 == End - 1)
+        RawBody = Tokens[Start].getRawBody();
+      CurrentNode->setRawBody(RawBody);
       Parent->addChild(CurrentNode);
       break;
     }
     case Token::Type::InvertSectionOpen: {
       CurrentNode =
           std::make_shared<ASTNode>(ASTNode::InvertSection, A, Parent);
+      std::size_t Start = CurrentPtr;
       parseMustache(CurrentNode);
+      std::size_t End = CurrentPtr;
+      SmallString<128> RawBody;
+      if (Start + 1 < End - 1)
+        for (std::size_t I = Start + 1; I < End - 1; I++) {
+          RawBody += Tokens[I].getRawBody();
+        }
+      else if (Start + 1 == End - 1)
+        RawBody = Tokens[Start].getRawBody();
+      CurrentNode->setRawBody(RawBody);
       Parent->addChild(CurrentNode);
       break;
     }
@@ -185,59 +274,167 @@ void Parser::parseMustache(std::shared_ptr<ASTNode> Parent) {
   }
 }
 
-Expected<Template> Template::createTemplate(std::string TemplateStr) {
+Template Template::createTemplate(StringRef TemplateStr) {
   Parser P = Parser(TemplateStr);
-  Expected<std::shared_ptr<ASTNode>> MustacheTree = P.parse();
-  if (!MustacheTree)
-    return MustacheTree.takeError();
-  return Template(MustacheTree.get());
+  std::shared_ptr<ASTNode> MustacheTree = P.parse();
+  Template T = Template(MustacheTree);
+  // the default behaviour is to escape html entities
+  DenseMap<char, StringRef> HtmlEntities = {{'&', "&amp;"},
+                                            {'<', "&lt;"},
+                                            {'>', "&gt;"},
+                                            {'"', "&quot;"},
+                                            {'\'', "&#39;"}};
+  T.registerEscape(HtmlEntities);
+  return T;
 }
-std::string Template::render(Value Data) { return Tree->render(Data); }
 
-std::string printJson(Value &Data) {
-  if (Data.getAsNull().has_value()) {
-    return "";
+SmallString<128> Template::render(Value Data) {
+  return Tree->render(Data, Partials, Lambdas, SectionLambdas, Escapes);
+}
+
+void Template::registerPartial(StringRef Name, StringRef Partial) {
+  Parser P = Parser(Partial);
+  std::shared_ptr<ASTNode> PartialTree = P.parse();
+  Partials[Name] = PartialTree;
+}
+
+void Template::registerLambda(StringRef Name, Lambda L) { Lambdas[Name] = L; }
+
+void Template::registerLambda(StringRef Name, SectionLambda L) {
+  SectionLambdas[Name] = L;
+}
+
+void Template::registerEscape(DenseMap<char, StringRef> E) { Escapes = E; }
+
+SmallString<128> printJson(Value &Data) {
+
+  SmallString<128> Result;
+  if (Data.getAsNull()) {
+    return Result;
   }
   if (auto *Arr = Data.getAsArray()) {
     if (Arr->empty()) {
-      return "";
+      return Result;
     }
   }
-  if (Data.getAsString().has_value()) {
-    return Data.getAsString()->str();
+  if (Data.getAsString()) {
+    Result += Data.getAsString()->str();
+    return Result;
   }
   return llvm::formatv("{0:2}", Data);
 }
 
-std::string ASTNode::render(Value Data) {
+bool isFalsey(Value &V) {
+  return V.getAsNull() || (V.getAsBoolean() && !V.getAsBoolean().value()) ||
+         (V.getAsArray() && V.getAsArray()->empty()) ||
+         (V.getAsObject() && V.getAsObject()->empty());
+}
+
+SmallString<128>
+ASTNode::render(Value Data,
+                DenseMap<StringRef, std::shared_ptr<ASTNode>> &Partials,
+                DenseMap<StringRef, Lambda> &Lambdas,
+                DenseMap<StringRef, SectionLambda> &SectionLambdas,
+                DenseMap<char, StringRef> &Escapes) {
   LocalContext = Data;
   Value Context = T == Root ? Data : findContext();
+  SmallString<128> Result;
   switch (T) {
   case Root: {
-    std::string Result = "";
-    for (std::shared_ptr<ASTNode> Child : Children) {
-      Result += Child->render(Context);
-    }
+    for (std::shared_ptr<ASTNode> Child : Children)
+      Result +=
+          Child->render(Context, Partials, Lambdas, SectionLambdas, Escapes);
     return Result;
   }
   case Text:
-    return escapeHtml(Body);
-  case Partial:
-    break;
-  case Variable:
-    return escapeHtml(printJson(Context));
-  case UnescapeVariable:
-    return printJson(Context);
-  case Section:
-    break;
-  case InvertSection:
-    break;
+    return Body;
+  case Partial: {
+    if (Partials.find(Accessor[0]) != Partials.end()) {
+      std::shared_ptr<ASTNode> Partial = Partials[Accessor[0]];
+      Result +=
+          Partial->render(Data, Partials, Lambdas, SectionLambdas, Escapes);
+      return Result;
+    }
   }
+  case Variable: {
+    if (Lambdas.find(Accessor[0]) != Lambdas.end()) {
+      Lambda &L = Lambdas[Accessor[0]];
+      Value LambdaResult = L();
+      StringRef LambdaStr = printJson(LambdaResult);
+      Parser P = Parser(LambdaStr);
+      std::shared_ptr<ASTNode> LambdaNode = P.parse();
+      return LambdaNode->render(Data, Partials, Lambdas, SectionLambdas,
+                                Escapes);
+    }
+    return escapeString(printJson(Context), Escapes);
+  }
+  case UnescapeVariable: {
+    if (Lambdas.find(Accessor[0]) != Lambdas.end()) {
+      Lambda &L = Lambdas[Accessor[0]];
+      Value LambdaResult = L();
+      StringRef LambdaStr = printJson(LambdaResult);
+      Parser P = Parser(LambdaStr);
+      std::shared_ptr<ASTNode> LambdaNode = P.parse();
+      DenseMap<char, StringRef> EmptyEscapes;
+      return LambdaNode->render(Data, Partials, Lambdas, SectionLambdas,
+                                EmptyEscapes);
+    }
+    return printJson(Context);
+  }
+  case Section: {
+    // Sections are not rendered if the context is falsey
+    bool IsLambda = SectionLambdas.find(Accessor[0]) != SectionLambdas.end();
 
-  return std::string();
+    if (isFalsey(Context) && !IsLambda)
+      return Result;
+
+    if (IsLambda) {
+      SectionLambda &Lambda = SectionLambdas[Accessor[0]];
+      Value Return = Lambda(RawBody);
+      if (isFalsey(Return))
+        return Result;
+      StringRef LambdaStr = printJson(Return);
+      Parser P = Parser(LambdaStr);
+      std::shared_ptr<ASTNode> LambdaNode = P.parse();
+      return LambdaNode->render(Data, Partials, Lambdas, SectionLambdas,
+                                Escapes);
+    }
+
+    if (Context.getAsArray()) {
+      json::Array *Arr = Context.getAsArray();
+      for (Value &V : *Arr) {
+        for (std::shared_ptr<ASTNode> Child : Children)
+          Result +=
+              Child->render(V, Partials, Lambdas, SectionLambdas, Escapes);
+      }
+      return Result;
+    }
+
+    for (std::shared_ptr<ASTNode> Child : Children)
+      Result +=
+          Child->render(Context, Partials, Lambdas, SectionLambdas, Escapes);
+
+    return Result;
+  }
+  case InvertSection: {
+    bool IsLambda = SectionLambdas.find(Accessor[0]) != SectionLambdas.end();
+    if (!isFalsey(Context) || IsLambda)
+      return Result;
+    for (std::shared_ptr<ASTNode> Child : Children)
+      Result +=
+          Child->render(Context, Partials, Lambdas, SectionLambdas, Escapes);
+    return Result;
+  }
+  }
+  llvm_unreachable("Invalid ASTNode type");
 }
 
 Value ASTNode::findContext() {
+  // The mustache spec allows for dot notation to access nested values
+  // a single dot refers to the current context
+  // We attempt to find the JSON context in the current node if it is not found
+  // we traverse the parent nodes to find the context until we reach the root
+  // node or the context is found
   if (Accessor.empty()) {
     return nullptr;
   }
@@ -245,7 +442,7 @@ Value ASTNode::findContext() {
     return LocalContext;
   }
   json::Object *CurrentContext = LocalContext.getAsObject();
-  std::string &CurrentAccessor = Accessor[0];
+  SmallString<128> CurrentAccessor = Accessor[0];
   std::weak_ptr<ASTNode> CurrentParent = Parent;
 
   while (!CurrentContext || !CurrentContext->get(CurrentAccessor)) {
@@ -257,13 +454,13 @@ Value ASTNode::findContext() {
     return nullptr;
   }
   Value Context = nullptr;
-  for (std::size_t i = 0; i < Accessor.size(); i++) {
-    CurrentAccessor = Accessor[i];
+  for (std::size_t I = 0; I < Accessor.size(); I++) {
+    CurrentAccessor = Accessor[I];
     Value *CurrentValue = CurrentContext->get(CurrentAccessor);
     if (!CurrentValue) {
       return nullptr;
     }
-    if (i < Accessor.size() - 1) {
+    if (I < Accessor.size() - 1) {
       CurrentContext = CurrentValue->getAsObject();
       if (!CurrentContext) {
         return nullptr;
