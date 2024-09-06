@@ -19,6 +19,10 @@ namespace usage_invalid {
 namespace usage_ok {
   struct IntRef { int *target; };
 
+  const int &crefparam(const int &param); // Omitted in first decl
+  const int &crefparam(const int &param); // Omitted in second decl
+  const int &crefparam(const int &param [[clang::lifetimebound]]); // Add LB
+  const int &crefparam(const int &param) { return param; } // Omit in impl
   int &refparam(int &param [[clang::lifetimebound]]);
   int &classparam(IntRef param [[clang::lifetimebound]]);
 
@@ -48,6 +52,7 @@ namespace usage_ok {
   int *p = A().class_member(); // expected-warning {{temporary whose address is used as value of local variable 'p' will be destroyed at the end of the full-expression}}
   int *q = A(); // expected-warning {{temporary whose address is used as value of local variable 'q' will be destroyed at the end of the full-expression}}
   int *r = A(1); // expected-warning {{temporary whose address is used as value of local variable 'r' will be destroyed at the end of the full-expression}}
+  const int& s = crefparam(2); // expected-warning {{temporary bound to local reference 's' will be destroyed at the end of the full-expression}}
 
   void test_assignment() {
     p = A().class_member(); // expected-warning {{object backing the pointer p will be destroyed at the end of the full-expression}}

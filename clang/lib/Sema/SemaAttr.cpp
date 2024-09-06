@@ -217,7 +217,8 @@ void Sema::inferGslOwnerPointerAttribute(CXXRecordDecl *Record) {
 }
 
 void Sema::inferLifetimeBoundAttribute(FunctionDecl *FD) {
-  if (FD->getNumParams() == 0)
+  unsigned NumParams = FD->getNumParams();
+  if (NumParams == 0)
     return;
 
   if (unsigned BuiltinID = FD->getBuiltinID()) {
@@ -239,18 +240,13 @@ void Sema::inferLifetimeBoundAttribute(FunctionDecl *FD) {
     default:
       break;
     }
-    return;
-  }
-  if (auto *CMD = dyn_cast<CXXMethodDecl>(FD)) {
-    const auto *CRD = CMD->getParent();
-    if (!CRD->isInStdNamespace() || !CRD->getIdentifier())
-      return;
-
-    if (isa<CXXConstructorDecl>(CMD)) {
+  } else if (auto *CMD = dyn_cast<CXXMethodDecl>(FD)) {
+    const CXXRecordDecl *CRD = CMD->getParent();
+    if (CRD->isInStdNamespace() && CRD->getIdentifier() &&
+        isa<CXXConstructorDecl>(CMD)) {
       auto *Param = CMD->getParamDecl(0);
-      if (Param->hasAttr<LifetimeBoundAttr>())
-        return;
-      if (CRD->getName() == "basic_string_view" &&
+      if (!Param->hasAttr<LifetimeBoundAttr>() &&
+          CRD->getName() == "basic_string_view" &&
           Param->getType()->isPointerType()) {
         // construct from a char array pointed by a pointer.
         //   basic_string_view(const CharT* s);
@@ -264,6 +260,20 @@ void Sema::inferLifetimeBoundAttribute(FunctionDecl *FD) {
         if (LRT && LRT->getPointeeType().IgnoreParens()->isArrayType())
           Param->addAttr(
               LifetimeBoundAttr::CreateImplicit(Context, FD->getLocation()));
+      }
+    }
+  } else if (auto *CanonDecl = FD->getCanonicalDecl(); FD != CanonDecl) {
+    // Propagate the lifetimebound attribute from parameters to the canonical
+    // declaration.
+    // Note that this doesn't include the implicit 'this' parameter, as the
+    // attribute is applied to the function type in that case.
+    unsigned NP = std::min(NumParams, CanonDecl->getNumParams());
+    for (unsigned I = 0; I < NP; ++I) {
+      auto *CanonParam = CanonDecl->getParamDecl(I);
+      if (!CanonParam->hasAttr<LifetimeBoundAttr>() &&
+          FD->getParamDecl(I)->hasAttr<LifetimeBoundAttr>()) {
+        CanonParam->addAttr(LifetimeBoundAttr::CreateImplicit(
+            Context, CanonParam->getLocation()));
       }
     }
   }
