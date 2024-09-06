@@ -161,7 +161,7 @@ void EnumInitialValueCheck::check(const MatchFinder::MatchResult &Result) {
   if (const auto *Enum = Result.Nodes.getNodeAs<EnumDecl>("inconsistent")) {
     DiagnosticBuilder Diag =
         diag(Enum->getBeginLoc(),
-             "inital values in enum %0 are not consistent, consider explicit "
+             "initial values in enum %0 are not consistent, consider explicit "
              "initialization of all, none or only the first enumerator")
         << Enum;
     for (const EnumConstantDecl *ECD : Enum->enumerators())
