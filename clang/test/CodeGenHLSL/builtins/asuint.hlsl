@@ -1,26 +1,41 @@
-// RUN: %clang_cc1 -finclude-default-header -x hlsl -triple dxil-pc-shadermodel6.3-library %s -fnative-half-type -emit-llvm -disable-llvm-passes -o - | FileCheck %s
+// RUN: %clang_cc1 -finclude-default-header -x hlsl -triple dxil-pc-shadermodel6.3-library %s -fnative-half-type -emit-llvm -O1 -o - | FileCheck %s
 
-
-// CHECK-LABEL: test_asuint4_uint
-// CHECK: ret i32 %0
-export uint test_asuint4_uint(uint p0) {
+// CHECK: define {{.*}}test_uint{{.*}}(i32 {{.*}} [[VAL:%.*]]){{.*}} 
+// CHECK-NOT: bitcast
+// CHECK: ret i32 [[VAL]]
+export uint test_uint(uint p0) {
   return asuint(p0);
 }
 
-// CHECK-LABEL: test_asuint4_int
-// CHECK: %splat.splatinsert = insertelement <4 x i32> poison, i32 %0, i64 0
-export uint4 test_asuint4_int(int p0) {
+// CHECK: define {{.*}}test_int{{.*}}(i32 {{.*}} [[VAL:%.*]]){{.*}} 
+// CHECK-NOT: bitcast
+// CHECK: ret i32 [[VAL]]
+export uint test_int(int p0) {
   return asuint(p0);
 }
 
-// CHECK-LABEL: test_asuint_float
-// CHECK: %1 = bitcast float %0 to i32
-export uint test_asuint_float(float p0) {
+// CHECK: define {{.*}}test_float{{.*}}(float {{.*}} [[VAL:%.*]]){{.*}} 
+// CHECK: bitcast float [[VAL]] to i32
+export uint test_float(float p0) {
   return asuint(p0);
 }
 
-// CHECK-LABEL: test_asuint_float
-// CHECK: %1 = bitcast <4 x float> %0 to <4 x i32>
-export uint4 test_asuint_float4(float4 p0) {
+// CHECK: define {{.*}}test_vector_uint{{.*}}(<4 x i32> {{.*}} [[VAL:%.*]]){{.*}} 
+// CHECK-NOT: bitcast
+// CHECK: ret <4 x i32> [[VAL]]
+export uint4 test_vector_uint(uint4 p0) {
+  return asuint(p0);
+}
+
+// CHECK: define {{.*}}test_vector_int{{.*}}(<4 x i32> {{.*}} [[VAL:%.*]]){{.*}} 
+// CHECK-NOT: bitcast
+// CHECK: ret <4 x i32> [[VAL]]
+export uint4 test_vector_int(int4 p0) {
+  return asuint(p0);
+}
+
+// CHECK: define {{.*}}test_vector_float{{.*}}(<4 x float> {{.*}} [[VAL:%.*]]){{.*}} 
+// CHECK: bitcast <4 x float> [[VAL]] to <4 x i32>
+export uint4 test_vector_float(float4 p0) {
   return asuint(p0);
 }

@@ -18867,7 +18867,7 @@ case Builtin::BI__builtin_hlsl_elementwise_isinf: {
         {}, false, true));
   }
   case Builtin::BI__builtin_hlsl_elementwise_asuint: {
-    Value *Op = EmitScalarExpr(E->getArg(0)->IgnoreImpCasts());
+    Value *Op = EmitScalarExpr(E->getArg(0));
 
     llvm::Type *DestTy = llvm::Type::getInt32Ty(this->getLLVMContext());
 
