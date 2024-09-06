@@ -216,6 +216,36 @@ namespace clang {
     }
     bool isUnsigned() const { return (Flags & UnsignedFlag) != 0; }
     bool isQuad() const { return (Flags & QuadFlag) != 0; }
+    unsigned getEltSizeInBits() const {
+      switch (getEltType()) {
+      case Int8:
+      case Poly8:
+        return 8;
+      case Int16:
+      case Float16:
+      case Poly16:
+      case BFloat16:
+        return 16;
+      case Int32:
+      case Float32:
+        return 32;
+      case Int64:
+      case Float64:
+      case Poly64:
+        return 64;
+      case Poly128:
+        return 128;
+      default:
+        llvm_unreachable("Invalid NeonTypeFlag!");
+      }
+    }
+  };
+
+  // Shared between SVE/SME and NEON
+  enum ImmCheckType {
+#define LLVM_GET_ARM_INTRIN_IMMCHECKTYPES
+#include "clang/Basic/arm_immcheck_types.inc"
+#undef LLVM_GET_ARM_INTRIN_IMMCHECKTYPES
   };
 
   /// Flags to identify the types for overloaded SVE builtins.
@@ -247,12 +277,6 @@ namespace clang {
 #define LLVM_GET_SVE_MERGETYPES
 #include "clang/Basic/arm_sve_typeflags.inc"
 #undef LLVM_GET_SVE_MERGETYPES
-    };
-
-    enum ImmCheckType {
-#define LLVM_GET_SVE_IMMCHECKTYPES
-#include "clang/Basic/arm_sve_typeflags.inc"
-#undef LLVM_GET_SVE_IMMCHECKTYPES
     };
 
     SVETypeFlags(uint64_t F) : Flags(F) {
