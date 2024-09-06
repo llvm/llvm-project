@@ -256,4 +256,28 @@ void test_s_ttracedata_imm()
   __builtin_amdgcn_s_ttracedata_imm(1);
 }
 
-
+// CHECK-LABEL: @test_s_prefetch_data(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[FP_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
+// CHECK-NEXT:    [[GP_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
+// CHECK-NEXT:    [[CP_ADDR:%.*]] = alloca ptr addrspace(4), align 8, addrspace(5)
+// CHECK-NEXT:    [[LEN_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    store ptr [[FP:%.*]], ptr addrspace(5) [[FP_ADDR]], align 8
+// CHECK-NEXT:    store ptr addrspace(1) [[GP:%.*]], ptr addrspace(5) [[GP_ADDR]], align 8
+// CHECK-NEXT:    store ptr addrspace(4) [[CP:%.*]], ptr addrspace(5) [[CP_ADDR]], align 8
+// CHECK-NEXT:    store i32 [[LEN:%.*]], ptr addrspace(5) [[LEN_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr addrspace(5) [[FP_ADDR]], align 8
+// CHECK-NEXT:    call void @llvm.amdgcn.s.prefetch.data.p0(ptr [[TMP0]], i32 0)
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[GP_ADDR]], align 8
+// CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(5) [[LEN_ADDR]], align 4
+// CHECK-NEXT:    call void @llvm.amdgcn.s.prefetch.data.p1(ptr addrspace(1) [[TMP1]], i32 [[TMP2]])
+// CHECK-NEXT:    [[TMP3:%.*]] = load ptr addrspace(4), ptr addrspace(5) [[CP_ADDR]], align 8
+// CHECK-NEXT:    call void @llvm.amdgcn.s.prefetch.data.p4(ptr addrspace(4) [[TMP3]], i32 31)
+// CHECK-NEXT:    ret void
+//
+void test_s_prefetch_data(int *fp, global float *gp, constant char *cp, unsigned int len)
+{
+  __builtin_amdgcn_s_prefetch_data(fp, 0);
+  __builtin_amdgcn_s_prefetch_data(gp, len);
+  __builtin_amdgcn_s_prefetch_data(cp, 31);
+}

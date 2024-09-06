@@ -97,6 +97,8 @@ write_cmake_config("config") {
     "HAVE_LIBPFM=",
     "HAVE_LIBPSAPI=",
     "HAVE_MALLCTL=",
+    "HAVE_PTHREAD_GET_NAME_NP=",
+    "HAVE_PTHREAD_SET_NAME_NP=",
     "HAVE_SIGNAL_H=1",
     "HAVE_SYS_STAT_H=1",
     "HAVE_SYS_TYPES_H=1",

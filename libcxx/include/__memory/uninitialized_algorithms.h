@@ -22,6 +22,7 @@
 #include <__memory/construct_at.h>
 #include <__memory/pointer_traits.h>
 #include <__memory/voidify.h>
+#include <__type_traits/enable_if.h>
 #include <__type_traits/extent.h>
 #include <__type_traits/is_array.h>
 #include <__type_traits/is_constant_evaluated.h>

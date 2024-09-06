@@ -2187,8 +2187,9 @@ bool SILoadStoreOptimizer::promoteConstantOffsetToImm(
     return false;
   }
 
-  LLVM_DEBUG(dbgs() << "  BASE: {" << MAddr.Base.HiReg << ", "
-             << MAddr.Base.LoReg << "} Offset: " << MAddr.Offset << "\n\n";);
+  LLVM_DEBUG(dbgs() << "  BASE: {" << printReg(MAddr.Base.HiReg, TRI) << ", "
+                    << printReg(MAddr.Base.LoReg, TRI)
+                    << "} Offset: " << MAddr.Offset << "\n\n";);
 
   // Step2: Traverse through MI's basic block and find an anchor(that has the
   // same base-registers) with the highest 13bit distance from MI's offset.

@@ -41,7 +41,7 @@ using llvm::formatv;
 // stable and useful way, where abstract Node subclasses correspond to ranges.
 class Hierarchy {
 public:
-  Hierarchy(const llvm::RecordKeeper &Records) {
+  Hierarchy(llvm::RecordKeeper &Records) {
     for (llvm::Record *T : Records.getAllDerivedDefinitions("NodeType"))
       add(T);
     for (llvm::Record *Derived : Records.getAllDerivedDefinitions("NodeType"))

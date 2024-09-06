@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Lower/Bridge.h"
+#include "DirectivesCommon.h"
 #include "flang/Common/Version.h"
 #include "flang/Lower/Allocatable.h"
 #include "flang/Lower/CallInterface.h"
@@ -857,7 +858,7 @@ public:
 
     copyVarHLFIR(loc, Fortran::lower::SymbolBox::Intrinsic{dst},
                  Fortran::lower::SymbolBox::Intrinsic{src}, isAllocatable,
-                 isPointer);
+                 isPointer, Fortran::semantics::Symbol::Flags());
   }
 
   void copyHostAssociateVar(
@@ -894,7 +895,7 @@ public:
       rhs_sb = &hsb;
     }
 
-    copyVar(sym, *lhs_sb, *rhs_sb);
+    copyVar(sym, *lhs_sb, *rhs_sb, sym.flags());
 
     if (copyAssignIP && copyAssignIP->isSet() &&
         sym.test(Fortran::semantics::Symbol::Flag::OmpLastPrivate)) {
@@ -1210,16 +1211,18 @@ private:
 
   void copyVar(const Fortran::semantics::Symbol &sym,
                const Fortran::lower::SymbolBox &lhs_sb,
-               const Fortran::lower::SymbolBox &rhs_sb) {
+               const Fortran::lower::SymbolBox &rhs_sb,
+               Fortran::semantics::Symbol::Flags flags) {
     mlir::Location loc = genLocation(sym.name());
     if (lowerToHighLevelFIR())
-      copyVarHLFIR(loc, lhs_sb, rhs_sb);
+      copyVarHLFIR(loc, lhs_sb, rhs_sb, flags);
     else
       copyVarFIR(loc, sym, lhs_sb, rhs_sb);
   }
 
   void copyVarHLFIR(mlir::Location loc, Fortran::lower::SymbolBox dst,
-                    Fortran::lower::SymbolBox src) {
+                    Fortran::lower::SymbolBox src,
+                    Fortran::semantics::Symbol::Flags flags) {
     assert(lowerToHighLevelFIR());
 
     bool isBoxAllocatable = dst.match(
@@ -1236,51 +1239,39 @@ private:
         },
         [](const auto &box) { return false; });
 
-    copyVarHLFIR(loc, dst, src, isBoxAllocatable, isBoxPointer);
+    copyVarHLFIR(loc, dst, src, isBoxAllocatable, isBoxPointer, flags);
   }
 
   void copyVarHLFIR(mlir::Location loc, Fortran::lower::SymbolBox dst,
                     Fortran::lower::SymbolBox src, bool isAllocatable,
-                    bool isPointer) {
+                    bool isPointer, Fortran::semantics::Symbol::Flags flags) {
     assert(lowerToHighLevelFIR());
     hlfir::Entity lhs{dst.getAddr()};
     hlfir::Entity rhs{src.getAddr()};
-    // Temporary_lhs is set to true in hlfir.assign below to avoid user
-    // assignment to be used and finalization to be called on the LHS.
-    // This may or may not be correct but mimics the current behaviour
-    // without HLFIR.
+
     auto copyData = [&](hlfir::Entity l, hlfir::Entity r) {
       // Dereference RHS and load it if trivial scalar.
       r = hlfir::loadTrivialScalar(loc, *builder, r);
-      builder->create<hlfir::AssignOp>(
-          loc, r, l,
-          /*isWholeAllocatableAssignment=*/false,
-          /*keepLhsLengthInAllocatableAssignment=*/false,
-          /*temporary_lhs=*/true);
+      builder->create<hlfir::AssignOp>(loc, r, l, isAllocatable);
     };
 
-    if (isAllocatable) {
-      // Deep copy allocatable if it is allocated.
-      // Note that when allocated, the RHS is already allocated with the LHS
-      // shape for copy on entry in createHostAssociateVarClone.
-      // For lastprivate, this assumes that the RHS was not reallocated in
-      // the OpenMP region.
-      lhs = hlfir::derefPointersAndAllocatables(loc, *builder, lhs);
-      mlir::Value addr = hlfir::genVariableRawAddress(loc, *builder, lhs);
-      mlir::Value isAllocated = builder->genIsNotNullAddr(loc, addr);
-      builder->genIfThen(loc, isAllocated)
-          .genThen([&]() {
-            // Copy the DATA, not the descriptors.
-            copyData(lhs, rhs);
-          })
-          .end();
-    } else if (isPointer) {
+    if (isPointer) {
       // Set LHS target to the target of RHS (do not copy the RHS
       // target data into the LHS target storage).
       auto loadVal = builder->create<fir::LoadOp>(loc, rhs);
       builder->create<fir::StoreOp>(loc, loadVal, lhs);
+    } else if (isAllocatable &&
+               flags.test(Fortran::semantics::Symbol::Flag::OmpFirstPrivate)) {
+      // For firstprivate allocatable variables, RHS must be copied only when
+      // LHS is allocated.
+      hlfir::Entity temp =
+          hlfir::derefPointersAndAllocatables(loc, *builder, lhs);
+      mlir::Value addr = hlfir::genVariableRawAddress(loc, *builder, temp);
+      mlir::Value isAllocated = builder->genIsNotNullAddr(loc, addr);
+      builder->genIfThen(loc, isAllocated)
+          .genThen([&]() { copyData(lhs, rhs); })
+          .end();
     } else {
-      // Non ALLOCATABLE/POINTER variable. Simple DATA copy.
       copyData(lhs, rhs);
     }
   }
@@ -2999,6 +2990,12 @@ private:
     mlir::Block &b = op.getRegion().back();
     builder->setInsertionPointToStart(&b);
 
+    Fortran::lower::pft::Evaluation *crtEval = &getEval();
+    if (crtEval->lowerAsUnstructured())
+      Fortran::lower::createEmptyRegionBlocks<fir::FirEndOp>(
+          *builder, crtEval->getNestedEvaluations());
+    builder->setInsertionPointToStart(&b);
+
     for (auto [arg, value] : llvm::zip(
              op.getLoopRegions().front()->front().getArguments(), ivValues)) {
       mlir::Value convArg =
@@ -3006,7 +3003,6 @@ private:
       builder->create<fir::StoreOp>(loc, convArg, value);
     }
 
-    Fortran::lower::pft::Evaluation *crtEval = &getEval();
     if (crtEval->lowerAsStructured()) {
       crtEval = &crtEval->getFirstNestedEvaluation();
       for (int64_t i = 1; i < nestedLoops; i++)
