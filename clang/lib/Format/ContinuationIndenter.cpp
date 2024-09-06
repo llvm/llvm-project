@@ -861,7 +861,7 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
       //  or
       //  caaaaaaaaaaaaaaaaaaaaal(
       //       new SomethingElseeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee());
-      !IsSimpleFunction(Current)) {
+      Current.isNot(tok::comment) && !IsSimpleFunction(Current)) {
     CurrentState.NoLineBreak = true;
   }
 
