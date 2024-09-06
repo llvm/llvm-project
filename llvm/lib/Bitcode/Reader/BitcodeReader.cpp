@@ -985,7 +985,7 @@ private:
   Error parseValueSymbolTable(
       uint64_t Offset,
       DenseMap<unsigned, GlobalValue::LinkageTypes> &ValueIdToLinkageMap);
-  std::vector<ValueInfo> makeRefList(ArrayRef<uint64_t> Record);
+  SmallVector<ValueInfo, 0> makeRefList(ArrayRef<uint64_t> Record);
   std::vector<FunctionSummary::EdgeTy> makeCallList(ArrayRef<uint64_t> Record,
                                                     bool IsOldProfileFormat,
                                                     bool HasProfile,
@@ -1349,6 +1349,10 @@ static AtomicRMWInst::BinOp getDecodedRMWOperation(unsigned Val) {
     return AtomicRMWInst::UIncWrap;
   case bitc::RMW_UDEC_WRAP:
     return AtomicRMWInst::UDecWrap;
+  case bitc::RMW_USUB_COND:
+    return AtomicRMWInst::USubCond;
+  case bitc::RMW_USUB_SAT:
+    return AtomicRMWInst::USubSat;
   }
 }
 
@@ -7364,9 +7368,9 @@ Error ModuleSummaryIndexBitcodeReader::parseModule() {
   }
 }
 
-std::vector<ValueInfo>
+SmallVector<ValueInfo, 0>
 ModuleSummaryIndexBitcodeReader::makeRefList(ArrayRef<uint64_t> Record) {
-  std::vector<ValueInfo> Ret;
+  SmallVector<ValueInfo, 0> Ret;
   Ret.reserve(Record.size());
   for (uint64_t RefValueId : Record)
     Ret.push_back(std::get<0>(getValueInfoFromValueId(RefValueId)));
@@ -7511,7 +7515,7 @@ void ModuleSummaryIndexBitcodeReader::parseTypeIdCompatibleVtableSummaryRecord(
     parseTypeIdCompatibleVtableInfo(Record, Slot, TypeId);
 }
 
-static void setSpecialRefs(std::vector<ValueInfo> &Refs, unsigned ROCnt,
+static void setSpecialRefs(SmallVectorImpl<ValueInfo> &Refs, unsigned ROCnt,
                            unsigned WOCnt) {
   // Readonly and writeonly refs are in the end of the refs list.
   assert(ROCnt + WOCnt <= Refs.size());
@@ -7661,7 +7665,7 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       int CallGraphEdgeStartIndex = RefListStartIndex + NumRefs;
       assert(Record.size() >= RefListStartIndex + NumRefs &&
              "Record size inconsistent with number of references");
-      std::vector<ValueInfo> Refs = makeRefList(
+      SmallVector<ValueInfo, 0> Refs = makeRefList(
           ArrayRef<uint64_t>(Record).slice(RefListStartIndex, NumRefs));
       bool HasProfile = (BitCode == bitc::FS_PERMODULE_PROFILE);
       bool HasRelBF = (BitCode == bitc::FS_PERMODULE_RELBF);
@@ -7736,7 +7740,7 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
         GVF = getDecodedGVarFlags(Record[2]);
         RefArrayStart = 3;
       }
-      std::vector<ValueInfo> Refs =
+      SmallVector<ValueInfo, 0> Refs =
           makeRefList(ArrayRef<uint64_t>(Record).slice(RefArrayStart));
       auto FS =
           std::make_unique<GlobalVarSummary>(Flags, GVF, std::move(Refs));
@@ -7757,7 +7761,7 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       unsigned RefListStartIndex = 4;
       unsigned VTableListStartIndex = RefListStartIndex + NumRefs;
       auto Flags = getDecodedGVSummaryFlags(RawFlags, Version);
-      std::vector<ValueInfo> Refs = makeRefList(
+      SmallVector<ValueInfo, 0> Refs = makeRefList(
           ArrayRef<uint64_t>(Record).slice(RefListStartIndex, NumRefs));
       VTableFuncList VTableFuncs;
       for (unsigned I = VTableListStartIndex, E = Record.size(); I != E; ++I) {
@@ -7818,7 +7822,7 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       int CallGraphEdgeStartIndex = RefListStartIndex + NumRefs;
       assert(Record.size() >= RefListStartIndex + NumRefs &&
              "Record size inconsistent with number of references");
-      std::vector<ValueInfo> Refs = makeRefList(
+      SmallVector<ValueInfo, 0> Refs = makeRefList(
           ArrayRef<uint64_t>(Record).slice(RefListStartIndex, NumRefs));
       bool HasProfile = (BitCode == bitc::FS_COMBINED_PROFILE);
       std::vector<FunctionSummary::EdgeTy> Edges = makeCallList(
@@ -7878,7 +7882,7 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
         GVF = getDecodedGVarFlags(Record[3]);
         RefArrayStart = 4;
       }
-      std::vector<ValueInfo> Refs =
+      SmallVector<ValueInfo, 0> Refs =
           makeRefList(ArrayRef<uint64_t>(Record).slice(RefArrayStart));
       auto FS =
           std::make_unique<GlobalVarSummary>(Flags, GVF, std::move(Refs));

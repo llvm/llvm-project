@@ -21,6 +21,7 @@
 #include "lldb/Core/Communication.h"
 #include "lldb/Host/Config.h"
 #include "lldb/Host/HostThread.h"
+#include "lldb/Host/Socket.h"
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/Listener.h"
 #include "lldb/Utility/Predicate.h"
@@ -156,8 +157,8 @@ public:
       Platform *platform, // If non nullptr, then check with the platform for
                           // the GDB server binary if it can't be located
       ProcessLaunchInfo &launch_info, uint16_t *port, const Args *inferior_args,
-      int pass_comm_fd); // Communication file descriptor to pass during
-                         // fork/exec to avoid having to connect/accept
+      shared_fd_t pass_comm_fd); // Communication file descriptor to pass during
+                                 // fork/exec to avoid having to connect/accept
 
   void DumpHistory(Stream &strm);
 

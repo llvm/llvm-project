@@ -332,3 +332,24 @@ end subroutine
 ! CHECK: acc.serial
 ! CHECK-NOT: cuf.data_transfer
 ! CHECK: hlfir.assign
+
+! Check that cuf.data_transfer are not generated within cuf kernel and do not
+! trigger semantic error.
+subroutine sub17()
+  integer, parameter :: n = 10
+  real, device :: adev(n)
+  real, device :: bdev(n)
+  real :: ahost
+  real, managed :: b
+  integer :: i
+
+  adev = ahost
+  !$cuf kernel do <<<*,*>>>
+  do i = 1, n
+    ahost = adev(i) * bdev(i) + b
+  enddo
+end subroutine
+
+! CHECK-LABEL: func.func @_QPsub17()
+! CHECK: cuf.kernel<<<*, *>>>
+! CHECK-NOT: cuf.data_transfer
