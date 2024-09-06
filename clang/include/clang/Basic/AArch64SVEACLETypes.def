@@ -46,9 +46,8 @@
 //
 //  - ElBits is the size of one element in bits.
 //
-//  - NF enumerates the number of sub-vectors.
-//    TODO: Tuple types are represented as a concatination of "NumEls x ElBits"
-//    vectors.  This will be changed to become a struct containing NF vectors.
+//  - NF enumerates the number of vectors whereby 1 implies a single vector,
+//    with other values implying a struct of NF "NumEls x NumEls" vectors.
 //
 //  - IsSigned is true for vectors of signed integer elements and
 //    for vectors of floating-point elements.
