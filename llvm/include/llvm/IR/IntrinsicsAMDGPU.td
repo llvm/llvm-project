@@ -1723,6 +1723,15 @@ class AMDGPUStructPtrBufferLoadLDS : Intrinsic <
    ImmArg<ArgIndex<7>>, IntrNoCallback, IntrNoFree], "", [SDNPMemOperand]>, AMDGPURsrcIntrinsic<0>;
 def int_amdgcn_struct_ptr_buffer_load_lds : AMDGPUStructPtrBufferLoadLDS;
 
+def int_amdgcn_s_buffer_prefetch_data : DefaultAttrsIntrinsic <
+  [],
+  [AMDGPUBufferRsrcTy, // rsrc(SGPR)
+   llvm_i32_ty,        // offset (imm)
+   llvm_i32_ty],       // len (SGPR/imm)
+  [IntrInaccessibleMemOrArgMemOnly, ImmArg<ArgIndex<1>>], "", [SDNPMemOperand]>,
+  AMDGPURsrcIntrinsic<0>,
+  ClangBuiltin<"__builtin_amdgcn_s_buffer_prefetch_data">;
+
 } // defset AMDGPUBufferIntrinsics
 
 // Uses that do not set the done bit should set IntrWriteMem on the

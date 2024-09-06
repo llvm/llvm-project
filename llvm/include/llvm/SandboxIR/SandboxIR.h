@@ -122,6 +122,7 @@ class ConstantInt;
 class ConstantFP;
 class ConstantAggregateZero;
 class ConstantPointerNull;
+class PoisonValue;
 class Context;
 class Function;
 class Instruction;
@@ -320,6 +321,7 @@ protected:
   friend class ConstantStruct;        // For `Val`.
   friend class ConstantAggregateZero; // For `Val`.
   friend class ConstantPointerNull;   // For `Val`.
+  friend class PoisonValue;           // For `Val`.
 
   /// All values point to the context.
   Context &Ctx;
@@ -1010,6 +1012,49 @@ public:
 #ifndef NDEBUG
   void verify() const override {
     assert(isa<llvm::ConstantPointerNull>(Val) && "Expected a CPNull!");
+  }
+  void dumpOS(raw_ostream &OS) const override {
+    dumpCommonPrefix(OS);
+    dumpCommonSuffix(OS);
+  }
+#endif
+};
+
+// TODO: Inherit from UndefValue.
+class PoisonValue final : public Constant {
+  PoisonValue(llvm::PoisonValue *C, Context &Ctx)
+      : Constant(ClassID::PoisonValue, C, Ctx) {}
+  friend class Context; // For constructor.
+
+public:
+  /// Static factory methods - Return an 'poison' object of the specified type.
+  static PoisonValue *get(Type *T);
+
+  /// If this poison has array or vector type, return a poison with the right
+  /// element type.
+  PoisonValue *getSequentialElement() const;
+
+  /// If this poison has struct type, return a poison with the right element
+  /// type for the specified element.
+  PoisonValue *getStructElement(unsigned Elt) const;
+
+  /// Return an poison of the right value for the specified GEP index if we can,
+  /// otherwise return null (e.g. if C is a ConstantExpr).
+  PoisonValue *getElementValue(Constant *C) const;
+
+  /// Return an poison of the right value for the specified GEP index.
+  PoisonValue *getElementValue(unsigned Idx) const;
+
+  /// For isa/dyn_cast.
+  static bool classof(const sandboxir::Value *From) {
+    return From->getSubclassID() == ClassID::PoisonValue;
+  }
+  unsigned getUseOperandNo(const Use &Use) const final {
+    llvm_unreachable("PoisonValue has no operands!");
+  }
+#ifndef NDEBUG
+  void verify() const override {
+    assert(isa<llvm::PoisonValue>(Val) && "Expected a PoisonValue!");
   }
   void dumpOS(raw_ostream &OS) const override {
     dumpCommonPrefix(OS);
