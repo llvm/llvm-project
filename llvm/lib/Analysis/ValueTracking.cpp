@@ -4132,6 +4132,30 @@ Intrinsic::ID llvm::getIntrinsicForCallSite(const CallBase &CB,
   case LibFunc_tanf:
   case LibFunc_tanl:
     return Intrinsic::tan;
+  case LibFunc_asin:
+  case LibFunc_asinf:
+  case LibFunc_asinl:
+    return Intrinsic::asin;
+  case LibFunc_acos:
+  case LibFunc_acosf:
+  case LibFunc_acosl:
+    return Intrinsic::acos;
+  case LibFunc_atan:
+  case LibFunc_atanf:
+  case LibFunc_atanl:
+    return Intrinsic::atan;
+  case LibFunc_sinh:
+  case LibFunc_sinhf:
+  case LibFunc_sinhl:
+    return Intrinsic::sinh;
+  case LibFunc_cosh:
+  case LibFunc_coshf:
+  case LibFunc_coshl:
+    return Intrinsic::cosh;
+  case LibFunc_tanh:
+  case LibFunc_tanhf:
+  case LibFunc_tanhl:
+    return Intrinsic::tanh;
   case LibFunc_exp:
   case LibFunc_expf:
   case LibFunc_expl:
@@ -9572,7 +9596,7 @@ static ConstantRange getRangeForIntrinsic(const IntrinsicInst &II) {
   case Intrinsic::cttz:
     // Maximum of set/clear bits is the bit width.
     return ConstantRange::getNonEmpty(APInt::getZero(Width),
-                                      APInt(Width, Width + 1));
+                                      APInt(Width, Width) + 1);
   case Intrinsic::uadd_sat:
     // uadd.sat(x, C) produces [C, UINT_MAX].
     if (match(II.getOperand(0), m_APInt(C)) ||
