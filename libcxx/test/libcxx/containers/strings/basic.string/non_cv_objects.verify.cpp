@@ -43,6 +43,7 @@ std::basic_string<int[2]> C10;
 // Bogus errors
 // expected-error@*:* 0+ {{call to implicitly-deleted}}
 // expected-error@*:* 0+ {{multiple overloads}}
+// expected-error@*:* 0+ {{[allocator.requirements] states that rebinding}}
 // expected-error@*:* 1+ {{cannot form a reference to 'void'}}
 // expected-error@*:* 1+ {{declared as a pointer}}
 // expected-error@*:* 1+ {{no matching function}}
