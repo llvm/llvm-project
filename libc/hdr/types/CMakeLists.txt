@@ -173,7 +173,7 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
-  __sighandler_t
+  sighandler_t
   HDRS
     sighandler_t.h
   FULL_BUILD_DEPENDS
