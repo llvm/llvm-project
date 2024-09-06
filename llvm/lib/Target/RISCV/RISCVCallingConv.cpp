@@ -607,7 +607,7 @@ bool llvm::CC_RISCV_FastCC(unsigned ValNo, MVT ValVT, MVT LocVT,
       // Try and pass the address via a "fast" GPR.
       if (MCRegister GPRReg = State.AllocateReg(getFastCCArgGPRs(ABI))) {
         LocInfo = CCValAssign::Indirect;
-        LocVT = TLI.getSubtarget().getXLenVT();
+        LocVT = Subtarget.getXLenVT();
         State.addLoc(CCValAssign::getReg(ValNo, ValVT, GPRReg, LocVT, LocInfo));
       } else if (ValVT.isFixedLengthVector()) {
         auto StackAlign =
