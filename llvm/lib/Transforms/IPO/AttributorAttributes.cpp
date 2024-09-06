@@ -12584,10 +12584,15 @@ struct AAAddressSpaceImpl : public AAAddressSpace {
       if (auto *LI = dyn_cast<LoadInst>(Inst)) {
         Changed |=
             makeChange(A, LI, U, OriginalValue, NewPtrTy, UseOriginalValue);
-      }
-      if (auto *SI = dyn_cast<StoreInst>(Inst)) {
+      } else if (auto *SI = dyn_cast<StoreInst>(Inst)) {
         Changed |=
             makeChange(A, SI, U, OriginalValue, NewPtrTy, UseOriginalValue);
+      } else if (auto *RMW = dyn_cast<AtomicRMWInst>(Inst)) {
+        Changed |=
+            makeChange(A, RMW, U, OriginalValue, NewPtrTy, UseOriginalValue);
+      } else if (auto *CmpX = dyn_cast<AtomicCmpXchgInst>(Inst)) {
+        Changed |=
+            makeChange(A, CmpX, U, OriginalValue, NewPtrTy, UseOriginalValue);
       }
       return true;
     };
