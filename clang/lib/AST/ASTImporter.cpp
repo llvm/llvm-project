@@ -368,7 +368,7 @@ namespace clang {
           auto *ToInheritedFrom = const_cast<TemplateParmDeclT *>(
               importChecked(Err, D->getDefaultArgStorage().getInheritedFrom()));
           if (Err)
-            return std::move(Err);
+            return Err;
           if (!ToInheritedFrom->hasDefaultArgument()) {
             // Resolve possible circular dependency between default value of the
             // template argument and the template declaration.
@@ -377,7 +377,7 @@ namespace clang {
                                        .getInheritedFrom()
                                        ->getDefaultArgument());
             if (Err)
-              return std::move(Err);
+              return Err;
             ToInheritedFrom->setDefaultArgument(Importer.getToContext(),
                                                 ToInheritedDefaultArg);
           }
