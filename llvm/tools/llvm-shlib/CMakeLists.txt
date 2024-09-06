@@ -52,8 +52,6 @@ if(LLVM_BUILD_LLVM_DYLIB)
     if(MSVC)
       target_link_directories(LLVM PRIVATE ${LLVM_LIBRARY_DIR})
       foreach(library ${LIB_NAMES})
-        # FIXME figure out how to use LINK_LIBRARY:WHOLE_ARCHIVE without cmake errors
-        # target_link_libraries(LLVM PRIVATE  "$<LINK_LIBRARY:WHOLE_ARCHIVE,${library}>" )
         target_link_options(LLVM PRIVATE /WHOLEARCHIVE:${library}.lib)
       endforeach()
     else()
