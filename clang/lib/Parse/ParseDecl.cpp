@@ -146,7 +146,21 @@ void Parser::ParseAttributes(unsigned WhichAttrKinds, ParsedAttributes &Attrs,
   } while (MoreToParse);
 }
 
-bool Parser::ParseGNUSingleAttribute(ParsedAttributes &Attrs,
+/// ParseSingleGNUAttribute - Parse a single GNU attribute.
+///
+/// [GNU]  attrib:
+///          empty
+///          attrib-name
+///          attrib-name '(' identifier ')'
+///          attrib-name '(' identifier ',' nonempty-expr-list ')'
+///          attrib-name '(' argument-expression-list [C99 6.5.2] ')'
+///
+/// [GNU]  attrib-name:
+///          identifier
+///          typespec
+///          typequal
+///          storageclass
+bool Parser::ParseSingleGNUAttribute(ParsedAttributes &Attrs,
                                      SourceLocation &EndLoc,
                                      LateParsedAttrList *LateAttrs,
                                      Declarator *D) {
@@ -290,7 +304,7 @@ void Parser::ParseGNUAttributes(ParsedAttributes &Attrs,
         break;
       }
 
-      if (ParseGNUSingleAttribute(Attrs, EndLoc, LateAttrs, D))
+      if (ParseSingleGNUAttribute(Attrs, EndLoc, LateAttrs, D))
         break;
     } while (Tok.is(tok::comma));
 

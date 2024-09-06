@@ -2943,7 +2943,7 @@ private:
     return false;
   }
 
-  bool ParseGNUSingleAttribute(ParsedAttributes &Attrs, SourceLocation &EndLoc,
+  bool ParseSingleGNUAttribute(ParsedAttributes &Attrs, SourceLocation &EndLoc,
                                LateParsedAttrList *LateAttrs = nullptr,
                                Declarator *D = nullptr);
   void ParseGNUAttributes(ParsedAttributes &Attrs,
