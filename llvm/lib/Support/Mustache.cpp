@@ -431,11 +431,11 @@ Value ASTNode::findContext() {
     return nullptr;
   }
   Value Context = nullptr;
-  for (auto CurrentAccessor : Accessor) {
-    Value *CurrentValue = CurrentContext->get(CurrentAccessor);
+  for (auto E : enumerate(Accessor)) {
+    Value *CurrentValue = CurrentContext->get(E.value());
     if (!CurrentValue)
       return nullptr;
-    if (I < Accessor.size() - 1) {
+    if (E.index() < Accessor.size() - 1) {
       CurrentContext = CurrentValue->getAsObject();
       if (!CurrentContext)
         return nullptr;
