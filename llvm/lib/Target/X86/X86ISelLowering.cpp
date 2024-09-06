@@ -24084,13 +24084,13 @@ static SDValue LowerSELECTWithCmpZero(SDValue CmpVal, SDValue LHS, SDValue RHS,
   if (!CmpVT.isScalarInteger() || !VT.isScalarInteger())
     return SDValue();
 
+  // Convert OR/XOR 'identity' patterns (iff X is 0 or 1):
+  // select (X != 0), Y, (OR Y, Z) -> (OR Y, (AND (0 - X), Z))
+  // select (X != 0), Y, (XOR Y, Z) -> (XOR Y, (AND (0 - X), Z))
   if (!Subtarget.canUseCMOV() && X86CC == X86::COND_E &&
       CmpVal.getOpcode() == ISD::AND && isOneConstant(CmpVal.getOperand(1))) {
     SDValue Src1, Src2;
-    // true if RHS is XOR or OR operator and one of its operands
-    // is equal to LHS
-    // ( a , a op b) || ( b , a op b)
-    auto isOrXorPattern = [&]() {
+    auto isIdentityPattern = [&]() {
       if ((RHS.getOpcode() == ISD::XOR || RHS.getOpcode() == ISD::OR) &&
           (RHS.getOperand(0) == LHS || RHS.getOperand(1) == LHS)) {
         Src1 = RHS.getOperand(RHS.getOperand(0) == LHS ? 1 : 0);
@@ -24100,20 +24100,17 @@ static SDValue LowerSELECTWithCmpZero(SDValue CmpVal, SDValue LHS, SDValue RHS,
       return false;
     };
 
-    if (isOrXorPattern()) {
-      SDValue Neg;
-      unsigned int CmpSz = CmpVT.getSizeInBits();
+    if (isIdentityPattern()) {
       // we need mask of all zeros or ones with same size of the other
       // operands.
-      if (CmpSz > VT.getSizeInBits())
+      SDValue Neg = CmpVal;
+      if (CmpVT.bitsGT(VT))
         Neg = DAG.getNode(ISD::TRUNCATE, DL, VT, CmpVal);
-      else if (CmpSz < VT.getSizeInBits())
+      else if (CmpVT.bitsLT(VT))
         Neg = DAG.getNode(
             ISD::AND, DL, VT,
             DAG.getNode(ISD::ANY_EXTEND, DL, VT, CmpVal.getOperand(0)),
             DAG.getConstant(1, DL, VT));
-      else
-        Neg = CmpVal;
       SDValue Mask = DAG.getNegative(Neg, DL, VT); // -(and (x, 0x1))
       SDValue And = DAG.getNode(ISD::AND, DL, VT, Mask, Src1); // Mask & z
       return DAG.getNode(RHS.getOpcode(), DL, VT, And, Src2);  // And Op y
