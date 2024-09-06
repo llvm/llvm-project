@@ -247,6 +247,11 @@ AST_MATCHER_P(Stmt, ignoreUnsafeBufferInContainer,
   return Handler->ignoreUnsafeBufferInContainer(Node.getBeginLoc());
 }
 
+AST_MATCHER_P(Stmt, ignoreUnsafeLibcCall, const UnsafeBufferUsageHandler *,
+              Handler) {
+  return Handler->ignoreUnsafeBufferInLibcCall(Node.getBeginLoc());
+}
+
 AST_MATCHER_P(CastExpr, castSubExpr, internal::Matcher<Expr>, innerMatcher) {
   return innerMatcher.matches(*Node.getSubExpr(), Finder, Builder);
 }
@@ -768,7 +773,7 @@ AST_MATCHER_P(CallExpr, hasUnsafePrintfStringArg,
     const Expr *UnsafeArg;
 
     if (auto *Callee = Node.getDirectCallee())
-      if (auto *II = Node.getDirectCallee()->getIdentifier())
+      if (auto *II = Callee->getIdentifier())
         isKprintf = II->getName() == "kprintf";
     if (hasUnsafeFormatOrSArg(&Node, UnsafeArg, 0, Ctx, isKprintf))
       return UnsafeStringArgMatcher.matches(*UnsafeArg, Finder, Builder);
@@ -798,8 +803,7 @@ AST_MATCHER_P(CallExpr, hasUnsafePrintfStringArg,
     // It is a snprintf:
     const Expr *UnsafeArg;
 
-    if (unsigned UnsafeArgIdx =
-            hasUnsafeFormatOrSArg(&Node, UnsafeArg, 2, Ctx, false))
+    if (hasUnsafeFormatOrSArg(&Node, UnsafeArg, 2, Ctx, false))
       return UnsafeStringArgMatcher.matches(*UnsafeArg, Finder, Builder);
     return false;
   }
@@ -1180,6 +1184,10 @@ public:
                     .bind(SpanTwoParamConstructorTag));
   }
 
+  static Matcher matcher(const UnsafeBufferUsageHandler *Handler) {
+    return stmt(unless(ignoreUnsafeBufferInContainer(Handler)), matcher());
+  }
+
   void handleUnsafeOperation(UnsafeBufferUsageHandler &Handler,
                              bool IsRelatedToDecl,
                              ASTContext &Ctx) const override {
@@ -1492,8 +1500,9 @@ public:
       WarnedFunKind = VA_LIST;
   }
 
-  static Matcher matcher() {
-    return stmt(anyOf(
+  static Matcher matcher(const UnsafeBufferUsageHandler *Handler) {
+    return stmt(unless(ignoreUnsafeLibcCall(Handler)),
+      anyOf(
         callExpr(
             callee(functionDecl(anyOf(
                 // Match a predefined unsafe libc
@@ -1963,10 +1972,9 @@ findGadgets(const Decl *D, const UnsafeBufferUsageHandler &Handler,
 #define WARNING_GADGET(x)                                                      \
           allOf(x ## Gadget::matcher().bind(#x),                               \
                 notInSafeBufferOptOut(&Handler)),
-#define WARNING_CONTAINER_GADGET(x)                                            \
-          allOf(x ## Gadget::matcher().bind(#x),                               \
-                notInSafeBufferOptOut(&Handler),                               \
-                unless(ignoreUnsafeBufferInContainer(&Handler))),
+#define WARNING_OPTIONAL_GADGET(x)                                            \
+          allOf(x ## Gadget::matcher(&Handler).bind(#x),                      \
+                notInSafeBufferOptOut(&Handler)),
 #include "clang/Analysis/Analyses/UnsafeBufferUsageGadgets.def"
             // Avoid a hanging comma.
             unless(stmt())

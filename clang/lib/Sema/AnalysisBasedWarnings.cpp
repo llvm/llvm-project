@@ -2396,6 +2396,10 @@ public:
     return S.Diags.isIgnored(diag::warn_unsafe_buffer_usage_in_container, Loc);
   }
 
+  bool ignoreUnsafeBufferInLibcCall(const SourceLocation &Loc) const override {
+    return S.Diags.isIgnored(diag::warn_unsafe_buffer_libc_call, Loc);
+  }
+
   // Returns the text representation of clang::unsafe_buffer_usage attribute.
   // `WSSuffix` holds customized "white-space"s, e.g., newline or whilespace
   // characters.
@@ -2562,6 +2566,8 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
         !Diags.isIgnored(diag::warn_unsafe_buffer_variable,
                          Node->getBeginLoc()) ||
         !Diags.isIgnored(diag::warn_unsafe_buffer_usage_in_container,
+                         Node->getBeginLoc()) ||
+        !Diags.isIgnored(diag::warn_unsafe_buffer_libc_call,
                          Node->getBeginLoc())) {
       clang::checkUnsafeBufferUsage(Node, R,
                                     UnsafeBufferUsageShouldEmitSuggestions);
@@ -2574,7 +2580,8 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
   if (!Diags.isIgnored(diag::warn_unsafe_buffer_operation, SourceLocation()) ||
       !Diags.isIgnored(diag::warn_unsafe_buffer_variable, SourceLocation()) ||
       !Diags.isIgnored(diag::warn_unsafe_buffer_usage_in_container,
-                       SourceLocation())) {
+                       SourceLocation()) ||
+      !Diags.isIgnored(diag::warn_unsafe_buffer_libc_call, SourceLocation())) {
     CallableVisitor(CallAnalyzers).TraverseTranslationUnitDecl(TU);
   }
 }

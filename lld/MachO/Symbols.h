@@ -33,6 +33,15 @@ public:
     AliasKind,
   };
 
+  // Enum that describes the type of Identical Code Folding (ICF) applied to a
+  // symbol. This information is crucial for accurately representing symbol
+  // sizes in the map file.
+  enum ICFFoldKind {
+    None, // No folding is applied.
+    Body, // The entire body (function or data) is folded.
+    Thunk // The function body is folded into a single branch thunk.
+  };
+
   virtual ~Symbol() {}
 
   Kind kind() const { return symbolKind; }
@@ -142,8 +151,8 @@ public:
   bool privateExtern : 1;
   // Whether this symbol should appear in the output symbol table.
   bool includeInSymtab : 1;
-  // Whether this symbol was folded into a different symbol during ICF.
-  bool wasIdenticalCodeFolded : 1;
+  // The ICF folding kind of this symbol: None / Body / Thunk.
+  ICFFoldKind identicalCodeFoldingKind : 2;
   // Symbols marked referencedDynamically won't be removed from the output's
   // symbol table by tools like strip. In theory, this could be set on arbitrary
   // symbols in input object files. In practice, it's used solely for the

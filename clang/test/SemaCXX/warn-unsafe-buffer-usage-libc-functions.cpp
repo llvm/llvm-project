@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -std=c++20 -Wno-all -Wunsafe-buffer-usage \
 // RUN:            -verify %s
+// RUN: %clang_cc1 -std=c++20 -Wno-all -Wunsafe-buffer-usage-in-libc-call \
+// RUN:            -verify %s
 
 typedef struct {} FILE;
 void memcpy();
@@ -103,4 +105,20 @@ void v(std::string s1, int *p) {
 void g(char *begin, char *end, char *p, std::span<char> s) {
   std::copy(begin, end, p); // no warn
   std::copy(s.begin(), s.end(), s.begin()); // no warn
+}
+
+// warning gets turned off
+void ff(char * p, char * q, std::span<char> s, std::span<char> s2) {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunsafe-buffer-usage-in-libc-call"
+  memcpy();
+  std::memcpy();
+  __builtin_memcpy(p, q, 64);
+  __builtin___memcpy_chk(p, q, 8, 64);
+  __asan_memcpy();
+  strcpy();
+  std::strcpy();
+  strcpy_s();
+  wcscpy_s();
+#pragma clang diagnostic pop
 }

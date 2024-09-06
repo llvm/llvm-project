@@ -92,10 +92,11 @@ bool validate(const ContextRoot *Root) {
 }
 
 inline ContextNode *allocContextNode(char *Place, GUID Guid,
-                                     uint32_t NrCounters, uint32_t NrCallsites,
+                                     uint32_t NumCounters,
+                                     uint32_t NumCallsites,
                                      ContextNode *Next = nullptr) {
   assert(reinterpret_cast<uint64_t>(Place) % ExpectedAlignment == 0);
-  return new (Place) ContextNode(Guid, NrCounters, NrCallsites, Next);
+  return new (Place) ContextNode(Guid, NumCounters, NumCallsites, Next);
 }
 
 void resetContextNode(ContextNode &Node) {
@@ -161,8 +162,8 @@ void Arena::freeArenaList(Arena *&A) {
 // If this is the first time we hit a callsite with this (Guid) particular
 // callee, we need to allocate.
 ContextNode *getCallsiteSlow(GUID Guid, ContextNode **InsertionPoint,
-                             uint32_t NrCounters, uint32_t NrCallsites) {
-  auto AllocSize = ContextNode::getAllocSize(NrCounters, NrCallsites);
+                             uint32_t NumCounters, uint32_t NumCallsites) {
+  auto AllocSize = ContextNode::getAllocSize(NumCounters, NumCallsites);
   auto *Mem = __llvm_ctx_profile_current_context_root->CurrentMem;
   char *AllocPlace = Mem->tryBumpAllocate(AllocSize);
   if (!AllocPlace) {
@@ -175,15 +176,15 @@ ContextNode *getCallsiteSlow(GUID Guid, ContextNode **InsertionPoint,
         Mem->allocateNewArena(getArenaAllocSize(AllocSize), Mem);
     AllocPlace = Mem->tryBumpAllocate(AllocSize);
   }
-  auto *Ret = allocContextNode(AllocPlace, Guid, NrCounters, NrCallsites,
+  auto *Ret = allocContextNode(AllocPlace, Guid, NumCounters, NumCallsites,
                                *InsertionPoint);
   *InsertionPoint = Ret;
   return Ret;
 }
 
 ContextNode *__llvm_ctx_profile_get_context(void *Callee, GUID Guid,
-                                            uint32_t NrCounters,
-                                            uint32_t NrCallsites) {
+                                            uint32_t NumCounters,
+                                            uint32_t NumCallsites) {
   // fast "out" if we're not even doing contextual collection.
   if (!__llvm_ctx_profile_current_context_root)
     return TheScratchContext;
@@ -222,14 +223,14 @@ ContextNode *__llvm_ctx_profile_get_context(void *Callee, GUID Guid,
     Callsite = Callsite->next();
   }
   auto *Ret = Callsite ? Callsite
-                       : getCallsiteSlow(Guid, CallsiteContext, NrCounters,
-                                         NrCallsites);
-  if (Ret->callsites_size() != NrCallsites ||
-      Ret->counters_size() != NrCounters)
+                       : getCallsiteSlow(Guid, CallsiteContext, NumCounters,
+                                         NumCallsites);
+  if (Ret->callsites_size() != NumCallsites ||
+      Ret->counters_size() != NumCounters)
     __sanitizer::Printf("[ctxprof] Returned ctx differs from what's asked: "
                         "Context: %p, Asked: %lu %u %u, Got: %lu %u %u \n",
-                        reinterpret_cast<void *>(Ret), Guid, NrCallsites,
-                        NrCounters, Ret->guid(), Ret->callsites_size(),
+                        reinterpret_cast<void *>(Ret), Guid, NumCallsites,
+                        NumCounters, Ret->guid(), Ret->callsites_size(),
                         Ret->counters_size());
   onContextEnter(*Ret);
   return Ret;
@@ -237,19 +238,19 @@ ContextNode *__llvm_ctx_profile_get_context(void *Callee, GUID Guid,
 
 // This should be called once for a Root. Allocate the first arena, set up the
 // first context.
-void setupContext(ContextRoot *Root, GUID Guid, uint32_t NrCounters,
-                  uint32_t NrCallsites) {
+void setupContext(ContextRoot *Root, GUID Guid, uint32_t NumCounters,
+                  uint32_t NumCallsites) {
   __sanitizer::GenericScopedLock<__sanitizer::SpinMutex> Lock(
       &AllContextsMutex);
   // Re-check - we got here without having had taken a lock.
   if (Root->FirstMemBlock)
     return;
-  const auto Needed = ContextNode::getAllocSize(NrCounters, NrCallsites);
+  const auto Needed = ContextNode::getAllocSize(NumCounters, NumCallsites);
   auto *M = Arena::allocateNewArena(getArenaAllocSize(Needed));
   Root->FirstMemBlock = M;
   Root->CurrentMem = M;
   Root->FirstNode = allocContextNode(M->tryBumpAllocate(Needed), Guid,
-                                     NrCounters, NrCallsites);
+                                     NumCounters, NumCallsites);
   AllContextRoots.PushBack(Root);
 }
 
@@ -278,7 +279,7 @@ void __llvm_ctx_profile_release_context(ContextRoot *Root)
 }
 
 void __llvm_ctx_profile_start_collection() {
-  size_t NrMemUnits = 0;
+  size_t NumMemUnits = 0;
   __sanitizer::GenericScopedLock<__sanitizer::SpinMutex> Lock(
       &AllContextsMutex);
   for (uint32_t I = 0; I < AllContextRoots.Size(); ++I) {
@@ -286,11 +287,11 @@ void __llvm_ctx_profile_start_collection() {
     __sanitizer::GenericScopedLock<__sanitizer::StaticSpinMutex> Lock(
         &Root->Taken);
     for (auto *Mem = Root->FirstMemBlock; Mem; Mem = Mem->next())
-      ++NrMemUnits;
+      ++NumMemUnits;
 
     resetContextNode(*Root->FirstNode);
   }
-  __sanitizer::Printf("[ctxprof] Initial NrMemUnits: %zu \n", NrMemUnits);
+  __sanitizer::Printf("[ctxprof] Initial NumMemUnits: %zu \n", NumMemUnits);
 }
 
 bool __llvm_ctx_profile_fetch(void *Data,
