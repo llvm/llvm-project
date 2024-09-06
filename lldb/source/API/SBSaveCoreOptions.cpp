@@ -40,8 +40,7 @@ SBSaveCoreOptions::operator=(const SBSaveCoreOptions &rhs) {
 
 SBError SBSaveCoreOptions::SetPluginName(const char *name) {
   LLDB_INSTRUMENT_VA(this, name);
-  lldb_private::Status error = m_opaque_up->SetPluginName(name);
-  return SBError(error);
+  return SBError(m_opaque_up->SetPluginName(name));
 }
 
 void SBSaveCoreOptions::SetStyle(lldb::SaveCoreStyle style) {

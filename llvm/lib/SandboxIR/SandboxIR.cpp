@@ -2426,6 +2426,17 @@ Constant *ConstantAggregateZero::getElementValue(unsigned Idx) const {
       cast<llvm::ConstantAggregateZero>(Val)->getElementValue(Idx)));
 }
 
+ConstantPointerNull *ConstantPointerNull::get(PointerType *Ty) {
+  auto *LLVMC =
+      llvm::ConstantPointerNull::get(cast<llvm::PointerType>(Ty->LLVMTy));
+  return cast<ConstantPointerNull>(Ty->getContext().getOrCreateConstant(LLVMC));
+}
+
+PointerType *ConstantPointerNull::getType() const {
+  return cast<PointerType>(
+      Ctx.getType(cast<llvm::ConstantPointerNull>(Val)->getType()));
+}
+
 FunctionType *Function::getFunctionType() const {
   return cast<FunctionType>(
       Ctx.getType(cast<llvm::Function>(Val)->getFunctionType()));
@@ -2535,6 +2546,10 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
       }
       return Ret;
     }
+    case llvm::Value::ConstantPointerNullVal:
+      It->second = std::unique_ptr<ConstantPointerNull>(
+          new ConstantPointerNull(cast<llvm::ConstantPointerNull>(C), *this));
+      return It->second.get();
     case llvm::Value::ConstantArrayVal:
       It->second = std::unique_ptr<ConstantArray>(
           new ConstantArray(cast<llvm::ConstantArray>(C), *this));
