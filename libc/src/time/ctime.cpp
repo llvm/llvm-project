@@ -17,7 +17,7 @@ using LIBC_NAMESPACE::time_utils::TimeConstants;
 
 LLVM_LIBC_FUNCTION(char *, ctime, (const time_t *t_ptr)) {
   if (t_ptr > 2147483647) {
-    return llvm::createStringError(llvm::errc::invalid_argument, "ERROR");
+    return nullptr;
   }
   static char buffer[TimeConstants::ASCTIME_BUFFER_SIZE];
   return time_utils::asctime(localtime(t_ptr), buffer, TimeConstants::ASCTIME_MAX_BYTES);
