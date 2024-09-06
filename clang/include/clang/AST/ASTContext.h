@@ -2306,6 +2306,12 @@ public:
                                                 unsigned Index,
                                                 bool Final) const;
 
+  /// Represents a TemplateName which had some of it's default arguments
+  /// deduced. This both represents this default argument deduction as sugar,
+  /// and provides the support for it's equivalences through canonicalization.
+  /// For example DeducedTemplateNames which have the same set of default
+  /// arguments are equivalent, and are also equivalent to the underlying
+  /// template when the deduced template arguments are the same.
   TemplateName getDeducedTemplateName(TemplateName Underlying,
                                       DefaultArguments DefaultArgs) const;
 
