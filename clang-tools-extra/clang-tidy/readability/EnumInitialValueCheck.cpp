@@ -141,16 +141,18 @@ void EnumInitialValueCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void EnumInitialValueCheck::registerMatchers(MatchFinder *Finder) {
-  Finder->addMatcher(
-      enumDecl(unless(isMacro()), unless(hasConsistentInitialValues()))
-          .bind("inconsistent"),
-      this);
+  Finder->addMatcher(enumDecl(isDefinition(), unless(isMacro()),
+                              unless(hasConsistentInitialValues()))
+                         .bind("inconsistent"),
+                     this);
   if (!AllowExplicitZeroFirstInitialValue)
     Finder->addMatcher(
-        enumDecl(hasZeroInitialValueForFirstEnumerator()).bind("zero_first"),
+        enumDecl(isDefinition(), hasZeroInitialValueForFirstEnumerator())
+            .bind("zero_first"),
         this);
   if (!AllowExplicitSequentialInitialValues)
-    Finder->addMatcher(enumDecl(unless(isMacro()), hasSequentialInitialValues())
+    Finder->addMatcher(enumDecl(isDefinition(), unless(isMacro()),
+                                hasSequentialInitialValues())
                            .bind("sequential"),
                        this);
 }

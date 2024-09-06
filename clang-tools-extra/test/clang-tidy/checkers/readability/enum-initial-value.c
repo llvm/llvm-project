@@ -78,3 +78,17 @@ enum EnumSequentialInitialValue {
   EnumSequentialInitialValue_2 = 4,
   // CHECK-FIXES-ENABLE: EnumSequentialInitialValue_2 ,
 };
+
+// gh107590
+enum WithFwdDecl : int;
+
+enum WithFwdDecl : int {
+  // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: inital values in enum 'WithFwdDecl' are not consistent
+  // CHECK-MESSAGES-ENABLE: :[[@LINE-2]]:1: warning: inital values in enum 'WithFwdDecl' are not consistent
+  E0,
+  // CHECK-FIXES: E0 = 0,
+  E1 = 1,
+  E2,
+  // CHECK-FIXES: E2 = 2,
+};
+
