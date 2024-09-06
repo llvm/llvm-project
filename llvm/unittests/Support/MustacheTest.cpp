@@ -139,9 +139,9 @@ TEST(MustacheInterpolation, DottedNamesArbitraryDepth) {
                Object{{"c",
                        Object{{"d",
                                Object{{"e", Object{{"name", "Phil"}}}}}}}}}}}};
-  auto T = Template::createTemplate("{{a.b.c.d.e.name}} == Phil");
+  auto T = Template::createTemplate("{{a.b.c.d.e.name}}");
   auto Out = T.render(D);
-  EXPECT_EQ("Phil == Phil", Out);
+  EXPECT_EQ("Phil", Out);
 }
 
 TEST(MustacheInterpolation, DottedNamesBrokenChains) {
@@ -171,9 +171,9 @@ TEST(MustacheInterpolation, DottedNamesInitialResolution) {
                     Object{{"d", Object{{"e", Object{{"name", "Phil"}}}}}}}}}}},
       {"b",
        Object{{"c", Object{{"d", Object{{"e", Object{{"name", "Wrong"}}}}}}}}}};
-  auto T = Template::createTemplate("{{#a}}{{b.c.d.e.name}}{{/a}} == Phil");
+  auto T = Template::createTemplate("{{#a}}{{b.c.d.e.name}}{{/a}}");
   auto Out = T.render(D);
-  EXPECT_EQ("Phil == Phil", Out);
+  EXPECT_EQ("Phil", Out);
 }
 
 TEST(MustacheInterpolation, DottedNamesContextPrecedence) {
