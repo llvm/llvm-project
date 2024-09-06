@@ -216,6 +216,7 @@ public:
                "The index must be inside the counters vector by construction - "
                "tripping this assertion indicates a bug in how the contextual "
                "profile is managed by IPO transforms");
+        (void)Index;
         Count = Counters[Ins->getIndex()->getZExtValue()];
       }
       auto [It, Ins] =
@@ -280,7 +281,8 @@ public:
   }
 };
 
-bool areAllBBsReachable(const Function &F, FunctionAnalysisManager &FAM) {
+[[maybe_unused]] bool areAllBBsReachable(const Function &F,
+                                         FunctionAnalysisManager &FAM) {
   auto &DT = FAM.getResult<DominatorTreeAnalysis>(const_cast<Function &>(F));
   return llvm::all_of(
       F, [&](const BasicBlock &BB) { return DT.isReachableFromEntry(&BB); });
