@@ -4814,13 +4814,12 @@ BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
                  });
         });
     const unsigned AbsoluteDiff = std::abs(*Diff);
-    if (IsPossibleStrided &&
-        (IsAnyPointerUsedOutGraph ||
-         ((Sz > MinProfitableStridedLoads ||
-           (AbsoluteDiff <= MaxProfitableLoadStride * Sz &&
-            hasFullVectorsOnly(*TTI, ScalarTy, AbsoluteDiff))) &&
-          AbsoluteDiff > Sz) ||
-         *Diff == -(static_cast<int>(Sz) - 1))) {
+    if (IsPossibleStrided && (IsAnyPointerUsedOutGraph ||
+                              ((Sz > MinProfitableStridedLoads ||
+                                (AbsoluteDiff <= MaxProfitableLoadStride * Sz &&
+                                 has_single_bit(AbsoluteDiff))) &&
+                               AbsoluteDiff > Sz) ||
+                              *Diff == -(static_cast<int>(Sz) - 1))) {
       int Stride = *Diff / static_cast<int>(Sz - 1);
       if (*Diff == Stride * static_cast<int>(Sz - 1)) {
         Align Alignment =
@@ -5619,7 +5618,7 @@ void BoUpSLP::reorderTopToBottom() {
 
   // Reorder the graph nodes according to their vectorization factor.
   for (unsigned VF = VectorizableTree.front()->getVectorFactor(); VF > 1;
-       VF = (VF & ~1U) - 2) {
+       VF -= 2 - (VF & 1U)) {
     auto It = VFToOrderedEntries.find(VF);
     if (It == VFToOrderedEntries.end())
       continue;
