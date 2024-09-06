@@ -1,4 +1,5 @@
 ; RUN: opt < %s -S -nvptx-lower-alloca -infer-address-spaces | FileCheck %s
+; RUN: opt < %s -S -nvptx-lower-alloca | FileCheck %s --check-prefix LOWERALLOCAONLY
 ; RUN: llc < %s -march=nvptx64 -mcpu=sm_35 | FileCheck %s --check-prefix PTX
 ; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_35 | %ptxas-verify %}
 
@@ -11,6 +12,9 @@ define void @kernel() {
   %A = alloca i32
 ; CHECK: addrspacecast ptr %A to ptr addrspace(5)
 ; CHECK: store i32 0, ptr addrspace(5) {{%.+}}
+; LOWERALLOCAONLY: [[V1:%.*]] = addrspacecast ptr %A to ptr addrspace(5)
+; LOWERALLOCAONLY: [[V2:%.*]] = addrspacecast ptr addrspace(5) [[V1]] to ptr
+; LOWERALLOCAONLY: store i32 0, ptr [[V2]], align 4
 ; PTX: st.local.u32 [{{%rd[0-9]+}}], {{%r[0-9]+}}
   store i32 0, ptr %A
   call void @callee(ptr %A)
@@ -21,9 +25,10 @@ define void @alloca_in_explicit_local_as() {
 ; LABEL: @lower_alloca_addrspace5
 ; PTX-LABEL: .visible .func alloca_in_explicit_local_as(
   %A = alloca i32, addrspace(5)
-; CHECK-NOT: addrspacecast ptr %A to ptr addrspace(5)
 ; CHECK: store i32 0, ptr addrspace(5) {{%.+}}
 ; PTX: st.local.u32 [%SP+0], {{%r[0-9]+}}
+; LOWERALLOCAONLY: [[V1:%.*]] = addrspacecast ptr addrspace(5) %A to ptr
+; LOWERALLOCAONLY: store i32 0, ptr [[V1]], align 4
   store i32 0, ptr addrspace(5) %A
   call void @callee(ptr addrspace(5) %A)
   ret void
