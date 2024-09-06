@@ -700,7 +700,7 @@ static RValue emitLibraryCall(CodeGenFunction &CGF, const FunctionDecl *FD,
         Context.BuiltinInfo.isConstWithoutErrnoAndExceptions(BuiltinID);
     // Restrict to target with errno, for example, MacOS doesn't set errno.
     bool CallWithPointerArgsOrPointerReturnType = false;
-    if (Call.isScalar()) {
+    if (Call.isScalar() && Call.getScalarVal()) {
       if (CallBase *CB = dyn_cast<CallBase>(Call.getScalarVal())) {
         for (Value *A : CB->args())
           if (A->getType()->isPointerTy())
