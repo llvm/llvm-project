@@ -519,8 +519,7 @@ static bool initTargetOptions(DiagnosticsEngine &Diags,
          Entry.Group == frontend::IncludeDirGroup::System))
       Options.MCOptions.IASSearchPaths.push_back(
           Entry.IgnoreSysRoot ? Entry.Path : HSOpts.Sysroot + Entry.Path);
-  Options.MCOptions.Argv0 =
-      CodeGenOpts.Argv0 != nullptr ? CodeGenOpts.Argv0 : "";
+  Options.MCOptions.Argv0 = CodeGenOpts.Argv0 ? CodeGenOpts.Argv0 : "";
   Options.MCOptions.CommandlineArgs = flattenClangCommandLine(
       CodeGenOpts.CommandLineArgs, CodeGenOpts.MainFileName);
   Options.MCOptions.AsSecureLogFile = CodeGenOpts.AsSecureLogFile;
