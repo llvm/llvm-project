@@ -30,6 +30,36 @@ add_libc_unittest(
     libc.src.time.asctime_r
 )
 
+add_libc_unittest(
+  ctime_test
+  SUITE
+    libc_time_unittests
+  SRCS
+    ctime_test.cpp
+  HDRS
+    TmHelper.h
+    TmMatcher.h
+  CXX_STANDARD
+    20
+  DEPENDS
+    libc.src.time.ctime
+)
+
+add_libc_unittest(
+  ctime_r_test
+  SUITE
+    libc_time_unittests
+  SRCS
+    ctime_r_test.cpp
+  HDRS
+    TmHelper.h
+    TmMatcher.h
+  CXX_STANDARD
+    20
+  DEPENDS
+    libc.src.time.ctime_r
+)
+
 add_libc_test(
   clock_gettime_test
   SUITE
