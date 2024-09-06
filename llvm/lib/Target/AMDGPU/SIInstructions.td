@@ -3984,6 +3984,16 @@ def G_AMDGPU_S_BUFFER_LOAD_UBYTE : SBufferLoadInstruction;
 def G_AMDGPU_S_BUFFER_LOAD_SSHORT : SBufferLoadInstruction;
 def G_AMDGPU_S_BUFFER_LOAD_USHORT : SBufferLoadInstruction;
 
+class SBufferPrefetchInstruction : AMDGPUGenericInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins type0:$rsrc, untyped_imm_0:$offset, type1:$len);
+  let hasSideEffects = 0;
+  let mayLoad = 1;
+  let mayStore = 1;
+}
+
+def G_AMDGPU_S_BUFFER_PREFETCH : SBufferPrefetchInstruction;
+
 def G_AMDGPU_S_MUL_U64_U32 : AMDGPUGenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src0, type0:$src1);
