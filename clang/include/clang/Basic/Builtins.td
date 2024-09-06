@@ -934,6 +934,12 @@ def IsConstantEvaluated : LangBuiltin<"CXX_LANG"> {
   let Prototype = "bool()";
 }
 
+def IsWithinLifetime : LangBuiltin<"CXX_LANG"> {
+  let Spellings = ["__builtin_is_within_lifetime"];
+  let Attributes = [NoThrow, CustomTypeChecking, Consteval];
+  let Prototype = "bool(void*)";
+}
+
 // GCC exception builtins
 def EHReturn : Builtin {
   let Spellings = ["__builtin_eh_return"];
@@ -4677,6 +4683,12 @@ def HLSLWaveGetLaneIndex : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_wave_get_lane_index"];
   let Attributes = [NoThrow, Const];
   let Prototype = "unsigned int()";
+}
+
+def HLSLWaveIsFirstLane : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_wave_is_first_lane"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "bool()";
 }
 
 def HLSLClamp : LangBuiltin<"HLSL_LANG"> {

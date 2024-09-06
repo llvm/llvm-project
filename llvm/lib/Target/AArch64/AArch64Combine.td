@@ -222,7 +222,15 @@ def build_vector_to_dup : GICombineRule<
   (apply [{ applyBuildVectorToDup(*${root}, MRI, B); }])
 >;
 
-def build_vector_lowering : GICombineGroup<[build_vector_to_dup]>;
+def build_vector_to_vector_insert : GICombineRule<
+  (defs root:$root),
+  (match (G_BUILD_VECTOR $dst, GIVariadic<>:$unused):$root,
+          [{ return matchLowerBuildToInsertVecElt(*${root}, MRI); }]),
+  (apply [{ applyLowerBuildToInsertVecElt(*${root}, MRI, B); }])
+>;
+
+def build_vector_lowering : GICombineGroup<[build_vector_to_dup,
+                                            build_vector_to_vector_insert]>;
 
 def lower_vector_fcmp : GICombineRule<
   (defs root:$root),

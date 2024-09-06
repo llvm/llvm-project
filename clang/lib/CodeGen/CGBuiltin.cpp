@@ -2538,6 +2538,9 @@ static RValue EmitHipStdParUnsupportedBuiltin(CodeGenFunction *CGF,
 RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
                                         const CallExpr *E,
                                         ReturnValueSlot ReturnValue) {
+  assert(!getContext().BuiltinInfo.isImmediate(BuiltinID) &&
+         "Should not codegen for consteval builtins");
+
   const FunctionDecl *FD = GD.getDecl()->getAsFunction();
   // See if we can constant fold this builtin.  If so, don't emit it at all.
   // TODO: Extend this handling to all builtin calls that we can constant-fold.
@@ -13481,6 +13484,95 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     Int = Intrinsic::aarch64_neon_suqadd;
     return EmitNeonCall(CGM.getIntrinsic(Int, Ty), Ops, "vuqadd");
   }
+
+  case NEON::BI__builtin_neon_vluti2_laneq_bf16:
+  case NEON::BI__builtin_neon_vluti2_laneq_f16:
+  case NEON::BI__builtin_neon_vluti2_laneq_p16:
+  case NEON::BI__builtin_neon_vluti2_laneq_p8:
+  case NEON::BI__builtin_neon_vluti2_laneq_s16:
+  case NEON::BI__builtin_neon_vluti2_laneq_s8:
+  case NEON::BI__builtin_neon_vluti2_laneq_u16:
+  case NEON::BI__builtin_neon_vluti2_laneq_u8: {
+    Int = Intrinsic::aarch64_neon_vluti2_laneq;
+    llvm::Type *Tys[2];
+    Tys[0] = Ty;
+    Tys[1] = GetNeonType(this, NeonTypeFlags(Type.getEltType(), false,
+                                             /*isQuad*/ false));
+    return EmitNeonCall(CGM.getIntrinsic(Int, Tys), Ops, "vluti2_laneq");
+  }
+  case NEON::BI__builtin_neon_vluti2q_laneq_bf16:
+  case NEON::BI__builtin_neon_vluti2q_laneq_f16:
+  case NEON::BI__builtin_neon_vluti2q_laneq_p16:
+  case NEON::BI__builtin_neon_vluti2q_laneq_p8:
+  case NEON::BI__builtin_neon_vluti2q_laneq_s16:
+  case NEON::BI__builtin_neon_vluti2q_laneq_s8:
+  case NEON::BI__builtin_neon_vluti2q_laneq_u16:
+  case NEON::BI__builtin_neon_vluti2q_laneq_u8: {
+    Int = Intrinsic::aarch64_neon_vluti2_laneq;
+    llvm::Type *Tys[2];
+    Tys[0] = Ty;
+    Tys[1] = GetNeonType(this, NeonTypeFlags(Type.getEltType(), false,
+                                             /*isQuad*/ true));
+    return EmitNeonCall(CGM.getIntrinsic(Int, Tys), Ops, "vluti2_laneq");
+  }
+  case NEON::BI__builtin_neon_vluti2_lane_bf16:
+  case NEON::BI__builtin_neon_vluti2_lane_f16:
+  case NEON::BI__builtin_neon_vluti2_lane_p16:
+  case NEON::BI__builtin_neon_vluti2_lane_p8:
+  case NEON::BI__builtin_neon_vluti2_lane_s16:
+  case NEON::BI__builtin_neon_vluti2_lane_s8:
+  case NEON::BI__builtin_neon_vluti2_lane_u16:
+  case NEON::BI__builtin_neon_vluti2_lane_u8: {
+    Int = Intrinsic::aarch64_neon_vluti2_lane;
+    llvm::Type *Tys[2];
+    Tys[0] = Ty;
+    Tys[1] = GetNeonType(this, NeonTypeFlags(Type.getEltType(), false,
+                                             /*isQuad*/ false));
+    return EmitNeonCall(CGM.getIntrinsic(Int, Tys), Ops, "vluti2_lane");
+  }
+  case NEON::BI__builtin_neon_vluti2q_lane_bf16:
+  case NEON::BI__builtin_neon_vluti2q_lane_f16:
+  case NEON::BI__builtin_neon_vluti2q_lane_p16:
+  case NEON::BI__builtin_neon_vluti2q_lane_p8:
+  case NEON::BI__builtin_neon_vluti2q_lane_s16:
+  case NEON::BI__builtin_neon_vluti2q_lane_s8:
+  case NEON::BI__builtin_neon_vluti2q_lane_u16:
+  case NEON::BI__builtin_neon_vluti2q_lane_u8: {
+    Int = Intrinsic::aarch64_neon_vluti2_lane;
+    llvm::Type *Tys[2];
+    Tys[0] = Ty;
+    Tys[1] = GetNeonType(this, NeonTypeFlags(Type.getEltType(), false,
+                                             /*isQuad*/ true));
+    return EmitNeonCall(CGM.getIntrinsic(Int, Tys), Ops, "vluti2_lane");
+  }
+  case NEON::BI__builtin_neon_vluti4q_lane_p8:
+  case NEON::BI__builtin_neon_vluti4q_lane_s8:
+  case NEON::BI__builtin_neon_vluti4q_lane_u8: {
+    Int = Intrinsic::aarch64_neon_vluti4q_lane;
+    return EmitNeonCall(CGM.getIntrinsic(Int, Ty), Ops, "vluti4q_lane");
+  }
+  case NEON::BI__builtin_neon_vluti4q_laneq_p8:
+  case NEON::BI__builtin_neon_vluti4q_laneq_s8:
+  case NEON::BI__builtin_neon_vluti4q_laneq_u8: {
+    Int = Intrinsic::aarch64_neon_vluti4q_laneq;
+    return EmitNeonCall(CGM.getIntrinsic(Int, Ty), Ops, "vluti4q_laneq");
+  }
+  case NEON::BI__builtin_neon_vluti4q_lane_bf16_x2:
+  case NEON::BI__builtin_neon_vluti4q_lane_f16_x2:
+  case NEON::BI__builtin_neon_vluti4q_lane_p16_x2:
+  case NEON::BI__builtin_neon_vluti4q_lane_s16_x2:
+  case NEON::BI__builtin_neon_vluti4q_lane_u16_x2: {
+    Int = Intrinsic::aarch64_neon_vluti4q_lane_x2;
+    return EmitNeonCall(CGM.getIntrinsic(Int, Ty), Ops, "vluti4q_lane_x2");
+  }
+  case NEON::BI__builtin_neon_vluti4q_laneq_bf16_x2:
+  case NEON::BI__builtin_neon_vluti4q_laneq_f16_x2:
+  case NEON::BI__builtin_neon_vluti4q_laneq_p16_x2:
+  case NEON::BI__builtin_neon_vluti4q_laneq_s16_x2:
+  case NEON::BI__builtin_neon_vluti4q_laneq_u16_x2: {
+    Int = Intrinsic::aarch64_neon_vluti4q_laneq_x2;
+    return EmitNeonCall(CGM.getIntrinsic(Int, Ty), Ops, "vluti4q_laneq_x2");
+  }
   }
 }
 
@@ -14728,6 +14820,7 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_storeups512_mask:
     return EmitX86MaskedStore(*this, Ops, Align(1));
 
+  case X86::BI__builtin_ia32_storesbf16128_mask:
   case X86::BI__builtin_ia32_storesh128_mask:
   case X86::BI__builtin_ia32_storess128_mask:
   case X86::BI__builtin_ia32_storesd128_mask:
@@ -14836,6 +14929,9 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_vfmaddph512_mask:
   case X86::BI__builtin_ia32_vfmaddph512_maskz:
   case X86::BI__builtin_ia32_vfmaddph512_mask3:
+  case X86::BI__builtin_ia32_vfmaddnepbh128:
+  case X86::BI__builtin_ia32_vfmaddnepbh256:
+  case X86::BI__builtin_ia32_vfmaddnepbh512:
   case X86::BI__builtin_ia32_vfmaddps512_mask:
   case X86::BI__builtin_ia32_vfmaddps512_maskz:
   case X86::BI__builtin_ia32_vfmaddps512_mask3:
@@ -14920,6 +15016,7 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_loaddqudi512_mask:
     return EmitX86MaskedLoad(*this, Ops, Align(1));
 
+  case X86::BI__builtin_ia32_loadsbf16128_mask:
   case X86::BI__builtin_ia32_loadsh128_mask:
   case X86::BI__builtin_ia32_loadss128_mask:
   case X86::BI__builtin_ia32_loadsd128_mask:
@@ -16074,6 +16171,9 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_sqrtph256:
   case X86::BI__builtin_ia32_sqrtph:
   case X86::BI__builtin_ia32_sqrtph512:
+  case X86::BI__builtin_ia32_vsqrtnepbf16256:
+  case X86::BI__builtin_ia32_vsqrtnepbf16:
+  case X86::BI__builtin_ia32_vsqrtnepbf16512:
   case X86::BI__builtin_ia32_sqrtps512:
   case X86::BI__builtin_ia32_sqrtpd512: {
     if (Ops.size() == 2) {
@@ -16293,6 +16393,9 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_fpclassps128_mask:
   case X86::BI__builtin_ia32_fpclassps256_mask:
   case X86::BI__builtin_ia32_fpclassps512_mask:
+  case X86::BI__builtin_ia32_vfpclasspbf16128_mask:
+  case X86::BI__builtin_ia32_vfpclasspbf16256_mask:
+  case X86::BI__builtin_ia32_vfpclasspbf16512_mask:
   case X86::BI__builtin_ia32_fpclassph128_mask:
   case X86::BI__builtin_ia32_fpclassph256_mask:
   case X86::BI__builtin_ia32_fpclassph512_mask:
@@ -16307,6 +16410,15 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     Intrinsic::ID ID;
     switch (BuiltinID) {
     default: llvm_unreachable("Unsupported intrinsic!");
+    case X86::BI__builtin_ia32_vfpclasspbf16128_mask:
+      ID = Intrinsic::x86_avx10_fpclass_nepbf16_128;
+      break;
+    case X86::BI__builtin_ia32_vfpclasspbf16256_mask:
+      ID = Intrinsic::x86_avx10_fpclass_nepbf16_256;
+      break;
+    case X86::BI__builtin_ia32_vfpclasspbf16512_mask:
+      ID = Intrinsic::x86_avx10_fpclass_nepbf16_512;
+      break;
     case X86::BI__builtin_ia32_fpclassph128_mask:
       ID = Intrinsic::x86_avx512fp16_fpclass_ph_128;
       break;
@@ -16465,6 +16577,9 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_vcmppd256_round_mask:
   case X86::BI__builtin_ia32_vcmpps256_round_mask:
   case X86::BI__builtin_ia32_vcmpph256_round_mask:
+  case X86::BI__builtin_ia32_vcmppbf16512_mask:
+  case X86::BI__builtin_ia32_vcmppbf16256_mask:
+  case X86::BI__builtin_ia32_vcmppbf16128_mask:
     IsMaskFCmp = true;
     [[fallthrough]];
   case X86::BI__builtin_ia32_cmpps:
@@ -18700,6 +18815,10 @@ case Builtin::BI__builtin_hlsl_elementwise_isinf: {
         llvm::FunctionType::get(IntTy, {}, false), "__hlsl_wave_get_lane_index",
         {}, false, true));
   }
+  case Builtin::BI__builtin_hlsl_wave_is_first_lane: {
+    Intrinsic::ID ID = CGM.getHLSLRuntime().getWaveIsFirstLaneIntrinsic();
+    return EmitRuntimeCall(Intrinsic::getDeclaration(&CGM.getModule(), ID));
+  }
   }
   return nullptr;
 }
@@ -19489,6 +19608,9 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
         F, {EmitScalarExpr(E->getArg(0)), EmitScalarExpr(E->getArg(1)),
             EmitScalarExpr(E->getArg(2)), EmitScalarExpr(E->getArg(3))});
   }
+  case AMDGPU::BI__builtin_amdgcn_s_prefetch_data:
+    return emitBuiltinWithOneOverloadedType<2>(
+        *this, E, Intrinsic::amdgcn_s_prefetch_data);
   default:
     return nullptr;
   }

@@ -1260,10 +1260,8 @@ public:
 #endif /* LLPC_BUILD_GFX12 */
   bool hasVALUMaskWriteHazard() const { return getGeneration() == GFX11; }
 
-#if LLPC_BUILD_GFX12
   bool hasVALUReadSGPRHazard() const { return getGeneration() == GFX12; }
 
-#endif /* LLPC_BUILD_GFX12 */
   /// Return if operations acting on VGPR tuples require even alignment.
   bool needsAlignedVGPRs() const { return GFX90AInsts; }
 

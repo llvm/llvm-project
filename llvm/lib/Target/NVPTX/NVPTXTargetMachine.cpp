@@ -462,7 +462,7 @@ void NVPTXPassConfig::addMachineSSAOptimization() {
     printAndVerify("After ILP optimizations");
 
   addPass(&EarlyMachineLICMID);
-  addPass(&MachineCSEID);
+  addPass(&MachineCSELegacyID);
 
   addPass(&MachineSinkingID);
   printAndVerify("After Machine LICM, CSE and Sinking passes");

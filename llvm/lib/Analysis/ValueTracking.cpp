@@ -9596,7 +9596,7 @@ static ConstantRange getRangeForIntrinsic(const IntrinsicInst &II) {
   case Intrinsic::cttz:
     // Maximum of set/clear bits is the bit width.
     return ConstantRange::getNonEmpty(APInt::getZero(Width),
-                                      APInt(Width, Width + 1));
+                                      APInt(Width, Width) + 1);
   case Intrinsic::uadd_sat:
     // uadd.sat(x, C) produces [C, UINT_MAX].
     if (match(II.getOperand(0), m_APInt(C)) ||
