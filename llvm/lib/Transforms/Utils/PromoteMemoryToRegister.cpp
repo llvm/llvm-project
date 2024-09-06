@@ -81,7 +81,8 @@ bool llvm::isAllocaPromotable(const AllocaInst *AI) {
         return false;
     } else if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(U)) {
       if (!II->isLifetimeStartOrEnd() && !II->isDroppable() &&
-          II->getIntrinsicID() != Intrinsic::fake_use)
+          II->getIntrinsicID() != Intrinsic::fake_use &&
+          !II->isLaunderOrStripInvariantGroup())
         return false;
     } else if (const BitCastInst *BCI = dyn_cast<BitCastInst>(U)) {
       if (!onlyUsedByLifetimeMarkersOrDroppableInsts(BCI))
@@ -491,9 +492,9 @@ static void removeIntrinsicUsers(AllocaInst *AI) {
     }
 
     if (!I->getType()->isVoidTy()) {
-      // The only users of this bitcast/GEP instruction are lifetime intrinsics.
-      // Follow the use/def chain to erase them now instead of leaving it for
-      // dead code elimination later.
+      // The only users of this bitcast/GEP instruction are lifetime intrinsics,
+      // fake_use as well as invariant group ones. Follow the use/def chain to
+      // erase them now instead of leaving it for dead code elimination later.
       for (Use &UU : llvm::make_early_inc_range(I->uses())) {
         Instruction *Inst = cast<Instruction>(UU.getUser());
 
