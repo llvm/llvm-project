@@ -18593,7 +18593,9 @@ static SDValue PerformBITCASTCombine(SDNode *N,
 
   // We may have a bitcast of something that has already had this bitcast
   // combine performed on it, so skip past any VECTOR_REG_CASTs.
-  while (Src.getOpcode() == ARMISD::VECTOR_REG_CAST)
+  if (Src.getOpcode() == ARMISD::VECTOR_REG_CAST &&
+      Src.getOperand(0).getValueType().getScalarSizeInBits() <=
+          Src.getValueType().getScalarSizeInBits())
     Src = Src.getOperand(0);
 
   // Bitcast from element-wise VMOV or VMVN doesn't need VREV if the VREV that
@@ -18602,7 +18604,7 @@ static SDValue PerformBITCASTCombine(SDNode *N,
   if ((Src.getOpcode() == ARMISD::VMOVIMM ||
        Src.getOpcode() == ARMISD::VMVNIMM ||
        Src.getOpcode() == ARMISD::VMOVFPIMM) &&
-      SrcVT.getScalarSizeInBits() < DstVT.getScalarSizeInBits() &&
+      SrcVT.getScalarSizeInBits() <= DstVT.getScalarSizeInBits() &&
       DAG.getDataLayout().isBigEndian())
     return DAG.getNode(ARMISD::VECTOR_REG_CAST, SDLoc(N), DstVT, Src);
 
