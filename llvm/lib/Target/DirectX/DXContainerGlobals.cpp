@@ -15,6 +15,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Analysis/DXILMetadataAnalysis.h"
 #include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/Constants.h"
@@ -57,6 +58,7 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
     AU.addRequired<ShaderFlagsAnalysisWrapper>();
+    AU.addRequired<DXILMetadataAnalysisWrapperPass>();
   }
 };
 
@@ -143,23 +145,35 @@ void DXContainerGlobals::addPipelineStateValidationInfo(
   SmallString<256> Data;
   raw_svector_ostream OS(Data);
   PSVRuntimeInfo PSV;
-  Triple TT(M.getTargetTriple());
   PSV.BaseData.MinimumWaveLaneCount = 0;
   PSV.BaseData.MaximumWaveLaneCount = std::numeric_limits<uint32_t>::max();
+
+  dxil::ModuleMetadataInfo &MMI =
+      getAnalysis<DXILMetadataAnalysisWrapperPass>().getModuleMetadata();
+  assert(MMI.EntryPropertyVec.size() == 1 ||
+         MMI.ShaderStage == Triple::Library);
   PSV.BaseData.ShaderStage =
-      static_cast<uint8_t>(TT.getEnvironment() - Triple::Pixel);
+      static_cast<uint8_t>(MMI.ShaderStage - Triple::Pixel);
 
   // Hardcoded values here to unblock loading the shader into D3D.
   //
   // TODO: Lots more stuff to do here!
   //
   // See issue https://github.com/llvm/llvm-project/issues/96674.
-  PSV.BaseData.NumThreadsX = 1;
-  PSV.BaseData.NumThreadsY = 1;
-  PSV.BaseData.NumThreadsZ = 1;
-  PSV.EntryName = "main";
+  switch (MMI.ShaderStage) {
+  case Triple::Compute:
+    PSV.BaseData.NumThreadsX = MMI.EntryPropertyVec[0].NumThreadsX;
+    PSV.BaseData.NumThreadsY = MMI.EntryPropertyVec[0].NumThreadsY;
+    PSV.BaseData.NumThreadsZ = MMI.EntryPropertyVec[0].NumThreadsZ;
+    break;
+  default:
+    break;
+  }
 
-  PSV.finalize(TT.getEnvironment());
+  if (MMI.ShaderStage != Triple::Library)
+    PSV.EntryName = MMI.EntryPropertyVec[0].Entry->getName();
+
+  PSV.finalize(MMI.ShaderStage);
   PSV.write(OS);
   Constant *Constant =
       ConstantDataArray::getString(M.getContext(), Data, /*AddNull*/ false);
@@ -170,6 +184,7 @@ char DXContainerGlobals::ID = 0;
 INITIALIZE_PASS_BEGIN(DXContainerGlobals, "dxil-globals",
                       "DXContainer Global Emitter", false, true)
 INITIALIZE_PASS_DEPENDENCY(ShaderFlagsAnalysisWrapper)
+INITIALIZE_PASS_DEPENDENCY(DXILMetadataAnalysisWrapperPass)
 INITIALIZE_PASS_END(DXContainerGlobals, "dxil-globals",
                     "DXContainer Global Emitter", false, true)
 

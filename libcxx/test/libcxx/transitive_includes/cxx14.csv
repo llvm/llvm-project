@@ -132,8 +132,6 @@ chrono type_traits
 chrono vector
 chrono version
 cinttypes cstdint
-cmath cstddef
-cmath initializer_list
 cmath limits
 cmath type_traits
 cmath version
@@ -235,7 +233,6 @@ expected cstddef
 expected initializer_list
 expected new
 expected version
-experimental/iterator cstddef
 experimental/iterator iosfwd
 experimental/iterator iterator
 experimental/iterator type_traits
@@ -930,7 +927,6 @@ tuple type_traits
 tuple typeinfo
 tuple utility
 tuple version
-type_traits cstddef
 type_traits cstdint
 type_traits version
 typeindex compare

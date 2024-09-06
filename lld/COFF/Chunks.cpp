@@ -1000,16 +1000,7 @@ void BaserelChunk::writeTo(uint8_t *buf) const {
 }
 
 uint8_t Baserel::getDefaultType(llvm::COFF::MachineTypes machine) {
-  switch (machine) {
-  case AMD64:
-  case ARM64:
-    return IMAGE_REL_BASED_DIR64;
-  case I386:
-  case ARMNT:
-    return IMAGE_REL_BASED_HIGHLOW;
-  default:
-    llvm_unreachable("unknown machine type");
-  }
+  return is64Bit(machine) ? IMAGE_REL_BASED_DIR64 : IMAGE_REL_BASED_HIGHLOW;
 }
 
 MergeChunk::MergeChunk(uint32_t alignment)

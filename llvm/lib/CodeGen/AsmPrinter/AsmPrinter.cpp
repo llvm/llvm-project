@@ -1832,6 +1832,10 @@ void AsmPrinter::emitFunctionBody() {
         // This instruction is only used to note jump table debug info, it's
         // purely meta information.
         break;
+      case TargetOpcode::INIT_UNDEF:
+        // This is only used to influence register allocation behavior, no
+        // actual initialization is needed.
+        break;
       default:
         emitInstruction(&MI);
         if (CanDoExtraAnalysis) {

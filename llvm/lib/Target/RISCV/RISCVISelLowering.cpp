@@ -1317,6 +1317,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         // FIXME: mload, mstore, mgather, mscatter, vp_load/store,
         // vp_stride_load/store, vp_gather/scatter can be hoisted to here.
         setOperationAction({ISD::LOAD, ISD::STORE}, VT, Custom);
+        setOperationAction({ISD::VP_LOAD, ISD::VP_STORE}, VT, Custom);
 
         setOperationAction({ISD::FP_ROUND, ISD::FP_EXTEND}, VT, Custom);
         setOperationAction({ISD::STRICT_FP_ROUND, ISD::STRICT_FP_EXTEND}, VT,
@@ -1378,8 +1379,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         setOperationAction(
             {ISD::MLOAD, ISD::MSTORE, ISD::MGATHER, ISD::MSCATTER}, VT, Custom);
 
-        setOperationAction({ISD::VP_LOAD, ISD::VP_STORE,
-                            ISD::EXPERIMENTAL_VP_STRIDED_LOAD,
+        setOperationAction({ISD::EXPERIMENTAL_VP_STRIDED_LOAD,
                             ISD::EXPERIMENTAL_VP_STRIDED_STORE, ISD::VP_GATHER,
                             ISD::VP_SCATTER},
                            VT, Custom);
@@ -2288,10 +2288,11 @@ bool RISCVTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
     return true;
 
   // Building an integer and then converting requires a fmv at the end of
-  // the integer sequence.
+  // the integer sequence. The fmv is not required for Zfinx.
+  const int FmvCost = Subtarget.hasStdExtZfinx() ? 0 : 1;
   const int Cost =
-      1 + RISCVMatInt::getIntMatCost(Imm.bitcastToAPInt(), Subtarget.getXLen(),
-                                     Subtarget);
+      FmvCost + RISCVMatInt::getIntMatCost(Imm.bitcastToAPInt(),
+                                           Subtarget.getXLen(), Subtarget);
   return Cost <= FPImmCost;
 }
 
@@ -19631,7 +19632,7 @@ static SDValue unpackF64OnRV32DSoftABI(SelectionDAG &DAG, SDValue Chain,
 }
 
 // FastCC has less than 1% performance improvement for some particular
-// benchmark. But theoretically, it may has benenfit for some cases.
+// benchmark. But theoretically, it may have benefit for some cases.
 bool RISCV::CC_RISCV_FastCC(const DataLayout &DL, RISCVABI::ABI ABI,
                             unsigned ValNo, MVT ValVT, MVT LocVT,
                             CCValAssign::LocInfo LocInfo,
@@ -21980,10 +21981,10 @@ bool RISCVTargetLowering::lowerDeinterleaveIntrinsicToLoad(
 
   VectorType *VTy = cast<VectorType>(DI->getOperand(0)->getType());
   VectorType *ResVTy = cast<VectorType>(DI->getType()->getContainedType(0));
+  const DataLayout &DL = LI->getDataLayout();
 
   if (!isLegalInterleavedAccessType(ResVTy, Factor, LI->getAlign(),
-                                    LI->getPointerAddressSpace(),
-                                    LI->getDataLayout()))
+                                    LI->getPointerAddressSpace(), DL))
     return false;
 
   Function *VlsegNFunc;
@@ -22005,7 +22006,7 @@ bool RISCVTargetLowering::lowerDeinterleaveIntrinsicToLoad(
         Intrinsic::riscv_vlseg6, Intrinsic::riscv_vlseg7,
         Intrinsic::riscv_vlseg8};
 
-    unsigned SEW = ResVTy->getElementType()->getScalarSizeInBits();
+    unsigned SEW = DL.getTypeSizeInBits(ResVTy->getElementType());
     unsigned NumElts = ResVTy->getElementCount().getKnownMinValue();
     Type *VecTupTy = TargetExtType::get(
         LI->getContext(), "riscv.vector.tuple",
@@ -22051,10 +22052,10 @@ bool RISCVTargetLowering::lowerInterleaveIntrinsicToStore(
 
   VectorType *VTy = cast<VectorType>(II->getType());
   VectorType *InVTy = cast<VectorType>(II->getOperand(0)->getType());
+  const DataLayout &DL = SI->getDataLayout();
 
   if (!isLegalInterleavedAccessType(InVTy, Factor, SI->getAlign(),
-                                    SI->getPointerAddressSpace(),
-                                    SI->getDataLayout()))
+                                    SI->getPointerAddressSpace(), DL))
     return false;
 
   Function *VssegNFunc;
@@ -22075,7 +22076,7 @@ bool RISCVTargetLowering::lowerInterleaveIntrinsicToStore(
         Intrinsic::riscv_vsseg6, Intrinsic::riscv_vsseg7,
         Intrinsic::riscv_vsseg8};
 
-    unsigned SEW = InVTy->getElementType()->getScalarSizeInBits();
+    unsigned SEW = DL.getTypeSizeInBits(InVTy->getElementType());
     unsigned NumElts = InVTy->getElementCount().getKnownMinValue();
     Type *VecTupTy = TargetExtType::get(
         SI->getContext(), "riscv.vector.tuple",
