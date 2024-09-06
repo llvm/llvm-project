@@ -194,7 +194,7 @@ Status ProcessElfCore::DoLoadCore() {
     // Parse thread contexts and auxv structure
     if (H.p_type == llvm::ELF::PT_NOTE) {
       if (llvm::Error error = ParseThreadContextsFromNoteSegment(H, data))
-        return Status(std::move(error));
+        return Status::FromError(std::move(error));
     }
     // PT_LOAD segments contains address map
     if (H.p_type == llvm::ELF::PT_LOAD) {

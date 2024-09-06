@@ -18,6 +18,7 @@
 #include "ErrorReporting.h"
 #include "GlobalHandler.h"
 #include "JIT.h"
+#include "Shared/Utils.h"
 #include "Utils/ELF.h"
 #include "omptarget.h"
 #include "print_tracing.h"
@@ -110,7 +111,7 @@ private:
         Device->allocate(1024, /*HstPtr=*/nullptr, TARGET_ALLOC_DEFAULT);
     Device->free(Addr);
     // Align Address to MaxMemoryAllocation
-    Addr = (void *)alignPtr((Addr), MaxMemoryAllocation);
+    Addr = (void *)utils::alignPtr((Addr), MaxMemoryAllocation);
     return Addr;
   }
 
@@ -243,8 +244,8 @@ public:
     if (EC)
       report_fatal_error("Error saving image : " + StringRef(EC.message()));
     if (const auto *TgtImageBitcode = Image.getTgtImageBitcode()) {
-      size_t Size =
-          getPtrDiff(TgtImageBitcode->ImageEnd, TgtImageBitcode->ImageStart);
+      size_t Size = utils::getPtrDiff(TgtImageBitcode->ImageEnd,
+                                      TgtImageBitcode->ImageStart);
       MemoryBufferRef MBR = MemoryBufferRef(
           StringRef((const char *)TgtImageBitcode->ImageStart, Size), "");
       OS << MBR.getBuffer();
@@ -277,10 +278,10 @@ public:
 
       int32_t NameLength = std::strlen(OffloadEntry.Name) + 1;
       memcpy(BufferPtr, OffloadEntry.Name, NameLength);
-      BufferPtr = advanceVoidPtr(BufferPtr, NameLength);
+      BufferPtr = utils::advancePtr(BufferPtr, NameLength);
 
       *((uint32_t *)(BufferPtr)) = OffloadEntry.Size;
-      BufferPtr = advanceVoidPtr(BufferPtr, sizeof(uint32_t));
+      BufferPtr = utils::advancePtr(BufferPtr, sizeof(uint32_t));
 
       auto Err = Plugin::success();
       {
@@ -290,11 +291,12 @@ public:
       }
       if (Err)
         report_fatal_error("Error retrieving data for global");
-      BufferPtr = advanceVoidPtr(BufferPtr, OffloadEntry.Size);
+      BufferPtr = utils::advancePtr(BufferPtr, OffloadEntry.Size);
     }
     assert(BufferPtr == GlobalsMB->get()->getBufferEnd() &&
            "Buffer over/under-filled.");
-    assert(Size == getPtrDiff(BufferPtr, GlobalsMB->get()->getBufferStart()) &&
+    assert(Size == utils::getPtrDiff(BufferPtr,
+                                     GlobalsMB->get()->getBufferStart()) &&
            "Buffer size mismatch");
 
     StringRef GlobalsMemory(GlobalsMB.get()->getBufferStart(), Size);
@@ -1113,7 +1115,7 @@ GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
 #ifdef OMPT_SUPPORT
   if (ompt::CallbacksInitialized) {
     size_t Bytes =
-        getPtrDiff(InputTgtImage->ImageEnd, InputTgtImage->ImageStart);
+        utils::getPtrDiff(InputTgtImage->ImageEnd, InputTgtImage->ImageStart);
     performOmptCallback(
         device_load, Plugin.getUserId(DeviceId),
         /*FileName=*/nullptr, /*FileOffset=*/0, /*VmaInFile=*/nullptr,
@@ -1352,8 +1354,8 @@ Expected<void *> PinnedAllocationMapTy::lockHostBuffer(void *HstPtr,
       return std::move(Err);
 
     // Return the device accessible pointer with the correct offset.
-    return advanceVoidPtr(Entry->DevAccessiblePtr,
-                          getPtrDiff(HstPtr, Entry->HstPtr));
+    return utils::advancePtr(Entry->DevAccessiblePtr,
+                             utils::getPtrDiff(HstPtr, Entry->HstPtr));
   }
 
   // No intersecting registered allocation found in the map. First, lock the
@@ -1951,7 +1953,7 @@ int32_t GenericPluginTy::is_plugin_compatible(__tgt_device_image *Image) {
   auto T = logger::log<int32_t>(__func__, Image);
   auto R = [&]() {
     StringRef Buffer(reinterpret_cast<const char *>(Image->ImageStart),
-                     target::getPtrDiff(Image->ImageEnd, Image->ImageStart));
+                     utils::getPtrDiff(Image->ImageEnd, Image->ImageStart));
 
     auto HandleError = [&](Error Err) -> bool {
       [[maybe_unused]] std::string ErrStr = toString(std::move(Err));
@@ -1988,7 +1990,7 @@ int32_t GenericPluginTy::is_device_compatible(int32_t DeviceId,
   auto T = logger::log<int32_t>(__func__, DeviceId, Image);
   auto R = [&]() {
     StringRef Buffer(reinterpret_cast<const char *>(Image->ImageStart),
-                     target::getPtrDiff(Image->ImageEnd, Image->ImageStart));
+                     utils::getPtrDiff(Image->ImageEnd, Image->ImageStart));
 
     auto HandleError = [&](Error Err) -> bool {
       [[maybe_unused]] std::string ErrStr = toString(std::move(Err));
