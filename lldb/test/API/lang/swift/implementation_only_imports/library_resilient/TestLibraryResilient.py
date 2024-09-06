@@ -53,8 +53,8 @@ class TestLibraryResilient(TestBase):
         self.expect("fr var", substrs=[
             "(SomeLibrary.ContainsTwoInts) container = {\n  wrapped = (first = 2, second = 3)\n  other = 10\n}",
             "(Int) simple = 1"])
-        self.expect("e container", substrs=["(SomeLibrary.ContainsTwoInts)", "other = 10"])
-        self.expect("e container.wrapped", substrs=["(SomeLibraryCore.TwoInts)", "(first = 2, second = 3)"])
+        self.expect("expr container", substrs=["(SomeLibrary.ContainsTwoInts)", "other = 10"])
+        self.expect("expr container.wrapped", substrs=["(SomeLibraryCore.TwoInts)", "(first = 2, second = 3)"])
 
     @swiftTest
     @expectedFailureAll(oslist=["windows"]) # Requires Remote Mirrors support
@@ -74,5 +74,5 @@ class TestLibraryResilient(TestBase):
         self.expect("fr var", substrs=[
             "(SomeLibrary.ContainsTwoInts) container = {", "other = 10",
             "(Int) simple = 1"])
-        self.expect("e container", substrs=["(SomeLibrary.ContainsTwoInts)", "other = 10"])
-        self.expect("e container.wrapped", error=True, substrs=["value of type 'ContainsTwoInts' has no member 'wrapped'"])
+        self.expect("expr container", substrs=["(SomeLibrary.ContainsTwoInts)", "other = 10"])
+        self.expect("expr container.wrapped", error=True, substrs=["value of type 'ContainsTwoInts' has no member 'wrapped'"])

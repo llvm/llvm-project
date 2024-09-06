@@ -15,4 +15,4 @@ class TestDefaultProtocolExtensionNoSelfReference(TestBase):
         self.build()
 
         lldbutil.run_to_source_breakpoint(self, 'break here', lldb.SBFileSpec('main.swift'))
-        self.expect('e -d no-run-target -- self', substrs=["(a.C) $R0 = 0x"])
+        self.expect('expr -d no-run-target -- self', substrs=["(a.C) $R0 = 0x"])
