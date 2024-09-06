@@ -531,7 +531,8 @@ bool llvm::CC_RISCV_FastCC(unsigned ValNo, MVT ValVT, MVT LocVT,
     }
   }
 
-  if (LocVT == MVT::f16 && Subtarget.hasStdExtZfhmin()) {
+  if ((LocVT == MVT::f16 && Subtarget.hasStdExtZfhmin()) ||
+      (LocVT == MVT::bf16 && Subtarget.hasStdExtZfbfmin())) {
     static const MCPhysReg FPR16List[] = {
         RISCV::F10_H, RISCV::F11_H, RISCV::F12_H, RISCV::F13_H, RISCV::F14_H,
         RISCV::F15_H, RISCV::F16_H, RISCV::F17_H, RISCV::F0_H,  RISCV::F1_H,
@@ -584,7 +585,7 @@ bool llvm::CC_RISCV_FastCC(unsigned ValNo, MVT ValVT, MVT LocVT,
     }
   }
 
-  if (LocVT == MVT::f16) {
+  if (LocVT == MVT::f16 || LocVT == MVT::bf16) {
     unsigned Offset2 = State.AllocateStack(2, Align(2));
     State.addLoc(CCValAssign::getMem(ValNo, ValVT, Offset2, LocVT, LocInfo));
     return false;
