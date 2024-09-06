@@ -230,10 +230,16 @@ def S_INVERSE_BALLOT_U64 : SPseudoInstSI<
 let Uses = [MODE, EXEC] in {
 def FPTRUNC_ROUND_F16_F32_PSEUDO : VPseudoInstSI <(outs VGPR_32:$vdst),
   (ins VGPR_32:$src0, i32imm:$round)>;
+
+def FPTRUNC_ROUND_F32_F64_PSEUDO : VPseudoInstSI <(outs VGPR_32:$vdst),
+  (ins VReg_64:$src0, i32imm:$round)>;
 } // End Uses = [MODE, EXEC]
 
 def : GCNPat <(f16 (fptrunc_round f32:$src0, (i32 SupportedRoundMode:$round))),
      (FPTRUNC_ROUND_F16_F32_PSEUDO $src0, (as_hw_round_mode $round))>;
+
+def : GCNPat <(f32 (fptrunc_round f64:$src0, (i32 SupportedRoundMode:$round))),
+     (FPTRUNC_ROUND_F32_F64_PSEUDO $src0, (as_hw_round_mode $round))>;
 
 // Invert the exec mask and overwrite the inactive lanes of dst with inactive,
 // restoring it after we're done.

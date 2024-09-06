@@ -62,8 +62,7 @@ static void emitMethodNameAndArgs(const InterfaceMethod &method,
 /// Get an array of all OpInterface definitions but exclude those subclassing
 /// "DeclareOpInterfaceMethods".
 static std::vector<llvm::Record *>
-getAllInterfaceDefinitions(const llvm::RecordKeeper &recordKeeper,
-                           StringRef name) {
+getAllInterfaceDefinitions(llvm::RecordKeeper &recordKeeper, StringRef name) {
   std::vector<llvm::Record *> defs =
       recordKeeper.getAllDerivedDefinitions((name + "Interface").str());
 
@@ -118,7 +117,7 @@ protected:
 
 /// A specialized generator for attribute interfaces.
 struct AttrInterfaceGenerator : public InterfaceGenerator {
-  AttrInterfaceGenerator(const llvm::RecordKeeper &records, raw_ostream &os)
+  AttrInterfaceGenerator(llvm::RecordKeeper &records, raw_ostream &os)
       : InterfaceGenerator(getAllInterfaceDefinitions(records, "Attr"), os) {
     valueType = "::mlir::Attribute";
     interfaceBaseType = "AttributeInterface";
@@ -133,7 +132,7 @@ struct AttrInterfaceGenerator : public InterfaceGenerator {
 };
 /// A specialized generator for operation interfaces.
 struct OpInterfaceGenerator : public InterfaceGenerator {
-  OpInterfaceGenerator(const llvm::RecordKeeper &records, raw_ostream &os)
+  OpInterfaceGenerator(llvm::RecordKeeper &records, raw_ostream &os)
       : InterfaceGenerator(getAllInterfaceDefinitions(records, "Op"), os) {
     valueType = "::mlir::Operation *";
     interfaceBaseType = "OpInterface";
@@ -149,7 +148,7 @@ struct OpInterfaceGenerator : public InterfaceGenerator {
 };
 /// A specialized generator for type interfaces.
 struct TypeInterfaceGenerator : public InterfaceGenerator {
-  TypeInterfaceGenerator(const llvm::RecordKeeper &records, raw_ostream &os)
+  TypeInterfaceGenerator(llvm::RecordKeeper &records, raw_ostream &os)
       : InterfaceGenerator(getAllInterfaceDefinitions(records, "Type"), os) {
     valueType = "::mlir::Type";
     interfaceBaseType = "TypeInterface";
@@ -684,15 +683,15 @@ struct InterfaceGenRegistration {
         genDefDesc(("Generate " + genDesc + " interface definitions").str()),
         genDocDesc(("Generate " + genDesc + " interface documentation").str()),
         genDecls(genDeclArg, genDeclDesc,
-                 [](const llvm::RecordKeeper &records, raw_ostream &os) {
+                 [](llvm::RecordKeeper &records, raw_ostream &os) {
                    return GeneratorT(records, os).emitInterfaceDecls();
                  }),
         genDefs(genDefArg, genDefDesc,
-                [](const llvm::RecordKeeper &records, raw_ostream &os) {
+                [](llvm::RecordKeeper &records, raw_ostream &os) {
                   return GeneratorT(records, os).emitInterfaceDefs();
                 }),
         genDocs(genDocArg, genDocDesc,
-                [](const llvm::RecordKeeper &records, raw_ostream &os) {
+                [](llvm::RecordKeeper &records, raw_ostream &os) {
                   return GeneratorT(records, os).emitInterfaceDocs();
                 }) {}
 

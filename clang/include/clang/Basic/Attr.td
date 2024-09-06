@@ -4643,16 +4643,14 @@ def HLSLResource : InheritableAttr {
   let Documentation = [InternalOnly];
 }
 
-def HLSLROV : InheritableAttr {
+def HLSLROV : TypeAttr {
   let Spellings = [CXX11<"hlsl", "is_rov">];
-  let Subjects = SubjectList<[Struct]>;
   let LangOpts = [HLSL]; 
   let Documentation = [InternalOnly];
 }
 
-def HLSLResourceClass : InheritableAttr {
+def HLSLResourceClass : TypeAttr {
   let Spellings = [CXX11<"hlsl", "resource_class">];
-  let Subjects = SubjectList<[Field]>;
   let LangOpts = [HLSL];
   let Args = [
 	EnumArgument<"ResourceClass", "llvm::hlsl::ResourceClass",
