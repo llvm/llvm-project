@@ -6070,10 +6070,11 @@ StmtResult SemaOpenMP::ActOnOpenMPExecutableDirective(
               DMC->getDefaultmapModifierLoc();
     }
 
-    for (unsigned VC = 0; VC < VariableImplicitInfo::DefaultmapKindNum; ++VC) {
-      auto K = static_cast<OpenMPDefaultmapClauseKind>(VC);
-      std::fill_n(std::back_inserter(ImplicitMapModifiersLoc[VC]),
-                  ImpInfo.MapModifiers[K].size(), PresentModifierLocs[VC]);
+    for (OpenMPDefaultmapClauseKind K :
+         llvm::enum_seq_inclusive<OpenMPDefaultmapClauseKind>(
+             OpenMPDefaultmapClauseKind(), OMPC_DEFAULTMAP_unknown)) {
+      std::fill_n(std::back_inserter(ImplicitMapModifiersLoc[K]),
+                  ImpInfo.MapModifiers[K].size(), PresentModifierLocs[K]);
     }
     // Mark taskgroup task_reduction descriptors as implicitly firstprivate.
     for (OMPClause *C : Clauses) {
