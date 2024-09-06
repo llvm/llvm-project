@@ -6231,7 +6231,7 @@ void SIInstrInfo::legalizeOperandsSMRD(MachineRegisterInfo &MRI,
     SBase->setReg(SGPR);
   }
   MachineOperand *SOff = getNamedOperand(MI, AMDGPU::OpName::soffset);
-  if (SOff && !RI.isSGPRClass(MRI.getRegClass(SOff->getReg()))) {
+  if (SOff && !RI.isSGPRReg(MRI, SOff->getReg())) {
     Register SGPR = readlaneVGPRToSGPR(SOff->getReg(), MI, MRI);
     SOff->setReg(SGPR);
   }
