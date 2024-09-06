@@ -312,10 +312,8 @@ bool llvm::CC_RISCV(unsigned ValNo, MVT ValVT, MVT LocVT,
 
   ArrayRef<MCPhysReg> ArgGPRs = RISCV::getArgGPRs(ABI);
 
-  const RISCVSubtarget &STI =
-      State.getMachineFunction().getSubtarget<RISCVSubtarget>();
-  if ((ValVT == MVT::f32 && XLen == 32 && STI.hasStdExtZfinx()) ||
-      (ValVT == MVT::f64 && XLen == 64 && STI.hasStdExtZdinx())) {
+  if ((ValVT == MVT::f32 && XLen == 32 && Subtarget.hasStdExtZfinx()) ||
+      (ValVT == MVT::f64 && XLen == 64 && Subtarget.hasStdExtZdinx())) {
     if (MCRegister Reg = State.AllocateReg(ArgGPRs)) {
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
       return false;
