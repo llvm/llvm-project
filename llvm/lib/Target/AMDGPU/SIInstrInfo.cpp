@@ -2098,20 +2098,6 @@ unsigned SIInstrInfo::getNumWaitStates(const MachineInstr &MI) {
   }
 }
 
-Register SIInstrInfo::findSetInactiveMask(const MachineInstr &MI) {
-  assert(MI.getOpcode() == AMDGPU::V_SET_INACTIVE_B32);
-  for (auto &Op : MI.implicit_operands()) {
-    if (Op.isDef())
-      continue;
-    Register OpReg = Op.getReg();
-    if (OpReg == AMDGPU::EXEC || OpReg == AMDGPU::EXEC_LO ||
-        OpReg == AMDGPU::SCC)
-      continue;
-    return OpReg;
-  }
-  return Register();
-}
-
 bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   MachineBasicBlock &MBB = *MI.getParent();
   DebugLoc DL = MBB.findDebugLoc(MI);
@@ -2287,92 +2273,14 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     break;
   }
   case AMDGPU::V_SET_INACTIVE_B32: {
-    unsigned NotOpc = ST.isWave32() ? AMDGPU::S_NOT_B32 : AMDGPU::S_NOT_B64;
-    unsigned MovOpc = ST.isWave32() ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
-    Register ExecReg = RI.getExec();
+    // Lower V_SET_INACTIVE_B32 to V_CNDMASK_B32.
     Register DstReg = MI.getOperand(0).getReg();
-    MachineOperand &ActiveSrc = MI.getOperand(1);
-    MachineOperand &InactiveSrc = MI.getOperand(2);
-
-    // Find implicit register defining lanes active outside WWM.
-    Register ExecSrcReg = findSetInactiveMask(MI);
-    assert(ExecSrcReg && "V_SET_INACTIVE must be in known WWM region");
-    // Note: default here is set to ExecReg so that functional MIR is still
-    // generated if implicit def is not found and assertions are disabled.
-    if (!ExecSrcReg)
-      ExecSrcReg = ExecReg;
-
-    // Ideally in WWM this operation is lowered to V_CNDMASK; however,
-    // constant bus constraints and the presence of literal constants
-    // present an issue.
-    // Fallback to V_MOV base lowering in all but the common cases.
-    MachineFunction *MF = MBB.getParent();
-    MachineRegisterInfo &MRI = MF->getRegInfo();
-    const unsigned Opcode = AMDGPU::V_CNDMASK_B32_e64;
-    const MCInstrDesc &Desc = get(Opcode);
-
-    const APInt ActiveImm(64, ActiveSrc.isImm() ? ActiveSrc.getImm() : 0);
-    const APInt InactiveImm(64, InactiveSrc.isImm() ? InactiveSrc.getImm() : 0);
-
-    int Src0Idx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src0);
-    int Src1Idx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src1);
-
-    int ConstantBusLimit = ST.getConstantBusLimit(Opcode);
-    int LiteralLimit = ST.hasVOP3Literal() ? 1 : 0;
-    int ConstantBusUses =
-        1 + // Starts at 1 for ExecSrcReg
-        (usesConstantBus(MRI, ActiveSrc, Desc.operands()[Src1Idx]) ? 1 : 0) +
-        (usesConstantBus(MRI, InactiveSrc, Desc.operands()[Src0Idx]) ? 1 : 0);
-    int LiteralConstants =
-        ((ActiveSrc.isReg() ||
-          (ActiveSrc.isImm() && isInlineConstant(ActiveImm)))
-             ? 0
-             : 1) +
-        ((InactiveSrc.isReg() ||
-          (InactiveSrc.isImm() && isInlineConstant(InactiveImm)))
-             ? 0
-             : 1);
-
-    bool UseVCndMask =
-        ConstantBusUses <= ConstantBusLimit && LiteralConstants <= LiteralLimit;
-
-    if (UseVCndMask) {
-      // Single V_CNDMASK_B32
-      BuildMI(MBB, MI, DL, Desc, DstReg)
-          .addImm(0)
-          .add(InactiveSrc)
-          .addImm(0)
-          .add(ActiveSrc)
-          .addReg(ExecSrcReg);
-    } else {
-      // Fallback V_MOV case.
-      // Avoid unnecessary work if a source VGPR is also the destination.
-      // This can happen if WWM register allocation was efficient.
-      // Note: this assumes WWM execution.
-      bool DstIsActive = ActiveSrc.isReg() && ActiveSrc.getReg() == DstReg;
-      bool DstIsInactive =
-          InactiveSrc.isReg() && InactiveSrc.getReg() == DstReg;
-      if (!DstIsInactive) {
-        // Set exec mask to inactive lanes,
-        // but only if active lanes would be overwritten.
-        if (DstIsActive) {
-          BuildMI(MBB, MI, DL, get(NotOpc), ExecReg)
-              .addReg(ExecSrcReg)
-              .setOperandDead(3); // Dead scc
-        }
-        // Copy inactive lanes
-        BuildMI(MBB, MI, DL, get(AMDGPU::V_MOV_B32_e32), DstReg).add(InactiveSrc);
-      }
-      if (!DstIsActive) {
-        // Set exec mask to active lanes
-        BuildMI(MBB, MI, DL, get(MovOpc), ExecReg).addReg(ExecSrcReg);
-        // Copy active lanes
-        BuildMI(MBB, MI, DL, get(AMDGPU::V_MOV_B32_e32), MI.getOperand(0).getReg())
-            .add(ActiveSrc);
-      }
-      // Restore WWM
-      BuildMI(MBB, MI, DL, get(MovOpc), ExecReg).addImm(-1);
-    }
+    BuildMI(MBB, MI, DL, get(AMDGPU::V_CNDMASK_B32_e64), DstReg)
+        .add(MI.getOperand(3))
+        .add(MI.getOperand(4))
+        .add(MI.getOperand(1))
+        .add(MI.getOperand(2))
+        .add(MI.getOperand(5));
     MI.eraseFromParent();
     break;
   }
