@@ -176,7 +176,7 @@ public:
   void registerEscape(DenseMap<char, StringRef> Escapes);
 
 private:
-  Template(std::shared_ptr<ASTNode> Tree) : Tree(Tree){};
+  Template(std::shared_ptr<ASTNode> Tree) : Tree(Tree) {};
   DenseMap<StringRef, std::shared_ptr<ASTNode>> Partials;
   DenseMap<StringRef, Lambda> Lambdas;
   DenseMap<StringRef, SectionLambda> SectionLambdas;
