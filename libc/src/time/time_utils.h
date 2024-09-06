@@ -37,6 +37,7 @@ enum Month : int {
 };
 
 struct TimeConstants {
+  static constexpr int MAXIMUM_32_BIT_VALUE = 2147483647;
   static constexpr int SECONDS_PER_MIN = 60;
   static constexpr int MINUTES_PER_HOUR = 60;
   static constexpr int HOURS_PER_DAY = 24;
