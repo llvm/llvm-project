@@ -75,7 +75,7 @@ Status DebuggerThread::DebugAttach(lldb::pid_t pid,
         return DebuggerThreadAttachRoutine(pid, attach_info);
       });
   if (!secondary_thread) {
-    result = Status(secondary_thread.takeError());
+    result = Status::FromError(secondary_thread.takeError());
     LLDB_LOG(log, "couldn't attach to process '{0}'. {1}", pid, result);
   }
 
