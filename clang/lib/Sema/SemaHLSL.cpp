@@ -578,17 +578,16 @@ bool clang::CreateHLSLAttributedResourceType(Sema &S, QualType Wrapped,
     switch (A->getKind()) {
     case attr::HLSLResourceClass: {
       llvm::dxil::ResourceClass RC =
-          dyn_cast<HLSLResourceClassAttr>(A)->getResourceClass();
-      if (!HasResourceClass) {
-        ResAttrs.ResourceClass = RC;
-        HasResourceClass = true;
-      } else {
+          cast<HLSLResourceClassAttr>(A)->getResourceClass();
+      if (HasResourceClass) {
         S.Diag(A->getLocation(), ResAttrs.ResourceClass == RC
                                      ? diag::warn_duplicate_attribute_exact
                                      : diag::warn_duplicate_attribute)
             << A;
         return false;
       }
+      ResAttrs.ResourceClass = RC;
+      HasResourceClass = true;
       break;
     }
     case attr::HLSLROV:
@@ -664,6 +663,9 @@ QualType SemaHLSL::ProcessResourceTypeAttributes(QualType CurrentType) {
                                        HLSLResourcesTypeAttrs, QT)) {
     const HLSLAttributedResourceType *RT =
         dyn_cast<HLSLAttributedResourceType>(QT.getTypePtr());
+    // Use the location of the first attribute as the location of the aggregated
+    // type. The attributes are stored in HLSLResourceTypeAttrs in the same
+    // order as they are parsed.
     SourceLocation Loc = HLSLResourcesTypeAttrs[0]->getLoc();
     LocsForHLSLAttributedResources.insert(std::pair(RT, Loc));
   }
