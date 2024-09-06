@@ -948,8 +948,7 @@ Status GDBRemoteCommunication::StartDebugserverProcess(
   Status error;
   FileSpec &debugserver_file_spec = launch_info.GetExecutableFile();
   if (debugserver_file_spec = GetDebugserverPath(platform)) {
-    char debugserver_path[PATH_MAX];
-    debugserver_file_spec.GetPath(debugserver_path, sizeof(debugserver_path));
+    std::string debugserver_path = debugserver_file_spec.GetPath();
 
     Args &debugserver_args = launch_info.GetArguments();
     debugserver_args.Clear();
