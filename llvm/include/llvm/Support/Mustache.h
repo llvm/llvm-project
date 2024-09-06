@@ -7,8 +7,50 @@
 //===----------------------------------------------------------------------===//
 //
 // Implementation of the Mustache templating language supports version 1.4.2
+// currently relies on llvm::json::Value for data input
+// see the Mustache spec for more information
 // (https://mustache.github.io/mustache.5.html).
 //
+// Current Features Supported:
+// - Variables
+// - Sections
+// - Inverted Sections
+// - Partials
+// - Comments
+// - Lambdas
+// - Unescaped Variables
+//
+// Features Not Supported:
+// - Set Delimiter
+// - Blocks
+// - Parents
+// - Dynamic Names
+//
+// Usage:
+// - Creating a simple template and rendering it:
+// \code
+//   auto Template = Template::createTemplate("Hello, {{name}}!");
+//   Value Data = {{"name", "World"}};
+//   StringRef Rendered = Template.render(Data);
+//   // Rendered == "Hello, World!"
+// \endcode
+// - Creating a template with a partial and rendering it:
+// \code
+//   auto Template = Template::createTemplate("{{>partial}}");
+//   Template.registerPartial("partial", "Hello, {{name}}!");
+//   Value Data = {{"name", "World"}};
+//   StringRef Rendered = Template.render(Data);
+//   // Rendered == "Hello, World!"
+// \endcode
+// - Creating a template with a lambda and rendering it:
+// \code
+//   auto Template = Template::createTemplate("{{#lambda}}Hello,
+//                                             {{name}}!{{/lambda}}");
+//   Template.registerLambda("lambda", []() { return true; });
+//   Value Data = {{"name", "World"}};
+//   StringRef Rendered = Template.render(Data);
+//   // Rendered == "Hello, World!"
+// \endcode
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_SUPPORT_MUSTACHE
@@ -17,8 +59,6 @@
 #include "Error.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/JSON.h"
-#include <string>
-#include <variant>
 #include <vector>
 
 namespace llvm {
@@ -96,8 +136,6 @@ public:
 
   void setRawBody(StringRef NewBody) { RawBody = NewBody; };
 
-  SmallString<128> getRawBody() const { return RawBody; };
-
   std::shared_ptr<ASTNode> getLastChild() const {
     return Children.empty() ? nullptr : Children.back();
   };
@@ -120,6 +158,8 @@ private:
   llvm::json::Value LocalContext;
 };
 
+// A Template represents the container for the AST and the partials
+// and Lambdas that are registered with it.
 class Template {
 public:
   static Template createTemplate(StringRef TemplateStr);
@@ -132,6 +172,9 @@ public:
 
   void registerLambda(StringRef Name, SectionLambda Lambda);
 
+  // By default the Mustache Spec Specifies that HTML special characters
+  // should be escaped. This function allows the user to specify which
+  // characters should be escaped.
   void registerEscape(DenseMap<char, StringRef> Escapes);
 
 private:

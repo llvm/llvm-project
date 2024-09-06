@@ -8,9 +8,6 @@
 
 #include "llvm/Support/Mustache.h"
 #include "llvm/Support/Error.h"
-#include <iostream>
-#include <regex>
-#include <sstream>
 
 using namespace llvm;
 using namespace llvm::json;
@@ -20,11 +17,10 @@ SmallString<128> escapeString(StringRef Input,
                               DenseMap<char, StringRef> &Escape) {
   SmallString<128> EscapedString("");
   for (char C : Input) {
-    if (Escape.find(C) != Escape.end()) {
+    if (Escape.find(C) != Escape.end())
       EscapedString += Escape[C];
-    } else {
+    else
       EscapedString += C;
-    }
   }
   return EscapedString;
 }
@@ -52,9 +48,9 @@ Token::Token(StringRef RawBody, StringRef InnerBody, char Identifier)
     return;
 
   StringRef AccessorStr = InnerBody;
-  if (TokenType != Type::Variable) {
+  if (TokenType != Type::Variable)
     AccessorStr = InnerBody.substr(1);
-  }
+
   Accessor = split(AccessorStr.trim(), '.');
 }
 
@@ -118,9 +114,8 @@ std::vector<Token> tokenize(StringRef Template) {
     DelimiterStart = Template.find(Open, Start);
   }
 
-  if (Start < Template.size()) {
+  if (Start < Template.size())
     Tokens.push_back(Token(Template.substr(Start)));
-  }
 
   // fix up white spaces for
   // open sections/inverted sections/close section/comment
@@ -139,38 +134,27 @@ std::vector<Token> tokenize(StringRef Template) {
       Token &PrevToken = Tokens[I - 1];
       StringRef TokenBody = PrevToken.getRawBody().rtrim(" \t\v\t");
       if (TokenBody.ends_with("\n") || TokenBody.ends_with("\r\n") ||
-          (TokenBody.empty() && I == 1)) {
+          (TokenBody.empty() && I == 1))
         NoTextBehind = true;
-      }
     }
     if (I < Tokens.size() - 1 && Tokens[I + 1].getType() == Token::Type::Text &&
         RequiresCleanUp) {
       Token &NextToken = Tokens[I + 1];
       StringRef TokenBody = NextToken.getRawBody().ltrim(" ");
-      if (TokenBody.starts_with("\r\n") || TokenBody.starts_with("\n")) {
+      if (TokenBody.starts_with("\r\n") || TokenBody.starts_with("\n"))
         NoTextAhead = true;
-      }
     }
 
-    if (NoTextBehind && NoTextAhead) {
-      Token &PrevToken = Tokens[I - 1];
+    if ((NoTextBehind && NoTextAhead) || (NoTextAhead && I == 0)) {
       Token &NextToken = Tokens[I + 1];
       StringRef NextTokenBody = NextToken.getTokenBody();
-      PrevToken.setTokenBody(PrevToken.getTokenBody().rtrim(" \t\v\t"));
-      if (NextTokenBody.starts_with("\r\n")) {
+      if (NextTokenBody.starts_with("\r\n"))
         NextToken.setTokenBody(NextTokenBody.substr(2));
-      } else if (NextToken.getTokenBody().starts_with("\n")) {
+      else if (NextToken.getTokenBody().starts_with("\n"))
         NextToken.setTokenBody(NextTokenBody.substr(1));
-      }
-    } else if (NoTextAhead && I == 0) {
-      Token &NextToken = Tokens[I + 1];
-      StringRef NextTokenBody = NextToken.getTokenBody();
-      if (NextTokenBody.starts_with("\r\n")) {
-        NextToken.setTokenBody(NextTokenBody.substr(2));
-      } else if (NextToken.getTokenBody().starts_with("\n")) {
-        NextToken.setTokenBody(NextTokenBody.substr(1));
-      }
-    } else if (NoTextBehind && I == Tokens.size() - 1) {
+    }
+    if ((NoTextBehind && NoTextAhead) ||
+        (NoTextBehind && I == Tokens.size() - 1)) {
       Token &PrevToken = Tokens[I - 1];
       StringRef PrevTokenBody = PrevToken.getTokenBody();
       PrevToken.setTokenBody(PrevTokenBody.rtrim(" \t\v\t"));
@@ -239,9 +223,8 @@ void Parser::parseMustache(std::shared_ptr<ASTNode> Parent) {
       std::size_t End = CurrentPtr;
       SmallString<128> RawBody;
       if (Start + 1 < End - 1)
-        for (std::size_t I = Start + 1; I < End - 1; I++) {
+        for (std::size_t I = Start + 1; I < End - 1; I++)
           RawBody += Tokens[I].getRawBody();
-        }
       else if (Start + 1 == End - 1)
         RawBody = Tokens[Start].getRawBody();
       CurrentNode->setRawBody(RawBody);
@@ -256,18 +239,16 @@ void Parser::parseMustache(std::shared_ptr<ASTNode> Parent) {
       std::size_t End = CurrentPtr;
       SmallString<128> RawBody;
       if (Start + 1 < End - 1)
-        for (std::size_t I = Start + 1; I < End - 1; I++) {
+        for (std::size_t I = Start + 1; I < End - 1; I++)
           RawBody += Tokens[I].getRawBody();
-        }
       else if (Start + 1 == End - 1)
         RawBody = Tokens[Start].getRawBody();
       CurrentNode->setRawBody(RawBody);
       Parent->addChild(CurrentNode);
       break;
     }
-    case Token::Type::SectionClose: {
+    case Token::Type::SectionClose:
       return;
-    }
     default:
       break;
     }
@@ -309,14 +290,11 @@ void Template::registerEscape(DenseMap<char, StringRef> E) { Escapes = E; }
 SmallString<128> printJson(Value &Data) {
 
   SmallString<128> Result;
-  if (Data.getAsNull()) {
+  if (Data.getAsNull())
     return Result;
-  }
-  if (auto *Arr = Data.getAsArray()) {
-    if (Arr->empty()) {
+  if (auto *Arr = Data.getAsArray())
+    if (Arr->empty())
       return Result;
-    }
-  }
   if (Data.getAsString()) {
     Result += Data.getAsString()->str();
     return Result;
@@ -436,12 +414,10 @@ Value ASTNode::findContext() {
   // We attempt to find the JSON context in the current node if it is not found
   // we traverse the parent nodes to find the context until we reach the root
   // node or the context is found
-  if (Accessor.empty()) {
+  if (Accessor.empty())
     return nullptr;
-  }
-  if (Accessor[0] == ".") {
+  if (Accessor[0] == ".")
     return LocalContext;
-  }
   json::Object *CurrentContext = LocalContext.getAsObject();
   SmallString<128> CurrentAccessor = Accessor[0];
   std::weak_ptr<ASTNode> CurrentParent = Parent;
@@ -458,17 +434,14 @@ Value ASTNode::findContext() {
   for (std::size_t I = 0; I < Accessor.size(); I++) {
     CurrentAccessor = Accessor[I];
     Value *CurrentValue = CurrentContext->get(CurrentAccessor);
-    if (!CurrentValue) {
+    if (!CurrentValue)
       return nullptr;
-    }
     if (I < Accessor.size() - 1) {
       CurrentContext = CurrentValue->getAsObject();
-      if (!CurrentContext) {
+      if (!CurrentContext)
         return nullptr;
-      }
-    } else {
+    } else
       Context = *CurrentValue;
-    }
   }
   return Context;
 }
