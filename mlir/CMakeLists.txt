@@ -136,7 +136,7 @@ option(MLIR_INCLUDE_TESTS
        ${LLVM_INCLUDE_TESTS})
 
 option(MLIR_INCLUDE_INTEGRATION_TESTS
-       "Generate build targets for the MLIR integration tests.")
+       "Generate build targets for the MLIR integration tests." ON)
 
 set(MLIR_INSTALL_AGGREGATE_OBJECTS 1 CACHE BOOL
     "Installs object files needed for add_mlir_aggregate to work out of \
