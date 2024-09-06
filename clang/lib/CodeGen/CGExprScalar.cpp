@@ -36,6 +36,7 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/FixedPointBuilder.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/GEPNoWrapFlags.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Intrinsics.h"
@@ -2865,19 +2866,22 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
                                   llvm::AtomicOrdering::SequentiallyConsistent);
       return isPre ? Builder.CreateBinOp(op, old, amt) : old;
     }
-    // Special case for atomic increment/decrement on floats
+    // Special case for atomic increment/decrement on floats.
+    // Bail out non-power-of-2-sized floating point types (e.g., x86_fp80).
     if (type->isFloatingType()) {
-      llvm::AtomicRMWInst::BinOp aop =
-          isInc ? llvm::AtomicRMWInst::FAdd : llvm::AtomicRMWInst::FSub;
-      llvm::Instruction::BinaryOps op =
-          isInc ? llvm::Instruction::FAdd : llvm::Instruction::FSub;
-      llvm::Value *amt = llvm::ConstantFP::get(
-          VMContext, llvm::APFloat(static_cast<float>(1.0)));
-      llvm::AtomicRMWInst *old =
-          CGF.emitAtomicRMWInst(aop, LV.getAddress(), amt,
-                                llvm::AtomicOrdering::SequentiallyConsistent);
+      llvm::Type *Ty = ConvertType(type);
+      if (llvm::has_single_bit(Ty->getScalarSizeInBits())) {
+        llvm::AtomicRMWInst::BinOp aop =
+            isInc ? llvm::AtomicRMWInst::FAdd : llvm::AtomicRMWInst::FSub;
+        llvm::Instruction::BinaryOps op =
+            isInc ? llvm::Instruction::FAdd : llvm::Instruction::FSub;
+        llvm::Value *amt = llvm::ConstantFP::get(Ty, 1.0);
+        llvm::AtomicRMWInst *old =
+            CGF.emitAtomicRMWInst(aop, LV.getAddress(), amt,
+                                  llvm::AtomicOrdering::SequentiallyConsistent);
 
-      return isPre ? Builder.CreateBinOp(op, old, amt) : old;
+        return isPre ? Builder.CreateBinOp(op, old, amt) : old;
+      }
     }
     value = EmitLoadOfLValue(LV, E->getExprLoc());
     input = value;
@@ -5756,7 +5760,12 @@ CodeGenFunction::EmitCheckedInBoundsGEP(llvm::Type *ElemTy, Value *Ptr,
                                         bool SignedIndices, bool IsSubtraction,
                                         SourceLocation Loc, const Twine &Name) {
   llvm::Type *PtrTy = Ptr->getType();
-  Value *GEPVal = Builder.CreateInBoundsGEP(ElemTy, Ptr, IdxList, Name);
+
+  llvm::GEPNoWrapFlags NWFlags = llvm::GEPNoWrapFlags::inBounds();
+  if (!SignedIndices && !IsSubtraction)
+    NWFlags |= llvm::GEPNoWrapFlags::noUnsignedWrap();
+
+  Value *GEPVal = Builder.CreateGEP(ElemTy, Ptr, IdxList, Name, NWFlags);
 
   // If the pointer overflow sanitizer isn't enabled, do nothing.
   if (!SanOpts.has(SanitizerKind::PointerOverflow))
@@ -5871,8 +5880,13 @@ Address CodeGenFunction::EmitCheckedInBoundsGEP(
     Address Addr, ArrayRef<Value *> IdxList, llvm::Type *elementType,
     bool SignedIndices, bool IsSubtraction, SourceLocation Loc, CharUnits Align,
     const Twine &Name) {
-  if (!SanOpts.has(SanitizerKind::PointerOverflow))
-    return Builder.CreateInBoundsGEP(Addr, IdxList, elementType, Align, Name);
+  if (!SanOpts.has(SanitizerKind::PointerOverflow)) {
+    llvm::GEPNoWrapFlags NWFlags = llvm::GEPNoWrapFlags::inBounds();
+    if (!SignedIndices && !IsSubtraction)
+      NWFlags |= llvm::GEPNoWrapFlags::noUnsignedWrap();
+
+    return Builder.CreateGEP(Addr, IdxList, elementType, Align, Name, NWFlags);
+  }
 
   return RawAddress(
       EmitCheckedInBoundsGEP(Addr.getElementType(), Addr.emitRawPointer(*this),

@@ -3130,6 +3130,14 @@ def int_amdgcn_ds_read_tr16_b64    : AMDGPULoadIntrinsic<local_ptr_ty>;
 def int_amdgcn_wave_id :
   DefaultAttrsIntrinsic<[llvm_i32_ty], [], [NoUndef<RetIndex>, IntrNoMem, IntrSpeculatable]>;
 
+def int_amdgcn_s_prefetch_data :
+  Intrinsic<[],
+  [llvm_anyptr_ty, // Pointer to a constant/global memory
+   llvm_i32_ty],   // Length to prefetch 0-31 (1-32 chaunks, units of 128 bytes)
+    [IntrInaccessibleMemOrArgMemOnly, IntrWillReturn, NoCapture<ArgIndex<0>>, IntrNoCallback, IntrNoFree],
+    "", [SDNPMemOperand]
+  >;
+
 //===----------------------------------------------------------------------===//
 // GFX13 Intrinsics
 //===----------------------------------------------------------------------===//
@@ -3144,10 +3152,75 @@ def int_amdgcn_wave_id_in_wavegroup :
   DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable]>,
   ClangBuiltin<"__builtin_amdgcn_wave_id_in_wavegroup">;
 
-// i32 @llvm.amdgcn.wave.match <src>
-def int_amdgcn_wave_match :
-  DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty], [IntrNoMem, IntrConvergent]>,
-  ClangBuiltin<"__builtin_amdgcn_wave_match">;
+// i32 @llvm.amdgcn.wave.match.b32 <src0> <src1>
+def int_amdgcn_wave_match_b32 :
+  DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem, IntrConvergent]>,
+  ClangBuiltin<"__builtin_amdgcn_wave_match_b32">;
+
+// i32 @llvm.amdgcn.exclusive.scan.sum.i32 <src0> <src1> <clamp>
+def int_amdgcn_exclusive_scan_sum_i32 :
+  DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i1_ty], [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<2>>]>,
+  ClangBuiltin<"__builtin_amdgcn_exclusive_scan_sum_i32">;
+
+// i32 @llvm.amdgcn.exclusive.scan.sum.u32 <src0> <src1> <clamp>
+def int_amdgcn_exclusive_scan_sum_u32 :
+  DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i1_ty], [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<2>>]>,
+  ClangBuiltin<"__builtin_amdgcn_exclusive_scan_sum_u32">;
+
+// i32 @llvm.amdgcn.exclusive.scan.xor.b32 <src0> <src1>
+def int_amdgcn_exclusive_scan_xor_b32 :
+  DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem, IntrConvergent]>,
+  ClangBuiltin<"__builtin_amdgcn_exclusive_scan_xor_b32">;
+
+// i32 @llvm.amdgcn.exclusive.scan.or.b32 <src0> <src1>
+def int_amdgcn_exclusive_scan_or_b32 :
+  DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem, IntrConvergent]>,
+  ClangBuiltin<"__builtin_amdgcn_exclusive_scan_or_b32">;
+
+// i32 @llvm.amdgcn.exclusive.scan.and.b32 <src0> <src1>
+def int_amdgcn_exclusive_scan_and_b32 :
+  DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem, IntrConvergent]>,
+  ClangBuiltin<"__builtin_amdgcn_exclusive_scan_and_b32">;
+
+// i16 @llvm.amdgcn.exclusive.scan.min.i16 <src0> <src1>
+def int_amdgcn_exclusive_scan_min_i16 :
+  DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_i16_ty, llvm_i32_ty], [IntrNoMem, IntrConvergent]>,
+  ClangBuiltin<"__builtin_amdgcn_exclusive_scan_min_i16">;
+
+// i16 @llvm.amdgcn.exclusive.scan.min.u16 <src0> <src1>
+def int_amdgcn_exclusive_scan_min_u16 :
+  DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_i16_ty, llvm_i32_ty], [IntrNoMem, IntrConvergent]>,
+  ClangBuiltin<"__builtin_amdgcn_exclusive_scan_min_u16">;
+
+// i32 @llvm.amdgcn.exclusive.scan.min.i32 <src0> <src1>
+def int_amdgcn_exclusive_scan_min_i32 :
+  DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem, IntrConvergent]>,
+  ClangBuiltin<"__builtin_amdgcn_exclusive_scan_min_i32">;
+
+// i32 @llvm.amdgcn.exclusive.scan.min.u32 <src0> <src1>
+def int_amdgcn_exclusive_scan_min_u32 :
+  DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem, IntrConvergent]>,
+  ClangBuiltin<"__builtin_amdgcn_exclusive_scan_min_u32">;
+
+// i16 @llvm.amdgcn.exclusive.scan.max.i16 <src0> <src1>
+def int_amdgcn_exclusive_scan_max_i16 :
+  DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_i16_ty, llvm_i32_ty], [IntrNoMem, IntrConvergent]>,
+  ClangBuiltin<"__builtin_amdgcn_exclusive_scan_max_i16">;
+
+// i16 @llvm.amdgcn.exclusive.scan.max.u16 <src0> <src1>
+def int_amdgcn_exclusive_scan_max_u16 :
+  DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_i16_ty, llvm_i32_ty], [IntrNoMem, IntrConvergent]>,
+  ClangBuiltin<"__builtin_amdgcn_exclusive_scan_max_u16">;
+
+// i32 @llvm.amdgcn.exclusive.scan.max.i32 <src0> <src1>
+def int_amdgcn_exclusive_scan_max_i32 :
+  DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem, IntrConvergent]>,
+  ClangBuiltin<"__builtin_amdgcn_exclusive_scan_max_i32">;
+
+// i32 @llvm.amdgcn.exclusive.scan.max.u32 <src0> <src1>
+def int_amdgcn_exclusive_scan_max_u32 :
+  DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem, IntrConvergent]>,
+  ClangBuiltin<"__builtin_amdgcn_exclusive_scan_max_u32">;
 
 // void @llvm.amdgcn.s.sema.set.limit(ptr addrspace(3) %sem, i32 %limit)
 // The %sem argument must be uniform, otherwise behavior is undefined.
@@ -3372,13 +3445,13 @@ defm int_amdgcn_convolve_i32_iu4   : Conv<llvm_anyint_ty, llvm_anyint_ty>;
 defm int_amdgcn_convolve_f32i32_iu8: Conv<llvm_anyfloat_ty, llvm_anyint_ty, llvm_anyint_ty>;
 defm int_amdgcn_convolve_f32i32_iu4: Conv<llvm_anyfloat_ty, llvm_anyint_ty, llvm_anyint_ty>;
 
-class AMDGPUScaleBiasActivate<LLVMType data_ty, LLVMType bias_ty> :
+class AMDGPUScaleBiasActivate<LLVMType data_ty, LLVMType scale_ty, LLVMType bias_ty> :
   ClangBuiltin<!subst("int", "__builtin", NAME)>,
   Intrinsic<
     [data_ty],          // %out
     [
       data_ty,          // %acc_in
-      llvm_float_ty,    // %ssrc (expected to be uniform)
+      scale_ty,         // %ssrc (expected to be uniform)
       bias_ty,          // %bias
       llvm_i32_ty,      // %aux_data ([26] - scale and bias packed in %bias, %ssrc ignored and forced to NULL)
       llvm_i1_ty,       // %clamp
@@ -3386,28 +3459,28 @@ class AMDGPUScaleBiasActivate<LLVMType data_ty, LLVMType bias_ty> :
     [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>]
   >;
 
-class AMDGPUUniformScaleActivate<LLVMType data_ty> :
+class AMDGPUUniformScaleActivate<LLVMType data_ty, LLVMType scale_ty> :
   ClangBuiltin<!subst("int", "__builtin", NAME)>,
   Intrinsic<
     [data_ty],          // %out
     [
       data_ty,          // %acc_in
-      llvm_float_ty,    // %ssrc (expected to be uniform)
+      scale_ty,         // %ssrc (expected to be uniform)
       llvm_i32_ty,      // %aux_data
       llvm_i1_ty,       // %clamp
     ],
     [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>]
   >;
 
-def int_amdgcn_scale_bias_activate_f32 : AMDGPUScaleBiasActivate<llvm_v4f32_ty, llvm_float_ty>;
-def int_amdgcn_scale_bias_activate_f16 : AMDGPUScaleBiasActivate<llvm_v8f16_ty, llvm_v2f16_ty>;
-def int_amdgcn_scale_bias_activate_bf16 : AMDGPUScaleBiasActivate<llvm_v8bf16_ty, llvm_v2bf16_ty>;
+def int_amdgcn_scale_bias_activate_f32 : AMDGPUScaleBiasActivate<llvm_v4f32_ty, llvm_float_ty, llvm_float_ty>;
+def int_amdgcn_scale_bias_activate_f16 : AMDGPUScaleBiasActivate<llvm_v8f16_ty, llvm_half_ty, llvm_v2f16_ty>;
+def int_amdgcn_scale_bias_activate_bf16 : AMDGPUScaleBiasActivate<llvm_v8bf16_ty, llvm_bfloat_ty, llvm_v2bf16_ty>;
 
-def int_amdgcn_uniform_scale_activate_f32 : AMDGPUUniformScaleActivate<llvm_v4f32_ty>;
-def int_amdgcn_uniform_scale_activate_f16 : AMDGPUUniformScaleActivate<llvm_v8f16_ty>;
-def int_amdgcn_uniform_scale_activate_bf16 : AMDGPUUniformScaleActivate<llvm_v8bf16_ty>;
+def int_amdgcn_uniform_scale_activate_f32 : AMDGPUUniformScaleActivate<llvm_v4f32_ty, llvm_float_ty>;
+def int_amdgcn_uniform_scale_activate_f16 : AMDGPUUniformScaleActivate<llvm_v8f16_ty, llvm_half_ty>;
+def int_amdgcn_uniform_scale_activate_bf16 : AMDGPUUniformScaleActivate<llvm_v8bf16_ty, llvm_bfloat_ty>;
 
-class AMDGPUScaleBiasActivateScatter2<LLVMType out_data_ty, LLVMType acc_in_ty, LLVMType bias_ty> :
+class AMDGPUScaleBiasActivateScatter2<LLVMType out_data_ty, LLVMType acc_in_ty, LLVMType scale_ty, LLVMType bias_ty> :
   Intrinsic<
     [
       out_data_ty,      // %out0
@@ -3415,7 +3488,7 @@ class AMDGPUScaleBiasActivateScatter2<LLVMType out_data_ty, LLVMType acc_in_ty, 
     ],
     [
       acc_in_ty,        // %acc_in
-      llvm_float_ty,    // %ssrc (expected to be uniform)
+      scale_ty,         // %ssrc (expected to be uniform)
       bias_ty,          // %bias
       llvm_i32_ty,      // %aux_data ([26] - scale and bias packed in %bias, %ssrc ignored and forced to NULL)
       llvm_i1_ty,       // %clamp
@@ -3423,7 +3496,7 @@ class AMDGPUScaleBiasActivateScatter2<LLVMType out_data_ty, LLVMType acc_in_ty, 
     [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>]
   >;
 
-class AMDGPUUniformScaleActivateScatter2<LLVMType out_data_ty, LLVMType acc_in_ty> :
+class AMDGPUUniformScaleActivateScatter2<LLVMType out_data_ty, LLVMType acc_in_ty, LLVMType scale_ty> :
   Intrinsic<
     [
       out_data_ty,      // %out0
@@ -3431,20 +3504,20 @@ class AMDGPUUniformScaleActivateScatter2<LLVMType out_data_ty, LLVMType acc_in_t
     ],
     [
       acc_in_ty,        // %acc_in
-      llvm_float_ty,    // %ssrc (expected to be uniform)
+      scale_ty,         // %ssrc (expected to be uniform)
       llvm_i32_ty,      // %aux_data
       llvm_i1_ty,       // %clamp
     ],
     [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>]
   >;
 
-def int_amdgcn_scale_bias_activate_scatter2_f16 : AMDGPUScaleBiasActivateScatter2<llvm_v2f16_ty, llvm_v4f16_ty, llvm_v2f16_ty>;
-def int_amdgcn_scale_bias_activate_scatter2_bf16 : AMDGPUScaleBiasActivateScatter2<llvm_v2bf16_ty, llvm_v4bf16_ty, llvm_v2bf16_ty>;
+def int_amdgcn_scale_bias_activate_scatter2_f16 : AMDGPUScaleBiasActivateScatter2<llvm_v2f16_ty, llvm_v4f16_ty, llvm_half_ty, llvm_v2f16_ty>;
+def int_amdgcn_scale_bias_activate_scatter2_bf16 : AMDGPUScaleBiasActivateScatter2<llvm_v2bf16_ty, llvm_v4bf16_ty, llvm_bfloat_ty, llvm_v2bf16_ty>;
 
-def int_amdgcn_uniform_scale_activate_scatter2_f16 : AMDGPUUniformScaleActivateScatter2<llvm_v2f16_ty, llvm_v4f16_ty>;
-def int_amdgcn_uniform_scale_activate_scatter2_bf16 : AMDGPUUniformScaleActivateScatter2<llvm_v2bf16_ty, llvm_v4bf16_ty>;
+def int_amdgcn_uniform_scale_activate_scatter2_f16 : AMDGPUUniformScaleActivateScatter2<llvm_v2f16_ty, llvm_v4f16_ty, llvm_half_ty>;
+def int_amdgcn_uniform_scale_activate_scatter2_bf16 : AMDGPUUniformScaleActivateScatter2<llvm_v2bf16_ty, llvm_v4bf16_ty, llvm_bfloat_ty>;
 
-class AMDGPUScaleBiasActivateScatter4<LLVMType out_data_ty, LLVMType acc_in_ty, LLVMType bias_ty> :
+class AMDGPUScaleBiasActivateScatter4<LLVMType out_data_ty, LLVMType acc_in_ty, LLVMType scale_ty, LLVMType bias_ty> :
   Intrinsic<
     [
       out_data_ty,      // %out0
@@ -3454,7 +3527,7 @@ class AMDGPUScaleBiasActivateScatter4<LLVMType out_data_ty, LLVMType acc_in_ty, 
     ],
     [
       acc_in_ty,        // %acc_in
-      llvm_float_ty,    // %ssrc (expected to be uniform)
+      scale_ty,         // %ssrc (expected to be uniform)
       bias_ty,          // %bias
       llvm_i32_ty,      // %aux_data ([26] - scale and bias packed in %bias, %ssrc ignored and forced to NULL)
       llvm_i1_ty,       // %clamp
@@ -3462,7 +3535,7 @@ class AMDGPUScaleBiasActivateScatter4<LLVMType out_data_ty, LLVMType acc_in_ty, 
     [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>]
   >;
 
-class AMDGPUUniformScaleActivateScatter4<LLVMType out_data_ty, LLVMType acc_in_ty> :
+class AMDGPUUniformScaleActivateScatter4<LLVMType out_data_ty, LLVMType acc_in_ty, LLVMType scale_ty> :
   Intrinsic<
     [
       out_data_ty,      // %out0
@@ -3472,18 +3545,18 @@ class AMDGPUUniformScaleActivateScatter4<LLVMType out_data_ty, LLVMType acc_in_t
     ],
     [
       acc_in_ty,        // %acc_in
-      llvm_float_ty,    // %ssrc (expected to be uniform)
+      scale_ty,         // %ssrc (expected to be uniform)
       llvm_i32_ty,      // %aux_data
       llvm_i1_ty,       // %clamp
     ],
     [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>]
   >;
 
-def int_amdgcn_scale_bias_activate_scatter4_f16 : AMDGPUScaleBiasActivateScatter4<llvm_v2f16_ty, llvm_v8f16_ty, llvm_v2f16_ty>;
-def int_amdgcn_scale_bias_activate_scatter4_bf16 : AMDGPUScaleBiasActivateScatter4<llvm_v2bf16_ty, llvm_v8bf16_ty, llvm_v2bf16_ty>;
+def int_amdgcn_scale_bias_activate_scatter4_f16 : AMDGPUScaleBiasActivateScatter4<llvm_v2f16_ty, llvm_v8f16_ty, llvm_half_ty, llvm_v2f16_ty>;
+def int_amdgcn_scale_bias_activate_scatter4_bf16 : AMDGPUScaleBiasActivateScatter4<llvm_v2bf16_ty, llvm_v8bf16_ty, llvm_bfloat_ty, llvm_v2bf16_ty>;
 
-def int_amdgcn_uniform_scale_activate_scatter4_f16 : AMDGPUUniformScaleActivateScatter4<llvm_v2f16_ty, llvm_v8f16_ty>;
-def int_amdgcn_uniform_scale_activate_scatter4_bf16 : AMDGPUUniformScaleActivateScatter4<llvm_v2bf16_ty, llvm_v8bf16_ty>;
+def int_amdgcn_uniform_scale_activate_scatter4_f16 : AMDGPUUniformScaleActivateScatter4<llvm_v2f16_ty, llvm_v8f16_ty, llvm_half_ty>;
+def int_amdgcn_uniform_scale_activate_scatter4_bf16 : AMDGPUUniformScaleActivateScatter4<llvm_v2bf16_ty, llvm_v8bf16_ty, llvm_bfloat_ty>;
 
 class AMDGPUWmmaIntrinsicClamp<LLVMType AB, LLVMType CD> :
   ClangBuiltin<!subst("int", "__builtin", NAME)>,

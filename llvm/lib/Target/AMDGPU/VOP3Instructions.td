@@ -1690,28 +1690,40 @@ let SubtargetPredicate = HasAshrPkInsts in {
   def : AshrPkU8Pat<V_ASHR_PK_U8_I32_e64, 0, 255>;
 }
 
+def VOP_WAVE_MATCH_B32 : VOP3_Profile<VOP_I32_I32_I32> {
+  let HasSrc0IntMods = 0;
+  let HasExtSDWA = 0;
+  let HasExtDPP = 0;
+  let HasExtVOP3DPP = 0;
+  let HasExt64BitDPP = 0;
+}
+
+let SubtargetPredicate = HasExclusiveScanInsts, SubtargetPredicate = isGFX13Plus in {
+  defm V_WAVE_MATCH_B32 : VOP3Inst<"v_wave_match_b32", VOP_WAVE_MATCH_B32, int_amdgcn_wave_match_b32>;
+}
+
 class VOP_EXCLUSIVE_SCAN<VOPProfile p, VOP3Features f> : VOP3_Profile<p, f> {
   let HasExtVOP3DPP = 0;
 }
 
-multiclass V_EXCLUSIVE_SCAN<VOPProfile p, VOP3Features f = VOP3_REGULAR> {
+multiclass V_EXCLUSIVE_SCAN<VOPProfile p, SDPatternOperator node, VOP3Features f = VOP3_REGULAR> {
   let SubtargetPredicate = HasExclusiveScanInsts in
-  defm NAME : VOP3Inst<!tolower(NAME), VOP_EXCLUSIVE_SCAN<p, f>>;
+  defm NAME : VOP3Inst<!tolower(NAME), VOP_EXCLUSIVE_SCAN<p, f>, node>;
 }
 
-defm V_EXCLUSIVE_SCAN_SUM_I32 : V_EXCLUSIVE_SCAN<VOP_I32_I32_I32, VOP3_CLAMP>;
-defm V_EXCLUSIVE_SCAN_SUM_U32 : V_EXCLUSIVE_SCAN<VOP_I32_I32_I32, VOP3_CLAMP>;
-defm V_EXCLUSIVE_SCAN_XOR_B32 : V_EXCLUSIVE_SCAN<VOP_I32_I32_I32>;
-defm V_EXCLUSIVE_SCAN_OR_B32  : V_EXCLUSIVE_SCAN<VOP_I32_I32_I32>;
-defm V_EXCLUSIVE_SCAN_AND_B32 : V_EXCLUSIVE_SCAN<VOP_I32_I32_I32>;
-defm V_EXCLUSIVE_SCAN_MIN_I16 : V_EXCLUSIVE_SCAN<VOP_I16_I16_I16>;
-defm V_EXCLUSIVE_SCAN_MIN_U16 : V_EXCLUSIVE_SCAN<VOP_I16_I16_I16>;
-defm V_EXCLUSIVE_SCAN_MIN_I32 : V_EXCLUSIVE_SCAN<VOP_I32_I32_I32>;
-defm V_EXCLUSIVE_SCAN_MIN_U32 : V_EXCLUSIVE_SCAN<VOP_I32_I32_I32>;
-defm V_EXCLUSIVE_SCAN_MAX_I16 : V_EXCLUSIVE_SCAN<VOP_I16_I16_I16>;
-defm V_EXCLUSIVE_SCAN_MAX_U16 : V_EXCLUSIVE_SCAN<VOP_I16_I16_I16>;
-defm V_EXCLUSIVE_SCAN_MAX_I32 : V_EXCLUSIVE_SCAN<VOP_I32_I32_I32>;
-defm V_EXCLUSIVE_SCAN_MAX_U32 : V_EXCLUSIVE_SCAN<VOP_I32_I32_I32>;
+defm V_EXCLUSIVE_SCAN_SUM_I32 : V_EXCLUSIVE_SCAN<VOP_I32_I32_I32, int_amdgcn_exclusive_scan_sum_i32, VOP3_CLAMP>;
+defm V_EXCLUSIVE_SCAN_SUM_U32 : V_EXCLUSIVE_SCAN<VOP_I32_I32_I32, int_amdgcn_exclusive_scan_sum_u32, VOP3_CLAMP>;
+defm V_EXCLUSIVE_SCAN_XOR_B32 : V_EXCLUSIVE_SCAN<VOP_I32_I32_I32, int_amdgcn_exclusive_scan_xor_b32>;
+defm V_EXCLUSIVE_SCAN_OR_B32  : V_EXCLUSIVE_SCAN<VOP_I32_I32_I32, int_amdgcn_exclusive_scan_or_b32>;
+defm V_EXCLUSIVE_SCAN_AND_B32 : V_EXCLUSIVE_SCAN<VOP_I32_I32_I32, int_amdgcn_exclusive_scan_and_b32>;
+defm V_EXCLUSIVE_SCAN_MIN_I16 : V_EXCLUSIVE_SCAN<VOP_I16_I16_I32, int_amdgcn_exclusive_scan_min_i16>;
+defm V_EXCLUSIVE_SCAN_MIN_U16 : V_EXCLUSIVE_SCAN<VOP_I16_I16_I32, int_amdgcn_exclusive_scan_min_u16>;
+defm V_EXCLUSIVE_SCAN_MIN_I32 : V_EXCLUSIVE_SCAN<VOP_I32_I32_I32, int_amdgcn_exclusive_scan_min_i32>;
+defm V_EXCLUSIVE_SCAN_MIN_U32 : V_EXCLUSIVE_SCAN<VOP_I32_I32_I32, int_amdgcn_exclusive_scan_min_u32>;
+defm V_EXCLUSIVE_SCAN_MAX_I16 : V_EXCLUSIVE_SCAN<VOP_I16_I16_I32, int_amdgcn_exclusive_scan_max_i16>;
+defm V_EXCLUSIVE_SCAN_MAX_U16 : V_EXCLUSIVE_SCAN<VOP_I16_I16_I32, int_amdgcn_exclusive_scan_max_u16>;
+defm V_EXCLUSIVE_SCAN_MAX_I32 : V_EXCLUSIVE_SCAN<VOP_I32_I32_I32, int_amdgcn_exclusive_scan_max_i32>;
+defm V_EXCLUSIVE_SCAN_MAX_U32 : V_EXCLUSIVE_SCAN<VOP_I32_I32_I32, int_amdgcn_exclusive_scan_max_u32>;
 
 //===----------------------------------------------------------------------===//
 // Integer Clamp Patterns
@@ -1788,6 +1800,7 @@ defm V_MINIMUM3_F16           : VOP3Only_Realtriple_t16_gfx12_gfx13<0x22f>;
 defm V_MAXIMUM3_F16           : VOP3Only_Realtriple_t16_gfx12_gfx13<0x230>;
 defm V_MED3_NUM_F32           : VOP3_Realtriple_with_name_gfx12_gfx13<0x231, 0x231, "V_MED3_F32", "v_med3_num_f32">;
 defm V_MED3_NUM_F16           : VOP3_Realtriple_with_name_gfx12_gfx13<0x232, 0x357, "V_MED3_F16", "v_med3_num_f16">;
+defm V_WAVE_MATCH_B32         : VOP3_Real_Base<GFX13Gen, 0x241>;
 defm V_EXCLUSIVE_SCAN_SUM_I32 : VOP3_Real_Base<GFX13Gen, 0x242>;
 defm V_EXCLUSIVE_SCAN_SUM_U32 : VOP3_Real_Base<GFX13Gen, 0x243>;
 defm V_EXCLUSIVE_SCAN_XOR_B32 : VOP3_Real_Base<GFX13Gen, 0x244>;

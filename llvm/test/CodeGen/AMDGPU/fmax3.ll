@@ -133,7 +133,6 @@ define amdgpu_kernel void @test_fmax3_olt_0_f32(ptr addrspace(1) %out, ptr addrs
 ; GFX1210-NEXT:    s_load_b256 s[0:7], s[2:3], 0x24
 ; GFX1210-NEXT:    s_mov_b32 s10, -1
 ; GFX1210-NEXT:    s_mov_b32 s11, 0x31016000
-; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    s_mov_b32 s14, s10
 ; GFX1210-NEXT:    s_mov_b32 s15, s11
 ; GFX1210-NEXT:    s_mov_b32 s18, s10
@@ -297,7 +296,6 @@ define amdgpu_kernel void @test_fmax3_olt_1_f32(ptr addrspace(1) %out, ptr addrs
 ; GFX1210-NEXT:    s_load_b256 s[0:7], s[2:3], 0x24
 ; GFX1210-NEXT:    s_mov_b32 s10, -1
 ; GFX1210-NEXT:    s_mov_b32 s11, 0x31016000
-; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    s_mov_b32 s14, s10
 ; GFX1210-NEXT:    s_mov_b32 s15, s11
 ; GFX1210-NEXT:    s_mov_b32 s18, s10
@@ -468,7 +466,6 @@ define amdgpu_kernel void @test_fmax3_olt_0_f16(ptr addrspace(1) %out, ptr addrs
 ; GFX1210-NEXT:    s_load_b256 s[0:7], s[2:3], 0x24
 ; GFX1210-NEXT:    s_mov_b32 s10, -1
 ; GFX1210-NEXT:    s_mov_b32 s11, 0x31016000
-; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    s_mov_b32 s14, s10
 ; GFX1210-NEXT:    s_mov_b32 s15, s11
 ; GFX1210-NEXT:    s_mov_b32 s18, s10
@@ -640,7 +637,6 @@ define amdgpu_kernel void @test_fmax3_olt_1_f16(ptr addrspace(1) %out, ptr addrs
 ; GFX1210-NEXT:    s_load_b256 s[0:7], s[2:3], 0x24
 ; GFX1210-NEXT:    s_mov_b32 s10, -1
 ; GFX1210-NEXT:    s_mov_b32 s11, 0x31016000
-; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    s_mov_b32 s14, s10
 ; GFX1210-NEXT:    s_mov_b32 s15, s11
 ; GFX1210-NEXT:    s_mov_b32 s18, s10
@@ -739,7 +735,6 @@ define <2 x half> @no_fmax3_v2f16(<2 x half> %a, <2 x half> %b, <2 x half> %c, <
 ; GFX1210-NEXT:    v_pk_max_num_f16 v0, v0, v1
 ; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1210-NEXT:    v_pk_max3_num_f16 v0, v2, v0, v3
-; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %max = call <2 x half> @llvm.maxnum.v2f16(<2 x half> %a, <2 x half> %b)

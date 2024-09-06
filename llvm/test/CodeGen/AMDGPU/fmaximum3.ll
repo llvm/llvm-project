@@ -17,7 +17,6 @@ define <2 x half> @no_fmaximum3_v2f16(<2 x half> %a, <2 x half> %b, <2 x half> %
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_pk_maximum_f16 v0, v2, v0
 ; GFX12-NEXT:    v_pk_maximum_f16 v0, v0, v3
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: no_fmaximum3_v2f16:
@@ -77,7 +76,6 @@ define float @v_fmaximum3_f32(float %a, float %b, float %c) {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_maximum3_f32 v0, v0, v1, v2
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: v_fmaximum3_f32:
@@ -113,7 +111,6 @@ define float @v_fmaximum3_f32_commute(float %a, float %b, float %c) {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_maximum3_f32 v0, v2, v0, v1
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: v_fmaximum3_f32_commute:
@@ -189,7 +186,6 @@ define float @v_fmaximum3_f32_fabs0(float %a, float %b, float %c) {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_maximum3_f32 v0, |v0|, v1, v2
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: v_fmaximum3_f32_fabs0:
@@ -226,7 +222,6 @@ define float @v_fmaximum3_f32_fabs1(float %a, float %b, float %c) {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_maximum3_f32 v0, v0, |v1|, v2
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: v_fmaximum3_f32_fabs1:
@@ -263,7 +258,6 @@ define float @v_fmaximum3_f32_fabs2(float %a, float %b, float %c) {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_maximum3_f32 v0, v0, v1, |v2|
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: v_fmaximum3_f32_fabs2:
@@ -300,7 +294,6 @@ define float @v_fmaximum3_f32_fabs_all(float %a, float %b, float %c) {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_maximum3_f32 v0, |v0|, |v1|, |v2|
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: v_fmaximum3_f32_fabs_all:
@@ -339,7 +332,6 @@ define float @v_fmaximum3_f32_fneg_all(float %a, float %b, float %c) {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_maximum3_f32 v0, -v0, -v1, -v2
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: v_fmaximum3_f32_fneg_all:
@@ -378,7 +370,6 @@ define float @v_fmaximum3_f32_fneg_fabs_all(float %a, float %b, float %c) {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_maximum3_f32 v0, -|v0|, -|v1|, -|v2|
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: v_fmaximum3_f32_fneg_fabs_all:
@@ -420,7 +411,6 @@ define float @v_fmaximum3_f32_fneg0(float %a, float %b, float %c) {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_maximum3_f32 v0, -v0, v1, v2
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: v_fmaximum3_f32_fneg0:
@@ -457,7 +447,6 @@ define float @v_fmaximum3_f32_fneg1(float %a, float %b, float %c) {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_maximum3_f32 v0, v0, -v1, v2
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: v_fmaximum3_f32_fneg1:
@@ -494,7 +483,6 @@ define float @v_fmaximum3_f32_fneg2(float %a, float %b, float %c) {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_maximum3_f32 v0, v0, v1, -v2
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: v_fmaximum3_f32_fneg2:
@@ -531,7 +519,6 @@ define float @v_fmaximum3_f32_const0(float %b, float %c) {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_maximum3_f32 v0, v0, 0x41000000, v1
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: v_fmaximum3_f32_const0:
@@ -568,7 +555,6 @@ define float @v_fmaximum3_f32__const2(float %a, float %b) {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_maximum3_f32 v0, v0, v1, 0x41000000
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: v_fmaximum3_f32__const2:
@@ -605,7 +591,6 @@ define float @v_fmaximum3_f32_inlineimm0(float %b, float %c) {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_maximum3_f32 v0, v0, 4.0, v1
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: v_fmaximum3_f32_inlineimm0:
@@ -641,7 +626,6 @@ define float @v_fmaximum3_f32__inlineimm(float %a, float %b) {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_maximum3_f32 v0, v0, v1, 4.0
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: v_fmaximum3_f32__inlineimm:
@@ -679,7 +663,6 @@ define float @v_fmaximum3_f32_const1_const2(float %a) {
 ; GFX12-NEXT:    s_mov_b32 s0, 0x41000000
 ; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    v_maximum3_f32 v0, v0, s0, 0x41800000
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: v_fmaximum3_f32_const1_const2:
@@ -718,7 +701,6 @@ define <2 x float> @v_fmaximum3_v2f32(<2 x float> %a, <2 x float> %b, <2 x float
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_maximum3_f32 v0, v4, v0, v2
 ; GFX12-NEXT:    v_maximum3_f32 v1, v5, v1, v3
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: v_fmaximum3_v2f32:
@@ -764,7 +746,6 @@ define <2 x float> @v_fmaximum3_v2f32_commute(<2 x float> %a, <2 x float> %b, <2
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_maximum3_f32 v0, v0, v2, v4
 ; GFX12-NEXT:    v_maximum3_f32 v1, v1, v3, v5
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: v_fmaximum3_v2f32_commute:
@@ -810,7 +791,6 @@ define <2 x float> @v_fmaximum3_v2f32__fabs_all(<2 x float> %a, <2 x float> %b, 
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_maximum3_f32 v0, |v0|, |v2|, |v4|
 ; GFX12-NEXT:    v_maximum3_f32 v1, |v1|, |v3|, |v5|
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: v_fmaximum3_v2f32__fabs_all:
@@ -859,7 +839,6 @@ define <2 x float> @v_fmaximum3_v2f32__fneg_all(<2 x float> %a, <2 x float> %b, 
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_maximum3_f32 v0, -v0, -v2, -v4
 ; GFX12-NEXT:    v_maximum3_f32 v1, -v1, -v3, -v5
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: v_fmaximum3_v2f32__fneg_all:
@@ -908,7 +887,6 @@ define <2 x float> @v_fmaximum3_v2f32__inlineimm1(<2 x float> %a, <2 x float> %c
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_maximum3_f32 v0, v0, 2.0, v2
 ; GFX12-NEXT:    v_maximum3_f32 v1, v1, 2.0, v3
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: v_fmaximum3_v2f32__inlineimm1:
@@ -954,7 +932,6 @@ define <2 x float> @v_fmaximum3_v2f32__inlineimm2(<2 x float> %a, <2 x float> %b
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_maximum3_f32 v0, v0, v2, 4.0
 ; GFX12-NEXT:    v_maximum3_f32 v1, v1, v3, 4.0
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: v_fmaximum3_v2f32__inlineimm2:
@@ -1001,7 +978,6 @@ define <3 x float> @v_fmaximum3_v3f32(<3 x float> %a, <3 x float> %b, <3 x float
 ; GFX12-NEXT:    v_maximum3_f32 v0, v6, v0, v3
 ; GFX12-NEXT:    v_maximum3_f32 v1, v7, v1, v4
 ; GFX12-NEXT:    v_maximum3_f32 v2, v8, v2, v5
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: v_fmaximum3_v3f32:
@@ -1057,7 +1033,6 @@ define <3 x float> @v_fmaximum3_v3f32_commute(<3 x float> %a, <3 x float> %b, <3
 ; GFX12-NEXT:    v_maximum3_f32 v0, v0, v3, v6
 ; GFX12-NEXT:    v_maximum3_f32 v1, v1, v4, v7
 ; GFX12-NEXT:    v_maximum3_f32 v2, v2, v5, v8
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: v_fmaximum3_v3f32_commute:
@@ -1113,7 +1088,6 @@ define <3 x float> @v_fmaximum3_v3f32__fabs_all(<3 x float> %a, <3 x float> %b, 
 ; GFX12-NEXT:    v_maximum3_f32 v0, |v0|, |v3|, |v6|
 ; GFX12-NEXT:    v_maximum3_f32 v1, |v1|, |v4|, |v7|
 ; GFX12-NEXT:    v_maximum3_f32 v2, |v2|, |v5|, |v8|
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: v_fmaximum3_v3f32__fabs_all:
@@ -1172,7 +1146,6 @@ define <3 x float> @v_fmaximum3_v3f32__fneg_all(<3 x float> %a, <3 x float> %b, 
 ; GFX12-NEXT:    v_maximum3_f32 v0, -v0, -v3, -v6
 ; GFX12-NEXT:    v_maximum3_f32 v1, -v1, -v4, -v7
 ; GFX12-NEXT:    v_maximum3_f32 v2, -v2, -v5, -v8
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: v_fmaximum3_v3f32__fneg_all:
@@ -1231,7 +1204,6 @@ define <3 x float> @v_fmaximum3_v3f32__inlineimm1(<3 x float> %a, <3 x float> %c
 ; GFX12-NEXT:    v_maximum3_f32 v0, v0, 2.0, v3
 ; GFX12-NEXT:    v_maximum3_f32 v1, v1, 2.0, v4
 ; GFX12-NEXT:    v_maximum3_f32 v2, v2, 2.0, v5
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: v_fmaximum3_v3f32__inlineimm1:
@@ -1287,7 +1259,6 @@ define <3 x float> @v_fmaximum3_v3f32__inlineimm2(<3 x float> %a, <3 x float> %b
 ; GFX12-NEXT:    v_maximum3_f32 v0, v0, v3, 4.0
 ; GFX12-NEXT:    v_maximum3_f32 v1, v1, v4, 4.0
 ; GFX12-NEXT:    v_maximum3_f32 v2, v2, v5, 4.0
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: v_fmaximum3_v3f32__inlineimm2:
@@ -1342,7 +1313,6 @@ define half @v_fmaximum3_f16(half %a, half %b, half %c) {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_maximum3_f16 v0, v0, v1, v2
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: v_fmaximum3_f16:
@@ -1378,7 +1348,6 @@ define half @v_fmaximum3_f16_commute(half %a, half %b, half %c) {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_maximum3_f16 v0, v2, v0, v1
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: v_fmaximum3_f16_commute:
@@ -1460,7 +1429,6 @@ define half @v_fmaximum3_f16_fabs0(half %a, half %b, half %c) {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_maximum3_f16 v0, |v0|, v1, v2
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: v_fmaximum3_f16_fabs0:
@@ -1498,7 +1466,6 @@ define half @v_fmaximum3_f16_fabs1(half %a, half %b, half %c) {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_maximum3_f16 v0, v0, |v1|, v2
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: v_fmaximum3_f16_fabs1:
@@ -1536,7 +1503,6 @@ define half @v_fmaximum3_f16_fabs2(half %a, half %b, half %c) {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_maximum3_f16 v0, v0, v1, |v2|
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: v_fmaximum3_f16_fabs2:
@@ -1574,7 +1540,6 @@ define half @v_fmaximum3_f16_fabs_all(half %a, half %b, half %c) {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_maximum3_f16 v0, |v0|, |v1|, |v2|
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: v_fmaximum3_f16_fabs_all:
@@ -1616,7 +1581,6 @@ define half @v_fmaximum3_f16_fneg_all(half %a, half %b, half %c) {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_maximum3_f16 v0, -v0, -v1, -v2
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: v_fmaximum3_f16_fneg_all:
@@ -1658,7 +1622,6 @@ define half @v_fmaximum3_f16_fneg_fabs_all(half %a, half %b, half %c) {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_maximum3_f16 v0, -|v0|, -|v1|, -|v2|
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: v_fmaximum3_f16_fneg_fabs_all:
@@ -1703,7 +1666,6 @@ define half @v_fmaximum3_f16_fneg0(half %a, half %b, half %c) {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_maximum3_f16 v0, -v0, v1, v2
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: v_fmaximum3_f16_fneg0:
@@ -1741,7 +1703,6 @@ define half @v_fmaximum3_f16_fneg1(half %a, half %b, half %c) {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_maximum3_f16 v0, v0, -v1, v2
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: v_fmaximum3_f16_fneg1:
@@ -1779,7 +1740,6 @@ define half @v_fmaximum3_f16_fneg2(half %a, half %b, half %c) {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_maximum3_f16 v0, v0, v1, -v2
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: v_fmaximum3_f16_fneg2:
@@ -1817,7 +1777,6 @@ define half @v_fmaximum3_f16_const0(half %b, half %c) {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_maximum3_f16 v0, v0, 0x4800, v1
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: v_fmaximum3_f16_const0:
@@ -1854,7 +1813,6 @@ define half @v_fmaximum3_f16__const2(half %a, half %b) {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_maximum3_f16 v0, v0, v1, 0x4800
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: v_fmaximum3_f16__const2:
@@ -1891,7 +1849,6 @@ define half @v_fmaximum3_f16_inlineimm0(half %b, half %c) {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_maximum3_f16 v0, v0, 4.0, v1
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: v_fmaximum3_f16_inlineimm0:
@@ -1927,7 +1884,6 @@ define half @v_fmaximum3_f16__inlineimm(half %a, half %b) {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_maximum3_f16 v0, v0, v1, 4.0
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: v_fmaximum3_f16__inlineimm:
@@ -1965,7 +1921,6 @@ define half @v_fmaximum3_f16_const1_const2(half %a) {
 ; GFX12-NEXT:    s_movk_i32 s0, 0x4800
 ; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    v_maximum3_f16 v0, v0, s0, 0x4c00
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: v_fmaximum3_f16_const1_const2:
@@ -2005,7 +1960,6 @@ define <2 x half> @v_fmaximum3_v2f16(<2 x half> %a, <2 x half> %b, <2 x half> %c
 ; GFX12-NEXT:    v_pk_maximum_f16 v0, v0, v1
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_pk_maximum_f16 v0, v2, v0
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: v_fmaximum3_v2f16:
@@ -2054,7 +2008,6 @@ define <2 x half> @v_fmaximum3_v2f16_commute(<2 x half> %a, <2 x half> %b, <2 x 
 ; GFX12-NEXT:    v_pk_maximum_f16 v0, v0, v1
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_pk_maximum_f16 v0, v0, v2
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: v_fmaximum3_v2f16_commute:
@@ -2106,7 +2059,6 @@ define <2 x half> @v_fmaximum3_v2f16__fabs_all(<2 x half> %a, <2 x half> %b, <2 
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_pk_maximum_f16 v0, v0, v1
 ; GFX12-NEXT:    v_pk_maximum_f16 v0, v0, v2
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: v_fmaximum3_v2f16__fabs_all:
@@ -2163,7 +2115,6 @@ define <2 x half> @v_fmaximum3_v2f16__fneg_all(<2 x half> %a, <2 x half> %b, <2 
 ; GFX12-NEXT:    v_pk_maximum_f16 v0, v0, v1 neg_lo:[1,1] neg_hi:[1,1]
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_pk_maximum_f16 v0, v0, v2 neg_lo:[0,1] neg_hi:[0,1]
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: v_fmaximum3_v2f16__fneg_all:
@@ -2215,7 +2166,6 @@ define <2 x half> @v_fmaximum3_v2f16__inlineimm1(<2 x half> %a, <2 x half> %c) {
 ; GFX12-NEXT:    v_pk_maximum_f16 v0, v0, 2.0 op_sel_hi:[1,0]
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_pk_maximum_f16 v0, v0, v1
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: v_fmaximum3_v2f16__inlineimm1:
@@ -2264,7 +2214,6 @@ define <2 x half> @v_fmaximum3_v2f16__inlineimm2(<2 x half> %a, <2 x half> %b) {
 ; GFX12-NEXT:    v_pk_maximum_f16 v0, v0, v1
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_pk_maximum_f16 v0, v0, 4.0 op_sel_hi:[1,0]
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: v_fmaximum3_v2f16__inlineimm2:
@@ -2315,7 +2264,6 @@ define <3 x half> @v_fmaximum3_v3f16(<3 x half> %a, <3 x half> %b, <3 x half> %c
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_pk_maximum_f16 v0, v4, v0
 ; GFX12-NEXT:    v_pk_maximum_f16 v1, v5, v1
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: v_fmaximum3_v3f16:
@@ -2379,7 +2327,6 @@ define <3 x half> @v_fmaximum3_v3f16_commute(<3 x half> %a, <3 x half> %b, <3 x 
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_pk_maximum_f16 v0, v0, v4
 ; GFX12-NEXT:    v_pk_maximum_f16 v1, v1, v5
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: v_fmaximum3_v3f16_commute:
@@ -2450,7 +2397,6 @@ define <3 x half> @v_fmaximum3_v3f16__fabs_all(<3 x half> %a, <3 x half> %b, <3 
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_pk_maximum_f16 v0, v0, v4
 ; GFX12-NEXT:    v_pk_maximum_f16 v1, v1, v5
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: v_fmaximum3_v3f16__fabs_all:
@@ -2527,7 +2473,6 @@ define <3 x half> @v_fmaximum3_v3f16__fneg_all(<3 x half> %a, <3 x half> %b, <3 
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_pk_maximum_f16 v0, v0, v4 neg_lo:[0,1] neg_hi:[0,1]
 ; GFX12-NEXT:    v_pk_maximum_f16 v1, v1, v5 neg_lo:[0,1] neg_hi:[0,1]
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: v_fmaximum3_v3f16__fneg_all:
@@ -2594,7 +2539,6 @@ define <3 x half> @v_fmaximum3_v3f16__inlineimm1(<3 x half> %a, <3 x half> %c) {
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_pk_maximum_f16 v0, v0, v2
 ; GFX12-NEXT:    v_pk_maximum_f16 v1, v1, v3
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: v_fmaximum3_v3f16__inlineimm1:
@@ -2655,7 +2599,6 @@ define <3 x half> @v_fmaximum3_v3f16__inlineimm2(<3 x half> %a, <3 x half> %b) {
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_pk_maximum_f16 v0, v0, 4.0 op_sel_hi:[1,0]
 ; GFX12-NEXT:    v_pk_maximum_f16 v1, v1, 4.0
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: v_fmaximum3_v3f16__inlineimm2:
@@ -2719,7 +2662,6 @@ define <4 x half> @v_fmaximum3_v4f16(<4 x half> %a, <4 x half> %b, <4 x half> %c
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_pk_maximum_f16 v0, v4, v0
 ; GFX12-NEXT:    v_pk_maximum_f16 v1, v5, v1
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: v_fmaximum3_v4f16:
@@ -2788,7 +2730,6 @@ define <4 x half> @v_fmaximum3_v4f16_commute(<4 x half> %a, <4 x half> %b, <4 x 
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_pk_maximum_f16 v0, v0, v4
 ; GFX12-NEXT:    v_pk_maximum_f16 v1, v1, v5
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: v_fmaximum3_v4f16_commute:
@@ -2864,7 +2805,6 @@ define <4 x half> @v_fmaximum3_v4f16__fabs_all(<4 x half> %a, <4 x half> %b, <4 
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_pk_maximum_f16 v0, v0, v4
 ; GFX12-NEXT:    v_pk_maximum_f16 v1, v1, v5
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: v_fmaximum3_v4f16__fabs_all:
@@ -2945,7 +2885,6 @@ define <4 x half> @v_fmaximum3_v4f16__fneg_all(<4 x half> %a, <4 x half> %b, <4 
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_pk_maximum_f16 v0, v0, v4 neg_lo:[0,1] neg_hi:[0,1]
 ; GFX12-NEXT:    v_pk_maximum_f16 v1, v1, v5 neg_lo:[0,1] neg_hi:[0,1]
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: v_fmaximum3_v4f16__fneg_all:
@@ -3017,7 +2956,6 @@ define <4 x half> @v_fmaximum3_v4f16__inlineimm1(<4 x half> %a, <4 x half> %c) {
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_pk_maximum_f16 v0, v0, v2
 ; GFX12-NEXT:    v_pk_maximum_f16 v1, v1, v3
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: v_fmaximum3_v4f16__inlineimm1:
@@ -3085,7 +3023,6 @@ define <4 x half> @v_fmaximum3_v4f16__inlineimm2(<4 x half> %a, <4 x half> %b) {
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_pk_maximum_f16 v0, v0, 4.0 op_sel_hi:[1,0]
 ; GFX12-NEXT:    v_pk_maximum_f16 v1, v1, 4.0 op_sel_hi:[1,0]
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: v_fmaximum3_v4f16__inlineimm2:
@@ -3152,7 +3089,6 @@ define double @v_fmaximum3_f64(double %a, double %b, double %c) {
 ; GFX12-NEXT:    v_maximum_f64 v[0:1], v[0:1], v[2:3]
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_maximum_f64 v[0:1], v[0:1], v[4:5]
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_fmaximum3_f64:
@@ -3186,7 +3122,6 @@ define double @v_fmaximum3_f64_commute(double %a, double %b, double %c) {
 ; GFX12-NEXT:    v_maximum_f64 v[0:1], v[0:1], v[2:3]
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_maximum_f64 v[0:1], v[4:5], v[0:1]
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_fmaximum3_f64_commute:
@@ -3260,7 +3195,6 @@ define double @v_fmaximum3_f64_fabs0(double %a, double %b, double %c) {
 ; GFX12-NEXT:    v_maximum_f64 v[0:1], |v[0:1]|, v[2:3]
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_maximum_f64 v[0:1], v[0:1], v[4:5]
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_fmaximum3_f64_fabs0:
@@ -3295,7 +3229,6 @@ define double @v_fmaximum3_f64_fabs1(double %a, double %b, double %c) {
 ; GFX12-NEXT:    v_maximum_f64 v[0:1], v[0:1], |v[2:3]|
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_maximum_f64 v[0:1], v[0:1], v[4:5]
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_fmaximum3_f64_fabs1:
@@ -3330,7 +3263,6 @@ define double @v_fmaximum3_f64_fabs2(double %a, double %b, double %c) {
 ; GFX12-NEXT:    v_maximum_f64 v[0:1], v[0:1], v[2:3]
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_maximum_f64 v[0:1], v[0:1], |v[4:5]|
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_fmaximum3_f64_fabs2:
@@ -3365,7 +3297,6 @@ define double @v_fmaximum3_f64_fabs_all(double %a, double %b, double %c) {
 ; GFX12-NEXT:    v_maximum_f64 v[0:1], |v[0:1]|, |v[2:3]|
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_maximum_f64 v[0:1], v[0:1], |v[4:5]|
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_fmaximum3_f64_fabs_all:
@@ -3402,7 +3333,6 @@ define double @v_fmaximum3_f64_fneg_all(double %a, double %b, double %c) {
 ; GFX12-NEXT:    v_maximum_f64 v[0:1], -v[0:1], -v[2:3]
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_maximum_f64 v[0:1], v[0:1], -v[4:5]
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_fmaximum3_f64_fneg_all:
@@ -3439,7 +3369,6 @@ define double @v_fmaximum3_f64_fneg_fabs_all(double %a, double %b, double %c) {
 ; GFX12-NEXT:    v_maximum_f64 v[0:1], -|v[0:1]|, -|v[2:3]|
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_maximum_f64 v[0:1], v[0:1], -|v[4:5]|
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_fmaximum3_f64_fneg_fabs_all:
@@ -3479,7 +3408,6 @@ define double @v_fmaximum3_f64_fneg0(double %a, double %b, double %c) {
 ; GFX12-NEXT:    v_maximum_f64 v[0:1], -v[0:1], v[2:3]
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_maximum_f64 v[0:1], v[0:1], v[4:5]
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_fmaximum3_f64_fneg0:
@@ -3514,7 +3442,6 @@ define double @v_fmaximum3_f64_fneg1(double %a, double %b, double %c) {
 ; GFX12-NEXT:    v_maximum_f64 v[0:1], v[0:1], -v[2:3]
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_maximum_f64 v[0:1], v[0:1], v[4:5]
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_fmaximum3_f64_fneg1:
@@ -3549,7 +3476,6 @@ define double @v_fmaximum3_f64_fneg2(double %a, double %b, double %c) {
 ; GFX12-NEXT:    v_maximum_f64 v[0:1], v[0:1], v[2:3]
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_maximum_f64 v[0:1], v[0:1], -v[4:5]
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_fmaximum3_f64_fneg2:
@@ -3584,7 +3510,6 @@ define double @v_fmaximum3_f64_const0(double %b, double %c) {
 ; GFX12-NEXT:    v_maximum_f64 v[0:1], 0x40200000, v[0:1]
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_maximum_f64 v[0:1], v[0:1], v[2:3]
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_fmaximum3_f64_const0:
@@ -3620,7 +3545,6 @@ define double @v_fmaximum3_f64__const2(double %a, double %b) {
 ; GFX12-NEXT:    v_maximum_f64 v[0:1], v[0:1], v[2:3]
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_maximum_f64 v[0:1], 0x40200000, v[0:1]
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_fmaximum3_f64__const2:
@@ -3655,7 +3579,6 @@ define double @v_fmaximum3_f64_inlineimm0(double %b, double %c) {
 ; GFX12-NEXT:    v_maximum_f64 v[0:1], v[0:1], 4.0
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_maximum_f64 v[0:1], v[0:1], v[2:3]
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_fmaximum3_f64_inlineimm0:
@@ -3689,7 +3612,6 @@ define double @v_fmaximum3_f64__inlineimm(double %a, double %b) {
 ; GFX12-NEXT:    v_maximum_f64 v[0:1], v[0:1], v[2:3]
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_maximum_f64 v[0:1], v[0:1], 4.0
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_fmaximum3_f64__inlineimm:
@@ -3723,7 +3645,6 @@ define double @v_fmaximum3_f64_const1_const2(double %a) {
 ; GFX12-NEXT:    v_maximum_f64 v[0:1], 0x40200000, v[0:1]
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_maximum_f64 v[0:1], 0x40300000, v[0:1]
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_fmaximum3_f64_const1_const2:
@@ -3760,7 +3681,6 @@ define <2 x float> @v_no_fmaximum3_f32__multi_use(float %a, float %b, float %c) 
 ; GFX12-NEXT:    v_maximum_f32 v0, v0, v1
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_maximum_f32 v1, v0, v2
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: v_no_fmaximum3_f32__multi_use:
@@ -3846,7 +3766,6 @@ define <2 x half> @v_no_fmaximum3_f16__multi_use(half %a, half %b, half %c) {
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_maximum_f16 v1, v0, v2
 ; GFX12-NEXT:    v_pack_b32_f16 v0, v0, v1
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: v_no_fmaximum3_f16__multi_use:
@@ -3943,7 +3862,6 @@ define <4 x half> @v_no_fmaximum3_v2f16__multi_use(<2 x half> %a, <2 x half> %b,
 ; GFX12-NEXT:    v_pk_maximum_f16 v0, v0, v1
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_pk_maximum_f16 v1, v0, v2
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: v_no_fmaximum3_v2f16__multi_use:
@@ -3995,7 +3913,6 @@ define <2 x double> @v_no_fmaximum3_f64__multi_use(double %a, double %b, double 
 ; GFX12-NEXT:    v_maximum_f64 v[0:1], v[0:1], v[2:3]
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_maximum_f64 v[2:3], v[0:1], v[4:5]
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_no_fmaximum3_f64__multi_use:

@@ -1710,6 +1710,13 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.flags = MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
     return true;
   }
+  case Intrinsic::amdgcn_s_prefetch_data: {
+    Info.opc = ISD::INTRINSIC_VOID;
+    Info.memVT = EVT::getIntegerVT(CI.getContext(), 8);
+    Info.ptrVal = CI.getArgOperand(0);
+    Info.flags |= MachineMemOperand::MOLoad;
+    return true;
+  }
   case Intrinsic::amdgcn_s_mov_from_global:
   case Intrinsic::amdgcn_s_mov_to_global:
   case Intrinsic::amdgcn_s_swap_to_global: {
@@ -11181,6 +11188,12 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
 
     auto NewMI = DAG.getMachineNode(Opc, DL, Op->getVTList(), Ops);
     return SDValue(NewMI, 0);
+  }
+  case Intrinsic::amdgcn_s_prefetch_data: {
+    // For non-global address space preserve the chain and remove the call.
+    if (!AMDGPU::isFlatGlobalAddrSpace(cast<MemSDNode>(Op)->getAddressSpace()))
+      return Op.getOperand(0);
+    return Op;
   }
   case Intrinsic::amdgcn_s_sema_set_limit: {
     // TODO-GFX13: Implement this in tablegen with an SDNodeXForm.

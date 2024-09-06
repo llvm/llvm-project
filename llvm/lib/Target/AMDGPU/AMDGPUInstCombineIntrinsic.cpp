@@ -1084,12 +1084,13 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       return IC.replaceInstUsesWith(II, Src.get());
     break;
   }
-  case Intrinsic::amdgcn_wave_match: {
+  case Intrinsic::amdgcn_wave_match_b32: {
     // TODO: We should use UniformityAnalysis instead of just checking for
     // trivially uniform constants.
 
-    // A constant value is trivially uniform.
-    if (Constant *C = dyn_cast<Constant>(II.getArgOperand(0))) {
+    const Use &Src0 = II.getOperandUse(0);
+    const Use &Src1 = II.getArgOperandUse(1);
+    if (Src0.get() == Src1.get() && isTriviallyUniform(Src0)) {
       Function *NewF = Intrinsic::getDeclaration(
           II.getModule(), Intrinsic::amdgcn_ballot, II.getType());
       CallInst *NewCall =

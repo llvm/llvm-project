@@ -3343,6 +3343,16 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       constrainOpWithReadfirstlane(B, MI, 2);
       return;
     }
+    case Intrinsic::amdgcn_s_prefetch_data: {
+      Register PtrReg = MI.getOperand(1).getReg();
+      unsigned AS = MRI.getType(PtrReg).getAddressSpace();
+      if (AMDGPU::isFlatGlobalAddrSpace(AS)) {
+        constrainOpWithReadfirstlane(B, MI, 1);
+        constrainOpWithReadfirstlane(B, MI, 2);
+      } else
+        MI.eraseFromParent();
+      return;
+    }
     case Intrinsic::amdgcn_tensor_load_to_lds:
     case Intrinsic::amdgcn_tensor_store_from_lds: {
       constrainOpWithReadfirstlane(B, MI, 1);
@@ -4652,7 +4662,20 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_alignbyte:
     case Intrinsic::amdgcn_perm:
     case Intrinsic::amdgcn_prng_b32:
-    case Intrinsic::amdgcn_wave_match:
+    case Intrinsic::amdgcn_wave_match_b32:
+    case Intrinsic::amdgcn_exclusive_scan_sum_i32:
+    case Intrinsic::amdgcn_exclusive_scan_sum_u32:
+    case Intrinsic::amdgcn_exclusive_scan_xor_b32:
+    case Intrinsic::amdgcn_exclusive_scan_or_b32:
+    case Intrinsic::amdgcn_exclusive_scan_and_b32:
+    case Intrinsic::amdgcn_exclusive_scan_min_i16:
+    case Intrinsic::amdgcn_exclusive_scan_min_u16:
+    case Intrinsic::amdgcn_exclusive_scan_min_i32:
+    case Intrinsic::amdgcn_exclusive_scan_min_u32:
+    case Intrinsic::amdgcn_exclusive_scan_max_i16:
+    case Intrinsic::amdgcn_exclusive_scan_max_u16:
+    case Intrinsic::amdgcn_exclusive_scan_max_i32:
+    case Intrinsic::amdgcn_exclusive_scan_max_u32:
     case Intrinsic::amdgcn_fdot2:
     case Intrinsic::amdgcn_sdot2:
     case Intrinsic::amdgcn_udot2:
@@ -5640,6 +5663,11 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_tensor_load_to_lds:
     case Intrinsic::amdgcn_tensor_store_from_lds:
       return getDefaultMappingSOP(MI);
+    case Intrinsic::amdgcn_s_prefetch_data: {
+      OpdsMapping[1] = getSGPROpMapping(MI.getOperand(1).getReg(), MRI, *TRI);
+      OpdsMapping[2] = getSGPROpMapping(MI.getOperand(2).getReg(), MRI, *TRI);
+      break;
+    }
     default:
       return getInvalidInstructionMapping();
     }

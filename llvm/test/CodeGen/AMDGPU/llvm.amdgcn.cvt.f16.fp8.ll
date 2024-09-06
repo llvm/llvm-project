@@ -15,7 +15,6 @@ define float @test_cvt_f16_bf8_byte0(i32 %a) {
 ; GFX1210-NEXT:    v_cvt_f16_bf8_e32 v0, v0
 ; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1210-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %cvt = tail call half @llvm.amdgcn.cvt.f16.bf8(i32 %a, i32 0)
   %ret = fpext half %cvt to float
@@ -30,7 +29,6 @@ define float @test_cvt_f16_bf8_byte1(i32 %a) {
 ; GFX1210-NEXT:    v_cvt_f16_bf8_e64 v0, v0 byte_sel:1
 ; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1210-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %cvt = tail call half @llvm.amdgcn.cvt.f16.bf8(i32 %a, i32 1)
   %ret = fpext half %cvt to float
@@ -45,7 +43,6 @@ define float @test_cvt_f16_bf8_byte2(i32 %a) {
 ; GFX1210-NEXT:    v_cvt_f16_bf8_e64 v0, v0 byte_sel:2
 ; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1210-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %cvt = tail call half @llvm.amdgcn.cvt.f16.bf8(i32 %a, i32 2)
   %ret = fpext half %cvt to float
@@ -60,7 +57,6 @@ define float @test_cvt_f16_bf8_byte3(i32 %a) {
 ; GFX1210-NEXT:    v_cvt_f16_bf8_e64 v0, v0 byte_sel:3
 ; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1210-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %cvt = tail call half @llvm.amdgcn.cvt.f16.bf8(i32 %a, i32 3)
   %ret = fpext half %cvt to float
@@ -75,7 +71,6 @@ define float @test_cvt_f16_fp8_byte0(i32 %a) {
 ; GFX1210-NEXT:    v_cvt_f16_fp8_e32 v0, v0
 ; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1210-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %cvt = tail call half @llvm.amdgcn.cvt.f16.fp8(i32 %a, i32 0)
   %ret = fpext half %cvt to float
@@ -90,7 +85,6 @@ define float @test_cvt_f16_fp8_byte1(i32 %a) {
 ; GFX1210-NEXT:    v_cvt_f16_fp8_e64 v0, v0 byte_sel:1
 ; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1210-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %cvt = tail call half @llvm.amdgcn.cvt.f16.fp8(i32 %a, i32 1)
   %ret = fpext half %cvt to float
@@ -105,7 +99,6 @@ define float @test_cvt_f16_fp8_byte2(i32 %a) {
 ; GFX1210-NEXT:    v_cvt_f16_fp8_e64 v0, v0 byte_sel:2
 ; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1210-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %cvt = tail call half @llvm.amdgcn.cvt.f16.fp8(i32 %a, i32 2)
   %ret = fpext half %cvt to float
@@ -120,7 +113,6 @@ define float @test_cvt_f16_fp8_byte3(i32 %a) {
 ; GFX1210-NEXT:    v_cvt_f16_fp8_e64 v0, v0 byte_sel:3
 ; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1210-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %cvt = tail call half @llvm.amdgcn.cvt.f16.fp8(i32 %a, i32 3)
   %ret = fpext half %cvt to float

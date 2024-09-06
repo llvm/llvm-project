@@ -3,47 +3,51 @@
 
 ; TODO: We should use UniformityAnalysis instead of just checking for
 ; trivially uniform constants. In that case, this test would also be optimized.
-define amdgpu_kernel void @v_wave_match_sgpr(ptr addrspace(1) %out, i32 %src) {
+define amdgpu_kernel void @v_wave_match_sgpr(ptr addrspace(1) %out, i32 %src1, i32 %src2) {
 ; CHECK-LABEL: @v_wave_match_sgpr(
-; CHECK-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.wave.match(i32 [[SRC:%.*]])
+; CHECK-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.wave.match.b32(i32 [[SRC1:%.*]], i32 [[SRC2:%.*]])
 ; CHECK-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
-  %v = call i32 @llvm.amdgcn.wave.match(i32 %src)
+  %v = call i32 @llvm.amdgcn.wave.match.b32(i32 %src1, i32 %src2)
   store i32 %v, ptr addrspace(1) %out
   ret void
 }
 
 define amdgpu_kernel void @v_wave_match_vgpr(i32 addrspace(1)* %out) {
 ; CHECK-LABEL: @v_wave_match_vgpr(
-; CHECK-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
-; CHECK-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.wave.match(i32 [[TID]])
-; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[TID]] to i64
+; CHECK-NEXT:    [[TIDX:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; CHECK-NEXT:    [[TIDY:%.*]] = call i32 @llvm.amdgcn.workitem.id.y()
+; CHECK-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.wave.match.b32(i32 [[TIDX]], i32 [[TIDY]])
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[TIDX]] to i64
 ; CHECK-NEXT:    [[OUT_PTR:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT:%.*]], i64 [[TMP1]]
 ; CHECK-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT_PTR]], align 4
 ; CHECK-NEXT:    ret void
 ;
-  %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %v = call i32 @llvm.amdgcn.wave.match(i32 %tid)
-  %out_ptr = getelementptr i32, i32 addrspace(1)* %out, i32 %tid
+  %tidx = call i32 @llvm.amdgcn.workitem.id.x()
+  %tidy = call i32 @llvm.amdgcn.workitem.id.y()
+  %v = call i32 @llvm.amdgcn.wave.match.b32(i32 %tidx, i32 %tidy)
+  %out_ptr = getelementptr i32, i32 addrspace(1)* %out, i32 %tidx
   store i32 %v, i32 addrspace(1)* %out_ptr
   ret void
 }
 
 define amdgpu_kernel void @v_wave_match_vgpr_expression(i32 addrspace(1)* %out) {
 ; CHECK-LABEL: @v_wave_match_vgpr_expression(
-; CHECK-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
-; CHECK-NEXT:    [[TID2:%.*]] = add i32 [[TID]], 1
-; CHECK-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.wave.match(i32 [[TID2]])
-; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[TID]] to i64
+; CHECK-NEXT:    [[TIDX:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; CHECK-NEXT:    [[TID2:%.*]] = add i32 [[TIDX]], 1
+; CHECK-NEXT:    [[TIDY:%.*]] = call i32 @llvm.amdgcn.workitem.id.y()
+; CHECK-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.wave.match.b32(i32 [[TID2]], i32 [[TIDY]])
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[TIDX]] to i64
 ; CHECK-NEXT:    [[OUT_PTR:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT:%.*]], i64 [[TMP1]]
 ; CHECK-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT_PTR]], align 4
 ; CHECK-NEXT:    ret void
 ;
-  %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %tid2 = add i32 %tid, 1
-  %v = call i32 @llvm.amdgcn.wave.match(i32 %tid2)
-  %out_ptr = getelementptr i32, i32 addrspace(1)* %out, i32 %tid
+  %tidx = call i32 @llvm.amdgcn.workitem.id.x()
+  %tid2 = add i32 %tidx, 1
+  %tidy = call i32 @llvm.amdgcn.workitem.id.y()
+  %v = call i32 @llvm.amdgcn.wave.match.b32(i32 %tid2, i32 %tidy)
+  %out_ptr = getelementptr i32, i32 addrspace(1)* %out, i32 %tidx
   store i32 %v, i32 addrspace(1)* %out_ptr
   ret void
 }
@@ -54,7 +58,7 @@ define amdgpu_kernel void @v_wave_match_constant(ptr addrspace(1) %out, i32 %src
 ; CHECK-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
-  %v = call i32 @llvm.amdgcn.wave.match(i32 7)
+  %v = call i32 @llvm.amdgcn.wave.match.b32(i32 7, i32 7)
   store i32 %v, ptr addrspace(1) %out
   ret void
 }
@@ -65,7 +69,7 @@ define amdgpu_kernel void @v_wave_match_undef(ptr addrspace(1) %out, i32 %src) {
 ; CHECK-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
-  %v = call i32 @llvm.amdgcn.wave.match(i32 undef)
+  %v = call i32 @llvm.amdgcn.wave.match.b32(i32 undef, i32 undef)
   store i32 %v, ptr addrspace(1) %out
   ret void
 }

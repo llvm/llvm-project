@@ -98,7 +98,7 @@ define amdgpu_kernel void @is_local_vgpr(ptr addrspace(1) %ptr.ptr) {
 ; GFX1210-NEXT:    s_wait_loadcnt 0x0
 ; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_mov_b64 s[0:1], src_shared_base
-; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1210-NEXT:    v_cmp_eq_u32_e32 vcc_lo, s1, v1
 ; GFX1210-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; GFX1210-NEXT:    global_store_b32 v[0:1], v0, off
@@ -253,10 +253,9 @@ define amdgpu_kernel void @is_local_sgpr(ptr %ptr) {
 ; GFX1210-SDAG-NEXT:    s_load_b32 s2, s[2:3], 0x4
 ; GFX1210-SDAG-NEXT:    s_mov_b64 s[0:1], src_shared_base
 ; GFX1210-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-SDAG-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-SDAG-NEXT:    s_cmp_eq_u32 s2, s1
 ; GFX1210-SDAG-NEXT:    s_cselect_b32 s0, -1, 0
-; GFX1210-SDAG-NEXT:    s_wait_alu 0xfffe
+; GFX1210-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1210-SDAG-NEXT:    s_and_not1_b32 vcc_lo, exec_lo, s0
 ; GFX1210-SDAG-NEXT:    s_cbranch_vccnz .LBB1_2
 ; GFX1210-SDAG-NEXT:  ; %bb.1: ; %bb0
@@ -329,7 +328,6 @@ define amdgpu_kernel void @is_local_sgpr(ptr %ptr) {
 ; GFX1210-GISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-GISEL-NEXT:    s_mov_b64 s[2:3], src_shared_base
 ; GFX1210-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-GISEL-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-GISEL-NEXT:    s_cmp_lg_u32 s1, s3
 ; GFX1210-GISEL-NEXT:    s_cbranch_scc1 .LBB1_2
 ; GFX1210-GISEL-NEXT:  ; %bb.1: ; %bb0

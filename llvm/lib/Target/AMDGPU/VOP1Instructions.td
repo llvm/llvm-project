@@ -119,22 +119,18 @@ class getVOP1Pat <SDPatternOperator node, VOPProfile P> : LetDummies {
 }
 
 multiclass VOP1Inst <string opName, VOPProfile P,
-                     SDPatternOperator node = null_frag, int VOPDOp = -1, bit Convergent = 0> {
+                     SDPatternOperator node = null_frag, int VOPDOp = -1> {
   // We only want to set this on the basic, non-SDWA or DPP forms.
   defvar should_mov_imm = !or(!eq(opName, "v_mov_b32"),
                               !eq(opName, "v_mov_b64"));
 
   let isMoveImm = should_mov_imm in {
     if !eq(VOPDOp, -1) then
-      def _e32 : VOP1_Pseudo <opName, P> {
-        let isConvergent = Convergent;
-      }
+      def _e32 : VOP1_Pseudo <opName, P>;
     else
       // Only for V_MOV_B32/V_MOV_B64
       def _e32 : VOP1_Pseudo <opName, P>, VOPD_Component<VOPDOp, opName>;
-    def _e64 : VOP3InstBase <opName, P, node> {
-      let isConvergent = Convergent;
-    }
+    def _e64 : VOP3InstBase <opName, P, node>;
   }
 
   if P.HasExtSDWA then
@@ -888,16 +884,6 @@ foreach vt = Reg32Types.types in {
   >;
 }
 
-def VOP_WAVE_MATCH : VOPProfile<[i32, i32, untyped, untyped]> {
-  let HasSrc0IntMods = 0;
-  let HasExtSDWA = 0;
-  let HasExtDPP = 0;
-  let HasExtVOP3DPP = 0;
-  let HasExt64BitDPP = 0;
-}
-
-let SubtargetPredicate = HasExclusiveScanInsts in
-defm V_WAVE_MATCH : VOP1Inst<"v_wave_match", VOP_WAVE_MATCH, int_amdgcn_wave_match, -1, 1>;
 //===----------------------------------------------------------------------===//
 // Target-specific instruction encodings.
 //===----------------------------------------------------------------------===//
@@ -1454,7 +1440,6 @@ defm V_CLREXCP           : VOP1_Real_gfx6_gfx7_gfx10<0x041>;
 defm V_MOVRELD_B32       : VOP1_Real_gfx6_gfx7_gfx10_FULL_gfx11_gfx12<0x042>;
 defm V_MOVRELS_B32       : VOP1_Real_gfx6_gfx7_gfx10_FULL_gfx11_gfx12<0x043>;
 defm V_MOVRELSD_B32      : VOP1_Real_gfx6_gfx7_gfx10_FULL_gfx11_gfx12<0x044>;
-defm V_WAVE_MATCH        : VOP1_Real_NO_DPP<GFX13Gen, 0x04f>;
 
 def : AMDGPUMnemonicAlias<"v_brev_b32", "v_bfrev_b32"> {
   let AssemblerPredicate = isGFX13Plus;

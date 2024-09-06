@@ -2,6 +2,8 @@
 // REQUIRES: amdgpu-registered-target
 // RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1300 -target-feature +wavefrontsize32 -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-GFX1300
 
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+
 typedef float  v4f   __attribute__((ext_vector_type(4)));
 typedef half   v2h   __attribute__((ext_vector_type(2)));
 typedef half   v4h   __attribute__((ext_vector_type(4)));
@@ -34,46 +36,46 @@ void test_amdgcn_scale_bias_activate_f32_scale_bias_packed(global v4f* out, v4f 
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_scale_bias_activate_f16(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x half> @llvm.amdgcn.scale.bias.activate.f16(<8 x half> [[ACC_IN:%.*]], float [[SSRC:%.*]], <2 x half> [[BIAS:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x half> @llvm.amdgcn.scale.bias.activate.f16(<8 x half> [[ACC_IN:%.*]], half [[SSRC:%.*]], <2 x half> [[BIAS:%.*]], i32 42, i1 true)
 // CHECK-GFX1300-NEXT:    store <8 x half> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
-void test_amdgcn_scale_bias_activate_f16(global v8h* out, v8h acc_in, float ssrc, v2h bias)
+void test_amdgcn_scale_bias_activate_f16(global v8h* out, v8h acc_in, half ssrc, v2h bias)
 {
   *out = __builtin_amdgcn_scale_bias_activate_f16(acc_in, ssrc, bias, 42, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_scale_bias_activate_f16_scale_bias_packed(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x half> @llvm.amdgcn.scale.bias.activate.f16(<8 x half> [[ACC_IN:%.*]], float 0.000000e+00, <2 x half> [[BIAS:%.*]], i32 65578, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x half> @llvm.amdgcn.scale.bias.activate.f16(<8 x half> [[ACC_IN:%.*]], half 0xH0000, <2 x half> [[BIAS:%.*]], i32 65578, i1 true)
 // CHECK-GFX1300-NEXT:    store <8 x half> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_scale_bias_activate_f16_scale_bias_packed(global v8h* out, v8h acc_in, v2h bias)
 {
-  *out = __builtin_amdgcn_scale_bias_activate_f16(acc_in, 0, bias, 65578, true);
+  *out = __builtin_amdgcn_scale_bias_activate_f16(acc_in, (half) 0, bias, 65578, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_scale_bias_activate_bf16(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x bfloat> @llvm.amdgcn.scale.bias.activate.bf16(<8 x bfloat> [[ACC_IN:%.*]], float [[SSRC:%.*]], <2 x bfloat> [[BIAS:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x bfloat> @llvm.amdgcn.scale.bias.activate.bf16(<8 x bfloat> [[ACC_IN:%.*]], bfloat [[SSRC:%.*]], <2 x bfloat> [[BIAS:%.*]], i32 42, i1 true)
 // CHECK-GFX1300-NEXT:    store <8 x bfloat> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
-void test_amdgcn_scale_bias_activate_bf16(global v8bf16* out, v8bf16 acc_in, float ssrc, v2bf16 bias)
+void test_amdgcn_scale_bias_activate_bf16(global v8bf16* out, v8bf16 acc_in, __bf16 ssrc, v2bf16 bias)
 {
   *out = __builtin_amdgcn_scale_bias_activate_bf16(acc_in, ssrc, bias, 42, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_scale_bias_activate_bf16_scale_bias_packed(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x bfloat> @llvm.amdgcn.scale.bias.activate.bf16(<8 x bfloat> [[ACC_IN:%.*]], float 0.000000e+00, <2 x bfloat> [[BIAS:%.*]], i32 65578, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x bfloat> @llvm.amdgcn.scale.bias.activate.bf16(<8 x bfloat> [[ACC_IN:%.*]], bfloat 0xR0000, <2 x bfloat> [[BIAS:%.*]], i32 65578, i1 true)
 // CHECK-GFX1300-NEXT:    store <8 x bfloat> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_scale_bias_activate_bf16_scale_bias_packed(global v8bf16* out, v8bf16 acc_in, v2bf16 bias)
 {
-  *out = __builtin_amdgcn_scale_bias_activate_bf16(acc_in, 0, bias, 65578, true);
+  *out = __builtin_amdgcn_scale_bias_activate_bf16(acc_in, (__bf16) 0, bias, 65578, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_uniform_scale_activate_f32(
@@ -89,22 +91,22 @@ void test_amdgcn_uniform_scale_activate_f32(global v4f* out, v4f acc_in, float s
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_uniform_scale_activate_f16(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x half> @llvm.amdgcn.uniform.scale.activate.f16(<8 x half> [[ACC_IN:%.*]], float [[SSRC:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x half> @llvm.amdgcn.uniform.scale.activate.f16(<8 x half> [[ACC_IN:%.*]], half [[SSRC:%.*]], i32 42, i1 true)
 // CHECK-GFX1300-NEXT:    store <8 x half> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
-void test_amdgcn_uniform_scale_activate_f16(global v8h* out, v8h acc_in, float ssrc)
+void test_amdgcn_uniform_scale_activate_f16(global v8h* out, v8h acc_in, half ssrc)
 {
   *out = __builtin_amdgcn_uniform_scale_activate_f16(acc_in, ssrc, 42, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_uniform_scale_activate_bf16(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x bfloat> @llvm.amdgcn.uniform.scale.activate.bf16(<8 x bfloat> [[ACC_IN:%.*]], float [[SSRC:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x bfloat> @llvm.amdgcn.uniform.scale.activate.bf16(<8 x bfloat> [[ACC_IN:%.*]], bfloat [[SSRC:%.*]], i32 42, i1 true)
 // CHECK-GFX1300-NEXT:    store <8 x bfloat> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
-void test_amdgcn_uniform_scale_activate_bf16(global v8bf16* out, v8bf16 acc_in, float ssrc)
+void test_amdgcn_uniform_scale_activate_bf16(global v8bf16* out, v8bf16 acc_in, __bf16 ssrc)
 {
   *out = __builtin_amdgcn_uniform_scale_activate_bf16(acc_in, ssrc, 42, true);
 }
@@ -116,21 +118,21 @@ void test_amdgcn_uniform_scale_activate_bf16(global v8bf16* out, v8bf16 acc_in, 
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_scale_bias_activate_scatter2_f16(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call { <2 x half>, <2 x half> } @llvm.amdgcn.scale.bias.activate.scatter2.f16(<4 x half> [[ACC_IN:%.*]], float [[SSRC:%.*]], <2 x half> [[BIAS:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call { <2 x half>, <2 x half> } @llvm.amdgcn.scale.bias.activate.scatter2.f16(<4 x half> [[ACC_IN:%.*]], half [[SSRC:%.*]], <2 x half> [[BIAS:%.*]], i32 42, i1 true)
 // CHECK-GFX1300-NEXT:    [[TMP1:%.*]] = extractvalue { <2 x half>, <2 x half> } [[TMP0]], 0
 // CHECK-GFX1300-NEXT:    store <2 x half> [[TMP1]], ptr addrspace(1) [[OUT0:%.*]], align 4
 // CHECK-GFX1300-NEXT:    [[TMP2:%.*]] = extractvalue { <2 x half>, <2 x half> } [[TMP0]], 1
 // CHECK-GFX1300-NEXT:    store <2 x half> [[TMP2]], ptr addrspace(1) [[OUT1:%.*]], align 4
 // CHECK-GFX1300-NEXT:    ret void
 //
-void test_amdgcn_scale_bias_activate_scatter2_f16(global v2h* out0, global v2h* out1, v4h acc_in, float ssrc, v2h bias)
+void test_amdgcn_scale_bias_activate_scatter2_f16(global v2h* out0, global v2h* out1, v4h acc_in, half ssrc, v2h bias)
 {
   __builtin_amdgcn_scale_bias_activate_scatter2_f16(out0, out1, acc_in, ssrc, bias, 42, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_scale_bias_activate_scatter2_f16_scale_bias_packed(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call { <2 x half>, <2 x half> } @llvm.amdgcn.scale.bias.activate.scatter2.f16(<4 x half> [[ACC_IN:%.*]], float 0.000000e+00, <2 x half> [[BIAS:%.*]], i32 65578, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call { <2 x half>, <2 x half> } @llvm.amdgcn.scale.bias.activate.scatter2.f16(<4 x half> [[ACC_IN:%.*]], half 0xH0000, <2 x half> [[BIAS:%.*]], i32 65578, i1 true)
 // CHECK-GFX1300-NEXT:    [[TMP1:%.*]] = extractvalue { <2 x half>, <2 x half> } [[TMP0]], 0
 // CHECK-GFX1300-NEXT:    store <2 x half> [[TMP1]], ptr addrspace(1) [[OUT0:%.*]], align 4
 // CHECK-GFX1300-NEXT:    [[TMP2:%.*]] = extractvalue { <2 x half>, <2 x half> } [[TMP0]], 1
@@ -139,26 +141,26 @@ void test_amdgcn_scale_bias_activate_scatter2_f16(global v2h* out0, global v2h* 
 //
 void test_amdgcn_scale_bias_activate_scatter2_f16_scale_bias_packed(global v2h* out0, global v2h* out1, v4h acc_in, v2h bias)
 {
-  __builtin_amdgcn_scale_bias_activate_scatter2_f16(out0, out1, acc_in, 0, bias, 65578, true);
+  __builtin_amdgcn_scale_bias_activate_scatter2_f16(out0, out1, acc_in, (half) 0, bias, 65578, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_scale_bias_activate_scatter2_bf16(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call { <2 x bfloat>, <2 x bfloat> } @llvm.amdgcn.scale.bias.activate.scatter2.bf16(<4 x bfloat> [[ACC_IN:%.*]], float [[SSRC:%.*]], <2 x bfloat> [[BIAS:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call { <2 x bfloat>, <2 x bfloat> } @llvm.amdgcn.scale.bias.activate.scatter2.bf16(<4 x bfloat> [[ACC_IN:%.*]], bfloat [[SSRC:%.*]], <2 x bfloat> [[BIAS:%.*]], i32 42, i1 true)
 // CHECK-GFX1300-NEXT:    [[TMP1:%.*]] = extractvalue { <2 x bfloat>, <2 x bfloat> } [[TMP0]], 0
 // CHECK-GFX1300-NEXT:    store <2 x bfloat> [[TMP1]], ptr addrspace(1) [[OUT0:%.*]], align 4
 // CHECK-GFX1300-NEXT:    [[TMP2:%.*]] = extractvalue { <2 x bfloat>, <2 x bfloat> } [[TMP0]], 1
 // CHECK-GFX1300-NEXT:    store <2 x bfloat> [[TMP2]], ptr addrspace(1) [[OUT1:%.*]], align 4
 // CHECK-GFX1300-NEXT:    ret void
 //
-void test_amdgcn_scale_bias_activate_scatter2_bf16(global v2bf16* out0, global v2bf16* out1, v4bf16 acc_in, float ssrc, v2bf16 bias)
+void test_amdgcn_scale_bias_activate_scatter2_bf16(global v2bf16* out0, global v2bf16* out1, v4bf16 acc_in, __bf16 ssrc, v2bf16 bias)
 {
   __builtin_amdgcn_scale_bias_activate_scatter2_bf16(out0, out1, acc_in, ssrc, bias, 42, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_scale_bias_activate_scatter2_bf16_scale_bias_packed(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call { <2 x bfloat>, <2 x bfloat> } @llvm.amdgcn.scale.bias.activate.scatter2.bf16(<4 x bfloat> [[ACC_IN:%.*]], float 0.000000e+00, <2 x bfloat> [[BIAS:%.*]], i32 65578, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call { <2 x bfloat>, <2 x bfloat> } @llvm.amdgcn.scale.bias.activate.scatter2.bf16(<4 x bfloat> [[ACC_IN:%.*]], bfloat 0xR0000, <2 x bfloat> [[BIAS:%.*]], i32 65578, i1 true)
 // CHECK-GFX1300-NEXT:    [[TMP1:%.*]] = extractvalue { <2 x bfloat>, <2 x bfloat> } [[TMP0]], 0
 // CHECK-GFX1300-NEXT:    store <2 x bfloat> [[TMP1]], ptr addrspace(1) [[OUT0:%.*]], align 4
 // CHECK-GFX1300-NEXT:    [[TMP2:%.*]] = extractvalue { <2 x bfloat>, <2 x bfloat> } [[TMP0]], 1
@@ -167,33 +169,33 @@ void test_amdgcn_scale_bias_activate_scatter2_bf16(global v2bf16* out0, global v
 //
 void test_amdgcn_scale_bias_activate_scatter2_bf16_scale_bias_packed(global v2bf16* out0, global v2bf16* out1, v4bf16 acc_in, v2bf16 bias)
 {
-  __builtin_amdgcn_scale_bias_activate_scatter2_bf16(out0, out1, acc_in, 0, bias, 65578, true);
+  __builtin_amdgcn_scale_bias_activate_scatter2_bf16(out0, out1, acc_in, (__bf16) 0, bias, 65578, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_uniform_scale_activate_scatter2_f16(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call { <2 x half>, <2 x half> } @llvm.amdgcn.uniform.scale.activate.scatter2.f16(<4 x half> [[ACC_IN:%.*]], float [[SSRC:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call { <2 x half>, <2 x half> } @llvm.amdgcn.uniform.scale.activate.scatter2.f16(<4 x half> [[ACC_IN:%.*]], half [[SSRC:%.*]], i32 42, i1 true)
 // CHECK-GFX1300-NEXT:    [[TMP1:%.*]] = extractvalue { <2 x half>, <2 x half> } [[TMP0]], 0
 // CHECK-GFX1300-NEXT:    store <2 x half> [[TMP1]], ptr addrspace(1) [[OUT0:%.*]], align 4
 // CHECK-GFX1300-NEXT:    [[TMP2:%.*]] = extractvalue { <2 x half>, <2 x half> } [[TMP0]], 1
 // CHECK-GFX1300-NEXT:    store <2 x half> [[TMP2]], ptr addrspace(1) [[OUT1:%.*]], align 4
 // CHECK-GFX1300-NEXT:    ret void
 //
-void test_amdgcn_uniform_scale_activate_scatter2_f16(global v2h* out0, global v2h* out1, v4h acc_in, float ssrc)
+void test_amdgcn_uniform_scale_activate_scatter2_f16(global v2h* out0, global v2h* out1, v4h acc_in, half ssrc)
 {
   __builtin_amdgcn_uniform_scale_activate_scatter2_f16(out0, out1, acc_in, ssrc, 42, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_uniform_scale_activate_scatter2_bf16(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call { <2 x bfloat>, <2 x bfloat> } @llvm.amdgcn.uniform.scale.activate.scatter2.bf16(<4 x bfloat> [[ACC_IN:%.*]], float [[SSRC:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call { <2 x bfloat>, <2 x bfloat> } @llvm.amdgcn.uniform.scale.activate.scatter2.bf16(<4 x bfloat> [[ACC_IN:%.*]], bfloat [[SSRC:%.*]], i32 42, i1 true)
 // CHECK-GFX1300-NEXT:    [[TMP1:%.*]] = extractvalue { <2 x bfloat>, <2 x bfloat> } [[TMP0]], 0
 // CHECK-GFX1300-NEXT:    store <2 x bfloat> [[TMP1]], ptr addrspace(1) [[OUT0:%.*]], align 4
 // CHECK-GFX1300-NEXT:    [[TMP2:%.*]] = extractvalue { <2 x bfloat>, <2 x bfloat> } [[TMP0]], 1
 // CHECK-GFX1300-NEXT:    store <2 x bfloat> [[TMP2]], ptr addrspace(1) [[OUT1:%.*]], align 4
 // CHECK-GFX1300-NEXT:    ret void
 //
-void test_amdgcn_uniform_scale_activate_scatter2_bf16(global v2bf16* out0, global v2bf16* out1, v4bf16 acc_in, float ssrc)
+void test_amdgcn_uniform_scale_activate_scatter2_bf16(global v2bf16* out0, global v2bf16* out1, v4bf16 acc_in, __bf16 ssrc)
 {
   __builtin_amdgcn_uniform_scale_activate_scatter2_bf16(out0, out1, acc_in, ssrc, 42, true);
 }
@@ -204,7 +206,7 @@ void test_amdgcn_uniform_scale_activate_scatter2_bf16(global v2bf16* out0, globa
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_scale_bias_activate_scatter4_f16(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call { <2 x half>, <2 x half>, <2 x half>, <2 x half> } @llvm.amdgcn.scale.bias.activate.scatter4.f16(<8 x half> [[ACC_IN:%.*]], float [[SSRC:%.*]], <2 x half> [[BIAS:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call { <2 x half>, <2 x half>, <2 x half>, <2 x half> } @llvm.amdgcn.scale.bias.activate.scatter4.f16(<8 x half> [[ACC_IN:%.*]], half [[SSRC:%.*]], <2 x half> [[BIAS:%.*]], i32 42, i1 true)
 // CHECK-GFX1300-NEXT:    [[TMP1:%.*]] = extractvalue { <2 x half>, <2 x half>, <2 x half>, <2 x half> } [[TMP0]], 0
 // CHECK-GFX1300-NEXT:    store <2 x half> [[TMP1]], ptr addrspace(1) [[OUT0:%.*]], align 4
 // CHECK-GFX1300-NEXT:    [[TMP2:%.*]] = extractvalue { <2 x half>, <2 x half>, <2 x half>, <2 x half> } [[TMP0]], 1
@@ -215,14 +217,14 @@ void test_amdgcn_uniform_scale_activate_scatter2_bf16(global v2bf16* out0, globa
 // CHECK-GFX1300-NEXT:    store <2 x half> [[TMP4]], ptr addrspace(1) [[OUT3:%.*]], align 4
 // CHECK-GFX1300-NEXT:    ret void
 //
-void test_amdgcn_scale_bias_activate_scatter4_f16(global v2h* out0, global v2h* out1, global v2h* out2, global v2h* out3, v8h acc_in, float ssrc, v2h bias)
+void test_amdgcn_scale_bias_activate_scatter4_f16(global v2h* out0, global v2h* out1, global v2h* out2, global v2h* out3, v8h acc_in, half ssrc, v2h bias)
 {
   __builtin_amdgcn_scale_bias_activate_scatter4_f16(out0, out1, out2, out3, acc_in, ssrc, bias, 42, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_scale_bias_activate_scatter4_f16_scale_bias_packed(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call { <2 x half>, <2 x half>, <2 x half>, <2 x half> } @llvm.amdgcn.scale.bias.activate.scatter4.f16(<8 x half> [[ACC_IN:%.*]], float 0.000000e+00, <2 x half> [[BIAS:%.*]], i32 65578, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call { <2 x half>, <2 x half>, <2 x half>, <2 x half> } @llvm.amdgcn.scale.bias.activate.scatter4.f16(<8 x half> [[ACC_IN:%.*]], half 0xH0000, <2 x half> [[BIAS:%.*]], i32 65578, i1 true)
 // CHECK-GFX1300-NEXT:    [[TMP1:%.*]] = extractvalue { <2 x half>, <2 x half>, <2 x half>, <2 x half> } [[TMP0]], 0
 // CHECK-GFX1300-NEXT:    store <2 x half> [[TMP1]], ptr addrspace(1) [[OUT0:%.*]], align 4
 // CHECK-GFX1300-NEXT:    [[TMP2:%.*]] = extractvalue { <2 x half>, <2 x half>, <2 x half>, <2 x half> } [[TMP0]], 1
@@ -235,13 +237,13 @@ void test_amdgcn_scale_bias_activate_scatter4_f16(global v2h* out0, global v2h* 
 //
 void test_amdgcn_scale_bias_activate_scatter4_f16_scale_bias_packed(global v2h* out0, global v2h* out1, global v2h* out2, global v2h* out3, v8h acc_in, v2h bias)
 {
-  __builtin_amdgcn_scale_bias_activate_scatter4_f16(out0, out1, out2, out3, acc_in, 0, bias, 65578, true);
+  __builtin_amdgcn_scale_bias_activate_scatter4_f16(out0, out1, out2, out3, acc_in, (half) 0, bias, 65578, true);
 }
 
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_scale_bias_activate_scatter4_bf16(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call { <2 x bfloat>, <2 x bfloat>, <2 x bfloat>, <2 x bfloat> } @llvm.amdgcn.scale.bias.activate.scatter4.bf16(<8 x bfloat> [[ACC_IN:%.*]], float [[SSRC:%.*]], <2 x bfloat> [[BIAS:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call { <2 x bfloat>, <2 x bfloat>, <2 x bfloat>, <2 x bfloat> } @llvm.amdgcn.scale.bias.activate.scatter4.bf16(<8 x bfloat> [[ACC_IN:%.*]], bfloat [[SSRC:%.*]], <2 x bfloat> [[BIAS:%.*]], i32 42, i1 true)
 // CHECK-GFX1300-NEXT:    [[TMP1:%.*]] = extractvalue { <2 x bfloat>, <2 x bfloat>, <2 x bfloat>, <2 x bfloat> } [[TMP0]], 0
 // CHECK-GFX1300-NEXT:    store <2 x bfloat> [[TMP1]], ptr addrspace(1) [[OUT0:%.*]], align 4
 // CHECK-GFX1300-NEXT:    [[TMP2:%.*]] = extractvalue { <2 x bfloat>, <2 x bfloat>, <2 x bfloat>, <2 x bfloat> } [[TMP0]], 1
@@ -252,14 +254,14 @@ void test_amdgcn_scale_bias_activate_scatter4_f16_scale_bias_packed(global v2h* 
 // CHECK-GFX1300-NEXT:    store <2 x bfloat> [[TMP4]], ptr addrspace(1) [[OUT3:%.*]], align 4
 // CHECK-GFX1300-NEXT:    ret void
 //
-void test_amdgcn_scale_bias_activate_scatter4_bf16(global v2bf16* out0, global v2bf16* out1, global v2bf16* out2, global v2bf16* out3, v8bf16 acc_in, float ssrc, v2bf16 bias)
+void test_amdgcn_scale_bias_activate_scatter4_bf16(global v2bf16* out0, global v2bf16* out1, global v2bf16* out2, global v2bf16* out3, v8bf16 acc_in, __bf16 ssrc, v2bf16 bias)
 {
   __builtin_amdgcn_scale_bias_activate_scatter4_bf16(out0, out1, out2, out3, acc_in, ssrc, bias, 42, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_scale_bias_activate_scatter4_bf16_scale_bias_packed(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call { <2 x bfloat>, <2 x bfloat>, <2 x bfloat>, <2 x bfloat> } @llvm.amdgcn.scale.bias.activate.scatter4.bf16(<8 x bfloat> [[ACC_IN:%.*]], float 0.000000e+00, <2 x bfloat> [[BIAS:%.*]], i32 65578, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call { <2 x bfloat>, <2 x bfloat>, <2 x bfloat>, <2 x bfloat> } @llvm.amdgcn.scale.bias.activate.scatter4.bf16(<8 x bfloat> [[ACC_IN:%.*]], bfloat 0xR0000, <2 x bfloat> [[BIAS:%.*]], i32 65578, i1 true)
 // CHECK-GFX1300-NEXT:    [[TMP1:%.*]] = extractvalue { <2 x bfloat>, <2 x bfloat>, <2 x bfloat>, <2 x bfloat> } [[TMP0]], 0
 // CHECK-GFX1300-NEXT:    store <2 x bfloat> [[TMP1]], ptr addrspace(1) [[OUT0:%.*]], align 4
 // CHECK-GFX1300-NEXT:    [[TMP2:%.*]] = extractvalue { <2 x bfloat>, <2 x bfloat>, <2 x bfloat>, <2 x bfloat> } [[TMP0]], 1
@@ -272,12 +274,12 @@ void test_amdgcn_scale_bias_activate_scatter4_bf16(global v2bf16* out0, global v
 //
 void test_amdgcn_scale_bias_activate_scatter4_bf16_scale_bias_packed(global v2bf16* out0, global v2bf16* out1, global v2bf16* out2, global v2bf16* out3, v8bf16 acc_in, v2bf16 bias)
 {
-  __builtin_amdgcn_scale_bias_activate_scatter4_bf16(out0, out1, out2, out3, acc_in, 0, bias, 65578, true);
+  __builtin_amdgcn_scale_bias_activate_scatter4_bf16(out0, out1, out2, out3, acc_in, (__bf16) 0, bias, 65578, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_uniform_scale_activate_scatter4_f16(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call { <2 x half>, <2 x half>, <2 x half>, <2 x half> } @llvm.amdgcn.uniform.scale.activate.scatter4.f16(<8 x half> [[ACC_IN:%.*]], float [[SSRC:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call { <2 x half>, <2 x half>, <2 x half>, <2 x half> } @llvm.amdgcn.uniform.scale.activate.scatter4.f16(<8 x half> [[ACC_IN:%.*]], half [[SSRC:%.*]], i32 42, i1 true)
 // CHECK-GFX1300-NEXT:    [[TMP1:%.*]] = extractvalue { <2 x half>, <2 x half>, <2 x half>, <2 x half> } [[TMP0]], 0
 // CHECK-GFX1300-NEXT:    store <2 x half> [[TMP1]], ptr addrspace(1) [[OUT0:%.*]], align 4
 // CHECK-GFX1300-NEXT:    [[TMP2:%.*]] = extractvalue { <2 x half>, <2 x half>, <2 x half>, <2 x half> } [[TMP0]], 1
@@ -288,14 +290,14 @@ void test_amdgcn_scale_bias_activate_scatter4_bf16_scale_bias_packed(global v2bf
 // CHECK-GFX1300-NEXT:    store <2 x half> [[TMP4]], ptr addrspace(1) [[OUT3:%.*]], align 4
 // CHECK-GFX1300-NEXT:    ret void
 //
-void test_amdgcn_uniform_scale_activate_scatter4_f16(global v2h* out0, global v2h* out1, global v2h* out2, global v2h* out3, v8h acc_in, float ssrc)
+void test_amdgcn_uniform_scale_activate_scatter4_f16(global v2h* out0, global v2h* out1, global v2h* out2, global v2h* out3, v8h acc_in, half ssrc)
 {
   __builtin_amdgcn_uniform_scale_activate_scatter4_f16(out0, out1, out2, out3, acc_in, ssrc, 42, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_uniform_scale_activate_scatter4_bf16(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call { <2 x bfloat>, <2 x bfloat>, <2 x bfloat>, <2 x bfloat> } @llvm.amdgcn.uniform.scale.activate.scatter4.bf16(<8 x bfloat> [[ACC_IN:%.*]], float [[SSRC:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call { <2 x bfloat>, <2 x bfloat>, <2 x bfloat>, <2 x bfloat> } @llvm.amdgcn.uniform.scale.activate.scatter4.bf16(<8 x bfloat> [[ACC_IN:%.*]], bfloat [[SSRC:%.*]], i32 42, i1 true)
 // CHECK-GFX1300-NEXT:    [[TMP1:%.*]] = extractvalue { <2 x bfloat>, <2 x bfloat>, <2 x bfloat>, <2 x bfloat> } [[TMP0]], 0
 // CHECK-GFX1300-NEXT:    store <2 x bfloat> [[TMP1]], ptr addrspace(1) [[OUT0:%.*]], align 4
 // CHECK-GFX1300-NEXT:    [[TMP2:%.*]] = extractvalue { <2 x bfloat>, <2 x bfloat>, <2 x bfloat>, <2 x bfloat> } [[TMP0]], 1
@@ -306,7 +308,7 @@ void test_amdgcn_uniform_scale_activate_scatter4_f16(global v2h* out0, global v2
 // CHECK-GFX1300-NEXT:    store <2 x bfloat> [[TMP4]], ptr addrspace(1) [[OUT3:%.*]], align 4
 // CHECK-GFX1300-NEXT:    ret void
 //
-void test_amdgcn_uniform_scale_activate_scatter4_bf16(global v2bf16* out0, global v2bf16* out1, global v2bf16* out2, global v2bf16* out3, v8bf16 acc_in, float ssrc)
+void test_amdgcn_uniform_scale_activate_scatter4_bf16(global v2bf16* out0, global v2bf16* out1, global v2bf16* out2, global v2bf16* out3, v8bf16 acc_in, __bf16 ssrc)
 {
   __builtin_amdgcn_uniform_scale_activate_scatter4_bf16(out0, out1, out2, out3, acc_in, ssrc, 42, true);
 }
