@@ -166,6 +166,7 @@ AddDebugInfoPass::getModuleAttrFromGlobalOp(fir::GlobalOp globalOp,
   mlir::OpBuilder builder(context);
 
   std::pair result = fir::NameUniquer::deconstruct(globalOp.getSymName());
+  // Only look for module if this variable is not part of a function.
   if (!result.second.procs.empty() || result.second.modules.empty())
     return std::nullopt;
 
@@ -289,6 +290,8 @@ void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
   if (isOptimized)
     subprogramFlags = mlir::LLVM::DISubprogramFlags::Optimized;
   if (!funcOp.isExternal()) {
+    // Place holder and final function have to have different IDs, otherwise
+    // translation code will reject one of them.
     id = mlir::DistinctAttr::create(mlir::UnitAttr::get(context));
     id2 = mlir::DistinctAttr::create(mlir::UnitAttr::get(context));
     compilationUnit = cuAttr;
