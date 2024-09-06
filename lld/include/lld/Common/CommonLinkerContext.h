@@ -55,11 +55,13 @@ template <typename T = CommonLinkerContext> T &context() {
 
 bool hasContext();
 
+inline llvm::BumpPtrAllocator &bAlloc() { return context().bAlloc; }
 inline llvm::StringSaver &saver() { return context().saver; }
 inline llvm::UniqueStringSaver &unique_saver() {
+  // FIXME: Look into other places where duplications are common in saved
+  // strings and unique saver make sense.
   return context().unique_saver;
 }
-inline llvm::BumpPtrAllocator &bAlloc() { return context().bAlloc; }
 } // namespace lld
 
 #endif

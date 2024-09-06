@@ -1744,6 +1744,8 @@ createBitcodeSymbol(Symbol *&sym, const std::vector<bool> &keptComdats,
   uint8_t type = objSym.isTLS() ? STT_TLS : STT_NOTYPE;
   uint8_t visibility = mapVisibility(objSym.getVisibility());
 
+  // Symbols can be duplicated in bitcode files because of '#include' and
+  // linkonce_odr. Use unique_saver to save symbol names for de-duplication.
   if (!sym)
     sym = symtab.insert(unique_saver().save(objSym.getName()));
 
@@ -1797,6 +1799,8 @@ void BitcodeFile::parseLazy() {
   symbols = std::make_unique<Symbol *[]>(numSymbols);
   for (auto [i, irSym] : llvm::enumerate(obj->symbols()))
     if (!irSym.isUndefined()) {
+      // Symbols can be duplicated in bitcode files because of '#include' and
+      // linkonce_odr. Use unique_saver to save symbol names for de-duplication.
       auto *sym = symtab.insert(unique_saver().save(irSym.getName()));
       sym->resolve(LazySymbol{*this});
       symbols[i] = sym;
