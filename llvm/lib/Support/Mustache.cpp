@@ -431,8 +431,7 @@ Value ASTNode::findContext() {
     return nullptr;
   }
   Value Context = nullptr;
-  for (std::size_t I = 0; I < Accessor.size(); I++) {
-    CurrentAccessor = Accessor[I];
+  for (auto CurrentAccessor : Accessor) {
     Value *CurrentValue = CurrentContext->get(CurrentAccessor);
     if (!CurrentValue)
       return nullptr;
