@@ -236,6 +236,7 @@ namespace clang {
       case Poly128:
         return 128;
       }
+      llvm_unreachable("Invalid NeonTypeFlag!");
     }
   };
 
