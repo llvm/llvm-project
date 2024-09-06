@@ -42,7 +42,10 @@ add_libc_unittest(
   CXX_STANDARD
     20
   DEPENDS
+    libc.include.time
+    libc.hdr.types.time_t
     libc.src.time.ctime
+    libc.src.time.time_utils
 )
 
 add_libc_unittest(
@@ -57,7 +60,10 @@ add_libc_unittest(
   CXX_STANDARD
     20
   DEPENDS
+    libc.include.time
+    libc.hdr.types.time_t
     libc.src.time.ctime_r
+    libc.src.time.time_utils
 )
 
 add_libc_test(
