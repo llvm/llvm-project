@@ -706,8 +706,8 @@ static RValue emitLibraryCall(CodeGenFunction &CGF, const FunctionDecl *FD,
           if (A->getType()->isPointerTy())
             CallWithPointerArgsOrPointerReturnType = true;
         CallWithPointerArgsOrPointerReturnType =
-          CallWithPointerArgsOrPointerReturnType ||
-          CB->getFunctionType()->getReturnType()->isPointerTy();
+            CallWithPointerArgsOrPointerReturnType ||
+            CB->getFunctionType()->getReturnType()->isPointerTy();
       }
     }
     if (ConstWithoutErrnoAndExceptions && CGF.CGM.getLangOpts().MathErrno &&
