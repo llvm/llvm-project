@@ -26,7 +26,6 @@ define float @global_agent_atomic_fmin_ret_f32__amdgpu_no_fine_grained_memory(pt
 ; GFX12-NEXT:    global_atomic_min_num_f32 v0, v[0:1], v2, off th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: global_agent_atomic_fmin_ret_f32__amdgpu_no_fine_grained_memory:
@@ -189,7 +188,6 @@ define float @global_agent_atomic_fmin_ret_f32__offset12b_pos__amdgpu_no_fine_gr
 ; GFX12-NEXT:    global_atomic_min_num_f32 v0, v[0:1], v2, off offset:2044 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: global_agent_atomic_fmin_ret_f32__offset12b_pos__amdgpu_no_fine_grained_memory:
@@ -354,7 +352,6 @@ define float @global_agent_atomic_fmin_ret_f32__offset12b_neg__amdgpu_no_fine_gr
 ; GFX12-NEXT:    global_atomic_min_num_f32 v0, v[0:1], v2, off offset:-2048 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: global_agent_atomic_fmin_ret_f32__offset12b_neg__amdgpu_no_fine_grained_memory:
@@ -519,7 +516,6 @@ define void @global_agent_atomic_fmin_noret_f32__amdgpu_no_fine_grained_memory(p
 ; GFX12-NEXT:    global_atomic_min_num_f32 v[0:1], v2, off scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: global_agent_atomic_fmin_noret_f32__amdgpu_no_fine_grained_memory:
@@ -676,7 +672,6 @@ define void @global_agent_atomic_fmin_noret_f32__offset12b_pos__amdgpu_no_fine_g
 ; GFX12-NEXT:    global_atomic_min_num_f32 v[0:1], v2, off offset:2044 scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: global_agent_atomic_fmin_noret_f32__offset12b_pos__amdgpu_no_fine_grained_memory:
@@ -836,7 +831,6 @@ define void @global_agent_atomic_fmin_noret_f32__offset12b_neg__amdgpu_no_fine_g
 ; GFX12-NEXT:    global_atomic_min_num_f32 v[0:1], v2, off offset:-2048 scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: global_agent_atomic_fmin_noret_f32__offset12b_neg__amdgpu_no_fine_grained_memory:
@@ -996,7 +990,6 @@ define float @global_system_atomic_fmin_ret_f32__offset12b_pos__amdgpu_no_fine_g
 ; GFX12-NEXT:    global_atomic_min_num_f32 v0, v[0:1], v2, off offset:2044 th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: global_system_atomic_fmin_ret_f32__offset12b_pos__amdgpu_no_fine_grained_memory:
@@ -1163,7 +1156,6 @@ define void @global_system_atomic_fmin_noret_f32__offset12b_pos__amdgpu_no_fine_
 ; GFX12-NEXT:    global_atomic_min_num_f32 v[0:1], v2, off offset:2044 scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: global_system_atomic_fmin_noret_f32__offset12b_pos__amdgpu_no_fine_grained_memory:
@@ -1325,7 +1317,6 @@ define float @global_agent_atomic_fmin_ret_f32__amdgpu_no_remote_memory(ptr addr
 ; GFX12-NEXT:    global_atomic_min_num_f32 v0, v[0:1], v2, off th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: global_agent_atomic_fmin_ret_f32__amdgpu_no_remote_memory:
@@ -1557,7 +1548,6 @@ define float @global_agent_atomic_fmin_ret_f32__amdgpu_no_fine_grained_memory__a
 ; GFX12-NEXT:    global_atomic_min_num_f32 v0, v[0:1], v2, off th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: global_agent_atomic_fmin_ret_f32__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory:
@@ -1724,7 +1714,6 @@ define float @global_agent_atomic_fmin_ret_f32__ftz__amdgpu_no_fine_grained_memo
 ; GFX12-NEXT:    global_atomic_min_num_f32 v0, v[0:1], v2, off th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: global_agent_atomic_fmin_ret_f32__ftz__amdgpu_no_fine_grained_memory:
@@ -1887,7 +1876,6 @@ define float @global_agent_atomic_fmin_ret_f32__offset12b_pos__ftz__amdgpu_no_fi
 ; GFX12-NEXT:    global_atomic_min_num_f32 v0, v[0:1], v2, off offset:2044 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: global_agent_atomic_fmin_ret_f32__offset12b_pos__ftz__amdgpu_no_fine_grained_memory:
@@ -2052,7 +2040,6 @@ define float @global_agent_atomic_fmin_ret_f32__offset12b_neg__ftz__amdgpu_no_fi
 ; GFX12-NEXT:    global_atomic_min_num_f32 v0, v[0:1], v2, off offset:-2048 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: global_agent_atomic_fmin_ret_f32__offset12b_neg__ftz__amdgpu_no_fine_grained_memory:
@@ -2217,7 +2204,6 @@ define void @global_agent_atomic_fmin_noret_f32__ftz__amdgpu_no_fine_grained_mem
 ; GFX12-NEXT:    global_atomic_min_num_f32 v[0:1], v2, off scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: global_agent_atomic_fmin_noret_f32__ftz__amdgpu_no_fine_grained_memory:
@@ -2374,7 +2360,6 @@ define void @global_agent_atomic_fmin_noret_f32__offset12b_pos__ftz__amdgpu_no_f
 ; GFX12-NEXT:    global_atomic_min_num_f32 v[0:1], v2, off offset:2044 scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: global_agent_atomic_fmin_noret_f32__offset12b_pos__ftz__amdgpu_no_fine_grained_memory:
@@ -2534,7 +2519,6 @@ define void @global_agent_atomic_fmin_noret_f32__offset12b_neg__ftz__amdgpu_no_f
 ; GFX12-NEXT:    global_atomic_min_num_f32 v[0:1], v2, off offset:-2048 scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: global_agent_atomic_fmin_noret_f32__offset12b_neg__ftz__amdgpu_no_fine_grained_memory:
@@ -2694,7 +2678,6 @@ define float @global_system_atomic_fmin_ret_f32__offset12b_pos__ftz__amdgpu_no_f
 ; GFX12-NEXT:    global_atomic_min_num_f32 v0, v[0:1], v2, off offset:2044 th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: global_system_atomic_fmin_ret_f32__offset12b_pos__ftz__amdgpu_no_fine_grained_memory:
@@ -2861,7 +2844,6 @@ define void @global_system_atomic_fmin_noret_f32__offset12b_pos__ftz__amdgpu_no_
 ; GFX12-NEXT:    global_atomic_min_num_f32 v[0:1], v2, off offset:2044 scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: global_system_atomic_fmin_noret_f32__offset12b_pos__ftz__amdgpu_no_fine_grained_memory:

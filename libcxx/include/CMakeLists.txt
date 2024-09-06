@@ -324,6 +324,11 @@ set(files
   __coroutine/coroutine_traits.h
   __coroutine/noop_coroutine_handle.h
   __coroutine/trivial_awaitables.h
+  __cstddef/byte.h
+  __cstddef/max_align_t.h
+  __cstddef/nullptr_t.h
+  __cstddef/ptrdiff_t.h
+  __cstddef/size_t.h
   __debug_utils/randomize_range.h
   __debug_utils/sanitizers.h
   __debug_utils/strict_weak_ordering_check.h
@@ -536,6 +541,7 @@ set(files
   __memory/construct_at.h
   __memory/destruct_n.h
   __memory/inout_ptr.h
+  __memory/noexcept_move_assign_container.h
   __memory/out_ptr.h
   __memory/pointer_traits.h
   __memory/ranges_construct_at.h
@@ -824,7 +830,6 @@ set(files
   __type_traits/maybe_const.h
   __type_traits/nat.h
   __type_traits/negation.h
-  __type_traits/noexcept_move_assign_container.h
   __type_traits/promote.h
   __type_traits/rank.h
   __type_traits/remove_all_extents.h

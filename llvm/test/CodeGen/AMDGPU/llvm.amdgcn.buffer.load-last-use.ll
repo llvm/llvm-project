@@ -12,7 +12,6 @@ define float @raw_buffer_load(<4 x i32> inreg) {
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    buffer_load_b32 v0, off, s[0:3], null th:TH_LOAD_LU
 ; GCN-NEXT:    s_wait_loadcnt 0x0
-; GCN-NEXT:    s_wait_alu 0xfffe
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 main_body:
   %data = call float @llvm.amdgcn.raw.buffer.load.f32(<4 x i32> %0, i32 0, i32 0, i32 3)
@@ -30,7 +29,6 @@ define float @struct_buffer_load(<4 x i32> inreg) {
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    buffer_load_b32 v0, v0, s[0:3], null idxen th:TH_LOAD_LU
 ; GCN-NEXT:    s_wait_loadcnt 0x0
-; GCN-NEXT:    s_wait_alu 0xfffe
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 main_body:
   %data = call float @llvm.amdgcn.struct.buffer.load.f32(<4 x i32> %0, i32 0, i32 0, i32 0, i32 3)

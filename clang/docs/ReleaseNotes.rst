@@ -109,6 +109,9 @@ C++ Language Changes
   constant expression. Supports the `V.xyzw` syntax and other tidbits
   as seen in OpenCL. Selecting multiple elements is left as a future work.
 
+- Accept C++26 user-defined ``static_assert`` messages in C++11 as an extension.
+
+
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
@@ -121,6 +124,9 @@ C++2c Feature Support
 - Implemented `P2893R3 Variadic Friends <https://wg21.link/P2893>`_
 
 - Implemented `P2747R2 constexpr placement new <https://wg21.link/P2747R2>`_.
+
+- Added the ``__builtin_is_within_lifetime`` builtin, which supports
+  `P2641R4 Checking if a union alternative is active <https://wg21.link/p2641r4>`_
 
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -153,6 +159,10 @@ Resolutions to C++ Defect Reports
 
 - Allow ``void{}`` as a prvalue of type ``void``.
   (`CWG2351: void{} <https://cplusplus.github.io/CWG/issues/2351.html>`_).
+
+- Clang now allows comparing unequal object pointers that have been cast to ``void *``
+  in constant expressions. These comparisons always worked in non-constant expressions.
+  (`CWG2749: Treatment of "pointer to void" for relational comparisons <https://cplusplus.github.io/CWG/issues/2749.html>`_).
 
 C Language Changes
 ------------------
@@ -225,6 +235,11 @@ Attribute Changes in Clang
   more cases where the returned reference outlives the object.
   (#GH100567)
 
+- Clang now correctly diagnoses the use of ``btf_type_tag`` in C++ and ignores
+  it; this attribute is a C-only attribute, and caused crashes with template
+  instantiation by accidentally allowing it in C++ in some circumstances.
+  (#GH106864)
+
 Improvements to Clang's diagnostics
 -----------------------------------
 
@@ -267,6 +282,13 @@ Improvements to Clang's diagnostics
   to be explicitly enabled or by ``-Weverything``.
 
 - Improved diagnostic when trying to overload a function in an ``extern "C"`` context. (#GH80235)
+
+- Clang now respects lifetimebound attribute for the assignment operator parameter. (#GH106372).
+
+- The lifetimebound and GSL analysis in clang are coherent, allowing clang to
+  detect more use-after-free bugs. (#GH100549).
+
+- Clang now warns for u8 character literals used in C23 with ``-Wpre-c23-compat`` instead of ``-Wpre-c++17-compat``.
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -341,6 +363,13 @@ Bug Fixes to C++ Support
 - Template parameter names are considered in the name lookup of out-of-line class template
   specialization right before its declaration context. (#GH64082)
 - Fixed a constraint comparison bug for friend declarations. (#GH78101)
+- Fix handling of ``_`` as the name of a lambda's init capture variable. (#GH107024)
+- Fix an issue with dependent source location expressions (#GH106428), (#GH81155), (#GH80210), (#GH85373)
+- Fixed a bug in the substitution of empty pack indexing types. (#GH105903)
+- Clang no longer tries to capture non-odr used default arguments of template parameters of generic lambdas (#GH107048)
+- Fixed a bug where defaulted comparison operators would remove ``const`` from base classes. (#GH102588)
+
+- Fix a crash when using ``source_location`` in the trailing return type of a lambda expression. (#GH67134)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
