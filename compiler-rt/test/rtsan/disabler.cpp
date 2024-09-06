@@ -17,6 +17,20 @@ void violation() [[clang::nonblocking]] {
     printf("ptr: %p\n", ptr); // ensure we don't optimize out the malloc
   }
 
+  // ensure nested disablers don't interfere with one another
+  void *ptr2;
+  {
+    __rtsan::ScopedDisabler disabler{};
+    {
+      __rtsan::ScopedDisabler disabler2{};
+      ptr2 = malloc(2);
+      printf("ptr: %p\n", ptr); // ensure we don't optimize out the malloc
+    }
+
+    free(ptr2);
+    printf("Free'd second pointer in disabled context without crashing\n");
+  }
+
   free(ptr);
 }
 
@@ -25,7 +39,8 @@ int main() {
   return 0;
   // CHECK: {{.*Real-time violation.*}}
   // CHECK-NOT: {{.*malloc*}}
-  // CHECK: {{.*free*}}
+  // CHECK: Free'd second pointer in disabled context without crashing
+  // CHECK: {{.*real-time unsafe function `free`.*}}
 }
 
 // CHECK-ENABLED-IR: {{.*@__rtsan_disable.*}}
