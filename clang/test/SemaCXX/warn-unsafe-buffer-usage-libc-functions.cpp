@@ -20,6 +20,7 @@ int snwprintf_s( char* buffer, unsigned buf_size, const char* format, ... );
 int vsnprintf( char* buffer, unsigned buf_size, const char* format, ... );
 int sscanf_s(const char * buffer, const char * format, ...);
 int sscanf(const char * buffer, const char * format, ... );
+int __asan_printf();
 
 namespace std {
   template< class InputIt, class OutputIt >
@@ -64,7 +65,6 @@ void f(char * p, char * q, std::span<char> s, std::span<char> s2) {
   strcpy_s();                 // expected-warning{{function 'strcpy_s' is unsafe}}
   wcscpy_s();                 // expected-warning{{function 'wcscpy_s' is unsafe}}
 
-
   /* Test printfs */
   fprintf((FILE*)p, "%s%d", p, *p);  // expected-warning{{function 'fprintf' is unsafe}} expected-note{{string argument is not guaranteed to be null-terminated}}
   printf("%s%d", // expected-warning{{function 'printf' is unsafe}}
@@ -90,6 +90,7 @@ void f(char * p, char * q, std::span<char> s, std::span<char> s2) {
   snwprintf(s.data(), s.size_bytes(), "%s%d", __PRETTY_FUNCTION__, *p); // no warn
   snwprintf_s(s.data(), s.size_bytes(), "%s%d", __PRETTY_FUNCTION__, *p); // no warn
   strlen("hello");// no warn
+  __asan_printf();// a printf but no argument, so no warn
 }
 
 void v(std::string s1, int *p) {
