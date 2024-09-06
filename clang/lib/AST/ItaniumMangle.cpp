@@ -6809,6 +6809,9 @@ bool CXXNameMangler::mangleSubstitution(QualType T) {
 }
 
 bool CXXNameMangler::mangleSubstitution(TemplateName Template) {
+  if (TemplateDecl *TD = Template.getAsTemplateDecl())
+    return mangleSubstitution(TD);
+
   Template = Context.getASTContext().getCanonicalTemplateName(Template);
   return mangleSubstitution(
                       reinterpret_cast<uintptr_t>(Template.getAsVoidPointer()));
@@ -6978,6 +6981,9 @@ void CXXNameMangler::addSubstitution(QualType T) {
 }
 
 void CXXNameMangler::addSubstitution(TemplateName Template) {
+  if (TemplateDecl *TD = Template.getAsTemplateDecl())
+    return addSubstitution(TD);
+
   Template = Context.getASTContext().getCanonicalTemplateName(Template);
   addSubstitution(reinterpret_cast<uintptr_t>(Template.getAsVoidPointer()));
 }
