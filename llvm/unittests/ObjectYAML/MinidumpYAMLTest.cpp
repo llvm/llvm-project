@@ -162,8 +162,9 @@ Streams:
 
   ASSERT_EQ(1u, File.streams().size());
 
-  Expected<const minidump::ExceptionStream &> ExpectedStream =
-      File.getExceptionStream();
+  auto ExceptionIterator = File.getExceptionStreams().begin();
+
+  Expected<const ExceptionStream &> ExpectedStream = *ExceptionIterator;
 
   ASSERT_THAT_EXPECTED(ExpectedStream, Succeeded());
 
@@ -205,9 +206,9 @@ Streams:
 
   ASSERT_EQ(1u, File.streams().size());
 
-  Expected<const minidump::ExceptionStream &> ExpectedStream =
-      File.getExceptionStream();
+  auto ExceptionIterator = File.getExceptionStreams().begin();
 
+  Expected<const ExceptionStream &> ExpectedStream = *ExceptionIterator;
   ASSERT_THAT_EXPECTED(ExpectedStream, Succeeded());
 
   const minidump::ExceptionStream &Stream = *ExpectedStream;
@@ -261,8 +262,9 @@ Streams:
 
   ASSERT_EQ(1u, File.streams().size());
 
-  Expected<const minidump::ExceptionStream &> ExpectedStream =
-      File.getExceptionStream();
+  auto ExceptionIterator = File.getExceptionStreams().begin();
+
+  Expected<const ExceptionStream &> ExpectedStream = *ExceptionIterator;
 
   ASSERT_THAT_EXPECTED(ExpectedStream, Succeeded());
 
@@ -312,8 +314,9 @@ Streams:
 
   ASSERT_EQ(1u, File.streams().size());
 
-  Expected<const minidump::ExceptionStream &> ExpectedStream =
-      File.getExceptionStream();
+  auto ExceptionIterator = File.getExceptionStreams().begin();
+
+  Expected<const ExceptionStream &> ExpectedStream = *ExceptionIterator;
 
   ASSERT_THAT_EXPECTED(ExpectedStream, Succeeded());
 
@@ -335,4 +338,109 @@ Streams:
   EXPECT_EQ((ArrayRef<uint8_t>{0x3d, 0xea, 0xdb, 0xee, 0xfd, 0xef, 0xac, 0xed,
                                0xab, 0xad, 0xca, 0xfe}),
             *ExpectedContext);
+}
+
+TEST(MinidumpYAML, MemoryRegion_64bit) {
+  SmallString<0> Storage;
+  auto ExpectedFile = toBinary(Storage, R"(
+--- !minidump
+Streams:
+  - Type:            Memory64List
+    Memory Ranges:
+      - Start of Memory Range: 0x7FFFFFCF0818283
+        Content:               '68656c6c6f'
+      - Start of Memory Range: 0x7FFFFFFF0818283
+        Content:               '776f726c64'
+        )");
+
+  ASSERT_THAT_EXPECTED(ExpectedFile, Succeeded());
+  object::MinidumpFile &File = **ExpectedFile;
+
+  ASSERT_THAT(File.streams().size(), 1u);
+
+  Error Err = Error::success();
+  iterator_range<object::MinidumpFile::FallibleMemory64Iterator> MemoryList =
+      File.getMemory64List(Err);
+
+  ASSERT_THAT_ERROR(std::move(Err), Succeeded());
+  auto Iterator = MemoryList.begin();
+
+  auto DescOnePair = *Iterator;
+  const minidump::MemoryDescriptor_64 &DescOne = DescOnePair.first;
+  ASSERT_THAT(DescOne.StartOfMemoryRange, 0x7FFFFFCF0818283u);
+  ASSERT_THAT(DescOne.DataSize, 5u);
+  ++Iterator;
+  ASSERT_THAT_ERROR(std::move(Err), Succeeded());
+
+  auto DescTwoPair = *Iterator;
+  const minidump::MemoryDescriptor_64 &DescTwo = DescTwoPair.first;
+  ASSERT_THAT(DescTwo.StartOfMemoryRange, 0x7FFFFFFF0818283u);
+  ASSERT_THAT(DescTwo.DataSize, 5u);
+  ++Iterator;
+  ASSERT_THAT_ERROR(std::move(Err), Succeeded());
+
+  const std::optional<ArrayRef<uint8_t>> ExpectedContent =
+      File.getRawStream(StreamType::Memory64List);
+  ASSERT_TRUE(ExpectedContent);
+  const size_t ExpectedStreamSize =
+      sizeof(Memory64ListHeader) + (sizeof(MemoryDescriptor_64) * 2);
+  ASSERT_THAT(ExpectedContent->size(), ExpectedStreamSize);
+
+  Expected<minidump::Memory64ListHeader> ExpectedHeader =
+      File.getMemoryList64Header();
+  ASSERT_THAT_EXPECTED(ExpectedHeader, Succeeded());
+  ASSERT_THAT(ExpectedHeader->BaseRVA, 92u);
+
+  Expected<ArrayRef<uint8_t>> DescOneExpectedContentSlice = DescOnePair.second;
+  ASSERT_THAT_EXPECTED(DescOneExpectedContentSlice, Succeeded());
+  ASSERT_THAT(DescOneExpectedContentSlice->size(), 5u);
+  ASSERT_THAT(*DescOneExpectedContentSlice, arrayRefFromStringRef("hello"));
+
+  Expected<ArrayRef<uint8_t>> DescTwoExpectedContentSlice = DescTwoPair.second;
+  ASSERT_THAT_EXPECTED(DescTwoExpectedContentSlice, Succeeded());
+  ASSERT_THAT(*DescTwoExpectedContentSlice, arrayRefFromStringRef("world"));
+
+  ASSERT_EQ(Iterator, MemoryList.end());
+}
+
+// Test that we can parse multiple exception streams.
+TEST(MinidumpYAML, ExceptionStream_MultipleExceptions) {
+  SmallString<0> Storage;
+  auto ExpectedFile = toBinary(Storage, R"(
+--- !minidump
+Streams:
+  - Type:            Exception
+    Thread ID:  0x7
+    Exception Record:
+      Exception Code:  0x23
+      Exception Flags: 0x5
+      Exception Record: 0x0102030405060708
+      Exception Address: 0x0a0b0c0d0e0f1011
+      Number of Parameters: 2
+      Parameter 0: 0x99
+      Parameter 1: 0x23
+      Parameter 2: 0x42
+    Thread Context:  3DeadBeefDefacedABadCafe
+  - Type:            Exception
+    Thread ID:  0x5
+    Exception Record:
+      Exception Code:  0x23
+      Exception Flags: 0x5
+      Exception Record: 0x0102030405060708
+      Exception Address: 0x0a0b0c0d0e0f1011
+    Thread Context:  3DeadBeefDefacedABadCafe)");
+
+  ASSERT_THAT_EXPECTED(ExpectedFile, Succeeded());
+  object::MinidumpFile &File = **ExpectedFile;
+
+  ASSERT_EQ(2u, File.streams().size());
+
+  size_t count = 0;
+  for (auto exception_stream : File.getExceptionStreams()) {
+    count++;
+    ASSERT_THAT_EXPECTED(exception_stream, Succeeded());
+    ASSERT_THAT(0x23u, exception_stream->ExceptionRecord.ExceptionCode);
+  }
+
+  ASSERT_THAT(2u, count);
 }

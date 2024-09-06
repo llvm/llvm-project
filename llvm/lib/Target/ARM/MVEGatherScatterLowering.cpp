@@ -1257,7 +1257,7 @@ bool MVEGatherScatterLowering::runOnFunction(Function &F) {
   if (!ST->hasMVEIntegerOps())
     return false;
   LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-  DL = &F.getParent()->getDataLayout();
+  DL = &F.getDataLayout();
   SmallVector<IntrinsicInst *, 4> Gathers;
   SmallVector<IntrinsicInst *, 4> Scatters;
 
@@ -1279,8 +1279,7 @@ bool MVEGatherScatterLowering::runOnFunction(Function &F) {
       }
     }
   }
-  for (unsigned i = 0; i < Gathers.size(); i++) {
-    IntrinsicInst *I = Gathers[i];
+  for (IntrinsicInst *I : Gathers) {
     Instruction *L = lowerGather(I);
     if (L == nullptr)
       continue;
@@ -1290,8 +1289,7 @@ bool MVEGatherScatterLowering::runOnFunction(Function &F) {
     Changed = true;
   }
 
-  for (unsigned i = 0; i < Scatters.size(); i++) {
-    IntrinsicInst *I = Scatters[i];
+  for (IntrinsicInst *I : Scatters) {
     Instruction *S = lowerScatter(I);
     if (S == nullptr)
       continue;

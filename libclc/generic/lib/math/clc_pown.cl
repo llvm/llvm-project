@@ -368,3 +368,15 @@ _CLC_DEF _CLC_OVERLOAD double __clc_pown(double x, int ny)
 }
 _CLC_BINARY_VECTORIZE(_CLC_DEF _CLC_OVERLOAD, double, __clc_pown, double, int)
 #endif
+
+#ifdef cl_khr_fp16
+
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+
+_CLC_OVERLOAD _CLC_DEF half __clc_pown(half x, int y) {
+    return (half)__clc_pown((float)x, y);
+}
+
+_CLC_BINARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, half, __clc_pown, half, int);
+
+#endif

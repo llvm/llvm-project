@@ -292,6 +292,7 @@
 // MCPU-SIFIVE-P450-SAME: "-target-feature" "+ziccif"
 // MCPU-SIFIVE-P450-SAME: "-target-feature" "+zicclsm"
 // MCPU-SIFIVE-P450-SAME: "-target-feature" "+ziccrse"
+// MCPU-SIFIVE-P450-SAME: "-target-feature" "+zicntr"
 // MCPU-SIFIVE-P450-SAME: "-target-feature" "+zicsr"
 // MCPU-SIFIVE-P450-SAME: "-target-feature" "+zifencei"
 // MCPU-SIFIVE-P450-SAME: "-target-feature" "+zihintntl"
@@ -303,6 +304,55 @@
 // MCPU-SIFIVE-P450-SAME: "-target-feature" "+zbb"
 // MCPU-SIFIVE-P450-SAME: "-target-feature" "+zbs"
 // MCPU-SIFIVE-P450-SAME: "-target-abi" "lp64d"
+
+// RUN: %clang -target riscv64 -### -c %s 2>&1 -mcpu=sifive-p470 | FileCheck -check-prefix=MCPU-SIFIVE-P470 %s
+// MCPU-SIFIVE-P470: "-target-cpu" "sifive-p470"
+// MCPU-SIFIVE-P470-SAME: "-target-feature" "+m"
+// MCPU-SIFIVE-P470-SAME: "-target-feature" "+a"
+// MCPU-SIFIVE-P470-SAME: "-target-feature" "+f"
+// MCPU-SIFIVE-P470-SAME: "-target-feature" "+d"
+// MCPU-SIFIVE-P470-SAME: "-target-feature" "+c"
+// MCPU-SIFIVE-P470-SAME: "-target-feature" "+v"
+// MCPU-SIFIVE-P470-SAME: "-target-feature" "+zic64b"
+// MCPU-SIFIVE-P470-SAME: "-target-feature" "+zicbom"
+// MCPU-SIFIVE-P470-SAME: "-target-feature" "+zicbop"
+// MCPU-SIFIVE-P470-SAME: "-target-feature" "+zicboz"
+// MCPU-SIFIVE-P470-SAME: "-target-feature" "+ziccamoa"
+// MCPU-SIFIVE-P470-SAME: "-target-feature" "+ziccif"
+// MCPU-SIFIVE-P470-SAME: "-target-feature" "+zicclsm"
+// MCPU-SIFIVE-P470-SAME: "-target-feature" "+ziccrse"
+// MCPU-SIFIVE-P470-SAME: "-target-feature" "+zicntr"
+// MCPU-SIFIVE-P470-SAME: "-target-feature" "+zicsr"
+// MCPU-SIFIVE-P470-SAME: "-target-feature" "+zifencei"
+// MCPU-SIFIVE-P470-SAME: "-target-feature" "+zihintntl"
+// MCPU-SIFIVE-P470-SAME: "-target-feature" "+zihintpause"
+// MCPU-SIFIVE-P470-SAME: "-target-feature" "+zihpm"
+// MCPU-SIFIVE-P470-SAME: "-target-feature" "+zmmul"
+// MCPU-SIFIVE-P470-SAME: "-target-feature" "+za64rs"
+// MCPU-SIFIVE-P470-SAME: "-target-feature" "+zfhmin"
+// MCPU-SIFIVE-P470-SAME: "-target-feature" "+zba"
+// MCPU-SIFIVE-P470-SAME: "-target-feature" "+zbb"
+// MCPU-SIFIVE-P470-SAME: "-target-feature" "+zbs"
+// MCPU-SIFIVE-P470-SAME: "-target-feature" "+zvbb"
+// MCPU-SIFIVE-P470-SAME: "-target-feature" "+zvbc"
+// MCPU-SIFIVE-P470-SAME: "-target-feature" "+zve32f"
+// MCPU-SIFIVE-P470-SAME: "-target-feature" "+zve32x"
+// MCPU-SIFIVE-P470-SAME: "-target-feature" "+zve64d"
+// MCPU-SIFIVE-P470-SAME: "-target-feature" "+zve64f"
+// MCPU-SIFIVE-P470-SAME: "-target-feature" "+zve64x"
+// MCPU-SIFIVE-P470-SAME: "-target-feature" "+zvkg"
+// MCPU-SIFIVE-P470-SAME: "-target-feature" "+zvkn"
+// MCPU-SIFIVE-P470-SAME: "-target-feature" "+zvknc"
+// MCPU-SIFIVE-P470-SAME: "-target-feature" "+zvkned"
+// MCPU-SIFIVE-P470-SAME: "-target-feature" "+zvkng"
+// MCPU-SIFIVE-P470-SAME: "-target-feature" "+zvknhb"
+// MCPU-SIFIVE-P470-SAME: "-target-feature" "+zvks"
+// MCPU-SIFIVE-P470-SAME: "-target-feature" "+zvksc"
+// MCPU-SIFIVE-P470-SAME: "-target-feature" "+zvksed"
+// MCPU-SIFIVE-P470-SAME: "-target-feature" "+zvksg"
+// MCPU-SIFIVE-P470-SAME: "-target-feature" "+zvksh"
+// MCPU-SIFIVE-P470-SAME: "-target-feature" "+zvkt"
+// MCPU-SIFIVE-P470-SAME: "-target-abi" "lp64d"
 
 // RUN: %clang -target riscv64 -### -c %s 2>&1 -mcpu=sifive-p670 | FileCheck -check-prefix=MCPU-SIFIVE-P670 %s
 // MCPU-SIFIVE-P670: "-target-cpu" "sifive-p670"
@@ -320,6 +370,7 @@
 // MCPU-SIFIVE-P670-SAME: "-target-feature" "+ziccif"
 // MCPU-SIFIVE-P670-SAME: "-target-feature" "+zicclsm"
 // MCPU-SIFIVE-P670-SAME: "-target-feature" "+ziccrse"
+// MCPU-SIFIVE-P670-SAME: "-target-feature" "+zicntr"
 // MCPU-SIFIVE-P670-SAME: "-target-feature" "+zicsr"
 // MCPU-SIFIVE-P670-SAME: "-target-feature" "+zifencei"
 // MCPU-SIFIVE-P670-SAME: "-target-feature" "+zihintntl"
@@ -351,6 +402,21 @@
 // MCPU-SIFIVE-P670-SAME: "-target-feature" "+zvkt"
 // MCPU-SIFIVE-P670-SAME: "-target-abi" "lp64d"
 
+// RUN: %clang -target riscv32 -### -c %s 2>&1 -mcpu=rp2350-hazard3 | FileCheck -check-prefix=MCPU-HAZARD3 %s
+// MCPU-HAZARD3: "-target-cpu" "rp2350-hazard3"
+// MCPU-HAZARD3-SAME: "-target-feature" "+m"
+// MCPU-HAZARD3-SAME: "-target-feature" "+a"
+// MCPU-HAZARD3-SAME: "-target-feature" "+c"
+// MCPU-HAZARD3-SAME: "-target-feature" "+zicsr"
+// MCPU-HAZARD3-SAME: "-target-feature" "+zifencei"
+// MCPU-HAZARD3-SAME: "-target-feature" "+zcb"
+// MCPU-HAZARD3-SAME: "-target-feature" "+zcmp"
+// MCPU-HAZARD3-SAME: "-target-feature" "+zba"
+// MCPU-HAZARD3-SAME: "-target-feature" "+zbb"
+// MCPU-HAZARD3-SAME: "-target-feature" "+zbkb"
+// MCPU-HAZARD3-SAME: "-target-feature" "+zbs"
+// MCPU-HAZARD3-SAME: "-target-abi" "ilp32"
+
 // Check failed cases
 
 // RUN: not %clang --target=riscv32 -### -c %s 2>&1 -mcpu=generic-rv321 | FileCheck -check-prefix=FAIL-MCPU-NAME %s
@@ -358,3 +424,81 @@
 
 // RUN: not %clang --target=riscv32 -### -c %s 2>&1 -mcpu=generic-rv32 -march=rv64i | FileCheck -check-prefix=MISMATCH-ARCH %s
 // MISMATCH-ARCH: cpu 'generic-rv32' does not support rv64
+
+// RUN: %clang --target=riscv32 -### -c %s 2>&1 -mcpu=syntacore-scr3-rv32 | FileCheck -check-prefix=MCPU-SYNTACORE-SCR3-RV32 %s
+// MCPU-SYNTACORE-SCR3-RV32: "-target-cpu" "syntacore-scr3-rv32"
+// MCPU-SYNTACORE-SCR3-RV32-SAME: "-target-feature" "+m"
+// MCPU-SYNTACORE-SCR3-RV32-SAME: "-target-feature" "+c"
+// MCPU-SYNTACORE-SCR3-RV32-SAME: "-target-feature" "+zicsr"
+// MCPU-SYNTACORE-SCR3-RV32-SAME: "-target-feature" "+zifencei"
+// MCPU-SYNTACORE-SCR3-RV32-SAME: "-target-abi" "ilp32"
+
+// RUN: %clang --target=riscv32 -### -c %s 2>&1 -mtune=syntacore-scr3-rv32 | FileCheck -check-prefix=MTUNE-SYNTACORE-SCR3-RV32 %s
+// MTUNE-SYNTACORE-SCR3-RV32: "-tune-cpu" "syntacore-scr3-rv32"
+
+// RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=syntacore-scr3-rv64 | FileCheck -check-prefix=MCPU-SYNTACORE-SCR3-RV64 %s
+// MCPU-SYNTACORE-SCR3-RV64: "-target-cpu" "syntacore-scr3-rv64"
+// MCPU-SYNTACORE-SCR3-RV64-SAME: "-target-feature" "+m"
+// MCPU-SYNTACORE-SCR3-RV64-SAME: "-target-feature" "+a"
+// MCPU-SYNTACORE-SCR3-RV64-SAME: "-target-feature" "+c"
+// MCPU-SYNTACORE-SCR3-RV64-SAME: "-target-feature" "+zicsr"
+// MCPU-SYNTACORE-SCR3-RV64-SAME: "-target-feature" "+zifencei"
+// MCPU-SYNTACORE-SCR3-RV64-SAME: "-target-abi" "lp64"
+
+// RUN: %clang --target=riscv64 -### -c %s 2>&1 -mtune=syntacore-scr3-rv64 | FileCheck -check-prefix=MTUNE-SYNTACORE-SCR3-RV64 %s
+// MTUNE-SYNTACORE-SCR3-RV64: "-tune-cpu" "syntacore-scr3-rv64"
+
+// RUN: %clang --target=riscv32 -### -c %s 2>&1 -mcpu=syntacore-scr4-rv32 | FileCheck -check-prefix=MCPU-SYNTACORE-SCR4-RV32 %s
+// MCPU-SYNTACORE-SCR4-RV32: "-target-cpu" "syntacore-scr4-rv32"
+// MCPU-SYNTACORE-SCR4-RV32-SAME: "-target-feature" "+m"
+// MCPU-SYNTACORE-SCR4-RV32-SAME: "-target-feature" "+f"
+// MCPU-SYNTACORE-SCR4-RV32-SAME: "-target-feature" "+d"
+// MCPU-SYNTACORE-SCR4-RV32-SAME: "-target-feature" "+c"
+// MCPU-SYNTACORE-SCR4-RV32-SAME: "-target-feature" "+zicsr"
+// MCPU-SYNTACORE-SCR4-RV32-SAME: "-target-feature" "+zifencei"
+// MCPU-SYNTACORE-SCR4-RV32-SAME: "-target-abi" "ilp32d"
+
+// RUN: %clang --target=riscv32 -### -c %s 2>&1 -mtune=syntacore-scr4-rv32 | FileCheck -check-prefix=MTUNE-SYNTACORE-SCR4-RV32 %s
+// MTUNE-SYNTACORE-SCR4-RV32: "-tune-cpu" "syntacore-scr4-rv32"
+
+// RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=syntacore-scr4-rv64 | FileCheck -check-prefix=MCPU-SYNTACORE-SCR4-RV64 %s
+// MCPU-SYNTACORE-SCR4-RV64: "-target-cpu" "syntacore-scr4-rv64"
+// MCPU-SYNTACORE-SCR4-RV64-SAME: "-target-feature" "+m"
+// MCPU-SYNTACORE-SCR4-RV64-SAME: "-target-feature" "+a"
+// MCPU-SYNTACORE-SCR4-RV64-SAME: "-target-feature" "+f"
+// MCPU-SYNTACORE-SCR4-RV64-SAME: "-target-feature" "+d"
+// MCPU-SYNTACORE-SCR4-RV64-SAME: "-target-feature" "+c"
+// MCPU-SYNTACORE-SCR4-RV64-SAME: "-target-feature" "+zicsr"
+// MCPU-SYNTACORE-SCR4-RV64-SAME: "-target-feature" "+zifencei"
+// MCPU-SYNTACORE-SCR4-RV64-SAME: "-target-abi" "lp64d"
+
+// RUN: %clang --target=riscv64 -### -c %s 2>&1 -mtune=syntacore-scr4-rv64 | FileCheck -check-prefix=MTUNE-SYNTACORE-SCR4-RV64 %s
+// MTUNE-SYNTACORE-SCR4-RV64: "-tune-cpu" "syntacore-scr4-rv64"
+
+// RUN: %clang --target=riscv32 -### -c %s 2>&1 -mcpu=syntacore-scr5-rv32 | FileCheck -check-prefix=MCPU-SYNTACORE-SCR5-RV32 %s
+// MCPU-SYNTACORE-SCR5-RV32: "-target-cpu" "syntacore-scr5-rv32"
+// MCPU-SYNTACORE-SCR5-RV32-SAME: "-target-feature" "+m"
+// MCPU-SYNTACORE-SCR5-RV32-SAME: "-target-feature" "+a"
+// MCPU-SYNTACORE-SCR5-RV32-SAME: "-target-feature" "+f"
+// MCPU-SYNTACORE-SCR5-RV32-SAME: "-target-feature" "+d"
+// MCPU-SYNTACORE-SCR5-RV32-SAME: "-target-feature" "+c"
+// MCPU-SYNTACORE-SCR5-RV32-SAME: "-target-feature" "+zicsr"
+// MCPU-SYNTACORE-SCR5-RV32-SAME: "-target-feature" "+zifencei"
+// MCPU-SYNTACORE-SCR5-RV32-SAME: "-target-abi" "ilp32d"
+
+// RUN: %clang --target=riscv32 -### -c %s 2>&1 -mtune=syntacore-scr5-rv32 | FileCheck -check-prefix=MTUNE-SYNTACORE-SCR5-RV32 %s
+// MTUNE-SYNTACORE-SCR5-RV32: "-tune-cpu" "syntacore-scr5-rv32"
+
+// RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=syntacore-scr5-rv64 | FileCheck -check-prefix=MCPU-SYNTACORE-SCR5-RV64 %s
+// MCPU-SYNTACORE-SCR5-RV64: "-target-cpu" "syntacore-scr5-rv64"
+// MCPU-SYNTACORE-SCR5-RV64-SAME: "-target-feature" "+m"
+// MCPU-SYNTACORE-SCR5-RV64-SAME: "-target-feature" "+a"
+// MCPU-SYNTACORE-SCR5-RV64-SAME: "-target-feature" "+f"
+// MCPU-SYNTACORE-SCR5-RV64-SAME: "-target-feature" "+d"
+// MCPU-SYNTACORE-SCR5-RV64-SAME: "-target-feature" "+c"
+// MCPU-SYNTACORE-SCR5-RV64-SAME: "-target-feature" "+zicsr"
+// MCPU-SYNTACORE-SCR5-RV64-SAME: "-target-feature" "+zifencei"
+// MCPU-SYNTACORE-SCR5-RV64-SAME: "-target-abi" "lp64d"
+
+// RUN: %clang --target=riscv64 -### -c %s 2>&1 -mtune=syntacore-scr5-rv64 | FileCheck -check-prefix=MTUNE-SYNTACORE-SCR5-RV64 %s
+// MTUNE-SYNTACORE-SCR5-RV64: "-tune-cpu" "syntacore-scr5-rv64"

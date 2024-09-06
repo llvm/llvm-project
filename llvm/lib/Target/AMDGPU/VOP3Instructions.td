@@ -568,6 +568,7 @@ def VOP3_CVT_SR_F8_F32_Profile : VOP3_Profile<VOPProfile<[i32, f32, i32, f32]>,
   let HasSrc2Mods = 1;
   let HasExtVOP3DPP = 1;
   let HasOpSel = 1;
+  let HasFP8DstByteSel = 1;
   let AsmVOP3OpSel = !subst(", $src2_modifiers", "",
                             getAsmVOP3OpSel<3, HasClamp, HasOMod,
                                             HasSrc0FloatMods, HasSrc1FloatMods,
@@ -587,6 +588,7 @@ def VOP3_CVT_SR_F8_F32_Profile : VOP3_Profile<VOPProfile<[i32, f32, i32, f32]>,
 class VOP3_CVT_SR_F8_ByteSel_Profile<ValueType SrcVT> :
   VOP3_Profile<VOPProfile<[i32, SrcVT, i32, untyped]>> {
   let IsFP8DstByteSel = 1;
+  let HasFP8DstByteSel = 1;
   let HasClamp = 0;
   defvar bytesel = (ins VGPR_32:$vdst_in, ByteSel:$byte_sel);
   let Ins64 = !con(getIns64<Src0RC64, Src1RC64, Src2RC64, NumSrcArgs,
@@ -842,9 +844,9 @@ def gi_opsel_i1timm : GICustomOperandRenderer<"renderOpSelTImm">,
   GISDNodeXFormEquiv<opsel_i1timm>;
 
 class PermlanePat<SDPatternOperator permlane,
-  Instruction inst> : GCNPat<
-  (permlane i32:$vdst_in, i32:$src0, i32:$src1, i32:$src2,
-            timm:$fi, timm:$bc),
+  Instruction inst, ValueType vt> : GCNPat<
+  (vt (permlane vt:$vdst_in, vt:$src0, i32:$src1, i32:$src2,
+            timm:$fi, timm:$bc)),
   (inst (opsel_i1timm $fi), VGPR_32:$src0, (opsel_i1timm $bc),
         SCSrc_b32:$src1, 0, SCSrc_b32:$src2, VGPR_32:$vdst_in)
 >;
@@ -868,8 +870,10 @@ let SubtargetPredicate = isGFX10Plus in {
     defm V_PERMLANEX16_B32 : VOP3Inst<"v_permlanex16_b32", VOP3_PERMLANE_Profile>;
   } // End $vdst = $vdst_in, DisableEncoding $vdst_in, IsInvalidSingleUseConsumer = 1, IsInvalidSingleUseProducer = 1
 
-  def : PermlanePat<int_amdgcn_permlane16, V_PERMLANE16_B32_e64>;
-  def : PermlanePat<int_amdgcn_permlanex16, V_PERMLANEX16_B32_e64>;
+  foreach vt = Reg32Types.types in {
+    def : PermlanePat<int_amdgcn_permlane16, V_PERMLANE16_B32_e64, vt>;
+    def : PermlanePat<int_amdgcn_permlanex16, V_PERMLANEX16_B32_e64, vt>;
+  }
 
   defm V_ADD_NC_U16 : VOP3Inst <"v_add_nc_u16", VOP3_Profile<VOP_I16_I16_I16, VOP3_OPSEL>, add>;
   defm V_SUB_NC_U16 : VOP3Inst <"v_sub_nc_u16", VOP3_Profile<VOP_I16_I16_I16, VOP3_OPSEL>, sub>;
@@ -1225,8 +1229,11 @@ let InOperandList = (ins SSrcOrLds_b32:$src0, SCSrc_b32:$src1, VGPR_32:$vdst_in)
   defm V_WRITELANE_B32     : VOP3_Real_No_Suffix_gfx11_gfx12<0x361>; // Pseudo in VOP2
 } // End InOperandList = (ins SSrcOrLds_b32:$src0, SCSrc_b32:$src1, VGPR_32:$vdst_in)
 defm V_AND_B16_t16         : VOP3Only_Realtriple_t16_gfx11_gfx12<0x362, "v_and_b16">;
+defm V_AND_B16_fake16      : VOP3Only_Realtriple_t16_gfx11_gfx12<0x362, "v_and_b16">;
 defm V_OR_B16_t16          : VOP3Only_Realtriple_t16_gfx11_gfx12<0x363, "v_or_b16">;
+defm V_OR_B16_fake16       : VOP3Only_Realtriple_t16_gfx11_gfx12<0x363, "v_or_b16">;
 defm V_XOR_B16_t16         : VOP3Only_Realtriple_t16_gfx11_gfx12<0x364, "v_xor_b16">;
+defm V_XOR_B16_fake16      : VOP3Only_Realtriple_t16_gfx11_gfx12<0x364, "v_xor_b16">;
 
 //===----------------------------------------------------------------------===//
 // GFX10.

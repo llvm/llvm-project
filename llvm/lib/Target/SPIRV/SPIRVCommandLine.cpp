@@ -66,7 +66,10 @@ static const std::map<std::string, SPIRV::Extension::Extension>
          SPIRV::Extension::Extension::SPV_INTEL_function_pointers},
         {"SPV_KHR_shader_clock",
          SPIRV::Extension::Extension::SPV_KHR_shader_clock},
-};
+        {"SPV_KHR_cooperative_matrix",
+         SPIRV::Extension::Extension::SPV_KHR_cooperative_matrix},
+        {"SPV_KHR_non_semantic_info",
+         SPIRV::Extension::Extension::SPV_KHR_non_semantic_info}};
 
 bool SPIRVExtensionsParser::parse(cl::Option &O, llvm::StringRef ArgName,
                                   llvm::StringRef ArgValue,

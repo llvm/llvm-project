@@ -18,8 +18,8 @@
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
+#include "mlir/IR/Iterators.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Debug.h"
 
@@ -80,7 +80,7 @@ class EmboxConversion : public mlir::OpRewritePattern<fir::EmboxOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(fir::EmboxOp embox,
                   mlir::PatternRewriter &rewriter) const override {
     // If the embox does not include a shape, then do not convert it
@@ -95,7 +95,7 @@ public:
     return mlir::failure();
   }
 
-  mlir::LogicalResult rewriteStaticShape(fir::EmboxOp embox,
+  llvm::LogicalResult rewriteStaticShape(fir::EmboxOp embox,
                                          mlir::PatternRewriter &rewriter,
                                          fir::SequenceType seqTy) const {
     auto loc = embox.getLoc();
@@ -109,13 +109,13 @@ public:
     auto xbox = rewriter.create<fir::cg::XEmboxOp>(
         loc, embox.getType(), embox.getMemref(), shapeOpers, std::nullopt,
         std::nullopt, std::nullopt, std::nullopt, embox.getTypeparams(),
-        embox.getSourceBox());
+        embox.getSourceBox(), embox.getAllocatorIdxAttr());
     LLVM_DEBUG(llvm::dbgs() << "rewriting " << embox << " to " << xbox << '\n');
     rewriter.replaceOp(embox, xbox.getOperation()->getResults());
     return mlir::success();
   }
 
-  mlir::LogicalResult rewriteDynamicShape(fir::EmboxOp embox,
+  llvm::LogicalResult rewriteDynamicShape(fir::EmboxOp embox,
                                           mlir::PatternRewriter &rewriter,
                                           mlir::Value shapeVal) const {
     auto loc = embox.getLoc();
@@ -145,7 +145,7 @@ public:
     auto xbox = rewriter.create<fir::cg::XEmboxOp>(
         loc, embox.getType(), embox.getMemref(), shapeOpers, shiftOpers,
         sliceOpers, subcompOpers, substrOpers, embox.getTypeparams(),
-        embox.getSourceBox());
+        embox.getSourceBox(), embox.getAllocatorIdxAttr());
     LLVM_DEBUG(llvm::dbgs() << "rewriting " << embox << " to " << xbox << '\n');
     rewriter.replaceOp(embox, xbox.getOperation()->getResults());
     return mlir::success();
@@ -168,7 +168,7 @@ class ReboxConversion : public mlir::OpRewritePattern<fir::ReboxOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(fir::ReboxOp rebox,
                   mlir::PatternRewriter &rewriter) const override {
     auto loc = rebox.getLoc();
@@ -227,7 +227,7 @@ class ArrayCoorConversion : public mlir::OpRewritePattern<fir::ArrayCoorOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(fir::ArrayCoorOp arrCoor,
                   mlir::PatternRewriter &rewriter) const override {
     auto loc = arrCoor.getLoc();
@@ -277,7 +277,7 @@ public:
   DeclareOpConversion(mlir::MLIRContext *ctx, bool preserveDecl)
       : OpRewritePattern(ctx), preserveDeclare(preserveDecl) {}
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(fir::DeclareOp declareOp,
                   mlir::PatternRewriter &rewriter) const override {
     if (!preserveDeclare) {
@@ -316,7 +316,7 @@ class DummyScopeOpConversion
 public:
   using OpRewritePattern::OpRewritePattern;
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(fir::DummyScopeOp dummyScopeOp,
                   mlir::PatternRewriter &rewriter) const override {
     rewriter.replaceOpWithNewOp<fir::UndefOp>(dummyScopeOp,
@@ -324,6 +324,25 @@ public:
     return mlir::success();
   }
 };
+
+/// Simple DCE to erase fir.shape/shift/slice/unused shape operands after this
+/// pass (fir.shape and like have no codegen).
+/// mlir::RegionDCE is expensive and requires running
+/// mlir::eraseUnreachableBlocks. It does things that are not needed here, like
+/// removing unused block arguments. fir.shape/shift/slice cannot be block
+/// arguments.
+/// This helper does a naive backward walk of the IR. It is not even guaranteed
+/// to walk blocks according to backward dominance, but that is good enough for
+/// what is done here, fir.shape/shift/slice have no usages anymore. The
+/// backward walk allows getting rid of most of the unused operands, it is not a
+/// problem to leave some in the weird cases.
+static void simpleDCE(mlir::RewriterBase &rewriter, mlir::Operation *op) {
+  op->walk<mlir::WalkOrder::PostOrder, mlir::ReverseIterator>(
+      [&](mlir::Operation *subOp) {
+        if (mlir::isOpTriviallyDead(subOp))
+          rewriter.eraseOp(subOp);
+      });
+}
 
 class CodeGenRewrite : public fir::impl::CodeGenRewriteBase<CodeGenRewrite> {
 public:
@@ -356,7 +375,7 @@ public:
     }
     // Erase any residual (fir.shape, fir.slice...).
     mlir::IRRewriter rewriter(&context);
-    (void)mlir::runRegionDCE(rewriter, mod->getRegions());
+    simpleDCE(rewriter, mod.getOperation());
   }
 };
 

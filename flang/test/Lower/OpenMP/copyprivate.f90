@@ -1,5 +1,6 @@
 ! Test COPYPRIVATE.
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -o - %s 2>&1 | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -o - %s 2>&1 \
+! RUN: | FileCheck %s
 
 !CHECK-DAG: func private @_copy_i64(%{{.*}}: !fir.ref<i64>, %{{.*}}: !fir.ref<i64>)
 !CHECK-DAG: func private @_copy_f32(%{{.*}}: !fir.ref<f32>, %{{.*}}: !fir.ref<f32>)
@@ -34,7 +35,7 @@
 !CHECK-NEXT:    %[[DST:.*]]:2 = hlfir.declare %[[ARG0]] {uniq_name = "_copy_i32_dst"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK-NEXT:    %[[SRC:.*]]:2 = hlfir.declare %[[ARG1]] {uniq_name = "_copy_i32_src"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK-NEXT:    %[[SRC_VAL:.*]] = fir.load %[[SRC]]#0 : !fir.ref<i32>
-!CHECK-NEXT:    hlfir.assign %[[SRC_VAL]] to %[[DST]]#0 temporary_lhs : i32, !fir.ref<i32>
+!CHECK-NEXT:    hlfir.assign %[[SRC_VAL]] to %[[DST]]#0 : i32, !fir.ref<i32>
 !CHECK-NEXT:    return
 !CHECK-NEXT:  }
 
@@ -94,10 +95,10 @@ end subroutine
 
 !CHECK-LABEL: func @_QPtest_array
 !CHECK:         omp.parallel
-!CHECK:           %[[A:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) {uniq_name = "_QFtest_arrayEa"} : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.ref<!fir.array<?xi32>>)
+!CHECK:           %[[A:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) {uniq_name = "_QFtest_arrayEa"} : (!fir.box<!fir.array<?xi32>>, !fir.shift<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
 !CHECK:           %[[I1:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) {uniq_name = "_QFtest_arrayEi1"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
 !CHECK:           %[[I2:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) {uniq_name = "_QFtest_arrayEi2"} : (!fir.ref<!fir.array<3x4xi32>>, !fir.shape<2>) -> (!fir.ref<!fir.array<3x4xi32>>, !fir.ref<!fir.array<3x4xi32>>)
-!CHECK:           %[[I3:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) {uniq_name = "_QFtest_arrayEi3"} : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.ref<!fir.array<?xi32>>)
+!CHECK:           %[[I3:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) {uniq_name = "_QFtest_arrayEi3"} : (!fir.ref<!fir.array<?xi32>>, !fir.shapeshift<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.ref<!fir.array<?xi32>>)
 !CHECK:           %[[R1:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) {uniq_name = "_QFtest_arrayEr1"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>)
 !CHECK:           %[[C1:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) {uniq_name = "_QFtest_arrayEc1"} : (!fir.ref<!fir.array<3x4x!fir.complex<4>>>, !fir.shape<2>) -> (!fir.ref<!fir.array<3x4x!fir.complex<4>>>, !fir.ref<!fir.array<3x4x!fir.complex<4>>>)
 !CHECK:           %[[L1:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) {uniq_name = "_QFtest_arrayEl1"} : (!fir.ref<!fir.array<10x!fir.logical<4>>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10x!fir.logical<4>>>, !fir.ref<!fir.array<10x!fir.logical<4>>>)

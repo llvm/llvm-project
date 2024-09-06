@@ -146,16 +146,8 @@ struct notlockfree { long long a[4]; };
 // PATTERN-O1-NOT: @__const.test_atomictailpad_uninit.uninit
 // PATTERN-O0: @__const.test_complexfloat_uninit.uninit = private unnamed_addr constant { float, float } { float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000 }, align 4
 // PATTERN-O1-NOT: @__const.test_complexfloat_uninit.uninit
-// PATTERN-O0: @__const.test_complexfloat_braces.braces = private unnamed_addr constant { float, float } { float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000 }, align 4
-// PATTERN-O1-NOT: @__const.test_complexfloat_braces.braces
-// PATTERN-O0: @__const.test_complexfloat_custom.custom = private unnamed_addr constant { float, float } { float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000 }, align 4
-// PATTERN-O1-NOT: @__const.test_complexfloat_custom.custom
 // PATTERN-O0: @__const.test_complexdouble_uninit.uninit = private unnamed_addr constant { double, double } { double 0xFFFFFFFFFFFFFFFF, double 0xFFFFFFFFFFFFFFFF }, align 8
 // PATTERN-O1-NOT: @__const.test_complexdouble_uninit.uninit
-// PATTERN-O0: @__const.test_complexdouble_braces.braces = private unnamed_addr constant { double, double } { double 0xFFFFFFFFFFFFFFFF, double 0xFFFFFFFFFFFFFFFF }, align 8
-// PATTERN-O1-NOT: @__const.test_complexdouble_braces.braces
-// PATTERN-O0: @__const.test_complexdouble_custom.custom = private unnamed_addr constant { double, double } { double 0xFFFFFFFFFFFFFFFF, double 0xFFFFFFFFFFFFFFFF }, align 8
-// PATTERN-O1-NOT: @__const.test_complexdouble_custom.custom
 // PATTERN-O0: @__const.test_semivolatile_uninit.uninit = private unnamed_addr constant %struct.semivolatile { i32 [[I32]], i32 [[I32]] }, align 4
 // PATTERN-O0: @__const.test_semivolatile_custom.custom = private unnamed_addr constant %struct.semivolatile { i32 1145324612, i32 1145324612 }, align 4
 // PATTERN-O1-NOT: @__const.test_semivolatile_custom.custom
@@ -626,7 +618,7 @@ TEST_UNINIT(smallinit, smallinit);
 TEST_BRACES(smallinit, smallinit);
 // CHECK-LABEL: @test_smallinit_braces()
 // CHECK:       %braces = alloca %struct.smallinit, align [[ALIGN:[0-9]*]]
-// CHECK-NEXT:  %[[C:[^ ]*]] = getelementptr inbounds %struct.smallinit, ptr %braces, i32 0, i32 0
+// CHECK-NEXT:  %[[C:[^ ]*]] = getelementptr inbounds nuw %struct.smallinit, ptr %braces, i32 0, i32 0
 // CHECK-NEXT:  store i8 42, ptr %[[C]], align [[ALIGN]]
 // CHECK-NOT:   !annotation
 // CHECK-NEXT:  call void @{{.*}}used{{.*}}%braces)
@@ -634,7 +626,7 @@ TEST_BRACES(smallinit, smallinit);
 TEST_CUSTOM(smallinit, smallinit, { 100 });
 // CHECK-LABEL: @test_smallinit_custom()
 // CHECK:       %custom = alloca %struct.smallinit, align [[ALIGN:[0-9]*]]
-// CHECK-NEXT:  %[[C:[^ ]*]] = getelementptr inbounds %struct.smallinit, ptr %custom, i32 0, i32 0
+// CHECK-NEXT:  %[[C:[^ ]*]] = getelementptr inbounds nuw %struct.smallinit, ptr %custom, i32 0, i32 0
 // CHECK-NEXT:  store i8 100, ptr %[[C]], align [[ALIGN]]
 // CHECK-NOT:   !annotation
 // CHECK-NEXT:  call void @{{.*}}used{{.*}}%custom)
@@ -655,10 +647,10 @@ TEST_UNINIT(smallpartinit, smallpartinit);
 TEST_BRACES(smallpartinit, smallpartinit);
 // CHECK-LABEL: @test_smallpartinit_braces()
 // CHECK:       %braces = alloca %struct.smallpartinit, align [[ALIGN:[0-9]*]]
-// CHECK-NEXT:  %[[C:[^ ]*]] = getelementptr inbounds %struct.smallpartinit, ptr %braces, i32 0, i32 0
+// CHECK-NEXT:  %[[C:[^ ]*]] = getelementptr inbounds nuw %struct.smallpartinit, ptr %braces, i32 0, i32 0
 // CHECK-NEXT:  store i8 42, ptr %[[C]], align [[ALIGN]]
 // CHECK-NOT:   !annotation
-// CHECK-NEXT:  %[[D:[^ ]*]] = getelementptr inbounds %struct.smallpartinit, ptr %braces, i32 0, i32 1
+// CHECK-NEXT:  %[[D:[^ ]*]] = getelementptr inbounds nuw %struct.smallpartinit, ptr %braces, i32 0, i32 1
 // CHECK-NEXT:  store i8 0, ptr %[[D]], align [[ALIGN]]
 // CHECK-NOT:   !annotation
 // CHECK-NEXT:  call void @{{.*}}used{{.*}}%braces)
@@ -666,10 +658,10 @@ TEST_BRACES(smallpartinit, smallpartinit);
 TEST_CUSTOM(smallpartinit, smallpartinit, { 100, 42 });
 // CHECK-LABEL: @test_smallpartinit_custom()
 // CHECK:       %custom = alloca %struct.smallpartinit, align [[ALIGN:[0-9]*]]
-// CHECK-NEXT:  %[[C:[^ ]*]] = getelementptr inbounds %struct.smallpartinit, ptr %custom, i32 0, i32 0
+// CHECK-NEXT:  %[[C:[^ ]*]] = getelementptr inbounds nuw %struct.smallpartinit, ptr %custom, i32 0, i32 0
 // CHECK-NEXT:  store i8 100, ptr %[[C]], align [[ALIGN]]
 // CHECK-NOT:   !annotation
-// CHECK-NEXT:  %[[D:[^ ]*]] = getelementptr inbounds %struct.smallpartinit, ptr %custom, i32 0, i32 1
+// CHECK-NEXT:  %[[D:[^ ]*]] = getelementptr inbounds nuw %struct.smallpartinit, ptr %custom, i32 0, i32 1
 // CHECK-NEXT:  store i8 42, ptr %[[D]], align [[ALIGN]]
 // CHECK-NOT:   !annotation
 // CHECK-NEXT:  call void @{{.*}}used{{.*}}%custom)
@@ -683,7 +675,7 @@ TEST_UNINIT(nullinit, nullinit);
 TEST_BRACES(nullinit, nullinit);
 // CHECK-LABEL: @test_nullinit_braces()
 // CHECK:       %braces = alloca %struct.nullinit, align [[ALIGN:[0-9]*]]
-// CHECK-NEXT:  %[[N:[^ ]*]] = getelementptr inbounds %struct.nullinit, ptr %braces, i32 0, i32 0
+// CHECK-NEXT:  %[[N:[^ ]*]] = getelementptr inbounds nuw %struct.nullinit, ptr %braces, i32 0, i32 0
 // CHECK-NEXT:  store ptr null, ptr %[[N]], align [[ALIGN]]
 // CHECK-NOT:   !annotation
 // CHECK-NEXT:  call void @{{.*}}used{{.*}}%braces)
@@ -691,7 +683,7 @@ TEST_BRACES(nullinit, nullinit);
 TEST_CUSTOM(nullinit, nullinit, { (char*)"derp" });
 // CHECK-LABEL: @test_nullinit_custom()
 // CHECK:       %custom = alloca %struct.nullinit, align [[ALIGN:[0-9]*]]
-// CHECK-NEXT:  %[[N:[^ ]*]] = getelementptr inbounds %struct.nullinit, ptr %custom, i32 0, i32 0
+// CHECK-NEXT:  %[[N:[^ ]*]] = getelementptr inbounds nuw %struct.nullinit, ptr %custom, i32 0, i32 0
 // CHECK-NEXT:  store ptr {{.*}}, ptr %[[N]], align [[ALIGN]]
 // CHECK-NOT:   !annotation
 // CHECK-NEXT:  call void @{{.*}}used{{.*}}%custom)
@@ -742,10 +734,10 @@ TEST_UNINIT(paddednullinit, paddednullinit);
 TEST_BRACES(paddednullinit, paddednullinit);
 // CHECK-LABEL: @test_paddednullinit_braces()
 // CHECK:       %braces = alloca %struct.paddednullinit, align [[ALIGN:[0-9]*]]
-// CHECK-NEXT:  %[[C:[^ ]*]] = getelementptr inbounds %struct.paddednullinit, ptr %braces, i32 0, i32 0
+// CHECK-NEXT:  %[[C:[^ ]*]] = getelementptr inbounds nuw %struct.paddednullinit, ptr %braces, i32 0, i32 0
 // CHECK-NEXT:  store i8 0, ptr %[[C]], align [[ALIGN]]
 // CHECK-NOT:   !annotation
-// CHECK-NEXT:  %[[I:[^ ]*]] = getelementptr inbounds %struct.paddednullinit, ptr %braces, i32 0, i32 1
+// CHECK-NEXT:  %[[I:[^ ]*]] = getelementptr inbounds nuw %struct.paddednullinit, ptr %braces, i32 0, i32 1
 // CHECK-NEXT:  store i32 0, ptr %[[I]], align [[ALIGN]]
 // CHECK-NOT:   !annotation
 // CHECK-NEXT:  call void @{{.*}}used{{.*}}%braces)
@@ -753,10 +745,10 @@ TEST_BRACES(paddednullinit, paddednullinit);
 TEST_CUSTOM(paddednullinit, paddednullinit, { 42, 13371337 });
 // CHECK-LABEL: @test_paddednullinit_custom()
 // CHECK:       %custom = alloca %struct.paddednullinit, align [[ALIGN:[0-9]*]]
-// CHECK-NEXT:  %[[C:[^ ]*]] = getelementptr inbounds %struct.paddednullinit, ptr %custom, i32 0, i32 0
+// CHECK-NEXT:  %[[C:[^ ]*]] = getelementptr inbounds nuw %struct.paddednullinit, ptr %custom, i32 0, i32 0
 // CHECK-NEXT:  store i8 42, ptr %[[C]], align [[ALIGN]]
 // CHECK-NOT:   !annotation
-// CHECK-NEXT:  %[[I:[^ ]*]] = getelementptr inbounds %struct.paddednullinit, ptr %custom, i32 0, i32 1
+// CHECK-NEXT:  %[[I:[^ ]*]] = getelementptr inbounds nuw %struct.paddednullinit, ptr %custom, i32 0, i32 1
 // CHECK-NEXT:  store i32 13371337, ptr %[[I]], align [[ALIGN]]
 // CHECK-NOT:   !annotation
 // CHECK-NEXT:  call void @{{.*}}used{{.*}}%custom)
@@ -1214,8 +1206,8 @@ TEST_UNINIT(complexfloat, _Complex float);
 TEST_BRACES(complexfloat, _Complex float);
 // CHECK-LABEL: @test_complexfloat_braces()
 // CHECK:       %braces = alloca { float, float }, align [[ALIGN:[0-9]*]]
-// CHECK-NEXT:  %[[R:[^ ]*]] = getelementptr inbounds { float, float }, ptr %braces, i32 0, i32 0
-// CHECK-NEXT:  %[[I:[^ ]*]] = getelementptr inbounds { float, float }, ptr %braces, i32 0, i32 1
+// CHECK-NEXT:  %[[R:[^ ]*]] = getelementptr inbounds nuw { float, float }, ptr %braces, i32 0, i32 0
+// CHECK-NEXT:  %[[I:[^ ]*]] = getelementptr inbounds nuw { float, float }, ptr %braces, i32 0, i32 1
 // CHECK-NEXT:  store float 0.000000e+00, ptr %[[R]], align [[ALIGN]]
 // CHECK-NOT:   !annotation
 // CHECK-NEXT:  store float 0.000000e+00, ptr %[[I]], align [[ALIGN]]
@@ -1225,8 +1217,8 @@ TEST_BRACES(complexfloat, _Complex float);
 TEST_CUSTOM(complexfloat, _Complex float, { 3.1415926535897932384626433, 3.1415926535897932384626433 });
 // CHECK-LABEL: @test_complexfloat_custom()
 // CHECK:       %custom = alloca { float, float }, align [[ALIGN:[0-9]*]]
-// CHECK-NEXT:  %[[R:[^ ]*]] = getelementptr inbounds { float, float }, ptr %custom, i32 0, i32 0
-// CHECK-NEXT:  %[[I:[^ ]*]] = getelementptr inbounds { float, float }, ptr %custom, i32 0, i32 1
+// CHECK-NEXT:  %[[R:[^ ]*]] = getelementptr inbounds nuw { float, float }, ptr %custom, i32 0, i32 0
+// CHECK-NEXT:  %[[I:[^ ]*]] = getelementptr inbounds nuw { float, float }, ptr %custom, i32 0, i32 1
 // CHECK-NEXT:  store float 0x400921FB60000000, ptr %[[R]], align [[ALIGN]]
 // CHECK-NOT:   !annotation
 // CHECK-NEXT:  store float 0x400921FB60000000, ptr %[[I]], align [[ALIGN]]
@@ -1245,8 +1237,8 @@ TEST_UNINIT(complexdouble, _Complex double);
 TEST_BRACES(complexdouble, _Complex double);
 // CHECK-LABEL: @test_complexdouble_braces()
 // CHECK:       %braces = alloca { double, double }, align [[ALIGN:[0-9]*]]
-// CHECK-NEXT:  %[[R:[^ ]*]] = getelementptr inbounds { double, double }, ptr %braces, i32 0, i32 0
-// CHECK-NEXT:  %[[I:[^ ]*]] = getelementptr inbounds { double, double }, ptr %braces, i32 0, i32 1
+// CHECK-NEXT:  %[[R:[^ ]*]] = getelementptr inbounds nuw { double, double }, ptr %braces, i32 0, i32 0
+// CHECK-NEXT:  %[[I:[^ ]*]] = getelementptr inbounds nuw { double, double }, ptr %braces, i32 0, i32 1
 // CHECK-NEXT:  store double 0.000000e+00, ptr %[[R]], align [[ALIGN]]
 // CHECK-NOT:   !annotation
 // CHECK-NEXT:  store double 0.000000e+00, ptr %[[I]], align [[ALIGN]]
@@ -1256,8 +1248,8 @@ TEST_BRACES(complexdouble, _Complex double);
 TEST_CUSTOM(complexdouble, _Complex double, { 3.1415926535897932384626433, 3.1415926535897932384626433 });
 // CHECK-LABEL: @test_complexdouble_custom()
 // CHECK:       %custom = alloca { double, double }, align [[ALIGN:[0-9]*]]
-// CHECK-NEXT:  %[[R:[^ ]*]] = getelementptr inbounds { double, double }, ptr %custom, i32 0, i32 0
-// CHECK-NEXT:  %[[I:[^ ]*]] = getelementptr inbounds { double, double }, ptr %custom, i32 0, i32 1
+// CHECK-NEXT:  %[[R:[^ ]*]] = getelementptr inbounds nuw { double, double }, ptr %custom, i32 0, i32 0
+// CHECK-NEXT:  %[[I:[^ ]*]] = getelementptr inbounds nuw { double, double }, ptr %custom, i32 0, i32 1
 // CHECK-NEXT:  store double 0x400921FB54442D18, ptr %[[R]], align [[ALIGN]]
 // CHECK-NOT:   !annotation
 // CHECK-NEXT:  store double 0x400921FB54442D18, ptr %[[I]], align [[ALIGN]]
@@ -1318,10 +1310,10 @@ TEST_UNINIT(semivolatileinit, semivolatileinit);
 TEST_BRACES(semivolatileinit, semivolatileinit);
 // CHECK-LABEL: @test_semivolatileinit_braces()
 // CHECK:       %braces = alloca %struct.semivolatileinit, align [[ALIGN:[0-9]*]]
-// CHECK-NEXT:  %[[I:[^ ]*]] = getelementptr inbounds %struct.semivolatileinit, ptr %braces, i32 0, i32 0
+// CHECK-NEXT:  %[[I:[^ ]*]] = getelementptr inbounds nuw %struct.semivolatileinit, ptr %braces, i32 0, i32 0
 // CHECK-NEXT:  store i32 286331153, ptr %[[I]], align [[ALIGN]]
 // CHECK-NOT:   !annotation
-// CHECK-NEXT:  %[[VI:[^ ]*]] = getelementptr inbounds %struct.semivolatileinit, ptr %braces, i32 0, i32 1
+// CHECK-NEXT:  %[[VI:[^ ]*]] = getelementptr inbounds nuw %struct.semivolatileinit, ptr %braces, i32 0, i32 1
 // CHECK-NEXT:  store volatile i32 286331153, ptr %[[VI]], align [[ALIGN]]
 // CHECK-NOT:   !annotation
 // CHECK-NEXT:  call void @{{.*}}used{{.*}}%braces)
@@ -1329,10 +1321,10 @@ TEST_BRACES(semivolatileinit, semivolatileinit);
 TEST_CUSTOM(semivolatileinit, semivolatileinit, { 0x44444444, 0x44444444 });
 // CHECK-LABEL: @test_semivolatileinit_custom()
 // CHECK:       %custom = alloca %struct.semivolatileinit, align [[ALIGN:[0-9]*]]
-// CHECK-NEXT:  %[[I:[^ ]*]] = getelementptr inbounds %struct.semivolatileinit, ptr %custom, i32 0, i32 0
+// CHECK-NEXT:  %[[I:[^ ]*]] = getelementptr inbounds nuw %struct.semivolatileinit, ptr %custom, i32 0, i32 0
 // CHECK-NEXT:  store i32 1145324612, ptr %[[I]], align [[ALIGN]]
 // CHECK-NOT:   !annotation
-// CHECK-NEXT:  %[[VI:[^ ]*]] = getelementptr inbounds %struct.semivolatileinit, ptr %custom, i32 0, i32 1
+// CHECK-NEXT:  %[[VI:[^ ]*]] = getelementptr inbounds nuw %struct.semivolatileinit, ptr %custom, i32 0, i32 1
 // CHECK-NEXT:  store volatile i32 1145324612, ptr %[[VI]], align [[ALIGN]]
 // CHECK-NOT:   !annotation
 // CHECK-NEXT:  call void @{{.*}}used{{.*}}%custom)

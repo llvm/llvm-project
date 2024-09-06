@@ -16,7 +16,6 @@
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/Support/LogicalResult.h"
 
 #define DEBUG_TYPE "vector-bitcast-lowering"
 
@@ -56,17 +55,12 @@ public:
     if (!unrollIterator)
       return failure();
 
-    // TODO: Support the scalable vector cases. It is not supported because
-    // the final rank could be values other than `targetRank`. It makes creating
-    // the result type of new vector.bitcast ops much harder.
-    if (resultType.isScalable()) {
-      return rewriter.notifyMatchFailure(op,
-                                         "unrolling vector.bitcast on scalable "
-                                         "vectors is not yet implemented");
-    }
-
-    ArrayRef<int64_t> shape = resultType.getShape().take_back(targetRank);
-    auto bitcastResType = VectorType::get(shape, resultType.getElementType());
+    auto unrollRank = unrollIterator->getRank();
+    ArrayRef<int64_t> shape = resultType.getShape().drop_front(unrollRank);
+    ArrayRef<bool> scalableDims =
+        resultType.getScalableDims().drop_front(unrollRank);
+    auto bitcastResType =
+        VectorType::get(shape, resultType.getElementType(), scalableDims);
 
     Location loc = op.getLoc();
     Value result = rewriter.create<arith::ConstantOp>(

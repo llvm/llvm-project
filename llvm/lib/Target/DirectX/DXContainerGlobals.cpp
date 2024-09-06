@@ -12,11 +12,14 @@
 
 #include "DXILShaderFlags.h"
 #include "DirectX.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Analysis/DXILMetadataAnalysis.h"
 #include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/DXContainerPSVInfo.h"
 #include "llvm/Pass.h"
@@ -37,6 +40,8 @@ class DXContainerGlobals : public llvm::ModulePass {
   GlobalVariable *buildSignature(Module &M, Signature &Sig, StringRef Name,
                                  StringRef SectionName);
   void addSignature(Module &M, SmallVector<GlobalValue *> &Globals);
+  void addPipelineStateValidationInfo(Module &M,
+                                      SmallVector<GlobalValue *> &Globals);
 
 public:
   static char ID; // Pass identification, replacement for typeid
@@ -53,6 +58,7 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
     AU.addRequired<ShaderFlagsAnalysisWrapper>();
+    AU.addRequired<DXILMetadataAnalysisWrapperPass>();
   }
 };
 
@@ -63,6 +69,7 @@ bool DXContainerGlobals::runOnModule(Module &M) {
   Globals.push_back(getFeatureFlags(M));
   Globals.push_back(computeShaderHash(M));
   addSignature(M, Globals);
+  addPipelineStateValidationInfo(M, Globals);
   appendToCompilerUsed(M, Globals);
   return true;
 }
@@ -133,10 +140,51 @@ void DXContainerGlobals::addSignature(Module &M,
   Globals.emplace_back(buildSignature(M, OutputSig, "dx.osg1", "OSG1"));
 }
 
+void DXContainerGlobals::addPipelineStateValidationInfo(
+    Module &M, SmallVector<GlobalValue *> &Globals) {
+  SmallString<256> Data;
+  raw_svector_ostream OS(Data);
+  PSVRuntimeInfo PSV;
+  PSV.BaseData.MinimumWaveLaneCount = 0;
+  PSV.BaseData.MaximumWaveLaneCount = std::numeric_limits<uint32_t>::max();
+
+  dxil::ModuleMetadataInfo &MMI =
+      getAnalysis<DXILMetadataAnalysisWrapperPass>().getModuleMetadata();
+  assert(MMI.EntryPropertyVec.size() == 1 ||
+         MMI.ShaderStage == Triple::Library);
+  PSV.BaseData.ShaderStage =
+      static_cast<uint8_t>(MMI.ShaderStage - Triple::Pixel);
+
+  // Hardcoded values here to unblock loading the shader into D3D.
+  //
+  // TODO: Lots more stuff to do here!
+  //
+  // See issue https://github.com/llvm/llvm-project/issues/96674.
+  switch (MMI.ShaderStage) {
+  case Triple::Compute:
+    PSV.BaseData.NumThreadsX = MMI.EntryPropertyVec[0].NumThreadsX;
+    PSV.BaseData.NumThreadsY = MMI.EntryPropertyVec[0].NumThreadsY;
+    PSV.BaseData.NumThreadsZ = MMI.EntryPropertyVec[0].NumThreadsZ;
+    break;
+  default:
+    break;
+  }
+
+  if (MMI.ShaderStage != Triple::Library)
+    PSV.EntryName = MMI.EntryPropertyVec[0].Entry->getName();
+
+  PSV.finalize(MMI.ShaderStage);
+  PSV.write(OS);
+  Constant *Constant =
+      ConstantDataArray::getString(M.getContext(), Data, /*AddNull*/ false);
+  Globals.emplace_back(buildContainerGlobal(M, Constant, "dx.psv0", "PSV0"));
+}
+
 char DXContainerGlobals::ID = 0;
 INITIALIZE_PASS_BEGIN(DXContainerGlobals, "dxil-globals",
                       "DXContainer Global Emitter", false, true)
 INITIALIZE_PASS_DEPENDENCY(ShaderFlagsAnalysisWrapper)
+INITIALIZE_PASS_DEPENDENCY(DXILMetadataAnalysisWrapperPass)
 INITIALIZE_PASS_END(DXContainerGlobals, "dxil-globals",
                     "DXContainer Global Emitter", false, true)
 

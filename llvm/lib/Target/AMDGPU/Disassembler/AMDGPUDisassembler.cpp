@@ -45,10 +45,26 @@ using namespace llvm;
 
 using DecodeStatus = llvm::MCDisassembler::DecodeStatus;
 
+static const MCSubtargetInfo &addDefaultWaveSize(const MCSubtargetInfo &STI,
+                                                 MCContext &Ctx) {
+  if (!STI.hasFeature(AMDGPU::FeatureWavefrontSize64) &&
+      !STI.hasFeature(AMDGPU::FeatureWavefrontSize32)) {
+    MCSubtargetInfo &STICopy = Ctx.getSubtargetCopy(STI);
+    // If there is no default wave size it must be a generation before gfx10,
+    // these have FeatureWavefrontSize64 in their definition already. For gfx10+
+    // set wave32 as a default.
+    STICopy.ToggleFeature(AMDGPU::FeatureWavefrontSize32);
+    return STICopy;
+  }
+
+  return STI;
+}
+
 AMDGPUDisassembler::AMDGPUDisassembler(const MCSubtargetInfo &STI,
                                        MCContext &Ctx, MCInstrInfo const *MCII)
-    : MCDisassembler(STI, Ctx), MCII(MCII), MRI(*Ctx.getRegisterInfo()),
-      MAI(*Ctx.getAsmInfo()), TargetMaxInstBytes(MAI.getMaxInstLength(&STI)),
+    : MCDisassembler(addDefaultWaveSize(STI, Ctx), Ctx), MCII(MCII),
+      MRI(*Ctx.getRegisterInfo()), MAI(*Ctx.getAsmInfo()),
+      TargetMaxInstBytes(MAI.getMaxInstLength(&STI)),
       CodeObjectVersion(AMDGPU::getDefaultAMDHSACodeObjectVersion()) {
   // ToDo: AMDGPUDisassembler supports only VI ISA.
   if (!STI.hasFeature(AMDGPU::FeatureGCN3Encoding) && !isGFX10Plus())
@@ -366,7 +382,7 @@ static bool IsAGPROperand(const MCInst &Inst, int OpIdx,
   if (!Op.isReg())
     return false;
 
-  unsigned Sub = MRI->getSubReg(Op.getReg(), AMDGPU::sub0);
+  MCRegister Sub = MRI->getSubReg(Op.getReg(), AMDGPU::sub0);
   auto Reg = Sub ? Sub : Op.getReg();
   return Reg >= AMDGPU::AGPR0 && Reg <= AMDGPU::AGPR255;
 }
@@ -494,10 +510,10 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
       if (isGFX12() &&
           tryDecodeInst(DecoderTableGFX12W6496, MI, DecW, Address, CS))
         break;
-    }
 
-    // Reinitialize Bytes
-    Bytes = Bytes_.slice(0, MaxInstBytesNum);
+      // Reinitialize Bytes
+      Bytes = Bytes_.slice(0, MaxInstBytesNum);
+    }
 
     if (Bytes.size() >= 8) {
       const uint64_t QW = eatBytes<uint64_t>(Bytes);
@@ -552,10 +568,10 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
       if (isGFX12() &&
           tryDecodeInst(DecoderTableGFX12W6464, MI, QW, Address, CS))
         break;
-    }
 
-    // Reinitialize Bytes
-    Bytes = Bytes_.slice(0, MaxInstBytesNum);
+      // Reinitialize Bytes
+      Bytes = Bytes_.slice(0, MaxInstBytesNum);
+    }
 
     // Try decode 32-bit instruction
     if (Bytes.size() >= 4) {
@@ -1550,8 +1566,7 @@ AMDGPUDisassembler::decodeNonVGPRSrcOp(const OpWidthTy Width, unsigned Val,
     if (MandatoryLiteral)
       // Keep a sentinel value for deferred setting
       return MCOperand::createImm(LITERAL_CONST);
-    else
-      return decodeLiteralConstant(Sema == AMDGPU::OperandSemantics::FP64);
+    return decodeLiteralConstant(Sema == AMDGPU::OperandSemantics::FP64);
   }
 
   switch (Width) {
@@ -1685,9 +1700,9 @@ AMDGPUDisassembler::decodeSDWASrc(const OpWidthTy Width, const unsigned Val,
       return decodeFPImmed(ImmWidth, SVal, Sema);
 
     return decodeSpecialReg32(SVal);
-  } else if (STI.hasFeature(AMDGPU::FeatureVolcanicIslands)) {
-    return createRegOperand(getVgprClassId(Width), Val);
   }
+  if (STI.hasFeature(AMDGPU::FeatureVolcanicIslands))
+    return createRegOperand(getVgprClassId(Width), Val);
   llvm_unreachable("unsupported target");
 }
 
@@ -1715,15 +1730,13 @@ MCOperand AMDGPUDisassembler::decodeSDWAVopcDst(unsigned Val) const {
     if (TTmpIdx >= 0) {
       auto TTmpClsId = getTtmpClassId(IsWave64 ? OPW64 : OPW32);
       return createSRegOperand(TTmpClsId, TTmpIdx);
-    } else if (Val > SGPR_MAX) {
-      return IsWave64 ? decodeSpecialReg64(Val)
-                      : decodeSpecialReg32(Val);
-    } else {
-      return createSRegOperand(getSgprClassId(IsWave64 ? OPW64 : OPW32), Val);
     }
-  } else {
-    return createRegOperand(IsWave64 ? AMDGPU::VCC : AMDGPU::VCC_LO);
+    if (Val > SGPR_MAX) {
+      return IsWave64 ? decodeSpecialReg64(Val) : decodeSpecialReg32(Val);
+    }
+    return createSRegOperand(getSgprClassId(IsWave64 ? OPW64 : OPW32), Val);
   }
+  return createRegOperand(IsWave64 ? AMDGPU::VCC : AMDGPU::VCC_LO);
 }
 
 MCOperand AMDGPUDisassembler::decodeBoolReg(unsigned Val) const {
@@ -2249,7 +2262,8 @@ Expected<bool> AMDGPUDisassembler::decodeKernelDescriptorDirective(
       return createReservedKDBitsError(
           KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32,
           amdhsa::KERNEL_CODE_PROPERTIES_OFFSET, "must be zero on gfx9");
-    } else if (isGFX10Plus()) {
+    }
+    if (isGFX10Plus()) {
       PRINT_DIRECTIVE(".amdhsa_wavefront_size32",
                       KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32);
     }
@@ -2366,8 +2380,16 @@ const MCExpr *AMDGPUDisassembler::createConstantSymbolExpr(StringRef Id,
                                                            int64_t Val) {
   MCContext &Ctx = getContext();
   MCSymbol *Sym = Ctx.getOrCreateSymbol(Id);
-  assert(!Sym->isVariable());
-  Sym->setVariableValue(MCConstantExpr::create(Val, Ctx));
+  // Note: only set value to Val on a new symbol in case an dissassembler
+  // has already been initialized in this context.
+  if (!Sym->isVariable()) {
+    Sym->setVariableValue(MCConstantExpr::create(Val, Ctx));
+  } else {
+    int64_t Res = ~Val;
+    bool Valid = Sym->getVariableValue()->evaluateAsAbsolute(Res);
+    if (!Valid || Res != Val)
+      Ctx.reportWarning(SMLoc(), "unsupported redefinition of " + Id);
+  }
   return MCSymbolRefExpr::create(Sym, Ctx);
 }
 

@@ -41,8 +41,8 @@ define i1 @test_srem_even(i4 %X) nounwind {
 define i1 @test_srem_pow2_setne(i6 %X) nounwind {
 ; CHECK-LABEL: test_srem_pow2_setne:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sbfx w8, w0, #0, #6
-; CHECK-NEXT:    ubfx w8, w8, #9, #2
+; CHECK-NEXT:    sbfx w8, w0, #5, #1
+; CHECK-NEXT:    and w8, w8, #0x3
 ; CHECK-NEXT:    add w8, w0, w8
 ; CHECK-NEXT:    and w8, w8, #0x3c
 ; CHECK-NEXT:    sub w8, w0, w8

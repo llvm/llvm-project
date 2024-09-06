@@ -17,6 +17,7 @@
 #include "flang/Lower/LoweringOptions.h"
 #include "flang/Lower/PFTDefs.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
+#include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Semantics/symbol.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -126,8 +127,8 @@ public:
       const Fortran::semantics::Symbol &sym,
       mlir::OpBuilder::InsertPoint *copyAssignIP = nullptr) = 0;
 
-  virtual void copyVar(mlir::Location loc, mlir::Value dst,
-                       mlir::Value src) = 0;
+  virtual void copyVar(mlir::Location loc, mlir::Value dst, mlir::Value src,
+                       fir::FortranVariableFlagsEnum attrs) = 0;
 
   /// For a given symbol, check if it is present in the inner-most
   /// level of the symbol map.

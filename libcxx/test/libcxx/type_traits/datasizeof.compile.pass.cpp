@@ -8,13 +8,25 @@
 
 #include <__type_traits/datasizeof.h>
 #include <cstdint>
+#include <type_traits>
 
 static_assert(std::__datasizeof_v<std::int8_t> == 1, "");
 static_assert(std::__datasizeof_v<std::int16_t> == 2, "");
 static_assert(std::__datasizeof_v<std::int32_t> == 4, "");
 static_assert(std::__datasizeof_v<std::int64_t> == 8, "");
 
-struct OneBytePadding {
+struct NonStandardLayout {
+  virtual ~NonStandardLayout();
+};
+
+static_assert(!std::is_standard_layout<NonStandardLayout>::value, "");
+static_assert(std::__datasizeof_v<NonStandardLayout> == sizeof(void*), "");
+
+struct Empty {};
+
+static_assert(std::__datasizeof_v<Empty> == 0, "");
+
+struct OneBytePadding final {
   OneBytePadding() {}
 
   std::int16_t a;
@@ -36,3 +48,9 @@ struct InBetweenPadding {
 };
 
 static_assert(std::__datasizeof_v<InBetweenPadding> == 8, "");
+
+struct NoDataButNoPadding {
+  OneBytePadding v;
+};
+
+static_assert(std::__datasizeof_v<NoDataButNoPadding> == 4, "");

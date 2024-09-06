@@ -19,7 +19,12 @@
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/IR/GlobalValue.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
+
+namespace llvm::coverage {
+extern cl::opt<bool> SystemHeadersCoverage;
+}
 
 namespace clang {
 

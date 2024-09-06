@@ -133,11 +133,11 @@ int foo(int n) {
   // TCHECK:  store double 1.0{{.*}}, ptr [[CN_GEP_3]],
 
   // d.X = 1
-  // [[X_FIELD:%.+]] = getelementptr inbounds [[TT]] ptr [[D]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
+  // [[X_FIELD:%.+]] = getelementptr inbounds nuw [[TT]] ptr [[D]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
   // store i{{[0-9]+}} 1, ptr [[X_FIELD]],
 
   // d.Y = 1
-  // [[Y_FIELD:%.+]] = getelementptr inbounds [[TT]] ptr [[D]], i{{[0-9]+}} 0, i{{[0-9]+}} 1
+  // [[Y_FIELD:%.+]] = getelementptr inbounds nuw [[TT]] ptr [[D]], i{{[0-9]+}} 0, i{{[0-9]+}} 1
   // store i{{[0-9]+}} 1, ptr [[Y_FIELD]],
 
   // finish
@@ -234,11 +234,11 @@ struct S1 {
   // TCHECK: [[B_VAL:%.+]] = load i{{[0-9]+}}, ptr [[B]],
   // TCHECK: [[B_CONV:%.+]] = sitofp i{{[0-9]+}} [[B_VAL]] to double
   // TCHECK: [[NEW_A_VAL:%.+]] = fadd double [[B_CONV]], 1.5{{.+}}+00
-  // TCHECK: [[A_FIELD:%.+]] = getelementptr inbounds [[S1]], ptr [[TH_ADDR_REF]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
+  // TCHECK: [[A_FIELD:%.+]] = getelementptr inbounds nuw [[S1]], ptr [[TH_ADDR_REF]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
   // TCHECK: store double [[NEW_A_VAL]], ptr [[A_FIELD]],
 
   // c[1][1] = ++a;
-  // TCHECK: [[A_FIELD4:%.+]] = getelementptr inbounds [[S1]], ptr [[TH_ADDR_REF]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
+  // TCHECK: [[A_FIELD4:%.+]] = getelementptr inbounds nuw [[S1]], ptr [[TH_ADDR_REF]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
   // TCHECK: [[A_FIELD4_VAL:%.+]] = load double, ptr [[A_FIELD4]],
   // TCHECK: [[A_FIELD_INC:%.+]] = fadd double [[A_FIELD4_VAL]], 1.0{{.+}}+00
   // TCHECK: store double [[A_FIELD_INC]], ptr [[A_FIELD4]],

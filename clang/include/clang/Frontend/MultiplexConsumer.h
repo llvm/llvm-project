@@ -36,6 +36,7 @@ public:
   void MacroRead(serialization::MacroID ID, MacroInfo *MI) override;
   void TypeRead(serialization::TypeIdx Idx, QualType T) override;
   void DeclRead(GlobalDeclID ID, const Decl *D) override;
+  void PredefinedDeclBuilt(PredefinedDeclIDs ID, const Decl *D) override;
   void SelectorRead(serialization::SelectorID iD, Selector Sel) override;
   void MacroDefinitionRead(serialization::PreprocessedEntityID,
                            MacroDefinitionRecord *MD) override;
@@ -67,7 +68,7 @@ public:
   void HandleTopLevelDeclInObjCContainer(DeclGroupRef D) override;
   void HandleImplicitImportDecl(ImportDecl *D) override;
   void CompleteTentativeDefinition(VarDecl *D) override;
-  void CompleteExternalDeclaration(VarDecl *D) override;
+  void CompleteExternalDeclaration(DeclaratorDecl *D) override;
   void AssignInheritanceModel(CXXRecordDecl *RD) override;
   void HandleVTable(CXXRecordDecl *RD) override;
   ASTMutationListener *GetASTMutationListener() override;

@@ -82,6 +82,8 @@ auto IsVariableHelper::operator()(const Symbol &symbol) const -> Result {
   const Symbol &ultimate{symbol.GetUltimate()};
   return !IsNamedConstant(ultimate) &&
       (ultimate.has<semantics::ObjectEntityDetails>() ||
+          (ultimate.has<semantics::EntityDetails>() &&
+              ultimate.attrs().test(semantics::Attr::TARGET)) ||
           ultimate.has<semantics::AssocEntityDetails>());
 }
 auto IsVariableHelper::operator()(const Component &x) const -> Result {
@@ -998,6 +1000,35 @@ template semantics::UnorderedSymbolSet CollectSymbols(
 template semantics::UnorderedSymbolSet CollectSymbols(
     const Expr<SubscriptInteger> &);
 
+struct CollectCudaSymbolsHelper : public SetTraverse<CollectCudaSymbolsHelper,
+                                      semantics::UnorderedSymbolSet> {
+  using Base =
+      SetTraverse<CollectCudaSymbolsHelper, semantics::UnorderedSymbolSet>;
+  CollectCudaSymbolsHelper() : Base{*this} {}
+  using Base::operator();
+  semantics::UnorderedSymbolSet operator()(const Symbol &symbol) const {
+    return {symbol};
+  }
+  // Overload some of the operator() to filter out the symbols that are not
+  // of interest for CUDA data transfer logic.
+  semantics::UnorderedSymbolSet operator()(const Subscript &) const {
+    return {};
+  }
+  semantics::UnorderedSymbolSet operator()(const ProcedureRef &) const {
+    return {};
+  }
+};
+template <typename A>
+semantics::UnorderedSymbolSet CollectCudaSymbols(const A &x) {
+  return CollectCudaSymbolsHelper{}(x);
+}
+template semantics::UnorderedSymbolSet CollectCudaSymbols(
+    const Expr<SomeType> &);
+template semantics::UnorderedSymbolSet CollectCudaSymbols(
+    const Expr<SomeInteger> &);
+template semantics::UnorderedSymbolSet CollectCudaSymbols(
+    const Expr<SubscriptInteger> &);
+
 // HasVectorSubscript()
 struct HasVectorSubscriptHelper
     : public AnyTraverse<HasVectorSubscriptHelper, bool,
@@ -1269,12 +1300,12 @@ std::optional<Expr<SomeType>> HollerithToBOZ(FoldingContext &context,
     const Expr<SomeType> &expr, const DynamicType &type) {
   if (std::optional<std::string> chValue{GetScalarConstantValue<Ascii>(expr)}) {
     // Pad on the right with spaces when short, truncate the right if long.
-    // TODO: big-endian targets
     auto bytes{static_cast<std::size_t>(
         ToInt64(type.MeasureSizeInBytes(context, false)).value())};
     BOZLiteralConstant bits{0};
     for (std::size_t j{0}; j < bytes; ++j) {
-      char ch{j >= chValue->size() ? ' ' : chValue->at(j)};
+      auto idx{isHostLittleEndian ? j : bytes - j - 1};
+      char ch{idx >= chValue->size() ? ' ' : chValue->at(idx)};
       BOZLiteralConstant chBOZ{static_cast<unsigned char>(ch)};
       bits = bits.IOR(chBOZ.SHIFTL(8 * j));
     }
@@ -1665,7 +1696,8 @@ bool IsSaved(const Symbol &original) {
       (features.IsEnabled(common::LanguageFeature::SaveMainProgram) ||
           (features.IsEnabled(
                common::LanguageFeature::SaveBigMainProgramVariables) &&
-              symbol.size() > 32))) {
+              symbol.size() > 32)) &&
+      Fortran::evaluate::CanCUDASymbolHasSave(symbol)) {
     // With SaveBigMainProgramVariables, keeping all unsaved main program
     // variables of 32 bytes or less on the stack allows keeping numerical and
     // logical scalars, small scalar characters or derived, small arrays, and

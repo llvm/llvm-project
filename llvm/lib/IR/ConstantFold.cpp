@@ -120,66 +120,6 @@ static Constant *FoldBitCast(Constant *V, Type *DestTy) {
   return nullptr;
 }
 
-
-/// V is an integer constant which only has a subset of its bytes used.
-/// The bytes used are indicated by ByteStart (which is the first byte used,
-/// counting from the least significant byte) and ByteSize, which is the number
-/// of bytes used.
-///
-/// This function analyzes the specified constant to see if the specified byte
-/// range can be returned as a simplified constant.  If so, the constant is
-/// returned, otherwise null is returned.
-static Constant *ExtractConstantBytes(Constant *C, unsigned ByteStart,
-                                      unsigned ByteSize) {
-  assert(C->getType()->isIntegerTy() &&
-         (cast<IntegerType>(C->getType())->getBitWidth() & 7) == 0 &&
-         "Non-byte sized integer input");
-  [[maybe_unused]] unsigned CSize = cast<IntegerType>(C->getType())->getBitWidth()/8;
-  assert(ByteSize && "Must be accessing some piece");
-  assert(ByteStart+ByteSize <= CSize && "Extracting invalid piece from input");
-  assert(ByteSize != CSize && "Should not extract everything");
-
-  // Constant Integers are simple.
-  if (ConstantInt *CI = dyn_cast<ConstantInt>(C)) {
-    APInt V = CI->getValue();
-    if (ByteStart)
-      V.lshrInPlace(ByteStart*8);
-    V = V.trunc(ByteSize*8);
-    return ConstantInt::get(CI->getContext(), V);
-  }
-
-  // In the input is a constant expr, we might be able to recursively simplify.
-  // If not, we definitely can't do anything.
-  ConstantExpr *CE = dyn_cast<ConstantExpr>(C);
-  if (!CE) return nullptr;
-
-  switch (CE->getOpcode()) {
-  default: return nullptr;
-  case Instruction::Shl: {
-    ConstantInt *Amt = dyn_cast<ConstantInt>(CE->getOperand(1));
-    if (!Amt)
-      return nullptr;
-    APInt ShAmt = Amt->getValue();
-    // Cannot analyze non-byte shifts.
-    if ((ShAmt & 7) != 0)
-      return nullptr;
-    ShAmt.lshrInPlace(3);
-
-    // If the extract is known to be all zeros, return zero.
-    if (ShAmt.uge(ByteStart + ByteSize))
-      return Constant::getNullValue(
-          IntegerType::get(CE->getContext(), ByteSize * 8));
-    // If the extract is known to be fully in the input, extract it.
-    if (ShAmt.ule(ByteStart))
-      return ExtractConstantBytes(CE->getOperand(0),
-                                  ByteStart - ShAmt.getZExtValue(), ByteSize);
-
-    // TODO: Handle the 'partially zero' case.
-    return nullptr;
-  }
-  }
-}
-
 static Constant *foldMaybeUndesirableCast(unsigned opc, Constant *V,
                                           Type *DestTy) {
   return ConstantExpr::isDesirableCastOp(opc)
@@ -202,7 +142,7 @@ Constant *llvm::ConstantFoldCastInstruction(unsigned opc, Constant *V,
     return UndefValue::get(DestTy);
   }
 
-  if (V->isNullValue() && !DestTy->isX86_MMXTy() && !DestTy->isX86_AMXTy() &&
+  if (V->isNullValue() && !DestTy->isX86_AMXTy() &&
       opc != Instruction::AddrSpaceCast)
     return Constant::getNullValue(DestTy);
 
@@ -312,14 +252,6 @@ Constant *llvm::ConstantFoldCastInstruction(unsigned opc, Constant *V,
       return ConstantInt::get(V->getContext(),
                               CI->getValue().trunc(DestBitWidth));
     }
-
-    // The input must be a constantexpr.  See if we can simplify this based on
-    // the bytes we are demanding.  Only do this if the source and dest are an
-    // even multiple of a byte.
-    if ((DestBitWidth & 7) == 0 &&
-        (cast<IntegerType>(V->getType())->getBitWidth() & 7) == 0)
-      if (Constant *Res = ExtractConstantBytes(V, 0, DestBitWidth / 8))
-        return Res;
 
     return nullptr;
   }

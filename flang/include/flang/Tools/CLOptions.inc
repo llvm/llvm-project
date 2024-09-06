@@ -9,6 +9,7 @@
 /// This file defines some shared command-line options that can be used when
 /// debugging the test tools. This file must be included into the tool.
 
+#include "mlir/Conversion/ReconcileUnrealizedCasts/ReconcileUnrealizedCasts.h"
 #include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Pass/PassManager.h"
@@ -16,6 +17,7 @@
 #include "mlir/Transforms/Passes.h"
 #include "flang/Optimizer/CodeGen/CodeGen.h"
 #include "flang/Optimizer/HLFIR/Passes.h"
+#include "flang/Optimizer/OpenMP/Passes.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "llvm/Passes/OptimizationLevel.h"
 #include "llvm/Support/CommandLine.h"
@@ -24,6 +26,10 @@
 #define DisableOption(DOName, DOOption, DODescription) \
   static llvm::cl::opt<bool> disable##DOName("disable-" DOOption, \
       llvm::cl::desc("disable " DODescription " pass"), llvm::cl::init(false), \
+      llvm::cl::Hidden)
+#define EnableOption(EOName, EOOption, EODescription) \
+  static llvm::cl::opt<bool> enable##EOName("enable-" EOOption, \
+      llvm::cl::desc("enable " EODescription " pass"), llvm::cl::init(false), \
       llvm::cl::Hidden)
 
 /// Shared option in tools to control whether dynamically sized array
@@ -86,6 +92,10 @@ DisableOption(BoxedProcedureRewrite, "boxed-procedure-rewrite",
 
 DisableOption(ExternalNameConversion, "external-name-interop",
     "convert names with external convention");
+EnableOption(ConstantArgumentGlobalisation, "constant-argument-globalisation",
+    "the local constant argument to global constant conversion");
+DisableOption(CompilerGeneratedNamesConversion, "compiler-generated-names",
+    "replace special symbols in compiler generated names");
 
 using PassConstructor = std::unique_ptr<mlir::Pass>();
 
@@ -215,8 +225,14 @@ inline void addFIRToLLVMPass(
   options.ignoreMissingTypeDescriptors = ignoreMissingTypeDescriptors;
   options.applyTBAA = config.AliasAnalysis;
   options.forceUnifiedTBAATree = useOldAliasTags;
+  options.typeDescriptorsRenamedForAssembly =
+      !disableCompilerGeneratedNamesConversion;
   addPassConditionally(pm, disableFirToLlvmIr,
       [&]() { return fir::createFIRToLLVMPass(options); });
+  // The dialect conversion framework may leave dead unrealized_conversion_cast
+  // ops behind, so run reconcile-unrealized-casts to clean them up.
+  addPassConditionally(pm, disableFirToLlvmIr,
+      [&]() { return mlir::createReconcileUnrealizedCastsPass(); });
 }
 
 inline void addLLVMDialectToLLVMPass(
@@ -235,6 +251,11 @@ inline void addExternalNameConversionPass(
     mlir::PassManager &pm, bool appendUnderscore = true) {
   addPassConditionally(pm, disableExternalNameConversion,
       [&]() { return fir::createExternalNameConversion({appendUnderscore}); });
+}
+
+inline void addCompilerGeneratedNamesConversionPass(mlir::PassManager &pm) {
+  addPassConditionally(pm, disableCompilerGeneratedNamesConversion,
+      [&]() { return fir::createCompilerGeneratedNamesConversion(); });
 }
 
 // Use inliner extension point callback to register the default inliner pass.
@@ -270,6 +291,8 @@ inline void createDefaultFIROptimizerPassPipeline(
     // These passes may increase code size.
     pm.addPass(fir::createSimplifyIntrinsics());
     pm.addPass(fir::createAlgebraicSimplificationPass(config));
+    if (enableConstantArgumentGlobalisation)
+      pm.addPass(fir::createConstantArgumentGlobalisationOpt());
   }
 
   if (pc.LoopVersioning)
@@ -344,11 +367,10 @@ inline void createHLFIRToFIRPassPipeline(
 /// rather than the host device.
 inline void createOpenMPFIRPassPipeline(
     mlir::PassManager &pm, bool isTargetDevice) {
-  addNestedPassToAllTopLevelOperations(
-      pm, fir::createOMPMapInfoFinalizationPass);
-  pm.addPass(fir::createOMPMarkDeclareTargetPass());
+  pm.addPass(flangomp::createMapInfoFinalizationPass());
+  pm.addPass(flangomp::createMarkDeclareTargetPass());
   if (isTargetDevice)
-    pm.addPass(fir::createOMPFunctionFiltering());
+    pm.addPass(flangomp::createFunctionFilteringPass());
 }
 
 #if !defined(FLANG_EXCLUDE_CODEGEN)
@@ -366,6 +388,7 @@ inline void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
   fir::addCodeGenRewritePass(
       pm, (config.DebugInfo != llvm::codegenoptions::NoDebugInfo));
   fir::addTargetRewritePass(pm);
+  fir::addCompilerGeneratedNamesConversionPass(pm);
   fir::addExternalNameConversionPass(pm, config.Underscoring);
   fir::createDebugPasses(pm, config.DebugInfo, config.OptLevel, inputFilename);
 

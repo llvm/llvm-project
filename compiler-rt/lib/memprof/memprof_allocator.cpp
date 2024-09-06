@@ -34,6 +34,10 @@
 #include <sched.h>
 #include <time.h>
 
+#define MAX_HISTOGRAM_PRINT_SIZE 32U
+
+extern bool __memprof_histogram;
+
 namespace __memprof {
 namespace {
 using ::llvm::memprof::MemInfoBlock;
@@ -68,6 +72,14 @@ void Print(const MemInfoBlock &M, const u64 id, bool print_terse) {
            "cpu: %u, num same dealloc_cpu: %u\n",
            M.NumMigratedCpu, M.NumLifetimeOverlaps, M.NumSameAllocCpu,
            M.NumSameDeallocCpu);
+    Printf("AccessCountHistogram[%u]: ", M.AccessHistogramSize);
+    uint32_t PrintSize = M.AccessHistogramSize > MAX_HISTOGRAM_PRINT_SIZE
+                             ? MAX_HISTOGRAM_PRINT_SIZE
+                             : M.AccessHistogramSize;
+    for (size_t i = 0; i < PrintSize; ++i) {
+      Printf("%llu ", ((uint64_t *)M.AccessHistogram)[i]);
+    }
+    Printf("\n");
   }
 }
 } // namespace
@@ -216,6 +228,17 @@ u64 GetShadowCount(uptr p, u32 size) {
   return count;
 }
 
+// Accumulates the access count from the shadow for the given pointer and size.
+// See memprof_mapping.h for an overview on histogram counters.
+u64 GetShadowCountHistogram(uptr p, u32 size) {
+  u8 *shadow = (u8 *)HISTOGRAM_MEM_TO_SHADOW(p);
+  u8 *shadow_end = (u8 *)HISTOGRAM_MEM_TO_SHADOW(p + size);
+  u64 count = 0;
+  for (; shadow <= shadow_end; shadow++)
+    count += *shadow;
+  return count;
+}
+
 // Clears the shadow counters (when memory is allocated).
 void ClearShadow(uptr addr, uptr size) {
   CHECK(AddrIsAlignedByGranularity(addr));
@@ -223,8 +246,16 @@ void ClearShadow(uptr addr, uptr size) {
   CHECK(AddrIsAlignedByGranularity(addr + size));
   CHECK(AddrIsInMem(addr + size - SHADOW_GRANULARITY));
   CHECK(REAL(memset));
-  uptr shadow_beg = MEM_TO_SHADOW(addr);
-  uptr shadow_end = MEM_TO_SHADOW(addr + size - SHADOW_GRANULARITY) + 1;
+  uptr shadow_beg;
+  uptr shadow_end;
+  if (__memprof_histogram) {
+    shadow_beg = HISTOGRAM_MEM_TO_SHADOW(addr);
+    shadow_end = HISTOGRAM_MEM_TO_SHADOW(addr + size);
+  } else {
+    shadow_beg = MEM_TO_SHADOW(addr);
+    shadow_end = MEM_TO_SHADOW(addr + size - SHADOW_GRANULARITY) + 1;
+  }
+
   if (shadow_end - shadow_beg < common_flags()->clear_shadow_mmap_threshold) {
     REAL(memset)((void *)shadow_beg, 0, shadow_end - shadow_beg);
   } else {
@@ -279,6 +310,44 @@ struct Allocator {
     Print(Value->mib, Key, bool(Arg));
   }
 
+  // See memprof_mapping.h for an overview on histogram counters.
+  static MemInfoBlock CreateNewMIB(uptr p, MemprofChunk *m, u64 user_size) {
+    if (__memprof_histogram) {
+      return CreateNewMIBWithHistogram(p, m, user_size);
+    } else {
+      return CreateNewMIBWithoutHistogram(p, m, user_size);
+    }
+  }
+
+  static MemInfoBlock CreateNewMIBWithHistogram(uptr p, MemprofChunk *m,
+                                                u64 user_size) {
+
+    u64 c = GetShadowCountHistogram(p, user_size);
+    long curtime = GetTimestamp();
+    uint32_t HistogramSize =
+        RoundUpTo(user_size, HISTOGRAM_GRANULARITY) / HISTOGRAM_GRANULARITY;
+    uintptr_t Histogram =
+        (uintptr_t)InternalAlloc(HistogramSize * sizeof(uint64_t));
+    memset((void *)Histogram, 0, HistogramSize * sizeof(uint64_t));
+    for (size_t i = 0; i < HistogramSize; ++i) {
+      u8 Counter =
+          *((u8 *)HISTOGRAM_MEM_TO_SHADOW(p + HISTOGRAM_GRANULARITY * i));
+      ((uint64_t *)Histogram)[i] = (uint64_t)Counter;
+    }
+    MemInfoBlock newMIB(user_size, c, m->timestamp_ms, curtime, m->cpu_id,
+                        GetCpuId(), Histogram, HistogramSize);
+    return newMIB;
+  }
+
+  static MemInfoBlock CreateNewMIBWithoutHistogram(uptr p, MemprofChunk *m,
+                                                   u64 user_size) {
+    u64 c = GetShadowCount(p, user_size);
+    long curtime = GetTimestamp();
+    MemInfoBlock newMIB(user_size, c, m->timestamp_ms, curtime, m->cpu_id,
+                        GetCpuId(), 0, 0);
+    return newMIB;
+  }
+
   void FinishAndWrite() {
     if (print_text && common_flags()->print_module_map)
       DumpProcessMap();
@@ -319,10 +388,7 @@ struct Allocator {
           if (!m)
             return;
           uptr user_beg = ((uptr)m) + kChunkHeaderSize;
-          u64 c = GetShadowCount(user_beg, user_requested_size);
-          long curtime = GetTimestamp();
-          MemInfoBlock newMIB(user_requested_size, c, m->timestamp_ms, curtime,
-                              m->cpu_id, GetCpuId());
+          MemInfoBlock newMIB = CreateNewMIB(user_beg, m, user_requested_size);
           InsertOrMerge(m->alloc_context_id, newMIB, A->MIBMap);
         },
         this);
@@ -451,11 +517,7 @@ struct Allocator {
         atomic_exchange(&m->user_requested_size, 0, memory_order_acquire);
     if (memprof_inited && atomic_load_relaxed(&constructed) &&
         !atomic_load_relaxed(&destructing)) {
-      u64 c = GetShadowCount(p, user_requested_size);
-      long curtime = GetTimestamp();
-
-      MemInfoBlock newMIB(user_requested_size, c, m->timestamp_ms, curtime,
-                          m->cpu_id, GetCpuId());
+      MemInfoBlock newMIB = this->CreateNewMIB(p, m, user_requested_size);
       InsertOrMerge(m->alloc_context_id, newMIB, MIBMap);
     }
 

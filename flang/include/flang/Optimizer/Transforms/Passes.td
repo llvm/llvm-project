@@ -170,6 +170,24 @@ def ExternalNameConversion : Pass<"external-name-interop", "mlir::ModuleOp"> {
   ];
 }
 
+def CompilerGeneratedNamesConversion : Pass<"compiler-generated-names",
+    "mlir::ModuleOp"> {
+  let summary = "Convert names of compiler generated globals";
+  let description = [{
+    Transforms names of compiler generated globals to avoid
+    characters that might be unsupported by some target toolchains.
+    All special symbols are replaced with a predefined 'X' character.
+    This is only done for uniqued names that are not externally facing.
+    The uniqued names always use '_Q' prefix, and the user entity names
+    are always lower cased, so using 'X' instead of the special symbols
+    will guarantee that the converted name will not conflict with the user
+    space. This pass does not affect the externally facing names,
+    because the expectation is that the compiler will not generate
+    externally facing names on its own, and these names cannot use
+    special symbols.
+  }];
+}
+
 def MemRefDataFlowOpt : Pass<"fir-memref-dataflow-opt", "::mlir::func::FuncOp"> {
   let summary =
     "Perform store/load forwarding and potentially removing dead stores.";
@@ -249,6 +267,15 @@ def MemoryAllocationOpt : Pass<"memory-allocation-opt", "mlir::func::FuncOp"> {
            "std::size_t", /*default=*/"~static_cast<std::size_t>(0)",
            "Set maximum number of elements of an array allocated on the stack.">
   ];
+}
+
+// This needs to be a "mlir::ModuleOp" pass, because it inserts global constants
+def ConstantArgumentGlobalisationOpt : Pass<"constant-argument-globalisation-opt", "mlir::ModuleOp"> {
+  let summary = "Convert constant function arguments to global constants.";
+  let description = [{
+    Convert scalar literals of function arguments to global constants.
+  }];
+  let dependentDialects = [ "fir::FIROpsDialect" ];
 }
 
 def StackArrays : Pass<"stack-arrays", "mlir::ModuleOp"> {
@@ -331,32 +358,6 @@ def LoopVersioning : Pass<"loop-versioning", "mlir::func::FuncOp"> {
   let dependentDialects = [ "fir::FIROpsDialect" ];
 }
 
-def OMPMapInfoFinalizationPass
-    : Pass<"omp-map-info-finalization"> {
-  let summary = "expands OpenMP MapInfo operations containing descriptors";
-  let description = [{
-    Expands MapInfo operations containing descriptor types into multiple 
-    MapInfo's for each pointer element in the descriptor that requires 
-    explicit individual mapping by the OpenMP runtime.
-  }];
-  let dependentDialects = ["mlir::omp::OpenMPDialect"];
-}
-
-def OMPMarkDeclareTargetPass
-    : Pass<"omp-mark-declare-target", "mlir::ModuleOp"> {
-  let summary = "Marks all functions called by an OpenMP declare target function as declare target";
-  let dependentDialects = ["mlir::omp::OpenMPDialect"];
-}
-
-def OMPFunctionFiltering : Pass<"omp-function-filtering"> {
-  let summary = "Filters out functions intended for the host when compiling "
-                "for the target device.";
-  let dependentDialects = [
-    "mlir::func::FuncDialect",
-    "fir::FIROpsDialect"
-  ];
-}
-
 def VScaleAttr : Pass<"vscale-attr", "mlir::func::FuncOp"> {
   let summary = "Add vscale_range attribute to functions";
   let description = [{
@@ -402,7 +403,10 @@ def FunctionAttr : Pass<"function-attr", "mlir::func::FuncOp"> {
     Option<"unsafeFPMath", "unsafe-fp-math",
            "bool", /*default=*/"false",
            "Set the unsafe-fp-math attribute on functions in the module.">,
-  ];
+    Option<"tuneCPU", "tune-cpu",
+           "llvm::StringRef", /*default=*/"llvm::StringRef{}",
+           "Set the tune-cpu attribute on functions in the module.">,
+];
 }
 
 def AssumedRankOpConversion : Pass<"fir-assumed-rank-op", "mlir::ModuleOp"> {
@@ -414,6 +418,13 @@ def AssumedRankOpConversion : Pass<"fir-assumed-rank-op", "mlir::ModuleOp"> {
   }];
   let dependentDialects = [
     "fir::FIROpsDialect", "mlir::func::FuncDialect"
+  ];
+}
+
+def CufOpConversion : Pass<"cuf-convert", "mlir::ModuleOp"> {
+  let summary = "Convert some CUF operations to runtime calls";
+  let dependentDialects = [
+    "fir::FIROpsDialect"
   ];
 }
 

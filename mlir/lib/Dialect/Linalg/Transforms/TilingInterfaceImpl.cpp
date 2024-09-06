@@ -215,10 +215,11 @@ struct LinalgOpTilingInterface
     return success();
   }
 
-  FailureOr<TilingResult>
-  generateResultTileValue(Operation *op, OpBuilder &b, unsigned resultNumber,
-                          ArrayRef<OpFoldResult> offsets,
-                          ArrayRef<OpFoldResult> sizes) const {
+  LogicalResult getIterationDomainTileFromResultTile(
+      Operation *op, OpBuilder &b, unsigned resultNumber,
+      ArrayRef<OpFoldResult> offsets, ArrayRef<OpFoldResult> sizes,
+      SmallVectorImpl<OpFoldResult> &iterDomainOffsets,
+      SmallVectorImpl<OpFoldResult> &iterDomainSizes) const {
     auto linalgOp = cast<LinalgOp>(op);
 
     // Check that the indexing map used for the output is a projected
@@ -232,9 +233,21 @@ struct LinalgOpTilingInterface
           "unhandled tiled implementation generation when result is not "
           "accessed using a permuted projection");
     }
-    SmallVector<OpFoldResult> mappedOffsets, mappedSizes;
+
     getMappedOffsetAndSize(linalgOp, b, indexingMap, offsets, sizes,
-                           mappedOffsets, mappedSizes);
+                           iterDomainOffsets, iterDomainSizes);
+    return success();
+  }
+
+  FailureOr<TilingResult>
+  generateResultTileValue(Operation *op, OpBuilder &b, unsigned resultNumber,
+                          ArrayRef<OpFoldResult> offsets,
+                          ArrayRef<OpFoldResult> sizes) const {
+    SmallVector<OpFoldResult> mappedOffsets, mappedSizes;
+    if (failed(getIterationDomainTileFromResultTile(
+            op, b, resultNumber, offsets, sizes, mappedOffsets, mappedSizes))) {
+      return failure();
+    }
     auto tilingInterfaceOp = cast<TilingInterface>(op);
     FailureOr<TilingResult> tilingResult =
         tilingInterfaceOp.getTiledImplementation(b, mappedOffsets, mappedSizes);
@@ -447,39 +460,9 @@ struct LinalgOpPartialReductionInterface
                                          Location loc, ValueRange partialReduce,
                                          ArrayRef<int> reductionDims) const {
     auto linalgOp = cast<LinalgOp>(op);
-
-    // Step 1. Recover the dims that actually need to be merged from the
-    // original operation. We can classify the original iterators as follows:
-    //
-    // parallel                         --> parallel
-    // reduction + not in reductionDims --> parallel (already reduced)
-    // reduction + in reductionDims     --> reduction (will reduce now)
-    SmallVector<utils::IteratorType> iterators(linalgOp.getNumLoops(),
-                                               utils::IteratorType::parallel);
-    for (int redIdx : reductionDims)
-      iterators[redIdx] = utils::IteratorType::reduction;
-
-    // Step 2. For each partial result, create a map to index it. This map
-    // is simply the indexing map for the original result with reductionDims
-    // appended (as produced in tileToPartialReduction).
-    int64_t numInits = linalgOp.getNumDpsInits();
-    SmallVector<AffineMap> indexingMaps(numInits * 2);
-    for (int idx : llvm::seq<int>(0, numInits)) {
-      AffineMap &inputMap = indexingMaps[idx];
-      AffineMap &outputMap = indexingMaps[numInits + idx];
-
-      outputMap =
-          linalgOp.getMatchingIndexingMap(linalgOp.getDpsInitOperand(idx));
-      inputMap = outputMap;
-      for (int redPos : reductionDims) {
-        inputMap = inputMap.insertResult(b.getAffineDimExpr(redPos),
-                                         inputMap.getNumResults());
-      }
-    }
-
-    auto reduction = b.create<GenericOp>(
-        loc, op->getResultTypes(), partialReduce, linalgOp.getDpsInits(),
-        indexingMaps, iterators,
+    SmallVector<int64_t> reductionDimsInt64(reductionDims);
+    auto reduction = b.create<linalg::ReduceOp>(
+        loc, partialReduce, linalgOp.getDpsInits(), reductionDimsInt64,
         [&linalgOp](OpBuilder &b, Location loc, ValueRange inputs) {
           int64_t numInits = linalgOp.getNumDpsInits();
           SmallVector<Value> yieldedValues;

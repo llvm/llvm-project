@@ -431,8 +431,8 @@ attributes #5 = { convergent nounwind "llvm.assume"="omp_no_openmp,ompx_spmd_ame
 ; CHECK: attributes #[[ATTR6]] = { nounwind }
 ; CHECK: attributes #[[ATTR7:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite) }
 ; CHECK: attributes #[[ATTR8:[0-9]+]] = { convergent nounwind }
-; CHECK: attributes #[[ATTR9]] = { nounwind willreturn "llvm.assume"="ompx_spmd_amenable,omp_no_openmp" }
-; CHECK: attributes #[[ATTR10]] = { convergent nounwind "llvm.assume"="ompx_spmd_amenable,omp_no_openmp" }
+; CHECK: attributes #[[ATTR9]] = { nounwind willreturn "llvm.assume"="omp_no_openmp,ompx_spmd_amenable" }
+; CHECK: attributes #[[ATTR10]] = { convergent nounwind "llvm.assume"="omp_no_openmp,ompx_spmd_amenable" }
 ;.
 ; CHECK-DISABLED: attributes #[[ATTR0]] = { convergent norecurse nounwind "frame-pointer"="all" "kernel" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="sm_53" "target-features"="+ptx32,+sm_53" }
 ; CHECK-DISABLED: attributes #[[ATTR1:[0-9]+]] = { alwaysinline }
@@ -443,8 +443,8 @@ attributes #5 = { convergent nounwind "llvm.assume"="omp_no_openmp,ompx_spmd_ame
 ; CHECK-DISABLED: attributes #[[ATTR6]] = { nounwind }
 ; CHECK-DISABLED: attributes #[[ATTR7:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite) }
 ; CHECK-DISABLED: attributes #[[ATTR8:[0-9]+]] = { convergent nounwind }
-; CHECK-DISABLED: attributes #[[ATTR9]] = { nounwind willreturn "llvm.assume"="ompx_spmd_amenable,omp_no_openmp" }
-; CHECK-DISABLED: attributes #[[ATTR10]] = { convergent nounwind "llvm.assume"="ompx_spmd_amenable,omp_no_openmp" }
+; CHECK-DISABLED: attributes #[[ATTR9]] = { nounwind willreturn "llvm.assume"="omp_no_openmp,ompx_spmd_amenable" }
+; CHECK-DISABLED: attributes #[[ATTR10]] = { convergent nounwind "llvm.assume"="omp_no_openmp,ompx_spmd_amenable" }
 ;.
 ; CHECK: [[META0:![0-9]+]] = !{i32 0, i32 42, i32 16513658, !"sequential_loop", i32 6, i32 0}
 ; CHECK: [[META1:![0-9]+]] = !{ptr @__omp_offloading_2a_fbfa7a_sequential_loop_l6, !"kernel", i32 1}

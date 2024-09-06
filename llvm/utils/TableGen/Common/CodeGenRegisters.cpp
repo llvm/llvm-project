@@ -22,6 +22,7 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -618,10 +619,14 @@ struct TupleExpander : SetTheory::Expander {
   // the synthesized definitions for their lifetime.
   std::vector<std::unique_ptr<Record>> &SynthDefs;
 
+  // Track all synthesized tuple names in order to detect duplicate definitions.
+  llvm::StringSet<> TupleNames;
+
   TupleExpander(std::vector<std::unique_ptr<Record>> &SynthDefs)
       : SynthDefs(SynthDefs) {}
 
-  void expand(SetTheory &ST, Record *Def, SetTheory::RecSet &Elts) override {
+  void expand(SetTheory &ST, const Record *Def,
+              SetTheory::RecSet &Elts) override {
     std::vector<Record *> Indices = Def->getValueAsListOfDefs("SubRegIndices");
     unsigned Dim = Indices.size();
     ListInit *SubRegs = Def->getValueAsListInit("SubRegs");
@@ -683,6 +688,12 @@ struct TupleExpander : SetTheory::Expander {
           std::make_unique<Record>(Name, Def->getLoc(), Def->getRecords()));
       Record *NewReg = SynthDefs.back().get();
       Elts.insert(NewReg);
+
+      // Detect duplicates among synthesized registers.
+      const auto Res = TupleNames.insert(NewReg->getName());
+      if (!Res.second)
+        PrintFatalError(Def->getLoc(),
+                        "Register tuple redefines register '" + Name + "'.");
 
       // Copy Proto super-classes.
       ArrayRef<std::pair<Record *, SMRange>> Supers = Proto->getSuperClasses();

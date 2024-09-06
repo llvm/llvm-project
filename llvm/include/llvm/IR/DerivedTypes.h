@@ -32,6 +32,7 @@ namespace llvm {
 class Value;
 class APInt;
 class LLVMContext;
+template <typename T> class Expected;
 
 /// Class to represent integer types. Note that this class is also used to
 /// represent the built-in integer types: Int1Ty, Int8Ty, Int16Ty, Int32Ty and
@@ -631,7 +632,7 @@ public:
 
   /// Get the minimum number of elements in this vector. The actual number of
   /// elements in the vector is an integer multiple of this value.
-  uint64_t getMinNumElements() const { return ElementQuantity; }
+  unsigned getMinNumElements() const { return ElementQuantity; }
 
   static bool classof(const Type *T) {
     return T->getTypeID() == ScalableVectorTyID;
@@ -734,6 +735,19 @@ public:
   static TargetExtType *get(LLVMContext &Context, StringRef Name,
                             ArrayRef<Type *> Types = std::nullopt,
                             ArrayRef<unsigned> Ints = std::nullopt);
+
+  /// Return a target extension type having the specified name and optional
+  /// type and integer parameters, or an appropriate Error if it fails the
+  /// parameters check.
+  static Expected<TargetExtType *>
+  getOrError(LLVMContext &Context, StringRef Name,
+             ArrayRef<Type *> Types = std::nullopt,
+             ArrayRef<unsigned> Ints = std::nullopt);
+
+  /// Check that a newly created target extension type has the expected number
+  /// of type parameters and integer parameters, returning the type itself if OK
+  /// or an appropriate Error if not.
+  static Expected<TargetExtType *> checkParams(TargetExtType *TTy);
 
   /// Return the name for this target extension type. Two distinct target
   /// extension types may have the same name if their type or integer parameters

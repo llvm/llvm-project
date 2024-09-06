@@ -122,16 +122,17 @@ class SIRegisterTuples<list<SubRegIndex> Indices, RegisterClass RC,
 //===----------------------------------------------------------------------===//
 //  Declarations that describe the SI registers
 //===----------------------------------------------------------------------===//
-class SIReg <string n, bits<8> regIdx = 0, bit isAGPROrVGPR = 0,
-             bit isHi = 0> : Register<n> {
+class SIReg <string n, bits<8> regIdx = 0, bit isVGPR = 0,
+             bit isAGPR = 0, bit isHi16 = 0> : Register<n> {
   let Namespace = "AMDGPU";
 
   // These are generic helper values we use to form actual register
   // codes. They should not be assumed to match any particular register
   // encodings on any particular subtargets.
   let HWEncoding{7-0} = regIdx;
-  let HWEncoding{8} = isAGPROrVGPR;
-  let HWEncoding{9} = isHi;
+  let HWEncoding{8} = isVGPR;
+  let HWEncoding{9} = isAGPR;
+  let HWEncoding{10} = isHi16;
 
   int Index = !cast<int>(regIdx);
 }
@@ -157,10 +158,10 @@ class SIRegisterClass <string n, list<ValueType> rTypes, int Align, dag rList>
 }
 
 multiclass SIRegLoHi16 <string n, bits<8> regIdx, bit ArtificialHigh = 1,
-                        bit isAGPROrVGPR = 0> {
-  def _LO16 : SIReg<n#".l", regIdx, isAGPROrVGPR>;
-  def _HI16 : SIReg<!if(ArtificialHigh, "", n#".h"), regIdx, isAGPROrVGPR,
-                    /* isHi */ 1> {
+                        bit isVGPR = 0, bit isAGPR = 0> {
+  def _LO16 : SIReg<n#".l", regIdx, isVGPR, isAGPR>;
+  def _HI16 : SIReg<!if(ArtificialHigh, "", n#".h"), regIdx, isVGPR, isAGPR,
+                    /* isHi16 */ 1> {
     let isArtificial = ArtificialHigh;
   }
   def "" : RegisterWithSubRegs<n, [!cast<Register>(NAME#"_LO16"),
@@ -169,7 +170,8 @@ multiclass SIRegLoHi16 <string n, bits<8> regIdx, bit ArtificialHigh = 1,
     let SubRegIndices = [lo16, hi16];
     let CoveredBySubRegs = !not(ArtificialHigh);
     let HWEncoding{7-0} = regIdx;
-    let HWEncoding{8} = isAGPROrVGPR;
+    let HWEncoding{8} = isVGPR;
+    let HWEncoding{9} = isAGPR;
 
     int Index = !cast<int>(regIdx);
   }
@@ -348,14 +350,16 @@ foreach Index = 0...105 in {
 // VGPR registers
 foreach Index = 0...255 in {
   defm VGPR#Index :
-    SIRegLoHi16 <"v"#Index, Index, 0, 1>,
+    SIRegLoHi16 <"v"#Index, Index, /* ArtificialHigh= */ 0,
+                 /* isVGPR= */ 1, /* isAGPR= */ 0>,
     DwarfRegNum<[!add(Index, 2560), !add(Index, 1536)]>;
 }
 
 // AccVGPR registers
 foreach Index = 0...255 in {
   defm AGPR#Index :
-      SIRegLoHi16 <"a"#Index, Index, 1, 1>,
+      SIRegLoHi16 <"a"#Index, Index, /* ArtificialHigh= */ 1,
+                   /* isVGPR= */ 0, /* isAGPR= */ 1>,
       DwarfRegNum<[!add(Index, 3072), !add(Index, 2048)]>;
 }
 
@@ -1344,6 +1348,7 @@ def AVLdSt_64 : AVLdStOperand<AV_64, "OPW64">;
 def AVLdSt_96 : AVLdStOperand<AV_96, "OPW96">;
 def AVLdSt_128 : AVLdStOperand<AV_128, "OPW128">;
 def AVLdSt_160 : AVLdStOperand<AV_160, "OPW160">;
+def AVLdSt_1024 : AVLdStOperand<AV_1024, "OPW1024">;
 
 //===----------------------------------------------------------------------===//
 //  ACSrc_* Operands with an AGPR or an inline constant

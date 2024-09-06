@@ -12,8 +12,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "DirectXTargetMachine.h"
+#include "DXILIntrinsicExpansion.h"
+#include "DXILOpLowering.h"
+#include "DXILPrettyPrinter.h"
 #include "DXILResourceAnalysis.h"
 #include "DXILShaderFlags.h"
+#include "DXILTranslateMetadata.h"
 #include "DXILWriter/DXILWriterPass.h"
 #include "DirectX.h"
 #include "DirectXSubtarget.h"
@@ -45,9 +49,10 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeDirectXTarget() {
   initializeWriteDXILPassPass(*PR);
   initializeDXContainerGlobalsPass(*PR);
   initializeDXILOpLoweringLegacyPass(*PR);
-  initializeDXILTranslateMetadataPass(*PR);
-  initializeDXILResourceWrapperPass(*PR);
+  initializeDXILTranslateMetadataLegacyPass(*PR);
+  initializeDXILResourceMDWrapperPass(*PR);
   initializeShaderFlagsAnalysisWrapperPass(*PR);
+  initializeDXILFinalizeLinkageLegacyPass(*PR);
 }
 
 class DXILTargetObjectFile : public TargetLoweringObjectFile {
@@ -79,7 +84,8 @@ public:
   void addCodeGenPrepare() override {
     addPass(createDXILIntrinsicExpansionLegacyPass());
     addPass(createDXILOpLoweringLegacyPass());
-    addPass(createDXILTranslateMetadataPass());
+    addPass(createDXILFinalizeLinkageLegacyPass());
+    addPass(createDXILTranslateMetadataLegacyPass());
     addPass(createDXILPrepareModulePass());
   }
 };
@@ -102,8 +108,7 @@ DirectXTargetMachine::DirectXTargetMachine(const Target &T, const Triple &TT,
 
 DirectXTargetMachine::~DirectXTargetMachine() {}
 
-void DirectXTargetMachine::registerPassBuilderCallbacks(
-    PassBuilder &PB, bool PopulateClassToPassNames) {
+void DirectXTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 #define GET_PASS_REGISTRY "DirectXPassRegistry.def"
 #include "llvm/Passes/TargetPassRegistry.inc"
 }
@@ -117,7 +122,7 @@ bool DirectXTargetMachine::addPassesToEmitFile(
 
   switch (FileType) {
   case CodeGenFileType::AssemblyFile:
-    PM.add(createDXILPrettyPrinterPass(Out));
+    PM.add(createDXILPrettyPrinterLegacyPass(Out));
     PM.add(createPrintModulePass(Out, "", true));
     break;
   case CodeGenFileType::ObjectFile:

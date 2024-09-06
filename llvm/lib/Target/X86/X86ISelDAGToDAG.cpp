@@ -26,6 +26,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsX86.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -313,7 +314,8 @@ namespace {
         Disp = CurDAG->getTargetBlockAddress(AM.BlockAddr, MVT::i32, AM.Disp,
                                              AM.SymbolFlags);
       else
-        Disp = CurDAG->getTargetConstant(AM.Disp, DL, MVT::i32);
+        Disp =
+            CurDAG->getSignedConstant(AM.Disp, DL, MVT::i32, /*isTarget=*/true);
 
       if (AM.Segment.getNode())
         Segment = AM.Segment;
@@ -921,7 +923,8 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
       if (Imm == EndbrImm || isEndbrImm64(Imm)) {
         // Check that the cf-protection-branch is enabled.
         Metadata *CFProtectionBranch =
-          MF->getMMI().getModule()->getModuleFlag("cf-protection-branch");
+            MF->getFunction().getParent()->getModuleFlag(
+                "cf-protection-branch");
         if (CFProtectionBranch || IndirectBranchTracking) {
           SDLoc dl(N);
           SDValue Complement = CurDAG->getConstant(~Imm, dl, VT, false, true);
@@ -2128,7 +2131,7 @@ static bool foldMaskedShiftToScaledMask(SelectionDAG &DAG, SDValue N,
     X = NewX;
   }
 
-  SDValue NewMask = DAG.getConstant(Mask >> ShiftAmt, DL, VT);
+  SDValue NewMask = DAG.getSignedConstant(Mask >> ShiftAmt, DL, VT);
   SDValue NewAnd = DAG.getNode(ISD::AND, DL, VT, X, NewMask);
   SDValue NewShift = DAG.getNode(ISD::SHL, DL, VT, NewAnd, Shift.getOperand(1));
 
@@ -2744,7 +2747,7 @@ bool X86DAGToDAGISel::matchAddressRecursively(SDValue N, X86ISelAddressMode &AM,
         Src = Src.getOperand(0);
       }
 
-    if (Src.getOpcode() == ISD::SHL && Src.hasOneUse()) {
+    if (Src.getOpcode() == ISD::SHL && Src.hasOneUse() && N->hasOneUse()) {
       // Give up if the shift is not a valid scale factor [1,2,3].
       SDValue ShlSrc = Src.getOperand(0);
       SDValue ShlAmt = Src.getOperand(1);
@@ -3731,7 +3734,8 @@ bool X86DAGToDAGISel::foldLoadStoreIntoMemOperand(SDNode *Node) {
       }
 
       if (MemVT != MVT::i64 || isInt<32>(OperandV)) {
-        Operand = CurDAG->getTargetConstant(OperandV, SDLoc(Node), MemVT);
+        Operand = CurDAG->getSignedConstant(OperandV, SDLoc(Node), MemVT,
+                                            /*isTarget=*/true);
         NewOpc = SelectImmOpcode(Opc);
       }
     }
@@ -4505,7 +4509,7 @@ bool X86DAGToDAGISel::tryShrinkShlLogicImm(SDNode *N) {
     X = NewX;
   }
 
-  SDValue NewCst = CurDAG->getConstant(ShiftedVal, dl, NVT);
+  SDValue NewCst = CurDAG->getSignedConstant(ShiftedVal, dl, NVT);
   insertDAGNode(*CurDAG, SDValue(N, 0), NewCst);
   SDValue NewBinOp = CurDAG->getNode(Opcode, dl, NVT, X, NewCst);
   insertDAGNode(*CurDAG, SDValue(N, 0), NewBinOp);

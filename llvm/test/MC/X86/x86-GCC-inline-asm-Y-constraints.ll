@@ -11,7 +11,7 @@ define void @f_Ym(i64 %m.coerce) {
 ; CHECK:         ## InlineAsm End
 
 entry:
-  %0 = tail call x86_mmx asm sideeffect "movq $0, %mm1\0A\09", "=^Ym,~{dirflag},~{fpsr},~{flags}"() 
+  %0 = tail call <1 x i64> asm sideeffect "movq $0, %mm1\0A\09", "=^Ym,~{dirflag},~{fpsr},~{flags}"() 
   ret void
 }
 

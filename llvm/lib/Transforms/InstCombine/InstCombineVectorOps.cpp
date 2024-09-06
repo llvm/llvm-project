@@ -62,7 +62,7 @@ static bool cheapToScalarize(Value *V, Value *EI) {
   if (auto *C = dyn_cast<Constant>(V))
     return CEI || C->getSplatValue();
 
-  if (CEI && match(V, m_Intrinsic<Intrinsic::experimental_stepvector>())) {
+  if (CEI && match(V, m_Intrinsic<Intrinsic::stepvector>())) {
     ElementCount EC = cast<VectorType>(V->getType())->getElementCount();
     // Index needs to be lower than the minimum size of the vector, because
     // for scalable vector, the vector size is known at run time.
@@ -419,6 +419,7 @@ Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
   // If extracting a specified index from the vector, see if we can recursively
   // find a previously computed scalar that was inserted into the vector.
   auto *IndexC = dyn_cast<ConstantInt>(Index);
+  bool HasKnownValidIndex = false;
   if (IndexC) {
     // Canonicalize type of constant indices to i64 to simplify CSE
     if (auto *NewIdx = getPreferredVectorIndex(IndexC))
@@ -426,13 +427,13 @@ Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
 
     ElementCount EC = EI.getVectorOperandType()->getElementCount();
     unsigned NumElts = EC.getKnownMinValue();
+    HasKnownValidIndex = IndexC->getValue().ult(NumElts);
 
     if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(SrcVec)) {
       Intrinsic::ID IID = II->getIntrinsicID();
       // Index needs to be lower than the minimum size of the vector, because
       // for scalable vector, the vector size is known at run time.
-      if (IID == Intrinsic::experimental_stepvector &&
-          IndexC->getValue().ult(NumElts)) {
+      if (IID == Intrinsic::stepvector && IndexC->getValue().ult(NumElts)) {
         Type *Ty = EI.getType();
         unsigned BitWidth = Ty->getIntegerBitWidth();
         Value *Idx;
@@ -471,8 +472,11 @@ Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
     return UnaryOperator::CreateWithCopiedFlags(UO->getOpcode(), E, UO);
   }
 
+  // If the binop is not speculatable, we cannot hoist the extractelement if
+  // it may make the operand poison.
   BinaryOperator *BO;
-  if (match(SrcVec, m_BinOp(BO)) && cheapToScalarize(SrcVec, Index)) {
+  if (match(SrcVec, m_BinOp(BO)) && cheapToScalarize(SrcVec, Index) &&
+      (HasKnownValidIndex || isSafeToSpeculativelyExecute(BO))) {
     // extelt (binop X, Y), Index --> binop (extelt X, Index), (extelt Y, Index)
     Value *X = BO->getOperand(0), *Y = BO->getOperand(1);
     Value *E0 = Builder.CreateExtractElement(X, Index);
@@ -2837,15 +2841,7 @@ Instruction *InstCombinerImpl::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
     auto *XType = cast<FixedVectorType>(X->getType());
     unsigned XNumElts = XType->getNumElements();
     SmallVector<int, 16> ScaledMask;
-    if (XNumElts >= VWidth) {
-      assert(XNumElts % VWidth == 0 && "Unexpected vector bitcast");
-      narrowShuffleMaskElts(XNumElts / VWidth, Mask, ScaledMask);
-    } else {
-      assert(VWidth % XNumElts == 0 && "Unexpected vector bitcast");
-      if (!widenShuffleMaskElts(VWidth / XNumElts, Mask, ScaledMask))
-        ScaledMask.clear();
-    }
-    if (!ScaledMask.empty()) {
+    if (scaleShuffleMaskElts(XNumElts, Mask, ScaledMask)) {
       // If the shuffled source vector simplifies, cast that value to this
       // shuffle's type.
       if (auto *V = simplifyShuffleVectorInst(X, UndefValue::get(XType),

@@ -320,9 +320,7 @@ define double @fsgnjn_d(double %a, double %b) nounwind {
 ;
 ; RV64IZFINXZDINX-LABEL: fsgnjn_d:
 ; RV64IZFINXZDINX:       # %bb.0:
-; RV64IZFINXZDINX-NEXT:    li a2, -1
-; RV64IZFINXZDINX-NEXT:    slli a2, a2, 63
-; RV64IZFINXZDINX-NEXT:    xor a1, a1, a2
+; RV64IZFINXZDINX-NEXT:    not a1, a1
 ; RV64IZFINXZDINX-NEXT:    fsgnj.d a0, a0, a1
 ; RV64IZFINXZDINX-NEXT:    ret
 ;
@@ -1498,4 +1496,52 @@ define double @fnmsub_d_contract(double %a, double %b, double %c) nounwind {
   %1 = fmul contract double %a_, %b_
   %2 = fsub contract double %c, %1
   ret double %2
+}
+
+define double @fsgnjx_f64(double %x, double %y) nounwind {
+; CHECKIFD-LABEL: fsgnjx_f64:
+; CHECKIFD:       # %bb.0:
+; CHECKIFD-NEXT:    fsgnjx.d fa0, fa1, fa0
+; CHECKIFD-NEXT:    ret
+;
+; RV32IZFINXZDINX-LABEL: fsgnjx_f64:
+; RV32IZFINXZDINX:       # %bb.0:
+; RV32IZFINXZDINX-NEXT:    fsgnjx.d a0, a2, a0
+; RV32IZFINXZDINX-NEXT:    ret
+;
+; RV64IZFINXZDINX-LABEL: fsgnjx_f64:
+; RV64IZFINXZDINX:       # %bb.0:
+; RV64IZFINXZDINX-NEXT:    fsgnjx.d a0, a1, a0
+; RV64IZFINXZDINX-NEXT:    ret
+;
+; RV32I-LABEL: fsgnjx_f64:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    lui a0, 524288
+; RV32I-NEXT:    and a0, a1, a0
+; RV32I-NEXT:    lui a1, 261888
+; RV32I-NEXT:    or a1, a0, a1
+; RV32I-NEXT:    li a0, 0
+; RV32I-NEXT:    call __muldf3
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: fsgnjx_f64:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    srli a0, a0, 63
+; RV64I-NEXT:    slli a0, a0, 63
+; RV64I-NEXT:    li a2, 1023
+; RV64I-NEXT:    slli a2, a2, 52
+; RV64I-NEXT:    or a0, a0, a2
+; RV64I-NEXT:    call __muldf3
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
+  %z = call double @llvm.copysign.f64(double 1.0, double %x)
+  %mul = fmul double %z, %y
+  ret double %mul
 }

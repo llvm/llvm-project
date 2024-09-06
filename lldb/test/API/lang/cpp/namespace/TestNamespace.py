@@ -208,6 +208,12 @@ class NamespaceTestCase(TestBase):
             patterns=[" = 3"],
         )
 
+        # Search for a type in an anonymous namespace, both with and without the
+        # namespace prefix.
+        self.expect("type lookup -- my_uint_t", substrs=["unsigned int"])
+        self.expect("type lookup -- (anonymous namespace)::my_uint_t",
+                    substrs=["unsigned int"])
+
         # rdar://problem/8660275
         # test/namespace: 'expression -- i+j' not working
         # This has been fixed.
@@ -252,4 +258,17 @@ class NamespaceTestCase(TestBase):
         )
         self.expect_expr(
             "((::B::Bar*)&::B::bar)->x()", result_type="int", result_value="42"
+        )
+
+        self.expect_expr("InAnon1::var_in_anon", result_type="int", result_value="10")
+        self.expect_expr(
+            "InAnon1::InAnon2::var_in_anon", result_type="int", result_value="5"
+        )
+        self.expect_expr(
+            "InAnon1::inline_ns::var_in_anon", result_type="int", result_value="15"
+        )
+        self.expect_expr(
+            "InAnon1::inline_ns::InAnon2::var_in_anon",
+            result_type="int",
+            result_value="5",
         )

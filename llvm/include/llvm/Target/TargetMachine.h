@@ -45,6 +45,7 @@ class MCSubtargetInfo;
 class MCSymbol;
 class raw_pwrite_stream;
 class PassBuilder;
+class PassInstrumentationCallbacks;
 struct PerFunctionMIParsingState;
 class SMDiagnostic;
 class SMRange;
@@ -253,10 +254,10 @@ public:
   TLSModel::Model getTLSModel(const GlobalValue *GV) const;
 
   /// Returns the optimization level: None, Less, Default, or Aggressive.
-  CodeGenOptLevel getOptLevel() const;
+  CodeGenOptLevel getOptLevel() const { return OptLevel; }
 
   /// Overrides the optimization level.
-  void setOptLevel(CodeGenOptLevel Level);
+  void setOptLevel(CodeGenOptLevel Level) { OptLevel = Level; }
 
   void setFastISel(bool Enable) { Options.EnableFastISel = Enable; }
   bool getO0WantsFastISel() { return O0WantsFastISel; }
@@ -368,8 +369,7 @@ public:
 
   /// Allow the target to modify the pass pipeline.
   // TODO: Populate all pass names by using <Target>PassRegistry.def.
-  virtual void registerPassBuilderCallbacks(PassBuilder &,
-                                            bool PopulateClassToPassNames) {}
+  virtual void registerPassBuilderCallbacks(PassBuilder &) {}
 
   /// Allow the target to register alias analyses with the AAManager for use
   /// with the new pass manager. Only affects the "default" AAManager.

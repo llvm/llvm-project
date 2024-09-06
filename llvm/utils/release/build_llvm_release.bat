@@ -151,6 +151,7 @@ set common_cmake_flags=^
   -DCMAKE_BUILD_TYPE=Release ^
   -DLLVM_ENABLE_ASSERTIONS=OFF ^
   -DLLVM_INSTALL_TOOLCHAIN_ONLY=ON ^
+  -DLLVM_TARGETS_TO_BUILD="AArch64;ARM;X86" ^
   -DLLVM_BUILD_LLVM_C_DYLIB=ON ^
   -DCMAKE_INSTALL_UCRT_LIBRARIES=ON ^
   -DPython3_FIND_REGISTRY=NEVER ^
@@ -163,6 +164,7 @@ set common_cmake_flags=^
   -DCLANG_ENABLE_LIBXML2=OFF ^
   -DCMAKE_C_FLAGS="%common_compiler_flags%" ^
   -DCMAKE_CXX_FLAGS="%common_compiler_flags%" ^
+  -DLLVM_ENABLE_RPMALLOC=ON ^
   -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld;compiler-rt;lldb;openmp"
 
 set cmake_profile_flags=""
@@ -191,6 +193,7 @@ REM Stage0 binaries directory; used in stage1.
 set "stage0_bin_dir=%build_dir%/build32_stage0/bin"
 set cmake_flags=^
   %common_cmake_flags% ^
+  -DLLVM_ENABLE_RPMALLOC=OFF ^
   -DLLDB_TEST_COMPILER=%stage0_bin_dir%/clang.exe ^
   -DPYTHON_HOME=%PYTHONHOME% ^
   -DPython3_ROOT_DIR=%PYTHONHOME% ^
@@ -412,6 +415,7 @@ cmake -GNinja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=install ^
   -DLIBXML2_WITH_THREADS=ON -DLIBXML2_WITH_THREAD_ALLOC=OFF -DLIBXML2_WITH_TREE=ON ^
   -DLIBXML2_WITH_VALID=OFF -DLIBXML2_WITH_WRITER=OFF -DLIBXML2_WITH_XINCLUDE=OFF ^
   -DLIBXML2_WITH_XPATH=OFF -DLIBXML2_WITH_XPTR=OFF -DLIBXML2_WITH_ZLIB=OFF ^
+  -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded ^
   ../../libxml2-v2.9.12 || exit /b 1
 ninja install || exit /b 1
 set libxmldir=%cd%\install

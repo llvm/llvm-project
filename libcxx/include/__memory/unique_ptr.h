@@ -23,6 +23,7 @@
 #include <__type_traits/common_type.h>
 #include <__type_traits/conditional.h>
 #include <__type_traits/dependent_type.h>
+#include <__type_traits/enable_if.h>
 #include <__type_traits/integral_constant.h>
 #include <__type_traits/is_array.h>
 #include <__type_traits/is_assignable.h>
@@ -37,6 +38,7 @@
 #include <__type_traits/is_void.h>
 #include <__type_traits/remove_extent.h>
 #include <__type_traits/type_identity.h>
+#include <__utility/declval.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
 #include <cstddef>
@@ -252,7 +254,8 @@ public:
     return *this;
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 __add_lvalue_reference_t<_Tp> operator*() const {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 __add_lvalue_reference_t<_Tp> operator*() const
+      _NOEXCEPT_(_NOEXCEPT_(*std::declval<pointer>())) {
     return *__ptr_.first();
   }
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 pointer operator->() const _NOEXCEPT { return __ptr_.first(); }

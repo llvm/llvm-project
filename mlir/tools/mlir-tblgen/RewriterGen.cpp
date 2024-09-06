@@ -268,7 +268,7 @@ private:
 // inlining them.
 class StaticMatcherHelper {
 public:
-  StaticMatcherHelper(raw_ostream &os, const RecordKeeper &recordKeeper,
+  StaticMatcherHelper(raw_ostream &os, RecordKeeper &recordKeeper,
                       RecordOperatorMap &mapper);
 
   // Determine if we should inline the match logic or delegate to a static
@@ -366,7 +366,7 @@ std::string PatternEmitter::handleConstantAttr(Attribute attr,
 
 void PatternEmitter::emitStaticMatcher(DagNode tree, std::string funcName) {
   os << formatv(
-      "static ::mlir::LogicalResult {0}(::mlir::PatternRewriter &rewriter, "
+      "static ::llvm::LogicalResult {0}(::mlir::PatternRewriter &rewriter, "
       "::mlir::Operation *op0, ::llvm::SmallVector<::mlir::Operation "
       "*, 4> &tblgen_ops",
       funcName);
@@ -1081,7 +1081,7 @@ void PatternEmitter::emit(StringRef rewriteName) {
   {
     auto classScope = os.scope();
     os.printReindented(R"(
-    ::mlir::LogicalResult matchAndRewrite(::mlir::Operation *op0,
+    ::llvm::LogicalResult matchAndRewrite(::mlir::Operation *op0,
         ::mlir::PatternRewriter &rewriter) const override {)")
         << '\n';
     {
@@ -1117,7 +1117,7 @@ void PatternEmitter::emit(StringRef rewriteName) {
 
       os << "return ::mlir::success();\n";
     }
-    os << "};\n";
+    os << "}\n";
   }
   os << "};\n\n";
 }
@@ -1886,7 +1886,7 @@ void PatternEmitter::createAggregateLocalVarsForOpArgs(
 }
 
 StaticMatcherHelper::StaticMatcherHelper(raw_ostream &os,
-                                         const RecordKeeper &recordKeeper,
+                                         RecordKeeper &recordKeeper,
                                          RecordOperatorMap &mapper)
     : opMap(mapper), staticVerifierEmitter(os, recordKeeper) {}
 
@@ -1951,7 +1951,7 @@ StringRef StaticMatcherHelper::getVerifierName(DagLeaf leaf) {
   return staticVerifierEmitter.getTypeConstraintFn(leaf.getAsConstraint());
 }
 
-static void emitRewriters(const RecordKeeper &recordKeeper, raw_ostream &os) {
+static void emitRewriters(RecordKeeper &recordKeeper, raw_ostream &os) {
   emitSourceFileHeader("Rewriters", os, recordKeeper);
 
   const auto &patterns = recordKeeper.getAllDerivedDefinitions("Pattern");
@@ -2001,7 +2001,7 @@ static void emitRewriters(const RecordKeeper &recordKeeper, raw_ostream &os) {
 
 static mlir::GenRegistration
     genRewriters("gen-rewriters", "Generate pattern rewriters",
-                 [](const RecordKeeper &records, raw_ostream &os) {
+                 [](RecordKeeper &records, raw_ostream &os) {
                    emitRewriters(records, os);
                    return false;
                  });

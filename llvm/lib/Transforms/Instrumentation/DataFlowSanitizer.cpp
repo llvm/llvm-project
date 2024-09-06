@@ -789,7 +789,7 @@ public:
   DFSanVisitor(DFSanFunction &DFSF) : DFSF(DFSF) {}
 
   const DataLayout &getDataLayout() const {
-    return DFSF.F->getParent()->getDataLayout();
+    return DFSF.F->getDataLayout();
   }
 
   // Combines shadow values and origins for all of I's operands.
@@ -1843,7 +1843,7 @@ void DFSanFunction::setOrigin(Instruction *I, Value *Origin) {
 
 Value *DFSanFunction::getShadowForTLSArgument(Argument *A) {
   unsigned ArgOffset = 0;
-  const DataLayout &DL = F->getParent()->getDataLayout();
+  const DataLayout &DL = F->getDataLayout();
   for (auto &FArg : F->args()) {
     if (!FArg.getType()->isSized()) {
       if (A == &FArg)
@@ -2392,7 +2392,7 @@ Value *StripPointerGEPsAndCasts(Value *V) {
 }
 
 void DFSanVisitor::visitLoadInst(LoadInst &LI) {
-  auto &DL = LI.getModule()->getDataLayout();
+  auto &DL = LI.getDataLayout();
   uint64_t Size = DL.getTypeStoreSize(LI.getType());
   if (Size == 0) {
     DFSF.setShadow(&LI, DFSF.DFS.getZeroShadow(&LI));
@@ -2470,7 +2470,7 @@ Value *DFSanFunction::updateOrigin(Value *V, IRBuilder<> &IRB) {
 
 Value *DFSanFunction::originToIntptr(IRBuilder<> &IRB, Value *Origin) {
   const unsigned OriginSize = DataFlowSanitizer::OriginWidthBytes;
-  const DataLayout &DL = F->getParent()->getDataLayout();
+  const DataLayout &DL = F->getDataLayout();
   unsigned IntptrSize = DL.getTypeStoreSize(DFS.IntptrTy);
   if (IntptrSize == OriginSize)
     return Origin;
@@ -2483,7 +2483,7 @@ void DFSanFunction::paintOrigin(IRBuilder<> &IRB, Value *Origin,
                                 Value *StoreOriginAddr,
                                 uint64_t StoreOriginSize, Align Alignment) {
   const unsigned OriginSize = DataFlowSanitizer::OriginWidthBytes;
-  const DataLayout &DL = F->getParent()->getDataLayout();
+  const DataLayout &DL = F->getDataLayout();
   const Align IntptrAlignment = DL.getABITypeAlign(DFS.IntptrTy);
   unsigned IntptrSize = DL.getTypeStoreSize(DFS.IntptrTy);
   assert(IntptrAlignment >= MinOriginAlignment);
@@ -2659,7 +2659,7 @@ static AtomicOrdering addReleaseOrdering(AtomicOrdering AO) {
 }
 
 void DFSanVisitor::visitStoreInst(StoreInst &SI) {
-  auto &DL = SI.getModule()->getDataLayout();
+  auto &DL = SI.getDataLayout();
   Value *Val = SI.getValueOperand();
   uint64_t Size = DL.getTypeStoreSize(Val->getType());
   if (Size == 0)
@@ -2715,7 +2715,7 @@ void DFSanVisitor::visitCASOrRMW(Align InstAlignment, Instruction &I) {
   assert(isa<AtomicRMWInst>(I) || isa<AtomicCmpXchgInst>(I));
 
   Value *Val = I.getOperand(1);
-  const auto &DL = I.getModule()->getDataLayout();
+  const auto &DL = I.getDataLayout();
   uint64_t Size = DL.getTypeStoreSize(Val->getType());
   if (Size == 0)
     return;
@@ -3473,6 +3473,9 @@ void DFSanVisitor::visitPHINode(PHINode &PN) {
 
 PreservedAnalyses DataFlowSanitizerPass::run(Module &M,
                                              ModuleAnalysisManager &AM) {
+  // Return early if nosanitize_dataflow module flag is present for the module.
+  if (checkIfAlreadyInstrumented(M, "nosanitize_dataflow"))
+    return PreservedAnalyses::all();
   auto GetTLI = [&](Function &F) -> TargetLibraryInfo & {
     auto &FAM =
         AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();

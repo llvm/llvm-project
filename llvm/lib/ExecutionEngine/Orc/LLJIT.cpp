@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_ENABLE_THREADS
 #include "llvm/ExecutionEngine/JITLink/EHFrameSupport.h"
 #include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/COFFPlatform.h"
@@ -801,8 +802,9 @@ Error LLJITBuilderState::prepareForConstruction() {
       break;
     }
     if (UseJITLink) {
+      if (!JTMB->getCodeModel())
+        JTMB->setCodeModel(CodeModel::Small);
       JTMB->setRelocationModel(Reloc::PIC_);
-      JTMB->setCodeModel(CodeModel::Small);
       CreateObjectLinkingLayer =
           [](ExecutionSession &ES,
              const Triple &) -> Expected<std::unique_ptr<ObjectLayer>> {

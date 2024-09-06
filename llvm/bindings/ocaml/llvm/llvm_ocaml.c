@@ -686,11 +686,6 @@ value llvm_label_type(value Context) {
   return to_val(LLVMLabelTypeInContext(Context_val(Context)));
 }
 
-/* llcontext -> lltype */
-value llvm_x86_mmx_type(value Context) {
-  return to_val(LLVMX86MMXTypeInContext(Context_val(Context)));
-}
-
 /* llmodule -> string -> lltype option */
 value llvm_type_by_name(value M, value Name) {
   return ptr_to_option(LLVMGetTypeByName(Module_val(M), String_val(Name)));
@@ -1221,12 +1216,6 @@ value llvm_const_nuw_mul(value LHS, value RHS) {
 /* llvalue -> llvalue -> llvalue */
 value llvm_const_xor(value LHS, value RHS) {
   LLVMValueRef Value = LLVMConstXor(Value_val(LHS), Value_val(RHS));
-  return to_val(Value);
-}
-
-/* llvalue -> llvalue -> llvalue */
-value llvm_const_shl(value LHS, value RHS) {
-  LLVMValueRef Value = LLVMConstShl(Value_val(LHS), Value_val(RHS));
   return to_val(Value);
 }
 

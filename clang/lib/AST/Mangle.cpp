@@ -513,10 +513,20 @@ public:
       }
     } else if (const auto *MD = dyn_cast_or_null<CXXMethodDecl>(ND)) {
       Manglings.emplace_back(getName(ND));
-      if (MD->isVirtual())
-        if (const auto *TIV = Ctx.getVTableContext()->getThunkInfo(MD))
-          for (const auto &T : *TIV)
-            Manglings.emplace_back(getMangledThunk(MD, T));
+      if (MD->isVirtual()) {
+        if (const auto *TIV = Ctx.getVTableContext()->getThunkInfo(MD)) {
+          for (const auto &T : *TIV) {
+            std::string ThunkName;
+            std::string ContextualizedName =
+                getMangledThunk(MD, T, /* ElideOverrideInfo */ false);
+            if (Ctx.useAbbreviatedThunkName(MD, ContextualizedName))
+              ThunkName = getMangledThunk(MD, T, /* ElideOverrideInfo */ true);
+            else
+              ThunkName = ContextualizedName;
+            Manglings.emplace_back(ThunkName);
+          }
+        }
+      }
     }
 
     return Manglings;
@@ -569,11 +579,12 @@ private:
     return BOS.str();
   }
 
-  std::string getMangledThunk(const CXXMethodDecl *MD, const ThunkInfo &T) {
+  std::string getMangledThunk(const CXXMethodDecl *MD, const ThunkInfo &T,
+                              bool ElideOverrideInfo) {
     std::string FrontendBuf;
     llvm::raw_string_ostream FOS(FrontendBuf);
 
-    MC->mangleThunk(MD, T, FOS);
+    MC->mangleThunk(MD, T, ElideOverrideInfo, FOS);
 
     std::string BackendBuf;
     llvm::raw_string_ostream BOS(BackendBuf);

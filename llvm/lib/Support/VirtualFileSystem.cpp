@@ -591,7 +591,7 @@ public:
 
   CombiningDirIterImpl(ArrayRef<directory_iterator> DirIters,
                        std::error_code &EC)
-      : IterList(DirIters.begin(), DirIters.end()) {
+      : IterList(DirIters) {
     EC = incrementImpl(true);
   }
 
@@ -2780,7 +2780,7 @@ bool JSONWriter::containedIn(StringRef Parent, StringRef Path) {
 StringRef JSONWriter::containedPart(StringRef Parent, StringRef Path) {
   assert(!Parent.empty());
   assert(containedIn(Parent, Path));
-  return Path.slice(Parent.size() + 1, StringRef::npos);
+  return Path.substr(Parent.size() + 1);
 }
 
 void JSONWriter::startDirectory(StringRef Path) {
@@ -2846,7 +2846,7 @@ void JSONWriter::write(ArrayRef<YAMLVFSEntry> Entries,
     if (UseOverlayRelative) {
       assert(RPath.starts_with(OverlayDir) &&
              "Overlay dir must be contained in RPath");
-      RPath = RPath.slice(OverlayDir.size(), RPath.size());
+      RPath = RPath.substr(OverlayDir.size());
     }
 
     bool IsCurrentDirEmpty = true;
@@ -2879,7 +2879,7 @@ void JSONWriter::write(ArrayRef<YAMLVFSEntry> Entries,
       if (UseOverlayRelative) {
         assert(RPath.starts_with(OverlayDir) &&
                "Overlay dir must be contained in RPath");
-        RPath = RPath.slice(OverlayDir.size(), RPath.size());
+        RPath = RPath.substr(OverlayDir.size());
       }
       if (!Entry.IsDirectory) {
         writeEntry(path::filename(Entry.VPath), RPath);
@@ -2913,30 +2913,31 @@ vfs::recursive_directory_iterator::recursive_directory_iterator(
   directory_iterator I = FS->dir_begin(Path, EC);
   if (I != directory_iterator()) {
     State = std::make_shared<detail::RecDirIterState>();
-    State->Stack.push(I);
+    State->Stack.push_back(I);
   }
 }
 
 vfs::recursive_directory_iterator &
 recursive_directory_iterator::increment(std::error_code &EC) {
   assert(FS && State && !State->Stack.empty() && "incrementing past end");
-  assert(!State->Stack.top()->path().empty() && "non-canonical end iterator");
+  assert(!State->Stack.back()->path().empty() && "non-canonical end iterator");
   vfs::directory_iterator End;
 
   if (State->HasNoPushRequest)
     State->HasNoPushRequest = false;
   else {
-    if (State->Stack.top()->type() == sys::fs::file_type::directory_file) {
-      vfs::directory_iterator I = FS->dir_begin(State->Stack.top()->path(), EC);
+    if (State->Stack.back()->type() == sys::fs::file_type::directory_file) {
+      vfs::directory_iterator I =
+          FS->dir_begin(State->Stack.back()->path(), EC);
       if (I != End) {
-        State->Stack.push(I);
+        State->Stack.push_back(I);
         return *this;
       }
     }
   }
 
-  while (!State->Stack.empty() && State->Stack.top().increment(EC) == End)
-    State->Stack.pop();
+  while (!State->Stack.empty() && State->Stack.back().increment(EC) == End)
+    State->Stack.pop_back();
 
   if (State->Stack.empty())
     State.reset(); // end iterator

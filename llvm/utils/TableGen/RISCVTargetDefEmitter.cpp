@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/Support/RISCVISAUtils.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
@@ -35,9 +36,9 @@ static void printExtensionTable(raw_ostream &OS,
     if (R->getValueAsBit("Experimental") != Experimental)
       continue;
 
-    OS << "    {\"" << getExtensionName(R) << "\", {"
-       << R->getValueAsInt("MajorVersion") << ", "
-       << R->getValueAsInt("MinorVersion") << "}},\n";
+    OS.indent(4) << "{\"" << getExtensionName(R) << "\", {"
+                 << R->getValueAsInt("MajorVersion") << ", "
+                 << R->getValueAsInt("MinorVersion") << "}},\n";
   }
 
   OS << "};\n\n";
@@ -76,8 +77,8 @@ static void emitRISCVExtensions(RecordKeeper &Records, raw_ostream &OS) {
         if (!ImpliedExt->isSubClassOf("RISCVExtension"))
           continue;
 
-        OS << "    { {\"" << Name << "\"}, \"" << getExtensionName(ImpliedExt)
-           << "\"},\n";
+        OS.indent(4) << "{ {\"" << Name << "\"}, \""
+                     << getExtensionName(ImpliedExt) << "\"},\n";
       }
     }
 
@@ -164,7 +165,8 @@ static void emitRISCVProfiles(RecordKeeper &Records, raw_ostream &OS) {
 
 static void emitRISCVProcs(RecordKeeper &RK, raw_ostream &OS) {
   OS << "#ifndef PROC\n"
-     << "#define PROC(ENUM, NAME, DEFAULT_MARCH, FAST_UNALIGNED_ACCESS)\n"
+     << "#define PROC(ENUM, NAME, DEFAULT_MARCH, FAST_SCALAR_UNALIGN"
+     << ", FAST_VECTOR_UNALIGN)\n"
      << "#endif\n\n";
 
   // Iterate on all definition records.
@@ -180,9 +182,6 @@ static void emitRISCVProcs(RecordKeeper &RK, raw_ostream &OS) {
       return Feature->getValueAsString("Name") == "unaligned-vector-mem";
     });
 
-    bool FastUnalignedAccess =
-        FastScalarUnalignedAccess && FastVectorUnalignedAccess;
-
     OS << "PROC(" << Rec->getName() << ", {\"" << Rec->getValueAsString("Name")
        << "\"}, {\"";
 
@@ -193,7 +192,8 @@ static void emitRISCVProcs(RecordKeeper &RK, raw_ostream &OS) {
       printMArch(OS, Features);
     else
       OS << MArch;
-    OS << "\"}, " << FastUnalignedAccess << ")\n";
+    OS << "\"}, " << FastScalarUnalignedAccess << ", "
+       << FastVectorUnalignedAccess << ")\n";
   }
   OS << "\n#undef PROC\n";
   OS << "\n";
@@ -210,10 +210,46 @@ static void emitRISCVProcs(RecordKeeper &RK, raw_ostream &OS) {
   OS << "\n#undef TUNE_PROC\n";
 }
 
+static void emitRISCVExtensionBitmask(RecordKeeper &RK, raw_ostream &OS) {
+
+  std::vector<Record *> Extensions =
+      RK.getAllDerivedDefinitionsIfDefined("RISCVExtensionBitmask");
+  llvm::sort(Extensions, [](const Record *Rec1, const Record *Rec2) {
+    return getExtensionName(Rec1) < getExtensionName(Rec2);
+  });
+
+#ifndef NDEBUG
+  llvm::DenseSet<std::pair<uint64_t, uint64_t>> Seen;
+#endif
+
+  OS << "#ifdef GET_RISCVExtensionBitmaskTable_IMPL\n";
+  OS << "static const RISCVExtensionBitmask ExtensionBitmask[]={\n";
+  for (const Record *Rec : Extensions) {
+    unsigned GroupIDVal = Rec->getValueAsInt("GroupID");
+    unsigned BitPosVal = Rec->getValueAsInt("BitPos");
+
+    StringRef ExtName = Rec->getValueAsString("Name");
+    ExtName.consume_front("experimental-");
+
+#ifndef NDEBUG
+    assert(Seen.insert(std::make_pair(GroupIDVal, BitPosVal)).second &&
+           "duplicated bitmask");
+#endif
+
+    OS.indent(4) << "{"
+                 << "\"" << ExtName << "\""
+                 << ", " << GroupIDVal << ", " << BitPosVal << "ULL"
+                 << "},\n";
+  }
+  OS << "};\n";
+  OS << "#endif\n";
+}
+
 static void EmitRISCVTargetDef(RecordKeeper &RK, raw_ostream &OS) {
   emitRISCVExtensions(RK, OS);
   emitRISCVProfiles(RK, OS);
   emitRISCVProcs(RK, OS);
+  emitRISCVExtensionBitmask(RK, OS);
 }
 
 static TableGen::Emitter::Opt X("gen-riscv-target-def", EmitRISCVTargetDef,

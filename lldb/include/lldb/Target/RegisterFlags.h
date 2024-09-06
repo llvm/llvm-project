@@ -32,10 +32,15 @@ public:
         : m_value(value), m_name(std::move(name)) {}
 
     void ToXML(Stream &strm) const;
+
+    void DumpToLog(Log *log) const;
   };
 
   typedef std::vector<Enumerator> Enumerators;
 
+  // GDB also includes a "size" that is the size of the underlying register.
+  // We will not store that here but instead use the size of the register
+  // this gets attached to when emitting XML.
   FieldEnum(std::string id, const Enumerators &enumerators);
 
   const Enumerators &GetEnumerators() const { return m_enumerators; }
@@ -43,6 +48,8 @@ public:
   const std::string &GetID() const { return m_id; }
 
   void ToXML(Stream &strm, unsigned size) const;
+
+  void DumpToLog(Log *log) const;
 
 private:
   std::string m_id;
@@ -89,7 +96,7 @@ public:
     unsigned GetEnd() const { return m_end; }
     const FieldEnum *GetEnum() const { return m_enum_type; }
     bool Overlaps(const Field &other) const;
-    void log(Log *log) const;
+    void DumpToLog(Log *log) const;
 
     /// Return the number of bits between this field and the other, that are not
     /// covered by either field.
@@ -158,7 +165,7 @@ public:
   const std::vector<Field> &GetFields() const { return m_fields; }
   const std::string &GetID() const { return m_id; }
   unsigned GetSize() const { return m_size; }
-  void log(Log *log) const;
+  void DumpToLog(Log *log) const;
 
   /// Produce a text table showing the layout of all the fields. Unnamed/padding
   /// fields will be included, with only their positions shown.

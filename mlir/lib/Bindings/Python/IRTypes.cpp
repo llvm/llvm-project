@@ -10,6 +10,8 @@
 
 #include "PybindUtils.h"
 
+#include "mlir/Bindings/Python/IRTypes.h"
+
 #include "mlir-c/BuiltinAttributes.h"
 #include "mlir-c/BuiltinTypes.h"
 #include "mlir-c/Support.h"
@@ -143,7 +145,7 @@ public:
   }
 };
 
-/// Floating Point Type subclass - Float8M5E2Type.
+/// Floating Point Type subclass - Float8E5M2Type.
 class PyFloat8E5M2Type : public PyConcreteType<PyFloat8E5M2Type, PyFloatType> {
 public:
   static constexpr IsAFunctionTy isaFunction = mlirTypeIsAFloat8E5M2;
@@ -160,6 +162,26 @@ public:
           return PyFloat8E5M2Type(context->getRef(), t);
         },
         py::arg("context") = py::none(), "Create a float8_e5m2 type.");
+  }
+};
+
+/// Floating Point Type subclass - Float8E4M3Type.
+class PyFloat8E4M3Type : public PyConcreteType<PyFloat8E4M3Type, PyFloatType> {
+public:
+  static constexpr IsAFunctionTy isaFunction = mlirTypeIsAFloat8E4M3;
+  static constexpr GetTypeIDFunctionTy getTypeIdFunction =
+      mlirFloat8E4M3TypeGetTypeID;
+  static constexpr const char *pyClassName = "Float8E4M3Type";
+  using PyConcreteType::PyConcreteType;
+
+  static void bindDerived(ClassTy &c) {
+    c.def_static(
+        "get",
+        [](DefaultingPyMlirContext context) {
+          MlirType t = mlirFloat8E4M3TypeGet(context->get());
+          return PyFloat8E4M3Type(context->getRef(), t);
+        },
+        py::arg("context") = py::none(), "Create a float8_e4m3 type.");
   }
 };
 
@@ -223,6 +245,26 @@ public:
           return PyFloat8E5M2FNUZType(context->getRef(), t);
         },
         py::arg("context") = py::none(), "Create a float8_e5m2fnuz type.");
+  }
+};
+
+/// Floating Point Type subclass - Float8E3M4Type.
+class PyFloat8E3M4Type : public PyConcreteType<PyFloat8E3M4Type, PyFloatType> {
+public:
+  static constexpr IsAFunctionTy isaFunction = mlirTypeIsAFloat8E3M4;
+  static constexpr GetTypeIDFunctionTy getTypeIdFunction =
+      mlirFloat8E3M4TypeGetTypeID;
+  static constexpr const char *pyClassName = "Float8E3M4Type";
+  using PyConcreteType::PyConcreteType;
+
+  static void bindDerived(ClassTy &c) {
+    c.def_static(
+        "get",
+        [](DefaultingPyMlirContext context) {
+          MlirType t = mlirFloat8E3M4TypeGet(context->get());
+          return PyFloat8E3M4Type(context->getRef(), t);
+        },
+        py::arg("context") = py::none(), "Create a float8_e3m4 type.");
   }
 };
 
@@ -378,98 +420,98 @@ public:
   }
 };
 
-class PyShapedType : public PyConcreteType<PyShapedType> {
-public:
-  static constexpr IsAFunctionTy isaFunction = mlirTypeIsAShaped;
-  static constexpr const char *pyClassName = "ShapedType";
-  using PyConcreteType::PyConcreteType;
+} // namespace
 
-  static void bindDerived(ClassTy &c) {
-    c.def_property_readonly(
-        "element_type",
-        [](PyShapedType &self) { return mlirShapedTypeGetElementType(self); },
-        "Returns the element type of the shaped type.");
-    c.def_property_readonly(
-        "has_rank",
-        [](PyShapedType &self) -> bool { return mlirShapedTypeHasRank(self); },
-        "Returns whether the given shaped type is ranked.");
-    c.def_property_readonly(
-        "rank",
-        [](PyShapedType &self) {
-          self.requireHasRank();
-          return mlirShapedTypeGetRank(self);
-        },
-        "Returns the rank of the given ranked shaped type.");
-    c.def_property_readonly(
-        "has_static_shape",
-        [](PyShapedType &self) -> bool {
-          return mlirShapedTypeHasStaticShape(self);
-        },
-        "Returns whether the given shaped type has a static shape.");
-    c.def(
-        "is_dynamic_dim",
-        [](PyShapedType &self, intptr_t dim) -> bool {
-          self.requireHasRank();
-          return mlirShapedTypeIsDynamicDim(self, dim);
-        },
-        py::arg("dim"),
-        "Returns whether the dim-th dimension of the given shaped type is "
-        "dynamic.");
-    c.def(
-        "get_dim_size",
-        [](PyShapedType &self, intptr_t dim) {
-          self.requireHasRank();
-          return mlirShapedTypeGetDimSize(self, dim);
-        },
-        py::arg("dim"),
-        "Returns the dim-th dimension of the given ranked shaped type.");
-    c.def_static(
-        "is_dynamic_size",
-        [](int64_t size) -> bool { return mlirShapedTypeIsDynamicSize(size); },
-        py::arg("dim_size"),
-        "Returns whether the given dimension size indicates a dynamic "
-        "dimension.");
-    c.def(
-        "is_dynamic_stride_or_offset",
-        [](PyShapedType &self, int64_t val) -> bool {
-          self.requireHasRank();
-          return mlirShapedTypeIsDynamicStrideOrOffset(val);
-        },
-        py::arg("dim_size"),
-        "Returns whether the given value is used as a placeholder for dynamic "
-        "strides and offsets in shaped types.");
-    c.def_property_readonly(
-        "shape",
-        [](PyShapedType &self) {
-          self.requireHasRank();
+// Shaped Type Interface - ShapedType
+void mlir::PyShapedType::bindDerived(ClassTy &c) {
+  c.def_property_readonly(
+      "element_type",
+      [](PyShapedType &self) { return mlirShapedTypeGetElementType(self); },
+      "Returns the element type of the shaped type.");
+  c.def_property_readonly(
+      "has_rank",
+      [](PyShapedType &self) -> bool { return mlirShapedTypeHasRank(self); },
+      "Returns whether the given shaped type is ranked.");
+  c.def_property_readonly(
+      "rank",
+      [](PyShapedType &self) {
+        self.requireHasRank();
+        return mlirShapedTypeGetRank(self);
+      },
+      "Returns the rank of the given ranked shaped type.");
+  c.def_property_readonly(
+      "has_static_shape",
+      [](PyShapedType &self) -> bool {
+        return mlirShapedTypeHasStaticShape(self);
+      },
+      "Returns whether the given shaped type has a static shape.");
+  c.def(
+      "is_dynamic_dim",
+      [](PyShapedType &self, intptr_t dim) -> bool {
+        self.requireHasRank();
+        return mlirShapedTypeIsDynamicDim(self, dim);
+      },
+      py::arg("dim"),
+      "Returns whether the dim-th dimension of the given shaped type is "
+      "dynamic.");
+  c.def(
+      "get_dim_size",
+      [](PyShapedType &self, intptr_t dim) {
+        self.requireHasRank();
+        return mlirShapedTypeGetDimSize(self, dim);
+      },
+      py::arg("dim"),
+      "Returns the dim-th dimension of the given ranked shaped type.");
+  c.def_static(
+      "is_dynamic_size",
+      [](int64_t size) -> bool { return mlirShapedTypeIsDynamicSize(size); },
+      py::arg("dim_size"),
+      "Returns whether the given dimension size indicates a dynamic "
+      "dimension.");
+  c.def(
+      "is_dynamic_stride_or_offset",
+      [](PyShapedType &self, int64_t val) -> bool {
+        self.requireHasRank();
+        return mlirShapedTypeIsDynamicStrideOrOffset(val);
+      },
+      py::arg("dim_size"),
+      "Returns whether the given value is used as a placeholder for dynamic "
+      "strides and offsets in shaped types.");
+  c.def_property_readonly(
+      "shape",
+      [](PyShapedType &self) {
+        self.requireHasRank();
 
-          std::vector<int64_t> shape;
-          int64_t rank = mlirShapedTypeGetRank(self);
-          shape.reserve(rank);
-          for (int64_t i = 0; i < rank; ++i)
-            shape.push_back(mlirShapedTypeGetDimSize(self, i));
-          return shape;
-        },
-        "Returns the shape of the ranked shaped type as a list of integers.");
-    c.def_static(
-        "get_dynamic_size", []() { return mlirShapedTypeGetDynamicSize(); },
-        "Returns the value used to indicate dynamic dimensions in shaped "
-        "types.");
-    c.def_static(
-        "get_dynamic_stride_or_offset",
-        []() { return mlirShapedTypeGetDynamicStrideOrOffset(); },
-        "Returns the value used to indicate dynamic strides or offsets in "
-        "shaped types.");
+        std::vector<int64_t> shape;
+        int64_t rank = mlirShapedTypeGetRank(self);
+        shape.reserve(rank);
+        for (int64_t i = 0; i < rank; ++i)
+          shape.push_back(mlirShapedTypeGetDimSize(self, i));
+        return shape;
+      },
+      "Returns the shape of the ranked shaped type as a list of integers.");
+  c.def_static(
+      "get_dynamic_size", []() { return mlirShapedTypeGetDynamicSize(); },
+      "Returns the value used to indicate dynamic dimensions in shaped "
+      "types.");
+  c.def_static(
+      "get_dynamic_stride_or_offset",
+      []() { return mlirShapedTypeGetDynamicStrideOrOffset(); },
+      "Returns the value used to indicate dynamic strides or offsets in "
+      "shaped types.");
+}
+
+void mlir::PyShapedType::requireHasRank() {
+  if (!mlirShapedTypeHasRank(*this)) {
+    throw py::value_error(
+        "calling this method requires that the type has a rank.");
   }
+}
 
-private:
-  void requireHasRank() {
-    if (!mlirShapedTypeHasRank(*this)) {
-      throw py::value_error(
-          "calling this method requires that the type has a rank.");
-    }
-  }
-};
+const mlir::PyShapedType::IsAFunctionTy mlir::PyShapedType::isaFunction =
+    mlirTypeIsAShaped;
+
+namespace {
 
 /// Vector Type subclass - VectorType.
 class PyVectorType : public PyConcreteType<PyVectorType, PyShapedType> {
@@ -840,9 +882,11 @@ void mlir::python::populateIRTypes(py::module &m) {
   PyIndexType::bind(m);
   PyFloat8E4M3FNType::bind(m);
   PyFloat8E5M2Type::bind(m);
+  PyFloat8E4M3Type::bind(m);
   PyFloat8E4M3FNUZType::bind(m);
   PyFloat8E4M3B11FNUZType::bind(m);
   PyFloat8E5M2FNUZType::bind(m);
+  PyFloat8E3M4Type::bind(m);
   PyBF16Type::bind(m);
   PyF16Type::bind(m);
   PyTF32Type::bind(m);

@@ -17,7 +17,17 @@ foreach(proj ${LLVM_ENABLE_RUNTIMES})
 endforeach()
 
 function(get_compiler_rt_path path)
-  foreach(entry ${runtimes})
+  set(all_runtimes ${runtimes})
+  foreach(name ${LLVM_RUNTIME_TARGETS})
+    foreach(proj ${RUNTIMES_${name}_LLVM_ENABLE_RUNTIMES})
+      set(proj_dir "${CMAKE_CURRENT_SOURCE_DIR}/../../${proj}")
+      if(IS_DIRECTORY ${proj_dir} AND EXISTS ${proj_dir}/CMakeLists.txt)
+        list(APPEND all_runtimes ${proj_dir})
+      endif()
+    endforeach()
+  endforeach()
+  list(REMOVE_DUPLICATES all_runtimes)
+  foreach(entry ${all_runtimes})
     get_filename_component(projName ${entry} NAME)
     if("${projName}" MATCHES "compiler-rt")
       set(${path} ${entry} PARENT_SCOPE)
@@ -84,6 +94,7 @@ function(builtin_default_target compiler_rt_path)
                                       -DLLVM_RUNTIME_OUTPUT_INTDIR=${LLVM_TOOLS_BINARY_DIR}
                                       -DLLVM_DEFAULT_TARGET_TRIPLE=${LLVM_TARGET_TRIPLE}
                                       -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=${LLVM_ENABLE_PER_TARGET_RUNTIME_DIR}
+                                      -DLLVM_CMAKE_DIR=${CMAKE_BINARY_DIR}
                                       -DCMAKE_C_COMPILER_WORKS=ON
                                       -DCMAKE_ASM_COMPILER_WORKS=ON
                                       ${COMMON_CMAKE_ARGS}
@@ -123,6 +134,7 @@ function(builtin_register_target compiler_rt_path name)
                            CMAKE_ARGS -DLLVM_LIBRARY_OUTPUT_INTDIR=${LLVM_LIBRARY_DIR}
                                       -DLLVM_RUNTIME_OUTPUT_INTDIR=${LLVM_TOOLS_BINARY_DIR}
                                       -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON
+                                      -DLLVM_CMAKE_DIR=${CMAKE_BINARY_DIR}
                                       -DCMAKE_C_COMPILER_WORKS=ON
                                       -DCMAKE_ASM_COMPILER_WORKS=ON
                                       -DCOMPILER_RT_DEFAULT_TARGET_ONLY=ON
@@ -138,37 +150,44 @@ endfunction()
 # before the just-built compiler can pass the configuration tests.
 get_compiler_rt_path(compiler_rt_path)
 if(compiler_rt_path)
-  if(NOT LLVM_BUILTIN_TARGETS)
-    builtin_default_target(${compiler_rt_path}
-      DEPENDS clang-resource-headers)
-  else()
-    if("default" IN_LIST LLVM_BUILTIN_TARGETS)
-      builtin_default_target(${compiler_rt_path}
-        DEPENDS clang-resource-headers)
-      list(REMOVE_ITEM LLVM_BUILTIN_TARGETS "default")
-    else()
-      add_custom_target(builtins)
-      add_custom_target(install-builtins)
-      add_custom_target(install-builtins-stripped)
-      set_target_properties(
-        builtins install-builtins install-builtins-stripped
-        PROPERTIES FOLDER "Compiler-RT"
-      )
+  # If the user did not specify the targets infer them from the runtimes.
+  set(builtin_targets ${LLVM_BUILTIN_TARGETS})
+  if(NOT builtin_targets)
+    if("compiler-rt" IN_LIST LLVM_ENABLE_RUNTIMES)
+      list(APPEND builtin_targets "default")
     endif()
-
-    foreach(target ${LLVM_BUILTIN_TARGETS})
-      check_apple_target(${target} builtin)
-
-      builtin_register_target(${compiler_rt_path} ${target}
-        DEPENDS clang-resource-headers
-        CMAKE_ARGS -DLLVM_DEFAULT_TARGET_TRIPLE=${target}
-        EXTRA_ARGS TARGET_TRIPLE ${target})
-
-      add_dependencies(builtins builtins-${target})
-      add_dependencies(install-builtins install-builtins-${target})
-      add_dependencies(install-builtins-stripped install-builtins-${target}-stripped)
+    foreach(name ${LLVM_RUNTIME_TARGETS})
+      if("compiler-rt" IN_LIST RUNTIMES_${name}_LLVM_ENABLE_RUNTIMES)
+        list(APPEND builtin_targets ${name})
+      endif()
     endforeach()
   endif()
+  if("default" IN_LIST builtin_targets)
+    builtin_default_target(${compiler_rt_path}
+      DEPENDS clang-resource-headers)
+    list(REMOVE_ITEM builtin_targets "default")
+  else()
+    add_custom_target(builtins)
+    add_custom_target(install-builtins)
+    add_custom_target(install-builtins-stripped)
+    set_target_properties(
+      builtins install-builtins install-builtins-stripped
+      PROPERTIES FOLDER "Compiler-RT"
+    )
+  endif()
+
+  foreach(target ${builtin_targets})
+    check_apple_target(${target} builtin)
+
+    builtin_register_target(${compiler_rt_path} ${target}
+      DEPENDS clang-resource-headers
+      CMAKE_ARGS -DLLVM_DEFAULT_TARGET_TRIPLE=${target}
+      EXTRA_ARGS TARGET_TRIPLE ${target})
+
+    add_dependencies(builtins builtins-${target})
+    add_dependencies(install-builtins install-builtins-${target})
+    add_dependencies(install-builtins-stripped install-builtins-${target}-stripped)
+  endforeach()
   set(builtins_dep builtins)
   # We don't need to depend on the builtins if we're building instrumented
   # because the next stage will use the same compiler used to build this stage.
@@ -204,10 +223,6 @@ foreach(entry ${runtimes})
   if(canon_name STREQUAL "LIBC")
     list(APPEND prefixes "LLVM_LIBC")
     list(APPEND prefixes "LIBC_")
-    # The `libc` project may require '-DCUDAToolkit_ROOT' in GPU mode.
-    if(LLVM_LIBC_GPU_BUILD)
-      list(APPEND prefixes "CUDA")
-    endif()
   endif()
 
   _get_runtime_name(${name} name)
@@ -261,6 +276,7 @@ function(runtime_default_target)
                                       ${ARG_CMAKE_ARGS}
                            PASSTHROUGH_PREFIXES LLVM_ENABLE_RUNTIMES
                                                 LLVM_USE_LINKER
+                                                CUDA # For runtimes that may look for the CUDA SDK (libc, offload)
                                                 ${ARG_PREFIXES}
                            EXTRA_TARGETS ${extra_targets}
                                          ${test_targets}
@@ -445,6 +461,47 @@ if(build_runtimes)
   # The runtimes target is a configuration of all the runtime libraries
   # together in a single CMake invocation.
   set(extra_deps "")
+  set(extra_cmake_args "")
+
+  if(LLVM_INCLUDE_TESTS)
+    foreach(dep FileCheck
+                clang
+                count
+                lld
+                lli
+                llvm-cov
+                llvm-lto
+                llvm-jitlink
+                llvm-nm
+                llvm-objdump
+                llvm-profdata
+                llvm-size
+                llvm-symbolizer
+                llvm-xray
+                not
+                obj2yaml
+                opt
+                sancov
+                sanstats
+                llvm_gtest_main
+                llvm_gtest
+                split-file)
+      if(TARGET ${dep})
+        list(APPEND extra_deps ${dep})
+      endif()
+    endforeach()
+  endif()
+
+  # Forward user-provived system configuration to runtimes for requirement introspection.
+  # CMAKE_PREFIX_PATH is the search path for CMake packages.
+  if(CMAKE_PREFIX_PATH)
+    list(APPEND extra_cmake_args "-DCMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}")
+  endif()
+  # CMAKE_PROGRAM_PATH is the search path for executables such as python.
+  if(CMAKE_PROGRAM_PATH)
+    list(APPEND extra_cmake_args "-DCMAKE_PROGRAM_PATH=${CMAKE_PROGRAM_PATH}")
+  endif()
+
   if("openmp" IN_LIST LLVM_ENABLE_RUNTIMES)
     if (${LLVM_TOOL_FLANG_BUILD})
       message(STATUS "Configuring build of omp_lib.mod and omp_lib_kinds.mod via flang-new")
@@ -478,49 +535,46 @@ if(build_runtimes)
     if(NOT hdrgen_exe)
       message(FATAL_ERROR "libc-hdrgen executable missing")
     endif()
-    list(APPEND libc_cmake_args "-DLIBC_HDRGEN_EXE=${hdrgen_exe}")
+    list(APPEND extra_cmake_args "-DLIBC_HDRGEN_EXE=${hdrgen_exe}")
     list(APPEND extra_deps ${hdrgen_deps})
   endif()
   if(LLVM_LIBC_GPU_BUILD)
-    list(APPEND libc_cmake_args "-DLLVM_LIBC_GPU_BUILD=ON")
+    list(APPEND extra_cmake_args "-DLLVM_LIBC_GPU_BUILD=ON")
     if("libc" IN_LIST RUNTIMES_amdgcn-amd-amdhsa_LLVM_ENABLE_RUNTIMES)
       if(TARGET amdhsa-loader)
-        list(APPEND libc_cmake_args
+        list(APPEND extra_cmake_args
              "-DRUNTIMES_amdgcn-amd-amdhsa_LIBC_GPU_LOADER_EXECUTABLE=$<TARGET_FILE:amdhsa-loader>")
-        list(APPEND extra_deps amdhsa-loader amdgpu-arch)
+        list(APPEND extra_deps amdhsa-loader)
       endif()
-      list(APPEND libc_cmake_args "-DRUNTIMES_amdgcn-amd-amdhsa_LLVM_LIBC_FULL_BUILD=ON")
+      list(APPEND extra_cmake_args "-DRUNTIMES_amdgcn-amd-amdhsa_LLVM_LIBC_FULL_BUILD=ON")
     endif()
     if("libc" IN_LIST RUNTIMES_nvptx64-nvidia-cuda_LLVM_ENABLE_RUNTIMES)
       if(TARGET nvptx-loader)
-        list(APPEND libc_cmake_args
+        list(APPEND extra_cmake_args
              "-DRUNTIMES_nvptx64-nvidia-cuda_LIBC_GPU_LOADER_EXECUTABLE=$<TARGET_FILE:nvptx-loader>")
-        list(APPEND extra_deps nvptx-loader nvptx-arch)
+        list(APPEND extra_deps nvptx-loader)
       endif()
-      list(APPEND libc_cmake_args "-DRUNTIMES_nvptx64-nvidia-cuda_LLVM_LIBC_FULL_BUILD=ON")
-    endif()
-    # The `libc` project may require '-DCUDAToolkit_ROOT' in GPU mode.
-    if(CUDAToolkit_ROOT)
-      list(APPEND libc_cmake_args "-DCUDAToolkit_ROOT=${CUDAToolkit_ROOT}")
+      list(APPEND extra_cmake_args "-DRUNTIMES_nvptx64-nvidia-cuda_LLVM_LIBC_FULL_BUILD=ON")
     endif()
     if(TARGET clang-offload-packager)
       list(APPEND extra_deps clang-offload-packager)
     endif()
   endif()
   if(LLVM_LIBC_FULL_BUILD)
-    list(APPEND libc_cmake_args "-DLLVM_LIBC_FULL_BUILD=ON")
+    list(APPEND extra_cmake_args "-DLLVM_LIBC_FULL_BUILD=ON")
   endif()
+
   if(NOT LLVM_RUNTIME_TARGETS)
     runtime_default_target(
       DEPENDS ${builtins_dep} ${extra_deps}
-      CMAKE_ARGS ${libc_cmake_args}
+      CMAKE_ARGS ${extra_cmake_args}
       PREFIXES ${prefixes})
     set(test_targets check-runtimes)
   else()
     if("default" IN_LIST LLVM_RUNTIME_TARGETS)
       runtime_default_target(
         DEPENDS ${builtins_dep} ${extra_deps}
-        CMAKE_ARGS ${libc_cmake_args}
+        CMAKE_ARGS ${extra_cmake_args}
         PREFIXES ${prefixes})
       list(REMOVE_ITEM LLVM_RUNTIME_TARGETS "default")
     else()
@@ -567,7 +621,7 @@ if(build_runtimes)
 
       runtime_register_target(${name}
         DEPENDS ${builtins_dep_name} ${extra_deps}
-        CMAKE_ARGS -DLLVM_DEFAULT_TARGET_TRIPLE=${name} ${libc_cmake_args}
+        CMAKE_ARGS -DLLVM_DEFAULT_TARGET_TRIPLE=${name} ${extra_cmake_args}
         EXTRA_ARGS TARGET_TRIPLE ${name})
     endforeach()
 
@@ -606,29 +660,10 @@ if(build_runtimes)
   if(LLVM_INCLUDE_TESTS)
     set_property(GLOBAL APPEND PROPERTY LLVM_ALL_ADDITIONAL_TEST_DEPENDS runtimes-test-depends)
 
-    set(RUNTIMES_TEST_DEPENDS
-        FileCheck
-        count
-        llvm-cov
-        llvm-lto
-        llvm-nm
-        llvm-objdump
-        llvm-profdata
-        llvm-size
-        llvm-xray
-        not
-        obj2yaml
-        opt
-        sancov
-        sanstats
-        llvm_gtest_main
-        llvm_gtest
-        split-file
-      )
     foreach(target ${test_targets} ${SUB_CHECK_TARGETS})
-      add_dependencies(${target} ${RUNTIMES_TEST_DEPENDS})
+      add_dependencies(${target} ${extra_deps})
     endforeach()
 
-    set_property(GLOBAL APPEND PROPERTY LLVM_ALL_ADDITIONAL_TEST_TARGETS runtimes ${RUNTIMES_TEST_DEPENDS})
+    set_property(GLOBAL APPEND PROPERTY LLVM_ALL_ADDITIONAL_TEST_TARGETS runtimes ${extra_deps})
   endif()
 endif()

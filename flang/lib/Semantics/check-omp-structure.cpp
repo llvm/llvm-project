@@ -84,9 +84,9 @@ private:
   parser::CharBlock source_;
 };
 
-class OmpCycleAndExitChecker {
+class AssociatedLoopChecker {
 public:
-  OmpCycleAndExitChecker(SemanticsContext &context, std::int64_t level)
+  AssociatedLoopChecker(SemanticsContext &context, std::int64_t level)
       : context_{context}, level_{level} {}
 
   template <typename T> bool Pre(const T &) { return true; }
@@ -94,10 +94,23 @@ public:
 
   bool Pre(const parser::DoConstruct &dc) {
     level_--;
-    const auto &constructName{std::get<0>(std::get<0>(dc.t).statement.t)};
+    const auto &doStmt{
+        std::get<parser::Statement<parser::NonLabelDoStmt>>(dc.t)};
+    const auto &constructName{
+        std::get<std::optional<parser::Name>>(doStmt.statement.t)};
     if (constructName) {
       constructNamesAndLevels_.emplace(
           constructName.value().ToString(), level_);
+    }
+    if (level_ >= 0) {
+      if (dc.IsDoWhile()) {
+        context_.Say(doStmt.source,
+            "The associated loop of a loop-associated directive cannot be a DO WHILE."_err_en_US);
+      }
+      if (!dc.GetLoopControl()) {
+        context_.Say(doStmt.source,
+            "The associated loop of a loop-associated directive cannot be a DO without control."_err_en_US);
+      }
     }
     return true;
   }
@@ -450,9 +463,8 @@ void OmpStructureChecker::Enter(const parser::OpenMPLoopConstruct &x) {
     const auto &doBlock{std::get<parser::Block>(doConstruct->t)};
     CheckNoBranching(doBlock, beginDir.v, beginDir.source);
   }
-  CheckDoWhile(x);
   CheckLoopItrVariableIsInt(x);
-  CheckCycleConstraints(x);
+  CheckAssociatedLoopConstraints(x);
   HasInvalidDistributeNesting(x);
   if (CurrentDirectiveIsNested() &&
       llvm::omp::topTeamsSet.test(GetContextParent().directive)) {
@@ -475,21 +487,6 @@ void OmpStructureChecker::SetLoopInfo(const parser::OpenMPLoopConstruct &x) {
     if (loop && loop->IsDoNormal()) {
       const parser::Name &itrVal{GetLoopIndex(loop)};
       SetLoopIv(itrVal.symbol);
-    }
-  }
-}
-void OmpStructureChecker::CheckDoWhile(const parser::OpenMPLoopConstruct &x) {
-  const auto &beginLoopDir{std::get<parser::OmpBeginLoopDirective>(x.t)};
-  const auto &beginDir{std::get<parser::OmpLoopDirective>(beginLoopDir.t)};
-  if (beginDir.v == llvm::omp::Directive::OMPD_do) {
-    if (const auto &doConstruct{
-            std::get<std::optional<parser::DoConstruct>>(x.t)}) {
-      if (doConstruct.value().IsDoWhile()) {
-        const auto &doStmt{std::get<parser::Statement<parser::NonLabelDoStmt>>(
-            doConstruct.value().t)};
-        context_.Say(doStmt.source,
-            "The DO loop cannot be a DO WHILE with DO directive."_err_en_US);
-      }
     }
   }
 }
@@ -647,8 +644,8 @@ std::int64_t OmpStructureChecker::GetOrdCollapseLevel(
   const auto &beginLoopDir{std::get<parser::OmpBeginLoopDirective>(x.t)};
   const auto &clauseList{std::get<parser::OmpClauseList>(beginLoopDir.t)};
   std::int64_t orderedCollapseLevel{1};
-  std::int64_t orderedLevel{0};
-  std::int64_t collapseLevel{0};
+  std::int64_t orderedLevel{1};
+  std::int64_t collapseLevel{1};
 
   for (const auto &clause : clauseList.v) {
     if (const auto *collapseClause{
@@ -672,10 +669,10 @@ std::int64_t OmpStructureChecker::GetOrdCollapseLevel(
   return orderedCollapseLevel;
 }
 
-void OmpStructureChecker::CheckCycleConstraints(
+void OmpStructureChecker::CheckAssociatedLoopConstraints(
     const parser::OpenMPLoopConstruct &x) {
   std::int64_t ordCollapseLevel{GetOrdCollapseLevel(x)};
-  OmpCycleAndExitChecker checker{context_, ordCollapseLevel};
+  AssociatedLoopChecker checker{context_, ordCollapseLevel};
   parser::Walk(x, checker);
 }
 
@@ -1799,13 +1796,12 @@ inline void OmpStructureChecker::ErrIfLHSAndRHSSymbolsMatch(
   const auto *e{GetExpr(context_, expr)};
   const auto *v{GetExpr(context_, var)};
   if (e && v) {
-    const Symbol &varSymbol = evaluate::GetSymbolVector(*v).front();
+    auto vSyms{evaluate::GetSymbolVector(*v)};
+    const Symbol &varSymbol = vSyms.front();
     for (const Symbol &symbol : evaluate::GetSymbolVector(*e)) {
       if (varSymbol == symbol) {
         context_.Say(expr.source,
-            "RHS expression "
-            "on atomic assignment statement"
-            " cannot access '%s'"_err_en_US,
+            "RHS expression on atomic assignment statement cannot access '%s'"_err_en_US,
             var.GetSource().ToString());
       }
     }
@@ -1945,12 +1941,14 @@ void OmpStructureChecker::CheckAtomicUpdateStmt(
           "Expected scalar variable "
           "on the LHS of atomic update assignment "
           "statement"_err_en_US);
-    const Symbol &varSymbol = evaluate::GetSymbolVector(*v).front();
+    auto vSyms{evaluate::GetSymbolVector(*v)};
+    const Symbol &varSymbol = vSyms.front();
     int numOfSymbolMatches{0};
-    SymbolVector exprSymbols = evaluate::GetSymbolVector(*e);
+    SymbolVector exprSymbols{evaluate::GetSymbolVector(*e)};
     for (const Symbol &symbol : exprSymbols) {
-      if (varSymbol == symbol)
+      if (varSymbol == symbol) {
         numOfSymbolMatches++;
+      }
     }
     if (isIntrinsicProcedure) {
       std::string varName = var.GetSource().ToString();
@@ -2223,10 +2221,12 @@ void OmpStructureChecker::Enter(const parser::OmpClause &x) {
 }
 
 // Following clauses do not have a separate node in parse-tree.h.
+CHECK_SIMPLE_CLAUSE(Absent, OMPC_absent)
 CHECK_SIMPLE_CLAUSE(AcqRel, OMPC_acq_rel)
 CHECK_SIMPLE_CLAUSE(Acquire, OMPC_acquire)
 CHECK_SIMPLE_CLAUSE(Affinity, OMPC_affinity)
 CHECK_SIMPLE_CLAUSE(Capture, OMPC_capture)
+CHECK_SIMPLE_CLAUSE(Contains, OMPC_contains)
 CHECK_SIMPLE_CLAUSE(Default, OMPC_default)
 CHECK_SIMPLE_CLAUSE(Depobj, OMPC_depobj)
 CHECK_SIMPLE_CLAUSE(Destroy, OMPC_destroy)
@@ -2239,6 +2239,7 @@ CHECK_SIMPLE_CLAUSE(Flush, OMPC_flush)
 CHECK_SIMPLE_CLAUSE(From, OMPC_from)
 CHECK_SIMPLE_CLAUSE(Full, OMPC_full)
 CHECK_SIMPLE_CLAUSE(Hint, OMPC_hint)
+CHECK_SIMPLE_CLAUSE(Holds, OMPC_holds)
 CHECK_SIMPLE_CLAUSE(InReduction, OMPC_in_reduction)
 CHECK_SIMPLE_CLAUSE(Inclusive, OMPC_inclusive)
 CHECK_SIMPLE_CLAUSE(Match, OMPC_match)
@@ -2251,6 +2252,9 @@ CHECK_SIMPLE_CLAUSE(Inbranch, OMPC_inbranch)
 CHECK_SIMPLE_CLAUSE(Link, OMPC_link)
 CHECK_SIMPLE_CLAUSE(Indirect, OMPC_indirect)
 CHECK_SIMPLE_CLAUSE(Mergeable, OMPC_mergeable)
+CHECK_SIMPLE_CLAUSE(NoOpenmp, OMPC_no_openmp)
+CHECK_SIMPLE_CLAUSE(NoOpenmpRoutines, OMPC_no_openmp_routines)
+CHECK_SIMPLE_CLAUSE(NoParallelism, OMPC_no_parallelism)
 CHECK_SIMPLE_CLAUSE(Nogroup, OMPC_nogroup)
 CHECK_SIMPLE_CLAUSE(Notinbranch, OMPC_notinbranch)
 CHECK_SIMPLE_CLAUSE(Partial, OMPC_partial)
@@ -2564,7 +2568,7 @@ void OmpStructureChecker::CheckIntentInPointerAndDefinable(
                   "Variable '%s' on the %s clause is not definable"_err_en_US,
                   symbol->name(),
                   parser::ToUpperCaseLetters(getClauseName(clause).str()))
-              .Attach(std::move(*msg));
+              .Attach(std::move(msg->set_severity(parser::Severity::Because)));
         }
       }
     }
@@ -3369,7 +3373,7 @@ void OmpStructureChecker::CheckDefinableObjects(
               "Variable '%s' on the %s clause is not definable"_err_en_US,
               symbol->name(),
               parser::ToUpperCaseLetters(getClauseName(clause).str()))
-          .Attach(std::move(*msg));
+          .Attach(std::move(msg->set_severity(parser::Severity::Because)));
     }
   }
 }

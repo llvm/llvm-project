@@ -39,6 +39,8 @@ set(LIBC_BUILD_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
 set(LIBC_ENABLE_USE_BY_CLANG OFF CACHE BOOL "Whether or not to place libc in a build directory findable by a just built clang")
 
+set(LIBC_KERNEL_HEADERS "/usr/include" CACHE STRING "Path to Linux kernel headers")
+
 # Defining a global namespace to enclose all libc functions.
 set(default_namespace "__llvm_libc")
 if(LLVM_VERSION_MAJOR)
@@ -47,6 +49,10 @@ endif()
 set(LIBC_NAMESPACE ${default_namespace}
   CACHE STRING "The namespace to use to enclose internal implementations. Must start with '__llvm_libc'."
 )
+
+
+add_subdirectory(newhdrgen)
+
 
 if(LLVM_LIBC_FULL_BUILD OR LLVM_LIBC_GPU_BUILD)
   if(NOT LIBC_HDRGEN_EXE)
@@ -66,6 +72,8 @@ option(LIBC_BUILD_GPU_LOADER "Always build the GPU loader utilities" OFF)
 if(LIBC_BUILD_GPU_LOADER OR (LLVM_LIBC_GPU_BUILD AND NOT LLVM_RUNTIMES_BUILD))
   add_subdirectory(utils/gpu)
 endif()
+
+option(LIBC_USE_NEW_HEADER_GEN "Generate header files using new headergen instead of the old one" ON)
 
 set(NEED_LIBC_HDRGEN FALSE)
 if(NOT LLVM_RUNTIMES_BUILD)
@@ -104,6 +112,7 @@ add_compile_definitions(LIBC_NAMESPACE=${LIBC_NAMESPACE})
 
 # Flags to pass down to the compiler while building the libc functions.
 set(LIBC_COMPILE_OPTIONS_DEFAULT "" CACHE STRING "Architecture to tell clang to optimize for (e.g. -march=... or -mcpu=...)")
+set(LIBC_TEST_COMPILE_OPTIONS_DEFAULT "" CACHE STRING "Common compile options for all the tests.")
 
 list(APPEND LIBC_COMPILE_OPTIONS_DEFAULT ${LIBC_COMMON_TUNE_OPTIONS})
 
@@ -123,12 +132,31 @@ if(COMMAND_RETURN_CODE EQUAL 0)
   message(STATUS "Set COMPILER_RESOURCE_DIR to "
                  "${COMPILER_RESOURCE_DIR} using --print-resource-dir")
 else()
-  if (LIBC_TARGET_OS_IS_GPU)
-    message(FATAL_ERROR "COMPILER_RESOURCE_DIR must be set for GPU builds")
-  else()
-    set(COMPILER_RESOURCE_DIR OFF)
-    message(STATUS "COMPILER_RESOURCE_DIR not set
-                    --print-resource-dir not supported by host compiler")
+  # Try with GCC option: -print-search-dirs, which will output in the form:
+  #   install: <path>
+  #   programs: ........
+  # So we try to capture the <path> after "install: " in the first line of the
+  # output.
+  execute_process(
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    COMMAND ${CMAKE_CXX_COMPILER} -print-search-dirs
+    RESULT_VARIABLE COMMAND_RETURN_CODE
+    OUTPUT_VARIABLE COMPILER_RESOURCE_DIR
+  )
+  if(COMMAND_RETURN_CODE EQUAL 0)
+    string(REPLACE " " ";" COMPILER_RESOURCE_DIR ${COMPILER_RESOURCE_DIR})
+    string(REPLACE "\n" ";" COMPILER_RESOURCE_DIR "${COMPILER_RESOURCE_DIR}")
+    list(GET COMPILER_RESOURCE_DIR 1 COMPILER_RESOURCE_DIR)
+    message(STATUS "Set COMPILER_RESOURCE_DIR to "
+    "${COMPILER_RESOURCE_DIR} using --print-search-dirs")
+else()
+    if (LIBC_TARGET_OS_IS_GPU)
+      message(FATAL_ERROR "COMPILER_RESOURCE_DIR must be set for GPU builds")
+    else()
+      set(COMPILER_RESOURCE_DIR OFF)
+      message(STATUS "COMPILER_RESOURCE_DIR not set
+                      --print-resource-dir not supported by host compiler")
+    endif()
   endif()
 endif()
 
@@ -220,7 +248,7 @@ foreach(config_path IN LISTS LIBC_CONFIG_JSON_FILE_LIST)
   load_libc_config(${config_path}/config.json ${cmd_line_conf})
 endforeach()
 
-if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND LIBC_ENABLE_USE_BY_CLANG)
+if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND (LIBC_ENABLE_USE_BY_CLANG OR LIBC_TARGET_OS_IS_GPU))
   set(LIBC_INCLUDE_DIR ${LLVM_BINARY_DIR}/include/${LLVM_DEFAULT_TARGET_TRIPLE})
   set(LIBC_INSTALL_INCLUDE_DIR ${CMAKE_INSTALL_INCLUDEDIR}/${LLVM_DEFAULT_TARGET_TRIPLE})
   set(LIBC_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/${LLVM_DEFAULT_TARGET_TRIPLE})
@@ -236,9 +264,7 @@ else()
     set(LIBC_LIBRARY_DIR ${CMAKE_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX})
   endif()
   if(LIBC_TARGET_OS_IS_GPU)
-    if(LLVM_RUNTIMES_TARGET)
-      set(LIBC_INSTALL_INCLUDE_DIR ${CMAKE_INSTALL_INCLUDEDIR}/${LLVM_RUNTIMES_TARGET})
-    elseif(LIBC_TARGET_TRIPLE)
+    if(LIBC_TARGET_TRIPLE)
       set(LIBC_INSTALL_INCLUDE_DIR ${CMAKE_INSTALL_INCLUDEDIR}/${LIBC_TARGET_TRIPLE})
     else()
       set(LIBC_INSTALL_INCLUDE_DIR ${CMAKE_INSTALL_INCLUDEDIR}/${LLVM_DEFAULT_TARGET_TRIPLE})
@@ -401,9 +427,7 @@ if(LLVM_INCLUDE_TESTS)
   add_subdirectory(fuzzing)
 endif()
 
-if(LIBC_INCLUDE_BENCHMARKS)
-  add_subdirectory(benchmarks)
-endif()
+add_subdirectory(benchmarks)
 
 if (LIBC_INCLUDE_DOCS)
   add_subdirectory(docs)

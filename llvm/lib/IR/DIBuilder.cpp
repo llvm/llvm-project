@@ -79,9 +79,9 @@ void DIBuilder::finalize() {
   // list. Use a set to remove the duplicates while we transform the
   // TrackingVHs back into Values.
   SmallPtrSet<Metadata *, 16> RetainSet;
-  for (unsigned I = 0, E = AllRetainTypes.size(); I < E; I++)
-    if (RetainSet.insert(AllRetainTypes[I]).second)
-      RetainValues.push_back(AllRetainTypes[I]);
+  for (const TrackingMDNodeRef &N : AllRetainTypes)
+    if (RetainSet.insert(N).second)
+      RetainValues.push_back(N);
 
   if (!RetainValues.empty())
     CUNode->replaceRetainedTypes(MDTuple::get(VMContext, RetainValues));
@@ -509,7 +509,7 @@ DICompositeType *DIBuilder::createClassType(
          "createClassType should be called with a valid Context");
 
   auto *R = DICompositeType::get(
-      VMContext, dwarf::DW_TAG_structure_type, Name, File, LineNumber,
+      VMContext, dwarf::DW_TAG_class_type, Name, File, LineNumber,
       getNonCompileUnitScope(Context), DerivedFrom, SizeInBits, AlignInBits,
       OffsetInBits, Flags, Elements, RunTimeLang, VTableHolder,
       cast_or_null<MDTuple>(TemplateParams), UniqueIdentifier);

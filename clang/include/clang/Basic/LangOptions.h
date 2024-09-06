@@ -367,6 +367,23 @@ public:
     PerThread,
   };
 
+  /// Exclude certain code patterns from being instrumented by arithmetic
+  /// overflow sanitizers
+  enum OverflowPatternExclusionKind {
+    /// Don't exclude any overflow patterns from sanitizers
+    None = 1 << 0,
+    /// Exclude all overflow patterns (below)
+    All = 1 << 1,
+    /// if (a + b < a)
+    AddSignedOverflowTest = 1 << 2,
+    /// if (a + b < a)
+    AddUnsignedOverflowTest = 1 << 3,
+    /// -1UL
+    NegUnsignedConst = 1 << 4,
+    /// while (count--)
+    PostDecrInWhile = 1 << 5,
+  };
+
   enum class DefaultVisiblityExportMapping {
     None,
     /// map only explicit default visibilities to exported
@@ -439,6 +456,16 @@ public:
 
     /// No range rule is enabled.
     CX_None
+  };
+
+  /// Controls which variables have static destructors registered.
+  enum class RegisterStaticDestructorsKind {
+    /// Register static destructors for all variables.
+    All,
+    /// Register static destructors only for thread-local variables.
+    ThreadLocal,
+    /// Don't register static destructors for any variables.
+    None,
   };
 
   // Define simple language options (with no accessors).
@@ -555,6 +582,11 @@ public:
   /// The default stream kind used for HIP kernel launching.
   GPUDefaultStreamKind GPUDefaultStream;
 
+  /// Which overflow patterns should be excluded from sanitizer instrumentation
+  unsigned OverflowPatternExclusionMask = 0;
+
+  std::vector<std::string> OverflowPatternExclusionValues;
+
   /// The seed used by the randomize structure layout feature.
   std::string RandstructSeed;
 
@@ -574,6 +606,10 @@ public:
   // This exists so that we can override the macro value and test our incomplete
   // implementation on real-world examples.
   std::string OpenACCMacroOverride;
+
+  // Indicates if the wasm-opt binary must be ignored in the case of a
+  // WebAssembly target.
+  bool NoWasmOpt = false;
 
   LangOptions();
 
@@ -624,6 +660,14 @@ public:
 
   bool isCompatibleWithMSVC(MSVCMajorVersion MajorVersion) const {
     return MSCompatibilityVersion >= MajorVersion * 100000U;
+  }
+
+  bool isOverflowPatternExcluded(OverflowPatternExclusionKind Kind) const {
+    if (OverflowPatternExclusionMask & OverflowPatternExclusionKind::None)
+      return false;
+    if (OverflowPatternExclusionMask & OverflowPatternExclusionKind::All)
+      return true;
+    return OverflowPatternExclusionMask & Kind;
   }
 
   /// Reset all of the options that are not considered when building a

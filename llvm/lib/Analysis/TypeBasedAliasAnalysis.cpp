@@ -110,6 +110,7 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/LLVMContext.h"
@@ -612,12 +613,13 @@ static bool mayBeAccessToSubobjectOf(TBAAStructTagNode BaseTag,
     }
 
     if (BaseType.getNode() == SubobjectTag.getBaseType()) {
-      bool SameMemberAccess = OffsetInBase == SubobjectTag.getOffset();
+      MayAlias = OffsetInBase == SubobjectTag.getOffset() ||
+                 BaseType.getNode() == BaseTag.getAccessType() ||
+                 SubobjectTag.getBaseType() == SubobjectTag.getAccessType();
       if (GenericTag) {
-        *GenericTag = SameMemberAccess ? SubobjectTag.getNode() :
-                                         createAccessTag(CommonType);
+        *GenericTag =
+            MayAlias ? SubobjectTag.getNode() : createAccessTag(CommonType);
       }
-      MayAlias = SameMemberAccess;
       return true;
     }
 
@@ -806,7 +808,7 @@ MDNode *AAMDNodes::extendToTBAA(MDNode *MD, ssize_t Len) {
 
   // Otherwise, create TBAA with the new Len
   ArrayRef<MDOperand> MDOperands = MD->operands();
-  SmallVector<Metadata *, 4> NextNodes(MDOperands.begin(), MDOperands.end());
+  SmallVector<Metadata *, 4> NextNodes(MDOperands);
   ConstantInt *PreviousSize = mdconst::extract<ConstantInt>(NextNodes[3]);
 
   // Don't create a new MDNode if it is the same length.
@@ -821,16 +823,16 @@ MDNode *AAMDNodes::extendToTBAA(MDNode *MD, ssize_t Len) {
 AAMDNodes AAMDNodes::adjustForAccess(unsigned AccessSize) {
   AAMDNodes New = *this;
   MDNode *M = New.TBAAStruct;
-  if (M && M->getNumOperands() >= 3 && M->getOperand(0) &&
+  if (!New.TBAA && M && M->getNumOperands() >= 3 && M->getOperand(0) &&
       mdconst::hasa<ConstantInt>(M->getOperand(0)) &&
       mdconst::extract<ConstantInt>(M->getOperand(0))->isZero() &&
       M->getOperand(1) && mdconst::hasa<ConstantInt>(M->getOperand(1)) &&
       mdconst::extract<ConstantInt>(M->getOperand(1))->getValue() ==
           AccessSize &&
-      M->getOperand(2) && isa<MDNode>(M->getOperand(2))) {
-    New.TBAAStruct = nullptr;
+      M->getOperand(2) && isa<MDNode>(M->getOperand(2)))
     New.TBAA = cast<MDNode>(M->getOperand(2));
-  }
+
+  New.TBAAStruct = nullptr;
   return New;
 }
 

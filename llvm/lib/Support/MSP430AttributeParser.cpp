@@ -21,22 +21,24 @@ constexpr std::array<MSP430AttributeParser::DisplayHandler, 4>
          {MSP430Attrs::TagEnumSize, &MSP430AttributeParser::parseEnumSize}}};
 
 Error MSP430AttributeParser::parseISA(AttrType Tag) {
-  static const char *StringVals[] = {"None", "MSP430", "MSP430X"};
+  static const char *const StringVals[] = {"None", "MSP430", "MSP430X"};
   return parseStringAttribute("ISA", Tag, ArrayRef(StringVals));
 }
 
 Error MSP430AttributeParser::parseCodeModel(AttrType Tag) {
-  static const char *StringVals[] = {"None", "Small", "Large"};
+  static const char *const StringVals[] = {"None", "Small", "Large"};
   return parseStringAttribute("Code Model", Tag, ArrayRef(StringVals));
 }
 
 Error MSP430AttributeParser::parseDataModel(AttrType Tag) {
-  static const char *StringVals[] = {"None", "Small", "Large", "Restricted"};
+  static const char *const StringVals[] = {"None", "Small", "Large",
+                                           "Restricted"};
   return parseStringAttribute("Data Model", Tag, ArrayRef(StringVals));
 }
 
 Error MSP430AttributeParser::parseEnumSize(AttrType Tag) {
-  static const char *StringVals[] = {"None", "Small", "Integer", "Don't Care"};
+  static const char *const StringVals[] = {"None", "Small", "Integer",
+                                           "Don't Care"};
   return parseStringAttribute("Enum Size", Tag, ArrayRef(StringVals));
 }
 

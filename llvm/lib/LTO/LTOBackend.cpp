@@ -191,12 +191,8 @@ static void RegisterPassPlugins(ArrayRef<std::string> PassPlugins,
   // Load requested pass plugins and let them register pass builder callbacks
   for (auto &PluginFN : PassPlugins) {
     auto PassPlugin = PassPlugin::Load(PluginFN);
-    if (!PassPlugin) {
-      errs() << "Failed to load passes from '" << PluginFN
-             << "'. Request ignored.\n";
-      continue;
-    }
-
+    if (!PassPlugin)
+      report_fatal_error(PassPlugin.takeError(), /*gen_crash_diag=*/false);
     PassPlugin->registerPassBuilderCallbacks(PB);
   }
 }
@@ -338,6 +334,16 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
 
   if (!Conf.DisableVerify)
     MPM.addPass(VerifierPass());
+
+  if (PrintPipelinePasses) {
+    std::string PipelineStr;
+    raw_string_ostream OS(PipelineStr);
+    MPM.printPipeline(OS, [&PIC](StringRef ClassName) {
+      auto PassName = PIC.getPassNameForClassName(ClassName);
+      return PassName.empty() ? ClassName : PassName;
+    });
+    outs() << "pipeline-passes: " << PipelineStr << '\n';
+  }
 
   MPM.run(Mod, MAM);
 }
@@ -720,7 +726,7 @@ bool lto::initImportList(const Module &M,
       if (Summary->modulePath() == M.getModuleIdentifier())
         continue;
       // Add an entry to provoke importing by thinBackend.
-      ImportList[Summary->modulePath()].insert(GUID);
+      ImportList.addGUID(Summary->modulePath(), GUID, Summary->importType());
     }
   }
   return true;

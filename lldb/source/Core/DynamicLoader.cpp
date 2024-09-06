@@ -13,6 +13,7 @@
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Core/Progress.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/MemoryRegionInfo.h"
@@ -195,20 +196,37 @@ ModuleSP DynamicLoader::LoadBinaryWithUUIDAndAddress(
   Target &target = process->GetTarget();
   Status error;
 
+  StreamString prog_str;
+  if (!name.empty()) {
+    prog_str << name.str() << " ";
+  }
+  if (uuid.IsValid())
+    prog_str << uuid.GetAsString();
+  if (value_is_offset == 0 && value != LLDB_INVALID_ADDRESS) {
+    prog_str << "at 0x";
+    prog_str.PutHex64(value);
+  }
+
   if (!uuid.IsValid() && !value_is_offset) {
     memory_module_sp = ReadUnnamedMemoryModule(process, value, name);
 
-    if (memory_module_sp)
+    if (memory_module_sp) {
       uuid = memory_module_sp->GetUUID();
+      if (uuid.IsValid()) {
+        prog_str << " ";
+        prog_str << uuid.GetAsString();
+      }
+    }
   }
   ModuleSpec module_spec;
   module_spec.GetUUID() = uuid;
   FileSpec name_filespec(name);
-  if (FileSystem::Instance().Exists(name_filespec))
-    module_spec.GetFileSpec() = name_filespec;
 
   if (uuid.IsValid()) {
+    Progress progress("Locating binary", prog_str.GetString().str());
+
     // Has lldb already seen a module with this UUID?
+    // Or have external lookup enabled in DebugSymbols on macOS.
     if (!module_sp)
       error = ModuleList::GetSharedModule(module_spec, module_sp, nullptr,
                                           nullptr, nullptr);

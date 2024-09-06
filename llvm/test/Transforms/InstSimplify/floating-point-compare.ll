@@ -672,6 +672,38 @@ define i1 @assume_nonnan_x2_ord(float %x, float %y) {
   ret i1 %cmp
 }
 
+define i1 @assume_nan_x2_uno(float %x, float %y) {
+; CHECK-LABEL: @assume_nan_x2_uno(
+; CHECK-NEXT:    [[UNO_X:%.*]] = fcmp uno float [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    call void @llvm.assume(i1 [[UNO_X]])
+; CHECK-NEXT:    [[UNO_Y:%.*]] = fcmp uno float [[Y:%.*]], 0.000000e+00
+; CHECK-NEXT:    call void @llvm.assume(i1 [[UNO_Y]])
+; CHECK-NEXT:    ret i1 true
+;
+  %uno.x = fcmp uno float %x, 0.0
+  call void @llvm.assume(i1 %uno.x)
+  %uno.y = fcmp uno float %y, 0.0
+  call void @llvm.assume(i1 %uno.y)
+  %cmp = fcmp uno float %x, %y
+  ret i1 %cmp
+}
+
+define i1 @assume_nan_x2_ord(float %x, float %y) {
+; CHECK-LABEL: @assume_nan_x2_ord(
+; CHECK-NEXT:    [[UNO_X:%.*]] = fcmp uno float [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    call void @llvm.assume(i1 [[UNO_X]])
+; CHECK-NEXT:    [[UNO_Y:%.*]] = fcmp uno float [[Y:%.*]], 0.000000e+00
+; CHECK-NEXT:    call void @llvm.assume(i1 [[UNO_Y]])
+; CHECK-NEXT:    ret i1 false
+;
+  %uno.x = fcmp uno float %x, 0.0
+  call void @llvm.assume(i1 %uno.x)
+  %uno.y = fcmp uno float %y, 0.0
+  call void @llvm.assume(i1 %uno.y)
+  %cmp = fcmp ord float %x, %y
+  ret i1 %cmp
+}
+
 define i1 @assume_nonan_x2_uno(float %x, float %y) {
 ; CHECK-LABEL: @assume_nonan_x2_uno(
 ; CHECK-NEXT:    [[ORD_X:%.*]] = fcmp ord float [[X:%.*]], 0.000000e+00

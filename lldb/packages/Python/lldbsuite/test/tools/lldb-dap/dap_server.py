@@ -574,6 +574,8 @@ class DebugCommunication(object):
         coreFile=None,
         postRunCommands=None,
         sourceMap=None,
+        gdbRemotePort=None,
+        gdbRemoteHostname=None,
     ):
         args_dict = {}
         if pid is not None:
@@ -603,6 +605,10 @@ class DebugCommunication(object):
             args_dict["postRunCommands"] = postRunCommands
         if sourceMap:
             args_dict["sourceMap"] = sourceMap
+        if gdbRemotePort is not None:
+            args_dict["gdb-remote-port"] = gdbRemotePort
+        if gdbRemoteHostname is not None:
+            args_dict["gdb-remote-hostname"] = gdbRemoteHostname
         command_dict = {"command": "attach", "type": "request", "arguments": args_dict}
         return self.send_recv(command_dict)
 
@@ -810,17 +816,21 @@ class DebugCommunication(object):
             self.wait_for_event(filter=["process", "initialized"])
         return response
 
-    def request_next(self, threadId):
+    def request_next(self, threadId, granularity="statement"):
         if self.exit_status is not None:
             raise ValueError("request_continue called after process exited")
-        args_dict = {"threadId": threadId}
+        args_dict = {"threadId": threadId, "granularity": granularity}
         command_dict = {"command": "next", "type": "request", "arguments": args_dict}
         return self.send_recv(command_dict)
 
-    def request_stepIn(self, threadId, targetId):
+    def request_stepIn(self, threadId, targetId, granularity="statement"):
         if self.exit_status is not None:
             raise ValueError("request_stepIn called after process exited")
-        args_dict = {"threadId": threadId, "targetId": targetId}
+        args_dict = {
+            "threadId": threadId,
+            "targetId": targetId,
+            "granularity": granularity,
+        }
         command_dict = {"command": "stepIn", "type": "request", "arguments": args_dict}
         return self.send_recv(command_dict)
 
@@ -1089,6 +1099,20 @@ class DebugCommunication(object):
         self.send.close()
         # self.recv.close()
 
+    def request_setInstructionBreakpoints(self, memory_reference=[]):
+        breakpoints = []
+        for i in memory_reference:
+            args_dict = {
+                "instructionReference": i,
+            }
+            breakpoints.append(args_dict)
+        args_dict = {"breakpoints": breakpoints}
+        command_dict = {
+            "command": "setInstructionBreakpoints",
+            "type": "request",
+            "arguments": args_dict,
+        }
+        return self.send_recv(command_dict)
 
 class DebugAdaptorServer(DebugCommunication):
     def __init__(

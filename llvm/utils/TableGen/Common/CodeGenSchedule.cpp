@@ -14,6 +14,7 @@
 #include "CodeGenSchedule.h"
 #include "CodeGenInstruction.h"
 #include "CodeGenTarget.h"
+#include "Utils.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -42,7 +43,7 @@ namespace {
 
 // (instrs a, b, ...) Evaluate and union all arguments. Identical to AddOp.
 struct InstrsOp : public SetTheory::Operator {
-  void apply(SetTheory &ST, DagInit *Expr, SetTheory::RecSet &Elts,
+  void apply(SetTheory &ST, const DagInit *Expr, SetTheory::RecSet &Elts,
              ArrayRef<SMLoc> Loc) override {
     ST.evaluate(Expr->arg_begin(), Expr->arg_end(), Elts, Loc);
   }
@@ -74,7 +75,7 @@ struct InstRegexOp : public SetTheory::Operator {
     return Result;
   }
 
-  void apply(SetTheory &ST, DagInit *Expr, SetTheory::RecSet &Elts,
+  void apply(SetTheory &ST, const DagInit *Expr, SetTheory::RecSet &Elts,
              ArrayRef<SMLoc> Loc) override {
     ArrayRef<const CodeGenInstruction *> Instructions =
         Target.getInstructionsByEnumValue();
@@ -533,17 +534,9 @@ void CodeGenSchedModels::collectOptionalProcessorInfo() {
 /// Gather all processor models.
 void CodeGenSchedModels::collectProcModels() {
   RecVec ProcRecords = Records.getAllDerivedDefinitions("Processor");
-  llvm::sort(ProcRecords, LessRecordFieldName());
 
-  // Check for duplicated names.
-  auto I = std::adjacent_find(ProcRecords.begin(), ProcRecords.end(),
-                              [](const Record *Rec1, const Record *Rec2) {
-                                return Rec1->getValueAsString("Name") ==
-                                       Rec2->getValueAsString("Name");
-                              });
-  if (I != ProcRecords.end())
-    PrintFatalError((*I)->getLoc(), "Duplicate processor name " +
-                                        (*I)->getValueAsString("Name"));
+  // Sort and check duplicate Processor name.
+  sortAndReportDuplicates(ProcRecords, "Processor");
 
   // Reserve space because we can. Reallocation would be ok.
   ProcModels.reserve(ProcRecords.size() + 1);

@@ -1,10 +1,14 @@
 # REQUIRES: asserts
 # RUN: llc --march=hexagon %s -run-pass=pipeliner -debug-only=pipeliner \
-# RUN: -window-sched=force -o - 2>&1 | FileCheck %s \
-# RUN: --check-prefix=CHECK-SUCCESSIVE-PHI
+# RUN: -window-sched=force -filetype=null -verify-machineinstrs 2>&1 \
+# RUN: | FileCheck %s
 
-# CHECK-SUCCESSIVE-PHI: Consecutive phis are not allowed in window scheduling!
-# CHECK-SUCCESSIVE-PHI: The WindowScheduler failed to initialize!
+# CHECK: Loop carried phis are not supported yet!
+# CHECK: The WindowScheduler failed to initialize!
+# CHECK-LABEL: body:             |
+# CHECK: bb.3 (machine-block-address-taken):
+# CHECK: [[REG:%[0-9]+]]:intregs = PHI {{%[0-9]+}}, %bb.1, {{%[0-9]+}}, %bb.3
+# CHECK: {{%[0-9]+}}:intregs = PHI {{%[0-9]+}}, %bb.1, [[REG]], %bb.3
 
 ---
 name:            relu

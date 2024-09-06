@@ -48,7 +48,6 @@
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LazyBlockFrequencyInfo.h"
-#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
@@ -874,7 +873,7 @@ Instruction *InstCombinerImpl::tryFoldInstWithCtpopWithNot(Instruction *I) {
 //   -> (arithmetic_shift Binop1((not X), Y), Amt)
 
 Instruction *InstCombinerImpl::foldBinOpShiftWithShift(BinaryOperator &I) {
-  const DataLayout &DL = I.getModule()->getDataLayout();
+  const DataLayout &DL = I.getDataLayout();
   auto IsValidBinOpc = [](unsigned Opc) {
     switch (Opc) {
     default:
@@ -1651,14 +1650,14 @@ static Constant *constantFoldOperationIntoSelectOperand(Instruction &I,
                                                         bool IsTrueArm) {
   SmallVector<Constant *> ConstOps;
   for (Value *Op : I.operands()) {
-    CmpInst::Predicate Pred;
     Constant *C = nullptr;
     if (Op == SI) {
       C = dyn_cast<Constant>(IsTrueArm ? SI->getTrueValue()
                                        : SI->getFalseValue());
     } else if (match(SI->getCondition(),
-                     m_ICmp(Pred, m_Specific(Op), m_Constant(C))) &&
-               Pred == (IsTrueArm ? ICmpInst::ICMP_EQ : ICmpInst::ICMP_NE) &&
+                     m_SpecificICmp(IsTrueArm ? ICmpInst::ICMP_EQ
+                                              : ICmpInst::ICMP_NE,
+                                    m_Specific(Op), m_Constant(C))) &&
                isGuaranteedNotToBeUndefOrPoison(C)) {
       // Pass
     } else {
@@ -1670,7 +1669,7 @@ static Constant *constantFoldOperationIntoSelectOperand(Instruction &I,
     ConstOps.push_back(C);
   }
 
-  return ConstantFoldInstOperands(&I, ConstOps, I.getModule()->getDataLayout());
+  return ConstantFoldInstOperands(&I, ConstOps, I.getDataLayout());
 }
 
 static Value *foldOperationIntoSelectOperand(Instruction &I, SelectInst *SI,
@@ -1731,8 +1730,7 @@ static Value *simplifyInstructionWithPHI(Instruction &I, PHINode *PN,
                                          const DataLayout &DL,
                                          const SimplifyQuery SQ) {
   // NB: It is a precondition of this transform that the operands be
-  // phi translatable! This is usually trivially satisfied by limiting it
-  // to constant ops, and for selects we do a more sophisticated check.
+  // phi translatable!
   SmallVector<Value *> Ops;
   for (Value *Op : I.operands()) {
     if (Op == PN)
@@ -1785,9 +1783,31 @@ Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN) {
     // Otherwise, we can replace *all* users with the new PHI we form.
   }
 
+  // Check that all operands are phi-translatable.
+  for (Value *Op : I.operands()) {
+    if (Op == PN)
+      continue;
+
+    // Non-instructions never require phi-translation.
+    auto *I = dyn_cast<Instruction>(Op);
+    if (!I)
+      continue;
+
+    // Phi-translate can handle phi nodes in the same block.
+    if (isa<PHINode>(I))
+      if (I->getParent() == PN->getParent())
+        continue;
+
+    // Operand dominates the block, no phi-translation necessary.
+    if (DT.dominates(I, PN->getParent()))
+      continue;
+
+    // Not phi-translatable, bail out.
+    return nullptr;
+  }
+
   // Check to see whether the instruction can be folded into each phi operand.
   // If there is one operand that does not fold, remember the BB it is in.
-  // If there is more than one or if *it* is a PHI, bail out.
   SmallVector<Value *> NewPhiValues;
   BasicBlock *NonSimplifiedBB = nullptr;
   Value *NonSimplifiedInVal = nullptr;
@@ -1812,12 +1832,10 @@ Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN) {
       if (cast<Instruction>(InVal)->getParent() == NonSimplifiedBB)
         return nullptr;
 
-    // If the incoming non-constant value is reachable from the phis block,
-    // we'll push the operation across a loop backedge. This could result in
+    // Do not push the operation across a loop backedge. This could result in
     // an infinite combine loop, and is generally non-profitable (especially
     // if the operation was originally outside the loop).
-    if (isPotentiallyReachable(PN->getParent(), NonSimplifiedBB, nullptr, &DT,
-                               LI))
+    if (isBackEdge(NonSimplifiedBB, PN->getParent()))
       return nullptr;
   }
 
@@ -2787,12 +2805,19 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
                                     GEP.getNoWrapFlags()));
   }
 
-  // Canonicalize scalable GEPs to an explicit offset using the llvm.vscale
-  // intrinsic. This has better support in BasicAA.
-  if (GEPEltType->isScalableTy()) {
+  // Canonicalize
+  //  - scalable GEPs to an explicit offset using the llvm.vscale intrinsic.
+  //    This has better support in BasicAA.
+  //  - gep i32 p, mul(O, C) -> gep i8, p, mul(O, C*4) to fold the two
+  //    multiplies together.
+  if (GEPEltType->isScalableTy() ||
+      (!GEPEltType->isIntegerTy(8) && GEP.getNumIndices() == 1 &&
+       match(GEP.getOperand(1),
+             m_OneUse(m_CombineOr(m_Mul(m_Value(), m_ConstantInt()),
+                                  m_Shl(m_Value(), m_ConstantInt())))))) {
     Value *Offset = EmitGEPOffset(cast<GEPOperator>(&GEP));
     return replaceInstUsesWith(
-        GEP, Builder.CreatePtrAdd(PtrOp, Offset, "", GEP.isInBounds()));
+        GEP, Builder.CreatePtrAdd(PtrOp, Offset, "", GEP.getNoWrapFlags()));
   }
 
   // Check to see if the inputs to the PHI node are getelementptr instructions.
@@ -2932,18 +2957,57 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
           });
           return Changed ? &GEP : nullptr;
         }
-      } else {
+      } else if (auto *ExactIns =
+                     dyn_cast<PossiblyExactOperator>(GEP.getOperand(1))) {
         // Canonicalize (gep T* X, V / sizeof(T)) to (gep i8* X, V)
         Value *V;
-        if ((has_single_bit(TyAllocSize) &&
-             match(GEP.getOperand(1),
-                   m_Exact(m_Shr(m_Value(V),
-                                 m_SpecificInt(countr_zero(TyAllocSize)))))) ||
-            match(GEP.getOperand(1),
-                  m_Exact(m_IDiv(m_Value(V), m_SpecificInt(TyAllocSize))))) {
-          return GetElementPtrInst::Create(Builder.getInt8Ty(),
-                                           GEP.getPointerOperand(), V,
-                                           GEP.getNoWrapFlags());
+        if (ExactIns->isExact()) {
+          if ((has_single_bit(TyAllocSize) &&
+               match(GEP.getOperand(1),
+                     m_Shr(m_Value(V),
+                           m_SpecificInt(countr_zero(TyAllocSize))))) ||
+              match(GEP.getOperand(1),
+                    m_IDiv(m_Value(V), m_SpecificInt(TyAllocSize)))) {
+            return GetElementPtrInst::Create(Builder.getInt8Ty(),
+                                             GEP.getPointerOperand(), V,
+                                             GEP.getNoWrapFlags());
+          }
+        }
+        if (ExactIns->isExact() && ExactIns->hasOneUse()) {
+          // Try to canonicalize non-i8 element type to i8 if the index is an
+          // exact instruction. If the index is an exact instruction (div/shr)
+          // with a constant RHS, we can fold the non-i8 element scale into the
+          // div/shr (similiar to the mul case, just inverted).
+          const APInt *C;
+          std::optional<APInt> NewC;
+          if (has_single_bit(TyAllocSize) &&
+              match(ExactIns, m_Shr(m_Value(V), m_APInt(C))) &&
+              C->uge(countr_zero(TyAllocSize)))
+            NewC = *C - countr_zero(TyAllocSize);
+          else if (match(ExactIns, m_UDiv(m_Value(V), m_APInt(C)))) {
+            APInt Quot;
+            uint64_t Rem;
+            APInt::udivrem(*C, TyAllocSize, Quot, Rem);
+            if (Rem == 0)
+              NewC = Quot;
+          } else if (match(ExactIns, m_SDiv(m_Value(V), m_APInt(C)))) {
+            APInt Quot;
+            int64_t Rem;
+            APInt::sdivrem(*C, TyAllocSize, Quot, Rem);
+            // For sdiv we need to make sure we arent creating INT_MIN / -1.
+            if (!Quot.isAllOnes() && Rem == 0)
+              NewC = Quot;
+          }
+
+          if (NewC.has_value()) {
+            Value *NewOp = Builder.CreateBinOp(
+                static_cast<Instruction::BinaryOps>(ExactIns->getOpcode()), V,
+                ConstantInt::get(V->getType(), *NewC));
+            cast<BinaryOperator>(NewOp)->setIsExact();
+            return GetElementPtrInst::Create(Builder.getInt8Ty(),
+                                             GEP.getPointerOperand(), NewOp,
+                                             GEP.getNoWrapFlags());
+          }
         }
       }
     }
@@ -3659,6 +3723,23 @@ Instruction *InstCombinerImpl::visitBranchInst(BranchInst &BI) {
     return nullptr;
   }
 
+  // Replace all dominated uses of the condition with true/false
+  if (BI.getSuccessor(0) != BI.getSuccessor(1)) {
+    for (auto &U : make_early_inc_range(Cond->uses())) {
+      BasicBlockEdge Edge0(BI.getParent(), BI.getSuccessor(0));
+      if (DT.dominates(Edge0, U)) {
+        replaceUse(U, ConstantInt::getTrue(Cond->getType()));
+        addToWorklist(cast<Instruction>(U.getUser()));
+        continue;
+      }
+      BasicBlockEdge Edge1(BI.getParent(), BI.getSuccessor(1));
+      if (DT.dominates(Edge1, U)) {
+        replaceUse(U, ConstantInt::getFalse(Cond->getType()));
+        addToWorklist(cast<Instruction>(U.getUser()));
+      }
+    }
+  }
+
   DC.registerBranch(&BI);
   return nullptr;
 }
@@ -4353,8 +4434,8 @@ Instruction *InstCombinerImpl::visitLandingPadInst(LandingPadInst &LI) {
   if (MakeNewInstruction) {
     LandingPadInst *NLI = LandingPadInst::Create(LI.getType(),
                                                  NewClauses.size());
-    for (unsigned i = 0, e = NewClauses.size(); i != e; ++i)
-      NLI->addClause(NewClauses[i]);
+    for (Constant *C : NewClauses)
+      NLI->addClause(C);
     // A landing pad with no clauses must have the cleanup flag set.  It is
     // theoretically possible, though highly unlikely, that we eliminated all
     // clauses.  If so, force the cleanup flag to true.
@@ -4661,8 +4742,7 @@ static bool SoleWriteToDeadLocal(Instruction *I, TargetLibraryInfo &TLI) {
   pushUsers(*AI);
   while (!AllocaUsers.empty()) {
     auto *UserI = cast<Instruction>(AllocaUsers.pop_back_val());
-    if (isa<BitCastInst>(UserI) || isa<GetElementPtrInst>(UserI) ||
-        isa<AddrSpaceCastInst>(UserI)) {
+    if (isa<GetElementPtrInst>(UserI) || isa<AddrSpaceCastInst>(UserI)) {
       pushUsers(*UserI);
       continue;
     }
@@ -5073,7 +5153,7 @@ bool InstCombinerImpl::run() {
 #ifndef NDEBUG
     std::string OrigI;
 #endif
-    LLVM_DEBUG(raw_string_ostream SS(OrigI); I->print(SS); OrigI = SS.str(););
+    LLVM_DEBUG(raw_string_ostream SS(OrigI); I->print(SS););
     LLVM_DEBUG(dbgs() << "IC: Visiting: " << OrigI << '\n');
 
     if (Instruction *Result = visit(*I)) {
@@ -5189,8 +5269,7 @@ public:
 /// them to the worklist (this significantly speeds up instcombine on code where
 /// many instructions are dead or constant).  Additionally, if we find a branch
 /// whose condition is a known constant, we only visit the reachable successors.
-bool InstCombinerImpl::prepareWorklist(
-    Function &F, ReversePostOrderTraversal<BasicBlock *> &RPOT) {
+bool InstCombinerImpl::prepareWorklist(Function &F) {
   bool MadeIRChange = false;
   SmallPtrSet<BasicBlock *, 32> LiveBlocks;
   SmallVector<Instruction *, 128> InstrsForInstructionWorklist;
@@ -5329,13 +5408,25 @@ bool InstCombinerImpl::prepareWorklist(
   return MadeIRChange;
 }
 
+void InstCombiner::computeBackEdges() {
+  // Collect backedges.
+  SmallPtrSet<BasicBlock *, 16> Visited;
+  for (BasicBlock *BB : RPOT) {
+    Visited.insert(BB);
+    for (BasicBlock *Succ : successors(BB))
+      if (Visited.contains(Succ))
+        BackEdges.insert({BB, Succ});
+  }
+  ComputedBackEdges = true;
+}
+
 static bool combineInstructionsOverFunction(
     Function &F, InstructionWorklist &Worklist, AliasAnalysis *AA,
     AssumptionCache &AC, TargetLibraryInfo &TLI, TargetTransformInfo &TTI,
     DominatorTree &DT, OptimizationRemarkEmitter &ORE, BlockFrequencyInfo *BFI,
-    BranchProbabilityInfo *BPI, ProfileSummaryInfo *PSI, LoopInfo *LI,
+    BranchProbabilityInfo *BPI, ProfileSummaryInfo *PSI,
     const InstCombineOptions &Opts) {
-  auto &DL = F.getParent()->getDataLayout();
+  auto &DL = F.getDataLayout();
 
   /// Builder - This is an IRBuilder that automatically inserts new
   /// instructions into the worklist when they are created.
@@ -5372,9 +5463,9 @@ static bool combineInstructionsOverFunction(
                       << F.getName() << "\n");
 
     InstCombinerImpl IC(Worklist, Builder, F.hasMinSize(), AA, AC, TLI, TTI, DT,
-                        ORE, BFI, BPI, PSI, DL, LI);
+                        ORE, BFI, BPI, PSI, DL, RPOT);
     IC.MaxArraySizeForCombine = MaxArraySize;
-    bool MadeChangeInThisIteration = IC.prepareWorklist(F, RPOT);
+    bool MadeChangeInThisIteration = IC.prepareWorklist(F);
     MadeChangeInThisIteration |= IC.run();
     if (!MadeChangeInThisIteration)
       break;
@@ -5383,7 +5474,8 @@ static bool combineInstructionsOverFunction(
     if (Iteration > Opts.MaxIterations) {
       report_fatal_error(
           "Instruction Combining did not reach a fixpoint after " +
-              Twine(Opts.MaxIterations) + " iterations",
+              Twine(Opts.MaxIterations) + " iterations. " +
+              "Use 'instcombine<no-verify-fixpoint>' to suppress this error.",
           /*GenCrashDiag=*/false);
     }
   }
@@ -5408,7 +5500,6 @@ void InstCombinePass::printPipeline(
       OS, MapClassName2PassName);
   OS << '<';
   OS << "max-iterations=" << Options.MaxIterations << ";";
-  OS << (Options.UseLoopInfo ? "" : "no-") << "use-loop-info;";
   OS << (Options.VerifyFixpoint ? "" : "no-") << "verify-fixpoint";
   OS << '>';
 }
@@ -5421,12 +5512,6 @@ PreservedAnalyses InstCombinePass::run(Function &F,
   auto &ORE = AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
   auto &TTI = AM.getResult<TargetIRAnalysis>(F);
 
-  // TODO: Only use LoopInfo when the option is set. This requires that the
-  //       callers in the pass pipeline explicitly set the option.
-  auto *LI = AM.getCachedResult<LoopAnalysis>(F);
-  if (!LI && Options.UseLoopInfo)
-    LI = &AM.getResult<LoopAnalysis>(F);
-
   auto *AA = &AM.getResult<AAManager>(F);
   auto &MAMProxy = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
   ProfileSummaryInfo *PSI =
@@ -5436,7 +5521,7 @@ PreservedAnalyses InstCombinePass::run(Function &F,
   auto *BPI = AM.getCachedResult<BranchProbabilityAnalysis>(F);
 
   if (!combineInstructionsOverFunction(F, Worklist, AA, AC, TLI, TTI, DT, ORE,
-                                       BFI, BPI, PSI, LI, Options))
+                                       BFI, BPI, PSI, Options))
     // No changes, all analyses are preserved.
     return PreservedAnalyses::all();
 
@@ -5475,8 +5560,6 @@ bool InstructionCombiningPass::runOnFunction(Function &F) {
   auto &ORE = getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
 
   // Optional analyses.
-  auto *LIWP = getAnalysisIfAvailable<LoopInfoWrapperPass>();
-  auto *LI = LIWP ? &LIWP->getLoopInfo() : nullptr;
   ProfileSummaryInfo *PSI =
       &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
   BlockFrequencyInfo *BFI =
@@ -5489,8 +5572,7 @@ bool InstructionCombiningPass::runOnFunction(Function &F) {
     BPI = &WrapperPass->getBPI();
 
   return combineInstructionsOverFunction(F, Worklist, AA, AC, TLI, TTI, DT, ORE,
-                                         BFI, BPI, PSI, LI,
-                                         InstCombineOptions());
+                                         BFI, BPI, PSI, InstCombineOptions());
 }
 
 char InstructionCombiningPass::ID = 0;

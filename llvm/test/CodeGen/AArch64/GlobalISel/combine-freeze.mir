@@ -655,8 +655,7 @@ body:             |
     ; CHECK-NEXT: %c:_(s64) = G_CONSTANT_FOLD_BARRIER %cst
     ; CHECK-NEXT: %d:_(s64) = G_CONSTANT_FOLD_BARRIER %cst
     ; CHECK-NEXT: %cmp:_(s1) = G_ICMP intpred(eq), %c(s64), %d
-    ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:_(s1) = G_FREEZE %cmp
-    ; CHECK-NEXT: %ext:_(s64) = G_ZEXT [[FREEZE]](s1)
+    ; CHECK-NEXT: %ext:_(s64) = G_ZEXT %cmp(s1)
     ; CHECK-NEXT: $x0 = COPY %ext(s64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:_(s64) = COPY $x0
@@ -682,8 +681,7 @@ body:             |
     ; CHECK-NEXT: %c:_(s64) = G_CONSTANT_FOLD_BARRIER %cst
     ; CHECK-NEXT: %d:_(s64) = G_CONSTANT_FOLD_BARRIER %cst
     ; CHECK-NEXT: %cmp:_(s1) = G_FCMP floatpred(oeq), %c(s64), %d
-    ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:_(s1) = G_FREEZE %cmp
-    ; CHECK-NEXT: %ext:_(s64) = G_ZEXT [[FREEZE]](s1)
+    ; CHECK-NEXT: %ext:_(s64) = G_ZEXT %cmp(s1)
     ; CHECK-NEXT: $x0 = COPY %ext(s64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:_(s64) = COPY $x0
@@ -1151,4 +1149,294 @@ body:             |
     %1:_(s64) = G_USHLSAT %c, %d
     %2:_(s64) = G_FREEZE %1
     $x0 = COPY %2(s64)
+    RET_ReallyLR implicit $x0
+...
+---
+name:            freeze_fneg_fold_barrier
+body:             |
+  bb.1:
+    liveins: $w0
+
+    ; CHECK-LABEL: name: freeze_fneg_fold_barrier
+    ; CHECK: liveins: $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %cst:_(s64) = G_FCONSTANT double 0.000000e+00
+    ; CHECK-NEXT: %c:_(s64) = G_CONSTANT_FOLD_BARRIER %cst
+    ; CHECK-NEXT: [[FNEG:%[0-9]+]]:_(s64) = G_FNEG %c
+    ; CHECK-NEXT: $x0 = COPY [[FNEG]](s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %0:_(s64) = COPY $x0
+    %cst:_(s64) = G_FCONSTANT double 0.0
+    %c:_(s64) = G_CONSTANT_FOLD_BARRIER %cst
+    %d:_(s64) = G_CONSTANT_FOLD_BARRIER %cst
+    %1:_(s64) = G_FNEG %c
+    %2:_(s64) = G_FREEZE %1
+    $x0 = COPY %2(s64)
+    RET_ReallyLR implicit $x0
+...
+---
+name:            freeze_frem_fold_barrier
+body:             |
+  bb.1:
+    liveins: $w0
+
+    ; CHECK-LABEL: name: freeze_frem_fold_barrier
+    ; CHECK: liveins: $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %cst:_(s64) = G_FCONSTANT double 0.000000e+00
+    ; CHECK-NEXT: %c:_(s64) = G_CONSTANT_FOLD_BARRIER %cst
+    ; CHECK-NEXT: %d:_(s64) = G_CONSTANT_FOLD_BARRIER %cst
+    ; CHECK-NEXT: [[FREM:%[0-9]+]]:_(s64) = G_FREM %c, %d
+    ; CHECK-NEXT: $x0 = COPY [[FREM]](s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %0:_(s64) = COPY $x0
+    %cst:_(s64) = G_FCONSTANT double 0.0
+    %c:_(s64) = G_CONSTANT_FOLD_BARRIER %cst
+    %d:_(s64) = G_CONSTANT_FOLD_BARRIER %cst
+    %1:_(s64) = G_FREM %c, %d
+    %2:_(s64) = G_FREEZE %1
+    $x0 = COPY %2(s64)
+    RET_ReallyLR implicit $x0
+...
+---
+name:            freeze_fdiv_fold_barrier
+body:             |
+  bb.1:
+    liveins: $w0
+
+    ; CHECK-LABEL: name: freeze_fdiv_fold_barrier
+    ; CHECK: liveins: $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %cst:_(s64) = G_FCONSTANT double 0.000000e+00
+    ; CHECK-NEXT: %c:_(s64) = G_CONSTANT_FOLD_BARRIER %cst
+    ; CHECK-NEXT: %d:_(s64) = G_CONSTANT_FOLD_BARRIER %cst
+    ; CHECK-NEXT: [[FDIV:%[0-9]+]]:_(s64) = G_FDIV %c, %d
+    ; CHECK-NEXT: $x0 = COPY [[FDIV]](s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %0:_(s64) = COPY $x0
+    %cst:_(s64) = G_FCONSTANT double 0.0
+    %c:_(s64) = G_CONSTANT_FOLD_BARRIER %cst
+    %d:_(s64) = G_CONSTANT_FOLD_BARRIER %cst
+    %1:_(s64) = G_FDIV %c, %d
+    %2:_(s64) = G_FREEZE %1
+    $x0 = COPY %2(s64)
+    RET_ReallyLR implicit $x0
+...
+---
+name:            freeze_fmul_fold_barrier
+body:             |
+  bb.1:
+    liveins: $w0
+
+    ; CHECK-LABEL: name: freeze_fmul_fold_barrier
+    ; CHECK: liveins: $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %cst:_(s64) = G_FCONSTANT double 0.000000e+00
+    ; CHECK-NEXT: %c:_(s64) = G_CONSTANT_FOLD_BARRIER %cst
+    ; CHECK-NEXT: %d:_(s64) = G_CONSTANT_FOLD_BARRIER %cst
+    ; CHECK-NEXT: [[FMUL:%[0-9]+]]:_(s64) = G_FMUL %c, %d
+    ; CHECK-NEXT: $x0 = COPY [[FMUL]](s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %0:_(s64) = COPY $x0
+    %cst:_(s64) = G_FCONSTANT double 0.0
+    %c:_(s64) = G_CONSTANT_FOLD_BARRIER %cst
+    %d:_(s64) = G_CONSTANT_FOLD_BARRIER %cst
+    %1:_(s64) = G_FMUL %c, %d
+    %2:_(s64) = G_FREEZE %1
+    $x0 = COPY %2(s64)
+    RET_ReallyLR implicit $x0
+...
+---
+name:            freeze_fsub_fold_barrier
+body:             |
+  bb.1:
+    liveins: $w0
+
+    ; CHECK-LABEL: name: freeze_fsub_fold_barrier
+    ; CHECK: liveins: $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %cst:_(s64) = G_FCONSTANT double 0.000000e+00
+    ; CHECK-NEXT: %c:_(s64) = G_CONSTANT_FOLD_BARRIER %cst
+    ; CHECK-NEXT: %d:_(s64) = G_CONSTANT_FOLD_BARRIER %cst
+    ; CHECK-NEXT: [[FSUB:%[0-9]+]]:_(s64) = G_FSUB %c, %d
+    ; CHECK-NEXT: $x0 = COPY [[FSUB]](s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %0:_(s64) = COPY $x0
+    %cst:_(s64) = G_FCONSTANT double 0.0
+    %c:_(s64) = G_CONSTANT_FOLD_BARRIER %cst
+    %d:_(s64) = G_CONSTANT_FOLD_BARRIER %cst
+    %1:_(s64) = G_FSUB %c, %d
+    %2:_(s64) = G_FREEZE %1
+    $x0 = COPY %2(s64)
+    RET_ReallyLR implicit $x0
+...
+---
+name:            freeze_fadd_fold_barrier
+body:             |
+  bb.1:
+    liveins: $w0
+
+    ; CHECK-LABEL: name: freeze_fadd_fold_barrier
+    ; CHECK: liveins: $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %cst:_(s64) = G_FCONSTANT double 0.000000e+00
+    ; CHECK-NEXT: %c:_(s64) = G_CONSTANT_FOLD_BARRIER %cst
+    ; CHECK-NEXT: %d:_(s64) = G_CONSTANT_FOLD_BARRIER %cst
+    ; CHECK-NEXT: [[FADD:%[0-9]+]]:_(s64) = G_FADD %c, %d
+    ; CHECK-NEXT: $x0 = COPY [[FADD]](s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %0:_(s64) = COPY $x0
+    %cst:_(s64) = G_FCONSTANT double 0.0
+    %c:_(s64) = G_CONSTANT_FOLD_BARRIER %cst
+    %d:_(s64) = G_CONSTANT_FOLD_BARRIER %cst
+    %1:_(s64) = G_FADD %c, %d
+    %2:_(s64) = G_FREEZE %1
+    $x0 = COPY %2(s64)
+    RET_ReallyLR implicit $x0
+...
+---
+name:            freeze_urem_fold_barrier
+body:             |
+  bb.1:
+    liveins: $w0
+
+    ; CHECK-LABEL: name: freeze_urem_fold_barrier
+    ; CHECK: liveins: $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %cst:_(s64) = G_CONSTANT i64 9
+    ; CHECK-NEXT: %c:_(s64) = G_CONSTANT_FOLD_BARRIER %cst
+    ; CHECK-NEXT: %d:_(s64) = G_CONSTANT_FOLD_BARRIER %cst
+    ; CHECK-NEXT: [[UREM:%[0-9]+]]:_(s64) = G_UREM %c, %d
+    ; CHECK-NEXT: $x0 = COPY [[UREM]](s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %0:_(s64) = COPY $x0
+    %cst:_(s64) = G_CONSTANT i64 9
+    %c:_(s64) = G_CONSTANT_FOLD_BARRIER %cst
+    %d:_(s64) = G_CONSTANT_FOLD_BARRIER %cst
+    %1:_(s64) = G_UREM %c, %d
+    %2:_(s64) = G_FREEZE %1
+    $x0 = COPY %2(s64)
+    RET_ReallyLR implicit $x0
+...
+---
+name:            freeze_srem_fold_barrier
+body:             |
+  bb.1:
+    liveins: $w0
+
+    ; CHECK-LABEL: name: freeze_srem_fold_barrier
+    ; CHECK: liveins: $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %cst:_(s64) = G_CONSTANT i64 9
+    ; CHECK-NEXT: %c:_(s64) = G_CONSTANT_FOLD_BARRIER %cst
+    ; CHECK-NEXT: %d:_(s64) = G_CONSTANT_FOLD_BARRIER %cst
+    ; CHECK-NEXT: [[SREM:%[0-9]+]]:_(s64) = G_SREM %c, %d
+    ; CHECK-NEXT: $x0 = COPY [[SREM]](s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %0:_(s64) = COPY $x0
+    %cst:_(s64) = G_CONSTANT i64 9
+    %c:_(s64) = G_CONSTANT_FOLD_BARRIER %cst
+    %d:_(s64) = G_CONSTANT_FOLD_BARRIER %cst
+    %1:_(s64) = G_SREM %c, %d
+    %2:_(s64) = G_FREEZE %1
+    $x0 = COPY %2(s64)
+    RET_ReallyLR implicit $x0
+...
+---
+name:            freeze_ptradd_fold_barrier
+body:             |
+  bb.1:
+    liveins: $w0
+
+    ; CHECK-LABEL: name: freeze_ptradd_fold_barrier
+    ; CHECK: liveins: $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %p:_(p0) = COPY $x0
+    ; CHECK-NEXT: %cst:_(s64) = G_CONSTANT i64 9
+    ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:_(p0) = G_FREEZE %p
+    ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FREEZE]], %cst(s64)
+    ; CHECK-NEXT: $x0 = COPY [[PTR_ADD]](p0)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %0:_(s64) = COPY $x0
+    %p:_(p0) = COPY $x0
+    %cst:_(s64) = G_CONSTANT i64 9
+    %c:_(s64) = G_CONSTANT_FOLD_BARRIER %cst
+    %d:_(s64) = G_CONSTANT_FOLD_BARRIER %cst
+    %1:_(p0) = G_PTR_ADD %p, %cst
+    %2:_(p0) = G_FREEZE %1
+    $x0 = COPY %2(p0)
+    RET_ReallyLR implicit $x0
+...
+---
+# select (false, x, y) -> y
+name:            freeze_select_fold_barrier
+body:             |
+  bb.1:
+    liveins: $x0, $x1
+    ; CHECK-LABEL: name: freeze_select_fold_barrier
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x1
+    ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:_(s64) = G_FREEZE [[COPY]]
+    ; CHECK-NEXT: $x0 = COPY [[FREEZE]](s64)
+    %0:_(s64) = COPY $x0
+    %1:_(s64) = COPY $x1
+    %2:_(s1) = G_CONSTANT i1 false
+    %3:_(s64) = G_SELECT %2, %0, %1
+    %4:_(s64) = G_FREEZE %3
+    $x0 = COPY %4(s64)
+...
+---
+name:            freeze_extract_and_shuffle_vector_fold_barrier
+body:             |
+  bb.1:
+    liveins: $x0, $x1
+    ; CHECK-LABEL: name: freeze_extract_and_shuffle_vector_fold_barrier
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %arg1:_(<4 x s32>) = COPY $q0
+    ; CHECK-NEXT: %arg2:_(<4 x s32>) = COPY $q1
+    ; CHECK-NEXT: %idx:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: %sv:_(<4 x s32>) = G_SHUFFLE_VECTOR %arg1(<4 x s32>), %arg2, shufflemask(3, 0, 0, 0)
+    ; CHECK-NEXT: %freeze_sv:_(<4 x s32>) = G_FREEZE %sv
+    ; CHECK-NEXT: %extract:_(s32) = G_EXTRACT_VECTOR_ELT %freeze_sv(<4 x s32>), %idx(s64)
+    ; CHECK-NEXT: $w0 = COPY %extract(s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %arg1:_(<4 x s32>) = COPY $q0
+    %arg2:_(<4 x s32>) = COPY $q1
+    %idx:_(s64) = G_CONSTANT i64 0
+    %sv:_(<4 x s32>) = G_SHUFFLE_VECTOR %arg1(<4 x s32>), %arg2(<4 x s32>), shufflemask(3, 0, 0, 0)
+    %freeze_sv:_(<4 x s32>) = G_FREEZE %sv
+    %extract:_(s32) = G_EXTRACT_VECTOR_ELT %freeze_sv(<4 x s32>), %idx(s64)
+    %freeze:_(s32) = G_FREEZE %extract
+    $w0 = COPY %extract(s32)
+    RET_ReallyLR implicit $x0
+...
+---
+name:            freeze_insert_and_shuffle_vector_fold_barrier
+body:             |
+  bb.1:
+    liveins: $x0, $x1
+    ; CHECK-LABEL: name: freeze_insert_and_shuffle_vector_fold_barrier
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %elt:_(s32) = COPY $w0
+    ; CHECK-NEXT: %arg1:_(<4 x s32>) = COPY $q0
+    ; CHECK-NEXT: %arg2:_(<4 x s32>) = COPY $q1
+    ; CHECK-NEXT: %idx:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: %sv:_(<4 x s32>) = G_SHUFFLE_VECTOR %arg1(<4 x s32>), %arg2, shufflemask(3, 0, 0, 0)
+    ; CHECK-NEXT: %freeze_sv:_(<4 x s32>) = G_FREEZE %sv
+    ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:_(s32) = G_FREEZE %elt
+    ; CHECK-NEXT: %extract:_(<4 x s32>) = G_INSERT_VECTOR_ELT %freeze_sv, [[FREEZE]](s32), %idx(s64)
+    ; CHECK-NEXT: $q0 = COPY %extract(<4 x s32>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %elt:_(s32) = COPY $w0
+    %arg1:_(<4 x s32>) = COPY $q0
+    %arg2:_(<4 x s32>) = COPY $q1
+    %idx:_(s64) = G_CONSTANT i64 0
+    %sv:_(<4 x s32>) = G_SHUFFLE_VECTOR %arg1(<4 x s32>), %arg2(<4 x s32>), shufflemask(3, 0, 0, 0)
+    %freeze_sv:_(<4 x s32>) = G_FREEZE %sv
+    %extract:_(<4 x s32>) = G_INSERT_VECTOR_ELT %freeze_sv(<4 x s32>), %elt(s32), %idx(s64)
+    %freeze:_(<4 x s32>) = G_FREEZE %extract
+    $q0 = COPY %freeze(<4 x s32>)
     RET_ReallyLR implicit $x0

@@ -266,7 +266,7 @@ TokenSequence &TokenSequence::ClipComment(
     if (std::size_t blanks{tok.CountLeadingBlanks()};
         blanks < tok.size() && tok[blanks] == '!') {
       // Retain active compiler directive sentinels (e.g. "!dir$")
-      for (std::size_t k{j + 1}; k < tokens && tok.size() < blanks + 5; ++k) {
+      for (std::size_t k{j + 1}; k < tokens && tok.size() <= blanks + 5; ++k) {
         if (tok.begin() + tok.size() == TokenAt(k).begin()) {
           tok.ExtendToCover(TokenAt(k));
         } else {
@@ -274,12 +274,9 @@ TokenSequence &TokenSequence::ClipComment(
         }
       }
       bool isSentinel{false};
-      if (tok.size() == blanks + 5) {
-        char sentinel[4];
-        for (int k{0}; k < 4; ++k) {
-          sentinel[k] = ToLowerCaseLetter(tok[blanks + k + 1]);
-        }
-        isSentinel = prescanner.IsCompilerDirectiveSentinel(sentinel, 4);
+      if (tok.size() > blanks + 5) {
+        isSentinel = prescanner.IsCompilerDirectiveSentinel(&tok[blanks + 1])
+                         .has_value();
       }
       if (isSentinel) {
       } else if (skipFirst) {

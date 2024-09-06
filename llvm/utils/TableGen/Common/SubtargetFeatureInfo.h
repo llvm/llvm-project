@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_UTIL_TABLEGEN_SUBTARGETFEATUREINFO_H
-#define LLVM_UTIL_TABLEGEN_SUBTARGETFEATUREINFO_H
+#ifndef LLVM_UTIL_TABLEGEN_COMMON_SUBTARGETFEATUREINFO_H
+#define LLVM_UTIL_TABLEGEN_COMMON_SUBTARGETFEATUREINFO_H
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/TableGen/Record.h"
@@ -49,7 +49,7 @@ struct SubtargetFeatureInfo {
 
   void dump() const;
   static std::vector<std::pair<Record *, SubtargetFeatureInfo>>
-  getAll(const RecordKeeper &Records);
+  getAll(RecordKeeper &Records);
 
   /// Emit the subtarget feature flag definitions.
   ///
@@ -102,4 +102,4 @@ struct SubtargetFeatureInfo {
 };
 } // end namespace llvm
 
-#endif // LLVM_UTIL_TABLEGEN_SUBTARGETFEATUREINFO_H
+#endif // LLVM_UTIL_TABLEGEN_COMMON_SUBTARGETFEATUREINFO_H

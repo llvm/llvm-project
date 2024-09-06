@@ -27,10 +27,11 @@
 #include <__chrono/year_month.h>
 #include <__chrono/year_month_day.h>
 #include <__chrono/year_month_weekday.h>
+#include <__chrono/zoned_time.h>
 #include <__concepts/same_as.h>
 #include <__config>
 #include <__format/format_functions.h>
-#include <ostream>
+#include <__fwd/ostream.h>
 #include <ratio>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -302,6 +303,14 @@ operator<<(basic_ostream<_CharT, _Traits>& __os, const local_info& __info) {
              _LIBCPP_STATICALLY_WIDEN(_CharT, "{}: {{{}, {}}}"), __result(), __info.first, __info.second);
 }
 
+#    if !defined(_LIBCPP_HAS_NO_TIME_ZONE_DATABASE) && !defined(_LIBCPP_HAS_NO_FILESYSTEM) &&                          \
+        !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+template <class _CharT, class _Traits, class _Duration, class _TimeZonePtr>
+_LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
+operator<<(basic_ostream<_CharT, _Traits>& __os, const zoned_time<_Duration, _TimeZonePtr>& __tp) {
+  return __os << std::format(__os.getloc(), _LIBCPP_STATICALLY_WIDEN(_CharT, "{:L%F %T %Z}"), __tp);
+}
+#    endif
 #  endif // !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB)
 
 } // namespace chrono

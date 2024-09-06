@@ -128,7 +128,7 @@ FunctionPass *llvm::createX86FlagsCopyLoweringPass() {
 char X86FlagsCopyLoweringPass::ID = 0;
 
 void X86FlagsCopyLoweringPass::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addRequired<MachineDominatorTreeWrapperPass>();
+  AU.addUsedIfAvailable<MachineDominatorTreeWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
@@ -258,12 +258,31 @@ bool X86FlagsCopyLoweringPass::runOnMachineFunction(MachineFunction &MF) {
   MRI = &MF.getRegInfo();
   TII = Subtarget->getInstrInfo();
   TRI = Subtarget->getRegisterInfo();
-  MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   PromoteRC = &X86::GR8RegClass;
 
   if (MF.empty())
     // Nothing to do for a degenerate empty function...
     return false;
+
+  if (none_of(MRI->def_instructions(X86::EFLAGS), [](const MachineInstr &MI) {
+        return MI.getOpcode() == TargetOpcode::COPY;
+      }))
+    return false;
+
+  // We change the code, so we don't preserve the dominator tree anyway. If we
+  // got a valid MDT from the pass manager, use that, otherwise construct one
+  // now. This is an optimization that avoids unnecessary MDT construction for
+  // functions that have no flag copies.
+
+  auto MDTWrapper = getAnalysisIfAvailable<MachineDominatorTreeWrapperPass>();
+  std::unique_ptr<MachineDominatorTree> OwnedMDT;
+  if (MDTWrapper) {
+    MDT = &MDTWrapper->getDomTree();
+  } else {
+    OwnedMDT = std::make_unique<MachineDominatorTree>();
+    OwnedMDT->getBase().recalculate(MF);
+    MDT = OwnedMDT.get();
+  }
 
   // Collect the copies in RPO so that when there are chains where a copy is in
   // turn copied again we visit the first one first. This ensures we can find

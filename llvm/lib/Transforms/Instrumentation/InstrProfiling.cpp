@@ -38,6 +38,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/InitializePasses.h"
@@ -131,6 +132,11 @@ cl::opt<bool> AtomicFirstCounter(
              "the entry counter)"),
     cl::init(false));
 
+cl::opt<bool> ConditionalCounterUpdate(
+    "conditional-counter-update",
+    cl::desc("Do conditional counter updates in single byte counters mode)"),
+    cl::init(false));
+
 // If the option is not specified, the default behavior about whether
 // counter promotion is done depends on how instrumentaiton lowering
 // pipeline is setup, i.e., the default value of true of this option
@@ -168,6 +174,30 @@ cl::opt<bool> IterativeCounterPromotion(
 cl::opt<bool> SkipRetExitBlock(
     "skip-ret-exit-block", cl::init(true),
     cl::desc("Suppress counter promotion if exit blocks contain ret."));
+
+static cl::opt<bool> SampledInstr("sampled-instrumentation", cl::ZeroOrMore,
+                                  cl::init(false),
+                                  cl::desc("Do PGO instrumentation sampling"));
+
+static cl::opt<unsigned> SampledInstrPeriod(
+    "sampled-instr-period",
+    cl::desc("Set the profile instrumentation sample period. For each sample "
+             "period, a fixed number of consecutive samples will be recorded. "
+             "The number is controlled by 'sampled-instr-burst-duration' flag. "
+             "The default sample period of 65535 is optimized for generating "
+             "efficient code that leverages unsigned integer wrapping in "
+             "overflow."),
+    cl::init(65535));
+
+static cl::opt<unsigned> SampledInstrBurstDuration(
+    "sampled-instr-burst-duration",
+    cl::desc("Set the profile instrumentation burst duration, which can range "
+             "from 0 to one less than the value of 'sampled-instr-period'. "
+             "This number of samples will be recorded for each "
+             "'sampled-instr-period' count update. Setting to 1 enables "
+             "simple sampling, in which case it is recommended to set "
+             "'sampled-instr-period' to a prime number."),
+    cl::init(200));
 
 using LoadStorePair = std::pair<Instruction *, Instruction *>;
 
@@ -237,6 +267,10 @@ private:
   GlobalVariable *NamesVar = nullptr;
   size_t NamesSize = 0;
 
+  /// The instance of [[alwaysinline]] rmw_or(ptr, i8).
+  /// This is name-insensitive.
+  Function *RMWOrFunc = nullptr;
+
   // vector of counter load/store pairs to be register promoted.
   std::vector<LoadStorePair> PromotionCandidates;
 
@@ -254,6 +288,9 @@ private:
 
   /// Returns true if profile counter update register promotion is enabled.
   bool isCounterPromotionEnabled() const;
+
+  /// Return true if profile sampling is enabled.
+  bool isSamplingEnabled() const;
 
   /// Count the number of instrumented value sites for the function.
   void computeNumValueSiteCounts(InstrProfValueProfileInst *Ins);
@@ -286,6 +323,9 @@ private:
   /// acts on.
   Value *getCounterAddress(InstrProfCntrInstBase *I);
 
+  /// Lower the incremental instructions under profile sampling predicates.
+  void doSampling(Instruction *I);
+
   /// Get the region counters for an increment, creating them if necessary.
   ///
   /// If the counter array doesn't yet exist, the profile data variables
@@ -296,6 +336,14 @@ private:
   GlobalVariable *createRegionCounters(InstrProfCntrInstBase *Inc,
                                        StringRef Name,
                                        GlobalValue::LinkageTypes Linkage);
+
+  /// Create [[alwaysinline]] rmw_or(ptr, i8).
+  /// This doesn't update `RMWOrFunc`.
+  Function *createRMWOrFunc();
+
+  /// Get the call to `rmw_or`.
+  /// Create the instance if it is unknown.
+  CallInst *getRMWOrCall(Value *Addr, Value *Val);
 
   /// Compute the address of the test vector bitmap that this profiling
   /// instruction acts on.
@@ -622,33 +670,169 @@ PreservedAnalyses InstrProfilingLoweringPass::run(Module &M,
   return PreservedAnalyses::none();
 }
 
+//
+// Perform instrumentation sampling.
+//
+// There are 3 favors of sampling:
+// (1) Full burst sampling: We transform:
+//   Increment_Instruction;
+// to:
+//   if (__llvm_profile_sampling__ < SampledInstrBurstDuration) {
+//     Increment_Instruction;
+//   }
+//   __llvm_profile_sampling__ += 1;
+//   if (__llvm_profile_sampling__ >= SampledInstrPeriod) {
+//     __llvm_profile_sampling__ = 0;
+//   }
+//
+// "__llvm_profile_sampling__" is a thread-local global shared by all PGO
+// counters (value-instrumentation and edge instrumentation).
+//
+// (2) Fast burst sampling:
+// "__llvm_profile_sampling__" variable is an unsigned type, meaning it will
+// wrap around to zero when overflows. In this case, the second check is
+// unnecessary, so we won't generate check2 when the SampledInstrPeriod is
+// set to 65535 (64K - 1). The code after:
+//   if (__llvm_profile_sampling__ < SampledInstrBurstDuration) {
+//     Increment_Instruction;
+//   }
+//   __llvm_profile_sampling__ += 1;
+//
+// (3) Simple sampling:
+// When SampledInstrBurstDuration sets to 1, we do a simple sampling:
+//   __llvm_profile_sampling__ += 1;
+//   if (__llvm_profile_sampling__ >= SampledInstrPeriod) {
+//     __llvm_profile_sampling__ = 0;
+//     Increment_Instruction;
+//   }
+//
+// Note that, the code snippet after the transformation can still be counter
+// promoted. However, with sampling enabled, counter updates are expected to
+// be infrequent, making the benefits of counter promotion negligible.
+// Moreover, counter promotion can potentially cause issues in server
+// applications, particularly when the counters are dumped without a clean
+// exit. To mitigate this risk, counter promotion is disabled by default when
+// sampling is enabled. This behavior can be overridden using the internal
+// option.
+void InstrLowerer::doSampling(Instruction *I) {
+  if (!isSamplingEnabled())
+    return;
+
+  unsigned SampledBurstDuration = SampledInstrBurstDuration.getValue();
+  unsigned SampledPeriod = SampledInstrPeriod.getValue();
+  if (SampledBurstDuration >= SampledPeriod) {
+    report_fatal_error(
+        "SampledPeriod needs to be greater than SampledBurstDuration");
+  }
+  bool UseShort = (SampledPeriod <= USHRT_MAX);
+  bool IsSimpleSampling = (SampledBurstDuration == 1);
+  // If (SampledBurstDuration == 1 && SampledPeriod == 65535), generate
+  // the simple sampling style code.
+  bool IsFastSampling = (!IsSimpleSampling && SampledPeriod == 65535);
+
+  auto GetConstant = [UseShort](IRBuilder<> &Builder, uint32_t C) {
+    if (UseShort)
+      return Builder.getInt16(C);
+    else
+      return Builder.getInt32(C);
+  };
+
+  IntegerType *SamplingVarTy;
+  if (UseShort)
+    SamplingVarTy = Type::getInt16Ty(M.getContext());
+  else
+    SamplingVarTy = Type::getInt32Ty(M.getContext());
+  auto *SamplingVar =
+      M.getGlobalVariable(INSTR_PROF_QUOTE(INSTR_PROF_PROFILE_SAMPLING_VAR));
+  assert(SamplingVar && "SamplingVar not set properly");
+
+  // Create the condition for checking the burst duration.
+  Instruction *SamplingVarIncr;
+  Value *NewSamplingVarVal;
+  MDBuilder MDB(I->getContext());
+  MDNode *BranchWeight;
+  IRBuilder<> CondBuilder(I);
+  auto *LoadSamplingVar = CondBuilder.CreateLoad(SamplingVarTy, SamplingVar);
+  if (IsSimpleSampling) {
+    // For the simple sampling, just create the load and increments.
+    IRBuilder<> IncBuilder(I);
+    NewSamplingVarVal =
+        IncBuilder.CreateAdd(LoadSamplingVar, GetConstant(IncBuilder, 1));
+    SamplingVarIncr = IncBuilder.CreateStore(NewSamplingVarVal, SamplingVar);
+  } else {
+    // For the bust-sampling, create the conditonal update.
+    auto *DurationCond = CondBuilder.CreateICmpULE(
+        LoadSamplingVar, GetConstant(CondBuilder, SampledBurstDuration));
+    BranchWeight = MDB.createBranchWeights(
+        SampledBurstDuration, SampledPeriod + 1 - SampledBurstDuration);
+    Instruction *ThenTerm = SplitBlockAndInsertIfThen(
+        DurationCond, I, /* Unreachable */ false, BranchWeight);
+    IRBuilder<> IncBuilder(I);
+    NewSamplingVarVal =
+        IncBuilder.CreateAdd(LoadSamplingVar, GetConstant(IncBuilder, 1));
+    SamplingVarIncr = IncBuilder.CreateStore(NewSamplingVarVal, SamplingVar);
+    I->moveBefore(ThenTerm);
+  }
+
+  if (IsFastSampling)
+    return;
+
+  // Create the condtion for checking the period.
+  Instruction *ThenTerm, *ElseTerm;
+  IRBuilder<> PeriodCondBuilder(SamplingVarIncr);
+  auto *PeriodCond = PeriodCondBuilder.CreateICmpUGE(
+      NewSamplingVarVal, GetConstant(PeriodCondBuilder, SampledPeriod));
+  BranchWeight = MDB.createBranchWeights(1, SampledPeriod);
+  SplitBlockAndInsertIfThenElse(PeriodCond, SamplingVarIncr, &ThenTerm,
+                                &ElseTerm, BranchWeight);
+
+  // For the simple sampling, the counter update happens in sampling var reset.
+  if (IsSimpleSampling)
+    I->moveBefore(ThenTerm);
+
+  IRBuilder<> ResetBuilder(ThenTerm);
+  ResetBuilder.CreateStore(GetConstant(ResetBuilder, 0), SamplingVar);
+  SamplingVarIncr->moveBefore(ElseTerm);
+}
+
 bool InstrLowerer::lowerIntrinsics(Function *F) {
   bool MadeChange = false;
   PromotionCandidates.clear();
+  SmallVector<InstrProfInstBase *, 8> InstrProfInsts;
+
+  // To ensure compatibility with sampling, we save the intrinsics into
+  // a buffer to prevent potential breakage of the iterator (as the
+  // intrinsics will be moved to a different BB).
   for (BasicBlock &BB : *F) {
     for (Instruction &Instr : llvm::make_early_inc_range(BB)) {
-      if (auto *IPIS = dyn_cast<InstrProfIncrementInstStep>(&Instr)) {
-        lowerIncrement(IPIS);
-        MadeChange = true;
-      } else if (auto *IPI = dyn_cast<InstrProfIncrementInst>(&Instr)) {
-        lowerIncrement(IPI);
-        MadeChange = true;
-      } else if (auto *IPC = dyn_cast<InstrProfTimestampInst>(&Instr)) {
-        lowerTimestamp(IPC);
-        MadeChange = true;
-      } else if (auto *IPC = dyn_cast<InstrProfCoverInst>(&Instr)) {
-        lowerCover(IPC);
-        MadeChange = true;
-      } else if (auto *IPVP = dyn_cast<InstrProfValueProfileInst>(&Instr)) {
-        lowerValueProfileInst(IPVP);
-        MadeChange = true;
-      } else if (auto *IPMP = dyn_cast<InstrProfMCDCBitmapParameters>(&Instr)) {
-        IPMP->eraseFromParent();
-        MadeChange = true;
-      } else if (auto *IPBU = dyn_cast<InstrProfMCDCTVBitmapUpdate>(&Instr)) {
-        lowerMCDCTestVectorBitmapUpdate(IPBU);
-        MadeChange = true;
-      }
+      if (auto *IP = dyn_cast<InstrProfInstBase>(&Instr))
+        InstrProfInsts.push_back(IP);
+    }
+  }
+
+  for (auto *Instr : InstrProfInsts) {
+    doSampling(Instr);
+    if (auto *IPIS = dyn_cast<InstrProfIncrementInstStep>(Instr)) {
+      lowerIncrement(IPIS);
+      MadeChange = true;
+    } else if (auto *IPI = dyn_cast<InstrProfIncrementInst>(Instr)) {
+      lowerIncrement(IPI);
+      MadeChange = true;
+    } else if (auto *IPC = dyn_cast<InstrProfTimestampInst>(Instr)) {
+      lowerTimestamp(IPC);
+      MadeChange = true;
+    } else if (auto *IPC = dyn_cast<InstrProfCoverInst>(Instr)) {
+      lowerCover(IPC);
+      MadeChange = true;
+    } else if (auto *IPVP = dyn_cast<InstrProfValueProfileInst>(Instr)) {
+      lowerValueProfileInst(IPVP);
+      MadeChange = true;
+    } else if (auto *IPMP = dyn_cast<InstrProfMCDCBitmapParameters>(Instr)) {
+      IPMP->eraseFromParent();
+      MadeChange = true;
+    } else if (auto *IPBU = dyn_cast<InstrProfMCDCTVBitmapUpdate>(Instr)) {
+      lowerMCDCTestVectorBitmapUpdate(IPBU);
+      MadeChange = true;
     }
   }
 
@@ -669,6 +853,12 @@ bool InstrLowerer::isRuntimeCounterRelocationEnabled() const {
 
   // Fuchsia uses runtime counter relocation by default.
   return TT.isOSFuchsia();
+}
+
+bool InstrLowerer::isSamplingEnabled() const {
+  if (SampledInstr.getNumOccurrences() > 0)
+    return SampledInstr;
+  return Options.Sampling;
 }
 
 bool InstrLowerer::isCounterPromotionEnabled() const {
@@ -740,6 +930,9 @@ bool InstrLowerer::lower() {
   bool NeedsRuntimeHook = needsRuntimeHookUnconditionally(TT);
   if (NeedsRuntimeHook)
     MadeChange = emitRuntimeHook();
+
+  if (!IsCS && isSamplingEnabled())
+    createProfileSamplingVar(M);
 
   bool ContainsProfiling = containsProfilingIntrinsics(M);
   GlobalVariable *CoverageNamesVar =
@@ -866,6 +1059,8 @@ void InstrLowerer::lowerValueProfileInst(InstrProfValueProfileInst *Ind) {
                       llvm::InstrProfValueKind::IPVK_MemOPSize);
   CallInst *Call = nullptr;
   auto *TLI = &GetTLI(*Ind->getFunction());
+  auto *NormalizedDataVarPtr = ConstantExpr::getPointerBitCastOrAddrSpaceCast(
+      DataVar, PointerType::get(M.getContext(), 0));
 
   // To support value profiling calls within Windows exception handlers, funclet
   // information contained within operand bundles needs to be copied over to
@@ -874,11 +1069,13 @@ void InstrLowerer::lowerValueProfileInst(InstrProfValueProfileInst *Ind) {
   SmallVector<OperandBundleDef, 1> OpBundles;
   Ind->getOperandBundlesAsDefs(OpBundles);
   if (!IsMemOpSize) {
-    Value *Args[3] = {Ind->getTargetValue(), DataVar, Builder.getInt32(Index)};
+    Value *Args[3] = {Ind->getTargetValue(), NormalizedDataVarPtr,
+                      Builder.getInt32(Index)};
     Call = Builder.CreateCall(getOrInsertValueProfilingCall(M, *TLI), Args,
                               OpBundles);
   } else {
-    Value *Args[3] = {Ind->getTargetValue(), DataVar, Builder.getInt32(Index)};
+    Value *Args[3] = {Ind->getTargetValue(), NormalizedDataVarPtr,
+                      Builder.getInt32(Index)};
     Call = Builder.CreateCall(
         getOrInsertValueProfilingCall(M, *TLI, ValueProfilingCallType::MemOp),
         Args, OpBundles);
@@ -932,30 +1129,110 @@ Value *InstrLowerer::getCounterAddress(InstrProfCntrInstBase *I) {
     IRBuilder<> EntryBuilder(&Fn->getEntryBlock().front());
     auto *Bias = getOrCreateBiasVar(getInstrProfCounterBiasVarName());
     BiasLI = EntryBuilder.CreateLoad(Int64Ty, Bias, "profc_bias");
+    // Bias doesn't change after startup.
+    BiasLI->setMetadata(LLVMContext::MD_invariant_load,
+                        MDNode::get(M.getContext(), std::nullopt));
   }
   auto *Add = Builder.CreateAdd(Builder.CreatePtrToInt(Addr, Int64Ty), BiasLI);
   return Builder.CreateIntToPtr(Add, Addr->getType());
 }
 
-Value *InstrLowerer::getBitmapAddress(InstrProfMCDCTVBitmapUpdate *I) {
-  auto *Bitmaps = getOrCreateRegionBitmaps(I);
-  IRBuilder<> Builder(I);
+/// Create `void [[alwaysinline]] rmw_or(uint8_t *ArgAddr, uint8_t ArgVal)`
+/// "Basic" sequence is `*ArgAddr |= ArgVal`
+Function *InstrLowerer::createRMWOrFunc() {
+  auto &Ctx = M.getContext();
+  auto *Int8Ty = Type::getInt8Ty(Ctx);
+  Function *Fn = Function::Create(
+      FunctionType::get(Type::getVoidTy(Ctx),
+                        {PointerType::getUnqual(Ctx), Int8Ty}, false),
+      Function::LinkageTypes::PrivateLinkage, "rmw_or", M);
+  Fn->addFnAttr(Attribute::AlwaysInline);
+  auto *ArgAddr = Fn->getArg(0);
+  auto *ArgVal = Fn->getArg(1);
+  IRBuilder<> Builder(BasicBlock::Create(Ctx, "", Fn));
 
-  if (isRuntimeCounterRelocationEnabled()) {
-    LLVMContext &Ctx = M.getContext();
-    Ctx.diagnose(DiagnosticInfoPGOProfile(
-        M.getName().data(),
-        Twine("Runtime counter relocation is presently not supported for MC/DC "
-              "bitmaps."),
-        DS_Warning));
+  // Load profile bitmap byte.
+  //  %mcdc.bits = load i8, ptr %4, align 1
+  auto *Bitmap = Builder.CreateLoad(Int8Ty, ArgAddr, "mcdc.bits");
+
+  if (Options.Atomic || AtomicCounterUpdateAll) {
+    // If ((Bitmap & Val) != Val), then execute atomic (Bitmap |= Val).
+    // Note, just-loaded Bitmap might not be up-to-date. Use it just for
+    // early testing.
+    auto *Masked = Builder.CreateAnd(Bitmap, ArgVal);
+    auto *ShouldStore = Builder.CreateICmpNE(Masked, ArgVal);
+    auto *ThenTerm = BasicBlock::Create(Ctx, "", Fn);
+    auto *ElseTerm = BasicBlock::Create(Ctx, "", Fn);
+    // Assume updating will be rare.
+    auto *Unlikely = MDBuilder(Ctx).createUnlikelyBranchWeights();
+    Builder.CreateCondBr(ShouldStore, ThenTerm, ElseTerm, Unlikely);
+
+    IRBuilder<> ThenBuilder(ThenTerm);
+    ThenBuilder.CreateAtomicRMW(AtomicRMWInst::Or, ArgAddr, ArgVal,
+                                MaybeAlign(), AtomicOrdering::Monotonic);
+    ThenBuilder.CreateRetVoid();
+
+    IRBuilder<> ElseBuilder(ElseTerm);
+    ElseBuilder.CreateRetVoid();
+
+    return Fn;
   }
 
-  return Bitmaps;
+  // Perform logical OR of profile bitmap byte and shifted bit offset.
+  //  %8 = or i8 %mcdc.bits, %7
+  auto *Result = Builder.CreateOr(Bitmap, ArgVal);
+
+  // Store the updated profile bitmap byte.
+  //  store i8 %8, ptr %3, align 1
+  Builder.CreateStore(Result, ArgAddr);
+
+  // Terminator
+  Builder.CreateRetVoid();
+
+  return Fn;
+}
+
+CallInst *InstrLowerer::getRMWOrCall(Value *Addr, Value *Val) {
+  if (!RMWOrFunc)
+    RMWOrFunc = createRMWOrFunc();
+
+  return CallInst::Create(RMWOrFunc, {Addr, Val});
+}
+
+Value *InstrLowerer::getBitmapAddress(InstrProfMCDCTVBitmapUpdate *I) {
+  auto *Bitmaps = getOrCreateRegionBitmaps(I);
+  if (!isRuntimeCounterRelocationEnabled())
+    return Bitmaps;
+
+  // Put BiasLI onto the entry block.
+  Type *Int64Ty = Type::getInt64Ty(M.getContext());
+  Function *Fn = I->getFunction();
+  IRBuilder<> EntryBuilder(&Fn->getEntryBlock().front());
+  auto *Bias = getOrCreateBiasVar(getInstrProfBitmapBiasVarName());
+  auto *BiasLI = EntryBuilder.CreateLoad(Int64Ty, Bias, "profbm_bias");
+  // Assume BiasLI invariant (in the function at least)
+  BiasLI->setMetadata(LLVMContext::MD_invariant_load,
+                      MDNode::get(M.getContext(), std::nullopt));
+
+  // Add Bias to Bitmaps and put it before the intrinsic.
+  IRBuilder<> Builder(I);
+  return Builder.CreatePtrAdd(Bitmaps, BiasLI, "profbm_addr");
 }
 
 void InstrLowerer::lowerCover(InstrProfCoverInst *CoverInstruction) {
   auto *Addr = getCounterAddress(CoverInstruction);
   IRBuilder<> Builder(CoverInstruction);
+  if (ConditionalCounterUpdate) {
+    Instruction *SplitBefore = CoverInstruction->getNextNode();
+    auto &Ctx = CoverInstruction->getParent()->getContext();
+    auto *Int8Ty = llvm::Type::getInt8Ty(Ctx);
+    Value *Load = Builder.CreateLoad(Int8Ty, Addr, "pgocount");
+    Value *Cmp = Builder.CreateIsNotNull(Load, "pgocount.ifnonzero");
+    Instruction *ThenBranch =
+        SplitBlockAndInsertIfThen(Cmp, SplitBefore, false);
+    Builder.SetInsertPoint(ThenBranch);
+  }
+
   // We store zero to represent that this block is covered.
   Builder.CreateStore(Builder.getInt8(0), Addr);
   CoverInstruction->eraseFromParent();
@@ -1044,17 +1321,7 @@ void InstrLowerer::lowerMCDCTestVectorBitmapUpdate(
   //  %7 = shl i8 1, %6
   auto *ShiftedVal = Builder.CreateShl(Builder.getInt8(0x1), BitToSet);
 
-  // Load profile bitmap byte.
-  //  %mcdc.bits = load i8, ptr %4, align 1
-  auto *Bitmap = Builder.CreateLoad(Int8Ty, BitmapByteAddr, "mcdc.bits");
-
-  // Perform logical OR of profile bitmap byte and shifted bit offset.
-  //  %8 = or i8 %mcdc.bits, %7
-  auto *Result = Builder.CreateOr(Bitmap, ShiftedVal);
-
-  // Store the updated profile bitmap byte.
-  //  store i8 %8, ptr %3, align 1
-  Builder.CreateStore(Result, BitmapByteAddr);
+  Builder.Insert(getRMWOrCall(BitmapByteAddr, ShiftedVal));
   Update->eraseFromParent();
 }
 
@@ -1551,7 +1818,8 @@ void InstrLowerer::createDataVariable(InstrProfCntrInstBase *Inc) {
         getInstrProfSectionName(IPSK_vals, TT.getObjectFormat()));
     ValuesVar->setAlignment(Align(8));
     maybeSetComdat(ValuesVar, Fn, CntsVarName);
-    ValuesPtrExpr = ValuesVar;
+    ValuesPtrExpr = ConstantExpr::getPointerBitCastOrAddrSpaceCast(
+        ValuesVar, PointerType::get(Fn->getContext(), 0));
   }
 
   uint64_t NumCounters = Inc->getNumCounters()->getZExtValue();
@@ -1575,6 +1843,10 @@ void InstrLowerer::createDataVariable(InstrProfCntrInstBase *Inc) {
   for (uint32_t Kind = IPVK_First; Kind <= IPVK_Last; ++Kind)
     Int16ArrayVals[Kind] = ConstantInt::get(Int16Ty, PD.NumValueSites[Kind]);
 
+  if (isGPUProfTarget(M)) {
+    Linkage = GlobalValue::ExternalLinkage;
+    Visibility = GlobalValue::ProtectedVisibility;
+  }
   // If the data variable is not referenced by code (if we don't emit
   // @llvm.instrprof.value.profile, NS will be 0), and the counter keeps the
   // data variable live under linker GC, the data variable can be private. This
@@ -1586,9 +1858,9 @@ void InstrLowerer::createDataVariable(InstrProfCntrInstBase *Inc) {
   // If profd is in a deduplicate comdat, NS==0 with a hash suffix guarantees
   // that other copies must have the same CFG and cannot have value profiling.
   // If no hash suffix, other profd copies may be referenced by code.
-  if (NS == 0 && !(DataReferencedByCode && NeedComdat && !Renamed) &&
-      (TT.isOSBinFormatELF() ||
-       (!DataReferencedByCode && TT.isOSBinFormatCOFF()))) {
+  else if (NS == 0 && !(DataReferencedByCode && NeedComdat && !Renamed) &&
+           (TT.isOSBinFormatELF() ||
+            (!DataReferencedByCode && TT.isOSBinFormatCOFF()))) {
     Linkage = GlobalValue::PrivateLinkage;
     Visibility = GlobalValue::DefaultVisibility;
   }
@@ -1711,6 +1983,13 @@ void InstrLowerer::emitNameData() {
   NamesVar = new GlobalVariable(M, NamesVal->getType(), true,
                                 GlobalValue::PrivateLinkage, NamesVal,
                                 getInstrProfNamesVarName());
+
+  // Make names variable public if current target is a GPU
+  if (isGPUProfTarget(M)) {
+    NamesVar->setLinkage(GlobalValue::ExternalLinkage);
+    NamesVar->setVisibility(GlobalValue::VisibilityTypes::ProtectedVisibility);
+  }
+
   NamesSize = CompressedNameStr.size();
   setGlobalVariableLargeSection(TT, *NamesVar);
   NamesVar->setSection(
@@ -1777,10 +2056,13 @@ void InstrLowerer::emitRegistration() {
   IRBuilder<> IRB(BasicBlock::Create(M.getContext(), "", RegisterF));
   for (Value *Data : CompilerUsedVars)
     if (!isa<Function>(Data))
-      IRB.CreateCall(RuntimeRegisterF, Data);
+      // Check for addrspace cast when profiling GPU
+      IRB.CreateCall(RuntimeRegisterF,
+                     IRB.CreatePointerBitCastOrAddrSpaceCast(Data, VoidPtrTy));
   for (Value *Data : UsedVars)
     if (Data != NamesVar && !isa<Function>(Data))
-      IRB.CreateCall(RuntimeRegisterF, Data);
+      IRB.CreateCall(RuntimeRegisterF,
+                     IRB.CreatePointerBitCastOrAddrSpaceCast(Data, VoidPtrTy));
 
   if (NamesVar) {
     Type *ParamTypes[] = {VoidPtrTy, Int64Ty};
@@ -1789,7 +2071,9 @@ void InstrLowerer::emitRegistration() {
     auto *NamesRegisterF =
         Function::Create(NamesRegisterTy, GlobalVariable::ExternalLinkage,
                          getInstrProfNamesRegFuncName(), M);
-    IRB.CreateCall(NamesRegisterF, {NamesVar, IRB.getInt64(NamesSize)});
+    IRB.CreateCall(NamesRegisterF, {IRB.CreatePointerBitCastOrAddrSpaceCast(
+                                        NamesVar, VoidPtrTy),
+                                    IRB.getInt64(NamesSize)});
   }
 
   IRB.CreateRetVoid();
@@ -1810,7 +2094,10 @@ bool InstrLowerer::emitRuntimeHook() {
   auto *Var =
       new GlobalVariable(M, Int32Ty, false, GlobalValue::ExternalLinkage,
                          nullptr, getInstrProfRuntimeHookVarName());
-  Var->setVisibility(GlobalValue::HiddenVisibility);
+  if (isGPUProfTarget(M))
+    Var->setVisibility(GlobalValue::ProtectedVisibility);
+  else
+    Var->setVisibility(GlobalValue::HiddenVisibility);
 
   if (TT.isOSBinFormatELF() && !TT.isPS()) {
     // Mark the user variable as used so that it isn't stripped out.
@@ -1887,3 +2174,29 @@ void InstrLowerer::emitInitialization() {
 
   appendToGlobalCtors(M, F, 0);
 }
+
+namespace llvm {
+// Create the variable for profile sampling.
+void createProfileSamplingVar(Module &M) {
+  const StringRef VarName(INSTR_PROF_QUOTE(INSTR_PROF_PROFILE_SAMPLING_VAR));
+  IntegerType *SamplingVarTy;
+  Constant *ValueZero;
+  if (SampledInstrPeriod.getValue() <= USHRT_MAX) {
+    SamplingVarTy = Type::getInt16Ty(M.getContext());
+    ValueZero = Constant::getIntegerValue(SamplingVarTy, APInt(16, 0));
+  } else {
+    SamplingVarTy = Type::getInt32Ty(M.getContext());
+    ValueZero = Constant::getIntegerValue(SamplingVarTy, APInt(32, 0));
+  }
+  auto SamplingVar = new GlobalVariable(
+      M, SamplingVarTy, false, GlobalValue::WeakAnyLinkage, ValueZero, VarName);
+  SamplingVar->setVisibility(GlobalValue::DefaultVisibility);
+  SamplingVar->setThreadLocal(true);
+  Triple TT(M.getTargetTriple());
+  if (TT.supportsCOMDAT()) {
+    SamplingVar->setLinkage(GlobalValue::ExternalLinkage);
+    SamplingVar->setComdat(M.getOrInsertComdat(VarName));
+  }
+  appendToCompilerUsed(M, SamplingVar);
+}
+} // namespace llvm

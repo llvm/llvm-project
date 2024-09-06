@@ -772,7 +772,7 @@ void StructurizeCFG::simplifyAffectedPhis() {
   bool Changed;
   do {
     Changed = false;
-    SimplifyQuery Q(Func->getParent()->getDataLayout());
+    SimplifyQuery Q(Func->getDataLayout());
     Q.DT = DT;
     // Setting CanUseUndef to true might extend value liveness, set it to false
     // to achieve better register pressure.
@@ -1212,20 +1212,46 @@ static void addRegionIntoQueue(Region &R, std::vector<Region *> &Regions) {
     addRegionIntoQueue(*E, Regions);
 }
 
+StructurizeCFGPass::StructurizeCFGPass(bool SkipUniformRegions_)
+    : SkipUniformRegions(SkipUniformRegions_) {
+  if (ForceSkipUniformRegions.getNumOccurrences())
+    SkipUniformRegions = ForceSkipUniformRegions.getValue();
+}
+
+void StructurizeCFGPass::printPipeline(
+    raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
+  static_cast<PassInfoMixin<StructurizeCFGPass> *>(this)->printPipeline(
+      OS, MapClassName2PassName);
+  if (SkipUniformRegions)
+    OS << "<skip-uniform-regions>";
+}
+
 PreservedAnalyses StructurizeCFGPass::run(Function &F,
                                           FunctionAnalysisManager &AM) {
 
   bool Changed = false;
   DominatorTree *DT = &AM.getResult<DominatorTreeAnalysis>(F);
   auto &RI = AM.getResult<RegionInfoAnalysis>(F);
+
+  UniformityInfo *UI = nullptr;
+  if (SkipUniformRegions)
+    UI = &AM.getResult<UniformityInfoAnalysis>(F);
+
   std::vector<Region *> Regions;
   addRegionIntoQueue(*RI.getTopLevelRegion(), Regions);
   while (!Regions.empty()) {
     Region *R = Regions.back();
+    Regions.pop_back();
+
     StructurizeCFG SCFG;
     SCFG.init(R);
+
+    if (SkipUniformRegions && SCFG.makeUniformRegion(R, *UI)) {
+      Changed = true; // May have added metadata.
+      continue;
+    }
+
     Changed |= SCFG.run(R, DT);
-    Regions.pop_back();
   }
   if (!Changed)
     return PreservedAnalyses::all();

@@ -16,6 +16,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <optional>
 #include <sys/stat.h>
 #include <sys/types.h>
 #if defined(_WIN32)
@@ -398,7 +399,7 @@ void SendProcessEvent(LaunchMethod launch_method) {
 // Grab any STDOUT and STDERR from the process and send it up to VS Code
 // via an "output" event to the "stdout" and "stderr" categories.
 void SendStdOutStdErr(lldb::SBProcess &process) {
-  char buffer[1024];
+  char buffer[OutputBufferSize];
   size_t count;
   while ((count = process.GetSTDOUT(buffer, sizeof(buffer))) > 0)
     g_dap.SendOutput(OutputType::Stdout, llvm::StringRef(buffer, count));
@@ -672,9 +673,14 @@ void request_attach(const llvm::json::Object &request) {
   lldb::SBError error;
   FillResponse(request, response);
   lldb::SBAttachInfo attach_info;
+  const int invalid_port = 0;
   auto arguments = request.getObject("arguments");
   const lldb::pid_t pid =
       GetUnsigned(arguments, "pid", LLDB_INVALID_PROCESS_ID);
+  const auto gdb_remote_port =
+      GetUnsigned(arguments, "gdb-remote-port", invalid_port);
+  const auto gdb_remote_hostname =
+      GetString(arguments, "gdb-remote-hostname", "localhost");
   if (pid != LLDB_INVALID_PROCESS_ID)
     attach_info.SetProcessID(pid);
   const auto wait_for = GetBoolean(arguments, "waitFor", false);
@@ -695,6 +701,8 @@ void request_attach(const llvm::json::Object &request) {
       GetBoolean(arguments, "enableAutoVariableSummaries", false);
   g_dap.enable_synthetic_child_debugging =
       GetBoolean(arguments, "enableSyntheticChildDebugging", false);
+  g_dap.enable_display_extended_backtrace =
+      GetBoolean(arguments, "enableDisplayExtendedBacktrace", false);
   g_dap.command_escape_prefix =
       GetString(arguments, "commandEscapePrefix", "`");
   g_dap.SetFrameFormat(GetString(arguments, "customFrameFormat"));
@@ -736,7 +744,8 @@ void request_attach(const llvm::json::Object &request) {
     return;
   }
 
-  if (pid == LLDB_INVALID_PROCESS_ID && wait_for) {
+  if ((pid == LLDB_INVALID_PROCESS_ID || gdb_remote_port == invalid_port) &&
+      wait_for) {
     char attach_msg[256];
     auto attach_msg_len = snprintf(attach_msg, sizeof(attach_msg),
                                    "Waiting to attach to \"%s\"...",
@@ -749,9 +758,27 @@ void request_attach(const llvm::json::Object &request) {
     // Disable async events so the attach will be successful when we return from
     // the launch call and the launch will happen synchronously
     g_dap.debugger.SetAsync(false);
-    if (core_file.empty())
-      g_dap.target.Attach(attach_info, error);
-    else
+    if (core_file.empty()) {
+      if ((pid != LLDB_INVALID_PROCESS_ID) &&
+          (gdb_remote_port != invalid_port)) {
+        // If both pid and port numbers are specified.
+        error.SetErrorString("The user can't specify both pid and port");
+      } else if (gdb_remote_port != invalid_port) {
+        // If port is specified and pid is not.
+        lldb::SBListener listener = g_dap.debugger.GetListener();
+
+        // If the user hasn't provided the hostname property, default localhost
+        // being used.
+        std::string connect_url =
+            llvm::formatv("connect://{0}:", gdb_remote_hostname);
+        connect_url += std::to_string(gdb_remote_port);
+        g_dap.target.ConnectRemote(listener, connect_url.c_str(), "gdb-remote",
+                                   error);
+      } else {
+        // Attach by process name or id.
+        g_dap.target.Attach(attach_info, error);
+      }
+    } else
       g_dap.target.LoadCore(core_file.data(), error);
     // Reenable async events
     g_dap.debugger.SetAsync(true);
@@ -1575,6 +1602,10 @@ void request_modules(const llvm::json::Object &request) {
 //   }]
 // }
 void request_initialize(const llvm::json::Object &request) {
+  llvm::json::Object response;
+  FillResponse(request, response);
+  llvm::json::Object body;
+
   auto log_cb = [](const char *buf, void *baton) -> void {
     g_dap.SendOutput(OutputType::Console, llvm::StringRef{buf});
   };
@@ -1586,16 +1617,24 @@ void request_initialize(const llvm::json::Object &request) {
   bool source_init_file = GetBoolean(arguments, "sourceInitFile", true);
 
   g_dap.debugger = lldb::SBDebugger::Create(source_init_file, log_cb, nullptr);
+  if (llvm::Error err = g_dap.RunPreInitCommands()) {
+    response["success"] = false;
+    EmplaceSafeString(response, "message", llvm::toString(std::move(err)));
+    g_dap.SendJSON(llvm::json::Value(std::move(response)));
+    return;
+  }
+
+  g_dap.PopulateExceptionBreakpoints();
   auto cmd = g_dap.debugger.GetCommandInterpreter().AddMultiwordCommand(
       "lldb-dap", "Commands for managing lldb-dap.");
   if (GetBoolean(arguments, "supportsStartDebuggingRequest", false)) {
     cmd.AddCommand(
-        "startDebugging", &g_dap.start_debugging_request_handler,
+        "startDebugging", new StartDebuggingRequestHandler(),
         "Sends a startDebugging request from the debug adapter to the client "
         "to start a child debug session of the same type as the caller.");
   }
   cmd.AddCommand(
-      "repl-mode", &g_dap.repl_mode_request_handler,
+      "repl-mode", new ReplModeRequestHandler(),
       "Get or set the repl behavior of lldb-dap evaluation requests.");
 
   g_dap.progress_event_thread = std::thread(ProgressEventThreadFunction);
@@ -1604,9 +1643,6 @@ void request_initialize(const llvm::json::Object &request) {
   // process and more.
   g_dap.event_thread = std::thread(EventThreadFunction);
 
-  llvm::json::Object response;
-  FillResponse(request, response);
-  llvm::json::Object body;
   // The debug adapter supports the configurationDoneRequest.
   body.try_emplace("supportsConfigurationDoneRequest", true);
   // The debug adapter supports function breakpoints.
@@ -1621,7 +1657,7 @@ void request_initialize(const llvm::json::Object &request) {
   body.try_emplace("supportsEvaluateForHovers", true);
   // Available filters or options for the setExceptionBreakpoints request.
   llvm::json::Array filters;
-  for (const auto &exc_bp : g_dap.exception_breakpoints) {
+  for (const auto &exc_bp : *g_dap.exception_breakpoints) {
     filters.emplace_back(CreateExceptionBreakpointFilter(exc_bp));
   }
   body.try_emplace("exceptionBreakpointFilters", std::move(filters));
@@ -1643,6 +1679,9 @@ void request_initialize(const llvm::json::Object &request) {
   body.try_emplace("supportsCompletionsRequest", true);
   // The debug adapter supports the disassembly request.
   body.try_emplace("supportsDisassembleRequest", true);
+  // The debug adapter supports stepping granularities (argument `granularity`)
+  // for the stepping requests.
+  body.try_emplace("supportsSteppingGranularity", true);
 
   llvm::json::Array completion_characters;
   completion_characters.emplace_back(".");
@@ -1684,6 +1723,13 @@ void request_initialize(const llvm::json::Object &request) {
   body.try_emplace("supportsLogPoints", true);
   // The debug adapter supports data watchpoints.
   body.try_emplace("supportsDataBreakpoints", true);
+  // The debug adapter support for instruction breakpoint.
+  body.try_emplace("supportsInstructionBreakpoints", true);
+
+  // Put in non-DAP specification lldb specific information.
+  llvm::json::Object lldb_json;
+  lldb_json.try_emplace("version", g_dap.debugger.GetVersionString());
+  body.try_emplace("__lldb", std::move(lldb_json));
 
   response.try_emplace("body", std::move(body));
   g_dap.SendJSON(llvm::json::Value(std::move(response)));
@@ -1883,6 +1929,8 @@ void request_launch(const llvm::json::Object &request) {
       GetBoolean(arguments, "enableAutoVariableSummaries", false);
   g_dap.enable_synthetic_child_debugging =
       GetBoolean(arguments, "enableSyntheticChildDebugging", false);
+  g_dap.enable_display_extended_backtrace =
+      GetBoolean(arguments, "enableDisplayExtendedBacktrace", false);
   g_dap.command_escape_prefix =
       GetString(arguments, "commandEscapePrefix", "`");
   g_dap.SetFrameFormat(GetString(arguments, "customFrameFormat"));
@@ -1946,6 +1994,14 @@ void request_launch(const llvm::json::Object &request) {
   g_dap.SendJSON(CreateEventObject("initialized"));
 }
 
+// Check if the step-granularity is `instruction`
+static bool hasInstructionGranularity(const llvm::json::Object &requestArgs) {
+  if (std::optional<llvm::StringRef> value =
+          requestArgs.getString("granularity"))
+    return value == "instruction";
+  return false;
+}
+
 // "NextRequest": {
 //   "allOf": [ { "$ref": "#/definitions/Request" }, {
 //     "type": "object",
@@ -1973,6 +2029,11 @@ void request_launch(const llvm::json::Object &request) {
 //     "threadId": {
 //       "type": "integer",
 //       "description": "Execute 'next' for this thread."
+//     },
+//     "granularity": {
+//       "$ref": "#/definitions/SteppingGranularity",
+//       "description": "Stepping granularity. If no granularity is specified, a
+//                       granularity of `statement` is assumed."
 //     }
 //   },
 //   "required": [ "threadId" ]
@@ -1993,7 +2054,11 @@ void request_next(const llvm::json::Object &request) {
     // Remember the thread ID that caused the resume so we can set the
     // "threadCausedFocus" boolean value in the "stopped" events.
     g_dap.focus_tid = thread.GetThreadID();
-    thread.StepOver();
+    if (hasInstructionGranularity(*arguments)) {
+      thread.StepInstruction(/*step_over=*/true);
+    } else {
+      thread.StepOver();
+    }
   } else {
     response["success"] = llvm::json::Value(false);
   }
@@ -2476,7 +2541,7 @@ void request_setExceptionBreakpoints(const llvm::json::Object &request) {
   // Keep a list of any exception breakpoint filter names that weren't set
   // so we can clear any exception breakpoints if needed.
   std::set<std::string> unset_filters;
-  for (const auto &bp : g_dap.exception_breakpoints)
+  for (const auto &bp : *g_dap.exception_breakpoints)
     unset_filters.insert(bp.filter);
 
   for (const auto &value : *filters) {
@@ -3052,8 +3117,9 @@ void request_stackTrace(const llvm::json::Object &request) {
     // This will always return an invalid thread when
     // libBacktraceRecording.dylib is not loaded or if there is no extended
     // backtrace.
-    lldb::SBThread queue_backtrace_thread =
-        thread.GetExtendedBacktraceThread("libdispatch");
+    lldb::SBThread queue_backtrace_thread;
+    if (g_dap.enable_display_extended_backtrace)
+      queue_backtrace_thread = thread.GetExtendedBacktraceThread("libdispatch");
     if (queue_backtrace_thread.IsValid()) {
       // One extra frame as a label to mark the enqueued thread.
       totalFrames += queue_backtrace_thread.GetNumFrames() + 1;
@@ -3061,8 +3127,10 @@ void request_stackTrace(const llvm::json::Object &request) {
 
     // This will always return an invalid thread when there is no exception in
     // the current thread.
-    lldb::SBThread exception_backtrace_thread =
-        thread.GetCurrentExceptionBacktrace();
+    lldb::SBThread exception_backtrace_thread;
+    if (g_dap.enable_display_extended_backtrace)
+      exception_backtrace_thread = thread.GetCurrentExceptionBacktrace();
+
     if (exception_backtrace_thread.IsValid()) {
       // One extra frame as a label to mark the exception thread.
       totalFrames += exception_backtrace_thread.GetNumFrames() + 1;
@@ -3154,6 +3222,11 @@ void request_stackTrace(const llvm::json::Object &request) {
 //     "targetId": {
 //       "type": "integer",
 //       "description": "Optional id of the target to step into."
+//     },
+//     "granularity": {
+//       "$ref": "#/definitions/SteppingGranularity",
+//       "description": "Stepping granularity. If no granularity is specified, a
+//                       granularity of `statement` is assumed."
 //     }
 //   },
 //   "required": [ "threadId" ]
@@ -3184,7 +3257,11 @@ void request_stepIn(const llvm::json::Object &request) {
     // Remember the thread ID that caused the resume so we can set the
     // "threadCausedFocus" boolean value in the "stopped" events.
     g_dap.focus_tid = thread.GetThreadID();
-    thread.StepInto(step_in_target.c_str(), run_mode);
+    if (hasInstructionGranularity(*arguments)) {
+      thread.StepInstruction(/*step_over=*/false);
+    } else {
+      thread.StepInto(step_in_target.c_str(), run_mode);
+    }
   } else {
     response["success"] = llvm::json::Value(false);
   }
@@ -4007,6 +4084,254 @@ void request__testGetTargetBreakpoints(const llvm::json::Object &request) {
   g_dap.SendJSON(llvm::json::Value(std::move(response)));
 }
 
+// "SetInstructionBreakpointsRequest" : {
+//   "allOf" : [
+//     {"$ref" : "#/definitions/Request"}, {
+//       "type" : "object",
+//       "description" :
+//           "Replaces all existing instruction breakpoints. Typically, "
+//           "instruction breakpoints would be set from a disassembly window. "
+//           "\nTo clear all instruction breakpoints, specify an empty "
+//           "array.\nWhen an instruction breakpoint is hit, a `stopped` event "
+//           "(with reason `instruction breakpoint`) is generated.\nClients "
+//           "should only call this request if the corresponding capability "
+//           "`supportsInstructionBreakpoints` is true.",
+//       "properties" : {
+//         "command" : {"type" : "string", "enum" :
+//         ["setInstructionBreakpoints"]}, "arguments" :
+//             {"$ref" : "#/definitions/SetInstructionBreakpointsArguments"}
+//       },
+//       "required" : [ "command", "arguments" ]
+//     }
+//   ]
+// },
+//                                      "SetInstructionBreakpointsArguments"
+//     : {
+//       "type" : "object",
+//       "description" : "Arguments for `setInstructionBreakpoints` request",
+//       "properties" : {
+//         "breakpoints" : {
+//           "type" : "array",
+//           "items" : {"$ref" : "#/definitions/InstructionBreakpoint"},
+//           "description" : "The instruction references of the breakpoints"
+//         }
+//       },
+//       "required" : ["breakpoints"]
+//     },
+//       "SetInstructionBreakpointsResponse"
+//     : {
+//       "allOf" : [
+//         {"$ref" : "#/definitions/Response"}, {
+//           "type" : "object",
+//           "description" : "Response to `setInstructionBreakpoints` request",
+//           "properties" : {
+//             "body" : {
+//               "type" : "object",
+//               "properties" : {
+//                 "breakpoints" : {
+//                   "type" : "array",
+//                   "items" : {"$ref" : "#/definitions/Breakpoint"},
+//                   "description" :
+//                       "Information about the breakpoints. The array elements
+//                       " "correspond to the elements of the `breakpoints`
+//                       array."
+//                 }
+//               },
+//               "required" : ["breakpoints"]
+//             }
+//           },
+//           "required" : ["body"]
+//         }
+//       ]
+//     },
+// "InstructionBreakpoint" : {
+//   "type" : "object",
+//   "description" : "Properties of a breakpoint passed to the "
+//                   "`setInstructionBreakpoints` request",
+//   "properties" : {
+//     "instructionReference" : {
+//       "type" : "string",
+//       "description" :
+//           "The instruction reference of the breakpoint.\nThis should be a "
+//           "memory or instruction pointer reference from an
+//           `EvaluateResponse`, "
+//           "`Variable`, `StackFrame`, `GotoTarget`, or `Breakpoint`."
+//     },
+//     "offset" : {
+//       "type" : "integer",
+//       "description" : "The offset from the instruction reference in "
+//                       "bytes.\nThis can be negative."
+//     },
+//     "condition" : {
+//       "type" : "string",
+//       "description" : "An expression for conditional breakpoints.\nIt is only
+//       "
+//                       "honored by a debug adapter if the corresponding "
+//                       "capability `supportsConditionalBreakpoints` is true."
+//     },
+//     "hitCondition" : {
+//       "type" : "string",
+//       "description" : "An expression that controls how many hits of the "
+//                       "breakpoint are ignored.\nThe debug adapter is expected
+//                       " "to interpret the expression as needed.\nThe
+//                       attribute " "is only honored by a debug adapter if the
+//                       corresponding " "capability
+//                       `supportsHitConditionalBreakpoints` is true."
+//     },
+//     "mode" : {
+//       "type" : "string",
+//       "description" : "The mode of this breakpoint. If defined, this must be
+//       "
+//                       "one of the `breakpointModes` the debug adapter "
+//                       "advertised in its `Capabilities`."
+//     }
+//   },
+//   "required" : ["instructionReference"]
+// },
+// "Breakpoint"
+//     : {
+//       "type" : "object",
+//       "description" :
+//           "Information about a breakpoint created in `setBreakpoints`, "
+//           "`setFunctionBreakpoints`, `setInstructionBreakpoints`, or "
+//           "`setDataBreakpoints` requests.",
+//       "properties" : {
+//         "id" : {
+//           "type" : "integer",
+//           "description" :
+//               "The identifier for the breakpoint. It is needed if breakpoint
+//               " "events are used to update or remove breakpoints."
+//         },
+//         "verified" : {
+//           "type" : "boolean",
+//           "description" : "If true, the breakpoint could be set (but not "
+//                           "necessarily at the desired location)."
+//         },
+//         "message" : {
+//           "type" : "string",
+//           "description" : "A message about the state of the breakpoint.\nThis
+//           "
+//                           "is shown to the user and can be used to explain
+//                           why " "a breakpoint could not be verified."
+//         },
+//         "source" : {
+//           "$ref" : "#/definitions/Source",
+//           "description" : "The source where the breakpoint is located."
+//         },
+//         "line" : {
+//           "type" : "integer",
+//           "description" :
+//               "The start line of the actual range covered by the breakpoint."
+//         },
+//         "column" : {
+//           "type" : "integer",
+//           "description" :
+//               "Start position of the source range covered by the breakpoint.
+//               " "It is measured in UTF-16 code units and the client
+//               capability "
+//               "`columnsStartAt1` determines whether it is 0- or 1-based."
+//         },
+//         "endLine" : {
+//           "type" : "integer",
+//           "description" :
+//               "The end line of the actual range covered by the breakpoint."
+//         },
+//         "endColumn" : {
+//           "type" : "integer",
+//           "description" :
+//               "End position of the source range covered by the breakpoint. It
+//               " "is measured in UTF-16 code units and the client capability "
+//               "`columnsStartAt1` determines whether it is 0- or 1-based.\nIf
+//               " "no end line is given, then the end column is assumed to be
+//               in " "the start line."
+//         },
+//         "instructionReference" : {
+//           "type" : "string",
+//           "description" : "A memory reference to where the breakpoint is
+//           set."
+//         },
+//         "offset" : {
+//           "type" : "integer",
+//           "description" : "The offset from the instruction reference.\nThis "
+//                           "can be negative."
+//         },
+//         "reason" : {
+//           "type" : "string",
+//           "description" :
+//               "A machine-readable explanation of why a breakpoint may not be
+//               " "verified. If a breakpoint is verified or a specific reason
+//               is " "not known, the adapter should omit this property.
+//               Possible " "values include:\n\n- `pending`: Indicates a
+//               breakpoint might be " "verified in the future, but the adapter
+//               cannot verify it in the " "current state.\n - `failed`:
+//               Indicates a breakpoint was not " "able to be verified, and the
+//               adapter does not believe it can be " "verified without
+//               intervention.",
+//           "enum" : [ "pending", "failed" ]
+//         }
+//       },
+//       "required" : ["verified"]
+//     },
+
+void request_setInstructionBreakpoints(const llvm::json::Object &request) {
+  llvm::json::Object response;
+  llvm::json::Array response_breakpoints;
+  llvm::json::Object body;
+  FillResponse(request, response);
+
+  auto arguments = request.getObject("arguments");
+  auto breakpoints = arguments->getArray("breakpoints");
+
+  // It holds active instruction breakpoint list received from DAP.
+  InstructionBreakpointMap request_ibp;
+  if (breakpoints) {
+    for (const auto &bp : *breakpoints) {
+      auto bp_obj = bp.getAsObject();
+      if (bp_obj) {
+        // Read instruction breakpoint request.
+        InstructionBreakpoint inst_bp(*bp_obj);
+        // Store them into map for reference.
+        request_ibp[inst_bp.instructionAddressReference] = std::move(inst_bp);
+      }
+    }
+
+    // Iterate previous active instruction breakpoint list.
+    for (auto &prev_ibp : g_dap.instruction_breakpoints) {
+      // Find previous instruction breakpoint reference address in newly
+      // received instruction breakpoint list.
+      auto inst_reference = request_ibp.find(prev_ibp.first);
+      // Request for remove and delete the breakpoint, if the prev instruction
+      // breakpoint ID is not available in active instrcation breakpoint list.
+      // Means delete removed breakpoint instance.
+      if (inst_reference == request_ibp.end()) {
+        g_dap.target.BreakpointDelete(prev_ibp.second.id);
+        // Update Prev instruction breakpoint list.
+        g_dap.instruction_breakpoints.erase(prev_ibp.first);
+      } else {
+        // Instead of recreating breakpoint instance, update the breakpoint if
+        // there are any conditional changes.
+        prev_ibp.second.UpdateBreakpoint(inst_reference->second);
+        request_ibp.erase(inst_reference);
+        response_breakpoints.emplace_back(
+            CreateInstructionBreakpoint(&prev_ibp.second));
+      }
+    }
+
+    for (auto &req_bpi : request_ibp) {
+      // Add this breakpoint info to the response
+      g_dap.instruction_breakpoints[req_bpi.first] = std::move(req_bpi.second);
+      InstructionBreakpoint &new_bp =
+          g_dap.instruction_breakpoints[req_bpi.first];
+      new_bp.SetInstructionBreakpoint();
+      response_breakpoints.emplace_back(CreateInstructionBreakpoint(&new_bp));
+    }
+  }
+
+  body.try_emplace("breakpoints", std::move(response_breakpoints));
+  response.try_emplace("body", std::move(body));
+  g_dap.SendJSON(llvm::json::Value(std::move(response)));
+}
+
 void RegisterRequestCallbacks() {
   g_dap.RegisterRequestCallback("attach", request_attach);
   g_dap.RegisterRequestCallback("completions", request_completions);
@@ -4039,6 +4364,9 @@ void RegisterRequestCallbacks() {
   g_dap.RegisterRequestCallback("threads", request_threads);
   g_dap.RegisterRequestCallback("variables", request_variables);
   g_dap.RegisterRequestCallback("disassemble", request_disassemble);
+  // Instruction breakpoint request
+  g_dap.RegisterRequestCallback("setInstructionBreakpoints",
+                                request_setInstructionBreakpoints);
   // Custom requests
   g_dap.RegisterRequestCallback("compileUnits", request_compileUnits);
   g_dap.RegisterRequestCallback("modules", request_modules);
@@ -4290,6 +4618,11 @@ int main(int argc, char *argv[]) {
   } else {
     g_dap.input.descriptor = StreamDescriptor::from_file(fileno(stdin), false);
     g_dap.output.descriptor = StreamDescriptor::from_file(new_stdout_fd, false);
+  }
+
+  for (const std::string &arg :
+       input_args.getAllArgValues(OPT_pre_init_command)) {
+    g_dap.pre_init_commands.push_back(arg);
   }
 
   bool CleanExit = true;

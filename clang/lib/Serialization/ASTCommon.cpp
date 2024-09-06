@@ -263,6 +263,11 @@ serialization::TypeIdxFromBuiltin(const BuiltinType *BT) {
     ID = PREDEF_TYPE_##Id##_ID;                                                \
     break;
 #include "clang/Basic/AMDGPUTypes.def"
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId)                            \
+  case BuiltinType::Id:                                                        \
+    ID = PREDEF_TYPE_##Id##_ID;                                                \
+    break;
+#include "clang/Basic/HLSLIntangibleTypes.def"
   case BuiltinType::BuiltinFn:
     ID = PREDEF_TYPE_BUILTIN_FN;
     break;
@@ -283,7 +288,7 @@ serialization::TypeIdxFromBuiltin(const BuiltinType *BT) {
     break;
   }
 
-  return TypeIdx(ID);
+  return TypeIdx(0, ID);
 }
 
 unsigned serialization::ComputeHash(Selector Sel) {

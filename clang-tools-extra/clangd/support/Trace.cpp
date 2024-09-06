@@ -159,8 +159,8 @@ private:
     Out.object([&] {
       Out.attribute("pid", 0);
       Out.attribute("ph", Phase);
-      for (const auto &KV : Event)
-        Out.attribute(KV.first, KV.second);
+      for (const auto *KV : llvm::json::sortedElements(Event))
+        Out.attribute(KV->first, KV->second);
     });
   }
 

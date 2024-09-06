@@ -35,6 +35,8 @@ class OutputSection;
 class SectionBase;
 class ThunkSection;
 struct OutputDesc;
+struct SectionClass;
+struct SectionClassDesc;
 
 // This represents an r-value in the linker script.
 struct ExprValue {
@@ -78,7 +80,8 @@ enum SectionsCommandKind {
   AssignmentKind, // . = expr or <sym> = expr
   OutputSectionKind,
   InputSectionKind,
-  ByteKind    // BYTE(expr), SHORT(expr), LONG(expr) or QUAD(expr)
+  ByteKind,  // BYTE(expr), SHORT(expr), LONG(expr) or QUAD(expr)
+  ClassKind, // CLASS(class_name)
 };
 
 struct SectionCommand {
@@ -198,9 +201,12 @@ class InputSectionDescription : public SectionCommand {
 
 public:
   InputSectionDescription(StringRef filePattern, uint64_t withFlags = 0,
-                          uint64_t withoutFlags = 0)
+                          uint64_t withoutFlags = 0, StringRef classRef = {})
       : SectionCommand(InputSectionKind), filePat(filePattern),
-        withFlags(withFlags), withoutFlags(withoutFlags) {}
+        classRef(classRef), withFlags(withFlags), withoutFlags(withoutFlags) {
+    assert((filePattern.empty() || classRef.empty()) &&
+           "file pattern and class reference are mutually exclusive");
+  }
 
   static bool classof(const SectionCommand *c) {
     return c->kind == InputSectionKind;
@@ -211,6 +217,10 @@ public:
   // Input sections that matches at least one of SectionPatterns
   // will be associated with this InputSectionDescription.
   SmallVector<SectionPattern, 0> sectionPatterns;
+
+  // If present, input section matching uses class membership instead of file
+  // and section patterns (mutually exclusive).
+  StringRef classRef;
 
   // Includes InputSections and MergeInputSections. Used temporarily during
   // assignment of input sections to output sections.
@@ -256,6 +266,16 @@ struct InsertCommand {
   StringRef where;
 };
 
+// A NOCROSSREFS/NOCROSSREFS_TO command that prohibits references between
+// certain output sections.
+struct NoCrossRefCommand {
+  SmallVector<StringRef, 0> outputSections;
+
+  // When true, this describes a NOCROSSREFS_TO command that probits references
+  // to the first output section from any of the other sections.
+  bool toFirst = false;
+};
+
 struct PhdrsCommand {
   StringRef name;
   unsigned type = llvm::ELF::PT_NULL;
@@ -280,6 +300,7 @@ class LinkerScript final {
 
   llvm::DenseMap<llvm::CachedHashStringRef, OutputDesc *> nameToOutputSection;
 
+  StringRef getOutputSectionName(const InputSectionBase *s) const;
   void addSymbol(SymbolAssignment *cmd);
   void assignSymbol(SymbolAssignment *cmd, bool inSec);
   void setDot(Expr e, const Twine &loc, bool inSec);
@@ -288,8 +309,7 @@ class LinkerScript final {
 
   SmallVector<InputSectionBase *, 0>
   computeInputSections(const InputSectionDescription *,
-                       ArrayRef<InputSectionBase *>,
-                       const OutputSection &outCmd);
+                       ArrayRef<InputSectionBase *>, const SectionBase &outCmd);
 
   SmallVector<InputSectionBase *, 0> createInputSectionList(OutputSection &cmd);
 
@@ -312,7 +332,7 @@ class LinkerScript final {
 
   OutputSection *aether;
 
-  uint64_t dot;
+  uint64_t dot = 0;
 
 public:
   OutputDesc *createOutputSection(StringRef name, StringRef location);
@@ -342,13 +362,16 @@ public:
   void processSymbolAssignments();
   void declareSymbols();
 
-  bool isDiscarded(const OutputSection *sec) const;
-
   // Used to handle INSERT AFTER statements.
   void processInsertCommands();
 
   // Describe memory region usage.
   void printMemoryUsage(raw_ostream &os);
+
+  // Record a pending error during an assignAddresses invocation.
+  // assignAddresses is executed more than once. Therefore, lld::error should be
+  // avoided to not report duplicate errors.
+  void recordError(const Twine &msg);
 
   // Check backward location counter assignment and memory region/LMA overflows.
   void checkFinalScriptConditions() const;
@@ -375,7 +398,7 @@ public:
   bool seenDataAlign = false;
   bool seenRelroEnd = false;
   bool errorOnMissingSection = false;
-  std::string backwardDotErr;
+  SmallVector<SmallString<0>, 0> recordedErrors;
 
   // List of section patterns specified with KEEP commands. They will
   // be kept even if they are unused and --gc-sections is specified.
@@ -393,6 +416,9 @@ public:
 
   // OutputSections specified by OVERWRITE_SECTIONS.
   SmallVector<OutputDesc *, 0> overwriteSections;
+
+  // NOCROSSREFS(_TO) commands.
+  SmallVector<NoCrossRefCommand, 0> noCrossRefs;
 
   // Sections that will be warned/errored by --orphan-handling.
   SmallVector<const InputSectionBase *, 0> orphanSections;
@@ -413,14 +439,12 @@ public:
     PotentialSpillSection *tail;
   };
   llvm::DenseMap<InputSectionBase *, PotentialSpillList> potentialSpillLists;
-};
 
-struct ScriptWrapper {
-  LinkerScript s;
-  LinkerScript *operator->() { return &s; }
+  // Named lists of input sections that can be collectively referenced in output
+  // section descriptions. Multiple references allow for sections to spill from
+  // one output section to another.
+  llvm::DenseMap<llvm::CachedHashStringRef, SectionClassDesc *> sectionClasses;
 };
-
-LLVM_LIBRARY_VISIBILITY extern ScriptWrapper script;
 
 } // end namespace lld::elf
 

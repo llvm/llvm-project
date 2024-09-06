@@ -64,7 +64,7 @@ int main(int, char**)
         std::locale l(LOCALE_fr_FR_UTF_8);
         {
 #if defined(_CS_GNU_LIBC_VERSION) || defined(_WIN32) || defined(_AIX)
-          const char sep = ' ';
+            const char sep = ' ';
 #else
             const char sep = ',';
 #endif
@@ -77,11 +77,11 @@ int main(int, char**)
 #if defined(_CS_GNU_LIBC_VERSION)
             const wchar_t wsep = glibc_version_less_than("2.27") ? L' ' : L'\u202f';
 #  elif defined(_AIX)
-          const wchar_t wsep = L'\u202F';
+            const wchar_t wsep = L'\u202F';
 #  elif defined(_WIN32)
-          const wchar_t wsep = L'\u00A0';
+            const wchar_t wsep = L'\u00A0';
 #  else
-          const wchar_t wsep = L',';
+            const wchar_t wsep = L',';
 #  endif
             typedef wchar_t C;
             const std::numpunct<C>& np = std::use_facet<std::numpunct<C> >(l);

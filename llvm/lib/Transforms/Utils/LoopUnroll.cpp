@@ -374,7 +374,7 @@ void llvm::simplifyLoopAfterUnroll(Loop *L, bool SimplifyIVs, LoopInfo *LI,
 
   // At this point, the code is well formed.  Perform constprop, instsimplify,
   // and dce.
-  const DataLayout &DL = L->getHeader()->getModule()->getDataLayout();
+  const DataLayout &DL = L->getHeader()->getDataLayout();
   SmallVector<WeakTrackingVH, 16> DeadInsts;
   for (BasicBlock *BB : L->getBlocks()) {
     // Remove repeated debug instructions after loop unrolling.
@@ -1091,8 +1091,8 @@ MDNode *llvm::GetUnrollMetadata(MDNode *LoopID, StringRef Name) {
   assert(LoopID->getNumOperands() > 0 && "requires at least one operand");
   assert(LoopID->getOperand(0) == LoopID && "invalid loop id");
 
-  for (unsigned i = 1, e = LoopID->getNumOperands(); i < e; ++i) {
-    MDNode *MD = dyn_cast<MDNode>(LoopID->getOperand(i));
+  for (const MDOperand &MDO : llvm::drop_begin(LoopID->operands())) {
+    MDNode *MD = dyn_cast<MDNode>(MDO);
     if (!MD)
       continue;
 

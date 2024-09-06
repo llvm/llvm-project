@@ -378,6 +378,7 @@ protected:
 
   DynRegionInfo DynRelRegion;
   DynRegionInfo DynRelaRegion;
+  DynRegionInfo DynCrelRegion;
   DynRegionInfo DynRelrRegion;
   DynRegionInfo DynPLTRelRegion;
   std::optional<DynRegionInfo> DynSymRegion;
@@ -793,7 +794,11 @@ public:
 
   void printEmptyGroupMessage() const override;
 
+  void printDynamicTable() override;
+
 private:
+  void printAuxillaryDynamicTableEntryInfo(const Elf_Dyn &Entry);
+
   std::unique_ptr<DictScope> FileScope;
 };
 
@@ -1679,6 +1684,16 @@ const EnumEntry<unsigned> ElfHeaderRISCVFlags[] = {
   ENUM_ENT(EF_RISCV_TSO, "TSO"),
 };
 
+const EnumEntry<unsigned> ElfHeaderSPARCFlags[] = {
+    ENUM_ENT(EF_SPARC_32PLUS, "V8+ ABI"),
+    ENUM_ENT(EF_SPARC_SUN_US1, "Sun UltraSPARC I extensions"),
+    ENUM_ENT(EF_SPARC_HAL_R1, "HAL/Fujitsu R1 extensions"),
+    ENUM_ENT(EF_SPARC_SUN_US3, "Sun UltraSPARC III extensions"),
+    ENUM_ENT(EF_SPARCV9_TSO, "Total Store Ordering"),
+    ENUM_ENT(EF_SPARCV9_PSO, "Partial Store Ordering"),
+    ENUM_ENT(EF_SPARCV9_RMO, "Relaxed Memory Ordering"),
+};
+
 const EnumEntry<unsigned> ElfHeaderAVRFlags[] = {
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AVR_ARCH_AVR1),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AVR_ARCH_AVR2),
@@ -1905,7 +1920,7 @@ ELFDumper<ELFT>::ELFDumper(const object::ELFObjectFile<ELFT> &O,
                            ScopedPrinter &Writer)
     : ObjDumper(Writer, O.getFileName()), ObjF(O), Obj(O.getELFFile()),
       FileName(O.getFileName()), DynRelRegion(O, *this),
-      DynRelaRegion(O, *this), DynRelrRegion(O, *this),
+      DynRelaRegion(O, *this), DynCrelRegion(O, *this), DynRelrRegion(O, *this),
       DynPLTRelRegion(O, *this), DynSymTabShndxRegion(O, *this),
       DynamicTable(O, *this) {
   if (!O.IsContentValid())
@@ -2064,6 +2079,9 @@ template <typename ELFT> void ELFDumper<ELFT>::parseDynamicTable() {
       DynRelaRegion.EntSize = Dyn.getVal();
       DynRelaRegion.EntSizePrintName = "DT_RELAENT value";
       break;
+    case ELF::DT_CREL:
+      DynCrelRegion.Addr = toMappedAddr(Dyn.getTag(), Dyn.getPtr());
+      break;
     case ELF::DT_SONAME:
       SONameOffset = Dyn.getVal();
       break;
@@ -2104,6 +2122,8 @@ template <typename ELFT> void ELFDumper<ELFT>::parseDynamicTable() {
         DynPLTRelRegion.EntSize = sizeof(Elf_Rel);
       else if (Dyn.getVal() == DT_RELA)
         DynPLTRelRegion.EntSize = sizeof(Elf_Rela);
+      else if (Dyn.getVal() == DT_CREL)
+        DynPLTRelRegion.EntSize = 1;
       else
         reportUniqueWarning(Twine("unknown DT_PLTREL value of ") +
                             Twine((uint64_t)Dyn.getVal()));
@@ -2423,6 +2443,8 @@ std::string ELFDumper<ELFT>::getDynamicEntry(uint64_t Type,
       return "REL";
     if (Value == DT_RELA)
       return "RELA";
+    if (Value == DT_CREL)
+      return "CREL";
     [[fallthrough]];
   case DT_PLTGOT:
   case DT_HASH:
@@ -2437,6 +2459,7 @@ std::string ELFDumper<ELFT>::getDynamicEntry(uint64_t Type,
   case DT_FINI_ARRAY:
   case DT_PREINIT_ARRAY:
   case DT_DEBUG:
+  case DT_CREL:
   case DT_VERDEF:
   case DT_VERNEED:
   case DT_VERSYM:
@@ -3612,6 +3635,9 @@ template <class ELFT> void GNUELFDumper<ELFT>::printFileHeaders() {
         unsigned(ELF::EF_MIPS_ABI), unsigned(ELF::EF_MIPS_MACH));
   else if (e.e_machine == EM_RISCV)
     ElfFlags = printFlags(e.e_flags, ArrayRef(ElfHeaderRISCVFlags));
+  else if (e.e_machine == EM_SPARC32PLUS || e.e_machine == EM_SPARCV9)
+    ElfFlags = printFlags(e.e_flags, ArrayRef(ElfHeaderSPARCFlags),
+                          unsigned(ELF::EF_SPARCV9_MM));
   else if (e.e_machine == EM_AVR)
     ElfFlags = printFlags(e.e_flags, ArrayRef(ElfHeaderAVRFlags),
                           unsigned(ELF::EF_AVR_ARCH_MASK));
@@ -3842,14 +3868,15 @@ void GNUELFDumper<ELFT>::printRelRelaReloc(const Relocation<ELFT> &R,
 
 template <class ELFT>
 static void printRelocHeaderFields(formatted_raw_ostream &OS, unsigned SType,
-                                   const typename ELFT::Ehdr &EHeader) {
+                                   const typename ELFT::Ehdr &EHeader,
+                                   uint64_t CrelHdr = 0) {
   bool IsRela = SType == ELF::SHT_RELA || SType == ELF::SHT_ANDROID_RELA;
   if (ELFT::Is64Bits)
     OS << "    Offset             Info             Type               Symbol's "
           "Value  Symbol's Name";
   else
     OS << " Offset     Info    Type                Sym. Value  Symbol's Name";
-  if (IsRela)
+  if (IsRela || (SType == ELF::SHT_CREL && (CrelHdr & CREL_HDR_ADDEND)))
     OS << " + Addend";
   OS << "\n";
 }
@@ -3859,7 +3886,10 @@ void GNUELFDumper<ELFT>::printDynamicRelocHeader(unsigned Type, StringRef Name,
                                                  const DynRegionInfo &Reg) {
   uint64_t Offset = Reg.Addr - this->Obj.base();
   OS << "\n'" << Name.str().c_str() << "' relocation section at offset 0x"
-     << utohexstr(Offset, /*LowerCase=*/true) << " contains " << Reg.Size << " bytes:\n";
+     << utohexstr(Offset, /*LowerCase=*/true);
+  if (Type != ELF::SHT_CREL)
+    OS << " contains " << Reg.Size << " bytes";
+  OS << ":\n";
   printRelocHeaderFields<ELFT>(OS, Type, this->Obj.getHeader());
 }
 
@@ -3867,7 +3897,8 @@ template <class ELFT>
 static bool isRelocationSec(const typename ELFT::Shdr &Sec,
                             const typename ELFT::Ehdr &EHeader) {
   return Sec.sh_type == ELF::SHT_REL || Sec.sh_type == ELF::SHT_RELA ||
-         Sec.sh_type == ELF::SHT_RELR || Sec.sh_type == ELF::SHT_ANDROID_REL ||
+         Sec.sh_type == ELF::SHT_RELR || Sec.sh_type == ELF::SHT_CREL ||
+         Sec.sh_type == ELF::SHT_ANDROID_REL ||
          Sec.sh_type == ELF::SHT_ANDROID_RELA ||
          Sec.sh_type == ELF::SHT_ANDROID_RELR ||
          (EHeader.e_machine == EM_AARCH64 &&
@@ -3891,6 +3922,17 @@ template <class ELFT> void GNUELFDumper<ELFT>::printRelocations() {
       if (!RelasOrErr)
         return RelasOrErr.takeError();
       return RelasOrErr->size();
+    }
+
+    if (Sec.sh_type == ELF::SHT_CREL) {
+      Expected<ArrayRef<uint8_t>> ContentsOrErr =
+          this->Obj.getSectionContents(Sec);
+      if (!ContentsOrErr)
+        return ContentsOrErr.takeError();
+      auto NumOrErr = this->Obj.getCrelHeader(*ContentsOrErr);
+      if (!NumOrErr)
+        return NumOrErr.takeError();
+      return *NumOrErr / 8;
     }
 
     if (PrintAsRelr(Sec)) {
@@ -3926,8 +3968,17 @@ template <class ELFT> void GNUELFDumper<ELFT>::printRelocations() {
     if (PrintAsRelr(Sec)) {
       printRelr(Sec);
     } else {
-      printRelocHeaderFields<ELFT>(OS, Sec.sh_type, this->Obj.getHeader());
-      this->printRelocationsHelper(Sec);
+      uint64_t CrelHdr = 0;
+      // For CREL, read the header and call printRelocationsHelper only if
+      // GetEntriesNum(Sec) succeeded.
+      if (Sec.sh_type == ELF::SHT_CREL && EntriesNum != "<?>") {
+        CrelHdr = cantFail(this->Obj.getCrelHeader(
+            cantFail(this->Obj.getSectionContents(Sec))));
+      }
+      printRelocHeaderFields<ELFT>(OS, Sec.sh_type, this->Obj.getHeader(),
+                                   CrelHdr);
+      if (Sec.sh_type != ELF::SHT_CREL || EntriesNum != "<?>")
+        this->printRelocationsHelper(Sec);
     }
   }
   if (!HasRelocSections)
@@ -4890,6 +4941,34 @@ void ELFDumper<ELFT>::printRelocationsHelper(const Elf_Shdr &Sec) {
 
 template <class ELFT> void ELFDumper<ELFT>::printDynamicRelocationsHelper() {
   const bool IsMips64EL = this->Obj.isMips64EL();
+  auto DumpCrelRegion = [&](DynRegionInfo &Region) {
+    // While the size is unknown, a valid CREL has at least one byte. We can
+    // check whether Addr is in bounds, and then decode CREL until the file
+    // end.
+    Region.Size = Region.EntSize = 1;
+    if (!Region.template getAsArrayRef<uint8_t>().empty()) {
+      const uint64_t Offset =
+          Region.Addr - reinterpret_cast<const uint8_t *>(
+                            ObjF.getMemoryBufferRef().getBufferStart());
+      const uint64_t ObjSize = ObjF.getMemoryBufferRef().getBufferSize();
+      auto RelsOrRelas =
+          Obj.decodeCrel(ArrayRef<uint8_t>(Region.Addr, ObjSize - Offset));
+      if (!RelsOrRelas) {
+        reportUniqueWarning(toString(RelsOrRelas.takeError()));
+      } else {
+        for (const Elf_Rel &R : RelsOrRelas->first)
+          printDynamicReloc(Relocation<ELFT>(R, false));
+        for (const Elf_Rela &R : RelsOrRelas->second)
+          printDynamicReloc(Relocation<ELFT>(R, false));
+      }
+    }
+  };
+
+  if (this->DynCrelRegion.Addr) {
+    printDynamicRelocHeader(ELF::SHT_CREL, "CREL", this->DynCrelRegion);
+    DumpCrelRegion(this->DynCrelRegion);
+  }
+
   if (this->DynRelaRegion.Size > 0) {
     printDynamicRelocHeader(ELF::SHT_RELA, "RELA", this->DynRelaRegion);
     for (const Elf_Rela &Rela :
@@ -4918,6 +4997,8 @@ template <class ELFT> void ELFDumper<ELFT>::printDynamicRelocationsHelper() {
       for (const Elf_Rela &Rela :
            this->DynPLTRelRegion.template getAsArrayRef<Elf_Rela>())
         printDynamicReloc(Relocation<ELFT>(Rela, IsMips64EL));
+    } else if (this->DynPLTRelRegion.EntSize == 1) {
+      DumpCrelRegion(this->DynPLTRelRegion);
     } else {
       printDynamicRelocHeader(ELF::SHT_REL, "PLT", this->DynPLTRelRegion);
       for (const Elf_Rel &Rel :
@@ -5216,8 +5297,16 @@ static bool printAArch64PAuthABICoreInfo(raw_ostream &OS, uint32_t DataSize,
     Flags[AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_VPTRTYPEDISCR] =
         "VTPtrTypeDiscrimination";
     Flags[AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_INITFINI] = "InitFini";
+    Flags[AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_INITFINIADDRDISC] =
+        "InitFiniAddressDiscrimination";
+    Flags[AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_GOT] = "ELFGOT";
+    Flags[AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_GOTOS] = "IndirectGotos";
+    Flags[AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_TYPEINFOVPTRDISCR] =
+        "TypeInfoVTPtrDiscrimination";
+    Flags[AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_FPTRTYPEDISCR] =
+        "FPtrTypeDiscrimination";
 
-    static_assert(AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_INITFINI ==
+    static_assert(AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_FPTRTYPEDISCR ==
                       AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_LAST,
                   "Update when new enum items are defined");
 
@@ -5964,6 +6053,7 @@ const NoteType CoreNoteTypes[] = {
     {ELF::NT_ARM_SSVE, "NT_ARM_SSVE (AArch64 Streaming SVE registers)"},
     {ELF::NT_ARM_ZA, "NT_ARM_ZA (AArch64 SME ZA registers)"},
     {ELF::NT_ARM_ZT, "NT_ARM_ZT (AArch64 SME ZT registers)"},
+    {ELF::NT_ARM_FPMR, "NT_ARM_FPMR (AArch64 Floating Point Mode Register)"},
 
     {ELF::NT_FILE, "NT_FILE (mapped files)"},
     {ELF::NT_PRXFPREG, "NT_PRXFPREG (user_xfpregs structure)"},
@@ -6410,6 +6500,17 @@ void ELFDumper<ELFT>::forEachRelocationDo(
     for (const Elf_Rel &R : Obj.decode_relrs(*RangeOrErr))
       RelRelaFn(Relocation<ELFT>(R, IsMips64EL), RelNdx++, Sec,
                 /*SymTab=*/nullptr);
+    break;
+  }
+  case ELF::SHT_CREL: {
+    if (auto RelsOrRelas = Obj.crels(Sec)) {
+      for (const Elf_Rel &R : RelsOrRelas->first)
+        RelRelaFn(Relocation<ELFT>(R, false), RelNdx++, Sec, SymTab);
+      for (const Elf_Rela &R : RelsOrRelas->second)
+        RelRelaFn(Relocation<ELFT>(R, false), RelNdx++, Sec, SymTab);
+    } else {
+      Warn(RelsOrRelas.takeError());
+    }
     break;
   }
   case ELF::SHT_ANDROID_REL:
@@ -7035,6 +7136,9 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printFileHeaders() {
       }
     } else if (E.e_machine == EM_RISCV)
       W.printFlags("Flags", E.e_flags, ArrayRef(ElfHeaderRISCVFlags));
+    else if (E.e_machine == EM_SPARC32PLUS || E.e_machine == EM_SPARCV9)
+      W.printFlags("Flags", E.e_flags, ArrayRef(ElfHeaderSPARCFlags),
+                   unsigned(ELF::EF_SPARCV9_MM));
     else if (E.e_machine == EM_AVR)
       W.printFlags("Flags", E.e_flags, ArrayRef(ElfHeaderAVRFlags),
                    unsigned(ELF::EF_AVR_ARCH_MASK));
@@ -7363,6 +7467,63 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printDynamicTable() {
                   << Value << "\n";
   }
   W.startLine() << "]\n";
+}
+
+template <class ELFT>
+void JSONELFDumper<ELFT>::printAuxillaryDynamicTableEntryInfo(
+    const Elf_Dyn &Entry) {
+  auto FormatFlags = [this, Value = Entry.getVal()](auto Flags) {
+    ListScope L(this->W, "Flags");
+    for (const auto &Flag : Flags) {
+      if (Flag.Value != 0 && (Value & Flag.Value) == Flag.Value)
+        this->W.printString(Flag.Name);
+    }
+  };
+  switch (Entry.getTag()) {
+  case DT_SONAME:
+    this->W.printString("Name", this->getDynamicString(Entry.getVal()));
+    break;
+  case DT_AUXILIARY:
+  case DT_FILTER:
+  case DT_NEEDED:
+    this->W.printString("Library", this->getDynamicString(Entry.getVal()));
+    break;
+  case DT_USED:
+    this->W.printString("Object", this->getDynamicString(Entry.getVal()));
+    break;
+  case DT_RPATH:
+  case DT_RUNPATH: {
+    StringRef Value = this->getDynamicString(Entry.getVal());
+    ListScope L(this->W, "Path");
+    while (!Value.empty()) {
+      auto [Front, Back] = Value.split(':');
+      this->W.printString(Front);
+      Value = Back;
+    }
+    break;
+  }
+  case DT_FLAGS:
+    FormatFlags(ArrayRef(ElfDynamicDTFlags));
+    break;
+  case DT_FLAGS_1:
+    FormatFlags(ArrayRef(ElfDynamicDTFlags1));
+    break;
+  default:
+    return;
+  }
+}
+
+template <class ELFT> void JSONELFDumper<ELFT>::printDynamicTable() {
+  Elf_Dyn_Range Table = this->dynamic_table();
+  ListScope L(this->W, "DynamicSection");
+  for (const auto &Entry : Table) {
+    DictScope D(this->W);
+    uintX_t Tag = Entry.getTag();
+    this->W.printHex("Tag", Tag);
+    this->W.printString("Type", this->Obj.getDynamicTagAsString(Tag));
+    this->W.printHex("Value", Entry.getVal());
+    this->printAuxillaryDynamicTableEntryInfo(Entry);
+  }
 }
 
 template <class ELFT> void LLVMELFDumper<ELFT>::printDynamicRelocations() {
@@ -7853,24 +8014,29 @@ static void printCoreNoteLLVMStyle(const CoreNote &Note, ScopedPrinter &W) {
 }
 
 template <class ELFT> void LLVMELFDumper<ELFT>::printNotes() {
-  ListScope L(W, "Notes");
+  ListScope L(W, "NoteSections");
 
-  std::unique_ptr<DictScope> NoteScope;
+  std::unique_ptr<DictScope> NoteSectionScope;
+  std::unique_ptr<ListScope> NotesScope;
   size_t Align = 0;
   auto StartNotes = [&](std::optional<StringRef> SecName,
                         const typename ELFT::Off Offset,
                         const typename ELFT::Addr Size, size_t Al) {
     Align = std::max<size_t>(Al, 4);
-    NoteScope = std::make_unique<DictScope>(W, "NoteSection");
+    NoteSectionScope = std::make_unique<DictScope>(W, "NoteSection");
     W.printString("Name", SecName ? *SecName : "<?>");
     W.printHex("Offset", Offset);
     W.printHex("Size", Size);
+    NotesScope = std::make_unique<ListScope>(W, "Notes");
   };
 
-  auto EndNotes = [&] { NoteScope.reset(); };
+  auto EndNotes = [&] {
+    NotesScope.reset();
+    NoteSectionScope.reset();
+  };
 
   auto ProcessNote = [&](const Elf_Note &Note, bool IsCore) -> Error {
-    DictScope D2(W, "Note");
+    DictScope D2(W);
     StringRef Name = Note.getName();
     ArrayRef<uint8_t> Descriptor = Note.getDesc(Align);
     Elf_Word Type = Note.getType();

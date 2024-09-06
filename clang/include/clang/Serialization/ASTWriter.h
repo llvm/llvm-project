@@ -228,6 +228,11 @@ private:
   /// unit, while 0 is reserved for NULL.
   llvm::DenseMap<const Decl *, LocalDeclID> DeclIDs;
 
+  /// Set of predefined decls. This is a helper data to determine if a decl
+  /// is predefined. It should be more clear and safer to query the set
+  /// instead of comparing the result of `getDeclID()` or `GetDeclRef()`.
+  llvm::SmallPtrSet<const Decl *, 32> PredefinedDecls;
+
   /// Offset of each declaration in the bitstream, indexed by
   /// the declaration's ID.
   std::vector<serialization::DeclOffset> DeclOffsets;
@@ -495,8 +500,8 @@ private:
   std::vector<SourceRange> NonAffectingRanges;
   std::vector<SourceLocation::UIntTy> NonAffectingOffsetAdjustments;
 
-  /// A list of classes which need to emit the VTable in the corresponding
-  /// object file.
+  /// A list of classes in named modules which need to emit the VTable in
+  /// the corresponding object file.
   llvm::SmallVector<CXXRecordDecl *> PendingEmittingVTables;
 
   /// Computes input files that didn't affect compilation of the current module,
@@ -563,8 +568,6 @@ private:
   void WriteType(QualType T);
 
   bool isLookupResultExternal(StoredDeclsList &Result, DeclContext *DC);
-  bool isLookupResultEntirelyExternalOrUnreachable(StoredDeclsList &Result,
-                                                   DeclContext *DC);
 
   void GenerateNameLookupTable(const DeclContext *DC,
                                llvm::SmallVectorImpl<char> &LookupTable);
@@ -844,6 +847,8 @@ public:
   bool hasChain() const { return Chain; }
   ASTReader *getChain() const { return Chain; }
 
+  bool isWritingModule() const { return WritingModule; }
+
   bool isWritingStdCXXNamedModules() const {
     return WritingModule && WritingModule->isNamedModule();
   }
@@ -851,6 +856,10 @@ public:
   bool isGeneratingReducedBMI() const { return GeneratingReducedBMI; }
 
   bool getDoneWritingDeclsAndTypes() const { return DoneWritingDeclsAndTypes; }
+
+  bool isDeclPredefined(const Decl *D) const {
+    return PredefinedDecls.count(D);
+  }
 
   void handleVTable(CXXRecordDecl *RD);
 
@@ -860,6 +869,7 @@ private:
   void IdentifierRead(serialization::IdentifierID ID, IdentifierInfo *II) override;
   void MacroRead(serialization::MacroID ID, MacroInfo *MI) override;
   void TypeRead(serialization::TypeIdx Idx, QualType T) override;
+  void PredefinedDeclBuilt(PredefinedDeclIDs ID, const Decl *D) override;
   void SelectorRead(serialization::SelectorID ID, Selector Sel) override;
   void MacroDefinitionRead(serialization::PreprocessedEntityID ID,
                            MacroDefinitionRecord *MD) override;

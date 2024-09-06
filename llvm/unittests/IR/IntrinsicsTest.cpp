@@ -11,6 +11,19 @@
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/IntrinsicsAArch64.h"
+#include "llvm/IR/IntrinsicsAMDGPU.h"
+#include "llvm/IR/IntrinsicsARM.h"
+#include "llvm/IR/IntrinsicsBPF.h"
+#include "llvm/IR/IntrinsicsDirectX.h"
+#include "llvm/IR/IntrinsicsHexagon.h"
+#include "llvm/IR/IntrinsicsLoongArch.h"
+#include "llvm/IR/IntrinsicsMips.h"
+#include "llvm/IR/IntrinsicsNVPTX.h"
+#include "llvm/IR/IntrinsicsPowerPC.h"
+#include "llvm/IR/IntrinsicsRISCV.h"
+#include "llvm/IR/IntrinsicsS390.h"
+#include "llvm/IR/IntrinsicsX86.h"
 #include "llvm/IR/Module.h"
 #include "gtest/gtest.h"
 
@@ -68,6 +81,51 @@ TEST(IntrinsicNameLookup, Basic) {
   EXPECT_EQ(4, I);
 }
 
+// Tests to verify getIntrinsicForClangBuiltin.
+TEST(IntrinsicNameLookup, ClangBuiltinLookup) {
+  using namespace Intrinsic;
+  static constexpr std::tuple<StringRef, StringRef, ID> ClangTests[] = {
+      {"__builtin_adjust_trampoline", "", adjust_trampoline},
+      {"__builtin_trap", "", trap},
+      {"__builtin_arm_chkfeat", "aarch64", aarch64_chkfeat},
+      {"__builtin_amdgcn_alignbyte", "amdgcn", amdgcn_alignbyte},
+      {"__builtin_amdgcn_workgroup_id_z", "amdgcn", amdgcn_workgroup_id_z},
+      {"__builtin_arm_cdp", "arm", arm_cdp},
+      {"__builtin_bpf_preserve_type_info", "bpf", bpf_preserve_type_info},
+      {"__builtin_hlsl_create_handle", "dx", dx_create_handle},
+      {"__builtin_HEXAGON_A2_tfr", "hexagon", hexagon_A2_tfr},
+      {"__builtin_lasx_xbz_w", "loongarch", loongarch_lasx_xbz_w},
+      {"__builtin_mips_bitrev", "mips", mips_bitrev},
+      {"__nvvm_add_rn_d", "nvvm", nvvm_add_rn_d},
+      {"__builtin_altivec_dss", "ppc", ppc_altivec_dss},
+      {"__builtin_riscv_sha512sum1r", "riscv", riscv_sha512sum1r},
+      {"__builtin_tend", "s390", s390_tend},
+      {"__builtin_ia32_pause", "x86", x86_sse2_pause},
+
+      {"__does_not_exist", "", not_intrinsic},
+      {"__does_not_exist", "arm", not_intrinsic},
+      {"__builtin_arm_cdp", "", not_intrinsic},
+      {"__builtin_arm_cdp", "x86", not_intrinsic},
+  };
+
+  for (const auto &[Builtin, Target, ID] : ClangTests)
+    EXPECT_EQ(ID, getIntrinsicForClangBuiltin(Target, Builtin));
+}
+
+// Tests to verify getIntrinsicForMSBuiltin.
+TEST(IntrinsicNameLookup, MSBuiltinLookup) {
+  using namespace Intrinsic;
+  static constexpr std::tuple<StringRef, StringRef, ID> MSTests[] = {
+      {"__dmb", "aarch64", aarch64_dmb},
+      {"__dmb", "arm", arm_dmb},
+      {"__dmb", "", not_intrinsic},
+      {"__does_not_exist", "", not_intrinsic},
+      {"__does_not_exist", "arm", not_intrinsic},
+  };
+  for (const auto &[Builtin, Target, ID] : MSTests)
+    EXPECT_EQ(ID, getIntrinsicForMSBuiltin(Target, Builtin));
+}
+
 TEST_F(IntrinsicsTest, InstrProfInheritance) {
   auto isInstrProfInstBase = [](const Instruction &I) {
     return isa<InstrProfInstBase>(I);
@@ -106,4 +164,5 @@ TEST_F(IntrinsicsTest, InstrProfInheritance) {
     EXPECT_TRUE(Checker(*Intr));
   }
 }
+
 } // end namespace

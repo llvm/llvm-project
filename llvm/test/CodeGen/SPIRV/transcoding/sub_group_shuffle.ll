@@ -79,7 +79,8 @@
 ;;     dst[1] = sub_group_shuffle_xor( v, 0 );
 ;; }
 
-; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-SPIRV-DAG: OpCapability GroupNonUniformShuffle
 
@@ -107,16 +108,20 @@
 
 define dso_local spir_kernel void @testShuffleChar(i8 addrspace(1)* nocapture) local_unnamed_addr {
   %2 = tail call spir_func signext i8 @_Z17sub_group_shufflecj(i8 signext 0, i32 0)
+  %r2 = tail call spir_func signext i8 @__spirv_GroupNonUniformShuffle(i32 3, i8 signext 0, i32 0)
   store i8 %2, i8 addrspace(1)* %0, align 1
   %3 = tail call spir_func signext i8 @_Z21sub_group_shuffle_xorcj(i8 signext 0, i32 0)
+  %r3 = tail call spir_func signext i8 @__spirv_GroupNonUniformShuffleXor(i32 3, i8 signext 0, i32 0)
   %4 = getelementptr inbounds i8, i8 addrspace(1)* %0, i64 1
   store i8 %3, i8 addrspace(1)* %4, align 1
   ret void
 }
 
 declare dso_local spir_func signext i8 @_Z17sub_group_shufflecj(i8 signext, i32) local_unnamed_addr
+declare dso_local spir_func signext i8 @__spirv_GroupNonUniformShuffle(i32, i8 signext, i32)
 
 declare dso_local spir_func signext i8 @_Z21sub_group_shuffle_xorcj(i8 signext, i32) local_unnamed_addr
+declare dso_local spir_func signext i8 @__spirv_GroupNonUniformShuffleXor(i32, i8 signext, i32)
 
 ; CHECK-SPIRV: OpFunction
 ; CHECK-SPIRV: %[[#]] = OpGroupNonUniformShuffle %[[#char]] %[[#ScopeSubgroup]] %[[#char_0]] %[[#int_0]]

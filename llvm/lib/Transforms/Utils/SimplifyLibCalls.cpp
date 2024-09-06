@@ -18,6 +18,7 @@
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/DataLayout.h"
@@ -27,6 +28,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
@@ -909,7 +911,8 @@ Value *LibCallSimplifier::optimizeStringNCpy(CallInst *CI, bool RetEnd,
     // Create a bigger, nul-padded array with the same length, SrcLen,
     // as the original string.
     SrcStr.resize(N, '\0');
-    Src = B.CreateGlobalString(SrcStr, "str");
+    Src = B.CreateGlobalString(SrcStr, "str", /*AddressSpace=*/0,
+                               /*M=*/nullptr, /*AddNull=*/false);
   }
 
   Type *PT = Callee->getFunctionType()->getParamType(0);
@@ -1451,10 +1454,12 @@ Value *LibCallSimplifier::optimizeMemChr(CallInst *CI, IRBuilderBase &B) {
     if (NonContRanges > 2)
       return nullptr;
 
+    // Slice off the character's high end bits.
+    CharVal = B.CreateTrunc(CharVal, B.getInt8Ty());
+
     SmallVector<Value *> CharCompares;
     for (unsigned char C : SortedStr)
-      CharCompares.push_back(
-          B.CreateICmpEQ(CharVal, ConstantInt::get(CharVal->getType(), C)));
+      CharCompares.push_back(B.CreateICmpEQ(CharVal, B.getInt8(C)));
 
     return B.CreateIntToPtr(B.CreateOr(CharCompares), CI->getType());
   }
@@ -1743,7 +1748,7 @@ Value *LibCallSimplifier::optimizeNew(CallInst *CI, IRBuilderBase &B,
   // if cold or hot, and leave as-is for default handling if "notcold" aka warm.
   // Note that in cases where we decide it is "notcold", it might be slightly
   // better to replace the hinted call with a non hinted call, to avoid the
-  // extra paramter and the if condition check of the hint value in the
+  // extra parameter and the if condition check of the hint value in the
   // allocator. This can be considered in the future.
   switch (Func) {
   case LibFunc_Znwm12__hot_cold_t:
@@ -1841,6 +1846,30 @@ Value *LibCallSimplifier::optimizeNew(CallInst *CI, IRBuilderBase &B,
           CI->getArgOperand(0), CI->getArgOperand(1), CI->getArgOperand(2), B,
           TLI, LibFunc_ZnamSt11align_val_tRKSt9nothrow_t12__hot_cold_t,
           HotCold);
+    break;
+  case LibFunc_size_returning_new:
+    if (HotCold != NotColdNewHintValue)
+      return emitHotColdSizeReturningNew(CI->getArgOperand(0), B, TLI,
+                                         LibFunc_size_returning_new_hot_cold,
+                                         HotCold);
+    break;
+  case LibFunc_size_returning_new_hot_cold:
+    if (OptimizeExistingHotColdNew)
+      return emitHotColdSizeReturningNew(CI->getArgOperand(0), B, TLI,
+                                         LibFunc_size_returning_new_hot_cold,
+                                         HotCold);
+    break;
+  case LibFunc_size_returning_new_aligned:
+    if (HotCold != NotColdNewHintValue)
+      return emitHotColdSizeReturningNewAligned(
+          CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
+          LibFunc_size_returning_new_aligned_hot_cold, HotCold);
+    break;
+  case LibFunc_size_returning_new_aligned_hot_cold:
+    if (OptimizeExistingHotColdNew)
+      return emitHotColdSizeReturningNewAligned(
+          CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
+          LibFunc_size_returning_new_aligned_hot_cold, HotCold);
     break;
   default:
     return nullptr;
@@ -1958,24 +1987,52 @@ static Value *optimizeBinaryDoubleFP(CallInst *CI, IRBuilderBase &B,
 
 // cabs(z) -> sqrt((creal(z)*creal(z)) + (cimag(z)*cimag(z)))
 Value *LibCallSimplifier::optimizeCAbs(CallInst *CI, IRBuilderBase &B) {
-  if (!CI->isFast())
-    return nullptr;
+  Value *Real, *Imag;
+
+  if (CI->arg_size() == 1) {
+
+    if (!CI->isFast())
+      return nullptr;
+
+    Value *Op = CI->getArgOperand(0);
+    assert(Op->getType()->isArrayTy() && "Unexpected signature for cabs!");
+
+    Real = B.CreateExtractValue(Op, 0, "real");
+    Imag = B.CreateExtractValue(Op, 1, "imag");
+
+  } else {
+    assert(CI->arg_size() == 2 && "Unexpected signature for cabs!");
+
+    Real = CI->getArgOperand(0);
+    Imag = CI->getArgOperand(1);
+
+    // if real or imaginary part is zero, simplify to abs(cimag(z))
+    // or abs(creal(z))
+    Value *AbsOp = nullptr;
+    if (ConstantFP *ConstReal = dyn_cast<ConstantFP>(Real)) {
+      if (ConstReal->isZero())
+        AbsOp = Imag;
+
+    } else if (ConstantFP *ConstImag = dyn_cast<ConstantFP>(Imag)) {
+      if (ConstImag->isZero())
+        AbsOp = Real;
+    }
+
+    if (AbsOp) {
+      IRBuilderBase::FastMathFlagGuard Guard(B);
+      B.setFastMathFlags(CI->getFastMathFlags());
+
+      return copyFlags(
+          *CI, B.CreateUnaryIntrinsic(Intrinsic::fabs, AbsOp, nullptr, "cabs"));
+    }
+
+    if (!CI->isFast())
+      return nullptr;
+  }
 
   // Propagate fast-math flags from the existing call to new instructions.
   IRBuilderBase::FastMathFlagGuard Guard(B);
   B.setFastMathFlags(CI->getFastMathFlags());
-
-  Value *Real, *Imag;
-  if (CI->arg_size() == 1) {
-    Value *Op = CI->getArgOperand(0);
-    assert(Op->getType()->isArrayTy() && "Unexpected signature for cabs!");
-    Real = B.CreateExtractValue(Op, 0, "real");
-    Imag = B.CreateExtractValue(Op, 1, "imag");
-  } else {
-    assert(CI->arg_size() == 2 && "Unexpected signature for cabs!");
-    Real = CI->getArgOperand(0);
-    Imag = CI->getArgOperand(1);
-  }
 
   Value *RealReal = B.CreateFMul(Real, Real);
   Value *ImagImag = B.CreateFMul(Imag, Imag);
@@ -2703,14 +2760,17 @@ Value *LibCallSimplifier::optimizeSqrt(CallInst *CI, IRBuilderBase &B) {
     // Note: We don't bother looking any deeper than this first level or for
     // variations of this pattern because instcombine's visitFMUL and/or the
     // reassociation pass should give us this form.
-    Value *OtherMul0, *OtherMul1;
-    if (match(Op0, m_FMul(m_Value(OtherMul0), m_Value(OtherMul1)))) {
-      // Pattern: sqrt((x * y) * z)
-      if (OtherMul0 == OtherMul1 && cast<Instruction>(Op0)->isFast()) {
-        // Matched: sqrt((x * x) * z)
-        RepeatOp = OtherMul0;
-        OtherOp = Op1;
-      }
+    Value *MulOp;
+    if (match(Op0, m_FMul(m_Value(MulOp), m_Deferred(MulOp))) &&
+        cast<Instruction>(Op0)->isFast()) {
+      // Pattern: sqrt((x * x) * z)
+      RepeatOp = MulOp;
+      OtherOp = Op1;
+    } else if (match(Op1, m_FMul(m_Value(MulOp), m_Deferred(MulOp))) &&
+               cast<Instruction>(Op1)->isFast()) {
+      // Pattern: sqrt(z * (x * x))
+      RepeatOp = MulOp;
+      OtherOp = Op0;
     }
   }
   if (!RepeatOp)
@@ -2987,6 +3047,37 @@ void LibCallSimplifier::classifyArgUse(
     else if (Func == LibFunc_sincospi_stret)
       SinCosCalls.push_back(CI);
   }
+}
+
+/// Constant folds remquo
+Value *LibCallSimplifier::optimizeRemquo(CallInst *CI, IRBuilderBase &B) {
+  const APFloat *X, *Y;
+  if (!match(CI->getArgOperand(0), m_APFloat(X)) ||
+      !match(CI->getArgOperand(1), m_APFloat(Y)))
+    return nullptr;
+
+  APFloat::opStatus Status;
+  APFloat Quot = *X;
+  Status = Quot.divide(*Y, APFloat::rmNearestTiesToEven);
+  if (Status != APFloat::opOK && Status != APFloat::opInexact)
+    return nullptr;
+  APFloat Rem = *X;
+  if (Rem.remainder(*Y) != APFloat::opOK)
+    return nullptr;
+
+  // TODO: We can only keep at least the three of the last bits of x/y
+  unsigned IntBW = TLI->getIntSize();
+  APSInt QuotInt(IntBW, /*isUnsigned=*/false);
+  bool IsExact;
+  Status =
+      Quot.convertToInteger(QuotInt, APFloat::rmNearestTiesToEven, &IsExact);
+  if (Status != APFloat::opOK && Status != APFloat::opInexact)
+    return nullptr;
+
+  B.CreateAlignedStore(
+      ConstantInt::get(B.getIntNTy(IntBW), QuotInt.getExtValue()),
+      CI->getArgOperand(2), CI->getParamAlign(2));
+  return ConstantFP::get(CI->getType(), Rem);
 }
 
 //===----------------------------------------------------------------------===//
@@ -3669,6 +3760,17 @@ Value *LibCallSimplifier::optimizePuts(CallInst *CI, IRBuilderBase &B) {
   return nullptr;
 }
 
+Value *LibCallSimplifier::optimizeExit(CallInst *CI) {
+
+  // Mark 'exit' as cold if its not exit(0) (success).
+  const APInt *C;
+  if (!CI->hasFnAttr(Attribute::Cold) &&
+      match(CI->getArgOperand(0), m_APInt(C)) && !C->isZero()) {
+    CI->addFnAttr(Attribute::Cold);
+  }
+  return nullptr;
+}
+
 Value *LibCallSimplifier::optimizeBCopy(CallInst *CI, IRBuilderBase &B) {
   // bcopy(src, dst, n) -> llvm.memmove(dst, src, n)
   return copyFlags(*CI, B.CreateMemMove(CI->getArgOperand(1), Align(1),
@@ -3687,6 +3789,7 @@ Value *LibCallSimplifier::optimizeStringMemoryLibCall(CallInst *CI,
   Module *M = CI->getModule();
   LibFunc Func;
   Function *Callee = CI->getCalledFunction();
+
   // Check for string/memory library functions.
   if (TLI->getLibFunc(*Callee, Func) && isLibFuncEmittable(M, TLI, Func)) {
     // Make sure we never change the calling convention.
@@ -3779,12 +3882,32 @@ Value *LibCallSimplifier::optimizeStringMemoryLibCall(CallInst *CI,
     case LibFunc_ZnamRKSt9nothrow_t12__hot_cold_t:
     case LibFunc_ZnamSt11align_val_t12__hot_cold_t:
     case LibFunc_ZnamSt11align_val_tRKSt9nothrow_t12__hot_cold_t:
+    case LibFunc_size_returning_new:
+    case LibFunc_size_returning_new_hot_cold:
+    case LibFunc_size_returning_new_aligned:
+    case LibFunc_size_returning_new_aligned_hot_cold:
       return optimizeNew(CI, Builder, Func);
     default:
       break;
     }
   }
   return nullptr;
+}
+
+/// Constant folding nan/nanf/nanl.
+static Value *optimizeNaN(CallInst *CI) {
+  StringRef CharSeq;
+  if (!getConstantStringInfo(CI->getArgOperand(0), CharSeq))
+    return nullptr;
+
+  APInt Fill;
+  // Treat empty strings as if they were zero.
+  if (CharSeq.empty())
+    Fill = APInt(32, 0);
+  else if (CharSeq.getAsInteger(0, Fill))
+    return nullptr;
+
+  return ConstantFP::getQNaN(CI->getType(), /*Negative=*/false, &Fill);
 }
 
 Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
@@ -3897,6 +4020,14 @@ Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
   case LibFunc_cabsf:
   case LibFunc_cabsl:
     return optimizeCAbs(CI, Builder);
+  case LibFunc_remquo:
+  case LibFunc_remquof:
+  case LibFunc_remquol:
+    return optimizeRemquo(CI, Builder);
+  case LibFunc_nan:
+  case LibFunc_nanf:
+  case LibFunc_nanl:
+    return optimizeNaN(CI);
   default:
     return nullptr;
   }
@@ -4020,6 +4151,9 @@ Value *LibCallSimplifier::optimizeCall(CallInst *CI, IRBuilderBase &Builder) {
     case LibFunc_vfprintf:
     case LibFunc_fiprintf:
       return optimizeErrorReporting(CI, Builder, 0);
+    case LibFunc_exit:
+    case LibFunc_Exit:
+      return optimizeExit(CI);
     default:
       return nullptr;
     }
@@ -4159,7 +4293,7 @@ Value *FortifiedLibCallSimplifier::optimizeMemSetChk(CallInst *CI,
 
 Value *FortifiedLibCallSimplifier::optimizeMemPCpyChk(CallInst *CI,
                                                       IRBuilderBase &B) {
-  const DataLayout &DL = CI->getModule()->getDataLayout();
+  const DataLayout &DL = CI->getDataLayout();
   if (isFortifiedCallFoldable(CI, 3, 2))
     if (Value *Call = emitMemPCpy(CI->getArgOperand(0), CI->getArgOperand(1),
                                   CI->getArgOperand(2), B, DL, TLI)) {
@@ -4171,7 +4305,7 @@ Value *FortifiedLibCallSimplifier::optimizeMemPCpyChk(CallInst *CI,
 Value *FortifiedLibCallSimplifier::optimizeStrpCpyChk(CallInst *CI,
                                                       IRBuilderBase &B,
                                                       LibFunc Func) {
-  const DataLayout &DL = CI->getModule()->getDataLayout();
+  const DataLayout &DL = CI->getDataLayout();
   Value *Dst = CI->getArgOperand(0), *Src = CI->getArgOperand(1),
         *ObjSize = CI->getArgOperand(2);
 
@@ -4219,7 +4353,7 @@ Value *FortifiedLibCallSimplifier::optimizeStrLenChk(CallInst *CI,
                                                      IRBuilderBase &B) {
   if (isFortifiedCallFoldable(CI, 1, std::nullopt, 0))
     return copyFlags(*CI, emitStrLen(CI->getArgOperand(0), B,
-                                     CI->getModule()->getDataLayout(), TLI));
+                                     CI->getDataLayout(), TLI));
   return nullptr;
 }
 

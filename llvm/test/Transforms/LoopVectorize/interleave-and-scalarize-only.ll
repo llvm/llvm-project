@@ -96,7 +96,6 @@ declare i32 @llvm.smin.i32(i32, i32)
 ; DBG-NEXT:     Successor(s): pred.store.continue
 ; DBG-EMPTY:
 ; DBG-NEXT:     pred.store.continue:
-; DBG-NEXT:       PHI-PREDICATED-INSTRUCTION vp<{{.+}}> = ir<%l>
 ; DBG-NEXT:     No successors
 ; DBG-NEXT:   }
 ; DBG-NEXT:   Successor(s): cond.false.1
@@ -109,6 +108,14 @@ declare i32 @llvm.smin.i32(i32, i32)
 ; DBG-NEXT: Successor(s): middle.block
 ; DBG-EMPTY:
 ; DBG-NEXT: middle.block:
+; DBG-NEXT:   EMIT vp<[[CMP:%.+]]> = icmp eq ir<1000>, vp<[[VEC_TC]]>
+; DBG-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
+; DBG-NEXT: Successor(s): ir-bb<exit>, scalar.ph
+; DBG-EMPTY:
+; DBG-NEXT: ir-bb<exit>:
+; DBG-NEXT: No successors
+; DBG-EMPTY:
+; DBG-NEXT: scalar.ph:
 ; DBG-NEXT: No successors
 ; DBG-NEXT: }
 
@@ -129,7 +136,6 @@ define void @test_scalarize_with_branch_cond(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    store i32 [[TMP4]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    br label %pred.store.continue
 ; CHECK:       pred.store.continue:
-; CHECK-NEXT:    [[TMP5:%.*]] = phi i32 [ poison, %vector.body ], [ [[TMP4]], %pred.store.if ]
 ; CHECK-NEXT:    br i1 [[INDUCTION3]], label %pred.store.if4, label %pred.store.continue5
 ; CHECK:       pred.store.if4:
 ; CHECK-NEXT:    [[INDUCTION5:%.*]] = add i64 [[INDEX]], 1
@@ -139,7 +145,6 @@ define void @test_scalarize_with_branch_cond(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    store i32 [[TMP7]], ptr [[TMP2]], align 4
 ; CHECK-NEXT:    br label %pred.store.continue5
 ; CHECK:       pred.store.continue5:
-; CHECK-NEXT:    [[TMP8:%.*]] = phi i32 [ poison, %pred.store.continue ], [ [[TMP7]], %pred.store.if4 ]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP9]], label %middle.block, label %vector.body
@@ -203,9 +208,18 @@ exit:
 ; DBG-EMPTY:
 ; DBG-NEXT: middle.block:
 ; DBG-NEXT:   EMIT vp<[[RESUME_1:%.+]]> = extract-from-end vp<[[SCALAR_STEPS]]>, ir<1>
+; DBG-NEXT:   EMIT vp<[[CMP:%.+]]> = icmp eq vp<[[TC]]>, vp<[[VEC_TC]]>
+; DBG-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
+; DBG-NEXT: Successor(s): ir-bb<exit>, scalar.ph
+; DBG-EMPTY:
+; DBG-NEXT: ir-bb<exit>:
 ; DBG-NEXT: No successors
 ; DBG-EMPTY:
-; DBG-NEXT: Live-out i32 %for = vp<[[RESUME_1]]>
+; DBG-NEXT: scalar.ph:
+; DBG-NEXT:  EMIT vp<[[RESUME_P:%.*]]> = resume-phi vp<[[RESUME_1]]>, ir<0>
+; DBG-NEXT: No successors
+; DBG-EMPTY:
+; DBG-NEXT: Live-out i32 %for = vp<[[RESUME_P]]>
 ; DBG-NEXT: }
 
 define void @first_order_recurrence_using_induction(i32 %n, ptr %dst) {

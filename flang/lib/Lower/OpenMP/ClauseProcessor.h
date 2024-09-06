@@ -55,14 +55,15 @@ public:
   // 'Unique' clauses: They can appear at most once in the clause list.
   bool
   processCollapse(mlir::Location currentLocation, lower::pft::Evaluation &eval,
-                  mlir::omp::CollapseClauseOps &result,
+                  mlir::omp::LoopRelatedOps &result,
                   llvm::SmallVectorImpl<const semantics::Symbol *> &iv) const;
-  bool processDefault() const;
   bool processDevice(lower::StatementContext &stmtCtx,
                      mlir::omp::DeviceClauseOps &result) const;
   bool processDeviceType(mlir::omp::DeviceTypeClauseOps &result) const;
   bool processDistSchedule(lower::StatementContext &stmtCtx,
                            mlir::omp::DistScheduleClauseOps &result) const;
+  bool processFilter(lower::StatementContext &stmtCtx,
+                     mlir::omp::FilterClauseOps &result) const;
   bool processFinal(lower::StatementContext &stmtCtx,
                     mlir::omp::FinalClauseOps &result) const;
   bool processHasDeviceAddr(
@@ -77,6 +78,7 @@ public:
                        mlir::omp::NumTeamsClauseOps &result) const;
   bool processNumThreads(lower::StatementContext &stmtCtx,
                          mlir::omp::NumThreadsClauseOps &result) const;
+  bool processOrder(mlir::omp::OrderClauseOps &result) const;
   bool processOrdered(mlir::omp::OrderedClauseOps &result) const;
   bool processPriority(lower::StatementContext &stmtCtx,
                        mlir::omp::PriorityClauseOps &result) const;
@@ -124,16 +126,16 @@ public:
       llvm::SmallVectorImpl<mlir::Type> *reductionTypes = nullptr,
       llvm::SmallVectorImpl<const semantics::Symbol *> *reductionSyms =
           nullptr) const;
-  bool processSectionsReduction(mlir::Location currentLocation,
-                                mlir::omp::ReductionClauseOps &result) const;
   bool processTo(llvm::SmallVectorImpl<DeclareTargetCapturePair> &result) const;
   bool processUseDeviceAddr(
-      mlir::omp::UseDeviceClauseOps &result,
+      lower::StatementContext &stmtCtx,
+      mlir::omp::UseDeviceAddrClauseOps &result,
       llvm::SmallVectorImpl<mlir::Type> &useDeviceTypes,
       llvm::SmallVectorImpl<mlir::Location> &useDeviceLocs,
       llvm::SmallVectorImpl<const semantics::Symbol *> &useDeviceSyms) const;
   bool processUseDevicePtr(
-      mlir::omp::UseDeviceClauseOps &result,
+      lower::StatementContext &stmtCtx,
+      mlir::omp::UseDevicePtrClauseOps &result,
       llvm::SmallVectorImpl<mlir::Type> &useDeviceTypes,
       llvm::SmallVectorImpl<mlir::Location> &useDeviceLocs,
       llvm::SmallVectorImpl<const semantics::Symbol *> &useDeviceSyms) const;
@@ -172,6 +174,17 @@ private:
   template <typename T>
   bool markClauseOccurrence(mlir::UnitAttr &result) const;
 
+  void processMapObjects(
+      lower::StatementContext &stmtCtx, mlir::Location clauseLocation,
+      const omp::ObjectList &objects,
+      llvm::omp::OpenMPOffloadMappingFlags mapTypeBits,
+      std::map<const semantics::Symbol *,
+               llvm::SmallVector<OmpMapMemberIndicesData>> &parentMemberIndices,
+      llvm::SmallVectorImpl<mlir::Value> &mapVars,
+      llvm::SmallVectorImpl<const semantics::Symbol *> *mapSyms,
+      llvm::SmallVectorImpl<mlir::Location> *mapSymLocs = nullptr,
+      llvm::SmallVectorImpl<mlir::Type> *mapSymTypes = nullptr) const;
+
   lower::AbstractConverter &converter;
   semantics::SemanticsContext &semaCtx;
   List<Clause> clauses;
@@ -188,7 +201,6 @@ bool ClauseProcessor::processMotionClauses(lower::StatementContext &stmtCtx,
   bool clauseFound = findRepeatableClause<T>(
       [&](const T &clause, const parser::CharBlock &source) {
         mlir::Location clauseLocation = converter.genLocation(source);
-        fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
 
         static_assert(std::is_same_v<T, omp::clause::To> ||
                       std::is_same_v<T, omp::clause::From>);
@@ -199,43 +211,9 @@ bool ClauseProcessor::processMotionClauses(lower::StatementContext &stmtCtx,
                 ? llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO
                 : llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
 
-        auto &objects = std::get<ObjectList>(clause.t);
-        for (const omp::Object &object : objects) {
-          llvm::SmallVector<mlir::Value> bounds;
-          std::stringstream asFortran;
-
-          lower::AddrAndBoundsInfo info =
-              lower::gatherDataOperandAddrAndBounds<mlir::omp::MapBoundsOp,
-                                                    mlir::omp::MapBoundsType>(
-                  converter, firOpBuilder, semaCtx, stmtCtx, *object.sym(),
-                  object.ref(), clauseLocation, asFortran, bounds,
-                  treatIndexAsSection);
-
-          auto origSymbol = converter.getSymbolAddress(*object.sym());
-          mlir::Value symAddr = info.addr;
-          if (origSymbol && fir::isTypeWithDescriptor(origSymbol.getType()))
-            symAddr = origSymbol;
-
-          // Explicit map captures are captured ByRef by default,
-          // optimisation passes may alter this to ByCopy or other capture
-          // types to optimise
-          mlir::omp::MapInfoOp mapOp = createMapInfoOp(
-              firOpBuilder, clauseLocation, symAddr,
-              /*varPtrPtr=*/mlir::Value{}, asFortran.str(), bounds,
-              /*members=*/{}, /*membersIndex=*/mlir::DenseIntElementsAttr{},
-              static_cast<
-                  std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
-                  mapTypeBits),
-              mlir::omp::VariableCaptureKind::ByRef, symAddr.getType());
-
-          if (object.sym()->owner().IsDerivedType()) {
-            addChildIndexAndMapToParent(object, parentMemberIndices, mapOp,
-                                        semaCtx);
-          } else {
-            result.mapVars.push_back(mapOp);
-            mapSymbols.push_back(object.sym());
-          }
-        }
+        processMapObjects(stmtCtx, clauseLocation,
+                          std::get<ObjectList>(clause.t), mapTypeBits,
+                          parentMemberIndices, result.mapVars, &mapSymbols);
       });
 
   insertChildMapInfoIntoParent(converter, parentMemberIndices, result.mapVars,
