@@ -154,7 +154,7 @@ TEST(DependencyScanningFilesystem, CacheStatFailures) {
   InMemoryFS->addFile("/cache/a.pcm", 0, llvm::MemoryBuffer::getMemBuffer(""));
 
   auto InstrumentingFS =
-      llvm::makeIntrusiveRefCnt<InstrumentingFilesystem>(InMemoryFS);
+      llvm::makeIntrusiveRefCnt<llvm::vfs::TracingFileSystem>(InMemoryFS);
 
   DependencyScanningFilesystemSharedCache SharedCache;
   DependencyScanningWorkerFilesystem DepFS(SharedCache, InstrumentingFS);

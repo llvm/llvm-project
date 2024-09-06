@@ -1420,6 +1420,7 @@ cc_library(
         ":Demangle",
         ":MC",
         ":ProfileData",
+        ":Scalar",
         ":Support",
         ":Target",
         ":TargetParser",
@@ -1452,8 +1453,8 @@ cc_library(
         "lib/SandboxIR/*.cpp",
     ]),
     hdrs = glob(["include/llvm/SandboxIR/*.h"]),
-    textual_hdrs = ["include/llvm/SandboxIR/SandboxIRValues.def"],
     copts = llvm_copts,
+    textual_hdrs = ["include/llvm/SandboxIR/SandboxIRValues.def"],
     deps = [
         ":Core",
         ":Support",
@@ -1492,7 +1493,7 @@ cc_library(
     ]),
     hdrs = glob([
         "include/llvm/Transforms/Vectorize/*.h",
-        "include/llvm/Transforms/Vectorize/SandboxVectorizer/SandboxVectorizer.h"
+        "include/llvm/Transforms/Vectorize/SandboxVectorizer/SandboxVectorizer.h",
     ]),
     copts = llvm_copts,
     deps = [
@@ -4450,6 +4451,7 @@ cc_library(
     copts = llvm_copts,
     deps = [
         ":Core",
+        ":Debuginfod",
         ":Object",
         ":ProfileData",
         ":Support",
