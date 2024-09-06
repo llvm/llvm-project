@@ -40,3 +40,12 @@ void testInlineAsmMemcpyUninit(void)
     MyMemcpy(&a[1], &b[1], sizeof(b) - sizeof(b[1]));
     c = a[0]; // expected-warning{{Assigned value is garbage or undefined}}
 }
+
+void *globalPtr;
+
+void testNoCrash()
+{
+  // Use global pointer to make it symbolic. Then engine will try to bind
+  // value to first element of type void * and should not crash.
+  asm ("" : : "a"(globalPtr)); // no crash
+}
