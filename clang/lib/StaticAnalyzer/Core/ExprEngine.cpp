@@ -1211,7 +1211,7 @@ void ExprEngine::ProcessInitializer(const CFGInitializer CFGInit,
           if (std::optional<Loc> LValueLoc = LValue.getAs<Loc>()) {
             InitVal = State->getSVal(*LValueLoc);
           } else if (auto CV = LValue.getAs<nonloc::CompoundVal>()) {
-            // initializer list for an array
+            // Initializer list for an array.
             InitVal = *CV;
           }
         }

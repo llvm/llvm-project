@@ -259,7 +259,7 @@ struct ArrCombination : public HasArr {
 
 void derived_and_member() {
   ArrCombination a{8};
-  // FIXME: default initializers for array members are not modelled
+  // FIXME: Default initializers for array members are not modeled.
   clang_analyzer_eval(a.arrDefault[0] == 1); // expected-warning{{UNKNOWN}}
   clang_analyzer_eval(a.arrDefault[1] == 2); // expected-warning{{UNKNOWN}}
   clang_analyzer_eval(a.arr[0] == 3); // expected-warning{{TRUE}}
