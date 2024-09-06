@@ -2152,7 +2152,9 @@ void OmpAttributeVisitor::CreateImplicitSymbols(
         dirContext.defaultDSA == Symbol::Flag::OmpShared) {
       // 1) default
       // Allowed only with parallel, teams and task generating constructs.
-      assert(parallelDir || taskGenDir || teamsDir);
+      if (!parallelDir && !taskGenDir && !teamsDir) {
+        return;
+      }
       if (dirContext.defaultDSA != Symbol::Flag::OmpShared)
         makePrivateSymbol(dirContext.defaultDSA);
       else
