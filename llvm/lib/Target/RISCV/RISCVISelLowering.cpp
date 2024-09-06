@@ -19167,10 +19167,14 @@ static MCRegister allocateRVVReg(MVT ValVT, unsigned ValNo, CCState &State,
 }
 
 // Implements the RISC-V calling convention. Returns true upon failure.
-bool RISCV::CC_RISCV(const DataLayout &DL, RISCVABI::ABI ABI, unsigned ValNo,
-                     MVT ValVT, MVT LocVT, CCValAssign::LocInfo LocInfo,
-                     ISD::ArgFlagsTy ArgFlags, CCState &State, bool IsFixed,
-                     bool IsRet, Type *OrigTy, const RISCVTargetLowering &TLI) {
+bool RISCV::CC_RISCV(unsigned ValNo, MVT ValVT, MVT LocVT,
+                     CCValAssign::LocInfo LocInfo, ISD::ArgFlagsTy ArgFlags,
+                     CCState &State, bool IsFixed, bool IsRet, Type *OrigTy) {
+  const MachineFunction &MF = State.getMachineFunction();
+  const DataLayout &DL = MF.getDataLayout();
+  const RISCVSubtarget &STI = MF.getSubtarget<RISCVSubtarget>();
+  const RISCVTargetLowering &TLI = *STI.getTargetLowering();
+
   unsigned XLen = DL.getLargestLegalIntTypeSizeInBits();
   assert(XLen == 32 || XLen == 64);
   MVT XLenVT = XLen == 32 ? MVT::i32 : MVT::i64;
@@ -19196,6 +19200,7 @@ bool RISCV::CC_RISCV(const DataLayout &DL, RISCVABI::ABI ABI, unsigned ValNo,
   // variadic argument, or if no F64 argument registers are available.
   bool UseGPRForF64 = true;
 
+  RISCVABI::ABI ABI = STI.getTargetABI();
   switch (ABI) {
   default:
     llvm_unreachable("Unexpected ABI");
@@ -19437,9 +19442,8 @@ void RISCVTargetLowering::analyzeInputArgs(
     else if (Ins[i].isOrigArg())
       ArgTy = FType->getParamType(Ins[i].getOrigArgIndex());
 
-    RISCVABI::ABI ABI = MF.getSubtarget<RISCVSubtarget>().getTargetABI();
-    if (Fn(MF.getDataLayout(), ABI, i, ArgVT, ArgVT, CCValAssign::Full,
-           ArgFlags, CCInfo, /*IsFixed=*/true, IsRet, ArgTy, *this)) {
+    if (Fn(i, ArgVT, ArgVT, CCValAssign::Full, ArgFlags, CCInfo,
+           /*IsFixed=*/true, IsRet, ArgTy)) {
       LLVM_DEBUG(dbgs() << "InputArg #" << i << " has unhandled type "
                         << ArgVT << '\n');
       llvm_unreachable(nullptr);
@@ -19458,9 +19462,8 @@ void RISCVTargetLowering::analyzeOutputArgs(
     ISD::ArgFlagsTy ArgFlags = Outs[i].Flags;
     Type *OrigTy = CLI ? CLI->getArgs()[Outs[i].OrigArgIndex].Ty : nullptr;
 
-    RISCVABI::ABI ABI = MF.getSubtarget<RISCVSubtarget>().getTargetABI();
-    if (Fn(MF.getDataLayout(), ABI, i, ArgVT, ArgVT, CCValAssign::Full,
-           ArgFlags, CCInfo, Outs[i].IsFixed, IsRet, OrigTy, *this)) {
+    if (Fn(i, ArgVT, ArgVT, CCValAssign::Full, ArgFlags, CCInfo,
+           Outs[i].IsFixed, IsRet, OrigTy)) {
       LLVM_DEBUG(dbgs() << "OutputArg #" << i << " has unhandled type "
                         << ArgVT << "\n");
       llvm_unreachable(nullptr);
@@ -19633,12 +19636,15 @@ static SDValue unpackF64OnRV32DSoftABI(SelectionDAG &DAG, SDValue Chain,
 
 // FastCC has less than 1% performance improvement for some particular
 // benchmark. But theoretically, it may have benefit for some cases.
-bool RISCV::CC_RISCV_FastCC(const DataLayout &DL, RISCVABI::ABI ABI,
-                            unsigned ValNo, MVT ValVT, MVT LocVT,
+bool RISCV::CC_RISCV_FastCC(unsigned ValNo, MVT ValVT, MVT LocVT,
                             CCValAssign::LocInfo LocInfo,
                             ISD::ArgFlagsTy ArgFlags, CCState &State,
-                            bool IsFixed, bool IsRet, Type *OrigTy,
-                            const RISCVTargetLowering &TLI) {
+                            bool IsFixed, bool IsRet, Type *OrigTy) {
+  const MachineFunction &MF = State.getMachineFunction();
+  const RISCVSubtarget &STI = MF.getSubtarget<RISCVSubtarget>();
+  const RISCVTargetLowering &TLI = *STI.getTargetLowering();
+  RISCVABI::ABI ABI = STI.getTargetABI();
+
   if (LocVT == MVT::i32 || LocVT == MVT::i64) {
     if (MCRegister Reg = State.AllocateReg(getFastCCArgGPRs(ABI))) {
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
@@ -20357,10 +20363,8 @@ bool RISCVTargetLowering::CanLowerReturn(
   for (unsigned i = 0, e = Outs.size(); i != e; ++i) {
     MVT VT = Outs[i].VT;
     ISD::ArgFlagsTy ArgFlags = Outs[i].Flags;
-    RISCVABI::ABI ABI = MF.getSubtarget<RISCVSubtarget>().getTargetABI();
-    if (RISCV::CC_RISCV(MF.getDataLayout(), ABI, i, VT, VT, CCValAssign::Full,
-                        ArgFlags, CCInfo, /*IsFixed=*/true, /*IsRet=*/true,
-                        nullptr, *this))
+    if (RISCV::CC_RISCV(i, VT, VT, CCValAssign::Full, ArgFlags, CCInfo,
+                        /*IsFixed=*/true, /*IsRet=*/true, nullptr))
       return false;
   }
   return true;
