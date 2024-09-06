@@ -211,6 +211,14 @@ set(SANITIZER_IMPL_HEADERS
   sanitizer_win_thunk_interception.h
   )
 
+if(MSVC)
+  # asan on windows only supports the release dll version of the runtimes, in the interest of
+  # only having one asan dll to support/test. Having asan statically linked
+  # with the runtime might be possible, but it multiplies the number of scenerios to test.
+  # the program USING sanitizers can use whatever version of the runtime it wants to.
+  set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreadedDLL)
+endif()
+
 include_directories(..)
 
 set(SANITIZER_COMMON_DEFINITIONS
