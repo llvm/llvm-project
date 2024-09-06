@@ -24,9 +24,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "MCTargetDesc/NVPTXBaseInfo.h"
 #include "NVPTX.h"
 #include "NVPTXUtilities.h"
-#include "MCTargetDesc/NVPTXBaseInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -55,8 +55,8 @@ public:
 
 char NVPTXLowerAlloca::ID = 1;
 
-INITIALIZE_PASS(NVPTXLowerAlloca, "nvptx-lower-alloca",
-                "Lower Alloca", false, false)
+INITIALIZE_PASS(NVPTXLowerAlloca, "nvptx-lower-alloca", "Lower Alloca", false,
+                false)
 
 // =============================================================================
 // Main function for this pass.
@@ -81,9 +81,17 @@ bool NVPTXLowerAlloca::runOnFunction(Function &F) {
 
         Instruction *AllocaInLocalAS = allocaInst;
         auto ETy = allocaInst->getAllocatedType();
+
+        // We need to make sure that LLVM has info that alloca needs to go to
+        // ADDRESS_SPACE_LOCAL for InferAddressSpace pass.
+        //
+        // For allocas in ADDRESS_SPACE_LOCAL, we add addrspacecast to
+        // ADDRESS_SPACE_LOCAL and back to ADDRESS_SPACE_GENERIC, so that
+        // the alloca's users still use a generic pointer to operate on.
+        //
+        // For allocas already in ADDRESS_SPACE_LOCAL, we just need
+        // addrspacecast to ADDRESS_SPACE_GENERIC.
         if (AllocAddrSpace == ADDRESS_SPACE_GENERIC) {
-          // Insert a new AddrSpaceCastInst if
-          // allocaInst is not already in ADDRESS_SPACE_Generic.
           auto ASCastToLocalAS = new AddrSpaceCastInst(
               allocaInst, PointerType::get(ETy, ADDRESS_SPACE_LOCAL), "");
           ASCastToLocalAS->insertAfter(allocaInst);
