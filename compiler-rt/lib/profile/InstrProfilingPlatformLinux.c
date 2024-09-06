@@ -6,8 +6,8 @@
 |*
 \*===----------------------------------------------------------------------===*/
 
-#if defined(__linux__) || defined(__FreeBSD__) || defined(__Fuchsia__) || \
-    (defined(__sun__) && defined(__svr4__)) || defined(__NetBSD__) || \
+#if defined(__linux__) || defined(__FreeBSD__) || defined(__Fuchsia__) ||      \
+    (defined(__sun__) && defined(__svr4__)) || defined(__NetBSD__) ||          \
     defined(_AIX) || defined(__HAIKU__)
 
 #if !defined(_AIX)

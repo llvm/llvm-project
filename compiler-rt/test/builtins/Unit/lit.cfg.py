@@ -126,7 +126,9 @@ if builtins_build_crt:
     config.substitutions.append(("%crtn", get_library_path("crtn.o")))
 
     config.substitutions.append(("%libgcc", get_libgcc_file_name()))
-    config.substitutions.append(("%libc", "-lroot" if sys.platform.startswith("haiku") else "-lc"))
+    config.substitutions.append(
+        ("%libc", "-lroot" if sys.platform.startswith("haiku") else "-lc")
+    )
 
     config.substitutions.append(
         ("%libstdcxx", "-l" + config.sanitizer_cxx_lib.lstrip("lib"))
