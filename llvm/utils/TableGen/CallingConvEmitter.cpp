@@ -160,7 +160,7 @@ void CallingConvEmitter::EmitAction(Record *Action, unsigned Indent,
       ListInit *RegList = Action->getValueAsListInit("RegList");
       if (RegList->size() == 1) {
         std::string Name = getQualifiedName(RegList->getElementAsRecord(0));
-        O << IndentStr << "if (unsigned Reg = State.AllocateReg(" << Name
+        O << IndentStr << "if (MCRegister Reg = State.AllocateReg(" << Name
           << ")) {\n";
         if (SwiftAction)
           AssignedSwiftRegsMap[CurrentAction].insert(Name);
@@ -180,7 +180,7 @@ void CallingConvEmitter::EmitAction(Record *Action, unsigned Indent,
           O << LS << Name;
         }
         O << "\n" << IndentStr << "};\n";
-        O << IndentStr << "if (unsigned Reg = State.AllocateReg(RegList"
+        O << IndentStr << "if (MCRegister Reg = State.AllocateReg(RegList"
           << Counter << ")) {\n";
       }
       O << IndentStr << "  State.addLoc(CCValAssign::getReg(ValNo, ValVT, "
@@ -217,7 +217,7 @@ void CallingConvEmitter::EmitAction(Record *Action, unsigned Indent,
                         "Invalid length of list of shadowed registers");
 
       if (RegList->size() == 1) {
-        O << IndentStr << "if (unsigned Reg = State.AllocateReg(";
+        O << IndentStr << "if (MCRegister Reg = State.AllocateReg(";
         O << getQualifiedName(RegList->getElementAsRecord(0));
         O << ", " << getQualifiedName(ShadowRegList->getElementAsRecord(0));
         O << ")) {\n";
@@ -241,7 +241,7 @@ void CallingConvEmitter::EmitAction(Record *Action, unsigned Indent,
           O << LSS << getQualifiedName(ShadowRegList->getElementAsRecord(i));
         O << "\n" << IndentStr << "};\n";
 
-        O << IndentStr << "if (unsigned Reg = State.AllocateReg(RegList"
+        O << IndentStr << "if (MCRegister Reg = State.AllocateReg(RegList"
           << RegListNumber << ", "
           << "RegList" << ShadowRegListNumber << ")) {\n";
       }

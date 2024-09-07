@@ -42,9 +42,8 @@ define void @test_02(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[C3:%.*]] = icmp sgt i32 [[X]], [[Y]]
 ; CHECK-NEXT:    br i1 [[C3]], label [[EXIT]], label [[UNREACHED:%.*]]
 ; CHECK:       unreached:
-; CHECK-NEXT:    [[C1:%.*]] = icmp eq i32 [[X]], [[Y]]
-; CHECK-NEXT:    [[SIGNED:%.*]] = select i1 [[C2]], i32 -1, i32 1
-; CHECK-NEXT:    [[COMPARATOR:%.*]] = select i1 [[C1]], i32 0, i32 [[SIGNED]]
+; CHECK-NEXT:    [[C1:%.*]] = icmp ne i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[COMPARATOR:%.*]] = zext i1 [[C1]] to i32
 ; CHECK-NEXT:    call void @use(i32 [[COMPARATOR]])
 ; CHECK-NEXT:    unreachable
 ; CHECK:       exit:
@@ -78,9 +77,8 @@ define i32 @test_03(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[C3:%.*]] = icmp sgt i32 [[X]], [[Y]]
 ; CHECK-NEXT:    br i1 [[C3]], label [[EXIT]], label [[UNREACHED:%.*]]
 ; CHECK:       unreached:
-; CHECK-NEXT:    [[C1:%.*]] = icmp eq i32 [[X]], [[Y]]
-; CHECK-NEXT:    [[SIGNED:%.*]] = select i1 [[C2]], i32 -1, i32 1
-; CHECK-NEXT:    [[COMPARATOR:%.*]] = select i1 [[C1]], i32 0, i32 [[SIGNED]]
+; CHECK-NEXT:    [[C1:%.*]] = icmp ne i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[COMPARATOR:%.*]] = zext i1 [[C1]] to i32
 ; CHECK-NEXT:    ret i32 [[COMPARATOR]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i32 0

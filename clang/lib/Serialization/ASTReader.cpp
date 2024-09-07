@@ -7049,6 +7049,11 @@ void TypeLocReader::VisitBTFTagAttributedTypeLoc(BTFTagAttributedTypeLoc TL) {
   // Nothing to do.
 }
 
+void TypeLocReader::VisitHLSLAttributedResourceTypeLoc(
+    HLSLAttributedResourceTypeLoc TL) {
+  // Nothing to do.
+}
+
 void TypeLocReader::VisitTemplateTypeParmTypeLoc(TemplateTypeParmTypeLoc TL) {
   TL.setNameLoc(readSourceLocation());
 }
@@ -7891,6 +7896,9 @@ Decl *ASTReader::getPredefinedDecl(PredefinedDeclIDs ID) {
     if (Context.TypePackElementDecl)
       return Context.TypePackElementDecl;
     NewLoaded = Context.getTypePackElementDecl();
+    break;
+  case NUM_PREDEF_DECL_IDS:
+    llvm_unreachable("Invalid decl ID");
     break;
   }
 
@@ -8963,15 +8971,34 @@ void ASTReader::ReadLateParsedTemplates(
   LateParsedTemplates.clear();
 }
 
-void ASTReader::AssignedLambdaNumbering(const CXXRecordDecl *Lambda) {
-  if (Lambda->getLambdaContextDecl()) {
-    // Keep track of this lambda so it can be merged with another lambda that
-    // is loaded later.
-    LambdaDeclarationsForMerging.insert(
-        {{Lambda->getLambdaContextDecl()->getCanonicalDecl(),
-          Lambda->getLambdaIndexInContext()},
-         const_cast<CXXRecordDecl *>(Lambda)});
+void ASTReader::AssignedLambdaNumbering(CXXRecordDecl *Lambda) {
+  if (!Lambda->getLambdaContextDecl())
+    return;
+
+  auto LambdaInfo =
+      std::make_pair(Lambda->getLambdaContextDecl()->getCanonicalDecl(),
+                     Lambda->getLambdaIndexInContext());
+
+  // Handle the import and then include case for lambdas.
+  if (auto Iter = LambdaDeclarationsForMerging.find(LambdaInfo);
+      Iter != LambdaDeclarationsForMerging.end() &&
+      Iter->second->isFromASTFile() && Lambda->getFirstDecl() == Lambda) {
+    CXXRecordDecl *Previous =
+        cast<CXXRecordDecl>(Iter->second)->getMostRecentDecl();
+    Lambda->setPreviousDecl(Previous);
+    // FIXME: It will be best to use the Previous type when we creating the
+    // lambda directly. But that requires us to get the lambda context decl and
+    // lambda index before creating the lambda, which needs a drastic change in
+    // the parser.
+    const_cast<QualType &>(Lambda->TypeForDecl->CanonicalType) =
+        Previous->TypeForDecl->CanonicalType;
+    return;
   }
+
+  // Keep track of this lambda so it can be merged with another lambda that
+  // is loaded later.
+  LambdaDeclarationsForMerging.insert(
+      {LambdaInfo, const_cast<CXXRecordDecl *>(Lambda)});
 }
 
 void ASTReader::LoadSelector(Selector Sel) {
@@ -9954,6 +9981,45 @@ void ASTReader::finishPendingActions() {
       cast<RedeclarableTemplateDecl>(R)->Common = RTD->Common;
   }
   PendingDefinitions.clear();
+
+  for (auto [D, Previous] : PendingWarningForDuplicatedDefsInModuleUnits) {
+    auto hasDefinitionImpl = [this](Decl *D, auto hasDefinitionImpl) {
+      if (auto *VD = dyn_cast<VarDecl>(D))
+        return VD->isThisDeclarationADefinition() ||
+               VD->isThisDeclarationADemotedDefinition();
+
+      if (auto *TD = dyn_cast<TagDecl>(D))
+        return TD->isThisDeclarationADefinition() ||
+               TD->isThisDeclarationADemotedDefinition();
+
+      if (auto *FD = dyn_cast<FunctionDecl>(D))
+        return FD->isThisDeclarationADefinition() || PendingBodies.count(FD);
+
+      if (auto *RTD = dyn_cast<RedeclarableTemplateDecl>(D))
+        return hasDefinitionImpl(RTD->getTemplatedDecl(), hasDefinitionImpl);
+
+      // Conservatively return false here.
+      return false;
+    };
+
+    auto hasDefinition = [&hasDefinitionImpl](Decl *D) {
+      return hasDefinitionImpl(D, hasDefinitionImpl);
+    };
+
+    // It is not good to prevent multiple declarations since the forward
+    // declaration is common. Let's try to avoid duplicated definitions
+    // only.
+    if (!hasDefinition(D) || !hasDefinition(Previous))
+      continue;
+
+    Module *PM = Previous->getOwningModule();
+    Module *DM = D->getOwningModule();
+    Diag(D->getLocation(), diag::warn_decls_in_multiple_modules)
+        << cast<NamedDecl>(Previous) << PM->getTopLevelModuleName()
+        << (DM ? DM->getTopLevelModuleName() : "global module");
+    Diag(Previous->getLocation(), diag::note_also_found);
+  }
+  PendingWarningForDuplicatedDefsInModuleUnits.clear();
 
   // Load the bodies of any functions or methods we've encountered. We do
   // this now (delayed) so that we can be sure that the declaration chains

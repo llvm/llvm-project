@@ -128,25 +128,6 @@ static bool startsSegmentOfBuilderTypeCall(const FormatToken &Tok) {
   return Tok.isMemberAccess() && Tok.Previous && Tok.Previous->closesScope();
 }
 
-// Returns \c true if \c Current starts a new parameter.
-static bool startsNextParameter(const FormatToken &Current,
-                                const FormatStyle &Style) {
-  assert(Current.Previous);
-  const auto &Previous = *Current.Previous;
-  if (Current.is(TT_CtorInitializerComma) &&
-      Style.BreakConstructorInitializers == FormatStyle::BCIS_BeforeComma) {
-    return true;
-  }
-  if (Style.Language == FormatStyle::LK_Proto && Current.is(TT_SelectorName))
-    return true;
-  return Previous.is(tok::comma) && !Current.isTrailingComment() &&
-         ((Previous.isNot(TT_CtorInitializerComma) ||
-           Style.BreakConstructorInitializers !=
-               FormatStyle::BCIS_BeforeComma) &&
-          (Previous.isNot(TT_InheritanceComma) ||
-           Style.BreakInheritanceList != FormatStyle::BILS_BeforeComma));
-}
-
 // Returns \c true if \c Token in an alignable binary operator
 static bool isAlignableBinaryOperator(const FormatToken &Token) {
   // No need to align binary operators that only have two operands.
@@ -437,7 +418,8 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
         // sets BreakBeforeParameter to avoid bin packing and this creates a
         // completely unnecessary line break after a template type that isn't
         // line-wrapped.
-        (Previous.NestingLevel == 1 || Style.BinPackParameters)) ||
+        (Previous.NestingLevel == 1 ||
+         Style.BinPackParameters == FormatStyle::BPPS_BinPack)) ||
        (Style.BreakBeforeTernaryOperators && Current.is(TT_ConditionalExpr) &&
         Previous.isNot(tok::question)) ||
        (!Style.BreakBeforeTernaryOperators &&
@@ -848,6 +830,12 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
   const auto IsSimpleFunction = [&](const FormatToken &Tok) {
     if (!Tok.FakeLParens.empty() && Tok.FakeLParens.back() > prec::Unknown)
       return false;
+    // Nested calls that involve `new` expressions also look like simple
+    // function calls, eg:
+    // - foo(new Bar())
+    // - foo(::new Bar())
+    if (Tok.is(tok::kw_new) || Tok.startsSequence(tok::coloncolon, tok::kw_new))
+      return true;
     const auto *Previous = Tok.Previous;
     if (!Previous || (!Previous->isOneOf(TT_FunctionDeclarationLParen,
                                          TT_LambdaDefinitionLParen) &&
@@ -870,6 +858,9 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
       //       caaaaaaaaaaaall(
       //           caaaaaaaaaaaall(
       //               caaaaaaaaaaaaaaaaaaaaaaall(aaaaaaaaaaaaaa, aaaaaaaaa))));
+      //  or
+      //  caaaaaaaaaaaaaaaaaaaaal(
+      //       new SomethingElseeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee());
       !IsSimpleFunction(Current)) {
     CurrentState.NoLineBreak = true;
   }
@@ -903,10 +894,8 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
     CurrentState.ContainsUnwrappedBuilder = true;
   }
 
-  if (Current.is(TT_TrailingReturnArrow) &&
-      Style.Language == FormatStyle::LK_Java) {
+  if (Current.is(TT_LambdaArrow) && Style.Language == FormatStyle::LK_Java)
     CurrentState.NoLineBreak = true;
-  }
   if (Current.isMemberAccess() && Previous.is(tok::r_paren) &&
       (Previous.MatchingParen &&
        (Previous.TotalLength - Previous.MatchingParen->TotalLength > 10))) {
@@ -1061,7 +1050,7 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
   //
   // is common and should be formatted like a free-standing function. The same
   // goes for wrapping before the lambda return type arrow.
-  if (Current.isNot(TT_TrailingReturnArrow) &&
+  if (Current.isNot(TT_LambdaArrow) &&
       (!Style.isJavaScript() || Current.NestingLevel != 0 ||
        !PreviousNonComment || PreviousNonComment->isNot(tok::equal) ||
        !Current.isOneOf(Keywords.kw_async, Keywords.kw_function))) {
@@ -1321,7 +1310,7 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
     }
     return CurrentState.Indent;
   }
-  if (Current.is(TT_TrailingReturnArrow) &&
+  if (Current.is(TT_LambdaArrow) &&
       Previous.isOneOf(tok::kw_noexcept, tok::kw_mutable, tok::kw_constexpr,
                        tok::kw_consteval, tok::kw_static, TT_AttributeSquare)) {
     return ContinuationIndent;
@@ -1427,6 +1416,7 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
     switch (Style.RequiresClausePosition) {
     case FormatStyle::RCPS_OwnLine:
     case FormatStyle::RCPS_WithFollowing:
+    case FormatStyle::RCPS_OwnLineWithBrace:
       return CurrentState.Indent;
     default:
       break;
@@ -1654,7 +1644,7 @@ unsigned ContinuationIndenter::moveStateToNextToken(LineState &State,
   }
   if (Current.isOneOf(TT_BinaryOperator, TT_ConditionalExpr) && Newline)
     CurrentState.NestedBlockIndent = State.Column + Current.ColumnWidth + 1;
-  if (Current.isOneOf(TT_LambdaLSquare, TT_TrailingReturnArrow))
+  if (Current.isOneOf(TT_LambdaLSquare, TT_LambdaArrow))
     CurrentState.LastSpace = State.Column;
   if (Current.is(TT_RequiresExpression) &&
       Style.RequiresExpressionIndentation == FormatStyle::REI_Keyword) {
@@ -1950,11 +1940,12 @@ void ContinuationIndenter::moveStatePastScopeOpener(LineState &State,
     // for backwards compatibility.
     bool ObjCBinPackProtocolList =
         (Style.ObjCBinPackProtocolList == FormatStyle::BPS_Auto &&
-         Style.BinPackParameters) ||
+         Style.BinPackParameters == FormatStyle::BPPS_BinPack) ||
         Style.ObjCBinPackProtocolList == FormatStyle::BPS_Always;
 
     bool BinPackDeclaration =
-        (State.Line->Type != LT_ObjCDecl && Style.BinPackParameters) ||
+        (State.Line->Type != LT_ObjCDecl &&
+         Style.BinPackParameters == FormatStyle::BPPS_BinPack) ||
         (State.Line->Type == LT_ObjCDecl && ObjCBinPackProtocolList);
 
     bool GenericSelection =

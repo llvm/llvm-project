@@ -103,6 +103,10 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
     return "AtomicLoadUIncWrap";
   case ISD::ATOMIC_LOAD_UDEC_WRAP:
     return "AtomicLoadUDecWrap";
+  case ISD::ATOMIC_LOAD_USUB_COND:
+    return "AtomicLoadUSubCond";
+  case ISD::ATOMIC_LOAD_USUB_SAT:
+    return "AtomicLoadUSubSat";
   case ISD::ATOMIC_LOAD:                return "AtomicLoad";
   case ISD::ATOMIC_STORE:               return "AtomicStore";
   case ISD::PCMARKER:                   return "PCMarker";
@@ -203,6 +207,8 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::STRICT_FMINIMUM:            return "strict_fminimum";
   case ISD::FMAXIMUM:                   return "fmaximum";
   case ISD::STRICT_FMAXIMUM:            return "strict_fmaximum";
+  case ISD::FMINIMUMNUM:                return "fminimumnum";
+  case ISD::FMAXIMUMNUM:                return "fmaximumnum";
   case ISD::FNEG:                       return "fneg";
   case ISD::FSQRT:                      return "fsqrt";
   case ISD::STRICT_FSQRT:               return "strict_fsqrt";
@@ -452,6 +458,8 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::UBSANTRAP:                  return "ubsantrap";
   case ISD::LIFETIME_START:             return "lifetime.start";
   case ISD::LIFETIME_END:               return "lifetime.end";
+  case ISD::FAKE_USE:
+    return "fake_use";
   case ISD::PSEUDO_PROBE:
     return "pseudoprobe";
   case ISD::GC_TRANSITION_START:        return "gc_transition.start";

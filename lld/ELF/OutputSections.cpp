@@ -278,7 +278,7 @@ static void nopInstrFill(uint8_t *buf, size_t size) {
   unsigned i = 0;
   if (size == 0)
     return;
-  std::vector<std::vector<uint8_t>> nopFiller = *target->nopInstrs;
+  std::vector<std::vector<uint8_t>> nopFiller = *ctx.target->nopInstrs;
   unsigned num = size / nopFiller.back().size();
   for (unsigned c = 0; c < num; ++c) {
     memcpy(buf + i, nopFiller.back().data(), nopFiller.back().size());
@@ -541,7 +541,7 @@ void OutputSection::writeTo(uint8_t *buf, parallel::TaskGroup &tg) {
         else
           end = buf + sections[i + 1]->outSecOff;
         if (isec->nopFiller) {
-          assert(target->nopInstrs);
+          assert(ctx.target->nopInstrs);
           nopInstrFill(start, end - start);
         } else
           fill(start, end - start, filler);
@@ -857,7 +857,7 @@ std::array<uint8_t, 4> OutputSection::getFiller() {
   if (filler)
     return *filler;
   if (flags & SHF_EXECINSTR)
-    return target->trapInstr;
+    return ctx.target->trapInstr;
   return {0, 0, 0, 0};
 }
 
@@ -890,7 +890,7 @@ void OutputSection::checkDynRelAddends(const uint8_t *bufStart) {
       int64_t writtenAddend =
           relOsec->type == SHT_NOBITS
               ? 0
-              : target->getImplicitAddend(relocTarget, rel.type);
+              : ctx.target->getImplicitAddend(relocTarget, rel.type);
       if (addend != writtenAddend)
         internalLinkerError(
             getErrorLocation(relocTarget),

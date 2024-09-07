@@ -163,7 +163,7 @@ struct __is_partitioned<__default_backend_tag, _ExecutionPolicy> {
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<bool>
   operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Pred&& __pred) const noexcept {
     using _FindIfNot   = __dispatch<__find_if_not, __current_configuration, _ExecutionPolicy>;
-    auto __maybe_first = _FindIfNot()(__policy, std::move(__first), std::move(__last), __pred);
+    auto __maybe_first = _FindIfNot()(__policy, std::move(__first), __last, __pred);
     if (__maybe_first == nullopt)
       return nullopt;
 

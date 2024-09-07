@@ -49,9 +49,15 @@ typedef __bf16 __m128bh __attribute__((__vector_size__(16), __aligned__(16)));
 #endif
 
 /* Define the default attributes for the functions in this file. */
+#if defined(__EVEX512__) && !defined(__AVX10_1_512__)
 #define __DEFAULT_FN_ATTRS                                                     \
   __attribute__((__always_inline__, __nodebug__,                               \
                  __target__("sse2,no-evex512"), __min_vector_width__(128)))
+#else
+#define __DEFAULT_FN_ATTRS                                                     \
+  __attribute__((__always_inline__, __nodebug__, __target__("sse2"),           \
+                 __min_vector_width__(128)))
+#endif
 
 #define __trunc64(x)                                                           \
   (__m64) __builtin_shufflevector((__v2di)(x), __extension__(__v2di){}, 0)
@@ -1774,7 +1780,7 @@ static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_undefined_pd(void) {
 ///    lower 64 bits contain the value of the parameter. The upper 64 bits are
 ///    set to zero.
 static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_set_sd(double __w) {
-  return __extension__(__m128d){__w, 0};
+  return __extension__(__m128d){__w, 0.0};
 }
 
 /// Constructs a 128-bit floating-point vector of [2 x double], with each

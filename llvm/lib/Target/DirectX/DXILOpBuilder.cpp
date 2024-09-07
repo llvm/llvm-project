@@ -124,14 +124,10 @@ static OverloadKind getOverloadKind(Type *Ty) {
     // TODO: This is a hack. As described in DXILEmitter.cpp, we need to rework
     // how we're handling overloads and remove the `OverloadKind` proxy enum.
     StructType *ST = cast<StructType>(Ty);
-    if (ST->hasName() && ST->getName().starts_with("dx.types.ResRet"))
-      return getOverloadKind(ST->getElementType(0));
-
-    return OverloadKind::ObjectType;
+    return getOverloadKind(ST->getElementType(0));
   }
   default:
-    llvm_unreachable("invalid overload type");
-    return OverloadKind::VOID;
+    return OverloadKind::UNDEFINED;
   }
 }
 
@@ -163,8 +159,8 @@ struct OpCodeProperty {
   llvm::SmallVector<OpOverload> Overloads;
   llvm::SmallVector<OpStage> Stages;
   llvm::SmallVector<OpAttribute> Attributes;
-  int OverloadParamIndex;        // parameter index which control the overload.
-                                 // When < 0, should be only 1 overload type.
+  int OverloadParamIndex; // parameter index which control the overload.
+                          // When < 0, should be only 1 overload type.
 };
 
 // Include getOpCodeClassName getOpCodeProperty, getOpCodeName and

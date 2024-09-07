@@ -3200,7 +3200,7 @@ are similar.
    always involve two functions: an ``ActOnXXX`` function that will be called
    directly from the parser, and a ``BuildXXX`` function that performs the
    actual semantic analysis and will (eventually!) build the AST node.  It's
-   fairly common for the ``ActOnCXX`` function to do very little (often just
+   fairly common for the ``ActOnXXX`` function to do very little (often just
    some minor translation from the parser's representation to ``Sema``'s
    representation of the same thing), but the separation is still important:
    C++ template instantiation, for example, should always call the ``BuildXXX``

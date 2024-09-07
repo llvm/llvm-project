@@ -130,6 +130,7 @@ void ModuloScheduleExpander::generatePipelinedLoop() {
   // Generate the prolog instructions that set up the pipeline.
   generateProlog(MaxStageCount, KernelBB, VRMap, PrologBBs);
   MF.insert(BB->getIterator(), KernelBB);
+  LIS.insertMBBInMaps(KernelBB);
 
   // Rearrange the instructions to generate the new, pipelined loop,
   // and update register names as needed.
@@ -210,6 +211,7 @@ void ModuloScheduleExpander::generateProlog(unsigned LastStage,
     NewBB->transferSuccessors(PredBB);
     PredBB->addSuccessor(NewBB);
     PredBB = NewBB;
+    LIS.insertMBBInMaps(NewBB);
 
     // Generate instructions for each appropriate stage. Process instructions
     // in original program order.
@@ -283,6 +285,7 @@ void ModuloScheduleExpander::generateEpilog(
 
     PredBB->replaceSuccessor(LoopExitBB, NewBB);
     NewBB->addSuccessor(LoopExitBB);
+    LIS.insertMBBInMaps(NewBB);
 
     if (EpilogStart == LoopExitBB)
       EpilogStart = NewBB;
@@ -2664,8 +2667,8 @@ void ModuloScheduleExpanderMVE::calcNumUnroll() {
 void ModuloScheduleExpanderMVE::updateInstrDef(MachineInstr *NewMI,
                                                ValueMapTy &VRMap,
                                                bool LastDef) {
-  for (MachineOperand &MO : NewMI->operands()) {
-    if (!MO.isReg() || !MO.getReg().isVirtual() || !MO.isDef())
+  for (MachineOperand &MO : NewMI->all_defs()) {
+    if (!MO.getReg().isVirtual())
       continue;
     Register Reg = MO.getReg();
     const TargetRegisterClass *RC = MRI.getRegClass(Reg);

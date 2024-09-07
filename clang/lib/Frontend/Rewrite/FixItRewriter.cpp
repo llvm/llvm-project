@@ -21,8 +21,8 @@
 #include "clang/Edit/Commit.h"
 #include "clang/Edit/EditsReceiver.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
-#include "clang/Rewrite/Core/RewriteBuffer.h"
 #include "clang/Rewrite/Core/Rewriter.h"
+#include "llvm/ADT/RewriteBuffer.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
@@ -33,6 +33,7 @@
 #include <utility>
 
 using namespace clang;
+using llvm::RewriteBuffer;
 
 FixItRewriter::FixItRewriter(DiagnosticsEngine &Diags, SourceManager &SourceMgr,
                              const LangOptions &LangOpts,
