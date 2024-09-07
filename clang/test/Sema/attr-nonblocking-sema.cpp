@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -fsyntax-only -fblocks -fcxx-exceptions -verify %s
 // RUN: %clang_cc1 -fsyntax-only -fblocks -verify -x c -std=c23 %s
 
+#pragma clang diagnostic warning "-Wfunction-effects"
+
 #if !__has_attribute(nonblocking)
 #error "the 'nonblocking' attribute is not available"
 #endif

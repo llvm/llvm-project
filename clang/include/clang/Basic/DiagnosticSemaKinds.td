@@ -10955,7 +10955,7 @@ def warn_func_effect_violation : Warning<
   "with '%1' attribute "
   "must not %select{allocate or deallocate memory|throw or catch exceptions|"
   "have static local variables|use thread-local variables|access ObjC methods or properties}2">,
-  InGroup<FunctionEffects>;
+  InGroup<FunctionEffects>, DefaultIgnore;
 def note_func_effect_violation : Note<
   "%select{function|constructor|destructor|lambda|block|member initializer}0 "
   "cannot be inferred '%1' because it "
@@ -10968,7 +10968,7 @@ def warn_func_effect_calls_func_without_effect : Warning<
   "must not call non-'%1' "
   "%select{function|constructor|destructor|lambda|block}2 "
   "'%3'">,
-  InGroup<FunctionEffects>;
+  InGroup<FunctionEffects>, DefaultIgnore;
 def note_func_effect_calls_func_without_effect : Note<
   "%select{function|constructor|destructor|lambda|block|member initializer}0 "
   "cannot be inferred '%1' because it calls non-'%1' "
@@ -10978,7 +10978,7 @@ def warn_func_effect_calls_expr_without_effect : Warning<
   "%select{function|constructor|destructor|lambda|block|member initializer of constructor}0 "
   "with '%1' attribute "
   "must not call non-'%0' expression">,
-  InGroup<FunctionEffects>;
+  InGroup<FunctionEffects>, DefaultIgnore;
 def note_func_effect_call_extern : Note<
   "declaration cannot be inferred '%0' because it has no definition in this translation unit">;
 def note_func_effect_call_disallows_inference : Note<
@@ -10988,7 +10988,7 @@ def note_func_effect_call_indirect : Note<
   "%select{virtual method|function pointer}0 cannot be inferred '%1'">;
 def warn_perf_constraint_implies_noexcept : Warning<
   "function with '%0' attribute should be declared noexcept">,
-  InGroup<PerfConstraintImpliesNoexcept>;
+  InGroup<PerfConstraintImpliesNoexcept>, DefaultIgnore;
 
 // FIXME: It would be nice if we could provide fuller template expansion notes.
 def note_func_effect_from_template : Note<
@@ -11001,16 +11001,16 @@ def note_in_evaluating_default_argument : Note<
 // spoofing nonblocking/nonallocating
 def warn_invalid_add_func_effects : Warning<
   "attribute '%0' should not be added via type conversion">,
-  InGroup<FunctionEffects>;
+  InGroup<FunctionEffects>, DefaultIgnore;
 def warn_mismatched_func_effect_override : Warning<
   "attribute '%0' on overriding function does not match base declaration">,
-  InGroup<FunctionEffects>;
+  InGroup<FunctionEffects>, DefaultIgnore;
 def warn_mismatched_func_effect_redeclaration : Warning<
   "attribute '%0' on function does not match previous declaration">,
-  InGroup<FunctionEffects>;
+  InGroup<FunctionEffects>, DefaultIgnore;
 def warn_conflicting_func_effects : Warning<
   "effects conflict when merging declarations; kept '%0', discarded '%1'">,
-  InGroup<FunctionEffects>;
+  InGroup<FunctionEffects>, DefaultIgnore;
 def err_func_with_effects_no_prototype : Error<
   "'%0' function must have a prototype">;
 
