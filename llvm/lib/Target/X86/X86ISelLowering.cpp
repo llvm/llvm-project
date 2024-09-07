@@ -24086,6 +24086,23 @@ static SDValue LowerSELECTWithCmpZero(SDValue CmpVal, SDValue LHS, SDValue RHS,
 
   if (X86CC == X86::COND_E && CmpVal.getOpcode() == ISD::AND &&
       isOneConstant(CmpVal.getOperand(1))) {
+    auto SplatLSB = [&]() {
+      // we need mask of all zeros or ones with same size of the other
+      // operands.
+      SDValue Neg = CmpVal;
+      if (CmpVT.bitsGT(VT))
+        Neg = DAG.getNode(ISD::TRUNCATE, DL, VT, CmpVal);
+      else if (CmpVT.bitsLT(VT))
+        Neg = DAG.getNode(
+            ISD::AND, DL, VT,
+            DAG.getNode(ISD::ANY_EXTEND, DL, VT, CmpVal.getOperand(0)),
+            DAG.getConstant(1, DL, VT));
+      return DAG.getNegative(Neg, DL, VT); // -(and (x, 0x1))
+    };
+
+    // SELECT (AND(X,1) == 0), 0, -1 -> NEG(AND(X,1))
+    if (isNullConstant(LHS) && isAllOnesConstant(RHS))
+      return SplatLSB();
 
     SDValue Src1, Src2;
     auto isIdentityPattern = [&]() {
@@ -24116,17 +24133,7 @@ static SDValue LowerSELECTWithCmpZero(SDValue CmpVal, SDValue LHS, SDValue RHS,
     // SELECT (AND(X,1) == 0), Y, (ADD Y, Z) -> (ADD Y, (AND NEG(AND(X,1)), Z))
     // SELECT (AND(X,1) == 0), Y, (SUB Y, Z) -> (SUB Y, (AND NEG(AND(X,1)), Z))
     if (!Subtarget.canUseCMOV() && isIdentityPattern()) {
-      // we need mask of all zeros or ones with same size of the other
-      // operands.
-      SDValue Neg = CmpVal;
-      if (CmpVT.bitsGT(VT))
-        Neg = DAG.getNode(ISD::TRUNCATE, DL, VT, CmpVal);
-      else if (CmpVT.bitsLT(VT))
-        Neg = DAG.getNode(
-            ISD::AND, DL, VT,
-            DAG.getNode(ISD::ANY_EXTEND, DL, VT, CmpVal.getOperand(0)),
-            DAG.getConstant(1, DL, VT));
-      SDValue Mask = DAG.getNegative(Neg, DL, VT); // -(and (x, 0x1))
+      SDValue Mask = SplatLSB();
       SDValue And = DAG.getNode(ISD::AND, DL, VT, Mask, Src1); // Mask & z
       return DAG.getNode(RHS.getOpcode(), DL, VT, Src2, And);  // y Op And
     }
