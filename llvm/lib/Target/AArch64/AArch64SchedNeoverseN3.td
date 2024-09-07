@@ -140,10 +140,9 @@ def N3Write_5c_1L_1S : SchedWriteRes<[N3UnitL, N3UnitS]> {
     let NumMicroOps = 2;
 }
 
-def N3Write_4c_2L : SchedWriteRes<[N3UnitL]> {
+def N3Write_4c_2L : SchedWriteRes<[N3UnitL, N3UnitL]> {
     let Latency = 4;
     let NumMicroOps = 2;
-    let ReleaseAtCycles = [2];
 }
 
 def N3Write_3c_1L01_1V : SchedWriteRes<[N3UnitL01, N3UnitV]> {
@@ -161,10 +160,9 @@ def N3Write_5c_1L_1I : SchedWriteRes<[N3UnitL, N3UnitI]> {
     let NumMicroOps = 2;
 }
 
-def N3Write_6c_2L : SchedWriteRes<[N3UnitL]> {
+def N3Write_6c_2L : SchedWriteRes<[N3UnitL, N3UnitL]> {
     let Latency = 6;
     let NumMicroOps = 2;
-    let ReleaseAtCycles = [2];
 }
 
 def N3Write_2c_1L01_1V : SchedWriteRes<[N3UnitL01, N3UnitV]> {
@@ -172,40 +170,34 @@ def N3Write_2c_1L01_1V : SchedWriteRes<[N3UnitL01, N3UnitV]> {
     let NumMicroOps = 2;
 }
 
-def N3Write_6c_2V1 : SchedWriteRes<[N3UnitV1]> {
+def N3Write_6c_2V1 : SchedWriteRes<[N3UnitV1, N3UnitV1]> {
     let Latency = 6;
     let NumMicroOps = 2;
-    let ReleaseAtCycles = [2];
 }
 
-def N3Write_4c_2V0 : SchedWriteRes<[N3UnitV0]> {
+def N3Write_4c_2V0 : SchedWriteRes<[N3UnitV0, N3UnitV0]> {
     let Latency = 4;
     let NumMicroOps = 2;
-    let ReleaseAtCycles = [2];
 }
 
-def N3Write_8c_2V0 : SchedWriteRes<[N3UnitV0]> {
+def N3Write_8c_2V0 : SchedWriteRes<[N3UnitV0, N3UnitV0]> {
     let Latency = 8;
     let NumMicroOps = 2;
-    let ReleaseAtCycles = [2];
 }
 
-def N3Write_13c_2V0 : SchedWriteRes<[N3UnitV0]> {
+def N3Write_13c_2V0 : SchedWriteRes<[N3UnitV0, N3UnitV0]> {
     let Latency = 13;
     let NumMicroOps = 2;
-    let ReleaseAtCycles = [2];
 }
 
-def N3Write_4c_2V : SchedWriteRes<[N3UnitV]> {
+def N3Write_4c_2V : SchedWriteRes<[N3UnitV, N3UnitV]> {
     let Latency = 4;
     let NumMicroOps = 2;
-    let ReleaseAtCycles = [2];
 }
 
-def N3Write_2c_2V : SchedWriteRes<[N3UnitV]> {
+def N3Write_2c_2V : SchedWriteRes<[N3UnitV, N3UnitV]> {
     let Latency = 2;
     let NumMicroOps = 2;
-    let ReleaseAtCycles = [2];
 }
 
 def N3Write_8c_1L_1V : SchedWriteRes<[N3UnitL, N3UnitV]> {
@@ -218,16 +210,14 @@ def N3Write_2c_1V_1L01 : SchedWriteRes<[N3UnitV, N3UnitL01]> {
     let NumMicroOps = 2;
 }
 
-def N3Write_5c_2V0 : SchedWriteRes<[N3UnitV0]> {
+def N3Write_5c_2V0 : SchedWriteRes<[N3UnitV0, N3UnitV0]> {
     let Latency = 5;
     let NumMicroOps = 2;
-    let ReleaseAtCycles = [2];
 }
 
-def N3Write_6c_2V0 : SchedWriteRes<[N3UnitV0]> {
+def N3Write_6c_2V0 : SchedWriteRes<[N3UnitV0, N3UnitV0]> {
     let Latency = 6;
     let NumMicroOps = 2;
-    let ReleaseAtCycles = [2];
 }
 
 def N3Write_7c_1L_1M : SchedWriteRes<[N3UnitL, N3UnitM]> {
@@ -243,349 +233,358 @@ def N3Write_8c_1V_1L : SchedWriteRes<[N3UnitV, N3UnitL]> {
 //===----------------------------------------------------------------------===//
 // Define generic 3 micro-op types
 
-def N3Write_5c_1M0_2V : SchedWriteRes<[N3UnitM0, N3UnitV]> {
+def N3Write_5c_1M0_2V : SchedWriteRes<[N3UnitM0, N3UnitV, N3UnitV]> {
     let Latency = 5;
     let NumMicroOps = 3;
-    let ReleaseAtCycles = [1, 2];
 }
 
-def N3Write_5c_1V1_2V : SchedWriteRes<[N3UnitV1, N3UnitV]> {
+def N3Write_5c_1V1_2V : SchedWriteRes<[N3UnitV1, N3UnitV, N3UnitV]> {
     let Latency = 5;
     let NumMicroOps = 3;
-    let ReleaseAtCycles = [1, 2];
 }
 
-def N3Write_6c_3V : SchedWriteRes<[N3UnitV]> {
+def N3Write_6c_3V : SchedWriteRes<[N3UnitV, N3UnitV, N3UnitV]> {
     let Latency = 6;
     let NumMicroOps = 3;
-    let ReleaseAtCycles = [3];
 }
 
-def N3Write_4c_3V : SchedWriteRes<[N3UnitV]> {
+def N3Write_4c_3V : SchedWriteRes<[N3UnitV, N3UnitV, N3UnitV]> {
     let Latency = 4;
     let NumMicroOps = 3;
-    let ReleaseAtCycles = [3];
 }
 
-def N3Write_6c_3L : SchedWriteRes<[N3UnitL]> {
+def N3Write_6c_3L : SchedWriteRes<[N3UnitL, N3UnitL, N3UnitL]> {
     let Latency = 6;
     let NumMicroOps = 3;
-    let ReleaseAtCycles = [3];
 }
 
-def N3Write_8c_2L_1V : SchedWriteRes<[N3UnitL, N3UnitV]> {
+def N3Write_8c_2L_1V : SchedWriteRes<[N3UnitL, N3UnitL, N3UnitV]> {
     let Latency = 8;
     let NumMicroOps = 3;
-    let ReleaseAtCycles = [2, 1];
 }
 
-def N3Write_8c_1M0_2V : SchedWriteRes<[N3UnitM0, N3UnitV]> {
+def N3Write_8c_1M0_2V : SchedWriteRes<[N3UnitM0, N3UnitV, N3UnitV]> {
     let Latency = 8;
     let NumMicroOps = 3;
-    let ReleaseAtCycles = [1, 2];
 }
 
-def N3Write_7c_2V_1V1 : SchedWriteRes<[N3UnitV, N3UnitV1]> {
+def N3Write_7c_2V_1V1 : SchedWriteRes<[N3UnitV, N3UnitV, N3UnitV1]> {
     let Latency = 7;
     let NumMicroOps = 3;
-    let ReleaseAtCycles = [2, 1];
 }
 
-def N3Write_5c_2V_1V1 : SchedWriteRes<[N3UnitV, N3UnitV1]> {
+def N3Write_5c_2V_1V1 : SchedWriteRes<[N3UnitV, N3UnitV, N3UnitV1]> {
     let Latency = 5;
     let NumMicroOps = 3;
-    let ReleaseAtCycles = [2, 1];
 }
 
 //===----------------------------------------------------------------------===//
 // Define generic 4 micro-op types
 
-def N3Write_5c_1M_1L_2I : SchedWriteRes<[N3UnitM, N3UnitL, N3UnitI]> {
+def N3Write_5c_1M_1L_2I : SchedWriteRes<[N3UnitM, N3UnitL, N3UnitI, N3UnitI]> {
     let Latency = 5;
     let NumMicroOps = 4;
-    let ReleaseAtCycles = [1, 1, 2];
 }
 
-def N3Write_4c_2I_2L : SchedWriteRes<[N3UnitI, N3UnitL]> {
+def N3Write_4c_2I_2L : SchedWriteRes<[N3UnitI, N3UnitI, N3UnitL, N3UnitL]> {
     let Latency = 4;
     let NumMicroOps = 4;
-    let ReleaseAtCycles = [2, 2];
 }
 
-def N3Write_1c_1L01_1D_2I : SchedWriteRes<[N3UnitL01, N3UnitD, N3UnitI]> {
+def N3Write_1c_1L01_1D_2I : SchedWriteRes<[N3UnitL01, N3UnitD, N3UnitI, N3UnitI]> {
     let Latency = 1;
     let NumMicroOps = 4;
-    let ReleaseAtCycles = [1, 1, 2];
 }
 
-def N3Write_2c_2I_1L01_1V : SchedWriteRes<[N3UnitI, N3UnitL01, N3UnitV]> {
+def N3Write_2c_2I_1L01_1V : SchedWriteRes<[N3UnitI, N3UnitI, N3UnitL01, N3UnitV]> {
     let Latency = 2;
     let NumMicroOps = 4;
-    let ReleaseAtCycles = [2, 1, 1];
 }
 
-def N3Write_6c_4V0 : SchedWriteRes<[N3UnitV0]> {
+def N3Write_6c_4V0 : SchedWriteRes<[N3UnitV0, N3UnitV0, N3UnitV0, N3UnitV0]> {
     let Latency = 6;
     let NumMicroOps = 4;
-    let ReleaseAtCycles = [4];
 }
 
-def N3Write_8c_4V0 : SchedWriteRes<[N3UnitV0]> {
+def N3Write_8c_4V0 : SchedWriteRes<[N3UnitV0, N3UnitV0, N3UnitV0, N3UnitV0]> {
     let Latency = 8;
     let NumMicroOps = 4;
-    let ReleaseAtCycles = [4];
 }
 
-def N3Write_10c_4V0 : SchedWriteRes<[N3UnitV0]> {
+def N3Write_10c_4V0 : SchedWriteRes<[N3UnitV0, N3UnitV0, N3UnitV0, N3UnitV0]> {
     let Latency = 10;
     let NumMicroOps = 4;
-    let ReleaseAtCycles = [4];
 }
 
-def N3Write_6c_4V : SchedWriteRes<[N3UnitV]> {
+def N3Write_6c_4V : SchedWriteRes<[N3UnitV, N3UnitV, N3UnitV, N3UnitV]> {
     let Latency = 6;
     let NumMicroOps = 4;
-    let ReleaseAtCycles = [4];
 }
 
-def N3Write_7c_4L : SchedWriteRes<[N3UnitL]> {
+def N3Write_7c_4L : SchedWriteRes<[N3UnitL, N3UnitL, N3UnitL, N3UnitL]> {
     let Latency = 7;
     let NumMicroOps = 4;
-    let ReleaseAtCycles = [4];
 }
 
-def N3Write_2c_2L01_2V : SchedWriteRes<[N3UnitL01, N3UnitV]> {
+def N3Write_2c_2L01_2V : SchedWriteRes<[N3UnitL01, N3UnitL01, N3UnitV, N3UnitV]> {
     let Latency = 2;
     let NumMicroOps = 4;
-    let ReleaseAtCycles = [2, 2];
 }
 
-def N3Write_4c_2V_2L01 : SchedWriteRes<[N3UnitV, N3UnitL01]> {
+def N3Write_4c_2V_2L01 : SchedWriteRes<[N3UnitV, N3UnitV, N3UnitL01, N3UnitL01]> {
     let Latency = 4;
     let NumMicroOps = 4;
-    let ReleaseAtCycles = [2, 2];
 }
 
-def N3Write_2c_2V_2L01 : SchedWriteRes<[N3UnitV, N3UnitL01]> {
+def N3Write_2c_2V_2L01 : SchedWriteRes<[N3UnitV, N3UnitV, N3UnitL01, N3UnitL01]> {
     let Latency = 2;
     let NumMicroOps = 4;
-    let ReleaseAtCycles = [2, 2];
 }
 
-def N3Write_8c_4V : SchedWriteRes<[N3UnitV]> {
+def N3Write_8c_4V : SchedWriteRes<[N3UnitV, N3UnitV, N3UnitV, N3UnitV]> {
     let Latency = 8;
     let NumMicroOps = 4;
-    let ReleaseAtCycles = [4];
 }
 
-def N3Write_2c_1L01_2I_1V : SchedWriteRes<[N3UnitL01, N3UnitI, N3UnitV]> {
+def N3Write_2c_1L01_2I_1V : SchedWriteRes<[N3UnitL01, N3UnitI, N3UnitI, N3UnitV]> {
     let Latency = 2;
     let NumMicroOps = 4;
-    let ReleaseAtCycles = [1, 2, 1];
 }
 
 //===----------------------------------------------------------------------===//
 // Define generic 5 micro-op types
 
-def N3Write_7c_2M_1M0_2V : SchedWriteRes<[N3UnitM, N3UnitM0, N3UnitV]> {
+def N3Write_7c_2M_1M0_2V : SchedWriteRes<[N3UnitM, N3UnitM, N3UnitM0, N3UnitV, N3UnitV]> {
     let Latency = 7;
     let NumMicroOps = 5;
-    let ReleaseAtCycles = [2, 1, 2];
 }
 
 //===----------------------------------------------------------------------===//
 // Define generic 6 micro-op types
 
-def N3Write_4c_3V_3L01 : SchedWriteRes<[N3UnitV, N3UnitL01]> {
+def N3Write_4c_3V_3L01 : SchedWriteRes<[N3UnitV, N3UnitV, N3UnitV,
+                                        N3UnitL01, N3UnitL01, N3UnitL01]> {
     let Latency = 4;
     let NumMicroOps = 6;
-    let ReleaseAtCycles = [3, 3];
 }
 
-def N3Write_2c_3V_3L01 : SchedWriteRes<[N3UnitV, N3UnitL01]> {
+def N3Write_2c_3V_3L01 : SchedWriteRes<[N3UnitV, N3UnitV, N3UnitV,
+                                        N3UnitL01, N3UnitL01, N3UnitL01]> {
     let Latency = 2;
     let NumMicroOps = 6;
-    let ReleaseAtCycles = [3, 3];
 }
 
-def N3Write_8c_4V_2V1 : SchedWriteRes<[N3UnitV, N3UnitV1]> {
+def N3Write_8c_4V_2V1 : SchedWriteRes<[N3UnitV, N3UnitV, N3UnitV, N3UnitV,
+                                       N3UnitV1, N3UnitV1]> {
     let Latency = 8;
     let NumMicroOps = 6;
-    let ReleaseAtCycles = [4, 2];
 }
 
-def N3Write_4c_3L01_3V : SchedWriteRes<[N3UnitL01, N3UnitV]> {
+def N3Write_4c_3L01_3V : SchedWriteRes<[N3UnitL01, N3UnitL01, N3UnitL01,
+                                        N3UnitV, N3UnitV, N3UnitV]> {
     let Latency = 4;
     let NumMicroOps = 6;
-    let ReleaseAtCycles = [3, 3];
 }
 
-def N3Write_3c_3L01_3V : SchedWriteRes<[N3UnitL01, N3UnitV]> {
+def N3Write_3c_3L01_3V : SchedWriteRes<[N3UnitL01, N3UnitL01, N3UnitL01,
+                                        N3UnitV, N3UnitV, N3UnitV]> {
     let Latency = 3;
     let NumMicroOps = 6;
-    let ReleaseAtCycles = [3, 3];
 }
 
-def N3Write_6c_3L01_3V : SchedWriteRes<[N3UnitL01, N3UnitV]> {
+def N3Write_6c_3L01_3V : SchedWriteRes<[N3UnitL01, N3UnitL01, N3UnitL01,
+                                        N3UnitV, N3UnitV, N3UnitV]> {
     let Latency = 6;
     let NumMicroOps = 6;
-    let ReleaseAtCycles = [3, 3];
 }
 
 //===----------------------------------------------------------------------===//
 // Define generic 7 micro-op types
 
-def N3Write_8c_4L_3V : SchedWriteRes<[N3UnitL, N3UnitV]> {
+def N3Write_8c_4L_3V : SchedWriteRes<[N3UnitL, N3UnitL, N3UnitL, N3UnitL,
+                                      N3UnitV, N3UnitV, N3UnitV]> {
     let Latency = 8;
     let NumMicroOps = 7;
-    let ReleaseAtCycles = [4, 3];
 }
 
-def N3Write_10c_4L_3V : SchedWriteRes<[N3UnitL, N3UnitV]> {
+def N3Write_10c_4L_3V : SchedWriteRes<[N3UnitL, N3UnitL, N3UnitL, N3UnitL,
+                                       N3UnitV, N3UnitV, N3UnitV]> {
     let Latency = 10;
     let NumMicroOps = 7;
-    let ReleaseAtCycles = [4, 3];
 }
 
-def N3Write_8c_3V_4L : SchedWriteRes<[N3UnitV, N3UnitL]> {
+def N3Write_8c_3V_4L : SchedWriteRes<[N3UnitV, N3UnitV, N3UnitV,
+                                      N3UnitL, N3UnitL, N3UnitL, N3UnitL]> {
     let Latency = 8;
     let NumMicroOps = 7;
-    let ReleaseAtCycles = [3, 4];
 }
 
 //===----------------------------------------------------------------------===//
 // Define generic 8 micro-op types
 
-def N3Write_12c_8V0 : SchedWriteRes<[N3UnitV0]> {
+def N3Write_12c_8V0 : SchedWriteRes<[N3UnitV0, N3UnitV0, N3UnitV0, N3UnitV0,
+                                     N3UnitV0, N3UnitV0, N3UnitV0, N3UnitV0]> {
     let Latency = 12;
     let NumMicroOps = 8;
-    let ReleaseAtCycles = [8];
 }
 
-def N3Write_4c_4V_4L01 : SchedWriteRes<[N3UnitV, N3UnitL01]> {
+def N3Write_4c_4V_4L01 : SchedWriteRes<[N3UnitV, N3UnitV, N3UnitV, N3UnitV,
+                                        N3UnitL01, N3UnitL01, N3UnitL01, N3UnitL01]> {
     let Latency = 4;
     let NumMicroOps = 8;
-    let ReleaseAtCycles = [4, 4];
 }
 
-def N3Write_8c_8V0 : SchedWriteRes<[N3UnitV0]> {
+def N3Write_8c_8V0 : SchedWriteRes<[N3UnitV0, N3UnitV0, N3UnitV0, N3UnitV0,
+                                    N3UnitV0, N3UnitV0, N3UnitV0, N3UnitV0]> {
     let Latency = 8;
     let NumMicroOps = 8;
-    let ReleaseAtCycles = [8];
 }
 
-def N3Write_16c_8V : SchedWriteRes<[N3UnitV]> {
+def N3Write_16c_8V : SchedWriteRes<[N3UnitV, N3UnitV, N3UnitV, N3UnitV,
+                                    N3UnitV, N3UnitV, N3UnitV, N3UnitV]> {
     let Latency = 16;
     let NumMicroOps = 8;
-    let ReleaseAtCycles = [8];
 }
 
-def N3Write_3c_4L01_4V : SchedWriteRes<[N3UnitL01, N3UnitV]> {
+def N3Write_3c_4L01_4V : SchedWriteRes<[N3UnitL01, N3UnitL01, N3UnitL01, N3UnitL01,
+                                        N3UnitV, N3UnitV, N3UnitV, N3UnitV]> {
     let Latency = 3;
     let NumMicroOps = 8;
-    let ReleaseAtCycles = [4, 4];
 }
 
 //===----------------------------------------------------------------------===//
 // Define generic 10 micro-op types
 
-def N3Write_8c_6L_4V : SchedWriteRes<[N3UnitL, N3UnitV]> {
+def N3Write_8c_6L_4V : SchedWriteRes<[N3UnitL, N3UnitL, N3UnitL,
+                                      N3UnitL, N3UnitL, N3UnitL,
+                                      N3UnitV, N3UnitV, N3UnitV, N3UnitV]> {
     let Latency = 8;
     let NumMicroOps = 10;
-    let ReleaseAtCycles = [6, 4];
 }
 
-def N3Write_8c_4V_6L : SchedWriteRes<[N3UnitV, N3UnitL]> {
+def N3Write_8c_4V_6L : SchedWriteRes<[N3UnitV, N3UnitV, N3UnitV, N3UnitV,
+                                      N3UnitL, N3UnitL, N3UnitL,
+                                      N3UnitL, N3UnitL, N3UnitL]> {
     let Latency = 8;
     let NumMicroOps = 10;
-    let ReleaseAtCycles = [4, 6];
 }
 
 //===----------------------------------------------------------------------===//
 // Define generic 12 micro-op types
 
-def N3Write_12c_5V_7L : SchedWriteRes<[N3UnitV, N3UnitL]> {
+def N3Write_12c_5V_7L : SchedWriteRes<[N3UnitV, N3UnitV, N3UnitV, N3UnitV, N3UnitV,
+                                       N3UnitL, N3UnitL, N3UnitL, N3UnitL,
+                                       N3UnitL, N3UnitL, N3UnitL]> {
     let Latency = 12;
     let NumMicroOps = 12;
-    let ReleaseAtCycles = [5, 7];
 }
 
-def N3Write_4c_3L01_6I_3V : SchedWriteRes<[N3UnitL01, N3UnitI, N3UnitV]> {
+def N3Write_4c_3L01_6I_3V : SchedWriteRes<[N3UnitL01, N3UnitL01, N3UnitL01,
+                                           N3UnitI, N3UnitI, N3UnitI,
+                                           N3UnitI, N3UnitI, N3UnitI,
+                                           N3UnitV, N3UnitV, N3UnitV]> {
     let Latency = 4;
     let NumMicroOps = 12;
-    let ReleaseAtCycles = [3, 6, 3];
 }
 
-def N3Write_3c_3L01_6I_3V : SchedWriteRes<[N3UnitL01, N3UnitI, N3UnitV]> {
+def N3Write_3c_3L01_6I_3V : SchedWriteRes<[N3UnitL01, N3UnitL01, N3UnitL01,
+                                           N3UnitI, N3UnitI, N3UnitI,
+                                           N3UnitI, N3UnitI, N3UnitI,
+                                           N3UnitV, N3UnitV, N3UnitV]> {
     let Latency = 3;
     let NumMicroOps = 12;
-    let ReleaseAtCycles = [3, 6, 3];
 }
 
-def N3Write_6c_3L01_6I_3V : SchedWriteRes<[N3UnitL01, N3UnitI, N3UnitV]> {
+def N3Write_6c_3L01_6I_3V : SchedWriteRes<[N3UnitL01, N3UnitL01, N3UnitL01,
+                                           N3UnitI, N3UnitI, N3UnitI,
+                                           N3UnitI, N3UnitI, N3UnitI,
+                                           N3UnitV, N3UnitV, N3UnitV]> {
     let Latency = 6;
     let NumMicroOps = 12;
-    let ReleaseAtCycles = [3, 6, 3];
 }
 
 //===----------------------------------------------------------------------===//
 // Define generic 13 micro-op types
 
-def N3Write_9c_3V_4L_6I : SchedWriteRes<[N3UnitV, N3UnitL, N3UnitI]> {
+def N3Write_9c_3V_4L_6I : SchedWriteRes<[N3UnitV, N3UnitV, N3UnitV,
+                                         N3UnitL, N3UnitL, N3UnitL, N3UnitL,
+                                         N3UnitI, N3UnitI, N3UnitI,
+                                         N3UnitI, N3UnitI, N3UnitI]> {
     let Latency = 9;
     let NumMicroOps = 13;
-    let ReleaseAtCycles = [3, 4, 6];
 }
 
 //===----------------------------------------------------------------------===//
 // Define generic 15 micro-op types
 
-def N3Write_10c_6V_9L : SchedWriteRes<[N3UnitV, N3UnitL]> {
+def N3Write_10c_6V_9L : SchedWriteRes<[N3UnitV, N3UnitV, N3UnitV,
+                                       N3UnitV, N3UnitV, N3UnitV,
+                                       N3UnitL, N3UnitL, N3UnitL,
+                                       N3UnitL, N3UnitL, N3UnitL,
+                                       N3UnitL, N3UnitL, N3UnitL]> {
     let Latency = 10;
     let NumMicroOps = 15;
-    let ReleaseAtCycles = [6, 9];
 }
 
 //===----------------------------------------------------------------------===//
 // Define generic 16 micro-op types
 
-def N3Write_16c_16V0 : SchedWriteRes<[N3UnitV0]> {
+def N3Write_16c_16V0 : SchedWriteRes<[N3UnitV0, N3UnitV0, N3UnitV0, N3UnitV0,
+                                      N3UnitV0, N3UnitV0, N3UnitV0, N3UnitV0,
+                                      N3UnitV0, N3UnitV0, N3UnitV0, N3UnitV0,
+                                      N3UnitV0, N3UnitV0, N3UnitV0, N3UnitV0]> {
     let Latency = 16;
     let NumMicroOps = 16;
-    let ReleaseAtCycles = [16];
 }
 
-def N3Write_3c_4L01_8I_4V : SchedWriteRes<[N3UnitL01, N3UnitI, N3UnitV]> {
+def N3Write_3c_4L01_8I_4V : SchedWriteRes<[N3UnitL01, N3UnitL01, N3UnitL01, N3UnitL01,
+                                           N3UnitI, N3UnitI, N3UnitI, N3UnitI,
+                                           N3UnitI, N3UnitI, N3UnitI, N3UnitI,
+                                           N3UnitV, N3UnitV, N3UnitV, N3UnitV]> {
     let Latency = 3;
     let NumMicroOps = 16;
-    let ReleaseAtCycles = [4, 8, 4];
 }
 
 //===----------------------------------------------------------------------===//
 // Define generic 18 micro-op types
 
-def N3Write_9c_6L_4V_8I : SchedWriteRes<[N3UnitL, N3UnitV, N3UnitI]> {
+def N3Write_9c_6L_4V_8I : SchedWriteRes<[N3UnitL, N3UnitL, N3UnitL,
+                                         N3UnitL, N3UnitL, N3UnitL,
+                                         N3UnitV, N3UnitV, N3UnitV, N3UnitV,
+                                         N3UnitI, N3UnitI, N3UnitI, N3UnitI,
+                                         N3UnitI, N3UnitI, N3UnitI, N3UnitI]> {
     let Latency = 9;
     let NumMicroOps = 18;
-    let ReleaseAtCycles = [6, 4, 8];
 }
 
 //===----------------------------------------------------------------------===//
 // Define generic 22 micro-op types
 
-def N3Write_13c_7L_5V_10I : SchedWriteRes<[N3UnitL, N3UnitV, N3UnitI]> {
+def N3Write_13c_7L_5V_10I : SchedWriteRes<[N3UnitL, N3UnitL, N3UnitL, N3UnitL,
+                                           N3UnitL, N3UnitL, N3UnitL,
+                                           N3UnitV, N3UnitV, N3UnitV,
+                                           N3UnitV, N3UnitV,
+                                           N3UnitI, N3UnitI, N3UnitI, N3UnitI,
+                                           N3UnitI, N3UnitI, N3UnitI, N3UnitI,
+                                           N3UnitI, N3UnitI]> {
     let Latency = 13;
     let NumMicroOps = 22;
-    let ReleaseAtCycles = [7, 5, 10];
 }
 
 //===----------------------------------------------------------------------===//
 // Define generic 27 micro-op types
 
-def N3Write_11c_6V_9L_12I : SchedWriteRes<[N3UnitV, N3UnitL, N3UnitI]> {
+def N3Write_11c_6V_9L_12I : SchedWriteRes<[N3UnitV, N3UnitV, N3UnitV,
+                                           N3UnitV, N3UnitV, N3UnitV,
+                                           N3UnitL, N3UnitL, N3UnitL,
+                                           N3UnitL, N3UnitL, N3UnitL,
+                                           N3UnitL, N3UnitL, N3UnitL,
+                                           N3UnitI, N3UnitI, N3UnitI,
+                                           N3UnitI, N3UnitI, N3UnitI,
+                                           N3UnitI, N3UnitI, N3UnitI,
+                                           N3UnitI, N3UnitI, N3UnitI]> {
     let Latency = 11;
     let NumMicroOps = 27;
-    let ReleaseAtCycles = [6, 9, 12];
 }
 
 // Miscellaneous
@@ -843,6 +842,9 @@ def : SchedAlias<WriteF, N3Write_2c_1V>;
 
 // FP compare
 def : SchedAlias<WriteFCmp, N3Write_2c_1V>;
+
+// FP divide and square root operations are now performed using
+// a fully pipelined data path.
 
 // FP divide, H-form
 // FP square root, H-form
@@ -1108,6 +1110,9 @@ def : InstRW<[N3Write_4c_2V0], (instregex "^[FSU]CVT[AMNPZ][SU]v4f(16|32)$",
 // ASIMD FP convert, other, Q-form F16
 def : InstRW<[N3Write_6c_4V0], (instregex "^[FSU]CVT[AMNPZ][SU]v8f16$",
                                           "^[SU]CVTFv8f16$")>;
+
+// ASIMD FP divide and square root operations are now performed using
+// a fully pipelined data path.
 
 // ASIMD FP divide, D-form, F16
 def : InstRW<[N3Write_8c_4V0], (instrs FDIVv4f16)>;
@@ -1746,6 +1751,9 @@ def : InstRW<[N3Write_5c_1M0_2V], (instregex "^CPY_ZPmR_[BHSD]$")>;
 def : InstRW<[N3Write_2c_1V], (instregex "^CPY_ZPm[IV]_[BHSD]$",
                                          "^CPY_ZPzI_[BHSD]$")>;
 
+// SVE integer divide operations are now performed using
+// a fully pipelined data path.
+
 // Divides, 32 bit
 def : InstRW<[N3Write_8c_8V0], (instregex "^[SU]DIVR?_ZPmZ_S",
                                           "^[SU]DIV_ZPZZ_S")>;
@@ -2007,6 +2015,9 @@ def : InstRW<[N3Write_3c_1V0],
 // Floating point copy
 def : InstRW<[N3Write_2c_1V], (instregex "^FCPY_ZPmI_[HSD]$",
                                          "^FDUP_ZI_[HSD]$")>;
+
+// SVE FP divide and square root operations are now performed using
+// a fully pipelined data path.
 
 // Floating point divide, F16
 def : InstRW<[N3Write_12c_8V0], (instregex "^FDIVR?_(ZPmZ|ZPZZ)_H")>;
