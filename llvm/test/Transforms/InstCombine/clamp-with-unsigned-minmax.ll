@@ -3,10 +3,8 @@
 
 define i32 @clamp_pattern_with_signed_icmp_unsigned_min(i32 %input ) {
 ; CHECK-LABEL: @clamp_pattern_with_signed_icmp_unsigned_min(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[INPUT:%.*]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call i32 @llvm.umin.i32(i32 [[INPUT]], i32 255)
-; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP1]], i32 0, i32 [[TMP2]]
-; CHECK-NEXT:    ret i32 [[TMP3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.umin.i32(i32 [[INPUT:%.*]], i32 255)
+; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %1 = icmp slt i32 %input, 0
   %2 = tail call i32 @llvm.umin.i32(i32 %input, i32 255)
