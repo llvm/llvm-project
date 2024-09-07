@@ -24,8 +24,8 @@ using namespace llvm;
 /// `OpenMP_Clause` class the record is based on is found, the optional
 /// "OpenMP_" prefix and "Skip" and "Clause" suffixes are removed to return only
 /// the clause name, i.e. "OpenMP_CollapseClauseSkip" is returned as "Collapse".
-static StringRef extractOmpClauseName(Record *clause) {
-  Record *ompClause = clause->getRecords().getClass("OpenMP_Clause");
+static StringRef extractOmpClauseName(const Record *clause) {
+  const Record *ompClause = clause->getRecords().getClass("OpenMP_Clause");
   assert(ompClause && "base OpenMP records expected to be defined");
 
   StringRef clauseClassName;
@@ -33,7 +33,7 @@ static StringRef extractOmpClauseName(Record *clause) {
   clause->getDirectSuperClasses(clauseSuperClasses);
 
   // Check if OpenMP_Clause is a direct superclass.
-  for (Record *superClass : clauseSuperClasses) {
+  for (const Record *superClass : clauseSuperClasses) {
     if (superClass == ompClause) {
       clauseClassName = clause->getName();
       break;
@@ -83,7 +83,8 @@ static bool verifyArgument(DagInit *arguments, StringRef argName,
 /// Check that the given string record value, identified by its name \c value,
 /// is either undefined or empty in both the given operation and clause record
 /// or its contents for the clause record are contained in the operation record.
-static bool verifyStringValue(StringRef value, Record *op, Record *clause) {
+static bool verifyStringValue(StringRef value, const Record *op,
+                              const Record *clause) {
   auto opValue = op->getValueAsOptionalString(value);
   auto clauseValue = clause->getValueAsOptionalString(value);
 
@@ -100,7 +101,7 @@ static bool verifyStringValue(StringRef value, Record *op, Record *clause) {
 /// present in the corresponding operation field.
 ///
 /// Print warnings or errors where this is not the case.
-static void verifyClause(Record *op, Record *clause) {
+static void verifyClause(const Record *op, const Record *clause) {
   StringRef clauseClassName = extractOmpClauseName(clause);
 
   if (!clause->getValueAsBit("ignoreArgs")) {
@@ -149,9 +150,9 @@ static void verifyClause(Record *op, Record *clause) {
 
 /// Verify that all properties of `OpenMP_Clause`s of records deriving from
 /// `OpenMP_Op`s have been inherited by the latter.
-static bool verifyDecls(RecordKeeper &recordKeeper, raw_ostream &) {
-  for (Record *op : recordKeeper.getAllDerivedDefinitions("OpenMP_Op")) {
-    for (Record *clause : op->getValueAsListOfDefs("clauseList"))
+static bool verifyDecls(const RecordKeeper &recordKeeper, raw_ostream &) {
+  for (const Record *op : recordKeeper.getAllDerivedDefinitions("OpenMP_Op")) {
+    for (const Record *clause : op->getValueAsListOfDefs("clauseList"))
       verifyClause(op, clause);
   }
 
