@@ -1499,6 +1499,9 @@ DeduceTemplateBases(Sema &S, const CXXRecordDecl *RD,
   return TemplateDeductionResult::Success;
 }
 
+/// When propagating a partial ordering kind into a NonCall context,
+/// this is used to downgrade a 'Call' into a 'NonCall', so that
+/// the kind still reflects whether we are in a partial ordering context.
 static PartialOrderingKind
 degradeCallPartialOrderingKind(PartialOrderingKind POK) {
   return std::min(POK, PartialOrderingKind::NonCall);
