@@ -5615,10 +5615,17 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
         if (isa<DecompositionDecl>(VD))
           return revisit(VD);
 
-        // Visit local const variables like normal.
-        if ((VD->hasGlobalStorage() || VD->isLocalVarDecl() ||
-             VD->isStaticDataMember()) &&
+        if ((VD->hasGlobalStorage() || VD->isStaticDataMember()) &&
             typeShouldBeVisited(VD->getType()))
+          return revisit(VD);
+
+        // FIXME: The evaluateValue() check here is a little ridiculous, since
+        // it will ultimately call into Context::evaluateAsInitializer(). In
+        // other words, we're evaluating the initializer, just to know if we can
+        // evaluate the initializer.
+        if (VD->isLocalVarDecl() && typeShouldBeVisited(VD->getType()) &&
+            VD->getInit() && !VD->getInit()->isValueDependent() &&
+            VD->evaluateValue())
           return revisit(VD);
       }
     } else {
