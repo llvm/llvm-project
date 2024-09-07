@@ -3077,8 +3077,8 @@ void Sema::NoteAllFoundTemplates(TemplateName Name) {
 }
 
 static QualType builtinCommonTypeImpl(Sema &S, TemplateName BaseTemplate,
-                               SourceLocation TemplateLoc,
-                               ArrayRef<TemplateArgument> Ts) {
+                                      SourceLocation TemplateLoc,
+                                      ArrayRef<TemplateArgument> Ts) {
   auto lookUpCommonType = [&](TemplateArgument T1,
                               TemplateArgument T2) -> QualType {
     // Don't bother looking for other specializations if both types are

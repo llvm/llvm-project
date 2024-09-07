@@ -1519,7 +1519,7 @@ Builtin type aliases
 Clang provides a few builtin aliases to improve the throughput of certain metaprogramming facilities.
 
 __builtin_common_type
--------------
+---------------------
 
 .. code-block:: c++
 

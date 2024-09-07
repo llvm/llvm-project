@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -verify -std=c++17 %s
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -verify -std=c++20 %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -verify -std=c++17 -Wno-vla-cxx-extension %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -verify -std=c++20 -Wno-vla-cxx-extension %s
 
 #if !__has_builtin(__builtin_common_type)
 #  error
@@ -9,6 +9,8 @@
 
 void test() {
   __builtin_common_type<> a; // expected-error {{too few template arguments for template '__builtin_common_type'}}
+  __builtin_common_type<1> b; // expected-error {{template argument for template template parameter must be a class template or type alias template}}
+  __builtin_common_type<int, 1> c; // expected-error {{template argument for template template parameter must be a class template or type alias template}}
 }
 
 struct empty_type {};
@@ -23,6 +25,12 @@ struct common_type;
 
 template <class... Args>
 using common_type_t = typename common_type<Args...>::type;
+
+void test_vla() {
+  int i = 4;
+  int VLA[i];
+  __builtin_common_type<common_type_t, type_identity, empty_type, decltype(VLA)> d; // expected-error {{variably modified type 'decltype(VLA)' (aka 'int[i]') cannot be used as a template argument}}
+}
 
 template <class... Args>
 using common_type_base = __builtin_common_type<common_type_t, type_identity, empty_type, Args...>;
@@ -62,6 +70,24 @@ static_assert(__is_same(common_type_base<int*, long*>, empty_type));
 static_assert(__is_same(common_type_base<int, long, float>, type_identity<float>));
 static_assert(__is_same(common_type_base<unsigned, char, long>, type_identity<long>));
 static_assert(__is_same(common_type_base<long long, long long, long>, type_identity<long long>));
+
+static_assert(__is_same(common_type_base<int [[clang::address_space(1)]]>, type_identity<int [[clang::address_space(1)]]>));
+static_assert(__is_same(common_type_base<int [[clang::address_space(1)]], int>, type_identity<int>));
+static_assert(__is_same(common_type_base<long [[clang::address_space(1)]], int>, type_identity<long>));
+static_assert(__is_same(common_type_base<long [[clang::address_space(1)]], int [[clang::address_space(1)]]>, type_identity<long>));
+static_assert(__is_same(common_type_base<long [[clang::address_space(1)]], long [[clang::address_space(1)]]>, type_identity<long [[clang::address_space(1)]]>));
+static_assert(__is_same(common_type_base<long [[clang::address_space(1)]], long [[clang::address_space(2)]]>, type_identity<long>));
+
+struct S {};
+struct T : S {};
+
+static_assert(__is_same(common_type_base<int S::*, int S::*>, type_identity<int S::*>));
+static_assert(__is_same(common_type_base<int S::*, int T::*>, type_identity<int T::*>));
+static_assert(__is_same(common_type_base<int S::*, long S::*>, empty_type));
+
+static_assert(__is_same(common_type_base<int (S::*)(), int (S::*)()>, type_identity<int (S::*)()>));
+static_assert(__is_same(common_type_base<int (S::*)(), int (T::*)()>, type_identity<int (T::*)()>));
+static_assert(__is_same(common_type_base<int (S::*)(), long (S::*)()>, empty_type));
 
 struct NoCommonType {};
 
