@@ -401,7 +401,7 @@ define i8 @phi_ugt_high_bits_and_known_todo_high_depths(i8 %xx, i8 %y, i8 %z) {
 ; CHECK-LABEL: @phi_ugt_high_bits_and_known_todo_high_depths(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[YY:%.*]] = and i8 [[Y:%.*]], -2
-; CHECK-NEXT:    [[XXX:%.*]] = and i8 [[YY]], [[XX:%.*]]
+; CHECK-NEXT:    [[XXX:%.*]] = and i8 [[XX:%.*]], [[YY]]
 ; CHECK-NEXT:    [[ZZ:%.*]] = or i8 [[Z:%.*]], 1
 ; CHECK-NEXT:    [[X:%.*]] = add i8 [[XXX]], [[ZZ]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[X]], -65

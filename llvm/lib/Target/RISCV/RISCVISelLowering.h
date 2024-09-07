@@ -15,6 +15,7 @@
 #define LLVM_LIB_TARGET_RISCV_RISCVISELLOWERING_H
 
 #include "RISCV.h"
+#include "RISCVCallingConv.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -24,7 +25,6 @@ namespace llvm {
 class InstructionCost;
 class RISCVSubtarget;
 struct RISCVRegisterInfo;
-class RVVArgDispatcher;
 
 namespace RISCVISD {
 // clang-format off
@@ -116,9 +116,6 @@ enum NodeType : unsigned {
   // is passed as a TargetConstant operand using the RISCVFPRndMode enum.
   FCVT_W_RV64,
   FCVT_WU_RV64,
-
-  FP_ROUND_BF16,
-  FP_EXTEND_BF16,
 
   // Rounds an FP value to its corresponding integer in the same FP format.
   // First operand is the value to round, the second operand is the largest
@@ -415,32 +412,6 @@ enum NodeType : unsigned {
   /// operand 1 is the target address.
   SW_GUARDED_BRIND,
 
-  // FP to 32 bit int conversions for RV64. These are used to keep track of the
-  // result being sign extended to 64 bit. These saturate out of range inputs.
-  STRICT_FCVT_W_RV64 = ISD::FIRST_TARGET_STRICTFP_OPCODE,
-  STRICT_FCVT_WU_RV64,
-  STRICT_FADD_VL,
-  STRICT_FSUB_VL,
-  STRICT_FMUL_VL,
-  STRICT_FDIV_VL,
-  STRICT_FSQRT_VL,
-  STRICT_VFMADD_VL,
-  STRICT_VFNMADD_VL,
-  STRICT_VFMSUB_VL,
-  STRICT_VFNMSUB_VL,
-  STRICT_FP_ROUND_VL,
-  STRICT_FP_EXTEND_VL,
-  STRICT_VFNCVT_ROD_VL,
-  STRICT_SINT_TO_FP_VL,
-  STRICT_UINT_TO_FP_VL,
-  STRICT_VFCVT_RM_X_F_VL,
-  STRICT_VFCVT_RTZ_X_F_VL,
-  STRICT_VFCVT_RTZ_XU_F_VL,
-  STRICT_FSETCC_VL,
-  STRICT_FSETCCS_VL,
-  STRICT_VFROUND_NOEXCEPT_VL,
-  LAST_RISCV_STRICTFP_OPCODE = STRICT_VFROUND_NOEXCEPT_VL,
-
   SF_VC_XV_SE,
   SF_VC_IV_SE,
   SF_VC_VV_SE,
@@ -467,6 +438,36 @@ enum NodeType : unsigned {
   SF_VC_V_IVW_SE,
   SF_VC_V_VVW_SE,
   SF_VC_V_FVW_SE,
+
+  // RISC-V vector tuple type version of INSERT_SUBVECTOR/EXTRACT_SUBVECTOR.
+  TUPLE_INSERT,
+  TUPLE_EXTRACT,
+
+  // FP to 32 bit int conversions for RV64. These are used to keep track of the
+  // result being sign extended to 64 bit. These saturate out of range inputs.
+  STRICT_FCVT_W_RV64 = ISD::FIRST_TARGET_STRICTFP_OPCODE,
+  STRICT_FCVT_WU_RV64,
+  STRICT_FADD_VL,
+  STRICT_FSUB_VL,
+  STRICT_FMUL_VL,
+  STRICT_FDIV_VL,
+  STRICT_FSQRT_VL,
+  STRICT_VFMADD_VL,
+  STRICT_VFNMADD_VL,
+  STRICT_VFMSUB_VL,
+  STRICT_VFNMSUB_VL,
+  STRICT_FP_ROUND_VL,
+  STRICT_FP_EXTEND_VL,
+  STRICT_VFNCVT_ROD_VL,
+  STRICT_SINT_TO_FP_VL,
+  STRICT_UINT_TO_FP_VL,
+  STRICT_VFCVT_RM_X_F_VL,
+  STRICT_VFCVT_RTZ_X_F_VL,
+  STRICT_VFCVT_RTZ_XU_F_VL,
+  STRICT_FSETCC_VL,
+  STRICT_FSETCCS_VL,
+  STRICT_VFROUND_NOEXCEPT_VL,
+  LAST_RISCV_STRICTFP_OPCODE = STRICT_VFROUND_NOEXCEPT_VL,
 
   // WARNING: Do not add anything in the end unless you want the node to
   // have memop! In fact, starting from FIRST_TARGET_MEMORY_OPCODE all
@@ -896,17 +897,6 @@ public:
                               MachineBasicBlock::instr_iterator &MBBI,
                               const TargetInstrInfo *TII) const override;
 
-  /// RISCVCCAssignFn - This target-specific function extends the default
-  /// CCValAssign with additional information used to lower RISC-V calling
-  /// conventions.
-  typedef bool RISCVCCAssignFn(const DataLayout &DL, RISCVABI::ABI,
-                               unsigned ValNo, MVT ValVT, MVT LocVT,
-                               CCValAssign::LocInfo LocInfo,
-                               ISD::ArgFlagsTy ArgFlags, CCState &State,
-                               bool IsFixed, bool IsRet, Type *OrigTy,
-                               const RISCVTargetLowering &TLI,
-                               RVVArgDispatcher &RVVDispatcher);
-
 private:
   void analyzeInputArgs(MachineFunction &MF, CCState &CCInfo,
                         const SmallVectorImpl<ISD::InputArg> &Ins, bool IsRet,
@@ -1048,80 +1038,6 @@ private:
   SDValue emitFlushICache(SelectionDAG &DAG, SDValue InChain, SDValue Start,
                           SDValue End, SDValue Flags, SDLoc DL) const;
 };
-
-/// As per the spec, the rules for passing vector arguments are as follows:
-///
-/// 1. For the first vector mask argument, use v0 to pass it.
-/// 2. For vector data arguments or rest vector mask arguments, starting from
-/// the v8 register, if a vector register group between v8-v23 that has not been
-/// allocated can be found and the first register number is a multiple of LMUL,
-/// then allocate this vector register group to the argument and mark these
-/// registers as allocated. Otherwise, pass it by reference and are replaced in
-/// the argument list with the address.
-/// 3. For tuple vector data arguments, starting from the v8 register, if
-/// NFIELDS consecutive vector register groups between v8-v23 that have not been
-/// allocated can be found and the first register number is a multiple of LMUL,
-/// then allocate these vector register groups to the argument and mark these
-/// registers as allocated. Otherwise, pass it by reference and are replaced in
-/// the argument list with the address.
-class RVVArgDispatcher {
-public:
-  static constexpr unsigned NumArgVRs = 16;
-
-  struct RVVArgInfo {
-    unsigned NF;
-    MVT VT;
-    bool FirstVMask = false;
-  };
-
-  template <typename Arg>
-  RVVArgDispatcher(const MachineFunction *MF, const RISCVTargetLowering *TLI,
-                   ArrayRef<Arg> ArgList)
-      : MF(MF), TLI(TLI) {
-    constructArgInfos(ArgList);
-    compute();
-  }
-
-  RVVArgDispatcher() = default;
-
-  MCPhysReg getNextPhysReg();
-
-private:
-  SmallVector<RVVArgInfo, 4> RVVArgInfos;
-  SmallVector<MCPhysReg, 4> AllocatedPhysRegs;
-
-  const MachineFunction *MF = nullptr;
-  const RISCVTargetLowering *TLI = nullptr;
-
-  unsigned CurIdx = 0;
-
-  template <typename Arg> void constructArgInfos(ArrayRef<Arg> Ret);
-  void compute();
-  void allocatePhysReg(unsigned NF = 1, unsigned LMul = 1,
-                       unsigned StartReg = 0);
-};
-
-namespace RISCV {
-
-bool CC_RISCV(const DataLayout &DL, RISCVABI::ABI ABI, unsigned ValNo,
-              MVT ValVT, MVT LocVT, CCValAssign::LocInfo LocInfo,
-              ISD::ArgFlagsTy ArgFlags, CCState &State, bool IsFixed,
-              bool IsRet, Type *OrigTy, const RISCVTargetLowering &TLI,
-              RVVArgDispatcher &RVVDispatcher);
-
-bool CC_RISCV_FastCC(const DataLayout &DL, RISCVABI::ABI ABI, unsigned ValNo,
-                     MVT ValVT, MVT LocVT, CCValAssign::LocInfo LocInfo,
-                     ISD::ArgFlagsTy ArgFlags, CCState &State, bool IsFixed,
-                     bool IsRet, Type *OrigTy, const RISCVTargetLowering &TLI,
-                     RVVArgDispatcher &RVVDispatcher);
-
-bool CC_RISCV_GHC(unsigned ValNo, MVT ValVT, MVT LocVT,
-                  CCValAssign::LocInfo LocInfo, ISD::ArgFlagsTy ArgFlags,
-                  CCState &State);
-
-ArrayRef<MCPhysReg> getArgGPRs(const RISCVABI::ABI ABI);
-
-} // end namespace RISCV
 
 namespace RISCVVIntrinsicsTable {
 

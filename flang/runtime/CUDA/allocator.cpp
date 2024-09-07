@@ -15,7 +15,7 @@
 #include "flang/ISO_Fortran_binding_wrapper.h"
 #include "flang/Runtime/allocator-registry.h"
 
-#include "cuda.h"
+#include "cuda_runtime.h"
 
 namespace Fortran::runtime::cuda {
 extern "C" {
@@ -34,32 +34,28 @@ void RTDEF(CUFRegisterAllocator)() {
 
 void *CUFAllocPinned(std::size_t sizeInBytes) {
   void *p;
-  CUDA_REPORT_IF_ERROR(cuMemAllocHost(&p, sizeInBytes));
+  CUDA_REPORT_IF_ERROR(cudaMallocHost((void **)&p, sizeInBytes));
   return p;
 }
 
-void CUFFreePinned(void *p) { CUDA_REPORT_IF_ERROR(cuMemFreeHost(p)); }
+void CUFFreePinned(void *p) { CUDA_REPORT_IF_ERROR(cudaFreeHost(p)); }
 
 void *CUFAllocDevice(std::size_t sizeInBytes) {
-  CUdeviceptr p = 0;
-  CUDA_REPORT_IF_ERROR(cuMemAlloc(&p, sizeInBytes));
-  return reinterpret_cast<void *>(p);
+  void *p;
+  CUDA_REPORT_IF_ERROR(cudaMalloc(&p, sizeInBytes));
+  return p;
 }
 
-void CUFFreeDevice(void *p) {
-  CUDA_REPORT_IF_ERROR(cuMemFree(reinterpret_cast<CUdeviceptr>(p)));
-}
+void CUFFreeDevice(void *p) { CUDA_REPORT_IF_ERROR(cudaFree(p)); }
 
 void *CUFAllocManaged(std::size_t sizeInBytes) {
-  CUdeviceptr p = 0;
+  void *p;
   CUDA_REPORT_IF_ERROR(
-      cuMemAllocManaged(&p, sizeInBytes, CU_MEM_ATTACH_GLOBAL));
+      cudaMallocManaged((void **)&p, sizeInBytes, cudaMemAttachGlobal));
   return reinterpret_cast<void *>(p);
 }
 
-void CUFFreeManaged(void *p) {
-  CUDA_REPORT_IF_ERROR(cuMemFree(reinterpret_cast<CUdeviceptr>(p)));
-}
+void CUFFreeManaged(void *p) { CUDA_REPORT_IF_ERROR(cudaFree(p)); }
 
 void *CUFAllocUnified(std::size_t sizeInBytes) {
   // Call alloc managed for the time being.

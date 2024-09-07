@@ -58,7 +58,7 @@ static bool findRISCVMultilibs(const Driver &D,
 
     Result.Multilibs =
         MultilibSetBuilder().Either(Imac, Imafdc).makeMultilibSet();
-    return Result.Multilibs.select(Flags, Result.SelectedMultilibs);
+    return Result.Multilibs.select(D, Flags, Result.SelectedMultilibs);
   }
   if (TargetTriple.isRISCV32()) {
     MultilibBuilder Imac =
@@ -92,7 +92,7 @@ static bool findRISCVMultilibs(const Driver &D,
 
     Result.Multilibs =
         MultilibSetBuilder().Either(I, Im, Iac, Imac, Imafc).makeMultilibSet();
-    return Result.Multilibs.select(Flags, Result.SelectedMultilibs);
+    return Result.Multilibs.select(D, Flags, Result.SelectedMultilibs);
   }
   return false;
 }
@@ -182,12 +182,13 @@ static void findMultilibsFromYAML(const ToolChain &TC, const Driver &D,
   if (ErrorOrMultilibSet.getError())
     return;
   Result.Multilibs = ErrorOrMultilibSet.get();
-  if (Result.Multilibs.select(Flags, Result.SelectedMultilibs))
+  if (Result.Multilibs.select(D, Flags, Result.SelectedMultilibs))
     return;
   D.Diag(clang::diag::warn_drv_missing_multilib) << llvm::join(Flags, " ");
   std::stringstream ss;
   for (const Multilib &Multilib : Result.Multilibs)
-    ss << "\n" << llvm::join(Multilib.flags(), " ");
+    if (!Multilib.isFatalError())
+      ss << "\n" << llvm::join(Multilib.flags(), " ");
   D.Diag(clang::diag::note_drv_available_multilibs) << ss.str();
 }
 
@@ -218,17 +219,19 @@ static std::string computeBaseSysRoot(const Driver &D,
 void BareMetal::findMultilibs(const Driver &D, const llvm::Triple &Triple,
                               const ArgList &Args) {
   DetectedMultilibs Result;
-  if (isRISCVBareMetal(Triple)) {
+  // Look for a multilib.yaml before trying target-specific hardwired logic.
+  // If it exists, always do what it specifies.
+  llvm::SmallString<128> MultilibPath(computeBaseSysRoot(D, Triple));
+  llvm::sys::path::append(MultilibPath, MultilibFilename);
+  if (D.getVFS().exists(MultilibPath)) {
+    findMultilibsFromYAML(*this, D, MultilibPath, Args, Result);
+    SelectedMultilibs = Result.SelectedMultilibs;
+    Multilibs = Result.Multilibs;
+  } else if (isRISCVBareMetal(Triple)) {
     if (findRISCVMultilibs(D, Triple, Args, Result)) {
       SelectedMultilibs = Result.SelectedMultilibs;
       Multilibs = Result.Multilibs;
     }
-  } else {
-    llvm::SmallString<128> MultilibPath(computeBaseSysRoot(D, Triple));
-    llvm::sys::path::append(MultilibPath, MultilibFilename);
-    findMultilibsFromYAML(*this, D, MultilibPath, Args, Result);
-    SelectedMultilibs = Result.SelectedMultilibs;
-    Multilibs = Result.Multilibs;
   }
 }
 

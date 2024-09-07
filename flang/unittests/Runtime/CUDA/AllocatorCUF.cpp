@@ -14,7 +14,7 @@
 #include "flang/Runtime/allocatable.h"
 #include "flang/Runtime/allocator-registry.h"
 
-#include "cuda.h"
+#include "cuda_runtime.h"
 
 using namespace Fortran::runtime;
 using namespace Fortran::runtime::cuda;
@@ -25,38 +25,9 @@ static OwningPtr<Descriptor> createAllocatable(
       CFI_attribute_allocatable);
 }
 
-thread_local static int32_t defaultDevice = 0;
-
-CUdevice getDefaultCuDevice() {
-  CUdevice device;
-  CUDA_REPORT_IF_ERROR(cuDeviceGet(&device, /*ordinal=*/defaultDevice));
-  return device;
-}
-
-class ScopedContext {
-public:
-  ScopedContext() {
-    // Static reference to CUDA primary context for device ordinal
-    // defaultDevice.
-    static CUcontext context = [] {
-      CUDA_REPORT_IF_ERROR(cuInit(/*flags=*/0));
-      CUcontext ctx;
-      // Note: this does not affect the current context.
-      CUDA_REPORT_IF_ERROR(
-          cuDevicePrimaryCtxRetain(&ctx, getDefaultCuDevice()));
-      return ctx;
-    }();
-
-    CUDA_REPORT_IF_ERROR(cuCtxPushCurrent(context));
-  }
-
-  ~ScopedContext() { CUDA_REPORT_IF_ERROR(cuCtxPopCurrent(nullptr)); }
-};
-
 TEST(AllocatableCUFTest, SimpleDeviceAllocate) {
   using Fortran::common::TypeCategory;
   RTNAME(CUFRegisterAllocator)();
-  ScopedContext ctx;
   // REAL(4), DEVICE, ALLOCATABLE :: a(:)
   auto a{createAllocatable(TypeCategory::Real, 4)};
   a->SetAllocIdx(kDeviceAllocatorPos);
@@ -74,7 +45,6 @@ TEST(AllocatableCUFTest, SimpleDeviceAllocate) {
 TEST(AllocatableCUFTest, SimplePinnedAllocate) {
   using Fortran::common::TypeCategory;
   RTNAME(CUFRegisterAllocator)();
-  ScopedContext ctx;
   // INTEGER(4), PINNED, ALLOCATABLE :: a(:)
   auto a{createAllocatable(TypeCategory::Integer, 4)};
   EXPECT_FALSE(a->HasAddendum());
@@ -93,7 +63,6 @@ TEST(AllocatableCUFTest, SimplePinnedAllocate) {
 TEST(AllocatableCUFTest, DescriptorAllocationTest) {
   using Fortran::common::TypeCategory;
   RTNAME(CUFRegisterAllocator)();
-  ScopedContext ctx;
   // REAL(4), DEVICE, ALLOCATABLE :: a(:)
   auto a{createAllocatable(TypeCategory::Real, 4)};
   Descriptor *desc = nullptr;

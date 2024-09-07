@@ -123,8 +123,7 @@ static OverloadKind getOverloadKind(Type *Ty) {
   case Type::StructTyID:
     return OverloadKind::ObjectType;
   default:
-    llvm_unreachable("invalid overload type");
-    return OverloadKind::VOID;
+    return OverloadKind::UNDEFINED;
   }
 }
 
@@ -156,8 +155,8 @@ struct OpCodeProperty {
   llvm::SmallVector<OpOverload> Overloads;
   llvm::SmallVector<OpStage> Stages;
   llvm::SmallVector<OpAttribute> Attributes;
-  int OverloadParamIndex;        // parameter index which control the overload.
-                                 // When < 0, should be only 1 overload type.
+  int OverloadParamIndex; // parameter index which control the overload.
+                          // When < 0, should be only 1 overload type.
 };
 
 // Include getOpCodeClassName getOpCodeProperty, getOpCodeName and

@@ -127,6 +127,14 @@ RegionKind GraphRegionOp::getRegionKind(unsigned index) {
 }
 
 //===----------------------------------------------------------------------===//
+// IsolatedGraphRegionOp
+//===----------------------------------------------------------------------===//
+
+RegionKind IsolatedGraphRegionOp::getRegionKind(unsigned index) {
+  return RegionKind::Graph;
+}
+
+//===----------------------------------------------------------------------===//
 // AffineScopeOp
 //===----------------------------------------------------------------------===//
 
