@@ -668,6 +668,10 @@ static unsigned getEncodedRMWOperation(AtomicRMWInst::BinOp Op) {
     return bitc::RMW_UINC_WRAP;
   case AtomicRMWInst::UDecWrap:
     return bitc::RMW_UDEC_WRAP;
+  case AtomicRMWInst::USubCond:
+    return bitc::RMW_USUB_COND;
+  case AtomicRMWInst::USubSat:
+    return bitc::RMW_USUB_SAT;
   }
 }
 
@@ -4736,7 +4740,8 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
         getEncodedGVSummaryFlags(FS->flags(), shouldImportValueAsDecl(FS)));
     NameVals.push_back(FS->instCount());
     NameVals.push_back(getEncodedFFlags(FS->fflags()));
-    NameVals.push_back(FS->entryCount());
+    // TODO: Stop writing entry count and bump bitcode version.
+    NameVals.push_back(0 /* EntryCount */);
 
     // Fill in below
     NameVals.push_back(0); // numrefs

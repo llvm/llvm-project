@@ -3101,6 +3101,10 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     applyMappingSBufferLoad(B, OpdMapper);
     return;
   }
+  case AMDGPU::G_AMDGPU_S_BUFFER_PREFETCH:
+    constrainOpWithReadfirstlane(B, MI, 0);
+    constrainOpWithReadfirstlane(B, MI, 2);
+    return;
   case AMDGPU::G_INTRINSIC:
   case AMDGPU::G_INTRINSIC_CONVERGENT: {
     switch (cast<GIntrinsic>(MI).getIntrinsicID()) {
@@ -4464,6 +4468,10 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     OpdsMapping[0] = AMDGPU::getValueMapping(ResultBank, Size0);
     break;
   }
+  case AMDGPU::G_AMDGPU_S_BUFFER_PREFETCH:
+    OpdsMapping[0] = getSGPROpMapping(MI.getOperand(0).getReg(), MRI, *TRI);
+    OpdsMapping[2] = getSGPROpMapping(MI.getOperand(2).getReg(), MRI, *TRI);
+    break;
   case AMDGPU::G_INTRINSIC:
   case AMDGPU::G_INTRINSIC_CONVERGENT: {
     switch (cast<GIntrinsic>(MI).getIntrinsicID()) {
