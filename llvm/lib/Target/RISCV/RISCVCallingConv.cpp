@@ -377,7 +377,7 @@ bool llvm::CC_RISCV(unsigned ValNo, MVT ValVT, MVT LocVT,
     // cases.
     MCRegister Reg = State.AllocateReg(ArgGPRs);
     if (!Reg) {
-      unsigned StackOffset = State.AllocateStack(8, Align(8));
+      int64_t StackOffset = State.AllocateStack(8, Align(8));
       State.addLoc(
           CCValAssign::getMem(ValNo, ValVT, StackOffset, LocVT, LocInfo));
       return false;
@@ -389,7 +389,7 @@ bool llvm::CC_RISCV(unsigned ValNo, MVT ValVT, MVT LocVT,
       State.addLoc(
           CCValAssign::getCustomReg(ValNo, ValVT, HiReg, LocVT, LocInfo));
     } else {
-      unsigned StackOffset = State.AllocateStack(4, Align(4));
+      int64_t StackOffset = State.AllocateStack(4, Align(4));
       State.addLoc(
           CCValAssign::getCustomMem(ValNo, ValVT, StackOffset, LocVT, LocInfo));
     }
@@ -471,7 +471,7 @@ bool llvm::CC_RISCV(unsigned ValNo, MVT ValVT, MVT LocVT,
     Reg = State.AllocateReg(ArgGPRs);
   }
 
-  unsigned StackOffset =
+  int64_t StackOffset =
       Reg ? 0 : State.AllocateStack(StoreSizeBytes, StackAlign);
 
   // If we reach this point and PendingLocs is non-empty, we must be at the
@@ -586,19 +586,19 @@ bool llvm::CC_RISCV_FastCC(unsigned ValNo, MVT ValVT, MVT LocVT,
   }
 
   if (LocVT == MVT::f16 || LocVT == MVT::bf16) {
-    unsigned Offset2 = State.AllocateStack(2, Align(2));
+    int64_t Offset2 = State.AllocateStack(2, Align(2));
     State.addLoc(CCValAssign::getMem(ValNo, ValVT, Offset2, LocVT, LocInfo));
     return false;
   }
 
   if (LocVT == MVT::i32 || LocVT == MVT::f32) {
-    unsigned Offset4 = State.AllocateStack(4, Align(4));
+    int64_t Offset4 = State.AllocateStack(4, Align(4));
     State.addLoc(CCValAssign::getMem(ValNo, ValVT, Offset4, LocVT, LocInfo));
     return false;
   }
 
   if (LocVT == MVT::i64 || LocVT == MVT::f64) {
-    unsigned Offset5 = State.AllocateStack(8, Align(8));
+    int64_t Offset5 = State.AllocateStack(8, Align(8));
     State.addLoc(CCValAssign::getMem(ValNo, ValVT, Offset5, LocVT, LocInfo));
     return false;
   }
@@ -626,7 +626,7 @@ bool llvm::CC_RISCV_FastCC(unsigned ValNo, MVT ValVT, MVT LocVT,
       LocInfo = CCValAssign::Indirect;
       LocVT = Subtarget.getXLenVT();
       unsigned XLen = Subtarget.getXLen();
-      unsigned StackOffset = State.AllocateStack(XLen / 8, Align(XLen / 8));
+      int64_t StackOffset = State.AllocateStack(XLen / 8, Align(XLen / 8));
       State.addLoc(
           CCValAssign::getMem(ValNo, ValVT, StackOffset, LocVT, LocInfo));
       return false;
@@ -634,8 +634,7 @@ bool llvm::CC_RISCV_FastCC(unsigned ValNo, MVT ValVT, MVT LocVT,
 
     // Pass fixed-length vectors on the stack.
     auto StackAlign = MaybeAlign(ValVT.getScalarSizeInBits() / 8).valueOrOne();
-    unsigned StackOffset =
-        State.AllocateStack(ValVT.getStoreSize(), StackAlign);
+    int64_t StackOffset = State.AllocateStack(ValVT.getStoreSize(), StackAlign);
     State.addLoc(
         CCValAssign::getMem(ValNo, ValVT, StackOffset, LocVT, LocInfo));
     return false;
