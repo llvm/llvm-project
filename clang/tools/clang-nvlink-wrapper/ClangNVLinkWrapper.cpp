@@ -84,18 +84,6 @@ static cl::list<std::string>
     PassPlugins("load-pass-plugin",
                 cl::desc("Load passes from plugin library"));
 
-static cl::opt<std::string> PassPipeline(
-    "passes",
-    cl::desc(
-        "A textual description of the pass pipeline. To have analysis passes "
-        "available before a certain pass, add 'require<foo-analysis>'. "
-        "'-passes' overrides the pass pipeline (but not all effects) from "
-        "specifying '--opt-level=O?' (O2 is the default) to "
-        "clang-linker-wrapper.  Be sure to include the corresponding "
-        "'default<O?>' in '-passes'."));
-static cl::alias PassPipeline2("p", cl::aliasopt(PassPipeline),
-                               cl::desc("Alias for -passes"));
-
 static void printVersion(raw_ostream &OS) {
   OS << clang::getClangToolFullVersion("clang-nvlink-wrapper") << '\n';
 }
@@ -302,6 +290,9 @@ Expected<StringRef> runPTXAs(StringRef File, const ArgList &Args) {
       findProgram(Args, "ptxas", {CudaPath + "/bin", GivenPath});
   if (!PTXAsPath)
     return PTXAsPath.takeError();
+  if (!Args.hasArg(OPT_arch))
+    return createStringError(
+        "must pass in an explicit nvptx64 gpu architecture to 'ptxas'");
 
   auto TempFileOrErr = createTempFile(
       Args, sys::path::stem(Args.getLastArgValue(OPT_o, "a.out")), "cubin");
@@ -362,8 +353,9 @@ Expected<std::unique_ptr<lto::LTO>> createLTO(const ArgList &Args) {
   Conf.OptLevel = Args.getLastArgValue(OPT_O, "2")[0] - '0';
   Conf.DefaultTriple = Triple.getTriple();
 
-  Conf.OptPipeline = PassPipeline;
+  Conf.OptPipeline = Args.getLastArgValue(OPT_lto_newpm_passes, "");
   Conf.PassPlugins = PassPlugins;
+  Conf.DebugPassManager = Args.hasArg(OPT_lto_debug_pass_manager);
 
   Conf.DiagHandler = diagnosticHandler;
   Conf.CGFileType = CodeGenFileType::AssemblyFile;
@@ -598,10 +590,11 @@ Expected<SmallVector<StringRef>> getInput(const ArgList &Args) {
         Res.Prevailing = !Sym.isUndefined() && ObjSym.File == *BitcodeFile;
 
         // We need LTO to preseve the following global symbols:
-        // 1) Symbols used in regular objects.
-        // 2) Prevailing symbols that are needed visible to the gpu runtime.
+        // 1) All symbols during a relocatable link.
+        // 2) Symbols used in regular objects.
+        // 3) Prevailing symbols that are needed visible to the gpu runtime.
         Res.VisibleToRegularObj =
-            ObjSym.UsedInRegularObj ||
+            Args.hasArg(OPT_relocatable) || ObjSym.UsedInRegularObj ||
             (Res.Prevailing &&
              (Sym.getVisibility() != GlobalValue::HiddenVisibility &&
               !Sym.canBeOmittedFromSymbolTable()));
@@ -692,6 +685,10 @@ Error runNVLink(ArrayRef<StringRef> Files, const ArgList &Args) {
       findProgram(Args, "nvlink", {CudaPath + "/bin"});
   if (!NVLinkPath)
     return NVLinkPath.takeError();
+
+  if (!Args.hasArg(OPT_arch))
+    return createStringError(
+        "must pass in an explicit nvptx64 gpu architecture to 'nvlink'");
 
   ArgStringList NewLinkerArgs;
   for (const opt::Arg *Arg : Args) {

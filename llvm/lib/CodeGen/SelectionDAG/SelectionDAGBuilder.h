@@ -439,8 +439,8 @@ public:
     /// The set of gc.relocate calls associated with this gc.statepoint.
     SmallVector<const GCRelocateInst *, 16> GCRelocates;
 
-    /// The full list of gc arguments to the gc.statepoint being lowered.
-    ArrayRef<const Use> GCArgs;
+    /// The full list of gc-live arguments to the gc.statepoint being lowered.
+    ArrayRef<const Use> GCLives;
 
     /// The gc.statepoint instruction.
     const Instruction *StatepointInstr = nullptr;

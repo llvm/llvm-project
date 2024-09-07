@@ -161,3 +161,155 @@ bool CombinerHelper::matchTruncateOfExt(const MachineInstr &Root,
 
   return false;
 }
+
+bool CombinerHelper::isCastFree(unsigned Opcode, LLT ToTy, LLT FromTy) const {
+  const TargetLowering &TLI = getTargetLowering();
+  const DataLayout &DL = getDataLayout();
+  LLVMContext &Ctx = getContext();
+
+  switch (Opcode) {
+  case TargetOpcode::G_ANYEXT:
+  case TargetOpcode::G_ZEXT:
+    return TLI.isZExtFree(FromTy, ToTy, DL, Ctx);
+  case TargetOpcode::G_TRUNC:
+    return TLI.isTruncateFree(FromTy, ToTy, DL, Ctx);
+  default:
+    return false;
+  }
+}
+
+bool CombinerHelper::matchCastOfSelect(const MachineInstr &CastMI,
+                                       const MachineInstr &SelectMI,
+                                       BuildFnTy &MatchInfo) {
+  const GExtOrTruncOp *Cast = cast<GExtOrTruncOp>(&CastMI);
+  const GSelect *Select = cast<GSelect>(&SelectMI);
+
+  if (!MRI.hasOneNonDBGUse(Select->getReg(0)))
+    return false;
+
+  Register Dst = Cast->getReg(0);
+  LLT DstTy = MRI.getType(Dst);
+  LLT CondTy = MRI.getType(Select->getCondReg());
+  Register TrueReg = Select->getTrueReg();
+  Register FalseReg = Select->getFalseReg();
+  LLT SrcTy = MRI.getType(TrueReg);
+  Register Cond = Select->getCondReg();
+
+  if (!isLegalOrBeforeLegalizer({TargetOpcode::G_SELECT, {DstTy, CondTy}}))
+    return false;
+
+  if (!isCastFree(Cast->getOpcode(), DstTy, SrcTy))
+    return false;
+
+  MatchInfo = [=](MachineIRBuilder &B) {
+    auto True = B.buildInstr(Cast->getOpcode(), {DstTy}, {TrueReg});
+    auto False = B.buildInstr(Cast->getOpcode(), {DstTy}, {FalseReg});
+    B.buildSelect(Dst, Cond, True, False);
+  };
+
+  return true;
+}
+
+bool CombinerHelper::matchExtOfExt(const MachineInstr &FirstMI,
+                                   const MachineInstr &SecondMI,
+                                   BuildFnTy &MatchInfo) {
+  const GExtOp *First = cast<GExtOp>(&FirstMI);
+  const GExtOp *Second = cast<GExtOp>(&SecondMI);
+
+  Register Dst = First->getReg(0);
+  Register Src = Second->getSrcReg();
+  LLT DstTy = MRI.getType(Dst);
+  LLT SrcTy = MRI.getType(Src);
+
+  if (!MRI.hasOneNonDBGUse(Second->getReg(0)))
+    return false;
+
+  // ext of ext -> later ext
+  if (First->getOpcode() == Second->getOpcode() &&
+      isLegalOrBeforeLegalizer({Second->getOpcode(), {DstTy, SrcTy}})) {
+    if (Second->getOpcode() == TargetOpcode::G_ZEXT) {
+      MachineInstr::MIFlag Flag = MachineInstr::MIFlag::NoFlags;
+      if (Second->getFlag(MachineInstr::MIFlag::NonNeg))
+        Flag = MachineInstr::MIFlag::NonNeg;
+      MatchInfo = [=](MachineIRBuilder &B) { B.buildZExt(Dst, Src, Flag); };
+      return true;
+    }
+    // not zext -> no flags
+    MatchInfo = [=](MachineIRBuilder &B) {
+      B.buildInstr(Second->getOpcode(), {Dst}, {Src});
+    };
+    return true;
+  }
+
+  // anyext of sext/zext  -> sext/zext
+  // -> pick anyext as second ext, then ext of ext
+  if (First->getOpcode() == TargetOpcode::G_ANYEXT &&
+      isLegalOrBeforeLegalizer({Second->getOpcode(), {DstTy, SrcTy}})) {
+    if (Second->getOpcode() == TargetOpcode::G_ZEXT) {
+      MachineInstr::MIFlag Flag = MachineInstr::MIFlag::NoFlags;
+      if (Second->getFlag(MachineInstr::MIFlag::NonNeg))
+        Flag = MachineInstr::MIFlag::NonNeg;
+      MatchInfo = [=](MachineIRBuilder &B) { B.buildZExt(Dst, Src, Flag); };
+      return true;
+    }
+    MatchInfo = [=](MachineIRBuilder &B) { B.buildSExt(Dst, Src); };
+    return true;
+  }
+
+  // sext/zext of anyext -> sext/zext
+  // -> pick anyext as first ext, then ext of ext
+  if (Second->getOpcode() == TargetOpcode::G_ANYEXT &&
+      isLegalOrBeforeLegalizer({First->getOpcode(), {DstTy, SrcTy}})) {
+    if (First->getOpcode() == TargetOpcode::G_ZEXT) {
+      MachineInstr::MIFlag Flag = MachineInstr::MIFlag::NoFlags;
+      if (First->getFlag(MachineInstr::MIFlag::NonNeg))
+        Flag = MachineInstr::MIFlag::NonNeg;
+      MatchInfo = [=](MachineIRBuilder &B) { B.buildZExt(Dst, Src, Flag); };
+      return true;
+    }
+    MatchInfo = [=](MachineIRBuilder &B) { B.buildSExt(Dst, Src); };
+    return true;
+  }
+
+  return false;
+}
+
+bool CombinerHelper::matchCastOfBuildVector(const MachineInstr &CastMI,
+                                            const MachineInstr &BVMI,
+                                            BuildFnTy &MatchInfo) {
+  const GExtOrTruncOp *Cast = cast<GExtOrTruncOp>(&CastMI);
+  const GBuildVector *BV = cast<GBuildVector>(&BVMI);
+
+  if (!MRI.hasOneNonDBGUse(BV->getReg(0)))
+    return false;
+
+  Register Dst = Cast->getReg(0);
+  // The type of the new build vector.
+  LLT DstTy = MRI.getType(Dst);
+  // The scalar or element type of the new build vector.
+  LLT ElemTy = DstTy.getScalarType();
+  // The scalar or element type of the old build vector.
+  LLT InputElemTy = MRI.getType(BV->getReg(0)).getElementType();
+
+  // Check legality of new build vector, the scalar casts, and profitability of
+  // the many casts.
+  if (!isLegalOrBeforeLegalizer(
+          {TargetOpcode::G_BUILD_VECTOR, {DstTy, ElemTy}}) ||
+      !isLegalOrBeforeLegalizer({Cast->getOpcode(), {ElemTy, InputElemTy}}) ||
+      !isCastFree(Cast->getOpcode(), ElemTy, InputElemTy))
+    return false;
+
+  MatchInfo = [=](MachineIRBuilder &B) {
+    SmallVector<Register> Casts;
+    unsigned Elements = BV->getNumSources();
+    for (unsigned I = 0; I < Elements; ++I) {
+      auto CastI =
+          B.buildInstr(Cast->getOpcode(), {ElemTy}, {BV->getSourceReg(I)});
+      Casts.push_back(CastI.getReg(0));
+    }
+
+    B.buildBuildVector(Dst, Casts);
+  };
+
+  return true;
+}

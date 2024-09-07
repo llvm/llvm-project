@@ -5983,8 +5983,8 @@ TEST_F(OpenMPIRBuilderTest, TargetRegion) {
   TargetRegionEntryInfo EntryInfo("func", 42, 4711, 17);
   OpenMPIRBuilder::LocationDescription OmpLoc({Builder.saveIP(), DL});
   Builder.restoreIP(OMPBuilder.createTarget(
-      OmpLoc, Builder.saveIP(), Builder.saveIP(), EntryInfo, -1, 0, Inputs,
-      GenMapInfoCB, BodyGenCB, SimpleArgAccessorCB));
+      OmpLoc, /*IsOffloadEntry=*/true, Builder.saveIP(), Builder.saveIP(),
+      EntryInfo, -1, 0, Inputs, GenMapInfoCB, BodyGenCB, SimpleArgAccessorCB));
   OMPBuilder.finalize();
   Builder.CreateRetVoid();
 
@@ -6006,6 +6006,10 @@ TEST_F(OpenMPIRBuilderTest, TargetRegion) {
   BasicBlock *FallbackBlock = Branch->getSuccessor(0);
   Iter = FallbackBlock->rbegin();
   CallInst *FCall = dyn_cast<CallInst>(&*(++Iter));
+  // 'F' has a dummy DISubprogram which causes OutlinedFunc to also
+  // have a DISubprogram. In this case, the call to OutlinedFunc needs
+  // to have a debug loc, otherwise verifier will complain.
+  FCall->setDebugLoc(DL);
   EXPECT_NE(FCall, nullptr);
 
   // Check that the correct aguments are passed in
@@ -6087,7 +6091,8 @@ TEST_F(OpenMPIRBuilderTest, TargetRegionDevice) {
                                   /*Line=*/3, /*Count=*/0);
 
   Builder.restoreIP(
-      OMPBuilder.createTarget(Loc, EntryIP, EntryIP, EntryInfo, /*NumTeams=*/-1,
+      OMPBuilder.createTarget(Loc, /*IsOffloadEntry=*/true, EntryIP, EntryIP,
+                              EntryInfo, /*NumTeams=*/-1,
                               /*NumThreads=*/0, CapturedArgs, GenMapInfoCB,
                               BodyGenCB, SimpleArgAccessorCB));
 
@@ -6235,7 +6240,8 @@ TEST_F(OpenMPIRBuilderTest, ConstantAllocaRaise) {
                                   /*Line=*/3, /*Count=*/0);
 
   Builder.restoreIP(
-      OMPBuilder.createTarget(Loc, EntryIP, EntryIP, EntryInfo, /*NumTeams=*/-1,
+      OMPBuilder.createTarget(Loc, /*IsOffloadEntry=*/true, EntryIP, EntryIP,
+                              EntryInfo, /*NumTeams=*/-1,
                               /*NumThreads=*/0, CapturedArgs, GenMapInfoCB,
                               BodyGenCB, SimpleArgAccessorCB));
 
@@ -6902,8 +6908,8 @@ TEST_F(OpenMPIRBuilderTest, EmitOffloadingArraysArguments) {
   Info.RTArgs.MappersArray =
       ConstantPointerNull::get(Array4VoidPtrTy->getPointerTo());
   Info.NumberOfPtrs = 4;
-
-  OMPBuilder.emitOffloadingArraysArgument(Builder, RTArgs, Info, false, false);
+  Info.EmitDebug = false;
+  OMPBuilder.emitOffloadingArraysArgument(Builder, RTArgs, Info, false);
 
   EXPECT_NE(RTArgs.BasePointersArray, nullptr);
   EXPECT_NE(RTArgs.PointersArray, nullptr);

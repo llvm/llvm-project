@@ -1096,19 +1096,21 @@ bool RISCVInstructionSelector::selectAddr(MachineInstr &MI,
 
 bool RISCVInstructionSelector::selectSExtInreg(MachineInstr &MI,
                                                MachineIRBuilder &MIB) const {
-  if (!STI.isRV64())
-    return false;
+  Register DstReg = MI.getOperand(0).getReg();
+  Register SrcReg = MI.getOperand(1).getReg();
+  unsigned SrcSize = MI.getOperand(2).getImm();
 
-  const MachineOperand &Size = MI.getOperand(2);
-  // Only Size == 32 (i.e. shift by 32 bits) is acceptable at this point.
-  if (!Size.isImm() || Size.getImm() != 32)
-    return false;
-
-  const MachineOperand &Src = MI.getOperand(1);
-  const MachineOperand &Dst = MI.getOperand(0);
-  // addiw rd, rs, 0 (i.e. sext.w rd, rs)
-  MachineInstr *NewMI =
-      MIB.buildInstr(RISCV::ADDIW, {Dst.getReg()}, {Src.getReg()}).addImm(0U);
+  MachineInstr *NewMI;
+  if (SrcSize == 32) {
+    assert(Subtarget->is64Bit() && "Unexpected extend");
+    // addiw rd, rs, 0 (i.e. sext.w rd, rs)
+    NewMI = MIB.buildInstr(RISCV::ADDIW, {DstReg}, {SrcReg}).addImm(0U);
+  } else {
+    assert(Subtarget->hasStdExtZbb() && "Unexpected extension");
+    assert((SrcSize == 8 || SrcSize == 16) && "Unexpected size");
+    unsigned Opc = SrcSize == 16 ? RISCV::SEXT_H : RISCV::SEXT_B;
+    NewMI = MIB.buildInstr(Opc, {DstReg}, {SrcReg});
+  }
 
   if (!constrainSelectedInstRegOperands(*NewMI, TII, TRI, RBI))
     return false;

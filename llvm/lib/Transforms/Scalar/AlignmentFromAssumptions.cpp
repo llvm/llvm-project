@@ -208,6 +208,7 @@ bool AlignmentFromAssumptionsPass::processAssumption(CallInst *ACall,
       continue;
 
     if (Instruction *K = dyn_cast<Instruction>(J))
+      if (K->getFunction() == ACall->getFunction())
         WorkList.push_back(K);
   }
 

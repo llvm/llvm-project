@@ -150,6 +150,9 @@ class BufferizationTransformDialectExtension
     : public transform::TransformDialectExtension<
           BufferizationTransformDialectExtension> {
 public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(
+      BufferizationTransformDialectExtension)
+
   using Base::Base;
 
   void init() {

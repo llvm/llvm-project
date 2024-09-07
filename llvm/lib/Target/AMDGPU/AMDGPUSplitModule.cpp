@@ -568,12 +568,13 @@ doPartitioning(SplitModuleLogger &SML, Module &M, unsigned NumParts,
   }
 
   if (SML) {
+    CostType ModuleCostOr1 = ModuleCost ? ModuleCost : 1;
     for (const auto &[Idx, Part] : enumerate(Partitions)) {
       CostType Cost = 0;
       for (auto *Fn : Part)
         Cost += FnCosts.at(Fn);
       SML << "P" << Idx << " has a total cost of " << Cost << " ("
-          << format("%0.2f", (float(Cost) / ModuleCost) * 100)
+          << format("%0.2f", (float(Cost) / ModuleCostOr1) * 100)
           << "% of source module)\n";
     }
 

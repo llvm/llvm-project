@@ -25,6 +25,7 @@ FIRTransforms
 FIRBuilder
 HLFIRDialect
 HLFIRTransforms
+FlangOpenMPTransforms
 ${dialect_libs}
 ${extension_libs}
 MLIRAffineToStandard
