@@ -18521,7 +18521,7 @@ Intrinsic::ID getDotProductIntrinsic(CGHLSLRuntime &RT, QualType QT) {
 
 Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
                                             const CallExpr *E,
-					    ReturnValueSlot ReturnValue) {
+                                            ReturnValueSlot ReturnValue) {
   if (!getLangOpts().HLSL)
     return nullptr;
 
@@ -18711,17 +18711,21 @@ case Builtin::BI__builtin_hlsl_elementwise_isinf: {
   case Builtin::BI__builtin_hlsl_select: {
     Value *OpCond = EmitScalarExpr(E->getArg(0));
     RValue RValTrue = EmitAnyExpr(E->getArg(1));
-    Value *OpTrue = RValTrue.isScalar() ? RValTrue.getScalarVal()
-      : RValTrue.getAggregatePointer(E->getArg(1)->getType(), *this);
+    Value *OpTrue =
+        RValTrue.isScalar()
+            ? RValTrue.getScalarVal()
+            : RValTrue.getAggregatePointer(E->getArg(1)->getType(), *this);
     RValue RValFalse = EmitAnyExpr(E->getArg(2));
-    Value *OpFalse = RValFalse.isScalar() ? RValFalse.getScalarVal()
-      : RValFalse.getAggregatePointer(E->getArg(2)->getType(), *this);
-    
-    Value *SelectVal = Builder.CreateSelect(OpCond, OpTrue, OpFalse,
-					    "hlsl.select");
+    Value *OpFalse =
+        RValFalse.isScalar()
+            ? RValFalse.getScalarVal()
+            : RValFalse.getAggregatePointer(E->getArg(2)->getType(), *this);
+
+    Value *SelectVal =
+        Builder.CreateSelect(OpCond, OpTrue, OpFalse, "hlsl.select");
     if (!RValTrue.isScalar())
       Builder.CreateStore(SelectVal, ReturnValue.getAddress(),
-			  ReturnValue.isVolatile());
+                          ReturnValue.isVolatile());
 
     return SelectVal;
   }

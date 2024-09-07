@@ -1616,7 +1616,7 @@ double4 saturate(double4);
 template <typename T>
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_select)
 T select(bool, T, T);
-  
+
 /// \fn vector<T,Sz> select(vector<bool,Sz> Conds, vector<T,Sz> TrueVals,
 ///                         vector<T,Sz> FalseVals)
 /// \brief ternary operator for vectors. All vectors must be the same size.
@@ -1628,7 +1628,7 @@ T select(bool, T, T);
 template <typename T, int Sz>
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_select)
 vector<T, Sz> select(vector<bool, Sz>, vector<T, Sz>, vector<T, Sz>);
-  
+
 //===----------------------------------------------------------------------===//
 // sin builtins
 //===----------------------------------------------------------------------===//

@@ -1513,17 +1513,17 @@ void SetElementTypeAsReturnType(Sema *S, CallExpr *TheCall,
 }
 
 static bool CheckScalarOrVector(Sema *S, CallExpr *TheCall, QualType Scalar,
-				unsigned ArgIndex) {
+                                unsigned ArgIndex) {
   assert(TheCall->getNumArgs() >= ArgIndex);
   QualType ArgType = TheCall->getArg(ArgIndex)->getType();
   auto *VTy = ArgType->getAs<VectorType>();
   // not the scalar or vector<scalar>
   if (!(S->Context.hasSameUnqualifiedType(ArgType, Scalar) ||
-	(VTy && S->Context.hasSameUnqualifiedType(VTy->getElementType(),
-						  Scalar)))) {
+        (VTy &&
+         S->Context.hasSameUnqualifiedType(VTy->getElementType(), Scalar)))) {
     S->Diag(TheCall->getArg(0)->getBeginLoc(),
-		   diag::err_typecheck_expect_scalar_or_vector)
-	<< ArgType << Scalar;
+            diag::err_typecheck_expect_scalar_or_vector)
+        << ArgType << Scalar;
     return true;
   }
   return false;
@@ -1533,12 +1533,11 @@ static bool CheckBoolSelect(Sema *S, CallExpr *TheCall) {
   assert(TheCall->getNumArgs() == 3);
   Expr *Arg1 = TheCall->getArg(1);
   Expr *Arg2 = TheCall->getArg(2);
-  if(!S->Context.hasSameUnqualifiedType(Arg1->getType(),
-					Arg2->getType())) {
+  if (!S->Context.hasSameUnqualifiedType(Arg1->getType(), Arg2->getType())) {
     S->Diag(TheCall->getBeginLoc(),
-	    diag::err_typecheck_call_different_arg_types)
-      << Arg1->getType() << Arg2->getType()
-      << Arg1->getSourceRange() << Arg2->getSourceRange();
+            diag::err_typecheck_call_different_arg_types)
+        << Arg1->getType() << Arg2->getType() << Arg1->getSourceRange()
+        << Arg2->getSourceRange();
     return true;
   }
 
@@ -1551,27 +1550,24 @@ static bool CheckVectorSelect(Sema *S, CallExpr *TheCall) {
   Expr *Arg1 = TheCall->getArg(1);
   Expr *Arg2 = TheCall->getArg(2);
   if (!Arg1->getType()->isVectorType()) {
-    S->Diag(Arg1->getBeginLoc(),
-	    diag::err_builtin_non_vector_type)
-      << "Second" << TheCall->getDirectCallee() << Arg1->getType()
-      << Arg1->getSourceRange();
-    return true;
-  }
-  
-  if (!Arg2->getType()->isVectorType()) {
-    S->Diag(Arg2->getBeginLoc(),
-	    diag::err_builtin_non_vector_type)
-      << "Third" << TheCall->getDirectCallee() << Arg2->getType()
-      << Arg2->getSourceRange();
+    S->Diag(Arg1->getBeginLoc(), diag::err_builtin_non_vector_type)
+        << "Second" << TheCall->getDirectCallee() << Arg1->getType()
+        << Arg1->getSourceRange();
     return true;
   }
 
-  if (!S->Context.hasSameUnqualifiedType(Arg1->getType(),
-					 Arg2->getType())) {
+  if (!Arg2->getType()->isVectorType()) {
+    S->Diag(Arg2->getBeginLoc(), diag::err_builtin_non_vector_type)
+        << "Third" << TheCall->getDirectCallee() << Arg2->getType()
+        << Arg2->getSourceRange();
+    return true;
+  }
+
+  if (!S->Context.hasSameUnqualifiedType(Arg1->getType(), Arg2->getType())) {
     S->Diag(TheCall->getBeginLoc(),
-	    diag::err_typecheck_call_different_arg_types)
-      << Arg1->getType() << Arg2->getType()
-      << Arg1->getSourceRange() << Arg2->getSourceRange();
+            diag::err_typecheck_call_different_arg_types)
+        << Arg1->getType() << Arg2->getType() << Arg1->getSourceRange()
+        << Arg2->getSourceRange();
     return true;
   }
 
@@ -1580,9 +1576,9 @@ static bool CheckVectorSelect(Sema *S, CallExpr *TheCall) {
   if (TheCall->getArg(0)->getType()->getAs<VectorType>()->getNumElements() !=
       Arg1->getType()->getAs<VectorType>()->getNumElements()) {
     S->Diag(TheCall->getBeginLoc(),
-	    diag::err_typecheck_vector_lengths_not_equal)
-      << TheCall->getArg(0)->getType() << Arg1->getType()
-      << TheCall->getArg(0)->getSourceRange() << Arg1->getSourceRange();
+            diag::err_typecheck_vector_lengths_not_equal)
+        << TheCall->getArg(0)->getType() << Arg1->getType()
+        << TheCall->getArg(0)->getSourceRange() << Arg1->getSourceRange();
     return true;
   }
   TheCall->setType(Arg1->getType());
@@ -1631,7 +1627,7 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
       return true;
     auto *VTy = ArgTy->getAs<VectorType>();
     if (VTy && VTy->getElementType()->isBooleanType() &&
-	CheckVectorSelect(&SemaRef, TheCall))
+        CheckVectorSelect(&SemaRef, TheCall))
       return true;
     break;
   }
