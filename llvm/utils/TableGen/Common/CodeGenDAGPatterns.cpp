@@ -1603,14 +1603,11 @@ static TreePatternNode &getOperandNum(unsigned OpNo, TreePatternNode &N,
   OpNo -= NumResults;
 
   if (OpNo >= N.getNumChildren()) {
-    std::string S;
-    raw_string_ostream OS(S);
-    OS << "Invalid operand number in type constraint " << (OpNo + NumResults)
-       << " ";
-    N.print(OS);
-    PrintFatalError(S);
+    PrintFatalError([&N, OpNo, NumResults](raw_ostream &OS) {
+      OS << "Invalid operand number in type constraint " << (OpNo + NumResults);
+      N.print(OS);
+    });
   }
-
   return N.getChild(OpNo);
 }
 
