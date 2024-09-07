@@ -812,10 +812,11 @@ bool CheckDynamicMemoryAllocation(InterpState &S, CodePtr OpPC) {
   return true;
 }
 
-bool CheckNewDeleteForms(InterpState &S, CodePtr OpPC, bool NewWasArray,
-                         bool DeleteIsArray, const Descriptor *D,
+bool CheckNewDeleteForms(InterpState &S, CodePtr OpPC,
+                         DynamicAllocator::Form AllocForm,
+                         DynamicAllocator::Form DeleteForm, const Descriptor *D,
                          const Expr *NewExpr) {
-  if (NewWasArray == DeleteIsArray)
+  if (AllocForm == DeleteForm)
     return true;
 
   QualType TypeToDiagnose;
@@ -832,7 +833,8 @@ bool CheckNewDeleteForms(InterpState &S, CodePtr OpPC, bool NewWasArray,
 
   const SourceInfo &E = S.Current->getSource(OpPC);
   S.FFDiag(E, diag::note_constexpr_new_delete_mismatch)
-      << DeleteIsArray << 0 << TypeToDiagnose;
+      << static_cast<int>(DeleteForm) << static_cast<int>(AllocForm)
+      << TypeToDiagnose;
   S.Note(NewExpr->getExprLoc(), diag::note_constexpr_dynamic_alloc_here)
       << NewExpr->getSourceRange();
   return false;
@@ -840,7 +842,12 @@ bool CheckNewDeleteForms(InterpState &S, CodePtr OpPC, bool NewWasArray,
 
 bool CheckDeleteSource(InterpState &S, CodePtr OpPC, const Expr *Source,
                        const Pointer &Ptr) {
-  if (Source && isa<CXXNewExpr>(Source))
+  // The two sources we currently allow are new expressions and
+  // __builtin_operator_new calls.
+  if (isa_and_nonnull<CXXNewExpr>(Source))
+    return true;
+  if (const CallExpr *CE = dyn_cast_if_present<CallExpr>(Source);
+      CE && CE->getBuiltinCallee() == Builtin::BI__builtin_operator_new)
     return true;
 
   // Whatever this is, we didn't heap allocate it.
@@ -1172,6 +1179,8 @@ bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
 
 bool CallBI(InterpState &S, CodePtr &PC, const Function *Func,
             const CallExpr *CE) {
+  if (S.checkingPotentialConstantExpression())
+    return false;
   auto NewFrame = std::make_unique<InterpFrame>(S, Func, PC);
 
   InterpFrame *FrameBefore = S.Current;
