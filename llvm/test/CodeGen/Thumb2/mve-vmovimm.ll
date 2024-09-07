@@ -1050,7 +1050,6 @@ entry:
   ret <16 x i8> <i8 -1, i8 0, i8 -1, i8 0, i8 -1, i8 0, i8 -1, i8 0, i8 -1, i8 0, i8 -1, i8 0, i8 -1, i8 0, i8 -1, i8 0>
 }
 
-; FIXME: This is incorrect for BE
 define arm_aapcs_vfpcc <16 x i8> @xor_int64_0f0f0f0f0f0f0f0f(<16 x i8> %a) {
 ; CHECKLE-LABEL: xor_int64_0f0f0f0f0f0f0f0f:
 ; CHECKLE:       @ %bb.0: @ %entry
@@ -1330,4 +1329,38 @@ entry:
   %l699 = or <2 x i1> %broadcast.splat1968, <i1 true, i1 false>
   %s = select <2 x i1> %l699, <2 x i64> %a, <2 x i64> %b
   ret <2 x i64> %s
+}
+
+; FIXME: This is incorrect for BE
+define arm_aapcs_vfpcc <8 x i16> @and_v8i16_m1(<8 x i16> %a) {
+; CHECKLE-LABEL: and_v8i16_m1:
+; CHECKLE:       @ %bb.0:
+; CHECKLE-NEXT:    vbic.i32 q0, #0x10000
+; CHECKLE-NEXT:    bx lr
+;
+; CHECKBE-LABEL: and_v8i16_m1:
+; CHECKBE:       @ %bb.0:
+; CHECKBE-NEXT:    vrev64.32 q1, q0
+; CHECKBE-NEXT:    vbic.i32 q1, #0x10000
+; CHECKBE-NEXT:    vrev64.32 q0, q1
+; CHECKBE-NEXT:    bx lr
+  %b = and <8 x i16> %a, <i16 65535, i16 65534, i16 65535, i16 65534, i16 65535, i16 65534, i16 65535, i16 65534>
+  ret <8 x i16> %b
+}
+
+; FIXME: This is incorrect for BE
+define arm_aapcs_vfpcc <8 x i16> @or_v8i16_1(<8 x i16> %a) {
+; CHECKLE-LABEL: or_v8i16_1:
+; CHECKLE:       @ %bb.0:
+; CHECKLE-NEXT:    vorr.i32 q0, #0x10000
+; CHECKLE-NEXT:    bx lr
+;
+; CHECKBE-LABEL: or_v8i16_1:
+; CHECKBE:       @ %bb.0:
+; CHECKBE-NEXT:    vrev64.32 q1, q0
+; CHECKBE-NEXT:    vorr.i32 q1, #0x10000
+; CHECKBE-NEXT:    vrev64.32 q0, q1
+; CHECKBE-NEXT:    bx lr
+  %b = or <8 x i16> %a, <i16 0, i16 1, i16 0, i16 1, i16 0, i16 1, i16 0, i16 1>
+  ret <8 x i16> %b
 }
