@@ -387,7 +387,6 @@ private:
   DILASTNodeUP m_rhs;
 };
 
-
 /// This class contains one Visit method for each specialized type of
 /// DIL AST node. The Visit methods are used to dispatch a DIL AST node to
 /// the correct function in the DIL expression evaluator for evaluating that

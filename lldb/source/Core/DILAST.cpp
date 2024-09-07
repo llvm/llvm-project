@@ -296,7 +296,6 @@ LookupIdentifier(const std::string &name,
       if (value_sp)
         // Force static value, otherwise we can end up with the "real" type.
         return IdentifierInfo::FromValue(*(value_sp->GetStaticValue()));
-
     }
   }
 
