@@ -350,11 +350,6 @@ private:
     DenseMap<GlobalValue::GUID, StringRef> PrevailingModuleForGUID;
   } ThinLTO;
 
-  std::unique_ptr<llvm::BumpPtrAllocator> Alloc;
-
-  // Symbol saver for global resolution map.
-  std::unique_ptr<llvm::StringSaver> GlobalResolutionSymbolSaver;
-
   // The global resolution for a particular (mangled) symbol name. This is in
   // particular necessary to track whether each symbol can be internalized.
   // Because any input file may introduce a new cross-partition reference, we
@@ -411,6 +406,12 @@ private:
       RegularLTO = 0,
     };
   };
+
+  // GlobalResolutionSymbolSaver allocator.
+  std::unique_ptr<llvm::BumpPtrAllocator> Alloc;
+
+  // Symbol saver for global resolution map.
+  std::unique_ptr<llvm::StringSaver> GlobalResolutionSymbolSaver;
 
   // Global mapping from mangled symbol names to resolutions.
   // Make this an unique_ptr to guard against accessing after it has been reset

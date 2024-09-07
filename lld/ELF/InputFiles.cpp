@@ -1807,8 +1807,7 @@ void BitcodeFile::parseLazy() {
     } else {
       // Keep copies of per-module undefined symbols for LTO::GlobalResolutions
       // usage.
-      [[maybe_unused]] StringRef SymbolRef =
-          unique_saver().save(irSym.getName());
+      unique_saver().save(irSym.getName());
     }
 }
 
