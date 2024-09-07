@@ -219,6 +219,7 @@ struct Configuration {
   llvm::StringRef printSymbolOrder;
 
   llvm::StringRef irpgoProfileSortProfilePath;
+  bool compressionSortStartupFunctions = false;
   bool functionOrderForCompression = false;
   bool dataOrderForCompression = false;
   bool verboseBpSectionOrderer = false;

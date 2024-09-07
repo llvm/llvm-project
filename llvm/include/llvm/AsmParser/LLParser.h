@@ -419,7 +419,7 @@ namespace llvm {
     bool parseParamAccessCall(FunctionSummary::ParamAccess::Call &Call,
                               IdLocListType &IdLocList);
     bool parseParamAccessOffset(ConstantRange &Range);
-    bool parseOptionalRefs(std::vector<ValueInfo> &Refs);
+    bool parseOptionalRefs(SmallVectorImpl<ValueInfo> &Refs);
     bool parseTypeIdEntry(unsigned ID);
     bool parseTypeIdSummary(TypeIdSummary &TIS);
     bool parseTypeIdCompatibleVtableEntry(unsigned ID);

@@ -162,8 +162,9 @@ Streams:
 
   ASSERT_EQ(1u, File.streams().size());
 
-  Expected<const minidump::ExceptionStream &> ExpectedStream =
-      File.getExceptionStream();
+  auto ExceptionIterator = File.getExceptionStreams().begin();
+
+  Expected<const ExceptionStream &> ExpectedStream = *ExceptionIterator;
 
   ASSERT_THAT_EXPECTED(ExpectedStream, Succeeded());
 
@@ -205,9 +206,9 @@ Streams:
 
   ASSERT_EQ(1u, File.streams().size());
 
-  Expected<const minidump::ExceptionStream &> ExpectedStream =
-      File.getExceptionStream();
+  auto ExceptionIterator = File.getExceptionStreams().begin();
 
+  Expected<const ExceptionStream &> ExpectedStream = *ExceptionIterator;
   ASSERT_THAT_EXPECTED(ExpectedStream, Succeeded());
 
   const minidump::ExceptionStream &Stream = *ExpectedStream;
@@ -261,8 +262,9 @@ Streams:
 
   ASSERT_EQ(1u, File.streams().size());
 
-  Expected<const minidump::ExceptionStream &> ExpectedStream =
-      File.getExceptionStream();
+  auto ExceptionIterator = File.getExceptionStreams().begin();
+
+  Expected<const ExceptionStream &> ExpectedStream = *ExceptionIterator;
 
   ASSERT_THAT_EXPECTED(ExpectedStream, Succeeded());
 
@@ -312,8 +314,9 @@ Streams:
 
   ASSERT_EQ(1u, File.streams().size());
 
-  Expected<const minidump::ExceptionStream &> ExpectedStream =
-      File.getExceptionStream();
+  auto ExceptionIterator = File.getExceptionStreams().begin();
+
+  Expected<const ExceptionStream &> ExpectedStream = *ExceptionIterator;
 
   ASSERT_THAT_EXPECTED(ExpectedStream, Succeeded());
 
@@ -398,4 +401,46 @@ Streams:
   ASSERT_THAT(*DescTwoExpectedContentSlice, arrayRefFromStringRef("world"));
 
   ASSERT_EQ(Iterator, MemoryList.end());
+}
+
+// Test that we can parse multiple exception streams.
+TEST(MinidumpYAML, ExceptionStream_MultipleExceptions) {
+  SmallString<0> Storage;
+  auto ExpectedFile = toBinary(Storage, R"(
+--- !minidump
+Streams:
+  - Type:            Exception
+    Thread ID:  0x7
+    Exception Record:
+      Exception Code:  0x23
+      Exception Flags: 0x5
+      Exception Record: 0x0102030405060708
+      Exception Address: 0x0a0b0c0d0e0f1011
+      Number of Parameters: 2
+      Parameter 0: 0x99
+      Parameter 1: 0x23
+      Parameter 2: 0x42
+    Thread Context:  3DeadBeefDefacedABadCafe
+  - Type:            Exception
+    Thread ID:  0x5
+    Exception Record:
+      Exception Code:  0x23
+      Exception Flags: 0x5
+      Exception Record: 0x0102030405060708
+      Exception Address: 0x0a0b0c0d0e0f1011
+    Thread Context:  3DeadBeefDefacedABadCafe)");
+
+  ASSERT_THAT_EXPECTED(ExpectedFile, Succeeded());
+  object::MinidumpFile &File = **ExpectedFile;
+
+  ASSERT_EQ(2u, File.streams().size());
+
+  size_t count = 0;
+  for (auto exception_stream : File.getExceptionStreams()) {
+    count++;
+    ASSERT_THAT_EXPECTED(exception_stream, Succeeded());
+    ASSERT_THAT(0x23u, exception_stream->ExceptionRecord.ExceptionCode);
+  }
+
+  ASSERT_THAT(2u, count);
 }
