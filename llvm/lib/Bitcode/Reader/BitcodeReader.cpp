@@ -7686,8 +7686,8 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
         PendingAllocs.clear();
       }
       auto FS = std::make_unique<FunctionSummary>(
-          Flags, InstCount, getDecodedFFlags(RawFunFlags), /*EntryCount=*/0,
-          std::move(Refs), std::move(Calls), std::move(PendingTypeTests),
+          Flags, InstCount, getDecodedFFlags(RawFunFlags), std::move(Refs),
+          std::move(Calls), std::move(PendingTypeTests),
           std::move(PendingTypeTestAssumeVCalls),
           std::move(PendingTypeCheckedLoadVCalls),
           std::move(PendingTypeTestAssumeConstVCalls),
@@ -7792,7 +7792,6 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       uint64_t RawFlags = Record[2];
       unsigned InstCount = Record[3];
       uint64_t RawFunFlags = 0;
-      uint64_t EntryCount = 0;
       unsigned NumRefs = Record[4];
       unsigned NumRORefs = 0, NumWORefs = 0;
       int RefListStartIndex = 5;
@@ -7806,7 +7805,6 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
           RefListStartIndex = 7;
           if (Version >= 6) {
             NumRefsIndex = 6;
-            EntryCount = Record[5];
             RefListStartIndex = 8;
             if (Version >= 7) {
               RefListStartIndex = 9;
@@ -7832,8 +7830,8 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       ValueInfo VI = std::get<0>(getValueInfoFromValueId(ValueID));
       setSpecialRefs(Refs, NumRORefs, NumWORefs);
       auto FS = std::make_unique<FunctionSummary>(
-          Flags, InstCount, getDecodedFFlags(RawFunFlags), EntryCount,
-          std::move(Refs), std::move(Edges), std::move(PendingTypeTests),
+          Flags, InstCount, getDecodedFFlags(RawFunFlags), std::move(Refs),
+          std::move(Edges), std::move(PendingTypeTests),
           std::move(PendingTypeTestAssumeVCalls),
           std::move(PendingTypeCheckedLoadVCalls),
           std::move(PendingTypeTestAssumeConstVCalls),
