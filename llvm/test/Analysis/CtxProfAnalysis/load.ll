@@ -58,8 +58,8 @@
 ;--- expected-profile-output.txt
 Function Info:
 4909520559318251808 : an_entrypoint. MaxCounterID: 2. MaxCallsiteID: 1
-12074870348631550642 : another_entrypoint_no_callees. MaxCounterID: 1. MaxCallsiteID: 0
 11872291593386833696 : foo. MaxCounterID: 1. MaxCallsiteID: 1
+12074870348631550642 : another_entrypoint_no_callees. MaxCounterID: 1. MaxCallsiteID: 0
 
 Current Profile:
 [

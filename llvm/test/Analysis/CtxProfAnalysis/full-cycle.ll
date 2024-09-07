@@ -116,10 +116,10 @@ define void @entrypoint() {
 ]
 ;--- expected.txt
 Function Info:
-10507721908651011566 : entrypoint. MaxCounterID: 1. MaxCallsiteID: 2
+2072045998141807037 : f1. MaxCounterID: 1. MaxCallsiteID: 1
 3087265239403591524 : f2.llvm.0. MaxCounterID: 1. MaxCallsiteID: 0
 4197650231481825559 : f3. MaxCounterID: 1. MaxCallsiteID: 1
-2072045998141807037 : f1. MaxCounterID: 1. MaxCallsiteID: 1
+10507721908651011566 : entrypoint. MaxCounterID: 1. MaxCallsiteID: 2
 
 Current Profile:
 [
