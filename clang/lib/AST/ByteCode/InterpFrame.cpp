@@ -96,11 +96,6 @@ void InterpFrame::destroy(unsigned Idx) {
   }
 }
 
-void InterpFrame::popArgs() {
-  for (PrimType Ty : Func->args_reverse())
-    TYPE_SWITCH(Ty, S.Stk.discard<T>());
-}
-
 template <typename T>
 static void print(llvm::raw_ostream &OS, const T &V, ASTContext &ASTCtx,
                   QualType Ty) {
