@@ -2579,8 +2579,15 @@ bool Compiler<Emitter>::VisitCXXReinterpretCastExpr(
     const CXXReinterpretCastExpr *E) {
   const Expr *SubExpr = E->getSubExpr();
 
-  bool TypesMatch = classify(E) == classify(SubExpr);
-  if (!this->emitInvalidCast(CastKind::Reinterpret, /*Fatal=*/!TypesMatch, E))
+  bool Fatal = false;
+  std::optional<PrimType> FromT = classify(SubExpr);
+  std::optional<PrimType> ToT = classify(E);
+  if (!FromT || !ToT)
+    Fatal = true;
+  else
+    Fatal = (ToT != FromT);
+
+  if (!this->emitInvalidCast(CastKind::Reinterpret, Fatal, E))
     return false;
 
   return this->delegate(SubExpr);
