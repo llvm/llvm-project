@@ -1,0 +1,1459 @@
+diff --git a/libcxx/include/CMakeLists.txt b/libcxx/include/CMakeLists.txt
+index 32579272858a..d4e8d5863520 100644
+--- a/libcxx/include/CMakeLists.txt
++++ b/libcxx/include/CMakeLists.txt
+@@ -744,6 +744,7 @@ set(files
+   __type_traits/decay.h
+   __type_traits/dependent_type.h
+   __type_traits/desugars_to.h
++  __type_traits/diagnostic_utilities.h
+   __type_traits/disjunction.h
+   __type_traits/enable_if.h
+   __type_traits/extent.h
+diff --git a/libcxx/include/__memory/allocator.h b/libcxx/include/__memory/allocator.h
+index 0dbdc41d3c3d..50c93ff173c4 100644
+--- a/libcxx/include/__memory/allocator.h
++++ b/libcxx/include/__memory/allocator.h
+@@ -14,11 +14,10 @@
+ #include <__memory/addressof.h>
+ #include <__memory/allocate_at_least.h>
+ #include <__memory/allocator_traits.h>
+-#include <__type_traits/is_const.h>
++#include <__type_traits/diagnostic_utilities.h>
+ #include <__type_traits/is_constant_evaluated.h>
+ #include <__type_traits/is_same.h>
+ #include <__type_traits/is_void.h>
+-#include <__type_traits/is_volatile.h>
+ #include <__utility/forward.h>
+ #include <cstddef>
+ #include <new>
+@@ -76,8 +75,7 @@ struct __non_trivial_if<true, _Unique> {
+ 
+ template <class _Tp>
+ class _LIBCPP_TEMPLATE_VIS allocator : private __non_trivial_if<!is_void<_Tp>::value, allocator<_Tp> > {
+-  static_assert(!is_const<_Tp>::value, "std::allocator does not support const types");
+-  static_assert(!is_volatile<_Tp>::value, "std::allocator does not support volatile types");
++  static_assert(__allocator_requirements<allocator, _Tp>::value);
+ 
+ public:
+   typedef size_t size_type;
+@@ -170,6 +168,8 @@ inline _LIBCPP_HIDE_FROM_ABI bool operator!=(const allocator<_Tp>&, const alloca
+ 
+ #endif
+ 
++_LIBCPP_CHECK_ALLOCATOR_VALUE_TYPE_REQUIREMENTS(allocator, "allocate");
++
+ _LIBCPP_END_NAMESPACE_STD
+ 
+ #endif // _LIBCPP___MEMORY_ALLOCATOR_H
+diff --git a/libcxx/include/__type_traits/diagnostic_utilities.h b/libcxx/include/__type_traits/diagnostic_utilities.h
+new file mode 100644
+index 000000000000..a9487cb65173
+--- /dev/null
++++ b/libcxx/include/__type_traits/diagnostic_utilities.h
+@@ -0,0 +1,81 @@
++//===----------------------------------------------------------------------===//
++//
++// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
++// See https://llvm.org/LICENSE.txt for license information.
++// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
++//
++//===----------------------------------------------------------------------===//
++
++#ifndef _LIBCPP___TYPE_TRAITS_DIAGNOSTIC_UTILITIES_H
++#define _LIBCPP___TYPE_TRAITS_DIAGNOSTIC_UTILITIES_H
++
++#include <__config>
++#include <__type_traits/decay.h>
++#include <__type_traits/integral_constant.h>
++#include <__type_traits/is_bounded_array.h>
++#include <__type_traits/is_const.h>
++#include <__type_traits/is_function.h>
++#include <__type_traits/is_reference.h>
++#include <__type_traits/is_same.h>
++#include <__type_traits/is_unbounded_array.h>
++#include <__type_traits/is_void.h>
++#include <__type_traits/is_volatile.h>
++
++#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
++#  pragma GCC system_header
++#endif
++
++
++_LIBCPP_BEGIN_NAMESPACE_STD
++
++// Per https://eel.is/c++draft/containers#container.reqmts-64, allocator-aware containers must have an
++// allocator that meets the Cpp17Allocator requirements (https://eel.is/c++draft/allocator.requirements).
++// In particular, this means that containers should only accept non-cv-qualified object types, and
++// types that are Cpp17Erasable.
++template <template <class...> class _Template, class _Tp, bool = is_same<typename decay<_Tp>::type, _Tp>::value>
++struct __allocator_requirements : true_type {};
++
++#if _LIBCPP_STD_VER >= 20
++template <class _Tp>
++struct __bounded_arrays_allowed_only_after_cxx20 : false_type {};
++#else
++template <class _Tp>
++struct __bounded_arrays_allowed_only_after_cxx20 : integral_constant<bool, __libcpp_is_bounded_array<_Tp>::value> {};
++#endif
++
++#define _LIBCPP_CHECK_ALLOCATOR_VALUE_TYPE_REQUIREMENTS(_Template, _Verb)                                              \
++  template <class _Tp>                                                                                                 \
++  struct __allocator_requirements<_Template, _Tp, false>                                                               \
++      : integral_constant<bool,                                                                                        \
++                          !(is_const<_Tp>::value || is_volatile<_Tp>::value || is_reference<_Tp>::value ||             \
++                            is_function<_Tp>::value || __bounded_arrays_allowed_only_after_cxx20<_Tp>::value)> {       \
++    static_assert(!is_const<_Tp>::value, "'std::" #_Template "' cannot " _Verb " const types");                        \
++    static_assert(!is_volatile<_Tp>::value, "'std::" #_Template "' cannot " _Verb " volatile types");                  \
++    static_assert(!is_reference<_Tp>::value, "'std::" #_Template "' cannot " _Verb " references");                     \
++    static_assert(!is_function<_Tp>::value, "'std::" #_Template "' cannot " _Verb " functions");                       \
++    static_assert(!__bounded_arrays_allowed_only_after_cxx20<_Tp>::value,                                              \
++                  "'std::" #_Template "' cannot " _Verb " C arrays before C++20");                                     \
++  }
++
++template <template <class...> class, class>
++struct __container_requirements : false_type {
++  static_assert(false,
++                "a new container has been defined; please define '_LIBCPP_CHECK_CONTAINER_VALUE_TYPE_REQUIREMENTS' for "
++                "that container");
++};
++
++#define _LIBCPP_CHECK_CONTAINER_VALUE_TYPE_REQUIREMENTS(_Template)                                                     \
++  _LIBCPP_CHECK_ALLOCATOR_VALUE_TYPE_REQUIREMENTS(_Template, "hold");                                                  \
++  template <class _Tp>                                                                                                 \
++  struct __container_requirements<_Template, _Tp>                                                                      \
++      : integral_constant<bool,                                                                                        \
++                          __allocator_requirements<_Template, _Tp>::value &&                                           \
++                              !(is_void<_Tp>::value || __libcpp_is_unbounded_array<_Tp>::value)> {                     \
++    static_assert(!is_void<_Tp>::value, "'std::" #_Template "' cannot hold 'void'");                                   \
++    static_assert(!__libcpp_is_unbounded_array<_Tp>::value,                                                            \
++                  "'std::" #_Template "' cannot hold C arrays of an unknown size");                                    \
++  }
++
++_LIBCPP_END_NAMESPACE_STD
++
++#endif // _LIBCPP___TYPE_TRAITS_DIAGNOSTIC_UTILITIES_H
+diff --git a/libcxx/include/array b/libcxx/include/array
+index 4db0cb7bd7e3..c812bfa914a9 100644
+--- a/libcxx/include/array
++++ b/libcxx/include/array
+@@ -127,10 +127,14 @@ template <size_t I, class T, size_t N> const T&& get(const array<T, N>&&) noexce
+ #include <__type_traits/is_array.h>
+ #include <__type_traits/is_const.h>
+ #include <__type_traits/is_constructible.h>
++#include <__type_traits/is_function.h>
+ #include <__type_traits/is_nothrow_constructible.h>
++#include <__type_traits/is_reference.h>
+ #include <__type_traits/is_same.h>
+ #include <__type_traits/is_swappable.h>
+ #include <__type_traits/is_trivially_relocatable.h>
++#include <__type_traits/is_unbounded_array.h>
++#include <__type_traits/is_void.h>
+ #include <__type_traits/remove_cv.h>
+ #include <__utility/empty.h>
+ #include <__utility/integer_sequence.h>
+@@ -167,6 +171,11 @@ _LIBCPP_BEGIN_NAMESPACE_STD
+ 
+ template <class _Tp, size_t _Size>
+ struct _LIBCPP_TEMPLATE_VIS array {
++  static_assert(!is_reference<_Tp>::value, "'std::array' cannot hold references");
++  static_assert(!is_function<_Tp>::value, "'std::array' cannot hold functions");
++  static_assert(!is_void<_Tp>::value, "'std::array' cannot hold 'void'");
++  static_assert(!__libcpp_is_unbounded_array<_Tp>::value, "'std::array' cannot hold C arrays of an unknown size");
++
+   using __trivially_relocatable = __conditional_t<__libcpp_is_trivially_relocatable<_Tp>::value, array, void>;
+ 
+   // types:
+diff --git a/libcxx/include/deque b/libcxx/include/deque
+index 759de5d3a030..90f07d1ab056 100644
+--- a/libcxx/include/deque
++++ b/libcxx/include/deque
+@@ -211,6 +211,7 @@ template <class T, class Allocator, class Predicate>
+ #include <__ranges/from_range.h>
+ #include <__ranges/size.h>
+ #include <__split_buffer>
++#include <__type_traits/diagnostic_utilities.h>
+ #include <__type_traits/is_allocator.h>
+ #include <__type_traits/is_convertible.h>
+ #include <__type_traits/is_same.h>
+@@ -468,6 +469,8 @@ const _DiffType __deque_iterator<_ValueType, _Pointer, _Reference, _MapPointer,
+ 
+ template <class _Tp, class _Allocator /*= allocator<_Tp>*/>
+ class _LIBCPP_TEMPLATE_VIS deque {
++  static_assert(__container_requirements<deque, _Tp>::value);
++
+ public:
+   // types:
+ 
+@@ -2591,6 +2594,8 @@ inline constexpr bool __format::__enable_insertable<std::deque<wchar_t>> = true;
+ 
+ #endif // _LIBCPP_STD_VER >= 20
+ 
++_LIBCPP_CHECK_CONTAINER_VALUE_TYPE_REQUIREMENTS(deque);
++
+ _LIBCPP_END_NAMESPACE_STD
+ 
+ #if _LIBCPP_STD_VER >= 17
+diff --git a/libcxx/include/forward_list b/libcxx/include/forward_list
+index b8e3d05588f9..5c427db4ffae 100644
+--- a/libcxx/include/forward_list
++++ b/libcxx/include/forward_list
+@@ -218,6 +218,7 @@ template <class T, class Allocator, class Predicate>
+ #include <__ranges/container_compatible_range.h>
+ #include <__ranges/from_range.h>
+ #include <__type_traits/conditional.h>
++#include <__type_traits/diagnostic_utilities.h>
+ #include <__type_traits/is_allocator.h>
+ #include <__type_traits/is_const.h>
+ #include <__type_traits/is_nothrow_assignable.h>
+@@ -476,6 +477,8 @@ public:
+ 
+ template <class _Tp, class _Alloc>
+ class __forward_list_base {
++  static_assert(__container_requirements<forward_list, _Tp>::value);
++
+ protected:
+   typedef _Tp value_type;
+   typedef _Alloc allocator_type;
+@@ -587,6 +590,8 @@ private:
+   }
+ };
+ 
++_LIBCPP_CHECK_CONTAINER_VALUE_TYPE_REQUIREMENTS(forward_list);
++
+ #ifndef _LIBCPP_CXX03_LANG
+ 
+ template <class _Tp, class _Alloc>
+diff --git a/libcxx/include/list b/libcxx/include/list
+index 929c84de7be4..312da7e6b55c 100644
+--- a/libcxx/include/list
++++ b/libcxx/include/list
+@@ -225,7 +225,9 @@ template <class T, class Allocator, class Predicate>
+ #include <__ranges/container_compatible_range.h>
+ #include <__ranges/from_range.h>
+ #include <__type_traits/conditional.h>
++#include <__type_traits/diagnostic_utilities.h>
+ #include <__type_traits/is_allocator.h>
++#include <__type_traits/is_const.h>
+ #include <__type_traits/is_nothrow_assignable.h>
+ #include <__type_traits/is_nothrow_constructible.h>
+ #include <__type_traits/is_pointer.h>
+@@ -465,6 +467,8 @@ public:
+ 
+ template <class _Tp, class _Alloc>
+ class __list_imp {
++  static_assert(__container_requirements<list, _Tp>::value);
++
+ public:
+   __list_imp(const __list_imp&) = delete;
+   __list_imp& operator=(const __list_imp&) = delete;
+@@ -591,6 +595,8 @@ private:
+   _LIBCPP_HIDE_FROM_ABI void __move_assign_alloc(__list_imp&, false_type) _NOEXCEPT {}
+ };
+ 
++_LIBCPP_CHECK_CONTAINER_VALUE_TYPE_REQUIREMENTS(list);
++
+ // Unlink nodes [__f, __l]
+ template <class _Tp, class _Alloc>
+ inline void __list_imp<_Tp, _Alloc>::__unlink_nodes(__link_pointer __f, __link_pointer __l) _NOEXCEPT {
+diff --git a/libcxx/include/map b/libcxx/include/map
+index 02bd17ccb4e8..c51fbec60b27 100644
+--- a/libcxx/include/map
++++ b/libcxx/include/map
+@@ -592,6 +592,11 @@ erase_if(multimap<Key, T, Compare, Allocator>& c, Predicate pred);  // C++20
+ #include <__ranges/from_range.h>
+ #include <__tree>
+ #include <__type_traits/is_allocator.h>
++#include <__type_traits/is_array.h>
++#include <__type_traits/is_function.h>
++#include <__type_traits/is_reference.h>
++#include <__type_traits/is_unbounded_array.h>
++#include <__type_traits/is_void.h>
+ #include <__utility/forward.h>
+ #include <__utility/piecewise_construct.h>
+ #include <__utility/swap.h>
+@@ -962,6 +967,13 @@ public:
+ 
+ template <class _Key, class _Tp, class _Compare = less<_Key>, class _Allocator = allocator<pair<const _Key, _Tp> > >
+ class _LIBCPP_TEMPLATE_VIS map {
++  // TODO(#106635): replace with _LIBCPP_CHECK_CONTAINER_VALUE_TYPE_REQUIREMENTS
++  // Remember to remove relevant headers when this is completed.
++  static_assert(!is_lvalue_reference<_Key>::value, "'std::map' cannot hold references");
++  static_assert(!is_function<_Key>::value && !is_function<_Tp>::value, "'std::map' cannot hold functions");
++  static_assert(!is_void<_Key>::value && !is_void<_Tp>::value, "'std::map' cannot hold 'void'");
++  static_assert(!__libcpp_is_unbounded_array<_Key>::value, "'std::map' cannot hold C arrays of an unknown size");
++
+ public:
+   // types:
+   typedef _Key key_type;
+@@ -1639,6 +1651,13 @@ erase_if(map<_Key, _Tp, _Compare, _Allocator>& __c, _Predicate __pred) {
+ 
+ template <class _Key, class _Tp, class _Compare = less<_Key>, class _Allocator = allocator<pair<const _Key, _Tp> > >
+ class _LIBCPP_TEMPLATE_VIS multimap {
++  // TODO(#106635): replace with _LIBCPP_CHECK_CONTAINER_VALUE_TYPE_REQUIREMENTS
++  // Remember to remove relevant headers when this is completed.
++  static_assert(!is_lvalue_reference<_Key>::value, "'std::multimap' cannot hold references");
++  static_assert(!is_function<_Key>::value && !is_function<_Tp>::value, "'std::multimap' cannot hold functions");
++  static_assert(!is_void<_Key>::value && !is_void<_Tp>::value, "'std::multimap' cannot hold 'void'");
++  static_assert(!__libcpp_is_unbounded_array<_Key>::value, "'std::multimap' cannot hold C arrays of an unknown size");
++
+ public:
+   // types:
+   typedef _Key key_type;
+diff --git a/libcxx/include/module.modulemap b/libcxx/include/module.modulemap
+index 13d0dce34d97..9f98ab4210d6 100644
+--- a/libcxx/include/module.modulemap
++++ b/libcxx/include/module.modulemap
+@@ -1505,7 +1505,17 @@ module std_private_memory_align                           [system] { header "__m
+ module std_private_memory_aligned_alloc                   [system] { header "__memory/aligned_alloc.h" }
+ module std_private_memory_allocate_at_least               [system] { header "__memory/allocate_at_least.h" }
+ module std_private_memory_allocation_guard                [system] { header "__memory/allocation_guard.h" }
+-module std_private_memory_allocator                       [system] { header "__memory/allocator.h" }
++module std_private_memory_allocator                       [system] {
++  header "__memory/allocator.h"
++  export std_private_type_traits_diagnostic_utilities
++  export std_private_type_traits_is_bounded_array
++  export std_private_type_traits_is_const
++  export std_private_type_traits_is_function
++  export std_private_type_traits_is_reference
++  export std_private_type_traits_is_unbounded_array
++  export std_private_type_traits_is_void
++  export std_private_type_traits_is_volatile
++}
+ module std_private_memory_allocator_arg_t                 [system] { header "__memory/allocator_arg_t.h" }
+ module std_private_memory_allocator_destructor            [system] { header "__memory/allocator_destructor.h" }
+ module std_private_memory_allocator_traits                [system] { header "__memory/allocator_traits.h" }
+@@ -1897,6 +1907,10 @@ module std_private_type_traits_decay                                     [system
+ }
+ module std_private_type_traits_dependent_type                            [system] { header "__type_traits/dependent_type.h" }
+ module std_private_type_traits_desugars_to                               [system] { header "__type_traits/desugars_to.h" }
++module std_private_type_traits_diagnostic_utilities [system] {
++  textual header "__type_traits/diagnostic_utilities.h"
++  export *
++}
+ module std_private_type_traits_disjunction                               [system] { header "__type_traits/disjunction.h" }
+ module std_private_type_traits_enable_if                                 [system] { header "__type_traits/enable_if.h" }
+ module std_private_type_traits_extent                                    [system] { header "__type_traits/extent.h" }
+diff --git a/libcxx/include/set b/libcxx/include/set
+index 945335837986..05943343ee84 100644
+--- a/libcxx/include/set
++++ b/libcxx/include/set
+@@ -530,6 +530,7 @@ erase_if(multiset<Key, Compare, Allocator>& c, Predicate pred);  // C++20
+ #include <__ranges/container_compatible_range.h>
+ #include <__ranges/from_range.h>
+ #include <__tree>
++#include <__type_traits/diagnostic_utilities.h>
+ #include <__type_traits/is_allocator.h>
+ #include <__utility/forward.h>
+ #include <version>
+@@ -561,6 +562,8 @@ class multiset;
+ 
+ template <class _Key, class _Compare = less<_Key>, class _Allocator = allocator<_Key> >
+ class _LIBCPP_TEMPLATE_VIS set {
++  static_assert(__container_requirements<set, _Key>::value);
++
+ public:
+   // types:
+   typedef _Key key_type;
+@@ -891,6 +894,8 @@ public:
+ #endif
+ };
+ 
++_LIBCPP_CHECK_CONTAINER_VALUE_TYPE_REQUIREMENTS(set);
++
+ #if _LIBCPP_STD_VER >= 17
+ template <class _InputIterator,
+           class _Compare   = less<__iter_value_type<_InputIterator>>,
+@@ -1015,6 +1020,8 @@ erase_if(set<_Key, _Compare, _Allocator>& __c, _Predicate __pred) {
+ 
+ template <class _Key, class _Compare = less<_Key>, class _Allocator = allocator<_Key> >
+ class _LIBCPP_TEMPLATE_VIS multiset {
++  static_assert(__container_requirements<multiset, _Key>::value);
++
+ public:
+   // types:
+   typedef _Key key_type;
+@@ -1348,6 +1355,8 @@ public:
+ #endif
+ };
+ 
++_LIBCPP_CHECK_CONTAINER_VALUE_TYPE_REQUIREMENTS(multiset);
++
+ #if _LIBCPP_STD_VER >= 17
+ template <class _InputIterator,
+           class _Compare   = less<__iter_value_type<_InputIterator>>,
+diff --git a/libcxx/include/string b/libcxx/include/string
+index 05d42afb7c9c..6f64fc5bbc1c 100644
+--- a/libcxx/include/string
++++ b/libcxx/include/string
+@@ -620,6 +620,7 @@ basic_string<char32_t> operator""s( const char32_t *str, size_t len );
+ #include <__string/char_traits.h>
+ #include <__string/extern_template_lists.h>
+ #include <__type_traits/conditional.h>
++#include <__type_traits/diagnostic_utilities.h>
+ #include <__type_traits/is_allocator.h>
+ #include <__type_traits/is_array.h>
+ #include <__type_traits/is_convertible.h>
+@@ -751,6 +752,13 @@ struct __init_with_sentinel_tag {};
+ template <class _CharT, class _Traits, class _Allocator>
+ class basic_string {
+ private:
++  // This is_array check precedes _LIBCPP_CHECK_CONTAINER_VALUE_TYPE_REQUIREMENTS since basic_string
++  // never permits arrays, and earlier static_asserts suppress later ones (meaning that this one is
++  // always emitted for both 'basic_string<char[]>' and 'basic_string<char[10]>', and doesn't say
++  // "before C++20").
++  static_assert(!is_array<_CharT>::value, "'std::basic_string' cannot hold C arrays");
++  static_assert(__container_requirements<basic_string, _CharT>::value);
++
+   using __default_allocator_type = allocator<_CharT>;
+ 
+ public:
+@@ -814,7 +822,6 @@ public:
+ #  define _LIBCPP_ASAN_VOLATILE_WRAPPER(PTR) PTR
+ #endif
+ 
+-  static_assert(!is_array<value_type>::value, "Character type of basic_string must not be an array");
+   static_assert(is_standard_layout<value_type>::value, "Character type of basic_string must be standard-layout");
+   static_assert(is_trivial<value_type>::value, "Character type of basic_string must be trivial");
+   static_assert(is_same<_CharT, typename traits_type::char_type>::value,
+@@ -2252,6 +2259,8 @@ private:
+   operator==(const basic_string<_CharT2, _Traits2, _Allocator2>&, const _CharT2*) _NOEXCEPT;
+ };
+ 
++_LIBCPP_CHECK_CONTAINER_VALUE_TYPE_REQUIREMENTS(basic_string);
++
+ // These declarations must appear before any functions are implicitly used
+ // so that they have the correct visibility specifier.
+ #define _LIBCPP_DECLARE(...) extern template __VA_ARGS__;
+diff --git a/libcxx/include/unordered_map b/libcxx/include/unordered_map
+index acf3485e644a..446618ea599f 100644
+--- a/libcxx/include/unordered_map
++++ b/libcxx/include/unordered_map
+@@ -600,7 +600,12 @@ template <class Key, class T, class Hash, class Pred, class Alloc>
+ #include <__ranges/concepts.h>
+ #include <__ranges/container_compatible_range.h>
+ #include <__ranges/from_range.h>
++#include <__type_traits/diagnostic_utilities.h>
+ #include <__type_traits/is_allocator.h>
++#include <__type_traits/is_array.h>
++#include <__type_traits/is_function.h>
++#include <__type_traits/is_reference.h>
++#include <__type_traits/is_void.h>
+ #include <__type_traits/type_identity.h>
+ #include <__utility/forward.h>
+ #include <stdexcept>
+@@ -1024,6 +1029,15 @@ template <class _Key,
+           class _Pred  = equal_to<_Key>,
+           class _Alloc = allocator<pair<const _Key, _Tp> > >
+ class _LIBCPP_TEMPLATE_VIS unordered_map {
++  // TODO(#106635): replace with _LIBCPP_CHECK_CONTAINER_VALUE_TYPE_REQUIREMENTS
++  // Remember to remove relevant headers when this is completed.
++  static_assert(!is_reference<_Key>::value, "'std::unordered_map' cannot hold references");
++  static_assert(!is_function<_Key>::value && !is_function<_Tp>::value, "'std::unordered_map' cannot hold functions");
++  static_assert(!is_void<_Key>::value && !is_void<_Tp>::value, "'std::unordered_map' cannot hold 'void'");
++  static_assert(!__libcpp_is_unbounded_array<_Key>::value,
++                "'std::unordered_map' cannot hold C arrays of an unknown size");
++  static_assert(!is_array<_Key>::value, "'std::unordered_map' cannot hold C arrays before C++20");
++
+ public:
+   // types
+   typedef _Key key_type;
+@@ -1827,6 +1841,16 @@ template <class _Key,
+           class _Pred  = equal_to<_Key>,
+           class _Alloc = allocator<pair<const _Key, _Tp> > >
+ class _LIBCPP_TEMPLATE_VIS unordered_multimap {
++  // TODO(#106635): replace with _LIBCPP_CHECK_CONTAINER_VALUE_TYPE_REQUIREMENTS
++  // Remember to remove relevant headers when this is completed.
++  static_assert(!is_reference<_Key>::value, "'std::unordered_multimap' cannot hold references");
++  static_assert(!is_function<_Key>::value && !is_function<_Tp>::value,
++                "'std::unordered_multimap' cannot hold functions");
++  static_assert(!is_void<_Key>::value && !is_void<_Tp>::value, "'std::unordered_multimap' cannot hold 'void'");
++  static_assert(!__libcpp_is_unbounded_array<_Key>::value,
++                "'std::unordered_multimap' cannot hold C arrays of an unknown size");
++  static_assert(!is_array<_Key>::value, "'std::unordered_multimap' cannot hold C arrays before C++20");
++
+ public:
+   // types
+   typedef _Key key_type;
+diff --git a/libcxx/include/unordered_set b/libcxx/include/unordered_set
+index d11ceacba814..5e79d5bf4da7 100644
+--- a/libcxx/include/unordered_set
++++ b/libcxx/include/unordered_set
+@@ -548,6 +548,7 @@ template <class Value, class Hash, class Pred, class Alloc>
+ #include <__ranges/concepts.h>
+ #include <__ranges/container_compatible_range.h>
+ #include <__ranges/from_range.h>
++#include <__type_traits/diagnostic_utilities.h>
+ #include <__type_traits/is_allocator.h>
+ #include <__utility/forward.h>
+ #include <version>
+@@ -579,6 +580,8 @@ class unordered_multiset;
+ 
+ template <class _Value, class _Hash = hash<_Value>, class _Pred = equal_to<_Value>, class _Alloc = allocator<_Value> >
+ class _LIBCPP_TEMPLATE_VIS unordered_set {
++  static_assert(__container_requirements<unordered_set, _Value>::value);
++
+ public:
+   // types
+   typedef _Value key_type;
+@@ -899,6 +902,8 @@ public:
+   _LIBCPP_HIDE_FROM_ABI void reserve(size_type __n) { __table_.__reserve_unique(__n); }
+ };
+ 
++_LIBCPP_CHECK_CONTAINER_VALUE_TYPE_REQUIREMENTS(unordered_set);
++
+ #if _LIBCPP_STD_VER >= 17
+ template <class _InputIterator,
+           class _Hash      = hash<__iter_value_type<_InputIterator>>,
+@@ -1174,6 +1179,8 @@ inline _LIBCPP_HIDE_FROM_ABI bool operator!=(const unordered_set<_Value, _Hash,
+ 
+ template <class _Value, class _Hash = hash<_Value>, class _Pred = equal_to<_Value>, class _Alloc = allocator<_Value> >
+ class _LIBCPP_TEMPLATE_VIS unordered_multiset {
++  static_assert(__container_requirements<unordered_multiset, _Value>::value);
++
+ public:
+   // types
+   typedef _Value key_type;
+@@ -1496,6 +1503,8 @@ public:
+   _LIBCPP_HIDE_FROM_ABI void reserve(size_type __n) { __table_.__reserve_multi(__n); }
+ };
+ 
++_LIBCPP_CHECK_CONTAINER_VALUE_TYPE_REQUIREMENTS(unordered_multiset);
++
+ #if _LIBCPP_STD_VER >= 17
+ template <class _InputIterator,
+           class _Hash      = hash<__iter_value_type<_InputIterator>>,
+diff --git a/libcxx/include/vector b/libcxx/include/vector
+index 81aab9407714..18827b61f400 100644
+--- a/libcxx/include/vector
++++ b/libcxx/include/vector
+@@ -345,6 +345,7 @@ template<class T, class charT> requires is-vector-bool-reference<T> // Since C++
+ #include <__ranges/from_range.h>
+ #include <__ranges/size.h>
+ #include <__split_buffer>
++#include <__type_traits/diagnostic_utilities.h>
+ #include <__type_traits/is_allocator.h>
+ #include <__type_traits/is_constructible.h>
+ #include <__type_traits/is_nothrow_assignable.h>
+@@ -387,6 +388,8 @@ _LIBCPP_BEGIN_NAMESPACE_STD
+ template <class _Tp, class _Allocator /* = allocator<_Tp> */>
+ class _LIBCPP_TEMPLATE_VIS vector {
+ private:
++  static_assert(__container_requirements<vector, _Tp>::value);
++
+   typedef allocator<_Tp> __default_allocator_type;
+ 
+ public:
+@@ -1019,6 +1022,8 @@ private:
+   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __move_assign_alloc(vector&, false_type) _NOEXCEPT {}
+ };
+ 
++_LIBCPP_CHECK_CONTAINER_VALUE_TYPE_REQUIREMENTS(vector);
++
+ #if _LIBCPP_STD_VER >= 17
+ template <class _InputIterator,
+           class _Alloc = allocator<__iter_value_type<_InputIterator>>,
+diff --git a/libcxx/test/libcxx/containers/associative/map/non_cv_objects.verify.cpp b/libcxx/test/libcxx/containers/associative/map/non_cv_objects.verify.cpp
+new file mode 100644
+index 000000000000..2d87420f7bbe
+--- /dev/null
++++ b/libcxx/test/libcxx/containers/associative/map/non_cv_objects.verify.cpp
+@@ -0,0 +1,47 @@
++//===----------------------------------------------------------------------===//
++//
++// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
++// See https://llvm.org/LICENSE.txt for license information.
++// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
++//
++//===----------------------------------------------------------------------===//
++
++// Checks that we can only form maps of object types.
++
++#include <map>
++
++std::map<int const, int> K1;
++std::map<int, int const> M1;
++// TODO(#106635): turn this into a compile-time error
++
++std::map<int volatile, int> K2;
++std::map<int, int volatile> M2;
++// TODO(#106635): turn this into a compile-time error
++
++std::map<int&, int> K3;
++std::map<int, int&> M3; // TODO(#106635): turn this into a compile-time error
++// expected-error@*:* 1 {{'std::map' cannot hold references}}
++
++std::map<int&&, int> K4;
++std::map<int, int&&> M4;
++// TODO(#106635): turn this into a compile-time error
++
++std::map<int(), int> K5;
++std::map<int(int), int> K6;
++std::map<int(int, int), int> K7;
++std::map<int, int()> M5;
++std::map<int, int(int)> M6;
++std::map<int, int(int, int)> M7;
++// expected-error@*:* 6 {{'std::map' cannot hold functions}}
++
++std::map<void, int> K8;
++std::map<int, void> M8;
++// expected-error@*:* 2 {{'std::map' cannot hold 'void'}}
++
++std::map<int[], int> K9;
++std::map<int, int[]> M9; // TODO(#106635): turn this into a compile-time error
++// expected-error@*:*{{'std::map' cannot hold C arrays of an unknown size}}
++
++std::map<int[2], int> K10;
++std::map<int, int[2]> M10;
++// TODO(#106635): turn this into a compile-time error
+diff --git a/libcxx/test/libcxx/containers/associative/multimap/non_cv_objects.verify.cpp b/libcxx/test/libcxx/containers/associative/multimap/non_cv_objects.verify.cpp
+new file mode 100644
+index 000000000000..4318f5ccbd7c
+--- /dev/null
++++ b/libcxx/test/libcxx/containers/associative/multimap/non_cv_objects.verify.cpp
+@@ -0,0 +1,47 @@
++//===----------------------------------------------------------------------===//
++//
++// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
++// See https://llvm.org/LICENSE.txt for license information.
++// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
++//
++//===----------------------------------------------------------------------===//
++
++// Checks that we can only form multimaps of object types.
++
++#include <map>
++
++std::multimap<int const, int> K1;
++std::multimap<int, int const> M1;
++// TODO(#106635): turn this into a compile-time error
++
++std::multimap<int volatile, int> K2;
++std::multimap<int, int volatile> M2;
++// TODO(#106635): turn this into a compile-time error
++
++std::multimap<int&, int> K3;
++std::multimap<int, int&> M3; // TODO(#106635): turn this into a compile-time error
++// expected-error@*:* 1 {{'std::multimap' cannot hold references}}
++
++std::multimap<int&&, int> K4;
++std::multimap<int, int&&> M4;
++// TODO(#106635): turn this into a compile-time error
++
++std::multimap<int(), int> K5;
++std::multimap<int(int), int> K6;
++std::multimap<int(int, int), int> K7;
++std::multimap<int, int()> M5;
++std::multimap<int, int(int)> M6;
++std::multimap<int, int(int, int)> M7;
++// expected-error@*:* 6 {{'std::multimap' cannot hold functions}}
++
++std::multimap<void, int> K8;
++std::multimap<int, void> M8;
++// expected-error@*:* 2 {{'std::multimap' cannot hold 'void'}}
++
++std::multimap<int[], int> K9;
++std::multimap<int, int[]> M9; // TODO(#106635): turn this into a compile-time error
++// expected-error@*:*{{'std::multimap' cannot hold C arrays of an unknown size}}
++
++std::multimap<int[2], int> K10;
++std::multimap<int, int[2]> M10;
++// TODO(#106635): turn this into a compile-time error
+diff --git a/libcxx/test/libcxx/containers/associative/multiset/non_cv_object_types.verify.cpp b/libcxx/test/libcxx/containers/associative/multiset/non_cv_object_types.verify.cpp
+new file mode 100644
+index 000000000000..bb9c2a03ef0e
+--- /dev/null
++++ b/libcxx/test/libcxx/containers/associative/multiset/non_cv_object_types.verify.cpp
+@@ -0,0 +1,48 @@
++//===----------------------------------------------------------------------===//
++//
++// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
++// See https://llvm.org/LICENSE.txt for license information.
++// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
++//
++//===----------------------------------------------------------------------===//
++
++// Checks that we can only form multisets of object types.
++
++#include <set>
++#include "test_macros.h"
++
++std::multiset<const int> C1;
++// expected-error@*:*{{'std::multiset' cannot hold const types}}
++
++std::multiset<volatile int> C2;
++// expected-error@*:*{{'std::multiset' cannot hold volatile types}}
++
++std::multiset<int&> C3;
++std::multiset<int&&> C4;
++// expected-error@*:* 2 {{'std::multiset' cannot hold references}}
++
++std::multiset<int()> C5;
++std::multiset<int(int)> C6;
++std::multiset<int(int, int)> C7;
++// expected-error@*:* 3 {{'std::multiset' cannot hold functions}}
++
++std::multiset<void> C8;
++// expected-error@*:*{{'std::multiset' cannot hold 'void'}}
++
++std::multiset<int[]> C9;
++// expected-error@*:*{{'std::multiset' cannot hold C arrays of an unknown size}}
++
++std::multiset<int[2]> C10;
++#if TEST_STD_VER < 20
++// expected-error@*:*{{'std::multiset' cannot hold C arrays before C++20}}
++#endif
++
++// Spurious errors
++// expected-error@__tree:* 1+ {{}}
++// expected-error@*:* 1+ {{cannot form a reference to 'void'}}
++// expected-error@*:* 1+ {{declared as a pointer}}
++// expected-error@*:* 1+ {{no matching function}}
++// expected-error@*:* 1+ {{no member named 'rebind'}}
++// expected-error@*:* 1+ {{std::__tree}}
++// expected-error@*:* 1+ {{multiple overloads of}}
++// expected-error@*:* 1+ {{'std::allocator' cannot allocate}}
+diff --git a/libcxx/test/libcxx/containers/associative/set/non_cv_object_types.verify.cpp b/libcxx/test/libcxx/containers/associative/set/non_cv_object_types.verify.cpp
+new file mode 100644
+index 000000000000..e6c0e151f090
+--- /dev/null
++++ b/libcxx/test/libcxx/containers/associative/set/non_cv_object_types.verify.cpp
+@@ -0,0 +1,48 @@
++//===----------------------------------------------------------------------===//
++//
++// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
++// See https://llvm.org/LICENSE.txt for license information.
++// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
++//
++//===----------------------------------------------------------------------===//
++
++// Checks that we can only form sets of object types.
++
++#include <set>
++#include "test_macros.h"
++
++std::set<const int> C1;
++// expected-error@*:*{{'std::set' cannot hold const types}}
++
++std::set<volatile int> C2;
++// expected-error@*:*{{'std::set' cannot hold volatile types}}
++
++std::set<int&> C3;
++std::set<int&&> C4;
++// expected-error@*:* 2 {{'std::set' cannot hold references}}
++
++std::set<int()> C5;
++std::set<int(int)> C6;
++std::set<int(int, int)> C7;
++// expected-error@*:* 3 {{'std::set' cannot hold functions}}
++
++std::set<void> C8;
++// expected-error@*:*{{'std::set' cannot hold 'void'}}
++
++std::set<int[]> C9;
++// expected-error@*:*{{'std::set' cannot hold C arrays of an unknown size}}
++
++std::set<int[2]> C10;
++#if TEST_STD_VER < 20
++// expected-error@*:*{{'std::set' cannot hold C arrays before C++20}}
++#endif
++
++// Spurious errors
++// expected-error@__tree:* 1+ {{}}
++// expected-error@*:* 1+ {{cannot form a reference to 'void'}}
++// expected-error@*:* 1+ {{declared as a pointer}}
++// expected-error@*:* 1+ {{no matching function}}
++// expected-error@*:* 1+ {{no member named 'rebind'}}
++// expected-error@*:* 1+ {{std::__tree}}
++// expected-error@*:* 1+ {{multiple overloads of}}
++// expected-error@*:* 1+ {{'std::allocator' cannot allocate}}
+diff --git a/libcxx/test/libcxx/containers/sequences/array/non_cv_objects.verify.cpp b/libcxx/test/libcxx/containers/sequences/array/non_cv_objects.verify.cpp
+new file mode 100644
+index 000000000000..d4fcb21036b5
+--- /dev/null
++++ b/libcxx/test/libcxx/containers/sequences/array/non_cv_objects.verify.cpp
+@@ -0,0 +1,33 @@
++//===----------------------------------------------------------------------===//
++//
++// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
++// See https://llvm.org/LICENSE.txt for license information.
++// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
++//
++//===----------------------------------------------------------------------===//
++
++// Checks that we can only form arrays of object types.
++
++// UNSUPPORTED: c++03
++
++#include <array>
++
++std::array<const int, 1> A1{0}; // okay
++std::array<volatile int, 1> A2; // okay
++
++std::array<int&, 1> A3{};
++std::array<int&&, 1> A4{};
++// expected-error@*:* 2 {{'std::array' cannot hold references}}
++
++std::array<int(), 1> A5;
++std::array<int(int), 1> A6;
++std::array<int(int, int), 1> A7;
++// expected-error@*:* 3 {{'std::array' cannot hold functions}}
++
++std::array<void, 1> A8;
++// expected-error@*:*{{'std::array' cannot hold 'void'}}
++
++std::array<int[], 1> A9;
++// expected-error@*:*{{'std::array' cannot hold C arrays of an unknown size}}
++
++std::array<int[2], 1> A10; // okay
+diff --git a/libcxx/test/libcxx/containers/sequences/deque/non_cv_objects.verify.cpp b/libcxx/test/libcxx/containers/sequences/deque/non_cv_objects.verify.cpp
+new file mode 100644
+index 000000000000..3428d1a8626d
+--- /dev/null
++++ b/libcxx/test/libcxx/containers/sequences/deque/non_cv_objects.verify.cpp
+@@ -0,0 +1,52 @@
++//===----------------------------------------------------------------------===//
++//
++// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
++// See https://llvm.org/LICENSE.txt for license information.
++// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
++//
++//===----------------------------------------------------------------------===//
++
++// Checks that we can only form deques of object types.
++
++#include <deque>
++#include "test_macros.h"
++
++std::deque<const int> C1;
++// expected-error@*:*{{'std::deque' cannot hold const types}}
++
++std::deque<volatile int> C2;
++// expected-error@*:*{{'std::deque' cannot hold volatile types}}
++
++std::deque<int&> C3;
++std::deque<int&&> C4;
++// expected-error@*:* 2 {{'std::deque' cannot hold references}}
++
++std::deque<int()> C5;
++std::deque<int(int)> C6;
++std::deque<int(int, int)> C7;
++// expected-error@*:* 3 {{'std::deque' cannot hold functions}}
++
++std::deque<void> C8;
++// expected-error@*:*{{'std::deque' cannot hold 'void'}}
++
++std::deque<int[]> C9;
++// expected-error@*:*{{'std::deque' cannot hold C arrays of an unknown size}}
++
++std::deque<int[2]> C10;
++#if TEST_STD_VER < 20
++// expected-error@*:*{{'std::deque' cannot hold C arrays before C++20}}
++#endif
++
++// Spurious errors
++// expected-error@*:* 0+ {{[allocator.requirements]}}
++// expected-error@*:* 0+ {{object expression of non-scalar type}}
++// expected-error@*:* 1+ {{arithmetic on}}
++// expected-error@*:* 1+ {{cannot form a reference to 'void'}}
++// expected-error@*:* 1+ {{declared as a pointer}}
++// expected-error@*:* 1+ {{indirection}}
++// expected-error@*:* 1+ {{invalid application of 'sizeof'}}
++// expected-error@*:* 1+ {{multiple overloads of}}
++// expected-error@*:* 1+ {{no matching function}}
++// expected-error@*:* 1+ {{no member named}}
++// expected-error@*:* 1+ {{no type named 'type' in 'std::enable_if}}
++// expected-error@*:* 1+ {{'std::allocator' cannot allocate}}
+diff --git a/libcxx/test/libcxx/containers/sequences/forward_list/non_cv_objects.verify.cpp b/libcxx/test/libcxx/containers/sequences/forward_list/non_cv_objects.verify.cpp
+new file mode 100644
+index 000000000000..cc865e399ce4
+--- /dev/null
++++ b/libcxx/test/libcxx/containers/sequences/forward_list/non_cv_objects.verify.cpp
+@@ -0,0 +1,53 @@
++//===----------------------------------------------------------------------===//
++//
++// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
++// See https://llvm.org/LICENSE.txt for license information.
++// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
++//
++//===----------------------------------------------------------------------===//
++
++// Checks that we can only form forward_lists of object types.
++
++#include <forward_list>
++#include "test_macros.h"
++
++std::forward_list<const int> C1;
++// expected-error@*:*{{'std::forward_list' cannot hold const types}}
++
++std::forward_list<volatile int> C2;
++// expected-error@*:*{{'std::forward_list' cannot hold volatile types}}
++
++std::forward_list<int&> C3;
++std::forward_list<int&&> C4;
++// expected-error@*:* 2 {{'std::forward_list' cannot hold references}}
++
++std::forward_list<int()> C5;
++std::forward_list<int(int)> C6;
++std::forward_list<int(int, int)> C7;
++// expected-error@*:* 3 {{'std::forward_list' cannot hold functions}}
++
++std::forward_list<void> C8;
++// expected-error@*:*{{'std::forward_list' cannot hold 'void'}}
++
++std::forward_list<int[]> C9;
++// expected-error@*:*{{'std::forward_list' cannot hold C arrays of an unknown size}}
++
++std::forward_list<int[2]> C10;
++#if TEST_STD_VER < 20
++// expected-error@*:*{{'std::forward_list' cannot hold C arrays before C++20}}
++#endif
++
++// Spurious errors
++// expected-error@*:* 0+ {{[allocator.requirements]}}
++// expected-error@*:* 0+ {{object expression of non-scalar type}}
++// expected-error@*:* 1+ {{cannot form a reference to 'void'}}
++// expected-error@*:* 1+ {{declared as a pointer}}
++// expected-error@*:* 1+ {{multiple overloads of}}
++// expected-error@*:* 1+ {{no matching function}}
++// expected-error@*:* 1+ {{no member named}}
++// expected-error@*:* 1+ {{no type named 'type' in 'std::enable_if}}
++// expected-error@*:* 1+ {{__node_}}
++// expected-error@*:* 1+ {{data member instantiated}}
++// expected-error@*:* 1+ {{pointer}}
++// expected-error@*:* 1+ {{iterator}}
++// expected-error@*:* 1+ {{'std::allocator' cannot allocate}}
+diff --git a/libcxx/test/libcxx/containers/sequences/list/non_cv_objects.verify.cpp b/libcxx/test/libcxx/containers/sequences/list/non_cv_objects.verify.cpp
+new file mode 100644
+index 000000000000..bd791347a99d
+--- /dev/null
++++ b/libcxx/test/libcxx/containers/sequences/list/non_cv_objects.verify.cpp
+@@ -0,0 +1,54 @@
++//===----------------------------------------------------------------------===//
++//
++// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
++// See https://llvm.org/LICENSE.txt for license information.
++// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
++//
++//===----------------------------------------------------------------------===//
++
++// Checks that we can only form lists of object types.
++
++#include <list>
++#include "test_macros.h"
++
++std::list<const int> C1;
++// expected-error@*:*{{'std::list' cannot hold const types}}
++
++std::list<volatile int> C2;
++// expected-error@*:*{{'std::list' cannot hold volatile types}}
++
++std::list<int&> C3;
++std::list<int&&> C4;
++// expected-error@*:* 2 {{'std::list' cannot hold references}}
++
++std::list<int()> C5;
++std::list<int(int)> C6;
++std::list<int(int, int)> C7;
++// expected-error@*:* 3 {{'std::list' cannot hold functions}}
++
++std::list<void> C8;
++// expected-error@*:*{{'std::list' cannot hold 'void'}}
++
++std::list<int[]> C9;
++// expected-error@*:*{{'std::list' cannot hold C arrays of an unknown size}}
++
++std::list<int[2]> C10;
++#if TEST_STD_VER < 20
++// expected-error@*:*{{'std::list' cannot hold C arrays before C++20}}
++#endif
++
++// Spurious errors
++// expected-error@*:* 0+ {{[allocator.requirements]}}
++// expected-error@*:* 0+ {{object expression of non-scalar type}}
++// expected-error@*:* 1+ {{cannot form a reference to 'void'}}
++// expected-error@*:* 1+ {{declared as a pointer}}
++// expected-error@*:* 1+ {{multiple overloads of}}
++// expected-error@*:* 1+ {{no matching function}}
++// expected-error@*:* 1+ {{no member named}}
++// expected-error@*:* 1+ {{no type named 'type' in 'std::enable_if}}
++// expected-error@*:* 1+ {{__node_}}
++// expected-error@*:* 1+ {{data member instantiated}}
++// expected-error@*:* 1+ {{pointer}}
++// expected-error@*:* 1+ {{iterator}}
++// expected-error@*:* 1+ {{difference_type}}
++// expected-error@*:* 1+ {{'std::allocator' cannot allocate}}
+diff --git a/libcxx/test/libcxx/containers/sequences/vector/non_cv_objects.verify.cpp b/libcxx/test/libcxx/containers/sequences/vector/non_cv_objects.verify.cpp
+new file mode 100644
+index 000000000000..0f68fc64eaf2
+--- /dev/null
++++ b/libcxx/test/libcxx/containers/sequences/vector/non_cv_objects.verify.cpp
+@@ -0,0 +1,51 @@
++//===----------------------------------------------------------------------===//
++//
++// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
++// See https://llvm.org/LICENSE.txt for license information.
++// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
++//
++//===----------------------------------------------------------------------===//
++
++// Checks that we can only form vectors of object types.
++
++#include <vector>
++#include "test_macros.h"
++
++std::vector<const int> C1;
++// expected-error@*:*{{'std::vector' cannot hold const types}}
++
++std::vector<volatile int> C2;
++// expected-error@*:*{{'std::vector' cannot hold volatile types}}
++
++std::vector<int&> C3;
++std::vector<int&&> C4;
++// expected-error@*:* 2 {{'std::vector' cannot hold references}}
++
++std::vector<int()> C5;
++std::vector<int(int)> C6;
++std::vector<int(int, int)> C7;
++// expected-error@*:* 3 {{'std::vector' cannot hold functions}}
++
++std::vector<void> C8;
++// expected-error@*:*{{'std::vector' cannot hold 'void'}}
++
++std::vector<int[]> C9;
++// expected-error@*:*{{'std::vector' cannot hold C arrays of an unknown size}}
++
++std::vector<int[2]> C10;
++#if TEST_STD_VER < 20
++// expected-error@*:*{{'std::vector' cannot hold C arrays before C++20}}
++#endif
++
++// Bogus errors
++// expected-error@*:* 0+ {{[allocator.requirements]}}
++// expected-error@*:* 0+ {{object expression of non-scalar type}}
++// expected-error@*:* 1+ {{arithmetic on}}
++// expected-error@*:* 1+ {{cannot form a reference to 'void'}}
++// expected-error@*:* 1+ {{declared as a pointer}}
++// expected-error@*:* 1+ {{invalid application of 'sizeof'}}
++// expected-error@*:* 1+ {{multiple overloads of}}
++// expected-error@*:* 1+ {{no matching function}}
++// expected-error@*:* 1+ {{no member named 'rebind'}}
++// expected-error@*:* 1+ {{no type named 'type' in 'std::enable_if}}
++// expected-error@*:* 1+ {{'std::allocator' cannot allocate}}
+diff --git a/libcxx/test/libcxx/containers/strings/basic.string/non_cv_objects.verify.cpp b/libcxx/test/libcxx/containers/strings/basic.string/non_cv_objects.verify.cpp
+new file mode 100644
+index 000000000000..1636bb81761a
+--- /dev/null
++++ b/libcxx/test/libcxx/containers/strings/basic.string/non_cv_objects.verify.cpp
+@@ -0,0 +1,53 @@
++//===----------------------------------------------------------------------===//
++//
++// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
++// See https://llvm.org/LICENSE.txt for license information.
++// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
++//
++//===----------------------------------------------------------------------===//
++
++// Checks that we can only form basic_strings of object types.
++
++#include <string>
++
++std::basic_string<const int> C1;
++// expected-error@*:*{{'std::basic_string' cannot hold const types}}
++
++std::basic_string<volatile int> C2;
++// expected-error@*:*{{'std::basic_string' cannot hold volatile types}}
++
++std::basic_string<int&> C3;
++// expected-error@*:*{{'std::basic_string' cannot hold references}}
++
++std::basic_string<int&&> C4;
++// expected-error@*:*{{'std::basic_string' cannot hold references}}
++
++std::basic_string<int()> C5;
++// expected-error@*:*{{'std::basic_string' cannot hold functions}}
++
++std::basic_string<int(int)> C6;
++// expected-error@*:*{{'std::basic_string' cannot hold functions}}
++
++std::basic_string<int(int, int)> C7;
++// expected-error@*:*{{'std::basic_string' cannot hold functions}}
++
++std::basic_string<void> C8;
++// expected-error@*:*{{'std::basic_string' cannot hold 'void'}}
++
++std::basic_string<int[]> C9;
++// expected-error@*:*{{'std::basic_string' cannot hold C arrays}}
++
++std::basic_string<int[2]> C10;
++// expected-error@*:*{{'std::basic_string' cannot hold C arrays}}
++
++// Bogus errors
++// expected-error@*:* 1+ {{cannot form a reference to 'void'}}
++// expected-error@*:* 1+ {{declared as a pointer}}
++// expected-error@*:* 1+ {{no matching function}}
++// expected-error@*:* 1+ {{no function template}}
++// expected-error@*:* 1+ {{no member named 'rebind'}}
++// expected-error@*:* 1+ {{call to implicitly-deleted}}
++// expected-error@*:* 1+ {{implicit instantiation of undefined template 'std::char_traits}}
++// expected-error@*:* 1+ {{must be standard-layout}}
++// expected-error@*:* 1+ {{'std::allocator' cannot allocate}}
++// expected-warning@*:* 1+ {{volatile-qualified parameter type}}
+diff --git a/libcxx/test/libcxx/containers/unord/unord.map/non_cv_objects.verify.cpp b/libcxx/test/libcxx/containers/unord/unord.map/non_cv_objects.verify.cpp
+new file mode 100644
+index 000000000000..7f8576379efb
+--- /dev/null
++++ b/libcxx/test/libcxx/containers/unord/unord.map/non_cv_objects.verify.cpp
+@@ -0,0 +1,75 @@
++//===----------------------------------------------------------------------===//
++//
++// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
++// See https://llvm.org/LICENSE.txt for license information.
++// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
++//
++//===----------------------------------------------------------------------===//
++
++// Checks that we can only form maps of object types.
++
++#include <unordered_map>
++
++struct S {};
++
++namespace std {
++template <>
++struct hash<S> {
++  using argument_type = S;
++  using result_type   = size_t;
++
++  size_t operator()(S) const;
++};
++
++template <>
++struct hash<S const> {
++  using argument_type = S;
++  using result_type   = size_t;
++
++  size_t operator()(S) const;
++};
++
++template <>
++struct hash<S volatile> {
++  using argument_type = S;
++  using result_type   = size_t;
++
++  size_t operator()(S const volatile&) const;
++};
++} // namespace std
++
++std::unordered_map<S const, int> K1;
++std::unordered_map<int, int const> M1;
++// TODO(#106635): turn this into a compile-time error
++
++std::unordered_map<S volatile, int> K2;
++std::unordered_map<int, int volatile> M2;
++// TODO(#106635): turn this into a compile-time error
++
++std::unordered_map<int&, int> K3;
++std::unordered_map<int, int&> M3; // TODO(#106635): turn this into a compile-time error
++// expected-error@*:* 1 {{'std::unordered_map' cannot hold references}}
++
++std::unordered_map<int&&, int> K4;
++std::unordered_map<int, int&&> M4; // TODO(#106635): turn this into a compile-time error
++// expected-error@*:*{{'std::unordered_map' cannot hold references}}
++
++std::unordered_map<int(), int> K5;
++std::unordered_map<int(int), int> K6;
++std::unordered_map<int(int, int), int> K7;
++std::unordered_map<int, int()> M5;
++std::unordered_map<int, int(int)> M6;
++std::unordered_map<int, int(int, int)> M7;
++// expected-error@*:* 6 {{'std::unordered_map' cannot hold functions}}
++
++std::unordered_map<void, int> K8;
++std::unordered_map<int, void> M8;
++// expected-error@*:* 2 {{'std::unordered_map' cannot hold 'void'}}
++
++std::unordered_map<int[], int> K9;
++std::unordered_map<int, int[]> M9; // TODO(#106635): turn this into a compile-time error
++// expected-error@*:*{{'std::unordered_map' cannot hold C arrays of an unknown size}}
++
++std::unordered_map<int[2], int> K10;
++std::unordered_map<int, int[2]> M10; // TODO(#106635): turn this into a compile-time error
++// expected-error@*:*{{'std::unordered_map' cannot hold C arrays before C++20}}
+diff --git a/libcxx/test/libcxx/containers/unord/unord.multimap/non_cv_objects.verify.cpp b/libcxx/test/libcxx/containers/unord/unord.multimap/non_cv_objects.verify.cpp
+new file mode 100644
+index 000000000000..082090679ad2
+--- /dev/null
++++ b/libcxx/test/libcxx/containers/unord/unord.multimap/non_cv_objects.verify.cpp
+@@ -0,0 +1,70 @@
++//===----------------------------------------------------------------------===//
++//
++// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
++// See https://llvm.org/LICENSE.txt for license information.
++// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
++//
++//===----------------------------------------------------------------------===//
++
++// Checks that we can only form multimaps of object types.
++
++#include <unordered_map>
++
++struct S {};
++
++namespace std {
++template <>
++struct hash<S> {
++  using argument_type = S;
++  using result_type   = size_t;
++
++  size_t operator()(S) const;
++};
++
++template <>
++struct hash<S const> : hash<S> {};
++
++template <>
++struct hash<S volatile> {
++  using argument_type = S;
++  using result_type   = size_t;
++
++  size_t operator()(S const volatile&) const;
++};
++} // namespace std
++
++std::unordered_multimap<S const, int> K1;
++std::unordered_multimap<int, int const> M1;
++// TODO(#106635): turn this into a compile-time error
++
++std::unordered_multimap<S volatile, int> K2;
++std::unordered_multimap<int, int volatile> M2;
++// TODO(#106635): turn this into a compile-time error
++
++std::unordered_multimap<int&, int> K3;
++std::unordered_multimap<int, int&> M3; // TODO(#106635): turn this into a compile-time error
++// expected-error@*:* 1 {{'std::unordered_multimap' cannot hold references}}
++
++std::unordered_multimap<int&&, int> K4;
++std::unordered_multimap<int, int&&> M4; // TODO(#106635): turn this into a compile-time error
++// expected-error@*:*{{'std::unordered_multimap' cannot hold references}}
++
++std::unordered_multimap<int(), int> K5;
++std::unordered_multimap<int(int), int> K6;
++std::unordered_multimap<int(int, int), int> K7;
++std::unordered_multimap<int, int()> M5;
++std::unordered_multimap<int, int(int)> M6;
++std::unordered_multimap<int, int(int, int)> M7;
++// expected-error@*:* 6 {{'std::unordered_multimap' cannot hold functions}}
++
++std::unordered_multimap<void, int> K8;
++std::unordered_multimap<int, void> M8;
++// expected-error@*:* 2 {{'std::unordered_multimap' cannot hold 'void'}}
++
++std::unordered_multimap<int[], int> K9;
++std::unordered_multimap<int, int[]> M9; // TODO(#106635): turn this into a compile-time error
++// expected-error@*:*{{'std::unordered_multimap' cannot hold C arrays of an unknown size}}
++
++std::unordered_multimap<int[2], int> K10;
++std::unordered_multimap<int, int[2]> M10; // TODO(#106635): turn this into a compile-time error
++// expected-error@*:*{{'std::unordered_multimap' cannot hold C arrays before C++20}}
+diff --git a/libcxx/test/libcxx/containers/unord/unord.multiset/non_cv_objects.verify.cpp b/libcxx/test/libcxx/containers/unord/unord.multiset/non_cv_objects.verify.cpp
+new file mode 100644
+index 000000000000..ae36de1422c6
+--- /dev/null
++++ b/libcxx/test/libcxx/containers/unord/unord.multiset/non_cv_objects.verify.cpp
+@@ -0,0 +1,60 @@
++//===----------------------------------------------------------------------===//
++//
++// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
++// See https://llvm.org/LICENSE.txt for license information.
++// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
++//
++//===----------------------------------------------------------------------===//
++
++// Checks that we can only form unordered_multisets of object types.
++
++#include <unordered_set>
++#include "test_macros.h"
++
++std::unordered_multiset<const int> C1;
++// expected-error@*:*{{'std::unordered_multiset' cannot hold const types}}
++
++std::unordered_multiset<volatile int> C2;
++// expected-error@*:*{{'std::unordered_multiset' cannot hold volatile types}}
++
++std::unordered_multiset<int&> C3;
++std::unordered_multiset<int&&> C4;
++// expected-error@*:* 2 {{'std::unordered_multiset' cannot hold references}}
++
++std::unordered_multiset<int()> C5;
++std::unordered_multiset<int(int)> C6;
++std::unordered_multiset<int(int, int)> C7;
++// expected-error@*:* 3 {{'std::unordered_multiset' cannot hold functions}}
++
++std::unordered_multiset<void> C8;
++// expected-error@*:*{{'std::unordered_multiset' cannot hold 'void'}}
++
++std::unordered_multiset<int[]> C9;
++// expected-error@*:*{{'std::unordered_multiset' cannot hold C arrays of an unknown size}}
++
++// std::hash doesn't work with C arrays, so we need to test it with something else to ensure the
++// correct diagnostic is issued.
++template <class T>
++struct test_hash {
++  using argument_type = T;
++  using result_type   = std::size_t;
++
++  result_type operator()(T const&) const;
++};
++
++std::unordered_multiset<int[2], test_hash<int[2]> > C10;
++#if TEST_STD_VER < 20
++// expected-error@*:*{{'std::unordered_multiset' cannot hold C arrays before C++20}}
++#endif
++
++// Spurious errors
++// expected-error@__hash_table:* 1+ {{}}
++// expected-error@*:* 1+ {{call to implicitly-deleted}}
++// expected-error@*:* 1+ {{cannot form a reference to 'void'}}
++// expected-error@*:* 1+ {{declared as a pointer}}
++// expected-error@*:* 1+ {{multiple overloads of}}
++// expected-error@*:* 1+ {{no matching function}}
++// expected-error@*:* 1+ {{no member named 'rebind'}}
++// expected-error@*:* 1+ {{no type named 'const_iterator'}}
++// expected-error@*:* 1+ {{no type named 'const_local_iterator'}}
++// expected-error@*:* 1+ {{'std::allocator' cannot allocate}}
+diff --git a/libcxx/test/libcxx/containers/unord/unord.set/non_cv_objects.verify.cpp b/libcxx/test/libcxx/containers/unord/unord.set/non_cv_objects.verify.cpp
+new file mode 100644
+index 000000000000..56c428eb063d
+--- /dev/null
++++ b/libcxx/test/libcxx/containers/unord/unord.set/non_cv_objects.verify.cpp
+@@ -0,0 +1,60 @@
++//===----------------------------------------------------------------------===//
++//
++// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
++// See https://llvm.org/LICENSE.txt for license information.
++// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
++//
++//===----------------------------------------------------------------------===//
++
++// Checks that we can only form unordered_sets of object types.
++
++#include <unordered_set>
++#include "test_macros.h"
++
++std::unordered_set<const int> C1;
++// expected-error@*:*{{'std::unordered_set' cannot hold const types}}
++
++std::unordered_set<volatile int> C2;
++// expected-error@*:*{{'std::unordered_set' cannot hold volatile types}}
++
++std::unordered_set<int&> C3;
++std::unordered_set<int&&> C4;
++// expected-error@*:* 2 {{'std::unordered_set' cannot hold references}}
++
++std::unordered_set<int()> C5;
++std::unordered_set<int(int)> C6;
++std::unordered_set<int(int, int)> C7;
++// expected-error@*:* 3 {{'std::unordered_set' cannot hold functions}}
++
++std::unordered_set<void> C8;
++// expected-error@*:*{{'std::unordered_set' cannot hold 'void'}}
++
++std::unordered_set<int[]> C9;
++// expected-error@*:*{{'std::unordered_set' cannot hold C arrays of an unknown size}}
++
++// std::hash doesn't work with C arrays, so we need to test it with something else to ensure the
++// correct diagnostic is issued.
++template <class T>
++struct test_hash {
++  using argument_type = T;
++  using result_type   = std::size_t;
++
++  result_type operator()(T const&) const;
++};
++
++std::unordered_set<int[2], test_hash<int[2]> > C10;
++#if TEST_STD_VER < 20
++// expected-error@*:*{{'std::unordered_set' cannot hold C arrays before C++20}}
++#endif
++
++// Spurious errors
++// expected-error@__hash_table:* 1+ {{}}
++// expected-error@*:* 1+ {{call to implicitly-deleted}}
++// expected-error@*:* 1+ {{cannot form a reference to 'void'}}
++// expected-error@*:* 1+ {{declared as a pointer}}
++// expected-error@*:* 1+ {{multiple overloads of}}
++// expected-error@*:* 1+ {{no matching function}}
++// expected-error@*:* 1+ {{no member named 'rebind'}}
++// expected-error@*:* 1+ {{no type named 'const_iterator'}}
++// expected-error@*:* 1+ {{no type named 'const_local_iterator'}}
++// expected-error@*:* 1+ {{'std::allocator' cannot allocate}}
+diff --git a/libcxx/test/libcxx/memory/allocator_non_cv_objects_only.verify.cpp b/libcxx/test/libcxx/memory/allocator_non_cv_objects_only.verify.cpp
+new file mode 100644
+index 000000000000..45197e83b798
+--- /dev/null
++++ b/libcxx/test/libcxx/memory/allocator_non_cv_objects_only.verify.cpp
+@@ -0,0 +1,30 @@
++//===----------------------------------------------------------------------===//
++//
++// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
++// See https://llvm.org/LICENSE.txt for license information.
++// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
++//
++//===----------------------------------------------------------------------===//
++
++// http://wg21.link/LWG2447 gives implementors freedom to reject cv-qualified and non-object types in `std::allocator`.
++
++#include <memory>
++#include "test_macros.h"
++
++std::allocator<const int> A1;
++// expected-error@*:* {{'std::allocator' cannot allocate const types}}
++
++std::allocator<volatile int> A2;
++// expected-error@*:* {{'std::allocator' cannot allocate volatile types}}
++
++std::allocator<int&> A3;
++std::allocator<int&&> A4;
++// expected-error@*:* 2 {{'std::allocator' cannot allocate references}}
++
++std::allocator<int()> A5;
++std::allocator<int(int)> A6;
++std::allocator<int(int, int)> A7;
++// expected-error@*:* 3 {{'std::allocator' cannot allocate functions}}
++
++// Spurious errors
++// expected-error@*:* 1+ {{declared as a pointer to a reference}}
+diff --git a/libcxx/test/libcxx/memory/allocator_volatile.verify.cpp b/libcxx/test/libcxx/memory/allocator_volatile.verify.cpp
+deleted file mode 100644
+index 53fdc08e7a02..000000000000
+--- a/libcxx/test/libcxx/memory/allocator_volatile.verify.cpp
++++ /dev/null
+@@ -1,14 +0,0 @@
+-//===----------------------------------------------------------------------===//
+-//
+-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+-// See https://llvm.org/LICENSE.txt for license information.
+-// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+-//
+-//===----------------------------------------------------------------------===//
+-
+-// http://wg21.link/LWG2447 gives implementors freedom to reject const or volatile types in `std::allocator`.
+-
+-#include <memory>
+-
+-std::allocator<const int> A1; // expected-error@*:* {{std::allocator does not support const types}}
+-std::allocator<volatile int> A2; // expected-error@*:* {{std::allocator does not support volatile types}}
+diff --git a/libcxx/test/std/strings/basic.string/char.bad.verify.cpp b/libcxx/test/std/strings/basic.string/char.bad.verify.cpp
+index bedc5f19a6a8..5bce7057e33b 100644
+--- a/libcxx/test/std/strings/basic.string/char.bad.verify.cpp
++++ b/libcxx/test/std/strings/basic.string/char.bad.verify.cpp
+@@ -33,7 +33,7 @@ void f() {
+     typedef char C[3];
+     static_assert(std::is_array<C>::value, "");
+     std::basic_string<C, test_traits<C> > s;
+-    // expected-error-re@string:* {{static assertion failed{{.*}}Character type of basic_string must not be an array}}
++    // expected-error-re@string:* {{static assertion failed{{.*}}'std::basic_string' cannot hold C arrays}}
+   }
+ 
+   {

@@ -38,8 +38,11 @@ std::vector<int[2]> C10;
 #endif
 
 // Bogus errors
+// expected-error@*:* 0+ {{_Tp is a function type}}
 // expected-error@*:* 0+ {{[allocator.requirements]}}
+// expected-error@*:* 0+ {{cannot initialize a variable of type}}
 // expected-error@*:* 0+ {{object expression of non-scalar type}}
+// expected-error@*:* 1+ {{'std::allocator' cannot allocate}}
 // expected-error@*:* 1+ {{arithmetic on}}
 // expected-error@*:* 1+ {{cannot form a reference to 'void'}}
 // expected-error@*:* 1+ {{declared as a pointer}}
@@ -47,6 +50,5 @@ std::vector<int[2]> C10;
 // expected-error@*:* 1+ {{multiple overloads of}}
 // expected-error@*:* 1+ {{no matching function}}
 // expected-error@*:* 1+ {{no member named 'rebind'}}
-// expected-error@*:* 1+ {{no type named 'type' in 'std::enable_if}}
-// expected-error@*:* 1+ {{'std::allocator' cannot allocate}}
+// expected-error@*:* 1+ {{no type named}}
 // expected-warning@*:* 0+ {{is a Microsoft extension}}
