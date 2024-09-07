@@ -70,13 +70,16 @@ bool Context::evaluateAsRValue(State &Parent, const Expr *E, APValue &Result) {
   return true;
 }
 
-bool Context::evaluate(State &Parent, const Expr *E, APValue &Result) {
+bool Context::evaluate(State &Parent, const Expr *E, APValue &Result,
+                       ConstantExprKind Kind) {
   ++EvalID;
   bool Recursing = !Stk.empty();
   size_t StackSizeBefore = Stk.size();
   Compiler<EvalEmitter> C(*this, *P, Parent, Stk);
 
-  auto Res = C.interpretExpr(E);
+  auto Res = C.interpretExpr(E, /*ConvertResultToRValue=*/false,
+                             /*DestroyToplevelScope=*/Kind ==
+                                 ConstantExprKind::ClassTemplateArgument);
   if (Res.isInvalid()) {
     C.cleanup();
     Stk.clearTo(StackSizeBefore);
