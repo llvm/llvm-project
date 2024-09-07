@@ -3422,6 +3422,10 @@ struct FoldConsecutiveConstantPadding : public OpRewritePattern<tensor::PadOp> {
 
   LogicalResult matchAndRewrite(tensor::PadOp padOp,
                                 PatternRewriter &rewriter) const override {
+    if (padOp.getNofold()) {
+      return rewriter.notifyMatchFailure(padOp, "skipping unfoldable pad");
+    }
+
     auto producerPad = padOp.getSource().getDefiningOp<tensor::PadOp>();
     if (!producerPad || producerPad.getNofold()) {
       return rewriter.notifyMatchFailure(
