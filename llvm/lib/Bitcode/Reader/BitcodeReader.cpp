@@ -7686,8 +7686,8 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
         PendingAllocs.clear();
       }
       auto FS = std::make_unique<FunctionSummary>(
-          Flags, InstCount, getDecodedFFlags(RawFunFlags), /*EntryCount=*/0,
-          std::move(Refs), std::move(Calls), std::move(PendingTypeTests),
+          Flags, InstCount, getDecodedFFlags(RawFunFlags), std::move(Refs),
+          std::move(Calls), std::move(PendingTypeTests),
           std::move(PendingTypeTestAssumeVCalls),
           std::move(PendingTypeCheckedLoadVCalls),
           std::move(PendingTypeTestAssumeConstVCalls),
@@ -7832,8 +7832,8 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       ValueInfo VI = std::get<0>(getValueInfoFromValueId(ValueID));
       setSpecialRefs(Refs, NumRORefs, NumWORefs);
       auto FS = std::make_unique<FunctionSummary>(
-          Flags, InstCount, getDecodedFFlags(RawFunFlags), EntryCount,
-          std::move(Refs), std::move(Edges), std::move(PendingTypeTests),
+          Flags, InstCount, getDecodedFFlags(RawFunFlags), std::move(Refs),
+          std::move(Edges), std::move(PendingTypeTests),
           std::move(PendingTypeTestAssumeVCalls),
           std::move(PendingTypeCheckedLoadVCalls),
           std::move(PendingTypeTestAssumeConstVCalls),
