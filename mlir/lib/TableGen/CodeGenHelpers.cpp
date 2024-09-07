@@ -49,7 +49,7 @@ StaticVerifierFunctionEmitter::StaticVerifierFunctionEmitter(
     : os(os), uniqueOutputLabel(getUniqueOutputLabel(records, tag)) {}
 
 void StaticVerifierFunctionEmitter::emitOpConstraints(
-    ArrayRef<llvm::Record *> opDefs) {
+    ArrayRef<const llvm::Record *> opDefs) {
   NamespaceEmitter namespaceEmitter(os, Operator(*opDefs[0]).getCppNamespace());
   emitTypeConstraints();
   emitAttrConstraints();
@@ -264,14 +264,14 @@ void StaticVerifierFunctionEmitter::collectConstraint(ConstraintMap &map,
 }
 
 void StaticVerifierFunctionEmitter::collectOpConstraints(
-    ArrayRef<Record *> opDefs) {
+    ArrayRef<const Record *> opDefs) {
   const auto collectTypeConstraints = [&](Operator::const_value_range values) {
     for (const NamedTypeConstraint &value : values)
       if (value.hasPredicate())
         collectConstraint(typeConstraints, "type", value.constraint);
   };
 
-  for (Record *def : opDefs) {
+  for (const Record *def : opDefs) {
     Operator op(*def);
     /// Collect type constraints.
     collectTypeConstraints(op.getOperands());
