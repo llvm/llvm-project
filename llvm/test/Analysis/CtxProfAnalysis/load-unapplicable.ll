@@ -12,7 +12,9 @@
 ; CHECK: No contextual profile was provided
 ;
 ; This is the reference profile, laid out in the format the json formatter will
-; output it from opt.
+; output it from opt. Note that the root GUIDs - 12341 and 34234 - are different from
+; the GUID present in the module, which is otherwise present in the profile, but not
+; as a root.
 ;--- profile.json
 [
   {
@@ -25,7 +27,7 @@
     "Counters": [
       5
     ],
-    "Guid": 12074870348631550642
+    "Guid": 1000
   },
   {
     "Callsites": [
@@ -35,14 +37,14 @@
             6,
             7
           ],
-          "Guid": 728453322856651412
+          "Guid": 1000
         }
       ]
     ],
     "Counters": [
       1
     ],
-    "Guid": 11872291593386833696
+    "Guid": 34234
   }
 ]
 ;--- example.ll
