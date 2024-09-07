@@ -724,7 +724,7 @@ CacheCostTy CacheCost::computeRefGroupCacheCost(const ReferenceGroupTy &RG,
 PreservedAnalyses LoopCachePrinterPass::run(Loop &L, LoopAnalysisManager &AM,
                                             LoopStandardAnalysisResults &AR,
                                             LPMUpdater &U) {
-  LoopAccessInfoManager LAIs(AR.SE, AR.AA, AR.DT, AR.LI, &AR.TTI, nullptr);
+  LoopAccessInfoManager LAIs(AR.SE, AR.AA, AR.DT, AR.LI, &AR.TTI, &AR.TLI);
   if (auto CC = CacheCost::getCacheCost(L, AR, LAIs))
     OS << *CC;
 
