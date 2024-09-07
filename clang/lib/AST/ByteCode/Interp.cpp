@@ -221,17 +221,17 @@ static void popArg(InterpState &S, const Expr *Arg) {
   TYPE_SWITCH(Ty, S.Stk.discard<T>());
 }
 
-void cleanupAfterFunctionCall(InterpState &S, CodePtr OpPC) {
+void cleanupAfterFunctionCall(InterpState &S, CodePtr OpPC,
+                              const Function *Func) {
   assert(S.Current);
-  const Function *CurFunc = S.Current->getFunction();
-  assert(CurFunc);
+  assert(Func);
 
-  if (CurFunc->isUnevaluatedBuiltin())
+  if (Func->isUnevaluatedBuiltin())
     return;
 
   // Some builtin functions require us to only look at the call site, since
   // the classified parameter types do not match.
-  if (unsigned BID = CurFunc->getBuiltinID();
+  if (unsigned BID = Func->getBuiltinID();
       BID && S.getASTContext().BuiltinInfo.hasCustomTypechecking(BID)) {
     const auto *CE =
         cast<CallExpr>(S.Current->Caller->getExpr(S.Current->getRetPC()));
@@ -242,7 +242,7 @@ void cleanupAfterFunctionCall(InterpState &S, CodePtr OpPC) {
     return;
   }
 
-  if (S.Current->Caller && CurFunc->isVariadic()) {
+  if (S.Current->Caller && Func->isVariadic()) {
     // CallExpr we're look for is at the return PC of the current function, i.e.
     // in the caller.
     // This code path should be executed very rarely.
@@ -259,8 +259,8 @@ void cleanupAfterFunctionCall(InterpState &S, CodePtr OpPC) {
     } else
       assert(false && "Can't get arguments from that expression type");
 
-    assert(NumArgs >= CurFunc->getNumWrittenParams());
-    NumVarArgs = NumArgs - (CurFunc->getNumWrittenParams() +
+    assert(NumArgs >= Func->getNumWrittenParams());
+    NumVarArgs = NumArgs - (Func->getNumWrittenParams() +
                             isa<CXXOperatorCallExpr>(CallSite));
     for (unsigned I = 0; I != NumVarArgs; ++I) {
       const Expr *A = Args[NumArgs - 1 - I];
@@ -270,7 +270,8 @@ void cleanupAfterFunctionCall(InterpState &S, CodePtr OpPC) {
 
   // And in any case, remove the fixed parameters (the non-variadic ones)
   // at the end.
-  S.Current->popArgs();
+  for (PrimType Ty : Func->args_reverse())
+    TYPE_SWITCH(Ty, S.Stk.discard<T>());
 }
 
 bool CheckExtern(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
@@ -1036,6 +1037,12 @@ bool CallVar(InterpState &S, CodePtr OpPC, const Function *Func,
 
 bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
           uint32_t VarArgSize) {
+  assert(Func);
+  auto cleanup = [&]() -> bool {
+    cleanupAfterFunctionCall(S, OpPC, Func);
+    return false;
+  };
+
   if (Func->hasThisPointer()) {
     size_t ArgSize = Func->getArgSize() + VarArgSize;
     size_t ThisOffset = ArgSize - (Func->hasRVO() ? primSize(PT_Ptr) : 0);
@@ -1052,22 +1059,22 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
       assert(ThisPtr.isZero());
     } else {
       if (!CheckInvoke(S, OpPC, ThisPtr))
-        return false;
+        return cleanup();
     }
   }
 
   if (!CheckCallable(S, OpPC, Func))
-    return false;
+    return cleanup();
 
   // FIXME: The isConstructor() check here is not always right. The current
   // constant evaluator is somewhat inconsistent in when it allows a function
   // call when checking for a constant expression.
   if (Func->hasThisPointer() && S.checkingPotentialConstantExpression() &&
       !Func->isConstructor())
-    return false;
+    return cleanup();
 
   if (!CheckCallDepth(S, OpPC))
-    return false;
+    return cleanup();
 
   auto NewFrame = std::make_unique<InterpFrame>(S, Func, OpPC, VarArgSize);
   InterpFrame *FrameBefore = S.Current;
