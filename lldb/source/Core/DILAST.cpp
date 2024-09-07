@@ -29,7 +29,7 @@ GetDynamicOrSyntheticValue(lldb::ValueObjectSP in_valobj_sp,
   Status error;
 
   if (!in_valobj_sp) {
-    error.SetErrorString("invalid value object");
+    error = Status("invalid value object");
     return in_valobj_sp;
   }
 
@@ -56,7 +56,7 @@ GetDynamicOrSyntheticValue(lldb::ValueObjectSP in_valobj_sp,
   }
 
   if (!value_sp)
-    error.SetErrorString("invalid value object");
+    error = Status("invalid value object");
 
   return value_sp;
 }
@@ -64,142 +64,6 @@ GetDynamicOrSyntheticValue(lldb::ValueObjectSP in_valobj_sp,
 CompilerType DILASTNode::GetDereferencedResultType() const {
   auto type = result_type();
   return type.IsReferenceType() ? type.GetNonReferenceType() : type;
-}
-
-std::optional<MemberInfo>
-GetFieldWithNameIndexPath(lldb::ValueObjectSP lhs_val_sp, CompilerType type,
-                          const std::string &name, std::vector<uint32_t> *idx,
-                          CompilerType empty_type, bool use_synthetic,
-                          bool is_dynamic) {
-  bool is_synthetic = false;
-  // Go through the fields first.
-  uint32_t num_fields = type.GetNumFields();
-  lldb::ValueObjectSP empty_valobj_sp;
-  for (uint32_t i = 0; i < num_fields; ++i) {
-    uint64_t bit_offset = 0;
-    uint32_t bitfield_bit_size = 0;
-    bool is_bitfield = false;
-    std::string name_sstr;
-    CompilerType field_type(type.GetFieldAtIndex(
-        i, name_sstr, &bit_offset, &bitfield_bit_size, &is_bitfield));
-    auto field_name =
-        name_sstr.length() == 0 ? std::optional<std::string>() : name_sstr;
-    if (field_type.IsValid()) {
-      std::optional<uint32_t> size_in_bits;
-      if (is_bitfield)
-        size_in_bits = bitfield_bit_size;
-      struct MemberInfo field = {field_name,   field_type, size_in_bits,
-                                 is_synthetic, is_dynamic, empty_valobj_sp};
-
-      // Name can be null if this is a padding field.
-      if (field.name == name) {
-        if (lhs_val_sp) {
-          lldb::ValueObjectSP child_valobj_sp =
-              lhs_val_sp->GetChildMemberWithName(name);
-          if (child_valobj_sp &&
-              child_valobj_sp->GetName() == ConstString(name))
-            field.val_obj_sp = child_valobj_sp;
-        }
-
-        if (idx) {
-          assert(idx->empty());
-          // Direct base classes are located before fields, so field members
-          // needs to be offset by the number of base classes.
-          idx->push_back(i + type.GetNumberOfNonEmptyBaseClasses());
-        }
-        return field;
-      } else if (field.type.IsAnonymousType()) {
-        // Every member of an anonymous struct is considered to be a member of
-        // the enclosing struct or union. This applies recursively if the
-        // enclosing struct or union is also anonymous.
-
-        assert(!field.name && "Field should be unnamed.");
-
-        std::optional<MemberInfo> field_in_anon_type =
-            GetFieldWithNameIndexPath(lhs_val_sp, field.type, name, idx,
-                                      empty_type, use_synthetic, is_dynamic);
-        if (field_in_anon_type) {
-          if (idx) {
-            idx->push_back(i + type.GetNumberOfNonEmptyBaseClasses());
-          }
-          return field_in_anon_type.value();
-        }
-      }
-    }
-  }
-
-  // LLDB can't access inherited fields of anonymous struct members.
-  if (type.IsAnonymousType()) {
-    return {};
-  }
-
-  // Go through the base classes and look for the field there.
-  uint32_t num_non_empty_bases = 0;
-  uint32_t num_direct_bases = type.GetNumDirectBaseClasses();
-  for (uint32_t i = 0; i < num_direct_bases; ++i) {
-    uint32_t bit_offset;
-    auto base = type.GetDirectBaseClassAtIndex(i, &bit_offset);
-    auto field = GetFieldWithNameIndexPath(
-        lhs_val_sp, base, name, idx, empty_type, use_synthetic, is_dynamic);
-    if (field) {
-      if (idx) {
-        idx->push_back(num_non_empty_bases);
-      }
-      return field.value();
-    }
-    if (base.GetNumFields() > 0) {
-      num_non_empty_bases += 1;
-    }
-  }
-
-  // Check for synthetic member
-  if (lhs_val_sp && use_synthetic) {
-    lldb::ValueObjectSP child_valobj_sp = lhs_val_sp->GetSyntheticValue();
-    if (child_valobj_sp) {
-      is_synthetic = true;
-      uint32_t child_idx = child_valobj_sp->GetIndexOfChildWithName(name);
-      child_valobj_sp = child_valobj_sp->GetChildMemberWithName(name);
-      if (child_valobj_sp) {
-        CompilerType field_type = child_valobj_sp->GetCompilerType();
-        if (field_type.IsValid()) {
-          struct MemberInfo field = {name,         field_type, {},
-                                     is_synthetic, is_dynamic, child_valobj_sp};
-          if (idx) {
-            assert(idx->empty());
-            idx->push_back(child_idx);
-          }
-          return field;
-        }
-      }
-    }
-  }
-
-  if (lhs_val_sp) {
-    lldb::ValueObjectSP dynamic_val_sp =
-        lhs_val_sp->GetDynamicValue(lldb::eDynamicDontRunTarget);
-    if (dynamic_val_sp) {
-      CompilerType lhs_type = dynamic_val_sp->GetCompilerType();
-      if (lhs_type.IsPointerType())
-        lhs_type = lhs_type.GetPointeeType();
-      is_dynamic = true;
-      return GetFieldWithNameIndexPath(dynamic_val_sp, lhs_type, name, idx,
-                                       empty_type, use_synthetic, is_dynamic);
-    }
-  }
-
-  return {};
-}
-
-std::tuple<std::optional<MemberInfo>, std::vector<uint32_t>>
-GetMemberInfo(lldb::ValueObjectSP lhs_val_sp, CompilerType type,
-              const std::string &name, bool use_synthetic) {
-  std::vector<uint32_t> idx;
-  CompilerType empty_type;
-  bool is_dynamic = false;
-  std::optional<MemberInfo> member = GetFieldWithNameIndexPath(
-      lhs_val_sp, type, name, &idx, empty_type, use_synthetic, is_dynamic);
-  std::reverse(idx.begin(), idx.end());
-  return {member, std::move(idx)};
 }
 
 static lldb::ValueObjectSP
@@ -389,8 +253,7 @@ LookupIdentifier(const std::string &name,
     if (value_sp)
       return IdentifierInfo::FromValue(*value_sp);
     else
-      return std::unique_ptr<IdentifierInfo>(
-          new IdentifierInfo(IdentifierInfo::Kind::eValue, {}, nullptr, {}));
+      return nullptr;
   }
 
   // Internally values don't have global scope qualifier in their names and
@@ -434,15 +297,6 @@ LookupIdentifier(const std::string &name,
         // Force static value, otherwise we can end up with the "real" type.
         return IdentifierInfo::FromValue(*(value_sp->GetStaticValue()));
 
-    } else {
-      // Lookup the variable as a member of the current scope value.
-      lldb::ValueObjectSP empty_sp;
-      bool use_synthetic = false;
-      auto [member, path] =
-          GetMemberInfo(empty_sp, *scope_ptr, name_ref.data(), use_synthetic);
-      if (member)
-        return IdentifierInfo::FromMemberPath(member.value().type,
-                                              std::move(path));
     }
   }
 
@@ -516,8 +370,7 @@ LookupIdentifier(const std::string &name,
   if (value)
     return IdentifierInfo::FromValue(*value);
   else
-    return std::unique_ptr<IdentifierInfo>(
-        new IdentifierInfo(IdentifierInfo::Kind::eValue, {}, nullptr, {}));
+    return nullptr;
 }
 
 void ErrorNode::Accept(Visitor *v) const { v->Visit(this); }

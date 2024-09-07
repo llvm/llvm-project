@@ -34,8 +34,6 @@ namespace dil {
 /// Data Inspection Language (DIL).
 struct MemberInfo {
   std::optional<std::string> name;
-  CompilerType type;
-  std::optional<uint32_t> bitfield_size_in_bits;
   bool is_synthetic;
   bool is_dynamic;
   lldb::ValueObjectSP val_obj_sp;
@@ -64,6 +62,7 @@ enum class NodeKind {
 enum class TypePromotionCastKind {
   eArithmetic,
   ePointer,
+  eNone,
 };
 
 /// The Unary operators recognized by DIL.
@@ -81,8 +80,6 @@ ResolveTypeByName(const std::string &name,
 
 /// Class used to store & manipulate information about identifiers.
 class IdentifierInfo {
-private:
-
 public:
   enum class Kind {
     eValue,
@@ -115,7 +112,6 @@ public:
   const std::vector<uint32_t> &GetPath() const { return m_path; }
 
   CompilerType GetType() { return m_type; }
-  bool IsValid() const { return m_type.IsValid(); }
 
   IdentifierInfo(Kind kind, CompilerType type, lldb::ValueObjectSP value,
                  std::vector<uint32_t> path)
@@ -165,7 +161,6 @@ public:
   virtual bool is_literal_zero() const { return false; }
   virtual uint32_t bitfield_size() const { return 0; }
   virtual CompilerType result_type() const = 0;
-  virtual ValueObject *valobj() const { return nullptr; }
 
   clang::SourceLocation GetLocation() const { return m_location; }
   NodeKind GetKind() const { return m_kind; }
@@ -260,9 +255,6 @@ public:
   bool is_rvalue() const override { return m_is_rvalue; }
   bool is_context_var() const override { return m_is_context_var; };
   CompilerType result_type() const override { return m_identifier->GetType(); }
-  ValueObject *valobj() const override {
-    return m_identifier->GetValue().get();
-  }
 
   std::string name() const { return m_name; }
   const IdentifierInfo &info() const { return *m_identifier; }
@@ -288,7 +280,6 @@ public:
   void Accept(Visitor *v) const override;
   bool is_rvalue() const override { return false; }
   CompilerType result_type() const override { return m_type; }
-  ValueObject *valobj() const override { return m_operand->valobj(); }
 
   CompilerType type() const { return m_type; }
   DILASTNode *operand() const { return m_operand.get(); }
@@ -307,28 +298,27 @@ private:
 class MemberOfNode : public DILASTNode {
 public:
   MemberOfNode(clang::SourceLocation location, CompilerType result_type,
-               DILASTNodeUP base, std::optional<uint32_t> bitfield_size,
-               std::vector<uint32_t> member_index, bool is_arrow,
-               bool is_synthetic, bool is_dynamic, ConstString name,
+               DILASTNodeUP base, bool is_arrow, bool is_synthetic,
+               bool is_dynamic, ConstString name,
                lldb::ValueObjectSP field_valobj_sp)
       : DILASTNode(location, NodeKind::eMemberOfNode),
         m_result_type(result_type), m_base(std::move(base)),
-        m_bitfield_size(bitfield_size), m_member_index(std::move(member_index)),
         m_is_arrow(is_arrow), m_is_synthetic(is_synthetic),
         m_is_dynamic(is_dynamic), m_field_name(name),
         m_field_valobj_sp(field_valobj_sp) {}
 
   void Accept(Visitor *v) const override;
   bool is_rvalue() const override { return false; }
-  bool is_bitfield() const override { return m_bitfield_size ? true : false; }
+  bool is_bitfield() const override { return m_field_valobj_sp->IsBitfield(); }
   uint32_t bitfield_size() const override {
-    return m_bitfield_size ? m_bitfield_size.value() : 0;
+    if (m_field_valobj_sp->IsBitfield())
+      return m_field_valobj_sp->GetBitfieldBitSize();
+    return 0;
   }
   CompilerType result_type() const override { return m_result_type; }
-  ValueObject *valobj() const override { return m_field_valobj_sp.get(); }
 
   DILASTNode *base() const { return m_base.get(); }
-  const std::vector<uint32_t> &member_index() const { return m_member_index; }
+  ValueObject *valobj() const { return m_field_valobj_sp.get(); }
   bool is_arrow() const { return m_is_arrow; }
   bool is_synthetic() const { return m_is_synthetic; }
   bool is_dynamic() const { return m_is_dynamic; }
@@ -341,8 +331,6 @@ public:
 private:
   CompilerType m_result_type;
   DILASTNodeUP m_base;
-  std::optional<uint32_t> m_bitfield_size;
-  std::vector<uint32_t> m_member_index;
   bool m_is_arrow;
   bool m_is_synthetic;
   bool m_is_dynamic;
@@ -361,7 +349,6 @@ public:
   void Accept(Visitor *v) const override;
   bool is_rvalue() const override { return false; }
   CompilerType result_type() const override { return m_result_type; }
-  ValueObject *valobj() const override { return m_base->valobj(); }
 
   DILASTNode *base() const { return m_base.get(); }
   DILASTNode *index() const { return m_index.get(); }
@@ -386,7 +373,6 @@ public:
   void Accept(Visitor *v) const override;
   bool is_rvalue() const override { return m_kind != UnaryOpKind::Deref; }
   CompilerType result_type() const override { return m_result_type; }
-  ValueObject *valobj() const override { return m_rhs->valobj(); }
 
   UnaryOpKind kind() const { return m_kind; }
   DILASTNode *rhs() const { return m_rhs.get(); }
