@@ -108,10 +108,12 @@ constexpr bool test() {
       return value;
     };
     assert(std::ranges::clamp(3, 2, 4, std::ranges::less{}, projection_function) == 3);
+    // When assertions are enabled, we call the projection more times
 #if defined(_LIBCPP_HARDENING_MODE) && \
       _LIBCPP_HARDENING_MODE != _LIBCPP_HARDENING_MODE_EXTENSIVE && \
       _LIBCPP_HARDENING_MODE != _LIBCPP_HARDENING_MODE_DEBUG
-    assert(counter <= 3);
+    if (!std::__libcpp_is_constant_evaluated())
+      assert(counter <= 3);
 #endif
   }
 

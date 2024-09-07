@@ -17,9 +17,14 @@
 #  pragma GCC system_header
 #endif
 
-#define _LIBCPP_ASSERT_IS_CONSTANT_EVALUATED                                                                           \
-  (_LIBCPP_DIAGNOSTIC_PUSH _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wconstant-evaluated") __builtin_is_constant_evaluated()  \
-       _LIBCPP_DIAGNOSTIC_POP)
+#ifdef _LIBCPP_COMPILER_CLANG_BASED
+// TODO: use `_LIBCPP_DIAGNOSTIC_*` macros after #107715 is fixed in all supported clang compilers
+#  define _LIBCPP_ASSERT_IS_CONSTANT_EVALUATED                                                                         \
+    (_Pragma("clang diagnostic push") _Pragma("clang diagnostic ignored \"-Wconstant-evaluated\"")                     \
+         __builtin_is_constant_evaluated() _Pragma("clang diagnostic pop"))
+#else
+#  define _LIBCPP_ASSERT_IS_CONSTANT_EVALUATED (__builtin_is_constant_evaluated())
+#endif
 
 #define _LIBCPP_ASSERT(expression, message)                                                                            \
   (__builtin_expect(static_cast<bool>(expression), 1) ? (void)0                                                        \
