@@ -1244,6 +1244,156 @@ static bool interp__builtin_constant_p(InterpState &S, CodePtr OpPC,
   return returnInt(false);
 }
 
+static bool interp__builtin_operator_new(InterpState &S, CodePtr OpPC,
+                                         const InterpFrame *Frame,
+                                         const Function *Func,
+                                         const CallExpr *Call) {
+  // A call to __operator_new is only valid within std::allocate<>::allocate.
+  // Walk up the call stack to find the appropriate caller and get the
+  // element type from it.
+  QualType ElemType;
+
+  for (const InterpFrame *F = Frame; F; F = F->Caller) {
+    const Function *Func = F->getFunction();
+    if (!Func)
+      continue;
+    const auto *MD = dyn_cast_if_present<CXXMethodDecl>(Func->getDecl());
+    if (!MD)
+      continue;
+    const IdentifierInfo *FnII = MD->getIdentifier();
+    if (!FnII || !FnII->isStr("allocate"))
+      continue;
+
+    const auto *CTSD =
+        dyn_cast<ClassTemplateSpecializationDecl>(MD->getParent());
+    if (!CTSD)
+      continue;
+
+    const IdentifierInfo *ClassII = CTSD->getIdentifier();
+    const TemplateArgumentList &TAL = CTSD->getTemplateArgs();
+    if (CTSD->isInStdNamespace() && ClassII && ClassII->isStr("allocator") &&
+        TAL.size() >= 1 && TAL[0].getKind() == TemplateArgument::Type) {
+      ElemType = TAL[0].getAsType();
+      break;
+    }
+  }
+
+  if (ElemType.isNull()) {
+    S.FFDiag(Call, S.getLangOpts().CPlusPlus20
+                       ? diag::note_constexpr_new_untyped
+                       : diag::note_constexpr_new);
+    return false;
+  }
+
+  if (ElemType->isIncompleteType() || ElemType->isFunctionType()) {
+    S.FFDiag(Call, diag::note_constexpr_new_not_complete_object_type)
+        << (ElemType->isIncompleteType() ? 0 : 1) << ElemType;
+    return false;
+  }
+
+  APSInt Bytes = peekToAPSInt(S.Stk, *S.getContext().classify(Call->getArg(0)));
+  CharUnits ElemSize = S.getASTContext().getTypeSizeInChars(ElemType);
+  assert(!ElemSize.isZero());
+  // Divide the number of bytes by sizeof(ElemType), so we get the number of
+  // elements we should allocate.
+  APInt NumElems, Remainder;
+  APInt ElemSizeAP(Bytes.getBitWidth(), ElemSize.getQuantity());
+  APInt::udivrem(Bytes, ElemSizeAP, NumElems, Remainder);
+  if (Remainder != 0) {
+    // This likely indicates a bug in the implementation of 'std::allocator'.
+    S.FFDiag(Call, diag::note_constexpr_operator_new_bad_size)
+        << Bytes << APSInt(ElemSizeAP, true) << ElemType;
+    return false;
+  }
+
+  // FIXME: CheckArraySize for NumElems?
+
+  std::optional<PrimType> ElemT = S.getContext().classify(ElemType);
+  DynamicAllocator &Allocator = S.getAllocator();
+  if (ElemT) {
+    if (NumElems.ule(1)) {
+      const Descriptor *Desc =
+          S.P.createDescriptor(Call, *ElemT, Descriptor::InlineDescMD,
+                               /*IsConst=*/false, /*IsTemporary=*/false,
+                               /*IsMutable=*/false);
+      Block *B = Allocator.allocate(Desc, S.getContext().getEvalID(),
+                                    DynamicAllocator::Form::Operator);
+      assert(B);
+
+      S.Stk.push<Pointer>(B);
+      return true;
+    }
+    assert(NumElems.ugt(1));
+
+    Block *B =
+        Allocator.allocate(Call, *ElemT, NumElems.getZExtValue(),
+                           S.Ctx.getEvalID(), DynamicAllocator::Form::Operator);
+    assert(B);
+    S.Stk.push<Pointer>(B);
+    return true;
+  }
+
+  assert(!ElemT);
+  // Structs etc.
+  const Descriptor *Desc = S.P.createDescriptor(
+      Call, ElemType.getTypePtr(),
+      NumElems.ule(1) ? std::nullopt : Descriptor::InlineDescMD,
+      /*IsConst=*/false, /*IsTemporary=*/false, /*IsMutable=*/false,
+      /*Init=*/nullptr);
+
+  if (NumElems.ule(1)) {
+    Block *B = Allocator.allocate(Desc, S.getContext().getEvalID(),
+                                  DynamicAllocator::Form::Operator);
+    assert(B);
+    S.Stk.push<Pointer>(B);
+    return true;
+  }
+
+  Block *B =
+      Allocator.allocate(Desc, NumElems.getZExtValue(), S.Ctx.getEvalID(),
+                         DynamicAllocator::Form::Operator);
+  assert(B);
+  S.Stk.push<Pointer>(B);
+  return true;
+}
+
+static bool interp__builtin_operator_delete(InterpState &S, CodePtr OpPC,
+                                            const InterpFrame *Frame,
+                                            const Function *Func,
+                                            const CallExpr *Call) {
+  const Expr *Source = nullptr;
+  const Block *BlockToDelete = nullptr;
+
+  {
+    const Pointer &Ptr = S.Stk.peek<Pointer>();
+
+    if (Ptr.isZero()) {
+      S.CCEDiag(Call, diag::note_constexpr_deallocate_null);
+      return true;
+    }
+
+    Source = Ptr.getDeclDesc()->asExpr();
+    BlockToDelete = Ptr.block();
+  }
+  assert(BlockToDelete);
+
+  DynamicAllocator &Allocator = S.getAllocator();
+  const Descriptor *BlockDesc = BlockToDelete->getDescriptor();
+  std::optional<DynamicAllocator::Form> AllocForm =
+      Allocator.getAllocationForm(Source);
+
+  if (!Allocator.deallocate(Source, BlockToDelete, S)) {
+    // Nothing has been deallocated, this must be a double-delete.
+    const SourceInfo &Loc = S.Current->getSource(OpPC);
+    S.FFDiag(Loc, diag::note_constexpr_double_delete);
+    return false;
+  }
+  assert(AllocForm);
+
+  return CheckNewDeleteForms(
+      S, OpPC, *AllocForm, DynamicAllocator::Form::Operator, BlockDesc, Source);
+}
+
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
                       const CallExpr *Call) {
   const InterpFrame *Frame = S.Current;
@@ -1595,6 +1745,16 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
 
   case Builtin::BI__noop:
     pushInteger(S, 0, Call->getType());
+    break;
+
+  case Builtin::BI__builtin_operator_new:
+    if (!interp__builtin_operator_new(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
+  case Builtin::BI__builtin_operator_delete:
+    if (!interp__builtin_operator_delete(S, OpPC, Frame, F, Call))
+      return false;
     break;
 
   default:

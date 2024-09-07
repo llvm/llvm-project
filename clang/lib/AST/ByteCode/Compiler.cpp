@@ -1874,8 +1874,12 @@ bool Compiler<Emitter>::VisitMemberExpr(const MemberExpr *E) {
     return false;
   }
 
-  if (!isa<FieldDecl>(Member))
-    return this->discard(Base) && this->visitDeclRef(Member, E);
+  if (!isa<FieldDecl>(Member)) {
+    if (!this->discard(Base) && !this->emitSideEffect(E))
+      return false;
+
+    return this->visitDeclRef(Member, E);
+  }
 
   if (Initializing) {
     if (!this->delegate(Base))
@@ -2673,8 +2677,14 @@ bool Compiler<Emitter>::VisitCXXConstructExpr(const CXXConstructExpr *E) {
       if (!this->emitCallVar(Func, VarArgSize, E))
         return false;
     } else {
-      if (!this->emitCall(Func, 0, E))
+      if (!this->emitCall(Func, 0, E)) {
+        // When discarding, we don't need the result anyway, so clean up
+        // the instance dup we did earlier in case surrounding code wants
+        // to keep evaluating.
+        if (DiscardResult)
+          (void)this->emitPopPtr(E);
         return false;
+      }
     }
 
     if (DiscardResult)
@@ -3723,20 +3733,29 @@ const Function *Compiler<Emitter>::getFunction(const FunctionDecl *FD) {
   return Ctx.getOrCreateFunction(FD);
 }
 
-template <class Emitter> bool Compiler<Emitter>::visitExpr(const Expr *E) {
+template <class Emitter>
+bool Compiler<Emitter>::visitExpr(const Expr *E, bool DestroyToplevelScope) {
   LocalScope<Emitter> RootScope(this);
+
+  auto maybeDestroyLocals = [&]() -> bool {
+    if (DestroyToplevelScope)
+      return RootScope.destroyLocals();
+    return true;
+  };
+
   // Void expressions.
   if (E->getType()->isVoidType()) {
     if (!visit(E))
       return false;
-    return this->emitRetVoid(E) && RootScope.destroyLocals();
+    return this->emitRetVoid(E) && maybeDestroyLocals();
   }
 
   // Expressions with a primitive return type.
   if (std::optional<PrimType> T = classify(E)) {
     if (!visit(E))
       return false;
-    return this->emitRet(*T, E) && RootScope.destroyLocals();
+
+    return this->emitRet(*T, E) && maybeDestroyLocals();
   }
 
   // Expressions with a composite return type.
@@ -3754,10 +3773,10 @@ template <class Emitter> bool Compiler<Emitter>::visitExpr(const Expr *E) {
     // We are destroying the locals AFTER the Ret op.
     // The Ret op needs to copy the (alive) values, but the
     // destructors may still turn the entire expression invalid.
-    return this->emitRetValue(E) && RootScope.destroyLocals();
+    return this->emitRetValue(E) && maybeDestroyLocals();
   }
 
-  RootScope.destroyLocals();
+  (void)maybeDestroyLocals();
   return false;
 }
 
