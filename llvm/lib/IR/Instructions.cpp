@@ -1555,6 +1555,17 @@ bool GetElementPtrInst::hasAllConstantIndices() const {
   return true;
 }
 
+/// hasAllZeroIndicesExceptLast - Return true if all of the indices of this GEP
+/// are zero except the last indice.
+bool GetElementPtrInst::hasAllZeroIndicesExceptLast() const {
+  for (unsigned i = 1, e = getNumOperands() - 1; i != e; ++i) {
+    if (!isa<ConstantInt>(getOperand(i)) ||
+        !cast<ConstantInt>(getOperand(i))->isZero())
+      return false;
+  }
+  return true;
+}
+
 void GetElementPtrInst::setNoWrapFlags(GEPNoWrapFlags NW) {
   SubclassOptionalData = NW.getRaw();
 }

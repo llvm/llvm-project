@@ -2805,6 +2805,38 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
                                     GEP.getNoWrapFlags()));
   }
 
+  // For complex type: %"struct.std::complex" = type { { float, float } }
+  // Canonicalize
+  //  - %idxprom = sext i32 %Off to i64
+  //  - inbounds [100 x %"struct.std::complex"], ptr @p, i64 0, i64 %idx
+  // into
+  //  - %idxprom.scale = shl nsw i32 %Off, 1
+  //  - %1 = sext i32 %idxprom.scale to i64
+  //  - getelementptr inbounds float, ptr @p, i64 %1
+  auto *GepResElTy = GEP.getResultElementType();
+  if (GepResElTy->isStructTy() && GepResElTy->getStructNumElements() == 1)
+    GepResElTy = GepResElTy->getStructElementType(0);
+  if (GepResElTy->isStructTy() && GepResElTy->getStructNumElements() == 2 &&
+      GepResElTy->getStructElementType(0) ==
+          GepResElTy->getStructElementType(1) &&
+      GEP.hasAllZeroIndicesExceptLast()) {
+    unsigned LastIndice = GEP.getNumOperands() - 1;
+    Value *LastOp = GEP.getOperand(LastIndice);
+    if (auto *SExtI = dyn_cast<SExtInst>(LastOp)) {
+      GEPOperator *GEPOp = cast<GEPOperator>(&GEP);
+      bool NSW = GEPOp->hasNoUnsignedSignedWrap();
+      bool NUW = GEPOp->hasNoUnsignedWrap();
+      // We'll let instcombine(mul) convert this to a shl if possible.
+      auto IntTy = SExtI->getOperand(0)->getType();
+      Value *Offset =
+          Builder.CreateMul(SExtI->getOperand(0), ConstantInt::get(IntTy, 2),
+                            SExtI->getName() + ".scale", NUW, NSW);
+      return replaceInstUsesWith(
+          GEP, Builder.CreateGEP(GepResElTy->getStructElementType(0), PtrOp,
+                                 Offset, "", GEP.getNoWrapFlags()));
+    }
+  }
+
   // Canonicalize
   //  - scalable GEPs to an explicit offset using the llvm.vscale intrinsic.
   //    This has better support in BasicAA.

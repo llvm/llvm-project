@@ -1078,6 +1078,8 @@ public:
   /// a constant offset between them.
   bool hasAllConstantIndices() const;
 
+  bool hasAllZeroIndicesExceptLast() const;
+
   /// Set nowrap flags for GEP instruction.
   void setNoWrapFlags(GEPNoWrapFlags NW);
 
