@@ -98,3 +98,6 @@ List of projects and tools
    uses of reserved identifiers to ensuring that code adheres to lifecycle
    protocols for certain LibreOffice-specific classes.  They may serve as
    examples for writing RecursiveASTVisitor-based plugins."
+
+`<https://github.com/banach-space/clang-tutor>`_
+   "A collection of out-of-tree Clang plugins for teaching and learning"
