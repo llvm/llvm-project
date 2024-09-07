@@ -24084,18 +24084,32 @@ static SDValue LowerSELECTWithCmpZero(SDValue CmpVal, SDValue LHS, SDValue RHS,
   if (!CmpVT.isScalarInteger() || !VT.isScalarInteger())
     return SDValue();
 
-  // Convert OR/XOR 'identity' patterns (iff X is 0 or 1):
-  // select (X != 0), Y, (OR Y, Z) -> (OR Y, (AND (0 - X), Z))
-  // select (X != 0), Y, (XOR Y, Z) -> (XOR Y, (AND (0 - X), Z))
+  // Convert 'identity' patterns (iff X is 0 or 1):
+  // SELECT (X != 0), Y, (OR Y, Z) -> (OR Y, (AND (0 - X), Z))
+  // SELECT (X != 0), Y, (XOR Y, Z) -> (XOR Y, (AND (0 - X), Z))
+  // SELECT (X != 0), Y, (ADD Y, Z) -> (ADD Y, (AND (0 - X), Z))
+  // SELECT (X != 0), Y, (SUB Y, Z) -> (SUB Y, (AND (0 - X), Z))
   if (!Subtarget.canUseCMOV() && X86CC == X86::COND_E &&
       CmpVal.getOpcode() == ISD::AND && isOneConstant(CmpVal.getOperand(1))) {
     SDValue Src1, Src2;
     auto isIdentityPattern = [&]() {
-      if ((RHS.getOpcode() == ISD::XOR || RHS.getOpcode() == ISD::OR) &&
-          (RHS.getOperand(0) == LHS || RHS.getOperand(1) == LHS)) {
-        Src1 = RHS.getOperand(RHS.getOperand(0) == LHS ? 1 : 0);
-        Src2 = LHS;
-        return true;
+      switch (RHS.getOpcode()) {
+      case ISD::OR:
+      case ISD::XOR:
+      case ISD::ADD:
+        if (RHS.getOperand(0) == LHS || RHS.getOperand(1) == LHS) {
+          Src1 = RHS.getOperand(RHS.getOperand(0) == LHS ? 1 : 0);
+          Src2 = LHS;
+          return true;
+        }
+        break;
+      case ISD::SUB:
+        if (RHS.getOperand(0) == LHS) {
+          Src1 = RHS.getOperand(1);
+          Src2 = LHS;
+          return true;
+        }
+        break;
       }
       return false;
     };
@@ -24113,7 +24127,7 @@ static SDValue LowerSELECTWithCmpZero(SDValue CmpVal, SDValue LHS, SDValue RHS,
             DAG.getConstant(1, DL, VT));
       SDValue Mask = DAG.getNegative(Neg, DL, VT); // -(and (x, 0x1))
       SDValue And = DAG.getNode(ISD::AND, DL, VT, Mask, Src1); // Mask & z
-      return DAG.getNode(RHS.getOpcode(), DL, VT, And, Src2);  // And Op y
+      return DAG.getNode(RHS.getOpcode(), DL, VT, Src2, And);  // y Op And
     }
   }
 
