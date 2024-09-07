@@ -952,7 +952,7 @@ bool IODEF(SetRecl)(Cookie cookie, std::size_t n) {
     io.GetIoErrorHandler().SignalError("RECL= must be greater than zero");
     return false;
   } else if (open->wasExtant() &&
-      open->unit().openRecl.value_or(0) != static_cast<std::int64_t>(n)) {
+      open->unit().openRecl.value_or(n) != static_cast<std::int64_t>(n)) {
     open->SignalError("RECL= may not be changed for an open unit");
     return false;
   } else {
