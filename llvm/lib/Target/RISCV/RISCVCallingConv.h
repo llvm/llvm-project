@@ -15,28 +15,21 @@
 
 namespace llvm {
 
-class DataLayout;
-class RISCVTargetLowering;
-
 /// RISCVCCAssignFn - This target-specific function extends the default
 /// CCValAssign with additional information used to lower RISC-V calling
 /// conventions.
-typedef bool RISCVCCAssignFn(const DataLayout &DL, RISCVABI::ABI,
-                             unsigned ValNo, MVT ValVT, MVT LocVT,
+typedef bool RISCVCCAssignFn(unsigned ValNo, MVT ValVT, MVT LocVT,
                              CCValAssign::LocInfo LocInfo,
                              ISD::ArgFlagsTy ArgFlags, CCState &State,
-                             bool IsFixed, bool IsRet, Type *OrigTy,
-                             const RISCVTargetLowering &TLI);
+                             bool IsFixed, bool IsRet, Type *OrigTy);
 
-bool CC_RISCV(const DataLayout &DL, RISCVABI::ABI ABI, unsigned ValNo,
-              MVT ValVT, MVT LocVT, CCValAssign::LocInfo LocInfo,
-              ISD::ArgFlagsTy ArgFlags, CCState &State, bool IsFixed,
-              bool IsRet, Type *OrigTy, const RISCVTargetLowering &TLI);
+bool CC_RISCV(unsigned ValNo, MVT ValVT, MVT LocVT,
+              CCValAssign::LocInfo LocInfo, ISD::ArgFlagsTy ArgFlags,
+              CCState &State, bool IsFixed, bool IsRet, Type *OrigTy);
 
-bool CC_RISCV_FastCC(const DataLayout &DL, RISCVABI::ABI ABI, unsigned ValNo,
-                     MVT ValVT, MVT LocVT, CCValAssign::LocInfo LocInfo,
-                     ISD::ArgFlagsTy ArgFlags, CCState &State, bool IsFixed,
-                     bool IsRet, Type *OrigTy, const RISCVTargetLowering &TLI);
+bool CC_RISCV_FastCC(unsigned ValNo, MVT ValVT, MVT LocVT,
+                     CCValAssign::LocInfo LocInfo, ISD::ArgFlagsTy ArgFlags,
+                     CCState &State, bool IsFixed, bool IsRet, Type *OrigTy);
 
 bool CC_RISCV_GHC(unsigned ValNo, MVT ValVT, MVT LocVT,
                   CCValAssign::LocInfo LocInfo, ISD::ArgFlagsTy ArgFlags,
