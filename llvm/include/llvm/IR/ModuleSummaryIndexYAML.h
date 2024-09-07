@@ -230,7 +230,7 @@ template <> struct CustomMappingTraits<GlobalValueSummaryMapTy> {
               FSum.CanAutoHide,
               static_cast<GlobalValueSummary::ImportKind>(FSum.ImportType)),
           /*NumInsts=*/0, FunctionSummary::FFlags{}, std::move(Refs),
-          ArrayRef<FunctionSummary::EdgeTy>{}, std::move(FSum.TypeTests),
+          SmallVector<FunctionSummary::EdgeTy, 0>{}, std::move(FSum.TypeTests),
           std::move(FSum.TypeTestAssumeVCalls),
           std::move(FSum.TypeCheckedLoadVCalls),
           std::move(FSum.TypeTestAssumeConstVCalls),
