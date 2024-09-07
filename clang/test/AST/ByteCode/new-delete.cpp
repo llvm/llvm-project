@@ -586,6 +586,118 @@ constexpr void use_after_free_2() { // both-error {{never produces a constant ex
   p->f(); // both-note {{member call on heap allocated object that has been deleted}}
 }
 
+
+/// std::allocator definition
+namespace std {
+  using size_t = decltype(sizeof(0));
+  template<typename T> struct allocator {
+    constexpr T *allocate(size_t N) {
+      return (T*)__builtin_operator_new(sizeof(T) * N); // both-note 2{{allocation performed here}}
+    }
+    constexpr void deallocate(void *p) {
+      __builtin_operator_delete(p); // both-note 2{{std::allocator<...>::deallocate' used to delete pointer to object allocated with 'new'}} \
+                                    // both-note {{used to delete a null pointer}}
+    }
+  };
+}
+
+namespace OperatorNewDelete {
+
+  constexpr bool mismatched(int alloc_kind, int dealloc_kind) {
+    int *p;
+
+    if (alloc_kind == 0)
+      p = new int; // both-note {{allocation performed here}}
+    else if (alloc_kind == 1)
+      p = new int[1]; // both-note {{allocation performed here}}
+    else if (alloc_kind == 2)
+      p = std::allocator<int>().allocate(1);
+
+
+    if (dealloc_kind == 0)
+      delete p; // both-note {{'delete' used to delete pointer to object allocated with 'std::allocator<...>::allocate'}}
+    else if (dealloc_kind == 1)
+      delete[] p; // both-note {{'delete' used to delete pointer to object allocated with 'std::allocator<...>::allocate'}}
+    else if (dealloc_kind == 2)
+      std::allocator<int>().deallocate(p); // both-note 2{{in call to}}
+
+    return true;
+  }
+  static_assert(mismatched(0, 2)); // both-error {{constant expression}} \
+                                   // both-note {{in call to}}
+  static_assert(mismatched(1, 2)); // both-error {{constant expression}} \
+                                   // both-note {{in call to}}
+  static_assert(mismatched(2, 0)); // both-error {{constant expression}} \
+                                   // both-note {{in call}}
+  static_assert(mismatched(2, 1)); // both-error {{constant expression}} \
+                                   // both-note {{in call}}
+  static_assert(mismatched(2, 2));
+
+  constexpr bool zeroAlloc() {
+    int *F = std::allocator<int>().allocate(0);
+    std::allocator<int>().deallocate(F);
+    return true;
+  }
+  static_assert(zeroAlloc());
+
+  /// FIXME: This is broken in the current interpreter.
+  constexpr int arrayAlloc() {
+    int *F = std::allocator<int>().allocate(2);
+    F[0] = 10; // ref-note {{assignment to object outside its lifetime is not allowed in a constant expression}}
+    F[1] = 13;
+    int Res = F[1] + F[0];
+    std::allocator<int>().deallocate(F);
+    return Res;
+  }
+  static_assert(arrayAlloc() == 23); // ref-error {{not an integral constant expression}} \
+                                     // ref-note {{in call to}}
+
+  struct S {
+    int i;
+    constexpr S(int i) : i(i) {}
+    constexpr ~S() { }
+  };
+
+  /// FIXME: This is broken in the current interpreter.
+  constexpr bool structAlloc() {
+    S *s = std::allocator<S>().allocate(1);
+
+    s->i = 12; // ref-note {{assignment to object outside its lifetime is not allowed in a constant expression}}
+
+    bool Res = (s->i == 12);
+    std::allocator<S>().deallocate(s);
+
+    return Res;
+  }
+  static_assert(structAlloc()); // ref-error {{not an integral constant expression}} \
+                                // ref-note {{in call to}}
+
+  constexpr bool structAllocArray() {
+    S *s = std::allocator<S>().allocate(9);
+
+    s[2].i = 12; // ref-note {{assignment to object outside its lifetime is not allowed in a constant expression}}
+    bool Res = (s[2].i == 12);
+    std::allocator<S>().deallocate(s);
+
+    return Res;
+  }
+  static_assert(structAllocArray()); // ref-error {{not an integral constant expression}} \
+                                     // ref-note {{in call to}}
+
+  constexpr bool alloc_from_user_code() {
+    void *p = __builtin_operator_new(sizeof(int)); // both-note {{cannot allocate untyped memory in a constant expression; use 'std::allocator<T>::allocate'}}
+    __builtin_operator_delete(p);
+    return true;
+  }
+  static_assert(alloc_from_user_code()); // both-error {{constant expression}} \
+                                         // both-note {{in call to}}
+
+
+  constexpr int no_deallocate_nullptr = (std::allocator<int>().deallocate(nullptr), 1); // both-error {{constant expression}} \
+                                                                                        // both-note {{in call}}
+
+}
+
 #else
 /// Make sure we reject this prior to C++20
 constexpr int a() { // both-error {{never produces a constant expression}}
