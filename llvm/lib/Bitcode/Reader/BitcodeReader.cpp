@@ -7792,7 +7792,6 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       uint64_t RawFlags = Record[2];
       unsigned InstCount = Record[3];
       uint64_t RawFunFlags = 0;
-      uint64_t EntryCount = 0;
       unsigned NumRefs = Record[4];
       unsigned NumRORefs = 0, NumWORefs = 0;
       int RefListStartIndex = 5;
@@ -7806,7 +7805,8 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
           RefListStartIndex = 7;
           if (Version >= 6) {
             NumRefsIndex = 6;
-            EntryCount = Record[5];
+            // Record[5] is reserved for an obsolete field. Bitcode writer
+            // writes a dummy zero.
             RefListStartIndex = 8;
             if (Version >= 7) {
               RefListStartIndex = 9;
