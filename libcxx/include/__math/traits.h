@@ -34,30 +34,27 @@ namespace __math {
 #  define _LIBCPP_SIGNBIT_CONSTEXPR
 #endif
 
-_LIBCPP_NODISCARD inline _LIBCPP_SIGNBIT_CONSTEXPR _LIBCPP_HIDE_FROM_ABI
-#ifdef _LIBCPP_PREFERRED_OVERLOAD
-_LIBCPP_PREFERRED_OVERLOAD
+// The universal C runtime (UCRT) in the WinSDK provides overloads for all floating point types
+// for std::signbit(). We need to work around it as the compilation would otherwise error out
+// due to duplicated definitions for clang-cl builds.
+#if defined(_LIBCPP_MSVCRT) && defined(_LIBCPP_PREFERRED_OVERLOAD)
+#  define LIBCPP_SIGNBIT_OVERLOAD _LIBCPP_PREFERRED_OVERLOAD
+#else
+#  define LIBCPP_SIGNBIT_OVERLOAD
 #endif
-    bool
-    signbit(float __x) _NOEXCEPT {
+
+_LIBCPP_NODISCARD inline _LIBCPP_SIGNBIT_CONSTEXPR _LIBCPP_HIDE_FROM_ABI LIBCPP_SIGNBIT_OVERLOAD bool
+signbit(float __x) _NOEXCEPT {
   return __builtin_signbit(__x);
 }
 
-_LIBCPP_NODISCARD inline _LIBCPP_SIGNBIT_CONSTEXPR _LIBCPP_HIDE_FROM_ABI
-#ifdef _LIBCPP_PREFERRED_OVERLOAD
-_LIBCPP_PREFERRED_OVERLOAD
-#endif
-    bool
-    signbit(double __x) _NOEXCEPT {
+_LIBCPP_NODISCARD inline _LIBCPP_SIGNBIT_CONSTEXPR _LIBCPP_HIDE_FROM_ABI LIBCPP_SIGNBIT_OVERLOAD bool
+signbit(double __x) _NOEXCEPT {
   return __builtin_signbit(__x);
 }
 
-_LIBCPP_NODISCARD inline _LIBCPP_SIGNBIT_CONSTEXPR _LIBCPP_HIDE_FROM_ABI
-#ifdef _LIBCPP_PREFERRED_OVERLOAD
-_LIBCPP_PREFERRED_OVERLOAD
-#endif
-    bool
-    signbit(long double __x) _NOEXCEPT {
+_LIBCPP_NODISCARD inline _LIBCPP_SIGNBIT_CONSTEXPR _LIBCPP_HIDE_FROM_ABI LIBCPP_SIGNBIT_OVERLOAD bool
+signbit(long double __x) _NOEXCEPT {
   return __builtin_signbit(__x);
 }
 
