@@ -191,12 +191,11 @@ define i32 @add_signbit_select_shl(i32 %x, i1 %cond, ptr %dst) {
 ; X86-LABEL: add_signbit_select_shl:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; X86-NEXT:    je .LBB6_2
-; X86-NEXT:  # %bb.1:
-; X86-NEXT:    addl $-65536, %eax # imm = 0xFFFF0000
-; X86-NEXT:  .LBB6_2:
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    andl $1, %eax
+; X86-NEXT:    negl %eax
+; X86-NEXT:    andl $16711680, %eax # imm = 0xFF0000
+; X86-NEXT:    addl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    shll $8, %eax
 ; X86-NEXT:    movl %eax, (%ecx)
 ; X86-NEXT:    retl
@@ -220,12 +219,11 @@ define i32 @add_nosignbit_select_shl(i32 %x, i1 %cond, ptr %dst) {
 ; X86-LABEL: add_nosignbit_select_shl:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; X86-NEXT:    je .LBB7_2
-; X86-NEXT:  # %bb.1:
-; X86-NEXT:    addl $2147418112, %eax # imm = 0x7FFF0000
-; X86-NEXT:  .LBB7_2:
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    andl $1, %eax
+; X86-NEXT:    negl %eax
+; X86-NEXT:    andl $16711680, %eax # imm = 0xFF0000
+; X86-NEXT:    addl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    shll $8, %eax
 ; X86-NEXT:    movl %eax, (%ecx)
 ; X86-NEXT:    retl
@@ -425,12 +423,11 @@ define i32 @add_signbit_select_lshr(i32 %x, i1 %cond, ptr %dst) {
 ; X86-LABEL: add_signbit_select_lshr:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; X86-NEXT:    je .LBB14_2
-; X86-NEXT:  # %bb.1:
-; X86-NEXT:    addl $-65536, %eax # imm = 0xFFFF0000
-; X86-NEXT:  .LBB14_2:
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    andl $1, %eax
+; X86-NEXT:    negl %eax
+; X86-NEXT:    andl $-65536, %eax # imm = 0xFFFF0000
+; X86-NEXT:    addl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    shrl $8, %eax
 ; X86-NEXT:    movl %eax, (%ecx)
 ; X86-NEXT:    retl
@@ -454,12 +451,11 @@ define i32 @add_nosignbit_select_lshr(i32 %x, i1 %cond, ptr %dst) {
 ; X86-LABEL: add_nosignbit_select_lshr:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; X86-NEXT:    je .LBB15_2
-; X86-NEXT:  # %bb.1:
-; X86-NEXT:    addl $2147418112, %eax # imm = 0x7FFF0000
-; X86-NEXT:  .LBB15_2:
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    andl $1, %eax
+; X86-NEXT:    negl %eax
+; X86-NEXT:    andl $2147418112, %eax # imm = 0x7FFF0000
+; X86-NEXT:    addl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    shrl $8, %eax
 ; X86-NEXT:    movl %eax, (%ecx)
 ; X86-NEXT:    retl
@@ -659,12 +655,11 @@ define i32 @add_signbit_select_ashr(i32 %x, i1 %cond, ptr %dst) {
 ; X86-LABEL: add_signbit_select_ashr:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; X86-NEXT:    je .LBB22_2
-; X86-NEXT:  # %bb.1:
-; X86-NEXT:    addl $-65536, %eax # imm = 0xFFFF0000
-; X86-NEXT:  .LBB22_2:
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    andl $1, %eax
+; X86-NEXT:    negl %eax
+; X86-NEXT:    andl $-65536, %eax # imm = 0xFFFF0000
+; X86-NEXT:    addl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    sarl $8, %eax
 ; X86-NEXT:    movl %eax, (%ecx)
 ; X86-NEXT:    retl
@@ -688,12 +683,11 @@ define i32 @add_nosignbit_select_ashr(i32 %x, i1 %cond, ptr %dst) {
 ; X86-LABEL: add_nosignbit_select_ashr:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; X86-NEXT:    je .LBB23_2
-; X86-NEXT:  # %bb.1:
-; X86-NEXT:    addl $2147418112, %eax # imm = 0x7FFF0000
-; X86-NEXT:  .LBB23_2:
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    andl $1, %eax
+; X86-NEXT:    negl %eax
+; X86-NEXT:    andl $2147418112, %eax # imm = 0x7FFF0000
+; X86-NEXT:    addl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    sarl $8, %eax
 ; X86-NEXT:    movl %eax, (%ecx)
 ; X86-NEXT:    retl
