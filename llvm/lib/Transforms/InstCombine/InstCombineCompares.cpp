@@ -8184,64 +8184,64 @@ static Instruction *foldFCmpWithFloorAndCeil(FCmpInst &I,
   Type *OpType = LHS->getType();
   CmpInst::Predicate Pred = I.getPredicate();
 
-  bool floor_x = match(LHS, m_Intrinsic<Intrinsic::floor>(m_Specific(RHS)));
-  bool x_floor = match(RHS, m_Intrinsic<Intrinsic::floor>(m_Specific(LHS)));
-  bool ceil_x = match(LHS, m_Intrinsic<Intrinsic::ceil>(m_Specific(RHS)));
-  bool x_ceil = match(RHS, m_Intrinsic<Intrinsic::ceil>(m_Specific(LHS)));
+  bool FloorX = match(LHS, m_Intrinsic<Intrinsic::floor>(m_Specific(RHS)));
+  bool CeilX = match(LHS, m_Intrinsic<Intrinsic::ceil>(m_Specific(RHS)));
 
-  if (x_floor || x_ceil) {
-    std::swap(LHS, RHS);
-    Pred = I.getSwappedPredicate();
-    (x_floor ? floor_x : ceil_x) = true;
+  if (!FloorX && !CeilX) {
+    if ((FloorX = match(RHS, m_Intrinsic<Intrinsic::floor>(m_Specific(LHS)))) ||
+        (CeilX = match(RHS, m_Intrinsic<Intrinsic::ceil>(m_Specific(LHS))))) {
+      std::swap(LHS, RHS);
+      Pred = I.getSwappedPredicate();
+    }
   }
 
   switch (Pred) {
   case FCmpInst::FCMP_OLE:
     // fcmp ole floor(x), x => fcmp ord x, 0
-    if (floor_x)
+    if (FloorX)
       return new FCmpInst(FCmpInst::FCMP_ORD, RHS, ConstantFP::getZero(OpType),
                           "", &I);
     break;
   case FCmpInst::FCMP_OGT:
     // fcmp ogt floor(x), x => false
-    if (floor_x)
+    if (FloorX)
       return CI.replaceInstUsesWith(I, ConstantInt::getFalse(I.getType()));
     break;
   case FCmpInst::FCMP_OGE:
     // fcmp oge ceil(x), x => fcmp ord x, 0
-    if (ceil_x)
+    if (CeilX)
       return new FCmpInst(FCmpInst::FCMP_ORD, RHS, ConstantFP::getZero(OpType),
                           "", &I);
     break;
   case FCmpInst::FCMP_OLT:
     // fcmp olt ceil(x), x => false
-    if (ceil_x)
+    if (CeilX)
       return CI.replaceInstUsesWith(I, ConstantInt::getFalse(I.getType()));
     break;
   case FCmpInst::FCMP_ULE:
     // fcmp ule floor(x), x => fcmp ule -inf, x
-    if (floor_x)
+    if (FloorX)
       return new FCmpInst(FCmpInst::FCMP_ULE,
                           ConstantFP::getInfinity(RHS->getType(), true), RHS,
                           "", &I);
     break;
   case FCmpInst::FCMP_UGT:
     // fcmp ugt floor(x), x => fcmp ugt -inf, x
-    if (floor_x)
+    if (FloorX)
       return new FCmpInst(FCmpInst::FCMP_UGT,
                           ConstantFP::getInfinity(RHS->getType(), true), RHS,
                           "", &I);
     break;
   case FCmpInst::FCMP_UGE:
     // fcmp uge ceil(x), x => fcmp uge inf, x
-    if (ceil_x)
+    if (CeilX)
       return new FCmpInst(FCmpInst::FCMP_UGE,
                           ConstantFP::getInfinity(RHS->getType(), false), RHS,
                           "", &I);
     break;
   case FCmpInst::FCMP_ULT:
     // fcmp ult ceil(x), x => fcmp ult inf, x
-    if (ceil_x)
+    if (CeilX)
       return new FCmpInst(FCmpInst::FCMP_ULT,
                           ConstantFP::getInfinity(RHS->getType(), false), RHS,
                           "", &I);
