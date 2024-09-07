@@ -160,6 +160,9 @@ Resolutions to C++ Defect Reports
 - Allow ``void{}`` as a prvalue of type ``void``.
   (`CWG2351: void{} <https://cplusplus.github.io/CWG/issues/2351.html>`_).
 
+- Clang now has improved resolution to CWG2398, allowing class templates to have
+  default arguments deduced when partial ordering.
+
 - Clang now allows comparing unequal object pointers that have been cast to ``void *``
   in constant expressions. These comparisons always worked in non-constant expressions.
   (`CWG2749: Treatment of "pointer to void" for relational comparisons <https://cplusplus.github.io/CWG/issues/2749.html>`_).
