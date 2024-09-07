@@ -51,6 +51,8 @@ Improvements and New Features
 
 - The ``_LIBCPP_ENABLE_CXX20_REMOVED_UNCAUGHT_EXCEPTION`` macro has been added to make ``std::uncaught_exception`` available in C++20 and later modes.
 
+- ``_LIBCPP_ASSUME(expression)`` now checks the expression is ``true`` during constant evaluation.
+  This means that all assertions are now checked regardless of hardening mode in constant expressions.
 
 Deprecations and Removals
 -------------------------
