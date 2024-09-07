@@ -538,10 +538,13 @@ private:
   /// (either by the initializer of a global variable, or referenced
   /// from within a function). This does not include functions called, which
   /// are listed in the derived FunctionSummary object.
-  std::vector<ValueInfo> RefEdgeList;
+  /// We use SmallVector<ValueInfo, 0> instead of std::vector<ValueInfo> for its
+  /// smaller memory footprint.
+  SmallVector<ValueInfo, 0> RefEdgeList;
 
 protected:
-  GlobalValueSummary(SummaryKind K, GVFlags Flags, std::vector<ValueInfo> Refs)
+  GlobalValueSummary(SummaryKind K, GVFlags Flags,
+                     SmallVectorImpl<ValueInfo> &&Refs)
       : Kind(K), Flags(Flags), RefEdgeList(std::move(Refs)) {
     assert((K != AliasKind || Refs.empty()) &&
            "Expect no references for AliasSummary");
@@ -637,12 +640,11 @@ class AliasSummary : public GlobalValueSummary {
   /// memory for time). Note that this pointer may be null (and the value info
   /// empty) when we have a distributed index where the alias is being imported
   /// (as a copy of the aliasee), but the aliasee is not.
-  GlobalValueSummary *AliaseeSummary;
+  GlobalValueSummary *AliaseeSummary = nullptr;
 
 public:
   AliasSummary(GVFlags Flags)
-      : GlobalValueSummary(AliasKind, Flags, ArrayRef<ValueInfo>{}),
-        AliaseeSummary(nullptr) {}
+      : GlobalValueSummary(AliasKind, Flags, SmallVector<ValueInfo, 0>{}) {}
 
   /// Check if this is an alias summary.
   static bool classof(const GlobalValueSummary *GVS) {
@@ -856,9 +858,8 @@ public:
             GlobalValue::DefaultVisibility,
             /*NotEligibleToImport=*/true, /*Live=*/true, /*IsLocal=*/false,
             /*CanAutoHide=*/false, GlobalValueSummary::ImportKind::Definition),
-        /*NumInsts=*/0, FunctionSummary::FFlags{}, /*EntryCount=*/0,
-        std::vector<ValueInfo>(), std::move(Edges),
-        std::vector<GlobalValue::GUID>(),
+        /*NumInsts=*/0, FunctionSummary::FFlags{}, SmallVector<ValueInfo, 0>(),
+        std::move(Edges), std::vector<GlobalValue::GUID>(),
         std::vector<FunctionSummary::VFuncId>(),
         std::vector<FunctionSummary::VFuncId>(),
         std::vector<FunctionSummary::ConstVCall>(),
@@ -877,11 +878,6 @@ private:
 
   /// Function summary specific flags.
   FFlags FunFlags;
-
-  /// The synthesized entry count of the function.
-  /// This is only populated during ThinLink phase and remains unused while
-  /// generating per-module summaries.
-  uint64_t EntryCount = 0;
 
   /// List of <CalleeValueInfo, CalleeInfo> call edge pairs from this function.
   std::vector<EdgeTy> CallGraphEdgeList;
@@ -913,7 +909,7 @@ private:
 
 public:
   FunctionSummary(GVFlags Flags, unsigned NumInsts, FFlags FunFlags,
-                  uint64_t EntryCount, std::vector<ValueInfo> Refs,
+                  SmallVectorImpl<ValueInfo> &&Refs,
                   std::vector<EdgeTy> CGEdges,
                   std::vector<GlobalValue::GUID> TypeTests,
                   std::vector<VFuncId> TypeTestAssumeVCalls,
@@ -923,7 +919,7 @@ public:
                   std::vector<ParamAccess> Params, CallsitesTy CallsiteList,
                   AllocsTy AllocList)
       : GlobalValueSummary(FunctionKind, Flags, std::move(Refs)),
-        InstCount(NumInsts), FunFlags(FunFlags), EntryCount(EntryCount),
+        InstCount(NumInsts), FunFlags(FunFlags),
         CallGraphEdgeList(std::move(CGEdges)) {
     if (!TypeTests.empty() || !TypeTestAssumeVCalls.empty() ||
         !TypeCheckedLoadVCalls.empty() || !TypeTestAssumeConstVCalls.empty() ||
@@ -957,12 +953,6 @@ public:
 
   /// Get the instruction count recorded for this function.
   unsigned instCount() const { return InstCount; }
-
-  /// Get the synthetic entry count for this function.
-  uint64_t entryCount() const { return EntryCount; }
-
-  /// Set the synthetic entry count for this function.
-  void setEntryCount(uint64_t EC) { EntryCount = EC; }
 
   /// Return the list of <CalleeValueInfo, CalleeInfo> pairs.
   ArrayRef<EdgeTy> calls() const { return CallGraphEdgeList; }
@@ -1166,7 +1156,7 @@ public:
   } VarFlags;
 
   GlobalVarSummary(GVFlags Flags, GVarFlags VarFlags,
-                   std::vector<ValueInfo> Refs)
+                   SmallVectorImpl<ValueInfo> &&Refs)
       : GlobalValueSummary(GlobalVarKind, Flags, std::move(Refs)),
         VarFlags(VarFlags) {}
 
@@ -1417,7 +1407,7 @@ private:
   // used except in the case of a SamplePGO partial profile, and should be
   // reevaluated/redesigned to allow more effective incremental builds in that
   // case.
-  uint64_t BlockCount;
+  uint64_t BlockCount = 0;
 
   // List of unique stack ids (hashes). We use a 4B index of the id in the
   // stack id lists on the alloc and callsite summaries for memory savings,
@@ -1443,7 +1433,7 @@ public:
   ModuleSummaryIndex(bool HaveGVs, bool EnableSplitLTOUnit = false,
                      bool UnifiedLTO = false)
       : HaveGVs(HaveGVs), EnableSplitLTOUnit(EnableSplitLTOUnit),
-        UnifiedLTO(UnifiedLTO), Saver(Alloc), BlockCount(0) {}
+        UnifiedLTO(UnifiedLTO), Saver(Alloc) {}
 
   // Current version for the module summary in bitcode files.
   // The BitcodeSummaryVersion should be bumped whenever we introduce changes
@@ -1584,9 +1574,6 @@ public:
   bool isWriteOnly(const GlobalVarSummary *GVS) const {
     return WithAttributePropagation && GVS->maybeWriteOnly();
   }
-
-  bool hasSyntheticEntryCounts() const { return HasSyntheticEntryCounts; }
-  void setHasSyntheticEntryCounts() { HasSyntheticEntryCounts = true; }
 
   bool withSupportsHotColdNew() const { return WithSupportsHotColdNew; }
   void setWithSupportsHotColdNew() { WithSupportsHotColdNew = true; }
