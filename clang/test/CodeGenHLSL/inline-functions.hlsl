@@ -1,7 +1,9 @@
 // RUN: %clang_cc1 -x hlsl -triple  dxil-pc-shadermodel6.3-library %s -emit-llvm -disable-llvm-passes -o - | FileCheck %s --check-prefixes=CHECK,NOINLINE
 // RUN: %clang_cc1 -x hlsl -triple  dxil-pc-shadermodel6.3-library %s -emit-llvm -O0 -o - | FileCheck %s --check-prefixes=CHECK,INLINE
+// RUN: %clang_cc1 -x hlsl -triple  dxil-pc-shadermodel6.3-library %s -emit-llvm -O1 -o - | FileCheck %s --check-prefixes=CHECK,INLINE
 // RUN: %clang_cc1 -x hlsl -triple  dxil-pc-shadermodel6.0-compute %s -emit-llvm -disable-llvm-passes -o - | FileCheck %s --check-prefixes=CHECK,NOINLINE
 // RUN: %clang_cc1 -x hlsl -triple  dxil-pc-shadermodel6.0-compute %s -emit-llvm -O0 -o - | FileCheck %s --check-prefixes=CHECK,INLINE
+// RUN: %clang_cc1 -x hlsl -triple  dxil-pc-shadermodel6.0-compute %s -emit-llvm -O1 -o - | FileCheck %s --check-prefixes=CHECK,INLINE
 
 // Tests that user functions will always be inlined.
 // This includes exported functions and mangled entry point implementation functions.
@@ -12,9 +14,9 @@
 float nums[MAX];
 
 // Verify that all functions have the alwaysinline attribute
-// CHECK: Function Attrs: alwaysinline
-// CHECK: define void @"?swap@@YAXY0GE@III@Z"(ptr noundef byval([100 x i32]) align 4 %Buf, i32 noundef %ix1, i32 noundef %ix2) [[IntAttr:\#[0-9]+]]
-// CHECK: ret void
+// NOINLINE: Function Attrs: alwaysinline
+// NOINLINE: define void @"?swap@@YAXY0GE@III@Z"(ptr noundef byval([100 x i32]) align 4 %Buf, i32 noundef %ix1, i32 noundef %ix2) [[IntAttr:\#[0-9]+]]
+// NOINLINE: ret void
 // Swap the values of Buf at indices ix1 and ix2
 void swap(unsigned Buf[MAX], unsigned ix1, unsigned ix2) {
   float tmp = Buf[ix1];
@@ -22,9 +24,9 @@ void swap(unsigned Buf[MAX], unsigned ix1, unsigned ix2) {
   Buf[ix2] = tmp;
 }
 
-// CHECK: Function Attrs: alwaysinline
-// CHECK: define void @"?BubbleSort@@YAXY0GE@II@Z"(ptr noundef byval([100 x i32]) align 4 %Buf, i32 noundef %size) [[IntAttr]]
-// CHECK: ret void
+// NOINLINE: Function Attrs: alwaysinline
+// NOINLINE: define void @"?BubbleSort@@YAXY0GE@II@Z"(ptr noundef byval([100 x i32]) align 4 %Buf, i32 noundef %size) [[IntAttr]]
+// NOINLINE: ret void
 // Inefficiently sort Buf in place
 void BubbleSort(unsigned Buf[MAX], unsigned size) {
   bool swapped = true;
@@ -41,7 +43,7 @@ void BubbleSort(unsigned Buf[MAX], unsigned size) {
 
 // Note ExtAttr is the inlined export set of attribs
 // CHECK: Function Attrs: alwaysinline
-// CHECK: define noundef i32 @"?RemoveDupes@@YAIY0GE@II@Z"(ptr noundef byval([100 x i32]) align 4 %Buf, i32 noundef %size) [[ExtAttr:\#[0-9]+]]
+// CHECK: define noundef i32 @"?RemoveDupes@@YAIY0GE@II@Z"(ptr {{[a-z_ ]*}}noundef byval([100 x i32]) align 4 %Buf, i32 noundef %size) {{[a-z_ ]*}}[[ExtAttr:\#[0-9]+]]
 // CHECK: ret i32
 // Sort Buf and remove any duplicate values
 // returns the number of values left
@@ -69,8 +71,8 @@ RWBuffer<unsigned> Indices;
 // NOINLINE: ret void
 
 // The unmangled version is not inlined, EntryAttr reflects that
-// CHECK: Function Attrs: convergent norecurse
-// CHECK: define void @main() [[EntryAttr:\#[0-9]+]]
+// CHECK-NOT: Function Attrs: alwaysinline
+// CHECK: define void @main() {{[a-z_ ]*}}[[EntryAttr:\#[0-9]+]]
 // Make sure function calls are inlined when AlwaysInline is run
 // This only leaves calls to llvm. intrinsics
 // INLINE-NOT:   call {{[^@]*}} @{{[^l][^l][^v][^m][^\.]}}
@@ -96,8 +98,8 @@ void main(unsigned int GI : SV_GroupIndex) {
 // NOINLINE: ret void
 
 // The unmangled version is not inlined, EntryAttr reflects that
-// CHECK: Function Attrs: convergent norecurse
-// CHECK: define void @main10() [[EntryAttr]]
+// CHECK-NOT: Function Attrs: alwaysinline
+// CHECK: define void @main10() {{[a-z_ ]*}}[[EntryAttr]]
 // Make sure function calls are inlined when AlwaysInline is run
 // This only leaves calls to llvm. intrinsics
 // INLINE-NOT:   call {{[^@]*}} @{{[^l][^l][^v][^m][^\.]}}
@@ -109,6 +111,6 @@ void main10() {
   main(10);
 }
 
-// CHECK: attributes [[IntAttr]] = {{.*}} alwaysinline
+// NOINLINE: attributes [[IntAttr]] = {{.*}} alwaysinline
 // CHECK: attributes [[ExtAttr]] = {{.*}} alwaysinline
 // CHECK-NOT: attributes [[EntryAttr]] = {{.*}} alwaysinline

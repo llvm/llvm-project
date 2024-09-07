@@ -2471,12 +2471,13 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
     B.addAttribute(llvm::Attribute::StackProtectReq);
 
   if (!D) {
+    // HLSL functions must always be inlined
+    if (getLangOpts().HLSL && !F->hasFnAttribute("hlsl.shader"))
+      B.addAttribute(llvm::Attribute::AlwaysInline);
     // If we don't have a declaration to control inlining, the function isn't
     // explicitly marked as alwaysinline for semantic reasons, and inlining is
     // disabled, mark the function as noinline.
-    // HLSL functions must be always inlined
-    if (!F->hasFnAttribute(llvm::Attribute::AlwaysInline) &&
-        !getLangOpts().HLSL &&
+    else if (!F->hasFnAttribute(llvm::Attribute::AlwaysInline) &&
         CodeGenOpts.getInlining() == CodeGenOptions::OnlyAlwaysInlining)
       B.addAttribute(llvm::Attribute::NoInline);
 
@@ -2504,9 +2505,12 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
   ShouldAddOptNone &= !D->hasAttr<MinSizeAttr>();
   ShouldAddOptNone &= !D->hasAttr<AlwaysInlineAttr>();
 
-  // Add optnone, but do so only if the function isn't always_inline.
-  if ((ShouldAddOptNone || D->hasAttr<OptimizeNoneAttr>()) &&
+  // alwaysinline all HLSL functions save entry points
+  if (getLangOpts().HLSL && !F->hasFnAttribute("hlsl.shader"))
+    B.addAttribute(llvm::Attribute::AlwaysInline);
+  else if ((ShouldAddOptNone || D->hasAttr<OptimizeNoneAttr>()) &&
       !F->hasFnAttribute(llvm::Attribute::AlwaysInline)) {
+    // Add optnone, but do so only if the function isn't always_inline.
     B.addAttribute(llvm::Attribute::OptimizeNone);
 
     // OptimizeNone implies noinline; we should not be inlining such functions.

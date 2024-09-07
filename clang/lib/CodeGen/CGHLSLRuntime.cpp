@@ -414,13 +414,10 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
 
 void CGHLSLRuntime::setHLSLFunctionAttributes(const FunctionDecl *FD,
                                               llvm::Function *Fn) {
-  if (FD && FD->isInExportDeclContext()) {
+  if (FD->isInExportDeclContext()) {
     const StringRef ExportAttrKindStr = "hlsl.export";
     Fn->addFnAttr(ExportAttrKindStr);
   }
-  // Respect noinline if used else default to alwaysinline
-  if (!Fn->hasFnAttribute(Attribute::NoInline))
-    Fn->addFnAttr(llvm::Attribute::AlwaysInline);
 }
 
 static void gatherFunctions(SmallVectorImpl<Function *> &Fns, llvm::Module &M,

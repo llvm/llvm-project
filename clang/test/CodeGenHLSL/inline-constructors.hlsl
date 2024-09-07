@@ -2,8 +2,10 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -std=hlsl202x -emit-llvm -o - -disable-llvm-passes %s | FileCheck %s --check-prefixes=CHECK,NOINLINE
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -std=hlsl202x -emit-llvm -o - -O0 %s | FileCheck %s --check-prefixes=CHECK,INLINE
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -std=hlsl202x -emit-llvm -o - -O0 %s | FileCheck %s --check-prefixes=CHECK,INLINE
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -std=hlsl202x -emit-llvm -o - -O1 %s | FileCheck %s --check-prefixes=CHECK,INLINE
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -std=hlsl202x -emit-llvm -o - -O1 %s | FileCheck %s --check-prefixes=CHECK,INLINE
 
-// Tests that implicit contstructor calls for user classes will always be inlined.
+// Tests that implicit constructor calls for user classes will always be inlined.
 
 struct Weed {
   Weed() {Count += 1;}
