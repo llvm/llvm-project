@@ -1167,13 +1167,14 @@ static void printASTValidationError(
     LLDB_LOG(log, "  -- {0}", ExtraOpt);
 }
 
-void SwiftASTContext::DiagnoseWarnings(Process &process, Module &module) const {
-  if (!HasDiagnostics())
+void SwiftASTContext::DiagnoseWarnings(Process &process,
+                                       const SymbolContext &sc) const {
+  if (!sc.module_sp || !HasDiagnostics())
     return;
   auto debugger_id = process.GetTarget().GetDebugger().GetID();
   std::string msg;
   llvm::raw_string_ostream(msg) << "Cannot load Swift type information for "
-                                << module.GetFileSpec().GetPath();
+                                << sc.module_sp->GetFileSpec().GetPath();
   Debugger::ReportWarning(msg, debugger_id, &m_swift_import_warning);
   StreamAllDiagnostics(debugger_id);
 }
@@ -2111,7 +2112,8 @@ ProcessModule(Module &module, std::string m_description,
               std::vector<swift::PluginSearchOption> &plugin_search_options,
               std::vector<std::string> &module_search_paths,
               std::vector<std::pair<std::string, bool>> &framework_search_paths,
-              std::vector<std::string> &extra_clang_args) {
+              std::vector<std::string> &extra_clang_args,
+              std::string &error) {
   {
     llvm::raw_string_ostream ss(m_description);
     ss << "::ProcessModule(" << '"';
@@ -2215,8 +2217,7 @@ ProcessModule(Module &module, std::string m_description,
     return;
   bool found_swift_modules = false;
   bool got_serialized_options = false;
-  llvm::SmallString<0> error;
-  llvm::raw_svector_ostream errs(error);
+  llvm::raw_string_ostream errs(error);
   swift::CompilerInvocation invocation;
   auto ast_file_datas = module.GetASTData(eLanguageTypeSwift);
   std::string module_name = module.GetSpecificationDescription();
@@ -2365,7 +2366,7 @@ SwiftASTContext::CreateInstance(lldb::LanguageType language, Module &module,
     bool got_serialized_options = false;
     llvm::SmallString<0> error;
     llvm::raw_svector_ostream errs(error);
-    // Implicit search paths will be discovered by ValidateSecionModules().
+    // Implicit search paths will be discovered by ValidateSectionModules().
     bool discover_implicit_search_paths = false;
     auto ast_file_datas = module.GetASTData(eLanguageTypeSwift);
     std::string module_name = module.GetSpecificationDescription();
@@ -2436,6 +2437,7 @@ SwiftASTContext::CreateInstance(lldb::LanguageType language, Module &module,
   const bool use_all_compiler_flags = false;
   const bool is_target_module = true;
 
+  std::string error;
   StringRef module_filter;
   std::vector<swift::PluginSearchOption> plugin_search_options;
   std::vector<std::string> extra_clang_args = swift_ast_sp->GetClangArguments();
@@ -2444,7 +2446,10 @@ SwiftASTContext::CreateInstance(lldb::LanguageType language, Module &module,
   ProcessModule(module, m_description, discover_implicit_search_paths,
                 use_all_compiler_flags, is_target_module, module_filter, triple,
                 plugin_search_options, module_search_paths,
-                framework_search_paths, extra_clang_args);
+                framework_search_paths, extra_clang_args, error);
+  if (!error.empty())
+    swift_ast_sp->AddDiagnostic(eSeverityError, error);
+
   // Apply the working directory to all relative paths.
   StringRef overrideOpts = target ? target->GetSwiftClangOverrideOptions() : "";
   swift_ast_sp->AddExtraClangArgs(extra_clang_args, overrideOpts);
@@ -2800,6 +2805,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
 
   for (ModuleSP module_sp : target.GetImages().Modules())
     if (module_sp) {
+      std::string error;
       StringRef module_filter;
       std::vector<std::string> extra_clang_args;
       ProcessModule(*module_sp, m_description, discover_implicit_search_paths,
@@ -2807,7 +2813,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
                     target.GetExecutableModulePointer() == module_sp.get(),
                     module_filter, triple, plugin_search_options,
                     module_search_paths, framework_search_paths,
-                    extra_clang_args);
+                    extra_clang_args, error);
       swift_ast_sp->AddExtraClangArgs(extra_clang_args,
                                       target.GetSwiftClangOverrideOptions());
     }
@@ -3137,14 +3143,17 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
                                       /*is_system*/ false});
   ModuleSP module_sp = sc.module_sp;
   if (module_sp) {
+    std::string error;
     StringRef module_filter = swift_module_name;
     std::vector<std::string> extra_clang_args;
     ProcessModule(*module_sp, m_description, discover_implicit_search_paths,
                   use_all_compiler_flags,
                   target.GetExecutableModulePointer() == module_sp.get(),
                   module_filter, triple, plugin_search_options,
-                  module_search_paths, framework_search_paths,
-                  extra_clang_args);
+                  module_search_paths, framework_search_paths, extra_clang_args,
+                  error);
+    if (!error.empty())
+      swift_ast_sp->AddDiagnostic(eSeverityError, error);
     swift_ast_sp->AddExtraClangArgs(extra_clang_args,
                                     target.GetSwiftClangOverrideOptions());
   }
@@ -5604,13 +5613,16 @@ void SwiftASTContextForExpressions::ModulesDidLoad(ModuleList &module_list) {
     lldb::ModuleSP module_sp = module_list.GetModuleAtIndex(mi);
     if (!module_sp)
       continue;
+    std::string error;
     StringRef module_filter;
     ProcessModule(*module_sp, m_description, discover_implicit_search_paths,
                   use_all_compiler_flags,
                   target_sp->GetExecutableModulePointer() == module_sp.get(),
                   module_filter, GetTriple(), plugin_search_options,
-                  module_search_paths, framework_search_paths,
-                  extra_clang_args);
+                  module_search_paths, framework_search_paths, extra_clang_args,
+                  error);
+    if (!error.empty())
+      AddDiagnostic(eSeverityError, error);
     // If the use-all-compiler-flags setting is enabled, the
     // expression context is supposed to merge all search paths
     // from all dylibs.

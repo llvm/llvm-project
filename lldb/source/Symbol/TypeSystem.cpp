@@ -166,7 +166,8 @@ bool TypeSystem::IsMeaninglessWithoutDynamicResolution(void *type) {
   return false;
 }
 
-void TypeSystem::DiagnoseWarnings(Process &process, Module &module) const {}
+void TypeSystem::DiagnoseWarnings(Process &process,
+                                  const SymbolContext &sc) const {}
 
 Status TypeSystem::IsCompatible() {
   // Assume a language is compatible. Override this virtual function
