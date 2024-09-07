@@ -108,6 +108,10 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/casting-through-void>` check to suggest replacing
   the offending code with ``reinterpret_cast``, to more clearly express intent.
 
+- Improved :doc:`bugprone-dangling-handle
+  <clang-tidy/checks/bugprone/dangling-handle>` check to treat `std::span` as a
+  handle class.
+
 - Improved :doc:`modernize-use-std-format
   <clang-tidy/checks/modernize/use-std-format>` check to support replacing
   member function calls too.
