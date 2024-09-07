@@ -26,7 +26,7 @@ struct Chipset {
 
   constexpr Chipset() = default;
   constexpr Chipset(unsigned major, unsigned minor, unsigned stepping)
-      : majorVersion(major), minorVersion(minor), steppingVersion(stepping){};
+      : majorVersion(major), minorVersion(minor), steppingVersion(stepping) {};
 
   /// Parses the chipset version string and returns the chipset on success, and
   /// failure otherwise.
