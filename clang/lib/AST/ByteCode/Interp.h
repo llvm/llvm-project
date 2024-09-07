@@ -130,8 +130,9 @@ bool CheckNonNullArgs(InterpState &S, CodePtr OpPC, const Function *F,
 bool CheckDynamicMemoryAllocation(InterpState &S, CodePtr OpPC);
 
 /// Diagnose mismatched new[]/delete or new/delete[] pairs.
-bool CheckNewDeleteForms(InterpState &S, CodePtr OpPC, bool NewWasArray,
-                         bool DeleteIsArray, const Descriptor *D,
+bool CheckNewDeleteForms(InterpState &S, CodePtr OpPC,
+                         DynamicAllocator::Form AllocForm,
+                         DynamicAllocator::Form DeleteForm, const Descriptor *D,
                          const Expr *NewExpr);
 
 /// Check the source of the pointer passed to delete/delete[] has actually
@@ -2797,10 +2798,11 @@ inline bool Alloc(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
     return false;
 
   DynamicAllocator &Allocator = S.getAllocator();
-  Block *B = Allocator.allocate(Desc, S.Ctx.getEvalID());
+  Block *B = Allocator.allocate(Desc, S.Ctx.getEvalID(),
+                                DynamicAllocator::Form::NonArray);
   assert(B);
 
-  S.Stk.push<Pointer>(B, sizeof(InlineDescriptor));
+  S.Stk.push<Pointer>(B);
 
   return true;
 }
@@ -2822,8 +2824,9 @@ inline bool AllocN(InterpState &S, CodePtr OpPC, PrimType T, const Expr *Source,
   }
 
   DynamicAllocator &Allocator = S.getAllocator();
-  Block *B = Allocator.allocate(Source, T, static_cast<size_t>(NumElements),
-                                S.Ctx.getEvalID());
+  Block *B =
+      Allocator.allocate(Source, T, static_cast<size_t>(NumElements),
+                         S.Ctx.getEvalID(), DynamicAllocator::Form::Array);
   assert(B);
   S.Stk.push<Pointer>(B, sizeof(InlineDescriptor));
 
@@ -2848,8 +2851,9 @@ inline bool AllocCN(InterpState &S, CodePtr OpPC, const Descriptor *ElementDesc,
   }
 
   DynamicAllocator &Allocator = S.getAllocator();
-  Block *B = Allocator.allocate(ElementDesc, static_cast<size_t>(NumElements),
-                                S.Ctx.getEvalID());
+  Block *B =
+      Allocator.allocate(ElementDesc, static_cast<size_t>(NumElements),
+                         S.Ctx.getEvalID(), DynamicAllocator::Form::Array);
   assert(B);
 
   S.Stk.push<Pointer>(B, sizeof(InlineDescriptor));
@@ -2894,8 +2898,9 @@ static inline bool Free(InterpState &S, CodePtr OpPC, bool DeleteIsArrayForm) {
     return false;
 
   DynamicAllocator &Allocator = S.getAllocator();
-  bool WasArrayAlloc = Allocator.isArrayAllocation(Source);
   const Descriptor *BlockDesc = BlockToDelete->getDescriptor();
+  std::optional<DynamicAllocator::Form> AllocForm =
+      Allocator.getAllocationForm(Source);
 
   if (!Allocator.deallocate(Source, BlockToDelete, S)) {
     // Nothing has been deallocated, this must be a double-delete.
@@ -2903,8 +2908,13 @@ static inline bool Free(InterpState &S, CodePtr OpPC, bool DeleteIsArrayForm) {
     S.FFDiag(Loc, diag::note_constexpr_double_delete);
     return false;
   }
-  return CheckNewDeleteForms(S, OpPC, WasArrayAlloc, DeleteIsArrayForm,
-                             BlockDesc, Source);
+
+  assert(AllocForm);
+  DynamicAllocator::Form DeleteForm = DeleteIsArrayForm
+                                          ? DynamicAllocator::Form::Array
+                                          : DynamicAllocator::Form::NonArray;
+  return CheckNewDeleteForms(S, OpPC, *AllocForm, DeleteForm, BlockDesc,
+                             Source);
 }
 
 static inline bool IsConstantContext(InterpState &S, CodePtr OpPC) {
