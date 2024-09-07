@@ -1178,7 +1178,7 @@ bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
 }
 
 bool CallBI(InterpState &S, CodePtr &PC, const Function *Func,
-            const CallExpr *CE) {
+            const CallExpr *CE, uint32_t BuiltinID) {
   if (S.checkingPotentialConstantExpression())
     return false;
   auto NewFrame = std::make_unique<InterpFrame>(S, Func, PC);
@@ -1186,7 +1186,7 @@ bool CallBI(InterpState &S, CodePtr &PC, const Function *Func,
   InterpFrame *FrameBefore = S.Current;
   S.Current = NewFrame.get();
 
-  if (InterpretBuiltin(S, PC, Func, CE)) {
+  if (InterpretBuiltin(S, PC, Func, CE, BuiltinID)) {
     NewFrame.release();
     return true;
   }

@@ -4070,18 +4070,18 @@ bool Compiler<Emitter>::visitAPValueInitializer(const APValue &Val,
 }
 
 template <class Emitter>
-bool Compiler<Emitter>::VisitBuiltinCallExpr(const CallExpr *E) {
+bool Compiler<Emitter>::VisitBuiltinCallExpr(const CallExpr *E,
+                                             unsigned BuiltinID) {
   const Function *Func = getFunction(E->getDirectCallee());
   if (!Func)
     return false;
 
   // For these, we're expected to ultimately return an APValue pointing
   // to the CallExpr. This is needed to get the correct codegen.
-  unsigned Builtin = E->getBuiltinCallee();
-  if (Builtin == Builtin::BI__builtin___CFStringMakeConstantString ||
-      Builtin == Builtin::BI__builtin___NSStringMakeConstantString ||
-      Builtin == Builtin::BI__builtin_ptrauth_sign_constant ||
-      Builtin == Builtin::BI__builtin_function_start) {
+  if (BuiltinID == Builtin::BI__builtin___CFStringMakeConstantString ||
+      BuiltinID == Builtin::BI__builtin___NSStringMakeConstantString ||
+      BuiltinID == Builtin::BI__builtin_ptrauth_sign_constant ||
+      BuiltinID == Builtin::BI__builtin_function_start) {
     if (std::optional<unsigned> GlobalOffset = P.createGlobal(E)) {
       if (!this->emitGetPtrGlobal(*GlobalOffset, E))
         return false;
@@ -4113,7 +4113,7 @@ bool Compiler<Emitter>::VisitBuiltinCallExpr(const CallExpr *E) {
     }
   }
 
-  if (!this->emitCallBI(Func, E, E))
+  if (!this->emitCallBI(Func, E, BuiltinID, E))
     return false;
 
   if (DiscardResult && !ReturnType->isVoidType()) {
@@ -4126,13 +4126,24 @@ bool Compiler<Emitter>::VisitBuiltinCallExpr(const CallExpr *E) {
 
 template <class Emitter>
 bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
-  if (E->getBuiltinCallee())
-    return VisitBuiltinCallExpr(E);
+  if (unsigned BuiltinID = E->getBuiltinCallee())
+    return VisitBuiltinCallExpr(E, BuiltinID);
+
+  const FunctionDecl *FuncDecl = E->getDirectCallee();
+  // Calls to replaceable operator new/operator delete.
+  if (FuncDecl && FuncDecl->isReplaceableGlobalAllocationFunction()) {
+    if (FuncDecl->getDeclName().getCXXOverloadedOperator() == OO_New ||
+        FuncDecl->getDeclName().getCXXOverloadedOperator() == OO_Array_New) {
+      return VisitBuiltinCallExpr(E, Builtin::BI__builtin_operator_new);
+    } else {
+      assert(FuncDecl->getDeclName().getCXXOverloadedOperator() == OO_Delete);
+      return VisitBuiltinCallExpr(E, Builtin::BI__builtin_operator_delete);
+    }
+  }
 
   QualType ReturnType = E->getCallReturnType(Ctx.getASTContext());
   std::optional<PrimType> T = classify(ReturnType);
   bool HasRVO = !ReturnType->isVoidType() && !T;
-  const FunctionDecl *FuncDecl = E->getDirectCallee();
 
   if (HasRVO) {
     if (DiscardResult) {
