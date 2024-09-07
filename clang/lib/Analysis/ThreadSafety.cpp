@@ -922,6 +922,9 @@ public:
   handleRemovalFromIntersection(const FactSet &FSet, FactManager &FactMan,
                                 SourceLocation JoinLoc, LockErrorKind LEK,
                                 ThreadSafetyHandler &Handler) const override {
+    if (LEK == LEK_LockedAtEndOfFunction || LEK == LEK_NotLockedAtEndOfFunction)
+      return;
+
     for (const auto &UnderlyingMutex : UnderlyingMutexes) {
       const auto *Entry = FSet.findLock(FactMan, UnderlyingMutex.Cap);
       if ((UnderlyingMutex.Kind == UCK_Acquired && Entry) ||
@@ -2224,7 +2227,7 @@ void ThreadSafetyAnalyzer::intersectAndWarn(FactSet &EntrySet,
       if (join(FactMan[*EntryIt], ExitFact,
                EntryLEK != LEK_LockedSomeLoopIterations))
         *EntryIt = Fact;
-    } else if (!ExitFact.managed()) {
+    } else if (!ExitFact.managed() || EntryLEK == LEK_LockedAtEndOfFunction) {
       ExitFact.handleRemovalFromIntersection(ExitSet, FactMan, JoinLoc,
                                              EntryLEK, Handler);
     }
@@ -2236,7 +2239,8 @@ void ThreadSafetyAnalyzer::intersectAndWarn(FactSet &EntrySet,
     const FactEntry *ExitFact = ExitSet.findLock(FactMan, *EntryFact);
 
     if (!ExitFact) {
-      if (!EntryFact->managed() || ExitLEK == LEK_LockedSomeLoopIterations)
+      if (!EntryFact->managed() || ExitLEK == LEK_LockedSomeLoopIterations ||
+          ExitLEK == LEK_NotLockedAtEndOfFunction)
         EntryFact->handleRemovalFromIntersection(EntrySetOrig, FactMan, JoinLoc,
                                                  ExitLEK, Handler);
       if (ExitLEK == LEK_LockedSomePredecessors)

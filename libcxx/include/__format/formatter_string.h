@@ -167,8 +167,8 @@ inline constexpr bool enable_nonlocking_formatter_optimization<basic_string<wcha
 template <class _Traits>
 inline constexpr bool enable_nonlocking_formatter_optimization<basic_string_view<wchar_t, _Traits>> = true;
 #    endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
-#  endif   //_LIBCPP_STD_VER >= 23
-#endif     //_LIBCPP_STD_VER >= 20
+#  endif   // _LIBCPP_STD_VER >= 23
+#endif     // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

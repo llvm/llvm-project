@@ -1873,6 +1873,27 @@ DeclResult Sema::CheckClassTemplate(
   if (Previous.isAmbiguous())
     return true;
 
+  // Let the template parameter scope enter the lookup chain of the current
+  // class template. For example, given
+  //
+  //  namespace ns {
+  //    template <class> bool Param = false;
+  //    template <class T> struct N;
+  //  }
+  //
+  //  template <class Param> struct ns::N { void foo(Param); };
+  //
+  // When we reference Param inside the function parameter list, our name lookup
+  // chain for it should be like:
+  //  FunctionScope foo
+  //  -> RecordScope N
+  //  -> TemplateParamScope (where we will find Param)
+  //  -> NamespaceScope ns
+  //
+  // See also CppLookupName().
+  if (S->isTemplateParamScope())
+    EnterTemplatedContext(S, SemanticContext);
+
   NamedDecl *PrevDecl = nullptr;
   if (Previous.begin() != Previous.end())
     PrevDecl = (*Previous.begin())->getUnderlyingDecl();
@@ -3979,7 +4000,7 @@ DeclResult Sema::ActOnVarTemplateSpecialization(
              << IsPartialSpecialization;
   }
 
-  if (const auto *DSA = VarTemplate->getAttr<DiagnoseSpecializationsAttr>()) {
+  if (const auto *DSA = VarTemplate->getAttr<NoSpecializationsAttr>()) {
     auto Message = DSA->getMessage();
     Diag(TemplateNameLoc, diag::warn_invalid_specialization)
         << VarTemplate << !Message.empty() << Message;
@@ -8096,12 +8117,15 @@ DeclResult Sema::ActOnClassTemplateSpecialization(
     return true;
   }
 
-  if (const auto *DSA = ClassTemplate->getAttr<DiagnoseSpecializationsAttr>()) {
+  if (const auto *DSA = ClassTemplate->getAttr<NoSpecializationsAttr>()) {
     auto Message = DSA->getMessage();
     Diag(TemplateNameLoc, diag::warn_invalid_specialization)
         << ClassTemplate << !Message.empty() << Message;
     Diag(DSA->getLoc(), diag::note_marked_here) << DSA;
   }
+
+  if (S->isTemplateParamScope())
+    EnterTemplatedContext(S, ClassTemplate->getTemplatedDecl());
 
   DeclContext *DC = ClassTemplate->getDeclContext();
 
@@ -8983,6 +9007,14 @@ bool Sema::CheckFunctionTemplateSpecialization(
 
   // Ignore access information;  it doesn't figure into redeclaration checking.
   FunctionDecl *Specialization = cast<FunctionDecl>(*Result);
+
+  if (const auto *PT = Specialization->getPrimaryTemplate();
+      const auto *DSA = PT->getAttr<NoSpecializationsAttr>()) {
+    auto Message = DSA->getMessage();
+    Diag(FD->getLocation(), diag::warn_invalid_specialization)
+        << PT << !Message.empty() << Message;
+    Diag(DSA->getLoc(), diag::note_marked_here) << DSA;
+  }
 
   // C++23 [except.spec]p13:
   //   An exception specification is considered to be needed when:

@@ -1215,13 +1215,13 @@ static void handlePreferredName(Sema &S, Decl *D, const ParsedAttr &AL) {
         << TT->getDecl();
 }
 
-static void handleDiagnoseSpecializations(Sema &S, Decl *D,
+static void handleNoSpecializations(Sema &S, Decl *D,
                                           const ParsedAttr &AL) {
   StringRef Message;
   if (AL.getNumArgs() != 0)
     S.checkStringLiteralArgumentAttr(AL, 0, Message);
   D->getDescribedTemplate()->addAttr(
-      DiagnoseSpecializationsAttr::Create(S.Context, Message, AL));
+      NoSpecializationsAttr::Create(S.Context, Message, AL));
 }
 
 bool Sema::isValidPointerAttrType(QualType T, bool RefOkay) {
@@ -6708,8 +6708,8 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_PreferredName:
     handlePreferredName(S, D, AL);
     break;
-  case ParsedAttr::AT_DiagnoseSpecializations:
-    handleDiagnoseSpecializations(S, D, AL);
+  case ParsedAttr::AT_NoSpecializations:
+    handleNoSpecializations(S, D, AL);
     break;
   case ParsedAttr::AT_Section:
     handleSectionAttr(S, D, AL);
@@ -6897,6 +6897,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   // HLSL attributes:
   case ParsedAttr::AT_HLSLNumThreads:
     S.HLSL().handleNumThreadsAttr(D, AL);
+    break;
+  case ParsedAttr::AT_HLSLWaveSize:
+    S.HLSL().handleWaveSizeAttr(D, AL);
     break;
   case ParsedAttr::AT_HLSLSV_GroupIndex:
     handleSimpleAttribute<HLSLSV_GroupIndexAttr>(S, D, AL);

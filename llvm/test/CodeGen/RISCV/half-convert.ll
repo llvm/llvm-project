@@ -672,37 +672,37 @@ define i16 @fcvt_ui_h(half %a) nounwind {
 ; CHECK32-IZFHMIN-LABEL: fcvt_ui_h:
 ; CHECK32-IZFHMIN:       # %bb.0:
 ; CHECK32-IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
-; CHECK32-IZFHMIN-NEXT:    fcvt.wu.s a0, fa5, rtz
+; CHECK32-IZFHMIN-NEXT:    fcvt.w.s a0, fa5, rtz
 ; CHECK32-IZFHMIN-NEXT:    ret
 ;
 ; CHECK64-IZFHMIN-LABEL: fcvt_ui_h:
 ; CHECK64-IZFHMIN:       # %bb.0:
 ; CHECK64-IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
-; CHECK64-IZFHMIN-NEXT:    fcvt.lu.s a0, fa5, rtz
+; CHECK64-IZFHMIN-NEXT:    fcvt.l.s a0, fa5, rtz
 ; CHECK64-IZFHMIN-NEXT:    ret
 ;
 ; CHECK32-IZHINXMIN-LABEL: fcvt_ui_h:
 ; CHECK32-IZHINXMIN:       # %bb.0:
 ; CHECK32-IZHINXMIN-NEXT:    fcvt.s.h a0, a0
-; CHECK32-IZHINXMIN-NEXT:    fcvt.wu.s a0, a0, rtz
+; CHECK32-IZHINXMIN-NEXT:    fcvt.w.s a0, a0, rtz
 ; CHECK32-IZHINXMIN-NEXT:    ret
 ;
 ; CHECK64-IZHINXMIN-LABEL: fcvt_ui_h:
 ; CHECK64-IZHINXMIN:       # %bb.0:
 ; CHECK64-IZHINXMIN-NEXT:    fcvt.s.h a0, a0
-; CHECK64-IZHINXMIN-NEXT:    fcvt.lu.s a0, a0, rtz
+; CHECK64-IZHINXMIN-NEXT:    fcvt.l.s a0, a0, rtz
 ; CHECK64-IZHINXMIN-NEXT:    ret
 ;
 ; CHECK32-IZDINXZHINXMIN-LABEL: fcvt_ui_h:
 ; CHECK32-IZDINXZHINXMIN:       # %bb.0:
 ; CHECK32-IZDINXZHINXMIN-NEXT:    fcvt.s.h a0, a0
-; CHECK32-IZDINXZHINXMIN-NEXT:    fcvt.wu.s a0, a0, rtz
+; CHECK32-IZDINXZHINXMIN-NEXT:    fcvt.w.s a0, a0, rtz
 ; CHECK32-IZDINXZHINXMIN-NEXT:    ret
 ;
 ; CHECK64-IZDINXZHINXMIN-LABEL: fcvt_ui_h:
 ; CHECK64-IZDINXZHINXMIN:       # %bb.0:
 ; CHECK64-IZDINXZHINXMIN-NEXT:    fcvt.s.h a0, a0
-; CHECK64-IZDINXZHINXMIN-NEXT:    fcvt.lu.s a0, a0, rtz
+; CHECK64-IZDINXZHINXMIN-NEXT:    fcvt.l.s a0, a0, rtz
 ; CHECK64-IZDINXZHINXMIN-NEXT:    ret
   %1 = fptoui half %a to i16
   ret i16 %1
@@ -3467,7 +3467,7 @@ define half @fcvt_h_si(i16 %a) nounwind {
 ; CHECK64-IZFHMIN:       # %bb.0:
 ; CHECK64-IZFHMIN-NEXT:    slli a0, a0, 48
 ; CHECK64-IZFHMIN-NEXT:    srai a0, a0, 48
-; CHECK64-IZFHMIN-NEXT:    fcvt.s.l fa5, a0
+; CHECK64-IZFHMIN-NEXT:    fcvt.s.w fa5, a0
 ; CHECK64-IZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; CHECK64-IZFHMIN-NEXT:    ret
 ;
@@ -3483,7 +3483,7 @@ define half @fcvt_h_si(i16 %a) nounwind {
 ; CHECK64-IZHINXMIN:       # %bb.0:
 ; CHECK64-IZHINXMIN-NEXT:    slli a0, a0, 48
 ; CHECK64-IZHINXMIN-NEXT:    srai a0, a0, 48
-; CHECK64-IZHINXMIN-NEXT:    fcvt.s.l a0, a0
+; CHECK64-IZHINXMIN-NEXT:    fcvt.s.w a0, a0
 ; CHECK64-IZHINXMIN-NEXT:    fcvt.h.s a0, a0
 ; CHECK64-IZHINXMIN-NEXT:    ret
 ;
@@ -3499,7 +3499,7 @@ define half @fcvt_h_si(i16 %a) nounwind {
 ; CHECK64-IZDINXZHINXMIN:       # %bb.0:
 ; CHECK64-IZDINXZHINXMIN-NEXT:    slli a0, a0, 48
 ; CHECK64-IZDINXZHINXMIN-NEXT:    srai a0, a0, 48
-; CHECK64-IZDINXZHINXMIN-NEXT:    fcvt.s.l a0, a0
+; CHECK64-IZDINXZHINXMIN-NEXT:    fcvt.s.w a0, a0
 ; CHECK64-IZDINXZHINXMIN-NEXT:    fcvt.h.s a0, a0
 ; CHECK64-IZDINXZHINXMIN-NEXT:    ret
   %1 = sitofp i16 %a to half
@@ -3614,7 +3614,7 @@ define half @fcvt_h_si_signext(i16 signext %a) nounwind {
 ;
 ; CHECK64-IZFHMIN-LABEL: fcvt_h_si_signext:
 ; CHECK64-IZFHMIN:       # %bb.0:
-; CHECK64-IZFHMIN-NEXT:    fcvt.s.l fa5, a0
+; CHECK64-IZFHMIN-NEXT:    fcvt.s.w fa5, a0
 ; CHECK64-IZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; CHECK64-IZFHMIN-NEXT:    ret
 ;
@@ -3626,7 +3626,7 @@ define half @fcvt_h_si_signext(i16 signext %a) nounwind {
 ;
 ; CHECK64-IZHINXMIN-LABEL: fcvt_h_si_signext:
 ; CHECK64-IZHINXMIN:       # %bb.0:
-; CHECK64-IZHINXMIN-NEXT:    fcvt.s.l a0, a0
+; CHECK64-IZHINXMIN-NEXT:    fcvt.s.w a0, a0
 ; CHECK64-IZHINXMIN-NEXT:    fcvt.h.s a0, a0
 ; CHECK64-IZHINXMIN-NEXT:    ret
 ;
@@ -3638,7 +3638,7 @@ define half @fcvt_h_si_signext(i16 signext %a) nounwind {
 ;
 ; CHECK64-IZDINXZHINXMIN-LABEL: fcvt_h_si_signext:
 ; CHECK64-IZDINXZHINXMIN:       # %bb.0:
-; CHECK64-IZDINXZHINXMIN-NEXT:    fcvt.s.l a0, a0
+; CHECK64-IZDINXZHINXMIN-NEXT:    fcvt.s.w a0, a0
 ; CHECK64-IZDINXZHINXMIN-NEXT:    fcvt.h.s a0, a0
 ; CHECK64-IZDINXZHINXMIN-NEXT:    ret
   %1 = sitofp i16 %a to half
@@ -3800,7 +3800,7 @@ define half @fcvt_h_ui(i16 %a) nounwind {
 ; CHECK64-IZFHMIN:       # %bb.0:
 ; CHECK64-IZFHMIN-NEXT:    slli a0, a0, 48
 ; CHECK64-IZFHMIN-NEXT:    srli a0, a0, 48
-; CHECK64-IZFHMIN-NEXT:    fcvt.s.lu fa5, a0
+; CHECK64-IZFHMIN-NEXT:    fcvt.s.wu fa5, a0
 ; CHECK64-IZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; CHECK64-IZFHMIN-NEXT:    ret
 ;
@@ -3816,7 +3816,7 @@ define half @fcvt_h_ui(i16 %a) nounwind {
 ; CHECK64-IZHINXMIN:       # %bb.0:
 ; CHECK64-IZHINXMIN-NEXT:    slli a0, a0, 48
 ; CHECK64-IZHINXMIN-NEXT:    srli a0, a0, 48
-; CHECK64-IZHINXMIN-NEXT:    fcvt.s.lu a0, a0
+; CHECK64-IZHINXMIN-NEXT:    fcvt.s.wu a0, a0
 ; CHECK64-IZHINXMIN-NEXT:    fcvt.h.s a0, a0
 ; CHECK64-IZHINXMIN-NEXT:    ret
 ;
@@ -3832,7 +3832,7 @@ define half @fcvt_h_ui(i16 %a) nounwind {
 ; CHECK64-IZDINXZHINXMIN:       # %bb.0:
 ; CHECK64-IZDINXZHINXMIN-NEXT:    slli a0, a0, 48
 ; CHECK64-IZDINXZHINXMIN-NEXT:    srli a0, a0, 48
-; CHECK64-IZDINXZHINXMIN-NEXT:    fcvt.s.lu a0, a0
+; CHECK64-IZDINXZHINXMIN-NEXT:    fcvt.s.wu a0, a0
 ; CHECK64-IZDINXZHINXMIN-NEXT:    fcvt.h.s a0, a0
 ; CHECK64-IZDINXZHINXMIN-NEXT:    ret
   %1 = uitofp i16 %a to half
@@ -3947,7 +3947,7 @@ define half @fcvt_h_ui_zeroext(i16 zeroext %a) nounwind {
 ;
 ; CHECK64-IZFHMIN-LABEL: fcvt_h_ui_zeroext:
 ; CHECK64-IZFHMIN:       # %bb.0:
-; CHECK64-IZFHMIN-NEXT:    fcvt.s.lu fa5, a0
+; CHECK64-IZFHMIN-NEXT:    fcvt.s.wu fa5, a0
 ; CHECK64-IZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; CHECK64-IZFHMIN-NEXT:    ret
 ;
@@ -3959,7 +3959,7 @@ define half @fcvt_h_ui_zeroext(i16 zeroext %a) nounwind {
 ;
 ; CHECK64-IZHINXMIN-LABEL: fcvt_h_ui_zeroext:
 ; CHECK64-IZHINXMIN:       # %bb.0:
-; CHECK64-IZHINXMIN-NEXT:    fcvt.s.lu a0, a0
+; CHECK64-IZHINXMIN-NEXT:    fcvt.s.wu a0, a0
 ; CHECK64-IZHINXMIN-NEXT:    fcvt.h.s a0, a0
 ; CHECK64-IZHINXMIN-NEXT:    ret
 ;
@@ -3971,7 +3971,7 @@ define half @fcvt_h_ui_zeroext(i16 zeroext %a) nounwind {
 ;
 ; CHECK64-IZDINXZHINXMIN-LABEL: fcvt_h_ui_zeroext:
 ; CHECK64-IZDINXZHINXMIN:       # %bb.0:
-; CHECK64-IZDINXZHINXMIN-NEXT:    fcvt.s.lu a0, a0
+; CHECK64-IZDINXZHINXMIN-NEXT:    fcvt.s.wu a0, a0
 ; CHECK64-IZDINXZHINXMIN-NEXT:    fcvt.h.s a0, a0
 ; CHECK64-IZDINXZHINXMIN-NEXT:    ret
   %1 = uitofp i16 %a to half
@@ -4087,8 +4087,7 @@ define half @fcvt_h_w(i32 %a) nounwind {
 ;
 ; CHECK64-IZFHMIN-LABEL: fcvt_h_w:
 ; CHECK64-IZFHMIN:       # %bb.0:
-; CHECK64-IZFHMIN-NEXT:    sext.w a0, a0
-; CHECK64-IZFHMIN-NEXT:    fcvt.s.l fa5, a0
+; CHECK64-IZFHMIN-NEXT:    fcvt.s.w fa5, a0
 ; CHECK64-IZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; CHECK64-IZFHMIN-NEXT:    ret
 ;
@@ -4100,8 +4099,7 @@ define half @fcvt_h_w(i32 %a) nounwind {
 ;
 ; CHECK64-IZHINXMIN-LABEL: fcvt_h_w:
 ; CHECK64-IZHINXMIN:       # %bb.0:
-; CHECK64-IZHINXMIN-NEXT:    sext.w a0, a0
-; CHECK64-IZHINXMIN-NEXT:    fcvt.s.l a0, a0
+; CHECK64-IZHINXMIN-NEXT:    fcvt.s.w a0, a0
 ; CHECK64-IZHINXMIN-NEXT:    fcvt.h.s a0, a0
 ; CHECK64-IZHINXMIN-NEXT:    ret
 ;
@@ -4113,8 +4111,7 @@ define half @fcvt_h_w(i32 %a) nounwind {
 ;
 ; CHECK64-IZDINXZHINXMIN-LABEL: fcvt_h_w:
 ; CHECK64-IZDINXZHINXMIN:       # %bb.0:
-; CHECK64-IZDINXZHINXMIN-NEXT:    sext.w a0, a0
-; CHECK64-IZDINXZHINXMIN-NEXT:    fcvt.s.l a0, a0
+; CHECK64-IZDINXZHINXMIN-NEXT:    fcvt.s.w a0, a0
 ; CHECK64-IZDINXZHINXMIN-NEXT:    fcvt.h.s a0, a0
 ; CHECK64-IZDINXZHINXMIN-NEXT:    ret
   %1 = sitofp i32 %a to half
@@ -4242,7 +4239,7 @@ define half @fcvt_h_w_load(ptr %p) nounwind {
 ; CHECK64-IZFHMIN-LABEL: fcvt_h_w_load:
 ; CHECK64-IZFHMIN:       # %bb.0:
 ; CHECK64-IZFHMIN-NEXT:    lw a0, 0(a0)
-; CHECK64-IZFHMIN-NEXT:    fcvt.s.l fa5, a0
+; CHECK64-IZFHMIN-NEXT:    fcvt.s.w fa5, a0
 ; CHECK64-IZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; CHECK64-IZFHMIN-NEXT:    ret
 ;
@@ -4256,7 +4253,7 @@ define half @fcvt_h_w_load(ptr %p) nounwind {
 ; CHECK64-IZHINXMIN-LABEL: fcvt_h_w_load:
 ; CHECK64-IZHINXMIN:       # %bb.0:
 ; CHECK64-IZHINXMIN-NEXT:    lw a0, 0(a0)
-; CHECK64-IZHINXMIN-NEXT:    fcvt.s.l a0, a0
+; CHECK64-IZHINXMIN-NEXT:    fcvt.s.w a0, a0
 ; CHECK64-IZHINXMIN-NEXT:    fcvt.h.s a0, a0
 ; CHECK64-IZHINXMIN-NEXT:    ret
 ;
@@ -4270,7 +4267,7 @@ define half @fcvt_h_w_load(ptr %p) nounwind {
 ; CHECK64-IZDINXZHINXMIN-LABEL: fcvt_h_w_load:
 ; CHECK64-IZDINXZHINXMIN:       # %bb.0:
 ; CHECK64-IZDINXZHINXMIN-NEXT:    lw a0, 0(a0)
-; CHECK64-IZDINXZHINXMIN-NEXT:    fcvt.s.l a0, a0
+; CHECK64-IZDINXZHINXMIN-NEXT:    fcvt.s.w a0, a0
 ; CHECK64-IZDINXZHINXMIN-NEXT:    fcvt.h.s a0, a0
 ; CHECK64-IZDINXZHINXMIN-NEXT:    ret
   %a = load i32, ptr %p
@@ -4387,9 +4384,7 @@ define half @fcvt_h_wu(i32 %a) nounwind {
 ;
 ; CHECK64-IZFHMIN-LABEL: fcvt_h_wu:
 ; CHECK64-IZFHMIN:       # %bb.0:
-; CHECK64-IZFHMIN-NEXT:    slli a0, a0, 32
-; CHECK64-IZFHMIN-NEXT:    srli a0, a0, 32
-; CHECK64-IZFHMIN-NEXT:    fcvt.s.lu fa5, a0
+; CHECK64-IZFHMIN-NEXT:    fcvt.s.wu fa5, a0
 ; CHECK64-IZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; CHECK64-IZFHMIN-NEXT:    ret
 ;
@@ -4401,9 +4396,7 @@ define half @fcvt_h_wu(i32 %a) nounwind {
 ;
 ; CHECK64-IZHINXMIN-LABEL: fcvt_h_wu:
 ; CHECK64-IZHINXMIN:       # %bb.0:
-; CHECK64-IZHINXMIN-NEXT:    slli a0, a0, 32
-; CHECK64-IZHINXMIN-NEXT:    srli a0, a0, 32
-; CHECK64-IZHINXMIN-NEXT:    fcvt.s.lu a0, a0
+; CHECK64-IZHINXMIN-NEXT:    fcvt.s.wu a0, a0
 ; CHECK64-IZHINXMIN-NEXT:    fcvt.h.s a0, a0
 ; CHECK64-IZHINXMIN-NEXT:    ret
 ;
@@ -4415,9 +4408,7 @@ define half @fcvt_h_wu(i32 %a) nounwind {
 ;
 ; CHECK64-IZDINXZHINXMIN-LABEL: fcvt_h_wu:
 ; CHECK64-IZDINXZHINXMIN:       # %bb.0:
-; CHECK64-IZDINXZHINXMIN-NEXT:    slli a0, a0, 32
-; CHECK64-IZDINXZHINXMIN-NEXT:    srli a0, a0, 32
-; CHECK64-IZDINXZHINXMIN-NEXT:    fcvt.s.lu a0, a0
+; CHECK64-IZDINXZHINXMIN-NEXT:    fcvt.s.wu a0, a0
 ; CHECK64-IZDINXZHINXMIN-NEXT:    fcvt.h.s a0, a0
 ; CHECK64-IZDINXZHINXMIN-NEXT:    ret
   %1 = uitofp i32 %a to half
@@ -4563,7 +4554,7 @@ define half @fcvt_h_wu_load(ptr %p) nounwind {
 ; CHECK64-IZFHMIN-LABEL: fcvt_h_wu_load:
 ; CHECK64-IZFHMIN:       # %bb.0:
 ; CHECK64-IZFHMIN-NEXT:    lwu a0, 0(a0)
-; CHECK64-IZFHMIN-NEXT:    fcvt.s.lu fa5, a0
+; CHECK64-IZFHMIN-NEXT:    fcvt.s.wu fa5, a0
 ; CHECK64-IZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; CHECK64-IZFHMIN-NEXT:    ret
 ;
@@ -4577,7 +4568,7 @@ define half @fcvt_h_wu_load(ptr %p) nounwind {
 ; CHECK64-IZHINXMIN-LABEL: fcvt_h_wu_load:
 ; CHECK64-IZHINXMIN:       # %bb.0:
 ; CHECK64-IZHINXMIN-NEXT:    lwu a0, 0(a0)
-; CHECK64-IZHINXMIN-NEXT:    fcvt.s.lu a0, a0
+; CHECK64-IZHINXMIN-NEXT:    fcvt.s.wu a0, a0
 ; CHECK64-IZHINXMIN-NEXT:    fcvt.h.s a0, a0
 ; CHECK64-IZHINXMIN-NEXT:    ret
 ;
@@ -4591,7 +4582,7 @@ define half @fcvt_h_wu_load(ptr %p) nounwind {
 ; CHECK64-IZDINXZHINXMIN-LABEL: fcvt_h_wu_load:
 ; CHECK64-IZDINXZHINXMIN:       # %bb.0:
 ; CHECK64-IZDINXZHINXMIN-NEXT:    lwu a0, 0(a0)
-; CHECK64-IZDINXZHINXMIN-NEXT:    fcvt.s.lu a0, a0
+; CHECK64-IZDINXZHINXMIN-NEXT:    fcvt.s.wu a0, a0
 ; CHECK64-IZDINXZHINXMIN-NEXT:    fcvt.h.s a0, a0
 ; CHECK64-IZDINXZHINXMIN-NEXT:    ret
   %a = load i32, ptr %p
@@ -5904,7 +5895,7 @@ define signext i32 @fcvt_h_w_demanded_bits(i32 signext %0, ptr %1) nounwind {
 ; CHECK64-IZFHMIN-LABEL: fcvt_h_w_demanded_bits:
 ; CHECK64-IZFHMIN:       # %bb.0:
 ; CHECK64-IZFHMIN-NEXT:    addiw a0, a0, 1
-; CHECK64-IZFHMIN-NEXT:    fcvt.s.l fa5, a0
+; CHECK64-IZFHMIN-NEXT:    fcvt.s.w fa5, a0
 ; CHECK64-IZFHMIN-NEXT:    fcvt.h.s fa5, fa5
 ; CHECK64-IZFHMIN-NEXT:    fsh fa5, 0(a1)
 ; CHECK64-IZFHMIN-NEXT:    ret
@@ -5920,7 +5911,7 @@ define signext i32 @fcvt_h_w_demanded_bits(i32 signext %0, ptr %1) nounwind {
 ; CHECK64-IZHINXMIN-LABEL: fcvt_h_w_demanded_bits:
 ; CHECK64-IZHINXMIN:       # %bb.0:
 ; CHECK64-IZHINXMIN-NEXT:    addiw a0, a0, 1
-; CHECK64-IZHINXMIN-NEXT:    fcvt.s.l a2, a0
+; CHECK64-IZHINXMIN-NEXT:    fcvt.s.w a2, a0
 ; CHECK64-IZHINXMIN-NEXT:    fcvt.h.s a2, a2
 ; CHECK64-IZHINXMIN-NEXT:    sh a2, 0(a1)
 ; CHECK64-IZHINXMIN-NEXT:    ret
@@ -5936,7 +5927,7 @@ define signext i32 @fcvt_h_w_demanded_bits(i32 signext %0, ptr %1) nounwind {
 ; CHECK64-IZDINXZHINXMIN-LABEL: fcvt_h_w_demanded_bits:
 ; CHECK64-IZDINXZHINXMIN:       # %bb.0:
 ; CHECK64-IZDINXZHINXMIN-NEXT:    addiw a0, a0, 1
-; CHECK64-IZDINXZHINXMIN-NEXT:    fcvt.s.l a2, a0
+; CHECK64-IZDINXZHINXMIN-NEXT:    fcvt.s.w a2, a0
 ; CHECK64-IZDINXZHINXMIN-NEXT:    fcvt.h.s a2, a2
 ; CHECK64-IZDINXZHINXMIN-NEXT:    sh a2, 0(a1)
 ; CHECK64-IZDINXZHINXMIN-NEXT:    ret
@@ -6129,9 +6120,7 @@ define signext i32 @fcvt_h_wu_demanded_bits(i32 signext %0, ptr %1) nounwind {
 ; CHECK64-IZFHMIN-LABEL: fcvt_h_wu_demanded_bits:
 ; CHECK64-IZFHMIN:       # %bb.0:
 ; CHECK64-IZFHMIN-NEXT:    addiw a0, a0, 1
-; CHECK64-IZFHMIN-NEXT:    slli a2, a0, 32
-; CHECK64-IZFHMIN-NEXT:    srli a2, a2, 32
-; CHECK64-IZFHMIN-NEXT:    fcvt.s.lu fa5, a2
+; CHECK64-IZFHMIN-NEXT:    fcvt.s.wu fa5, a0
 ; CHECK64-IZFHMIN-NEXT:    fcvt.h.s fa5, fa5
 ; CHECK64-IZFHMIN-NEXT:    fsh fa5, 0(a1)
 ; CHECK64-IZFHMIN-NEXT:    ret
@@ -6147,9 +6136,7 @@ define signext i32 @fcvt_h_wu_demanded_bits(i32 signext %0, ptr %1) nounwind {
 ; CHECK64-IZHINXMIN-LABEL: fcvt_h_wu_demanded_bits:
 ; CHECK64-IZHINXMIN:       # %bb.0:
 ; CHECK64-IZHINXMIN-NEXT:    addiw a0, a0, 1
-; CHECK64-IZHINXMIN-NEXT:    slli a2, a0, 32
-; CHECK64-IZHINXMIN-NEXT:    srli a2, a2, 32
-; CHECK64-IZHINXMIN-NEXT:    fcvt.s.lu a2, a2
+; CHECK64-IZHINXMIN-NEXT:    fcvt.s.wu a2, a0
 ; CHECK64-IZHINXMIN-NEXT:    fcvt.h.s a2, a2
 ; CHECK64-IZHINXMIN-NEXT:    sh a2, 0(a1)
 ; CHECK64-IZHINXMIN-NEXT:    ret
@@ -6165,9 +6152,7 @@ define signext i32 @fcvt_h_wu_demanded_bits(i32 signext %0, ptr %1) nounwind {
 ; CHECK64-IZDINXZHINXMIN-LABEL: fcvt_h_wu_demanded_bits:
 ; CHECK64-IZDINXZHINXMIN:       # %bb.0:
 ; CHECK64-IZDINXZHINXMIN-NEXT:    addiw a0, a0, 1
-; CHECK64-IZDINXZHINXMIN-NEXT:    slli a2, a0, 32
-; CHECK64-IZDINXZHINXMIN-NEXT:    srli a2, a2, 32
-; CHECK64-IZDINXZHINXMIN-NEXT:    fcvt.s.lu a2, a2
+; CHECK64-IZDINXZHINXMIN-NEXT:    fcvt.s.wu a2, a0
 ; CHECK64-IZDINXZHINXMIN-NEXT:    fcvt.h.s a2, a2
 ; CHECK64-IZDINXZHINXMIN-NEXT:    sh a2, 0(a1)
 ; CHECK64-IZDINXZHINXMIN-NEXT:    ret
@@ -6808,7 +6793,7 @@ define zeroext i16 @fcvt_wu_s_i16(half %a) nounwind {
 ; CHECK32-IZFHMIN-LABEL: fcvt_wu_s_i16:
 ; CHECK32-IZFHMIN:       # %bb.0:
 ; CHECK32-IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
-; CHECK32-IZFHMIN-NEXT:    fcvt.wu.s a0, fa5, rtz
+; CHECK32-IZFHMIN-NEXT:    fcvt.w.s a0, fa5, rtz
 ; CHECK32-IZFHMIN-NEXT:    ret
 ;
 ; CHECK64-IZFHMIN-LABEL: fcvt_wu_s_i16:
@@ -6820,7 +6805,7 @@ define zeroext i16 @fcvt_wu_s_i16(half %a) nounwind {
 ; CHECK32-IZHINXMIN-LABEL: fcvt_wu_s_i16:
 ; CHECK32-IZHINXMIN:       # %bb.0:
 ; CHECK32-IZHINXMIN-NEXT:    fcvt.s.h a0, a0
-; CHECK32-IZHINXMIN-NEXT:    fcvt.wu.s a0, a0, rtz
+; CHECK32-IZHINXMIN-NEXT:    fcvt.w.s a0, a0, rtz
 ; CHECK32-IZHINXMIN-NEXT:    ret
 ;
 ; CHECK64-IZHINXMIN-LABEL: fcvt_wu_s_i16:
@@ -6832,7 +6817,7 @@ define zeroext i16 @fcvt_wu_s_i16(half %a) nounwind {
 ; CHECK32-IZDINXZHINXMIN-LABEL: fcvt_wu_s_i16:
 ; CHECK32-IZDINXZHINXMIN:       # %bb.0:
 ; CHECK32-IZDINXZHINXMIN-NEXT:    fcvt.s.h a0, a0
-; CHECK32-IZDINXZHINXMIN-NEXT:    fcvt.wu.s a0, a0, rtz
+; CHECK32-IZDINXZHINXMIN-NEXT:    fcvt.w.s a0, a0, rtz
 ; CHECK32-IZDINXZHINXMIN-NEXT:    ret
 ;
 ; CHECK64-IZDINXZHINXMIN-LABEL: fcvt_wu_s_i16:
@@ -7759,7 +7744,7 @@ define zeroext i8 @fcvt_wu_s_i8(half %a) nounwind {
 ; CHECK32-IZFHMIN-LABEL: fcvt_wu_s_i8:
 ; CHECK32-IZFHMIN:       # %bb.0:
 ; CHECK32-IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
-; CHECK32-IZFHMIN-NEXT:    fcvt.wu.s a0, fa5, rtz
+; CHECK32-IZFHMIN-NEXT:    fcvt.w.s a0, fa5, rtz
 ; CHECK32-IZFHMIN-NEXT:    ret
 ;
 ; CHECK64-IZFHMIN-LABEL: fcvt_wu_s_i8:
@@ -7771,7 +7756,7 @@ define zeroext i8 @fcvt_wu_s_i8(half %a) nounwind {
 ; CHECK32-IZHINXMIN-LABEL: fcvt_wu_s_i8:
 ; CHECK32-IZHINXMIN:       # %bb.0:
 ; CHECK32-IZHINXMIN-NEXT:    fcvt.s.h a0, a0
-; CHECK32-IZHINXMIN-NEXT:    fcvt.wu.s a0, a0, rtz
+; CHECK32-IZHINXMIN-NEXT:    fcvt.w.s a0, a0, rtz
 ; CHECK32-IZHINXMIN-NEXT:    ret
 ;
 ; CHECK64-IZHINXMIN-LABEL: fcvt_wu_s_i8:
@@ -7783,7 +7768,7 @@ define zeroext i8 @fcvt_wu_s_i8(half %a) nounwind {
 ; CHECK32-IZDINXZHINXMIN-LABEL: fcvt_wu_s_i8:
 ; CHECK32-IZDINXZHINXMIN:       # %bb.0:
 ; CHECK32-IZDINXZHINXMIN-NEXT:    fcvt.s.h a0, a0
-; CHECK32-IZDINXZHINXMIN-NEXT:    fcvt.wu.s a0, a0, rtz
+; CHECK32-IZDINXZHINXMIN-NEXT:    fcvt.w.s a0, a0, rtz
 ; CHECK32-IZDINXZHINXMIN-NEXT:    ret
 ;
 ; CHECK64-IZDINXZHINXMIN-LABEL: fcvt_wu_s_i8:

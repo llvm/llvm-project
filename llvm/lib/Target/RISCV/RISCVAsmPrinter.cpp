@@ -303,11 +303,6 @@ void RISCVAsmPrinter::emitInstruction(const MachineInstr *MI) {
   case RISCV::KCFI_CHECK:
     LowerKCFI_CHECK(*MI);
     return;
-  case RISCV::PseudoRVVInitUndefM1:
-  case RISCV::PseudoRVVInitUndefM2:
-  case RISCV::PseudoRVVInitUndefM4:
-  case RISCV::PseudoRVVInitUndefM8:
-    return;
   case TargetOpcode::STACKMAP:
     return LowerSTACKMAP(*OutStreamer, SM, *MI);
   case TargetOpcode::PATCHPOINT:
@@ -396,6 +391,15 @@ bool RISCVAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
     OS << MCO.getImm();
   else if (Offset.isGlobal() || Offset.isBlockAddress() || Offset.isMCSymbol())
     OS << *MCO.getExpr();
+
+  if (Offset.isMCSymbol())
+    MMI->getContext().registerInlineAsmLabel(Offset.getMCSymbol());
+  if (Offset.isBlockAddress()) {
+    const BlockAddress *BA = Offset.getBlockAddress();
+    MCSymbol *Sym = GetBlockAddressSymbol(BA);
+    MMI->getContext().registerInlineAsmLabel(Sym);
+  }
+
   OS << "(" << RISCVInstPrinter::getRegisterName(AddrReg.getReg()) << ")";
   return false;
 }
