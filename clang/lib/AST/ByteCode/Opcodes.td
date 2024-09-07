@@ -732,6 +732,7 @@ def Flip : Opcode {
 def Invalid : Opcode {}
 def Unsupported : Opcode {}
 def Error : Opcode {}
+def SideEffect : Opcode {}
 def InvalidCast : Opcode {
   let Args = [ArgCastKind, ArgBool];
 }
