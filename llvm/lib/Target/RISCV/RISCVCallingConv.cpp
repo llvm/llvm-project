@@ -610,25 +610,34 @@ bool llvm::CC_RISCV_FastCC(unsigned ValNo, MVT ValVT, MVT LocVT,
       if (ValVT.isFixedLengthVector())
         LocVT = TLI.getContainerForFixedLengthVector(LocVT);
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
-    } else {
-      // Try and pass the address via a "fast" GPR.
-      if (MCRegister GPRReg = State.AllocateReg(getFastCCArgGPRs(ABI))) {
-        LocInfo = CCValAssign::Indirect;
-        LocVT = Subtarget.getXLenVT();
-        State.addLoc(CCValAssign::getReg(ValNo, ValVT, GPRReg, LocVT, LocInfo));
-      } else if (ValVT.isFixedLengthVector()) {
-        auto StackAlign =
-            MaybeAlign(ValVT.getScalarSizeInBits() / 8).valueOrOne();
-        unsigned StackOffset =
-            State.AllocateStack(ValVT.getStoreSize(), StackAlign);
-        State.addLoc(
-            CCValAssign::getMem(ValNo, ValVT, StackOffset, LocVT, LocInfo));
-      } else {
-        // Can't pass scalable vectors on the stack.
-        return true;
-      }
+      return false;
     }
 
+    // Try and pass the address via a "fast" GPR.
+    if (MCRegister GPRReg = State.AllocateReg(getFastCCArgGPRs(ABI))) {
+      LocInfo = CCValAssign::Indirect;
+      LocVT = Subtarget.getXLenVT();
+      State.addLoc(CCValAssign::getReg(ValNo, ValVT, GPRReg, LocVT, LocInfo));
+      return false;
+    }
+
+    // Pass scalable vectors indirectly by storing the pointer on the stack.
+    if (ValVT.isScalableVector()) {
+      LocInfo = CCValAssign::Indirect;
+      LocVT = Subtarget.getXLenVT();
+      unsigned XLen = Subtarget.getXLen();
+      unsigned StackOffset = State.AllocateStack(XLen / 8, Align(XLen / 8));
+      State.addLoc(
+          CCValAssign::getMem(ValNo, ValVT, StackOffset, LocVT, LocInfo));
+      return false;
+    }
+
+    // Pass fixed-length vectors on the stack.
+    auto StackAlign = MaybeAlign(ValVT.getScalarSizeInBits() / 8).valueOrOne();
+    unsigned StackOffset =
+        State.AllocateStack(ValVT.getStoreSize(), StackAlign);
+    State.addLoc(
+        CCValAssign::getMem(ValNo, ValVT, StackOffset, LocVT, LocInfo));
     return false;
   }
 
