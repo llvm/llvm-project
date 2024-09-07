@@ -273,8 +273,6 @@ PreservedAnalyses FunctionToLoopPassAdaptor::run(Function &F,
            llvm::any_cast<const LoopNest *>(&IR));
     const Loop **LPtr = llvm::any_cast<const Loop *>(&IR);
     const Loop *L = LPtr ? *LPtr : nullptr;
-    if (!L)
-      L = &llvm::any_cast<const LoopNest *>(IR)->getOutermostLoop();
     assert(L && "Loop should be valid for printing");
 
     // Verify the loop structure and LCSSA form before visiting the loop.

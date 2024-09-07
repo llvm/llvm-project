@@ -17,6 +17,12 @@
 
 namespace llvm {
 
+#ifdef _WIN32
+template struct LLVM_EXPORT_TEMPLATE Any::TypeId<const Module *>;
+template struct LLVM_EXPORT_TEMPLATE Any::TypeId<const Function *>;
+template struct LLVM_EXPORT_TEMPLATE Any::TypeId<const Loop *>;
+#endif
+
 void PassInstrumentationCallbacks::addClassToPassName(StringRef ClassName,
                                                       StringRef PassName) {
   ClassToPassName.try_emplace(ClassName, PassName.str());

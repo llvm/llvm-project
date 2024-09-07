@@ -50,10 +50,11 @@
 #define LLVM_IR_PASSINSTRUMENTATION_H
 
 #include "llvm/ADT/Any.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 #include <type_traits>
 #include <vector>
 
@@ -61,6 +62,15 @@ namespace llvm {
 
 class PreservedAnalyses;
 class StringRef;
+class Module;
+class Loop;
+class Function;
+
+#ifdef _WIN32
+extern template struct LLVM_TEMPLATE_ABI Any::TypeId<const Module *>;
+extern template struct LLVM_TEMPLATE_ABI Any::TypeId<const Function *>;
+extern template struct LLVM_TEMPLATE_ABI Any::TypeId<const Loop *>;
+#endif
 
 /// This class manages callbacks registration, as well as provides a way for
 /// PassInstrumentation to pass control to the registered callbacks.
