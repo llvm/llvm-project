@@ -815,7 +815,7 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
     return Tok.is(tok::l_paren) && Tok.ParameterCount > 0 && Tok.Previous &&
            Tok.Previous->is(tok::identifier);
   };
-  const auto IsInTemplateString = [this](const FormatToken &Tok) {
+  auto IsInTemplateString = [this](const FormatToken &Tok) {
     if (!Style.isJavaScript())
       return false;
     for (const auto *Prev = &Tok; Prev; Prev = Prev->Previous) {
@@ -827,7 +827,10 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
     return false;
   };
   // Identifies simple (no expression) one-argument function calls.
-  const auto IsSimpleFunction = [&](const FormatToken &Tok) {
+  auto StartsSimpleOneArgList = [&](const FormatToken &TokAfterLParen) {
+    assert(TokAfterLParen.isNot(tok::comment) || TokAfterLParen.Next);
+    const auto &Tok =
+        TokAfterLParen.is(tok::comment) ? *TokAfterLParen.Next : TokAfterLParen;
     if (!Tok.FakeLParens.empty() && Tok.FakeLParens.back() > prec::Unknown)
       return false;
     // Nested calls that involve `new` expressions also look like simple
@@ -861,7 +864,7 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
       //  or
       //  caaaaaaaaaaaaaaaaaaaaal(
       //       new SomethingElseeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee());
-      Current.isNot(tok::comment) && !IsSimpleFunction(Current)) {
+      !StartsSimpleOneArgList(Current)) {
     CurrentState.NoLineBreak = true;
   }
 
