@@ -10,11 +10,11 @@
 #define LLVM_LIBC_SRC_SETJMP_LONGJMP_H
 
 #include "src/__support/macros/config.h"
-#include <setjmp.h>
+#include "hdr/types/jmp_buf.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-void longjmp(__jmp_buf *buf, int val);
+void longjmp(jmp_buf buf, int val);
 
 } // namespace LIBC_NAMESPACE_DECL
 
