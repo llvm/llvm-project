@@ -4396,8 +4396,9 @@ Sema::BuildMemInitializer(Decl *ConstructorD,
           for (auto const &Base : ClassDecl->bases()) {
             auto BaseTemplate =
                 Base.getType()->getAs<TemplateSpecializationType>();
-            if (BaseTemplate && Context.hasSameTemplateName(
-                                    BaseTemplate->getTemplateName(), TN)) {
+            if (BaseTemplate &&
+                Context.hasSameTemplateName(BaseTemplate->getTemplateName(), TN,
+                                            /*IgnoreDeduced=*/true)) {
               Diag(IdLoc, diag::ext_unqualified_base_class)
                   << SourceRange(IdLoc, Init->getSourceRange().getEnd());
               BaseType = Base.getType();
@@ -11459,8 +11460,8 @@ bool Sema::CheckDeductionGuideDeclarator(Declarator &D, QualType &R,
     if (auto RetTST =
             TSI->getTypeLoc().getAsAdjusted<TemplateSpecializationTypeLoc>()) {
       TemplateName SpecifiedName = RetTST.getTypePtr()->getTemplateName();
-      bool TemplateMatches =
-          Context.hasSameTemplateName(SpecifiedName, GuidedTemplate);
+      bool TemplateMatches = Context.hasSameTemplateName(
+          SpecifiedName, GuidedTemplate, /*IgnoreDeduced=*/true);
 
       const QualifiedTemplateName *Qualifiers =
           SpecifiedName.getAsQualifiedTemplateName();

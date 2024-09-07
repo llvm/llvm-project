@@ -17090,6 +17090,16 @@ bool AArch64TargetLowering::lowerInterleavedLoad(
   if (!isLegalInterleavedAccessType(VTy, DL, UseScalable))
     return false;
 
+  // Check if the interleave is a zext(shuffle), that can be better optimized
+  // into shift / and masks. For the moment we do this just for uitofp (not
+  // zext) to avoid issues with widening instructions.
+  if (Shuffles.size() == 4 && all_of(Shuffles, [](ShuffleVectorInst *SI) {
+        return SI->hasOneUse() && match(SI->user_back(), m_UIToFP(m_Value())) &&
+               SI->getType()->getScalarSizeInBits() * 4 ==
+                   SI->user_back()->getType()->getScalarSizeInBits();
+      }))
+    return false;
+
   unsigned NumLoads = getNumInterleavedAccesses(VTy, DL, UseScalable);
 
   auto *FVTy = cast<FixedVectorType>(VTy);
