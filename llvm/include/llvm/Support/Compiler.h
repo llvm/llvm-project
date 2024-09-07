@@ -131,13 +131,22 @@
 #if (!(defined(_WIN32) || defined(__CYGWIN__)) ||                              \
      (defined(__MINGW32__) && defined(__clang__)))
 #define LLVM_LIBRARY_VISIBILITY LLVM_ATTRIBUTE_VISIBILITY_HIDDEN
+// Clang compilers older then 15 do not support gnu style attributes on
+// namespaces.
+#if defined(__clang__) && __clang_major__ < 15
+#define LLVM_LIBRARY_VISIBILITY_NAMESPACE [[gnu::visibility("hidden")]]
+#else
+#define LLVM_LIBRARY_VISIBILITY_NAMESPACE LLVM_ATTRIBUTE_VISIBILITY_HIDDEN
+#endif
 #define LLVM_ALWAYS_EXPORT LLVM_ATTRIBUTE_VISIBILITY_DEFAULT
 #elif defined(_WIN32)
 #define LLVM_ALWAYS_EXPORT __declspec(dllexport)
 #define LLVM_LIBRARY_VISIBILITY
+#define LLVM_LIBRARY_VISIBILITY_NAMESPACE
 #else
 #define LLVM_LIBRARY_VISIBILITY
 #define LLVM_ALWAYS_EXPORT
+#define LLVM_LIBRARY_VISIBILITY_NAMESPACE
 #endif
 
 /// LLVM_ABI is the main export/visibility macro to mark something as explicitly
