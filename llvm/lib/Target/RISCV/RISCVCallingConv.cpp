@@ -395,11 +395,6 @@ bool llvm::CC_RISCV(unsigned ValNo, MVT ValVT, MVT LocVT,
     return false;
   }
 
-  // Fixed-length vectors are located in the corresponding scalable-vector
-  // container types.
-  if (ValVT.isFixedLengthVector())
-    LocVT = TLI.getContainerForFixedLengthVector(LocVT);
-
   // Split arguments might be passed indirectly, so keep track of the pending
   // values. Split vectors are passed via a mix of registers and indirectly, so
   // treat them as we would any other argument.
@@ -443,7 +438,12 @@ bool llvm::CC_RISCV(unsigned ValNo, MVT ValVT, MVT LocVT,
     Reg = State.AllocateReg(ArgFPR64s);
   else if (ValVT.isVector() || ValVT.isRISCVVectorTuple()) {
     Reg = allocateRVVReg(ValVT, ValNo, State, TLI);
-    if (!Reg) {
+    if (Reg) {
+      // Fixed-length vectors are located in the corresponding scalable-vector
+      // container types.
+      if (ValVT.isFixedLengthVector())
+        LocVT = TLI.getContainerForFixedLengthVector(LocVT);
+    } else {
       // For return values, the vector must be passed fully via registers or
       // via the stack.
       // FIXME: The proposed vector ABI only mandates v8-v15 for return values,
@@ -458,8 +458,6 @@ bool llvm::CC_RISCV(unsigned ValNo, MVT ValVT, MVT LocVT,
         LocVT = XLenVT;
         LocInfo = CCValAssign::Indirect;
       } else {
-        // Pass fixed-length vectors on the stack.
-        LocVT = ValVT;
         StoreSizeBytes = ValVT.getStoreSize();
         // Align vectors to their element sizes, being careful for vXi1
         // vectors.
