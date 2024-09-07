@@ -1395,13 +1395,13 @@ static bool interp__builtin_operator_delete(InterpState &S, CodePtr OpPC,
 }
 
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
-                      const CallExpr *Call) {
+                      const CallExpr *Call, uint32_t BuiltinID) {
   const InterpFrame *Frame = S.Current;
   APValue Dummy;
 
   std::optional<PrimType> ReturnT = S.getContext().classify(Call);
 
-  switch (F->getBuiltinID()) {
+  switch (BuiltinID) {
   case Builtin::BI__builtin_is_constant_evaluated:
     if (!interp__builtin_is_constant_evaluated(S, OpPC, Frame, Call))
       return false;

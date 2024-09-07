@@ -601,6 +601,19 @@ namespace std {
   };
 }
 
+/// Specialization for float, using operator new/delete.
+namespace std {
+  using size_t = decltype(sizeof(0));
+  template<> struct allocator<float> {
+    constexpr float *allocate(size_t N) {
+      return (float*)operator new (sizeof(float) * N);
+    }
+    constexpr void deallocate(void *p) {
+      operator delete(p);
+    }
+  };
+}
+
 namespace OperatorNewDelete {
 
   constexpr bool mismatched(int alloc_kind, int dealloc_kind) {
@@ -696,6 +709,7 @@ namespace OperatorNewDelete {
   constexpr int no_deallocate_nullptr = (std::allocator<int>().deallocate(nullptr), 1); // both-error {{constant expression}} \
                                                                                         // both-note {{in call}}
 
+  static_assert((std::allocator<float>().deallocate(std::allocator<float>().allocate(10)), 1) == 1);
 }
 
 #else
