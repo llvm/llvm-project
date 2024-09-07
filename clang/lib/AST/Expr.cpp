@@ -13,6 +13,7 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/APValue.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/ASTLambda.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/ComputeDependence.h"
 #include "clang/AST/DeclCXX.h"
@@ -2287,6 +2288,15 @@ APValue SourceLocExpr::EvaluateInContext(const ASTContext &Ctx,
     Context = getParentContext();
   }
 
+  // If we are currently parsing a lambda declarator, we might not have a fully
+  // formed call operator declaration yet, and we could not form a function name
+  // for it. Because we do not have access to Sema/function scopes here, we
+  // detect this case by relying on the fact such method doesn't yet have a
+  // type.
+  if (const auto *D = dyn_cast<CXXMethodDecl>(Context);
+      D && D->getFunctionTypeLoc().isNull() && isLambdaCallOperator(D))
+    Context = D->getParent()->getParent();
+
   PresumedLoc PLoc = Ctx.getSourceManager().getPresumedLoc(
       Ctx.getSourceManager().getExpansionRange(Loc).getEnd());
 
@@ -3631,6 +3641,7 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
   case RequiresExprClass:
   case SYCLUniqueStableNameExprClass:
   case PackIndexingExprClass:
+  case HLSLOutArgExprClass:
     // These never have a side-effect.
     return false;
 
@@ -4806,6 +4817,26 @@ getOverflowPatternBinOp(const BinaryOperator *E) {
   return {};
 }
 
+/// Compute and set the OverflowPatternExclusion bit based on whether the
+/// BinaryOperator expression matches an overflow pattern being ignored by
+/// -fsanitize-undefined-ignore-overflow-pattern=add-signed-overflow-test or
+/// -fsanitize-undefined-ignore-overflow-pattern=add-unsigned-overflow-test
+static void computeOverflowPatternExclusion(const ASTContext &Ctx,
+                                            const BinaryOperator *E) {
+  std::optional<BinaryOperator *> Result = getOverflowPatternBinOp(E);
+  if (!Result.has_value())
+    return;
+  QualType AdditionResultType = Result.value()->getType();
+
+  if ((AdditionResultType->isSignedIntegerType() &&
+       Ctx.getLangOpts().isOverflowPatternExcluded(
+           LangOptions::OverflowPatternExclusionKind::AddSignedOverflowTest)) ||
+      (AdditionResultType->isUnsignedIntegerType() &&
+       Ctx.getLangOpts().isOverflowPatternExcluded(
+           LangOptions::OverflowPatternExclusionKind::AddUnsignedOverflowTest)))
+    Result.value()->setExcludedOverflowPattern(true);
+}
+
 BinaryOperator::BinaryOperator(const ASTContext &Ctx, Expr *lhs, Expr *rhs,
                                Opcode opc, QualType ResTy, ExprValueKind VK,
                                ExprObjectKind OK, SourceLocation opLoc,
@@ -4818,12 +4849,7 @@ BinaryOperator::BinaryOperator(const ASTContext &Ctx, Expr *lhs, Expr *rhs,
   BinaryOperatorBits.ExcludedOverflowPattern = false;
   SubExprs[LHS] = lhs;
   SubExprs[RHS] = rhs;
-  if (Ctx.getLangOpts().isOverflowPatternExcluded(
-          LangOptions::OverflowPatternExclusionKind::AddOverflowTest)) {
-    std::optional<BinaryOperator *> Result = getOverflowPatternBinOp(this);
-    if (Result.has_value())
-      Result.value()->BinaryOperatorBits.ExcludedOverflowPattern = true;
-  }
+  computeOverflowPatternExclusion(Ctx, this);
   BinaryOperatorBits.HasFPFeatures = FPFeatures.requiresTrailingStorage();
   if (hasStoredFPFeatures())
     setStoredFPFeatures(FPFeatures);
@@ -5372,4 +5398,15 @@ OMPIteratorExpr *OMPIteratorExpr::CreateEmpty(const ASTContext &Context,
           NumIterators * static_cast<int>(RangeLocOffset::Total), NumIterators),
       alignof(OMPIteratorExpr));
   return new (Mem) OMPIteratorExpr(EmptyShell(), NumIterators);
+}
+
+HLSLOutArgExpr *HLSLOutArgExpr::Create(const ASTContext &C, QualType Ty,
+                                       OpaqueValueExpr *Base,
+                                       OpaqueValueExpr *OpV, Expr *WB,
+                                       bool IsInOut) {
+  return new (C) HLSLOutArgExpr(Ty, Base, OpV, WB, IsInOut);
+}
+
+HLSLOutArgExpr *HLSLOutArgExpr::CreateEmpty(const ASTContext &C) {
+  return new (C) HLSLOutArgExpr(EmptyShell());
 }

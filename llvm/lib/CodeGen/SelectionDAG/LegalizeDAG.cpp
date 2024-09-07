@@ -1241,6 +1241,11 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
     Action = TLI.getOperationAction(Node->getOpcode(),
                                     Node->getOperand(0).getValueType());
     break;
+  case ISD::EXPERIMENTAL_VECTOR_HISTOGRAM:
+    Action = TLI.getOperationAction(
+        Node->getOpcode(),
+        cast<MaskedHistogramSDNode>(Node)->getIndex().getValueType());
+    break;
   default:
     if (Node->getOpcode() >= ISD::BUILTIN_OP_END) {
       Action = TLI.getCustomOperationAction(*Node);

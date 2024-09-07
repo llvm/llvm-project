@@ -949,7 +949,7 @@ def : Flag<["-"], "fident">, Group<f_Group>, Alias<Qy>,
 def : Flag<["-"], "fno-ident">, Group<f_Group>, Alias<Qn>,
   Visibility<[ClangOption, CLOption, DXCOption, CC1Option]>;
 def Qunused_arguments : Flag<["-"], "Qunused-arguments">,
-  Flags<[NoXarchOption]>, Visibility<[ClangOption, CLOption, DXCOption]>,
+  Flags<[NoXarchOption]>, Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>,
   HelpText<"Don't emit warning for unused driver arguments">;
 def Q : Flag<["-"], "Q">, IgnoredGCCCompat;
 def S : Flag<["-"], "S">, Flags<[NoXarchOption]>,
@@ -2302,11 +2302,18 @@ defm fixed_point : BoolFOption<"fixed-point",
   PosFlag<SetTrue, [], [ClangOption, CC1Option], "Enable">,
   NegFlag<SetFalse, [], [ClangOption], "Disable">,
   BothFlags<[], [ClangOption], " fixed point types">>;
-defm cxx_static_destructors : BoolFOption<"c++-static-destructors",
-  LangOpts<"RegisterStaticDestructors">, DefaultTrue,
-  NegFlag<SetFalse, [], [ClangOption, CC1Option],
-          "Disable C++ static destructor registration">,
-  PosFlag<SetTrue>>;
+def cxx_static_destructors_EQ : Joined<["-"], "fc++-static-destructors=">, Group<f_Group>,
+  HelpText<"Controls which variables C++ static destructors are registered for">,
+  Values<"all,thread-local,none">,
+  NormalizedValues<["All", "ThreadLocal", "None"]>,
+  NormalizedValuesScope<"LangOptions::RegisterStaticDestructorsKind">,
+  MarshallingInfoEnum<LangOpts<"RegisterStaticDestructors">, "All">,
+  Visibility<[ClangOption, CC1Option]>;
+def cxx_static_destructors : Flag<["-"], "fc++-static-destructors">, Group<f_Group>,
+  Alias<cxx_static_destructors_EQ>, AliasArgs<["all"]>;
+def no_cxx_static_destructors : Flag<["-"], "fno-c++-static-destructors">, Group<f_Group>,
+  Alias<cxx_static_destructors_EQ>, AliasArgs<["none"]>,
+  HelpText<"Disable C++ static destructor registration">;
 def fsymbol_partition_EQ : Joined<["-"], "fsymbol-partition=">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
   MarshallingInfoString<CodeGenOpts<"SymbolPartition">>;
@@ -2570,7 +2577,7 @@ defm sanitize_stats : BoolOption<"f", "sanitize-stats",
 def fsanitize_undefined_ignore_overflow_pattern_EQ : CommaJoined<["-"], "fsanitize-undefined-ignore-overflow-pattern=">,
   HelpText<"Specify the overflow patterns to exclude from artihmetic sanitizer instrumentation">,
   Visibility<[ClangOption, CC1Option]>,
-  Values<"none,all,add-overflow-test,negated-unsigned-const,post-decr-while">,
+  Values<"none,all,add-unsigned-overflow-test,add-signed-overflow-test,negated-unsigned-const,unsigned-post-decr-while">,
   MarshallingInfoStringVector<LangOpts<"OverflowPatternExclusionValues">>;
 def fsanitize_thread_memory_access : Flag<["-"], "fsanitize-thread-memory-access">,
                                      Group<f_clang_Group>,
@@ -3538,6 +3545,7 @@ def fopenmp : Flag<["-"], "fopenmp">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
   HelpText<"Parse OpenMP pragmas and generate parallel code.">;
 def fno_openmp : Flag<["-"], "fno-openmp">, Group<f_Group>,
+  Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
   Flags<[NoArgumentUnused]>;
 class OpenMPVersionHelp<string program, string default> {
   string str = !strconcat(
@@ -6754,6 +6762,14 @@ def fdefault_integer_8 : Flag<["-"],"fdefault-integer-8">, Group<f_Group>,
   HelpText<"Set the default integer and logical kind to an 8 byte wide type">;
 def fdefault_real_8 : Flag<["-"],"fdefault-real-8">, Group<f_Group>,
   HelpText<"Set the default real kind to an 8 byte wide type">;
+def fdisable_real_3 : Flag<["-"],"fdisable-real-3">, Group<f_Group>,
+   HelpText<"Disable real(KIND=3) from TargetCharacteristics">, Flags<[HelpHidden]>;
+def fdisable_real_10 : Flag<["-"],"fdisable-real-10">, Group<f_Group>,
+  HelpText<"Disable real(KIND=10) from TargetCharacteristics">, Flags<[HelpHidden]>;
+def fdisable_integer_2 : Flag<["-"],"fdisable-integer-2">, Group<f_Group>,
+  HelpText<"Disable integer(KIND=2) from TargetCharacteristics">, Flags<[HelpHidden]>;
+def fdisable_integer_16 : Flag<["-"],"fdisable-integer-16">, Group<f_Group>,
+  HelpText<"Disable integer(KIND=16) from TargetCharacteristics">, Flags<[HelpHidden]>;
 def flarge_sizes : Flag<["-"],"flarge-sizes">, Group<f_Group>,
   HelpText<"Use INTEGER(KIND=8) for the result type in size-related intrinsics">;
 

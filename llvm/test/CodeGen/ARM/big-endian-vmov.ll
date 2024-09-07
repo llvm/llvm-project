@@ -134,3 +134,103 @@ define arm_aapcs_vfpcc <1 x i64> @vmov_i64_b() {
 ; CHECK-NEXT:    bx lr
   ret <1 x i64> <i64 72056498804490495>
 }
+
+define arm_aapcs_vfpcc <2 x i64> @vmov_v2i64_b() {
+; CHECK-LABEL: vmov_v2i64_b:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    vmov.i64 q0, #0xffff00ff0000ff
+; CHECK-NEXT:    bx lr
+  ret <2 x i64> <i64 72056498804490495, i64 72056498804490495>
+}
+
+define arm_aapcs_vfpcc <4 x i32> @vmov_v4i32_b() {
+; CHECK-LE-LABEL: vmov_v4i32_b:
+; CHECK-LE:       @ %bb.0:
+; CHECK-LE-NEXT:    vmov.i64 q0, #0xff0000ff00ffff00
+; CHECK-LE-NEXT:    bx lr
+;
+; CHECK-BE-LABEL: vmov_v4i32_b:
+; CHECK-BE:       @ %bb.0:
+; CHECK-BE-NEXT:    vmov.i64 q0, #0xffff00ff0000ff
+; CHECK-BE-NEXT:    bx lr
+  ret <4 x i32> <i32 u0xffff00, i32 u0xff0000ff, i32 u0xffff00, i32 u0xff0000ff>
+}
+
+define arm_aapcs_vfpcc <2 x i64> @and_v2i64_b(<2 x i64> %a) {
+; CHECK-LABEL: and_v2i64_b:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    vmov.i64 q8, #0xffff00ff0000ff
+; CHECK-NEXT:    vand q0, q0, q8
+; CHECK-NEXT:    bx lr
+  %b = and <2 x i64> %a, <i64 72056498804490495, i64 72056498804490495>
+  ret <2 x i64> %b
+}
+
+define arm_aapcs_vfpcc <4 x i32> @and_v4i32_b(<4 x i32> %a) {
+; CHECK-LE-LABEL: and_v4i32_b:
+; CHECK-LE:       @ %bb.0:
+; CHECK-LE-NEXT:    vmov.i64 q8, #0xff0000ff00ffff00
+; CHECK-LE-NEXT:    vand q0, q0, q8
+; CHECK-LE-NEXT:    bx lr
+;
+; CHECK-BE-LABEL: and_v4i32_b:
+; CHECK-BE:       @ %bb.0:
+; CHECK-BE-NEXT:    vmov.i64 q8, #0xffff00ff0000ff
+; CHECK-BE-NEXT:    vrev64.32 q9, q0
+; CHECK-BE-NEXT:    vrev64.32 q8, q8
+; CHECK-BE-NEXT:    vand q8, q9, q8
+; CHECK-BE-NEXT:    vrev64.32 q0, q8
+; CHECK-BE-NEXT:    bx lr
+  %b = and <4 x i32> %a, <i32 u0xffff00, i32 u0xff0000ff, i32 u0xffff00, i32 u0xff0000ff>
+  ret <4 x i32> %b
+}
+
+define arm_aapcs_vfpcc <8 x i16> @vmvn_v16i8_m1() {
+; CHECK-LE-LABEL: vmvn_v16i8_m1:
+; CHECK-LE:       @ %bb.0:
+; CHECK-LE-NEXT:    vmvn.i32 q0, #0x10000
+; CHECK-LE-NEXT:    bx lr
+;
+; CHECK-BE-LABEL: vmvn_v16i8_m1:
+; CHECK-BE:       @ %bb.0:
+; CHECK-BE-NEXT:    vmvn.i32 q0, #0x1
+; CHECK-BE-NEXT:    bx lr
+  ret <8 x i16> <i16 65535, i16 65534, i16 65535, i16 65534, i16 65535, i16 65534, i16 65535, i16 65534>
+}
+
+; FIXME: This is incorrect for BE
+define arm_aapcs_vfpcc <8 x i16> @and_v8i16_m1(<8 x i16> %a) {
+; CHECK-LE-LABEL: and_v8i16_m1:
+; CHECK-LE:       @ %bb.0:
+; CHECK-LE-NEXT:    vbic.i32 q0, #0x10000
+; CHECK-LE-NEXT:    bx lr
+;
+; CHECK-BE-LABEL: and_v8i16_m1:
+; CHECK-BE:       @ %bb.0:
+; CHECK-BE-NEXT:    vrev64.32 q8, q0
+; CHECK-BE-NEXT:    vbic.i32 q8, #0x10000
+; CHECK-BE-NEXT:    vrev64.32 q0, q8
+; CHECK-BE-NEXT:    bx lr
+  %b = and <8 x i16> %a, <i16 65535, i16 65534, i16 65535, i16 65534, i16 65535, i16 65534, i16 65535, i16 65534>
+  ret <8 x i16> %b
+}
+
+; FIXME: This is incorrect for BE
+define arm_aapcs_vfpcc <8 x i16> @xor_v8i16_m1(<8 x i16> %a) {
+; CHECK-LE-LABEL: xor_v8i16_m1:
+; CHECK-LE:       @ %bb.0:
+; CHECK-LE-NEXT:    vmvn.i32 q8, #0x10000
+; CHECK-LE-NEXT:    veor q0, q0, q8
+; CHECK-LE-NEXT:    bx lr
+;
+; CHECK-BE-LABEL: xor_v8i16_m1:
+; CHECK-BE:       @ %bb.0:
+; CHECK-BE-NEXT:    vmvn.i32 q8, #0x10000
+; CHECK-BE-NEXT:    vrev64.16 q9, q0
+; CHECK-BE-NEXT:    vrev32.16 q8, q8
+; CHECK-BE-NEXT:    veor q8, q9, q8
+; CHECK-BE-NEXT:    vrev64.16 q0, q8
+; CHECK-BE-NEXT:    bx lr
+  %b = xor <8 x i16> %a, <i16 65535, i16 65534, i16 65535, i16 65534, i16 65535, i16 65534, i16 65535, i16 65534>
+  ret <8 x i16> %b
+}

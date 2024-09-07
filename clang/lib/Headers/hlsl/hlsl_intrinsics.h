@@ -1796,5 +1796,9 @@ _HLSL_AVAILABILITY(shadermodel, 6.0)
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_get_lane_index)
 __attribute__((convergent)) uint WaveGetLaneIndex();
 
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_is_first_lane)
+__attribute__((convergent)) bool WaveIsFirstLane();
+
 } // namespace hlsl
 #endif //_HLSL_HLSL_INTRINSICS_H_

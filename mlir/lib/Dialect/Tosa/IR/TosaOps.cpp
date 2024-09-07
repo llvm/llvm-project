@@ -817,6 +817,20 @@ LogicalResult tosa::PadOp::inferReturnTypeComponents(
   return success();
 }
 
+LogicalResult tosa::PadOp::verify() {
+  RankedTensorType inputType = getInput1().getType();
+  RankedTensorType outputType = getOutput().getType();
+  TensorType paddingType = getPadding().getType();
+
+  if (inputType.getRank() != outputType.getRank())
+    return emitOpError() << "expect same input and output tensor rank.";
+
+  if (paddingType.hasRank() && paddingType.getRank() != 2)
+    return emitOpError() << "expect 'padding' tensor rank equal to 2.";
+
+  return success();
+}
+
 static SmallVector<int64_t> convertToMlirShape(ArrayRef<int64_t> shape) {
   return to_vector(llvm::map_range(shape, [](int64_t dim) {
     return dim == -1 ? ShapedType::kDynamic : dim;
@@ -929,6 +943,10 @@ LogicalResult tosa::TileOp::verify() {
              static_cast<size_t>(outputType.getRank()) != multiples.size())
     return emitOpError("expect 'multiples' array to have length ")
            << outputType.getRank() << " but got " << multiples.size() << ".";
+
+  if (llvm::any_of(multiples, [](int64_t v) { return v <= 0 && v != -1; }))
+    return emitOpError(
+        "expect element of 'multiples' to be positive integer or -1.");
 
   return success();
 }

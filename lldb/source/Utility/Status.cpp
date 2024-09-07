@@ -37,10 +37,10 @@ class raw_ostream;
 using namespace lldb;
 using namespace lldb_private;
 
-Status::Status() : m_string() {}
+Status::Status() {}
 
-Status::Status(ValueType err, ErrorType type)
-    : m_code(err), m_type(type), m_string() {}
+Status::Status(ValueType err, ErrorType type, std::string msg)
+    : m_code(err), m_type(type), m_string(std::move(msg)) {}
 
 // This logic is confusing because c++ calls the traditional (posix) errno codes
 // "generic errors", while we use the term "generic" to mean completely
@@ -51,18 +51,14 @@ Status::Status(std::error_code EC)
                                                       : eErrorTypeGeneric),
       m_string(EC.message()) {}
 
-Status::Status(const char *format, ...) : m_string() {
-  va_list args;
-  va_start(args, format);
-  SetErrorToGenericError();
-  SetErrorStringWithVarArg(format, args);
-  va_end(args);
-}
+Status::Status(std::string err_str)
+    : m_code(LLDB_GENERIC_ERROR), m_type(eErrorTypeGeneric),
+      m_string(std::move(err_str)) {}
 
-const Status &Status::operator=(llvm::Error error) {
+Status::Status(llvm::Error error) {
   if (!error) {
     Clear();
-    return *this;
+    return;
   }
 
   // if the error happens to be a errno error, preserve the error code
@@ -79,12 +75,26 @@ const Status &Status::operator=(llvm::Error error) {
 
   // Otherwise, just preserve the message
   if (error) {
-    SetErrorToGenericError();
-    SetErrorString(llvm::toString(std::move(error)));
+    m_code = LLDB_GENERIC_ERROR;
+    m_type = eErrorTypeGeneric;
+    m_string = llvm::toString(std::move(error));
   }
-
-  return *this;
 }
+
+Status Status::FromErrorStringWithFormat(const char *format, ...) {
+  std::string string;
+  va_list args;
+  va_start(args, format);
+  if (format != nullptr && format[0]) {
+    llvm::SmallString<1024> buf;
+    VASprintf(buf, format, args);
+    string = std::string(buf.str());
+  }
+  va_end(args);
+  return Status(string);
+}
+
+Status Status::FromError(llvm::Error error) { return Status(std::move(error)); }
 
 llvm::Error Status::ToError() const {
   if (Success())
@@ -96,6 +106,13 @@ llvm::Error Status::ToError() const {
 }
 
 Status::~Status() = default;
+
+const Status &Status::operator=(Status &&other) {
+  m_code = other.m_code;
+  m_type = other.m_type;
+  m_string = std::move(other.m_string);
+  return *this;
+}
 
 #ifdef _WIN32
 static std::string RetrieveWin32ErrorString(uint32_t error_code) {
@@ -179,98 +196,9 @@ ErrorType Status::GetType() const { return m_type; }
 // otherwise non-success result.
 bool Status::Fail() const { return m_code != 0; }
 
-void Status::SetExpressionError(lldb::ExpressionResults result,
-                                const char *mssg) {
-  m_code = result;
-  m_type = eErrorTypeExpression;
-  m_string = mssg;
-}
-
-int Status::SetExpressionErrorWithFormat(lldb::ExpressionResults result,
-                                         const char *format, ...) {
-  int length = 0;
-
-  if (format != nullptr && format[0]) {
-    va_list args;
-    va_start(args, format);
-    length = SetErrorStringWithVarArg(format, args);
-    va_end(args);
-  } else {
-    m_string.clear();
-  }
-  m_code = result;
-  m_type = eErrorTypeExpression;
-  return length;
-}
-
-// Set accessor for the error value and type.
-void Status::SetError(ValueType err, ErrorType type) {
-  m_code = err;
-  m_type = type;
-  m_string.clear();
-}
-
-// Update the error value to be "errno" and update the type to be "POSIX".
-void Status::SetErrorToErrno() {
-  m_code = errno;
-  m_type = eErrorTypePOSIX;
-  m_string.clear();
-}
-
-// Update the error value to be LLDB_GENERIC_ERROR and update the type to be
-// "Generic".
-void Status::SetErrorToGenericError() {
-  m_code = LLDB_GENERIC_ERROR;
-  m_type = eErrorTypeGeneric;
-  m_string.clear();
-}
-
-// Set accessor for the error string value for a specific error. This allows
-// any string to be supplied as an error explanation. The error string value
-// will remain until the error value is cleared or a new error value/type is
-// assigned.
-void Status::SetErrorString(llvm::StringRef err_str) {
-  if (!err_str.empty()) {
-    // If we have an error string, we should always at least have an error set
-    // to a generic value.
-    if (Success())
-      SetErrorToGenericError();
-  }
-  m_string = std::string(err_str);
-}
-
-/// Set the current error string to a formatted error string.
-///
-/// \param format
-///     A printf style format string
-int Status::SetErrorStringWithFormat(const char *format, ...) {
-  if (format != nullptr && format[0]) {
-    va_list args;
-    va_start(args, format);
-    int length = SetErrorStringWithVarArg(format, args);
-    va_end(args);
-    return length;
-  } else {
-    m_string.clear();
-  }
-  return 0;
-}
-
-int Status::SetErrorStringWithVarArg(const char *format, va_list args) {
-  if (format != nullptr && format[0]) {
-    // If we have an error string, we should always at least have an error set
-    // to a generic value.
-    if (Success())
-      SetErrorToGenericError();
-
-    llvm::SmallString<1024> buf;
-    VASprintf(buf, format, args);
-    m_string = std::string(buf.str());
-    return buf.size();
-  } else {
-    m_string.clear();
-  }
-  return 0;
+Status Status::FromErrno() {
+  // Update the error value to be "errno" and update the type to be "POSIX".
+  return Status(errno, eErrorTypePOSIX);
 }
 
 // Returns true if the error code in this object is considered a successful
@@ -282,4 +210,30 @@ void llvm::format_provider<lldb_private::Status>::format(
     llvm::StringRef Options) {
   llvm::format_provider<llvm::StringRef>::format(error.AsCString(), OS,
                                                  Options);
+}
+
+const char *lldb_private::ExpressionResultAsCString(ExpressionResults result) {
+  switch (result) {
+  case eExpressionCompleted:
+    return "eExpressionCompleted";
+  case eExpressionDiscarded:
+    return "eExpressionDiscarded";
+  case eExpressionInterrupted:
+    return "eExpressionInterrupted";
+  case eExpressionHitBreakpoint:
+    return "eExpressionHitBreakpoint";
+  case eExpressionSetupError:
+    return "eExpressionSetupError";
+  case eExpressionParseError:
+    return "eExpressionParseError";
+  case eExpressionResultUnavailable:
+    return "eExpressionResultUnavailable";
+  case eExpressionTimedOut:
+    return "eExpressionTimedOut";
+  case eExpressionStoppedForDebug:
+    return "eExpressionStoppedForDebug";
+  case eExpressionThreadVanished:
+    return "eExpressionThreadVanished";
+  }
+  return "<unknown>";
 }

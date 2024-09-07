@@ -7,7 +7,7 @@
 ; Verify that we don't crash during codegen due to a wrong lowering
 ; of a setcc node with illegal operand types and return type.
 
-define <8 x i16> @pr25080(<8 x i32> %a) {
+define <8 x i16> @pr25080(<8 x i32> %a) nounwind {
 ; AVX1-LABEL: pr25080:
 ; AVX1:       # %bb.0: # %entry
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
@@ -50,7 +50,7 @@ entry:
   ret <8 x i16> %3
 }
 
-define void @pr26232(i64 %a, <16 x i1> %b) {
+define void @pr26232(i64 %a, <16 x i1> %b) nounwind {
 ; AVX1-LABEL: pr26232:
 ; AVX1:       # %bb.0: # %allocas
 ; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
@@ -89,8 +89,6 @@ define void @pr26232(i64 %a, <16 x i1> %b) {
 ; KNL-32-LABEL: pr26232:
 ; KNL-32:       # %bb.0: # %allocas
 ; KNL-32-NEXT:    pushl %esi
-; KNL-32-NEXT:    .cfi_def_cfa_offset 8
-; KNL-32-NEXT:    .cfi_offset %esi, -8
 ; KNL-32-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; KNL-32-NEXT:    vpslld $31, %zmm0, %zmm0
 ; KNL-32-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -111,7 +109,6 @@ define void @pr26232(i64 %a, <16 x i1> %b) {
 ; KNL-32-NEXT:    jne .LBB1_1
 ; KNL-32-NEXT:  # %bb.2: # %for_exit600
 ; KNL-32-NEXT:    popl %esi
-; KNL-32-NEXT:    .cfi_def_cfa_offset 4
 ; KNL-32-NEXT:    retl
 allocas:
   br label %for_test11.preheader
@@ -132,7 +129,7 @@ for_exit600:                                      ; preds = %for_loop599
   ret void
 }
 
-define <4 x i32> @pcmpgt(<4 x i8> %x) {
+define <4 x i32> @pcmpgt(<4 x i8> %x) nounwind {
 ; AVX-LABEL: pcmpgt:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpmovzxbd {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
