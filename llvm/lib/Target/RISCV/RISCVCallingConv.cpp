@@ -247,10 +247,14 @@ static MCRegister allocateRVVReg(MVT ValVT, unsigned ValNo, CCState &State,
 }
 
 // Implements the RISC-V calling convention. Returns true upon failure.
-bool llvm::CC_RISCV(const DataLayout &DL, RISCVABI::ABI ABI, unsigned ValNo,
-                    MVT ValVT, MVT LocVT, CCValAssign::LocInfo LocInfo,
-                    ISD::ArgFlagsTy ArgFlags, CCState &State, bool IsFixed,
-                    bool IsRet, Type *OrigTy, const RISCVTargetLowering &TLI) {
+bool llvm::CC_RISCV(unsigned ValNo, MVT ValVT, MVT LocVT,
+                    CCValAssign::LocInfo LocInfo, ISD::ArgFlagsTy ArgFlags,
+                    CCState &State, bool IsFixed, bool IsRet, Type *OrigTy) {
+  const MachineFunction &MF = State.getMachineFunction();
+  const DataLayout &DL = MF.getDataLayout();
+  const RISCVSubtarget &Subtarget = MF.getSubtarget<RISCVSubtarget>();
+  const RISCVTargetLowering &TLI = *Subtarget.getTargetLowering();
+
   unsigned XLen = DL.getLargestLegalIntTypeSizeInBits();
   assert(XLen == 32 || XLen == 64);
   MVT XLenVT = XLen == 32 ? MVT::i32 : MVT::i64;
@@ -276,6 +280,7 @@ bool llvm::CC_RISCV(const DataLayout &DL, RISCVABI::ABI ABI, unsigned ValNo,
   // variadic argument, or if no F64 argument registers are available.
   bool UseGPRForF64 = true;
 
+  RISCVABI::ABI ABI = Subtarget.getTargetABI();
   switch (ABI) {
   default:
     llvm_unreachable("Unexpected ABI");
@@ -306,6 +311,14 @@ bool llvm::CC_RISCV(const DataLayout &DL, RISCVABI::ABI ABI, unsigned ValNo,
   // ABI.
 
   ArrayRef<MCPhysReg> ArgGPRs = RISCV::getArgGPRs(ABI);
+
+  if ((ValVT == MVT::f32 && XLen == 32 && Subtarget.hasStdExtZfinx()) ||
+      (ValVT == MVT::f64 && XLen == 64 && Subtarget.hasStdExtZdinx())) {
+    if (MCRegister Reg = State.AllocateReg(ArgGPRs)) {
+      State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
+      return false;
+    }
+  }
 
   if (UseGPRForF16_F32 && (ValVT == MVT::f16 || ValVT == MVT::bf16 ||
                            (ValVT == MVT::f32 && XLen == 64))) {
@@ -502,12 +515,15 @@ bool llvm::CC_RISCV(const DataLayout &DL, RISCVABI::ABI ABI, unsigned ValNo,
 
 // FastCC has less than 1% performance improvement for some particular
 // benchmark. But theoretically, it may have benefit for some cases.
-bool llvm::CC_RISCV_FastCC(const DataLayout &DL, RISCVABI::ABI ABI,
-                           unsigned ValNo, MVT ValVT, MVT LocVT,
+bool llvm::CC_RISCV_FastCC(unsigned ValNo, MVT ValVT, MVT LocVT,
                            CCValAssign::LocInfo LocInfo,
                            ISD::ArgFlagsTy ArgFlags, CCState &State,
-                           bool IsFixed, bool IsRet, Type *OrigTy,
-                           const RISCVTargetLowering &TLI) {
+                           bool IsFixed, bool IsRet, Type *OrigTy) {
+  const MachineFunction &MF = State.getMachineFunction();
+  const RISCVSubtarget &Subtarget = MF.getSubtarget<RISCVSubtarget>();
+  const RISCVTargetLowering &TLI = *Subtarget.getTargetLowering();
+  RISCVABI::ABI ABI = Subtarget.getTargetABI();
+
   if (LocVT == MVT::i32 || LocVT == MVT::i64) {
     if (MCRegister Reg = State.AllocateReg(getFastCCArgGPRs(ABI))) {
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
@@ -515,9 +531,8 @@ bool llvm::CC_RISCV_FastCC(const DataLayout &DL, RISCVABI::ABI ABI,
     }
   }
 
-  const RISCVSubtarget &Subtarget = TLI.getSubtarget();
-
-  if (LocVT == MVT::f16 && Subtarget.hasStdExtZfhmin()) {
+  if ((LocVT == MVT::f16 && Subtarget.hasStdExtZfhmin()) ||
+      (LocVT == MVT::bf16 && Subtarget.hasStdExtZfbfmin())) {
     static const MCPhysReg FPR16List[] = {
         RISCV::F10_H, RISCV::F11_H, RISCV::F12_H, RISCV::F13_H, RISCV::F14_H,
         RISCV::F15_H, RISCV::F16_H, RISCV::F17_H, RISCV::F0_H,  RISCV::F1_H,
@@ -565,14 +580,12 @@ bool llvm::CC_RISCV_FastCC(const DataLayout &DL, RISCVABI::ABI ABI,
             CCValAssign::getCustomReg(ValNo, ValVT, Reg, LocVT, LocInfo));
         return false;
       }
-      LocVT = Subtarget.getXLenVT();
-      LocInfo = CCValAssign::BCvt;
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
       return false;
     }
   }
 
-  if (LocVT == MVT::f16) {
+  if (LocVT == MVT::f16 || LocVT == MVT::bf16) {
     unsigned Offset2 = State.AllocateStack(2, Align(2));
     State.addLoc(CCValAssign::getMem(ValNo, ValVT, Offset2, LocVT, LocInfo));
     return false;
@@ -597,25 +610,34 @@ bool llvm::CC_RISCV_FastCC(const DataLayout &DL, RISCVABI::ABI ABI,
       if (ValVT.isFixedLengthVector())
         LocVT = TLI.getContainerForFixedLengthVector(LocVT);
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
-    } else {
-      // Try and pass the address via a "fast" GPR.
-      if (MCRegister GPRReg = State.AllocateReg(getFastCCArgGPRs(ABI))) {
-        LocInfo = CCValAssign::Indirect;
-        LocVT = TLI.getSubtarget().getXLenVT();
-        State.addLoc(CCValAssign::getReg(ValNo, ValVT, GPRReg, LocVT, LocInfo));
-      } else if (ValVT.isFixedLengthVector()) {
-        auto StackAlign =
-            MaybeAlign(ValVT.getScalarSizeInBits() / 8).valueOrOne();
-        unsigned StackOffset =
-            State.AllocateStack(ValVT.getStoreSize(), StackAlign);
-        State.addLoc(
-            CCValAssign::getMem(ValNo, ValVT, StackOffset, LocVT, LocInfo));
-      } else {
-        // Can't pass scalable vectors on the stack.
-        return true;
-      }
+      return false;
     }
 
+    // Try and pass the address via a "fast" GPR.
+    if (MCRegister GPRReg = State.AllocateReg(getFastCCArgGPRs(ABI))) {
+      LocInfo = CCValAssign::Indirect;
+      LocVT = Subtarget.getXLenVT();
+      State.addLoc(CCValAssign::getReg(ValNo, ValVT, GPRReg, LocVT, LocInfo));
+      return false;
+    }
+
+    // Pass scalable vectors indirectly by storing the pointer on the stack.
+    if (ValVT.isScalableVector()) {
+      LocInfo = CCValAssign::Indirect;
+      LocVT = Subtarget.getXLenVT();
+      unsigned XLen = Subtarget.getXLen();
+      unsigned StackOffset = State.AllocateStack(XLen / 8, Align(XLen / 8));
+      State.addLoc(
+          CCValAssign::getMem(ValNo, ValVT, StackOffset, LocVT, LocInfo));
+      return false;
+    }
+
+    // Pass fixed-length vectors on the stack.
+    auto StackAlign = MaybeAlign(ValVT.getScalarSizeInBits() / 8).valueOrOne();
+    unsigned StackOffset =
+        State.AllocateStack(ValVT.getStoreSize(), StackAlign);
+    State.addLoc(
+        CCValAssign::getMem(ValNo, ValVT, StackOffset, LocVT, LocInfo));
     return false;
   }
 

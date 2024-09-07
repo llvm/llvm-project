@@ -115,8 +115,7 @@ define double @double_negative_zero(ptr %pd) nounwind {
 ;
 ; CHECKRV64ZDINX-LABEL: double_negative_zero:
 ; CHECKRV64ZDINX:       # %bb.0:
-; CHECKRV64ZDINX-NEXT:    li a0, -1
-; CHECKRV64ZDINX-NEXT:    slli a0, a0, 63
+; CHECKRV64ZDINX-NEXT:    fneg.d a0, zero
 ; CHECKRV64ZDINX-NEXT:    ret
   ret double -0.0
 }
@@ -160,12 +159,11 @@ define dso_local double @negzero_sel(i16 noundef %a, double noundef %d) nounwind
 ; CHECKRV64ZDINX-LABEL: negzero_sel:
 ; CHECKRV64ZDINX:       # %bb.0: # %entry
 ; CHECKRV64ZDINX-NEXT:    slli a2, a0, 48
+; CHECKRV64ZDINX-NEXT:    mv a0, a1
 ; CHECKRV64ZDINX-NEXT:    beqz a2, .LBB4_2
 ; CHECKRV64ZDINX-NEXT:  # %bb.1: # %entry
 ; CHECKRV64ZDINX-NEXT:    fneg.d a0, zero
-; CHECKRV64ZDINX-NEXT:    ret
-; CHECKRV64ZDINX-NEXT:  .LBB4_2:
-; CHECKRV64ZDINX-NEXT:    mv a0, a1
+; CHECKRV64ZDINX-NEXT:  .LBB4_2: # %entry
 ; CHECKRV64ZDINX-NEXT:    ret
 entry:
   %tobool.not = icmp eq i16 %a, 0

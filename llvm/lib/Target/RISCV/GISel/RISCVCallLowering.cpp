@@ -45,13 +45,8 @@ public:
                  CCValAssign::LocInfo LocInfo,
                  const CallLowering::ArgInfo &Info, ISD::ArgFlagsTy Flags,
                  CCState &State) override {
-    MachineFunction &MF = State.getMachineFunction();
-    const DataLayout &DL = MF.getDataLayout();
-    const RISCVSubtarget &Subtarget = MF.getSubtarget<RISCVSubtarget>();
-
-    if (RISCVAssignFn(DL, Subtarget.getTargetABI(), ValNo, ValVT, LocVT,
-                      LocInfo, Flags, State, Info.IsFixed, IsRet, Info.Ty,
-                      *Subtarget.getTargetLowering()))
+    if (RISCVAssignFn(ValNo, ValVT, LocVT, LocInfo, Flags, State, Info.IsFixed,
+                      IsRet, Info.Ty))
       return true;
 
     StackSize = State.getStackSize();
@@ -197,15 +192,12 @@ public:
                  const CallLowering::ArgInfo &Info, ISD::ArgFlagsTy Flags,
                  CCState &State) override {
     MachineFunction &MF = State.getMachineFunction();
-    const DataLayout &DL = MF.getDataLayout();
-    const RISCVSubtarget &Subtarget = MF.getSubtarget<RISCVSubtarget>();
 
     if (LocVT.isScalableVector())
       MF.getInfo<RISCVMachineFunctionInfo>()->setIsVectorCall();
 
-    if (RISCVAssignFn(DL, Subtarget.getTargetABI(), ValNo, ValVT, LocVT,
-                      LocInfo, Flags, State, /*IsFixed=*/true, IsRet, Info.Ty,
-                      *Subtarget.getTargetLowering()))
+    if (RISCVAssignFn(ValNo, ValVT, LocVT, LocInfo, Flags, State,
+                      /*IsFixed=*/true, IsRet, Info.Ty))
       return true;
 
     StackSize = State.getStackSize();
@@ -441,11 +433,9 @@ bool RISCVCallLowering::canLowerReturn(MachineFunction &MF,
                                        SmallVectorImpl<BaseArgInfo> &Outs,
                                        bool IsVarArg) const {
   SmallVector<CCValAssign, 16> ArgLocs;
-  const auto &TLI = *getTLI<RISCVTargetLowering>();
   CCState CCInfo(CallConv, IsVarArg, MF, ArgLocs,
                  MF.getFunction().getContext());
 
-  RISCVABI::ABI ABI = MF.getSubtarget<RISCVSubtarget>().getTargetABI();
   const RISCVSubtarget &Subtarget = MF.getSubtarget<RISCVSubtarget>();
 
   std::optional<unsigned> FirstMaskArgument = std::nullopt;
@@ -460,9 +450,8 @@ bool RISCVCallLowering::canLowerReturn(MachineFunction &MF,
 
   for (unsigned I = 0, E = Outs.size(); I < E; ++I) {
     MVT VT = MVT::getVT(Outs[I].Ty);
-    if (CC_RISCV(MF.getDataLayout(), ABI, I, VT, VT, CCValAssign::Full,
-                 Outs[I].Flags[0], CCInfo, /*IsFixed=*/true,
-                 /*isRet=*/true, nullptr, TLI))
+    if (CC_RISCV(I, VT, VT, CCValAssign::Full, Outs[I].Flags[0], CCInfo,
+                 /*IsFixed=*/true, /*isRet=*/true, nullptr))
       return false;
   }
   return true;
