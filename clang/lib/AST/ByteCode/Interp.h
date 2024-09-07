@@ -281,7 +281,8 @@ enum class ArithOp { Add, Sub };
 // Returning values
 //===----------------------------------------------------------------------===//
 
-void cleanupAfterFunctionCall(InterpState &S, CodePtr OpPC);
+void cleanupAfterFunctionCall(InterpState &S, CodePtr OpPC,
+                              const Function *Func);
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool Ret(InterpState &S, CodePtr &PC, APValue &Result) {
@@ -302,7 +303,7 @@ bool Ret(InterpState &S, CodePtr &PC, APValue &Result) {
   assert(S.Current);
   assert(S.Current->getFrameOffset() == S.Stk.size() && "Invalid frame");
   if (!S.checkingPotentialConstantExpression() || S.Current->Caller)
-    cleanupAfterFunctionCall(S, PC);
+    cleanupAfterFunctionCall(S, PC, S.Current->getFunction());
 
   if (InterpFrame *Caller = S.Current->Caller) {
     PC = S.Current->getRetPC();
@@ -322,7 +323,7 @@ inline bool RetVoid(InterpState &S, CodePtr &PC, APValue &Result) {
   assert(S.Current->getFrameOffset() == S.Stk.size() && "Invalid frame");
 
   if (!S.checkingPotentialConstantExpression() || S.Current->Caller)
-    cleanupAfterFunctionCall(S, PC);
+    cleanupAfterFunctionCall(S, PC, S.Current->getFunction());
 
   if (InterpFrame *Caller = S.Current->Caller) {
     PC = S.Current->getRetPC();
@@ -2658,6 +2659,9 @@ inline bool Unsupported(InterpState &S, CodePtr OpPC) {
 
 /// Do nothing and just abort execution.
 inline bool Error(InterpState &S, CodePtr OpPC) { return false; }
+inline bool SideEffect(InterpState &S, CodePtr OpPC) {
+  return S.noteSideEffect();
+}
 
 /// Same here, but only for casts.
 inline bool InvalidCast(InterpState &S, CodePtr OpPC, CastKind Kind,
