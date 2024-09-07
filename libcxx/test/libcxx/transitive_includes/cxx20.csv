@@ -364,11 +364,9 @@ functional version
 future atomic
 future cerrno
 future cstddef
-future cstdint
 future cstdlib
-future cstring
+future ctime
 future exception
-future initializer_list
 future iosfwd
 future limits
 future mutex
@@ -379,7 +377,6 @@ future string
 future system_error
 future thread
 future type_traits
-future typeinfo
 future version
 initializer_list cstddef
 iomanip istream

@@ -616,6 +616,60 @@ define ptr @foo() {
   EXPECT_EQ(NewCPNull2->getType(), sandboxir::PointerType::get(Ctx, 1u));
 }
 
+TEST_F(SandboxIRTest, PoisonValue) {
+  parseIR(C, R"IR(
+define void @foo() {
+  %i0 = add i32 poison, poison
+  %i1 = add <2 x i32> poison, poison
+  %i2 = extractvalue {i32, i8} poison, 0
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto &BB = *F.begin();
+  auto It = BB.begin();
+  auto *I0 = &*It++;
+  auto *I1 = &*It++;
+  auto *I2 = &*It++;
+  auto *Int32Ty = sandboxir::Type::getInt32Ty(Ctx);
+  auto *Int8Ty = sandboxir::Type::getInt8Ty(Ctx);
+  auto *Zero32 = sandboxir::ConstantInt::get(Int32Ty, 0u);
+  auto *One32 = sandboxir::ConstantInt::get(Int32Ty, 1u);
+
+  // Check classof() and creation.
+  auto *Poison = cast<sandboxir::PoisonValue>(I0->getOperand(0));
+  EXPECT_EQ(Poison->getType(), Int32Ty);
+  // Check get().
+  auto *NewPoison = sandboxir::PoisonValue::get(Int32Ty);
+  EXPECT_EQ(NewPoison, Poison);
+  auto *NewPoison2 =
+      sandboxir::PoisonValue::get(sandboxir::PointerType::get(Ctx, 0u));
+  EXPECT_NE(NewPoison2, Poison);
+  // Check getSequentialElement().
+  auto *PoisonVector = cast<sandboxir::PoisonValue>(I1->getOperand(0));
+  auto *SeqElm = PoisonVector->getSequentialElement();
+  EXPECT_EQ(SeqElm->getType(), Int32Ty);
+  // Check getStructElement().
+  auto *PoisonStruct = cast<sandboxir::PoisonValue>(I2->getOperand(0));
+  auto *StrElm0 = PoisonStruct->getStructElement(0);
+  auto *StrElm1 = PoisonStruct->getStructElement(1);
+  EXPECT_EQ(StrElm0->getType(), Int32Ty);
+  EXPECT_EQ(StrElm1->getType(), Int8Ty);
+  // Check getElementValue(Constant)
+  EXPECT_EQ(PoisonStruct->getElementValue(Zero32),
+            sandboxir::PoisonValue::get(Int32Ty));
+  EXPECT_EQ(PoisonStruct->getElementValue(One32),
+            sandboxir::PoisonValue::get(Int8Ty));
+  // Check getElementValue(unsigned)
+  EXPECT_EQ(PoisonStruct->getElementValue(0u),
+            sandboxir::PoisonValue::get(Int32Ty));
+  EXPECT_EQ(PoisonStruct->getElementValue(1u),
+            sandboxir::PoisonValue::get(Int8Ty));
+}
+
 TEST_F(SandboxIRTest, Use) {
   parseIR(C, R"IR(
 define i32 @foo(i32 %v0, i32 %v1) {
