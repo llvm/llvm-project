@@ -2856,6 +2856,15 @@ TEST_F(FormatTestJS, BreakAfterOpenBracket) {
   verifyFormat("ctrl.onCopy(/** @type {!WizEvent}*/ (\n"
                "    {event, targetElement: {el: () => selectedElement}}));",
                Style);
+  verifyFormat("failedUserIds.push(...subscriptioxxxxxxxxxxxxnSubset.map(\n"
+               "    subscxxxxxxxxxxxxription => subscription.getUserId()));",
+               Style);
+  verifyFormat("failedUserIds.push(!subscriptioxxxxxxxxxxxxnSubset.map(\n"
+               "    subscxxxxxxxxxxxxription => subscription.getUserId()));",
+               Style);
+  verifyFormat("failedUserIds.push(await subscriptioxxxxxxxxxxxxnSubset.map(\n"
+               "    subscxxxxxxxxxxxxription => subscription.getUserId()));",
+               Style);
 }
 
 } // namespace format

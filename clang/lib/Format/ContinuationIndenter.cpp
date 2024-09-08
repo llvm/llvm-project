@@ -839,6 +839,11 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
     // - foo(::new Bar())
     if (Tok.is(tok::kw_new) || Tok.startsSequence(tok::coloncolon, tok::kw_new))
       return true;
+    if (Tok.is(TT_UnaryOperator) ||
+        (Style.isJavaScript() &&
+         Tok.isOneOf(tok::ellipsis, Keywords.kw_await))) {
+      return true;
+    }
     const auto *Previous = Tok.Previous;
     if (!Previous || (!Previous->isOneOf(TT_FunctionDeclarationLParen,
                                          TT_LambdaDefinitionLParen) &&
