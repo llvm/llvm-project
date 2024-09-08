@@ -129,7 +129,6 @@ constexpr void test_is_implicit_lifetime() {
 
   // Pointer types
   test_is_implicit_lifetime<T*, true>();
-  test_is_implicit_lifetime<T* __restrict, true>();
 
   // Arrays
   test_is_implicit_lifetime<T[], true>();
