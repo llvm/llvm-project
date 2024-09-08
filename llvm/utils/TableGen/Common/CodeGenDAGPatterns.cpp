@@ -3334,7 +3334,7 @@ void CodeGenDAGPatterns::ParseDefaultOperands() {
 
   // Find some SDNode.
   assert(!SDNodes.empty() && "No SDNodes parsed?");
-  Init *SomeSDNode = DefInit::get(SDNodes.begin()->first);
+  Init *SomeSDNode = SDNodes.begin()->first->getDefInit();
 
   for (unsigned i = 0, e = DefaultOps.size(); i != e; ++i) {
     DagInit *DefaultInfo = DefaultOps[i]->getValueAsDag("DefaultOps");

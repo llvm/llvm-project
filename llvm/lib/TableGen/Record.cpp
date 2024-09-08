@@ -894,7 +894,7 @@ Init *UnOpInit::Fold(Record *CurRec, bool IsFinal) const {
           break;
         }
 
-        DefInit *DI = DefInit::get(D);
+        DefInit *DI = D->getDefInit();
         if (!DI->getType()->typeIsA(getType())) {
           PrintFatalErrorHelper(Twine("Expected type '") +
                                 getType()->getAsString() + "', got '" +
@@ -1682,7 +1682,7 @@ Init *TernOpInit::Fold(Record *CurRec) const {
       Record *Val = RHSd->getDef();
       if (LHSd->getAsString() == RHSd->getAsString())
         Val = MHSd->getDef();
-      return DefInit::get(Val);
+      return Val->getDefInit();
     }
     if (LHSv && MHSv && RHSv) {
       std::string Val = std::string(RHSv->getName());
@@ -2083,7 +2083,7 @@ Init *ExistsOpInit::Fold(Record *CurRec, bool IsFinal) const {
     if (D) {
       // Check if types are compatible.
       return IntInit::get(getRecordKeeper(),
-                          DefInit::get(D)->getType()->typeIsA(CheckType));
+                          D->getDefInit()->getType()->typeIsA(CheckType));
     }
 
     if (CurRec) {
@@ -2235,10 +2235,6 @@ Init *VarBitInit::resolveReferences(Resolver &R) const {
 DefInit::DefInit(Record *D)
     : TypedInit(IK_DefInit, D->getType()), Def(D) {}
 
-DefInit *DefInit::get(Record *R) {
-  return R->getDefInit();
-}
-
 Init *DefInit::convertInitializerTo(RecTy *Ty) const {
   if (auto *RRT = dyn_cast<RecordRecTy>(Ty))
     if (getType()->typeIsConvertibleTo(RRT))
@@ -2290,64 +2286,62 @@ void VarDefInit::Profile(FoldingSetNodeID &ID) const {
 }
 
 DefInit *VarDefInit::instantiate() {
-  if (!Def) {
-    RecordKeeper &Records = Class->getRecords();
-    auto NewRecOwner =
-        std::make_unique<Record>(Records.getNewAnonymousName(), Class->getLoc(),
-                                 Records, Record::RK_AnonymousDef);
-    Record *NewRec = NewRecOwner.get();
+  if (Def)
+    return Def;
 
-    // Copy values from class to instance
-    for (const RecordVal &Val : Class->getValues())
-      NewRec->addValue(Val);
+  RecordKeeper &Records = Class->getRecords();
+  auto NewRecOwner =
+      std::make_unique<Record>(Records.getNewAnonymousName(), Class->getLoc(),
+                               Records, Record::RK_AnonymousDef);
+  Record *NewRec = NewRecOwner.get();
 
-    // Copy assertions from class to instance.
-    NewRec->appendAssertions(Class);
+  // Copy values from class to instance
+  for (const RecordVal &Val : Class->getValues())
+    NewRec->addValue(Val);
 
-    // Copy dumps from class to instance.
-    NewRec->appendDumps(Class);
+  // Copy assertions from class to instance.
+  NewRec->appendAssertions(Class);
 
-    // Substitute and resolve template arguments
-    ArrayRef<Init *> TArgs = Class->getTemplateArgs();
-    MapResolver R(NewRec);
+  // Copy dumps from class to instance.
+  NewRec->appendDumps(Class);
 
-    for (Init *Arg : TArgs) {
-      R.set(Arg, NewRec->getValue(Arg)->getValue());
-      NewRec->removeValue(Arg);
-    }
+  // Substitute and resolve template arguments
+  ArrayRef<Init *> TArgs = Class->getTemplateArgs();
+  MapResolver R(NewRec);
 
-    for (auto *Arg : args()) {
-      if (Arg->isPositional())
-        R.set(TArgs[Arg->getIndex()], Arg->getValue());
-      if (Arg->isNamed())
-        R.set(Arg->getName(), Arg->getValue());
-    }
-
-    NewRec->resolveReferences(R);
-
-    // Add superclasses.
-    ArrayRef<std::pair<Record *, SMRange>> SCs = Class->getSuperClasses();
-    for (const auto &SCPair : SCs)
-      NewRec->addSuperClass(SCPair.first, SCPair.second);
-
-    NewRec->addSuperClass(Class,
-                          SMRange(Class->getLoc().back(),
-                                  Class->getLoc().back()));
-
-    // Resolve internal references and store in record keeper
-    NewRec->resolveReferences();
-    Records.addDef(std::move(NewRecOwner));
-
-    // Check the assertions.
-    NewRec->checkRecordAssertions();
-
-    // Check the assertions.
-    NewRec->emitRecordDumps();
-
-    Def = DefInit::get(NewRec);
+  for (Init *Arg : TArgs) {
+    R.set(Arg, NewRec->getValue(Arg)->getValue());
+    NewRec->removeValue(Arg);
   }
 
-  return Def;
+  for (auto *Arg : args()) {
+    if (Arg->isPositional())
+      R.set(TArgs[Arg->getIndex()], Arg->getValue());
+    if (Arg->isNamed())
+      R.set(Arg->getName(), Arg->getValue());
+  }
+
+  NewRec->resolveReferences(R);
+
+  // Add superclasses.
+  ArrayRef<std::pair<Record *, SMRange>> SCs = Class->getSuperClasses();
+  for (const auto &SCPair : SCs)
+    NewRec->addSuperClass(SCPair.first, SCPair.second);
+
+  NewRec->addSuperClass(
+      Class, SMRange(Class->getLoc().back(), Class->getLoc().back()));
+
+  // Resolve internal references and store in record keeper
+  NewRec->resolveReferences();
+  Records.addDef(std::move(NewRecOwner));
+
+  // Check the assertions.
+  NewRec->checkRecordAssertions();
+
+  // Check the assertions.
+  NewRec->emitRecordDumps();
+
+  return Def = NewRec->getDefInit();
 }
 
 Init *VarDefInit::resolveReferences(Resolver &R) const {
