@@ -1143,17 +1143,11 @@ public:
     /// Copy all the entries in the source map over the corresponding
     /// entries in the destination, which must exist.
     static void copyInto(const DeclMapTy &Src, DeclMapTy &Dest) {
-      for (auto &Pair : Src) {
-        if (!Pair.second.isValid()) {
-          Dest.erase(Pair.first);
-          continue;
-        }
-
-        auto I = Dest.find(Pair.first);
-        if (I != Dest.end())
-          I->second = Pair.second;
+      for (auto &[Decl, Addr] : Src) {
+        if (!Addr.isValid())
+          Dest.erase(Decl);
         else
-          Dest.insert(Pair);
+          Dest.insert_or_assign(Decl, Addr);
       }
     }
   };
