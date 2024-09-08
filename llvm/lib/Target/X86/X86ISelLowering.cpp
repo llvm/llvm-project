@@ -24084,13 +24084,9 @@ static SDValue LowerSELECTWithCmpZero(SDValue CmpVal, SDValue LHS, SDValue RHS,
   if (!CmpVT.isScalarInteger() || !VT.isScalarInteger())
     return SDValue();
 
-  // Convert 'identity' patterns (iff X is 0 or 1):
-  // SELECT (X != 0), Y, (OR Y, Z) -> (OR Y, (AND (0 - X), Z))
-  // SELECT (X != 0), Y, (XOR Y, Z) -> (XOR Y, (AND (0 - X), Z))
-  // SELECT (X != 0), Y, (ADD Y, Z) -> (ADD Y, (AND (0 - X), Z))
-  // SELECT (X != 0), Y, (SUB Y, Z) -> (SUB Y, (AND (0 - X), Z))
-  if (!Subtarget.canUseCMOV() && X86CC == X86::COND_E &&
-      CmpVal.getOpcode() == ISD::AND && isOneConstant(CmpVal.getOperand(1))) {
+  if (X86CC == X86::COND_E && CmpVal.getOpcode() == ISD::AND &&
+      isOneConstant(CmpVal.getOperand(1))) {
+
     SDValue Src1, Src2;
     auto isIdentityPattern = [&]() {
       switch (RHS.getOpcode()) {
@@ -24114,7 +24110,12 @@ static SDValue LowerSELECTWithCmpZero(SDValue CmpVal, SDValue LHS, SDValue RHS,
       return false;
     };
 
-    if (isIdentityPattern()) {
+    // Convert 'identity' patterns (iff X is 0 or 1):
+    // SELECT (AND(X,1) == 0), Y, (OR Y, Z) -> (OR Y, (AND NEG(AND(X,1)), Z))
+    // SELECT (AND(X,1) == 0), Y, (XOR Y, Z) -> (XOR Y, (AND NEG(AND(X,1)), Z))
+    // SELECT (AND(X,1) == 0), Y, (ADD Y, Z) -> (ADD Y, (AND NEG(AND(X,1)), Z))
+    // SELECT (AND(X,1) == 0), Y, (SUB Y, Z) -> (SUB Y, (AND NEG(AND(X,1)), Z))
+    if (!Subtarget.canUseCMOV() && isIdentityPattern()) {
       // we need mask of all zeros or ones with same size of the other
       // operands.
       SDValue Neg = CmpVal;
