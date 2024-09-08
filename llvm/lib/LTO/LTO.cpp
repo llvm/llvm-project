@@ -77,6 +77,10 @@ cl::opt<bool> EnableLTOInternalization(
     "enable-lto-internalization", cl::init(true), cl::Hidden,
     cl::desc("Enable global value internalization in LTO"));
 
+static cl::opt<bool>
+    LTOKeepSymbolCopies("lto-keep-symbol-copies", cl::init(false), cl::Hidden,
+                        cl::desc("Keep copies of symbols in LTO indexing"));
+
 /// Indicate we are linking with an allocator that supports hot/cold operator
 /// new interfaces.
 extern cl::opt<bool> SupportsHotColdNew;
@@ -587,8 +591,14 @@ LTO::LTO(Config Conf, ThinBackend Backend,
     : Conf(std::move(Conf)),
       RegularLTO(ParallelCodeGenParallelismLevel, this->Conf),
       ThinLTO(std::move(Backend)),
-      GlobalResolutions(std::make_optional<StringMap<GlobalResolution>>()),
-      LTOMode(LTOMode) {}
+      GlobalResolutions(
+          std::make_unique<DenseMap<StringRef, GlobalResolution>>()),
+      LTOMode(LTOMode) {
+  if (Conf.KeepSymbolNameCopies || LTOKeepSymbolCopies) {
+    Alloc = std::make_unique<BumpPtrAllocator>();
+    GlobalResolutionSymbolSaver = std::make_unique<llvm::StringSaver>(*Alloc);
+  }
+}
 
 // Requires a destructor for MapVector<BitcodeModule>.
 LTO::~LTO() = default;
@@ -606,7 +616,12 @@ void LTO::addModuleToGlobalRes(ArrayRef<InputFile::Symbol> Syms,
     assert(ResI != ResE);
     SymbolResolution Res = *ResI++;
 
-    auto &GlobalRes = (*GlobalResolutions)[Sym.getName()];
+    StringRef SymbolName = Sym.getName();
+    // Keep copies of symbols if the client of LTO says so.
+    if (GlobalResolutionSymbolSaver && !GlobalResolutions->contains(SymbolName))
+      SymbolName = GlobalResolutionSymbolSaver->save(SymbolName);
+
+    auto &GlobalRes = (*GlobalResolutions)[SymbolName];
     GlobalRes.UnnamedAddr &= Sym.isUnnamedAddr();
     if (Res.Prevailing) {
       assert(!GlobalRes.Prevailing &&
@@ -658,6 +673,14 @@ void LTO::addModuleToGlobalRes(ArrayRef<InputFile::Symbol> Syms,
 
     GlobalRes.ExportDynamic |= Res.ExportDynamic;
   }
+}
+
+void LTO::releaseGlobalResolutionsMemory() {
+  // Release GlobalResolutions dense-map itself.
+  GlobalResolutions.reset();
+  // Release the string saver memory.
+  GlobalResolutionSymbolSaver.reset();
+  Alloc.reset();
 }
 
 static void writeToResolutionFile(raw_ostream &OS, InputFile *Input,
@@ -1771,7 +1794,7 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
   // are no further accesses. We specifically want to do this before computing
   // cross module importing, which adds to peak memory via the computed import
   // and export lists.
-  GlobalResolutions.reset();
+  releaseGlobalResolutionsMemory();
 
   if (Conf.OptLevel > 0)
     ComputeCrossModuleImport(ThinLTO.CombinedIndex, ModuleToDefinedGVSummaries,
