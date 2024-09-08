@@ -46,8 +46,8 @@ private:
 
 // Generate enum class. Entries are emitted in the order in which they appear
 // in the `Records` vector.
-static void GenerateEnumClass(const std::vector<Record *> &Records,
-                              raw_ostream &OS, StringRef Enum, StringRef Prefix,
+static void GenerateEnumClass(ArrayRef<const Record *> Records, raw_ostream &OS,
+                              StringRef Enum, StringRef Prefix,
                               const DirectiveLanguage &DirLang,
                               bool ExportEnums) {
   OS << "\n";
@@ -79,7 +79,7 @@ static void GenerateEnumClass(const std::vector<Record *> &Records,
 
 // Generate enums for values that clauses can take.
 // Also generate function declarations for get<Enum>Name(StringRef Str).
-static void GenerateEnumClauseVal(const std::vector<Record *> &Records,
+static void GenerateEnumClauseVal(ArrayRef<const Record *> Records,
                                   raw_ostream &OS,
                                   const DirectiveLanguage &DirLang,
                                   std::string &EnumHelperFuncs) {
@@ -144,7 +144,7 @@ static bool HasDuplicateClauses(const std::vector<Record *> &Clauses,
 // three allowed list. Also, since required implies allowed, clauses cannot
 // appear in both the allowedClauses and requiredClauses lists.
 static bool
-HasDuplicateClausesInDirectives(const std::vector<Record *> &Directives) {
+HasDuplicateClausesInDirectives(ArrayRef<const Record *> Directives) {
   bool HasDuplicate = false;
   for (const auto &D : Directives) {
     Directive Dir{D};
@@ -184,7 +184,7 @@ bool DirectiveLanguage::HasValidityErrors() const {
 // Count the maximum number of leaf constituents per construct.
 static size_t GetMaxLeafCount(const DirectiveLanguage &DirLang) {
   size_t MaxCount = 0;
-  for (Record *R : DirLang.getDirectives()) {
+  for (const Record *R : DirLang.getDirectives()) {
     size_t Count = Directive{R}.getLeafConstructs().size();
     MaxCount = std::max(MaxCount, Count);
   }
@@ -193,7 +193,7 @@ static size_t GetMaxLeafCount(const DirectiveLanguage &DirLang) {
 
 // Generate the declaration section for the enumeration in the directive
 // language
-static void EmitDirectivesDecl(RecordKeeper &Records, raw_ostream &OS) {
+static void EmitDirectivesDecl(const RecordKeeper &Records, raw_ostream &OS) {
   const auto DirLang = DirectiveLanguage{Records};
   if (DirLang.HasValidityErrors())
     return;
@@ -220,7 +220,7 @@ static void EmitDirectivesDecl(RecordKeeper &Records, raw_ostream &OS) {
     OS << "\nLLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();\n";
 
   // Emit Directive associations
-  std::vector<Record *> associations;
+  std::vector<const Record *> associations;
   llvm::copy_if(
       DirLang.getAssociations(), std::back_inserter(associations),
       // Skip the "special" value
@@ -283,9 +283,8 @@ static void EmitDirectivesDecl(RecordKeeper &Records, raw_ostream &OS) {
 }
 
 // Generate function implementation for get<Enum>Name(StringRef Str)
-static void GenerateGetName(const std::vector<Record *> &Records,
-                            raw_ostream &OS, StringRef Enum,
-                            const DirectiveLanguage &DirLang,
+static void GenerateGetName(ArrayRef<const Record *> Records, raw_ostream &OS,
+                            StringRef Enum, const DirectiveLanguage &DirLang,
                             StringRef Prefix) {
   OS << "\n";
   OS << "llvm::StringRef llvm::" << DirLang.getCppNamespace() << "::get"
@@ -308,13 +307,13 @@ static void GenerateGetName(const std::vector<Record *> &Records,
 }
 
 // Generate function implementation for get<Enum>Kind(StringRef Str)
-static void GenerateGetKind(const std::vector<Record *> &Records,
-                            raw_ostream &OS, StringRef Enum,
-                            const DirectiveLanguage &DirLang, StringRef Prefix,
-                            bool ImplicitAsUnknown) {
+static void GenerateGetKind(ArrayRef<const Record *> Records, raw_ostream &OS,
+                            StringRef Enum, const DirectiveLanguage &DirLang,
+                            StringRef Prefix, bool ImplicitAsUnknown) {
 
-  auto DefaultIt = llvm::find_if(
-      Records, [](Record *R) { return R->getValueAsBit("isDefault") == true; });
+  auto DefaultIt = llvm::find_if(Records, [](const Record *R) {
+    return R->getValueAsBit("isDefault") == true;
+  });
 
   if (DefaultIt == Records.end()) {
     PrintError("At least one " + Enum + " must be defined as default.");
@@ -506,8 +505,8 @@ static void EmitLeafTable(const DirectiveLanguage &DirLang, raw_ostream &OS,
   // row. To avoid this, an auxiliary ordering table is created, such that
   //   row for Dir_A = table[auxiliary[Dir_A]].
 
-  std::vector<Record *> Directives = DirLang.getDirectives();
-  DenseMap<Record *, int> DirId; // Record * -> llvm::omp::Directive
+  ArrayRef<const Record *> Directives = DirLang.getDirectives();
+  DenseMap<const Record *, int> DirId; // Record * -> llvm::omp::Directive
 
   for (auto [Idx, Rec] : llvm::enumerate(Directives))
     DirId.insert(std::make_pair(Rec, Idx));
@@ -628,7 +627,7 @@ static void GenerateGetDirectiveAssociation(const DirectiveLanguage &DirLang,
     Invalid,
   };
 
-  std::vector<Record *> associations = DirLang.getAssociations();
+  ArrayRef<const Record *> associations = DirLang.getAssociations();
 
   auto getAssocValue = [](StringRef name) -> Association {
     return StringSwitch<Association>(name)
@@ -720,7 +719,7 @@ static void GenerateGetDirectiveAssociation(const DirectiveLanguage &DirLang,
     return Result;
   };
 
-  for (Record *R : DirLang.getDirectives())
+  for (const Record *R : DirLang.getDirectives())
     compAssocImpl(R, compAssocImpl); // Updates AsMap.
 
   OS << '\n';
@@ -739,7 +738,7 @@ static void GenerateGetDirectiveAssociation(const DirectiveLanguage &DirLang,
   OS << AssociationTypeName << " llvm::" << DirLang.getCppNamespace()
      << "::getDirectiveAssociation(" << DirectiveTypeName << " Dir) {\n";
   OS << "  switch (Dir) {\n";
-  for (Record *R : DirLang.getDirectives()) {
+  for (const Record *R : DirLang.getDirectives()) {
     if (auto F = AsMap.find(R); F != AsMap.end()) {
       Directive Dir{R};
       OS << "  case " << getQualifiedName(Dir.getFormattedName()) << ":\n";
@@ -763,7 +762,7 @@ static void GenerateGetDirectiveCategory(const DirectiveLanguage &DirLang,
      << GetDirectiveType(DirLang) << " Dir) {\n";
   OS << "  switch (Dir) {\n";
 
-  for (Record *R : DirLang.getDirectives()) {
+  for (const Record *R : DirLang.getDirectives()) {
     Directive D{R};
     OS << "  case " << GetDirectiveName(DirLang, R) << ":\n";
     OS << "    return " << CategoryNamespace
@@ -903,7 +902,7 @@ static void GenerateFlangClauseParserClassList(const DirectiveLanguage &DirLang,
   IfDefScope Scope("GEN_FLANG_CLAUSE_PARSER_CLASSES_LIST", OS);
 
   OS << "\n";
-  llvm::interleaveComma(DirLang.getClauses(), OS, [&](Record *C) {
+  llvm::interleaveComma(DirLang.getClauses(), OS, [&](const Record *C) {
     Clause Clause{C};
     OS << Clause.getFormattedParserClassName() << "\n";
   });
@@ -1013,7 +1012,7 @@ static void GenerateFlangClauseParserKindMap(const DirectiveLanguage &DirLang,
      << " Parser clause\");\n";
 }
 
-static bool compareClauseName(Record *R1, Record *R2) {
+static bool compareClauseName(const Record *R1, const Record *R2) {
   Clause C1{R1};
   Clause C2{R2};
   return (C1.getName() > C2.getName());
@@ -1022,7 +1021,7 @@ static bool compareClauseName(Record *R1, Record *R2) {
 // Generate the parser for the clauses.
 static void GenerateFlangClausesParser(const DirectiveLanguage &DirLang,
                                        raw_ostream &OS) {
-  std::vector<Record *> Clauses = DirLang.getClauses();
+  std::vector<const Record *> Clauses = DirLang.getClauses();
   // Sort clauses in reverse alphabetical order so with clauses with same
   // beginning, the longer option is tried before.
   llvm::sort(Clauses, compareClauseName);
@@ -1231,7 +1230,7 @@ void EmitDirectivesBasicImpl(const DirectiveLanguage &DirLang,
 
 // Generate the implemenation section for the enumeration in the directive
 // language.
-static void EmitDirectivesImpl(RecordKeeper &Records, raw_ostream &OS) {
+static void EmitDirectivesImpl(const RecordKeeper &Records, raw_ostream &OS) {
   const auto DirLang = DirectiveLanguage{Records};
   if (DirLang.HasValidityErrors())
     return;

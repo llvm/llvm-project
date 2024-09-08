@@ -182,7 +182,7 @@ class Transition {
   SmallVector<std::string, 4> Types;
 
 public:
-  Transition(Record *R, Automaton *Parent);
+  Transition(const Record *R, Automaton *Parent);
   const ActionTuple &getActions() { return Actions; }
   SmallVector<std::string, 4> getTypes() { return Types; }
 
@@ -191,8 +191,8 @@ public:
 };
 
 class Automaton {
-  RecordKeeper &Records;
-  Record *R;
+  const RecordKeeper &Records;
+  const Record *R;
   std::vector<Transition> Transitions;
   /// All possible action tuples, uniqued.
   UniqueVector<ActionTuple> Actions;
@@ -200,7 +200,7 @@ class Automaton {
   std::vector<StringRef> ActionSymbolFields;
 
 public:
-  Automaton(RecordKeeper &Records, Record *R);
+  Automaton(const RecordKeeper &Records, const Record *R);
   void emit(raw_ostream &OS);
 
   ArrayRef<StringRef> getActionSymbolFields() { return ActionSymbolFields; }
@@ -210,10 +210,10 @@ public:
 };
 
 class AutomatonEmitter {
-  RecordKeeper &Records;
+  const RecordKeeper &Records;
 
 public:
-  AutomatonEmitter(RecordKeeper &R) : Records(R) {}
+  AutomatonEmitter(const RecordKeeper &R) : Records(R) {}
   void run(raw_ostream &OS);
 };
 
@@ -232,7 +232,7 @@ public:
 } // namespace
 
 void AutomatonEmitter::run(raw_ostream &OS) {
-  for (Record *R : Records.getAllDerivedDefinitions("GenericAutomaton")) {
+  for (const Record *R : Records.getAllDerivedDefinitions("GenericAutomaton")) {
     Automaton A(Records, R);
     OS << "#ifdef GET_" << R->getName() << "_DECL\n";
     A.emit(OS);
@@ -240,7 +240,7 @@ void AutomatonEmitter::run(raw_ostream &OS) {
   }
 }
 
-Automaton::Automaton(RecordKeeper &Records, Record *R)
+Automaton::Automaton(const RecordKeeper &Records, const Record *R)
     : Records(Records), R(R) {
   LLVM_DEBUG(dbgs() << "Emitting automaton for " << R->getName() << "\n");
   ActionSymbolFields = R->getValueAsListOfStrings("SymbolFields");
@@ -248,7 +248,7 @@ Automaton::Automaton(RecordKeeper &Records, Record *R)
 
 void Automaton::emit(raw_ostream &OS) {
   StringRef TransitionClass = R->getValueAsString("TransitionClass");
-  for (Record *T : Records.getAllDerivedDefinitions(TransitionClass)) {
+  for (const Record *T : Records.getAllDerivedDefinitions(TransitionClass)) {
     assert(T->isSubClassOf("Transition"));
     Transitions.emplace_back(T, this);
     Actions.insert(Transitions.back().getActions());
@@ -305,7 +305,7 @@ StringRef Automaton::getActionSymbolType(StringRef A) {
   return R->getValueAsString(Ty.str());
 }
 
-Transition::Transition(Record *R, Automaton *Parent) {
+Transition::Transition(const Record *R, Automaton *Parent) {
   BitsInit *NewStateInit = R->getValueAsBitsInit("NewState");
   NewState = 0;
   assert(NewStateInit->getNumBits() <= sizeof(uint64_t) * 8 &&
@@ -318,8 +318,8 @@ Transition::Transition(Record *R, Automaton *Parent) {
   }
 
   for (StringRef A : Parent->getActionSymbolFields()) {
-    RecordVal *SymbolV = R->getValue(A);
-    if (auto *Ty = dyn_cast<RecordRecTy>(SymbolV->getType())) {
+    const RecordVal *SymbolV = R->getValue(A);
+    if (const auto *Ty = dyn_cast<RecordRecTy>(SymbolV->getType())) {
       Actions.emplace_back(R->getValueAsDef(A));
       Types.emplace_back(Ty->getAsString());
     } else if (isa<IntRecTy>(SymbolV->getType())) {
