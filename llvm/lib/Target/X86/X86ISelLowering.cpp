@@ -24154,7 +24154,7 @@ SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
   const ConstantFPSDNode* FPTV = dyn_cast<ConstantFPSDNode>(Op1);
   const ConstantFPSDNode* FPFV = dyn_cast<ConstantFPSDNode>(Op2);
   if (FPTV && FPFV && FPTV->isExactlyValue(1.0) && FPFV->isExactlyValue(0.0)) {
-      return DAG.getNode(ISD::SINT_TO_FP, DL, Op.getValueType(), Cond);
+    return DAG.getNode(ISD::SINT_TO_FP, DL, Op.getValueType(), Cond);
   }
 
   // Lower FP selects into a CMP/AND/ANDN/OR sequence when the necessary SSE ops
