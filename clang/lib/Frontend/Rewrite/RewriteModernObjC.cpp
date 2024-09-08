@@ -4340,17 +4340,13 @@ void RewriteModernObjC::SynthesizeBlockLiterals(SourceLocation FunLocStart,
       ValueDecl *VD = Exp->getDecl();
       BlockDeclRefs.push_back(Exp);
       if (!VD->hasAttr<BlocksAttr>()) {
-        if (!BlockByCopyDeclsPtrSet.count(VD)) {
-          BlockByCopyDeclsPtrSet.insert(VD);
+        if (BlockByCopyDeclsPtrSet.insert(VD).second)
           BlockByCopyDecls.push_back(VD);
-        }
         continue;
       }
 
-      if (!BlockByRefDeclsPtrSet.count(VD)) {
-        BlockByRefDeclsPtrSet.insert(VD);
+      if (BlockByRefDeclsPtrSet.insert(VD).second)
         BlockByRefDecls.push_back(VD);
-      }
 
       // imported objects in the inner blocks not used in the outer
       // blocks must be copied/disposed in the outer block as well.
@@ -5161,18 +5157,14 @@ void RewriteModernObjC::CollectBlockDeclRefInfo(BlockExpr *Exp) {
     // Unique all "by copy" declarations.
     for (unsigned i = 0; i < BlockDeclRefs.size(); i++)
       if (!BlockDeclRefs[i]->getDecl()->hasAttr<BlocksAttr>()) {
-        if (!BlockByCopyDeclsPtrSet.count(BlockDeclRefs[i]->getDecl())) {
-          BlockByCopyDeclsPtrSet.insert(BlockDeclRefs[i]->getDecl());
+        if (BlockByCopyDeclsPtrSet.insert(BlockDeclRefs[i]->getDecl()).second)
           BlockByCopyDecls.push_back(BlockDeclRefs[i]->getDecl());
-        }
       }
     // Unique all "by ref" declarations.
     for (unsigned i = 0; i < BlockDeclRefs.size(); i++)
       if (BlockDeclRefs[i]->getDecl()->hasAttr<BlocksAttr>()) {
-        if (!BlockByRefDeclsPtrSet.count(BlockDeclRefs[i]->getDecl())) {
-          BlockByRefDeclsPtrSet.insert(BlockDeclRefs[i]->getDecl());
+        if (BlockByRefDeclsPtrSet.insert(BlockDeclRefs[i]->getDecl()).second)
           BlockByRefDecls.push_back(BlockDeclRefs[i]->getDecl());
-        }
       }
     // Find any imported blocks...they will need special attention.
     for (unsigned i = 0; i < BlockDeclRefs.size(); i++)
