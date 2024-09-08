@@ -251,19 +251,16 @@ define i64 @cmov_spromotion_16_to_64(i1 %c) {
 ;
 ; NO_CMOV-LABEL: cmov_spromotion_16_to_64:
 ; NO_CMOV:       # %bb.0:
-; NO_CMOV-NEXT:    xorl %edx, %edx
-; NO_CMOV-NEXT:    testb $1, {{[0-9]+}}(%esp)
+; NO_CMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; NO_CMOV-NEXT:    andb $1, %cl
 ; NO_CMOV-NEXT:    movl $12414, %eax # imm = 0x307E
-; NO_CMOV-NEXT:    je .LBB10_1
-; NO_CMOV-NEXT:  # %bb.2:
-; NO_CMOV-NEXT:    je .LBB10_3
-; NO_CMOV-NEXT:  .LBB10_4:
-; NO_CMOV-NEXT:    retl
-; NO_CMOV-NEXT:  .LBB10_1:
+; NO_CMOV-NEXT:    jne .LBB10_2
+; NO_CMOV-NEXT:  # %bb.1:
 ; NO_CMOV-NEXT:    movl $-22429, %eax # imm = 0xA863
-; NO_CMOV-NEXT:    jne .LBB10_4
-; NO_CMOV-NEXT:  .LBB10_3:
-; NO_CMOV-NEXT:    movl $-1, %edx
+; NO_CMOV-NEXT:  .LBB10_2:
+; NO_CMOV-NEXT:    xorl %edx, %edx
+; NO_CMOV-NEXT:    cmpb $1, %cl
+; NO_CMOV-NEXT:    sbbl %edx, %edx
 ; NO_CMOV-NEXT:    retl
   %t0 = select i1 %c, i16 12414, i16 43107
   %ret = sext i16 %t0 to i64
