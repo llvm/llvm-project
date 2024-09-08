@@ -145,16 +145,14 @@ void test6()
   std::fill_n(&foo[0], UDI(5), Storage());
 }
 
-void
-test_deque()
-{
-    std::deque<int> dq(5);
-    std::fill_n(dq.begin(), dq.size(), 4);
-    assert(dq[0] == 4);
-    assert(dq[1] == 4);
-    assert(dq[2] == 4);
-    assert(dq[3] == 4);
-    assert(dq[4] == 4);
+void test_deque() {
+  std::deque<int> dq(5);
+  std::fill_n(dq.begin(), dq.size(), 4);
+  assert(dq[0] == 4);
+  assert(dq[1] == 4);
+  assert(dq[2] == 4);
+  assert(dq[3] == 4);
+  assert(dq[4] == 4);
 }
 
 
