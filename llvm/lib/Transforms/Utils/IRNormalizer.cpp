@@ -97,16 +97,16 @@ private:
 } // namespace
 
 cl::opt<bool> IRNormalizer::PreserveOrder(
-    "norm-preserve-order", cl::Hidden,
+    "norm-preserve-order", cl::Hidden, cl::init(false),
     cl::desc("Preserves original instruction order"));
 cl::opt<bool> IRNormalizer::RenameAll(
-    "norm-rename-all", cl::Hidden,
+    "norm-rename-all", cl::Hidden, cl::init(true),
     cl::desc("Renames all instructions (including user-named)"));
 cl::opt<bool> IRNormalizer::FoldPreOutputs(
-    "norm-fold-all", cl::Hidden,
+    "norm-fold-all", cl::Hidden, cl::init(true),
     cl::desc("Folds all regular instructions (including pre-outputs)"));
 cl::opt<bool> IRNormalizer::ReorderOperands(
-    "norm-reorder-operands", cl::Hidden,
+    "norm-reorder-operands", cl::Hidden, cl::init(true),
     cl::desc("Sorts and reorders operands in commutative instructions"));
 
 /// Entry method to the IRNormalizer.
