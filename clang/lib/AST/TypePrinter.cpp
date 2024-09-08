@@ -1635,7 +1635,8 @@ void TypePrinter::printTemplateId(const TemplateSpecializationType *T,
                                   raw_ostream &OS, bool FullyQualify) {
   IncludeStrongLifetimeRAII Strong(Policy);
 
-  TemplateDecl *TD = T->getTemplateName().getAsTemplateDecl();
+  TemplateDecl *TD =
+      T->getTemplateName().getAsTemplateDecl(/*IgnoreDeduced=*/true);
   // FIXME: Null TD never exercised in test suite.
   if (FullyQualify && TD) {
     if (!Policy.SuppressScope)

@@ -238,10 +238,8 @@ functional vector
 functional version
 future cerrno
 future cstddef
-future cstdint
 future cstdlib
-future cstring
-future initializer_list
+future ctime
 future limits
 future mutex
 future new

@@ -1945,6 +1945,7 @@ cc_library(
         "//llvm:Support",
         "//llvm:Target",
         "//llvm:TargetParser",
+        "//llvm:config",
     ],
 )
 

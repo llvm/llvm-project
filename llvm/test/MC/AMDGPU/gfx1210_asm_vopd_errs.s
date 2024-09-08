@@ -255,25 +255,6 @@ v_dual_fmac_f32 v7, v5, v8 :: v_dual_fma_f32 v1, v4, v2, v3
 // GFX12-NEXT:{{^}}                                                         ^
 
 //===----------------------------------------------------------------------===//
-// Make sure reverse shift opcode uses right src0 and src1 operands for bank
-// conflict checks.
-//===----------------------------------------------------------------------===//
-v_dual_lshlrev_add_u64 v[252:253], v2, v[6:7], v[10:11] :: v_dual_add_f32 v8, v6, v4
-// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: src0 operands must use different VGPR banks
-// GFX12-NEXT:{{^}}v_dual_lshlrev_add_u64 v[252:253], v2, v[6:7], v[10:11] :: v_dual_add_f32 v8, v6, v4
-// GFX12-NEXT:{{^}}                                                                              ^
-
-v_dual_lshlrev_add_u64 v[252:253], v2, v[6:7], v[10:11] :: v_dual_add_f32 v8, v1, v2
-// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: src1 operands must use different VGPR banks
-// GFX12-NEXT:{{^}}v_dual_lshlrev_add_u64 v[252:253], v2, v[6:7], v[10:11] :: v_dual_add_f32 v8, v1, v2
-// GFX12-NEXT:{{^}}                                                                                  ^
-
-v_dual_lshlrev_add_u64 v[252:253], v2, v[6:7], v[10:11] :: v_dual_add_f32 v8, v1, v3
-// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: src1 operands must use different VGPR banks
-// GFX12-NEXT:{{^}}v_dual_lshlrev_add_u64 v[252:253], v2, v[6:7], v[10:11] :: v_dual_add_f32 v8, v1, v3
-// GFX12-NEXT:{{^}}                                                                                  ^
-
-//===----------------------------------------------------------------------===//
 // ABS modifiers are not supported
 //===----------------------------------------------------------------------===//
 v_dual_fma_f32 v255, |s105|, v0, v1 :: v_dual_add_nc_u32 v7, s1, v0

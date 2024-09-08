@@ -71,13 +71,7 @@ class V_MUL_PROF<VOPProfile P> : VOP3_Profile<P> {
 }
 
 let HasExt64BitDPP = 1 in
-def V_LSHL_ADD_U64_PROF : VOP3_Profile<VOP_I64_I64_I32_I64> {
-  // The dual form of the opcode swaps src0 and src1.
-  let Src0VOPD3 = getVCSrcForVT<Src1VT>.ret;
-  let Src1VOPD3 = getVregSrcForVT<Src0VT>.ret;
-  let Src0ModVOPD3 = getSrcModVOP3VC<Src1VT>.ret;
-  let Src1ModVOPD3 = getSrcModVOP3V<Src0VT>.ret;
-}
+def V_LSHL_ADD_U64_PROF : VOP3_Profile<VOP_I64_I64_I32_I64>;
 
 def VOP_F64_F64_F64_F64_DPP_PROF : VOP3_Profile<VOP_F64_F64_F64_F64>;
 def V_MAD_U32_PROF: VOP3_Profile<VOP_I32_I32_I32_I32> {
@@ -722,7 +716,7 @@ defm V_LSHL_OR_B32 : VOP3Inst <"v_lshl_or_b32", VOP3_Profile<VOP_I32_I32_I32_I32
 // V_LSHL_ADD_U64: D0.u64 = (S0.u64 << S1.u[2:0]) + S2.u64
 // src0 is shifted left by 0-4 (use “0” to get ADD_U64).
 let SubtargetPredicate = isGFX940orGFX1210orGFX13Plus in
-defm V_LSHL_ADD_U64 : VOP3Inst <"v_lshl_add_u64", V_LSHL_ADD_U64_PROF>, VOPD_Component<0x26, "v_lshlrev_add_u64">;
+defm V_LSHL_ADD_U64 : VOP3Inst <"v_lshl_add_u64", V_LSHL_ADD_U64_PROF>;
 
 let OtherPredicates = [HasFP8ConversionInsts], mayRaiseFPException = 0,
     SchedRW = [WriteFloatCvt] in {

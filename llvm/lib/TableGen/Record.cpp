@@ -2802,7 +2802,7 @@ void Record::checkName() {
                                   "' is not a string!");
 }
 
-RecordRecTy *Record::getType() {
+RecordRecTy *Record::getType() const {
   SmallVector<Record *, 4> DirectSCs;
   getDirectSuperClasses(DirectSCs);
   return RecordRecTy::get(TrackedRecords, DirectSCs);
