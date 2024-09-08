@@ -20,7 +20,7 @@ RUN: llvm-readobj --coff-imports out2.dll | FileCheck --check-prefix=IMPORTS %s
 IMPORTS:      Import {
 IMPORTS-NEXT:   Name: test.dll
 IMPORTS-NEXT:   ImportLookupTableRVA:
-IMPORTS-NEXT:   ImportAddressTableRVA: 0x2258
+IMPORTS-NEXT:   ImportAddressTableRVA: 0x2000
 IMPORTS-NEXT:   Symbol: data (0)
 IMPORTS-NEXT:   Symbol: func (0)
 IMPORTS-NEXT:   Symbol: func2 (0)
@@ -28,7 +28,7 @@ IMPORTS-NEXT: }
 IMPORTS-NEXT: Import {
 IMPORTS-NEXT:   Name: test2.dll
 IMPORTS-NEXT:   ImportLookupTableRVA:
-IMPORTS-NEXT:   ImportAddressTableRVA: 0x2278
+IMPORTS-NEXT:   ImportAddressTableRVA: 0x2020
 IMPORTS-NEXT:   Symbol: t2func (0)
 IMPORTS-NEXT: }
 
@@ -36,12 +36,17 @@ RUN: llvm-objdump -d out.dll | FileCheck --check-prefix=DISASM %s
 RUN: llvm-objdump -d out2.dll | FileCheck --check-prefix=DISASM %s
 
 DISASM:      0000000180001000 <.text>:
-DISASM-NEXT: 180001000: ff 25 5a 12 00 00            jmpq    *0x125a(%rip)           # 0x180002260
+DISASM-NEXT: 180001000: ff 25 02 10 00 00            jmpq    *0x1002(%rip)           # 0x180002008
 
 RUN: llvm-readobj --hex-dump=.test out.dll | FileCheck --check-prefix=TESTSEC %s
 RUN: llvm-readobj --hex-dump=.test out2.dll | FileCheck --check-prefix=TESTSEC %s
-TESTSEC:      0x180004000 60220000 58220000 68220000 78220000
-TESTSEC-NEXT: 0x180004010 00100000
+TESTSEC:      0x180005000 08200000 00200000 10200000 20200000
+TESTSEC-NEXT: 0x180005010 00100000
+
+RUN: llvm-readobj --headers out.dll | FileCheck -check-prefix=HEADERS %s
+HEADERS:  LoadConfigTableRVA: 0x3008
+HEADERS:  IATRVA: 0x2000
+HEADERS:  IATSize: 0x1000
 
 #--- test.s
     .section .test, "r"
