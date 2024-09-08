@@ -1343,7 +1343,7 @@ private:
 
   /// Mapping from original ID to GUID. If original ID can map to multiple
   /// GUIDs, it will be mapped to 0.
-  std::map<GlobalValue::GUID, GlobalValue::GUID> OidGuidMap;
+  DenseMap<GlobalValue::GUID, GlobalValue::GUID> OidGuidMap;
 
   /// Indicates that summary-based GlobalValue GC has run, and values with
   /// GVFlags::Live==false are really dead. Otherwise, all values must be
