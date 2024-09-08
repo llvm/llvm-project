@@ -35,8 +35,6 @@
 #include "lldb/Host/ProcessLaunchInfo.h"
 #include "lldb/Host/ProcessRunLock.h"
 #include "lldb/Symbol/ObjectFile.h"
-#include "lldb/Symbol/SaveCoreOptions.h"
-#include "lldb/Target/CoreFileMemoryRanges.h"
 #include "lldb/Target/ExecutionContextScope.h"
 #include "lldb/Target/InstrumentationRuntime.h"
 #include "lldb/Target/Memory.h"
@@ -711,6 +709,29 @@ public:
   ///     true if saved successfully, false if saving the core dump
   ///     is not supported by the plugin, error otherwise.
   virtual llvm::Expected<bool> SaveCore(llvm::StringRef outfile);
+
+  struct CoreFileMemoryRange {
+    llvm::AddressRange range;  /// The address range to save into the core file.
+    uint32_t lldb_permissions; /// A bit set of lldb::Permissions bits.
+
+    bool operator==(const CoreFileMemoryRange &rhs) const {
+      return range == rhs.range && lldb_permissions == rhs.lldb_permissions;
+    }
+
+    bool operator!=(const CoreFileMemoryRange &rhs) const {
+      return !(*this == rhs);
+    }
+
+    bool operator<(const CoreFileMemoryRange &rhs) const {
+      if (range < rhs.range)
+        return true;
+      if (range == rhs.range)
+        return lldb_permissions < rhs.lldb_permissions;
+      return false;
+    }
+  };
+
+  using CoreFileMemoryRanges = std::vector<CoreFileMemoryRange>;
 
   /// Helper function for Process::SaveCore(...) that calculates the address
   /// ranges that should be saved. This allows all core file plug-ins to save

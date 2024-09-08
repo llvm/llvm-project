@@ -1232,7 +1232,7 @@ bool Compiler<Emitter>::VisitVectorBinOp(const BinaryOperator *E) {
 
   // FIXME: Current only support comparison binary operator, add support for
   // other binary operator.
-  if (!E->isComparisonOp())
+  if (!E->isComparisonOp() && !E->isLogicalOp())
     return this->emitInvalid(E);
   // Prepare storage for result.
   if (!Initializing) {
@@ -1267,7 +1267,15 @@ bool Compiler<Emitter>::VisitVectorBinOp(const BinaryOperator *E) {
   auto getElem = [=](unsigned Offset, unsigned Index) {
     if (!this->emitGetLocal(PT_Ptr, Offset, E))
       return false;
-    return this->emitArrayElemPop(ElemT, Index, E);
+    if (!this->emitArrayElemPop(ElemT, Index, E))
+      return false;
+    if (E->isLogicalOp()) {
+      if (!this->emitPrimCast(ElemT, PT_Bool, Ctx.getASTContext().BoolTy, E))
+        return false;
+      if (!this->emitPrimCast(PT_Bool, ResultElemT, VecTy->getElementType(), E))
+        return false;
+    }
+    return true;
   };
 
   for (unsigned I = 0; I != VecTy->getNumElements(); ++I) {
@@ -1298,6 +1306,16 @@ bool Compiler<Emitter>::VisitVectorBinOp(const BinaryOperator *E) {
       break;
     case BO_GT:
       if (!this->emitGT(ElemT, E))
+        return false;
+      break;
+    case BO_LAnd:
+      // a && b is equivalent to a!=0 & b!=0
+      if (!this->emitBitAnd(ResultElemT, E))
+        return false;
+      break;
+    case BO_LOr:
+      // a || b is equivalent to a!=0 | b!=0
+      if (!this->emitBitOr(ResultElemT, E))
         return false;
       break;
     default:
