@@ -24104,6 +24104,15 @@ static SDValue LowerSELECTWithCmpZero(SDValue CmpVal, SDValue LHS, SDValue RHS,
     if (isNullConstant(LHS) && isAllOnesConstant(RHS))
       return SplatLSB();
 
+    // SELECT (AND(X,1) == 0), C1, C2 -> XOR(C1,AND(NEG(AND(X,1)),XOR(C1,C2))
+    if (!Subtarget.canUseCMOV() && isa<ConstantSDNode>(LHS) &&
+        isa<ConstantSDNode>(RHS)) {
+      SDValue Mask = SplatLSB();
+      SDValue Diff = DAG.getNode(ISD::XOR, DL, VT, LHS, RHS);
+      SDValue Flip = DAG.getNode(ISD::AND, DL, VT, Mask, Diff);
+      return DAG.getNode(ISD::XOR, DL, VT, LHS, Flip);
+    }
+
     SDValue Src1, Src2;
     auto isIdentityPattern = [&]() {
       switch (RHS.getOpcode()) {
