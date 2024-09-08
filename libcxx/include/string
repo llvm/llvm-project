@@ -749,40 +749,31 @@ struct __can_be_converted_to_string_view
 struct __uninitialized_size_tag {};
 struct __init_with_sentinel_tag {};
 
-#ifdef _LIBCPP_ABI_ALTERNATE_STRING_LAYOUT
+template <size_t _PaddingSize>
+struct __padding {
+  char __padding_[_PaddingSize];
+};
+
+template <>
+struct __padding<0> {};
+
 template <class _CharT, size_t __min_cap, size_t _Padding = sizeof(_CharT) - 1>
 struct __short_layout_alternate {
   _CharT __data_[__min_cap];
-  unsigned char __padding_[_Padding];
+  _LIBCPP_NO_UNIQUE_ADDRESS __padding<_Padding> __padding_;
   unsigned char __size_    : 7;
   unsigned char __is_long_ : 1;
 };
 
-template <class _CharT, size_t __min_cap>
-struct __short_layout_alternate<_CharT, __min_cap, 0> {
-  _CharT __data_[__min_cap];
-  unsigned char __size_    : 7;
-  unsigned char __is_long_ : 1;
-};
-#else
 template <class _CharT, size_t __min_cap, size_t _Padding = sizeof(_CharT) - 1>
 struct __short_layout_classic {
   struct _LIBCPP_PACKED {
     unsigned char __is_long_ : 1;
     unsigned char __size_    : 7;
   };
-  char __padding_[_Padding];
+  _LIBCPP_NO_UNIQUE_ADDRESS __padding<_Padding> __padding_;
   _CharT __data_[__min_cap];
 };
-template <class _CharT, size_t __min_cap>
-struct __short_layout_classic<_CharT, __min_cap, 0> {
-  struct _LIBCPP_PACKED {
-    unsigned char __is_long_ : 1;
-    unsigned char __size_    : 7;
-  };
-  _CharT __data_[__min_cap];
-};
-#endif
 
 template <class _CharT, class _Traits, class _Allocator>
 class basic_string {
