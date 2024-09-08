@@ -468,8 +468,13 @@ void IRNormalizer::reorderInstructions(Function &F) const {
     // Reorder based on the topological sort.
     while (!TopologicalSort.empty()) {
       auto *Instruction = TopologicalSort.top();
-      auto *FirstNonPHIOrDbgOrAlloca = &*BB.getFirstNonPHIOrDbgOrAlloca();
-      Instruction->moveBefore(FirstNonPHIOrDbgOrAlloca);
+      auto FirstNonPHIOrDbgOrAlloca = BB.getFirstNonPHIOrDbgOrAlloca();
+      if (auto *Call = dyn_cast<CallInst>(&*FirstNonPHIOrDbgOrAlloca)) {
+        if (Call->getIntrinsicID() == Intrinsic::experimental_convergence_entry || 
+            Call->getIntrinsicID() == Intrinsic::experimental_convergence_loop)
+          FirstNonPHIOrDbgOrAlloca++;
+      }
+      Instruction->moveBefore(&*FirstNonPHIOrDbgOrAlloca);
       TopologicalSort.pop();
     }
   }
@@ -507,6 +512,10 @@ void IRNormalizer::reorderDefinition(
     if (Call->isMustTailCall())
       return;
     if (Call->getIntrinsicID() == Intrinsic::experimental_deoptimize)
+      return;
+    if (Call->getIntrinsicID() == Intrinsic::experimental_convergence_entry)
+      return;
+    if (Call->getIntrinsicID() == Intrinsic::experimental_convergence_loop)
       return;
   }
   if (auto *BitCast = dyn_cast<BitCastInst>(Definition)) {
