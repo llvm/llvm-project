@@ -8222,8 +8222,7 @@ static Instruction *foldFCmpWithFloorAndCeil(FCmpInst &I,
     // fcmp ule floor(x), x => fcmp ule -inf, x
     if (FloorX)
       return new FCmpInst(FCmpInst::FCMP_ULE,
-                          ConstantFP::getInfinity(OpType, true), RHS,
-                          "", &I);
+                          ConstantFP::getInfinity(OpType, true), RHS, "", &I);
     break;
   case FCmpInst::FCMP_UGT:
     // fcmp ugt floor(x), x => fcmp ugt -inf, x
