@@ -37,7 +37,8 @@ static cl::opt<bool> ImportConstantsWithRefs(
 constexpr uint32_t FunctionSummary::ParamAccess::RangeWidth;
 
 FunctionSummary FunctionSummary::ExternalNode =
-    FunctionSummary::makeDummyFunctionSummary({});
+    FunctionSummary::makeDummyFunctionSummary(
+        SmallVector<FunctionSummary::EdgeTy, 0>());
 
 GlobalValue::VisibilityTypes ValueInfo::getELFVisibility() const {
   bool HasProtected = false;

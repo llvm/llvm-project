@@ -64,7 +64,7 @@ class StaticMatcherHelper;
 
 class PatternEmitter {
 public:
-  PatternEmitter(Record *pat, RecordOperatorMap *mapper, raw_ostream &os,
+  PatternEmitter(const Record *pat, RecordOperatorMap *mapper, raw_ostream &os,
                  StaticMatcherHelper &helper);
 
   // Emits the mlir::RewritePattern struct named `rewriteName`.
@@ -268,7 +268,7 @@ private:
 // inlining them.
 class StaticMatcherHelper {
 public:
-  StaticMatcherHelper(raw_ostream &os, RecordKeeper &recordKeeper,
+  StaticMatcherHelper(raw_ostream &os, const RecordKeeper &recordKeeper,
                       RecordOperatorMap &mapper);
 
   // Determine if we should inline the match logic or delegate to a static
@@ -293,7 +293,7 @@ public:
 
   // Collect the `Record`s, i.e., the DRR, so that we can get the information of
   // the duplicated DAGs.
-  void addPattern(Record *record);
+  void addPattern(const Record *record);
 
   // Emit all static functions of DAG Matcher.
   void populateStaticMatchers(raw_ostream &os);
@@ -322,7 +322,7 @@ private:
   // inlining.
   //
   // The topological order of all the DagNodes among all patterns.
-  SmallVector<std::pair<DagNode, Record *>> topologicalOrder;
+  SmallVector<std::pair<DagNode, const Record *>> topologicalOrder;
 
   RecordOperatorMap &opMap;
 
@@ -347,7 +347,7 @@ private:
 
 } // namespace
 
-PatternEmitter::PatternEmitter(Record *pat, RecordOperatorMap *mapper,
+PatternEmitter::PatternEmitter(const Record *pat, RecordOperatorMap *mapper,
                                raw_ostream &os, StaticMatcherHelper &helper)
     : loc(pat->getLoc()), opMap(mapper), pattern(pat, mapper),
       symbolInfoMap(pat->getLoc()), staticMatcherHelper(helper), os(os) {
@@ -1886,7 +1886,7 @@ void PatternEmitter::createAggregateLocalVarsForOpArgs(
 }
 
 StaticMatcherHelper::StaticMatcherHelper(raw_ostream &os,
-                                         RecordKeeper &recordKeeper,
+                                         const RecordKeeper &recordKeeper,
                                          RecordOperatorMap &mapper)
     : opMap(mapper), staticVerifierEmitter(os, recordKeeper) {}
 
@@ -1912,7 +1912,7 @@ void StaticMatcherHelper::populateStaticConstraintFunctions(raw_ostream &os) {
   staticVerifierEmitter.emitPatternConstraints(constraints.getArrayRef());
 }
 
-void StaticMatcherHelper::addPattern(Record *record) {
+void StaticMatcherHelper::addPattern(const Record *record) {
   Pattern pat(record, &opMap);
 
   // While generating the function body of the DAG matcher, it may depends on
@@ -1951,10 +1951,10 @@ StringRef StaticMatcherHelper::getVerifierName(DagLeaf leaf) {
   return staticVerifierEmitter.getTypeConstraintFn(leaf.getAsConstraint());
 }
 
-static void emitRewriters(RecordKeeper &recordKeeper, raw_ostream &os) {
+static void emitRewriters(const RecordKeeper &recordKeeper, raw_ostream &os) {
   emitSourceFileHeader("Rewriters", os, recordKeeper);
 
-  const auto &patterns = recordKeeper.getAllDerivedDefinitions("Pattern");
+  auto patterns = recordKeeper.getAllDerivedDefinitions("Pattern");
 
   // We put the map here because it can be shared among multiple patterns.
   RecordOperatorMap recordOpMap;
@@ -1962,7 +1962,7 @@ static void emitRewriters(RecordKeeper &recordKeeper, raw_ostream &os) {
   // Exam all the patterns and generate static matcher for the duplicated
   // DagNode.
   StaticMatcherHelper staticMatcher(os, recordKeeper, recordOpMap);
-  for (Record *p : patterns)
+  for (const Record *p : patterns)
     staticMatcher.addPattern(p);
   staticMatcher.populateStaticConstraintFunctions(os);
   staticMatcher.populateStaticMatchers(os);
@@ -1973,7 +1973,7 @@ static void emitRewriters(RecordKeeper &recordKeeper, raw_ostream &os) {
   std::string baseRewriterName = "GeneratedConvert";
   int rewriterIndex = 0;
 
-  for (Record *p : patterns) {
+  for (const Record *p : patterns) {
     std::string name;
     if (p->isAnonymous()) {
       // If no name is provided, ensure unique rewriter names simply by
@@ -2001,7 +2001,7 @@ static void emitRewriters(RecordKeeper &recordKeeper, raw_ostream &os) {
 
 static mlir::GenRegistration
     genRewriters("gen-rewriters", "Generate pattern rewriters",
-                 [](RecordKeeper &records, raw_ostream &os) {
+                 [](const RecordKeeper &records, raw_ostream &os) {
                    emitRewriters(records, os);
                    return false;
                  });
