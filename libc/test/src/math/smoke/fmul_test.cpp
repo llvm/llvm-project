@@ -14,11 +14,11 @@ LIST_MUL_TESTS(float, double, LIBC_NAMESPACE::fmul)
 
 TEST_F(LlvmLibcMulTest, SpecialInputs) {
   constexpr double INPUTS[][2] = {
-    {0x1.0100010002p8, 0x1.fffcp14},
+      {0x1.0100010002p8, 0x1.fffcp14},
   };
 
   constexpr float RESULTS[] = {
-    0x1.00fdfep+23f,
+      0x1.00fdfep+23f,
   };
 
   constexpr size_t N = sizeof(RESULTS) / sizeof(RESULTS[0]);
