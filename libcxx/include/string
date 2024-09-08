@@ -757,21 +757,21 @@ struct __padding {
 template <>
 struct __padding<0> {};
 
-template <class _CharT, size_t __min_cap, size_t _Padding = sizeof(_CharT) - 1>
+template <class _CharT, size_t __min_cap>
 struct __short_layout_alternate {
   _CharT __data_[__min_cap];
-  _LIBCPP_NO_UNIQUE_ADDRESS __padding<_Padding> __padding_;
+  _LIBCPP_NO_UNIQUE_ADDRESS __padding<sizeof(_CharT) - 1> __padding_;
   unsigned char __size_    : 7;
   unsigned char __is_long_ : 1;
 };
 
-template <class _CharT, size_t __min_cap, size_t _Padding = sizeof(_CharT) - 1>
+template <class _CharT, size_t __min_cap>
 struct __short_layout_classic {
   struct _LIBCPP_PACKED {
     unsigned char __is_long_ : 1;
     unsigned char __size_    : 7;
   };
-  _LIBCPP_NO_UNIQUE_ADDRESS __padding<_Padding> __padding_;
+  _LIBCPP_NO_UNIQUE_ADDRESS __padding<sizeof(_CharT) - 1> __padding_;
   _CharT __data_[__min_cap];
 };
 
