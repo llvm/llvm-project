@@ -1358,11 +1358,9 @@ gentbl(
     tblgen = ":llvm-tblgen",
     td_file = "lib/Target/AMDGPU/InstCombineTables.td",
     td_srcs = glob([
-        "include/llvm/CodeGen/*.td",
-        "include/llvm/IR/Intrinsics*.td",
+        "lib/Target/AMDGPU/*.td",
     ]) + [
-        "lib/Target/AMDGPU/InstCombineTables.td",
-        "include/llvm/TableGen/SearchableTable.td",
+        ":common_target_td_sources",
     ],
 )
 
