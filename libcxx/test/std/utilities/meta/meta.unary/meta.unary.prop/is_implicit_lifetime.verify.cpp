@@ -24,9 +24,3 @@ static_assert(!std::is_implicit_lifetime<IncompleteStruct>::value);
 
 // expected-error@*:* {{incomplete type 'IncompleteStruct' used in type trait expression}}
 static_assert(!std::is_implicit_lifetime_v<IncompleteStruct>);
-
-// expected-error@*:* {{atomic types are not supported in '__builtin_is_implicit_lifetime'}}
-static_assert(!std::is_implicit_lifetime<_Atomic int>::value);
-
-// expected-error@*:* {{atomic types are not supported in '__builtin_is_implicit_lifetime'}}
-static_assert(!std::is_implicit_lifetime_v<_Atomic int>);

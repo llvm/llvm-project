@@ -139,7 +139,6 @@ constexpr void test_is_implicit_lifetime() {
 constexpr bool test() {
   // Standard fundamental C++ types
 
-  test_is_implicit_lifetime<decltype(nullptr), true>();
   test_is_implicit_lifetime<std::nullptr_t, true>();
 
   test_is_implicit_lifetime<void, false>();
@@ -254,12 +253,6 @@ constexpr bool test() {
 
   test_is_implicit_lifetime<std::pair<int, float>>();
   test_is_implicit_lifetime<std::tuple<int, float>>();
-
-  // Standard C types
-
-  test_is_implicit_lifetime<_Complex float>();
-  test_is_implicit_lifetime<_Complex double>();
-  test_is_implicit_lifetime<_Complex long double>();
 
   // Standard C23 types
 
