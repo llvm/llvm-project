@@ -943,7 +943,7 @@ class ModuleSummaryIndexBitcodeReader : public BitcodeReaderBase {
   // they are recorded in the summary index being built.
   // We save a GUID which refers to the same global as the ValueInfo, but
   // ignoring the linkage, i.e. for values other than local linkage they are
-  // identical (this is the second tuple member). ValueInfo has the real GUID.
+  // identical (this is the second member). ValueInfo has the real GUID.
   DenseMap<unsigned, std::pair<ValueInfo, GlobalValue::GUID>>
       ValueIdToValueInfoMap;
 
