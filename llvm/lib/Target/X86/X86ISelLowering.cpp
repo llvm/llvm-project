@@ -24104,6 +24104,15 @@ static SDValue LowerSELECTWithCmpZero(SDValue CmpVal, SDValue LHS, SDValue RHS,
     if (isNullConstant(LHS) && isAllOnesConstant(RHS))
       return SplatLSB();
 
+    // SELECT (AND(X,1) == 0), C1, C2 -> XOR(C1,AND(NEG(AND(X,1)),XOR(C1,C2))
+    if (!Subtarget.canUseCMOV() && isa<ConstantSDNode>(LHS) &&
+        isa<ConstantSDNode>(RHS)) {
+      SDValue Mask = SplatLSB();
+      SDValue Diff = DAG.getNode(ISD::XOR, DL, VT, LHS, RHS);
+      SDValue Flip = DAG.getNode(ISD::AND, DL, VT, Mask, Diff);
+      return DAG.getNode(ISD::XOR, DL, VT, LHS, Flip);
+    }
+
     SDValue Src1, Src2;
     auto isIdentityPattern = [&]() {
       switch (RHS.getOpcode()) {
@@ -24137,6 +24146,32 @@ static SDValue LowerSELECTWithCmpZero(SDValue CmpVal, SDValue LHS, SDValue RHS,
       SDValue And = DAG.getNode(ISD::AND, DL, VT, Mask, Src1); // Mask & z
       return DAG.getNode(RHS.getOpcode(), DL, VT, Src2, And);  // y Op And
     }
+  }
+
+  if ((X86CC == X86::COND_E || X86CC == X86::COND_NE) &&
+      (isAllOnesConstant(LHS) || isAllOnesConstant(RHS))) {
+    SDValue Y = isAllOnesConstant(RHS) ? LHS : RHS;
+    SDVTList CmpVTs = DAG.getVTList(CmpVT, MVT::i32);
+
+    // 'X - 1' sets the carry flag if X == 0.
+    // '0 - X' sets the carry flag if X != 0.
+    // Convert the carry flag to a -1/0 mask with sbb:
+    // select (X != 0), -1, Y --> 0 - X; or (sbb), Y
+    // select (X == 0), Y, -1 --> 0 - X; or (sbb), Y
+    // select (X != 0), Y, -1 --> X - 1; or (sbb), Y
+    // select (X == 0), -1, Y --> X - 1; or (sbb), Y
+    SDValue Sub;
+    if (isAllOnesConstant(LHS) == (X86CC == X86::COND_NE)) {
+      SDValue Zero = DAG.getConstant(0, DL, CmpVT);
+      Sub = DAG.getNode(X86ISD::SUB, DL, CmpVTs, Zero, CmpVal);
+    } else {
+      SDValue One = DAG.getConstant(1, DL, CmpVT);
+      Sub = DAG.getNode(X86ISD::SUB, DL, CmpVTs, CmpVal, One);
+    }
+    SDValue SBB = DAG.getNode(X86ISD::SETCC_CARRY, DL, VT,
+                              DAG.getTargetConstant(X86::COND_B, DL, MVT::i8),
+                              Sub.getValue(1));
+    return DAG.getNode(ISD::OR, DL, VT, SBB, Y);
   }
 
   return SDValue();
@@ -24262,30 +24297,6 @@ SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
         ((CondCode == X86::COND_NE && MatchFFSMinus1(Op1, Op2)) ||
          (CondCode == X86::COND_E && MatchFFSMinus1(Op2, Op1)))) {
       // Keep Cmp.
-    } else if ((isAllOnesConstant(Op1) || isAllOnesConstant(Op2)) &&
-        (CondCode == X86::COND_E || CondCode == X86::COND_NE)) {
-      SDValue Y = isAllOnesConstant(Op2) ? Op1 : Op2;
-      SDVTList CmpVTs = DAG.getVTList(CmpOp0.getValueType(), MVT::i32);
-
-      // 'X - 1' sets the carry flag if X == 0.
-      // '0 - X' sets the carry flag if X != 0.
-      // Convert the carry flag to a -1/0 mask with sbb:
-      // select (X != 0), -1, Y --> 0 - X; or (sbb), Y
-      // select (X == 0), Y, -1 --> 0 - X; or (sbb), Y
-      // select (X != 0), Y, -1 --> X - 1; or (sbb), Y
-      // select (X == 0), -1, Y --> X - 1; or (sbb), Y
-      SDValue Sub;
-      if (isAllOnesConstant(Op1) == (CondCode == X86::COND_NE)) {
-        SDValue Zero = DAG.getConstant(0, DL, CmpOp0.getValueType());
-        Sub = DAG.getNode(X86ISD::SUB, DL, CmpVTs, Zero, CmpOp0);
-      } else {
-        SDValue One = DAG.getConstant(1, DL, CmpOp0.getValueType());
-        Sub = DAG.getNode(X86ISD::SUB, DL, CmpVTs, CmpOp0, One);
-      }
-      SDValue SBB = DAG.getNode(X86ISD::SETCC_CARRY, DL, VT,
-                                DAG.getTargetConstant(X86::COND_B, DL, MVT::i8),
-                                Sub.getValue(1));
-      return DAG.getNode(ISD::OR, DL, VT, SBB, Y);
     } else if (SDValue R = LowerSELECTWithCmpZero(CmpOp0, Op1, Op2, CondCode,
                                                   DL, DAG, Subtarget)) {
       return R;
