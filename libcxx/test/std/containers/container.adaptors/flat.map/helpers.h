@@ -11,6 +11,7 @@
 
 #include <cassert>
 #include <string>
+#include <vector>
 
 struct StartsWith {
   explicit StartsWith(char ch) : lower_(1, ch), upper_(1, ch + 1) {}
@@ -30,6 +31,20 @@ struct StartsWith {
 private:
   std::string lower_;
   std::string upper_;
+};
+
+template <class T>
+struct CopyOnlyVector : std::vector<T> {
+  using std::vector<T>::vector;
+
+  CopyOnlyVector(const CopyOnlyVector&) = default;
+  CopyOnlyVector(CopyOnlyVector&& other) : CopyOnlyVector(other){}
+  CopyOnlyVector(CopyOnlyVector&& other, std::vector<T>::allocator_type alloc) : CopyOnlyVector(other, alloc){}
+
+  CopyOnlyVector& operator=(const CopyOnlyVector&) = default;
+  CopyOnlyVector& operator=(CopyOnlyVector& other) {
+    return this->operator=(other);
+  }
 };
 
 #endif // SUPPORT_FLAT_MAP_HELPERS_H
