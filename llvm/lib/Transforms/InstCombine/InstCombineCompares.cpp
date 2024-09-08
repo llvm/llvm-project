@@ -8205,7 +8205,7 @@ static Instruction *foldFCmpWithFloorAndCeil(FCmpInst &I,
   case FCmpInst::FCMP_OGT:
     // fcmp ogt floor(x), x => false
     if (FloorX)
-      return CI.replaceInstUsesWith(I, ConstantInt::getFalse(I.getType()));
+      return IC.replaceInstUsesWith(I, ConstantInt::getFalse(I.getType()));
     break;
   case FCmpInst::FCMP_OGE:
     // fcmp oge ceil(x), x => fcmp ord x, 0
@@ -8216,7 +8216,7 @@ static Instruction *foldFCmpWithFloorAndCeil(FCmpInst &I,
   case FCmpInst::FCMP_OLT:
     // fcmp olt ceil(x), x => false
     if (CeilX)
-      return CI.replaceInstUsesWith(I, ConstantInt::getFalse(I.getType()));
+      return IC.replaceInstUsesWith(I, ConstantInt::getFalse(I.getType()));
     break;
   case FCmpInst::FCMP_ULE:
     // fcmp ule floor(x), x => fcmp ule -inf, x
