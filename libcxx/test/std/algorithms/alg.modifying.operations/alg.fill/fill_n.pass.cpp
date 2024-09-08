@@ -155,7 +155,6 @@ void test_deque() {
   assert(dq[4] == 4);
 }
 
-
 int main(int, char**)
 {
     test_char<cpp17_output_iterator<char*> >();
