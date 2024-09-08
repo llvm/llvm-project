@@ -37,7 +37,11 @@ inline constexpr bool is_abi_tag_v<simd_abi::__vec_ext<_Np>> = _Np > 0 && _Np <=
 
 template <class _Tp, int _Np>
 struct __simd_storage<_Tp, simd_abi::__vec_ext<_Np>> {
-  _Tp __data __attribute__((__vector_size__(std::__bit_ceil((sizeof(_Tp) * _Np)))));
+  // This doesn't work in GCC if it is directly inside the __vector_size__ attribute because of a call to
+  // __builtin_is_constant_evaluated. See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=105233
+  static constexpr size_t __vector_size = std::__bit_ceil(sizeof(_Tp) * _Np);
+
+  _Tp __data __attribute__((__vector_size__(__vector_size)));
 
   _LIBCPP_HIDE_FROM_ABI _Tp __get(size_t __idx) const noexcept {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__idx < _Np, "Index is out of bounds");
