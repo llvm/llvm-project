@@ -1809,6 +1809,7 @@ Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN) {
   // Check to see whether the instruction can be folded into each phi operand.
   // If there is one operand that does not fold, remember the BB it is in.
   SmallVector<Value *> NewPhiValues;
+  SmallVector<unsigned int> OpsToMoveUseTo;
   BasicBlock *NonSimplifiedBB = nullptr;
   Value *NonSimplifiedInVal = nullptr;
   for (unsigned i = 0; i != NumPHIValues; ++i) {
@@ -1817,6 +1818,16 @@ Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN) {
 
     if (auto *NewVal = simplifyInstructionWithPHI(I, PN, InVal, InBB, DL, SQ)) {
       NewPhiValues.push_back(NewVal);
+      continue;
+    }
+
+    // If the only use of phi is comparing it with a constant then we can
+    // put this comparison in the incoming BB directly after a ucmp/scmp call
+    // because we know that it will simplify to a single icmp.
+    if (isa<CmpIntrinsic>(InVal) &&
+        match(&I, m_c_ICmp(m_Specific(PN), m_Constant()))) {
+      OpsToMoveUseTo.push_back(i);
+      NewPhiValues.push_back(nullptr);
       continue;
     }
 
@@ -1849,6 +1860,22 @@ Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN) {
     if (!BI || !BI->isUnconditional() ||
         !DT.isReachableFromEntry(NonSimplifiedBB))
       return nullptr;
+  }
+
+  // Clone the instruction that uses the phi node and move it into the incoming
+  // BB because we know that the next iteration of InstCombine will simplify it.
+  for (auto OpIndex : OpsToMoveUseTo) {
+    Instruction *Clone = I.clone();
+    Value *Op = PN->getIncomingValue(OpIndex);
+    BasicBlock *OpBB = PN->getIncomingBlock(OpIndex);
+    for (Use &U : Clone->operands()) {
+      if (U == PN)
+        U = Op;
+      else
+        U = U->DoPHITranslation(PN->getParent(), OpBB);
+    }
+    Clone = InsertNewInstBefore(Clone, OpBB->getTerminator()->getIterator());
+    NewPhiValues[OpIndex] = Clone;
   }
 
   // Okay, we can do the transformation: create the new PHI node.

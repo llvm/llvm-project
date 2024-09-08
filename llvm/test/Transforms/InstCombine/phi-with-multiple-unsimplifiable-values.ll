@@ -7,14 +7,13 @@ define i1 @icmp_of_phi_of_scmp_with_constant(i1 %c, i16 %x, i16 %y)
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br i1 [[C]], label %[[TRUE:.*]], label %[[FALSE:.*]]
 ; CHECK:       [[TRUE]]:
-; CHECK-NEXT:    [[CMP1:%.*]] = call i8 @llvm.scmp.i8.i16(i16 [[X]], i16 [[Y]])
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp slt i16 [[X]], [[Y]]
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[FALSE]]:
-; CHECK-NEXT:    [[CMP2:%.*]] = call i8 @llvm.scmp.i8.i16(i16 [[Y]], i16 [[X]])
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i16 [[Y]], [[X]]
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i8 [ [[CMP1]], %[[TRUE]] ], [ [[CMP2]], %[[FALSE]] ]
-; CHECK-NEXT:    [[R:%.*]] = icmp slt i8 [[PHI]], 0
+; CHECK-NEXT:    [[R:%.*]] = phi i1 [ [[TMP0]], %[[TRUE]] ], [ [[TMP1]], %[[FALSE]] ]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
 {
