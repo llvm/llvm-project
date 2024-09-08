@@ -470,7 +470,8 @@ void IRNormalizer::reorderInstructions(Function &F) const {
       auto *Instruction = TopologicalSort.top();
       auto FirstNonPHIOrDbgOrAlloca = BB.getFirstNonPHIOrDbgOrAlloca();
       if (auto *Call = dyn_cast<CallInst>(&*FirstNonPHIOrDbgOrAlloca)) {
-        if (Call->getIntrinsicID() == Intrinsic::experimental_convergence_entry || 
+        if (Call->getIntrinsicID() ==
+                Intrinsic::experimental_convergence_entry ||
             Call->getIntrinsicID() == Intrinsic::experimental_convergence_loop)
           FirstNonPHIOrDbgOrAlloca++;
       }
