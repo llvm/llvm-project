@@ -24150,6 +24150,13 @@ SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
                                           DAG.getBitcast(NVT, Op2)));
   }
 
+  // (select cc, 1.0, 0.0) -> (sint_to_fp (zext cc))
+  const ConstantFPSDNode* FPTV = dyn_cast<ConstantFPSDNode>(Op1);
+  const ConstantFPSDNode* FPFV = dyn_cast<ConstantFPSDNode>(Op2);
+  if (FPTV && FPFV && FPTV->isExactlyValue(1.0) && FPFV->isExactlyValue(0.0)) {
+      return DAG.getNode(ISD::SINT_TO_FP, DL, Op.getValueType(), Cond);
+  }
+
   // Lower FP selects into a CMP/AND/ANDN/OR sequence when the necessary SSE ops
   // are available or VBLENDV if AVX is available.
   // Otherwise FP cmovs get lowered into a less efficient branch sequence later.
@@ -45844,28 +45851,6 @@ static SDValue combineSelectOfTwoConstants(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
-static SDValue combineSelectOfTwoFPConstants(SDNode *N, SelectionDAG &DAG,
-                                             const SDLoc &DL) {
-  SDValue Cond = N->getOperand(0);
-  SDValue LHS = N->getOperand(1);
-  SDValue RHS = N->getOperand(2);
-  EVT VT = N->getValueType(0);
-
-  auto *TrueC = dyn_cast<ConstantFPSDNode>(LHS);
-  auto *FalseC = dyn_cast<ConstantFPSDNode>(RHS);
-  if (!TrueC || !FalseC)
-    return SDValue();
-
-  const APFloat &TrueVal = TrueC->getValueAPF();
-  const APFloat &FalseVal = FalseC->getValueAPF();
-
-  if (TrueVal == APFloat::getOne(TrueVal.getSemantics()) && FalseVal.isZero()) {
-    return DAG.getNode(ISD::UINT_TO_FP, DL, VT, Cond);
-  }
-
-  return SDValue();
-}
-
 /// If this is a *dynamic* select (non-constant condition) and we can match
 /// this node with one of the variable blend instructions, restructure the
 /// condition so that blends can use the high (sign) bit of each element.
@@ -46356,9 +46341,6 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
   }
 
   if (SDValue V = combineSelectOfTwoConstants(N, DAG, DL))
-    return V;
-
-  if (SDValue V = combineSelectOfTwoFPConstants(N, DAG, DL))
     return V;
 
   if (N->getOpcode() == ISD::SELECT && Cond.getOpcode() == ISD::SETCC &&

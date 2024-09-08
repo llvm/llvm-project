@@ -44,78 +44,74 @@ entry:
 define <4 x float> @vselect(ptr%p, <4 x i32> %q) {
 ; X86-LABEL: vselect:
 ; X86:       # %bb.0: # %entry
+; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
-; X86-NEXT:    xorps %xmm0, %xmm0
+; X86-NEXT:    sete %cl
+; X86-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    xorps %xmm1, %xmm1
 ; X86-NEXT:    je .LBB1_1
 ; X86-NEXT:  # %bb.2: # %entry
-; X86-NEXT:    xorps %xmm1, %xmm1
+; X86-NEXT:    xorps %xmm2, %xmm2
 ; X86-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    jne .LBB1_5
 ; X86-NEXT:  .LBB1_4:
-; X86-NEXT:    movss {{.*#+}} xmm2 = [3.0E+0,0.0E+0,0.0E+0,0.0E+0]
+; X86-NEXT:    movss {{.*#+}} xmm0 = [4.0E+0,0.0E+0,0.0E+0,0.0E+0]
+; X86-NEXT:    unpcklps {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1]
 ; X86-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
-; X86-NEXT:    jne .LBB1_8
-; X86-NEXT:  .LBB1_7:
-; X86-NEXT:    movss {{.*#+}} xmm3 = [4.0E+0,0.0E+0,0.0E+0,0.0E+0]
-; X86-NEXT:    unpcklps {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1]
-; X86-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
-; X86-NEXT:    je .LBB1_10
-; X86-NEXT:    jmp .LBB1_11
+; X86-NEXT:    je .LBB1_7
+; X86-NEXT:    jmp .LBB1_8
 ; X86-NEXT:  .LBB1_1:
-; X86-NEXT:    movss {{.*#+}} xmm1 = [2.0E+0,0.0E+0,0.0E+0,0.0E+0]
+; X86-NEXT:    movss {{.*#+}} xmm2 = [3.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; X86-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    je .LBB1_4
 ; X86-NEXT:  .LBB1_5: # %entry
-; X86-NEXT:    xorps %xmm2, %xmm2
+; X86-NEXT:    xorps %xmm0, %xmm0
+; X86-NEXT:    unpcklps {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1]
 ; X86-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
-; X86-NEXT:    je .LBB1_7
+; X86-NEXT:    jne .LBB1_8
+; X86-NEXT:  .LBB1_7:
+; X86-NEXT:    movss {{.*#+}} xmm1 = [2.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; X86-NEXT:  .LBB1_8: # %entry
-; X86-NEXT:    xorps %xmm3, %xmm3
-; X86-NEXT:    unpcklps {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1]
-; X86-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
-; X86-NEXT:    jne .LBB1_11
-; X86-NEXT:  .LBB1_10:
-; X86-NEXT:    movss {{.*#+}} xmm0 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
-; X86-NEXT:  .LBB1_11: # %entry
+; X86-NEXT:    movb %cl, %al
+; X86-NEXT:    xorps %xmm0, %xmm0
+; X86-NEXT:    cvtsi2ss %eax, %xmm0
 ; X86-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; X86-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm2[0]
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: vselect:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    testl %edx, %edx
-; X64-NEXT:    xorps %xmm0, %xmm0
+; X64-NEXT:    xorl %eax, %eax
+; X64-NEXT:    testl %esi, %esi
+; X64-NEXT:    sete %sil
+; X64-NEXT:    testl %ecx, %ecx
+; X64-NEXT:    xorps %xmm1, %xmm1
 ; X64-NEXT:    je .LBB1_1
 ; X64-NEXT:  # %bb.2: # %entry
-; X64-NEXT:    xorps %xmm1, %xmm1
-; X64-NEXT:    testl %ecx, %ecx
-; X64-NEXT:    jne .LBB1_5
-; X64-NEXT:  .LBB1_4:
-; X64-NEXT:    movss {{.*#+}} xmm2 = [3.0E+0,0.0E+0,0.0E+0,0.0E+0]
-; X64-NEXT:    testl %r8d, %r8d
-; X64-NEXT:    jne .LBB1_8
-; X64-NEXT:  .LBB1_7:
-; X64-NEXT:    movss {{.*#+}} xmm3 = [4.0E+0,0.0E+0,0.0E+0,0.0E+0]
-; X64-NEXT:    unpcklps {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1]
-; X64-NEXT:    testl %esi, %esi
-; X64-NEXT:    je .LBB1_10
-; X64-NEXT:    jmp .LBB1_11
-; X64-NEXT:  .LBB1_1:
-; X64-NEXT:    movss {{.*#+}} xmm1 = [2.0E+0,0.0E+0,0.0E+0,0.0E+0]
-; X64-NEXT:    testl %ecx, %ecx
-; X64-NEXT:    je .LBB1_4
-; X64-NEXT:  .LBB1_5: # %entry
 ; X64-NEXT:    xorps %xmm2, %xmm2
 ; X64-NEXT:    testl %r8d, %r8d
+; X64-NEXT:    jne .LBB1_5
+; X64-NEXT:  .LBB1_4:
+; X64-NEXT:    movss {{.*#+}} xmm0 = [4.0E+0,0.0E+0,0.0E+0,0.0E+0]
+; X64-NEXT:    unpcklps {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1]
+; X64-NEXT:    testl %edx, %edx
 ; X64-NEXT:    je .LBB1_7
+; X64-NEXT:    jmp .LBB1_8
+; X64-NEXT:  .LBB1_1:
+; X64-NEXT:    movss {{.*#+}} xmm2 = [3.0E+0,0.0E+0,0.0E+0,0.0E+0]
+; X64-NEXT:    testl %r8d, %r8d
+; X64-NEXT:    je .LBB1_4
+; X64-NEXT:  .LBB1_5: # %entry
+; X64-NEXT:    xorps %xmm0, %xmm0
+; X64-NEXT:    unpcklps {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1]
+; X64-NEXT:    testl %edx, %edx
+; X64-NEXT:    jne .LBB1_8
+; X64-NEXT:  .LBB1_7:
+; X64-NEXT:    movss {{.*#+}} xmm1 = [2.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; X64-NEXT:  .LBB1_8: # %entry
-; X64-NEXT:    xorps %xmm3, %xmm3
-; X64-NEXT:    unpcklps {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1]
-; X64-NEXT:    testl %esi, %esi
-; X64-NEXT:    jne .LBB1_11
-; X64-NEXT:  .LBB1_10:
-; X64-NEXT:    movss {{.*#+}} xmm0 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
-; X64-NEXT:  .LBB1_11: # %entry
+; X64-NEXT:    movb %sil, %al
+; X64-NEXT:    xorps %xmm0, %xmm0
+; X64-NEXT:    cvtsi2ss %eax, %xmm0
 ; X64-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; X64-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm2[0]
 ; X64-NEXT:    retq

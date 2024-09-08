@@ -217,32 +217,28 @@ define dso_local float @test_zext_fcmp_une(float %a, float %b) nounwind {
 ; CMOV-LABEL: test_zext_fcmp_une:
 ; CMOV:       # %bb.0: # %entry
 ; CMOV-NEXT:    cmpneqss %xmm1, %xmm0
-; CMOV-NEXT:    movss {{.*#+}} xmm1 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
-; CMOV-NEXT:    andps %xmm1, %xmm0
+; CMOV-NEXT:    movd %xmm0, %eax
+; CMOV-NEXT:    andl $1, %eax
+; CMOV-NEXT:    xorps %xmm0, %xmm0
+; CMOV-NEXT:    cvtsi2ss %eax, %xmm0
 ; CMOV-NEXT:    retq
 ;
 ; NOCMOV-LABEL: test_zext_fcmp_une:
 ; NOCMOV:       # %bb.0: # %entry
+; NOCMOV-NEXT:    pushl %eax
 ; NOCMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; NOCMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; NOCMOV-NEXT:    fucompp
 ; NOCMOV-NEXT:    fnstsw %ax
 ; NOCMOV-NEXT:    # kill: def $ah killed $ah killed $ax
 ; NOCMOV-NEXT:    sahf
-; NOCMOV-NEXT:    fld1
-; NOCMOV-NEXT:    fldz
-; NOCMOV-NEXT:    jne .LBB5_1
-; NOCMOV-NEXT:  # %bb.2: # %entry
-; NOCMOV-NEXT:    jp .LBB5_5
-; NOCMOV-NEXT:  # %bb.3: # %entry
-; NOCMOV-NEXT:    fstp %st(1)
-; NOCMOV-NEXT:    jmp .LBB5_4
-; NOCMOV-NEXT:  .LBB5_1:
-; NOCMOV-NEXT:    fstp %st(0)
-; NOCMOV-NEXT:  .LBB5_4: # %entry
-; NOCMOV-NEXT:    fldz
-; NOCMOV-NEXT:  .LBB5_5: # %entry
-; NOCMOV-NEXT:    fstp %st(0)
+; NOCMOV-NEXT:    setp %al
+; NOCMOV-NEXT:    setne %cl
+; NOCMOV-NEXT:    orb %al, %cl
+; NOCMOV-NEXT:    movzbl %cl, %eax
+; NOCMOV-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; NOCMOV-NEXT:    filds {{[0-9]+}}(%esp)
+; NOCMOV-NEXT:    popl %eax
 ; NOCMOV-NEXT:    retl
 entry:
   %cmp = fcmp une float %a, %b
@@ -255,32 +251,28 @@ define dso_local float @test_zext_fcmp_oeq(float %a, float %b) nounwind {
 ; CMOV-LABEL: test_zext_fcmp_oeq:
 ; CMOV:       # %bb.0: # %entry
 ; CMOV-NEXT:    cmpeqss %xmm1, %xmm0
-; CMOV-NEXT:    movss {{.*#+}} xmm1 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
-; CMOV-NEXT:    andps %xmm1, %xmm0
+; CMOV-NEXT:    movd %xmm0, %eax
+; CMOV-NEXT:    andl $1, %eax
+; CMOV-NEXT:    xorps %xmm0, %xmm0
+; CMOV-NEXT:    cvtsi2ss %eax, %xmm0
 ; CMOV-NEXT:    retq
 ;
 ; NOCMOV-LABEL: test_zext_fcmp_oeq:
 ; NOCMOV:       # %bb.0: # %entry
+; NOCMOV-NEXT:    pushl %eax
 ; NOCMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; NOCMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; NOCMOV-NEXT:    fucompp
 ; NOCMOV-NEXT:    fnstsw %ax
 ; NOCMOV-NEXT:    # kill: def $ah killed $ah killed $ax
 ; NOCMOV-NEXT:    sahf
-; NOCMOV-NEXT:    fldz
-; NOCMOV-NEXT:    fld1
-; NOCMOV-NEXT:    jne .LBB6_1
-; NOCMOV-NEXT:  # %bb.2: # %entry
-; NOCMOV-NEXT:    jp .LBB6_5
-; NOCMOV-NEXT:  # %bb.3: # %entry
-; NOCMOV-NEXT:    fstp %st(1)
-; NOCMOV-NEXT:    jmp .LBB6_4
-; NOCMOV-NEXT:  .LBB6_1:
-; NOCMOV-NEXT:    fstp %st(0)
-; NOCMOV-NEXT:  .LBB6_4: # %entry
-; NOCMOV-NEXT:    fldz
-; NOCMOV-NEXT:  .LBB6_5: # %entry
-; NOCMOV-NEXT:    fstp %st(0)
+; NOCMOV-NEXT:    setnp %al
+; NOCMOV-NEXT:    sete %cl
+; NOCMOV-NEXT:    andb %al, %cl
+; NOCMOV-NEXT:    movzbl %cl, %eax
+; NOCMOV-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; NOCMOV-NEXT:    filds {{[0-9]+}}(%esp)
+; NOCMOV-NEXT:    popl %eax
 ; NOCMOV-NEXT:    retl
 entry:
   %cmp = fcmp oeq float %a, %b

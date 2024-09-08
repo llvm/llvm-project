@@ -13,16 +13,19 @@
 define double @load_double_no_fold(double %x, double %y) {
 ; SSE2-LABEL: load_double_no_fold:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    cmplesd %xmm0, %xmm1
-; SSE2-NEXT:    movsd {{.*#+}} xmm0 = [1.0E+0,0.0E+0]
-; SSE2-NEXT:    andpd %xmm1, %xmm0
+; SSE2-NEXT:    xorl %eax, %eax
+; SSE2-NEXT:    ucomisd %xmm1, %xmm0
+; SSE2-NEXT:    setae %al
+; SSE2-NEXT:    xorps %xmm0, %xmm0
+; SSE2-NEXT:    cvtsi2sd %eax, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: load_double_no_fold:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vcmplesd %xmm0, %xmm1, %xmm0
-; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = [1.0E+0,0.0E+0]
-; AVX-NEXT:    vandpd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    xorl %eax, %eax
+; AVX-NEXT:    vucomisd %xmm1, %xmm0
+; AVX-NEXT:    setae %al
+; AVX-NEXT:    vcvtsi2sd %eax, %xmm2, %xmm0
 ; AVX-NEXT:    retq
 
   %cmp = fcmp oge double %x, %y
@@ -34,16 +37,19 @@ define double @load_double_no_fold(double %x, double %y) {
 define float @load_float_no_fold(float %x, float %y) {
 ; SSE2-LABEL: load_float_no_fold:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    cmpless %xmm0, %xmm1
-; SSE2-NEXT:    movss {{.*#+}} xmm0 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
-; SSE2-NEXT:    andps %xmm1, %xmm0
+; SSE2-NEXT:    xorl %eax, %eax
+; SSE2-NEXT:    ucomiss %xmm1, %xmm0
+; SSE2-NEXT:    setae %al
+; SSE2-NEXT:    xorps %xmm0, %xmm0
+; SSE2-NEXT:    cvtsi2ss %eax, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: load_float_no_fold:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vcmpless %xmm0, %xmm1, %xmm0
-; AVX-NEXT:    vmovss {{.*#+}} xmm1 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
-; AVX-NEXT:    vandps %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    xorl %eax, %eax
+; AVX-NEXT:    vucomiss %xmm1, %xmm0
+; AVX-NEXT:    setae %al
+; AVX-NEXT:    vcvtsi2ss %eax, %xmm2, %xmm0
 ; AVX-NEXT:    retq
 
   %cmp = fcmp oge float %x, %y

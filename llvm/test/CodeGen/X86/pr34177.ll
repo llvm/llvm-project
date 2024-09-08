@@ -8,27 +8,33 @@ target triple = "x86_64-unknown-linux-gnu"
 define void @test(<4 x i64> %a, <4 x x86_fp80> %b, ptr %c) local_unnamed_addr {
 ; AVX512F-LABEL: test:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vmovq %xmm0, %rax
-; AVX512F-NEXT:    vpextrq $1, %xmm0, %rcx
-; AVX512F-NEXT:    vextracti128 $1, %ymm0, %xmm0
-; AVX512F-NEXT:    vmovq %xmm0, %rdx
-; AVX512F-NEXT:    vpextrq $1, %xmm0, %rsi
-; AVX512F-NEXT:    cmpq $3, %rsi
-; AVX512F-NEXT:    fld1
-; AVX512F-NEXT:    fldz
-; AVX512F-NEXT:    fld %st(0)
-; AVX512F-NEXT:    fcmove %st(2), %st
-; AVX512F-NEXT:    cmpq $2, %rdx
-; AVX512F-NEXT:    fld %st(1)
-; AVX512F-NEXT:    fcmove %st(3), %st
-; AVX512F-NEXT:    cmpq $1, %rcx
-; AVX512F-NEXT:    fld %st(2)
-; AVX512F-NEXT:    fcmove %st(4), %st
-; AVX512F-NEXT:    testq %rax, %rax
-; AVX512F-NEXT:    fxch %st(3)
-; AVX512F-NEXT:    fcmove %st(4), %st
-; AVX512F-NEXT:    fstp %st(4)
 ; AVX512F-NEXT:    fldt {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vmovq %xmm0, %rcx
+; AVX512F-NEXT:    xorl %eax, %eax
+; AVX512F-NEXT:    testq %rcx, %rcx
+; AVX512F-NEXT:    sete %al
+; AVX512F-NEXT:    vpextrq $1, %xmm0, %rcx
+; AVX512F-NEXT:    xorl %edx, %edx
+; AVX512F-NEXT:    cmpq $1, %rcx
+; AVX512F-NEXT:    sete %dl
+; AVX512F-NEXT:    vextracti128 $1, %ymm0, %xmm0
+; AVX512F-NEXT:    vmovq %xmm0, %rcx
+; AVX512F-NEXT:    xorl %esi, %esi
+; AVX512F-NEXT:    cmpq $2, %rcx
+; AVX512F-NEXT:    sete %sil
+; AVX512F-NEXT:    vpextrq $1, %xmm0, %rcx
+; AVX512F-NEXT:    xorl %r8d, %r8d
+; AVX512F-NEXT:    cmpq $3, %rcx
+; AVX512F-NEXT:    sete %r8b
+; AVX512F-NEXT:    movw %r8w, -{{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    movw %si, -{{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    movw %dx, -{{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    filds -{{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    filds -{{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    filds -{{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    filds -{{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    fxch %st(4)
 ; AVX512F-NEXT:    fstpt 70(%rdi)
 ; AVX512F-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; AVX512F-NEXT:    fstpt 50(%rdi)
@@ -36,7 +42,7 @@ define void @test(<4 x i64> %a, <4 x x86_fp80> %b, ptr %c) local_unnamed_addr {
 ; AVX512F-NEXT:    fstpt 30(%rdi)
 ; AVX512F-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; AVX512F-NEXT:    fstpt 10(%rdi)
-; AVX512F-NEXT:    fxch %st(1)
+; AVX512F-NEXT:    fxch %st(2)
 ; AVX512F-NEXT:    fadd %st, %st(0)
 ; AVX512F-NEXT:    fstpt 60(%rdi)
 ; AVX512F-NEXT:    fadd %st, %st(0)
@@ -48,26 +54,32 @@ define void @test(<4 x i64> %a, <4 x x86_fp80> %b, ptr %c) local_unnamed_addr {
 ;
 ; AVX512VL-LABEL: test:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vpcmpeqq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %k0
-; AVX512VL-NEXT:    kshiftrb $2, %k0, %k1
-; AVX512VL-NEXT:    kmovd %k0, %eax
-; AVX512VL-NEXT:    testb $2, %al
-; AVX512VL-NEXT:    fld1
-; AVX512VL-NEXT:    fldz
-; AVX512VL-NEXT:    fld %st(0)
-; AVX512VL-NEXT:    fcmovne %st(2), %st
-; AVX512VL-NEXT:    testb $1, %al
-; AVX512VL-NEXT:    fld %st(1)
-; AVX512VL-NEXT:    fcmovne %st(3), %st
+; AVX512VL-NEXT:    vpcmpeqq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %k1
+; AVX512VL-NEXT:    kshiftrb $1, %k1, %k2
+; AVX512VL-NEXT:    kshiftrb $2, %k1, %k0
 ; AVX512VL-NEXT:    kmovd %k1, %eax
-; AVX512VL-NEXT:    testb $2, %al
-; AVX512VL-NEXT:    fld %st(2)
-; AVX512VL-NEXT:    fcmovne %st(4), %st
-; AVX512VL-NEXT:    testb $1, %al
-; AVX512VL-NEXT:    fxch %st(3)
-; AVX512VL-NEXT:    fcmovne %st(4), %st
-; AVX512VL-NEXT:    fstp %st(4)
 ; AVX512VL-NEXT:    fldt {{[0-9]+}}(%rsp)
+; AVX512VL-NEXT:    andb $1, %al
+; AVX512VL-NEXT:    movzbl %al, %eax
+; AVX512VL-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
+; AVX512VL-NEXT:    kmovd %k2, %eax
+; AVX512VL-NEXT:    andb $1, %al
+; AVX512VL-NEXT:    movzbl %al, %eax
+; AVX512VL-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
+; AVX512VL-NEXT:    kshiftrb $1, %k0, %k1
+; AVX512VL-NEXT:    kmovd %k1, %eax
+; AVX512VL-NEXT:    andb $1, %al
+; AVX512VL-NEXT:    movzbl %al, %eax
+; AVX512VL-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
+; AVX512VL-NEXT:    kmovd %k0, %eax
+; AVX512VL-NEXT:    andb $1, %al
+; AVX512VL-NEXT:    movzbl %al, %eax
+; AVX512VL-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
+; AVX512VL-NEXT:    filds -{{[0-9]+}}(%rsp)
+; AVX512VL-NEXT:    filds -{{[0-9]+}}(%rsp)
+; AVX512VL-NEXT:    filds -{{[0-9]+}}(%rsp)
+; AVX512VL-NEXT:    filds -{{[0-9]+}}(%rsp)
+; AVX512VL-NEXT:    fxch %st(4)
 ; AVX512VL-NEXT:    fstpt 70(%rdi)
 ; AVX512VL-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; AVX512VL-NEXT:    fstpt 50(%rdi)
@@ -75,11 +87,11 @@ define void @test(<4 x i64> %a, <4 x x86_fp80> %b, ptr %c) local_unnamed_addr {
 ; AVX512VL-NEXT:    fstpt 30(%rdi)
 ; AVX512VL-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; AVX512VL-NEXT:    fstpt 10(%rdi)
-; AVX512VL-NEXT:    fxch %st(1)
-; AVX512VL-NEXT:    fadd %st, %st(0)
-; AVX512VL-NEXT:    fstpt 20(%rdi)
+; AVX512VL-NEXT:    fxch %st(2)
 ; AVX512VL-NEXT:    fadd %st, %st(0)
 ; AVX512VL-NEXT:    fstpt (%rdi)
+; AVX512VL-NEXT:    fadd %st, %st(0)
+; AVX512VL-NEXT:    fstpt 20(%rdi)
 ; AVX512VL-NEXT:    fadd %st, %st(0)
 ; AVX512VL-NEXT:    fstpt 60(%rdi)
 ; AVX512VL-NEXT:    fadd %st, %st(0)

@@ -14,7 +14,6 @@ define void @PR24199(i32 %a0) {
 ; CHECK-NEXT:    subq $16, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset %rbx, -16
-; CHECK-NEXT:    movl %edi, %ebx
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    je .LBB0_2
@@ -25,20 +24,18 @@ define void @PR24199(i32 %a0) {
 ; CHECK-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-NEXT:  .LBB0_3: # %if.end
 ; CHECK-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    xorl %ebx, %ebx
+; CHECK-NEXT:    testl %edi, %edi
+; CHECK-NEXT:    setne %bl
 ; CHECK-NEXT:    callq foo@PLT
 ; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm2 # 4-byte Reload
 ; CHECK-NEXT:    # xmm2 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    mulss %xmm0, %xmm2
-; CHECK-NEXT:    movss {{.*#+}} xmm1 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
-; CHECK-NEXT:    addss %xmm1, %xmm0
-; CHECK-NEXT:    addss %xmm2, %xmm0
-; CHECK-NEXT:    movss %xmm0, (%rax)
-; CHECK-NEXT:    testl %ebx, %ebx
-; CHECK-NEXT:    jne .LBB0_5
-; CHECK-NEXT:  # %bb.4: # %if.end
-; CHECK-NEXT:    xorps %xmm1, %xmm1
-; CHECK-NEXT:  .LBB0_5: # %if.end
+; CHECK-NEXT:    addss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; CHECK-NEXT:    addss %xmm0, %xmm2
+; CHECK-NEXT:    cvtsi2ss %ebx, %xmm1
+; CHECK-NEXT:    movss %xmm2, (%rax)
 ; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    addss %xmm0, %xmm0
 ; CHECK-NEXT:    addss %xmm1, %xmm0
