@@ -19,7 +19,7 @@ LLVM_LIBC_FUNCTION(char *, ctime_r, (const time_t *t_ptr, char *buffer)) {
   if (t_ptr > TimeConstants::MAXIMUM_32_BIT_VALUE) {
     return nullptr;
   }
-  return time_utils::asctime(localtime(t_ptr), buffer, TimeConstants::ASCTIME_MAX_BYTES);
+  return time_utils::asctime(time_utils::localtime(t_ptr), buffer, TimeConstants::ASCTIME_MAX_BYTES);
 }
 
 } // namespace LIBC_NAMESPACE_DECL
