@@ -757,9 +757,7 @@ void InitListChecker::FillInEmptyInitForField(unsigned Init, FieldDecl *Field,
         // using a default member initializer.
         // CWG1815 (https://wg21.link/CWG1815).
         EnterExpressionEvaluationContext RebuildDefaultInit(
-            SemaRef, Sema::ExpressionEvaluationContext::PotentiallyEvaluated,
-            /*LambdaContextDecl=*/nullptr,
-            Sema::ExpressionEvaluationContextRecord::EK_Other, true);
+            SemaRef, Sema::ExpressionEvaluationContext::PotentiallyEvaluated);
         // Just copy previous record, make sure we haven't forget anything.
         SemaRef.currentEvaluationContext() = SemaRef.parentEvaluationContext();
         SemaRef.currentEvaluationContext().RebuildDefaultArgOrDefaultInit =
