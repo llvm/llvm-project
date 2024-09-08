@@ -8229,22 +8229,19 @@ static Instruction *foldFCmpWithFloorAndCeil(FCmpInst &I,
     // fcmp ugt floor(x), x => fcmp ugt -inf, x
     if (FloorX)
       return new FCmpInst(FCmpInst::FCMP_UGT,
-                          ConstantFP::getInfinity(RHS->getType(), true), RHS,
-                          "", &I);
+                          ConstantFP::getInfinity(OpType, true), RHS, "", &I);
     break;
   case FCmpInst::FCMP_UGE:
     // fcmp uge ceil(x), x => fcmp uge inf, x
     if (CeilX)
       return new FCmpInst(FCmpInst::FCMP_UGE,
-                          ConstantFP::getInfinity(RHS->getType(), false), RHS,
-                          "", &I);
+                          ConstantFP::getInfinity(OpType, false), RHS, "", &I);
     break;
   case FCmpInst::FCMP_ULT:
     // fcmp ult ceil(x), x => fcmp ult inf, x
     if (CeilX)
       return new FCmpInst(FCmpInst::FCMP_ULT,
-                          ConstantFP::getInfinity(RHS->getType(), false), RHS,
-                          "", &I);
+                          ConstantFP::getInfinity(OpType, false), RHS, "", &I);
     break;
   default:
     break;
