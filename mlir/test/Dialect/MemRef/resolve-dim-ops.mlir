@@ -12,6 +12,71 @@ func.func @dim_out_of_bounds(%m : memref<7x8xf32>) -> index {
 
 // -----
 
+// CHECK-LABEL:   func.func @dyn_dim_of_memref_collapse_shape(
+// CHECK-SAME:                                            %[[VAL_0:.*]]: memref<?x4x8x32xsi8>) -> index {
+// CHECK:           %[[VAL_1:.*]] = arith.constant 0 : index
+// CHECK:           %[[VAL_2:.*]] = memref.dim %[[VAL_0]], %[[VAL_1]] : memref<?x4x8x32xsi8>
+// CHECK:           return %[[VAL_2]] : index
+// CHECK:         }
+
+func.func @dyn_dim_of_memref_collapse_shape(%arg0: memref<?x4x8x32xsi8>)
+    -> index
+{
+    %c0 = arith.constant 0 : index
+    %dim_16 = memref.dim %arg0, %c0 : memref<?x4x8x32xsi8>
+    %alloc_17 = memref.alloc(%dim_16) {alignment = 32 : i64} : memref<?x32x4x8xsi8>
+    %collapse_shape = memref.collapse_shape %alloc_17 [[0], [1], [2, 3]] : memref<?x32x4x8xsi8> into memref<?x32x32xsi8>
+    %dim_18 = memref.dim %collapse_shape, %c0 : memref<?x32x32xsi8>
+    return %dim_18: index
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @resolve_when_collapse_after_collapse(
+// CHECK-SAME:                                                %[[VAL_0:.*]]: memref<?x4x8x32xsi8>) -> index {
+// CHECK:           %[[VAL_1:.*]] = arith.constant 0 : index
+// CHECK:           %[[VAL_2:.*]] = memref.dim %[[VAL_0]], %[[VAL_1]] : memref<?x4x8x32xsi8>
+// CHECK:           return %[[VAL_2]] : index
+// CHECK:         }
+
+func.func @resolve_when_collapse_after_collapse(%arg0: memref<?x4x8x32xsi8>)
+    -> index
+{
+    %c0 = arith.constant 0 : index
+    %dim_16 = memref.dim %arg0, %c0 : memref<?x4x8x32xsi8>
+    %alloc_17 = memref.alloc(%dim_16) {alignment = 32 : i64} : memref<?x32x4x8xsi8>
+    %collapse_shape = memref.collapse_shape %alloc_17 [[0], [1], [2, 3]] : memref<?x32x4x8xsi8> into memref<?x32x32xsi8>
+    %collapse_shape_1 = memref.collapse_shape %collapse_shape [[0], [1, 2]] : memref<?x32x32xsi8> into memref<?x1024xsi8>
+    %dim_18 = memref.dim %collapse_shape_1, %c0 : memref<?x1024xsi8>
+    return %dim_18: index
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @unfoldable_memref_collapse_shape(
+// CHECK-SAME:                                                %[[VAL_0:.*]]: memref<1x?x8x32xsi8>) -> index {
+// CHECK:           %[[VAL_1:.*]] = arith.constant 1 : index
+// CHECK:           %[[VAL_2:.*]] = arith.constant 2 : index
+// CHECK:           %[[VAL_3:.*]] = memref.dim %[[VAL_0]], %[[VAL_1]] : memref<1x?x8x32xsi8>
+// CHECK:           %[[VAL_4:.*]] = memref.alloc(%[[VAL_3]]) {alignment = 32 : i64} : memref<1x32x?x8xsi8>
+// CHECK:           %[[VAL_5:.*]] = memref.collapse_shape %[[VAL_4]] {{\[\[}}0], [1], [2, 3]] : memref<1x32x?x8xsi8> into memref<1x32x?xsi8>
+// CHECK:           %[[VAL_6:.*]] = memref.dim %[[VAL_5]], %[[VAL_2]] : memref<1x32x?xsi8>
+// CHECK:           return %[[VAL_6]] : index
+// CHECK:         }
+func.func @unfoldable_memref_collapse_shape(%arg0: memref<1x?x8x32xsi8>)
+    -> index
+{
+    %c1 = arith.constant 1 : index
+    %c2 = arith.constant 2 : index
+    %dim_1 = memref.dim %arg0, %c1 : memref<1x?x8x32xsi8>
+    %alloc_0 = memref.alloc(%dim_1) {alignment = 32 : i64} : memref<1x32x?x8xsi8>
+    %collapse_shape = memref.collapse_shape %alloc_0 [[0], [1], [2, 3]] : memref<1x32x?x8xsi8> into memref<1x32x?xsi8>
+    %dim_3 = memref.dim %collapse_shape, %c2 : memref<1x32x?xsi8>
+    return %dim_3: index
+}
+
+// -----
+
 // CHECK-LABEL: func @dim_out_of_bounds_2(
 //  CHECK-NEXT:   arith.constant
 //  CHECK-NEXT:   arith.constant
