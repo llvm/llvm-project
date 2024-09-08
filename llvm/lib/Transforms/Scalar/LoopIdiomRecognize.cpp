@@ -97,6 +97,7 @@ using namespace llvm;
 STATISTIC(NumMemSet, "Number of memset's formed from loop stores");
 STATISTIC(NumMemCpy, "Number of memcpy's formed from loop load+stores");
 STATISTIC(NumMemMove, "Number of memmove's formed from loop load+stores");
+STATISTIC(NumStrLen, "Number of strlen's formed from loop loads");
 STATISTIC(
     NumShiftUntilBitTest,
     "Number of uncountable loops recognized as 'shift until bitttest' idiom");
@@ -124,6 +125,14 @@ static cl::opt<bool, true>
                       cl::desc("Proceed with loop idiom recognize pass, but do "
                                "not convert loop(s) to memcpy."),
                       cl::location(DisableLIRP::Memcpy), cl::init(false),
+                      cl::ReallyHidden);
+
+bool DisableLIRP::Strlen;
+static cl::opt<bool, true>
+    DisableLIRPStrlen("disable-" DEBUG_TYPE "-strlen",
+                      cl::desc("Proceed with loop idiom recognize pass, but do "
+                               "not convert loop(s) to strlen."),
+                      cl::location(DisableLIRP::Strlen), cl::init(false),
                       cl::ReallyHidden);
 
 static cl::opt<bool> UseLIRCodeSizeHeurs(
@@ -246,6 +255,7 @@ private:
 
   bool recognizeShiftUntilBitTest();
   bool recognizeShiftUntilZero();
+  bool recognizeAndInsertStrLen();
 
   /// @}
 };
@@ -1512,9 +1522,11 @@ static Value *matchCondition(BranchInst *BI, BasicBlock *LoopEntry,
   if (!Cond)
     return nullptr;
 
-  ConstantInt *CmpZero = dyn_cast<ConstantInt>(Cond->getOperand(1));
-  if (!CmpZero || !CmpZero->isZero())
-    return nullptr;
+  if (!isa<ConstantPointerNull>(Cond->getOperand(1))) {
+    ConstantInt *CmpZero = dyn_cast<ConstantInt>(Cond->getOperand(1));
+    if (!CmpZero || !CmpZero->isZero())
+      return nullptr;
+  }
 
   BasicBlock *TrueSucc = BI->getSuccessor(0);
   BasicBlock *FalseSucc = BI->getSuccessor(1);
@@ -1527,6 +1539,284 @@ static Value *matchCondition(BranchInst *BI, BasicBlock *LoopEntry,
     return Cond->getOperand(0);
 
   return nullptr;
+}
+
+/// getCandidateResInstr - If there is strlen calculated, return the Result
+/// instruction based on the \p OpWidth passed, else return nullptr
+static Instruction *getCandidateResInstr(Instruction *EndAddress,
+                                         Value *StartAddress,
+                                         unsigned OpWidth) {
+  using namespace llvm::PatternMatch;
+
+  assert(StartAddress && "Valid start address required.");
+
+  // lambda expression to check that the instruction has a single user
+  auto GetSingleUser = [](Instruction *I) -> User * {
+    if (I->hasOneUse())
+      return *I->user_begin();
+    return nullptr;
+  };
+
+  // The pointer to the end address should only have one use which is a pointer
+  // to int instruction.
+  auto *TmpUser = GetSingleUser(EndAddress);
+  if (!TmpUser)
+    return nullptr;
+
+  if (PtrToIntInst *PToI = dyn_cast<PtrToIntInst>(TmpUser)) {
+    // The only user of the PtrToIntInst should be the sub instruction that
+    // calculates the difference b/w the two pointer operands.
+    TmpUser = GetSingleUser(PToI);
+    if (!TmpUser)
+      return nullptr;
+    Instruction *Inst = dyn_cast<Instruction>(TmpUser);
+
+    if (!Inst || Inst->getOpcode() != Instruction::Sub ||
+        Inst->getOperand(0) != PToI)
+      return nullptr;
+    Value *MatchAddr;
+    if (match(Inst->getOperand(1), m_PtrToInt(m_Value(MatchAddr)))) {
+      if (MatchAddr != StartAddress)
+        return nullptr;
+
+      // We found the candidate sub instruction
+      switch (OpWidth) {
+      case 8:
+        return Inst;
+      default:
+        return nullptr;
+      }
+    }
+  }
+
+  return nullptr;
+}
+
+/// Recognizes a strlen idiom by checking for loops that increment
+/// a char pointer and then subtract with the base pointer.
+///
+/// If detected, transforms the relevant code to a strlen function
+/// call, and returns true; otherwise, returns false.
+///
+/// The core idiom we are trying to detect is:
+/// \code
+///     if (str == NULL)
+///       goto loop-exit // the precondition of the loop
+///     start = str;
+///     do {
+///       str++;
+///     } while(*str!='\0');
+///     return (str - start);
+/// loop-exit:
+/// \endcode
+///
+/// The transformed output is similar to below c-code:
+/// \code
+///     if (str == NULL)
+///       goto loop-exit // the precondition of the loop
+///     return strlen(str);
+/// \endcode
+bool LoopIdiomRecognize::recognizeAndInsertStrLen() {
+  if (DisableLIRPStrlen)
+    return false;
+
+  // Give up if the loop has multiple blocks or multiple backedges.
+  if (CurLoop->getNumBackEdges() != 1 || CurLoop->getNumBlocks() != 1)
+    return false;
+
+  // It should have a preheader containing nothing but an unconditional branch.
+  auto *Pre = CurLoop->getLoopPreheader();
+  if (!Pre || &Pre->front() != Pre->getTerminator())
+    return false;
+
+  auto *EntryBI = dyn_cast<BranchInst>(Pre->getTerminator());
+  if (!EntryBI || EntryBI->isConditional())
+    return false;
+
+  // It should have a precondition block
+  auto *PreCondBB = Pre->getSinglePredecessor();
+  if (!PreCondBB)
+    return false;
+
+  // The precondition terminator instruction should skip the loop body based on
+  // an icmp with zero/null.
+  if (!matchCondition(dyn_cast<BranchInst>(PreCondBB->getTerminator()), Pre))
+    return false;
+
+  // The loop exit must be conditioned on an icmp with 0.
+  // The icmp operand has to be a load on some SSA reg that increments
+  // by 1 in the loop.
+  auto *LoopBody = *(CurLoop->block_begin());
+  auto *LoopTerm = dyn_cast<BranchInst>(LoopBody->getTerminator());
+  auto *LoopCond = matchCondition(LoopTerm, LoopBody);
+
+  if (!LoopCond)
+    return false;
+
+  auto *LoopLoad = dyn_cast<LoadInst>(LoopCond);
+  if (!LoopLoad || LoopLoad->getPointerAddressSpace() != 0)
+    return false;
+
+  Type *OperandType = LoopLoad->getType();
+  if (!OperandType || !OperandType->isIntegerTy())
+    return false;
+
+  // See if the pointer expression is an AddRec with step 1 ({n,+,1}) on
+  // the loop, indicating strlen calculation.
+  auto *IncPtr = LoopLoad->getPointerOperand();
+  const SCEVAddRecExpr *LoadEv = dyn_cast<SCEVAddRecExpr>(SE->getSCEV(IncPtr));
+  if (!LoadEv || LoadEv->getLoop() != CurLoop || !LoadEv->isAffine())
+    return false;
+
+  const SCEVConstant *Step =
+      dyn_cast<SCEVConstant>(LoadEv->getStepRecurrence(*SE));
+  if (!Step)
+    return false;
+
+  unsigned int ConstIntValue = 0;
+  if (ConstantInt *CI = dyn_cast<ConstantInt>(Step->getValue()))
+    ConstIntValue = CI->getZExtValue();
+
+  unsigned OpWidth = OperandType->getIntegerBitWidth();
+  if (OpWidth != ConstIntValue * 8)
+    return false;
+  if (OpWidth != 8)
+    return false;
+
+  // Scan every instruction in the loop to ensure there are no side effects.
+  for (auto &I : *LoopBody)
+    if (I.mayHaveSideEffects())
+      return false;
+
+  auto *LoopExitBB = CurLoop->getExitBlock();
+  if (!LoopExitBB)
+    return false;
+
+  // Check that the loop exit block is valid:
+  // It needs to have exactly one LCSSA Phi which is an AddRec.
+  PHINode *LCSSAPhi = nullptr;
+  for (PHINode &PN : LoopExitBB->phis()) {
+    if (!LCSSAPhi && PN.getNumIncomingValues() == 1)
+      LCSSAPhi = &PN;
+    else
+      return false;
+  }
+
+  if (!LCSSAPhi || !SE->isSCEVable(LCSSAPhi->getType()))
+    return false;
+
+  if (LCSSAPhi->getIncomingValueForBlock(LoopBody) !=
+      LoopLoad->getPointerOperand())
+    return false;
+
+  const SCEVAddRecExpr *LCSSAEv =
+      dyn_cast<SCEVAddRecExpr>(SE->getSCEV(LCSSAPhi->getIncomingValue(0)));
+
+  if (!LCSSAEv || !dyn_cast<SCEVUnknown>(SE->getPointerBase(LCSSAEv)) ||
+      !LCSSAEv->isAffine())
+    return false;
+
+  // We can now expand the base of the str
+  IRBuilder<> Builder(Pre->getTerminator());
+
+  PHINode *LoopPhi = &*LoopBody->phis().begin();
+  if (!LoopPhi || ++LoopBody->phis().begin() != LoopBody->phis().end())
+    return false;
+  Value *PreVal = LoopBody->phis().begin()->getIncomingValueForBlock(Pre);
+  if (!PreVal)
+    return false;
+
+  Value *Expanded = nullptr;
+  if (auto *GEP = dyn_cast<GetElementPtrInst>(LoopLoad->getPointerOperand())) {
+    if (GEP->getPointerOperand() != LoopPhi)
+      return false;
+    GetElementPtrInst *NewGEP =
+        GetElementPtrInst::Create(GEP->getSourceElementType(), PreVal,
+                                  SmallVector<Value *, 4>(GEP->indices()),
+                                  "newgep", Pre->getTerminator());
+    Expanded = NewGEP;
+  } else if (LoopLoad->getPointerOperand() == LoopPhi)
+    Expanded = PreVal;
+  if (!Expanded)
+    return false;
+
+  // Check that the LoopExitBB is calculating the string length and identify
+  // the instruction that has the string length calculation
+  Instruction *ResInst = getCandidateResInstr(LCSSAPhi, PreVal, OpWidth);
+  if (!ResInst)
+    return false;
+
+  // Ensure that the GEP has the correct index if the pointer was modified.
+  // This can happen when the pointer in the user code, outside the loop,
+  // walks past a certain pre-checked index of the string.
+  if (auto *GEP = dyn_cast<GEPOperator>(Expanded)) {
+    if (GEP->getNumOperands() != 2)
+      return false;
+
+    ConstantInt *I0 = dyn_cast<ConstantInt>(GEP->getOperand(1));
+    if (!I0)
+      return false;
+
+    int64_t Index = I0->getSExtValue(); // GEP index
+    auto *SAdd = dyn_cast<SCEVAddExpr>(LoadEv->getStart());
+    if (!SAdd || SAdd->getNumOperands() != 2)
+      return false;
+
+    auto *SAdd0 = dyn_cast<SCEVConstant>(SAdd->getOperand(0));
+    if (!SAdd0)
+      return false;
+
+    ConstantInt *CInt = SAdd0->getValue(); // SCEV index
+    assert(CInt && "Expecting CInt to be valid.");
+    int64_t Offset = CInt->getSExtValue();
+
+    // Update the index based on the Offset
+    assert((Offset * 8) % GEP->getSourceElementType()->getIntegerBitWidth() ==
+               0 &&
+           "Invalid offset");
+    int64_t NewIndex =
+        (Offset * 8) / GEP->getSourceElementType()->getIntegerBitWidth() -
+        Index;
+    Value *NewIndexVal =
+        ConstantInt::get(GEP->getOperand(1)->getType(), NewIndex);
+    GEP->setOperand(1, NewIndexVal);
+  }
+
+  Value *StrLenFunc = nullptr;
+  switch (OpWidth) {
+  case 8:
+    StrLenFunc = emitStrLen(Expanded, Builder, *DL, TLI);
+    break;
+  }
+
+  assert(StrLenFunc && "Failed to emit strlen function.");
+
+  // Replace the subtraction instruction by the result of strlen
+  ResInst->replaceAllUsesWith(StrLenFunc);
+
+  // Remove the loop-exit branch and delete dead instructions
+  RecursivelyDeleteTriviallyDeadInstructions(ResInst, TLI);
+
+  ConstantInt *NewLoopCond = LoopTerm->getSuccessor(0) == LoopBody
+                                 ? Builder.getFalse()
+                                 : Builder.getTrue();
+  LoopTerm->setCondition(NewLoopCond);
+
+  deleteDeadInstruction(cast<Instruction>(LoopCond));
+  deleteDeadInstruction(cast<Instruction>(IncPtr));
+  SE->forgetLoop(CurLoop);
+
+  LLVM_DEBUG(dbgs() << "  Formed strlen: " << *StrLenFunc << "\n");
+
+  ORE.emit([&]() {
+    return OptimizationRemark(DEBUG_TYPE, "recognizeAndInsertStrLen",
+                              CurLoop->getStartLoc(), Pre)
+           << "Transformed pointer difference into a call to strlen() function";
+  });
+
+  ++NumStrLen;
+
+  return true;
 }
 
 /// Check if the given conditional branch is based on an unsigned less-than
