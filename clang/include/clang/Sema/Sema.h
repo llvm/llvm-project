@@ -9147,8 +9147,7 @@ public:
   ///
   /// \returns true if lookup succeeded, false if it failed.
   bool LookupQualifiedName(LookupResult &R, DeclContext *LookupCtx,
-                           bool InUnqualifiedLookup = false,
-                           IdentifierInfo const *IdentifierOverride = nullptr);
+                           bool InUnqualifiedLookup = false);
 
   /// Performs qualified name lookup or special type of lookup for
   /// "__super::" scope specifier.

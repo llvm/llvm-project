@@ -2390,8 +2390,7 @@ static bool LookupQualifiedNameInUsingDirectives(Sema &S, LookupResult &R,
 }
 
 bool Sema::LookupQualifiedName(LookupResult &R, DeclContext *LookupCtx,
-                               bool InUnqualifiedLookup,
-                               IdentifierInfo const *IdentifierOverride) {
+                               bool InUnqualifiedLookup) {
   assert(LookupCtx && "Sema::LookupQualifiedName requires a lookup context");
 
   if (!R.getLookupName())
