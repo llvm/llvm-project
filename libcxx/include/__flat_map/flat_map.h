@@ -239,19 +239,15 @@ public:
   // state if an exception is thrown
   _LIBCPP_HIDE_FROM_ABI flat_map(const flat_map&) = default;
 
-#  if defined(_LIBCPP_HAS_NO_EXCEPTIONS)
-  _LIBCPP_HIDE_FROM_ABI flat_map(flat_map&&) = default;
-#  else // defined(_LIBCPP_HAS_NO_EXCEPTIONS)
   _LIBCPP_HIDE_FROM_ABI flat_map(flat_map&& __other) noexcept(
       is_nothrow_move_constructible_v<_KeyContainer> && is_nothrow_move_constructible_v<_MappedContainer> &&
       is_nothrow_move_constructible_v<_Compare>) try
       : __containers_(std::move(__other.__containers_)), __compare_(std::move(__other.__compare_)) {
+    __other.clear();
   } catch (...) {
     __other.clear();
     throw;
   }
-
-#  endif // defined(_LIBCPP_HAS_NO_EXCEPTIONS)
 
   template <class _Allocator>
     requires __allocator_ctor_constraint<_Allocator>
@@ -264,17 +260,24 @@ public:
 
   template <class _Allocator>
     requires __allocator_ctor_constraint<_Allocator>
-  _LIBCPP_HIDE_FROM_ABI flat_map(flat_map&& __other, const _Allocator& __alloc)
+  _LIBCPP_HIDE_FROM_ABI flat_map(flat_map&& __other, const _Allocator& __alloc) try
       : flat_map(__ctor_uses_allocator_tag{},
                  __alloc,
                  std::move(__other.__containers_.keys),
                  std::move(__other.__containers_.values),
-                 std::move(__other.__compare_)) {}
+                 std::move(__other.__compare_)) {
+    __other.clear();
+  } catch (...) {
+    __other.clear();
+    throw;
+  }
 
   _LIBCPP_HIDE_FROM_ABI flat_map(
       key_container_type __key_cont, mapped_container_type __mapped_cont, const key_compare& __comp = key_compare())
       : __containers_{.keys = std::move(__key_cont), .values = std::move(__mapped_cont)}, __compare_(__comp) {
     __sort_and_unique();
+    _LIBCPP_ASSERT_VALID_INPUT_RANGE(__containers.keys.size() == __containers.values.size(),
+                                     "flat_map keys and mapped containers have different size");
   }
 
   template <class _Allocator>
@@ -379,29 +382,29 @@ public:
   }
 
   template <input_iterator _InputIterator>
-  _LIBCPP_HIDE_FROM_ABI flat_map(
-      sorted_unique_t __s, _InputIterator __first, _InputIterator __last, const key_compare& __comp = key_compare())
+  _LIBCPP_HIDE_FROM_ABI
+  flat_map(sorted_unique_t, _InputIterator __first, _InputIterator __last, const key_compare& __comp = key_compare())
       : __containers_(), __compare_(__comp) {
-    insert(__s, __first, __last);
+    insert(sorted_unique, __first, __last);
   }
   template <input_iterator _InputIterator, class _Allocator>
     requires __allocator_ctor_constraint<_Allocator>
   _LIBCPP_HIDE_FROM_ABI
-  flat_map(sorted_unique_t __s,
+  flat_map(sorted_unique_t,
            _InputIterator __first,
            _InputIterator __last,
            const key_compare& __comp,
            const _Allocator& __alloc)
       : flat_map(__ctor_uses_allocator_empty_tag{}, __alloc, __comp) {
-    insert(__s, __first, __last);
+    insert(sorted_unique, __first, __last);
   }
 
   template <input_iterator _InputIterator, class _Allocator>
     requires __allocator_ctor_constraint<_Allocator>
   _LIBCPP_HIDE_FROM_ABI
-  flat_map(sorted_unique_t __s, _InputIterator __first, _InputIterator __last, const _Allocator& __alloc)
+  flat_map(sorted_unique_t, _InputIterator __first, _InputIterator __last, const _Allocator& __alloc)
       : flat_map(__ctor_uses_allocator_empty_tag{}, __alloc) {
-    insert(__s, __first, __last);
+    insert(sorted_unique, __first, __last);
   }
 
   _LIBCPP_HIDE_FROM_ABI flat_map(initializer_list<value_type> __il, const key_compare& __comp = key_compare())
@@ -419,19 +422,19 @@ public:
       : flat_map(__il.begin(), __il.end(), __alloc) {}
 
   _LIBCPP_HIDE_FROM_ABI
-  flat_map(sorted_unique_t __s, initializer_list<value_type> __il, const key_compare& __comp = key_compare())
-      : flat_map(__s, __il.begin(), __il.end(), __comp) {}
+  flat_map(sorted_unique_t, initializer_list<value_type> __il, const key_compare& __comp = key_compare())
+      : flat_map(sorted_unique, __il.begin(), __il.end(), __comp) {}
 
   template <class _Allocator>
     requires __allocator_ctor_constraint<_Allocator>
   _LIBCPP_HIDE_FROM_ABI
-  flat_map(sorted_unique_t __s, initializer_list<value_type> __il, const key_compare& __comp, const _Allocator& __alloc)
-      : flat_map(__s, __il.begin(), __il.end(), __comp, __alloc) {}
+  flat_map(sorted_unique_t, initializer_list<value_type> __il, const key_compare& __comp, const _Allocator& __alloc)
+      : flat_map(sorted_unique, __il.begin(), __il.end(), __comp, __alloc) {}
 
   template <class _Allocator>
     requires __allocator_ctor_constraint<_Allocator>
-  _LIBCPP_HIDE_FROM_ABI flat_map(sorted_unique_t __s, initializer_list<value_type> __il, const _Allocator& __alloc)
-      : flat_map(__s, __il.begin(), __il.end(), __alloc) {}
+  _LIBCPP_HIDE_FROM_ABI flat_map(sorted_unique_t, initializer_list<value_type> __il, const _Allocator& __alloc)
+      : flat_map(sorted_unique, __il.begin(), __il.end(), __alloc) {}
 
   _LIBCPP_HIDE_FROM_ABI flat_map& operator=(initializer_list<value_type> __il) {
     clear();
@@ -447,10 +450,11 @@ public:
   _LIBCPP_HIDE_FROM_ABI flat_map& operator=(flat_map&& __other) noexcept(
       is_nothrow_move_assignable_v<_KeyContainer> && is_nothrow_move_assignable_v<_MappedContainer> &&
       is_nothrow_move_assignable_v<_Compare>) {
-    auto __guard  = std::__make_exception_guard([&]() noexcept { __other.clear() /* noexcept */; });
-    __containers_ = std::move(__other.__containers_);
-    __compare_    = std::move(__other.__compare_);
-    __guard.__complete();
+    auto __clear_other_guard = std::__make_scoped_guard([&]() noexcept { __other.clear() /* noexcept */; });
+    auto __clear_self_guard  = std::__make_exception_guard([&]() noexcept { clear() /* noexcept */; });
+    __containers_            = std::move(__other.__containers_);
+    __compare_               = std::move(__other.__compare_);
+    __clear_self_guard.__complete();
     return *this;
   }
 
@@ -504,7 +508,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI mapped_type& at(const key_type& __x) {
     auto __it = find(__x);
     if (__it == end()) {
-      __throw_out_of_range("flat_map::at(const key_type&): Key does not exist");
+      std::__throw_out_of_range("flat_map::at(const key_type&): Key does not exist");
     }
     return (*__it).second;
   }
@@ -512,7 +516,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI const mapped_type& at(const key_type& __x) const {
     auto __it = find(__x);
     if (__it == end()) {
-      __throw_out_of_range("flat_map::at(const key_type&) const: Key does not exist");
+      std::__throw_out_of_range("flat_map::at(const key_type&) const: Key does not exist");
     }
     return (*__it).second;
   }
@@ -523,7 +527,7 @@ public:
     static_assert(requires { find(__x); }, "flat_map::at(const K& x): find(x) needs to be well-formed");
     auto __it = find(__x);
     if (__it == end()) {
-      __throw_out_of_range("flat_map::at(const K&): Key does not exist");
+      std::__throw_out_of_range("flat_map::at(const K&): Key does not exist");
     }
     return (*__it).second;
   }
@@ -534,7 +538,7 @@ public:
     static_assert(requires { find(__x); }, "flat_map::at(const K& x) const: find(x) needs to be well-formed");
     auto __it = find(__x);
     if (__it == end()) {
-      __throw_out_of_range("flat_map::at(const K&) const: Key does not exist");
+      std::__throw_out_of_range("flat_map::at(const K&) const: Key does not exist");
     }
     return (*__it).second;
   }
@@ -588,7 +592,7 @@ public:
     return emplace_hint(__hint, std::forward<_Pp>(__x));
   }
 
-  template <input_iterator _InputIterator>
+  template <class _InputIterator>
   _LIBCPP_HIDE_FROM_ABI void insert(_InputIterator __first, _InputIterator __last) {
     if constexpr (sized_sentinel_for<_InputIterator, _InputIterator>) {
       __reserve_impl(__last - __first);
@@ -634,14 +638,13 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI void insert(initializer_list<value_type> __il) { insert(__il.begin(), __il.end()); }
 
-  _LIBCPP_HIDE_FROM_ABI void insert(sorted_unique_t __s, initializer_list<value_type> __il) {
-    insert(__s, __il.begin(), __il.end());
+  _LIBCPP_HIDE_FROM_ABI void insert(sorted_unique_t, initializer_list<value_type> __il) {
+    insert(sorted_unique, __il.begin(), __il.end());
   }
 
   _LIBCPP_HIDE_FROM_ABI containers extract() && {
-    auto __guard = std::__make_exception_guard([&]() noexcept { clear() /* noexcept */; });
+    auto __guard = std::__make_scoped_guard([&]() noexcept { clear() /* noexcept */; });
     auto __ret   = std::move(__containers_);
-    __guard.__complete();
     return __ret;
   }
 
@@ -766,7 +769,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI void swap(flat_map& __y) noexcept {
     auto __guard = std::__make_exception_guard([&]() noexcept {
       clear() /* noexcept */;
-      __y.clear(); /*noexcept*/
+      __y.clear() /*noexcept*/;
     });
     using std::swap;
     swap(__compare_, __y.__compare_);

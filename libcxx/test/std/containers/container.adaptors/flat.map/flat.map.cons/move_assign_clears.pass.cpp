@@ -21,6 +21,7 @@
 #include <utility>
 #include <vector>
 
+#include "../helpers.h"
 #include "test_macros.h"
 
 struct MoveNegates {
@@ -86,6 +87,18 @@ int main(int, char**) {
     m.insert({2, 2});
     assert(m.contains(1));
     assert(m.find(2) != m.end());
+  }
+  {
+    // moved-from object maintains invariant if one of underlying container does not clear after move
+    using M = std::flat_map<int, int, std::less<>, std::vector<int>, CopyOnlyVector<int>>;
+    M m1    = M({1, 2, 3}, {1, 2, 3});
+    M m2    = M({1, 2}, {1, 2});
+    m2      = std::move(m1);
+    assert(m2.size() == 3);
+    assert(m1.keys().size() == m1.values().size());
+    LIBCPP_ASSERT(m1.empty());
+    LIBCPP_ASSERT(m1.keys().size() == 0);
+    LIBCPP_ASSERT(m1.values().size() == 0);
   }
   return 0;
 }
