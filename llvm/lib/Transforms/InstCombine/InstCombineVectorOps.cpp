@@ -62,7 +62,7 @@ static bool cheapToScalarize(Value *V, Value *EI) {
   if (auto *C = dyn_cast<Constant>(V))
     return CEI || C->getSplatValue();
 
-  if (CEI && match(V, m_Intrinsic<Intrinsic::experimental_stepvector>())) {
+  if (CEI && match(V, m_Intrinsic<Intrinsic::stepvector>())) {
     ElementCount EC = cast<VectorType>(V->getType())->getElementCount();
     // Index needs to be lower than the minimum size of the vector, because
     // for scalable vector, the vector size is known at run time.
@@ -433,8 +433,7 @@ Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
       Intrinsic::ID IID = II->getIntrinsicID();
       // Index needs to be lower than the minimum size of the vector, because
       // for scalable vector, the vector size is known at run time.
-      if (IID == Intrinsic::experimental_stepvector &&
-          IndexC->getValue().ult(NumElts)) {
+      if (IID == Intrinsic::stepvector && IndexC->getValue().ult(NumElts)) {
         Type *Ty = EI.getType();
         unsigned BitWidth = Ty->getIntegerBitWidth();
         Value *Idx;

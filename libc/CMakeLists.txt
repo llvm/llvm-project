@@ -50,31 +50,30 @@ set(LIBC_NAMESPACE ${default_namespace}
   CACHE STRING "The namespace to use to enclose internal implementations. Must start with '__llvm_libc'."
 )
 
-option(LIBC_USE_NEW_HEADER_GEN "Generate header files using new headergen instead of the old one" ON)
 
-if(LIBC_USE_NEW_HEADER_GEN)
-  add_subdirectory(newhdrgen)
-else()
-  if(LLVM_LIBC_FULL_BUILD OR LLVM_LIBC_GPU_BUILD)
-    if(NOT LIBC_HDRGEN_EXE)
-      # We need to set up hdrgen first since other targets depend on it.
-      add_subdirectory(utils/LibcTableGenUtil)
-      add_subdirectory(utils/HdrGen)
-      # Calling add_tablegen sets variables like LIBC_TABLEGEN_EXE in
-      # PARENT_SCOPE which get lost until saved in the cache.
-      set(LIBC_TABLEGEN_EXE "${LIBC_TABLEGEN_EXE}" CACHE INTERNAL "")
-      set(LIBC_TABLEGEN_TARGET "${LIBC_TABLEGEN_TARGET}" CACHE INTERNAL "")
-    else()
-      message(STATUS "Will use ${LIBC_HDRGEN_EXE} for libc header generation.")
-    endif()
+add_subdirectory(newhdrgen)
+
+
+if(LLVM_LIBC_FULL_BUILD OR LLVM_LIBC_GPU_BUILD)
+  if(NOT LIBC_HDRGEN_EXE)
+    # We need to set up hdrgen first since other targets depend on it.
+    add_subdirectory(utils/LibcTableGenUtil)
+    add_subdirectory(utils/HdrGen)
+    # Calling add_tablegen sets variables like LIBC_TABLEGEN_EXE in
+    # PARENT_SCOPE which get lost until saved in the cache.
+    set(LIBC_TABLEGEN_EXE "${LIBC_TABLEGEN_EXE}" CACHE INTERNAL "")
+    set(LIBC_TABLEGEN_TARGET "${LIBC_TABLEGEN_TARGET}" CACHE INTERNAL "")
+  else()
+    message(STATUS "Will use ${LIBC_HDRGEN_EXE} for libc header generation.")
   endif()
 endif()
-
 # We will build the GPU utilities if we are not doing a runtimes build.
 option(LIBC_BUILD_GPU_LOADER "Always build the GPU loader utilities" OFF)
 if(LIBC_BUILD_GPU_LOADER OR (LLVM_LIBC_GPU_BUILD AND NOT LLVM_RUNTIMES_BUILD))
   add_subdirectory(utils/gpu)
 endif()
+
+option(LIBC_USE_NEW_HEADER_GEN "Generate header files using new headergen instead of the old one" ON)
 
 set(NEED_LIBC_HDRGEN FALSE)
 if(NOT LLVM_RUNTIMES_BUILD)
@@ -113,6 +112,7 @@ add_compile_definitions(LIBC_NAMESPACE=${LIBC_NAMESPACE})
 
 # Flags to pass down to the compiler while building the libc functions.
 set(LIBC_COMPILE_OPTIONS_DEFAULT "" CACHE STRING "Architecture to tell clang to optimize for (e.g. -march=... or -mcpu=...)")
+set(LIBC_TEST_COMPILE_OPTIONS_DEFAULT "" CACHE STRING "Common compile options for all the tests.")
 
 list(APPEND LIBC_COMPILE_OPTIONS_DEFAULT ${LIBC_COMMON_TUNE_OPTIONS})
 
@@ -132,12 +132,31 @@ if(COMMAND_RETURN_CODE EQUAL 0)
   message(STATUS "Set COMPILER_RESOURCE_DIR to "
                  "${COMPILER_RESOURCE_DIR} using --print-resource-dir")
 else()
-  if (LIBC_TARGET_OS_IS_GPU)
-    message(FATAL_ERROR "COMPILER_RESOURCE_DIR must be set for GPU builds")
-  else()
-    set(COMPILER_RESOURCE_DIR OFF)
-    message(STATUS "COMPILER_RESOURCE_DIR not set
-                    --print-resource-dir not supported by host compiler")
+  # Try with GCC option: -print-search-dirs, which will output in the form:
+  #   install: <path>
+  #   programs: ........
+  # So we try to capture the <path> after "install: " in the first line of the
+  # output.
+  execute_process(
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    COMMAND ${CMAKE_CXX_COMPILER} -print-search-dirs
+    RESULT_VARIABLE COMMAND_RETURN_CODE
+    OUTPUT_VARIABLE COMPILER_RESOURCE_DIR
+  )
+  if(COMMAND_RETURN_CODE EQUAL 0)
+    string(REPLACE " " ";" COMPILER_RESOURCE_DIR ${COMPILER_RESOURCE_DIR})
+    string(REPLACE "\n" ";" COMPILER_RESOURCE_DIR "${COMPILER_RESOURCE_DIR}")
+    list(GET COMPILER_RESOURCE_DIR 1 COMPILER_RESOURCE_DIR)
+    message(STATUS "Set COMPILER_RESOURCE_DIR to "
+    "${COMPILER_RESOURCE_DIR} using --print-search-dirs")
+else()
+    if (LIBC_TARGET_OS_IS_GPU)
+      message(FATAL_ERROR "COMPILER_RESOURCE_DIR must be set for GPU builds")
+    else()
+      set(COMPILER_RESOURCE_DIR OFF)
+      message(STATUS "COMPILER_RESOURCE_DIR not set
+                      --print-resource-dir not supported by host compiler")
+    endif()
   endif()
 endif()
 

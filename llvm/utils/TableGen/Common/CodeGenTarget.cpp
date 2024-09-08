@@ -63,7 +63,7 @@ StringRef llvm::getName(MVT::SimpleValueType T) {
 StringRef llvm::getEnumName(MVT::SimpleValueType T) {
   // clang-format off
   switch (T) {
-#define GET_VT_ATTR(Ty, N, Sz, Any, Int, FP, Vec, Sc, NElem, EltTy)   \
+#define GET_VT_ATTR(Ty, N, Sz, Any, Int, FP, Vec, Sc, Tup, NF, NElem, EltTy)   \
   case MVT::Ty: return "MVT::" # Ty;
 #include "llvm/CodeGen/GenVT.inc"
   default: llvm_unreachable("ILLEGAL VALUE TYPE!");
@@ -86,7 +86,7 @@ std::string llvm::getQualifiedName(const Record *R) {
 /// getTarget - Return the current instance of the Target class.
 ///
 CodeGenTarget::CodeGenTarget(RecordKeeper &records)
-    : Records(records), CGH(records) {
+    : Records(records), CGH(records), Intrinsics(records) {
   std::vector<Record *> Targets = Records.getAllDerivedDefinitions("Target");
   if (Targets.size() == 0)
     PrintFatalError("No 'Target' subclasses defined!");

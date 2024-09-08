@@ -5300,8 +5300,13 @@ static bool printAArch64PAuthABICoreInfo(raw_ostream &OS, uint32_t DataSize,
     Flags[AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_INITFINIADDRDISC] =
         "InitFiniAddressDiscrimination";
     Flags[AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_GOT] = "ELFGOT";
+    Flags[AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_GOTOS] = "IndirectGotos";
+    Flags[AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_TYPEINFOVPTRDISCR] =
+        "TypeInfoVTPtrDiscrimination";
+    Flags[AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_FPTRTYPEDISCR] =
+        "FPtrTypeDiscrimination";
 
-    static_assert(AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_GOT ==
+    static_assert(AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_FPTRTYPEDISCR ==
                       AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_LAST,
                   "Update when new enum items are defined");
 

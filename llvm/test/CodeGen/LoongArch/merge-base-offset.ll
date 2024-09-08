@@ -542,21 +542,17 @@ define dso_local void @copy_i32x4() nounwind {
 ; LA32-LABEL: copy_i32x4:
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    pcalau12i $a0, %pc_hi20(g_i32x4_src)
-; LA32-NEXT:    addi.w $a0, $a0, %pc_lo12(g_i32x4_src)
-; LA32-NEXT:    vld $vr0, $a0, 0
+; LA32-NEXT:    vld $vr0, $a0, %pc_lo12(g_i32x4_src)
 ; LA32-NEXT:    pcalau12i $a0, %pc_hi20(g_i32x4_dst)
-; LA32-NEXT:    addi.w $a0, $a0, %pc_lo12(g_i32x4_dst)
-; LA32-NEXT:    vst $vr0, $a0, 0
+; LA32-NEXT:    vst $vr0, $a0, %pc_lo12(g_i32x4_dst)
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: copy_i32x4:
 ; LA64:       # %bb.0: # %entry
 ; LA64-NEXT:    pcalau12i $a0, %pc_hi20(g_i32x4_src)
-; LA64-NEXT:    addi.d $a0, $a0, %pc_lo12(g_i32x4_src)
-; LA64-NEXT:    vld $vr0, $a0, 0
+; LA64-NEXT:    vld $vr0, $a0, %pc_lo12(g_i32x4_src)
 ; LA64-NEXT:    pcalau12i $a0, %pc_hi20(g_i32x4_dst)
-; LA64-NEXT:    addi.d $a0, $a0, %pc_lo12(g_i32x4_dst)
-; LA64-NEXT:    vst $vr0, $a0, 0
+; LA64-NEXT:    vst $vr0, $a0, %pc_lo12(g_i32x4_dst)
 ; LA64-NEXT:    ret
 ;
 ; LA64-LARGE-LABEL: copy_i32x4:
@@ -565,14 +561,12 @@ define dso_local void @copy_i32x4() nounwind {
 ; LA64-LARGE-NEXT:    addi.d $a1, $zero, %pc_lo12(g_i32x4_src)
 ; LA64-LARGE-NEXT:    lu32i.d $a1, %pc64_lo20(g_i32x4_src)
 ; LA64-LARGE-NEXT:    lu52i.d $a1, $a1, %pc64_hi12(g_i32x4_src)
-; LA64-LARGE-NEXT:    add.d $a0, $a1, $a0
-; LA64-LARGE-NEXT:    vld $vr0, $a0, 0
+; LA64-LARGE-NEXT:    vldx $vr0, $a1, $a0
 ; LA64-LARGE-NEXT:    pcalau12i $a0, %pc_hi20(g_i32x4_dst)
 ; LA64-LARGE-NEXT:    addi.d $a1, $zero, %pc_lo12(g_i32x4_dst)
 ; LA64-LARGE-NEXT:    lu32i.d $a1, %pc64_lo20(g_i32x4_dst)
 ; LA64-LARGE-NEXT:    lu52i.d $a1, $a1, %pc64_hi12(g_i32x4_dst)
-; LA64-LARGE-NEXT:    add.d $a0, $a1, $a0
-; LA64-LARGE-NEXT:    vst $vr0, $a0, 0
+; LA64-LARGE-NEXT:    vstx $vr0, $a1, $a0
 ; LA64-LARGE-NEXT:    ret
 entry:
   %0 = load <4 x i32>, ptr @g_i32x4_src, align 16
@@ -587,21 +581,17 @@ define dso_local void @copy_i32x8() nounwind {
 ; LA32-LABEL: copy_i32x8:
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    pcalau12i $a0, %pc_hi20(g_i32x4_src)
-; LA32-NEXT:    addi.w $a0, $a0, %pc_lo12(g_i32x4_src)
-; LA32-NEXT:    xvld $xr0, $a0, 0
+; LA32-NEXT:    xvld $xr0, $a0, %pc_lo12(g_i32x4_src)
 ; LA32-NEXT:    pcalau12i $a0, %pc_hi20(g_i32x4_dst)
-; LA32-NEXT:    addi.w $a0, $a0, %pc_lo12(g_i32x4_dst)
-; LA32-NEXT:    xvst $xr0, $a0, 0
+; LA32-NEXT:    xvst $xr0, $a0, %pc_lo12(g_i32x4_dst)
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: copy_i32x8:
 ; LA64:       # %bb.0: # %entry
 ; LA64-NEXT:    pcalau12i $a0, %pc_hi20(g_i32x4_src)
-; LA64-NEXT:    addi.d $a0, $a0, %pc_lo12(g_i32x4_src)
-; LA64-NEXT:    xvld $xr0, $a0, 0
+; LA64-NEXT:    xvld $xr0, $a0, %pc_lo12(g_i32x4_src)
 ; LA64-NEXT:    pcalau12i $a0, %pc_hi20(g_i32x4_dst)
-; LA64-NEXT:    addi.d $a0, $a0, %pc_lo12(g_i32x4_dst)
-; LA64-NEXT:    xvst $xr0, $a0, 0
+; LA64-NEXT:    xvst $xr0, $a0, %pc_lo12(g_i32x4_dst)
 ; LA64-NEXT:    ret
 ;
 ; LA64-LARGE-LABEL: copy_i32x8:
@@ -610,14 +600,12 @@ define dso_local void @copy_i32x8() nounwind {
 ; LA64-LARGE-NEXT:    addi.d $a1, $zero, %pc_lo12(g_i32x4_src)
 ; LA64-LARGE-NEXT:    lu32i.d $a1, %pc64_lo20(g_i32x4_src)
 ; LA64-LARGE-NEXT:    lu52i.d $a1, $a1, %pc64_hi12(g_i32x4_src)
-; LA64-LARGE-NEXT:    add.d $a0, $a1, $a0
-; LA64-LARGE-NEXT:    xvld $xr0, $a0, 0
+; LA64-LARGE-NEXT:    xvldx $xr0, $a1, $a0
 ; LA64-LARGE-NEXT:    pcalau12i $a0, %pc_hi20(g_i32x4_dst)
 ; LA64-LARGE-NEXT:    addi.d $a1, $zero, %pc_lo12(g_i32x4_dst)
 ; LA64-LARGE-NEXT:    lu32i.d $a1, %pc64_lo20(g_i32x4_dst)
 ; LA64-LARGE-NEXT:    lu52i.d $a1, $a1, %pc64_hi12(g_i32x4_dst)
-; LA64-LARGE-NEXT:    add.d $a0, $a1, $a0
-; LA64-LARGE-NEXT:    xvst $xr0, $a0, 0
+; LA64-LARGE-NEXT:    xvstx $xr0, $a1, $a0
 ; LA64-LARGE-NEXT:    ret
 entry:
   %0 = load <8 x i32>, ptr @g_i32x4_src, align 32
@@ -631,21 +619,17 @@ define void @copy_i8_to_i8x16() {
 ; LA32-LABEL: copy_i8_to_i8x16:
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    pcalau12i $a0, %pc_hi20(g_i8)
-; LA32-NEXT:    addi.w $a0, $a0, %pc_lo12(g_i8)
-; LA32-NEXT:    vldrepl.b $vr0, $a0, 0
+; LA32-NEXT:    vldrepl.b $vr0, $a0, %pc_lo12(g_i8)
 ; LA32-NEXT:    pcalau12i $a0, %pc_hi20(g_i8x16)
-; LA32-NEXT:    addi.w $a0, $a0, %pc_lo12(g_i8x16)
-; LA32-NEXT:    vst $vr0, $a0, 0
+; LA32-NEXT:    vst $vr0, $a0, %pc_lo12(g_i8x16)
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: copy_i8_to_i8x16:
 ; LA64:       # %bb.0: # %entry
 ; LA64-NEXT:    pcalau12i $a0, %pc_hi20(g_i8)
-; LA64-NEXT:    addi.d $a0, $a0, %pc_lo12(g_i8)
-; LA64-NEXT:    vldrepl.b $vr0, $a0, 0
+; LA64-NEXT:    vldrepl.b $vr0, $a0, %pc_lo12(g_i8)
 ; LA64-NEXT:    pcalau12i $a0, %pc_hi20(g_i8x16)
-; LA64-NEXT:    addi.d $a0, $a0, %pc_lo12(g_i8x16)
-; LA64-NEXT:    vst $vr0, $a0, 0
+; LA64-NEXT:    vst $vr0, $a0, %pc_lo12(g_i8x16)
 ; LA64-NEXT:    ret
 ;
 ; LA64-LARGE-LABEL: copy_i8_to_i8x16:
@@ -660,8 +644,7 @@ define void @copy_i8_to_i8x16() {
 ; LA64-LARGE-NEXT:    addi.d $a1, $zero, %pc_lo12(g_i8x16)
 ; LA64-LARGE-NEXT:    lu32i.d $a1, %pc64_lo20(g_i8x16)
 ; LA64-LARGE-NEXT:    lu52i.d $a1, $a1, %pc64_hi12(g_i8x16)
-; LA64-LARGE-NEXT:    add.d $a0, $a1, $a0
-; LA64-LARGE-NEXT:    vst $vr0, $a0, 0
+; LA64-LARGE-NEXT:    vstx $vr0, $a1, $a0
 ; LA64-LARGE-NEXT:    ret
 entry:
   %0 = call <16 x i8> @llvm.loongarch.lsx.vldrepl.b(ptr @g_i8, i32 0)
@@ -675,21 +658,17 @@ define void @copy_i8_to_i8x32() {
 ; LA32-LABEL: copy_i8_to_i8x32:
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    pcalau12i $a0, %pc_hi20(g_i8)
-; LA32-NEXT:    addi.w $a0, $a0, %pc_lo12(g_i8)
-; LA32-NEXT:    xvldrepl.b $xr0, $a0, 0
+; LA32-NEXT:    xvldrepl.b $xr0, $a0, %pc_lo12(g_i8)
 ; LA32-NEXT:    pcalau12i $a0, %pc_hi20(g_i8x32)
-; LA32-NEXT:    addi.w $a0, $a0, %pc_lo12(g_i8x32)
-; LA32-NEXT:    xvst $xr0, $a0, 0
+; LA32-NEXT:    xvst $xr0, $a0, %pc_lo12(g_i8x32)
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: copy_i8_to_i8x32:
 ; LA64:       # %bb.0: # %entry
 ; LA64-NEXT:    pcalau12i $a0, %pc_hi20(g_i8)
-; LA64-NEXT:    addi.d $a0, $a0, %pc_lo12(g_i8)
-; LA64-NEXT:    xvldrepl.b $xr0, $a0, 0
+; LA64-NEXT:    xvldrepl.b $xr0, $a0, %pc_lo12(g_i8)
 ; LA64-NEXT:    pcalau12i $a0, %pc_hi20(g_i8x32)
-; LA64-NEXT:    addi.d $a0, $a0, %pc_lo12(g_i8x32)
-; LA64-NEXT:    xvst $xr0, $a0, 0
+; LA64-NEXT:    xvst $xr0, $a0, %pc_lo12(g_i8x32)
 ; LA64-NEXT:    ret
 ;
 ; LA64-LARGE-LABEL: copy_i8_to_i8x32:
@@ -704,8 +683,7 @@ define void @copy_i8_to_i8x32() {
 ; LA64-LARGE-NEXT:    addi.d $a1, $zero, %pc_lo12(g_i8x32)
 ; LA64-LARGE-NEXT:    lu32i.d $a1, %pc64_lo20(g_i8x32)
 ; LA64-LARGE-NEXT:    lu52i.d $a1, $a1, %pc64_hi12(g_i8x32)
-; LA64-LARGE-NEXT:    add.d $a0, $a1, $a0
-; LA64-LARGE-NEXT:    xvst $xr0, $a0, 0
+; LA64-LARGE-NEXT:    xvstx $xr0, $a1, $a0
 ; LA64-LARGE-NEXT:    ret
 entry:
   %0 = call <32 x i8> @llvm.loongarch.lasx.xvldrepl.b(ptr @g_i8, i32 0)
@@ -1150,8 +1128,7 @@ define dso_local ptr @load_addr_offset_614750729487779976() nounwind {
 ; LA64-NEXT:    addi.d $a0, $a0, %pc_lo12(g_a64)
 ; LA64-NEXT:    lu12i.w $a1, 279556
 ; LA64-NEXT:    ori $a1, $a1, 1088
-; LA64-NEXT:    lu32i.d $a1, 17472
-; LA64-NEXT:    lu52i.d $a1, $a1, 1092
+; LA64-NEXT:    bstrins.d $a1, $a1, 62, 32
 ; LA64-NEXT:    add.d $a0, $a0, $a1
 ; LA64-NEXT:    ret
 ;
@@ -1164,8 +1141,7 @@ define dso_local ptr @load_addr_offset_614750729487779976() nounwind {
 ; LA64-LARGE-NEXT:    add.d $a0, $a1, $a0
 ; LA64-LARGE-NEXT:    lu12i.w $a1, 279556
 ; LA64-LARGE-NEXT:    ori $a1, $a1, 1088
-; LA64-LARGE-NEXT:    lu32i.d $a1, 17472
-; LA64-LARGE-NEXT:    lu52i.d $a1, $a1, 1092
+; LA64-LARGE-NEXT:    bstrins.d $a1, $a1, 62, 32
 ; LA64-LARGE-NEXT:    add.d $a0, $a0, $a1
 ; LA64-LARGE-NEXT:    ret
 entry:

@@ -132,9 +132,6 @@ chrono type_traits
 chrono vector
 chrono version
 cinttypes cstdint
-cmath cstddef
-cmath cstdint
-cmath initializer_list
 cmath limits
 cmath type_traits
 cmath version
@@ -236,7 +233,6 @@ expected cstddef
 expected initializer_list
 expected new
 expected version
-experimental/iterator cstddef
 experimental/iterator iosfwd
 experimental/iterator iterator
 experimental/iterator type_traits
@@ -361,11 +357,9 @@ future atomic
 future cerrno
 future chrono
 future cstddef
-future cstdint
 future cstdlib
-future cstring
+future ctime
 future exception
-future initializer_list
 future iosfwd
 future limits
 future mutex
@@ -376,7 +370,6 @@ future string
 future system_error
 future thread
 future type_traits
-future typeinfo
 future version
 initializer_list cstddef
 iomanip istream
@@ -931,7 +924,6 @@ tuple type_traits
 tuple typeinfo
 tuple utility
 tuple version
-type_traits cstddef
 type_traits cstdint
 type_traits version
 typeindex compare

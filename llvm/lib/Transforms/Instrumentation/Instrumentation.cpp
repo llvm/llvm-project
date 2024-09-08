@@ -24,19 +24,6 @@ static cl::opt<bool> ClIgnoreRedundantInstrumentation(
     "ignore-redundant-instrumentation",
     cl::desc("Ignore redundant instrumentation"), cl::Hidden, cl::init(false));
 
-namespace {
-/// Diagnostic information for IR instrumentation reporting.
-class DiagnosticInfoInstrumentation : public DiagnosticInfo {
-  const Twine &Msg;
-
-public:
-  DiagnosticInfoInstrumentation(const Twine &DiagMsg,
-                                DiagnosticSeverity Severity = DS_Warning)
-      : DiagnosticInfo(DK_Linker, Severity), Msg(DiagMsg) {}
-  void print(DiagnosticPrinter &DP) const override { DP << Msg; }
-};
-} // namespace
-
 /// Check if module has flag attached, if not add the flag.
 bool llvm::checkIfAlreadyInstrumented(Module &M, StringRef Flag) {
   if (!M.getModuleFlag(Flag)) {
@@ -91,7 +78,7 @@ BasicBlock::iterator llvm::PrepareToSplitEntryBlock(BasicBlock &BB,
 // Create a constant for Str so that we can pass it to the run-time lib.
 GlobalVariable *llvm::createPrivateGlobalForString(Module &M, StringRef Str,
                                                    bool AllowMerging,
-                                                   const char *NamePrefix) {
+                                                   Twine NamePrefix) {
   Constant *StrConst = ConstantDataArray::getString(M.getContext(), Str);
   // We use private linkage for module-local strings. If they can be merged
   // with another one, we set the unnamed_addr attribute.

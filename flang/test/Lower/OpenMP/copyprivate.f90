@@ -35,7 +35,7 @@
 !CHECK-NEXT:    %[[DST:.*]]:2 = hlfir.declare %[[ARG0]] {uniq_name = "_copy_i32_dst"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK-NEXT:    %[[SRC:.*]]:2 = hlfir.declare %[[ARG1]] {uniq_name = "_copy_i32_src"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK-NEXT:    %[[SRC_VAL:.*]] = fir.load %[[SRC]]#0 : !fir.ref<i32>
-!CHECK-NEXT:    hlfir.assign %[[SRC_VAL]] to %[[DST]]#0 temporary_lhs : i32, !fir.ref<i32>
+!CHECK-NEXT:    hlfir.assign %[[SRC_VAL]] to %[[DST]]#0 : i32, !fir.ref<i32>
 !CHECK-NEXT:    return
 !CHECK-NEXT:  }
 

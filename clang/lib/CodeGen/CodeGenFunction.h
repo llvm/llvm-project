@@ -1143,17 +1143,11 @@ public:
     /// Copy all the entries in the source map over the corresponding
     /// entries in the destination, which must exist.
     static void copyInto(const DeclMapTy &Src, DeclMapTy &Dest) {
-      for (auto &Pair : Src) {
-        if (!Pair.second.isValid()) {
-          Dest.erase(Pair.first);
-          continue;
-        }
-
-        auto I = Dest.find(Pair.first);
-        if (I != Dest.end())
-          I->second = Pair.second;
+      for (auto &[Decl, Addr] : Src) {
+        if (!Addr.isValid())
+          Dest.erase(Decl);
         else
-          Dest.insert(Pair);
+          Dest.insert_or_assign(Decl, Addr);
       }
     }
   };
@@ -2927,6 +2921,11 @@ public:
 
   void EmitAnyExprToExn(const Expr *E, Address Addr);
 
+  /// EmitInitializationToLValue - Emit an initializer to an LValue.
+  void EmitInitializationToLValue(
+      const Expr *E, LValue LV,
+      AggValueSlot::IsZeroed_t IsZeroed = AggValueSlot::IsNotZeroed);
+
   /// EmitExprAsInit - Emits the code necessary to initialize a
   /// location in memory with the given initializer.
   void EmitExprAsInit(const Expr *init, const ValueDecl *D, LValue lvalue,
@@ -4280,6 +4279,7 @@ public:
   LValue EmitUnaryOpLValue(const UnaryOperator *E);
   LValue EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
                                 bool Accessed = false);
+  llvm::Value *EmitMatrixIndexExpr(const Expr *E);
   LValue EmitMatrixSubscriptExpr(const MatrixSubscriptExpr *E);
   LValue EmitArraySectionExpr(const ArraySectionExpr *E,
                               bool IsLowerBound = true);
@@ -4293,6 +4293,8 @@ public:
   LValue EmitCastLValue(const CastExpr *E);
   LValue EmitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *E);
   LValue EmitOpaqueValueLValue(const OpaqueValueExpr *e);
+  void EmitHLSLOutArgExpr(const HLSLOutArgExpr *E, CallArgList &Args,
+                          QualType Ty);
 
   Address EmitExtVectorElementLValue(LValue V);
 
@@ -4704,6 +4706,7 @@ public:
                                     ReturnValueSlot ReturnValue);
 
   llvm::Value *EmitRISCVCpuSupports(const CallExpr *E);
+  llvm::Value *EmitRISCVCpuSupports(ArrayRef<StringRef> FeaturesStrs);
   llvm::Value *EmitRISCVCpuInit();
 
   void AddAMDGPUFenceAddressSpaceMMRA(llvm::Instruction *Inst,

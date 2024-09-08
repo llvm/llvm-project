@@ -32,6 +32,10 @@ using namespace mlir::detail;
 #define GET_TYPEDEF_CLASSES
 #include "mlir/IR/BuiltinTypes.cpp.inc"
 
+namespace mlir {
+#include "mlir/IR/BuiltinTypeConstraints.cpp.inc"
+} // namespace mlir
+
 //===----------------------------------------------------------------------===//
 // BuiltinDialect
 //===----------------------------------------------------------------------===//
@@ -230,6 +234,10 @@ LogicalResult OpaqueType::verify(function_ref<InFlightDiagnostic()> emitError,
 // VectorType
 //===----------------------------------------------------------------------===//
 
+bool VectorType::isValidElementType(Type t) {
+  return isValidVectorTypeElementType(t);
+}
+
 LogicalResult VectorType::verify(function_ref<InFlightDiagnostic()> emitError,
                                  ArrayRef<int64_t> shape, Type elementType,
                                  ArrayRef<bool> scalableDims) {
@@ -278,7 +286,9 @@ Type TensorType::getElementType() const {
           [](auto type) { return type.getElementType(); });
 }
 
-bool TensorType::hasRank() const { return !llvm::isa<UnrankedTensorType>(*this); }
+bool TensorType::hasRank() const {
+  return !llvm::isa<UnrankedTensorType>(*this);
+}
 
 ArrayRef<int64_t> TensorType::getShape() const {
   return llvm::cast<RankedTensorType>(*this).getShape();
@@ -365,7 +375,9 @@ Type BaseMemRefType::getElementType() const {
           [](auto type) { return type.getElementType(); });
 }
 
-bool BaseMemRefType::hasRank() const { return !llvm::isa<UnrankedMemRefType>(*this); }
+bool BaseMemRefType::hasRank() const {
+  return !llvm::isa<UnrankedMemRefType>(*this);
+}
 
 ArrayRef<int64_t> BaseMemRefType::getShape() const {
   return llvm::cast<MemRefType>(*this).getShape();

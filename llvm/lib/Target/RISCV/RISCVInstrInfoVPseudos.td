@@ -92,8 +92,8 @@ def AVL : RegisterOperand<GPRNoX0> {
 def VLOp : ComplexPattern<XLenVT, 1, "selectVLOp">;
 
 def DecImm : SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(N->getSExtValue() - 1, SDLoc(N),
-                                   N->getValueType(0));
+  return CurDAG->getSignedConstant(N->getSExtValue() - 1, SDLoc(N),
+                                   N->getValueType(0), /*isTarget=*/true);
 }]>;
 
 defvar TAIL_AGNOSTIC = 1;
@@ -6114,15 +6114,6 @@ foreach lmul = MxList in {
         Pseudo<(outs vreg:$rs1), (ins GPR:$rs2), []>;
     }
   }
-}
-
-/// Empty pseudo for RISCVInitUndefPass
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 0,
-    isCodeGenOnly = 1 in {
-  def PseudoRVVInitUndefM1 : Pseudo<(outs VR:$vd), (ins), [], "">;
-  def PseudoRVVInitUndefM2 : Pseudo<(outs VRM2:$vd), (ins), [], "">;
-  def PseudoRVVInitUndefM4 : Pseudo<(outs VRM4:$vd), (ins), [], "">;
-  def PseudoRVVInitUndefM8 : Pseudo<(outs VRM8:$vd), (ins), [], "">;
 }
 
 //===----------------------------------------------------------------------===//

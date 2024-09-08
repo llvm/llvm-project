@@ -1553,12 +1553,19 @@ def DXILValidation : DiagGroup<"dxil-validation">;
 // Warning for HLSL API availability
 def HLSLAvailability : DiagGroup<"hlsl-availability">;
 
+// Warnings for legacy binding behavior
+def LegacyConstantRegisterBinding : DiagGroup<"legacy-constant-register-binding">;
+
+// Warning for HLSL Attributes on Statement.
+def HLSLAttributeStatement : DiagGroup<"attribute-statement">;
+
 // Warnings and notes related to const_var_decl_type attribute checks
 def ReadOnlyPlacementChecks : DiagGroup<"read-only-types">;
 
 // Warnings and fixes to support the "safe buffers" programming model.
 def UnsafeBufferUsageInContainer : DiagGroup<"unsafe-buffer-usage-in-container">;
-def UnsafeBufferUsage : DiagGroup<"unsafe-buffer-usage", [UnsafeBufferUsageInContainer]>;
+def UnsafeBufferUsageInLibcCall : DiagGroup<"unsafe-buffer-usage-in-libc-call">;
+def UnsafeBufferUsage : DiagGroup<"unsafe-buffer-usage", [UnsafeBufferUsageInContainer, UnsafeBufferUsageInLibcCall]>;
 
 // Warnings and notes InstallAPI verification.
 def InstallAPIViolation : DiagGroup<"installapi-violation">;
