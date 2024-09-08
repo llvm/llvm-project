@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// make check-libc LIBC_TEST_TARGET=call_ctime VERBOSE=1
+// make libc.test.src.time.ctime_test
 #include "src/errno/libc_errno.h"
 #include "src/time/ctime.h"
 #include "test/UnitTest/Test.h"

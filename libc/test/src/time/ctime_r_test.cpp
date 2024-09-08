@@ -14,7 +14,7 @@
 
 using LIBC_NAMESPACE::time_utils::TimeConstants;
 
-// make check-libc LIBC_TEST_TARGET=call_ctime_r VERBOSE=1
+// make libc.test.src.time.ctime_r_test
 static inline char *call_ctime_r(time_t *t, char *buffer) {
   return LIBC_NAMESPACE::ctime_r(t, buffer);
 }
