@@ -44,8 +44,7 @@ __fill(_RandomAccessIterator __first, _RandomAccessIterator __last, const _Tp& _
   std::fill_n(__first, __last - __first, __value);
 }
 
-template <class _SegmentedIterator,
-          class _Tp>
+template <class _SegmentedIterator, class _Tp>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void
 __fill(_SegmentedIterator __first, _SegmentedIterator __last, const _Tp& __value) {
   std::for_each(__first, __last, [__value](_Tp& __val) { __val = __value; });
