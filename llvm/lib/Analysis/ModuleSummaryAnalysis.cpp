@@ -309,7 +309,7 @@ static void computeFunctionSummary(
   // Map from callee ValueId to profile count. Used to accumulate profile
   // counts for all static calls to a given callee.
   MapVector<ValueInfo, CalleeInfo, DenseMap<ValueInfo, unsigned>,
-            std::vector<std::pair<ValueInfo, CalleeInfo>>>
+            SmallVector<FunctionSummary::EdgeTy, 0>>
       CallGraphEdges;
   SetVector<ValueInfo, SmallVector<ValueInfo, 0>> RefEdges, LoadRefEdges,
       StoreRefEdges;
@@ -964,7 +964,7 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
                         /* HasUnknownCall */ true,
                         /* MustBeUnreachable */ false},
                     SmallVector<ValueInfo, 0>{},
-                    ArrayRef<FunctionSummary::EdgeTy>{},
+                    SmallVector<FunctionSummary::EdgeTy, 0>{},
                     ArrayRef<GlobalValue::GUID>{},
                     ArrayRef<FunctionSummary::VFuncId>{},
                     ArrayRef<FunctionSummary::VFuncId>{},
