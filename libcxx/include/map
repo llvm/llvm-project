@@ -967,6 +967,8 @@ public:
 
 template <class _Key, class _Tp, class _Compare = less<_Key>, class _Allocator = allocator<pair<const _Key, _Tp> > >
 class _LIBCPP_TEMPLATE_VIS map {
+  // TODO(#106635): replace with _LIBCPP_CHECK_CONTAINER_VALUE_TYPE_REQUIREMENTS
+  // Remember to remove relevant headers when this is completed.
   static_assert(!is_lvalue_reference<_Key>::value, "'std::map' cannot hold references");
   static_assert(!is_function<_Key>::value && !is_function<_Tp>::value, "'std::map' cannot hold functions");
   static_assert(!is_void<_Key>::value && !is_void<_Tp>::value, "'std::map' cannot hold 'void'");
@@ -1649,6 +1651,8 @@ erase_if(map<_Key, _Tp, _Compare, _Allocator>& __c, _Predicate __pred) {
 
 template <class _Key, class _Tp, class _Compare = less<_Key>, class _Allocator = allocator<pair<const _Key, _Tp> > >
 class _LIBCPP_TEMPLATE_VIS multimap {
+  // TODO(#106635): replace with _LIBCPP_CHECK_CONTAINER_VALUE_TYPE_REQUIREMENTS
+  // Remember to remove relevant headers when this is completed.
   static_assert(!is_lvalue_reference<_Key>::value, "'std::multimap' cannot hold references");
   static_assert(!is_function<_Key>::value && !is_function<_Tp>::value, "'std::multimap' cannot hold functions");
   static_assert(!is_void<_Key>::value && !is_void<_Tp>::value, "'std::multimap' cannot hold 'void'");

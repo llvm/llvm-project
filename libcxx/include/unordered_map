@@ -1031,6 +1031,8 @@ template <class _Key,
           class _Pred  = equal_to<_Key>,
           class _Alloc = allocator<pair<const _Key, _Tp> > >
 class _LIBCPP_TEMPLATE_VIS unordered_map {
+  // TODO(#106635): replace with _LIBCPP_CHECK_CONTAINER_VALUE_TYPE_REQUIREMENTS
+  // Remember to remove relevant headers when this is completed.
   static_assert(!is_reference<_Key>::value, "'std::unordered_map' cannot hold references");
   static_assert(!is_function<_Key>::value && !is_function<_Tp>::value, "'std::unordered_map' cannot hold functions");
   static_assert(!is_void<_Key>::value && !is_void<_Tp>::value, "'std::unordered_map' cannot hold 'void'");
@@ -1841,6 +1843,8 @@ template <class _Key,
           class _Pred  = equal_to<_Key>,
           class _Alloc = allocator<pair<const _Key, _Tp> > >
 class _LIBCPP_TEMPLATE_VIS unordered_multimap {
+  // TODO(#106635): replace with _LIBCPP_CHECK_CONTAINER_VALUE_TYPE_REQUIREMENTS
+  // Remember to remove relevant headers when this is completed.
   static_assert(!is_reference<_Key>::value, "'std::unordered_multimap' cannot hold references");
   static_assert(!is_function<_Key>::value && !is_function<_Tp>::value,
                 "'std::unordered_multimap' cannot hold functions");
