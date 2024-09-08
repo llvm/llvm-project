@@ -1222,7 +1222,6 @@ enum SaveCoreStyle {
   eSaveCoreFull = 1,
   eSaveCoreDirtyOnly = 2,
   eSaveCoreStackOnly = 3,
-  eSaveCoreCustomOnly = 4,
 };
 
 /// Events that might happen during a trace session.
