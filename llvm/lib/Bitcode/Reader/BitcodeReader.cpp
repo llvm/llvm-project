@@ -986,10 +986,9 @@ private:
       uint64_t Offset,
       DenseMap<unsigned, GlobalValue::LinkageTypes> &ValueIdToLinkageMap);
   SmallVector<ValueInfo, 0> makeRefList(ArrayRef<uint64_t> Record);
-  std::vector<FunctionSummary::EdgeTy> makeCallList(ArrayRef<uint64_t> Record,
-                                                    bool IsOldProfileFormat,
-                                                    bool HasProfile,
-                                                    bool HasRelBF);
+  SmallVector<FunctionSummary::EdgeTy, 0>
+  makeCallList(ArrayRef<uint64_t> Record, bool IsOldProfileFormat,
+               bool HasProfile, bool HasRelBF);
   Error parseEntireSummary(unsigned ID);
   Error parseModuleStringTable();
   void parseTypeIdCompatibleVtableSummaryRecord(ArrayRef<uint64_t> Record);
@@ -7378,11 +7377,11 @@ ModuleSummaryIndexBitcodeReader::makeRefList(ArrayRef<uint64_t> Record) {
   return Ret;
 }
 
-std::vector<FunctionSummary::EdgeTy>
+SmallVector<FunctionSummary::EdgeTy, 0>
 ModuleSummaryIndexBitcodeReader::makeCallList(ArrayRef<uint64_t> Record,
                                               bool IsOldProfileFormat,
                                               bool HasProfile, bool HasRelBF) {
-  std::vector<FunctionSummary::EdgeTy> Ret;
+  SmallVector<FunctionSummary::EdgeTy, 0> Ret;
   // In the case of new profile formats, there are two Record entries per
   // Edge. Otherwise, conservatively reserve up to Record.size.
   if (!IsOldProfileFormat && (HasProfile || HasRelBF))
@@ -7670,7 +7669,7 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
           ArrayRef<uint64_t>(Record).slice(RefListStartIndex, NumRefs));
       bool HasProfile = (BitCode == bitc::FS_PERMODULE_PROFILE);
       bool HasRelBF = (BitCode == bitc::FS_PERMODULE_RELBF);
-      std::vector<FunctionSummary::EdgeTy> Calls = makeCallList(
+      SmallVector<FunctionSummary::EdgeTy, 0> Calls = makeCallList(
           ArrayRef<uint64_t>(Record).slice(CallGraphEdgeStartIndex),
           IsOldProfileFormat, HasProfile, HasRelBF);
       setSpecialRefs(Refs, NumRORefs, NumWORefs);
@@ -7824,7 +7823,7 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       SmallVector<ValueInfo, 0> Refs = makeRefList(
           ArrayRef<uint64_t>(Record).slice(RefListStartIndex, NumRefs));
       bool HasProfile = (BitCode == bitc::FS_COMBINED_PROFILE);
-      std::vector<FunctionSummary::EdgeTy> Edges = makeCallList(
+      SmallVector<FunctionSummary::EdgeTy, 0> Edges = makeCallList(
           ArrayRef<uint64_t>(Record).slice(CallGraphEdgeStartIndex),
           IsOldProfileFormat, HasProfile, false);
       ValueInfo VI = std::get<0>(getValueInfoFromValueId(ValueID));
