@@ -55,7 +55,7 @@ def : ReadAdvance<ReadI,       0>;
 def : ReadAdvance<ReadISReg,   0>;
 def : ReadAdvance<ReadIEReg,   0>;
 def : ReadAdvance<ReadIM,      0>;
-def : ReadAdvance<ReadIMA,     1, [WriteIM32, WriteIM64]>;
+def : ReadAdvance<ReadIMA,     0>;
 def : ReadAdvance<ReadID,      0>;
 def : ReadAdvance<ReadExtrHi,  0>;
 def : ReadAdvance<ReadAdrBase, 0>;
@@ -661,12 +661,26 @@ def : SchedAlias<WriteID32, N3Write_12c_1M0>;
 // Divide, X-form
 def : SchedAlias<WriteID64, N3Write_20c_1M0>;
 
-// Multiply accumulate, W-form
-// Multiply accumulate long
-def : SchedAlias<WriteIM32, N3Write_2c_1M0>;
+def N3Wr_IM   : SchedWriteRes<[N3UnitM]>  { let Latency = 2; }
+def N3Wr_IMA  : SchedWriteRes<[N3UnitM0]> { let Latency = 2; }
+def N3Wr_IMUL : SchedWriteVariant<[
+                  SchedVar<IsReg3ZeroPred, [N3Wr_IM]>,
+                  SchedVar<NoSchedPred,    [N3Wr_IMA]>]>;
+def N3Rd_IMA  : SchedReadAdvance<1, [N3Wr_IMA]>;
 
-// Multiply accumulate, X-form
+def : SchedAlias<WriteIM32, N3Write_2c_1M0>;
 def : SchedAlias<WriteIM64, N3Write_2c_1M0>;
+
+// NOTE: Modified from V2
+
+// Multiply
+// Multiply accumulate, W-form
+// Multiply accumulate, X-form
+// Multiply accumulate long
+// Multiply long
+def : InstRW<[N3Wr_IMUL, ReadIM, ReadIM, N3Rd_IMA],
+             (instregex "^M(ADD|SUB)[WX]rrr$",
+                        "^(S|U)M(ADD|SUB)Lrrr$")>;
 
 // Multiply high
 def : InstRW<[N3Write_3c_1M], (instrs SMULHrr, UMULHrr)>;
