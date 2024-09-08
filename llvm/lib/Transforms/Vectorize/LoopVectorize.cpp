@@ -6605,10 +6605,10 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
     if (canTruncateToMinimalBitwidth(I, VF)) {
       Instruction *Op0AsInstruction = dyn_cast<Instruction>(I->getOperand(0));
       (void)Op0AsInstruction;
-      assert(!canTruncateToMinimalBitwidth(Op0AsInstruction, VF) ||
-             MinBWs[I] == MinBWs[Op0AsInstruction] &&
-                 "if both the operand and the compare are marked for "
-                 "truncation, they must have the same bitwidth");
+      assert((!canTruncateToMinimalBitwidth(Op0AsInstruction, VF) ||
+              MinBWs[I] == MinBWs[Op0AsInstruction]) &&
+             "if both the operand and the compare are marked for "
+             "truncation, they must have the same bitwidth");
       ValTy = IntegerType::get(ValTy->getContext(), MinBWs[I]);
     }
 
