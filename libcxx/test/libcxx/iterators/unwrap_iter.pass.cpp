@@ -26,11 +26,13 @@ template <class Iter>
 using rev_rev_iter = rev_iter<rev_iter<Iter> >;
 
 static_assert(std::is_same<UnwrapT<int*>, int*>::value, "");
-static_assert(std::is_same<UnwrapT<std::__wrap_iter<int*> >, int*>::value, "");
+static_assert(std::is_same<UnwrapT<std::__wrap_mut_iter<int*, const int*> >, int*>::value, "");
 static_assert(std::is_same<UnwrapT<rev_iter<int*> >, std::reverse_iterator<int*> >::value, "");
 static_assert(std::is_same<UnwrapT<rev_rev_iter<int*> >, int*>::value, "");
-static_assert(std::is_same<UnwrapT<rev_rev_iter<std::__wrap_iter<int*> > >, int*>::value, "");
-static_assert(std::is_same<UnwrapT<rev_rev_iter<rev_iter<std::__wrap_iter<int*> > > >, rev_iter<std::__wrap_iter<int*> > >::value, "");
+static_assert(std::is_same<UnwrapT<rev_rev_iter<std::__wrap_mut_iter<int*, const int*> > >, int*>::value, "");
+static_assert(std::is_same<UnwrapT<rev_rev_iter<rev_iter<std::__wrap_mut_iter<int*, const int*> > > >,
+                           rev_iter<std::__wrap_mut_iter<int*, const int*> > >::value,
+              "");
 
 static_assert(std::is_same<UnwrapT<random_access_iterator<int*> >, random_access_iterator<int*> >::value, "");
 static_assert(std::is_same<UnwrapT<rev_iter<random_access_iterator<int*> > >, rev_iter<random_access_iterator<int*> > >::value, "");

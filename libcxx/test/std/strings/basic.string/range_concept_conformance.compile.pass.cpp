@@ -15,20 +15,34 @@
 #include <concepts>
 #include <ranges>
 
-static_assert(std::same_as<std::ranges::iterator_t<std::string>, std::string::iterator>);
-static_assert(std::ranges::common_range<std::string>);
-static_assert(std::ranges::random_access_range<std::string>);
-static_assert(std::ranges::contiguous_range<std::string>);
-static_assert(!std::ranges::view<std::string>);
-static_assert(std::ranges::sized_range<std::string>);
-static_assert(!std::ranges::borrowed_range<std::string>);
-static_assert(std::ranges::viewable_range<std::string>);
+#include "nasty_string.h"
+#include "test_macros.h"
 
-static_assert(std::same_as<std::ranges::iterator_t<std::string const>, std::string::const_iterator>);
-static_assert(std::ranges::common_range<std::string const>);
-static_assert(std::ranges::random_access_range<std::string const>);
-static_assert(std::ranges::contiguous_range<std::string const>);
-static_assert(!std::ranges::view<std::string const>);
-static_assert(std::ranges::sized_range<std::string const>);
-static_assert(!std::ranges::borrowed_range<std::string const>);
-static_assert(!std::ranges::viewable_range<std::string const>);
+template <class String>
+void test() {
+  static_assert(std::same_as<std::ranges::iterator_t<String>, typename String::iterator>);
+  static_assert(std::ranges::common_range<String>);
+  static_assert(std::ranges::random_access_range<String>);
+  static_assert(std::ranges::contiguous_range<String>);
+  static_assert(!std::ranges::view<String>);
+  static_assert(std::ranges::sized_range<String>);
+  static_assert(!std::ranges::borrowed_range<String>);
+  static_assert(std::ranges::viewable_range<String>);
+
+  static_assert(std::same_as<std::ranges::iterator_t<String const>, typename String::const_iterator>);
+  static_assert(std::ranges::common_range<String const>);
+  static_assert(std::ranges::random_access_range<String const>);
+  static_assert(std::ranges::contiguous_range<String const>);
+  static_assert(!std::ranges::view<String const>);
+  static_assert(std::ranges::sized_range<String const>);
+  static_assert(!std::ranges::borrowed_range<String const>);
+  static_assert(!std::ranges::viewable_range<String const>);
+}
+
+void tests() {
+  test<std::string>();
+  test<std::wstring>();
+#ifndef TEST_HAS_NO_NASTY_STRING
+  test<nasty_string>();
+#endif
+}

@@ -258,7 +258,7 @@ concept __enable_direct_output =
     (same_as<_OutIt, _CharT*>
      // TODO(hardening): the following check might not apply to hardened iterators and might need to be wrapped in an
      // `#ifdef`.
-     || same_as<_OutIt, __wrap_iter<_CharT*>>);
+     || same_as<_OutIt, __wrap_mut_iter<_CharT*, const _CharT*>>);
 
 /// Write policy for directly writing to the underlying output.
 template <class _OutIt, __fmt_char_type _CharT>

@@ -16,9 +16,11 @@
 #include <__iterator/iterator_traits.h>
 #include <__memory/addressof.h>
 #include <__memory/pointer_traits.h>
+#include <__type_traits/conditional.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/integral_constant.h>
 #include <__type_traits/is_convertible.h>
+#include <__type_traits/void_t.h>
 #include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -27,15 +29,25 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
+#ifdef _LIBCPP_ABI_WRAP_ITER_ADL_PROOF
+template <class _MutableIter, class _ConstIter>
+struct __wrap_iter_impl {
+  template <bool _IsConst>
+#else
 template <class _Iter>
-class __wrap_iter {
-public:
-  typedef _Iter iterator_type;
-  typedef typename iterator_traits<iterator_type>::value_type value_type;
-  typedef typename iterator_traits<iterator_type>::difference_type difference_type;
-  typedef typename iterator_traits<iterator_type>::pointer pointer;
-  typedef typename iterator_traits<iterator_type>::reference reference;
-  typedef typename iterator_traits<iterator_type>::iterator_category iterator_category;
+#endif
+  class __wrap_iter {
+
+  public:
+#ifdef _LIBCPP_ABI_WRAP_ITER_ADL_PROOF
+    using _Iter = __conditional_t<_IsConst, _ConstIter, _MutableIter>;
+#endif
+    typedef _Iter iterator_type;
+    typedef typename iterator_traits<iterator_type>::value_type value_type;
+    typedef typename iterator_traits<iterator_type>::difference_type difference_type;
+    typedef typename iterator_traits<iterator_type>::pointer pointer;
+    typedef typename iterator_traits<iterator_type>::reference reference;
+    typedef typename iterator_traits<iterator_type>::iterator_category iterator_category;
 #if _LIBCPP_STD_VER >= 20
   typedef contiguous_iterator_tag iterator_concept;
 #endif
@@ -45,9 +57,15 @@ private:
 
 public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 __wrap_iter() _NOEXCEPT : __i_() {}
+#ifdef _LIBCPP_ABI_WRAP_ITER_ADL_PROOF
+  template <bool _B, __enable_if_t<!_B, int> = 0>
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 __wrap_iter(const __wrap_iter<_B>& __u) _NOEXCEPT
+      : __i_(__u.base()) {}
+#else
   template <class _Up, __enable_if_t<is_convertible<_Up, iterator_type>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 __wrap_iter(const __wrap_iter<_Up>& __u) _NOEXCEPT
       : __i_(__u.base()) {}
+#endif
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 reference operator*() const _NOEXCEPT { return *__i_; }
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pointer operator->() const _NOEXCEPT {
     return std::__to_address(__i_);
@@ -96,7 +114,13 @@ public:
 private:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit __wrap_iter(iterator_type __x) _NOEXCEPT : __i_(__x) {}
 
+#ifdef _LIBCPP_ABI_WRAP_ITER_ADL_PROOF
+  using __is_wrap_iter = void;
+
+  template <bool _OtherConst>
+#else
   template <class _Up>
+#endif
   friend class __wrap_iter;
   template <class _CharT, class _Traits, class _Alloc>
   friend class basic_string;
@@ -108,85 +132,99 @@ private:
   friend class _LIBCPP_TEMPLATE_VIS span;
   template <class _Tp, size_t _Size>
   friend struct array;
-};
+  };
 
-template <class _Iter1>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool
-operator==(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter1>& __y) _NOEXCEPT {
-  return __x.base() == __y.base();
-}
+#ifdef _LIBCPP_ABI_WRAP_ITER_ADL_PROOF
+#  define _LIBCPP_WRAP_ITER_SINGLE_TEMPLATE_HEAD                                                                       \
+    template <bool _Iter1>                                                                                             \
+    friend
+#  define _LIBCPP_WRAP_ITER_PAIR_TEMPLATE_HEAD                                                                         \
+    template <bool _Iter1, bool _Iter2>                                                                                \
+    friend
+#else
+#  define _LIBCPP_WRAP_ITER_SINGLE_TEMPLATE_HEAD template <class _Iter1>
+#  define _LIBCPP_WRAP_ITER_PAIR_TEMPLATE_HEAD template <class _Iter1, class _Iter2>
+#endif
 
-template <class _Iter1, class _Iter2>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool
-operator==(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT {
-  return __x.base() == __y.base();
-}
+  _LIBCPP_WRAP_ITER_SINGLE_TEMPLATE_HEAD
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool
+  operator==(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter1>& __y) _NOEXCEPT {
+    return __x.base() == __y.base();
+  }
 
-template <class _Iter1>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 bool
-operator<(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter1>& __y) _NOEXCEPT {
-  return __x.base() < __y.base();
-}
+  _LIBCPP_WRAP_ITER_PAIR_TEMPLATE_HEAD
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool
+  operator==(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT {
+    return __x.base() == __y.base();
+  }
 
-template <class _Iter1, class _Iter2>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 bool
-operator<(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT {
-  return __x.base() < __y.base();
-}
+  _LIBCPP_WRAP_ITER_SINGLE_TEMPLATE_HEAD
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 bool
+  operator<(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter1>& __y) _NOEXCEPT {
+    return __x.base() < __y.base();
+  }
+
+  _LIBCPP_WRAP_ITER_PAIR_TEMPLATE_HEAD
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 bool
+  operator<(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT {
+    return __x.base() < __y.base();
+  }
 
 #if _LIBCPP_STD_VER <= 17
-template <class _Iter1>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool
-operator!=(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter1>& __y) _NOEXCEPT {
-  return !(__x == __y);
-}
+  _LIBCPP_WRAP_ITER_SINGLE_TEMPLATE_HEAD
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool
+  operator!=(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter1>& __y) _NOEXCEPT {
+    return !(__x == __y);
+  }
 
-template <class _Iter1, class _Iter2>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool
-operator!=(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT {
-  return !(__x == __y);
-}
-template <class _Iter1>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool
-operator>(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter1>& __y) _NOEXCEPT {
-  return __y < __x;
-}
+  _LIBCPP_WRAP_ITER_PAIR_TEMPLATE_HEAD
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool
+  operator!=(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT {
+    return !(__x == __y);
+  }
+  _LIBCPP_WRAP_ITER_SINGLE_TEMPLATE_HEAD
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool
+  operator>(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter1>& __y) _NOEXCEPT {
+    return __y < __x;
+  }
 
-template <class _Iter1, class _Iter2>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool
-operator>(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT {
-  return __y < __x;
-}
+  _LIBCPP_WRAP_ITER_PAIR_TEMPLATE_HEAD
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool
+  operator>(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT {
+    return __y < __x;
+  }
 
-template <class _Iter1>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool
-operator>=(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter1>& __y) _NOEXCEPT {
-  return !(__x < __y);
-}
+  _LIBCPP_WRAP_ITER_SINGLE_TEMPLATE_HEAD
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool
+  operator>=(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter1>& __y) _NOEXCEPT {
+    return !(__x < __y);
+  }
 
-template <class _Iter1, class _Iter2>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool
-operator>=(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT {
-  return !(__x < __y);
-}
+  _LIBCPP_WRAP_ITER_PAIR_TEMPLATE_HEAD
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool
+  operator>=(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT {
+    return !(__x < __y);
+  }
 
-template <class _Iter1>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool
-operator<=(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter1>& __y) _NOEXCEPT {
-  return !(__y < __x);
-}
+  _LIBCPP_WRAP_ITER_SINGLE_TEMPLATE_HEAD
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool
+  operator<=(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter1>& __y) _NOEXCEPT {
+    return !(__y < __x);
+  }
 
-template <class _Iter1, class _Iter2>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool
-operator<=(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT {
-  return !(__y < __x);
-}
+  _LIBCPP_WRAP_ITER_PAIR_TEMPLATE_HEAD
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool
+  operator<=(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT {
+    return !(__y < __x);
+  }
 
 #else
-template <class _Iter1, class _Iter2>
+_LIBCPP_WRAP_ITER_PAIR_TEMPLATE_HEAD
 _LIBCPP_HIDE_FROM_ABI constexpr strong_ordering
 operator<=>(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) noexcept {
-  if constexpr (three_way_comparable_with<_Iter1, _Iter2, strong_ordering>) {
+  if constexpr (three_way_comparable_with<typename __wrap_iter<_Iter1>::iterator_type,
+                                          typename __wrap_iter<_Iter2>::iterator_type,
+                                          strong_ordering>) {
     return __x.base() <=> __y.base();
   } else {
     if (__x.base() < __y.base())
@@ -200,31 +238,38 @@ operator<=>(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) noex
 }
 #endif // _LIBCPP_STD_VER >= 20
 
-template <class _Iter1, class _Iter2>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14
+  _LIBCPP_WRAP_ITER_PAIR_TEMPLATE_HEAD
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14
 #ifndef _LIBCPP_CXX03_LANG
-    auto
-    operator-(const __wrap_iter<_Iter1>& __x,
-              const __wrap_iter<_Iter2>& __y) _NOEXCEPT->decltype(__x.base() - __y.base())
+  auto
+  operator-(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT->decltype(__x.base() - __y.base())
 #else
 typename __wrap_iter<_Iter1>::difference_type
 operator-(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT
 #endif // C++03
-{
+  {
   return __x.base() - __y.base();
-}
+  }
 
-template <class _Iter1>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 __wrap_iter<_Iter1>
-operator+(typename __wrap_iter<_Iter1>::difference_type __n, __wrap_iter<_Iter1> __x) _NOEXCEPT {
-  __x += __n;
-  return __x;
-}
+  _LIBCPP_WRAP_ITER_SINGLE_TEMPLATE_HEAD
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 __wrap_iter<_Iter1>
+  operator+(typename __wrap_iter<_Iter1>::difference_type __n, __wrap_iter<_Iter1> __x) _NOEXCEPT {
+    __x += __n;
+    return __x;
+  }
 
-#if _LIBCPP_STD_VER <= 17
+#ifdef _LIBCPP_ABI_WRAP_ITER_ADL_PROOF
+};
+
+template <class _MutableIter, class _ConstIter>
+using __wrap_mut_iter = typename __wrap_iter_impl<_MutableIter, _ConstIter>::template __wrap_iter<false>;
+template <class _MutableIter, class _ConstIter>
+using __wrap_const_iter = typename __wrap_iter_impl<_MutableIter, _ConstIter>::template __wrap_iter<true>;
+#else
+#  if _LIBCPP_STD_VER <= 17
 template <class _It>
 struct __libcpp_is_contiguous_iterator<__wrap_iter<_It> > : true_type {};
-#endif
+#  endif
 
 template <class _It>
 struct _LIBCPP_TEMPLATE_VIS pointer_traits<__wrap_iter<_It> > {
@@ -236,6 +281,12 @@ struct _LIBCPP_TEMPLATE_VIS pointer_traits<__wrap_iter<_It> > {
     return std::__to_address(__w.base());
   }
 };
+
+template <class _MutableIter, class _ConstIter>
+using __wrap_mut_iter = __wrap_iter<_MutableIter>;
+template <class _MutableIter, class _ConstIter>
+using __wrap_const_iter = __wrap_iter<_ConstIter>;
+#endif
 
 _LIBCPP_END_NAMESPACE_STD
 

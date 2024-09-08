@@ -239,7 +239,7 @@ public:
 #  ifdef _LIBCPP_ABI_BOUNDED_ITERATORS
   using iterator = __bounded_iter<pointer>;
 #  else
-  using iterator = __wrap_iter<pointer>;
+  using iterator = __wrap_mut_iter<pointer, pointer>;
 #  endif
   using reverse_iterator = std::reverse_iterator<iterator>;
 
@@ -420,7 +420,7 @@ public:
 #  ifdef _LIBCPP_ABI_BOUNDED_ITERATORS
   using iterator = __bounded_iter<pointer>;
 #  else
-  using iterator = __wrap_iter<pointer>;
+  using iterator = __wrap_mut_iter<pointer, pointer>;
 #  endif
   using reverse_iterator = std::reverse_iterator<iterator>;
 

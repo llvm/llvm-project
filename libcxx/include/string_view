@@ -284,7 +284,7 @@ public:
 #if defined(_LIBCPP_ABI_BOUNDED_ITERATORS)
   using const_iterator = __bounded_iter<const_pointer>;
 #elif defined(_LIBCPP_ABI_USE_WRAP_ITER_IN_STD_STRING_VIEW)
-  using const_iterator = __wrap_iter<const_pointer>;
+  using const_iterator = __wrap_const_iter<const_pointer, const_pointer>;
 #else
   using const_iterator = const_pointer;
 #endif
