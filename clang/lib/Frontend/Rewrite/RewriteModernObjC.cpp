@@ -4080,10 +4080,8 @@ std::string RewriteModernObjC::SynthesizeBlockFunc(BlockExpr *CE, int i,
 
   // Create local declarations to avoid rewriting all closure decl ref exprs.
   // First, emit a declaration for all "by ref" decls.
-  for (llvm::SmallSetVector<ValueDecl *, 8>::iterator
-           I = BlockByRefDecls.begin(),
-           E = BlockByRefDecls.end();
-       I != E; ++I) {
+  for (auto I = BlockByRefDecls.begin(), E = BlockByRefDecls.end(); I != E;
+       ++I) {
     S += "  ";
     std::string Name = (*I)->getNameAsString();
     std::string TypeString;
@@ -4093,10 +4091,8 @@ std::string RewriteModernObjC::SynthesizeBlockFunc(BlockExpr *CE, int i,
     S += Name + " = __cself->" + (*I)->getNameAsString() + "; // bound by ref\n";
   }
   // Next, emit a declaration for all "by copy" declarations.
-  for (llvm::SmallSetVector<ValueDecl *, 8>::iterator
-           I = BlockByCopyDecls.begin(),
-           E = BlockByCopyDecls.end();
-       I != E; ++I) {
+  for (auto I = BlockByCopyDecls.begin(), E = BlockByCopyDecls.end(); I != E;
+       ++I) {
     S += "  ";
     // Handle nested closure invocation. For example:
     //
@@ -4192,10 +4188,8 @@ std::string RewriteModernObjC::SynthesizeBlockImpl(BlockExpr *CE,
 
   if (BlockDeclRefs.size()) {
     // Output all "by copy" declarations.
-    for (llvm::SmallSetVector<ValueDecl *, 8>::iterator
-             I = BlockByCopyDecls.begin(),
-             E = BlockByCopyDecls.end();
-         I != E; ++I) {
+    for (auto I = BlockByCopyDecls.begin(), E = BlockByCopyDecls.end(); I != E;
+         ++I) {
       S += "  ";
       std::string FieldName = (*I)->getNameAsString();
       std::string ArgName = "_" + FieldName;
@@ -4223,10 +4217,8 @@ std::string RewriteModernObjC::SynthesizeBlockImpl(BlockExpr *CE,
       S += FieldName + ";\n";
     }
     // Output all "by ref" declarations.
-    for (llvm::SmallSetVector<ValueDecl *, 8>::iterator
-             I = BlockByRefDecls.begin(),
-             E = BlockByRefDecls.end();
-         I != E; ++I) {
+    for (auto I = BlockByRefDecls.begin(), E = BlockByRefDecls.end(); I != E;
+         ++I) {
       S += "  ";
       std::string FieldName = (*I)->getNameAsString();
       std::string ArgName = "_" + FieldName;
@@ -4244,10 +4236,8 @@ std::string RewriteModernObjC::SynthesizeBlockImpl(BlockExpr *CE,
     Constructor += ", int flags=0)";
     // Initialize all "by copy" arguments.
     bool firsTime = true;
-    for (llvm::SmallSetVector<ValueDecl *, 8>::iterator
-             I = BlockByCopyDecls.begin(),
-             E = BlockByCopyDecls.end();
-         I != E; ++I) {
+    for (auto I = BlockByCopyDecls.begin(), E = BlockByCopyDecls.end(); I != E;
+         ++I) {
       std::string Name = (*I)->getNameAsString();
         if (firsTime) {
           Constructor += " : ";
@@ -4261,10 +4251,8 @@ std::string RewriteModernObjC::SynthesizeBlockImpl(BlockExpr *CE,
           Constructor += Name + "(_" + Name + ")";
     }
     // Initialize all "by ref" arguments.
-    for (llvm::SmallSetVector<ValueDecl *, 8>::iterator
-             I = BlockByRefDecls.begin(),
-             E = BlockByRefDecls.end();
-         I != E; ++I) {
+    for (auto I = BlockByRefDecls.begin(), E = BlockByRefDecls.end(); I != E;
+         ++I) {
       std::string Name = (*I)->getNameAsString();
       if (firsTime) {
         Constructor += " : ";
@@ -5162,14 +5150,12 @@ void RewriteModernObjC::CollectBlockDeclRefInfo(BlockExpr *Exp) {
   if (BlockDeclRefs.size()) {
     // Unique all "by copy" declarations.
     for (unsigned i = 0; i < BlockDeclRefs.size(); i++)
-      if (!BlockDeclRefs[i]->getDecl()->hasAttr<BlocksAttr>()) {
+      if (!BlockDeclRefs[i]->getDecl()->hasAttr<BlocksAttr>())
         BlockByCopyDecls.insert(BlockDeclRefs[i]->getDecl());
-      }
     // Unique all "by ref" declarations.
     for (unsigned i = 0; i < BlockDeclRefs.size(); i++)
-      if (BlockDeclRefs[i]->getDecl()->hasAttr<BlocksAttr>()) {
+      if (BlockDeclRefs[i]->getDecl()->hasAttr<BlocksAttr>())
         BlockByRefDecls.insert(BlockDeclRefs[i]->getDecl());
-      }
     // Find any imported blocks...they will need special attention.
     for (unsigned i = 0; i < BlockDeclRefs.size(); i++)
       if (BlockDeclRefs[i]->getDecl()->hasAttr<BlocksAttr>() ||
@@ -5291,10 +5277,8 @@ Stmt *RewriteModernObjC::SynthBlockInitExpr(BlockExpr *Exp,
   if (BlockDeclRefs.size()) {
     Expr *Exp;
     // Output all "by copy" declarations.
-    for (llvm::SmallSetVector<ValueDecl *, 8>::iterator
-             I = BlockByCopyDecls.begin(),
-             E = BlockByCopyDecls.end();
-         I != E; ++I) {
+    for (auto I = BlockByCopyDecls.begin(), E = BlockByCopyDecls.end(); I != E;
+         ++I) {
       if (isObjCType((*I)->getType())) {
         // FIXME: Conform to ABI ([[obj retain] autorelease]).
         FD = SynthBlockInitFunctionDecl((*I)->getName());
@@ -5331,10 +5315,8 @@ Stmt *RewriteModernObjC::SynthBlockInitExpr(BlockExpr *Exp,
       InitExprs.push_back(Exp);
     }
     // Output all "by ref" declarations.
-    for (llvm::SmallSetVector<ValueDecl *, 8>::iterator
-             I = BlockByRefDecls.begin(),
-             E = BlockByRefDecls.end();
-         I != E; ++I) {
+    for (auto I = BlockByRefDecls.begin(), E = BlockByRefDecls.end(); I != E;
+         ++I) {
       ValueDecl *ND = (*I);
       std::string Name(ND->getNameAsString());
       std::string RecName;
