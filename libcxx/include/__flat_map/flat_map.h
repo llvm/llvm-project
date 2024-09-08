@@ -11,7 +11,9 @@
 #define _LIBCPP___FLAT_MAP_FLAT_MAP_H
 
 #include <__algorithm/lexicographical_compare_three_way.h>
+#include <__algorithm/ranges_adjacent_find.h>
 #include <__algorithm/ranges_equal.h>
+#include <__algorithm/ranges_inplace_merge.h>
 #include <__algorithm/ranges_lower_bound.h>
 #include <__algorithm/ranges_partition_point.h>
 #include <__algorithm/ranges_stable_sort.h>
@@ -35,6 +37,7 @@
 #include <__memory/uses_allocator_construction.h>
 #include <__ranges/concepts.h>
 #include <__ranges/container_compatible_range.h>
+#include <__ranges/drop_view.h>
 #include <__ranges/ref_view.h>
 #include <__ranges/subrange.h>
 #include <__ranges/zip_view.h>
@@ -275,9 +278,9 @@ public:
   _LIBCPP_HIDE_FROM_ABI flat_map(
       key_container_type __key_cont, mapped_container_type __mapped_cont, const key_compare& __comp = key_compare())
       : __containers_{.keys = std::move(__key_cont), .values = std::move(__mapped_cont)}, __compare_(__comp) {
-    __sort_and_unique();
     _LIBCPP_ASSERT_VALID_INPUT_RANGE(__containers.keys.size() == __containers.values.size(),
                                      "flat_map keys and mapped containers have different size");
+    __sort_and_unique();
   }
 
   template <class _Allocator>
@@ -285,6 +288,8 @@ public:
   _LIBCPP_HIDE_FROM_ABI
   flat_map(const key_container_type& __key_cont, const mapped_container_type& __mapped_cont, const _Allocator& __alloc)
       : flat_map(__ctor_uses_allocator_tag{}, __alloc, __key_cont, __mapped_cont) {
+    _LIBCPP_ASSERT_VALID_INPUT_RANGE(__containers.keys.size() == __containers.values.size(),
+                                     "flat_map keys and mapped containers have different size");
     __sort_and_unique();
   }
 
@@ -296,6 +301,8 @@ public:
            const key_compare& __comp,
            const _Allocator& __alloc)
       : flat_map(__ctor_uses_allocator_tag{}, __alloc, __key_cont, __mapped_cont, __comp) {
+    _LIBCPP_ASSERT_VALID_INPUT_RANGE(__containers.keys.size() == __containers.values.size(),
+                                     "flat_map keys and mapped containers have different size");
     __sort_and_unique();
   }
 
@@ -304,7 +311,12 @@ public:
            key_container_type __key_cont,
            mapped_container_type __mapped_cont,
            const key_compare& __comp = key_compare())
-      : __containers_{.keys = std::move(__key_cont), .values = std::move(__mapped_cont)}, __compare_(__comp) {}
+      : __containers_{.keys = std::move(__key_cont), .values = std::move(__mapped_cont)}, __compare_(__comp) {
+    _LIBCPP_ASSERT_VALID_INPUT_RANGE(__containers.keys.size() == __containers.values.size(),
+                                     "flat_map keys and mapped containers have different size");
+    _LIBCPP_ASSERT_SEMANTIC_REQUIREMENT(
+        __is_sorted_and_unique(__containers.keys), "Either the key container is not sorted or it contains duplicates");
+  }
 
   template <class _Allocator>
     requires __allocator_ctor_constraint<_Allocator>
@@ -313,7 +325,12 @@ public:
            const key_container_type& __key_cont,
            const mapped_container_type& __mapped_cont,
            const _Allocator& __alloc)
-      : flat_map(__ctor_uses_allocator_tag{}, __alloc, __key_cont, __mapped_cont) {}
+      : flat_map(__ctor_uses_allocator_tag{}, __alloc, __key_cont, __mapped_cont) {
+    _LIBCPP_ASSERT_VALID_INPUT_RANGE(__containers.keys.size() == __containers.values.size(),
+                                     "flat_map keys and mapped containers have different size");
+    _LIBCPP_ASSERT_SEMANTIC_REQUIREMENT(
+        __is_sorted_and_unique(__containers.keys), "Either the key container is not sorted or it contains duplicates");
+  }
 
   template <class _Allocator>
     requires __allocator_ctor_constraint<_Allocator>
@@ -323,7 +340,12 @@ public:
            const mapped_container_type& __mapped_cont,
            const key_compare& __comp,
            const _Allocator& __alloc)
-      : flat_map(__ctor_uses_allocator_tag{}, __alloc, __key_cont, __mapped_cont, __comp) {}
+      : flat_map(__ctor_uses_allocator_tag{}, __alloc, __key_cont, __mapped_cont, __comp) {
+    _LIBCPP_ASSERT_VALID_INPUT_RANGE(__containers.keys.size() == __containers.values.size(),
+                                     "flat_map keys and mapped containers have different size");
+    _LIBCPP_ASSERT_SEMANTIC_REQUIREMENT(
+        __is_sorted_and_unique(__containers.keys), "Either the key container is not sorted or it contains duplicates");
+  }
 
   _LIBCPP_HIDE_FROM_ABI explicit flat_map(const key_compare& __comp) : __containers_(), __compare_(__comp) {}
 
@@ -597,10 +619,7 @@ public:
     if constexpr (sized_sentinel_for<_InputIterator, _InputIterator>) {
       __reserve_impl(__last - __first);
     }
-
-    for (; __first != __last; ++__first) {
-      __binary_search_emplace_impl(value_type(*__first));
-    }
+    __append_sort_merge_unique</*WasSorted = */ false>(std::move(__first), std::move(__last));
   }
 
   template <input_iterator _InputIterator>
@@ -609,19 +628,7 @@ public:
       __reserve_impl(__last - __first);
     }
 
-    auto __it = begin();
-    while (__first != __last) {
-      value_type __pair(*__first);
-      auto __end = end();
-      __it       = ranges::lower_bound(__it, __end, __pair.first, __compare_, [](const auto& __p) -> decltype(auto) {
-        return std::get<0>(__p);
-      });
-      if (__it == __end || __compare_(__pair.first, __it->first)) {
-        __it = __emplace_impl(__it, std::move(__pair));
-      }
-      ++__it;
-      ++__first;
-    }
+    __append_sort_merge_unique</*WasSorted = */ true>(std::move(__first), std::move(__last));
   }
 
   template <_ContainerCompatibleRange<value_type> _Range>
@@ -630,10 +637,7 @@ public:
       __reserve_impl(ranges::size(__range));
     }
 
-    auto __last = ranges::end(__range);
-    for (auto __it = ranges::begin(__range); __it != __last; ++__it) {
-      __binary_search_emplace_impl(value_type(*__it));
-    }
+    __append_sort_merge_unique</*WasSorted = */ false>(ranges::begin(__range), ranges::end(__range));
   }
 
   _LIBCPP_HIDE_FROM_ABI void insert(initializer_list<value_type> __il) { insert(__il.begin(), __il.end()); }
@@ -895,14 +899,6 @@ private:
   struct __ctor_uses_allocator_empty_tag {
     explicit __ctor_uses_allocator_empty_tag() = default;
   };
-  _LIBCPP_HIDE_FROM_ABI void __sort_and_unique() {
-    auto __zv = ranges::views::zip(__containers_.keys, __containers_.values);
-    ranges::stable_sort(__zv, __compare_, [](const auto& __p) -> decltype(auto) { return std::get<0>(__p); });
-    auto __it   = ranges::unique(__zv, __key_equiv(__compare_)).begin();
-    auto __dist = ranges::distance(__zv.begin(), __it);
-    __containers_.keys.erase(__containers_.keys.begin() + __dist, __containers_.keys.end());
-    __containers_.values.erase(__containers_.values.begin() + __dist, __containers_.values.end());
-  }
 
   template <class _Allocator, class _KeyCont, class _MappedCont, class... _CompArg>
   _LIBCPP_HIDE_FROM_ABI
@@ -922,6 +918,58 @@ private:
       : __containers_{.keys   = std::make_obj_using_allocator<key_container_type>(__alloc),
                       .values = std::make_obj_using_allocator<mapped_container_type>(__alloc)},
         __compare_(std::forward<_CompArg>(__comp)...) {}
+
+  _LIBCPP_HIDE_FROM_ABI bool __is_sorted_and_unique(auto&& __key_container) const {
+    auto __greater_or_equal_to = [this](const auto& __x, const auto& __y) { return !__compare_(__x, __y); };
+    return ranges::adjacent_find(__key_container, __greater_or_equal_to) == ranges::end(__key_container);
+  }
+
+  _LIBCPP_HIDE_FROM_ABI void __sort_and_unique() {
+    auto __zv = ranges::views::zip(__containers_.keys, __containers_.values);
+    ranges::stable_sort(__zv, __compare_, [](const auto& __p) -> decltype(auto) { return std::get<0>(__p); });
+    auto __dup_start = ranges::unique(__zv, __key_equiv(__compare_)).begin();
+    auto __dist      = ranges::distance(__zv.begin(), __dup_start);
+    __containers_.keys.erase(__containers_.keys.begin() + __dist, __containers_.keys.end());
+    __containers_.values.erase(__containers_.values.begin() + __dist, __containers_.values.end());
+  }
+
+  template <class _InputIterator, class _Sentinel>
+  _LIBCPP_HIDE_FROM_ABI size_type __append_no_check(_InputIterator __first, _Sentinel __last) {
+    size_type __num_of_appended = 0;
+    for (; __first != __last; ++__first) {
+      value_type __kv = *__first;
+      __containers_.keys.insert(__containers_.keys.end(), std::move(__kv.first));
+      __containers_.values.insert(__containers_.values.end(), std::move(__kv.second));
+      ++__num_of_appended;
+    }
+    return __num_of_appended;
+  }
+
+  template <bool _WasSorted, class _InputIterator, class _Sentinel>
+  _LIBCPP_HIDE_FROM_ABI void __append_sort_merge_unique(_InputIterator __first, _Sentinel __last) {
+    size_t __num_of_appended = __append_no_check(std::move(__first), std::move(__last));
+    if (__num_of_appended != 0) {
+      auto __zv                  = ranges::views::zip(__containers_.keys, __containers_.values);
+      auto __append_start_offset = __containers_.keys.size() - __num_of_appended;
+      auto __end                 = __zv.end();
+      auto __compare_key         = [this](const auto& __p1, const auto& __p2) {
+        return __compare_(std::get<0>(__p1), std::get<0>(__p2));
+      };
+      if constexpr (!_WasSorted) {
+        ranges::stable_sort(__zv.begin() + __append_start_offset, __end, __compare_key);
+      } else {
+        _LIBCPP_ASSERT_SEMANTIC_REQUIREMENT(
+            __is_sorted_and_unique(__containers.keys | views::drop(__append_start_offset)),
+            "Either the key container is not sorted or it contains duplicates");
+      }
+      ranges::inplace_merge(__zv.begin(), __zv.begin() + __append_start_offset, __end, __compare_key);
+
+      auto __dup_start = ranges::unique(__zv, __key_equiv(__compare_)).begin();
+      auto __dist      = ranges::distance(__zv.begin(), __dup_start);
+      __containers_.keys.erase(__containers_.keys.begin() + __dist, __containers_.keys.end());
+      __containers_.values.erase(__containers_.values.begin() + __dist, __containers_.values.end());
+    }
+  }
 
   template <class _Self, class _Kp>
   _LIBCPP_HIDE_FROM_ABI static auto __find_impl(_Self&& __self, const _Kp& __key) {
@@ -1131,7 +1179,8 @@ private:
   struct __key_equiv {
     __key_equiv(key_compare __c) : __comp_(__c) {}
     bool operator()(const_reference __x, const_reference __y) const {
-      return !__comp_(__x.first, __y.first) && !__comp_(__y.first, __x.first);
+      // LWG issue ? spec uses __x.first but zip_view no longer uses pair
+      return !__comp_(std::get<0>(__x), std::get<0>(__y)) && !__comp_(std::get<0>(__y), std::get<0>(__x));
     }
     key_compare __comp_;
   };
