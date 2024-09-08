@@ -1810,8 +1810,7 @@ Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN) {
   // If there is one operand that does not fold, remember the BB it is in.
   SmallVector<Value *> NewPhiValues;
   SmallVector<unsigned int> OpsToMoveUseTo;
-  BasicBlock *NonSimplifiedBB = nullptr;
-  Value *NonSimplifiedInVal = nullptr;
+  bool SeenNonSimplifiedInVal = false;
   for (unsigned i = 0; i != NumPHIValues; ++i) {
     Value *InVal = PN->getIncomingValue(i);
     BasicBlock *InBB = PN->getIncomingBlock(i);
@@ -1824,29 +1823,31 @@ Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN) {
     // If the only use of phi is comparing it with a constant then we can
     // put this comparison in the incoming BB directly after a ucmp/scmp call
     // because we know that it will simplify to a single icmp.
-    if (isa<CmpIntrinsic>(InVal) &&
-        match(&I, m_c_ICmp(m_Specific(PN), m_Constant()))) {
+    const APInt *Ignored;
+    if (isa<CmpIntrinsic>(InVal) && InVal->hasOneUse() &&
+        match(&I, m_c_ICmp(m_Specific(PN), m_APInt(Ignored)))) {
       OpsToMoveUseTo.push_back(i);
       NewPhiValues.push_back(nullptr);
       continue;
     }
 
-    if (NonSimplifiedBB) return nullptr;  // More than one non-simplified value.
+    if (SeenNonSimplifiedInVal)
+      return nullptr; // More than one non-simplified value.
+    SeenNonSimplifiedInVal = true;
 
-    NonSimplifiedBB = InBB;
-    NonSimplifiedInVal = InVal;
     NewPhiValues.push_back(nullptr);
+    OpsToMoveUseTo.push_back(i);
 
     // If the InVal is an invoke at the end of the pred block, then we can't
     // insert a computation after it without breaking the edge.
     if (isa<InvokeInst>(InVal))
-      if (cast<Instruction>(InVal)->getParent() == NonSimplifiedBB)
+      if (cast<Instruction>(InVal)->getParent() == InBB)
         return nullptr;
 
     // Do not push the operation across a loop backedge. This could result in
     // an infinite combine loop, and is generally non-profitable (especially
     // if the operation was originally outside the loop).
-    if (isBackEdge(NonSimplifiedBB, PN->getParent()))
+    if (isBackEdge(InBB, PN->getParent()))
       return nullptr;
   }
 
@@ -1855,19 +1856,18 @@ Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN) {
   // inserting the computation on some other paths (e.g. inside a loop).  Only
   // do this if the pred block is unconditionally branching into the phi block.
   // Also, make sure that the pred block is not dead code.
-  if (NonSimplifiedBB != nullptr) {
-    BranchInst *BI = dyn_cast<BranchInst>(NonSimplifiedBB->getTerminator());
-    if (!BI || !BI->isUnconditional() ||
-        !DT.isReachableFromEntry(NonSimplifiedBB))
-      return nullptr;
-  }
-
-  // Clone the instruction that uses the phi node and move it into the incoming
-  // BB because we know that the next iteration of InstCombine will simplify it.
+  // After checking for all of the above, clone the instruction that uses the
+  // phi node and move it into the incoming BB because we know that the next
+  // iteration of InstCombine will simplify it.
   for (auto OpIndex : OpsToMoveUseTo) {
-    Instruction *Clone = I.clone();
     Value *Op = PN->getIncomingValue(OpIndex);
     BasicBlock *OpBB = PN->getIncomingBlock(OpIndex);
+
+    BranchInst *BI = dyn_cast<BranchInst>(OpBB->getTerminator());
+    if (!BI || !BI->isUnconditional() || !DT.isReachableFromEntry(OpBB))
+      return nullptr;
+
+    Instruction *Clone = I.clone();
     for (Use &U : Clone->operands()) {
       if (U == PN)
         U = Op;
@@ -1884,30 +1884,14 @@ Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN) {
   NewPN->takeName(PN);
   NewPN->setDebugLoc(PN->getDebugLoc());
 
-  // If we are going to have to insert a new computation, do so right before the
-  // predecessor's terminator.
-  Instruction *Clone = nullptr;
-  if (NonSimplifiedBB) {
-    Clone = I.clone();
-    for (Use &U : Clone->operands()) {
-      if (U == PN)
-        U = NonSimplifiedInVal;
-      else
-        U = U->DoPHITranslation(PN->getParent(), NonSimplifiedBB);
-    }
-    InsertNewInstBefore(Clone, NonSimplifiedBB->getTerminator()->getIterator());
-  }
-
   for (unsigned i = 0; i != NumPHIValues; ++i) {
-    if (NewPhiValues[i])
-      NewPN->addIncoming(NewPhiValues[i], PN->getIncomingBlock(i));
-    else
-      NewPN->addIncoming(Clone, PN->getIncomingBlock(i));
+    NewPN->addIncoming(NewPhiValues[i], PN->getIncomingBlock(i));
   }
 
   for (User *U : make_early_inc_range(PN->users())) {
     Instruction *User = cast<Instruction>(U);
-    if (User == &I) continue;
+    if (User == &I)
+      continue;
     replaceInstUsesWith(*User, NewPN);
     eraseInstFromFunction(*User);
   }
