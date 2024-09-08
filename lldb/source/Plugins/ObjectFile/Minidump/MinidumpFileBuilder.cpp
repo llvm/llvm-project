@@ -831,32 +831,25 @@ Status MinidumpFileBuilder::AddMemoryList() {
   // bytes of the core file. Thread structures in minidump files can only use
   // 32 bit memory descriptiors, so we emit them first to ensure the memory is
   // in accessible with a 32 bit offset.
-  std::vector<CoreFileMemoryRange> ranges_32;
-  std::vector<CoreFileMemoryRange> ranges_64;
-  CoreFileMemoryRanges all_core_memory_ranges;
+  Process::CoreFileMemoryRanges ranges_32;
+  Process::CoreFileMemoryRanges ranges_64;
+  Process::CoreFileMemoryRanges all_core_memory_ranges;
   error = m_process_sp->CalculateCoreFileSaveRanges(m_save_core_options,
                                                     all_core_memory_ranges);
-
-  std::vector<CoreFileMemoryRange> all_core_memory_vec;
-  // Extract all the data into just a vector of data. So we can mutate this in
-  // place.
-  for (const auto &core_range : all_core_memory_ranges)
-    all_core_memory_vec.push_back(core_range.data);
-
   if (error.Fail())
     return error;
 
   // Start by saving all of the stacks and ensuring they fit under the 32b
   // limit.
   uint64_t total_size = GetCurrentDataEndOffset();
-  auto iterator = all_core_memory_vec.begin();
-  while (iterator != all_core_memory_vec.end()) {
+  auto iterator = all_core_memory_ranges.begin();
+  while (iterator != all_core_memory_ranges.end()) {
     if (m_saved_stack_ranges.count(iterator->range.start()) > 0) {
       // We don't save stacks twice.
       ranges_32.push_back(*iterator);
       total_size +=
           iterator->range.size() + sizeof(llvm::minidump::MemoryDescriptor);
-      iterator = all_core_memory_vec.erase(iterator);
+      iterator = all_core_memory_ranges.erase(iterator);
     } else {
       iterator++;
     }
@@ -876,11 +869,11 @@ Status MinidumpFileBuilder::AddMemoryList() {
   // Then anything overflow extends into 64b addressable space.
   // All core memeroy ranges will either container nothing on stacks only
   // or all the memory ranges including stacks
-  if (!all_core_memory_vec.empty())
-    total_size += 256 + (all_core_memory_vec.size() *
+  if (!all_core_memory_ranges.empty())
+    total_size += 256 + (all_core_memory_ranges.size() *
                          sizeof(llvm::minidump::MemoryDescriptor_64));
 
-  for (const auto &core_range : all_core_memory_vec) {
+  for (const auto &core_range : all_core_memory_ranges) {
     const addr_t range_size = core_range.range.size();
     // We don't need to check for stacks here because we already removed them
     // from all_core_memory_ranges.
@@ -965,15 +958,15 @@ Status MinidumpFileBuilder::DumpDirectories() const {
 }
 
 static uint64_t
-GetLargestRangeSize(const std::vector<CoreFileMemoryRange> &ranges) {
+GetLargestRangeSize(const Process::CoreFileMemoryRanges &ranges) {
   uint64_t max_size = 0;
   for (const auto &core_range : ranges)
     max_size = std::max(max_size, core_range.range.size());
   return max_size;
 }
 
-Status MinidumpFileBuilder::AddMemoryList_32(
-    std::vector<CoreFileMemoryRange> &ranges) {
+Status
+MinidumpFileBuilder::AddMemoryList_32(Process::CoreFileMemoryRanges &ranges) {
   std::vector<MemoryDescriptor> descriptors;
   Status error;
   if (ranges.size() == 0)
@@ -1049,8 +1042,8 @@ Status MinidumpFileBuilder::AddMemoryList_32(
   return error;
 }
 
-Status MinidumpFileBuilder::AddMemoryList_64(
-    std::vector<CoreFileMemoryRange> &ranges) {
+Status
+MinidumpFileBuilder::AddMemoryList_64(Process::CoreFileMemoryRanges &ranges) {
   Status error;
   if (ranges.empty())
     return error;
