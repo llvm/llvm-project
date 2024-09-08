@@ -213,3 +213,22 @@ define double @test18(double %a, double %b, double %c, double %eps) {
   ret double %cond
 }
 
+define float @test19(i1 %cmp) {
+; CHECK-LABEL: test19:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    andl $1, %edi
+; CHECK-NEXT:    cvtsi2ss %edi, %xmm0
+; CHECK-NEXT:    retq
+  %cond = select i1 %cmp, float 1.000000e+00, float 0.000000e+00
+  ret float %cond
+}
+
+define double @test20(i1 %cmp) {
+; CHECK-LABEL: test20:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    andl $1, %edi
+; CHECK-NEXT:    cvtsi2sd %edi, %xmm0
+; CHECK-NEXT:    retq
+  %cond = select i1 %cmp, double 1.000000e+00, double 0.000000e+00
+  ret double %cond
+}
