@@ -2091,7 +2091,7 @@ drps
 # CHECK-NEXT:  1      3     0.50                        fmov	x20, d31
 # CHECK-NEXT:  1      3     1.00                        fmov	d1, x15
 # CHECK-NEXT:  1      3     0.50                        fmov	x3, v12.d[1]
-# CHECK-NEXT:  3      5     1.00                        fmov	v1.d[1], x19
+# CHECK-NEXT:  2      5     1.00                        fmov	v1.d[1], x19
 # CHECK-NEXT:  1      2     0.50                        fmov	s2, #0.12500000
 # CHECK-NEXT:  1      2     0.50                        fmov	s3, #1.00000000
 # CHECK-NEXT:  1      2     0.50                        fmov	d30, #16.00000000
@@ -2557,7 +2557,7 @@ drps
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2]    [3.0]  [3.1]  [4]    [5]    [6.0]  [6.1]  [7]    [8]
-# CHECK-NEXT: 11.00  11.00  33.00  33.00  99.33  163.33 163.33 345.50 200.50 144.00 144.00 185.00 65.00
+# CHECK-NEXT: 11.00  11.00  33.00  33.00  99.33  163.33 163.33 345.50 200.50 144.00 144.00 184.50 64.50
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2]    [3.0]  [3.1]  [4]    [5]    [6.0]  [6.1]  [7]    [8]    Instructions:
@@ -3275,7 +3275,7 @@ drps
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fmov	x20, d31
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -      -     fmov	d1, x15
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fmov	x3, v12.d[1]
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -     1.00   1.00   fmov	v1.d[1], x19
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -     0.50   0.50   fmov	v1.d[1], x19
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fmov	s2, #0.12500000
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fmov	s3, #1.00000000
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fmov	d30, #16.00000000
