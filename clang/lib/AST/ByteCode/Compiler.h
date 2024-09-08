@@ -409,6 +409,8 @@ protected:
   /// Switch case mapping.
   CaseMap CaseLabels;
 
+  /// Scope to cleanup until when chumping to one of the labels.
+  VariableScope<Emitter> *LabelVarScope = nullptr;
   /// Point to break to.
   OptLabelTy BreakLabel;
   /// Point to continue to.
