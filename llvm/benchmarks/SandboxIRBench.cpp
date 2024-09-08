@@ -21,6 +21,7 @@
 #include "llvm/SandboxIR/SandboxIR.h"
 #include "llvm/Support/SourceMgr.h"
 #include <memory>
+#include <sstream>
 
 using namespace llvm;
 
