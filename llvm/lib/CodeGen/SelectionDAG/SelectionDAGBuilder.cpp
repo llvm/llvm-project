@@ -5112,6 +5112,12 @@ void SelectionDAGBuilder::visitAtomicRMW(const AtomicRMWInst &I) {
   case AtomicRMWInst::UDecWrap:
     NT = ISD::ATOMIC_LOAD_UDEC_WRAP;
     break;
+  case AtomicRMWInst::USubCond:
+    NT = ISD::ATOMIC_LOAD_USUB_COND;
+    break;
+  case AtomicRMWInst::USubSat:
+    NT = ISD::ATOMIC_LOAD_USUB_SAT;
+    break;
   }
   AtomicOrdering Ordering = I.getOrdering();
   SyncScope::ID SSID = I.getSyncScopeID();

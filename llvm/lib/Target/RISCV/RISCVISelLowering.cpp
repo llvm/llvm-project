@@ -18951,9 +18951,8 @@ void RISCVTargetLowering::analyzeInputArgs(
     else if (Ins[i].isOrigArg())
       ArgTy = FType->getParamType(Ins[i].getOrigArgIndex());
 
-    RISCVABI::ABI ABI = MF.getSubtarget<RISCVSubtarget>().getTargetABI();
-    if (Fn(MF.getDataLayout(), ABI, i, ArgVT, ArgVT, CCValAssign::Full,
-           ArgFlags, CCInfo, /*IsFixed=*/true, IsRet, ArgTy, *this)) {
+    if (Fn(i, ArgVT, ArgVT, CCValAssign::Full, ArgFlags, CCInfo,
+           /*IsFixed=*/true, IsRet, ArgTy)) {
       LLVM_DEBUG(dbgs() << "InputArg #" << i << " has unhandled type "
                         << ArgVT << '\n');
       llvm_unreachable(nullptr);
@@ -18972,9 +18971,8 @@ void RISCVTargetLowering::analyzeOutputArgs(
     ISD::ArgFlagsTy ArgFlags = Outs[i].Flags;
     Type *OrigTy = CLI ? CLI->getArgs()[Outs[i].OrigArgIndex].Ty : nullptr;
 
-    RISCVABI::ABI ABI = MF.getSubtarget<RISCVSubtarget>().getTargetABI();
-    if (Fn(MF.getDataLayout(), ABI, i, ArgVT, ArgVT, CCValAssign::Full,
-           ArgFlags, CCInfo, Outs[i].IsFixed, IsRet, OrigTy, *this)) {
+    if (Fn(i, ArgVT, ArgVT, CCValAssign::Full, ArgFlags, CCInfo,
+           Outs[i].IsFixed, IsRet, OrigTy)) {
       LLVM_DEBUG(dbgs() << "OutputArg #" << i << " has unhandled type "
                         << ArgVT << "\n");
       llvm_unreachable(nullptr);
@@ -19086,7 +19084,7 @@ static SDValue unpackFromMemLoc(SelectionDAG &DAG, SDValue Chain,
   EVT LocVT = VA.getLocVT();
   EVT ValVT = VA.getValVT();
   EVT PtrVT = MVT::getIntegerVT(DAG.getDataLayout().getPointerSizeInBits(0));
-  if (ValVT.isScalableVector()) {
+  if (VA.getLocInfo() == CCValAssign::Indirect) {
     // When the value is a scalable vector, we save the pointer which points to
     // the scalable vector value in the stack. The ValVT will be the pointer
     // type, instead of the scalable vector type.
@@ -19097,14 +19095,13 @@ static SDValue unpackFromMemLoc(SelectionDAG &DAG, SDValue Chain,
   SDValue FIN = DAG.getFrameIndex(FI, PtrVT);
   SDValue Val;
 
-  ISD::LoadExtType ExtType;
+  ISD::LoadExtType ExtType = ISD::NON_EXTLOAD;
   switch (VA.getLocInfo()) {
   default:
     llvm_unreachable("Unexpected CCValAssign::LocInfo");
   case CCValAssign::Full:
   case CCValAssign::Indirect:
   case CCValAssign::BCvt:
-    ExtType = ISD::NON_EXTLOAD;
     break;
   }
   Val = DAG.getExtLoad(
@@ -19688,10 +19685,8 @@ bool RISCVTargetLowering::CanLowerReturn(
   for (unsigned i = 0, e = Outs.size(); i != e; ++i) {
     MVT VT = Outs[i].VT;
     ISD::ArgFlagsTy ArgFlags = Outs[i].Flags;
-    RISCVABI::ABI ABI = MF.getSubtarget<RISCVSubtarget>().getTargetABI();
-    if (CC_RISCV(MF.getDataLayout(), ABI, i, VT, VT, CCValAssign::Full,
-                 ArgFlags, CCInfo, /*IsFixed=*/true, /*IsRet=*/true, nullptr,
-                 *this))
+    if (CC_RISCV(i, VT, VT, CCValAssign::Full, ArgFlags, CCInfo,
+                 /*IsFixed=*/true, /*IsRet=*/true, nullptr))
       return false;
   }
   return true;
@@ -20453,7 +20448,9 @@ RISCVTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
   // forward-progress guarantee.
   if (AI->isFloatingPointOperation() ||
       AI->getOperation() == AtomicRMWInst::UIncWrap ||
-      AI->getOperation() == AtomicRMWInst::UDecWrap)
+      AI->getOperation() == AtomicRMWInst::UDecWrap ||
+      AI->getOperation() == AtomicRMWInst::USubCond ||
+      AI->getOperation() == AtomicRMWInst::USubSat)
     return AtomicExpansionKind::CmpXChg;
 
   // Don't expand forced atomics, we want to have __sync libcalls instead.

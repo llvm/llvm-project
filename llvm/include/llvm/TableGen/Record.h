@@ -1737,7 +1737,7 @@ public:
   void updateClassLoc(SMLoc Loc);
 
   // Make the type that this record should have based on its superclasses.
-  RecordRecTy *getType();
+  RecordRecTy *getType() const;
 
   /// get the corresponding DefInit.
   DefInit *getDefInit();

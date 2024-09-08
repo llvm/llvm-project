@@ -217,6 +217,7 @@ private:
   void createExportTable();
   void mergeSections();
   void sortECChunks();
+  void appendECImportTables();
   void removeUnusedSections();
   void assignAddresses();
   bool isInRange(uint16_t relType, uint64_t s, uint64_t p, int margin,
@@ -753,6 +754,7 @@ void Writer::run() {
     createExportTable();
     mergeSections();
     sortECChunks();
+    appendECImportTables();
     removeUnusedSections();
     finalizeAddresses();
     removeEmptySections();
@@ -914,6 +916,28 @@ void Writer::addSyntheticIdata() {
   add(".idata$7", idata.dllNames);
 }
 
+void Writer::appendECImportTables() {
+  if (!isArm64EC(ctx.config.machine))
+    return;
+
+  const uint32_t rdata = IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ;
+
+  // IAT is always placed at the begining of .rdata section and its size
+  // is aligned to 4KB. Insert it here, after all merges all done.
+  if (PartialSection *importAddresses = findPartialSection(".idata$5", rdata)) {
+    if (!rdataSec->chunks.empty())
+      rdataSec->chunks.front()->setAlignment(
+          std::max(0x1000u, rdataSec->chunks.front()->getAlignment()));
+    iatSize = alignTo(iatSize, 0x1000);
+
+    rdataSec->chunks.insert(rdataSec->chunks.begin(),
+                            importAddresses->chunks.begin(),
+                            importAddresses->chunks.end());
+    rdataSec->contribSections.insert(rdataSec->contribSections.begin(),
+                                     importAddresses);
+  }
+}
+
 // Locate the first Chunk and size of the import directory list and the
 // IAT.
 void Writer::locateImportTables() {
@@ -1068,6 +1092,11 @@ void Writer::createSections() {
 
       sortCRTSectionChunks(pSec->chunks);
     }
+
+    // ARM64EC has specific placement and alignment requirements for the IAT.
+    // Delay adding its chunks until appendECImportTables.
+    if (isArm64EC(ctx.config.machine) && pSec->name == ".idata$5")
+      continue;
 
     OutputSection *sec = createSection(name, outChars);
     for (Chunk *c : pSec->chunks)
