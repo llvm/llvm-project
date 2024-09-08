@@ -57,6 +57,20 @@ void CharUsage() {
   constexpr auto H = FourCharsVecSize{1, 2, 3, 4} != 3;
   static_assert(H[0] == -1 && H[1] == -1 && H[2] == 0 && H[3] == -1, "");
 
+  constexpr auto O = FourCharsVecSize{5, 0, 6, 0} &&
+                     FourCharsVecSize{5, 5, 0, 0};
+  static_assert(O[0] == 1 && O[1] == 0 && O[2] == 0 && O[3] == 0, "");
+
+  constexpr auto P = FourCharsVecSize{5, 0, 6, 0} ||
+                     FourCharsVecSize{5, 5, 0, 0};
+  static_assert(P[0] == 1 && P[1] == 1 && P[2] == 1 && P[3] == 0, "");
+
+  constexpr auto Q = FourCharsVecSize{5, 0, 6, 0} && 3;
+  static_assert(Q[0] == 1 && Q[1] == 0 && Q[2] == 1 && Q[3] == 0, "");
+
+  constexpr auto R = FourCharsVecSize{5, 0, 6, 0} || 3;
+  static_assert(R[0] == 1 && R[1] == 1 && R[2] == 1 && R[3] == 1, "");
+
   constexpr auto H1 = FourCharsVecSize{-1, -1, 0, -1};
   constexpr auto InvH = -H1;
   static_assert(InvH[0] == 1 && InvH[1] == 1 && InvH[2] == 0 && InvH[3] == 1, "");
@@ -110,6 +124,21 @@ void CharExtVecUsage() {
 
   constexpr auto H = FourCharsExtVec{1, 2, 3, 4} != 3;
   static_assert(H[0] == -1 && H[1] == -1 && H[2] == 0 && H[3] == -1, "");
+
+  constexpr auto O = FourCharsExtVec{5, 0, 6, 0} &&
+                     FourCharsExtVec{5, 5, 0, 0};
+  static_assert(O[0] == 1 && O[1] == 0 && O[2] == 0 && O[3] == 0, "");
+
+  constexpr auto P = FourCharsExtVec{5, 0, 6, 0} ||
+                     FourCharsExtVec{5, 5, 0, 0};
+  static_assert(P[0] == 1 && P[1] == 1 && P[2] == 1 && P[3] == 0, "");
+
+  constexpr auto Q = FourCharsExtVec{5, 0, 6, 0} && 3;
+  static_assert(Q[0] == 1 && Q[1] == 0 && Q[2] == 1 && Q[3] == 0, "");
+
+  constexpr auto R = FourCharsExtVec{5, 0, 6, 0} || 3;
+  static_assert(R[0] == 1 && R[1] == 1 && R[2] == 1 && R[3] == 1, "");
+
 
   constexpr auto H1 = FourCharsExtVec{-1, -1, 0, -1};
   constexpr auto InvH = -H1;
@@ -165,9 +194,32 @@ void FloatUsage() {
   constexpr auto H = FourFloatsVecSize{1, 2, 3, 4} != 3;
   static_assert(H[0] == -1 && H[1] == -1 && H[2] == 0 && H[3] == -1, "");
 
+  constexpr auto O1 = FourFloatsVecSize{5, 0, 6, 0} &&
+                     FourFloatsVecSize{5, 5, 0, 0};
+  static_assert(O1[0] == 1 && O1[1] == 0 && O1[2] == 0 && O1[3] == 0, "");
+
+  constexpr auto P1 = FourFloatsVecSize{5, 0, 6, 0} ||
+                     FourFloatsVecSize{5, 5, 0, 0};
+  static_assert(P1[0] == 1 && P1[1] == 1 && P1[2] == 1 && P1[3] == 0, "");
+
+  constexpr auto Q = FourFloatsVecSize{5, 0, 6, 0} && 3;
+  static_assert(Q[0] == 1 && Q[1] == 0 && Q[2] == 1 && Q[3] == 0, "");
+
+  constexpr auto R = FourFloatsVecSize{5, 0, 6, 0} || 3;
+  static_assert(R[0] == 1 && R[1] == 1 && R[2] == 1 && R[3] == 1, "");
+
+
   constexpr auto Y = FourFloatsVecSize{1.200000e+01, 1.700000e+01, -1.000000e+00, -1.000000e+00};
   constexpr auto Z = -Y;
   static_assert(Z[0] == -1.200000e+01 && Z[1] == -1.700000e+01 && Z[2] == 1.000000e+00 && Z[3] == 1.000000e+00, "");
+
+  constexpr auto O = FourFloatsVecSize{5, 0, 6, 0} &&
+                     FourFloatsVecSize{5, 5, 0, 0};
+  static_assert(O[0] == 1 && O[1] == 0 && O[2] == 0 && O[3] == 0, "");
+
+  constexpr auto P = FourFloatsVecSize{5, 0, 6, 0} ||
+                     FourFloatsVecSize{5, 5, 0, 0};
+  static_assert(P[0] == 1 && P[1] == 1 && P[2] == 1 && P[3] == 0, "");
 
   // Operator ~ is illegal on floats.
   constexpr auto ae = ~FourFloatsVecSize{0, 1, 8, -1}; // expected-error {{invalid argument type}}
@@ -219,6 +271,20 @@ void FloatVecUsage() {
   constexpr auto H = FourFloatsVecSize{1, 2, 3, 4} != 3;
   static_assert(H[0] == -1 && H[1] == -1 && H[2] == 0 && H[3] == -1, "");
 
+  constexpr auto O = FourFloatsVecSize{5, 0, 6, 0} &&
+                     FourFloatsVecSize{5, 5, 0, 0};
+  static_assert(O[0] == 1 && O[1] == 0 && O[2] == 0 && O[3] == 0, "");
+
+  constexpr auto P = FourFloatsVecSize{5, 0, 6, 0} ||
+                     FourFloatsVecSize{5, 5, 0, 0};
+  static_assert(P[0] == 1 && P[1] == 1 && P[2] == 1 && P[3] == 0, "");
+
+  constexpr auto Q = FourFloatsVecSize{5, 0, 6, 0} && 3;
+  static_assert(Q[0] == 1 && Q[1] == 0 && Q[2] == 1 && Q[3] == 0, "");
+
+  constexpr auto R = FourFloatsVecSize{5, 0, 6, 0} || 3;
+  static_assert(R[0] == 1 && R[1] == 1 && R[2] == 1 && R[3] == 1, "");
+
   constexpr auto Y = FourFloatsVecSize{1.200000e+01, 1.700000e+01, -1.000000e+00, -1.000000e+00};
   constexpr auto Z = -Y;
   static_assert(Z[0] == -1.200000e+01 && Z[1] == -1.700000e+01 && Z[2] == 1.000000e+00 && Z[3] == 1.000000e+00, "");
@@ -234,6 +300,18 @@ void I128Usage() {
   constexpr auto a = FourI128VecSize{1, 2, 3, 4};
   static_assert(a[0] == 1 && a[1] == 2 && a[2] == 3 && a[3] == 4, "");
 
+  constexpr auto a1 = FourI128VecSize{5, 0, 6, 0} && FourI128VecSize{5, 5, 0, 0};
+  static_assert(a1[0] == 1 && a1[1] == 0 && a1[2] == 0 && a1[3] == 0, "");
+
+  constexpr auto a2 = FourI128VecSize{5, 0, 6, 0} || FourI128VecSize{5, 5, 0, 0};
+  static_assert(a2[0] == 1 && a2[1] == 1 && a2[2] == 1 && a2[3] == 0, "");
+
+  constexpr auto Q = FourI128VecSize{5, 0, 6, 0} && 3;
+  static_assert(Q[0] == 1 && Q[1] == 0 && Q[2] == 1 && Q[3] == 0, "");
+
+  constexpr auto R = FourI128VecSize{5, 0, 6, 0} || 3;
+  static_assert(R[0] == 1 && R[1] == 1 && R[2] == 1 && R[3] == 1, "");
+
   constexpr auto b = a < 3;
   static_assert(b[0] == -1 && b[1] == -1 && b[2] == 0 && b[3] == 0, "");
 
@@ -248,6 +326,18 @@ void I128Usage() {
 void I128VecUsage() {
   constexpr auto a = FourI128ExtVec{1, 2, 3, 4};
   static_assert(a[0] == 1 && a[1] == 2 && a[2] == 3 && a[3] == 4, "");
+
+  constexpr auto a1 = FourI128ExtVec{5, 0, 6, 0} && FourI128ExtVec{5, 5, 0, 0};
+  static_assert(a1[0] == 1 && a1[1] == 0 && a1[2] == 0 && a1[3] == 0, "");
+
+  constexpr auto a2 = FourI128ExtVec{5, 0, 6, 0} || FourI128ExtVec{5, 5, 0, 0};
+  static_assert(a2[0] == 1 && a2[1] == 1 && a2[2] == 1 && a2[3] == 0, "");
+
+  constexpr auto Q = FourI128ExtVec{5, 0, 6, 0} && 3;
+  static_assert(Q[0] == 1 && Q[1] == 0 && Q[2] == 1 && Q[3] == 0, "");
+
+  constexpr auto R = FourI128ExtVec{5, 0, 6, 0} || 3;
+  static_assert(R[0] == 1 && R[1] == 1 && R[2] == 1 && R[3] == 1, "");
 
   constexpr auto b = a < 3;
   static_assert(b[0] == -1 && b[1] == -1 && b[2] == 0 && b[3] == 0, "");

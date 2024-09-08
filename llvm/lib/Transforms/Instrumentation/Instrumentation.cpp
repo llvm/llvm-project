@@ -24,19 +24,6 @@ static cl::opt<bool> ClIgnoreRedundantInstrumentation(
     "ignore-redundant-instrumentation",
     cl::desc("Ignore redundant instrumentation"), cl::Hidden, cl::init(false));
 
-namespace {
-/// Diagnostic information for IR instrumentation reporting.
-class DiagnosticInfoInstrumentation : public DiagnosticInfo {
-  const Twine &Msg;
-
-public:
-  DiagnosticInfoInstrumentation(const Twine &DiagMsg,
-                                DiagnosticSeverity Severity = DS_Warning)
-      : DiagnosticInfo(DK_Linker, Severity), Msg(DiagMsg) {}
-  void print(DiagnosticPrinter &DP) const override { DP << Msg; }
-};
-} // namespace
-
 /// Check if module has flag attached, if not add the flag.
 bool llvm::checkIfAlreadyInstrumented(Module &M, StringRef Flag) {
   if (!M.getModuleFlag(Flag)) {
