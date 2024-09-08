@@ -1804,10 +1804,6 @@ void BitcodeFile::parseLazy() {
       auto *sym = symtab.insert(unique_saver().save(irSym.getName()));
       sym->resolve(LazySymbol{*this});
       symbols[i] = sym;
-    } else {
-      // Keep copies of per-module undefined symbols for LTO::GlobalResolutions
-      // usage.
-      unique_saver().save(irSym.getName());
     }
 }
 
