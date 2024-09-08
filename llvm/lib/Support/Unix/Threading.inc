@@ -185,11 +185,11 @@ void llvm::set_thread_name(const Twine &Name) {
                        const_cast<char *>(NameStr.data()));
 #elif defined(__APPLE__)
   ::pthread_setname_np(NameStr.data());
-#elif defined(__HAIKU__)
-  ::rename_thread(::find_thread(nullptr), NameStr.data());
 #else
   ::pthread_setname_np(::pthread_self(), NameStr.data());
 #endif
+#elif defined(__HAIKU__)
+  ::rename_thread(::find_thread(nullptr), NameStr.data());
 #endif
 }
 
