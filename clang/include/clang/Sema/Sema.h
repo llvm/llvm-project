@@ -7851,22 +7851,6 @@ public:
     return Res;
   }
 
-  /// keepInLifetimeExtendingContext - Pull down InLifetimeExtendingContext
-  /// flag from previous context.
-  void keepInLifetimeExtendingContext() {
-    if (ExprEvalContexts.size() > 2)
-      currentEvaluationContext().InLifetimeExtendingContext =
-          parentEvaluationContext().InLifetimeExtendingContext;
-  }
-
-  /// keepInRebuildDefaultArgInitContext - Pull down
-  /// RebuildDefaultArgOrDefaultInit flag from previous context.
-  void keepInRebuildDefaultArgOrInitContext() {
-    if (ExprEvalContexts.size() > 2)
-      currentEvaluationContext().RebuildDefaultArgOrDefaultInit =
-          parentEvaluationContext().RebuildDefaultArgOrDefaultInit;
-  }
-
   DefaultedComparisonKind getDefaultedComparisonKind(const FunctionDecl *FD) {
     return getDefaultedFunctionKind(FD).asComparison();
   }
