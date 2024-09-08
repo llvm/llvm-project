@@ -37,16 +37,11 @@
 #  define TEST_HAS_NO_NASTY_STRING
 #endif
 
-// TODO re-enable after #107747 is fixed
-#ifndef TEST_HAS_NO_NASTY_STRING
-#  define TEST_HAS_NO_NASTY_STRING
-#endif
-
 #ifndef TEST_HAS_NO_NASTY_STRING
 // Make sure the char-like operations in strings do not depend on the char-like type.
 struct nasty_char {
-  template <typename T>
-  friend auto operator<=>(T, T) = delete;
+  template <typename T, typename U>
+  friend auto operator<=>(T, U) = delete;
 
   template <typename T>
   friend void operator+(T&&) = delete;

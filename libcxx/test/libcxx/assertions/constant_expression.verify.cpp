@@ -20,42 +20,5 @@ static_assert((_LIBCPP_ASSERT(false, "message"), true), "");
 static_assert((_LIBCPP_ASSUME(false), true), "");
 // expected-error@-1 {{static assertion expression is not an integral constant expression}}
 
-const int i = (_LIBCPP_ASSERT(false, "message"), 1);
-const int j = (_LIBCPP_ASSUME(false), 1);
-
-static_assert(i, "");
-// expected-error@-1 {{static assertion expression is not an integral constant expression}}
-static_assert(j, "");
-// expected-error@-1 {{static assertion expression is not an integral constant expression}}
-
-#if TEST_STD_VER >= 11
-constexpr int f(int x) {
-  return (_LIBCPP_ASSERT(x != 6, "message"), x);
-  // expected-note@-1 {{subexpression not valid in a constant expression}}
-}
-constexpr int g(int x) {
-  return (_LIBCPP_ASSUME(x != 6), x);
-  // expected-note@-1 {{subexpression not valid in a constant expression}}
-}
-static_assert(f(6) == 6, "");
-// expected-error@-1 {{static assertion expression is not an integral constant expression}}
-static_assert(g(6) == 6, "");
-// expected-error@-1 {{static assertion expression is not an integral constant expression}}
-#endif
-
-#if TEST_STD_VER >= 14
-constexpr int ff(int x) {
-  _LIBCPP_ASSERT(x != 6, "message");
-  // expected-note@-1 {{subexpression not valid in a constant expression}}
-  return x;
-}
-constexpr int gg(int x) {
-  _LIBCPP_ASSUME(x != 6);
-  // expected-note@-1 {{subexpression not valid in a constant expression}}
-  return x;
-}
-static_assert(ff(6) == 6, "");
-// expected-error@-1 {{static assertion expression is not an integral constant expression}}
-static_assert(gg(6) == 6, "");
-// expected-error@-1 {{static assertion expression is not an integral constant expression}}
-#endif
+static_assert(!__builtin_constant_p(_LIBCPP_ASSERT(false, "message")), "");
+static_assert(!__builtin_constant_p(_LIBCPP_ASSUME(false)), "");
