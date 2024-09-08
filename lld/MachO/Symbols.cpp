@@ -60,7 +60,7 @@ Defined::Defined(StringRef name, InputFile *file, InputSection *isec,
                  bool interposable)
     : Symbol(DefinedKind, name, file), overridesWeakDef(canOverrideWeakDef),
       privateExtern(isPrivateExtern), includeInSymtab(includeInSymtab),
-      wasIdenticalCodeFolded(false),
+      identicalCodeFoldingKind(ICFFoldKind::None),
       referencedDynamically(isReferencedDynamically), noDeadStrip(noDeadStrip),
       interposable(interposable), weakDefCanBeHidden(isWeakDefCanBeHidden),
       weakDef(isWeakDef), external(isExternal), originalIsec(isec),

@@ -636,6 +636,9 @@ module std_private_bit_reference     [system] {
 module std_private_fwd_bit_reference [system] {
   header "__fwd/bit_reference.h"
 }
+module std_private_fwd_byte [system] {
+  header "__fwd/byte.h"
+}
 module std_private_config            [system] {
   textual header "__config"
   textual header "__configuration/abi.h"

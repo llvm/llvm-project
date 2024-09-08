@@ -21,7 +21,7 @@ LLVM_DUMP_METHOD void SubtargetFeatureInfo::dump() const {
 #endif
 
 std::vector<std::pair<Record *, SubtargetFeatureInfo>>
-SubtargetFeatureInfo::getAll(const RecordKeeper &Records) {
+SubtargetFeatureInfo::getAll(RecordKeeper &Records) {
   std::vector<std::pair<Record *, SubtargetFeatureInfo>> SubtargetFeatures;
   std::vector<Record *> AllPredicates =
       Records.getAllDerivedDefinitions("Predicate");

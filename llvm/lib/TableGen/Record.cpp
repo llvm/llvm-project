@@ -2802,7 +2802,7 @@ void Record::checkName() {
                                   "' is not a string!");
 }
 
-RecordRecTy *Record::getType() {
+RecordRecTy *Record::getType() const {
   SmallVector<Record *, 4> DirectSCs;
   getDirectSuperClasses(DirectSCs);
   return RecordRecTy::get(TrackedRecords, DirectSCs);
@@ -3248,25 +3248,28 @@ void RecordKeeper::stopBackendTimer() {
   }
 }
 
-std::vector<Record *>
-RecordKeeper::getAllDerivedDefinitions(StringRef ClassName) const {
+template <typename VecTy>
+const VecTy &RecordKeeper::getAllDerivedDefinitionsImpl(
+    StringRef ClassName, std::map<std::string, VecTy> &Cache) const {
   // We cache the record vectors for single classes. Many backends request
   // the same vectors multiple times.
-  auto Pair = ClassRecordsMap.try_emplace(ClassName);
+  auto Pair = Cache.try_emplace(ClassName.str());
   if (Pair.second)
-    Pair.first->second = getAllDerivedDefinitions(ArrayRef(ClassName));
+    Pair.first->second =
+        getAllDerivedDefinitionsImpl<VecTy>(ArrayRef(ClassName));
 
   return Pair.first->second;
 }
 
-std::vector<Record *> RecordKeeper::getAllDerivedDefinitions(
+template <typename VecTy>
+VecTy RecordKeeper::getAllDerivedDefinitionsImpl(
     ArrayRef<StringRef> ClassNames) const {
-  SmallVector<Record *, 2> ClassRecs;
-  std::vector<Record *> Defs;
+  SmallVector<const Record *, 2> ClassRecs;
+  VecTy Defs;
 
   assert(ClassNames.size() > 0 && "At least one class must be passed.");
   for (const auto &ClassName : ClassNames) {
-    Record *Class = getClass(ClassName);
+    const Record *Class = getClass(ClassName);
     if (!Class)
       PrintFatalError("The class '" + ClassName + "' is not defined\n");
     ClassRecs.push_back(Class);
@@ -3274,20 +3277,54 @@ std::vector<Record *> RecordKeeper::getAllDerivedDefinitions(
 
   for (const auto &OneDef : getDefs()) {
     if (all_of(ClassRecs, [&OneDef](const Record *Class) {
-                            return OneDef.second->isSubClassOf(Class);
-                          }))
+          return OneDef.second->isSubClassOf(Class);
+        }))
       Defs.push_back(OneDef.second.get());
   }
-
   llvm::sort(Defs, LessRecord());
-
   return Defs;
 }
 
+template <typename VecTy>
+const VecTy &RecordKeeper::getAllDerivedDefinitionsIfDefinedImpl(
+    StringRef ClassName, std::map<std::string, VecTy> &Cache) const {
+  return getClass(ClassName)
+             ? getAllDerivedDefinitionsImpl<VecTy>(ClassName, Cache)
+             : Cache[""];
+}
+
+ArrayRef<const Record *>
+RecordKeeper::getAllDerivedDefinitions(StringRef ClassName) const {
+  return getAllDerivedDefinitionsImpl<std::vector<const Record *>>(
+      ClassName, ClassRecordsMapConst);
+}
+
+const std::vector<Record *> &
+RecordKeeper::getAllDerivedDefinitions(StringRef ClassName) {
+  return getAllDerivedDefinitionsImpl<std::vector<Record *>>(ClassName,
+                                                             ClassRecordsMap);
+}
+
+std::vector<const Record *>
+RecordKeeper::getAllDerivedDefinitions(ArrayRef<StringRef> ClassNames) const {
+  return getAllDerivedDefinitionsImpl<std::vector<const Record *>>(ClassNames);
+}
+
 std::vector<Record *>
+RecordKeeper::getAllDerivedDefinitions(ArrayRef<StringRef> ClassNames) {
+  return getAllDerivedDefinitionsImpl<std::vector<Record *>>(ClassNames);
+}
+
+ArrayRef<const Record *>
 RecordKeeper::getAllDerivedDefinitionsIfDefined(StringRef ClassName) const {
-  return getClass(ClassName) ? getAllDerivedDefinitions(ClassName)
-                             : std::vector<Record *>();
+  return getAllDerivedDefinitionsIfDefinedImpl<std::vector<const Record *>>(
+      ClassName, ClassRecordsMapConst);
+}
+
+const std::vector<Record *> &
+RecordKeeper::getAllDerivedDefinitionsIfDefined(StringRef ClassName) {
+  return getAllDerivedDefinitionsIfDefinedImpl<std::vector<Record *>>(
+      ClassName, ClassRecordsMap);
 }
 
 void RecordKeeper::dumpAllocationStats(raw_ostream &OS) const {

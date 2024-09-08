@@ -16,6 +16,7 @@
 #ifndef LLVM_UTILS_TABLEGEN_COMMON_CODEGENTARGET_H
 #define LLVM_UTILS_TABLEGEN_COMMON_CODEGENTARGET_H
 
+#include "Basic/CodeGenIntrinsics.h"
 #include "Basic/SDNodeProperties.h"
 #include "CodeGenHwModes.h"
 #include "CodeGenInstruction.h"
@@ -75,6 +76,8 @@ class CodeGenTarget {
 
   mutable StringRef InstNamespace;
   mutable std::vector<const CodeGenInstruction *> InstrsByEnum;
+  mutable CodeGenIntrinsicMap Intrinsics;
+
   mutable unsigned NumPseudoInstructions = 0;
 
 public:
@@ -224,6 +227,10 @@ public:
   /// guessInstructionProperties - should we just guess unset instruction
   /// properties?
   bool guessInstructionProperties() const;
+
+  const CodeGenIntrinsic &getIntrinsic(const Record *Def) const {
+    return Intrinsics[Def];
+  }
 
 private:
   void ComputeInstrsByEnum() const;

@@ -1222,7 +1222,7 @@ namespace {
   public:
     /// Should we continue evaluation after encountering a side-effect that we
     /// couldn't model?
-    bool keepEvaluatingAfterSideEffect() {
+    bool keepEvaluatingAfterSideEffect() const override {
       switch (EvalMode) {
       case EM_IgnoreSideEffects:
         return true;
@@ -1240,7 +1240,7 @@ namespace {
 
     /// Note that we have had a side-effect, and determine whether we should
     /// keep evaluating.
-    bool noteSideEffect() {
+    bool noteSideEffect() override {
       EvalStatus.HasSideEffects = true;
       return keepEvaluatingAfterSideEffect();
     }
@@ -16281,7 +16281,7 @@ bool Expr::EvaluateAsConstantExpr(EvalResult &Result, const ASTContext &Ctx,
   Info.InConstantContext = true;
 
   if (Info.EnableNewConstInterp) {
-    if (!Info.Ctx.getInterpContext().evaluate(Info, this, Result.Val))
+    if (!Info.Ctx.getInterpContext().evaluate(Info, this, Result.Val, Kind))
       return false;
     return CheckConstantExpression(Info, getExprLoc(),
                                    getStorageType(Ctx, this), Result.Val, Kind);

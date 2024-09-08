@@ -1534,7 +1534,6 @@ bool SIWholeQuadMode::lowerCopyInstrs() {
       if (MI->getOperand(2).isReg())
         RecomputeReg = MI->getOperand(2).getReg();
       MI->removeOperand(2);
-      MI->untieRegOperand(1);
     } else {
       assert(MI->getNumExplicitOperands() == 2);
     }

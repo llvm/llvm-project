@@ -687,6 +687,8 @@ bool Compiler<Emitter>::VisitParenExpr(const ParenExpr *E) {
 template <class Emitter>
 bool Compiler<Emitter>::VisitBinaryOperator(const BinaryOperator *BO) {
   // Need short-circuiting for these.
+  if (BO->getType()->isVectorType())
+    return this->VisitVectorBinOp(BO);
   if (BO->isLogicalOp())
     return this->VisitLogicalBinOp(BO);
 
@@ -1218,6 +1220,123 @@ bool Compiler<Emitter>::VisitComplexBinOp(const BinaryOperator *E) {
       if (!this->emitPop(ResultElemT, E))
         return false;
     }
+  }
+  return true;
+}
+
+template <class Emitter>
+bool Compiler<Emitter>::VisitVectorBinOp(const BinaryOperator *E) {
+  assert(E->getType()->isVectorType());
+  assert(E->getLHS()->getType()->isVectorType());
+  assert(E->getRHS()->getType()->isVectorType());
+
+  // FIXME: Current only support comparison binary operator, add support for
+  // other binary operator.
+  if (!E->isComparisonOp() && !E->isLogicalOp())
+    return this->emitInvalid(E);
+  // Prepare storage for result.
+  if (!Initializing) {
+    unsigned LocalIndex = allocateTemporary(E);
+    if (!this->emitGetPtrLocal(LocalIndex, E))
+      return false;
+  }
+
+  const Expr *LHS = E->getLHS();
+  const Expr *RHS = E->getRHS();
+  const auto *VecTy = E->getType()->getAs<VectorType>();
+
+  // The LHS and RHS of a comparison operator must have the same type. So we
+  // just use LHS vector element type here.
+  PrimType ElemT = this->classifyVectorElementType(LHS->getType());
+  PrimType ResultElemT = this->classifyVectorElementType(E->getType());
+
+  // Evaluate LHS and save value to LHSOffset.
+  unsigned LHSOffset = this->allocateLocalPrimitive(LHS, PT_Ptr, true, false);
+  if (!this->visit(LHS))
+    return false;
+  if (!this->emitSetLocal(PT_Ptr, LHSOffset, E))
+    return false;
+
+  // Evaluate RHS and save value to RHSOffset.
+  unsigned RHSOffset = this->allocateLocalPrimitive(RHS, PT_Ptr, true, false);
+  if (!this->visit(RHS))
+    return false;
+  if (!this->emitSetLocal(PT_Ptr, RHSOffset, E))
+    return false;
+
+  auto getElem = [=](unsigned Offset, unsigned Index) {
+    if (!this->emitGetLocal(PT_Ptr, Offset, E))
+      return false;
+    if (!this->emitArrayElemPop(ElemT, Index, E))
+      return false;
+    if (E->isLogicalOp()) {
+      if (!this->emitPrimCast(ElemT, PT_Bool, Ctx.getASTContext().BoolTy, E))
+        return false;
+      if (!this->emitPrimCast(PT_Bool, ResultElemT, VecTy->getElementType(), E))
+        return false;
+    }
+    return true;
+  };
+
+  for (unsigned I = 0; I != VecTy->getNumElements(); ++I) {
+    if (!getElem(LHSOffset, I))
+      return false;
+    if (!getElem(RHSOffset, I))
+      return false;
+    switch (E->getOpcode()) {
+    case BO_EQ:
+      if (!this->emitEQ(ElemT, E))
+        return false;
+      break;
+    case BO_NE:
+      if (!this->emitNE(ElemT, E))
+        return false;
+      break;
+    case BO_LE:
+      if (!this->emitLE(ElemT, E))
+        return false;
+      break;
+    case BO_LT:
+      if (!this->emitLT(ElemT, E))
+        return false;
+      break;
+    case BO_GE:
+      if (!this->emitGE(ElemT, E))
+        return false;
+      break;
+    case BO_GT:
+      if (!this->emitGT(ElemT, E))
+        return false;
+      break;
+    case BO_LAnd:
+      // a && b is equivalent to a!=0 & b!=0
+      if (!this->emitBitAnd(ResultElemT, E))
+        return false;
+      break;
+    case BO_LOr:
+      // a || b is equivalent to a!=0 | b!=0
+      if (!this->emitBitOr(ResultElemT, E))
+        return false;
+      break;
+    default:
+      llvm_unreachable("Unsupported binary operator");
+    }
+
+    // The result of the comparison is a vector of the same width and number
+    // of elements as the comparison operands with a signed integral element
+    // type.
+    //
+    // https://gcc.gnu.org/onlinedocs/gcc/Vector-Extensions.html
+    if (E->isComparisonOp()) {
+      if (!this->emitPrimCast(PT_Bool, ResultElemT, VecTy->getElementType(), E))
+        return false;
+      if (!this->emitNeg(ResultElemT, E))
+        return false;
+    }
+
+    // Initialize array element with the value we just computed.
+    if (!this->emitInitElem(ResultElemT, I, E))
+      return false;
   }
   return true;
 }
@@ -1773,8 +1892,12 @@ bool Compiler<Emitter>::VisitMemberExpr(const MemberExpr *E) {
     return false;
   }
 
-  if (!isa<FieldDecl>(Member))
-    return this->discard(Base) && this->visitDeclRef(Member, E);
+  if (!isa<FieldDecl>(Member)) {
+    if (!this->discard(Base) && !this->emitSideEffect(E))
+      return false;
+
+    return this->visitDeclRef(Member, E);
+  }
 
   if (Initializing) {
     if (!this->delegate(Base))
@@ -2478,8 +2601,15 @@ bool Compiler<Emitter>::VisitCXXReinterpretCastExpr(
     const CXXReinterpretCastExpr *E) {
   const Expr *SubExpr = E->getSubExpr();
 
-  bool TypesMatch = classify(E) == classify(SubExpr);
-  if (!this->emitInvalidCast(CastKind::Reinterpret, /*Fatal=*/!TypesMatch, E))
+  bool Fatal = false;
+  std::optional<PrimType> FromT = classify(SubExpr);
+  std::optional<PrimType> ToT = classify(E);
+  if (!FromT || !ToT)
+    Fatal = true;
+  else
+    Fatal = (ToT != FromT);
+
+  if (!this->emitInvalidCast(CastKind::Reinterpret, Fatal, E))
     return false;
 
   return this->delegate(SubExpr);
@@ -2565,8 +2695,14 @@ bool Compiler<Emitter>::VisitCXXConstructExpr(const CXXConstructExpr *E) {
       if (!this->emitCallVar(Func, VarArgSize, E))
         return false;
     } else {
-      if (!this->emitCall(Func, 0, E))
+      if (!this->emitCall(Func, 0, E)) {
+        // When discarding, we don't need the result anyway, so clean up
+        // the instance dup we did earlier in case surrounding code wants
+        // to keep evaluating.
+        if (DiscardResult)
+          (void)this->emitPopPtr(E);
         return false;
+      }
     }
 
     if (DiscardResult)
@@ -3202,6 +3338,10 @@ bool Compiler<Emitter>::VisitCXXStdInitializerListExpr(
 
   if (!this->visit(SubExpr))
     return false;
+  if (!this->emitConstUint8(0, E))
+    return false;
+  if (!this->emitArrayElemPtrPopUint8(E))
+    return false;
   if (!this->emitInitFieldPtr(R->getField(0u)->Offset, E))
     return false;
 
@@ -3215,6 +3355,8 @@ bool Compiler<Emitter>::VisitCXXStdInitializerListExpr(
   assert(SecondFieldT == PT_Ptr);
 
   if (!this->emitGetFieldPtr(R->getField(0u)->Offset, E))
+    return false;
+  if (!this->emitExpandPtr(E))
     return false;
   if (!this->emitConst(static_cast<APSInt>(ArrayType->getSize()), PT_Uint64, E))
     return false;
@@ -3615,20 +3757,29 @@ const Function *Compiler<Emitter>::getFunction(const FunctionDecl *FD) {
   return Ctx.getOrCreateFunction(FD);
 }
 
-template <class Emitter> bool Compiler<Emitter>::visitExpr(const Expr *E) {
+template <class Emitter>
+bool Compiler<Emitter>::visitExpr(const Expr *E, bool DestroyToplevelScope) {
   LocalScope<Emitter> RootScope(this);
+
+  auto maybeDestroyLocals = [&]() -> bool {
+    if (DestroyToplevelScope)
+      return RootScope.destroyLocals();
+    return true;
+  };
+
   // Void expressions.
   if (E->getType()->isVoidType()) {
     if (!visit(E))
       return false;
-    return this->emitRetVoid(E) && RootScope.destroyLocals();
+    return this->emitRetVoid(E) && maybeDestroyLocals();
   }
 
   // Expressions with a primitive return type.
   if (std::optional<PrimType> T = classify(E)) {
     if (!visit(E))
       return false;
-    return this->emitRet(*T, E) && RootScope.destroyLocals();
+
+    return this->emitRet(*T, E) && maybeDestroyLocals();
   }
 
   // Expressions with a composite return type.
@@ -3646,10 +3797,10 @@ template <class Emitter> bool Compiler<Emitter>::visitExpr(const Expr *E) {
     // We are destroying the locals AFTER the Ret op.
     // The Ret op needs to copy the (alive) values, but the
     // destructors may still turn the entire expression invalid.
-    return this->emitRetValue(E) && RootScope.destroyLocals();
+    return this->emitRetValue(E) && maybeDestroyLocals();
   }
 
-  RootScope.destroyLocals();
+  (void)maybeDestroyLocals();
   return false;
 }
 
@@ -3943,18 +4094,18 @@ bool Compiler<Emitter>::visitAPValueInitializer(const APValue &Val,
 }
 
 template <class Emitter>
-bool Compiler<Emitter>::VisitBuiltinCallExpr(const CallExpr *E) {
+bool Compiler<Emitter>::VisitBuiltinCallExpr(const CallExpr *E,
+                                             unsigned BuiltinID) {
   const Function *Func = getFunction(E->getDirectCallee());
   if (!Func)
     return false;
 
   // For these, we're expected to ultimately return an APValue pointing
   // to the CallExpr. This is needed to get the correct codegen.
-  unsigned Builtin = E->getBuiltinCallee();
-  if (Builtin == Builtin::BI__builtin___CFStringMakeConstantString ||
-      Builtin == Builtin::BI__builtin___NSStringMakeConstantString ||
-      Builtin == Builtin::BI__builtin_ptrauth_sign_constant ||
-      Builtin == Builtin::BI__builtin_function_start) {
+  if (BuiltinID == Builtin::BI__builtin___CFStringMakeConstantString ||
+      BuiltinID == Builtin::BI__builtin___NSStringMakeConstantString ||
+      BuiltinID == Builtin::BI__builtin_ptrauth_sign_constant ||
+      BuiltinID == Builtin::BI__builtin_function_start) {
     if (std::optional<unsigned> GlobalOffset = P.createGlobal(E)) {
       if (!this->emitGetPtrGlobal(*GlobalOffset, E))
         return false;
@@ -3986,7 +4137,7 @@ bool Compiler<Emitter>::VisitBuiltinCallExpr(const CallExpr *E) {
     }
   }
 
-  if (!this->emitCallBI(Func, E, E))
+  if (!this->emitCallBI(Func, E, BuiltinID, E))
     return false;
 
   if (DiscardResult && !ReturnType->isVoidType()) {
@@ -3999,13 +4150,24 @@ bool Compiler<Emitter>::VisitBuiltinCallExpr(const CallExpr *E) {
 
 template <class Emitter>
 bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
-  if (E->getBuiltinCallee())
-    return VisitBuiltinCallExpr(E);
+  if (unsigned BuiltinID = E->getBuiltinCallee())
+    return VisitBuiltinCallExpr(E, BuiltinID);
+
+  const FunctionDecl *FuncDecl = E->getDirectCallee();
+  // Calls to replaceable operator new/operator delete.
+  if (FuncDecl && FuncDecl->isReplaceableGlobalAllocationFunction()) {
+    if (FuncDecl->getDeclName().getCXXOverloadedOperator() == OO_New ||
+        FuncDecl->getDeclName().getCXXOverloadedOperator() == OO_Array_New) {
+      return VisitBuiltinCallExpr(E, Builtin::BI__builtin_operator_new);
+    } else {
+      assert(FuncDecl->getDeclName().getCXXOverloadedOperator() == OO_Delete);
+      return VisitBuiltinCallExpr(E, Builtin::BI__builtin_operator_delete);
+    }
+  }
 
   QualType ReturnType = E->getCallReturnType(Ctx.getASTContext());
   std::optional<PrimType> T = classify(ReturnType);
   bool HasRVO = !ReturnType->isVoidType() && !T;
-  const FunctionDecl *FuncDecl = E->getDirectCallee();
 
   if (HasRVO) {
     if (DiscardResult) {
@@ -5507,10 +5669,17 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
         if (isa<DecompositionDecl>(VD))
           return revisit(VD);
 
-        // Visit local const variables like normal.
-        if ((VD->hasGlobalStorage() || VD->isLocalVarDecl() ||
-             VD->isStaticDataMember()) &&
+        if ((VD->hasGlobalStorage() || VD->isStaticDataMember()) &&
             typeShouldBeVisited(VD->getType()))
+          return revisit(VD);
+
+        // FIXME: The evaluateValue() check here is a little ridiculous, since
+        // it will ultimately call into Context::evaluateAsInitializer(). In
+        // other words, we're evaluating the initializer, just to know if we can
+        // evaluate the initializer.
+        if (VD->isLocalVarDecl() && typeShouldBeVisited(VD->getType()) &&
+            VD->getInit() && !VD->getInit()->isValueDependent() &&
+            VD->evaluateValue())
           return revisit(VD);
       }
     } else {
