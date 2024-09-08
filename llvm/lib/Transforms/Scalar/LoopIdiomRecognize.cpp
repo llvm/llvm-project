@@ -1499,7 +1499,7 @@ bool LoopIdiomRecognize::runOnNoncountableLoop() {
 
   return recognizePopcount() || recognizeAndInsertFFS() ||
          recognizeShiftUntilBitTest() || recognizeShiftUntilZero() ||
-         recognizeShiftUntilLessThan();
+         recognizeShiftUntilLessThan() || recognizeAndInsertStrLen();
 }
 
 /// Check if the given conditional branch is based on the comparison between
