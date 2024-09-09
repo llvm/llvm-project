@@ -172,7 +172,7 @@ private:
 /// CodeGenRegister - Represents a register definition.
 class CodeGenRegister {
 public:
-  Record *TheDef;
+  const Record *TheDef;
   unsigned EnumValue;
   std::vector<int64_t> CostPerUse;
   bool CoveredBySubRegs = true;
@@ -184,7 +184,7 @@ public:
   typedef std::map<CodeGenSubRegIndex *, CodeGenRegister *, deref<std::less<>>>
       SubRegMap;
 
-  CodeGenRegister(Record *R, unsigned Enum);
+  CodeGenRegister(const Record *R, unsigned Enum);
 
   StringRef getName() const;
 
@@ -314,7 +314,7 @@ inline bool operator==(const CodeGenRegister &A, const CodeGenRegister &B) {
 class CodeGenRegisterClass {
   CodeGenRegister::Vec Members;
   // Allocation orders. Order[0] always contains all registers in Members.
-  std::vector<SmallVector<Record *, 16>> Orders;
+  std::vector<SmallVector<const Record *, 16>> Orders;
   // Bit mask of sub-classes including this, indexed by their EnumValue.
   BitVector SubClasses;
   // List of super-classes, topologocally ordered to have the larger classes
@@ -452,7 +452,9 @@ public:
   // Returns an ordered list of class members.
   // The order of registers is the same as in the .td file.
   // No = 0 is the default allocation order, No = 1 is the first alternative.
-  ArrayRef<Record *> getOrder(unsigned No = 0) const { return Orders[No]; }
+  ArrayRef<const Record *> getOrder(unsigned No = 0) const {
+    return Orders[No];
+  }
 
   // Return the total number of allocation orders available.
   unsigned getNumOrders() const { return Orders.size(); }
@@ -594,7 +596,7 @@ class CodeGenRegBank {
   // Registers.
   std::deque<CodeGenRegister> Registers;
   StringMap<CodeGenRegister *> RegistersByName;
-  DenseMap<Record *, CodeGenRegister *> Def2Reg;
+  DenseMap<const Record *, CodeGenRegister *> Def2Reg;
   unsigned NumNativeRegUnits;
 
   std::map<TopoSigId, unsigned> TopoSigs;
@@ -713,7 +715,7 @@ public:
   }
 
   // Find a register from its Record def.
-  CodeGenRegister *getReg(Record *);
+  CodeGenRegister *getReg(const Record *);
 
   // Get a Register's index into the Registers array.
   unsigned getRegIndex(const CodeGenRegister *Reg) const {
@@ -846,7 +848,7 @@ public:
   //
   // This is used to compute the mask of call-preserved registers from a list
   // of callee-saves.
-  BitVector computeCoveredRegisters(ArrayRef<Record *> Regs);
+  BitVector computeCoveredRegisters(ArrayRef<const Record *> Regs);
 
   // Bit mask of lanes that cover their registers. A sub-register index whose
   // LaneMask is contained in CoveringLanes will be completely covered by

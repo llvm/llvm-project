@@ -277,7 +277,7 @@ return 1 to 4 elements from the given resource, to a maximum of 16 bytes of
 data. DXIL's modeling of this is influenced by DirectX and DXBC's history and
 it generally treats these operations as returning 4 32-bit values. For 16-bit
 elements the values are 16-bit values, and for 64-bit values the operations
-return 4 32-bit integers and combine them with further operations.
+return 4 32-bit integers and emit further code to construct the double.
 
 In DXIL, these operations return `ResRet`_ and `CBufRet`_ values, are structs
 containing 4 elements of the same type, and in the case of `ResRet` a 5th
@@ -366,10 +366,10 @@ Texture and Typed Buffer Stores
 
 *relevant types: Textures and TypedBuffer*
 
-The `TextureStore`_ and `BufferStore`_ DXIL operations can only be used to
-write all 4 32-bit elements to a texture or a typed buffer. Note that both of
-these operations do have a mask parameter, but it is documented that it must
-cover all components for these types.
+The `TextureStore`_ and `BufferStore`_ DXIL operations always write all four
+32-bit components to a texture or a typed buffer. While both operations include
+a mask parameter, it is specified that the mask must cover all components when
+used with these types.
 
 The store operations that we define as intrinsics behave similarly, and will
 only accept writes to the whole of the contained type. This differs from the
