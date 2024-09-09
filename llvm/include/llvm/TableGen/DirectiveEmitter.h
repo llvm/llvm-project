@@ -1,3 +1,16 @@
+//===- DirectiveEmitter.h - Directive Language Emitter ----------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// DirectiveEmitter uses the descriptions of directives and clauses to construct
+// common code declarations to be used in Frontends.
+//
+//===----------------------------------------------------------------------===//
+
 #ifndef LLVM_TABLEGEN_DIRECTIVEEMITTER_H
 #define LLVM_TABLEGEN_DIRECTIVEEMITTER_H
 
@@ -15,8 +28,7 @@ namespace llvm {
 // DirectiveBase.td and provides helper methods for accessing it.
 class DirectiveLanguage {
 public:
-  explicit DirectiveLanguage(const llvm::RecordKeeper &Records)
-      : Records(Records) {
+  explicit DirectiveLanguage(const RecordKeeper &Records) : Records(Records) {
     const auto &DirectiveLanguages = getDirectiveLanguages();
     Def = DirectiveLanguages[0];
   }
@@ -70,8 +82,8 @@ public:
   bool HasValidityErrors() const;
 
 private:
-  const llvm::Record *Def;
-  const llvm::RecordKeeper &Records;
+  const Record *Def;
+  const RecordKeeper &Records;
 
   ArrayRef<const Record *> getDirectiveLanguages() const {
     return Records.getAllDerivedDefinitions("DirectiveLanguage");
@@ -82,7 +94,7 @@ private:
 // DirectiveBase.td.
 class BaseRecord {
 public:
-  explicit BaseRecord(const llvm::Record *Def) : Def(Def) {}
+  explicit BaseRecord(const Record *Def) : Def(Def) {}
 
   StringRef getName() const { return Def->getValueAsString("name"); }
 
@@ -105,14 +117,14 @@ public:
   StringRef getRecordName() const { return Def->getName(); }
 
 protected:
-  const llvm::Record *Def;
+  const Record *Def;
 };
 
 // Wrapper class that contains a Directive's information defined in
 // DirectiveBase.td and provides helper methods for accessing it.
 class Directive : public BaseRecord {
 public:
-  explicit Directive(const llvm::Record *Def) : BaseRecord(Def) {}
+  explicit Directive(const Record *Def) : BaseRecord(Def) {}
 
   std::vector<Record *> getAllowedClauses() const {
     return Def->getValueAsListOfDefs("allowedClauses");
@@ -143,7 +155,7 @@ public:
 // and provides helper methods for accessing it.
 class Clause : public BaseRecord {
 public:
-  explicit Clause(const llvm::Record *Def) : BaseRecord(Def) {}
+  explicit Clause(const Record *Def) : BaseRecord(Def) {}
 
   // Optional field.
   StringRef getClangClass() const {
@@ -166,14 +178,14 @@ public:
     bool Cap = true;
     std::transform(N.begin(), N.end(), N.begin(), [&Cap](unsigned char C) {
       if (Cap == true) {
-        C = llvm::toUpper(C);
+        C = toUpper(C);
         Cap = false;
       } else if (C == '_') {
         Cap = true;
       }
       return C;
     });
-    llvm::erase(N, '_');
+    erase(N, '_');
     return N;
   }
 
@@ -211,7 +223,7 @@ public:
 // DirectiveBase.td and provides helper methods for accessing it.
 class VersionedClause {
 public:
-  explicit VersionedClause(const llvm::Record *Def) : Def(Def) {}
+  explicit VersionedClause(const Record *Def) : Def(Def) {}
 
   // Return the specific clause record wrapped in the Clause class.
   Clause getClause() const { return Clause{Def->getValueAsDef("clause")}; }
@@ -221,12 +233,12 @@ public:
   int64_t getMaxVersion() const { return Def->getValueAsInt("maxVersion"); }
 
 private:
-  const llvm::Record *Def;
+  const Record *Def;
 };
 
 class ClauseVal : public BaseRecord {
 public:
-  explicit ClauseVal(const llvm::Record *Def) : BaseRecord(Def) {}
+  explicit ClauseVal(const Record *Def) : BaseRecord(Def) {}
 
   int getValue() const { return Def->getValueAsInt("value"); }
 
@@ -235,4 +247,4 @@ public:
 
 } // namespace llvm
 
-#endif
+#endif // LLVM_TABLEGEN_DIRECTIVEEMITTER_H
