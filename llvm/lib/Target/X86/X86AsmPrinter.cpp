@@ -113,6 +113,10 @@ void processInstructions(
       const MachineOperand Rhs = Instr.getOperand(1);
       assert(Lhs.isReg() && "Is register.");
       assert(Rhs.isReg() && "Is register.");
+      if (Lhs.getReg() == Rhs.getReg()) {
+        // Moves like `mov rax, rax` are effectively a NOP for this analysis.
+        continue;
+      }
       // Reassigning a new value to LHS means any mappings to Lhs are now void
       // and need to be removed. We need to do this before updating the
       // mapping, so the transitive property of the SpillMap isn't violated
