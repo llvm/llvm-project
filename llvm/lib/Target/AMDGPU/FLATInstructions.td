@@ -1136,7 +1136,7 @@ defm SCRATCH_LOAD_LDS_SSHORT : FLAT_Scratch_Load_LDS_Pseudo <"scratch_load_lds_s
 defm SCRATCH_LOAD_LDS_DWORD  : FLAT_Scratch_Load_LDS_Pseudo <"scratch_load_lds_dword">;
 
 
-let SubtargetPredicate = isGFX1210Plus in {
+let SubtargetPredicate = isGFX121xOnly in {
 defm FLAT_LOAD_MONITOR_B32    : FLAT_Flat_Load_Pseudo <"flat_load_monitor_b32",  VGPR_32>;
 defm FLAT_LOAD_MONITOR_B64    : FLAT_Flat_Load_Pseudo <"flat_load_monitor_b64",  VReg_64>;
 defm FLAT_LOAD_MONITOR_B128   : FLAT_Flat_Load_Pseudo <"flat_load_monitor_b128", VReg_128>;
@@ -1144,7 +1144,9 @@ defm FLAT_LOAD_MONITOR_B128   : FLAT_Flat_Load_Pseudo <"flat_load_monitor_b128",
 defm GLOBAL_LOAD_MONITOR_B32  : FLAT_Global_Load_Pseudo <"global_load_monitor_b32",  VGPR_32>;
 defm GLOBAL_LOAD_MONITOR_B64  : FLAT_Global_Load_Pseudo <"global_load_monitor_b64",  VReg_64>;
 defm GLOBAL_LOAD_MONITOR_B128 : FLAT_Global_Load_Pseudo <"global_load_monitor_b128", VReg_128>;
+} // End SubtargetPredicate = isGFX121xOnly
 
+let SubtargetPredicate = isGFX1210Plus in {
 let Uses = [M0, EXEC] in { // Use M0 for broadcast workgroup mask.
 defm CLUSTER_LOAD_B32         : FLAT_Global_Load_Pseudo <"cluster_load_b32",  VGPR_32>;
 defm CLUSTER_LOAD_B64         : FLAT_Global_Load_Pseudo <"cluster_load_b64",  VReg_64>;
@@ -1940,7 +1942,7 @@ let WaveSizePredicate = isWave32,  OtherPredicates = [isGFX1210Plus] in {
   defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR6_B96, int_amdgcn_global_load_tr6_b96, v3i32>;
 }
 
-let OtherPredicates = [isGFX1210Plus] in {
+let OtherPredicates = [isGFX121xOnly] in {
   def  : FlatLoadPat_CPOL <FLAT_LOAD_MONITOR_B32,  int_amdgcn_flat_load_monitor_b32,  i32>;
   def  : FlatLoadPat_CPOL <FLAT_LOAD_MONITOR_B64,  int_amdgcn_flat_load_monitor_b64,  v2i32>;
   def  : FlatLoadPat_CPOL <FLAT_LOAD_MONITOR_B128, int_amdgcn_flat_load_monitor_b128, v4i32>;
@@ -1948,7 +1950,9 @@ let OtherPredicates = [isGFX1210Plus] in {
   defm : GlobalFLATLoadPats_CPOL <GLOBAL_LOAD_MONITOR_B32,  int_amdgcn_global_load_monitor_b32,  i32>;
   defm : GlobalFLATLoadPats_CPOL <GLOBAL_LOAD_MONITOR_B64,  int_amdgcn_global_load_monitor_b64,  v2i32>;
   defm : GlobalFLATLoadPats_CPOL <GLOBAL_LOAD_MONITOR_B128, int_amdgcn_global_load_monitor_b128, v4i32>;
+} // End SubtargetPredicate = isGFX121xOnly
 
+let OtherPredicates = [isGFX1210Plus] in {
   defm : GlobalFLATLoadPats_M0 <CLUSTER_LOAD_B32,  int_amdgcn_cluster_load_b32,  i32>;
   defm : GlobalFLATLoadPats_M0 <CLUSTER_LOAD_B64,  int_amdgcn_cluster_load_b64,  v2i32>;
   defm : GlobalFLATLoadPats_M0 <CLUSTER_LOAD_B128, int_amdgcn_cluster_load_b128, v4i32>;
