@@ -618,6 +618,20 @@ public:
           return *derivedType;
         }
       }
+    } else if constexpr (std::is_same_v<ProcEntityDetails, D>) {
+      if (auto *d{symbol->detailsIf<GenericDetails>()}) {
+        if (!d->derivedType()) {
+          // procedure pointer with same name as a generic
+          auto *specific{d->specific()};
+          if (!specific) {
+            specific = &currScope().MakeSymbol(name, attrs, std::move(details));
+            d->set_specific(*specific);
+          } else {
+            SayAlreadyDeclared(name, *specific);
+          }
+          return *specific;
+        }
+      }
     }
     if (symbol->CanReplaceDetails(details)) {
       // update the existing symbol
@@ -3035,14 +3049,26 @@ void ModuleVisitor::DoAddUse(SourceName location, SourceName localName,
     return;
   }
   const Symbol &useUltimate{useSymbol.GetUltimate()};
+  const auto *useGeneric{useUltimate.detailsIf<GenericDetails>()};
   if (localSymbol->has<UnknownDetails>()) {
-    localSymbol->set_details(UseDetails{localName, useSymbol});
-    localSymbol->attrs() =
-        useSymbol.attrs() & ~Attrs{Attr::PUBLIC, Attr::PRIVATE, Attr::SAVE};
-    localSymbol->implicitAttrs() =
-        localSymbol->attrs() & Attrs{Attr::ASYNCHRONOUS, Attr::VOLATILE};
-    localSymbol->flags() = useSymbol.flags();
-    return;
+    if (useGeneric && useGeneric->specific() &&
+        IsProcedurePointer(*useGeneric->specific())) {
+      // We are use-associating a generic that shadows a procedure pointer.
+      // Local references that might be made to that procedure pointer should
+      // use a UseDetails symbol for proper data addressing.  So create an
+      // empty local generic now into which the use-associated generic may
+      // be copied.
+      localSymbol->set_details(GenericDetails{});
+      localSymbol->get<GenericDetails>().set_kind(useGeneric->kind());
+    } else { // just create UseDetails
+      localSymbol->set_details(UseDetails{localName, useSymbol});
+      localSymbol->attrs() =
+          useSymbol.attrs() & ~Attrs{Attr::PUBLIC, Attr::PRIVATE, Attr::SAVE};
+      localSymbol->implicitAttrs() =
+          localSymbol->attrs() & Attrs{Attr::ASYNCHRONOUS, Attr::VOLATILE};
+      localSymbol->flags() = useSymbol.flags();
+      return;
+    }
   }
 
   Symbol &localUltimate{localSymbol->GetUltimate()};
@@ -3066,10 +3092,7 @@ void ModuleVisitor::DoAddUse(SourceName location, SourceName localName,
   //   - anything other than a derived type, non-generic procedure, or
   //     generic procedure being combined with something other than an
   //     prior USE association of itself
-
   auto *localGeneric{localUltimate.detailsIf<GenericDetails>()};
-  const auto *useGeneric{useUltimate.detailsIf<GenericDetails>()};
-
   Symbol *localDerivedType{nullptr};
   if (localUltimate.has<DerivedTypeDetails>()) {
     localDerivedType = &localUltimate;
@@ -3260,6 +3283,15 @@ void ModuleVisitor::DoAddUse(SourceName location, SourceName localName,
 
   // At this point, there must be at least one generic interface.
   CHECK(localGeneric || (useGeneric && (localDerivedType || localProcedure)));
+
+  // Ensure that a use-associated specific procedure that is a procedure
+  // pointer is properly represented as a USE association of an entity.
+  if (IsProcedurePointer(useProcedure)) {
+    Symbol &combined{currScope().MakeSymbol(localSymbol->name(),
+        useProcedure->attrs(), UseDetails{localName, *useProcedure})};
+    combined.flags() |= useProcedure->flags();
+    combinedProcedure = &combined;
+  }
 
   if (localGeneric) {
     // Create a local copy of a previously use-associated generic so that
@@ -5079,7 +5111,22 @@ bool DeclarationVisitor::HasCycle(
 
 Symbol &DeclarationVisitor::DeclareProcEntity(
     const parser::Name &name, Attrs attrs, const Symbol *interface) {
-  Symbol &symbol{DeclareEntity<ProcEntityDetails>(name, attrs)};
+  Symbol *proc{nullptr};
+  if (auto *extant{FindInScope(name)}) {
+    if (auto *d{extant->detailsIf<GenericDetails>()}; d && !d->derivedType()) {
+      // procedure pointer with same name as a generic
+      if (auto *specific{d->specific()}) {
+        SayAlreadyDeclared(name, *specific);
+      } else {
+        // Create the ProcEntityDetails symbol in the scope as the "specific()"
+        // symbol behind an existing GenericDetails symbol of the same name.
+        proc = &Resolve(name,
+            currScope().MakeSymbol(name.source, attrs, ProcEntityDetails{}));
+        d->set_specific(*proc);
+      }
+    }
+  }
+  Symbol &symbol{proc ? *proc : DeclareEntity<ProcEntityDetails>(name, attrs)};
   if (auto *details{symbol.detailsIf<ProcEntityDetails>()}) {
     if (context().HasError(symbol)) {
     } else if (HasCycle(symbol, interface)) {
