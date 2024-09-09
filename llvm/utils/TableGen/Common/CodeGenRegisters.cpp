@@ -1352,7 +1352,7 @@ CodeGenRegister *CodeGenRegBank::getReg(Record *Def) {
 }
 
 void CodeGenRegBank::addToMaps(CodeGenRegisterClass *RC) {
-  if (Record *Def = RC->getDef())
+  if (const Record *Def = RC->getDef())
     Def2RC.insert(std::pair(Def, RC));
 
   // Duplicate classes are rejected by insert().

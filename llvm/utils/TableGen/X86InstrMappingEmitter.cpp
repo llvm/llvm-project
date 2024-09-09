@@ -138,8 +138,8 @@ public:
       return false;
 
     for (unsigned I = 0, E = OldInst->Operands.size(); I < E; ++I) {
-      Record *OldOpRec = OldInst->Operands[I].Rec;
-      Record *NewOpRec = NewInst->Operands[I].Rec;
+      const Record *OldOpRec = OldInst->Operands[I].Rec;
+      const Record *NewOpRec = NewInst->Operands[I].Rec;
 
       if (OldOpRec == NewOpRec)
         continue;
