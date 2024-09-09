@@ -153,8 +153,8 @@ define half @powi_f16(half %a, i32 %b) nounwind {
 ; RV64IZHINX:       # %bb.0:
 ; RV64IZHINX-NEXT:    addi sp, sp, -16
 ; RV64IZHINX-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64IZHINX-NEXT:    sext.w a1, a1
 ; RV64IZHINX-NEXT:    fcvt.s.h a0, a0
+; RV64IZHINX-NEXT:    sext.w a1, a1
 ; RV64IZHINX-NEXT:    call __powisf2
 ; RV64IZHINX-NEXT:    fcvt.h.s a0, a0
 ; RV64IZHINX-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
@@ -233,8 +233,8 @@ define half @powi_f16(half %a, i32 %b) nounwind {
 ; RV64IZHINXMIN:       # %bb.0:
 ; RV64IZHINXMIN-NEXT:    addi sp, sp, -16
 ; RV64IZHINXMIN-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64IZHINXMIN-NEXT:    sext.w a1, a1
 ; RV64IZHINXMIN-NEXT:    fcvt.s.h a0, a0
+; RV64IZHINXMIN-NEXT:    sext.w a1, a1
 ; RV64IZHINXMIN-NEXT:    call __powisf2
 ; RV64IZHINXMIN-NEXT:    fcvt.h.s a0, a0
 ; RV64IZHINXMIN-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
