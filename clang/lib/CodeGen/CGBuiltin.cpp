@@ -6244,8 +6244,20 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   }
 
   // EmitHLSLBuiltinExpr will check getLangOpts().HLSL
-  if (Value *V = EmitHLSLBuiltinExpr(BuiltinID, E))
-    return RValue::get(V);
+  if (Value *V = EmitHLSLBuiltinExpr(BuiltinID, E, ReturnValue)) {
+    switch (EvalKind) {
+    case TEK_Scalar:
+      if (V->getType()->isVoidTy())
+        return RValue::get(nullptr);
+      return RValue::get(V);
+    case TEK_Aggregate:
+      return RValue::getAggregate(ReturnValue.getAddress(),
+                                  ReturnValue.isVolatile());
+    case TEK_Complex:
+      llvm_unreachable("No current hlsl builtin returns complex");
+    }
+    llvm_unreachable("Bad evaluation kind in EmitBuiltinExpr");
+  }
 
   if (getLangOpts().HIPStdPar && getLangOpts().CUDAIsDevice)
     return EmitHipStdParUnsupportedBuiltin(this, FD);
@@ -18640,7 +18652,8 @@ Intrinsic::ID getDotProductIntrinsic(CGHLSLRuntime &RT, QualType QT) {
 }
 
 Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
-                                            const CallExpr *E) {
+                                            const CallExpr *E,
+                                            ReturnValueSlot ReturnValue) {
   if (!getLangOpts().HLSL)
     return nullptr;
 
@@ -18826,6 +18839,27 @@ case Builtin::BI__builtin_hlsl_elementwise_isinf: {
         /*ReturnType=*/Op0->getType(),
         CGM.getHLSLRuntime().getSaturateIntrinsic(), ArrayRef<Value *>{Op0},
         nullptr, "hlsl.saturate");
+  }
+  case Builtin::BI__builtin_hlsl_select: {
+    Value *OpCond = EmitScalarExpr(E->getArg(0));
+    RValue RValTrue = EmitAnyExpr(E->getArg(1));
+    Value *OpTrue =
+        RValTrue.isScalar()
+            ? RValTrue.getScalarVal()
+            : RValTrue.getAggregatePointer(E->getArg(1)->getType(), *this);
+    RValue RValFalse = EmitAnyExpr(E->getArg(2));
+    Value *OpFalse =
+        RValFalse.isScalar()
+            ? RValFalse.getScalarVal()
+            : RValFalse.getAggregatePointer(E->getArg(2)->getType(), *this);
+
+    Value *SelectVal =
+        Builder.CreateSelect(OpCond, OpTrue, OpFalse, "hlsl.select");
+    if (!RValTrue.isScalar())
+      Builder.CreateStore(SelectVal, ReturnValue.getAddress(),
+                          ReturnValue.isVolatile());
+
+    return SelectVal;
   }
   case Builtin::BI__builtin_hlsl_wave_get_lane_index: {
     return EmitRuntimeCall(CGM.CreateRuntimeFunction(
