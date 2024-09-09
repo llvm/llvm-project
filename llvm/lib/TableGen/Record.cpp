@@ -1876,6 +1876,11 @@ Init *TernOpInit::resolveReferences(Resolver &R) const {
       return RHS->resolveReferences(R);
     }
   }
+  if (getOpcode() == IF && !lhs->isConcrete()) {
+    // do not proceed since we don't know the condition's value
+    return (TernOpInit::get(getOpcode(), lhs, MHS, RHS, getType()))
+        ->Fold(R.getCurrentRecord());
+  }
 
   Init *mhs = MHS->resolveReferences(R);
   Init *rhs;
