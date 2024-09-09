@@ -402,7 +402,9 @@ void CIRGenFunction::buildCXXConstructExpr(const CXXConstructExpr *E,
       Type = Ctor_Complete;
       break;
     case CXXConstructionKind::Delegating:
-      llvm_unreachable("NYI");
+      // We should be emitting a constructor; GlobalDecl will assert this
+      Type = CurGD.getCtorType();
+      Delegating = true;
       break;
     case CXXConstructionKind::VirtualBase:
       ForVirtualBase = true;
