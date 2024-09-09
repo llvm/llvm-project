@@ -438,12 +438,6 @@ public:
     visitAllDependencies([&](const Node &N) { BV.set(N.getID()); });
   }
 
-  /// Uses \ref visitAllDependencies to aggregate the individual cost of this
-  /// node and all of its dependencies.
-  ///
-  /// This is cached.
-  CostType getFullCost() const;
-
 private:
   void markAsGraphEntry() { IsGraphEntry = true; }
 
@@ -453,9 +447,6 @@ private:
   bool IsNonCopyable : 1;
   bool IsEntryFnCC : 1;
   bool IsGraphEntry : 1;
-
-  // TODO: Cache dependencies as well?
-  mutable CostType FullCost = 0;
 
   // TODO: Use a single sorted vector (with all incoming/outgoing edges grouped
   // together)
@@ -483,16 +474,6 @@ void SplitGraph::Node::visitAllDependencies(
       WorkList.push_back(E->Dst);
     }
   }
-}
-
-CostType SplitGraph::Node::getFullCost() const {
-  if (FullCost)
-    return FullCost;
-
-  assert(FullCost == 0);
-  visitAllDependencies(
-      [&](const Node &N) { FullCost += N.getIndividualCost(); });
-  return FullCost;
 }
 
 void SplitGraph::buildGraph(CallGraph &CG) {
