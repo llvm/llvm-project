@@ -2019,6 +2019,55 @@ RISCVInstrInfo::getInverseOpcode(unsigned Opcode) const {
 #undef RVV_OPC_LMUL_CASE
 }
 
+/// Utility routine that checks if \param MO is defined by an
+/// \param CombineOpc instruction in the basic block \param MBB
+static const MachineInstr *canCombine(const MachineBasicBlock &MBB,
+                                      const MachineOperand &MO,
+                                      unsigned CombineOpc) {
+  const MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
+  const MachineInstr *MI = nullptr;
+
+  if (MO.isReg() && MO.getReg().isVirtual())
+    MI = MRI.getUniqueVRegDef(MO.getReg());
+  // And it needs to be in the trace (otherwise, it won't have a depth).
+  if (!MI || MI->getParent() != &MBB || MI->getOpcode() != CombineOpc)
+    return nullptr;
+  // Must only used by the user we combine with.
+  if (!MRI.hasOneNonDBGUse(MI->getOperand(0).getReg()))
+    return nullptr;
+
+  return MI;
+}
+
+/// Fold (fadd X, fneg Y) -> fsub X, Y
+static bool getFPAddNegCombinePatterns(MachineInstr &Root,
+                                       SmallVectorImpl<unsigned> &Patterns) {
+  unsigned Opc = Root.getOpcode();
+  unsigned NegOpc;
+  bool Added = false;
+  switch (Opc) {
+  case RISCV::FADD_H:
+    NegOpc = RISCV::FSGNJN_H;
+    break;
+  case RISCV::FADD_S:
+    NegOpc = RISCV::FSGNJN_S;
+    break;
+  case RISCV::FADD_D:
+    NegOpc = RISCV::FSGNJN_D;
+    break;
+  default:
+    return false;
+  }
+  const MachineBasicBlock &MBB = *Root.getParent();
+  const MachineInstr *NegMI = canCombine(MBB, Root.getOperand(2), NegOpc);
+  if (NegMI && NegMI->getOperand(1).isReg() && NegMI->getOperand(2).isReg() &&
+      NegMI->getOperand(1).getReg() == NegMI->getOperand(2).getReg()) {
+    Patterns.push_back(RISCVMachineCombinerPattern::FADD_NEGRHS);
+    Added = true;
+  }
+  return Added;
+}
+
 static bool canCombineFPFusedMultiply(const MachineInstr &Root,
                                       const MachineOperand &MO,
                                       bool DoRegPressureReduce) {
@@ -2072,27 +2121,8 @@ static bool getFPFusedMultiplyPatterns(MachineInstr &Root,
 static bool getFPPatterns(MachineInstr &Root,
                           SmallVectorImpl<unsigned> &Patterns,
                           bool DoRegPressureReduce) {
-  return getFPFusedMultiplyPatterns(Root, Patterns, DoRegPressureReduce);
-}
-
-/// Utility routine that checks if \param MO is defined by an
-/// \param CombineOpc instruction in the basic block \param MBB
-static const MachineInstr *canCombine(const MachineBasicBlock &MBB,
-                                      const MachineOperand &MO,
-                                      unsigned CombineOpc) {
-  const MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
-  const MachineInstr *MI = nullptr;
-
-  if (MO.isReg() && MO.getReg().isVirtual())
-    MI = MRI.getUniqueVRegDef(MO.getReg());
-  // And it needs to be in the trace (otherwise, it won't have a depth).
-  if (!MI || MI->getParent() != &MBB || MI->getOpcode() != CombineOpc)
-    return nullptr;
-  // Must only used by the user we combine with.
-  if (!MRI.hasOneNonDBGUse(MI->getOperand(0).getReg()))
-    return nullptr;
-
-  return MI;
+  return getFPAddNegCombinePatterns(Root, Patterns) ||
+         getFPFusedMultiplyPatterns(Root, Patterns, DoRegPressureReduce);
 }
 
 /// Utility routine that checks if \param MO is defined by a SLLI in \param
@@ -2319,6 +2349,49 @@ genShXAddAddShift(MachineInstr &Root, unsigned AddOpIdx,
   DelInstrs.push_back(&Root);
 }
 
+// Combine (fadd X, (fneg Y)) -> fsub X, Y
+static void combineFPAddNeg(MachineInstr &Root,
+                            SmallVectorImpl<MachineInstr *> &InsInstrs,
+                            SmallVectorImpl<MachineInstr *> &DelInstrs,
+                            DenseMap<unsigned, unsigned> &InstrIdxForVirtReg) {
+  MachineFunction *MF = Root.getMF();
+  MachineRegisterInfo &MRI = MF->getRegInfo();
+  const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
+
+  unsigned Opc = Root.getOpcode();
+  unsigned SubOpc;
+  switch (Opc) {
+  case RISCV::FADD_H:
+    SubOpc = RISCV::FSUB_H;
+    break;
+  case RISCV::FADD_S:
+    SubOpc = RISCV::FSUB_S;
+    break;
+  case RISCV::FADD_D:
+    SubOpc = RISCV::FSUB_D;
+    break;
+  default:
+    llvm_unreachable("Unexpected opcode");
+  }
+
+  const MachineOperand &LHS = Root.getOperand(1);
+  const MachineOperand &RHS = Root.getOperand(2);
+  MachineInstr *NegMI = MRI.getUniqueVRegDef(RHS.getReg());
+  const MachineOperand &NegRHS = NegMI->getOperand(1);
+
+  MachineInstrBuilder MIB =
+      BuildMI(*MF, MIMetadata(Root), TII->get(SubOpc),
+              Root.getOperand(0).getReg())
+          .addReg(LHS.getReg(), getKillRegState(LHS.isKill()))
+          .addReg(NegRHS.getReg(), getKillRegState(NegRHS.isKill()))
+          .addImm(Root.getOperand(3).getImm())
+          .copyImplicitOps(Root);
+
+  InsInstrs.push_back(MIB);
+  DelInstrs.push_back(NegMI);
+  DelInstrs.push_back(&Root);
+}
+
 void RISCVInstrInfo::genAlternativeCodeSequence(
     MachineInstr &Root, unsigned Pattern,
     SmallVectorImpl<MachineInstr *> &InsInstrs,
@@ -2347,6 +2420,9 @@ void RISCVInstrInfo::genAlternativeCodeSequence(
     return;
   case RISCVMachineCombinerPattern::SHXADD_ADD_SLLI_OP2:
     genShXAddAddShift(Root, 2, InsInstrs, DelInstrs, InstrIdxForVirtReg);
+    return;
+  case RISCVMachineCombinerPattern::FADD_NEGRHS:
+    combineFPAddNeg(Root, InsInstrs, DelInstrs, InstrIdxForVirtReg);
     return;
   }
 }

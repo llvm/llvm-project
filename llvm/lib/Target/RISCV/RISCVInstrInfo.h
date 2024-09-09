@@ -57,6 +57,7 @@ enum RISCVMachineCombinerPattern : unsigned {
   FNMSUB,
   SHXADD_ADD_SLLI_OP1,
   SHXADD_ADD_SLLI_OP2,
+  FADD_NEGRHS,
 };
 
 class RISCVInstrInfo : public RISCVGenInstrInfo {
