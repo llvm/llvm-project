@@ -22,7 +22,7 @@
 #include <string>
 #include <unordered_map>
 
-namespace __orc_rt {
+namespace orc_rt {
 
 class PooledStringPtr;
 
@@ -156,7 +156,7 @@ inline bool StringPool::empty() const {
   return Pool.empty();
 }
 
-} // end namespace __orc_rt
+} // namespace orc_rt
 
 namespace std {
 

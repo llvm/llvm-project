@@ -30,8 +30,8 @@
 
 #define DEBUG_TYPE "macho_platform"
 
-using namespace __orc_rt;
-using namespace __orc_rt::macho;
+using namespace orc_rt;
+using namespace orc_rt::macho;
 
 // Declare function tags for functions in the JIT process.
 ORC_RT_JIT_DISPATCH_TAG(__orc_rt_macho_push_initializers_tag)
@@ -82,7 +82,7 @@ using MachOJITDylibDepInfoMap =
 
 } // anonymous namespace
 
-namespace __orc_rt {
+namespace orc_rt {
 
 using SPSMachOObjectPlatformSectionsMap =
     SPSSequence<SPSTuple<SPSString, SPSExecutorAddrRange>>;
@@ -139,7 +139,7 @@ public:
   }
 };
 
-} // namespace __orc_rt
+} // namespace orc_rt
 
 namespace {
 struct TLVDescriptor {
@@ -406,7 +406,7 @@ private:
 
 } // anonymous namespace
 
-namespace __orc_rt {
+namespace orc_rt {
 
 class SPSMachOExecutorSymbolFlags;
 
@@ -441,7 +441,7 @@ public:
   }
 };
 
-} // namespace __orc_rt
+} // namespace orc_rt
 
 namespace {
 
@@ -1532,8 +1532,8 @@ ORC_RT_INTERFACE int64_t __orc_rt_macho_run_program(const char *JITDylibName,
                                                     int argc, char *argv[]) {
   using MainTy = int (*)(int, char *[]);
 
-  void *H = __orc_rt_macho_jit_dlopen(JITDylibName,
-                                      __orc_rt::macho::ORC_RT_RTLD_LAZY);
+  void *H =
+      __orc_rt_macho_jit_dlopen(JITDylibName, orc_rt::macho::ORC_RT_RTLD_LAZY);
   if (!H) {
     __orc_rt_log_error(__orc_rt_macho_jit_dlerror());
     return -1;
