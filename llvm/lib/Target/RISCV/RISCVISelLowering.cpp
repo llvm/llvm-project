@@ -14,6 +14,7 @@
 #include "RISCVISelLowering.h"
 #include "MCTargetDesc/RISCVMatInt.h"
 #include "RISCV.h"
+#include "RISCVConstantPoolValue.h"
 #include "RISCVMachineFunctionInfo.h"
 #include "RISCVRegisterInfo.h"
 #include "RISCVSubtarget.h"
@@ -7518,6 +7519,27 @@ static SDValue getTargetNode(JumpTableSDNode *N, const SDLoc &DL, EVT Ty,
   return DAG.getTargetJumpTable(N->getIndex(), Ty, Flags);
 }
 
+static SDValue getLargeGlobalAddress(GlobalAddressSDNode *N, const SDLoc &DL,
+                                     EVT Ty, SelectionDAG &DAG) {
+  RISCVConstantPoolValue *CPV = RISCVConstantPoolValue::Create(N->getGlobal());
+  SDValue CPAddr = DAG.getTargetConstantPool(CPV, Ty, Align(8));
+  SDValue LC = DAG.getNode(RISCVISD::LLA, DL, Ty, CPAddr);
+  return DAG.getLoad(
+      Ty, DL, DAG.getEntryNode(), LC,
+      MachinePointerInfo::getConstantPool(DAG.getMachineFunction()));
+}
+
+static SDValue getLargeExternalSymbol(ExternalSymbolSDNode *N, const SDLoc &DL,
+                                      EVT Ty, SelectionDAG &DAG) {
+  RISCVConstantPoolValue *CPV =
+      RISCVConstantPoolValue::Create(*DAG.getContext(), N->getSymbol());
+  SDValue CPAddr = DAG.getTargetConstantPool(CPV, Ty, Align(8));
+  SDValue LC = DAG.getNode(RISCVISD::LLA, DL, Ty, CPAddr);
+  return DAG.getLoad(
+      Ty, DL, DAG.getEntryNode(), LC,
+      MachinePointerInfo::getConstantPool(DAG.getMachineFunction()));
+}
+
 template <class NodeTy>
 SDValue RISCVTargetLowering::getAddr(NodeTy *N, SelectionDAG &DAG,
                                      bool IsLocal, bool IsExternWeak) const {
@@ -7584,6 +7606,14 @@ SDValue RISCVTargetLowering::getAddr(NodeTy *N, SelectionDAG &DAG,
     // Generate a sequence for accessing addresses within any 2GiB range within
     // the address space. This generates the pattern (PseudoLLA sym), which
     // expands to (addi (auipc %pcrel_hi(sym)) %pcrel_lo(auipc)).
+    return DAG.getNode(RISCVISD::LLA, DL, Ty, Addr);
+  }
+  case CodeModel::Large: {
+    if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(N))
+      return getLargeGlobalAddress(G, DL, Ty, DAG);
+
+    // Using pc-relative mode for other node type.
+    SDValue Addr = getTargetNode(N, DL, Ty, DAG, 0);
     return DAG.getNode(RISCVISD::LLA, DL, Ty, Addr);
   }
   }
@@ -19590,7 +19620,12 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
   // If the callee is a GlobalAddress/ExternalSymbol node, turn it into a
   // TargetGlobalAddress/TargetExternalSymbol node so that legalize won't
   // split it and then direct call can be matched by PseudoCALL.
-  if (GlobalAddressSDNode *S = dyn_cast<GlobalAddressSDNode>(Callee)) {
+  if (getTargetMachine().getCodeModel() == CodeModel::Large) {
+    if (auto *S = dyn_cast<GlobalAddressSDNode>(Callee))
+      Callee = getLargeGlobalAddress(S, DL, PtrVT, DAG);
+    else if (auto *S = dyn_cast<ExternalSymbolSDNode>(Callee))
+      Callee = getLargeExternalSymbol(S, DL, PtrVT, DAG);
+  } else if (GlobalAddressSDNode *S = dyn_cast<GlobalAddressSDNode>(Callee)) {
     const GlobalValue *GV = S->getGlobal();
     Callee = DAG.getTargetGlobalAddress(GV, DL, PtrVT, 0, RISCVII::MO_CALL);
   } else if (ExternalSymbolSDNode *S = dyn_cast<ExternalSymbolSDNode>(Callee)) {
