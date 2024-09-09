@@ -146,6 +146,13 @@ void test_builtin_elementwise_atan() {
   static_assert(!is_const<decltype(__builtin_elementwise_atan(b))>::value);
 }
 
+void test_builtin_elementwise_atan2() {
+  const float a = 42.0;
+  float b = 42.3;
+  static_assert(!is_const<decltype(__builtin_elementwise_atan2(a, a))>::value);
+  static_assert(!is_const<decltype(__builtin_elementwise_atan2(b, b))>::value);
+}
+
 void test_builtin_elementwise_tan() {
   const float a = 42.0;
   float b = 42.3;
