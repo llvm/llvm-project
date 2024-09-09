@@ -15878,11 +15878,13 @@ Sema::BuildCallToObjectOfClassType(Scope *S, Expr *Obj,
   return CheckForImmediateInvocation(MaybeBindToTemporary(TheCall), Method);
 }
 
-ExprResult
-Sema::BuildOverloadedArrowExpr(Scope *S, Expr *Base, SourceLocation OpLoc,
-                               bool *NoArrowOperatorFound) {
-  assert(Base->getType()->isRecordType() &&
+ExprResult Sema::BuildOverloadedArrowExpr(Expr *Base, SourceLocation OpLoc,
+                                          bool *NoArrowOperatorFound,
+                                          bool &IsDependent) {
+  assert(Base->getType()->getAsRecordDecl() &&
          "left-hand side must have class type");
+
+  IsDependent = false;
 
   if (checkPlaceholderForOverload(*this, Base))
     return ExprError();
@@ -15904,7 +15906,19 @@ Sema::BuildOverloadedArrowExpr(Scope *S, Expr *Base, SourceLocation OpLoc,
     return ExprError();
 
   LookupResult R(*this, OpName, OpLoc, LookupOrdinaryName);
-  LookupQualifiedName(R, Base->getType()->castAs<RecordType>()->getDecl());
+  LookupParsedName(R, /*S=*/nullptr, /*SS=*/nullptr, Base->getType());
+
+  // If the expression is dependent and we either:
+  // - found a member of the current instantiation named 'operator->', or
+  // - found nothing, and the lookup context has no dependent base classes
+  //
+  // then we should build a dependent class member access expression.
+  if (R.wasNotFoundInCurrentInstantiation() ||
+      (Base->isTypeDependent() && !R.empty())) {
+    IsDependent = true;
+    return Base;
+  }
+
   R.suppressAccessDiagnostics();
 
   for (LookupResult::iterator Oper = R.begin(), OperEnd = R.end();
