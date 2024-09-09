@@ -1261,9 +1261,10 @@ private:
       auto loadVal = builder->create<fir::LoadOp>(loc, rhs);
       builder->create<fir::StoreOp>(loc, loadVal, lhs);
     } else if (isAllocatable &&
-               flags.test(Fortran::semantics::Symbol::Flag::OmpFirstPrivate)) {
-      // For firstprivate allocatable variables, RHS must be copied only when
-      // LHS is allocated.
+               (flags.test(Fortran::semantics::Symbol::Flag::OmpFirstPrivate) ||
+                flags.test(Fortran::semantics::Symbol::Flag::OmpCopyIn))) {
+      // For firstprivate and copyin allocatable variables, RHS must be copied
+      // only when LHS is allocated.
       hlfir::Entity temp =
           hlfir::derefPointersAndAllocatables(loc, *builder, lhs);
       mlir::Value addr = hlfir::genVariableRawAddress(loc, *builder, temp);

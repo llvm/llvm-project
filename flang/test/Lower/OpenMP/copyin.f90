@@ -415,3 +415,38 @@ subroutine allocatable()
   call sub8(p)
   !$omp end parallel
 end subroutine
+
+! CHECK-LABEL:   func.func @_QPallocatable2() {
+! CHECK:           %[[VAL_0:.*]] = fir.address_of(@_QFallocatable2Ea) : !fir.ref<!fir.box<!fir.heap<i32>>>
+! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFallocatable2Ea"} : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<!fir.box<!fir.heap<i32>>>)
+! CHECK:           %[[VAL_2:.*]] = omp.threadprivate %[[VAL_1]]#1 : !fir.ref<!fir.box<!fir.heap<i32>>> -> !fir.ref<!fir.box<!fir.heap<i32>>>
+! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFallocatable2Ea"} : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<!fir.box<!fir.heap<i32>>>)
+! CHECK:           omp.parallel {
+! CHECK:             %[[VAL_4:.*]] = omp.threadprivate %[[VAL_1]]#1 : !fir.ref<!fir.box<!fir.heap<i32>>> -> !fir.ref<!fir.box<!fir.heap<i32>>>
+! CHECK:             %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFallocatable2Ea"} : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<!fir.box<!fir.heap<i32>>>)
+! CHECK:             %[[VAL_6:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<!fir.box<!fir.heap<i32>>>
+! CHECK:             %[[VAL_7:.*]] = fir.box_addr %[[VAL_6]] : (!fir.box<!fir.heap<i32>>) -> !fir.heap<i32>
+! CHECK:             %[[VAL_8:.*]] = fir.convert %[[VAL_7]] : (!fir.heap<i32>) -> i64
+! CHECK:             %[[VAL_9:.*]] = arith.constant 0 : i64
+! CHECK:             %[[VAL_10:.*]] = arith.cmpi ne, %[[VAL_8]], %[[VAL_9]] : i64
+! CHECK:             fir.if %[[VAL_10]] {
+! CHECK:               %[[VAL_11:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<!fir.box<!fir.heap<i32>>>
+! CHECK:               %[[VAL_12:.*]] = fir.box_addr %[[VAL_11]] : (!fir.box<!fir.heap<i32>>) -> !fir.heap<i32>
+! CHECK:               %[[VAL_13:.*]] = fir.load %[[VAL_12]] : !fir.heap<i32>
+! CHECK:               hlfir.assign %[[VAL_13]] to %[[VAL_5]]#0 realloc : i32, !fir.ref<!fir.box<!fir.heap<i32>>>
+! CHECK:             }
+! CHECK:             omp.barrier
+! CHECK:             %[[VAL_14:.*]] = arith.constant 1 : i32
+! CHECK:             hlfir.assign %[[VAL_14]] to %[[VAL_5]]#0 realloc : i32, !fir.ref<!fir.box<!fir.heap<i32>>>
+! CHECK:             omp.terminator
+! CHECK:           }
+! CHECK:           return
+! CHECK:         }
+subroutine allocatable2()
+  integer, allocatable, save :: a
+  !$omp threadprivate(a)
+
+  !$omp parallel copyin(a)
+    a = 1
+  !$omp end parallel
+end subroutine
