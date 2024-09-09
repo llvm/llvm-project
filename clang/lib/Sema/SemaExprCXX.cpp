@@ -5168,7 +5168,8 @@ static bool HasNonDeletedDefaultedEqualityComparison(Sema &S,
 
     // const ClassT& obj;
     OpaqueValueExpr Operand(
-        {}, Decl->getTypeForDecl()->getCanonicalTypeUnqualified().withConst(),
+        KeyLoc,
+        Decl->getTypeForDecl()->getCanonicalTypeUnqualified().withConst(),
         ExprValueKind::VK_LValue);
     UnresolvedSet<16> Functions;
     // obj == obj;
