@@ -559,8 +559,8 @@ int main(int argc, char **argv) {
   std::string compilerVersion = Fortran::common::getFlangToolFullVersion("bbc");
   std::string compilerOptions = "";
   Fortran::tools::setUpTargetCharacteristics(
-      semanticsContext.targetCharacteristics(), *targetMachine, compilerVersion,
-      compilerOptions);
+      semanticsContext.targetCharacteristics(), *targetMachine, {},
+      compilerVersion, compilerOptions);
 
   return mlir::failed(
       convertFortranSourceToMLIR(inputFilename, options, programPrefix,
