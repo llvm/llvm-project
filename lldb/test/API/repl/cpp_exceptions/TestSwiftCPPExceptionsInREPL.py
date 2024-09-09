@@ -25,9 +25,8 @@ class TestSwiftREPLExceptions(TestBase):
 
     @skipUnlessDarwin
     @swiftTest
-    def test_set_repl_mode_exceptions(self):
+    def DISABLED_test_set_repl_mode_exceptions(self):
         """ Test that SetREPLMode turns off trapping exceptions."""
-        return
         self.build()
         self.main_source_file = lldb.SBFileSpec("main.swift")
         self.do_repl_mode_test()
@@ -45,6 +44,8 @@ class TestSwiftREPLExceptions(TestBase):
         with open(self.getBuildArtifact("sdkroot.txt"), 'r') as f:
             sdk_root = f.readlines()[0]
         self.assertGreater(len(sdk_root), 0)
+        if sdk_root[-1] == '\n':
+            sdk_root = sdk_root[:-1]
         build_dir = self.getBuildDir()
         repl_args = [lldbtest_config.lldbExec, "-x", "--repl=-enable-objc-interop -sdk %s -L%s -I%s"%(sdk_root, build_dir, build_dir)]
         repl_proc = subprocess.Popen(repl_args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, cwd=build_dir)
@@ -67,7 +68,7 @@ class TestSwiftREPLExceptions(TestBase):
                 lldb.SBFileSpec(os.path.join(wd, filename)))
             self.assertFalse(err.Fail(), 'Failed to copy ' + filename)
         (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(self,
-                                   "Set a breakpoint here", self.main_source_file) 
+                                   "Set a breakpoint here", self.main_source_file)
 
         frame = thread.GetFrameAtIndex(0)
         options = lldb.SBExpressionOptions()
