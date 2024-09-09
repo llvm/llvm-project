@@ -788,6 +788,8 @@ Improvements to Clang's diagnostics
       require(scope); // Warning!  Requires mu1.
     }
 
+- Clang now diagnoses the use of attribute names reserved by the C++ standard (#GH92196).
+
 Improvements to Clang's time-trace
 ----------------------------------
 
