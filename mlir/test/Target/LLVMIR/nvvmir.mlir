@@ -87,7 +87,7 @@ llvm.func @llvm_nvvm_barrier0() {
 // CHECK-SAME: i32 %[[barId:.*]], i32 %[[numThreads:.*]])
 llvm.func @llvm_nvvm_barrier(%barID : i32, %numberOfThreads : i32) {
   // CHECK: call void @llvm.nvvm.barrier0()
-  nvvm.barrier
+  nvvm.barrier 
   // CHECK: call void @llvm.nvvm.barrier.n(i32 %[[barId]])
   nvvm.barrier id = %barID
   // CHECK: call void @llvm.nvvm.barrier(i32 %[[barId]], i32 %[[numThreads]])
