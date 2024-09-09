@@ -321,7 +321,7 @@ define void @test_fmul_mem(ptr %p, ptr %q) nounwind {
   ret void
 }
 
-define half @freeze_half() nounwind {
+define half @freeze_half_undef() nounwind {
 ; LA32-LABEL: freeze_half:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    addi.w $sp, $sp, -16
@@ -348,6 +348,12 @@ define half @freeze_half() nounwind {
 ; LA64-NEXT:    addi.d $sp, $sp, 16
 ; LA64-NEXT:    ret
   %y1 = freeze half undef
+  %t1 = fadd half %y1, %y1
+  ret half %t1
+}
+
+define half @freeze_half_poison(half %poison) nounwind {
+  %y1 = freeze half %poison
   %t1 = fadd half %y1, %y1
   ret half %t1
 }
