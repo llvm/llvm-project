@@ -120,6 +120,10 @@ Changes in existing checks
   <clang-tidy/checks/modernize/use-std-print>` check to support replacing
   member function calls too.
 
+- Improved :doc:`performance-avoid-endl
+  <clang-tidy/checks/performance/avoid-endl>` check by fixing incorrect
+  message.
+
 - Improved :doc:`readablility-implicit-bool-conversion
   <clang-tidy/checks/readability/implicit-bool-conversion>` check
   by adding the option `UseUpperCaseLiteralSuffix` to select the

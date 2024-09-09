@@ -46,14 +46,13 @@ void AvoidEndlCheck::check(const MatchFinder::MatchResult &Result) {
     // Handle the more common streaming '... << std::endl' case
     const CharSourceRange TokenRange =
         CharSourceRange::getTokenRange(Expression->getSourceRange());
-    const StringRef SourceText = Lexer::getSourceText(
+    StringRef SourceText = Lexer::getSourceText(
         TokenRange, *Result.SourceManager, Result.Context->getLangOpts());
-
-    auto Diag = diag(Expression->getBeginLoc(),
-                     "do not use '%0' with streams; use '\\n' instead")
-                << SourceText;
-
-    Diag << FixItHint::CreateReplacement(TokenRange, "'\\n'");
+    if (SourceText.empty())
+      SourceText = "::std::endl";
+    diag(Expression->getBeginLoc(),
+         "do not use '%0' with streams; use '\\n' instead")
+        << SourceText << FixItHint::CreateReplacement(TokenRange, "'\\n'");
   } else {
     // Handle the less common function call 'std::endl(...)' case
     const auto *CallExpression = llvm::cast<CallExpr>(Expression);
