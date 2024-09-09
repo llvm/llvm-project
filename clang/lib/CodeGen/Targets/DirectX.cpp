@@ -40,7 +40,7 @@ llvm::Type *DirectXTargetCodeGenInfo::getHLSLType(CodeGenModule &CGM,
   // attributes (not yet implemented)
   llvm::FixedVectorType *ElemType =
       llvm::FixedVectorType::get(llvm::Type::getFloatTy(Ctx), 4);
-  unsigned Flags[] = {/*IsWriteable*/ 1, /*IsROV*/ 0, /*IsSigned*/ 1};
+  unsigned Flags[] = {/*IsWriteable*/ 1, /*IsROV*/ 0, /*IsSigned*/ 0};
   return llvm::TargetExtType::get(Ctx, "dx.TypedBuffer", {ElemType}, Flags);
 }
 
