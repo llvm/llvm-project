@@ -11,7 +11,6 @@
 #include "test/UnitTest/Test.h"
 #include "test/src/time/TmHelper.h"
 
-// make libc.test.src.time.ctime_test
 TEST(LlvmLibcCtime, Nullptr) {
   char *result;
   result = LIBC_NAMESPACE::ctime(nullptr);

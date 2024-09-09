@@ -14,7 +14,6 @@
 
 using LIBC_NAMESPACE::time_utils::TimeConstants;
 
-// make libc.test.src.time.ctime_r_test
 TEST(LlvmLibcCtimeR, Nullptr) {
   char *result;
   result = LIBC_NAMESPACE::ctime_r(nullptr, nullptr);
