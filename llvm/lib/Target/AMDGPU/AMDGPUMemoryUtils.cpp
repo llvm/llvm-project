@@ -396,11 +396,11 @@ bool isClobberedInFunction(const LoadInst *Load, MemorySSA *MSSA,
   return false;
 }
 
-static void collectUses(GlobalVariable &GV, SmallVectorImpl<Use *> &Uses) {
+static void collectUses(const Value &V, SmallVectorImpl<const Use *> &Uses) {
   SmallVector<Instruction *> WorkList;
-  SmallPtrSet<User *, 8> Visited;
+  SmallPtrSet<const User *, 8> Visited;
 
-  auto extendWorkList = [&](Use &U) {
+  auto extendWorkList = [&](const Use &U) {
     auto User = U.getUser();
     if (Visited.count(User))
       return;
@@ -409,7 +409,7 @@ static void collectUses(GlobalVariable &GV, SmallVectorImpl<Use *> &Uses) {
       WorkList.push_back(cast<Instruction>(User));
   };
 
-  for (auto &U : GV.uses()) {
+  for (auto &U : V.uses()) {
     Uses.push_back(&U);
     extendWorkList(U);
   }
@@ -423,7 +423,7 @@ static void collectUses(GlobalVariable &GV, SmallVectorImpl<Use *> &Uses) {
   }
 }
 
-static bool allPtrInputsInSameClass(GlobalVariable *GV, Instruction *Inst) {
+static bool allPtrInputsInSameClass(const Value &V, Instruction *Inst) {
   unsigned i = isa<SelectInst>(Inst) ? 1 : 0;
   for (; i < Inst->getNumOperands(); ++i) {
     Value *Op = Inst->getOperand(i);
@@ -436,13 +436,12 @@ static bool allPtrInputsInSameClass(GlobalVariable *GV, Instruction *Inst) {
       return false;
 
     // TODO-GFX13: if pointers are derived from two different
-    // global lane-shared, it should still work. The
+    // global lane-shared or private objects, it should still work. The
     // important part is both must be promotable into vgpr at
     // the end. It will require one more iteration of processing
-    if (Obj != GV) {
-      LLVM_DEBUG(
-          dbgs()
-          << "Found a select/phi with ptrs derived from two different GVs\n");
+    if (Obj != &V) {
+      LLVM_DEBUG(dbgs() << "Found a select/phi with ptrs derived from two "
+                           "different objects\n");
       return false;
     }
   }
@@ -452,31 +451,44 @@ static bool allPtrInputsInSameClass(GlobalVariable *GV, Instruction *Inst) {
 // Checks if the instruction I is a memset user of the global variable that we
 // can deal with. Currently, only non-volatile memsets that affect the whole
 // global variable are handled.
-static bool isSupportedMemset(MemSetInst *I, const GlobalVariable &GV,
+static bool isSupportedMemset(MemSetInst *I, const Value &V, Type *ValueType,
                               const DataLayout &DL) {
   using namespace PatternMatch;
   // For now we only care about non-volatile memsets that affect the whole
   // type (start at index 0 and fill the whole global variable).
-  const unsigned Size = DL.getTypeStoreSize(GV.getValueType());
-  return I->getOperand(0) == &GV &&
+  const unsigned Size = DL.getTypeStoreSize(ValueType);
+  return I->getOperand(0) == &V &&
          match(I->getOperand(2), m_SpecificInt(Size)) && !I->isVolatile();
 }
 
-bool IsPromotableToVGPR(GlobalVariable &GV, const DataLayout &DL) {
+bool IsPromotableToVGPR(const Value &V, const DataLayout &DL) {
   const auto RejectUser = [&](Instruction *Inst, Twine Msg) {
-    LLVM_DEBUG(dbgs() << "  Cannot promote lane-shared to vgpr: " << Msg << "\n"
+    LLVM_DEBUG(dbgs() << "  Cannot promote to vgpr: " << Msg << "\n"
                       << "    " << *Inst << "\n");
     return false;
   };
 
-  // TODO-GFX13: Do a proper allocation check across _all_ global variables.
-  if (DL.getTypeStoreSize(GV.getValueType()) > 4 * (1024 - 64)) {
-    LLVM_DEBUG(dbgs() << "  Cannot promote lane-shared to vgpr: too large\n");
+  Type *ValueType;
+  if (auto *GV = dyn_cast<GlobalVariable>(&V)) {
+    assert(GV->getAddressSpace() == AMDGPUAS::LANE_SHARED);
+    ValueType = GV->getValueType();
+  } else if (auto *AI = dyn_cast<AllocaInst>(&V)) {
+    if (!AI->isStaticAlloca() ||
+        AI->getAddressSpace() != AMDGPUAS::PRIVATE_ADDRESS)
+      return false;
+    ValueType = AI->getAllocatedType();
+  } else {
+    llvm_unreachable("Unexpected promotion candidate!");
+  }
+
+  // TODO-GFX13: Do a proper allocation check across _all_ allocatable objects.
+  if (DL.getTypeStoreSize(ValueType) > 4 * (1024 - 64)) {
+    LLVM_DEBUG(dbgs() << "  Cannot promote to vgpr: too large\n");
     return false;
   }
 
-  SmallVector<Use *, 8> Uses;
-  collectUses(GV, Uses);
+  SmallVector<const Use *, 8> Uses;
+  collectUses(V, Uses);
 
   for (auto *U : Uses) {
     Instruction *Inst = dyn_cast<Instruction>(U->getUser());
@@ -513,20 +525,20 @@ bool IsPromotableToVGPR(GlobalVariable &GV, const DataLayout &DL) {
     }
 
     if (auto *Phi = dyn_cast<PHINode>(Inst)) {
-      if (allPtrInputsInSameClass(&GV, Inst)) {
+      if (allPtrInputsInSameClass(V, Inst)) {
         continue;
       }
-      return RejectUser(Inst, "phi on ptrs from two different GVs");
+      return RejectUser(Inst, "phi on ptrs from two different objects");
     }
     if (auto *Phi = dyn_cast<SelectInst>(Inst)) {
-      if (allPtrInputsInSameClass(&GV, Inst)) {
+      if (allPtrInputsInSameClass(V, Inst)) {
         continue;
       }
-      return RejectUser(Inst, "select on ptrs from two different GVs");
+      return RejectUser(Inst, "select on ptrs from two different objects");
     }
 
     if (MemSetInst *MSI = dyn_cast<MemSetInst>(Inst)) {
-      if (isSupportedMemset(MSI, GV, DL)) {
+      if (isSupportedMemset(MSI, V, ValueType, DL)) {
         continue;
       }
       return RejectUser(Inst, "cannot handle partial memset inst yet");

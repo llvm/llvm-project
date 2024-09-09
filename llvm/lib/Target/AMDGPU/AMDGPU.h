@@ -63,6 +63,7 @@ FunctionPass *createAMDGPURewriteOutArgumentsPass();
 ModulePass *
 createAMDGPULowerModuleLDSLegacyPass(const AMDGPUTargetMachine *TM = nullptr);
 FunctionPass *createAMDGPUMarkPromotableLaneSharedLegacyPass();
+FunctionPass *createAMDGPUMarkPromotablePrivateLegacyPass();
 ModulePass *createAMDGPULowerBufferFatPointersPass();
 FunctionPass *createSIModeRegisterPass();
 FunctionPass *createGCNPreRAOptimizationsPass();
@@ -152,6 +153,16 @@ extern char &AMDGPUMarkPromotableLaneSharedLegacyPassID;
 struct AMDGPUMarkPromotableLaneSharedPass
     : PassInfoMixin<AMDGPUMarkPromotableLaneSharedPass> {
   AMDGPUMarkPromotableLaneSharedPass() {}
+
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+};
+
+void initializeAMDGPUMarkPromotablePrivateLegacyPass(PassRegistry &);
+extern char &AMDGPUMarkPromotablePrivateLegacyPassID;
+
+struct AMDGPUMarkPromotablePrivatePass
+    : PassInfoMixin<AMDGPUMarkPromotablePrivatePass> {
+  AMDGPUMarkPromotablePrivatePass() {}
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };

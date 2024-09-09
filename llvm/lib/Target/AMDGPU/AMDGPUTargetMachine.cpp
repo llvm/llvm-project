@@ -399,6 +399,11 @@ static cl::opt<bool>
                             cl::desc("Enable promoting lane-shared into VGPR"),
                             cl::init(true), cl::Hidden);
 
+static cl::opt<bool> EnablePromotePrivate(
+    "amdgpu-promote-private",
+    cl::desc("Enable promoting private objects into VGPRs"), cl::init(true),
+    cl::Hidden);
+
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   // Register the target
   RegisterTargetMachine<R600TargetMachine> X(getTheR600Target());
@@ -450,6 +455,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPURemoveIncompatibleFunctionsPass(*PR);
   initializeAMDGPULowerModuleLDSLegacyPass(*PR);
   initializeAMDGPUMarkPromotableLaneSharedLegacyPass(*PR);
+  initializeAMDGPUMarkPromotablePrivateLegacyPass(*PR);
   initializeAMDGPULowerBufferFatPointersPass(*PR);
   initializeAMDGPURewriteOutArgumentsPass(*PR);
   initializeAMDGPURewriteUndefForPHILegacyPass(*PR);
@@ -1273,6 +1279,8 @@ bool GCNPassConfig::addPreISel() {
 
   if (isPassEnabled(EnablePromoteLaneShared))
     addPass(createAMDGPUMarkPromotableLaneSharedLegacyPass());
+  if (isPassEnabled(EnablePromotePrivate))
+    addPass(createAMDGPUMarkPromotablePrivateLegacyPass());
 
   return false;
 }

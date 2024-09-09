@@ -906,6 +906,7 @@
 ; GCN-O2-NEXT:      Analysis if a function is memory bound
 ; GCN-O2-NEXT:      FunctionPass Manager
 ; GCN-O2-NEXT:        Mark promotable lane-shared
+; GCN-O2-NEXT:        Mark promotable private objects
 ; GCN-O2-NEXT:      DummyCGSCCPass
 ; GCN-O2-NEXT:      FunctionPass Manager
 ; GCN-O2-NEXT:        Dominator Tree Construction
@@ -1236,6 +1237,7 @@
 ; GCN-O3-NEXT:      Analysis if a function is memory bound
 ; GCN-O3-NEXT:      FunctionPass Manager
 ; GCN-O3-NEXT:        Mark promotable lane-shared
+; GCN-O3-NEXT:        Mark promotable private objects
 ; GCN-O3-NEXT:      DummyCGSCCPass
 ; GCN-O3-NEXT:      FunctionPass Manager
 ; GCN-O3-NEXT:        Dominator Tree Construction

@@ -70,9 +70,9 @@ bool isReallyAClobber(const Value *Ptr, MemoryDef *Def, AAResults *AA);
 bool isClobberedInFunction(const LoadInst *Load, MemorySSA *MSSA,
                            AAResults *AA);
 
-// Check if a lane-shared global variable can be stored in VGPRs, and
-// accumulate a list of use-insts that need to be marked or transformed.
-bool IsPromotableToVGPR(GlobalVariable &GV, const DataLayout &DL);
+/// Check if the passed global variable or private alloca can be allocated
+/// in VGPRs.
+bool IsPromotableToVGPR(const Value &V, const DataLayout &DL);
 
 } // end namespace AMDGPU
 
