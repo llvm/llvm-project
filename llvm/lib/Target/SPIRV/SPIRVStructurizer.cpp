@@ -620,14 +620,14 @@ class SPIRVStructurizer : public FunctionPass {
       std::vector<Edge> Output;
 
       for (auto &[Src, Dst] : Edges) {
-        if (Seen.count(Src) == 0) {
-          Seen.emplace(Src, Dst);
+        auto [iterator, inserted] = Seen.insert({Src, Dst});
+        if (inserted) {
           Output.emplace_back(Src, Dst);
           continue;
         }
 
         // The exact same edge was already seen. Ignoring.
-        if (Seen[Src] == Dst)
+        if (iterator->second == Dst)
           continue;
 
         // The same Src block branches to 2 distinct blocks. This will be an
