@@ -1835,6 +1835,15 @@ Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN) {
       return nullptr; // More than one non-simplified value.
     SeenNonSimplifiedInVal = true;
 
+    // If there is exactly one non-simplified value, we can insert a copy of the
+    // operation in that block.  However, if this is a critical edge, we would
+    // be inserting the computation on some other paths (e.g. inside a loop).
+    // Only do this if the pred block is unconditionally branching into the phi
+    // block. Also, make sure that the pred block is not dead code.
+    BranchInst *BI = dyn_cast<BranchInst>(InBB->getTerminator());
+    if (!BI || !BI->isUnconditional() || !DT.isReachableFromEntry(InBB))
+      return nullptr;
+
     NewPhiValues.push_back(nullptr);
     OpsToMoveUseTo.push_back(i);
 
@@ -1851,21 +1860,11 @@ Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN) {
       return nullptr;
   }
 
-  // If there is exactly one non-simplified value, we can insert a copy of the
-  // operation in that block.  However, if this is a critical edge, we would be
-  // inserting the computation on some other paths (e.g. inside a loop).  Only
-  // do this if the pred block is unconditionally branching into the phi block.
-  // Also, make sure that the pred block is not dead code.
-  // After checking for all of the above, clone the instruction that uses the
-  // phi node and move it into the incoming BB because we know that the next
-  // iteration of InstCombine will simplify it.
+  // Clone the instruction that uses the phi node and move it into the incoming
+  // BB because we know that the next iteration of InstCombine will simplify it.
   for (auto OpIndex : OpsToMoveUseTo) {
     Value *Op = PN->getIncomingValue(OpIndex);
     BasicBlock *OpBB = PN->getIncomingBlock(OpIndex);
-
-    BranchInst *BI = dyn_cast<BranchInst>(OpBB->getTerminator());
-    if (!BI || !BI->isUnconditional() || !DT.isReachableFromEntry(OpBB))
-      return nullptr;
 
     Instruction *Clone = I.clone();
     for (Use &U : Clone->operands()) {
