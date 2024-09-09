@@ -23,7 +23,6 @@
 #include <utility>
 #include <variant>
 
-#include "lldb/Symbol/SaveCoreOptions.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataBufferHeap.h"
@@ -121,9 +120,9 @@ private:
   lldb_private::Status AddData(const void *data, uint64_t size);
   // Add MemoryList stream, containing dumps of important memory segments
   lldb_private::Status
-  AddMemoryList_64(std::vector<lldb_private::CoreFileMemoryRange> &ranges);
+  AddMemoryList_64(lldb_private::Process::CoreFileMemoryRanges &ranges);
   lldb_private::Status
-  AddMemoryList_32(std::vector<lldb_private::CoreFileMemoryRange> &ranges);
+  AddMemoryList_32(lldb_private::Process::CoreFileMemoryRanges &ranges);
   // Update the thread list on disk with the newly emitted stack RVAs.
   lldb_private::Status FixThreadStacks();
   lldb_private::Status FlushBufferToDisk();

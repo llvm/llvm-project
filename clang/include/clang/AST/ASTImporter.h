@@ -484,6 +484,11 @@ class TypeSourceInfo;
     /// the declarations it contains.
     [[nodiscard]] llvm::Error ImportDefinition(Decl *From);
 
+    llvm::Error
+    ImportTemplateArguments(ArrayRef<TemplateArgument> FromArgs,
+                            SmallVectorImpl<TemplateArgument> &ToArgs);
+    Expected<TemplateArgument> Import(const TemplateArgument &From);
+
     /// Cope with a name conflict when importing a declaration into the
     /// given context.
     ///

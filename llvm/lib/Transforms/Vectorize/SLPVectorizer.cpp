@@ -3423,7 +3423,8 @@ private:
     Last->State = EntryState;
     // FIXME: Remove once support for ReuseShuffleIndices has been implemented
     // for non-power-of-two vectors.
-    assert((((VL.size() & 1U) == 0) || ReuseShuffleIndices.empty()) &&
+    assert((hasFullVectorsOnly(*TTI, getValueType(VL.front()), VL.size()) ||
+            ReuseShuffleIndices.empty()) &&
            "Reshuffling scalars not yet supported for nodes with padding");
     Last->ReuseShuffleIndices.append(ReuseShuffleIndices.begin(),
                                      ReuseShuffleIndices.end());
@@ -5617,8 +5618,8 @@ void BoUpSLP::reorderTopToBottom() {
   });
 
   // Reorder the graph nodes according to their vectorization factor.
-  for (unsigned VF = VectorizableTree.front()->getVectorFactor(); VF > 1;
-       VF -= 2 - (VF & 1U)) {
+  for (unsigned VF = VectorizableTree.front()->getVectorFactor();
+       !VFToOrderedEntries.empty() && VF > 1; VF -= 2 - (VF & 1U)) {
     auto It = VFToOrderedEntries.find(VF);
     if (It == VFToOrderedEntries.end())
       continue;
@@ -5626,6 +5627,9 @@ void BoUpSLP::reorderTopToBottom() {
     // used order and reorder scalar elements in the nodes according to this
     // mostly used order.
     ArrayRef<TreeEntry *> OrderedEntries = It->second.getArrayRef();
+    // Delete VF entry upon exit.
+    auto Cleanup = make_scope_exit([&]() { VFToOrderedEntries.erase(It); });
+
     // All operands are reordered and used only in this node - propagate the
     // most used order to the user node.
     MapVector<OrdersType, unsigned,
@@ -11722,9 +11726,8 @@ BoUpSLP::isGatherShuffledEntry(
   Mask.assign(VL.size(), PoisonMaskElem);
   assert(TE->UserTreeIndices.size() == 1 &&
          "Expected only single user of the gather node.");
-  // Number of scalars must be divisible by NumParts.
-  if (VL.size() % NumParts != 0)
-    return {};
+  assert(VL.size() % NumParts == 0 &&
+         "Number of scalars must be divisible by NumParts.");
   unsigned SliceSize = getPartNumElems(VL.size(), NumParts);
   SmallVector<std::optional<TTI::ShuffleKind>> Res;
   for (unsigned Part : seq<unsigned>(NumParts)) {

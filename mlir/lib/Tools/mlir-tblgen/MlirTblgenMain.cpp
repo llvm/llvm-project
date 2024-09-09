@@ -90,7 +90,7 @@ static bool findUse(Record &record, Init *deprecatedInit,
   });
 }
 
-static void warnOfDeprecatedUses(RecordKeeper &records) {
+static void warnOfDeprecatedUses(const RecordKeeper &records) {
   // This performs a direct check for any def marked as deprecated and then
   // finds all uses of deprecated def. Deprecated defs are not expected to be
   // either numerous or long lived.

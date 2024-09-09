@@ -309,7 +309,7 @@ static void computeFunctionSummary(
   // Map from callee ValueId to profile count. Used to accumulate profile
   // counts for all static calls to a given callee.
   MapVector<ValueInfo, CalleeInfo, DenseMap<ValueInfo, unsigned>,
-            std::vector<std::pair<ValueInfo, CalleeInfo>>>
+            SmallVector<FunctionSummary::EdgeTy, 0>>
       CallGraphEdges;
   SetVector<ValueInfo, SmallVector<ValueInfo, 0>> RefEdges, LoadRefEdges,
       StoreRefEdges;
@@ -673,9 +673,9 @@ static void computeFunctionSummary(
   if (auto *SSI = GetSSICallback(F))
     ParamAccesses = SSI->getParamAccesses(Index);
   auto FuncSummary = std::make_unique<FunctionSummary>(
-      Flags, NumInsts, FunFlags, /*EntryCount=*/0, std::move(Refs),
-      CallGraphEdges.takeVector(), TypeTests.takeVector(),
-      TypeTestAssumeVCalls.takeVector(), TypeCheckedLoadVCalls.takeVector(),
+      Flags, NumInsts, FunFlags, std::move(Refs), CallGraphEdges.takeVector(),
+      TypeTests.takeVector(), TypeTestAssumeVCalls.takeVector(),
+      TypeCheckedLoadVCalls.takeVector(),
       TypeTestAssumeConstVCalls.takeVector(),
       TypeCheckedLoadConstVCalls.takeVector(), std::move(ParamAccesses),
       std::move(Callsites), std::move(Allocs));
@@ -963,8 +963,8 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
                         /* MayThrow */ true,
                         /* HasUnknownCall */ true,
                         /* MustBeUnreachable */ false},
-                    /*EntryCount=*/0, SmallVector<ValueInfo, 0>{},
-                    ArrayRef<FunctionSummary::EdgeTy>{},
+                    SmallVector<ValueInfo, 0>{},
+                    SmallVector<FunctionSummary::EdgeTy, 0>{},
                     ArrayRef<GlobalValue::GUID>{},
                     ArrayRef<FunctionSummary::VFuncId>{},
                     ArrayRef<FunctionSummary::VFuncId>{},

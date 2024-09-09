@@ -29,9 +29,9 @@
 
 #define DEBUG_TYPE "coff_platform"
 
-using namespace __orc_rt;
+using namespace orc_rt;
 
-namespace __orc_rt {
+namespace orc_rt {
 
 using COFFJITDylibDepInfo = std::vector<ExecutorAddr>;
 using COFFJITDylibDepInfoMap =
@@ -45,7 +45,7 @@ using SPSCOFFJITDylibDepInfo = SPSSequence<SPSExecutorAddr>;
 using SPSCOFFJITDylibDepInfoMap =
     SPSSequence<SPSTuple<SPSExecutorAddr, SPSCOFFJITDylibDepInfo>>;
 
-} // namespace __orc_rt
+} // namespace orc_rt
 
 ORC_RT_JIT_DISPATCH_TAG(__orc_rt_coff_symbol_lookup_tag)
 ORC_RT_JIT_DISPATCH_TAG(__orc_rt_coff_push_initializers_tag)
@@ -752,7 +752,7 @@ ORC_RT_INTERFACE int64_t __orc_rt_coff_run_program(const char *JITDylibName,
   using MainTy = int (*)(int, char *[]);
 
   void *H =
-      __orc_rt_coff_jit_dlopen(JITDylibName, __orc_rt::coff::ORC_RT_RTLD_LAZY);
+      __orc_rt_coff_jit_dlopen(JITDylibName, orc_rt::coff::ORC_RT_RTLD_LAZY);
   if (!H) {
     __orc_rt_log_error(__orc_rt_coff_jit_dlerror());
     return -1;
