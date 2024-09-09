@@ -85,7 +85,7 @@ module attributes {transform.with_named_sequence} {
       transform.apply_patterns.canonicalization
     } : !transform.any_op
 
-    // Step 5 (optionnal): Hoist accumulator load/store.
+    // Step 5 (optional optimization): Hoist accumulator load/store.
     %func_h = transform.structured.hoist_redundant_vector_transfers %func
         : (!transform.any_op) -> !transform.any_op
     %all_loops = transform.structured.match interface{LoopLikeInterface} in %module
