@@ -804,6 +804,28 @@ void mlir::test::TestProduceInvalidIR::getEffects(
   transform::modifiesPayload(effects);
 }
 
+DiagnosedSilenceableFailure mlir::test::TestInitializerExtensionOp::apply(
+    transform::TransformRewriter &rewriter,
+    transform::TransformResults &results, transform::TransformState &state) {
+  std::string opName =
+      this->getOperationName().str() + "_" + getTypeAttr().str();
+  TransformStateInitializerExtension *initExt =
+      state.getExtension<TransformStateInitializerExtension>();
+  if (!initExt) {
+    emitRemark() << "\nSpecified extension not found, adding a new one!\n";
+    SmallVector<std::string> opCollection = {opName};
+    state.addExtension<TransformStateInitializerExtension>(1, opCollection);
+  } else {
+    initExt->setNumOp(initExt->getNumOp() + 1);
+    initExt->pushRegisteredOps(opName);
+    InFlightDiagnostic diag = emitRemark()
+                              << "Number of currently registered op: "
+                              << initExt->getNumOp() << "\n"
+                              << initExt->printMessage() << "\n";
+  }
+  return DiagnosedSilenceableFailure::success();
+}
+
 namespace {
 /// Test conversion pattern that replaces ops with the "replace_with_new_op"
 /// attribute with "test.new_op".

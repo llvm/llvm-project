@@ -33,6 +33,7 @@
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/AggressiveInstCombine/AggressiveInstCombine.h"
+#include "llvm/Transforms/Coroutines/CoroAnnotationElide.h"
 #include "llvm/Transforms/Coroutines/CoroCleanup.h"
 #include "llvm/Transforms/Coroutines/CoroConditionalWrapper.h"
 #include "llvm/Transforms/Coroutines/CoroEarly.h"
@@ -68,7 +69,6 @@
 #include "llvm/Transforms/IPO/SCCP.h"
 #include "llvm/Transforms/IPO/SampleProfile.h"
 #include "llvm/Transforms/IPO/SampleProfileProbe.h"
-#include "llvm/Transforms/IPO/SyntheticCountsPropagation.h"
 #include "llvm/Transforms/IPO/WholeProgramDevirt.h"
 #include "llvm/Transforms/InstCombine/InstCombine.h"
 #include "llvm/Transforms/Instrumentation/CGProfile.h"
@@ -76,6 +76,7 @@
 #include "llvm/Transforms/Instrumentation/InstrOrderFile.h"
 #include "llvm/Transforms/Instrumentation/InstrProfiling.h"
 #include "llvm/Transforms/Instrumentation/MemProfiler.h"
+#include "llvm/Transforms/Instrumentation/PGOCtxProfFlattening.h"
 #include "llvm/Transforms/Instrumentation/PGOCtxProfLowering.h"
 #include "llvm/Transforms/Instrumentation/PGOForceFunctionAttrs.h"
 #include "llvm/Transforms/Instrumentation/PGOInstrumentation.h"
@@ -154,11 +155,6 @@ static cl::opt<InliningAdvisorMode> UseInlineAdvisor(
                clEnumValN(InliningAdvisorMode::Release, "release",
                           "Use release mode (AOT-compiled model)")));
 
-static cl::opt<bool> EnableSyntheticCounts(
-    "enable-npm-synthetic-counts", cl::Hidden,
-    cl::desc("Run synthetic function entry count generation "
-             "pass"));
-
 /// Flag to enable inline deferral during PGO.
 static cl::opt<bool>
     EnablePGOInlineDeferral("enable-npm-pgo-inline-deferral", cl::init(true),
@@ -226,12 +222,6 @@ static cl::opt<bool>
     EnableDFAJumpThreading("enable-dfa-jump-thread",
                            cl::desc("Enable DFA jump threading"),
                            cl::init(false), cl::Hidden);
-
-// TODO: turn on and remove flag
-static cl::opt<bool> EnablePGOForceFunctionAttrs(
-    "enable-pgo-force-function-attrs",
-    cl::desc("Enable pass to set function attributes based on PGO profiles"),
-    cl::init(false));
 
 static cl::opt<bool>
     EnableHotColdSplit("hot-cold-split",
@@ -844,7 +834,8 @@ void PassBuilder::addPGOInstrPasses(ModulePassManager &MPM,
   }
 
   // Perform PGO instrumentation.
-  MPM.addPass(PGOInstrumentationGen(IsCS));
+  MPM.addPass(PGOInstrumentationGen(IsCS ? PGOInstrumentationType::CSFDO
+                                         : PGOInstrumentationType::FDO));
 
   addPostPGOLoopRotation(MPM, Level);
   // Add the profile lowering pass.
@@ -879,7 +870,8 @@ void PassBuilder::addPGOInstrPassesForO0(
   }
 
   // Perform PGO instrumentation.
-  MPM.addPass(PGOInstrumentationGen(IsCS));
+  MPM.addPass(PGOInstrumentationGen(IsCS ? PGOInstrumentationType::CSFDO
+                                         : PGOInstrumentationType::FDO));
   // Add the profile lowering pass.
   InstrProfOptions Options;
   if (!ProfileFile.empty())
@@ -982,8 +974,10 @@ PassBuilder::buildInlinerPipeline(OptimizationLevel Level,
   MainCGPipeline.addPass(createCGSCCToFunctionPassAdaptor(
       RequireAnalysisPass<ShouldNotRunFunctionPassesAnalysis, Function>()));
 
-  if (Phase != ThinOrFullLTOPhase::ThinLTOPreLink)
+  if (Phase != ThinOrFullLTOPhase::ThinLTOPreLink) {
     MainCGPipeline.addPass(CoroSplitPass(Level != OptimizationLevel::O0));
+    MainCGPipeline.addPass(CoroAnnotationElidePass());
+  }
 
   // Make sure we don't affect potential future NoRerun CGSCC adaptors.
   MIWP.addLateModulePass(createModuleToFunctionPassAdaptor(
@@ -1025,9 +1019,12 @@ PassBuilder::buildModuleInlinerPipeline(OptimizationLevel Level,
       buildFunctionSimplificationPipeline(Level, Phase),
       PTO.EagerlyInvalidateAnalyses));
 
-  if (Phase != ThinOrFullLTOPhase::ThinLTOPreLink)
+  if (Phase != ThinOrFullLTOPhase::ThinLTOPreLink) {
     MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(
         CoroSplitPass(Level != OptimizationLevel::O0)));
+    MPM.addPass(
+        createModuleToPostOrderCGSCCPassAdaptor(CoroAnnotationElidePass()));
+  }
 
   return MPM;
 }
@@ -1193,7 +1190,7 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
                       PGOOpt->ProfileFile, PGOOpt->ProfileRemappingFile,
                       PGOOpt->FS);
   } else if (IsCtxProfGen || IsCtxProfUse) {
-    MPM.addPass(PGOInstrumentationGen(false));
+    MPM.addPass(PGOInstrumentationGen(PGOInstrumentationType::CTXPROF));
     // In pre-link, we just want the instrumented IR. We use the contextual
     // profile in the post-thinlink phase.
     // The instrumentation will be removed in post-thinlink after IPO.
@@ -1216,11 +1213,8 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   if (IsMemprofUse)
     MPM.addPass(MemProfUsePass(PGOOpt->MemoryProfile, PGOOpt->FS));
 
-  // Synthesize function entry counts for non-PGO compilation.
-  if (EnableSyntheticCounts && !PGOOpt)
-    MPM.addPass(SyntheticCountsPropagation());
-
-  if (EnablePGOForceFunctionAttrs && PGOOpt)
+  if (PGOOpt && (PGOOpt->Action == PGOOptions::IRUse ||
+                 PGOOpt->Action == PGOOptions::SampleUse))
     MPM.addPass(PGOForceFunctionAttrsPass(PGOOpt->ColdOptType));
 
   MPM.addPass(AlwaysInlinerPass(/*InsertLifetimeIntrinsics=*/true));
@@ -1532,9 +1526,11 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
 
   // LoopSink (and other loop passes since the last simplifyCFG) might have
   // resulted in single-entry-single-exit or empty blocks. Clean up the CFG.
-  OptimizePM.addPass(SimplifyCFGPass(SimplifyCFGOptions()
-                                         .convertSwitchRangeToICmp(true)
-                                         .speculateUnpredictables(true)));
+  OptimizePM.addPass(
+      SimplifyCFGPass(SimplifyCFGOptions()
+                          .convertSwitchRangeToICmp(true)
+                          .speculateUnpredictables(true)
+                          .hoistLoadsStoresWithCondFaulting(true)));
 
   // Add the core optimizing pipeline.
   MPM.addPass(createModuleToFunctionPassAdaptor(std::move(OptimizePM),

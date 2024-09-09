@@ -265,10 +265,10 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
 }
 
 void Pointer::print(llvm::raw_ostream &OS) const {
-  OS << PointeeStorage.BS.Pointee << " (";
-  if (isBlockPointer()) {
+  switch (StorageKind) {
+  case Storage::Block: {
     const Block *B = PointeeStorage.BS.Pointee;
-    OS << "Block) {";
+    OS << "(Block) " << B << " {";
 
     if (isRoot())
       OS << "rootptr(" << PointeeStorage.BS.Base << "), ";
@@ -284,11 +284,18 @@ void Pointer::print(llvm::raw_ostream &OS) const {
       OS << B->getSize();
     else
       OS << "nullptr";
-  } else {
-    OS << "Int) {";
-    OS << PointeeStorage.Int.Value << ", " << PointeeStorage.Int.Desc;
+    OS << "}";
+  } break;
+  case Storage::Int:
+    OS << "(Int) {";
+    OS << PointeeStorage.Int.Value << " + " << Offset << ", "
+       << PointeeStorage.Int.Desc;
+    OS << "}";
+    break;
+  case Storage::Fn:
+    OS << "(Fn) { " << asFunctionPointer().getFunction() << " + " << Offset
+       << " }";
   }
-  OS << "}";
 }
 
 std::string Pointer::toDiagnosticString(const ASTContext &Ctx) const {
@@ -454,6 +461,17 @@ bool Pointer::hasSameArray(const Pointer &A, const Pointer &B) {
   return hasSameBase(A, B) &&
          A.PointeeStorage.BS.Base == B.PointeeStorage.BS.Base &&
          A.getFieldDesc()->IsArray;
+}
+
+bool Pointer::pointsToLiteral() const {
+  if (isZero() || !isBlockPointer())
+    return false;
+
+  const Expr *E = block()->getDescriptor()->asExpr();
+  if (block()->isDynamic())
+    return false;
+
+  return E && !isa<MaterializeTemporaryExpr, StringLiteral>(E);
 }
 
 std::optional<APValue> Pointer::toRValue(const Context &Ctx,
@@ -647,5 +665,5 @@ IntPointer IntPointer::atOffset(const ASTContext &ASTCtx,
   uint64_t FieldOffset =
       ASTCtx.toCharUnitsFromBits(Layout.getFieldOffset(FieldIndex))
           .getQuantity();
-  return IntPointer{this->Desc, FieldOffset};
+  return IntPointer{this->Desc, this->Value + FieldOffset};
 }

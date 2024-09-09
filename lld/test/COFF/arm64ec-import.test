@@ -1,0 +1,73 @@
+REQUIRES: aarch64, x86
+RUN: split-file %s %t.dir && cd %t.dir
+
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows test.s -o test.obj
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows %S/Inputs/loadconfig-arm64ec.s -o loadconfig-arm64ec.obj
+RUN: llvm-lib -machine:arm64ec -def:test.def -out:test-arm64ec.lib
+RUN: llvm-lib -machine:arm64ec -def:test2.def -out:test2-arm64ec.lib
+RUN: llvm-lib -machine:x64 -def:test.def -out:test-x86_64.lib
+
+Link using ARM64EC import library:
+RUN: lld-link -machine:arm64ec -dll -noentry -out:out.dll loadconfig-arm64ec.obj \
+RUN:          test.obj test-arm64ec.lib test2-arm64ec.lib
+
+Link using x86_64 import library:
+RUN: lld-link -machine:arm64ec -dll -noentry -out:out2.dll loadconfig-arm64ec.obj \
+RUN:          test.obj test-x86_64.lib test2-arm64ec.lib
+
+RUN: llvm-readobj --coff-imports out.dll | FileCheck --check-prefix=IMPORTS %s
+RUN: llvm-readobj --coff-imports out2.dll | FileCheck --check-prefix=IMPORTS %s
+IMPORTS:      Import {
+IMPORTS-NEXT:   Name: test.dll
+IMPORTS-NEXT:   ImportLookupTableRVA:
+IMPORTS-NEXT:   ImportAddressTableRVA: 0x2000
+IMPORTS-NEXT:   Symbol: data (0)
+IMPORTS-NEXT:   Symbol: func (0)
+IMPORTS-NEXT:   Symbol: func2 (0)
+IMPORTS-NEXT: }
+IMPORTS-NEXT: Import {
+IMPORTS-NEXT:   Name: test2.dll
+IMPORTS-NEXT:   ImportLookupTableRVA:
+IMPORTS-NEXT:   ImportAddressTableRVA: 0x2020
+IMPORTS-NEXT:   Symbol: t2func (0)
+IMPORTS-NEXT: }
+
+RUN: llvm-objdump -d out.dll | FileCheck --check-prefix=DISASM %s
+RUN: llvm-objdump -d out2.dll | FileCheck --check-prefix=DISASM %s
+
+DISASM:      0000000180001000 <.text>:
+DISASM-NEXT: 180001000: ff 25 02 10 00 00            jmpq    *0x1002(%rip)           # 0x180002008
+
+RUN: llvm-readobj --hex-dump=.test out.dll | FileCheck --check-prefix=TESTSEC %s
+RUN: llvm-readobj --hex-dump=.test out2.dll | FileCheck --check-prefix=TESTSEC %s
+TESTSEC:      0x180005000 08200000 00200000 10200000 20200000
+TESTSEC-NEXT: 0x180005010 00100000
+
+RUN: llvm-readobj --headers out.dll | FileCheck -check-prefix=HEADERS %s
+HEADERS:  LoadConfigTableRVA: 0x3008
+HEADERS:  IATRVA: 0x2000
+HEADERS:  IATSize: 0x1000
+
+#--- test.s
+    .section .test, "r"
+    .globl arm64ec_data_sym
+    .p2align 2, 0x0
+arm64ec_data_sym:
+    .rva __imp_func
+    .rva __imp_data
+    .rva __imp_func2
+    .rva __imp_t2func
+    .rva func
+
+#--- test.def
+NAME test.dll
+EXPORTS
+    data DATA
+    func
+    func2
+    unused_func
+
+#--- test2.def
+NAME test2.dll
+EXPORTS
+    t2func

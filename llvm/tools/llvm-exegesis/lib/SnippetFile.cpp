@@ -36,7 +36,7 @@ namespace {
 class BenchmarkCodeStreamer : public MCStreamer, public AsmCommentConsumer {
 public:
   explicit BenchmarkCodeStreamer(
-      MCContext *Context, const DenseMap<StringRef, unsigned> &RegNameToRegNo,
+      MCContext *Context, const DenseMap<StringRef, MCRegister> &RegNameToRegNo,
       BenchmarkCode *Result)
       : MCStreamer(*Context), RegNameToRegNo(RegNameToRegNo), Result(Result) {}
 
@@ -151,8 +151,8 @@ public:
     }
     if (CommentText.consume_front("SNIPPET-ADDRESS")) {
       // LLVM-EXEGESIS-SNIPPET-ADDRESS <address>
-      if (!to_integer<intptr_t>(CommentText.trim(), Result->Key.SnippetAddress,
-                                16)) {
+      if (!to_integer<uintptr_t>(CommentText.trim(), Result->Key.SnippetAddress,
+                                 16)) {
         errs() << "invalid comment 'LLVM-EXEGESIS-SNIPPET-ADDRESS "
                << CommentText
                << "', expected <ADDRESS> to contain a valid integer in "
@@ -215,7 +215,7 @@ private:
     return 0;
   }
 
-  const DenseMap<StringRef, unsigned> &RegNameToRegNo;
+  const DenseMap<StringRef, MCRegister> &RegNameToRegNo;
   BenchmarkCode *const Result;
   unsigned InvalidComments = 0;
 };

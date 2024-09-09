@@ -9,23 +9,8 @@ define void @pr104567(i8 %x, ptr %f) {
 ; CHECK-NEXT:  [[START:.*:]]
 ; CHECK-NEXT:    [[Y:%.*]] = alloca [1 x i8], align 1
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 1, ptr nonnull [[Y]])
-; CHECK-NEXT:    switch i8 [[X]], label %[[DEFAULT_UNREACHABLE:.*]] [
-; CHECK-NEXT:      i8 0, label %[[BB4:.*]]
-; CHECK-NEXT:      i8 1, label %[[BB3:.*]]
-; CHECK-NEXT:      i8 2, label %[[BB2:.*]]
-; CHECK-NEXT:    ]
-; CHECK:       [[DEFAULT_UNREACHABLE]]:
-; CHECK-NEXT:    unreachable
-; CHECK:       [[BB4]]:
-; CHECK-NEXT:    store i8 4, ptr [[Y]], align 1
-; CHECK-NEXT:    br label %[[BB5:.*]]
-; CHECK:       [[BB3]]:
-; CHECK-NEXT:    store i8 5, ptr [[Y]], align 1
-; CHECK-NEXT:    br label %[[BB5]]
-; CHECK:       [[BB2]]:
-; CHECK-NEXT:    store i8 6, ptr [[Y]], align 1
-; CHECK-NEXT:    br label %[[BB5]]
-; CHECK:       [[BB5]]:
+; CHECK-NEXT:    [[SWITCH_OFFSET:%.*]] = add nsw i8 [[X]], 4
+; CHECK-NEXT:    store i8 [[SWITCH_OFFSET]], ptr [[Y]], align 1
 ; CHECK-NEXT:    call void [[F]](ptr [[Y]])
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 1, ptr nonnull [[Y]])
 ; CHECK-NEXT:    ret void

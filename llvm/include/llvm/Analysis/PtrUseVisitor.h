@@ -34,7 +34,6 @@
 
 namespace llvm {
 class DataLayout;
-class Use;
 
 namespace detail {
 
@@ -158,7 +157,7 @@ protected:
   ///
   /// This will visit the users with the same offset of the current visit
   /// (including an unknown offset if that is the current state).
-  void enqueueUsers(Instruction &I);
+  void enqueueUsers(Value &I);
 
   /// Walk the operands of a GEP and adjust the offset as appropriate.
   ///
@@ -209,11 +208,14 @@ public:
 
   /// Recursively visit the uses of the given pointer.
   /// \returns An info struct about the pointer. See \c PtrInfo for details.
-  PtrInfo visitPtr(Instruction &I) {
+  /// We may also need to process Argument pointers, so the input uses is
+  /// a common Value type.
+  PtrInfo visitPtr(Value &I) {
     // This must be a pointer type. Get an integer type suitable to hold
     // offsets on this pointer.
     // FIXME: Support a vector of pointers.
     assert(I.getType()->isPointerTy());
+    assert(isa<Instruction>(I) || isa<Argument>(I));
     IntegerType *IntIdxTy = cast<IntegerType>(DL.getIndexType(I.getType()));
     IsOffsetKnown = true;
     Offset = APInt(IntIdxTy->getBitWidth(), 0);
@@ -278,6 +280,12 @@ protected:
     switch (II.getIntrinsicID()) {
     default:
       return Base::visitIntrinsicInst(II);
+
+    // We escape pointers used by a fake_use to prevent SROA from transforming
+    // them.
+    case Intrinsic::fake_use:
+      PI.setEscaped(&II);
+      return;
 
     case Intrinsic::lifetime_start:
     case Intrinsic::lifetime_end:

@@ -35,8 +35,8 @@ using namespace mlir;
 using namespace mlir::vector;
 
 namespace {
-struct LowerVectorToLLVMPass
-    : public impl::ConvertVectorToLLVMPassBase<LowerVectorToLLVMPass> {
+struct ConvertVectorToLLVMPass
+    : public impl::ConvertVectorToLLVMPassBase<ConvertVectorToLLVMPass> {
 
   using Base::Base;
 
@@ -58,7 +58,7 @@ struct LowerVectorToLLVMPass
 };
 } // namespace
 
-void LowerVectorToLLVMPass::runOnOperation() {
+void ConvertVectorToLLVMPass::runOnOperation() {
   // Perform progressive lowering of operations on slices and
   // all contraction operations. Also applies folding and DCE.
   {

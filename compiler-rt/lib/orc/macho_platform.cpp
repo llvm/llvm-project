@@ -30,8 +30,8 @@
 
 #define DEBUG_TYPE "macho_platform"
 
-using namespace __orc_rt;
-using namespace __orc_rt::macho;
+using namespace orc_rt;
+using namespace orc_rt::macho;
 
 // Declare function tags for functions in the JIT process.
 ORC_RT_JIT_DISPATCH_TAG(__orc_rt_macho_push_initializers_tag)
@@ -82,7 +82,7 @@ using MachOJITDylibDepInfoMap =
 
 } // anonymous namespace
 
-namespace __orc_rt {
+namespace orc_rt {
 
 using SPSMachOObjectPlatformSectionsMap =
     SPSSequence<SPSTuple<SPSString, SPSExecutorAddrRange>>;
@@ -139,7 +139,7 @@ public:
   }
 };
 
-} // namespace __orc_rt
+} // namespace orc_rt
 
 namespace {
 struct TLVDescriptor {
@@ -367,7 +367,9 @@ private:
   static Error registerEHFrames(span<const char> EHFrameSection);
   static Error deregisterEHFrames(span<const char> EHFrameSection);
 
-  static Error registerObjCRegistrationObjects(JITDylibState &JDS);
+  static Error
+  registerObjCRegistrationObjects(std::unique_lock<std::mutex> &JDStatesLock,
+                                  JITDylibState &JDS);
   static Error runModInits(std::unique_lock<std::mutex> &JDStatesLock,
                            JITDylibState &JDS);
 
@@ -404,7 +406,7 @@ private:
 
 } // anonymous namespace
 
-namespace __orc_rt {
+namespace orc_rt {
 
 class SPSMachOExecutorSymbolFlags;
 
@@ -439,7 +441,7 @@ public:
   }
 };
 
-} // namespace __orc_rt
+} // namespace orc_rt
 
 namespace {
 
@@ -1059,7 +1061,7 @@ Error MachOPlatformRuntimeState::deregisterEHFrames(
 }
 
 Error MachOPlatformRuntimeState::registerObjCRegistrationObjects(
-    JITDylibState &JDS) {
+    std::unique_lock<std::mutex> &JDStatesLock, JITDylibState &JDS) {
   ORC_RT_DEBUG(printdbg("Registering Objective-C / Swift metadata.\n"));
 
   std::vector<char *> RegObjBases;
@@ -1074,6 +1076,9 @@ Error MachOPlatformRuntimeState::registerObjCRegistrationObjects(
         "Could not register Objective-C / Swift metadata: _objc_map_images / "
         "_objc_load_image not found");
 
+  // Release the lock while calling out to libobjc in case +load methods cause
+  // reentering the orc runtime.
+  JDStatesLock.unlock();
   std::vector<char *> Paths;
   Paths.resize(RegObjBases.size());
   _objc_map_images(RegObjBases.size(), Paths.data(),
@@ -1081,6 +1086,7 @@ Error MachOPlatformRuntimeState::registerObjCRegistrationObjects(
 
   for (void *RegObjBase : RegObjBases)
     _objc_load_image(nullptr, reinterpret_cast<mach_header *>(RegObjBase));
+  JDStatesLock.lock();
 
   return Error::success();
 }
@@ -1218,7 +1224,7 @@ Error MachOPlatformRuntimeState::dlopenInitialize(
   }
 
   // Initialize this JITDylib.
-  if (auto Err = registerObjCRegistrationObjects(JDS))
+  if (auto Err = registerObjCRegistrationObjects(JDStatesLock, JDS))
     return Err;
   if (auto Err = runModInits(JDStatesLock, JDS))
     return Err;
@@ -1526,8 +1532,8 @@ ORC_RT_INTERFACE int64_t __orc_rt_macho_run_program(const char *JITDylibName,
                                                     int argc, char *argv[]) {
   using MainTy = int (*)(int, char *[]);
 
-  void *H = __orc_rt_macho_jit_dlopen(JITDylibName,
-                                      __orc_rt::macho::ORC_RT_RTLD_LAZY);
+  void *H =
+      __orc_rt_macho_jit_dlopen(JITDylibName, orc_rt::macho::ORC_RT_RTLD_LAZY);
   if (!H) {
     __orc_rt_log_error(__orc_rt_macho_jit_dlerror());
     return -1;

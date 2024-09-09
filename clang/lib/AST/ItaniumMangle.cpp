@@ -2384,6 +2384,8 @@ void CXXNameMangler::mangleType(TemplateName TN) {
     Out << "_SUBSTPACK_";
     break;
   }
+  case TemplateName::DeducedTemplate:
+    llvm_unreachable("Unexpected DeducedTemplate");
   }
 
   addSubstitution(TN);
@@ -2419,6 +2421,7 @@ bool CXXNameMangler::mangleUnresolvedTypeOrSimpleId(QualType Ty,
   case Type::Paren:
   case Type::Attributed:
   case Type::BTFTagAttributed:
+  case Type::HLSLAttributedResource:
   case Type::Auto:
   case Type::DeducedTemplateSpecialization:
   case Type::PackExpansion:
@@ -2501,6 +2504,7 @@ bool CXXNameMangler::mangleUnresolvedTypeOrSimpleId(QualType Ty,
     case TemplateName::OverloadedTemplate:
     case TemplateName::AssumedTemplate:
     case TemplateName::DependentTemplate:
+    case TemplateName::DeducedTemplate:
       llvm_unreachable("invalid base for a template specialization type");
 
     case TemplateName::SubstTemplateTemplateParm: {
@@ -3517,6 +3521,12 @@ CXXNameMangler::mangleExtParameterInfo(FunctionProtoType::ExtParameterInfo PI) {
   case ParameterABI::Ordinary:
     break;
 
+  // HLSL parameter mangling.
+  case ParameterABI::HLSLOut:
+  case ParameterABI::HLSLInOut:
+    mangleVendorQualifier(getParameterABISpelling(PI.getABI()));
+    break;
+
   // All of these start with "swift", so they come before "ns_consumed".
   case ParameterABI::SwiftContext:
   case ParameterABI::SwiftAsyncContext:
@@ -4442,14 +4452,10 @@ void CXXNameMangler::mangleType(const DeducedTemplateSpecializationType *T) {
   if (!Deduced.isNull())
     return mangleType(Deduced);
 
-  TemplateDecl *TD = T->getTemplateName().getAsTemplateDecl();
-  assert(TD && "shouldn't form deduced TST unless we know we have a template");
-
-  if (mangleSubstitution(TD))
-    return;
-
-  mangleName(GlobalDecl(TD));
-  addSubstitution(TD);
+  TemplateName TN = T->getTemplateName();
+  assert(TN.getAsTemplateDecl() &&
+         "shouldn't form deduced TST unless we know we have a template");
+  mangleType(TN);
 }
 
 void CXXNameMangler::mangleType(const AtomicType *T) {
@@ -5733,6 +5739,9 @@ recurse:
     Out << "E";
     break;
   }
+  case Expr::HLSLOutArgExprClass:
+    llvm_unreachable(
+        "cannot mangle hlsl temporary value; mangling wrong thing?");
   }
 
   if (AsTemplateArg && !IsPrimaryExpr)
@@ -5930,7 +5939,10 @@ struct CXXNameMangler::TemplateArgManglingInfo {
     // that of the template.
     auto *TTP = cast<TemplateTemplateParmDecl>(Param);
     TemplateName ArgTemplateName = Arg.getAsTemplateOrTemplatePattern();
-    const TemplateDecl *ArgTemplate = ArgTemplateName.getAsTemplateDecl();
+    assert(!ArgTemplateName.getTemplateDeclAndDefaultArgs().second &&
+           "A DeducedTemplateName shouldn't escape partial ordering");
+    const TemplateDecl *ArgTemplate =
+        ArgTemplateName.getAsTemplateDecl(/*IgnoreDeduced=*/true);
     if (!ArgTemplate)
       return true;
 
