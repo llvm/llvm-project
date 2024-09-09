@@ -1,0 +1,7 @@
+# RUN: not yaml2obj %s 2>&1 | FileCheck %s
+
+# CHECK: YAML:{{[0-9]*}}:{{[0-9]*}}: error: unknown record type name Foo
+# CHECk: yaml2obj: error: failed to parse YAML input: Invalid argument
+
+--- !GOFF
+- Foo:
