@@ -33,6 +33,7 @@
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/AggressiveInstCombine/AggressiveInstCombine.h"
+#include "llvm/Transforms/Coroutines/CoroAnnotationElide.h"
 #include "llvm/Transforms/Coroutines/CoroCleanup.h"
 #include "llvm/Transforms/Coroutines/CoroConditionalWrapper.h"
 #include "llvm/Transforms/Coroutines/CoroEarly.h"
@@ -68,7 +69,6 @@
 #include "llvm/Transforms/IPO/SCCP.h"
 #include "llvm/Transforms/IPO/SampleProfile.h"
 #include "llvm/Transforms/IPO/SampleProfileProbe.h"
-#include "llvm/Transforms/IPO/SyntheticCountsPropagation.h"
 #include "llvm/Transforms/IPO/WholeProgramDevirt.h"
 #include "llvm/Transforms/InstCombine/InstCombine.h"
 #include "llvm/Transforms/Instrumentation/CGProfile.h"
@@ -76,6 +76,7 @@
 #include "llvm/Transforms/Instrumentation/InstrOrderFile.h"
 #include "llvm/Transforms/Instrumentation/InstrProfiling.h"
 #include "llvm/Transforms/Instrumentation/MemProfiler.h"
+#include "llvm/Transforms/Instrumentation/PGOCtxProfFlattening.h"
 #include "llvm/Transforms/Instrumentation/PGOCtxProfLowering.h"
 #include "llvm/Transforms/Instrumentation/PGOForceFunctionAttrs.h"
 #include "llvm/Transforms/Instrumentation/PGOInstrumentation.h"
@@ -153,11 +154,6 @@ static cl::opt<InliningAdvisorMode> UseInlineAdvisor(
                           "Use development mode (runtime-loadable model)"),
                clEnumValN(InliningAdvisorMode::Release, "release",
                           "Use release mode (AOT-compiled model)")));
-
-static cl::opt<bool> EnableSyntheticCounts(
-    "enable-npm-synthetic-counts", cl::Hidden,
-    cl::desc("Run synthetic function entry count generation "
-             "pass"));
 
 /// Flag to enable inline deferral during PGO.
 static cl::opt<bool>
@@ -978,8 +974,10 @@ PassBuilder::buildInlinerPipeline(OptimizationLevel Level,
   MainCGPipeline.addPass(createCGSCCToFunctionPassAdaptor(
       RequireAnalysisPass<ShouldNotRunFunctionPassesAnalysis, Function>()));
 
-  if (Phase != ThinOrFullLTOPhase::ThinLTOPreLink)
+  if (Phase != ThinOrFullLTOPhase::ThinLTOPreLink) {
     MainCGPipeline.addPass(CoroSplitPass(Level != OptimizationLevel::O0));
+    MainCGPipeline.addPass(CoroAnnotationElidePass());
+  }
 
   // Make sure we don't affect potential future NoRerun CGSCC adaptors.
   MIWP.addLateModulePass(createModuleToFunctionPassAdaptor(
@@ -1021,9 +1019,12 @@ PassBuilder::buildModuleInlinerPipeline(OptimizationLevel Level,
       buildFunctionSimplificationPipeline(Level, Phase),
       PTO.EagerlyInvalidateAnalyses));
 
-  if (Phase != ThinOrFullLTOPhase::ThinLTOPreLink)
+  if (Phase != ThinOrFullLTOPhase::ThinLTOPreLink) {
     MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(
         CoroSplitPass(Level != OptimizationLevel::O0)));
+    MPM.addPass(
+        createModuleToPostOrderCGSCCPassAdaptor(CoroAnnotationElidePass()));
+  }
 
   return MPM;
 }
@@ -1211,10 +1212,6 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
 
   if (IsMemprofUse)
     MPM.addPass(MemProfUsePass(PGOOpt->MemoryProfile, PGOOpt->FS));
-
-  // Synthesize function entry counts for non-PGO compilation.
-  if (EnableSyntheticCounts && !PGOOpt)
-    MPM.addPass(SyntheticCountsPropagation());
 
   if (PGOOpt && (PGOOpt->Action == PGOOptions::IRUse ||
                  PGOOpt->Action == PGOOptions::SampleUse))

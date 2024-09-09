@@ -881,8 +881,8 @@ ASTContext::ASTContext(LangOptions &LOpts, SourceManager &SM,
       TemplateSpecializationTypes(this_()),
       DependentTemplateSpecializationTypes(this_()), AutoTypes(this_()),
       DependentBitIntTypes(this_()), SubstTemplateTemplateParmPacks(this_()),
-      ArrayParameterTypes(this_()), CanonTemplateTemplateParms(this_()),
-      SourceMgr(SM), LangOpts(LOpts),
+      DeducedTemplates(this_()), ArrayParameterTypes(this_()),
+      CanonTemplateTemplateParms(this_()), SourceMgr(SM), LangOpts(LOpts),
       NoSanitizeL(new NoSanitizeList(LangOpts.NoSanitizeFiles, SM)),
       XRayFilter(new XRayFunctionFilter(LangOpts.XRayAlwaysInstrumentFiles,
                                         LangOpts.XRayNeverInstrumentFiles,
@@ -5411,7 +5411,7 @@ ASTContext::getTemplateSpecializationType(TemplateName Template,
   assert(!Template.getAsDependentTemplateName() &&
          "No dependent template names here!");
 
-  const auto *TD = Template.getAsTemplateDecl();
+  const auto *TD = Template.getAsTemplateDecl(/*IgnoreDeduced=*/true);
   bool IsTypeAlias = TD && TD->isTypeAlias();
   QualType CanonType;
   if (!Underlying.isNull())
@@ -5446,7 +5446,12 @@ QualType ASTContext::getCanonicalTemplateSpecializationType(
          "No dependent template names here!");
 
   // Build the canonical template specialization type.
-  TemplateName CanonTemplate = getCanonicalTemplateName(Template);
+  // Any DeducedTemplateNames are ignored, because the effective name of a TST
+  // accounts for the TST arguments laid over any default arguments contained in
+  // its name.
+  TemplateName CanonTemplate =
+      getCanonicalTemplateName(Template, /*IgnoreDeduced=*/true);
+
   bool AnyNonCanonArgs = false;
   auto CanonArgs =
       ::getCanonicalTemplateArguments(*this, Args, AnyNonCanonArgs);
@@ -6753,16 +6758,41 @@ ASTContext::getNameForTemplate(TemplateName Name,
   case TemplateName::UsingTemplate:
     return DeclarationNameInfo(Name.getAsUsingShadowDecl()->getDeclName(),
                                NameLoc);
+  case TemplateName::DeducedTemplate: {
+    DeducedTemplateStorage *DTS = Name.getAsDeducedTemplateName();
+    return getNameForTemplate(DTS->getUnderlying(), NameLoc);
+  }
   }
 
   llvm_unreachable("bad template name kind!");
 }
 
-TemplateName
-ASTContext::getCanonicalTemplateName(const TemplateName &Name) const {
+static const TemplateArgument *
+getDefaultTemplateArgumentOrNone(const NamedDecl *P) {
+  auto handleParam = [](auto *TP) -> const TemplateArgument * {
+    if (!TP->hasDefaultArgument())
+      return nullptr;
+    return &TP->getDefaultArgument().getArgument();
+  };
+  switch (P->getKind()) {
+  case NamedDecl::TemplateTypeParm:
+    return handleParam(cast<TemplateTypeParmDecl>(P));
+  case NamedDecl::NonTypeTemplateParm:
+    return handleParam(cast<NonTypeTemplateParmDecl>(P));
+  case NamedDecl::TemplateTemplateParm:
+    return handleParam(cast<TemplateTemplateParmDecl>(P));
+  default:
+    llvm_unreachable("Unexpected template parameter kind");
+  }
+}
+
+TemplateName ASTContext::getCanonicalTemplateName(TemplateName Name,
+                                                  bool IgnoreDeduced) const {
+  while (std::optional<TemplateName> UnderlyingOrNone =
+             Name.desugar(IgnoreDeduced))
+    Name = *UnderlyingOrNone;
+
   switch (Name.getKind()) {
-  case TemplateName::UsingTemplate:
-  case TemplateName::QualifiedTemplate:
   case TemplateName::Template: {
     TemplateDecl *Template = Name.getAsTemplateDecl();
     if (auto *TTP  = dyn_cast<TemplateTemplateParmDecl>(Template))
@@ -6782,12 +6812,6 @@ ASTContext::getCanonicalTemplateName(const TemplateName &Name) const {
     return DTN->CanonicalTemplateName;
   }
 
-  case TemplateName::SubstTemplateTemplateParm: {
-    SubstTemplateTemplateParmStorage *subst
-      = Name.getAsSubstTemplateTemplateParm();
-    return getCanonicalTemplateName(subst->getReplacement());
-  }
-
   case TemplateName::SubstTemplateTemplateParmPack: {
     SubstTemplateTemplateParmPackStorage *subst =
         Name.getAsSubstTemplateTemplateParmPack();
@@ -6797,15 +6821,58 @@ ASTContext::getCanonicalTemplateName(const TemplateName &Name) const {
         canonArgPack, subst->getAssociatedDecl()->getCanonicalDecl(),
         subst->getFinal(), subst->getIndex());
   }
+  case TemplateName::DeducedTemplate: {
+    assert(IgnoreDeduced == false);
+    DeducedTemplateStorage *DTS = Name.getAsDeducedTemplateName();
+    DefaultArguments DefArgs = DTS->getDefaultArguments();
+    TemplateName Underlying = DTS->getUnderlying();
+
+    TemplateName CanonUnderlying =
+        getCanonicalTemplateName(Underlying, /*IgnoreDeduced=*/true);
+    bool NonCanonical = CanonUnderlying != Underlying;
+    auto CanonArgs =
+        getCanonicalTemplateArguments(*this, DefArgs.Args, NonCanonical);
+
+    ArrayRef<NamedDecl *> Params =
+        CanonUnderlying.getAsTemplateDecl()->getTemplateParameters()->asArray();
+    assert(CanonArgs.size() <= Params.size());
+    // A deduced template name which deduces the same default arguments already
+    // declared in the underlying template is the same template as the
+    // underlying template. We need need to note any arguments which differ from
+    // the corresponding declaration. If any argument differs, we must build a
+    // deduced template name.
+    for (int I = CanonArgs.size() - 1; I >= 0; --I) {
+      const TemplateArgument *A = getDefaultTemplateArgumentOrNone(Params[I]);
+      if (!A)
+        break;
+      auto CanonParamDefArg = getCanonicalTemplateArgument(*A);
+      TemplateArgument &CanonDefArg = CanonArgs[I];
+      if (CanonDefArg.structurallyEquals(CanonParamDefArg))
+        continue;
+      // Keep popping from the back any deault arguments which are the same.
+      if (I == int(CanonArgs.size() - 1))
+        CanonArgs.pop_back();
+      NonCanonical = true;
+    }
+    return NonCanonical ? getDeducedTemplateName(
+                              CanonUnderlying,
+                              /*DefaultArgs=*/{DefArgs.StartPos, CanonArgs})
+                        : Name;
+  }
+  case TemplateName::UsingTemplate:
+  case TemplateName::QualifiedTemplate:
+  case TemplateName::SubstTemplateTemplateParm:
+    llvm_unreachable("always sugar node");
   }
 
   llvm_unreachable("bad template name!");
 }
 
 bool ASTContext::hasSameTemplateName(const TemplateName &X,
-                                     const TemplateName &Y) const {
-  return getCanonicalTemplateName(X).getAsVoidPointer() ==
-         getCanonicalTemplateName(Y).getAsVoidPointer();
+                                     const TemplateName &Y,
+                                     bool IgnoreDeduced) const {
+  return getCanonicalTemplateName(X, IgnoreDeduced) ==
+         getCanonicalTemplateName(Y, IgnoreDeduced);
 }
 
 bool ASTContext::isSameConstraintExpr(const Expr *XCE, const Expr *YCE) const {
@@ -7294,7 +7361,7 @@ ASTContext::getCanonicalTemplateArgument(const TemplateArgument &Arg) const {
     case TemplateArgument::StructuralValue:
       return TemplateArgument(*this,
                               getCanonicalType(Arg.getStructuralValueType()),
-                              Arg.getAsStructuralValue());
+                              Arg.getAsStructuralValue(), Arg.getIsDefaulted());
 
     case TemplateArgument::Type:
       return TemplateArgument(getCanonicalType(Arg.getAsType()),
@@ -7306,8 +7373,10 @@ ASTContext::getCanonicalTemplateArgument(const TemplateArgument &Arg) const {
           *this, Arg.pack_elements(), AnyNonCanonArgs);
       if (!AnyNonCanonArgs)
         return Arg;
-      return TemplateArgument::CreatePackCopy(const_cast<ASTContext &>(*this),
-                                              CanonArgs);
+      auto NewArg = TemplateArgument::CreatePackCopy(
+          const_cast<ASTContext &>(*this), CanonArgs);
+      NewArg.setIsDefaulted(Arg.getIsDefaulted());
+      return NewArg;
     }
   }
 
@@ -9862,6 +9931,30 @@ ASTContext::getSubstTemplateTemplateParmPack(const TemplateArgument &ArgPack,
   }
 
   return TemplateName(Subst);
+}
+
+/// Retrieve the template name that represents a template name
+/// deduced from a specialization.
+TemplateName
+ASTContext::getDeducedTemplateName(TemplateName Underlying,
+                                   DefaultArguments DefaultArgs) const {
+  if (!DefaultArgs)
+    return Underlying;
+
+  llvm::FoldingSetNodeID ID;
+  DeducedTemplateStorage::Profile(ID, *this, Underlying, DefaultArgs);
+
+  void *InsertPos = nullptr;
+  DeducedTemplateStorage *DTS =
+      DeducedTemplates.FindNodeOrInsertPos(ID, InsertPos);
+  if (!DTS) {
+    void *Mem = Allocate(sizeof(DeducedTemplateStorage) +
+                             sizeof(TemplateArgument) * DefaultArgs.Args.size(),
+                         alignof(DeducedTemplateStorage));
+    DTS = new (Mem) DeducedTemplateStorage(Underlying, DefaultArgs);
+    DeducedTemplates.InsertNode(DTS, InsertPos);
+  }
+  return TemplateName(DTS);
 }
 
 /// getFromTargetType - Given one of the integer types provided by
@@ -13020,22 +13113,24 @@ static T *getCommonDeclChecked(T *X, T *Y) {
 }
 
 static TemplateName getCommonTemplateName(ASTContext &Ctx, TemplateName X,
-                                          TemplateName Y) {
+                                          TemplateName Y,
+                                          bool IgnoreDeduced = false) {
   if (X.getAsVoidPointer() == Y.getAsVoidPointer())
     return X;
   // FIXME: There are cases here where we could find a common template name
   //        with more sugar. For example one could be a SubstTemplateTemplate*
   //        replacing the other.
-  TemplateName CX = Ctx.getCanonicalTemplateName(X);
+  TemplateName CX = Ctx.getCanonicalTemplateName(X, IgnoreDeduced);
   if (CX.getAsVoidPointer() !=
       Ctx.getCanonicalTemplateName(Y).getAsVoidPointer())
     return TemplateName();
   return CX;
 }
 
-static TemplateName
-getCommonTemplateNameChecked(ASTContext &Ctx, TemplateName X, TemplateName Y) {
-  TemplateName R = getCommonTemplateName(Ctx, X, Y);
+static TemplateName getCommonTemplateNameChecked(ASTContext &Ctx,
+                                                 TemplateName X, TemplateName Y,
+                                                 bool IgnoreDeduced) {
+  TemplateName R = getCommonTemplateName(Ctx, X, Y, IgnoreDeduced);
   assert(R.getAsVoidPointer() != nullptr);
   return R;
 }
@@ -13522,7 +13617,8 @@ static QualType getCommonNonSugarTypeNode(ASTContext &Ctx, const Type *X,
                                          TY->template_arguments());
     return Ctx.getTemplateSpecializationType(
         ::getCommonTemplateNameChecked(Ctx, TX->getTemplateName(),
-                                       TY->getTemplateName()),
+                                       TY->getTemplateName(),
+                                       /*IgnoreDeduced=*/true),
         As, X->getCanonicalTypeInternal());
   }
   case Type::Decltype: {
@@ -13751,8 +13847,9 @@ static QualType getCommonSugarTypeNode(ASTContext &Ctx, const Type *X,
   case Type::TemplateSpecialization: {
     const auto *TX = cast<TemplateSpecializationType>(X),
                *TY = cast<TemplateSpecializationType>(Y);
-    TemplateName CTN = ::getCommonTemplateName(Ctx, TX->getTemplateName(),
-                                               TY->getTemplateName());
+    TemplateName CTN =
+        ::getCommonTemplateName(Ctx, TX->getTemplateName(),
+                                TY->getTemplateName(), /*IgnoreDeduced=*/true);
     if (!CTN.getAsVoidPointer())
       return QualType();
     SmallVector<TemplateArgument, 8> Args;

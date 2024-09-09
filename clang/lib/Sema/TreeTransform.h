@@ -7462,8 +7462,26 @@ QualType TreeTransform<Derived>::TransformBTFTagAttributedType(
 template <typename Derived>
 QualType TreeTransform<Derived>::TransformHLSLAttributedResourceType(
     TypeLocBuilder &TLB, HLSLAttributedResourceTypeLoc TL) {
-  llvm_unreachable(
-      "Unexpected TreeTransform for HLSLAttributedResourceTypeLoc");
+
+  const HLSLAttributedResourceType *oldType = TL.getTypePtr();
+
+  QualType WrappedTy = getDerived().TransformType(TLB, TL.getWrappedLoc());
+  if (WrappedTy.isNull())
+    return QualType();
+
+  QualType ContainedTy = QualType();
+  if (!oldType->getContainedType().isNull())
+    ContainedTy = getDerived().TransformType(TLB, TL.getContainedLoc());
+
+  QualType Result = TL.getType();
+  if (getDerived().AlwaysRebuild() || WrappedTy != oldType->getWrappedType() ||
+      ContainedTy != oldType->getContainedType()) {
+    Result = SemaRef.Context.getHLSLAttributedResourceType(
+        WrappedTy, ContainedTy, oldType->getAttrs());
+  }
+
+  TLB.push<HLSLAttributedResourceTypeLoc>(Result);
+  return Result;
 }
 
 template<typename Derived>
@@ -16565,10 +16583,14 @@ ExprResult TreeTransform<Derived>::RebuildCXXOperatorCallExpr(
   } else if (Op == OO_Arrow) {
     // It is possible that the type refers to a RecoveryExpr created earlier
     // in the tree transformation.
-    if (First->getType()->isDependentType())
+    if (First->containsErrors())
       return ExprError();
+    bool IsDependent;
     // -> is never a builtin operation.
-    return SemaRef.BuildOverloadedArrowExpr(nullptr, First, OpLoc);
+    ExprResult Result = SemaRef.BuildOverloadedArrowExpr(
+        First, OpLoc, /*NoArrowOperatorFound=*/nullptr, IsDependent);
+    assert(!IsDependent);
+    return Result;
   } else if (Second == nullptr || isPostIncDec) {
     if (!First->getType()->isOverloadableType() ||
         (Op == OO_Amp && getSema().isQualifiedMemberAccess(First))) {

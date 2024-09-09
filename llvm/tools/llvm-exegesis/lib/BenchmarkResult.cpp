@@ -154,7 +154,7 @@ private:
   std::string LastError;
   raw_string_ostream ErrorStream;
   const DenseMap<StringRef, unsigned> &OpcodeNameToOpcodeIdx;
-  const DenseMap<StringRef, unsigned> &RegNameToRegNo;
+  const DenseMap<StringRef, MCRegister> &RegNameToRegNo;
 };
 } // namespace
 

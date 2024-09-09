@@ -464,9 +464,6 @@ protected:
   /// iteration.
   MapVector<FuncTy *, std::vector<CallInfo>> FuncToCallsWithMetadata;
 
-  /// Records the function each call is located in.
-  DenseMap<CallInfo, const FuncTy *> CallToFunc;
-
   /// Map from callsite node to the enclosing caller function.
   std::map<const ContextNode *, const FuncTy *> NodeToCallingFunc;
 
@@ -1575,15 +1572,13 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::updateStackNodes() {
           continue;
       }
 
-      const FuncTy *CallFunc = CallToFunc[Call];
-
       // If the prior call had the same stack ids this map would not be empty.
       // Check if we already have a call that "matches" because it is located
       // in the same function.
-      if (FuncToCallMap.contains(CallFunc)) {
+      if (FuncToCallMap.contains(Func)) {
         // Record the matching call found for this call, and skip it. We
         // will subsequently combine it into the same node.
-        CallToMatchingCall[Call] = FuncToCallMap[CallFunc];
+        CallToMatchingCall[Call] = FuncToCallMap[Func];
         continue;
       }
 
@@ -1623,7 +1618,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::updateStackNodes() {
         // Record the call with its function, so we can locate it the next time
         // we find a call from this function when processing the calls with the
         // same stack ids.
-        FuncToCallMap[CallFunc] = Call;
+        FuncToCallMap[Func] = Call;
     }
   }
 
@@ -1741,7 +1736,6 @@ ModuleCallsiteContextGraph::ModuleCallsiteContextGraph(
           continue;
         if (auto *MemProfMD = I.getMetadata(LLVMContext::MD_memprof)) {
           CallsWithMetadata.push_back(&I);
-          CallToFunc[&I] = &F;
           auto *AllocNode = addAllocNode(&I, &F);
           auto *CallsiteMD = I.getMetadata(LLVMContext::MD_callsite);
           assert(CallsiteMD);
@@ -1765,7 +1759,6 @@ ModuleCallsiteContextGraph::ModuleCallsiteContextGraph(
         // For callsite metadata, add to list for this function for later use.
         else if (I.getMetadata(LLVMContext::MD_callsite)) {
           CallsWithMetadata.push_back(&I);
-          CallToFunc[&I] = &F;
         }
       }
     }
@@ -1823,7 +1816,6 @@ IndexCallsiteContextGraph::IndexCallsiteContextGraph(
             continue;
           IndexCall AllocCall(&AN);
           CallsWithMetadata.push_back(AllocCall);
-          CallToFunc[AllocCall] = FS;
           auto *AllocNode = addAllocNode(AllocCall, FS);
           // Pass an empty CallStack to the CallsiteContext (second)
           // parameter, since for ThinLTO we already collapsed out the inlined
@@ -1858,7 +1850,6 @@ IndexCallsiteContextGraph::IndexCallsiteContextGraph(
         for (auto &SN : FS->mutableCallsites()) {
           IndexCall StackNodeCall(&SN);
           CallsWithMetadata.push_back(StackNodeCall);
-          CallToFunc[StackNodeCall] = FS;
         }
 
       if (!CallsWithMetadata.empty())
@@ -1942,9 +1933,6 @@ void CallsiteContextGraph<DerivedCCG, FuncTy,
           // want to do this during iteration over that map, so save the calls
           // that need updated entries.
           NewCallToNode.push_back({ThisCall, Node});
-          // We should only have shared this node between calls from the same
-          // function.
-          assert(NodeToCallingFunc[Node] == CallToFunc[Node->Call]);
         }
         break;
       }

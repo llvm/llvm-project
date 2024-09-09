@@ -86,7 +86,7 @@ std::string llvm::getQualifiedName(const Record *R) {
 /// getTarget - Return the current instance of the Target class.
 ///
 CodeGenTarget::CodeGenTarget(RecordKeeper &records)
-    : Records(records), CGH(records) {
+    : Records(records), CGH(records), Intrinsics(records) {
   std::vector<Record *> Targets = Records.getAllDerivedDefinitions("Target");
   if (Targets.size() == 0)
     PrintFatalError("No 'Target' subclasses defined!");

@@ -1995,7 +1995,8 @@ bool AArch64TargetLowering::shouldExpandPartialReductionIntrinsic(
     return true;
 
   EVT VT = EVT::getEVT(I->getType());
-  return VT != MVT::nxv4i32 && VT != MVT::nxv2i64;
+  return VT != MVT::nxv4i32 && VT != MVT::nxv2i64 && VT != MVT::v4i32 &&
+         VT != MVT::v2i32;
 }
 
 bool AArch64TargetLowering::shouldExpandCttzElements(EVT VT) const {
@@ -16836,6 +16837,16 @@ bool AArch64TargetLowering::optimizeExtendOrTruncateConversion(
 
       DstTy = TruncDstType;
     }
+
+    // mul(zext(i8), sext) can be transformed into smull(zext, sext) which
+    // performs one extend implicitly. If DstWidth is at most 4 * SrcWidth, at
+    // most one extra extend step is needed and using tbl is not profitable.
+    if (SrcWidth * 4 <= DstWidth && I->hasOneUser()) {
+      auto *SingleUser = cast<Instruction>(*I->user_begin());
+      if (match(SingleUser, m_c_Mul(m_Specific(I), m_SExt(m_Value()))))
+        return false;
+    }
+
     IRBuilder<> Builder(ZExt);
     Value *Result = createTblShuffleForZExt(
         Builder, ZExt->getOperand(0), cast<FixedVectorType>(ZExt->getType()),
@@ -17077,6 +17088,16 @@ bool AArch64TargetLowering::lowerInterleavedLoad(
   // the vector types are divisible by 128.
   bool UseScalable;
   if (!isLegalInterleavedAccessType(VTy, DL, UseScalable))
+    return false;
+
+  // Check if the interleave is a zext(shuffle), that can be better optimized
+  // into shift / and masks. For the moment we do this just for uitofp (not
+  // zext) to avoid issues with widening instructions.
+  if (Shuffles.size() == 4 && all_of(Shuffles, [](ShuffleVectorInst *SI) {
+        return SI->hasOneUse() && match(SI->user_back(), m_UIToFP(m_Value())) &&
+               SI->getType()->getScalarSizeInBits() * 4 ==
+                   SI->user_back()->getType()->getScalarSizeInBits();
+      }))
     return false;
 
   unsigned NumLoads = getNumInterleavedAccesses(VTy, DL, UseScalable);
@@ -21807,7 +21828,10 @@ SDValue tryLowerPartialReductionToDot(SDNode *N,
              Intrinsic::experimental_vector_partial_reduce_add &&
          "Expected a partial reduction node");
 
-  if (!Subtarget->isSVEorStreamingSVEAvailable())
+  bool Scalable = N->getValueType(0).isScalableVector();
+  if (Scalable && !Subtarget->isSVEorStreamingSVEAvailable())
+    return SDValue();
+  if (!Scalable && (!Subtarget->isNeonAvailable() || !Subtarget->hasDotProd()))
     return SDValue();
 
   SDLoc DL(N);
@@ -21844,11 +21868,11 @@ SDValue tryLowerPartialReductionToDot(SDNode *N,
 
   // Dot products operate on chunks of four elements so there must be four times
   // as many elements in the wide type
-  if (ReducedType == MVT::nxv4i32 && MulSrcType == MVT::nxv16i8)
-    return DAG.getNode(Opcode, DL, MVT::nxv4i32, NarrowOp, A, B);
-
-  if (ReducedType == MVT::nxv2i64 && MulSrcType == MVT::nxv8i16)
-    return DAG.getNode(Opcode, DL, MVT::nxv2i64, NarrowOp, A, B);
+  if ((ReducedType == MVT::nxv4i32 && MulSrcType == MVT::nxv16i8) ||
+      (ReducedType == MVT::nxv2i64 && MulSrcType == MVT::nxv8i16) ||
+      (ReducedType == MVT::v4i32 && MulSrcType == MVT::v16i8) ||
+      (ReducedType == MVT::v2i32 && MulSrcType == MVT::v8i8))
+    return DAG.getNode(Opcode, DL, ReducedType, NarrowOp, A, B);
 
   return SDValue();
 }
