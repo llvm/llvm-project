@@ -3149,7 +3149,8 @@ public:
                               bool ForVirtualBase, bool Delegating,
                               Address This, CallArgList &Args,
                               AggValueSlot::Overlap_t Overlap,
-                              SourceLocation Loc, bool NewPointerIsChecked);
+                              SourceLocation Loc, bool NewPointerIsChecked,
+                              llvm::CallBase **CallOrInvoke = nullptr);
 
   /// Emit assumption load for all bases. Requires to be called only on
   /// most-derived class and not under construction of the object.
@@ -4269,7 +4270,8 @@ public:
   LValue EmitBinaryOperatorLValue(const BinaryOperator *E);
   LValue EmitCompoundAssignmentLValue(const CompoundAssignOperator *E);
   // Note: only available for agg return types
-  LValue EmitCallExprLValue(const CallExpr *E);
+  LValue EmitCallExprLValue(const CallExpr *E,
+                            llvm::CallBase **CallOrInvoke = nullptr);
   // Note: only available for agg return types
   LValue EmitVAArgExprLValue(const VAArgExpr *E);
   LValue EmitDeclRefLValue(const DeclRefExpr *E);
@@ -4382,21 +4384,27 @@ public:
   /// LLVM arguments and the types they were derived from.
   RValue EmitCall(const CGFunctionInfo &CallInfo, const CGCallee &Callee,
                   ReturnValueSlot ReturnValue, const CallArgList &Args,
-                  llvm::CallBase **callOrInvoke, bool IsMustTail,
+                  llvm::CallBase **CallOrInvoke, bool IsMustTail,
                   SourceLocation Loc,
                   bool IsVirtualFunctionPointerThunk = false);
   RValue EmitCall(const CGFunctionInfo &CallInfo, const CGCallee &Callee,
                   ReturnValueSlot ReturnValue, const CallArgList &Args,
-                  llvm::CallBase **callOrInvoke = nullptr,
+                  llvm::CallBase **CallOrInvoke = nullptr,
                   bool IsMustTail = false) {
-    return EmitCall(CallInfo, Callee, ReturnValue, Args, callOrInvoke,
+    return EmitCall(CallInfo, Callee, ReturnValue, Args, CallOrInvoke,
                     IsMustTail, SourceLocation());
   }
   RValue EmitCall(QualType FnType, const CGCallee &Callee, const CallExpr *E,
-                  ReturnValueSlot ReturnValue, llvm::Value *Chain = nullptr);
+                  ReturnValueSlot ReturnValue, llvm::Value *Chain = nullptr,
+                  llvm::CallBase **CallOrInvoke = nullptr);
+
+  // If a Call or Invoke instruction was emitted for this CallExpr, this method
+  // writes the pointer to `CallOrInvoke` if it's not null.
   RValue EmitCallExpr(const CallExpr *E,
-                      ReturnValueSlot ReturnValue = ReturnValueSlot());
-  RValue EmitSimpleCallExpr(const CallExpr *E, ReturnValueSlot ReturnValue);
+                      ReturnValueSlot ReturnValue = ReturnValueSlot(),
+                      llvm::CallBase **CallOrInvoke = nullptr);
+  RValue EmitSimpleCallExpr(const CallExpr *E, ReturnValueSlot ReturnValue,
+                            llvm::CallBase **CallOrInvoke = nullptr);
   CGCallee EmitCallee(const Expr *E);
 
   void checkTargetFeatures(const CallExpr *E, const FunctionDecl *TargetDecl);
@@ -4500,25 +4508,23 @@ public:
   void callCStructCopyAssignmentOperator(LValue Dst, LValue Src);
   void callCStructMoveAssignmentOperator(LValue Dst, LValue Src);
 
-  RValue
-  EmitCXXMemberOrOperatorCall(const CXXMethodDecl *Method,
-                              const CGCallee &Callee,
-                              ReturnValueSlot ReturnValue, llvm::Value *This,
-                              llvm::Value *ImplicitParam,
-                              QualType ImplicitParamTy, const CallExpr *E,
-                              CallArgList *RtlArgs);
+  RValue EmitCXXMemberOrOperatorCall(
+      const CXXMethodDecl *Method, const CGCallee &Callee,
+      ReturnValueSlot ReturnValue, llvm::Value *This,
+      llvm::Value *ImplicitParam, QualType ImplicitParamTy, const CallExpr *E,
+      CallArgList *RtlArgs, llvm::CallBase **CallOrInvoke);
   RValue EmitCXXDestructorCall(GlobalDecl Dtor, const CGCallee &Callee,
                                llvm::Value *This, QualType ThisTy,
                                llvm::Value *ImplicitParam,
-                               QualType ImplicitParamTy, const CallExpr *E);
+                               QualType ImplicitParamTy, const CallExpr *E,
+                               llvm::CallBase **CallOrInvoke = nullptr);
   RValue EmitCXXMemberCallExpr(const CXXMemberCallExpr *E,
-                               ReturnValueSlot ReturnValue);
-  RValue EmitCXXMemberOrOperatorMemberCallExpr(const CallExpr *CE,
-                                               const CXXMethodDecl *MD,
-                                               ReturnValueSlot ReturnValue,
-                                               bool HasQualifier,
-                                               NestedNameSpecifier *Qualifier,
-                                               bool IsArrow, const Expr *Base);
+                               ReturnValueSlot ReturnValue,
+                               llvm::CallBase **CallOrInvoke = nullptr);
+  RValue EmitCXXMemberOrOperatorMemberCallExpr(
+      const CallExpr *CE, const CXXMethodDecl *MD, ReturnValueSlot ReturnValue,
+      bool HasQualifier, NestedNameSpecifier *Qualifier, bool IsArrow,
+      const Expr *Base, llvm::CallBase **CallOrInvoke);
   // Compute the object pointer.
   Address EmitCXXMemberDataPointerAddress(const Expr *E, Address base,
                                           llvm::Value *memberPtr,
@@ -4526,15 +4532,18 @@ public:
                                           LValueBaseInfo *BaseInfo = nullptr,
                                           TBAAAccessInfo *TBAAInfo = nullptr);
   RValue EmitCXXMemberPointerCallExpr(const CXXMemberCallExpr *E,
-                                      ReturnValueSlot ReturnValue);
+                                      ReturnValueSlot ReturnValue,
+                                      llvm::CallBase **CallOrInvoke);
 
   RValue EmitCXXOperatorMemberCallExpr(const CXXOperatorCallExpr *E,
                                        const CXXMethodDecl *MD,
-                                       ReturnValueSlot ReturnValue);
+                                       ReturnValueSlot ReturnValue,
+                                       llvm::CallBase **CallOrInvoke);
   RValue EmitCXXPseudoDestructorExpr(const CXXPseudoDestructorExpr *E);
 
   RValue EmitCUDAKernelCallExpr(const CUDAKernelCallExpr *E,
-                                ReturnValueSlot ReturnValue);
+                                ReturnValueSlot ReturnValue,
+                                llvm::CallBase **CallOrInvoke);
 
   RValue EmitNVPTXDevicePrintfCallExpr(const CallExpr *E);
   RValue EmitAMDGPUDevicePrintfCallExpr(const CallExpr *E);
@@ -4556,7 +4565,8 @@ public:
       const analyze_os_log::OSLogBufferLayout &Layout,
       CharUnits BufferAlignment);
 
-  RValue EmitBlockCallExpr(const CallExpr *E, ReturnValueSlot ReturnValue);
+  RValue EmitBlockCallExpr(const CallExpr *E, ReturnValueSlot ReturnValue,
+                           llvm::CallBase **CallOrInvoke);
 
   /// EmitTargetBuiltinExpr - Emit the given builtin call. Returns 0 if the call
   /// is unhandled by the current target.
