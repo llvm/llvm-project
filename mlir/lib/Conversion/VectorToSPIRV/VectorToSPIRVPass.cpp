@@ -40,7 +40,9 @@ void ConvertVectorToSPIRVPass::runOnOperation() {
   std::unique_ptr<ConversionTarget> target =
       SPIRVConversionTarget::get(targetAttr);
 
-  SPIRVTypeConverter typeConverter(targetAttr);
+  SPIRVConversionOptions options;
+  options.use64bitIndex = this->use64bitIndex;
+  SPIRVTypeConverter typeConverter(targetAttr, options);
 
   // Use UnrealizedConversionCast as the bridge so that we don't need to pull in
   // patterns for other dialects.
