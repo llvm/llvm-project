@@ -224,7 +224,6 @@ _LIBCPP_HARDENING_MODE_DEBUG
 // easier to grep for target specific flags once the feature is complete.
 #  if !defined(_LIBCPP_ENABLE_EXPERIMENTAL) && !defined(_LIBCPP_BUILDING_LIBRARY)
 #    define _LIBCPP_HAS_NO_INCOMPLETE_PSTL
-#    define _LIBCPP_HAS_NO_EXPERIMENTAL_STOP_TOKEN
 #    define _LIBCPP_HAS_NO_EXPERIMENTAL_TZDB
 #    define _LIBCPP_HAS_NO_EXPERIMENTAL_SYNCSTREAM
 #  endif

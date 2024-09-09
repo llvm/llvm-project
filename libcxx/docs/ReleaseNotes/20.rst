@@ -41,6 +41,7 @@ Implemented Papers
 - P2747R2: ``constexpr`` placement new (`Github <https://github.com/llvm/llvm-project/issues/105427>`__)
 - P2609R3: Relaxing Ranges Just A Smidge (`Github <https://github.com/llvm/llvm-project/issues/105253>`__)
 - P2985R0: A type trait for detecting virtual base classes (`Github <https://github.com/llvm/llvm-project/issues/105432>`__)
+- ``std::jthread`` and ``<stop_token>`` are not guarded behind ``-fexperimental-library`` anymore
 
 
 Improvements and New Features
