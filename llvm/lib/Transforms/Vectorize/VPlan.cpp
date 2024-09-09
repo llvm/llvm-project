@@ -921,11 +921,11 @@ VPlanPtr VPlan::createInitialVPlan(const SCEV *TripCount, ScalarEvolution &SE,
 void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
                              Value *CanonicalIVStartValue,
                              VPTransformState &State) {
+  Type *TCTy = TripCountV->getType();
   // Check if the backedge taken count is needed, and if so build it.
   if (BackedgeTakenCount && BackedgeTakenCount->getNumUsers()) {
     IRBuilder<> Builder(State.CFG.PrevBB->getTerminator());
-    auto *TCMO = Builder.CreateSub(TripCountV,
-                                   ConstantInt::get(TripCountV->getType(), 1),
+    auto *TCMO = Builder.CreateSub(TripCountV, ConstantInt::get(TCTy, 1),
                                    "trip.count.minus.1");
     BackedgeTakenCount->setUnderlyingValue(TCMO);
   }
@@ -935,7 +935,6 @@ void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
   IRBuilder<> Builder(State.CFG.PrevBB->getTerminator());
   // FIXME: Model VF * UF computation completely in VPlan.
   assert(VFxUF.getNumUsers() && "VFxUF expected to always have users");
-  Type *TCTy = TripCountV->getType();
   if (VF.getNumUsers()) {
     Value *RuntimeVF = getRuntimeVF(Builder, TCTy, State.VF);
     VF.setUnderlyingValue(RuntimeVF);

@@ -340,7 +340,7 @@ define void @pred_cfg1(i32 %k, i32 %j) {
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT: vector.body:
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
-; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 0, %iv.next, ir<1>
+; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 0, %iv.next, ir<1>, vp<[[VF]]>
 ; CHECK-NEXT:   EMIT vp<[[MASK1:%.+]]> = icmp ule ir<%iv>, vp<[[BTC]]>
 ; CHECK-NEXT:   WIDEN ir<%c.1> = icmp ult ir<%iv>, ir<%j>
 ; CHECK-NEXT:   WIDEN ir<%mul> = mul ir<%iv>, ir<10>
