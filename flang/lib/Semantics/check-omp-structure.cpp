@@ -974,6 +974,42 @@ void OmpStructureChecker::CheckDistLinear(
 }
 
 void OmpStructureChecker::Leave(const parser::OpenMPLoopConstruct &x) {
+  const auto &beginLoopDir = std::get<parser::OmpBeginLoopDirective>(x.t);
+  const auto &clauseList{std::get<parser::OmpClauseList>(beginLoopDir.t)};
+  for (const auto &clause : clauseList.v) {
+    if (const auto *reductionClause{
+            std::get_if<parser::OmpClause::Reduction>(&clause.u)}) {
+      using ReductionModifier = parser::OmpReductionClause::ReductionModifier;
+      const auto &maybeModifier{
+          std::get<std::optional<ReductionModifier>>(reductionClause->v.t)};
+      if (maybeModifier && *maybeModifier == ReductionModifier::Inscan) {
+
+        const auto &objectList{
+            std::get<parser::OmpObjectList>(reductionClause->v.t)};
+        for (const auto &ompObj : objectList.v) {
+          common::visit(
+              common::visitors{
+                  [&](const parser::Designator &designator) {
+                    if (const auto *name{semantics::getDesignatorNameIfDataRef(
+                            designator)}) {
+                      std::string nameStr = name->symbol->name().ToString();
+                      if (GetContext().usedInScanDirective.find(nameStr) ==
+                          GetContext().usedInScanDirective.end()) {
+                        context_.Say(name->source,
+                            "List item %s must appear in 'inclusive' or "
+                            "'exclusive' clause of an "
+                            "enclosed scan directive"_err_en_US,
+                            nameStr);
+                      }
+                    }
+                  },
+                  [&](const auto &name) {},
+              },
+              ompObj.u);
+        }
+      }
+    }
+  }
   if (llvm::omp::allSimdSet.test(GetContext().directive)) {
     ExitDirectiveNest(SIMDNest);
   }
@@ -1646,19 +1682,32 @@ void OmpStructureChecker::Leave(const parser::OpenMPAllocatorsConstruct &x) {
   dirContext_.pop_back();
 }
 
+void OmpStructureChecker::CheckScan(
+    const parser::OpenMPSimpleStandaloneConstruct &x) {
+  if (std::get<parser::OmpClauseList>(x.t).v.size() != 1) {
+    context_.Say(x.source,
+        "Exactly one of `exclusive` or `inclusive` clause is expected"_err_en_US);
+  }
+  if (!CurrentDirectiveIsNested() ||
+      !llvm::omp::scanParentAllowedSet.test(GetContextParent().directive)) {
+    context_.Say(x.source,
+        "Orphaned `omp scan` directives are prohibited; perhaps you forgot "
+        "to enclose the directive in to a worksharing loop, a worksharing "
+        "loop simd or a simd directive."_err_en_US);
+  }
+}
+
 void OmpStructureChecker::CheckBarrierNesting(
     const parser::OpenMPSimpleStandaloneConstruct &x) {
   // A barrier region may not be `closely nested` inside a worksharing, loop,
   // task, taskloop, critical, ordered, atomic, or master region.
   // TODO:  Expand the check to include `LOOP` construct as well when it is
   // supported.
-  if (GetContext().directive == llvm::omp::Directive::OMPD_barrier) {
-    if (IsCloselyNestedRegion(llvm::omp::nestedBarrierErrSet)) {
-      context_.Say(parser::FindSourceLocation(x),
-          "`BARRIER` region may not be closely nested inside of `WORKSHARING`, "
-          "`LOOP`, `TASK`, `TASKLOOP`,"
-          "`CRITICAL`, `ORDERED`, `ATOMIC` or `MASTER` region."_err_en_US);
-    }
+  if (IsCloselyNestedRegion(llvm::omp::nestedBarrierErrSet)) {
+    context_.Say(parser::FindSourceLocation(x),
+        "`BARRIER` region may not be closely nested inside of `WORKSHARING`, "
+        "`LOOP`, `TASK`, `TASKLOOP`,"
+        "`CRITICAL`, `ORDERED`, `ATOMIC` or `MASTER` region."_err_en_US);
   }
 }
 
@@ -1842,7 +1891,16 @@ void OmpStructureChecker::Enter(
     const parser::OpenMPSimpleStandaloneConstruct &x) {
   const auto &dir{std::get<parser::OmpSimpleStandaloneDirective>(x.t)};
   PushContextAndClauseSets(dir.source, dir.v);
-  CheckBarrierNesting(x);
+  switch (dir.v) {
+  case llvm::omp::Directive::OMPD_barrier:
+    CheckBarrierNesting(x);
+    break;
+  case llvm::omp::Directive::OMPD_scan:
+    CheckScan(x);
+    break;
+  default:
+    break;
+  }
 }
 
 void OmpStructureChecker::Leave(
@@ -2674,7 +2732,6 @@ CHECK_SIMPLE_CLAUSE(Depobj, OMPC_depobj)
 CHECK_SIMPLE_CLAUSE(Detach, OMPC_detach)
 CHECK_SIMPLE_CLAUSE(DeviceType, OMPC_device_type)
 CHECK_SIMPLE_CLAUSE(DistSchedule, OMPC_dist_schedule)
-CHECK_SIMPLE_CLAUSE(Exclusive, OMPC_exclusive)
 CHECK_SIMPLE_CLAUSE(Final, OMPC_final)
 CHECK_SIMPLE_CLAUSE(Flush, OMPC_flush)
 CHECK_SIMPLE_CLAUSE(Full, OMPC_full)
@@ -2682,7 +2739,6 @@ CHECK_SIMPLE_CLAUSE(Grainsize, OMPC_grainsize)
 CHECK_SIMPLE_CLAUSE(Hint, OMPC_hint)
 CHECK_SIMPLE_CLAUSE(Holds, OMPC_holds)
 CHECK_SIMPLE_CLAUSE(InReduction, OMPC_in_reduction)
-CHECK_SIMPLE_CLAUSE(Inclusive, OMPC_inclusive)
 CHECK_SIMPLE_CLAUSE(Match, OMPC_match)
 CHECK_SIMPLE_CLAUSE(Nontemporal, OMPC_nontemporal)
 CHECK_SIMPLE_CLAUSE(NumTasks, OMPC_num_tasks)
@@ -2775,7 +2831,24 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Reduction &x) {
   if (CheckReductionOperators(x)) {
     CheckReductionTypeList(x);
   }
-  CheckReductionModifier(x);
+  using ReductionModifier = parser::OmpReductionClause::ReductionModifier;
+  if (const auto &maybeModifier{
+          std::get<std::optional<ReductionModifier>>(x.v.t)}) {
+    ReductionModifier modifier{*maybeModifier};
+    const auto &ompObjectList{std::get<parser::OmpObjectList>(x.v.t)};
+    addModifiertoMap(ompObjectList, modifier);
+    CheckReductionModifier(modifier);
+  }
+}
+
+void OmpStructureChecker::Enter(const parser::OmpClause::Inclusive &x) {
+  CheckAllowed(llvm::omp::Clause::OMPC_inclusive);
+  checkAndAddSymbolsToUsedInScanList(x.v);
+}
+
+void OmpStructureChecker::Enter(const parser::OmpClause::Exclusive &x) {
+  CheckAllowed(llvm::omp::Clause::OMPC_exclusive);
+  checkAndAddSymbolsToUsedInScanList(x.v);
 }
 
 bool OmpStructureChecker::CheckReductionOperators(
@@ -2818,6 +2891,49 @@ bool OmpStructureChecker::CheckReductionOperators(
 
   return ok;
 }
+
+void OmpStructureChecker::addModifiertoMap(const parser::OmpObjectList &x,
+    parser::OmpReductionClause::ReductionModifier &modifier) {
+  for (const auto &ompObject : x.v) {
+    if (const auto *name{parser::Unwrap<parser::Name>(ompObject)}) {
+      if (const auto *symbol{name->symbol}) {
+        GetContext().reductionMod[symbol->name().ToString()] = modifier;
+      }
+    }
+  }
+}
+
+void OmpStructureChecker::checkAndAddSymbolsToUsedInScanList(
+    const parser::OmpObjectList &x) {
+  for (const auto &ompObj : x.v) {
+    common::visit(
+        common::visitors{
+            [&](const parser::Designator &designator) {
+              if (const auto *name{
+                      semantics::getDesignatorNameIfDataRef(designator)}) {
+                if (name->symbol) {
+                  if (CurrentDirectiveIsNested()) {
+                    std::string nameStr = name->symbol->name().ToString();
+                    if (GetContextParent().reductionMod.find(nameStr) ==
+                        GetContextParent().reductionMod.end()) {
+
+                      context_.Say(name->source,
+                          "List item %s must appear in 'reduction' clause "
+                          "with the 'inscan' modifier of the parent "
+                          "directive"_err_en_US,
+                          nameStr);
+                    }
+                    GetContextParent().usedInScanDirective.insert(nameStr);
+                  }
+                }
+              }
+            },
+            [&](const auto &name) {},
+        },
+        ompObj.u);
+  }
+}
+
 bool OmpStructureChecker::CheckIntrinsicOperator(
     const parser::DefinedOperator::IntrinsicOperator &op) {
 
@@ -2952,14 +3068,12 @@ void OmpStructureChecker::CheckReductionTypeList(
 }
 
 void OmpStructureChecker::CheckReductionModifier(
-    const parser::OmpClause::Reduction &x) {
+    const parser::OmpReductionClause::ReductionModifier &modifier) {
   using ReductionModifier = parser::OmpReductionClause::ReductionModifier;
-  const auto &maybeModifier{std::get<std::optional<ReductionModifier>>(x.v.t)};
-  if (!maybeModifier || *maybeModifier == ReductionModifier::Default) {
-    // No modifier, or the default one is always ok.
+  if (modifier == ReductionModifier::Default) {
+    // the default one is always ok.
     return;
   }
-  ReductionModifier modifier{*maybeModifier};
   const DirectiveContext &dirCtx{GetContext()};
   if (dirCtx.directive == llvm::omp::Directive::OMPD_loop) {
     // [5.2:257:33-34]
