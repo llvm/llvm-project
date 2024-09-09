@@ -1215,7 +1215,7 @@ defm SCRATCH_LOAD_LDS_SSHORT : FLAT_Scratch_Load_LDS_Pseudo <"scratch_load_lds_s
 defm SCRATCH_LOAD_LDS_DWORD  : FLAT_Scratch_Load_LDS_Pseudo <"scratch_load_lds_dword">;
 
 
-let SubtargetPredicate = isGFX1210Plus in {
+let SubtargetPredicate = isGFX121xOnly in {
 defm FLAT_LOAD_MONITOR_B32    : FLAT_Flat_Load_Pseudo <"flat_load_monitor_b32",  VGPR_32>;
 defm FLAT_LOAD_MONITOR_B64    : FLAT_Flat_Load_Pseudo <"flat_load_monitor_b64",  VReg_64>;
 defm FLAT_LOAD_MONITOR_B128   : FLAT_Flat_Load_Pseudo <"flat_load_monitor_b128", VReg_128>;
@@ -1223,7 +1223,9 @@ defm FLAT_LOAD_MONITOR_B128   : FLAT_Flat_Load_Pseudo <"flat_load_monitor_b128",
 defm GLOBAL_LOAD_MONITOR_B32  : FLAT_Global_Load_Pseudo <"global_load_monitor_b32",  VGPR_32>;
 defm GLOBAL_LOAD_MONITOR_B64  : FLAT_Global_Load_Pseudo <"global_load_monitor_b64",  VReg_64>;
 defm GLOBAL_LOAD_MONITOR_B128 : FLAT_Global_Load_Pseudo <"global_load_monitor_b128", VReg_128>;
+} // End SubtargetPredicate = isGFX121xOnly
 
+let SubtargetPredicate = isGFX1210Plus in {
 let Uses = [M0, EXEC] in { // Use M0 for broadcast workgroup mask.
 defm CLUSTER_LOAD_B32         : FLAT_Global_Load_Pseudo <"cluster_load_b32",  VGPR_32>;
 defm CLUSTER_LOAD_B64         : FLAT_Global_Load_Pseudo <"cluster_load_b64",  VReg_64>;
@@ -2030,7 +2032,7 @@ let WaveSizePredicate = isWave32,  OtherPredicates = [isGFX1210Plus] in {
   defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR6_B96, int_amdgcn_global_load_tr6_b96, v3i32>;
 }
 
-let OtherPredicates = [isGFX1210Plus] in {
+let OtherPredicates = [isGFX121xOnly] in {
   def  : FlatLoadPat_CPOL <FLAT_LOAD_MONITOR_B32,  int_amdgcn_flat_load_monitor_b32,  i32>;
   def  : FlatLoadPat_CPOL <FLAT_LOAD_MONITOR_B64,  int_amdgcn_flat_load_monitor_b64,  v2i32>;
   def  : FlatLoadPat_CPOL <FLAT_LOAD_MONITOR_B128, int_amdgcn_flat_load_monitor_b128, v4i32>;
@@ -2038,7 +2040,9 @@ let OtherPredicates = [isGFX1210Plus] in {
   defm : GlobalFLATLoadPats_CPOL <GLOBAL_LOAD_MONITOR_B32,  int_amdgcn_global_load_monitor_b32,  i32>;
   defm : GlobalFLATLoadPats_CPOL <GLOBAL_LOAD_MONITOR_B64,  int_amdgcn_global_load_monitor_b64,  v2i32>;
   defm : GlobalFLATLoadPats_CPOL <GLOBAL_LOAD_MONITOR_B128, int_amdgcn_global_load_monitor_b128, v4i32>;
+} // End SubtargetPredicate = isGFX121xOnly
 
+let OtherPredicates = [isGFX1210Plus] in {
   defm : GlobalFLATLoadPats_M0 <CLUSTER_LOAD_B32,  int_amdgcn_cluster_load_b32,  i32>;
   defm : GlobalFLATLoadPats_M0 <CLUSTER_LOAD_B64,  int_amdgcn_cluster_load_b64,  v2i32>;
   defm : GlobalFLATLoadPats_M0 <CLUSTER_LOAD_B128, int_amdgcn_cluster_load_b128, v4i32>;
@@ -3609,9 +3613,6 @@ defm FLAT_ATOMIC_OR_X2                : VFLAT_Real_Atomics_gfx13<0x5a, "flat_ato
 defm FLAT_ATOMIC_XOR_X2               : VFLAT_Real_Atomics_gfx13<0x5b, "flat_atomic_xor_b64">;
 defm FLAT_ATOMIC_INC_X2               : VFLAT_Real_Atomics_gfx13<0x5c, "flat_atomic_inc_u64">;
 defm FLAT_ATOMIC_DEC_X2               : VFLAT_Real_Atomics_gfx13<0x5d, "flat_atomic_dec_u64">;
-defm FLAT_LOAD_MONITOR_B64            : VFLAT_Real_Base_gfx13<0x73>;
-defm FLAT_LOAD_MONITOR_B128           : VFLAT_Real_Base_gfx13<0x74>;
-defm FLAT_LOAD_MONITOR_B32            : VFLAT_Real_Base_gfx13<0x78>;
 
 // ENC_VGLOBAL.
 defm GLOBAL_LOAD_UBYTE                : VGLOBAL_Real_AllAddr_gfx13<0x08, "global_load_u8">;
@@ -3699,12 +3700,9 @@ defm CLUSTER_LOAD_ASYNC_TO_LDS_B8     : VGLOBAL_Real_AllAddr_gfx13<0x6c>;
 defm CLUSTER_LOAD_ASYNC_TO_LDS_B32    : VGLOBAL_Real_AllAddr_gfx13<0x6d>;
 defm CLUSTER_LOAD_ASYNC_TO_LDS_B64    : VGLOBAL_Real_AllAddr_gfx13<0x6e>;
 defm CLUSTER_LOAD_ASYNC_TO_LDS_B128   : VGLOBAL_Real_AllAddr_gfx13<0x6f>;
-defm GLOBAL_LOAD_MONITOR_B64          : VGLOBAL_Real_AllAddr_gfx13<0x73>;
-defm GLOBAL_LOAD_MONITOR_B128         : VGLOBAL_Real_AllAddr_gfx13<0x74>;
 defm GLOBAL_ATOMIC_ORDERED_ADD_B64    : VGLOBAL_Real_Atomics_gfx13<0x75>;
 defm TENSOR_SAVE                      : VFLAT_Real_Base_gfx13<0x76>;
 defm TENSOR_STOP                      : VFLAT_Real_Base_gfx13<0x77>;
-defm GLOBAL_LOAD_MONITOR_B32          : VGLOBAL_Real_AllAddr_gfx13<0x78>;
 defm GLOBAL_LOAD_TR4_B64              : VGLOBAL_Real_AllAddr_gfx13<0x8a>;
 defm GLOBAL_LOAD_TR6_B96              : VGLOBAL_Real_AllAddr_gfx13<0x8b>;
 // TODO-GFX13:
