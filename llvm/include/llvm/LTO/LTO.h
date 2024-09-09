@@ -136,8 +136,8 @@ public:
   /// Create an InputFile.
   static Expected<std::unique_ptr<InputFile>> create(MemoryBufferRef Object);
 
-  /// The purpose of this class is to only expose the symbol information that an
-  /// LTO client should need in order to do symbol resolution.
+  /// The purpose of this struct is to only expose the symbol information that
+  /// an LTO client should need in order to do symbol resolution.
   struct Symbol : irsymtab::Symbol {
     friend LTO;
 
