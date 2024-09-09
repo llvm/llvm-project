@@ -1938,6 +1938,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::CXXRewrittenBinaryOperatorClass:
     case Stmt::RequiresExprClass:
     case Expr::CXXParenListInitExprClass:
+    case Stmt::EmbedExprClass:
       // Fall through.
 
     // Cases we intentionally don't evaluate, since they don't need
@@ -2440,10 +2441,6 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       Bldr.addNodes(Dst);
       break;
     }
-
-    case Stmt::EmbedExprClass:
-      llvm::report_fatal_error("Support for EmbedExpr is not implemented.");
-      break;
   }
 }
 
