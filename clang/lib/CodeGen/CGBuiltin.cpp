@@ -18866,10 +18866,20 @@ case Builtin::BI__builtin_hlsl_elementwise_isinf: {
         llvm::FunctionType::get(IntTy, {}, false), "__hlsl_wave_get_lane_index",
         {}, false, true));
   }
-  case Builtin::BI__builtin_hlsl_elementwise_asuint: {
+  case Builtin::BI__builtin_hlsl_wave_is_first_lane: {
+    Intrinsic::ID ID = CGM.getHLSLRuntime().getWaveIsFirstLaneIntrinsic();
+    return EmitRuntimeCall(Intrinsic::getDeclaration(&CGM.getModule(), ID));
+  }
+  case Builtin::BI__builtin_hlsl_bit_cast_32: {
     Value *Op = EmitScalarExpr(E->getArg(0));
 
-    llvm::Type *DestTy = llvm::Type::getInt32Ty(this->getLLVMContext());
+    llvm::Type *DestTy = ConvertType(E->getCallReturnType(getContext()));
+
+    if (DestTy->isVectorTy()) {
+      const VectorType *VecTy =
+          E->getCallReturnType(getContext())->getAs<VectorType>();
+      DestTy = ConvertType(VecTy->getElementType());
+    }
 
     if (Op->getType()->isVectorTy()) {
       const VectorType *VecTy = E->getArg(0)->getType()->getAs<VectorType>();
@@ -18878,10 +18888,6 @@ case Builtin::BI__builtin_hlsl_elementwise_isinf: {
     }
 
     return Builder.CreateBitCast(Op, DestTy);
-  }
-  case Builtin::BI__builtin_hlsl_wave_is_first_lane: {
-    Intrinsic::ID ID = CGM.getHLSLRuntime().getWaveIsFirstLaneIntrinsic();
-    return EmitRuntimeCall(Intrinsic::getDeclaration(&CGM.getModule(), ID));
   }
   case Builtin::BI__builtin_hlsl_elementwise_sign: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));

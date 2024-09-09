@@ -395,32 +395,32 @@ float4 asin(float4);
 /// \brief Interprets the bit pattern of x as an unsigned integer.
 /// \param Val The input value.
 
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_asuint)
-uint asuint(float);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_asuint)
-uint2 asuint(float2);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_asuint)
-uint3 asuint(float3);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_asuint)
-uint4 asuint(float4);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_bit_cast_32)
+uint asuint(int);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_bit_cast_32)
+uint2 asuint(int2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_bit_cast_32)
+uint3 asuint(int3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_bit_cast_32)
+uint4 asuint(int4);
 
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_asuint)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_bit_cast_32)
 uint asuint(uint);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_asuint)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_bit_cast_32)
 uint2 asuint(uint2);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_asuint)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_bit_cast_32)
 uint3 asuint(uint3);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_asuint)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_bit_cast_32)
 uint4 asuint(uint4);
 
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_asuint)
-uint asuint(int);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_asuint)
-uint2 asuint(int2);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_asuint)
-uint3 asuint(int3);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_asuint)
-uint4 asuint(int4);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_bit_cast_32)
+uint asuint(float);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_bit_cast_32)
+uint2 asuint(float2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_bit_cast_32)
+uint3 asuint(float3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_bit_cast_32)
+uint4 asuint(float4);
 
 //===----------------------------------------------------------------------===//
 // atan builtins

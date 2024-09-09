@@ -3,39 +3,39 @@
 // CHECK: define {{.*}}test_uint{{.*}}(i32 {{.*}} [[VAL:%.*]]){{.*}} 
 // CHECK-NOT: bitcast
 // CHECK: ret i32 [[VAL]]
-export uint test_uint(uint p0) {
+uint test_uint(uint p0) {
   return asuint(p0);
 }
 
 // CHECK: define {{.*}}test_int{{.*}}(i32 {{.*}} [[VAL:%.*]]){{.*}} 
 // CHECK-NOT: bitcast
 // CHECK: ret i32 [[VAL]]
-export uint test_int(int p0) {
+uint test_int(int p0) {
   return asuint(p0);
 }
 
 // CHECK: define {{.*}}test_float{{.*}}(float {{.*}} [[VAL:%.*]]){{.*}} 
 // CHECK: bitcast float [[VAL]] to i32
-export uint test_float(float p0) {
+uint test_float(float p0) {
   return asuint(p0);
 }
 
 // CHECK: define {{.*}}test_vector_uint{{.*}}(<4 x i32> {{.*}} [[VAL:%.*]]){{.*}} 
 // CHECK-NOT: bitcast
 // CHECK: ret <4 x i32> [[VAL]]
-export uint4 test_vector_uint(uint4 p0) {
+uint4 test_vector_uint(uint4 p0) {
   return asuint(p0);
 }
 
 // CHECK: define {{.*}}test_vector_int{{.*}}(<4 x i32> {{.*}} [[VAL:%.*]]){{.*}} 
 // CHECK-NOT: bitcast
 // CHECK: ret <4 x i32> [[VAL]]
-export uint4 test_vector_int(int4 p0) {
+uint4 test_vector_int(int4 p0) {
   return asuint(p0);
 }
 
 // CHECK: define {{.*}}test_vector_float{{.*}}(<4 x float> {{.*}} [[VAL:%.*]]){{.*}} 
 // CHECK: bitcast <4 x float> [[VAL]] to <4 x i32>
-export uint4 test_vector_float(float4 p0) {
+uint4 test_vector_float(float4 p0) {
   return asuint(p0);
 }

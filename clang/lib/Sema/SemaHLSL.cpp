@@ -9,6 +9,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Sema/SemaHLSL.h"
+#include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
@@ -1765,13 +1766,12 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
       return true;
     break;
   }
-  case Builtin::BI__builtin_hlsl_elementwise_asuint: {
+  case Builtin::BI__builtin_hlsl_bit_cast_32: {
     if (SemaRef.checkArgCount(TheCall, 1))
       return true;
 
     if (CheckNotFloatAndInt(&SemaRef, TheCall))
       return true;
-
     break;
   }
   case Builtin::BI__builtin_elementwise_acos:

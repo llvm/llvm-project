@@ -53,9 +53,6 @@ class MSInt32_64Template : Template<["msint32_t", "int64_t"],
 class FloatDoubleTemplate : Template<["float", "double"],
                                      ["f",     ""]>;
 
-class HLSLFloatAndIntTemplate : Template<
-            ["unsigned int", "int", "float"],
-            ["",             "si",    "f"]>;
 // FIXME: These assume that char -> i8, short -> i16, int -> i32,
 // long long -> i64.
 class SyncBuiltinsTemplate :
@@ -4754,12 +4751,6 @@ def HLSLRcp : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "void(...)";
 }
 
-def HLSLAsUint : LangBuiltin<"HLSL_LANG">, HLSLFloatAndIntTemplate {
-  let Spellings = ["__builtin_hlsl_elementwise_asuint"];
-  let Attributes = [NoThrow, Const];
-  let Prototype = "unsigned int (T)";
-}
-
 def HLSLRSqrt : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_elementwise_rsqrt"];
   let Attributes = [NoThrow, Const];
@@ -4768,6 +4759,12 @@ def HLSLRSqrt : LangBuiltin<"HLSL_LANG"> {
 
 def HLSLSaturate : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_elementwise_saturate"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
+def HLSLBitCast32 : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_bit_cast_32"];
   let Attributes = [NoThrow, Const];
   let Prototype = "void(...)";
 }
