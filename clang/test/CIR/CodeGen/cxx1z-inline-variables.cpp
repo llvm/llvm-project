@@ -26,19 +26,18 @@ const int &compat_use_after_redecl1 = compat::c;
 const int &compat_use_after_redecl2 = compat::d;
 const int &compat_use_after_redecl3 = compat::g;
 
-// CIR: cir.global  weak_odr @_ZN6compat1bE = #cir.int<2> : !s32i
-// CIR: cir.global  weak_odr @_ZN6compat1aE = #cir.int<1> : !s32i
-// CIR: cir.global  weak_odr @_ZN6compat1cE = #cir.int<3> : !s32i
-// CIR: cir.global  external @_ZN6compat1eE = #cir.int<5> : !s32i
-// CIR: cir.global  weak_odr @_ZN6compat1fE = #cir.int<6> : !s32i
-// CIR: cir.global  linkonce_odr @_ZN6compat1dE = #cir.int<4> : !s32i
-// CIR: cir.global  linkonce_odr @_ZN6compat1gE = #cir.int<7> : !s32i
+// CIR: cir.global  weak_odr @_ZN6compat1bE = #cir.int<2> : !s32i {alignment = 4 : i64}
+// CIR: cir.global  weak_odr @_ZN6compat1aE = #cir.int<1> : !s32i {alignment = 4 : i64}
+// CIR: cir.global  weak_odr @_ZN6compat1cE = #cir.int<3> : !s32i {alignment = 4 : i64}
+// CIR: cir.global  external @_ZN6compat1eE = #cir.int<5> : !s32i {alignment = 4 : i64}
+// CIR: cir.global  weak_odr @_ZN6compat1fE = #cir.int<6> : !s32i {alignment = 4 : i64}
+// CIR: cir.global  linkonce_odr @_ZN6compat1dE = #cir.int<4> : !s32i {alignment = 4 : i64}
+// CIR: cir.global  linkonce_odr @_ZN6compat1gE = #cir.int<7> : !s32i {alignment = 4 : i64}
 
-// LLVM: @_ZN6compat1bE = weak_odr global i32 2
-// LLVM: @_ZN6compat1aE = weak_odr global i32 1
-// LLVM: @_ZN6compat1cE = weak_odr global i32 3
-// LLVM: @_ZN6compat1eE = global i32 5
-// LLVM: @_ZN6compat1fE = weak_odr global i32 6
-// LLVM: @_ZN6compat1dE = linkonce_odr global i32 4
-// LLVM: @_ZN6compat1gE = linkonce_odr global i32 7
-
+// LLVM: @_ZN6compat1bE = weak_odr global i32 2, align 4
+// LLVM: @_ZN6compat1aE = weak_odr global i32 1, align 4
+// LLVM: @_ZN6compat1cE = weak_odr global i32 3, align 4
+// LLVM: @_ZN6compat1eE = global i32 5, align 4
+// LLVM: @_ZN6compat1fE = weak_odr global i32 6, align 4
+// LLVM: @_ZN6compat1dE = linkonce_odr global i32 4, align 4
+// LLVM: @_ZN6compat1gE = linkonce_odr global i32 7, align 4

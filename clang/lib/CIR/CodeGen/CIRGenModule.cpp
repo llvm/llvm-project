@@ -921,10 +921,9 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef MangledName, mlir::Type Ty,
 
     // FIXME: This code is overly simple and should be merged with other global
     // handling.
-
+    GV.setAlignmentAttr(getSize(astCtx.getDeclAlign(D)));
     // TODO(cir):
     //   GV->setConstant(isTypeConstant(D->getType(), false));
-    //   GV->setAlignment(getContext().getDeclAlign(D).getAsAlign());
     //   setLinkageForGV(GV, D);
 
     if (D->getTLSKind()) {

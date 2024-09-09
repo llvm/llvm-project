@@ -43,7 +43,7 @@ module {
   cir.func linkonce_odr @_ZN6Father9FatherFooEv(%arg0: !cir.ptr<!ty_22Father22> ) { cir.return }
 } 
 
-// MLIR:  llvm.mlir.global linkonce_odr @_ZTV5Child() {addr_space = 0 : i32} : !llvm.struct<(array<4 x ptr>, array<3 x ptr>)> {
+// MLIR:  llvm.mlir.global linkonce_odr @_ZTV5Child() {addr_space = 0 : i32, alignment = 8 : i64} : !llvm.struct<(array<4 x ptr>, array<3 x ptr>)> {
 // MLIR:    %{{[0-9]+}} = llvm.mlir.undef : !llvm.struct<(array<4 x ptr>, array<3 x ptr>)>
 // MLIR:    %{{[0-9]+}} = llvm.mlir.undef : !llvm.array<4 x ptr>
 // MLIR:    %{{[0-9]+}} = llvm.mlir.zero : !llvm.ptr

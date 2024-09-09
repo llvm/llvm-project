@@ -5,11 +5,11 @@ extern int __attribute__((section(".shared"))) ext;
 int getExt() {
   return ext;
 }
-// CIR:   cir.global "private" external @ext : !s32i {section = ".shared"}
+// CIR:   cir.global "private" external @ext : !s32i {alignment = 4 : i64, section = ".shared"}
 // LLVM:  @ext = external global i32, section ".shared"
 
 int __attribute__((section(".shared"))) glob = 42;
-// CIR:   cir.global external @glob = #cir.int<42> : !s32i {section = ".shared"}
+// CIR:   cir.global external @glob = #cir.int<42> : !s32i {alignment = 4 : i64, section = ".shared"}
 // LLVM:   @glob = global i32 42, section ".shared"
 
 
