@@ -294,6 +294,12 @@ static cl::opt<bool> UseLoopVersioningLICM(
     "enable-loop-versioning-licm", cl::init(false), cl::Hidden,
     cl::desc("Enable the experimental Loop Versioning LICM pass"));
 
+static cl::opt<bool> DeferThinLTOPreLinkCoroSplit(
+    "defer-thinlto-prelink-coro-split", cl::init(false), cl::Hidden,
+    cl::desc("Do not run CoroSplit pass in ThinLTO pre-link pipeline. "
+             "This allows coroutine optimizations to be run in the ThinLTO "
+             "post-link pipeline."));
+
 extern cl::opt<std::string> UseCtxProfile;
 
 namespace llvm {
@@ -973,7 +979,8 @@ PassBuilder::buildInlinerPipeline(OptimizationLevel Level,
   MainCGPipeline.addPass(createCGSCCToFunctionPassAdaptor(
       RequireAnalysisPass<ShouldNotRunFunctionPassesAnalysis, Function>()));
 
-  if (Phase != ThinOrFullLTOPhase::ThinLTOPreLink)
+  if (Phase != ThinOrFullLTOPhase::ThinLTOPreLink ||
+      !DeferThinLTOPreLinkCoroSplit)
     MainCGPipeline.addPass(CoroSplitPass(Level != OptimizationLevel::O0));
 
   // Make sure we don't affect potential future NoRerun CGSCC adaptors.
@@ -1016,7 +1023,8 @@ PassBuilder::buildModuleInlinerPipeline(OptimizationLevel Level,
       buildFunctionSimplificationPipeline(Level, Phase),
       PTO.EagerlyInvalidateAnalyses));
 
-  if (Phase != ThinOrFullLTOPhase::ThinLTOPreLink)
+  if (Phase != ThinOrFullLTOPhase::ThinLTOPreLink ||
+      !DeferThinLTOPreLinkCoroSplit)
     MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(
         CoroSplitPass(Level != OptimizationLevel::O0)));
 
@@ -1222,7 +1230,8 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   // and argument promotion.
   MPM.addPass(DeadArgumentEliminationPass());
 
-  if (Phase != ThinOrFullLTOPhase::ThinLTOPreLink)
+  if (Phase != ThinOrFullLTOPhase::ThinLTOPreLink ||
+      !DeferThinLTOPreLinkCoroSplit)
     MPM.addPass(CoroCleanupPass());
 
   // Optimize globals now that functions are fully simplified.

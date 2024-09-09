@@ -1,10 +1,10 @@
 // REQUIRES: x86_64-linux
-// This tests that the coroutine elide optimization could happen succesfully with ThinLTO.
+// This tests that the coroutine elide optimization could happen succesfully with ThinLTO when coro-split is deferred to ThinLTO post-link.
 // This test is adapted from coro-elide.cpp and splits functions into two files.
 //
 // RUN: split-file %s %t
-// RUN: %clang --target=x86_64-linux -std=c++20 -O2 -flto=thin -I %S -c %t/coro-elide-callee.cpp -o %t/coro-elide-callee.bc
-// RUN: %clang --target=x86_64-linux -std=c++20 -O2 -flto=thin -I %S -c %t/coro-elide-caller.cpp -o %t/coro-elide-caller.bc
+// RUN: %clang --target=x86_64-linux -std=c++20 -O2 -flto=thin -mllvm -defer-thinlto-prelink-coro-split -I %S -c %t/coro-elide-callee.cpp -o %t/coro-elide-callee.bc
+// RUN: %clang --target=x86_64-linux -std=c++20 -O2 -flto=thin -mllvm -defer-thinlto-prelink-coro-split -I %S -c %t/coro-elide-caller.cpp -o %t/coro-elide-caller.bc
 // RUN: llvm-lto --thinlto %t/coro-elide-callee.bc %t/coro-elide-caller.bc -o %t/summary
 // RUN: %clang_cc1 -O2 -x ir %t/coro-elide-caller.bc -fthinlto-index=%t/summary.thinlto.bc -emit-llvm -o - | FileCheck %s
 
