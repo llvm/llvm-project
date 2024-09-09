@@ -96,7 +96,6 @@ class HipBinUtil {
   string getTempDir();
   void deleteTempFiles();
   string mktempFile(string name);
-  string trim(string str) const;
   string readConfigMap(map<string, string> hipVersionMap,
                        string keyName, string defaultValue) const;
   map<string, string> parseConfigFile(fs::path configPath) const;
@@ -127,13 +126,6 @@ string HipBinUtil::mktempFile(string name) {
 #endif
   tmpFiles_.push_back(fileName);
   return fileName;
-}
-
-// removes the empty spaces and end lines
-string HipBinUtil::trim(string str) const {
-  string strChomp = str;
-  strChomp.erase(str.find_last_not_of(" \n\r\t")+1);
-  return strChomp;
 }
 
 // matches the pattern in the string
