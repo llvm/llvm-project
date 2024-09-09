@@ -159,10 +159,13 @@ class SIRegisterClass <string n, list<ValueType> rTypes, int Align, dag rList>
 
 multiclass SIRegLoHi16 <string n, bits<8> regIdx, bit ArtificialHigh = 1,
                         bit isVGPR = 0, bit isAGPR = 0> {
-  def _LO16 : SIReg<n#".l", regIdx, isVGPR, isAGPR>;
+  def _LO16 : SIReg<n#".l", regIdx, isVGPR, isAGPR> {
+    let PositionOrder = !if(isAGPR, 1, 0);
+  }
   def _HI16 : SIReg<!if(ArtificialHigh, "", n#".h"), regIdx, isVGPR, isAGPR,
                     /* isHi16 */ 1> {
     let isArtificial = ArtificialHigh;
+    let PositionOrder = !if(isAGPR, 1, 0);
   }
   def "" : RegisterWithSubRegs<n, [!cast<Register>(NAME#"_LO16"),
                                    !cast<Register>(NAME#"_HI16")]> {
@@ -174,6 +177,7 @@ multiclass SIRegLoHi16 <string n, bits<8> regIdx, bit ArtificialHigh = 1,
     let HWEncoding{9} = isAGPR;
 
     int Index = !cast<int>(regIdx);
+    let PositionOrder = !if(isAGPR, 1, 0);
   }
 }
 
@@ -699,6 +703,8 @@ def AGPR_32 : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, bf16, v2i16, v2f16,
 }
 } // End HasAGPR = 1
 
+let PositionOrder = 1 in {
+
 // AGPR 64-bit registers
 def AGPR_64 : SIRegisterTuples<getSubRegs<2>.ret, AGPR_32, 255, 1, 2, "a">;
 
@@ -737,6 +743,7 @@ def AGPR_512 : SIRegisterTuples<getSubRegs<16>.ret, AGPR_32, 255, 1, 16, "a">;
 
 // AGPR 1024-bit registers
 def AGPR_1024 : SIRegisterTuples<getSubRegs<32>.ret, AGPR_32, 255, 1, 32, "a">;
+}
 
 //===----------------------------------------------------------------------===//
 //  Register classes used as source and destination

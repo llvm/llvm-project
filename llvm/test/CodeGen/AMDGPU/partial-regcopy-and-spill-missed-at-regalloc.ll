@@ -30,7 +30,7 @@ define amdgpu_kernel void @partial_copy(<4 x i32> %arg) #0 {
   ;
   ; PEI-GFX908-LABEL: name: partial_copy
   ; PEI-GFX908: bb.0 (%ir-block.0):
-  ; PEI-GFX908-NEXT:   liveins: $agpr4, $sgpr4_sgpr5, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr7
+  ; PEI-GFX908-NEXT:   liveins: $sgpr4_sgpr5, $agpr4, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr7
   ; PEI-GFX908-NEXT: {{  $}}
   ; PEI-GFX908-NEXT:   $sgpr8_sgpr9_sgpr10_sgpr11 = COPY killed $sgpr0_sgpr1_sgpr2_sgpr3
   ; PEI-GFX908-NEXT:   $sgpr8 = S_ADD_U32 $sgpr8, $sgpr7, implicit-def $scc, implicit-def $sgpr8_sgpr9_sgpr10_sgpr11
@@ -77,7 +77,7 @@ define amdgpu_kernel void @partial_copy(<4 x i32> %arg) #0 {
   ;
   ; PEI-GFX90A-LABEL: name: partial_copy
   ; PEI-GFX90A: bb.0 (%ir-block.0):
-  ; PEI-GFX90A-NEXT:   liveins: $agpr4, $sgpr4_sgpr5, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr7
+  ; PEI-GFX90A-NEXT:   liveins: $sgpr4_sgpr5, $agpr4, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr7
   ; PEI-GFX90A-NEXT: {{  $}}
   ; PEI-GFX90A-NEXT:   $sgpr8_sgpr9_sgpr10_sgpr11 = COPY killed $sgpr0_sgpr1_sgpr2_sgpr3
   ; PEI-GFX90A-NEXT:   $sgpr8 = S_ADD_U32 $sgpr8, $sgpr7, implicit-def $scc, implicit-def $sgpr8_sgpr9_sgpr10_sgpr11
