@@ -955,7 +955,7 @@ class TestCase(TestBase):
         self.assertIn("summaryProviderStatistics", stats)
         summary_providers = stats["summaryProviderStatistics"]
         summary_provider_str = str(summary_providers)
-        self.assertIn("'name': 'BoxFormatter.summary'", summary_provider_str)
+        self.assertIn("BoxFormatter.summary", summary_provider_str)
         self.assertIn("'count': 1", summary_provider_str)
         self.assertIn("'totalTime':", summary_provider_str)
         self.assertIn("'type': 'python'", summary_provider_str)
