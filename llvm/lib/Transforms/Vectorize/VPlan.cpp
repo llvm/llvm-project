@@ -934,6 +934,7 @@ void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
 
   IRBuilder<> Builder(State.CFG.PrevBB->getTerminator());
   // FIXME: Model VF * UF computation completely in VPlan.
+  assert(VFxUF.getNumUsers() && "VFxUF expected to always have users");
   VFxUF.setUnderlyingValue(
       createStepForVF(Builder, TripCountV->getType(), State.VF, State.UF));
 

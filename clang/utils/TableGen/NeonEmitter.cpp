@@ -1636,7 +1636,7 @@ std::pair<Type, std::string> Intrinsic::DagEmitter::emitDagShuffle(DagInit *DI){
       int64_t VectorSize = cast<IntInit>(Expr->getArg(0))->getValue();
       VectorSize /= ElementSize;
 
-      std::vector<Record *> Revved;
+      std::vector<const Record *> Revved;
       for (unsigned VI = 0; VI < Elts2.size(); VI += VectorSize) {
         for (int LI = VectorSize - 1; LI >= 0; --LI) {
           Revved.push_back(Elts2[VI + LI]);
