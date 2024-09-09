@@ -152,8 +152,7 @@ bool InitUndef::handleSubReg(MachineFunction &MF, MachineInstr &MI,
     if (Info.UsedLanes == Info.DefinedLanes)
       continue;
 
-    const TargetRegisterClass *TargetRegClass =
-        TRI->getLargestSuperClass(MRI->getRegClass(Reg));
+    const TargetRegisterClass *TargetRegClass = MRI->getRegClass(Reg);
 
     LaneBitmask NeedDef = Info.UsedLanes & ~Info.DefinedLanes;
 
@@ -172,8 +171,8 @@ bool InitUndef::handleSubReg(MachineFunction &MF, MachineInstr &MI,
     Register LatestReg = Reg;
     for (auto ind : SubRegIndexNeedInsert) {
       Changed = true;
-      const TargetRegisterClass *SubRegClass = TRI->getLargestSuperClass(
-          TRI->getSubRegisterClass(TargetRegClass, ind));
+      const TargetRegisterClass *SubRegClass =
+          TRI->getSubRegisterClass(TargetRegClass, ind);
       Register TmpInitSubReg = MRI->createVirtualRegister(SubRegClass);
       LLVM_DEBUG(dbgs() << "Register Class ID" << SubRegClass->getID() << "\n");
       BuildMI(*MI.getParent(), &MI, MI.getDebugLoc(),
@@ -199,8 +198,7 @@ bool InitUndef::fixupIllOperand(MachineInstr *MI, MachineOperand &MO) {
       dbgs() << "Emitting PseudoInitUndef Instruction for implicit register "
              << printReg(MO.getReg()) << '\n');
 
-  const TargetRegisterClass *TargetRegClass =
-      TRI->getLargestSuperClass(MRI->getRegClass(MO.getReg()));
+  const TargetRegisterClass *TargetRegClass = MRI->getRegClass(MO.getReg());
   LLVM_DEBUG(dbgs() << "Register Class ID" << TargetRegClass->getID() << "\n");
   Register NewReg = MRI->createVirtualRegister(TargetRegClass);
   BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
