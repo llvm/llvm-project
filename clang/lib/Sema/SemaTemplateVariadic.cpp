@@ -38,7 +38,10 @@ namespace {
 
     bool InLambda = false;
     unsigned DepthLimit = (unsigned)-1;
+
+#ifndef NDEBUG
     bool ContainsFunctionParmPackExpr = false;
+#endif
 
     void addUnexpanded(NamedDecl *ND, SourceLocation Loc = SourceLocation()) {
       if (auto *VD = dyn_cast<VarDecl>(ND)) {
@@ -282,6 +285,7 @@ namespace {
       return inherited::TraverseLambdaCapture(Lambda, C, Init);
     }
 
+#ifndef NDEBUG
     bool TraverseFunctionParmPackExpr(FunctionParmPackExpr *) {
       ContainsFunctionParmPackExpr = true;
       return true;
@@ -290,6 +294,7 @@ namespace {
     bool containsFunctionParmPackExpr() const {
       return ContainsFunctionParmPackExpr;
     }
+#endif
   };
 }
 
