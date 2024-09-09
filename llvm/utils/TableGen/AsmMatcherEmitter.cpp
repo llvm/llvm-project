@@ -140,7 +140,7 @@ class AsmMatcherInfo;
 // RegisterSets can be seen in the outputted AsmMatcher tables occasionally, and
 // can even affect compiler output (at least seen in diagnostics produced when
 // all matches fail). So we use a type that sorts them consistently.
-typedef std::set<Record *, LessRecordByID> RegisterSet;
+typedef std::set<const Record *, LessRecordByID> RegisterSet;
 
 class AsmMatcherEmitter {
   RecordKeeper &Records;
@@ -242,7 +242,7 @@ public:
       if (!isRegisterClass() || !RHS.isRegisterClass())
         return false;
 
-      std::vector<Record *> Tmp;
+      std::vector<const Record *> Tmp;
       std::set_intersection(Registers.begin(), Registers.end(),
                             RHS.Registers.begin(), RHS.Registers.end(),
                             std::back_inserter(Tmp), LessRecordByID());
@@ -403,7 +403,7 @@ struct MatchableInfo {
     bool IsIsolatedToken;
 
     /// Register record if this token is singleton register.
-    Record *SingletonReg;
+    const Record *SingletonReg;
 
     explicit AsmOperand(bool IsIsolatedToken, StringRef T)
         : Token(T), Class(nullptr), SubOpIdx(-1),
@@ -582,7 +582,7 @@ struct MatchableInfo {
   void formTwoOperandAlias(StringRef Constraint);
 
   void initialize(const AsmMatcherInfo &Info,
-                  SmallPtrSetImpl<Record *> &SingletonRegisters,
+                  SmallPtrSetImpl<const Record *> &SingletonRegisters,
                   AsmVariantInfo const &Variant, bool HasMnemonicFirst);
 
   /// validate - Return true if this matchable is a valid thing to match against
@@ -757,7 +757,8 @@ public:
   std::vector<OperandMatchEntry> OperandMatchInfo;
 
   /// Map of Register records to their class information.
-  typedef std::map<Record *, ClassInfo *, LessRecordByID> RegisterClassesTy;
+  typedef std::map<const Record *, ClassInfo *, LessRecordByID>
+      RegisterClassesTy;
   RegisterClassesTy RegisterClasses;
 
   /// Map of Predicate records to their subtarget information.
@@ -784,7 +785,8 @@ private:
 
   /// buildRegisterClasses - Build the ClassInfo* instances for register
   /// classes.
-  void buildRegisterClasses(SmallPtrSetImpl<Record *> &SingletonRegisters);
+  void
+  buildRegisterClasses(SmallPtrSetImpl<const Record *> &SingletonRegisters);
 
   /// buildOperandClasses - Build the ClassInfo* instances for user defined
   /// operand classes.
@@ -935,10 +937,10 @@ static void extractSingletonRegisterForAsmOperand(MatchableInfo::AsmOperand &Op,
   // be some random non-register token, just ignore it.
 }
 
-void MatchableInfo::initialize(const AsmMatcherInfo &Info,
-                               SmallPtrSetImpl<Record *> &SingletonRegisters,
-                               AsmVariantInfo const &Variant,
-                               bool HasMnemonicFirst) {
+void MatchableInfo::initialize(
+    const AsmMatcherInfo &Info,
+    SmallPtrSetImpl<const Record *> &SingletonRegisters,
+    AsmVariantInfo const &Variant, bool HasMnemonicFirst) {
   AsmVariantID = Variant.AsmVariantNo;
   AsmString = CodeGenInstruction::FlattenAsmStringVariants(
       AsmString, Variant.AsmVariantNo);
@@ -972,8 +974,8 @@ void MatchableInfo::initialize(const AsmMatcherInfo &Info,
   // Collect singleton registers, if used.
   for (MatchableInfo::AsmOperand &Op : AsmOperands) {
     extractSingletonRegisterForAsmOperand(Op, Info, Variant.RegisterPrefix);
-    if (Record *Reg = Op.SingletonReg)
-      SingletonRegisters.insert(Reg);
+    if (Op.SingletonReg)
+      SingletonRegisters.insert(Op.SingletonReg);
   }
 
   const RecordVal *DepMask = TheDef->getValue("DeprecatedFeatureMask");
@@ -1253,7 +1255,7 @@ struct LessRegisterSet {
 };
 
 void AsmMatcherInfo::buildRegisterClasses(
-    SmallPtrSetImpl<Record *> &SingletonRegisters) {
+    SmallPtrSetImpl<const Record *> &SingletonRegisters) {
   const auto &Registers = Target.getRegBank().getRegisters();
   auto &RegClassList = Target.getRegBank().getRegClasses();
 
@@ -1268,14 +1270,14 @@ void AsmMatcherInfo::buildRegisterClasses(
         RegisterSet(RC.getOrder().begin(), RC.getOrder().end()));
 
   // Add any required singleton sets.
-  for (Record *Rec : SingletonRegisters) {
+  for (const Record *Rec : SingletonRegisters) {
     RegisterSets.insert(RegisterSet(&Rec, &Rec + 1));
   }
 
   // Introduce derived sets where necessary (when a register does not determine
   // a unique register set class), and build the mapping of registers to the set
   // they should classify to.
-  std::map<Record *, RegisterSet> RegisterMap;
+  std::map<const Record *, RegisterSet> RegisterMap;
   for (const CodeGenRegister &CGR : Registers) {
     // Compute the intersection of all sets containing this register.
     RegisterSet ContainingSet;
@@ -1369,7 +1371,7 @@ void AsmMatcherInfo::buildRegisterClasses(
     RegisterClasses[It.first] = RegisterSetClasses[It.second];
 
   // Name the register classes which correspond to singleton registers.
-  for (Record *Rec : SingletonRegisters) {
+  for (const Record *Rec : SingletonRegisters) {
     ClassInfo *CI = RegisterClasses[Rec];
     assert(CI && "Missing singleton register class info!");
 
@@ -1526,7 +1528,7 @@ void AsmMatcherInfo::buildInfo() {
 
   // Parse the instructions; we need to do this first so that we can gather the
   // singleton register classes.
-  SmallPtrSet<Record *, 16> SingletonRegisters;
+  SmallPtrSet<const Record *, 16> SingletonRegisters;
   unsigned VariantCount = Target.getAsmParserVariantCount();
   for (unsigned VC = 0; VC != VariantCount; ++VC) {
     Record *AsmVariant = Target.getAsmParserVariant(VC);
@@ -1617,7 +1619,7 @@ void AsmMatcherInfo::buildInfo() {
       StringRef Token = Op.Token;
 
       // Check for singleton registers.
-      if (Record *RegRecord = Op.SingletonReg) {
+      if (const Record *RegRecord = Op.SingletonReg) {
         Op.Class = RegisterClasses[RegRecord];
         assert(Op.Class && Op.Class->Registers.size() == 1 &&
                "Unexpected class for singleton register");
