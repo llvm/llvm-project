@@ -3,6 +3,9 @@
 
 int clang_analyzer_eval(int);
 
+void clang_analyzer_dump(int);
+void clang_analyzer_dump_ptr(void *);
+
 int global;
 void testRValueOutput() {
   int &ref = global;
