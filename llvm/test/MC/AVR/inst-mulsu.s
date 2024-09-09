@@ -1,9 +1,7 @@
 ; RUN: llvm-mc -triple avr -mattr=mul -show-encoding < %s | FileCheck %s
-; RUN: llvm-mc -filetype=obj -triple avr -mattr=mul < %s | llvm-objdump -d --mattr=mul - | FileCheck -check-prefix=CHECK-INST %s
-
+; RUN: llvm-mc -filetype=obj -triple avr -mattr=mul < %s | llvm-objdump -dr --mattr=mul - | FileCheck -check-prefix=CHECK-INST %s
 
 foo:
-
   mulsu r22, r16
   mulsu r19, r17
   mulsu r21, r23

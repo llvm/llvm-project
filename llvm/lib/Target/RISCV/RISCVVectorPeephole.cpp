@@ -61,18 +61,19 @@ public:
   }
 
 private:
-  bool tryToReduceVL(MachineInstr &MI) const;
+  bool tryToReduceVL(MachineInstr &MI);
   bool convertToVLMAX(MachineInstr &MI) const;
   bool convertToWholeRegister(MachineInstr &MI) const;
   bool convertToUnmasked(MachineInstr &MI) const;
-  bool convertVMergeToVMv(MachineInstr &MI) const;
+  bool convertAllOnesVMergeToVMv(MachineInstr &MI) const;
+  bool convertSameMaskVMergeToVMv(MachineInstr &MI) const;
   bool foldUndefPassthruVMV_V_V(MachineInstr &MI);
   bool foldVMV_V_V(MachineInstr &MI);
 
   bool hasSameEEW(const MachineInstr &User, const MachineInstr &Src) const;
   bool isAllOnesMask(const MachineInstr *MaskDef) const;
   std::optional<unsigned> getConstant(const MachineOperand &VL) const;
-  bool ensureDominates(const MachineOperand &Use, MachineInstr &Src) const;
+  bool ensureDominates(const MachineOperand &Use, MachineInstr &Src);
 
   /// Maps uses of V0 to the corresponding def of V0.
   DenseMap<const MachineInstr *, const MachineInstr *> V0Defs;
@@ -115,7 +116,7 @@ bool RISCVVectorPeephole::hasSameEEW(const MachineInstr &User,
 // Attempt to reduce the VL of an instruction whose sole use is feeding a
 // instruction with a narrower VL.  This currently works backwards from the
 // user instruction (which might have a smaller VL).
-bool RISCVVectorPeephole::tryToReduceVL(MachineInstr &MI) const {
+bool RISCVVectorPeephole::tryToReduceVL(MachineInstr &MI) {
   // Note that the goal here is a bit multifaceted.
   // 1) For store's reducing the VL of the value being stored may help to
   //    reduce VL toggles.  This is somewhat of an artifact of the fact we
@@ -342,17 +343,13 @@ bool RISCVVectorPeephole::convertToWholeRegister(MachineInstr &MI) const {
   return true;
 }
 
-// Transform (VMERGE_VVM_<LMUL> pt, false, true, allones, vl, sew) to
-// (VMV_V_V_<LMUL> pt, true, vl, sew). It may decrease uses of VMSET.
-bool RISCVVectorPeephole::convertVMergeToVMv(MachineInstr &MI) const {
+static unsigned getVMV_V_VOpcodeForVMERGE_VVM(const MachineInstr &MI) {
 #define CASE_VMERGE_TO_VMV(lmul)                                               \
   case RISCV::PseudoVMERGE_VVM_##lmul:                                         \
-    NewOpc = RISCV::PseudoVMV_V_V_##lmul;                                      \
-    break;
-  unsigned NewOpc;
+    return RISCV::PseudoVMV_V_V_##lmul;
   switch (MI.getOpcode()) {
   default:
-    return false;
+    return 0;
     CASE_VMERGE_TO_VMV(MF8)
     CASE_VMERGE_TO_VMV(MF4)
     CASE_VMERGE_TO_VMV(MF2)
@@ -361,14 +358,68 @@ bool RISCVVectorPeephole::convertVMergeToVMv(MachineInstr &MI) const {
     CASE_VMERGE_TO_VMV(M4)
     CASE_VMERGE_TO_VMV(M8)
   }
+}
 
+/// Convert a PseudoVMERGE_VVM with an all ones mask to a PseudoVMV_V_V.
+///
+/// %x = PseudoVMERGE_VVM %passthru, %false, %true, %allones, sew, vl
+/// ->
+/// %x = PseudoVMV_V_V %passthru, %true, vl, sew, tu_mu
+bool RISCVVectorPeephole::convertAllOnesVMergeToVMv(MachineInstr &MI) const {
+  unsigned NewOpc = getVMV_V_VOpcodeForVMERGE_VVM(MI);
+  if (!NewOpc)
+    return false;
   assert(MI.getOperand(4).isReg() && MI.getOperand(4).getReg() == RISCV::V0);
   if (!isAllOnesMask(V0Defs.lookup(&MI)))
     return false;
 
   MI.setDesc(TII->get(NewOpc));
-  MI.removeOperand(2);  // False operand
-  MI.removeOperand(3);  // Mask operand
+  MI.removeOperand(2); // False operand
+  MI.removeOperand(3); // Mask operand
+  MI.addOperand(
+      MachineOperand::CreateImm(RISCVII::TAIL_UNDISTURBED_MASK_UNDISTURBED));
+
+  // vmv.v.v doesn't have a mask operand, so we may be able to inflate the
+  // register class for the destination and passthru operands e.g. VRNoV0 -> VR
+  MRI->recomputeRegClass(MI.getOperand(0).getReg());
+  if (MI.getOperand(1).getReg() != RISCV::NoRegister)
+    MRI->recomputeRegClass(MI.getOperand(1).getReg());
+  return true;
+}
+
+/// If a PseudoVMERGE_VVM's true operand is a masked pseudo and both have the
+/// same mask, and the masked pseudo's passthru is the same as the false
+/// operand, we can convert the PseudoVMERGE_VVM to a PseudoVMV_V_V.
+///
+/// %true = PseudoVADD_VV_M1_MASK %false, %x, %y, %mask, vl1, sew, policy
+/// %x = PseudoVMERGE_VVM %passthru, %false, %true, %mask, vl2, sew
+/// ->
+/// %true = PseudoVADD_VV_M1_MASK %false, %x, %y, %mask, vl1, sew, policy
+/// %x = PseudoVMV_V_V %passthru, %true, vl2, sew, tu_mu
+bool RISCVVectorPeephole::convertSameMaskVMergeToVMv(MachineInstr &MI) const {
+  unsigned NewOpc = getVMV_V_VOpcodeForVMERGE_VVM(MI);
+  if (!NewOpc)
+    return false;
+  MachineInstr *True = MRI->getVRegDef(MI.getOperand(3).getReg());
+  if (!True || !RISCV::getMaskedPseudoInfo(True->getOpcode()) ||
+      !hasSameEEW(MI, *True))
+    return false;
+
+  // True's passthru needs to be equivalent to False
+  Register TruePassthruReg = True->getOperand(1).getReg();
+  Register FalseReg = MI.getOperand(2).getReg();
+  if (TruePassthruReg != RISCV::NoRegister && TruePassthruReg != FalseReg)
+    return false;
+
+  const MachineInstr *TrueV0Def = V0Defs.lookup(True);
+  const MachineInstr *MIV0Def = V0Defs.lookup(&MI);
+  assert(TrueV0Def && TrueV0Def->isCopy() && MIV0Def && MIV0Def->isCopy());
+  if (TrueV0Def->getOperand(1).getReg() != MIV0Def->getOperand(1).getReg())
+    return false;
+
+  MI.setDesc(TII->get(NewOpc));
+  MI.removeOperand(2); // False operand
+  MI.removeOperand(3); // Mask operand
   MI.addOperand(
       MachineOperand::CreateImm(RISCVII::TAIL_UNDISTURBED_MASK_UNDISTURBED));
 
@@ -465,17 +516,18 @@ static bool dominates(MachineBasicBlock::const_iterator A,
 /// does. Returns false if doesn't dominate and we can't move. \p MO must be in
 /// the same basic block as \Src.
 bool RISCVVectorPeephole::ensureDominates(const MachineOperand &MO,
-                                          MachineInstr &Src) const {
+                                          MachineInstr &Src) {
   assert(MO.getParent()->getParent() == Src.getParent());
   if (!MO.isReg() || MO.getReg() == RISCV::NoRegister)
     return true;
 
   MachineInstr *Def = MRI->getVRegDef(MO.getReg());
   if (Def->getParent() == Src.getParent() && !dominates(Def, Src)) {
-    if (!isSafeToMove(Src, *Def->getNextNode()))
+    MachineInstr *AfterDef = Def->getNextNode();
+    if (!isSafeToMove(Src, *AfterDef))
       return false;
-    // FIXME: Update V0Defs
-    Src.moveBefore(Def->getNextNode());
+    V0Defs[&Src] = V0Defs[AfterDef];
+    Src.moveBefore(AfterDef);
   }
 
   return true;
@@ -622,7 +674,8 @@ bool RISCVVectorPeephole::runOnMachineFunction(MachineFunction &MF) {
       Changed |= tryToReduceVL(MI);
       Changed |= convertToUnmasked(MI);
       Changed |= convertToWholeRegister(MI);
-      Changed |= convertVMergeToVMv(MI);
+      Changed |= convertAllOnesVMergeToVMv(MI);
+      Changed |= convertSameMaskVMergeToVMv(MI);
       if (foldUndefPassthruVMV_V_V(MI)) {
         Changed |= true;
         continue; // MI is erased

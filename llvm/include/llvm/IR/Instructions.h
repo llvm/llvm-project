@@ -751,8 +751,16 @@ public:
     /// *p = ((old == 0) || (old u> v)) ? v : (old - 1)
     UDecWrap,
 
+    /// Subtract only if no unsigned overflow.
+    /// *p = (old u>= v) ? old - v : old
+    USubCond,
+
+    /// *p = usub.sat(old, v)
+    /// \p usub.sat matches the behavior of \p llvm.usub.sat.*.
+    USubSat,
+
     FIRST_BINOP = Xchg,
-    LAST_BINOP = UDecWrap,
+    LAST_BINOP = USubSat,
     BAD_BINOP
   };
 

@@ -2147,7 +2147,6 @@ size_t Process::ReadCStringFromMemory(addr_t addr, char *dst,
     result_error.Clear();
     // NULL out everything just to be safe
     memset(dst, 0, dst_max_len);
-    Status error;
     addr_t curr_addr = addr;
     const size_t cache_line_size = m_memory_cache.GetMemoryCacheLineSize();
     size_t bytes_left = dst_max_len - 1;
@@ -2158,10 +2157,11 @@ size_t Process::ReadCStringFromMemory(addr_t addr, char *dst,
           cache_line_size - (curr_addr % cache_line_size);
       addr_t bytes_to_read =
           std::min<addr_t>(bytes_left, cache_line_bytes_left);
+      Status error;
       size_t bytes_read = ReadMemory(curr_addr, curr_dst, bytes_to_read, error);
 
       if (bytes_read == 0) {
-        result_error = error;
+        result_error = std::move(error);
         dst[total_cstr_len] = '\0';
         break;
       }
@@ -5743,43 +5743,6 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
   return return_value;
 }
 
-const char *Process::ExecutionResultAsCString(ExpressionResults result) {
-  const char *result_name = "<unknown>";
-
-  switch (result) {
-  case eExpressionCompleted:
-    result_name = "eExpressionCompleted";
-    break;
-  case eExpressionDiscarded:
-    result_name = "eExpressionDiscarded";
-    break;
-  case eExpressionInterrupted:
-    result_name = "eExpressionInterrupted";
-    break;
-  case eExpressionHitBreakpoint:
-    result_name = "eExpressionHitBreakpoint";
-    break;
-  case eExpressionSetupError:
-    result_name = "eExpressionSetupError";
-    break;
-  case eExpressionParseError:
-    result_name = "eExpressionParseError";
-    break;
-  case eExpressionResultUnavailable:
-    result_name = "eExpressionResultUnavailable";
-    break;
-  case eExpressionTimedOut:
-    result_name = "eExpressionTimedOut";
-    break;
-  case eExpressionStoppedForDebug:
-    result_name = "eExpressionStoppedForDebug";
-    break;
-  case eExpressionThreadVanished:
-    result_name = "eExpressionThreadVanished";
-  }
-  return result_name;
-}
-
 void Process::GetStatus(Stream &strm) {
   const StateType state = GetState();
   if (StateIsStoppedState(state, false)) {
@@ -6486,13 +6449,13 @@ Status Process::WriteMemoryTags(lldb::addr_t addr, size_t len,
   llvm::Expected<const MemoryTagManager *> tag_manager_or_err =
       GetMemoryTagManager();
   if (!tag_manager_or_err)
-    return Status(tag_manager_or_err.takeError());
+    return Status::FromError(tag_manager_or_err.takeError());
 
   const MemoryTagManager *tag_manager = *tag_manager_or_err;
   llvm::Expected<std::vector<uint8_t>> packed_tags =
       tag_manager->PackTags(tags);
   if (!packed_tags) {
-    return Status(packed_tags.takeError());
+    return Status::FromError(packed_tags.takeError());
   }
 
   return DoWriteMemoryTags(addr, len, tag_manager->GetAllocationTagType(),

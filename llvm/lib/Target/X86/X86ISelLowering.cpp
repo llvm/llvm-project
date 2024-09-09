@@ -24074,6 +24074,109 @@ static bool isTruncWithZeroHighBitsInput(SDValue V, SelectionDAG &DAG) {
   return DAG.MaskedValueIsZero(VOp0, APInt::getHighBitsSet(InBits,InBits-Bits));
 }
 
+// Lower various (select (icmp CmpVal, 0), LHS, RHS) custom patterns.
+static SDValue LowerSELECTWithCmpZero(SDValue CmpVal, SDValue LHS, SDValue RHS,
+                                      unsigned X86CC, const SDLoc &DL,
+                                      SelectionDAG &DAG,
+                                      const X86Subtarget &Subtarget) {
+  EVT CmpVT = CmpVal.getValueType();
+  EVT VT = LHS.getValueType();
+  if (!CmpVT.isScalarInteger() || !VT.isScalarInteger())
+    return SDValue();
+
+  if (X86CC == X86::COND_E && CmpVal.getOpcode() == ISD::AND &&
+      isOneConstant(CmpVal.getOperand(1))) {
+    auto SplatLSB = [&]() {
+      // we need mask of all zeros or ones with same size of the other
+      // operands.
+      SDValue Neg = CmpVal;
+      if (CmpVT.bitsGT(VT))
+        Neg = DAG.getNode(ISD::TRUNCATE, DL, VT, CmpVal);
+      else if (CmpVT.bitsLT(VT))
+        Neg = DAG.getNode(
+            ISD::AND, DL, VT,
+            DAG.getNode(ISD::ANY_EXTEND, DL, VT, CmpVal.getOperand(0)),
+            DAG.getConstant(1, DL, VT));
+      return DAG.getNegative(Neg, DL, VT); // -(and (x, 0x1))
+    };
+
+    // SELECT (AND(X,1) == 0), 0, -1 -> NEG(AND(X,1))
+    if (isNullConstant(LHS) && isAllOnesConstant(RHS))
+      return SplatLSB();
+
+    // SELECT (AND(X,1) == 0), C1, C2 -> XOR(C1,AND(NEG(AND(X,1)),XOR(C1,C2))
+    if (!Subtarget.canUseCMOV() && isa<ConstantSDNode>(LHS) &&
+        isa<ConstantSDNode>(RHS)) {
+      SDValue Mask = SplatLSB();
+      SDValue Diff = DAG.getNode(ISD::XOR, DL, VT, LHS, RHS);
+      SDValue Flip = DAG.getNode(ISD::AND, DL, VT, Mask, Diff);
+      return DAG.getNode(ISD::XOR, DL, VT, LHS, Flip);
+    }
+
+    SDValue Src1, Src2;
+    auto isIdentityPattern = [&]() {
+      switch (RHS.getOpcode()) {
+      case ISD::OR:
+      case ISD::XOR:
+      case ISD::ADD:
+        if (RHS.getOperand(0) == LHS || RHS.getOperand(1) == LHS) {
+          Src1 = RHS.getOperand(RHS.getOperand(0) == LHS ? 1 : 0);
+          Src2 = LHS;
+          return true;
+        }
+        break;
+      case ISD::SUB:
+        if (RHS.getOperand(0) == LHS) {
+          Src1 = RHS.getOperand(1);
+          Src2 = LHS;
+          return true;
+        }
+        break;
+      }
+      return false;
+    };
+
+    // Convert 'identity' patterns (iff X is 0 or 1):
+    // SELECT (AND(X,1) == 0), Y, (OR Y, Z) -> (OR Y, (AND NEG(AND(X,1)), Z))
+    // SELECT (AND(X,1) == 0), Y, (XOR Y, Z) -> (XOR Y, (AND NEG(AND(X,1)), Z))
+    // SELECT (AND(X,1) == 0), Y, (ADD Y, Z) -> (ADD Y, (AND NEG(AND(X,1)), Z))
+    // SELECT (AND(X,1) == 0), Y, (SUB Y, Z) -> (SUB Y, (AND NEG(AND(X,1)), Z))
+    if (!Subtarget.canUseCMOV() && isIdentityPattern()) {
+      SDValue Mask = SplatLSB();
+      SDValue And = DAG.getNode(ISD::AND, DL, VT, Mask, Src1); // Mask & z
+      return DAG.getNode(RHS.getOpcode(), DL, VT, Src2, And);  // y Op And
+    }
+  }
+
+  if ((X86CC == X86::COND_E || X86CC == X86::COND_NE) &&
+      (isAllOnesConstant(LHS) || isAllOnesConstant(RHS))) {
+    SDValue Y = isAllOnesConstant(RHS) ? LHS : RHS;
+    SDVTList CmpVTs = DAG.getVTList(CmpVT, MVT::i32);
+
+    // 'X - 1' sets the carry flag if X == 0.
+    // '0 - X' sets the carry flag if X != 0.
+    // Convert the carry flag to a -1/0 mask with sbb:
+    // select (X != 0), -1, Y --> 0 - X; or (sbb), Y
+    // select (X == 0), Y, -1 --> 0 - X; or (sbb), Y
+    // select (X != 0), Y, -1 --> X - 1; or (sbb), Y
+    // select (X == 0), -1, Y --> X - 1; or (sbb), Y
+    SDValue Sub;
+    if (isAllOnesConstant(LHS) == (X86CC == X86::COND_NE)) {
+      SDValue Zero = DAG.getConstant(0, DL, CmpVT);
+      Sub = DAG.getNode(X86ISD::SUB, DL, CmpVTs, Zero, CmpVal);
+    } else {
+      SDValue One = DAG.getConstant(1, DL, CmpVT);
+      Sub = DAG.getNode(X86ISD::SUB, DL, CmpVTs, CmpVal, One);
+    }
+    SDValue SBB = DAG.getNode(X86ISD::SETCC_CARRY, DL, VT,
+                              DAG.getTargetConstant(X86::COND_B, DL, MVT::i8),
+                              Sub.getValue(1));
+    return DAG.getNode(ISD::OR, DL, VT, SBB, Y);
+  }
+
+  return SDValue();
+}
+
 SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
   bool AddTest = true;
   SDValue Cond  = Op.getOperand(0);
@@ -24194,65 +24297,9 @@ SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
         ((CondCode == X86::COND_NE && MatchFFSMinus1(Op1, Op2)) ||
          (CondCode == X86::COND_E && MatchFFSMinus1(Op2, Op1)))) {
       // Keep Cmp.
-    } else if ((isAllOnesConstant(Op1) || isAllOnesConstant(Op2)) &&
-        (CondCode == X86::COND_E || CondCode == X86::COND_NE)) {
-      SDValue Y = isAllOnesConstant(Op2) ? Op1 : Op2;
-      SDVTList CmpVTs = DAG.getVTList(CmpOp0.getValueType(), MVT::i32);
-
-      // 'X - 1' sets the carry flag if X == 0.
-      // '0 - X' sets the carry flag if X != 0.
-      // Convert the carry flag to a -1/0 mask with sbb:
-      // select (X != 0), -1, Y --> 0 - X; or (sbb), Y
-      // select (X == 0), Y, -1 --> 0 - X; or (sbb), Y
-      // select (X != 0), Y, -1 --> X - 1; or (sbb), Y
-      // select (X == 0), -1, Y --> X - 1; or (sbb), Y
-      SDValue Sub;
-      if (isAllOnesConstant(Op1) == (CondCode == X86::COND_NE)) {
-        SDValue Zero = DAG.getConstant(0, DL, CmpOp0.getValueType());
-        Sub = DAG.getNode(X86ISD::SUB, DL, CmpVTs, Zero, CmpOp0);
-      } else {
-        SDValue One = DAG.getConstant(1, DL, CmpOp0.getValueType());
-        Sub = DAG.getNode(X86ISD::SUB, DL, CmpVTs, CmpOp0, One);
-      }
-      SDValue SBB = DAG.getNode(X86ISD::SETCC_CARRY, DL, VT,
-                                DAG.getTargetConstant(X86::COND_B, DL, MVT::i8),
-                                Sub.getValue(1));
-      return DAG.getNode(ISD::OR, DL, VT, SBB, Y);
-    } else if (!Subtarget.canUseCMOV() && CondCode == X86::COND_E &&
-               CmpOp0.getOpcode() == ISD::AND &&
-               isOneConstant(CmpOp0.getOperand(1))) {
-      SDValue Src1, Src2;
-      // true if Op2 is XOR or OR operator and one of its operands
-      // is equal to Op1
-      // ( a , a op b) || ( b , a op b)
-      auto isOrXorPattern = [&]() {
-        if ((Op2.getOpcode() == ISD::XOR || Op2.getOpcode() == ISD::OR) &&
-            (Op2.getOperand(0) == Op1 || Op2.getOperand(1) == Op1)) {
-          Src1 =
-              Op2.getOperand(0) == Op1 ? Op2.getOperand(1) : Op2.getOperand(0);
-          Src2 = Op1;
-          return true;
-        }
-        return false;
-      };
-
-      if (isOrXorPattern()) {
-        SDValue Neg;
-        unsigned int CmpSz = CmpOp0.getSimpleValueType().getSizeInBits();
-        // we need mask of all zeros or ones with same size of the other
-        // operands.
-        if (CmpSz > VT.getSizeInBits())
-          Neg = DAG.getNode(ISD::TRUNCATE, DL, VT, CmpOp0);
-        else if (CmpSz < VT.getSizeInBits())
-          Neg = DAG.getNode(ISD::AND, DL, VT,
-              DAG.getNode(ISD::ANY_EXTEND, DL, VT, CmpOp0.getOperand(0)),
-              DAG.getConstant(1, DL, VT));
-        else
-          Neg = CmpOp0;
-        SDValue Mask = DAG.getNegative(Neg, DL, VT); // -(and (x, 0x1))
-        SDValue And = DAG.getNode(ISD::AND, DL, VT, Mask, Src1); // Mask & z
-        return DAG.getNode(Op2.getOpcode(), DL, VT, And, Src2);  // And Op y
-      }
+    } else if (SDValue R = LowerSELECTWithCmpZero(CmpOp0, Op1, Op2, CondCode,
+                                                  DL, DAG, Subtarget)) {
+      return R;
     } else if ((VT == MVT::i32 || VT == MVT::i64) && isNullConstant(Op2) &&
                Cmp.getNode()->hasOneUse() && (CmpOp0 == Op1) &&
                ((CondCode == X86::COND_S) ||                    // smin(x, 0)
@@ -24277,6 +24324,13 @@ SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
       Cond.getOperand(0).getOpcode() == X86ISD::SETCC_CARRY &&
       isOneConstant(Cond.getOperand(1)))
     Cond = Cond.getOperand(0);
+
+  // Attempt to fold "raw cond" cases by treating them as:
+  // (select (and X, 1), Op1, Op2  --> (select (icmpeq (and X, 1), 0), Op2, Op1)
+  if (Cond.getOpcode() == ISD::AND && isOneConstant(Cond.getOperand(1)))
+    if (SDValue R = LowerSELECTWithCmpZero(Cond, Op2, Op1, X86::COND_E, DL, DAG,
+                                           Subtarget))
+      return R;
 
   // If condition flag is set by a X86ISD::CMP, then use it as the condition
   // setting operand in place of the X86ISD::SETCC.
@@ -30980,6 +31034,8 @@ X86TargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
   case AtomicRMWInst::FMin:
   case AtomicRMWInst::UIncWrap:
   case AtomicRMWInst::UDecWrap:
+  case AtomicRMWInst::USubCond:
+  case AtomicRMWInst::USubSat:
   default:
     // These always require a non-trivial set of data operations on x86. We must
     // use a cmpxchg loop.
@@ -57386,7 +57442,8 @@ static SDValue combineEXTRACT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
-static SDValue combineScalarToVector(SDNode *N, SelectionDAG &DAG) {
+static SDValue combineScalarToVector(SDNode *N, SelectionDAG &DAG,
+                                     const X86Subtarget &Subtarget) {
   EVT VT = N->getValueType(0);
   SDValue Src = N->getOperand(0);
   SDLoc DL(N);
@@ -57464,6 +57521,43 @@ static SDValue combineScalarToVector(SDNode *N, SelectionDAG &DAG) {
         // TODO: Handle BroadcastSizeInBits < SizeInBits when we have test
         // coverage.
       }
+
+  // Check for cases where we've ended up with a scalarized shift, typically
+  // during type legalization.
+  switch (Src.getOpcode()) {
+  case ISD::SHL:
+  case ISD::SRL:
+  case ISD::SRA:
+    if (auto *Amt = dyn_cast<ConstantSDNode>(Src.getOperand(1))) {
+      if (supportedVectorShiftWithImm(VT, Subtarget, Src.getOpcode()) &&
+          Src.hasOneUse()) {
+        SDValue SrcVec =
+            DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VT, Src.getOperand(0));
+        unsigned Opc = getTargetVShiftUniformOpcode(Src.getOpcode(), false);
+        return getTargetVShiftByConstNode(Opc, DL, VT.getSimpleVT(), SrcVec,
+                                          Amt->getZExtValue(), DAG);
+      }
+    }
+    break;
+  case ISD::FSHL:
+  case ISD::FSHR:
+    if (auto *Amt = dyn_cast<ConstantSDNode>(Src.getOperand(2))) {
+      if (supportedVectorShiftWithImm(VT, Subtarget, ISD::SHL) &&
+          Src.getOperand(0).getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
+          Src.getOperand(1).getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
+          Src.hasOneUse()) {
+        uint64_t AmtVal =
+            Amt->getAPIntValue().urem(Src.getScalarValueSizeInBits());
+        SDValue SrcVec0 =
+            DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VT, Src.getOperand(0));
+        SDValue SrcVec1 =
+            DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VT, Src.getOperand(1));
+        return DAG.getNode(Src.getOpcode(), DL, VT, SrcVec0, SrcVec1,
+                           DAG.getConstant(AmtVal, DL, VT));
+      }
+    }
+    break;
+  }
 
   return SDValue();
 }
@@ -58017,7 +58111,7 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   // clang-format off
   default: break;
   case ISD::SCALAR_TO_VECTOR:
-    return combineScalarToVector(N, DAG);
+    return combineScalarToVector(N, DAG, Subtarget);
   case ISD::EXTRACT_VECTOR_ELT:
   case X86ISD::PEXTRW:
   case X86ISD::PEXTRB:
@@ -58210,7 +58304,7 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
 }
 
 bool X86TargetLowering::preferABDSToABSWithNSW(EVT VT) const {
-  return false;
+  return Subtarget.canUseCMOV() && (VT == MVT::i32 || VT == MVT::i64);
 }
 
 // Prefer (non-AVX512) vector TRUNCATE(SIGN_EXTEND_INREG(X)) to use of PACKSS.
