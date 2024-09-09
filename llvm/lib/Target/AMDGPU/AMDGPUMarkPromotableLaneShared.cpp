@@ -13,13 +13,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
+#include "AMDGPUMemoryUtils.h"
 #include "AMDGPUTargetMachine.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/Analysis/ValueTracking.h"
-#include "llvm/IR/Constants.h"
-#include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/PatternMatch.h"
-#include "llvm/IR/ReplaceConstant.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 
@@ -29,20 +24,14 @@ using namespace llvm;
 
 namespace {
 class AMDGPUMarkPromotableLaneShared {
-  const DataLayout *DL = nullptr;
-
 public:
   AMDGPUMarkPromotableLaneShared() {}
 
   bool runOnFunction(Function &F);
-
-private:
-  bool checkPromotable(GlobalVariable &GV);
 };
 
 bool AMDGPUMarkPromotableLaneShared::runOnFunction(Function &F) {
   auto M = F.getParent();
-  DL = &(M->getDataLayout());
   SmallVector<Constant *> LaneSharedGlobals;
   for (auto &GV : M->globals()) {
     if (GV.getAddressSpace() == AMDGPUAS::LANE_SHARED &&
@@ -56,181 +45,13 @@ bool AMDGPUMarkPromotableLaneShared::runOnFunction(Function &F) {
   bool Changed = false;
   for (auto *GVC : LaneSharedGlobals) {
     GlobalVariable &GV = *cast<GlobalVariable>(GVC);
-    if (checkPromotable(GV)) {
+    if (AMDGPU::IsPromotableToVGPR(GV, M->getDataLayout())) {
       GV.addAttribute("lane-shared-in-vgpr");
       Changed = true;
     } else
       GV.addAttribute("lane-shared-in-mem");
   }
   return Changed;
-}
-
-static void collectUses(GlobalVariable &GV, SmallVectorImpl<Use *> &Uses) {
-  SmallVector<Instruction *> WorkList;
-  SmallPtrSet<User *, 8> Visited;
-
-  auto extendWorkList = [&](Use &U) {
-    auto User = U.getUser();
-    if (Visited.count(User))
-      return;
-    Visited.insert(User);
-    if (isa<GetElementPtrInst, PHINode, SelectInst>(User))
-      WorkList.push_back(cast<Instruction>(User));
-  };
-
-  for (auto &U : GV.uses()) {
-    Uses.push_back(&U);
-    extendWorkList(U);
-  }
-
-  while (!WorkList.empty()) {
-    auto *Cur = WorkList.pop_back_val();
-    for (auto &U : Cur->uses()) {
-      Uses.push_back(&U);
-      extendWorkList(U);
-    }
-  }
-}
-
-static bool allPtrInputsInSameClass(GlobalVariable *GV, Instruction *Inst) {
-  unsigned i = isa<SelectInst>(Inst) ? 1 : 0;
-  for (; i < Inst->getNumOperands(); ++i) {
-    Value *Op = Inst->getOperand(i);
-
-    if (isa<ConstantPointerNull>(Op))
-      continue;
-
-    const Value *Obj = getUnderlyingObjectAggressive(Op);
-    if (!isa<GlobalVariable>(Obj))
-      return false;
-
-    // TODO-GFX13: if pointers are derived from two different
-    // global lane-shared, it should still work. The
-    // important part is both must be promotable into vgpr at
-    // the end. It will require one more iteration of processing
-    if (Obj != GV) {
-      LLVM_DEBUG(
-          dbgs()
-          << "Found a select/phi with ptrs derived from two different GVs\n");
-      return false;
-    }
-  }
-  return true;
-}
-
-// Checks if the instruction I is a memset user of the global variable that we
-// can deal with. Currently, only non-volatile memsets that affect the whole
-// global variable are handled.
-static bool isSupportedMemset(MemSetInst *I, const GlobalVariable &GV,
-                              const DataLayout &DL) {
-  using namespace PatternMatch;
-  // For now we only care about non-volatile memsets that affect the whole
-  // type (start at index 0 and fill the whole global variable).
-  const unsigned Size = DL.getTypeStoreSize(GV.getValueType());
-  return I->getOperand(0) == &GV &&
-         match(I->getOperand(2), m_SpecificInt(Size)) && !I->isVolatile();
-}
-
-// Check if a lane-shared global variable can be stored in VGPRs, and
-// accumulate a list of use-insts that need to be marked or transformed.
-bool AMDGPUMarkPromotableLaneShared::checkPromotable(GlobalVariable &GV) {
-
-  const auto RejectUser = [&](Instruction *Inst, Twine Msg) {
-    LLVM_DEBUG(dbgs() << "  Cannot promote lane-shared to vgpr: " << Msg << "\n"
-                      << "    " << *Inst << "\n");
-    return false;
-  };
-
-  // TODO-GFX13: Do a proper allocation check across _all_ global variables.
-  if (DL->getTypeStoreSize(GV.getValueType()) > 4 * (1024 - 64)) {
-    LLVM_DEBUG(dbgs() << "  Cannot promote lane-shared to vgpr: too large\n");
-    return false;
-  }
-
-  SmallVector<Use *, 8> Uses;
-  collectUses(GV, Uses);
-
-  for (auto *U : Uses) {
-    Instruction *Inst = dyn_cast<Instruction>(U->getUser());
-    if (!Inst)
-      continue;
-
-    if (Value *Ptr = getLoadStorePointerOperand(Inst)) {
-      // This is a store of the pointer, not to the pointer.
-      if (isa<StoreInst>(Inst) &&
-          U->getOperandNo() != StoreInst::getPointerOperandIndex())
-        return RejectUser(Inst, "pointer is being stored");
-
-      // Check that this is a simple access of a vector element.
-      bool IsSimple = isa<LoadInst>(Inst) ? cast<LoadInst>(Inst)->isSimple()
-                                          : cast<StoreInst>(Inst)->isSimple();
-      if (!IsSimple)
-        return RejectUser(Inst, "not a simple load or store");
-
-      auto Align = isa<LoadInst>(Inst) ? cast<LoadInst>(Inst)->getAlign()
-                                       : cast<StoreInst>(Inst)->getAlign();
-      if (Align < 4u)
-        return RejectUser(Inst, "address is less than dword-aligned");
-
-      Type *AccessTy = getLoadStoreType(Inst);
-      auto DataSize = DL->getTypeAllocSize(AccessTy);
-      if (DataSize % 4)
-        return RejectUser(Inst, "data-size is not supported");
-
-      continue;
-    }
-
-    if (auto *GEP = dyn_cast<GetElementPtrInst>(Inst)) {
-      continue;
-    }
-
-    if (auto *Phi = dyn_cast<PHINode>(Inst)) {
-      if (allPtrInputsInSameClass(&GV, Inst)) {
-        continue;
-      }
-      return RejectUser(Inst, "phi on ptrs from two different GVs");
-    }
-    if (auto *Phi = dyn_cast<SelectInst>(Inst)) {
-      if (allPtrInputsInSameClass(&GV, Inst)) {
-        continue;
-      }
-      return RejectUser(Inst, "select on ptrs from two different GVs");
-    }
-
-    if (MemSetInst *MSI = dyn_cast<MemSetInst>(Inst)) {
-      if (isSupportedMemset(MSI, GV, *DL)) {
-        continue;
-      }
-      return RejectUser(Inst, "cannot handle partial memset inst yet");
-    }
-
-    if (MemTransferInst *TransferInst = dyn_cast<MemTransferInst>(Inst))
-      return RejectUser(Inst, "cannot handle mem transfer inst yet");
-
-    if (auto *Intr = dyn_cast<IntrinsicInst>(Inst)) {
-      if (Intr->getIntrinsicID() == Intrinsic::objectsize) {
-        continue;
-      }
-    }
-
-    // Ignore assume-like intrinsics and comparisons used in assumes.
-    if (isAssumeLikeIntrinsic(Inst)) {
-      assert(Inst->use_empty() &&
-             "does not expect assume-like intrinsic with any user");
-      continue;
-    }
-
-    if (isa<ICmpInst>(Inst)) {
-      if (!all_of(Inst->users(), [](User *U) {
-            return isAssumeLikeIntrinsic(cast<Instruction>(U));
-          }))
-        return RejectUser(Inst, "used in icmp with non-assume-like uses");
-      continue;
-    }
-
-    return RejectUser(Inst, "unhandled global-variable user");
-  }
-  return true;
 }
 
 class AMDGPUMarkPromotableLaneSharedLegacy : public FunctionPass {

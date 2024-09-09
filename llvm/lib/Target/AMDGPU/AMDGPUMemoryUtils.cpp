@@ -14,11 +14,13 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/MemorySSA.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/ReplaceConstant.h"
 
 #define DEBUG_TYPE "amdgpu-memory-utils"
@@ -392,6 +394,171 @@ bool isClobberedInFunction(const LoadInst *Load, MemorySSA *MSSA,
 
   LLVM_DEBUG(dbgs() << "      -> no clobber\n");
   return false;
+}
+
+static void collectUses(GlobalVariable &GV, SmallVectorImpl<Use *> &Uses) {
+  SmallVector<Instruction *> WorkList;
+  SmallPtrSet<User *, 8> Visited;
+
+  auto extendWorkList = [&](Use &U) {
+    auto User = U.getUser();
+    if (Visited.count(User))
+      return;
+    Visited.insert(User);
+    if (isa<GetElementPtrInst, PHINode, SelectInst>(User))
+      WorkList.push_back(cast<Instruction>(User));
+  };
+
+  for (auto &U : GV.uses()) {
+    Uses.push_back(&U);
+    extendWorkList(U);
+  }
+
+  while (!WorkList.empty()) {
+    auto *Cur = WorkList.pop_back_val();
+    for (auto &U : Cur->uses()) {
+      Uses.push_back(&U);
+      extendWorkList(U);
+    }
+  }
+}
+
+static bool allPtrInputsInSameClass(GlobalVariable *GV, Instruction *Inst) {
+  unsigned i = isa<SelectInst>(Inst) ? 1 : 0;
+  for (; i < Inst->getNumOperands(); ++i) {
+    Value *Op = Inst->getOperand(i);
+
+    if (isa<ConstantPointerNull>(Op))
+      continue;
+
+    const Value *Obj = getUnderlyingObjectAggressive(Op);
+    if (!isa<GlobalVariable>(Obj))
+      return false;
+
+    // TODO-GFX13: if pointers are derived from two different
+    // global lane-shared, it should still work. The
+    // important part is both must be promotable into vgpr at
+    // the end. It will require one more iteration of processing
+    if (Obj != GV) {
+      LLVM_DEBUG(
+          dbgs()
+          << "Found a select/phi with ptrs derived from two different GVs\n");
+      return false;
+    }
+  }
+  return true;
+}
+
+// Checks if the instruction I is a memset user of the global variable that we
+// can deal with. Currently, only non-volatile memsets that affect the whole
+// global variable are handled.
+static bool isSupportedMemset(MemSetInst *I, const GlobalVariable &GV,
+                              const DataLayout &DL) {
+  using namespace PatternMatch;
+  // For now we only care about non-volatile memsets that affect the whole
+  // type (start at index 0 and fill the whole global variable).
+  const unsigned Size = DL.getTypeStoreSize(GV.getValueType());
+  return I->getOperand(0) == &GV &&
+         match(I->getOperand(2), m_SpecificInt(Size)) && !I->isVolatile();
+}
+
+bool IsPromotableToVGPR(GlobalVariable &GV, const DataLayout &DL) {
+  const auto RejectUser = [&](Instruction *Inst, Twine Msg) {
+    LLVM_DEBUG(dbgs() << "  Cannot promote lane-shared to vgpr: " << Msg << "\n"
+                      << "    " << *Inst << "\n");
+    return false;
+  };
+
+  // TODO-GFX13: Do a proper allocation check across _all_ global variables.
+  if (DL.getTypeStoreSize(GV.getValueType()) > 4 * (1024 - 64)) {
+    LLVM_DEBUG(dbgs() << "  Cannot promote lane-shared to vgpr: too large\n");
+    return false;
+  }
+
+  SmallVector<Use *, 8> Uses;
+  collectUses(GV, Uses);
+
+  for (auto *U : Uses) {
+    Instruction *Inst = dyn_cast<Instruction>(U->getUser());
+    if (!Inst)
+      continue;
+
+    if (Value *Ptr = getLoadStorePointerOperand(Inst)) {
+      // This is a store of the pointer, not to the pointer.
+      if (isa<StoreInst>(Inst) &&
+          U->getOperandNo() != StoreInst::getPointerOperandIndex())
+        return RejectUser(Inst, "pointer is being stored");
+
+      // Check that this is a simple access of a vector element.
+      bool IsSimple = isa<LoadInst>(Inst) ? cast<LoadInst>(Inst)->isSimple()
+                                          : cast<StoreInst>(Inst)->isSimple();
+      if (!IsSimple)
+        return RejectUser(Inst, "not a simple load or store");
+
+      auto Align = isa<LoadInst>(Inst) ? cast<LoadInst>(Inst)->getAlign()
+                                       : cast<StoreInst>(Inst)->getAlign();
+      if (Align < 4u)
+        return RejectUser(Inst, "address is less than dword-aligned");
+
+      Type *AccessTy = getLoadStoreType(Inst);
+      auto DataSize = DL.getTypeAllocSize(AccessTy);
+      if (DataSize % 4)
+        return RejectUser(Inst, "data-size is not supported");
+
+      continue;
+    }
+
+    if (auto *GEP = dyn_cast<GetElementPtrInst>(Inst)) {
+      continue;
+    }
+
+    if (auto *Phi = dyn_cast<PHINode>(Inst)) {
+      if (allPtrInputsInSameClass(&GV, Inst)) {
+        continue;
+      }
+      return RejectUser(Inst, "phi on ptrs from two different GVs");
+    }
+    if (auto *Phi = dyn_cast<SelectInst>(Inst)) {
+      if (allPtrInputsInSameClass(&GV, Inst)) {
+        continue;
+      }
+      return RejectUser(Inst, "select on ptrs from two different GVs");
+    }
+
+    if (MemSetInst *MSI = dyn_cast<MemSetInst>(Inst)) {
+      if (isSupportedMemset(MSI, GV, DL)) {
+        continue;
+      }
+      return RejectUser(Inst, "cannot handle partial memset inst yet");
+    }
+
+    if (MemTransferInst *TransferInst = dyn_cast<MemTransferInst>(Inst))
+      return RejectUser(Inst, "cannot handle mem transfer inst yet");
+
+    if (auto *Intr = dyn_cast<IntrinsicInst>(Inst)) {
+      if (Intr->getIntrinsicID() == Intrinsic::objectsize) {
+        continue;
+      }
+    }
+
+    // Ignore assume-like intrinsics and comparisons used in assumes.
+    if (isAssumeLikeIntrinsic(Inst)) {
+      assert(Inst->use_empty() &&
+             "does not expect assume-like intrinsic with any user");
+      continue;
+    }
+
+    if (isa<ICmpInst>(Inst)) {
+      if (!all_of(Inst->users(), [](User *U) {
+            return isAssumeLikeIntrinsic(cast<Instruction>(U));
+          }))
+        return RejectUser(Inst, "used in icmp with non-assume-like uses");
+      continue;
+    }
+
+    return RejectUser(Inst, "unhandled global-variable user");
+  }
+  return true;
 }
 
 } // end namespace llvm::AMDGPU
