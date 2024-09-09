@@ -86,9 +86,7 @@ void ObjCPropertyAttributeOrderFixer::sortPropertyAttributes(
       Value = Tok->TokenText;
     }
 
-    auto It = SortOrderMap.find(Attribute);
-    if (It == SortOrderMap.end())
-      It = SortOrderMap.insert({Attribute, SortOrderMap.size()}).first;
+    auto It = SortOrderMap.try_emplace(Attribute, SortOrderMap.size()).first;
 
     // Sort the indices based on the priority stored in `SortOrderMap`.
     const auto Ordinal = It->second;
