@@ -126,9 +126,9 @@ exit:
   ret void
 }
 
-define void @call_scalarized(ptr noalias %src, ptr noalias %dst, double %0) {
+define void @call_scalarized(ptr noalias %src, ptr noalias %dst) {
 ; CHECK-LABEL: define void @call_scalarized(
-; CHECK-SAME: ptr noalias [[SRC:%.*]], ptr noalias [[DST:%.*]], double [[TMP0:%.*]]) {
+; CHECK-SAME: ptr noalias [[SRC:%.*]], ptr noalias [[DST:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
@@ -136,7 +136,7 @@ define void @call_scalarized(ptr noalias %src, ptr noalias %dst, double %0) {
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], -1
 ; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr double, ptr [[SRC]], i64 [[IV_NEXT]]
 ; CHECK-NEXT:    [[L:%.*]] = load double, ptr [[GEP_SRC]], align 8
-; CHECK-NEXT:    [[CMP295:%.*]] = fcmp ugt double [[TMP0]], 0.000000e+00
+; CHECK-NEXT:    [[CMP295:%.*]] = fcmp une double [[L]], 4.000000e+00
 ; CHECK-NEXT:    [[CMP299:%.*]] = fcmp ugt double [[L]], 0.000000e+00
 ; CHECK-NEXT:    [[OR_COND:%.*]] = or i1 [[CMP295]], [[CMP299]]
 ; CHECK-NEXT:    br i1 [[OR_COND]], label %[[LOOP_LATCH]], label %[[THEN:.*]]
@@ -159,7 +159,7 @@ loop.header:
   %iv.next = add i64 %iv, -1
   %gep.src = getelementptr double, ptr %src, i64 %iv.next
   %l = load double, ptr %gep.src, align 8
-  %cmp295 = fcmp ugt double %0, 0.000000e+00
+  %cmp295 = fcmp une double %l, 4.000000e+00
   %cmp299 = fcmp ugt double %l, 0.000000e+00
   %or.cond = or i1 %cmp295, %cmp299
   br i1 %or.cond, label %loop.latch, label %then
