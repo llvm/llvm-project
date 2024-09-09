@@ -4172,6 +4172,26 @@ ExpectedDecl ASTNodeImporter::VisitFieldDecl(FieldDecl *D) {
   if (ToD)
     return ToD;
 
+  // Implicit imports of external fields may import the same field
+  // *after* we check for its presence with findDeclsInToCtx. If this
+  // happens we may import the field twice and break the record
+  // type.
+  //
+  // Force import the context now to avoid this problem.
+  DC->decls_begin();
+  LexicalDC->decls_begin();
+
+  // C++ types may cause an import of fields later, so force import them too.
+  Error Err = Error::success();
+  auto ToType = importChecked(Err, D->getType());
+  if (!ToType.isNull()) {
+    if (const auto *RT = ToType->getAs<RecordType>()) {
+      if (const auto *ClassDecl = dyn_cast<CXXRecordDecl>(RT->getDecl())) {
+        ClassDecl->decls_begin();
+      }
+    }
+  }
+
   // Determine whether we've already imported this field.
   auto FoundDecls = Importer.findDeclsInToCtx(DC, Name);
   for (auto *FoundDecl : FoundDecls) {
@@ -4217,8 +4237,6 @@ ExpectedDecl ASTNodeImporter::VisitFieldDecl(FieldDecl *D) {
     }
   }
 
-  Error Err = Error::success();
-  auto ToType = importChecked(Err, D->getType());
   auto ToTInfo = importChecked(Err, D->getTypeSourceInfo());
   auto ToBitWidth = importChecked(Err, D->getBitWidth());
   auto ToInnerLocStart = importChecked(Err, D->getInnerLocStart());
