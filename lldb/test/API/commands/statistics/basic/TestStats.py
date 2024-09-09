@@ -944,7 +944,9 @@ class TestCase(TestBase):
         self.assertIn("'totalTime':", summary_provider_str)
         # We may hit the std::string C++ provider, or a summary provider string
         self.assertIn("'type':", summary_provider_str)
-        self.assertTrue("c++" in summary_provider_str or "string" in summary_provider_str)
+        self.assertTrue(
+            "c++" in summary_provider_str or "string" in summary_provider_str
+        )
 
         self.runCmd("continue")
         self.runCmd("command script import BoxFormatter.py")
