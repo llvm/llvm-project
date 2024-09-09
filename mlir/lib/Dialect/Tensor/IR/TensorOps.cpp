@@ -3443,6 +3443,8 @@ struct FoldConsecutiveConstantPadding : public OpRewritePattern<tensor::PadOp> {
     }
 
     Location loc = padOp.getLoc();
+    AffineExpr d0, d1;
+    bindDims(rewriter.getContext(), d0, d1);
 
     // Combine the low/high paddings of the two tensor::PadOps.
     auto addPaddings = [&](ArrayRef<OpFoldResult> consumerPaddings,
@@ -3450,19 +3452,8 @@ struct FoldConsecutiveConstantPadding : public OpRewritePattern<tensor::PadOp> {
       SmallVector<OpFoldResult> sumPaddings;
       for (auto [consumerIndex, producerIndex] :
            llvm::zip_equal(consumerPaddings, producerPaddings)) {
-        Value consumerIndexVal =
-            getValueOrCreateConstantIndexOp(rewriter, loc, consumerIndex);
-        Value producerIndexVal =
-            getValueOrCreateConstantIndexOp(rewriter, loc, producerIndex);
-        Value sum = rewriter.createOrFold<arith::AddIOp>(loc, consumerIndexVal,
-                                                         producerIndexVal);
-        APInt constantSum;
-        if (matchPattern(sum, m_ConstantInt(&constantSum))) {
-          sumPaddings.push_back(
-              rewriter.getIndexAttr(constantSum.getSExtValue()));
-        } else {
-          sumPaddings.push_back(sum);
-        }
+        sumPaddings.push_back(affine::makeComposedFoldedAffineApply(
+            rewriter, loc, d0 + d1, {consumerIndex, producerIndex}));
       }
       return sumPaddings;
     };

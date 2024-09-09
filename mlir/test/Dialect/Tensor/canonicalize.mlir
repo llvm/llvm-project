@@ -1984,12 +1984,12 @@ func.func @merge_constant_padding(%arg0: tensor<2x3xf32>, %pad_value: f32) -> te
 
 // -----
 
+//       CHECK: #[[$MAP:.*]] = affine_map<()[s0] -> (s0 + 1)>
 // CHECK-LABEL: func @merge_constant_padding_dynamic
 //  CHECK-SAME:   %[[ARG0:[A-Za-z0-9]+]]: tensor<?x?xf32>
 //  CHECK-SAME:   %[[IDX:[A-Za-z0-9]+]]: index
 //  CHECK-SAME:   %[[PADVAL:[A-Za-z0-9]+]]: f32
-//       CHECK:   %[[C1:.+]] = arith.constant 1 : index
-//       CHECK:   %[[HIGH:.+]] = arith.addi %[[IDX]], %[[C1]] : index
+//       CHECK:   %[[HIGH:.+]] = affine.apply #[[$MAP]]()[%[[IDX]]]
 //       CHECK:   %[[PAD:.+]] = tensor.pad %[[ARG0]] low[%[[IDX]], 3] high[%[[HIGH]], 2]
 //       CHECK:     tensor.yield %[[PADVAL]]
 //       CHECK:   return %[[PAD]]
