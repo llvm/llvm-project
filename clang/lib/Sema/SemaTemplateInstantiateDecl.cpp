@@ -5481,10 +5481,7 @@ void Sema::InstantiateVariableInitializer(
     EnterExpressionEvaluationContext Evaluated(
         *this, Sema::ExpressionEvaluationContext::PotentiallyEvaluated, Var);
 
-    currentEvaluationContext().InLifetimeExtendingContext =
-        parentEvaluationContext().InLifetimeExtendingContext;
-    currentEvaluationContext().RebuildDefaultArgOrDefaultInit =
-        parentEvaluationContext().RebuildDefaultArgOrDefaultInit;
+    keepInLifetimeExtendingContext();
     // Instantiate the initializer.
     ExprResult Init;
 
