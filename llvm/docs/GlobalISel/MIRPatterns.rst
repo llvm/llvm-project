@@ -636,8 +636,8 @@ using wip_match_opcode in patterns. It can lead to imprecise patterns.
   class ext_of_ext_opcodes<Instruction ext1Opcode, Instruction ext2Opcode> : GICombineRule <
     (defs root:$root, build_fn_matchinfo:$matchinfo),
     (match (ext2Opcode $second, $src):$Second,
-         (ext1Opcode $root, $second):$First,
-         [{ return Helper.matchExtOfExt(*${First}, *${Second}, ${matchinfo}); }]),
+           (ext1Opcode $root, $second):$First,
+           [{ return Helper.matchExtOfExt(*${First}, *${Second}, ${matchinfo}); }]),
     (apply [{ Helper.applyBuildFn(*${First}, ${matchinfo}); }])>;
 
   def zext_of_zext : ext_of_ext_opcodes<G_ZEXT, G_ZEXT>;
