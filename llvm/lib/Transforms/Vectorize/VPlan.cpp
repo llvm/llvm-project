@@ -935,17 +935,17 @@ void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
   IRBuilder<> Builder(State.CFG.PrevBB->getTerminator());
   // FIXME: Model VF * UF computation completely in VPlan.
   assert(VFxUF.getNumUsers() && "VFxUF expected to always have users");
+  Type *TCTy = TripCountV->getType();
   if (VF.getNumUsers()) {
-    Value *RuntimeVF = getRuntimeVF(Builder, TripCountV->getType(), State.VF);
+    Value *RuntimeVF = getRuntimeVF(Builder, TCTy, State.VF);
     VF.setUnderlyingValue(RuntimeVF);
     VFxUF.setUnderlyingValue(
         State.UF > 1
-            ? Builder.CreateMul(
-                  RuntimeVF, ConstantInt::get(TripCountV->getType(), State.UF))
+            ? Builder.CreateMul(RuntimeVF, ConstantInt::get(TCTy, State.UF))
             : RuntimeVF);
   } else {
     VFxUF.setUnderlyingValue(
-        createStepForVF(Builder, TripCountV->getType(), State.VF, State.UF));
+        createStepForVF(Builder, TCTy, State.VF, State.UF));
   }
 
   // When vectorizing the epilogue loop, the canonical induction start value
