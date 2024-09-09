@@ -42,6 +42,7 @@
 #include "llvm/ADT/PointerEmbeddedInt.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Frontend/OpenMP/OMPAssume.h"
@@ -3707,6 +3708,17 @@ getMapClauseKindFromModifier(OpenMPDefaultmapClauseModifier M,
 }
 
 namespace {
+struct VariableImplicitInfo {
+  static const unsigned MapKindNum = OMPC_MAP_unknown;
+  static const unsigned DefaultmapKindNum = OMPC_DEFAULTMAP_unknown + 1;
+
+  llvm::SetVector<Expr *> Privates;
+  llvm::SetVector<Expr *> Firstprivates;
+  llvm::SetVector<Expr *> Mappings[DefaultmapKindNum][MapKindNum];
+  llvm::SmallVector<OpenMPMapModifierKind, NumberOfOMPMapClauseModifiers>
+      MapModifiers[DefaultmapKindNum];
+};
+
 class DSAAttrChecker final : public StmtVisitor<DSAAttrChecker, void> {
   DSAStackTy *Stack;
   Sema &SemaRef;
@@ -3714,12 +3726,8 @@ class DSAAttrChecker final : public StmtVisitor<DSAAttrChecker, void> {
   bool ErrorFound = false;
   bool TryCaptureCXXThisMembers = false;
   CapturedStmt *CS = nullptr;
-  const static unsigned DefaultmapKindNum = OMPC_DEFAULTMAP_unknown + 1;
-  llvm::SmallVector<Expr *, 4> ImplicitFirstprivate;
-  llvm::SmallVector<Expr *, 4> ImplicitPrivate;
-  llvm::SmallVector<Expr *, 4> ImplicitMap[DefaultmapKindNum][OMPC_MAP_delete];
-  llvm::SmallVector<OpenMPMapModifierKind, NumberOfOMPMapClauseModifiers>
-      ImplicitMapModifier[DefaultmapKindNum];
+
+  VariableImplicitInfo ImpInfo;
   SemaOpenMP::VarsWithInheritedDSAType VarsWithInheritedDSA;
   llvm::SmallDenseSet<const ValueDecl *, 4> ImplicitDeclarations;
 
@@ -3871,9 +3879,9 @@ public:
         bool IsModifierPresent = Stack->getDefaultmapModifier(ClauseKind) ==
                                  OMPC_DEFAULTMAP_MODIFIER_present;
         if (IsModifierPresent) {
-          if (!llvm::is_contained(ImplicitMapModifier[ClauseKind],
+          if (!llvm::is_contained(ImpInfo.MapModifiers[ClauseKind],
                                   OMPC_MAP_MODIFIER_present)) {
-            ImplicitMapModifier[ClauseKind].push_back(
+            ImpInfo.MapModifiers[ClauseKind].push_back(
                 OMPC_MAP_MODIFIER_present);
           }
         }
@@ -3913,13 +3921,13 @@ public:
           IsFirstprivate =
               IsFirstprivate || (Stack->mustBeFirstprivate(ClauseKind) && !Res);
           if (IsFirstprivate) {
-            ImplicitFirstprivate.emplace_back(E);
+            ImpInfo.Firstprivates.insert(E);
           } else {
             OpenMPDefaultmapClauseModifier M =
                 Stack->getDefaultmapModifier(ClauseKind);
             OpenMPMapClauseKind Kind = getMapClauseKindFromModifier(
                 M, ClauseKind == OMPC_DEFAULTMAP_aggregate || Res);
-            ImplicitMap[ClauseKind][Kind].emplace_back(E);
+            ImpInfo.Mappings[ClauseKind][Kind].insert(E);
           }
           return;
         }
@@ -3956,9 +3964,9 @@ public:
             !DVar.RefExpr)) &&
           !Stack->isLoopControlVariable(VD).first) {
         if (Stack->getDefaultDSA() == DSA_private)
-          ImplicitPrivate.push_back(E);
+          ImpInfo.Privates.insert(E);
         else
-          ImplicitFirstprivate.push_back(E);
+          ImpInfo.Firstprivates.insert(E);
         return;
       }
 
@@ -4015,7 +4023,7 @@ public:
             getVariableCategoryFromDecl(SemaRef.getLangOpts(), FD);
         OpenMPMapClauseKind Kind = getMapClauseKindFromModifier(
             Modifier, /*IsAggregateOrDeclareTarget=*/true);
-        ImplicitMap[ClauseKind][Kind].emplace_back(E);
+        ImpInfo.Mappings[ClauseKind][Kind].insert(E);
         return;
       }
 
@@ -4050,7 +4058,7 @@ public:
         // expression.
         // TODO: try to make it firstprivate.
         if (DVar.CKind != OMPC_unknown)
-          ImplicitFirstprivate.push_back(E);
+          ImpInfo.Firstprivates.insert(E);
       }
       return;
     }
@@ -4172,18 +4180,7 @@ public:
     }
   }
   bool isErrorFound() const { return ErrorFound; }
-  ArrayRef<Expr *> getImplicitFirstprivate() const {
-    return ImplicitFirstprivate;
-  }
-  ArrayRef<Expr *> getImplicitPrivate() const { return ImplicitPrivate; }
-  ArrayRef<Expr *> getImplicitMap(OpenMPDefaultmapClauseKind DK,
-                                  OpenMPMapClauseKind MK) const {
-    return ImplicitMap[DK][MK];
-  }
-  ArrayRef<OpenMPMapModifierKind>
-  getImplicitMapModifier(OpenMPDefaultmapClauseKind Kind) const {
-    return ImplicitMapModifier[Kind];
-  }
+  const VariableImplicitInfo &getImplicitInfo() const { return ImpInfo; }
   const SemaOpenMP::VarsWithInheritedDSAType &getVarsWithInheritedDSA() const {
     return VarsWithInheritedDSA;
   }
@@ -6060,69 +6057,56 @@ StmtResult SemaOpenMP::ActOnOpenMPExecutableDirective(
       return StmtError();
     // Generate list of implicitly defined firstprivate variables.
     VarsWithInheritedDSA = DSAChecker.getVarsWithInheritedDSA();
+    VariableImplicitInfo ImpInfo = DSAChecker.getImplicitInfo();
 
-    SmallVector<Expr *, 4> ImplicitFirstprivates(
-        DSAChecker.getImplicitFirstprivate());
-    SmallVector<Expr *, 4> ImplicitPrivates(DSAChecker.getImplicitPrivate());
-    const unsigned DefaultmapKindNum = OMPC_DEFAULTMAP_unknown + 1;
-    SmallVector<Expr *, 4> ImplicitMaps[DefaultmapKindNum][OMPC_MAP_delete];
-    SmallVector<OpenMPMapModifierKind, NumberOfOMPMapClauseModifiers>
-        ImplicitMapModifiers[DefaultmapKindNum];
     SmallVector<SourceLocation, NumberOfOMPMapClauseModifiers>
-        ImplicitMapModifiersLoc[DefaultmapKindNum];
+        ImplicitMapModifiersLoc[VariableImplicitInfo::DefaultmapKindNum];
     // Get the original location of present modifier from Defaultmap clause.
-    SourceLocation PresentModifierLocs[DefaultmapKindNum];
+    SourceLocation PresentModifierLocs[VariableImplicitInfo::DefaultmapKindNum];
     for (OMPClause *C : Clauses) {
       if (auto *DMC = dyn_cast<OMPDefaultmapClause>(C))
         if (DMC->getDefaultmapModifier() == OMPC_DEFAULTMAP_MODIFIER_present)
           PresentModifierLocs[DMC->getDefaultmapKind()] =
               DMC->getDefaultmapModifierLoc();
     }
-    for (unsigned VC = 0; VC < DefaultmapKindNum; ++VC) {
-      auto K = static_cast<OpenMPDefaultmapClauseKind>(VC);
-      for (unsigned I = 0; I < OMPC_MAP_delete; ++I) {
-        ArrayRef<Expr *> ImplicitMap =
-            DSAChecker.getImplicitMap(K, static_cast<OpenMPMapClauseKind>(I));
-        ImplicitMaps[VC][I].append(ImplicitMap.begin(), ImplicitMap.end());
-      }
-      ArrayRef<OpenMPMapModifierKind> ImplicitModifier =
-          DSAChecker.getImplicitMapModifier(K);
-      ImplicitMapModifiers[VC].append(ImplicitModifier.begin(),
-                                      ImplicitModifier.end());
-      std::fill_n(std::back_inserter(ImplicitMapModifiersLoc[VC]),
-                  ImplicitModifier.size(), PresentModifierLocs[VC]);
+
+    for (OpenMPDefaultmapClauseKind K :
+         llvm::enum_seq_inclusive<OpenMPDefaultmapClauseKind>(
+             OpenMPDefaultmapClauseKind(), OMPC_DEFAULTMAP_unknown)) {
+      std::fill_n(std::back_inserter(ImplicitMapModifiersLoc[K]),
+                  ImpInfo.MapModifiers[K].size(), PresentModifierLocs[K]);
     }
     // Mark taskgroup task_reduction descriptors as implicitly firstprivate.
     for (OMPClause *C : Clauses) {
       if (auto *IRC = dyn_cast<OMPInReductionClause>(C)) {
         for (Expr *E : IRC->taskgroup_descriptors())
           if (E)
-            ImplicitFirstprivates.emplace_back(E);
+            ImpInfo.Firstprivates.insert(E);
       }
       // OpenMP 5.0, 2.10.1 task Construct
       // [detach clause]... The event-handle will be considered as if it was
       // specified on a firstprivate clause.
       if (auto *DC = dyn_cast<OMPDetachClause>(C))
-        ImplicitFirstprivates.push_back(DC->getEventHandler());
+        ImpInfo.Firstprivates.insert(DC->getEventHandler());
     }
-    if (!ImplicitFirstprivates.empty()) {
+    if (!ImpInfo.Firstprivates.empty()) {
       if (OMPClause *Implicit = ActOnOpenMPFirstprivateClause(
-              ImplicitFirstprivates, SourceLocation(), SourceLocation(),
-              SourceLocation())) {
+              ImpInfo.Firstprivates.getArrayRef(), SourceLocation(),
+              SourceLocation(), SourceLocation())) {
         ClausesWithImplicit.push_back(Implicit);
         ErrorFound = cast<OMPFirstprivateClause>(Implicit)->varlist_size() !=
-                     ImplicitFirstprivates.size();
+                     ImpInfo.Firstprivates.size();
       } else {
         ErrorFound = true;
       }
     }
-    if (!ImplicitPrivates.empty()) {
-      if (OMPClause *Implicit =
-              ActOnOpenMPPrivateClause(ImplicitPrivates, SourceLocation(),
-                                       SourceLocation(), SourceLocation())) {
+    if (!ImpInfo.Privates.empty()) {
+      if (OMPClause *Implicit = ActOnOpenMPPrivateClause(
+              ImpInfo.Privates.getArrayRef(), SourceLocation(),
+              SourceLocation(), SourceLocation())) {
         ClausesWithImplicit.push_back(Implicit);
         ErrorFound = cast<OMPPrivateClause>(Implicit)->varlist_size() !=
-                     ImplicitPrivates.size();
+                     ImpInfo.Privates.size();
       } else {
         ErrorFound = true;
       }
@@ -6152,9 +6136,10 @@ StmtResult SemaOpenMP::ActOnOpenMPExecutableDirective(
           ClausesWithImplicit.emplace_back(Implicit);
       }
     }
-    for (unsigned I = 0, E = DefaultmapKindNum; I < E; ++I) {
+    for (unsigned I = 0; I < VariableImplicitInfo::DefaultmapKindNum; ++I) {
       int ClauseKindCnt = -1;
-      for (ArrayRef<Expr *> ImplicitMap : ImplicitMaps[I]) {
+      for (unsigned J = 0; J < VariableImplicitInfo::MapKindNum; ++J) {
+        ArrayRef<Expr *> ImplicitMap = ImpInfo.Mappings[I][J].getArrayRef();
         ++ClauseKindCnt;
         if (ImplicitMap.empty())
           continue;
@@ -6162,7 +6147,7 @@ StmtResult SemaOpenMP::ActOnOpenMPExecutableDirective(
         DeclarationNameInfo MapperId;
         auto K = static_cast<OpenMPMapClauseKind>(ClauseKindCnt);
         if (OMPClause *Implicit = ActOnOpenMPMapClause(
-                nullptr, ImplicitMapModifiers[I], ImplicitMapModifiersLoc[I],
+                nullptr, ImpInfo.MapModifiers[I], ImplicitMapModifiersLoc[I],
                 MapperIdScopeSpec, MapperId, K, /*IsMapTypeImplicit=*/true,
                 SourceLocation(), SourceLocation(), ImplicitMap,
                 OMPVarListLocTy())) {

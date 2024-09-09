@@ -39,7 +39,7 @@ DataSharingProcessor::DataSharingProcessor(
     const List<Clause> &clauses, lower::pft::Evaluation &eval,
     bool shouldCollectPreDeterminedSymbols, bool useDelayedPrivatization,
     lower::SymMap *symTable)
-    : hasLastPrivateOp(false), converter(converter), semaCtx(semaCtx),
+    : converter(converter), semaCtx(semaCtx),
       firOpBuilder(converter.getFirOpBuilder()), clauses(clauses), eval(eval),
       shouldCollectPreDeterminedSymbols(shouldCollectPreDeterminedSymbols),
       useDelayedPrivatization(useDelayedPrivatization), symTable(symTable),
@@ -64,9 +64,8 @@ void DataSharingProcessor::processStep1(
 void DataSharingProcessor::processStep2(mlir::Operation *op, bool isLoop) {
   // 'sections' lastprivate is handled by genOMP()
   if (!mlir::isa<mlir::omp::SectionsOp>(op)) {
-    insPt = firOpBuilder.saveInsertionPoint();
+    mlir::OpBuilder::InsertionGuard guard(firOpBuilder);
     copyLastPrivatize(op);
-    firOpBuilder.restoreInsertionPoint(insPt);
   }
 
   if (isLoop) {
@@ -157,7 +156,6 @@ void DataSharingProcessor::collectSymbolsForPrivatization() {
                    std::get_if<omp::clause::Lastprivate>(&clause.u)) {
       const ObjectList &objects = std::get<ObjectList>(lastPrivateClause->t);
       collectOmpObjectListSymbol(objects, explicitlyPrivatizedSymbols);
-      hasLastPrivateOp = true;
     }
   }
 

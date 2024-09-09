@@ -108,6 +108,9 @@ C++ Language Changes
 - Allow single element access of GCC vector/ext_vector_type object to be
   constant expression. Supports the `V.xyzw` syntax and other tidbits
   as seen in OpenCL. Selecting multiple elements is left as a future work.
+- Implement `CWG1815 <https://wg21.link/CWG1815>`_. Support lifetime extension 
+  of temporary created by aggregate initialization using a default member
+  initializer.
 
 - Accept C++26 user-defined ``static_assert`` messages in C++11 as an extension.
 
@@ -159,6 +162,9 @@ Resolutions to C++ Defect Reports
 
 - Allow ``void{}`` as a prvalue of type ``void``.
   (`CWG2351: void{} <https://cplusplus.github.io/CWG/issues/2351.html>`_).
+
+- Clang now has improved resolution to CWG2398, allowing class templates to have
+  default arguments deduced when partial ordering.
 
 - Clang now allows comparing unequal object pointers that have been cast to ``void *``
   in constant expressions. These comparisons always worked in non-constant expressions.
@@ -287,6 +293,8 @@ Improvements to Clang's diagnostics
 
 - The lifetimebound and GSL analysis in clang are coherent, allowing clang to
   detect more use-after-free bugs. (#GH100549).
+
+- Clang now diagnoses dangling cases where a gsl-pointer is constructed from a gsl-owner object inside a container (#GH100384).
 
 - Clang now warns for u8 character literals used in C23 with ``-Wpre-c23-compat`` instead of ``-Wpre-c++17-compat``.
 
