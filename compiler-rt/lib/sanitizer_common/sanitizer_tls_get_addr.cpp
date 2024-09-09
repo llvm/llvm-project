@@ -110,9 +110,8 @@ SANITIZER_WEAK_ATTRIBUTE
 const void *__sanitizer_get_allocated_begin(const void *p);
 }
 
-static bool GetDTLSRange(uptr& tls_beg, uptr& tls_size) {
-  const void *start =
-                 __sanitizer_get_allocated_begin((void *)tls_beg);
+static bool GetDTLSRange(uptr &tls_beg, uptr &tls_size) {
+  const void *start = __sanitizer_get_allocated_begin((void *)tls_beg);
   if (!start)
     return false;
   tls_beg = (uptr)start;
