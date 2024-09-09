@@ -300,7 +300,7 @@ def testPrintIrAfterAll():
         pm = PassManager.parse("builtin.module(canonicalize)")
         ctx.enable_multithreading(False)
         pm.enable_ir_printing()
-        # CHECK: // -----// IR Dump After Canonicalizer (canonicalize) ('builtin.module' operation) //----- //
+        # CHECK: // -----// IR Dump After Canonicalizer (canonicalize) //----- //
         # CHECK: module {
         # CHECK:   func.func @main() {
         # CHECK:     return
@@ -326,14 +326,14 @@ def testPrintIrBeforeAndAfterAll():
         pm = PassManager.parse("builtin.module(canonicalize)")
         ctx.enable_multithreading(False)
         pm.enable_ir_printing(print_before_all=True, print_after_all=True)
-        # CHECK: // -----// IR Dump Before Canonicalizer (canonicalize) ('builtin.module' operation) //----- //
+        # CHECK: // -----// IR Dump Before Canonicalizer (canonicalize) //----- //
         # CHECK: module {
         # CHECK:   func.func @main() {
         # CHECK:     %[[C10:.*]] = arith.constant 10 : i64
         # CHECK:     return
         # CHECK:   }
         # CHECK: }
-        # CHECK: // -----// IR Dump After Canonicalizer (canonicalize) ('builtin.module' operation) //----- //
+        # CHECK: // -----// IR Dump After Canonicalizer (canonicalize) //----- //
         # CHECK: module {
         # CHECK:   func.func @main() {
         # CHECK:     return
