@@ -36,6 +36,7 @@ def parse_args_and_run():
     parser.add_argument(
         "--root_dir", type=str, help="The root dir of module paths to combine."
     )
+    # TODO(#107898): Refactor this into a common location.
     parser.add_argument(
         "--verbosity",
         type=str,
