@@ -273,20 +273,7 @@ __handle_replacement_field(_Iterator __begin, _Iterator __end, _ParseCtx& __pars
     else if (__parse)
       __format::__compile_time_visit_format_arg(__parse_ctx, __ctx, __type);
   } else
-    std::__visit_format_arg(
-        [&](auto __arg) {
-          if constexpr (same_as<decltype(__arg), monostate>)
-            std::__throw_format_error("The argument index value is too large for the number of arguments supplied");
-          else if constexpr (same_as<decltype(__arg), typename basic_format_arg<_Ctx>::handle>)
-            __arg.format(__parse_ctx, __ctx);
-          else {
-            formatter<decltype(__arg), _CharT> __formatter;
-            if (__parse)
-              __parse_ctx.advance_to(__formatter.parse(__parse_ctx));
-            __ctx.advance_to(__formatter.format(__arg, __ctx));
-          }
-        },
-        __ctx.arg(__r.__value));
+    __ctx.arg(__r.__value).__value_.__visit(__parse_ctx, __ctx, __parse);
 
   __begin = __parse_ctx.begin();
   if (__begin == __end || *__begin != _CharT('}'))

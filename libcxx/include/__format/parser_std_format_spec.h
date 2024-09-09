@@ -54,13 +54,21 @@ namespace __format_spec {
 
 _LIBCPP_NORETURN _LIBCPP_HIDE_FROM_ABI inline void
 __throw_invalid_option_format_error(const char* __id, const char* __option) {
+# ifndef _LIBCPP_HAS_NO_EXCEPTIONS
   std::__throw_format_error(
       (string("The format specifier for ") + __id + " does not allow the " + __option + " option").c_str());
+# else
+  std::__throw_format_error("The format specifier does not allow the given option");
+# endif
 }
 
 _LIBCPP_NORETURN _LIBCPP_HIDE_FROM_ABI inline void __throw_invalid_type_format_error(const char* __id) {
+# ifndef _LIBCPP_HAS_NO_EXCEPTIONS
   std::__throw_format_error(
       (string("The type option contains an invalid value for ") + __id + " formatting argument").c_str());
+# else
+  std::__throw_format_error("The format specifier uses an invalid value for the type option");
+# endif
 }
 
 template <contiguous_iterator _Iterator, class _ParseContext>
