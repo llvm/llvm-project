@@ -27,7 +27,8 @@ module {
   cir.global external @alpha = #cir.const_array<[#cir.int<97> : !s8i, #cir.int<98> : !s8i, #cir.int<99> : !s8i, #cir.int<0> : !s8i]> : !cir.array<!s8i x 4>
   cir.global "private" constant internal @".str" = #cir.const_array<"example\00" : !cir.array<!s8i x 8>> : !cir.array<!s8i x 8> {alignment = 1 : i64}
   cir.global external @s = #cir.global_view<@".str"> : !cir.ptr<!s8i>
-  // MLIR: llvm.mlir.global internal constant @".str"("example\00") {addr_space = 0 : i32}
+  // MLIR: llvm.mlir.global internal constant @".str"("example\00")
+  // MLIR-SAME: {addr_space = 0 : i32, alignment = 1 : i64}
   // MLIR: llvm.mlir.global external @s() {addr_space = 0 : i32} : !llvm.ptr {
   // MLIR:   %0 = llvm.mlir.addressof @".str" : !llvm.ptr
   // MLIR:   %1 = llvm.bitcast %0 : !llvm.ptr to !llvm.ptr
