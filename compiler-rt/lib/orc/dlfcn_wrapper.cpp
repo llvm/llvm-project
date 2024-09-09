@@ -16,7 +16,7 @@
 
 #include <vector>
 
-using namespace __orc_rt;
+using namespace orc_rt;
 
 extern "C" const char *__orc_rt_jit_dlerror();
 extern "C" void *__orc_rt_jit_dlopen(const char *path, int mode);
