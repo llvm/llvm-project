@@ -2730,11 +2730,9 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
 
     // LowerVectorINT_TO_FP:
     { ISD::SINT_TO_FP, MVT::v2f32, MVT::v2i32, 1 },
-    { ISD::SINT_TO_FP, MVT::v3f32, MVT::v3i32, 1 },
     { ISD::SINT_TO_FP, MVT::v4f32, MVT::v4i32, 1 },
     { ISD::SINT_TO_FP, MVT::v2f64, MVT::v2i64, 1 },
     { ISD::UINT_TO_FP, MVT::v2f32, MVT::v2i32, 1 },
-    { ISD::UINT_TO_FP, MVT::v3f32, MVT::v3i32, 1 },
     { ISD::UINT_TO_FP, MVT::v4f32, MVT::v4i32, 1 },
     { ISD::UINT_TO_FP, MVT::v2f64, MVT::v2i64, 1 },
 
@@ -2745,12 +2743,6 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     { ISD::UINT_TO_FP, MVT::v2f32, MVT::v2i8,  3 },
     { ISD::UINT_TO_FP, MVT::v2f32, MVT::v2i16, 3 },
     { ISD::UINT_TO_FP, MVT::v2f32, MVT::v2i64, 2 },
-
-    // Complex: to v3f32
-    { ISD::SINT_TO_FP, MVT::v3f32, MVT::v3i8,  4 },
-    { ISD::SINT_TO_FP, MVT::v3f32, MVT::v3i16, 2 },
-    { ISD::UINT_TO_FP, MVT::v3f32, MVT::v3i8,  3 },
-    { ISD::UINT_TO_FP, MVT::v3f32, MVT::v3i16, 2 },
 
     // Complex: to v4f32
     { ISD::SINT_TO_FP, MVT::v4f32, MVT::v4i8,  4 },
@@ -2967,8 +2959,9 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
             CostKind, I));
   }
 
-  if (const auto *Entry = ConvertCostTableLookup(
-          ConversionTbl, ISD, DstTy.getSimpleVT(), SrcTy.getSimpleVT()))
+  if (const auto *Entry = ConvertCostTableLookup(ConversionTbl, ISD,
+                                                 DstTy.getSimpleVT(),
+                                                 SrcTy.getSimpleVT()))
     return AdjustCost(Entry->Cost);
 
   static const TypeConversionCostTblEntry FP16Tbl[] = {
