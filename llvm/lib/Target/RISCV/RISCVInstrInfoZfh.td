@@ -41,7 +41,6 @@ def GPRAsFPR16 : AsmOperandClass {
 
 def FPR16INX : RegisterOperand<GPRF16> {
   let ParserMatchClass = GPRAsFPR16;
-  let DecoderMethod = "DecodeGPRF16RegisterClass";
 }
 
 def ZfhExt     : ExtInfo<"", "", [HasStdExtZfh],
