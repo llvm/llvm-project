@@ -16,7 +16,7 @@
 // XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
 // HWASAN replaces TRAP with abort or error exit code.
 // XFAIL: hwasan
-// ADDITIONAL_COMPILE_FLAGS: -U_LIBCPP_HARDENING_MODE -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_EXTENSIVE
+// ADDITIONAL_COMPILE_FLAGS: -fcontract-group-evaluation-semantic=std.compatible_allocator=quick_enforce,std.internal=ignore
 
 #include <cassert>
 #include "check_assertion.h"

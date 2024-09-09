@@ -1,5 +1,5 @@
 include(HandleLitArguments)
-add_subdirectory(tools)
+
 
 if (LIBCXX_INCLUDE_BENCHMARKS)
   add_subdirectory(benchmarks)

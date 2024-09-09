@@ -172,6 +172,14 @@ DEFAULT_FEATURES = [
         when=lambda cfg: hasCompileFlag(cfg, "-fdelayed-template-parsing"),
     ),
     Feature(
+        name="fcontracts",
+        when=lambda cfg: hasCompileFlag(cfg, "-fcontracts"),
+    ),
+    Feature(
+        name="contract-groups",
+        when=lambda cfg: hasCompileFlag(cfg, "-fcontract-group-evaluation-semantic=std=enforce"),
+    ),
+    Feature(
         name="has-fobjc-arc",
         when=lambda cfg: hasCompileFlag(cfg, "-xobjective-c++ -fobjc-arc")
         and sys.platform.lower().strip() == "darwin",

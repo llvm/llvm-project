@@ -1,0 +1,85 @@
+#ifndef _LIBCPP_CONTRACTS
+#define _LIBCPP_CONTRACTS
+
+#include <__config>
+#include <version>
+#include <source_location>
+
+namespace std::contracts {
+
+enum class assertion_kind : unsigned char {
+  __unknown = 0,
+  pre = 1,
+  post = 2,
+  assert = 3
+};
+using _AssertKind = assertion_kind;
+enum class evaluation_semantic : unsigned char {
+  __unknown = 0,
+  enforce = 1,
+  observe = 2
+};
+using _EvaluationSemantic = evaluation_semantic;
+enum class detection_mode : unsigned char {
+  __unknown = 0,
+  predicate_false = 1,
+  evaluation_exception = 2
+};
+using _DetectionMode = detection_mode;
+
+class contract_violation {
+// no user−accessible constructor
+public:
+  // cannot be copied or moved
+  contract_violation(const contract_violation&) = delete;
+  // cannot be assigned to
+  contract_violation& operator=(const contract_violation&) = delete;
+  ~contract_violation() = default;
+  const char* comment() const noexcept { return __info_.__comment_; }
+
+  _DetectionMode detection_mode() const noexcept { return __info_.__detection_mode_; }
+  assertion_kind kind() const noexcept { return __info_.__kind_; }
+  const char* file_name() const noexcept { return __info_.__file_name_; }
+  unsigned line() const noexcept { return __info_.__line_; }
+
+  evaluation_semantic semantic() const noexcept { return __info_.__semantic_;}
+
+
+    struct _Info {
+        _AssertKind __kind_;
+        _EvaluationSemantic __semantic_;
+        _DetectionMode __detection_mode_;
+
+        const char* __comment_;
+        const char* __file_name_;
+        const char* __function_name_;
+        unsigned __line_;
+    };
+
+  explicit contract_violation(_Info __info) noexcept
+      : __info_(__info) {}
+
+
+  _Info __info_;
+};
+
+
+
+_LIBCPP_EXPORTED_FROM_ABI void invoke_default_contract_violation_handler(const contract_violation&) noexcept;
+
+
+} // namespace std::contracts
+
+_LIBCPP_WEAK void handle_contract_violation(const std::contracts::contract_violation&);
+
+
+extern "C" {
+_LIBCPP_EXPORTED_FROM_ABI
+void __handle_contract_violation(unsigned kind, unsigned eval_semantic,
+                                  unsigned detection_mode, const char* comment, const char* file, unsigned line);
+_LIBCPP_EXPORTED_FROM_ABI
+void __handle_contract_violation_new(void*) noexcept;
+}
+
+
+#endif // _LIBCPP_CONTRACTS
