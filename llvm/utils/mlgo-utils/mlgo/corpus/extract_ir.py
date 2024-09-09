@@ -27,7 +27,6 @@ any output.
 import argparse
 import json
 import logging
-import multiprocessing
 
 from mlgo.corpus import extract_ir_lib
 
