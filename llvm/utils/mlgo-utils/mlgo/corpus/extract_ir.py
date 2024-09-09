@@ -20,8 +20,8 @@ specifying -Wl,--save-temps=import -Wl,--thinlto-emit-index-files
 
 To change the logging verbosity, pass an integer representing the desired
 verbosity to the --verbosity flag. Use 0 for all logs, status information,
-and detailed debug information, -1 for solely warnings, and -2 to not produce
-any output.
+and detailed debug information, 30 for solely warnings, and 50 or higher to
+not produce any output.
 """
 
 import argparse
@@ -113,11 +113,20 @@ def parse_args_and_run():
         default=".llvmbc",
         nargs="?",
     )
+    parser.add_argument(
+        "--verbosity",
+        type=int,
+        help="The verbosity level to use for logging",
+        default=0,
+        nargs="?",
+    )
     args = parser.parse_args()
     main(args)
 
 
 def main(args):
+    logging.basicConfig(level=args.verbosity)
+
     objs = []
     if args.input is not None and args.thinlto_build == "local":
         raise ValueError("--thinlto_build=local cannot be run with --input")
