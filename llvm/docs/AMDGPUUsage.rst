@@ -6130,6 +6130,7 @@ following sections:
 * :ref:`amdgpu-amdhsa-memory-model-gfx90a`
 * :ref:`amdgpu-amdhsa-memory-model-gfx942`
 * :ref:`amdgpu-amdhsa-memory-model-gfx10-gfx11`
+* :ref:`amdgpu-amdhsa-memory-model-gfx12`
 
 .. _amdgpu-fence-as:
 
@@ -14081,6 +14082,2246 @@ table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx10-gfx11-table`.
                                                              the seq_load. We
                                                              choose the load to
                                                              make the s_waitcnt be
+                                                             as late as possible
+                                                             so that the store
+                                                             may have already
+                                                             completed.)
+
+                                                         2. *Following
+                                                            instructions same as
+                                                            corresponding load
+                                                            atomic acquire,
+                                                            except must generate
+                                                            all instructions even
+                                                            for OpenCL.*
+     store atomic seq_cst      - singlethread - global   *Same as corresponding
+                               - wavefront    - local    store atomic release,
+                               - workgroup    - generic  except must generate
+                               - agent                   all instructions even
+                               - system                  for OpenCL.*
+     atomicrmw    seq_cst      - singlethread - global   *Same as corresponding
+                               - wavefront    - local    atomicrmw acq_rel,
+                               - workgroup    - generic  except must generate
+                               - agent                   all instructions even
+                               - system                  for OpenCL.*
+     fence        seq_cst      - singlethread *none*     *Same as corresponding
+                               - wavefront               fence acq_rel,
+                               - workgroup               except must generate
+                               - agent                   all instructions even
+                               - system                  for OpenCL.*
+     ============ ============ ============== ========== ================================
+
+
+.. _amdgpu-amdhsa-memory-model-gfx12:
+
+Memory Model GFX12
+++++++++++++++++++++++++
+
+For GFX12:
+
+* Each agent has multiple shader arrays (SA).
+* Each SA has multiple work-group processors (WGP).
+* Each WGP has multiple compute units (CU).
+* Each CU has multiple SIMDs that execute wavefronts.
+* The wavefronts for a single work-group are executed in the same
+  WGP.
+
+  * In CU wavefront execution mode the wavefronts may be executed by different SIMDs
+    in the same CU.
+  * In WGP wavefront execution mode the wavefronts may be executed by different SIMDs
+    in different CUs in the same WGP.
+
+* Each WGP has a single LDS memory shared by the wavefronts of the work-groups
+  executing on it.
+* All LDS operations of a WGP are performed as wavefront wide operations in a
+  global order and involve no caching. Completion is reported to a wavefront in
+  execution order.
+* The LDS memory has multiple request queues shared by the SIMDs of a
+  WGP. Therefore, the LDS operations performed by different wavefronts of a
+  work-group can be reordered relative to each other, which can result in
+  reordering the visibility of vector memory operations with respect to LDS
+  operations of other wavefronts in the same work-group. A ``s_wait_dscnt 0x0``
+  is required to ensure synchronization between LDS operations and
+  vector memory operations between wavefronts of a work-group, but not between
+  operations performed by the same wavefront.
+* The vector memory operations are performed as wavefront wide operations.
+  Vector memory operations are divided in different types. Completion of a
+  vector memory operation is reported to a wavefront in-order within a type,
+  but may be out of order between types. The types of vector memory operations
+  (and their associated ``s_wait`` instructions) are:
+
+  * LDS: ``s_wait_dscnt``
+  * Load (global, scratch, flat, buffer and image): ``s_wait_loadcnt``
+  * Store (global, scratch, flat, buffer and image): ``s_wait_storecnt``
+  * Sample and Gather4: ``s_wait_samplecnt``
+  * BVH: ``s_wait_bvhcnt``
+
+* Vector and scalar memory instructions contain a ``SCOPE`` field with values
+  corresponding to each cache level. The ``SCOPE`` determines whether a cache
+  can complete an operation locally or whether it needs to forward the operation
+  to the next cache level. The ``SCOPE`` values are:
+
+  * ``SCOPE_CU``: Compute Unit (NOTE: not affected by CU/WGP mode)
+  * ``SCOPE_SE``: Shader Engine
+  * ``SCOPE_DEV``: Device/Agent
+  * ``SCOPE_SYS``: System
+
+* When a memory operation with a given ``SCOPE`` reaches a cache with a smaller
+  ``SCOPE`` value, it is forwarded to the next level of cache.
+* When a memory operation with a given ``SCOPE`` reaches a cache with a ``SCOPE``
+  value greater than or equal to its own, the operation can proceed:
+
+  * Reads can hit into the cache
+  * Writes can happen in this cache and the transaction is acknowledged
+    from this level of cache.
+  * RMW operations can be done locally.
+
+* ``global_inv``, ``global_wb`` and ``global_wbinv`` instructions are used to
+  invalidate, write-back and write-back+invalidate caches. The affected
+  cache(s) are controlled by the ``SCOPE:`` of the instruction.
+* ``global_inv`` invalidates caches whose scope is strictly smaller than the
+  instruction's. The invalidation requests cannot be reordered with pending or
+  upcoming memory operations.
+* ``global_wb`` additionally ensures that previous memory operation done at
+  a lower scope level have reached the ``SCOPE:`` of the ``global_wb``.
+* The vector memory operations access a vector L0 cache. There is a single L0
+  cache per CU. Each SIMD of a CU accesses the same L0 cache. Therefore, no
+  special action is required for coherence between the lanes of a single
+  wavefront. To achieve coherence between wavefronts executing in the same
+  work-group:
+
+  * In CU wavefront execution mode, no special action is required.
+  * In WGP wavefront execution mode, a ``global_inv scope:SCOPE_SE`` is required
+    as wavefronts may be executing on SIMDs of different CUs that access different L0s.
+
+* The scalar memory operations access a scalar L0 cache shared by all wavefronts
+  on a WGP. The scalar and vector L0 caches are not coherent. However, scalar
+  operations are used in a restricted way so do not impact the memory model. See
+  :ref:`amdgpu-amdhsa-memory-spaces`.
+* The vector and scalar memory L0 caches use an L1 buffer shared by all WGPs on
+  the same SA. The L1 buffer acts as a bridge to L2 for clients within a SA.
+* The L1 buffers have independent quadrants to service disjoint ranges of virtual
+  addresses.
+* Each L0 cache has a separate request queue per L1 quadrant. Therefore, the
+  vector and scalar memory operations performed by different wavefronts, whether
+  executing in the same or different work-groups (which may be executing on
+  different CUs accessing different L0s), can be reordered relative to each
+  other. Some or all of the wait instructions below are required to ensure
+  synchronization between vector memory operations of different wavefronts. It
+  ensures a previous vector memory operation has completed before executing a
+  subsequent vector memory or LDS operation and so can be used to meet the
+  requirements of acquire, release and sequential consistency.
+
+  * ``s_wait_loadcnt 0x0``
+  * ``s_wait_samplecnt 0x0``
+  * ``s_wait_bvhcnt 0x0``
+  * ``s_wait_storecnt 0x0``
+
+* The L1 buffers use an L2 cache shared by all SAs on the same agent.
+* The L2 cache has independent channels to service disjoint ranges of virtual
+  addresses.
+* Each L1 quadrant of a single SA accesses a different L2 channel. Each L1
+  quadrant has a separate request queue per L2 channel. Therefore, the vector
+  and scalar memory operations performed by wavefronts executing in different
+  work-groups (which may be executing on different SAs) of an agent can be
+  reordered relative to each other. Some or all of the wait instructions below are
+  required to ensure synchronization between vector memory operations of
+  different SAs. It ensures a previous vector memory operation has completed
+  before executing a subsequent vector memory and so can be used to meet the
+  requirements of acquire, release and sequential consistency.
+
+  * ``s_wait_loadcnt 0x0``
+  * ``s_wait_samplecnt 0x0``
+  * ``s_wait_bvhcnt 0x0``
+  * ``s_wait_storecnt 0x0``
+
+* The L2 cache can be kept coherent with other agents, or ranges
+  of virtual addresses can be set up to bypass it to ensure system coherence.
+* A memory attached last level (MALL) cache exists for GPU memory.
+  The MALL cache is fully coherent with GPU memory and has no impact on system
+  coherence. All agents (GPU and CPU) access GPU memory through the MALL cache.
+
+Scalar memory operations are only used to access memory that is proven to not
+change during the execution of the kernel dispatch. This includes constant
+address space and global address space for program scope ``const`` variables.
+Therefore, the kernel machine code does not have to maintain the scalar cache to
+ensure it is coherent with the vector caches. The scalar and vector caches are
+invalidated between kernel dispatches by CP since constant address space data
+may change between kernel dispatch executions. See
+:ref:`amdgpu-amdhsa-memory-spaces`.
+
+For kernarg backing memory:
+
+* CP invalidates caches at the start of each kernel dispatch.
+* On dGPU the kernarg backing memory is accessed as MTYPE UC (uncached) to avoid
+  needing to invalidate the L2 cache.
+* On APU the kernarg backing memory is accessed as MTYPE CC (cache coherent) and
+  so the L2 cache will be coherent with the CPU and other agents.
+
+Scratch backing memory (which is used for the private address space) is accessed
+with MTYPE NC (non-coherent). Since the private address space is only accessed
+by a single thread, and is always write-before-read, there is never a need to
+invalidate these entries from L0.
+
+Wavefronts can be executed in WGP or CU wavefront execution mode:
+
+* In WGP wavefront execution mode the wavefronts of a work-group are executed
+  on the SIMDs of both CUs of the WGP. Therefore, explicit management of the per
+  CU L0 caches is required for work-group synchronization. Also accesses to L1
+  at work-group scope need to be explicitly ordered as the accesses from
+  different CUs are not ordered.
+* In CU wavefront execution mode the wavefronts of a work-group are executed on
+  the SIMDs of a single CU of the WGP. Therefore, all global memory access by
+  the work-group access the same L0 which in turn ensures L1 accesses are
+  ordered and so do not require explicit management of the caches for
+  work-group synchronization.
+
+See ``WGP_MODE`` field in
+:ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table` and
+:ref:`amdgpu-target-features`.
+
+The code sequences used to implement the memory model for GFX12 are defined in
+table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx12-table`.
+
+The mapping of LLVM IR syncscope to GFX12 instruction ``scope`` operands is
+defined in :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table`.
+
+The table only applies if and only if it is directly referenced by an entry in
+:ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx12-table`, and it only applies to
+the instruction in the code sequence that references the table.
+
+  .. table:: AMDHSA Memory Model Code Sequences GFX12 - Instruction Scopes
+     :name: amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table
+
+     =================== =================== ===================
+     LLVM syncscope      CU wavefront        WGP wavefront
+                         execution           execution
+                         mode                mode
+     =================== =================== ===================
+     *none*              ``scope:SCOPE_SYS`` ``scope:SCOPE_SYS``
+     system              ``scope:SCOPE_SYS`` ``scope:SCOPE_SYS``
+     agent               ``scope:SCOPE_DEV`` ``scope:SCOPE_DEV``
+     workgroup           *none*              ``scope:SCOPE_SE``
+     wavefront           *none*              *none*
+     singlethread        *none*              *none*
+     one-as              ``scope:SCOPE_SYS`` ``scope:SCOPE_SYS``
+     system-one-as       ``scope:SCOPE_SYS`` ``scope:SCOPE_SYS``
+     agent-one-as        ``scope:SCOPE_DEV`` ``scope:SCOPE_DEV``
+     workgroup-one-as    *none*              ``scope:SCOPE_SE``
+     wavefront-one-as    *none*              *none*
+     singlethread-one-as *none*              *none*
+     =================== =================== ===================
+
+  .. table:: AMDHSA Memory Model Code Sequences GFX12
+     :name: amdgpu-amdhsa-memory-model-code-sequences-gfx12-table
+
+     ============ ============ ============== ========== ================================
+     LLVM Instr   LLVM Memory  LLVM Memory    AMDGPU     AMDGPU Machine Code
+                  Ordering     Sync Scope     Address    GFX12
+                                              Space
+     ============ ============ ============== ========== ================================
+     **Non-Atomic**
+     ------------------------------------------------------------------------------------
+     load         *none*       *none*         - global   - !volatile & !nontemporal
+                                              - generic
+                                              - private    1. buffer/global/flat_load
+                                              - constant
+                                                         - !volatile & nontemporal
+
+                                                           1. buffer/global/flat_load
+                                                              ``th:TH_LOAD_NT``
+
+                                                         - volatile
+
+                                                           1. buffer/global/flat_load
+                                                              ``scope:SCOPE_SYS``
+
+                                                           2. ``s_wait_loadcnt 0x0``
+
+                                                            - Must happen before
+                                                              any following volatile
+                                                              global/generic
+                                                              load/store.
+                                                            - Ensures that
+                                                              volatile
+                                                              operations to
+                                                              different
+                                                              addresses will not
+                                                              be reordered by
+                                                              hardware.
+
+     load         *none*       *none*         - local    1. ds_load
+     store        *none*       *none*         - global   - !volatile & !nontemporal
+                                              - generic
+                                              - private    1. buffer/global/flat_store
+                                              - constant
+                                                         - !volatile & nontemporal
+
+                                                           1. buffer/global/flat_store
+                                                              ``th:TH_STORE_NT``
+
+                                                         - volatile
+
+                                                           1. buffer/global/flat_store
+                                                              ``scope:SCOPE_SYS``
+
+                                                           2. ``s_wait_storecnt 0x0``
+
+                                                            - Must happen before
+                                                              any following volatile
+                                                              global/generic
+                                                              load/store.
+                                                            - Ensures that
+                                                              volatile
+                                                              operations to
+                                                              different
+                                                              addresses will not
+                                                              be reordered by
+                                                              hardware.
+
+     store        *none*       *none*         - local    1. ds_store
+     **Unordered Atomic**
+     ------------------------------------------------------------------------------------
+     load atomic  unordered    *any*          *any*      *Same as non-atomic*.
+     store atomic unordered    *any*          *any*      *Same as non-atomic*.
+     atomicrmw    unordered    *any*          *any*      *Same as monotonic atomic*.
+     **Monotonic Atomic**
+     ------------------------------------------------------------------------------------
+     load atomic  monotonic    - singlethread - global   1. buffer/global/flat_load
+                               - wavefront    - generic
+                               - workgroup                - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table`.
+                               - agent
+                               - system
+     load atomic  monotonic    - singlethread - local    1. ds_load
+                               - wavefront
+                               - workgroup
+     store atomic monotonic    - singlethread - global   1. buffer/global/flat_store
+                               - wavefront    - generic
+                               - workgroup                 - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table`.
+                               - agent
+                               - system
+     store atomic monotonic    - singlethread - local    1. ds_store
+                               - wavefront
+                               - workgroup
+     atomicrmw    monotonic    - singlethread - global   1. buffer/global/flat_atomic
+                               - wavefront    - generic
+                               - workgroup                 - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table`.
+                               - agent
+                               - system
+     atomicrmw    monotonic    - singlethread - local    1. ds_atomic
+                               - wavefront
+                               - workgroup
+     **Acquire Atomic**
+     ------------------------------------------------------------------------------------
+     load atomic  acquire      - singlethread - global   1. buffer/global/ds/flat_load
+                               - wavefront    - local
+                                              - generic
+     load atomic  acquire      - workgroup    - global   1. buffer/global_load ``scope:SCOPE_SE``
+
+                                                           - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table`.
+
+                                                         2.  ``s_wait_loadcnt 0x0``
+
+                                                           - If CU wavefront execution
+                                                             mode, omit.
+                                                           - Must happen before
+                                                             the following ``global_inv``
+                                                             and before any following
+                                                             global/generic
+                                                             load/load
+                                                             atomic/store/store
+                                                             atomic/atomicrmw.
+
+                                                         3. ``global_inv scope:SCOPE_SE``
+
+                                                           - If CU wavefront execution
+                                                             mode, omit.
+                                                           - Ensures that
+                                                             following
+                                                             loads will not see
+                                                             stale data.
+
+     load atomic  acquire      - workgroup    - local    1. ds_load
+                                                         2. ``s_wait_dscnt 0x0``
+
+                                                           - If OpenCL, omit.
+                                                           - Must happen before
+                                                             the following ``global_inv``
+                                                             and before any following
+                                                             global/generic load/load
+                                                             atomic/store/store
+                                                             atomic/atomicrmw.
+                                                           - Ensures any
+                                                             following global
+                                                             data read is no
+                                                             older than the local load
+                                                             atomic value being
+                                                             acquired.
+
+                                                         3. ``global_inv scope:SCOPE_SE``
+
+                                                           - If OpenCL or CU wavefront
+                                                             execution mode, omit.
+                                                           - Ensures that
+                                                             following
+                                                             loads will not see
+                                                             stale data.
+
+     load atomic  acquire      - workgroup    - generic  1. flat_load
+
+                                                           - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table`.
+
+                                                         2. | ``s_wait_loadcnt 0x0``
+                                                            | ``s_wait_dscnt 0x0``
+                                                            | **CU wavefront execution mode:**
+                                                            | ``s_wait_dscnt 0x0``
+
+                                                           - If OpenCL, omit ``s_wait_dscnt 0x0``
+                                                           - Must happen before
+                                                             the following
+                                                             ``global_inv`` and any
+                                                             following global/generic
+                                                             load/load
+                                                             atomic/store/store
+                                                             atomic/atomicrmw.
+                                                           - Ensures any
+                                                             following global
+                                                             data read is no
+                                                             older than a local load
+                                                             atomic value being
+                                                             acquired.
+
+                                                         3. ``global_inv scope:SCOPE_SE``
+
+                                                           - If CU wavefront execution
+                                                             mode, omit.
+                                                           - Ensures that
+                                                             following
+                                                             loads will not see
+                                                             stale data.
+
+     load atomic  acquire      - agent        - global   1. buffer/global_load
+                               - system
+                                                           - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table`.
+
+                                                         2.  ``s_wait_loadcnt 0x0``
+
+                                                           - Must happen before
+                                                             following
+                                                             ``global_inv``.
+                                                           - Ensures the load
+                                                             has completed
+                                                             before invalidating
+                                                             the caches.
+
+                                                         3. ``global_inv``
+
+                                                           - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table`.
+                                                           - Must happen before
+                                                             any following
+                                                             global/generic
+                                                             load/load
+                                                             atomic/atomicrmw.
+                                                           - Ensures that
+                                                             following
+                                                             loads will not see
+                                                             stale global data.
+
+     load atomic  acquire      - agent        - generic  1. flat_load
+                               - system
+                                                           - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table`.
+
+                                                         2. | ``s_wait_loadcnt 0x0``
+                                                            | ``s_wait_dscnt 0x0``
+
+                                                           - If OpenCL, omit ``s_wait_dscnt 0x0``
+                                                           - Must happen before
+                                                             following
+                                                             ``global_inv``.
+                                                           - Ensures the flat_load
+                                                             has completed
+                                                             before invalidating
+                                                             the caches.
+
+                                                         3. ``global_inv``
+
+                                                           - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table`.
+                                                           - Must happen before
+                                                             any following
+                                                             global/generic
+                                                             load/load
+                                                             atomic/atomicrmw.
+                                                           - Ensures that
+                                                             following loads
+                                                             will not see stale
+                                                             global data.
+
+     atomicrmw    acquire      - singlethread - global   1. buffer/global/ds/flat_atomic
+                               - wavefront    - local
+                                              - generic
+     atomicrmw    acquire      - workgroup    - global   1. buffer/global_atomic
+
+                                                           - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table`.
+                                                           - If atomic with return,
+                                                             use ``th:TH_ATOMIC_RETURN``
+
+                                                         2. | **Atomic with return:**
+                                                            | ``s_wait_loadcnt 0x0``
+                                                            | **Atomic without return:**
+                                                            | ``s_wait_storecnt 0x0``
+
+                                                           - If CU wavefront execution
+                                                             mode, omit.
+                                                           - Must happen before
+                                                             the following ``global_inv``
+                                                             and before any following
+                                                             global/generic
+                                                             load/load
+                                                             atomic/store/store
+                                                             atomic/atomicrmw.
+
+                                                         3. ``global_inv scope:SCOPE_SE``
+
+                                                           - If CU wavefront execution
+                                                             mode, omit.
+                                                           - Ensures that
+                                                             following
+                                                             loads will not see
+                                                             stale data.
+
+     atomicrmw    acquire      - workgroup    - local    1. ds_atomic
+                                                         2. ``s_wait_dscnt 0x0``
+
+                                                           - If OpenCL, omit.
+                                                           - Must happen before
+                                                             the following
+                                                             ``global_inv``.
+                                                           - Ensures any
+                                                             following global
+                                                             data read is no
+                                                             older than the local
+                                                             atomicrmw value
+                                                             being acquired.
+
+                                                         3. ``global_inv scope:SCOPE_SE``
+
+                                                           - If OpenCL omit.
+                                                           - If CU wavefront execution
+                                                             mode, omit.
+                                                           - Ensures that
+                                                             following
+                                                             loads will not see
+                                                             stale data.
+
+     atomicrmw    acquire      - workgroup    - generic  1. flat_atomic
+
+                                                           - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table`.
+                                                           - If atomic with return,
+                                                             use ``th:TH_ATOMIC_RETURN``
+
+                                                         2. | **Atomic with return:**
+                                                            | ``s_wait_loadcnt 0x0``
+                                                            | ``s_wait_dscnt 0x0``
+                                                            | **Atomic without return:**
+                                                            | ``s_wait_storecnt 0x0``
+                                                            | ``s_wait_dscnt 0x0``
+
+                                                           - If CU wavefront execution mode,
+                                                             omit all for atomics without
+                                                             return, and only emit
+                                                             ``s_wait_dscnt 0x0`` for atomics
+                                                             with return.
+                                                           - If OpenCL, omit ``s_wait_dscnt 0x0``
+                                                           - Must happen before
+                                                             the following
+                                                             ``global_inv``.
+                                                           - Ensures any
+                                                             following global
+                                                             data read is no
+                                                             older than a local
+                                                             atomicrmw value
+                                                             being acquired.
+
+                                                         3. ``global_inv scope:SCOPE_SE``
+
+                                                           - If CU wavefront execution
+                                                             mode, omit.
+                                                           - Ensures that
+                                                             following
+                                                             loads will not see
+                                                             stale data.
+
+     atomicrmw    acquire      - agent        - global   1. buffer/global_atomic
+                               - system
+                                                           - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table`.
+                                                           - If atomic with return,
+                                                             use ``th:TH_ATOMIC_RETURN``
+
+                                                         2. | **Atomic with return:**
+                                                            | ``s_wait_loadcnt 0x0``
+                                                            | **Atomic without return:**
+                                                            | ``s_wait_storecnt 0x0``
+
+                                                           - Must happen before
+                                                             following ``global_inv``.
+                                                           - Ensures the
+                                                             atomicrmw has
+                                                             completed before
+                                                             invalidating the
+                                                             caches.
+
+                                                         3. ``global_inv``
+
+                                                           - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table`.
+                                                           - Must happen before
+                                                             any following
+                                                             global/generic
+                                                             load/load
+                                                             atomic/atomicrmw.
+                                                           - Ensures that
+                                                             following loads
+                                                             will not see stale
+                                                             global data.
+
+     atomicrmw    acquire      - agent        - generic  1. flat_atomic
+                               - system
+                                                           - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table`.
+                                                           - If atomic with return,
+                                                             use ``th:TH_ATOMIC_RETURN``
+
+                                                         2. | **Atomic with return:**
+                                                            | ``s_wait_loadcnt 0x0``
+                                                            | ``s_wait_dscnt 0x0``
+                                                            | **Atomic without return:**
+                                                            | ``s_wait_storecnt 0x0``
+                                                            | ``s_wait_dscnt 0x0``
+
+                                                           - If OpenCL, omit dscnt
+                                                           - Must happen before
+                                                             following
+                                                             global_inv
+                                                           - Ensures the
+                                                             atomicrmw has
+                                                             completed before
+                                                             invalidating the
+                                                             caches.
+
+                                                         3. ``global_inv``
+
+                                                           - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table`.
+                                                           - Must happen before
+                                                             any following
+                                                             global/generic
+                                                             load/load
+                                                             atomic/atomicrmw.
+                                                           - Ensures that
+                                                             following loads
+                                                             will not see stale
+                                                             global data.
+
+     fence        acquire      - singlethread *none*     *none*
+                               - wavefront
+     fence        acquire      - workgroup    *none*     1. | ``s_wait_storecnt 0x0``
+                                                            | ``s_wait_loadcnt 0x0``
+                                                            | ``s_wait_dscnt 0x0``
+                                                            | **CU wavefront execution mode:**
+                                                            | ``s_wait_dscnt 0x0``
+
+                                                           - If OpenCL, omit ``s_wait_dscnt 0x0``
+                                                           - If OpenCL and address space is local,
+                                                             omit all.
+                                                           - See :ref:`amdgpu-fence-as` for
+                                                             more details on fencing specific
+                                                             address spaces.
+                                                           - Note: we don't have to use
+                                                             ``s_wait_samplecnt 0x0`` or
+                                                             ``s_wait_bvhcnt 0x0`` because
+                                                             there are no atomic sample or
+                                                             BVH instructions that the fence
+                                                             could pair with.
+                                                           - The waits can be
+                                                             independently moved
+                                                             according to the
+                                                             following rules:
+                                                           - ``s_wait_loadcnt 0x0``
+                                                             must happen after
+                                                             any preceding
+                                                             global/generic load
+                                                             atomic/
+                                                             atomicrmw-with-return-value
+                                                             with an equal or
+                                                             wider sync scope
+                                                             and memory ordering
+                                                             stronger than
+                                                             unordered (this is
+                                                             termed the
+                                                             fence-paired-atomic).
+                                                           - ``s_wait_storecnt 0x0``
+                                                             must happen after
+                                                             any preceding
+                                                             global/generic
+                                                             atomicrmw-no-return-value
+                                                             with an equal or
+                                                             wider sync scope
+                                                             and memory ordering
+                                                             stronger than
+                                                             unordered (this is
+                                                             termed the
+                                                             fence-paired-atomic).
+                                                           - ``s_wait_dscnt 0x0``
+                                                             must happen after
+                                                             any preceding
+                                                             local/generic load
+                                                             atomic/atomicrmw
+                                                             with an equal or
+                                                             wider sync scope
+                                                             and memory ordering
+                                                             stronger than
+                                                             unordered (this is
+                                                             termed the
+                                                             fence-paired-atomic).
+                                                           - Must happen before
+                                                             the following
+                                                             ``global_inv``.
+                                                           - Ensures that the
+                                                             fence-paired atomic
+                                                             has completed
+                                                             before invalidating
+                                                             the
+                                                             cache. Therefore
+                                                             any following
+                                                             locations read must
+                                                             be no older than
+                                                             the value read by
+                                                             the
+                                                             fence-paired-atomic.
+
+                                                         2. ``global_inv scope:SCOPE_SE``
+
+                                                           - If CU wavefront execution
+                                                             mode, omit.
+                                                           - Ensures that
+                                                             following
+                                                             loads will not see
+                                                             stale data.
+
+     fence        acquire      - agent        *none*     1.  | ``s_wait_storecnt 0x0``
+                                                             | ``s_wait_loadcnt 0x0``
+                                                             | ``s_wait_dscnt 0x0``
+
+                                                           - If OpenCL, omit ``s_wait_dscnt 0x0``.
+                                                           - If OpenCL and address space is
+                                                             local, omit all.
+                                                           - See :ref:`amdgpu-fence-as` for
+                                                             more details on fencing specific
+                                                             address spaces.
+                                                           - Note: we don't have to use
+                                                             ``s_wait_samplecnt 0x0`` or
+                                                             ``s_wait_bvhcnt 0x0`` because
+                                                             there are no atomic sample or
+                                                             BVH instructions that the fence
+                                                             could pair with.
+                                                           - The waits can be
+                                                             independently moved
+                                                             according to the
+                                                             following rules:
+                                                           - ``s_wait_loadcnt 0x0``
+                                                             must happen after
+                                                             any preceding
+                                                             global/generic load
+                                                             atomic/
+                                                             atomicrmw-with-return-value
+                                                             with an equal or
+                                                             wider sync scope
+                                                             and memory ordering
+                                                             stronger than
+                                                             unordered (this is
+                                                             termed the
+                                                             fence-paired-atomic).
+                                                           - ``s_wait_storecnt 0x0``
+                                                             must happen after
+                                                             any preceding
+                                                             global/generic
+                                                             atomicrmw-no-return-value
+                                                             with an equal or
+                                                             wider sync scope
+                                                             and memory ordering
+                                                             stronger than
+                                                             unordered (this is
+                                                             termed the
+                                                             fence-paired-atomic).
+                                                           - ``s_wait_dscnt 0x0``
+                                                             must happen after
+                                                             any preceding
+                                                             local/generic load
+                                                             atomic/atomicrmw
+                                                             with an equal or
+                                                             wider sync scope
+                                                             and memory ordering
+                                                             stronger than
+                                                             unordered (this is
+                                                             termed the
+                                                             fence-paired-atomic).
+                                                           - Must happen before
+                                                             the following
+                                                             ``global_inv``
+                                                           - Ensures that the
+                                                             fence-paired atomic
+                                                             has completed
+                                                             before invalidating the
+                                                             caches. Therefore
+                                                             any following
+                                                             locations read must
+                                                             be no older than
+                                                             the value read by
+                                                             the
+                                                             fence-paired-atomic.
+
+                                                         2. ``global_inv``
+
+                                                           - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table`.
+                                                           - Ensures that
+                                                             following
+                                                             loads will not see
+                                                             stale data.
+
+     **Release Atomic**
+     ------------------------------------------------------------------------------------
+     store atomic release      - singlethread - global   1. buffer/global/ds/flat_store
+                               - wavefront    - local
+                                              - generic
+     store atomic release      - workgroup    - global   1. ``global_wb scope:SCOPE_SE``
+
+                                                           - If CU wavefront execution
+                                                             mode, omit.
+                                                           - In combination with the waits
+                                                             below, ensures that all
+                                                             memory operations
+                                                             have completed at workgroup
+                                                             scope before performing the
+                                                             store that is being
+                                                             released.
+
+                                                         2. | ``s_wait_bvhcnt 0x0``
+                                                            | ``s_wait_samplecnt 0x0``
+                                                            | ``s_wait_storecnt 0x0``
+                                                            | ``s_wait_loadcnt 0x0``
+                                                            | ``s_wait_dscnt 0x0``
+                                                            | **CU wavefront execution mode:**
+                                                            | ``s_wait_dscnt 0x0``
+
+                                                           - If OpenCL, omit ``s_wait_dscnt 0x0``.
+                                                           - The waits can be
+                                                             independently moved
+                                                             according to the
+                                                             following rules:
+                                                           - ``s_wait_loadcnt 0x0``,
+                                                             ``s_wait_samplecnt 0x0`` and
+                                                             ``s_wait_bvhcnt 0x0``
+                                                             must happen after
+                                                             any preceding
+                                                             global/generic load/load
+                                                             atomic/
+                                                             atomicrmw-with-return-value.
+                                                           - ``s_wait_storecnt 0x0``
+                                                             must happen after
+                                                             ``global_wb``.
+                                                           - ``s_wait_dscnt 0x0``
+                                                             must happen after
+                                                             any preceding
+                                                             local/generic
+                                                             load/store/load
+                                                             atomic/store
+                                                             atomic/atomicrmw.
+                                                           - Ensures that all
+                                                             memory operations
+                                                             have
+                                                             completed before
+                                                             performing the
+                                                             store that is being
+                                                             released.
+
+                                                         3. buffer/global/flat_store
+
+                                                           - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table`.
+
+     store atomic release      - workgroup    - local    1. ``global_wb scope:SCOPE_SE``
+
+                                                           - If CU wavefront execution
+                                                             mode or OpenCL, omit.
+                                                           - In combination with the waits
+                                                             below, ensures that all
+                                                             memory operations
+                                                             have completed at workgroup
+                                                             scope before performing the
+                                                             store that is being
+                                                             released.
+
+                                                         2. | ``s_wait_bvhcnt 0x0``
+                                                            | ``s_wait_samplecnt 0x0``
+                                                            | ``s_wait_storecnt 0x0``
+                                                            | ``s_wait_loadcnt 0x0``
+                                                            | ``s_wait_dscnt 0x0``
+                                                            | **CU wavefront execution mode:**
+                                                            | ``s_wait_dscnt 0x0``
+
+                                                           - If OpenCL, omit.
+                                                           - The waits can be
+                                                             independently moved
+                                                             according to the
+                                                             following rules:
+                                                           - ``s_wait_loadcnt 0x0``,
+                                                             ``s_wait_samplecnt 0x0`` and
+                                                             ``s_wait_bvhcnt 0x0``
+                                                             must happen after
+                                                             any preceding
+                                                             global/generic load/load
+                                                             atomic/
+                                                             atomicrmw-with-return-value.
+                                                           - ``s_wait_storecnt 0x0``
+                                                             must happen after
+                                                             ``global_wb``.
+                                                           - Must happen before the
+                                                             following store.
+                                                           - Ensures that all
+                                                             global memory
+                                                             operations have
+                                                             completed before
+                                                             performing the
+                                                             store that is being
+                                                             released.
+
+                                                         3. ds_store
+     store atomic release      - agent        - global   1. ``global_wb``
+                               - system       - generic
+                                                              - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table`.
+                                                              - In combination with the waits
+                                                                below, ensures that all
+                                                                memory operations
+                                                                have completed at agent or system
+                                                                scope before performing the
+                                                                store that is being
+                                                                released.
+
+                                                         2. | ``s_wait_bvhcnt 0x0``
+                                                            | ``s_wait_samplecnt 0x0``
+                                                            | ``s_wait_storecnt 0x0``
+                                                            | ``s_wait_loadcnt 0x0``
+                                                            | ``s_wait_dscnt 0x0``
+
+                                                           - If OpenCL, omit ``s_wait_dscnt 0x0``.
+                                                           - The waits can be
+                                                             independently moved
+                                                             according to the
+                                                             following rules:
+                                                           - ``s_wait_loadcnt 0x0``,
+                                                             ``s_wait_samplecnt 0x0`` and
+                                                             ``s_wait_bvhcnt 0x0``
+                                                             must happen after
+                                                             any preceding
+                                                             global/generic
+                                                             load/load
+                                                             atomic/
+                                                             atomicrmw-with-return-value.
+                                                           - ``s_wait_storecnt 0x0``
+                                                             must happen after
+                                                             ``global_wb``.
+                                                           - ``s_wait_dscnt 0x0``
+                                                             must happen after
+                                                             any preceding
+                                                             local/generic
+                                                             load/store/load
+                                                             atomic/store
+                                                             atomic/atomicrmw.
+                                                           - Must happen before the
+                                                             following store.
+                                                           - Ensures that all
+                                                             memory operations
+                                                             have
+                                                             completed before
+                                                             performing the
+                                                             store that is being
+                                                             released.
+
+                                                         3. buffer/global/flat_store
+
+                                                           - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table`.
+
+     atomicrmw    release      - singlethread - global   1. buffer/global/ds/flat_atomic
+                               - wavefront    - local
+                                              - generic
+     atomicrmw    release      - workgroup    - global   1. ``global_wb scope:SCOPE_SE``
+                                              - generic
+                                                            - If CU wavefront execution
+                                                              mode, omit.
+                                                            - In combination with the waits
+                                                              below, ensures that all
+                                                              memory operations
+                                                              have completed at workgroup
+                                                              scope before performing the
+                                                              store that is being
+                                                              released.
+
+                                                         2. | ``s_wait_bvhcnt 0x0``
+                                                            | ``s_wait_samplecnt 0x0``
+                                                            | ``s_wait_storecnt 0x0``
+                                                            | ``s_wait_loadcnt 0x0``
+                                                            | ``s_wait_dscnt 0x0``
+                                                            | **CU wavefront execution mode:**
+                                                            | ``s_wait_dscnt 0x0``
+
+                                                           - If OpenCL, omit ``s_wait_dscnt 0x0``.
+                                                           - If OpenCL and CU wavefront
+                                                             execution mode, omit all.
+                                                           - The waits can be
+                                                             independently moved
+                                                             according to the
+                                                             following rules:
+                                                           - ``s_wait_loadcnt 0x0``,
+                                                             ``s_wait_samplecnt 0x0`` and
+                                                             ``s_wait_bvhcnt 0x0``
+                                                             must happen after
+                                                             any preceding
+                                                             global/generic load/load
+                                                             atomic/
+                                                             atomicrmw-with-return-value.
+                                                           - ``s_wait_storecnt 0x0``
+                                                              must happen after
+                                                              ``global_wb``.
+                                                           - ``s_wait_dscnt 0x0``
+                                                              must happen after
+                                                              any preceding
+                                                              local/generic
+                                                              load/store/load
+                                                              atomic/store
+                                                              atomic/atomicrmw.
+                                                           - Must happen before the
+                                                             following atomic.
+                                                           - Ensures that all
+                                                             memory operations
+                                                             have
+                                                             completed before
+                                                             performing the
+                                                             atomicrmw that is
+                                                             being released.
+
+                                                         3. buffer/global/flat_atomic
+
+                                                           - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table`.
+
+     atomicrmw    release      - workgroup    - local    1. ``global_wb scope:SCOPE_SE``
+
+                                                           - If CU wavefront execution
+                                                             mode or OpenCL, omit.
+                                                           - In combination with the waits
+                                                             below, ensures that all
+                                                             memory operations
+                                                             have completed at workgroup
+                                                             scope before performing the
+                                                             store that is being
+                                                             released.
+
+                                                         2. | ``s_wait_bvhcnt 0x0``
+                                                            | ``s_wait_samplecnt 0x0``
+                                                            | ``s_wait_storecnt 0x0``
+                                                            | ``s_wait_loadcnt 0x0``
+                                                            | ``s_wait_dscnt 0x0``
+                                                            | **CU wavefront execution mode:**
+                                                            | ``s_wait_dscnt 0x0``
+
+                                                           - If OpenCL, omit all.
+                                                           - The waits can be
+                                                             independently moved
+                                                             according to the
+                                                             following rules:
+                                                           - ``s_wait_loadcnt 0x0``,
+                                                             ``s_wait_samplecnt 0x0`` and
+                                                             ``s_wait_bvhcnt 0x0``
+                                                             must happen after
+                                                             any preceding
+                                                             global/generic load/load
+                                                             atomic/
+                                                             atomicrmw-with-return-value.
+                                                           - ``s_wait_storecnt 0x0``
+                                                             must happen after
+                                                             ``global_wb``.
+                                                           - Must happen before the
+                                                             following atomic.
+                                                           - Ensures that all
+                                                             global memory
+                                                             operations have
+                                                             completed before
+                                                             performing the
+                                                             store that is being
+                                                             released.
+
+                                                         3. ds_atomic
+     atomicrmw    release      - agent        - global   1. ``global_wb scope:``
+                               - system       - generic
+                                                           - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table`.
+                                                           - In combination with the waits
+                                                             below, ensures that all
+                                                             memory operations
+                                                             have completed at agent or system
+                                                             scope before performing the
+                                                             store that is being
+                                                             released.
+
+                                                         2. | ``s_wait_bvhcnt 0x0``
+                                                            | ``s_wait_samplecnt 0x0``
+                                                            | ``s_wait_storecnt 0x0``
+                                                            | ``s_wait_loadcnt 0x0``
+                                                            | ``s_wait_dscnt 0x0``
+
+                                                           - If OpenCL, omit ``s_wait_dscnt 0x0``.
+                                                           - The waits can be
+                                                             independently moved
+                                                             according to the
+                                                             following rules:
+                                                           - ``s_wait_loadcnt 0x0``,
+                                                             ``s_wait_samplecnt 0x0`` and
+                                                             ``s_wait_bvhcnt 0x0``
+                                                             must happen after
+                                                             any preceding
+                                                             global/generic
+                                                             load/load atomic/
+                                                             atomicrmw-with-return-value.
+                                                           - ``s_wait_storecnt 0x0``
+                                                             must happen after
+                                                             ``global_wb``
+                                                           - ``s_wait_dscnt 0x0``
+                                                             must happen after
+                                                             any preceding
+                                                             local/generic
+                                                             load/store/load
+                                                             atomic/store
+                                                             atomic/atomicrmw.
+                                                           - Must happen before the
+                                                             following atomic.
+                                                           - Ensures that all
+                                                             memory operations
+                                                             to global and local
+                                                             have completed
+                                                             before performing
+                                                             the atomicrmw that
+                                                             is being released.
+
+                                                         3. buffer/global/flat_atomic
+
+                                                           - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table`.
+
+     fence        release      - singlethread *none*     *none*
+                               - wavefront
+     fence        release      - workgroup    *none*     1. ``global_wb scope:SCOPE_SE``
+
+                                                            - If CU wavefront execution
+                                                              mode, omit.
+                                                            - In combination with the waits
+                                                              below, ensures that all
+                                                              memory operations
+                                                              have completed at workgroup
+                                                              scope before performing the
+                                                              store that is being
+                                                              released.
+
+                                                         2. | ``s_wait_bvhcnt 0x0``
+                                                            | ``s_wait_samplecnt 0x0``
+                                                            | ``s_wait_storecnt 0x0``
+                                                            | ``s_wait_loadcnt 0x0``
+                                                            | ``s_wait_dscnt 0x0``
+                                                            | **CU wavefront execution mode:**
+                                                            | ``s_wait_dscnt 0x0``
+
+                                                           - If OpenCL, omit ``s_wait_dscnt 0x0``.
+                                                           - If OpenCL and
+                                                             address space is
+                                                             local, omit all.
+                                                           - See :ref:`amdgpu-fence-as` for
+                                                             more details on fencing specific
+                                                             address spaces.
+                                                           - The waits can be
+                                                             independently moved
+                                                             according to the
+                                                             following rules:
+                                                           - ``s_wait_loadcnt 0x0``,
+                                                             ``s_wait_samplecnt 0x0`` and
+                                                             ``s_wait_bvhcnt 0x0``
+                                                             must happen after
+                                                             any preceding
+                                                             global/generic
+                                                             load/load
+                                                             atomic/
+                                                             atomicrmw-with-return-value.
+                                                           - ``s_wait_storecnt 0x0``
+                                                             must happen after
+                                                             ``global_wb``
+                                                           - ``s_wait_dscnt 0x0``
+                                                             must happen after
+                                                             any preceding
+                                                             local/generic
+                                                             load/store/load
+                                                             atomic/store atomic/
+                                                             atomicrmw.
+                                                           - Must happen before
+                                                             any following store
+                                                             atomic/atomicrmw
+                                                             with an equal or
+                                                             wider sync scope
+                                                             and memory ordering
+                                                             stronger than
+                                                             unordered (this is
+                                                             termed the
+                                                             fence-paired-atomic).
+                                                           - Ensures that all
+                                                             memory operations
+                                                             have
+                                                             completed before
+                                                             performing the
+                                                             following
+                                                             fence-paired-atomic.
+
+     fence        release      - agent        *none*     1. ``global_wb``
+                               - system
+                                                           - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table`.
+                                                           - In combination with the waits
+                                                             below, ensures that all
+                                                             memory operations
+                                                             have completed at agent or system
+                                                             scope before performing the
+                                                             store that is being
+                                                             released.
+
+                                                         2. | ``s_wait_bvhcnt 0x0``
+                                                            | ``s_wait_samplecnt 0x0``
+                                                            | ``s_wait_storecnt 0x0``
+                                                            | ``s_wait_loadcnt 0x0``
+                                                            | ``s_wait_dscnt 0x0``
+                                                            | **OpenCL:**
+                                                            | ``s_wait_bvhcnt 0x0``
+                                                            | ``s_wait_samplecnt 0x0``
+                                                            | ``s_wait_storecnt 0x0``
+                                                            | ``s_wait_loadcnt 0x0``
+
+                                                           - If OpenCl, omit ``s_wait_dscnt 0x0``.
+                                                           - If OpenCL and address space is local,
+                                                             omit all.
+                                                           - See :ref:`amdgpu-fence-as` for
+                                                             more details on fencing specific
+                                                             address spaces.
+                                                           - The waits can be
+                                                             independently moved
+                                                             according to the
+                                                             following rules:
+                                                           - ``s_wait_loadcnt 0x0``,
+                                                             ``s_wait_samplecnt 0x0`` and
+                                                             ``s_wait_bvhcnt 0x0``
+                                                             must happen after
+                                                             any preceding
+                                                             global/generic
+                                                             load/load atomic/
+                                                             atomicrmw-with-return-value.
+                                                           - ``s_wait_storecnt 0x0``
+                                                             must happen after
+                                                             ``global_wb``
+                                                           - ``s_wait_dscnt 0x0``
+                                                             must happen after
+                                                             any preceding
+                                                             local/generic
+                                                             load/store/load
+                                                             atomic/store
+                                                             atomic/atomicrmw.
+                                                           - Must happen before
+                                                             any following store
+                                                             atomic/atomicrmw
+                                                             with an equal or
+                                                             wider sync scope
+                                                             and memory ordering
+                                                             stronger than
+                                                             unordered (this is
+                                                             termed the
+                                                             fence-paired-atomic).
+                                                           - Ensures that all
+                                                             memory operations
+                                                             have
+                                                             completed before
+                                                             performing the
+                                                             following
+                                                             fence-paired-atomic.
+
+     **Acquire-Release Atomic**
+     ------------------------------------------------------------------------------------
+     atomicrmw    acq_rel      - singlethread - global   1. buffer/global/ds/flat_atomic
+                               - wavefront    - local
+                                              - generic
+     atomicrmw    acq_rel      - workgroup    - global   1. ``global_wb scope:SCOPE_SE``
+
+                                                            - If CU wavefront execution
+                                                              mode, omit.
+                                                            - In combination with the waits
+                                                              below, ensures that all
+                                                              memory operations
+                                                              have completed at workgroup
+                                                              scope before performing the
+                                                              store that is being
+                                                              released.
+
+                                                         2. | ``s_wait_bvhcnt 0x0``
+                                                            | ``s_wait_samplecnt 0x0``
+                                                            | ``s_wait_storecnt 0x0``
+                                                            | ``s_wait_loadcnt 0x0``
+                                                            | ``s_wait_dscnt 0x0``
+                                                            | **CU wavefront execution mode:**
+                                                            | ``s_wait_dscnt 0x0``
+
+                                                           - If OpenCL, omit ``s_wait_dscnt 0x0``.
+                                                           - Must happen after
+                                                             any preceding
+                                                             local/generic
+                                                             load/store/load
+                                                             atomic/store
+                                                             atomic/atomicrmw.
+                                                           - The waits can be
+                                                             independently moved
+                                                             according to the
+                                                             following rules:
+                                                           - ``s_wait_loadcnt 0x0``,
+                                                             ``s_wait_samplecnt 0x0`` and
+                                                             ``s_wait_bvhcnt 0x0``
+                                                             must happen after
+                                                             any preceding
+                                                             global/generic load/load
+                                                             atomic/
+                                                             atomicrmw-with-return-value.
+                                                           - ``s_wait_storecnt 0x0``
+                                                             must happen after
+                                                             ``global_wb``.
+                                                           - ``s_wait_dscnt 0x0``
+                                                             must happen after
+                                                             any preceding
+                                                             local/generic
+                                                             load/store/load
+                                                             atomic/store
+                                                             atomic/atomicrmw.
+                                                           - Must happen before
+                                                             the following
+                                                             atomicrmw.
+                                                           - Ensures that all
+                                                             memory operations
+                                                             have
+                                                             completed before
+                                                             performing the
+                                                             atomicrmw that is
+                                                             being released.
+
+                                                         3. buffer/global_atomic
+
+                                                           - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table`.
+                                                           - If atomic with return, use
+                                                             ``th:TH_ATOMIC_RETURN``.
+
+                                                         4. | **Atomic with return:**
+                                                            | ``s_wait_loadcnt 0x0``
+                                                            | **Atomic without return:**
+                                                            | ``s_wait_storecnt 0x0``
+
+                                                           - If CU wavefront execution
+                                                             mode, omit.
+                                                           - Must happen before
+                                                             the following
+                                                             ``global_inv``.
+                                                           - Ensures any
+                                                             following global
+                                                             data read is no
+                                                             older than the
+                                                             atomicrmw value
+                                                             being acquired.
+
+                                                         5. ``global_inv scope:SCOPE_SE``
+
+                                                           - If CU wavefront execution
+                                                             mode, omit.
+                                                           - Ensures that
+                                                             following
+                                                             loads will not see
+                                                             stale data.
+
+     atomicrmw    acq_rel      - workgroup    - local    1. ``global_wb scope:SCOPE_SE``
+
+                                                            - If CU wavefront execution
+                                                              mode or OpenCL, omit.
+                                                            - In combination with the waits
+                                                              below, ensures that all
+                                                              memory operations
+                                                              have completed at workgroup
+                                                              scope before performing the
+                                                              store that is being
+                                                              released.
+
+                                                         2. | ``s_wait_bvhcnt 0x0``
+                                                            | ``s_wait_samplecnt 0x0``
+                                                            | ``s_wait_storecnt 0x0``
+                                                            | ``s_wait_loadcnt 0x0``
+                                                            | ``s_wait_dscnt 0x0``
+                                                            | **CU wavefront execution mode:**
+                                                            | ``s_wait_dscnt 0x0``
+
+                                                           - If OpenCL, omit.
+                                                           - The waits can be
+                                                             independently moved
+                                                             according to the
+                                                             following rules:
+                                                           - ``s_wait_loadcnt 0x0``,
+                                                             ``s_wait_samplecnt 0x0`` and
+                                                             ``s_wait_bvhcnt 0x0``
+                                                             must happen after
+                                                             any preceding
+                                                             global/generic load/load
+                                                             atomic/
+                                                             atomicrmw-with-return-value.
+                                                           - ``s_wait_storecnt 0x0``
+                                                             must happen after
+                                                             ``global_wb``
+                                                           - Must happen before
+                                                             the following
+                                                             store.
+                                                           - Ensures that all
+                                                             global memory
+                                                             operations have
+                                                             completed before
+                                                             performing the
+                                                             store that is being
+                                                             released.
+
+                                                         3. ds_atomic
+                                                         4. ``s_wait_dscnt 0x0``
+
+                                                           - If OpenCL, omit.
+                                                           - Must happen before
+                                                             the following
+                                                             ``global_inv``.
+                                                           - Ensures any
+                                                             following global
+                                                             data read is no
+                                                             older than the local load
+                                                             atomic value being
+                                                             acquired.
+
+                                                         5. ``global_inv scope:SCOPE_SE``
+
+                                                           - If CU wavefront execution
+                                                             mode, omit.
+                                                           - If OpenCL omit.
+                                                           - Ensures that
+                                                             following
+                                                             loads will not see
+                                                             stale data.
+
+     atomicrmw    acq_rel      - workgroup    - generic  1. ``global_wb scope:SCOPE_SE``
+
+                                                            - If CU wavefront execution
+                                                              mode or OpenCL, omit.
+                                                            - In combination with the waits
+                                                              below, ensures that all
+                                                              memory operations
+                                                              have completed at workgroup
+                                                              scope before performing the
+                                                              store that is being
+                                                              released.
+
+                                                         2. | ``s_wait_bvhcnt 0x0``
+                                                            | ``s_wait_samplecnt 0x0``
+                                                            | ``s_wait_storecnt 0x0``
+                                                            | ``s_wait_loadcnt 0x0``
+                                                            | ``s_wait_dscnt 0x0``
+                                                            | **CU wavefront execution mode:**
+                                                            | ``s_wait_dscnt 0x0``
+
+                                                           - If OpenCL, omit ``s_wait_loadcnt 0x0``.
+                                                           - The waits can be
+                                                             independently moved
+                                                             according to the
+                                                             following rules:
+                                                           - ``s_wait_loadcnt 0x0``,
+                                                             ``s_wait_samplecnt 0x0`` and
+                                                             ``s_wait_bvhcnt 0x0``
+                                                             must happen after
+                                                             any preceding
+                                                             global/generic load/load
+                                                             atomic/
+                                                             atomicrmw-with-return-value.
+                                                           - ``s_wait_storecnt 0x0``
+                                                             must happen after
+                                                             ``global_wb``
+                                                           - ``s_wait_dscnt 0x0``
+                                                             must happen after
+                                                             any preceding
+                                                             local/generic
+                                                             load/store/load
+                                                             atomic/store
+                                                             atomic/atomicrmw.
+                                                           - Must happen before
+                                                             the following
+                                                             atomicrmw.
+                                                           - Ensures that all
+                                                             memory operations
+                                                             have
+                                                             completed before
+                                                             performing the
+                                                             atomicrmw that is
+                                                             being released.
+
+                                                         3. flat_atomic
+
+                                                           - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table`.
+                                                           - If atomic with return,
+                                                             use ``th:TH_ATOMIC_RETURN``.
+
+                                                         4. | **Atomic without return:**
+                                                            | ``s_wait_dscnt 0x0``
+                                                            | ``s_wait_storecnt 0x0``
+                                                            | **Atomic with return:**
+                                                            | ``s_wait_loadcnt 0x0``
+                                                            | ``s_wait_dscnt 0x0``
+                                                            | **CU wavefront execution mode:**
+                                                            | ``s_wait_dscnt 0x0``
+
+                                                           - If OpenCL, omit ``s_wait_dscnt 0x0``
+                                                           - Must happen before
+                                                             the following
+                                                             ``global_inv``.
+                                                           - Ensures any
+                                                             following global
+                                                             data read is no
+                                                             older than the load
+                                                             atomic value being
+                                                             acquired.
+
+                                                         5. ``global_inv scope:SCOPE_SE``
+
+                                                           - If CU wavefront execution
+                                                             mode, omit.
+                                                           - Ensures that
+                                                             following
+                                                             loads will not see
+                                                             stale data.
+
+     atomicrmw    acq_rel      - agent        - global   1. ``global_wb``
+                               - system
+                                                           - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table`.
+                                                           - In combination with the waits
+                                                             below, ensures that all
+                                                             memory operations
+                                                             have completed at agent or system
+                                                             scope before performing the
+                                                             store that is being
+                                                             released.
+
+                                                         2. | ``s_wait_bvhcnt 0x0``
+                                                            | ``s_wait_samplecnt 0x0``
+                                                            | ``s_wait_storecnt 0x0``
+                                                            | ``s_wait_loadcnt 0x0``
+                                                            | ``s_wait_dscnt 0x0``
+
+                                                           - If OpenCL, omit
+                                                             ``s_wait_dscnt 0x0``
+                                                           - The waits can be
+                                                             independently moved
+                                                             according to the
+                                                             following rules:
+                                                           - ``s_wait_loadcnt 0x0``,
+                                                             ``s_wait_samplecnt 0x0`` and
+                                                             ``s_wait_bvhcnt 0x0``
+                                                             must happen after
+                                                             any preceding
+                                                             global/generic
+                                                             load/load atomic/
+                                                             atomicrmw-with-return-value.
+                                                           - ``s_wait_storecnt 0x0``
+                                                             must happen after
+                                                             ``global_wb``
+                                                           - ``s_wait_dscnt 0x0``
+                                                             must happen after
+                                                             any preceding
+                                                             local/generic
+                                                             load/store/load
+                                                             atomic/store
+                                                             atomic/atomicrmw.
+                                                           - Must happen before
+                                                             the following
+                                                             atomicrmw.
+                                                           - Ensures that all
+                                                             memory operations
+                                                             to global have
+                                                             completed before
+                                                             performing the
+                                                             atomicrmw that is
+                                                             being released.
+
+                                                         3. buffer/global_atomic
+
+                                                           - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table`.
+                                                           - If atomic with return, use
+                                                             ``th:TH_ATOMIC_RETURN``.
+
+                                                         4. | **Atomic with return:**
+                                                            | ``s_wait_loadcnt 0x0``
+                                                            | **Atomic without return:**
+                                                            | ``s_wait_storecnt 0x0``
+
+                                                           - Must happen before
+                                                             following
+                                                             ``global_inv``.
+                                                           - Ensures the
+                                                             atomicrmw has
+                                                             completed before
+                                                             invalidating the
+                                                             caches.
+
+                                                         5. ``global_inv``
+
+                                                           - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table`.
+                                                           - Must happen before
+                                                             any following
+                                                             global/generic
+                                                             load/load
+                                                             atomic/atomicrmw.
+                                                           - Ensures that
+                                                             following loads
+                                                             will not see stale
+                                                             global data.
+
+     atomicrmw    acq_rel      - agent        - generic  1. ``global_wb``
+                               - system
+                                                           - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table`.
+                                                           - In combination with the waits
+                                                             below, ensures that all
+                                                             memory operations
+                                                             have completed at agent or system
+                                                             scope before performing the
+                                                             store that is being
+                                                             released.
+
+                                                         2. | ``s_wait_bvhcnt 0x0``
+                                                            | ``s_wait_samplecnt 0x0``
+                                                            | ``s_wait_storecnt 0x0``
+                                                            | ``s_wait_loadcnt 0x0``
+                                                            | ``s_wait_dscnt 0x0``
+
+                                                           - If OpenCL, omit
+                                                             ``s_wait_dscnt 0x0``
+                                                           - The waits can be
+                                                             independently moved
+                                                             according to the
+                                                             following rules:
+                                                           - ``s_wait_loadcnt 0x0``,
+                                                             ``s_wait_samplecnt 0x0`` and
+                                                             ``s_wait_bvhcnt 0x0``
+                                                             must happen after
+                                                             any preceding
+                                                             global/generic
+                                                             load/load atomic
+                                                             atomicrmw-with-return-value.
+                                                           - ``s_wait_storecnt 0x0``
+                                                             must happen after
+                                                             ``global_wb``
+                                                           - ``s_wait_dscnt 0x0``
+                                                             must happen after
+                                                             any preceding
+                                                             local/generic
+                                                             load/store/load
+                                                             atomic/store
+                                                             atomic/atomicrmw.
+                                                           - Must happen before
+                                                             the following
+                                                             atomicrmw.
+                                                           - Ensures that all
+                                                             memory operations
+                                                             have
+                                                             completed before
+                                                             performing the
+                                                             atomicrmw that is
+                                                             being released.
+
+                                                         3. flat_atomic
+
+                                                           - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table`.
+                                                           - If atomic with return, use
+                                                             ``th:TH_ATOMIC_RETURN``.
+
+                                                         4. | **Atomic with return:**
+                                                            | ``s_wait_loadcnt 0x0``
+                                                            | ``s_wait_dscnt 0x0``
+                                                            | **Atomic without return:**
+                                                            | ``s_wait_storecnt 0x0``
+                                                            | ``s_wait_dscnt 0x0``
+
+
+                                                           - If OpenCL, omit
+                                                             ``s_wait_dscnt 0x0``.
+                                                           - Must happen before
+                                                             following
+                                                             ``global_inv``.
+                                                           - Ensures the
+                                                             atomicrmw has
+                                                             completed before
+                                                             invalidating the
+                                                             caches.
+
+                                                         5. ``global_inv``
+
+                                                           - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table`.
+                                                           - Must happen before
+                                                             any following
+                                                             global/generic
+                                                             load/load
+                                                             atomic/atomicrmw.
+                                                           - Ensures that
+                                                             following loads
+                                                             will not see stale
+                                                             global data.
+
+     fence        acq_rel      - singlethread *none*     *none*
+                               - wavefront
+     fence        acq_rel      - workgroup    *none*     1. ``global_wb scope:SCOPE_SE``
+
+                                                           - If CU wavefront execution
+                                                             mode, omit.
+                                                           - In combination with the waits
+                                                             below, ensures that all
+                                                             memory operations
+                                                             have completed at workgroup
+                                                             scope before performing the
+                                                             store that is being
+                                                             released.
+
+                                                         2. | ``s_wait_bvhcnt 0x0``
+                                                            | ``s_wait_samplecnt 0x0``
+                                                            | ``s_wait_storecnt 0x0``
+                                                            | ``s_wait_loadcnt 0x0``
+                                                            | ``s_wait_dscnt 0x0``
+                                                            | **CU wavefront execution mode:**
+                                                            | ``s_wait_dscnt 0x0``
+
+                                                           - If OpenCL and
+                                                             address space is
+                                                             not generic, omit
+                                                             ``s_wait_dscnt 0x0``
+                                                           - If OpenCL and
+                                                             address space is
+                                                             local, omit
+                                                             all but ``s_wait_dscnt 0x0``.
+                                                           - See :ref:`amdgpu-fence-as` for
+                                                             more details on fencing specific
+                                                             address spaces.
+                                                           - The waits can be
+                                                             independently moved
+                                                             according to the
+                                                             following rules:
+                                                           - ``s_wait_loadcnt 0x0``,
+                                                             ``s_wait_samplecnt 0x0`` and
+                                                             ``s_wait_bvhcnt 0x0``
+                                                             must happen after
+                                                             any preceding
+                                                             global/generic
+                                                             load/load
+                                                             atomic/
+                                                             atomicrmw-with-return-value.
+                                                           - ``s_wait_storecnt 0x0``
+                                                             must happen after
+                                                             ``global_wb``
+                                                           - ``s_wait_dscnt 0x0``
+                                                             must happen after
+                                                             any preceding
+                                                             local/generic
+                                                             load/store/load
+                                                             atomic/store atomic/
+                                                             atomicrmw.
+                                                           - Must happen before
+                                                             any following
+                                                             global/generic
+                                                             load/load
+                                                             atomic/store/store
+                                                             atomic/atomicrmw.
+                                                           - Ensures that all
+                                                             memory operations
+                                                             have
+                                                             completed before
+                                                             performing any
+                                                             following global
+                                                             memory operations.
+                                                           - Ensures that the
+                                                             preceding
+                                                             local/generic load
+                                                             atomic/atomicrmw
+                                                             with an equal or
+                                                             wider sync scope
+                                                             and memory ordering
+                                                             stronger than
+                                                             unordered (this is
+                                                             termed the
+                                                             acquire-fence-paired-atomic)
+                                                             has completed
+                                                             before following
+                                                             global memory
+                                                             operations. This
+                                                             satisfies the
+                                                             requirements of
+                                                             acquire.
+                                                           - Ensures that all
+                                                             previous memory
+                                                             operations have
+                                                             completed before a
+                                                             following
+                                                             local/generic store
+                                                             atomic/atomicrmw
+                                                             with an equal or
+                                                             wider sync scope
+                                                             and memory ordering
+                                                             stronger than
+                                                             unordered (this is
+                                                             termed the
+                                                             release-fence-paired-atomic).
+                                                             This satisfies the
+                                                             requirements of
+                                                             release.
+                                                           - Must happen before
+                                                             the following
+                                                             ``global_inv``.
+                                                           - Ensures that the
+                                                             acquire-fence-paired
+                                                             atomic has completed
+                                                             before invalidating
+                                                             the
+                                                             cache. Therefore
+                                                             any following
+                                                             locations read must
+                                                             be no older than
+                                                             the value read by
+                                                             the
+                                                             acquire-fence-paired-atomic.
+
+                                                         3. ``global_inv scope:SCOPE_SE``
+
+                                                           - If CU wavefront execution
+                                                             mode, omit.
+                                                           - Ensures that
+                                                             following
+                                                             loads will not see
+                                                             stale data.
+
+     fence        acq_rel      - agent        *none*     1.  ``global_wb``
+                               - system
+                                                           - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table`.
+                                                           - In combination with the waits
+                                                             below, ensures that all
+                                                             memory operations
+                                                             have completed at agent or system
+                                                             scope before performing the
+                                                             store that is being
+                                                             released.
+
+                                                         2. | ``s_wait_bvhcnt 0x0``
+                                                            | ``s_wait_samplecnt 0x0``
+                                                            | ``s_wait_storecnt 0x0``
+                                                            | ``s_wait_loadcnt 0x0``
+                                                            | ``s_wait_dscnt 0x0``
+
+                                                           - If OpenCL and
+                                                             address space is
+                                                             not generic, omit
+                                                             ``s_wait_dscnt 0x0``
+                                                           - If OpenCL and
+                                                             address space is
+                                                             local, omit
+                                                             all but ``s_wait_dscnt 0x0``.
+                                                           - See :ref:`amdgpu-fence-as` for
+                                                             more details on fencing specific
+                                                             address spaces.
+                                                           - The waits can be
+                                                             independently moved
+                                                             according to the
+                                                             following rules:
+                                                           - ``s_wait_loadcnt 0x0``,
+                                                             ``s_wait_samplecnt 0x0`` and
+                                                             ``s_wait_bvhcnt 0x0``
+                                                             must happen after
+                                                             any preceding
+                                                             global/generic
+                                                             load/load
+                                                             atomic/
+                                                             atomicrmw-with-return-value.
+                                                           - ``s_wait_storecnt 0x0``
+                                                             must happen after
+                                                             ``global_wb``
+                                                           - ``s_wait_dscnt 0x0``
+                                                             must happen after
+                                                             any preceding
+                                                             local/generic
+                                                             load/store/load
+                                                             atomic/store
+                                                             atomic/atomicrmw.
+                                                           - Must happen before
+                                                             the following
+                                                             ``global_inv``
+                                                           - Ensures that the
+                                                             preceding
+                                                             global/local/generic
+                                                             load
+                                                             atomic/atomicrmw
+                                                             with an equal or
+                                                             wider sync scope
+                                                             and memory ordering
+                                                             stronger than
+                                                             unordered (this is
+                                                             termed the
+                                                             acquire-fence-paired-atomic)
+                                                             has completed
+                                                             before invalidating
+                                                             the caches. This
+                                                             satisfies the
+                                                             requirements of
+                                                             acquire.
+                                                           - Ensures that all
+                                                             previous memory
+                                                             operations have
+                                                             completed before a
+                                                             following
+                                                             global/local/generic
+                                                             store
+                                                             atomic/atomicrmw
+                                                             with an equal or
+                                                             wider sync scope
+                                                             and memory ordering
+                                                             stronger than
+                                                             unordered (this is
+                                                             termed the
+                                                             release-fence-paired-atomic).
+                                                             This satisfies the
+                                                             requirements of
+                                                             release.
+
+                                                         3. ``global_inv scope:``
+
+                                                           - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table`.
+                                                           - Must happen before
+                                                             any following
+                                                             global/generic
+                                                             load/load
+                                                             atomic/store/store
+                                                             atomic/atomicrmw.
+                                                           - Ensures that
+                                                             following loads
+                                                             will not see stale
+                                                             global data. This
+                                                             satisfies the
+                                                             requirements of
+                                                             acquire.
+
+     **Sequential Consistent Atomic**
+     ------------------------------------------------------------------------------------
+     load atomic  seq_cst      - singlethread - global   *Same as corresponding
+                               - wavefront    - local    load atomic acquire,
+                                              - generic  except must generate
+                                                         all instructions even
+                                                         for OpenCL.*
+     load atomic  seq_cst      - workgroup    - global   1. | ``s_wait_bvhcnt 0x0``
+                                              - generic     | ``s_wait_samplecnt 0x0``
+                                                            | ``s_wait_storecnt 0x0``
+                                                            | ``s_wait_loadcnt 0x0``
+                                                            | ``s_wait_dscnt 0x0``
+                                                            | **CU wavefront execution mode:**
+                                                            | ``s_wait_dscnt 0x0``
+
+                                                           - If OpenCL, omit
+                                                             ``s_wait_dscnt 0x0``
+                                                           - The waits can be
+                                                             independently moved
+                                                             according to the
+                                                             following rules:
+                                                           - ``s_wait_dscnt 0x0`` must
+                                                             happen after
+                                                             preceding
+                                                             local/generic load
+                                                             atomic/store
+                                                             atomic/atomicrmw
+                                                             with memory
+                                                             ordering of seq_cst
+                                                             and with equal or
+                                                             wider sync scope.
+                                                             (Note that seq_cst
+                                                             fences have their
+                                                             own ``s_wait_dscnt 0x0``
+                                                             and so do not need to be
+                                                             considered.)
+                                                           - ``s_wait_loadcnt 0x0``\,
+                                                             ``s_wait_samplecnt 0x0`` and
+                                                             ``s_wait_bvhcnt 0x0``
+                                                             must happen after
+                                                             preceding
+                                                             global/generic load
+                                                             atomic/
+                                                             atomicrmw-with-return-value
+                                                             with memory
+                                                             ordering of seq_cst
+                                                             and with equal or
+                                                             wider sync scope.
+                                                             (Note that seq_cst
+                                                             fences have their
+                                                             own waits and so do
+                                                             not need to be
+                                                             considered.)
+                                                           - ``s_wait_storecnt 0x0``
+                                                             Must happen after
+                                                             preceding
+                                                             global/generic store
+                                                             atomic/
+                                                             atomicrmw-no-return-value
+                                                             with memory
+                                                             ordering of seq_cst
+                                                             and with equal or
+                                                             wider sync scope.
+                                                             (Note that seq_cst
+                                                             fences have their
+                                                             own ``s_wait_storecnt 0x0``
+                                                             and so do not need to be
+                                                             considered.)
+                                                           - Ensures any
+                                                             preceding
+                                                             sequential
+                                                             consistent global/local
+                                                             memory instructions
+                                                             have completed
+                                                             before executing
+                                                             this sequentially
+                                                             consistent
+                                                             instruction. This
+                                                             prevents reordering
+                                                             a seq_cst store
+                                                             followed by a
+                                                             seq_cst load. (Note
+                                                             that seq_cst is
+                                                             stronger than
+                                                             acquire/release as
+                                                             the reordering of
+                                                             load acquire
+                                                             followed by a store
+                                                             release is
+                                                             prevented by the
+                                                             ``s_wait``\s of
+                                                             the release, but
+                                                             there is nothing
+                                                             preventing a store
+                                                             release followed by
+                                                             load acquire from
+                                                             completing out of
+                                                             order. The ``s_wait``\s
+                                                             could be placed after
+                                                             seq_store or before
+                                                             the seq_load. We
+                                                             choose the load to
+                                                             make the ``s_wait``\s be
+                                                             as late as possible
+                                                             so that the store
+                                                             may have already
+                                                             completed.)
+
+                                                         2. *Following
+                                                            instructions same as
+                                                            corresponding load
+                                                            atomic acquire,
+                                                            except must generate
+                                                            all instructions even
+                                                            for OpenCL.*
+     load atomic  seq_cst      - workgroup    - local    1. | ``s_wait_bvhcnt 0x0``
+                                                            | ``s_wait_samplecnt 0x0``
+                                                            | ``s_wait_storecnt 0x0``
+                                                            | ``s_wait_loadcnt 0x0``
+                                                            | ``s_wait_dscnt 0x0``
+                                                            | **CU wavefront execution mode:**
+                                                            | ``s_wait_dscnt 0x0``
+
+                                                           - If OpenCL, omit all.
+                                                           - The waits can be
+                                                             independently moved
+                                                             according to the
+                                                             following rules:
+                                                           - ``s_wait_loadcnt 0x0``\,
+                                                             ``s_wait_samplecnt 0x0`` and
+                                                             ``s_wait_bvhcnt 0x0``
+                                                             Must happen after
+                                                             preceding
+                                                             global/generic load
+                                                             atomic/
+                                                             atomicrmw-with-return-value
+                                                             with memory
+                                                             ordering of seq_cst
+                                                             and with equal or
+                                                             wider sync scope.
+                                                             (Note that seq_cst
+                                                             fences have their
+                                                             own ``s_wait``\s and so do
+                                                             not need to be
+                                                             considered.)
+                                                           - ``s_wait_storecnt 0x0``
+                                                             Must happen after
+                                                             preceding
+                                                             global/generic store
+                                                             atomic/
+                                                             atomicrmw-no-return-value
+                                                             with memory
+                                                             ordering of seq_cst
+                                                             and with equal or
+                                                             wider sync scope.
+                                                             (Note that seq_cst
+                                                             fences have their
+                                                             own ``s_wait_storecnt 0x0``
+                                                             and so do
+                                                             not need to be
+                                                             considered.)
+                                                           - Ensures any
+                                                             preceding
+                                                             sequential
+                                                             consistent global
+                                                             memory instructions
+                                                             have completed
+                                                             before executing
+                                                             this sequentially
+                                                             consistent
+                                                             instruction. This
+                                                             prevents reordering
+                                                             a seq_cst store
+                                                             followed by a
+                                                             seq_cst load. (Note
+                                                             that seq_cst is
+                                                             stronger than
+                                                             acquire/release as
+                                                             the reordering of
+                                                             load acquire
+                                                             followed by a store
+                                                             release is
+                                                             prevented by the
+                                                             ``s_wait``\s of
+                                                             the release, but
+                                                             there is nothing
+                                                             preventing a store
+                                                             release followed by
+                                                             load acquire from
+                                                             completing out of
+                                                             order. The s_waitcnt
+                                                             could be placed after
+                                                             seq_store or before
+                                                             the seq_load. We
+                                                             choose the load to
+                                                             make the ``s_wait``\s be
+                                                             as late as possible
+                                                             so that the store
+                                                             may have already
+                                                             completed.)
+
+                                                         2. *Following
+                                                            instructions same as
+                                                            corresponding load
+                                                            atomic acquire,
+                                                            except must generate
+                                                            all instructions even
+                                                            for OpenCL.*
+
+     load atomic  seq_cst      - agent        - global   1. | ``s_wait_bvhcnt 0x0``
+                               - system       - generic     | ``s_wait_samplecnt 0x0``
+                                                            | ``s_wait_storecnt 0x0``
+                                                            | ``s_wait_loadcnt 0x0``
+                                                            | ``s_wait_dscnt 0x0``
+
+                                                           - If OpenCL, omit
+                                                             ``s_wait_dscnt 0x0``
+                                                           - The waits can be
+                                                             independently moved
+                                                             according to the
+                                                             following rules:
+                                                           - ``s_wait_dscnt 0x0``
+                                                             must happen after
+                                                             preceding
+                                                             local load
+                                                             atomic/store
+                                                             atomic/atomicrmw
+                                                             with memory
+                                                             ordering of seq_cst
+                                                             and with equal or
+                                                             wider sync scope.
+                                                             (Note that seq_cst
+                                                             fences have their
+                                                             own ``s_wait_dscnt 0x0``
+                                                             and so do
+                                                             not need to be
+                                                             considered.)
+                                                           - ``s_wait_loadcnt 0x0``\,
+                                                             ``s_wait_samplecnt 0x0`` and
+                                                             ``s_wait_bvhcnt 0x0``
+                                                             must happen after
+                                                             preceding
+                                                             global/generic load
+                                                             atomic/
+                                                             atomicrmw-with-return-value
+                                                             with memory
+                                                             ordering of seq_cst
+                                                             and with equal or
+                                                             wider sync scope.
+                                                             (Note that seq_cst
+                                                             fences have their
+                                                             own ``s_wait``\s and so do
+                                                             not need to be
+                                                             considered.)
+                                                           - ``s_wait_storecnt 0x0``
+                                                             Must happen after
+                                                             preceding
+                                                             global/generic store
+                                                             atomic/
+                                                             atomicrmw-no-return-value
+                                                             with memory
+                                                             ordering of seq_cst
+                                                             and with equal or
+                                                             wider sync scope.
+                                                             (Note that seq_cst
+                                                             fences have their
+                                                             own
+                                                             ``s_wait_storecnt 0x0`` and so do
+                                                             not need to be
+                                                             considered.)
+                                                           - Ensures any
+                                                             preceding
+                                                             sequential
+                                                             consistent global
+                                                             memory instructions
+                                                             have completed
+                                                             before executing
+                                                             this sequentially
+                                                             consistent
+                                                             instruction. This
+                                                             prevents reordering
+                                                             a seq_cst store
+                                                             followed by a
+                                                             seq_cst load. (Note
+                                                             that seq_cst is
+                                                             stronger than
+                                                             acquire/release as
+                                                             the reordering of
+                                                             load acquire
+                                                             followed by a store
+                                                             release is
+                                                             prevented by the
+                                                             ``s_wait``\s of
+                                                             the release, but
+                                                             there is nothing
+                                                             preventing a store
+                                                             release followed by
+                                                             load acquire from
+                                                             completing out of
+                                                             order. The ``s_wait``\s
+                                                             could be placed after
+                                                             seq_store or before
+                                                             the seq_load. We
+                                                             choose the load to
+                                                             make the ``s_wait``\s be
                                                              as late as possible
                                                              so that the store
                                                              may have already
