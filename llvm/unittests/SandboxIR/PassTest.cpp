@@ -133,3 +133,32 @@ define void @foo() {
   EXPECT_EQ(Buff, "test-fpm(test-pass1,test-pass2)");
 #endif // NDEBUG
 }
+
+TEST_F(PassTest, PassRegistry) {
+  class TestPass1 final : public FunctionPass {
+  public:
+    TestPass1() : FunctionPass("test-pass1") {}
+    bool runOnFunction(Function &F) final { return false; }
+  };
+  class TestPass2 final : public FunctionPass {
+  public:
+    TestPass2() : FunctionPass("test-pass2") {}
+    bool runOnFunction(Function &F) final { return false; }
+  };
+
+  PassRegistry Registry;
+  auto &TP1 = Registry.registerPass(std::make_unique<TestPass1>());
+  auto &TP2 = Registry.registerPass(std::make_unique<TestPass2>());
+
+  // Check getPassByName().
+  EXPECT_EQ(Registry.getPassByName("test-pass1"), &TP1);
+  EXPECT_EQ(Registry.getPassByName("test-pass2"), &TP2);
+
+#ifndef NDEBUG
+  // Check print().
+  std::string Buff;
+  llvm::raw_string_ostream SS(Buff);
+  Registry.print(SS);
+  EXPECT_EQ(Buff, "test-pass1\ntest-pass2\n");
+#endif // NDEBUG
+}
