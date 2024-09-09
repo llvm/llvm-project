@@ -18443,10 +18443,6 @@ Value *EmitAMDGPUWorkGroupSize(CodeGenFunction &CGF, unsigned Index) {
   auto Cov = CGF.getTarget().getTargetOpts().CodeObjectVersion;
 
   if (Cov == CodeObjectVersionKind::COV_None) {
-    LangAS AddrSpace =
-        // LangAS::Default;
-        CGF.getContext().getLangOpts().OpenCL ? LangAS::opencl_global
-                                              : LangAS::Default;
     StringRef Name = "__oclc_ABI_version";
     auto *ABIVersionC = CGF.CGM.getModule().getNamedGlobal(Name);
     if (!ABIVersionC)

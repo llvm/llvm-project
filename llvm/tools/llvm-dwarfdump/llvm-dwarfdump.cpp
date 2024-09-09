@@ -522,36 +522,6 @@ static void filterByAccelName(ArrayRef<std::string> Names, DWARFContext &DICtx,
 }
 
 /// Print all DIEs in apple accelerator tables
-static void findAllApple(
-    DWARFContext &DICtx, raw_ostream &OS,
-    std::function<StringRef(uint64_t RegNum, bool IsEH)> GetNameForDWARFReg) {
-  MapVector<StringRef, llvm::SmallSet<DWARFDie, 2>> NameToDies;
-
-  auto PushDIEs = [&](const AppleAcceleratorTable &Accel) {
-    for (const auto &Entry : Accel.entries()) {
-      if (std::optional<uint64_t> Off = Entry.BaseEntry.getDIESectionOffset()) {
-        std::optional<StringRef> MaybeName = Entry.readName();
-        DWARFDie Die = DICtx.getDIEForOffset(*Off);
-        if (Die && MaybeName)
-          NameToDies[*MaybeName].insert(Die);
-      }
-    }
-  };
-
-  PushDIEs(DICtx.getAppleNames());
-  PushDIEs(DICtx.getAppleNamespaces());
-  PushDIEs(DICtx.getAppleTypes());
-
-  DIDumpOptions DumpOpts = getDumpOpts(DICtx);
-  DumpOpts.GetNameForDWARFReg = GetNameForDWARFReg;
-  for (const auto &[Name, Dies] : NameToDies) {
-    OS << llvm::formatv("\nApple accelerator entries with name = \"{0}\":\n",
-                        Name);
-    for (DWARFDie Die : Dies)
-      Die.dump(OS, 0, DumpOpts);
-  }
-}
-
 /// Handle the --lookup option and dump the DIEs and line info for the given
 /// address.
 /// TODO: specified Address for --lookup option could relate for several

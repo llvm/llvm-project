@@ -258,6 +258,9 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       break;
     case Driver::OMPRT_GOMP:
       break;
+    case Driver::OMPRT_BOLT:
+      llvm::report_fatal_error("MSVC toolchain does not support OMPRT_BOLT");
+      break;
     case Driver::OMPRT_Unknown:
       // Already diagnosed.
       break;

@@ -84,10 +84,13 @@ struct ELFNote {
 
 const ELFNote* getNext(const ELFNote &N);
 
+template <typename Item> class const_varsize_item_iterator {
+  using iterator_catagory = std::forward_iterator_tag;
+  using value_type = const Item;
+  using difference_type = std::ptrdiff_t;
+  using pointer = const Item *;
+  using reference = const Item &;
 
-template <typename Item>
-class const_varsize_item_iterator :
-  std::iterator<std::forward_iterator_tag, const Item, void> {
   ArrayRef<uint8_t> Ref;
 
   const Item *item() const {

@@ -122,9 +122,6 @@ public:
   getDeviceLibs(const llvm::opt::ArgList &Args) const override;
 
   const ToolChain &HostTC;
-
-private:
-  const Action::OffloadKind OK;
 };
 
 } // end namespace toolchains

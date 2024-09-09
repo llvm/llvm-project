@@ -707,20 +707,6 @@ static bool supportsSPMDExecutionMode(CodeGenModule &CGM,
       "Unknown programming model for OpenMP directive on NVPTX target.");
 }
 
-/// Check if the directive is loops based and has schedule clause at all or has
-/// static scheduling.
-static bool hasStaticScheduling(const OMPExecutableDirective &D) {
-  assert(isOpenMPWorksharingDirective(D.getDirectiveKind()) &&
-         isOpenMPLoopDirective(D.getDirectiveKind()) &&
-         "Expected loop-based directive.");
-  return !D.hasClausesOfKind<OMPOrderedClause>() &&
-         (!D.hasClausesOfKind<OMPScheduleClause>() ||
-          llvm::any_of(D.getClausesOfKind<OMPScheduleClause>(),
-                       [](const OMPScheduleClause *C) {
-                         return C->getScheduleKind() == OMPC_SCHEDULE_static;
-                       }));
-}
-
 // Create a unique global variable to indicate the flat-work-group-size
 // for this region. Values are [1..1024].
 static void setPropertyWorkGroupSize(CodeGenModule &CGM, StringRef Name,

@@ -3699,7 +3699,6 @@ class OffloadingActionBuilder final {
     /// The OpenMP actions for the current input.
     ActionList OpenMPDeviceActions;
 
-    bool CompileHostOnly = false;
     bool CompileDeviceOnly = false;
 
     /// List of GPU architectures to use in this compilation.
@@ -5092,6 +5091,8 @@ Action *Driver::ConstructPhaseAction(
 
     return C.MakeAction<PrecompileJobAction>(Input, OutputTy);
   }
+  case phases::FortranFrontend:
+    llvm::report_fatal_error("fortranfrontend action invalid here.");
   case phases::Compile: {
     if (Args.hasArg(options::OPT_fsyntax_only))
       return C.MakeAction<CompileJobAction>(Input, types::TY_Nothing);

@@ -9118,8 +9118,6 @@ CodeGenModule::checkAndSetXteamRedKernel(const OMPExecutableDirective &D) {
 
 bool CodeGenModule::checkAndSetMultiDeviceKernel(
     const OMPExecutableDirective &D, bool CanBeMultiDevice) {
-  NoLoopXteamErr NxStatus = NxSuccess;
-
   bool IsMultiDeviceKernel = false;
 
   if (!getLangOpts().OpenMPTargetMultiDevice ||

@@ -599,6 +599,9 @@ Tool *ToolChain::getTool(Action::ActionClass AC) const {
   case Action::BinaryAnalyzeJobClass:
     llvm_unreachable("Invalid tool kind.");
 
+  case Action::FortranFrontendJobClass:
+    llvm::report_fatal_error("fortranfrontend is invalid tool kind here.");
+
   case Action::CompileJobClass:
   case Action::PrecompileJobClass:
   case Action::PreprocessJobClass:

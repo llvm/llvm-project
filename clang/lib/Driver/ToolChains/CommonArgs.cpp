@@ -450,7 +450,6 @@ void tools::AddLinkerInputs(const ToolChain &TC, const InputInfoList &Inputs,
                             const ArgList &Args, ArgStringList &CmdArgs,
                             const JobAction &JA) {
   const Driver &D = TC.getDriver();
-  bool SeenFirstLinkerInput = false;
 
   // Add extra linker input arguments which are not treated as inputs
   // (constructed via -Xarch_).
@@ -1261,42 +1260,6 @@ void tools::addOpenMPRuntimeSpecificRPath(const ToolChain &TC,
           return !str.compare("--enable-new-dtags");
         }) == CmdArgs.end())
       CmdArgs.push_back("--disable-new-dtags");
-  }
-}
-
-/// Adds the '-lcgpu' and '-lmgpu' libraries to the compilation to include the
-/// LLVM C library for GPUs.
-static void addOpenMPDeviceLibC(const Compilation &C, const ArgList &Args,
-                                ArgStringList &CmdArgs) {
-  if (Args.hasArg(options::OPT_nogpulib) || Args.hasArg(options::OPT_nolibc))
-    return;
-
-  // Check the resource directory for the LLVM libc GPU declarations. If it's
-  // found we can assume that LLVM was built with support for the GPU libc.
-  SmallString<256> LibCDecls(C.getDriver().ResourceDir);
-  llvm::sys::path::append(LibCDecls, "include", "llvm_libc_wrappers",
-                          "llvm-libc-decls");
-  bool HasLibC = llvm::sys::fs::exists(LibCDecls) &&
-                 llvm::sys::fs::is_directory(LibCDecls);
-  if (!Args.hasFlag(options::OPT_gpulibc, options::OPT_nogpulibc, HasLibC))
-    return;
-
-  SmallVector<const ToolChain *> ToolChains;
-  auto TCRange = C.getOffloadToolChains(Action::OFK_OpenMP);
-  for (auto TI = TCRange.first, TE = TCRange.second; TI != TE; ++TI)
-    ToolChains.push_back(TI->second);
-
-  if (llvm::any_of(ToolChains, [](const ToolChain *TC) {
-        return TC->getTriple().isAMDGPU();
-      })) {
-    CmdArgs.push_back("-lcgpu-amdgpu");
-    CmdArgs.push_back("-lmgpu-amdgpu");
-  }
-  if (llvm::any_of(ToolChains, [](const ToolChain *TC) {
-        return TC->getTriple().isNVPTX();
-      })) {
-    CmdArgs.push_back("-lcgpu-nvptx");
-    CmdArgs.push_back("-lmgpu-nvptx");
   }
 }
 

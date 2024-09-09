@@ -887,9 +887,8 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
 
   CmdArgs.push_back(Input.getFilename());
 
-  bool ClosedNeeded =
-    checkForAMDProprietaryOptOptions(TC, D, Args, CmdArgs,
-                                     false /*isLLD*/, false /*checkOnly*/);
+  checkForAMDProprietaryOptOptions(TC, D, Args, CmdArgs, false /*isLLD*/,
+                                   false /*checkOnly*/);
 
   // TODO: Replace flang-new with flang once the new driver replaces the
   // throwaway driver

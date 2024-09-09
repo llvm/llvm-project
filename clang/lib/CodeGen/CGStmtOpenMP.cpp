@@ -7166,7 +7166,7 @@ static void emitOMPAtomicCompareExpr(
   if (CGF.CGM.getOpenMPRuntime().mustEmitSafeAtomic(
           CGF, XLVal, RValue::get(EVal),
           cast<BinaryOperator>(CE)->getOpcode())) {
-    auto Ret = CGF.CGM.getOpenMPRuntime().emitAtomicCASLoop(
+    CGF.CGM.getOpenMPRuntime().emitAtomicCASLoop(
         CGF, XLVal, RValue::get(EVal), cast<BinaryOperator>(CE)->getOpcode());
     return;
   }

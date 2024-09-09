@@ -306,6 +306,9 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
         case Driver::OMPRT_GOMP:
           CmdArgs.push_back("-lgomp");
           break;
+        case Driver::OMPRT_BOLT:
+          llvm::report_fatal_error("AIX toolchain does not support OMPRT_BOLT");
+          break;
         case Driver::OMPRT_Unknown:
           // Already diagnosed.
           break;
@@ -377,6 +380,7 @@ void AIX::AddOpenMPIncludeArgs(const ArgList &DriverArgs,
       break;
     case Driver::OMPRT_IOMP5:
     case Driver::OMPRT_GOMP:
+    case Driver::OMPRT_BOLT:
     case Driver::OMPRT_Unknown:
       // Unknown / unsupported include paths.
       break;
