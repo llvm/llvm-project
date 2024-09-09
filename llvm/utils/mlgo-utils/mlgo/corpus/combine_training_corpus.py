@@ -38,10 +38,11 @@ def parse_args_and_run():
     )
     parser.add_argument(
         "--verbosity",
-        type=int,
+        type=str,
         help="The verbosity level to use for logging",
-        default=0,
+        default="INFO",
         nargs="?",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR"],
     )
     args = parser.parse_args()
     main(args)

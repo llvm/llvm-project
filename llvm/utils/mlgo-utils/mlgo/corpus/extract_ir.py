@@ -18,10 +18,9 @@ specifying -mllvm -lto-embed-bitcode=post-merge-pre-opt.
 In a local ThinLTO case, the compilation is assumedto have been performed
 specifying -Wl,--save-temps=import -Wl,--thinlto-emit-index-files
 
-To change the logging verbosity, pass an integer representing the desired
-verbosity to the --verbosity flag. Use 0 for all logs, status information,
-and detailed debug information, 30 for solely warnings, and 50 or higher to
-not produce any output.
+To change the logging verbosity, set the --verbosity flag to the desired level.
+Setting it to a specific level will enable all messages at that level and
+higher. Exact values can be found by invoking the script with --help.
 """
 
 import argparse
@@ -115,10 +114,11 @@ def parse_args_and_run():
     )
     parser.add_argument(
         "--verbosity",
-        type=int,
+        type=str,
         help="The verbosity level to use for logging",
-        default=0,
+        default="INFO",
         nargs="?",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR"],
     )
     args = parser.parse_args()
     main(args)
