@@ -50,7 +50,7 @@ bool CIRGenFunction::IsConstructorDelegationValid(
 
   // FIXME: Decide if we can do a delegation of a delegating constructor.
   if (Ctor->isDelegatingConstructor())
-    llvm_unreachable("NYI");
+    return false;
 
   return true;
 }
@@ -585,7 +585,7 @@ void CIRGenFunction::buildCtorPrologue(const CXXConstructorDecl *CD,
                                        CXXCtorType CtorType,
                                        FunctionArgList &Args) {
   if (CD->isDelegatingConstructor())
-    llvm_unreachable("NYI");
+    return buildDelegatingCXXConstructorCall(CD, Args);
 
   const CXXRecordDecl *ClassDecl = CD->getParent();
 
@@ -1377,6 +1377,51 @@ void CIRGenFunction::EnterDtorCleanups(const CXXDestructorDecl *DD,
 
   if (SanitizeFields)
     assert(!MissingFeatures::sanitizeDtor());
+}
+
+namespace {
+struct CallDelegatingCtorDtor final : EHScopeStack::Cleanup {
+  const CXXDestructorDecl *Dtor;
+  Address Addr;
+  CXXDtorType Type;
+
+  CallDelegatingCtorDtor(const CXXDestructorDecl *D, Address Addr,
+                         CXXDtorType Type)
+      : Dtor(D), Addr(Addr), Type(Type) {}
+
+  void Emit(CIRGenFunction &CGF, Flags flags) override {
+    // We are calling the destructor from within the constructor.
+    // Therefore, "this" should have the expected type.
+    QualType ThisTy = Dtor->getFunctionObjectParameterType();
+    CGF.buildCXXDestructorCall(Dtor, Type, /*ForVirtualBase=*/false,
+                               /*Delegating=*/true, Addr, ThisTy);
+  }
+};
+} // end anonymous namespace
+
+void CIRGenFunction::buildDelegatingCXXConstructorCall(
+    const CXXConstructorDecl *Ctor, const FunctionArgList &Args) {
+  assert(Ctor->isDelegatingConstructor());
+
+  Address ThisPtr = LoadCXXThisAddress();
+
+  AggValueSlot AggSlot = AggValueSlot::forAddr(
+      ThisPtr, Qualifiers(), AggValueSlot::IsDestructed,
+      AggValueSlot::DoesNotNeedGCBarriers, AggValueSlot::IsNotAliased,
+      AggValueSlot::MayOverlap, AggValueSlot::IsNotZeroed,
+      // Checks are made by the code that calls constructor.
+      AggValueSlot::IsSanitizerChecked);
+
+  buildAggExpr(Ctor->init_begin()[0]->getInit(), AggSlot);
+
+  const CXXRecordDecl *ClassDecl = Ctor->getParent();
+  if (CGM.getLangOpts().Exceptions && !ClassDecl->hasTrivialDestructor()) {
+    CXXDtorType Type =
+        CurGD.getCtorType() == Ctor_Complete ? Dtor_Complete : Dtor_Base;
+
+    EHStack.pushCleanup<CallDelegatingCtorDtor>(
+        EHCleanup, ClassDecl->getDestructor(), ThisPtr, Type);
+  }
 }
 
 void CIRGenFunction::buildCXXDestructorCall(const CXXDestructorDecl *DD,
