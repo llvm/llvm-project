@@ -2125,8 +2125,5 @@ RISCVTTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
   if (ST->is64Bit())
     Options.LoadSizes.push_back(8);
   llvm::append_range(Options.LoadSizes, ArrayRef({4, 2, 1}));
-  Options.AllowedTailExpansions = {3};
-  if (ST->is64Bit())
-    llvm::append_range(Options.AllowedTailExpansions, ArrayRef{5, 6});
   return Options;
 }
