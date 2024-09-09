@@ -674,6 +674,9 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot)
 float dot(float4, float4);
 
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot)
+double dot(double, double);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot)
 int dot(int, int);
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot)
 int dot(int2, int2);
