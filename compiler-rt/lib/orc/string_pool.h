@@ -161,9 +161,9 @@ inline bool StringPool::empty() const {
 namespace std {
 
 // Make PooledStringPtrs hashable.
-template <> struct hash<__orc_rt::PooledStringPtr> {
-  size_t operator()(const __orc_rt::PooledStringPtr &A) const {
-    return hash<__orc_rt::PooledStringPtr::PoolEntryPtr>()(A.S);
+template <> struct hash<orc_rt::PooledStringPtr> {
+  size_t operator()(const orc_rt::PooledStringPtr &A) const {
+    return hash<orc_rt::PooledStringPtr::PoolEntryPtr>()(A.S);
   }
 };
 
