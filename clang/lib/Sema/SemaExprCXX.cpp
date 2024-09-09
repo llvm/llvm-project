@@ -4848,18 +4848,13 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
       // type is destination type is either an ExtVectorType or a builtin scalar
       // type.
       auto *FromVec = From->getType()->castAs<VectorType>();
-      QualType ElType = FromVec->getElementType();
-      if (auto *ToVec = ToType->getAs<VectorType>()) {
-        QualType TruncTy =
-            Context.getExtVectorType(ElType, ToVec->getNumElements());
-        From = ImpCastExprToType(From, TruncTy, CK_HLSLVectorTruncation,
-                                 From->getValueKind())
-                   .get();
-      } else {
-        From = ImpCastExprToType(From, ElType, CK_HLSLVectorTruncation,
-                                 From->getValueKind())
-                   .get();
-      }
+      QualType TruncTy = FromVec->getElementType();
+      if (auto *ToVec = ToType->getAs<VectorType>())
+        TruncTy = Context.getExtVectorType(TruncTy, ToVec->getNumElements());
+      From = ImpCastExprToType(From, TruncTy, CK_HLSLVectorTruncation,
+                               From->getValueKind())
+                 .get();
+
       break;
     }
     case ICK_Identity:

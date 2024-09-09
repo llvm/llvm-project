@@ -2709,7 +2709,7 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
            "Destination type must be a vector or builtin type.");
     Value *Vec = Visit(const_cast<Expr *>(E));
     if (auto *VecTy = DestTy->getAs<VectorType>()) {
-      SmallVector<int, 16> Mask;
+      SmallVector<int> Mask;
       unsigned NumElts = VecTy->getNumElements();
       for (unsigned I = 0; I != NumElts; ++I)
         Mask.push_back(I);

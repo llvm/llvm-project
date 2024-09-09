@@ -2055,7 +2055,7 @@ static bool IsVectorConversion(Sema &S, QualType FromType, QualType ToType,
         return true;
       return IsVectorElementConversion(S, FromElTy, ToElTy, ICK, From);
     }
-    if (FromExtType && nullptr == ToExtType) {
+    if (FromExtType && !ToExtType) {
       ElConv = ICK_HLSL_Vector_Truncation;
       QualType FromElTy = FromExtType->getElementType();
       if (S.Context.hasSameUnqualifiedType(FromElTy, ToType))
