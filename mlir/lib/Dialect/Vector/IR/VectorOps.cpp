@@ -2920,7 +2920,7 @@ private:
   /// Converts the expected type to an IntegerAttr if there's
   /// a mismatch.
   Attribute convertIntegerAttr(Attribute attr, Type expectedType) const {
-    if (auto intAttr = attr.dyn_cast<IntegerAttr>()) {
+    if (auto intAttr = mlir::dyn_cast<IntegerAttr>(attr)) {
       if (intAttr.getType() != expectedType)
         return IntegerAttr::get(expectedType, intAttr.getInt());
     }
