@@ -13,7 +13,7 @@ import lldb
 import swift
 import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import decorators
+from lldbsuite.test.decorators import *
 
 
 class TestSwiftREPLExceptions(TestBase):
@@ -23,8 +23,8 @@ class TestSwiftREPLExceptions(TestBase):
     # each debug info format.
     NO_DEBUG_INFO_TESTCASE = True
 
-    @decorators.skipUnlessDarwin
-    @decorators.swiftTest
+    @skipUnlessDarwin
+    @swiftTest
     def test_set_repl_mode_exceptions(self):
         """ Test that SetREPLMode turns off trapping exceptions."""
         return
@@ -32,8 +32,8 @@ class TestSwiftREPLExceptions(TestBase):
         self.main_source_file = lldb.SBFileSpec("main.swift")
         self.do_repl_mode_test()
 
-    @decorators.skipUnlessDarwin
-    @decorators.swiftTest
+    @skipUnlessDarwin
+    @swiftTest
     def test_repl_exceptions(self):
         """ Test the lldb --repl turns off trapping exceptions."""
         self.build()
@@ -43,7 +43,7 @@ class TestSwiftREPLExceptions(TestBase):
         # Call super's setUp().
         TestBase.setUp(self)
 
-    @decorators.skipIfRemote
+    @skipIfRemote
     def do_repl_test(self):
         sdk_root = ""
         with open(self.getBuildArtifact("sdkroot.txt"), 'r') as f:
