@@ -2,7 +2,6 @@
 // RUN:      -analyzer-checker debug.ExprInspection,core -Wno-error=invalid-gnu-asm-cast -w %s -verify
 
 int clang_analyzer_eval(int);
-
 void clang_analyzer_dump(int);
 void clang_analyzer_dump_ptr(void *);
 
