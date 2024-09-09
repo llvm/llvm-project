@@ -1197,8 +1197,15 @@ def AnyIntegerOrFloatOr1DVector :
 def GPU_SubgroupReduceOp : GPU_Op<"subgroup_reduce", [SameOperandsAndResultType]> {
   let summary = "Reduce values among subgroup.";
   let description = [{
-    The `subgroup_reduce` op reduces the value of every lane (work item) across
-    a subgroup. The result is equal for all lanes.
+    The `subgroup_reduce` op reduces the values of lanes (work items) across a
+    subgroup.
+
+    The subgroup is divided into clusters starting at lane index 0. Within each
+    cluster, there are `size` lanes, and the lane index advances by `stride`.
+    A reduction is done for each cluster in parallel: every lane in the cluster
+    is reduced, and the result is equal for all lanes in the cluster. If `size`
+    is omitted, there is a single cluster covering the entire subgroup. If
+    `stride` is omitted, the stride is 1 (the cluster's lanes are contiguous).
 
     When the reduced value is of a vector type, each vector element is reduced
     independently. Only 1-d vector types are allowed.
@@ -1206,13 +1213,16 @@ def GPU_SubgroupReduceOp : GPU_Op<"subgroup_reduce", [SameOperandsAndResultType]
     Example:
 
     ```mlir
-    %1 = gpu.subgroup_reduce add %a : (f32) -> (f32)
-    %2 = gpu.subgroup_reduce add %b : (vector<4xf16>) -> (vector<4xf16>)
+    %1 = gpu.subgroup_reduce add %a : (f32) -> f32
+    %2 = gpu.subgroup_reduce add %b : (vector<4xf16>) -> vector<4xf16>
+    %3 = gpu.subgroup_reduce add %c cluster(size = 4) : (f32) -> f32
+    %3 = gpu.subgroup_reduce add %c cluster(size = 4, stride = 2) : (f32) -> f32
     ```
 
     If `uniform` flag is set either none or all lanes of a subgroup need to execute
-    this op in convergence. The reduction operation must be one
-    of:
+    this op in convergence.
+
+    The reduction operation must be one of:
     *  Integer types: `add`, `mul`, `minui`, `minsi`, `maxui`, `maxsi`, `and`,
        `or`, `xor`
     *  Floating point types: `add`, `mul`, `minnumf`, `maxnumf`, `minimumf`,
@@ -1222,12 +1232,40 @@ def GPU_SubgroupReduceOp : GPU_Op<"subgroup_reduce", [SameOperandsAndResultType]
   let arguments = (ins
     AnyIntegerOrFloatOr1DVector:$value,
     GPU_AllReduceOperationAttr:$op,
-    UnitAttr:$uniform
+    UnitAttr:$uniform,
+    OptionalAttr<I32Attr>:$cluster_size,
+    DefaultValuedAttr<I32Attr,"1">:$cluster_stride
   );
   let results = (outs AnyIntegerOrFloatOr1DVector:$result);
 
+  let builders = [
+    OpBuilder<(ins "Value":$value,
+               "::mlir::gpu::AllReduceOperation":$op,
+               "bool":$uniform), [{
+      build($_builder, $_state, value, op, uniform, std::nullopt);
+    }]>,
+    OpBuilder<(ins "Value":$value,
+               "::mlir::gpu::AllReduceOperation":$op,
+               "bool":$uniform,
+               "std::optional<uint32_t>":$cluster_size), [{
+      build($_builder, $_state, value, op, uniform,
+            cluster_size ? $_builder.getI32IntegerAttr(*cluster_size) : nullptr);
+    }]>,
+    OpBuilder<(ins "Value":$value,
+               "::mlir::gpu::AllReduceOperation":$op,
+               "bool":$uniform,
+               "std::optional<uint32_t>":$cluster_size,
+               "uint32_t":$cluster_stride), [{
+      build($_builder, $_state, value, op, uniform,
+            cluster_size ? $_builder.getI32IntegerAttr(*cluster_size) : nullptr,
+            cluster_stride);
+    }]>
+  ];
+
   let assemblyFormat = [{ custom<AllReduceOperation>($op) $value
-                          (`uniform` $uniform^)? attr-dict
+                          (`uniform` $uniform^)?
+                          (`cluster` `(` `size` `=` $cluster_size^ (`,` `stride` `=` $cluster_stride^)? `)`)?
+                          attr-dict
                           `:` functional-type(operands, results) }];
 
   let hasFolder = 1;
@@ -1250,17 +1288,11 @@ def GPU_ShuffleMode : I32EnumAttr<"ShuffleMode",
 def GPU_ShuffleModeAttr : EnumAttr<GPU_Dialect, GPU_ShuffleMode,
                                    "shuffle_mode">;
 
-def I32I64F32OrF64 : TypeConstraint<Or<[I32.predicate,
-                                        I64.predicate,
-                                        F32.predicate,
-                                        F64.predicate]>,
-                                       "i32, i64, f32 or f64">;
-
 def GPU_ShuffleOp : GPU_Op<
     "shuffle", [Pure, AllTypesMatch<["value", "shuffleResult"]>]>,
-    Arguments<(ins I32I64F32OrF64:$value, I32:$offset, I32:$width,
+    Arguments<(ins AnyIntegerOrFloatOr1DVector:$value, I32:$offset, I32:$width,
                GPU_ShuffleModeAttr:$mode)>,
-    Results<(outs I32I64F32OrF64:$shuffleResult, I1:$valid)> {
+    Results<(outs AnyIntegerOrFloatOr1DVector:$shuffleResult, I1:$valid)> {
   let summary = "Shuffles values within a subgroup.";
   let description = [{
     The "shuffle" op moves values to a across lanes (a.k.a., invocations,

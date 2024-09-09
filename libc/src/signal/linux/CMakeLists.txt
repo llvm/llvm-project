@@ -126,6 +126,7 @@ add_entrypoint_object(
   DEPENDS
     .sigaction
     libc.hdr.signal_macros
+    libc.hdr.types.sighandler_t
 )
 
 add_entrypoint_object(

@@ -672,6 +672,9 @@ public:
   SDValue getConstant(const APInt &Val, const SDLoc &DL, EVT VT,
                       bool isTarget = false, bool isOpaque = false);
 
+  SDValue getSignedConstant(int64_t Val, const SDLoc &DL, EVT VT,
+                            bool isTarget = false, bool isOpaque = false);
+
   SDValue getAllOnesConstant(const SDLoc &DL, EVT VT, bool IsTarget = false,
                              bool IsOpaque = false);
 
@@ -1161,7 +1164,12 @@ public:
   SDValue getNode(unsigned Opcode, const SDLoc &DL, EVT VT, SDValue N1,
                   SDValue N2, SDValue N3, SDValue N4);
   SDValue getNode(unsigned Opcode, const SDLoc &DL, EVT VT, SDValue N1,
+                  SDValue N2, SDValue N3, SDValue N4, const SDNodeFlags Flags);
+  SDValue getNode(unsigned Opcode, const SDLoc &DL, EVT VT, SDValue N1,
                   SDValue N2, SDValue N3, SDValue N4, SDValue N5);
+  SDValue getNode(unsigned Opcode, const SDLoc &DL, EVT VT, SDValue N1,
+                  SDValue N2, SDValue N3, SDValue N4, SDValue N5,
+                  const SDNodeFlags Flags);
 
   // Specialize again based on number of operands for nodes with a VTList
   // rather than a single VT.
@@ -1585,6 +1593,11 @@ public:
   /// Return the specified value casted to
   /// the target's desired shift amount type.
   SDValue getShiftAmountOperand(EVT LHSTy, SDValue Op);
+
+  /// Create the DAG equivalent of vector_partial_reduce where Op1 and Op2 are
+  /// its operands and ReducedTY is the intrinsic's return type.
+  SDValue getPartialReduceAdd(SDLoc DL, EVT ReducedTy, SDValue Op1,
+                              SDValue Op2);
 
   /// Expand the specified \c ISD::VAARG node as the Legalize pass would.
   SDValue expandVAArg(SDNode *Node);

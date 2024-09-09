@@ -3091,8 +3091,10 @@ define amdgpu_kernel void @global_sextload_v32i32_to_v32i64(ptr addrspace(1) %ou
 ; SI-NOHSA-NEXT:    buffer_store_dwordx4 v[36:39], off, s[0:3], 0 offset:240
 ; SI-NOHSA-NEXT:    buffer_store_dwordx4 v[32:35], off, s[0:3], 0 offset:192
 ; SI-NOHSA-NEXT:    buffer_load_dword v8, off, s[12:15], 0 ; 4-byte Folded Reload
+; SI-NOHSA-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NOHSA-NEXT:    buffer_load_dword v9, off, s[12:15], 0 offset:4 ; 4-byte Folded Reload
 ; SI-NOHSA-NEXT:    buffer_load_dword v10, off, s[12:15], 0 offset:8 ; 4-byte Folded Reload
+; SI-NOHSA-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NOHSA-NEXT:    buffer_load_dword v11, off, s[12:15], 0 offset:12 ; 4-byte Folded Reload
 ; SI-NOHSA-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NOHSA-NEXT:    buffer_store_dwordx4 v[8:11], off, s[0:3], 0 offset:208

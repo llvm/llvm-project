@@ -317,6 +317,12 @@ gpu.module @shuffles attributes {
   // CHECK-SAME-DAG:  will_return
   // CHECK-NOT:       memory_effects = #llvm.memory_effects
   // CHECK-SAME:      }
+  // CHECK:           llvm.func spir_funccc @_Z20sub_group_shuffle_upDhj(f16, i32) -> f16 attributes {
+  // CHECK-SAME-DAG:  no_unwind
+  // CHECK-SAME-DAG:  convergent
+  // CHECK-SAME-DAG:  will_return
+  // CHECK-NOT:       memory_effects = #llvm.memory_effects
+  // CHECK-SAME:      }
   // CHECK:           llvm.func spir_funccc @_Z21sub_group_shuffle_xorlj(i64, i32) -> i64 attributes {
   // CHECK-SAME-DAG:  no_unwind
   // CHECK-SAME-DAG:  convergent
@@ -329,26 +335,54 @@ gpu.module @shuffles attributes {
   // CHECK-SAME-DAG:  will_return
   // CHECK-NOT:       memory_effects = #llvm.memory_effects
   // CHECK-SAME:      }
+  // CHECK:           llvm.func spir_funccc @_Z21sub_group_shuffle_xorsj(i16, i32) -> i16 attributes {
+  // CHECK-SAME-DAG:  no_unwind
+  // CHECK-SAME-DAG:  convergent
+  // CHECK-SAME-DAG:  will_return
+  // CHECK-NOT:       memory_effects = #llvm.memory_effects
+  // CHECK-SAME:      }
+  // CHECK:           llvm.func spir_funccc @_Z17sub_group_shufflecj(i8, i32) -> i8 attributes {
+  // CHECK-SAME-DAG:  no_unwind
+  // CHECK-SAME-DAG:  convergent
+  // CHECK-SAME-DAG:  will_return
+  // CHECK-NOT:       memory_effects = #llvm.memory_effects
+  // CHECK-SAME:      }
 
   // CHECK-LABEL: gpu_shuffles
-  // CHECK-SAME:              (%[[VAL_0:.*]]: i32, %[[VAL_1:.*]]: i32, %[[VAL_2:.*]]: i64, %[[VAL_3:.*]]: i32, %[[VAL_4:.*]]: f32, %[[VAL_5:.*]]: i32, %[[VAL_6:.*]]: f64, %[[VAL_7:.*]]: i32)
-  func.func @gpu_shuffles(%val0: i32, %id: i32,
-                          %val1: i64, %mask: i32,
-                          %val2: f32, %delta_up: i32,
-                          %val3: f64, %delta_down: i32) {
+  // CHECK-SAME:              (%[[I8_VAL:.*]]: i8, %[[I16_VAL:.*]]: i16,
+  // CHECK-SAME:               %[[I32_VAL:.*]]: i32, %[[I64_VAL:.*]]: i64,
+  // CHECK-SAME:               %[[F16_VAL:.*]]: f16, %[[F32_VAL:.*]]: f32,
+  // CHECK-SAME:               %[[F64_VAL:.*]]: f64,  %[[OFFSET:.*]]: i32) {
+  func.func @gpu_shuffles(%i8_val: i8,
+                          %i16_val: i16,
+                          %i32_val: i32,
+                          %i64_val: i64,
+                          %f16_val: f16,
+                          %f32_val: f32,
+                          %f64_val: f64,
+                          %offset: i32) {
     %width = arith.constant 16 : i32
-    // CHECK:         llvm.call spir_funccc @_Z17sub_group_shuffleij(%[[VAL_0]], %[[VAL_1]])
+    // CHECK:         llvm.call spir_funccc @_Z17sub_group_shufflecj(%[[I8_VAL]], %[[OFFSET]])
     // CHECK:         llvm.mlir.constant(true) : i1
-    // CHECK:         llvm.call spir_funccc @_Z21sub_group_shuffle_xorlj(%[[VAL_2]], %[[VAL_3]])
+    // CHECK:         llvm.call spir_funccc @_Z21sub_group_shuffle_xorsj(%[[I16_VAL]], %[[OFFSET]])
     // CHECK:         llvm.mlir.constant(true) : i1
-    // CHECK:         llvm.call spir_funccc @_Z20sub_group_shuffle_upfj(%[[VAL_4]], %[[VAL_5]])
+    // CHECK:         llvm.call spir_funccc @_Z17sub_group_shuffleij(%[[I32_VAL]], %[[OFFSET]])
     // CHECK:         llvm.mlir.constant(true) : i1
-    // CHECK:         llvm.call spir_funccc @_Z22sub_group_shuffle_downdj(%[[VAL_6]], %[[VAL_7]])
+    // CHECK:         llvm.call spir_funccc @_Z21sub_group_shuffle_xorlj(%[[I64_VAL]], %[[OFFSET]])
     // CHECK:         llvm.mlir.constant(true) : i1
-    %shuffleResult0, %valid0 = gpu.shuffle idx %val0, %id, %width : i32
-    %shuffleResult1, %valid1 = gpu.shuffle xor %val1, %mask, %width : i64
-    %shuffleResult2, %valid2 = gpu.shuffle up %val2, %delta_up, %width : f32
-    %shuffleResult3, %valid3 = gpu.shuffle down %val3, %delta_down, %width : f64
+    // CHECK:         llvm.call spir_funccc @_Z20sub_group_shuffle_upDhj(%[[F16_VAL]], %[[OFFSET]])
+    // CHECK:         llvm.mlir.constant(true) : i1
+    // CHECK:         llvm.call spir_funccc @_Z20sub_group_shuffle_upfj(%[[F32_VAL]], %[[OFFSET]])
+    // CHECK:         llvm.mlir.constant(true) : i1
+    // CHECK:         llvm.call spir_funccc @_Z22sub_group_shuffle_downdj(%[[F64_VAL]], %[[OFFSET]])
+    // CHECK:         llvm.mlir.constant(true) : i1
+    %shuffleResult0, %valid0 = gpu.shuffle idx %i8_val, %offset, %width : i8
+    %shuffleResult1, %valid1 = gpu.shuffle xor %i16_val, %offset, %width : i16
+    %shuffleResult2, %valid2 = gpu.shuffle idx %i32_val, %offset, %width : i32
+    %shuffleResult3, %valid3 = gpu.shuffle xor %i64_val, %offset, %width : i64
+    %shuffleResult4, %valid4 = gpu.shuffle up %f16_val, %offset, %width : f16
+    %shuffleResult5, %valid5 = gpu.shuffle up %f32_val, %offset, %width : f32
+    %shuffleResult6, %valid6 = gpu.shuffle down %f64_val, %offset, %width : f64
     return
   }
 }
@@ -377,6 +411,20 @@ gpu.module @shuffles_mismatch {
     return
   }
 }
+
+// -----
+
+// Cannot convert due to value type not being supported by the conversion
+
+gpu.module @not_supported_lowering {
+  func.func @gpu_shuffles(%val: i1, %id: i32) {
+    %width = arith.constant 32 : i32
+    // expected-error@below {{failed to legalize operation 'gpu.shuffle' that was explicitly marked illegal}}
+    %shuffleResult, %valid = gpu.shuffle xor %val, %id, %width : i1
+    return
+  }
+}
+
 
 // -----
 
@@ -444,7 +492,7 @@ gpu.module @kernels {
 // CHECK:           %[[VAL_17:.*]] = llvm.insertvalue %[[VAL_15]], %[[VAL_16]][0]
 // CHECK:           llvm.insertvalue %[[VAL_15]], %[[VAL_17]][1]
   gpu.func @kernel_with_private_attributions()
-      private(%arg2: memref<32xf32>, %arg3: memref<16xi16>)
+      private(%arg2: memref<32xf32, #gpu.address_space<private>>, %arg3: memref<16xi16, #gpu.address_space<private>>)
       kernel {
     gpu.return
   }
@@ -471,7 +519,7 @@ gpu.module @kernels {
 // CHECK:           %[[VAL_42:.*]] = llvm.insertvalue %[[VAL_30]], %[[VAL_41]][0]
 // CHECK:           llvm.insertvalue %[[VAL_30]], %[[VAL_42]][1]
   gpu.func @kernel_with_workgoup_attributions()
-      workgroup(%arg2: memref<32xf32, 3>, %arg3: memref<16xi16, 3>)
+      workgroup(%arg2: memref<32xf32, #gpu.address_space<workgroup>>, %arg3: memref<16xi16, #gpu.address_space<workgroup>>)
       kernel {
     gpu.return
   }
@@ -491,8 +539,8 @@ gpu.module @kernels {
 // CHECK-64:        %[[VAL_92:.*]] = llvm.alloca %[[VAL_91]] x i64 : (i64) -> !llvm.ptr
 // CHECK-32:        %[[VAL_92:.*]] = llvm.alloca %[[VAL_91]] x i32 : (i64) -> !llvm.ptr
   gpu.func @kernel_with_both_attributions()
-      workgroup(%arg4: memref<8xf32, 3>, %arg5: memref<16xindex, 3>)
-      private(%arg6: memref<32xi32>, %arg7: memref<32xindex>)
+      workgroup(%arg4: memref<8xf32, #gpu.address_space<workgroup>>, %arg5: memref<16xindex, #gpu.address_space<workgroup>>)
+      private(%arg6: memref<32xi32, #gpu.address_space<private>>, %arg7: memref<32xindex, #gpu.address_space<private>>)
       kernel {
     gpu.return
   }
@@ -500,6 +548,18 @@ gpu.module @kernels {
 // CHECK-LABEL:   llvm.func spir_kernelcc @kernel_known_block_size
 // CHECK-SAME:                                                     reqd_work_group_size = array<i32: 128, 128, 256>
   gpu.func @kernel_known_block_size() kernel attributes {known_block_size = array<i32: 128, 128, 256>} {
+    gpu.return
+  }
+}
+
+// -----
+
+gpu.module @kernels {
+// CHECK-LABEL:   llvm.func spir_funccc @address_spaces(
+// CHECK-SAME:                                          {{.*}}: !llvm.ptr<1>
+// CHECK-SAME:                                          {{.*}}: !llvm.ptr<3>
+// CHECK-SAME:                                          {{.*}}: !llvm.ptr
+  gpu.func @address_spaces(%arg0: memref<f32, #gpu.address_space<global>>, %arg1: memref<f32, #gpu.address_space<workgroup>>, %arg2: memref<f32, #gpu.address_space<private>>) {
     gpu.return
   }
 }

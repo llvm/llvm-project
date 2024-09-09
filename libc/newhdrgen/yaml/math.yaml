@@ -37,6 +37,13 @@ functions:
     return_type: float
     arguments:
       - type: float
+  - name: atan2
+    standards:
+      - stdc
+    return_type: double
+    arguments:
+      - type: double
+      - type: double
   - name: atan2f
     standards:
       - stdc
@@ -44,6 +51,13 @@ functions:
     arguments:
       - type: float
       - type: float
+  - name: atan2l
+    standards:
+      - stdc
+    return_type: long double
+    arguments:
+      - type: long double
+      - type: long double
   - name: atanf
     standards:
       - stdc

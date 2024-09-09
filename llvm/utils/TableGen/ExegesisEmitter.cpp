@@ -59,7 +59,7 @@ private:
 };
 
 static std::map<llvm::StringRef, unsigned>
-collectPfmCounters(const RecordKeeper &Records) {
+collectPfmCounters(RecordKeeper &Records) {
   std::map<llvm::StringRef, unsigned> PfmCounterNameTable;
   const auto AddPfmCounterName = [&PfmCounterNameTable](
                                      const Record *PfmCounterDef) {

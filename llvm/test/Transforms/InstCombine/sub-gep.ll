@@ -422,7 +422,7 @@ define i64 @nullptrtoint_scalable_x(i64 %x) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 4
-; CHECK-NEXT:    [[PTR_IDX:%.*]] = mul nsw i64 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[PTR_IDX:%.*]] = mul nsw i64 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i64 [[PTR_IDX]]
 ;
 entry:

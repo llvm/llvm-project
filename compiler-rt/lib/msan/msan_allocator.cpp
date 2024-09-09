@@ -199,8 +199,15 @@ static void *MsanAllocate(BufferedStackTrace *stack, uptr size, uptr alignment,
     ReportRssLimitExceeded(stack);
   }
   MsanThread *t = GetCurrentThread();
-  void *allocated = allocator.Allocate(GetAllocatorCache(&t->malloc_storage()),
-                                       size, alignment);
+  void *allocated;
+  if (t) {
+    AllocatorCache *cache = GetAllocatorCache(&t->malloc_storage());
+    allocated = allocator.Allocate(cache, size, alignment);
+  } else {
+    SpinMutexLock l(&fallback_mutex);
+    AllocatorCache *cache = &fallback_allocator_cache;
+    allocated = allocator.Allocate(cache, size, alignment);
+  }
   if (UNLIKELY(!allocated)) {
     SetAllocatorOutOfMemory();
     if (AllocatorMayReturnNull())

@@ -13,11 +13,8 @@
 #ifndef LLVM_CLANG_SEMA_SEMAOBJC_H
 #define LLVM_CLANG_SEMA_SEMAOBJC_H
 
-#include "clang/AST/Decl.h"
-#include "clang/AST/DeclBase.h"
+#include "clang/AST/ASTFwd.h"
 #include "clang/AST/DeclObjC.h"
-#include "clang/AST/Expr.h"
-#include "clang/AST/ExprObjC.h"
 #include "clang/AST/NSAPI.h"
 #include "clang/AST/OperationKinds.h"
 #include "clang/AST/Type.h"
@@ -27,24 +24,29 @@
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Sema/DeclSpec.h"
-#include "clang/Sema/Lookup.h"
 #include "clang/Sema/ObjCMethodList.h"
 #include "clang/Sema/Ownership.h"
 #include "clang/Sema/Redeclaration.h"
-#include "clang/Sema/Scope.h"
+#include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaBase.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include <memory>
 #include <optional>
-#include <type_traits>
 #include <utility>
 
 namespace clang {
 
+class AttributeCommonInfo;
+class AvailabilitySpec;
 enum class CheckedConversionKind;
+class DeclGroupRef;
+class LookupResult;
+struct ObjCDictionaryElement;
 class ParsedAttr;
+class ParsedAttributesView;
+class Scope;
 struct SkipBodyInfo;
 
 class SemaObjC : public SemaBase {
