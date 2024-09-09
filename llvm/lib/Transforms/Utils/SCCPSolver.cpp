@@ -361,7 +361,7 @@ static void inferAttribute(Function *F, unsigned AttrIndex,
   // Infer nonnull attribute.
   if (Val.isNotConstant() && Val.getNotConstant()->getType()->isPointerTy() &&
       Val.getNotConstant()->isNullValue() &&
-      !F->getAttributeAtIndex(AttrIndex, Attribute::NonNull).isValid()) {
+      !F->hasAttributeAtIndex(AttrIndex, Attribute::NonNull)) {
     F->addAttributeAtIndex(AttrIndex,
                            Attribute::get(F->getContext(), Attribute::NonNull));
   }
