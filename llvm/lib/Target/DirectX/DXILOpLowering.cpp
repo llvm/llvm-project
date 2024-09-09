@@ -287,7 +287,10 @@ public:
           if (!CheckOp) {
             Value *NewEVI = IRB.CreateExtractValue(Op, 4);
             Expected<CallInst *> OpCall = OpBuilder.tryCreateOp(
-                OpCode::CheckAccessFullyMapped, {NewEVI}, Int32Ty);
+                OpCode::CheckAccessFullyMapped, {NewEVI},
+                OldResult->hasName() ? OldResult->getName() + "_check"
+                                     : Twine(),
+                Int32Ty);
             if (Error E = OpCall.takeError())
               return E;
             CheckOp = *OpCall;
@@ -297,7 +300,8 @@ public:
         }
       }
 
-      OldResult = cast<Instruction>(IRB.CreateExtractValue(Op, 0));
+      OldResult = cast<Instruction>(
+          IRB.CreateExtractValue(Op, 0, OldResult->getName()));
       OldTy = ST->getElementType(0);
     }
 
