@@ -64,8 +64,8 @@ class MatcherTableEmitter {
 
   std::vector<const ComplexPattern *> ComplexPatterns;
 
-  DenseMap<Record *, unsigned> NodeXFormMap;
-  std::vector<Record *> NodeXForms;
+  DenseMap<const Record *, unsigned> NodeXFormMap;
+  std::vector<const Record *> NodeXForms;
 
   std::vector<std::string> VecIncludeStrings;
   MapVector<std::string, unsigned, StringMap<unsigned>> VecPatterns;
@@ -203,7 +203,7 @@ private:
     return llvm::find(ComplexPatterns, &P) - ComplexPatterns.begin();
   }
 
-  unsigned getNodeXFormID(Record *Rec) {
+  unsigned getNodeXFormID(const Record *Rec) {
     unsigned &Entry = NodeXFormMap[Rec];
     if (Entry == 0) {
       NodeXForms.push_back(Rec);
@@ -930,7 +930,7 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
             GetPatFromTreePatternNode(SNT->getPattern().getSrcPattern());
         std::string dst =
             GetPatFromTreePatternNode(SNT->getPattern().getDstPattern());
-        Record *PatRecord = SNT->getPattern().getSrcRecord();
+        const Record *PatRecord = SNT->getPattern().getSrcRecord();
         std::string include_src = getIncludePath(PatRecord);
         unsigned Offset =
             getPatternIdxFromTable(src + " -> " + dst, std::move(include_src));
@@ -1043,7 +1043,7 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
           GetPatFromTreePatternNode(CM->getPattern().getSrcPattern());
       std::string dst =
           GetPatFromTreePatternNode(CM->getPattern().getDstPattern());
-      Record *PatRecord = CM->getPattern().getSrcRecord();
+      const Record *PatRecord = CM->getPattern().getSrcRecord();
       std::string include_src = getIncludePath(PatRecord);
       unsigned Offset =
           getPatternIdxFromTable(src + " -> " + dst, std::move(include_src));

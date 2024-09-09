@@ -298,7 +298,8 @@ CGIOperandList::ParseOperandName(StringRef Op, bool AllowWholeOp) {
   return std::pair(0U, 0U);
 }
 
-static void ParseConstraint(StringRef CStr, CGIOperandList &Ops, Record *Rec) {
+static void ParseConstraint(StringRef CStr, CGIOperandList &Ops,
+                            const Record *Rec) {
   // EARLY_CLOBBER: @early $reg
   StringRef::size_type wpos = CStr.find_first_of(" \t");
   StringRef::size_type start = CStr.find_first_not_of(" \t");
@@ -391,7 +392,8 @@ static void ParseConstraint(StringRef CStr, CGIOperandList &Ops, Record *Rec) {
   Ops[SrcOp.first].Constraints[SrcOp.second] = NewConstraint;
 }
 
-static void ParseConstraints(StringRef CStr, CGIOperandList &Ops, Record *Rec) {
+static void ParseConstraints(StringRef CStr, CGIOperandList &Ops,
+                             const Record *Rec) {
   if (CStr.empty())
     return;
 
@@ -428,7 +430,7 @@ void CGIOperandList::ProcessDisableEncoding(StringRef DisableEncoding) {
 // CodeGenInstruction Implementation
 //===----------------------------------------------------------------------===//
 
-CodeGenInstruction::CodeGenInstruction(Record *R)
+CodeGenInstruction::CodeGenInstruction(const Record *R)
     : TheDef(R), Operands(R), InferredFrom(nullptr) {
   Namespace = R->getValueAsString("Namespace");
   AsmString = std::string(R->getValueAsString("AsmString"));
@@ -501,7 +503,7 @@ CodeGenInstruction::CodeGenInstruction(Record *R)
     HasComplexDeprecationPredicate = true;
     DeprecatedReason =
         std::string(R->getValueAsString("ComplexDeprecationPredicate"));
-  } else if (RecordVal *Dep = R->getValue("DeprecatedFeatureMask")) {
+  } else if (const RecordVal *Dep = R->getValue("DeprecatedFeatureMask")) {
     // Check if we have a Subtarget feature mask.
     HasComplexDeprecationPredicate = false;
     DeprecatedReason = Dep->getValue()->getAsString();
