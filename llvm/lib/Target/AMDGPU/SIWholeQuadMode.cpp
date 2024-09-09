@@ -1072,7 +1072,8 @@ void SIWholeQuadMode::lowerBlock(MachineBasicBlock &MBB) {
     case AMDGPU::V_SET_INACTIVE_B32:
       if (ActiveLanesReg) {
         LiveInterval &LI = LIS->getInterval(MI.getOperand(5).getReg());
-        MRI->constrainRegClass(ActiveLanesReg, TRI->getRegClass(AMDGPU::SReg_1_XEXECRegClassID));
+        MRI->constrainRegClass(
+            ActiveLanesReg, TRI->getRegClass(AMDGPU::SReg_1_XEXECRegClassID));
         MI.getOperand(5).setReg(ActiveLanesReg);
         LIS->shrinkToUses(&LI);
       } else {
