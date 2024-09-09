@@ -211,7 +211,6 @@ namespace ARMII {
 
   inline static const char *AddrModeToString(AddrMode addrmode) {
     switch (addrmode) {
-    default: llvm_unreachable("Unknown addressing mode");
     case AddrModeNone:     return "AddrModeNone";
     case AddrMode1:        return "AddrMode1";
     case AddrMode2:        return "AddrMode2";
