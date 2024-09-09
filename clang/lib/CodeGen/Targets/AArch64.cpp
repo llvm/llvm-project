@@ -304,7 +304,7 @@ AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadic,
         return getNaturalAlignIndirect(Ty, false);
 
     return (isPromotableIntegerTypeForABI(Ty) && isDarwinPCS()
-                ? ABIArgInfo::getExtend(Ty)
+                ? ABIArgInfo::getExtend(Ty, CGT.ConvertType(Ty))
                 : ABIArgInfo::getDirect());
   }
 
