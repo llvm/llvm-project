@@ -353,12 +353,13 @@ DepScanFile::create(EntryRef Entry) {
 }
 
 llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>>
-DependencyScanningWorkerFilesystem::openFileForRead(const Twine &Path) {
+DependencyScanningWorkerFilesystem::openFileForRead(const Twine &Path,
+                                                    bool IsText) {
   SmallString<256> OwnedFilename;
   StringRef Filename = Path.toStringRef(OwnedFilename);
 
   if (shouldBypass(Filename))
-    return getUnderlyingFS().openFileForRead(Path);
+    return getUnderlyingFS().openFileForRead(Path, IsText);
 
   llvm::ErrorOr<EntryRef> Result = getOrCreateFileSystemEntry(Filename);
   if (!Result)
