@@ -24,8 +24,8 @@
 #include <unordered_map>
 #include <vector>
 
-using namespace __orc_rt;
-using namespace __orc_rt::elfnix;
+using namespace orc_rt;
+using namespace orc_rt::elfnix;
 
 // Declare function tags for functions in the JIT process.
 ORC_RT_JIT_DISPATCH_TAG(__orc_rt_elfnix_get_initializers_tag)
@@ -601,7 +601,7 @@ ORC_RT_INTERFACE int64_t __orc_rt_elfnix_run_program(
   using MainTy = int (*)(int, char *[]);
 
   void *H = __orc_rt_elfnix_jit_dlopen(JITDylibName,
-                                       __orc_rt::elfnix::ORC_RT_RTLD_LAZY);
+                                       orc_rt::elfnix::ORC_RT_RTLD_LAZY);
   if (!H) {
     __orc_rt_log_error(__orc_rt_elfnix_jit_dlerror());
     return -1;
