@@ -121,7 +121,7 @@ In C, you can use the ``__rtsan_disable()`` and ``rtsan_enable()`` functions to 
         }
     }
 
-Each call to ``__rtsan_disable()`` must be paired with a subsequent call to ``__rtsan_enable()`` to restore normal sanitizer functionality. If a corresponding ``rtsan_enable()`` call is not made, undefined behavior may result, potentially leaving the sanitizer permanently disabled for the rest of the program's execution.
+Each call to ``__rtsan_disable()`` must be paired with a subsequent call to ``__rtsan_enable()`` to restore normal sanitizer functionality. If a corresponding ``rtsan_enable()`` call is not made, the behavior is undefined.
 
 Compile-time sanitizer detection
 --------------------------------
