@@ -502,10 +502,8 @@ private:
   void addToQueue(Value *Val, BasicBlock *BB,
                   std::deque<std::pair<Value *, BasicBlock *>> &Q,
                   SmallSet<Value *, 16> &SeenValues) {
-    if (SeenValues.contains(Val))
-      return;
-    Q.push_back({Val, BB});
-    SeenValues.insert(Val);
+    if (SeenValues.insert(Val).second)
+      Q.push_back({Val, BB});
   }
 
   bool isValidSelectInst(SelectInst *SI) {

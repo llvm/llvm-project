@@ -133,7 +133,7 @@ public:
   bool VisitVectorBinOp(const BinaryOperator *E);
   bool VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *E);
   bool VisitCallExpr(const CallExpr *E);
-  bool VisitBuiltinCallExpr(const CallExpr *E);
+  bool VisitBuiltinCallExpr(const CallExpr *E, unsigned BuiltinID);
   bool VisitCXXDefaultInitExpr(const CXXDefaultInitExpr *E);
   bool VisitCXXBoolLiteralExpr(const CXXBoolLiteralExpr *E);
   bool VisitCXXNullPtrLiteralExpr(const CXXNullPtrLiteralExpr *E);
@@ -222,7 +222,7 @@ public:
 
 protected:
   bool visitStmt(const Stmt *S);
-  bool visitExpr(const Expr *E) override;
+  bool visitExpr(const Expr *E, bool DestroyToplevelScope) override;
   bool visitFunc(const FunctionDecl *F) override;
 
   bool visitDeclAndReturn(const VarDecl *VD, bool ConstantContext) override;
@@ -409,6 +409,8 @@ protected:
   /// Switch case mapping.
   CaseMap CaseLabels;
 
+  /// Scope to cleanup until when chumping to one of the labels.
+  VariableScope<Emitter> *LabelVarScope = nullptr;
   /// Point to break to.
   OptLabelTy BreakLabel;
   /// Point to continue to.

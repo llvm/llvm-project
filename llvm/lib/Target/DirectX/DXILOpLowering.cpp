@@ -259,23 +259,21 @@ public:
       lowerToBindAndAnnotateHandle(F);
   }
 
-  /// Replace uses of \c V with the values in the `dx.ResRet` of \c Op. Since we
-  /// expect to be post-scalarization, make an effort to avoid vectors.
+  /// Replace uses of \c Intrin with the values in the `dx.ResRet` of \c Op.
+  /// Since we expect to be post-scalarization, make an effort to avoid vectors.
   Error replaceResRetUses(CallInst *Intrin, CallInst *Op) {
     IRBuilder<> &IRB = OpBuilder.getIRB();
 
-    Type *OldRetTy = Intrin->getType();
+    Type *OldTy = Intrin->getType();
 
     // For scalars, we just extract the first element.
-    if (!isa<FixedVectorType>(OldRetTy)) {
+    if (!isa<FixedVectorType>(OldTy)) {
       Value *EVI = IRB.CreateExtractValue(Op, 0);
       Intrin->replaceAllUsesWith(EVI);
       Intrin->eraseFromParent();
       return Error::success();
     }
 
-    auto *VecTy = cast<FixedVectorType>(OldRetTy);
-    unsigned N = VecTy->getNumElements();
     std::array<Value *, 4> Extracts = {};
     SmallVector<ExtractElementInst *> DynamicAccesses;
 
@@ -295,6 +293,9 @@ public:
         }
       }
     }
+
+    const auto *VecTy = cast<FixedVectorType>(OldTy);
+    const unsigned N = VecTy->getNumElements();
 
     // If there's a dynamic access we need to round trip through stack memory so
     // that we don't leave vectors around.
@@ -331,7 +332,7 @@ public:
         if (!Extracts[I])
           Extracts[I] = IRB.CreateExtractValue(Op, I);
 
-      Value *Vec = UndefValue::get(OldRetTy);
+      Value *Vec = UndefValue::get(OldTy);
       for (int I = 0, E = N; I != E; ++I)
         Vec = IRB.CreateInsertElement(Vec, Extracts[I], I);
       Intrin->replaceAllUsesWith(Vec);

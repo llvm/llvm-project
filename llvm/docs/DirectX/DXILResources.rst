@@ -277,7 +277,7 @@ return 1 to 4 elements from the given resource, to a maximum of 16 bytes of
 data. DXIL's modeling of this is influenced by DirectX and DXBC's history and
 it generally treats these operations as returning 4 32-bit values. For 16-bit
 elements the values are 16-bit values, and for 64-bit values the operations
-return 4 32-bit integers and combine them with further operations.
+return 4 32-bit integers and emit further code to construct the double.
 
 In DXIL, these operations return `ResRet`_ and `CBufRet`_ values, are structs
 containing 4 elements of the same type, and in the case of `ResRet` a 5th

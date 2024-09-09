@@ -164,8 +164,6 @@ public:
 
   bool hasPathSensitiveCheckers() const;
 
-  void finishedCheckerRegistration();
-
   const LangOptions &getLangOpts() const { return LangOpts; }
   const AnalyzerOptions &getAnalyzerOptions() const { return AOptions; }
   const Preprocessor &getPreprocessor() const {
