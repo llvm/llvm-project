@@ -1,4 +1,4 @@
-# REQUIRES: host-byteorder-little-endian
+# REQUIRES: target-byteorder-little-endian
 # RUN: yaml2obj %s \
 # RUN:   | llvm-objdump --macho --private-header - 2>&1 \
 # RUN:   | FileCheck %s

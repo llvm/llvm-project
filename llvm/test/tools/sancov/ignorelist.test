@@ -1,4 +1,4 @@
-REQUIRES: x86-registered-target && host-byteorder-little-endian
+REQUIRES: x86-registered-target && target-byteorder-little-endian
 RUN: sancov -covered-functions %p/Inputs/test-linux_x86_64 %p/Inputs/test-linux_x86_64.0.sancov | FileCheck %s --check-prefix=ALL
 RUN: sancov -covered-functions -ignorelist %p/Inputs/fun_ignorelist.txt %p/Inputs/test-linux_x86_64 %p/Inputs/test-linux_x86_64.0.sancov | FileCheck %s
 RUN: sancov -covered-functions -ignorelist %p/Inputs/src_ignorelist.txt %p/Inputs/test-linux_x86_64 %p/Inputs/test-linux_x86_64.1.sancov | FileCheck --check-prefix=CHECK1 %s
