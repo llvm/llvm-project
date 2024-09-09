@@ -152,6 +152,9 @@ void nb10(
 {
 	fp1(); // expected-warning {{function with 'nonblocking' attribute must not call non-'nonblocking' function}}
 	fp2();
+
+	// When there's a cast, there's a separate diagnostic.
+	static_cast<void (*)()>(fp1)(); // expected-warning {{function with 'nonblocking' attribute must not call non-'nonblocking' expression}}
 }
 
 // Interactions with nonblocking(false)

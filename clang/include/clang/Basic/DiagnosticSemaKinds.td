@@ -10969,7 +10969,7 @@ def note_func_effect_calls_func_without_effect : Note<
 def warn_func_effect_calls_expr_without_effect : Warning<
   "%select{function|constructor|destructor|lambda|block|member initializer of constructor}0 "
   "with '%1' attribute "
-  "must not call non-'%0' expression">,
+  "must not call non-'%1' expression">,
   InGroup<FunctionEffects>, DefaultIgnore;
 def note_func_effect_call_extern : Note<
   "declaration cannot be inferred '%0' because it has no definition in this translation unit">;
