@@ -10186,7 +10186,7 @@ public:
       OverloadCandidateSet &CandidateSet,
       TemplateArgumentListInfo *ExplicitTemplateArgs = nullptr,
       bool SuppressUserConversions = false, bool PartialOverloading = false,
-      bool FirstArgumentIsBase = false, VarDecl *LambdaName = nullptr);
+      bool FirstArgumentIsBase = false, VarDecl *LambdaDecl = nullptr);
 
   /// AddMethodCandidate - Adds a named decl (which is some kind of
   /// method) as a method candidate to the given overload set.
@@ -10211,7 +10211,7 @@ public:
       OverloadCandidateSet &CandidateSet, bool SuppressUserConversions = false,
       bool PartialOverloading = false,
       ConversionSequenceList EarlyConversions = std::nullopt,
-      OverloadCandidateParamOrder PO = {}, VarDecl *LambdaName = nullptr);
+      OverloadCandidateParamOrder PO = {}, VarDecl *LambdaDecl = nullptr);
 
   /// Add a C++ member function template as a candidate to the candidate
   /// set, using template argument deduction to produce an appropriate member

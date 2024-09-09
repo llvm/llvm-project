@@ -6127,9 +6127,9 @@ static void mergeCandidatesWithResults(
     }
     if (Candidate.Viable)
       Results.push_back(
-          Candidate.LambdaName == nullptr
+          Candidate.LambdaDecl == nullptr
               ? ResultCandidate(Candidate.Function)
-              : ResultCandidate(Candidate.Function, Candidate.LambdaName));
+              : ResultCandidate(Candidate.Function, Candidate.LambdaDecl));
   }
 }
 
@@ -6298,7 +6298,7 @@ SemaCodeCompletion::ProduceCallSignatureHelp(Expr *Fn, ArrayRef<Expr *> Args,
         SmallVector<Expr *, 12> ArgExprs(1, NakedFn);
         ArgExprs.append(ArgsWithoutDependentTypes.begin(),
                         ArgsWithoutDependentTypes.end());
-        auto *const LambdaName =
+        auto *const LambdaDecl =
             DC->isLambda() ? dyn_cast_if_present<VarDecl>(NakedFn->getReferencedDeclOfCallee())
                            : nullptr;
         SemaRef.AddFunctionCandidates(R.asUnresolvedSet(), ArgExprs,
@@ -6307,7 +6307,7 @@ SemaCodeCompletion::ProduceCallSignatureHelp(Expr *Fn, ArrayRef<Expr *> Args,
                                       /*SuppressUserConversions=*/false,
                                       /*PartialOverloading=*/true,
                                       /*FirstArgumentIsBase=*/false,
-                                      /*LambdaName=*/LambdaName);
+                                      /*LambdaDecl=*/LambdaDecl);
       }
     } else {
       // Lastly we check whether expression's type is function pointer or

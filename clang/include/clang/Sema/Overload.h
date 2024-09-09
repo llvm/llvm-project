@@ -876,10 +876,10 @@ class Sema;
     /// function pointer or reference (C++ [over.call.object]).
     FunctionDecl *Function;
 
-    /// LambdaName - When the OverloadCandidate is for a
+    /// LambdaDecl - When the OverloadCandidate is for a
     /// lambda's operator(), points to the declaration of
     /// the lambda variable.
-    VarDecl *LambdaName{nullptr};
+    VarDecl *LambdaDecl{nullptr};
 
     /// FoundDecl - The original declaration that was looked up /
     /// invented / otherwise found, together with its access.
