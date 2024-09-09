@@ -1,12 +1,15 @@
 /// (Essentially identical to ps4-sdk-root.c except for the target.)
 
-/// PS5 clang emits warnings when SDK headers or libraries are missing, or if a
-/// specified `-isysroot` or `--sysroot` does not exist.
+/// PS5 clang emits warnings when SDK headers or libraries are missing, unless
+/// the user takes control of search paths, when corresponding existence checks
+/// are skipped.
 ///
-/// If the user takes control of header or library search, the respective
-/// existence check is skipped. User control of header search is assumed if
-/// `--sysroot`, `-isysroot`, `-nostdinc` or `-nostdlibinc` is supplied. User
-/// control of library search is assumed if `--sysroot` is supplied.
+/// User control of header search is assumed if `--sysroot`, `-isysroot`,
+/// `-nostdinc` or `-nostdlibinc` is supplied. User control of library search
+/// is assumed if `--sysroot` is supplied.
+///
+/// Warnings are emitted if a specified `-isysroot` or `--sysroot` does not
+/// exist.
 ///
 /// The default sysroot for both headers and libraries is taken from the
 /// SCE_PROSPERO_SDK_DIR environment variable.
