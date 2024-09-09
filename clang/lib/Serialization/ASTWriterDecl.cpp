@@ -796,10 +796,14 @@ void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
   // Store references to all lambda decls inside function to load them
   // immediately after loading the function to make sure that canonical
   // decls for lambdas will be from the same module.
-  llvm::SmallVector<const Decl *, 2> Lambdas = collectLambdas(D);
-  Record.push_back(Lambdas.size());
-  for (const auto *L : Lambdas)
-    Record.AddDeclRef(L);
+  if (D->isCanonicalDecl()) {
+    llvm::SmallVector<const Decl *, 2> Lambdas = collectLambdas(D);
+    Record.push_back(Lambdas.size());
+    for (const auto *L : Lambdas)
+      Record.AddDeclRef(L);
+  } else {
+    Record.push_back(0);
+  }
 
   Code = serialization::DECL_FUNCTION;
 }
@@ -2276,6 +2280,7 @@ getFunctionDeclAbbrev(serialization::DeclCode Code) {
   //
   // This is:
   //         NumParams and Params[] from FunctionDecl, and
+  //         NumLambdas, Lambdas[] from FunctionDecl, and
   //         NumOverriddenMethods, OverriddenMethods[] from CXXMethodDecl.
   //
   //  Add an AbbrevOp for 'size then elements' and use it here.

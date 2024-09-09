@@ -1163,7 +1163,7 @@ void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
     for (unsigned I = 0; I != NumLambdas; ++I)
       Reader.PendingLambdas.push_back(Record.readDeclID());
   } else {
-    (void)Record.readIntArray(NumLambdas);
+    Record.skipInts(NumLambdas);
   }
 }
 
