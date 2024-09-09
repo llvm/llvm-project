@@ -43,15 +43,7 @@ public:
   virtual bool recordRelocation(const MCFixup &) const { return true; }
 };
 
-class WinCOFFWriter;
-
 class WinCOFFObjectWriter final : public MCObjectWriter {
-  friend class WinCOFFWriter;
-
-  std::unique_ptr<MCWinCOFFObjectTargetWriter> TargetObjectWriter;
-  std::unique_ptr<WinCOFFWriter> ObjWriter, DwoWriter;
-  bool IncrementalLinkerCompatible = false;
-
 public:
   WinCOFFObjectWriter(std::unique_ptr<MCWinCOFFObjectTargetWriter> MOTW,
                       raw_pwrite_stream &OS);
@@ -72,20 +64,13 @@ public:
                         const MCFixup &Fixup, MCValue Target,
                         uint64_t &FixedValue) override;
   uint64_t writeObject(MCAssembler &Asm) override;
+
+  std::unique_ptr<MCWinCOFFObjectTargetWriter> TargetObjectWriter;
+  bool IncrementalLinkerCompatible = false;
+
+private:
+  std::unique_ptr<MCObjectWriterBase> ObjWriter, DwoWriter;
 };
-
-/// Construct a new Win COFF writer instance.
-///
-/// \param MOTW - The target specific WinCOFF writer subclass.
-/// \param OS - The stream to write to.
-/// \returns The constructed object writer.
-std::unique_ptr<MCObjectWriter>
-createWinCOFFObjectWriter(std::unique_ptr<MCWinCOFFObjectTargetWriter> MOTW,
-                          raw_pwrite_stream &OS);
-
-std::unique_ptr<MCObjectWriter>
-createWinCOFFDwoObjectWriter(std::unique_ptr<MCWinCOFFObjectTargetWriter> MOTW,
-                             raw_pwrite_stream &OS, raw_pwrite_stream &DwoOS);
 } // end namespace llvm
 
 #endif // LLVM_MC_MCWINCOFFOBJECTWRITER_H

@@ -119,9 +119,8 @@ public:
 
   SmallVector<COFFSymbol *, 1> OffsetSymbols;
 };
-} // namespace
 
-class llvm::WinCOFFWriter {
+class WinCOFFWriter : public MCObjectWriterBase {
   WinCOFFObjectWriter &OWriter;
   support::endian::Writer W;
 
@@ -158,12 +157,12 @@ public:
   WinCOFFWriter(WinCOFFObjectWriter &OWriter, raw_pwrite_stream &OS,
                 DwoMode Mode);
 
-  void reset();
-  void executePostLayoutBinding(MCAssembler &Asm);
+  void reset() override;
+  void executePostLayoutBinding(MCAssembler &Asm) override;
   void recordRelocation(MCAssembler &Asm, const MCFragment *Fragment,
                         const MCFixup &Fixup, MCValue Target,
-                        uint64_t &FixedValue);
-  uint64_t writeObject(MCAssembler &Asm);
+                        uint64_t &FixedValue) override;
+  uint64_t writeObject(MCAssembler &Asm) override;
 
 private:
   COFFSymbol *createSymbol(StringRef Name);
@@ -194,6 +193,7 @@ private:
   void assignSectionNumbers();
   void assignFileOffsets(MCAssembler &Asm);
 };
+} // namespace
 
 WinCOFFObjectWriter::WinCOFFObjectWriter(
     std::unique_ptr<MCWinCOFFObjectTargetWriter> MOTW, raw_pwrite_stream &OS)
@@ -1067,7 +1067,7 @@ uint64_t WinCOFFWriter::writeObject(MCAssembler &Asm) {
         ".llvm_addrsig", COFF::IMAGE_SCN_LNK_REMOVE);
     auto *Frag = cast<MCDataFragment>(Sec->curFragList()->Head);
     raw_svector_ostream OS(Frag->getContents());
-    for (const MCSymbol *S : OWriter.AddrsigSyms) {
+    for (const MCSymbol *S : OWriter.getAddrsigSyms()) {
       if (!S->isRegistered())
         continue;
       if (!S->isTemporary()) {
@@ -1200,17 +1200,3 @@ MCWinCOFFObjectTargetWriter::MCWinCOFFObjectTargetWriter(unsigned Machine_)
 
 // Pin the vtable to this file.
 void MCWinCOFFObjectTargetWriter::anchor() {}
-
-//------------------------------------------------------------------------------
-// WinCOFFObjectWriter factory function
-
-std::unique_ptr<MCObjectWriter> llvm::createWinCOFFObjectWriter(
-    std::unique_ptr<MCWinCOFFObjectTargetWriter> MOTW, raw_pwrite_stream &OS) {
-  return std::make_unique<WinCOFFObjectWriter>(std::move(MOTW), OS);
-}
-
-std::unique_ptr<MCObjectWriter> llvm::createWinCOFFDwoObjectWriter(
-    std::unique_ptr<MCWinCOFFObjectTargetWriter> MOTW, raw_pwrite_stream &OS,
-    raw_pwrite_stream &DwoOS) {
-  return std::make_unique<WinCOFFObjectWriter>(std::move(MOTW), OS, DwoOS);
-}
