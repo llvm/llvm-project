@@ -31,7 +31,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 // allocator that meets the Cpp17Allocator requirements (https://eel.is/c++draft/allocator.requirements).
 // In particular, this means that containers should only accept non-cv-qualified object types, and
 // types that are Cpp17Erasable.
-template <template <class...> class _Template, class _Tp, bool = is_same<typename decay<_Tp>::type, _Tp>::value>
+template <template <class...> class _Template, class _Tp, bool = is_same<__decay_t<_Tp>, _Tp>::value>
 struct __allocator_requirements : true_type {};
 
 #if _LIBCPP_STD_VER >= 20
