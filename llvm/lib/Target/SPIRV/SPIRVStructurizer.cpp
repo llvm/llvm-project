@@ -1142,6 +1142,42 @@ class SPIRVStructurizer : public FunctionPass {
     return Modified;
   }
 
+  // Makes sure every case target in |F| is unique. If 2 cases branch to the
+  // same basic block, one of the targets is updated so it jumps to a new basic
+  // block ending with a single unconditional branch to the original target.
+  bool splitSwitchCases(Function &F) {
+    bool Modified = false;
+
+    for (BasicBlock &BB : F) {
+      SwitchInst *SI = dyn_cast<SwitchInst>(BB.getTerminator());
+      if (!SI)
+        continue;
+
+      BlockSet Seen;
+      Seen.insert(SI->getDefaultDest());
+
+      auto It = SI->case_begin();
+      while (It != SI->case_end()) {
+        BasicBlock *Target = It->getCaseSuccessor();
+        if (Seen.count(Target) == 0) {
+          Seen.insert(Target);
+          ++It;
+          continue;
+        }
+
+        Modified = true;
+        BasicBlock *NewTarget =
+            BasicBlock::Create(F.getContext(), "new.sw.case", &F);
+        IRBuilder<> Builder(NewTarget);
+        Builder.CreateBr(Target);
+        SI->addCase(It->getCaseValue(), NewTarget);
+        It = SI->removeCase(It);
+      }
+    }
+
+    return Modified;
+  }
+
   bool IsRequiredForPhiNode(BasicBlock *BB) {
     for (BasicBlock *Successor : successors(BB)) {
       for (PHINode &Phi : Successor->phis()) {
@@ -1268,6 +1304,11 @@ public:
 
   virtual bool runOnFunction(Function &F) override {
     bool Modified = false;
+
+    // In LLVM, Switches are allowed to have several cases branching to the same
+    // basic block. This is allowed in SPIR-V, but can make structurizing SPIR-V
+    // harder, so first remove edge cases.
+    Modified |= splitSwitchCases(F);
 
     // LLVM allows conditional branches to have both side jumping to the same
     // block. It also allows switched to have a single default, or just one
