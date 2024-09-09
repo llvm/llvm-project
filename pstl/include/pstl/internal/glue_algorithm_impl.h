@@ -606,7 +606,7 @@ sort(_ExecutionPolicy&& __exec, _RandomAccessIterator __first, _RandomAccessIter
 
     typedef typename iterator_traits<_RandomAccessIterator>::value_type _InputType;
     return __pstl::__internal::__pattern_sort(__dispatch_tag, std::forward<_ExecutionPolicy>(__exec), __first, __last,
-                                              __comp, typename std::is_move_constructible<_InputType>::type());
+                                              __comp);
 }
 
 template <class _ExecutionPolicy, class _RandomAccessIterator>
