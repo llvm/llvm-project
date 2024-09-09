@@ -66,7 +66,7 @@ private:
   bool convertToWholeRegister(MachineInstr &MI) const;
   bool convertToUnmasked(MachineInstr &MI) const;
   bool convertAllOnesVMergeToVMv(MachineInstr &MI) const;
-  bool convertSameMaskVMergeToVMv(MachineInstr &MI) const;
+  bool convertSameMaskVMergeToVMv(MachineInstr &MI);
   bool foldUndefPassthruVMV_V_V(MachineInstr &MI);
   bool foldVMV_V_V(MachineInstr &MI);
 
@@ -396,7 +396,7 @@ bool RISCVVectorPeephole::convertAllOnesVMergeToVMv(MachineInstr &MI) const {
 /// ->
 /// %true = PseudoVADD_VV_M1_MASK %false, %x, %y, %mask, vl1, sew, policy
 /// %x = PseudoVMV_V_V %passthru, %true, vl2, sew, tu_mu
-bool RISCVVectorPeephole::convertSameMaskVMergeToVMv(MachineInstr &MI) const {
+bool RISCVVectorPeephole::convertSameMaskVMergeToVMv(MachineInstr &MI) {
   unsigned NewOpc = getVMV_V_VOpcodeForVMERGE_VVM(MI);
   if (!NewOpc)
     return false;
@@ -405,17 +405,23 @@ bool RISCVVectorPeephole::convertSameMaskVMergeToVMv(MachineInstr &MI) const {
       !hasSameEEW(MI, *True))
     return false;
 
-  // True's passthru needs to be equivalent to False
-  Register TruePassthruReg = True->getOperand(1).getReg();
-  Register FalseReg = MI.getOperand(2).getReg();
-  if (TruePassthruReg != RISCV::NoRegister && TruePassthruReg != FalseReg)
-    return false;
-
   const MachineInstr *TrueV0Def = V0Defs.lookup(True);
   const MachineInstr *MIV0Def = V0Defs.lookup(&MI);
   assert(TrueV0Def && TrueV0Def->isCopy() && MIV0Def && MIV0Def->isCopy());
   if (TrueV0Def->getOperand(1).getReg() != MIV0Def->getOperand(1).getReg())
     return false;
+
+  // True's passthru needs to be equivalent to False
+  Register TruePassthruReg = True->getOperand(1).getReg();
+  Register FalseReg = MI.getOperand(2).getReg();
+  if (TruePassthruReg != FalseReg) {
+    // If True's passthru is undef see if we can change it to False
+    if (TruePassthruReg != RISCV::NoRegister ||
+        !MRI->hasOneUse(MI.getOperand(3).getReg()) ||
+        !ensureDominates(MI.getOperand(2), *True))
+      return false;
+    True->getOperand(1).setReg(MI.getOperand(2).getReg());
+  }
 
   MI.setDesc(TII->get(NewOpc));
   MI.removeOperand(2); // False operand

@@ -832,28 +832,32 @@ define fastcc float @callee_float_32(<32 x float> %A) nounwind {
 define float @caller_float_32(<32 x float> %A) nounwind {
 ; ZHINX32-LABEL: caller_float_32:
 ; ZHINX32:       # %bb.0:
-; ZHINX32-NEXT:    addi sp, sp, -144
-; ZHINX32-NEXT:    sw ra, 140(sp) # 4-byte Folded Spill
-; ZHINX32-NEXT:    sw s0, 136(sp) # 4-byte Folded Spill
-; ZHINX32-NEXT:    sw s1, 132(sp) # 4-byte Folded Spill
-; ZHINX32-NEXT:    sw s2, 128(sp) # 4-byte Folded Spill
-; ZHINX32-NEXT:    sw s3, 124(sp) # 4-byte Folded Spill
-; ZHINX32-NEXT:    sw s4, 120(sp) # 4-byte Folded Spill
-; ZHINX32-NEXT:    sw s5, 116(sp) # 4-byte Folded Spill
-; ZHINX32-NEXT:    sw s6, 112(sp) # 4-byte Folded Spill
-; ZHINX32-NEXT:    sw s7, 108(sp) # 4-byte Folded Spill
-; ZHINX32-NEXT:    sw s8, 104(sp) # 4-byte Folded Spill
-; ZHINX32-NEXT:    sw s9, 100(sp) # 4-byte Folded Spill
-; ZHINX32-NEXT:    sw s10, 96(sp) # 4-byte Folded Spill
-; ZHINX32-NEXT:    sw s11, 92(sp) # 4-byte Folded Spill
+; ZHINX32-NEXT:    addi sp, sp, -160
+; ZHINX32-NEXT:    sw ra, 156(sp) # 4-byte Folded Spill
+; ZHINX32-NEXT:    sw s0, 152(sp) # 4-byte Folded Spill
+; ZHINX32-NEXT:    sw s1, 148(sp) # 4-byte Folded Spill
+; ZHINX32-NEXT:    sw s2, 144(sp) # 4-byte Folded Spill
+; ZHINX32-NEXT:    sw s3, 140(sp) # 4-byte Folded Spill
+; ZHINX32-NEXT:    sw s4, 136(sp) # 4-byte Folded Spill
+; ZHINX32-NEXT:    sw s5, 132(sp) # 4-byte Folded Spill
+; ZHINX32-NEXT:    sw s6, 128(sp) # 4-byte Folded Spill
+; ZHINX32-NEXT:    sw s7, 124(sp) # 4-byte Folded Spill
+; ZHINX32-NEXT:    sw s8, 120(sp) # 4-byte Folded Spill
+; ZHINX32-NEXT:    sw s9, 116(sp) # 4-byte Folded Spill
+; ZHINX32-NEXT:    sw s10, 112(sp) # 4-byte Folded Spill
+; ZHINX32-NEXT:    sw s11, 108(sp) # 4-byte Folded Spill
 ; ZHINX32-NEXT:    lw t0, 160(sp)
-; ZHINX32-NEXT:    lw t1, 164(sp)
-; ZHINX32-NEXT:    lw t2, 168(sp)
-; ZHINX32-NEXT:    lw s0, 172(sp)
-; ZHINX32-NEXT:    lw t3, 176(sp)
-; ZHINX32-NEXT:    lw t4, 180(sp)
-; ZHINX32-NEXT:    lw t5, 184(sp)
-; ZHINX32-NEXT:    lw t6, 188(sp)
+; ZHINX32-NEXT:    sw t0, 104(sp) # 4-byte Folded Spill
+; ZHINX32-NEXT:    lw t0, 164(sp)
+; ZHINX32-NEXT:    sw t0, 100(sp) # 4-byte Folded Spill
+; ZHINX32-NEXT:    lw t0, 168(sp)
+; ZHINX32-NEXT:    sw t0, 96(sp) # 4-byte Folded Spill
+; ZHINX32-NEXT:    lw t0, 172(sp)
+; ZHINX32-NEXT:    sw t0, 92(sp) # 4-byte Folded Spill
+; ZHINX32-NEXT:    lw t6, 176(sp)
+; ZHINX32-NEXT:    lw t5, 180(sp)
+; ZHINX32-NEXT:    lw t4, 184(sp)
+; ZHINX32-NEXT:    lw s0, 188(sp)
 ; ZHINX32-NEXT:    lw s1, 192(sp)
 ; ZHINX32-NEXT:    lw s2, 196(sp)
 ; ZHINX32-NEXT:    lw s3, 200(sp)
@@ -866,45 +870,49 @@ define float @caller_float_32(<32 x float> %A) nounwind {
 ; ZHINX32-NEXT:    lw s10, 228(sp)
 ; ZHINX32-NEXT:    lw s11, 232(sp)
 ; ZHINX32-NEXT:    lw ra, 236(sp)
-; ZHINX32-NEXT:    sw ra, 76(sp)
-; ZHINX32-NEXT:    sw s11, 72(sp)
-; ZHINX32-NEXT:    sw s10, 68(sp)
-; ZHINX32-NEXT:    sw s9, 64(sp)
-; ZHINX32-NEXT:    sw s8, 60(sp)
-; ZHINX32-NEXT:    sw s7, 56(sp)
-; ZHINX32-NEXT:    sw s6, 52(sp)
-; ZHINX32-NEXT:    sw s5, 48(sp)
-; ZHINX32-NEXT:    sw s4, 44(sp)
-; ZHINX32-NEXT:    sw s3, 40(sp)
-; ZHINX32-NEXT:    sw s2, 36(sp)
-; ZHINX32-NEXT:    sw s1, 32(sp)
-; ZHINX32-NEXT:    sw t6, 28(sp)
-; ZHINX32-NEXT:    sw t5, 24(sp)
-; ZHINX32-NEXT:    sw t4, 20(sp)
-; ZHINX32-NEXT:    sw t3, 16(sp)
-; ZHINX32-NEXT:    lw t3, 144(sp)
-; ZHINX32-NEXT:    lw t4, 148(sp)
-; ZHINX32-NEXT:    lw t5, 152(sp)
-; ZHINX32-NEXT:    lw t6, 156(sp)
+; ZHINX32-NEXT:    lw t3, 240(sp)
+; ZHINX32-NEXT:    lw t2, 244(sp)
+; ZHINX32-NEXT:    lw t1, 248(sp)
+; ZHINX32-NEXT:    lw t0, 252(sp)
+; ZHINX32-NEXT:    sw t0, 76(sp)
+; ZHINX32-NEXT:    sw t1, 72(sp)
+; ZHINX32-NEXT:    sw t2, 68(sp)
+; ZHINX32-NEXT:    sw t3, 64(sp)
+; ZHINX32-NEXT:    sw ra, 60(sp)
+; ZHINX32-NEXT:    sw s11, 56(sp)
+; ZHINX32-NEXT:    sw s10, 52(sp)
+; ZHINX32-NEXT:    sw s9, 48(sp)
+; ZHINX32-NEXT:    sw s8, 44(sp)
+; ZHINX32-NEXT:    sw s7, 40(sp)
+; ZHINX32-NEXT:    sw s6, 36(sp)
+; ZHINX32-NEXT:    sw s5, 32(sp)
+; ZHINX32-NEXT:    sw s4, 28(sp)
+; ZHINX32-NEXT:    sw s3, 24(sp)
+; ZHINX32-NEXT:    sw s2, 20(sp)
+; ZHINX32-NEXT:    sw s1, 16(sp)
 ; ZHINX32-NEXT:    sw s0, 12(sp)
-; ZHINX32-NEXT:    sw t2, 8(sp)
-; ZHINX32-NEXT:    sw t1, 4(sp)
-; ZHINX32-NEXT:    sw t0, 0(sp)
+; ZHINX32-NEXT:    sw t4, 8(sp)
+; ZHINX32-NEXT:    sw t5, 4(sp)
+; ZHINX32-NEXT:    sw t6, 0(sp)
+; ZHINX32-NEXT:    lw t3, 104(sp) # 4-byte Folded Reload
+; ZHINX32-NEXT:    lw t4, 100(sp) # 4-byte Folded Reload
+; ZHINX32-NEXT:    lw t5, 96(sp) # 4-byte Folded Reload
+; ZHINX32-NEXT:    lw t6, 92(sp) # 4-byte Folded Reload
 ; ZHINX32-NEXT:    call callee_float_32
-; ZHINX32-NEXT:    lw ra, 140(sp) # 4-byte Folded Reload
-; ZHINX32-NEXT:    lw s0, 136(sp) # 4-byte Folded Reload
-; ZHINX32-NEXT:    lw s1, 132(sp) # 4-byte Folded Reload
-; ZHINX32-NEXT:    lw s2, 128(sp) # 4-byte Folded Reload
-; ZHINX32-NEXT:    lw s3, 124(sp) # 4-byte Folded Reload
-; ZHINX32-NEXT:    lw s4, 120(sp) # 4-byte Folded Reload
-; ZHINX32-NEXT:    lw s5, 116(sp) # 4-byte Folded Reload
-; ZHINX32-NEXT:    lw s6, 112(sp) # 4-byte Folded Reload
-; ZHINX32-NEXT:    lw s7, 108(sp) # 4-byte Folded Reload
-; ZHINX32-NEXT:    lw s8, 104(sp) # 4-byte Folded Reload
-; ZHINX32-NEXT:    lw s9, 100(sp) # 4-byte Folded Reload
-; ZHINX32-NEXT:    lw s10, 96(sp) # 4-byte Folded Reload
-; ZHINX32-NEXT:    lw s11, 92(sp) # 4-byte Folded Reload
-; ZHINX32-NEXT:    addi sp, sp, 144
+; ZHINX32-NEXT:    lw ra, 156(sp) # 4-byte Folded Reload
+; ZHINX32-NEXT:    lw s0, 152(sp) # 4-byte Folded Reload
+; ZHINX32-NEXT:    lw s1, 148(sp) # 4-byte Folded Reload
+; ZHINX32-NEXT:    lw s2, 144(sp) # 4-byte Folded Reload
+; ZHINX32-NEXT:    lw s3, 140(sp) # 4-byte Folded Reload
+; ZHINX32-NEXT:    lw s4, 136(sp) # 4-byte Folded Reload
+; ZHINX32-NEXT:    lw s5, 132(sp) # 4-byte Folded Reload
+; ZHINX32-NEXT:    lw s6, 128(sp) # 4-byte Folded Reload
+; ZHINX32-NEXT:    lw s7, 124(sp) # 4-byte Folded Reload
+; ZHINX32-NEXT:    lw s8, 120(sp) # 4-byte Folded Reload
+; ZHINX32-NEXT:    lw s9, 116(sp) # 4-byte Folded Reload
+; ZHINX32-NEXT:    lw s10, 112(sp) # 4-byte Folded Reload
+; ZHINX32-NEXT:    lw s11, 108(sp) # 4-byte Folded Reload
+; ZHINX32-NEXT:    addi sp, sp, 160
 ; ZHINX32-NEXT:    ret
 ;
 ; ZHINX64-LABEL: caller_float_32:
@@ -994,28 +1002,32 @@ define float @caller_float_32(<32 x float> %A) nounwind {
 ;
 ; ZFINX32-LABEL: caller_float_32:
 ; ZFINX32:       # %bb.0:
-; ZFINX32-NEXT:    addi sp, sp, -144
-; ZFINX32-NEXT:    sw ra, 140(sp) # 4-byte Folded Spill
-; ZFINX32-NEXT:    sw s0, 136(sp) # 4-byte Folded Spill
-; ZFINX32-NEXT:    sw s1, 132(sp) # 4-byte Folded Spill
-; ZFINX32-NEXT:    sw s2, 128(sp) # 4-byte Folded Spill
-; ZFINX32-NEXT:    sw s3, 124(sp) # 4-byte Folded Spill
-; ZFINX32-NEXT:    sw s4, 120(sp) # 4-byte Folded Spill
-; ZFINX32-NEXT:    sw s5, 116(sp) # 4-byte Folded Spill
-; ZFINX32-NEXT:    sw s6, 112(sp) # 4-byte Folded Spill
-; ZFINX32-NEXT:    sw s7, 108(sp) # 4-byte Folded Spill
-; ZFINX32-NEXT:    sw s8, 104(sp) # 4-byte Folded Spill
-; ZFINX32-NEXT:    sw s9, 100(sp) # 4-byte Folded Spill
-; ZFINX32-NEXT:    sw s10, 96(sp) # 4-byte Folded Spill
-; ZFINX32-NEXT:    sw s11, 92(sp) # 4-byte Folded Spill
+; ZFINX32-NEXT:    addi sp, sp, -160
+; ZFINX32-NEXT:    sw ra, 156(sp) # 4-byte Folded Spill
+; ZFINX32-NEXT:    sw s0, 152(sp) # 4-byte Folded Spill
+; ZFINX32-NEXT:    sw s1, 148(sp) # 4-byte Folded Spill
+; ZFINX32-NEXT:    sw s2, 144(sp) # 4-byte Folded Spill
+; ZFINX32-NEXT:    sw s3, 140(sp) # 4-byte Folded Spill
+; ZFINX32-NEXT:    sw s4, 136(sp) # 4-byte Folded Spill
+; ZFINX32-NEXT:    sw s5, 132(sp) # 4-byte Folded Spill
+; ZFINX32-NEXT:    sw s6, 128(sp) # 4-byte Folded Spill
+; ZFINX32-NEXT:    sw s7, 124(sp) # 4-byte Folded Spill
+; ZFINX32-NEXT:    sw s8, 120(sp) # 4-byte Folded Spill
+; ZFINX32-NEXT:    sw s9, 116(sp) # 4-byte Folded Spill
+; ZFINX32-NEXT:    sw s10, 112(sp) # 4-byte Folded Spill
+; ZFINX32-NEXT:    sw s11, 108(sp) # 4-byte Folded Spill
 ; ZFINX32-NEXT:    lw t0, 160(sp)
-; ZFINX32-NEXT:    lw t1, 164(sp)
-; ZFINX32-NEXT:    lw t2, 168(sp)
-; ZFINX32-NEXT:    lw s0, 172(sp)
-; ZFINX32-NEXT:    lw t3, 176(sp)
-; ZFINX32-NEXT:    lw t4, 180(sp)
-; ZFINX32-NEXT:    lw t5, 184(sp)
-; ZFINX32-NEXT:    lw t6, 188(sp)
+; ZFINX32-NEXT:    sw t0, 104(sp) # 4-byte Folded Spill
+; ZFINX32-NEXT:    lw t0, 164(sp)
+; ZFINX32-NEXT:    sw t0, 100(sp) # 4-byte Folded Spill
+; ZFINX32-NEXT:    lw t0, 168(sp)
+; ZFINX32-NEXT:    sw t0, 96(sp) # 4-byte Folded Spill
+; ZFINX32-NEXT:    lw t0, 172(sp)
+; ZFINX32-NEXT:    sw t0, 92(sp) # 4-byte Folded Spill
+; ZFINX32-NEXT:    lw t6, 176(sp)
+; ZFINX32-NEXT:    lw t5, 180(sp)
+; ZFINX32-NEXT:    lw t4, 184(sp)
+; ZFINX32-NEXT:    lw s0, 188(sp)
 ; ZFINX32-NEXT:    lw s1, 192(sp)
 ; ZFINX32-NEXT:    lw s2, 196(sp)
 ; ZFINX32-NEXT:    lw s3, 200(sp)
@@ -1028,45 +1040,49 @@ define float @caller_float_32(<32 x float> %A) nounwind {
 ; ZFINX32-NEXT:    lw s10, 228(sp)
 ; ZFINX32-NEXT:    lw s11, 232(sp)
 ; ZFINX32-NEXT:    lw ra, 236(sp)
-; ZFINX32-NEXT:    sw ra, 76(sp)
-; ZFINX32-NEXT:    sw s11, 72(sp)
-; ZFINX32-NEXT:    sw s10, 68(sp)
-; ZFINX32-NEXT:    sw s9, 64(sp)
-; ZFINX32-NEXT:    sw s8, 60(sp)
-; ZFINX32-NEXT:    sw s7, 56(sp)
-; ZFINX32-NEXT:    sw s6, 52(sp)
-; ZFINX32-NEXT:    sw s5, 48(sp)
-; ZFINX32-NEXT:    sw s4, 44(sp)
-; ZFINX32-NEXT:    sw s3, 40(sp)
-; ZFINX32-NEXT:    sw s2, 36(sp)
-; ZFINX32-NEXT:    sw s1, 32(sp)
-; ZFINX32-NEXT:    sw t6, 28(sp)
-; ZFINX32-NEXT:    sw t5, 24(sp)
-; ZFINX32-NEXT:    sw t4, 20(sp)
-; ZFINX32-NEXT:    sw t3, 16(sp)
-; ZFINX32-NEXT:    lw t3, 144(sp)
-; ZFINX32-NEXT:    lw t4, 148(sp)
-; ZFINX32-NEXT:    lw t5, 152(sp)
-; ZFINX32-NEXT:    lw t6, 156(sp)
+; ZFINX32-NEXT:    lw t3, 240(sp)
+; ZFINX32-NEXT:    lw t2, 244(sp)
+; ZFINX32-NEXT:    lw t1, 248(sp)
+; ZFINX32-NEXT:    lw t0, 252(sp)
+; ZFINX32-NEXT:    sw t0, 76(sp)
+; ZFINX32-NEXT:    sw t1, 72(sp)
+; ZFINX32-NEXT:    sw t2, 68(sp)
+; ZFINX32-NEXT:    sw t3, 64(sp)
+; ZFINX32-NEXT:    sw ra, 60(sp)
+; ZFINX32-NEXT:    sw s11, 56(sp)
+; ZFINX32-NEXT:    sw s10, 52(sp)
+; ZFINX32-NEXT:    sw s9, 48(sp)
+; ZFINX32-NEXT:    sw s8, 44(sp)
+; ZFINX32-NEXT:    sw s7, 40(sp)
+; ZFINX32-NEXT:    sw s6, 36(sp)
+; ZFINX32-NEXT:    sw s5, 32(sp)
+; ZFINX32-NEXT:    sw s4, 28(sp)
+; ZFINX32-NEXT:    sw s3, 24(sp)
+; ZFINX32-NEXT:    sw s2, 20(sp)
+; ZFINX32-NEXT:    sw s1, 16(sp)
 ; ZFINX32-NEXT:    sw s0, 12(sp)
-; ZFINX32-NEXT:    sw t2, 8(sp)
-; ZFINX32-NEXT:    sw t1, 4(sp)
-; ZFINX32-NEXT:    sw t0, 0(sp)
+; ZFINX32-NEXT:    sw t4, 8(sp)
+; ZFINX32-NEXT:    sw t5, 4(sp)
+; ZFINX32-NEXT:    sw t6, 0(sp)
+; ZFINX32-NEXT:    lw t3, 104(sp) # 4-byte Folded Reload
+; ZFINX32-NEXT:    lw t4, 100(sp) # 4-byte Folded Reload
+; ZFINX32-NEXT:    lw t5, 96(sp) # 4-byte Folded Reload
+; ZFINX32-NEXT:    lw t6, 92(sp) # 4-byte Folded Reload
 ; ZFINX32-NEXT:    call callee_float_32
-; ZFINX32-NEXT:    lw ra, 140(sp) # 4-byte Folded Reload
-; ZFINX32-NEXT:    lw s0, 136(sp) # 4-byte Folded Reload
-; ZFINX32-NEXT:    lw s1, 132(sp) # 4-byte Folded Reload
-; ZFINX32-NEXT:    lw s2, 128(sp) # 4-byte Folded Reload
-; ZFINX32-NEXT:    lw s3, 124(sp) # 4-byte Folded Reload
-; ZFINX32-NEXT:    lw s4, 120(sp) # 4-byte Folded Reload
-; ZFINX32-NEXT:    lw s5, 116(sp) # 4-byte Folded Reload
-; ZFINX32-NEXT:    lw s6, 112(sp) # 4-byte Folded Reload
-; ZFINX32-NEXT:    lw s7, 108(sp) # 4-byte Folded Reload
-; ZFINX32-NEXT:    lw s8, 104(sp) # 4-byte Folded Reload
-; ZFINX32-NEXT:    lw s9, 100(sp) # 4-byte Folded Reload
-; ZFINX32-NEXT:    lw s10, 96(sp) # 4-byte Folded Reload
-; ZFINX32-NEXT:    lw s11, 92(sp) # 4-byte Folded Reload
-; ZFINX32-NEXT:    addi sp, sp, 144
+; ZFINX32-NEXT:    lw ra, 156(sp) # 4-byte Folded Reload
+; ZFINX32-NEXT:    lw s0, 152(sp) # 4-byte Folded Reload
+; ZFINX32-NEXT:    lw s1, 148(sp) # 4-byte Folded Reload
+; ZFINX32-NEXT:    lw s2, 144(sp) # 4-byte Folded Reload
+; ZFINX32-NEXT:    lw s3, 140(sp) # 4-byte Folded Reload
+; ZFINX32-NEXT:    lw s4, 136(sp) # 4-byte Folded Reload
+; ZFINX32-NEXT:    lw s5, 132(sp) # 4-byte Folded Reload
+; ZFINX32-NEXT:    lw s6, 128(sp) # 4-byte Folded Reload
+; ZFINX32-NEXT:    lw s7, 124(sp) # 4-byte Folded Reload
+; ZFINX32-NEXT:    lw s8, 120(sp) # 4-byte Folded Reload
+; ZFINX32-NEXT:    lw s9, 116(sp) # 4-byte Folded Reload
+; ZFINX32-NEXT:    lw s10, 112(sp) # 4-byte Folded Reload
+; ZFINX32-NEXT:    lw s11, 108(sp) # 4-byte Folded Reload
+; ZFINX32-NEXT:    addi sp, sp, 160
 ; ZFINX32-NEXT:    ret
 ;
 ; ZFINX64-LABEL: caller_float_32:
@@ -1156,28 +1172,32 @@ define float @caller_float_32(<32 x float> %A) nounwind {
 ;
 ; ZDINX32-LABEL: caller_float_32:
 ; ZDINX32:       # %bb.0:
-; ZDINX32-NEXT:    addi sp, sp, -144
-; ZDINX32-NEXT:    sw ra, 140(sp) # 4-byte Folded Spill
-; ZDINX32-NEXT:    sw s0, 136(sp) # 4-byte Folded Spill
-; ZDINX32-NEXT:    sw s1, 132(sp) # 4-byte Folded Spill
-; ZDINX32-NEXT:    sw s2, 128(sp) # 4-byte Folded Spill
-; ZDINX32-NEXT:    sw s3, 124(sp) # 4-byte Folded Spill
-; ZDINX32-NEXT:    sw s4, 120(sp) # 4-byte Folded Spill
-; ZDINX32-NEXT:    sw s5, 116(sp) # 4-byte Folded Spill
-; ZDINX32-NEXT:    sw s6, 112(sp) # 4-byte Folded Spill
-; ZDINX32-NEXT:    sw s7, 108(sp) # 4-byte Folded Spill
-; ZDINX32-NEXT:    sw s8, 104(sp) # 4-byte Folded Spill
-; ZDINX32-NEXT:    sw s9, 100(sp) # 4-byte Folded Spill
-; ZDINX32-NEXT:    sw s10, 96(sp) # 4-byte Folded Spill
-; ZDINX32-NEXT:    sw s11, 92(sp) # 4-byte Folded Spill
+; ZDINX32-NEXT:    addi sp, sp, -160
+; ZDINX32-NEXT:    sw ra, 156(sp) # 4-byte Folded Spill
+; ZDINX32-NEXT:    sw s0, 152(sp) # 4-byte Folded Spill
+; ZDINX32-NEXT:    sw s1, 148(sp) # 4-byte Folded Spill
+; ZDINX32-NEXT:    sw s2, 144(sp) # 4-byte Folded Spill
+; ZDINX32-NEXT:    sw s3, 140(sp) # 4-byte Folded Spill
+; ZDINX32-NEXT:    sw s4, 136(sp) # 4-byte Folded Spill
+; ZDINX32-NEXT:    sw s5, 132(sp) # 4-byte Folded Spill
+; ZDINX32-NEXT:    sw s6, 128(sp) # 4-byte Folded Spill
+; ZDINX32-NEXT:    sw s7, 124(sp) # 4-byte Folded Spill
+; ZDINX32-NEXT:    sw s8, 120(sp) # 4-byte Folded Spill
+; ZDINX32-NEXT:    sw s9, 116(sp) # 4-byte Folded Spill
+; ZDINX32-NEXT:    sw s10, 112(sp) # 4-byte Folded Spill
+; ZDINX32-NEXT:    sw s11, 108(sp) # 4-byte Folded Spill
 ; ZDINX32-NEXT:    lw t0, 160(sp)
-; ZDINX32-NEXT:    lw t1, 164(sp)
-; ZDINX32-NEXT:    lw t2, 168(sp)
-; ZDINX32-NEXT:    lw s0, 172(sp)
-; ZDINX32-NEXT:    lw t3, 176(sp)
-; ZDINX32-NEXT:    lw t4, 180(sp)
-; ZDINX32-NEXT:    lw t5, 184(sp)
-; ZDINX32-NEXT:    lw t6, 188(sp)
+; ZDINX32-NEXT:    sw t0, 104(sp) # 4-byte Folded Spill
+; ZDINX32-NEXT:    lw t0, 164(sp)
+; ZDINX32-NEXT:    sw t0, 100(sp) # 4-byte Folded Spill
+; ZDINX32-NEXT:    lw t0, 168(sp)
+; ZDINX32-NEXT:    sw t0, 96(sp) # 4-byte Folded Spill
+; ZDINX32-NEXT:    lw t0, 172(sp)
+; ZDINX32-NEXT:    sw t0, 92(sp) # 4-byte Folded Spill
+; ZDINX32-NEXT:    lw t6, 176(sp)
+; ZDINX32-NEXT:    lw t5, 180(sp)
+; ZDINX32-NEXT:    lw t4, 184(sp)
+; ZDINX32-NEXT:    lw s0, 188(sp)
 ; ZDINX32-NEXT:    lw s1, 192(sp)
 ; ZDINX32-NEXT:    lw s2, 196(sp)
 ; ZDINX32-NEXT:    lw s3, 200(sp)
@@ -1190,45 +1210,49 @@ define float @caller_float_32(<32 x float> %A) nounwind {
 ; ZDINX32-NEXT:    lw s10, 228(sp)
 ; ZDINX32-NEXT:    lw s11, 232(sp)
 ; ZDINX32-NEXT:    lw ra, 236(sp)
-; ZDINX32-NEXT:    sw ra, 76(sp)
-; ZDINX32-NEXT:    sw s11, 72(sp)
-; ZDINX32-NEXT:    sw s10, 68(sp)
-; ZDINX32-NEXT:    sw s9, 64(sp)
-; ZDINX32-NEXT:    sw s8, 60(sp)
-; ZDINX32-NEXT:    sw s7, 56(sp)
-; ZDINX32-NEXT:    sw s6, 52(sp)
-; ZDINX32-NEXT:    sw s5, 48(sp)
-; ZDINX32-NEXT:    sw s4, 44(sp)
-; ZDINX32-NEXT:    sw s3, 40(sp)
-; ZDINX32-NEXT:    sw s2, 36(sp)
-; ZDINX32-NEXT:    sw s1, 32(sp)
-; ZDINX32-NEXT:    sw t6, 28(sp)
-; ZDINX32-NEXT:    sw t5, 24(sp)
-; ZDINX32-NEXT:    sw t4, 20(sp)
-; ZDINX32-NEXT:    sw t3, 16(sp)
-; ZDINX32-NEXT:    lw t3, 144(sp)
-; ZDINX32-NEXT:    lw t4, 148(sp)
-; ZDINX32-NEXT:    lw t5, 152(sp)
-; ZDINX32-NEXT:    lw t6, 156(sp)
+; ZDINX32-NEXT:    lw t3, 240(sp)
+; ZDINX32-NEXT:    lw t2, 244(sp)
+; ZDINX32-NEXT:    lw t1, 248(sp)
+; ZDINX32-NEXT:    lw t0, 252(sp)
+; ZDINX32-NEXT:    sw t0, 76(sp)
+; ZDINX32-NEXT:    sw t1, 72(sp)
+; ZDINX32-NEXT:    sw t2, 68(sp)
+; ZDINX32-NEXT:    sw t3, 64(sp)
+; ZDINX32-NEXT:    sw ra, 60(sp)
+; ZDINX32-NEXT:    sw s11, 56(sp)
+; ZDINX32-NEXT:    sw s10, 52(sp)
+; ZDINX32-NEXT:    sw s9, 48(sp)
+; ZDINX32-NEXT:    sw s8, 44(sp)
+; ZDINX32-NEXT:    sw s7, 40(sp)
+; ZDINX32-NEXT:    sw s6, 36(sp)
+; ZDINX32-NEXT:    sw s5, 32(sp)
+; ZDINX32-NEXT:    sw s4, 28(sp)
+; ZDINX32-NEXT:    sw s3, 24(sp)
+; ZDINX32-NEXT:    sw s2, 20(sp)
+; ZDINX32-NEXT:    sw s1, 16(sp)
 ; ZDINX32-NEXT:    sw s0, 12(sp)
-; ZDINX32-NEXT:    sw t2, 8(sp)
-; ZDINX32-NEXT:    sw t1, 4(sp)
-; ZDINX32-NEXT:    sw t0, 0(sp)
+; ZDINX32-NEXT:    sw t4, 8(sp)
+; ZDINX32-NEXT:    sw t5, 4(sp)
+; ZDINX32-NEXT:    sw t6, 0(sp)
+; ZDINX32-NEXT:    lw t3, 104(sp) # 4-byte Folded Reload
+; ZDINX32-NEXT:    lw t4, 100(sp) # 4-byte Folded Reload
+; ZDINX32-NEXT:    lw t5, 96(sp) # 4-byte Folded Reload
+; ZDINX32-NEXT:    lw t6, 92(sp) # 4-byte Folded Reload
 ; ZDINX32-NEXT:    call callee_float_32
-; ZDINX32-NEXT:    lw ra, 140(sp) # 4-byte Folded Reload
-; ZDINX32-NEXT:    lw s0, 136(sp) # 4-byte Folded Reload
-; ZDINX32-NEXT:    lw s1, 132(sp) # 4-byte Folded Reload
-; ZDINX32-NEXT:    lw s2, 128(sp) # 4-byte Folded Reload
-; ZDINX32-NEXT:    lw s3, 124(sp) # 4-byte Folded Reload
-; ZDINX32-NEXT:    lw s4, 120(sp) # 4-byte Folded Reload
-; ZDINX32-NEXT:    lw s5, 116(sp) # 4-byte Folded Reload
-; ZDINX32-NEXT:    lw s6, 112(sp) # 4-byte Folded Reload
-; ZDINX32-NEXT:    lw s7, 108(sp) # 4-byte Folded Reload
-; ZDINX32-NEXT:    lw s8, 104(sp) # 4-byte Folded Reload
-; ZDINX32-NEXT:    lw s9, 100(sp) # 4-byte Folded Reload
-; ZDINX32-NEXT:    lw s10, 96(sp) # 4-byte Folded Reload
-; ZDINX32-NEXT:    lw s11, 92(sp) # 4-byte Folded Reload
-; ZDINX32-NEXT:    addi sp, sp, 144
+; ZDINX32-NEXT:    lw ra, 156(sp) # 4-byte Folded Reload
+; ZDINX32-NEXT:    lw s0, 152(sp) # 4-byte Folded Reload
+; ZDINX32-NEXT:    lw s1, 148(sp) # 4-byte Folded Reload
+; ZDINX32-NEXT:    lw s2, 144(sp) # 4-byte Folded Reload
+; ZDINX32-NEXT:    lw s3, 140(sp) # 4-byte Folded Reload
+; ZDINX32-NEXT:    lw s4, 136(sp) # 4-byte Folded Reload
+; ZDINX32-NEXT:    lw s5, 132(sp) # 4-byte Folded Reload
+; ZDINX32-NEXT:    lw s6, 128(sp) # 4-byte Folded Reload
+; ZDINX32-NEXT:    lw s7, 124(sp) # 4-byte Folded Reload
+; ZDINX32-NEXT:    lw s8, 120(sp) # 4-byte Folded Reload
+; ZDINX32-NEXT:    lw s9, 116(sp) # 4-byte Folded Reload
+; ZDINX32-NEXT:    lw s10, 112(sp) # 4-byte Folded Reload
+; ZDINX32-NEXT:    lw s11, 108(sp) # 4-byte Folded Reload
+; ZDINX32-NEXT:    addi sp, sp, 160
 ; ZDINX32-NEXT:    ret
 ;
 ; ZDINX64-LABEL: caller_float_32:

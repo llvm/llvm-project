@@ -20,7 +20,7 @@
 #include "simple_packed_serialization.h"
 #include <type_traits>
 
-namespace __orc_rt {
+namespace orc_rt {
 
 /// C++ wrapper function result: Same as CWrapperFunctionResult but
 /// auto-releases memory.
@@ -504,6 +504,6 @@ public:
   }
 };
 
-} // end namespace __orc_rt
+} // namespace orc_rt
 
 #endif // ORC_RT_WRAPPER_FUNCTION_UTILS_H

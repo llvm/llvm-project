@@ -402,10 +402,8 @@ static void emitDXILOperationTable(std::vector<DXILOperationDesc> &Ops,
   for (auto &Op : Ops) {
     OpStrings.add(Op.OpName);
 
-    if (ClassSet.contains(Op.OpClass))
-      continue;
-    ClassSet.insert(Op.OpClass);
-    OpClassStrings.add(Op.OpClass.data());
+    if (ClassSet.insert(Op.OpClass).second)
+      OpClassStrings.add(Op.OpClass.data());
   }
 
   // Layout names.

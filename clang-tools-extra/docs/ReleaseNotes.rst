@@ -95,6 +95,9 @@ The improvements are...
 Improvements to clang-tidy
 --------------------------
 
+- Improved :program:`run-clang-tidy.py` script. Fixed minor shutdown noise
+  happening on certain platforms when interrupting the script.
+
 New checks
 ^^^^^^^^^^
 

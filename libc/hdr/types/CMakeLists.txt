@@ -173,11 +173,29 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
-  __sighandler_t
+  sighandler_t
   HDRS
     sighandler_t.h
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.__sighandler_t
     libc.include.signal
+)
+
+add_proxy_header_library(
+  stack_t
+  HDRS
+    stack_t.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.stack_t
+    libc.include.signal
+)
+
+add_proxy_header_library(
+  jmp_buf
+  HDRS
+    jmp_buf.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.jmp_buf
+    libc.include.setjmp
 )
 
