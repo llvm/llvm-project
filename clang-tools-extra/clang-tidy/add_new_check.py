@@ -17,7 +17,7 @@ import sys
 import textwrap
 
 # FIXME Python 3.9: Replace typing.Tuple with builtins.tuple.
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Any
 
 
 # Adapts the module's CMakelist file. Returns 'True' if it could add a new
@@ -511,7 +511,7 @@ def update_checks_list(clang_tidy_path: str) -> None:
 
         return ""
 
-    def process_doc(doc_file):
+    def process_doc(doc_file: Tuple[str, str]) -> Tuple[str, Optional[Any]]:
         check_name = doc_file[0] + "-" + doc_file[1].replace(".rst", "")
 
         with io.open(os.path.join(docs_dir, *doc_file), "r", encoding="utf8") as doc:
@@ -526,7 +526,7 @@ def update_checks_list(clang_tidy_path: str) -> None:
             # Is it a redirect?
             return check_name, match
 
-    def format_link(doc_file) -> str:
+    def format_link(doc_file: Tuple[str, str]) -> str:
         check_name, match = process_doc(doc_file)
         if not match and check_name and not check_name.startswith("clang-analyzer-"):
             return "   :doc:`%(check_name)s <%(module)s/%(check)s>`,%(autofix)s\n" % {
@@ -538,7 +538,7 @@ def update_checks_list(clang_tidy_path: str) -> None:
         else:
             return ""
 
-    def format_link_alias(doc_file) -> str:
+    def format_link_alias(doc_file: Tuple[str, str]) -> str:
         check_name, match = process_doc(doc_file)
         if (match or (check_name.startswith("clang-analyzer-"))) and check_name:
             module = doc_file[0]
