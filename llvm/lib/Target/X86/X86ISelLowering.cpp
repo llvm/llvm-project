@@ -24086,36 +24086,38 @@ static SDValue LowerSELECTWithCmpZero(SDValue CmpVal, SDValue LHS, SDValue RHS,
 
   if (X86CC == X86::COND_E && CmpVal.getOpcode() == ISD::AND &&
       isOneConstant(CmpVal.getOperand(1))) {
-    auto SplatLSB = [&]() {
+    auto SplatLSB = [&](EVT SplatVT) {
       // we need mask of all zeros or ones with same size of the other
       // operands.
       SDValue Neg = CmpVal;
-      if (CmpVT.bitsGT(VT))
-        Neg = DAG.getNode(ISD::TRUNCATE, DL, VT, CmpVal);
-      else if (CmpVT.bitsLT(VT))
+      if (CmpVT.bitsGT(SplatVT))
+        Neg = DAG.getNode(ISD::TRUNCATE, DL, SplatVT, CmpVal);
+      else if (CmpVT.bitsLT(SplatVT))
         Neg = DAG.getNode(
-            ISD::AND, DL, VT,
-            DAG.getNode(ISD::ANY_EXTEND, DL, VT, CmpVal.getOperand(0)),
-            DAG.getConstant(1, DL, VT));
-      return DAG.getNegative(Neg, DL, VT); // -(and (x, 0x1))
+            ISD::AND, DL, SplatVT,
+            DAG.getNode(ISD::ANY_EXTEND, DL, SplatVT, CmpVal.getOperand(0)),
+            DAG.getConstant(1, DL, SplatVT));
+      return DAG.getNegative(Neg, DL, SplatVT); // -(and (x, 0x1))
     };
 
     // SELECT (AND(X,1) == 0), 0, -1 -> NEG(AND(X,1))
     if (isNullConstant(LHS) && isAllOnesConstant(RHS))
-      return SplatLSB();
+      return SplatLSB(VT);
 
     // SELECT (AND(X,1) == 0), C1, C2 -> XOR(C1,AND(NEG(AND(X,1)),XOR(C1,C2))
     if (!Subtarget.canUseCMOV() && isa<ConstantSDNode>(LHS) &&
         isa<ConstantSDNode>(RHS)) {
-      SDValue Mask = SplatLSB();
+      SDValue Mask = SplatLSB(VT);
       SDValue Diff = DAG.getNode(ISD::XOR, DL, VT, LHS, RHS);
       SDValue Flip = DAG.getNode(ISD::AND, DL, VT, Mask, Diff);
       return DAG.getNode(ISD::XOR, DL, VT, LHS, Flip);
     }
 
     SDValue Src1, Src2;
-    auto isIdentityPattern = [&]() {
+    auto isIdentityPatternZero = [&]() {
       switch (RHS.getOpcode()) {
+      default:
+        break;
       case ISD::OR:
       case ISD::XOR:
       case ISD::ADD:
@@ -24125,10 +24127,28 @@ static SDValue LowerSELECTWithCmpZero(SDValue CmpVal, SDValue LHS, SDValue RHS,
           return true;
         }
         break;
+      case ISD::SHL:
+      case ISD::SRA:
+      case ISD::SRL:
       case ISD::SUB:
         if (RHS.getOperand(0) == LHS) {
           Src1 = RHS.getOperand(1);
           Src2 = LHS;
+          return true;
+        }
+        break;
+      }
+      return false;
+    };
+
+    auto isIdentityPatternOnes = [&]() {
+      switch (LHS.getOpcode()) {
+      default:
+        break;
+      case ISD::AND:
+        if (LHS.getOperand(0) == RHS || LHS.getOperand(1) == RHS) {
+          Src1 = LHS.getOperand(LHS.getOperand(0) == RHS ? 1 : 0);
+          Src2 = RHS;
           return true;
         }
         break;
@@ -24141,10 +24161,20 @@ static SDValue LowerSELECTWithCmpZero(SDValue CmpVal, SDValue LHS, SDValue RHS,
     // SELECT (AND(X,1) == 0), Y, (XOR Y, Z) -> (XOR Y, (AND NEG(AND(X,1)), Z))
     // SELECT (AND(X,1) == 0), Y, (ADD Y, Z) -> (ADD Y, (AND NEG(AND(X,1)), Z))
     // SELECT (AND(X,1) == 0), Y, (SUB Y, Z) -> (SUB Y, (AND NEG(AND(X,1)), Z))
-    if (!Subtarget.canUseCMOV() && isIdentityPattern()) {
-      SDValue Mask = SplatLSB();
-      SDValue And = DAG.getNode(ISD::AND, DL, VT, Mask, Src1); // Mask & z
-      return DAG.getNode(RHS.getOpcode(), DL, VT, Src2, And);  // y Op And
+    // SELECT (AND(X,1) == 0), Y, (SHL Y, Z) -> (SHL Y, (AND NEG(AND(X,1)), Z))
+    // SELECT (AND(X,1) == 0), Y, (SRA Y, Z) -> (SRA Y, (AND NEG(AND(X,1)), Z))
+    // SELECT (AND(X,1) == 0), Y, (SRL Y, Z) -> (SRL Y, (AND NEG(AND(X,1)), Z))
+    if (!Subtarget.canUseCMOV() && isIdentityPatternZero()) {
+      SDValue Mask = SplatLSB(Src1.getValueType());
+      SDValue And = DAG.getNode(ISD::AND, DL, Src1.getValueType(), Mask,
+                                Src1);                        // Mask & z
+      return DAG.getNode(RHS.getOpcode(), DL, VT, Src2, And); // y Op And
+    }
+    // SELECT (AND(X,1) == 0), (AND Y, Z), Y -> (AND Y, (OR NEG(AND(X, 1)), Z))
+    if (!Subtarget.canUseCMOV() && isIdentityPatternOnes()) {
+      SDValue Mask = SplatLSB(VT);
+      SDValue Or = DAG.getNode(ISD::OR, DL, VT, Mask, Src1); // Mask | z
+      return DAG.getNode(LHS.getOpcode(), DL, VT, Src2, Or); // y Op Or
     }
   }
 
