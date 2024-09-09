@@ -294,8 +294,8 @@ public:
       }
     }
 
-    auto *VecTy = cast<FixedVectorType>(OldTy);
-    unsigned N = VecTy->getNumElements();
+    const auto *VecTy = cast<FixedVectorType>(OldTy);
+    const unsigned N = VecTy->getNumElements();
 
     // If there's a dynamic access we need to round trip through stack memory so
     // that we don't leave vectors around.
