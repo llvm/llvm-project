@@ -39,10 +39,6 @@ class TestSwiftREPLExceptions(TestBase):
         self.build()
         self.do_repl_test()
 
-    def setUp(self):
-        # Call super's setUp().
-        TestBase.setUp(self)
-
     @skipIfRemote
     def do_repl_test(self):
         sdk_root = ""
