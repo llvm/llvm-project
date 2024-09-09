@@ -1534,7 +1534,7 @@ void VectorizedMem2Reg::Calculate() {
 
   // Order inserted PHI nodes in a deterministic way.
   for (size_t I = 0; I < Allocas.size(); ++I)
-    std::sort(PHIBlocks[I].begin(), PHIBlocks[I].end());
+    llvm::sort(PHIBlocks[I]);
 }
 
 /// Queue a phi-node to be added to a basic-block for a specific Alloca.
