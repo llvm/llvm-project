@@ -1,6 +1,8 @@
-! RUN: %flang -### -o /dev/null %s -Xlinker -rpath=/not/a/real/path 2>&1 | FileCheck %s
+! RUN: %flang -### -o /dev/null %s -Xlinker -rpath=/not/a/real/path 2>&1 | FileCheck --check-prefix=SINGLE %s
+! RUN: %flang -### -o /dev/null %s -Xlinker -rpath -Xlinker /not/a/real/path 2>&1 | FileCheck --check-prefix=MULTIPLE %s
 
-! CHECK: "-fc1"
-! CHECK-NEXT: "-rpath=/not/a/real/path"
+
+! SINGLE: "-rpath=/not/a/real/path"
+! MULTIPLE: "-rpath" "/not/a/real/path"
 
 end program
