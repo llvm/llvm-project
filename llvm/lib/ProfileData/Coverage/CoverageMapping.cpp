@@ -851,7 +851,7 @@ Error CoverageMapping::loadFunctionRecord(
   // won't (in which case we don't unintuitively report functions as uncovered
   // when they have non-zero counts in the profile).
   if (Record.MappingRegions.size() == 1 &&
-      Record.MappingRegions[0].Count.isZero() && Counts[0] > 0)
+      Record.MappingRegions[0].Count.isZero())
     return Error::success();
 
   MCDCDecisionRecorder MCDCDecisions;
