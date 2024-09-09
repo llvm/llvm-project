@@ -606,7 +606,7 @@ class CodeGenRegBank {
 
   // Register classes.
   std::list<CodeGenRegisterClass> RegClasses;
-  DenseMap<Record *, CodeGenRegisterClass *> Def2RC;
+  DenseMap<const Record *, CodeGenRegisterClass *> Def2RC;
   typedef std::map<CodeGenRegisterClass::Key, CodeGenRegisterClass *> RCKeyMap;
   RCKeyMap Key2RC;
 
