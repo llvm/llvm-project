@@ -13573,6 +13573,23 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     Int = Intrinsic::aarch64_neon_vluti4q_laneq_x2;
     return EmitNeonCall(CGM.getIntrinsic(Int, Ty), Ops, "vluti4q_laneq_x2");
   }
+
+  case NEON::BI__builtin_neon_vamin_f16:
+  case NEON::BI__builtin_neon_vaminq_f16:
+  case NEON::BI__builtin_neon_vamin_f32:
+  case NEON::BI__builtin_neon_vaminq_f32:
+  case NEON::BI__builtin_neon_vaminq_f64: {
+    Int = Intrinsic::aarch64_neon_famin;
+    return EmitNeonCall(CGM.getIntrinsic(Int, Ty), Ops, "famin");
+  }
+  case NEON::BI__builtin_neon_vamax_f16:
+  case NEON::BI__builtin_neon_vamaxq_f16:
+  case NEON::BI__builtin_neon_vamax_f32:
+  case NEON::BI__builtin_neon_vamaxq_f32:
+  case NEON::BI__builtin_neon_vamaxq_f64: {
+    Int = Intrinsic::aarch64_neon_famax;
+    return EmitNeonCall(CGM.getIntrinsic(Int, Ty), Ops, "famax");
+  }
   }
 }
 
