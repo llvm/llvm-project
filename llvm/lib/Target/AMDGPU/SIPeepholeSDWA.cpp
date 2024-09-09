@@ -1241,9 +1241,9 @@ void SIPeepholeSDWA::legalizeScalarOperands(MachineInstr &MI,
 }
 
 bool SIPeepholeSDWALegacy::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(MF.getFunction())) {
+  if (skipFunction(MF.getFunction()))
     return false;
-  }
+
   return SIPeepholeSDWA().run(MF);
 }
 
