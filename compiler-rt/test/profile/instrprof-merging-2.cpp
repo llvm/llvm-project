@@ -1,5 +1,6 @@
 // UNSUPPORTED: target={{.*windows.*}}
 
+// clang-format off
 // RUN: split-file %s %t
 // RUN: %clangxx_profgen -fcoverage-mapping %t/test1.cpp -o %t/test1.exe
 // RUN: %clangxx_profgen -fcoverage-mapping %t/test2.cpp -o %t/test2.exe
