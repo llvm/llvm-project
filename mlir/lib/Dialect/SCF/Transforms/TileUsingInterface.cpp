@@ -1464,38 +1464,12 @@ checkAssumptionForFusingConsumer(tensor::InsertSliceOp candidateSliceOp) {
 /// failure otherwise.
 static FailureOr<OpOperand *> getConsumerFromUses(Value val,
                                                   Block *containingOpBlock) {
-  // Step 1. Check that the value has exactly one use excluding `insertSliceOp`
-  // or `ParallelInsertSliceOp`.
-  OpOperand *operand = nullptr;
-  for (auto &use : val.getUses()) {
-    Operation *user = use.getOwner();
-    if (isa<tensor::ParallelInsertSliceOp>(user))
-      continue;
-    if (isa<tensor::InsertSliceOp>(user)) {
-      // The only one use is expected as dummy extractSliceOp without any uses.
-      // For more details, please refer to:
-      // https://github.com/llvm/llvm-project/pull/88712#discussion_r1609384470
-      if (user->hasOneUse()) {
-        if (auto extractOp =
-                dyn_cast<tensor::ExtractSliceOp>(*user->getUsers().begin());
-            extractOp && extractOp->use_empty()) {
-          // Erase dummy extractSliceOp.
-          extractOp.erase();
-          // DO NOT erase `user` inside iteration of `getUses`.
-          user->moveBefore(&containingOpBlock->getOperations().back());
-          continue;
-        }
-      }
-      // Otherwise return.
-      return failure();
-    }
-    // Only one valid use expected
-    if (operand)
-      return failure();
-    operand = &use;
-  }
+  // Step 1. Check that the value has exactly one use.
+  if (!llvm::hasSingleElement(val.getUses()))
+    return failure();
   // Step 2. Get uses.
-  Operation *consumerOp = operand->getOwner();
+  OpOperand &operand = (*val.getUses().begin());
+  Operation *consumerOp = operand.getOwner();
   // TODO: We have to init result of consumer before scf.for, use
   //       DestinationStyleOpInterface to get result shape from init for now.
   //       Add support for other op such as op has InferTypeOpInterface.
@@ -1504,7 +1478,7 @@ static FailureOr<OpOperand *> getConsumerFromUses(Value val,
     return failure();
   if (containingOpBlock != consumerOp->getBlock())
     return failure();
-  return operand;
+  return &operand;
 }
 
 /// Recursively find the outer nest loops of given loop(included) while the
@@ -1693,9 +1667,9 @@ fixTerminatorSCFInParallel(RewriterBase &rewriter, scf::ForallOp newForallOp,
 
 /// Implementation of fusing consumer of a single slice by computing the
 /// slice of the consumer in-place for scf loop.
-static FailureOr<scf::SCFFuseConsumerOfSliceResult>
-tileAndFuseConsumerOfSliceImpl(RewriterBase &rewriter,
-                               Operation *candidateSliceOp) {
+FailureOr<scf::SCFFuseConsumerOfSliceResult>
+mlir::scf::tileAndFuseConsumerOfSlice(RewriterBase &rewriter,
+                                      Operation *candidateSliceOp) {
   if (!isa<tensor::InsertSliceOp, tensor::ParallelInsertSliceOp>(
           candidateSliceOp))
     return failure();
@@ -1742,7 +1716,7 @@ tileAndFuseConsumerOfSliceImpl(RewriterBase &rewriter,
   // 2. inner-most `scf.for` insider nest `scf.loop` structure, where the
   // top-level loop is the outer-most one of these nested loops.
   Operation *oldTopLevelLoop = oldLoopOp;
-  SmallVector<LoopLikeOpInterface> oldNestedForOps, newNestedForOps;
+  SmallVector<LoopLikeOpInterface> oldNestedForOps;
   if (isInsertSliceOp) {
     oldNestedForOps =
         getOuterNestLoopsWhile(cast<LoopLikeOpInterface>(oldTopLevelLoop),
@@ -1781,6 +1755,7 @@ tileAndFuseConsumerOfSliceImpl(RewriterBase &rewriter,
   // 3.a Create new outer scf loops with new Inits only if nested `scf.for`
   // case was found.
   bool isNestedForOps = isInsertSliceOp && oldNestedForOps.size() > 1;
+  SmallVector<LoopLikeOpInterface> newNestedForOps;
   if (isNestedForOps) {
     for (auto &&[index, loopOp] :
          llvm::enumerate(MutableArrayRef(oldNestedForOps).drop_back())) {
@@ -1977,110 +1952,6 @@ tileAndFuseConsumerOfSliceImpl(RewriterBase &rewriter,
       consumerOpOperand,
       &(tileAndFuseResult->tiledOps[0]->getOpOperand(operandNumber)),
       tileAndFuseResult->tiledOps};
-}
-
-/// Get the real consumers from candidate InsertSliceOp. E.g
-///
-/// ```
-/// %1 = scf.for
-///  %2 = scf.for
-///   %3 = scf.for
-///      ...
-///      %4 = insert
-///      yield %4
-///   %5 = insert %3
-///   yield %5
-///  yield %2
-/// %6 = consumerOp ins(%1)
-/// ```
-///
-/// @param candidateSliceOp: %4 = insert
-/// @param forwardSlice: in-out parameter populated by forward insertSliceOps
-/// @return OpOperand consumers: %6 = consumerOp ins(%1)
-static FailureOr<SmallVector<OpOperand *>> getRealConsumersFromInsertSliceOp(
-    Operation *candidateSliceOp,
-    SmallVector<OffsetSizeAndStrideOpInterface> &forwardSlice,
-    unsigned curDepth = 0, unsigned maxDepth = 5) {
-  if (!isa<tensor::InsertSliceOp, tensor::ParallelInsertSliceOp>(
-          candidateSliceOp))
-    return failure();
-  // Control recursive time in avoid of stack overflow
-  if (curDepth > maxDepth)
-    return failure();
-
-  forwardSlice.push_back(
-      cast<OffsetSizeAndStrideOpInterface>(candidateSliceOp));
-  Value resultOfLoop;
-  if (auto sliceOp =
-          dyn_cast<tensor::ParallelInsertSliceOp>(candidateSliceOp)) {
-    Value destValue = sliceOp.getDest();
-    auto iterArg = cast<BlockArgument>(destValue);
-    auto forallOp = dyn_cast<scf::ForallOp>(iterArg.getOwner()->getParentOp());
-    if (!forallOp)
-      return failure();
-    resultOfLoop = forallOp.getTiedOpResult(forallOp.getTiedOpOperand(iterArg));
-  } else if (auto sliceOp = dyn_cast<tensor::InsertSliceOp>(candidateSliceOp)) {
-    Value resultValue = sliceOp.getResult();
-    for (auto &useOperand : resultValue.getUses()) {
-      if (auto yieldOp = dyn_cast<scf::YieldOp>(useOperand.getOwner())) {
-        if (llvm::detail::isPresent(resultOfLoop))
-          return failure();
-        auto forOp = dyn_cast<LoopLikeOpInterface>(yieldOp->getParentOp());
-        if (!forOp)
-          return failure();
-        resultOfLoop = forOp->getResult(useOperand.getOperandNumber());
-      }
-    }
-  }
-
-  if (!llvm::detail::isPresent(resultOfLoop))
-    return failure();
-
-  bool traverseUpperLoop;
-  do {
-    traverseUpperLoop = false;
-    for (OpOperand &useOperand : resultOfLoop.getUses()) {
-      if (auto sliceOp =
-              dyn_cast<OffsetSizeAndStrideOpInterface>(useOperand.getOwner())) {
-        return getRealConsumersFromInsertSliceOp(sliceOp, forwardSlice,
-                                                 curDepth + 1);
-      }
-      if (auto yieldOp = dyn_cast<scf::YieldOp>(useOperand.getOwner())) {
-        // Walk through outer loop.
-        auto forOp = dyn_cast<LoopLikeOpInterface>(yieldOp->getParentOp());
-        if (!forOp)
-          return failure();
-        resultOfLoop = forOp->getResult(useOperand.getOperandNumber());
-        traverseUpperLoop = true;
-        break;
-      }
-    }
-  } while (traverseUpperLoop);
-  // Return all operands using result of top level loop.
-  return llvm::map_to_vector(resultOfLoop.getUses(),
-                             [](OpOperand &u) -> OpOperand * { return &u; });
-}
-
-/// Fusing real consumer of a single slice even within complex nested loops via
-/// multiple application of `tileAndFuseConsumerOfSliceImpl`.
-FailureOr<scf::SCFFuseConsumerOfSliceResult>
-mlir::scf::tileAndFuseConsumerOfSlice(RewriterBase &rewriter,
-                                      Operation *candidateSliceOp) {
-  SmallVector<OffsetSizeAndStrideOpInterface> forwardSlice;
-  if (failed(getRealConsumersFromInsertSliceOp(candidateSliceOp, forwardSlice)))
-    return failure();
-
-  FailureOr<scf::SCFFuseConsumerOfSliceResult> fuseConsumerResult;
-  // Reverse forward slice from outer to inner.
-  std::reverse(forwardSlice.begin(), forwardSlice.end());
-  // Multiple application of `tileAndFuseConsumerOfSliceImpl`.
-  for (auto &sliceOp : forwardSlice) {
-    fuseConsumerResult = tileAndFuseConsumerOfSliceImpl(rewriter, sliceOp);
-    if (failed(fuseConsumerResult))
-      return rewriter.notifyMatchFailure(sliceOp,
-                                         "could not fuse consumer of sliceOp");
-  }
-  return fuseConsumerResult;
 }
 
 //===----------------------------------------------------------------------===//
