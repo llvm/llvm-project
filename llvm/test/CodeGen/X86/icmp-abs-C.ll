@@ -132,17 +132,17 @@ define i8 @ne_and_with_dom_abs_non_pow2(i8 %x) nounwind {
 ;
 ; X64-LABEL: ne_and_with_dom_abs_non_pow2:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    sarb $7, %al
-; X64-NEXT:    xorb %al, %dil
-; X64-NEXT:    subb %al, %dil
-; X64-NEXT:    movl %edi, %ecx
-; X64-NEXT:    xorb $12, %cl
+; X64-NEXT:    movsbl %dil, %eax
+; X64-NEXT:    movl %eax, %ecx
+; X64-NEXT:    negl %ecx
+; X64-NEXT:    cmovsl %eax, %ecx
+; X64-NEXT:    movl %ecx, %edx
+; X64-NEXT:    xorb $12, %dl
 ; X64-NEXT:    xorl %eax, %eax
-; X64-NEXT:    cmpb $121, %dil
+; X64-NEXT:    cmpb $121, %cl
 ; X64-NEXT:    setne %al
-; X64-NEXT:    cmpb $24, %cl
-; X64-NEXT:    movzbl %cl, %ecx
+; X64-NEXT:    cmpb $24, %dl
+; X64-NEXT:    movzbl %dl, %ecx
 ; X64-NEXT:    cmovael %ecx, %eax
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq

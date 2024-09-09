@@ -21,10 +21,11 @@ define i8 @neg_abs_i8(i8 %x) nounwind {
 ;
 ; X64-LABEL: neg_abs_i8:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    sarb $7, %al
-; X64-NEXT:    xorb %al, %dil
-; X64-NEXT:    subb %dil, %al
+; X64-NEXT:    movsbl %dil, %ecx
+; X64-NEXT:    movl %ecx, %eax
+; X64-NEXT:    negl %eax
+; X64-NEXT:    cmovnsl %ecx, %eax
+; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
   %abs = tail call i8 @llvm.abs.i8(i8 %x, i1 true)
   %neg = sub nsw i8 0, %abs
@@ -164,11 +165,12 @@ define i8 @sub_abs_i8(i8 %x, i8 %y) nounwind {
 ;
 ; X64-LABEL: sub_abs_i8:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    sarb $7, %al
-; X64-NEXT:    xorb %al, %dil
-; X64-NEXT:    subb %dil, %al
+; X64-NEXT:    movsbl %dil, %ecx
+; X64-NEXT:    movl %ecx, %eax
+; X64-NEXT:    negl %eax
+; X64-NEXT:    cmovnsl %ecx, %eax
 ; X64-NEXT:    addb %sil, %al
+; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
   %abs = tail call i8 @llvm.abs.i8(i8 %x, i1 false)
   %neg = sub nsw i8 %y, %abs
