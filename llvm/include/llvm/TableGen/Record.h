@@ -1323,13 +1323,9 @@ public:
     return I->getKind() == IK_DefInit;
   }
 
-  static DefInit *get(Record*);
-
   Init *convertInitializerTo(RecTy *Ty) const override;
 
   Record *getDef() const { return Def; }
-
-  //virtual Init *convertInitializerBitRange(ArrayRef<unsigned> Bits);
 
   RecTy *getFieldType(StringInit *FieldName) const override;
 
