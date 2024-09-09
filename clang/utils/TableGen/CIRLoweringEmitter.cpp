@@ -15,7 +15,7 @@ namespace {
 std::string ClassDefinitions;
 std::string ClassList;
 
-void GenerateLowering(raw_ostream &OS, const Record *Operation) {
+void GenerateLowering(const Record *Operation) {
   using namespace std::string_literals;
   std::string Name = Operation->getName().str();
   std::string LLVMOp = Operation->getValueAsString("llvmOp").str();
@@ -30,9 +30,21 @@ void GenerateLowering(raw_ostream &OS, const Record *Operation) {
   mlir::LogicalResult
   matchAndRewrite(mlir::cir::)C++" +
       Name +
-      R"C++( op, OpAdaptor adaptor, mlir::ConversionPatternRewriter &rewriter) const override {
+      " op, OpAdaptor adaptor, mlir::ConversionPatternRewriter &rewriter) "
+      "const "
+      "override {";
+
+  auto ResultCount = Operation->getValueAsDag("results")->getNumArgs();
+  if (ResultCount > 0)
+    ClassDefinitions += R"C++(
+    auto resTy = this->getTypeConverter()->convertType(op.getType());)C++";
+
+  ClassDefinitions += R"C++(
     rewriter.replaceOpWithNewOp<mlir::LLVM::)C++" +
-      LLVMOp + ">(op";
+                      LLVMOp + ">(op";
+
+  if (ResultCount > 0)
+    ClassDefinitions += ", resTy";
 
   auto ArgCount = Operation->getValueAsDag("arguments")->getNumArgs();
   for (size_t i = 0; i != ArgCount; ++i)
@@ -53,7 +65,7 @@ void clang::EmitCIRBuiltinsLowering(RecordKeeper &Records, raw_ostream &OS) {
   for (const auto *Builtin :
        Records.getAllDerivedDefinitions("LLVMLoweringInfo")) {
     if (!Builtin->getValueAsString("llvmOp").empty())
-      GenerateLowering(OS, Builtin);
+      GenerateLowering(Builtin);
   }
 
   OS << "#ifdef GET_BUILTIN_LOWERING_CLASSES\n"
