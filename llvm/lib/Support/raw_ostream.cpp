@@ -844,7 +844,7 @@ size_t raw_fd_ostream::preferred_buffer_size() const {
     return 0;
   return raw_ostream::preferred_buffer_size();
 #elif defined(__MVS__)
-  // The buffer size on zOS is defined with macro BUFSIZ, which can be retrieved
+  // The buffer size on z/OS is defined with macro BUFSIZ, which can be retrieved
   // by invoking function raw_ostream::preferred_buffer_size().
   return raw_ostream::preferred_buffer_size();
 #else
