@@ -280,6 +280,15 @@ define void @foo(<4 x i16> %vi0, <4 x float> %vf1, i8 %i0) {
   EXPECT_TRUE(VecTy->getElementType()->isIntegerTy(16));
   EXPECT_EQ(VecTy->getElementCount(), ElementCount::getFixed(4));
 
+  // get(ElementType, NumElements, Scalable)
+  EXPECT_EQ(sandboxir::VectorType::get(sandboxir::Type::getInt16Ty(Ctx), 4,
+                                       /*Scalable=*/false),
+            F->getArg(0)->getType());
+  // get(ElementType, Other)
+  EXPECT_EQ(sandboxir::VectorType::get(
+                sandboxir::Type::getInt16Ty(Ctx),
+                cast<sandboxir::VectorType>(F->getArg(0)->getType())),
+            F->getArg(0)->getType());
   auto *FVecTy = cast<sandboxir::VectorType>(F->getArg(1)->getType());
   EXPECT_TRUE(FVecTy->getElementType()->isFloatTy());
   // getInteger
