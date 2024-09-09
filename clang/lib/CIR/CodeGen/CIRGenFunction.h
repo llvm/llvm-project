@@ -2215,9 +2215,11 @@ public:
   /// appropriate alignmen and cast it to the default address space. Returns
   /// the original alloca instruction by \p Alloca if it is not nullptr.
   Address CreateMemTemp(QualType T, mlir::Location Loc,
-                        const Twine &Name = "tmp", Address *Alloca = nullptr);
+                        const Twine &Name = "tmp", Address *Alloca = nullptr,
+                        mlir::OpBuilder::InsertPoint ip = {});
   Address CreateMemTemp(QualType T, CharUnits Align, mlir::Location Loc,
-                        const Twine &Name = "tmp", Address *Alloca = nullptr);
+                        const Twine &Name = "tmp", Address *Alloca = nullptr,
+                        mlir::OpBuilder::InsertPoint ip = {});
 
   /// Create a temporary memory object of the given type, with
   /// appropriate alignment without casting it to the default address space.
