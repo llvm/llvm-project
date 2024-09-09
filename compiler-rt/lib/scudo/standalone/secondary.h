@@ -725,7 +725,7 @@ MapAllocator<Config>::tryAllocateFromCache(const Options &Options, uptr Size,
   uptr EntryHeaderPos;
   uptr MaxAllowedFragmentedPages = MaxUnreleasedCachePages;
 
-  if (UNLIKELY(useMemoryTagging<Config>(Options)))
+  if (LIKELY(!useMemoryTagging<Config>(Options)))
     MaxAllowedFragmentedPages += CachedBlock::MaxReleasedCachePages;
 
   Entry = Cache.retrieve(MaxAllowedFragmentedPages, Size, Alignment,
