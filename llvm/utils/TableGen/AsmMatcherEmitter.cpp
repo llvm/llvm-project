@@ -765,10 +765,10 @@ public:
   std::map<Record *, SubtargetFeatureInfo, LessRecordByID> SubtargetFeatures;
 
   /// Map of AsmOperandClass records to their class information.
-  std::map<Record *, ClassInfo *> AsmOperandClasses;
+  std::map<const Record *, ClassInfo *> AsmOperandClasses;
 
   /// Map of RegisterClass records to their class information.
-  std::map<Record *, ClassInfo *> RegisterClassClasses;
+  std::map<const Record *, ClassInfo *> RegisterClassClasses;
 
 private:
   /// Map of token to class information which has already been constructed.
@@ -781,7 +781,7 @@ private:
   /// getOperandClass - Lookup or create the class for the given operand.
   ClassInfo *getOperandClass(const CGIOperandList::OperandInfo &OI,
                              int SubOpIdx);
-  ClassInfo *getOperandClass(Record *Rec, int SubOpIdx);
+  ClassInfo *getOperandClass(const Record *Rec, int SubOpIdx);
 
   /// buildRegisterClasses - Build the ClassInfo* instances for register
   /// classes.
@@ -1193,13 +1193,13 @@ ClassInfo *AsmMatcherInfo::getTokenClass(StringRef Token) {
 ClassInfo *
 AsmMatcherInfo::getOperandClass(const CGIOperandList::OperandInfo &OI,
                                 int SubOpIdx) {
-  Record *Rec = OI.Rec;
+  const Record *Rec = OI.Rec;
   if (SubOpIdx != -1)
     Rec = cast<DefInit>(OI.MIOperandInfo->getArg(SubOpIdx))->getDef();
   return getOperandClass(Rec, SubOpIdx);
 }
 
-ClassInfo *AsmMatcherInfo::getOperandClass(Record *Rec, int SubOpIdx) {
+ClassInfo *AsmMatcherInfo::getOperandClass(const Record *Rec, int SubOpIdx) {
   if (Rec->isSubClassOf("RegisterOperand")) {
     // RegisterOperand may have an associated ParserMatchClass. If it does,
     // use it, else just fall back to the underlying register class.
@@ -1210,7 +1210,7 @@ ClassInfo *AsmMatcherInfo::getOperandClass(Record *Rec, int SubOpIdx) {
                           "' does not have a ParserMatchClass!\n");
 
     if (DefInit *DI = dyn_cast<DefInit>(R->getValue())) {
-      Record *MatchClass = DI->getDef();
+      const Record *MatchClass = DI->getDef();
       if (ClassInfo *CI = AsmOperandClasses[MatchClass])
         return CI;
     }
@@ -1726,9 +1726,9 @@ void AsmMatcherInfo::buildInstructionOperandReference(MatchableInfo *II,
   // match class for the asm operand is still the default "ImmAsmOperand",
   // then handle each suboperand separately.
   if (Op->SubOpIdx == -1 && Operands[Idx].MINumOperands > 1) {
-    Record *Rec = Operands[Idx].Rec;
+    const Record *Rec = Operands[Idx].Rec;
     assert(Rec->isSubClassOf("Operand") && "Unexpected operand!");
-    Record *MatchClass = Rec->getValueAsDef("ParserMatchClass");
+    const Record *MatchClass = Rec->getValueAsDef("ParserMatchClass");
     if (MatchClass && MatchClass->getValueAsString("Name") == "Imm") {
       // Insert remaining suboperands after AsmOpIdx in II->AsmOperands.
       StringRef Token = Op->Token; // save this in case Op gets moved
