@@ -757,24 +757,6 @@ struct __padding {
 template <>
 struct __padding<0> {};
 
-template <class _CharT, size_t __min_cap>
-struct __short_layout_alternate {
-  _CharT __data_[__min_cap];
-  _LIBCPP_NO_UNIQUE_ADDRESS __padding<sizeof(_CharT) - 1> __padding_;
-  unsigned char __size_    : 7;
-  unsigned char __is_long_ : 1;
-};
-
-template <class _CharT, size_t __min_cap>
-struct __short_layout_classic {
-  struct _LIBCPP_PACKED {
-    unsigned char __is_long_ : 1;
-    unsigned char __size_    : 7;
-  };
-  _LIBCPP_NO_UNIQUE_ADDRESS __padding<sizeof(_CharT) - 1> __padding_;
-  _CharT __data_[__min_cap];
-};
-
 template <class _CharT, class _Traits, class _Allocator>
 class basic_string {
 private:
@@ -922,9 +904,21 @@ private:
 #endif // _LIBCPP_ABI_ALTERNATE_STRING_LAYOUT
 
 #ifdef _LIBCPP_ABI_ALTERNATE_STRING_LAYOUT
-  using __short = __short_layout_alternate<value_type, __min_cap>;
+  struct __short {
+    value_type __data_[__min_cap];
+    _LIBCPP_NO_UNIQUE_ADDRESS __padding<sizeof(value_type) - 1> __padding_;
+    unsigned char __size_    : 7;
+    unsigned char __is_long_ : 1;
+  };
 #else
-  using __short = __short_layout_classic<value_type, __min_cap>;
+  struct __short {
+    struct _LIBCPP_PACKED {
+      unsigned char __is_long_ : 1;
+      unsigned char __size_    : 7;
+    };
+    _LIBCPP_NO_UNIQUE_ADDRESS __padding<sizeof(value_type) - 1> __padding_;
+    value_type __data_[__min_cap];
+  };
 #endif
   static_assert(sizeof(__short) == (sizeof(value_type) * (__min_cap + 1)), "__short has an unexpected size.");
 
