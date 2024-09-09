@@ -114,19 +114,23 @@ public:
 
   LoopScope(Compiler<Emitter> *Ctx, LabelTy BreakLabel, LabelTy ContinueLabel)
       : LabelScope<Emitter>(Ctx), OldBreakLabel(Ctx->BreakLabel),
-        OldContinueLabel(Ctx->ContinueLabel) {
+        OldContinueLabel(Ctx->ContinueLabel),
+        OldLabelVarScope(Ctx->LabelVarScope) {
     this->Ctx->BreakLabel = BreakLabel;
     this->Ctx->ContinueLabel = ContinueLabel;
+    this->Ctx->LabelVarScope = this->Ctx->VarScope;
   }
 
   ~LoopScope() {
     this->Ctx->BreakLabel = OldBreakLabel;
     this->Ctx->ContinueLabel = OldContinueLabel;
+    this->Ctx->LabelVarScope = OldLabelVarScope;
   }
 
 private:
   OptLabelTy OldBreakLabel;
   OptLabelTy OldContinueLabel;
+  VariableScope<Emitter> *OldLabelVarScope;
 };
 
 // Sets the context for a switch scope, mapping labels.
@@ -140,22 +144,26 @@ public:
               OptLabelTy DefaultLabel)
       : LabelScope<Emitter>(Ctx), OldBreakLabel(Ctx->BreakLabel),
         OldDefaultLabel(this->Ctx->DefaultLabel),
-        OldCaseLabels(std::move(this->Ctx->CaseLabels)) {
+        OldCaseLabels(std::move(this->Ctx->CaseLabels)),
+        OldLabelVarScope(Ctx->LabelVarScope) {
     this->Ctx->BreakLabel = BreakLabel;
     this->Ctx->DefaultLabel = DefaultLabel;
     this->Ctx->CaseLabels = std::move(CaseLabels);
+    this->Ctx->LabelVarScope = this->Ctx->VarScope;
   }
 
   ~SwitchScope() {
     this->Ctx->BreakLabel = OldBreakLabel;
     this->Ctx->DefaultLabel = OldDefaultLabel;
     this->Ctx->CaseLabels = std::move(OldCaseLabels);
+    this->Ctx->LabelVarScope = OldLabelVarScope;
   }
 
 private:
   OptLabelTy OldBreakLabel;
   OptLabelTy OldDefaultLabel;
   CaseMap OldCaseLabels;
+  VariableScope<Emitter> *OldLabelVarScope;
 };
 
 template <class Emitter> class StmtExprScope final {
@@ -1232,7 +1240,7 @@ bool Compiler<Emitter>::VisitVectorBinOp(const BinaryOperator *E) {
 
   // FIXME: Current only support comparison binary operator, add support for
   // other binary operator.
-  if (!E->isComparisonOp())
+  if (!E->isComparisonOp() && !E->isLogicalOp())
     return this->emitInvalid(E);
   // Prepare storage for result.
   if (!Initializing) {
@@ -1267,7 +1275,15 @@ bool Compiler<Emitter>::VisitVectorBinOp(const BinaryOperator *E) {
   auto getElem = [=](unsigned Offset, unsigned Index) {
     if (!this->emitGetLocal(PT_Ptr, Offset, E))
       return false;
-    return this->emitArrayElemPop(ElemT, Index, E);
+    if (!this->emitArrayElemPop(ElemT, Index, E))
+      return false;
+    if (E->isLogicalOp()) {
+      if (!this->emitPrimCast(ElemT, PT_Bool, Ctx.getASTContext().BoolTy, E))
+        return false;
+      if (!this->emitPrimCast(PT_Bool, ResultElemT, VecTy->getElementType(), E))
+        return false;
+    }
+    return true;
   };
 
   for (unsigned I = 0; I != VecTy->getNumElements(); ++I) {
@@ -1298,6 +1314,16 @@ bool Compiler<Emitter>::VisitVectorBinOp(const BinaryOperator *E) {
       break;
     case BO_GT:
       if (!this->emitGT(ElemT, E))
+        return false;
+      break;
+    case BO_LAnd:
+      // a && b is equivalent to a!=0 & b!=0
+      if (!this->emitBitAnd(ResultElemT, E))
+        return false;
+      break;
+    case BO_LOr:
+      // a || b is equivalent to a!=0 | b!=0
+      if (!this->emitBitOr(ResultElemT, E))
         return false;
       break;
     default:
@@ -4734,7 +4760,9 @@ bool Compiler<Emitter>::visitBreakStmt(const BreakStmt *S) {
   if (!BreakLabel)
     return false;
 
-  this->emitCleanup();
+  for (VariableScope<Emitter> *C = VarScope; C != LabelVarScope;
+       C = C->getParent())
+    C->emitDestruction();
   return this->jump(*BreakLabel);
 }
 
@@ -4743,7 +4771,9 @@ bool Compiler<Emitter>::visitContinueStmt(const ContinueStmt *S) {
   if (!ContinueLabel)
     return false;
 
-  this->emitCleanup();
+  for (VariableScope<Emitter> *C = VarScope; C != LabelVarScope;
+       C = C->getParent())
+    C->emitDestruction();
   return this->jump(*ContinueLabel);
 }
 
