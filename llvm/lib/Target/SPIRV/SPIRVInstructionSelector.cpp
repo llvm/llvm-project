@@ -659,6 +659,15 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
                    .addUse(NewVReg)
                    .addUse(I.getOperand(2).getReg())
                    .constrainAllUses(TII, TRI, RBI);
+      } else {
+        return BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpSpecConstantOp))
+            .addDef(ResVReg)
+            .addUse(GR.getSPIRVTypeID(ResType))
+            .addImm(
+                static_cast<uint32_t>(SPIRV::Opcode::InBoundsPtrAccessChain))
+            .addUse(GV)
+            .addUse(I.getOperand(2).getReg())
+            .constrainAllUses(TII, TRI, RBI);
       }
     }
     // It's possible to translate G_PTR_ADD to OpSpecConstantOp: either to
