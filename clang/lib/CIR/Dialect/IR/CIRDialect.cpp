@@ -1400,11 +1400,20 @@ void TernaryOp::build(OpBuilder &builder, OperationState &result, Value cond,
 
 OpFoldResult SelectOp::fold(FoldAdaptor adaptor) {
   auto condition = adaptor.getCondition();
-  if (!condition)
-    return nullptr;
+  if (condition) {
+    auto conditionValue = mlir::cast<mlir::cir::BoolAttr>(condition).getValue();
+    return conditionValue ? getTrueValue() : getFalseValue();
+  }
 
-  auto conditionValue = mlir::cast<mlir::cir::BoolAttr>(condition).getValue();
-  return conditionValue ? getTrueValue() : getFalseValue();
+  // cir.select if %0 then x else x -> x
+  auto trueValue = adaptor.getTrueValue();
+  auto falseValue = adaptor.getFalseValue();
+  if (trueValue && trueValue == falseValue)
+    return trueValue;
+  if (getTrueValue() == getFalseValue())
+    return getTrueValue();
+
+  return nullptr;
 }
 
 //===----------------------------------------------------------------------===//

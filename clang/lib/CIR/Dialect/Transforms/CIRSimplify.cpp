@@ -107,6 +107,45 @@ struct RemoveTrivialTry : public OpRewritePattern<TryOp> {
   }
 };
 
+struct SimplifySelect : public OpRewritePattern<SelectOp> {
+  using OpRewritePattern<SelectOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(SelectOp op,
+                                PatternRewriter &rewriter) const final {
+    mlir::Operation *trueValueOp = op.getTrueValue().getDefiningOp();
+    mlir::Operation *falseValueOp = op.getFalseValue().getDefiningOp();
+    auto trueValueConstOp =
+        mlir::dyn_cast_if_present<mlir::cir::ConstantOp>(trueValueOp);
+    auto falseValueConstOp =
+        mlir::dyn_cast_if_present<mlir::cir::ConstantOp>(falseValueOp);
+    if (!trueValueConstOp || !falseValueConstOp)
+      return mlir::failure();
+
+    auto trueValue =
+        mlir::dyn_cast<mlir::cir::BoolAttr>(trueValueConstOp.getValue());
+    auto falseValue =
+        mlir::dyn_cast<mlir::cir::BoolAttr>(falseValueConstOp.getValue());
+    if (!trueValue || !falseValue)
+      return mlir::failure();
+
+    // cir.select if %0 then #true else #false -> %0
+    if (trueValue.getValue() && !falseValue.getValue()) {
+      rewriter.replaceAllUsesWith(op, op.getCondition());
+      rewriter.eraseOp(op);
+      return mlir::success();
+    }
+
+    // cir.seleft if %0 then #false else #true -> cir.unary not %0
+    if (!trueValue.getValue() && falseValue.getValue()) {
+      rewriter.replaceOpWithNewOp<mlir::cir::UnaryOp>(
+          op, mlir::cir::UnaryOpKind::Not, op.getCondition());
+      return mlir::success();
+    }
+
+    return mlir::failure();
+  }
+};
+
 //===----------------------------------------------------------------------===//
 // CIRSimplifyPass
 //===----------------------------------------------------------------------===//
@@ -131,7 +170,8 @@ void populateMergeCleanupPatterns(RewritePatternSet &patterns) {
     RemoveRedundantBranches,
     RemoveEmptyScope,
     RemoveEmptySwitch,
-    RemoveTrivialTry
+    RemoveTrivialTry,
+    SimplifySelect
   >(patterns.getContext());
   // clang-format on
 }
