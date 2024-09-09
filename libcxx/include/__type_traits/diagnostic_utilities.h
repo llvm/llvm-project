@@ -36,10 +36,10 @@ struct __allocator_requirements : true_type {};
 
 #if _LIBCPP_STD_VER >= 20
 template <class _Tp>
-struct __bounded_arrays_allowed_only_after_cxx20 : false_type {};
+inline const bool __bounded_arrays_allowed_only_after_cxx20 = false;
 #else
 template <class _Tp>
-struct __bounded_arrays_allowed_only_after_cxx20 : integral_constant<bool, __libcpp_is_bounded_array<_Tp>::value> {};
+inline const bool __bounded_arrays_allowed_only_after_cxx20 = __libcpp_is_bounded_array<_Tp>::value;
 #endif
 
 #define _LIBCPP_CHECK_ALLOCATOR_VALUE_TYPE_REQUIREMENTS(_Template, _Verb)                                              \
