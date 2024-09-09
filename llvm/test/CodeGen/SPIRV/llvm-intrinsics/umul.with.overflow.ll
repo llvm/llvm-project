@@ -1,4 +1,4 @@
-; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 
 ; CHECK-SPIRV: OpName %[[#NAME_UMUL_FUNC_8:]] "spirv.llvm_umul_with_overflow_i8"
 ; CHECK-SPIRV: OpName %[[#NAME_UMUL_FUNC_32:]] "spirv.llvm_umul_with_overflow_i32"

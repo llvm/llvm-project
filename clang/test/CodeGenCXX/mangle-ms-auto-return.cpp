@@ -215,6 +215,8 @@ void test_template_decltypeauto() {
 // Still want to use clang's custom mangling for lambdas to keep backwards compatibility until
 // MSVC lambda name mangling has been deciphered.
 void test_lambda() {
+  int i = 0;
+
   auto lambdaIntRetAuto = []() { return 0; };
   lambdaIntRetAuto();
   // CHECK: call {{.*}} @"??R<lambda_1>@?0??test_lambda@@YAXXZ@QEBA?A?<auto>@@XZ"
@@ -226,6 +228,18 @@ void test_lambda() {
   auto lambdaGenericIntIntRetAuto = [](auto a) { return a; };
   lambdaGenericIntIntRetAuto(0);
   // CHECK: call {{.*}} @"??$?RH@<lambda_0>@?0??test_lambda@@YAXXZ@QEBA?A?<auto>@@H@Z"
+
+  auto lambdaRetTrailingAuto = []() -> auto { return 0; };
+  lambdaRetTrailingAuto();
+  // CHECK: call {{.*}} @"??R<lambda_3>@?0??test_lambda@@YAXXZ@QEBA?A?<auto>@@XZ"
+
+  auto lambdaRetTrailingDecltypeAuto = []() -> decltype(auto) { return 0; };
+  lambdaRetTrailingDecltypeAuto();
+  // CHECK: call {{.*}} @"??R<lambda_4>@?0??test_lambda@@YAXXZ@QEBA?A?<decltype-auto>@@XZ"
+
+  auto lambdaRetTrailingRefCollapse = [](int x) -> auto&& { return x; };
+  lambdaRetTrailingRefCollapse(i);
+  // CHECK: call {{.*}} @"??R<lambda_5>@?0??test_lambda@@YAXXZ@QEBA?A?<auto>@@H@Z"
 }
 
 auto TestTrailingInt() -> int {
@@ -366,4 +380,18 @@ auto * __attribute__((address_space(1))) * AutoPtrAddressSpaceT() {
 void test_template_auto_address_space_ptr() {
   AutoPtrAddressSpaceT<int>();
   // CHECK: call {{.*}} @"??$AutoPtrAddressSpaceT@H@@YA?A?<auto>@@XZ"
+}
+
+template<class T>
+auto&& AutoReferenceCollapseT(T& x) { return static_cast<T&>(x); }
+
+auto&& AutoReferenceCollapse(int& x) { return static_cast<int&>(x); }
+
+void test2() {
+  int x = 1;
+  auto&& rref0 = AutoReferenceCollapseT(x);
+  // CHECK: call {{.*}} @"??$AutoReferenceCollapseT@H@@YA$$QEA_PAEAH@Z"
+
+  auto&& rref1 = AutoReferenceCollapse(x);
+  // CHECK: call {{.*}} @"?AutoReferenceCollapse@@YA@AEAH@Z"
 }

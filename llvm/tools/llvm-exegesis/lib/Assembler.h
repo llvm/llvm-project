@@ -115,7 +115,7 @@ public:
 
   // Executes the function.
   void operator()(char *Memory) const {
-    ((void (*)(char *))(intptr_t)FunctionBytes.data())(Memory);
+    ((void (*)(char *))(uintptr_t)FunctionBytes.data())(Memory);
   }
 
   StringRef FunctionBytes;

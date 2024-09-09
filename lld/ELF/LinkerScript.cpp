@@ -44,13 +44,11 @@ using namespace llvm::support::endian;
 using namespace lld;
 using namespace lld::elf;
 
-ScriptWrapper elf::script;
-
 static bool isSectionPrefix(StringRef prefix, StringRef name) {
   return name.consume_front(prefix) && (name.empty() || name[0] == '.');
 }
 
-static StringRef getOutputSectionName(const InputSectionBase *s) {
+StringRef LinkerScript::getOutputSectionName(const InputSectionBase *s) const {
   // This is for --emit-relocs and -r. If .text.foo is emitted as .text.bar, we
   // want to emit .rela.text.foo as .rela.text.bar for consistency (this is not
   // technically required, but not doing it is odd). This code guarantees that.
@@ -77,7 +75,7 @@ static StringRef getOutputSectionName(const InputSectionBase *s) {
   if (s->name == "COMMON")
     return ".bss";
 
-  if (script->hasSectionsCommand)
+  if (hasSectionsCommand)
     return s->name;
 
   // When no SECTIONS is specified, emulate GNU ld's internal linker scripts
@@ -106,10 +104,13 @@ static StringRef getOutputSectionName(const InputSectionBase *s) {
     return ".text";
   }
 
-  for (StringRef v :
-       {".data.rel.ro", ".data", ".rodata", ".bss.rel.ro", ".bss", ".ldata",
-        ".lrodata", ".lbss", ".gcc_except_table", ".init_array", ".fini_array",
-        ".tbss", ".tdata", ".ARM.exidx", ".ARM.extab", ".ctors", ".dtors"})
+  for (StringRef v : {".data.rel.ro", ".data",       ".rodata",
+                      ".bss.rel.ro",  ".bss",        ".ldata",
+                      ".lrodata",     ".lbss",       ".gcc_except_table",
+                      ".init_array",  ".fini_array", ".tbss",
+                      ".tdata",       ".ARM.exidx",  ".ARM.extab",
+                      ".ctors",       ".dtors",      ".sbss",
+                      ".sdata",       ".srodata"})
     if (isSectionPrefix(v, s->name))
       return v;
 
@@ -593,7 +594,7 @@ LinkerScript::computeInputSections(const InputSectionDescription *cmd,
     sortByPositionThenCommandLine(sizeAfterPrevSort, ret.size());
   } else {
     SectionClassDesc *scd =
-        script->sectionClasses.lookup(CachedHashStringRef(cmd->classRef));
+        sectionClasses.lookup(CachedHashStringRef(cmd->classRef));
     if (!scd) {
       errorOrWarn("undefined section class '" + cmd->classRef + "'");
       return ret;
@@ -859,7 +860,7 @@ static OutputSection *findByName(ArrayRef<SectionCommand *> vec,
 }
 
 static OutputDesc *createSection(InputSectionBase *isec, StringRef outsecName) {
-  OutputDesc *osd = script->createOutputSection(outsecName, "<internal>");
+  OutputDesc *osd = ctx.script->createOutputSection(outsecName, "<internal>");
   osd->osec.recordSection(isec);
   return osd;
 }
@@ -1157,7 +1158,7 @@ bool LinkerScript::assignOffsets(OutputSection *sec) {
   }
 
   state->outSec = sec;
-  if (!(sec->addrExpr && script->hasSectionsCommand)) {
+  if (!(sec->addrExpr && hasSectionsCommand)) {
     // ALIGN is respected. sec->alignment is the max of ALIGN and the maximum of
     // input section alignments.
     const uint64_t pos = dot;
@@ -1416,15 +1417,6 @@ void LinkerScript::adjustSectionsAfterSorting() {
       maybePropagatePhdrs(osd->osec, defPhdrs);
 }
 
-static uint64_t computeBase(uint64_t min, bool allocateHeaders) {
-  // If there is no SECTIONS or if the linkerscript is explicit about program
-  // headers, do our best to allocate them.
-  if (!script->hasSectionsCommand || allocateHeaders)
-    return 0;
-  // Otherwise only allocate program headers if that would not add a page.
-  return alignDown(min, config->maxPageSize);
-}
-
 // When the SECTIONS command is used, try to find an address for the file and
 // program headers output sections, which can be added to the first PT_LOAD
 // segment when program headers are created.
@@ -1450,8 +1442,13 @@ void LinkerScript::allocateHeaders(SmallVector<PhdrEntry *, 0> &phdrs) {
       });
   bool paged = !config->omagic && !config->nmagic;
   uint64_t headerSize = getHeaderSize();
-  if ((paged || hasExplicitHeaders) &&
-      headerSize <= min - computeBase(min, hasExplicitHeaders)) {
+
+  uint64_t base = 0;
+  // If SECTIONS is present and the linkerscript is not explicit about program
+  // headers, only allocate program headers if that would not add a page.
+  if (hasSectionsCommand && !hasExplicitHeaders)
+    base = alignDown(min, config->maxPageSize);
+  if ((paged || hasExplicitHeaders) && headerSize <= min - base) {
     min = alignDown(min - headerSize, config->maxPageSize);
     ctx.out.elfHeader->addr = min;
     ctx.out.programHeaders->addr = min + ctx.out.elfHeader->size;
@@ -1471,7 +1468,7 @@ void LinkerScript::allocateHeaders(SmallVector<PhdrEntry *, 0> &phdrs) {
 }
 
 LinkerScript::AddressState::AddressState() {
-  for (auto &mri : script->memoryRegions) {
+  for (auto &mri : ctx.script->memoryRegions) {
     MemoryRegion *mr = mri.second;
     mr->curPos = (mr->origin)().getValue();
   }
@@ -1484,13 +1481,13 @@ LinkerScript::AddressState::AddressState() {
 // that has changed its section or value (or nullptr if no symbol has changed).
 std::pair<const OutputSection *, const Defined *>
 LinkerScript::assignAddresses() {
-  if (script->hasSectionsCommand) {
+  if (hasSectionsCommand) {
     // With a linker script, assignment of addresses to headers is covered by
     // allocateHeaders().
     dot = config->imageBase.value_or(0);
   } else {
     // Assign addresses to headers right now.
-    dot = target->getImageBase();
+    dot = ctx.target->getImageBase();
     ctx.out.elfHeader->addr = dot;
     ctx.out.programHeaders->addr = dot + ctx.out.elfHeader->size;
     dot += getHeaderSize();
@@ -1802,10 +1799,9 @@ void LinkerScript::addScriptReferencedSymbolsToSymTable() {
     for (StringRef name : *symRefsVec.pop_back_val()) {
       reference(name);
       // Prevent the symbol from being discarded by --gc-sections.
-      script->referencedSymbols.push_back(name);
-      auto it = script->provideMap.find(name);
-      if (it != script->provideMap.end() &&
-          LinkerScript::shouldAddProvideSym(name) &&
+      referencedSymbols.push_back(name);
+      auto it = provideMap.find(name);
+      if (it != provideMap.end() && shouldAddProvideSym(name) &&
           added.insert(name).second) {
         symRefsVec.push_back(&it->second);
       }

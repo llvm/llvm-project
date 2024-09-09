@@ -344,6 +344,12 @@ class LoopVectorizationPlanner {
   /// been retired.
   InstructionCost cost(VPlan &Plan, ElementCount VF) const;
 
+  /// Precompute costs for certain instructions using the legacy cost model. The
+  /// function is used to bring up the VPlan-based cost model to initially avoid
+  /// taking different decisions due to inaccuracies in the legacy cost model.
+  InstructionCost precomputeCosts(VPlan &Plan, ElementCount VF,
+                                  VPCostContext &CostCtx) const;
+
 public:
   LoopVectorizationPlanner(
       Loop *L, LoopInfo *LI, DominatorTree *DT, const TargetLibraryInfo *TLI,
@@ -354,20 +360,22 @@ public:
       : OrigLoop(L), LI(LI), DT(DT), TLI(TLI), TTI(TTI), Legal(Legal), CM(CM),
         IAI(IAI), PSE(PSE), Hints(Hints), ORE(ORE) {}
 
-  /// Plan how to best vectorize, return the best VF and its cost, or
-  /// std::nullopt if vectorization and interleaving should be avoided up front.
-  std::optional<VectorizationFactor> plan(ElementCount UserVF, unsigned UserIC);
+  /// Build VPlans for the specified \p UserVF and \p UserIC if they are
+  /// non-zero or all applicable candidate VFs otherwise. If vectorization and
+  /// interleaving should be avoided up-front, no plans are generated.
+  void plan(ElementCount UserVF, unsigned UserIC);
 
   /// Use the VPlan-native path to plan how to best vectorize, return the best
   /// VF and its cost.
   VectorizationFactor planInVPlanNativePath(ElementCount UserVF);
 
-  /// Return the best VPlan for \p VF.
-  VPlan &getBestPlanFor(ElementCount VF) const;
+  /// Return the VPlan for \p VF. At the moment, there is always a single VPlan
+  /// for each VF.
+  VPlan &getPlanFor(ElementCount VF) const;
 
-  /// Return the most profitable vectorization factor. Also collect all
-  /// profitable VFs in ProfitableVFs.
-  ElementCount getBestVF();
+  /// Compute and return the most profitable vectorization factor. Also collect
+  /// all profitable VFs in ProfitableVFs.
+  VectorizationFactor computeBestVF();
 
   /// Generate the IR code for the vectorized loop captured in VPlan \p BestPlan
   /// according to the best selected \p VF and  \p UF.
@@ -449,12 +457,14 @@ private:
                                   VPRecipeBuilder &RecipeBuilder,
                                   ElementCount MinVF);
 
+#ifndef NDEBUG
   /// \return The most profitable vectorization factor for the available VPlans
   /// and the cost of that VF.
   /// This is now only used to verify the decisions by the new VPlan-based
   /// cost-model and will be retired once the VPlan-based cost-model is
   /// stabilized.
   VectorizationFactor selectVectorizationFactor();
+#endif
 
   /// Returns true if the per-lane cost of VectorizationFactor A is lower than
   /// that of B.

@@ -123,6 +123,11 @@ public:
     });
   }
 
+  /// Create a cast between a `target("dx")` type and `dx.types.Handle`, which
+  /// is intended to be removed by the end of lowering. This is used to allow
+  /// lowering of ops which need to change their return or argument types in a
+  /// piecemeal way - we can add the casts in to avoid updating all of the uses
+  /// or defs, and by the end all of the casts will be redundant.
   Value *createTmpHandleCast(Value *V, Type *Ty) {
     Function *CastFn = Intrinsic::getDeclaration(&M, Intrinsic::dx_cast_handle,
                                                  {Ty, V->getType()});
@@ -136,10 +141,14 @@ public:
     SmallVector<Function *> CastFns;
 
     for (CallInst *Cast : CleanupCasts) {
+      // These casts were only put in to ease the move from `target("dx")` types
+      // to `dx.types.Handle in a piecemeal way. At this point, all of the
+      // non-cast uses should now be `dx.types.Handle`, and remaining casts
+      // should all form pairs to and from the now unused `target("dx")` type.
       CastFns.push_back(Cast->getCalledFunction());
-      // All of the ops should be using `dx.types.Handle` at this point, so if
-      // we're not producing that we should be part of a pair. Track this so we
-      // can remove it at the end.
+
+      // If the cast is not to `dx.types.Handle`, it should be the first part of
+      // the pair. Keep track so we can remove it once it has no more uses.
       if (Cast->getType() != OpBuilder.getHandleType()) {
         ToRemove.push_back(Cast);
         continue;
@@ -156,6 +165,8 @@ public:
       assert(Cast->user_empty() && "Temporary handle cast still has users");
       Cast->eraseFromParent();
     }
+
+    // Deduplicate the cast functions so that we only erase each one once.
     llvm::sort(CastFns);
     CastFns.erase(llvm::unique(CastFns), CastFns.end());
     for (Function *F : CastFns)
@@ -172,8 +183,10 @@ public:
     replaceFunction(F, [&](CallInst *CI) -> Error {
       IRB.SetInsertPoint(CI);
 
-      dxil::ResourceInfo &RI = DRM[CI];
-      dxil::ResourceInfo::ResourceBinding Binding = RI.getBinding();
+      auto *It = DRM.find(CI);
+      assert(It != DRM.end() && "Resource not in map?");
+      dxil::ResourceInfo &RI = *It;
+      const auto &Binding = RI.getBinding();
 
       std::array<Value *, 4> Args{
           ConstantInt::get(Int8Ty, llvm::to_underlying(RI.getResourceClass())),
@@ -198,13 +211,21 @@ public:
     replaceFunction(F, [&](CallInst *CI) -> Error {
       IRB.SetInsertPoint(CI);
 
-      dxil::ResourceInfo &RI = DRM[CI];
-      dxil::ResourceInfo::ResourceBinding Binding = RI.getBinding();
+      auto *It = DRM.find(CI);
+      assert(It != DRM.end() && "Resource not in map?");
+      dxil::ResourceInfo &RI = *It;
+
+      const auto &Binding = RI.getBinding();
       std::pair<uint32_t, uint32_t> Props = RI.getAnnotateProps();
 
+      // For `CreateHandleFromBinding` we need the upper bound rather than the
+      // size, so we need to be careful about the difference for "unbounded".
+      uint32_t Unbounded = std::numeric_limits<uint32_t>::max();
+      uint32_t UpperBound = Binding.Size == Unbounded
+                                ? Unbounded
+                                : Binding.LowerBound + Binding.Size - 1;
       Constant *ResBind = OpBuilder.getResBind(
-          Binding.LowerBound, Binding.LowerBound + Binding.Size - 1,
-          Binding.Space, RI.getResourceClass());
+          Binding.LowerBound, UpperBound, Binding.Space, RI.getResourceClass());
       std::array<Value *, 3> BindArgs{ResBind, CI->getArgOperand(3),
                                       CI->getArgOperand(4)};
       Expected<CallInst *> OpBind =
@@ -228,12 +249,96 @@ public:
     });
   }
 
+  /// Lower `dx.handle.fromBinding` intrinsics depending on the shader model and
+  /// taking into account binding information from DXILResourceAnalysis.
   void lowerHandleFromBinding(Function &F) {
     Triple TT(Triple(M.getTargetTriple()));
     if (TT.getDXILVersion() < VersionTuple(1, 6))
       lowerToCreateHandle(F);
     else
       lowerToBindAndAnnotateHandle(F);
+  }
+
+  /// Replace uses of \c V with the values in the `dx.ResRet` of \c Op. Since we
+  /// expect to be post-scalarization, make an effort to avoid vectors.
+  Error replaceResRetUses(CallInst *Intrin, CallInst *Op) {
+    IRBuilder<> &IRB = OpBuilder.getIRB();
+
+    Type *OldRetTy = Intrin->getType();
+
+    // For scalars, we just extract the first element.
+    if (!isa<FixedVectorType>(OldRetTy)) {
+      Value *EVI = IRB.CreateExtractValue(Op, 0);
+      Intrin->replaceAllUsesWith(EVI);
+      Intrin->eraseFromParent();
+      return Error::success();
+    }
+
+    auto *VecTy = cast<FixedVectorType>(OldRetTy);
+    unsigned N = VecTy->getNumElements();
+    std::array<Value *, 4> Extracts = {};
+    SmallVector<ExtractElementInst *> DynamicAccesses;
+
+    // The users of the operation should all be scalarized, so we attempt to
+    // replace the extractelements with extractvalues directly.
+    for (Use &U : make_early_inc_range(Intrin->uses())) {
+      if (auto *EEI = dyn_cast<ExtractElementInst>(U.getUser())) {
+        if (auto *IndexOp = dyn_cast<ConstantInt>(EEI->getIndexOperand())) {
+          size_t IndexVal = IndexOp->getZExtValue();
+          assert(IndexVal < 4 && "Index into buffer load out of range");
+          if (!Extracts[IndexVal])
+            Extracts[IndexVal] = IRB.CreateExtractValue(Op, IndexVal);
+          EEI->replaceAllUsesWith(Extracts[IndexVal]);
+          EEI->eraseFromParent();
+        } else {
+          DynamicAccesses.push_back(EEI);
+        }
+      }
+    }
+
+    // If there's a dynamic access we need to round trip through stack memory so
+    // that we don't leave vectors around.
+    if (!DynamicAccesses.empty()) {
+      Type *Int32Ty = IRB.getInt32Ty();
+      Constant *Zero = ConstantInt::get(Int32Ty, 0);
+
+      Type *ElTy = VecTy->getElementType();
+      Type *ArrayTy = ArrayType::get(ElTy, N);
+      Value *Alloca = IRB.CreateAlloca(ArrayTy);
+
+      for (int I = 0, E = N; I != E; ++I) {
+        if (!Extracts[I])
+          Extracts[I] = IRB.CreateExtractValue(Op, I);
+        Value *GEP = IRB.CreateInBoundsGEP(
+            ArrayTy, Alloca, {Zero, ConstantInt::get(Int32Ty, I)});
+        IRB.CreateStore(Extracts[I], GEP);
+      }
+
+      for (ExtractElementInst *EEI : DynamicAccesses) {
+        Value *GEP = IRB.CreateInBoundsGEP(ArrayTy, Alloca,
+                                           {Zero, EEI->getIndexOperand()});
+        Value *Load = IRB.CreateLoad(ElTy, GEP);
+        EEI->replaceAllUsesWith(Load);
+        EEI->eraseFromParent();
+      }
+    }
+
+    // If we still have uses, then we're not fully scalarized and need to
+    // recreate the vector. This should only happen for things like exported
+    // functions from libraries.
+    if (!Intrin->use_empty()) {
+      for (int I = 0, E = N; I != E; ++I)
+        if (!Extracts[I])
+          Extracts[I] = IRB.CreateExtractValue(Op, I);
+
+      Value *Vec = UndefValue::get(OldRetTy);
+      for (int I = 0, E = N; I != E; ++I)
+        Vec = IRB.CreateInsertElement(Vec, Extracts[I], I);
+      Intrin->replaceAllUsesWith(Vec);
+    }
+
+    Intrin->eraseFromParent();
+    return Error::success();
   }
 
   void lowerTypedBufferLoad(Function &F) {
@@ -247,44 +352,17 @@ public:
           createTmpHandleCast(CI->getArgOperand(0), OpBuilder.getHandleType());
       Value *Index0 = CI->getArgOperand(1);
       Value *Index1 = UndefValue::get(Int32Ty);
-      Type *RetTy = OpBuilder.getResRetType(CI->getType()->getScalarType());
+
+      Type *NewRetTy = OpBuilder.getResRetType(CI->getType()->getScalarType());
 
       std::array<Value *, 3> Args{Handle, Index0, Index1};
       Expected<CallInst *> OpCall =
-          OpBuilder.tryCreateOp(OpCode::BufferLoad, Args, RetTy);
+          OpBuilder.tryCreateOp(OpCode::BufferLoad, Args, NewRetTy);
       if (Error E = OpCall.takeError())
         return E;
+      if (Error E = replaceResRetUses(CI, *OpCall))
+        return E;
 
-      std::array<Value *, 4> Extracts = {};
-
-      // We've switched the return type from a vector to a struct, but at this
-      // point most vectors have probably already been scalarized. Try to
-      // forward arguments directly rather than inserting into and immediately
-      // extracting from a vector.
-      for (Use &U : make_early_inc_range(CI->uses()))
-        if (auto *EEI = dyn_cast<ExtractElementInst>(U.getUser()))
-          if (auto *Index = dyn_cast<ConstantInt>(EEI->getIndexOperand())) {
-            size_t IndexVal = Index->getZExtValue();
-            assert(IndexVal < 4 && "Index into buffer load out of range");
-            if (!Extracts[IndexVal])
-              Extracts[IndexVal] = IRB.CreateExtractValue(*OpCall, IndexVal);
-            EEI->replaceAllUsesWith(Extracts[IndexVal]);
-            EEI->eraseFromParent();
-          }
-
-      // If there are still uses then we need to create a vector.
-      if (!CI->use_empty()) {
-        for (int I = 0, E = 4; I != E; ++I)
-          if (!Extracts[I])
-            Extracts[I] = IRB.CreateExtractValue(*OpCall, I);
-
-        Value *Vec = UndefValue::get(CI->getType());
-        for (int I = 0, E = 4; I != E; ++I)
-          Vec = IRB.CreateInsertElement(Vec, Extracts[I], I);
-        CI->replaceAllUsesWith(Vec);
-      }
-
-      CI->eraseFromParent();
       return Error::success();
     });
   }

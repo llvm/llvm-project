@@ -1241,6 +1241,11 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
     Action = TLI.getOperationAction(Node->getOpcode(),
                                     Node->getOperand(0).getValueType());
     break;
+  case ISD::EXPERIMENTAL_VECTOR_HISTOGRAM:
+    Action = TLI.getOperationAction(
+        Node->getOpcode(),
+        cast<MaskedHistogramSDNode>(Node)->getIndex().getValueType());
+    break;
   default:
     if (Node->getOpcode() >= ISD::BUILTIN_OP_END) {
       Action = TLI.getCustomOperationAction(*Node);
@@ -2601,7 +2606,7 @@ SDValue SelectionDAGLegalize::expandFrexp(SDNode *Node) const {
   SDValue IsDenormal =
       DAG.getSetCC(dl, SetCCVT, Abs, SmallestNormalizedInt, ISD::SETULT);
 
-  SDValue MinExp = DAG.getConstant(MinExpVal, dl, ExpVT);
+  SDValue MinExp = DAG.getSignedConstant(MinExpVal, dl, ExpVT);
   SDValue Zero = DAG.getConstant(0, dl, ExpVT);
 
   SDValue ScaledAsInt = DAG.getNode(ISD::BITCAST, dl, AsIntVT, ScaleUp);
@@ -5042,7 +5047,8 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
   case ISD::RESET_FPENV: {
     // It is legalized to call 'fesetenv(FE_DFL_ENV)'. On most targets
     // FE_DFL_ENV is defined as '((const fenv_t *) -1)' in glibc.
-    SDValue Ptr = DAG.getIntPtrConstant(-1LL, dl);
+    EVT PtrTy = TLI.getPointerTy(DAG.getDataLayout());
+    SDValue Ptr = DAG.getAllOnesConstant(dl, PtrTy);
     SDValue Chain = Node->getOperand(0);
     Results.push_back(
         DAG.makeStateFunctionCall(RTLIB::FESETENV, Ptr, Chain, dl));
@@ -5097,7 +5103,7 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
     // target must provide custom lowering.
     const DataLayout &DL = DAG.getDataLayout();
     EVT PtrTy = TLI.getPointerTy(DL);
-    SDValue Mode = DAG.getConstant(-1LL, dl, PtrTy);
+    SDValue Mode = DAG.getAllOnesConstant(dl, PtrTy);
     Results.push_back(DAG.makeStateFunctionCall(RTLIB::FESETMODE, Mode,
                                                 Node->getOperand(0), dl));
     break;

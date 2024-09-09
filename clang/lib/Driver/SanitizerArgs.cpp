@@ -119,6 +119,8 @@ static SanitizerMask parseArgValues(const Driver &D, const llvm::opt::Arg *A,
 static int parseCoverageFeatures(const Driver &D, const llvm::opt::Arg *A,
                                  bool DiagnoseErrors);
 
+/// Parse -fsanitize-undefined-ignore-overflow-pattern= flag values, diagnosing
+/// any invalid values. Returns a mask of excluded overflow patterns.
 static int parseOverflowPatternExclusionValues(const Driver &D,
                                                const llvm::opt::Arg *A,
                                                bool DiagnoseErrors);
@@ -556,11 +558,15 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
                          SanitizerKind::Leak | SanitizerKind::Thread |
                          SanitizerKind::Memory | SanitizerKind::KernelAddress |
                          SanitizerKind::Scudo | SanitizerKind::SafeStack),
-      std::make_pair(SanitizerKind::MemTag,
-                     SanitizerKind::Address | SanitizerKind::KernelAddress |
-                         SanitizerKind::HWAddress |
-                         SanitizerKind::KernelHWAddress),
-      std::make_pair(SanitizerKind::KCFI, SanitizerKind::Function)};
+      std::make_pair(SanitizerKind::MemTag, SanitizerKind::Address |
+                                                SanitizerKind::KernelAddress |
+                                                SanitizerKind::HWAddress |
+                                                SanitizerKind::KernelHWAddress),
+      std::make_pair(SanitizerKind::KCFI, SanitizerKind::Function),
+      std::make_pair(SanitizerKind::Realtime,
+                     SanitizerKind::Address | SanitizerKind::Thread |
+                         SanitizerKind::Undefined | SanitizerKind::Memory)};
+
   // Enable toolchain specific default sanitizers if not explicitly disabled.
   SanitizerMask Default = TC.getDefaultSanitizers() & ~AllRemove;
 
@@ -792,8 +798,8 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
           << "fsanitize-trap=cfi";
   }
 
-  for (const auto *Arg :
-       Args.filtered(options::OPT_fsanitize_overflow_pattern_exclusion_EQ)) {
+  for (const auto *Arg : Args.filtered(
+           options::OPT_fsanitize_undefined_ignore_overflow_pattern_EQ)) {
     Arg->claim();
     OverflowPatternExclusions |=
         parseOverflowPatternExclusionValues(D, Arg, DiagnoseErrors);
@@ -1253,8 +1259,8 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
                         "-fsanitize-system-ignorelist=", SystemIgnorelistFiles);
 
   if (OverflowPatternExclusions)
-    Args.AddAllArgs(CmdArgs,
-                    options::OPT_fsanitize_overflow_pattern_exclusion_EQ);
+    Args.AddAllArgs(
+        CmdArgs, options::OPT_fsanitize_undefined_ignore_overflow_pattern_EQ);
 
   if (MsanTrackOrigins)
     CmdArgs.push_back(Args.MakeArgString("-fsanitize-memory-track-origins=" +
@@ -1451,9 +1457,12 @@ static int parseOverflowPatternExclusionValues(const Driver &D,
         llvm::StringSwitch<int>(Value)
             .Case("none", LangOptionsBase::None)
             .Case("all", LangOptionsBase::All)
-            .Case("add-overflow-test", LangOptionsBase::AddOverflowTest)
+            .Case("add-unsigned-overflow-test",
+                  LangOptionsBase::AddUnsignedOverflowTest)
+            .Case("add-signed-overflow-test",
+                  LangOptionsBase::AddSignedOverflowTest)
             .Case("negated-unsigned-const", LangOptionsBase::NegUnsignedConst)
-            .Case("post-decr-while", LangOptionsBase::PostDecrInWhile)
+            .Case("unsigned-post-decr-while", LangOptionsBase::PostDecrInWhile)
             .Default(0);
     if (E == 0)
       D.Diag(clang::diag::err_drv_unsupported_option_argument)

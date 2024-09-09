@@ -146,14 +146,13 @@ static irdl::DialectOp createIRDLDialect(OpBuilder &builder) {
 }
 
 static std::vector<llvm::Record *>
-getOpDefinitions(const RecordKeeper &recordKeeper) {
+getOpDefinitions(RecordKeeper &recordKeeper) {
   if (!recordKeeper.getClass("Op"))
     return {};
   return recordKeeper.getAllDerivedDefinitions("Op");
 }
 
-static bool emitDialectIRDLDefs(const RecordKeeper &recordKeeper,
-                                raw_ostream &os) {
+static bool emitDialectIRDLDefs(RecordKeeper &recordKeeper, raw_ostream &os) {
   // Initialize.
   MLIRContext ctx;
   ctx.getOrLoadDialect<irdl::IRDLDialect>();
@@ -185,6 +184,6 @@ static bool emitDialectIRDLDefs(const RecordKeeper &recordKeeper,
 
 static mlir::GenRegistration
     genOpDefs("gen-dialect-irdl-defs", "Generate IRDL dialect definitions",
-              [](const RecordKeeper &records, raw_ostream &os) {
+              [](RecordKeeper &records, raw_ostream &os) {
                 return emitDialectIRDLDefs(records, os);
               });
