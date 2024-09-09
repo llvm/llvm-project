@@ -138,7 +138,7 @@ public:
 
   /// The purpose of this class is to only expose the symbol information that an
   /// LTO client should need in order to do symbol resolution.
-  class Symbol : irsymtab::Symbol {
+  struct Symbol : irsymtab::Symbol {
     friend LTO;
 
   public:

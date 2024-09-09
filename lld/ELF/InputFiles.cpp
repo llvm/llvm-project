@@ -1746,8 +1746,10 @@ createBitcodeSymbol(Symbol *&sym, const std::vector<bool> &keptComdats,
 
   // Symbols can be duplicated in bitcode files because of '#include' and
   // linkonce_odr. Use unique_saver to save symbol names for de-duplication.
-  if (!sym)
-    sym = symtab.insert(unique_saver().save(objSym.getName()));
+  if (!sym) {
+    objSym.Name = unique_saver().save(objSym.getName());
+    sym = symtab.insert(objSym.getName());
+  }
 
   int c = objSym.getComdatIndex();
   if (objSym.isUndefined() || (c != -1 && !keptComdats[c])) {
@@ -1797,18 +1799,18 @@ void BitcodeFile::parse() {
 void BitcodeFile::parseLazy() {
   numSymbols = obj->symbols().size();
   symbols = std::make_unique<Symbol *[]>(numSymbols);
-  for (auto [i, irSym] : llvm::enumerate(obj->symbols()))
+  for (auto [i, irSym] : llvm::enumerate(obj->symbols())) {
+    // Keep copies of per-module undefined symbols for LTO::GlobalResolutions
+    // usage.
+    irSym.Name = unique_saver().save(irSym.getName());
     if (!irSym.isUndefined()) {
       // Symbols can be duplicated in bitcode files because of '#include' and
       // linkonce_odr. Use unique_saver to save symbol names for de-duplication.
-      auto *sym = symtab.insert(unique_saver().save(irSym.getName()));
+      auto *sym = symtab.insert(irSym.getName());
       sym->resolve(LazySymbol{*this});
       symbols[i] = sym;
-    } else {
-      // Keep copies of per-module undefined symbols for LTO::GlobalResolutions
-      // usage.
-      unique_saver().save(irSym.getName());
     }
+  }
 }
 
 void BitcodeFile::postParse() {
