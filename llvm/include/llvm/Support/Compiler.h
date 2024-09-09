@@ -189,7 +189,7 @@
 #define LLVM_TEMPLATE_ABI __declspec(dllimport)
 #define LLVM_EXPORT_TEMPLATE
 #endif
-#elif defined(__ELF__) || defined(__MINGW32__)
+#elif defined(__ELF__) || defined(__MINGW32__) || defined(_AIX)
 #define LLVM_ABI LLVM_ATTRIBUTE_VISIBILITY_DEFAULT
 #define LLVM_TEMPLATE_ABI LLVM_ATTRIBUTE_VISIBILITY_DEFAULT
 #define LLVM_EXPORT_TEMPLATE
