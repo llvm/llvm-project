@@ -322,7 +322,7 @@ define void @test_fmul_mem(ptr %p, ptr %q) nounwind {
 }
 
 define half @freeze_half_undef() nounwind {
-; LA32-LABEL: freeze_half:
+; LA32-LABEL: freeze_half_undef:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    addi.w $sp, $sp, -16
 ; LA32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
@@ -335,7 +335,7 @@ define half @freeze_half_undef() nounwind {
 ; LA32-NEXT:    addi.w $sp, $sp, 16
 ; LA32-NEXT:    ret
 ;
-; LA64-LABEL: freeze_half:
+; LA64-LABEL: freeze_half_undef:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    addi.d $sp, $sp, -16
 ; LA64-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
@@ -353,6 +353,27 @@ define half @freeze_half_undef() nounwind {
 }
 
 define half @freeze_half_poison(half %poison) nounwind {
+; LA32-LABEL: freeze_half_poison:
+; LA32:       # %bb.0:
+; LA32-NEXT:    addi.w $sp, $sp, -16
+; LA32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
+; LA32-NEXT:    bl %plt(__gnu_h2f_ieee)
+; LA32-NEXT:    fadd.s $fa0, $fa0, $fa0
+; LA32-NEXT:    bl %plt(__gnu_f2h_ieee)
+; LA32-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
+; LA32-NEXT:    addi.w $sp, $sp, 16
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: freeze_half_poison:
+; LA64:       # %bb.0:
+; LA64-NEXT:    addi.d $sp, $sp, -16
+; LA64-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
+; LA64-NEXT:    bl %plt(__gnu_h2f_ieee)
+; LA64-NEXT:    fadd.s $fa0, $fa0, $fa0
+; LA64-NEXT:    bl %plt(__gnu_f2h_ieee)
+; LA64-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
+; LA64-NEXT:    addi.d $sp, $sp, 16
+; LA64-NEXT:    ret
   %y1 = freeze half %poison
   %t1 = fadd half %y1, %y1
   ret half %t1
