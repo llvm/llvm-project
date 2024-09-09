@@ -160,6 +160,9 @@ Resolutions to C++ Defect Reports
 - Allow ``void{}`` as a prvalue of type ``void``.
   (`CWG2351: void{} <https://cplusplus.github.io/CWG/issues/2351.html>`_).
 
+- Clang now has improved resolution to CWG2398, allowing class templates to have
+  default arguments deduced when partial ordering.
+
 - Clang now allows comparing unequal object pointers that have been cast to ``void *``
   in constant expressions. These comparisons always worked in non-constant expressions.
   (`CWG2749: Treatment of "pointer to void" for relational comparisons <https://cplusplus.github.io/CWG/issues/2749.html>`_).
@@ -240,6 +243,9 @@ Attribute Changes in Clang
   instantiation by accidentally allowing it in C++ in some circumstances.
   (#GH106864)
 
+- Introduced a new attribute ``[[clang::coro_await_elidable]]`` on coroutine return types
+  to express elideability at call sites where the coroutine is co_awaited as a prvalue.
+
 Improvements to Clang's diagnostics
 -----------------------------------
 
@@ -287,6 +293,8 @@ Improvements to Clang's diagnostics
 
 - The lifetimebound and GSL analysis in clang are coherent, allowing clang to
   detect more use-after-free bugs. (#GH100549).
+
+- Clang now diagnoses dangling cases where a gsl-pointer is constructed from a gsl-owner object inside a container (#GH100384).
 
 - Clang now warns for u8 character literals used in C23 with ``-Wpre-c23-compat`` instead of ``-Wpre-c++17-compat``.
 
@@ -368,8 +376,8 @@ Bug Fixes to C++ Support
 - Fixed a bug in the substitution of empty pack indexing types. (#GH105903)
 - Clang no longer tries to capture non-odr used default arguments of template parameters of generic lambdas (#GH107048)
 - Fixed a bug where defaulted comparison operators would remove ``const`` from base classes. (#GH102588)
-
 - Fix a crash when using ``source_location`` in the trailing return type of a lambda expression. (#GH67134)
+- A follow-up fix was added for (#GH61460), as the previous fix was not entirely correct. (#GH86361)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

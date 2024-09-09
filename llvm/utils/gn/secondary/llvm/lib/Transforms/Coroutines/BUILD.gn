@@ -10,6 +10,7 @@ static_library("Coroutines") {
     "//llvm/lib/Transforms/Utils",
   ]
   sources = [
+    "CoroAnnotationElide.cpp",
     "CoroCleanup.cpp",
     "CoroConditionalWrapper.cpp",
     "CoroEarly.cpp",

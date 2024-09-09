@@ -221,17 +221,17 @@ static void popArg(InterpState &S, const Expr *Arg) {
   TYPE_SWITCH(Ty, S.Stk.discard<T>());
 }
 
-void cleanupAfterFunctionCall(InterpState &S, CodePtr OpPC) {
+void cleanupAfterFunctionCall(InterpState &S, CodePtr OpPC,
+                              const Function *Func) {
   assert(S.Current);
-  const Function *CurFunc = S.Current->getFunction();
-  assert(CurFunc);
+  assert(Func);
 
-  if (CurFunc->isUnevaluatedBuiltin())
+  if (Func->isUnevaluatedBuiltin())
     return;
 
   // Some builtin functions require us to only look at the call site, since
   // the classified parameter types do not match.
-  if (unsigned BID = CurFunc->getBuiltinID();
+  if (unsigned BID = Func->getBuiltinID();
       BID && S.getASTContext().BuiltinInfo.hasCustomTypechecking(BID)) {
     const auto *CE =
         cast<CallExpr>(S.Current->Caller->getExpr(S.Current->getRetPC()));
@@ -242,7 +242,7 @@ void cleanupAfterFunctionCall(InterpState &S, CodePtr OpPC) {
     return;
   }
 
-  if (S.Current->Caller && CurFunc->isVariadic()) {
+  if (S.Current->Caller && Func->isVariadic()) {
     // CallExpr we're look for is at the return PC of the current function, i.e.
     // in the caller.
     // This code path should be executed very rarely.
@@ -259,8 +259,8 @@ void cleanupAfterFunctionCall(InterpState &S, CodePtr OpPC) {
     } else
       assert(false && "Can't get arguments from that expression type");
 
-    assert(NumArgs >= CurFunc->getNumWrittenParams());
-    NumVarArgs = NumArgs - (CurFunc->getNumWrittenParams() +
+    assert(NumArgs >= Func->getNumWrittenParams());
+    NumVarArgs = NumArgs - (Func->getNumWrittenParams() +
                             isa<CXXOperatorCallExpr>(CallSite));
     for (unsigned I = 0; I != NumVarArgs; ++I) {
       const Expr *A = Args[NumArgs - 1 - I];
@@ -270,7 +270,8 @@ void cleanupAfterFunctionCall(InterpState &S, CodePtr OpPC) {
 
   // And in any case, remove the fixed parameters (the non-variadic ones)
   // at the end.
-  S.Current->popArgs();
+  for (PrimType Ty : Func->args_reverse())
+    TYPE_SWITCH(Ty, S.Stk.discard<T>());
 }
 
 bool CheckExtern(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
@@ -811,10 +812,11 @@ bool CheckDynamicMemoryAllocation(InterpState &S, CodePtr OpPC) {
   return true;
 }
 
-bool CheckNewDeleteForms(InterpState &S, CodePtr OpPC, bool NewWasArray,
-                         bool DeleteIsArray, const Descriptor *D,
+bool CheckNewDeleteForms(InterpState &S, CodePtr OpPC,
+                         DynamicAllocator::Form AllocForm,
+                         DynamicAllocator::Form DeleteForm, const Descriptor *D,
                          const Expr *NewExpr) {
-  if (NewWasArray == DeleteIsArray)
+  if (AllocForm == DeleteForm)
     return true;
 
   QualType TypeToDiagnose;
@@ -831,7 +833,8 @@ bool CheckNewDeleteForms(InterpState &S, CodePtr OpPC, bool NewWasArray,
 
   const SourceInfo &E = S.Current->getSource(OpPC);
   S.FFDiag(E, diag::note_constexpr_new_delete_mismatch)
-      << DeleteIsArray << 0 << TypeToDiagnose;
+      << static_cast<int>(DeleteForm) << static_cast<int>(AllocForm)
+      << TypeToDiagnose;
   S.Note(NewExpr->getExprLoc(), diag::note_constexpr_dynamic_alloc_here)
       << NewExpr->getSourceRange();
   return false;
@@ -839,7 +842,12 @@ bool CheckNewDeleteForms(InterpState &S, CodePtr OpPC, bool NewWasArray,
 
 bool CheckDeleteSource(InterpState &S, CodePtr OpPC, const Expr *Source,
                        const Pointer &Ptr) {
-  if (Source && isa<CXXNewExpr>(Source))
+  // The two sources we currently allow are new expressions and
+  // __builtin_operator_new calls.
+  if (isa_and_nonnull<CXXNewExpr>(Source))
+    return true;
+  if (const CallExpr *CE = dyn_cast_if_present<CallExpr>(Source);
+      CE && CE->getBuiltinCallee() == Builtin::BI__builtin_operator_new)
     return true;
 
   // Whatever this is, we didn't heap allocate it.
@@ -1036,6 +1044,12 @@ bool CallVar(InterpState &S, CodePtr OpPC, const Function *Func,
 
 bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
           uint32_t VarArgSize) {
+  assert(Func);
+  auto cleanup = [&]() -> bool {
+    cleanupAfterFunctionCall(S, OpPC, Func);
+    return false;
+  };
+
   if (Func->hasThisPointer()) {
     size_t ArgSize = Func->getArgSize() + VarArgSize;
     size_t ThisOffset = ArgSize - (Func->hasRVO() ? primSize(PT_Ptr) : 0);
@@ -1052,22 +1066,22 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
       assert(ThisPtr.isZero());
     } else {
       if (!CheckInvoke(S, OpPC, ThisPtr))
-        return false;
+        return cleanup();
     }
   }
 
   if (!CheckCallable(S, OpPC, Func))
-    return false;
+    return cleanup();
 
   // FIXME: The isConstructor() check here is not always right. The current
   // constant evaluator is somewhat inconsistent in when it allows a function
   // call when checking for a constant expression.
   if (Func->hasThisPointer() && S.checkingPotentialConstantExpression() &&
       !Func->isConstructor())
-    return false;
+    return cleanup();
 
   if (!CheckCallDepth(S, OpPC))
-    return false;
+    return cleanup();
 
   auto NewFrame = std::make_unique<InterpFrame>(S, Func, OpPC, VarArgSize);
   InterpFrame *FrameBefore = S.Current;
@@ -1164,13 +1178,15 @@ bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
 }
 
 bool CallBI(InterpState &S, CodePtr &PC, const Function *Func,
-            const CallExpr *CE) {
+            const CallExpr *CE, uint32_t BuiltinID) {
+  if (S.checkingPotentialConstantExpression())
+    return false;
   auto NewFrame = std::make_unique<InterpFrame>(S, Func, PC);
 
   InterpFrame *FrameBefore = S.Current;
   S.Current = NewFrame.get();
 
-  if (InterpretBuiltin(S, PC, Func, CE)) {
+  if (InterpretBuiltin(S, PC, Func, CE, BuiltinID)) {
     NewFrame.release();
     return true;
   }
