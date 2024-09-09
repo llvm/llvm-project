@@ -816,8 +816,8 @@ static void processBlockAddr(MachineFunction &MF, SPIRVGlobalRegistry *GR,
   }
 
   // For each instruction to fix, we replace all the G_BLOCK_ADDR operands by
-  // the actual MBB it references. Once those references updated, we can cleanup
-  // remaining G_BLOCK_ADDR references.
+  // the actual MBB it references. Once those references have been updated, we
+  // can cleanup remaining G_BLOCK_ADDR references.
   SmallPtrSet<MachineBasicBlock *, 8> ClearAddressTaken;
   SmallPtrSet<MachineInstr *, 8> ToEraseMI;
   MachineRegisterInfo &MRI = MF.getRegInfo();

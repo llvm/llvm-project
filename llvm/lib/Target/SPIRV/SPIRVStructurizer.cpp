@@ -220,7 +220,7 @@ const ConvergenceRegion *getRegionForHeader(const ConvergenceRegion *Node,
 }
 
 // Returns the single BasicBlock exiting the convergence region `CR`,
-// nullptr if no such exit exists. F must be the function CR belongs to.
+// nullptr if no such exit exists.
 BasicBlock *getExitFor(const ConvergenceRegion *CR) {
   std::unordered_set<BasicBlock *> ExitTargets;
   for (BasicBlock *Exit : CR->Exits) {
@@ -285,7 +285,7 @@ bool hasLoopMergeInstruction(BasicBlock &BB) {
   return false;
 }
 
-// Returns truye is I is an OpSelectionMerge or OpLoopMerge instruction, false
+// Returns true is I is an OpSelectionMerge or OpLoopMerge instruction, false
 // otherwise.
 bool isMergeInstruction(Instruction *I) {
   return getDesignatedMergeBlock(I) != nullptr;
@@ -413,7 +413,7 @@ void replaceIfBranchTargets(BasicBlock *BB, BasicBlock *OldTarget,
     C->destroyConstant();
 }
 
-// Replaces the branching instruction destination of |BB| by |NewTarget| if it
+// Replaces the target of branch instruction in |BB| with |NewTarget| if it
 // was |OldTarget|. This function also fixes the associated merge instruction.
 // Note: this function does not simplify branching instructions, it only updates
 // targets. See also: simplifyBranches.
@@ -438,7 +438,7 @@ void replaceBranchTargets(BasicBlock *BB, BasicBlock *OldTarget,
 }
 
 // Replaces basic bloc operands |OldSrc| or OpPhi instructions in |BB| by
-// |NewSrc|. This function does not simplifies the OpPhi instruction once
+// |NewSrc|. This function does not simplify the OpPhi instruction once
 // transformed.
 void replacePhiTargets(BasicBlock *BB, BasicBlock *OldSrc, BasicBlock *NewSrc) {
   for (PHINode &Phi : BB->phis()) {
@@ -462,8 +462,8 @@ class SPIRVStructurizer : public FunctionPass {
   using ConstructList = std::vector<std::unique_ptr<DivergentConstruct>>;
 
   // Represents a divergent construct in the SPIR-V sense.
-  // Such construct is represented by a header (entry), a merge block (exit),
-  // and possible a continue block (back-edge). Each construct can contain other
+  // Such constructs are represented by a header (entry), a merge block (exit),
+  // and possibly a continue block (back-edge). A construct can contain other
   // constructs, but their boundaries do not cross.
   struct DivergentConstruct {
     BasicBlock *Header = nullptr;
@@ -491,13 +491,12 @@ class SPIRVStructurizer : public FunctionPass {
       DT.recalculate(F);
     }
 
-    // Returns the list of blocks that belongs to a SPIR-V continue construct.
+    // Returns the list of blocks that belong to a SPIR-V continue construct.
     std::vector<BasicBlock *> getContinueConstructBlocks(BasicBlock *Header,
                                                          BasicBlock *Continue) {
       std::vector<BasicBlock *> Output;
       Loop *L = LI.getLoopFor(Continue);
-      BasicBlock *BackEdgeBlock = L->getLoopLatch();
-      assert(BackEdgeBlock);
+      assert(L->getLoopLatch() != nullptr);
 
       partialOrderVisit(*Continue, [&](BasicBlock *BB) {
         if (BB == Header)
@@ -508,7 +507,7 @@ class SPIRVStructurizer : public FunctionPass {
       return Output;
     }
 
-    // Returns the list of blocks that belongs to a SPIR-V loop construct.
+    // Returns the list of blocks that belong to a SPIR-V loop construct.
     std::vector<BasicBlock *> getLoopConstructBlocks(BasicBlock *Header,
                                                      BasicBlock *Merge,
                                                      BasicBlock *Continue) {
@@ -525,7 +524,7 @@ class SPIRVStructurizer : public FunctionPass {
       return Output;
     }
 
-    // Returns the list of blocks that belongs to a SPIR-V selection construct.
+    // Returns the list of blocks that belong to a SPIR-V selection construct.
     std::vector<BasicBlock *>
     getSelectionConstructBlocks(DivergentConstruct *Node) {
       assert(DT.dominates(Node->Header, Node->Merge));
@@ -551,7 +550,7 @@ class SPIRVStructurizer : public FunctionPass {
       return Output;
     }
 
-    // Returns the list of blocks that belongs to a SPIR-V switch construct.
+    // Returns the list of blocks that belong to a SPIR-V switch construct.
     std::vector<BasicBlock *> getSwitchConstructBlocks(BasicBlock *Header,
                                                        BasicBlock *Merge) {
       assert(DT.dominates(Header, Merge));
@@ -571,7 +570,7 @@ class SPIRVStructurizer : public FunctionPass {
       return Output;
     }
 
-    // Returns the list of blocks that belongs to a SPIR-V case construct.
+    // Returns the list of blocks that belong to a SPIR-V case construct.
     std::vector<BasicBlock *> getCaseConstructBlocks(BasicBlock *Target,
                                                      BasicBlock *Merge) {
       assert(DT.dominates(Target, Merge));
@@ -597,12 +596,12 @@ class SPIRVStructurizer : public FunctionPass {
     //
     // clang-format off
     //
-    // In SPIR-V, construct must have a single exit/merge.
-    // Given A, B nodes in the construct, a C a node outside, with the following edges.
+    // In SPIR-V, constructs must have a single exit/merge.
+    // Given nodes A and B in the construct, a node C outside, and the following edges.
     //  A -> C
     //  B -> C
     //
-    // In such cases, we must create a new exit node D, that belongs to the construct to make is viable:
+    // In such cases, we must create a new exit node D, that belong to the construct to make is viable:
     // A -> D -> C
     // B -> D -> C
     //
@@ -839,11 +838,11 @@ class SPIRVStructurizer : public FunctionPass {
     return Modified;
   }
 
-  // When a block has multiple OpSelectionMerge/OpLoopMerge, sorts those
-  // instructions to but the "largest" first. A merge instruction is defined as
-  // larger than another when its target merge block post-dominates the other
-  // target's merge block.
-  // (This ordering should match the nesting ordering of the source HLSL).
+  // When a block has multiple OpSelectionMerge/OpLoopMerge instructions, sorts
+  // them to put the "largest" first. A merge instruction is defined as larger
+  // than another when its target merge block post-dominates the other target's
+  // merge block. (This ordering should match the nesting ordering of the source
+  // HLSL).
   bool sortSelectionMerge(Function &F, BasicBlock &Block) {
     std::vector<Instruction *> MergeInstructions;
     for (Instruction &I : Block)
@@ -1159,8 +1158,8 @@ class SPIRVStructurizer : public FunctionPass {
     return Modified;
   }
 
-  // Makes sure every case target in |F| are unique. If 2 case branch to the
-  // same basic block, one of the target is updated so it jumps to a new basic
+  // Makes sure every case target in |F| is unique. If 2 cases branch to the
+  // same basic block, one of the targets is updated so it jumps to a new basic
   // block ending with a single unconditional branch to the original target.
   bool splitSwitchCases(Function &F) {
     bool Modified = false;
