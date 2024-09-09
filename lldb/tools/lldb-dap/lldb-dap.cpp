@@ -641,6 +641,79 @@ void SetSourceMapFromArguments(const llvm::json::Object &arguments) {
   }
 }
 
+// Fill in the stack frames of the thread.
+//
+// Threads stacks may contain runtime specific extended backtraces, when
+// constructing a stack trace first report the full thread stack trace then
+// perform a breadth first traversal of any extended backtrace frames.
+//
+// For example:
+//
+// Thread (id=th0) stack=[s0, s1, s2, s3]
+//   \ Extended backtrace "libdispatch" Thread (id=th1) stack=[s0, s1]
+//     \ Extended backtrace "libdispatch" Thread (id=th2) stack=[s0, s1]
+//   \ Extended backtrace "Application Specific Backtrace" Thread (id=th3)
+//   stack=[s0, s1, s2]
+//
+// Which will flatten into:
+//
+//  0. th0->s0
+//  1. th0->s1
+//  2. th0->s2
+//  3. th0->s3
+//  4. label - Enqueued from th1, sf=-1, i=-4
+//  5. th1->s0
+//  6. th1->s1
+//  7. label - Enqueued from th2
+//  8. th2->s0
+//  9. th2->s1
+// 10. label - Application Specific Backtrace
+// 11. th3->s0
+// 12. th3->s1
+// 13. th3->s2
+//
+// s=3,l=3 = [th0->s3, label1, th1->s0]
+bool FillStackFrames(lldb::SBThread &thread, llvm::json::Array &stack_frames,
+                     int64_t &offset, const int64_t start_frame,
+                     const int64_t levels) {
+  bool reached_end_of_stack = false;
+  for (int64_t i = start_frame;
+       static_cast<int64_t>(stack_frames.size()) < levels; i++) {
+    if (i == -1) {
+      stack_frames.emplace_back(CreateExtendedStackFrameLabel(thread));
+      continue;
+    }
+
+    lldb::SBFrame frame = thread.GetFrameAtIndex(i);
+    if (!frame.IsValid()) {
+      offset += thread.GetNumFrames() + 1 /* label between threads */;
+      reached_end_of_stack = true;
+      break;
+    }
+
+    stack_frames.emplace_back(CreateStackFrame(frame));
+  }
+
+  if (g_dap.enable_display_extended_backtrace && reached_end_of_stack) {
+    // Check for any extended backtraces.
+    for (uint32_t bt = 0;
+         bt < thread.GetProcess().GetNumExtendedBacktraceTypes(); bt++) {
+      lldb::SBThread backtrace = thread.GetExtendedBacktraceThread(
+          thread.GetProcess().GetExtendedBacktraceTypeAtIndex(bt));
+      if (!backtrace.IsValid())
+        continue;
+
+      reached_end_of_stack = FillStackFrames(
+          backtrace, stack_frames, offset,
+          (start_frame - offset) > 0 ? start_frame - offset : -1, levels);
+      if (static_cast<int64_t>(stack_frames.size()) >= levels)
+        break;
+    }
+  }
+
+  return reached_end_of_stack;
+}
+
 // "AttachRequest": {
 //   "allOf": [ { "$ref": "#/definitions/Request" }, {
 //     "type": "object",
@@ -3234,114 +3307,22 @@ void request_stackTrace(const llvm::json::Object &request) {
   lldb::SBError error;
   auto arguments = request.getObject("arguments");
   lldb::SBThread thread = g_dap.GetLLDBThread(*arguments);
-  llvm::json::Array stackFrames;
+  llvm::json::Array stack_frames;
   llvm::json::Object body;
 
-  // Threads stacks may contain runtime specific extended backtraces, when
-  // constructing a stack trace first report the full thread stack trace then
-  // perform a breadth first traversal of any extended backtrace frames.
-  //
-  // For example:
-  //
-  // Thread (id=th0) stack=[s0, s1, s2, s3]
-  //   \ Extended backtrace "libdispatch" Thread (id=th1) stack=[s0, s1]
-  //     \ Extended backtrace "libdispatch" Thread (id=th2) stack=[s0, s1]
-  //   \ Extended backtrace "Application Specific Backtrace" Thread (id=th3)
-  //   stack=[s0, s1, s2]
-  //
-  // Which will flatten into:
-  //
-  //  0. th0->s0
-  //  1. th0->s1
-  //  2. th0->s2
-  //  3. th0->s3
-  //  4. label - Enqueued from th1
-  //  5. th1->s0
-  //  6. th1->s1
-  //  7. label - Enqueued from th2
-  //  8. th2->s0
-  //  9. th2->s1
-  // 10. label - Application Specific Backtrace
-  // 11. th3->s0
-  // 12. th3->s1
-  // 13. th3->s2
-
   if (thread.IsValid()) {
-    const auto startFrame = GetUnsigned(arguments, "startFrame", 0);
+    const auto start_frame = GetUnsigned(arguments, "startFrame", 0);
     const auto levels = GetUnsigned(arguments, "levels", 0);
-    const auto endFrame = (levels == 0) ? INT64_MAX : (startFrame + levels);
-    bool done = false;
     int64_t offset = 0;
-    lldb::SBProcess process = thread.GetProcess();
-    llvm::SmallVector<lldb::SBThread> threadCluster{{thread}};
-
-    for (uint32_t i = startFrame; i < endFrame && !threadCluster.empty(); ++i) {
-      lldb::SBThread current = threadCluster.front();
-      lldb::SBFrame frame = current.GetFrameAtIndex(i - offset);
-
-      // If we don't have a valid frame, check if we have any extended frames to
-      // report.
-      // *NOTE*: Threads can be chained across mutliple backtraces, so we
-      // need to keep track of each backtrace we've traversed fully in the
-      // offset.
-      while (!frame.IsValid() && current.IsValid() && !threadCluster.empty()) {
-        offset += current.GetNumFrames() +
-                  1 /* one extra frame for a label between threads*/;
-        threadCluster.pop_back();
-
-        if (!g_dap.enable_display_extended_backtrace) {
-          break;
-        }
-
-        // Check for any extended backtraces.
-        for (uint32_t i = 0; i < process.GetNumExtendedBacktraceTypes(); i++) {
-          lldb::SBThread backtrace = current.GetExtendedBacktraceThread(
-              process.GetExtendedBacktraceTypeAtIndex(i));
-          if (backtrace.IsValid()) {
-            threadCluster.emplace_back(backtrace);
-          }
-        }
-
-        if (threadCluster.empty())
-          break;
-
-        current = threadCluster.front();
-        frame = current.GetFrameAtIndex(0);
-      }
-
-      // If we're out of extended backtraces, no more frames to load.
-      if (!frame.IsValid() && threadCluster.empty()) {
-        done = true;
-        break;
-      }
-
-      // Between the thread and extended backtrace add a label.
-      if (offset != 0 && (i - offset) == 0) {
-        const uint32_t thread_idx =
-            current.GetExtendedBacktraceOriginatingIndexID();
-        const char *queue_name = current.GetQueueName();
-        std::string name;
-        if (queue_name != nullptr) {
-          name = llvm::formatv("Enqueued from {0} (Thread {1})", queue_name,
-                               thread_idx);
-        } else {
-          name = llvm::formatv("Thread {0}", thread_idx);
-        }
-        stackFrames.emplace_back(
-            llvm::json::Object{{"id", thread.GetThreadID() + 1},
-                               {"name", name},
-                               {"presentationHint", "label"}});
-      } else {
-        stackFrames.emplace_back(CreateStackFrame(frame));
-      }
-    }
-
-    // If we loaded all the frames, set the total frame to the current total,
-    // otherwise use the totalFrames to indicate more data is available.
-    body.try_emplace("totalFrames", startFrame + stackFrames.size() +
-                                        (done ? 0 : StackPageSize));
+    bool reached_end_of_stack =
+        FillStackFrames(thread, stack_frames, offset, start_frame,
+                        levels == 0 ? INT64_MAX : levels);
+    body.try_emplace("totalFrames",
+                     start_frame + stack_frames.size() +
+                         (reached_end_of_stack ? 0 : StackPageSize));
   }
-  body.try_emplace("stackFrames", std::move(stackFrames));
+
+  body.try_emplace("stackFrames", std::move(stack_frames));
   response.try_emplace("body", std::move(body));
   g_dap.SendJSON(llvm::json::Value(std::move(response)));
 }

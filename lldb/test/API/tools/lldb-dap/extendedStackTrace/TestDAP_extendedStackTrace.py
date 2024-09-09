@@ -49,22 +49,56 @@ class TestDAP_extendedStackTrace(lldbdap_testcase.DAPTestCaseBase):
 
         events = self.continue_to_next_stop()
 
-        stackFrames = self.get_stackFrames(threadId=events[0]["body"]["threadId"])
+        stackFrames, totalFrames = self.get_stackFrames_and_totalFramesCount(
+            threadId=events[0]["body"]["threadId"]
+        )
         self.assertGreaterEqual(len(stackFrames), 3, "expect >= 3 frames")
+        self.assertEqual(len(stackFrames), totalFrames)
         self.assertEqual(stackFrames[0]["name"], "one")
         self.assertEqual(stackFrames[1]["name"], "two")
         self.assertEqual(stackFrames[2]["name"], "three")
 
         stackLabels = [
-            frame
-            for frame in stackFrames
+            (i, frame)
+            for i, frame in enumerate(stackFrames)
             if frame.get("presentationHint", "") == "label"
         ]
         self.assertEqual(len(stackLabels), 2, "expected two label stack frames")
         self.assertRegex(
-            stackLabels[0]["name"],
+            stackLabels[0][1]["name"],
             "Enqueued from com.apple.root.default-qos \(Thread \d\)",
         )
         self.assertRegex(
-            stackLabels[1]["name"], "Enqueued from com.apple.main-thread \(Thread \d\)"
+            stackLabels[1][1]["name"],
+            "Enqueued from com.apple.main-thread \(Thread \d\)",
         )
+
+        for i, frame in stackLabels:
+            # Ensure requesting startFrame+levels across thread backtraces works as expected.
+            stackFrames, totalFrames = self.get_stackFrames_and_totalFramesCount(
+                threadId=events[0]["body"]["threadId"], startFrame=i - 1, levels=3
+            )
+            self.assertEqual(len(stackFrames), 3, "expected 3 frames with levels=3")
+            self.assertGreaterEqual(
+                totalFrames, i + 3, "total frames should include a pagination offset"
+            )
+            self.assertEqual(stackFrames[1], frame)
+
+            # Ensure requesting startFrame+levels at the beginning of a thread backtraces works as expected.
+            stackFrames, totalFrames = self.get_stackFrames_and_totalFramesCount(
+                threadId=events[0]["body"]["threadId"], startFrame=i, levels=3
+            )
+            self.assertEqual(len(stackFrames), 3, "expected 3 frames with levels=3")
+            self.assertGreaterEqual(
+                totalFrames, i + 3, "total frames should include a pagination offset"
+            )
+            self.assertEqual(stackFrames[0], frame)
+
+            # Ensure requests with startFrame+levels that end precisely on the last frame includes the totalFrames pagination offset.
+            stackFrames, totalFrames = self.get_stackFrames_and_totalFramesCount(
+                threadId=events[0]["body"]["threadId"], startFrame=i - 1, levels=1
+            )
+            self.assertEqual(len(stackFrames), 1, "expected 1 frames with levels=1")
+            self.assertGreaterEqual(
+                totalFrames, i, "total frames should include a pagination offset"
+            )
