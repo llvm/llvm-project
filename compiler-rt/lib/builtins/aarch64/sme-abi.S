@@ -10,6 +10,8 @@
 
 .set FEAT_SVE_BIT, 30
 .set FEAT_SME_BIT, 42
+.set FEAT_SME2_BIT, 57
+.set FEAT_SME2_MASK, 1 << 57
 .set SVCR_PSTATE_SM_BIT, 0
 
 #if !defined(__APPLE__)
@@ -22,7 +24,7 @@
 #define CPU_FEATS_SYMBOL_OFFSET SYMBOL_NAME(__aarch64_cpu_features)@pageoff
 #endif
 
-.arch armv9-a+sme
+.arch armv9-a+sme2
 
 // Utility function which calls a system's abort() routine. Because the function
 // is streaming-compatible it should disable streaming-SVE mode before calling
@@ -203,6 +205,161 @@ DEFINE_COMPILERRT_FUNCTION(__arm_get_current_vg)
   mov     x0, xzr
   ret
 END_COMPILERRT_FUNCTION(__arm_get_current_vg)
+
+DEFINE_COMPILERRT_FUNCTION(__arm_sme_state_size)
+  .variant_pcs __arm_sme_state_size
+  BTI_C
+
+  // Test if SME is available and PSTATE = 1.
+  adrp    x16, CPU_FEATS_SYMBOL
+  ldr     x16, [x16, CPU_FEATS_SYMBOL_OFFSET]
+  tbz     x16, #FEAT_SME_BIT, 0f
+  mrs     x16, SVCR
+  tbz     x16, #1, 0f
+
+  // Size = HAS_FEAT_SME2 ? 32 : 96
+  adrp    x16, CPU_FEATS_SYMBOL
+  ldr     x16, [x16, CPU_FEATS_SYMBOL_OFFSET]
+  tst     x16, #FEAT_SME2_MASK
+  mov     w17, #32
+  mov     w16, #96
+  csel    x16, x17, x16, eq
+
+  // Size = Size + (SVLB * SVLB)
+  rdsvl   x17, #1
+  madd    x0, x17, x17, x16
+  ret
+
+0:
+  // Default case, 16 bytes is minimum (to encode VALID bit, multiple of 16 bytes)
+  mov w0, #16
+  ret
+END_COMPILERRT_FUNCTION(__arm_sme_state_size)
+
+DEFINE_COMPILERRT_FUNCTION(__arm_sme_save)
+  .variant_pcs __arm_sme_save
+  BTI_C
+
+  // Clear internal state bits
+  stp     xzr, xzr, [x0]
+
+  // If PTR is not 16-byte aligned, abort.
+  tst     x0, #0xF
+  b.ne    3f
+
+  // If SME is not available, PSTATE.ZA = 0 or TPIDR2_EL0 != 0, return.
+  adrp    x16, CPU_FEATS_SYMBOL
+  ldr     x16, [x16, CPU_FEATS_SYMBOL_OFFSET]
+  tbz     x16, #FEAT_SME_BIT, 2f
+  mrs     x16, SVCR
+  tbz     x16, #1, 2f
+  mrs     x16, TPIDR2_EL0
+  cbnz    x16, 2f
+
+  # ZA or ZT0 need saving, we can now set internal VALID bit to 1
+  mov     w16, #1
+  str     x16, [x0]
+
+  adrp    x16, CPU_FEATS_SYMBOL
+  ldr     x16, [x16, CPU_FEATS_SYMBOL_OFFSET]
+  tbz     x16, #FEAT_SME2_BIT, 0f
+
+  // Store ZT0 and ZA
+  add     x16, x0, #32
+  str     zt0, [x16]
+  add     x18, x0, #96
+  b       1f
+
+0:
+  // Has SME only
+  add     x18, x0, #32
+
+1:
+  // Set up lazy-save (x18 = pointer to buffer)
+  rdsvl   x17, #1
+  str     x18, [x0, #16]!
+  strh    w17, [x0, #8]
+  stur    wzr, [x0, #10]
+  strh    wzr, [x0, #14]
+  msr     TPIDR2_EL0, x0
+  ret
+
+2:
+  // Do nothing
+  ret
+
+3:
+  b       SYMBOL_NAME(do_abort)
+END_COMPILERRT_FUNCTION(__arm_sme_save)
+
+DEFINE_COMPILERRT_FUNCTION(__arm_sme_restore)
+  .cfi_startproc
+  .variant_pcs __arm_sme_save
+  BTI_C
+
+  stp     x29, x30, [sp, #-16]!
+  .cfi_def_cfa_offset 16
+  mov     x29, sp
+  .cfi_def_cfa w29, 16
+  .cfi_offset w30, -8
+  .cfi_offset w29, -16
+
+  // If PTR is not 16-byte aligned, abort.
+  tst     x0, #0xF
+  b.ne    3f
+
+  // If the VALID bit is 0, return early.
+  ldr     x16, [x0]
+  tbz     x16, #0, 2f
+
+  // If SME is not available, abort.
+  adrp    x16, CPU_FEATS_SYMBOL
+  ldr     x16, [x16, CPU_FEATS_SYMBOL_OFFSET]
+  tbz     x16, #FEAT_SME_BIT, 3f
+
+  // If TPIDR2_EL0 != nullptr, no lazy-save was committed, try to reload zt0.
+  mrs     x16, TPIDR2_EL0
+  cbnz    x16, 0f
+
+  // If TPIDR2_EL0 == nullptr and PSTATE.ZA = 1 (<=> ZA state is 'active'),
+  // abort.
+  mrs     x16, SVCR
+  tbnz    x16, #1, 3f
+
+  // Restore za.
+  smstart za
+  mov     x16, x0
+  add     x0, x0, #16
+  bl      __arm_tpidr2_restore
+  mov     x0, x16
+  msr     TPIDR2_EL0, xzr
+
+0:
+  smstart za
+
+1:
+  // Check if zt0 needs restoring.
+  adrp    x16, CPU_FEATS_SYMBOL
+  ldr     x16, [x16, CPU_FEATS_SYMBOL_OFFSET]
+  tbz     x16, #FEAT_SME2_BIT, 2f
+
+  // Restore zt0.
+  add     x16, x0, #32
+  ldr     zt0, [x16]
+
+2:
+  // Do nothing
+  .cfi_def_cfa wsp, 16
+  ldp     x29, x30, [sp], #16
+  .cfi_def_cfa_offset 0
+  .cfi_restore w30
+  .cfi_restore w29
+  ret
+
+3:
+  b       SYMBOL_NAME(do_abort)
+  .cfi_endproc
+END_COMPILERRT_FUNCTION(__arm_sme_restore)
 
 NO_EXEC_STACK_DIRECTIVE
 
