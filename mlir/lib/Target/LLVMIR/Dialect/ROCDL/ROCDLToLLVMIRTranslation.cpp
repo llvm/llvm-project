@@ -46,9 +46,8 @@ static llvm::Value *createDimGetterFunctionCall(llvm::IRBuilderBase &builder,
   if (auto rangeAttr = op->getAttrOfType<LLVM::ConstantRangeAttr>("range")) {
     // Zero-extend to 64 bits because the GPU dialect uses 32-bit bounds but
     // these ockl functions are defined to be 64-bits
-    call->addRangeRetAttr(
-        llvm::ConstantRange(rangeAttr.getLower().getValue().zext(64),
-                            rangeAttr.getUpper().getValue().zext(64)));
+    call->addRangeRetAttr(llvm::ConstantRange(rangeAttr.getLower().zext(64),
+                                              rangeAttr.getUpper().zext(64)));
   }
   return call;
 }

@@ -77,18 +77,18 @@ gpu.module @test_module {
       {known_block_size = array<i32: 8, 12, 16>,
        known_grid_size = array<i32: 20, 24, 28>} {
 
-    // CHECK: rocdl.workitem.id.x range <0 : i32, 8 : i32> : i32
+    // CHECK: rocdl.workitem.id.x range <i32, 0, 8> : i32
     %tIdX = gpu.thread_id x
-    // CHECK: rocdl.workitem.id.y range <0 : i32, 12 : i32> : i32
+    // CHECK: rocdl.workitem.id.y range <i32, 0, 12> : i32
     %tIdY = gpu.thread_id y
-    // CHECK: rocdl.workitem.id.z range <0 : i32, 16 : i32> : i32
+    // CHECK: rocdl.workitem.id.z range <i32, 0, 16> : i32
     %tIdZ = gpu.thread_id z
 
-    // CHECK: rocdl.workgroup.id.x range <0 : i32, 20 : i32> : i32
+    // CHECK: rocdl.workgroup.id.x range <i32, 0, 20> : i32
     %bIdX = gpu.block_id x
-    // CHECK: rocdl.workgroup.id.y range <0 : i32, 24 : i32> : i32
+    // CHECK: rocdl.workgroup.id.y range <i32, 0, 24> : i32
     %bIdY = gpu.block_id y
-    // CHECK: rocdl.workgroup.id.z range <0 : i32, 28 : i32> : i32
+    // CHECK: rocdl.workgroup.id.z range <i32, 0, 28> : i32
     %bIdZ = gpu.block_id z
 
     // "Usage" to make the ID calls not die

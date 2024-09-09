@@ -362,7 +362,7 @@ class LLVM_IntrOpBase<Dialect dialect, string opName, string enumName,
   string setRangeRetAttrCode = [{
     if ($range) {
       inst->addRangeRetAttr(::llvm::ConstantRange(
-        $range->getLower().getValue(), $range->getUpper().getValue()));
+        $range->getLower(), $range->getUpper()));
     }
   }];
   string importRangeRetAttrCode = [{
@@ -370,10 +370,7 @@ class LLVM_IntrOpBase<Dialect dialect, string opName, string enumName,
     auto rangeAttr = inst->getAttributes().getRetAttr(::llvm::Attribute::Range);
     if (rangeAttr.isValid()) {
       const ::llvm::ConstantRange& value = rangeAttr.getValueAsConstantRange();
-      ::mlir::Type intType = ::mlir::IntegerType::get($_builder.getContext(), value.getBitWidth());
-      auto lowerAttr = ::mlir::IntegerAttr::get(intType, value.getLower());
-      auto upperAttr = ::mlir::IntegerAttr::get(intType, value.getUpper());
-      op.setRangeAttr(::mlir::LLVM::ConstantRangeAttr::get($_builder.getContext(), lowerAttr, upperAttr));
+      op.setRangeAttr(::mlir::LLVM::ConstantRangeAttr::get($_builder.getContext(), value.getLower(), value.getUpper()));
     }
   }];
 }
