@@ -87,9 +87,9 @@ non-zero exit code.
 Disabling
 ---------
 
-In some circumstances, you may want to suppress RealtimeSanitizer violations in a specific scope.
+In some circumstances, you may want to suppress error reporting in a specific scope.
 
-In C++, this is achieved via  ``__rtsan::ScopedDisabler``. Within the scope where the ``ScopedDisabler`` object is instantiated, all sanitizer-reported violations are suppressed. This suppression applies to the current scope as well as all invoked functions, including any functions called transitively. 
+In C++, this is achieved via  ``__rtsan::ScopedDisabler``. Within the scope where the ``ScopedDisabler`` object is instantiated, all sanitizer error reports are suppressed. This suppression applies to the current scope as well as all invoked functions, including any functions called transitively. 
 
 .. code-block:: c++
 
