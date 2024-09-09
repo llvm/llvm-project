@@ -322,7 +322,6 @@ public:
     return VectorType::get(ElementType,
                            ElementCount::get(NumElements, Scalable));
   }
-  // Needs tests
   Type *getElementType() const;
 
   static VectorType *get(Type *ElementType, const VectorType *Other) {
@@ -332,16 +331,13 @@ public:
   inline ElementCount getElementCount() const {
     return cast<llvm::VectorType>(LLVMTy)->getElementCount();
   }
-  static VectorType *getInteger(Context &Ctx, VectorType *VTy);
-  static VectorType *getExtendedElementVectorType(Context &Ctx,
-                                                  VectorType *VTy);
-  static VectorType *getTruncatedElementVectorType(Context &Ctx,
-                                                   VectorType *VTy);
-  static VectorType *getSubdividedVectorType(Context &Ctx, VectorType *VTy,
-                                             int NumSubdivs);
-  static VectorType *getHalfElementsVectorType(Context &Ctx, VectorType *VTy);
-  static VectorType *getDoubleElementsVectorType(Context &Ctx, VectorType *VTy);
-  static bool isValidElementType(Context &Ctx, Type *ElemTy);
+  static VectorType *getInteger(VectorType *VTy);
+  static VectorType *getExtendedElementVectorType(VectorType *VTy);
+  static VectorType *getTruncatedElementVectorType(VectorType *VTy);
+  static VectorType *getSubdividedVectorType(VectorType *VTy, int NumSubdivs);
+  static VectorType *getHalfElementsVectorType(VectorType *VTy);
+  static VectorType *getDoubleElementsVectorType(VectorType *VTy);
+  static bool isValidElementType(Type *ElemTy);
 
   static bool classof(const Type *From) {
     return isa<llvm::VectorType>(From->LLVMTy);

@@ -69,40 +69,37 @@ VectorType *VectorType::get(Type *ElementType, ElementCount EC) {
 Type *VectorType::getElementType() const {
   return Ctx.getType(cast<llvm::VectorType>(LLVMTy)->getElementType());
 }
-VectorType *VectorType::getInteger(Context &Ctx, VectorType *VTy) {
-  return cast<VectorType>(Ctx.getType(
+VectorType *VectorType::getInteger(VectorType *VTy) {
+  return cast<VectorType>(VTy->getContext().getType(
       llvm::VectorType::getInteger(cast<llvm::VectorType>(VTy->LLVMTy))));
 }
-VectorType *VectorType::getExtendedElementVectorType(Context &Ctx,
-                                                     VectorType *VTy) {
+VectorType *VectorType::getExtendedElementVectorType(VectorType *VTy) {
   return cast<VectorType>(
-      Ctx.getType(llvm::VectorType::getExtendedElementVectorType(
+      VTy->getContext().getType(llvm::VectorType::getExtendedElementVectorType(
           cast<llvm::VectorType>(VTy->LLVMTy))));
 }
-VectorType *VectorType::getTruncatedElementVectorType(Context &Ctx,
-                                                      VectorType *VTy) {
+VectorType *VectorType::getTruncatedElementVectorType(VectorType *VTy) {
   return cast<VectorType>(
-      Ctx.getType(llvm::VectorType::getTruncatedElementVectorType(
+      VTy->getContext().getType(llvm::VectorType::getTruncatedElementVectorType(
           cast<llvm::VectorType>(VTy->LLVMTy))));
 }
-VectorType *VectorType::getSubdividedVectorType(Context &Ctx, VectorType *VTy,
+VectorType *VectorType::getSubdividedVectorType(VectorType *VTy,
                                                 int NumSubdivs) {
-  return cast<VectorType>(Ctx.getType(llvm::VectorType::getSubdividedVectorType(
-      cast<llvm::VectorType>(VTy->LLVMTy), NumSubdivs)));
-}
-VectorType *VectorType::getHalfElementsVectorType(Context &Ctx,
-                                                  VectorType *VTy) {
   return cast<VectorType>(
-      Ctx.getType(llvm::VectorType::getHalfElementsVectorType(
+      VTy->getContext().getType(llvm::VectorType::getSubdividedVectorType(
+          cast<llvm::VectorType>(VTy->LLVMTy), NumSubdivs)));
+}
+VectorType *VectorType::getHalfElementsVectorType(VectorType *VTy) {
+  return cast<VectorType>(
+      VTy->getContext().getType(llvm::VectorType::getHalfElementsVectorType(
           cast<llvm::VectorType>(VTy->LLVMTy))));
 }
-VectorType *VectorType::getDoubleElementsVectorType(Context &Ctx,
-                                                    VectorType *VTy) {
+VectorType *VectorType::getDoubleElementsVectorType(VectorType *VTy) {
   return cast<VectorType>(
-      Ctx.getType(llvm::VectorType::getDoubleElementsVectorType(
+      VTy->getContext().getType(llvm::VectorType::getDoubleElementsVectorType(
           cast<llvm::VectorType>(VTy->LLVMTy))));
 }
-bool VectorType::isValidElementType(Context &Ctx, Type *ElemTy) {
+bool VectorType::isValidElementType(Type *ElemTy) {
   return llvm::VectorType::isValidElementType(ElemTy->LLVMTy);
 }
 
