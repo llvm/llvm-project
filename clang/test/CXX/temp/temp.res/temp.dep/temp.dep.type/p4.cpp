@@ -484,19 +484,16 @@ namespace N4 {
   template<typename T>
   struct A {
     void not_instantiated(A a, A<T> b, T c) {
-      a->x; // expected-error {{member reference type 'A<T>' is not a pointer; did you mean to use '.'?}}
-      b->x; // expected-error {{member reference type 'A<T>' is not a pointer; did you mean to use '.'?}}
+      a->x;
+      b->x;
       c->x;
     }
 
     void instantiated(A a, A<T> b, T c) {
-      // FIXME: We should only emit a single diagnostic suggesting to use '.'!
-      a->x; // expected-error {{member reference type 'A<T>' is not a pointer; did you mean to use '.'?}}
-            // expected-error@-1 {{member reference type 'A<int>' is not a pointer; did you mean to use '.'?}}
-            // expected-error@-2 {{no member named 'x' in 'N4::A<int>'}}
-      b->x; // expected-error {{member reference type 'A<T>' is not a pointer; did you mean to use '.'?}}
-            // expected-error@-1 {{member reference type 'A<int>' is not a pointer; did you mean to use '.'?}}
-            // expected-error@-2 {{no member named 'x' in 'N4::A<int>'}}
+      a->x; // expected-error {{member reference type 'A<int>' is not a pointer; did you mean to use '.'?}}
+            // expected-error@-1 {{no member named 'x' in 'N4::A<int>'}}
+      b->x; // expected-error {{member reference type 'A<int>' is not a pointer; did you mean to use '.'?}}
+            // expected-error@-1 {{no member named 'x' in 'N4::A<int>'}}
       c->x; // expected-error {{member reference type 'int' is not a pointer}}
     }
   };
@@ -543,10 +540,11 @@ namespace N4 {
       a->T::f();
       a->T::g();
 
-      a->U::x;
-      a->U::y;
-      a->U::f();
-      a->U::g();
+      // FIXME: 'U' should be a dependent name, and its lookup context should be 'a.operator->()'!
+      a->U::x; // expected-error {{use of undeclared identifier 'U'}}
+      a->U::y; // expected-error {{use of undeclared identifier 'U'}}
+      a->U::f(); // expected-error {{use of undeclared identifier 'U'}}
+      a->U::g(); // expected-error {{use of undeclared identifier 'U'}}
     }
 
     void instantiated(D a) {
