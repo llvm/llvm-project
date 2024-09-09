@@ -57,6 +57,10 @@ option(LIBCXX_ENABLE_FILESYSTEM
    available on the platform. This includes things like most parts of <filesystem> and
    others like <fstream>" ON)
 option(LIBCXX_INCLUDE_TESTS "Build the libc++ tests." ${LLVM_INCLUDE_TESTS})
+option(LIBCXX_DISABLE_CLANG_TIDY_TESTS
+  "Disables test using the clang-tidy plugin. This option should only be used
+   when autodetection fails, please file a bug report so the autodetection can
+   be improved." OFF)
 set(LIBCXX_SUPPORTED_HARDENING_MODES none fast extensive debug)
 set(LIBCXX_HARDENING_MODE "none" CACHE STRING
   "Specify the default hardening mode to use. This mode will be used inside the
