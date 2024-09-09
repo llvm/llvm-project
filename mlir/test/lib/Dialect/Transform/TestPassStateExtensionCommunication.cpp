@@ -78,11 +78,11 @@ struct TestPassStateExtensionCommunication
       return success();
     };
 
+    auto options = mlir::transform::TransformOptions();
+    options.setStateInitializerExporter(stateInitializer, stateExporter);
     // Process transform ops with stateInitializer and stateExporter.
     for (auto op : module.getBody()->getOps<transform::TransformOpInterface>())
-      if (failed(transform::applyTransforms(
-              module, op, {}, mlir::transform::TransformOptions(), false,
-              stateInitializer, stateExporter)))
+      if (failed(transform::applyTransforms(module, op, {}, options, false)))
         return signalPassFailure();
 
     // Print the opCollection vector after processing transform ops.
