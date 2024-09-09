@@ -1021,16 +1021,14 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   case Intrinsic::vp_fcmp: {
     Intrinsic::ID IID = ICA.getID();
     std::optional<unsigned> FOp = VPIntrinsic::getFunctionalOpcodeForVP(IID);
-    CmpInst::Predicate Pred;
+    auto *UI = dyn_cast<VPCmpIntrinsic>(ICA.getInst());
 
-    if (IID == Intrinsic::vp_icmp)
-      Pred = CmpInst::ICMP_SLT;
-    else
-      Pred = CmpInst::FCMP_OLT;
-
-    assert(FOp && !ICA.getArgTypes().empty());
+    // We can only handle vp_cmp intrinsics with underlying instructions.
+    if (!UI)
+      break;
+    assert(FOp);
     return getCmpSelInstrCost(*FOp, ICA.getArgTypes()[0], ICA.getReturnType(),
-                              Pred, CostKind);
+                              UI->getPredicate(), CostKind);
   }
   }
 
