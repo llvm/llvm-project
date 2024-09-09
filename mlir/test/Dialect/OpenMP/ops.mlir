@@ -30,6 +30,14 @@ func.func @omp_masked(%filtered_thread_id : i32) -> () {
   return
 }
 
+func.func @omp_scan(%arg0 : memref<i32>) -> () {
+  // CHECK: omp.scan inclusive(%{{.*}} : memref<i32>)
+  omp.scan inclusive(%arg0 : memref<i32>)
+  // CHECK: omp.scan exclusive(%{{.*}} : memref<i32>)
+  omp.scan exclusive(%arg0 : memref<i32>)
+  return
+}
+
 func.func @omp_taskwait() -> () {
   // CHECK: omp.taskwait
   omp.taskwait

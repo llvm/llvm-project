@@ -105,6 +105,13 @@ struct IfClauseOps {
   Value ifVar;
 };
 
+struct InclusiveClauseOps {
+  llvm::SmallVector<Value> inclusiveVars;
+};
+
+struct ExclusiveClauseOps {
+  llvm::SmallVector<Value> exclusiveVars;
+};
 struct InReductionClauseOps {
   llvm::SmallVector<Value> inReductionVars;
   llvm::SmallVector<bool> inReductionByref;
@@ -260,6 +267,8 @@ using DistributeOperands =
 using LoopNestOperands = detail::Clauses<LoopRelatedOps>;
 
 using MaskedOperands = detail::Clauses<FilterClauseOps>;
+
+using ScanOperands = detail::Clauses<InclusiveClauseOps, ExclusiveClauseOps>;
 
 using OrderedOperands = detail::Clauses<DoacrossClauseOps>;
 

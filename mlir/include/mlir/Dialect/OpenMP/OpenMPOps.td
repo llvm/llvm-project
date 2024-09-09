@@ -1202,6 +1202,20 @@ def OrderedRegionOp : OpenMP_Op<"ordered.region", clauses = [
   let hasVerifier = 1;
 }
 
+def ScanOp : OpenMP_Op<"scan", traits = [
+    AttrSizedOperandSegments
+  ], clauses = [OpenMP_InclusiveClause, OpenMP_ExclusiveClause]> {
+  let summary = "scan construct with the region";
+  let description = [{
+    The scan without region is a stand-alone directive that
+  }] # clausesDescription;
+
+  let builders = [
+    OpBuilder<(ins CArg<"const ScanOperands &">:$clauses)>
+  ];
+
+}
+
 //===----------------------------------------------------------------------===//
 // 2.17.5 taskwait Construct
 //===----------------------------------------------------------------------===//
