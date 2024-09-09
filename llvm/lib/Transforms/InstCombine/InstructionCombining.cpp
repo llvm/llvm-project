@@ -1809,7 +1809,7 @@ Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN) {
   // Check to see whether the instruction can be folded into each phi operand.
   // If there is one operand that does not fold, remember the BB it is in.
   SmallVector<Value *> NewPhiValues;
-  SmallVector<unsigned int> OpsToMoveUseTo;
+  SmallVector<unsigned int> OpsToMoveUseToIncomingBB;
   bool SeenNonSimplifiedInVal = false;
   for (unsigned i = 0; i != NumPHIValues; ++i) {
     Value *InVal = PN->getIncomingValue(i);
@@ -1825,8 +1825,8 @@ Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN) {
     // because we know that it will simplify to a single icmp.
     const APInt *Ignored;
     if (isa<CmpIntrinsic>(InVal) && InVal->hasOneUse() &&
-        match(&I, m_c_ICmp(m_Specific(PN), m_APInt(Ignored)))) {
-      OpsToMoveUseTo.push_back(i);
+        match(&I, m_ICmp(m_Specific(PN), m_APInt(Ignored)))) {
+      OpsToMoveUseToIncomingBB.push_back(i);
       NewPhiValues.push_back(nullptr);
       continue;
     }
@@ -1845,7 +1845,7 @@ Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN) {
       return nullptr;
 
     NewPhiValues.push_back(nullptr);
-    OpsToMoveUseTo.push_back(i);
+    OpsToMoveUseToIncomingBB.push_back(i);
 
     // If the InVal is an invoke at the end of the pred block, then we can't
     // insert a computation after it without breaking the edge.
@@ -1862,7 +1862,7 @@ Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN) {
 
   // Clone the instruction that uses the phi node and move it into the incoming
   // BB because we know that the next iteration of InstCombine will simplify it.
-  for (auto OpIndex : OpsToMoveUseTo) {
+  for (auto OpIndex : OpsToMoveUseToIncomingBB) {
     Value *Op = PN->getIncomingValue(OpIndex);
     BasicBlock *OpBB = PN->getIncomingBlock(OpIndex);
 
