@@ -60,6 +60,10 @@
 #include <arm_neon.h>
 #endif
 
+#if defined(_MSC_VER)
+#include <intrin.h>
+#endif
+
 using namespace llvm;
 using namespace support;
 
