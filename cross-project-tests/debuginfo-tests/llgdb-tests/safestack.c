@@ -1,4 +1,4 @@
-// RUN: %clang %target_itanium_abi_host_triple -arch x86_64 %s -o %t.out -g -fsanitize=safe-stack
+// RUN: %clang %target_itanium_abi_host_triple -march=x86-64 %s -o %t.out -g -fsanitize=safe-stack
 // RUN: %test_debuginfo %s %t.out
 // UNSUPPORTED: system-darwin
 // REQUIRES: !asan, compiler-rt
