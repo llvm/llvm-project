@@ -232,7 +232,7 @@ namespace gh107859 {
 
 void bad_macro() {
   std::cout << ENDL;
-  // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: do not use '::std::endl' with streams; use '\n' instead [performance-avoid-endl]
+  // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: do not use 'std::endl' with streams; use '\n' instead [performance-avoid-endl]
 }
 
 } // namespace gh107859
