@@ -133,8 +133,8 @@ def main(args):
     elif args.input_type == "params":
         if not args.obj_base_dir:
             logging.info(
-                "-obj_base_dir is unspecified, assuming current directory."
-                "If no objects are found, use this option to specify the root"
+                "-obj_base_dir is unspecified, assuming current directory. "
+                "If no objects are found, use this option to specify the root "
                 "directory for the object file paths in the input file."
             )
         with open(args.input, encoding="utf-8") as f:
@@ -143,9 +143,9 @@ def main(args):
             )
     elif args.input_type == "directory":
         logging.warning(
-            "Using the directory input is only recommended if the build system"
-            "your project uses does not support any structured output that"
-            "ml-compiler-opt understands. If your build system provides a"
+            "Using the directory input is only recommended if the build system "
+            "your project uses does not support any structured output that "
+            "ml-compiler-opt understands. If your build system provides a "
             "structured compilation database, use that instead"
         )
         objs = extract_ir_lib.load_from_directory(args.input, args.output_dir)
