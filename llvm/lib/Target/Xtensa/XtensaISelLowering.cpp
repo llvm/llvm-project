@@ -596,22 +596,23 @@ SDValue XtensaTargetLowering::LowerSELECT_CC(SDValue Op,
 
 SDValue XtensaTargetLowering::LowerRETURNADDR(SDValue Op,
                                               SelectionDAG &DAG) const {
-  // check the depth
-  // TODO: xtensa-gcc can handle this, by navigating through the stack, we
-  // should be able to do this too
-  assert((cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue() == 0) &&
-         "Return address can be determined only for current frame.");
+  // This nodes represent llvm.returnaddress on the DAG.
+  // It takes one operand, the index of the return address to return.
+  // An index of zero corresponds to the current function's return address.
+  // An index of one to the parent's return address, and so on.
+  // Depths > 0 not supported yet!
+  if (Op.getConstantOperandVal(0) > 0)
+    return SDValue();
 
   MachineFunction &MF = DAG.getMachineFunction();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   EVT VT = Op.getValueType();
-  unsigned RA = Xtensa::A0;
   MFI.setReturnAddressIsTaken(true);
 
   // Return RA, which contains the return address. Mark it an implicit
   // live-in.
-  unsigned Register = MF.addLiveIn(RA, getRegClassFor(MVT::i32));
-  return DAG.getCopyFromReg(DAG.getEntryNode(), SDLoc(Op), Register, VT);
+  Register RA = MF.addLiveIn(Xtensa::A0, getRegClassFor(MVT::i32));
+  return DAG.getCopyFromReg(DAG.getEntryNode(), SDLoc(Op), RA, VT);
 }
 
 SDValue XtensaTargetLowering::LowerImmediate(SDValue Op,
@@ -744,9 +745,13 @@ SDValue XtensaTargetLowering::LowerSTACKRESTORE(SDValue Op,
 
 SDValue XtensaTargetLowering::LowerFRAMEADDR(SDValue Op,
                                              SelectionDAG &DAG) const {
-  // check the depth
-  assert((cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue() == 0) &&
-         "Frame address can only be determined for current frame.");
+  // This nodes represent llvm.frameaddress on the DAG.
+  // It takes one operand, the index of the frame address to return.
+  // An index of zero corresponds to the current function's frame address.
+  // An index of one to the parent's frame address, and so on.
+  // Depths > 0 not supported yet!
+  if (Op.getConstantOperandVal(0) > 0)
+    return SDValue();
 
   MachineFunction &MF = DAG.getMachineFunction();
   MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
@@ -754,7 +759,7 @@ SDValue XtensaTargetLowering::LowerFRAMEADDR(SDValue Op,
   EVT VT = Op.getValueType();
   SDLoc DL(Op);
 
-  unsigned FrameRegister = Subtarget.getRegisterInfo()->getFrameRegister(MF);
+  Register FrameRegister = Subtarget.getRegisterInfo()->getFrameRegister(MF);
   SDValue FrameAddr =
       DAG.getCopyFromReg(DAG.getEntryNode(), DL, FrameRegister, VT);
   return FrameAddr;
