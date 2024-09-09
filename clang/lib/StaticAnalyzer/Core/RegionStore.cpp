@@ -2380,15 +2380,11 @@ RegionStoreManager::bind(RegionBindingsConstRef B, Loc L, SVal V) {
 
   // Binding directly to a symbolic region should be treated as binding
   // to element 0.
-  if (const SymbolicRegion *SR = dyn_cast<SymbolicRegion>(R)) {
-    // Symbolic region with void * type may appear as input for inline asm
-    // block. In such case CSA cannot reason about region content and just
-    // assumes it has UnknownVal()
-    QualType PT = SR->getPointeeStaticType();
-    if (PT->isVoidType())
-      PT = StateMgr.getContext().CharTy;
-
-    R = GetElementZeroRegion(SR, PT);
+  if (const auto *SymReg = dyn_cast<SymbolicRegion>(R)) {
+    QualType Ty = SymReg->getPointeeStaticType();
+    if (Ty->isVoidType())
+      Ty = StateMgr.getContext().CharTy;
+    R = GetElementZeroRegion(SymReg, Ty);
   }
 
   assert((!isa<CXXThisRegion>(R) || !B.lookup(R)) &&

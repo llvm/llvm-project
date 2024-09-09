@@ -41,11 +41,12 @@ void testInlineAsmMemcpyUninit(void)
     c = a[0]; // expected-warning{{Assigned value is garbage or undefined}}
 }
 
-void *globalPtr;
-
-void testNoCrash()
+void testAsmWithVoidPtrArgument()
 {
-  // Use global pointer to make it symbolic. Then engine will try to bind
-  // value to first element of type void * and should not crash.
-  asm ("" : : "a"(globalPtr)); // no crash
+  extern void *globalVoidPtr;
+  clang_analyzer_dump(*(int *)globalVoidPtr); // expected-warning-re {{reg_${{[0-9]+}}<int Element{SymRegion{reg_${{[0-9]+}}<void * globalVoidPtr>},0 S64b,int}>}}
+  clang_analyzer_dump_ptr(globalVoidPtr); // expected-warning-re {{&SymRegion{reg_${{[0-9]+}}<void * globalVoidPtr>}}}
+  asm ("" : : "a"(globalVoidPtr)); // no crash
+  clang_analyzer_dump(*(int *)globalVoidPtr); // expected-warning {{Unknown}}
+  clang_analyzer_dump_ptr(globalVoidPtr); // expected-warning-re {{&SymRegion{reg_${{[0-9]+}}<void * globalVoidPtr>}}}
 }
