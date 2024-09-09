@@ -15993,10 +15993,10 @@ ExprResult Sema::BuildOverloadedArrowExpr(Expr *Base, SourceLocation OpLoc,
   LookupParsedName(R, /*S=*/nullptr, /*SS=*/nullptr, Base->getType());
 
   // If the expression is dependent and we either:
-  // - Found a member of the current instantiation named 'operator->', or
-  // - Found nothing, and the lookup context has no dependent base classes
+  // - found a member of the current instantiation named 'operator->', or
+  // - found nothing, and the lookup context has no dependent base classes
   //
-  // Then we should build a dependent class member access expression.
+  // then we should build a dependent class member access expression.
   if (R.wasNotFoundInCurrentInstantiation() ||
       (Base->isTypeDependent() && !R.empty())) {
     IsDependent = true;
