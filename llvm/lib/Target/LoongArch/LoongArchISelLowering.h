@@ -339,8 +339,6 @@ private:
       const SmallVectorImpl<CCValAssign> &ArgLocs) const;
 
   bool softPromoteHalfType() const override { return true; }
-
-  bool useFPRegsForHalfType() const override { return true; }
 };
 
 } // end namespace llvm
