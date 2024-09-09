@@ -1285,3 +1285,16 @@ module {
     cir.return
   }
 }
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+module {
+  cir.func @array_to_ptrdecay_addrspace() {
+    %0 = cir.alloca !cir.array<!s32i x 32>, !cir.ptr<!cir.array<!s32i x 32>, addrspace(offload_private)>, ["x", init]
+    // expected-error@+1 {{requires same address space for source and result}}
+    %1 = cir.cast(array_to_ptrdecay, %0 : !cir.ptr<!cir.array<!s32i x 32>, addrspace(offload_private)>), !cir.ptr<!s32i>
+    cir.return
+  }
+}

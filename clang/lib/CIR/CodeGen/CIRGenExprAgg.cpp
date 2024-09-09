@@ -488,8 +488,10 @@ void AggExprEmitter::buildArrayInit(Address DestPtr, mlir::cir::ArrayType AType,
   QualType elementPtrType = CGF.getContext().getPointerType(elementType);
 
   auto cirElementType = CGF.convertType(elementType);
-  auto cirElementPtrType = mlir::cir::PointerType::get(
-      CGF.getBuilder().getContext(), cirElementType);
+  auto cirAddrSpace = mlir::cast_if_present<mlir::cir::AddressSpaceAttr>(
+      DestPtr.getType().getAddrSpace());
+  auto cirElementPtrType =
+      CGF.getBuilder().getPointerTo(cirElementType, cirAddrSpace);
   auto loc = CGF.getLoc(ExprToVisit->getSourceRange());
 
   // Cast from cir.ptr<cir.array<elementType> to cir.ptr<elementType>

@@ -490,6 +490,11 @@ LogicalResult CastOp::verify() {
     if (!arrayPtrTy || !flatPtrTy)
       return emitOpError() << "requires !cir.ptr type for source and result";
 
+    if (arrayPtrTy.getAddrSpace() != flatPtrTy.getAddrSpace()) {
+      return emitOpError()
+             << "requires same address space for source and result";
+    }
+
     auto arrayTy =
         mlir::dyn_cast<mlir::cir::ArrayType>(arrayPtrTy.getPointee());
     if (!arrayTy)
