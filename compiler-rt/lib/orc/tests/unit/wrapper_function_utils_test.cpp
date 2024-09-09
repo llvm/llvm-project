@@ -13,7 +13,7 @@
 #include "wrapper_function_utils.h"
 #include "gtest/gtest.h"
 
-using namespace __orc_rt;
+using namespace orc_rt;
 
 namespace {
 constexpr const char *TestString = "test string";
