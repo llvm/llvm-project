@@ -218,11 +218,8 @@ Status ProcessMinidump::DoLoadCore() {
     if (!m_exceptions_by_tid
              .try_emplace(exception_stream->ThreadId, exception_stream.get())
              .second) {
-      // We only cast to avoid the warning around converting little endian in
-      // printf.
-      return Status::FromErrorStringWithFormat(
-          "Duplicate exception stream for tid %" PRIu32,
-          (uint32_t)exception_stream->ThreadId);
+      return Status::FromErrorStringWithFormatv(
+          "Duplicate exception stream for tid {0}", exception_stream->ThreadId);
     }
   }
 
@@ -399,8 +396,9 @@ bool ProcessMinidump::DoUpdateThreadList(ThreadList &old_thread_list,
     LocationDescriptor context_location = thread.Context;
 
     // If the minidump contains an exception context, use it
-    if (m_exceptions_by_tid.count(thread.ThreadId) > 0)
-      context_location = m_exceptions_by_tid[thread.ThreadId].ThreadContext;
+    if (auto it = m_exceptions_by_tid.find(thread.ThreadId);
+        it != m_exceptions_by_tid.end())
+      context_location = it->second.ThreadContext;
 
     llvm::ArrayRef<uint8_t> context;
     if (!m_is_wow64)
