@@ -6118,6 +6118,12 @@ def fno_sycl : Flag<["-"], "fno-sycl">, Flags<[NoXarchOption]>,
   Visibility<[ClangOption, CLOption]>,
   Group<sycl_Group>, HelpText<"Disables SYCL kernels compilation for device">;
 
+// double run options
+def fdoublerun : Flag<["-"], "fdoublerun">,
+  Group<f_Group>, HelpText<"Enables double run">;
+def fno_doublerun : Flag<["-"], "fno-doublerun">,
+  Group<f_Group>, HelpText<"Disables double run">;
+
 //===----------------------------------------------------------------------===//
 // FLangOption + NoXarchOption
 //===----------------------------------------------------------------------===//

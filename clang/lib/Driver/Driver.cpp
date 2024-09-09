@@ -2865,6 +2865,64 @@ class OffloadingActionBuilder final {
     }
   };
 
+  class MyActionBuilder : public DeviceActionBuilder {
+    Action *FirstRunAction;
+  public:
+    MyActionBuilder(Compilation &C, DerivedArgList &Args,
+                    const Driver::InputList &Inputs)
+        : DeviceActionBuilder(C, Args, Inputs, Action::OFK_Host) {}
+
+    bool initialize() override {
+      if (Args.hasFlag(options::OPT_fdoublerun, options::OPT_fno_doublerun,
+                       false)) {
+        const ToolChain *TC =
+            C.getSingleOffloadToolChain<Action::OFK_Host>();
+        ToolChains.push_back(TC);
+        return false;
+      }
+      return true;
+    }
+
+    ActionBuilderReturnCode addDeviceDependences(Action *HostAction) override {
+      if (auto *IA = dyn_cast<InputAction>(HostAction)) {
+        FirstRunAction = C.MakeAction<InputAction>(
+            IA->getInputArg(), IA->getType(), IA->getId());
+        return ABRT_Success;
+      }
+      return ABRT_Inactive;
+    }
+
+    ActionBuilderReturnCode
+    getDeviceDependences(OffloadAction::DeviceDependences &DA,
+                         phases::ID CurPhase, phases::ID FinalPhase,
+                         PhasesTy &Phases) override {
+      if (CurPhase != phases::Backend)
+        return ABRT_Inactive;
+
+      assert(FirstRunAction);
+      Action *PrevFirstRunAction = FirstRunAction;
+      for (auto Ph : Phases) {
+        if (Ph > CurPhase)
+          break;
+        FirstRunAction = C.getDriver().ConstructPhaseAction(C, Args, Ph, FirstRunAction);
+        // FirstRunAction
+      }
+      if (PrevFirstRunAction == FirstRunAction)
+        return ABRT_Inactive;
+      DA.add(*FirstRunAction, *ToolChains.front(), ToolChains.front()->getArchName().data(), Action::OFK_Host);
+      return ABRT_Success;
+    }
+
+    StringRef getCanonicalOffloadArch(StringRef Arch) {
+      return Arch;
+    }
+
+    std::optional<std::pair<StringRef, StringRef>>
+    getConflictOffloadArchCombination(const std::set<StringRef> &ArchSet) {
+      return std::nullopt;
+    }
+  };
+
   /// Base class for CUDA/HIP action builder. It injects device code in
   /// the host backend action.
   class CudaActionBuilderBase : public DeviceActionBuilder {
@@ -3611,6 +3669,8 @@ public:
 
     // Create a specialized builder for HIP.
     SpecializedBuilders.push_back(new HIPActionBuilder(C, Args, Inputs));
+
+    SpecializedBuilders.push_back(new MyActionBuilder(C, Args, Inputs));
 
     //
     // TODO: Build other specialized builders here.
