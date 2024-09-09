@@ -5332,9 +5332,8 @@ define i1 @icmp_and_inv_pow2_ne_0(i32 %A, i32 %B) {
 ; CHECK-NEXT:    [[POPCNT:%.*]] = tail call range(i32 0, 33) i32 @llvm.ctpop.i32(i32 [[A:%.*]])
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[POPCNT]], 1
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
-; CHECK-NEXT:    [[INV:%.*]] = xor i32 [[B:%.*]], -1
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[A]], [[INV]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[AND]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[A]], [[B:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %popcnt = tail call i32 @llvm.ctpop.i32(i32 %A)

@@ -284,7 +284,7 @@ define i16 @cttz_assume(i16 %x) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[COND0]])
 ; CHECK-NEXT:    [[COND1:%.*]] = icmp ne i16 [[X]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[COND1]])
-; CHECK-NEXT:    [[CTTZ:%.*]] = call range(i16 0, 17) i16 @llvm.cttz.i16(i16 [[X]], i1 false)
+; CHECK-NEXT:    [[CTTZ:%.*]] = call range(i16 0, 17) i16 @llvm.cttz.i16(i16 [[X]], i1 true)
 ; CHECK-NEXT:    ret i16 [[CTTZ]]
 ;
   %add = add i16 %x, 1
