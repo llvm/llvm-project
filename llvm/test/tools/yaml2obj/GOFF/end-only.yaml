@@ -1,0 +1,22 @@
+# RUN: yaml2obj %s | od -v -An -tx1 | FileCheck --ignore-case %s
+
+## Verify that the GOFF end record is correct, with all fields having a value.
+## No other record is written.
+
+# CHECK:      03 40 00 01 04 00 00 00 00 00 00 01 00 00 00 2a
+# CHECK-NEXT: 00 00 00 00 00 00 02 01 00 06 c6 96 96 c2 81 99
+# CHECK-NEXT: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+# CHECK-NEXT: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+# CHECK-NEXT: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+
+# CHECK-EMPTY:
+
+--- !GOFF
+- End:
+    Flags: 1
+    AMODE: AMODE_64
+    RecordCount: 1
+    ESDID: 42
+    Offset: 513
+    NameLength: 6
+    EntryName: FooBar
