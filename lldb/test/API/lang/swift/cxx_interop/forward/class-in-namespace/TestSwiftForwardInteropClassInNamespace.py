@@ -30,7 +30,7 @@ class TestSwiftForwardInteropClassInNamespace(TestBase):
 
         self.expect('v fooInherited', substrs=['foo::InheritedCxxClass', 
             'foo::CxxClass = (foo_field = 10)', 'foo_subfield = 20'])
-        self.expect('e fooInherited', substrs=['foo::InheritedCxxClass', 
+        self.expect('expr fooInherited', substrs=['foo::InheritedCxxClass', 
             'foo::CxxClass = (foo_field = 10)', 'foo_subfield = 20'])
 
         self.expect('v barInherited', substrs=['bar::InheritedCxxClass', 
