@@ -5463,19 +5463,30 @@ static MachineBasicBlock *emitVLoadStoreIdx(MachineInstr &MI,
 
   // common code to generate IDX for SADDR mode
   auto EmitIdxSAddr = [&](MachineInstr &MI) {
-    Register SAddrReg =
-        TII->getNamedOperand(MI, AMDGPU::OpName::saddr)->getReg();
+    MachineOperand &SAddrOp = *TII->getNamedOperand(MI, AMDGPU::OpName::saddr);
     int Offset = TII->getNamedOperand(MI, AMDGPU::OpName::offset)->getImm();
-    Register IdxReg = MRI.createVirtualRegister(MRI.getRegClass(SAddrReg));
+
+    const TargetRegisterClass *IdxRC;
+    if (SAddrOp.isReg()) {
+      IdxRC = MRI.getRegClass(SAddrOp.getReg());
+    } else {
+      assert(SAddrOp.isFI());
+      IdxRC = &AMDGPU::SReg_32_XEXEC_HIRegClass;
+    }
+
+    Register IdxReg = MRI.createVirtualRegister(IdxRC);
     // index should be in the unit of dword
-    BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_LSHR_B32), IdxReg)
-        .addReg(SAddrReg)
-        .addImm(2u)
-        .setOperandDead(3); // Dead scc
+    auto Shift = BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_LSHR_B32), IdxReg);
+    if (SAddrOp.isReg())
+      Shift.addReg(SAddrOp.getReg());
+    else
+      Shift.addFrameIndex(SAddrOp.getIndex());
+    Shift.addImm(2u);
+    Shift.setOperandDead(3); // Dead scc
     if (Offset >= 0 && Offset < (int)ST.getAddressableNumVGPRs() * 4) {
       Offset = Offset >> 2;
     } else {
-      Register AddReg = MRI.createVirtualRegister(MRI.getRegClass(SAddrReg));
+      Register AddReg = MRI.createVirtualRegister(IdxRC);
       BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_ADD_I32), AddReg)
           .addReg(IdxReg)
           .addImm(Offset >> 2)
@@ -6272,15 +6283,19 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
   }
   default:
     if (TII->isFLATScratch(MI)) {
-      bool LaneSharedInVGPR = false;
-      for (const auto *MemOp : MI.memoperands()) {
-        if (AMDGPU::IsLaneSharedInVGPR(MemOp)) {
-          LaneSharedInVGPR = true;
-          break;
+      const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
+      if (ST.hasVGPRIndexingRegisters()) {
+        bool LaneSharedOrPrivateInVGPR = false;
+        for (const auto *MemOp : MI.memoperands()) {
+          if (AMDGPU::IsLaneSharedInVGPR(MemOp) ||
+              AMDGPU::IsPrivateInVGPR(MemOp)) {
+            LaneSharedOrPrivateInVGPR = true;
+            break;
+          }
         }
-      }
-      if (LaneSharedInVGPR) {
-        return emitVLoadStoreIdx(MI, *BB, *getSubtarget());
+        if (LaneSharedOrPrivateInVGPR) {
+          return emitVLoadStoreIdx(MI, *BB, *getSubtarget());
+        }
       }
       return BB;
     }

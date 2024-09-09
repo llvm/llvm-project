@@ -399,9 +399,10 @@ static cl::opt<bool>
                             cl::desc("Enable promoting lane-shared into VGPR"),
                             cl::init(true), cl::Hidden);
 
+// TODO: Enable by default once all codegen phases are implemented.
 static cl::opt<bool> EnablePromotePrivate(
     "amdgpu-promote-private",
-    cl::desc("Enable promoting private objects into VGPRs"), cl::init(true),
+    cl::desc("Enable promoting private objects into VGPRs"), cl::init(false),
     cl::Hidden);
 
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {

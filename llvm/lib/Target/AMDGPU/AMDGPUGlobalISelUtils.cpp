@@ -82,3 +82,14 @@ bool AMDGPU::IsLaneSharedInVGPR(const MachineMemOperand *MemOpnd) {
   }
   return false;
 }
+
+bool AMDGPU::IsPrivateInVGPR(const MachineMemOperand *MemOpnd) {
+  if (const Value *Val = MemOpnd->getValue()) {
+    const Value *Obj = getUnderlyingObjectAggressive(Val);
+    if (auto *AI = dyn_cast<AllocaInst>(Obj);
+        AI && AI->hasMetadata("amdgpu.promotable.to.vgpr")) {
+      return true;
+    }
+  }
+  return false;
+}
