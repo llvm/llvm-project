@@ -6281,6 +6281,12 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           "Value for inactive lanes must be a VGPR function argument", &Call);
     break;
   }
+  case Intrinsic::amdgcn_s_prefetch_data: {
+    unsigned AS = Call.getArgOperand(0)->getType()->getPointerAddressSpace();
+    Check(AS == 0 || AS == 1 || AS == 4,
+          "s_prefetch_data only supports global or constant memory");
+    break;
+  }
   case Intrinsic::nvvm_setmaxnreg_inc_sync_aligned_u32:
   case Intrinsic::nvvm_setmaxnreg_dec_sync_aligned_u32: {
     Value *V = Call.getArgOperand(0);
