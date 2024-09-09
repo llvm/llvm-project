@@ -24,6 +24,7 @@ public:
     eRegisterTypeKindFlags,
     eRegisterTypeKindEnum,
     eRegisterTypeKindUnion,
+    eRegisterTypeKindVector,
   };
 
   RegisterTypeKind getKind() const { return m_kind; }

@@ -57,6 +57,7 @@
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/RegisterTypeFlags.h"
 #include "lldb/Target/RegisterTypeUnion.h"
+#include "lldb/Target/RegisterTypeVector.h"
 #include "lldb/Target/SystemRuntime.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/TargetList.h"
@@ -5044,6 +5045,66 @@ void ParseUnions(
       });
 }
 
+void ParseVectors(
+    XMLNode feature_node,
+    llvm::StringMap<std::unique_ptr<RegisterType>> &register_types) {
+  Log *log(GetLog(GDBRLog::Process));
+
+  feature_node.ForEachChildElementWithName(
+      "vector", [&log, &register_types](const XMLNode &union_node) -> bool {
+        LLDB_LOG(log,
+                 "ProcessGDBRemote::ParseVectors Found vector node \"{0}\"",
+                 union_node.GetAttributeValue("id").c_str());
+
+        std::optional<llvm::StringRef> id;
+        std::optional<llvm::StringRef> type;
+        std::optional<unsigned> count;
+        union_node.ForEachAttribute([&id, &type, &count,
+                                     &log](const llvm::StringRef &name,
+                                           const llvm::StringRef &value) {
+          if (name == "id")
+            id = value;
+          else if (name == "type")
+            type = value;
+          else if (name == "count") {
+            unsigned parsed_count = 0;
+            if (llvm::to_integer(value, parsed_count))
+              count = parsed_count;
+            else {
+              LLDB_LOG(log,
+                       "ProcessGDBRemote::ParseVectors Invalid count \"{0}\" "
+                       "in vector node",
+                       value.data());
+            }
+          } else {
+            LLDB_LOG(log,
+                     "ProcessGDBRemote::ParseVectors Ignoring unknown "
+                     "attribute \"{0}\" in vector node",
+                     name.data());
+          }
+          return true; // Walk all attributes.
+        });
+
+        if (id && type && count) {
+          if (register_types.contains(*id)) {
+            LLDB_LOG(
+                log,
+                "ProcessGDBRemote::ParseVectors Definition of vector with ID "
+                "\"{0}\" shadows "
+                "previous use of that ID, using original definition "
+                "instead.",
+                id->data());
+          } else {
+            register_types.insert_or_assign(
+                *id, std::make_unique<RegisterTypeVector>(id->str(),
+                                                          type->str(), *count));
+          }
+        }
+
+        return true; // Keep iterating through all "vector" elements.
+      });
+}
+
 bool ParseRegisters(
     XMLNode feature_node, GdbServerTargetInfo &target_info,
     std::vector<DynamicRegisterInfo::Register> &registers,
@@ -5055,6 +5116,7 @@ bool ParseRegisters(
 
   // Enums first because they are referenced by fields in the flags.
   ParseEnums(feature_node, register_types);
+  ParseVectors(feature_node, register_types);
   ParseFlags(feature_node, register_types);
   // TODO: this has to be last as it may reference the others.
   ParseUnions(feature_node, register_types);
@@ -5151,6 +5213,7 @@ bool ParseRegisters(
             else
               LLDB_LOG(
                   log,
+                  // TODO: make this error generic!
                   "ProcessGDBRemote::ParseRegisters Size of register flags {0} "
                   "({1} bytes) for register {2} does not match the register "
                   "size ({3} bytes). Ignoring this set of flags.",
@@ -5158,6 +5221,7 @@ bool ParseRegisters(
                   reg_info.name, reg_info.byte_size);
           }
 
+          // TODO: update comment to refer to types not flags!!!
           // There's a slim chance that the gdb_type name is both a flags type
           // and a simple type. Just in case, look for that too (setting both
           // does no harm).

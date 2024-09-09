@@ -50,15 +50,33 @@ static std::string MakeTypeName(const RegisterType &type_info,
     // it is used with.
     type_name += "enum_" + std::to_string(register_byte_size) + "_";
     break;
+  case RegisterType::eRegisterTypeKindVector:
+    // Since array types are not declared (there is no "array" keyword"),
+    // they do not have names and do not need to be cached.
+    break;
   }
 
   return type_name + type_info.GetID();
 }
 
 CompilerType
-RegisterTypeBuilderClang::BuildEnumType(const RegisterTypeEnum &enum_type_info,
-                                        uint32_t register_byte_size,
-                                        lldb::TypeSystemClangSP type_system) {
+RegisterTypeBuilderClang::BuildVectorType(const lldb_private::RegisterTypeVector &vector_info,
+                uint32_t register_byte_size,
+                lldb::TypeSystemClangSP type_system) {
+  // Don't need to check for existing types because all array types are
+  // pre-existing. This also means they do not have unique names.
+  auto element_info = vector_info.GetElementTypeInfo();
+  CompilerType element_type = type_system->GetBuiltinTypeForEncodingAndBitSize(
+      element_info.encoding, element_info.size * 8);
+  // If we didn't recognise the vector's "type", element_type may be invalid,
+  // but CreateArrayType already checks for this.
+  return type_system->CreateArrayType(element_type, vector_info.GetCount(),
+                                      /*is_vector=*/true);
+}
+
+CompilerType RegisterTypeBuilderClang::BuildEnumType(const RegisterTypeEnum &enum_type_info,
+                                  uint32_t register_byte_size,
+                                  lldb::TypeSystemClangSP type_system) {
   std::string enum_type_name = MakeTypeName(enum_type_info, register_byte_size);
 
   // Reuse existing type if we can.
@@ -161,14 +179,21 @@ RegisterTypeBuilderClang::BuildUnionType(const lldb_private::RegisterTypeUnion &
 
   for (const RegisterTypeUnion::Field &field : union_info.GetFields()) {
     auto [name, type_info] = field;
-    // Unions can in theory reference any other type, but we will start by only
-    // supporting flags here.
+    // Unions can in theory reference anything, but we are not supporting all
+    // combinations right now.
     CompilerType field_type;
 
     switch (type_info->getKind()) {
     case RegisterType::eRegisterTypeKindEnum:
       break;
     case RegisterType::eRegisterTypeKindUnion:
+      field_type = BuildUnionType(*llvm::dyn_cast<RegisterTypeUnion>(type_info),
+                                  register_byte_size, type_system);
+      break;
+    case RegisterType::eRegisterTypeKindVector:
+      field_type =
+          BuildVectorType(*llvm::dyn_cast<RegisterTypeVector>(type_info),
+                          register_byte_size, type_system);
       break;
     case RegisterType::eRegisterTypeKindFlags:
       field_type = BuildFlagsType(*llvm::dyn_cast<RegisterTypeFlags>(type_info),
@@ -203,6 +228,9 @@ CompilerType RegisterTypeBuilderClang::GetRegisterType(
   case RegisterType::eRegisterTypeKindUnion:
     return BuildUnionType(*llvm::dyn_cast<RegisterTypeUnion>(&type_info),
                           register_byte_size, type_system);
+  case RegisterType::eRegisterTypeKindVector:
+    return BuildVectorType(*llvm::dyn_cast<RegisterTypeVector>(&type_info),
+                           register_byte_size, type_system);
   case RegisterType::eRegisterTypeKindEnum:
     return {};
   }

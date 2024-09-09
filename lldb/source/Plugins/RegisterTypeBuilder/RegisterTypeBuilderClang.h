@@ -14,6 +14,7 @@
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Target/RegisterTypeBuilder.h"
 #include "lldb/Target/RegisterTypeFlags.h"
+#include "lldb/Target/RegisterTypeVector.h"
 #include "lldb/Target/RegisterTypeUnion.h"
 #include "lldb/Target/Target.h"
 
@@ -88,8 +89,12 @@ private:
   CompilerType BuildFlagsType(const RegisterTypeFlags &flags_info,
                               uint32_t register_byte_size,
                               lldb::TypeSystemClangSP type_system);
+  
+  CompilerType BuildVectorType(const lldb_private::RegisterTypeVector &vector_info,
+                uint32_t register_byte_size,
+                lldb::TypeSystemClangSP type_system);
 
-  CompilerType BuildUnionType(const RegisterTypeUnion &union_info,
+  CompilerType BuildUnionType(const lldb_private::RegisterTypeUnion &union_info,
                uint32_t register_byte_size,
                lldb::TypeSystemClangSP type_system);
 

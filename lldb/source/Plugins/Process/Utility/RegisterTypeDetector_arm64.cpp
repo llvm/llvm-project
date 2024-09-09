@@ -9,6 +9,7 @@
 #include "RegisterTypeDetector_arm64.h"
 #include "lldb/Target/RegisterTypeFlags.h"
 #include "lldb/Target/RegisterTypeUnion.h"
+#include "lldb/Target/RegisterTypeVector.h"
 #include "lldb/lldb-private-types.h"
 
 // This file is built on all systems because it is used by native processes and
@@ -256,9 +257,17 @@ const RegisterType *Arm64RegisterTypeDetector::DetectX0Type(uint64_t hwcap,
   static RegisterTypeFlags x0_flags_rhs("x0_flags_rhs", 8, {
       {"y", 48, 63}, {"z", 0, 47}});
 
+  static RegisterTypeVector x0_vec8( "x0_vec8", "uint8", 8);
+  static RegisterTypeVector x0_vec16("x0_vec16", "uint16", 4);
+  static RegisterTypeVector x0_vec32("x0_vec32", "uint32", 2);
+  static RegisterTypeUnion x0_vec_union(
+      "x0_vec_union",
+      {{"8", &x0_vec8}, {"16", &x0_vec16}, {"32", &x0_vec32}});
+
   static RegisterTypeUnion x0_union(
       "x0_union",
-      {{"lhs", &x0_flags_lhs}, {"rhs", &x0_flags_rhs}});
+      {{"lhs", &x0_flags_lhs}, {"rhs", &x0_flags_rhs},
+       {"vector", &x0_vec_union}});
 
   return &x0_union;
 }
@@ -327,9 +336,17 @@ const RegisterType *Arm64RegisterTypeDetector::DetectCPSRType(uint64_t hwcap,
 
   cpsr_flags_reversed.SetFields(raw_bits);
 
-  static RegisterTypeUnion cpsr_union(
-      "cpsr_union",
-      {{"normal", &cpsr_flags}, {"raw_bits", &cpsr_flags_reversed}});
+  static RegisterTypeVector cpsr_vec8("cpsr_vec8", "uint8", 4);
+  static RegisterTypeVector cpsr_vec16("cpsr_vec16", "uint16", 2);
+  static RegisterTypeVector cpsr_vec32("cpsr_vec32", "uint32", 1);
+  static RegisterTypeUnion cpsr_vec_union(
+      "cpsr_vec_union",
+      {{"8", &cpsr_vec8}, {"16", &cpsr_vec16}, {"32", &cpsr_vec32}});
+
+  static RegisterTypeUnion cpsr_union("cpsr_union",
+                                      {{"normal", &cpsr_flags},
+                                       {"raw_bits", &cpsr_flags_reversed},
+                                       {"vectors", &cpsr_vec_union}});
 
   return &cpsr_union;
 }
