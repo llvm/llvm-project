@@ -393,33 +393,29 @@ Interpreter::Interpreter(std::unique_ptr<CompilerInstance> CI,
     return;
   CI->ExecuteAction(*Act);
 
-  if (getCodeGen())
-    CachedInCodeGenModule = GenModule();
+  ASTContext &C = CI->getASTContext();
 
   IncrParser = std::make_unique<IncrementalParser>(std::move(CI), ErrOut);
-
-  // An initial PTU is needed as CUDA includes some headers automatically.
-  auto PTU = Parse("");
-  if (auto E = PTU.takeError()) {
-    ErrOut = joinErrors(std::move(ErrOut), std::move(E));
-    return;
-  }
-
-  if (getCodeGen()) {
-    PTU->TheModule = GenModule();
-    assert(PTU->TheModule && "Failed to create initial PTU");
-  }
 
   if (ErrOut)
     return;
 
-  // Not all frontends support code-generation, e.g. ast-dump actions don't
   if (getCodeGen()) {
+    CachedInCodeGenModule = GenModule();
     if (llvm::Error Err = CreateExecutor()) {
       ErrOut = joinErrors(std::move(ErrOut), std::move(Err));
       return;
     }
+  }
 
+  // The initial PTU is filled by `-include` or by CUDA includes automatically.
+  RegisterPTU(C.getTranslationUnitDecl());
+
+  // Prepare the IncrParser for input.
+  llvm::cantFail(Parse(""));
+
+  // Not all frontends support code-generation, e.g. ast-dump actions don't
+  if (getCodeGen()) {
     // Process the PTUs that came from initialization. For example -include will
     // give us a header that's processed at initialization of the preprocessor.
     for (PartialTranslationUnit &PTU : PTUs)
@@ -549,6 +545,17 @@ size_t Interpreter::getEffectivePTUSize() const {
   return PTUs.size() - InitPTUSize;
 }
 
+PartialTranslationUnit &Interpreter::RegisterPTU(TranslationUnitDecl *TU) {
+  PTUs.emplace_back(PartialTranslationUnit());
+  PartialTranslationUnit &LastPTU = PTUs.back();
+  LastPTU.TUPart = TU;
+
+  if (std::unique_ptr<llvm::Module> M = GenModule())
+    LastPTU.TheModule = std::move(M);
+
+  return LastPTU;
+}
+
 llvm::Expected<PartialTranslationUnit &>
 Interpreter::Parse(llvm::StringRef Code) {
   // If we have a device parser, parse it first. The generated code will be
@@ -568,14 +575,7 @@ Interpreter::Parse(llvm::StringRef Code) {
   if (!TuOrErr)
     return TuOrErr.takeError();
 
-  PTUs.emplace_back(PartialTranslationUnit());
-  PartialTranslationUnit &LastPTU = PTUs.back();
-  LastPTU.TUPart = *TuOrErr;
-
-  if (std::unique_ptr<llvm::Module> M = GenModule())
-    LastPTU.TheModule = std::move(M);
-
-  return LastPTU;
+  return RegisterPTU(*TuOrErr);
 }
 
 static llvm::Expected<llvm::orc::JITTargetMachineBuilder>
