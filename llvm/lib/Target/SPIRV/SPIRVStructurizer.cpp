@@ -491,26 +491,10 @@ class SPIRVStructurizer : public FunctionPass {
       DT.recalculate(F);
     }
 
-    // Returns the list of blocks that belong to a SPIR-V continue construct.
-    std::vector<BasicBlock *> getContinueConstructBlocks(BasicBlock *Header,
-                                                         BasicBlock *Continue) {
-      std::vector<BasicBlock *> Output;
-      Loop *L = LI.getLoopFor(Continue);
-      assert(L->getLoopLatch() != nullptr);
-
-      partialOrderVisit(*Continue, [&](BasicBlock *BB) {
-        if (BB == Header)
-          return false;
-        Output.push_back(BB);
-        return true;
-      });
-      return Output;
-    }
-
-    // Returns the list of blocks that belong to a SPIR-V loop construct.
+    // Returns the list of blocks that belong to a SPIR-V loop construct,
+    // including the continue construct.
     std::vector<BasicBlock *> getLoopConstructBlocks(BasicBlock *Header,
-                                                     BasicBlock *Merge,
-                                                     BasicBlock *Continue) {
+                                                     BasicBlock *Merge) {
       assert(DT.dominates(Header, Merge));
       std::vector<BasicBlock *> Output;
       partialOrderVisit(*Header, [&](BasicBlock *BB) {
@@ -776,10 +760,11 @@ class SPIRVStructurizer : public FunctionPass {
 
       auto *Merge = getExitFor(CR);
       // We are indeed in a loop, but there are no exits (infinite loop).
-      // TODO: I see no value in having real infinite loops in vulkan shaders.
-      // For now, I need to create a Merge block, and a structurally reachable
-      // block for it, but maybe we'd want to raise an error, as locking up the
-      // system is probably not wanted.
+      // This could be caused by a bad shader, but also could be an artifact
+      // from an earlier optimization. It is not always clear if structurally
+      // reachable means runtime reachable, so we cannot error-out. What we must
+      // do however is to make is legal on the SPIR-V point of view, hence
+      // adding an unreachable merge block.
       if (Merge == nullptr) {
         BranchInst *Br = cast<BranchInst>(BB.getTerminator());
         assert(cast<BranchInst>(BB.getTerminator())->isUnconditional());
@@ -1021,8 +1006,7 @@ class SPIRVStructurizer : public FunctionPass {
     assert(Node->Header && Node->Merge);
 
     if (Node->Continue) {
-      auto LoopBlocks =
-          S.getLoopConstructBlocks(Node->Header, Node->Merge, Node->Continue);
+      auto LoopBlocks = S.getLoopConstructBlocks(Node->Header, Node->Merge);
       return BlockSet(LoopBlocks.begin(), LoopBlocks.end());
     }
 

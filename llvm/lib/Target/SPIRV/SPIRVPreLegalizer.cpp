@@ -781,12 +781,12 @@ static void processSwitchesConstants(MachineFunction &MF,
 // Some instructions are used during CodeGen but should never be emitted.
 // Cleaning up those.
 static void cleanupHelperInstructions(MachineFunction &MF) {
-  SmallPtrSet<MachineInstr *, 8> ToEraseMI;
+  SmallVector<MachineInstr *, 8> ToEraseMI;
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
       if (isSpvIntrinsic(MI, Intrinsic::spv_track_constant) ||
           MI.getOpcode() == TargetOpcode::G_BRINDIRECT)
-        ToEraseMI.insert(&MI);
+        ToEraseMI.push_back(&MI);
     }
   }
 
