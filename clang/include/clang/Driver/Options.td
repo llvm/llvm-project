@@ -5986,7 +5986,9 @@ def _no_line_commands : Flag<["--"], "no-line-commands">, Alias<P>;
 def _no_standard_includes : Flag<["--"], "no-standard-includes">, Alias<nostdinc>;
 def _no_standard_libraries : Flag<["--"], "no-standard-libraries">, Alias<nostdlib>;
 def _no_undefined : Flag<["--"], "no-undefined">, Flags<[LinkerInput]>;
-def _no_warnings : Flag<["--"], "no-warnings">, Alias<w>;
+def _no_warnings : Flag<["--"], "no-warnings">,
+  Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
+  Alias<w>;
 def _optimize_EQ : Joined<["--"], "optimize=">, Alias<O>;
 def _optimize : Flag<["--"], "optimize">, Alias<O>;
 def _output_class_directory_EQ : Joined<["--"], "output-class-directory=">, Alias<foutput_class_dir_EQ>;

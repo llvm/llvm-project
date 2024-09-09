@@ -158,7 +158,7 @@ void CodeGenSubRegIndex::computeConcatTransitiveClosure() {
 //                              CodeGenRegister
 //===----------------------------------------------------------------------===//
 
-CodeGenRegister::CodeGenRegister(Record *R, unsigned Enum)
+CodeGenRegister::CodeGenRegister(const Record *R, unsigned Enum)
     : TheDef(R), EnumValue(Enum),
       CostPerUse(R->getValueAsListOfInts("CostPerUse")),
       CoveredBySubRegs(R->getValueAsBit("CoveredBySubRegs")),
@@ -657,10 +657,10 @@ struct TupleExpander : SetTheory::Expander {
     RecordKeeper &RK = Def->getRecords();
     for (unsigned n = 0; n != Length; ++n) {
       std::string Name;
-      Record *Proto = Lists[0][n];
+      const Record *Proto = Lists[0][n];
       std::vector<Init *> Tuple;
       for (unsigned i = 0; i != Dim; ++i) {
-        Record *Reg = Lists[i][n];
+        const Record *Reg = Lists[i][n];
         if (i)
           Name += '_';
         Name += Reg->getName();
@@ -1198,18 +1198,17 @@ CodeGenRegBank::CodeGenRegBank(RecordKeeper &Records,
     Idx.updateComponents(*this);
 
   // Read in the register and register tuple definitions.
-  std::vector<Record *> Regs = Records.getAllDerivedDefinitions("Register");
+  const RecordKeeper &RC = Records;
+  std::vector<const Record *> Regs = RC.getAllDerivedDefinitions("Register");
   if (!Regs.empty() && Regs[0]->isSubClassOf("X86Reg")) {
     // For X86, we need to sort Registers and RegisterTuples together to list
     // new registers and register tuples at a later position. So that we can
     // reduce unnecessary iterations on unsupported registers in LiveVariables.
     // TODO: Remove this logic when migrate from LiveVariables to LiveIntervals
     // completely.
-    std::vector<Record *> Tups =
-        Records.getAllDerivedDefinitions("RegisterTuples");
-    for (Record *R : Tups) {
+    for (const Record *R : Records.getAllDerivedDefinitions("RegisterTuples")) {
       // Expand tuples and merge the vectors
-      std::vector<Record *> TupRegs = *Sets.expand(R);
+      std::vector<const Record *> TupRegs = *Sets.expand(R);
       Regs.insert(Regs.end(), TupRegs.begin(), TupRegs.end());
     }
 
@@ -1224,13 +1223,10 @@ CodeGenRegBank::CodeGenRegBank(RecordKeeper &Records,
       getReg(Regs[i]);
 
     // Expand tuples and number the new registers.
-    std::vector<Record *> Tups =
-        Records.getAllDerivedDefinitions("RegisterTuples");
-
-    for (Record *R : Tups) {
-      std::vector<Record *> TupRegs = *Sets.expand(R);
+    for (Record *R : Records.getAllDerivedDefinitions("RegisterTuples")) {
+      std::vector<const Record *> TupRegs = *Sets.expand(R);
       llvm::sort(TupRegs, LessRecordRegister());
-      for (Record *RC : TupRegs)
+      for (const Record *RC : TupRegs)
         getReg(RC);
     }
   }
@@ -1342,7 +1338,7 @@ CodeGenRegBank::findSubRegIdx(const Record *Def) const {
   return Def2SubRegIdx.lookup(Def);
 }
 
-CodeGenRegister *CodeGenRegBank::getReg(Record *Def) {
+CodeGenRegister *CodeGenRegBank::getReg(const Record *Def) {
   CodeGenRegister *&Reg = Def2Reg[Def];
   if (Reg)
     return Reg;
@@ -2508,7 +2504,8 @@ CodeGenRegBank::getMinimalPhysRegClass(Record *RegRecord,
   return BestRC;
 }
 
-BitVector CodeGenRegBank::computeCoveredRegisters(ArrayRef<Record *> Regs) {
+BitVector
+CodeGenRegBank::computeCoveredRegisters(ArrayRef<const Record *> Regs) {
   SetVector<const CodeGenRegister *> Set;
 
   // First add Regs with all sub-registers.
