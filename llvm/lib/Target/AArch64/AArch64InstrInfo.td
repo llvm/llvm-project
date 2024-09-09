@@ -10134,13 +10134,15 @@ let Uses = [FPMR, FPCR], Predicates = [HasFP8] in {
 // fminimum(abs(a), abs(b)) -> famin(a, b)
 // fminnum[nnan](abs(a), abs(b)) -> famin(a, b)
 def AArch64famin : PatFrags<(ops node:$Rn, node:$Rm),
-                             [(fminimum (fabs node:$Rn), (fabs node:$Rm)),
+                             [(int_aarch64_neon_famin node:$Rn, node:$Rm),
+                              (fminimum (fabs node:$Rn), (fabs node:$Rm)),
                               (fminnum_nnan (fabs node:$Rn), (fabs node:$Rm))]>;
 
 // fmaximum(abs(a), abs(b)) -> famax(a, b)
 // fmaxnum[nnan](abs(a), abs(b)) -> famax(a, b)
 def AArch64famax : PatFrags<(ops node:$Rn, node:$Rm),
-                             [(fmaximum (fabs node:$Rn), (fabs node:$Rm)),
+                             [(int_aarch64_neon_famax node:$Rn, node:$Rm),
+                              (fmaximum (fabs node:$Rn), (fabs node:$Rm)),
                               (fmaxnum_nnan (fabs node:$Rn), (fabs node:$Rm))]>;
 
 let Predicates = [HasNEON, HasFAMINMAX] in {
