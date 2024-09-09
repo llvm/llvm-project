@@ -1438,12 +1438,31 @@ TEST(SignatureHelpTest, Overloads) {
 }
 
 TEST(SignatureHelpTest, ShowLambdaNameInsteadOfOperatorParens) {
-  auto const Results = signatures(R"cpp(
+  const auto Results = signatures(R"cpp(
     auto foo = [](int x, int y){};
     int main() { foo(^); }
   )cpp");
   EXPECT_THAT(Results.signatures,
               UnorderedElementsAre(sig("foo([[int x]], [[int y]]) -> void")));
+}
+
+TEST(SignatureHelpTest, ShowOperatorParensForImmediatelyInvokedLambda) {
+  const auto Results = signatures(R"cpp(
+    auto foo = [](int x, int y){}(^);
+  )cpp");
+  EXPECT_THAT(Results.signatures,
+              UnorderedElementsAre(sig("operator()([[int x]], [[int y]]) -> void")));
+}
+
+TEST(SignatureHelpTest, ShowOperatorParensForLambdaReturnedFromFunction) {
+  const auto Results = signatures(R"cpp(
+    auto returnsLambda() {
+      return [](int x, int y){};
+    }
+    int main() { returnsLambda()(^); }
+  )cpp");
+  EXPECT_THAT(Results.signatures,
+              UnorderedElementsAre(sig("operator()([[int x]], [[int y]]) -> void")));
 }
 
 TEST(SignatureHelpTest, FunctionPointers) {
