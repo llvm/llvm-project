@@ -32,7 +32,6 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/RuntimeLibcalls.h"
 #include "llvm/LTO/LTOBackend.h"
-#include "llvm/LTO/SummaryBasedOptimizations.h"
 #include "llvm/Linker/IRMover.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/IRObjectFile.h"
@@ -1692,9 +1691,6 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
   for (auto &Mod : ThinLTO.ModuleMap)
     if (!ModuleToDefinedGVSummaries.count(Mod.first))
       ModuleToDefinedGVSummaries.try_emplace(Mod.first);
-
-  // Synthesize entry counts for functions in the CombinedIndex.
-  computeSyntheticCounts(ThinLTO.CombinedIndex);
 
   FunctionImporter::ImportListsTy ImportLists(ThinLTO.ModuleMap.size());
   DenseMap<StringRef, FunctionImporter::ExportSetTy> ExportLists(

@@ -8,6 +8,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <rtsan/rtsan.h>
 #include <rtsan/rtsan_context.h>
 
 #include <rtsan/rtsan_stack.h>
@@ -75,6 +76,7 @@ void __rtsan::Context::BypassPop() { bypass_depth_--; }
 
 void __rtsan::ExpectNotRealtime(Context &context,
                                 const char *intercepted_function_name) {
+  CHECK(__rtsan_is_initialized());
   if (context.InRealtimeContext() && !context.IsBypassed()) {
     context.BypassPush();
 

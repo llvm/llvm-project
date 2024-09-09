@@ -335,7 +335,7 @@ public:
 private:
   std::string ClassName;
 
-  const RecordKeeper &RK;
+  RecordKeeper &RK;
   const CodeGenDAGPatterns CGP;
   const CodeGenTarget &Target;
   CodeGenRegBank &CGRegs;
