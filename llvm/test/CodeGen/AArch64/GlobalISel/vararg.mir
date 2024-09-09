@@ -168,7 +168,7 @@ body:             |
   ; CHECK-NEXT:   [[ADDXri3:%[0-9]+]]:gpr64common = ADDXri %stack.0, 0, 0
   ; CHECK-NEXT:   STRXui [[ADDXri3]], [[ADDXri]], 2 :: (store (s64) into %ir.ap + 16)
   ; CHECK-NEXT:   [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 0
-  ; CHECK-NEXT:   STRWui [[MOVi32imm]], [[ADDXri]], 6 :: (store (s32) into %ir.ap + 24)
+  ; CHECK-NEXT:   STRWui [[MOVi32imm]], [[ADDXri]], 6 :: (store (s32) into %ir.ap + 24, align 8)
   ; CHECK-NEXT:   [[MOVi32imm1:%[0-9]+]]:gpr32 = MOVi32imm 0
   ; CHECK-NEXT:   STRWui [[MOVi32imm1]], [[ADDXri]], 7 :: (store (s32) into %ir.ap + 28)
   ; CHECK-NEXT:   [[LDRSWui:%[0-9]+]]:gpr64common = LDRSWui %stack.2.ap, 7 :: (dereferenceable load (s32) from %ir.vr_offs_p)

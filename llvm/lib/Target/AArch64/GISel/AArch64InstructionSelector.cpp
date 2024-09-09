@@ -2037,16 +2037,15 @@ bool AArch64InstructionSelector::selectVaStartAAPCS(
                    .addImm(0);
     constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
 
+    const auto *MMO = *I.memoperands_begin();
     MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(), MCIDStoreAddr)
               .addUse(Top)
               .addUse(VAList)
               .addImm(OffsetBytes / PtrSize)
               .addMemOperand(MF.getMachineMemOperand(
-                  (*I.memoperands_begin())
-                      ->getPointerInfo()
-                      .getWithOffset(OffsetBytes),
+                  MMO->getPointerInfo().getWithOffset(OffsetBytes),
                   MachineMemOperand::MOStore, PtrSize,
-                  commonAlignment(Align(PtrSize), OffsetBytes)));
+                  commonAlignment(MMO->getBaseAlign(), OffsetBytes)));
     constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
 
     OffsetBytes += PtrSize;
@@ -2074,16 +2073,15 @@ bool AArch64InstructionSelector::selectVaStartAAPCS(
             .addImm(Value);
     constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
 
+    const auto *MMO = *I.memoperands_begin();
     MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(AArch64::STRWui))
               .addUse(Temp)
               .addUse(VAList)
               .addImm(OffsetBytes / IntSize)
               .addMemOperand(MF.getMachineMemOperand(
-                  (*I.memoperands_begin())
-                      ->getPointerInfo()
-                      .getWithOffset(OffsetBytes),
+                  MMO->getPointerInfo().getWithOffset(OffsetBytes),
                   MachineMemOperand::MOStore, IntSize,
-                  commonAlignment(Align(IntSize), OffsetBytes)));
+                  commonAlignment(MMO->getBaseAlign(), OffsetBytes)));
     constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
     OffsetBytes += IntSize;
   };
