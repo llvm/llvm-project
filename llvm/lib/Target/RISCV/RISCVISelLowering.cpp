@@ -467,8 +467,11 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(FPRndMode, MVT::f16,
                          Subtarget.hasStdExtZfa() ? Legal : Custom);
       setOperationAction(ISD::IS_FPCLASS, MVT::f16, Custom);
+      setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM}, MVT::f16,
+                         Subtarget.hasStdExtZfa() ? Legal : Custom);
     } else {
       setOperationAction(ZfhminZfbfminPromoteOps, MVT::f16, Promote);
+      setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM}, MVT::f16, Promote);
       for (auto Op : {ISD::LROUND, ISD::LLROUND, ISD::LRINT, ISD::LLRINT,
                       ISD::STRICT_LROUND, ISD::STRICT_LLROUND,
                       ISD::STRICT_LRINT, ISD::STRICT_LLRINT})
@@ -487,8 +490,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::SELECT, MVT::f16, Custom);
     setOperationAction(ISD::BR_CC, MVT::f16, Expand);
 
-    setOperationAction(ISD::FNEARBYINT, MVT::f16,
-                       Subtarget.hasStdExtZfa() ? Legal : Promote);
+    setOperationAction(
+        ISD::FNEARBYINT, MVT::f16,
+        Subtarget.hasStdExtZfh() && Subtarget.hasStdExtZfa() ? Legal : Promote);
     setOperationAction({ISD::FREM, ISD::FPOW, ISD::FPOWI,
                         ISD::FCOS, ISD::FSIN, ISD::FSINCOS, ISD::FEXP,
                         ISD::FEXP2, ISD::FEXP10, ISD::FLOG, ISD::FLOG2,
@@ -506,9 +510,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     // We need to custom promote this.
     if (Subtarget.is64Bit())
       setOperationAction(ISD::FPOWI, MVT::i32, Custom);
-
-    setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM}, MVT::f16,
-                       Subtarget.hasStdExtZfa() ? Legal : Custom);
   }
 
   if (Subtarget.hasStdExtFOrZfinx()) {
