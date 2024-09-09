@@ -2146,8 +2146,22 @@ static Address createReferenceTemporary(CIRGenFunction &CGF,
         (Ty->isArrayType() || Ty->isRecordType()) &&
         CGF.CGM.isTypeConstant(Ty, /*ExcludeCtor=*/true, /*ExcludeDtor=*/false))
       assert(0 && "NYI");
+
+    // The temporary memory should be created in the same scope as the extending
+    // declaration of the temporary materialization expression.
+    mlir::cir::AllocaOp extDeclAlloca;
+    if (const clang::ValueDecl *extDecl = M->getExtendingDecl()) {
+      auto extDeclAddrIter = CGF.LocalDeclMap.find(extDecl);
+      if (extDeclAddrIter != CGF.LocalDeclMap.end()) {
+        extDeclAlloca = dyn_cast_if_present<mlir::cir::AllocaOp>(
+            extDeclAddrIter->second.getDefiningOp());
+      }
+    }
+    mlir::OpBuilder::InsertPoint ip;
+    if (extDeclAlloca)
+      ip = {extDeclAlloca->getBlock(), extDeclAlloca->getIterator()};
     return CGF.CreateMemTemp(Ty, CGF.getLoc(M->getSourceRange()),
-                             CGF.getCounterRefTmpAsString(), Alloca);
+                             CGF.getCounterRefTmpAsString(), Alloca, ip);
   }
   case SD_Thread:
   case SD_Static:
@@ -2245,7 +2259,7 @@ LValue CIRGenFunction::buildMaterializeTemporaryExpr(
   } else {
     switch (M->getStorageDuration()) {
     case SD_Automatic:
-      assert(0 && "NYI");
+      assert(!MissingFeatures::shouldEmitLifetimeMarkers());
       break;
 
     case SD_FullExpression: {
@@ -2932,18 +2946,20 @@ void CIRGenFunction::buildUnreachable(SourceLocation Loc) {
 //===----------------------------------------------------------------------===//
 
 Address CIRGenFunction::CreateMemTemp(QualType Ty, mlir::Location Loc,
-                                      const Twine &Name, Address *Alloca) {
+                                      const Twine &Name, Address *Alloca,
+                                      mlir::OpBuilder::InsertPoint ip) {
   // FIXME: Should we prefer the preferred type alignment here?
   return CreateMemTemp(Ty, getContext().getTypeAlignInChars(Ty), Loc, Name,
-                       Alloca);
+                       Alloca, ip);
 }
 
 Address CIRGenFunction::CreateMemTemp(QualType Ty, CharUnits Align,
                                       mlir::Location Loc, const Twine &Name,
-                                      Address *Alloca) {
+                                      Address *Alloca,
+                                      mlir::OpBuilder::InsertPoint ip) {
   Address Result =
       CreateTempAlloca(getTypes().convertTypeForMem(Ty), Align, Loc, Name,
-                       /*ArraySize=*/nullptr, Alloca);
+                       /*ArraySize=*/nullptr, Alloca, ip);
   if (Ty->isConstantMatrixType()) {
     assert(0 && "NYI");
   }
