@@ -1239,7 +1239,6 @@ private:
     const uptr MaxNumGroupsInUse =
         roundUp(Region->MemMapInfo.AllocatedUser, GroupSize) / GroupSize;
     for (uptr I = 0; I < MaxNumGroupsInUse; ++I) {
-
       uptr Integral;
       uptr Fractional;
       computePercentage(Recorder.NumPagesInOneGroup -
