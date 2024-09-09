@@ -111,12 +111,12 @@ static void GenerateEnumClauseVal(ArrayRef<const Record *> Records,
            << "llvm::" << DirLang.getCppNamespace() << "::" << EnumName
            << "::" << CV->getName() << ";\n";
       }
-      EnumHelperFuncs += (Twine(EnumName) + Twine(" get") + Twine(EnumName) +
-                          Twine("(StringRef);\n"))
+      EnumHelperFuncs += (Twine("LLVM_ABI ") + Twine(EnumName) + Twine(" get") +
+                          Twine(EnumName) + Twine("(StringRef);\n"))
                              .str();
 
       EnumHelperFuncs +=
-          (Twine("llvm::StringRef get") + Twine(DirLang.getName()) +
+          (Twine("LLVM_ABI llvm::StringRef get") + Twine(DirLang.getName()) +
            Twine(EnumName) + Twine("Name(") + Twine(EnumName) + Twine(");\n"))
               .str();
     }
@@ -200,6 +200,7 @@ static void EmitDirectivesDecl(const RecordKeeper &Records, raw_ostream &OS) {
   if (DirLang.hasEnableBitmaskEnumInNamespace())
     OS << "#include \"llvm/ADT/BitmaskEnum.h\"\n";
 
+  OS << "#include \"llvm/Support/Compiler.h\"\n";
   OS << "#include <cstddef>\n"; // for size_t
   OS << "\n";
   OS << "namespace llvm {\n";
@@ -242,26 +243,27 @@ static void EmitDirectivesDecl(const RecordKeeper &Records, raw_ostream &OS) {
   // Generic function signatures
   OS << "\n";
   OS << "// Enumeration helper functions\n";
-  OS << "Directive get" << DirLang.getName()
+  OS << "LLVM_ABI Directive get" << DirLang.getName()
      << "DirectiveKind(llvm::StringRef Str);\n";
   OS << "\n";
-  OS << "llvm::StringRef get" << DirLang.getName()
+  OS << "LLVM_ABI llvm::StringRef get" << DirLang.getName()
      << "DirectiveName(Directive D);\n";
   OS << "\n";
-  OS << "Clause get" << DirLang.getName()
+  OS << "LLVM_ABI Clause get" << DirLang.getName()
      << "ClauseKind(llvm::StringRef Str);\n";
   OS << "\n";
-  OS << "llvm::StringRef get" << DirLang.getName() << "ClauseName(Clause C);\n";
+  OS << "LLVM_ABI llvm::StringRef get" << DirLang.getName()
+     << "ClauseName(Clause C);\n";
   OS << "\n";
   OS << "/// Return true if \\p C is a valid clause for \\p D in version \\p "
      << "Version.\n";
-  OS << "bool isAllowedClauseForDirective(Directive D, "
+  OS << "LLVM_ABI bool isAllowedClauseForDirective(Directive D, "
      << "Clause C, unsigned Version);\n";
   OS << "\n";
   OS << "constexpr std::size_t getMaxLeafCount() { return "
      << GetMaxLeafCount(DirLang) << "; }\n";
-  OS << "Association getDirectiveAssociation(Directive D);\n";
-  OS << "Category getDirectiveCategory(Directive D);\n";
+  OS << "LLVM_ABI Association getDirectiveAssociation(Directive D);\n";
+  OS << "LLVM_ABI Category getDirectiveCategory(Directive D);\n";
   if (EnumHelperFuncs.length() > 0) {
     OS << EnumHelperFuncs;
     OS << "\n";
