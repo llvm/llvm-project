@@ -1480,6 +1480,18 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
         ctx.script->assignAddresses();
       changed |= a32p.createFixes();
     }
+    if (config->relaxTbljal) {
+      if (!changed) {
+        // scan all R_RISCV_JAL, R_RISCV_CALL/R_RISCV_CALL_PLT for RISCV Zcmt
+        // Jump table.
+        for (InputSectionBase *inputSection : ctx.inputSections) {
+          in.riscvTableJumpSection->scanTableJumpEntries(
+              cast<InputSection>(*inputSection));
+        }
+        in.riscvTableJumpSection->finalizeContents();
+        changed |= target->relaxOnce(pass);
+      }
+    }
 
     finalizeSynthetic(in.got.get());
     if (in.mipsGot)
