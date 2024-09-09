@@ -2080,12 +2080,13 @@ splitCoroutine(Function &F, SmallVectorImpl<Function *> &Clones,
   return Shape;
 }
 
-static void updateCallGraphAfterCoroutineSplit(
+static LazyCallGraph::SCC &updateCallGraphAfterCoroutineSplit(
     LazyCallGraph::Node &N, const coro::Shape &Shape,
     const SmallVectorImpl<Function *> &Clones, LazyCallGraph::SCC &C,
     LazyCallGraph &CG, CGSCCAnalysisManager &AM, CGSCCUpdateResult &UR,
     FunctionAnalysisManager &FAM) {
 
+  auto *CurrentSCC = &C;
   if (!Clones.empty()) {
     switch (Shape.ABI) {
     case coro::ABI::Switch:
@@ -2105,13 +2106,16 @@ static void updateCallGraphAfterCoroutineSplit(
     }
 
     // Let the CGSCC infra handle the changes to the original function.
-    updateCGAndAnalysisManagerForCGSCCPass(CG, C, N, AM, UR, FAM);
+    CurrentSCC = &updateCGAndAnalysisManagerForCGSCCPass(CG, *CurrentSCC, N, AM,
+                                                         UR, FAM);
   }
 
   // Do some cleanup and let the CGSCC infra see if we've cleaned up any edges
   // to the split functions.
   postSplitCleanup(N.getFunction());
-  updateCGAndAnalysisManagerForFunctionPass(CG, C, N, AM, UR, FAM);
+  CurrentSCC = &updateCGAndAnalysisManagerForFunctionPass(CG, *CurrentSCC, N,
+                                                          AM, UR, FAM);
+  return *CurrentSCC;
 }
 
 /// Replace a call to llvm.coro.prepare.retcon.
@@ -2200,6 +2204,7 @@ PreservedAnalyses CoroSplitPass::run(LazyCallGraph::SCC &C,
   if (Coroutines.empty() && PrepareFns.empty())
     return PreservedAnalyses::all();
 
+  auto *CurrentSCC = &C;
   // Split all the coroutines.
   for (LazyCallGraph::Node *N : Coroutines) {
     Function &F = N->getFunction();
@@ -2211,7 +2216,8 @@ PreservedAnalyses CoroSplitPass::run(LazyCallGraph::SCC &C,
     coro::Shape Shape =
         splitCoroutine(F, Clones, FAM.getResult<TargetIRAnalysis>(F),
                        OptimizeFrame, MaterializableCallback);
-    updateCallGraphAfterCoroutineSplit(*N, Shape, Clones, C, CG, AM, UR, FAM);
+    CurrentSCC = &updateCallGraphAfterCoroutineSplit(
+        *N, Shape, Clones, *CurrentSCC, CG, AM, UR, FAM);
 
     auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
     ORE.emit([&]() {
@@ -2223,14 +2229,14 @@ PreservedAnalyses CoroSplitPass::run(LazyCallGraph::SCC &C,
 
     if (!Shape.CoroSuspends.empty()) {
       // Run the CGSCC pipeline on the original and newly split functions.
-      UR.CWorklist.insert(&C);
+      UR.CWorklist.insert(CurrentSCC);
       for (Function *Clone : Clones)
         UR.CWorklist.insert(CG.lookupSCC(CG.get(*Clone)));
     }
   }
 
   for (auto *PrepareFn : PrepareFns) {
-    replaceAllPrepares(PrepareFn, CG, C);
+    replaceAllPrepares(PrepareFn, CG, *CurrentSCC);
   }
 
   return PreservedAnalyses::none();
