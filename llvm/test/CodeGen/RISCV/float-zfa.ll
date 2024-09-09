@@ -269,3 +269,15 @@ define void @fli_remat() {
   tail call void @foo(float 1.000000e+00, float 1.000000e+00)
   ret void
 }
+
+define float @add_negimm(float %x) {
+; CHECK-LABEL: add_negimm:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    fli.s fa5, 0.5
+; CHECK-NEXT:    fneg.s fa5, fa5
+; CHECK-NEXT:    fadd.s fa0, fa0, fa5
+; CHECK-NEXT:    ret
+entry:
+  %sub = fadd float %x, -5.000000e-01
+  ret float %sub
+}
