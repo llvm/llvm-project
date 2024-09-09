@@ -64,7 +64,7 @@ llvm.func @nvvm_special_regs() -> i32 {
   %30 = nvvm.read.ptx.sreg.clock64 : i64
 
   // CHECK: %31 = call range(i32 0, 64) i32 @llvm.nvvm.read.ptx.sreg.tid.x()
-  %31 = nvvm.read.ptx.sreg.tid.x range <0 : i32, 64 : i32> : i32
+  %31 = nvvm.read.ptx.sreg.tid.x range <i32, 0, 64> : i32
 
   llvm.return %1 : i32
 }

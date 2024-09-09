@@ -702,11 +702,11 @@ gpu.module @test_module_33 {
 // CHECK-LABEL: func @kernel_with_block_size(
 // CHECK: attributes {gpu.kernel, gpu.known_block_size = array<i32: 32, 4, 2>, nvvm.kernel, nvvm.maxntid = array<i32: 32, 4, 2>}
   gpu.func @kernel_with_block_size(%arg0: !llvm.ptr) kernel attributes {known_block_size = array<i32: 32, 4, 2>} {
-    // CHECK: = nvvm.read.ptx.sreg.tid.x range <0 : i32, 32 : i32> : i32
+    // CHECK: = nvvm.read.ptx.sreg.tid.x range <i32, 0, 32> : i32
     %0 = gpu.thread_id x
-    // CHECK: = nvvm.read.ptx.sreg.tid.y range <0 : i32, 4 : i32> : i32
+    // CHECK: = nvvm.read.ptx.sreg.tid.y range <i32, 0, 4> : i32
     %1 = gpu.thread_id y
-    // CHECK: = nvvm.read.ptx.sreg.tid.z range <0 : i32, 2 : i32> : i32
+    // CHECK: = nvvm.read.ptx.sreg.tid.z range <i32, 0, 2> : i32
     %2 = gpu.thread_id z
 
     // Fake usage to prevent dead code elimination
@@ -926,6 +926,20 @@ gpu.module @test_module_48 {
     %result32Fast = math.exp %arg_f32 fastmath<ninf> : f32
     // CHECK: llvm.call @__nv_expf(%{{.*}}) : (f32) -> f32
     func.return %result32, %result64, %result32Fast : f32, f64, f32
+  }
+}
+
+gpu.module @test_module_49 {
+// CHECK-LABEL: func @explicit_id_bounds()
+  func.func @explicit_id_bounds() -> (index, index, index) {
+    // CHECK: = nvvm.read.ptx.sreg.tid.x range <i32, 0, 32> : i32
+    %0 = gpu.thread_id x upper_bound 32
+    // CHECK: = nvvm.read.ptx.sreg.ntid.x range <i32, 1, 33> : i32
+    %1 = gpu.block_dim x upper_bound 32
+    // CHECK: = nvvm.read.ptx.sreg.laneid range <i32, 0, 32> : i32
+    %2 = gpu.lane_id upper_bound 32
+
+    return %0, %1, %2 : index, index, index
   }
 }
 

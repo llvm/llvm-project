@@ -212,7 +212,7 @@ struct GPULaneIdOpToNVVM : ConvertOpToLLVMPattern<gpu::LaneIdOp> {
     LLVM::ConstantRangeAttr bounds = nullptr;
     if (std::optional<APInt> upperBound = op.getUpperBound())
       bounds = rewriter.getAttr<LLVM::ConstantRangeAttr>(
-          32, 0, upperBound->getZExtValue());
+          /*bitWidth=*/32, /*lower=*/0, upperBound->getZExtValue());
     Value newOp =
         rewriter.create<NVVM::LaneIdOp>(loc, rewriter.getI32Type(), bounds);
     // Truncate or extend the result depending on the index bitwidth specified
