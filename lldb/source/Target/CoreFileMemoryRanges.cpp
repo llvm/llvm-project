@@ -13,28 +13,32 @@ using namespace lldb_private;
 
 using Entry = CoreFileMemoryRanges::Entry;
 
-
 static bool OverlapHelper(const Entry *region_one, const Entry *region_two) {
-  return (region_one->GetRangeBase() <= region_two->GetRangeBase() && region_two->GetRangeBase() <= region_one->GetRangeEnd())
-      || (region_one->GetRangeBase() <= region_two->GetRangeEnd() && region_two->GetRangeEnd() <= region_one->GetRangeEnd());
+  return (region_one->GetRangeBase() <= region_two->GetRangeBase() &&
+          region_two->GetRangeBase() <= region_one->GetRangeEnd()) ||
+         (region_one->GetRangeBase() <= region_two->GetRangeEnd() &&
+          region_two->GetRangeEnd() <= region_one->GetRangeEnd());
 }
 
 static bool Overlaps(const Entry *region_one, const Entry *region_two) {
   // We make no assumptions on the order of the regions. We have a matrix of
   // comparions we need to make. A region overlaps another if, it's base is
-  // greater than another's base and less than another's end, or it's end is 
-  // greater than another's base and less than another's end. 
-  // We put the above comparison in overlap helper and change the order here to 
+  // greater than another's base and less than another's end, or it's end is
+  // greater than another's base and less than another's end.
+  // We put the above comparison in overlap helper and change the order here to
   // validate all combinations.
-  return OverlapHelper(region_one, region_two) || OverlapHelper(region_two, region_one);
+  return OverlapHelper(region_one, region_two) ||
+         OverlapHelper(region_two, region_one);
 }
 
 static bool IntersectHelper(const Entry *region_one, const Entry *region_two) {
-  return region_one->GetRangeBase() == region_two->GetRangeEnd() || region_one->GetRangeEnd() == region_two->GetRangeBase();
+  return region_one->GetRangeBase() == region_two->GetRangeEnd() ||
+         region_one->GetRangeEnd() == region_two->GetRangeBase();
 }
 
 static bool OnlyIntersects(const Entry *region_one, const Entry *region_two) {
-  return IntersectHelper(region_one, region_two) || IntersectHelper(region_two, region_one);
+  return IntersectHelper(region_one, region_two) ||
+         IntersectHelper(region_two, region_one);
 }
 
 static bool PermissionsMatch(const Entry *region_one, const Entry *region_two) {
@@ -50,15 +54,16 @@ Status CoreFileMemoryRanges::FinalizeCoreFileSaveRanges() {
     auto region_one = this->GetMutableEntryAtIndex(i);
     auto region_two = this->GetMutableEntryAtIndex(i - 1);
     if (Overlaps(region_one, region_two)) {
-      // It's okay for interesecting regions to have different permissions but if they overlap
-      // we fail because we don't know what to do with them.
+      // It's okay for interesecting regions to have different permissions but
+      // if they overlap we fail because we don't know what to do with them.
       if (!PermissionsMatch(region_one, region_two)) {
         // Permissions mismatch and it's not a simple intersection.
         if (!OnlyIntersects(region_one, region_two)) {
           error = Status::createWithFormat(
-            "Memory region at {0}::{1} has different permssions than overlapping region at {2}::{3}",
-            region_one->GetRangeBase(), region_one->GetRangeEnd(),
-            region_two->GetRangeBase(), region_two->GetRangeEnd());
+              "Memory region at {0}::{1} has different permssions than "
+              "overlapping region at {2}::{3}",
+              region_one->GetRangeBase(), region_one->GetRangeEnd(),
+              region_two->GetRangeBase(), region_two->GetRangeEnd());
           return error;
         }
         // Simple intersection, we can just not merge these.

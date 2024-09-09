@@ -6649,7 +6649,6 @@ static void GetUserSpecifiedCoreFileSaveRanges(Process &process,
                     range.GetRange().GetByteSize(),
                     CreateCoreFileMemoryRange(range));
     }
-
   }
 }
 
