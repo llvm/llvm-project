@@ -49,7 +49,7 @@ void AvoidEndlCheck::check(const MatchFinder::MatchResult &Result) {
     StringRef SourceText = Lexer::getSourceText(
         TokenRange, *Result.SourceManager, Result.Context->getLangOpts());
     if (SourceText.empty())
-      SourceText = "::std::endl";
+      SourceText = "std::endl";
     diag(Expression->getBeginLoc(),
          "do not use '%0' with streams; use '\\n' instead")
         << SourceText << FixItHint::CreateReplacement(TokenRange, "'\\n'");
