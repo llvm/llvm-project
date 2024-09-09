@@ -9,6 +9,7 @@
 #ifndef MLIR_DIALECT_SCF_TRANSFORMS_TILEUSINGINTERFACE_H
 #define MLIR_DIALECT_SCF_TRANSFORMS_TILEUSINGINTERFACE_H
 
+#include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Tensor/Transforms/Transforms.h"
 #include "mlir/IR/PatternMatch.h"
@@ -114,6 +115,20 @@ FailureOr<SCFTilingResult> tileUsingSCF(RewriterBase &rewriter,
                                         TilingInterface op,
                                         const SCFTilingOptions &options);
 
+/// Fuse the producer of the source of `candidateSliceOp` by computing the
+/// required slice of the producer in-place.  Note that the method
+/// replaces the uses of `candidateSliceOp` with the tiled and fused producer
+/// value but does not delete the slice operation.
+struct SCFFuseProducerOfSliceResult {
+  OpResult origProducer;       // Original untiled producer.
+  Value tiledAndFusedProducer; // Tile and fused producer value.
+  SmallVector<Operation *> tiledOps;
+};
+std::optional<SCFFuseProducerOfSliceResult>
+tileAndFuseProducerOfSlice(RewriterBase &rewriter,
+                           tensor::ExtractSliceOp candidateSliceOp,
+                           MutableArrayRef<LoopLikeOpInterface> loops);
+
 /// Options used to control tile + fuse.
 struct SCFTileAndFuseOptions {
   /// The tiling options used to control the tiling of the consumer.
@@ -146,21 +161,15 @@ struct SCFTileAndFuseOptions {
     fusionControlFn = controlFn;
     return *this;
   }
-};
 
-/// Fuse the producer of the source of `candidateSliceOp` by computing the
-/// required slice of the producer in-place.  Note that the method
-/// replaces the uses of `candidateSliceOp` with the tiled and fused producer
-/// value but does not delete the slice operation.
-struct SCFFuseProducerOfSliceResult {
-  OpResult origProducer;       // Original untiled producer.
-  Value tiledAndFusedProducer; // Tile and fused producer value.
-  SmallVector<Operation *> tiledOps;
+  /// Customizable function implementing the fusion logic for the producer
+  /// of the given slice.
+  using FusionFnTy =
+      std::function<std::optional<scf::SCFFuseProducerOfSliceResult>(
+          RewriterBase &, tensor::ExtractSliceOp,
+          MutableArrayRef<LoopLikeOpInterface>)>;
+  FusionFnTy fusionFn = tileAndFuseProducerOfSlice;
 };
-std::optional<SCFFuseProducerOfSliceResult>
-tileAndFuseProducerOfSlice(RewriterBase &rewriter,
-                           tensor::ExtractSliceOp candidateSliceOp,
-                           MutableArrayRef<LoopLikeOpInterface> loops);
 
 /// Reconstruct the fused producer from within the tiled-and-fused code. Based
 /// on the slice of the producer computed in place it is possible that within

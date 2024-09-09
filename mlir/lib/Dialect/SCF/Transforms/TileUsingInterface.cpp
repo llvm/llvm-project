@@ -1389,7 +1389,7 @@ mlir::scf::tileConsumerAndFuseProducersUsingSCF(
     // values produced by operations that implement the `TilingInterface`.
     // Add these operations to the worklist.
     std::optional<scf::SCFFuseProducerOfSliceResult> fusedResult =
-        tileAndFuseProducerOfSlice(rewriter, candidateSliceOp, loops);
+        options.fusionFn(rewriter, candidateSliceOp, loops);
     if (!fusedResult)
       continue;
 
