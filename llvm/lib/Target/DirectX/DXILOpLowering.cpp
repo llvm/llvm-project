@@ -259,6 +259,115 @@ public:
       lowerToBindAndAnnotateHandle(F);
   }
 
+  /// Replace uses of \c Intrin with the values in the `dx.ResRet` of \c Op.
+  /// Since we expect to be post-scalarization, make an effort to avoid vectors.
+  Error replaceResRetUses(CallInst *Intrin, CallInst *Op) {
+    IRBuilder<> &IRB = OpBuilder.getIRB();
+
+    Type *OldTy = Intrin->getType();
+
+    // For scalars, we just extract the first element.
+    if (!isa<FixedVectorType>(OldTy)) {
+      Value *EVI = IRB.CreateExtractValue(Op, 0);
+      Intrin->replaceAllUsesWith(EVI);
+      Intrin->eraseFromParent();
+      return Error::success();
+    }
+
+    std::array<Value *, 4> Extracts = {};
+    SmallVector<ExtractElementInst *> DynamicAccesses;
+
+    // The users of the operation should all be scalarized, so we attempt to
+    // replace the extractelements with extractvalues directly.
+    for (Use &U : make_early_inc_range(Intrin->uses())) {
+      if (auto *EEI = dyn_cast<ExtractElementInst>(U.getUser())) {
+        if (auto *IndexOp = dyn_cast<ConstantInt>(EEI->getIndexOperand())) {
+          size_t IndexVal = IndexOp->getZExtValue();
+          assert(IndexVal < 4 && "Index into buffer load out of range");
+          if (!Extracts[IndexVal])
+            Extracts[IndexVal] = IRB.CreateExtractValue(Op, IndexVal);
+          EEI->replaceAllUsesWith(Extracts[IndexVal]);
+          EEI->eraseFromParent();
+        } else {
+          DynamicAccesses.push_back(EEI);
+        }
+      }
+    }
+
+    const auto *VecTy = cast<FixedVectorType>(OldTy);
+    const unsigned N = VecTy->getNumElements();
+
+    // If there's a dynamic access we need to round trip through stack memory so
+    // that we don't leave vectors around.
+    if (!DynamicAccesses.empty()) {
+      Type *Int32Ty = IRB.getInt32Ty();
+      Constant *Zero = ConstantInt::get(Int32Ty, 0);
+
+      Type *ElTy = VecTy->getElementType();
+      Type *ArrayTy = ArrayType::get(ElTy, N);
+      Value *Alloca = IRB.CreateAlloca(ArrayTy);
+
+      for (int I = 0, E = N; I != E; ++I) {
+        if (!Extracts[I])
+          Extracts[I] = IRB.CreateExtractValue(Op, I);
+        Value *GEP = IRB.CreateInBoundsGEP(
+            ArrayTy, Alloca, {Zero, ConstantInt::get(Int32Ty, I)});
+        IRB.CreateStore(Extracts[I], GEP);
+      }
+
+      for (ExtractElementInst *EEI : DynamicAccesses) {
+        Value *GEP = IRB.CreateInBoundsGEP(ArrayTy, Alloca,
+                                           {Zero, EEI->getIndexOperand()});
+        Value *Load = IRB.CreateLoad(ElTy, GEP);
+        EEI->replaceAllUsesWith(Load);
+        EEI->eraseFromParent();
+      }
+    }
+
+    // If we still have uses, then we're not fully scalarized and need to
+    // recreate the vector. This should only happen for things like exported
+    // functions from libraries.
+    if (!Intrin->use_empty()) {
+      for (int I = 0, E = N; I != E; ++I)
+        if (!Extracts[I])
+          Extracts[I] = IRB.CreateExtractValue(Op, I);
+
+      Value *Vec = UndefValue::get(OldTy);
+      for (int I = 0, E = N; I != E; ++I)
+        Vec = IRB.CreateInsertElement(Vec, Extracts[I], I);
+      Intrin->replaceAllUsesWith(Vec);
+    }
+
+    Intrin->eraseFromParent();
+    return Error::success();
+  }
+
+  void lowerTypedBufferLoad(Function &F) {
+    IRBuilder<> &IRB = OpBuilder.getIRB();
+    Type *Int32Ty = IRB.getInt32Ty();
+
+    replaceFunction(F, [&](CallInst *CI) -> Error {
+      IRB.SetInsertPoint(CI);
+
+      Value *Handle =
+          createTmpHandleCast(CI->getArgOperand(0), OpBuilder.getHandleType());
+      Value *Index0 = CI->getArgOperand(1);
+      Value *Index1 = UndefValue::get(Int32Ty);
+
+      Type *NewRetTy = OpBuilder.getResRetType(CI->getType()->getScalarType());
+
+      std::array<Value *, 3> Args{Handle, Index0, Index1};
+      Expected<CallInst *> OpCall =
+          OpBuilder.tryCreateOp(OpCode::BufferLoad, Args, NewRetTy);
+      if (Error E = OpCall.takeError())
+        return E;
+      if (Error E = replaceResRetUses(CI, *OpCall))
+        return E;
+
+      return Error::success();
+    });
+  }
+
   bool lowerIntrinsics() {
     bool Updated = false;
 
@@ -276,6 +385,10 @@ public:
 #include "DXILOperation.inc"
       case Intrinsic::dx_handle_fromBinding:
         lowerHandleFromBinding(F);
+        break;
+      case Intrinsic::dx_typedBufferLoad:
+        lowerTypedBufferLoad(F);
+        break;
       }
       Updated = true;
     }
