@@ -194,14 +194,31 @@ InstrProfWriter::InstrProfWriter(
 
 InstrProfWriter::~InstrProfWriter() { delete InfoObj; }
 
-// Internal interface for testing purpose only.
+// Begin: Internal interface for testing purpose only.
 void InstrProfWriter::setValueProfDataEndianness(llvm::endianness Endianness) {
   InfoObj->ValueProfDataEndianness = Endianness;
 }
 
-void InstrProfWriter::setOutputSparse(bool Sparse) {
-  this->Sparse = Sparse;
+void InstrProfWriter::setOutputSparse(bool Sparse) { this->Sparse = Sparse; }
+
+void InstrProfWriter::setProfileVersion(uint32_t Version) {
+  ProfileVersion = Version;
 }
+
+void InstrProfWriter::setMinCompatibleReaderProfileVersion(uint32_t Version) {
+  MinCompatibleReaderProfileVersion = Version;
+}
+
+void InstrProfWriter::setAppendAdditionalHeaderFields() {
+  AppendAdditionalHeaderFields = true;
+}
+
+void InstrProfWriter::resetTestOnlyStatesForHeaderSection() {
+  ProfileVersion = std::nullopt;
+  MinCompatibleReaderProfileVersion = std::nullopt;
+  AppendAdditionalHeaderFields = false;
+}
+// End: Internal interface for testing purpose only.
 
 void InstrProfWriter::addRecord(NamedInstrProfRecord &&I, uint64_t Weight,
                                 function_ref<void(Error)> Warn) {
@@ -779,6 +796,22 @@ static Error writeMemProf(ProfOStream &OS,
               memprof::MaximumSupportedVersion));
 }
 
+uint32_t InstrProfWriter::profileVersion() const {
+  // ProfileVersion is set in tests only.
+  if (this->ProfileVersion)
+    return *(this->ProfileVersion);
+  return WritePrevVersion ? (IndexedInstrProf::ProfVersion::CurrentVersion - 1)
+                          : IndexedInstrProf::ProfVersion::CurrentVersion;
+}
+
+uint64_t InstrProfWriter::minCompatibleReaderVersion() const {
+  // MinCompatibleReaderProfileVersion is set in tests only.
+  if (this->MinCompatibleReaderProfileVersion)
+    return *(this->MinCompatibleReaderProfileVersion);
+
+  return IndexedInstrProf::ProfVersion::Version13;
+}
+
 uint64_t InstrProfWriter::writeHeader(const IndexedInstrProf::Header &Header,
                                       const bool WritePrevVersion,
                                       ProfOStream &OS) {
@@ -794,8 +827,16 @@ uint64_t InstrProfWriter::writeHeader(const IndexedInstrProf::Header &Header,
   OS.write(0); // MemProfOffset
   OS.write(0); // BinaryIdOffset
   OS.write(0); // TemporalProfTracesOffset
-  if (!WritePrevVersion)
-    OS.write(0); // VTableNamesOffset
+  OS.write(0); // VTableNamesOffset
+  if (!WritePrevVersion) {
+    OS.write(0); // HeaderByteSize
+    OS.write(0); // MinimumProfileReaderVersion
+  }
+
+  // This is a test-only path to append dummy header fields.
+  // NOTE: please write all other header fields before this one.
+  if (AppendAdditionalHeaderFields)
+    OS.write(0);
 
   return BackPatchStartOffset;
 }
@@ -853,13 +894,11 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
 
   // Write the header.
   IndexedInstrProf::Header Header;
-  Header.Version = WritePrevVersion
-                       ? IndexedInstrProf::ProfVersion::Version11
-                       : IndexedInstrProf::ProfVersion::CurrentVersion;
-  // The WritePrevVersion handling will either need to be removed or updated
-  // if the version is advanced beyond 12.
+  Header.Magic = IndexedInstrProf::Magic;
+  Header.Version = profileVersion();
+
   static_assert(IndexedInstrProf::ProfVersion::CurrentVersion ==
-                IndexedInstrProf::ProfVersion::Version12);
+                IndexedInstrProf::ProfVersion::Version13);
   if (static_cast<bool>(ProfileKind & InstrProfKind::IRInstrumentation))
     Header.Version |= VARIANT_MASK_IR_PROF;
   if (static_cast<bool>(ProfileKind & InstrProfKind::ContextSensitive))
@@ -876,8 +915,12 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
   if (static_cast<bool>(ProfileKind & InstrProfKind::TemporalProfile))
     Header.Version |= VARIANT_MASK_TEMPORAL_PROF;
 
+  const uint64_t StartOffset = OS.tell();
   const uint64_t BackPatchStartOffset =
       writeHeader(Header, WritePrevVersion, OS);
+
+  // Record the header byte size.
+  const uint64_t OnDiskHeaderSize = OS.tell() - StartOffset;
 
   // Reserve space to write profile summary data.
   uint32_t NumEntries = ProfileSummaryBuilder::DefaultCutoffs.size();
@@ -945,9 +988,8 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
 
   uint64_t VTableNamesSectionStart = OS.tell();
 
-  if (!WritePrevVersion)
-    if (Error E = writeVTableNames(OS))
-      return E;
+  if (Error E = writeVTableNames(OS))
+    return E;
 
   uint64_t TemporalProfTracesSectionStart = 0;
   if (static_cast<bool>(ProfileKind & InstrProfKind::TemporalProfile)) {
@@ -980,11 +1022,13 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
   }
   InfoObj->CSSummaryBuilder = nullptr;
 
-  SmallVector<uint64_t, 8> HeaderOffsets = {HashTableStart, MemProfSectionStart,
-                                            BinaryIdSectionStart,
-                                            TemporalProfTracesSectionStart};
-  if (!WritePrevVersion)
-    HeaderOffsets.push_back(VTableNamesSectionStart);
+  SmallVector<uint64_t, 8> HeaderOffsets = {
+      HashTableStart, MemProfSectionStart, BinaryIdSectionStart,
+      TemporalProfTracesSectionStart, VTableNamesSectionStart};
+  if (!WritePrevVersion) {
+    HeaderOffsets.push_back(OnDiskHeaderSize);
+    HeaderOffsets.push_back(minCompatibleReaderVersion());
+  }
 
   PatchItem PatchItems[] = {
       // Patch the Header fields
