@@ -1081,7 +1081,8 @@ define i64 @rem_pow2_domcond(i64 %a, i64 %b) {
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i64 [[CPOP]], 1
 ; CHECK-NEXT:    br i1 [[COND]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[REM:%.*]] = urem i64 [[A:%.*]], [[B]]
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[B]], -1
+; CHECK-NEXT:    [[REM:%.*]] = and i64 [[A:%.*]], [[TMP0]]
 ; CHECK-NEXT:    ret i64 [[REM]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    ret i64 0
@@ -1106,7 +1107,8 @@ define i64 @rem_pow2_domcond_in_else(i64 %a, i64 %b) {
 ; CHECK-NEXT:    [[COND_NOT:%.*]] = icmp eq i64 [[CPOP]], 1
 ; CHECK-NEXT:    br i1 [[COND_NOT]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[REM:%.*]] = urem i64 [[A:%.*]], [[B]]
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[B]], -1
+; CHECK-NEXT:    [[REM:%.*]] = and i64 [[A:%.*]], [[TMP0]]
 ; CHECK-NEXT:    ret i64 [[REM]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    ret i64 0
@@ -1131,7 +1133,8 @@ define i64 @rem_pow2_or_zero_domcond(i64 %a, i64 %b) {
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ult i64 [[CPOP]], 2
 ; CHECK-NEXT:    br i1 [[COND]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[REM:%.*]] = urem i64 [[A:%.*]], [[B]]
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[B]], -1
+; CHECK-NEXT:    [[REM:%.*]] = and i64 [[A:%.*]], [[TMP0]]
 ; CHECK-NEXT:    ret i64 [[REM]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    ret i64 0
