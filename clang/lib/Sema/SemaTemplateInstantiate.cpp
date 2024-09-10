@@ -1856,7 +1856,8 @@ Decl *TemplateInstantiator::TransformDecl(SourceLocation Loc, Decl *D) {
   }
 
   if (ParmVarDecl *PVD = dyn_cast<ParmVarDecl>(D);
-      PVD && SemaRef.ArgumentPackSubstitutionIndex == -1) {
+      PVD && SemaRef.CurrentInstantiationScope &&
+      SemaRef.ArgumentPackSubstitutionIndex == -1) {
     if (auto *Found =
             SemaRef.CurrentInstantiationScope->findInstantiationUnsafe(D)) {
       using DeclArgumentPack = LocalInstantiationScope::DeclArgumentPack;
