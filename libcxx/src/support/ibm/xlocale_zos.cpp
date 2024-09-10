@@ -15,26 +15,26 @@
 extern "C" {
 #endif // __cplusplus
 
-locale_t newlocale(int category_mask, const char* locale, locale_t base) {
+__libcpp_locale_t newlocale(int category_mask, const char* locale, __libcpp_locale_t base) {
   // Maintain current locale name(s) to restore later.
   std::string current_loc_name(setlocale(LC_ALL, 0));
 
   // Check for errors.
   if (category_mask == LC_ALL_MASK && setlocale(LC_ALL, locale) == nullptr) {
     errno = EINVAL;
-    return (locale_t)0;
+    return (__libcpp_locale_t)0;
   } else {
     for (int _Cat = 0; _Cat <= _LC_MAX; ++_Cat) {
       if ((_CATMASK(_Cat) & category_mask) != 0 && setlocale(_Cat, locale) == nullptr) {
         setlocale(LC_ALL, current_loc_name.c_str());
         errno = EINVAL;
-        return (locale_t)0;
+        return (__libcpp_locale_t)0;
       }
     }
   }
 
   // Create new locale.
-  locale_t newloc = new locale_struct();
+  __libcpp_locale_t newloc = new locale_struct();
 
   if (base) {
     if (category_mask != LC_ALL_MASK) {
@@ -62,12 +62,12 @@ locale_t newlocale(int category_mask, const char* locale, locale_t base) {
 
   // Restore current locale.
   setlocale(LC_ALL, current_loc_name.c_str());
-  return (locale_t)newloc;
+  return (__libcpp_locale_t)newloc;
 }
 
-void freelocale(locale_t locobj) { delete locobj; }
+void freelocale(__libcpp_locale_t locobj) { delete locobj; }
 
-locale_t uselocale(locale_t newloc) {
+__libcpp_locale_t uselocale(__libcpp_locale_t newloc) {
   // Maintain current locale name(s).
   std::string current_loc_name(setlocale(LC_ALL, 0));
 
@@ -84,12 +84,12 @@ locale_t uselocale(locale_t newloc) {
     if (is_error) {
       setlocale(LC_ALL, current_loc_name.c_str());
       errno = EINVAL;
-      return (locale_t)0;
+      return (__libcpp_locale_t)0;
     }
   }
 
   // Construct and return previous locale.
-  locale_t previous_loc = new locale_struct();
+  __libcpp_locale_t previous_loc = new locale_struct();
 
   // current_loc_name might be a comma-separated locale name list.
   if (current_loc_name.find(',') != std::string::npos) {

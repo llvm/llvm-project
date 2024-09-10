@@ -34,11 +34,11 @@ extern "C" {
 #      include <__support/xlocale/__strtonum_fallback.h>
 #    elif __ANDROID_API__ < 26
 
-inline _LIBCPP_HIDE_FROM_ABI float strtof_l(const char* __nptr, char** __endptr, locale_t) {
+inline _LIBCPP_HIDE_FROM_ABI float strtof_l(const char* __nptr, char** __endptr, __libcpp_locale_t) {
   return ::strtof(__nptr, __endptr);
 }
 
-inline _LIBCPP_HIDE_FROM_ABI double strtod_l(const char* __nptr, char** __endptr, locale_t) {
+inline _LIBCPP_HIDE_FROM_ABI double strtod_l(const char* __nptr, char** __endptr, __libcpp_locale_t) {
   return ::strtod(__nptr, __endptr);
 }
 
@@ -46,5 +46,7 @@ inline _LIBCPP_HIDE_FROM_ABI double strtod_l(const char* __nptr, char** __endptr
 
 #  endif // __NDK_MAJOR__ <= 16
 #endif   // __has_include(<android/ndk-version.h>)
+
+using __libcpp_locale_t = ::locale_t;
 
 #endif // _LIBCPP___LOCALE_LOCALE_BASE_API_ANDROID_H

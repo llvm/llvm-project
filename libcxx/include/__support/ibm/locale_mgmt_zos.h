@@ -38,13 +38,13 @@ typedef struct locale_struct {
   std::string lc_numeric;
   std::string lc_time;
   std::string lc_messages;
-}* locale_t;
+}* __libcpp_locale_t;
 
 // z/OS does not have newlocale, freelocale and uselocale.
 // The functions below are workarounds in single thread mode.
-locale_t newlocale(int category_mask, const char* locale, locale_t base);
-void freelocale(locale_t locobj);
-locale_t uselocale(locale_t newloc);
+__libcpp_locale_t newlocale(int category_mask, const char* locale, __libcpp_locale_t base);
+void freelocale(__libcpp_locale_t locobj);
+__libcpp_locale_t uselocale(__libcpp_locale_t newloc);
 
 #  ifdef __cplusplus
 }

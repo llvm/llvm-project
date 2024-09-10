@@ -60,9 +60,9 @@ struct __libcpp_unique_locale {
 
   explicit operator bool() const { return __loc_; }
 
-  locale_t& get() { return __loc_; }
+  __libcpp_locale_t& get() { return __loc_; }
 
-  locale_t __loc_;
+  __libcpp_locale_t __loc_;
 
 private:
   __libcpp_unique_locale(__libcpp_unique_locale const&);
@@ -70,11 +70,11 @@ private:
 };
 
 #ifdef __cloc_defined
-locale_t __cloc() {
+__libcpp_locale_t __cloc() {
   // In theory this could create a race condition. In practice
   // the race condition is non-fatal since it will just create
   // a little resource leak. Better approach would be appreciated.
-  static locale_t result = newlocale(LC_ALL_MASK, "C", 0);
+  static __libcpp_locale_t result = newlocale(LC_ALL_MASK, "C", 0);
   return result;
 }
 #endif // __cloc_defined
@@ -3931,7 +3931,7 @@ __widen_from_utf8<16>::~__widen_from_utf8() {}
 __widen_from_utf8<32>::~__widen_from_utf8() {}
 
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-static bool checked_string_to_wchar_convert(wchar_t& dest, const char* ptr, locale_t loc) {
+static bool checked_string_to_wchar_convert(wchar_t& dest, const char* ptr, __libcpp_locale_t loc) {
   if (*ptr == '\0')
     return false;
   mbstate_t mb = {};
@@ -3957,7 +3957,7 @@ static bool is_non_breaking_space(const char* ptr) {
 }
 #endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
 
-static bool checked_string_to_char_convert(char& dest, const char* ptr, locale_t __loc) {
+static bool checked_string_to_char_convert(char& dest, const char* ptr, __libcpp_locale_t __loc) {
   if (*ptr == '\0')
     return false;
   if (!ptr[1]) {
