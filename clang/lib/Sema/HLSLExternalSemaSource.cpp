@@ -111,6 +111,7 @@ struct BuiltinTypeDeclBuilder {
 
   BuiltinTypeDeclBuilder &
   addHandleMember(Sema &S, ResourceClass RC, ResourceKind RK, bool IsROV,
+                  bool RowAccess,
                   AccessSpecifier Access = AccessSpecifier::AS_private) {
     if (Record->isCompleteDefinition())
       return *this;
@@ -126,7 +127,9 @@ struct BuiltinTypeDeclBuilder {
     QualType AttributedResTy = QualType();
     SmallVector<const Attr *> Attrs = {
         HLSLResourceClassAttr::CreateImplicit(Record->getASTContext(), RC),
-        IsROV ? HLSLROVAttr::CreateImplicit(Record->getASTContext()) : nullptr};
+        IsROV ? HLSLROVAttr::CreateImplicit(Record->getASTContext()) : nullptr,
+        RowAccess ? HLSLRowAccessAttr::CreateImplicit(Record->getASTContext())
+                  : nullptr};
     Attr *ResourceAttr =
         HLSLResourceAttr::CreateImplicit(Record->getASTContext(), RK);
     if (CreateHLSLAttributedResourceType(S, Ty, Attrs, AttributedResTy))
@@ -495,9 +498,9 @@ void HLSLExternalSemaSource::defineTrivialHLSLTypes() {
 /// Set up common members and attributes for buffer types
 static BuiltinTypeDeclBuilder setupBufferType(CXXRecordDecl *Decl, Sema &S,
                                               ResourceClass RC, ResourceKind RK,
-                                              bool IsROV) {
+                                              bool IsROV, bool RowAccess) {
   return BuiltinTypeDeclBuilder(Decl)
-      .addHandleMember(S, RC, RK, IsROV)
+      .addHandleMember(S, RC, RK, IsROV, RowAccess)
       .addDefaultHandleConstructor(S, RC);
 }
 
@@ -510,7 +513,7 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
     setupBufferType(Decl, *SemaPtr, ResourceClass::UAV,
                     ResourceKind::TypedBuffer,
-                    /*IsROV=*/false)
+                    /*IsROV=*/false, /*RowAccess=*/true)
         .addArraySubscriptOperators()
         .completeDefinition();
   });
@@ -521,7 +524,8 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
           .Record;
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
     setupBufferType(Decl, *SemaPtr, ResourceClass::UAV,
-                    ResourceKind::TypedBuffer, /*IsROV=*/true)
+                    ResourceKind::TypedBuffer, /*IsROV=*/true,
+                    /*RowAccess=*/true)
         .addArraySubscriptOperators()
         .completeDefinition();
   });

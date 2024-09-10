@@ -6169,9 +6169,13 @@ public:
     // Data gathered from HLSL resource attributes
     llvm::dxil::ResourceClass ResourceClass;
     uint8_t IsROV : 1;
-    Attributes(llvm::dxil::ResourceClass ResourceClass, bool IsROV)
-        : ResourceClass(ResourceClass), IsROV(IsROV) {}
-    Attributes() : ResourceClass(llvm::dxil::ResourceClass::UAV), IsROV(0) {}
+    uint8_t RowAccess : 1;
+    Attributes(llvm::dxil::ResourceClass ResourceClass, bool IsROV,
+               bool RowAccess)
+        : ResourceClass(ResourceClass), IsROV(IsROV), RowAccess(RowAccess) {}
+    Attributes()
+        : ResourceClass(llvm::dxil::ResourceClass::UAV), IsROV(0),
+          RowAccess(0) {}
   };
 
 private:
@@ -6204,6 +6208,7 @@ public:
     ID.AddPointer(Contained.getAsOpaquePtr());
     ID.AddInteger(static_cast<uint32_t>(Attrs.ResourceClass));
     ID.AddBoolean(Attrs.IsROV);
+    ID.AddBoolean(Attrs.RowAccess);
   }
 
   static bool classof(const Type *T) {

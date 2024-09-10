@@ -1945,6 +1945,7 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
 
   case attr::HLSLResourceClass:
   case attr::HLSLROV:
+  case attr::HLSLRowAccess:
     llvm_unreachable("HLSL resource type attributes handled separately");
 
   case attr::OpenCLPrivateAddressSpace:
@@ -2078,6 +2079,8 @@ void TypePrinter::printHLSLAttributedResourceAfter(
      << ")]]";
   if (Attrs.IsROV)
     OS << " [[hlsl::is_rov()]]";
+  if (Attrs.RowAccess)
+    OS << " [[hlsl::row_access]]";
 }
 
 void TypePrinter::printObjCInterfaceBefore(const ObjCInterfaceType *T,

@@ -4669,6 +4669,12 @@ def HLSLResourceClass : TypeAttr {
   let Documentation = [InternalOnly];
 }
 
+def HLSLRowAccess : TypeAttr {
+  let Spellings = [CXX11<"hlsl", "row_access">];
+  let LangOpts = [HLSL]; 
+  let Documentation = [InternalOnly];
+}
+
 def HLSLGroupSharedAddressSpace : TypeAttr {
   let Spellings = [CustomKeyword<"groupshared">];
   let Subjects = SubjectList<[Var]>;

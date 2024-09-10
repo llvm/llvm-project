@@ -593,6 +593,9 @@ bool clang::CreateHLSLAttributedResourceType(Sema &S, QualType Wrapped,
     case attr::HLSLROV:
       ResAttrs.IsROV = true;
       break;
+    case attr::HLSLRowAccess:
+      ResAttrs.RowAccess = true;
+      break;
     default:
       llvm_unreachable("unhandled resource attribute type");
     }
@@ -644,6 +647,9 @@ bool SemaHLSL::handleResourceTypeAttr(const ParsedAttr &AL) {
   }
   case ParsedAttr::AT_HLSLROV:
     A = HLSLROVAttr::Create(getASTContext(), AL.getLoc());
+    break;
+  case ParsedAttr::AT_HLSLRowAccess:
+    A = HLSLRowAccessAttr::Create(getASTContext(), AL.getLoc());
     break;
   default:
     llvm_unreachable("unhandled HLSL attribute");
