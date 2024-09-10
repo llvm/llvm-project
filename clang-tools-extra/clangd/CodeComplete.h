@@ -96,9 +96,21 @@ struct CodeCompleteOptions {
   /// '->' on member access etc.
   bool IncludeFixIts = false;
 
-  /// Whether to generate snippets for function arguments on code-completion.
-  /// Needs snippets to be enabled as well.
-  bool EnableFunctionArgSnippets = true;
+  // requested by community in favour of 'EnableFunctionArgSnippets',
+  // see here for more info:
+  // https://github.com/llvm/llvm-project/issues/63565#issuecomment-1975065771
+  /// Controls how the delimter/argument-list for callables: "()"
+  /// and for generics: "<>" are handled
+  enum PlaceholderOption {
+    /// nothing, no argument list and also NO Delimiters "()" or "<>"
+    None = 0,
+    /// open, only opening delimiter "(" or "<"
+    OpenDelimiter,
+    /// empty pair of delimiters "()" or "<>" (or [legacy] alias 0)
+    Delimiters,
+    /// full name of both type and variable (or [legacy] alias 1)
+    FullPlaceholders,
+  } PlaceholderType = PlaceholderOption::FullPlaceholders;
 
   /// Whether to include index symbols that are not defined in the scopes
   /// visible from the code completion point. This applies in contexts without

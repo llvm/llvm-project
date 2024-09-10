@@ -350,8 +350,7 @@ struct CodeCompletionBuilder {
                         CodeCompletionContext::Kind ContextKind,
                         const CodeCompleteOptions &Opts,
                         bool IsUsingDeclaration, tok::TokenKind NextTokenKind)
-      : ASTCtx(ASTCtx),
-        EnableFunctionArgSnippets(Opts.EnableFunctionArgSnippets),
+      : ASTCtx(ASTCtx), PlaceholderType(Opts.PlaceholderType),
         IsUsingDeclaration(IsUsingDeclaration), NextTokenKind(NextTokenKind) {
     Completion.Deprecated = true; // cleared by any non-deprecated overload.
     add(C, SemaCCS, ContextKind);
@@ -561,6 +560,14 @@ private:
   }
 
   std::string summarizeSnippet() const {
+    /// localize PlaceholderType for better readability
+    const bool None = PlaceholderType == CodeCompleteOptions::None;
+    const bool Open = PlaceholderType == CodeCompleteOptions::OpenDelimiter;
+    const bool Delim = PlaceholderType == CodeCompleteOptions::Delimiters;
+    const bool Full =
+        PlaceholderType == CodeCompleteOptions::FullPlaceholders ||
+        (!None && !Open && !Delim); // <-- failsafe
+
     if (IsUsingDeclaration)
       return "";
     auto *Snippet = onlyValue<&BundledEntry::SnippetSuffix>();
@@ -568,7 +575,7 @@ private:
       // All bundles are function calls.
       // FIXME(ibiryukov): sometimes add template arguments to a snippet, e.g.
       // we need to complete 'forward<$1>($0)'.
-      return "($0)";
+      return None ? "" : (Open ? "(" : "($0)");
 
     if (Snippet->empty())
       return "";
@@ -607,7 +614,7 @@ private:
         return "";
       }
     }
-    if (EnableFunctionArgSnippets)
+    if (Full)
       return *Snippet;
 
     // Replace argument snippets with a simplified pattern.
@@ -622,9 +629,9 @@ private:
 
       bool EmptyArgs = llvm::StringRef(*Snippet).ends_with("()");
       if (Snippet->front() == '<')
-        return EmptyArgs ? "<$1>()$0" : "<$1>($0)";
+        return None ? "" : (Open ? "<" : (EmptyArgs ? "<$1>()$0" : "<$1>($0)"));
       if (Snippet->front() == '(')
-        return EmptyArgs ? "()" : "($0)";
+        return None ? "" : (Open ? "(" : (EmptyArgs ? "()$0" : "($0)"));
       return *Snippet; // Not an arg snippet?
     }
     // 'CompletionItemKind::Interface' matches template type aliases.
@@ -638,7 +645,7 @@ private:
       // e.g. Foo<${1:class}>.
       if (llvm::StringRef(*Snippet).ends_with("<>"))
         return "<>"; // can happen with defaulted template arguments.
-      return "<$0>";
+      return None ? "" : (Open ? "<" : "<$0>");
     }
     return *Snippet;
   }
@@ -654,7 +661,7 @@ private:
   ASTContext *ASTCtx;
   CodeCompletion Completion;
   llvm::SmallVector<BundledEntry, 1> Bundled;
-  bool EnableFunctionArgSnippets;
+  CodeCompleteOptions::PlaceholderOption PlaceholderType;
   // No snippets will be generated for using declarations and when the function
   // arguments are already present.
   bool IsUsingDeclaration;
@@ -797,8 +804,8 @@ SpecifiedScope getQueryScopes(CodeCompletionContext &CCContext,
   llvm::StringRef SpelledSpecifier = Lexer::getSourceText(
       CharSourceRange::getCharRange(SemaSpecifier->getRange()),
       CCSema.SourceMgr, clang::LangOptions());
-  if (SpelledSpecifier.consume_front("::")) 
-      Scopes.QueryScopes = {""};
+  if (SpelledSpecifier.consume_front("::"))
+    Scopes.QueryScopes = {""};
   Scopes.UnresolvedQualifier = std::string(SpelledSpecifier);
   // Sema excludes the trailing "::".
   if (!Scopes.UnresolvedQualifier->empty())
@@ -1591,7 +1598,7 @@ class CodeCompleteFlow {
   CompletionPrefix HeuristicPrefix;
   std::optional<FuzzyMatcher> Filter; // Initialized once Sema runs.
   Range ReplacedRange;
-  std::vector<std::string> QueryScopes; // Initialized once Sema runs.
+  std::vector<std::string> QueryScopes;      // Initialized once Sema runs.
   std::vector<std::string> AccessibleScopes; // Initialized once Sema runs.
   // Initialized once QueryScopes is initialized, if there are scopes.
   std::optional<ScopeDistance> ScopeProximity;
@@ -2387,8 +2394,7 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const CodeCompletion &C) {
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
                               const CodeCompleteResult &R) {
   OS << "CodeCompleteResult: " << R.Completions.size() << (R.HasMore ? "+" : "")
-     << " (" << getCompletionKindString(R.Context) << ")"
-     << " items:\n";
+     << " (" << getCompletionKindString(R.Context) << ")" << " items:\n";
   for (const auto &C : R.Completions)
     OS << C << "\n";
   return OS;

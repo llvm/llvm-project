@@ -242,13 +242,31 @@ opt<std::string> FallbackStyle{
     init(clang::format::DefaultFallbackStyle),
 };
 
-opt<bool> EnableFunctionArgSnippets{
-    "function-arg-placeholders",
-    cat(Features),
-    desc("When disabled, completions contain only parentheses for "
-         "function calls. When enabled, completions also contain "
-         "placeholders for method parameters"),
-    init(CodeCompleteOptions().EnableFunctionArgSnippets),
+opt<CodeCompleteOptions::PlaceholderOption> PlaceholderOption{
+    "function-arg-placeholders", cat(Features),
+    desc("Set the way placeholders and delimiters are implemented."),
+    init(CodeCompleteOptions().PlaceholderType),
+    values(
+        clEnumValN(CodeCompleteOptions::PlaceholderOption::None, "None",
+                   "insert nothing, not even the delimiters \"()\" or "
+                   "\"<>\": void foo"),
+        clEnumValN(CodeCompleteOptions::PlaceholderOption::OpenDelimiter,
+                   "OpenDelimiter",
+                   "Only insert opening delimiter \"(\" or \"<\", no "
+                   "placeholders: void foo("),
+        clEnumValN(CodeCompleteOptions::PlaceholderOption::Delimiters,
+                   "Delimiters",
+                   "Only insert delimiters \"()\" and \"<>\", no placeholders: "
+                   "void foo()"),
+        clEnumValN(
+            CodeCompleteOptions::PlaceholderOption::FullPlaceholders,
+            "FullPlaceholders",
+            "[default] Use full type names and value names: void foo(int x)"),
+        clEnumValN(CodeCompleteOptions::PlaceholderOption::Delimiters, "0",
+                   "[deprecated] use: Delimiters instead"),
+        clEnumValN(CodeCompleteOptions::PlaceholderOption::FullPlaceholders,
+                   "1", "[deprecated] use: FullPlaceholders instead"))
+
 };
 
 opt<CodeCompleteOptions::IncludeInsertion> HeaderInsertion{
@@ -916,7 +934,7 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
     Opts.CodeComplete.IncludeIndicator.Insert.clear();
     Opts.CodeComplete.IncludeIndicator.NoInsert.clear();
   }
-  Opts.CodeComplete.EnableFunctionArgSnippets = EnableFunctionArgSnippets;
+  Opts.CodeComplete.PlaceholderType = PlaceholderOption;
   Opts.CodeComplete.RunParser = CodeCompletionParse;
   Opts.CodeComplete.RankingModel = RankingModel;
 
