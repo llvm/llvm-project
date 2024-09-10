@@ -1490,14 +1490,11 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::updateStackNodes() {
     std::stable_sort(
         Calls.begin(), Calls.end(),
         [&FuncToIndex](const CallContextInfo &A, const CallContextInfo &B) {
-          auto &IdsA = A.StackIds;
-          auto &IdsB = B.StackIds;
-          auto *FuncA = A.Func;
-          auto *FuncB = B.Func;
-          return IdsA.size() > IdsB.size() ||
-                 (IdsA.size() == IdsB.size() &&
-                  (IdsA < IdsB ||
-                   (IdsA == IdsB && FuncToIndex[FuncA] < FuncToIndex[FuncB])));
+          return A.StackIds.size() > B.StackIds.size() ||
+                 (A.StackIds.size() == B.StackIds.size() &&
+                  (A.StackIds < B.StackIds ||
+                   (A.StackIds == B.StackIds &&
+                    FuncToIndex[A.Func] < FuncToIndex[B.Func])));
         });
 
     // Find the node for the last stack id, which should be the same
