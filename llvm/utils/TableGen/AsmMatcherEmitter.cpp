@@ -762,7 +762,7 @@ public:
   RegisterClassesTy RegisterClasses;
 
   /// Map of Predicate records to their subtarget information.
-  std::map<Record *, SubtargetFeatureInfo, LessRecordByID> SubtargetFeatures;
+  SubtargetFeatureInfoMap SubtargetFeatures;
 
   /// Map of AsmOperandClass records to their class information.
   std::map<const Record *, ClassInfo *> AsmOperandClasses;
@@ -1513,8 +1513,8 @@ void AsmMatcherInfo::buildOperandMatchInfo() {
 
 void AsmMatcherInfo::buildInfo() {
   // Build information about all of the AssemblerPredicates.
-  const std::vector<std::pair<Record *, SubtargetFeatureInfo>>
-      &SubtargetFeaturePairs = SubtargetFeatureInfo::getAll(Records);
+  SubtargetFeaturesInfoVec SubtargetFeaturePairs =
+      SubtargetFeatureInfo::getAll(Records);
   SubtargetFeatures.insert(SubtargetFeaturePairs.begin(),
                            SubtargetFeaturePairs.end());
 #ifndef NDEBUG
@@ -3226,9 +3226,9 @@ static void emitMatchClassKindNames(std::forward_list<ClassInfo> &Infos,
 }
 
 static std::string
-getNameForFeatureBitset(const std::vector<Record *> &FeatureBitset) {
+getNameForFeatureBitset(ArrayRef<const Record *> FeatureBitset) {
   std::string Name = "AMFBS";
-  for (const auto &Feature : FeatureBitset)
+  for (const Record *Feature : FeatureBitset)
     Name += ("_" + Feature->getName()).str();
   return Name;
 }
@@ -3451,7 +3451,7 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   StringTable.EmitString(OS);
   OS << ";\n\n";
 
-  std::vector<std::vector<Record *>> FeatureBitsets;
+  std::vector<std::vector<const Record *>> FeatureBitsets;
   for (const auto &MI : Info.Matchables) {
     if (MI->RequiredFeatures.empty())
       continue;
@@ -3460,8 +3460,8 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
       FeatureBitsets.back().push_back(MI->RequiredFeatures[I]->TheDef);
   }
 
-  llvm::sort(FeatureBitsets, [&](const std::vector<Record *> &A,
-                                 const std::vector<Record *> &B) {
+  llvm::sort(FeatureBitsets, [&](const std::vector<const Record *> &A,
+                                 const std::vector<const Record *> &B) {
     if (A.size() < B.size())
       return true;
     if (A.size() > B.size())

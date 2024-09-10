@@ -721,9 +721,9 @@ void InstrInfoEmitter::emitMCIIHelperMethods(raw_ostream &OS,
 }
 
 static std::string
-getNameForFeatureBitset(const std::vector<Record *> &FeatureBitset) {
+getNameForFeatureBitset(ArrayRef<const Record *> FeatureBitset) {
   std::string Name = "CEFBS";
-  for (const auto &Feature : FeatureBitset)
+  for (const Record *Feature : FeatureBitset)
     Name += ("_" + Feature->getName()).str();
   return Name;
 }
@@ -731,7 +731,7 @@ getNameForFeatureBitset(const std::vector<Record *> &FeatureBitset) {
 void InstrInfoEmitter::emitFeatureVerifier(raw_ostream &OS,
                                            const CodeGenTarget &Target) {
   const auto &All = SubtargetFeatureInfo::getAll(Records);
-  std::map<Record *, SubtargetFeatureInfo, LessRecordByID> SubtargetFeatures;
+  SubtargetFeatureInfoMap SubtargetFeatures;
   SubtargetFeatures.insert(All.begin(), All.end());
 
   OS << "#if (defined(ENABLE_INSTR_PREDICATE_VERIFIER) && !defined(NDEBUG)) "
@@ -752,18 +752,19 @@ void InstrInfoEmitter::emitFeatureVerifier(raw_ostream &OS,
   SubtargetFeatureInfo::emitComputeAssemblerAvailableFeatures(
       Target.getName(), "", "computeAvailableFeatures", SubtargetFeatures, OS);
 
-  std::vector<std::vector<Record *>> FeatureBitsets;
+  std::vector<std::vector<const Record *>> FeatureBitsets;
   for (const CodeGenInstruction *Inst : Target.getInstructionsByEnumValue()) {
     FeatureBitsets.emplace_back();
-    for (Record *Predicate : Inst->TheDef->getValueAsListOfDefs("Predicates")) {
+    for (const Record *Predicate :
+         Inst->TheDef->getValueAsListOfDefs("Predicates")) {
       const auto &I = SubtargetFeatures.find(Predicate);
       if (I != SubtargetFeatures.end())
         FeatureBitsets.back().push_back(I->second.TheDef);
     }
   }
 
-  llvm::sort(FeatureBitsets, [&](const std::vector<Record *> &A,
-                                 const std::vector<Record *> &B) {
+  llvm::sort(FeatureBitsets, [&](const std::vector<const Record *> &A,
+                                 const std::vector<const Record *> &B) {
     if (A.size() < B.size())
       return true;
     if (A.size() > B.size())
@@ -806,7 +807,8 @@ void InstrInfoEmitter::emitFeatureVerifier(raw_ostream &OS,
   for (const CodeGenInstruction *Inst : Target.getInstructionsByEnumValue()) {
     OS << "    CEFBS";
     unsigned NumPredicates = 0;
-    for (Record *Predicate : Inst->TheDef->getValueAsListOfDefs("Predicates")) {
+    for (const Record *Predicate :
+         Inst->TheDef->getValueAsListOfDefs("Predicates")) {
       const auto &I = SubtargetFeatures.find(Predicate);
       if (I != SubtargetFeatures.end()) {
         OS << '_' << I->second.TheDef->getName();
@@ -890,7 +892,8 @@ void InstrInfoEmitter::emitFeatureVerifier(raw_ostream &OS,
 void InstrInfoEmitter::emitTIIHelperMethods(raw_ostream &OS,
                                             StringRef TargetName,
                                             bool ExpandDefinition) {
-  RecVec TIIPredicates = Records.getAllDerivedDefinitions("TIIPredicate");
+  ArrayRef<const Record *> TIIPredicates =
+      Records.getAllDerivedDefinitions("TIIPredicate");
   if (TIIPredicates.empty())
     return;
 
