@@ -1,5 +1,5 @@
 """
-Test exception behavior in DAP with signal.
+Test exception behavior in DAP with c++ throw.
 """
 
 
@@ -8,7 +8,7 @@ from lldbsuite.test.lldbtest import *
 import lldbdap_testcase
 
 
-class TestDAP_exception(lldbdap_testcase.DAPTestCaseBase):
+class TestDAP_exception_cpp(lldbdap_testcase.DAPTestCaseBase):
     @skipIfWindows
     def test_stopped_description(self):
         """
@@ -23,3 +23,4 @@ class TestDAP_exception(lldbdap_testcase.DAPTestCaseBase):
         self.assertEqual(exceptionInfo["breakMode"], "always")
         self.assertEqual(exceptionInfo["description"], "signal SIGABRT")
         self.assertEqual(exceptionInfo["exceptionId"], "signal")
+        self.assertIsNotNone(exceptionInfo["details"])
