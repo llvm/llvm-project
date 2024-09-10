@@ -91,23 +91,12 @@ IntegerType IntegerType::scaleElementBitwidth(unsigned scale) {
 //===----------------------------------------------------------------------===//
 
 unsigned FloatType::getWidth() {
-  if (llvm::isa<Float6E3M2FNType>(*this))
-    return 6;
-  if (llvm::isa<Float8E5M2Type, Float8E4M3Type, Float8E4M3FNType,
-                Float8E5M2FNUZType, Float8E4M3FNUZType, Float8E4M3B11FNUZType,
-                Float8E3M4Type>(*this))
-    return 8;
-  if (llvm::isa<Float16Type, BFloat16Type>(*this))
-    return 16;
-  if (llvm::isa<Float32Type, FloatTF32Type>(*this))
+  // The actual width of TF32 is 19 bits. However, since it is a truncated
+  // version of Float32, we treat it as 32 bits in MLIR FloatType::getWidth
+  // for compatibility.
+  if (llvm::isa<FloatTF32Type>(*this))
     return 32;
-  if (llvm::isa<Float64Type>(*this))
-    return 64;
-  if (llvm::isa<Float80Type>(*this))
-    return 80;
-  if (llvm::isa<Float128Type>(*this))
-    return 128;
-  llvm_unreachable("unexpected float type");
+  return APFloat::semanticsSizeInBits(getFloatSemantics());
 }
 
 /// Returns the floating semantics for the given type.
