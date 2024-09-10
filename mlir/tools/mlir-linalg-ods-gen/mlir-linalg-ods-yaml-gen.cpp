@@ -656,7 +656,7 @@ ArrayAttr {0}::getIndexingMaps() {{
 }
 )FMT";
 
-// Implementations of fold and getEffects.
+// Implementations of fold, getEffects and getSpeculatability.
 // Parameters:
 // {0}: Class name
 const char structuredOpFoldersFormat[] = R"FMT(
@@ -668,6 +668,9 @@ void {0}::getEffects(SmallVectorImpl<
     SideEffects::EffectInstance<MemoryEffects::Effect> >&effects) {{
       if (hasPureTensorSemantics()) return;
       getGenericEffectsImpl(effects, cast<LinalgOp>(getOperation()));
+}
+Speculation::Speculatability {0}::getSpeculatability() {{
+  return getGenericSpeculatabilityImpl(cast<LinalgOp>(getOperation()));
 }
 )FMT";
 

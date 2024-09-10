@@ -34,6 +34,7 @@
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallSet.h"
@@ -1202,6 +1203,23 @@ void GenericOp::getEffects(
   getGenericEffectsImpl(effects, cast<LinalgOp>(getOperation()));
 }
 
+static Speculation::Speculatability
+getGenericSpeculatabilityImpl(LinalgOp linalgOp) {
+  // Operands with value semantics are speculatable, while operands with memory
+  // semantics are not.
+  for (Value operand : linalgOp->getOperands()) {
+    if (isa<MemRefType>(operand.getType())) {
+      return Speculation::NotSpeculatable;
+    }
+  }
+  // The body of the op can still have speculation in it's region.
+  return Speculation::RecursivelySpeculatable;
+}
+
+Speculation::Speculatability GenericOp::getSpeculatability() {
+  return getGenericSpeculatabilityImpl(cast<LinalgOp>(getOperation()));
+}
+
 LogicalResult GenericOp::verify() { return success(); }
 
 namespace {
@@ -1553,6 +1571,10 @@ void MapOp::getEffects(
   getGenericEffectsImpl(effects, cast<LinalgOp>(getOperation()));
 }
 
+Speculation::Speculatability MapOp::getSpeculatability() {
+  return getGenericSpeculatabilityImpl(cast<LinalgOp>(getOperation()));
+}
+
 //===----------------------------------------------------------------------===//
 // ReduceOp
 //===----------------------------------------------------------------------===//
@@ -1619,6 +1641,10 @@ void ReduceOp::getEffects(
     SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
         &effects) {
   getGenericEffectsImpl(effects, cast<LinalgOp>(getOperation()));
+}
+
+Speculation::Speculatability ReduceOp::getSpeculatability() {
+  return getGenericSpeculatabilityImpl(cast<LinalgOp>(getOperation()));
 }
 
 static ParseResult parseDenseI64ArrayAttr(OpAsmParser &parser,
@@ -1906,6 +1932,10 @@ void TransposeOp::getEffects(
   getGenericEffectsImpl(effects, cast<LinalgOp>(getOperation()));
 }
 
+Speculation::Speculatability TransposeOp::getSpeculatability() {
+  return getGenericSpeculatabilityImpl(cast<LinalgOp>(getOperation()));
+}
+
 LogicalResult TransposeOp::fold(FoldAdaptor adaptor,
                                 SmallVectorImpl<OpFoldResult> &result) {
   // Only the tensor type is supported.
@@ -2132,6 +2162,10 @@ void BroadcastOp::getEffects(
     SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
         &effects) {
   getGenericEffectsImpl(effects, cast<LinalgOp>(getOperation()));
+}
+
+Speculation::Speculatability BroadcastOp::getSpeculatability() {
+  return getGenericSpeculatabilityImpl(cast<LinalgOp>(getOperation()));
 }
 
 void BroadcastOp::getCanonicalizationPatterns(RewritePatternSet &results,
