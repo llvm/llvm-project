@@ -70,10 +70,6 @@ define void @forward_different_access_sizes(ptr readnone %end, ptr %start) {
 ; CHECK-NEXT:            store i32 0, ptr %gep.2, align 4 ->
 ; CHECK-NEXT:            %l = load i24, ptr %gep.1, align 1
 ; CHECK-EMPTY:
-; CHECK-NEXT:        Forward:
-; CHECK-NEXT:            store i32 0, ptr %gep.2, align 4 ->
-; CHECK-NEXT:            store i24 %l, ptr %ptr.iv, align 1
-; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-EMPTY:

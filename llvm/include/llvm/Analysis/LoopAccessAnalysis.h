@@ -366,16 +366,20 @@ private:
 
   struct DepDistanceStrideAndSizeInfo {
     const SCEV *Dist;
-    uint64_t StrideA;
-    uint64_t StrideB;
+    uint64_t MaxStride;
+    std::optional<uint64_t> CommonStride;
+    bool ShouldRetryWithRuntimeCheck;
     uint64_t TypeByteSize;
     bool AIsWrite;
     bool BIsWrite;
 
-    DepDistanceStrideAndSizeInfo(const SCEV *Dist, uint64_t StrideA,
-                                 uint64_t StrideB, uint64_t TypeByteSize,
-                                 bool AIsWrite, bool BIsWrite)
-        : Dist(Dist), StrideA(StrideA), StrideB(StrideB),
+    DepDistanceStrideAndSizeInfo(const SCEV *Dist, uint64_t MaxStride,
+                                 std::optional<uint64_t> CommonStride,
+                                 bool ShouldRetryWithRuntimeCheck,
+                                 uint64_t TypeByteSize, bool AIsWrite,
+                                 bool BIsWrite)
+        : Dist(Dist), MaxStride(MaxStride), CommonStride(CommonStride),
+          ShouldRetryWithRuntimeCheck(ShouldRetryWithRuntimeCheck),
           TypeByteSize(TypeByteSize), AIsWrite(AIsWrite), BIsWrite(BIsWrite) {}
   };
 
