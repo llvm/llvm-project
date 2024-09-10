@@ -612,12 +612,18 @@ public:
                   mlir::ConversionPatternRewriter &rewriter) const override {
     mlir::Value i1Condition;
 
+    auto hasOneUse = false;
+
+    if (auto defOp = brOp.getCond().getDefiningOp())
+      hasOneUse = defOp->getResult(0).hasOneUse();
+
     if (auto defOp = adaptor.getCond().getDefiningOp()) {
       if (auto zext = dyn_cast<mlir::LLVM::ZExtOp>(defOp)) {
         if (zext->use_empty() &&
             zext->getOperand(0).getType() == rewriter.getI1Type()) {
           i1Condition = zext->getOperand(0);
-          rewriter.eraseOp(zext);
+          if (hasOneUse)
+            rewriter.eraseOp(zext);
         }
       }
     }
