@@ -298,7 +298,7 @@ getFuncOpsOrderedByCalls(ModuleOp moduleOp,
   // For each FuncOp, the number of func::CallOp it contains.
   DenseMap<FunctionOpInterface, unsigned> numberCallOpsContainedInFuncOp;
   WalkResult res = moduleOp.walk([&](FunctionOpInterface funcOp) -> WalkResult {
-    if (!funcOp.getFunctionBody().empty() && funcOp.getNumResults() != 0) {
+    if (!funcOp.getFunctionBody().empty()) {
       Operation *returnOp = getAssumedUniqueReturnOp(funcOp);
       if (!returnOp)
         return funcOp->emitError()
