@@ -4,14 +4,10 @@
 ; Check that we correctly handle the use of %start2 in the exit block, and do
 ; not crash.
 
-define i64 @foo(i64 %start, i64 %end) {
+define i64 @foo(ptr %p1, ptr %p2, i64 %start, i64 %end) {
 ; CHECK-LABEL: define i64 @foo(
-; CHECK-SAME: i64 [[START:%.*]], i64 [[END:%.*]]) {
+; CHECK-SAME: ptr [[P1:%.*]], ptr [[P2:%.*]], i64 [[START:%.*]], i64 [[END:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[P1:%.*]] = alloca [1024 x i32], align 4
-; CHECK-NEXT:    [[P2:%.*]] = alloca [1024 x i32], align 4
-; CHECK-NEXT:    call void @init_mem(ptr [[P1]], i64 1024)
-; CHECK-NEXT:    call void @init_mem(ptr [[P2]], i64 1024)
 ; CHECK-NEXT:    [[START2:%.*]] = and i64 [[START]], 12345
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[END]], [[START2]]
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 4
@@ -52,10 +48,6 @@ define i64 @foo(i64 %start, i64 %end) {
 ; CHECK-NEXT:    ret i64 [[USE]]
 ;
 entry:
-  %p1 = alloca [1024 x i32]
-  %p2 = alloca [1024 x i32]
-  call void @init_mem(ptr %p1, i64 1024)
-  call void @init_mem(ptr %p2, i64 1024)
   %start2 = and i64 %start, 12345
   br label %for.body
 
@@ -73,8 +65,6 @@ exit:
   %use =  phi i64 [ %start2, %for.body ]
   ret i64 %use
 }
-
-declare void @init_mem(ptr, i64)
 
 ;.
 ; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
