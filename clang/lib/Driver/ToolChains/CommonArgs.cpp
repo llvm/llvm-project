@@ -674,7 +674,7 @@ std::string tools::getCPUName(const Driver &D, const ArgList &Args,
     return getLanaiTargetCPU(Args);
 
   case llvm::Triple::systemz:
-    return systemz::getSystemZTargetCPU(Args);
+    return systemz::getSystemZTargetCPU(Args, T);
 
   case llvm::Triple::r600:
   case llvm::Triple::amdgcn:

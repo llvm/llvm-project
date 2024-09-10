@@ -315,10 +315,11 @@ public:
                                      Address This, llvm::Type *Ty,
                                      SourceLocation Loc) override;
 
-  llvm::Value *EmitVirtualDestructorCall(CodeGenFunction &CGF,
-                                         const CXXDestructorDecl *Dtor,
-                                         CXXDtorType DtorType, Address This,
-                                         DeleteOrMemberCallExpr E) override;
+  llvm::Value *
+  EmitVirtualDestructorCall(CodeGenFunction &CGF, const CXXDestructorDecl *Dtor,
+                            CXXDtorType DtorType, Address This,
+                            DeleteOrMemberCallExpr E,
+                            llvm::CallBase **CallOrInvoke) override;
 
   void emitVirtualInheritanceTables(const CXXRecordDecl *RD) override;
 
@@ -1399,7 +1400,8 @@ void ItaniumCXXABI::emitVirtualObjectDelete(CodeGenFunction &CGF,
   // FIXME: Provide a source location here even though there's no
   // CXXMemberCallExpr for dtor call.
   CXXDtorType DtorType = UseGlobalDelete ? Dtor_Complete : Dtor_Deleting;
-  EmitVirtualDestructorCall(CGF, Dtor, DtorType, Ptr, DE);
+  EmitVirtualDestructorCall(CGF, Dtor, DtorType, Ptr, DE,
+                            /*CallOrInvoke=*/nullptr);
 
   if (UseGlobalDelete)
     CGF.PopCleanupBlock();
@@ -2236,7 +2238,7 @@ CGCallee ItaniumCXXABI::getVirtualFunctionPointer(CodeGenFunction &CGF,
 
 llvm::Value *ItaniumCXXABI::EmitVirtualDestructorCall(
     CodeGenFunction &CGF, const CXXDestructorDecl *Dtor, CXXDtorType DtorType,
-    Address This, DeleteOrMemberCallExpr E) {
+    Address This, DeleteOrMemberCallExpr E, llvm::CallBase **CallOrInvoke) {
   auto *CE = E.dyn_cast<const CXXMemberCallExpr *>();
   auto *D = E.dyn_cast<const CXXDeleteExpr *>();
   assert((CE != nullptr) ^ (D != nullptr));
@@ -2257,7 +2259,7 @@ llvm::Value *ItaniumCXXABI::EmitVirtualDestructorCall(
   }
 
   CGF.EmitCXXDestructorCall(GD, Callee, This.emitRawPointer(CGF), ThisTy,
-                            nullptr, QualType(), nullptr);
+                            nullptr, QualType(), nullptr, CallOrInvoke);
   return nullptr;
 }
 

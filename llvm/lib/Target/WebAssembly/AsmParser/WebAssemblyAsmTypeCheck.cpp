@@ -212,7 +212,7 @@ bool WebAssemblyAsmTypeCheck::getGlobal(SMLoc ErrorLoc,
     [[fallthrough]];
   default:
     return typeError(ErrorLoc, StringRef("symbol ") + WasmSym->getName() +
-                                   " missing .globaltype");
+                                   ": missing .globaltype");
   }
   return false;
 }
@@ -226,7 +226,7 @@ bool WebAssemblyAsmTypeCheck::getTable(SMLoc ErrorLoc, const MCOperand &TableOp,
   if (WasmSym->getType().value_or(wasm::WASM_SYMBOL_TYPE_DATA) !=
       wasm::WASM_SYMBOL_TYPE_TABLE)
     return typeError(ErrorLoc, StringRef("symbol ") + WasmSym->getName() +
-                                   " missing .tabletype");
+                                   ": missing .tabletype");
   Type = static_cast<wasm::ValType>(WasmSym->getTableType().ElemType);
   return false;
 }
@@ -254,7 +254,7 @@ bool WebAssemblyAsmTypeCheck::getSignature(SMLoc ErrorLoc,
       return true;
     }
     return typeError(ErrorLoc, StringRef("symbol ") + WasmSym->getName() +
-                                   " missing ." + TypeName + "type");
+                                   ": missing ." + TypeName + "type");
   }
   return false;
 }

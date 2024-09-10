@@ -799,16 +799,11 @@ class AMDGPUDimNoSampleProfile<string opmod,
 
 class AMDGPUDimAtomicProfile<string opmod,
                              AMDGPUDimProps dim,
-                             list<AMDGPUArg> dataargs> : AMDGPUDimProfile<opmod, dim> {
-  let RetTypes = [llvm_anyint_ty];
+                             list<AMDGPUArg> dataargs,
+                             LLVMType rettype> : AMDGPUDimProfile<opmod, dim> {
+  let RetTypes = [rettype];
   let DataArgs = dataargs;
   let IsAtomic = true;
-}
-
-class AMDGPUDimAtomicFloatProfile<string opmod, AMDGPUDimProps dim,
-                                  list<AMDGPUArg> dataargs>
-    : AMDGPUDimAtomicProfile<opmod, dim, dataargs> {
-  let RetTypes = [llvm_anyfloat_ty];
 }
 
 class AMDGPUDimGetResInfoProfile<AMDGPUDimProps dim>
@@ -1023,26 +1018,28 @@ defset list<AMDGPUImageDimIntrinsic> AMDGPUImageDimIntrinsics = {
 //////////////////////////////////////////////////////////////////////////
 defset list<AMDGPUImageDimIntrinsic> AMDGPUImageDimAtomicIntrinsics = {
   multiclass AMDGPUImageDimAtomicX<string opmod, list<AMDGPUArg> dataargs,
-                                   int isFloat = 0> {
+                                   LLVMType rettype = llvm_anyint_ty> {
         foreach dim = AMDGPUDims.All in {
-          def !strconcat(NAME, "_", dim.Name): AMDGPUImageDimIntrinsic<
-              !if (isFloat, AMDGPUDimAtomicFloatProfile<opmod, dim, dataargs>,
-                   AMDGPUDimAtomicProfile<opmod, dim, dataargs>),
-              [], [SDNPMemOperand]>;
+          def !strconcat(NAME, "_", dim.Name):
+            AMDGPUImageDimIntrinsic<AMDGPUDimAtomicProfile<opmod, dim, dataargs, rettype>,
+            [], [SDNPMemOperand]>;
         }
   }
 
-  multiclass AMDGPUImageDimAtomic<string opmod, int isFloat = 0> {
+  multiclass AMDGPUImageDimAtomic<string opmod, LLVMType rettype = llvm_anyint_ty> {
     defm ""
-        : AMDGPUImageDimAtomicX<opmod, [AMDGPUArg<LLVMMatchType<0>, "vdata">],
-                                isFloat>;
+        : AMDGPUImageDimAtomicX<opmod, [AMDGPUArg<LLVMMatchType<0>, "vdata">], rettype>;
   }
 
   multiclass AMDGPUImageDimFloatAtomic<string opmod> {
-    defm "" : AMDGPUImageDimAtomic<opmod, 1 /*isFloat*/>;
+    defm "" : AMDGPUImageDimAtomic<opmod, llvm_anyfloat_ty>;
   }
 
-  defm int_amdgcn_image_atomic_swap : AMDGPUImageDimAtomic<"ATOMIC_SWAP">;
+  multiclass AMDGPUImageDimAnyAtomic<string opmod> {
+    defm "" : AMDGPUImageDimAtomic<opmod, llvm_any_ty>;
+  }
+
+  defm int_amdgcn_image_atomic_swap : AMDGPUImageDimAnyAtomic<"ATOMIC_SWAP">;
   defm int_amdgcn_image_atomic_add : AMDGPUImageDimAtomic<"ATOMIC_ADD">;
   defm int_amdgcn_image_atomic_sub : AMDGPUImageDimAtomic<"ATOMIC_SUB">;
   defm int_amdgcn_image_atomic_smin : AMDGPUImageDimAtomic<"ATOMIC_SMIN">;
@@ -1722,6 +1719,15 @@ class AMDGPUStructPtrBufferLoadLDS : Intrinsic <
    ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<6>>,
    ImmArg<ArgIndex<7>>, IntrNoCallback, IntrNoFree], "", [SDNPMemOperand]>, AMDGPURsrcIntrinsic<0>;
 def int_amdgcn_struct_ptr_buffer_load_lds : AMDGPUStructPtrBufferLoadLDS;
+
+def int_amdgcn_s_buffer_prefetch_data : DefaultAttrsIntrinsic <
+  [],
+  [AMDGPUBufferRsrcTy, // rsrc(SGPR)
+   llvm_i32_ty,        // offset (imm)
+   llvm_i32_ty],       // len (SGPR/imm)
+  [IntrInaccessibleMemOrArgMemOnly, ImmArg<ArgIndex<1>>], "", [SDNPMemOperand]>,
+  AMDGPURsrcIntrinsic<0>,
+  ClangBuiltin<"__builtin_amdgcn_s_buffer_prefetch_data">;
 
 } // defset AMDGPUBufferIntrinsics
 
@@ -2688,6 +2694,14 @@ def int_amdgcn_global_load_tr_b128 : AMDGPULoadIntrinsic<global_ptr_ty>;
 // i32 @llvm.amdgcn.wave.id()
 def int_amdgcn_wave_id :
   DefaultAttrsIntrinsic<[llvm_i32_ty], [], [NoUndef<RetIndex>, IntrNoMem, IntrSpeculatable]>;
+
+def int_amdgcn_s_prefetch_data :
+  Intrinsic<[],
+  [llvm_anyptr_ty, // Pointer to a constant/global memory
+   llvm_i32_ty],   // Length to prefetch 0-31 (1-32 chaunks, units of 128 bytes)
+    [IntrInaccessibleMemOrArgMemOnly, IntrWillReturn, NoCapture<ArgIndex<0>>, IntrNoCallback, IntrNoFree],
+    "", [SDNPMemOperand]
+  >;
 
 //===----------------------------------------------------------------------===//
 // Deep learning intrinsics.

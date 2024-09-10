@@ -824,7 +824,7 @@ void MatcherGen::EmitResultInstructionAsOperand(
   for (unsigned InstOpNo = NumResults, e = NumFixedOperands; InstOpNo != e;
        ++InstOpNo) {
     // Determine what to emit for this operand.
-    Record *OperandNode = II.Operands[InstOpNo].Rec;
+    const Record *OperandNode = II.Operands[InstOpNo].Rec;
     if (CGP.operandHasDefault(OperandNode) &&
         (InstOpNo < NonOverridableOperands || ChildNo >= N.getNumChildren())) {
       // This is a predicate or optional def operand which the pattern has not
