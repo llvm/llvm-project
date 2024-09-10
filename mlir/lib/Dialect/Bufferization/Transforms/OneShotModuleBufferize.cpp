@@ -129,7 +129,7 @@ static void annotateEquivalentReturnBbArg(OpOperand &returnVal,
 static LogicalResult
 aliasingFuncOpBBArgsAnalysis(FunctionOpInterface funcOp, OneShotAnalysisState &state,
                              FuncAnalysisState &funcState) {
-  if (funcOp.getFunctionBody().empty() || funcOp.getNumResults() == 0) {
+  if (funcOp.getFunctionBody().empty()) {
     // No function body available. Conservatively assume that every tensor
     // return value may alias with any tensor bbArg.
     for (const auto &inputIt : llvm::enumerate(funcOp.getArgumentTypes())) {
