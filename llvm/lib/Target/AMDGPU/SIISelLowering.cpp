@@ -10256,6 +10256,7 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
   LoadSDNode *Load = cast<LoadSDNode>(Op);
   ISD::LoadExtType ExtType = Load->getExtensionType();
   EVT MemVT = Load->getMemoryVT();
+  MachineMemOperand *MMO = Load->getMemOperand();
 
   if (ExtType == ISD::NON_EXTLOAD && MemVT.getSizeInBits() < 32) {
     if (MemVT == MVT::i16 && isTypeLegal(MVT::i16))
@@ -10266,7 +10267,6 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
 
     SDValue Chain = Load->getChain();
     SDValue BasePtr = Load->getBasePtr();
-    MachineMemOperand *MMO = Load->getMemOperand();
 
     EVT RealMemVT = (MemVT == MVT::i1) ? MVT::i8 : MVT::i16;
 
@@ -10322,7 +10322,8 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
 
   unsigned NumElements = MemVT.getVectorNumElements();
 
-  if (!Op->isDivergent() && Alignment >= Align(4) && NumElements < 32) {
+  if ((!Op->isDivergent() || AMDGPUInstrInfo::isUniformMMO(MMO)) &&
+      Alignment >= Align(4) && NumElements < 32) {
     if (AS == AMDGPUAS::CONSTANT_ADDRESS ||
         AS == AMDGPUAS::CONSTANT_ADDRESS_32BIT) {
       if (MemVT.isPow2VectorType() ||
