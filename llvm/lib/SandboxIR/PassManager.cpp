@@ -20,3 +20,9 @@ bool FunctionPassManager::runOnFunction(Function &F) {
   // TODO: Check ChangeAll against hashes before/after.
   return Change;
 }
+#ifndef NDEBUG
+void PassRegistry::dump() const {
+  print(dbgs());
+  dbgs() << "\n";
+}
+#endif // NDEBUG
