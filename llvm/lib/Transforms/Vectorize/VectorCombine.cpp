@@ -1700,7 +1700,7 @@ bool VectorCombine::foldShuffleOfIntrinsics(Instruction &I) {
   if (!isTriviallyVectorizable(IID))
     return false;
 
-  for (unsigned I = 0; I != II0->arg_size(); ++I)
+  for (unsigned I = 0, E = II0->arg_size(); I != E; ++I)
     if (isVectorIntrinsicWithScalarOpAtArg(IID, I) &&
         II0->getArgOperand(I) != II1->getArgOperand(I))
       return false;
@@ -1715,7 +1715,7 @@ bool VectorCombine::foldShuffleOfIntrinsics(Instruction &I) {
 
   SmallVector<Type *> NewArgsTy;
   InstructionCost NewCost = 0;
-  for (unsigned I = 0; I != II0->arg_size(); ++I)
+  for (unsigned I = 0, E = II0->arg_size(); I != E; ++I)
     if (isVectorIntrinsicWithScalarOpAtArg(IID, I)) {
       NewArgsTy.push_back(II0->getArgOperand(I)->getType());
     } else {
@@ -1736,7 +1736,7 @@ bool VectorCombine::foldShuffleOfIntrinsics(Instruction &I) {
     return false;
 
   SmallVector<Value *> NewArgs;
-  for (unsigned I = 0; I != II0->arg_size(); ++I)
+  for (unsigned I = 0, E = II0->arg_size(); I != E; ++I)
     if (isVectorIntrinsicWithScalarOpAtArg(IID, I)) {
       NewArgs.push_back(II0->getArgOperand(I));
     } else {
