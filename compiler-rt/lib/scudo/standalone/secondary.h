@@ -74,7 +74,7 @@ struct CachedBlock {
   static constexpr u16 InvalidEntry = CacheIndexMax;
   // We allow a certain amount of fragmentation and part of the fragmented bytes
   // will be released by `releaseAndZeroPagesToOS()`. This increases the chance
-  // of cache hit rate and reduce the overhead to the RSS at the same time. See
+  // of cache hit rate and reduces the overhead to the RSS at the same time. See
   // more details in the `MapAllocatorCache::retrieve()` section.
   //
   // We arrived at this default value after noticing that mapping in larger
