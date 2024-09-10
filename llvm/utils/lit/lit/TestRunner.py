@@ -1021,10 +1021,10 @@ def findColor(line, curr_color):
     start = line.rfind("\33[")
     if start == -1:
         return curr_color
-    end = line.find("m", start+2)
+    end = line.find("m", start + 2)
     if end == -1:
         return curr_color
-    match = line[start:end+1]
+    match = line[start : end + 1]
     # "\33[0m" means "reset all formatting". Sometimes the 0 is skipped.
     if match == "\33[m" or match == "\33[0m":
         return None
