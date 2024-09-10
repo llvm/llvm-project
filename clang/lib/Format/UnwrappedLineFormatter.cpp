@@ -361,8 +361,17 @@ private:
     const auto *FirstNonComment = TheLine->getFirstNonComment();
     if (!FirstNonComment)
       return 0;
+
     // FIXME: There are probably cases where we should use FirstNonComment
     // instead of TheLine->First.
+
+    if (TheLine->Last->is(tok::l_brace)) {
+      if (Style.AllowShortNamespacesOnASingleLine &&
+          TheLine->First->is(tok::kw_namespace)) {
+        if (unsigned result = tryMergeNamespace(I, E, Limit))
+          return result;
+      }
+    }
 
     if (Style.CompactNamespaces) {
       if (const auto *NSToken = TheLine->First->getNamespaceToken()) {
@@ -419,14 +428,6 @@ private:
     if (LastNonComment->is(TT_FunctionLBrace) &&
         TheLine->First != LastNonComment) {
       return MergeShortFunctions ? tryMergeSimpleBlock(I, E, Limit) : 0;
-    }
-
-    if (TheLine->Last->is(tok::l_brace)) {
-      if (Style.AllowShortNamespacesOnASingleLine &&
-          TheLine->First->is(tok::kw_namespace)) {
-        if (unsigned result = tryMergeNamespace(I, E, Limit))
-          return result;
-      }
     }
 
     // Try to merge a control statement block with left brace unwrapped.

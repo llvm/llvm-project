@@ -28315,9 +28315,11 @@ TEST_F(FormatTest, KeepFormFeed) {
 }
 
 TEST_F(FormatTest, ShortNamespacesOption) {
-  FormatStyle Style = getLLVMStyle();
-  Style.AllowShortNamespacesOnASingleLine = true;
-  Style.FixNamespaceComments = false;
+  auto BaseStyle = getLLVMStyle();
+  BaseStyle.AllowShortNamespacesOnASingleLine = true;
+  BaseStyle.FixNamespaceComments = false;
+
+  auto Style = BaseStyle;
 
   // Basic functionality.
   verifyFormat("namespace foo { class bar; }", Style);
@@ -28335,7 +28337,7 @@ TEST_F(FormatTest, ShortNamespacesOption) {
                "}",
                Style);
 
-  // Make sure code doesn't walk to far on unbalanced code.
+  // Make sure code doesn't walk too far on unbalanced code.
   verifyFormat("namespace foo {", Style);
   verifyFormat("namespace foo {\n"
                "class baz;",
@@ -28348,7 +28350,7 @@ TEST_F(FormatTest, ShortNamespacesOption) {
   verifyFormat("namespace foo { namespace bar { class baz; } }", Style);
   verifyFormat("namespace foo {\n"
                "namespace bar { class baz; }\n"
-               "namespace quar { class quaz; }\n"
+               "namespace qux { class quux; }\n"
                "}",
                Style);
 
@@ -28390,20 +28392,32 @@ TEST_F(FormatTest, ShortNamespacesOption) {
   // No ColumnLimit, allows long nested one-liners, but also leaves multi-line
   // instances alone.
   Style.ColumnLimit = 0;
-  verifyFormat("namespace foo { namespace bar { namespace baz { namespace qux "
-               "{ class quux; } } } }",
-               Style);
+  verifyFormat(
+      "namespace foo { namespace bar { namespace baz { class qux; } } }",
+      Style);
 
   verifyNoChange("namespace foo {\n"
-                 "namespace bar {\n"
-                 "namespace baz { namespace qux { class quux; } }\n"
-                 "}\n"
+                 "namespace bar { namespace baz { class qux; } }\n"
                  "}",
                  Style);
+
+  Style = BaseStyle;
+  Style.CompactNamespaces = true;
+  verifyFormat("namespace foo { namespace bar { class baz; } }", Style);
+
+  // If we can't merge an outer nested namespaces, but can merge an inner
+  // nested namespace, then CompactNamespaces will merge the outer namespace
+  // first, preventing the merging of the inner namespace
+  verifyFormat("namespace foo { namespace baz {\n"
+               "class qux;\n"
+               "} // comment\n"
+               "}",
+               Style);
 
   // This option doesn't really work with FixNamespaceComments and nested
   // namespaces. Code should use the concatenated namespace syntax.  e.g.
   // 'namespace foo::bar'.
+  Style = BaseStyle;
   Style.FixNamespaceComments = true;
 
   verifyFormat(
