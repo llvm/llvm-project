@@ -2766,7 +2766,7 @@ AddOrdinaryNameResults(SemaCodeCompletion::ParserCompletionContext CCC,
         Builder.AddChunk(CodeCompletionString::CK_RightBrace);
         Results.AddResult(Result(Builder.TakeString()));
 
-        if (llvm::isa<clang::RequiresExprBodyDecl>(SemaRef.CurContext)) {
+        if (SemaRef.CurContext->isRequiresExprBody()) {
           // requires expression ;
           Builder.AddTypedTextChunk("requires");
           Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
