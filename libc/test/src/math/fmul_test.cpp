@@ -25,7 +25,6 @@ TEST_F(LlvmLibcMulTest, SpecialInputs) {
       0x1.00fdfep+23f,
   };
 
-  
   constexpr size_t N = sizeof(RESULTS) / sizeof(RESULTS[0]);
 
   for (size_t i = 0; i < N; ++i) {
@@ -34,7 +33,9 @@ TEST_F(LlvmLibcMulTest, SpecialInputs) {
     for (int j = 0; j < 180; ++j) {
       a *= 0.5;
       mpfr::BinaryInput<double> input{INPUTS[i][0], INPUTS[i][1]};
-      ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Mul, input, LIBC_NAMESPACE::fmul(INPUTS[i][0], INPUTS[i][1]), 0.5);
+      ASSERT_MPFR_MATCH_ALL_ROUNDING(
+          mpfr::Operation::Mul, input,
+          LIBC_NAMESPACE::fmul(INPUTS[i][0], INPUTS[i][1]), 0.5);
     }
   }
 }
