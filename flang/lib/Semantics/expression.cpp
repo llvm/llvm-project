@@ -210,7 +210,8 @@ private:
 // or procedure pointer reference in a ProcedureDesignator.
 MaybeExpr ExpressionAnalyzer::Designate(DataRef &&ref) {
   const Symbol &last{ref.GetLastSymbol()};
-  const Symbol &symbol{BypassGeneric(last).GetUltimate()};
+  const Symbol &specific{BypassGeneric(last)};
+  const Symbol &symbol{specific.GetUltimate()};
   if (semantics::IsProcedure(symbol)) {
     if (symbol.attrs().test(semantics::Attr::ABSTRACT)) {
       Say("Abstract procedure interface '%s' may not be used as a designator"_err_en_US,
@@ -226,6 +227,10 @@ MaybeExpr ExpressionAnalyzer::Designate(DataRef &&ref) {
     } else if (!symbol.attrs().test(semantics::Attr::INTRINSIC)) {
       if (symbol.has<semantics::GenericDetails>()) {
         Say("'%s' is not a specific procedure"_err_en_US, last.name());
+      } else if (IsProcedurePointer(specific)) {
+        // For procedure pointers, retain associations so that data accesses
+        // from client modules will work.
+        return Expr<SomeType>{ProcedureDesignator{specific}};
       } else {
         return Expr<SomeType>{ProcedureDesignator{symbol}};
       }
