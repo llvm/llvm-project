@@ -82,6 +82,8 @@ def sub_gpr_odd  : SubRegIndex<32, 32> {
 // instructions.
 
 let RegAltNameIndices = [ABIRegAltName] in {
+  // 16-bit sub-registers for use by Zhinx. Having a 16-bit sub-register reduces
+  // the spill size for these operations.
   let isConstant = true in
   def X0_H  : RISCVReg<0, "x0", ["zero"]>;
   let CostPerUse = [0, 1] in {
@@ -605,6 +607,7 @@ def VRM8NoV0 : VReg<VM8VTs, (sub VRM8, V0M8), 8>;
 
 def VMV0 : VReg<VMaskVTs, (add V0), 1>;
 
+// 16-bit GPR sub-register class used by Zhinx instructions.
 def GPRF16 : RISCVRegisterClass<[f16], 16, (add (sequence "X%u_H", 10, 17),
                                                 (sequence "X%u_H", 5, 7),
                                                 (sequence "X%u_H", 28, 31),
