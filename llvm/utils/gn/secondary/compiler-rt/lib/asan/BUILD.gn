@@ -67,6 +67,8 @@ if (current_toolchain == host_toolchain) {
     cflags = []
     if (target_os != "win") {
       cflags += [ "-ftls-model=initial-exec" ]
+    } else {
+      ldflags = [ "/OPT:NOICF" ]
     }
 
     # FIXME: link rt dl m pthread log
@@ -175,13 +177,6 @@ if (current_toolchain == host_toolchain) {
       "//compiler-rt/lib/ubsan:cxx_sources",
       "//compiler-rt/lib/ubsan:sources",
     ]
-    if (current_os == "win") {
-      deps += [
-        ":weak_interception",
-        "//compiler-rt/lib/sanitizer_common:weak_interception",
-        "//compiler-rt/lib/ubsan:weak_interception",
-      ]
-    }
     defines = [ "ASAN_DYNAMIC" ]
     if (current_os == "win") {
       defines += [ "INTERCEPTION_DYNAMIC_CRT" ]
