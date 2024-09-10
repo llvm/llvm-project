@@ -946,8 +946,13 @@ void HWAddressSanitizer::getInterestingMemoryOperands(
       Type *Ty = CI->getParamByValType(ArgNo);
       Interesting.emplace_back(I, ArgNo, false, Ty, Align(1));
     }
-    maybeMarkSanitizerLibraryCallNoBuiltin(CI, &TLI);
-    removeFnAttributes(CI->getCalledFunction());
+    if (Function *F = CI->getCalledFunction()) {
+      LibFunc LF;
+      if (F->hasName() && TLI.getLibFunc(F->getName(), LF)) {
+        maybeMarkSanitizerLibraryCallNoBuiltin(CI, &TLI);
+        removeFnAttributes(F);
+      }
+    }
   }
 }
 
