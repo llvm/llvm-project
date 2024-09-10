@@ -138,8 +138,7 @@ define i1 @fold_icmp_shl_nuw_c2_div_non_pow2(i32 %x) {
 
 define i1 @fold_icmp_shl_nuw_c2_indivisible(i32 %x) {
 ; CHECK-LABEL: @fold_icmp_shl_nuw_c2_indivisible(
-; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i32 16, [[X:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[SHL]], 63
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[X:%.*]], 2
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %shl = shl nuw i32 16, %x
@@ -155,5 +154,25 @@ define i1 @fold_icmp_shl_c2_without_nuw(i32 %x) {
 ;
   %shl = shl i32 16, %x
   %cmp = icmp ult i32 %shl, 64
+  ret i1 %cmp
+}
+
+; Make sure this trivial case is folded by InstSimplify.
+define i1 @fold_icmp_shl_nuw_c2_precondition1(i32 %x) {
+; CHECK-LABEL: @fold_icmp_shl_nuw_c2_precondition1(
+; CHECK-NEXT:    ret i1 true
+;
+  %shl = shl nuw i32 0, %x
+  %cmp = icmp ult i32 %shl, 63
+  ret i1 %cmp
+}
+
+; Make sure this trivial case is folded by InstSimplify.
+define i1 @fold_icmp_shl_nuw_c2_precondition2(i32 %x) {
+; CHECK-LABEL: @fold_icmp_shl_nuw_c2_precondition2(
+; CHECK-NEXT:    ret i1 false
+;
+  %shl = shl nuw i32 127, %x
+  %cmp = icmp ult i32 %shl, 63
   ret i1 %cmp
 }

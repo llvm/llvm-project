@@ -2239,11 +2239,11 @@ static Instruction *foldICmpShlLHSC(ICmpInst &Cmp, Instruction *Shl,
   unsigned TypeBits = C.getBitWidth();
   ICmpInst::Predicate Pred = Cmp.getPredicate();
   if (Cmp.isUnsigned()) {
+    assert(!C2->isZero() && C2->ult(C) &&
+           "Should be simplified by InstSimplify");
     APInt Div, Rem;
     APInt::udivrem(C, *C2, Div, Rem);
-    if (!Rem.isZero())
-      return nullptr;
-    bool CIsPowerOf2 = Div.isPowerOf2();
+    bool CIsPowerOf2 = Rem.isZero() && Div.isPowerOf2();
 
     // (1 << Y) pred C -> Y pred Log2(C)
     if (!CIsPowerOf2) {
