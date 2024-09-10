@@ -354,14 +354,14 @@ define void @foo(<4 x i16> %vi0, <4 x float> %vf1, i8 %i0) {
   EXPECT_EQ(Vec4i32Ty->getElementCount(), Vec4FTy->getElementCount());
   // getExtendedElementCountVectorType
   auto *Vec4i64Ty =
-      sandboxir::FixedVectorType::getExtendedElementVectorType(Vec4i32Ty);
-  EXPECT_TRUE(Vec4i64Ty->getElementType()->isIntegerTy(64));
+      sandboxir::FixedVectorType::getExtendedElementVectorType(Vec4i16Ty);
+  EXPECT_TRUE(Vec4i64Ty->getElementType()->isIntegerTy(32));
   EXPECT_EQ(Vec4i64Ty->getElementCount(), Vec4i16Ty->getElementCount());
   // getTruncatedElementVectorType
-  auto *TVec4i16Ty =
-      sandboxir::FixedVectorType::getTruncatedElementVectorType(Vec4i32Ty);
-  EXPECT_TRUE(TVec4i16Ty->getElementType()->isIntegerTy(16));
-  EXPECT_EQ(TVec4i16Ty->getElementCount(), TVec4i16Ty->getElementCount());
+  auto *Vec4i8Ty =
+      sandboxir::FixedVectorType::getTruncatedElementVectorType(Vec4i16Ty);
+  EXPECT_TRUE(Vec4i8Ty->getElementType()->isIntegerTy(8));
+  EXPECT_EQ(Vec4i8Ty->getElementCount(), Vec4i8Ty->getElementCount());
   // getSubdividedVectorType
   auto *Vec8i8Ty =
       sandboxir::FixedVectorType::getSubdividedVectorType(Vec4i16Ty, 1);
