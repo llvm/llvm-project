@@ -16,7 +16,7 @@
 #include <sys/socket.h>  // For the types
 #include <sys/syscall.h> // For syscall numbers.
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, connect,
                    (int sockfd, const struct sockaddr *addr,
@@ -40,4 +40,4 @@ LLVM_LIBC_FUNCTION(int, connect,
   return ret;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

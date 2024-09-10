@@ -17,7 +17,7 @@
 #include <linux/net.h>   // For SYS_SOCKET socketcall number.
 #include <sys/syscall.h> // For syscall numbers.
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, listen, (int socket, int backlog)) {
 #ifdef SYS_listen
@@ -37,4 +37,4 @@ LLVM_LIBC_FUNCTION(int, listen, (int socket, int backlog)) {
   return ret;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

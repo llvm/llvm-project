@@ -14,7 +14,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-int bind(int domain, const struct sockaddr *address, socklen_t address_len);
+int bind(int socket, const struct sockaddr *address, socklen_t address_len);
 
 } // namespace LIBC_NAMESPACE_DECL
 

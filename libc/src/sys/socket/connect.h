@@ -6,15 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SYS_SOCKET_RECV_H
-#define LLVM_LIBC_SRC_SYS_SOCKET_RECV_H
+#ifndef LLVM_LIBC_SRC_SYS_SOCKET_CONNECT_H
+#define LLVM_LIBC_SRC_SYS_SOCKET_CONNECT_H
 
+#include "src/__support/macros/config.h"
 #include <sys/socket.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 int connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC_SYS_SOCKET_RECV_H
+#endif // LLVM_LIBC_SRC_SYS_SOCKET_CONNECT_H

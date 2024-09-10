@@ -15,7 +15,7 @@
 #include <sys/socket.h>  // For the types
 #include <sys/syscall.h> // For syscall numbers.
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(ssize_t, send,
                    (int sockfd, const void *buf, size_t len, int flags)) {
@@ -41,4 +41,4 @@ LLVM_LIBC_FUNCTION(ssize_t, send,
   return ret;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

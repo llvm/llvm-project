@@ -9,12 +9,13 @@
 #ifndef LLVM_LIBC_SRC_SYS_SOCKET_RECV_H
 #define LLVM_LIBC_SRC_SYS_SOCKET_RECV_H
 
+#include "src/__support/macros/config.h"
 #include <sys/socket.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 ssize_t recv(int sockfd, const void *buf, size_t len, int flags);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_SYS_SOCKET_RECV_H

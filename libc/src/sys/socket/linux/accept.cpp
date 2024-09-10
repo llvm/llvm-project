@@ -16,7 +16,7 @@
 #include <linux/net.h>   // For SYS_SOCKET socketcall number.
 #include <sys/syscall.h> // For syscall numbers.
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, accept,
                    (int domain, sockaddr *__restrict address,
@@ -40,4 +40,4 @@ LLVM_LIBC_FUNCTION(int, accept,
   return ret;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

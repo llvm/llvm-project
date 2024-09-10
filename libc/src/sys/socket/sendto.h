@@ -9,13 +9,14 @@
 #ifndef LLVM_LIBC_SRC_SYS_SOCKET_SENDTO_H
 #define LLVM_LIBC_SRC_SYS_SOCKET_SENDTO_H
 
+#include "src/__support/macros/config.h"
 #include <sys/socket.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 ssize_t sendto(int sockfd, const void *buf, size_t len, int flags,
                const struct sockaddr *dest_addr, socklen_t addrlen);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_SYS_SOCKET_SENDTO_H

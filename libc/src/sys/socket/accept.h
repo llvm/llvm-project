@@ -9,13 +9,14 @@
 #ifndef LLVM_LIBC_SRC_SYS_SOCKET_ACCEPT_H
 #define LLVM_LIBC_SRC_SYS_SOCKET_ACCEPT_H
 
+#include "src/__support/macros/config.h"
 #include <sys/socket.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 int accept(int domain, sockaddr *__restrict address,
            socklen_t *__restrict address_len);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_SYS_SOCKET_ACCEPT_H

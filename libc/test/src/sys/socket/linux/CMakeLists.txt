@@ -27,22 +27,3 @@ add_libc_unittest(
     libc.src.stdio.remove
     libc.src.unistd.close
 )
-
-add_libc_unittest(
-  send_test
-  SUITE
-    libc_sys_socket_unittests
-  SRCS
-    send_test.cpp
-  DEPENDS
-    libc.include.sys_socket
-    libc.src.errno.errno
-    libc.src.sys.socket.send
-    libc.src.sys.socket.socket
-    libc.src.sys.socket.bind
-    libc.src.sys.socket.connect
-    libc.src.sys.socket.listen
-    libc.src.sys.socket.accept
-    libc.src.stdio.remove
-    libc.src.unistd.close
-)

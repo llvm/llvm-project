@@ -9,10 +9,11 @@
 #ifndef LLVM_LIBC_SRC_SYS_SOCKET_LISTEN_H
 #define LLVM_LIBC_SRC_SYS_SOCKET_LISTEN_H
 
-namespace LIBC_NAMESPACE {
+#include "src/__support/macros/config.h"
+namespace LIBC_NAMESPACE_DECL {
 
 int listen(int socket, int backlog);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_SYS_SOCKET_LISTEN_H
