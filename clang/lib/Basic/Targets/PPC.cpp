@@ -630,6 +630,7 @@ bool PPCTargetInfo::initFeatureMap(
                                           .Default(false);
 
   Features["isa-v30-instructions"] =
+      llvm::is_contained(FeaturesVec, "+power9-vector") or
       llvm::StringSwitch<bool>(CPU).Case("pwr9", true).Default(false);
 
   Features["quadword-atomics"] =
@@ -637,6 +638,8 @@ bool PPCTargetInfo::initFeatureMap(
                                        .Case("pwr9", true)
                                        .Case("pwr8", true)
                                        .Default(false);
+
+  Features["power9-altivec"] = llvm::is_contained(FeaturesVec, "+power9-vector");
 
   // Power10 includes all the same features as Power9 plus any features specific
   // to the Power10 core.
