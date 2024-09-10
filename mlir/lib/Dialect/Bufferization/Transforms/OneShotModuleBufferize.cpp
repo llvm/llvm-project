@@ -349,7 +349,7 @@ getFuncOpsOrderedByCalls(ModuleOp moduleOp,
 /// entire function body, a more concise memref type can potentially be used for
 /// the return type of the function.
 static void foldMemRefCasts(FunctionOpInterface funcOp) {
-  if (funcOp.getFunctionBody().empty() || funcOp.getNumResults() == 0)
+  if (funcOp.getFunctionBody().empty())
     return;
 
   Operation *returnOp = getAssumedUniqueReturnOp(funcOp);
