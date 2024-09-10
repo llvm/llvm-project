@@ -510,19 +510,19 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
         return HasAVX512 && typeInSet(0, {s32, s64})(Query) &&
                typeInSet(1, {s32, s64})(Query);
       })
-      .lowerIf([=](const LegalityQuery &Query) {
-        // Lower conversions from s64
-        return !HasAVX512 &&
-               ((HasSSE1 && typeIs(0, s32)(Query)) ||
-                (HasSSE2 && typeIs(0, s64)(Query))) &&
-               (Is64Bit && typeIs(1, s64)(Query));
-      })
       .customIf([=](const LegalityQuery &Query) {
         return !HasAVX512 &&
                ((HasSSE1 && typeIs(0, s32)(Query)) ||
                 (HasSSE2 && typeIs(0, s64)(Query))) &&
                (scalarNarrowerThan(1, 32)(Query) ||
                 (Is64Bit && typeIs(1, s32)(Query)));
+      })
+      .lowerIf([=](const LegalityQuery &Query) {
+        // Lower conversions from s64
+        return !HasAVX512 &&
+               ((HasSSE1 && typeIs(0, s32)(Query)) ||
+                (HasSSE2 && typeIs(0, s64)(Query))) &&
+               (Is64Bit && typeIs(1, s64)(Query));
       })
       .clampScalar(0, s32, HasSSE2 ? s64 : s32)
       .widenScalarToNextPow2(0)

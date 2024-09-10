@@ -7133,7 +7133,8 @@ LegalizerHelper::lowerU64ToF32WithSITOFP(MachineInstr &MI) {
   auto RoundedHalved = MIRBuilder.buildOr(S64, Halved, LowerBit);
   auto HalvedFP = MIRBuilder.buildSITOFP(S32, RoundedHalved);
   auto LargeResult = MIRBuilder.buildFAdd(S32, HalvedFP, HalvedFP);
-  // Choose
+  // Check if the original value is larger than INT_MAX by comparing with
+  // zero to pick one of the two conversions.
   auto IsLarge =
       MIRBuilder.buildICmp(CmpInst::Predicate::ICMP_SLT, S1, Src, Zero);
   MIRBuilder.buildSelect(Dst, IsLarge, LargeResult, SmallResult);
