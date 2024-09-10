@@ -117,7 +117,10 @@ InjectorIRStrategy::chooseOperation(Value *Src, RandomIRBuilder &IB) {
 
 static inline iterator_range<BasicBlock::iterator>
 getInsertionRange(BasicBlock &BB) {
-  auto End = BB.getTerminatingMustTailCall() ? std::prev(BB.end()) : BB.end();
+  auto End = BB.end();
+  if (auto MTC = BB.getTerminatingMustTailCall()) {
+    End = MTC->getIterator();
+  }
   return make_range(BB.getFirstInsertionPt(), End);
 }
 
