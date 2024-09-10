@@ -61,7 +61,7 @@ public:
   }
 
 private:
-  bool tryToReduceVL(MachineInstr &MI);
+  bool tryToReduceVL(MachineInstr &MI) const;
   bool convertToVLMAX(MachineInstr &MI) const;
   bool convertToWholeRegister(MachineInstr &MI) const;
   bool convertToUnmasked(MachineInstr &MI) const;
@@ -73,7 +73,7 @@ private:
   bool hasSameEEW(const MachineInstr &User, const MachineInstr &Src) const;
   bool isAllOnesMask(const MachineInstr *MaskDef) const;
   std::optional<unsigned> getConstant(const MachineOperand &VL) const;
-  bool ensureDominates(const MachineOperand &Use, MachineInstr &Src);
+  bool ensureDominates(const MachineOperand &Use, MachineInstr &Src) const;
 
   /// Maps uses of V0 to the corresponding def of V0.
   DenseMap<const MachineInstr *, const MachineInstr *> V0Defs;
@@ -116,7 +116,7 @@ bool RISCVVectorPeephole::hasSameEEW(const MachineInstr &User,
 // Attempt to reduce the VL of an instruction whose sole use is feeding a
 // instruction with a narrower VL.  This currently works backwards from the
 // user instruction (which might have a smaller VL).
-bool RISCVVectorPeephole::tryToReduceVL(MachineInstr &MI) {
+bool RISCVVectorPeephole::tryToReduceVL(MachineInstr &MI) const {
   // Note that the goal here is a bit multifaceted.
   // 1) For store's reducing the VL of the value being stored may help to
   //    reduce VL toggles.  This is somewhat of an artifact of the fact we
@@ -421,6 +421,10 @@ bool RISCVVectorPeephole::convertSameMaskVMergeToVMv(MachineInstr &MI) {
         !ensureDominates(MI.getOperand(2), *True))
       return false;
     True->getOperand(1).setReg(MI.getOperand(2).getReg());
+    // If True is masked then its passthru needs to be in VRNoV0.
+    MRI->constrainRegClass(True->getOperand(1).getReg(),
+                           TII->getRegClass(True->getDesc(), 1, TRI,
+                                            *True->getParent()->getParent()));
   }
 
   MI.setDesc(TII->get(NewOpc));
@@ -522,18 +526,16 @@ static bool dominates(MachineBasicBlock::const_iterator A,
 /// does. Returns false if doesn't dominate and we can't move. \p MO must be in
 /// the same basic block as \Src.
 bool RISCVVectorPeephole::ensureDominates(const MachineOperand &MO,
-                                          MachineInstr &Src) {
+                                          MachineInstr &Src) const {
   assert(MO.getParent()->getParent() == Src.getParent());
   if (!MO.isReg() || MO.getReg() == RISCV::NoRegister)
     return true;
 
   MachineInstr *Def = MRI->getVRegDef(MO.getReg());
   if (Def->getParent() == Src.getParent() && !dominates(Def, Src)) {
-    MachineInstr *AfterDef = Def->getNextNode();
-    if (!isSafeToMove(Src, *AfterDef))
+    if (!isSafeToMove(Src, *Def->getNextNode()))
       return false;
-    V0Defs[&Src] = V0Defs[AfterDef];
-    Src.moveBefore(AfterDef);
+    Src.moveBefore(Def->getNextNode());
   }
 
   return true;
