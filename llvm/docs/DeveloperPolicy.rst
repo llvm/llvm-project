@@ -1317,7 +1317,7 @@ regenerate copyrighted material does not remove the copyright, and contributors
 are responsible for ensuring that such material does not appear in their
 contributions.
 
-As such, the LLVM policy is that contributors are permitted to to use artificial
+As such, the LLVM policy is that contributors are permitted to use artificial
 intelligence tools to produce contributions, provided that they have the right
 to license that code under the project license. Contributions found to violate
 this policy will be removed just like any other offending contribution.
