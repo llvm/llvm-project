@@ -112,9 +112,9 @@ bool WebAssemblyAsmTypeCheck::popRefType(SMLoc ErrorLoc) {
   return false;
 }
 
-bool WebAssemblyAsmTypeCheck::getLocal(SMLoc ErrorLoc, const MCOperand &Op,
+bool WebAssemblyAsmTypeCheck::getLocal(SMLoc ErrorLoc, const MCOperand &LocalOp,
                                        wasm::ValType &Type) {
-  auto Local = static_cast<size_t>(Op.getImm());
+  auto Local = static_cast<size_t>(LocalOp.getImm());
   if (Local >= LocalTypes.size())
     return typeError(ErrorLoc, StringRef("no local type specified for index ") +
                                    std::to_string(Local));
@@ -178,20 +178,21 @@ bool WebAssemblyAsmTypeCheck::checkSig(SMLoc ErrorLoc,
   return false;
 }
 
-bool WebAssemblyAsmTypeCheck::getSymRef(SMLoc ErrorLoc, const MCOperand &Op,
+bool WebAssemblyAsmTypeCheck::getSymRef(SMLoc ErrorLoc, const MCOperand &SymOp,
                                         const MCSymbolRefExpr *&SymRef) {
-  if (!Op.isExpr())
+  if (!SymOp.isExpr())
     return typeError(ErrorLoc, StringRef("expected expression operand"));
-  SymRef = dyn_cast<MCSymbolRefExpr>(Op.getExpr());
+  SymRef = dyn_cast<MCSymbolRefExpr>(SymOp.getExpr());
   if (!SymRef)
     return typeError(ErrorLoc, StringRef("expected symbol operand"));
   return false;
 }
 
-bool WebAssemblyAsmTypeCheck::getGlobal(SMLoc ErrorLoc, const MCOperand &Op,
+bool WebAssemblyAsmTypeCheck::getGlobal(SMLoc ErrorLoc,
+                                        const MCOperand &GlobalOp,
                                         wasm::ValType &Type) {
   const MCSymbolRefExpr *SymRef;
-  if (getSymRef(ErrorLoc, Op, SymRef))
+  if (getSymRef(ErrorLoc, GlobalOp, SymRef))
     return true;
   auto WasmSym = cast<MCSymbolWasm>(&SymRef->getSymbol());
   switch (WasmSym->getType().value_or(wasm::WASM_SYMBOL_TYPE_DATA)) {
@@ -216,10 +217,10 @@ bool WebAssemblyAsmTypeCheck::getGlobal(SMLoc ErrorLoc, const MCOperand &Op,
   return false;
 }
 
-bool WebAssemblyAsmTypeCheck::getTable(SMLoc ErrorLoc, const MCOperand &Op,
+bool WebAssemblyAsmTypeCheck::getTable(SMLoc ErrorLoc, const MCOperand &TableOp,
                                        wasm::ValType &Type) {
   const MCSymbolRefExpr *SymRef;
-  if (getSymRef(ErrorLoc, Op, SymRef))
+  if (getSymRef(ErrorLoc, TableOp, SymRef))
     return true;
   auto WasmSym = cast<MCSymbolWasm>(&SymRef->getSymbol());
   if (WasmSym->getType().value_or(wasm::WASM_SYMBOL_TYPE_DATA) !=
@@ -230,25 +231,12 @@ bool WebAssemblyAsmTypeCheck::getTable(SMLoc ErrorLoc, const MCOperand &Op,
   return false;
 }
 
-bool WebAssemblyAsmTypeCheck::endOfFunction(SMLoc ErrorLoc) {
-  // Check the return types.
-  for (auto RVT : llvm::reverse(ReturnTypes)) {
-    if (popType(ErrorLoc, RVT))
-      return true;
-  }
-  if (!Stack.empty()) {
-    return typeError(ErrorLoc, std::to_string(Stack.size()) +
-                                   " superfluous return values");
-  }
-  Unreachable = true;
-  return false;
-}
-
-bool WebAssemblyAsmTypeCheck::getSignature(SMLoc ErrorLoc, const MCOperand &Op,
+bool WebAssemblyAsmTypeCheck::getSignature(SMLoc ErrorLoc,
+                                           const MCOperand &SigOp,
                                            wasm::WasmSymbolType Type,
                                            const wasm::WasmSignature *&Sig) {
   const MCSymbolRefExpr *SymRef = nullptr;
-  if (getSymRef(ErrorLoc, Op, SymRef))
+  if (getSymRef(ErrorLoc, SigOp, SymRef))
     return true;
   const auto *WasmSym = cast<MCSymbolWasm>(&SymRef->getSymbol());
   Sig = WasmSym->getSignature();
@@ -268,6 +256,20 @@ bool WebAssemblyAsmTypeCheck::getSignature(SMLoc ErrorLoc, const MCOperand &Op,
     return typeError(ErrorLoc, StringRef("symbol ") + WasmSym->getName() +
                                    " missing ." + TypeName + "type");
   }
+  return false;
+}
+
+bool WebAssemblyAsmTypeCheck::endOfFunction(SMLoc ErrorLoc) {
+  // Check the return types.
+  for (auto RVT : llvm::reverse(ReturnTypes)) {
+    if (popType(ErrorLoc, RVT))
+      return true;
+  }
+  if (!Stack.empty()) {
+    return typeError(ErrorLoc, std::to_string(Stack.size()) +
+                                   " superfluous return values");
+  }
+  Unreachable = true;
   return false;
 }
 
