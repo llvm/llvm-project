@@ -1460,10 +1460,8 @@ public:
   _LIBCPP_HIDE_FROM_ABI __packaged_task_function() _NOEXCEPT : __f_(nullptr) {}
   template <class _Fp>
   _LIBCPP_HIDE_FROM_ABI __packaged_task_function(_Fp&& __f);
-#  if _LIBCPP_STD_VER <= 14
   template <class _Fp, class _Alloc>
   _LIBCPP_HIDE_FROM_ABI __packaged_task_function(allocator_arg_t, const _Alloc& __a, _Fp&& __f);
-#  endif
 
   _LIBCPP_HIDE_FROM_ABI __packaged_task_function(__packaged_task_function&&) _NOEXCEPT;
   _LIBCPP_HIDE_FROM_ABI __packaged_task_function& operator=(__packaged_task_function&&) _NOEXCEPT;
@@ -1509,7 +1507,6 @@ __packaged_task_function<_Rp(_ArgTypes...)>::__packaged_task_function(_Fp&& __f)
   }
 }
 
-#  if _LIBCPP_STD_VER <= 14
 template <class _Rp, class... _ArgTypes>
 template <class _Fp, class _Alloc>
 __packaged_task_function<_Rp(_ArgTypes...)>::__packaged_task_function(allocator_arg_t, const _Alloc& __a0, _Fp&& __f)
@@ -1528,7 +1525,6 @@ __packaged_task_function<_Rp(_ArgTypes...)>::__packaged_task_function(allocator_
     __f_ = std::addressof(*__hold.release());
   }
 }
-#  endif
 
 template <class _Rp, class... _ArgTypes>
 __packaged_task_function<_Rp(_ArgTypes...)>&
