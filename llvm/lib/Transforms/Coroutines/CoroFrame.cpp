@@ -1284,7 +1284,7 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
 
       // If we have a single edge PHINode, remove it and replace it with a
       // reload from the coroutine frame. (We already took care of multi edge
-      // PHINodes by rewriting them in the rewritePHIs function).
+      // PHINodes by normalizing them in the rewritePHIs function).
       if (auto *PN = dyn_cast<PHINode>(U)) {
         assert(PN->getNumIncomingValues() == 1 &&
                "unexpected number of incoming "

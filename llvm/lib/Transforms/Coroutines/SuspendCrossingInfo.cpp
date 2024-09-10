@@ -165,8 +165,13 @@ SuspendCrossingInfo::SuspendCrossingInfo(
   // Mark all CoroEnd Blocks. We do not propagate Kills beyond coro.ends as
   // the code beyond coro.end is reachable during initial invocation of the
   // coroutine.
-  for (auto *CE : CoroEnds)
+  for (auto *CE : CoroEnds) {
+    // Verify CoroEnd was normalized
+    assert(CE->getParent()->getFirstInsertionPt() == CE->getIterator() &&
+           CE->getParent()->size() <= 2 && "CoroEnd must be in its own BB");
+
     getBlockData(CE->getParent()).End = true;
+  }
 
   // Mark all suspend blocks and indicate that they kill everything they
   // consume. Note, that crossing coro.save also requires a spill, as any code
@@ -179,6 +184,11 @@ SuspendCrossingInfo::SuspendCrossingInfo(
     B.Kills |= B.Consumes;
   };
   for (auto *CSI : CoroSuspends) {
+    // Verify CoroSuspend was normalized
+    assert(CSI->getParent()->getFirstInsertionPt() == CSI->getIterator() &&
+           CSI->getParent()->size() <= 2 &&
+           "CoroSuspend must be in its own BB");
+
     markSuspendBlock(CSI);
     if (auto *Save = CSI->getCoroSave())
       markSuspendBlock(Save);
