@@ -242,26 +242,24 @@ static void createEntryMD(Module &M, const uint64_t ShaderFlags,
       // EntryPro.Entry is 0.
       ShaderEntryMDInfo SEP(EntryProp, Ctx, MDAnalysisInfo.ShaderProfile,
                             nullptr, 0);
-      MDTuple *EmptyMDT = SEP.getAsMetadata();
-      EntryFnMDNodes.emplace_back(EmptyMDT);
+      MDTuple *MDT = SEP.getAsMetadata();
+      EntryFnMDNodes.emplace_back(MDT);
     }
   } break;
   case Triple::EnvironmentType::Compute: {
     size_t NumEntries = MDAnalysisInfo.EntryPropertyVec.size();
-    if (NumEntries > 0) {
-      assert(NumEntries == 1 &&
-             "Compute shader: One and only one entry expected");
-      EntryProperties EntryProp = MDAnalysisInfo.EntryPropertyVec[0];
-      // ShaderFlagsAnalysis pass needs to collect and provide ShaderFlags for
-      // each entry function. Currently, even though the ShaderFlags value
-      // provided by ShaderFlagsAnalysis pass is created by walking all the
-      // function instructions of the module, it is sufficient to since there is
-      // only one entry function in the module.
-      ShaderEntryMDInfo SEP(EntryProp, Ctx, MDAnalysisInfo.ShaderProfile,
-                            MDResources, ShaderFlags);
-      MDTuple *EmptyMDT = SEP.getAsMetadata();
-      EntryFnMDNodes.emplace_back(EmptyMDT);
-    }
+    assert(NumEntries == 1 &&
+           "Compute shader: One and only one entry expected");
+    EntryProperties EntryProp = MDAnalysisInfo.EntryPropertyVec[0];
+    // ShaderFlagsAnalysis pass needs to collect and provide ShaderFlags for
+    // each entry function. Currently, even though the ShaderFlags value
+    // provided by ShaderFlagsAnalysis pass is created by walking all the
+    // function instructions of the module, it is sufficient to since there is
+    // only one entry function in the module.
+    ShaderEntryMDInfo SEP(EntryProp, Ctx, MDAnalysisInfo.ShaderProfile,
+                          MDResources, ShaderFlags);
+    MDTuple *MDT = SEP.getAsMetadata();
+    EntryFnMDNodes.emplace_back(MDT);
     break;
   }
   case Triple::EnvironmentType::Amplification:
@@ -272,19 +270,17 @@ static void createEntryMD(Module &M, const uint64_t ShaderFlags,
   case Triple::EnvironmentType::Geometry:
   case Triple::EnvironmentType::Pixel: {
     size_t NumEntries = MDAnalysisInfo.EntryPropertyVec.size();
-    if (NumEntries > 0) {
-      assert(NumEntries == 1 && "non-lib profiles should only have one entry");
-      EntryProperties EntryProp = MDAnalysisInfo.EntryPropertyVec[0];
-      // ShaderFlagsAnalysis pass needs to collect and provide ShaderFlags for
-      // each entry function. Currently, even though the ShaderFlags value
-      // provided by ShaderFlagsAnalysis pass is created by walking all the
-      // function instructions of the module, it is sufficient to since there is
-      // only one entry function in the module.
-      ShaderEntryMDInfo SEP(EntryProp, Ctx, MDAnalysisInfo.ShaderProfile,
-                            MDResources, ShaderFlags);
-      MDTuple *EmptyMDT = SEP.getAsMetadata();
-      EntryFnMDNodes.emplace_back(EmptyMDT);
-    }
+    assert(NumEntries == 1 && "non-lib profiles should only have one entry");
+    EntryProperties EntryProp = MDAnalysisInfo.EntryPropertyVec[0];
+    // ShaderFlagsAnalysis pass needs to collect and provide ShaderFlags for
+    // each entry function. Currently, even though the ShaderFlags value
+    // provided by ShaderFlagsAnalysis pass is created by walking all the
+    // function instructions of the module, it is sufficient to since there is
+    // only one entry function in the module.
+    ShaderEntryMDInfo SEP(EntryProp, Ctx, MDAnalysisInfo.ShaderProfile,
+                          MDResources, ShaderFlags);
+    MDTuple *MDT = SEP.getAsMetadata();
+    EntryFnMDNodes.emplace_back(MDT);
   } break;
   default:
     assert(0 && "invalid profile");
