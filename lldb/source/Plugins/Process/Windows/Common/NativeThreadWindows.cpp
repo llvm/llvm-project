@@ -178,9 +178,41 @@ Status NativeThreadWindows::RemoveWatchpoint(lldb::addr_t addr) {
 
 Status NativeThreadWindows::SetHardwareBreakpoint(lldb::addr_t addr,
                                                   size_t size) {
+#if defined(__aarch64__) || defined(_M_ARM64)
+  if (m_state == eStateLaunching)
+    return Status();
+
+  Status error = RemoveHardwareBreakpoint(addr);
+  if (error.Fail())
+    return error;
+
+  uint32_t bp_index = m_reg_context_up->SetHardwareBreakpoint(addr, size);
+
+  if (bp_index == LLDB_INVALID_INDEX32)
+    return Status::FromErrorString("Setting hardware breakpoint failed.");
+
+  m_hw_breakpoint_index_map.insert({addr, bp_index});
+
+  return Status();
+#else
   return Status::FromErrorString("unimplemented.");
+#endif
 }
 
 Status NativeThreadWindows::RemoveHardwareBreakpoint(lldb::addr_t addr) {
+#if defined(__aarch64__) || defined(_M_ARM64)
+  auto bp = m_hw_breakpoint_index_map.find(addr);
+  if (bp == m_hw_breakpoint_index_map.end())
+    return Status();
+
+  uint32_t bp_index = bp->second;
+  if (m_reg_context_up->ClearHardwareBreakpoint(bp_index)) {
+    m_hw_breakpoint_index_map.erase(bp);
+    return Status();
+  }
+
+  return Status::FromErrorString("Clearing hardware breakpoint failed.");
+#else
   return Status::FromErrorString("unimplemented.");
+#endif
 }
