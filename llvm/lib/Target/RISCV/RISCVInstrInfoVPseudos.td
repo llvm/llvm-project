@@ -2478,6 +2478,7 @@ multiclass VPseudoUnaryVMV_V_X_I {
         def "_X_" # mx : VPseudoUnaryNoMask<m.vrclass, GPR>,
                          SchedUnary<"WriteVIMovX", "ReadVIMovX", mx,
                                     forcePassthruRead=true>;
+        let isReMaterializable = 1 in
         def "_I_" # mx : VPseudoUnaryNoMask<m.vrclass, simm5>,
                          SchedNullary<"WriteVIMovI", mx,
                                       forcePassthruRead=true>;

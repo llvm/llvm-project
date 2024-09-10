@@ -16,6 +16,7 @@
 #include "debug.h"
 #include "error.h"
 #include "interval_map.h"
+#include "jit_dispatch.h"
 #include "wrapper_function_utils.h"
 
 #include <algorithm>
@@ -30,8 +31,8 @@
 
 #define DEBUG_TYPE "macho_platform"
 
-using namespace __orc_rt;
-using namespace __orc_rt::macho;
+using namespace orc_rt;
+using namespace orc_rt::macho;
 
 // Declare function tags for functions in the JIT process.
 ORC_RT_JIT_DISPATCH_TAG(__orc_rt_macho_push_initializers_tag)
@@ -82,7 +83,7 @@ using MachOJITDylibDepInfoMap =
 
 } // anonymous namespace
 
-namespace __orc_rt {
+namespace orc_rt {
 
 using SPSMachOObjectPlatformSectionsMap =
     SPSSequence<SPSTuple<SPSString, SPSExecutorAddrRange>>;
@@ -139,7 +140,7 @@ public:
   }
 };
 
-} // namespace __orc_rt
+} // namespace orc_rt
 
 namespace {
 struct TLVDescriptor {
@@ -406,7 +407,7 @@ private:
 
 } // anonymous namespace
 
-namespace __orc_rt {
+namespace orc_rt {
 
 class SPSMachOExecutorSymbolFlags;
 
@@ -441,7 +442,7 @@ public:
   }
 };
 
-} // namespace __orc_rt
+} // namespace orc_rt
 
 namespace {
 
@@ -915,7 +916,7 @@ Error MachOPlatformRuntimeState::requestPushSymbols(
   Error OpErr = Error::success();
   if (auto Err = WrapperFunction<SPSError(
           SPSExecutorAddr, SPSSequence<SPSTuple<SPSString, bool>>)>::
-          call(&__orc_rt_macho_push_symbols_tag, OpErr,
+          call(JITDispatch(&__orc_rt_macho_push_symbols_tag), OpErr,
                ExecutorAddr::fromPtr(JDS.Header), Symbols)) {
     cantFail(std::move(OpErr));
     return std::move(Err);
@@ -1145,8 +1146,9 @@ Error MachOPlatformRuntimeState::dlopenFull(
   // Unlock so that we can accept the initializer update.
   JDStatesLock.unlock();
   if (auto Err = WrapperFunction<SPSExpected<SPSMachOJITDylibDepInfoMap>(
-          SPSExecutorAddr)>::call(&__orc_rt_macho_push_initializers_tag,
-                                  DepInfo, ExecutorAddr::fromPtr(JDS.Header)))
+          SPSExecutorAddr)>::
+          call(JITDispatch(&__orc_rt_macho_push_initializers_tag), DepInfo,
+               ExecutorAddr::fromPtr(JDS.Header)))
     return Err;
   JDStatesLock.lock();
 
@@ -1532,8 +1534,8 @@ ORC_RT_INTERFACE int64_t __orc_rt_macho_run_program(const char *JITDylibName,
                                                     int argc, char *argv[]) {
   using MainTy = int (*)(int, char *[]);
 
-  void *H = __orc_rt_macho_jit_dlopen(JITDylibName,
-                                      __orc_rt::macho::ORC_RT_RTLD_LAZY);
+  void *H =
+      __orc_rt_macho_jit_dlopen(JITDylibName, orc_rt::macho::ORC_RT_RTLD_LAZY);
   if (!H) {
     __orc_rt_log_error(__orc_rt_macho_jit_dlerror());
     return -1;

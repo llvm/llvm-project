@@ -46,6 +46,8 @@ public:
   Expected<CallInst *> tryCreateOp(dxil::OpCode Op, ArrayRef<Value *> Args,
                                    Type *RetTy = nullptr);
 
+  /// Get a `%dx.types.ResRet` type with the given element type.
+  StructType *getResRetType(Type *ElementTy);
   /// Get the `%dx.types.Handle` type.
   StructType *getHandleType();
 

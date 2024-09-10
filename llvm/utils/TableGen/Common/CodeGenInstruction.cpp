@@ -22,7 +22,7 @@ using namespace llvm;
 // CGIOperandList Implementation
 //===----------------------------------------------------------------------===//
 
-CGIOperandList::CGIOperandList(Record *R) : TheDef(R) {
+CGIOperandList::CGIOperandList(const Record *R) : TheDef(R) {
   isPredicable = false;
   hasOptionalDef = false;
   isVariadic = false;
@@ -75,7 +75,7 @@ CGIOperandList::CGIOperandList(Record *R) : TheDef(R) {
       PrintFatalError(R->getLoc(), "Illegal operand for the '" + R->getName() +
                                        "' instruction!");
 
-    Record *Rec = Arg->getDef();
+    const Record *Rec = Arg->getDef();
     std::string PrintMethod = "printOperand";
     std::string EncoderMethod;
     std::string OperandType = "OPERAND_UNKNOWN";
