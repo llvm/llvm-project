@@ -35,7 +35,7 @@ llvm::Type *DirectXTargetCodeGenInfo::getHLSLType(CodeGenModule &CGM,
 
   llvm::LLVMContext &Ctx = CGM.getLLVMContext();
   // FIXME: translate __hlsl_resource_t to target("dx.TypedBuffer", <4 x float>,
-  // 1, 0, 1) only for now (RWBuffer<float4>); more work us needed to determine
+  // 1, 0, 0) only for now (RWBuffer<float4>); more work us needed to determine
   // the target ext type and its parameters based on the handle type
   // attributes (not yet implemented)
   llvm::FixedVectorType *ElemType =
