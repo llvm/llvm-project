@@ -38,6 +38,7 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_ENABLE_ZLIB
 #include "llvm/Support/JSON.h"
 
 #if defined(HAVE_LIBCOMPRESSION)
@@ -1745,7 +1746,7 @@ Status GDBRemoteCommunicationClient::LoadQXferMemoryMap() {
 
   llvm::Expected<std::string> xml = ReadExtFeature("memory-map", "");
   if (!xml)
-    return Status(xml.takeError());
+    return Status::FromError(xml.takeError());
 
   XMLDocument xml_document;
 

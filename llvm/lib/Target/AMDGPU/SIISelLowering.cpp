@@ -1210,9 +1210,13 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
         Info.ptrVal = RsrcArg;
     }
 
-    auto *Aux = cast<ConstantInt>(CI.getArgOperand(CI.arg_size() - 1));
-    if (Aux->getZExtValue() & AMDGPU::CPol::VOLATILE)
-      Info.flags |= MachineMemOperand::MOVolatile;
+    bool IsSPrefetch = IntrID == Intrinsic::amdgcn_s_buffer_prefetch_data;
+    if (!IsSPrefetch) {
+      auto *Aux = cast<ConstantInt>(CI.getArgOperand(CI.arg_size() - 1));
+      if (Aux->getZExtValue() & AMDGPU::CPol::VOLATILE)
+        Info.flags |= MachineMemOperand::MOVolatile;
+    }
+
     Info.flags |= MachineMemOperand::MODereferenceable;
     if (ME.onlyReadsMemory()) {
       if (RsrcIntr->IsImage) {
@@ -1251,16 +1255,18 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
 
       Info.flags |= MachineMemOperand::MOStore;
     } else {
-      // Atomic or NoReturn Sampler
+      // Atomic, NoReturn Sampler or prefetch
       Info.opc = CI.getType()->isVoidTy() ? ISD::INTRINSIC_VOID :
                                             ISD::INTRINSIC_W_CHAIN;
-      Info.flags |= MachineMemOperand::MOLoad |
-                    MachineMemOperand::MOStore |
-                    MachineMemOperand::MODereferenceable;
+      Info.flags |=
+          MachineMemOperand::MOLoad | MachineMemOperand::MODereferenceable;
+
+      if (!IsSPrefetch)
+        Info.flags |= MachineMemOperand::MOStore;
 
       switch (IntrID) {
       default:
-        if (RsrcIntr->IsImage && BaseOpcode->NoReturn) {
+        if ((RsrcIntr->IsImage && BaseOpcode->NoReturn) || IsSPrefetch) {
           // Fake memory access type for no return sampler intrinsics
           Info.memVT = MVT::i32;
         } else {
@@ -1428,6 +1434,13 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.align = Align(4);
 
     Info.flags = MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
+    return true;
+  }
+  case Intrinsic::amdgcn_s_prefetch_data: {
+    Info.opc = ISD::INTRINSIC_VOID;
+    Info.memVT = EVT::getIntegerVT(CI.getContext(), 8);
+    Info.ptrVal = CI.getArgOperand(0);
+    Info.flags |= MachineMemOperand::MOLoad;
     return true;
   }
   default:
@@ -9920,6 +9933,24 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
 
     auto NewMI = DAG.getMachineNode(Opc, DL, Op->getVTList(), Ops);
     return SDValue(NewMI, 0);
+  }
+  case Intrinsic::amdgcn_s_prefetch_data: {
+    // For non-global address space preserve the chain and remove the call.
+    if (!AMDGPU::isFlatGlobalAddrSpace(cast<MemSDNode>(Op)->getAddressSpace()))
+      return Op.getOperand(0);
+    return Op;
+  }
+  case Intrinsic::amdgcn_s_buffer_prefetch_data: {
+    SDValue Ops[] = {
+        Chain, bufferRsrcPtrToVector(Op.getOperand(2), DAG),
+        Op.getOperand(3), // offset
+        Op.getOperand(4), // length
+    };
+
+    MemSDNode *M = cast<MemSDNode>(Op);
+    return DAG.getMemIntrinsicNode(AMDGPUISD::SBUFFER_PREFETCH_DATA, DL,
+                                   Op->getVTList(), Ops, M->getMemoryVT(),
+                                   M->getMemOperand());
   }
   default: {
     if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =

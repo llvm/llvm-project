@@ -36,7 +36,6 @@ Type *Type::getDoubleTy(Context &Ctx) {
 Type *Type::getFloatTy(Context &Ctx) {
   return Ctx.getType(llvm::Type::getFloatTy(Ctx.LLVMCtx));
 }
-
 PointerType *PointerType::get(Type *ElementType, unsigned AddressSpace) {
   return cast<PointerType>(ElementType->getContext().getType(
       llvm::PointerType::get(ElementType->LLVMTy, AddressSpace)));
@@ -65,6 +64,43 @@ StructType *StructType::get(Context &Ctx, ArrayRef<Type *> Elements,
 VectorType *VectorType::get(Type *ElementType, ElementCount EC) {
   return cast<VectorType>(ElementType->getContext().getType(
       llvm::VectorType::get(ElementType->LLVMTy, EC)));
+}
+
+Type *VectorType::getElementType() const {
+  return Ctx.getType(cast<llvm::VectorType>(LLVMTy)->getElementType());
+}
+VectorType *VectorType::getInteger(VectorType *VTy) {
+  return cast<VectorType>(VTy->getContext().getType(
+      llvm::VectorType::getInteger(cast<llvm::VectorType>(VTy->LLVMTy))));
+}
+VectorType *VectorType::getExtendedElementVectorType(VectorType *VTy) {
+  return cast<VectorType>(
+      VTy->getContext().getType(llvm::VectorType::getExtendedElementVectorType(
+          cast<llvm::VectorType>(VTy->LLVMTy))));
+}
+VectorType *VectorType::getTruncatedElementVectorType(VectorType *VTy) {
+  return cast<VectorType>(
+      VTy->getContext().getType(llvm::VectorType::getTruncatedElementVectorType(
+          cast<llvm::VectorType>(VTy->LLVMTy))));
+}
+VectorType *VectorType::getSubdividedVectorType(VectorType *VTy,
+                                                int NumSubdivs) {
+  return cast<VectorType>(
+      VTy->getContext().getType(llvm::VectorType::getSubdividedVectorType(
+          cast<llvm::VectorType>(VTy->LLVMTy), NumSubdivs)));
+}
+VectorType *VectorType::getHalfElementsVectorType(VectorType *VTy) {
+  return cast<VectorType>(
+      VTy->getContext().getType(llvm::VectorType::getHalfElementsVectorType(
+          cast<llvm::VectorType>(VTy->LLVMTy))));
+}
+VectorType *VectorType::getDoubleElementsVectorType(VectorType *VTy) {
+  return cast<VectorType>(
+      VTy->getContext().getType(llvm::VectorType::getDoubleElementsVectorType(
+          cast<llvm::VectorType>(VTy->LLVMTy))));
+}
+bool VectorType::isValidElementType(Type *ElemTy) {
+  return llvm::VectorType::isValidElementType(ElemTy->LLVMTy);
 }
 
 IntegerType *IntegerType::get(Context &Ctx, unsigned NumBits) {

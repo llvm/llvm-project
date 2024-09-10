@@ -881,8 +881,8 @@ ABIArgInfo X86_32ABIInfo::classifyArgumentType(QualType Ty, CCState &State,
 
   if (isPromotableIntegerTypeForABI(Ty)) {
     if (InReg)
-      return ABIArgInfo::getExtendInReg(Ty);
-    return ABIArgInfo::getExtend(Ty);
+      return ABIArgInfo::getExtendInReg(Ty, CGT.ConvertType(Ty));
+    return ABIArgInfo::getExtend(Ty, CGT.ConvertType(Ty));
   }
 
   if (const auto *EIT = Ty->getAs<BitIntType>()) {
@@ -2756,7 +2756,7 @@ X86_64ABIInfo::classifyArgumentType(QualType Ty, unsigned freeIntRegs,
 
       if (Ty->isIntegralOrEnumerationType() &&
           isPromotableIntegerTypeForABI(Ty))
-        return ABIArgInfo::getExtend(Ty);
+        return ABIArgInfo::getExtend(Ty, CGT.ConvertType(Ty));
     }
 
     break;

@@ -109,3 +109,65 @@ define void @vid_passthru(ptr %p, <vscale x 8 x i64> %v) {
   store volatile <vscale x 8 x i64> %vid, ptr %p
   ret void
 }
+
+define void @vmv.v.i(ptr %p) {
+; POSTRA-LABEL: vmv.v.i:
+; POSTRA:       # %bb.0:
+; POSTRA-NEXT:    vsetvli a1, zero, e64, m8, ta, ma
+; POSTRA-NEXT:    vmv.v.i v8, 1
+; POSTRA-NEXT:    vs8r.v v8, (a0)
+; POSTRA-NEXT:    vl8re64.v v16, (a0)
+; POSTRA-NEXT:    vl8re64.v v24, (a0)
+; POSTRA-NEXT:    vl8re64.v v0, (a0)
+; POSTRA-NEXT:    vl8re64.v v8, (a0)
+; POSTRA-NEXT:    vs8r.v v8, (a0)
+; POSTRA-NEXT:    vs8r.v v0, (a0)
+; POSTRA-NEXT:    vs8r.v v24, (a0)
+; POSTRA-NEXT:    vs8r.v v16, (a0)
+; POSTRA-NEXT:    vmv.v.i v8, 1
+; POSTRA-NEXT:    vs8r.v v8, (a0)
+; POSTRA-NEXT:    ret
+;
+; PRERA-LABEL: vmv.v.i:
+; PRERA:       # %bb.0:
+; PRERA-NEXT:    addi sp, sp, -16
+; PRERA-NEXT:    .cfi_def_cfa_offset 16
+; PRERA-NEXT:    csrr a1, vlenb
+; PRERA-NEXT:    slli a1, a1, 3
+; PRERA-NEXT:    sub sp, sp, a1
+; PRERA-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 8 * vlenb
+; PRERA-NEXT:    vsetvli a1, zero, e64, m8, ta, ma
+; PRERA-NEXT:    vmv.v.i v8, 1
+; PRERA-NEXT:    vs8r.v v8, (a0)
+; PRERA-NEXT:    vl8re64.v v16, (a0)
+; PRERA-NEXT:    addi a1, sp, 16
+; PRERA-NEXT:    vs8r.v v16, (a1) # Unknown-size Folded Spill
+; PRERA-NEXT:    vl8re64.v v24, (a0)
+; PRERA-NEXT:    vl8re64.v v0, (a0)
+; PRERA-NEXT:    vl8re64.v v16, (a0)
+; PRERA-NEXT:    vs8r.v v16, (a0)
+; PRERA-NEXT:    vs8r.v v0, (a0)
+; PRERA-NEXT:    vs8r.v v24, (a0)
+; PRERA-NEXT:    vl8r.v v16, (a1) # Unknown-size Folded Reload
+; PRERA-NEXT:    vs8r.v v16, (a0)
+; PRERA-NEXT:    vs8r.v v8, (a0)
+; PRERA-NEXT:    csrr a0, vlenb
+; PRERA-NEXT:    slli a0, a0, 3
+; PRERA-NEXT:    add sp, sp, a0
+; PRERA-NEXT:    addi sp, sp, 16
+; PRERA-NEXT:    ret
+  %vmv.v.i = call <vscale x 8 x i64> @llvm.riscv.vmv.v.x.nxv8i64(<vscale x 8 x i64> poison, i64 1, i64 -1)
+  store volatile <vscale x 8 x i64> %vmv.v.i, ptr %p
+
+  %a = load volatile <vscale x 8 x i64>, ptr %p
+  %b = load volatile <vscale x 8 x i64>, ptr %p
+  %c = load volatile <vscale x 8 x i64>, ptr %p
+  %d = load volatile <vscale x 8 x i64>, ptr %p
+  store volatile <vscale x 8 x i64> %d, ptr %p
+  store volatile <vscale x 8 x i64> %c, ptr %p
+  store volatile <vscale x 8 x i64> %b, ptr %p
+  store volatile <vscale x 8 x i64> %a, ptr %p
+
+  store volatile <vscale x 8 x i64> %vmv.v.i, ptr %p
+  ret void
+}

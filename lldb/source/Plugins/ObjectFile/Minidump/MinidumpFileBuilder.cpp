@@ -473,7 +473,8 @@ GetThreadContext_x86_64(RegisterContext *reg_ctx) {
       lldb_private::minidump::MinidumpContext_x86_64_Flags::x86_64_Flag |
       lldb_private::minidump::MinidumpContext_x86_64_Flags::Control |
       lldb_private::minidump::MinidumpContext_x86_64_Flags::Segments |
-      lldb_private::minidump::MinidumpContext_x86_64_Flags::Integer);
+      lldb_private::minidump::MinidumpContext_x86_64_Flags::Integer |
+      lldb_private::minidump::MinidumpContext_x86_64_Flags::LLDBSpecific);
   thread_context.rax = read_register_u64(reg_ctx, "rax");
   thread_context.rbx = read_register_u64(reg_ctx, "rbx");
   thread_context.rcx = read_register_u64(reg_ctx, "rcx");
@@ -499,6 +500,8 @@ GetThreadContext_x86_64(RegisterContext *reg_ctx) {
   thread_context.gs = read_register_u64(reg_ctx, "gs");
   thread_context.ss = read_register_u64(reg_ctx, "ss");
   thread_context.ds = read_register_u64(reg_ctx, "ds");
+  thread_context.fs_base = read_register_u64(reg_ctx, "fs_base");
+  thread_context.gs_base = read_register_u64(reg_ctx, "gs_base");
   return thread_context;
 }
 

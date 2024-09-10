@@ -2437,6 +2437,58 @@ PointerType *ConstantPointerNull::getType() const {
       Ctx.getType(cast<llvm::ConstantPointerNull>(Val)->getType()));
 }
 
+UndefValue *UndefValue::get(Type *T) {
+  auto *LLVMC = llvm::UndefValue::get(T->LLVMTy);
+  return cast<UndefValue>(T->getContext().getOrCreateConstant(LLVMC));
+}
+
+UndefValue *UndefValue::getSequentialElement() const {
+  return cast<UndefValue>(Ctx.getOrCreateConstant(
+      cast<llvm::UndefValue>(Val)->getSequentialElement()));
+}
+
+UndefValue *UndefValue::getStructElement(unsigned Elt) const {
+  return cast<UndefValue>(Ctx.getOrCreateConstant(
+      cast<llvm::UndefValue>(Val)->getStructElement(Elt)));
+}
+
+UndefValue *UndefValue::getElementValue(Constant *C) const {
+  return cast<UndefValue>(
+      Ctx.getOrCreateConstant(cast<llvm::UndefValue>(Val)->getElementValue(
+          cast<llvm::Constant>(C->Val))));
+}
+
+UndefValue *UndefValue::getElementValue(unsigned Idx) const {
+  return cast<UndefValue>(Ctx.getOrCreateConstant(
+      cast<llvm::UndefValue>(Val)->getElementValue(Idx)));
+}
+
+PoisonValue *PoisonValue::get(Type *T) {
+  auto *LLVMC = llvm::PoisonValue::get(T->LLVMTy);
+  return cast<PoisonValue>(T->getContext().getOrCreateConstant(LLVMC));
+}
+
+PoisonValue *PoisonValue::getSequentialElement() const {
+  return cast<PoisonValue>(Ctx.getOrCreateConstant(
+      cast<llvm::PoisonValue>(Val)->getSequentialElement()));
+}
+
+PoisonValue *PoisonValue::getStructElement(unsigned Elt) const {
+  return cast<PoisonValue>(Ctx.getOrCreateConstant(
+      cast<llvm::PoisonValue>(Val)->getStructElement(Elt)));
+}
+
+PoisonValue *PoisonValue::getElementValue(Constant *C) const {
+  return cast<PoisonValue>(
+      Ctx.getOrCreateConstant(cast<llvm::PoisonValue>(Val)->getElementValue(
+          cast<llvm::Constant>(C->Val))));
+}
+
+PoisonValue *PoisonValue::getElementValue(unsigned Idx) const {
+  return cast<PoisonValue>(Ctx.getOrCreateConstant(
+      cast<llvm::PoisonValue>(Val)->getElementValue(Idx)));
+}
+
 FunctionType *Function::getFunctionType() const {
   return cast<FunctionType>(
       Ctx.getType(cast<llvm::Function>(Val)->getFunctionType()));
@@ -2549,6 +2601,14 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
     case llvm::Value::ConstantPointerNullVal:
       It->second = std::unique_ptr<ConstantPointerNull>(
           new ConstantPointerNull(cast<llvm::ConstantPointerNull>(C), *this));
+      return It->second.get();
+    case llvm::Value::PoisonValueVal:
+      It->second = std::unique_ptr<PoisonValue>(
+          new PoisonValue(cast<llvm::PoisonValue>(C), *this));
+      return It->second.get();
+    case llvm::Value::UndefValueVal:
+      It->second = std::unique_ptr<UndefValue>(
+          new UndefValue(cast<llvm::UndefValue>(C), *this));
       return It->second.get();
     case llvm::Value::ConstantArrayVal:
       It->second = std::unique_ptr<ConstantArray>(

@@ -162,6 +162,8 @@ void ODRHash::AddTemplateName(TemplateName Name) {
   case TemplateName::SubstTemplateTemplateParmPack:
   case TemplateName::UsingTemplate:
     break;
+  case TemplateName::DeducedTemplate:
+    llvm_unreachable("Unexpected DeducedTemplate");
   }
 }
 

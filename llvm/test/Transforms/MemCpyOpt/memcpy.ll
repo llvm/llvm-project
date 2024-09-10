@@ -456,6 +456,23 @@ define void @immut_param_maycapture(ptr align 4 noalias %val) {
 define void @immut_param_mayalias(ptr align 4 noalias %val) {
 ; CHECK-LABEL: @immut_param_mayalias(
 ; CHECK-NEXT:    [[VAL1:%.*]] = alloca i8, align 4
+; CHECK-NEXT:    call void @f(ptr [[VAL1]])
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[VAL1]], ptr align 4 [[VAL:%.*]], i64 1, i1 false)
+; CHECK-NEXT:    call void @f(ptr nocapture readonly align 4 [[VAL1]])
+; CHECK-NEXT:    ret void
+;
+  %val1 = alloca i8, align 4
+  call void @f(ptr %val1) ; escape
+  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %val1, ptr align 4 %val, i64 1, i1 false)
+  call void @f(ptr align 4 nocapture readonly %val1)
+  ret void
+}
+
+; Can remove memcpy because alloca does not escape, so lack of noalias on the
+; argument doesn't matter.
+define void @immut_param_unescaped_alloca(ptr align 4 noalias %val) {
+; CHECK-LABEL: @immut_param_unescaped_alloca(
+; CHECK-NEXT:    [[VAL1:%.*]] = alloca i8, align 4
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[VAL1]], ptr align 4 [[VAL:%.*]], i64 1, i1 false)
 ; CHECK-NEXT:    call void @f(ptr nocapture readonly align 4 [[VAL1]])
 ; CHECK-NEXT:    ret void
@@ -463,6 +480,41 @@ define void @immut_param_mayalias(ptr align 4 noalias %val) {
   %val1 = alloca i8, align 4
   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %val1, ptr align 4 %val, i64 1, i1 false)
   call void @f(ptr align 4 nocapture readonly %val1)
+  ret void
+}
+
+; Can remove memcpy because the function is argmem: read, so there cannot be
+; a write to the escaped pointer.
+define void @immut_param_memory_argmem_read(ptr align 4 noalias %val) {
+; CHECK-LABEL: @immut_param_memory_argmem_read(
+; CHECK-NEXT:    [[VAL1:%.*]] = alloca i8, align 4
+; CHECK-NEXT:    call void @f(ptr [[VAL1]])
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[VAL1]], ptr align 4 [[VAL:%.*]], i64 1, i1 false)
+; CHECK-NEXT:    call void @f(ptr nocapture readonly align 4 [[VAL1]]) #[[ATTR6:[0-9]+]]
+; CHECK-NEXT:    ret void
+;
+  %val1 = alloca i8, align 4
+  call void @f(ptr %val1) ; escape
+  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %val1, ptr align 4 %val, i64 1, i1 false)
+  call void @f(ptr align 4 nocapture readonly %val1) memory(argmem: read)
+  ret void
+}
+
+; Can remove memcpy because the function is argmem: read, so there cannot be
+; a write to the escaped pointer. The readonly on the argument is redundant in
+; this case.
+define void @immut_param_memory_argmem_read_no_readonly(ptr align 4 noalias %val) {
+; CHECK-LABEL: @immut_param_memory_argmem_read_no_readonly(
+; CHECK-NEXT:    [[VAL1:%.*]] = alloca i8, align 4
+; CHECK-NEXT:    call void @f(ptr [[VAL1]])
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[VAL1]], ptr align 4 [[VAL:%.*]], i64 1, i1 false)
+; CHECK-NEXT:    call void @f(ptr nocapture align 4 [[VAL1]]) #[[ATTR6]]
+; CHECK-NEXT:    ret void
+;
+  %val1 = alloca i8, align 4
+  call void @f(ptr %val1) ; escape
+  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %val1, ptr align 4 %val, i64 1, i1 false)
+  call void @f(ptr align 4 nocapture %val1) memory(argmem: read)
   ret void
 }
 
@@ -756,7 +808,7 @@ define void @byval_param_noalias_metadata(ptr align 4 byval(i32) %ptr) {
 
 define void @memcpy_memory_none(ptr %p, ptr %p2, i64 %size) {
 ; CHECK-LABEL: @memcpy_memory_none(
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[P:%.*]], ptr [[P2:%.*]], i64 [[SIZE:%.*]], i1 false) #[[ATTR6:[0-9]+]]
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[P:%.*]], ptr [[P2:%.*]], i64 [[SIZE:%.*]], i1 false) #[[ATTR7:[0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memcpy.p0.p0.i64(ptr %p, ptr %p2, i64 %size, i1 false) memory(none)
