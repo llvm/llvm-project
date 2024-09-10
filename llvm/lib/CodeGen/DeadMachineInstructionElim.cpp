@@ -107,8 +107,9 @@ bool DeadMachineInstructionElimImpl::isDead(const MachineInstr *MI) const {
       if (MO.isDead()) {
 #ifndef NDEBUG
         // Basic check on the register. All of them should be 'undef'.
-        for (auto &U : MRI->use_nodbg_operands(Reg))
-          assert(U.isUndef() && "'Undef' use on a 'dead' register is found!");
+        if (!MI->isBundle())
+          for (auto &U : MRI->use_nodbg_operands(Reg))
+            assert(U.isUndef() && "'Undef' use on a 'dead' register is found!");
 #endif
         continue;
       }
