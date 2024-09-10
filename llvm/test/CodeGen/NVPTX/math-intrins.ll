@@ -195,8 +195,9 @@ define double @round_double(double %a) {
 ; check the use of 0.5 to implement round
 ; CHECK-LABEL: round_double(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .pred %p<3>;
-; CHECK-NEXT:    .reg .f64 %fd<8>;
+; CHECK-NEXT:    .reg .pred %p<4>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .f64 %fd<10>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f64 %fd1, [round_double_param_0];
@@ -205,10 +206,16 @@ define double @round_double(double %a) {
 ; CHECK-NEXT:    add.rn.f64 %fd3, %fd2, 0d3FE0000000000000;
 ; CHECK-NEXT:    cvt.rzi.f64.f64 %fd4, %fd3;
 ; CHECK-NEXT:    selp.f64 %fd5, 0d0000000000000000, %fd4, %p1;
-; CHECK-NEXT:    copysign.f64 %fd6, %fd1, %fd5;
-; CHECK-NEXT:    setp.gt.f64 %p2, %fd2, 0d4330000000000000;
-; CHECK-NEXT:    selp.f64 %fd7, %fd1, %fd6, %p2;
-; CHECK-NEXT:    st.param.f64 [func_retval0+0], %fd7;
+; CHECK-NEXT:    abs.f64 %fd6, %fd5;
+; CHECK-NEXT:    neg.f64 %fd7, %fd6;
+; CHECK-NEXT:    mov.b64 %rd1, %fd1;
+; CHECK-NEXT:    shr.u64 %rd2, %rd1, 63;
+; CHECK-NEXT:    and.b64 %rd3, %rd2, 1;
+; CHECK-NEXT:    setp.eq.b64 %p2, %rd3, 1;
+; CHECK-NEXT:    selp.f64 %fd8, %fd7, %fd6, %p2;
+; CHECK-NEXT:    setp.gt.f64 %p3, %fd2, 0d4330000000000000;
+; CHECK-NEXT:    selp.f64 %fd9, %fd1, %fd8, %p3;
+; CHECK-NEXT:    st.param.f64 [func_retval0+0], %fd9;
 ; CHECK-NEXT:    ret;
   %b = call double @llvm.round.f64(double %a)
   ret double %b

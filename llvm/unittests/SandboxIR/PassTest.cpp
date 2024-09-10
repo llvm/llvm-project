@@ -9,6 +9,7 @@
 #include "llvm/SandboxIR/Pass.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Module.h"
+#include "llvm/SandboxIR/PassManager.h"
 #include "llvm/SandboxIR/SandboxIR.h"
 #include "llvm/Support/SourceMgr.h"
 #include "gtest/gtest.h"
@@ -81,4 +82,54 @@ define void @foo() {
   EXPECT_DEATH(TestNamePass("white space"), ".*whitespace.*");
   EXPECT_DEATH(TestNamePass("-dash"), ".*start with.*");
 #endif
+}
+
+TEST_F(PassTest, FunctionPassManager) {
+  auto *F = parseFunction(R"IR(
+define void @foo() {
+  ret void
+}
+)IR",
+                          "foo");
+  class TestPass1 final : public FunctionPass {
+    unsigned &BBCnt;
+
+  public:
+    TestPass1(unsigned &BBCnt) : FunctionPass("test-pass1"), BBCnt(BBCnt) {}
+    bool runOnFunction(Function &F) final {
+      for ([[maybe_unused]] auto &BB : F)
+        ++BBCnt;
+      return false;
+    }
+  };
+  class TestPass2 final : public FunctionPass {
+    unsigned &BBCnt;
+
+  public:
+    TestPass2(unsigned &BBCnt) : FunctionPass("test-pass2"), BBCnt(BBCnt) {}
+    bool runOnFunction(Function &F) final {
+      for ([[maybe_unused]] auto &BB : F)
+        ++BBCnt;
+      return false;
+    }
+  };
+  unsigned BBCnt1 = 0;
+  unsigned BBCnt2 = 0;
+  TestPass1 TPass1(BBCnt1);
+  TestPass2 TPass2(BBCnt2);
+
+  FunctionPassManager FPM("test-fpm");
+  FPM.addPass(&TPass1);
+  FPM.addPass(&TPass2);
+  // Check runOnFunction().
+  FPM.runOnFunction(*F);
+  EXPECT_EQ(BBCnt1, 1u);
+  EXPECT_EQ(BBCnt2, 1u);
+#ifndef NDEBUG
+  // Check dump().
+  std::string Buff;
+  llvm::raw_string_ostream SS(Buff);
+  FPM.print(SS);
+  EXPECT_EQ(Buff, "test-fpm(test-pass1,test-pass2)");
+#endif // NDEBUG
 }

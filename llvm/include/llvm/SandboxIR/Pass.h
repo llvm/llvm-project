@@ -37,8 +37,8 @@ public:
     Pass.print(OS);
     return OS;
   }
-  void print(raw_ostream &OS) const { OS << Name; }
-  LLVM_DUMP_METHOD void dump() const;
+  virtual void print(raw_ostream &OS) const { OS << Name; }
+  LLVM_DUMP_METHOD virtual void dump() const;
 #endif
 };
 
