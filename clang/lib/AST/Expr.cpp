@@ -1475,6 +1475,7 @@ CallExpr::CallExpr(StmtClass SC, Expr *Fn, ArrayRef<Expr *> PreArgs,
   this->computeDependence();
 
   CallExprBits.HasFPFeatures = FPFeatures.requiresTrailingStorage();
+  CallExprBits.IsCoroElideSafe = false;
   if (hasStoredFPFeatures())
     setStoredFPFeatures(FPFeatures);
 }
@@ -1490,6 +1491,7 @@ CallExpr::CallExpr(StmtClass SC, unsigned NumPreArgs, unsigned NumArgs,
   assert((CallExprBits.OffsetToTrailingObjects == OffsetToTrailingObjects) &&
          "OffsetToTrailingObjects overflow!");
   CallExprBits.HasFPFeatures = HasFPFeatures;
+  CallExprBits.IsCoroElideSafe = false;
 }
 
 CallExpr *CallExpr::Create(const ASTContext &Ctx, Expr *Fn,

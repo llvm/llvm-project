@@ -138,3 +138,24 @@ body: |
     %true:vrnov0 = PseudoVADD_VV_M1_MASK %false, $noreg, $noreg, $v0, 4, 4 /* e16 */, 0 /* tu, mu */
     $v0 = COPY %mask
     %x:vrnov0 = PseudoVMERGE_VVM_M1 %pt, %false, %true, $v0, 8, 5 /* e32 */
+...
+---
+name: same_mask_undef_truepassthru
+body: |
+  bb.0:
+    liveins: $v8, $v0
+    ; CHECK-LABEL: name: same_mask_undef_truepassthru
+    ; CHECK: liveins: $v8, $v0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %false:vrnov0 = COPY $v8
+    ; CHECK-NEXT: %mask:vr = COPY $v0
+    ; CHECK-NEXT: $v0 = COPY %mask
+    ; CHECK-NEXT: %true:vrnov0 = PseudoVADD_VV_M1_MASK %false, $noreg, $noreg, $v0, 4, 5 /* e32 */, 1 /* ta, mu */
+    ; CHECK-NEXT: $v0 = COPY %mask
+    %false:vrnov0 = COPY $v8
+    %mask:vr = COPY $v0
+    $v0 = COPY %mask
+    %true:vrnov0 = PseudoVADD_VV_M1_MASK $noreg, $noreg, $noreg, $v0, 4, 5 /* e32 */, 0 /* tu, mu */
+    $v0 = COPY %mask
+    %x:vrnov0 = PseudoVMERGE_VVM_M1 $noreg, %false, %true, $v0, 4, 5 /* e32 */
+...

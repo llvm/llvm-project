@@ -34,10 +34,12 @@ class CodeGenSchedModels;
 class CodeGenInstruction;
 
 using RecVec = std::vector<Record *>;
-using RecIter = std::vector<Record *>::const_iterator;
+using RecIter = RecVec::const_iterator;
+using ConstRecVec = std::vector<const Record *>;
+using ConstRecIter = ConstRecVec::const_iterator;
 
 using IdxVec = std::vector<unsigned>;
-using IdxIter = std::vector<unsigned>::const_iterator;
+using IdxIter = IdxVec::const_iterator;
 
 /// We have two kinds of SchedReadWrites. Explicitly defined and inferred
 /// sequences.  TheDef is nonnull for explicit SchedWrites, but Sequence may or
@@ -446,7 +448,7 @@ class CodeGenSchedModels {
 
   // Map each instruction to its unique SchedClass index considering the
   // combination of it's itinerary class, SchedRW list, and InstRW records.
-  using InstClassMapTy = DenseMap<Record *, unsigned>;
+  using InstClassMapTy = DenseMap<const Record *, unsigned>;
   InstClassMapTy InstrClassMap;
 
   std::vector<STIPredicateFunction> STIPredicates;
@@ -602,7 +604,7 @@ private:
   std::string createSchedClassName(Record *ItinClassDef,
                                    ArrayRef<unsigned> OperWrites,
                                    ArrayRef<unsigned> OperReads);
-  std::string createSchedClassName(const RecVec &InstDefs);
+  std::string createSchedClassName(const ConstRecVec &InstDefs);
   void createInstRWClass(Record *InstRWDef);
 
   void collectProcItins();

@@ -243,6 +243,7 @@ CGSCC_PASS("attributor-light-cgscc", AttributorLightCGSCCPass())
 CGSCC_PASS("invalidate<all>", InvalidateAllAnalysesPass())
 CGSCC_PASS("no-op-cgscc", NoOpCGSCCPass())
 CGSCC_PASS("openmp-opt-cgscc", OpenMPOptCGSCCPass())
+CGSCC_PASS("coro-annotation-elide", CoroAnnotationElidePass())
 #undef CGSCC_PASS
 
 #ifndef CGSCC_PASS_WITH_PARAMS
