@@ -86,11 +86,12 @@ define <2 x i8> @out_v2i8(<2 x i8> %x, <2 x i8> %y, <2 x i8> %mask) nounwind {
 define <1 x i16> @out_v1i16(<1 x i16> %x, <1 x i16> %y, <1 x i16> %mask) nounwind {
 ; CHECK-LABEL: out_v1i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edx, %eax
+; CHECK-NEXT:    # kill: def $edx killed $edx def $rdx
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
 ; CHECK-NEXT:    andl %edx, %edi
-; CHECK-NEXT:    notl %eax
-; CHECK-NEXT:    andl %esi, %eax
-; CHECK-NEXT:    orl %edi, %eax
+; CHECK-NEXT:    notl %edx
+; CHECK-NEXT:    andl %esi, %edx
+; CHECK-NEXT:    leal (%rdx,%rdi), %eax
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq
   %mx = and <1 x i16> %x, %mask
@@ -235,32 +236,38 @@ define <4 x i8> @out_v4i8_undef(<4 x i8> %x, <4 x i8> %y, <4 x i8> %mask) nounwi
 define <2 x i16> @out_v2i16(<2 x i16> %x, <2 x i16> %y, <2 x i16> %mask) nounwind {
 ; CHECK-BASELINE-LABEL: out_v2i16:
 ; CHECK-BASELINE:       # %bb.0:
-; CHECK-BASELINE-NEXT:    movl %r8d, %eax
+; CHECK-BASELINE-NEXT:    # kill: def $r9d killed $r9d def $r9
+; CHECK-BASELINE-NEXT:    # kill: def $r8d killed $r8d def $r8
+; CHECK-BASELINE-NEXT:    # kill: def $esi killed $esi def $rsi
+; CHECK-BASELINE-NEXT:    # kill: def $edi killed $edi def $rdi
 ; CHECK-BASELINE-NEXT:    andl %r9d, %esi
 ; CHECK-BASELINE-NEXT:    andl %r8d, %edi
-; CHECK-BASELINE-NEXT:    notl %eax
+; CHECK-BASELINE-NEXT:    notl %r8d
 ; CHECK-BASELINE-NEXT:    notl %r9d
 ; CHECK-BASELINE-NEXT:    andl %ecx, %r9d
-; CHECK-BASELINE-NEXT:    orl %esi, %r9d
-; CHECK-BASELINE-NEXT:    andl %edx, %eax
-; CHECK-BASELINE-NEXT:    orl %edi, %eax
+; CHECK-BASELINE-NEXT:    leal (%r9,%rsi), %ecx
+; CHECK-BASELINE-NEXT:    andl %edx, %r8d
+; CHECK-BASELINE-NEXT:    leal (%r8,%rdi), %eax
 ; CHECK-BASELINE-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-BASELINE-NEXT:    movl %r9d, %edx
+; CHECK-BASELINE-NEXT:    movl %ecx, %edx
 ; CHECK-BASELINE-NEXT:    retq
 ;
 ; CHECK-SSE1-LABEL: out_v2i16:
 ; CHECK-SSE1:       # %bb.0:
-; CHECK-SSE1-NEXT:    movl %r8d, %eax
+; CHECK-SSE1-NEXT:    # kill: def $r9d killed $r9d def $r9
+; CHECK-SSE1-NEXT:    # kill: def $r8d killed $r8d def $r8
+; CHECK-SSE1-NEXT:    # kill: def $esi killed $esi def $rsi
+; CHECK-SSE1-NEXT:    # kill: def $edi killed $edi def $rdi
 ; CHECK-SSE1-NEXT:    andl %r9d, %esi
 ; CHECK-SSE1-NEXT:    andl %r8d, %edi
-; CHECK-SSE1-NEXT:    notl %eax
+; CHECK-SSE1-NEXT:    notl %r8d
 ; CHECK-SSE1-NEXT:    notl %r9d
 ; CHECK-SSE1-NEXT:    andl %ecx, %r9d
-; CHECK-SSE1-NEXT:    orl %esi, %r9d
-; CHECK-SSE1-NEXT:    andl %edx, %eax
-; CHECK-SSE1-NEXT:    orl %edi, %eax
+; CHECK-SSE1-NEXT:    leal (%r9,%rsi), %ecx
+; CHECK-SSE1-NEXT:    andl %edx, %r8d
+; CHECK-SSE1-NEXT:    leal (%r8,%rdi), %eax
 ; CHECK-SSE1-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-SSE1-NEXT:    movl %r9d, %edx
+; CHECK-SSE1-NEXT:    movl %ecx, %edx
 ; CHECK-SSE1-NEXT:    retq
 ;
 ; CHECK-SSE2-LABEL: out_v2i16:
