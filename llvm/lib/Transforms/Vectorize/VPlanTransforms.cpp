@@ -1598,6 +1598,8 @@ void VPlanTransforms::licm(VPlan &Plan) {
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_shallow(LoopRegion->getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
+      // TODO: Relax checks in the future, e.g. we could also hoist reads, if
+      // their memory location is not modified in the vector loop.
       if (R.mayHaveSideEffects() || R.mayReadFromMemory() || R.isPhi() ||
           any_of(R.operands(), [](VPValue *Op) {
             return !Op->isDefinedOutsideVectorRegions();
