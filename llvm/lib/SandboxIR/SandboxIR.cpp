@@ -3173,7 +3173,7 @@ void BasicBlock::buildBasicBlockFromLLVMIR(llvm::BasicBlock *LLVMBB) {
       Ctx.getOrCreateValue(Op);
     }
   }
-#if !defined(NDEBUG) && defined(SBVEC_EXPENSIVE_CHECKS)
+#if !defined(NDEBUG)
   verify();
 #endif
 }
@@ -3249,4 +3249,12 @@ void BasicBlock::dumpOS(raw_ostream &OS) const {
     }
   }
 }
+
+void BasicBlock::verify() const {
+  assert(isa<llvm::BasicBlock>(Val) && "Expected BasicBlock!");
+  for (const auto &I : *this) {
+    I.verify();
+  }
+}
+
 #endif // NDEBUG
