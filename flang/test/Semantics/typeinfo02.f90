@@ -29,5 +29,5 @@ module m1
     character(len=*), intent(inout) :: iomsg
   end subroutine
 end module
-!CHECK: .s.base, SAVE, TARGET (CompilerCreated, ReadOnly): ObjectEntity type: TYPE(specialbinding) shape: 0_8:0_8 init:[specialbinding::specialbinding(which=5_1,isargdescriptorset=1_1,istypebound=1_1,isargcontiguousset=0_1,proc=wf1)]
-!CHECK: .s.extended, SAVE, TARGET (CompilerCreated, ReadOnly): ObjectEntity type: TYPE(specialbinding) shape: 0_8:0_8 init:[specialbinding::specialbinding(which=5_1,isargdescriptorset=1_1,istypebound=1_1,isargcontiguousset=0_1,proc=wf2)]
+!CHECK: .s.base, SAVE, TARGET (CompilerCreated, ReadOnly): ObjectEntity type: TYPE(specialbinding) shape: 0_8:0_8 init:[specialbinding::specialbinding(which=7_1,isargdescriptorset=1_1,istypebound=1_1,isargcontiguousset=0_1,proc=wf1)]
+!CHECK: .s.extended, SAVE, TARGET (CompilerCreated, ReadOnly): ObjectEntity type: TYPE(specialbinding) shape: 0_8:0_8 init:[specialbinding::specialbinding(which=7_1,isargdescriptorset=1_1,istypebound=1_1,isargcontiguousset=0_1,proc=wf2)]
