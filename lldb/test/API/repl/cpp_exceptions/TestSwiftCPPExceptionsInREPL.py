@@ -13,7 +13,7 @@ import lldb
 import swift
 import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import decorators
+from lldbsuite.test.decorators import *
 
 
 class TestSwiftREPLExceptions(TestBase):
@@ -23,32 +23,29 @@ class TestSwiftREPLExceptions(TestBase):
     # each debug info format.
     NO_DEBUG_INFO_TESTCASE = True
 
-    @decorators.skipUnlessDarwin
-    @decorators.swiftTest
-    def test_set_repl_mode_exceptions(self):
+    @skipUnlessDarwin
+    @swiftTest
+    def DISABLED_test_set_repl_mode_exceptions(self):
         """ Test that SetREPLMode turns off trapping exceptions."""
-        return
         self.build()
         self.main_source_file = lldb.SBFileSpec("main.swift")
         self.do_repl_mode_test()
 
-    @decorators.skipUnlessDarwin
-    @decorators.swiftTest
+    @skipUnlessDarwin
+    @swiftTest
     def test_repl_exceptions(self):
         """ Test the lldb --repl turns off trapping exceptions."""
         self.build()
         self.do_repl_test()
 
-    def setUp(self):
-        # Call super's setUp().
-        TestBase.setUp(self)
-
-    @decorators.skipIfRemote
+    @skipIfRemote
     def do_repl_test(self):
         sdk_root = ""
         with open(self.getBuildArtifact("sdkroot.txt"), 'r') as f:
             sdk_root = f.readlines()[0]
         self.assertGreater(len(sdk_root), 0)
+        if sdk_root[-1] == '\n':
+            sdk_root = sdk_root[:-1]
         build_dir = self.getBuildDir()
         repl_args = [lldbtest_config.lldbExec, "-x", "--repl=-enable-objc-interop -sdk %s -L%s -I%s"%(sdk_root, build_dir, build_dir)]
         repl_proc = subprocess.Popen(repl_args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, cwd=build_dir)
@@ -71,7 +68,7 @@ class TestSwiftREPLExceptions(TestBase):
                 lldb.SBFileSpec(os.path.join(wd, filename)))
             self.assertFalse(err.Fail(), 'Failed to copy ' + filename)
         (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(self,
-                                   "Set a breakpoint here", self.main_source_file) 
+                                   "Set a breakpoint here", self.main_source_file)
 
         frame = thread.GetFrameAtIndex(0)
         options = lldb.SBExpressionOptions()

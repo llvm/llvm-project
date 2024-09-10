@@ -490,8 +490,9 @@ public:
   /// Return only fatal errors.
   Status GetFatalErrors() const;
   /// Notify the Process about any Swift or ClangImporter errors.
-  void DiagnoseWarnings(Process &process, Module &module) const override;
-  
+  void DiagnoseWarnings(Process &process,
+                        const SymbolContext &sc) const override;
+
   bool SetColorizeDiagnostics(bool b);
 
   void PrintDiagnostics(DiagnosticManager &diagnostic_manager,
