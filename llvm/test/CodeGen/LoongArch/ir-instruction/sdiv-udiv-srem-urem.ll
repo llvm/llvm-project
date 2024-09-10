@@ -191,7 +191,8 @@ define signext i32 @sdiv_si32_ui32_ui32(i32 %a, i32 %b) {
 ; LA64:       # %bb.0: # %entry
 ; LA64-NEXT:    addi.w $a1, $a1, 0
 ; LA64-NEXT:    addi.w $a0, $a0, 0
-; LA64-NEXT:    div.w $a0, $a0, $a1
+; LA64-NEXT:    div.d $a0, $a0, $a1
+; LA64-NEXT:    addi.w $a0, $a0, 0
 ; LA64-NEXT:    ret
 ;
 ; LA32-TRAP-LABEL: sdiv_si32_ui32_ui32:
@@ -207,11 +208,12 @@ define signext i32 @sdiv_si32_ui32_ui32(i32 %a, i32 %b) {
 ; LA64-TRAP:       # %bb.0: # %entry
 ; LA64-TRAP-NEXT:    addi.w $a1, $a1, 0
 ; LA64-TRAP-NEXT:    addi.w $a0, $a0, 0
-; LA64-TRAP-NEXT:    div.w $a0, $a0, $a1
+; LA64-TRAP-NEXT:    div.d $a0, $a0, $a1
 ; LA64-TRAP-NEXT:    bnez $a1, .LBB5_2
 ; LA64-TRAP-NEXT:  # %bb.1: # %entry
 ; LA64-TRAP-NEXT:    break 7
 ; LA64-TRAP-NEXT:  .LBB5_2: # %entry
+; LA64-TRAP-NEXT:    addi.w $a0, $a0, 0
 ; LA64-TRAP-NEXT:    ret
 entry:
   %r = sdiv i32 %a, %b
@@ -1150,4 +1152,65 @@ define i64 @urem_i64(i64 %a, i64 %b) {
 entry:
   %r = urem i64 %a, %b
   ret i64 %r
+}
+
+define signext i32 @pr107414(i32 signext %x) {
+; LA32-LABEL: pr107414:
+; LA32:       # %bb.0: # %entry
+; LA32-NEXT:    addi.w $sp, $sp, -16
+; LA32-NEXT:    .cfi_def_cfa_offset 16
+; LA32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
+; LA32-NEXT:    .cfi_offset 1, -4
+; LA32-NEXT:    move $a2, $a0
+; LA32-NEXT:    srai.w $a3, $a0, 31
+; LA32-NEXT:    lu12i.w $a0, -266831
+; LA32-NEXT:    ori $a0, $a0, 3337
+; LA32-NEXT:    move $a1, $zero
+; LA32-NEXT:    bl %plt(__divdi3)
+; LA32-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
+; LA32-NEXT:    addi.w $sp, $sp, 16
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: pr107414:
+; LA64:       # %bb.0: # %entry
+; LA64-NEXT:    lu12i.w $a1, -266831
+; LA64-NEXT:    ori $a1, $a1, 3337
+; LA64-NEXT:    lu32i.d $a1, 0
+; LA64-NEXT:    div.d $a0, $a1, $a0
+; LA64-NEXT:    addi.w $a0, $a0, 0
+; LA64-NEXT:    ret
+;
+; LA32-TRAP-LABEL: pr107414:
+; LA32-TRAP:       # %bb.0: # %entry
+; LA32-TRAP-NEXT:    addi.w $sp, $sp, -16
+; LA32-TRAP-NEXT:    .cfi_def_cfa_offset 16
+; LA32-TRAP-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
+; LA32-TRAP-NEXT:    .cfi_offset 1, -4
+; LA32-TRAP-NEXT:    move $a2, $a0
+; LA32-TRAP-NEXT:    srai.w $a3, $a0, 31
+; LA32-TRAP-NEXT:    lu12i.w $a0, -266831
+; LA32-TRAP-NEXT:    ori $a0, $a0, 3337
+; LA32-TRAP-NEXT:    move $a1, $zero
+; LA32-TRAP-NEXT:    bl %plt(__divdi3)
+; LA32-TRAP-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
+; LA32-TRAP-NEXT:    addi.w $sp, $sp, 16
+; LA32-TRAP-NEXT:    ret
+;
+; LA64-TRAP-LABEL: pr107414:
+; LA64-TRAP:       # %bb.0: # %entry
+; LA64-TRAP-NEXT:    lu12i.w $a1, -266831
+; LA64-TRAP-NEXT:    ori $a1, $a1, 3337
+; LA64-TRAP-NEXT:    lu32i.d $a1, 0
+; LA64-TRAP-NEXT:    div.d $a1, $a1, $a0
+; LA64-TRAP-NEXT:    bnez $a0, .LBB32_2
+; LA64-TRAP-NEXT:  # %bb.1: # %entry
+; LA64-TRAP-NEXT:    break 7
+; LA64-TRAP-NEXT:  .LBB32_2: # %entry
+; LA64-TRAP-NEXT:    addi.w $a0, $a1, 0
+; LA64-TRAP-NEXT:    ret
+entry:
+  %conv = sext i32 %x to i64
+  %div = sdiv i64 3202030857, %conv
+  %conv1 = trunc i64 %div to i32
+  ret i32 %conv1
 }
