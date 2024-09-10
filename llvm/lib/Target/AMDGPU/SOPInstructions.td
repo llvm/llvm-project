@@ -1902,7 +1902,7 @@ let SubtargetPredicate = HasSWC, hasSideEffects = 1 in {
 let SubtargetPredicate = Has1024AddressableVGPRs in {
   def S_SET_VGPR_MSB : SOPP_Pseudo<"s_set_vgpr_msb" , (ins i16imm:$simm16), "$simm16"> {
     let hasSideEffects = 1;
-    let Defs = [MODE];
+    let Defs = [MODE];  // The MSBs are stored in SQ_WAVE_MODE.
   }
 }
 
@@ -1916,7 +1916,9 @@ def s_sema_wait_imm : ImmLeaf<
 >;
 
 let SubtargetPredicate = isGFX13Plus, hasSideEffects = 1 in {
-  let Defs = [MODE] in
+  // In GFX13+ the MSBs and the index registers are stored in
+  // SQ_WAVE_GPR_MSB_IDX0 and SQ_WAVE_GPR_IDX123, so
+  // S_SET_VGPR_FRAMES does not write to SQ_WAVE_MODE.
   def S_SET_VGPR_FRAMES : SOPP_Pseudo<"s_set_vgpr_frames" , (ins i16imm:$simm16), "$simm16">;
 
   def S_SEMA_SIGNAL            : SOPP_Pseudo<"s_sema_signal", (ins i16imm:$simm16), "$simm16">;
