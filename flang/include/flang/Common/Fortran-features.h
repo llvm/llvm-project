@@ -51,7 +51,8 @@ ENUM_CLASS(LanguageFeature, BackslashEscapes, OldDebugLines,
     BadBranchTarget, ConvertedArgument, HollerithPolymorphic, ListDirectedSize,
     NonBindCInteroperability, CudaManaged, CudaUnified,
     PolymorphicActualAllocatableOrPointerToMonomorphicDummy, RelaxedPureDummy,
-    UndefinableAsynchronousOrVolatileActual, AutomaticInMainProgram, PrintCptr)
+    UndefinableAsynchronousOrVolatileActual, AutomaticInMainProgram, PrintCptr,
+    SavedLocalInSpecExpr)
 
 // Portability and suspicious usage warnings
 ENUM_CLASS(UsageWarning, Portability, PointerToUndefinable,
@@ -146,6 +147,8 @@ public:
     warnUsage_.set(UsageWarning::VectorSubscriptFinalization);
     warnUsage_.set(UsageWarning::UndefinedFunctionResult);
     warnUsage_.set(UsageWarning::UselessIomsg);
+    // New warnings, on by default
+    warnLanguage_.set(LanguageFeature::SavedLocalInSpecExpr);
   }
   LanguageFeatureControl(const LanguageFeatureControl &) = default;
 
