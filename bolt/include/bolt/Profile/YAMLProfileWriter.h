@@ -32,9 +32,28 @@ public:
   /// Save execution profile for that instance.
   std::error_code writeProfile(const RewriteInstance &RI);
 
+  using InlineTreeMapTy =
+      DenseMap<const MCDecodedPseudoProbeInlineTree *, uint32_t>;
+  struct InlineTreeDesc {
+    template <typename T> using GUIDMapTy = std::unordered_map<uint64_t, T>;
+    using GUIDNodeMap = GUIDMapTy<const MCDecodedPseudoProbeInlineTree *>;
+    using GUIDNumMap = GUIDMapTy<uint32_t>;
+    GUIDNodeMap TopLevelGUIDToInlineTree;
+    GUIDNumMap GUIDIdxMap;
+    GUIDNumMap HashIdxMap;
+  };
+
+  static std::tuple<std::vector<yaml::bolt::InlineTreeInfo>, InlineTreeMapTy>
+  convertBFInlineTree(const MCPseudoProbeDecoder &Decoder,
+                      const InlineTreeDesc &InlineTree, uint64_t GUID);
+
   static yaml::bolt::BinaryFunctionProfile
   convert(const BinaryFunction &BF, bool UseDFS,
+          const InlineTreeDesc &InlineTree,
           const BoltAddressTranslation *BAT = nullptr);
+
+  static std::tuple<yaml::bolt::PseudoProbeDesc, InlineTreeDesc>
+  convertPseudoProbeDesc(const MCPseudoProbeDecoder &PseudoProbeDecoder);
 
   /// Set CallSiteInfo destination fields from \p Symbol and return a target
   /// BinaryFunction for that symbol.
@@ -43,14 +62,38 @@ public:
                     const MCSymbol *Symbol, const BoltAddressTranslation *BAT,
                     uint32_t Offset = 0);
 
-  using InlineTreeTy =
-      std::vector<std::pair<const MCDecodedPseudoProbeInlineTree *,
-                            yaml::bolt::InlineTreeInfo>>;
-  /// Return pseudo probe inline tree for a given top-level GUID.
-  static InlineTreeTy
-  getInlineTree(const MCPseudoProbeDecoder &PseudoProbeDecoder, uint64_t GUID);
-};
+private:
+  struct InlineTreeNode {
+    const MCDecodedPseudoProbeInlineTree *InlineTree;
+    uint64_t GUID;
+    uint64_t Hash;
+    uint32_t ParentId;
+    uint32_t InlineSite;
+  };
+  static std::vector<InlineTreeNode>
+  getInlineTree(const MCPseudoProbeDecoder &Decoder,
+                const MCDecodedPseudoProbeInlineTree *Root);
 
+  // 0 - block probe, 1 - indirect call, 2 - direct call
+  using ProbeList = std::array<SmallVector<uint64_t, 0>, 3>;
+  using NodeIdToProbes = DenseMap<uint32_t, ProbeList>;
+  static std::vector<yaml::bolt::PseudoProbeInfo>
+  convertNodeProbes(NodeIdToProbes &NodeProbes);
+
+public:
+  template <typename T>
+  static std::vector<yaml::bolt::PseudoProbeInfo>
+  writeBlockProbes(T Probes, const InlineTreeMapTy &InlineTreeNodeId) {
+    NodeIdToProbes NodeProbes;
+    for (const MCDecodedPseudoProbe &Probe : Probes) {
+      auto It = InlineTreeNodeId.find(Probe.getInlineTreeNode());
+      if (It == InlineTreeNodeId.end())
+        continue;
+      NodeProbes[It->second][Probe.getType()].emplace_back(Probe.getIndex());
+    }
+    return convertNodeProbes(NodeProbes);
+  }
+};
 } // namespace bolt
 } // namespace llvm
 
