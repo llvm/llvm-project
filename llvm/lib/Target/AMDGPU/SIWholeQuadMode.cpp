@@ -1584,7 +1584,8 @@ void SIWholeQuadMode::lowerInitExec(MachineInstr &MI) {
   bool IsWave32 = ST->isWave32();
 
   if (MI.getOpcode() == AMDGPU::SI_INIT_WHOLE_WAVE) {
-    // TODO: Assert that it's in the entry block
+    assert(MBB == &MBB->getParent()->front() &&
+           "init whole wave not in entry block");
     Register EntryExec = MRI->createVirtualRegister(TRI->getBoolRC());
     MachineInstr *SaveExec =
         BuildMI(*MBB, MBB->begin(), MI.getDebugLoc(),

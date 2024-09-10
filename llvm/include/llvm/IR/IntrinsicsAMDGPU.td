@@ -215,9 +215,6 @@ def int_amdgcn_init_exec_from_input : Intrinsic<[],
 // tails need to be run in whole-wave-mode. It may also have other consequences
 // (mostly related to WWM CSR handling) that differentiate it from using
 // a plain `amdgcn.init.exec -1`.
-//
-// Using this intrinsic without immediately branching on its return value is an
-// error.
 def int_amdgcn_init_whole_wave : Intrinsic<[llvm_i1_ty], [], [
     IntrHasSideEffects, IntrNoMem, IntrConvergent]>;
 
