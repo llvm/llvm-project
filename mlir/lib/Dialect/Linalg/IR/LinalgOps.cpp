@@ -1207,11 +1207,8 @@ static Speculation::Speculatability
 getGenericSpeculatabilityImpl(LinalgOp linalgOp) {
   // Operands with value semantics are speculatable, while operands with memory
   // semantics are not.
-  for (Value operand : linalgOp->getOperands()) {
-    if (isa<MemRefType>(operand.getType())) {
-      return Speculation::NotSpeculatable;
-    }
-  }
+  if (!linalgOp.hasPureTensorSemantics())
+    return Speculation::NotSpeculatable;
   // The body of the op can still have speculation in it's region.
   return Speculation::RecursivelySpeculatable;
 }
