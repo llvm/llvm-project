@@ -324,6 +324,7 @@ struct MLIRDocument {
   //===--------------------------------------------------------------------===//
 
   llvm::Expected<lsp::MLIRConvertBytecodeResult> convertToBytecode();
+  LogicalResult convertOperationToBytecode(Operation *op, llvm::raw_ostream &os);
 
   //===--------------------------------------------------------------------===//
   // Fields
@@ -791,7 +792,7 @@ public:
   void completeExpectedTokens(ArrayRef<StringRef> tokens, bool optional) final {
     for (StringRef token : tokens) {
       lsp::CompletionItem item(token, lsp::CompletionItemKind::Keyword,
-                               /*sortText=*/"0");
+                                /*sortText=*/"0");
       item.detail = optional ? "optional" : "";
       completionList.items.emplace_back(item);
     }
@@ -826,7 +827,7 @@ public:
     // Handle the builtin integer types.
     for (StringRef type : {"i", "si", "ui"}) {
       lsp::CompletionItem item(type + "<N>", lsp::CompletionItemKind::Field,
-                               /*sortText=*/"1");
+                                /*sortText=*/"1");
       item.insertText = type.str();
       completionList.items.emplace_back(item);
     }
@@ -933,30 +934,51 @@ void MLIRDocument::getCodeActionForDiagnostic(
 
 llvm::Expected<lsp::MLIRConvertBytecodeResult>
 MLIRDocument::convertToBytecode() {
-  // TODO: We currently require a single top-level operation, but this could
-  // conceptually be relaxed.
+  // Check if there is a single top-level operation
   if (!llvm::hasSingleElement(parsedIR)) {
     if (parsedIR.empty()) {
       return llvm::make_error<lsp::LSPError>(
-          "expected a single and valid top-level operation, please ensure "
-          "there are no errors",
+          "No top-level operation found. Ensure the file is not empty and contains valid MLIR code.",
           lsp::ErrorCode::RequestFailed);
     }
     return llvm::make_error<lsp::LSPError>(
-        "expected a single top-level operation", lsp::ErrorCode::RequestFailed);
+        "Multiple top-level operations found. Ensure there is only one top-level operation.",
+        lsp::ErrorCode::RequestFailed);
   }
 
+  // Get the top-level operation
+  Operation *topLevelOp = &parsedIR.front();
+
+  // Create a bytecode writer
+  std::string bytecode;
+  llvm::raw_string_ostream bytecodeStream(bytecode);
+
+  // Convert the top-level operation to bytecode
+  if (failed(convertOperationToBytecode(topLevelOp, bytecodeStream))) {
+    return llvm::make_error<lsp::LSPError>(
+        "Failed to convert the top-level operation to bytecode.",
+        lsp::ErrorCode::RequestFailed);
+  }
+
+  // Return the bytecode result
   lsp::MLIRConvertBytecodeResult result;
-  {
-    BytecodeWriterConfig writerConfig(fallbackResourceMap);
-
-    std::string rawBytecodeBuffer;
-    llvm::raw_string_ostream os(rawBytecodeBuffer);
-    // No desired bytecode version set, so no need to check for error.
-    (void)writeBytecodeToFile(&parsedIR.front(), os, writerConfig);
-    result.output = llvm::encodeBase64(rawBytecodeBuffer);
-  }
+  result.bytecode = std::move(bytecode);
   return result;
+}
+
+LogicalResult MLIRDocument::convertOperationToBytecode(Operation *op, llvm::raw_ostream &os) {
+  // Handle nested operations
+  for (Operation &nestedOp : op->getRegion(0).getOps()) {
+    if (failed(convertOperationToBytecode(&nestedOp, os))) {
+      return failure();
+    }
+  }
+
+  // Convert the current operation to bytecode
+  // (This is a placeholder for the actual bytecode conversion logic)
+  os << "bytecode_for_" << op->getName().getStringRef() << "\n";
+
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

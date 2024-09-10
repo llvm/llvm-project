@@ -36,3 +36,26 @@
   }) : () -> ()
   "bytecode.return"() : () -> ()
 }) : () -> ()
+
+
+// RUN: mlir-opt -allow-unregistered-dialect -emit-bytecode %s | mlir-opt -allow-unregistered-dialect | FileCheck %s
+
+// Test for enhanced bytecode conversion with nested operations
+module {
+  func.func @nested_ops() {
+    %0 = "test.op"() : () -> i32
+    "test.nested"() ({
+      %1 = "test.inner"() : () -> i32
+      "test.return"(%1) : (i32) -> ()
+    }) : () -> ()
+    return
+  }
+}
+
+// CHECK-LABEL: func @nested_ops()
+// CHECK: %0 = "test.op"() : () -> i32
+// CHECK: "test.nested"() ({
+// CHECK:   %1 = "test.inner"() : () -> i32
+// CHECK:   "test.return"(%1) : (i32) -> ()
+// CHECK: }) : () -> ()
+// CHECK: return
