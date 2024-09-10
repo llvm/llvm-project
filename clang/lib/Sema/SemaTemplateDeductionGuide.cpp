@@ -951,7 +951,13 @@ getRHSTemplateDeclAndArgs(Sema &SemaRef, TypeAliasTemplateDecl *AliasTemplate) {
 }
 
 struct InheritedConstructorDeductionInfo {
+  // Class template for which we are declaring deduction guides
+  // This is `C` in the standard wording
   TemplateDecl *DerivedClassTemplate;
+
+  // `template<typename> CC` in the standard wording
+  // This is the type of template that is substituted in the deduction guide
+  // return type `CC<R>`
   TypeSourceInfo *CCType;
 };
 
@@ -960,7 +966,7 @@ struct InheritedConstructorDeductionInfo {
 // ... the set contains the guides of A with the return type R
 // of each guide replaced with `typename CC<R>::type` ...
 TypeSourceInfo *buildInheritedConstructorDeductionGuideType(
-    Sema &SemaRef, InheritedConstructorDeductionInfo Info,
+    Sema &SemaRef, const InheritedConstructorDeductionInfo &Info,
     TypeSourceInfo *SourceGuideTSI) {
   auto &Context = SemaRef.Context;
   const auto *FPT = SourceGuideTSI->getType()->getAs<FunctionProtoType>();
@@ -1009,8 +1015,8 @@ TypeSourceInfo *buildInheritedConstructorDeductionGuideType(
 FunctionTemplateDecl *BuildDeductionGuideForTypeAlias(
     Sema &SemaRef, TypeAliasTemplateDecl *AliasTemplate,
     FunctionTemplateDecl *F, SourceLocation Loc,
-    std::optional<InheritedConstructorDeductionInfo> FromInheritedCtor =
-        std::nullopt) {
+    InheritedConstructorDeductionInfo *FromInheritedCtor =
+        nullptr) {
   LocalInstantiationScope Scope(SemaRef);
   Sema::InstantiatingTemplate BuildingDeductionGuides(
       SemaRef, AliasTemplate->getLocation(), F,
@@ -1230,8 +1236,8 @@ FunctionTemplateDecl *BuildDeductionGuideForTypeAlias(
 
 void DeclareImplicitDeductionGuidesForTypeAlias(
     Sema &SemaRef, TypeAliasTemplateDecl *AliasTemplate, SourceLocation Loc,
-    std::optional<InheritedConstructorDeductionInfo> FromInheritedCtor =
-        std::nullopt) {
+    InheritedConstructorDeductionInfo *FromInheritedCtor =
+        nullptr) {
   if (AliasTemplate->isInvalidDecl())
     return;
   TemplateDecl *DeducedTemplate = FromInheritedCtor
@@ -1329,6 +1335,39 @@ void DeclareImplicitDeductionGuidesForTypeAlias(
   }
 }
 
+// Check if a template is deducible as per [dcl.type.simple]p3
+static bool IsDeducibleTemplate(TemplateDecl *TD) {
+  while (TD) {
+    // [dcl.type.simple]p3: A deducible template is either a class template ...
+    if (isa<ClassTemplateDecl>(TD))
+      return true;
+
+    // ... or is an alias template ...
+    auto *Alias = dyn_cast<TypeAliasTemplateDecl>(TD);
+    if (!Alias)
+      return false;
+
+    QualType AliasType = Alias->getTemplatedDecl()->getUnderlyingType().getCanonicalType();
+
+    // ... whose defining-type-id is of the form
+    // [typename] [nested-name-specifier] [template] simple-template-id ...
+    if (const auto *TST = AliasType->getAs<TemplateSpecializationType>()) {
+      // ... and the template-name of the simple-template-id names a deducible template
+      TD = TST->getTemplateName().getAsTemplateDecl();
+      continue;
+    }
+
+    // Handle the case that the RHS of the alias is not dependent
+    // e.g. using AliasFoo = Foo<bool>;
+    if (const auto *RT = AliasType->getAs<RecordType>())
+      return isa<ClassTemplateSpecializationDecl>(RT->getAsCXXRecordDecl());
+
+    return false;
+  }
+
+  return false;
+}
+
 void DeclareImplicitDeductionGuidesFromInheritedConstructors(
     Sema &SemaRef, TemplateDecl *Template, ClassTemplateDecl *Pattern,
     TypeSourceInfo *BaseTSI, unsigned BaseIdx) {
@@ -1340,7 +1379,10 @@ void DeclareImplicitDeductionGuidesFromInheritedConstructors(
   SourceLocation BaseLoc = BaseTSI->getTypeLoc().getBeginLoc();
 
   TemplateDecl *BaseTD = BaseTST->getTemplateName().getAsTemplateDecl();
-  if (!BaseTD)
+
+  // The alias template `A` that we build out of the base type must be a deducible template.
+  // `A` will be of the correct form, so it is deducible iff BaseTD is deducible
+  if (!BaseTD || !IsDeducibleTemplate(BaseTD))
     return;
 
   // Substitute any parameters with default arguments not present in the base,
@@ -1349,9 +1391,9 @@ void DeclareImplicitDeductionGuidesFromInheritedConstructors(
   auto BaseDeducedTemplateParams =
       TemplateParamsReferencedInTemplateArgumentList(
           TemplateTPL, BaseTST->template_arguments());
-  SmallVector<NamedDecl *, 8> PartialSpecParams;
+  SmallVector<NamedDecl *, 8> AliasTemplateParams;
   SmallVector<TemplateArgument, 8> SubstArgs;
-  PartialSpecParams.reserve(TemplateTPL->size());
+  AliasTemplateParams.reserve(TemplateTPL->size());
   SubstArgs.reserve(TemplateTPL->size());
   LocalInstantiationScope Scope(SemaRef);
   for (unsigned I = 0, N = TemplateTPL->size(); I < N; ++I) {
@@ -1386,12 +1428,12 @@ void DeclareImplicitDeductionGuidesFromInheritedConstructors(
     Args.addOuterRetainedLevels(Template->getTemplateDepth());
 
     NamedDecl *NewParam = transformTemplateParameter(
-        SemaRef, DC, Param, Args, PartialSpecParams.size(),
+        SemaRef, DC, Param, Args, AliasTemplateParams.size(),
         Template->getTemplateDepth());
     if (!NewParam)
       return;
 
-    PartialSpecParams.push_back(NewParam);
+    AliasTemplateParams.push_back(NewParam);
     SubstArgs.push_back(Context.getInjectedTemplateArg(NewParam));
   }
 
@@ -1406,9 +1448,26 @@ void DeclareImplicitDeductionGuidesFromInheritedConstructors(
       return;
     RequiresClause = E.getAs<Expr>();
   }
-  auto *PartialSpecTPL = TemplateParameterList::Create(
+  auto *AliasTPL = TemplateParameterList::Create(
       Context, TemplateTPL->getTemplateLoc(), TemplateTPL->getLAngleLoc(),
-      PartialSpecParams, TemplateTPL->getRAngleLoc(), RequiresClause);
+      AliasTemplateParams, TemplateTPL->getRAngleLoc(), RequiresClause);
+
+  // Clone AliasTPL into a new parameter list for the partial specialization,
+  // but with default arguments removed, using the template instantiator
+  // for heavy lifting.
+  LocalInstantiationScope CloneScope(SemaRef);
+  TemplateDeclInstantiator CloneTDI(SemaRef, DC, /*TemplateArgs=*/{});
+  TemplateParameterList *PartialSpecTPL = CloneTDI.SubstTemplateParams(AliasTPL);
+  CloneScope.Exit();
+  for (NamedDecl *Param : *PartialSpecTPL) {
+    if (auto *TTP = dyn_cast<TemplateTypeParmDecl>(Param)) {
+      TTP->removeDefaultArgument();
+    } else if (auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(Param)) {
+      NTTP->removeDefaultArgument();
+    } else if (auto *TTP = dyn_cast<TemplateTemplateParmDecl>(Param)) {
+      TTP->removeDefaultArgument();
+    }
+  }
 
   // [over.match.class.deduct]p1.10
   // Let A be an alias template whose template parameter list is that of
@@ -1419,12 +1478,12 @@ void DeclareImplicitDeductionGuidesFromInheritedConstructors(
       Context, DC, SourceLocation(), BaseLoc,
       TransformedBase->getType().getBaseTypeIdentifier(), TransformedBase);
   std::string AliasDeclName =
-      (Twine("__ctad_alias_") + BaseTD->getName() + "_to_" +
+      (Twine("__ctad_A_") + BaseTD->getName() + "_to_" +
        Template->getName() + "_" + Twine(BaseIdx))
           .str();
   IdentifierInfo *AliasIdentifier = &Context.Idents.get(AliasDeclName);
   auto *BaseATD = TypeAliasTemplateDecl::Create(
-      Context, DC, BaseLoc, DeclarationName(AliasIdentifier), PartialSpecTPL,
+      Context, DC, BaseLoc, DeclarationName(AliasIdentifier), AliasTPL,
       BaseAD);
   BaseAD->setDescribedAliasTemplate(BaseATD);
   BaseAD->setImplicit();
@@ -1443,7 +1502,7 @@ void DeclareImplicitDeductionGuidesFromInheritedConstructors(
       ArrayRef<NamedDecl *>(TParam), SourceLocation(), nullptr);
 
   std::string MapperDeclName =
-      (Twine("__ctad_mapper_") + BaseTD->getName() + "_to_" +
+      (Twine("__ctad_CC_") + BaseTD->getName() + "_to_" +
        Template->getName() + "_" + Twine(BaseIdx))
           .str();
   IdentifierInfo *MapperII = &Context.Idents.get(MapperDeclName);
@@ -1540,7 +1599,7 @@ void DeclareImplicitDeductionGuidesFromInheritedConstructors(
       ReturnTypeTLB.getTypeSourceInfo(Context, MapperReturnType);
 
   InheritedConstructorDeductionInfo Info{Template, MapperTSI};
-  DeclareImplicitDeductionGuidesForTypeAlias(SemaRef, BaseATD, BaseLoc, Info);
+  DeclareImplicitDeductionGuidesForTypeAlias(SemaRef, BaseATD, BaseLoc, &Info);
 }
 
 // Build an aggregate deduction guide for a type alias template.
