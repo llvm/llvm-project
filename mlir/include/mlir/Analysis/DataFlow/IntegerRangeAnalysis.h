@@ -18,6 +18,8 @@
 #ifndef MLIR_ANALYSIS_DATAFLOW_INTEGERANGEANALYSIS_H
 #define MLIR_ANALYSIS_DATAFLOW_INTEGERANGEANALYSIS_H
 
+#include "mlir/Analysis/DataFlow/ConstantPropagationAnalysis.h"
+#include "mlir/Analysis/DataFlow/DeadCodeAnalysis.h"
 #include "mlir/Analysis/DataFlow/SparseAnalysis.h"
 #include "mlir/Interfaces/InferIntRangeInterface.h"
 
@@ -69,6 +71,12 @@ public:
   visitNonControlFlowArguments(Operation *op, const RegionSuccessor &successor,
                                ArrayRef<IntegerValueRangeLattice *> argLattices,
                                unsigned firstIndex) override;
+
+  static void loadAnalysis(DataFlowSolver &solver) {
+    solver.load<SparseConstantPropagation>();
+    solver.load<DeadCodeAnalysis>();
+    solver.load<IntegerRangeAnalysis>();
+  }
 };
 
 } // end namespace dataflow
