@@ -3639,36 +3639,36 @@ void InterfaceVisitor::CheckGenericProcedures(Symbol &generic) {
     }
     return;
   }
-  const Symbol &firstSpecific{specifics.front()};
-  bool isFunction{firstSpecific.test(Symbol::Flag::Function)};
-  bool isBoth{false};
+  const Symbol *function{nullptr};
+  const Symbol *subroutine{nullptr};
   for (const Symbol &specific : specifics) {
-    if (isFunction != specific.test(Symbol::Flag::Function)) { // C1514
-      if (context().ShouldWarn(
+    if (!function && specific.test(Symbol::Flag::Function)) {
+      function = &specific;
+    } else if (!subroutine && specific.test(Symbol::Flag::Subroutine)) {
+      subroutine = &specific;
+      if (details.derivedType() &&
+          context().ShouldWarn(
               common::LanguageFeature::SubroutineAndFunctionSpecifics)) {
+        SayDerivedType(generic.name(),
+            "Generic interface '%s' should only contain functions due to derived type with same name"_warn_en_US,
+            *details.derivedType()->GetUltimate().scope());
+      }
+    }
+    if (function && subroutine) {
+      if (context().ShouldWarn(common::LanguageFeature::
+                  SubroutineAndFunctionSpecifics)) { // C1514
         auto &msg{Say(generic.name(),
             "Generic interface '%s' has both a function and a subroutine"_warn_en_US)};
-        if (isFunction) {
-          msg.Attach(firstSpecific.name(), "Function declaration"_en_US);
-          msg.Attach(specific.name(), "Subroutine declaration"_en_US);
-        } else {
-          msg.Attach(firstSpecific.name(), "Subroutine declaration"_en_US);
-          msg.Attach(specific.name(), "Function declaration"_en_US);
-        }
+        msg.Attach(function->name(), "Function declaration"_en_US);
+        msg.Attach(subroutine->name(), "Subroutine declaration"_en_US);
       }
-      isFunction = false;
-      isBoth = true;
       break;
     }
   }
-  if (!isFunction && details.derivedType()) {
-    SayDerivedType(generic.name(),
-        "Generic interface '%s' may only contain functions due to derived type"
-        " with same name"_err_en_US,
-        *details.derivedType()->GetUltimate().scope());
-  }
-  if (!isBoth) {
-    generic.set(isFunction ? Symbol::Flag::Function : Symbol::Flag::Subroutine);
+  if (function && !subroutine) {
+    generic.set(Symbol::Flag::Function);
+  } else if (subroutine && !function) {
+    generic.set(Symbol::Flag::Subroutine);
   }
 }
 
