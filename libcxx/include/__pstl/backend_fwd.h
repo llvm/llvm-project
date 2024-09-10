@@ -49,11 +49,12 @@ struct __default_backend_tag;
 struct __libdispatch_backend_tag;
 struct __serial_backend_tag;
 struct __std_thread_backend_tag;
+struct __forward_to_mem_funcs_backend_tag;
 
 #if defined(_LIBCPP_PSTL_BACKEND_SERIAL)
 using __current_configuration = __backend_configuration<__serial_backend_tag, __default_backend_tag>;
 #elif defined(_LIBCPP_PSTL_BACKEND_STD_THREAD)
-using __current_configuration = __backend_configuration<__std_thread_backend_tag, __default_backend_tag>;
+using __current_configuration = __backend_configuration<__forward_to_mem_funcs_backend_tag, __std_thread_backend_tag, __default_backend_tag>;
 #elif defined(_LIBCPP_PSTL_BACKEND_LIBDISPATCH)
 using __current_configuration = __backend_configuration<__libdispatch_backend_tag, __default_backend_tag>;
 #else
