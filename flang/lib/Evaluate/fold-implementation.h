@@ -1088,24 +1088,42 @@ Expr<T> FoldMINorMAX(
   static_assert(T::category == TypeCategory::Integer ||
       T::category == TypeCategory::Real ||
       T::category == TypeCategory::Character);
-  std::vector<Constant<T> *> constantArgs;
-  // Call Folding on all arguments, even if some are not constant,
-  // to make operand promotion explicit.
-  for (auto &arg : funcRef.arguments()) {
-    if (auto *cst{Folder<T>{context}.Folding(arg)}) {
-      constantArgs.push_back(cst);
+  auto &args{funcRef.arguments()};
+  bool ok{true};
+  std::optional<Expr<T>> result;
+  Folder<T> folder{context};
+  for (std::optional<ActualArgument> &arg : args) {
+    // Call Folding on all arguments to make operand promotion explicit.
+    if (!folder.Folding(arg)) {
+      // TODO: Lowering can't handle having every FunctionRef for max and min
+      // being converted into Extremum<T>.  That needs fixing.  Until that
+      // is corrected, however, it is important that max and min references
+      // in module files be converted into Extremum<T> even when not constant;
+      // the Extremum<SubscriptInteger> operations created to normalize the
+      // values of array bounds are formatted as max operations in the
+      // declarations in modules, and need to be read back in as such in
+      // order for expression comparison to not produce false inequalities
+      // when checking function results for procedure interface compatibility.
+      if (!context.moduleFileName()) {
+        ok = false;
+      }
+    }
+    Expr<SomeType> *argExpr{arg ? arg->UnwrapExpr() : nullptr};
+    if (argExpr) {
+      *argExpr = Fold(context, std::move(*argExpr));
+    }
+    if (Expr<T> * tExpr{UnwrapExpr<Expr<T>>(argExpr)}) {
+      if (result) {
+        result = FoldOperation(
+            context, Extremum<T>{order, std::move(*result), Expr<T>{*tExpr}});
+      } else {
+        result = Expr<T>{*tExpr};
+      }
+    } else {
+      ok = false;
     }
   }
-  if (constantArgs.size() != funcRef.arguments().size()) {
-    return Expr<T>(std::move(funcRef));
-  }
-  CHECK(!constantArgs.empty());
-  Expr<T> result{std::move(*constantArgs[0])};
-  for (std::size_t i{1}; i < constantArgs.size(); ++i) {
-    Extremum<T> extremum{order, result, Expr<T>{std::move(*constantArgs[i])}};
-    result = FoldOperation(context, std::move(extremum));
-  }
-  return result;
+  return ok && result ? std::move(*result) : Expr<T>{std::move(funcRef)};
 }
 
 // For AMAX0, AMIN0, AMAX1, AMIN1, DMAX1, DMIN1, MAX0, MIN0, MAX1, and MIN1
