@@ -4,7 +4,6 @@
 
 # Tests for LLVM libc math.h functions.
 
-load("//libc:libc_build_rules.bzl", "libc_support_library")
 load("//libc/test/src/math:libc_math_test_rules.bzl", "math_mpfr_test")
 
 package(default_visibility = ["//visibility:public"])
@@ -53,6 +52,9 @@ math_mpfr_test(name = "cos")
 math_mpfr_test(
     name = "cosf",
     hdrs = ["sdcomp26094.h"],
+    deps = [
+        "//libc:__support_cpp_array",
+    ],
 )
 
 math_mpfr_test(
@@ -65,6 +67,9 @@ math_mpfr_test(
 math_mpfr_test(
     name = "cospif",
     hdrs = ["sdcomp26094.h"],
+    deps = [
+        "//libc:__support_cpp_array",
+    ],
 )
 
 math_mpfr_test(
@@ -107,7 +112,7 @@ math_mpfr_test(
     name = "exp2m1f",
     deps = [
         "//libc:__support_cpp_array",
-    ]
+    ],
 )
 
 math_mpfr_test(name = "expm1")
@@ -211,8 +216,8 @@ math_mpfr_test(
 math_mpfr_test(
     name = "hypotf",
     hdrs = [
-        "hypotf_hard_to_round.h",
         "HypotTest.h",
+        "hypotf_hard_to_round.h",
     ],
 )
 
@@ -297,16 +302,25 @@ math_mpfr_test(
 math_mpfr_test(
     name = "nearbyint",
     hdrs = ["NearbyIntTest.h"],
+    deps = [
+        "//libc:__support_cpp_array",
+    ],
 )
 
 math_mpfr_test(
     name = "nearbyintf",
     hdrs = ["NearbyIntTest.h"],
+    deps = [
+        "//libc:__support_cpp_array",
+    ],
 )
 
 math_mpfr_test(
     name = "nearbyintl",
     hdrs = ["NearbyIntTest.h"],
+    deps = [
+        "//libc:__support_cpp_array",
+    ],
 )
 
 math_mpfr_test(name = "pow")
@@ -378,6 +392,9 @@ math_mpfr_test(name = "sin")
 math_mpfr_test(
     name = "sinf",
     hdrs = ["sdcomp26094.h"],
+    deps = [
+        "//libc:__support_cpp_array",
+    ],
 )
 
 math_mpfr_test(name = "sincos")
@@ -385,18 +402,24 @@ math_mpfr_test(name = "sincos")
 math_mpfr_test(
     name = "sincosf",
     hdrs = ["sdcomp26094.h"],
+    deps = [
+        "//libc:__support_cpp_array",
+    ],
 )
 
 math_mpfr_test(
     name = "sinhf",
     deps = [
         "//libc:__support_cpp_array",
-    ]
+    ],
 )
 
 math_mpfr_test(
     name = "sinpif",
     hdrs = ["sdcomp26094.h"],
+    deps = [
+        "//libc:__support_cpp_array",
+    ],
 )
 
 math_mpfr_test(
@@ -419,6 +442,9 @@ math_mpfr_test(name = "tan")
 math_mpfr_test(
     name = "tanf",
     hdrs = ["sdcomp26094.h"],
+    deps = [
+        "//libc:__support_cpp_array",
+    ],
 )
 
 math_mpfr_test(name = "tanhf")

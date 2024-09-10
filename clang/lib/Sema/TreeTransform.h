@@ -16583,14 +16583,10 @@ ExprResult TreeTransform<Derived>::RebuildCXXOperatorCallExpr(
   } else if (Op == OO_Arrow) {
     // It is possible that the type refers to a RecoveryExpr created earlier
     // in the tree transformation.
-    if (First->containsErrors())
+    if (First->getType()->isDependentType())
       return ExprError();
-    bool IsDependent;
     // -> is never a builtin operation.
-    ExprResult Result = SemaRef.BuildOverloadedArrowExpr(
-        First, OpLoc, /*NoArrowOperatorFound=*/nullptr, IsDependent);
-    assert(!IsDependent);
-    return Result;
+    return SemaRef.BuildOverloadedArrowExpr(nullptr, First, OpLoc);
   } else if (Second == nullptr || isPostIncDec) {
     if (!First->getType()->isOverloadableType() ||
         (Op == OO_Amp && getSema().isQualifiedMemberAccess(First))) {

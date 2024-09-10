@@ -115,7 +115,7 @@ ValueTypeByHwMode llvm::getValueTypeByHwMode(Record *Rec,
   return ValueTypeByHwMode(Rec, llvm::getValueType(Rec));
 }
 
-RegSizeInfo::RegSizeInfo(Record *R) {
+RegSizeInfo::RegSizeInfo(const Record *R) {
   RegSize = R->getValueAsInt("RegSize");
   SpillSize = R->getValueAsInt("SpillSize");
   SpillAlignment = R->getValueAsInt("SpillAlignment");
@@ -136,7 +136,8 @@ void RegSizeInfo::writeToStream(raw_ostream &OS) const {
      << ']';
 }
 
-RegSizeInfoByHwMode::RegSizeInfoByHwMode(Record *R, const CodeGenHwModes &CGH) {
+RegSizeInfoByHwMode::RegSizeInfoByHwMode(const Record *R,
+                                         const CodeGenHwModes &CGH) {
   const HwModeSelect &MS = CGH.getHwModeSelect(R);
   for (const HwModeSelect::PairType &P : MS.Items) {
     auto I = Map.insert({P.first, RegSizeInfo(P.second)});
@@ -183,12 +184,13 @@ void RegSizeInfoByHwMode::writeToStream(raw_ostream &OS) const {
   OS << '}';
 }
 
-SubRegRange::SubRegRange(Record *R) {
+SubRegRange::SubRegRange(const Record *R) {
   Size = R->getValueAsInt("Size");
   Offset = R->getValueAsInt("Offset");
 }
 
-SubRegRangeByHwMode::SubRegRangeByHwMode(Record *R, const CodeGenHwModes &CGH) {
+SubRegRangeByHwMode::SubRegRangeByHwMode(const Record *R,
+                                         const CodeGenHwModes &CGH) {
   const HwModeSelect &MS = CGH.getHwModeSelect(R);
   for (const HwModeSelect::PairType &P : MS.Items) {
     auto I = Map.insert({P.first, SubRegRange(P.second)});
@@ -197,7 +199,7 @@ SubRegRangeByHwMode::SubRegRangeByHwMode(Record *R, const CodeGenHwModes &CGH) {
   }
 }
 
-EncodingInfoByHwMode::EncodingInfoByHwMode(Record *R,
+EncodingInfoByHwMode::EncodingInfoByHwMode(const Record *R,
                                            const CodeGenHwModes &CGH) {
   const HwModeSelect &MS = CGH.getHwModeSelect(R);
   for (const HwModeSelect::PairType &P : MS.Items) {

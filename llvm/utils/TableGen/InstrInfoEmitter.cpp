@@ -151,7 +151,7 @@ InstrInfoEmitter::GetOperandInfo(const CodeGenInstruction &Inst) {
     }
 
     for (unsigned j = 0, e = OperandList.size(); j != e; ++j) {
-      Record *OpR = OperandList[j].Rec;
+      const Record *OpR = OperandList[j].Rec;
       std::string Res;
 
       if (OpR->isSubClassOf("RegisterOperand"))
@@ -398,7 +398,7 @@ void InstrInfoEmitter::emitOperandTypeMappings(
   // TODO: Factor out duplicate operand lists to compress the tables.
   if (!NumberedInstructions.empty()) {
     std::vector<int> OperandOffsets;
-    std::vector<Record *> OperandRecords;
+    std::vector<const Record *> OperandRecords;
     int CurrentOffset = 0;
     for (const CodeGenInstruction *Inst : NumberedInstructions) {
       OperandOffsets.push_back(CurrentOffset);
@@ -447,7 +447,7 @@ void InstrInfoEmitter::emitOperandTypeMappings(
         while (OperandOffsets[++CurOffset] == I)
           OS << "/* " << getInstrName(CurOffset) << " */\n    ";
       }
-      Record *OpR = OperandRecords[I];
+      const Record *OpR = OperandRecords[I];
       if ((OpR->isSubClassOf("Operand") ||
            OpR->isSubClassOf("RegisterOperand") ||
            OpR->isSubClassOf("RegisterClass")) &&

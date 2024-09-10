@@ -112,7 +112,7 @@ class ThinBackendProc;
 /// information that an LTO client should need in order to do symbol resolution.
 class InputFile {
 public:
-  class Symbol;
+  struct Symbol;
 
 private:
   // FIXME: Remove LTO class friendship once we have bitcode symbol tables.
