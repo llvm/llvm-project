@@ -714,6 +714,9 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
                     Args, Ptrs, *KernelLaunchEnvOrErr);
   }
 
+  // Get max occupancy for this kernel
+  computeMaxOccupancy(GenericDevice);
+
   uint32_t NumThreads = getNumThreads(GenericDevice, KernelArgs.ThreadLimit);
 
   std::pair<bool, uint32_t> AdjustInfo = adjustNumThreadsForLowTripCount(

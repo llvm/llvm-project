@@ -434,67 +434,6 @@ Expected<std::string> getTargetTripleAndFeatures(hsa_agent_t Agent) {
   return Target;
 }
 
-/// Compute the occupancy with the constraint on the number of SGPRs
-/// Follow the logic on the backend
-/// Ref:
-/// llvm-project/llvm/lib/Target/AMDGPU/Utils/AMDGPUBaseInfo.cpp:getOccupancyWithNumSGPRs
-unsigned getOccupancyWithNumSGPRs(unsigned SGPRCount) {
-
-  if (SGPRCount <= llvm::omp::amdgpu_arch::SGPRCountOccupancy10) {
-    return 10;
-  } else if (SGPRCount <= llvm::omp::amdgpu_arch::SGPRCountOccupancy9) {
-    return 9;
-  } else if (SGPRCount <= llvm::omp::amdgpu_arch::SGPRCountOccupancy8) {
-    return 8;
-  }
-
-  return 7;
-}
-
-/// Compute the occupancy with the constraint on LDS
-/// Follow the logic on the backend
-/// Ref:
-/// llvm-project/llvm/lib/Target/AMDGPU/Utils/AMDGPUBaseInfo.cpp:getOccupancyWithLocalMemSize
-unsigned getOccupancyWithLDS(uint32_t GroupSegmentSize, unsigned MaxWavesPerEU,
-                             uint32_t MaxFlatWorkgroupSize) {
-
-  unsigned MaxWorkgroupNum =
-      llvm::omp::amdgpu_arch::LocalMemorySize / GroupSegmentSize;
-
-  // workgroup size
-  unsigned ThreadsPerWorkgroup = MaxFlatWorkgroupSize;
-  unsigned WavesPerWorkgroup =
-      divideCeil(ThreadsPerWorkgroup, llvm::omp::amdgpu_arch::WaveFrontSize64);
-
-  unsigned MaxWavesPerCU = MaxWavesPerEU * llvm::omp::amdgpu_arch::SIMDPerCU;
-
-  // if a workgroup has just one wavefront, the max # of workgroup per CU is
-  // 40 if a workgroup has more than one wavefront, the max # of workgroup per
-  // CU is 16 https://github.com/ROCm/ROCm/issues/746#issuecomment-474656922
-  if (WavesPerWorkgroup <= 1) {
-
-    MaxWorkgroupNum = std::min(MaxWorkgroupNum, MaxWavesPerCU);
-  } else {
-    MaxWorkgroupNum =
-        std::min(MaxWorkgroupNum, MaxWavesPerCU / WavesPerWorkgroup);
-    MaxWorkgroupNum =
-        std::min(MaxWorkgroupNum, llvm::omp::amdgpu_arch::MaxWorkgroupNumPerCU);
-  }
-
-  // per SIMD
-  unsigned WaveNumByLDS = divideCeil(WavesPerWorkgroup * MaxWorkgroupNum,
-                                     llvm::omp::amdgpu_arch::SIMDPerCU);
-  WaveNumByLDS = std::min(WaveNumByLDS, MaxWavesPerEU);
-
-  return WaveNumByLDS;
-}
-
-// forward declaration
-unsigned computeOccupancy(
-    GenericDeviceTy &Device,
-    std::optional<offloading::amdgpu::AMDGPUKernelMetaData> KernelInfo,
-    uint32_t NumThreads, uint64_t NumBlocks);
-
 } // namespace hsa_utils
 
 /// Utility class representing generic resource references to AMDGPU resources.
@@ -1287,6 +1226,111 @@ private:
       PreferredNumBlocks = std::min(TripCountNumBlocks, AdjustedNumBlocks);
     return std::min(PreferredNumBlocks,
                     (uint64_t)GenericDevice.getBlockLimit());
+  }
+
+  /// Compute the occupancy with the constraint on the number of SGPRs
+  /// Follow the logic on the backend
+  /// Ref:
+  /// llvm-project/llvm/lib/Target/AMDGPU/Utils/AMDGPUBaseInfo.cpp:getOccupancyWithNumSGPRs
+  unsigned getOccupancyWithNumSGPRs(unsigned SGPRCount) const {
+
+    if (SGPRCount <= llvm::omp::amdgpu_arch::SGPRCountOccupancy10) {
+      return 10;
+    } else if (SGPRCount <= llvm::omp::amdgpu_arch::SGPRCountOccupancy9) {
+      return 9;
+    } else if (SGPRCount <= llvm::omp::amdgpu_arch::SGPRCountOccupancy8) {
+      return 8;
+    }
+    return 7;
+  }
+
+  /// Compute the occupancy with the constraint on LDS
+  /// Follow the logic on the backend
+  /// Ref:
+  /// llvm-project/llvm/lib/Target/AMDGPU/Utils/AMDGPUBaseInfo.cpp:getOccupancyWithLocalMemSize
+  unsigned getOccupancyWithLDS(uint32_t GroupSegmentSize,
+                               unsigned MaxWavesPerEU,
+                               uint32_t MaxFlatWorkgroupSize) const {
+
+    unsigned MaxWorkgroupNum =
+        llvm::omp::amdgpu_arch::LocalMemorySize / GroupSegmentSize;
+
+    // workgroup size
+    unsigned ThreadsPerWorkgroup = MaxFlatWorkgroupSize;
+    unsigned WavesPerWorkgroup = divideCeil(
+        ThreadsPerWorkgroup, llvm::omp::amdgpu_arch::WaveFrontSize64);
+
+    unsigned MaxWavesPerCU = MaxWavesPerEU * llvm::omp::amdgpu_arch::SIMDPerCU;
+
+    // if a workgroup has just one wavefront, the max # of workgroup per CU is
+    // 40 if a workgroup has more than one wavefront, the max # of workgroup per
+    // CU is 16 https://github.com/ROCm/ROCm/issues/746#issuecomment-474656922
+    if (WavesPerWorkgroup <= 1) {
+      MaxWorkgroupNum = std::min(MaxWorkgroupNum, MaxWavesPerCU);
+    } else {
+      MaxWorkgroupNum =
+          std::min(MaxWorkgroupNum, MaxWavesPerCU / WavesPerWorkgroup);
+      MaxWorkgroupNum = std::min(MaxWorkgroupNum,
+                                 llvm::omp::amdgpu_arch::MaxWorkgroupNumPerCU);
+    }
+
+    // per SIMD
+    unsigned WaveNumByLDS = divideCeil(WavesPerWorkgroup * MaxWorkgroupNum,
+                                       llvm::omp::amdgpu_arch::SIMDPerCU);
+    WaveNumByLDS = std::min(WaveNumByLDS, MaxWavesPerEU);
+
+    return WaveNumByLDS;
+  }
+
+  /// Compute the max kernel occupancy for AMD GPU
+  unsigned computeMaxOccupancy(GenericDeviceTy &Device) const override {
+    uint32_t GroupSegmentSize = (*KernelInfo).GroupSegmentList;
+    uint32_t SGPRCount = (*KernelInfo).SGPRCount;
+    uint32_t VGPRCount = (*KernelInfo).VGPRCount;
+    uint32_t MaxFlatWorkgroupSize = (*KernelInfo).MaxFlatWorkgroupSize;
+
+    // Default number of waves per EU
+    unsigned MaxWavesPerEU = llvm::omp::amdgpu_arch::MaxWavesPerEU10;
+
+    // Get GPU info
+    bool IsEquippedWithGFX90A = Device.hasGfx90aDevice();
+    if (IsEquippedWithGFX90A) {
+      MaxWavesPerEU = llvm::omp::amdgpu_arch::MaxWavesPerEU8;
+    }
+
+    unsigned Occupancy = INT_MAX;
+
+    // Contraint on SGPR
+    if (SGPRCount) {
+      Occupancy = getOccupancyWithNumSGPRs(SGPRCount);
+    }
+
+    Occupancy = std::min(Occupancy, MaxWavesPerEU);
+
+    // Constraint on VGPR
+    // Follow the logic on the backend
+    // Ref:
+    // llvm-project/llvm/lib/Target/AMDGPU/Utils/AMDGPUBaseInfo.cpp:getNumWavesPerEUWithNumVGPRs
+    if (VGPRCount) {
+      unsigned WaveNumByVGPR =
+          llvm::omp::amdgpu_arch::VGPRNumPerThread / VGPRCount;
+      Occupancy = std::min(Occupancy, WaveNumByVGPR);
+    }
+
+    // Constraint on LDS
+    if (GroupSegmentSize) {
+      unsigned WaveNumByLDS = getOccupancyWithLDS(
+          GroupSegmentSize, MaxWavesPerEU, MaxFlatWorkgroupSize);
+      Occupancy = std::min(Occupancy, WaveNumByLDS);
+    } else {
+      // If 0 LDS required by the kernel
+      Occupancy = std::min(Occupancy, MaxWavesPerEU);
+    }
+
+    // Cache the value before return
+    MaxOccupancy = Occupancy;
+
+    return Occupancy;
   }
 };
 
@@ -4980,10 +5024,6 @@ void AMDGPUKernelTy::printAMDOneLineKernelTrace(GenericDeviceTy &GenericDevice,
   auto VGPRSpillCount = (*KernelInfo).VGPRSpillCount;
   // auto MaxFlatWorkgroupSize = (*KernelInfo).MaxFlatWorkgroupSize;
 
-  // kernel occupancy
-  auto Occupancy =
-      hsa_utils::computeOccupancy(GenericDevice, KernelInfo, NumThreads, NumBlocks);
-
   // This line should print exactly as the one in the old plugin.
   fprintf(stderr,
           "DEVID: %2d SGN:%d ConstWGSize:%-4d args:%2d teamsXthrds:(%4luX%4d) "
@@ -4994,7 +5034,7 @@ void AMDGPUKernelTy::printAMDOneLineKernelTrace(GenericDeviceTy &GenericDevice,
           KernelArgs.NumArgs, NumBlocks, NumThreads, 0, 0, GroupSegmentSize,
           SGPRCount, VGPRCount, SGPRSpillCount, VGPRSpillCount,
           KernelArgs.Tripcount, NeedsHostServices, isMultiDeviceKernel(),
-          MultiDeviceLB, MultiDeviceUB, Occupancy, getName());
+          MultiDeviceLB, MultiDeviceUB, MaxOccupancy, getName());
 }
 
 Error AMDGPUKernelTy::printLaunchInfoDetails(GenericDeviceTy &GenericDevice,
@@ -5220,63 +5260,6 @@ void AMDGPUQueueTy::callbackError(hsa_status_t Status, hsa_queue_t *Source,
   auto Err = Plugin::check(Status, "Received error in queue %p: %s", Source);
   FATAL_MESSAGE(1, "%s", toString(std::move(Err)).data());
 }
-
-namespace hsa_utils {
-// TODO: improve the computation logic
-//        with more corner cases
-// split namespace utils for solving the dependency
-/// Compute kernel occupancy
-unsigned computeOccupancy(
-    GenericDeviceTy &Device,
-    std::optional<offloading::amdgpu::AMDGPUKernelMetaData> KernelInfo,
-    uint32_t NumThreads, uint64_t NumBlocks) {
-  uint32_t GroupSegmentSize = (*KernelInfo).GroupSegmentList;
-  uint32_t SGPRCount = (*KernelInfo).SGPRCount;
-  uint32_t VGPRCount = (*KernelInfo).VGPRCount;
-  uint32_t MaxFlatWorkgroupSize = (*KernelInfo).MaxFlatWorkgroupSize;
-
-  // device info
-  AMDGPUDeviceTy &AMDGPUDevice = static_cast<AMDGPUDeviceTy &>(Device);
-  unsigned MaxWavesPerEU = llvm::omp::amdgpu_arch::MaxWavesPerEU10;
-
-  // get GPU info
-  bool IsEquippedWithGFX90A = AMDGPUDevice.hasGfx90aDevice();
-  if (IsEquippedWithGFX90A) {
-    MaxWavesPerEU = llvm::omp::amdgpu_arch::MaxWavesPerEU8;
-  }
-
-  unsigned Occupancy = INT_MAX;
-
-  // contraint on SGPR
-  if (SGPRCount) {
-    Occupancy = hsa_utils::getOccupancyWithNumSGPRs(SGPRCount);
-  }
-
-  Occupancy = std::min(Occupancy, MaxWavesPerEU);
-
-  // constraint on VGPR
-  // follow the logic on the backend
-  // ref:
-  // llvm-project/llvm/lib/Target/AMDGPU/Utils/AMDGPUBaseInfo.cpp:getNumWavesPerEUWithNumVGPRs
-  if (VGPRCount) {
-    unsigned WaveNumByVGPR =
-        llvm::omp::amdgpu_arch::VGPRNumPerThread / VGPRCount;
-    Occupancy = std::min(Occupancy, WaveNumByVGPR);
-  }
-
-  // constraint on LDS
-  if (GroupSegmentSize) {
-    unsigned WaveNumByLDS = hsa_utils::getOccupancyWithLDS(
-        GroupSegmentSize, MaxWavesPerEU, MaxFlatWorkgroupSize);
-    Occupancy = std::min(Occupancy, WaveNumByLDS);
-  } else {
-    // if 0 LDS required by the kernel
-    Occupancy = std::min(Occupancy, MaxWavesPerEU);
-  }
-
-  return Occupancy;
-}
-} // namespace hsa_utils
 
 } // namespace plugin
 } // namespace target

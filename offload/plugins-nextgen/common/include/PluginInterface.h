@@ -310,6 +310,15 @@ struct GenericKernelTy {
   /// Check if kernel is a multi-device kernel.
   bool isMultiDeviceKernel() const { return IsMultiDeviceKernel; }
 
+  /// Compute kernel occupancy
+  /// This function computes the max(upperbound) occupancy for a lanuched kernel
+  /// based on the given hardware resources e.g. the number of registers, size
+  /// of the local memory, etc.
+  virtual unsigned computeMaxOccupancy(GenericDeviceTy &Device) const {
+    // This function should be overridden in the derived class.
+    return MaxOccupancy;
+  }
+
 protected:
   /// Get the execution mode name of the kernel.
   const char *getExecutionModeName() const {
@@ -415,6 +424,7 @@ protected:
   bool isXTeamReductionsMode() const {
     return ExecutionMode == OMP_TGT_EXEC_MODE_XTEAM_RED;
   }
+
   /// The kernel environment, including execution flags.
   KernelEnvironmentTy KernelEnvironment;
 
@@ -423,6 +433,10 @@ protected:
 
   /// If the kernel is a bare kernel.
   bool IsBareKernel = false;
+
+  /// Upper-bound for the launched kernel occupancy.
+  /// -1 indicates an invalid result.
+  mutable unsigned MaxOccupancy = -1;
 };
 
 /// Information about an allocation, when it has been allocated, and when/if it
