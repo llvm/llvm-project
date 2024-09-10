@@ -58,7 +58,7 @@ public:
   constexpr ReservedMemoryFuchsia() = default;
 
   bool createImpl(uptr Addr, uptr Size, const char *Name, uptr Flags,
-                  uptr Alignment);
+                  uptr AlignmentPages);
   void releaseImpl();
   MemMapT dispatchImpl(uptr Addr, uptr Size);
   uptr getBaseImpl() { return Base; }

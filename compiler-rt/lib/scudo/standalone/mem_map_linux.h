@@ -52,7 +52,7 @@ public:
 
   // These threes are specific to `ReservedMemory`.
   bool createImpl(uptr Addr, uptr Size, const char *Name, uptr Flags,
-                  uptr Alignment);
+                  uptr AlignmentPages);
   void releaseImpl();
   MemMapT dispatchImpl(uptr Addr, uptr Size);
 

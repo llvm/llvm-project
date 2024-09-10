@@ -94,10 +94,10 @@ public:
 
   // Reserve a chunk of memory at a suggested address.
   bool create(uptr Addr, uptr Size, const char *Name, uptr Flags = 0,
-              uptr Alignment = getPageSizeCached()) {
+              uptr AlignmentPages = 1) {
     DCHECK(!isCreated());
-    DCHECK_EQ(Alignment % getPageSizeCached(), 0U);
-    return invokeImpl(&Derived::createImpl, Addr, Size, Name, Flags, Alignment);
+    return invokeImpl(&Derived::createImpl, Addr, Size, Name, Flags,
+                      AlignmentPages);
   }
 
   // Release the entire reserved memory.
