@@ -17,7 +17,6 @@
 
 #include "debug.h"
 #include "error.h"
-#include "jit_dispatch.h"
 #include "wrapper_function_utils.h"
 
 #include <array>
@@ -316,9 +315,9 @@ Error COFFPlatformRuntimeState::dlopenFull(JITDylibState &JDS) {
   // Call back to the JIT to push the initializers.
   Expected<COFFJITDylibDepInfoMap> DepInfoMap((COFFJITDylibDepInfoMap()));
   if (auto Err = WrapperFunction<SPSExpected<SPSCOFFJITDylibDepInfoMap>(
-          SPSExecutorAddr)>::
-          call(JITDispatch(&__orc_rt_coff_push_initializers_tag), DepInfoMap,
-               ExecutorAddr::fromPtr(JDS.Header)))
+          SPSExecutorAddr)>::call(&__orc_rt_coff_push_initializers_tag,
+                                  DepInfoMap,
+                                  ExecutorAddr::fromPtr(JDS.Header)))
     return Err;
   if (!DepInfoMap)
     return DepInfoMap.takeError();
@@ -446,9 +445,10 @@ COFFPlatformRuntimeState::lookupSymbolInJITDylib(void *header,
                                                  std::string_view Sym) {
   Expected<ExecutorAddr> Result((ExecutorAddr()));
   if (auto Err = WrapperFunction<SPSExpected<SPSExecutorAddr>(
-          SPSExecutorAddr,
-          SPSString)>::call(JITDispatch(&__orc_rt_coff_symbol_lookup_tag),
-                            Result, ExecutorAddr::fromPtr(header), Sym))
+          SPSExecutorAddr, SPSString)>::call(&__orc_rt_coff_symbol_lookup_tag,
+                                             Result,
+                                             ExecutorAddr::fromPtr(header),
+                                             Sym))
     return std::move(Err);
   return Result;
 }
