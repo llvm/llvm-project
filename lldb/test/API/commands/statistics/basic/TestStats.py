@@ -921,6 +921,7 @@ class TestCase(TestBase):
                 f"The order of options '{options[0]}' and '{options[1]}' should not matter",
             )
 
+    @skipIfWindows
     def test_summary_statistics_providers(self):
         """
         Test summary timing statistics is included in statistics dump when
@@ -960,6 +961,7 @@ class TestCase(TestBase):
         self.assertIn("'totalTime':", summary_provider_str)
         self.assertIn("'type': 'python'", summary_provider_str)
 
+    @skipIfWindows
     def test_summary_statistics_providers_vec(self):
         """
         Test summary timing statistics is included in statistics dump when
