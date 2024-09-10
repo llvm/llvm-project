@@ -284,7 +284,7 @@ void AbstractDenseBackwardDataFlowAnalysis::visitCallOperation(
     CallOpInterface call, const AbstractDenseLattice &after,
     AbstractDenseLattice *before) {
   // Find the callee.
-  Operation *callee = call.resolveCallable(&symbolTable);
+  Operation *callee = call.resolveCallableInTable(&symbolTable);
 
   auto callable = dyn_cast_or_null<CallableOpInterface>(callee);
   // No region means the callee is only declared in this module.
