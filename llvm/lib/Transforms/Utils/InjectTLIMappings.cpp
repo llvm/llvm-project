@@ -34,6 +34,19 @@ STATISTIC(NumVFDeclAdded,
 STATISTIC(NumCompUsedAdded,
           "Number of `@llvm.compiler.used` operands that have been added.");
 
+static void removeIllegalAttributes(Function *Func, const FunctionType *FTy) {
+  // Vector types can not have attributes signext/zeroext.
+  if (FTy->getReturnType()->isVectorTy()) {
+    Func->removeRetAttr(Attribute::SExt);
+    Func->removeRetAttr(Attribute::ZExt);
+  }
+  for (const auto I : enumerate(FTy->params()))
+    if (I.value()->isVectorTy()) {
+      Func->removeParamAttr(I.index(), Attribute::SExt);
+      Func->removeParamAttr(I.index(), Attribute::ZExt);
+    }
+}
+
 /// A helper function that adds the vector variant declaration for vectorizing
 /// the CallInst \p CI with a vectorization factor of \p VF lanes. For each
 /// mapping, TLI provides a VABI prefix, which contains all information required
@@ -56,6 +69,8 @@ static void addVariantDeclaration(CallInst &CI, const ElementCount &VF,
   Function *VecFunc =
       Function::Create(VectorFTy, Function::ExternalLinkage, VFName, M);
   VecFunc->copyAttributesFrom(CI.getCalledFunction());
+  removeIllegalAttributes(VecFunc, VectorFTy);
+
   ++NumVFDeclAdded;
   LLVM_DEBUG(dbgs() << DEBUG_TYPE << ": Added to the module: `" << VFName
                     << "` of type " << *VectorFTy << "\n");
