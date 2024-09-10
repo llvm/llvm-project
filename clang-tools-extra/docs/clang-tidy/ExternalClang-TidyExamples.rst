@@ -7,7 +7,7 @@ Introduction
 
 This page provides examples of what people have done with :program:`clang-tidy` that 
 might serve as useful guides (or starting points) to develop your own checks. 
-They may be helpful for necessary things such as how to write CMakeLists.txt 
+They may be helpful for necessary things such as how to write the `CMakeLists.txt`` 
 for an out-of-tree plugin of :program:`clang-tidy` checks.
 
 If you know of (or wrote!) a tool or project using :program:`clang-tidy`, please share it 
@@ -29,4 +29,4 @@ List of projects and tools
 ==========================
 
 `<https://github.com/coveooss/clang-tidy-plugin-examples/tree/main>`_
-    "This folder contains clang-tidy plugins."
+    "This folder contains :program:`clang-tidy` plugins."
