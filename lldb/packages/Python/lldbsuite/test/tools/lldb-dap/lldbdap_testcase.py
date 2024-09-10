@@ -362,6 +362,7 @@ class DAPTestCaseBase(TestBase):
         cwd=None,
         env=None,
         stopOnEntry=False,
+        singleStoppedEvent=False,
         disableASLR=True,
         disableSTDIO=False,
         shellExpandArguments=False,
@@ -399,7 +400,7 @@ class DAPTestCaseBase(TestBase):
         self.addTearDownHook(cleanup)
 
         # Initialize and launch the program
-        self.dap_server.request_initialize(sourceInitFile)
+        self.dap_server.request_initialize(sourceInitFile, singleStoppedEvent)
         response = self.dap_server.request_launch(
             program,
             args=args,
@@ -444,6 +445,7 @@ class DAPTestCaseBase(TestBase):
         cwd=None,
         env=None,
         stopOnEntry=False,
+        singleStoppedEvent=False,
         disableASLR=True,
         disableSTDIO=False,
         shellExpandArguments=False,
@@ -480,6 +482,7 @@ class DAPTestCaseBase(TestBase):
             cwd,
             env,
             stopOnEntry,
+            singleStoppedEvent,
             disableASLR,
             disableSTDIO,
             shellExpandArguments,

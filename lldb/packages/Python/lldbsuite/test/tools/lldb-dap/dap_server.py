@@ -125,6 +125,8 @@ class DebugCommunication(object):
         self.initialize_body = None
         self.thread_stop_reasons = {}
         self.breakpoint_events = []
+        self.thread_events_body = []
+        self.stopped_events = []
         self.progress_events = []
         self.reverse_requests = []
         self.sequence = 1
@@ -227,6 +229,8 @@ class DebugCommunication(object):
                 # When a new process is attached or launched, remember the
                 # details that are available in the body of the event
                 self.process_event_body = body
+            elif event == "continued":
+                self.stopped_events = []
             elif event == "stopped":
                 # Each thread that stops with a reason will send a
                 # 'stopped' event. We need to remember the thread stop
@@ -234,6 +238,7 @@ class DebugCommunication(object):
                 # that information.
                 self._process_stopped()
                 tid = body["threadId"]
+                self.stopped_events.append(packet)
                 self.thread_stop_reasons[tid] = body
             elif event == "breakpoint":
                 # Breakpoint events come in when a breakpoint has locations
@@ -241,6 +246,10 @@ class DebugCommunication(object):
                 # in tests.
                 self.breakpoint_events.append(packet)
                 # no need to add 'breakpoint' event packets to our packets list
+                return keepGoing
+            elif event == "thread":
+                self.thread_events_body.append(body)
+                # no need to add 'thread' event packets to our packets list
                 return keepGoing
             elif event.startswith("progress"):
                 # Progress events come in as 'progressStart', 'progressUpdate',
@@ -417,6 +426,17 @@ class DebugCommunication(object):
         if self.threads is None:
             self.request_threads()
         return self.threads
+
+    def get_thread_events(self, reason=None):
+        if reason == None:
+            return self.thread_events_body
+        else:
+            return [
+                body for body in self.thread_events_body if body["reason"] == reason
+            ]
+
+    def get_stopped_events(self):
+        return self.stopped_events
 
     def get_thread_id(self, threadIndex=0):
         """Utility function to get the first thread ID in the thread list.
@@ -707,7 +727,7 @@ class DebugCommunication(object):
         }
         return self.send_recv(command_dict)
 
-    def request_initialize(self, sourceInitFile):
+    def request_initialize(self, sourceInitFile, singleStoppedEvent=False):
         command_dict = {
             "command": "initialize",
             "type": "request",
@@ -723,6 +743,7 @@ class DebugCommunication(object):
                 "supportsVariableType": True,
                 "supportsStartDebuggingRequest": True,
                 "sourceInitFile": sourceInitFile,
+                "singleStoppedEvent": singleStoppedEvent,
             },
         }
         response = self.send_recv(command_dict)
