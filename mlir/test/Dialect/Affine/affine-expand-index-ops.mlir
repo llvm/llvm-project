@@ -21,8 +21,8 @@ func.func @static_basis(%linear_index: index) -> (index, index, index) {
 // -----
 
 //   CHECK-DAG:   #[[$map0:.+]] = affine_map<()[s0, s1, s2] -> (s2 floordiv (s0 * s1))>
-//   CHECK-DAG:   #[[$map1:.+]] = affine_map<()[s0, s1, s2] -> ((s2 mod (s0 * s1)) floordiv s1)>
-//   CHECK-DAG:   #[[$map2:.+]] = affine_map<()[s0, s1, s2] -> ((s2 mod (s0 * s1)) mod s1)>
+//   CHECK-DAG:   #[[$map1:.+]] = affine_map<()[s0, s1, s2] -> ((s2 mod (s1 * s0)) floordiv s0)>
+//   CHECK-DAG:   #[[$map2:.+]] = affine_map<()[s0, s1, s2] -> ((s2 mod (s1 * s0)) mod s0)>
 
 // CHECK-LABEL: @dynamic_basis
 //  CHECK-SAME:    (%[[IDX:.+]]: index, %[[MEMREF:.+]]: memref
@@ -31,8 +31,8 @@ func.func @static_basis(%linear_index: index) -> (index, index, index) {
 //        CHECK:  %[[DIM1:.+]] = memref.dim %[[MEMREF]], %[[C1]] :
 //        CHECK:  %[[DIM2:.+]] = memref.dim %[[MEMREF]], %[[C2]] :
 //       CHECK:   %[[N:.+]] = affine.apply #[[$map0]]()[%[[DIM1]], %[[DIM2]], %[[IDX]]]
-//       CHECK:   %[[P:.+]] = affine.apply #[[$map1]]()[%[[DIM1]], %[[DIM2]], %[[IDX]]]
-//       CHECK:   %[[Q:.+]] = affine.apply #[[$map2]]()[%[[DIM1]], %[[DIM2]], %[[IDX]]]
+//       CHECK:   %[[P:.+]] = affine.apply #[[$map1]]()[%[[DIM2]], %[[DIM1]], %[[IDX]]]
+//       CHECK:   %[[Q:.+]] = affine.apply #[[$map2]]()[%[[DIM2]], %[[DIM1]], %[[IDX]]]
 //       CHECK:   return %[[N]], %[[P]], %[[Q]]
 func.func @dynamic_basis(%linear_index: index, %src: memref<?x?x?xf32>) -> (index, index, index) {
   %c0 = arith.constant 0 : index
