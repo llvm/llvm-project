@@ -53,6 +53,10 @@
 #include "lldb/Utility/StreamString.h"
 #include "lldb/lldb-enumerations.h"
 
+#ifdef LLDB_ENABLE_SWIFT
+#include "Plugins/TypeSystem/Swift/TypeSystemSwiftTypeRef.h"
+#endif
+
 #include <memory>
 #include <optional>
 
@@ -344,13 +348,20 @@ void Thread::FrameSelectedCallback(StackFrame *frame) {
     GetProcess()->PrintWarningToolchainMismatch(sc);
 #endif
   }
-  SymbolContext msc = frame->GetSymbolContext(eSymbolContextModule);
-  if (msc.module_sp)
-    msc.module_sp->ForEachTypeSystem([&](lldb::TypeSystemSP ts) {
-      if (ts)
-        ts->DiagnoseWarnings(*GetProcess(), *msc.module_sp);
-      return true;
-    });
+#ifdef LLDB_ENABLE_SWIFT
+  {
+    SymbolContext msc =
+        frame->GetSymbolContext(eSymbolContextFunction | eSymbolContextModule);
+    Status error;
+    ExecutionContext exe_ctx;
+    frame->CalculateExecutionContext(exe_ctx);
+    if (auto *exe_scope = exe_ctx.GetBestExecutionContextScope())
+      if (auto target = frame->CalculateTarget())
+        if (auto swift_ast_ctx =
+                target->GetSwiftScratchContext(error, *exe_scope, false))
+          swift_ast_ctx->get()->DiagnoseWarnings(*GetProcess(), msc);
+  }
+#endif
 }
 
 lldb::StopInfoSP Thread::GetStopInfo() {
