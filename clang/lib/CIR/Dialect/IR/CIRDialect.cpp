@@ -510,11 +510,21 @@ LogicalResult CastOp::verify() {
     if (isa<StructType>(srcType) || isa<StructType>(resType))
       return success();
 
+    // Handle the pointer types first.
+    auto srcPtrTy = mlir::dyn_cast<mlir::cir::PointerType>(srcType);
+    auto resPtrTy = mlir::dyn_cast<mlir::cir::PointerType>(resType);
+
+    if (srcPtrTy && resPtrTy) {
+      if (srcPtrTy.getAddrSpace() != resPtrTy.getAddrSpace()) {
+        return emitOpError() << "result type address space does not match the "
+                                "address space of the operand";
+      }
+      return success();
+    }
+
     // This is the only cast kind where we don't want vector types to decay
     // into the element type.
-    if ((!mlir::isa<mlir::cir::PointerType>(getSrc().getType()) ||
-         !mlir::isa<mlir::cir::PointerType>(getResult().getType())) &&
-        (!mlir::isa<mlir::cir::VectorType>(getSrc().getType()) ||
+    if ((!mlir::isa<mlir::cir::VectorType>(getSrc().getType()) ||
          !mlir::isa<mlir::cir::VectorType>(getResult().getType())))
       return emitOpError()
              << "requires !cir.ptr or !cir.vector type for source and result";
