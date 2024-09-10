@@ -42,6 +42,7 @@ __orc_rt_jit_dlopen_wrapper(const char *ArgData, size_t ArgSize) {
       .release();
 }
 
+#ifdef __APPLE__
 ORC_RT_INTERFACE orc_rt_CWrapperFunctionResult
 __orc_rt_jit_dlupdate_wrapper(const char *ArgData, size_t ArgSize) {
   return WrapperFunction<int32_t(SPSExecutorAddr, int32_t)>::handle(
@@ -51,6 +52,7 @@ __orc_rt_jit_dlupdate_wrapper(const char *ArgData, size_t ArgSize) {
              })
       .release();
 }
+#endif
 
 ORC_RT_INTERFACE orc_rt_CWrapperFunctionResult
 __orc_rt_jit_dlclose_wrapper(const char *ArgData, size_t ArgSize) {

@@ -1295,8 +1295,9 @@ Error MachOPlatformRuntimeState::dlupdateFull(
   // Unlock so that we can accept the initializer update.
   JDStatesLock.unlock();
   if (auto Err = WrapperFunction<SPSExpected<SPSMachOJITDylibDepInfoMap>(
-          SPSExecutorAddr)>::call(&__orc_rt_macho_push_initializers_tag,
-                                  DepInfo, ExecutorAddr::fromPtr(JDS.Header)))
+          SPSExecutorAddr)>::
+          call(JITDispatch(&__orc_rt_macho_push_initializers_tag), DepInfo,
+               ExecutorAddr::fromPtr(JDS.Header)))
     return Err;
   JDStatesLock.lock();
 
@@ -1317,7 +1318,7 @@ Error MachOPlatformRuntimeState::dlupdateInitialize(
   });
 
   // Initialize this JITDylib.
-  if (auto Err = registerObjCRegistrationObjects(JDS))
+  if (auto Err = registerObjCRegistrationObjects(JDStatesLock, JDS))
     return Err;
   if (auto Err = runModInits(JDStatesLock, JDS))
     return Err;
