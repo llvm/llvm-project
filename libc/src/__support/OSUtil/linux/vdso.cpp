@@ -40,8 +40,7 @@ struct Verdef {
   ElfW(Half) vd_cnt;     /* Number of associated aux entries */
   ElfW(Word) vd_hash;    /* Version name hash value */
   ElfW(Word) vd_aux;     /* Offset in bytes to verdaux array */
-  ElfW(Word) vd_next;    /* Offset in bytes to next verdef
-                            entry */
+  ElfW(Word) vd_next;    /* Offset in bytes to next verdef entry */
   Verdef *next() const {
     if (vd_next == 0)
       return nullptr;
@@ -91,6 +90,7 @@ size_t shdr_get_symbol_count(ElfW(Shdr) * vdso_shdr, size_t e_shnum) {
 struct VDSOSymbolTable {
   const char *strtab;
   ElfW(Sym) * symtab;
+  // The following can be nullptr if the vDSO does not have versioning
   ElfW(Half) * versym;
   Verdef *verdef;
 
@@ -107,9 +107,9 @@ struct VDSOSymbolTable {
         if (name == strtab + symtab[j].st_name) {
           // we find a symbol with desired name
           // now we need to check if it has the right version
-          if (versym && verdef)
-            if (version != find_version(verdef, versym, strtab, j))
-              continue;
+          if (versym && verdef &&
+              version != find_version(verdef, versym, strtab, j))
+            continue;
 
           // put the symbol address into the symbol table
           symbol_table[i] =
@@ -125,7 +125,7 @@ struct PhdrInfo {
   ElfW(Dyn) * vdso_dyn;
   static cpp::optional<PhdrInfo> from(ElfW(Phdr) * vdso_phdr, size_t e_phnum,
                                       uintptr_t vdso_ehdr_addr) {
-    static constexpr ElfW(Addr) INVALID_ADDR = static_cast<ElfW(Addr)>(-1);
+    constexpr ElfW(Addr) INVALID_ADDR = static_cast<ElfW(Addr)>(-1);
     ElfW(Addr) vdso_addr = INVALID_ADDR;
     ElfW(Dyn) *vdso_dyn = nullptr;
     // iterate through all the program headers until we get the desired pieces
@@ -165,9 +165,8 @@ struct PhdrInfo {
         verdef = reinterpret_cast<Verdef *>(vdso_addr + d->d_un.d_ptr);
         break;
       }
-      if (strtab && symtab && versym && verdef) {
+      if (strtab && symtab && versym && verdef)
         break;
-      }
     }
     if (strtab == nullptr || symtab == nullptr)
       return cpp::nullopt;
