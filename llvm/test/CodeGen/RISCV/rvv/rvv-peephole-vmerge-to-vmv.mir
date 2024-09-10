@@ -152,7 +152,7 @@ body: |
     ; CHECK-NEXT: $v0 = COPY %mask
     ; CHECK-NEXT: %true:vrnov0 = PseudoVADD_VV_M1_MASK %false, $noreg, $noreg, $v0, 4, 5 /* e32 */, 1 /* ta, mu */
     ; CHECK-NEXT: $v0 = COPY %mask
-    %false:vrnov0 = COPY $v8
+    %false:vr = COPY $v8
     %mask:vr = COPY $v0
     $v0 = COPY %mask
     %true:vrnov0 = PseudoVADD_VV_M1_MASK $noreg, $noreg, $noreg, $v0, 4, 5 /* e32 */, 0 /* tu, mu */
