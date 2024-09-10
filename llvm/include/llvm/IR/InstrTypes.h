@@ -85,6 +85,7 @@ public:
            I->getOpcode() == Instruction::Load ||
            I->getOpcode() == Instruction::VAArg ||
            I->getOpcode() == Instruction::ExtractValue ||
+           I->getOpcode() == Instruction::Freeze ||
            (I->getOpcode() >= CastOpsBegin && I->getOpcode() < CastOpsEnd);
   }
   static bool classof(const Value *V) {
