@@ -1,9 +1,9 @@
-// RUN: %clang_cc1 -x hlsl -triple  dxil-pc-shadermodel6.3-library %s -emit-llvm -disable-llvm-passes -o - | FileCheck %s --check-prefixes=CHECK,NOINLINE
-// RUN: %clang_cc1 -x hlsl -triple  dxil-pc-shadermodel6.3-library %s -emit-llvm -O0 -o - | FileCheck %s --check-prefixes=CHECK,INLINE
-// RUN: %clang_cc1 -x hlsl -triple  dxil-pc-shadermodel6.3-library %s -emit-llvm -O1 -o - | FileCheck %s --check-prefixes=CHECK,INLINE
-// RUN: %clang_cc1 -x hlsl -triple  dxil-pc-shadermodel6.0-compute %s -emit-llvm -disable-llvm-passes -o - | FileCheck %s --check-prefixes=CHECK,NOINLINE
-// RUN: %clang_cc1 -x hlsl -triple  dxil-pc-shadermodel6.0-compute %s -emit-llvm -O0 -o - | FileCheck %s --check-prefixes=CHECK,INLINE
-// RUN: %clang_cc1 -x hlsl -triple  dxil-pc-shadermodel6.0-compute %s -emit-llvm -O1 -o - | FileCheck %s --check-prefixes=CHECK,INLINE
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library %s -emit-llvm -disable-llvm-passes -o - | FileCheck %s --check-prefixes=CHECK,NOINLINE
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library %s -emit-llvm -O0 -o - | FileCheck %s --check-prefixes=CHECK,INLINE
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library %s -emit-llvm -O1 -o - | FileCheck %s --check-prefixes=CHECK,INLINE
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute %s -emit-llvm -disable-llvm-passes -o - | FileCheck %s --check-prefixes=CHECK,NOINLINE
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute %s -emit-llvm -O0 -o - | FileCheck %s --check-prefixes=CHECK,INLINE
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute %s -emit-llvm -O1 -o - | FileCheck %s --check-prefixes=CHECK,INLINE
 
 // Tests that user functions will always be inlined.
 // This includes exported functions and mangled entry point implementation functions.
@@ -71,7 +71,7 @@ RWBuffer<unsigned> Indices;
 // NOINLINE: ret void
 
 // The unmangled version is not inlined, EntryAttr reflects that
-// CHECK-NOT: Function Attrs: alwaysinline
+// CHECK: Function Attrs: {{.*}}noinline
 // CHECK: define void @main() {{[a-z_ ]*}}[[EntryAttr:\#[0-9]+]]
 // Make sure function calls are inlined when AlwaysInline is run
 // This only leaves calls to llvm. intrinsics
@@ -98,7 +98,7 @@ void main(unsigned int GI : SV_GroupIndex) {
 // NOINLINE: ret void
 
 // The unmangled version is not inlined, EntryAttr reflects that
-// CHECK-NOT: Function Attrs: alwaysinline
+// CHECK: Function Attrs: {{.*}}noinline
 // CHECK: define void @main10() {{[a-z_ ]*}}[[EntryAttr]]
 // Make sure function calls are inlined when AlwaysInline is run
 // This only leaves calls to llvm. intrinsics
@@ -113,4 +113,4 @@ void main10() {
 
 // NOINLINE: attributes [[IntAttr]] = {{.*}} alwaysinline
 // CHECK: attributes [[ExtAttr]] = {{.*}} alwaysinline
-// CHECK-NOT: attributes [[EntryAttr]] = {{.*}} alwaysinline
+// CHECK: attributes [[EntryAttr]] = {{.*}} noinline

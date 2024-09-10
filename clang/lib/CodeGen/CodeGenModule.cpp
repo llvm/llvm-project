@@ -2472,7 +2472,7 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
 
   if (!D) {
     // Non-entry HLSL functions must always be inlined.
-    if (getLangOpts().HLSL && !F->hasFnAttribute("hlsl.shader"))
+    if (getLangOpts().HLSL && !F->hasFnAttribute(llvm::Attribute::NoInline))
       B.addAttribute(llvm::Attribute::AlwaysInline);
     // If we don't have a declaration to control inlining, the function isn't
     // explicitly marked as alwaysinline for semantic reasons, and inlining is
@@ -2506,9 +2506,12 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
   ShouldAddOptNone &= !D->hasAttr<AlwaysInlineAttr>();
 
   // Non-entry HLSL functions must always be inlined.
-  if (getLangOpts().HLSL && !F->hasFnAttribute("hlsl.shader"))
+  if (getLangOpts().HLSL && !F->hasFnAttribute(llvm::Attribute::NoInline)) {
+    if (D->hasAttr<NoInlineAttr>())
+      getDiags().Report(D->getLocation(), diag::warn_unsupported_attribute_ignored)
+	<< "noinline" << "HLSL";
     B.addAttribute(llvm::Attribute::AlwaysInline);
-  else if ((ShouldAddOptNone || D->hasAttr<OptimizeNoneAttr>()) &&
+  } else if ((ShouldAddOptNone || D->hasAttr<OptimizeNoneAttr>()) &&
            !F->hasFnAttribute(llvm::Attribute::AlwaysInline)) {
     // Add optnone, but do so only if the function isn't always_inline.
     B.addAttribute(llvm::Attribute::OptimizeNone);
