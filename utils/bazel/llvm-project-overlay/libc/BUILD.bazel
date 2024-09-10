@@ -150,7 +150,6 @@ libc_support_library(
     hdrs = ["hdr/stdio_macros.h"],
 )
 
-
 libc_support_library(
     name = "hdr_limits_macros",
     hdrs = ["hdr/limits_macros.h"],
@@ -687,6 +686,7 @@ libc_support_library(
         ":__support_fputil_dyadic_float",
         ":__support_fputil_fenv_impl",
         ":__support_fputil_fp_bits",
+        ":__support_fputil_rounding_mode",
         ":__support_macros_optimization",
         ":__support_uint128",
     ],
@@ -2730,7 +2730,6 @@ libc_math_function(name = "ufromfpxf")
 libc_math_function(name = "ufromfpxl")
 
 libc_math_function(name = "ufromfpxf128")
-
 
 ############################## inttypes targets ##############################
 
