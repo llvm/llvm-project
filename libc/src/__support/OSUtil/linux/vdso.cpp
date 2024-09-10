@@ -57,7 +57,9 @@ struct Verdef {
 // https://refspecs.linuxfoundation.org/LSB_1.3.0/gLSB/gLSB/symversion.html#SYMVERTBL
 cpp::string_view find_version(Verdef *verdef, ElfW(Half) * versym,
                               const char *strtab, size_t idx) {
-  static constexpr ElfW(Half) VER_FLG_BASE = 0x1;
+  constexpr ElfW(Half) VER_FLG_BASE = 0x1;
+  if (!versym)
+    return "";
   ElfW(Half) identifier = versym[idx] & 0x7FFF;
   // iterate through all version definitions
   for (Verdef *def = verdef; def != nullptr; def = def->next()) {
@@ -76,6 +78,8 @@ cpp::string_view find_version(Verdef *verdef, ElfW(Half) * versym,
 }
 
 size_t shdr_get_symbol_count(ElfW(Shdr) * vdso_shdr, size_t e_shnum) {
+  if (!vdso_shdr)
+    return 0;
   // iterate all sections until we locate the dynamic symbol section
   for (size_t i = 0; i < e_shnum; ++i) {
     // dynamic symbol section is a table section
@@ -128,6 +132,8 @@ struct PhdrInfo {
     constexpr ElfW(Addr) INVALID_ADDR = static_cast<ElfW(Addr)>(-1);
     ElfW(Addr) vdso_addr = INVALID_ADDR;
     ElfW(Dyn) *vdso_dyn = nullptr;
+    if (!vdso_phdr)
+      return cpp::nullopt;
     // iterate through all the program headers until we get the desired pieces
     for (size_t i = 0; i < e_phnum; ++i) {
       if (vdso_phdr[i].p_type == PT_DYNAMIC)
