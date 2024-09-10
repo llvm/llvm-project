@@ -82,8 +82,11 @@ class OpLowerer {
 public:
   OpLowerer(Module &M, DXILResourceMap &DRM) : M(M), OpBuilder(M), DRM(DRM) {}
 
-  void replaceFunction(Function &F,
-                       llvm::function_ref<Error(CallInst *CI)> ReplaceCall) {
+  /// Replace every call to \c F using \c ReplaceCall, and then erase \c F. If
+  /// there is an error replacing a call, we emit a diagnostic and return true.
+  [[nodiscard]] bool
+  replaceFunction(Function &F,
+                  llvm::function_ref<Error(CallInst *CI)> ReplaceCall) {
     for (User *U : make_early_inc_range(F.users())) {
       CallInst *CI = dyn_cast<CallInst>(U);
       if (!CI)
@@ -94,16 +97,18 @@ public:
         DiagnosticInfoUnsupported Diag(*CI->getFunction(), Message,
                                        CI->getDebugLoc());
         M.getContext().diagnose(Diag);
-        continue;
+        return true;
       }
     }
     if (F.user_empty())
       F.eraseFromParent();
+    return false;
   }
 
-  void replaceFunctionWithOp(Function &F, dxil::OpCode DXILOp) {
+  [[nodiscard]]
+  bool replaceFunctionWithOp(Function &F, dxil::OpCode DXILOp) {
     bool IsVectorArgExpansion = isVectorArgExpansion(F);
-    replaceFunction(F, [&](CallInst *CI) -> Error {
+    return replaceFunction(F, [&](CallInst *CI) -> Error {
       SmallVector<Value *> Args;
       OpBuilder.getIRB().SetInsertPoint(CI);
       if (IsVectorArgExpansion) {
@@ -175,12 +180,12 @@ public:
     CleanupCasts.clear();
   }
 
-  void lowerToCreateHandle(Function &F) {
+  [[nodiscard]] bool lowerToCreateHandle(Function &F) {
     IRBuilder<> &IRB = OpBuilder.getIRB();
     Type *Int8Ty = IRB.getInt8Ty();
     Type *Int32Ty = IRB.getInt32Ty();
 
-    replaceFunction(F, [&](CallInst *CI) -> Error {
+    return replaceFunction(F, [&](CallInst *CI) -> Error {
       IRB.SetInsertPoint(CI);
 
       auto *It = DRM.find(CI);
@@ -205,10 +210,10 @@ public:
     });
   }
 
-  void lowerToBindAndAnnotateHandle(Function &F) {
+  [[nodiscard]] bool lowerToBindAndAnnotateHandle(Function &F) {
     IRBuilder<> &IRB = OpBuilder.getIRB();
 
-    replaceFunction(F, [&](CallInst *CI) -> Error {
+    return replaceFunction(F, [&](CallInst *CI) -> Error {
       IRB.SetInsertPoint(CI);
 
       auto *It = DRM.find(CI);
@@ -251,12 +256,11 @@ public:
 
   /// Lower `dx.handle.fromBinding` intrinsics depending on the shader model and
   /// taking into account binding information from DXILResourceAnalysis.
-  void lowerHandleFromBinding(Function &F) {
+  bool lowerHandleFromBinding(Function &F) {
     Triple TT(Triple(M.getTargetTriple()));
     if (TT.getDXILVersion() < VersionTuple(1, 6))
-      lowerToCreateHandle(F);
-    else
-      lowerToBindAndAnnotateHandle(F);
+      return lowerToCreateHandle(F);
+    return lowerToBindAndAnnotateHandle(F);
   }
 
   /// Replace uses of \c Intrin with the values in the `dx.ResRet` of \c Op.
@@ -342,11 +346,11 @@ public:
     return Error::success();
   }
 
-  void lowerTypedBufferLoad(Function &F) {
+  [[nodiscard]] bool lowerTypedBufferLoad(Function &F) {
     IRBuilder<> &IRB = OpBuilder.getIRB();
     Type *Int32Ty = IRB.getInt32Ty();
 
-    replaceFunction(F, [&](CallInst *CI) -> Error {
+    return replaceFunction(F, [&](CallInst *CI) -> Error {
       IRB.SetInsertPoint(CI);
 
       Value *Handle =
@@ -368,8 +372,51 @@ public:
     });
   }
 
+  [[nodiscard]] bool lowerTypedBufferStore(Function &F) {
+    IRBuilder<> &IRB = OpBuilder.getIRB();
+    Type *Int8Ty = IRB.getInt8Ty();
+    Type *Int32Ty = IRB.getInt32Ty();
+
+    return replaceFunction(F, [&](CallInst *CI) -> Error {
+      IRB.SetInsertPoint(CI);
+
+      Value *Handle =
+          createTmpHandleCast(CI->getArgOperand(0), OpBuilder.getHandleType());
+      Value *Index0 = CI->getArgOperand(1);
+      Value *Index1 = UndefValue::get(Int32Ty);
+      // For typed stores, the mask must always cover all four elements.
+      Constant *Mask = ConstantInt::get(Int8Ty, 0xF);
+
+      Value *Data = CI->getArgOperand(2);
+      auto *DataTy = dyn_cast<FixedVectorType>(Data->getType());
+      if (!DataTy || DataTy->getNumElements() != 4)
+        return make_error<StringError>(
+            "typedBufferStore data must be a vector of 4 elements",
+            inconvertibleErrorCode());
+      Value *Data0 =
+          IRB.CreateExtractElement(Data, ConstantInt::get(Int32Ty, 0));
+      Value *Data1 =
+          IRB.CreateExtractElement(Data, ConstantInt::get(Int32Ty, 1));
+      Value *Data2 =
+          IRB.CreateExtractElement(Data, ConstantInt::get(Int32Ty, 2));
+      Value *Data3 =
+          IRB.CreateExtractElement(Data, ConstantInt::get(Int32Ty, 3));
+
+      std::array<Value *, 8> Args{Handle, Index0, Index1, Data0,
+                                  Data1,  Data2,  Data3,  Mask};
+      Expected<CallInst *> OpCall =
+          OpBuilder.tryCreateOp(OpCode::BufferStore, Args);
+      if (Error E = OpCall.takeError())
+        return E;
+
+      CI->eraseFromParent();
+      return Error::success();
+    });
+  }
+
   bool lowerIntrinsics() {
     bool Updated = false;
+    bool HasErrors = false;
 
     for (Function &F : make_early_inc_range(M.functions())) {
       if (!F.isDeclaration())
@@ -380,19 +427,22 @@ public:
         continue;
 #define DXIL_OP_INTRINSIC(OpCode, Intrin)                                      \
   case Intrin:                                                                 \
-    replaceFunctionWithOp(F, OpCode);                                          \
+    HasErrors |= replaceFunctionWithOp(F, OpCode);                             \
     break;
 #include "DXILOperation.inc"
       case Intrinsic::dx_handle_fromBinding:
-        lowerHandleFromBinding(F);
+        HasErrors |= lowerHandleFromBinding(F);
         break;
       case Intrinsic::dx_typedBufferLoad:
-        lowerTypedBufferLoad(F);
+        HasErrors |= lowerTypedBufferLoad(F);
+        break;
+      case Intrinsic::dx_typedBufferStore:
+        HasErrors |= lowerTypedBufferStore(F);
         break;
       }
       Updated = true;
     }
-    if (Updated)
+    if (Updated && !HasErrors)
       cleanupHandleCasts();
 
     return Updated;

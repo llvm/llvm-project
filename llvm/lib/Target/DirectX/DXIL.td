@@ -707,6 +707,18 @@ def BufferLoad : DXILOp<68, bufferLoad> {
   let stages = [Stages<DXIL1_0, [all_stages]>];
 }
 
+def BufferStore : DXILOp<69, bufferStore> {
+  let Doc = "writes to an RWTypedBuffer";
+  // Handle, Coord0, Coord1, Val0, Val1, Val2, Val3, Mask
+  let arguments = [
+    HandleTy, Int32Ty, Int32Ty, OverloadTy, OverloadTy, OverloadTy, OverloadTy,
+    Int8Ty
+  ];
+  let result = VoidTy;
+  let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy, Int16Ty, Int32Ty]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+}
+
 def ThreadId :  DXILOp<93, threadId> {
   let Doc = "Reads the thread ID";
   let LLVMIntrinsic = int_dx_thread_id;

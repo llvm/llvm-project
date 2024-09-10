@@ -73,7 +73,7 @@ public:
   struct OperandInfo {
     /// Rec - The definition this operand is declared as.
     ///
-    Record *Rec;
+    const Record *Rec;
 
     /// Name - If this operand was assigned a symbolic name, this is it,
     /// otherwise, it's empty.
@@ -116,7 +116,7 @@ public:
     /// track constraint info for each.
     std::vector<ConstraintInfo> Constraints;
 
-    OperandInfo(Record *R, const std::string &N, const std::string &PMN,
+    OperandInfo(const Record *R, const std::string &N, const std::string &PMN,
                 const std::string &OT, unsigned MION, unsigned MINO,
                 DagInit *MIOI)
         : Rec(R), Name(N), SubOpNames(MINO), PrinterMethodName(PMN),
@@ -136,9 +136,9 @@ public:
     }
   };
 
-  CGIOperandList(Record *D);
+  CGIOperandList(const Record *D);
 
-  Record *TheDef; // The actual record containing this OperandList.
+  const Record *TheDef; // The actual record containing this OperandList.
 
   /// NumDefs - Number of def operands declared, this is the number of
   /// elements in the instruction's (outs) list.
