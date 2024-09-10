@@ -12,7 +12,12 @@
 //                            to the x.ll file.
 //  Options:
 //      --help   - Output information about command line switches
-//
+//      -o <filename>                  - Override output filename
+//      -f                             - Enable binary output on terminals
+//      --disable-output               - Don't output the .ll file
+//      --show-annotations             - Add informational comments to the .ll file
+//      --materialize-metadata         - Load module without materializing metadata, then materialize only the metadata
+// 
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Bitcode/BitcodeReader.h"
