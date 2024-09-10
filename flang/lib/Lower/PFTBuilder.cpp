@@ -1566,11 +1566,11 @@ private:
       return 0;
     LLVM_DEBUG(llvm::dbgs() << "analyze symbol " << &sym << " in <"
                             << &sym.owner() << ">: " << sym << '\n');
-    semantics::Symbol ultimate = sym.GetUltimate();
+    const semantics::Symbol &ultimate = sym.GetUltimate();
     if (const auto *details = ultimate.detailsIf<semantics::GenericDetails>()) {
       // Procedure pointers may be "hidden" behind to the generic symbol if they
       // have the same name.
-      if (const semantics::Symbol *specific{details->specific()})
+      if (const semantics::Symbol *specific = details->specific())
         analyze(*specific);
       return 0;
     }
