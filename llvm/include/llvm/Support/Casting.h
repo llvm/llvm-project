@@ -683,6 +683,13 @@ template <typename... X, class Y>
   return isa_and_present<X...>(Val);
 }
 
+// isa_or_null<X> - Returns true if the value is null or matches the list of
+// types provided.
+template <typename... To, typename From>
+[[nodiscard]] inline bool isa_or_null(const From &Val) {
+  return !detail::isPresent(Val) || isa<To...>(Val);
+}
+
 /// cast_if_present<X> - Functionally identical to cast, except that a null
 /// value is accepted.
 template <class X, class Y>
