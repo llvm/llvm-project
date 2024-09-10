@@ -191,7 +191,8 @@ AddDebugInfoPass::getModuleAttrFromGlobalOp(fir::GlobalOp globalOp,
     scope = sp.getCompileUnit();
 
   return getOrCreateModuleAttr(result.second.modules[0], fileAttr, scope,
-                               line - 1, !globalOp.isInitialized());
+                               std::max(line - 1, (unsigned)1),
+                               !globalOp.isInitialized());
 }
 
 void AddDebugInfoPass::handleGlobalOp(fir::GlobalOp globalOp,
