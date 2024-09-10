@@ -594,7 +594,8 @@ char SIWholeQuadMode::scanInstructions(MachineFunction &MF,
         KillInstrs.push_back(&MI);
         BBI.NeedsLowering = true;
       } else if (Opcode == AMDGPU::SI_INIT_EXEC ||
-                 Opcode == AMDGPU::SI_INIT_EXEC_FROM_INPUT) {
+                 Opcode == AMDGPU::SI_INIT_EXEC_FROM_INPUT ||
+                 Opcode == AMDGPU::SI_INIT_WHOLE_WAVE) {
         InitExecInstrs.push_back(&MI);
       } else if (WQMOutputs) {
         // The function is in machine SSA form, which means that physical
@@ -1581,6 +1582,29 @@ bool SIWholeQuadMode::lowerKillInstrs(bool IsWQM) {
 void SIWholeQuadMode::lowerInitExec(MachineInstr &MI) {
   MachineBasicBlock *MBB = MI.getParent();
   bool IsWave32 = ST->isWave32();
+
+  if (MI.getOpcode() == AMDGPU::SI_INIT_WHOLE_WAVE) {
+    assert(MBB == &MBB->getParent()->front() &&
+           "init whole wave not in entry block");
+    Register EntryExec = MRI->createVirtualRegister(TRI->getBoolRC());
+    MachineInstr *SaveExec =
+        BuildMI(*MBB, MBB->begin(), MI.getDebugLoc(),
+                TII->get(IsWave32 ? AMDGPU::S_OR_SAVEEXEC_B32
+                                  : AMDGPU::S_OR_SAVEEXEC_B64),
+                EntryExec)
+            .addImm(-1);
+
+    // Replace all uses of MI's destination reg with EntryExec.
+    MRI->replaceRegWith(MI.getOperand(0).getReg(), EntryExec);
+    MI.eraseFromParent();
+
+    if (LIS) {
+      LIS->RemoveMachineInstrFromMaps(MI);
+      LIS->InsertMachineInstrInMaps(*SaveExec);
+      LIS->createAndComputeVirtRegInterval(EntryExec);
+    }
+    return;
+  }
 
   if (MI.getOpcode() == AMDGPU::SI_INIT_EXEC) {
     // This should be before all vector instructions.
