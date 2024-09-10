@@ -745,7 +745,7 @@ Within the `{}` attribute entries are specified by an identifier or string name,
 corresponding to the attribute name, followed by an assignment to the attribute
 value. If the attribute value is elided, the value of the attribute is
 implicitly defined as a
-[`UnitAttr`](Dialects/Builtin.md#unitattr).
+[`UnitAttr`](https://mlir.llvm.org/docs/Dialects/Builtin/#unitattr).
 
 ```pdll
 let unitConstant = op<my_dialect.constant> {value};
