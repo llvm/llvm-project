@@ -1838,7 +1838,7 @@ static void AddTypeSpecifierResults(const LangOptions &LangOpts,
       Results.AddResult(Result(Builder.TakeString()));
     }
 
-    if(LangOpts.CPlusPlus20){
+    if (LangOpts.CPlusPlus20) {
       Results.AddResult(Result("char8_t", CCP_Type));
     }
   } else
@@ -2265,8 +2265,9 @@ AddOrdinaryNameResults(SemaCodeCompletion::ParserCompletionContext CCC,
     [[fallthrough]];
 
   case SemaCodeCompletion::PCC_Template:
-    if (SemaRef.getLangOpts().CPlusPlus20 && CCC == SemaCodeCompletion::PCC_Template)
-        Results.AddResult(Result("concept", CCP_Keyword));
+    if (SemaRef.getLangOpts().CPlusPlus20 && 
+        CCC == SemaCodeCompletion::PCC_Template)
+      Results.AddResult(Result("concept", CCP_Keyword));
     [[fallthrough]];
 
   case SemaCodeCompletion::PCC_MemberTemplate:
@@ -2282,7 +2283,8 @@ AddOrdinaryNameResults(SemaCodeCompletion::ParserCompletionContext CCC,
     }
 
     if(SemaRef.getLangOpts().CPlusPlus20 && 
-      (CCC == SemaCodeCompletion::PCC_Template || CCC == SemaCodeCompletion::PCC_MemberTemplate)) {
+      (CCC == SemaCodeCompletion::PCC_Template || 
+       CCC == SemaCodeCompletion::PCC_MemberTemplate)) {
       Results.AddResult(Result("requires", CCP_Keyword));
     }
 
@@ -2738,14 +2740,12 @@ AddOrdinaryNameResults(SemaCodeCompletion::ParserCompletionContext CCC,
 
       if (SemaRef.getLangOpts().CPlusPlus20) {
         // co_await expression
-        Builder.AddResultTypeChunk("");
         Builder.AddTypedTextChunk("co_await");
         Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
         Builder.AddPlaceholderChunk("expression");
         Results.AddResult(Result(Builder.TakeString()));
 
         // co_yield expression
-        Builder.AddResultTypeChunk("");
         Builder.AddTypedTextChunk("co_yield");
         Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
         Builder.AddPlaceholderChunk("expression");
@@ -2766,9 +2766,8 @@ AddOrdinaryNameResults(SemaCodeCompletion::ParserCompletionContext CCC,
         Builder.AddChunk(CodeCompletionString::CK_RightBrace);
         Results.AddResult(Result(Builder.TakeString()));
 
-        if(llvm::isa<clang::RequiresExprBodyDecl>(SemaRef.CurContext)){
+        if (llvm::isa<clang::RequiresExprBodyDecl>(SemaRef.CurContext)) {
           // requires expression ;
-          Builder.AddResultTypeChunk("");
           Builder.AddTypedTextChunk("requires");
           Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
           Builder.AddPlaceholderChunk("expression");
