@@ -1696,12 +1696,16 @@ bool CursorVisitor::VisitTagTypeLoc(TagTypeLoc TL) {
 }
 
 bool CursorVisitor::VisitTemplateTypeParmTypeLoc(TemplateTypeParmTypeLoc TL) {
-  if (const auto *TC = TL.getDecl()->getTypeConstraint()) {
+  TemplateTypeParmDecl *D = TL.getDecl();
+  if (!D)
+    return true;
+
+  if (const auto *TC = D->getTypeConstraint()) {
     if (VisitTypeConstraint(*TC))
       return true;
   }
 
-  return Visit(MakeCursorTypeRef(TL.getDecl(), TL.getNameLoc(), TU));
+  return Visit(MakeCursorTypeRef(D, TL.getNameLoc(), TU));
 }
 
 bool CursorVisitor::VisitObjCInterfaceTypeLoc(ObjCInterfaceTypeLoc TL) {
