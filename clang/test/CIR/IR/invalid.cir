@@ -1298,3 +1298,18 @@ module {
     cir.return
   }
 }
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+module {
+
+  cir.func @test_bitcast_addrspace() {
+    %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["tmp"] {alignment = 4 : i64}
+    // expected-error@+1 {{'cir.cast' op result type address space does not match the address space of the operand}}
+    %1 = cir.cast(bitcast, %0 : !cir.ptr<!s32i>), !cir.ptr<!s32i, addrspace(offload_local)>
+  }
+
+}
+
