@@ -1956,7 +1956,7 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::ArrayConstructor &array) {
 
 // Check if implicit conversion of expr to the symbol type is legal (if needed),
 // and make it explicit if requested.
-static MaybeExpr implicitConvertTo(const semantics::Symbol &sym,
+static MaybeExpr ImplicitConvertTo(const semantics::Symbol &sym,
     Expr<SomeType> &&expr, bool keepConvertImplicit) {
   if (!keepConvertImplicit) {
     return ConvertToType(sym, std::move(expr));
@@ -2196,7 +2196,7 @@ MaybeExpr ExpressionAnalyzer::Analyze(
         // convert would cause a segfault. Lowering will deal with
         // conditionally converting and preserving the lower bounds in this
         // case.
-        if (MaybeExpr converted{implicitConvertTo(
+        if (MaybeExpr converted{ImplicitConvertTo(
                 *symbol, std::move(*value), IsAllocatable(*symbol))}) {
           if (auto componentShape{GetShape(GetFoldingContext(), *symbol)}) {
             if (auto valueShape{GetShape(GetFoldingContext(), *converted)}) {
