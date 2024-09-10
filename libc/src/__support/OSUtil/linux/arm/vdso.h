@@ -32,5 +32,5 @@ LIBC_INLINE constexpr cpp::string_view symbol_version(VDSOSym) {
   return "LINUX_2.6";
 }
 } // namespace vdso
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 #endif // LLVM_LIBC_SRC___SUPPORT_OSUTIL_LINUX_ARM_VDSO_H

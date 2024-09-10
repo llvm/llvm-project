@@ -38,5 +38,5 @@ LIBC_INLINE constexpr cpp::string_view symbol_version(VDSOSym) {
   return "LINUX_4.15";
 }
 } // namespace vdso
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 #endif // LLVM_LIBC_SRC___SUPPORT_OSUTIL_LINUX_RISCV_VDSO_H
