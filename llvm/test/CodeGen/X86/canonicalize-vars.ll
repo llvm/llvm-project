@@ -10,26 +10,32 @@
 define float @canon_fp32_varargsf32(float %a) {
 ; SSE-LABEL: canon_fp32_varargsf32:
 ; SSE:       # %bb.0:
+; SSE-NEXT:    mulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE-NEXT:    retq
 ;
 ; SSE2-LABEL: canon_fp32_varargsf32:
 ; SSE2:       # %bb.0:
+; SSE2-NEXT:    mulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: canon_fp32_varargsf32:
 ; AVX:       # %bb.0:
+; AVX-NEXT:    vmulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; AVX2-LABEL: canon_fp32_varargsf32:
 ; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: canon_fp32_varargsf32:
 ; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vmulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: canon_fp32_varargsf32:
 ; AVX512BW:       # %bb.0:
+; AVX512BW-NEXT:    vmulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX512BW-NEXT:    retq
   %canonicalized = call float @llvm.canonicalize.f32(float %a)
   ret float %canonicalized
@@ -39,62 +45,46 @@ define x86_fp80 @canon_fp32_varargsf80(x86_fp80 %a) {
 ; SSE-LABEL: canon_fp32_varargsf80:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    fldt {{[0-9]+}}(%rsp)
+; SSE-NEXT:    fld1
+; SSE-NEXT:    fmulp %st, %st(1)
 ; SSE-NEXT:    retq
 ;
 ; SSE2-LABEL: canon_fp32_varargsf80:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    fldt {{[0-9]+}}(%rsp)
+; SSE2-NEXT:    fld1
+; SSE2-NEXT:    fmulp %st, %st(1)
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: canon_fp32_varargsf80:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    fldt {{[0-9]+}}(%rsp)
+; AVX-NEXT:    fld1
+; AVX-NEXT:    fmulp %st, %st(1)
 ; AVX-NEXT:    retq
 ;
 ; AVX2-LABEL: canon_fp32_varargsf80:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    fldt {{[0-9]+}}(%rsp)
+; AVX2-NEXT:    fld1
+; AVX2-NEXT:    fmulp %st, %st(1)
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: canon_fp32_varargsf80:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    fldt {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    fld1
+; AVX512F-NEXT:    fmulp %st, %st(1)
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: canon_fp32_varargsf80:
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    fldt {{[0-9]+}}(%rsp)
+; AVX512BW-NEXT:    fld1
+; AVX512BW-NEXT:    fmulp %st, %st(1)
 ; AVX512BW-NEXT:    retq
   %canonicalized = call x86_fp80 @llvm.canonicalize.f80(x86_fp80 %a)
   ret x86_fp80 %canonicalized
-}
-
-define bfloat @canon_fp32_varargsbf16(bfloat %a) {
-; SSE-LABEL: canon_fp32_varargsbf16:
-; SSE:       # %bb.0:
-; SSE-NEXT:    retq
-;
-; SSE2-LABEL: canon_fp32_varargsbf16:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    retq
-;
-; AVX-LABEL: canon_fp32_varargsbf16:
-; AVX:       # %bb.0:
-; AVX-NEXT:    retq
-;
-; AVX2-LABEL: canon_fp32_varargsbf16:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    retq
-;
-; AVX512F-LABEL: canon_fp32_varargsbf16:
-; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    retq
-;
-; AVX512BW-LABEL: canon_fp32_varargsbf16:
-; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    retq
-  %canonicalized = call bfloat @llvm.canonicalize.bf16(bfloat %a)
-  ret bfloat %canonicalized
 }
 
 define half @complex_canonicalize_fmul_half(half %a, half %b) {
@@ -102,27 +92,33 @@ define half @complex_canonicalize_fmul_half(half %a, half %b) {
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    pushq %rax
 ; SSE-NEXT:    .cfi_def_cfa_offset 16
-; SSE-NEXT:    movss %xmm1, (%rsp) # 4-byte Spill
-; SSE-NEXT:    callq __extendhfsf2@PLT
-; SSE-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; SSE-NEXT:    movss (%rsp), %xmm0 # 4-byte Reload
-; SSE-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; SSE-NEXT:    movss %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; SSE-NEXT:    callq __extendhfsf2@PLT
 ; SSE-NEXT:    movss %xmm0, (%rsp) # 4-byte Spill
-; SSE-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 4-byte Reload
+; SSE-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Reload
+; SSE-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; SSE-NEXT:    callq __extendhfsf2@PLT
+; SSE-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; SSE-NEXT:    movss (%rsp), %xmm1 # 4-byte Reload
 ; SSE-NEXT:    # xmm1 = mem[0],zero,zero,zero
 ; SSE-NEXT:    subss %xmm0, %xmm1
 ; SSE-NEXT:    movaps %xmm1, %xmm0
 ; SSE-NEXT:    callq __truncsfhf2@PLT
 ; SSE-NEXT:    callq __extendhfsf2@PLT
-; SSE-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; SSE-NEXT:    addss (%rsp), %xmm0 # 4-byte Folded Reload
-; SSE-NEXT:    callq __truncsfhf2@PLT
-; SSE-NEXT:    callq __extendhfsf2@PLT
-; SSE-NEXT:    subss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
+; SSE-NEXT:    movss %xmm0, (%rsp) # 4-byte Spill
+; SSE-NEXT:    addss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
 ; SSE-NEXT:    callq __truncsfhf2@PLT
 ; SSE-NEXT:    callq __extendhfsf2@PLT
 ; SSE-NEXT:    subss (%rsp), %xmm0 # 4-byte Folded Reload
+; SSE-NEXT:    callq __truncsfhf2@PLT
+; SSE-NEXT:    callq __extendhfsf2@PLT
+; SSE-NEXT:    movss %xmm0, (%rsp) # 4-byte Spill
+; SSE-NEXT:    pinsrw $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-NEXT:    callq __extendhfsf2@PLT
+; SSE-NEXT:    mulss (%rsp), %xmm0 # 4-byte Folded Reload
+; SSE-NEXT:    callq __truncsfhf2@PLT
+; SSE-NEXT:    callq __extendhfsf2@PLT
+; SSE-NEXT:    subss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
 ; SSE-NEXT:    callq __truncsfhf2@PLT
 ; SSE-NEXT:    popq %rax
 ; SSE-NEXT:    .cfi_def_cfa_offset 8
@@ -132,27 +128,33 @@ define half @complex_canonicalize_fmul_half(half %a, half %b) {
 ; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    pushq %rax
 ; SSE2-NEXT:    .cfi_def_cfa_offset 16
-; SSE2-NEXT:    movss %xmm1, (%rsp) # 4-byte Spill
-; SSE2-NEXT:    callq __extendhfsf2@PLT
-; SSE2-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; SSE2-NEXT:    movss (%rsp), %xmm0 # 4-byte Reload
-; SSE2-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; SSE2-NEXT:    movss %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; SSE2-NEXT:    callq __extendhfsf2@PLT
 ; SSE2-NEXT:    movss %xmm0, (%rsp) # 4-byte Spill
-; SSE2-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 4-byte Reload
+; SSE2-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Reload
+; SSE2-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; SSE2-NEXT:    callq __extendhfsf2@PLT
+; SSE2-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; SSE2-NEXT:    movss (%rsp), %xmm1 # 4-byte Reload
 ; SSE2-NEXT:    # xmm1 = mem[0],zero,zero,zero
 ; SSE2-NEXT:    subss %xmm0, %xmm1
 ; SSE2-NEXT:    movaps %xmm1, %xmm0
 ; SSE2-NEXT:    callq __truncsfhf2@PLT
 ; SSE2-NEXT:    callq __extendhfsf2@PLT
-; SSE2-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; SSE2-NEXT:    addss (%rsp), %xmm0 # 4-byte Folded Reload
-; SSE2-NEXT:    callq __truncsfhf2@PLT
-; SSE2-NEXT:    callq __extendhfsf2@PLT
-; SSE2-NEXT:    subss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
+; SSE2-NEXT:    movss %xmm0, (%rsp) # 4-byte Spill
+; SSE2-NEXT:    addss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
 ; SSE2-NEXT:    callq __truncsfhf2@PLT
 ; SSE2-NEXT:    callq __extendhfsf2@PLT
 ; SSE2-NEXT:    subss (%rsp), %xmm0 # 4-byte Folded Reload
+; SSE2-NEXT:    callq __truncsfhf2@PLT
+; SSE2-NEXT:    callq __extendhfsf2@PLT
+; SSE2-NEXT:    movss %xmm0, (%rsp) # 4-byte Spill
+; SSE2-NEXT:    pinsrw $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE2-NEXT:    callq __extendhfsf2@PLT
+; SSE2-NEXT:    mulss (%rsp), %xmm0 # 4-byte Folded Reload
+; SSE2-NEXT:    callq __truncsfhf2@PLT
+; SSE2-NEXT:    callq __extendhfsf2@PLT
+; SSE2-NEXT:    subss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
 ; SSE2-NEXT:    callq __truncsfhf2@PLT
 ; SSE2-NEXT:    popq %rax
 ; SSE2-NEXT:    .cfi_def_cfa_offset 8
@@ -162,26 +164,32 @@ define half @complex_canonicalize_fmul_half(half %a, half %b) {
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    pushq %rax
 ; AVX-NEXT:    .cfi_def_cfa_offset 16
-; AVX-NEXT:    vmovss %xmm1, (%rsp) # 4-byte Spill
-; AVX-NEXT:    callq __extendhfsf2@PLT
-; AVX-NEXT:    vmovss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; AVX-NEXT:    vmovss (%rsp), %xmm0 # 4-byte Reload
-; AVX-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; AVX-NEXT:    vmovss %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; AVX-NEXT:    callq __extendhfsf2@PLT
 ; AVX-NEXT:    vmovss %xmm0, (%rsp) # 4-byte Spill
-; AVX-NEXT:    vmovss {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 4-byte Reload
+; AVX-NEXT:    vmovss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Reload
+; AVX-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; AVX-NEXT:    callq __extendhfsf2@PLT
+; AVX-NEXT:    vmovss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; AVX-NEXT:    vmovss (%rsp), %xmm1 # 4-byte Reload
 ; AVX-NEXT:    # xmm1 = mem[0],zero,zero,zero
 ; AVX-NEXT:    vsubss %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    callq __truncsfhf2@PLT
 ; AVX-NEXT:    callq __extendhfsf2@PLT
-; AVX-NEXT:    vmovss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; AVX-NEXT:    vaddss (%rsp), %xmm0, %xmm0 # 4-byte Folded Reload
-; AVX-NEXT:    callq __truncsfhf2@PLT
-; AVX-NEXT:    callq __extendhfsf2@PLT
-; AVX-NEXT:    vsubss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 4-byte Folded Reload
+; AVX-NEXT:    vmovss %xmm0, (%rsp) # 4-byte Spill
+; AVX-NEXT:    vaddss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 4-byte Folded Reload
 ; AVX-NEXT:    callq __truncsfhf2@PLT
 ; AVX-NEXT:    callq __extendhfsf2@PLT
 ; AVX-NEXT:    vsubss (%rsp), %xmm0, %xmm0 # 4-byte Folded Reload
+; AVX-NEXT:    callq __truncsfhf2@PLT
+; AVX-NEXT:    callq __extendhfsf2@PLT
+; AVX-NEXT:    vmovss %xmm0, (%rsp) # 4-byte Spill
+; AVX-NEXT:    vpinsrw $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    callq __extendhfsf2@PLT
+; AVX-NEXT:    vmulss (%rsp), %xmm0, %xmm0 # 4-byte Folded Reload
+; AVX-NEXT:    callq __truncsfhf2@PLT
+; AVX-NEXT:    callq __extendhfsf2@PLT
+; AVX-NEXT:    vsubss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 4-byte Folded Reload
 ; AVX-NEXT:    callq __truncsfhf2@PLT
 ; AVX-NEXT:    popq %rax
 ; AVX-NEXT:    .cfi_def_cfa_offset 8
@@ -191,26 +199,32 @@ define half @complex_canonicalize_fmul_half(half %a, half %b) {
 ; AVX2:       # %bb.0: # %entry
 ; AVX2-NEXT:    pushq %rax
 ; AVX2-NEXT:    .cfi_def_cfa_offset 16
-; AVX2-NEXT:    vmovss %xmm1, (%rsp) # 4-byte Spill
-; AVX2-NEXT:    callq __extendhfsf2@PLT
-; AVX2-NEXT:    vmovss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; AVX2-NEXT:    vmovss (%rsp), %xmm0 # 4-byte Reload
-; AVX2-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; AVX2-NEXT:    vmovss %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; AVX2-NEXT:    callq __extendhfsf2@PLT
 ; AVX2-NEXT:    vmovss %xmm0, (%rsp) # 4-byte Spill
-; AVX2-NEXT:    vmovss {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 4-byte Reload
+; AVX2-NEXT:    vmovss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Reload
+; AVX2-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; AVX2-NEXT:    callq __extendhfsf2@PLT
+; AVX2-NEXT:    vmovss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; AVX2-NEXT:    vmovss (%rsp), %xmm1 # 4-byte Reload
 ; AVX2-NEXT:    # xmm1 = mem[0],zero,zero,zero
 ; AVX2-NEXT:    vsubss %xmm0, %xmm1, %xmm0
 ; AVX2-NEXT:    callq __truncsfhf2@PLT
 ; AVX2-NEXT:    callq __extendhfsf2@PLT
-; AVX2-NEXT:    vmovss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; AVX2-NEXT:    vaddss (%rsp), %xmm0, %xmm0 # 4-byte Folded Reload
-; AVX2-NEXT:    callq __truncsfhf2@PLT
-; AVX2-NEXT:    callq __extendhfsf2@PLT
-; AVX2-NEXT:    vsubss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 4-byte Folded Reload
+; AVX2-NEXT:    vmovss %xmm0, (%rsp) # 4-byte Spill
+; AVX2-NEXT:    vaddss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 4-byte Folded Reload
 ; AVX2-NEXT:    callq __truncsfhf2@PLT
 ; AVX2-NEXT:    callq __extendhfsf2@PLT
 ; AVX2-NEXT:    vsubss (%rsp), %xmm0, %xmm0 # 4-byte Folded Reload
+; AVX2-NEXT:    callq __truncsfhf2@PLT
+; AVX2-NEXT:    callq __extendhfsf2@PLT
+; AVX2-NEXT:    vmovss %xmm0, (%rsp) # 4-byte Spill
+; AVX2-NEXT:    vpinsrw $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX2-NEXT:    callq __extendhfsf2@PLT
+; AVX2-NEXT:    vmulss (%rsp), %xmm0, %xmm0 # 4-byte Folded Reload
+; AVX2-NEXT:    callq __truncsfhf2@PLT
+; AVX2-NEXT:    callq __extendhfsf2@PLT
+; AVX2-NEXT:    vsubss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 4-byte Folded Reload
 ; AVX2-NEXT:    callq __truncsfhf2@PLT
 ; AVX2-NEXT:    popq %rax
 ; AVX2-NEXT:    .cfi_def_cfa_offset 8
@@ -231,6 +245,15 @@ define half @complex_canonicalize_fmul_half(half %a, half %b) {
 ; AVX512F-NEXT:    vcvtps2ph $4, %xmm2, %xmm2
 ; AVX512F-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; AVX512F-NEXT:    vsubss %xmm0, %xmm2, %xmm0
+; AVX512F-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
+; AVX512F-NEXT:    vpmovzxwq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero
+; AVX512F-NEXT:    vcvtph2ps %xmm0, %xmm0
+; AVX512F-NEXT:    movzwl {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %eax
+; AVX512F-NEXT:    vmovd %eax, %xmm2
+; AVX512F-NEXT:    vcvtph2ps %xmm2, %xmm2
+; AVX512F-NEXT:    vmulss %xmm0, %xmm2, %xmm0
+; AVX512F-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; AVX512F-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm2[1,2,3]
 ; AVX512F-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; AVX512F-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX512F-NEXT:    vsubss %xmm1, %xmm0, %xmm0
@@ -254,6 +277,15 @@ define half @complex_canonicalize_fmul_half(half %a, half %b) {
 ; AVX512BW-NEXT:    vcvtps2ph $4, %xmm2, %xmm2
 ; AVX512BW-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; AVX512BW-NEXT:    vsubss %xmm0, %xmm2, %xmm0
+; AVX512BW-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
+; AVX512BW-NEXT:    vpmovzxwq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero
+; AVX512BW-NEXT:    vcvtph2ps %xmm0, %xmm0
+; AVX512BW-NEXT:    movzwl {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %eax
+; AVX512BW-NEXT:    vmovd %eax, %xmm2
+; AVX512BW-NEXT:    vcvtph2ps %xmm2, %xmm2
+; AVX512BW-NEXT:    vmulss %xmm0, %xmm2, %xmm0
+; AVX512BW-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; AVX512BW-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm2[1,2,3]
 ; AVX512BW-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; AVX512BW-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX512BW-NEXT:    vsubss %xmm1, %xmm0, %xmm0
@@ -280,6 +312,8 @@ define x86_fp80 @complex_canonicalize_fmul_x86_fp80(x86_fp80 %a, x86_fp80 %b) {
 ; SSE-NEXT:    fld %st(0)
 ; SSE-NEXT:    fadd %st(2), %st
 ; SSE-NEXT:    fsubp %st, %st(1)
+; SSE-NEXT:    fld1
+; SSE-NEXT:    fmulp %st, %st(1)
 ; SSE-NEXT:    fsubp %st, %st(1)
 ; SSE-NEXT:    retq
 ;
@@ -291,6 +325,8 @@ define x86_fp80 @complex_canonicalize_fmul_x86_fp80(x86_fp80 %a, x86_fp80 %b) {
 ; SSE2-NEXT:    fld %st(0)
 ; SSE2-NEXT:    fadd %st(2), %st
 ; SSE2-NEXT:    fsubp %st, %st(1)
+; SSE2-NEXT:    fld1
+; SSE2-NEXT:    fmulp %st, %st(1)
 ; SSE2-NEXT:    fsubp %st, %st(1)
 ; SSE2-NEXT:    retq
 ;
@@ -302,6 +338,8 @@ define x86_fp80 @complex_canonicalize_fmul_x86_fp80(x86_fp80 %a, x86_fp80 %b) {
 ; AVX-NEXT:    fld %st(0)
 ; AVX-NEXT:    fadd %st(2), %st
 ; AVX-NEXT:    fsubp %st, %st(1)
+; AVX-NEXT:    fld1
+; AVX-NEXT:    fmulp %st, %st(1)
 ; AVX-NEXT:    fsubp %st, %st(1)
 ; AVX-NEXT:    retq
 ;
@@ -313,6 +351,8 @@ define x86_fp80 @complex_canonicalize_fmul_x86_fp80(x86_fp80 %a, x86_fp80 %b) {
 ; AVX2-NEXT:    fld %st(0)
 ; AVX2-NEXT:    fadd %st(2), %st
 ; AVX2-NEXT:    fsubp %st, %st(1)
+; AVX2-NEXT:    fld1
+; AVX2-NEXT:    fmulp %st, %st(1)
 ; AVX2-NEXT:    fsubp %st, %st(1)
 ; AVX2-NEXT:    retq
 ;
@@ -324,6 +364,8 @@ define x86_fp80 @complex_canonicalize_fmul_x86_fp80(x86_fp80 %a, x86_fp80 %b) {
 ; AVX512F-NEXT:    fld %st(0)
 ; AVX512F-NEXT:    fadd %st(2), %st
 ; AVX512F-NEXT:    fsubp %st, %st(1)
+; AVX512F-NEXT:    fld1
+; AVX512F-NEXT:    fmulp %st, %st(1)
 ; AVX512F-NEXT:    fsubp %st, %st(1)
 ; AVX512F-NEXT:    retq
 ;
@@ -335,6 +377,8 @@ define x86_fp80 @complex_canonicalize_fmul_x86_fp80(x86_fp80 %a, x86_fp80 %b) {
 ; AVX512BW-NEXT:    fld %st(0)
 ; AVX512BW-NEXT:    fadd %st(2), %st
 ; AVX512BW-NEXT:    fsubp %st, %st(1)
+; AVX512BW-NEXT:    fld1
+; AVX512BW-NEXT:    fmulp %st, %st(1)
 ; AVX512BW-NEXT:    fsubp %st, %st(1)
 ; AVX512BW-NEXT:    retq
 entry:
@@ -347,214 +391,6 @@ entry:
   ret x86_fp80 %result
 }
 
-define bfloat @complex_canonicalize_fmul_bfloat(bfloat %a, bfloat %b) {
-; SSE-LABEL: complex_canonicalize_fmul_bfloat:
-; SSE:       # %bb.0: # %entry
-; SSE-NEXT:    pushq %rax
-; SSE-NEXT:    .cfi_def_cfa_offset 16
-; SSE-NEXT:    pextrw $0, %xmm0, %eax
-; SSE-NEXT:    pextrw $0, %xmm1, %ecx
-; SSE-NEXT:    shll $16, %ecx
-; SSE-NEXT:    movd %ecx, %xmm1
-; SSE-NEXT:    movd %xmm1, (%rsp) # 4-byte Folded Spill
-; SSE-NEXT:    shll $16, %eax
-; SSE-NEXT:    movd %eax, %xmm0
-; SSE-NEXT:    subss %xmm1, %xmm0
-; SSE-NEXT:    callq __truncsfbf2@PLT
-; SSE-NEXT:    pextrw $0, %xmm0, %eax
-; SSE-NEXT:    shll $16, %eax
-; SSE-NEXT:    movd %eax, %xmm0
-; SSE-NEXT:    movd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
-; SSE-NEXT:    addss (%rsp), %xmm0 # 4-byte Folded Reload
-; SSE-NEXT:    callq __truncsfbf2@PLT
-; SSE-NEXT:    pextrw $0, %xmm0, %eax
-; SSE-NEXT:    shll $16, %eax
-; SSE-NEXT:    movd %eax, %xmm0
-; SSE-NEXT:    subss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
-; SSE-NEXT:    callq __truncsfbf2@PLT
-; SSE-NEXT:    pextrw $0, %xmm0, %eax
-; SSE-NEXT:    shll $16, %eax
-; SSE-NEXT:    movd %eax, %xmm0
-; SSE-NEXT:    subss (%rsp), %xmm0 # 4-byte Folded Reload
-; SSE-NEXT:    callq __truncsfbf2@PLT
-; SSE-NEXT:    popq %rax
-; SSE-NEXT:    .cfi_def_cfa_offset 8
-; SSE-NEXT:    retq
-;
-; SSE2-LABEL: complex_canonicalize_fmul_bfloat:
-; SSE2:       # %bb.0: # %entry
-; SSE2-NEXT:    pushq %rax
-; SSE2-NEXT:    .cfi_def_cfa_offset 16
-; SSE2-NEXT:    pextrw $0, %xmm0, %eax
-; SSE2-NEXT:    pextrw $0, %xmm1, %ecx
-; SSE2-NEXT:    shll $16, %ecx
-; SSE2-NEXT:    movd %ecx, %xmm1
-; SSE2-NEXT:    movd %xmm1, (%rsp) # 4-byte Folded Spill
-; SSE2-NEXT:    shll $16, %eax
-; SSE2-NEXT:    movd %eax, %xmm0
-; SSE2-NEXT:    subss %xmm1, %xmm0
-; SSE2-NEXT:    callq __truncsfbf2@PLT
-; SSE2-NEXT:    pextrw $0, %xmm0, %eax
-; SSE2-NEXT:    shll $16, %eax
-; SSE2-NEXT:    movd %eax, %xmm0
-; SSE2-NEXT:    movd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
-; SSE2-NEXT:    addss (%rsp), %xmm0 # 4-byte Folded Reload
-; SSE2-NEXT:    callq __truncsfbf2@PLT
-; SSE2-NEXT:    pextrw $0, %xmm0, %eax
-; SSE2-NEXT:    shll $16, %eax
-; SSE2-NEXT:    movd %eax, %xmm0
-; SSE2-NEXT:    subss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
-; SSE2-NEXT:    callq __truncsfbf2@PLT
-; SSE2-NEXT:    pextrw $0, %xmm0, %eax
-; SSE2-NEXT:    shll $16, %eax
-; SSE2-NEXT:    movd %eax, %xmm0
-; SSE2-NEXT:    subss (%rsp), %xmm0 # 4-byte Folded Reload
-; SSE2-NEXT:    callq __truncsfbf2@PLT
-; SSE2-NEXT:    popq %rax
-; SSE2-NEXT:    .cfi_def_cfa_offset 8
-; SSE2-NEXT:    retq
-;
-; AVX-LABEL: complex_canonicalize_fmul_bfloat:
-; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    pushq %rax
-; AVX-NEXT:    .cfi_def_cfa_offset 16
-; AVX-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX-NEXT:    vpextrw $0, %xmm1, %ecx
-; AVX-NEXT:    shll $16, %ecx
-; AVX-NEXT:    vmovd %ecx, %xmm1
-; AVX-NEXT:    vmovd %xmm1, (%rsp) # 4-byte Folded Spill
-; AVX-NEXT:    shll $16, %eax
-; AVX-NEXT:    vmovd %eax, %xmm0
-; AVX-NEXT:    vsubss %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    callq __truncsfbf2@PLT
-; AVX-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX-NEXT:    shll $16, %eax
-; AVX-NEXT:    vmovd %eax, %xmm0
-; AVX-NEXT:    vmovd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
-; AVX-NEXT:    vaddss (%rsp), %xmm0, %xmm0 # 4-byte Folded Reload
-; AVX-NEXT:    callq __truncsfbf2@PLT
-; AVX-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX-NEXT:    shll $16, %eax
-; AVX-NEXT:    vmovd %eax, %xmm0
-; AVX-NEXT:    vsubss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 4-byte Folded Reload
-; AVX-NEXT:    callq __truncsfbf2@PLT
-; AVX-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX-NEXT:    shll $16, %eax
-; AVX-NEXT:    vmovd %eax, %xmm0
-; AVX-NEXT:    vsubss (%rsp), %xmm0, %xmm0 # 4-byte Folded Reload
-; AVX-NEXT:    callq __truncsfbf2@PLT
-; AVX-NEXT:    popq %rax
-; AVX-NEXT:    .cfi_def_cfa_offset 8
-; AVX-NEXT:    retq
-;
-; AVX2-LABEL: complex_canonicalize_fmul_bfloat:
-; AVX2:       # %bb.0: # %entry
-; AVX2-NEXT:    pushq %rax
-; AVX2-NEXT:    .cfi_def_cfa_offset 16
-; AVX2-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX2-NEXT:    vpextrw $0, %xmm1, %ecx
-; AVX2-NEXT:    shll $16, %ecx
-; AVX2-NEXT:    vmovd %ecx, %xmm1
-; AVX2-NEXT:    vmovd %xmm1, (%rsp) # 4-byte Folded Spill
-; AVX2-NEXT:    shll $16, %eax
-; AVX2-NEXT:    vmovd %eax, %xmm0
-; AVX2-NEXT:    vsubss %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    callq __truncsfbf2@PLT
-; AVX2-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX2-NEXT:    shll $16, %eax
-; AVX2-NEXT:    vmovd %eax, %xmm0
-; AVX2-NEXT:    vmovd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
-; AVX2-NEXT:    vaddss (%rsp), %xmm0, %xmm0 # 4-byte Folded Reload
-; AVX2-NEXT:    callq __truncsfbf2@PLT
-; AVX2-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX2-NEXT:    shll $16, %eax
-; AVX2-NEXT:    vmovd %eax, %xmm0
-; AVX2-NEXT:    vsubss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 4-byte Folded Reload
-; AVX2-NEXT:    callq __truncsfbf2@PLT
-; AVX2-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX2-NEXT:    shll $16, %eax
-; AVX2-NEXT:    vmovd %eax, %xmm0
-; AVX2-NEXT:    vsubss (%rsp), %xmm0, %xmm0 # 4-byte Folded Reload
-; AVX2-NEXT:    callq __truncsfbf2@PLT
-; AVX2-NEXT:    popq %rax
-; AVX2-NEXT:    .cfi_def_cfa_offset 8
-; AVX2-NEXT:    retq
-;
-; AVX512F-LABEL: complex_canonicalize_fmul_bfloat:
-; AVX512F:       # %bb.0: # %entry
-; AVX512F-NEXT:    pushq %rax
-; AVX512F-NEXT:    .cfi_def_cfa_offset 16
-; AVX512F-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX512F-NEXT:    vpextrw $0, %xmm1, %ecx
-; AVX512F-NEXT:    shll $16, %ecx
-; AVX512F-NEXT:    vmovd %ecx, %xmm1
-; AVX512F-NEXT:    vmovd %xmm1, (%rsp) # 4-byte Folded Spill
-; AVX512F-NEXT:    shll $16, %eax
-; AVX512F-NEXT:    vmovd %eax, %xmm0
-; AVX512F-NEXT:    vsubss %xmm1, %xmm0, %xmm0
-; AVX512F-NEXT:    callq __truncsfbf2@PLT
-; AVX512F-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX512F-NEXT:    shll $16, %eax
-; AVX512F-NEXT:    vmovd %eax, %xmm0
-; AVX512F-NEXT:    vmovd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
-; AVX512F-NEXT:    vaddss (%rsp), %xmm0, %xmm0 # 4-byte Folded Reload
-; AVX512F-NEXT:    callq __truncsfbf2@PLT
-; AVX512F-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX512F-NEXT:    shll $16, %eax
-; AVX512F-NEXT:    vmovd %eax, %xmm0
-; AVX512F-NEXT:    vsubss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 4-byte Folded Reload
-; AVX512F-NEXT:    callq __truncsfbf2@PLT
-; AVX512F-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX512F-NEXT:    shll $16, %eax
-; AVX512F-NEXT:    vmovd %eax, %xmm0
-; AVX512F-NEXT:    vsubss (%rsp), %xmm0, %xmm0 # 4-byte Folded Reload
-; AVX512F-NEXT:    callq __truncsfbf2@PLT
-; AVX512F-NEXT:    popq %rax
-; AVX512F-NEXT:    .cfi_def_cfa_offset 8
-; AVX512F-NEXT:    retq
-;
-; AVX512BW-LABEL: complex_canonicalize_fmul_bfloat:
-; AVX512BW:       # %bb.0: # %entry
-; AVX512BW-NEXT:    pushq %rax
-; AVX512BW-NEXT:    .cfi_def_cfa_offset 16
-; AVX512BW-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX512BW-NEXT:    vpextrw $0, %xmm1, %ecx
-; AVX512BW-NEXT:    shll $16, %ecx
-; AVX512BW-NEXT:    vmovd %ecx, %xmm1
-; AVX512BW-NEXT:    vmovd %xmm1, (%rsp) # 4-byte Folded Spill
-; AVX512BW-NEXT:    shll $16, %eax
-; AVX512BW-NEXT:    vmovd %eax, %xmm0
-; AVX512BW-NEXT:    vsubss %xmm1, %xmm0, %xmm0
-; AVX512BW-NEXT:    callq __truncsfbf2@PLT
-; AVX512BW-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX512BW-NEXT:    shll $16, %eax
-; AVX512BW-NEXT:    vmovd %eax, %xmm0
-; AVX512BW-NEXT:    vmovd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
-; AVX512BW-NEXT:    vaddss (%rsp), %xmm0, %xmm0 # 4-byte Folded Reload
-; AVX512BW-NEXT:    callq __truncsfbf2@PLT
-; AVX512BW-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX512BW-NEXT:    shll $16, %eax
-; AVX512BW-NEXT:    vmovd %eax, %xmm0
-; AVX512BW-NEXT:    vsubss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 4-byte Folded Reload
-; AVX512BW-NEXT:    callq __truncsfbf2@PLT
-; AVX512BW-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX512BW-NEXT:    shll $16, %eax
-; AVX512BW-NEXT:    vmovd %eax, %xmm0
-; AVX512BW-NEXT:    vsubss (%rsp), %xmm0, %xmm0 # 4-byte Folded Reload
-; AVX512BW-NEXT:    callq __truncsfbf2@PLT
-; AVX512BW-NEXT:    popq %rax
-; AVX512BW-NEXT:    .cfi_def_cfa_offset 8
-; AVX512BW-NEXT:    retq
-entry:
-
-  %sub1 = fsub bfloat %a, %b
-  %add = fadd bfloat %sub1, %b
-  %sub2 = fsub bfloat %add, %sub1
-  %canonicalized = call bfloat @llvm.canonicalize.bf16(bfloat %sub2)
-  %result = fsub bfloat %canonicalized, %b
-  ret bfloat %result
-}
-
 define double @canonicalize_fp64(double %a, double %b) unnamed_addr #0 {
 ; SSE-LABEL: canonicalize_fp64:
 ; SSE:       # %bb.0: # %start
@@ -565,6 +401,7 @@ define double @canonicalize_fp64(double %a, double %b) unnamed_addr #0 {
 ; SSE-NEXT:    maxsd %xmm0, %xmm1
 ; SSE-NEXT:    andnpd %xmm1, %xmm2
 ; SSE-NEXT:    orpd %xmm3, %xmm2
+; SSE-NEXT:    mulsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
 ; SSE-NEXT:    movapd %xmm2, %xmm0
 ; SSE-NEXT:    retq
 ;
@@ -577,6 +414,7 @@ define double @canonicalize_fp64(double %a, double %b) unnamed_addr #0 {
 ; SSE2-NEXT:    maxsd %xmm0, %xmm1
 ; SSE2-NEXT:    andnpd %xmm1, %xmm2
 ; SSE2-NEXT:    orpd %xmm3, %xmm2
+; SSE2-NEXT:    mulsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
 ; SSE2-NEXT:    movapd %xmm2, %xmm0
 ; SSE2-NEXT:    retq
 ;
@@ -585,6 +423,7 @@ define double @canonicalize_fp64(double %a, double %b) unnamed_addr #0 {
 ; AVX-NEXT:    vmaxsd %xmm0, %xmm1, %xmm2
 ; AVX-NEXT:    vcmpunordsd %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    vblendvpd %xmm0, %xmm1, %xmm2, %xmm0
+; AVX-NEXT:    vmulsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; AVX2-LABEL: canonicalize_fp64:
@@ -592,6 +431,7 @@ define double @canonicalize_fp64(double %a, double %b) unnamed_addr #0 {
 ; AVX2-NEXT:    vmaxsd %xmm0, %xmm1, %xmm2
 ; AVX2-NEXT:    vcmpunordsd %xmm0, %xmm0, %xmm0
 ; AVX2-NEXT:    vblendvpd %xmm0, %xmm1, %xmm2, %xmm0
+; AVX2-NEXT:    vmulsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: canonicalize_fp64:
@@ -599,7 +439,7 @@ define double @canonicalize_fp64(double %a, double %b) unnamed_addr #0 {
 ; AVX512F-NEXT:    vmaxsd %xmm0, %xmm1, %xmm2
 ; AVX512F-NEXT:    vcmpunordsd %xmm0, %xmm0, %k1
 ; AVX512F-NEXT:    vmovsd %xmm1, %xmm2, %xmm2 {%k1}
-; AVX512F-NEXT:    vmovapd %xmm2, %xmm0
+; AVX512F-NEXT:    vmulsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: canonicalize_fp64:
@@ -607,7 +447,7 @@ define double @canonicalize_fp64(double %a, double %b) unnamed_addr #0 {
 ; AVX512BW-NEXT:    vmaxsd %xmm0, %xmm1, %xmm2
 ; AVX512BW-NEXT:    vcmpunordsd %xmm0, %xmm0, %k1
 ; AVX512BW-NEXT:    vmovsd %xmm1, %xmm2, %xmm2 {%k1}
-; AVX512BW-NEXT:    vmovapd %xmm2, %xmm0
+; AVX512BW-NEXT:    vmulsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm0
 ; AVX512BW-NEXT:    retq
 start:
 
@@ -629,6 +469,7 @@ define float @canonicalize_fp32(float %aa, float %bb) unnamed_addr #0 {
 ; SSE-NEXT:    maxss %xmm0, %xmm1
 ; SSE-NEXT:    andnps %xmm1, %xmm2
 ; SSE-NEXT:    orps %xmm3, %xmm2
+; SSE-NEXT:    mulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
 ; SSE-NEXT:    movaps %xmm2, %xmm0
 ; SSE-NEXT:    retq
 ;
@@ -641,6 +482,7 @@ define float @canonicalize_fp32(float %aa, float %bb) unnamed_addr #0 {
 ; SSE2-NEXT:    maxss %xmm0, %xmm1
 ; SSE2-NEXT:    andnps %xmm1, %xmm2
 ; SSE2-NEXT:    orps %xmm3, %xmm2
+; SSE2-NEXT:    mulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
 ; SSE2-NEXT:    movaps %xmm2, %xmm0
 ; SSE2-NEXT:    retq
 ;
@@ -649,6 +491,7 @@ define float @canonicalize_fp32(float %aa, float %bb) unnamed_addr #0 {
 ; AVX-NEXT:    vmaxss %xmm0, %xmm1, %xmm2
 ; AVX-NEXT:    vcmpunordss %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    vblendvps %xmm0, %xmm1, %xmm2, %xmm0
+; AVX-NEXT:    vmulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; AVX2-LABEL: canonicalize_fp32:
@@ -656,6 +499,7 @@ define float @canonicalize_fp32(float %aa, float %bb) unnamed_addr #0 {
 ; AVX2-NEXT:    vmaxss %xmm0, %xmm1, %xmm2
 ; AVX2-NEXT:    vcmpunordss %xmm0, %xmm0, %xmm0
 ; AVX2-NEXT:    vblendvps %xmm0, %xmm1, %xmm2, %xmm0
+; AVX2-NEXT:    vmulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: canonicalize_fp32:
@@ -663,7 +507,7 @@ define float @canonicalize_fp32(float %aa, float %bb) unnamed_addr #0 {
 ; AVX512F-NEXT:    vmaxss %xmm0, %xmm1, %xmm2
 ; AVX512F-NEXT:    vcmpunordss %xmm0, %xmm0, %k1
 ; AVX512F-NEXT:    vmovss %xmm1, %xmm2, %xmm2 {%k1}
-; AVX512F-NEXT:    vmovaps %xmm2, %xmm0
+; AVX512F-NEXT:    vmulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: canonicalize_fp32:
@@ -671,7 +515,7 @@ define float @canonicalize_fp32(float %aa, float %bb) unnamed_addr #0 {
 ; AVX512BW-NEXT:    vmaxss %xmm0, %xmm1, %xmm2
 ; AVX512BW-NEXT:    vcmpunordss %xmm0, %xmm0, %k1
 ; AVX512BW-NEXT:    vmovss %xmm1, %xmm2, %xmm2 {%k1}
-; AVX512BW-NEXT:    vmovaps %xmm2, %xmm0
+; AVX512BW-NEXT:    vmulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm0
 ; AVX512BW-NEXT:    retq
 start:
 
@@ -962,39 +806,48 @@ define void @v_test_canonicalize_var_f64(double addrspace(1)* %out) #1 {
   ret void
 }
 
-define void @v_test_canonicalize__bfloat(bfloat addrspace(1)* %out) {
-; SSE-LABEL: v_test_canonicalize__bfloat:
-; SSE:       # %bb.0: # %entry
+define void @canonicalize_undef(double addrspace(1)* %out) {
+; SSE-LABEL: canonicalize_undef:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movabsq $9221120237041090560, %rax # imm = 0x7FF8000000000000
+; SSE-NEXT:    movq %rax, (%rdi)
 ; SSE-NEXT:    retq
 ;
-; SSE2-LABEL: v_test_canonicalize__bfloat:
-; SSE2:       # %bb.0: # %entry
+; SSE2-LABEL: canonicalize_undef:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movabsq $9221120237041090560, %rax # imm = 0x7FF8000000000000
+; SSE2-NEXT:    movq %rax, (%rdi)
 ; SSE2-NEXT:    retq
 ;
-; AVX-LABEL: v_test_canonicalize__bfloat:
-; AVX:       # %bb.0: # %entry
+; AVX-LABEL: canonicalize_undef:
+; AVX:       # %bb.0:
+; AVX-NEXT:    movabsq $9221120237041090560, %rax # imm = 0x7FF8000000000000
+; AVX-NEXT:    movq %rax, (%rdi)
 ; AVX-NEXT:    retq
 ;
-; AVX2-LABEL: v_test_canonicalize__bfloat:
-; AVX2:       # %bb.0: # %entry
+; AVX2-LABEL: canonicalize_undef:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    movabsq $9221120237041090560, %rax # imm = 0x7FF8000000000000
+; AVX2-NEXT:    movq %rax, (%rdi)
 ; AVX2-NEXT:    retq
 ;
-; AVX512F-LABEL: v_test_canonicalize__bfloat:
-; AVX512F:       # %bb.0: # %entry
+; AVX512F-LABEL: canonicalize_undef:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    movabsq $9221120237041090560, %rax # imm = 0x7FF8000000000000
+; AVX512F-NEXT:    movq %rax, (%rdi)
 ; AVX512F-NEXT:    retq
 ;
-; AVX512BW-LABEL: v_test_canonicalize__bfloat:
-; AVX512BW:       # %bb.0: # %entry
+; AVX512BW-LABEL: canonicalize_undef:
+; AVX512BW:       # %bb.0:
+; AVX512BW-NEXT:    movabsq $9221120237041090560, %rax # imm = 0x7FF8000000000000
+; AVX512BW-NEXT:    movq %rax, (%rdi)
 ; AVX512BW-NEXT:    retq
-entry:
-  %val = load bfloat, bfloat addrspace(1)* %out
-  %canonicalized = call bfloat @llvm.canonicalize.bf16(bfloat %val)
-  store bfloat %canonicalized, bfloat addrspace(1)* %out
+  %canonicalized = call double @llvm.canonicalize.f64(double undef)
+  store double %canonicalized, double addrspace(1)* %out
   ret void
 }
 
 declare double @llvm.canonicalize.f64(double)
 declare float @llvm.canonicalize.f32(float)
-declare bfloat @llvm.canonicalize.bf16(bfloat)
 declare x86_fp80 @llvm.canonicalize.f80(x86_fp80)
 declare half @llvm.canonicalize.f16(half)

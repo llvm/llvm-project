@@ -1980,6 +1980,16 @@ SDValue DAGCombiner::visit(SDNode *N) {
   case ISD::FREEZE:             return visitFREEZE(N);
   case ISD::GET_FPENV_MEM:      return visitGET_FPENV_MEM(N);
   case ISD::SET_FPENV_MEM:      return visitSET_FPENV_MEM(N);
+  case ISD::FCANONICALIZE:{
+    SDValue Operand = N->getOperand(0);
+    EVT VT = Operand.getValueType();
+    SDLoc dl(N);
+    if(Operand.isUndef()){
+      APFloat CanonicalQNaN = APFloat::getQNaN(VT.getFltSemantics());
+      return DAG.getConstantFP(CanonicalQNaN, dl, VT);
+    }
+    break;
+  }
   case ISD::VECREDUCE_FADD:
   case ISD::VECREDUCE_FMUL:
   case ISD::VECREDUCE_ADD:
