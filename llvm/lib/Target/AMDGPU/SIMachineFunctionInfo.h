@@ -289,8 +289,6 @@ struct SIMachineFunctionInfo final : public yaml::MachineFunctionInfo {
   StringValue SGPRForEXECCopy;
   StringValue LongBranchReservedReg;
 
-  bool HasInitWholeWave = false;
-
   SIMachineFunctionInfo() = default;
   SIMachineFunctionInfo(const llvm::SIMachineFunctionInfo &,
                         const TargetRegisterInfo &TRI,
@@ -338,7 +336,6 @@ template <> struct MappingTraits<SIMachineFunctionInfo> {
                        StringValue()); // Don't print out when it's empty.
     YamlIO.mapOptional("longBranchReservedReg", MFI.LongBranchReservedReg,
                        StringValue());
-    YamlIO.mapOptional("hasInitWholeWave", MFI.HasInitWholeWave, false);
   }
 };
 
