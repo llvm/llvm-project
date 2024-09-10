@@ -953,17 +953,62 @@ void DumpModuleInfoAction::ExecuteAction() {
       for (/*<IdentifierInfo *, MacroState> pair*/ const auto &Macro :
            FilteredMacros)
         Out << "     " << Macro.first->getName() << "\n";
-    }
 
-    // Now let's print out any modules we did not see as part of the Primary.
-    for (const auto &SM : SubModMap) {
-      if (!SM.second.Seen && SM.second.Mod) {
-        Out << "  " << ModuleKindName(SM.second.Kind) << " '" << SM.first
-            << "' at index #" << SM.second.Idx
-            << " has no direct reference in the Primary\n";
+      // Emit the macro definition bodies completely.
+      Out << "   Macro Definition Bodies:\n";
+      for (const auto &Macro : FilteredMacros) {
+        Out << "     " << Macro.first->getName();
+        clang::MacroInfo *MI = PP.getMacroInfo(Macro.first);
+        if (MI == nullptr) {
+          Out << '\n';
+          continue;
+        }
+        if (MI->isFunctionLike()) {
+          Out << '(';
+          if (!MI->param_empty()) {
+            MacroInfo::param_iterator AI = MI->param_begin(),
+                                      E = MI->param_end();
+            for (; AI + 1 != E; ++AI) {
+              Out << (*AI)->getName();
+              Out << ',';
+            }
+
+            // Last argument.
+            if ((*AI)->getName() == "__VA_ARGS__")
+              Out << "...";
+            else
+              Out << (*AI)->getName();
+          }
+
+          if (MI->isGNUVarargs())
+            // #define foo(x...)
+            Out << "...";
+
+          Out << ')';
+        }
+
+        SmallString<128> SpellingBuffer;
+        bool First = true;
+        for (const auto &T : MI->tokens()) {
+          if (First || T.hasLeadingSpace())
+            Out << " ";
+          First = false;
+
+          Out << PP.getSpelling(T, SpellingBuffer);
+        }
+        Out << '\n';
       }
+
+      // Now let's print out any modules we did not see as part of the Primary.
+      for (const auto &SM : SubModMap) {
+        if (!SM.second.Seen && SM.second.Mod) {
+          Out << "  " << ModuleKindName(SM.second.Kind) << " '" << SM.first
+              << "' at index #" << SM.second.Idx
+              << " has no direct reference in the Primary\n";
+        }
+      }
+      Out << "  ====== ======\n";
     }
-    Out << "  ====== ======\n";
   }
 
   // The reminder of the output is produced from the listener as the AST
