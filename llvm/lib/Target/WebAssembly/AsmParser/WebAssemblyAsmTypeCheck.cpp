@@ -212,7 +212,7 @@ bool WebAssemblyAsmTypeCheck::getGlobal(SMLoc ErrorLoc, const MCInst &Inst,
     [[fallthrough]];
   default:
     return typeError(ErrorLoc, StringRef("symbol ") + WasmSym->getName() +
-                                   " missing .globaltype");
+                                   ": missing .globaltype");
   }
   return false;
 }
@@ -226,7 +226,7 @@ bool WebAssemblyAsmTypeCheck::getTable(SMLoc ErrorLoc, const MCInst &Inst,
   if (WasmSym->getType().value_or(wasm::WASM_SYMBOL_TYPE_DATA) !=
       wasm::WASM_SYMBOL_TYPE_TABLE)
     return typeError(ErrorLoc, StringRef("symbol ") + WasmSym->getName() +
-                                   " missing .tabletype");
+                                   ": missing .tabletype");
   Type = static_cast<wasm::ValType>(WasmSym->getTableType().ElemType);
   return false;
 }
@@ -360,7 +360,7 @@ bool WebAssemblyAsmTypeCheck::typeCheck(SMLoc ErrorLoc, const MCInst &Inst,
       if (!Sig || WasmSym->getType() != wasm::WASM_SYMBOL_TYPE_TAG)
         return typeError(Operands[1]->getStartLoc(), StringRef("symbol ") +
                                                          WasmSym->getName() +
-                                                         " missing .tagtype");
+                                                         ": missing .tagtype");
       // catch instruction pushes values whose types are specified in the tag's
       // "params" part
       Stack.insert(Stack.end(), Sig->Params.begin(), Sig->Params.end());
@@ -391,7 +391,7 @@ bool WebAssemblyAsmTypeCheck::typeCheck(SMLoc ErrorLoc, const MCInst &Inst,
     if (!Sig || WasmSym->getType() != wasm::WASM_SYMBOL_TYPE_FUNCTION)
       return typeError(Operands[1]->getStartLoc(), StringRef("symbol ") +
                                                        WasmSym->getName() +
-                                                       " missing .functype");
+                                                       ": missing .functype");
     if (checkSig(ErrorLoc, *Sig))
       return true;
     if (Name == "return_call" && endOfFunction(ErrorLoc))

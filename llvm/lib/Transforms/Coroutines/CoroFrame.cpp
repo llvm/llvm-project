@@ -2659,6 +2659,7 @@ salvageDebugInfoImpl(SmallDenseMap<Argument *, AllocaInst *, 4> &ArgToAllocaMap,
     Expr = DIExpression::prepend(Expr, DIExpression::DerefBefore);
   }
 
+  Expr = Expr->foldConstantMath();
   return {{*Storage, *Expr}};
 }
 

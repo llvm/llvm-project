@@ -34,8 +34,7 @@ namespace {
 struct YamlContext {
   YamlContext(const exegesis::LLVMState &State)
       : State(&State), ErrorStream(LastError),
-        OpcodeNameToOpcodeIdx(State.getOpcodeNameToOpcodeIdxMapping()),
-        RegNameToRegNo(State.getRegNameToRegNoMapping()) {}
+        OpcodeNameToOpcodeIdx(State.getOpcodeNameToOpcodeIdxMapping()) {}
 
   void serializeMCInst(const MCInst &MCInst, raw_ostream &OS) {
     OS << getInstrName(MCInst.getOpcode());
@@ -77,11 +76,11 @@ struct YamlContext {
   }
 
   std::optional<unsigned> getRegNo(StringRef RegName) {
-    auto Iter = RegNameToRegNo.find(RegName);
-    if (Iter != RegNameToRegNo.end())
-      return Iter->second;
-    ErrorStream << "No register with name '" << RegName << "'\n";
-    return std::nullopt;
+    std::optional<MCRegister> RegisterNumber =
+        State->getRegisterNumberFromName(RegName);
+    if (!RegisterNumber.has_value())
+      ErrorStream << "No register with name '" << RegName << "'\n";
+    return RegisterNumber;
   }
 
 private:
@@ -154,7 +153,6 @@ private:
   std::string LastError;
   raw_string_ostream ErrorStream;
   const DenseMap<StringRef, unsigned> &OpcodeNameToOpcodeIdx;
-  const DenseMap<StringRef, MCRegister> &RegNameToRegNo;
 };
 } // namespace
 
@@ -231,10 +229,8 @@ template <> struct MappingTraits<exegesis::BenchmarkMeasure> {
   static const bool flow = true;
 };
 
-template <>
-struct ScalarEnumerationTraits<exegesis::Benchmark::ModeE> {
-  static void enumeration(IO &Io,
-                          exegesis::Benchmark::ModeE &Value) {
+template <> struct ScalarEnumerationTraits<exegesis::Benchmark::ModeE> {
+  static void enumeration(IO &Io, exegesis::Benchmark::ModeE &Value) {
     Io.enumCase(Value, "", exegesis::Benchmark::Unknown);
     Io.enumCase(Value, "latency", exegesis::Benchmark::Latency);
     Io.enumCase(Value, "uops", exegesis::Benchmark::Uops);
@@ -282,8 +278,7 @@ template <> struct ScalarTraits<exegesis::RegisterValue> {
   static const bool flow = true;
 };
 
-template <>
-struct MappingContextTraits<exegesis::BenchmarkKey, YamlContext> {
+template <> struct MappingContextTraits<exegesis::BenchmarkKey, YamlContext> {
   static void mapping(IO &Io, exegesis::BenchmarkKey &Obj,
                       YamlContext &Context) {
     Io.setContext(&Context);
@@ -293,8 +288,7 @@ struct MappingContextTraits<exegesis::BenchmarkKey, YamlContext> {
   }
 };
 
-template <>
-struct MappingContextTraits<exegesis::Benchmark, YamlContext> {
+template <> struct MappingContextTraits<exegesis::Benchmark, YamlContext> {
   struct NormalizedBinary {
     NormalizedBinary(IO &io) {}
     NormalizedBinary(IO &, std::vector<uint8_t> &Data) : Binary(Data) {}
@@ -311,8 +305,7 @@ struct MappingContextTraits<exegesis::Benchmark, YamlContext> {
     BinaryRef Binary;
   };
 
-  static void mapping(IO &Io, exegesis::Benchmark &Obj,
-                      YamlContext &Context) {
+  static void mapping(IO &Io, exegesis::Benchmark &Obj, YamlContext &Context) {
     Io.mapRequired("mode", Obj.Mode);
     Io.mapRequired("key", Obj.Key, Context);
     Io.mapRequired("cpu_name", Obj.CpuName);
@@ -339,8 +332,7 @@ struct MappingContextTraits<exegesis::Benchmark, YamlContext> {
 };
 
 template <> struct MappingTraits<exegesis::Benchmark::TripleAndCpu> {
-  static void mapping(IO &Io,
-                      exegesis::Benchmark::TripleAndCpu &Obj) {
+  static void mapping(IO &Io, exegesis::Benchmark::TripleAndCpu &Obj) {
     assert(!Io.outputting() && "can only read TripleAndCpu");
     // Read triple.
     Io.mapRequired("llvm_triple", Obj.LLVMTriple);
@@ -357,8 +349,7 @@ Expected<std::set<Benchmark::TripleAndCpu>>
 Benchmark::readTriplesAndCpusFromYamls(MemoryBufferRef Buffer) {
   // We're only mapping a field, drop other fields and silence the corresponding
   // warnings.
-  yaml::Input Yin(
-      Buffer, nullptr, +[](const SMDiagnostic &, void *Context) {});
+  yaml::Input Yin(Buffer, nullptr, +[](const SMDiagnostic &, void *Context) {});
   Yin.setAllowUnknownKeys(true);
   std::set<TripleAndCpu> Result;
   yaml::EmptyContext Context;
@@ -373,8 +364,8 @@ Benchmark::readTriplesAndCpusFromYamls(MemoryBufferRef Buffer) {
   return Result;
 }
 
-Expected<Benchmark>
-Benchmark::readYaml(const LLVMState &State, MemoryBufferRef Buffer) {
+Expected<Benchmark> Benchmark::readYaml(const LLVMState &State,
+                                        MemoryBufferRef Buffer) {
   yaml::Input Yin(Buffer);
   YamlContext Context(State);
   Benchmark Benchmark;
@@ -385,9 +376,8 @@ Benchmark::readYaml(const LLVMState &State, MemoryBufferRef Buffer) {
   return std::move(Benchmark);
 }
 
-Expected<std::vector<Benchmark>>
-Benchmark::readYamls(const LLVMState &State,
-                                MemoryBufferRef Buffer) {
+Expected<std::vector<Benchmark>> Benchmark::readYamls(const LLVMState &State,
+                                                      MemoryBufferRef Buffer) {
   yaml::Input Yin(Buffer);
   YamlContext Context(State);
   std::vector<Benchmark> Benchmarks;
@@ -403,8 +393,7 @@ Benchmark::readYamls(const LLVMState &State,
   return std::move(Benchmarks);
 }
 
-Error Benchmark::writeYamlTo(const LLVMState &State,
-                                        raw_ostream &OS) {
+Error Benchmark::writeYamlTo(const LLVMState &State, raw_ostream &OS) {
   auto Cleanup = make_scope_exit([&] { OS.flush(); });
   yaml::Output Yout(OS, nullptr /*Ctx*/, 200 /*WrapColumn*/);
   YamlContext Context(State);
@@ -416,8 +405,7 @@ Error Benchmark::writeYamlTo(const LLVMState &State,
   return Error::success();
 }
 
-Error Benchmark::readYamlFrom(const LLVMState &State,
-                                         StringRef InputContent) {
+Error Benchmark::readYamlFrom(const LLVMState &State, StringRef InputContent) {
   yaml::Input Yin(InputContent);
   YamlContext Context(State);
   if (Yin.setCurrentDocument())
