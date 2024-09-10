@@ -6375,9 +6375,9 @@ static void gatherPossiblyVectorizableLoads(
     bool AddNew = true) {
   if (VL.empty())
     return;
-  if (!isValidElementType(VL.front()->getType()))
+  Type *ScalarTy = getValueType(VL.front());
+  if (!isValidElementType(ScalarTy))
     return;
-  Type *ScalarTy = VL.front()->getType();
   int NumScalars = VL.size();
   auto *VecTy = getWidenedType(ScalarTy, NumScalars);
   int NumParts = TTI.getNumberOfParts(VecTy);
@@ -8912,6 +8912,9 @@ void BoUpSLP::transformNodes() {
       for (unsigned VF = VL.size() / 2; VF >= MinVF; VF /= 2) {
         for (unsigned Cnt = StartIdx; Cnt + VF <= End; Cnt += VF) {
           ArrayRef<Value *> Slice = VL.slice(Cnt, VF);
+          // If any instruction is vectorized already - do not try again.
+          if (getTreeEntry(Slice.front()) || getTreeEntry(Slice.back()))
+            continue;
           InstructionsState S = getSameOpcode(Slice, *TLI);
           if (!S.getOpcode() || S.isAltShuffle() ||
               (S.getOpcode() != Instruction::Load &&
@@ -8920,20 +8923,18 @@ void BoUpSLP::transformNodes() {
                                                UserIgnoreList);
                })))
             continue;
-          if (!getTreeEntry(Slice.front()) && !getTreeEntry(Slice.back())) {
-            unsigned PrevSize = VectorizableTree.size();
-            buildTree_rec(Slice, 0, EdgeInfo(&E, UINT_MAX));
-            if (PrevSize + 1 == VectorizableTree.size() &&
-                VectorizableTree[PrevSize]->isGather()) {
-              VectorizableTree.pop_back();
-              continue;
-            }
-            E.CombinedEntriesWithIndices.emplace_back(PrevSize, Cnt);
-            if (StartIdx == Cnt)
-              StartIdx = Cnt + VF;
-            if (End == Cnt + VF)
-              End = Cnt;
+          unsigned PrevSize = VectorizableTree.size();
+          buildTree_rec(Slice, 0, EdgeInfo(&E, UINT_MAX));
+          if (PrevSize + 1 == VectorizableTree.size() &&
+              VectorizableTree[PrevSize]->isGather()) {
+            VectorizableTree.pop_back();
+            continue;
           }
+          E.CombinedEntriesWithIndices.emplace_back(PrevSize, Cnt);
+          if (StartIdx == Cnt)
+            StartIdx = Cnt + VF;
+          if (End == Cnt + VF)
+            End = Cnt;
         }
       }
     }
@@ -12282,7 +12283,7 @@ Instruction &BoUpSLP::getLastInstructionInBundle(const TreeEntry *E) {
     return *Res;
   // Get the basic block this bundle is in. All instructions in the bundle
   // should be in this block (except for extractelement-like instructions with
-  // constant indecies or gathered loads).
+  // constant indices or gathered loads).
   auto *Front = E->getMainOp();
   auto *BB = Front->getParent();
   assert(((GatheredLoadsEntriesFirst != NoGatheredLoads &&
