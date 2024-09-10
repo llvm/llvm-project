@@ -8,12 +8,10 @@
 
 // This file defines ptrace functions & structures
 
-#ifndef liblldb_Host_aix_Ptrace_h_
-#define liblldb_Host_aix_Ptrace_h_
+#ifndef LIBLLDB_HOST_AIX_PTRACE_H_
+#define LIBLLDB_HOST_AIX_PTRACE_H_
 
 #include <sys/ptrace.h>
-
-#define DEBUG_PTRACE_MAXBYTES 20
 
 // Support ptrace extensions even when compiled without required kernel support
 #ifndef PTRACE_GETREGS
@@ -41,4 +39,4 @@
 #define PTRACE_GETVSRREGS (PT_COMMAND_MAX + 6)
 #endif
 
-#endif // liblldb_Host_aix_Ptrace_h_
+#endif // LIBLLDB_HOST_AIX_PTRACE_H_
