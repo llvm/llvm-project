@@ -154,7 +154,7 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
           uint32_t VarArgSize);
 bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
               uint32_t VarArgSize);
-bool CallBI(InterpState &S, CodePtr &PC, const Function *Func,
+bool CallBI(InterpState &S, CodePtr OpPC, const Function *Func,
             const CallExpr *CE, uint32_t BuiltinID);
 bool CallPtr(InterpState &S, CodePtr OpPC, uint32_t ArgSize,
              const CallExpr *CE);
