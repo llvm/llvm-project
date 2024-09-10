@@ -317,7 +317,7 @@ bool WebAssemblyLateEHPrepare::addCatchRefsAndThrowRefs(MachineFunction &MF) {
     Catch->eraseFromParent();
 
     for (auto *Rethrow : Rethrows) {
-      auto InsertPos = Rethrow->getIterator()++;
+      auto InsertPos = std::next(Rethrow->getIterator());
       BuildMI(*Rethrow->getParent(), InsertPos, Rethrow->getDebugLoc(),
               TII.get(WebAssembly::THROW_REF))
           .addReg(ExnReg);
