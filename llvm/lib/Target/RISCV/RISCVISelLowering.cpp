@@ -14147,12 +14147,11 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
           SDValue Mul359A =
               DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
                           DAG.getConstant(Log2_64(Divisor - 1), DL, VT), X);
-          SDValue Mul359B =
-              DAG.getNode(RISCVISD::SHL_ADD, DL, VT, Mul359A,
-                          DAG.getConstant(Log2_64(Divisor2 - 1), DL, VT),
-                          Mul359A);
+          SDValue Mul359B = DAG.getNode(
+              RISCVISD::SHL_ADD, DL, VT, Mul359A,
+              DAG.getConstant(Log2_64(Divisor2 - 1), DL, VT), Mul359A);
           return DAG.getNode(ISD::SHL, DL, VT, Mul359B,
-                           DAG.getConstant(Log2_64(MulAmt3), DL, VT));
+                             DAG.getConstant(Log2_64(MulAmt3), DL, VT));
         }
       }
     }
