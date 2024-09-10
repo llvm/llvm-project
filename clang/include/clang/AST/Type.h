@@ -6168,14 +6168,19 @@ public:
   struct Attributes {
     // Data gathered from HLSL resource attributes
     llvm::dxil::ResourceClass ResourceClass;
+
+    LLVM_PREFERRED_TYPE(bool)
     uint8_t IsROV : 1;
+
+    LLVM_PREFERRED_TYPE(bool)
     uint8_t RowAccess : 1;
+
     Attributes(llvm::dxil::ResourceClass ResourceClass, bool IsROV,
                bool RowAccess)
         : ResourceClass(ResourceClass), IsROV(IsROV), RowAccess(RowAccess) {}
     Attributes()
-        : ResourceClass(llvm::dxil::ResourceClass::UAV), IsROV(0),
-          RowAccess(0) {}
+        : ResourceClass(llvm::dxil::ResourceClass::UAV), IsROV(false),
+          RowAccess(false) {}
   };
 
 private:

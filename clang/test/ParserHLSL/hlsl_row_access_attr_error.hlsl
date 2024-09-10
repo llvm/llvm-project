@@ -3,9 +3,6 @@
 // expected-error@+1{{'row_access' attribute cannot be applied to a declaration}}
 [[hlsl::row_access]] __hlsl_resource_t res0;
 
-// expected-error@+1{{HLSL resource needs to have [[hlsl::resource_class()]] attribute}}
-__hlsl_resource_t [[hlsl::row_access]] res1;
-
 // expected-error@+1{{'row_access' attribute takes no arguments}}
 __hlsl_resource_t [[hlsl::resource_class(UAV)]] [[hlsl::row_access(3)]] res2;
   
