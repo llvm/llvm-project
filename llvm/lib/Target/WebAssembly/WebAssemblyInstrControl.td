@@ -182,7 +182,6 @@ let isTerminator = 1, hasSideEffects = 1, isBarrier = 1, hasCtrlDep = 1,
 // instruction before we convert it to a THROW_REF.
 let isTerminator = 1, hasCtrlDep = 1, isBarrier = 1 in
 defm RETHROW : NRI<(outs), (ins i32imm:$depth), [], "rethrow \t$depth", 0x09>;
-// isTerminator = 1, hasCtrlDep = 1, isBarrier = 1
 // The depth argument will be computed in CFGStackify. We set it to 0 here for
 // now.
 def : Pat<(int_wasm_rethrow), (RETHROW 0)>;
