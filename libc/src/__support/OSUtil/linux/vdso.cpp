@@ -228,4 +228,4 @@ void Symbol::initialize_vdso_global_cache() {
                                            phdr_info->vdso_addr);
 }
 } // namespace vdso
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
