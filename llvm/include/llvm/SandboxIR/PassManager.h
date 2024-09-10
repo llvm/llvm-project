@@ -72,6 +72,7 @@ class PassRegistry {
   DenseMap<StringRef, Pass *> NameToPassMap;
 
 public:
+  static constexpr const char PassDelimToken = ',';
   PassRegistry() = default;
   /// Registers \p PassPtr and takes ownership.
   Pass &registerPass(std::unique_ptr<Pass> &&PassPtr) {
@@ -85,6 +86,9 @@ public:
     auto It = NameToPassMap.find(Name);
     return It != NameToPassMap.end() ? It->second : nullptr;
   }
+  /// Creates a pass pipeline and returns the first pass manager.
+  FunctionPassManager &parseAndCreatePassPipeline(StringRef Pipeline);
+
 #ifndef NDEBUG
   void print(raw_ostream &OS) const {
     for (const auto &PassPtr : Passes)

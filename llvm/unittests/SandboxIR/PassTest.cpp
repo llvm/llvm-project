@@ -162,3 +162,34 @@ TEST_F(PassTest, PassRegistry) {
   EXPECT_EQ(Buff, "test-pass1\ntest-pass2\n");
 #endif // NDEBUG
 }
+
+TEST_F(PassTest, ParsePassPipeline) {
+  class TestPass1 final : public FunctionPass {
+  public:
+    TestPass1() : FunctionPass("test-pass1") {}
+    bool runOnFunction(Function &F) final { return false; }
+  };
+  class TestPass2 final : public FunctionPass {
+  public:
+    TestPass2() : FunctionPass("test-pass2") {}
+    bool runOnFunction(Function &F) final { return false; }
+  };
+
+  PassRegistry Registry;
+  Registry.registerPass(std::make_unique<TestPass1>());
+  Registry.registerPass(std::make_unique<TestPass2>());
+
+  auto &FPM =
+      Registry.parseAndCreatePassPipeline("test-pass1,test-pass2,test-pass1");
+#ifndef NDEBUG
+  std::string Buff;
+  llvm::raw_string_ostream SS(Buff);
+  FPM.print(SS);
+  EXPECT_EQ(Buff, "init-fpm(test-pass1,test-pass2,test-pass1)");
+#endif // NDEBUG
+
+  EXPECT_DEATH(Registry.parseAndCreatePassPipeline("bad-pass-name"),
+               ".*not registered.*");
+  EXPECT_DEATH(Registry.parseAndCreatePassPipeline(""), ".*not registered.*");
+  EXPECT_DEATH(Registry.parseAndCreatePassPipeline(","), ".*not registered.*");
+}
