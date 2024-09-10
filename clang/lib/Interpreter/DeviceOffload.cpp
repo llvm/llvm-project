@@ -25,14 +25,17 @@
 namespace clang {
 
 IncrementalCUDADeviceParser::IncrementalCUDADeviceParser(
-    std::unique_ptr<CompilerInstance> Instance, IncrementalParser &HostParser,
+    std::unique_ptr<CompilerInstance> DeviceInstance,
+    CompilerInstance &HostInstance,
     llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> FS,
     llvm::Error &Err, const std::list<PartialTranslationUnit> &PTUs)
-    : IncrementalParser(std::move(Instance), Err), PTUs(PTUs),
-      HostParser(HostParser), VFS(FS) {
+    : IncrementalParser(*DeviceInstance, Err), PTUs(PTUs), VFS(FS),
+      CodeGenOpts(HostInstance.getCodeGenOpts()),
+      TargetOpts(HostInstance.getTargetOpts()) {
   if (Err)
     return;
-  StringRef Arch = CI->getTargetOpts().CPU;
+  DeviceCI = std::move(DeviceInstance);
+  StringRef Arch = TargetOpts.CPU;
   if (!Arch.starts_with("sm_") || Arch.substr(3).getAsInteger(10, SMVersion)) {
     Err = llvm::joinErrors(std::move(Err), llvm::make_error<llvm::StringError>(
                                                "Invalid CUDA architecture",
@@ -62,7 +65,7 @@ IncrementalCUDADeviceParser::Parse(llvm::StringRef Input) {
                    llvm::StringRef(FatbinContent.data(), FatbinContent.size()),
                    "", false));
 
-  HostParser.getCI()->getCodeGenOpts().CudaGpuBinaryFileName = FatbinFileName;
+  CodeGenOpts.CudaGpuBinaryFileName = FatbinFileName;
 
   FatbinContent.clear();
 
@@ -80,7 +83,7 @@ llvm::Expected<llvm::StringRef> IncrementalCUDADeviceParser::GeneratePTX() {
                                                std::error_code());
   llvm::TargetOptions TO = llvm::TargetOptions();
   llvm::TargetMachine *TargetMachine = Target->createTargetMachine(
-      PTU.TheModule->getTargetTriple(), getCI()->getTargetOpts().CPU, "", TO,
+      PTU.TheModule->getTargetTriple(), TargetOpts.CPU, "", TO,
       llvm::Reloc::Model::PIC_);
   PTU.TheModule->setDataLayout(TargetMachine->createDataLayout());
 

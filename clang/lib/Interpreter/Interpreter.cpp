@@ -378,11 +378,12 @@ public:
   }
 };
 
-Interpreter::Interpreter(std::unique_ptr<CompilerInstance> CI,
+Interpreter::Interpreter(std::unique_ptr<CompilerInstance> Instance,
                          llvm::Error &ErrOut,
                          std::unique_ptr<llvm::orc::LLJITBuilder> JITBuilder,
                          std::unique_ptr<clang::ASTConsumer> Consumer)
     : JITBuilder(std::move(JITBuilder)) {
+  CI = std::move(Instance);
   llvm::ErrorAsOutParameter EAO(&ErrOut);
   auto LLVMCtx = std::make_unique<llvm::LLVMContext>();
   TSCtx = std::make_unique<llvm::orc::ThreadSafeContext>(std::move(LLVMCtx));
@@ -395,7 +396,7 @@ Interpreter::Interpreter(std::unique_ptr<CompilerInstance> CI,
 
   ASTContext &C = CI->getASTContext();
 
-  IncrParser = std::make_unique<IncrementalParser>(std::move(CI), ErrOut);
+  IncrParser = std::make_unique<IncrementalParser>(*CI, ErrOut);
 
   if (ErrOut)
     return;
@@ -427,8 +428,8 @@ Interpreter::Interpreter(std::unique_ptr<CompilerInstance> CI,
 }
 
 Interpreter::~Interpreter() {
-  Act->FinalizeAction();
   IncrParser.reset();
+  Act->FinalizeAction();
   if (IncrExecutor) {
     if (llvm::Error Err = IncrExecutor->cleanUp())
       llvm::report_fatal_error(
@@ -500,7 +501,7 @@ Interpreter::createWithCUDA(std::unique_ptr<CompilerInstance> CI,
 
   llvm::Error Err = llvm::Error::success();
   auto DeviceParser = std::make_unique<IncrementalCUDADeviceParser>(
-      std::move(DCI), *(*Interp)->IncrParser.get(), IMVFS, Err,
+      std::move(DCI), *(*Interp)->getCompilerInstance(), IMVFS, Err,
       (*Interp)->PTUs);
   if (Err)
     return std::move(Err);
@@ -511,12 +512,10 @@ Interpreter::createWithCUDA(std::unique_ptr<CompilerInstance> CI,
 }
 
 const CompilerInstance *Interpreter::getCompilerInstance() const {
-  return IncrParser->getCI();
+  return CI.get();
 }
 
-CompilerInstance *Interpreter::getCompilerInstance() {
-  return IncrParser->getCI();
-}
+CompilerInstance *Interpreter::getCompilerInstance() { return CI.get(); }
 
 llvm::Expected<llvm::orc::LLJIT &> Interpreter::getExecutionEngine() {
   if (!IncrExecutor) {

@@ -19,12 +19,17 @@
 
 namespace clang {
 struct PartialTranslationUnit;
+class CompilerInstance;
+class CodeGenOptions;
+class TargetOptions;
+
 class IncrementalCUDADeviceParser : public IncrementalParser {
   const std::list<PartialTranslationUnit> &PTUs;
 
 public:
   IncrementalCUDADeviceParser(
-      std::unique_ptr<CompilerInstance> Instance, IncrementalParser &HostParser,
+      std::unique_ptr<CompilerInstance> DeviceInstance,
+      CompilerInstance &HostInstance,
       llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> VFS,
       llvm::Error &Err, const std::list<PartialTranslationUnit> &PTUs);
 
@@ -39,11 +44,13 @@ public:
   ~IncrementalCUDADeviceParser();
 
 protected:
-  IncrementalParser &HostParser;
+  std::unique_ptr<CompilerInstance> DeviceCI;
   int SMVersion;
   llvm::SmallString<1024> PTXCode;
   llvm::SmallVector<char, 1024> FatbinContent;
   llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> VFS;
+  CodeGenOptions &CodeGenOpts; // intentionally a reference.
+  const TargetOptions &TargetOpts;
 };
 
 } // namespace clang

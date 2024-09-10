@@ -24,6 +24,7 @@ class ASTConsumer;
 class CodeGenerator;
 class CompilerInstance;
 class Parser;
+class Sema;
 class TranslationUnitDecl;
 
 /// Provides support for incremental compilation. Keeps track of the state
@@ -31,8 +32,8 @@ class TranslationUnitDecl;
 ///
 class IncrementalParser {
 protected:
-  /// Compiler instance performing the incremental compilation.
-  std::unique_ptr<CompilerInstance> CI;
+  /// The Sema performing the incremental compilation.
+  Sema &S;
 
   /// Parser.
   std::unique_ptr<Parser> P;
@@ -43,14 +44,11 @@ protected:
   /// Counts the number of direct user input lines that have been parsed.
   unsigned InputCount = 0;
 
-  IncrementalParser();
+  // IncrementalParser();
 
 public:
-  IncrementalParser(std::unique_ptr<CompilerInstance> Instance,
-                    llvm::Error &Err);
+  IncrementalParser(CompilerInstance &Instance, llvm::Error &Err);
   virtual ~IncrementalParser();
-
-  CompilerInstance *getCI() { return CI.get(); }
 
   /// Parses incremental input by creating an in-memory file.
   ///\returns a \c PartialTranslationUnit which holds information about the

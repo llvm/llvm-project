@@ -110,9 +110,12 @@ class Interpreter {
   /// and we must keep it alive.
   std::unique_ptr<llvm::Module> CachedInCodeGenModule;
 
+  /// Compiler instance performing the incremental compilation.
+  std::unique_ptr<CompilerInstance> CI;
+
 protected:
   // Derived classes can use an extended interface of the Interpreter.
-  Interpreter(std::unique_ptr<CompilerInstance> CI, llvm::Error &Err,
+  Interpreter(std::unique_ptr<CompilerInstance> Instance, llvm::Error &Err,
               std::unique_ptr<llvm::orc::LLJITBuilder> JITBuilder = nullptr,
               std::unique_ptr<clang::ASTConsumer> Consumer = nullptr);
 

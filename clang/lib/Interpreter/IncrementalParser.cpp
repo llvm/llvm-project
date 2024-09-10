@@ -24,16 +24,14 @@
 
 namespace clang {
 
-IncrementalParser::IncrementalParser() {}
+// IncrementalParser::IncrementalParser() {}
 
-IncrementalParser::IncrementalParser(std::unique_ptr<CompilerInstance> Instance,
+IncrementalParser::IncrementalParser(CompilerInstance &Instance,
                                      llvm::Error &Err)
-    : CI(std::move(Instance)) {
+    : S(Instance.getSema()) {
   llvm::ErrorAsOutParameter EAO(&Err);
-
-  Consumer = &CI->getASTConsumer();
-  P.reset(
-      new Parser(CI->getPreprocessor(), CI->getSema(), /*SkipBodies=*/false));
+  Consumer = &S.getASTConsumer();
+  P.reset(new Parser(S.getPreprocessor(), S, /*SkipBodies=*/false));
   P->Initialize();
 }
 
@@ -42,7 +40,6 @@ IncrementalParser::~IncrementalParser() { P.reset(); }
 llvm::Expected<TranslationUnitDecl *>
 IncrementalParser::ParseOrWrapTopLevelDecl() {
   // Recover resources if we crash before exiting this method.
-  Sema &S = CI->getSema();
   llvm::CrashRecoveryContextCleanupRegistrar<Sema> CleanupSema(&S);
   Sema::GlobalEagerInstantiationScope GlobalInstantiations(S, /*Enabled=*/true);
   Sema::LocalEagerInstantiationScope LocalInstantiations(S);
@@ -73,7 +70,7 @@ IncrementalParser::ParseOrWrapTopLevelDecl() {
                                                  std::error_code());
   }
 
-  DiagnosticsEngine &Diags = getCI()->getDiagnostics();
+  DiagnosticsEngine &Diags = S.getDiagnostics();
   if (Diags.hasErrorOccurred()) {
     CleanUpPTU(C.getTranslationUnitDecl());
 
@@ -99,7 +96,7 @@ IncrementalParser::ParseOrWrapTopLevelDecl() {
 
 llvm::Expected<TranslationUnitDecl *>
 IncrementalParser::Parse(llvm::StringRef input) {
-  Preprocessor &PP = CI->getPreprocessor();
+  Preprocessor &PP = S.getPreprocessor();
   assert(PP.isIncrementalProcessingEnabled() && "Not in incremental mode!?");
 
   std::ostringstream SourceName;
@@ -115,7 +112,7 @@ IncrementalParser::Parse(llvm::StringRef input) {
   memcpy(MBStart, input.data(), InputSize);
   MBStart[InputSize] = '\n';
 
-  SourceManager &SM = CI->getSourceManager();
+  SourceManager &SM = S.getSourceManager();
 
   // FIXME: Create SourceLocation, which will allow clang to order the overload
   // candidates for example
@@ -183,7 +180,7 @@ void IncrementalParser::CleanUpPTU(TranslationUnitDecl *MostRecentTU) {
     // Check if we need to clean up the IdResolver chain.
     if (ND->getDeclName().getFETokenInfo() && !D->getLangOpts().ObjC &&
         !D->getLangOpts().CPlusPlus)
-      getCI()->getSema().IdResolver.RemoveDecl(ND);
+      S.IdResolver.RemoveDecl(ND);
   }
 }
 
