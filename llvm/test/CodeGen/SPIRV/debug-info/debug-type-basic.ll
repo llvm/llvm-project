@@ -5,81 +5,81 @@
 
 ; CHECK-MIR-DAG: [[type_void:%[0-9]+\:type]] = OpTypeVoid
 ; CHECK-MIR-DAG: [[type_i32:%[0-9]+\:type]] = OpTypeInt 32, 0
-; CHECK-MIR: [[encoding_signedchar:%[0-9]+\:iid\(s32\)]] = OpConstantI [[type_i32]], 5
-; CHECK-MIR: [[encoding_float:%[0-9]+\:iid\(s32\)]] = OpConstantI [[type_i32]], 3
-; CHECK-MIR: [[debug_info_none:%[0-9]+\:id\(s32\)]] = OpExtInst [[type_void]], 3, 0
-; CHECK-MIR: [[str_bool:%[0-9]+\:id\(s32\)]] = OpString 1819242338, 0
-; CHECK-MIR: [[size_8bits:%[0-9]+\:iid\(s32\)]] = OpConstantI [[type_i32]], 8
-; CHECK-MIR: [[encoding_boolean:%[0-9]+\:iid\(s32\)]] = OpConstantI [[type_i32]], 2
+; CHECK-MIR-DAG: [[encoding_signedchar:%[0-9]+\:iid\(s32\)]] = OpConstantI [[type_i32]], 5
+; CHECK-MIR-DAG: [[encoding_float:%[0-9]+\:iid\(s32\)]] = OpConstantI [[type_i32]], 3
+; CHECK-MIR-DAG: [[debug_info_none:%[0-9]+\:id\(s32\)]] = OpExtInst [[type_void]], 3, 0
+; CHECK-MIR-DAG: [[str_bool:%[0-9]+\:id\(s32\)]] = OpString 1819242338, 0
+; CHECK-MIR-DAG: [[size_8bits:%[0-9]+\:iid\(s32\)]] = OpConstantI [[type_i32]], 8
+; CHECK-MIR-DAG: [[encoding_boolean:%[0-9]+\:iid\(s32\)]] = OpConstantI [[type_i32]], 2
 ; CHECK-MIR: OpExtInst [[type_void]], 3, 2, [[str_bool]], [[size_8bits]], [[encoding_boolean]], [[debug_info_none]]
-; CHECK-MIR: [[str_int:%[0-9]+\:id\(s32\)]] = OpString 7630441
-; CHECK-MIR: [[size_32bits:%[0-9]+\:iid\(s32\)]] = OpConstantI [[type_i32]], 32
-; CHECK-MIR: [[encoding_signed:%[0-9]+\:iid\(s32\)]] = OpConstantI [[type_i32]], 4
+; CHECK-MIR-DAG: [[str_int:%[0-9]+\:id\(s32\)]] = OpString 7630441
+; CHECK-MIR-DAG: [[size_32bits:%[0-9]+\:iid\(s32\)]] = OpConstantI [[type_i32]], 32
+; CHECK-MIR-DAG: [[encoding_signed:%[0-9]+\:iid\(s32\)]] = OpConstantI [[type_i32]], 4
 ; CHECK-MIR: OpExtInst [[type_void]], 3, 2, [[str_int]], [[size_32bits]], [[encoding_signed]], [[debug_info_none]]
-; CHECK-MIR: [[str_short:%[0-9]+\:id\(s32\)]] = OpString 1919903859, 116
-; CHECK-MIR: [[size_16bits:%[0-9]+\:iid\(s32\)]] = OpConstantI [[type_i32]], 16
+; CHECK-MIR-DAG: [[str_short:%[0-9]+\:id\(s32\)]] = OpString 1919903859, 116
+; CHECK-MIR-DAG: [[size_16bits:%[0-9]+\:iid\(s32\)]] = OpConstantI [[type_i32]], 16
 ; CHECK-MIR: OpExtInst [[type_void]], 3, 2, [[str_short]], [[size_16bits]], [[encoding_signed]], [[debug_info_none]]
-; CHECK-MIR: [[str_char:%[0-9]+\:id\(s32\)]] = OpString 1918986339, 0
+; CHECK-MIR-DAG: [[str_char:%[0-9]+\:id\(s32\)]] = OpString 1918986339, 0
 ; CHECK-MIR: OpExtInst [[type_void]], 3, 2, [[str_char]], [[size_8bits]], [[encoding_signedchar]], [[debug_info_none]]
-; CHECK-MIR: [[str_long:%[0-9]+\:id\(s32\)]] = OpString 1735290732, 0
-; CHECK-MIR: [[size_64bits:%[0-9]+\:iid\(s32\)]] = OpConstantI [[type_i32]], 64
+; CHECK-MIR-DAG: [[str_long:%[0-9]+\:id\(s32\)]] = OpString 1735290732, 0
+; CHECK-MIR-DAG: [[size_64bits:%[0-9]+\:iid\(s32\)]] = OpConstantI [[type_i32]], 64
 ; CHECK-MIR: OpExtInst [[type_void]], 3, 2, [[str_long]], [[size_64bits]], [[encoding_signed]], [[debug_info_none]]
-; CHECK-MIR: [[str_uint:%[0-9]+\:id\(s32\)]] = OpString 1769172597, 1684368999, 1953392928, 0
-; CHECK-MIR: [[encoding_unsigned:%[0-9]+\:iid\(s32\)]] = OpConstantI [[type_i32]], 6
+; CHECK-MIR-DAG: [[str_uint:%[0-9]+\:id\(s32\)]] = OpString 1769172597, 1684368999, 1953392928, 0
+; CHECK-MIR-DAG: [[encoding_unsigned:%[0-9]+\:iid\(s32\)]] = OpConstantI [[type_i32]], 6
 ; CHECK-MIR: OpExtInst [[type_void]], 3, 2, [[str_uint]], [[size_32bits]], [[encoding_unsigned]], [[debug_info_none]]
-; CHECK-MIR: [[str_ushort:%[0-9]+\:id\(s32\)]] = OpString 1769172597, 1684368999, 1869116192, 29810
+; CHECK-MIR-DAG: [[str_ushort:%[0-9]+\:id\(s32\)]] = OpString 1769172597, 1684368999, 1869116192, 29810
 ; CHECK-MIR: OpExtInst [[type_void]], 3, 2, [[str_ushort]], [[size_16bits]], [[encoding_unsigned]], [[debug_info_none]]
-; CHECK-MIR: [[str_uchar:%[0-9]+\:id\(s32\)]] = OpString 1769172597, 1684368999, 1634231072, 114
-; CHECK-MIR: [[encoding_unsignedchar:%[0-9]+\:iid\(s32\)]] = OpConstantI [[type_i32]], 7
+; CHECK-MIR-DAG: [[str_uchar:%[0-9]+\:id\(s32\)]] = OpString 1769172597, 1684368999, 1634231072, 114
+; CHECK-MIR-DAG: [[encoding_unsignedchar:%[0-9]+\:iid\(s32\)]] = OpConstantI [[type_i32]], 7
 ; CHECK-MIR: OpExtInst [[type_void]], 3, 2, [[str_uchar]], [[size_8bits]], [[encoding_unsignedchar]], [[debug_info_none]]
-; CHECK-MIR: [[str_ulong:%[0-9]+\:id\(s32\)]] = OpString 1769172597, 1684368999, 1852795936, 103
+; CHECK-MIR-DAG: [[str_ulong:%[0-9]+\:id\(s32\)]] = OpString 1769172597, 1684368999, 1852795936, 103
 ; CHECK-MIR: OpExtInst [[type_void]], 3, 2, [[str_ulong]], [[size_64bits]], [[encoding_unsigned]], [[debug_info_none]]
-; CHECK-MIR: [[str_float:%[0-9]+\:id\(s32\)]] = OpString 1634692198, 116
+; CHECK-MIR-DAG: [[str_float:%[0-9]+\:id\(s32\)]] = OpString 1634692198, 116
 ; CHECK-MIR: OpExtInst [[type_void]], 3, 2, [[str_float]], [[size_32bits]], [[encoding_float]], [[debug_info_none]]
-; CHECK-MIR: [[str_double:%[0-9]+\:id\(s32\)]] = OpString 1651863396, 25964
+; CHECK-MIR-DAG: [[str_double:%[0-9]+\:id\(s32\)]] = OpString 1651863396, 25964
 ; CHECK-MIR: OpExtInst [[type_void]], 3, 2, [[str_double]], [[size_64bits]], [[encoding_float]], [[debug_info_none]]
 
 ; CHECK-SPIRV: [[ext_inst_non_semantic:%[0-9]+]] = OpExtInstImport "NonSemantic.Shader.DebugInfo.100"
-; CHECK-SPIRV: [[str_bool:%[0-9]+]] = OpString "bool"
-; CHECK-SPIRV: [[str_int:%[0-9]+]] = OpString "int"
-; CHECK-SPIRV: [[str_short:%[0-9]+]] = OpString "short"
-; CHECK-SPIRV: [[str_char:%[0-9]+]] = OpString "char"
-; CHECK-SPIRV: [[str_long:%[0-9]+]] = OpString "long"
-; CHECK-SPIRV: [[str_uint:%[0-9]+]] = OpString "unsigned int"
-; CHECK-SPIRV: [[str_ushort:%[0-9]+]] = OpString "unsigned short"
-; CHECK-SPIRV: [[str_uchar:%[0-9]+]] = OpString "unsigned char"
-; CHECK-SPIRV: [[str_ulong:%[0-9]+]] = OpString "unsigned long"
-; CHECK-SPIRV: [[str_float:%[0-9]+]] = OpString "float"
+; CHECK-SPIRV-DAG: [[str_bool:%[0-9]+]] = OpString "bool"
+; CHECK-SPIRV-DAG: [[str_int:%[0-9]+]] = OpString "int"
+; CHECK-SPIRV-DAG: [[str_short:%[0-9]+]] = OpString "short"
+; CHECK-SPIRV-DAG: [[str_char:%[0-9]+]] = OpString "char"
+; CHECK-SPIRV-DAG: [[str_long:%[0-9]+]] = OpString "long"
+; CHECK-SPIRV-DAG: [[str_uint:%[0-9]+]] = OpString "unsigned int"
+; CHECK-SPIRV-DAG: [[str_ushort:%[0-9]+]] = OpString "unsigned short"
+; CHECK-SPIRV-DAG: [[str_uchar:%[0-9]+]] = OpString "unsigned char"
+; CHECK-SPIRV-DAG: [[str_ulong:%[0-9]+]] = OpString "unsigned long"
+; CHECK-SPIRV-DAG: [[str_float:%[0-9]+]] = OpString "float"
 ; CHECK-SPIRV: [[str_double:%[0-9]+]] = OpString "double"
-; CHECK-SPIRV: [[type_void:%[0-9]+]] = OpTypeVoid
-; CHECK-SPIRV: [[type_float64:%[0-9]+]] = OpTypeFloat 64
-; CHECK-SPIRV: [[type_float32:%[0-9]+]] = OpTypeFloat 32
-; CHECK-SPIRV: [[type_int64:%[0-9]+]] = OpTypeInt 64 0
-; CHECK-SPIRV: [[type_int8:%[0-9]+]] = OpTypeInt 8 0
-; CHECK-SPIRV: [[type_int16:%[0-9]+]] = OpTypeInt 16 0
-; CHECK-SPIRV: [[type_int32:%[0-9]+]] = OpTypeInt 32 0
+; CHECK-SPIRV-DAG: [[type_void:%[0-9]+]] = OpTypeVoid
+; CHECK-SPIRV-DAG: [[type_float64:%[0-9]+]] = OpTypeFloat 64
+; CHECK-SPIRV-DAG: [[type_float32:%[0-9]+]] = OpTypeFloat 32
+; CHECK-SPIRV-DAG: [[type_int64:%[0-9]+]] = OpTypeInt 64 0
+; CHECK-SPIRV-DAG: [[type_int8:%[0-9]+]] = OpTypeInt 8 0
+; CHECK-SPIRV-DAG: [[type_int16:%[0-9]+]] = OpTypeInt 16 0
+; CHECK-SPIRV-DAG: [[type_int32:%[0-9]+]] = OpTypeInt 32 0
 ; CHECK-SPIRV: [[encoding_signedchar:%[0-9]+]] = OpConstant [[type_int32]] 5
-; CHECK-SPIRV: [[encoding_float:%[0-9]+]] = OpConstant [[type_int32]] 3
-; CHECK-SPIRV: [[size_8bit:%[0-9]+]] = OpConstant [[type_int32]] 8
-; CHECK-SPIRV: [[encoding_boolean:%[0-9]+]] = OpConstant [[type_int32]] 2
-; CHECK-SPIRV: [[size_32bit:%[0-9]+]] = OpConstant [[type_int32]] 32
-; CHECK-SPIRV: [[encoding_signed:%[0-9]+]] = OpConstant [[type_int32]] 4
-; CHECK-SPIRV: [[size_16bit:%[0-9]+]] = OpConstant [[type_int32]] 16
-; CHECK-SPIRV: [[size_64bit:%[0-9]+]] = OpConstant [[type_int32]] 64
-; CHECK-SPIRV: [[encoding_unsigned:%[0-9]+]] = OpConstant [[type_int32]] 6
-; CHECK-SPIRV: [[encoding_unsignedchar:%[0-9]+]] = OpConstant [[type_int32]] 7
+; CHECK-SPIRV-DAG: [[encoding_float:%[0-9]+]] = OpConstant [[type_int32]] 3
+; CHECK-SPIRV-DAG: [[size_8bit:%[0-9]+]] = OpConstant [[type_int32]] 8
+; CHECK-SPIRV-DAG: [[encoding_boolean:%[0-9]+]] = OpConstant [[type_int32]] 2
+; CHECK-SPIRV-DAG: [[size_32bit:%[0-9]+]] = OpConstant [[type_int32]] 32
+; CHECK-SPIRV-DAG: [[encoding_signed:%[0-9]+]] = OpConstant [[type_int32]] 4
+; CHECK-SPIRV-DAG: [[size_16bit:%[0-9]+]] = OpConstant [[type_int32]] 16
+; CHECK-SPIRV-DAG: [[size_64bit:%[0-9]+]] = OpConstant [[type_int32]] 64
+; CHECK-SPIRV-DAG: [[encoding_unsigned:%[0-9]+]] = OpConstant [[type_int32]] 6
+; CHECK-SPIRV-DAG: [[encoding_unsignedchar:%[0-9]+]] = OpConstant [[type_int32]] 7
 ; CHECK-SPIRV: [[debug_info_none:%[0-9]+]] = OpExtInst [[type_void]] [[ext_inst_non_semantic]] DebugInfoNone
-; CHECK-SPIRV: OpExtInst [[type_void]] [[ext_inst_non_semantic]] DebugTypeBasic [[str_bool]] [[size_8bit]] [[encoding_boolean]] [[debug_info_none]]
-; CHECK-SPIRV: OpExtInst [[type_void]] [[ext_inst_non_semantic]] DebugTypeBasic [[str_int]] [[size_32bit]] [[encoding_signed]] [[debug_info_none]]
-; CHECK-SPIRV: OpExtInst [[type_void]] [[ext_inst_non_semantic]] DebugTypeBasic [[str_short]] [[size_16bit]] [[encoding_signed]] [[debug_info_none]]
-; CHECK-SPIRV: OpExtInst [[type_void]] [[ext_inst_non_semantic]] DebugTypeBasic [[str_char]] [[size_8bit]] [[encoding_signedchar]] [[debug_info_none]]
-; CHECK-SPIRV: OpExtInst [[type_void]] [[ext_inst_non_semantic]] DebugTypeBasic [[str_long]] [[size_64bit]] [[encoding_signed]] [[debug_info_none]]
-; CHECK-SPIRV: OpExtInst [[type_void]] [[ext_inst_non_semantic]] DebugTypeBasic [[str_uint]] [[size_32bit]] [[encoding_unsigned]] [[debug_info_none]]
-; CHECK-SPIRV: OpExtInst [[type_void]] [[ext_inst_non_semantic]] DebugTypeBasic [[str_ushort]] [[size_16bit]] [[encoding_unsigned]] [[debug_info_none]]
-; CHECK-SPIRV: OpExtInst [[type_void]] [[ext_inst_non_semantic]] DebugTypeBasic [[str_uchar]] [[size_8bit]] [[encoding_unsignedchar]] [[debug_info_none]]
-; CHECK-SPIRV: OpExtInst [[type_void]] [[ext_inst_non_semantic]] DebugTypeBasic [[str_ulong]] [[size_64bit]] [[encoding_unsigned]] [[debug_info_none]]
-; CHECK-SPIRV: OpExtInst [[type_void]] [[ext_inst_non_semantic]] DebugTypeBasic [[str_float]] [[size_32bit]] [[encoding_float]] [[debug_info_none]]
-; CHECK-SPIRV: OpExtInst [[type_void]] [[ext_inst_non_semantic]] DebugTypeBasic [[str_double]] [[size_64bit]] [[encoding_float]] [[debug_info_none]]
+; CHECK-SPIRV-DAG: OpExtInst [[type_void]] [[ext_inst_non_semantic]] DebugTypeBasic [[str_bool]] [[size_8bit]] [[encoding_boolean]] [[debug_info_none]]
+; CHECK-SPIRV-DAG: OpExtInst [[type_void]] [[ext_inst_non_semantic]] DebugTypeBasic [[str_int]] [[size_32bit]] [[encoding_signed]] [[debug_info_none]]
+; CHECK-SPIRV-DAG: OpExtInst [[type_void]] [[ext_inst_non_semantic]] DebugTypeBasic [[str_short]] [[size_16bit]] [[encoding_signed]] [[debug_info_none]]
+; CHECK-SPIRV-DAG: OpExtInst [[type_void]] [[ext_inst_non_semantic]] DebugTypeBasic [[str_char]] [[size_8bit]] [[encoding_signedchar]] [[debug_info_none]]
+; CHECK-SPIRV-DAG: OpExtInst [[type_void]] [[ext_inst_non_semantic]] DebugTypeBasic [[str_long]] [[size_64bit]] [[encoding_signed]] [[debug_info_none]]
+; CHECK-SPIRV-DAG: OpExtInst [[type_void]] [[ext_inst_non_semantic]] DebugTypeBasic [[str_uint]] [[size_32bit]] [[encoding_unsigned]] [[debug_info_none]]
+; CHECK-SPIRV-DAG: OpExtInst [[type_void]] [[ext_inst_non_semantic]] DebugTypeBasic [[str_ushort]] [[size_16bit]] [[encoding_unsigned]] [[debug_info_none]]
+; CHECK-SPIRV-DAG: OpExtInst [[type_void]] [[ext_inst_non_semantic]] DebugTypeBasic [[str_uchar]] [[size_8bit]] [[encoding_unsignedchar]] [[debug_info_none]]
+; CHECK-SPIRV-DAG: OpExtInst [[type_void]] [[ext_inst_non_semantic]] DebugTypeBasic [[str_ulong]] [[size_64bit]] [[encoding_unsigned]] [[debug_info_none]]
+; CHECK-SPIRV-DAG: OpExtInst [[type_void]] [[ext_inst_non_semantic]] DebugTypeBasic [[str_float]] [[size_32bit]] [[encoding_float]] [[debug_info_none]]
+; CHECK-SPIRV-DAG: OpExtInst [[type_void]] [[ext_inst_non_semantic]] DebugTypeBasic [[str_double]] [[size_64bit]] [[encoding_float]] [[debug_info_none]]
 
 ; CHECK-OPTION-NOT: DebugTypeBasic
 

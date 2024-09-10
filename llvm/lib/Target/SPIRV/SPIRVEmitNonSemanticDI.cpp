@@ -5,7 +5,6 @@
 #include "SPIRVRegisterInfo.h"
 #include "SPIRVTargetMachine.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
@@ -127,13 +126,11 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
     for (auto &F : *M) {
       for (auto &BB : F) {
         for (auto &I : BB) {
-          for (DbgRecord &DR : I.getDbgRecordRange()) {
-            if (auto *DVR = dyn_cast<DbgVariableRecord>(&DR)) {
-              DILocalVariable *LocalVariable = DVR->getVariable();
-              if (auto *BasicType =
-                      dyn_cast<DIBasicType>(LocalVariable->getType()))
-                BasicTypes.insert(BasicType);
-            }
+          for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange())) {
+            DILocalVariable *LocalVariable = DVR.getVariable();
+            if (auto *BasicType =
+                    dyn_cast<DIBasicType>(LocalVariable->getType()))
+              BasicTypes.insert(BasicType);
           }
         }
       }
@@ -213,7 +210,8 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
                            DebugSourceResIdReg, SourceLanguageReg});
 
     // Emit DebugInfoNone. This instruction is a wildcard accepted
-    // by standard to put into instruction arguments as Not Available/Null
+    // by standard to put into debug instructions arguments
+    // as Not Available/Null
     const Register DebugInfoNoneReg =
         EmitDIInstruction(SPIRV::NonSemanticExtInst::DebugInfoNone, {});
 
