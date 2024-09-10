@@ -2121,15 +2121,18 @@ void OmpAttributeVisitor::CreateImplicitSymbols(
       }
       return lastDeclSymbol;
     };
-    auto makeSharedSymbol = [&]() {
+    auto makeSharedSymbol = [&](bool setFlag) {
       const Symbol *hostSymbol =
           lastDeclSymbol ? lastDeclSymbol : &symbol->GetUltimate();
-      MakeAssocSymbol(symbol->name(), *hostSymbol,
+      Symbol &assocSymbol = MakeAssocSymbol(symbol->name(), *hostSymbol,
           context_.FindScope(dirContext.directiveSource));
+      if (setFlag) {
+        assocSymbol.set(Symbol::Flag::OmpShared);
+      }
     };
-    auto useLastDeclSymbol = [&]() {
+    auto useLastDeclSymbol = [&](bool setFlag) {
       if (lastDeclSymbol) {
-        makeSharedSymbol();
+        makeSharedSymbol(setFlag);
       }
     };
 
@@ -2140,8 +2143,9 @@ void OmpAttributeVisitor::CreateImplicitSymbols(
 
     if (dsa.has_value()) {
       if (dsa.value() == Symbol::Flag::OmpShared &&
-          (parallelDir || taskGenDir || teamsDir))
-        makeSharedSymbol();
+          (parallelDir || taskGenDir || teamsDir)) {
+        makeSharedSymbol(/*setFlag=*/true);
+      }
       // Private symbols will have been declared already.
       prevDSA = dsa;
       continue;
@@ -2155,18 +2159,19 @@ void OmpAttributeVisitor::CreateImplicitSymbols(
       if (!parallelDir && !taskGenDir && !teamsDir) {
         return;
       }
-      if (dirContext.defaultDSA != Symbol::Flag::OmpShared)
+      if (dirContext.defaultDSA != Symbol::Flag::OmpShared) {
         makePrivateSymbol(dirContext.defaultDSA);
-      else
-        makeSharedSymbol();
+      } else {
+        makeSharedSymbol(/*setFlag=*/true);
+      }
       dsa = dirContext.defaultDSA;
     } else if (parallelDir) {
       // 2) parallel -> shared
-      makeSharedSymbol();
+      makeSharedSymbol(/*setFlag=*/false);
       dsa = Symbol::Flag::OmpShared;
     } else if (!taskGenDir && !targetDir) {
       // 3) enclosing context
-      useLastDeclSymbol();
+      useLastDeclSymbol(/*setFlag=*/false);
       dsa = prevDSA;
     } else if (targetDir) {
       // TODO 4) not mapped target variable -> firstprivate
@@ -2175,7 +2180,7 @@ void OmpAttributeVisitor::CreateImplicitSymbols(
       // TODO 5) dummy arg in orphaned taskgen construct -> firstprivate
       if (prevDSA == Symbol::Flag::OmpShared) {
         // 6) shared in enclosing context -> shared
-        makeSharedSymbol();
+        makeSharedSymbol(/*setFlag=*/false);
         dsa = Symbol::Flag::OmpShared;
       } else {
         // 7) firstprivate

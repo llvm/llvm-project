@@ -20,7 +20,7 @@ program omp_do
   !$omp parallel  default(shared)
   !$omp do
   !DEF: /omp_do/OtherConstruct2/OtherConstruct1/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
-  !DEF: /omp_do/OtherConstruct2/n HostAssoc INTEGER(4)
+  !DEF: /omp_do/OtherConstruct2/n (OmpShared) HostAssoc INTEGER(4)
   do i=1,n
     !$omp parallel
     !$omp single
