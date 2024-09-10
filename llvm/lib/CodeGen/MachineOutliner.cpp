@@ -463,7 +463,7 @@ struct MachineOutliner : public ModulePass {
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<MachineModuleInfoWrapperPass>();
     AU.addPreserved<MachineModuleInfoWrapperPass>();
-    AU.addRequired<ImmutableModuleSummaryIndexWrapperPass>();
+    AU.addUsedIfAvailable<ImmutableModuleSummaryIndexWrapperPass>();
     AU.setPreservesAll();
     ModulePass::getAnalysisUsage(AU);
   }
