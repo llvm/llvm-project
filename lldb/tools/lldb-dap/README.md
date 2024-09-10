@@ -36,6 +36,9 @@ file that defines how your program will be run. The JSON configuration file can 
 |**terminateCommands** |[string]| | LLDB commands executed when the debugging session ends. Commands and command output will be sent to the debugger console when they are executed.
 |**sourceMap**      |[string[2]]| | Specify an array of path re-mappings. Each element in the array must be a two element array containing a source and destination pathname.
 |**debuggerRoot**   | string| |Specify a working directory to use when launching lldb-dap. If the debug information in your executable contains relative paths, this option can be used so that `lldb-dap` can find source files and object files that have relative paths.
+|**enableAutoVariableSummaries**|bool| | Enable auto generated summaries for variables when no summaries exist for a given type. This feature can cause performance delays in large projects when viewing variables.
+|**enableDisplayExtendedBacktrace**|bool| | Enable language specific extended backtraces.
+|**enableSyntheticChildDebugging**|bool| | If a variable is displayed using a synthetic children, also display the actual contents of the variable at the end under a [raw] entry. This is useful when creating sythetic child plug-ins as it lets you see the actual contents of the variable.
 
 ### Attaching Settings
 
@@ -62,6 +65,9 @@ The JSON configuration file can contain the following `lldb-dap` specific launch
 |**exitCommands**   |[string]| | LLDB commands executed when the program exits. Commands and command output will be sent to the debugger console when they are executed.
 |**terminateCommands** |[string]| | LLDB commands executed when the debugging session ends. Commands and command output will be sent to the debugger console when they are executed.
 |**attachCommands** |[string]| | LLDB commands that will be executed after **preRunCommands** which take place of the code that normally does the attach. The commands can create a new target and attach or launch it however desired. This allows custom launch and attach configurations. Core files can use `target create --core /path/to/core` to attach to core files.
+|**enableAutoVariableSummaries**|bool| | Enable auto generated summaries for variables when no summaries exist for a given type. This feature can cause performance delays in large projects when viewing variables.
+|**enableDisplayExtendedBacktrace**|bool| | Enable language specific extended backtraces.
+|**enableSyntheticChildDebugging**|bool| | If a variable is displayed using a synthetic children, also display the actual contents of the variable at the end under a [raw] entry. This is useful when creating sythetic child plug-ins as it lets you see the actual contents of the variable.
 
 ### Example configurations
 

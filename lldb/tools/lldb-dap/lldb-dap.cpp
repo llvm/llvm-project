@@ -112,6 +112,9 @@ typedef void (*RequestCallback)(const llvm::json::Object &command);
 
 enum LaunchMethod { Launch, Attach, AttachForSuspendedLaunch };
 
+/// Page size used for reporting addtional frames in the 'stackTrace' request.
+constexpr int StackPageSize = 20;
+
 /// Prints a welcome message on the editor if the preprocessor variable
 /// LLDB_DAP_WELCOME_MESSAGE is defined.
 static void PrintWelcomeMessage() {
@@ -638,6 +641,79 @@ void SetSourceMapFromArguments(const llvm::json::Object &arguments) {
   }
 }
 
+// Fill in the stack frames of the thread.
+//
+// Threads stacks may contain runtime specific extended backtraces, when
+// constructing a stack trace first report the full thread stack trace then
+// perform a breadth first traversal of any extended backtrace frames.
+//
+// For example:
+//
+// Thread (id=th0) stack=[s0, s1, s2, s3]
+//   \ Extended backtrace "libdispatch" Thread (id=th1) stack=[s0, s1]
+//     \ Extended backtrace "libdispatch" Thread (id=th2) stack=[s0, s1]
+//   \ Extended backtrace "Application Specific Backtrace" Thread (id=th3)
+//   stack=[s0, s1, s2]
+//
+// Which will flatten into:
+//
+//  0. th0->s0
+//  1. th0->s1
+//  2. th0->s2
+//  3. th0->s3
+//  4. label - Enqueued from th1, sf=-1, i=-4
+//  5. th1->s0
+//  6. th1->s1
+//  7. label - Enqueued from th2
+//  8. th2->s0
+//  9. th2->s1
+// 10. label - Application Specific Backtrace
+// 11. th3->s0
+// 12. th3->s1
+// 13. th3->s2
+//
+// s=3,l=3 = [th0->s3, label1, th1->s0]
+bool FillStackFrames(lldb::SBThread &thread, llvm::json::Array &stack_frames,
+                     int64_t &offset, const int64_t start_frame,
+                     const int64_t levels) {
+  bool reached_end_of_stack = false;
+  for (int64_t i = start_frame;
+       static_cast<int64_t>(stack_frames.size()) < levels; i++) {
+    if (i == -1) {
+      stack_frames.emplace_back(CreateExtendedStackFrameLabel(thread));
+      continue;
+    }
+
+    lldb::SBFrame frame = thread.GetFrameAtIndex(i);
+    if (!frame.IsValid()) {
+      offset += thread.GetNumFrames() + 1 /* label between threads */;
+      reached_end_of_stack = true;
+      break;
+    }
+
+    stack_frames.emplace_back(CreateStackFrame(frame));
+  }
+
+  if (g_dap.enable_display_extended_backtrace && reached_end_of_stack) {
+    // Check for any extended backtraces.
+    for (uint32_t bt = 0;
+         bt < thread.GetProcess().GetNumExtendedBacktraceTypes(); bt++) {
+      lldb::SBThread backtrace = thread.GetExtendedBacktraceThread(
+          thread.GetProcess().GetExtendedBacktraceTypeAtIndex(bt));
+      if (!backtrace.IsValid())
+        continue;
+
+      reached_end_of_stack = FillStackFrames(
+          backtrace, stack_frames, offset,
+          (start_frame - offset) > 0 ? start_frame - offset : -1, levels);
+      if (static_cast<int64_t>(stack_frames.size()) >= levels)
+        break;
+    }
+  }
+
+  return reached_end_of_stack;
+}
+
 // "AttachRequest": {
 //   "allOf": [ { "$ref": "#/definitions/Request" }, {
 //     "type": "object",
@@ -1020,6 +1096,103 @@ void request_disconnect(const llvm::json::Object &request) {
   g_dap.disconnecting = true;
 }
 
+// "ExceptionInfoRequest": {
+//   "allOf": [ { "$ref": "#/definitions/Request" }, {
+//     "type": "object",
+//     "description": "Retrieves the details of the exception that
+//     caused this event to be raised. Clients should only call this request if
+//     the corresponding capability `supportsExceptionInfoRequest` is true.",
+//     "properties": {
+//       "command": {
+//         "type": "string",
+//         "enum": [ "exceptionInfo" ]
+//       },
+//       "arguments": {
+//         "$ref": "#/definitions/ExceptionInfoArguments"
+//       }
+//     },
+//     "required": [ "command", "arguments"  ]
+//   }]
+// },
+// "ExceptionInfoArguments": {
+//   "type": "object",
+//   "description": "Arguments for `exceptionInfo` request.",
+//   "properties": {
+//     "threadId": {
+//       "type": "integer",
+//       "description": "Thread for which exception information should be
+//       retrieved."
+//     }
+//   },
+//   "required": [ "threadId" ]
+// },
+// "ExceptionInfoResponse": {
+//   "allOf": [ { "$ref": "#/definitions/Response" }, {
+//     "type": "object",
+//     "description": "Response to `exceptionInfo` request.",
+//     "properties": {
+//       "body": {
+//         "type": "object",
+//         "properties": {
+//           "exceptionId": {
+//             "type": "string",
+//             "description": "ID of the exception that was thrown."
+//           },
+//           "description": {
+//             "type": "string",
+//             "description": "Descriptive text for the exception."
+//           },
+//           "breakMode": {
+//          "$ref": "#/definitions/ExceptionBreakMode",
+//            "description": "Mode that caused the exception notification to
+//            be raised."
+//           },
+//           "details": {
+//             "$ref": "#/definitions/ExceptionDetails",
+//            "description": "Detailed information about the exception."
+//           }
+//         },
+//         "required": [ "exceptionId", "breakMode" ]
+//       }
+//     },
+//     "required": [ "body" ]
+//   }]
+// }
+// "ExceptionDetails": {
+//   "type": "object",
+//   "description": "Detailed information about an exception that has
+//   occurred.", "properties": {
+//     "message": {
+//       "type": "string",
+//       "description": "Message contained in the exception."
+//     },
+//     "typeName": {
+//       "type": "string",
+//       "description": "Short type name of the exception object."
+//     },
+//     "fullTypeName": {
+//       "type": "string",
+//       "description": "Fully-qualified type name of the exception object."
+//     },
+//     "evaluateName": {
+//       "type": "string",
+//       "description": "An expression that can be evaluated in the current
+//       scope to obtain the exception object."
+//     },
+//     "stackTrace": {
+//       "type": "string",
+//       "description": "Stack trace at the time the exception was thrown."
+//     },
+//     "innerException": {
+//       "type": "array",
+//       "items": {
+//         "$ref": "#/definitions/ExceptionDetails"
+//       },
+//       "description": "Details of the exception contained by this exception,
+//       if any."
+//     }
+//   }
+// },
 void request_exceptionInfo(const llvm::json::Object &request) {
   llvm::json::Object response;
   FillResponse(request, response);
@@ -1048,6 +1221,27 @@ void request_exceptionInfo(const llvm::json::Object &request) {
       }
     }
     body.try_emplace("breakMode", "always");
+    auto exception = thread.GetCurrentException();
+    if (exception.IsValid()) {
+      llvm::json::Object details;
+      lldb::SBStream stream;
+      if (exception.GetDescription(stream)) {
+        EmplaceSafeString(details, "message", stream.GetData());
+      }
+
+      auto exceptionBacktrace = thread.GetCurrentExceptionBacktrace();
+      if (exceptionBacktrace.IsValid()) {
+        lldb::SBStream stream;
+        exceptionBacktrace.GetDescription(stream);
+        for (uint32_t i = 0; i < exceptionBacktrace.GetNumFrames(); i++) {
+          lldb::SBFrame frame = exceptionBacktrace.GetFrameAtIndex(i);
+          frame.GetDescription(stream);
+        }
+        EmplaceSafeString(details, "stackTrace", stream.GetData());
+      }
+
+      body.try_emplace("details", std::move(details));
+    }
     // auto excInfoCount = thread.GetStopReasonDataCount();
     // for (auto i=0; i<excInfoCount; ++i) {
     //   uint64_t exc_data = thread.GetStopReasonDataAtIndex(i);
@@ -3066,7 +3260,9 @@ void request_source(const llvm::json::Object &request) {
 //     },
 //     "format": {
 //       "$ref": "#/definitions/StackFrameFormat",
-//       "description": "Specifies details on how to format the stack frames."
+//       "description": "Specifies details on how to format the stack frames.
+//       The attribute is only honored by a debug adapter if the corresponding
+//       capability `supportsValueFormattingOptions` is true."
 //     }
 //  },
 //   "required": [ "threadId" ]
@@ -3074,7 +3270,7 @@ void request_source(const llvm::json::Object &request) {
 // "StackTraceResponse": {
 //   "allOf": [ { "$ref": "#/definitions/Response" }, {
 //     "type": "object",
-//     "description": "Response to 'stackTrace' request.",
+//     "description": "Response to `stackTrace` request.",
 //     "properties": {
 //       "body": {
 //         "type": "object",
@@ -3090,7 +3286,13 @@ void request_source(const llvm::json::Object &request) {
 //           },
 //           "totalFrames": {
 //             "type": "integer",
-//             "description": "The total number of frames available."
+//             "description": "The total number of frames available in the
+//             stack. If omitted or if `totalFrames` is larger than the
+//             available frames, a client is expected to request frames until
+//             a request returns less frames than requested (which indicates
+//             the end of the stack). Returning monotonically increasing
+//             `totalFrames` values for subsequent requests can be used to
+//             enforce paging in the client."
 //           }
 //         },
 //         "required": [ "stackFrames" ]
@@ -3105,85 +3307,22 @@ void request_stackTrace(const llvm::json::Object &request) {
   lldb::SBError error;
   auto arguments = request.getObject("arguments");
   lldb::SBThread thread = g_dap.GetLLDBThread(*arguments);
-  llvm::json::Array stackFrames;
+  llvm::json::Array stack_frames;
   llvm::json::Object body;
 
   if (thread.IsValid()) {
-    const auto startFrame = GetUnsigned(arguments, "startFrame", 0);
+    const auto start_frame = GetUnsigned(arguments, "startFrame", 0);
     const auto levels = GetUnsigned(arguments, "levels", 0);
-    const auto endFrame = (levels == 0) ? INT64_MAX : (startFrame + levels);
-    auto totalFrames = thread.GetNumFrames();
-
-    // This will always return an invalid thread when
-    // libBacktraceRecording.dylib is not loaded or if there is no extended
-    // backtrace.
-    lldb::SBThread queue_backtrace_thread;
-    if (g_dap.enable_display_extended_backtrace)
-      queue_backtrace_thread = thread.GetExtendedBacktraceThread("libdispatch");
-    if (queue_backtrace_thread.IsValid()) {
-      // One extra frame as a label to mark the enqueued thread.
-      totalFrames += queue_backtrace_thread.GetNumFrames() + 1;
-    }
-
-    // This will always return an invalid thread when there is no exception in
-    // the current thread.
-    lldb::SBThread exception_backtrace_thread;
-    if (g_dap.enable_display_extended_backtrace)
-      exception_backtrace_thread = thread.GetCurrentExceptionBacktrace();
-
-    if (exception_backtrace_thread.IsValid()) {
-      // One extra frame as a label to mark the exception thread.
-      totalFrames += exception_backtrace_thread.GetNumFrames() + 1;
-    }
-
-    for (uint32_t i = startFrame; i < endFrame; ++i) {
-      lldb::SBFrame frame;
-      std::string prefix;
-      if (i < thread.GetNumFrames()) {
-        frame = thread.GetFrameAtIndex(i);
-      } else if (queue_backtrace_thread.IsValid() &&
-                 i < (thread.GetNumFrames() +
-                      queue_backtrace_thread.GetNumFrames() + 1)) {
-        if (i == thread.GetNumFrames()) {
-          const uint32_t thread_idx =
-              queue_backtrace_thread.GetExtendedBacktraceOriginatingIndexID();
-          const char *queue_name = queue_backtrace_thread.GetQueueName();
-          auto name = llvm::formatv("Enqueued from {0} (Thread {1})",
-                                    queue_name, thread_idx);
-          stackFrames.emplace_back(
-              llvm::json::Object{{"id", thread.GetThreadID() + 1},
-                                 {"name", name},
-                                 {"presentationHint", "label"}});
-          continue;
-        }
-        frame = queue_backtrace_thread.GetFrameAtIndex(
-            i - thread.GetNumFrames() - 1);
-      } else if (exception_backtrace_thread.IsValid()) {
-        if (i == thread.GetNumFrames() +
-                     (queue_backtrace_thread.IsValid()
-                          ? queue_backtrace_thread.GetNumFrames() + 1
-                          : 0)) {
-          stackFrames.emplace_back(
-              llvm::json::Object{{"id", thread.GetThreadID() + 2},
-                                 {"name", "Original Exception Backtrace"},
-                                 {"presentationHint", "label"}});
-          continue;
-        }
-
-        frame = exception_backtrace_thread.GetFrameAtIndex(
-            i - thread.GetNumFrames() -
-            (queue_backtrace_thread.IsValid()
-                 ? queue_backtrace_thread.GetNumFrames() + 1
-                 : 0));
-      }
-      if (!frame.IsValid())
-        break;
-      stackFrames.emplace_back(CreateStackFrame(frame));
-    }
-
-    body.try_emplace("totalFrames", totalFrames);
+    int64_t offset = 0;
+    bool reached_end_of_stack =
+        FillStackFrames(thread, stack_frames, offset, start_frame,
+                        levels == 0 ? INT64_MAX : levels);
+    body.try_emplace("totalFrames",
+                     start_frame + stack_frames.size() +
+                         (reached_end_of_stack ? 0 : StackPageSize));
   }
-  body.try_emplace("stackFrames", std::move(stackFrames));
+
+  body.try_emplace("stackFrames", std::move(stack_frames));
   response.try_emplace("body", std::move(body));
   g_dap.SendJSON(llvm::json::Value(std::move(response)));
 }
@@ -3487,7 +3626,6 @@ void request_stepOut(const llvm::json::Object &request) {
 //   }]
 // }
 void request_threads(const llvm::json::Object &request) {
-
   lldb::SBProcess process = g_dap.target.GetProcess();
   llvm::json::Object response;
   FillResponse(request, response);
