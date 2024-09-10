@@ -1,4 +1,4 @@
-REQUIRES: x86-registered-target && target-byteorder-little-endian
+REQUIRES: x86-registered-target && host-byteorder-little-endian
 RUN: sancov -symbolize -strip_path_prefix="llvm/" %p/Inputs/test-linux_x86_64 %p/Inputs/test-linux_x86_64.0.sancov | FileCheck %s --check-prefixes=CHECK,STRIP
 RUN: sancov -symbolize %p/Inputs/test-linux_x86_64 %p/Inputs/test-linux_x86_64.0.sancov | FileCheck %s --check-prefixes=CHECK,NOSTRIP
 
