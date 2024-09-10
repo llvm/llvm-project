@@ -346,13 +346,13 @@ matching expressions to simplify your matcher.
 
 Alternatively, pressing the tab key after a previous matcher's open parentheses would also 
 show which matchers can be chained with the previous matcher, though some matchers that work 
-may not be listed.
+may not be listed. Note that this suggestion feature currently does not work on Windows.
 
 Just like breaking up a huge function into smaller chunks with intention-revealing names 
 can help you understand a complex algorithm, breaking up a matcher into smaller matchers 
 with intention-revealing names can help you understand a complicated matcher.  
 
-Once you have a working clang-query matcher, the C++ API matchers will be the same or similar 
+Once you have a working :program:`clang-query` matcher, the C++ API matchers will be the same or similar 
 to your interactively constructed matcher (there can be cases where they differ slightly). 
 You can use local variables to preserve your intention-revealing names that you applied 
 to nested matchers.
