@@ -9,6 +9,7 @@
 #ifndef TEST_STD_RANGES_RANGE_ADAPTORS_RANGE_STRIDE_TYPES_H
 #define TEST_STD_RANGES_RANGE_ADAPTORS_RANGE_STRIDE_TYPES_H
 
+#include <cstddef>
 #include <functional>
 #include <iterator>
 #include <ranges>
@@ -27,25 +28,22 @@ concept IterDifferable = std::invocable<std::minus<>, Iter, Iter>;
 
 // Iterators
 
-// The base for an input iterator that keeps a count of the times that it is
+// The base for an iterator that keeps a count of the times that it is
 // moved and copied.
-template <class Derived, std::input_iterator Iter = int*, bool IsSized = false>
-  requires((!IsSized) || (IsSized && IterDifferable<Iter>))
-struct InputIterBase {
-  using iterator_concept  = std::input_iterator_tag;
-  using iterator_category = std::input_iterator_tag;
-  using value_type        = typename std::iterator_traits<Iter>::value_type;
-  using difference_type   = typename std::iterator_traits<Iter>::difference_type;
+template <class Derived, std::input_iterator Iter>
+struct IterBase {
+  using value_type      = typename std::iterator_traits<Iter>::value_type;
+  using difference_type = typename std::iterator_traits<Iter>::difference_type;
 
   int* move_counter = nullptr;
   int* copy_counter = nullptr;
 
   Iter value_{};
 
-  constexpr InputIterBase() = default;
-  constexpr explicit InputIterBase(Iter value) : value_(value) {}
+  constexpr IterBase() = default;
+  constexpr explicit IterBase(Iter value) : value_(value) {}
 
-  constexpr InputIterBase(const InputIterBase& other) noexcept {
+  constexpr IterBase(const IterBase& other) noexcept {
     copy_counter = other.copy_counter;
     move_counter = other.move_counter;
     if (copy_counter != nullptr) {
@@ -54,7 +52,7 @@ struct InputIterBase {
     value_ = other.value_;
   }
 
-  constexpr InputIterBase(InputIterBase&& other) noexcept {
+  constexpr IterBase(IterBase&& other) noexcept {
     copy_counter = other.copy_counter;
     move_counter = other.move_counter;
     if (move_counter != nullptr) {
@@ -62,17 +60,33 @@ struct InputIterBase {
     }
     value_ = std::move(other.value_);
   }
-  constexpr InputIterBase& operator=(const InputIterBase& other) = default;
-  constexpr InputIterBase& operator=(InputIterBase&& other)      = default;
+  constexpr IterBase& operator=(const IterBase& other) = default;
+  constexpr IterBase& operator=(IterBase&& other)      = default;
+};
 
-  constexpr value_type operator*() const { return *value_; }
+// The base for an input iterator that keeps a count of the times that it is
+// moved and copied.
+template <class Derived, std::input_iterator Iter = int*, bool IsSized = false>
+  requires((!IsSized) || (IsSized && IterDifferable<Iter>))
+struct InputIter : IterBase<Derived, Iter> {
+  using Base = IterBase<Derived, Iter>;
+
+  using typename Base::difference_type;
+  using typename Base::value_type;
+
+  using iterator_concept  = std::input_iterator_tag;
+  using iterator_category = std::input_iterator_tag;
+
+  using Base::Base;
+
+  constexpr value_type operator*() const { return *Base::value_; }
   constexpr Derived& operator++() {
-    value_++;
+    Base::value_++;
     return static_cast<Derived&>(*this);
   }
   constexpr Derived operator++(int) {
     auto nv = *this;
-    value_++;
+    Base::value_++;
     return nv;
   }
   friend constexpr bool operator==(const Derived& left, const Derived& right) { return left.value_ == right.value_; }
@@ -83,12 +97,19 @@ struct InputIterBase {
   }
 };
 
-// In input iterator that is sized.
-struct SizedInputIterator : InputIterBase<SizedInputIterator, int*, true> {
-  using InputIterBase::InputIterBase;
+// In input iterator that is unsized.
+struct UnsizedInputIter : InputIter<UnsizedInputIter, int*, false> {
+  using InputIter::InputIter;
 };
-static_assert(std::input_iterator<SizedInputIterator>);
-static_assert(std::sized_sentinel_for<SizedInputIterator, SizedInputIterator>);
+static_assert(std::input_iterator<UnsizedInputIter>);
+static_assert(!std::sized_sentinel_for<UnsizedInputIter, UnsizedInputIter>);
+
+// In input iterator that is sized.
+struct SizedInputIter : InputIter<SizedInputIter, int*, true> {
+  using InputIter::InputIter;
+};
+static_assert(std::input_iterator<SizedInputIter>);
+static_assert(std::sized_sentinel_for<SizedInputIter, SizedInputIter>);
 
 // Views
 
@@ -97,15 +118,14 @@ static_assert(std::sized_sentinel_for<SizedInputIterator, SizedInputIterator>);
 namespace adl {
 template <std::input_iterator Iter = int*, bool IsIterSwappable = true, bool IsNoExceptIterMoveable = true>
 struct IterMoveIterSwapTestRangeIterator
-    : InputIterBase<IterMoveIterSwapTestRangeIterator<Iter, IsIterSwappable, IsNoExceptIterMoveable>, Iter, false> {
+    : InputIter<IterMoveIterSwapTestRangeIterator<Iter, IsIterSwappable, IsNoExceptIterMoveable>, Iter, false> {
   int* counter_{nullptr};
 
-  using InputIterBase<IterMoveIterSwapTestRangeIterator<Iter, IsIterSwappable, IsNoExceptIterMoveable>, Iter, false>::
-      InputIterBase;
+  using InputIter<IterMoveIterSwapTestRangeIterator<Iter, IsIterSwappable, IsNoExceptIterMoveable>, Iter, false>::
+      InputIter;
 
   constexpr IterMoveIterSwapTestRangeIterator(Iter value, int* counter)
-      : InputIterBase<IterMoveIterSwapTestRangeIterator<Iter, IsIterSwappable, IsNoExceptIterMoveable>, Iter, false>(
-            value),
+      : InputIter<IterMoveIterSwapTestRangeIterator<Iter, IsIterSwappable, IsNoExceptIterMoveable>, Iter, false>(value),
         counter_(counter) {}
 
   friend constexpr void iter_swap(IterMoveIterSwapTestRangeIterator t, IterMoveIterSwapTestRangeIterator u) noexcept
@@ -152,18 +172,19 @@ struct IterMoveIterSwapTestRange : std::ranges::view_base {
 
 // Views
 
-template <bool View>
-struct ViewOrRange {};
-
+// Depending upon configuration, ViewOrRange is either a View or not.
+template <bool IsView>
+struct MaybeView {};
 template <>
-struct ViewOrRange<true> : std::ranges::view_base {};
+struct MaybeView<true> : std::ranges::view_base {};
 
 template <std::input_iterator Iter,
           std::sentinel_for<Iter> Sent = sentinel_wrapper<Iter>,
           bool IsSized                 = false,
-          bool IsView                  = false>
+          bool IsView                  = false,
+          bool IsCopyable              = false >
   requires((!IsSized) || (IsSized && IterDifferable<Iter>))
-struct BasicTestViewOrRange : ViewOrRange<IsView> {
+struct BasicTestViewOrRange : MaybeView<IsView> {
   Iter begin_{};
   Iter end_{};
 
@@ -179,39 +200,32 @@ struct BasicTestViewOrRange : ViewOrRange<IsView> {
   {
     return begin_ - end_;
   }
+
+  constexpr BasicTestViewOrRange(BasicTestViewOrRange&& other)      = default;
+  constexpr BasicTestViewOrRange& operator=(BasicTestViewOrRange&&) = default;
+
+  constexpr BasicTestViewOrRange(const BasicTestViewOrRange&)
+    requires(!IsCopyable)
+  = delete;
+  constexpr BasicTestViewOrRange(const BasicTestViewOrRange&)
+    requires IsCopyable
+  = default;
+
+  constexpr BasicTestViewOrRange& operator=(const BasicTestViewOrRange&)
+    requires(!IsCopyable)
+  = delete;
+  constexpr BasicTestViewOrRange& operator=(const BasicTestViewOrRange&)
+    requires IsCopyable
+  = default;
 };
 
 template <std::input_iterator Iter, std::sentinel_for<Iter> Sent = sentinel_wrapper<Iter>, bool IsSized = false>
   requires((!IsSized) || (IsSized && IterDifferable<Iter>))
-using BasicTestView = BasicTestViewOrRange<Iter, Sent, IsSized, true>;
+using BasicTestView = BasicTestViewOrRange<Iter, Sent, IsSized, true /* IsView */, true /* IsCopyable */>;
 
 template <std::input_iterator Iter, std::sentinel_for<Iter> Sent = sentinel_wrapper<Iter>, bool IsCopyable = true>
-struct MaybeCopyableAlwaysMoveableView : std::ranges::view_base {
-  Iter begin_;
-  Iter end_;
+using MaybeCopyableAlwaysMoveableView = BasicTestViewOrRange<Iter, Sent, false, true, IsCopyable>;
 
-  constexpr explicit MaybeCopyableAlwaysMoveableView(Iter b, Iter e) : begin_(b), end_(e) {}
-
-  constexpr MaybeCopyableAlwaysMoveableView(MaybeCopyableAlwaysMoveableView&& other)      = default;
-  constexpr MaybeCopyableAlwaysMoveableView& operator=(MaybeCopyableAlwaysMoveableView&&) = default;
-
-  constexpr MaybeCopyableAlwaysMoveableView(const MaybeCopyableAlwaysMoveableView&)
-    requires(!IsCopyable)
-  = delete;
-  constexpr MaybeCopyableAlwaysMoveableView(const MaybeCopyableAlwaysMoveableView&)
-    requires IsCopyable
-  = default;
-
-  constexpr MaybeCopyableAlwaysMoveableView& operator=(const MaybeCopyableAlwaysMoveableView&)
-    requires(!IsCopyable)
-  = delete;
-  constexpr MaybeCopyableAlwaysMoveableView& operator=(const MaybeCopyableAlwaysMoveableView&)
-    requires IsCopyable
-  = default;
-
-  constexpr Iter begin() const { return begin_; }
-  constexpr Sent end() const { return Sent{end_}; }
-};
 static_assert(std::ranges::view<MaybeCopyableAlwaysMoveableView<cpp17_input_iterator<int*>>>);
 static_assert(std::ranges::view<MaybeCopyableAlwaysMoveableView<cpp17_input_iterator<int*>,
                                                                 sentinel_wrapper<cpp17_input_iterator<int*>>,
