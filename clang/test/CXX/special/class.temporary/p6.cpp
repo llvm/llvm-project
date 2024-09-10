@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -std=c++17 %s -triple x86_64-linux-gnu -emit-llvm -o - | FileCheck %s --implicit-check-not='call{{.*}}dtor'
-// RUN: %clang_cc1 -std=c++23 %s -triple x86_64-linux-gnu -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK-CXX23,CHECK-CXX23-NEXT,CHECK-CXX23-LABEL
+// RUN: %clang_cc1 -std=c++23 %s -triple x86_64-linux-gnu -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK-CXX23
 
 namespace std {
   typedef decltype(sizeof(int)) size_t;

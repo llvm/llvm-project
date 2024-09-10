@@ -10,10 +10,10 @@
 
 # RUN: sed '/Header: name count/s/[0-9]/4/' %S/Inputs/debug-names-a.s > bad-name-count.s
 # RUN: llvm-mc -filetype=obj -triple=x86_64 bad-name-count.s -o bad-name-count.o
-# RUN: not ld.lld --debug-names bad-name-count.o 2>&1 | FileCheck %s --check-prefix=BAD-NAME-COUNT --implicit-check-not=error:
+# RUN: not ld.lld --debug-names bad-name-count.o 2>&1 | FileCheck %s --check-prefix=BAD-NAME-NUM --implicit-check-not=error:
 
 ## Test errors in offsets.
-# BAD-NAME-COUNT: error: bad-name-count.o:(.debug_names): Section too small: cannot read abbreviations.
+# BAD-NAME-NUM: error: bad-name-count.o:(.debug_names): Section too small: cannot read abbreviations.
 
 # RUN: sed '/Offset in Bucket/s/long/byte/' %S/Inputs/debug-names-a.s > entry-offset-in-byte.s
 # RUN: llvm-mc -filetype=obj -triple=x86_64 entry-offset-in-byte.s -o entry-offset-in-byte.o

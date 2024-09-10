@@ -2490,6 +2490,22 @@ static bool ValidatePrefixes(StringRef Kind, StringSet<> &UniquePrefixes,
   return true;
 }
 
+static bool ValidateCheckPrefixesSuffix(StringRef Kind,
+                                        ArrayRef<StringRef> SuppliedPrefixes) {
+  static const char *Suffixes[] = {"-NEXT",  "-SAME", "-EMPTY", "-NOT",
+                                   "-COUNT", "-DAG",  "-LABEL"};
+  for (StringRef Prefix : SuppliedPrefixes) {
+    for (StringRef Suffix : Suffixes) {
+      if (Prefix.ends_with(Suffix)) {
+        errs() << "error: supplied " << Kind << " prefix must not end with "
+               << "directive: '" << Suffix << "', prefix: '" << Prefix << "'\n";
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
 bool FileCheck::ValidateCheckPrefixes() {
   StringSet<> UniquePrefixes;
   // Add default prefixes to catch user-supplied duplicates of them below.
@@ -2504,6 +2520,8 @@ bool FileCheck::ValidateCheckPrefixes() {
   // Do not validate the default prefixes, or diagnostics about duplicates might
   // incorrectly indicate that they were supplied by the user.
   if (!ValidatePrefixes("check", UniquePrefixes, Req.CheckPrefixes))
+    return false;
+  if (!ValidateCheckPrefixesSuffix("check", Req.CheckPrefixes))
     return false;
   if (!ValidatePrefixes("comment", UniquePrefixes, Req.CommentPrefixes))
     return false;

@@ -190,8 +190,8 @@
 // RUN: %clang -### -S -frounding-math %s 2>&1 | FileCheck -check-prefix=CHECK-ROUNDING-MATH %s
 // CHECK-ROUNDING-MATH: "-cc1"
 // CHECK-ROUNDING-MATH: "-frounding-math"
-// CHECK-ROUNDING-MATH-NOT: "-fno-rounding-math"
-// RUN: %clang -### -S %s 2>&1 | FileCheck -check-prefix=CHECK-ROUNDING-MATH-NOT %s
+// CHECK-NO-ROUNDING-MATH: "-fno-rounding-math"
+// RUN: %clang -### -S %s 2>&1 | FileCheck -check-prefix=CHECK-NO-ROUNDING-MATH %s
 // RUN: not %clang -### -S -ffp-model=imprecise %s 2>&1 | FileCheck -check-prefix=CHECK-FPMODEL %s
 // CHECK-FPMODEL: unsupported argument 'imprecise' to option '-ffp-model='
 // RUN: %clang -### -S -ffp-model=precise %s 2>&1 | FileCheck -check-prefix=IGNORE %s
