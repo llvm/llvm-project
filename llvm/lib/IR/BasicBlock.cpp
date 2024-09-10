@@ -975,8 +975,16 @@ void BasicBlock::spliceDebugInfoImpl(BasicBlock::iterator Dest, BasicBlock *Src,
   if (ReadFromTail && Src->getMarker(Last)) {
     DbgMarker *FromLast = Src->getMarker(Last);
     if (LastIsEnd) {
-      Dest->adoptDbgRecords(Src, Last, true);
-      // adoptDbgRecords will release any trailers.
+      if (Dest == end()) {
+        // Abosrb the trailing markers from Src.
+        assert(FromLast == Src->getTrailingDbgRecords());
+        createMarker(Dest)->absorbDebugValues(*FromLast, true);
+        FromLast->eraseFromParent();
+        Src->deleteTrailingDbgRecords();
+      } else {
+        // adoptDbgRecords will release any trailers.
+        Dest->adoptDbgRecords(Src, Last, true);
+      }
       assert(!Src->getTrailingDbgRecords());
     } else {
       // FIXME: can we use adoptDbgRecords here to reduce allocations?
