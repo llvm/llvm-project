@@ -1106,6 +1106,383 @@ loop.end:
 }
 
 
+define i64 @loop_contains_safe_call() {
+; DEBUG-LABEL: LV: Checking a loop in 'loop_contains_safe_call'
+; DEBUG:       LV: Found an early exit. Retrying with speculative exit count.
+; DEBUG-NEXT:  LV: Found speculative backedge taken count: 63
+; DEBUG-NEXT:  LV: We can vectorize this loop!
+; CHECK-LABEL: define i64 @loop_contains_safe_call(
+; CHECK-SAME: ) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[P1:%.*]] = alloca [1024 x i8], align 4
+; CHECK-NEXT:    [[P2:%.*]] = alloca [1024 x i8], align 4
+; CHECK-NEXT:    call void @init_mem(ptr [[P1]], i64 1024)
+; CHECK-NEXT:    call void @init_mem(ptr [[P2]], i64 1024)
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[LOOP_INC:%.*]] ], [ 3, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[P1]], i64 [[INDEX]]
+; CHECK-NEXT:    [[LD1:%.*]] = load float, ptr [[ARRAYIDX]], align 1
+; CHECK-NEXT:    [[SQRT:%.*]] = tail call fast float @llvm.sqrt.f32(float [[LD1]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp fast ult float [[SQRT]], 3.000000e+00
+; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP_INC]], label [[LOOP_END:%.*]]
+; CHECK:       loop.inc:
+; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDEX_NEXT]], 67
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[LOOP_END]]
+; CHECK:       loop.end:
+; CHECK-NEXT:    [[RETVAL:%.*]] = phi i64 [ [[INDEX]], [[LOOP]] ], [ 67, [[LOOP_INC]] ]
+; CHECK-NEXT:    ret i64 [[RETVAL]]
+;
+entry:
+  %p1 = alloca [1024 x i8]
+  %p2 = alloca [1024 x i8]
+  call void @init_mem(ptr %p1, i64 1024)
+  call void @init_mem(ptr %p2, i64 1024)
+  br label %loop
+
+loop:
+  %index = phi i64 [ %index.next, %loop.inc ], [ 3, %entry ]
+  %arrayidx = getelementptr inbounds float, ptr %p1, i64 %index
+  %ld1 = load float, ptr %arrayidx, align 1
+  %sqrt = tail call fast float @llvm.sqrt.f32(float %ld1)
+  %cmp = fcmp fast ult float %sqrt, 3.0e+00
+  br i1 %cmp, label %loop.inc, label %loop.end
+
+loop.inc:
+  %index.next = add i64 %index, 1
+  %exitcond = icmp ne i64 %index.next, 67
+  br i1 %exitcond, label %loop, label %loop.end
+
+loop.end:
+  %retval = phi i64 [ %index, %loop ], [ 67, %loop.inc ]
+  ret i64 %retval
+}
+
+
+define i64 @loop_contains_unsafe_call() {
+; DEBUG-LABEL: LV: Checking a loop in 'loop_contains_unsafe_call'
+; DEBUG:       LV: Not vectorizing: Early exit loop contains operations that cannot be speculatively executed.
+; CHECK-LABEL: define i64 @loop_contains_unsafe_call(
+; CHECK-SAME: ) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[P1:%.*]] = alloca [1024 x i8], align 4
+; CHECK-NEXT:    [[P2:%.*]] = alloca [1024 x i8], align 4
+; CHECK-NEXT:    call void @init_mem(ptr [[P1]], i64 1024)
+; CHECK-NEXT:    call void @init_mem(ptr [[P2]], i64 1024)
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[LOOP_INC:%.*]] ], [ 3, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[P1]], i64 [[INDEX]]
+; CHECK-NEXT:    [[LD1:%.*]] = load i32, ptr [[ARRAYIDX]], align 1
+; CHECK-NEXT:    [[BAD_CALL:%.*]] = call i32 @foo(i32 [[LD1]]) #[[ATTR2:[0-9]+]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[BAD_CALL]], 34
+; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP_INC]], label [[LOOP_END:%.*]]
+; CHECK:       loop.inc:
+; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDEX_NEXT]], 67
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[LOOP_END]]
+; CHECK:       loop.end:
+; CHECK-NEXT:    [[RETVAL:%.*]] = phi i64 [ [[INDEX]], [[LOOP]] ], [ 67, [[LOOP_INC]] ]
+; CHECK-NEXT:    ret i64 [[RETVAL]]
+;
+entry:
+  %p1 = alloca [1024 x i8]
+  %p2 = alloca [1024 x i8]
+  call void @init_mem(ptr %p1, i64 1024)
+  call void @init_mem(ptr %p2, i64 1024)
+  br label %loop
+
+loop:
+  %index = phi i64 [ %index.next, %loop.inc ], [ 3, %entry ]
+  %arrayidx = getelementptr inbounds i32, ptr %p1, i64 %index
+  %ld1 = load i32, ptr %arrayidx, align 1
+  %bad_call = call i32 @foo(i32 %ld1) #0
+  %cmp = icmp eq i32 %bad_call, 34
+  br i1 %cmp, label %loop.inc, label %loop.end
+
+loop.inc:
+  %index.next = add i64 %index, 1
+  %exitcond = icmp ne i64 %index.next, 67
+  br i1 %exitcond, label %loop, label %loop.end
+
+loop.end:
+  %retval = phi i64 [ %index, %loop ], [ 67, %loop.inc ]
+  ret i64 %retval
+}
+
+
+define i64 @loop_contains_safe_div() {
+; DEBUG-LABEL: LV: Checking a loop in 'loop_contains_safe_div'
+; DEBUG:       LV: Found an early exit. Retrying with speculative exit count.
+; DEBUG-NEXT:  LV: Found speculative backedge taken count: 63
+; DEBUG-NEXT:  LV: We can vectorize this loop!
+; CHECK-LABEL: define i64 @loop_contains_safe_div(
+; CHECK-SAME: ) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[P1:%.*]] = alloca [1024 x i8], align 4
+; CHECK-NEXT:    [[P2:%.*]] = alloca [1024 x i8], align 4
+; CHECK-NEXT:    call void @init_mem(ptr [[P1]], i64 1024)
+; CHECK-NEXT:    call void @init_mem(ptr [[P2]], i64 1024)
+; CHECK-NEXT:    br label [[LOOP1:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDEX2:%.*]] = phi i64 [ [[INDEX_NEXT1:%.*]], [[LOOP_INC1:%.*]] ], [ 3, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[P1]], i64 [[INDEX2]]
+; CHECK-NEXT:    [[LD1:%.*]] = load i32, ptr [[ARRAYIDX]], align 1
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i32 [[LD1]], 20000
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[DIV]], 1
+; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP_INC1]], label [[LOOP_END:%.*]]
+; CHECK:       loop.inc:
+; CHECK-NEXT:    [[INDEX_NEXT1]] = add i64 [[INDEX2]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDEX_NEXT1]], 67
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP1]], label [[LOOP_END]]
+; CHECK:       loop.end:
+; CHECK-NEXT:    [[RETVAL:%.*]] = phi i64 [ [[INDEX2]], [[LOOP1]] ], [ 67, [[LOOP_INC1]] ]
+; CHECK-NEXT:    ret i64 [[RETVAL]]
+;
+entry:
+  %p1 = alloca [1024 x i8]
+  %p2 = alloca [1024 x i8]
+  call void @init_mem(ptr %p1, i64 1024)
+  call void @init_mem(ptr %p2, i64 1024)
+  br label %loop
+
+loop:
+  %index = phi i64 [ %index.next, %loop.inc ], [ 3, %entry ]
+  %arrayidx = getelementptr inbounds i32, ptr %p1, i64 %index
+  %ld1 = load i32, ptr %arrayidx, align 1
+  %div = udiv i32 %ld1, 20000
+  %cmp = icmp eq i32 %div, 1
+  br i1 %cmp, label %loop.inc, label %loop.end
+
+loop.inc:
+  %index.next = add i64 %index, 1
+  %exitcond = icmp ne i64 %index.next, 67
+  br i1 %exitcond, label %loop, label %loop.end
+
+loop.end:
+  %retval = phi i64 [ %index, %loop ], [ 67, %loop.inc ]
+  ret i64 %retval
+}
+
+
+define i64 @loop_contains_unsafe_div() {
+; DEBUG-LABEL: LV: Checking a loop in 'loop_contains_unsafe_div'
+; DEBUG:       LV: Not vectorizing: Early exit loop contains operations that cannot be speculatively executed.
+; CHECK-LABEL: define i64 @loop_contains_unsafe_div(
+; CHECK-SAME: ) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[P1:%.*]] = alloca [1024 x i8], align 4
+; CHECK-NEXT:    [[P2:%.*]] = alloca [1024 x i8], align 4
+; CHECK-NEXT:    call void @init_mem(ptr [[P1]], i64 1024)
+; CHECK-NEXT:    call void @init_mem(ptr [[P2]], i64 1024)
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[LOOP_INC:%.*]] ], [ 3, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[P1]], i64 [[INDEX]]
+; CHECK-NEXT:    [[LD1:%.*]] = load i32, ptr [[ARRAYIDX]], align 1
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i32 20000, [[LD1]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[DIV]], 1
+; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP_INC]], label [[LOOP_END:%.*]]
+; CHECK:       loop.inc:
+; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDEX_NEXT]], 67
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[LOOP_END]]
+; CHECK:       loop.end:
+; CHECK-NEXT:    [[RETVAL:%.*]] = phi i64 [ [[INDEX]], [[LOOP]] ], [ 67, [[LOOP_INC]] ]
+; CHECK-NEXT:    ret i64 [[RETVAL]]
+;
+entry:
+  %p1 = alloca [1024 x i8]
+  %p2 = alloca [1024 x i8]
+  call void @init_mem(ptr %p1, i64 1024)
+  call void @init_mem(ptr %p2, i64 1024)
+  br label %loop
+
+loop:
+  %index = phi i64 [ %index.next, %loop.inc ], [ 3, %entry ]
+  %arrayidx = getelementptr inbounds i8, ptr %p1, i64 %index
+  %ld1 = load i32, ptr %arrayidx, align 1
+  %div = udiv i32 20000, %ld1
+  %cmp = icmp eq i32 %div, 1
+  br i1 %cmp, label %loop.inc, label %loop.end
+
+loop.inc:
+  %index.next = add i64 %index, 1
+  %exitcond = icmp ne i64 %index.next, 67
+  br i1 %exitcond, label %loop, label %loop.end
+
+loop.end:
+  %retval = phi i64 [ %index, %loop ], [ 67, %loop.inc ]
+  ret i64 %retval
+}
+
+
+define i64 @loop_contains_store(ptr %dest) {
+; DEBUG-LABEL: LV: Checking a loop in 'loop_contains_store'
+; DEBUG:       LV: Not vectorizing: Writes to memory unsupported in early exit loops
+; CHECK-LABEL: define i64 @loop_contains_store(
+; CHECK-SAME: ptr [[DEST:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[P1:%.*]] = alloca [1024 x i8], align 4
+; CHECK-NEXT:    call void @init_mem(ptr [[P1]], i64 1024)
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[LOOP_INC:%.*]] ], [ 3, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[P1]], i64 [[INDEX]]
+; CHECK-NEXT:    [[LD1:%.*]] = load i32, ptr [[ARRAYIDX]], align 1
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, ptr [[DEST]], i64 [[INDEX]]
+; CHECK-NEXT:    store i32 [[LD1]], ptr [[ARRAYIDX2]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[LD1]], 1
+; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP_INC]], label [[LOOP_END:%.*]]
+; CHECK:       loop.inc:
+; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDEX_NEXT]], 67
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[LOOP_END]]
+; CHECK:       loop.end:
+; CHECK-NEXT:    [[RETVAL:%.*]] = phi i64 [ [[INDEX]], [[LOOP]] ], [ 67, [[LOOP_INC]] ]
+; CHECK-NEXT:    ret i64 [[RETVAL]]
+;
+entry:
+  %p1 = alloca [1024 x i8]
+  call void @init_mem(ptr %p1, i64 1024)
+  br label %loop
+
+loop:
+  %index = phi i64 [ %index.next, %loop.inc ], [ 3, %entry ]
+  %arrayidx = getelementptr inbounds i32, ptr %p1, i64 %index
+  %ld1 = load i32, ptr %arrayidx, align 1
+  %arrayidx2 = getelementptr inbounds i32, ptr %dest, i64 %index
+  store i32 %ld1, ptr %arrayidx2, align 4
+  %cmp = icmp eq i32 %ld1, 1
+  br i1 %cmp, label %loop.inc, label %loop.end
+
+loop.inc:
+  %index.next = add i64 %index, 1
+  %exitcond = icmp ne i64 %index.next, 67
+  br i1 %exitcond, label %loop, label %loop.end
+
+loop.end:
+  %retval = phi i64 [ %index, %loop ], [ 67, %loop.inc ]
+  ret i64 %retval
+}
+
+
+define i64 @loop_contains_load_after_early_exit(ptr %p2) {
+; DEBUG-LABEL: LV: Checking a loop in 'loop_contains_load_after_early_exit'
+; DEBUG:       LV: Not vectorizing: Loads not permitted after early exit
+; CHECK-LABEL: define i64 @loop_contains_load_after_early_exit(
+; CHECK-SAME: ptr [[P2:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[P1:%.*]] = alloca [1024 x i8], align 4
+; CHECK-NEXT:    call void @init_mem(ptr [[P1]], i64 1024)
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[LOOP_INC:%.*]] ], [ 3, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[P1]], i64 [[INDEX]]
+; CHECK-NEXT:    [[LD1:%.*]] = load i32, ptr [[ARRAYIDX]], align 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[LD1]], 1
+; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP_INC]], label [[LOOP_END:%.*]]
+; CHECK:       loop.inc:
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, ptr [[P2]], i64 [[INDEX]]
+; CHECK-NEXT:    [[LD2:%.*]] = load i32, ptr [[ARRAYIDX2]], align 1
+; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDEX_NEXT]], 67
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[LOOP_END]]
+; CHECK:       loop.end:
+; CHECK-NEXT:    [[RETVAL:%.*]] = phi i64 [ [[INDEX]], [[LOOP]] ], [ 67, [[LOOP_INC]] ]
+; CHECK-NEXT:    ret i64 [[RETVAL]]
+;
+entry:
+  %p1 = alloca [1024 x i8]
+  call void @init_mem(ptr %p1, i64 1024)
+  br label %loop
+
+loop:
+  %index = phi i64 [ %index.next, %loop.inc ], [ 3, %entry ]
+  %arrayidx = getelementptr inbounds i32, ptr %p1, i64 %index
+  %ld1 = load i32, ptr %arrayidx, align 1
+  %cmp = icmp eq i32 %ld1, 1
+  br i1 %cmp, label %loop.inc, label %loop.end
+
+loop.inc:
+  %arrayidx2 = getelementptr inbounds i32, ptr %p2, i64 %index
+  %ld2 = load i32, ptr %arrayidx2, align 1
+  %index.next = add i64 %index, 1
+  %exitcond = icmp ne i64 %index.next, 67
+  br i1 %exitcond, label %loop, label %loop.end
+
+loop.end:
+  %retval = phi i64 [ %index, %loop ], [ 67, %loop.inc ]
+  ret i64 %retval
+}
+
+
+define i64 @early_exit_in_conditional_block(ptr %mask) {
+; DEBUG-LABEL: LV: Checking a loop in 'early_exit_in_conditional_block'
+; DEBUG:       LV: Not vectorizing: Early exit is not the latch predecessor.
+; CHECK-LABEL: define i64 @early_exit_in_conditional_block(
+; CHECK-SAME: ptr [[MASK:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[P1:%.*]] = alloca [1024 x i8], align 4
+; CHECK-NEXT:    [[P2:%.*]] = alloca [1024 x i8], align 4
+; CHECK-NEXT:    call void @init_mem(ptr [[P1]], i64 1024)
+; CHECK-NEXT:    call void @init_mem(ptr [[P2]], i64 1024)
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[LOOP_INC:%.*]] ], [ 3, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i8, ptr [[MASK]], i64 [[INDEX]]
+; CHECK-NEXT:    [[LD1:%.*]] = load i8, ptr [[ARRAYIDX1]], align 1
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i8 [[LD1]], 0
+; CHECK-NEXT:    br i1 [[CMP1]], label [[LOOP_SEARCH:%.*]], label [[LOOP_INC]]
+; CHECK:       loop.search:
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i8, ptr [[P1]], i64 [[INDEX]]
+; CHECK-NEXT:    [[LD2:%.*]] = load i8, ptr [[ARRAYIDX2]], align 1
+; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i8, ptr [[P2]], i64 [[INDEX]]
+; CHECK-NEXT:    [[LD3:%.*]] = load i8, ptr [[ARRAYIDX3]], align 1
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i8 [[LD2]], [[LD3]]
+; CHECK-NEXT:    br i1 [[CMP2]], label [[LOOP_INC]], label [[LOOP_END:%.*]]
+; CHECK:       loop.inc:
+; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDEX_NEXT]], 67
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[LOOP_END]]
+; CHECK:       loop.end:
+; CHECK-NEXT:    [[RETVAL:%.*]] = phi i64 [ [[INDEX]], [[LOOP_SEARCH]] ], [ 67, [[LOOP_INC]] ]
+; CHECK-NEXT:    ret i64 [[RETVAL]]
+;
+entry:
+  %p1 = alloca [1024 x i8]
+  %p2 = alloca [1024 x i8]
+  call void @init_mem(ptr %p1, i64 1024)
+  call void @init_mem(ptr %p2, i64 1024)
+  br label %loop
+
+loop:
+  %index = phi i64 [ %index.next, %loop.inc ], [ 3, %entry ]
+  %arrayidx1 = getelementptr inbounds i8, ptr %mask, i64 %index
+  %ld1 = load i8, ptr %arrayidx1, align 1
+  %cmp1 = icmp ne i8 %ld1, 0
+  br i1 %cmp1, label %loop.search, label %loop.inc
+
+loop.search:
+  %arrayidx2 = getelementptr inbounds i8, ptr %p1, i64 %index
+  %ld2 = load i8, ptr %arrayidx2, align 1
+  %arrayidx3 = getelementptr inbounds i8, ptr %p2, i64 %index
+  %ld3 = load i8, ptr %arrayidx3, align 1
+  %cmp2 = icmp eq i8 %ld2, %ld3
+  br i1 %cmp2, label %loop.inc, label %loop.end
+
+loop.inc:
+  %index.next = add i64 %index, 1
+  %exitcond = icmp ne i64 %index.next, 67
+  br i1 %exitcond, label %loop, label %loop.end
+
+loop.end:
+  %retval = phi i64 [ %index, %loop.search ], [ 67, %loop.inc ]
+  ret i64 %retval
+}
+
+
 define i64 @same_exit_block_pre_inc_use1_reverse() {
 ; CHECK-LABEL: define i64 @same_exit_block_pre_inc_use1_reverse(
 ; CHECK-SAME: ) #[[ATTR0]] {
@@ -1582,3 +1959,10 @@ loop.end:
   %retval = phi i64 [ %index, %loop ], [ 67, %loop.inc ]
   ret i64 %retval
 }
+
+
+
+declare i32 @foo(i32)
+declare <vscale x 4 x i32> @foo_vec(<vscale x 4 x i32>)
+
+attributes #0 = { "vector-function-abi-variant"="_ZGVsNxv_foo(foo_vec)" }

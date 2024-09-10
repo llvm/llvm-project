@@ -2445,11 +2445,8 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
       // vectorize a loop if it contains known function calls that don't set
       // the flag. Therefore, it is safe to ignore this read from memory.
       auto *Call = dyn_cast<CallInst>(&I);
-      if (Call) {
-        NumCalls++;
-        if (getVectorIntrinsicIDForCall(Call, TLI))
-          continue;
-      }
+      if (Call && getVectorIntrinsicIDForCall(Call, TLI))
+        continue;
 
       // If this is a load, save it. If this instruction can read from memory
       // but is not a load, then we quit. Notice that we don't handle function

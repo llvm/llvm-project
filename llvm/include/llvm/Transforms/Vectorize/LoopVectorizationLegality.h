@@ -480,8 +480,7 @@ private:
   /// specific checks for outer loop vectorization.
   bool canVectorizeOuterLoop();
 
-  /// Returns true if this is a supported early exit loop that we can
-  /// vectorize.
+  /// Returns true if this is an early exit loop that can be vectorized.
   bool isVectorizableEarlyExitLoop();
 
   /// Return true if all of the instructions in the block can be speculatively
@@ -594,10 +593,11 @@ private:
   /// uncountable exiting block that is not the latch.
   bool HasSpeculativeEarlyExit = false;
 
-  /// Keeps track of all the exits with known or countable exit-not-taken
-  /// counts.
+  /// Keep track of all the loop exiting blocks.
   SmallVector<BasicBlock *, 4> CountableExitingBlocks;
   SmallVector<BasicBlock *, 4> UncountableExitingBlocks;
+
+  /// Keep track of the destinations of all uncountable exits.
   SmallVector<BasicBlock *, 4> UncountableExitBlocks;
 };
 

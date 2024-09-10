@@ -1086,16 +1086,12 @@ bool LoopVectorizationLegality::canVectorizeMemory(bool IsEarlyExitLoop) {
       return false;
     }
 
-    if (LAI->getNumCalls()) {
-      reportVectorizationFailure(
-          "Calls unsupported in early exit loops",
-          "Cannot vectorize early exit loop with function calls",
-          "CallsInEarlyExitLoop", ORE, TheLoop);
-      return false;
-    }
-
     // The vectoriser cannot handle loads that occur after the early exit block.
     BasicBlock *LatchBB = TheLoop->getLoopLatch();
+    assert(LatchBB->getUniquePredecessor() ==
+               getUncountableExitingBlocks()[0] &&
+           "Expected latch predecessor to be the early exiting block");
+
     for (Instruction &I : *LatchBB) {
       if (I.mayReadFromMemory()) {
         reportVectorizationFailure(
@@ -1104,10 +1100,15 @@ bool LoopVectorizationLegality::canVectorizeMemory(bool IsEarlyExitLoop) {
             "LoadsAfterEarlyExit", ORE, TheLoop);
         return false;
       }
+      // Any other problematic instructions should have been caught earlier.
+      assert(!I.mayWriteToMemory() && !I.mayThrow() &&
+             !I.mayHaveSideEffects() &&
+             "Unexpected instructions in latch block of early exit loop");
     }
 
     // The vectoriser does not yet handle loops that may fault, but this will
     // be improved in a follow-on patch.
+    // TODO: Handle loops that may fault.
     if (!isDereferenceableReadOnlyLoop(TheLoop, PSE.getSE(), DT, AC)) {
       reportVectorizationFailure(
           "Loop may fault",
@@ -1499,11 +1500,18 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
     return false;
   }
 
+  if (Reductions.size() || FixedOrderRecurrences.size()) {
+    reportVectorizationFailure(
+        "Found reductions or recurrences in early-exit loop",
+        "Cannot vectorize early exit loop with reductions or recurrences",
+        "RecurrencesInEarlyExitLoop", ORE, TheLoop);
+    return false;
+  }
+
   SmallVector<BasicBlock *, 8> ExitingBlocks;
   TheLoop->getExitingBlocks(ExitingBlocks);
 
-  // Keep a record of all the exiting blocks with exact exit counts, as well as
-  // those with inexact counts.
+  // Keep a record of all the exiting blocks.
   SmallVector<const SCEVPredicate *, 4> Predicates;
   for (BasicBlock *BB1 : ExitingBlocks) {
     const SCEV *EC =
@@ -1511,20 +1519,23 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
     if (isa<SCEVCouldNotCompute>(EC)) {
       UncountableExitingBlocks.push_back(BB1);
 
-      unsigned NumExitBlocks = 0;
-      for (BasicBlock *BB2 : successors(BB1)) {
-        if (!TheLoop->contains(BB2)) {
-          UncountableExitBlocks.push_back(BB2);
-          NumExitBlocks++;
-        }
-      }
-      if (NumExitBlocks > 1) {
+      SmallVector<BasicBlock *, 2> Succs(successors(BB1));
+      if (Succs.size() != 2) {
         reportVectorizationFailure(
-            "Early exiting block has more than one successor outside of loop",
-            "Too many successors from early exiting block",
+            "Early exiting block does not have exactly two successors",
+            "Incorrect number of successors from early exiting block",
             "EarlyExitTooManySuccessors", ORE, TheLoop);
         return false;
       }
+
+      BasicBlock *BB2;
+      if (!TheLoop->contains(Succs[0]))
+        BB2 = Succs[0];
+      else {
+        assert(!TheLoop->contains(Succs[1]));
+        BB2 = Succs[1];
+      }
+      UncountableExitBlocks.push_back(BB2);
     } else
       CountableExitingBlocks.push_back(BB1);
   }
@@ -1549,13 +1560,34 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
     return false;
   }
 
-  if (Reductions.size() || FixedOrderRecurrences.size()) {
-    reportVectorizationFailure(
-        "Found reductions or recurrences in early-exit loop",
-        "Cannot vectorize early exit loop with reductions or recurrences",
-        "RecurrencesInEarlyExitLoop", ORE, TheLoop);
-    return false;
-  }
+  // Check all instructions in the loop to see if they could potentially
+  // generate exceptions or have side-effects.
+  auto IsSafeOperation = [](Instruction *I) -> bool {
+    // Is this a divide?
+    switch (I->getOpcode()) {
+    case Instruction::Load:
+    case Instruction::Store:
+    case Instruction::PHI:
+    case Instruction::Br:
+      // These are checked separately. For example, canVectorizeMemory will
+      // analyze the loads and stores in the loop.
+      return true;
+    default:
+      return isSafeToSpeculativelyExecute(I);
+    }
+  };
+
+  for (auto *BB : TheLoop->blocks())
+    for (auto &I : *BB)
+      if (!IsSafeOperation(&I)) {
+        reportVectorizationFailure("Early exit loop contains operations that "
+                                   "cannot be speculatively executed",
+                                   "Early exit loop contains operations that "
+                                   "cannot be speculatively executed",
+                                   "UnsafeOperationsEarlyExitLoop", ORE,
+                                   TheLoop);
+        return false;
+      }
 
   LLVM_DEBUG(
       dbgs()
