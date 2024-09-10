@@ -42,8 +42,7 @@ static cl::opt<std::set<SPIRV::Extension::Extension>, false,
 // module.
 void SPIRVSubtarget::addExtensionsToClOpt(
     const std::set<SPIRV::Extension::Extension> &AllowList) {
-  for (const auto &Ext : AllowList)
-    Extensions.insert(Ext);
+  Extensions.insert(AllowList.begin(), AllowList.end());
 }
 
 // Compare version numbers, but allow 0 to mean unspecified.
