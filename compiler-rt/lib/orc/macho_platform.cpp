@@ -16,7 +16,6 @@
 #include "debug.h"
 #include "error.h"
 #include "interval_map.h"
-#include "jit_dispatch.h"
 #include "wrapper_function_utils.h"
 
 #include <algorithm>
@@ -916,7 +915,7 @@ Error MachOPlatformRuntimeState::requestPushSymbols(
   Error OpErr = Error::success();
   if (auto Err = WrapperFunction<SPSError(
           SPSExecutorAddr, SPSSequence<SPSTuple<SPSString, bool>>)>::
-          call(JITDispatch(&__orc_rt_macho_push_symbols_tag), OpErr,
+          call(&__orc_rt_macho_push_symbols_tag, OpErr,
                ExecutorAddr::fromPtr(JDS.Header), Symbols)) {
     cantFail(std::move(OpErr));
     return std::move(Err);
@@ -1146,9 +1145,8 @@ Error MachOPlatformRuntimeState::dlopenFull(
   // Unlock so that we can accept the initializer update.
   JDStatesLock.unlock();
   if (auto Err = WrapperFunction<SPSExpected<SPSMachOJITDylibDepInfoMap>(
-          SPSExecutorAddr)>::
-          call(JITDispatch(&__orc_rt_macho_push_initializers_tag), DepInfo,
-               ExecutorAddr::fromPtr(JDS.Header)))
+          SPSExecutorAddr)>::call(&__orc_rt_macho_push_initializers_tag,
+                                  DepInfo, ExecutorAddr::fromPtr(JDS.Header)))
     return Err;
   JDStatesLock.lock();
 
