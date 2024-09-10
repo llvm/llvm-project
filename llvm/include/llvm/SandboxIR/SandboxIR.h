@@ -1507,9 +1507,9 @@ public:
                        BasicBlock *InsertAtEnd, Context &Ctx,
                        const Twine &Name = "");
 
-  const Value* getCondition() const { return getOperand(0); }
-  const Value* getTrueValue() const { return getOperand(1); }
-  const Value* getFalseValue() const { return getOperand(2); }
+  const Value *getCondition() const { return getOperand(0); }
+  const Value *getTrueValue() const { return getOperand(1); }
+  const Value *getFalseValue() const { return getOperand(2); }
   Value *getCondition() { return getOperand(0); }
   Value *getTrueValue() { return getOperand(1); }
   Value *getFalseValue() { return getOperand(2); }

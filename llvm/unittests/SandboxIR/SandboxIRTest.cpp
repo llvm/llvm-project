@@ -1354,7 +1354,7 @@ define void @foo(i1 %c0, i8 %v0, i8 %v1, i1 %c1) {
   auto *BB = &*F->begin();
   auto It = BB->begin();
   auto *Select = cast<sandboxir::SelectInst>(&*It++);
-  const auto *ConstSelect = Select;  // To test the const getters.
+  const auto *ConstSelect = Select; // To test the const getters.
   auto *Ret = &*It++;
 
   // Check getCondition().
