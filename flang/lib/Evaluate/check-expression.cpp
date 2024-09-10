@@ -525,6 +525,11 @@ public:
 
   Result operator()(const semantics::Symbol &symbol) const {
     const auto &ultimate{symbol.GetUltimate()};
+    const auto *object{ultimate.detailsIf<semantics::ObjectEntityDetails>()};
+    bool isInitialized{semantics::IsSaved(ultimate) &&
+        !IsAllocatable(ultimate) && object &&
+        (ultimate.test(Symbol::Flag::InDataStmt) ||
+            object->init().has_value())};
     if (const auto *assoc{
             ultimate.detailsIf<semantics::AssocEntityDetails>()}) {
       return (*this)(assoc->expr());
@@ -554,8 +559,7 @@ public:
       }
     } else if (&symbol.owner() != &scope_ || &ultimate.owner() != &scope_) {
       return std::nullopt; // host association is in play
-    } else if (semantics::IsSaved(ultimate) &&
-        semantics::IsInitialized(ultimate) &&
+    } else if (isInitialized &&
         context_.languageFeatures().IsEnabled(
             common::LanguageFeature::SavedLocalInSpecExpr)) {
       if (!scope_.IsModuleFile() &&
