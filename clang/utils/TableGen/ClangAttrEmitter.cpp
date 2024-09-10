@@ -413,8 +413,8 @@ namespace {
 
   public:
     DefaultSimpleArgument(const Record &Arg, StringRef Attr,
-                          std::string T, int64_t Default)
-      : SimpleArgument(Arg, Attr, T), Default(Default) {}
+                          const std::string &T, int64_t Default)
+        : SimpleArgument(Arg, Attr, T), Default(Default) {}
 
     void writeAccessors(raw_ostream &OS) const override {
       SimpleArgument::writeAccessors(OS);
@@ -5100,7 +5100,7 @@ public:
     return Spellings[(size_t)K];
   }
 
-  void add(const Record &Attr, FlattenedSpelling Spelling) {
+  void add(const Record &Attr, const FlattenedSpelling &Spelling) {
     SpellingKind Kind =
         StringSwitch<SpellingKind>(Spelling.variety())
             .Case("GNU", SpellingKind::GNU)
