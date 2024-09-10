@@ -173,7 +173,7 @@ public:
 private:
   size_t getEffectivePTUSize() const;
   void markUserCodeStart();
-  llvm::Expected<Expr *> AttachValuePrinting(Expr *E);
+  llvm::Expected<Expr *> ExtractValueFromExpr(Expr *E);
   llvm::Expected<llvm::orc::ExecutorAddr> CompileDtorCall(CXXRecordDecl *CXXRD);
 
   CodeGenerator *getCodeGen() const;

@@ -253,14 +253,12 @@ public:
   bool HandleTopLevelDecl(DeclGroupRef DGR) override final {
     if (DGR.isNull())
       return true;
-    // if (!Consumer)
-    //   return true;
 
     for (Decl *D : DGR)
       if (auto *TLSD = llvm::dyn_cast<TopLevelStmtDecl>(D))
         if (TLSD && TLSD->isSemiMissing()) {
           auto ExprOrErr =
-              Interp.AttachValuePrinting(cast<Expr>(TLSD->getStmt()));
+              Interp.ExtractValueFromExpr(cast<Expr>(TLSD->getStmt()));
           if (llvm::Error E = ExprOrErr.takeError()) {
             llvm::logAllUnhandledErrors(std::move(E), llvm::errs(),
                                         "Value printing failed: ");

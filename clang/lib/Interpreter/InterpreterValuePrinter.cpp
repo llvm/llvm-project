@@ -156,7 +156,7 @@ private:
 //   // 3. If x is a struct, but a rvalue.
 //   new (__clang_Interpreter_SetValueWithAlloc(ThisInterp, OpaqueValue,
 //   xQualType)) (x);
-llvm::Expected<Expr *> Interpreter::AttachValuePrinting(Expr *E) {
+llvm::Expected<Expr *> Interpreter::ExtractValueFromExpr(Expr *E) {
   Sema &S = getCompilerInstance()->getSema();
   ASTContext &Ctx = S.getASTContext();
 
