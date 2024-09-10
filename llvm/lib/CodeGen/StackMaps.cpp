@@ -225,7 +225,8 @@ MachineInstr::const_mop_iterator
 StackMaps::parseOperand(MachineInstr::const_mop_iterator MOI,
                         MachineInstr::const_mop_iterator MOE,
                         LiveVarsVec &LiveVars, LiveOutVec &LiveOuts,
-                        std::map<Register, std::set<int64_t>> SpillOffsets) const {
+                        std::map<Register, std::set<int64_t>> SpillOffsets,
+                        std::set<int64_t> TrackedRegisters) const {
   LocationVec &Locs = LiveVars.back();
   const TargetRegisterInfo *TRI = AP.MF->getSubtarget().getRegisterInfo();
   if (MOI->isImm()) {
@@ -310,6 +311,17 @@ StackMaps::parseOperand(MachineInstr::const_mop_iterator MOI,
     if (MOI->isReg()) {
       if (SpillOffsets.count(DwarfRegNum) > 0) {
         auto Extras = SpillOffsets[DwarfRegNum];
+        // Remove redundant registers/offsets that are already tracked by the
+        // stackmap or by another tracked register.
+        for (auto TReg : TrackedRegisters) {
+          if (TReg == DwarfRegNum) {
+            continue;
+          }
+          Extras.erase(TReg);
+          for (auto X : SpillOffsets[TReg]) {
+            Extras.erase(X);
+          }
+        }
         // FIXME: We currently can only deal with two additional locations.
         // This could lead to problems in the future. Fixing this requires a
         // extensive change updating the stackmap format. For now let's hope we
@@ -579,12 +591,20 @@ void StackMaps::recordStackMapOpers(const MCSymbol &MILabel,
     LiveVars.push_back(LocationVec());
   }
 
+  const TargetRegisterInfo *TRI = AP.MF->getSubtarget().getRegisterInfo();
+  std::set<int64_t> TrackedRegisters;
+  for (const auto *Op = MI.operands_begin(); Op != MI.operands_end(); Op++) {
+    if (Op->isReg() && !Op->isImplicit() && !Op->isUndef()) {
+      TrackedRegisters.insert(getDwarfRegNum(Op->getReg(), TRI));
+    }
+  }
+
   // Parse operands.
   if (MI.getOpcode() == TargetOpcode::STATEPOINT)
     parseStatepointOpers(MI, MOI, MOE, LiveVars, LiveOuts);
   else
     while (MOI != MOE)
-      MOI = parseOperand(MOI, MOE, LiveVars, LiveOuts, SpillOffsets);
+      MOI = parseOperand(MOI, MOE, LiveVars, LiveOuts, SpillOffsets, TrackedRegisters);
 
   // Move large constants into the constant pool.
   for (auto &Locations : LiveVars) {
@@ -631,7 +651,6 @@ void StackMaps::recordStackMapOpers(const MCSymbol &MILabel,
 
   // Record the stack size of the current function and update callsite count.
   const MachineFrameInfo &MFI = AP.MF->getFrameInfo();
-  const TargetRegisterInfo *TRI = AP.MF->getSubtarget().getRegisterInfo();
   const TargetRegisterInfo *RegInfo = AP.MF->getSubtarget().getRegisterInfo();
   bool HasDynamicFrameSize =
       MFI.hasVarSizedObjects() || RegInfo->hasStackRealignment(*(AP.MF));
