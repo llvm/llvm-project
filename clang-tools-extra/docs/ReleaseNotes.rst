@@ -98,6 +98,12 @@ Improvements to clang-tidy
 New checks
 ^^^^^^^^^^
 
+- New :doc:`bugprone-bit-cast-pointers
+  <clang-tidy/checks/bugprone/bit-cast-pointers>` check.
+
+  Warns about usage of ``std::bit_cast`` when either the input or output types
+  are pointers.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
