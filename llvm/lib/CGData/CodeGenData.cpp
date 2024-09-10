@@ -14,6 +14,7 @@
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/CGData/CodeGenDataReader.h"
 #include "llvm/CGData/OutlinedHashTreeRecord.h"
+#include "llvm/CGData/StableFunctionMapRecord.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
@@ -165,6 +166,8 @@ CodeGenData &CodeGenData::getInstance() {
       auto Reader = ReaderOrErr->get();
       if (Reader->hasOutlinedHashTree())
         Instance->publishOutlinedHashTree(Reader->releaseOutlinedHashTree());
+      if (Reader->hasStableFunctionMap())
+        Instance->publishStableFunctionMap(Reader->releaseStableFunctionMap());
     }
   });
   return *(Instance.get());
@@ -187,18 +190,14 @@ Expected<Header> Header::readFromBuffer(const unsigned char *Curr) {
     return make_error<CGDataError>(cgdata_error::unsupported_version);
   H.DataKind = endian::readNext<uint32_t, endianness::little, unaligned>(Curr);
 
-  switch (H.Version) {
-    // When a new field is added to the header add a case statement here to
-    // compute the size as offset of the new field + size of the new field. This
-    // relies on the field being added to the end of the list.
-    static_assert(IndexedCGData::CGDataVersion::CurrentVersion == Version1,
-                  "Please update the size computation below if a new field has "
-                  "been added to the header, if not add a case statement to "
-                  "fall through to the latest version.");
-  case 1ull:
-    H.OutlinedHashTreeOffset =
+  static_assert(IndexedCGData::CGDataVersion::CurrentVersion == Version2,
+                "Please update the offset computation below if a new field has "
+                "been added to the header.");
+  H.OutlinedHashTreeOffset =
+      endian::readNext<uint64_t, endianness::little, unaligned>(Curr);
+  if (H.Version >= 2)
+    H.StableFunctionMapOffset =
         endian::readNext<uint64_t, endianness::little, unaligned>(Curr);
-  }
 
   return H;
 }
@@ -273,6 +272,7 @@ Error mergeCodeGenData(
     const std::unique_ptr<std::vector<llvm::SmallString<0>>> InputFiles) {
 
   OutlinedHashTreeRecord GlobalOutlineRecord;
+  StableFunctionMapRecord GlobalStableFunctionMapRecord;
   for (auto &InputFile : *(InputFiles)) {
     if (InputFile.empty())
       continue;
@@ -285,13 +285,16 @@ Error mergeCodeGenData(
       return BinOrErr.takeError();
 
     std::unique_ptr<object::ObjectFile> &Obj = BinOrErr.get();
-    if (auto E = CodeGenDataReader::mergeFromObjectFile(Obj.get(),
-                                                        GlobalOutlineRecord))
+    if (auto E = CodeGenDataReader::mergeFromObjectFile(
+            Obj.get(), GlobalOutlineRecord, GlobalStableFunctionMapRecord))
       return E;
   }
 
   if (!GlobalOutlineRecord.empty())
     cgdata::publishOutlinedHashTree(std::move(GlobalOutlineRecord.HashTree));
+  if (!GlobalStableFunctionMapRecord.empty())
+    cgdata::publishStableFunctionMap(
+        std::move(GlobalStableFunctionMapRecord.FunctionMap));
 
   return Error::success();
 }

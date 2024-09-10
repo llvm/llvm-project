@@ -52,6 +52,13 @@ void CodeGenDataWriter::addRecord(OutlinedHashTreeRecord &Record) {
   DataKind |= CGDataKind::FunctionOutlinedHashTree;
 }
 
+void CodeGenDataWriter::addRecord(StableFunctionMapRecord &Record) {
+  assert(Record.StableHashTree && "empty function map in the record");
+  FunctionMapRecord.FunctionMap = std::move(Record.FunctionMap);
+
+  DataKind |= CGDataKind::StableFunctionMergingMap;
+}
+
 Error CodeGenDataWriter::write(raw_fd_ostream &OS) {
   CGDataOStream COS(OS);
   return writeImpl(COS);
@@ -68,8 +75,11 @@ Error CodeGenDataWriter::writeHeader(CGDataOStream &COS) {
   if (static_cast<bool>(DataKind & CGDataKind::FunctionOutlinedHashTree))
     Header.DataKind |=
         static_cast<uint32_t>(CGDataKind::FunctionOutlinedHashTree);
-
+  if (static_cast<bool>(DataKind & CGDataKind::StableFunctionMergingMap))
+    Header.DataKind |=
+        static_cast<uint32_t>(CGDataKind::StableFunctionMergingMap);
   Header.OutlinedHashTreeOffset = 0;
+  Header.StableFunctionMapOffset = 0;
 
   // Only write up to the CGDataKind. We need to remember the offset of the
   // remaining fields to allow back-patching later.
@@ -79,8 +89,13 @@ Error CodeGenDataWriter::writeHeader(CGDataOStream &COS) {
 
   // Save the location of Header.OutlinedHashTreeOffset field in \c COS.
   OutlinedHashTreeOffset = COS.tell();
-
   // Reserve the space for OutlinedHashTreeOffset field.
+  COS.write(0);
+
+  // Save the location of Header.StableFunctionMapOffset field in \c COS.
+  StableFunctionMapOffset = COS.tell();
+
+  // Reserve the space for StableFunctionMapOffset field.
   COS.write(0);
 
   return Error::success();
@@ -93,10 +108,14 @@ Error CodeGenDataWriter::writeImpl(CGDataOStream &COS) {
   uint64_t OutlinedHashTreeFieldStart = COS.tell();
   if (hasOutlinedHashTree())
     HashTreeRecord.serialize(COS.OS);
+  uint64_t StableFunctionMapFieldStart = COS.tell();
+  if (hasStableFunctionMap())
+    FunctionMapRecord.serialize(COS.OS);
 
   // Back patch the offsets.
   CGDataPatchItem PatchItems[] = {
-      {OutlinedHashTreeOffset, &OutlinedHashTreeFieldStart, 1}};
+      {OutlinedHashTreeOffset, &OutlinedHashTreeFieldStart, 1},
+      {StableFunctionMapOffset, &StableFunctionMapFieldStart, 1}};
   COS.patch(PatchItems);
 
   return Error::success();
@@ -106,7 +125,8 @@ Error CodeGenDataWriter::writeHeaderText(raw_fd_ostream &OS) {
   if (hasOutlinedHashTree())
     OS << "# Outlined stable hash tree\n:outlined_hash_tree\n";
 
-  // TODO: Add more data types in this header
+  if (hasStableFunctionMap())
+    OS << "# Stable function map\n:stable_function_map\n";
 
   return Error::success();
 }
@@ -119,7 +139,8 @@ Error CodeGenDataWriter::writeText(raw_fd_ostream &OS) {
   if (hasOutlinedHashTree())
     HashTreeRecord.serializeYAML(YOS);
 
-  // TODO: Write more yaml cgdata in order
+  if (hasStableFunctionMap())
+    FunctionMapRecord.serializeYAML(YOS);
 
   return Error::success();
 }

@@ -81,9 +81,16 @@ void StableFunctionMapRecord::serialize(raw_ostream &OS) const {
 
   // Write Names.
   auto &Names = FunctionMap->getNames();
+  uint32_t ByteSize = 4;
   Writer.write<uint32_t>(Names.size());
-  for (auto &Name : Names)
+  for (auto &Name : Names) {
     Writer.OS << Name << '\0';
+    ByteSize += Name.size() + 1;
+  }
+  // Align ByteSize to 4 bytes.
+  uint32_t Padding = offsetToAlignment(ByteSize, Align(4));
+  for (uint32_t I = 0; I < Padding; ++I)
+    Writer.OS << '\0';
 
   // Write StableFunctionEntries whose pointers are sorted.
   auto FuncEntries = getStableFunctionEntries(*FunctionMap);
@@ -108,15 +115,19 @@ void StableFunctionMapRecord::serialize(raw_ostream &OS) const {
 }
 
 void StableFunctionMapRecord::deserialize(const unsigned char *&Ptr) {
-
   // Read Names.
   auto NumNames =
       endian::readNext<uint32_t, endianness::little, unaligned>(Ptr);
+  // Early exit if there is no name.
+  if (NumNames == 0)
+    return;
   for (unsigned I = 0; I < NumNames; ++I) {
     std::string Name(reinterpret_cast<const char *>(Ptr));
     Ptr += Name.size() + 1;
     FunctionMap->getIdOrCreateForName(Name);
   }
+  // Align Ptr to 4 bytes.
+  Ptr = reinterpret_cast<const uint8_t *>(alignAddr(Ptr, Align(4)));
 
   // Read StableFunctionEntries.
   auto NumFuncs =
