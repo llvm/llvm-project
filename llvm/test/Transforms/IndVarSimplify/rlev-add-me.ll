@@ -88,7 +88,7 @@ define i32 @neg_wrong_loop(i32 %n) {
 ; CHECK:       wrong_loop:
 ; CHECK-NEXT:    [[IV2:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV2_NEXT:%.*]], [[WRONG_LOOP]] ]
 ; CHECK-NEXT:    [[IV2_NEXT]] = add i32 [[IV2]], 1
-; CHECK-NEXT:    [[UNKNOWN:%.*]] = load volatile i32, ptr @G
+; CHECK-NEXT:    [[UNKNOWN:%.*]] = load volatile i32, ptr @G, align 4
 ; CHECK-NEXT:    [[CMP_UNK:%.*]] = icmp eq i32 [[UNKNOWN]], 0
 ; CHECK-NEXT:    br i1 [[CMP_UNK]], label [[HEADER_PREHEADER:%.*]], label [[WRONG_LOOP]]
 ; CHECK:       header.preheader:
@@ -108,8 +108,7 @@ define i32 @neg_wrong_loop(i32 %n) {
 ; CHECK-NEXT:    [[IV_LCSSA:%.*]] = phi i32 [ [[IV]], [[HEADER]] ]
 ; CHECK-NEXT:    ret i32 [[IV_LCSSA]]
 ; CHECK:       exit2:
-; CHECK-NEXT:    [[EXITVAL:%.*]] = phi i32 [ [[IV2_LCSSA]], [[LATCH]] ]
-; CHECK-NEXT:    ret i32 [[EXITVAL]]
+; CHECK-NEXT:    ret i32 [[IV2_LCSSA]]
 ;
 entry:
   br label %wrong_loop

@@ -15,10 +15,8 @@ define void @pr54413(ptr %ptr.base) {
 ; CHECK:       loop2.preheader:
 ; CHECK-NEXT:    br label [[LOOP2:%.*]]
 ; CHECK:       loop2:
-; CHECK-NEXT:    [[PTR_NEXT:%.*]] = getelementptr inbounds i64, ptr [[PTR_BASE:%.*]], i64 1
 ; CHECK-NEXT:    br i1 true, label [[LOOP2_EXIT:%.*]], label [[LOOP2]]
 ; CHECK:       loop2.exit:
-; CHECK-NEXT:    [[PTR_NEXT_LCSSA:%.*]] = phi ptr [ [[PTR_NEXT]], [[LOOP2]] ]
 ; CHECK-NEXT:    br label [[LOOP1_LATCH]]
 ; CHECK:       loop1.latch:
 ; CHECK-NEXT:    br label [[LOOP1]]

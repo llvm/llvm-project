@@ -31,17 +31,16 @@ define void @test() {
 ; CHECK:       bb32:
 ; CHECK-NEXT:    ret void
 ; CHECK:       bb33.loopexit:
-; CHECK-NEXT:    [[TMP2_LCSSA9:%.*]] = phi i32 [ [[TMP2_LCSSA12]], [[BB11:%.*]] ]
 ; CHECK-NEXT:    br label [[BB33:%.*]]
 ; CHECK:       bb33.loopexit1:
 ; CHECK-NEXT:    [[TMP2_LCSSA:%.*]] = phi i32 [ 11, [[BB1]] ]
 ; CHECK-NEXT:    br label [[BB33]]
 ; CHECK:       bb33:
-; CHECK-NEXT:    [[TMP210:%.*]] = phi i32 [ [[TMP2_LCSSA]], [[BB33_LOOPEXIT1]] ], [ [[TMP2_LCSSA9]], [[BB33_LOOPEXIT]] ]
+; CHECK-NEXT:    [[TMP210:%.*]] = phi i32 [ [[TMP2_LCSSA]], [[BB33_LOOPEXIT1]] ], [ [[TMP2_LCSSA12]], [[BB33_LOOPEXIT]] ]
 ; CHECK-NEXT:    call void @use(i32 [[TMP210]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       bb34:
-; CHECK-NEXT:    br i1 false, label [[BB11]], label [[BB12:%.*]]
+; CHECK-NEXT:    br i1 false, label [[BB11:%.*]], label [[BB12:%.*]]
 ; CHECK:       bb42:
 ; CHECK-NEXT:    [[TMP24_LCSSA:%.*]] = phi i32 [ undef, [[BB22]] ]
 ; CHECK-NEXT:    [[TMP18_LCSSA4:%.*]] = phi i64 [ 0, [[BB22]] ]
