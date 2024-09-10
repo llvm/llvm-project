@@ -1338,7 +1338,7 @@ void AsmMatcherInfo::buildRegisterClasses(
   // Name the register classes which correspond to a user defined RegisterClass.
   for (const CodeGenRegisterClass &RC : RegClassList) {
     // Def will be NULL for non-user defined register classes.
-    Record *Def = RC.getDef();
+    const Record *Def = RC.getDef();
     if (!Def)
       continue;
     ClassInfo *CI = RegisterSetClasses[RegisterSet(RC.getOrder().begin(),
