@@ -1347,6 +1347,8 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
   Diag(LambdaBeginLoc, getLangOpts().CPlusPlus11
                            ? diag::warn_cxx98_compat_lambda
                            : diag::ext_lambda);
+  if (getLangOpts().HLSL)
+    Diag(LambdaBeginLoc, diag::ext_hlsl_lambda);
 
   PrettyStackTraceLoc CrashInfo(PP.getSourceManager(), LambdaBeginLoc,
                                 "lambda expression parsing");

@@ -1790,5 +1790,7 @@ def ext_hlsl_access_specifiers : ExtWarn<
   InGroup<HLSLExtension>;
 def err_hlsl_unsupported_component : Error<"invalid component '%0' used; expected 'x', 'y', 'z', or 'w'">;
 def err_hlsl_packoffset_invalid_reg : Error<"invalid resource class specifier '%0' for packoffset, expected 'c'">;
+def ext_hlsl_lambda : ExtWarn<"lambdas are a clang HLSL extension">,
+  InGroup<HLSLExtension>;
 
 } // end of Parser diagnostics

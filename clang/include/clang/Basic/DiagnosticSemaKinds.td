@@ -12397,6 +12397,9 @@ def warn_attr_min_eq_max:  Warning<
 def err_hlsl_attribute_number_arguments_insufficient_shader_model: Error<
   "attribute %0 with %1 arguments requires shader model %2 or greater">;
 
+def ext_hlsl_auto_type_specifier : ExtWarn<
+  "'auto' type specifier is a HLSL 202y extension">, InGroup<HLSL202y>;
+
 // Layout randomization diagnostics.
 def err_non_designated_init_used : Error<
   "a randomized struct can only be initialized with a designated initializer">;

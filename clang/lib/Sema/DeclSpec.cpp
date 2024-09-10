@@ -1419,6 +1419,10 @@ void DeclSpec::Finish(Sema &S, const PrintingPolicy &Policy) {
   if (!S.getLangOpts().CPlusPlus11 && !S.getLangOpts().C23 &&
       TypeSpecType == TST_auto)
     S.Diag(TSTLoc, diag::ext_auto_type_specifier);
+  if (S.getLangOpts().HLSL &&
+      S.getLangOpts().getHLSLVersion() < LangOptions::HLSL_202y &&
+      TypeSpecType == TST_auto)
+    S.Diag(TSTLoc, diag::ext_hlsl_auto_type_specifier);
   if (S.getLangOpts().CPlusPlus && !S.getLangOpts().CPlusPlus11 &&
       StorageClassSpec == SCS_auto)
     S.Diag(StorageClassSpecLoc, diag::warn_auto_storage_class)
