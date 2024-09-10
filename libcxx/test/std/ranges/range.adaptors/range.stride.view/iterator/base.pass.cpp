@@ -53,13 +53,13 @@ bool base_move() {
   int move_counter = 0;
   int copy_counter = 0;
 
-  auto start         = SizedInputIterator();
+  auto start         = SizedInputIter();
   start.move_counter = &move_counter;
   start.copy_counter = &copy_counter;
-  auto stop          = SizedInputIterator();
+  auto stop          = SizedInputIter();
 
-  auto view = BasicTestView<SizedInputIterator>{start, stop};
-  auto sv   = std::ranges::stride_view<BasicTestView<SizedInputIterator>>(view, 1);
+  auto view = BasicTestView<SizedInputIter>{start, stop};
+  auto sv   = std::ranges::stride_view<BasicTestView<SizedInputIter>>(view, 1);
   auto svi  = sv.begin();
 
   // Reset the move/copy counters so that they reflect *only* whether the
@@ -78,20 +78,20 @@ bool base_copy() {
   // See above.
   int move_counter = 0;
   int copy_counter = 0;
-  auto start       = SizedInputIterator();
+  auto start       = SizedInputIter();
 
   start.move_counter = &move_counter;
   start.copy_counter = &copy_counter;
-  auto stop          = SizedInputIterator();
+  auto stop          = SizedInputIter();
 
-  auto view                 = BasicTestView<SizedInputIterator>{start, stop};
-  auto sv                   = std::ranges::stride_view<BasicTestView<SizedInputIterator>>(view, 1);
+  auto view                 = BasicTestView<SizedInputIter>{start, stop};
+  auto sv                   = std::ranges::stride_view<BasicTestView<SizedInputIter>>(view, 1);
   [[maybe_unused]] auto svi = sv.begin();
 
   // See above.
   move_counter                                      = 0;
   copy_counter                                      = 0;
-  [[maybe_unused]] const SizedInputIterator& result = svi.base();
+  [[maybe_unused]] const SizedInputIter& result = svi.base();
 
   // Ensure that base did _not_ std::move'd the iterator.
   assert(*result.move_counter == 0);

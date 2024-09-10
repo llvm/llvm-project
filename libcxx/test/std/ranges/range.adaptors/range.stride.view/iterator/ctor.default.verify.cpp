@@ -16,7 +16,7 @@
 #include "../types.h"
 #include "test_iterators.h"
 
-struct NonDefaultConstructibleIterator : InputIterBase<NonDefaultConstructibleIterator> {
+struct NonDefaultConstructibleIterator : InputIter<NonDefaultConstructibleIterator> {
   NonDefaultConstructibleIterator() = delete;
   constexpr NonDefaultConstructibleIterator(int) {}
 };
