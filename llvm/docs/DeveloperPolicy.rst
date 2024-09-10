@@ -1310,7 +1310,7 @@ AI generated contributions
 
 Artificial intelligence systems raise many questions around copyright that have
 yet to be answered. Our policy on AI tools is guided by our copyright policy:
-contributors are responsible for ensuring that they have the right to contribute
+Contributors are responsible for ensuring that they have the right to contribute
 code under the terms of our license, typically meaning that either they, their
 employer, or their collaborators hold the copyright. Using AI tools to
 regenerate copyrighted material does not remove the copyright, and contributors
