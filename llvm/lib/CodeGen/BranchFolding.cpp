@@ -1422,8 +1422,7 @@ ReoptimizeBlock:
     // This has to check PrevBB->succ_size() because EH edges are ignored by
     // analyzeBranch.
     if (PriorCond.empty() && !PriorTBB && MBB->pred_size() == 1 &&
-        PrevBB.succ_size() == 1 && PrevBB.isSuccessor(MBB) &&
-        !MBB->hasAddressTaken() && !MBB->isEHPad()) {
+        PrevBB.succ_size() == 1 && !MBB->hasAddressTaken()) {
       LLVM_DEBUG(dbgs() << "\nMerging into block: " << PrevBB
                         << "From MBB: " << *MBB);
       // Remove redundant DBG_VALUEs first.
@@ -1756,21 +1755,11 @@ ReoptimizeBlock:
       // removed, move this block to the end of the function. There is no real
       // advantage in "falling through" to an EH block, so we don't want to
       // perform this transformation for that case.
-      //
-      // Also, Windows EH introduced the possibility of an arbitrary number of
-      // successors to a given block.  The analyzeBranch call does not consider
-      // exception handling and so we can get in a state where a block
-      // containing a call is followed by multiple EH blocks that would be
-      // rotated infinitely at the end of the function if the transformation
-      // below were performed for EH "FallThrough" blocks.  Therefore, even if
-      // that appears not to be happening anymore, we should assume that it is
-      // possible and not remove the "!FallThrough()->isEHPad" condition below.
       MachineBasicBlock *PrevTBB = nullptr, *PrevFBB = nullptr;
       SmallVector<MachineOperand, 4> PrevCond;
       if (FallThrough != MF.end() &&
-          !FallThrough->isEHPad() &&
           !TII->analyzeBranch(PrevBB, PrevTBB, PrevFBB, PrevCond, true) &&
-          PrevBB.isSuccessor(&*FallThrough)) {
+          ((PrevTBB == &*FallThrough) || (PrevFBB == &*FallThrough))) {
         MBB->moveAfter(&MF.back());
         MadeChange = true;
         return MadeChange;
