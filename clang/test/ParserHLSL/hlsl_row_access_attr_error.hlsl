@@ -12,5 +12,5 @@ __hlsl_resource_t [[hlsl::resource_class(UAV)]] [[hlsl::row_access(3)]] res2;
 // expected-error@+1{{use of undeclared identifier 'gibberish'}}
 __hlsl_resource_t [[hlsl::resource_class(UAV)]] [[hlsl::row_access(gibberish)]] res3;
 
-// duplicate attribute with the same meaning - no error
+// expected-warning@+1{{attribute 'row_access' is already applied}}
 __hlsl_resource_t [[hlsl::resource_class(UAV)]] [[hlsl::row_access]] [[hlsl::row_access]] res4;

@@ -8845,7 +8845,11 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
     case ParsedAttr::AT_HLSLResourceClass:
     case ParsedAttr::AT_HLSLROV:
     case ParsedAttr::AT_HLSLRowAccess: {
-      if (state.getSema().HLSL().handleResourceTypeAttr(attr))
+      // Only collect HLSL resource type attributes that are in
+      // decl-specifier-seq; do not collect attributes on declarations or those
+      // that get to slide after declaration name.
+      if (TAL == TAL_DeclSpec &&
+          state.getSema().HLSL().handleResourceTypeAttr(attr))
         attr.setUsedAsTypeAttr();
       break;
     }

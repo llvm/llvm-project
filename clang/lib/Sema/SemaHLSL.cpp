@@ -594,6 +594,10 @@ bool clang::CreateHLSLAttributedResourceType(Sema &S, QualType Wrapped,
       ResAttrs.IsROV = true;
       break;
     case attr::HLSLRowAccess:
+      if (ResAttrs.RowAccess) {
+        S.Diag(A->getLocation(), diag::warn_duplicate_attribute_exact) << A;
+        return false;
+      }
       ResAttrs.RowAccess = true;
       break;
     default:
