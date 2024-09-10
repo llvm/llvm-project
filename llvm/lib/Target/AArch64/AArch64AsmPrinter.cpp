@@ -45,6 +45,7 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/Mangler.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
@@ -1387,22 +1388,21 @@ void AArch64AsmPrinter::emitFunctionEntryLabel() {
       return Sym;
     };
 
-    if (MCSymbol *UnmangledSym =
-            getSymbolFromMetadata("arm64ec_unmangled_name")) {
-      MCSymbol *ECMangledSym = getSymbolFromMetadata("arm64ec_ecmangled_name");
-
-      if (ECMangledSym) {
-        // An external function, emit the alias from the unmangled symbol to
-        // mangled symbol name and the alias from the mangled symbol to guest
-        // exit thunk.
+    SmallVector<MDNode *> UnmangledNames;
+    MF->getFunction().getMetadata("arm64ec_unmangled_name", UnmangledNames);
+    for (MDNode *Node : UnmangledNames) {
+      StringRef NameStr = cast<MDString>(Node->getOperand(0))->getString();
+      MCSymbol *UnmangledSym = MMI->getContext().getOrCreateSymbol(NameStr);
+      if (std::optional<std::string> MangledName =
+              getArm64ECMangledFunctionName(UnmangledSym->getName())) {
+        MCSymbol *ECMangledSym =
+            MMI->getContext().getOrCreateSymbol(*MangledName);
         emitFunctionAlias(UnmangledSym, ECMangledSym);
-        emitFunctionAlias(ECMangledSym, CurrentFnSym);
-      } else {
-        // A function implementation, emit the alias from the unmangled symbol
-        // to mangled symbol name.
-        emitFunctionAlias(UnmangledSym, CurrentFnSym);
       }
     }
+    if (MCSymbol *ECMangledSym =
+            getSymbolFromMetadata("arm64ec_ecmangled_name"))
+      emitFunctionAlias(ECMangledSym, CurrentFnSym);
   }
 }
 
