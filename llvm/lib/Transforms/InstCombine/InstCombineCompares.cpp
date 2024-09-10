@@ -8219,28 +8219,26 @@ static Instruction *foldFCmpWithFloorAndCeil(FCmpInst &I,
       return IC.replaceInstUsesWith(I, ConstantInt::getFalse(I.getType()));
     break;
   case FCmpInst::FCMP_ULE:
-    // fcmp ule floor(x), x => fcmp ule -inf, x
+    // fcmp ule floor(x), x => true
     if (FloorX)
-      return new FCmpInst(FCmpInst::FCMP_ULE,
-                          ConstantFP::getInfinity(OpType, true), RHS, "", &I);
+      return IC.replaceInstUsesWith(I, ConstantInt::getTrue(I.getType()));
     break;
   case FCmpInst::FCMP_UGT:
-    // fcmp ugt floor(x), x => fcmp ugt -inf, x
+    // fcmp ugt floor(x), x => fcmp uno x, 0
     if (FloorX)
-      return new FCmpInst(FCmpInst::FCMP_UGT,
-                          ConstantFP::getInfinity(OpType, true), RHS, "", &I);
+      return new FCmpInst(FCmpInst::FCMP_UNO, RHS, ConstantFP::getZero(OpType),
+                          "", &I);
     break;
   case FCmpInst::FCMP_UGE:
-    // fcmp uge ceil(x), x => fcmp uge inf, x
+    // fcmp uge ceil(x), x => true
     if (CeilX)
-      return new FCmpInst(FCmpInst::FCMP_UGE,
-                          ConstantFP::getInfinity(OpType, false), RHS, "", &I);
+      return IC.replaceInstUsesWith(I, ConstantInt::getTrue(I.getType()));
     break;
   case FCmpInst::FCMP_ULT:
-    // fcmp ult ceil(x), x => fcmp ult inf, x
+    // fcmp ult ceil(x), x => fcmp uno x, 0
     if (CeilX)
-      return new FCmpInst(FCmpInst::FCMP_ULT,
-                          ConstantFP::getInfinity(OpType, false), RHS, "", &I);
+      return new FCmpInst(FCmpInst::FCMP_UNO, RHS, ConstantFP::getZero(OpType),
+                          "", &I);
     break;
   default:
     break;
