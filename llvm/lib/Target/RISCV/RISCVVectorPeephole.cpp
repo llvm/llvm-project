@@ -421,6 +421,10 @@ bool RISCVVectorPeephole::convertSameMaskVMergeToVMv(MachineInstr &MI) {
         !ensureDominates(MI.getOperand(2), *True))
       return false;
     True->getOperand(1).setReg(MI.getOperand(2).getReg());
+    // If True is masked then its passthru needs to be in VRNoV0.
+    MRI->constrainRegClass(True->getOperand(1).getReg(),
+                           TII->getRegClass(True->getDesc(), 1, TRI,
+                                            *True->getParent()->getParent()));
   }
 
   MI.setDesc(TII->get(NewOpc));
