@@ -42,6 +42,10 @@ Non-comprehensive list of changes in this release
    functionality, or simply have a lot to talk about), see the `NOTE` below
    for adding a new subsection.
 
+* Starting with LLVM 19, the Windows installers only include support for the
+  X86, ARM, and AArch64 targets in order to keep the build size within the
+  limits of the NSIS installer framework.
+
 * ...
 
 Update on required toolchains to build LLVM
