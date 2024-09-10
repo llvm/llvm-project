@@ -2427,11 +2427,15 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
           }
         }
       }
-      // Drop blocks without a hash, won't be useful for stale matching.
-      llvm::erase_if(YamlBF.Blocks,
-                     [](const yaml::bolt::BinaryBasicBlockProfile &YamlBB) {
-                       return YamlBB.Hash == (yaml::Hex64)0;
-                     });
+      // Skip printing if there's no profile data
+      llvm::erase_if(
+          YamlBF.Blocks, [](const yaml::bolt::BinaryBasicBlockProfile &YamlBB) {
+            auto HasCount = [](const auto &SI) { return SI.Count; };
+            bool HasAnyCount = YamlBB.ExecCount ||
+                               llvm::any_of(YamlBB.Successors, HasCount) ||
+                               llvm::any_of(YamlBB.CallSites, HasCount);
+            return !HasAnyCount;
+          });
       BP.Functions.emplace_back(YamlBF);
     }
   }

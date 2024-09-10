@@ -153,13 +153,6 @@ void PseudoProbeRewriter::parsePseudoProbe(bool ProfiledOnly) {
       }
     }
   }
-  if (ProfiledOnly) {
-    for (const auto &FuncDesc : ProbeDecoder.getGUID2FuncDescMap()) {
-      uint64_t GUID = FuncDesc.FuncGUID;
-      if (!FuncStartAddrs.contains(GUID))
-        GuidFilter.insert(GUID);
-    }
-  }
   Contents = PseudoProbeSection->getContents();
   if (!ProbeDecoder.buildAddress2ProbeMap(
           reinterpret_cast<const uint8_t *>(Contents.data()), Contents.size(),
