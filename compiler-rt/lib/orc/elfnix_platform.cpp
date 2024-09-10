@@ -369,7 +369,7 @@ ELFNixPlatformRuntimeState::getJITDylibInitializersByName(
   if (auto Err =
           WrapperFunction<SPSExpected<SPSELFNixJITDylibInitializerSequence>(
               SPSString)>::
-              call(JITDispatch(&__orc_rt_elfnix_get_initializers_tag, Result),
+              call(JITDispatch(&__orc_rt_elfnix_get_initializers_tag), Result,
                    Path))
     return std::move(Err);
   return Result;
