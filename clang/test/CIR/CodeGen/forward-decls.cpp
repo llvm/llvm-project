@@ -68,7 +68,7 @@ void testRecursiveStruct(struct RecursiveStruct *arg) {
 // types, or all the recursive types are self references.
 
 // CHECK4: ![[B:.+]] = !cir.struct<struct "StructNodeB" {!s32i, !cir.ptr<!cir.struct<struct "StructNodeA" {!s32i, !cir.ptr<!cir.struct<struct "StructNodeB">>}
-// CHECK4: ![[A:.+]] = !cir.struct<struct "StructNodeA" {!s32i, !cir.ptr<!ty_22StructNodeB22>}>
+// CHECK4: ![[A:.+]] = !cir.struct<struct "StructNodeA" {!s32i, !cir.ptr<![[B]]>}>
 struct StructNodeB;
 struct StructNodeA {
   int value;
@@ -98,11 +98,11 @@ void testIndirectSelfReference(struct StructNodeA arg) {
 // A sizeable complex struct just to double check that stuff is working.
 
 // CHECK5: !cir.struct<struct "anon.1" {!cir.ptr<!cir.struct<struct "A" {!cir.struct<struct "anon.1">, !cir.struct<struct "B" {!cir.ptr<!cir.struct<struct "B">>, !cir.struct<struct "C" {!cir.ptr<!cir.struct<struct "A">>, !cir.ptr<!cir.struct<struct "B">>, !cir.ptr<!cir.struct<struct "C">>} #cir.record.decl.ast>, !cir.struct<union "anon.5" {!cir.ptr<!cir.struct<struct "A">>, !cir.struct<struct "anon.4" {!cir.ptr<!cir.struct<struct "B">>} #cir.record.decl.ast>} #cir.record.decl.ast>} #cir.record.decl.ast>} #cir.record.decl.ast>>} #cir.record.decl.ast>
-// CHECK5: !cir.struct<struct "C" {!cir.ptr<!cir.struct<struct "A" {!ty_22anon2E122, !cir.struct<struct "B" {!cir.ptr<!cir.struct<struct "B">>, !cir.struct<struct "C">, !cir.struct<union "anon.5" {!cir.ptr<!cir.struct<struct "A">>, !cir.struct<struct "anon.4" {!cir.ptr<!cir.struct<struct "B">>} #cir.record.decl.ast>} #cir.record.decl.ast>} #cir.record.decl.ast>} #cir.record.decl.ast>>, !cir.ptr<!cir.struct<struct "B" {!cir.ptr<!cir.struct<struct "B">>, !cir.struct<struct "C">, !cir.struct<union "anon.5" {!cir.ptr<!cir.struct<struct "A" {!ty_22anon2E122, !cir.struct<struct "B">} #cir.record.decl.ast>>, !cir.struct<struct "anon.4" {!cir.ptr<!cir.struct<struct "B">>} #cir.record.decl.ast>} #cir.record.decl.ast>} #cir.record.decl.ast>>, !cir.ptr<!cir.struct<struct "C">>} #cir.record.decl.ast>
-// CHECK5: !cir.struct<struct "anon.4" {!cir.ptr<!cir.struct<struct "B" {!cir.ptr<!cir.struct<struct "B">>, !ty_22C22, !cir.struct<union "anon.5" {!cir.ptr<!cir.struct<struct "A" {!ty_22anon2E122, !cir.struct<struct "B">} #cir.record.decl.ast>>, !cir.struct<struct "anon.4">} #cir.record.decl.ast>} #cir.record.decl.ast>>} #cir.record.decl.ast>
-// CHECK5: !cir.struct<union "anon.5" {!cir.ptr<!cir.struct<struct "A" {!ty_22anon2E122, !cir.struct<struct "B" {!cir.ptr<!cir.struct<struct "B">>, !ty_22C22, !cir.struct<union "anon.5">} #cir.record.decl.ast>} #cir.record.decl.ast>>, !ty_22anon2E422} #cir.record.decl.ast>
-// CHECK5: !cir.struct<struct "B" {!cir.ptr<!cir.struct<struct "B">>, !ty_22C22, !ty_22anon2E522} #cir.record.decl.ast>
-// CHECK5: !cir.struct<struct "A" {!ty_22anon2E122, !ty_22B22} #cir.record.decl.ast>
+// CHECK5: !cir.struct<struct "C" {!cir.ptr<!cir.struct<struct "A" {!ty_anon2E1_, !cir.struct<struct "B" {!cir.ptr<!cir.struct<struct "B">>, !cir.struct<struct "C">, !cir.struct<union "anon.5" {!cir.ptr<!cir.struct<struct "A">>, !cir.struct<struct "anon.4" {!cir.ptr<!cir.struct<struct "B">>} #cir.record.decl.ast>} #cir.record.decl.ast>} #cir.record.decl.ast>} #cir.record.decl.ast>>, !cir.ptr<!cir.struct<struct "B" {!cir.ptr<!cir.struct<struct "B">>, !cir.struct<struct "C">, !cir.struct<union "anon.5" {!cir.ptr<!cir.struct<struct "A" {!ty_anon2E1_, !cir.struct<struct "B">} #cir.record.decl.ast>>, !cir.struct<struct "anon.4" {!cir.ptr<!cir.struct<struct "B">>} #cir.record.decl.ast>} #cir.record.decl.ast>} #cir.record.decl.ast>>, !cir.ptr<!cir.struct<struct "C">>} #cir.record.decl.ast>
+// CHECK5: !cir.struct<struct "anon.4" {!cir.ptr<!cir.struct<struct "B" {!cir.ptr<!cir.struct<struct "B">>, !ty_C, !cir.struct<union "anon.5" {!cir.ptr<!cir.struct<struct "A" {!ty_anon2E1_, !cir.struct<struct "B">} #cir.record.decl.ast>>, !cir.struct<struct "anon.4">} #cir.record.decl.ast>} #cir.record.decl.ast>>} #cir.record.decl.ast>
+// CHECK5: !cir.struct<union "anon.5" {!cir.ptr<!cir.struct<struct "A" {!ty_anon2E1_, !cir.struct<struct "B" {!cir.ptr<!cir.struct<struct "B">>, !ty_C, !cir.struct<union "anon.5">} #cir.record.decl.ast>} #cir.record.decl.ast>>, !ty_anon2E4_} #cir.record.decl.ast>
+// CHECK5: !cir.struct<struct "B" {!cir.ptr<!cir.struct<struct "B">>, !ty_C, !ty_anon2E5_} #cir.record.decl.ast>
+// CHECK5: !cir.struct<struct "A" {!ty_anon2E1_, !ty_B} #cir.record.decl.ast>
 struct A {
   struct {
     struct A *a1;

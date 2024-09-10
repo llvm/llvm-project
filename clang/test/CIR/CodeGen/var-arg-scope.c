@@ -7,20 +7,20 @@ void f1(__builtin_va_list c) {
   { __builtin_va_arg(c, void *); }
 }
 
-// BEFORE: cir.func @f1(%arg0: !ty_22__va_list22) attributes
-// BEFORE: [[VAR_LIST:%.*]] = cir.alloca !ty_22__va_list22, !cir.ptr<!ty_22__va_list22>, ["c", init] {alignment = 8 : i64}
-// BEFORE: cir.store %arg0, [[VAR_LIST]] : !ty_22__va_list22, !cir.ptr<!ty_22__va_list22>
+// BEFORE: cir.func @f1(%arg0: !ty___va_list) attributes
+// BEFORE: [[VAR_LIST:%.*]] = cir.alloca !ty___va_list, !cir.ptr<!ty___va_list>, ["c", init] {alignment = 8 : i64}
+// BEFORE: cir.store %arg0, [[VAR_LIST]] : !ty___va_list, !cir.ptr<!ty___va_list>
 // BEFORE: cir.scope {
-// BEFORE-NEXT: [[TMP:%.*]] = cir.va.arg [[VAR_LIST]] : (!cir.ptr<!ty_22__va_list22>) -> !cir.ptr<!void>
+// BEFORE-NEXT: [[TMP:%.*]] = cir.va.arg [[VAR_LIST]] : (!cir.ptr<!ty___va_list>) -> !cir.ptr<!void>
 // BEFORE-NEXT: }
 // BEFORE-NEXT: cir.return
 
-// AFTER: cir.func @f1(%arg0: !ty_22__va_list22) attributes
-// AFTER: [[VARLIST:%.*]] = cir.alloca !ty_22__va_list22, !cir.ptr<!ty_22__va_list22>, ["c", init] {alignment = 8 : i64}
-// AFTER: cir.store %arg0, [[VARLIST]] : !ty_22__va_list22, !cir.ptr<!ty_22__va_list22>
+// AFTER: cir.func @f1(%arg0: !ty___va_list) attributes
+// AFTER: [[VARLIST:%.*]] = cir.alloca !ty___va_list, !cir.ptr<!ty___va_list>, ["c", init] {alignment = 8 : i64}
+// AFTER: cir.store %arg0, [[VARLIST]] : !ty___va_list, !cir.ptr<!ty___va_list>
 // AFTER: cir.scope {
 //
-// AFTER-NEXT: [[GR_OFFS_P:%.*]] = cir.get_member [[VARLIST]][3] {name = "gr_offs"} : !cir.ptr<!ty_22__va_list22> -> !cir.ptr<!s32i>
+// AFTER-NEXT: [[GR_OFFS_P:%.*]] = cir.get_member [[VARLIST]][3] {name = "gr_offs"} : !cir.ptr<!ty___va_list> -> !cir.ptr<!s32i>
 // AFTER-NEXT: [[GR_OFFS:%.*]] = cir.load [[GR_OFFS_P]] : !cir.ptr<!s32i>
 // AFTER:  [[ZERO:%.*]] = cir.const #cir.int<0> : !s32i
 // AFTER:  [[CMP0:%.*]] = cir.cmp(ge, [[GR_OFFS]], [[ZERO]]) : !s32i, !cir.bool
@@ -36,7 +36,7 @@ void f1(__builtin_va_list c) {
 
 // arg is passed in register.
 // AFTER: [[BB_IN_REG]]:
-// AFTER-NEXT: [[GR_TOP_P:%.*]] = cir.get_member [[VARLIST]][1] {name = "gr_top"} : !cir.ptr<!ty_22__va_list22> -> !cir.ptr<!cir.ptr<!void>>
+// AFTER-NEXT: [[GR_TOP_P:%.*]] = cir.get_member [[VARLIST]][1] {name = "gr_top"} : !cir.ptr<!ty___va_list> -> !cir.ptr<!cir.ptr<!void>>
 // AFTER-NEXT: [[GR_TOP:%.*]] = cir.load [[GR_TOP_P]] : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
 // AFTER-NEXT: [[TMP2:%.*]] = cir.cast(bitcast, [[GR_TOP]] : !cir.ptr<!void>), !cir.ptr<i8>
 // AFTER-NEXT: [[TMP3:%.*]] = cir.ptr_stride([[TMP2]] : !cir.ptr<i8>, [[GR_OFFS]] : !s32i), !cir.ptr<i8>
@@ -45,7 +45,7 @@ void f1(__builtin_va_list c) {
 
 // arg is passed in stack.
 // AFTER: [[BB_ON_STACK]]:
-// AFTER-NEXT: [[STACK_P:%.*]] = cir.get_member [[VARLIST]][0] {name = "stack"} : !cir.ptr<!ty_22__va_list22> -> !cir.ptr<!cir.ptr<!void>>
+// AFTER-NEXT: [[STACK_P:%.*]] = cir.get_member [[VARLIST]][0] {name = "stack"} : !cir.ptr<!ty___va_list> -> !cir.ptr<!cir.ptr<!void>>
 // AFTER-NEXT: [[STACK_V:%.*]] = cir.load [[STACK_P]] : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
 // AFTER-NEXT: [[EIGHT_IN_PTR_ARITH:%.*]]  = cir.const #cir.int<8> : !u64i
 // AFTER-NEXT: [[TMP4:%.*]] = cir.cast(bitcast, [[STACK_V]] : !cir.ptr<!void>), !cir.ptr<i8>

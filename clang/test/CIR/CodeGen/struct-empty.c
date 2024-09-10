@@ -4,7 +4,7 @@
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
 
 // CIR: ![[lock:.*]] = !cir.struct<struct "rwlock_t" {}>
-// CIR: ![[fs_struct:.*]] = !cir.struct<struct "fs_struct" {!ty_22rwlock_t22, !s32i}
+// CIR: ![[fs_struct:.*]] = !cir.struct<struct "fs_struct" {![[lock]], !s32i}
 
 typedef struct { } rwlock_t;
 struct fs_struct { rwlock_t lock; int umask; };

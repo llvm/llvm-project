@@ -25,7 +25,7 @@ void bar() {
 }
 // CHECK:  cir.func no_proto @bar()
 // CHECK:    [[ALLOC:%.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init] {alignment = 4 : i64}
-// CHECK:    {{%.*}} = cir.get_global @s : !cir.ptr<!ty_22S22>
+// CHECK:    {{%.*}} = cir.get_global @s : !cir.ptr<!ty_S>
 // CHECK:    [[CONST:%.*]] = cir.const #cir.int<0> : !s32i
 // CHECK:    cir.store [[CONST]], [[ALLOC]] : !s32i, !cir.ptr<!s32i>
 // CHECK:    cir.return

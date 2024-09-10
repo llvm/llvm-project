@@ -24,13 +24,13 @@ void test2() { ({int x = 3; x; }); }
 struct S { int x; };
 int test3() { return ({ struct S s = {1}; s; }).x; }
 // CHECK: @test3
-// CHECK: %[[#RETVAL:]] = cir.alloca !ty_22S22, !cir.ptr<!ty_22S22>
+// CHECK: %[[#RETVAL:]] = cir.alloca !ty_S, !cir.ptr<!ty_S>
 // CHECK: cir.scope {
-// CHECK:   %[[#VAR:]] = cir.alloca !ty_22S22, !cir.ptr<!ty_22S22>
+// CHECK:   %[[#VAR:]] = cir.alloca !ty_S, !cir.ptr<!ty_S>
 //          [...]
-// CHECK:   cir.copy %[[#VAR]] to %[[#RETVAL]] : !cir.ptr<!ty_22S22>
+// CHECK:   cir.copy %[[#VAR]] to %[[#RETVAL]] : !cir.ptr<!ty_S>
 // CHECK: }
-// CHECK: %[[#RETADDR:]] = cir.get_member %1[0] {name = "x"} : !cir.ptr<!ty_22S22> -> !cir.ptr<!s32i>
+// CHECK: %[[#RETADDR:]] = cir.get_member %1[0] {name = "x"} : !cir.ptr<!ty_S> -> !cir.ptr<!s32i>
 // CHECK: %{{.+}} = cir.load %[[#RETADDR]] : !cir.ptr<!s32i>, !s32i
 
 // Expression is wrapped in an expression attribute (just ensure it does not crash).

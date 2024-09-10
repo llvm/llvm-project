@@ -20,14 +20,14 @@ typedef struct {
 } __attribute__((aligned(2))) C;
 
 
-// CHECK: !ty_22A22 = !cir.struct<struct "A" packed {!s32i, !s8i}>
-// CHECK: !ty_22C22 = !cir.struct<struct "C" packed {!s32i, !s8i}>
-// CHECK: !ty_22B22 = !cir.struct<struct "B" packed {!s32i, !s8i, !cir.array<!ty_22A22 x 6>}>
+// CHECK: !ty_A = !cir.struct<struct "A" packed {!s32i, !s8i}>
+// CHECK: !ty_C = !cir.struct<struct "C" packed {!s32i, !s8i}>
+// CHECK: !ty_B = !cir.struct<struct "B" packed {!s32i, !s8i, !cir.array<!ty_A x 6>}>
 
 // CHECK: cir.func {{.*@foo()}}
-// CHECK:  %0 = cir.alloca !ty_22A22, !cir.ptr<!ty_22A22>, ["a"] {alignment = 1 : i64}
-// CHECK:  %1 = cir.alloca !ty_22B22, !cir.ptr<!ty_22B22>, ["b"] {alignment = 1 : i64}
-// CHECK:  %2 = cir.alloca !ty_22C22, !cir.ptr<!ty_22C22>, ["c"] {alignment = 2 : i64}
+// CHECK:  %0 = cir.alloca !ty_A, !cir.ptr<!ty_A>, ["a"] {alignment = 1 : i64}
+// CHECK:  %1 = cir.alloca !ty_B, !cir.ptr<!ty_B>, ["b"] {alignment = 1 : i64}
+// CHECK:  %2 = cir.alloca !ty_C, !cir.ptr<!ty_C>, ["c"] {alignment = 2 : i64}
 void foo() {
     A a;
     B b;
