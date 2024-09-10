@@ -3052,4 +3052,3 @@ entry:
   fence syncscope("one-as") seq_cst
   ret void
 }
-
