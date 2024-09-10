@@ -10322,9 +10322,9 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
 
   unsigned NumElements = MemVT.getVectorNumElements();
 
-  if (AS == AMDGPUAS::CONSTANT_ADDRESS ||
-      AS == AMDGPUAS::CONSTANT_ADDRESS_32BIT) {
-    if (!Op->isDivergent() && Alignment >= Align(4) && NumElements < 32) {
+  if (!Op->isDivergent() && Alignment >= Align(4) && NumElements < 32) {
+    if (AS == AMDGPUAS::CONSTANT_ADDRESS ||
+        AS == AMDGPUAS::CONSTANT_ADDRESS_32BIT) {
       if (MemVT.isPow2VectorType() ||
           (Subtarget->hasScalarDwordx3Loads() && NumElements == 3))
         return SDValue();
@@ -10334,24 +10334,24 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
     // have the same legalization requirements as global and private
     // loads.
     //
+
+    if (AS == AMDGPUAS::CONSTANT_ADDRESS ||
+        AS == AMDGPUAS::CONSTANT_ADDRESS_32BIT ||
+        AS == AMDGPUAS::GLOBAL_ADDRESS) {
+      if (Subtarget->getScalarizeGlobalBehavior() && Load->isSimple() &&
+          isMemOpHasNoClobberedMemOperand(Load)) {
+        if (MemVT.isPow2VectorType() ||
+            (Subtarget->hasScalarDwordx3Loads() && NumElements == 3))
+          return SDValue();
+        return WidenOrSplitVectorLoad(Op, DAG);
+      }
+      // Non-uniform loads will be selected to MUBUF instructions, so they
+      // have the same legalization requirements as global and private
+      // loads.
+      //
+    }
   }
 
-  if (AS == AMDGPUAS::CONSTANT_ADDRESS ||
-      AS == AMDGPUAS::CONSTANT_ADDRESS_32BIT ||
-      AS == AMDGPUAS::GLOBAL_ADDRESS) {
-    if (Subtarget->getScalarizeGlobalBehavior() && !Op->isDivergent() &&
-        Load->isSimple() && isMemOpHasNoClobberedMemOperand(Load) &&
-        Alignment >= Align(4) && NumElements < 32) {
-      if (MemVT.isPow2VectorType() ||
-          (Subtarget->hasScalarDwordx3Loads() && NumElements == 3))
-        return SDValue();
-      return WidenOrSplitVectorLoad(Op, DAG);
-    }
-    // Non-uniform loads will be selected to MUBUF instructions, so they
-    // have the same legalization requirements as global and private
-    // loads.
-    //
-  }
   if (AS == AMDGPUAS::CONSTANT_ADDRESS ||
       AS == AMDGPUAS::CONSTANT_ADDRESS_32BIT ||
       AS == AMDGPUAS::GLOBAL_ADDRESS ||
