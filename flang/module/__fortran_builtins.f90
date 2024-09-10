@@ -6,7 +6,7 @@
 !
 !===------------------------------------------------------------------------===!
 
-include '../include/flang/Runtime/magic-numbers.h'
+#include '../include/flang/Runtime/magic-numbers.h'
 
 ! These naming shenanigans prevent names from Fortran intrinsic modules
 ! from being usable on INTRINSIC statements, and force the program

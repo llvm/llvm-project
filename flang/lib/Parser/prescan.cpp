@@ -32,10 +32,10 @@ Prescanner::Prescanner(Messages &messages, CookedSource &cooked,
       backslashFreeFormContinuation_{preprocessor.AnyDefinitions()},
       encoding_{allSources_.encoding()} {}
 
-Prescanner::Prescanner(const Prescanner &that, bool isNestedInIncludeDirective)
-    : messages_{that.messages_}, cooked_{that.cooked_},
-      preprocessor_{that.preprocessor_}, allSources_{that.allSources_},
-      features_{that.features_},
+Prescanner::Prescanner(const Prescanner &that, Preprocessor &prepro,
+    bool isNestedInIncludeDirective)
+    : messages_{that.messages_}, cooked_{that.cooked_}, preprocessor_{prepro},
+      allSources_{that.allSources_}, features_{that.features_},
       isNestedInIncludeDirective_{isNestedInIncludeDirective},
       backslashFreeFormContinuation_{that.backslashFreeFormContinuation_},
       inFixedForm_{that.inFixedForm_},
@@ -1104,7 +1104,14 @@ void Prescanner::FortranInclude(const char *firstQuote) {
         provenance, static_cast<std::size_t>(p - nextLine_)};
     ProvenanceRange fileRange{
         allSources_.AddIncludedFile(*included, includeLineRange)};
-    Prescanner{*this, /*isNestedInIncludeDirective=*/false}
+    Preprocessor cleanPrepro{allSources_};
+    if (preprocessor_.IsNameDefined("__FILE__"s)) {
+      cleanPrepro.DefineStandardMacros(); // __FILE__, __LINE__, &c.
+    }
+    if (preprocessor_.IsNameDefined("_CUDA"s)) {
+      cleanPrepro.Define("_CUDA"s, "1");
+    }
+    Prescanner{*this, cleanPrepro, /*isNestedInIncludeDirective=*/false}
         .set_encoding(included->encoding())
         .Prescan(fileRange);
   }
