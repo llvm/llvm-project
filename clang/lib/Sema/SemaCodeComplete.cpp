@@ -1840,7 +1840,6 @@ static void AddTypeSpecifierResults(const LangOptions &LangOpts,
 
     if(LangOpts.CPlusPlus20){
       Results.AddResult(Result("char8_t", CCP_Type));
-      Results.AddResult(Result("concept", CCP_Keyword));
     }
   } else
     Results.AddResult(Result("__auto_type", CCP_Type));
@@ -2266,6 +2265,10 @@ AddOrdinaryNameResults(SemaCodeCompletion::ParserCompletionContext CCC,
     [[fallthrough]];
 
   case SemaCodeCompletion::PCC_Template:
+    if (SemaRef.getLangOpts().CPlusPlus20 && CCC == SemaCodeCompletion::PCC_Template)
+        Results.AddResult(Result("concept", CCP_Keyword));
+    [[fallthrough]];
+
   case SemaCodeCompletion::PCC_MemberTemplate:
     if (SemaRef.getLangOpts().CPlusPlus && Results.includeCodePatterns()) {
       // template < parameters >
@@ -2276,6 +2279,11 @@ AddOrdinaryNameResults(SemaCodeCompletion::ParserCompletionContext CCC,
       Results.AddResult(Result(Builder.TakeString()));
     } else {
       Results.AddResult(Result("template", CodeCompletionResult::RK_Keyword));
+    }
+
+    if(SemaRef.getLangOpts().CPlusPlus20 && 
+      (CCC == SemaCodeCompletion::PCC_Template || CCC == SemaCodeCompletion::PCC_MemberTemplate)) {
+      Results.AddResult(Result("requires", CCP_Keyword));
     }
 
     AddStorageSpecifiers(CCC, SemaRef.getLangOpts(), Results);
