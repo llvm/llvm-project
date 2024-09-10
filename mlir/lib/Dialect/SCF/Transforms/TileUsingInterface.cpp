@@ -1481,13 +1481,11 @@ static FailureOr<OpOperand *> getConsumerFromUses(Value val,
   return &operand;
 }
 
-/// Recursively find the outer nest loops of given loop(included) while the
-/// predict function succeed, sorted from outer to inner.
+/// Recursively find the outer nest loops of given loop(included) sorted from
+/// outer to inner.
 ///
 /// @param loop: target loop, note that this loop will be also included. I.e.
 ///              if no other nest loops were found, just return itself.
-/// @param pred: predict function, the termination condition of recursive
-/// process.
 /// @return Outer Nest Loops: nest loops outside given target loop(included).
 ///
 /// E.g.
@@ -1498,34 +1496,35 @@ static FailureOr<OpOperand *> getConsumerFromUses(Value val,
 ///      %2 = scf.for()
 /// ```
 ///
-/// If `%2 = scf.for` is given without specific prediction function, this
-/// function will return three nest loops: %0 + %1 + %2.
-static SmallVector<LoopLikeOpInterface> getOuterNestLoopsWhile(
-    LoopLikeOpInterface loop,
-    const std::function<LogicalResult(LoopLikeOpInterface)> &pred) {
+/// This function will return three nest loops: %0 + %1 + %2.
+static SmallVector<LoopLikeOpInterface>
+getPerfectlyOuterNestedLoops(LoopLikeOpInterface loop) {
   SmallVector<LoopLikeOpInterface> nestLoops = {loop};
   auto outerLoop = dyn_cast<LoopLikeOpInterface>(loop->getParentOp());
-  while (outerLoop && succeeded(pred(outerLoop))) {
+
+  /// Check if it is the ForOp that yield the result of inner loop.
+  auto isForOpYieldResultOfInnerLoop =
+      [](LoopLikeOpInterface outerLoop) -> LogicalResult {
+    auto forOp = dyn_cast<scf::ForOp>(outerLoop.getOperation());
+    if (!forOp)
+      return failure();
+    Block *body = forOp.getBody();
+    if (!llvm::hasSingleElement(body->without_terminator()))
+      return failure();
+    auto yieldOp = cast<scf::YieldOp>(body->getTerminator());
+    auto innerForOp = dyn_cast<scf::ForOp>(body->front());
+    if (!innerForOp)
+      return failure();
+    // If any of the innerForOp results are not yielded.
+    return success(innerForOp->getNumResults() == yieldOp->getNumOperands());
+  };
+
+  while (outerLoop && succeeded(isForOpYieldResultOfInnerLoop(outerLoop))) {
     nestLoops.push_back(outerLoop);
     outerLoop = dyn_cast<LoopLikeOpInterface>(outerLoop->getParentOp());
   }
   // sorted from outer to inner
   return {nestLoops.rbegin(), nestLoops.rend()};
-}
-
-/// Check if it is the ForOp that yield the result of inner loop
-static LogicalResult isForOpYieldResultOfInnerLoop(LoopLikeOpInterface loop) {
-  if (auto forOp = dyn_cast<scf::ForOp>(loop.getOperation())) {
-    Block::OpListType &opsInLoopBody = forOp.getBody()->getOperations();
-    for (auto &&[index, op] : llvm::enumerate(opsInLoopBody)) {
-      // If the orderIndex of inner loop is the last second one before the
-      // yieldOp of ForOp, the given loop must yield the result of inner loop.
-      if (isa<LoopLikeOpInterface>(op)) {
-        return success((index + 2) == opsInLoopBody.size());
-      }
-    }
-  }
-  return failure();
 }
 
 /// Fetch the untiled consumer of a scf.for's result which is yielded by a
@@ -1546,7 +1545,7 @@ getUntiledConsumerFromSlice(tensor::InsertSliceOp candidateSliceOp) {
   if (!forOp)
     return failure();
   LoopLikeOpInterface topLevelForOp =
-      getOuterNestLoopsWhile(forOp, isForOpYieldResultOfInnerLoop).front();
+      getPerfectlyOuterNestedLoops(forOp).front();
   Value resultingValue = topLevelForOp->getResult(resultNumber);
 
   return getConsumerFromUses(resultingValue, topLevelForOp->getBlock());
@@ -1650,8 +1649,7 @@ mlir::scf::tileAndFuseConsumerOfSlice(RewriterBase &rewriter,
       candidateSliceOp->getParentOfType<LoopLikeOpInterface>();
   SmallVector<LoopLikeOpInterface> nestedLoops;
   if (isInsertSliceOp) {
-    nestedLoops =
-        getOuterNestLoopsWhile(innerMostLoop, isForOpYieldResultOfInnerLoop);
+    nestedLoops = getPerfectlyOuterNestedLoops(innerMostLoop);
   } else {
     nestedLoops = {innerMostLoop};
   }
