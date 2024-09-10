@@ -110,6 +110,17 @@ SANITIZER_WEAK_ATTRIBUTE
 const void *__sanitizer_get_allocated_begin(const void *p);
 }
 
+static bool GetDTLSRange(uptr &tls_beg, uptr &tls_size) {
+  const void *start = __sanitizer_get_allocated_begin((void *)tls_beg);
+  if (!start)
+    return false;
+  tls_beg = (uptr)start;
+  tls_size = __sanitizer_get_allocated_size(start);
+  VReport(2, "__tls_get_addr: glibc >=2.25 suspected; tls={%p,0x%zx}\n",
+          (void *)tls_beg, tls_size);
+  return true;
+}
+
 DTLS::DTV *DTLS_on_tls_get_addr(void *arg_void, void *res,
                                 uptr static_tls_begin, uptr static_tls_end) {
   if (!common_flags()->intercept_tls_get_addr) return 0;
@@ -135,13 +146,7 @@ DTLS::DTV *DTLS_on_tls_get_addr(void *arg_void, void *res,
     // creation.
     VReport(2, "__tls_get_addr: static tls: %p\n", (void *)tls_beg);
     tls_size = 0;
-  } else if (const void *start =
-                 __sanitizer_get_allocated_begin((void *)tls_beg)) {
-    tls_beg = (uptr)start;
-    tls_size = __sanitizer_get_allocated_size(start);
-    VReport(2, "__tls_get_addr: glibc >=2.25 suspected; tls={%p,0x%zx}\n",
-            (void *)tls_beg, tls_size);
-  } else {
+  } else if (!GetDTLSRange(tls_beg, tls_size)) {
     VReport(2, "__tls_get_addr: Can't guess glibc version\n");
     // This may happen inside the DTOR of main thread, so just ignore it.
     tls_size = 0;

@@ -361,11 +361,60 @@ Examples:
      - ``i32``
      - Index into the buffer
 
+Texture and Typed Buffer Stores
+-------------------------------
+
+*relevant types: Textures and TypedBuffer*
+
+The `TextureStore`_ and `BufferStore`_ DXIL operations always write all four
+32-bit components to a texture or a typed buffer. While both operations include
+a mask parameter, it is specified that the mask must cover all components when
+used with these types.
+
+The store operations that we define as intrinsics behave similarly, and will
+only accept writes to the whole of the contained type. This differs from the
+loads above, but this makes sense to do from a semantics preserving point of
+view. Thus, texture and buffer stores may only operate on 4-element vectors of
+types that are 32-bits or fewer, such as ``<4 x i32>``, ``<4 x float>``, and
+``<4 x half>``, and 2 element vectors of 64-bit types like ``<2 x double>`` and
+``<2 x i64>``.
+
+.. _BufferStore: https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/DXIL.rst#bufferstore
+.. _TextureStore: https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/DXIL.rst#texturestore
+
+Examples:
+
+.. list-table:: ``@llvm.dx.typedBufferStore``
+   :header-rows: 1
+
+   * - Argument
+     -
+     - Type
+     - Description
+   * - Return value
+     -
+     - ``void``
+     -
+   * - ``%buffer``
+     - 0
+     - ``target(dx.TypedBuffer, ...)``
+     - The buffer to store into
+   * - ``%index``
+     - 1
+     - ``i32``
+     - Index into the buffer
+   * - ``%data``
+     - 2
+     - A 4- or 2-element vector of the type of the buffer
+     - The data to store
+
 Examples:
 
 .. code-block:: llvm
 
-   %ret = call {<4 x float>, i1}
-       @llvm.dx.typedBufferLoad.checkbit.v4f32.tdx.TypedBuffer_v4f32_0_0_0t(
-           target("dx.TypedBuffer", <4 x float>, 0, 0, 0) %buffer, i32 %index)
-
+   call void @llvm.dx.typedBufferStore.tdx.Buffer_v4f32_1_0_0t(
+       target("dx.TypedBuffer", f32, 1, 0) %buf, i32 %index, <4 x f32> %data)
+   call void @llvm.dx.typedBufferStore.tdx.Buffer_v4f16_1_0_0t(
+       target("dx.TypedBuffer", f16, 1, 0) %buf, i32 %index, <4 x f16> %data)
+   call void @llvm.dx.typedBufferStore.tdx.Buffer_v2f64_1_0_0t(
+       target("dx.TypedBuffer", f64, 1, 0) %buf, i32 %index, <2 x f64> %data)
