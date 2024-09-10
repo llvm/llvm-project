@@ -1,4 +1,5 @@
 /* in libgcc.a */
+#include "llvm/Config/config.h" // for HAVE__* macros
 
 #ifdef HAVE__ALLOCA
 EXPLICIT_SYMBOL(_alloca)

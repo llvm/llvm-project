@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "Assembler.h"
-
 #include "SnippetRepetitor.h"
 #include "SubprocessMemory.h"
 #include "Target.h"
@@ -22,6 +21,7 @@
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/Config/config.h" // for HAVE_LIBPFM
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Instructions.h"

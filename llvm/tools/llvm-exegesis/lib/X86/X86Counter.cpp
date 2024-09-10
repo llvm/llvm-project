@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "X86Counter.h"
+#include "llvm/Config/config.h" // for HAVE_LIBPFM, LIBPFM_HAS_FIELD_CYCLES
 
 #if defined(__linux__) && defined(HAVE_LIBPFM) &&                              \
     defined(LIBPFM_HAS_FIELD_CYCLES)
