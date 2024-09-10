@@ -1,7 +1,7 @@
 ; RUN: llvm-split -o %t %s -j 3 -mtriple amdgcn-amd-amdhsa
-; RUN: llvm-dis -o - %t0 | FileCheck --check-prefix=CHECK0 %s
-; RUN: llvm-dis -o - %t1 | FileCheck --check-prefix=CHECK1 %s
-; RUN: llvm-dis -o - %t2 | FileCheck --check-prefix=CHECK2 %s
+; RUN: llvm-dis -o - %t0 | FileCheck --check-prefix=CHECK0 --implicit-check-not=define %s
+; RUN: llvm-dis -o - %t1 | FileCheck --check-prefix=CHECK1 --implicit-check-not=define %s
+; RUN: llvm-dis -o - %t2 | FileCheck --check-prefix=CHECK2 --implicit-check-not=define %s
 
 ; We have 4 kernels:
 ;   - Each kernel has an internal helper
@@ -15,25 +15,19 @@
 ; indirect call. HelperC/D should also end up in P0 as they
 ; are dependencies of HelperB.
 
-; CHECK0-NOT: define
-; CHECK0: define hidden void @HelperA
-; CHECK0: define hidden void @HelperB
-; CHECK0: define hidden void @CallCandidate
-; CHECK0: define internal void @HelperC
 ; CHECK0: define internal void @HelperD
-; CHECK0: define amdgpu_kernel void @A
-; CHECK0: define amdgpu_kernel void @B
-; CHECK0-NOT: define
+; CHECK0: define amdgpu_kernel void @D
 
-; CHECK1-NOT: define
-; CHECK1: define internal void @HelperD
-; CHECK1: define amdgpu_kernel void @D
-; CHECK1-NOT: define
+; CHECK1: define internal void @HelperC
+; CHECK1: define amdgpu_kernel void @C
 
-; CHECK2-NOT: define
+; CHECK2: define hidden void @HelperA
+; CHECK2: define hidden void @HelperB
+; CHECK2: define hidden void @CallCandidate
 ; CHECK2: define internal void @HelperC
-; CHECK2: define amdgpu_kernel void @C
-; CHECK2-NOT: define
+; CHECK2: define internal void @HelperD
+; CHECK2: define amdgpu_kernel void @A
+; CHECK2: define amdgpu_kernel void @B
 
 @addrthief = global [3 x ptr] [ptr @HelperA, ptr @HelperB, ptr @CallCandidate]
 
