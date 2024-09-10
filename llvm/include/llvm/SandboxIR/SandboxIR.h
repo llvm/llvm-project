@@ -1194,9 +1194,7 @@ public:
   Instruction &back() const;
 
 #ifndef NDEBUG
-  void verify() const final {
-    assert(isa<llvm::BasicBlock>(Val) && "Expected BasicBlock!");
-  }
+  void verify() const final;
   void dumpOS(raw_ostream &OS) const final;
 #endif
 };
@@ -1435,7 +1433,7 @@ public:
 #endif
 };
 
-class FenceInst : public SingleLLVMInstructionImpl<llvm::SelectInst> {
+class FenceInst : public SingleLLVMInstructionImpl<llvm::FenceInst> {
   FenceInst(llvm::FenceInst *FI, Context &Ctx)
       : SingleLLVMInstructionImpl(ClassID::Fence, Opcode::Fence, FI, Ctx) {}
   friend Context; // For constructor;
