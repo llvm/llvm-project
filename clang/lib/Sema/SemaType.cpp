@@ -8843,8 +8843,10 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
       break;
     }
     case ParsedAttr::AT_HLSLResourceClass:
-    case ParsedAttr::AT_HLSLROV: {
-      if (state.getSema().HLSL().handleResourceTypeAttr(attr))
+    case ParsedAttr::AT_HLSLROV:
+    case ParsedAttr::AT_HLSLContainedType: {
+      if (TAL == TAL_DeclSpec &&
+          state.getSema().HLSL().handleResourceTypeAttr(attr))
         attr.setUsedAsTypeAttr();
       break;
     }

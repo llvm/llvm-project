@@ -10,6 +10,7 @@
 
 #include "clang/Sema/SemaHLSL.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/Attrs.inc"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
@@ -593,6 +594,18 @@ bool clang::CreateHLSLAttributedResourceType(Sema &S, QualType Wrapped,
     case attr::HLSLROV:
       ResAttrs.IsROV = true;
       break;
+    case attr::HLSLContainedType: {
+      QualType Ty = cast<HLSLContainedTypeAttr>(A)->getType();
+      if (!Contained.isNull()) {
+        S.Diag(A->getLocation(), Contained == Ty
+                                     ? diag::warn_duplicate_attribute_exact
+                                     : diag::warn_duplicate_attribute)
+            << A;
+        return false;
+      }
+      Contained = Ty;
+      break;
+    }
     default:
       llvm_unreachable("unhandled resource attribute type");
     }
@@ -642,9 +655,27 @@ bool SemaHLSL::handleResourceTypeAttr(const ParsedAttr &AL) {
     A = HLSLResourceClassAttr::Create(getASTContext(), RC, AL.getLoc());
     break;
   }
+
   case ParsedAttr::AT_HLSLROV:
     A = HLSLROVAttr::Create(getASTContext(), AL.getLoc());
     break;
+
+  case ParsedAttr::AT_HLSLContainedType: {
+    if (AL.getNumArgs() != 1 && !AL.hasParsedType()) {
+      Diag(AL.getLoc(), diag::err_attribute_wrong_number_arguments) << AL << 1;
+      return false;
+    }
+
+    TypeSourceInfo *TSI = nullptr;
+    QualType QT = SemaRef.GetTypeFromParser(AL.getTypeArg(), &TSI);
+    assert(TSI && "no type source info for attribute argument");
+    if (SemaRef.RequireCompleteType(TSI->getTypeLoc().getBeginLoc(), QT,
+                                    diag::err_incomplete_type))
+      return false;
+    A = HLSLContainedTypeAttr::Create(getASTContext(), TSI, AL.getLoc());
+    break;
+  }
+
   default:
     llvm_unreachable("unhandled HLSL attribute");
   }

@@ -7470,8 +7470,14 @@ QualType TreeTransform<Derived>::TransformHLSLAttributedResourceType(
     return QualType();
 
   QualType ContainedTy = QualType();
-  if (!oldType->getContainedType().isNull())
-    ContainedTy = getDerived().TransformType(TLB, TL.getContainedLoc());
+  if (!oldType->getContainedType().isNull()) {
+    TypeLocBuilder ContainedTyTLB;
+    TypeLoc ContainedTL = TL.getContainedLoc();
+    ContainedTyTLB.reserve(ContainedTL.getFullDataSize());
+    ContainedTy = getDerived().TransformType(ContainedTyTLB, ContainedTL);
+    if (ContainedTy.isNull())
+      return QualType();
+  }
 
   QualType Result = TL.getType();
   if (getDerived().AlwaysRebuild() || WrappedTy != oldType->getWrappedType() ||

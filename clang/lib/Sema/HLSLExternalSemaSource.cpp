@@ -16,6 +16,7 @@
 #include "clang/AST/Type.h"
 #include "clang/Basic/AttrKinds.h"
 #include "clang/Basic/HLSLRuntime.h"
+#include "clang/Basic/SourceLocation.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaHLSL.h"
@@ -114,19 +115,30 @@ struct BuiltinTypeDeclBuilder {
                   AccessSpecifier Access = AccessSpecifier::AS_private) {
     if (Record->isCompleteDefinition())
       return *this;
+
+    TypeSourceInfo *ElementTypeTSI = nullptr;
+
     QualType Ty = Record->getASTContext().VoidPtrTy;
     if (Template) {
-      if (const auto *TTD = dyn_cast<TemplateTypeParmDecl>(
-              Template->getTemplateParameters()->getParam(0)))
+      if (const TemplateTypeParmDecl *TTD = dyn_cast<TemplateTypeParmDecl>(
+              Template->getTemplateParameters()->getParam(0))) {
         Ty = Record->getASTContext().getPointerType(
             QualType(TTD->getTypeForDecl(), 0));
+        QualType ElemType = QualType(TTD->getTypeForDecl(), 0);
+        ElementTypeTSI = S.getASTContext().getTrivialTypeSourceInfo(
+            ElemType, SourceLocation());
+      }
     }
 
     // add handle member with resource type attributes
     QualType AttributedResTy = QualType();
     SmallVector<const Attr *> Attrs = {
         HLSLResourceClassAttr::CreateImplicit(Record->getASTContext(), RC),
-        IsROV ? HLSLROVAttr::CreateImplicit(Record->getASTContext()) : nullptr};
+        IsROV ? HLSLROVAttr::CreateImplicit(Record->getASTContext()) : nullptr,
+        ElementTypeTSI ? HLSLContainedTypeAttr::CreateImplicit(
+                             Record->getASTContext(), ElementTypeTSI)
+                       : nullptr,
+    };
     Attr *ResourceAttr =
         HLSLResourceAttr::CreateImplicit(Record->getASTContext(), RK);
     if (CreateHLSLAttributedResourceType(S, Ty, Attrs, AttributedResTy))
