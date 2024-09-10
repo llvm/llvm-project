@@ -17,10 +17,10 @@
 constexpr bool test_non_forward_operator_minus() {
   int arr[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
 
-  using Base = BasicTestView<SizedInputIterator, SizedInputIterator>;
+  using Base = BasicTestView<SizedInputIter, SizedInputIter>;
 
-  auto base_view_offset_zero             = Base(SizedInputIterator(arr), SizedInputIterator(arr + 10));
-  auto base_view_offset_one              = Base(SizedInputIterator(arr + 1), SizedInputIterator(arr + 10));
+  auto base_view_offset_zero             = Base(SizedInputIter(arr), SizedInputIter(arr + 10));
+  auto base_view_offset_one              = Base(SizedInputIter(arr + 1), SizedInputIter(arr + 10));
   auto stride_view_over_base_zero_offset = std::ranges::stride_view(base_view_offset_zero, 3);
   auto stride_view_over_base_one_offset  = std::ranges::stride_view(base_view_offset_one, 3);
 
