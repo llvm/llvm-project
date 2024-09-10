@@ -16,6 +16,8 @@ def verbose : FF<"verbose", "Enable verbose logging and encoding details">;
 defm convert :
   Eq<"convert",
      "Convert the specified file to the GSYM format.\nSupported files include ELF and mach-o files that will have their debug info (DWARF) and symbol table converted">;
+def merged_functions :
+  FF<"merged-functions", "Encode merged function information for functions in debug info that have matching address ranges.\nWithout this option one function per unique address range will be emitted.">;
 defm arch :
   Eq<"arch",
      "Process debug information for the specified CPU architecture only.\nArchitectures may be specified by name or by number.\nThis option can be specified multiple times, once for each desired architecture">;
@@ -35,3 +37,6 @@ defm address : Eq<"address", "Lookup an address in a GSYM file">;
 def addresses_from_stdin :
   FF<"addresses-from-stdin",
      "Lookup addresses in a GSYM file that are read from stdin\nEach input line is expected to be of the following format: <addr> <gsym-path>">;
+defm json_summary_file :
+  Eq<"json-summary-file",
+     "Output a categorized summary of errors into the JSON file specified.">;

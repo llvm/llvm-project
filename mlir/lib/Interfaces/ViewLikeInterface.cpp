@@ -27,7 +27,7 @@ LogicalResult mlir::verifyListOfOperandsOrIntegers(Operation *op,
     return op->emitError("expected ") << numElements << " " << name
                                       << " values, got " << staticVals.size();
   unsigned expectedNumDynamicEntries =
-      llvm::count_if(staticVals, [&](int64_t staticVal) {
+      llvm::count_if(staticVals, [](int64_t staticVal) {
         return ShapedType::isDynamic(staticVal);
       });
   if (values.size() != expectedNumDynamicEntries)
@@ -113,7 +113,7 @@ static char getRightDelimiter(AsmParser::Delimiter delimiter) {
 void mlir::printDynamicIndexList(OpAsmPrinter &printer, Operation *op,
                                  OperandRange values,
                                  ArrayRef<int64_t> integers,
-                                 TypeRange valueTypes, ArrayRef<bool> scalables,
+                                 ArrayRef<bool> scalables, TypeRange valueTypes,
                                  AsmParser::Delimiter delimiter) {
   char leftDelimiter = getLeftDelimiter(delimiter);
   char rightDelimiter = getRightDelimiter(delimiter);

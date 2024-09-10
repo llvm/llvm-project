@@ -122,6 +122,7 @@ protected:
   friend class SBTrace;
   friend class lldb_private::python::SWIGBridge;
   friend class lldb_private::lua::SWIGBridge;
+  friend class SBCommandInterpreter;
 
   SBStructuredData(const lldb_private::StructuredDataImpl &impl);
 

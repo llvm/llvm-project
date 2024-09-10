@@ -29,8 +29,10 @@
 #include "clang/Lex/ModuleLoader.h"
 #include "clang/Lex/ModuleMap.h"
 #include "clang/Lex/PPCallbacks.h"
+#include "clang/Lex/PPEmbedParameters.h"
 #include "clang/Lex/Token.h"
 #include "clang/Lex/TokenLexer.h"
+#include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/FoldingSet.h"
@@ -119,6 +121,13 @@ enum MacroUse {
   MU_Undef  = 2
 };
 
+enum class EmbedResult {
+  Invalid = -1, // Parsing error occurred.
+  NotFound = 0, // Corresponds to __STDC_EMBED_NOT_FOUND__
+  Found = 1,    // Corresponds to __STDC_EMBED_FOUND__
+  Empty = 2,    // Corresponds to __STDC_EMBED_EMPTY__
+};
+
 /// Engages in a tight little dance with the lexer to efficiently
 /// preprocess tokens.
 ///
@@ -165,6 +174,7 @@ class Preprocessor {
   IdentifierInfo *Ident__has_builtin;              // __has_builtin
   IdentifierInfo *Ident__has_constexpr_builtin;    // __has_constexpr_builtin
   IdentifierInfo *Ident__has_attribute;            // __has_attribute
+  IdentifierInfo *Ident__has_embed;                // __has_embed
   IdentifierInfo *Ident__has_include;              // __has_include
   IdentifierInfo *Ident__has_include_next;         // __has_include_next
   IdentifierInfo *Ident__has_warning;              // __has_warning
@@ -284,6 +294,13 @@ public:
   /// The kind of translation unit we are processing.
   const TranslationUnitKind TUKind;
 
+  /// Returns a pointer into the given file's buffer that's guaranteed
+  /// to be between tokens. The returned pointer is always before \p Start.
+  /// The maximum distance betweenthe returned pointer and \p Start is
+  /// limited by a constant value, but also an implementation detail.
+  /// If no such check point exists, \c nullptr is returned.
+  const char *getCheckPoint(FileID FID, const char *Start) const;
+
 private:
   /// The code-completion handler.
   CodeCompletionHandler *CodeComplete = nullptr;
@@ -310,6 +327,9 @@ private:
 
   /// The import path for named module that we're currently processing.
   SmallVector<std::pair<IdentifierInfo *, SourceLocation>, 2> NamedModuleImportPath;
+
+  llvm::DenseMap<FileID, SmallVector<const char *>> CheckPoints;
+  unsigned CheckPointCounter = 0;
 
   /// Whether the import is an `@import` or a standard c++ modules import.
   bool IsAtImport = false;
@@ -826,7 +846,7 @@ private:
     ModuleMacroInfo *getModuleInfo(Preprocessor &PP,
                                    const IdentifierInfo *II) const {
       if (II->isOutOfDate())
-        PP.updateOutOfDateIdentifier(const_cast<IdentifierInfo&>(*II));
+        PP.updateOutOfDateIdentifier(*II);
       // FIXME: Find a spare bit on IdentifierInfo and store a
       //        HasModuleMacros flag.
       if (!II->hasMacroDefinition() ||
@@ -1000,7 +1020,7 @@ private:
   llvm::FoldingSet<ModuleMacro> ModuleMacros;
 
   /// The names of potential module macros that we've not yet processed.
-  llvm::SmallVector<const IdentifierInfo *, 32> PendingModuleMacroNames;
+  llvm::SmallVector<IdentifierInfo *, 32> PendingModuleMacroNames;
 
   /// The list of module macros, for each identifier, that are not overridden by
   /// any other module macro.
@@ -1140,6 +1160,11 @@ private:
   /// invoked (at which point the last position is popped).
   std::vector<CachedTokensTy::size_type> BacktrackPositions;
 
+  /// Stack of cached tokens/initial number of cached tokens pairs, allowing
+  /// nested unannotated backtracks.
+  std::vector<std::pair<CachedTokensTy, CachedTokensTy::size_type>>
+      UnannotatedBacktrackTokens;
+
   /// True if \p Preprocessor::SkipExcludedConditionalBlock() is running.
   /// This is used to guard against calling this function recursively.
   ///
@@ -1152,7 +1177,7 @@ private:
   /// skipped.
   llvm::DenseMap<const char *, unsigned> RecordedSkippedRanges;
 
-  void updateOutOfDateIdentifier(IdentifierInfo &II) const;
+  void updateOutOfDateIdentifier(const IdentifierInfo &II) const;
 
 public:
   Preprocessor(std::shared_ptr<PreprocessorOptions> PPOpts,
@@ -1350,7 +1375,7 @@ public:
 
     MacroState &S = CurSubmoduleState->Macros[II];
     auto *MD = S.getLatest();
-    while (MD && isa<VisibilityMacroDirective>(MD))
+    while (isa_and_nonnull<VisibilityMacroDirective>(MD))
       MD = MD->getPrevious();
     return MacroDefinition(dyn_cast_or_null<DefMacroDirective>(MD),
                            S.getActiveModuleMacros(*this, II),
@@ -1422,14 +1447,15 @@ public:
                                MacroDirective *MD);
 
   /// Register an exported macro for a module and identifier.
-  ModuleMacro *addModuleMacro(Module *Mod, IdentifierInfo *II, MacroInfo *Macro,
+  ModuleMacro *addModuleMacro(Module *Mod, IdentifierInfo *II,
+                              MacroInfo *Macro,
                               ArrayRef<ModuleMacro *> Overrides, bool &IsNew);
   ModuleMacro *getModuleMacro(Module *Mod, const IdentifierInfo *II);
 
   /// Get the list of leaf (non-overridden) module macros for a name.
   ArrayRef<ModuleMacro*> getLeafModuleMacros(const IdentifierInfo *II) const {
     if (II->isOutOfDate())
-      updateOutOfDateIdentifier(const_cast<IdentifierInfo&>(*II));
+      updateOutOfDateIdentifier(*II);
     auto I = LeafModuleMacros.find(II);
     if (I != LeafModuleMacros.end())
       return I->second;
@@ -1701,8 +1727,16 @@ public:
   /// at some point after EnableBacktrackAtThisPos. If you don't, caching of
   /// tokens will continue indefinitely.
   ///
-  void EnableBacktrackAtThisPos();
+  /// \param Unannotated Whether token annotations are reverted upon calling
+  /// Backtrack().
+  void EnableBacktrackAtThisPos(bool Unannotated = false);
 
+private:
+  std::pair<CachedTokensTy::size_type, bool> LastBacktrackPos();
+
+  CachedTokensTy PopUnannotatedBacktrackTokens();
+
+public:
   /// Disable the last EnableBacktrackAtThisPos call.
   void CommitBacktrackedTokens();
 
@@ -1714,6 +1748,12 @@ public:
   /// caching of tokens is on.
   bool isBacktrackEnabled() const { return !BacktrackPositions.empty(); }
 
+  /// True if EnableBacktrackAtThisPos() was called and
+  /// caching of unannotated tokens is on.
+  bool isUnannotatedBacktrackEnabled() const {
+    return !UnannotatedBacktrackTokens.empty();
+  }
+
   /// Lex the next token for this preprocessor.
   void Lex(Token &Result);
 
@@ -1722,6 +1762,10 @@ public:
 
   /// Lex a token, forming a header-name token if possible.
   bool LexHeaderName(Token &Result, bool AllowMacroExpansion = true);
+
+  /// Lex the parameters for an #embed directive, returns nullopt on error.
+  std::optional<LexEmbedParametersResult> LexEmbedParameters(Token &Current,
+                                                             bool ForHasEmbed);
 
   bool LexAfterModuleImport(Token &Result);
   void CollectPpImportSuffix(SmallVectorImpl<Token> &Toks);
@@ -1816,8 +1860,9 @@ public:
   void RevertCachedTokens(unsigned N) {
     assert(isBacktrackEnabled() &&
            "Should only be called when tokens are cached for backtracking");
-    assert(signed(CachedLexPos) - signed(N) >= signed(BacktrackPositions.back())
-         && "Should revert tokens up to the last backtrack position, not more");
+    assert(signed(CachedLexPos) - signed(N) >=
+               signed(LastBacktrackPos().first) &&
+           "Should revert tokens up to the last backtrack position, not more");
     assert(signed(CachedLexPos) - signed(N) >= 0 &&
            "Corrupted backtrack positions ?");
     CachedLexPos -= N;
@@ -2094,21 +2139,22 @@ public:
   }
 
   /// Given a Token \p Tok that is a numeric constant with length 1,
-  /// return the character.
-  char
+  /// return the value of constant as an unsigned 8-bit integer.
+  uint8_t
   getSpellingOfSingleCharacterNumericConstant(const Token &Tok,
                                               bool *Invalid = nullptr) const {
-    assert(Tok.is(tok::numeric_constant) &&
+    assert((Tok.is(tok::numeric_constant) || Tok.is(tok::binary_data)) &&
            Tok.getLength() == 1 && "Called on unsupported token");
     assert(!Tok.needsCleaning() && "Token can't need cleaning with length 1");
 
     // If the token is carrying a literal data pointer, just use it.
     if (const char *D = Tok.getLiteralData())
-      return *D;
+      return (Tok.getKind() == tok::binary_data) ? *D : *D - '0';
 
+    assert(Tok.is(tok::numeric_constant) && "binary data with no data");
     // Otherwise, fall back on getCharacterData, which is slower, but always
     // works.
-    return *SourceMgr.getCharacterData(Tok.getLocation(), Invalid);
+    return *SourceMgr.getCharacterData(Tok.getLocation(), Invalid) - '0';
   }
 
   /// Retrieve the name of the immediate macro expansion.
@@ -2303,7 +2349,13 @@ public:
 
   /// Read and discard all tokens remaining on the current line until
   /// the tok::eod token is found. Returns the range of the skipped tokens.
-  SourceRange DiscardUntilEndOfDirective();
+  SourceRange DiscardUntilEndOfDirective() {
+    Token Tmp;
+    return DiscardUntilEndOfDirective(Tmp);
+  }
+
+  /// Same as above except retains the token that was found.
+  SourceRange DiscardUntilEndOfDirective(Token &Tok);
 
   /// Returns true if the preprocessor has seen a use of
   /// __DATE__ or __TIME__ in the file so far.
@@ -2407,6 +2459,18 @@ public:
              ModuleMap::KnownHeader *SuggestedModule, bool *IsMapped,
              bool *IsFrameworkFound, bool SkipCache = false,
              bool OpenFile = true, bool CacheFailures = true);
+
+  /// Given a "Filename" or \<Filename> reference, look up the indicated embed
+  /// resource. \p isAngled indicates whether the file reference is for
+  /// system \#include's or not (i.e. using <> instead of ""). If \p OpenFile
+  /// is true, the file looked up is opened for reading, otherwise it only
+  /// validates that the file exists. Quoted filenames are looked up relative
+  /// to \p LookupFromFile if it is nonnull.
+  ///
+  /// Returns std::nullopt on failure.
+  OptionalFileEntryRef
+  LookupEmbedFile(StringRef Filename, bool isAngled, bool OpenFile,
+                  const FileEntry *LookupFromFile = nullptr);
 
   /// Return true if we're in the top-level file, not in a \#include.
   bool isInPrimaryFile() const;
@@ -2513,6 +2577,9 @@ private:
   /// Information about the result for evaluating an expression for a
   /// preprocessor directive.
   struct DirectiveEvalResult {
+    /// The integral value of the expression.
+    std::optional<llvm::APSInt> Value;
+
     /// Whether the expression was evaluated as true or not.
     bool Conditional;
 
@@ -2527,7 +2594,25 @@ private:
   /// \#if or \#elif directive and return a \p DirectiveEvalResult object.
   ///
   /// If the expression is equivalent to "!defined(X)" return X in IfNDefMacro.
-  DirectiveEvalResult EvaluateDirectiveExpression(IdentifierInfo *&IfNDefMacro);
+  DirectiveEvalResult EvaluateDirectiveExpression(IdentifierInfo *&IfNDefMacro,
+                                                  bool CheckForEoD = true);
+
+  /// Evaluate an integer constant expression that may occur after a
+  /// \#if or \#elif directive and return a \p DirectiveEvalResult object.
+  ///
+  /// If the expression is equivalent to "!defined(X)" return X in IfNDefMacro.
+  /// \p EvaluatedDefined will contain the result of whether "defined" appeared
+  /// in the evaluated expression or not.
+  DirectiveEvalResult EvaluateDirectiveExpression(IdentifierInfo *&IfNDefMacro,
+                                                  Token &Tok,
+                                                  bool &EvaluatedDefined,
+                                                  bool CheckForEoD = true);
+
+  /// Process a '__has_embed("path" [, ...])' expression.
+  ///
+  /// Returns predefined `__STDC_EMBED_*` macro values if
+  /// successful.
+  EmbedResult EvaluateHasEmbed(Token &Tok, IdentifierInfo *II);
 
   /// Process a '__has_include("path")' expression.
   ///
@@ -2675,6 +2760,12 @@ private:
       const FileEntry *LookupFromFile, StringRef &LookupFilename,
       SmallVectorImpl<char> &RelativePath, SmallVectorImpl<char> &SearchPath,
       ModuleMap::KnownHeader &SuggestedModule, bool isAngled);
+  // Binary data inclusion
+  void HandleEmbedDirective(SourceLocation HashLoc, Token &Tok,
+                            const FileEntry *LookupFromFile = nullptr);
+  void HandleEmbedDirectiveImpl(SourceLocation HashLoc,
+                                const LexEmbedParametersResult &Params,
+                                StringRef BinaryContents);
 
   // File inclusion.
   void HandleIncludeDirective(SourceLocation HashLoc, Token &Tok,
@@ -2828,13 +2919,22 @@ public:
     return AnnotationInfos.find(II)->second;
   }
 
-  void emitMacroExpansionWarnings(const Token &Identifier) const {
-    if (Identifier.getIdentifierInfo()->isDeprecatedMacro())
+  void emitMacroExpansionWarnings(const Token &Identifier,
+                                  bool IsIfnDef = false) const {
+    IdentifierInfo *Info = Identifier.getIdentifierInfo();
+    if (Info->isDeprecatedMacro())
       emitMacroDeprecationWarning(Identifier);
 
-    if (Identifier.getIdentifierInfo()->isRestrictExpansion() &&
+    if (Info->isRestrictExpansion() &&
         !SourceMgr.isInMainFile(Identifier.getLocation()))
       emitRestrictExpansionWarning(Identifier);
+
+    if (!IsIfnDef) {
+      if (Info->getName() == "INFINITY" && getLangOpts().NoHonorInfs)
+        emitRestrictInfNaNWarning(Identifier, 0);
+      if (Info->getName() == "NAN" && getLangOpts().NoHonorNaNs)
+        emitRestrictInfNaNWarning(Identifier, 1);
+    }
   }
 
   static void processPathForFileMacro(SmallVectorImpl<char> &Path,
@@ -2850,6 +2950,8 @@ private:
   void emitMacroDeprecationWarning(const Token &Identifier) const;
   void emitRestrictExpansionWarning(const Token &Identifier) const;
   void emitFinalMacroWarning(const Token &Identifier, bool IsUndef) const;
+  void emitRestrictInfNaNWarning(const Token &Identifier,
+                                 unsigned DiagSelection) const;
 
   /// This boolean state keeps track if the current scanned token (by this PP)
   /// is in an "-Wunsafe-buffer-usage" opt-out region. Assuming PP scans a
@@ -2861,11 +2963,41 @@ private:
   /// otherwise.
   SourceLocation CurrentSafeBufferOptOutStart; // It is used to report the start location of an never-closed region.
 
-  // An ordered sequence of "-Wunsafe-buffer-usage" opt-out regions in one
-  // translation unit. Each region is represented by a pair of start and end
-  // locations.  A region is "open" if its' start and end locations are
-  // identical.
-  SmallVector<std::pair<SourceLocation, SourceLocation>, 8> SafeBufferOptOutMap;
+  using SafeBufferOptOutRegionsTy =
+      SmallVector<std::pair<SourceLocation, SourceLocation>, 16>;
+  // An ordered sequence of "-Wunsafe-buffer-usage" opt-out regions in this
+  // translation unit. Each region is represented by a pair of start and
+  // end locations.
+  SafeBufferOptOutRegionsTy SafeBufferOptOutMap;
+
+  // The "-Wunsafe-buffer-usage" opt-out regions in loaded ASTs.  We use the
+  // following structure to manage them by their ASTs.
+  struct {
+    // A map from unique IDs to region maps of loaded ASTs.  The ID identifies a
+    // loaded AST. See `SourceManager::getUniqueLoadedASTID`.
+    llvm::DenseMap<FileID, SafeBufferOptOutRegionsTy> LoadedRegions;
+
+    // Returns a reference to the safe buffer opt-out regions of the loaded
+    // AST where `Loc` belongs to. (Construct if absent)
+    SafeBufferOptOutRegionsTy &
+    findAndConsLoadedOptOutMap(SourceLocation Loc, SourceManager &SrcMgr) {
+      return LoadedRegions[SrcMgr.getUniqueLoadedASTFileID(Loc)];
+    }
+
+    // Returns a reference to the safe buffer opt-out regions of the loaded
+    // AST where `Loc` belongs to. (This const function returns nullptr if
+    // absent.)
+    const SafeBufferOptOutRegionsTy *
+    lookupLoadedOptOutMap(SourceLocation Loc,
+                          const SourceManager &SrcMgr) const {
+      FileID FID = SrcMgr.getUniqueLoadedASTFileID(Loc);
+      auto Iter = LoadedRegions.find(FID);
+
+      if (Iter == LoadedRegions.end())
+        return nullptr;
+      return &Iter->getSecond();
+    }
+  } LoadedSafeBufferOptOutMap;
 
 public:
   /// \return true iff the given `Loc` is in a "-Wunsafe-buffer-usage" opt-out
@@ -2895,6 +3027,18 @@ public:
   /// \return true iff this PP is currently in a "-Wunsafe-buffer-usage"
   ///          opt-out region
   bool isPPInSafeBufferOptOutRegion(SourceLocation &StartLoc);
+
+  /// \return a sequence of SourceLocations representing ordered opt-out regions
+  /// specified by
+  /// `\#pragma clang unsafe_buffer_usage begin/end`s of this translation unit.
+  SmallVector<SourceLocation, 64> serializeSafeBufferOptOutMap() const;
+
+  /// \param SrcLocSeqs a sequence of SourceLocations deserialized from a
+  /// record of code `PP_UNSAFE_BUFFER_USAGE`.
+  /// \return true iff the `Preprocessor` has been updated; false `Preprocessor`
+  /// is same as itself before the call.
+  bool setDeserializedSafeBufferOptOutMap(
+      const SmallVectorImpl<SourceLocation> &SrcLocSeqs);
 
 private:
   /// Helper functions to forward lexing to the actual lexer. They all share the
@@ -2936,6 +3080,12 @@ public:
 
   // The handler handles empty lines.
   virtual void HandleEmptyline(SourceRange Range) = 0;
+};
+
+/// Helper class to shuttle information about #embed directives from the
+/// preprocessor to the parser through an annotation token.
+struct EmbedAnnotationData {
+  StringRef BinaryData;
 };
 
 /// Registry of pragma handlers added by plugins

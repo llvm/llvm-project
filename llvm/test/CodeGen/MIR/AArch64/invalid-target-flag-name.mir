@@ -7,7 +7,7 @@
 
   define i32 @sub_small() {
   entry:
-    %val32 = load i32, i32* @var_i32
+    %val32 = load i32, ptr @var_i32
     ret i32 %val32
   }
 

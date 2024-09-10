@@ -1,4 +1,7 @@
 SECTIONS {
+  .interp : { *(.interp) }
+
+  . = ALIGN(CONSTANT(MAXPAGESIZE));
   .fini_array    :
   {
     PROVIDE_HIDDEN (__fini_array_start = .);

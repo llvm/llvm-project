@@ -1,0 +1,39 @@
+## Test that note values are interpreted correctly for files with multiple sections.
+
+## Check NT_PRSTATUS + NT_PRPSINFO.
+# RUN: yaml2obj %s -DTYPE1=0x1 -DTYPE2=0x3 -o %t1.o
+# RUN: llvm-readelf --elf-output-style=JSON --pretty-print --notes %t1.o | FileCheck %s --check-prefix=CHECK-JSON  -DDESC1="NT_PRSTATUS (prstatus structure)" -DDESC2="NT_PRPSINFO (prpsinfo structure)"
+# CHECK-JSON:       "Size": 40,
+# CHECK-JSON-NEXT:  "Notes": [
+# CHECK-JSON-NEXT:  {
+# CHECK-JSON-NEXT:   "Owner": "CORE",
+# CHECK-JSON-NEXT:   "Data size": 0,
+# CHECK-JSON-NEXT:   "Type": "[[DESC1]]"
+# CHECK-JSON-NEXT:  },
+# CHECK-JSON-NEXT:  {
+# CHECK-JSON-NEXT:   "Owner": "CORE",
+# CHECK-JSON-NEXT:   "Data size": 0,
+# CHECK-JSON-NEXT:   "Type": "[[DESC2]]"
+# CHECK-JSON-NEXT:  }
+# CHECK-JSON-NEXT:  ]
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_CORE
+Sections:
+  - Name: .note.first
+    Type: SHT_NOTE
+    Notes:
+      - Name: CORE
+        Type: [[TYPE1]]
+  - Name: .note.second
+    Type: SHT_NOTE
+    Notes:
+      - Name: CORE
+        Type: [[TYPE2]]
+ProgramHeaders:
+  - Type:     PT_NOTE
+    FirstSec: .note.first
+    LastSec:  .note.second

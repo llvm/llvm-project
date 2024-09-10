@@ -6,13 +6,13 @@
   target datalayout = "e-m:m-p:32:32-i8:8:32-i16:16:32-i64:64-n32-S64"
   target triple = "mipsel-pc-linux-gnu"
 
-  declare void @llvm.memcpy.inline.p0i8.p0i8.i64(i8* noalias nocapture writeonly, i8* noalias nocapture readonly, i64 immarg, i1 immarg) #0
+  declare void @llvm.memcpy.inline.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64 immarg, i1 immarg) #0
 
-  define void @test_memcpy_inline(i32* nocapture %dst, i32* nocapture readonly %src) local_unnamed_addr {
+  define void @test_memcpy_inline(ptr nocapture %dst, ptr nocapture readonly %src) local_unnamed_addr {
   entry:
-    %0 = bitcast i32* %dst to i8*
-    %1 = bitcast i32* %src to i8*
-    tail call void @llvm.memcpy.inline.p0i8.p0i8.i64(i8* align 4 %0, i8* align 4 %1, i64 2, i1 false)
+    %0 = bitcast ptr %dst to ptr
+    %1 = bitcast ptr %src to ptr
+    tail call void @llvm.memcpy.inline.p0.p0.i64(ptr align 4 %0, ptr align 4 %1, i64 2, i1 false)
     ret void
   }
 

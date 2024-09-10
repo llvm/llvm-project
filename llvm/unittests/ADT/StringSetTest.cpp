@@ -73,4 +73,12 @@ TEST_F(StringSetTest, Contains) {
   EXPECT_FALSE(Set.contains("test"));
 }
 
+TEST_F(StringSetTest, Equal) {
+  StringSet<> A = {"A"};
+  StringSet<> B = {"B"};
+  ASSERT_TRUE(A != B);
+  ASSERT_FALSE(A == B);
+  ASSERT_TRUE(A == A);
+}
+
 } // end anonymous namespace

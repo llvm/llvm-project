@@ -81,10 +81,8 @@ public:
   bool GetProcessInfo(ProcessInstanceInfo &info) override;
 
   Status WillResume() override {
-    Status error;
-    error.SetErrorStringWithFormatv(
+    return Status::FromErrorStringWithFormatv(
         "error: {0} does not support resuming processes", GetPluginName());
-    return error;
   }
 
   std::optional<MinidumpParser> m_minidump_parser;
@@ -107,7 +105,6 @@ protected:
   JITLoaderList &GetJITLoaders() override;
 
 private:
-  FileSpec m_core_file;
   lldb::DataBufferSP m_core_data;
   llvm::ArrayRef<minidump::Thread> m_thread_list;
   const minidump::ExceptionStream *m_active_exception;

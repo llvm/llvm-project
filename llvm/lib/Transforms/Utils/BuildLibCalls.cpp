@@ -19,6 +19,7 @@
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
@@ -48,12 +49,30 @@ STATISTIC(NumNoAlias, "Number of function returns inferred as noalias");
 STATISTIC(NumNoUndef, "Number of function returns inferred as noundef returns");
 STATISTIC(NumReturnedArg, "Number of arguments inferred as returned");
 STATISTIC(NumWillReturn, "Number of functions inferred as willreturn");
+STATISTIC(NumCold, "Number of functions inferred as cold");
+STATISTIC(NumNoReturn, "Number of functions inferred as no return");
 
 static bool setDoesNotAccessMemory(Function &F) {
   if (F.doesNotAccessMemory())
     return false;
   F.setDoesNotAccessMemory();
   ++NumReadNone;
+  return true;
+}
+
+static bool setIsCold(Function &F) {
+  if (F.hasFnAttribute(Attribute::Cold))
+    return false;
+  F.addFnAttr(Attribute::Cold);
+  ++NumCold;
+  return true;
+}
+
+static bool setNoReturn(Function &F) {
+  if (F.hasFnAttribute(Attribute::NoReturn))
+    return false;
+  F.addFnAttr(Attribute::NoReturn);
+  ++NumNoReturn;
   return true;
 }
 
@@ -270,6 +289,9 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
     Changed |= setNonLazyBind(F);
 
   switch (TheLibFunc) {
+  case LibFunc_nan:
+  case LibFunc_nanf:
+  case LibFunc_nanl:
   case LibFunc_strlen:
   case LibFunc_strnlen:
   case LibFunc_wcslen:
@@ -1087,6 +1109,18 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
     Changed |= setOnlyWritesMemory(F, 0);
     Changed |= setDoesNotThrow(F);
     break;
+  case LibFunc_abort:
+    Changed |= setIsCold(F);
+    break;
+  case LibFunc_terminate:
+    Changed |= setIsCold(F);
+    Changed |= setNoReturn(F);
+    break;
+  case LibFunc_cxa_throw:
+    Changed |= setIsCold(F);
+    Changed |= setNoReturn(F);
+    // Don't add `nofree` on `__cxa_throw`
+    return Changed;
   // int __nvvm_reflect(const char *)
   case LibFunc_nvvm_reflect:
     Changed |= setRetAndArgsNoUndef(F);
@@ -1098,6 +1132,11 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_ldexpl:
     Changed |= setWillReturn(F);
     break;
+  case LibFunc_remquo:
+  case LibFunc_remquof:
+  case LibFunc_remquol:
+    Changed |= setDoesNotCapture(F, 2);
+    [[fallthrough]];
   case LibFunc_abs:
   case LibFunc_acos:
   case LibFunc_acosf:
@@ -1137,6 +1176,9 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_cosl:
   case LibFunc_cospi:
   case LibFunc_cospif:
+  case LibFunc_erf:
+  case LibFunc_erff:
+  case LibFunc_erfl:
   case LibFunc_exp:
   case LibFunc_expf:
   case LibFunc_expl:
@@ -1192,6 +1234,9 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_pow:
   case LibFunc_powf:
   case LibFunc_powl:
+  case LibFunc_remainder:
+  case LibFunc_remainderf:
+  case LibFunc_remainderl:
   case LibFunc_rint:
   case LibFunc_rintf:
   case LibFunc_rintl:
@@ -1252,7 +1297,7 @@ static void setRetExtAttr(Function &F,
 }
 
 // Modeled after X86TargetLowering::markLibCallAttributes.
-static void markRegisterParameterAttributes(Function *F) {
+void llvm::markRegisterParameterAttributes(Function *F) {
   if (!F->arg_size() || F->isVarArg())
     return;
 
@@ -1932,6 +1977,56 @@ Value *llvm::emitCalloc(Value *Num, Value *Size, IRBuilderBase &B,
 
   if (const auto *F =
           dyn_cast<Function>(Calloc.getCallee()->stripPointerCasts()))
+    CI->setCallingConv(F->getCallingConv());
+
+  return CI;
+}
+
+Value *llvm::emitHotColdSizeReturningNew(Value *Num, IRBuilderBase &B,
+                                         const TargetLibraryInfo *TLI,
+                                         LibFunc SizeFeedbackNewFunc,
+                                         uint8_t HotCold) {
+  Module *M = B.GetInsertBlock()->getModule();
+  if (!isLibFuncEmittable(M, TLI, SizeFeedbackNewFunc))
+    return nullptr;
+
+  StringRef Name = TLI->getName(SizeFeedbackNewFunc);
+
+  // __sized_ptr_t struct return type { void*, size_t }
+  StructType *SizedPtrT =
+      StructType::get(M->getContext(), {B.getPtrTy(), Num->getType()});
+  FunctionCallee Func =
+      M->getOrInsertFunction(Name, SizedPtrT, Num->getType(), B.getInt8Ty());
+  inferNonMandatoryLibFuncAttrs(M, Name, *TLI);
+  CallInst *CI = B.CreateCall(Func, {Num, B.getInt8(HotCold)}, "sized_ptr");
+
+  if (const Function *F = dyn_cast<Function>(Func.getCallee()))
+    CI->setCallingConv(F->getCallingConv());
+
+  return CI;
+}
+
+Value *llvm::emitHotColdSizeReturningNewAligned(Value *Num, Value *Align,
+                                                IRBuilderBase &B,
+                                                const TargetLibraryInfo *TLI,
+                                                LibFunc SizeFeedbackNewFunc,
+                                                uint8_t HotCold) {
+  Module *M = B.GetInsertBlock()->getModule();
+  if (!isLibFuncEmittable(M, TLI, SizeFeedbackNewFunc))
+    return nullptr;
+
+  StringRef Name = TLI->getName(SizeFeedbackNewFunc);
+
+  // __sized_ptr_t struct return type { void*, size_t }
+  StructType *SizedPtrT =
+      StructType::get(M->getContext(), {B.getPtrTy(), Num->getType()});
+  FunctionCallee Func = M->getOrInsertFunction(Name, SizedPtrT, Num->getType(),
+                                               Align->getType(), B.getInt8Ty());
+  inferNonMandatoryLibFuncAttrs(M, Name, *TLI);
+  CallInst *CI =
+      B.CreateCall(Func, {Num, Align, B.getInt8(HotCold)}, "sized_ptr");
+
+  if (const Function *F = dyn_cast<Function>(Func.getCallee()))
     CI->setCallingConv(F->getCallingConv());
 
   return CI;

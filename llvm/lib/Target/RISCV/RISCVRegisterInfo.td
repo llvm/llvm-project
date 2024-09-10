@@ -64,9 +64,14 @@ def sub_vrm1_6 : ComposedSubRegIndex<sub_vrm2_3, sub_vrm1_0>;
 def sub_vrm1_7 : ComposedSubRegIndex<sub_vrm2_3, sub_vrm1_1>;
 
 // GPR sizes change with HwMode.
-// FIXME: Support HwMode in SubRegIndex?
-def sub_gpr_even : SubRegIndex<-1>;
-def sub_gpr_odd  : SubRegIndex<-1, -1>;
+def sub_gpr_even : SubRegIndex<32> {
+  let SubRegRanges = SubRegRangeByHwMode<[RV32, RV64],
+                                         [SubRegRange<32>, SubRegRange<64>]>;
+}
+def sub_gpr_odd  : SubRegIndex<32, 32> {
+  let SubRegRanges = SubRegRangeByHwMode<[RV32, RV64],
+                                         [SubRegRange<32, 32>, SubRegRange<64, 64>]>;
+}
 } // Namespace = "RISCV"
 
 // Integer registers
@@ -127,8 +132,21 @@ def XLenRI : RegInfoByHwMode<
       [RV32,              RV64],
       [RegInfo<32,32,32>, RegInfo<64,64,64>]>;
 
+class RISCVRegisterClass<list<ValueType> regTypes, int align, dag regList>
+    : RegisterClass<"RISCV", regTypes, align, regList> {
+  bit IsVRegClass = 0;
+  int VLMul = 1;
+  int NF = 1;
+
+  let Size = !if(IsVRegClass, !mul(VLMul, NF, 64), 0);
+
+  let TSFlags{0} = IsVRegClass;
+  let TSFlags{3-1} = !logtwo(VLMul);
+  let TSFlags{6-4} = !sub(NF, 1);
+}
+
 class GPRRegisterClass<dag regList>
-    : RegisterClass<"RISCV", [XLenVT, XLenFVT, i32], 32, regList> {
+    : RISCVRegisterClass<[XLenVT, XLenFVT, i32], 32, regList> {
   let RegInfos = XLenRI;
 }
 
@@ -149,11 +167,15 @@ def GPRNoX0 : GPRRegisterClass<(sub GPR, X0)>;
 
 def GPRNoX0X2 : GPRRegisterClass<(sub GPR, X0, X2)>;
 
+def GPRX7 : GPRRegisterClass<(add X7)>;
+
 // Don't use X1 or X5 for JALR since that is a hint to pop the return address
 // stack on some microarchitectures. Also remove the reserved registers X0, X2,
 // X3, and X4 as it reduces the number of register classes that get synthesized
 // by tablegen.
 def GPRJALR : GPRRegisterClass<(sub GPR, (sequence "X%u", 0, 5))>;
+
+def GPRJALRNonX7 : GPRRegisterClass<(sub GPRJALR, X7)>;
 
 def GPRC : GPRRegisterClass<(add (sequence "X%u", 10, 15),
                                  (sequence "X%u", 8, 9))>;
@@ -165,6 +187,7 @@ def GPRC : GPRRegisterClass<(add (sequence "X%u", 10, 15),
 def GPRTC : GPRRegisterClass<(add (sequence "X%u", 6, 7),
                                   (sequence "X%u", 10, 17),
                                   (sequence "X%u", 28, 31))>;
+def GPRTCNonX7 : GPRRegisterClass<(sub GPRTC, X7)>;
 
 def SP : GPRRegisterClass<(add X2)>;
 
@@ -211,12 +234,12 @@ let RegAltNameIndices = [ABIRegAltName] in {
 
   foreach Index = 0-31 in {
     def F#Index#_F : RISCVReg32<!cast<RISCVReg16>("F"#Index#"_H")>,
-      DwarfRegNum<[!add(Index, 32)]>;
+      DwarfRegAlias<!cast<Register>("F"#Index#"_H")>;
   }
 
   foreach Index = 0-31 in {
     def F#Index#_D : RISCVReg64<!cast<RISCVReg32>("F"#Index#"_F")>,
-      DwarfRegNum<[!add(Index, 32)]>;
+      DwarfRegAlias<!cast<Register>("F"#Index#"_H")>;
   }
 }
 
@@ -224,7 +247,7 @@ let RegAltNameIndices = [ABIRegAltName] in {
 // meaning caller-save regs are listed before callee-save.
 // We start by allocating argument registers in reverse order since they are
 // compressible.
-def FPR16 : RegisterClass<"RISCV", [f16, bf16], 16, (add
+def FPR16 : RISCVRegisterClass<[f16, bf16], 16, (add
     (sequence "F%u_H", 15, 10), // fa5-fa0
     (sequence "F%u_H", 0, 7),   // ft0-f7
     (sequence "F%u_H", 16, 17), // fa6-fa7
@@ -233,7 +256,7 @@ def FPR16 : RegisterClass<"RISCV", [f16, bf16], 16, (add
     (sequence "F%u_H", 18, 27)  // fs2-fs11
 )>;
 
-def FPR32 : RegisterClass<"RISCV", [f32], 32, (add
+def FPR32 : RISCVRegisterClass<[f32], 32, (add
     (sequence "F%u_F", 15, 10),
     (sequence "F%u_F", 0, 7),
     (sequence "F%u_F", 16, 17),
@@ -242,14 +265,14 @@ def FPR32 : RegisterClass<"RISCV", [f32], 32, (add
     (sequence "F%u_F", 18, 27)
 )>;
 
-def FPR32C : RegisterClass<"RISCV", [f32], 32, (add
+def FPR32C : RISCVRegisterClass<[f32], 32, (add
   (sequence "F%u_F", 15, 10),
   (sequence "F%u_F", 8, 9)
 )>;
 
 // The order of registers represents the preferred allocation sequence,
 // meaning caller-save regs are listed before callee-save.
-def FPR64 : RegisterClass<"RISCV", [f64], 64, (add
+def FPR64 : RISCVRegisterClass<[f64], 64, (add
     (sequence "F%u_D", 15, 10),
     (sequence "F%u_D", 0, 7),
     (sequence "F%u_D", 16, 17),
@@ -258,7 +281,7 @@ def FPR64 : RegisterClass<"RISCV", [f64], 64, (add
     (sequence "F%u_D", 18, 27)
 )>;
 
-def FPR64C : RegisterClass<"RISCV", [f64], 64, (add
+def FPR64C : RISCVRegisterClass<[f64], 64, (add
   (sequence "F%u_D", 15, 10),
   (sequence "F%u_D", 8, 9)
 )>;
@@ -400,10 +423,12 @@ class IndexSet<int tuple_index, int nf, int lmul, bit isV0 = false> {
 
 // This class returns a list of vector register collections.
 // For example, for NF = 2 and LMUL = 4,
-// it will return
+// L would be:
 //   ([ V8M4, V12M4, V16M4, V20M4, V24M4, V4M4],
 //    [V12M4, V16M4, V20M4, V24M4, V28M4, V8M4])
-//
+// Names are the starting register of each register list,
+// in this example:
+//   ["v8", "v12", "v16", "v20", "v24", "v4"]
 class VRegList<list<dag> LIn, int start, int nf, int lmul, bit isV0> {
   list<dag> L =
     !if(!ge(start, nf),
@@ -417,6 +442,9 @@ class VRegList<list<dag> LIn, int start, int nf, int lmul, bit isV0> {
                 !listsplat("",
                   !size(IndexSet<start, nf, lmul, isV0>.R)))],
           VRegList<LIn, !add(start, 1), nf, lmul, isV0>.L));
+  list<string> Names =
+    !if(!ge(start, nf), [],
+        !foreach(i, IndexSet<start, nf, lmul, isV0>.R, "v" # i));
 }
 
 // Vector registers
@@ -459,8 +487,8 @@ let isConstant = true in
 def VLENB  : RISCVReg<0, "vlenb">,
              DwarfRegNum<[!add(4096, SysRegVLENB.Encoding)]>;
 
-def VCSR : RegisterClass<"RISCV", [XLenVT], 32,
-                          (add VTYPE, VL, VLENB)> {
+def VCSR : RISCVRegisterClass<[XLenVT], 32,
+                              (add VTYPE, VL, VLENB)> {
   let RegInfos = XLenRI;
   let isAllocatable = 0;
 }
@@ -468,22 +496,25 @@ def VCSR : RegisterClass<"RISCV", [XLenVT], 32,
 
 foreach m = [1, 2, 4] in {
   foreach n = NFList<m>.L in {
+    defvar RegListWOV0 = VRegList<[], 0, n, m, false>;
+    defvar RegListWV0 = VRegList<[], 0, n, m, true>;
     def "VN" # n # "M" # m # "NoV0": RegisterTuples<
                                        SubRegSet<n, m>.L,
-                                       VRegList<[], 0, n, m, false>.L>;
+                                       RegListWOV0.L,
+                                       RegListWOV0.Names>;
     def "VN" # n # "M" # m # "V0" : RegisterTuples<
                                        SubRegSet<n, m>.L,
-                                       VRegList<[], 0, n, m, true>.L>;
+                                       RegListWV0.L,
+                                       RegListWV0.Names>;
   }
 }
 
 class VReg<list<ValueType> regTypes, dag regList, int Vlmul>
-  : RegisterClass<"RISCV",
-                  regTypes,
-                  64, // The maximum supported ELEN is 64.
-                  regList> {
-  int VLMul = Vlmul;
-  int Size = !mul(Vlmul, 64);
+    : RISCVRegisterClass<regTypes,
+                         64, // The maximum supported ELEN is 64.
+                         regList> {
+  let IsVRegClass = 1;
+  let VLMul = Vlmul;
 }
 
 defvar VMaskVTs = [vbool1_t, vbool2_t, vbool4_t, vbool8_t, vbool16_t,
@@ -508,37 +539,35 @@ defvar VM8VTs = [vint8m8_t, vint16m8_t, vint32m8_t, vint64m8_t,
                  vfloat16m8_t, vbfloat16m8_t,
                  vfloat32m8_t, vfloat64m8_t];
 
+// We reverse the order of last 8 registers so that we don't needlessly prevent
+// allocation of higher lmul register groups while still putting v0 last in the
+// allocation order.
+
 def VR : VReg<!listconcat(VM1VTs, VMaskVTs),
               (add (sequence "V%u", 8, 31),
-                   (sequence "V%u", 0, 7)), 1>;
+                   (sequence "V%u", 7, 0)), 1>;
 
-def VRNoV0 : VReg<!listconcat(VM1VTs, VMaskVTs),
-                  (add (sequence "V%u", 8, 31),
-                       (sequence "V%u", 1, 7)), 1>;
+def VRNoV0 : VReg<!listconcat(VM1VTs, VMaskVTs), (sub VR, V0), 1>;
 
 def VRM2 : VReg<VM2VTs, (add (sequence "V%uM2", 8, 31, 2),
-                             (sequence "V%uM2", 0, 7, 2)), 2>;
+                             (sequence "V%uM2", 6, 0, 2)), 2>;
 
-def VRM2NoV0 : VReg<VM2VTs, (add (sequence "V%uM2", 8, 31, 2),
-                                 (sequence "V%uM2", 2, 7, 2)), 2>;
+def VRM2NoV0 : VReg<VM2VTs, (sub VRM2, V0M2), 2>;
 
-def VRM4 : VReg<VM4VTs,
-             (add V8M4, V12M4, V16M4, V20M4, V24M4, V28M4, V0M4, V4M4), 4>;
+def VRM4 : VReg<VM4VTs, (add V8M4, V12M4, V16M4, V20M4,
+                             V24M4, V28M4, V4M4, V0M4), 4>;
 
-def VRM4NoV0 : VReg<VM4VTs,
-             (add V8M4, V12M4, V16M4, V20M4, V24M4, V28M4, V4M4), 4>;
+def VRM4NoV0 : VReg<VM4VTs, (sub VRM4, V0M4), 4>;
 
 def VRM8 : VReg<VM8VTs, (add V8M8, V16M8, V24M8, V0M8), 8>;
 
-def VRM8NoV0 : VReg<VM8VTs, (add V8M8, V16M8, V24M8), 8>;
+def VRM8NoV0 : VReg<VM8VTs, (sub VRM8, V0M8), 8>;
 
-def VMV0 : RegisterClass<"RISCV", VMaskVTs, 64, (add V0)> {
-  let Size = 64;
-}
+def VMV0 : VReg<VMaskVTs, (add V0), 1>;
 
 let RegInfos = XLenRI in {
-def GPRF16  : RegisterClass<"RISCV", [f16], 16, (add GPR)>;
-def GPRF32  : RegisterClass<"RISCV", [f32], 32, (add GPR)>;
+def GPRF16  : RISCVRegisterClass<[f16], 16, (add GPR)>;
+def GPRF32  : RISCVRegisterClass<[f32], 32, (add GPR)>;
 } // RegInfos = XLenRI
 
 // Dummy zero register for use in the register pair containing X0 (as X1 is
@@ -573,9 +602,9 @@ let RegAltNameIndices = [ABIRegAltName] in {
 }
 
 let RegInfos = RegInfoByHwMode<[RV32, RV64],
-                               [RegInfo<64, 64, 64>, RegInfo<128, 128, 128>]>,
+                               [RegInfo<64, 64, 32>, RegInfo<128, 128, 64>]>,
     DecoderMethod = "DecodeGPRPairRegisterClass" in
-def GPRPair : RegisterClass<"RISCV", [XLenPairFVT], 64, (add
+def GPRPair : RISCVRegisterClass<[XLenPairFVT], 64, (add
     X10_X11, X12_X13, X14_X15, X16_X17,
     X6_X7,
     X28_X29, X30_X31,
@@ -585,19 +614,46 @@ def GPRPair : RegisterClass<"RISCV", [XLenPairFVT], 64, (add
 )>;
 
 // The register class is added for inline assembly for vector mask types.
-def VM : VReg<VMaskVTs,
-           (add (sequence "V%u", 8, 31),
-                (sequence "V%u", 0, 7)), 1>;
+def VM : VReg<VMaskVTs, (add VR), 1>;
+
+defvar VTupM1N2VTs = [riscv_nxv8i8x2, riscv_nxv4i8x2, riscv_nxv2i8x2, riscv_nxv1i8x2];
+defvar VTupM1N3VTs = [riscv_nxv8i8x3, riscv_nxv4i8x3, riscv_nxv2i8x3, riscv_nxv1i8x3];
+defvar VTupM1N4VTs = [riscv_nxv8i8x4, riscv_nxv4i8x4, riscv_nxv2i8x4, riscv_nxv1i8x4];
+defvar VTupM1N5VTs = [riscv_nxv8i8x5, riscv_nxv4i8x5, riscv_nxv2i8x5, riscv_nxv1i8x5];
+defvar VTupM1N6VTs = [riscv_nxv8i8x6, riscv_nxv4i8x6, riscv_nxv2i8x6, riscv_nxv1i8x6];
+defvar VTupM1N7VTs = [riscv_nxv8i8x7, riscv_nxv4i8x7, riscv_nxv2i8x7, riscv_nxv1i8x7];
+defvar VTupM1N8VTs = [riscv_nxv8i8x8, riscv_nxv4i8x8, riscv_nxv2i8x8, riscv_nxv1i8x8];
+defvar VTupM2N2VTs = [riscv_nxv16i8x2];
+defvar VTupM2N3VTs = [riscv_nxv16i8x3];
+defvar VTupM2N4VTs = [riscv_nxv16i8x4];
+defvar VTupM4N2VTs = [riscv_nxv32i8x2];
+class VTupRegList<int LMUL, int NF> {
+  list<ValueType> L = !cond(!and(!eq(LMUL, 1), !eq(NF, 2)): VTupM1N2VTs,
+                            !and(!eq(LMUL, 1), !eq(NF, 3)): VTupM1N3VTs,
+                            !and(!eq(LMUL, 1), !eq(NF, 4)): VTupM1N4VTs,
+                            !and(!eq(LMUL, 1), !eq(NF, 5)): VTupM1N5VTs,
+                            !and(!eq(LMUL, 1), !eq(NF, 6)): VTupM1N6VTs,
+                            !and(!eq(LMUL, 1), !eq(NF, 7)): VTupM1N7VTs,
+                            !and(!eq(LMUL, 1), !eq(NF, 8)): VTupM1N8VTs,
+                            !and(!eq(LMUL, 2), !eq(NF, 2)): VTupM2N2VTs,
+                            !and(!eq(LMUL, 2), !eq(NF, 3)): VTupM2N3VTs,
+                            !and(!eq(LMUL, 2), !eq(NF, 4)): VTupM2N4VTs,
+                            !and(!eq(LMUL, 4), !eq(NF, 2)): VTupM4N2VTs);
+}
 
 foreach m = LMULList in {
   foreach nf = NFList<m>.L in {
-    def "VRN" # nf # "M" # m # "NoV0": VReg<[untyped],
-                               (add !cast<RegisterTuples>("VN" # nf # "M" # m # "NoV0")),
-                                    !mul(nf, m)>;
-    def "VRN" # nf # "M" # m: VReg<[untyped],
-                               (add !cast<RegisterTuples>("VN" # nf # "M" # m # "NoV0"),
-                                    !cast<RegisterTuples>("VN" # nf # "M" # m # "V0")),
-                                    !mul(nf, m)>;
+    let NF = nf in {
+      def "VRN" # nf # "M" # m # "NoV0"
+        : VReg<VTupRegList<m, nf>.L,
+               (add !cast<RegisterTuples>("VN" # nf # "M" # m # "NoV0")),
+               m>;
+      def "VRN" # nf # "M" # m
+        : VReg<VTupRegList<m, nf>.L,
+               (add !cast<RegisterTuples>("VN" # nf # "M" # m # "NoV0"),
+                    !cast<RegisterTuples>("VN" # nf # "M" # m # "V0")),
+               m>;
+    }
   }
 }
 
@@ -607,3 +663,6 @@ def FRM    : RISCVReg<0, "frm">;
 
 // Shadow Stack register
 def SSP    : RISCVReg<0, "ssp">;
+
+// Dummy SiFive VCIX state register
+def SF_VCIX_STATE : RISCVReg<0, "sf.vcix_state">;

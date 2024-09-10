@@ -39,10 +39,6 @@ public:
 
   bool WantsCompletion() override { return true; }
 
-  void
-  HandleArgumentCompletion(CompletionRequest &request,
-                           OptionElementVector &opt_element_vector) override;
-
 private:
   void DoExecute(llvm::StringRef command, CommandReturnObject &result) override;
 

@@ -7,34 +7,34 @@
   target triple = "powerpc64le-unknown-linux-gnu"
 
   %"class.xercesc_2_7::HashXMLCh" = type { %"class.xercesc_2_7::HashBase" }
-  %"class.xercesc_2_7::HashBase" = type { i32 (...)** }
+  %"class.xercesc_2_7::HashBase" = type { ptr }
 
-  define dso_local zeroext i1 @_ZN11xercesc_2_79HashXMLCh6equalsEPKvS2_(%"class.xercesc_2_7::HashXMLCh"* nocapture readnone %this, i8* readonly %key1, i8* readonly %key2) unnamed_addr #0 {
+  define dso_local zeroext i1 @_ZN11xercesc_2_79HashXMLCh6equalsEPKvS2_(ptr nocapture readnone %this, ptr readonly %key1, ptr readonly %key2) unnamed_addr #0 {
   entry:
-    %cmp.i = icmp eq i8* %key1, null
-    %cmp1.i = icmp eq i8* %key2, null
+    %cmp.i = icmp eq ptr %key1, null
+    %cmp1.i = icmp eq ptr %key2, null
     %or.cond.i = or i1 %cmp.i, %cmp1.i
     br i1 %or.cond.i, label %if.then.i, label %while.cond.preheader.i
 
   while.cond.preheader.i:                           ; preds = %entry
-    %0 = bitcast i8* %key2 to i16*
-    %1 = bitcast i8* %key1 to i16*
-    %2 = load i16, i16* %1, align 2
-    %3 = load i16, i16* %0, align 2
+    %0 = bitcast ptr %key2 to ptr
+    %1 = bitcast ptr %key1 to ptr
+    %2 = load i16, ptr %1, align 2
+    %3 = load i16, ptr %0, align 2
     %cmp926.i = icmp eq i16 %2, %3
     br i1 %cmp926.i, label %while.body.i.preheader, label %_ZN11xercesc_2_79XMLString6equalsEPKtS2_.exit
 
   while.body.i.preheader:                           ; preds = %while.cond.preheader.i
-    %scevgep = getelementptr i8, i8* %key2, i64 2
-    %scevgep4 = getelementptr i8, i8* %key1, i64 2
+    %scevgep = getelementptr i8, ptr %key2, i64 2
+    %scevgep4 = getelementptr i8, ptr %key1, i64 2
     br label %while.body.i
 
   if.then.i:                                        ; preds = %entry
     br i1 %cmp.i, label %lor.lhs.false3.i, label %land.lhs.true.i
 
   land.lhs.true.i:                                  ; preds = %if.then.i
-    %4 = bitcast i8* %key1 to i16*
-    %5 = load i16, i16* %4, align 2
+    %4 = bitcast ptr %key1 to ptr
+    %5 = load i16, ptr %4, align 2
     %tobool.i = icmp eq i16 %5, 0
     br i1 %tobool.i, label %lor.lhs.false3.i, label %_ZN11xercesc_2_79XMLString6equalsEPKtS2_.exit
 
@@ -42,8 +42,8 @@
     br i1 %cmp1.i, label %if.else.i, label %land.lhs.true5.i
 
   land.lhs.true5.i:                                 ; preds = %lor.lhs.false3.i
-    %6 = bitcast i8* %key2 to i16*
-    %7 = load i16, i16* %6, align 2
+    %6 = bitcast ptr %key2 to ptr
+    %7 = load i16, ptr %6, align 2
     %tobool6.i = icmp eq i16 %7, 0
     br i1 %tobool6.i, label %if.else.i, label %_ZN11xercesc_2_79XMLString6equalsEPKtS2_.exit
 
@@ -51,24 +51,24 @@
     br label %_ZN11xercesc_2_79XMLString6equalsEPKtS2_.exit
 
   while.body.i:                                     ; preds = %while.body.i.preheader, %if.end12.i
-    %lsr.iv5 = phi i8* [ %scevgep4, %while.body.i.preheader ], [ %scevgep6, %if.end12.i ]
-    %lsr.iv = phi i8* [ %scevgep, %while.body.i.preheader ], [ %scevgep2, %if.end12.i ]
+    %lsr.iv5 = phi ptr [ %scevgep4, %while.body.i.preheader ], [ %scevgep6, %if.end12.i ]
+    %lsr.iv = phi ptr [ %scevgep, %while.body.i.preheader ], [ %scevgep2, %if.end12.i ]
     %8 = phi i16 [ %15, %if.end12.i ], [ %2, %while.body.i.preheader ]
-    %9 = phi i8* [ %key1, %while.body.i.preheader ], [ %13, %if.end12.i ]
-    %10 = phi i8* [ %key2, %while.body.i.preheader ], [ %11, %if.end12.i ]
-    %11 = getelementptr i8, i8* %10, i64 2
-    %12 = bitcast i8* %11 to i16*
-    %13 = getelementptr i8, i8* %9, i64 2
-    %14 = bitcast i8* %13 to i16*
+    %9 = phi ptr [ %key1, %while.body.i.preheader ], [ %13, %if.end12.i ]
+    %10 = phi ptr [ %key2, %while.body.i.preheader ], [ %11, %if.end12.i ]
+    %11 = getelementptr i8, ptr %10, i64 2
+    %12 = bitcast ptr %11 to ptr
+    %13 = getelementptr i8, ptr %9, i64 2
+    %14 = bitcast ptr %13 to ptr
     %tobool10.i = icmp eq i16 %8, 0
     br i1 %tobool10.i, label %_ZN11xercesc_2_79XMLString6equalsEPKtS2_.exit, label %if.end12.i
 
   if.end12.i:                                       ; preds = %while.body.i
-    %15 = load i16, i16* %14, align 2
-    %16 = load i16, i16* %12, align 2
+    %15 = load i16, ptr %14, align 2
+    %16 = load i16, ptr %12, align 2
     %cmp9.i = icmp eq i16 %15, %16
-    %scevgep2 = getelementptr i8, i8* %lsr.iv, i64 2
-    %scevgep6 = getelementptr i8, i8* %lsr.iv5, i64 2
+    %scevgep2 = getelementptr i8, ptr %lsr.iv, i64 2
+    %scevgep6 = getelementptr i8, ptr %lsr.iv5, i64 2
     br i1 %cmp9.i, label %while.body.i, label %_ZN11xercesc_2_79XMLString6equalsEPKtS2_.exit
 
   _ZN11xercesc_2_79XMLString6equalsEPKtS2_.exit:    ; preds = %if.end12.i, %while.body.i, %if.else.i, %land.lhs.true5.i, %land.lhs.true.i, %while.cond.preheader.i

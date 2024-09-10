@@ -410,8 +410,7 @@ bool DynamicLoaderFreeBSDKernel::KModImageInfo::LoadImageUsingMemoryModule(
 
   // Find the slide address
   addr_t fixed_slide = LLDB_INVALID_ADDRESS;
-  if (ObjectFileELF *memory_objfile_elf =
-          llvm::dyn_cast<ObjectFileELF>(memory_object_file)) {
+  if (llvm::dyn_cast<ObjectFileELF>(memory_object_file)) {
     addr_t load_address = memory_object_file->GetBaseAddress().GetFileAddress();
 
     if (load_address != LLDB_INVALID_ADDRESS &&
@@ -784,6 +783,5 @@ ThreadPlanSP DynamicLoaderFreeBSDKernel::GetStepThroughTrampolinePlan(
 }
 
 Status DynamicLoaderFreeBSDKernel::CanLoadImage() {
-  Status error("shared object cannot be loaded into kernel");
-  return error;
+  return Status::FromErrorString("shared object cannot be loaded into kernel");
 }

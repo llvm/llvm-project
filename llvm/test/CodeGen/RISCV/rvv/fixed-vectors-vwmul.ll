@@ -289,13 +289,12 @@ define <128 x i16> @vwmul_v128i16(ptr %x, ptr %y) {
 ; CHECK-NEXT:    vslidedown.vx v16, v8, a0
 ; CHECK-NEXT:    vslidedown.vx v8, v0, a0
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
-; CHECK-NEXT:    vmv4r.v v24, v8
-; CHECK-NEXT:    vwmul.vv v8, v16, v24
+; CHECK-NEXT:    vwmul.vv v24, v16, v8
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add a0, sp, a0
 ; CHECK-NEXT:    addi a0, a0, 16
-; CHECK-NEXT:    vs8r.v v8, (a0) # Unknown-size Folded Spill
+; CHECK-NEXT:    vs8r.v v24, (a0) # Unknown-size Folded Spill
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    vl8r.v v16, (a0) # Unknown-size Folded Reload
 ; CHECK-NEXT:    vwmul.vv v8, v16, v0
@@ -337,13 +336,12 @@ define <64 x i32> @vwmul_v64i32(ptr %x, ptr %y) {
 ; CHECK-NEXT:    vslidedown.vx v16, v8, a0
 ; CHECK-NEXT:    vslidedown.vx v8, v0, a0
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
-; CHECK-NEXT:    vmv4r.v v24, v8
-; CHECK-NEXT:    vwmul.vv v8, v16, v24
+; CHECK-NEXT:    vwmul.vv v24, v16, v8
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add a0, sp, a0
 ; CHECK-NEXT:    addi a0, a0, 16
-; CHECK-NEXT:    vs8r.v v8, (a0) # Unknown-size Folded Spill
+; CHECK-NEXT:    vs8r.v v24, (a0) # Unknown-size Folded Spill
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    vl8r.v v16, (a0) # Unknown-size Folded Reload
 ; CHECK-NEXT:    vwmul.vv v8, v16, v0
@@ -384,13 +382,12 @@ define <32 x i64> @vwmul_v32i64(ptr %x, ptr %y) {
 ; CHECK-NEXT:    vslidedown.vi v16, v8, 16
 ; CHECK-NEXT:    vslidedown.vi v8, v0, 16
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
-; CHECK-NEXT:    vmv4r.v v24, v8
-; CHECK-NEXT:    vwmul.vv v8, v16, v24
+; CHECK-NEXT:    vwmul.vv v24, v16, v8
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add a0, sp, a0
 ; CHECK-NEXT:    addi a0, a0, 16
-; CHECK-NEXT:    vs8r.v v8, (a0) # Unknown-size Folded Spill
+; CHECK-NEXT:    vs8r.v v24, (a0) # Unknown-size Folded Spill
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    vl8r.v v16, (a0) # Unknown-size Folded Reload
 ; CHECK-NEXT:    vwmul.vv v8, v16, v0
@@ -416,11 +413,11 @@ define <2 x i32> @vwmul_v2i32_v2i8(ptr %x, ptr %y) {
 ; CHECK-LABEL: vwmul_v2i32_v2i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; CHECK-NEXT:    vle8.v v8, (a1)
-; CHECK-NEXT:    vle8.v v9, (a0)
+; CHECK-NEXT:    vle8.v v8, (a0)
+; CHECK-NEXT:    vle8.v v9, (a1)
 ; CHECK-NEXT:    vsext.vf2 v10, v8
 ; CHECK-NEXT:    vsext.vf2 v11, v9
-; CHECK-NEXT:    vwmul.vv v8, v11, v10
+; CHECK-NEXT:    vwmul.vv v8, v10, v11
 ; CHECK-NEXT:    ret
   %a = load <2 x i8>, ptr %x
   %b = load <2 x i8>, ptr %y
@@ -798,22 +795,13 @@ define <4 x i32> @vwmul_vx_v4i32_i32(ptr %x, ptr %y) {
 }
 
 define <2 x i64> @vwmul_vx_v2i64_i8(ptr %x, ptr %y) {
-; RV32-LABEL: vwmul_vx_v2i64_i8:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; RV32-NEXT:    vle32.v v8, (a0)
-; RV32-NEXT:    lb a0, 0(a1)
-; RV32-NEXT:    vsext.vf2 v9, v8
-; RV32-NEXT:    vmul.vx v8, v9, a0
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: vwmul_vx_v2i64_i8:
-; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; RV64-NEXT:    vle32.v v9, (a0)
-; RV64-NEXT:    lb a0, 0(a1)
-; RV64-NEXT:    vwmul.vx v8, v9, a0
-; RV64-NEXT:    ret
+; CHECK-LABEL: vwmul_vx_v2i64_i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; CHECK-NEXT:    vle32.v v9, (a0)
+; CHECK-NEXT:    lb a0, 0(a1)
+; CHECK-NEXT:    vwmul.vx v8, v9, a0
+; CHECK-NEXT:    ret
   %a = load <2 x i32>, ptr %x
   %b = load i8, ptr %y
   %c = sext i8 %b to i64
@@ -825,22 +813,13 @@ define <2 x i64> @vwmul_vx_v2i64_i8(ptr %x, ptr %y) {
 }
 
 define <2 x i64> @vwmul_vx_v2i64_i16(ptr %x, ptr %y) {
-; RV32-LABEL: vwmul_vx_v2i64_i16:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; RV32-NEXT:    vle32.v v8, (a0)
-; RV32-NEXT:    lh a0, 0(a1)
-; RV32-NEXT:    vsext.vf2 v9, v8
-; RV32-NEXT:    vmul.vx v8, v9, a0
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: vwmul_vx_v2i64_i16:
-; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; RV64-NEXT:    vle32.v v9, (a0)
-; RV64-NEXT:    lh a0, 0(a1)
-; RV64-NEXT:    vwmul.vx v8, v9, a0
-; RV64-NEXT:    ret
+; CHECK-LABEL: vwmul_vx_v2i64_i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; CHECK-NEXT:    vle32.v v9, (a0)
+; CHECK-NEXT:    lh a0, 0(a1)
+; CHECK-NEXT:    vwmul.vx v8, v9, a0
+; CHECK-NEXT:    ret
   %a = load <2 x i32>, ptr %x
   %b = load i16, ptr %y
   %c = sext i16 %b to i64
@@ -852,22 +831,13 @@ define <2 x i64> @vwmul_vx_v2i64_i16(ptr %x, ptr %y) {
 }
 
 define <2 x i64> @vwmul_vx_v2i64_i32(ptr %x, ptr %y) {
-; RV32-LABEL: vwmul_vx_v2i64_i32:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; RV32-NEXT:    vle32.v v8, (a0)
-; RV32-NEXT:    lw a0, 0(a1)
-; RV32-NEXT:    vsext.vf2 v9, v8
-; RV32-NEXT:    vmul.vx v8, v9, a0
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: vwmul_vx_v2i64_i32:
-; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; RV64-NEXT:    vle32.v v9, (a0)
-; RV64-NEXT:    lw a0, 0(a1)
-; RV64-NEXT:    vwmul.vx v8, v9, a0
-; RV64-NEXT:    ret
+; CHECK-LABEL: vwmul_vx_v2i64_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; CHECK-NEXT:    vle32.v v9, (a0)
+; CHECK-NEXT:    lw a0, 0(a1)
+; CHECK-NEXT:    vwmul.vx v8, v9, a0
+; CHECK-NEXT:    ret
   %a = load <2 x i32>, ptr %x
   %b = load i32, ptr %y
   %c = sext i32 %b to i64
@@ -883,9 +853,9 @@ define <2 x i64> @vwmul_vx_v2i64_i64(ptr %x, ptr %y) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV32-NEXT:    lw a2, 4(a1)
 ; RV32-NEXT:    lw a1, 0(a1)
+; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV32-NEXT:    vle32.v v8, (a0)
 ; RV32-NEXT:    sw a2, 12(sp)
 ; RV32-NEXT:    sw a1, 8(sp)
@@ -911,4 +881,41 @@ define <2 x i64> @vwmul_vx_v2i64_i64(ptr %x, ptr %y) {
   %f = sext <2 x i32> %a to <2 x i64>
   %g = mul <2 x i64> %e, %f
   ret <2 x i64> %g
+}
+
+define <2 x i16> @vwmul_v2i16_multiuse(ptr %x, ptr %y, ptr %z, ptr %w) {
+; CHECK-LABEL: vwmul_v2i16_multiuse:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; CHECK-NEXT:    vle8.v v8, (a0)
+; CHECK-NEXT:    vle8.v v9, (a1)
+; CHECK-NEXT:    vle8.v v10, (a2)
+; CHECK-NEXT:    vle8.v v11, (a3)
+; CHECK-NEXT:    vsext.vf2 v12, v8
+; CHECK-NEXT:    vsext.vf2 v8, v9
+; CHECK-NEXT:    vsext.vf2 v9, v10
+; CHECK-NEXT:    vsext.vf2 v10, v11
+; CHECK-NEXT:    vmul.vv v11, v12, v10
+; CHECK-NEXT:    vmul.vv v10, v8, v10
+; CHECK-NEXT:    vdivu.vv v8, v8, v9
+; CHECK-NEXT:    vor.vv v9, v11, v10
+; CHECK-NEXT:    vor.vv v8, v9, v8
+; CHECK-NEXT:    ret
+  %a = load <2 x i8>, ptr %x
+  %b = load <2 x i8>, ptr %y
+  %c = load <2 x i8>, ptr %z
+  %d = load <2 x i8>, ptr %w
+
+  %as = sext <2 x i8> %a to <2 x i16>
+  %bs = sext <2 x i8> %b to <2 x i16>
+  %cs = sext <2 x i8> %c to <2 x i16>
+  %ds = sext <2 x i8> %d to <2 x i16>
+
+  %e = mul <2 x i16> %as, %ds
+  %f = mul <2 x i16> %bs, %ds ; shares 1 use with %e
+  %g = udiv <2 x i16> %bs, %cs ; shares 1 use with %f, and no uses with %e
+
+  %h = or <2 x i16> %e, %f
+  %i = or <2 x i16> %h, %g
+  ret <2 x i16> %i
 }

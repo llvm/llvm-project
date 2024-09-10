@@ -1,4 +1,4 @@
-;RUN: llc < %s -march=r600 -mcpu=redwood | FileCheck %s
+;RUN: llc < %s -mtriple=r600 -mcpu=redwood | FileCheck %s
 
 ;CHECK-LABEL: test1:
 ;CHECK: LOG_IEEE * T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}},

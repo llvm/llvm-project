@@ -454,8 +454,8 @@ public:
   /// where a problem occurred in case an error is returned.
   Error parse(DWARFDataExtractor Data, uint64_t *Offset, uint64_t EndOffset);
 
-  void dump(raw_ostream &OS, DIDumpOptions DumpOpts,
-            unsigned IndentLevel = 1) const;
+  void dump(raw_ostream &OS, DIDumpOptions DumpOpts, unsigned IndentLevel,
+            std::optional<uint64_t> InitialLocation) const;
 
   void addInstruction(const Instruction &I) { Instructions.push_back(I); }
 
@@ -497,7 +497,7 @@ private:
 
   /// Types of operands to CFI instructions
   /// In DWARF, this type is implicitly tied to a CFI instruction opcode and
-  /// thus this type doesn't need to be explictly written to the file (this is
+  /// thus this type doesn't need to be explicitly written to the file (this is
   /// not a DWARF encoding). The relationship of instrs to operand types can
   /// be obtained from getOperandTypes() and is only used to simplify
   /// instruction printing.
@@ -524,7 +524,7 @@ private:
   /// Print \p Opcode's operand number \p OperandIdx which has value \p Operand.
   void printOperand(raw_ostream &OS, DIDumpOptions DumpOpts,
                     const Instruction &Instr, unsigned OperandIdx,
-                    uint64_t Operand) const;
+                    uint64_t Operand, std::optional<uint64_t> &Address) const;
 };
 
 /// An entry in either debug_frame or eh_frame. This entry can be a CIE or an

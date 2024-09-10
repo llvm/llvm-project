@@ -32,9 +32,9 @@ using namespace lldb_private;
 BreakpointLocation::BreakpointLocation(break_id_t loc_id, Breakpoint &owner,
                                        const Address &addr, lldb::tid_t tid,
                                        bool hardware, bool check_for_resolver)
-    : m_being_created(true), m_should_resolve_indirect_functions(false),
-      m_is_reexported(false), m_is_indirect(false), m_address(addr),
-      m_owner(owner), m_condition_hash(0), m_loc_id(loc_id), m_hit_counter() {
+    : m_should_resolve_indirect_functions(false), m_is_reexported(false),
+      m_is_indirect(false), m_address(addr), m_owner(owner),
+      m_condition_hash(0), m_loc_id(loc_id), m_hit_counter() {
   if (check_for_resolver) {
     Symbol *symbol = m_address.CalculateSymbolContextSymbol();
     if (symbol && symbol->IsIndirect()) {
@@ -42,8 +42,7 @@ BreakpointLocation::BreakpointLocation(break_id_t loc_id, Breakpoint &owner,
     }
   }
 
-  SetThreadID(tid);
-  m_being_created = false;
+  SetThreadIDInternal(tid);
 }
 
 BreakpointLocation::~BreakpointLocation() { ClearBreakpointSite(); }
@@ -100,14 +99,7 @@ void BreakpointLocation::SetAutoContinue(bool auto_continue) {
 }
 
 void BreakpointLocation::SetThreadID(lldb::tid_t thread_id) {
-  if (thread_id != LLDB_INVALID_THREAD_ID)
-    GetLocationOptions().SetThreadID(thread_id);
-  else {
-    // If we're resetting this to an invalid thread id, then don't make an
-    // options pointer just to do that.
-    if (m_options_up != nullptr)
-      m_options_up->SetThreadID(thread_id);
-  }
+  SetThreadIDInternal(thread_id);
   SendBreakpointLocationChangedEvent(eBreakpointEventTypeThreadChanged);
 }
 
@@ -272,7 +264,7 @@ bool BreakpointLocation::ConditionSaysStop(ExecutionContext &exe_ctx,
     if (!m_user_expression_sp->Parse(diagnostics, exe_ctx,
                                      eExecutionPolicyOnlyWhenNeeded, true,
                                      false)) {
-      error.SetErrorStringWithFormat(
+      error = Status::FromErrorStringWithFormat(
           "Couldn't parse conditional expression:\n%s",
           diagnostics.GetString().c_str());
       m_user_expression_sp.reset();
@@ -307,7 +299,7 @@ bool BreakpointLocation::ConditionSaysStop(ExecutionContext &exe_ctx,
 
   if (result_code == eExpressionCompleted) {
     if (!result_variable_sp) {
-      error.SetErrorString("Expression did not return a result");
+      error = Status::FromErrorString("Expression did not return a result");
       return false;
     }
 
@@ -320,19 +312,20 @@ bool BreakpointLocation::ConditionSaysStop(ExecutionContext &exe_ctx,
           LLDB_LOGF(log, "Condition successfully evaluated, result is %s.\n",
                     ret ? "true" : "false");
         } else {
-          error.SetErrorString(
+          error = Status::FromErrorString(
               "Failed to get an integer result from the expression");
           ret = false;
         }
       }
     } else {
       ret = false;
-      error.SetErrorString("Failed to get any result from the expression");
+      error = Status::FromErrorString(
+          "Failed to get any result from the expression");
     }
   } else {
     ret = false;
-    error.SetErrorStringWithFormat("Couldn't execute expression:\n%s",
-                                   diagnostics.GetString().c_str());
+    error = Status::FromErrorStringWithFormat(
+        "Couldn't execute expression:\n%s", diagnostics.GetString().c_str());
   }
 
   return ret;
@@ -515,7 +508,7 @@ void BreakpointLocation::GetDescription(Stream *s,
       else
         s->PutCString("where = ");
       sc.DumpStopContext(s, m_owner.GetTarget().GetProcessSP().get(), m_address,
-                         false, true, false, true, true);
+                         false, true, false, true, true, true);
     } else {
       if (sc.module_sp) {
         s->EOL();
@@ -532,6 +525,12 @@ void BreakpointLocation::GetDescription(Stream *s,
           s->EOL();
           s->Indent("function = ");
           s->PutCString(sc.function->GetName().AsCString("<unknown>"));
+          if (ConstString mangled_name =
+                  sc.function->GetMangled().GetMangledName()) {
+            s->EOL();
+            s->Indent("mangled function = ");
+            s->PutCString(mangled_name.AsCString());
+          }
         }
 
         if (sc.line_entry.line > 0) {
@@ -646,14 +645,13 @@ void BreakpointLocation::Dump(Stream *s) const {
 
 void BreakpointLocation::SendBreakpointLocationChangedEvent(
     lldb::BreakpointEventType eventKind) {
-  if (!m_being_created && !m_owner.IsInternal() &&
-      m_owner.GetTarget().EventTypeHasListeners(
-          Target::eBroadcastBitBreakpointChanged)) {
-    Breakpoint::BreakpointEventData *data = new Breakpoint::BreakpointEventData(
+  if (!m_owner.IsInternal() && m_owner.GetTarget().EventTypeHasListeners(
+                                   Target::eBroadcastBitBreakpointChanged)) {
+    auto data_sp = std::make_shared<Breakpoint::BreakpointEventData>(
         eventKind, m_owner.shared_from_this());
-    data->GetBreakpointLocationCollection().Add(shared_from_this());
+    data_sp->GetBreakpointLocationCollection().Add(shared_from_this());
     m_owner.GetTarget().BroadcastEvent(Target::eBroadcastBitBreakpointChanged,
-                                       data);
+                                       data_sp);
   }
 }
 
@@ -664,4 +662,15 @@ void BreakpointLocation::SwapLocation(BreakpointLocationSP swap_from) {
   m_is_reexported = swap_from->m_is_reexported;
   m_is_indirect = swap_from->m_is_indirect;
   m_user_expression_sp.reset();
+}
+
+void BreakpointLocation::SetThreadIDInternal(lldb::tid_t thread_id) {
+  if (thread_id != LLDB_INVALID_THREAD_ID)
+    GetLocationOptions().SetThreadID(thread_id);
+  else {
+    // If we're resetting this to an invalid thread id, then don't make an
+    // options pointer just to do that.
+    if (m_options_up != nullptr)
+      m_options_up->SetThreadID(thread_id);
+  }
 }

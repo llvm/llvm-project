@@ -13,8 +13,8 @@
 ; Basic tests
 ; ==============================================================================
 define i1 @eq_basic(i8 %x, i8 %y) {
-; CHECK-LABEL: define i1 @eq_basic
-; CHECK-SAME: (i8 [[X:%.*]], i8 [[Y:%.*]]) {
+; CHECK-LABEL: define i1 @eq_basic(
+; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[X]], -1
 ; CHECK-NEXT:    [[OR:%.*]] = icmp uge i8 [[TMP1]], [[Y]]
 ; CHECK-NEXT:    ret i1 [[OR]]
@@ -26,8 +26,8 @@ define i1 @eq_basic(i8 %x, i8 %y) {
 }
 
 define i1 @ne_basic_equal_5(i8 %x, i8 %y) {
-; CHECK-LABEL: define i1 @ne_basic_equal_5
-; CHECK-SAME: (i8 [[X:%.*]], i8 [[Y:%.*]]) {
+; CHECK-LABEL: define i1 @ne_basic_equal_5(
+; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[X]], -6
 ; CHECK-NEXT:    [[AND:%.*]] = icmp ult i8 [[TMP1]], [[Y]]
 ; CHECK-NEXT:    ret i1 [[AND]]
@@ -40,8 +40,8 @@ define i1 @ne_basic_equal_5(i8 %x, i8 %y) {
 }
 
 define i1 @eq_basic_equal_minus_1(i8 %x, i8 %y) {
-; CHECK-LABEL: define i1 @eq_basic_equal_minus_1
-; CHECK-SAME: (i8 [[X:%.*]], i8 [[Y:%.*]]) {
+; CHECK-LABEL: define i1 @eq_basic_equal_minus_1(
+; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[OR:%.*]] = icmp uge i8 [[X]], [[Y]]
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
@@ -53,8 +53,8 @@ define i1 @eq_basic_equal_minus_1(i8 %x, i8 %y) {
 }
 
 define i1 @ne_basic_equal_minus_7(i8 %x, i8 %y) {
-; CHECK-LABEL: define i1 @ne_basic_equal_minus_7
-; CHECK-SAME: (i8 [[X:%.*]], i8 [[Y:%.*]]) {
+; CHECK-LABEL: define i1 @ne_basic_equal_minus_7(
+; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[X]], 6
 ; CHECK-NEXT:    [[AND:%.*]] = icmp ult i8 [[TMP1]], [[Y]]
 ; CHECK-NEXT:    ret i1 [[AND]]
@@ -67,8 +67,8 @@ define i1 @ne_basic_equal_minus_7(i8 %x, i8 %y) {
 }
 
 define i1 @eq_basic_unequal(i8 %x, i8 %y) {
-; CHECK-LABEL: define i1 @eq_basic_unequal
-; CHECK-SAME: (i8 [[X:%.*]], i8 [[Y:%.*]]) {
+; CHECK-LABEL: define i1 @eq_basic_unequal(
+; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[SUB:%.*]] = add i8 [[X]], -5
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[X]], 6
 ; CHECK-NEXT:    [[C2:%.*]] = icmp ugt i8 [[SUB]], [[Y]]
@@ -83,8 +83,8 @@ define i1 @eq_basic_unequal(i8 %x, i8 %y) {
 }
 
 define i1 @ne_basic_unequal(i8 %x, i8 %y) {
-; CHECK-LABEL: define i1 @ne_basic_unequal
-; CHECK-SAME: (i8 [[X:%.*]], i8 [[Y:%.*]]) {
+; CHECK-LABEL: define i1 @ne_basic_unequal(
+; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X]], 7
 ; CHECK-NEXT:    [[C1:%.*]] = icmp ne i8 [[X]], -4
 ; CHECK-NEXT:    [[C2:%.*]] = icmp ule i8 [[ADD]], [[Y]]
@@ -102,8 +102,8 @@ define i1 @ne_basic_unequal(i8 %x, i8 %y) {
 ; Tests with multiple uses
 ; ==============================================================================
 define i1 @eq_multi_c1(i8 %x, i8 %y) {
-; CHECK-LABEL: define i1 @eq_multi_c1
-; CHECK-SAME: (i8 [[X:%.*]], i8 [[Y:%.*]]) {
+; CHECK-LABEL: define i1 @eq_multi_c1(
+; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[X]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[X]], -1
 ; CHECK-NEXT:    [[OR:%.*]] = icmp uge i8 [[TMP1]], [[Y]]
@@ -118,8 +118,8 @@ define i1 @eq_multi_c1(i8 %x, i8 %y) {
 }
 
 define i1 @ne_multi_c2(i8 %x, i8 %y) {
-; CHECK-LABEL: define i1 @ne_multi_c2
-; CHECK-SAME: (i8 [[X:%.*]], i8 [[Y:%.*]]) {
+; CHECK-LABEL: define i1 @ne_multi_c2(
+; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[C2:%.*]] = icmp ule i8 [[X]], [[Y]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[X]], -1
 ; CHECK-NEXT:    [[AND:%.*]] = icmp ult i8 [[TMP1]], [[Y]]
@@ -137,8 +137,8 @@ define i1 @ne_multi_c2(i8 %x, i8 %y) {
 ; Tests with vector types
 ; ==============================================================================
 define <2 x i1> @eq_vector(<2 x i8> %x, <2 x i8> %y) {
-; CHECK-LABEL: define <2 x i1> @eq_vector
-; CHECK-SAME: (<2 x i8> [[X:%.*]], <2 x i8> [[Y:%.*]]) {
+; CHECK-LABEL: define <2 x i1> @eq_vector(
+; CHECK-SAME: <2 x i8> [[X:%.*]], <2 x i8> [[Y:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i8> [[X]], <i8 -1, i8 -1>
 ; CHECK-NEXT:    [[OR:%.*]] = icmp uge <2 x i8> [[TMP1]], [[Y]]
 ; CHECK-NEXT:    ret <2 x i1> [[OR]]
@@ -150,8 +150,8 @@ define <2 x i1> @eq_vector(<2 x i8> %x, <2 x i8> %y) {
 }
 
 define <2 x i1> @ne_vector_equal_5(<2 x i8> %x, <2 x i8> %y) {
-; CHECK-LABEL: define <2 x i1> @ne_vector_equal_5
-; CHECK-SAME: (<2 x i8> [[X:%.*]], <2 x i8> [[Y:%.*]]) {
+; CHECK-LABEL: define <2 x i1> @ne_vector_equal_5(
+; CHECK-SAME: <2 x i8> [[X:%.*]], <2 x i8> [[Y:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i8> [[X]], <i8 -6, i8 -6>
 ; CHECK-NEXT:    [[AND:%.*]] = icmp ult <2 x i8> [[TMP1]], [[Y]]
 ; CHECK-NEXT:    ret <2 x i1> [[AND]]
@@ -164,8 +164,8 @@ define <2 x i1> @ne_vector_equal_5(<2 x i8> %x, <2 x i8> %y) {
 }
 
 define <2 x i1> @eq_vector_equal_minus_1(<2 x i8> %x, <2 x i8> %y) {
-; CHECK-LABEL: define <2 x i1> @eq_vector_equal_minus_1
-; CHECK-SAME: (<2 x i8> [[X:%.*]], <2 x i8> [[Y:%.*]]) {
+; CHECK-LABEL: define <2 x i1> @eq_vector_equal_minus_1(
+; CHECK-SAME: <2 x i8> [[X:%.*]], <2 x i8> [[Y:%.*]]) {
 ; CHECK-NEXT:    [[OR:%.*]] = icmp uge <2 x i8> [[X]], [[Y]]
 ; CHECK-NEXT:    ret <2 x i1> [[OR]]
 ;
@@ -177,8 +177,8 @@ define <2 x i1> @eq_vector_equal_minus_1(<2 x i8> %x, <2 x i8> %y) {
 }
 
 define <2 x i1> @ne_vector_equal_minus_7(<2 x i8> %x, <2 x i8> %y) {
-; CHECK-LABEL: define <2 x i1> @ne_vector_equal_minus_7
-; CHECK-SAME: (<2 x i8> [[X:%.*]], <2 x i8> [[Y:%.*]]) {
+; CHECK-LABEL: define <2 x i1> @ne_vector_equal_minus_7(
+; CHECK-SAME: <2 x i8> [[X:%.*]], <2 x i8> [[Y:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i8> [[X]], <i8 6, i8 6>
 ; CHECK-NEXT:    [[AND:%.*]] = icmp ult <2 x i8> [[TMP1]], [[Y]]
 ; CHECK-NEXT:    ret <2 x i1> [[AND]]
@@ -191,8 +191,8 @@ define <2 x i1> @ne_vector_equal_minus_7(<2 x i8> %x, <2 x i8> %y) {
 }
 
 define <2 x i1> @eq_vector_unequal1(<2 x i8> %x, <2 x i8> %y) {
-; CHECK-LABEL: define <2 x i1> @eq_vector_unequal1
-; CHECK-SAME: (<2 x i8> [[X:%.*]], <2 x i8> [[Y:%.*]]) {
+; CHECK-LABEL: define <2 x i1> @eq_vector_unequal1(
+; CHECK-SAME: <2 x i8> [[X:%.*]], <2 x i8> [[Y:%.*]]) {
 ; CHECK-NEXT:    [[SUB:%.*]] = add <2 x i8> [[X]], <i8 -5, i8 -5>
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq <2 x i8> [[X]], <i8 2, i8 2>
 ; CHECK-NEXT:    [[C2:%.*]] = icmp ugt <2 x i8> [[SUB]], [[Y]]
@@ -207,8 +207,8 @@ define <2 x i1> @eq_vector_unequal1(<2 x i8> %x, <2 x i8> %y) {
 }
 
 define <2 x i1> @ne_vector_unequal2(<2 x i8> %x, <2 x i8> %y) {
-; CHECK-LABEL: define <2 x i1> @ne_vector_unequal2
-; CHECK-SAME: (<2 x i8> [[X:%.*]], <2 x i8> [[Y:%.*]]) {
+; CHECK-LABEL: define <2 x i1> @ne_vector_unequal2(
+; CHECK-SAME: <2 x i8> [[X:%.*]], <2 x i8> [[Y:%.*]]) {
 ; CHECK-NEXT:    [[ADD:%.*]] = add <2 x i8> [[X]], <i8 7, i8 7>
 ; CHECK-NEXT:    [[C1:%.*]] = icmp ne <2 x i8> [[X]], <i8 -3, i8 -3>
 ; CHECK-NEXT:    [[C2:%.*]] = icmp ule <2 x i8> [[ADD]], [[Y]]
@@ -223,30 +223,30 @@ define <2 x i1> @ne_vector_unequal2(<2 x i8> %x, <2 x i8> %y) {
 }
 
 ; ==============================================================================
-; Tests with undef
+; Tests with poison
 ; ==============================================================================
-define <2 x i1> @eq_vector_undef_icmp(<2 x i8> %x, <2 x i8> %y) {
-; CHECK-LABEL: define <2 x i1> @eq_vector_undef_icmp
-; CHECK-SAME: (<2 x i8> [[X:%.*]], <2 x i8> [[Y:%.*]]) {
+define <2 x i1> @eq_vector_poison_icmp(<2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: define <2 x i1> @eq_vector_poison_icmp(
+; CHECK-SAME: <2 x i8> [[X:%.*]], <2 x i8> [[Y:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i8> [[X]], <i8 -6, i8 -6>
 ; CHECK-NEXT:    [[OR:%.*]] = icmp uge <2 x i8> [[TMP1]], [[Y]]
 ; CHECK-NEXT:    ret <2 x i1> [[OR]]
 ;
   %sub = add <2 x i8> %x, <i8 -5, i8 -5>
-  %c1 = icmp eq <2 x i8> %x, <i8 5, i8 undef>
+  %c1 = icmp eq <2 x i8> %x, <i8 5, i8 poison>
   %c2 = icmp ugt <2 x i8> %sub, %y
   %or = or <2 x i1> %c1, %c2
   ret <2 x i1> %or
 }
 
-define <2 x i1> @eq_vector_undef_add(<2 x i8> %x, <2 x i8> %y) {
-; CHECK-LABEL: define <2 x i1> @eq_vector_undef_add
-; CHECK-SAME: (<2 x i8> [[X:%.*]], <2 x i8> [[Y:%.*]]) {
+define <2 x i1> @eq_vector_poison_add(<2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: define <2 x i1> @eq_vector_poison_add(
+; CHECK-SAME: <2 x i8> [[X:%.*]], <2 x i8> [[Y:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i8> [[X]], <i8 -6, i8 -6>
 ; CHECK-NEXT:    [[OR:%.*]] = icmp uge <2 x i8> [[TMP1]], [[Y]]
 ; CHECK-NEXT:    ret <2 x i1> [[OR]]
 ;
-  %sub = add <2 x i8> %x, <i8 -5, i8 undef>
+  %sub = add <2 x i8> %x, <i8 -5, i8 poison>
   %c1 = icmp eq <2 x i8> %x, <i8 5, i8 5>
   %c2 = icmp ugt <2 x i8> %sub, %y
   %or = or <2 x i1> %c1, %c2
@@ -257,8 +257,8 @@ define <2 x i1> @eq_vector_undef_add(<2 x i8> %x, <2 x i8> %y) {
 ; Tests with values commuted
 ; ==============================================================================
 define i1 @eq_commuted(i8 %x, i8 %py) {
-; CHECK-LABEL: define i1 @eq_commuted
-; CHECK-SAME: (i8 [[X:%.*]], i8 [[PY:%.*]]) {
+; CHECK-LABEL: define i1 @eq_commuted(
+; CHECK-SAME: i8 [[X:%.*]], i8 [[PY:%.*]]) {
 ; CHECK-NEXT:    [[Y:%.*]] = sdiv i8 43, [[PY]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[X]], -1
 ; CHECK-NEXT:    [[OR:%.*]] = icmp uge i8 [[TMP1]], [[Y]]
@@ -272,10 +272,10 @@ define i1 @eq_commuted(i8 %x, i8 %py) {
 }
 
 define i1 @ne_commuted_equal_minus_1(i8 %x, i8 %py) {
-; CHECK-LABEL: define i1 @ne_commuted_equal_minus_1
-; CHECK-SAME: (i8 [[X:%.*]], i8 [[PY:%.*]]) {
+; CHECK-LABEL: define i1 @ne_commuted_equal_minus_1(
+; CHECK-SAME: i8 [[X:%.*]], i8 [[PY:%.*]]) {
 ; CHECK-NEXT:    [[Y:%.*]] = sdiv i8 42, [[PY]]
-; CHECK-NEXT:    [[AND:%.*]] = icmp ugt i8 [[Y]], [[X]]
+; CHECK-NEXT:    [[AND:%.*]] = icmp ult i8 [[X]], [[Y]]
 ; CHECK-NEXT:    ret i1 [[AND]]
 ;
   %y = sdiv i8 42, %py ; thwart complexity-based canonicalization

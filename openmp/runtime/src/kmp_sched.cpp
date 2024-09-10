@@ -52,6 +52,7 @@ char const *traits_t<long>::spec = "ld";
     } else if (i > 0) {                                                        \
       t = (u - l) / i + 1;                                                     \
     } else {                                                                   \
+      KMP_DEBUG_ASSERT(i != 0);                                                \
       t = (l - u) / (-i) + 1;                                                  \
     }                                                                          \
     KMP_COUNT_VALUE(stat, t);                                                  \
@@ -102,7 +103,7 @@ static void __kmp_for_static_init(ident_t *loc, kmp_int32 global_tid,
 #if OMPT_SUPPORT && OMPT_OPTIONAL
   ompt_team_info_t *team_info = NULL;
   ompt_task_info_t *task_info = NULL;
-  ompt_work_t ompt_work_type = ompt_work_loop;
+  ompt_work_t ompt_work_type = ompt_work_loop_static;
 
   static kmp_int8 warn = 0;
 
@@ -113,7 +114,7 @@ static void __kmp_for_static_init(ident_t *loc, kmp_int32 global_tid,
     // Determine workshare type
     if (loc != NULL) {
       if ((loc->flags & KMP_IDENT_WORK_LOOP) != 0) {
-        ompt_work_type = ompt_work_loop;
+        ompt_work_type = ompt_work_loop_static;
       } else if ((loc->flags & KMP_IDENT_WORK_SECTIONS) != 0) {
         ompt_work_type = ompt_work_sections;
       } else if ((loc->flags & KMP_IDENT_WORK_DISTRIBUTE) != 0) {
@@ -284,6 +285,7 @@ static void __kmp_for_static_init(ident_t *loc, kmp_int32 global_tid,
     // upper-lower can exceed the limit of signed type
     trip_count = (UT)(*pupper - *plower) / incr + 1;
   } else {
+    KMP_DEBUG_ASSERT(incr != 0);
     trip_count = (UT)(*plower - *pupper) / (-incr) + 1;
   }
 
@@ -318,6 +320,7 @@ static void __kmp_for_static_init(ident_t *loc, kmp_int32 global_tid,
       if (plastiter != NULL)
         *plastiter = (tid == trip_count - 1);
     } else {
+      KMP_DEBUG_ASSERT(nth != 0);
       if (__kmp_static == kmp_sch_static_balanced) {
         UT small_chunk = trip_count / nth;
         UT extras = trip_count % nth;
@@ -358,6 +361,7 @@ static void __kmp_for_static_init(ident_t *loc, kmp_int32 global_tid,
   case kmp_sch_static_chunked: {
     ST span;
     UT nchunks;
+    KMP_DEBUG_ASSERT(chunk != 0);
     if (chunk < 1)
       chunk = 1;
     else if ((UT)chunk > trip_count)
@@ -383,6 +387,7 @@ static void __kmp_for_static_init(ident_t *loc, kmp_int32 global_tid,
   }
   case kmp_sch_static_balanced_chunked: {
     T old_upper = *pupper;
+    KMP_DEBUG_ASSERT(nth != 0);
     // round up to make sure the chunk is enough to cover all iterations
     UT span = (trip_count + nth - 1) / nth;
 
@@ -398,8 +403,10 @@ static void __kmp_for_static_init(ident_t *loc, kmp_int32 global_tid,
     } else if (*pupper < old_upper)
       *pupper = old_upper;
 
-    if (plastiter != NULL)
+    if (plastiter != NULL) {
+      KMP_DEBUG_ASSERT(chunk != 0);
       *plastiter = (tid == ((trip_count - 1) / (UT)chunk));
+    }
     break;
   }
   default:
@@ -417,6 +424,7 @@ static void __kmp_for_static_init(ident_t *loc, kmp_int32 global_tid,
     // Calculate chunk in case it was not specified; it is specified for
     // kmp_sch_static_chunked
     if (schedtype == kmp_sch_static) {
+      KMP_DEBUG_ASSERT(nth != 0);
       cur_chunk = trip_count / nth + ((trip_count % nth) ? 1 : 0);
     }
     // 0 - "static" schedule
@@ -547,6 +555,7 @@ static void __kmp_dist_for_static_init(ident_t *loc, kmp_int32 gtid,
     // upper-lower can exceed the limit of signed type
     trip_count = (UT)(*pupper - *plower) / incr + 1;
   } else {
+    KMP_DEBUG_ASSERT(incr != 0);
     trip_count = (UT)(*plower - *pupper) / (-incr) + 1;
   }
 
@@ -568,6 +577,7 @@ static void __kmp_dist_for_static_init(ident_t *loc, kmp_int32 gtid,
       *plastiter = (tid == 0 && team_id == trip_count - 1);
   } else {
     // Get the team's chunk first (each team gets at most one chunk)
+    KMP_DEBUG_ASSERT(nteams != 0);
     if (__kmp_static == kmp_sch_static_balanced) {
       UT chunkD = trip_count / nteams;
       UT extras = trip_count % nteams;
@@ -619,6 +629,7 @@ static void __kmp_dist_for_static_init(ident_t *loc, kmp_int32 gtid,
       // upper-lower can exceed the limit of signed type
       trip_count = (UT)(*pupperDist - *plower) / incr + 1;
     } else {
+      KMP_DEBUG_ASSERT(incr != 0);
       trip_count = (UT)(*plower - *pupperDist) / (-incr) + 1;
     }
     KMP_DEBUG_ASSERT(trip_count);
@@ -637,6 +648,7 @@ static void __kmp_dist_for_static_init(ident_t *loc, kmp_int32 gtid,
           if (*plastiter != 0 && !(tid == trip_count - 1))
             *plastiter = 0;
       } else {
+        KMP_DEBUG_ASSERT(nth != 0);
         if (__kmp_static == kmp_sch_static_balanced) {
           UT chunkL = trip_count / nth;
           UT extras = trip_count % nth;
@@ -684,9 +696,11 @@ static void __kmp_dist_for_static_init(ident_t *loc, kmp_int32 gtid,
       *pstride = span * nth;
       *plower = *plower + (span * tid);
       *pupper = *plower + span - incr;
-      if (plastiter != NULL)
+      if (plastiter != NULL) {
+        KMP_DEBUG_ASSERT(chunk != 0);
         if (*plastiter != 0 && !(tid == ((trip_count - 1) / (UT)chunk) % nth))
           *plastiter = 0;
+      }
       break;
     }
     default:
@@ -809,6 +823,7 @@ static void __kmp_team_static_init(ident_t *loc, kmp_int32 gtid,
     // upper-lower can exceed the limit of signed type
     trip_count = (UT)(upper - lower) / incr + 1;
   } else {
+    KMP_DEBUG_ASSERT(incr != 0);
     trip_count = (UT)(lower - upper) / (-incr) + 1;
   }
   if (chunk < 1)
@@ -817,8 +832,10 @@ static void __kmp_team_static_init(ident_t *loc, kmp_int32 gtid,
   *p_st = span * nteams;
   *p_lb = lower + (span * team_id);
   *p_ub = *p_lb + span - incr;
-  if (p_last != NULL)
+  if (p_last != NULL) {
+    KMP_DEBUG_ASSERT(chunk != 0);
     *p_last = (team_id == ((trip_count - 1) / (UT)chunk) % nteams);
+  }
   // Correct upper bound if needed
   if (incr > 0) {
     if (*p_ub < *p_lb) // overflow?

@@ -13,7 +13,7 @@ declare ptr @strchr(ptr, i32)
 
 define void @test_simplify1() {
 ; CHECK-LABEL: @test_simplify1(
-; CHECK-NEXT:    store ptr getelementptr inbounds ([14 x i8], ptr @hello, i32 0, i32 6), ptr @chp, align 4
+; CHECK-NEXT:    store ptr getelementptr inbounds (i8, ptr @hello, i32 6), ptr @chp, align 4
 ; CHECK-NEXT:    ret void
 ;
 
@@ -35,7 +35,7 @@ define void @test_simplify2() {
 
 define void @test_simplify3() {
 ; CHECK-LABEL: @test_simplify3(
-; CHECK-NEXT:    store ptr getelementptr inbounds ([14 x i8], ptr @hello, i32 0, i32 13), ptr @chp, align 4
+; CHECK-NEXT:    store ptr getelementptr inbounds (i8, ptr @hello, i32 13), ptr @chp, align 4
 ; CHECK-NEXT:    ret void
 ;
 
@@ -58,7 +58,7 @@ define void @test_simplify4(i32 %chr) {
 
 define void @test_simplify5() {
 ; CHECK-LABEL: @test_simplify5(
-; CHECK-NEXT:    store ptr getelementptr inbounds ([14 x i8], ptr @hello, i32 0, i32 13), ptr @chp, align 4
+; CHECK-NEXT:    store ptr getelementptr inbounds (i8, ptr @hello, i32 13), ptr @chp, align 4
 ; CHECK-NEXT:    ret void
 ;
 

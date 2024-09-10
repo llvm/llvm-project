@@ -1240,8 +1240,8 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-// CHECK-LABEL:   func @red_max_2d(
-func.func @red_max_2d(%arg0: tensor<4x4xf32>) -> tensor<4xf32> {
+// CHECK-LABEL:   func @red_maximumf_2d(
+func.func @red_maximumf_2d(%arg0: tensor<4x4xf32>) -> tensor<4xf32> {
   // CHECK: %[[CMINF:.+]] = arith.constant dense<-3.402820e+38> : vector<4xf32>
   // CHECK: tensor.empty() : tensor<4xf32>
   // CHECK: vector.multi_reduction <maximumf>, {{.*}}, %[[CMINF]] [1] : vector<4x4xf32> to vector<4xf32>
@@ -1272,8 +1272,40 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-// CHECK-LABEL:   func @red_min_2d(
-func.func @red_min_2d(%arg0: tensor<4x4xf32>) -> tensor<4xf32> {
+// CHECK-LABEL:   func @red_maxnumf_2d(
+func.func @red_maxnumf_2d(%arg0: tensor<4x4xf32>) -> tensor<4xf32> {
+  // CHECK: %[[CMINF:.+]] = arith.constant dense<-3.402820e+38> : vector<4xf32>
+  // CHECK: tensor.empty() : tensor<4xf32>
+  // CHECK: vector.multi_reduction <maxnumf>, {{.*}}, %[[CMINF]] [1] : vector<4x4xf32> to vector<4xf32>
+  // CHECK: vector.transfer_write {{.*}} : vector<4xf32>, tensor<4xf32>
+  %ident = arith.constant -3.40282e+38 : f32
+  %init = tensor.empty() : tensor<4xf32>
+  %fill = linalg.fill ins(%ident : f32) outs(%init : tensor<4xf32>) -> tensor<4xf32>
+  %red = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
+                                          affine_map<(d0, d1) -> (d0)>],
+                         iterator_types = ["parallel", "reduction"]}
+                         ins(%arg0 : tensor<4x4xf32>) outs(%fill : tensor<4xf32>) {
+  ^bb0(%in0: f32, %out0: f32):
+    %max = arith.maxnumf %in0, %out0 : f32
+    linalg.yield %max : f32
+  } -> tensor<4xf32>
+  return %red : tensor<4xf32>
+}
+
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %3 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %4 = transform.get_parent_op %3 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
+    %5 = transform.structured.vectorize_children_and_apply_patterns %4 { vectorize_padding } : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// CHECK-LABEL:   func @red_minimumf_2d(
+func.func @red_minimumf_2d(%arg0: tensor<4x4xf32>) -> tensor<4xf32> {
   // CHECK: %[[CMAXF:.+]] = arith.constant dense<3.402820e+38> : vector<4xf32>
   // CHECK: tensor.empty() : tensor<4xf32>
   // CHECK: vector.transfer_read {{.*}} : tensor<4x4xf32>, vector<4x4xf32>
@@ -1288,6 +1320,39 @@ func.func @red_min_2d(%arg0: tensor<4x4xf32>) -> tensor<4xf32> {
                          ins(%arg0 : tensor<4x4xf32>) outs(%fill : tensor<4xf32>) {
   ^bb0(%in0: f32, %out0: f32):
     %min = arith.minimumf %out0, %in0 : f32
+    linalg.yield %min : f32
+  } -> tensor<4xf32>
+  return %red : tensor<4xf32>
+}
+
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %3 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %4 = transform.get_parent_op %3 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
+    %5 = transform.structured.vectorize_children_and_apply_patterns %4 : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// CHECK-LABEL:   func @red_minnumf_2d(
+func.func @red_minnumf_2d(%arg0: tensor<4x4xf32>) -> tensor<4xf32> {
+  // CHECK: %[[CMAXF:.+]] = arith.constant dense<3.402820e+38> : vector<4xf32>
+  // CHECK: tensor.empty() : tensor<4xf32>
+  // CHECK: vector.transfer_read {{.*}} : tensor<4x4xf32>, vector<4x4xf32>
+  // CHECK: vector.multi_reduction <minnumf>, {{.*}}, %[[CMAXF]] [1] : vector<4x4xf32> to vector<4xf32>
+  // CHECK: vector.transfer_write {{.*}} : vector<4xf32>, tensor<4xf32>
+  %maxf32 = arith.constant 3.40282e+38 : f32
+  %init = tensor.empty() : tensor<4xf32>
+  %fill = linalg.fill ins(%maxf32 : f32) outs(%init : tensor<4xf32>) -> tensor<4xf32>
+  %red = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
+                                          affine_map<(d0, d1) -> (d0)>],
+                         iterator_types = ["parallel", "reduction"]}
+                         ins(%arg0 : tensor<4x4xf32>) outs(%fill : tensor<4xf32>) {
+  ^bb0(%in0: f32, %out0: f32):
+    %min = arith.minnumf %out0, %in0 : f32
     linalg.yield %min : f32
   } -> tensor<4xf32>
   return %red : tensor<4xf32>
@@ -1710,10 +1775,12 @@ module attributes {transform.with_named_sequence} {
 #map = affine_map<(d0) -> (d0)>
 // CHECK-LABEL:   @not_vectorizable
 func.func @not_vectorizable(%arg0: tensor<1x?xf32>, %arg1: index, %arg2: index, %arg3: index) -> tensor<1x128xf32> {
+  %c0 = arith.constant 0 : index
   %0 = tensor.empty() : tensor<1x128xf32>
   %1 = scf.for %arg5 = %arg2 to %arg1 step %arg3 iter_args(%arg6 = %0) -> (tensor<1x128xf32>) {
     %extracted_slice = tensor.extract_slice %arg6[0, 0] [1, %arg1] [1, 1] : tensor<1x128xf32> to tensor<?xf32>
-    %expanded = tensor.expand_shape %extracted_slice [[0, 1]] : tensor<?xf32> into tensor<1x?xf32>
+    %sz0 = tensor.dim %extracted_slice, %c0 : tensor<?xf32>
+    %expanded = tensor.expand_shape %extracted_slice [[0, 1]] output_shape [1, %sz0] : tensor<?xf32> into tensor<1x?xf32>
     %extracted_slice_0 = tensor.extract_slice %arg0[0, %arg3] [1, %arg2] [1, 1] : tensor<1x?xf32> to tensor<?xf32>
     %extracted_slice_1 = tensor.extract_slice %expanded[0, %arg3] [1, %arg2] [1, 1] : tensor<1x?xf32> to tensor<?xf32>
     %2 = linalg.generic {indexing_maps = [#map, #map], iterator_types = ["parallel"]} ins(%extracted_slice_0 : tensor<?xf32>) outs(%extracted_slice_1 : tensor<?xf32>) {

@@ -120,17 +120,16 @@ bool spirv::needsInterfaceVarABIAttrs(spirv::TargetEnvAttr targetAttr) {
 
 StringRef spirv::getEntryPointABIAttrName() { return "spirv.entry_point_abi"; }
 
-spirv::EntryPointABIAttr
-spirv::getEntryPointABIAttr(MLIRContext *context,
-                            ArrayRef<int32_t> workgroupSize,
-                            std::optional<int> subgroupSize) {
+spirv::EntryPointABIAttr spirv::getEntryPointABIAttr(
+    MLIRContext *context, ArrayRef<int32_t> workgroupSize,
+    std::optional<int> subgroupSize, std::optional<int> targetWidth) {
   DenseI32ArrayAttr workgroupSizeAttr;
   if (!workgroupSize.empty()) {
     assert(workgroupSize.size() == 3);
     workgroupSizeAttr = DenseI32ArrayAttr::get(context, workgroupSize);
   }
-  return spirv::EntryPointABIAttr::get(context, workgroupSizeAttr,
-                                       subgroupSize);
+  return spirv::EntryPointABIAttr::get(context, workgroupSizeAttr, subgroupSize,
+                                       targetWidth);
 }
 
 spirv::EntryPointABIAttr spirv::lookupEntryPointABI(Operation *op) {

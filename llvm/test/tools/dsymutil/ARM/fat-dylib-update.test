@@ -6,11 +6,11 @@
 # RUN: dsymutil -u %t.dSYM -o %t1.dSYM
 # RUN: llvm-dwarfdump -a -v %t1.dSYM/Contents/Resources/DWARF/fat-test.arm.dylib | FileCheck %s
 #
-# RUN: dsymutil --linker llvm -oso-prepend-path %p/..  %p/../Inputs/fat-test.arm.dylib -o %t.dSYM
+# RUN: dsymutil --linker parallel -oso-prepend-path %p/..  %p/../Inputs/fat-test.arm.dylib -o %t.dSYM
 # RUN: llvm-dwarfdump -a -v %t.dSYM/Contents/Resources/DWARF/fat-test.arm.dylib | FileCheck %s
-# RUN: dsymutil --linker llvm -u %t.dSYM
+# RUN: dsymutil --linker parallel -u %t.dSYM
 # RUN: llvm-dwarfdump -a -v %t.dSYM/Contents/Resources/DWARF/fat-test.arm.dylib | FileCheck %s
-# RUN: dsymutil --linker llvm -u %t.dSYM -o %t1.dSYM
+# RUN: dsymutil --linker parallel -u %t.dSYM -o %t1.dSYM
 # RUN: llvm-dwarfdump -a -v %t1.dSYM/Contents/Resources/DWARF/fat-test.arm.dylib | FileCheck %s
 
 CHECK: /Contents/Resources/DWARF/fat-test.arm.dylib(armv7):	file format Mach-O arm

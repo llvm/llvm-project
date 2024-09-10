@@ -2,10 +2,10 @@
 ; RUN: llc -mtriple=amdgcn-- - -amdgpu-atomic-optimizer-strategy=DPP -verify-machineinstrs -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck -enable-var-scope -check-prefixes=GFX7 %s
 ; RUN: llc  -mtriple=amdgcn-- -mcpu=tonga -mattr=-flat-for-global - -amdgpu-atomic-optimizer-strategy=DPP -verify-machineinstrs -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck -enable-var-scope -check-prefixes=GFX89,GFX8 %s
 ; RUN: llc -mtriple=amdgcn-- -mcpu=gfx900 -mattr=-flat-for-global - -amdgpu-atomic-optimizer-strategy=DPP -verify-machineinstrs -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck -enable-var-scope -check-prefixes=GFX89,GFX9 %s
-; RUN: llc -mtriple=amdgcn-- -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64 -mattr=-flat-for-global - -amdgpu-atomic-optimizer-strategy=DPP -verify-machineinstrs -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck -enable-var-scope -check-prefixes=GFX1064 %s
-; RUN: llc -mtriple=amdgcn-- -mcpu=gfx1010 -mattr=+wavefrontsize32,-wavefrontsize64 -mattr=-flat-for-global - -amdgpu-atomic-optimizer-strategy=DPP -verify-machineinstrs -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck -enable-var-scope -check-prefixes=GFX1032 %s
-; RUN: llc -mtriple=amdgcn-- -mcpu=gfx1100 -mattr=-wavefrontsize32,+wavefrontsize64 -mattr=-flat-for-global - -amdgpu-atomic-optimizer-strategy=DPP -verify-machineinstrs -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck -enable-var-scope -check-prefixes=GFX1164 %s
-; RUN: llc -mtriple=amdgcn-- -mcpu=gfx1100 -mattr=+wavefrontsize32,-wavefrontsize64 -mattr=-flat-for-global - -amdgpu-atomic-optimizer-strategy=DPP -verify-machineinstrs -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck -enable-var-scope -check-prefixes=GFX1132 %s
+; RUN: llc -mtriple=amdgcn-- -mcpu=gfx1010 -mattr=+wavefrontsize64 -mattr=-flat-for-global - -amdgpu-atomic-optimizer-strategy=DPP -verify-machineinstrs -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck -enable-var-scope -check-prefixes=GFX1064 %s
+; RUN: llc -mtriple=amdgcn-- -mcpu=gfx1010 -mattr=+wavefrontsize32 -mattr=-flat-for-global - -amdgpu-atomic-optimizer-strategy=DPP -verify-machineinstrs -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck -enable-var-scope -check-prefixes=GFX1032 %s
+; RUN: llc -mtriple=amdgcn-- -mcpu=gfx1100 -mattr=+wavefrontsize64 -mattr=-flat-for-global - -amdgpu-atomic-optimizer-strategy=DPP -verify-machineinstrs -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck -enable-var-scope -check-prefixes=GFX1164 %s
+; RUN: llc -mtriple=amdgcn-- -mcpu=gfx1100 -mattr=+wavefrontsize32 -mattr=-flat-for-global - -amdgpu-atomic-optimizer-strategy=DPP -verify-machineinstrs -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck -enable-var-scope -check-prefixes=GFX1132 %s
 
 declare i1 @llvm.amdgcn.wqm.vote(i1)
 declare i32 @llvm.amdgcn.raw.ptr.buffer.atomic.add(i32, ptr addrspace(8), i32, i32, i32 immarg)
@@ -277,11 +277,9 @@ define amdgpu_ps void @add_i32_varying(ptr addrspace(8) inreg %out, ptr addrspac
 ; GFX8-NEXT:    s_mov_b64 exec, s[10:11]
 ; GFX8-NEXT:    v_mbcnt_lo_u32_b32 v3, exec_lo, 0
 ; GFX8-NEXT:    v_mbcnt_hi_u32_b32 v3, exec_hi, v3
-; GFX8-NEXT:    v_mov_b32_e32 v2, v0
-; GFX8-NEXT:    s_not_b64 exec, exec
-; GFX8-NEXT:    v_mov_b32_e32 v2, 0
-; GFX8-NEXT:    s_not_b64 exec, exec
 ; GFX8-NEXT:    s_or_saveexec_b64 s[10:11], -1
+; GFX8-NEXT:    v_cndmask_b32_e64 v2, 0, v0, s[10:11]
+; GFX8-NEXT:    s_nop 1
 ; GFX8-NEXT:    v_add_u32_dpp v2, vcc, v2, v2 row_shr:1 row_mask:0xf bank_mask:0xf bound_ctrl:1
 ; GFX8-NEXT:    s_nop 1
 ; GFX8-NEXT:    v_add_u32_dpp v2, vcc, v2, v2 row_shr:2 row_mask:0xf bank_mask:0xf bound_ctrl:1
@@ -334,11 +332,9 @@ define amdgpu_ps void @add_i32_varying(ptr addrspace(8) inreg %out, ptr addrspac
 ; GFX9-NEXT:    s_mov_b64 exec, s[10:11]
 ; GFX9-NEXT:    v_mbcnt_lo_u32_b32 v3, exec_lo, 0
 ; GFX9-NEXT:    v_mbcnt_hi_u32_b32 v3, exec_hi, v3
-; GFX9-NEXT:    v_mov_b32_e32 v2, v0
-; GFX9-NEXT:    s_not_b64 exec, exec
-; GFX9-NEXT:    v_mov_b32_e32 v2, 0
-; GFX9-NEXT:    s_not_b64 exec, exec
 ; GFX9-NEXT:    s_or_saveexec_b64 s[10:11], -1
+; GFX9-NEXT:    v_cndmask_b32_e64 v2, 0, v0, s[10:11]
+; GFX9-NEXT:    s_nop 1
 ; GFX9-NEXT:    v_add_u32_dpp v2, v2, v2 row_shr:1 row_mask:0xf bank_mask:0xf bound_ctrl:1
 ; GFX9-NEXT:    s_nop 1
 ; GFX9-NEXT:    v_add_u32_dpp v2, v2, v2 row_shr:2 row_mask:0xf bank_mask:0xf bound_ctrl:1
@@ -386,18 +382,14 @@ define amdgpu_ps void @add_i32_varying(ptr addrspace(8) inreg %out, ptr addrspac
 ; GFX1064-NEXT:    s_and_saveexec_b64 s[8:9], s[10:11]
 ; GFX1064-NEXT:    s_cbranch_execz .LBB1_4
 ; GFX1064-NEXT:  ; %bb.1:
-; GFX1064-NEXT:    v_mov_b32_e32 v1, v0
-; GFX1064-NEXT:    s_not_b64 exec, exec
-; GFX1064-NEXT:    v_mov_b32_e32 v1, 0
-; GFX1064-NEXT:    s_not_b64 exec, exec
 ; GFX1064-NEXT:    s_or_saveexec_b64 s[10:11], -1
-; GFX1064-NEXT:    v_add_nc_u32_dpp v1, v1, v1 row_shr:1 row_mask:0xf bank_mask:0xf bound_ctrl:1
+; GFX1064-NEXT:    v_cndmask_b32_e64 v1, 0, v0, s[10:11]
 ; GFX1064-NEXT:    v_mov_b32_e32 v3, 0
+; GFX1064-NEXT:    v_add_nc_u32_dpp v1, v1, v1 row_shr:1 row_mask:0xf bank_mask:0xf bound_ctrl:1
 ; GFX1064-NEXT:    v_add_nc_u32_dpp v1, v1, v1 row_shr:2 row_mask:0xf bank_mask:0xf bound_ctrl:1
 ; GFX1064-NEXT:    v_add_nc_u32_dpp v1, v1, v1 row_shr:4 row_mask:0xf bank_mask:0xf bound_ctrl:1
 ; GFX1064-NEXT:    v_add_nc_u32_dpp v1, v1, v1 row_shr:8 row_mask:0xf bank_mask:0xf bound_ctrl:1
-; GFX1064-NEXT:    v_mov_b32_e32 v2, v1
-; GFX1064-NEXT:    v_permlanex16_b32 v2, v2, -1, -1
+; GFX1064-NEXT:    v_permlanex16_b32 v2, v1, -1, -1
 ; GFX1064-NEXT:    v_add_nc_u32_dpp v1, v2, v1 quad_perm:[0,1,2,3] row_mask:0xa bank_mask:0xf
 ; GFX1064-NEXT:    v_readlane_b32 s12, v1, 31
 ; GFX1064-NEXT:    v_mov_b32_e32 v2, s12
@@ -450,18 +442,14 @@ define amdgpu_ps void @add_i32_varying(ptr addrspace(8) inreg %out, ptr addrspac
 ; GFX1032-NEXT:    s_and_saveexec_b32 s8, s9
 ; GFX1032-NEXT:    s_cbranch_execz .LBB1_4
 ; GFX1032-NEXT:  ; %bb.1:
-; GFX1032-NEXT:    v_mov_b32_e32 v1, v0
-; GFX1032-NEXT:    s_not_b32 exec_lo, exec_lo
-; GFX1032-NEXT:    v_mov_b32_e32 v1, 0
-; GFX1032-NEXT:    s_not_b32 exec_lo, exec_lo
 ; GFX1032-NEXT:    s_or_saveexec_b32 s9, -1
-; GFX1032-NEXT:    v_add_nc_u32_dpp v1, v1, v1 row_shr:1 row_mask:0xf bank_mask:0xf bound_ctrl:1
+; GFX1032-NEXT:    v_cndmask_b32_e64 v1, 0, v0, s9
 ; GFX1032-NEXT:    v_mov_b32_e32 v3, 0
+; GFX1032-NEXT:    v_add_nc_u32_dpp v1, v1, v1 row_shr:1 row_mask:0xf bank_mask:0xf bound_ctrl:1
 ; GFX1032-NEXT:    v_add_nc_u32_dpp v1, v1, v1 row_shr:2 row_mask:0xf bank_mask:0xf bound_ctrl:1
 ; GFX1032-NEXT:    v_add_nc_u32_dpp v1, v1, v1 row_shr:4 row_mask:0xf bank_mask:0xf bound_ctrl:1
 ; GFX1032-NEXT:    v_add_nc_u32_dpp v1, v1, v1 row_shr:8 row_mask:0xf bank_mask:0xf bound_ctrl:1
-; GFX1032-NEXT:    v_mov_b32_e32 v2, v1
-; GFX1032-NEXT:    v_permlanex16_b32 v2, v2, -1, -1
+; GFX1032-NEXT:    v_permlanex16_b32 v2, v1, -1, -1
 ; GFX1032-NEXT:    v_add_nc_u32_dpp v1, v2, v1 quad_perm:[0,1,2,3] row_mask:0xa bank_mask:0xf
 ; GFX1032-NEXT:    v_readlane_b32 s11, v1, 31
 ; GFX1032-NEXT:    v_mov_b32_dpp v3, v1 row_shr:1 row_mask:0xf bank_mask:0xf
@@ -477,7 +465,6 @@ define amdgpu_ps void @add_i32_varying(ptr addrspace(8) inreg %out, ptr addrspac
 ; GFX1032-NEXT:    s_cbranch_execz .LBB1_3
 ; GFX1032-NEXT:  ; %bb.2:
 ; GFX1032-NEXT:    v_mov_b32_e32 v0, s11
-; GFX1032-NEXT:    s_mov_b32 s10, s11
 ; GFX1032-NEXT:    buffer_atomic_add v0, off, s[4:7], 0 glc
 ; GFX1032-NEXT:  .LBB1_3:
 ; GFX1032-NEXT:    s_waitcnt_depctr 0xffe3
@@ -506,21 +493,17 @@ define amdgpu_ps void @add_i32_varying(ptr addrspace(8) inreg %out, ptr addrspac
 ; GFX1164-NEXT:    s_and_saveexec_b64 s[8:9], s[10:11]
 ; GFX1164-NEXT:    s_cbranch_execz .LBB1_4
 ; GFX1164-NEXT:  ; %bb.1:
-; GFX1164-NEXT:    v_mov_b32_e32 v1, v0
-; GFX1164-NEXT:    s_not_b64 exec, exec
-; GFX1164-NEXT:    v_mov_b32_e32 v1, 0
-; GFX1164-NEXT:    s_not_b64 exec, exec
 ; GFX1164-NEXT:    s_or_saveexec_b64 s[10:11], -1
-; GFX1164-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
-; GFX1164-NEXT:    v_add_nc_u32_dpp v1, v1, v1 row_shr:1 row_mask:0xf bank_mask:0xf bound_ctrl:1
+; GFX1164-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX1164-NEXT:    v_cndmask_b32_e64 v1, 0, v0, s[10:11]
 ; GFX1164-NEXT:    v_mov_b32_e32 v3, 0
+; GFX1164-NEXT:    v_add_nc_u32_dpp v1, v1, v1 row_shr:1 row_mask:0xf bank_mask:0xf bound_ctrl:1
+; GFX1164-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1164-NEXT:    v_add_nc_u32_dpp v1, v1, v1 row_shr:2 row_mask:0xf bank_mask:0xf bound_ctrl:1
-; GFX1164-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1164-NEXT:    v_add_nc_u32_dpp v1, v1, v1 row_shr:4 row_mask:0xf bank_mask:0xf bound_ctrl:1
-; GFX1164-NEXT:    v_add_nc_u32_dpp v1, v1, v1 row_shr:8 row_mask:0xf bank_mask:0xf bound_ctrl:1
 ; GFX1164-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1164-NEXT:    v_mov_b32_e32 v2, v1
-; GFX1164-NEXT:    v_permlanex16_b32 v2, v2, -1, -1
+; GFX1164-NEXT:    v_add_nc_u32_dpp v1, v1, v1 row_shr:8 row_mask:0xf bank_mask:0xf bound_ctrl:1
+; GFX1164-NEXT:    v_permlanex16_b32 v2, v1, -1, -1
 ; GFX1164-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1164-NEXT:    v_add_nc_u32_dpp v1, v2, v1 quad_perm:[0,1,2,3] row_mask:0xa bank_mask:0xf
 ; GFX1164-NEXT:    v_readlane_b32 s12, v1, 31
@@ -582,21 +565,17 @@ define amdgpu_ps void @add_i32_varying(ptr addrspace(8) inreg %out, ptr addrspac
 ; GFX1132-NEXT:    s_and_saveexec_b32 s8, s9
 ; GFX1132-NEXT:    s_cbranch_execz .LBB1_4
 ; GFX1132-NEXT:  ; %bb.1:
-; GFX1132-NEXT:    v_mov_b32_e32 v1, v0
-; GFX1132-NEXT:    s_not_b32 exec_lo, exec_lo
-; GFX1132-NEXT:    v_mov_b32_e32 v1, 0
-; GFX1132-NEXT:    s_not_b32 exec_lo, exec_lo
 ; GFX1132-NEXT:    s_or_saveexec_b32 s9, -1
-; GFX1132-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
-; GFX1132-NEXT:    v_add_nc_u32_dpp v1, v1, v1 row_shr:1 row_mask:0xf bank_mask:0xf bound_ctrl:1
+; GFX1132-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX1132-NEXT:    v_cndmask_b32_e64 v1, 0, v0, s9
 ; GFX1132-NEXT:    v_mov_b32_e32 v3, 0
+; GFX1132-NEXT:    v_add_nc_u32_dpp v1, v1, v1 row_shr:1 row_mask:0xf bank_mask:0xf bound_ctrl:1
+; GFX1132-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1132-NEXT:    v_add_nc_u32_dpp v1, v1, v1 row_shr:2 row_mask:0xf bank_mask:0xf bound_ctrl:1
-; GFX1132-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1132-NEXT:    v_add_nc_u32_dpp v1, v1, v1 row_shr:4 row_mask:0xf bank_mask:0xf bound_ctrl:1
-; GFX1132-NEXT:    v_add_nc_u32_dpp v1, v1, v1 row_shr:8 row_mask:0xf bank_mask:0xf bound_ctrl:1
 ; GFX1132-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1132-NEXT:    v_mov_b32_e32 v2, v1
-; GFX1132-NEXT:    v_permlanex16_b32 v2, v2, -1, -1
+; GFX1132-NEXT:    v_add_nc_u32_dpp v1, v1, v1 row_shr:8 row_mask:0xf bank_mask:0xf bound_ctrl:1
+; GFX1132-NEXT:    v_permlanex16_b32 v2, v1, -1, -1
 ; GFX1132-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1132-NEXT:    v_add_nc_u32_dpp v1, v2, v1 quad_perm:[0,1,2,3] row_mask:0xa bank_mask:0xf
 ; GFX1132-NEXT:    v_readlane_b32 s11, v1, 31
@@ -615,7 +594,6 @@ define amdgpu_ps void @add_i32_varying(ptr addrspace(8) inreg %out, ptr addrspac
 ; GFX1132-NEXT:    s_cbranch_execz .LBB1_3
 ; GFX1132-NEXT:  ; %bb.2:
 ; GFX1132-NEXT:    v_mov_b32_e32 v0, s11
-; GFX1132-NEXT:    s_mov_b32 s10, s11
 ; GFX1132-NEXT:    buffer_atomic_add_u32 v0, off, s[4:7], 0 glc
 ; GFX1132-NEXT:  .LBB1_3:
 ; GFX1132-NEXT:    s_or_b32 exec_lo, exec_lo, s9

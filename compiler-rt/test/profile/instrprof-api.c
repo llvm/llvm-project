@@ -33,14 +33,10 @@ int main() {
   // PROFUSE-NOT: call void @__llvm_profile_set_filename(ptr noundef @{{.*}})
   if (__llvm_profile_dump())
     return 2;
-  // PROFGEN: %call1 = call {{(signext )*}}i32 @__llvm_profile_dump()
-  // PROFUSE-NOT: %call1 = call {{(signext )*}}i32 @__llvm_profile_dump()
-  __llvm_orderfile_dump();
-  // PROFGEN: %call2 = call {{(signext )*}}i32 @__llvm_orderfile_dump()
-  // PROFUSE-NOT: %call2 = call {{(signext )*}}i32 @__llvm_orderfile_dump()
+  // PROFGEN: %{{.*}} = call {{(signext )*}}i32 @__llvm_profile_dump()
+  // PROFUSE-NOT: %{{.*}} = call {{(signext )*}}i32 @__llvm_profile_dump()
   return z + bar() - 11;
 }
 
 // PROFUSE-NOT: declare void @__llvm_profile_set_filename(ptr noundef)
 // PROFUSE-NOT: declare signext i32 @__llvm_profile_dump()
-// PROFUSE-NOT: declare signext i32 @__llvm_orderfile_dump()

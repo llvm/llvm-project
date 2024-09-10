@@ -27,21 +27,17 @@ define <vscale x 1 x double> @test2(<vscale x 1 x double> %a, <vscale x 1 x i1> 
 ; CHECK-LABEL: test2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a1, %hi(.LCPI1_0)
-; CHECK-NEXT:    addi a1, a1, %lo(.LCPI1_0)
-; CHECK-NEXT:    vsetvli a2, zero, e64, m1, ta, ma
-; CHECK-NEXT:    vlse64.v v9, (a1), zero
+; CHECK-NEXT:    fld fa5, %lo(.LCPI1_0)(a1)
 ; CHECK-NEXT:    lui a1, %hi(.LCPI1_1)
-; CHECK-NEXT:    fld fa5, %lo(.LCPI1_1)(a1)
+; CHECK-NEXT:    fld fa4, %lo(.LCPI1_1)(a1)
+; CHECK-NEXT:    vsetvli a1, zero, e64, m1, ta, ma
+; CHECK-NEXT:    vfmv.v.f v9, fa5
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
-; CHECK-NEXT:    vfadd.vf v9, v9, fa5, v0.t
+; CHECK-NEXT:    vfadd.vf v9, v9, fa4, v0.t
 ; CHECK-NEXT:    vfmul.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    ret
-  %elt.head1 = insertelement <vscale x 1 x double> poison, double 2.0, i32 0
-  %c1 = shufflevector <vscale x 1 x double> %elt.head1, <vscale x 1 x double> poison, <vscale x 1 x i32> zeroinitializer
-  %t = call <vscale x 1 x double> @llvm.vp.fmul.nxv1f64(<vscale x 1 x double> %a, <vscale x 1 x double> %c1, <vscale x 1 x i1> %m, i32 %evl)
-  %elt.head2 = insertelement <vscale x 1 x double> poison, double 4.0, i32 0
-  %c2 = shufflevector <vscale x 1 x double> %elt.head2, <vscale x 1 x double> poison, <vscale x 1 x i32> zeroinitializer
-  %v = call fast <vscale x 1 x double> @llvm.vp.fma.nxv1f64(<vscale x 1 x double> %a, <vscale x 1 x double> %c2, <vscale x 1 x double> %t, <vscale x 1 x i1> %m, i32 %evl)
+  %t = call <vscale x 1 x double> @llvm.vp.fmul.nxv1f64(<vscale x 1 x double> %a, <vscale x 1 x double> splat (double 2.0), <vscale x 1 x i1> %m, i32 %evl)
+  %v = call fast <vscale x 1 x double> @llvm.vp.fma.nxv1f64(<vscale x 1 x double> %a, <vscale x 1 x double> splat (double 4.0), <vscale x 1 x double> %t, <vscale x 1 x i1> %m, i32 %evl)
   ret <vscale x 1 x double> %v
 }
 
@@ -50,21 +46,17 @@ define <vscale x 1 x double> @test3(<vscale x 1 x double> %a, <vscale x 1 x doub
 ; CHECK-LABEL: test3:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a1, %hi(.LCPI2_0)
-; CHECK-NEXT:    addi a1, a1, %lo(.LCPI2_0)
-; CHECK-NEXT:    vsetvli a2, zero, e64, m1, ta, ma
-; CHECK-NEXT:    vlse64.v v10, (a1), zero
+; CHECK-NEXT:    fld fa5, %lo(.LCPI2_0)(a1)
 ; CHECK-NEXT:    lui a1, %hi(.LCPI2_1)
-; CHECK-NEXT:    fld fa5, %lo(.LCPI2_1)(a1)
+; CHECK-NEXT:    fld fa4, %lo(.LCPI2_1)(a1)
+; CHECK-NEXT:    vsetvli a1, zero, e64, m1, ta, ma
+; CHECK-NEXT:    vfmv.v.f v10, fa5
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
-; CHECK-NEXT:    vfmul.vf v10, v10, fa5, v0.t
+; CHECK-NEXT:    vfmul.vf v10, v10, fa4, v0.t
 ; CHECK-NEXT:    vfmadd.vv v10, v8, v9, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v10
 ; CHECK-NEXT:    ret
-  %elt.head1 = insertelement <vscale x 1 x double> poison, double 2.0, i32 0
-  %c1 = shufflevector <vscale x 1 x double> %elt.head1, <vscale x 1 x double> poison, <vscale x 1 x i32> zeroinitializer
-  %t = call <vscale x 1 x double> @llvm.vp.fmul.nxv1f64(<vscale x 1 x double> %a, <vscale x 1 x double> %c1, <vscale x 1 x i1> %m, i32 %evl)
-  %elt.head2 = insertelement <vscale x 1 x double> poison, double 4.0, i32 0
-  %c2 = shufflevector <vscale x 1 x double> %elt.head2, <vscale x 1 x double> poison, <vscale x 1 x i32> zeroinitializer
-  %v = call fast <vscale x 1 x double> @llvm.vp.fma.nxv1f64(<vscale x 1 x double> %t, <vscale x 1 x double> %c2, <vscale x 1 x double> %b, <vscale x 1 x i1> %m, i32 %evl)
+  %t = call <vscale x 1 x double> @llvm.vp.fmul.nxv1f64(<vscale x 1 x double> %a, <vscale x 1 x double> splat (double 2.0), <vscale x 1 x i1> %m, i32 %evl)
+  %v = call fast <vscale x 1 x double> @llvm.vp.fma.nxv1f64(<vscale x 1 x double> %t, <vscale x 1 x double> splat (double 4.0), <vscale x 1 x double> %b, <vscale x 1 x i1> %m, i32 %evl)
   ret <vscale x 1 x double> %v
 }

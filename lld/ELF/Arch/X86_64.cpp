@@ -310,27 +310,31 @@ bool X86_64::deleteFallThruJmpInsn(InputSection &is, InputFile *file,
 
 bool X86_64::relaxOnce(int pass) const {
   uint64_t minVA = UINT64_MAX, maxVA = 0;
-  for (OutputSection *osec : outputSections) {
+  for (OutputSection *osec : ctx.outputSections) {
     minVA = std::min(minVA, osec->addr);
     maxVA = std::max(maxVA, osec->addr + osec->size);
   }
-  // If the max VA difference is under 2^31, GOT-generating relocations with a 32-bit range cannot overflow.
-  if (isUInt<31>(maxVA - minVA))
+  // If the max VA is under 2^31, GOTPCRELX relocations cannot overfow. In
+  // -pie/-shared, the condition can be relaxed to test the max VA difference as
+  // there is no R_RELAX_GOT_PC_NOPIC.
+  if (isUInt<31>(maxVA) || (isUInt<31>(maxVA - minVA) && config->isPic))
     return false;
 
   SmallVector<InputSection *, 0> storage;
   bool changed = false;
-  for (OutputSection *osec : outputSections) {
+  for (OutputSection *osec : ctx.outputSections) {
     if (!(osec->flags & SHF_EXECINSTR))
       continue;
     for (InputSection *sec : getInputSections(*osec, storage)) {
       for (Relocation &rel : sec->relocs()) {
-        if (rel.expr != R_RELAX_GOT_PC)
+        if (rel.expr != R_RELAX_GOT_PC && rel.expr != R_RELAX_GOT_PC_NOPIC)
           continue;
+        assert(rel.addend == -4);
 
         uint64_t v = sec->getRelocTargetVA(
-            sec->file, rel.type, rel.addend,
-            sec->getOutputSection()->addr + rel.offset, *rel.sym, rel.expr);
+            sec->file, rel.type, rel.expr == R_RELAX_GOT_PC_NOPIC ? 0 : -4,
+            sec->getOutputSection()->addr + sec->outSecOff + rel.offset,
+            *rel.sym, rel.expr);
         if (isInt<32>(v))
           continue;
         if (rel.sym->auxIdx == 0) {
@@ -403,11 +407,11 @@ RelExpr X86_64::getRelExpr(RelType type, const Symbol &s,
 }
 
 void X86_64::writeGotPltHeader(uint8_t *buf) const {
-  // The first entry holds the value of _DYNAMIC. It is not clear why that is
-  // required, but it is documented in the psabi and the glibc dynamic linker
-  // seems to use it (note that this is relevant for linking ld.so, not any
-  // other program).
-  write64le(buf, mainPart->dynamic->getVA());
+  // The first entry holds the link-time address of _DYNAMIC. It is documented
+  // in the psABI and glibc before Aug 2021 used the entry to compute run-time
+  // load address of the shared object (note that this is relevant for linking
+  // ld.so, not any other program).
+  write64le(buf, ctx.mainPart->dynamic->getVA());
 }
 
 void X86_64::writeGotPlt(uint8_t *buf, const Symbol &s) const {

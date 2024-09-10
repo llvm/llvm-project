@@ -22,14 +22,14 @@ void test_presence(void)
   r = 0;
   __atomic_store(&i, &r, memory_order_seq_cst);
 
-  // CHECK: __atomic_fetch_add_8
+  // CHECK: atomicrmw add ptr {{.*}} seq_cst, align 8
   __atomic_fetch_add(&l, 1, memory_order_seq_cst);
-  // CHECK: __atomic_fetch_sub_8
+  // CHECK: atomicrmw sub ptr {{.*}} seq_cst, align 8
   __atomic_fetch_sub(&l, 1, memory_order_seq_cst);
-  // CHECK: __atomic_load_8
+  // CHECK: load atomic i64, ptr {{.*}} seq_cst, align 8
   long long rl;
   __atomic_load(&l, &rl, memory_order_seq_cst);
-  // CHECK: __atomic_store_8
+  // CHECK: store atomic i64 {{.*}}, ptr {{.*}} seq_cst, align 8
   rl = 0;
   __atomic_store(&l, &rl, memory_order_seq_cst);
 }

@@ -574,31 +574,7 @@ const char *clang::getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind,
 }
 
 bool clang::isOpenMPLoopDirective(OpenMPDirectiveKind DKind) {
-  return DKind == OMPD_simd || DKind == OMPD_for || DKind == OMPD_for_simd ||
-         DKind == OMPD_parallel_for || DKind == OMPD_parallel_for_simd ||
-         DKind == OMPD_taskloop || DKind == OMPD_taskloop_simd ||
-         DKind == OMPD_master_taskloop || DKind == OMPD_master_taskloop_simd ||
-         DKind == OMPD_parallel_master_taskloop ||
-         DKind == OMPD_parallel_master_taskloop_simd ||
-         DKind == OMPD_masked_taskloop || DKind == OMPD_masked_taskloop_simd ||
-         DKind == OMPD_parallel_masked_taskloop || DKind == OMPD_distribute ||
-         DKind == OMPD_parallel_masked_taskloop_simd ||
-         DKind == OMPD_target_parallel_for ||
-         DKind == OMPD_distribute_parallel_for ||
-         DKind == OMPD_distribute_parallel_for_simd ||
-         DKind == OMPD_distribute_simd ||
-         DKind == OMPD_target_parallel_for_simd || DKind == OMPD_target_simd ||
-         DKind == OMPD_teams_distribute ||
-         DKind == OMPD_teams_distribute_simd ||
-         DKind == OMPD_teams_distribute_parallel_for_simd ||
-         DKind == OMPD_teams_distribute_parallel_for ||
-         DKind == OMPD_target_teams_distribute ||
-         DKind == OMPD_target_teams_distribute_parallel_for ||
-         DKind == OMPD_target_teams_distribute_parallel_for_simd ||
-         DKind == OMPD_target_teams_distribute_simd || DKind == OMPD_tile ||
-         DKind == OMPD_unroll || DKind == OMPD_loop ||
-         DKind == OMPD_teams_loop || DKind == OMPD_target_teams_loop ||
-         DKind == OMPD_parallel_loop || DKind == OMPD_target_parallel_loop;
+  return getDirectiveAssociation(DKind) == Association::Loop;
 }
 
 bool clang::isOpenMPWorksharingDirective(OpenMPDirectiveKind DKind) {
@@ -619,44 +595,20 @@ bool clang::isOpenMPWorksharingDirective(OpenMPDirectiveKind DKind) {
 }
 
 bool clang::isOpenMPTaskLoopDirective(OpenMPDirectiveKind DKind) {
-  return DKind == OMPD_taskloop || DKind == OMPD_taskloop_simd ||
-         DKind == OMPD_master_taskloop || DKind == OMPD_master_taskloop_simd ||
-         DKind == OMPD_parallel_master_taskloop ||
-         DKind == OMPD_masked_taskloop || DKind == OMPD_masked_taskloop_simd ||
-         DKind == OMPD_parallel_masked_taskloop ||
-         DKind == OMPD_parallel_masked_taskloop_simd ||
-         DKind == OMPD_parallel_master_taskloop_simd;
+  return DKind == OMPD_taskloop ||
+         llvm::is_contained(getLeafConstructs(DKind), OMPD_taskloop);
 }
 
 bool clang::isOpenMPParallelDirective(OpenMPDirectiveKind DKind) {
-  return DKind == OMPD_parallel || DKind == OMPD_parallel_for ||
-         DKind == OMPD_parallel_for_simd || DKind == OMPD_parallel_sections ||
-         DKind == OMPD_target_parallel || DKind == OMPD_target_parallel_for ||
-         DKind == OMPD_distribute_parallel_for ||
-         DKind == OMPD_distribute_parallel_for_simd ||
-         DKind == OMPD_target_parallel_for_simd ||
-         DKind == OMPD_teams_distribute_parallel_for ||
-         DKind == OMPD_teams_distribute_parallel_for_simd ||
-         DKind == OMPD_target_teams_distribute_parallel_for ||
-         DKind == OMPD_target_teams_distribute_parallel_for_simd ||
-         DKind == OMPD_parallel_master || DKind == OMPD_parallel_masked ||
-         DKind == OMPD_parallel_master_taskloop ||
-         DKind == OMPD_parallel_master_taskloop_simd ||
-         DKind == OMPD_parallel_masked_taskloop ||
-         DKind == OMPD_parallel_masked_taskloop_simd ||
-         DKind == OMPD_parallel_loop || DKind == OMPD_target_parallel_loop ||
-         DKind == OMPD_teams_loop;
+  if (DKind == OMPD_teams_loop)
+    return true;
+  return DKind == OMPD_parallel ||
+         llvm::is_contained(getLeafConstructs(DKind), OMPD_parallel);
 }
 
 bool clang::isOpenMPTargetExecutionDirective(OpenMPDirectiveKind DKind) {
-  return DKind == OMPD_target || DKind == OMPD_target_parallel ||
-         DKind == OMPD_target_parallel_for ||
-         DKind == OMPD_target_parallel_for_simd || DKind == OMPD_target_simd ||
-         DKind == OMPD_target_teams || DKind == OMPD_target_teams_distribute ||
-         DKind == OMPD_target_teams_distribute_parallel_for ||
-         DKind == OMPD_target_teams_distribute_parallel_for_simd ||
-         DKind == OMPD_target_teams_distribute_simd ||
-         DKind == OMPD_target_teams_loop || DKind == OMPD_target_parallel_loop;
+  return DKind == OMPD_target ||
+         llvm::is_contained(getLeafConstructs(DKind), OMPD_target);
 }
 
 bool clang::isOpenMPTargetDataManagementDirective(OpenMPDirectiveKind DKind) {
@@ -665,60 +617,45 @@ bool clang::isOpenMPTargetDataManagementDirective(OpenMPDirectiveKind DKind) {
 }
 
 bool clang::isOpenMPNestingTeamsDirective(OpenMPDirectiveKind DKind) {
-  return DKind == OMPD_teams || DKind == OMPD_teams_distribute ||
-         DKind == OMPD_teams_distribute_simd ||
-         DKind == OMPD_teams_distribute_parallel_for_simd ||
-         DKind == OMPD_teams_distribute_parallel_for ||
-         DKind == OMPD_teams_loop;
+  if (DKind == OMPD_teams)
+    return true;
+  ArrayRef<Directive> Leaves = getLeafConstructs(DKind);
+  return !Leaves.empty() && Leaves.front() == OMPD_teams;
 }
 
 bool clang::isOpenMPTeamsDirective(OpenMPDirectiveKind DKind) {
-  return isOpenMPNestingTeamsDirective(DKind) || DKind == OMPD_target_teams ||
-         DKind == OMPD_target_teams_distribute ||
-         DKind == OMPD_target_teams_distribute_parallel_for ||
-         DKind == OMPD_target_teams_distribute_parallel_for_simd ||
-         DKind == OMPD_target_teams_distribute_simd ||
-         DKind == OMPD_target_teams_loop;
+  return DKind == OMPD_teams ||
+         llvm::is_contained(getLeafConstructs(DKind), OMPD_teams);
 }
 
 bool clang::isOpenMPSimdDirective(OpenMPDirectiveKind DKind) {
-  return DKind == OMPD_simd || DKind == OMPD_for_simd ||
-         DKind == OMPD_parallel_for_simd || DKind == OMPD_taskloop_simd ||
-         DKind == OMPD_master_taskloop_simd ||
-         DKind == OMPD_masked_taskloop_simd ||
-         DKind == OMPD_parallel_master_taskloop_simd ||
-         DKind == OMPD_parallel_masked_taskloop_simd ||
-         DKind == OMPD_distribute_parallel_for_simd ||
-         DKind == OMPD_distribute_simd || DKind == OMPD_target_simd ||
-         DKind == OMPD_teams_distribute_simd ||
-         DKind == OMPD_teams_distribute_parallel_for_simd ||
-         DKind == OMPD_target_teams_distribute_parallel_for_simd ||
-         DKind == OMPD_target_teams_distribute_simd ||
-         DKind == OMPD_target_parallel_for_simd;
+  // Avoid OMPD_declare_simd
+  if (getDirectiveAssociation(DKind) != Association::Loop)
+    return false;
+  // Formally, OMPD_end_do_simd also has a loop association, but
+  // it's a Fortran-specific directive.
+
+  return DKind == OMPD_simd ||
+         llvm::is_contained(getLeafConstructs(DKind), OMPD_simd);
 }
 
 bool clang::isOpenMPNestingDistributeDirective(OpenMPDirectiveKind Kind) {
-  return Kind == OMPD_distribute || Kind == OMPD_distribute_parallel_for ||
-         Kind == OMPD_distribute_parallel_for_simd ||
-         Kind == OMPD_distribute_simd;
-  // TODO add next directives.
+  if (Kind == OMPD_distribute)
+    return true;
+  ArrayRef<Directive> Leaves = getLeafConstructs(Kind);
+  return !Leaves.empty() && Leaves.front() == OMPD_distribute;
 }
 
 bool clang::isOpenMPDistributeDirective(OpenMPDirectiveKind Kind) {
-  return isOpenMPNestingDistributeDirective(Kind) ||
-         Kind == OMPD_teams_distribute || Kind == OMPD_teams_distribute_simd ||
-         Kind == OMPD_teams_distribute_parallel_for_simd ||
-         Kind == OMPD_teams_distribute_parallel_for ||
-         Kind == OMPD_target_teams_distribute ||
-         Kind == OMPD_target_teams_distribute_parallel_for ||
-         Kind == OMPD_target_teams_distribute_parallel_for_simd ||
-         Kind == OMPD_target_teams_distribute_simd;
+  return Kind == OMPD_distribute ||
+         llvm::is_contained(getLeafConstructs(Kind), OMPD_distribute);
 }
 
 bool clang::isOpenMPGenericLoopDirective(OpenMPDirectiveKind Kind) {
-  return Kind == OMPD_loop || Kind == OMPD_teams_loop ||
-         Kind == OMPD_target_teams_loop || Kind == OMPD_parallel_loop ||
-         Kind == OMPD_target_parallel_loop;
+  if (Kind == OMPD_loop)
+    return true;
+  ArrayRef<Directive> Leaves = getLeafConstructs(Kind);
+  return !Leaves.empty() && Leaves.back() == OMPD_loop;
 }
 
 bool clang::isOpenMPPrivate(OpenMPClauseKind Kind) {
@@ -747,7 +684,8 @@ bool clang::isOpenMPLoopBoundSharingDirective(OpenMPDirectiveKind Kind) {
 }
 
 bool clang::isOpenMPLoopTransformationDirective(OpenMPDirectiveKind DKind) {
-  return DKind == OMPD_tile || DKind == OMPD_unroll;
+  return DKind == OMPD_tile || DKind == OMPD_unroll || DKind == OMPD_reverse ||
+         DKind == OMPD_interchange;
 }
 
 bool clang::isOpenMPCombinedParallelADirective(OpenMPDirectiveKind DKind) {
@@ -765,139 +703,139 @@ bool clang::needsTaskBasedThreadLimit(OpenMPDirectiveKind DKind) {
          DKind == OMPD_target_parallel_loop;
 }
 
+bool clang::isOpenMPExecutableDirective(OpenMPDirectiveKind DKind) {
+  if (DKind == OMPD_error)
+    return true;
+  Category Cat = getDirectiveCategory(DKind);
+  return Cat == Category::Executable || Cat == Category::Subsidiary;
+}
+
+bool clang::isOpenMPInformationalDirective(OpenMPDirectiveKind DKind) {
+  if (DKind == OMPD_error)
+    return true;
+  Category Cat = getDirectiveCategory(DKind);
+  return Cat == Category::Informational;
+}
+
+bool clang::isOpenMPCapturingDirective(OpenMPDirectiveKind DKind) {
+  if (isOpenMPExecutableDirective(DKind)) {
+    switch (DKind) {
+    case OMPD_atomic:
+    case OMPD_barrier:
+    case OMPD_cancel:
+    case OMPD_cancellation_point:
+    case OMPD_critical:
+    case OMPD_depobj:
+    case OMPD_error:
+    case OMPD_flush:
+    case OMPD_masked:
+    case OMPD_master:
+    case OMPD_section:
+    case OMPD_taskwait:
+    case OMPD_taskyield:
+    case OMPD_assume:
+      return false;
+    default:
+      return !isOpenMPLoopTransformationDirective(DKind);
+    }
+  }
+  // Non-executable directives.
+  switch (DKind) {
+  case OMPD_metadirective:
+  case OMPD_nothing:
+    return true;
+  default:
+    break;
+  }
+  return false;
+}
+
 void clang::getOpenMPCaptureRegions(
     SmallVectorImpl<OpenMPDirectiveKind> &CaptureRegions,
     OpenMPDirectiveKind DKind) {
   assert(unsigned(DKind) < llvm::omp::Directive_enumSize);
-  switch (DKind) {
-  case OMPD_metadirective:
-    CaptureRegions.push_back(OMPD_metadirective);
-    break;
-  case OMPD_parallel:
-  case OMPD_parallel_for:
-  case OMPD_parallel_for_simd:
-  case OMPD_parallel_master:
-  case OMPD_parallel_masked:
-  case OMPD_parallel_sections:
-  case OMPD_distribute_parallel_for:
-  case OMPD_distribute_parallel_for_simd:
-  case OMPD_parallel_loop:
-    CaptureRegions.push_back(OMPD_parallel);
-    break;
-  case OMPD_target_teams:
-  case OMPD_target_teams_distribute:
-  case OMPD_target_teams_distribute_simd:
-    CaptureRegions.push_back(OMPD_task);
-    CaptureRegions.push_back(OMPD_target);
-    CaptureRegions.push_back(OMPD_teams);
-    break;
-  case OMPD_teams:
-  case OMPD_teams_distribute:
-  case OMPD_teams_distribute_simd:
-    CaptureRegions.push_back(OMPD_teams);
-    break;
-  case OMPD_target:
-  case OMPD_target_simd:
-    CaptureRegions.push_back(OMPD_task);
-    CaptureRegions.push_back(OMPD_target);
-    break;
-  case OMPD_teams_loop:
-  case OMPD_teams_distribute_parallel_for:
-  case OMPD_teams_distribute_parallel_for_simd:
-    CaptureRegions.push_back(OMPD_teams);
-    CaptureRegions.push_back(OMPD_parallel);
-    break;
-  case OMPD_target_parallel:
-  case OMPD_target_parallel_for:
-  case OMPD_target_parallel_for_simd:
-  case OMPD_target_parallel_loop:
-    CaptureRegions.push_back(OMPD_task);
-    CaptureRegions.push_back(OMPD_target);
-    CaptureRegions.push_back(OMPD_parallel);
-    break;
-  case OMPD_task:
-  case OMPD_target_enter_data:
-  case OMPD_target_exit_data:
-  case OMPD_target_update:
-    CaptureRegions.push_back(OMPD_task);
-    break;
-  case OMPD_taskloop:
-  case OMPD_taskloop_simd:
-  case OMPD_master_taskloop:
-  case OMPD_master_taskloop_simd:
-  case OMPD_masked_taskloop:
-  case OMPD_masked_taskloop_simd:
-    CaptureRegions.push_back(OMPD_taskloop);
-    break;
-  case OMPD_parallel_masked_taskloop:
-  case OMPD_parallel_masked_taskloop_simd:
-  case OMPD_parallel_master_taskloop:
-  case OMPD_parallel_master_taskloop_simd:
-    CaptureRegions.push_back(OMPD_parallel);
-    CaptureRegions.push_back(OMPD_taskloop);
-    break;
-  case OMPD_target_teams_loop:
-  case OMPD_target_teams_distribute_parallel_for:
-  case OMPD_target_teams_distribute_parallel_for_simd:
-    CaptureRegions.push_back(OMPD_task);
-    CaptureRegions.push_back(OMPD_target);
-    CaptureRegions.push_back(OMPD_teams);
-    CaptureRegions.push_back(OMPD_parallel);
-    break;
-  case OMPD_nothing:
-    CaptureRegions.push_back(OMPD_nothing);
-    break;
-  case OMPD_loop:
-    // TODO: 'loop' may require different capture regions depending on the bind
-    // clause or the parent directive when there is no bind clause. Use
-    // OMPD_unknown for now.
-  case OMPD_simd:
-  case OMPD_for:
-  case OMPD_for_simd:
-  case OMPD_sections:
-  case OMPD_section:
-  case OMPD_single:
-  case OMPD_master:
-  case OMPD_critical:
-  case OMPD_taskgroup:
-  case OMPD_distribute:
-  case OMPD_ordered:
-  case OMPD_atomic:
-  case OMPD_target_data:
-  case OMPD_distribute_simd:
-  case OMPD_scope:
-  case OMPD_dispatch:
+  assert(isOpenMPCapturingDirective(DKind) && "Expecting capturing directive");
+
+  auto GetRegionsForLeaf = [&](OpenMPDirectiveKind LKind) {
+    assert(isLeafConstruct(LKind) && "Epecting leaf directive");
+    // Whether a leaf would require OMPD_unknown if it occured on its own.
+    switch (LKind) {
+    case OMPD_metadirective:
+      CaptureRegions.push_back(OMPD_metadirective);
+      break;
+    case OMPD_nothing:
+      CaptureRegions.push_back(OMPD_nothing);
+      break;
+    case OMPD_parallel:
+      CaptureRegions.push_back(OMPD_parallel);
+      break;
+    case OMPD_target:
+      CaptureRegions.push_back(OMPD_task);
+      CaptureRegions.push_back(OMPD_target);
+      break;
+    case OMPD_task:
+    case OMPD_target_enter_data:
+    case OMPD_target_exit_data:
+    case OMPD_target_update:
+      CaptureRegions.push_back(OMPD_task);
+      break;
+    case OMPD_teams:
+      CaptureRegions.push_back(OMPD_teams);
+      break;
+    case OMPD_taskloop:
+      CaptureRegions.push_back(OMPD_taskloop);
+      break;
+    case OMPD_loop:
+      // TODO: 'loop' may require different capture regions depending on the
+      // bind clause or the parent directive when there is no bind clause.
+      // If any of the directives that push regions here are parents of 'loop',
+      // assume 'parallel'. Otherwise do nothing.
+      if (!CaptureRegions.empty() &&
+          !llvm::is_contained(CaptureRegions, OMPD_parallel))
+        CaptureRegions.push_back(OMPD_parallel);
+      else
+        return true;
+      break;
+    case OMPD_dispatch:
+    case OMPD_distribute:
+    case OMPD_for:
+    case OMPD_ordered:
+    case OMPD_scope:
+    case OMPD_sections:
+    case OMPD_simd:
+    case OMPD_single:
+    case OMPD_target_data:
+    case OMPD_taskgroup:
+      // These directives (when standalone) use OMPD_unknown as the region,
+      // but when they're constituents of a compound directive, and other
+      // leafs from that directive have specific regions, then these directives
+      // add no additional regions.
+      return true;
+    case OMPD_masked:
+    case OMPD_master:
+      return false;
+    default:
+      llvm::errs() << getOpenMPDirectiveName(LKind) << '\n';
+      llvm_unreachable("Unexpected directive");
+    }
+    return false;
+  };
+
+  bool MayNeedUnknownRegion = false;
+  for (OpenMPDirectiveKind L : getLeafConstructsOrSelf(DKind))
+    MayNeedUnknownRegion |= GetRegionsForLeaf(L);
+
+  // We need OMPD_unknown when no regions were added, and specific leaf
+  // constructs were present. Push a single OMPD_unknown as the capture
+  /// region.
+  if (CaptureRegions.empty() && MayNeedUnknownRegion)
     CaptureRegions.push_back(OMPD_unknown);
-    break;
-  case OMPD_tile:
-  case OMPD_unroll:
-    // loop transformations do not introduce captures.
-    break;
-  case OMPD_threadprivate:
-  case OMPD_allocate:
-  case OMPD_taskyield:
-  case OMPD_barrier:
-  case OMPD_error:
-  case OMPD_taskwait:
-  case OMPD_cancellation_point:
-  case OMPD_cancel:
-  case OMPD_flush:
-  case OMPD_depobj:
-  case OMPD_scan:
-  case OMPD_declare_reduction:
-  case OMPD_declare_mapper:
-  case OMPD_declare_simd:
-  case OMPD_declare_target:
-  case OMPD_end_declare_target:
-  case OMPD_requires:
-  case OMPD_declare_variant:
-  case OMPD_begin_declare_variant:
-  case OMPD_end_declare_variant:
-    llvm_unreachable("OpenMP Directive is not allowed");
-  case OMPD_unknown:
-  default:
-    llvm_unreachable("Unknown OpenMP directive");
-  }
+
+  // OMPD_unknown is only expected as the only region. If other regions
+  // are present OMPD_unknown should not be present.
+  assert((CaptureRegions[0] == OMPD_unknown ||
+          !llvm::is_contained(CaptureRegions, OMPD_unknown)) &&
+         "Misplaced OMPD_unknown");
 }
 
 bool clang::checkFailClauseParameter(OpenMPClauseKind FailClauseParameter) {

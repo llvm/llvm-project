@@ -1,12 +1,12 @@
-// RUN: %clang_cc1 -fblocks -fobjc-arc -Wno-objc-root-class -fsyntax-only -ast-dump "-DSUBJECT=objc_interface" %s | FileCheck --check-prefix=CHECK-OBJC_INTERFACE %s
-// RUN: %clang_cc1 -fblocks -fobjc-arc -Wno-objc-root-class -fsyntax-only -ast-dump -ast-dump-filter test "-DSUBJECT=objc_protocol" %s | FileCheck --check-prefix=CHECK-OBJC_PROTOCOL %s
-// RUN: %clang_cc1 -fblocks -fobjc-arc -Wno-objc-root-class -fsyntax-only -ast-dump "-DSUBJECT=objc_category" %s | FileCheck --check-prefix=CHECK-OBJC_CATEGORY %s
-// RUN: %clang_cc1 -fblocks -fobjc-arc -Wno-objc-root-class -fsyntax-only -ast-dump -ast-dump-filter test "-DSUBJECT=objc_method" %s | FileCheck --check-prefix=CHECK-OBJC_METHOD %s
-// RUN: %clang_cc1 -fblocks -fobjc-arc -Wno-objc-root-class -fsyntax-only -ast-dump -ast-dump-filter test "-DSUBJECT=objc_method(is_instance)" %s | FileCheck --check-prefix=CHECK-OBJC_METHOD_IS_INSTANCE %s
-// RUN: %clang_cc1 -fblocks -fobjc-arc -Wno-objc-root-class -fsyntax-only -ast-dump -ast-dump-filter test "-DSUBJECT=field" %s | FileCheck --check-prefix=CHECK-FIELD %s
-// RUN: %clang_cc1 -fblocks -fobjc-arc -Wno-objc-root-class -fsyntax-only -ast-dump -ast-dump-filter test "-DSUBJECT=objc_property" %s | FileCheck --check-prefix=CHECK-OBJC_PROPERTY %s
-// RUN: %clang_cc1 -fblocks -fobjc-arc -Wno-objc-root-class -fsyntax-only -ast-dump -ast-dump-filter test "-DSUBJECT=block" %s | FileCheck --check-prefix=CHECK-BLOCK %s
-// RUN: %clang_cc1 -fblocks -fobjc-arc -Wno-objc-root-class -fsyntax-only -ast-dump -ast-dump-filter test "-DSUBJECT=hasType(functionType)" %s | FileCheck --check-prefix=CHECK-HAS_TYPE_FUNCTION_TYPE %s
+// RUN: %clang_cc1 -fblocks -fobjc-arc -Wno-objc-root-class -ast-dump "-DSUBJECT=objc_interface" %s | FileCheck --check-prefix=CHECK-OBJC_INTERFACE %s
+// RUN: %clang_cc1 -fblocks -fobjc-arc -Wno-objc-root-class -ast-dump -ast-dump-filter test "-DSUBJECT=objc_protocol" %s | FileCheck --check-prefix=CHECK-OBJC_PROTOCOL %s
+// RUN: %clang_cc1 -fblocks -fobjc-arc -Wno-objc-root-class -ast-dump "-DSUBJECT=objc_category" %s | FileCheck --check-prefix=CHECK-OBJC_CATEGORY %s
+// RUN: %clang_cc1 -fblocks -fobjc-arc -Wno-objc-root-class -ast-dump -ast-dump-filter test "-DSUBJECT=objc_method" %s | FileCheck --check-prefix=CHECK-OBJC_METHOD %s
+// RUN: %clang_cc1 -fblocks -fobjc-arc -Wno-objc-root-class -ast-dump -ast-dump-filter test "-DSUBJECT=objc_method(is_instance)" %s | FileCheck --check-prefix=CHECK-OBJC_METHOD_IS_INSTANCE %s
+// RUN: %clang_cc1 -fblocks -fobjc-arc -Wno-objc-root-class -ast-dump -ast-dump-filter test "-DSUBJECT=field" %s | FileCheck --check-prefix=CHECK-FIELD %s
+// RUN: %clang_cc1 -fblocks -fobjc-arc -Wno-objc-root-class -ast-dump -ast-dump-filter test "-DSUBJECT=objc_property" %s | FileCheck --check-prefix=CHECK-OBJC_PROPERTY %s
+// RUN: %clang_cc1 -fblocks -fobjc-arc -Wno-objc-root-class -ast-dump -ast-dump-filter test "-DSUBJECT=block" %s | FileCheck --check-prefix=CHECK-BLOCK %s
+// RUN: %clang_cc1 -fblocks -fobjc-arc -Wno-objc-root-class -ast-dump -ast-dump-filter test "-DSUBJECT=hasType(functionType)" %s | FileCheck --check-prefix=CHECK-HAS_TYPE_FUNCTION_TYPE %s
 
 #pragma clang attribute push (__attribute__((annotate("test"))), apply_to = any(SUBJECT))
 

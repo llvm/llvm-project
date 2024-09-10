@@ -333,7 +333,7 @@ INTERCEPTOR(int, pthread_timedjoin_np, void *thread, void **ret,
 }
 #    endif
 
-DEFINE_REAL_PTHREAD_FUNCTIONS
+DEFINE_INTERNAL_PTHREAD_FUNCTIONS
 #endif  // ASAN_INTERCEPT_PTHREAD_CREATE
 
 #if ASAN_INTERCEPT_SWAPCONTEXT
@@ -352,8 +352,16 @@ static void ClearShadowMemoryForContextStack(uptr stack, uptr ssize) {
   PoisonShadow(bottom, ssize, 0);
 }
 
+// Since Solaris 10/SPARC, ucp->uc_stack.ss_sp refers to the stack base address
+// as on other targets.  For binary compatibility, the new version uses a
+// different external name, so we intercept that.
+#    if SANITIZER_SOLARIS && defined(__sparc__)
+INTERCEPTOR(void, __makecontext_v2, struct ucontext_t *ucp, void (*func)(),
+            int argc, ...) {
+#    else
 INTERCEPTOR(void, makecontext, struct ucontext_t *ucp, void (*func)(), int argc,
             ...) {
+#    endif
   va_list ap;
   uptr args[64];
   // We don't know a better way to forward ... into REAL function. We can
@@ -373,7 +381,11 @@ INTERCEPTOR(void, makecontext, struct ucontext_t *ucp, void (*func)(), int argc,
       ENUMERATE_ARRAY_16(0), ENUMERATE_ARRAY_16(16), ENUMERATE_ARRAY_16(32), \
           ENUMERATE_ARRAY_16(48)
 
+#    if SANITIZER_SOLARIS && defined(__sparc__)
+  REAL(__makecontext_v2)
+#    else
   REAL(makecontext)
+#    endif
   ((struct ucontext_t *)ucp, func, argc, ENUMERATE_ARRAY_64());
 
 #    undef ENUMERATE_ARRAY_4
@@ -558,6 +570,17 @@ INTERCEPTOR(char *, strcpy, char *to, const char *from) {
   return REAL(strcpy)(to, from);
 }
 
+// Windows doesn't always define the strdup identifier,
+// and when it does it's a macro defined to either _strdup
+// or _strdup_dbg, _strdup_dbg ends up calling _strdup, so
+// we want to intercept that. push/pop_macro are used to avoid problems
+// if this file ends up including <string.h> in the future.
+#  if SANITIZER_WINDOWS
+#    pragma push_macro("strdup")
+#    undef strdup
+#    define strdup _strdup
+#  endif
+
 INTERCEPTOR(char*, strdup, const char *s) {
   void *ctx;
   ASAN_INTERCEPTOR_ENTER(ctx, strdup);
@@ -575,7 +598,7 @@ INTERCEPTOR(char*, strdup, const char *s) {
   return reinterpret_cast<char*>(new_mem);
 }
 
-#if ASAN_INTERCEPT___STRDUP
+#  if ASAN_INTERCEPT___STRDUP
 INTERCEPTOR(char*, __strdup, const char *s) {
   void *ctx;
   ASAN_INTERCEPTOR_ENTER(ctx, strdup);
@@ -724,7 +747,7 @@ INTERCEPTOR(int, atexit, void (*func)()) {
 extern "C" {
 extern int _pthread_atfork(void (*prepare)(), void (*parent)(),
                            void (*child)());
-};
+}
 
 INTERCEPTOR(int, pthread_atfork, void (*prepare)(), void (*parent)(),
             void (*child)()) {
@@ -738,8 +761,8 @@ INTERCEPTOR(int, pthread_atfork, void (*prepare)(), void (*parent)(),
 #endif
 
 #if ASAN_INTERCEPT_VFORK
-DEFINE_REAL(int, vfork)
-DECLARE_EXTERN_INTERCEPTOR_AND_WRAPPER(int, vfork)
+DEFINE_REAL(int, vfork,)
+DECLARE_EXTERN_INTERCEPTOR_AND_WRAPPER(int, vfork,)
 #endif
 
 // ---------------------- InitializeAsanInterceptors ---------------- {{{1
@@ -758,7 +781,7 @@ void InitializeAsanInterceptors() {
   ASAN_INTERCEPT_FUNC(strncat);
   ASAN_INTERCEPT_FUNC(strncpy);
   ASAN_INTERCEPT_FUNC(strdup);
-#if ASAN_INTERCEPT___STRDUP
+#  if ASAN_INTERCEPT___STRDUP
   ASAN_INTERCEPT_FUNC(__strdup);
 #endif
 #if ASAN_INTERCEPT_INDEX && ASAN_USE_ALIAS_ATTRIBUTE_FOR_INDEX
@@ -780,7 +803,12 @@ void InitializeAsanInterceptors() {
 
 #  if ASAN_INTERCEPT_SWAPCONTEXT
   ASAN_INTERCEPT_FUNC(swapcontext);
+  // See the makecontext interceptor above for an explanation.
+#    if SANITIZER_SOLARIS && defined(__sparc__)
+  ASAN_INTERCEPT_FUNC(__makecontext_v2);
+#    else
   ASAN_INTERCEPT_FUNC(makecontext);
+#    endif
 #  endif
 #  if ASAN_INTERCEPT__LONGJMP
   ASAN_INTERCEPT_FUNC(_longjmp);
@@ -848,6 +876,10 @@ void InitializeAsanInterceptors() {
 
   VReport(1, "AddressSanitizer: libc interceptors initialized\n");
 }
+
+#  if SANITIZER_WINDOWS
+#    pragma pop_macro("strdup")
+#  endif
 
 } // namespace __asan
 

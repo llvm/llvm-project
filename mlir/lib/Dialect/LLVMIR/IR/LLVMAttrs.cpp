@@ -35,6 +35,7 @@ static LogicalResult parseExpressionArg(AsmParser &parser, uint64_t opcode,
 static void printExpressionArg(AsmPrinter &printer, uint64_t opcode,
                                ArrayRef<uint64_t> args);
 
+#include "mlir/Dialect/LLVMIR/LLVMAttrInterfaces.cpp.inc"
 #include "mlir/Dialect/LLVMIR/LLVMOpsEnums.cpp.inc"
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/LLVMIR/LLVMOpsAttrDefs.cpp.inc"
@@ -57,10 +58,11 @@ void LLVMDialect::registerAttributes() {
 bool DINodeAttr::classof(Attribute attr) {
   return llvm::isa<DIBasicTypeAttr, DICompileUnitAttr, DICompositeTypeAttr,
                    DIDerivedTypeAttr, DIFileAttr, DIGlobalVariableAttr,
-                   DILabelAttr, DILexicalBlockAttr, DILexicalBlockFileAttr,
-                   DILocalVariableAttr, DIModuleAttr, DINamespaceAttr,
-                   DINullTypeAttr, DISubprogramAttr, DISubrangeAttr,
-                   DISubroutineTypeAttr>(attr);
+                   DIImportedEntityAttr, DILabelAttr, DILexicalBlockAttr,
+                   DILexicalBlockFileAttr, DILocalVariableAttr, DIModuleAttr,
+                   DINamespaceAttr, DINullTypeAttr, DIStringTypeAttr,
+                   DISubprogramAttr, DISubrangeAttr, DISubroutineTypeAttr>(
+      attr);
 }
 
 //===----------------------------------------------------------------------===//
@@ -82,12 +84,21 @@ bool DILocalScopeAttr::classof(Attribute attr) {
 }
 
 //===----------------------------------------------------------------------===//
+// DIVariableAttr
+//===----------------------------------------------------------------------===//
+
+bool DIVariableAttr::classof(Attribute attr) {
+  return llvm::isa<DILocalVariableAttr, DIGlobalVariableAttr>(attr);
+}
+
+//===----------------------------------------------------------------------===//
 // DITypeAttr
 //===----------------------------------------------------------------------===//
 
 bool DITypeAttr::classof(Attribute attr) {
   return llvm::isa<DINullTypeAttr, DIBasicTypeAttr, DICompositeTypeAttr,
-                   DIDerivedTypeAttr, DISubroutineTypeAttr>(attr);
+                   DIDerivedTypeAttr, DIStringTypeAttr, DISubroutineTypeAttr>(
+      attr);
 }
 
 //===----------------------------------------------------------------------===//
@@ -183,6 +194,42 @@ void printExpressionArg(AsmPrinter &printer, uint64_t opcode,
     printer << operand;
     i++;
   });
+}
+
+//===----------------------------------------------------------------------===//
+// DICompositeTypeAttr
+//===----------------------------------------------------------------------===//
+
+DIRecursiveTypeAttrInterface
+DICompositeTypeAttr::withRecId(DistinctAttr recId) {
+  return DICompositeTypeAttr::get(
+      getContext(), recId, getIsRecSelf(), getTag(), getName(), getFile(),
+      getLine(), getScope(), getBaseType(), getFlags(), getSizeInBits(),
+      getAlignInBits(), getElements(), getDataLocation(), getRank(),
+      getAllocated(), getAssociated());
+}
+
+DIRecursiveTypeAttrInterface
+DICompositeTypeAttr::getRecSelf(DistinctAttr recId) {
+  return DICompositeTypeAttr::get(recId.getContext(), recId, /*isRecSelf=*/true,
+                                  0, {}, {}, 0, {}, {}, DIFlags(), 0, 0, {}, {},
+                                  {}, {}, {});
+}
+
+//===----------------------------------------------------------------------===//
+// DISubprogramAttr
+//===----------------------------------------------------------------------===//
+
+DIRecursiveTypeAttrInterface DISubprogramAttr::withRecId(DistinctAttr recId) {
+  return DISubprogramAttr::get(
+      getContext(), recId, getIsRecSelf(), getId(), getCompileUnit(),
+      getScope(), getName(), getLinkageName(), getFile(), getLine(),
+      getScopeLine(), getSubprogramFlags(), getType(), getRetainedNodes());
+}
+
+DIRecursiveTypeAttrInterface DISubprogramAttr::getRecSelf(DistinctAttr recId) {
+  return DISubprogramAttr::get(recId.getContext(), recId, /*isRecSelf=*/true,
+                               {}, {}, {}, {}, {}, 0, 0, {}, {}, {}, {});
 }
 
 //===----------------------------------------------------------------------===//

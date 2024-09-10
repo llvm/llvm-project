@@ -653,27 +653,20 @@ bool X86FastPreTileConfig::configBasicBlock(MachineBasicBlock &MBB) {
 }
 
 bool X86FastPreTileConfig::runOnMachineFunction(MachineFunction &MFunc) {
+  X86FI = MFunc.getInfo<X86MachineFunctionInfo>();
+  // Early exit in the common case of non-AMX code.
+  if (X86FI->getAMXProgModel() != AMXProgModelEnum::ManagedRA)
+    return false;
+
   MF = &MFunc;
   MRI = &MFunc.getRegInfo();
   ST = &MFunc.getSubtarget<X86Subtarget>();
   TII = ST->getInstrInfo();
-  X86FI = MFunc.getInfo<X86MachineFunctionInfo>();
   MFI = &MFunc.getFrameInfo();
   TRI = ST->getRegisterInfo();
   CfgSS = -1;
 
   unsigned NumVirtRegs = MRI->getNumVirtRegs();
-  // Abandon early if there is no tile register to config.
-  bool HasVirtTileReg = false;
-  for (unsigned I = 0, E = NumVirtRegs; I != E; ++I) {
-    Register VirtReg = Register::index2VirtReg(I);
-    if (MRI->getRegClass(VirtReg)->getID() == X86::TILERegClassID) {
-      HasVirtTileReg = true;
-      break;
-    }
-  }
-  if (!HasVirtTileReg)
-    return false;
 
   StackSlotForVirtReg.resize(NumVirtRegs);
   MayLiveAcrossBlocks.clear();

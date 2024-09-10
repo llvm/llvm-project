@@ -1,4 +1,6 @@
-! RUN: bbc -fopenmp -emit-hlfir %s -o - | FileCheck %s
+! REQUIRES: openmp_runtime
+
+! RUN: bbc %openmp_flags -emit-hlfir %s -o - | FileCheck %s
 
 ! This test checks the lowering of atomic write
 
@@ -21,8 +23,8 @@
 !CHECK:    %[[Z_VAL:.*]] = fir.load %[[Z_DECL]]#0 : !fir.ref<i32>
 !CHECK:    %[[C2:.*]] = arith.constant 2 : i32
 !CHECK:    %[[Z_DIV_2:.*]] = arith.divsi %[[Z_VAL]], %[[C2]] : i32
-!CHECK:    %172 = arith.addi %[[TEN_X]], %[[Z_DIV_2]] : i32
-!CHECK:    omp.atomic.write %163#1 = %172   hint(speculative) memory_order(release) : !fir.ref<i32>, i32
+!CHECK:    %[[ADD_RES:.*]] = arith.addi %[[TEN_X]], %[[Z_DIV_2]] : i32
+!CHECK:    omp.atomic.write %[[Y_DECL]]#1 = %[[ADD_RES]]   hint(speculative) memory_order(release) : !fir.ref<i32>, i32
 
 program OmpAtomicWrite
     use omp_lib
@@ -71,3 +73,17 @@ subroutine atomic_write_typed_assign
   !$omp atomic write
   r2 = 0
 end subroutine
+
+!CHECK-LABEL: func.func @_QPatomic_write_logical()
+!CHECK:    %[[L_REF:.*]] = fir.alloca !fir.logical<4> {bindc_name = "l", uniq_name = "_QFatomic_write_logicalEl"}
+!CHECK:    %[[L_DECL:.*]]:2 = hlfir.declare %[[L_REF]] {uniq_name = "_QFatomic_write_logicalEl"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
+!CHECK:    %true = arith.constant true
+!CHECK:    %[[CVT:.*]] = fir.convert %true : (i1) -> !fir.logical<4>
+!CHECK:    omp.atomic.write %[[L_DECL]]#1 = %[[CVT]] : !fir.ref<!fir.logical<4>>, !fir.logical<4>
+
+subroutine atomic_write_logical
+  logical :: l
+  !$omp atomic write
+      l = .true.
+  !$omp end atomic
+end

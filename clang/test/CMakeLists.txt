@@ -9,7 +9,11 @@ llvm_canonicalize_cmake_booleans(
   CLANG_ENABLE_STATIC_ANALYZER
   CLANG_PLUGIN_SUPPORT
   CLANG_SPAWN_CC1
+  CLANG_ENABLE_CIR
   ENABLE_BACKTRACES
+  LLVM_BUILD_EXAMPLES
+  LLVM_BYE_LINK_INTO_TOOLS
+  LLVM_ENABLE_PLUGINS
   LLVM_ENABLE_ZLIB
   LLVM_ENABLE_ZSTD
   LLVM_ENABLE_PER_TARGET_RUNTIME_DIR
@@ -71,8 +75,10 @@ list(APPEND CLANG_TEST_DEPS
   clang-rename
   clang-refactor
   clang-diff
+  clang-installapi
   clang-scan-deps
   clang-linker-wrapper
+  clang-nvlink-wrapper
   clang-offload-bundler
   clang-offload-packager
   diagtool
@@ -131,9 +137,11 @@ if( NOT CLANG_BUILT_STANDALONE )
     llvm-rc
     llvm-readelf
     llvm-readobj
+    llvm-readtapi
     llvm-strip
     llvm-symbolizer
     llvm-windres
+    obj2yaml
     opt
     split-file
     yaml2obj
@@ -166,7 +174,7 @@ configure_file(AST/gen_ast_dump_json_test.py
   ${CLANG_BINARY_DIR}/bin/gen_ast_dump_json_test.py COPYONLY)
 
 add_custom_target(clang-test-depends DEPENDS ${CLANG_TEST_DEPS})
-set_target_properties(clang-test-depends PROPERTIES FOLDER "Clang tests")
+set_target_properties(clang-test-depends PROPERTIES FOLDER "Clang/Tests")
 
 add_lit_testsuite(check-clang "Running the Clang regression tests"
   ${CMAKE_CURRENT_BINARY_DIR}
@@ -175,7 +183,6 @@ add_lit_testsuite(check-clang "Running the Clang regression tests"
   DEPENDS ${CLANG_TEST_DEPS}
   ARGS ${CLANG_TEST_EXTRA_ARGS}
   )
-set_target_properties(check-clang PROPERTIES FOLDER "Clang tests")
 
 add_lit_testsuites(CLANG ${CMAKE_CURRENT_SOURCE_DIR}
   PARAMS ${CLANG_TEST_PARAMS}
@@ -186,7 +193,7 @@ add_lit_testsuites(CLANG ${CMAKE_CURRENT_SOURCE_DIR}
 # Add a legacy target spelling: clang-test
 add_custom_target(clang-test)
 add_dependencies(clang-test check-clang)
-set_target_properties(clang-test PROPERTIES FOLDER "Clang tests")
+set_target_properties(clang-test PROPERTIES FOLDER "Clang/Tests")
 
 # FIXME: This logic can be removed once all buildbots have moved
 # debuginfo-test from clang/test to llvm/projects or monorepo.

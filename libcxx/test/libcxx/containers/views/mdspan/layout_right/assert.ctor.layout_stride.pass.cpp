@@ -9,7 +9,7 @@
 // REQUIRES: has-unix-headers
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 // UNSUPPORTED: libcpp-hardening-mode=none
-// XFAIL: availability-verbose_abort-missing
+// XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
 // ADDITIONAL_COMPILE_FLAGS: -Wno-ctad-maybe-unsupported
 
 // FIXME: https://github.com/llvm/llvm-project/issues/64719
@@ -54,14 +54,14 @@ int main(int, char**) {
   // non-representability of extents itself
   {
     std::layout_stride::mapping arg(std::extents<int, D>(500), std::array<int, 1>{1});
-    TEST_LIBCPP_ASSERT_FAILURE(([=] { std::layout_right::mapping<std::extents<char, D>> m(arg); }()),
+    TEST_LIBCPP_ASSERT_FAILURE(([=] { std::layout_right::mapping<std::extents<signed char, D>> m(arg); }()),
                                "extents ctor: arguments must be representable as index_type and nonnegative");
   }
   // non-representability of required span size
   {
     std::layout_stride::mapping arg(std::extents<int, D, D>(100, 3), std::array<int, 2>{3, 1});
     TEST_LIBCPP_ASSERT_FAILURE(
-        ([=] { std::layout_right::mapping<std::extents<char, D, D>> m(arg); }()),
+        ([=] { std::layout_right::mapping<std::extents<signed char, D, D>> m(arg); }()),
         "layout_right::mapping from layout_stride ctor: other.required_span_size() must be "
         "representable as index_type.");
   }

@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LLVM_LIBC_TYPES_SIGHANDLER_T_H__
-#define __LLVM_LIBC_TYPES_SIGHANDLER_T_H__
+#ifndef LLVM_LIBC_TYPES___SIGHANDLER_T_H
+#define LLVM_LIBC_TYPES___SIGHANDLER_T_H
 
 typedef void (*__sighandler_t)(int);
 
-#endif // __LLVM_LIBC_TYPES_SIGHANDLER_T_H__
+#endif // LLVM_LIBC_TYPES___SIGHANDLER_T_H

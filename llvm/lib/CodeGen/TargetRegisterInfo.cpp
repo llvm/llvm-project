@@ -21,11 +21,11 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/CodeGen/VirtRegMap.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/DebugInfoMetadata.h"
@@ -50,20 +50,16 @@ static cl::opt<unsigned>
                               "high compile time cost in global splitting."),
                      cl::init(5000));
 
-TargetRegisterInfo::TargetRegisterInfo(const TargetRegisterInfoDesc *ID,
-                             regclass_iterator RCB, regclass_iterator RCE,
-                             const char *const *SRINames,
-                             const LaneBitmask *SRILaneMasks,
-                             LaneBitmask SRICoveringLanes,
-                             const RegClassInfo *const RCIs,
-                             const MVT::SimpleValueType *const RCVTLists,
-                             unsigned Mode)
-  : InfoDesc(ID), SubRegIndexNames(SRINames),
-    SubRegIndexLaneMasks(SRILaneMasks),
-    RegClassBegin(RCB), RegClassEnd(RCE),
-    CoveringLanes(SRICoveringLanes),
-    RCInfos(RCIs), RCVTLists(RCVTLists), HwMode(Mode) {
-}
+TargetRegisterInfo::TargetRegisterInfo(
+    const TargetRegisterInfoDesc *ID, regclass_iterator RCB,
+    regclass_iterator RCE, const char *const *SRINames,
+    const SubRegCoveredBits *SubIdxRanges, const LaneBitmask *SRILaneMasks,
+    LaneBitmask SRICoveringLanes, const RegClassInfo *const RCIs,
+    const MVT::SimpleValueType *const RCVTLists, unsigned Mode)
+    : InfoDesc(ID), SubRegIndexNames(SRINames), SubRegIdxRanges(SubIdxRanges),
+      SubRegIndexLaneMasks(SRILaneMasks), RegClassBegin(RCB), RegClassEnd(RCE),
+      CoveringLanes(SRICoveringLanes), RCInfos(RCIs), RCVTLists(RCVTLists),
+      HwMode(Mode) {}
 
 TargetRegisterInfo::~TargetRegisterInfo() = default;
 
@@ -124,7 +120,7 @@ Printable printReg(Register Reg, const TargetRegisterInfo *TRI,
         OS << '%' << Register::virtReg2Index(Reg);
       }
     } else if (!TRI)
-      OS << '$' << "physreg" << Reg;
+      OS << '$' << "physreg" << Reg.id();
     else if (Reg < TRI->getNumRegs()) {
       OS << '$';
       printLowerCase(TRI->getName(Reg), OS);
@@ -425,13 +421,16 @@ bool TargetRegisterInfo::getRegAllocationHints(
     SmallVectorImpl<MCPhysReg> &Hints, const MachineFunction &MF,
     const VirtRegMap *VRM, const LiveRegMatrix *Matrix) const {
   const MachineRegisterInfo &MRI = MF.getRegInfo();
-  const std::pair<unsigned, SmallVector<Register, 4>> &Hints_MRI =
+  const std::pair<unsigned, SmallVector<Register, 4>> *Hints_MRI =
       MRI.getRegAllocationHints(VirtReg);
+
+  if (!Hints_MRI)
+    return false;
 
   SmallSet<Register, 32> HintedRegs;
   // First hint may be a target hint.
-  bool Skip = (Hints_MRI.first != 0);
-  for (auto Reg : Hints_MRI.second) {
+  bool Skip = (Hints_MRI->first != 0);
+  for (auto Reg : Hints_MRI->second) {
     if (Skip) {
       Skip = false;
       continue;
@@ -478,16 +477,11 @@ bool TargetRegisterInfo::isCalleeSavedPhysReg(
 }
 
 bool TargetRegisterInfo::canRealignStack(const MachineFunction &MF) const {
-  return !MF.getFunction().hasFnAttribute("no-realign-stack");
+  return MF.getFrameInfo().isStackRealignable();
 }
 
 bool TargetRegisterInfo::shouldRealignStack(const MachineFunction &MF) const {
-  const MachineFrameInfo &MFI = MF.getFrameInfo();
-  const TargetFrameLowering *TFI = MF.getSubtarget().getFrameLowering();
-  const Function &F = MF.getFunction();
-  return F.hasFnAttribute("stackrealign") ||
-         (MFI.getMaxAlign() > TFI->getStackAlign()) ||
-         F.hasFnAttribute(Attribute::StackAlignment);
+  return MF.getFrameInfo().shouldRealignStack();
 }
 
 bool TargetRegisterInfo::regmaskSubsetEqual(const uint32_t *mask0,
@@ -594,6 +588,18 @@ bool TargetRegisterInfo::getCoveringSubRegIndexes(
   }
 
   return BestIdx;
+}
+
+unsigned TargetRegisterInfo::getSubRegIdxSize(unsigned Idx) const {
+  assert(Idx && Idx < getNumSubRegIndices() &&
+         "This is not a subregister index");
+  return SubRegIdxRanges[HwMode * getNumSubRegIndices() + Idx].Size;
+}
+
+unsigned TargetRegisterInfo::getSubRegIdxOffset(unsigned Idx) const {
+  assert(Idx && Idx < getNumSubRegIndices() &&
+         "This is not a subregister index");
+  return SubRegIdxRanges[HwMode * getNumSubRegIndices() + Idx].Offset;
 }
 
 Register

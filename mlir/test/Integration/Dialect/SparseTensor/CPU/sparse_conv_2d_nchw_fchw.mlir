@@ -10,9 +10,10 @@
 // DEFINE: %{compile} = mlir-opt %s --sparsifier="%{sparsifier_opts}"
 // DEFINE: %{compile_sve} = mlir-opt %s --sparsifier="%{sparsifier_opts_sve}"
 // DEFINE: %{run_libs} = -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils
-// DEFINE: %{run_opts} = -e entry -entry-point-result=void
+// DEFINE: %{run_libs_sve} = -shared-libs=%native_mlir_runner_utils,%native_mlir_c_runner_utils
+// DEFINE: %{run_opts} = -e main -entry-point-result=void
 // DEFINE: %{run} = mlir-cpu-runner %{run_opts} %{run_libs}
-// DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs}
+// DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs_sve}
 //
 // DEFINE: %{env} =
 //--------------------------------------------------------------------------------------------------
@@ -82,7 +83,7 @@ func.func @conv_2d_nchw_fchw_CCCC_CCCC(%arg0: tensor<?x?x?x?xf32, #CCCC>, %arg1:
   return %ret : tensor<?x?x?x?xf32>
 }
 
-func.func @entry() {
+func.func @main() {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %c3 = arith.constant 3 : index
@@ -207,6 +208,7 @@ func.func @entry() {
   bufferization.dealloc_tensor %out2D_nhwc : tensor<?x?x?x?xf32>
   bufferization.dealloc_tensor %out2D_nhwc_CCCD : tensor<?x?x?x?xf32>
   bufferization.dealloc_tensor %out2D_nhwc_CCCC : tensor<?x?x?x?xf32>
+  bufferization.dealloc_tensor %dense_ret :tensor<?x?x?x?xf32>
 
   bufferization.dealloc_tensor %in2D_nhwc_CCCC : tensor<?x?x?x?xf32, #CCCC>
   bufferization.dealloc_tensor %in2D_nhwc_CCCD : tensor<?x?x?x?xf32, #CDCD>

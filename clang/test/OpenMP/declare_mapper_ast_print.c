@@ -1,26 +1,26 @@
 // RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=50 -ast-print %s | FileCheck %s
 // RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -include-pch %t -fsyntax-only -verify %s -ast-print | FileCheck %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -include-pch %t -verify %s -ast-print | FileCheck %s
 
 // RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=50 -ast-print %s | FileCheck %s
 // RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=50 -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=50 -include-pch %t -fsyntax-only -verify %s -ast-print | FileCheck %s
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=50 -include-pch %t -verify %s -ast-print | FileCheck %s
 
 // RUN: %clang_cc1 -DOMP51 -verify -fopenmp -ast-print %s | FileCheck -check-prefixes=CHECK,OMP51 %s
 // RUN: %clang_cc1 -DOMP51 -fopenmp -emit-pch -o %t %s
-// RUN: %clang_cc1 -DOMP51 -fopenmp -include-pch %t -fsyntax-only -verify %s -ast-print | FileCheck -check-prefixes=CHECK,OMP51 %s
+// RUN: %clang_cc1 -DOMP51 -fopenmp -include-pch %t -verify %s -ast-print | FileCheck -check-prefixes=CHECK,OMP51 %s
 
 // RUN: %clang_cc1 -DOMP51 -verify -fopenmp-simd -ast-print %s | FileCheck -check-prefixes=CHECK,OMP51 %s
 // RUN: %clang_cc1 -DOMP51 -fopenmp-simd -emit-pch -o %t %s
-// RUN: %clang_cc1 -DOMP51 -fopenmp-simd -include-pch %t -fsyntax-only -verify %s -ast-print | FileCheck -check-prefixes=CHECK,OMP51 %s
+// RUN: %clang_cc1 -DOMP51 -fopenmp-simd -include-pch %t -verify %s -ast-print | FileCheck -check-prefixes=CHECK,OMP51 %s
 
 // RUN: %clang_cc1 -DOMP52 -verify -fopenmp -fopenmp-version=52 -ast-print %s | FileCheck -check-prefixes=CHECK,OMP52 %s
 // RUN: %clang_cc1 -DOMP52 -fopenmp -fopenmp-version=52 -emit-pch -o %t %s
-// RUN: %clang_cc1 -DOMP52 -fopenmp -fopenmp-version=52 -include-pch %t -fsyntax-only -verify %s -ast-print | FileCheck -check-prefixes=CHECK,OMP52 %s
+// RUN: %clang_cc1 -DOMP52 -fopenmp -fopenmp-version=52 -include-pch %t -verify %s -ast-print | FileCheck -check-prefixes=CHECK,OMP52 %s
 
 // RUN: %clang_cc1 -DOMP52 -verify -fopenmp-simd -fopenmp-version=52 -ast-print %s | FileCheck -check-prefixes=CHECK,OMP52 %s
 // RUN: %clang_cc1 -DOMP52 -fopenmp-simd -fopenmp-version=52 -emit-pch -o %t %s
-// RUN: %clang_cc1 -DOMP52 -fopenmp-simd -fopenmp-version=52 -include-pch %t -fsyntax-only -verify %s -ast-print | FileCheck -check-prefixes=CHECK,OMP52 %s
+// RUN: %clang_cc1 -DOMP52 -fopenmp-simd -fopenmp-version=52 -include-pch %t -verify %s -ast-print | FileCheck -check-prefixes=CHECK,OMP52 %s
 // expected-no-diagnostics
 
 #ifndef HEADER

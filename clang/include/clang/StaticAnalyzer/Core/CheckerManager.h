@@ -49,7 +49,7 @@ class ExplodedNodeSet;
 class ExprEngine;
 struct EvalCallOptions;
 class MemRegion;
-struct NodeBuilderContext;
+class NodeBuilderContext;
 class ObjCMethodCall;
 class RegionAndSymbolInvalidationTraits;
 class SVal;
@@ -163,8 +163,6 @@ public:
   CheckerNameRef getCurrentCheckerName() const { return CurrentCheckerName; }
 
   bool hasPathSensitiveCheckers() const;
-
-  void finishedCheckerRegistration();
 
   const LangOptions &getLangOpts() const { return LangOpts; }
   const AnalyzerOptions &getAnalyzerOptions() const { return AOptions; }

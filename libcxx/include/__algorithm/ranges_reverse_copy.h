@@ -25,6 +25,9 @@
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 #if _LIBCPP_STD_VER >= 20
 
 _LIBCPP_BEGIN_NAMESPACE_STD
@@ -34,8 +37,7 @@ namespace ranges {
 template <class _InIter, class _OutIter>
 using reverse_copy_result = in_out_result<_InIter, _OutIter>;
 
-namespace __reverse_copy {
-struct __fn {
+struct __reverse_copy {
   template <bidirectional_iterator _InIter, sentinel_for<_InIter> _Sent, weakly_incrementable _OutIter>
     requires indirectly_copyable<_InIter, _OutIter>
   _LIBCPP_HIDE_FROM_ABI constexpr reverse_copy_result<_InIter, _OutIter>
@@ -51,15 +53,16 @@ struct __fn {
     return {ranges::next(ranges::begin(__range), ranges::end(__range)), std::move(__ret.out)};
   }
 };
-} // namespace __reverse_copy
 
 inline namespace __cpo {
-inline constexpr auto reverse_copy = __reverse_copy::__fn{};
+inline constexpr auto reverse_copy = __reverse_copy{};
 } // namespace __cpo
 } // namespace ranges
 
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 20
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___ALGORITHM_RANGES_REVERSE_COPY_H

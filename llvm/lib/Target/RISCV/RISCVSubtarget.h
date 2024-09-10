@@ -13,6 +13,7 @@
 #ifndef LLVM_LIB_TARGET_RISCV_RISCVSUBTARGET_H
 #define LLVM_LIB_TARGET_RISCV_RISCVSUBTARGET_H
 
+#include "GISel/RISCVRegisterBankInfo.h"
 #include "MCTargetDesc/RISCVBaseInfo.h"
 #include "RISCVFrameLowering.h"
 #include "RISCVISelLowering.h"
@@ -20,12 +21,14 @@
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
-#include "llvm/CodeGen/RegisterBankInfo.h"
 #include "llvm/CodeGen/SelectionDAGTargetInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/Target/TargetMachine.h"
 #include <bitset>
+
+#define GET_RISCV_MACRO_FUSION_PRED_DECL
+#include "RISCVGenMacroFusion.inc"
 
 #define GET_SUBTARGETINFO_HEADER
 #include "RISCVGenSubtargetInfo.inc"
@@ -47,6 +50,9 @@ struct RISCVTuneInfo {
   unsigned MaxPrefetchIterationsAhead;
 
   unsigned MinimumJumpTableEntries;
+
+  // Tail duplication threshold at -O3.
+  unsigned TailDupAggressiveThreshold;
 };
 
 #define GET_RISCVTuneInfoTable_DECL
@@ -118,9 +124,7 @@ public:
   }
   bool enableMachineScheduler() const override { return true; }
 
-  bool enablePostRAScheduler() const override {
-    return getSchedModel().PostRAScheduler || UsePostRAScheduler;
-  }
+  bool enablePostRAScheduler() const override { return UsePostRAScheduler; }
 
   Align getPrefFunctionAlignment() const {
     return Align(TuneInfo->PrefFunctionAlignment);
@@ -140,6 +144,10 @@ public:
 #include "RISCVGenSubtargetInfo.inc"
 
   bool hasStdExtCOrZca() const { return HasStdExtC || HasStdExtZca; }
+  bool hasStdExtCOrZcd() const { return HasStdExtC || HasStdExtZcd; }
+  bool hasStdExtCOrZcfOrZce() const {
+    return HasStdExtC || HasStdExtZcf || HasStdExtZce;
+  }
   bool hasStdExtZvl() const { return ZvlLen != 0; }
   bool hasStdExtFOrZfinx() const { return HasStdExtF || HasStdExtZfinx; }
   bool hasStdExtDOrZdinx() const { return HasStdExtD || HasStdExtZdinx; }
@@ -185,6 +193,25 @@ public:
     unsigned VLen = getMaxRVVVectorSizeInBits();
     return VLen == 0 ? 65536 : VLen;
   }
+  // If we know the exact VLEN, return it.  Otherwise, return std::nullopt.
+  std::optional<unsigned> getRealVLen() const {
+    unsigned Min = getRealMinVLen();
+    if (Min != getRealMaxVLen())
+      return std::nullopt;
+    return Min;
+  }
+
+  /// If the ElementCount or TypeSize \p X is scalable and VScale (VLEN) is
+  /// exactly known, returns \p X converted to a fixed quantity. Otherwise
+  /// returns \p X unmodified.
+  template <typename Quantity> Quantity expandVScale(Quantity X) const {
+    if (auto VLen = getRealVLen(); VLen && X.isScalable()) {
+      const unsigned VScale = *VLen / RISCV::RVVBitsPerBlock;
+      X = Quantity::getFixed(X.getKnownMinValue() * VScale);
+    }
+    return X;
+  }
+
   RISCVABI::ABI getTargetABI() const { return TargetABI; }
   bool isSoftFPABI() const {
     return TargetABI == RISCVABI::ABI_LP64 ||
@@ -196,17 +223,12 @@ public:
     return UserReservedRegister[i];
   }
 
-  bool hasMacroFusion() const {
-    return hasLUIADDIFusion() || hasAUIPCADDIFusion() || hasZExtHFusion() ||
-           hasZExtWFusion() || hasShiftedZExtWFusion() || hasLDADDFusion();
-  }
-
   // Vector codegen related methods.
   bool hasVInstructions() const { return HasStdExtZve32x; }
   bool hasVInstructionsI64() const { return HasStdExtZve64x; }
   bool hasVInstructionsF16Minimal() const { return HasStdExtZvfhmin; }
   bool hasVInstructionsF16() const { return HasStdExtZvfh; }
-  bool hasVInstructionsBF16() const { return HasStdExtZvfbfmin; }
+  bool hasVInstructionsBF16Minimal() const { return HasStdExtZvfbfmin; }
   bool hasVInstructionsF32() const { return HasStdExtZve32f; }
   bool hasVInstructionsF64() const { return HasStdExtZve64d; }
   // F16 and F64 both require F32.
@@ -226,10 +248,10 @@ public:
 
 protected:
   // GlobalISel related APIs.
-  std::unique_ptr<CallLowering> CallLoweringInfo;
-  std::unique_ptr<InstructionSelector> InstSelector;
-  std::unique_ptr<LegalizerInfo> Legalizer;
-  std::unique_ptr<RegisterBankInfo> RegBankInfo;
+  mutable std::unique_ptr<CallLowering> CallLoweringInfo;
+  mutable std::unique_ptr<InstructionSelector> InstSelector;
+  mutable std::unique_ptr<LegalizerInfo> Legalizer;
+  mutable std::unique_ptr<RISCVRegisterBankInfo> RegBankInfo;
 
   // Return the known range for the bit length of RVV data registers as set
   // at the command line. A value of 0 means nothing is known about that particular
@@ -242,8 +264,9 @@ public:
   const CallLowering *getCallLowering() const override;
   InstructionSelector *getInstructionSelector() const override;
   const LegalizerInfo *getLegalizerInfo() const override;
-  const RegisterBankInfo *getRegBankInfo() const override;
+  const RISCVRegisterBankInfo *getRegBankInfo() const override;
 
+  bool isTargetAndroid() const { return getTargetTriple().isAndroid(); }
   bool isTargetFuchsia() const { return getTargetTriple().isOSFuchsia(); }
 
   bool useConstantPoolForLargeInts() const;
@@ -279,6 +302,12 @@ public:
   };
 
   unsigned getMinimumJumpTableEntries() const;
+
+  unsigned getTailDupAggressiveThreshold() const {
+    return TuneInfo->TailDupAggressiveThreshold;
+  }
+
+  bool supportsInitUndef() const override { return hasVInstructions(); }
 };
 } // End llvm namespace
 

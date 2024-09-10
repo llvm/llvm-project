@@ -32,6 +32,9 @@
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER >= 23
@@ -75,8 +78,7 @@ concept __indirectly_binary_left_foldable =
 
 struct __fold_left_with_iter {
   template <input_iterator _Ip, sentinel_for<_Ip> _Sp, class _Tp, __indirectly_binary_left_foldable<_Tp, _Ip> _Fp>
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI static constexpr auto
-  operator()(_Ip __first, _Sp __last, _Tp __init, _Fp __f) {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr auto operator()(_Ip __first, _Sp __last, _Tp __init, _Fp __f) {
     using _Up = decay_t<invoke_result_t<_Fp&, _Tp, iter_reference_t<_Ip>>>;
 
     if (__first == __last) {
@@ -92,7 +94,7 @@ struct __fold_left_with_iter {
   }
 
   template <input_range _Rp, class _Tp, __indirectly_binary_left_foldable<_Tp, iterator_t<_Rp>> _Fp>
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI static constexpr auto operator()(_Rp&& __r, _Tp __init, _Fp __f) {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr auto operator()(_Rp&& __r, _Tp __init, _Fp __f) {
     auto __result = operator()(ranges::begin(__r), ranges::end(__r), std::move(__init), std::ref(__f));
 
     using _Up = decay_t<invoke_result_t<_Fp&, _Tp, range_reference_t<_Rp>>>;
@@ -104,13 +106,12 @@ inline constexpr auto fold_left_with_iter = __fold_left_with_iter();
 
 struct __fold_left {
   template <input_iterator _Ip, sentinel_for<_Ip> _Sp, class _Tp, __indirectly_binary_left_foldable<_Tp, _Ip> _Fp>
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI static constexpr auto
-  operator()(_Ip __first, _Sp __last, _Tp __init, _Fp __f) {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr auto operator()(_Ip __first, _Sp __last, _Tp __init, _Fp __f) {
     return fold_left_with_iter(std::move(__first), std::move(__last), std::move(__init), std::ref(__f)).value;
   }
 
   template <input_range _Rp, class _Tp, __indirectly_binary_left_foldable<_Tp, iterator_t<_Rp>> _Fp>
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI static constexpr auto operator()(_Rp&& __r, _Tp __init, _Fp __f) {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr auto operator()(_Rp&& __r, _Tp __init, _Fp __f) {
     return fold_left_with_iter(ranges::begin(__r), ranges::end(__r), std::move(__init), std::ref(__f)).value;
   }
 };
@@ -121,5 +122,7 @@ inline constexpr auto fold_left = __fold_left();
 #endif // _LIBCPP_STD_VER >= 23
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___ALGORITHM_FOLD_H

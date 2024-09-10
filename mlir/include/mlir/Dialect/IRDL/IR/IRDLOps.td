@@ -182,7 +182,7 @@ def IRDL_OperationOp : IRDL_Op<"operation",
 
       irdl.operation @norm {
         %0 = irdl.any
-        %1 = irdl.parametric @complex<%0>
+        %1 = irdl.parametric @cmath::@complex<%0>
         irdl.results(%0)
         irdl.operands(%1)
       }
@@ -216,7 +216,7 @@ def IRDL_OperandsOp : IRDL_Op<"operands", [HasParent<"OperationOp">]> {
 
       irdl.operation @mul {
         %0 = irdl.any
-        %1 = irdl.parametric @complex<%0>
+        %1 = irdl.parametric @cmath::@complex<%0>
         irdl.results(%1)
         irdl.operands(%1, %1)
       }
@@ -230,7 +230,7 @@ def IRDL_OperandsOp : IRDL_Op<"operands", [HasParent<"OperationOp">]> {
     ```mlir
     irdl.operands(%0, single %1, optional %2, variadic %3)
     ```
-    
+
     Here, %0 and %1 are required single operands, %2 is an optional operand,
     and %3 is a variadic operand.
 
@@ -239,7 +239,7 @@ def IRDL_OperandsOp : IRDL_Op<"operands", [HasParent<"OperationOp">]> {
     operands in each segment.
   }];
 
-  let arguments = (ins Variadic<IRDL_AttributeType>:$args, 
+  let arguments = (ins Variadic<IRDL_AttributeType>:$args,
                         VariadicityArrayAttr:$variadicity);
   let assemblyFormat =
     "`` custom<ValuesWithVariadicity>($args, $variadicity) attr-dict";
@@ -262,7 +262,7 @@ def IRDL_ResultsOp : IRDL_Op<"results", [HasParent<"OperationOp">]> {
 
       irdl.operation @get_values {
         %0 = irdl.any
-        %1 = irdl.parametric @complex<%0>
+        %1 = irdl.parametric @cmath::@complex<%0>
         irdl.results(%0, %0)
         irdl.operands(%1)
       }
@@ -276,7 +276,7 @@ def IRDL_ResultsOp : IRDL_Op<"results", [HasParent<"OperationOp">]> {
     ```mlir
     irdl.results(%0, single %1, optional %2, variadic %3)
     ```
-    
+
     Here, %0 and %1 are required single results, %2 is an optional result,
     and %3 is a variadic result.
 
@@ -285,7 +285,7 @@ def IRDL_ResultsOp : IRDL_Op<"results", [HasParent<"OperationOp">]> {
     results in each segment.
   }];
 
-  let arguments = (ins Variadic<IRDL_AttributeType>:$args, 
+  let arguments = (ins Variadic<IRDL_AttributeType>:$args,
                         VariadicityArrayAttr:$variadicity);
   let assemblyFormat =
     " `` custom<ValuesWithVariadicity>($args, $variadicity) attr-dict";
@@ -296,7 +296,7 @@ def IRDL_AttributesOp : IRDL_Op<"attributes", [HasParent<"OperationOp">]> {
   let summary = "Define the attributes of an operation";
 
   let description = [{
-    `irdl.attributes` defines the attributes of the `irdl.operation` parent 
+    `irdl.attributes` defines the attributes of the `irdl.operation` parent
     operation definition.
 
     In the following example, `irdl.attributes` defines the attributes of the
@@ -320,10 +320,10 @@ def IRDL_AttributesOp : IRDL_Op<"attributes", [HasParent<"OperationOp">]> {
     attribute "attr2" with value `i64`.
   }];
 
-  let arguments = (ins Variadic<IRDL_AttributeType>:$attributeValues, 
+  let arguments = (ins Variadic<IRDL_AttributeType>:$attributeValues,
                         StrArrayAttr:$attributeValueNames);
   let assemblyFormat = [{
-    custom<AttributesOp>($attributeValues, $attributeValueNames) attr-dict 
+    custom<AttributesOp>($attributeValues, $attributeValueNames) attr-dict
   }];
 
   let hasVerifier = true;
@@ -451,8 +451,60 @@ def IRDL_IsOp : IRDL_ConstraintOp<"is",
   let assemblyFormat = " $expected ` ` attr-dict ";
 }
 
+def IRDL_BaseOp : IRDL_ConstraintOp<"base",
+    [ParentOneOf<["TypeOp", "AttributeOp", "OperationOp"]>,
+     DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
+  let summary = "Constraints an attribute/type base";
+  let description = [{
+    `irdl.base` defines a constraint that only accepts a single type
+    or attribute base, e.g. an `IntegerType`. The attribute base is defined
+    either by a symbolic reference to the corresponding IRDL definition,
+    or by the name of the base. Named bases are prefixed with `!` or `#`
+    respectively for types and attributes.
+
+    Example:
+
+    ```mlir
+    irdl.dialect @cmath {
+      irdl.type @complex {
+        %0 = irdl.base "!builtin.integer"
+        irdl.parameters(%0)
+      }
+
+      irdl.type @complex_wrapper {
+        %0 = irdl.base @cmath::@complex
+        irdl.parameters(%0)
+      }
+    }
+    ```
+
+    The above program defines a `cmath.complex` type that expects a single
+    parameter, which is a type with base name `builtin.integer`, which is the
+    name of an `IntegerType` type.
+    It also defines a `cmath.complex_wrapper` type that expects a single
+    parameter, which is a type of base type `cmath.complex`.
+  }];
+
+  let arguments = (ins OptionalAttr<SymbolRefAttr>:$base_ref,
+                       OptionalAttr<StrAttr>:$base_name);
+  let results = (outs IRDL_AttributeType:$output);
+  let assemblyFormat = " ($base_ref^)? ($base_name^)? ` ` attr-dict";
+
+  let builders = [
+    OpBuilder<(ins "SymbolRefAttr":$base_ref), [{
+      build($_builder, $_state, base_ref, {});
+    }]>,
+    OpBuilder<(ins "StringAttr":$base_name), [{
+      build($_builder, $_state, {}, base_name);
+    }]>,
+  ];
+
+  let hasVerifier = 1;
+}
+
 def IRDL_ParametricOp : IRDL_ConstraintOp<"parametric",
-    [ParentOneOf<["TypeOp", "AttributeOp", "OperationOp"]>, Pure]> {
+    [ParentOneOf<["TypeOp", "AttributeOp", "OperationOp"]>,
+     DeclareOpInterfaceMethods<SymbolUserOpInterface>, Pure]> {
   let summary = "Constraints an attribute/type base and its parameters";
   let description = [{
     `irdl.parametric` defines a constraint that accepts only a single type
@@ -469,7 +521,7 @@ def IRDL_ParametricOp : IRDL_ConstraintOp<"parametric",
 
       irdl.operation @norm {
         %0 = irdl.any
-        %1 = irdl.parametric @complex<%0>
+        %1 = irdl.parametric @cmath::@complex<%0>
         irdl.operands(%1)
         irdl.results(%0)
       }
@@ -522,8 +574,8 @@ def IRDL_AnyOfOp : IRDL_ConstraintOp<"any_of",
     Example:
 
     ```mlir
-    irdl.dialect cmath {
-      irdl.type complex {
+    irdl.dialect @cmath {
+      irdl.type @complex {
         %0 = irdl.is i32
         %1 = irdl.is i64
         %2 = irdl.is f32
@@ -536,7 +588,7 @@ def IRDL_AnyOfOp : IRDL_ConstraintOp<"any_of",
 
     The above program defines a type `complex` inside the dialect `cmath` that
     can have a single type parameter that can be either `i32`, `i64`, `f32` or
-    `f32`.
+    `f64`.
   }];
 
   let arguments = (ins Variadic<IRDL_AttributeType>:$args);
@@ -555,8 +607,8 @@ def IRDL_AllOfOp : IRDL_ConstraintOp<"all_of",
     Example:
 
     ```mlir
-    irdl.dialect cmath {
-      irdl.type complex_f32 {
+    irdl.dialect @cmath {
+      irdl.type @complex_f32 {
         %0 = irdl.is i32
         %1 = irdl.is f32
         %2 = irdl.any_of(%0, %1) // is 32-bit

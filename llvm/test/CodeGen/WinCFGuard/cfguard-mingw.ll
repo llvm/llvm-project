@@ -97,7 +97,7 @@ $_ZTI7Derived = comdat any
 
 ; Function Attrs: nounwind uwtable
 define weak_odr dso_local dllexport void @_ZN4BaseC2Ev(ptr noundef nonnull align 8 dereferenceable(12) %0) unnamed_addr #0 comdat align 2 {
-  store ptr getelementptr inbounds ({ [5 x ptr] }, ptr @_ZTV4Base, i64 0, inrange i32 0, i64 2), ptr %0, align 8, !tbaa !5
+  store ptr getelementptr inbounds ({ [5 x ptr] }, ptr @_ZTV4Base, i64 0, i32 0, i64 2), ptr %0, align 8, !tbaa !5
   %2 = getelementptr inbounds %class.Base, ptr %0, i64 0, i32 1
   store i32 0, ptr %2, align 8, !tbaa !8
   ret void
@@ -105,7 +105,7 @@ define weak_odr dso_local dllexport void @_ZN4BaseC2Ev(ptr noundef nonnull align
 
 ; Function Attrs: nounwind uwtable
 define weak_odr dso_local dllexport void @_ZN4BaseC1Ev(ptr noundef nonnull align 8 dereferenceable(12) %0) unnamed_addr #0 comdat align 2 {
-  store ptr getelementptr inbounds ({ [5 x ptr] }, ptr @_ZTV4Base, i64 0, inrange i32 0, i64 2), ptr %0, align 8, !tbaa !5
+  store ptr getelementptr inbounds ({ [5 x ptr] }, ptr @_ZTV4Base, i64 0, i32 0, i64 2), ptr %0, align 8, !tbaa !5
   %2 = getelementptr inbounds %class.Base, ptr %0, i64 0, i32 1
   store i32 0, ptr %2, align 8, !tbaa !8
   ret void
@@ -140,10 +140,10 @@ declare dso_local void @_ZdlPv(ptr noundef) local_unnamed_addr #2
 
 ; Function Attrs: nounwind uwtable
 define weak_odr dso_local dllexport void @_ZN7DerivedC2Ev(ptr noundef nonnull align 8 dereferenceable(16) %0) unnamed_addr #0 comdat align 2 {
-  store ptr getelementptr inbounds ({ [5 x ptr] }, ptr @_ZTV4Base, i64 0, inrange i32 0, i64 2), ptr %0, align 8, !tbaa !5
+  store ptr getelementptr inbounds ({ [5 x ptr] }, ptr @_ZTV4Base, i64 0, i32 0, i64 2), ptr %0, align 8, !tbaa !5
   %2 = getelementptr inbounds %class.Base, ptr %0, i64 0, i32 1
   store i32 0, ptr %2, align 8, !tbaa !8
-  store ptr getelementptr inbounds ({ [5 x ptr] }, ptr @_ZTV7Derived, i64 0, inrange i32 0, i64 2), ptr %0, align 8, !tbaa !5
+  store ptr getelementptr inbounds ({ [5 x ptr] }, ptr @_ZTV7Derived, i64 0, i32 0, i64 2), ptr %0, align 8, !tbaa !5
   %3 = getelementptr inbounds %class.Derived, ptr %0, i64 0, i32 1
   store i32 0, ptr %3, align 4, !tbaa !12
   ret void
@@ -151,10 +151,10 @@ define weak_odr dso_local dllexport void @_ZN7DerivedC2Ev(ptr noundef nonnull al
 
 ; Function Attrs: nounwind uwtable
 define weak_odr dso_local dllexport void @_ZN7DerivedC1Ev(ptr noundef nonnull align 8 dereferenceable(16) %0) unnamed_addr #0 comdat align 2 {
-  store ptr getelementptr inbounds ({ [5 x ptr] }, ptr @_ZTV4Base, i64 0, inrange i32 0, i64 2), ptr %0, align 8, !tbaa !5
+  store ptr getelementptr inbounds ({ [5 x ptr] }, ptr @_ZTV4Base, i64 0, i32 0, i64 2), ptr %0, align 8, !tbaa !5
   %2 = getelementptr inbounds %class.Base, ptr %0, i64 0, i32 1
   store i32 0, ptr %2, align 8, !tbaa !8
-  store ptr getelementptr inbounds ({ [5 x ptr] }, ptr @_ZTV7Derived, i64 0, inrange i32 0, i64 2), ptr %0, align 8, !tbaa !5
+  store ptr getelementptr inbounds ({ [5 x ptr] }, ptr @_ZTV7Derived, i64 0, i32 0, i64 2), ptr %0, align 8, !tbaa !5
   %3 = getelementptr inbounds %class.Derived, ptr %0, i64 0, i32 1
   store i32 0, ptr %3, align 4, !tbaa !12
   ret void

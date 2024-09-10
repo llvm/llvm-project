@@ -4,164 +4,171 @@
   target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
   target triple = "aarch64"
 
-  define void @test_simple_2xs8(i8* %ptr) {
-    %addr11 = bitcast i8* %ptr to i8*
-    store i8 4, i8* %addr11, align 1
-    %addr2 = getelementptr i8, i8* %ptr, i64 1
-    store i8 5, i8* %addr2, align 1
+  define void @test_simple_2xs8(ptr %ptr) {
+    %addr11 = bitcast ptr %ptr to ptr
+    store i8 4, ptr %addr11, align 1
+    %addr2 = getelementptr i8, ptr %ptr, i64 1
+    store i8 5, ptr %addr2, align 1
     ret void
   }
 
-  define void @test_simple_2xs16(i16* %ptr) {
-    %addr11 = bitcast i16* %ptr to i16*
-    store i16 4, i16* %addr11, align 2
-    %addr2 = getelementptr i16, i16* %ptr, i64 1
-    store i16 5, i16* %addr2, align 2
+  define void @test_simple_2xs16(ptr %ptr) {
+    %addr11 = bitcast ptr %ptr to ptr
+    store i16 4, ptr %addr11, align 2
+    %addr2 = getelementptr i16, ptr %ptr, i64 1
+    store i16 5, ptr %addr2, align 2
     ret void
   }
 
-  define void @test_simple_4xs16(i16* %ptr) {
-    %addr11 = bitcast i16* %ptr to i16*
-    store i16 4, i16* %addr11, align 2
-    %addr2 = getelementptr i16, i16* %ptr, i64 1
-    store i16 5, i16* %addr2, align 2
-    %addr3 = getelementptr i16, i16* %ptr, i64 2
-    store i16 9, i16* %addr3, align 2
-    %addr4 = getelementptr i16, i16* %ptr, i64 3
-    store i16 14, i16* %addr4, align 2
+  define void @test_simple_4xs16(ptr %ptr) {
+    %addr11 = bitcast ptr %ptr to ptr
+    store i16 4, ptr %addr11, align 2
+    %addr2 = getelementptr i16, ptr %ptr, i64 1
+    store i16 5, ptr %addr2, align 2
+    %addr3 = getelementptr i16, ptr %ptr, i64 2
+    store i16 9, ptr %addr3, align 2
+    %addr4 = getelementptr i16, ptr %ptr, i64 3
+    store i16 14, ptr %addr4, align 2
     ret void
   }
 
-  define void @test_simple_2xs32(i32* %ptr) {
-    %addr11 = bitcast i32* %ptr to i32*
-    store i32 4, i32* %addr11, align 4
-    %addr2 = getelementptr i32, i32* %ptr, i64 1
-    store i32 5, i32* %addr2, align 4
+  define void @test_simple_2xs32(ptr %ptr) {
+    %addr11 = bitcast ptr %ptr to ptr
+    store i32 4, ptr %addr11, align 4
+    %addr2 = getelementptr i32, ptr %ptr, i64 1
+    store i32 5, ptr %addr2, align 4
     ret void
   }
 
-  define void @test_simple_2xs64_illegal(i64* %ptr) {
-    %addr11 = bitcast i64* %ptr to i64*
-    store i64 4, i64* %addr11, align 8
-    %addr2 = getelementptr i64, i64* %ptr, i64 1
-    store i64 5, i64* %addr2, align 8
+  define void @test_simple_2xs64_illegal(ptr %ptr) {
+    %addr11 = bitcast ptr %ptr to ptr
+    store i64 4, ptr %addr11, align 8
+    %addr2 = getelementptr i64, ptr %ptr, i64 1
+    store i64 5, ptr %addr2, align 8
     ret void
   }
 
-  define void @test_simple_vector(<2 x i16>* %ptr) {
-    %addr11 = bitcast <2 x i16>* %ptr to <2 x i16>*
-    store <2 x i16> <i16 4, i16 7>, <2 x i16>* %addr11, align 4
-    %addr2 = getelementptr <2 x i16>, <2 x i16>* %ptr, i64 1
-    store <2 x i16> <i16 5, i16 8>, <2 x i16>* %addr2, align 4
+  define void @test_simple_vector(ptr %ptr) {
+    %addr11 = bitcast ptr %ptr to ptr
+    store <2 x i16> <i16 4, i16 7>, ptr %addr11, align 4
+    %addr2 = getelementptr <2 x i16>, ptr %ptr, i64 1
+    store <2 x i16> <i16 5, i16 8>, ptr %addr2, align 4
     ret void
   }
 
-  define i32 @test_unknown_alias(i32* %ptr, i32* %aliasptr) {
-    %addr11 = bitcast i32* %ptr to i32*
-    store i32 4, i32* %addr11, align 4
-    %ld = load i32, i32* %aliasptr, align 4
-    %addr2 = getelementptr i32, i32* %ptr, i64 1
-    store i32 5, i32* %addr2, align 4
+  define i32 @test_unknown_alias(ptr %ptr, ptr %aliasptr) {
+    %addr11 = bitcast ptr %ptr to ptr
+    store i32 4, ptr %addr11, align 4
+    %ld = load i32, ptr %aliasptr, align 4
+    %addr2 = getelementptr i32, ptr %ptr, i64 1
+    store i32 5, ptr %addr2, align 4
     ret i32 %ld
   }
 
-  define void @test_2x_2xs32(i32* %ptr, i32* %ptr2) {
-    %addr11 = bitcast i32* %ptr to i32*
-    store i32 4, i32* %addr11, align 4
-    %addr2 = getelementptr i32, i32* %ptr, i64 1
-    store i32 5, i32* %addr2, align 4
-    %addr32 = bitcast i32* %ptr2 to i32*
-    store i32 9, i32* %addr32, align 4
-    %addr4 = getelementptr i32, i32* %ptr2, i64 1
-    store i32 17, i32* %addr4, align 4
+  define void @test_2x_2xs32(ptr %ptr, ptr %ptr2) {
+    %addr11 = bitcast ptr %ptr to ptr
+    store i32 4, ptr %addr11, align 4
+    %addr2 = getelementptr i32, ptr %ptr, i64 1
+    store i32 5, ptr %addr2, align 4
+    %addr32 = bitcast ptr %ptr2 to ptr
+    store i32 9, ptr %addr32, align 4
+    %addr4 = getelementptr i32, ptr %ptr2, i64 1
+    store i32 17, ptr %addr4, align 4
     ret void
   }
 
-  define void @test_simple_var_2xs8(i8* %ptr, i8 %v1, i8 %v2) {
-    %addr11 = bitcast i8* %ptr to i8*
-    store i8 %v1, i8* %addr11, align 1
-    %addr2 = getelementptr i8, i8* %ptr, i64 1
-    store i8 %v2, i8* %addr2, align 1
+  define void @test_simple_var_2xs8(ptr %ptr, i8 %v1, i8 %v2) {
+    %addr11 = bitcast ptr %ptr to ptr
+    store i8 %v1, ptr %addr11, align 1
+    %addr2 = getelementptr i8, ptr %ptr, i64 1
+    store i8 %v2, ptr %addr2, align 1
     ret void
   }
 
-  define void @test_simple_var_2xs16(i16* %ptr, i16 %v1, i16 %v2) {
-    %addr11 = bitcast i16* %ptr to i16*
-    store i16 %v1, i16* %addr11, align 2
-    %addr2 = getelementptr i16, i16* %ptr, i64 1
-    store i16 %v2, i16* %addr2, align 2
+  define void @test_simple_var_2xs16(ptr %ptr, i16 %v1, i16 %v2) {
+    %addr11 = bitcast ptr %ptr to ptr
+    store i16 %v1, ptr %addr11, align 2
+    %addr2 = getelementptr i16, ptr %ptr, i64 1
+    store i16 %v2, ptr %addr2, align 2
     ret void
   }
 
-  define void @test_simple_var_2xs32(i32* %ptr, i32 %v1, i32 %v2) {
-    %addr11 = bitcast i32* %ptr to i32*
-    store i32 %v1, i32* %addr11, align 4
-    %addr2 = getelementptr i32, i32* %ptr, i64 1
-    store i32 %v2, i32* %addr2, align 4
+  define void @test_simple_var_2xs32(ptr %ptr, i32 %v1, i32 %v2) {
+    %addr11 = bitcast ptr %ptr to ptr
+    store i32 %v1, ptr %addr11, align 4
+    %addr2 = getelementptr i32, ptr %ptr, i64 1
+    store i32 %v2, ptr %addr2, align 4
     ret void
   }
 
-  define void @test_alias_4xs16(i16* %ptr, i16* %ptr2) {
-    %addr11 = bitcast i16* %ptr to i16*
-    store i16 4, i16* %addr11, align 2
-    %addr2 = getelementptr i16, i16* %ptr, i64 1
-    store i16 5, i16* %addr2, align 2
-    %addr3 = getelementptr i16, i16* %ptr, i64 2
-    store i16 9, i16* %addr3, align 2
-    store i16 0, i16* %ptr2, align 2
-    %addr4 = getelementptr i16, i16* %ptr, i64 3
-    store i16 14, i16* %addr4, align 2
+  define void @test_alias_4xs16(ptr %ptr, ptr %ptr2) {
+    %addr11 = bitcast ptr %ptr to ptr
+    store i16 4, ptr %addr11, align 2
+    %addr2 = getelementptr i16, ptr %ptr, i64 1
+    store i16 5, ptr %addr2, align 2
+    %addr3 = getelementptr i16, ptr %ptr, i64 2
+    store i16 9, ptr %addr3, align 2
+    store i16 0, ptr %ptr2, align 2
+    %addr4 = getelementptr i16, ptr %ptr, i64 3
+    store i16 14, ptr %addr4, align 2
     ret void
   }
 
-  define void @test_alias2_4xs16(i16* %ptr, i16* %ptr2, i16* %ptr3) {
-    %addr11 = bitcast i16* %ptr to i16*
-    store i16 4, i16* %addr11, align 2
-    %addr2 = getelementptr i16, i16* %ptr, i64 1
-    store i16 0, i16* %ptr3, align 2
-    store i16 5, i16* %addr2, align 2
-    %addr3 = getelementptr i16, i16* %ptr, i64 2
-    store i16 9, i16* %addr3, align 2
-    store i16 0, i16* %ptr2, align 2
-    %addr4 = getelementptr i16, i16* %ptr, i64 3
-    store i16 14, i16* %addr4, align 2
+  define void @test_alias2_4xs16(ptr %ptr, ptr %ptr2, ptr %ptr3) {
+    %addr11 = bitcast ptr %ptr to ptr
+    store i16 4, ptr %addr11, align 2
+    %addr2 = getelementptr i16, ptr %ptr, i64 1
+    store i16 0, ptr %ptr3, align 2
+    store i16 5, ptr %addr2, align 2
+    %addr3 = getelementptr i16, ptr %ptr, i64 2
+    store i16 9, ptr %addr3, align 2
+    store i16 0, ptr %ptr2, align 2
+    %addr4 = getelementptr i16, ptr %ptr, i64 3
+    store i16 14, ptr %addr4, align 2
     ret void
   }
 
-  define void @test_alias3_4xs16(i16* %ptr, i16* %ptr2, i16* %ptr3, i16* %ptr4) {
-    %addr11 = bitcast i16* %ptr to i16*
-    store i16 4, i16* %addr11, align 2
-    %addr2 = getelementptr i16, i16* %ptr, i64 1
-    store i16 0, i16* %ptr3, align 2
-    store i16 5, i16* %addr2, align 2
-    store i16 0, i16* %ptr4, align 2
-    %addr3 = getelementptr i16, i16* %ptr, i64 2
-    store i16 9, i16* %addr3, align 2
-    store i16 0, i16* %ptr2, align 2
-    %addr4 = getelementptr i16, i16* %ptr, i64 3
-    store i16 14, i16* %addr4, align 2
+  define void @test_alias3_4xs16(ptr %ptr, ptr %ptr2, ptr %ptr3, ptr %ptr4) {
+    %addr11 = bitcast ptr %ptr to ptr
+    store i16 4, ptr %addr11, align 2
+    %addr2 = getelementptr i16, ptr %ptr, i64 1
+    store i16 0, ptr %ptr3, align 2
+    store i16 5, ptr %addr2, align 2
+    store i16 0, ptr %ptr4, align 2
+    %addr3 = getelementptr i16, ptr %ptr, i64 2
+    store i16 9, ptr %addr3, align 2
+    store i16 0, ptr %ptr2, align 2
+    %addr4 = getelementptr i16, ptr %ptr, i64 3
+    store i16 14, ptr %addr4, align 2
     ret void
   }
 
-  define i32 @test_alias_allocas_2xs32(i32* %ptr) {
+  define i32 @test_alias_allocas_2xs32(ptr %ptr) {
     %a1 = alloca [6 x i32], align 4
     %a2 = alloca i32, align 4
-    %addr11 = bitcast [6 x i32]* %a1 to i32*
-    store i32 4, i32* %addr11, align 4
-    %ld = load i32, i32* %a2, align 4
-    %addr2 = getelementptr [6 x i32], [6 x i32]* %a1, i64 0, i32 1
-    store i32 5, i32* %addr2, align 4
+    %addr11 = bitcast ptr %a1 to ptr
+    store i32 4, ptr %addr11, align 4
+    %ld = load i32, ptr %a2, align 4
+    %addr2 = getelementptr [6 x i32], ptr %a1, i64 0, i32 1
+    store i32 5, ptr %addr2, align 4
     ret i32 %ld
   }
 
-  define void @test_simple_2xs32_with_align(i32* %ptr) {
-    %addr11 = bitcast i32* %ptr to i32*
-    store i32 4, i32* %addr11, align 4
-    %addr2 = getelementptr i32, i32* %ptr, i64 1
-    store i32 5, i32* %addr2, align 4
+  define void @test_simple_2xs32_with_align(ptr %ptr) {
+    %addr11 = bitcast ptr %ptr to ptr
+    store i32 4, ptr %addr11, align 4
+    %addr2 = getelementptr i32, ptr %ptr, i64 1
+    store i32 5, ptr %addr2, align 4
     ret void
   }
 
+  @G = external global [10 x i32]
+  define void @invalid_zero_offset_no_merge(i64 %0) {
+    %2 = getelementptr [10 x i32], ptr @G, i64 0, i64 %0
+    store i32 0, ptr %2, align 4
+    store i32 0, ptr getelementptr inbounds ([10 x i32], ptr @G, i64 0, i64 1), align 4
+    ret void
+  }
 ...
 ---
 name:            test_simple_2xs8
@@ -582,13 +589,11 @@ liveins:
 frameInfo:
   maxAlignment:    1
 machineFunctionInfo: {}
+# The store to ptr2 prevents merging into a single store.
+# We can still merge the stores into addr1 and addr2.
 body:             |
   bb.1 (%ir-block.0):
     liveins: $x0, $x1
-
-    ; The store to ptr2 prevents merging into a single store.
-    ; We can still merge the stores into addr1 and addr2.
-
     ; CHECK-LABEL: name: test_alias_4xs16
     ; CHECK: liveins: $x0, $x1
     ; CHECK-NEXT: {{  $}}
@@ -639,10 +644,10 @@ liveins:
 frameInfo:
   maxAlignment:    1
 machineFunctionInfo: {}
+# Here store of 5 and 9 can be merged, others have aliasing barriers.
 body:             |
   bb.1 (%ir-block.0):
     liveins: $x0, $x1, $x2
-    ; Here store of 5 and 9 can be merged, others have aliasing barriers.
     ; CHECK-LABEL: name: test_alias2_4xs16
     ; CHECK: liveins: $x0, $x1, $x2
     ; CHECK-NEXT: {{  $}}
@@ -698,11 +703,10 @@ liveins:
 frameInfo:
   maxAlignment:    1
 machineFunctionInfo: {}
+# No merging can be done here.
 body:             |
   bb.1 (%ir-block.0):
     liveins: $x0, $x1, $x2, $x3
-
-    ; No merging can be done here.
 
     ; CHECK-LABEL: name: test_alias3_4xs16
     ; CHECK: liveins: $x0, $x1, $x2, $x3
@@ -767,12 +771,10 @@ stack:
   - { id: 0, name: a1, size: 24, alignment: 4 }
   - { id: 1, name: a2, size: 4, alignment: 4 }
 machineFunctionInfo: {}
+# Can merge because the load is from a different alloca and can't alias.
 body:             |
   bb.1 (%ir-block.0):
     liveins: $x0
-
-    ; Can merge because the load is from a different alloca and can't alias.
-
     ; CHECK-LABEL: name: test_alias_allocas_2xs32
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
@@ -823,6 +825,46 @@ body:             |
     %2:_(s64) = G_CONSTANT i64 4
     %3:_(p0) = G_PTR_ADD %0, %2(s64)
     G_STORE %4(s32), %3(p0) :: (store (s32) into %ir.addr2, align 2)
+    RET_ReallyLR
+
+...
+---
+name:            invalid_zero_offset_no_merge
+alignment:       4
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x0' }
+frameInfo:
+  maxAlignment:    1
+machineFunctionInfo: {}
+body:             |
+  bb.1 (%ir-block.1):
+    liveins: $x0
+
+    ; CHECK-LABEL: name: invalid_zero_offset_no_merge
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
+    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[COPY]], [[C]](s64)
+    ; CHECK-NEXT: [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @G
+    ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[GV]], [[SHL]](s64)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: G_STORE [[C1]](s32), [[PTR_ADD]](p0) :: (store (s32) into %ir.2)
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
+    ; CHECK-NEXT: [[PTR_ADD1:%[0-9]+]]:_(p0) = nuw G_PTR_ADD [[GV]], [[C2]](s64)
+    ; CHECK-NEXT: G_STORE [[C1]](s32), [[PTR_ADD1]](p0) :: (store (s32) into `ptr getelementptr inbounds ([10 x i32], ptr @G, i64 0, i64 1)`)
+    ; CHECK-NEXT: RET_ReallyLR
+    %0:_(s64) = COPY $x0
+    %9:_(s64) = G_CONSTANT i64 2
+    %3:_(s64) = G_SHL %0, %9(s64)
+    %1:_(p0) = G_GLOBAL_VALUE @G
+    %4:_(p0) = G_PTR_ADD %1, %3(s64)
+    %6:_(s32) = G_CONSTANT i32 0
+    G_STORE %6(s32), %4(p0) :: (store (s32) into %ir.2)
+    %8:_(s64) = G_CONSTANT i64 4
+    %7:_(p0) = nuw G_PTR_ADD %1, %8(s64)
+    G_STORE %6(s32), %7(p0) :: (store (s32) into `ptr getelementptr inbounds ([10 x i32], ptr @G, i64 0, i64 1)`)
     RET_ReallyLR
 
 ...

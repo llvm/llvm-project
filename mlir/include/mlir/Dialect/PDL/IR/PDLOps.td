@@ -35,20 +35,25 @@ def PDL_ApplyNativeConstraintOp
   let description = [{
     `pdl.apply_native_constraint` operations apply a native C++ constraint, that
     has been registered externally with the consumer of PDL, to a given set of
-    entities.
+    entities and optionally return a number of values.
 
     Example:
 
     ```mlir
     // Apply `myConstraint` to the entities defined by `input`, `attr`, and `op`.
     pdl.apply_native_constraint "myConstraint"(%input, %attr, %op : !pdl.value, !pdl.attribute, !pdl.operation)
+    // Apply constraint `with_result` to `root`. This constraint returns an attribute.
+    %attr = pdl.apply_native_constraint "with_result"(%root : !pdl.operation) : !pdl.attribute
     ```
   }];
 
   let arguments = (ins StrAttr:$name, 
                        Variadic<PDL_AnyType>:$args, 
                        DefaultValuedAttr<BoolAttr, "false">:$isNegated);
-  let assemblyFormat = "$name `(` $args `:` type($args) `)` attr-dict";
+  let results = (outs Variadic<PDL_AnyType>:$results);
+  let assemblyFormat = [{
+    $name `(` $args `:` type($args) `)` (`:`  type($results)^ )? attr-dict
+  }];
   let hasVerifier = 1;
 }
 

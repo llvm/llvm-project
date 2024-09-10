@@ -53,15 +53,15 @@ function ``@my_kernel`` is callable from host code, but ``@my_fmad`` is not.
       ret float %add
     }
 
-    define void @my_kernel(float* %ptr) {
-      %val = load float, float* %ptr
+    define void @my_kernel(ptr %ptr) {
+      %val = load float, ptr %ptr
       %ret = call float @my_fmad(float %val, float %val, float %val)
-      store float %ret, float* %ptr
+      store float %ret, ptr %ptr
       ret void
     }
 
     !nvvm.annotations = !{!1}
-    !1 = !{void (float*)* @my_kernel, !"kernel", i32 1}
+    !1 = !{ptr @my_kernel, !"kernel", i32 1}
 
 When compiled, the PTX kernel functions are callable by host-side code.
 
@@ -140,10 +140,10 @@ These are overloaded intrinsics.  You can use these on any pointer types.
 
 .. code-block:: llvm
 
-    declare i8* @llvm.nvvm.ptr.global.to.gen.p0i8.p1i8(i8 addrspace(1)*)
-    declare i8* @llvm.nvvm.ptr.shared.to.gen.p0i8.p3i8(i8 addrspace(3)*)
-    declare i8* @llvm.nvvm.ptr.constant.to.gen.p0i8.p4i8(i8 addrspace(4)*)
-    declare i8* @llvm.nvvm.ptr.local.to.gen.p0i8.p5i8(i8 addrspace(5)*)
+    declare ptr @llvm.nvvm.ptr.global.to.gen.p0.p1(ptr addrspace(1))
+    declare ptr @llvm.nvvm.ptr.shared.to.gen.p0.p3(ptr addrspace(3))
+    declare ptr @llvm.nvvm.ptr.constant.to.gen.p0.p4(ptr addrspace(4))
+    declare ptr @llvm.nvvm.ptr.local.to.gen.p0.p5(ptr addrspace(5))
 
 Overview:
 """""""""
@@ -168,10 +168,10 @@ These are overloaded intrinsics.  You can use these on any pointer types.
 
 .. code-block:: llvm
 
-    declare i8 addrspace(1)* @llvm.nvvm.ptr.gen.to.global.p1i8.p0i8(i8*)
-    declare i8 addrspace(3)* @llvm.nvvm.ptr.gen.to.shared.p3i8.p0i8(i8*)
-    declare i8 addrspace(4)* @llvm.nvvm.ptr.gen.to.constant.p4i8.p0i8(i8*)
-    declare i8 addrspace(5)* @llvm.nvvm.ptr.gen.to.local.p5i8.p0i8(i8*)
+    declare ptr addrspace(1) @llvm.nvvm.ptr.gen.to.global.p1.p0(ptr)
+    declare ptr addrspace(3) @llvm.nvvm.ptr.gen.to.shared.p3.p0(ptr)
+    declare ptr addrspace(4) @llvm.nvvm.ptr.gen.to.constant.p4.p0(ptr)
+    declare ptr addrspace(5) @llvm.nvvm.ptr.gen.to.local.p5.p0(ptr)
 
 Overview:
 """""""""
@@ -251,6 +251,138 @@ Overview:
 The '``@llvm.nvvm.barrier0()``' intrinsic emits a PTX ``bar.sync 0``
 instruction, equivalent to the ``__syncthreads()`` call in CUDA.
 
+Electing a thread
+-----------------
+
+'``llvm.nvvm.elect.sync``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare {i32, i1} @llvm.nvvm.elect.sync(i32 %membermask)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.elect.sync``' intrinsic generates the ``elect.sync``
+PTX instruction, which elects one predicated active leader thread from
+a set of threads specified by ``membermask``. The behavior is undefined
+if the executing thread is not in ``membermask``. The laneid of the
+elected thread is captured in the i32 return value. The i1 return
+value is set to ``True`` for the leader thread and ``False`` for all
+the other threads. Election of a leader thread happens deterministically,
+i.e. the same leader thread is elected for the same ``membermask``
+every time. For more information, refer PTX ISA
+`<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-elect-sync>`_.
+
+Membar/Fences
+-------------
+
+'``llvm.nvvm.fence.proxy.tensormap_generic.*``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.fence.proxy.tensormap_generic.release.cta()
+  declare void @llvm.nvvm.fence.proxy.tensormap_generic.release.cluster()
+  declare void @llvm.nvvm.fence.proxy.tensormap_generic.release.gpu()
+  declare void @llvm.nvvm.fence.proxy.tensormap_generic.release.sys()
+
+  declare void @llvm.nvvm.fence.proxy.tensormap_generic.acquire.cta(ptr %addr, i32 %size)
+  declare void @llvm.nvvm.fence.proxy.tensormap_generic.acquire.cluster(ptr %addr, i32 %size)
+  declare void @llvm.nvvm.fence.proxy.tensormap_generic.acquire.gpu(ptr %addr, i32 %size)
+  declare void @llvm.nvvm.fence.proxy.tensormap_generic.acquire.sys(ptr %addr, i32 %size)
+
+Overview:
+"""""""""
+
+The ``@llvm.nvvm.fence.proxy.tensormap_generic.*`` is a uni-directional fence used to establish ordering between a prior memory access performed via the generic `proxy<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#proxies>_` and a subsequent memory access performed via the tensormap proxy. ``nvvm.fence.proxy.tensormap_generic.release`` can form a release sequence that synchronizes with an acquire sequence that contains the ``nvvm.fence.proxy.tensormap_generic.acquire`` proxy fence. The following table describes the mapping between LLVM Intrinsic and the PTX instruction:
+
+  ====================================================== =========================================================
+  NVVM Intrinsic                                         PTX Instruction
+  ====================================================== =========================================================
+  ``@llvm.nvvm.fence.proxy.tensormap_generic.release.*`` ``fence.proxy.tensormap::generic.release.*``
+  ``@llvm.nvvm.fence.proxy.tensormap_generic.acquire.*`` ``fence.proxy.tensormap::generic.acquire.* [addr], size``
+  ====================================================== =========================================================
+
+The address operand ``addr`` and the operand ``size`` together specify the memory range ``[addr, addr+size)`` on which the ordering guarantees on the memory accesses across the proxies is to be provided. The only supported value for the ``size`` operand is ``128`` and must be an immediate. Generic Addressing is used unconditionally, and the address specified by the operand addr must fall within the ``.global`` state space. Otherwise, the behavior is undefined. For more information, see `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-membar>`_.
+
+Arithmetic Intrinsics
+---------------------
+
+'``llvm.nvvm.idp2a.[us].[us]``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+    declare i32 @llvm.nvvm.idp2a.s.s(i32 %a, i32 %b, i1 immarg %is.hi, i32 %c)
+    declare i32 @llvm.nvvm.idp2a.s.u(i32 %a, i32 %b, i1 immarg %is.hi, i32 %c)
+    declare i32 @llvm.nvvm.idp2a.u.s(i32 %a, i32 %b, i1 immarg %is.hi, i32 %c)
+    declare i32 @llvm.nvvm.idp2a.u.u(i32 %a, i32 %b, i1 immarg %is.hi, i32 %c)
+
+
+Overview:
+"""""""""
+
+The '``llvm.nvvm.idp2a.[us].[us]``' intrinsics performs a 2-element vector dot
+product followed by addition. They corresponds directly to the ``dp2a`` PTX 
+instruction.
+
+Semantics:
+""""""""""
+
+The 32-bit value in ``%a`` is broken into 2 16-bit values which are extended to
+32 bits. For the '``llvm.nvvm.idp2a.u.[us]``' variants zero-extension is used,
+while for the '``llvm.nvvm.idp2a.s.[us]``' sign-extension is used. Two bytes are
+selected from ``%b``, if ``%is.hi`` is true, the most significant bytes are
+selected, otherwise the least significant bytes are selected. These bytes are
+then extended to 32-bits. For the '``llvm.nvvm.idp2a.[us].u``' variants
+zero-extension is used, while for the '``llvm.nvvm.idp2a.[us].s``'
+sign-extension is used. The dot product of these 2-element vectors is added to
+``%c`` to produce the return.
+
+
+'``llvm.nvvm.idp4a.[us].[us]``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+    declare i32 @llvm.nvvm.idp4a.s.s(i32 %a, i32 %b, i32 %c)
+    declare i32 @llvm.nvvm.idp4a.s.u(i32 %a, i32 %b, i32 %c)
+    declare i32 @llvm.nvvm.idp4a.u.s(i32 %a, i32 %b, i32 %c)
+    declare i32 @llvm.nvvm.idp4a.u.u(i32 %a, i32 %b, i32 %c)
+
+Overview:
+"""""""""
+
+The '``llvm.nvvm.idp4a.[us].[us]``' intrinsics perform a 4-element vector dot
+product followed by addition. They corresponds directly to the ``dp4a`` PTX
+instruction.
+
+Semantics:
+""""""""""
+
+Each of the 4 bytes in both ``%a`` and ``%b`` are extended to 32-bit integers
+forming 2 ``<4 x i32>``. For ``%a``, zero-extension is used in the
+'``llvm.nvvm.idp4a.u.[us]``' variants, while sign-extension is used with
+'``llvm.nvvm.idp4a.s.[us]``' variants. Similarly, for ``%b``, zero-extension is
+used in the '``llvm.nvvm.idp4a.[us].u``' variants, while sign-extension is used
+with '``llvm.nvvm.idp4a.[us].s``' variants. The dot product of these 4-element
+vectors is added to ``%c`` to produce the return.
+
+
 
 Other Intrinsics
 ----------------
@@ -295,6 +427,10 @@ The ``NVVMReflect`` pass should be executed early in the optimization
 pipeline, immediately after the link stage. The ``internalize`` pass is also
 recommended to remove unused math functions from the resulting PTX. For an
 input IR module ``module.bc``, the following compilation flow is recommended:
+
+The ``NVVMReflect`` pass will attempt to remove dead code even without
+optimizations. This allows potentially incompatible instructions to be avoided
+at all optimizations levels by using the ``__CUDA_ARCH`` argument.
 
 1. Save list of external functions in ``module.bc``
 2. Link ``module.bc`` with ``libdevice.compute_XX.YY.bc``
@@ -356,7 +492,7 @@ The following sets the ftz flag to 1.
 
 .. code-block:: llvm
 
-    !llvm.module.flag = !{!0}
+    !llvm.module.flags = !{!0}
     !0 = !{i32 4, !"nvvm-reflect-ftz", i32 1}
 
 (``i32 4`` indicates that the value set here overrides the value in another
@@ -432,35 +568,33 @@ The Kernel
   ; Intrinsic to read X component of thread ID
   declare i32 @llvm.nvvm.read.ptx.sreg.tid.x() readnone nounwind
 
-  define void @kernel(float addrspace(1)* %A,
-                      float addrspace(1)* %B,
-                      float addrspace(1)* %C) {
+  define void @kernel(ptr addrspace(1) %A,
+                      ptr addrspace(1) %B,
+                      ptr addrspace(1) %C) {
   entry:
     ; What is my ID?
     %id = tail call i32 @llvm.nvvm.read.ptx.sreg.tid.x() readnone nounwind
 
     ; Compute pointers into A, B, and C
-    %ptrA = getelementptr float, float addrspace(1)* %A, i32 %id
-    %ptrB = getelementptr float, float addrspace(1)* %B, i32 %id
-    %ptrC = getelementptr float, float addrspace(1)* %C, i32 %id
+    %ptrA = getelementptr float, ptr addrspace(1) %A, i32 %id
+    %ptrB = getelementptr float, ptr addrspace(1) %B, i32 %id
+    %ptrC = getelementptr float, ptr addrspace(1) %C, i32 %id
 
     ; Read A, B
-    %valA = load float, float addrspace(1)* %ptrA, align 4
-    %valB = load float, float addrspace(1)* %ptrB, align 4
+    %valA = load float, ptr addrspace(1) %ptrA, align 4
+    %valB = load float, ptr addrspace(1) %ptrB, align 4
 
     ; Compute C = A + B
     %valC = fadd float %valA, %valB
 
     ; Store back to C
-    store float %valC, float addrspace(1)* %ptrC, align 4
+    store float %valC, ptr addrspace(1) %ptrC, align 4
 
     ret void
   }
 
   !nvvm.annotations = !{!0}
-  !0 = !{void (float addrspace(1)*,
-               float addrspace(1)*,
-               float addrspace(1)*)* @kernel, !"kernel", i32 1}
+  !0 = !{ptr @kernel, !"kernel", i32 1}
 
 
 We can use the LLVM ``llc`` tool to directly run the NVPTX code generator:
@@ -609,9 +743,7 @@ For the previous example, we have:
 .. code-block:: llvm
 
   !nvvm.annotations = !{!0}
-  !0 = !{void (float addrspace(1)*,
-               float addrspace(1)*,
-               float addrspace(1)*)* @kernel, !"kernel", i32 1}
+  !0 = !{ptr @kernel, !"kernel", i32 1}
 
 Here, we have a single metadata declaration in ``nvvm.annotations``. This
 metadata annotates our ``@kernel`` function with the ``kernel`` attribute.
@@ -816,35 +948,33 @@ Libdevice provides an ``__nv_powf`` function that we will use.
   ; libdevice function
   declare float @__nv_powf(float, float)
 
-  define void @kernel(float addrspace(1)* %A,
-                      float addrspace(1)* %B,
-                      float addrspace(1)* %C) {
+  define void @kernel(ptr addrspace(1) %A,
+                      ptr addrspace(1) %B,
+                      ptr addrspace(1) %C) {
   entry:
     ; What is my ID?
     %id = tail call i32 @llvm.nvvm.read.ptx.sreg.tid.x() readnone nounwind
 
     ; Compute pointers into A, B, and C
-    %ptrA = getelementptr float, float addrspace(1)* %A, i32 %id
-    %ptrB = getelementptr float, float addrspace(1)* %B, i32 %id
-    %ptrC = getelementptr float, float addrspace(1)* %C, i32 %id
+    %ptrA = getelementptr float, ptr addrspace(1) %A, i32 %id
+    %ptrB = getelementptr float, ptr addrspace(1) %B, i32 %id
+    %ptrC = getelementptr float, ptr addrspace(1) %C, i32 %id
 
     ; Read A, B
-    %valA = load float, float addrspace(1)* %ptrA, align 4
-    %valB = load float, float addrspace(1)* %ptrB, align 4
+    %valA = load float, ptr addrspace(1) %ptrA, align 4
+    %valB = load float, ptr addrspace(1) %ptrB, align 4
 
     ; Compute C = pow(A, B)
     %valC = call float @__nv_powf(float %valA, float %valB)
 
     ; Store back to C
-    store float %valC, float addrspace(1)* %ptrC, align 4
+    store float %valC, ptr addrspace(1) %ptrC, align 4
 
     ret void
   }
 
   !nvvm.annotations = !{!0}
-  !0 = !{void (float addrspace(1)*,
-               float addrspace(1)*,
-               float addrspace(1)*)* @kernel, !"kernel", i32 1}
+  !0 = !{ptr @kernel, !"kernel", i32 1}
 
 
 To compile this kernel, we perform the following steps:

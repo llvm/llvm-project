@@ -16,39 +16,39 @@ declare i64 @strlen(ptr)
 define void @fold_strlen_A(ptr %plen) {
 ; CHECK-LABEL: @fold_strlen_A(
 ; CHECK-NEXT:    store i64 1, ptr [[PLEN:%.*]], align 4
-; CHECK-NEXT:    [[PLEN1:%.*]] = getelementptr i64, ptr [[PLEN]], i64 1
+; CHECK-NEXT:    [[PLEN1:%.*]] = getelementptr i8, ptr [[PLEN]], i64 8
 ; CHECK-NEXT:    store i64 0, ptr [[PLEN1]], align 4
-; CHECK-NEXT:    [[PLEN2:%.*]] = getelementptr i64, ptr [[PLEN]], i64 2
+; CHECK-NEXT:    [[PLEN2:%.*]] = getelementptr i8, ptr [[PLEN]], i64 16
 ; CHECK-NEXT:    store i64 0, ptr [[PLEN2]], align 4
-; CHECK-NEXT:    [[PLEN3:%.*]] = getelementptr i64, ptr [[PLEN]], i64 3
+; CHECK-NEXT:    [[PLEN3:%.*]] = getelementptr i8, ptr [[PLEN]], i64 24
 ; CHECK-NEXT:    store i64 0, ptr [[PLEN3]], align 4
-; CHECK-NEXT:    [[PLEN4:%.*]] = getelementptr i64, ptr [[PLEN]], i64 4
+; CHECK-NEXT:    [[PLEN4:%.*]] = getelementptr i8, ptr [[PLEN]], i64 32
 ; CHECK-NEXT:    store i64 2, ptr [[PLEN4]], align 4
-; CHECK-NEXT:    [[PLEN5:%.*]] = getelementptr i64, ptr [[PLEN]], i64 5
+; CHECK-NEXT:    [[PLEN5:%.*]] = getelementptr i8, ptr [[PLEN]], i64 40
 ; CHECK-NEXT:    store i64 1, ptr [[PLEN5]], align 4
-; CHECK-NEXT:    [[PLEN6:%.*]] = getelementptr i64, ptr [[PLEN]], i64 6
+; CHECK-NEXT:    [[PLEN6:%.*]] = getelementptr i8, ptr [[PLEN]], i64 48
 ; CHECK-NEXT:    store i64 0, ptr [[PLEN6]], align 4
-; CHECK-NEXT:    [[PLEN7:%.*]] = getelementptr i64, ptr [[PLEN]], i64 7
+; CHECK-NEXT:    [[PLEN7:%.*]] = getelementptr i8, ptr [[PLEN]], i64 56
 ; CHECK-NEXT:    store i64 0, ptr [[PLEN7]], align 4
-; CHECK-NEXT:    [[PLEN8:%.*]] = getelementptr i64, ptr [[PLEN]], i64 8
+; CHECK-NEXT:    [[PLEN8:%.*]] = getelementptr i8, ptr [[PLEN]], i64 64
 ; CHECK-NEXT:    store i64 0, ptr [[PLEN8]], align 4
-; CHECK-NEXT:    [[PLEN9:%.*]] = getelementptr i64, ptr [[PLEN]], i64 9
+; CHECK-NEXT:    [[PLEN9:%.*]] = getelementptr i8, ptr [[PLEN]], i64 72
 ; CHECK-NEXT:    store i64 3, ptr [[PLEN9]], align 4
-; CHECK-NEXT:    [[PLEN10:%.*]] = getelementptr i64, ptr [[PLEN]], i64 10
+; CHECK-NEXT:    [[PLEN10:%.*]] = getelementptr i8, ptr [[PLEN]], i64 80
 ; CHECK-NEXT:    store i64 2, ptr [[PLEN10]], align 4
-; CHECK-NEXT:    [[PLEN11:%.*]] = getelementptr i64, ptr [[PLEN]], i64 11
+; CHECK-NEXT:    [[PLEN11:%.*]] = getelementptr i8, ptr [[PLEN]], i64 88
 ; CHECK-NEXT:    store i64 1, ptr [[PLEN11]], align 4
-; CHECK-NEXT:    [[PLEN12:%.*]] = getelementptr i64, ptr [[PLEN]], i64 12
+; CHECK-NEXT:    [[PLEN12:%.*]] = getelementptr i8, ptr [[PLEN]], i64 96
 ; CHECK-NEXT:    store i64 0, ptr [[PLEN12]], align 4
-; CHECK-NEXT:    [[PLEN14:%.*]] = getelementptr i64, ptr [[PLEN]], i64 14
+; CHECK-NEXT:    [[PLEN14:%.*]] = getelementptr i8, ptr [[PLEN]], i64 112
 ; CHECK-NEXT:    store i64 4, ptr [[PLEN14]], align 4
-; CHECK-NEXT:    [[PLEN15:%.*]] = getelementptr i64, ptr [[PLEN]], i64 15
+; CHECK-NEXT:    [[PLEN15:%.*]] = getelementptr i8, ptr [[PLEN]], i64 120
 ; CHECK-NEXT:    store i64 3, ptr [[PLEN15]], align 4
-; CHECK-NEXT:    [[PLEN16:%.*]] = getelementptr i64, ptr [[PLEN]], i64 16
+; CHECK-NEXT:    [[PLEN16:%.*]] = getelementptr i8, ptr [[PLEN]], i64 128
 ; CHECK-NEXT:    store i64 2, ptr [[PLEN16]], align 4
-; CHECK-NEXT:    [[PLEN17:%.*]] = getelementptr i64, ptr [[PLEN]], i64 17
+; CHECK-NEXT:    [[PLEN17:%.*]] = getelementptr i8, ptr [[PLEN]], i64 136
 ; CHECK-NEXT:    store i64 1, ptr [[PLEN17]], align 4
-; CHECK-NEXT:    [[PLEN18:%.*]] = getelementptr i64, ptr [[PLEN]], i64 18
+; CHECK-NEXT:    [[PLEN18:%.*]] = getelementptr i8, ptr [[PLEN]], i64 144
 ; CHECK-NEXT:    store i64 0, ptr [[PLEN18]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -172,15 +172,15 @@ define void @fold_strlen_A_pI(ptr %plen, i64 %I) {
 ; CHECK-NEXT:    store i64 [[LENA0A]], ptr [[PLEN:%.*]], align 4
 ; CHECK-NEXT:    [[PA0B:%.*]] = getelementptr [2 x %struct.A], ptr @a, i64 0, i64 0, i32 1, i64 [[I]]
 ; CHECK-NEXT:    [[LENA0B:%.*]] = call i64 @strlen(ptr noundef nonnull dereferenceable(1) [[PA0B]])
-; CHECK-NEXT:    [[PLEN1:%.*]] = getelementptr i64, ptr [[PLEN]], i64 1
+; CHECK-NEXT:    [[PLEN1:%.*]] = getelementptr i8, ptr [[PLEN]], i64 8
 ; CHECK-NEXT:    store i64 [[LENA0B]], ptr [[PLEN1]], align 4
 ; CHECK-NEXT:    [[PA1A:%.*]] = getelementptr [2 x %struct.A], ptr @a, i64 0, i64 1, i32 0, i64 [[I]]
 ; CHECK-NEXT:    [[LENA1A:%.*]] = call i64 @strlen(ptr noundef nonnull dereferenceable(1) [[PA1A]])
-; CHECK-NEXT:    [[PLEN2:%.*]] = getelementptr i64, ptr [[PLEN]], i64 2
+; CHECK-NEXT:    [[PLEN2:%.*]] = getelementptr i8, ptr [[PLEN]], i64 16
 ; CHECK-NEXT:    store i64 [[LENA1A]], ptr [[PLEN2]], align 4
 ; CHECK-NEXT:    [[PA1B:%.*]] = getelementptr [2 x %struct.A], ptr @a, i64 0, i64 1, i32 1, i64 [[I]]
 ; CHECK-NEXT:    [[LENA1B:%.*]] = call i64 @strlen(ptr noundef nonnull dereferenceable(1) [[PA1B]])
-; CHECK-NEXT:    [[PLEN3:%.*]] = getelementptr i64, ptr [[PLEN]], i64 3
+; CHECK-NEXT:    [[PLEN3:%.*]] = getelementptr i8, ptr [[PLEN]], i64 24
 ; CHECK-NEXT:    store i64 [[LENA1B]], ptr [[PLEN3]], align 4
 ; CHECK-NEXT:    ret void
 ;

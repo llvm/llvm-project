@@ -5,28 +5,28 @@
 ; CHECK:	.long	("$ip2state$?crash@@YAXH@Z")
 
 ; CHECK-LABEL: "$stateUnwindMap$?crash@@YAXH@Z":
-; CHECK:	.long	-1 
+; CHECK:	.long	-1
 ; CHECK:	.long	"?dtor$
-; CHECK:	.long	0 
+; CHECK:	.long	0
 ; CHECK:	.long	"?dtor$
 ; CHECK:	.long	1
 ; CHECK:	.long	"?dtor$
 
 ; CHECK-LABEL: "$ip2state$?crash@@YAXH@Z":
 ; CHECK-NEXT:	.long	.Lfunc_begin0@IMGREL
-; CHECK-NEXT:	.long	-1                  
-; CHECK-NEXT:	.long	.Ltmp     
-; CHECK-NEXT:	.long	0                   
-; CHECK-NEXT:	.long	.Ltmp     
-; CHECK-NEXT:	.long	1                   
+; CHECK-NEXT:	.long	-1
 ; CHECK-NEXT:	.long	.Ltmp
-; CHECK-NEXT:	.long	2                   
+; CHECK-NEXT:	.long	0
 ; CHECK-NEXT:	.long	.Ltmp
-; CHECK-NEXT:	.long	1                   
+; CHECK-NEXT:	.long	1
 ; CHECK-NEXT:	.long	.Ltmp
-; CHECK-NEXT:	.long	0                   
+; CHECK-NEXT:	.long	2
 ; CHECK-NEXT:	.long	.Ltmp
-; CHECK-NEXT:	.long	-1                  
+; CHECK-NEXT:	.long	1
+; CHECK-NEXT:	.long	.Ltmp
+; CHECK-NEXT:	.long	0
+; CHECK-NEXT:	.long	.Ltmp
+; CHECK-NEXT:	.long	-1
 
 ; ModuleID = 'windows-seh-EHa-CppDtors01.cpp'
 source_filename = "windows-seh-EHa-CppDtors01.cpp"
@@ -52,23 +52,23 @@ $"??_C@_0N@HMNCGOCN@?5in?5A?5dtor?5?6?$AA@" = comdat any
 @"??_C@_0N@HMNCGOCN@?5in?5A?5dtor?5?6?$AA@" = linkonce_odr dso_local unnamed_addr constant [13 x i8] c" in A dtor \0A\00", comdat, align 1
 
 ; Function Attrs: noinline optnone
-define dso_local void @"?crash@@YAXH@Z"(i32 %i) #0 personality i8* bitcast (i32 (...)* @__CxxFrameHandler3 to i8*) {
+define dso_local void @"?crash@@YAXH@Z"(i32 %i) #0 personality ptr @__CxxFrameHandler3 {
 entry:
   %i.addr = alloca i32, align 4
   %ObjA = alloca %struct.A, align 1
   %ObjB = alloca %struct.B, align 1
   %ObjC = alloca %struct.C, align 1
-  store i32 %i, i32* %i.addr, align 4
+  store i32 %i, ptr %i.addr, align 4
   invoke void @llvm.seh.scope.begin()
           to label %invoke.cont unwind label %ehcleanup13
 
 invoke.cont:                                      ; preds = %entry
-  %0 = load i32, i32* %i.addr, align 4
+  %0 = load i32, ptr %i.addr, align 4
   %cmp = icmp eq i32 %0, 0
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:                                          ; preds = %invoke.cont
-  store volatile i32 0, i32* inttoptr (i64 17 to i32*), align 4
+  store volatile i32 0, ptr inttoptr (i64 17 to ptr), align 4
   br label %if.end
 
 if.end:                                           ; preds = %if.then, %invoke.cont
@@ -76,12 +76,12 @@ if.end:                                           ; preds = %if.then, %invoke.co
           to label %invoke.cont1 unwind label %ehcleanup11
 
 invoke.cont1:                                     ; preds = %if.end
-  %1 = load i32, i32* %i.addr, align 4
+  %1 = load i32, ptr %i.addr, align 4
   %cmp2 = icmp eq i32 %1, 1
   br i1 %cmp2, label %if.then3, label %if.end4
 
 if.then3:                                         ; preds = %invoke.cont1
-  store volatile i32 0, i32* inttoptr (i64 17 to i32*), align 4
+  store volatile i32 0, ptr inttoptr (i64 17 to ptr), align 4
   br label %if.end4
 
 if.end4:                                          ; preds = %if.then3, %invoke.cont1
@@ -89,12 +89,12 @@ if.end4:                                          ; preds = %if.then3, %invoke.c
           to label %invoke.cont5 unwind label %ehcleanup
 
 invoke.cont5:                                     ; preds = %if.end4
-  %2 = load i32, i32* %i.addr, align 4
+  %2 = load i32, ptr %i.addr, align 4
   %cmp6 = icmp eq i32 %2, 2
   br i1 %cmp6, label %if.then7, label %if.end8
 
 if.then7:                                         ; preds = %invoke.cont5
-  store volatile i32 0, i32* inttoptr (i64 17 to i32*), align 4
+  store volatile i32 0, ptr inttoptr (i64 17 to ptr), align 4
   br label %if.end8
 
 if.end8:                                          ; preds = %if.then7, %invoke.cont5
@@ -102,32 +102,32 @@ if.end8:                                          ; preds = %if.then7, %invoke.c
           to label %invoke.cont9 unwind label %ehcleanup
 
 invoke.cont9:                                     ; preds = %if.end8
-  call void @"??1C@?1??crash@@YAXH@Z@QEAA@XZ"(%struct.C* %ObjC) #6
+  call void @"??1C@?1??crash@@YAXH@Z@QEAA@XZ"(ptr %ObjC) #6
   invoke void @llvm.seh.scope.end()
           to label %invoke.cont10 unwind label %ehcleanup11
 
 invoke.cont10:                                    ; preds = %invoke.cont9
-  call void @"??1B@?1??crash@@YAXH@Z@QEAA@XZ"(%struct.B* %ObjB) #6
+  call void @"??1B@?1??crash@@YAXH@Z@QEAA@XZ"(ptr %ObjB) #6
   invoke void @llvm.seh.scope.end()
           to label %invoke.cont12 unwind label %ehcleanup13
 
 invoke.cont12:                                    ; preds = %invoke.cont10
-  call void @"??1A@?1??crash@@YAXH@Z@QEAA@XZ"(%struct.A* %ObjA) #6
+  call void @"??1A@?1??crash@@YAXH@Z@QEAA@XZ"(ptr %ObjA) #6
   ret void
 
 ehcleanup:                                        ; preds = %if.end8, %if.end4
   %3 = cleanuppad within none []
-  call void @"??1C@?1??crash@@YAXH@Z@QEAA@XZ"(%struct.C* %ObjC) #6 [ "funclet"(token %3) ]
+  call void @"??1C@?1??crash@@YAXH@Z@QEAA@XZ"(ptr %ObjC) #6 [ "funclet"(token %3) ]
   cleanupret from %3 unwind label %ehcleanup11
 
 ehcleanup11:                                      ; preds = %invoke.cont9, %ehcleanup, %if.end
   %4 = cleanuppad within none []
-  call void @"??1B@?1??crash@@YAXH@Z@QEAA@XZ"(%struct.B* %ObjB) #6 [ "funclet"(token %4) ]
+  call void @"??1B@?1??crash@@YAXH@Z@QEAA@XZ"(ptr %ObjB) #6 [ "funclet"(token %4) ]
   cleanupret from %4 unwind label %ehcleanup13
 
 ehcleanup13:                                      ; preds = %invoke.cont10, %ehcleanup11, %entry
   %5 = cleanuppad within none []
-  call void @"??1A@?1??crash@@YAXH@Z@QEAA@XZ"(%struct.A* %ObjA) #6 [ "funclet"(token %5) ]
+  call void @"??1A@?1??crash@@YAXH@Z@QEAA@XZ"(ptr %ObjA) #6 [ "funclet"(token %5) ]
   cleanupret from %5 unwind to caller
 }
 
@@ -140,47 +140,47 @@ declare dso_local i32 @__CxxFrameHandler3(...)
 declare dso_local void @llvm.seh.scope.end() #1
 
 ; Function Attrs: noinline nounwind optnone
-define internal void @"??1C@?1??crash@@YAXH@Z@QEAA@XZ"(%struct.C* %this) unnamed_addr #2 align 2 {
+define internal void @"??1C@?1??crash@@YAXH@Z@QEAA@XZ"(ptr %this) unnamed_addr #2 align 2 {
 entry:
-  %this.addr = alloca %struct.C*, align 8
-  store %struct.C* %this, %struct.C** %this.addr, align 8
-  %this1 = load %struct.C*, %struct.C** %this.addr, align 8
-  call void (...) @"?printf@@YAXZZ"(i8* getelementptr inbounds ([13 x i8], [13 x i8]* @"??_C@_0N@FCCEEGKL@?5in?5C?5dtor?5?6?$AA@", i64 0, i64 0))
+  %this.addr = alloca ptr, align 8
+  store ptr %this, ptr %this.addr, align 8
+  %this1 = load ptr, ptr %this.addr, align 8
+  call void (...) @"?printf@@YAXZZ"(ptr @"??_C@_0N@FCCEEGKL@?5in?5C?5dtor?5?6?$AA@")
   ret void
 }
 
 ; Function Attrs: noinline nounwind optnone
-define internal void @"??1B@?1??crash@@YAXH@Z@QEAA@XZ"(%struct.B* %this) unnamed_addr #2 align 2 {
+define internal void @"??1B@?1??crash@@YAXH@Z@QEAA@XZ"(ptr %this) unnamed_addr #2 align 2 {
 entry:
-  %this.addr = alloca %struct.B*, align 8
-  store %struct.B* %this, %struct.B** %this.addr, align 8
-  %this1 = load %struct.B*, %struct.B** %this.addr, align 8
-  call void (...) @"?printf@@YAXZZ"(i8* getelementptr inbounds ([13 x i8], [13 x i8]* @"??_C@_0N@EFFPFCOI@?5in?5B?5dtor?5?6?$AA@", i64 0, i64 0))
+  %this.addr = alloca ptr, align 8
+  store ptr %this, ptr %this.addr, align 8
+  %this1 = load ptr, ptr %this.addr, align 8
+  call void (...) @"?printf@@YAXZZ"(ptr @"??_C@_0N@EFFPFCOI@?5in?5B?5dtor?5?6?$AA@")
   ret void
 }
 
 ; Function Attrs: noinline nounwind optnone
-define internal void @"??1A@?1??crash@@YAXH@Z@QEAA@XZ"(%struct.A* %this) unnamed_addr #2 align 2 {
+define internal void @"??1A@?1??crash@@YAXH@Z@QEAA@XZ"(ptr %this) unnamed_addr #2 align 2 {
 entry:
-  %this.addr = alloca %struct.A*, align 8
-  store %struct.A* %this, %struct.A** %this.addr, align 8
-  %this1 = load %struct.A*, %struct.A** %this.addr, align 8
-  call void (...) @"?printf@@YAXZZ"(i8* getelementptr inbounds ([13 x i8], [13 x i8]* @"??_C@_0N@HMNCGOCN@?5in?5A?5dtor?5?6?$AA@", i64 0, i64 0))
+  %this.addr = alloca ptr, align 8
+  store ptr %this, ptr %this.addr, align 8
+  %this1 = load ptr, ptr %this.addr, align 8
+  call void (...) @"?printf@@YAXZZ"(ptr @"??_C@_0N@HMNCGOCN@?5in?5A?5dtor?5?6?$AA@")
   ret void
 }
 
 ; Function Attrs: noinline norecurse optnone
-define dso_local i32 @main() #3 personality i8* bitcast (i32 (...)* @__C_specific_handler to i8*) {
+define dso_local i32 @main() #3 personality ptr @__C_specific_handler {
 entry:
   %retval = alloca i32, align 4
   %i = alloca i32, align 4
   %__exception_code = alloca i32, align 4
-  store i32 0, i32* %retval, align 4
-  store i32 0, i32* %i, align 4
+  store i32 0, ptr %retval, align 4
+  store i32 0, ptr %i, align 4
   br label %for.cond
 
 for.cond:                                         ; preds = %for.inc, %entry
-  %0 = load i32, i32* %i, align 4
+  %0 = load i32, ptr %i, align 4
   %cmp = icmp slt i32 %0, 3
   br i1 %cmp, label %for.body, label %for.end
 
@@ -189,7 +189,7 @@ for.body:                                         ; preds = %for.cond
           to label %invoke.cont unwind label %catch.dispatch
 
 invoke.cont:                                      ; preds = %for.body
-  %1 = load volatile i32, i32* %i, align 4
+  %1 = load volatile i32, ptr %i, align 4
   invoke void @"?crash@@YAXH@Z"(i32 %1) #7
           to label %invoke.cont1 unwind label %catch.dispatch
 
@@ -201,23 +201,23 @@ catch.dispatch:                                   ; preds = %invoke.cont1, %invo
   %2 = catchswitch within none [label %__except] unwind to caller
 
 __except:                                         ; preds = %catch.dispatch
-  %3 = catchpad within %2 [i8* null]
+  %3 = catchpad within %2 [ptr null]
   catchret from %3 to label %__except3
 
 __except3:                                        ; preds = %__except
   %4 = call i32 @llvm.eh.exceptioncode(token %3)
-  store i32 %4, i32* %__exception_code, align 4
-  %5 = load i32, i32* %i, align 4
-  call void (...) @"?printf@@YAXZZ"(i8* getelementptr inbounds ([44 x i8], [44 x i8]* @"??_C@_0CM@KAOHJHDK@?5Test?5CPP?5unwind?3?5in?5catch?5handl@", i64 0, i64 0), i32 %5)
+  store i32 %4, ptr %__exception_code, align 4
+  %5 = load i32, ptr %i, align 4
+  call void (...) @"?printf@@YAXZZ"(ptr @"??_C@_0CM@KAOHJHDK@?5Test?5CPP?5unwind?3?5in?5catch?5handl@", i32 %5)
   br label %__try.cont
 
 __try.cont:                                       ; preds = %__except3, %invoke.cont2
   br label %for.inc
 
 for.inc:                                          ; preds = %__try.cont
-  %6 = load i32, i32* %i, align 4
+  %6 = load i32, ptr %i, align 4
   %inc = add nsw i32 %6, 1
-  store i32 %inc, i32* %i, align 4
+  store i32 %inc, ptr %i, align 4
   br label %for.cond
 
 invoke.cont2:                                     ; preds = %invoke.cont1

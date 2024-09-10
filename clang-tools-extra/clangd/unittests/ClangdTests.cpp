@@ -29,6 +29,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Path.h"
@@ -392,7 +393,7 @@ TEST(ClangdServerTest, SearchLibDir) {
   ErrorCheckingCallbacks DiagConsumer;
   MockCompilationDatabase CDB;
   CDB.ExtraClangFlags.insert(CDB.ExtraClangFlags.end(),
-                             {"-xc++", "-target", "x86_64-linux-unknown",
+                             {"-xc++", "--target=x86_64-unknown-linux-gnu",
                               "-m64", "--gcc-toolchain=/randomusr",
                               "-stdlib=libstdc++"});
   ClangdServer Server(CDB, FS, ClangdServer::optsForTest(), &DiagConsumer);

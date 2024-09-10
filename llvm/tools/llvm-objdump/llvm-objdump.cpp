@@ -29,6 +29,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/DebugInfo/BTF/BTFParser.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
@@ -71,7 +72,6 @@
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/GraphWriter.h"
-#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
@@ -173,6 +173,120 @@ public:
                        "Mach-O object file displaying tool") {}
 };
 
+struct BBAddrMapLabel {
+  std::string BlockLabel;
+  std::string PGOAnalysis;
+};
+
+// This class represents the BBAddrMap and PGOMap associated with a single
+// function.
+class BBAddrMapFunctionEntry {
+public:
+  BBAddrMapFunctionEntry(BBAddrMap AddrMap, PGOAnalysisMap PGOMap)
+      : AddrMap(std::move(AddrMap)), PGOMap(std::move(PGOMap)) {}
+
+  const BBAddrMap &getAddrMap() const { return AddrMap; }
+
+  // Returns the PGO string associated with the entry of index `PGOBBEntryIndex`
+  // in `PGOMap`. If PrettyPGOAnalysis is true, prints BFI as relative frequency
+  // and BPI as percentage. Otherwise raw values are displayed.
+  std::string constructPGOLabelString(size_t PGOBBEntryIndex,
+                                      bool PrettyPGOAnalysis) const {
+    if (!PGOMap.FeatEnable.hasPGOAnalysis())
+      return "";
+    std::string PGOString;
+    raw_string_ostream PGOSS(PGOString);
+
+    PGOSS << " (";
+    if (PGOMap.FeatEnable.FuncEntryCount && PGOBBEntryIndex == 0) {
+      PGOSS << "Entry count: " << Twine(PGOMap.FuncEntryCount);
+      if (PGOMap.FeatEnable.hasPGOAnalysisBBData()) {
+        PGOSS << ", ";
+      }
+    }
+
+    if (PGOMap.FeatEnable.hasPGOAnalysisBBData()) {
+
+      assert(PGOBBEntryIndex < PGOMap.BBEntries.size() &&
+             "Expected PGOAnalysisMap and BBAddrMap to have the same entries");
+      const PGOAnalysisMap::PGOBBEntry &PGOBBEntry =
+          PGOMap.BBEntries[PGOBBEntryIndex];
+
+      if (PGOMap.FeatEnable.BBFreq) {
+        PGOSS << "Frequency: ";
+        if (PrettyPGOAnalysis)
+          printRelativeBlockFreq(PGOSS, PGOMap.BBEntries.front().BlockFreq,
+                                 PGOBBEntry.BlockFreq);
+        else
+          PGOSS << Twine(PGOBBEntry.BlockFreq.getFrequency());
+        if (PGOMap.FeatEnable.BrProb && PGOBBEntry.Successors.size() > 0) {
+          PGOSS << ", ";
+        }
+      }
+      if (PGOMap.FeatEnable.BrProb && PGOBBEntry.Successors.size() > 0) {
+        PGOSS << "Successors: ";
+        interleaveComma(
+            PGOBBEntry.Successors, PGOSS,
+            [&](const PGOAnalysisMap::PGOBBEntry::SuccessorEntry &SE) {
+              PGOSS << "BB" << SE.ID << ":";
+              if (PrettyPGOAnalysis)
+                PGOSS << "[" << SE.Prob << "]";
+              else
+                PGOSS.write_hex(SE.Prob.getNumerator());
+            });
+      }
+    }
+    PGOSS << ")";
+
+    return PGOString;
+  }
+
+private:
+  const BBAddrMap AddrMap;
+  const PGOAnalysisMap PGOMap;
+};
+
+// This class represents the BBAddrMap and PGOMap of potentially multiple
+// functions in a section.
+class BBAddrMapInfo {
+public:
+  void clear() {
+    FunctionAddrToMap.clear();
+    RangeBaseAddrToFunctionAddr.clear();
+  }
+
+  bool empty() const { return FunctionAddrToMap.empty(); }
+
+  void AddFunctionEntry(BBAddrMap AddrMap, PGOAnalysisMap PGOMap) {
+    uint64_t FunctionAddr = AddrMap.getFunctionAddress();
+    for (size_t I = 1; I < AddrMap.BBRanges.size(); ++I)
+      RangeBaseAddrToFunctionAddr.emplace(AddrMap.BBRanges[I].BaseAddress,
+                                          FunctionAddr);
+    [[maybe_unused]] auto R = FunctionAddrToMap.try_emplace(
+        FunctionAddr, std::move(AddrMap), std::move(PGOMap));
+    assert(R.second && "duplicate function address");
+  }
+
+  // Returns the BBAddrMap entry for the function associated with `BaseAddress`.
+  // `BaseAddress` could be the function address or the address of a range
+  // associated with that function. Returns `nullptr` if `BaseAddress` is not
+  // mapped to any entry.
+  const BBAddrMapFunctionEntry *getEntryForAddress(uint64_t BaseAddress) const {
+    uint64_t FunctionAddr = BaseAddress;
+    auto S = RangeBaseAddrToFunctionAddr.find(BaseAddress);
+    if (S != RangeBaseAddrToFunctionAddr.end())
+      FunctionAddr = S->second;
+    auto R = FunctionAddrToMap.find(FunctionAddr);
+    if (R == FunctionAddrToMap.end())
+      return nullptr;
+    return &R->second;
+  }
+
+private:
+  std::unordered_map<uint64_t, BBAddrMapFunctionEntry> FunctionAddrToMap;
+  std::unordered_map<uint64_t, uint64_t> RangeBaseAddrToFunctionAddr;
+};
+
 } // namespace
 
 #define DEBUG_TYPE "objdump"
@@ -227,6 +341,7 @@ static bool HasStopAddressFlag;
 
 bool objdump::SymbolTable;
 static bool SymbolizeOperands;
+static bool PrettyPGOAnalysisMap;
 static bool DynamicSymbolTable;
 std::string objdump::TripleName;
 bool objdump::UnwindInfo;
@@ -832,6 +947,55 @@ public:
 };
 AArch64PrettyPrinter AArch64PrettyPrinterInst;
 
+class RISCVPrettyPrinter : public PrettyPrinter {
+public:
+  void printInst(MCInstPrinter &IP, const MCInst *MI, ArrayRef<uint8_t> Bytes,
+                 object::SectionedAddress Address, formatted_raw_ostream &OS,
+                 StringRef Annot, MCSubtargetInfo const &STI, SourcePrinter *SP,
+                 StringRef ObjectFilename, std::vector<RelocationRef> *Rels,
+                 LiveVariablePrinter &LVP) override {
+    if (SP && (PrintSource || PrintLines))
+      SP->printSourceLine(OS, Address, ObjectFilename, LVP);
+    LVP.printBetweenInsts(OS, false);
+
+    size_t Start = OS.tell();
+    if (LeadingAddr)
+      OS << format("%8" PRIx64 ":", Address.Address);
+    if (ShowRawInsn) {
+      size_t Pos = 0, End = Bytes.size();
+      if (End % 4 == 0) {
+        // 32-bit and 64-bit instructions.
+        for (; Pos + 4 <= End; Pos += 4)
+          OS << ' '
+             << format_hex_no_prefix(
+                    llvm::support::endian::read<uint32_t>(
+                        Bytes.data() + Pos, llvm::endianness::little),
+                    8);
+      } else if (End % 2 == 0) {
+        // 16-bit and 48-bits instructions.
+        for (; Pos + 2 <= End; Pos += 2)
+          OS << ' '
+             << format_hex_no_prefix(
+                    llvm::support::endian::read<uint16_t>(
+                        Bytes.data() + Pos, llvm::endianness::little),
+                    4);
+      }
+      if (Pos < End) {
+        OS << ' ';
+        dumpBytes(Bytes.slice(Pos), OS);
+      }
+    }
+
+    AlignToInstStartColumn(Start, STI, OS);
+
+    if (MI) {
+      IP.printInst(MI, Address.Address, "", STI, OS);
+    } else
+      OS << "\t<unknown>";
+  }
+};
+RISCVPrettyPrinter RISCVPrettyPrinterInst;
+
 PrettyPrinter &selectPrettyPrinter(Triple const &Triple) {
   switch(Triple.getArch()) {
   default:
@@ -852,6 +1016,9 @@ PrettyPrinter &selectPrettyPrinter(Triple const &Triple) {
   case Triple::aarch64_be:
   case Triple::aarch64_32:
     return AArch64PrettyPrinterInst;
+  case Triple::riscv32:
+  case Triple::riscv64:
+    return RISCVPrettyPrinterInst;
   }
 }
 
@@ -913,6 +1080,9 @@ DisassemblerTarget::DisassemblerTarget(const Target *TheTarget, ObjectFile &Obj,
   DisAsm.reset(TheTarget->createMCDisassembler(*SubtargetInfo, *Context));
   if (!DisAsm)
     reportError(Obj.getFileName(), "no disassembler for target " + TripleName);
+
+  if (auto *ELFObj = dyn_cast<ELFObjectFileBase>(&Obj))
+    DisAsm->setABIVersion(ELFObj->getEIdentABIVersion());
 
   InstrAnalysis.reset(TheTarget->createMCInstrAnalysis(InstrInfo.get()));
 
@@ -1043,7 +1213,11 @@ addMissingWasmCodeSymbols(const WasmObjectFile &Obj,
     SymbolAddresses.insert(Sym.Addr);
 
   for (const wasm::WasmFunction &Function : Obj.functions()) {
-    uint64_t Address = Function.CodeSectionOffset;
+    // This adjustment mirrors the one in WasmObjectFile::getSymbolAddress.
+    uint32_t Adjustment = Obj.isRelocatableObject() || Obj.isSharedObject()
+                              ? 0
+                              : Section->getAddress();
+    uint64_t Address = Function.CodeSectionOffset + Adjustment;
     // Only add fallback symbols for functions not already present in the symbol
     // table.
     if (SymbolAddresses.count(Address))
@@ -1248,6 +1422,10 @@ SymbolInfoTy objdump::createSymbolInfo(const ObjectFile &Obj,
     const SymbolRef::Type SymType = unwrapOrError(Symbol.getType(), FileName);
     return SymbolInfoTy(Addr, Name, SymType, /*IsMappingSymbol=*/false,
                         /*IsXCOFF=*/true);
+  } else if (Obj.isWasm()) {
+    uint8_t SymType =
+        cast<WasmObjectFile>(&Obj)->getWasmSymbol(Symbol).Info.Kind;
+    return SymbolInfoTy(Addr, Name, SymType, false);
   } else {
     uint8_t Type =
         Obj.isELF() ? getElfSymbolType(Obj, Symbol) : (uint8_t)ELF::STT_NOTYPE;
@@ -1260,27 +1438,43 @@ static SymbolInfoTy createDummySymbolInfo(const ObjectFile &Obj,
                                           uint8_t Type) {
   if (Obj.isXCOFF() && (SymbolDescription || TracebackTable))
     return SymbolInfoTy(std::nullopt, Addr, Name, std::nullopt, false);
-  else
-    return SymbolInfoTy(Addr, Name, Type);
+  if (Obj.isWasm())
+    return SymbolInfoTy(Addr, Name, wasm::WASM_SYMBOL_TYPE_SECTION);
+  return SymbolInfoTy(Addr, Name, Type);
 }
 
-static void
-collectBBAddrMapLabels(const std::unordered_map<uint64_t, BBAddrMap> &AddrToBBAddrMap,
-                       uint64_t SectionAddr, uint64_t Start, uint64_t End,
-                       std::unordered_map<uint64_t, std::vector<std::string>> &Labels) {
-  if (AddrToBBAddrMap.empty())
+static void collectBBAddrMapLabels(
+    const BBAddrMapInfo &FullAddrMap, uint64_t SectionAddr, uint64_t Start,
+    uint64_t End,
+    std::unordered_map<uint64_t, std::vector<BBAddrMapLabel>> &Labels) {
+  if (FullAddrMap.empty())
     return;
   Labels.clear();
   uint64_t StartAddress = SectionAddr + Start;
   uint64_t EndAddress = SectionAddr + End;
-  auto Iter = AddrToBBAddrMap.find(StartAddress);
-  if (Iter == AddrToBBAddrMap.end())
+  const BBAddrMapFunctionEntry *FunctionMap =
+      FullAddrMap.getEntryForAddress(StartAddress);
+  if (!FunctionMap)
     return;
-  for (const BBAddrMap::BBEntry &BBEntry : Iter->second.getBBEntries()) {
-    uint64_t BBAddress = BBEntry.Offset + Iter->second.getFunctionAddress();
+  std::optional<size_t> BBRangeIndex =
+      FunctionMap->getAddrMap().getBBRangeIndexForBaseAddress(StartAddress);
+  if (!BBRangeIndex)
+    return;
+  size_t NumBBEntriesBeforeRange = 0;
+  for (size_t I = 0; I < *BBRangeIndex; ++I)
+    NumBBEntriesBeforeRange +=
+        FunctionMap->getAddrMap().BBRanges[I].BBEntries.size();
+  const auto &BBRange = FunctionMap->getAddrMap().BBRanges[*BBRangeIndex];
+  for (size_t I = 0; I < BBRange.BBEntries.size(); ++I) {
+    const BBAddrMap::BBEntry &BBEntry = BBRange.BBEntries[I];
+    uint64_t BBAddress = BBEntry.Offset + BBRange.BaseAddress;
     if (BBAddress >= EndAddress)
       continue;
-    Labels[BBAddress].push_back(("BB" + Twine(BBEntry.ID)).str());
+
+    std::string LabelString = ("BB" + Twine(BBEntry.ID)).str();
+    Labels[BBAddress].push_back(
+        {LabelString, FunctionMap->constructPGOLabelString(
+                          NumBBEntriesBeforeRange + I, PrettyPGOAnalysisMap)});
   }
 }
 
@@ -1290,9 +1484,11 @@ collectLocalBranchTargets(ArrayRef<uint8_t> Bytes, MCInstrAnalysis *MIA,
                           const MCSubtargetInfo *STI, uint64_t SectionAddr,
                           uint64_t Start, uint64_t End,
                           std::unordered_map<uint64_t, std::string> &Labels) {
-  // So far only supports PowerPC and X86.
+  // Supported by certain targets.
   const bool isPPC = STI->getTargetTriple().isPPC();
-  if (!isPPC && !STI->getTargetTriple().isX86())
+  const bool isX86 = STI->getTargetTriple().isX86();
+  const bool isBPF = STI->getTargetTriple().isBPF();
+  if (!isPPC && !isX86 && !isBPF)
     return;
 
   if (MIA)
@@ -1376,8 +1572,7 @@ static void addSymbolizer(
   LabelAddrs.insert(LabelAddrs.end(), LabelAddrsRef.begin(),
                     LabelAddrsRef.end());
   llvm::sort(LabelAddrs);
-  LabelAddrs.resize(std::unique(LabelAddrs.begin(), LabelAddrs.end()) -
-                    LabelAddrs.begin());
+  LabelAddrs.resize(llvm::unique(LabelAddrs) - LabelAddrs.begin());
   // Add the labels.
   for (unsigned LabelNum = 0; LabelNum != LabelAddrs.size(); ++LabelNum) {
     auto Name = std::make_unique<std::string>();
@@ -1637,19 +1832,22 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
 
   LLVM_DEBUG(LVP.dump());
 
-  std::unordered_map<uint64_t, BBAddrMap> AddrToBBAddrMap;
+  BBAddrMapInfo FullAddrMap;
   auto ReadBBAddrMap = [&](std::optional<unsigned> SectionIndex =
                                std::nullopt) {
-    AddrToBBAddrMap.clear();
+    FullAddrMap.clear();
     if (const auto *Elf = dyn_cast<ELFObjectFileBase>(&Obj)) {
-      auto BBAddrMapsOrErr = Elf->readBBAddrMap(SectionIndex);
+      std::vector<PGOAnalysisMap> PGOAnalyses;
+      auto BBAddrMapsOrErr = Elf->readBBAddrMap(SectionIndex, &PGOAnalyses);
       if (!BBAddrMapsOrErr) {
         reportWarning(toString(BBAddrMapsOrErr.takeError()), Obj.getFileName());
         return;
       }
-      for (auto &FunctionBBAddrMap : *BBAddrMapsOrErr)
-        AddrToBBAddrMap.emplace(FunctionBBAddrMap.Addr,
-                                std::move(FunctionBBAddrMap));
+      for (auto &&[FunctionBBAddrMap, FunctionPGOAnalysis] :
+           zip_equal(*std::move(BBAddrMapsOrErr), std::move(PGOAnalyses))) {
+        FullAddrMap.AddFunctionEntry(std::move(FunctionBBAddrMap),
+                                     std::move(FunctionPGOAnalysis));
+      }
     }
   };
 
@@ -1906,41 +2104,46 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
       for (size_t SHI = 0; SHI < SymbolsHere.size(); ++SHI) {
         SymbolInfoTy Symbol = SymbolsHere[SHI];
 
-        auto Status = DT->DisAsm->onSymbolStart(
-            Symbol, Size, Bytes.slice(Start, End - Start), SectionAddr + Start,
-            CommentStream);
+        Expected<bool> RespondedOrErr = DT->DisAsm->onSymbolStart(
+            Symbol, Size, Bytes.slice(Start, End - Start), SectionAddr + Start);
 
-        if (!Status) {
-          // If onSymbolStart returns std::nullopt, that means it didn't trigger
-          // any interesting handling for this symbol. Try the other symbols
-          // defined at this address.
+        if (RespondedOrErr && !*RespondedOrErr) {
+          // This symbol didn't trigger any interesting handling. Try the other
+          // symbols defined at this address.
           continue;
         }
 
-        if (*Status == MCDisassembler::Fail) {
-          // If onSymbolStart returns Fail, that means it identified some kind
-          // of special data at this address, but wasn't able to disassemble it
-          // meaningfully. So we fall back to disassembling the failed region
-          // as bytes, assuming that the target detected the failure before
-          // printing anything.
-          //
-          // Return values Success or SoftFail (i.e no 'real' failure) are
-          // expected to mean that the target has emitted its own output.
-          //
-          // Either way, 'Size' will have been set to the amount of data
-          // covered by whatever prologue the target identified. So we advance
-          // our own position to beyond that. Sometimes that will be the entire
-          // distance to the next symbol, and sometimes it will be just a
-          // prologue and we should start disassembling instructions from where
-          // it left off.
-          outs() << DT->Context->getAsmInfo()->getCommentString()
-                 << " error in decoding " << SymNamesHere[SHI]
-                 << " : decoding failed region as bytes.\n";
-          for (uint64_t I = 0; I < Size; ++I) {
-            outs() << "\t.byte\t " << format_hex(Bytes[I], 1, /*Upper=*/true)
-                   << "\n";
+        // If onSymbolStart returned an Error, that means it identified some
+        // kind of special data at this address, but wasn't able to disassemble
+        // it meaningfully. So we fall back to printing the error out and
+        // disassembling the failed region as bytes, assuming that the target
+        // detected the failure before printing anything.
+        if (!RespondedOrErr) {
+          std::string ErrMsgStr = toString(RespondedOrErr.takeError());
+          StringRef ErrMsg = ErrMsgStr;
+          do {
+            StringRef Line;
+            std::tie(Line, ErrMsg) = ErrMsg.split('\n');
+            outs() << DT->Context->getAsmInfo()->getCommentString()
+                   << " error decoding " << SymNamesHere[SHI] << ": " << Line
+                   << '\n';
+          } while (!ErrMsg.empty());
+
+          if (Size) {
+            outs() << DT->Context->getAsmInfo()->getCommentString()
+                   << " decoding failed region as bytes\n";
+            for (uint64_t I = 0; I < Size; ++I)
+              outs() << "\t.byte\t " << format_hex(Bytes[I], 1, /*Upper=*/true)
+                     << '\n';
           }
         }
+
+        // Regardless of whether onSymbolStart returned an Error or true, 'Size'
+        // will have been set to the amount of data covered by whatever prologue
+        // the target identified. So we advance our own position to beyond that.
+        // Sometimes that will be the entire distance to the next symbol, and
+        // sometimes it will be just a prologue and we should start
+        // disassembling instructions from where it left off.
         Start += Size;
         break;
       }
@@ -1970,21 +2173,14 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
 
       formatted_raw_ostream FOS(outs());
 
-      // FIXME: Workaround for bug in formatted_raw_ostream. Color escape codes
-      // are (incorrectly) written directly to the unbuffered raw_ostream
-      // wrapped by the formatted_raw_ostream.
-      if (DisassemblyColor == ColorOutput::Enable ||
-          DisassemblyColor == ColorOutput::Auto)
-        FOS.SetUnbuffered();
-
       std::unordered_map<uint64_t, std::string> AllLabels;
-      std::unordered_map<uint64_t, std::vector<std::string>> BBAddrMapLabels;
+      std::unordered_map<uint64_t, std::vector<BBAddrMapLabel>> BBAddrMapLabels;
       if (SymbolizeOperands) {
         collectLocalBranchTargets(Bytes, DT->InstrAnalysis.get(),
                                   DT->DisAsm.get(), DT->InstPrinter.get(),
                                   PrimaryTarget.SubtargetInfo.get(),
                                   SectionAddr, Index, End, AllLabels);
-        collectBBAddrMapLabels(AddrToBBAddrMap, SectionAddr, Index, End,
+        collectBBAddrMapLabels(FullAddrMap, SectionAddr, Index, End,
                                BBAddrMapLabels);
       }
 
@@ -2083,8 +2279,9 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
           // Print local label if there's any.
           auto Iter1 = BBAddrMapLabels.find(SectionAddr + Index);
           if (Iter1 != BBAddrMapLabels.end()) {
-            for (StringRef Label : Iter1->second)
-              FOS << "<" << Label << ">:\n";
+            for (const auto &BBLabel : Iter1->second)
+              FOS << "<" << BBLabel.BlockLabel << ">" << BBLabel.PGOAnalysis
+                  << ":\n";
           } else {
             auto Iter2 = AllLabels.find(SectionAddr + Index);
             if (Iter2 != AllLabels.end())
@@ -2261,7 +2458,7 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
                 } else if (!Disp) {
                   *TargetOS << TargetName;
                 } else if (BBAddrMapLabelAvailable) {
-                  *TargetOS << BBAddrMapLabels[Target].front();
+                  *TargetOS << BBAddrMapLabels[Target].front().BlockLabel;
                 } else if (LabelAvailable) {
                   *TargetOS << AllLabels[Target];
                 } else {
@@ -2277,7 +2474,8 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
                 }
 
               } else if (BBAddrMapLabelAvailable) {
-                *TargetOS << " <" << BBAddrMapLabels[Target].front() << ">";
+                *TargetOS << " <" << BBAddrMapLabels[Target].front().BlockLabel
+                          << ">";
               } else if (LabelAvailable) {
                 *TargetOS << " <" << AllLabels[Target] << ">";
               }
@@ -2491,6 +2689,16 @@ void Dumper::printRelocations() {
            << "VALUE\n";
 
     for (SectionRef Section : P.second) {
+      // CREL sections require decoding, each section may have its own specific
+      // decode problems.
+      if (O.isELF() && ELFSectionRef(Section).getType() == ELF::SHT_CREL) {
+        StringRef Err =
+            cast<const ELFObjectFileBase>(O).getCrelDecodeProblem(Section);
+        if (!Err.empty()) {
+          reportUniqueWarning(Err);
+          continue;
+        }
+      }
       for (const RelocationRef &Reloc : Section.relocations()) {
         uint64_t Address = Reloc.getOffset();
         SmallString<32> RelocName;
@@ -2677,16 +2885,6 @@ void Dumper::printSymbol(const SymbolRef &Symbol,
     reportUniqueWarning(AddrOrErr.takeError());
     return;
   }
-  uint64_t Address = *AddrOrErr;
-  section_iterator SecI = unwrapOrError(Symbol.getSection(), FileName);
-  if (SecI != O.section_end() && shouldAdjustVA(*SecI))
-    Address += AdjustVMA;
-  if ((Address < StartAddress) || (Address > StopAddress))
-    return;
-  SymbolRef::Type Type =
-      unwrapOrError(Symbol.getType(), FileName, ArchiveName, ArchitectureName);
-  uint32_t Flags =
-      unwrapOrError(Symbol.getFlags(), FileName, ArchiveName, ArchitectureName);
 
   // Don't ask a Mach-O STAB symbol for its section unless you know that
   // STAB symbol's section field refers to a valid section index. Otherwise
@@ -2704,6 +2902,16 @@ void Dumper::printSymbol(const SymbolRef &Symbol,
                                  ? O.section_end()
                                  : unwrapOrError(Symbol.getSection(), FileName,
                                                  ArchiveName, ArchitectureName);
+
+  uint64_t Address = *AddrOrErr;
+  if (Section != O.section_end() && shouldAdjustVA(*Section))
+    Address += AdjustVMA;
+  if ((Address < StartAddress) || (Address > StopAddress))
+    return;
+  SymbolRef::Type Type =
+      unwrapOrError(Symbol.getType(), FileName, ArchiveName, ArchitectureName);
+  uint32_t Flags =
+      unwrapOrError(Symbol.getFlags(), FileName, ArchiveName, ArchitectureName);
 
   StringRef Name;
   if (Type == SymbolRef::ST_Debug && Section != O.section_end()) {
@@ -2811,6 +3019,10 @@ void Dumper::printSymbol(const SymbolRef &Symbol,
                               Symbol.getRawDataRefImpl()));
   else if (O.isELF())
     outs() << '\t' << format(Fmt, ELFSymbolRef(Symbol).getSize());
+  else if (O.isWasm())
+    outs() << '\t'
+           << format(Fmt, static_cast<uint64_t>(
+                              cast<WasmObjectFile>(O).getSymbolSize(Symbol)));
 
   if (O.isELF()) {
     if (!SymbolVersions.empty()) {
@@ -2951,7 +3163,7 @@ void Dumper::printPrivateHeaders() {
 }
 
 static void printFileHeaders(const ObjectFile *O) {
-  if (!O->isELF() && !O->isCOFF())
+  if (!O->isELF() && !O->isCOFF() && !O->isXCOFF())
     reportError(O->getFileName(), "Invalid/Unsupported object file format");
 
   Triple::ArchType AT = O->getArch();
@@ -3333,6 +3545,10 @@ static void parseObjdumpOptions(const llvm::opt::InputArgList &InputArgs) {
   HasStopAddressFlag = InputArgs.hasArg(OBJDUMP_stop_address_EQ);
   SymbolTable = InputArgs.hasArg(OBJDUMP_syms);
   SymbolizeOperands = InputArgs.hasArg(OBJDUMP_symbolize_operands);
+  PrettyPGOAnalysisMap = InputArgs.hasArg(OBJDUMP_pretty_pgo_analysis_map);
+  if (PrettyPGOAnalysisMap && !SymbolizeOperands)
+    reportCmdLineWarning("--symbolize-operands must be enabled for "
+                         "--pretty-pgo-analysis-map to have an effect");
   DynamicSymbolTable = InputArgs.hasArg(OBJDUMP_dynamic_syms);
   TripleName = InputArgs.getLastArgValue(OBJDUMP_triple_EQ).str();
   UnwindInfo = InputArgs.hasArg(OBJDUMP_unwind_info);
@@ -3417,7 +3633,6 @@ static void parseObjdumpOptions(const llvm::opt::InputArgList &InputArgs) {
 
 int llvm_objdump_main(int argc, char **argv, const llvm::ToolContext &) {
   using namespace llvm;
-  InitLLVM X(argc, argv);
 
   ToolName = argv[0];
   std::unique_ptr<CommonOptTable> T;

@@ -10,7 +10,7 @@
   target triple = "x86_64-unknown-linux-gnu"
 
   ; Function Attrs: noinline norecurse nounwind uwtable
-  define dso_local i32 @main(i32 %argc, i8** nocapture readnone %argv) !dbg !14 {
+  define dso_local i32 @main(i32 %argc, ptr nocapture readnone %argv) !dbg !14 {
   entry:
     br label %return
   return:

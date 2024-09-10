@@ -1,8 +1,8 @@
-; RUN: llc -march=amdgcn -amdgpu-atomic-optimizer-strategy=None -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SI,SICIVI,FUNC %s
-; RUN: llc -march=amdgcn -mcpu=bonaire -amdgpu-atomic-optimizer-strategy=None -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,CIVI,FUNC %s
-; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -amdgpu-atomic-optimizer-strategy=None -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,CIVI,SICIVI,FUNC %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 -mattr=-flat-for-global -amdgpu-atomic-optimizer-strategy=None -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9,FUNC %s
-; RUN: llc -march=r600 -mcpu=redwood -amdgpu-atomic-optimizer-strategy=None -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=EG,FUNC %s
+; RUN: llc -mtriple=amdgcn -amdgpu-atomic-optimizer-strategy=None -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SI,SICIVI,FUNC %s
+; RUN: llc -mtriple=amdgcn -mcpu=bonaire -amdgpu-atomic-optimizer-strategy=None -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,CIVI,FUNC %s
+; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -amdgpu-atomic-optimizer-strategy=None -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,CIVI,SICIVI,FUNC %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -mattr=-flat-for-global -amdgpu-atomic-optimizer-strategy=None -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9,FUNC %s
+; RUN: llc -mtriple=r600 -mcpu=redwood -amdgpu-atomic-optimizer-strategy=None -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=EG,FUNC %s
 
 ; FUNC-LABEL: {{^}}lds_atomic_xchg_ret_i32:
 ; EG: LDS_WRXCHG_RET *

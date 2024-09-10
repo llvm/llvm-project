@@ -7,8 +7,6 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
 # RUN: ld.lld %t.o -o %t --unresolved-symbols=ignore-all -pie
 # RUN: llvm-readobj -r %t | FileCheck %s
-# RUN: ld.lld %t.o -o %t --unresolved-symbols=ignore-all --export-dynamic
-# RUN: llvm-readobj -r %t | FileCheck %s
 
 # CHECK:      Relocations [
 # CHECK-NEXT:   Section ({{.*}}) .rela.plt {

@@ -29,24 +29,48 @@
 namespace llvm {
 
 class BasicBlock;
-class DPMarker;
+class DataLayout;
+class DbgMarker;
 class FastMathFlags;
 class MDNode;
 class Module;
 struct AAMDNodes;
-class DPMarker;
+class DbgMarker;
+class DbgRecord;
 
 template <> struct ilist_alloc_traits<Instruction> {
   static inline void deleteNode(Instruction *V);
 };
 
+iterator_range<simple_ilist<DbgRecord>::iterator>
+getDbgRecordRange(DbgMarker *);
+
+class InsertPosition {
+  using InstListType = SymbolTableList<Instruction, ilist_iterator_bits<true>,
+                                       ilist_parent<BasicBlock>>;
+  InstListType::iterator InsertAt;
+
+public:
+  InsertPosition(std::nullptr_t) : InsertAt() {}
+  // LLVM_DEPRECATED("Use BasicBlock::iterators for insertion instead",
+  // "BasicBlock::iterator")
+  InsertPosition(Instruction *InsertBefore);
+  InsertPosition(BasicBlock *InsertAtEnd);
+  InsertPosition(InstListType::iterator InsertAt) : InsertAt(InsertAt) {}
+  operator InstListType::iterator() const { return InsertAt; }
+  bool isValid() const { return InsertAt.isValid(); }
+  BasicBlock *getBasicBlock() { return InsertAt.getNodeParent(); }
+};
+
 class Instruction : public User,
                     public ilist_node_with_parent<Instruction, BasicBlock,
-                                                  ilist_iterator_bits<true>> {
+                                                  ilist_iterator_bits<true>,
+                                                  ilist_parent<BasicBlock>> {
 public:
-  using InstListType = SymbolTableList<Instruction, ilist_iterator_bits<true>>;
+  using InstListType = SymbolTableList<Instruction, ilist_iterator_bits<true>,
+                                       ilist_parent<BasicBlock>>;
+
 private:
-  BasicBlock *Parent;
   DebugLoc DbgLoc;                         // 'dbg' Metadata cache.
 
   /// Relative order of this instruction in its parent basic block. Used for
@@ -57,43 +81,52 @@ public:
   /// Optional marker recording the position for debugging information that
   /// takes effect immediately before this instruction. Null unless there is
   /// debugging information present.
-  DPMarker *DbgMarker = nullptr;
+  DbgMarker *DebugMarker = nullptr;
 
   /// Clone any debug-info attached to \p From onto this instruction. Used to
   /// copy debugging information from one block to another, when copying entire
-  /// blocks. \see DebugProgramInstruction.h , because the ordering of DPValues
-  /// is still important, fine grain control of which instructions are moved and
-  /// where they go is necessary.
+  /// blocks. \see DebugProgramInstruction.h , because the ordering of
+  /// DbgRecords is still important, fine grain control of which instructions
+  /// are moved and where they go is necessary.
   /// \p From The instruction to clone debug-info from.
-  /// \p from_here Optional iterator to limit DPValues cloned to be a range from
+  /// \p from_here Optional iterator to limit DbgRecords cloned to be a range
+  /// from
   ///    from_here to end().
-  /// \p InsertAtHead Whether the cloned DPValues should be placed at the end
-  ///    or the beginning of existing DPValues attached to this.
-  /// \returns A range over the newly cloned DPValues.
-  iterator_range<simple_ilist<DPValue>::iterator> cloneDebugInfoFrom(
+  /// \p InsertAtHead Whether the cloned DbgRecords should be placed at the end
+  ///    or the beginning of existing DbgRecords attached to this.
+  /// \returns A range over the newly cloned DbgRecords.
+  iterator_range<simple_ilist<DbgRecord>::iterator> cloneDebugInfoFrom(
       const Instruction *From,
-      std::optional<simple_ilist<DPValue>::iterator> FromHere = std::nullopt,
+      std::optional<simple_ilist<DbgRecord>::iterator> FromHere = std::nullopt,
       bool InsertAtHead = false);
 
-  /// Return a range over the DPValues attached to this instruction.
-  iterator_range<simple_ilist<DPValue>::iterator> getDbgValueRange() const;
+  /// Return a range over the DbgRecords attached to this instruction.
+  iterator_range<simple_ilist<DbgRecord>::iterator> getDbgRecordRange() const {
+    return llvm::getDbgRecordRange(DebugMarker);
+  }
 
-  /// Return an iterator to the position of the "Next" DPValue after this
+  /// Return an iterator to the position of the "Next" DbgRecord after this
   /// instruction, or std::nullopt. This is the position to pass to
-  /// BasicBlock::reinsertInstInDPValues when re-inserting an instruction.
-  std::optional<simple_ilist<DPValue>::iterator> getDbgReinsertionPosition();
+  /// BasicBlock::reinsertInstInDbgRecords when re-inserting an instruction.
+  std::optional<simple_ilist<DbgRecord>::iterator> getDbgReinsertionPosition();
 
-  /// Returns true if any DPValues are attached to this instruction.
-  bool hasDbgValues() const;
+  /// Returns true if any DbgRecords are attached to this instruction.
+  bool hasDbgRecords() const;
 
-  /// Erase any DPValues attached to this instruction.
-  void dropDbgValues();
+  /// Transfer any DbgRecords on the position \p It onto this instruction,
+  /// by simply adopting the sequence of DbgRecords (which is efficient) if
+  /// possible, by merging two sequences otherwise.
+  void adoptDbgRecords(BasicBlock *BB, InstListType::iterator It,
+                       bool InsertAtHead);
 
-  /// Erase a single DPValue \p I that is attached to this instruction.
-  void dropOneDbgValue(DPValue *I);
+  /// Erase any DbgRecords attached to this instruction.
+  void dropDbgRecords();
+
+  /// Erase a single DbgRecord \p I that is attached to this instruction.
+  void dropOneDbgRecord(DbgRecord *I);
 
   /// Handle the debug-info implications of this instruction being removed. Any
-  /// attached DPValues need to "fall" down onto the next instruction.
+  /// attached DbgRecords need to "fall" down onto the next instruction.
   void handleMarkerRemoval();
 
 protected:
@@ -136,9 +169,6 @@ public:
   Instruction       *user_back()       { return cast<Instruction>(*user_begin());}
   const Instruction *user_back() const { return cast<Instruction>(*user_begin());}
 
-  inline const BasicBlock *getParent() const { return Parent; }
-  inline       BasicBlock *getParent()       { return Parent; }
-
   /// Return the module owning the function this instruction belongs to
   /// or nullptr it the function does not have a module.
   ///
@@ -159,6 +189,11 @@ public:
     return const_cast<Function *>(
                          static_cast<const Instruction *>(this)->getFunction());
   }
+
+  /// Get the data layout of the module this instruction belongs to.
+  ///
+  /// Requires the instruction to have a parent module.
+  const DataLayout &getDataLayout() const;
 
   /// This method unlinks 'this' from the containing basic block, but does not
   /// delete it.
@@ -384,6 +419,9 @@ public:
   void copyMetadata(const Instruction &SrcInst,
                     ArrayRef<unsigned> WL = ArrayRef<unsigned>());
 
+  /// Erase all metadata that matches the predicate.
+  void eraseMetadataIf(function_ref<bool(unsigned, MDNode *)> Pred);
+
   /// If the instruction has "branch_weights" MD_prof metadata and the MDNode
   /// has three operands (including name string), swap the order of the
   /// metadata.
@@ -395,17 +433,7 @@ public:
   /// convenience method for passes to do so.
   /// dropUBImplyingAttrsAndUnknownMetadata should be used instead of
   /// this API if the Instruction being modified is a call.
-  void dropUnknownNonDebugMetadata(ArrayRef<unsigned> KnownIDs);
-  void dropUnknownNonDebugMetadata() {
-    return dropUnknownNonDebugMetadata(std::nullopt);
-  }
-  void dropUnknownNonDebugMetadata(unsigned ID1) {
-    return dropUnknownNonDebugMetadata(ArrayRef(ID1));
-  }
-  void dropUnknownNonDebugMetadata(unsigned ID1, unsigned ID2) {
-    unsigned IDs[] = {ID1, ID2};
-    return dropUnknownNonDebugMetadata(IDs);
-  }
+  void dropUnknownNonDebugMetadata(ArrayRef<unsigned> KnownIDs = std::nullopt);
   /// @}
 
   /// Adds an !annotation metadata node with \p Annotation to this instruction.
@@ -480,14 +508,24 @@ public:
   /// Drops metadata that may generate poison.
   void dropPoisonGeneratingMetadata();
 
-  /// Return true if this instruction has poison-generating flags or metadata.
-  bool hasPoisonGeneratingFlagsOrMetadata() const {
-    return hasPoisonGeneratingFlags() || hasPoisonGeneratingMetadata();
+  /// Return true if this instruction has poison-generating attribute.
+  bool hasPoisonGeneratingReturnAttributes() const LLVM_READONLY;
+
+  /// Drops return attributes that may generate poison.
+  void dropPoisonGeneratingReturnAttributes();
+
+  /// Return true if this instruction has poison-generating flags,
+  /// return attributes or metadata.
+  bool hasPoisonGeneratingAnnotations() const {
+    return hasPoisonGeneratingFlags() ||
+           hasPoisonGeneratingReturnAttributes() ||
+           hasPoisonGeneratingMetadata();
   }
 
-  /// Drops flags and metadata that may generate poison.
-  void dropPoisonGeneratingFlagsAndMetadata() {
+  /// Drops flags, return attributes and metadata that may generate poison.
+  void dropPoisonGeneratingAnnotations() {
     dropPoisonGeneratingFlags();
+    dropPoisonGeneratingReturnAttributes();
     dropPoisonGeneratingMetadata();
   }
 
@@ -954,7 +992,8 @@ public:
   };
 
 private:
-  friend class SymbolTableListTraits<Instruction, ilist_iterator_bits<true>>;
+  friend class SymbolTableListTraits<Instruction, ilist_iterator_bits<true>,
+                                     ilist_parent<BasicBlock>>;
   friend class BasicBlock; // For renumbering.
 
   // Shadow Value::setValueSubclassData with a private forwarding method so that
@@ -966,8 +1005,6 @@ private:
   unsigned short getSubclassDataFromValue() const {
     return Value::getSubclassDataFromValue();
   }
-
-  void setParent(BasicBlock *P);
 
 protected:
   // Instruction subclasses can stick up to 15 bits of stuff into the
@@ -994,9 +1031,7 @@ protected:
   }
 
   Instruction(Type *Ty, unsigned iType, Use *Ops, unsigned NumOps,
-              Instruction *InsertBefore = nullptr);
-  Instruction(Type *Ty, unsigned iType, Use *Ops, unsigned NumOps,
-              BasicBlock *InsertAtEnd);
+              InsertPosition InsertBefore = nullptr);
 
 private:
   /// Create a copy of this instruction.

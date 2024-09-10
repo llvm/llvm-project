@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +neon -fsyntax-only -verify -emit-llvm -o - -ferror-limit 100 %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +neon -verify -emit-llvm -o - -ferror-limit 100 %s
 // REQUIRES: aarch64-registered-target
 
 // Test that functions with the correct target attributes can use the correct SVE intrinsics.

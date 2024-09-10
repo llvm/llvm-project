@@ -20,8 +20,9 @@ define void @shuffle_v64i8_to_v32i8(ptr %L, ptr %S) nounwind {
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovdqa (%rdi), %ymm0
 ; AVX512F-NEXT:    vmovdqa 32(%rdi), %ymm1
-; AVX512F-NEXT:    vpshufb {{.*#+}} ymm1 = ymm1[u,u,u,u,u,u,u,u,0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u,16,18,20,22,24,26,28,30]
-; AVX512F-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u,16,18,20,22,24,26,28,30,u,u,u,u,u,u,u,u]
+; AVX512F-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [0,2,4,6,8,10,12,14,0,2,4,6,8,10,12,14,0,2,4,6,8,10,12,14,0,2,4,6,8,10,12,14]
+; AVX512F-NEXT:    vpshufb %ymm2, %ymm1, %ymm1
+; AVX512F-NEXT:    vpshufb %ymm2, %ymm0, %ymm0
 ; AVX512F-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3],ymm0[4,5],ymm1[6,7]
 ; AVX512F-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,3]
 ; AVX512F-NEXT:    vmovdqa %ymm0, (%rsi)
@@ -34,7 +35,7 @@ define void @shuffle_v64i8_to_v32i8(ptr %L, ptr %S) nounwind {
 ; AVX512VL-FAST-ALL-NEXT:    vmovdqa 32(%rdi), %ymm1
 ; AVX512VL-FAST-ALL-NEXT:    vpshufb {{.*#+}} ymm1 = ymm1[u,u,u,u,u,u,u,u,0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u,16,18,20,22,24,26,28,30]
 ; AVX512VL-FAST-ALL-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u,16,18,20,22,24,26,28,30,u,u,u,u,u,u,u,u]
-; AVX512VL-FAST-ALL-NEXT:    vmovdqa {{.*#+}} ymm2 = [0,2,5,7]
+; AVX512VL-FAST-ALL-NEXT:    vpmovsxbq {{.*#+}} ymm2 = [0,2,5,7]
 ; AVX512VL-FAST-ALL-NEXT:    vpermi2q %ymm1, %ymm0, %ymm2
 ; AVX512VL-FAST-ALL-NEXT:    vmovdqa %ymm2, (%rsi)
 ; AVX512VL-FAST-ALL-NEXT:    vzeroupper
@@ -44,8 +45,9 @@ define void @shuffle_v64i8_to_v32i8(ptr %L, ptr %S) nounwind {
 ; AVX512VL-FAST-PERLANE:       # %bb.0:
 ; AVX512VL-FAST-PERLANE-NEXT:    vmovdqa (%rdi), %ymm0
 ; AVX512VL-FAST-PERLANE-NEXT:    vmovdqa 32(%rdi), %ymm1
-; AVX512VL-FAST-PERLANE-NEXT:    vpshufb {{.*#+}} ymm1 = ymm1[u,u,u,u,u,u,u,u,0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u,16,18,20,22,24,26,28,30]
-; AVX512VL-FAST-PERLANE-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u,16,18,20,22,24,26,28,30,u,u,u,u,u,u,u,u]
+; AVX512VL-FAST-PERLANE-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [0,2,4,6,8,10,12,14,0,2,4,6,8,10,12,14,0,2,4,6,8,10,12,14,0,2,4,6,8,10,12,14]
+; AVX512VL-FAST-PERLANE-NEXT:    vpshufb %ymm2, %ymm1, %ymm1
+; AVX512VL-FAST-PERLANE-NEXT:    vpshufb %ymm2, %ymm0, %ymm0
 ; AVX512VL-FAST-PERLANE-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3],ymm0[4,5],ymm1[6,7]
 ; AVX512VL-FAST-PERLANE-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,3]
 ; AVX512VL-FAST-PERLANE-NEXT:    vmovdqa %ymm0, (%rsi)
@@ -348,8 +350,7 @@ define <16 x i8> @trunc_shuffle_v64i8_01_05_09_13_17_21_25_29_33_37_41_45_49_53_
 ; AVX512VBMIVL-LABEL: trunc_shuffle_v64i8_01_05_09_13_17_21_25_29_33_37_41_45_49_53_57_62:
 ; AVX512VBMIVL:       # %bb.0:
 ; AVX512VBMIVL-NEXT:    vmovdqa {{.*#+}} xmm1 = [1,5,9,13,17,21,25,29,33,37,41,45,49,53,57,62]
-; AVX512VBMIVL-NEXT:    vextracti64x4 $1, %zmm0, %ymm2
-; AVX512VBMIVL-NEXT:    vpermt2b %ymm2, %ymm1, %ymm0
+; AVX512VBMIVL-NEXT:    vpermb %zmm0, %zmm1, %zmm0
 ; AVX512VBMIVL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512VBMIVL-NEXT:    vzeroupper
 ; AVX512VBMIVL-NEXT:    retq
@@ -392,7 +393,7 @@ define <4 x double> @PR34175(ptr %p) {
 ;
 ; AVX512BWVL-LABEL: PR34175:
 ; AVX512BWVL:       # %bb.0:
-; AVX512BWVL-NEXT:    vpbroadcastq {{.*#+}} xmm0 = [0,8,16,24,0,8,16,24]
+; AVX512BWVL-NEXT:    vmovq {{.*#+}} xmm0 = [0,8,16,24,0,0,0,0]
 ; AVX512BWVL-NEXT:    vmovdqu (%rdi), %ymm1
 ; AVX512BWVL-NEXT:    vpermt2w 32(%rdi), %ymm0, %ymm1
 ; AVX512BWVL-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero
@@ -411,7 +412,7 @@ define <4 x double> @PR34175(ptr %p) {
 ;
 ; AVX512VBMIVL-LABEL: PR34175:
 ; AVX512VBMIVL:       # %bb.0:
-; AVX512VBMIVL-NEXT:    vpbroadcastq {{.*#+}} xmm0 = [0,8,16,24,0,8,16,24]
+; AVX512VBMIVL-NEXT:    vmovq {{.*#+}} xmm0 = [0,8,16,24,0,0,0,0]
 ; AVX512VBMIVL-NEXT:    vmovdqu (%rdi), %ymm1
 ; AVX512VBMIVL-NEXT:    vpermt2w 32(%rdi), %ymm0, %ymm1
 ; AVX512VBMIVL-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero

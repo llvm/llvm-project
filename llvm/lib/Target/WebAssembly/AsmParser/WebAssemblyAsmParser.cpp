@@ -77,16 +77,16 @@ struct WebAssemblyOperand : public MCParsedAsmOperand {
     struct BrLOp BrL;
   };
 
-  WebAssemblyOperand(KindTy K, SMLoc Start, SMLoc End, TokOp T)
-      : Kind(K), StartLoc(Start), EndLoc(End), Tok(T) {}
-  WebAssemblyOperand(KindTy K, SMLoc Start, SMLoc End, IntOp I)
-      : Kind(K), StartLoc(Start), EndLoc(End), Int(I) {}
-  WebAssemblyOperand(KindTy K, SMLoc Start, SMLoc End, FltOp F)
-      : Kind(K), StartLoc(Start), EndLoc(End), Flt(F) {}
-  WebAssemblyOperand(KindTy K, SMLoc Start, SMLoc End, SymOp S)
-      : Kind(K), StartLoc(Start), EndLoc(End), Sym(S) {}
-  WebAssemblyOperand(KindTy K, SMLoc Start, SMLoc End)
-      : Kind(K), StartLoc(Start), EndLoc(End), BrL() {}
+  WebAssemblyOperand(SMLoc Start, SMLoc End, TokOp T)
+      : Kind(Token), StartLoc(Start), EndLoc(End), Tok(T) {}
+  WebAssemblyOperand(SMLoc Start, SMLoc End, IntOp I)
+      : Kind(Integer), StartLoc(Start), EndLoc(End), Int(I) {}
+  WebAssemblyOperand(SMLoc Start, SMLoc End, FltOp F)
+      : Kind(Float), StartLoc(Start), EndLoc(End), Flt(F) {}
+  WebAssemblyOperand(SMLoc Start, SMLoc End, SymOp S)
+      : Kind(Symbol), StartLoc(Start), EndLoc(End), Sym(S) {}
+  WebAssemblyOperand(SMLoc Start, SMLoc End)
+      : Kind(BrList), StartLoc(Start), EndLoc(End), BrL() {}
 
   ~WebAssemblyOperand() {
     if (isBrList())
@@ -100,7 +100,7 @@ struct WebAssemblyOperand : public MCParsedAsmOperand {
   bool isReg() const override { return false; }
   bool isBrList() const { return Kind == BrList; }
 
-  unsigned getReg() const override {
+  MCRegister getReg() const override {
     llvm_unreachable("Assembly inspects a register operand");
     return 0;
   }
@@ -178,14 +178,15 @@ static wasm::WasmLimits DefaultLimits() {
 }
 
 static MCSymbolWasm *GetOrCreateFunctionTableSymbol(MCContext &Ctx,
-                                                    const StringRef &Name) {
+                                                    const StringRef &Name,
+                                                    bool is64) {
   MCSymbolWasm *Sym = cast_or_null<MCSymbolWasm>(Ctx.lookupSymbol(Name));
   if (Sym) {
     if (!Sym->isFunctionTable())
       Ctx.reportError(SMLoc(), "symbol is not a wasm funcref table");
   } else {
     Sym = cast<MCSymbolWasm>(Ctx.getOrCreateSymbol(Name));
-    Sym->setFunctionTable();
+    Sym->setFunctionTable(is64);
     // The default function table is synthesized by the linker.
     Sym->setUndefined();
   }
@@ -195,10 +196,6 @@ static MCSymbolWasm *GetOrCreateFunctionTableSymbol(MCContext &Ctx,
 class WebAssemblyAsmParser final : public MCTargetAsmParser {
   MCAsmParser &Parser;
   MCAsmLexer &Lexer;
-
-  // Much like WebAssemblyAsmPrinter in the backend, we have to own these.
-  std::vector<std::unique_ptr<wasm::WasmSignature>> Signatures;
-  std::vector<std::unique_ptr<std::string>> Names;
 
   // Order of labels, directives and instructions in a .s file have no
   // syntactical enforcement. This class is a callback from the actual parser,
@@ -262,7 +259,7 @@ public:
     MCAsmParserExtension::Initialize(Parser);
 
     DefaultFunctionTable = GetOrCreateFunctionTableSymbol(
-        getContext(), "__indirect_function_table");
+        getContext(), "__indirect_function_table", is64);
     if (!STI->checkFeatures("+reference-types"))
       DefaultFunctionTable->setOmitFromLinkingSection();
   }
@@ -285,16 +282,6 @@ public:
 
   bool error(const Twine &Msg, SMLoc Loc = SMLoc()) {
     return Parser.Error(Loc.isValid() ? Loc : Lexer.getTok().getLoc(), Msg);
-  }
-
-  void addSignature(std::unique_ptr<wasm::WasmSignature> &&Sig) {
-    Signatures.push_back(std::move(Sig));
-  }
-
-  StringRef storeName(StringRef Name) {
-    std::unique_ptr<std::string> N = std::make_unique<std::string>(Name);
-    Names.push_back(std::move(N));
-    return *Names.back();
   }
 
   std::pair<StringRef, StringRef> nestingString(NestingType NT) {
@@ -401,8 +388,7 @@ public:
     if (IsNegative)
       Val = -Val;
     Operands.push_back(std::make_unique<WebAssemblyOperand>(
-        WebAssemblyOperand::Integer, Int.getLoc(), Int.getEndLoc(),
-        WebAssemblyOperand::IntOp{Val}));
+        Int.getLoc(), Int.getEndLoc(), WebAssemblyOperand::IntOp{Val}));
     Parser.Lex();
   }
 
@@ -414,8 +400,7 @@ public:
     if (IsNegative)
       Val = -Val;
     Operands.push_back(std::make_unique<WebAssemblyOperand>(
-        WebAssemblyOperand::Float, Flt.getLoc(), Flt.getEndLoc(),
-        WebAssemblyOperand::FltOp{Val}));
+        Flt.getLoc(), Flt.getEndLoc(), WebAssemblyOperand::FltOp{Val}));
     Parser.Lex();
     return false;
   }
@@ -436,8 +421,7 @@ public:
     if (IsNegative)
       Val = -Val;
     Operands.push_back(std::make_unique<WebAssemblyOperand>(
-        WebAssemblyOperand::Float, Flt.getLoc(), Flt.getEndLoc(),
-        WebAssemblyOperand::FltOp{Val}));
+        Flt.getLoc(), Flt.getEndLoc(), WebAssemblyOperand::FltOp{Val}));
     Parser.Lex();
     return false;
   }
@@ -472,8 +456,7 @@ public:
         // up later.
         auto Tok = Lexer.getTok();
         Operands.push_back(std::make_unique<WebAssemblyOperand>(
-            WebAssemblyOperand::Integer, Tok.getLoc(), Tok.getEndLoc(),
-            WebAssemblyOperand::IntOp{-1}));
+            Tok.getLoc(), Tok.getEndLoc(), WebAssemblyOperand::IntOp{-1}));
       }
     }
     return false;
@@ -487,8 +470,7 @@ public:
       NestingStack.back().Sig = Sig;
     }
     Operands.push_back(std::make_unique<WebAssemblyOperand>(
-        WebAssemblyOperand::Integer, NameLoc, NameLoc,
-        WebAssemblyOperand::IntOp{static_cast<int64_t>(BT)}));
+        NameLoc, NameLoc, WebAssemblyOperand::IntOp{static_cast<int64_t>(BT)}));
   }
 
   bool parseLimits(wasm::WasmLimits *Limits) {
@@ -522,19 +504,17 @@ public:
       auto &Tok = Lexer.getTok();
       if (Tok.is(AsmToken::Identifier)) {
         auto *Sym =
-            GetOrCreateFunctionTableSymbol(getContext(), Tok.getString());
+            GetOrCreateFunctionTableSymbol(getContext(), Tok.getString(), is64);
         const auto *Val = MCSymbolRefExpr::create(Sym, getContext());
         *Op = std::make_unique<WebAssemblyOperand>(
-            WebAssemblyOperand::Symbol, Tok.getLoc(), Tok.getEndLoc(),
-            WebAssemblyOperand::SymOp{Val});
+            Tok.getLoc(), Tok.getEndLoc(), WebAssemblyOperand::SymOp{Val});
         Parser.Lex();
         return expect(AsmToken::Comma, ",");
       } else {
         const auto *Val =
             MCSymbolRefExpr::create(DefaultFunctionTable, getContext());
         *Op = std::make_unique<WebAssemblyOperand>(
-            WebAssemblyOperand::Symbol, SMLoc(), SMLoc(),
-            WebAssemblyOperand::SymOp{Val});
+            SMLoc(), SMLoc(), WebAssemblyOperand::SymOp{Val});
         return false;
       }
     } else {
@@ -542,8 +522,7 @@ public:
       // write a table symbol or issue relocations.  Instead we just ensure the
       // table is live and write a zero.
       getStreamer().emitSymbolAttribute(DefaultFunctionTable, MCSA_NoDeadStrip);
-      *Op = std::make_unique<WebAssemblyOperand>(WebAssemblyOperand::Integer,
-                                                 SMLoc(), SMLoc(),
+      *Op = std::make_unique<WebAssemblyOperand>(SMLoc(), SMLoc(),
                                                  WebAssemblyOperand::IntOp{0});
       return false;
     }
@@ -577,7 +556,7 @@ public:
 
     // Now construct the name as first operand.
     Operands.push_back(std::make_unique<WebAssemblyOperand>(
-        WebAssemblyOperand::Token, NameLoc, SMLoc::getFromPointer(Name.end()),
+        NameLoc, SMLoc::getFromPointer(Name.end()),
         WebAssemblyOperand::TokOp{Name}));
 
     // If this instruction is part of a control flow structure, ensure
@@ -640,27 +619,25 @@ public:
       // represent as a signature, such that we can re-build this signature,
       // attach it to an anonymous symbol, which is what WasmObjectWriter
       // expects to be able to recreate the actual unique-ified type indices.
+      auto &Ctx = getContext();
       auto Loc = Parser.getTok();
-      auto Signature = std::make_unique<wasm::WasmSignature>();
-      if (parseSignature(Signature.get()))
+      auto Signature = Ctx.createWasmSignature();
+      if (parseSignature(Signature))
         return true;
       // Got signature as block type, don't need more
-      TC.setLastSig(*Signature.get());
+      TC.setLastSig(*Signature);
       if (ExpectBlockType)
-        NestingStack.back().Sig = *Signature.get();
+        NestingStack.back().Sig = *Signature;
       ExpectBlockType = false;
-      auto &Ctx = getContext();
       // The "true" here will cause this to be a nameless symbol.
       MCSymbol *Sym = Ctx.createTempSymbol("typeindex", true);
       auto *WasmSym = cast<MCSymbolWasm>(Sym);
-      WasmSym->setSignature(Signature.get());
-      addSignature(std::move(Signature));
+      WasmSym->setSignature(Signature);
       WasmSym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
       const MCExpr *Expr = MCSymbolRefExpr::create(
           WasmSym, MCSymbolRefExpr::VK_WASM_TYPEINDEX, Ctx);
       Operands.push_back(std::make_unique<WebAssemblyOperand>(
-          WebAssemblyOperand::Symbol, Loc.getLoc(), Loc.getEndLoc(),
-          WebAssemblyOperand::SymOp{Expr}));
+          Loc.getLoc(), Loc.getEndLoc(), WebAssemblyOperand::SymOp{Expr}));
     }
 
     while (Lexer.isNot(AsmToken::EndOfStatement)) {
@@ -685,8 +662,7 @@ public:
           if (Parser.parseExpression(Val, End))
             return error("Cannot parse symbol: ", Lexer.getTok());
           Operands.push_back(std::make_unique<WebAssemblyOperand>(
-              WebAssemblyOperand::Symbol, Start, End,
-              WebAssemblyOperand::SymOp{Val}));
+              Start, End, WebAssemblyOperand::SymOp{Val}));
           if (checkForP2AlignIfLoadStore(Operands, Name))
             return true;
         }
@@ -719,8 +695,8 @@ public:
       }
       case AsmToken::LCurly: {
         Parser.Lex();
-        auto Op = std::make_unique<WebAssemblyOperand>(
-            WebAssemblyOperand::BrList, Tok.getLoc(), Tok.getEndLoc());
+        auto Op =
+            std::make_unique<WebAssemblyOperand>(Tok.getLoc(), Tok.getEndLoc());
         if (!Lexer.is(AsmToken::RCurly))
           for (;;) {
             Op->BrL.List.push_back(Lexer.getTok().getIntVal());
@@ -770,8 +746,8 @@ public:
 
   bool CheckDataSection() {
     if (CurrentState != DataSection) {
-      auto WS = cast<MCSectionWasm>(getStreamer().getCurrentSection().first);
-      if (WS && WS->getKind().isText())
+      auto WS = cast<MCSectionWasm>(getStreamer().getCurrentSectionOnly());
+      if (WS && WS->isText())
         return error("data directive must occur in a data segment: ",
                      Lexer.getTok());
     }
@@ -851,7 +827,10 @@ public:
       // symbol
       auto WasmSym = cast<MCSymbolWasm>(Ctx.getOrCreateSymbol(SymName));
       WasmSym->setType(wasm::WASM_SYMBOL_TYPE_TABLE);
-      wasm::WasmTableType Type = {uint8_t(*ElemType), Limits};
+      if (is64) {
+        Limits.Flags |= wasm::WASM_LIMITS_FLAG_IS_64;
+      }
+      wasm::WasmTableType Type = {*ElemType, Limits};
       WasmSym->setTableType(Type);
       TOut.emitTableType(WasmSym);
       return expect(AsmToken::EndOfStatement, "EOL");
@@ -887,12 +866,11 @@ public:
         CurrentState = FunctionStart;
         LastFunctionLabel = WasmSym;
       }
-      auto Signature = std::make_unique<wasm::WasmSignature>();
-      if (parseSignature(Signature.get()))
+      auto Signature = Ctx.createWasmSignature();
+      if (parseSignature(Signature))
         return ParseStatus::Failure;
       TC.funcDecl(*Signature);
-      WasmSym->setSignature(Signature.get());
-      addSignature(std::move(Signature));
+      WasmSym->setSignature(Signature);
       WasmSym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
       TOut.emitFunctionType(WasmSym);
       // TODO: backend also calls TOut.emitIndIdx, but that is not implemented.
@@ -909,7 +887,7 @@ public:
       if (ExportName.empty())
         return ParseStatus::Failure;
       auto WasmSym = cast<MCSymbolWasm>(Ctx.getOrCreateSymbol(SymName));
-      WasmSym->setExportName(storeName(ExportName));
+      WasmSym->setExportName(Ctx.allocateString(ExportName));
       TOut.emitExportName(WasmSym, ExportName);
       return expect(AsmToken::EndOfStatement, "EOL");
     }
@@ -924,7 +902,7 @@ public:
       if (ImportModule.empty())
         return ParseStatus::Failure;
       auto WasmSym = cast<MCSymbolWasm>(Ctx.getOrCreateSymbol(SymName));
-      WasmSym->setImportModule(storeName(ImportModule));
+      WasmSym->setImportModule(Ctx.allocateString(ImportModule));
       TOut.emitImportModule(WasmSym, ImportModule);
       return expect(AsmToken::EndOfStatement, "EOL");
     }
@@ -939,7 +917,7 @@ public:
       if (ImportName.empty())
         return ParseStatus::Failure;
       auto WasmSym = cast<MCSymbolWasm>(Ctx.getOrCreateSymbol(SymName));
-      WasmSym->setImportName(storeName(ImportName));
+      WasmSym->setImportName(Ctx.allocateString(ImportName));
       TOut.emitImportName(WasmSym, ImportName);
       return expect(AsmToken::EndOfStatement, "EOL");
     }
@@ -949,11 +927,10 @@ public:
       if (SymName.empty())
         return ParseStatus::Failure;
       auto WasmSym = cast<MCSymbolWasm>(Ctx.getOrCreateSymbol(SymName));
-      auto Signature = std::make_unique<wasm::WasmSignature>();
+      auto Signature = Ctx.createWasmSignature();
       if (parseRegTypeList(Signature->Params))
         return ParseStatus::Failure;
-      WasmSym->setSignature(Signature.get());
-      addSignature(std::move(Signature));
+      WasmSym->setSignature(Signature);
       WasmSym->setType(wasm::WASM_SYMBOL_TYPE_TAG);
       TOut.emitTagType(WasmSym);
       // TODO: backend also calls TOut.emitIndIdx, but that is not implemented.
@@ -1086,8 +1063,8 @@ public:
 
   void doBeforeLabelEmit(MCSymbol *Symbol, SMLoc IDLoc) override {
     // Code below only applies to labels in text sections.
-    auto CWS = cast<MCSectionWasm>(getStreamer().getCurrentSection().first);
-    if (!CWS || !CWS->getKind().isText())
+    auto CWS = cast<MCSectionWasm>(getStreamer().getCurrentSectionOnly());
+    if (!CWS->isText())
       return;
 
     auto WasmSym = cast<MCSymbolWasm>(Symbol);
@@ -1119,9 +1096,8 @@ public:
     // assembly currently.
     if (Group)
       WasmSym->setComdat(true);
-    auto *WS =
-        getContext().getWasmSection(SecName, SectionKind::getText(), 0, Group,
-                                    MCContext::GenericSectionID, nullptr);
+    auto *WS = getContext().getWasmSection(SecName, SectionKind::getText(), 0,
+                                           Group, MCContext::GenericSectionID);
     getStreamer().switchSection(WS);
     // Also generate DWARF for this section if requested.
     if (getContext().getGenDwarfForAssembly())

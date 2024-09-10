@@ -6,15 +6,15 @@ int x __attribute__((aligned(4)));
 // CHECK: __declspec(align(4)) int y;
 __declspec(align(4)) int y;
 
-// CHECK: void foo() __attribute__((const));
-void foo() __attribute__((const));
+// CHECK: int foo() __attribute__((const));
+int foo() __attribute__((const));
 
-// CHECK: void bar() __attribute__((__const));
-void bar() __attribute__((__const));
+// CHECK: int bar() __attribute__((__const));
+int bar() __attribute__((__const));
 
 // FIXME: Print this with correct format.
-// CHECK: void foo1() __attribute__((noinline)) __attribute__((pure));
-void foo1() __attribute__((noinline, pure));
+// CHECK: int foo1() __attribute__((noinline)) __attribute__((pure));
+int foo1() __attribute__((noinline, pure));
 
 // CHECK: typedef int Small1 __attribute__((mode(byte)));
 typedef int Small1 __attribute__((mode(byte)));

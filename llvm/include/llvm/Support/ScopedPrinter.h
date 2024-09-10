@@ -86,7 +86,7 @@ template <class T> std::string to_string(const T &Value) {
   std::string number;
   raw_string_ostream stream(number);
   stream << Value;
-  return stream.str();
+  return number;
 }
 
 template <typename T, typename TEnum>
@@ -160,8 +160,8 @@ public:
   template <typename T, typename TFlag>
   void printFlags(StringRef Label, T Value, ArrayRef<EnumEntry<TFlag>> Flags,
                   TFlag EnumMask1 = {}, TFlag EnumMask2 = {},
-                  TFlag EnumMask3 = {}) {
-    SmallVector<FlagEntry, 10> SetFlags;
+                  TFlag EnumMask3 = {}, ArrayRef<FlagEntry> ExtraFlags = {}) {
+    SmallVector<FlagEntry, 10> SetFlags(ExtraFlags);
 
     for (const auto &Flag : Flags) {
       if (Flag.Value == 0)

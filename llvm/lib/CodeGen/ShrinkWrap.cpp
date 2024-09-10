@@ -161,9 +161,11 @@ class ShrinkWrap : public MachineFunctionPass {
   /// Current MachineFunction.
   MachineFunction *MachineFunc = nullptr;
 
-  /// Is `true` for block numbers where we can guarantee no stack access
-  /// or computation of stack-relative addresses on any CFG path including
-  /// the block itself.
+  /// Is `true` for the block numbers where we assume possible stack accesses
+  /// or computation of stack-relative addresses on any CFG path including the
+  /// block itself. Is `false` for basic blocks where we can guarantee the
+  /// opposite. False positives won't lead to incorrect analysis results,
+  /// therefore this approach is fair.
   BitVector StackAddressUsedBlockInfo;
 
   /// Check if \p MI uses or defines a callee-saved register or
@@ -223,12 +225,12 @@ class ShrinkWrap : public MachineFunctionPass {
   /// Initialize the pass for \p MF.
   void init(MachineFunction &MF) {
     RCI.runOnMachineFunction(MF);
-    MDT = &getAnalysis<MachineDominatorTree>();
-    MPDT = &getAnalysis<MachinePostDominatorTree>();
+    MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+    MPDT = &getAnalysis<MachinePostDominatorTreeWrapperPass>().getPostDomTree();
     Save = nullptr;
     Restore = nullptr;
-    MBFI = &getAnalysis<MachineBlockFrequencyInfo>();
-    MLI = &getAnalysis<MachineLoopInfo>();
+    MBFI = &getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
+    MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
     ORE = &getAnalysis<MachineOptimizationRemarkEmitterPass>().getORE();
     EntryFreq = MBFI->getEntryFreq();
     const TargetSubtargetInfo &Subtarget = MF.getSubtarget();
@@ -259,10 +261,10 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
-    AU.addRequired<MachineBlockFrequencyInfo>();
-    AU.addRequired<MachineDominatorTree>();
-    AU.addRequired<MachinePostDominatorTree>();
-    AU.addRequired<MachineLoopInfo>();
+    AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
+    AU.addRequired<MachineDominatorTreeWrapperPass>();
+    AU.addRequired<MachinePostDominatorTreeWrapperPass>();
+    AU.addRequired<MachineLoopInfoWrapperPass>();
     AU.addRequired<MachineOptimizationRemarkEmitterPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
@@ -286,10 +288,10 @@ char ShrinkWrap::ID = 0;
 char &llvm::ShrinkWrapID = ShrinkWrap::ID;
 
 INITIALIZE_PASS_BEGIN(ShrinkWrap, DEBUG_TYPE, "Shrink Wrap Pass", false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfo)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
-INITIALIZE_PASS_DEPENDENCY(MachinePostDominatorTree)
-INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
+INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachinePostDominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineOptimizationRemarkEmitterPass)
 INITIALIZE_PASS_END(ShrinkWrap, DEBUG_TYPE, "Shrink Wrap Pass", false, false)
 
@@ -409,8 +411,7 @@ hasDirtyPred(const DenseSet<const MachineBasicBlock *> &ReachableByDirty,
 /// Derives the list of all the basic blocks reachable from MBB.
 static void markAllReachable(DenseSet<const MachineBasicBlock *> &Visited,
                              const MachineBasicBlock &MBB) {
-  SmallVector<MachineBasicBlock *, 4> Worklist(MBB.succ_begin(),
-                                               MBB.succ_end());
+  SmallVector<MachineBasicBlock *, 4> Worklist(MBB.successors());
   Visited.insert(&MBB);
   while (!Worklist.empty()) {
     MachineBasicBlock *SuccMBB = Worklist.pop_back_val();
@@ -438,8 +439,7 @@ static bool
 isSaveReachableThroughClean(const MachineBasicBlock *SavePoint,
                             ArrayRef<MachineBasicBlock *> CleanPreds) {
   DenseSet<const MachineBasicBlock *> Visited;
-  SmallVector<MachineBasicBlock *, 4> Worklist(CleanPreds.begin(),
-                                               CleanPreds.end());
+  SmallVector<MachineBasicBlock *, 4> Worklist(CleanPreds);
   while (!Worklist.empty()) {
     MachineBasicBlock *CleanBB = Worklist.pop_back_val();
     if (CleanBB == SavePoint)
@@ -668,8 +668,8 @@ bool ShrinkWrap::postShrinkWrapping(bool HasCandidate, MachineFunction &MF,
   Save = NewSave;
   Restore = NewRestore;
 
-  MDT->runOnMachineFunction(MF);
-  MPDT->runOnMachineFunction(MF);
+  MDT->recalculate(MF);
+  MPDT->recalculate(MF);
 
   assert((MDT->dominates(Save, Restore) && MPDT->dominates(Restore, Save)) &&
          "Incorrect save or restore point due to dominance relations");
@@ -948,6 +948,9 @@ bool ShrinkWrap::runOnMachineFunction(MachineFunction &MF) {
 
   bool Changed = false;
 
+  // Initially, conservatively assume that stack addresses can be used in each
+  // basic block and change the state only for those basic blocks for which we
+  // were able to prove the opposite.
   StackAddressUsedBlockInfo.resize(MF.getNumBlockIDs(), true);
   bool HasCandidate = performShrinkWrapping(RPOT, RS.get());
   StackAddressUsedBlockInfo.clear();

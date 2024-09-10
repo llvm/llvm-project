@@ -26,28 +26,27 @@
 #include "test_macros.h"
 #include "../../rep.h"
 
-int main(int, char**)
-{
-    {
+int main(int, char**) {
+  {
     std::chrono::nanoseconds ns(3);
     ns = ns * 5;
     assert(ns.count() == 15);
     ns = 6 * ns;
     assert(ns.count() == 90);
-    }
+  }
 
 #if TEST_STD_VER >= 11
-    {
+  {
     constexpr std::chrono::nanoseconds ns(3);
     constexpr std::chrono::nanoseconds ns2 = ns * 5;
     static_assert(ns2.count() == 15, "");
     constexpr std::chrono::nanoseconds ns3 = 6 * ns;
     static_assert(ns3.count() == 18, "");
-    }
+  }
 #endif
 
 #if TEST_STD_VER >= 11
-    { // This is related to PR#41130
+  { // This is related to PR#41130
     typedef std::chrono::nanoseconds Duration;
     Duration d(5);
     NotARep n;
@@ -57,8 +56,23 @@ int main(int, char**)
     assert(d.count() == 5);
     d = n * d;
     assert(d.count() == 5);
+  }
+  {
+    std::chrono::duration<int> d(8);
+    RepConstConvertibleLWG3050 x;
+
+    {
+      auto r = d * x;
+      assert(r.count() == 16);
+      ASSERT_SAME_TYPE(std::chrono::duration<long>, decltype(r));
     }
-#endif
+    {
+      auto r = x * d;
+      assert(r.count() == 16);
+      ASSERT_SAME_TYPE(std::chrono::duration<long>, decltype(r));
+    }
+  }
+#endif // TEST_STD_VER >= 11
 
   return 0;
 }

@@ -7,6 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: no-exceptions
+
+// After changing the alignment of the allocated pointer from 16 to 8, the exception
+// thrown is no longer `bad_alloc` but instead length_error on systems using new
+// headers but a dylib that doesn't contain 04ce0ba.
+//
+// XFAIL: using-built-library-before-llvm-19
+
 // <string>
 
 // size_type max_size() const; // constexpr since C++20

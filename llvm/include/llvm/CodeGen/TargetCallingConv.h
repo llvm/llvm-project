@@ -13,8 +13,8 @@
 #ifndef LLVM_CODEGEN_TARGETCALLINGCONV_H
 #define LLVM_CODEGEN_TARGETCALLINGCONV_H
 
-#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/MathExtras.h"
 #include <cassert>
@@ -45,9 +45,9 @@ namespace ISD {
     unsigned IsHva : 1;        ///< HVA field for
     unsigned IsHvaStart : 1;   ///< HVA structure start
     unsigned IsSecArgPass : 1; ///< Second argument
-    unsigned MemAlign : 4;     ///< Log 2 of alignment when arg is passed in memory
-                               ///< (including byval/byref). The max alignment is
-                               ///< verified in IR verification.
+    unsigned MemAlign : 6; ///< Log 2 of alignment when arg is passed in memory
+                           ///< (including byval/byref). The max alignment is
+                           ///< verified in IR verification.
     unsigned OrigAlign : 5;    ///< Log 2 of original alignment
     unsigned IsInConsecutiveRegsLast : 1;
     unsigned IsInConsecutiveRegs : 1;
@@ -67,7 +67,7 @@ namespace ISD {
           IsSecArgPass(0), MemAlign(0), OrigAlign(0),
           IsInConsecutiveRegsLast(0), IsInConsecutiveRegs(0),
           IsCopyElisionCandidate(0), IsPointer(0) {
-      static_assert(sizeof(*this) == 3 * sizeof(unsigned), "flags are too big");
+      static_assert(sizeof(*this) == 4 * sizeof(unsigned), "flags are too big");
     }
 
     bool isZExt() const { return IsZExt; }

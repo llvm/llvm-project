@@ -35,9 +35,9 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/MachineValueType.h"
-#include "llvm/CodeGen/RuntimeLibcalls.h"
+#include "llvm/CodeGen/RuntimeLibcallUtil.h"
 #include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
@@ -55,6 +55,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
@@ -596,7 +597,7 @@ bool AArch64FastISel::computeAddress(const Value *Obj, Address &Addr, Type *Ty)
     // Don't walk into other basic blocks unless the object is an alloca from
     // another block, otherwise it may not have a virtual register assigned.
     if (FuncInfo.StaticAllocaMap.count(static_cast<const AllocaInst *>(Obj)) ||
-        FuncInfo.MBBMap[I->getParent()] == FuncInfo.MBB) {
+        FuncInfo.getMBB(I->getParent()) == FuncInfo.MBB) {
       Opcode = I->getOpcode();
       U = I;
     }
@@ -748,7 +749,7 @@ bool AArch64FastISel::computeAddress(const Value *Obj, Address &Addr, Type *Ty)
 
     const Value *Src = U->getOperand(0);
     if (const auto *I = dyn_cast<Instruction>(Src)) {
-      if (FuncInfo.MBBMap[I->getParent()] == FuncInfo.MBB) {
+      if (FuncInfo.getMBB(I->getParent()) == FuncInfo.MBB) {
         // Fold the zext or sext when it won't become a noop.
         if (const auto *ZE = dyn_cast<ZExtInst>(I)) {
           if (!isIntExtFree(ZE) &&
@@ -830,7 +831,7 @@ bool AArch64FastISel::computeAddress(const Value *Obj, Address &Addr, Type *Ty)
 
     const Value *Src = LHS;
     if (const auto *I = dyn_cast<Instruction>(Src)) {
-      if (FuncInfo.MBBMap[I->getParent()] == FuncInfo.MBB) {
+      if (FuncInfo.getMBB(I->getParent()) == FuncInfo.MBB) {
         // Fold the zext or sext when it won't become a noop.
         if (const auto *ZE = dyn_cast<ZExtInst>(I)) {
           if (!isIntExtFree(ZE) &&
@@ -1026,7 +1027,7 @@ bool AArch64FastISel::isValueAvailable(const Value *V) const {
     return true;
 
   const auto *I = cast<Instruction>(V);
-  return FuncInfo.MBBMap[I->getParent()] == FuncInfo.MBB;
+  return FuncInfo.getMBB(I->getParent()) == FuncInfo.MBB;
 }
 
 bool AArch64FastISel::simplifyAddress(Address &Addr, MVT VT) {
@@ -2278,8 +2279,8 @@ bool AArch64FastISel::emitCompareAndBranch(const BranchInst *BI) {
   if (BW > 64)
     return false;
 
-  MachineBasicBlock *TBB = FuncInfo.MBBMap[BI->getSuccessor(0)];
-  MachineBasicBlock *FBB = FuncInfo.MBBMap[BI->getSuccessor(1)];
+  MachineBasicBlock *TBB = FuncInfo.getMBB(BI->getSuccessor(0));
+  MachineBasicBlock *FBB = FuncInfo.getMBB(BI->getSuccessor(1));
 
   // Try to take advantage of fallthrough opportunities.
   if (FuncInfo.MBB->isLayoutSuccessor(TBB)) {
@@ -2383,13 +2384,13 @@ bool AArch64FastISel::emitCompareAndBranch(const BranchInst *BI) {
 bool AArch64FastISel::selectBranch(const Instruction *I) {
   const BranchInst *BI = cast<BranchInst>(I);
   if (BI->isUnconditional()) {
-    MachineBasicBlock *MSucc = FuncInfo.MBBMap[BI->getSuccessor(0)];
+    MachineBasicBlock *MSucc = FuncInfo.getMBB(BI->getSuccessor(0));
     fastEmitBranch(MSucc, BI->getDebugLoc());
     return true;
   }
 
-  MachineBasicBlock *TBB = FuncInfo.MBBMap[BI->getSuccessor(0)];
-  MachineBasicBlock *FBB = FuncInfo.MBBMap[BI->getSuccessor(1)];
+  MachineBasicBlock *TBB = FuncInfo.getMBB(BI->getSuccessor(0));
+  MachineBasicBlock *FBB = FuncInfo.getMBB(BI->getSuccessor(1));
 
   if (const CmpInst *CI = dyn_cast<CmpInst>(BI->getCondition())) {
     if (CI->hasOneUse() && isValueAvailable(CI)) {
@@ -2515,6 +2516,10 @@ bool AArch64FastISel::selectIndirectBr(const Instruction *I) {
   if (AddrReg == 0)
     return false;
 
+  // Authenticated indirectbr is not implemented yet.
+  if (FuncInfo.MF->getFunction().hasFnAttribute("ptrauth-indirect-gotos"))
+    return false;
+
   // Emit the indirect branch.
   const MCInstrDesc &II = TII.get(AArch64::BR);
   AddrReg = constrainOperandRegClass(II, AddrReg,  II.getNumDefs());
@@ -2522,7 +2527,7 @@ bool AArch64FastISel::selectIndirectBr(const Instruction *I) {
 
   // Make sure the CFG is up-to-date.
   for (const auto *Succ : BI->successors())
-    FuncInfo.MBB->addSuccessor(FuncInfo.MBBMap[Succ]);
+    FuncInfo.MBB->addSuccessor(FuncInfo.getMBB(Succ));
 
   return true;
 }
@@ -2828,7 +2833,7 @@ bool AArch64FastISel::selectFPToInt(const Instruction *I, bool Signed) {
     return false;
 
   EVT SrcVT = TLI.getValueType(DL, I->getOperand(0)->getType(), true);
-  if (SrcVT == MVT::f128 || SrcVT == MVT::f16)
+  if (SrcVT == MVT::f128 || SrcVT == MVT::f16 || SrcVT == MVT::bf16)
     return false;
 
   unsigned Opc;
@@ -2856,7 +2861,7 @@ bool AArch64FastISel::selectIntToFP(const Instruction *I, bool Signed) {
   if (!isTypeLegal(I->getType(), DestVT) || DestVT.isVector())
     return false;
   // Let regular ISEL handle FP16
-  if (DestVT == MVT::f16)
+  if (DestVT == MVT::f16 || DestVT == MVT::bf16)
     return false;
 
   assert((DestVT == MVT::f32 || DestVT == MVT::f64) &&
@@ -2978,7 +2983,7 @@ bool AArch64FastISel::fastLowerArguments() {
     } else if (VT == MVT::i64) {
       SrcReg = Registers[1][GPRIdx++];
       RC = &AArch64::GPR64RegClass;
-    } else if (VT == MVT::f16) {
+    } else if (VT == MVT::f16 || VT == MVT::bf16) {
       SrcReg = Registers[2][FPRIdx++];
       RC = &AArch64::FPR16RegClass;
     } else if (VT ==  MVT::f32) {
@@ -3172,8 +3177,16 @@ bool AArch64FastISel::fastLowerCall(CallLoweringInfo &CLI) {
   if (CM == CodeModel::Large && !Subtarget->isTargetMachO())
     return false;
 
+  // ELF -fno-plt compiled intrinsic calls do not have the nonlazybind
+  // attribute. Check "RtLibUseGOT" instead.
+  if (MF->getFunction().getParent()->getRtLibUseGOT())
+    return false;
+
   // Let SDISel handle vararg functions.
   if (IsVarArg)
+    return false;
+
+  if (Subtarget->isWindowsArm64EC())
     return false;
 
   for (auto Flag : CLI.OutFlags)
@@ -3526,6 +3539,7 @@ bool AArch64FastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
   }
   case Intrinsic::sin:
   case Intrinsic::cos:
+  case Intrinsic::tan:
   case Intrinsic::pow: {
     MVT RetVT;
     if (!isTypeLegal(II->getType(), RetVT))
@@ -3534,11 +3548,11 @@ bool AArch64FastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
     if (RetVT != MVT::f32 && RetVT != MVT::f64)
       return false;
 
-    static const RTLIB::Libcall LibCallTable[3][2] = {
-      { RTLIB::SIN_F32, RTLIB::SIN_F64 },
-      { RTLIB::COS_F32, RTLIB::COS_F64 },
-      { RTLIB::POW_F32, RTLIB::POW_F64 }
-    };
+    static const RTLIB::Libcall LibCallTable[4][2] = {
+        {RTLIB::SIN_F32, RTLIB::SIN_F64},
+        {RTLIB::COS_F32, RTLIB::COS_F64},
+        {RTLIB::TAN_F32, RTLIB::TAN_F64},
+        {RTLIB::POW_F32, RTLIB::POW_F64}};
     RTLIB::Libcall LC;
     bool Is64Bit = RetVT == MVT::f64;
     switch (II->getIntrinsicID()) {
@@ -3550,8 +3564,11 @@ bool AArch64FastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
     case Intrinsic::cos:
       LC = LibCallTable[1][Is64Bit];
       break;
-    case Intrinsic::pow:
+    case Intrinsic::tan:
       LC = LibCallTable[2][Is64Bit];
+      break;
+    case Intrinsic::pow:
+      LC = LibCallTable[3][Is64Bit];
       break;
     }
 
@@ -5176,7 +5193,8 @@ FastISel *AArch64::createFastISel(FunctionLoweringInfo &FuncInfo,
                                         const TargetLibraryInfo *LibInfo) {
 
   SMEAttrs CallerAttrs(*FuncInfo.Fn);
-  if (CallerAttrs.hasZAState() || CallerAttrs.hasStreamingInterfaceOrBody() ||
+  if (CallerAttrs.hasZAState() || CallerAttrs.hasZT0State() ||
+      CallerAttrs.hasStreamingInterfaceOrBody() ||
       CallerAttrs.hasStreamingCompatibleInterface())
     return nullptr;
   return new AArch64FastISel(FuncInfo, LibInfo);

@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -start-after=greedy -disable-copyprop -stop-after=si-optimize-exec-masking -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgcn -start-after=greedy -disable-copyprop -stop-after=si-optimize-exec-masking -o - %s | FileCheck %s
 # Check that we first do all vector instructions and only then change exec
 # CHECK-DAG:  COPY $vgpr10_vgpr11
 # CHECK-DAG:  COPY $vgpr12_vgpr13

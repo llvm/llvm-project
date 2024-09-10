@@ -12,12 +12,16 @@
 
 #include "LoongArchAsmBackend.h"
 #include "LoongArchFixupKinds.h"
-#include "llvm/MC/MCAsmLayout.h"
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFObjectWriter.h"
+#include "llvm/MC/MCExpr.h"
+#include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/Support/EndianStream.h"
+#include "llvm/Support/LEB128.h"
+#include "llvm/Support/MathExtras.h"
 
 #define DEBUG_TYPE "loongarch-asmbackend"
 
@@ -174,6 +178,76 @@ void LoongArchAsmBackend::applyFixup(const MCAssembler &Asm,
   }
 }
 
+// Linker relaxation may change code size. We have to insert Nops
+// for .align directive when linker relaxation enabled. So then Linker
+// could satisfy alignment by removing Nops.
+// The function returns the total Nops Size we need to insert.
+bool LoongArchAsmBackend::shouldInsertExtraNopBytesForCodeAlign(
+    const MCAlignFragment &AF, unsigned &Size) {
+  // Calculate Nops Size only when linker relaxation enabled.
+  if (!AF.getSubtargetInfo()->hasFeature(LoongArch::FeatureRelax))
+    return false;
+
+  // Ignore alignment if MaxBytesToEmit is less than the minimum Nop size.
+  const unsigned MinNopLen = 4;
+  if (AF.getMaxBytesToEmit() < MinNopLen)
+    return false;
+  Size = AF.getAlignment().value() - MinNopLen;
+  return AF.getAlignment() > MinNopLen;
+}
+
+// We need to insert R_LARCH_ALIGN relocation type to indicate the
+// position of Nops and the total bytes of the Nops have been inserted
+// when linker relaxation enabled.
+// The function inserts fixup_loongarch_align fixup which eventually will
+// transfer to R_LARCH_ALIGN relocation type.
+// The improved R_LARCH_ALIGN requires symbol index. The lowest 8 bits of
+// addend represent alignment and the other bits of addend represent the
+// maximum number of bytes to emit. The maximum number of bytes is zero
+// means ignore the emit limit.
+bool LoongArchAsmBackend::shouldInsertFixupForCodeAlign(MCAssembler &Asm,
+                                                        MCAlignFragment &AF) {
+  // Insert the fixup only when linker relaxation enabled.
+  if (!AF.getSubtargetInfo()->hasFeature(LoongArch::FeatureRelax))
+    return false;
+
+  // Calculate total Nops we need to insert. If there are none to insert
+  // then simply return.
+  unsigned InsertedNopBytes;
+  if (!shouldInsertExtraNopBytesForCodeAlign(AF, InsertedNopBytes))
+    return false;
+
+  MCSection *Sec = AF.getParent();
+  MCContext &Ctx = Asm.getContext();
+  const MCExpr *Dummy = MCConstantExpr::create(0, Ctx);
+  // Create fixup_loongarch_align fixup.
+  MCFixup Fixup =
+      MCFixup::create(0, Dummy, MCFixupKind(LoongArch::fixup_loongarch_align));
+  unsigned MaxBytesToEmit = AF.getMaxBytesToEmit();
+
+  auto createExtendedValue = [&]() {
+    const MCSymbolRefExpr *MCSym = getSecToAlignSym()[Sec];
+    if (MCSym == nullptr) {
+      // Define a marker symbol at the section with an offset of 0.
+      MCSymbol *Sym = Ctx.createNamedTempSymbol("la-relax-align");
+      Sym->setFragment(&*Sec->getBeginSymbol()->getFragment());
+      Asm.registerSymbol(*Sym);
+      MCSym = MCSymbolRefExpr::create(Sym, Ctx);
+      getSecToAlignSym()[Sec] = MCSym;
+    }
+    return MCValue::get(MCSym, nullptr,
+                        MaxBytesToEmit << 8 | Log2(AF.getAlignment()));
+  };
+
+  uint64_t FixedValue = 0;
+  MCValue Value = MaxBytesToEmit >= InsertedNopBytes
+                      ? MCValue::get(InsertedNopBytes)
+                      : createExtendedValue();
+  Asm.getWriter().recordRelocation(Asm, &AF, Fixup, Value, FixedValue);
+
+  return true;
+}
+
 bool LoongArchAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
                                                 const MCFixup &Fixup,
                                                 const MCValue &Target,
@@ -224,15 +298,140 @@ getRelocPairForSize(unsigned Size) {
   }
 }
 
-std::pair<bool, bool> LoongArchAsmBackend::relaxLEB128(MCLEBFragment &LF,
-                                                       MCAsmLayout &Layout,
+std::pair<bool, bool> LoongArchAsmBackend::relaxLEB128(const MCAssembler &Asm,
+                                                       MCLEBFragment &LF,
                                                        int64_t &Value) const {
   const MCExpr &Expr = LF.getValue();
-  if (LF.isSigned() || !Expr.evaluateKnownAbsolute(Value, Layout))
+  if (LF.isSigned() || !Expr.evaluateKnownAbsolute(Value, Asm))
     return std::make_pair(false, false);
   LF.getFixups().push_back(
       MCFixup::create(0, &Expr, FK_Data_leb128, Expr.getLoc()));
   return std::make_pair(true, true);
+}
+
+bool LoongArchAsmBackend::relaxDwarfLineAddr(const MCAssembler &Asm,
+                                             MCDwarfLineAddrFragment &DF,
+                                             bool &WasRelaxed) const {
+  MCContext &C = Asm.getContext();
+
+  int64_t LineDelta = DF.getLineDelta();
+  const MCExpr &AddrDelta = DF.getAddrDelta();
+  SmallVectorImpl<char> &Data = DF.getContents();
+  SmallVectorImpl<MCFixup> &Fixups = DF.getFixups();
+  size_t OldSize = Data.size();
+
+  int64_t Value;
+  if (AddrDelta.evaluateAsAbsolute(Value, Asm))
+    return false;
+  bool IsAbsolute = AddrDelta.evaluateKnownAbsolute(Value, Asm);
+  assert(IsAbsolute && "CFA with invalid expression");
+  (void)IsAbsolute;
+
+  Data.clear();
+  Fixups.clear();
+  raw_svector_ostream OS(Data);
+
+  // INT64_MAX is a signal that this is actually a DW_LNE_end_sequence.
+  if (LineDelta != INT64_MAX) {
+    OS << uint8_t(dwarf::DW_LNS_advance_line);
+    encodeSLEB128(LineDelta, OS);
+  }
+
+  unsigned Offset;
+  std::pair<MCFixupKind, MCFixupKind> FK;
+
+  // According to the DWARF specification, the `DW_LNS_fixed_advance_pc` opcode
+  // takes a single unsigned half (unencoded) operand. The maximum encodable
+  // value is therefore 65535.  Set a conservative upper bound for relaxation.
+  if (Value > 60000) {
+    unsigned PtrSize = C.getAsmInfo()->getCodePointerSize();
+
+    OS << uint8_t(dwarf::DW_LNS_extended_op);
+    encodeULEB128(PtrSize + 1, OS);
+
+    OS << uint8_t(dwarf::DW_LNE_set_address);
+    Offset = OS.tell();
+    assert((PtrSize == 4 || PtrSize == 8) && "Unexpected pointer size");
+    FK = getRelocPairForSize(PtrSize == 4 ? 32 : 64);
+    OS.write_zeros(PtrSize);
+  } else {
+    OS << uint8_t(dwarf::DW_LNS_fixed_advance_pc);
+    Offset = OS.tell();
+    FK = getRelocPairForSize(16);
+    support::endian::write<uint16_t>(OS, 0, llvm::endianness::little);
+  }
+
+  const MCBinaryExpr &MBE = cast<MCBinaryExpr>(AddrDelta);
+  Fixups.push_back(MCFixup::create(Offset, MBE.getLHS(), std::get<0>(FK)));
+  Fixups.push_back(MCFixup::create(Offset, MBE.getRHS(), std::get<1>(FK)));
+
+  if (LineDelta == INT64_MAX) {
+    OS << uint8_t(dwarf::DW_LNS_extended_op);
+    OS << uint8_t(1);
+    OS << uint8_t(dwarf::DW_LNE_end_sequence);
+  } else {
+    OS << uint8_t(dwarf::DW_LNS_copy);
+  }
+
+  WasRelaxed = OldSize != Data.size();
+  return true;
+}
+
+bool LoongArchAsmBackend::relaxDwarfCFA(const MCAssembler &Asm,
+                                        MCDwarfCallFrameFragment &DF,
+                                        bool &WasRelaxed) const {
+  const MCExpr &AddrDelta = DF.getAddrDelta();
+  SmallVectorImpl<char> &Data = DF.getContents();
+  SmallVectorImpl<MCFixup> &Fixups = DF.getFixups();
+  size_t OldSize = Data.size();
+
+  int64_t Value;
+  if (AddrDelta.evaluateAsAbsolute(Value, Asm))
+    return false;
+  bool IsAbsolute = AddrDelta.evaluateKnownAbsolute(Value, Asm);
+  assert(IsAbsolute && "CFA with invalid expression");
+  (void)IsAbsolute;
+
+  Data.clear();
+  Fixups.clear();
+  raw_svector_ostream OS(Data);
+
+  assert(Asm.getContext().getAsmInfo()->getMinInstAlignment() == 1 &&
+         "expected 1-byte alignment");
+  if (Value == 0) {
+    WasRelaxed = OldSize != Data.size();
+    return true;
+  }
+
+  auto AddFixups = [&Fixups,
+                    &AddrDelta](unsigned Offset,
+                                std::pair<MCFixupKind, MCFixupKind> FK) {
+    const MCBinaryExpr &MBE = cast<MCBinaryExpr>(AddrDelta);
+    Fixups.push_back(MCFixup::create(Offset, MBE.getLHS(), std::get<0>(FK)));
+    Fixups.push_back(MCFixup::create(Offset, MBE.getRHS(), std::get<1>(FK)));
+  };
+
+  if (isUIntN(6, Value)) {
+    OS << uint8_t(dwarf::DW_CFA_advance_loc);
+    AddFixups(0, getRelocPairForSize(6));
+  } else if (isUInt<8>(Value)) {
+    OS << uint8_t(dwarf::DW_CFA_advance_loc1);
+    support::endian::write<uint8_t>(OS, 0, llvm::endianness::little);
+    AddFixups(1, getRelocPairForSize(8));
+  } else if (isUInt<16>(Value)) {
+    OS << uint8_t(dwarf::DW_CFA_advance_loc2);
+    support::endian::write<uint16_t>(OS, 0, llvm::endianness::little);
+    AddFixups(1, getRelocPairForSize(16));
+  } else if (isUInt<32>(Value)) {
+    OS << uint8_t(dwarf::DW_CFA_advance_loc4);
+    support::endian::write<uint32_t>(OS, 0, llvm::endianness::little);
+    AddFixups(1, getRelocPairForSize(32));
+  } else {
+    llvm_unreachable("unsupported CFA encoding");
+  }
+
+  WasRelaxed = OldSize != Data.size();
+  return true;
 }
 
 bool LoongArchAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
@@ -249,7 +448,7 @@ bool LoongArchAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
   return true;
 }
 
-bool LoongArchAsmBackend::handleAddSubRelocations(const MCAsmLayout &Layout,
+bool LoongArchAsmBackend::handleAddSubRelocations(const MCAssembler &Asm,
                                                   const MCFragment &F,
                                                   const MCFixup &Fixup,
                                                   const MCValue &Target,
@@ -301,9 +500,9 @@ bool LoongArchAsmBackend::handleAddSubRelocations(const MCAsmLayout &Layout,
   MCValue B = MCValue::get(Target.getSymB());
   auto FA = MCFixup::create(Fixup.getOffset(), nullptr, std::get<0>(FK));
   auto FB = MCFixup::create(Fixup.getOffset(), nullptr, std::get<1>(FK));
-  auto &Asm = Layout.getAssembler();
-  Asm.getWriter().recordRelocation(Asm, Layout, &F, FA, A, FixedValueA);
-  Asm.getWriter().recordRelocation(Asm, Layout, &F, FB, B, FixedValueB);
+  auto &Assembler = const_cast<MCAssembler &>(Asm);
+  Asm.getWriter().recordRelocation(Assembler, &F, FA, A, FixedValueA);
+  Asm.getWriter().recordRelocation(Assembler, &F, FB, B, FixedValueB);
   FixedValue = FixedValueA - FixedValueB;
   return true;
 }

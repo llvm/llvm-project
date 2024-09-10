@@ -16,10 +16,9 @@ Quickstart
    environment:
 
    ```bash
-   % mkdir venv
-   % virtualenv venv
-   % . venv/bin/activate
-   % pip install svn+https://llvm.org/svn/llvm-project/llvm/trunk/utils/lit
+   % python3 -m venv .venv
+   % . .venv/bin/activate
+   % pip install git+https://github.com/llvm/llvm-project.git#subdirectory=llvm/utils/lit
    % lit --version
    lit 0.8.0dev
    ```
@@ -71,6 +70,9 @@ MicroBenchmarks/XRay microbenchmarks, you need to add `compiler-rt` to your
    PASS: test-suite :: MultiSource/Applications/ALAC/encode/alacconvert-encode.test (2 of 474)
    ...
    ```
+**NOTE!** even in the case you only want to get the compile-time results(code size, llvm stats etc),
+you need to run the test with the above `llvm-lit` command. In that case, the *results.json* file will
+contain compile-time metrics.
 
 6. Show and compare result files (optional):
 
@@ -132,6 +134,44 @@ Every program can work as a correctness test. Some programs are unsuitable for
 performance measurements. Setting the `TEST_SUITE_BENCHMARKING_ONLY` CMake
 option to `ON` will disable them.
 
+The MultiSource benchmarks consist of the following apps and benchmarks:
+
+| MultiSource          | Language  | Application Area              | Remark               |
+|----------------------|-----------|-------------------------------|----------------------|
+| 7zip                 |  C/C++    | Compression/Decompression     |                      |
+| ASCI_Purple          |  C        | SMG2000 benchmark and solver  | Memory intensive app |
+| ASC_Sequoia          |  C        | Simulation and solver         |                      |
+| BitBench             |  C        | uudecode/uuencode utility     | Bit Stream benchmark for functional compilers |
+| Bullet               |  C++      | Bullet 2.75 physics engine    |                      |
+| DOE-ProxyApps-C++    |  C++      | HPC/scientific apps           | Small applications, representative of our larger DOE workloads |
+| DOE-ProxyApps-C      |  C        | HPC/scientific apps           | "                    |
+| Fhourstones          |  C        | Game/solver                   | Integer benchmark that efficiently solves positions in the game of Connect-4 |
+| Fhourstones-3.1      |  C        | Game/solver                   | "                    |
+| FreeBench            |  C        | Benchmark suite               | Raytracer, four in a row, neural network, file compressor, Fast Fourier/Cosine/Sine Transform |
+| llubenchmark         |  C        | Linked-list micro-benchmark   |                      |
+| mafft                |  C        | Bioinformatics                | A multiple sequence alignment program |
+| MallocBench          |  C        | Benchmark suite               | cfrac, espresso, gawk, gs, make, p2c, perl |
+| McCat                |  C        | Benchmark suite               | Quicksort, bubblesort, eigenvalues |
+| mediabench           |  C        | Benchmark suite               | adpcm, g721, gsm, jpeg, mpeg2 |
+| MiBench              |  C        | Embedded benchmark suite      | Automotive, consumer, office, security, telecom apps  |
+| nbench               |  C        |                               | BYTE Magazine's BYTEmark benchmark program |
+| NPB-serial           |  C        | Parallel computing            | Serial version of the NPB IS code |
+| Olden                |  C        | Data Structures               | SGI version of the Olden benchmark |
+| OptimizerEval        |  C        | Solver                        | Preston Brigg's optimizer evaluation framework |
+| PAQ8p                |  C++      | Data compression              |                      |
+| Prolangs-C++         |  C++      | Benchmark suite               | city, employ, life, NP, ocean, primes, simul, vcirc |
+| Prolangs-C           |  C        | Benchmark suite               | agrep, archie-client, bison, gnugo, unix-smail |
+| Ptrdist              |  C        | Pointer-Intensive Benchmark Suite |                  |
+| Rodinia              |  C        | Scientific apps              | backprop, pathfinder, srad |
+| SciMark2-C           |  C        | Scientific apps              | FFT, LU, Montecarlo, sparse matmul |
+| sim                  |  C        | Dynamic programming          | A Time-Efficient, Linear-Space Local Similarity Algorithm |
+| tramp3d-v4           |  C++      | Numerical analysis           | Template-intensive numerical program based on FreePOOMA |
+| Trimaran             |  C        | Encryption                   | 3des, md5, crc |
+| TSVC                 |  C        | Vectorization benchmark      | Test Suite for Vectorizing Compilers (TSVC) |
+| VersaBench           |  C        | Benchmark suite              | 8b10b, beamformer, bmm, dbms, ecbdes |
+
+All MultiSource applications are suitable for performance measurements
+and will run when CMake option `TEST_SUITE_BENCHMARKING_ONLY` is set.
 
 Configuration
 -------------

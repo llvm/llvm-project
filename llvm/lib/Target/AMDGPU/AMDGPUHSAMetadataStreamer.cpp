@@ -19,6 +19,8 @@
 #include "SIMachineFunctionInfo.h"
 #include "SIProgramInfo.h"
 #include "llvm/IR/Module.h"
+#include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCExpr.h"
 using namespace llvm;
 
 static std::pair<Type *, Align> getArgumentTypeAlign(const Argument &Arg,
@@ -45,8 +47,7 @@ static cl::opt<bool> VerifyHSAMetadata(
     "amdgpu-verify-hsa-metadata",
     cl::desc("Verify AMDGPU HSA Metadata"));
 
-namespace AMDGPU {
-namespace HSAMD {
+namespace AMDGPU::HSAMD {
 
 //===----------------------------------------------------------------------===//
 // HSAMetadataStreamerV4
@@ -310,7 +311,7 @@ void MetadataStreamerMsgPackV4::emitKernelArg(const Argument &Arg,
   if (Node && ArgNo < Node->getNumOperands())
     TypeQual = cast<MDString>(Node->getOperand(ArgNo))->getString();
 
-  const DataLayout &DL = Func->getParent()->getDataLayout();
+  const DataLayout &DL = Func->getDataLayout();
 
   MaybeAlign PointeeAlign;
   Type *Ty = Arg.hasByRefAttr() ? Arg.getParamByRefType() : Arg.getType();
@@ -469,11 +470,13 @@ MetadataStreamerMsgPackV4::getHSAKernelProps(const MachineFunction &MF,
       STM.getKernArgSegmentSize(F, MaxKernArgAlign));
   Kern[".group_segment_fixed_size"] =
       Kern.getDocument()->getNode(ProgramInfo.LDSSize);
-  Kern[".private_segment_fixed_size"] =
-      Kern.getDocument()->getNode(ProgramInfo.ScratchSize);
-  if (CodeObjectVersion >= AMDGPU::AMDHSA_COV5)
-    Kern[".uses_dynamic_stack"] =
-        Kern.getDocument()->getNode(ProgramInfo.DynamicCallStack);
+  DelayedExprs->assignDocNode(Kern[".private_segment_fixed_size"],
+                              msgpack::Type::UInt, ProgramInfo.ScratchSize);
+  if (CodeObjectVersion >= AMDGPU::AMDHSA_COV5) {
+    DelayedExprs->assignDocNode(Kern[".uses_dynamic_stack"],
+                                msgpack::Type::Boolean,
+                                ProgramInfo.DynamicCallStack);
+  }
 
   if (CodeObjectVersion >= AMDGPU::AMDHSA_COV5 && STM.supportsWGP())
     Kern[".workgroup_processor_mode"] =
@@ -484,16 +487,27 @@ MetadataStreamerMsgPackV4::getHSAKernelProps(const MachineFunction &MF,
       Kern.getDocument()->getNode(std::max(Align(4), MaxKernArgAlign).value());
   Kern[".wavefront_size"] =
       Kern.getDocument()->getNode(STM.getWavefrontSize());
-  Kern[".sgpr_count"] = Kern.getDocument()->getNode(ProgramInfo.NumSGPR);
-  Kern[".vgpr_count"] = Kern.getDocument()->getNode(ProgramInfo.NumVGPR);
+  DelayedExprs->assignDocNode(Kern[".sgpr_count"], msgpack::Type::UInt,
+                              ProgramInfo.NumSGPR);
+  DelayedExprs->assignDocNode(Kern[".vgpr_count"], msgpack::Type::UInt,
+                              ProgramInfo.NumVGPR);
 
   // Only add AGPR count to metadata for supported devices
   if (STM.hasMAIInsts()) {
-    Kern[".agpr_count"] = Kern.getDocument()->getNode(ProgramInfo.NumAccVGPR);
+    DelayedExprs->assignDocNode(Kern[".agpr_count"], msgpack::Type::UInt,
+                                ProgramInfo.NumAccVGPR);
   }
 
   Kern[".max_flat_workgroup_size"] =
       Kern.getDocument()->getNode(MFI.getMaxFlatWorkGroupSize());
+  unsigned NumWGX = MFI.getMaxNumWorkGroupsX();
+  unsigned NumWGY = MFI.getMaxNumWorkGroupsY();
+  unsigned NumWGZ = MFI.getMaxNumWorkGroupsZ();
+  if (NumWGX != 0 && NumWGY != 0 && NumWGZ != 0) {
+    Kern[".max_num_workgroups_x"] = Kern.getDocument()->getNode(NumWGX);
+    Kern[".max_num_workgroups_y"] = Kern.getDocument()->getNode(NumWGY);
+    Kern[".max_num_workgroups_z"] = Kern.getDocument()->getNode(NumWGZ);
+  }
   Kern[".sgpr_spill_count"] =
       Kern.getDocument()->getNode(MFI.getNumSpilledSGPRs());
   Kern[".vgpr_spill_count"] =
@@ -503,6 +517,7 @@ MetadataStreamerMsgPackV4::getHSAKernelProps(const MachineFunction &MF,
 }
 
 bool MetadataStreamerMsgPackV4::emitTo(AMDGPUTargetStreamer &TargetStreamer) {
+  DelayedExprs->resolveDelayedExpressions();
   return TargetStreamer.EmitHSAMetadata(*HSAMetadataDoc, true);
 }
 
@@ -512,9 +527,11 @@ void MetadataStreamerMsgPackV4::begin(const Module &Mod,
   emitTargetID(TargetID);
   emitPrintf(Mod);
   getRootMetadata("amdhsa.kernels") = HSAMetadataDoc->getArrayNode();
+  DelayedExprs->clear();
 }
 
 void MetadataStreamerMsgPackV4::end() {
+  DelayedExprs->resolveDelayedExpressions();
   std::string HSAMetadataString;
   raw_string_ostream StrOS(HSAMetadataString);
   HSAMetadataDoc->toYAML(StrOS);
@@ -532,7 +549,8 @@ void MetadataStreamerMsgPackV4::emitKernel(const MachineFunction &MF,
       Func.getCallingConv() != CallingConv::SPIR_KERNEL)
     return;
 
-  auto CodeObjectVersion = AMDGPU::getCodeObjectVersion(*Func.getParent());
+  auto CodeObjectVersion =
+      AMDGPU::getAMDHSACodeObjectVersion(*Func.getParent());
   auto Kern = getHSAKernelProps(MF, ProgramInfo, CodeObjectVersion);
 
   auto Kernels =
@@ -677,7 +695,16 @@ void MetadataStreamerMsgPackV5::emitKernelAttrs(const Function &Func,
     Kern[".uniform_work_group_size"] = Kern.getDocument()->getNode(1);
 }
 
+//===----------------------------------------------------------------------===//
+// HSAMetadataStreamerV6
+//===----------------------------------------------------------------------===//
 
-} // end namespace HSAMD
-} // end namespace AMDGPU
+void MetadataStreamerMsgPackV6::emitVersion() {
+  auto Version = HSAMetadataDoc->getArrayNode();
+  Version.push_back(Version.getDocument()->getNode(VersionMajorV6));
+  Version.push_back(Version.getDocument()->getNode(VersionMinorV6));
+  getRootMetadata("amdhsa.version") = Version;
+}
+
+} // end namespace AMDGPU::HSAMD
 } // end namespace llvm

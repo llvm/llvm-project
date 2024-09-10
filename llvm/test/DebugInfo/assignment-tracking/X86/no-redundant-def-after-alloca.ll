@@ -1,6 +1,10 @@
 ; RUN: llc %s -o - -stop-after=finalize-isel \
 ; RUN: | FileCheck %s --implicit-check-not=DBG_
 
+
+; RUN: llc --try-experimental-debuginfo-iterators %s -o - -stop-after=finalize-isel \
+; RUN: | FileCheck %s --implicit-check-not=DBG_
+
 ;; Hand written. Check that no unnecessary undef is inserted after an alloca
 ;; that has a linked dbg.assign that doesn't immediately follow it.
 

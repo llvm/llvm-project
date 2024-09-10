@@ -1,5 +1,7 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx1200 -mattr=+wavefrontsize32,-wavefrontsize64 -show-encoding %s | FileCheck --check-prefixes=GFX12 %s
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx1200 -mattr=-wavefrontsize32,+wavefrontsize64 -show-encoding %s | FileCheck --check-prefixes=GFX12 %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1200 -mattr=+wavefrontsize32,+real-true16 -show-encoding %s | FileCheck --check-prefixes=GFX12 %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1200 -mattr=+wavefrontsize64,+real-true16 -show-encoding %s | FileCheck --check-prefixes=GFX12 %s
+
+// this file will be converted to true16 format when more true16 instructions are supported
 
 v_bfrev_b32_dpp v5, v1 quad_perm:[3,2,1,0]
 // GFX12: encoding: [0xfa,0x70,0x0a,0x7e,0x01,0x1b,0x00,0xff]
@@ -336,6 +338,18 @@ v_ctz_i32_b32 v5, v1 row_xmask:0 row_mask:0x1 bank_mask:0x3 bound_ctrl:1 fi:0
 
 v_ctz_i32_b32 v255, v255 row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:0 fi:1
 // GFX12: encoding: [0xfa,0x74,0xfe,0x7f,0xff,0x6f,0x05,0x30]
+
+v_cvt_f32_fp8 v1, v3 quad_perm:[0,1,2,3] row_mask:0xa bank_mask:0xc
+// GFX12: encoding: [0xfa,0xd8,0x02,0x7e,0x03,0xe4,0x00,0xac]
+
+v_cvt_f32_fp8 v1, v3 quad_perm:[3,2,1,0] row_mask:0x2 bank_mask:0xe
+// GFX12: encoding: [0xfa,0xd8,0x02,0x7e,0x03,0x1b,0x00,0x2e]
+
+v_cvt_f32_bf8 v1, v3 quad_perm:[0,1,2,3] row_mask:0xa bank_mask:0xc
+// GFX12: encoding: [0xfa,0xda,0x02,0x7e,0x03,0xe4,0x00,0xac]
+
+v_cvt_f32_bf8 v1, v3 quad_perm:[3,2,1,0] row_mask:0x2 bank_mask:0xe
+// GFX12: encoding: [0xfa,0xda,0x02,0x7e,0x03,0x1b,0x00,0x2e]
 
 v_cvt_f16_f32 v5, v1 quad_perm:[3,2,1,0]
 // GFX12: encoding: [0xfa,0x14,0x0a,0x7e,0x01,0x1b,0x00,0xff]

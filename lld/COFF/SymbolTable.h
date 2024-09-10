@@ -102,10 +102,12 @@ public:
   Symbol *addCommon(InputFile *f, StringRef n, uint64_t size,
                     const llvm::object::coff_symbol_generic *s = nullptr,
                     CommonChunk *c = nullptr);
-  Symbol *addImportData(StringRef n, ImportFile *f);
+  DefinedImportData *addImportData(StringRef n, ImportFile *f);
   Symbol *addImportThunk(StringRef name, DefinedImportData *s,
                          uint16_t machine);
   void addLibcall(StringRef name);
+  void addEntryThunk(Symbol *from, Symbol *to);
+  void initializeEntryThunks();
 
   void reportDuplicate(Symbol *existing, InputFile *newFile,
                        SectionChunk *newSc = nullptr,
@@ -113,6 +115,9 @@ public:
 
   // A list of chunks which to be added to .rdata.
   std::vector<Chunk *> localImportChunks;
+
+  // A list of EC EXP+ symbols.
+  std::vector<Symbol *> expSymbols;
 
   // Iterates symbols in non-determinstic hash table order.
   template <typename T> void forEachSymbol(T callback) {
@@ -134,6 +139,7 @@ private:
   llvm::DenseMap<llvm::CachedHashStringRef, Symbol *> symMap;
   std::unique_ptr<BitcodeCompiler> lto;
   bool ltoCompilationDone = false;
+  std::vector<std::pair<Symbol *, Symbol *>> entryThunks;
 
   COFFLinkerContext &ctx;
 };

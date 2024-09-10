@@ -20,7 +20,7 @@
 #include "simple_packed_serialization.h"
 #include <type_traits>
 
-namespace __orc_rt {
+namespace orc_rt {
 
 /// C++ wrapper function result: Same as CWrapperFunctionResult but
 /// auto-releases memory.
@@ -296,11 +296,15 @@ public:
     // operation fails.
     detail::ResultDeserializer<SPSRetTagT, RetT>::makeSafe(Result);
 
+    // Since the functions cannot be zero/unresolved on Windows, the following
+    // reference taking would always be non-zero, thus generating a compiler
+    // warning otherwise.
+#if !defined(_WIN32)
     if (ORC_RT_UNLIKELY(!&__orc_rt_jit_dispatch_ctx))
       return make_error<StringError>("__orc_rt_jit_dispatch_ctx not set");
     if (ORC_RT_UNLIKELY(!&__orc_rt_jit_dispatch))
       return make_error<StringError>("__orc_rt_jit_dispatch not set");
-
+#endif
     auto ArgBuffer =
         WrapperFunctionResult::fromSPSArgs<SPSArgList<SPSTagTs...>>(Args...);
     if (const char *ErrMsg = ArgBuffer.getOutOfBandError())
@@ -500,6 +504,6 @@ public:
   }
 };
 
-} // end namespace __orc_rt
+} // namespace orc_rt
 
 #endif // ORC_RT_WRAPPER_FUNCTION_UTILS_H

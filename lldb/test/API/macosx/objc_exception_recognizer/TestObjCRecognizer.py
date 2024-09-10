@@ -41,8 +41,8 @@ class TestObjCRecognizer(TestBase):
         exception_bkpt = target.BreakpointCreateForException(
             lldb.eLanguageTypeObjC, False, True
         )
-        self.assertTrue(
-            exception_bkpt.GetNumLocations() > 0, "Got some exception locations"
+        self.assertGreater(
+            exception_bkpt.GetNumLocations(), 0, "Got some exception locations"
         )
 
         threads = lldbutil.continue_to_breakpoint(process, exception_bkpt)

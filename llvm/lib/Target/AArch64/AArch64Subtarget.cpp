@@ -24,6 +24,7 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/IR/GlobalValue.h"
+#include "llvm/Support/SipHash.h"
 #include "llvm/TargetParser/AArch64TargetParser.h"
 
 using namespace llvm;
@@ -43,10 +44,10 @@ static cl::opt<bool>
 UseAddressTopByteIgnored("aarch64-use-tbi", cl::desc("Assume that top byte of "
                          "an address is ignored"), cl::init(false), cl::Hidden);
 
-static cl::opt<bool>
-    UseNonLazyBind("aarch64-enable-nonlazybind",
-                   cl::desc("Call nonlazybind functions via direct GOT load"),
-                   cl::init(false), cl::Hidden);
+static cl::opt<bool> MachOUseNonLazyBind(
+    "aarch64-macho-enable-nonlazybind",
+    cl::desc("Call nonlazybind functions via direct GOT load for Mach-O"),
+    cl::Hidden);
 
 static cl::opt<bool> UseAA("aarch64-use-aa", cl::init(true),
                            cl::desc("Enable the use of AA during codegen."));
@@ -63,12 +64,6 @@ ReservedRegsForRA("reserve-regs-for-regalloc", cl::desc("Reserve physical "
                   "registers, so they can't be used by register allocator. "
                   "Should only be used for testing register allocator."),
                   cl::CommaSeparated, cl::Hidden);
-
-static cl::opt<bool> ForceStreamingCompatibleSVE(
-    "force-streaming-compatible-sve",
-    cl::desc(
-        "Force the use of streaming-compatible SVE code for all functions"),
-    cl::Hidden);
 
 static cl::opt<AArch64PAuth::AuthCheckMethod>
     AuthenticatedLRCheckMethod("aarch64-authenticated-lr-check-method",
@@ -117,6 +112,8 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
   case CortexA35:
   case CortexA53:
   case CortexA55:
+  case CortexR82:
+  case CortexR82AE:
     PrefFunctionAlignment = Align(16);
     PrefLoopAlignment = Align(16);
     MaxBytesForLoopAlignment = 8;
@@ -140,10 +137,9 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
   case CortexA76:
   case CortexA77:
   case CortexA78:
+  case CortexA78AE:
   case CortexA78C:
-  case CortexR82:
   case CortexX1:
-  case CortexX1C:
     PrefFunctionAlignment = Align(16);
     PrefLoopAlignment = Align(32);
     MaxBytesForLoopAlignment = 16;
@@ -158,9 +154,11 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
   case CortexA710:
   case CortexA715:
   case CortexA720:
+  case CortexA725:
   case CortexX2:
   case CortexX3:
   case CortexX4:
+  case CortexX925:
     PrefFunctionAlignment = Align(16);
     VScaleForTuning = 1;
     PrefLoopAlignment = Align(32);
@@ -185,6 +183,7 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
   case AppleA15:
   case AppleA16:
   case AppleA17:
+  case AppleM4:
     CacheLineSize = 64;
     PrefetchDistance = 280;
     MinPrefetchStride = 2048;
@@ -194,6 +193,7 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
     case AppleA15:
     case AppleA16:
     case AppleA17:
+    case AppleM4:
       MaxInterleaveFactor = 4;
       break;
     default:
@@ -233,8 +233,13 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
     PrefLoopAlignment = Align(32);
     MaxBytesForLoopAlignment = 16;
     break;
-  case NeoverseN2:
   case NeoverseV2:
+    // Specialize cost for Neoverse-V2.
+    ScatterOverhead = 13;
+    LLVM_FALLTHROUGH;
+  case NeoverseN2:
+  case NeoverseN3:
+  case NeoverseV3:
     PrefFunctionAlignment = Align(16);
     PrefLoopAlignment = Align(32);
     MaxBytesForLoopAlignment = 16;
@@ -296,10 +301,18 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
     break;
   case Ampere1:
   case Ampere1A:
+  case Ampere1B:
     CacheLineSize = 64;
     PrefFunctionAlignment = Align(64);
     PrefLoopAlignment = Align(64);
     MaxInterleaveFactor = 4;
+    break;
+  case Oryon:
+    CacheLineSize = 64;
+    PrefFunctionAlignment = Align(16);
+    MaxInterleaveFactor = 4;
+    PrefetchDistance = 128;
+    MinPrefetchStride = 1024;
     break;
   }
 
@@ -312,15 +325,14 @@ AArch64Subtarget::AArch64Subtarget(const Triple &TT, StringRef CPU,
                                    const TargetMachine &TM, bool LittleEndian,
                                    unsigned MinSVEVectorSizeInBitsOverride,
                                    unsigned MaxSVEVectorSizeInBitsOverride,
-                                   bool StreamingSVEMode,
-                                   bool StreamingCompatibleSVEMode,
+                                   bool IsStreaming, bool IsStreamingCompatible,
                                    bool HasMinSize)
     : AArch64GenSubtargetInfo(TT, CPU, TuneCPU, FS),
       ReserveXRegister(AArch64::GPR64commonRegClass.getNumRegs()),
       ReserveXRegisterForRA(AArch64::GPR64commonRegClass.getNumRegs()),
       CustomCallSavedXRegs(AArch64::GPR64commonRegClass.getNumRegs()),
-      IsLittle(LittleEndian), StreamingSVEMode(StreamingSVEMode),
-      StreamingCompatibleSVEMode(StreamingCompatibleSVEMode),
+      IsLittle(LittleEndian), IsStreaming(IsStreaming),
+      IsStreamingCompatible(IsStreamingCompatible),
       MinSVEVectorSizeInBits(MinSVEVectorSizeInBitsOverride),
       MaxSVEVectorSizeInBits(MaxSVEVectorSizeInBitsOverride), TargetTriple(TT),
       InstrInfo(initializeSubtargetDependencies(FS, CPU, TuneCPU, HasMinSize)),
@@ -396,10 +408,8 @@ AArch64Subtarget::ClassifyGlobalReference(const GlobalValue *GV,
   if (GV->isTagged())
     return AArch64II::MO_GOT;
 
-  if (!TM.shouldAssumeDSOLocal(*GV->getParent(), GV)) {
+  if (!TM.shouldAssumeDSOLocal(GV)) {
     if (GV->hasDLLImportStorageClass()) {
-      if (isWindowsArm64EC() && GV->getValueType()->isFunctionTy())
-        return AArch64II::MO_GOT | AArch64II::MO_DLLIMPORTAUX;
       return AArch64II::MO_GOT | AArch64II::MO_DLLIMPORT;
     }
     if (getTargetTriple().isOSWindows())
@@ -434,16 +444,23 @@ unsigned AArch64Subtarget::classifyGlobalFunctionReference(
 
   // NonLazyBind goes via GOT unless we know it's available locally.
   auto *F = dyn_cast<Function>(GV);
-  if (UseNonLazyBind && F && F->hasFnAttribute(Attribute::NonLazyBind) &&
-      !TM.shouldAssumeDSOLocal(*GV->getParent(), GV))
+  if ((!isTargetMachO() || MachOUseNonLazyBind) && F &&
+      F->hasFnAttribute(Attribute::NonLazyBind) && !TM.shouldAssumeDSOLocal(GV))
     return AArch64II::MO_GOT;
 
   if (getTargetTriple().isOSWindows()) {
-    if (isWindowsArm64EC() && GV->getValueType()->isFunctionTy() &&
-        GV->hasDLLImportStorageClass()) {
-      // On Arm64EC, if we're calling a function directly, use MO_DLLIMPORT,
-      // not MO_DLLIMPORTAUX.
-      return AArch64II::MO_GOT | AArch64II::MO_DLLIMPORT;
+    if (isWindowsArm64EC() && GV->getValueType()->isFunctionTy()) {
+      if (GV->hasDLLImportStorageClass()) {
+        // On Arm64EC, if we're calling a symbol from the import table
+        // directly, use MO_ARM64EC_CALLMANGLE.
+        return AArch64II::MO_GOT | AArch64II::MO_DLLIMPORT |
+               AArch64II::MO_ARM64EC_CALLMANGLE;
+      }
+      if (GV->hasExternalLinkage()) {
+        // If we're calling a symbol directly, use the mangled form in the
+        // call instruction.
+        return AArch64II::MO_ARM64EC_CALLMANGLE;
+      }
     }
 
     // Use ClassifyGlobalReference for setting MO_DLLIMPORT/MO_COFFSTUB.
@@ -463,6 +480,45 @@ void AArch64Subtarget::overrideSchedPolicy(MachineSchedPolicy &Policy,
   // help nearly no benchmark on out-of-order architectures, on the other hand
   // it regresses register pressure on a few benchmarking.
   Policy.DisableLatencyHeuristic = DisableLatencySchedHeuristic;
+}
+
+void AArch64Subtarget::adjustSchedDependency(
+    SUnit *Def, int DefOpIdx, SUnit *Use, int UseOpIdx, SDep &Dep,
+    const TargetSchedModel *SchedModel) const {
+  if (!SchedModel || Dep.getKind() != SDep::Kind::Data || !Dep.getReg() ||
+      !Def->isInstr() || !Use->isInstr() ||
+      (Def->getInstr()->getOpcode() != TargetOpcode::BUNDLE &&
+       Use->getInstr()->getOpcode() != TargetOpcode::BUNDLE))
+    return;
+
+  // If the Def is a BUNDLE, find the last instruction in the bundle that defs
+  // the register.
+  const MachineInstr *DefMI = Def->getInstr();
+  if (DefMI->getOpcode() == TargetOpcode::BUNDLE) {
+    Register Reg = DefMI->getOperand(DefOpIdx).getReg();
+    for (const auto &Op : const_mi_bundle_ops(*DefMI)) {
+      if (Op.isReg() && Op.isDef() && Op.getReg() == Reg) {
+        DefMI = Op.getParent();
+        DefOpIdx = Op.getOperandNo();
+      }
+    }
+  }
+
+  // If the Use is a BUNDLE, find the first instruction that uses the Reg.
+  const MachineInstr *UseMI = Use->getInstr();
+  if (UseMI->getOpcode() == TargetOpcode::BUNDLE) {
+    Register Reg = UseMI->getOperand(UseOpIdx).getReg();
+    for (const auto &Op : const_mi_bundle_ops(*UseMI)) {
+      if (Op.isReg() && Op.isUse() && Op.getReg() == Reg) {
+        UseMI = Op.getParent();
+        UseOpIdx = Op.getOperandNo();
+        break;
+      }
+    }
+  }
+
+  Dep.setLatency(
+      SchedModel->computeOperandLatency(DefMI, DefOpIdx, UseMI, UseOpIdx));
 }
 
 bool AArch64Subtarget::enableEarlyIfConversion() const {
@@ -499,20 +555,6 @@ void AArch64Subtarget::mirFileLoaded(MachineFunction &MF) const {
 
 bool AArch64Subtarget::useAA() const { return UseAA; }
 
-bool AArch64Subtarget::isStreamingCompatible() const {
-  return StreamingCompatibleSVEMode || ForceStreamingCompatibleSVE;
-}
-
-bool AArch64Subtarget::isNeonAvailable() const {
-  return hasNEON() &&
-         (hasSMEFA64() || (!isStreaming() && !isStreamingCompatible()));
-}
-
-bool AArch64Subtarget::isSVEAvailable() const {
-  return hasSVE() &&
-         (hasSMEFA64() || (!isStreaming() && !isStreamingCompatible()));
-}
-
 // If return address signing is enabled, tail calls are emitted as follows:
 //
 // ```
@@ -526,12 +568,32 @@ bool AArch64Subtarget::isSVEAvailable() const {
 // exception on its own. Later, if the callee spills the signed LR value and
 // neither FEAT_PAuth2 nor FEAT_EPAC are implemented, the valid PAC replaces
 // the higher bits of LR thus hiding the authentication failure.
-AArch64PAuth::AuthCheckMethod
-AArch64Subtarget::getAuthenticatedLRCheckMethod() const {
+AArch64PAuth::AuthCheckMethod AArch64Subtarget::getAuthenticatedLRCheckMethod(
+    const MachineFunction &MF) const {
+  // TODO: Check subtarget for the scheme. Present variant is a default for
+  // pauthtest ABI.
+  if (MF.getFunction().hasFnAttribute("ptrauth-returns") &&
+      MF.getFunction().hasFnAttribute("ptrauth-auth-traps"))
+    return AArch64PAuth::AuthCheckMethod::HighBitsNoTBI;
   if (AuthenticatedLRCheckMethod.getNumOccurrences())
     return AuthenticatedLRCheckMethod;
 
   // At now, use None by default because checks may introduce an unexpected
   // performance regression or incompatibility with execute-only mappings.
   return AArch64PAuth::AuthCheckMethod::None;
+}
+
+std::optional<uint16_t>
+AArch64Subtarget::getPtrAuthBlockAddressDiscriminatorIfEnabled(
+    const Function &ParentFn) const {
+  if (!ParentFn.hasFnAttribute("ptrauth-indirect-gotos"))
+    return std::nullopt;
+  // We currently have one simple mechanism for all targets.
+  // This isn't ABI, so we can always do better in the future.
+  return getPointerAuthStableSipHash(
+      (Twine(ParentFn.getName()) + " blockaddress").str());
+}
+
+bool AArch64Subtarget::enableMachinePipeliner() const {
+  return getSchedModel().hasInstrSchedModel();
 }

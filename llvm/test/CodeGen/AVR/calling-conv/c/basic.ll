@@ -3,33 +3,33 @@
 ; CHECK-LABEL: ret_void_args_i8
 define void @ret_void_args_i8(i8 %a) {
   ; CHECK: sts 4, r24
-  store volatile i8 %a, i8* inttoptr (i64 4 to i8*)
+  store volatile i8 %a, ptr inttoptr (i64 4 to ptr)
   ret void
 }
 
 ; CHECK-LABEL: ret_void_args_i8_i32
 define void @ret_void_args_i8_i32(i8 %a, i32 %b) {
   ; CHECK:      sts     4, r24
-  store volatile i8 %a, i8* inttoptr (i64 4 to i8*)
+  store volatile i8 %a, ptr inttoptr (i64 4 to ptr)
 
   ; CHECK-NEXT: sts     8, r23
   ; CHECK-NEXT: sts     7, r22
   ; CHECK-NEXT: sts     6, r21
   ; CHECK-NEXT: sts     5, r20
-  store volatile i32 %b, i32* inttoptr (i64 5 to i32*)
+  store volatile i32 %b, ptr inttoptr (i64 5 to ptr)
   ret void
 }
 
 ; CHECK-LABEL: ret_void_args_i8_i8_i8_i8
 define void @ret_void_args_i8_i8_i8_i8(i8 %a, i8 %b, i8 %c, i8 %d) {
   ; CHECK:      sts     4, r24
-  store volatile i8 %a, i8* inttoptr (i64 4 to i8*)
+  store volatile i8 %a, ptr inttoptr (i64 4 to ptr)
   ; CHECK-NEXT: sts     5, r22
-  store volatile i8 %b, i8* inttoptr (i64 5 to i8*)
+  store volatile i8 %b, ptr inttoptr (i64 5 to ptr)
   ; CHECK-NEXT: sts     6, r20
-  store volatile i8 %c, i8* inttoptr (i64 6 to i8*)
+  store volatile i8 %c, ptr inttoptr (i64 6 to ptr)
   ; CHECK-NEXT: sts     7, r18
-  store volatile i8 %d, i8* inttoptr (i64 7 to i8*)
+  store volatile i8 %d, ptr inttoptr (i64 7 to ptr)
   ret void
 }
 
@@ -39,14 +39,14 @@ define void @ret_void_args_i32_16_i8(i32 %a, i16 %b, i8 %c) {
   ; CHECK-NEXT: sts     6, r24
   ; CHECK-NEXT: sts     5, r23
   ; CHECK-NEXT: sts     4, r22
-  store volatile i32 %a, i32* inttoptr (i64 4 to i32*)
+  store volatile i32 %a, ptr inttoptr (i64 4 to ptr)
 
   ; CHECK-NEXT: sts     5, r21
   ; CHECK-NEXT: sts     4, r20
-  store volatile i16 %b, i16* inttoptr (i64 4 to i16*)
+  store volatile i16 %b, ptr inttoptr (i64 4 to ptr)
 
   ; CHECK-NEXT: sts     4, r18
-  store volatile i8 %c, i8* inttoptr (i64 4 to i8*)
+  store volatile i8 %c, ptr inttoptr (i64 4 to ptr)
   ret void
 }
 
@@ -60,7 +60,7 @@ define void @ret_void_args_i64(i64 %a) {
   ; CHECK-NEXT: sts     6, r20
   ; CHECK-NEXT: sts     5, r19
   ; CHECK-NEXT: sts     4, r18
-  store volatile i64 %a, i64* inttoptr (i64 4 to i64*)
+  store volatile i64 %a, ptr inttoptr (i64 4 to ptr)
   ret void
 }
 
@@ -74,7 +74,7 @@ define void @ret_void_args_i64_i64(i64 %a, i64 %b) {
   ; CHECK-DAG: sts     6, r20
   ; CHECK-DAG: sts     5, r19
   ; CHECK-DAG: sts     4, r18
-  store volatile i64 %a, i64* inttoptr (i64 4 to i64*)
+  store volatile i64 %a, ptr inttoptr (i64 4 to ptr)
 
   ; CHECK-DAG: sts     11, r17
   ; CHECK-DAG: sts     10, r16
@@ -84,7 +84,7 @@ define void @ret_void_args_i64_i64(i64 %a, i64 %b) {
   ; CHECK-DAG: sts     6, r12
   ; CHECK-DAG: sts     5, r11
   ; CHECK-DAG: sts     4, r10
-  store volatile i64 %b, i64* inttoptr (i64 4 to i64*)
+  store volatile i64 %b, ptr inttoptr (i64 4 to ptr)
   ret void
 }
 
@@ -94,7 +94,7 @@ define void @ret_void_args_i64_i64(i64 %a, i64 %b) {
 define void @ret_void_args_i64_i64_i16(i64 %a, i64 %b, i16 %c) {
   ; CHECK:      sts     5, r9
   ; CHECK-NEXT: sts     4, r8
-  store volatile i16 %c, i16* inttoptr (i64 4 to i16*)
+  store volatile i16 %c, ptr inttoptr (i64 4 to ptr)
   ret void
 }
 

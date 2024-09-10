@@ -1,3 +1,5 @@
+.. _developer_policy:
+
 =====================
 LLVM Developer Policy
 =====================
@@ -89,8 +91,7 @@ to read it as possible.  As such, we recommend that you:
 
 #. Make your patch against git main, not a branch, and not an old version
    of LLVM.  This makes it easy to apply the patch.  For information on how to
-   clone from git, please see the :ref:`Getting Started Guide
-   <checkout>`.
+   clone from git, please see the :ref:`Getting Started Guide <sources>`.
 
 #. Similarly, patches should be submitted soon after they are generated.  Old
    patches may not apply correctly if the underlying code changes between the
@@ -103,6 +104,7 @@ to read it as possible.  As such, we recommend that you:
 When submitting patches, please do not add confidentiality or non-disclosure
 notices to the patches themselves.  These notices conflict with the LLVM
 licensing terms and may result in your contribution being excluded.
+
 
 .. _code review:
 
@@ -127,8 +129,8 @@ awareness of. For such changes, the following should be done:
 
 .. warning::
 
-  Phabricator is deprecated and will be switched to read-only mode in October
-  2023, for new code contributions use :ref:`GitHub Pull Requests <github-reviews>`.
+  Phabricator is deprecated is available in read-only mode,
+  for new code contributions use :ref:`GitHub Pull Requests <github-reviews>`.
   This section contains old information that needs to be updated.
 
 * When performing the code review for the change, please add any applicable
@@ -468,11 +470,13 @@ What are the expectations around a revert?
 * When re-applying a reverted patch, the commit message should be updated to
   indicate the problem that was addressed and how it was addressed.
 
+.. _obtaining_commit_access:
+
 Obtaining Commit Access
 -----------------------
 
-We grant commit access to contributors with a track record of submitting high
-quality patches.  If you would like commit access, please send an email to
+We grant commit access to contributors that can provide a valid justification.
+If you would like commit access, please send an email to
 `Chris <mailto:clattner@llvm.org>`_ with your GitHub username.  This is true
 for former contributors with SVN access as well as new contributors. If
 approved, a GitHub invitation will be sent to your GitHub account. In case you
@@ -633,6 +637,24 @@ author and the committer like git does. As such, older commits used a different
 attribution mechanism. The previous method was to include "Patch by John Doe."
 in a separate line of the commit message and there are automated processes that
 rely on this format.
+
+Bans
+----
+
+The goal of a ban is to protect people in the community from having to interact
+with people who are consistently not respecting the
+:ref:`LLVM Community Code of Conduct` in LLVM project spaces. Contributions of
+any variety (pull requests, issue reports, forum posts, etc.) require
+interacting with the community. Therefore, we do not accept any form of direct
+contribution from a banned individual.
+
+Indirect contributions are permissible only by someone taking full ownership of
+such a contribution and they are responsible for all related interactions with
+the community regarding that contribution.
+
+When in doubt how to act in a specific instance, please reach out to
+conduct@llvm.org for advice.
+
 
 .. _IR backwards compatibility:
 
@@ -1047,7 +1069,7 @@ In certain circumstances, code licensed under other licenses can be added
 to the codebase.  However, this may only be done with approval of the LLVM
 Foundation Board of Directors, and contributors should plan for the approval
 process to take at least 4-6 weeks.  If you would like to contribute code
-under a different license, please create a Phabricator review with the code
+under a different license, please create a pull request with the code
 you want to contribute and email board@llvm.org requesting a review.
 
 If you have questions or comments about these topics, please ask on the
@@ -1102,20 +1124,17 @@ To relicense LLVM, we will be seeking approval from all of the copyright holders
 of code in the repository, or potentially remove/rewrite code if we cannot.
 This is a large
 and challenging project which will take a significant amount of time to
-complete.  In the interim, **all contributions to the project will be made under
-the terms of both the new license and the legacy license scheme** (each of which
-is described below).  The exception to this is the legacy patent grant, which
-will not be required for new contributions.
+complete.
 
-When all of the code in the project has been converted to the new license or
-removed, we will drop the requirement to contribute under the legacy license.
-This will achieve the goal of having
-a single standardized license for the entire codebase.
+Starting on 2024-06-01 (first of June 2024), new contributions only need to
+be covered by the new LLVM license, i.e. Apache-2.0 WITH LLVM-exception.
+Before this date, the project required all contributions to be made under
+both the new license and the legacy license.
 
-If you are a prior contributor to LLVM and have not done so already, please do
-*TODO* to allow us to use your code. *Add a link to a separate page here, which
-is probably a click through web form or something like that.  Details to be
-determined later*.
+If you are a contributor to LLVM with contributions committed before 2019-01-19
+and have not done so already, please do follow the instructions at
+https://foundation.llvm.org/docs/relicensing/, under section "Individual
+Relicensing Agreement" to relicense your contributions under the new license.
 
 
 .. _open source licensing terms:
@@ -1242,12 +1261,11 @@ Legacy License Structure
 
 .. note::
    The code base was previously licensed under the Terms described here.
-   We are in the middle of relicensing to a new approach (described above), but
-   until this effort is complete, the code is also still available under these
-   terms.  Once we finish the relicensing project, new versions of the code will
-   not be available under these terms.  However, nothing takes away your right
-   to use old versions under the licensing terms under which they were
-   originally released.
+   We are in the middle of relicensing to a new approach (described above).
+   More than 99% of all contributions made to LLVM are covered by the Apache-2.0
+   WITH LLVM-exception license. A small portion of LLVM code remains exclusively
+   covered by the legacy license. Contributions after 2024-06-01 are covered
+   exclusively by the new license._
 
 We intend to keep LLVM perpetually open source and to use a permissive open
 source license.  The code in

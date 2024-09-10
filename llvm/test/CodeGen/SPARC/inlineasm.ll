@@ -14,8 +14,8 @@ entry:
 @v = external global %struct.anon, align 4
 define void @test_constraints_nro() {
 entry:
-  %0 = load i32, i32* getelementptr inbounds (%struct.anon, %struct.anon* @v, i32 0, i32 0);
-  %1 = load i32, i32* getelementptr inbounds (%struct.anon, %struct.anon* @v, i32 0, i32 1);
+  %0 = load i32, ptr @v;
+  %1 = load i32, ptr getelementptr inbounds (%struct.anon, ptr @v, i32 0, i32 1);
   tail call void asm sideeffect "", "nro,nro"(i32 %0, i32 %1)
   ret void
 }
@@ -49,10 +49,10 @@ entry:
 ; CHECK-LABEL: test_constraint_reg:
 ; CHECK:       ldda [%i1] 43, %g2
 ; CHECK:       ldda [%i1] 43, %g4
-define void @test_constraint_reg(i32 %s, i32* %ptr) {
+define void @test_constraint_reg(i32 %s, ptr %ptr) {
 entry:
-  %0 = tail call i64 asm sideeffect "ldda [$1] $2, $0", "={r2},r,n"(i32* %ptr, i32 43)
-  %1 = tail call i64 asm sideeffect "ldda [$1] $2, $0", "={g4},r,n"(i32* %ptr, i32 43)
+  %0 = tail call i64 asm sideeffect "ldda [$1] $2, $0", "={r2},r,n"(ptr %ptr, i32 43)
+  %1 = tail call i64 asm sideeffect "ldda [$1] $2, $0", "={g4},r,n"(ptr %ptr, i32 43)
   ret void
 }
 
@@ -62,10 +62,10 @@ entry:
 ; CHECK: mov %i0, %i5
 ; CHECK: sra %i5, 31, %i4
 ; CHECK: std %i4, [%i1]
-define i32 @test_constraint_r_i64(i32 %foo, i64* %out, i32 %o) {
+define i32 @test_constraint_r_i64(i32 %foo, ptr %out, i32 %o) {
 entry:
   %conv = sext i32 %foo to i64
-  tail call void asm sideeffect "std $0, [$1]", "r,r,~{memory}"(i64 %conv, i64* %out)
+  tail call void asm sideeffect "std $0, [$1]", "r,r,~{memory}"(i64 %conv, ptr %out)
   ret i32 %o
 }
 
@@ -74,10 +74,10 @@ entry:
 ; CHECK: mov %i0, %i5
 ; CHECK: sra %i5, 31, %i4
 ; CHECK: std %i4, [%i1]
-define i32 @test_constraint_r_i64_noleaf(i32 %foo, i64* %out, i32 %o) #0 {
+define i32 @test_constraint_r_i64_noleaf(i32 %foo, ptr %out, i32 %o) #0 {
 entry:
   %conv = sext i32 %foo to i64
-  tail call void asm sideeffect "std $0, [$1]", "r,r,~{memory}"(i64 %conv, i64* %out)
+  tail call void asm sideeffect "std $0, [$1]", "r,r,~{memory}"(i64 %conv, ptr %out)
   ret i32 %o
 }
 attributes #0 = { "frame-pointer"="all" }
@@ -115,9 +115,9 @@ entry:
 
 ; CHECK-LABEL: test_addressing_mode_i64:
 ; CHECK: std %l0, [%i0]
-define void @test_addressing_mode_i64(i64* %out) {
+define void @test_addressing_mode_i64(ptr %out) {
 entry:
-  call void asm "std %l0, $0", "=*m,r"(i64* elementtype(i64) nonnull %out, i64 0)
+  call void asm "std %l0, $0", "=*m,r"(ptr elementtype(i64) nonnull %out, i64 0)
   ret void
 }
 
@@ -143,3 +143,22 @@ entry:
   %1 = call double asm sideeffect "faddd $1, $2, $0", "=f,f,e"(i64 0, i64 0)
   ret void
 }
+
+; CHECK-LABEL: test_twinword:
+; CHECK: rd  %asr5, %i1
+; CHECK: srlx %i1, 32, %i0
+
+define i64 @test_twinword(){
+  %1 = tail call i64 asm sideeffect "rd %asr5, ${0:L} \0A\09 srlx ${0:L}, 32, ${0:H}", "={i0}"()
+  ret i64 %1
+}
+
+; CHECK-LABEL: test_symbol:
+; CHECK: ba,a brtarget
+define void @test_symbol() {
+Entry:
+  call void asm sideeffect "ba,a ${0}", "X"(ptr @brtarget)
+  unreachable
+}
+
+declare void @brtarget()

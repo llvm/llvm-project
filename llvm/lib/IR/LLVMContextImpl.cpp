@@ -40,17 +40,17 @@ LLVMContextImpl::LLVMContextImpl(LLVMContext &C)
       FloatTy(C, Type::FloatTyID), DoubleTy(C, Type::DoubleTyID),
       MetadataTy(C, Type::MetadataTyID), TokenTy(C, Type::TokenTyID),
       X86_FP80Ty(C, Type::X86_FP80TyID), FP128Ty(C, Type::FP128TyID),
-      PPC_FP128Ty(C, Type::PPC_FP128TyID), X86_MMXTy(C, Type::X86_MMXTyID),
-      X86_AMXTy(C, Type::X86_AMXTyID), Int1Ty(C, 1), Int8Ty(C, 8),
-      Int16Ty(C, 16), Int32Ty(C, 32), Int64Ty(C, 64), Int128Ty(C, 128) {}
+      PPC_FP128Ty(C, Type::PPC_FP128TyID), X86_AMXTy(C, Type::X86_AMXTyID),
+      Int1Ty(C, 1), Int8Ty(C, 8), Int16Ty(C, 16), Int32Ty(C, 32),
+      Int64Ty(C, 64), Int128Ty(C, 128) {}
 
 LLVMContextImpl::~LLVMContextImpl() {
 #ifndef NDEBUG
   // Check that any variable location records that fell off the end of a block
   // when it's terminator was removed were eventually replaced. This assertion
-  // firing indicates that DPValues went missing during the lifetime of the
-  // LLVMContext.
-  assert(TrailingDPValues.empty() && "DPValue records in blocks not cleaned");
+  // firing indicates that DbgVariableRecords went missing during the lifetime
+  // of the LLVMContext.
+  assert(TrailingDbgRecords.empty() && "DbgRecords in blocks not cleaned");
 #endif
 
   // NOTE: We need to delete the contents of OwnedModules, but Module's dtor
@@ -91,6 +91,9 @@ LLVMContextImpl::~LLVMContextImpl() {
   // Destroy MDNodes.
   for (MDNode *I : DistinctMDNodes)
     I->deleteAsSubclass();
+
+  for (auto *ConstantRangeListAttribute : ConstantRangeListAttributes)
+    ConstantRangeListAttribute->~ConstantRangeListAttributeImpl();
 #define HANDLE_MDNODE_LEAF_UNIQUABLE(CLASS)                                    \
   for (CLASS * I : CLASS##s)                                                   \
     delete I;
@@ -119,7 +122,9 @@ LLVMContextImpl::~LLVMContextImpl() {
   IntZeroConstants.clear();
   IntOneConstants.clear();
   IntConstants.clear();
+  IntSplatConstants.clear();
   FPConstants.clear();
+  FPSplatConstants.clear();
   CDSConstants.clear();
 
   // Destroy attribute node lists.

@@ -382,7 +382,7 @@ void PrintAddressSpaceLayout() {
 
   Printf("SHADOW_SCALE: %d\n", (int)ASAN_SHADOW_SCALE);
   Printf("SHADOW_GRANULARITY: %d\n", (int)ASAN_SHADOW_GRANULARITY);
-  Printf("SHADOW_OFFSET: 0x%zx\n", (uptr)ASAN_SHADOW_OFFSET);
+  Printf("SHADOW_OFFSET: %p\n", (void *)ASAN_SHADOW_OFFSET);
   CHECK(ASAN_SHADOW_SCALE >= 3 && ASAN_SHADOW_SCALE <= 7);
   if (kMidMemBeg)
     CHECK(kMidShadowBeg > kLowShadowEnd &&
@@ -410,6 +410,8 @@ static bool AsanInitInternal() {
     return false;
   }
 
+  // Make sure we are not statically linked.
+  __interception::DoesNotSupportStaticLinking();
   AsanCheckIncompatibleRT();
   AsanCheckDynamicRTPrereqs();
   AvoidCVE_2016_2143();
@@ -420,9 +422,6 @@ static bool AsanInitInternal() {
   InitializePlatformExceptionHandlers();
 
   InitializeHighMemEnd();
-
-  // Make sure we are not statically linked.
-  AsanDoesNotSupportStaticLinkage();
 
   // Install tool-specific callbacks in sanitizer_common.
   AddDieCallback(AsanDie);

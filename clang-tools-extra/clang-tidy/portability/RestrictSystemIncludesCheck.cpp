@@ -21,8 +21,8 @@ namespace clang::tidy::portability {
 void RestrictedIncludesPPCallbacks::InclusionDirective(
     SourceLocation HashLoc, const Token &IncludeTok, StringRef FileName,
     bool IsAngled, CharSourceRange FilenameRange, OptionalFileEntryRef File,
-    StringRef SearchPath, StringRef RelativePath, const Module *Imported,
-    SrcMgr::CharacteristicKind FileType) {
+    StringRef SearchPath, StringRef RelativePath, const Module *SuggestedModule,
+    bool ModuleImported, SrcMgr::CharacteristicKind FileType) {
   if (!Check.contains(FileName) && SrcMgr::isSystem(FileType)) {
     SmallString<256> FullPath;
     llvm::sys::path::append(FullPath, SearchPath);

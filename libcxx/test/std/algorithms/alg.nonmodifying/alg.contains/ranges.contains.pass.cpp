@@ -19,6 +19,7 @@
 //     constexpr bool ranges::contains(R&& r, const T& value, Proj proj = {});                 // since C++23
 
 #include <algorithm>
+#include <array>
 #include <cassert>
 #include <list>
 #include <ranges>
@@ -64,12 +65,12 @@ constexpr void test_iterators() {
   using ValueT = std::iter_value_t<Iter>;
   { // simple tests
     ValueT a[] = {1, 2, 3, 4, 5, 6};
-    auto whole = std::ranges::subrange(Iter(a), Sent(Iter(a + 6)));
     {
-      std::same_as<bool> decltype(auto) ret = std::ranges::contains(whole.begin(), whole.end(), 3);
+      std::same_as<bool> decltype(auto) ret = std::ranges::contains(Iter(a), Sent(Iter(a + 6)), 3);
       assert(ret);
     }
     {
+      auto whole                            = std::ranges::subrange(Iter(a), Sent(Iter(a + 6)));
       std::same_as<bool> decltype(auto) ret = std::ranges::contains(whole, 3);
       assert(ret);
     }
@@ -77,65 +78,65 @@ constexpr void test_iterators() {
 
   { // check that a range with a single element works
     ValueT a[] = {32};
-    auto whole = std::ranges::subrange(Iter(a), Sent(Iter(a + 1)));
     {
-      bool ret = std::ranges::contains(whole.begin(), whole.end(), 32);
+      bool ret = std::ranges::contains(Iter(a), Sent(Iter(a + 1)), 32);
       assert(ret);
     }
     {
-      bool ret = std::ranges::contains(whole, 32);
+      auto whole = std::ranges::subrange(Iter(a), Sent(Iter(a + 1)));
+      bool ret   = std::ranges::contains(whole, 32);
       assert(ret);
     }
   }
 
   { // check that an empty range works
-    ValueT a[] = {};
-    auto whole = std::ranges::subrange(Iter(a), Sent(Iter(a)));
+    std::array<ValueT, 0> a = {};
     {
-      bool ret = std::ranges::contains(whole.begin(), whole.end(), 1);
+      bool ret = std::ranges::contains(Iter(a.data()), Sent(Iter(a.data())), 1);
       assert(!ret);
     }
     {
-      bool ret = std::ranges::contains(whole, 1);
+      auto whole = std::ranges::subrange(Iter(a.data()), Sent(Iter(a.data())));
+      bool ret   = std::ranges::contains(whole, 1);
       assert(!ret);
     }
   }
 
   { // check that the first element matches
     ValueT a[] = {32, 3, 2, 1, 0, 23, 21, 9, 40, 100};
-    auto whole = std::ranges::subrange(Iter(a), Sent(Iter(a + 10)));
     {
-      bool ret = std::ranges::contains(whole.begin(), whole.end(), 32);
+      bool ret = std::ranges::contains(Iter(a), Sent(Iter(a + 10)), 32);
       assert(ret);
     }
     {
-      bool ret = std::ranges::contains(whole, 32);
+      auto whole = std::ranges::subrange(Iter(a), Sent(Iter(a + 10)));
+      bool ret   = std::ranges::contains(whole, 32);
       assert(ret);
     }
   }
 
   { // check that the last element matches
     ValueT a[] = {3, 22, 1, 43, 99, 0, 56, 100, 32};
-    auto whole = std::ranges::subrange(Iter(a), Sent(Iter(a + 9)));
     {
-      bool ret = std::ranges::contains(whole.begin(), whole.end(), 32);
+      bool ret = std::ranges::contains(Iter(a), Sent(Iter(a + 9)), 32);
       assert(ret);
     }
     {
-      bool ret = std::ranges::contains(whole, 32);
+      auto whole = std::ranges::subrange(Iter(a), Sent(Iter(a + 9)));
+      bool ret   = std::ranges::contains(whole, 32);
       assert(ret);
     }
   }
 
   { // no match
     ValueT a[] = {13, 1, 21, 4, 5};
-    auto whole = std::ranges::subrange(Iter(a), Sent(Iter(a + 5)));
     {
-      bool ret = std::ranges::contains(whole.begin(), whole.end(), 10);
+      bool ret = std::ranges::contains(Iter(a), Sent(Iter(a + 5)), 10);
       assert(!ret);
     }
     {
-      bool ret = std::ranges::contains(whole, 10);
+      auto whole = std::ranges::subrange(Iter(a), Sent(Iter(a + 5)));
+      bool ret   = std::ranges::contains(whole, 10);
       assert(!ret);
     }
   }
@@ -164,7 +165,7 @@ constexpr bool test() {
     });
   });
 
-  { // count invocations of the projection for continuous iterators
+  { // count invocations of the projection for contiguous iterators
     int a[]              = {1, 9, 0, 13, 25};
     int projection_count = 0;
     {
@@ -215,22 +216,22 @@ constexpr bool test() {
     }
   }
 
-  { // check invocations of the projection for non-continuous iterators
+  { // check invocations of the projection for non-contiguous iterators
     std::vector<bool> whole{false, false, true, false};
     int projection_count = 0;
     {
-      bool ret = std::ranges::contains(whole.begin(), whole.end(), true, [&](int i) {
+      bool ret = std::ranges::contains(whole.begin(), whole.end(), true, [&](bool b) {
         ++projection_count;
-        return i;
+        return b;
       });
       assert(ret);
       assert(projection_count == 3);
       projection_count = 0;
     }
     {
-      bool ret = std::ranges::contains(whole, true, [&](int i) {
+      bool ret = std::ranges::contains(whole, true, [&](bool b) {
         ++projection_count;
-        return i;
+        return b;
       });
       assert(ret);
       assert(projection_count == 3);

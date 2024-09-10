@@ -28,6 +28,9 @@
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _AlgPolicy,
@@ -73,8 +76,8 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _RandomAccessIterator
     _RandomAccessIterator __result_first,
     _RandomAccessIterator __result_last,
     _Compare __comp) {
-  static_assert(
-      __is_callable<_Compare, decltype(*__first), decltype(*__result_first)>::value, "Comparator has to be callable");
+  static_assert(__is_callable<_Compare&, decltype(*__first), decltype(*__result_first)>::value,
+                "The comparator has to be callable");
 
   auto __result = std::__partial_sort_copy<_ClassicAlgPolicy>(
       __first,
@@ -97,5 +100,7 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _RandomAccessIterator
 }
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___ALGORITHM_PARTIAL_SORT_COPY_H

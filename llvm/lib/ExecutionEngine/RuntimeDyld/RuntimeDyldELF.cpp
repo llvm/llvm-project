@@ -220,8 +220,7 @@ RuntimeDyldELF::RuntimeDyldELF(RuntimeDyld::MemoryManager &MemMgr,
 RuntimeDyldELF::~RuntimeDyldELF() = default;
 
 void RuntimeDyldELF::registerEHFrames() {
-  for (int i = 0, e = UnregisteredEHFrameSections.size(); i != e; ++i) {
-    SID EHFrameSID = UnregisteredEHFrameSections[i];
+  for (SID EHFrameSID : UnregisteredEHFrameSections) {
     uint8_t *EHFrameAddr = Sections[EHFrameSID].getAddress();
     uint64_t EHFrameLoadAddr = Sections[EHFrameSID].getLoadAddress();
     size_t EHFrameSize = Sections[EHFrameSID].getSize();
@@ -648,7 +647,7 @@ void RuntimeDyldELF::resolveARMRelocation(const SectionEntry &Section,
 
 void RuntimeDyldELF::setMipsABI(const ObjectFile &Obj) {
   if (Arch == Triple::UnknownArch ||
-      !StringRef(Triple::getArchTypePrefix(Arch)).equals("mips")) {
+      Triple::getArchTypePrefix(Arch) != "mips") {
     IsMipsO32ABI = false;
     IsMipsN32ABI = false;
     IsMipsN64ABI = false;
@@ -659,7 +658,7 @@ void RuntimeDyldELF::setMipsABI(const ObjectFile &Obj) {
     IsMipsO32ABI = AbiVariant & ELF::EF_MIPS_ABI_O32;
     IsMipsN32ABI = AbiVariant & ELF::EF_MIPS_ABI2;
   }
-  IsMipsN64ABI = Obj.getFileFormatName().equals("elf64-mips");
+  IsMipsN64ABI = Obj.getFileFormatName() == "elf64-mips";
 }
 
 // Return the .TOC. section and offset.
@@ -1129,7 +1128,8 @@ uint32_t RuntimeDyldELF::getMatchingLoRelocation(uint32_t RelType,
 bool RuntimeDyldELF::resolveAArch64ShortBranch(
     unsigned SectionID, relocation_iterator RelI,
     const RelocationValueRef &Value) {
-  uint64_t Address;
+  uint64_t TargetOffset;
+  unsigned TargetSectionID;
   if (Value.SymbolName) {
     auto Loc = GlobalSymbolTable.find(Value.SymbolName);
 
@@ -1138,23 +1138,32 @@ bool RuntimeDyldELF::resolveAArch64ShortBranch(
       return false;
 
     const auto &SymInfo = Loc->second;
-    Address =
-        uint64_t(Sections[SymInfo.getSectionID()].getLoadAddressWithOffset(
-            SymInfo.getOffset()));
+
+    TargetSectionID = SymInfo.getSectionID();
+    TargetOffset = SymInfo.getOffset();
   } else {
-    Address = uint64_t(Sections[Value.SectionID].getLoadAddress());
+    TargetSectionID = Value.SectionID;
+    TargetOffset = 0;
   }
-  uint64_t Offset = RelI->getOffset();
-  uint64_t SourceAddress = Sections[SectionID].getLoadAddressWithOffset(Offset);
+
+  // We don't actually know the load addresses at this point, so if the
+  // branch is cross-section, we don't know exactly how far away it is.
+  if (TargetSectionID != SectionID)
+    return false;
+
+  uint64_t SourceOffset = RelI->getOffset();
 
   // R_AARCH64_CALL26 requires immediate to be in range -2^27 <= imm < 2^27
   // If distance between source and target is out of range then we should
   // create thunk.
-  if (!isInt<28>(Address + Value.Addend - SourceAddress))
+  if (!isInt<28>(TargetOffset + Value.Addend - SourceOffset))
     return false;
 
-  resolveRelocation(Sections[SectionID], Offset, Address, RelI->getType(),
-                    Value.Addend);
+  RelocationEntry RE(SectionID, SourceOffset, RelI->getType(), Value.Addend);
+  if (Value.SymbolName)
+    addRelocationForSymbol(RE, Value.SymbolName);
+  else
+    addRelocationForSection(RE, Value.SectionID);
 
   return true;
 }
@@ -1173,8 +1182,7 @@ void RuntimeDyldELF::resolveAArch64Branch(unsigned SectionID,
   StubMap::const_iterator i = Stubs.find(Value);
   if (i != Stubs.end()) {
     resolveRelocation(Section, Offset,
-                      (uint64_t)Section.getAddressWithOffset(i->second),
-                      RelType, 0);
+                      Section.getLoadAddressWithOffset(i->second), RelType, 0);
     LLVM_DEBUG(dbgs() << " Stub function found\n");
   } else if (!resolveAArch64ShortBranch(SectionID, RelI, Value)) {
     // Create a new stub function.
@@ -1207,8 +1215,7 @@ void RuntimeDyldELF::resolveAArch64Branch(unsigned SectionID,
       addRelocationForSection(REmovk_g0, Value.SectionID);
     }
     resolveRelocation(Section, Offset,
-                      reinterpret_cast<uint64_t>(Section.getAddressWithOffset(
-                          Section.getStubOffset())),
+                      Section.getLoadAddressWithOffset(Section.getStubOffset()),
                       RelType, 0);
     Section.advanceStubOffset(getMaxStubSize());
   }
@@ -1339,10 +1346,9 @@ RuntimeDyldELF::processRelocationRef(
       // Look for an existing stub.
       StubMap::const_iterator i = Stubs.find(Value);
       if (i != Stubs.end()) {
-        resolveRelocation(
-            Section, Offset,
-            reinterpret_cast<uint64_t>(Section.getAddressWithOffset(i->second)),
-            RelType, 0);
+        resolveRelocation(Section, Offset,
+                          Section.getLoadAddressWithOffset(i->second), RelType,
+                          0);
         LLVM_DEBUG(dbgs() << " Stub function found\n");
       } else {
         // Create a new stub function.
@@ -1357,10 +1363,10 @@ RuntimeDyldELF::processRelocationRef(
         else
           addRelocationForSection(RE, Value.SectionID);
 
-        resolveRelocation(Section, Offset, reinterpret_cast<uint64_t>(
-                                               Section.getAddressWithOffset(
-                                                   Section.getStubOffset())),
-                          RelType, 0);
+        resolveRelocation(
+            Section, Offset,
+            Section.getLoadAddressWithOffset(Section.getStubOffset()), RelType,
+            0);
         Section.advanceStubOffset(getMaxStubSize());
       }
     } else {
@@ -1599,8 +1605,7 @@ RuntimeDyldELF::processRelocationRef(
         if (i != Stubs.end()) {
           // Symbol function stub already created, just relocate to it
           resolveRelocation(Section, Offset,
-                            reinterpret_cast<uint64_t>(
-                                Section.getAddressWithOffset(i->second)),
+                            Section.getLoadAddressWithOffset(i->second),
                             RelType, 0);
           LLVM_DEBUG(dbgs() << " Stub function found\n");
         } else {
@@ -1642,10 +1647,10 @@ RuntimeDyldELF::processRelocationRef(
             addRelocationForSection(REl, Value.SectionID);
           }
 
-          resolveRelocation(Section, Offset, reinterpret_cast<uint64_t>(
-                                                 Section.getAddressWithOffset(
-                                                     Section.getStubOffset())),
-                            RelType, 0);
+          resolveRelocation(
+              Section, Offset,
+              Section.getLoadAddressWithOffset(Section.getStubOffset()),
+              RelType, 0);
           Section.advanceStubOffset(getMaxStubSize());
         }
         if (IsExtern || (AbiVariant == 2 && Value.SectionID != SectionID)) {

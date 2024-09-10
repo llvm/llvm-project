@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -mcpu=gfx902 -verify-machineinstrs -run-pass=si-form-memory-clauses %s -o - | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx902 -verify-machineinstrs -run-pass=si-form-memory-clauses %s -o - | FileCheck -check-prefix=GCN %s
 
 # GCN-LABEL: {{^}}name: vector_clause{{$}}
 # GCN:      %1:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 0, 0, implicit $exec

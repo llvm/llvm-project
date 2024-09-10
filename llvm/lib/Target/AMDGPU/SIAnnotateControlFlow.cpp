@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
+#include "AMDGPUTargetMachine.h"
 #include "GCNSubtarget.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/UniformityAnalysis.h"
@@ -36,7 +37,8 @@ namespace {
 using StackEntry = std::pair<BasicBlock *, Value *>;
 using StackVector = SmallVector<StackEntry, 16>;
 
-class SIAnnotateControlFlow : public FunctionPass {
+class SIAnnotateControlFlow {
+private:
   UniformityInfo *UA;
 
   Type *Boolean;
@@ -89,36 +91,16 @@ class SIAnnotateControlFlow : public FunctionPass {
   bool closeControlFlow(BasicBlock *BB);
 
 public:
-  static char ID;
-
-  SIAnnotateControlFlow() : FunctionPass(ID) {}
-
-  bool runOnFunction(Function &F) override;
-
-  StringRef getPassName() const override { return "SI annotate control flow"; }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<LoopInfoWrapperPass>();
-    AU.addRequired<DominatorTreeWrapperPass>();
-    AU.addRequired<UniformityInfoWrapperPass>();
-    AU.addPreserved<LoopInfoWrapperPass>();
-    AU.addPreserved<DominatorTreeWrapperPass>();
-    AU.addRequired<TargetPassConfig>();
-    FunctionPass::getAnalysisUsage(AU);
+  SIAnnotateControlFlow(Module &M, const GCNSubtarget &ST, DominatorTree &DT,
+                        LoopInfo &LI, UniformityInfo &UA)
+      : UA(&UA), DT(&DT), LI(&LI) {
+    initialize(M, ST);
   }
+
+  bool run(Function &F);
 };
 
 } // end anonymous namespace
-
-INITIALIZE_PASS_BEGIN(SIAnnotateControlFlow, DEBUG_TYPE,
-                      "Annotate SI Control Flow", false, false)
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(UniformityInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
-INITIALIZE_PASS_END(SIAnnotateControlFlow, DEBUG_TYPE,
-                    "Annotate SI Control Flow", false, false)
-
-char SIAnnotateControlFlow::ID = 0;
 
 /// Initialize all the types and constants used in the pass
 void SIAnnotateControlFlow::initialize(Module &M, const GCNSubtarget &ST) {
@@ -147,8 +129,7 @@ void SIAnnotateControlFlow::initialize(Module &M, const GCNSubtarget &ST) {
 /// Is the branch condition uniform or did the StructurizeCFG pass
 /// consider it as such?
 bool SIAnnotateControlFlow::isUniform(BranchInst *T) {
-  return UA->isUniform(T) ||
-         T->getMetadata("structurizecfg.uniform") != nullptr;
+  return UA->isUniform(T) || T->hasMetadata("structurizecfg.uniform");
 }
 
 /// Is BB the last block saved on the stack ?
@@ -329,15 +310,20 @@ bool SIAnnotateControlFlow::closeControlFlow(BasicBlock *BB) {
   }
 
   Value *Exec = popSaved();
-  Instruction *FirstInsertionPt = &*BB->getFirstInsertionPt();
+  BasicBlock::iterator FirstInsertionPt = BB->getFirstInsertionPt();
   if (!isa<UndefValue>(Exec) && !isa<UnreachableInst>(FirstInsertionPt)) {
     Instruction *ExecDef = cast<Instruction>(Exec);
     BasicBlock *DefBB = ExecDef->getParent();
     if (!DT->dominates(DefBB, BB)) {
       // Split edge to make Def dominate Use
-      FirstInsertionPt = &*SplitEdge(DefBB, BB, DT, LI)->getFirstInsertionPt();
+      FirstInsertionPt = SplitEdge(DefBB, BB, DT, LI)->getFirstInsertionPt();
     }
-    IRBuilder<>(FirstInsertionPt).CreateCall(EndCf, {Exec});
+    IRBuilder<> IRB(FirstInsertionPt->getParent(), FirstInsertionPt);
+    // TODO: StructurizeCFG 'Flow' blocks have debug locations from the
+    // condition, for now just avoid copying these DebugLocs so that stepping
+    // out of the then/else block in a debugger doesn't step to the condition.
+    IRB.SetCurrentDebugLocation(DebugLoc());
+    IRB.CreateCall(EndCf, {Exec});
   }
 
   return true;
@@ -345,15 +331,9 @@ bool SIAnnotateControlFlow::closeControlFlow(BasicBlock *BB) {
 
 /// Annotate the control flow with intrinsics so the backend can
 /// recognize if/then/else and loops.
-bool SIAnnotateControlFlow::runOnFunction(Function &F) {
-  DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-  LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-  UA = &getAnalysis<UniformityInfoWrapperPass>().getUniformityInfo();
-  TargetPassConfig &TPC = getAnalysis<TargetPassConfig>();
-  const TargetMachine &TM = TPC.getTM<TargetMachine>();
-
+bool SIAnnotateControlFlow::run(Function &F) {
   bool Changed = false;
-  initialize(*F.getParent(), TM.getSubtarget<GCNSubtarget>(F));
+
   for (df_iterator<BasicBlock *> I = df_begin(&F.getEntryBlock()),
        E = df_end(&F.getEntryBlock()); I != E; ++I) {
     BasicBlock *BB = *I;
@@ -397,7 +377,70 @@ bool SIAnnotateControlFlow::runOnFunction(Function &F) {
   return Changed;
 }
 
+PreservedAnalyses SIAnnotateControlFlowPass::run(Function &F,
+                                                 FunctionAnalysisManager &FAM) {
+  const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
+
+  DominatorTree &DT = FAM.getResult<DominatorTreeAnalysis>(F);
+  UniformityInfo &UI = FAM.getResult<UniformityInfoAnalysis>(F);
+  LoopInfo &LI = FAM.getResult<LoopAnalysis>(F);
+
+  SIAnnotateControlFlow Impl(*F.getParent(), ST, DT, LI, UI);
+
+  // FIXME: We introduce dead declarations of intrinsics even if never used.
+  bool Changed = Impl.run(F);
+  if (!Changed)
+    return PreservedAnalyses::none();
+
+  // TODO: Is LoopInfo preserved?
+  PreservedAnalyses PA = PreservedAnalyses::none();
+  PA.preserve<DominatorTreeAnalysis>();
+  return PA;
+}
+
+class SIAnnotateControlFlowLegacy : public FunctionPass {
+public:
+  static char ID;
+
+  SIAnnotateControlFlowLegacy() : FunctionPass(ID) {}
+
+  StringRef getPassName() const override { return "SI annotate control flow"; }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<LoopInfoWrapperPass>();
+    AU.addRequired<DominatorTreeWrapperPass>();
+    AU.addRequired<UniformityInfoWrapperPass>();
+    AU.addPreserved<LoopInfoWrapperPass>();
+    AU.addPreserved<DominatorTreeWrapperPass>();
+    AU.addRequired<TargetPassConfig>();
+    FunctionPass::getAnalysisUsage(AU);
+  }
+
+  bool runOnFunction(Function &F) override {
+    DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+    LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+    UniformityInfo &UI =
+        getAnalysis<UniformityInfoWrapperPass>().getUniformityInfo();
+    TargetPassConfig &TPC = getAnalysis<TargetPassConfig>();
+    const TargetMachine &TM = TPC.getTM<TargetMachine>();
+    const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
+
+    SIAnnotateControlFlow Impl(*F.getParent(), ST, DT, LI, UI);
+    return Impl.run(F);
+  }
+};
+
+INITIALIZE_PASS_BEGIN(SIAnnotateControlFlowLegacy, DEBUG_TYPE,
+                      "Annotate SI Control Flow", false, false)
+INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(UniformityInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
+INITIALIZE_PASS_END(SIAnnotateControlFlowLegacy, DEBUG_TYPE,
+                    "Annotate SI Control Flow", false, false)
+
+char SIAnnotateControlFlowLegacy::ID = 0;
+
 /// Create the annotation pass
-FunctionPass *llvm::createSIAnnotateControlFlowPass() {
-  return new SIAnnotateControlFlow();
+FunctionPass *llvm::createSIAnnotateControlFlowLegacyPass() {
+  return new SIAnnotateControlFlowLegacy();
 }

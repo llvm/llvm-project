@@ -338,6 +338,9 @@ struct ExpandShapeOpInterface
 
     // Memref result type is inferred by the builder based on reassociation
     // indices and result shape.
+    // TODO: Instead of inferring the output shape argument of
+    // memref.expand_shape op, use output_shape argument of tensor.expand_shape
+    // op.
     replaceOpWithNewBufferizedOp<memref::ExpandShapeOp>(
         rewriter, op, tensorResultType.getShape(), *buffer,
         expandShapeOp.getReassociationIndices());
@@ -384,8 +387,8 @@ struct ExtractSliceOpInterface
     if (failed(resultMemrefType))
       return failure();
     Value subView = rewriter.create<memref::SubViewOp>(
-        loc, llvm::cast<MemRefType>(*resultMemrefType), *srcMemref, mixedOffsets,
-        mixedSizes, mixedStrides);
+        loc, llvm::cast<MemRefType>(*resultMemrefType), *srcMemref,
+        mixedOffsets, mixedSizes, mixedStrides);
 
     replaceOpWithBufferizedValues(rewriter, op, subView);
     return success();
@@ -404,8 +407,9 @@ struct ExtractSliceOpInterface
     SmallVector<OpFoldResult> mixedSizes = extractSliceOp.getMixedSizes();
     SmallVector<OpFoldResult> mixedStrides = extractSliceOp.getMixedStrides();
     return cast<BaseMemRefType>(memref::SubViewOp::inferRankReducedResultType(
-        extractSliceOp.getType().getShape(), llvm::cast<MemRefType>(*srcMemrefType),
-        mixedOffsets, mixedSizes, mixedStrides));
+        extractSliceOp.getType().getShape(),
+        llvm::cast<MemRefType>(*srcMemrefType), mixedOffsets, mixedSizes,
+        mixedStrides));
   }
 };
 
@@ -473,14 +477,14 @@ struct FromElementsOpInterface
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
                           const BufferizationOptions &options) const {
     auto fromElementsOp = cast<tensor::FromElementsOp>(op);
+    auto tensorType = cast<RankedTensorType>(fromElementsOp.getType());
 
     // TODO: Implement memory space for this op.
-    if (options.defaultMemorySpace != Attribute())
+    if (options.defaultMemorySpaceFn(tensorType) != Attribute())
       return op->emitError("memory space not implemented yet");
 
     // Allocate a buffer for the result.
     Location loc = op->getLoc();
-    auto tensorType = cast<RankedTensorType>(fromElementsOp.getType());
     auto shape = tensorType.getShape();
     // TODO: Create alloc_tensor ops during TensorCopyInsertion.
     FailureOr<Value> tensorAlloc = allocateTensorForShapedValue(
@@ -508,7 +512,7 @@ struct FromElementsOpInterface
     }
 
     // Create constants for the range of possible indices [0, max{shape_i}).
-    auto maxDim = *std::max_element(shape.begin(), shape.end());
+    auto maxDim = *llvm::max_element(shape);
     SmallVector<Value, 2> constants;
     constants.reserve(maxDim);
     for (int i = 0; i < maxDim; ++i)
@@ -588,8 +592,10 @@ struct GenerateOpInterface
                           const BufferizationOptions &options) const {
     auto generateOp = cast<tensor::GenerateOp>(op);
 
+    auto type = generateOp.getResult().getType();
+
     // TODO: Implement memory space for this op.
-    if (options.defaultMemorySpace != Attribute())
+    if (options.defaultMemorySpaceFn(type) != Attribute())
       return op->emitError("memory space not implemented yet");
 
     // Allocate memory.
@@ -983,13 +989,20 @@ struct ParallelInsertSliceOpInterface
     for (Operation *user : srcBuffer->getUsers()) {
       if (hasEffect<MemoryEffects::Free>(user)) {
         if (user->getBlock() == parallelCombiningParent->getBlock())
-          user->moveBefore(user->getBlock()->getTerminator());
+          rewriter.moveOpBefore(user, user->getBlock()->getTerminator());
         break;
       }
     }
 
     // Delete the op.
     rewriter.eraseOp(op);
+    return success();
+  }
+
+  /// tensor.parallel_insert_slice op has implicit inplace behavior. We
+  /// shouldn't create copy to resolve conflict.
+  LogicalResult resolveConflicts(Operation *op, RewriterBase &rewriter,
+                                 const AnalysisState &state) const {
     return success();
   }
 };
@@ -1007,10 +1020,6 @@ struct SplatOpInterface
     OpBuilder::InsertionGuard g(rewriter);
     auto splatOp = cast<tensor::SplatOp>(op);
 
-    // TODO: Implement memory space for this op.
-    if (options.defaultMemorySpace != Attribute())
-      return op->emitError("memory space not implemented yet");
-
     // Allocate memory.
     Location loc = op->getLoc();
     FailureOr<Value> tensorAlloc = allocateTensorForShapedValue(
@@ -1021,6 +1030,11 @@ struct SplatOpInterface
 
     // Create linalg::MapOp.
     auto tensorType = cast<RankedTensorType>(tensorAlloc->getType());
+
+    // TODO: Implement memory space for this op.
+    if (options.defaultMemorySpaceFn(tensorType) != Attribute())
+      return op->emitError("memory space not implemented yet");
+
     auto linalgOp =
         rewriter.create<linalg::MapOp>(loc, tensorType, /*inputs=*/ValueRange(),
                                        /*init=*/*tensorAlloc);

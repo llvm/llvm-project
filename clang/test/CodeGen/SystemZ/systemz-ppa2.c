@@ -13,14 +13,14 @@
 // REQUIRES: systemz-registered-target
 
 // RUN: %clang_cc1 -triple s390x-ibm-zos -xc -S -o - %s | FileCheck %s --check-prefix CHECK-C
-// CHECK-C:        [[PPA2:(.L)|(@@)PPA2]]:
+// CHECK-C:        [[PPA2:(.L)|(L#)PPA2]]:
 // CHECK-C-NEXT:   .byte        3{{[[:space:]]*}}.byte 0
 // CHECK-C-NEXT:   .byte        34{{$}}
 // CHECK-C-NEXT:   .byte        {{4}}
 // CHECK-C-NEXT:   .long        {{(CELQSTRT)}}-[[PPA2]]
 
 // RUN: %clang_cc1 -triple s390x-ibm-zos -xc++ -S -o - %s | FileCheck %s --check-prefix CHECK-CXX
-// CHECK-CXX:        [[PPA2:(.L)|(@@)PPA2]]:
+// CHECK-CXX:        [[PPA2:(.L)|(L#)PPA2]]:
 // CHECK-CXX-NEXT:   .byte      3{{[[:space:]]*}}.byte 1
 // CHECK-CXX-NEXT:   .byte      34{{$}}
 // CHECK-CXX-NEXT:   .byte      {{4}}

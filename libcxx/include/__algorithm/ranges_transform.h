@@ -26,6 +26,9 @@
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 #if _LIBCPP_STD_VER >= 20
 
 _LIBCPP_BEGIN_NAMESPACE_STD
@@ -38,8 +41,7 @@ using unary_transform_result = in_out_result<_Ip, _Op>;
 template <class _I1, class _I2, class _O1>
 using binary_transform_result = in_in_out_result<_I1, _I2, _O1>;
 
-namespace __transform {
-struct __fn {
+struct __transform {
 private:
   template <class _InIter, class _Sent, class _OutIter, class _Func, class _Proj>
   _LIBCPP_HIDE_FROM_ABI static constexpr unary_transform_result<_InIter, _OutIter>
@@ -158,15 +160,16 @@ public:
         __projection2);
   }
 };
-} // namespace __transform
 
 inline namespace __cpo {
-inline constexpr auto transform = __transform::__fn{};
+inline constexpr auto transform = __transform{};
 } // namespace __cpo
 } // namespace ranges
 
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 20
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___ALGORITHM_RANGES_TRANSFORM_H

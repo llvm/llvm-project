@@ -71,14 +71,14 @@ def remark_fe_backend_optimization_remark_analysis : Remark<"%0">, BackendInfo,
     InGroup<BackendOptimizationRemarkAnalysis>;
 def remark_fe_backend_optimization_remark_analysis_fpcommute : Remark<"%0; "
     "allow reordering by specifying '#pragma clang loop vectorize(enable)' "
-    "before the loop or by providing the compiler option '-ffast-math'.">,
+    "before the loop or by providing the compiler option '-ffast-math'">,
     BackendInfo, InGroup<BackendOptimizationRemarkAnalysis>;
 def remark_fe_backend_optimization_remark_analysis_aliasing : Remark<"%0; "
     "allow reordering by specifying '#pragma clang loop vectorize(enable)' "
-    "before the loop. If the arrays will always be independent specify "
+    "before the loop; if the arrays will always be independent, specify "
     "'#pragma clang loop vectorize(assume_safety)' before the loop or provide "
-    "the '__restrict__' qualifier with the independent array arguments. "
-    "Erroneous results will occur if these options are incorrectly applied!">,
+    "the '__restrict__' qualifier with the independent array arguments -- "
+    "erroneous results will occur if these options are incorrectly applied">,
     BackendInfo, InGroup<BackendOptimizationRemarkAnalysis>;
 
 def warn_fe_backend_optimization_failure : Warning<"%0">, BackendInfo,
@@ -94,6 +94,8 @@ def err_fe_backend_error_attr :
 def warn_fe_backend_warning_attr :
   Warning<"call to '%0' declared with 'warning' attribute: %1">, BackendInfo,
   InGroup<BackendWarningAttributes>;
+def warn_toc_unsupported_type : Warning<"-mtocdata option is ignored "
+  "for %0 because %1">, InGroup<BackendWarningAttributes>;
 
 def err_fe_invalid_code_complete_file : Error<
     "cannot locate code-completion file %0">, DefaultFatal;
@@ -132,6 +134,8 @@ def err_fe_no_pch_in_dir : Error<
     "no suitable precompiled header file found in directory '%0'">;
 def err_fe_action_not_available : Error<
     "action %0 not compiled in">;
+def err_fe_invalid_multiple_actions : Error<
+    "'%0' action ignored; '%1' action specified previously">;
 def err_fe_invalid_alignment : Error<
     "invalid value '%1' in '%0'; alignment must be a power of 2">;
 def err_fe_invalid_exception_model
@@ -148,8 +152,8 @@ def warn_fe_serialized_diag_merge_failure : Warning<
 def warn_fe_serialized_diag_failure : Warning<
     "unable to open file %0 for serializing diagnostics (%1)">,
     InGroup<SerializedDiagnostics>;
-def warn_fe_serialized_diag_failure_during_finalisation : Warning<
-    "Received warning after diagnostic serialization teardown was underway: %0">,
+def warn_fe_serialized_diag_failure_during_finalization : Warning<
+    "received warning after diagnostic serialization teardown was underway: %0">,
     InGroup<SerializedDiagnostics>;
 
 def err_verify_missing_line : Error<
@@ -176,10 +180,10 @@ def err_verify_inconsistent_diags : Error<
     "'%0' diagnostics %select{expected|seen}1 but not %select{seen|expected}1: "
     "%2">;
 def err_verify_invalid_no_diags : Error<
-    "%select{expected|'expected-no-diagnostics'}0 directive cannot follow "
-    "%select{'expected-no-diagnostics' directive|other expected directives}0">;
+    "%select{expected|'%0-no-diagnostics'}1 directive cannot follow "
+    "%select{'%0-no-diagnostics' directive|other expected directives}1">;
 def err_verify_no_directives : Error<
-    "no expected directives found: consider use of 'expected-no-diagnostics'">;
+    "no expected directives found: consider use of '%0-no-diagnostics'">;
 def err_verify_nonconst_addrspace : Error<
   "qualifier 'const' is needed for variables in address space '%0'">;
 
@@ -222,6 +226,7 @@ def err_module_map_not_found : Error<"module map file '%0' not found">,
 def err_missing_module_name : Error<
   "no module name provided; specify one with -fmodule-name=">,
   DefaultFatal;
+def err_file_is_not_module : Error<"file '%0' is not a module file">, DefaultFatal;
 def err_missing_module : Error<
   "no module named '%0' declared in module map file '%1'">, DefaultFatal;
 def err_no_submodule : Error<"no submodule named %0 in module '%1'">;
@@ -280,11 +285,24 @@ def err_function_needs_feature : Error<
   "always_inline function %1 requires target feature '%2', but would "
   "be inlined into function %0 that is compiled without support for '%2'">;
 
+let CategoryName = "Codegen ABI Check" in {
+def err_function_always_inline_attribute_mismatch : Error<
+  "always_inline function %1 and its caller %0 have mismatching %2 attributes">;
+def warn_function_always_inline_attribute_mismatch : Warning<
+  "always_inline function %1 and its caller %0 have mismatching %2 attributes, "
+  "inlining may change runtime behaviour">, InGroup<AArch64SMEAttributes>;
+def err_function_always_inline_new_za : Error<
+  "always_inline function %0 has new za state">;
+
 def warn_avx_calling_convention
     : Warning<"AVX vector %select{return|argument}0 of type %1 without '%2' "
               "enabled changes the ABI">,
       InGroup<DiagGroup<"psabi">>;
 def err_avx_calling_convention : Error<warn_avx_calling_convention.Summary>;
+
+def err_target_unsupported_type_for_abi
+    : Error<"%0 requires %1 type support, but ABI '%2' does not support it">;
+}
 
 def err_alias_to_undefined : Error<
   "%select{alias|ifunc}0 must point to a defined "
@@ -323,7 +341,7 @@ def warn_atomic_op_oversized : Warning<
 InGroup<AtomicAlignment>;
 
 def warn_sync_op_misaligned : Warning<
-  "__sync builtin operation MUST have natural alignment (consider using __atomic).">,
+  "__sync builtin operation must have natural alignment (consider using __atomic)">,
   InGroup<SyncAlignment>;
 
 def warn_alias_with_section : Warning<
@@ -345,13 +363,19 @@ def warn_profile_data_unprofiled : Warning<
   "no profile data available for file \"%0\"">,
   InGroup<ProfileInstrUnprofiled>;
 def warn_profile_data_misexpect : Warning<
-  "Potential performance regression from use of __builtin_expect(): "
-  "Annotation was correct on %0 of profiled executions.">,
-  BackendInfo,
-  InGroup<MisExpect>;
+  "potential performance regression from use of __builtin_expect(): "
+  "annotation was correct on %0 of profiled executions">,
+  BackendInfo, InGroup<MisExpect>;
 } // end of instrumentation issue category
 
 def err_extract_api_ignores_file_not_found :
   Error<"file '%0' specified by '--extract-api-ignores=' not found">, DefaultFatal;
 
+def warn_missing_symbol_graph_dir : Warning<
+  "missing symbol graph output directory, defaulting to working directory">,
+  InGroup<ExtractAPIMisuse>;
+
+def err_ast_action_on_llvm_ir : Error<
+  "cannot apply AST actions to LLVM IR file '%0'">,
+  DefaultFatal;
 }

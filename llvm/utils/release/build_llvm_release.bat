@@ -7,7 +7,7 @@ goto begin
 echo Script for building the LLVM installer on Windows,
 echo used for the releases at https://github.com/llvm/llvm-project/releases
 echo.
-echo Usage: build_llvm_release.bat --version ^<version^> [--x86,--x64, --arm64]
+echo Usage: build_llvm_release.bat --version ^<version^> [--x86,--x64, --arm64] [--skip-checkout] [--local-python]
 echo.
 echo Options:
 echo --version: [required] version to build
@@ -15,6 +15,8 @@ echo --help: display this help
 echo --x86: build and test x86 variant
 echo --x64: build and test x64 variant
 echo --arm64: build and test arm64 variant
+echo --skip-checkout: use local git checkout instead of downloading src.zip
+echo --local-python: use installed Python and does not try to use a specific version (3.10)
 echo.
 echo Note: At least one variant to build is required.
 echo.
@@ -30,6 +32,8 @@ set help=
 set x86=
 set x64=
 set arm64=
+set skip-checkout=
+set local-python=
 call :parse_args %*
 
 if "%help%" NEQ "" goto usage
@@ -126,20 +130,28 @@ if exist %build_dir% (
 mkdir %build_dir%
 cd %build_dir% || exit /b 1
 
-echo Checking out %revision%
-curl -L https://github.com/llvm/llvm-project/archive/%revision%.zip -o src.zip || exit /b 1
-7z x src.zip || exit /b 1
-mv llvm-project-* llvm-project || exit /b 1
+if "%skip-checkout%" == "true" (
+  echo Using local source
+  set llvm_src=%~dp0..\..\..
+) else (
+  echo Checking out %revision%
+  curl -L https://github.com/llvm/llvm-project/archive/%revision%.zip -o src.zip || exit /b 1
+  7z x src.zip || exit /b 1
+  mv llvm-project-* llvm-project || exit /b 1
+  set llvm_src=%build_dir%\llvm-project
+)
 
 curl -O https://gitlab.gnome.org/GNOME/libxml2/-/archive/v2.9.12/libxml2-v2.9.12.tar.gz || exit /b 1
 tar zxf libxml2-v2.9.12.tar.gz
 
 REM Setting CMAKE_CL_SHOWINCLUDES_PREFIX to work around PR27226.
 REM Common flags for all builds.
+set common_compiler_flags=-DLIBXML_STATIC
 set common_cmake_flags=^
   -DCMAKE_BUILD_TYPE=Release ^
   -DLLVM_ENABLE_ASSERTIONS=OFF ^
   -DLLVM_INSTALL_TOOLCHAIN_ONLY=ON ^
+  -DLLVM_TARGETS_TO_BUILD="AArch64;ARM;X86" ^
   -DLLVM_BUILD_LLVM_C_DYLIB=ON ^
   -DCMAKE_INSTALL_UCRT_LIBRARIES=ON ^
   -DPython3_FIND_REGISTRY=NEVER ^
@@ -150,11 +162,12 @@ set common_cmake_flags=^
   -DLLVM_ENABLE_LIBXML2=FORCE_ON ^
   -DLLDB_ENABLE_LIBXML2=OFF ^
   -DCLANG_ENABLE_LIBXML2=OFF ^
-  -DCMAKE_C_FLAGS="-DLIBXML_STATIC" ^
-  -DCMAKE_CXX_FLAGS="-DLIBXML_STATIC" ^
+  -DCMAKE_C_FLAGS="%common_compiler_flags%" ^
+  -DCMAKE_CXX_FLAGS="%common_compiler_flags%" ^
+  -DLLVM_ENABLE_RPMALLOC=ON ^
   -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld;compiler-rt;lldb;openmp"
 
-set cmake_profile_flag=""
+set cmake_profile_flags=""
 
 REM Preserve original path
 set OLDPATH=%PATH%
@@ -180,13 +193,14 @@ REM Stage0 binaries directory; used in stage1.
 set "stage0_bin_dir=%build_dir%/build32_stage0/bin"
 set cmake_flags=^
   %common_cmake_flags% ^
+  -DLLVM_ENABLE_RPMALLOC=OFF ^
   -DLLDB_TEST_COMPILER=%stage0_bin_dir%/clang.exe ^
   -DPYTHON_HOME=%PYTHONHOME% ^
   -DPython3_ROOT_DIR=%PYTHONHOME% ^
-  -DLIBXML2_INCLUDE_DIRS=%libxmldir%/include/libxml2 ^
+  -DLIBXML2_INCLUDE_DIR=%libxmldir%/include/libxml2 ^
   -DLIBXML2_LIBRARIES=%libxmldir%/lib/libxml2s.lib
 
-cmake -GNinja %cmake_flags% ..\llvm-project\llvm || exit /b 1
+cmake -GNinja %cmake_flags% %llvm_src%\llvm || exit /b 1
 ninja || ninja || ninja || exit /b 1
 REM ninja check-llvm || ninja check-llvm || ninja check-llvm || exit /b 1
 REM ninja check-clang || ninja check-clang || ninja check-clang || exit /b 1
@@ -208,7 +222,7 @@ set cmake_flags=%all_cmake_flags:\=/%
 
 mkdir build32
 cd build32
-cmake -GNinja %cmake_flags% ..\llvm-project\llvm || exit /b 1
+cmake -GNinja %cmake_flags% %llvm_src%\llvm || exit /b 1
 ninja || ninja || ninja || exit /b 1
 REM ninja check-llvm || ninja check-llvm || ninja check-llvm || exit /b 1
 REM ninja check-clang || ninja check-clang || ninja check-clang || exit /b 1
@@ -239,10 +253,10 @@ set cmake_flags=^
   -DLLDB_TEST_COMPILER=%stage0_bin_dir%/clang.exe ^
   -DPYTHON_HOME=%PYTHONHOME% ^
   -DPython3_ROOT_DIR=%PYTHONHOME% ^
-  -DLIBXML2_INCLUDE_DIRS=%libxmldir%/include/libxml2 ^
+  -DLIBXML2_INCLUDE_DIR=%libxmldir%/include/libxml2 ^
   -DLIBXML2_LIBRARIES=%libxmldir%/lib/libxml2s.lib
 
-cmake -GNinja %cmake_flags% ..\llvm-project\llvm || exit /b 1
+cmake -GNinja %cmake_flags% %llvm_src%\llvm || exit /b 1
 ninja || ninja || ninja || exit /b 1
 ninja check-llvm || ninja check-llvm || ninja check-llvm || exit /b 1
 ninja check-clang || ninja check-clang || ninja check-clang || exit /b 1
@@ -267,7 +281,7 @@ set cmake_flags=%all_cmake_flags:\=/%
 mkdir build64
 cd build64
 call :do_generate_profile || exit /b 1
-cmake -GNinja %cmake_flags% %cmake_profile_flag% ..\llvm-project\llvm || exit /b 1
+cmake -GNinja %cmake_flags% %cmake_profile_flags% %llvm_src%\llvm || exit /b 1
 ninja || ninja || ninja || exit /b 1
 ninja check-llvm || ninja check-llvm || ninja check-llvm || exit /b 1
 ninja check-clang || ninja check-clang || ninja check-clang || exit /b 1
@@ -276,7 +290,16 @@ ninja check-sanitizer || ninja check-sanitizer || ninja check-sanitizer || exit 
 ninja check-clang-tools || ninja check-clang-tools || ninja check-clang-tools || exit /b 1
 ninja check-clangd || ninja check-clangd || ninja check-clangd || exit /b 1
 ninja package || exit /b 1
+
+:: generate tarball with install toolchain only off
+set filename=clang+llvm-%version%-x86_64-pc-windows-msvc
+cmake -GNinja %cmake_flags% %cmake_profile_flags% -DLLVM_INSTALL_TOOLCHAIN_ONLY=OFF ^
+  -DCMAKE_INSTALL_PREFIX=%build_dir%/%filename% ..\llvm-project\llvm || exit /b 1
+ninja install || exit /b 1
+:: check llvm_config is present & returns something
+%build_dir%/%filename%/bin/llvm-config.exe --bindir || exit /b 1
 cd ..
+7z a -ttar -so %filename%.tar %filename% | 7z a -txz -si %filename%.tar.xz
 
 exit /b 0
 ::==============================================================================
@@ -297,7 +320,7 @@ set "stage0_bin_dir=%build_dir%/build_arm64_stage0/bin"
 set cmake_flags=^
   %common_cmake_flags% ^
   -DCLANG_DEFAULT_LINKER=lld ^
-  -DLIBXML2_INCLUDE_DIRS=%libxmldir%/include/libxml2 ^
+  -DLIBXML2_INCLUDE_DIR=%libxmldir%/include/libxml2 ^
   -DLIBXML2_LIBRARIES=%libxmldir%/lib/libxml2s.lib ^
   -DPython3_ROOT_DIR=%PYTHONHOME% ^
   -DCOMPILER_RT_BUILD_PROFILE=OFF ^
@@ -307,7 +330,7 @@ REM We need to build stage0 compiler-rt with clang-cl (msvc lacks some builtins)
 cmake -GNinja %cmake_flags% ^
   -DCMAKE_C_COMPILER=clang-cl.exe ^
   -DCMAKE_CXX_COMPILER=clang-cl.exe ^
-  ..\llvm-project\llvm || exit /b 1
+  %llvm_src%\llvm || exit /b 1
 ninja || exit /b 1
 ::ninja check-llvm || exit /b 1
 ::ninja check-clang || exit /b 1
@@ -332,7 +355,7 @@ set cmake_flags=%all_cmake_flags:\=/%
 
 mkdir build_arm64
 cd build_arm64
-cmake -GNinja %cmake_flags% ..\llvm-project\llvm || exit /b 1
+cmake -GNinja %cmake_flags% %llvm_src%\llvm || exit /b 1
 ninja || exit /b 1
 REM Check but do not fail on errors.
 ninja check-lldb
@@ -358,8 +381,13 @@ set PATH=%OLDPATH%
 set python_dir=%1
 
 REM Set Python environment
-%python_dir%/python.exe --version || exit /b 1
-set PYTHONHOME=%python_dir%
+if "%local-python%" == "true" (
+  FOR /F "delims=" %%i IN ('where python.exe ^| head -1') DO set python_exe=%%i
+  set PYTHONHOME=!python_exe:~0,-11!
+) else (
+  %python_dir%/python.exe --version || exit /b 1
+  set PYTHONHOME=%python_dir%
+)
 set PATH=%PYTHONHOME%;%PATH%
 
 set "VSCMD_START_DIR=%build_dir%"
@@ -387,6 +415,7 @@ cmake -GNinja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=install ^
   -DLIBXML2_WITH_THREADS=ON -DLIBXML2_WITH_THREAD_ALLOC=OFF -DLIBXML2_WITH_TREE=ON ^
   -DLIBXML2_WITH_VALID=OFF -DLIBXML2_WITH_WRITER=OFF -DLIBXML2_WITH_XINCLUDE=OFF ^
   -DLIBXML2_WITH_XPATH=OFF -DLIBXML2_WITH_XPTR=OFF -DLIBXML2_WITH_ZLIB=OFF ^
+  -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded ^
   ../../libxml2-v2.9.12 || exit /b 1
 ninja install || exit /b 1
 set libxmldir=%cd%\install
@@ -402,7 +431,7 @@ REM Build Clang with instrumentation.
 mkdir instrument
 cd instrument
 cmake -GNinja %cmake_flags% -DLLVM_TARGETS_TO_BUILD=Native ^
-  -DLLVM_BUILD_INSTRUMENTED=IR ..\..\llvm-project\llvm || exit /b 1
+  -DLLVM_BUILD_INSTRUMENTED=IR %llvm_src%\llvm || exit /b 1
 ninja clang || ninja clang || ninja clang || exit /b 1
 set instrumented_clang=%cd:\=/%/bin/clang-cl.exe
 cd ..
@@ -414,14 +443,17 @@ cmake -GNinja %cmake_flags% ^
   -DCMAKE_CXX_COMPILER=%instrumented_clang% ^
   -DLLVM_ENABLE_PROJECTS=clang ^
   -DLLVM_TARGETS_TO_BUILD=Native ^
-  ..\..\llvm-project\llvm || exit /b 1
+  %llvm_src%\llvm || exit /b 1
 REM Drop profiles generated from running cmake; those are not representative.
 del ..\instrument\profiles\*.profraw
 ninja tools/clang/lib/Sema/CMakeFiles/obj.clangSema.dir/Sema.cpp.obj
 cd ..
 set profile=%cd:\=/%/profile.profdata
 %stage0_bin_dir%\llvm-profdata merge -output=%profile% instrument\profiles\*.profraw || exit /b 1
-set cmake_profile_flag=-DLLVM_PROFDATA_FILE=%profile%
+set common_compiler_flags=%common_compiler_flags% -Wno-backend-plugin
+set cmake_profile_flags=-DLLVM_PROFDATA_FILE=%profile% ^
+  -DCMAKE_C_FLAGS="%common_compiler_flags%" ^
+  -DCMAKE_CXX_FLAGS="%common_compiler_flags%"
 exit /b 0
 
 ::=============================================================================

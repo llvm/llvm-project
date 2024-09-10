@@ -11,27 +11,27 @@ define half @vectorize_v2f16_loop(ptr addrspace(1) noalias %s) {
 ; GFX9-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; GFX9:       vector.body:
 ; GFX9-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; GFX9-NEXT:    [[VEC_PHI:%.*]] = phi <2 x half> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP4:%.*]], [[VECTOR_BODY]] ]
-; GFX9-NEXT:    [[VEC_PHI1:%.*]] = phi <2 x half> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP5:%.*]], [[VECTOR_BODY]] ]
+; GFX9-NEXT:    [[VEC_PHI:%.*]] = phi <2 x half> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP2:%.*]], [[VECTOR_BODY]] ]
+; GFX9-NEXT:    [[VEC_PHI1:%.*]] = phi <2 x half> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP3:%.*]], [[VECTOR_BODY]] ]
 ; GFX9-NEXT:    [[TMP0:%.*]] = getelementptr inbounds half, ptr addrspace(1) [[S:%.*]], i64 [[INDEX]]
-; GFX9-NEXT:    [[TMP2:%.*]] = getelementptr inbounds half, ptr addrspace(1) [[TMP0]], i64 2
+; GFX9-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP0]], i64 4
 ; GFX9-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x half>, ptr addrspace(1) [[TMP0]], align 2
-; GFX9-NEXT:    [[WIDE_LOAD2:%.*]] = load <2 x half>, ptr addrspace(1) [[TMP2]], align 2
-; GFX9-NEXT:    [[TMP4]] = fadd fast <2 x half> [[VEC_PHI]], [[WIDE_LOAD]]
-; GFX9-NEXT:    [[TMP5]] = fadd fast <2 x half> [[VEC_PHI1]], [[WIDE_LOAD2]]
+; GFX9-NEXT:    [[WIDE_LOAD2:%.*]] = load <2 x half>, ptr addrspace(1) [[TMP1]], align 2
+; GFX9-NEXT:    [[TMP2]] = fadd fast <2 x half> [[VEC_PHI]], [[WIDE_LOAD]]
+; GFX9-NEXT:    [[TMP3]] = fadd fast <2 x half> [[VEC_PHI1]], [[WIDE_LOAD2]]
 ; GFX9-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; GFX9-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 256
-; GFX9-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; GFX9-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], 256
+; GFX9-NEXT:    br i1 [[TMP4]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; GFX9:       middle.block:
-; GFX9-NEXT:    [[BIN_RDX:%.*]] = fadd fast <2 x half> [[TMP5]], [[TMP4]]
-; GFX9-NEXT:    [[TMP7:%.*]] = call fast half @llvm.vector.reduce.fadd.v2f16(half 0xH8000, <2 x half> [[BIN_RDX]])
+; GFX9-NEXT:    [[BIN_RDX:%.*]] = fadd fast <2 x half> [[TMP3]], [[TMP2]]
+; GFX9-NEXT:    [[TMP5:%.*]] = call fast half @llvm.vector.reduce.fadd.v2f16(half 0xH0000, <2 x half> [[BIN_RDX]])
 ; GFX9-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; GFX9:       scalar.ph:
 ; GFX9-NEXT:    br label [[FOR_BODY:%.*]]
 ; GFX9:       for.body:
 ; GFX9-NEXT:    br i1 poison, label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
 ; GFX9:       for.end:
-; GFX9-NEXT:    [[ADD_LCSSA:%.*]] = phi half [ poison, [[FOR_BODY]] ], [ [[TMP7]], [[MIDDLE_BLOCK]] ]
+; GFX9-NEXT:    [[ADD_LCSSA:%.*]] = phi half [ poison, [[FOR_BODY]] ], [ [[TMP5]], [[MIDDLE_BLOCK]] ]
 ; GFX9-NEXT:    ret half [[ADD_LCSSA]]
 ;
 ; VI-LABEL: @vectorize_v2f16_loop(
@@ -41,27 +41,27 @@ define half @vectorize_v2f16_loop(ptr addrspace(1) noalias %s) {
 ; VI-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VI:       vector.body:
 ; VI-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VI-NEXT:    [[VEC_PHI:%.*]] = phi <2 x half> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP4:%.*]], [[VECTOR_BODY]] ]
-; VI-NEXT:    [[VEC_PHI1:%.*]] = phi <2 x half> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP5:%.*]], [[VECTOR_BODY]] ]
+; VI-NEXT:    [[VEC_PHI:%.*]] = phi <2 x half> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP2:%.*]], [[VECTOR_BODY]] ]
+; VI-NEXT:    [[VEC_PHI1:%.*]] = phi <2 x half> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP3:%.*]], [[VECTOR_BODY]] ]
 ; VI-NEXT:    [[TMP0:%.*]] = getelementptr inbounds half, ptr addrspace(1) [[S:%.*]], i64 [[INDEX]]
-; VI-NEXT:    [[TMP2:%.*]] = getelementptr inbounds half, ptr addrspace(1) [[TMP0]], i64 2
+; VI-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP0]], i64 4
 ; VI-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x half>, ptr addrspace(1) [[TMP0]], align 2
-; VI-NEXT:    [[WIDE_LOAD2:%.*]] = load <2 x half>, ptr addrspace(1) [[TMP2]], align 2
-; VI-NEXT:    [[TMP4]] = fadd fast <2 x half> [[VEC_PHI]], [[WIDE_LOAD]]
-; VI-NEXT:    [[TMP5]] = fadd fast <2 x half> [[VEC_PHI1]], [[WIDE_LOAD2]]
+; VI-NEXT:    [[WIDE_LOAD2:%.*]] = load <2 x half>, ptr addrspace(1) [[TMP1]], align 2
+; VI-NEXT:    [[TMP2]] = fadd fast <2 x half> [[VEC_PHI]], [[WIDE_LOAD]]
+; VI-NEXT:    [[TMP3]] = fadd fast <2 x half> [[VEC_PHI1]], [[WIDE_LOAD2]]
 ; VI-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; VI-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 256
-; VI-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; VI-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], 256
+; VI-NEXT:    br i1 [[TMP4]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; VI:       middle.block:
-; VI-NEXT:    [[BIN_RDX:%.*]] = fadd fast <2 x half> [[TMP5]], [[TMP4]]
-; VI-NEXT:    [[TMP7:%.*]] = call fast half @llvm.vector.reduce.fadd.v2f16(half 0xH8000, <2 x half> [[BIN_RDX]])
+; VI-NEXT:    [[BIN_RDX:%.*]] = fadd fast <2 x half> [[TMP3]], [[TMP2]]
+; VI-NEXT:    [[TMP5:%.*]] = call fast half @llvm.vector.reduce.fadd.v2f16(half 0xH0000, <2 x half> [[BIN_RDX]])
 ; VI-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; VI:       scalar.ph:
 ; VI-NEXT:    br label [[FOR_BODY:%.*]]
 ; VI:       for.body:
 ; VI-NEXT:    br i1 poison, label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
 ; VI:       for.end:
-; VI-NEXT:    [[ADD_LCSSA:%.*]] = phi half [ poison, [[FOR_BODY]] ], [ [[TMP7]], [[MIDDLE_BLOCK]] ]
+; VI-NEXT:    [[ADD_LCSSA:%.*]] = phi half [ poison, [[FOR_BODY]] ], [ [[TMP5]], [[MIDDLE_BLOCK]] ]
 ; VI-NEXT:    ret half [[ADD_LCSSA]]
 ;
 ; CI-LABEL: @vectorize_v2f16_loop(

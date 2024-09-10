@@ -936,7 +936,7 @@ def : Builtin<"read_mem_fence", [Void, MemFenceFlags]>;
 def : Builtin<"write_mem_fence", [Void, MemFenceFlags]>;
 
 // OpenCL v3.0 s6.15.10 - Address Space Qualifier Functions.
-// to_global, to_local, to_private are declared in Builtins.def.
+// to_global, to_local, to_private are declared in Builtins.td.
 
 let Extension = FuncExtOpenCLCGenericAddressSpace in {
   // The OpenCL 3.0 specification defines these with a "gentype" argument indicating any builtin
@@ -1448,25 +1448,25 @@ let Extension = FuncExtOpenCLCWGCollectiveFunctions in {
 //--------------------------------------------------------------------
 // OpenCL2.0 : 6.13.16 : Pipe Functions
 // --- Table 27 ---
-// Defined in Builtins.def
+// Defined in Builtins.td
 
 // --- Table 28 ---
-// Builtins taking pipe arguments are defined in Builtins.def
+// Builtins taking pipe arguments are defined in Builtins.td
 let Extension = FuncExtOpenCLCPipes in {
   def : Builtin<"is_valid_reserve_id", [Bool, ReserveId]>;
 }
 
 // --- Table 29 ---
-// Defined in Builtins.def
+// Defined in Builtins.td
 
 
 //--------------------------------------------------------------------
 // OpenCL2.0 : 6.13.17 : Enqueuing Kernels
 // --- Table 30 ---
-// Defined in Builtins.def
+// Defined in Builtins.td
 
 // --- Table 32 ---
-// Defined in Builtins.def
+// Defined in Builtins.td
 
 // --- Table 33 ---
 let Extension = FuncExtOpenCLCDeviceEnqueue in {
@@ -1850,6 +1850,20 @@ let Extension = FunctionExtension<"__opencl_c_integer_dot_product_input_4x8bit_p
 let Extension = FunctionExtension<"cl_khr_subgroup_rotate"> in {
   def : Builtin<"sub_group_rotate", [AGenType1, AGenType1, Int], Attr.Convergent>;
   def : Builtin<"sub_group_clustered_rotate", [AGenType1, AGenType1, Int, UInt], Attr.Convergent>;
+}
+
+// cl_khr_kernel_clock
+let Extension = FunctionExtension<"cl_khr_kernel_clock __opencl_c_kernel_clock_scope_device"> in {
+  def : Builtin<"clock_read_device", [ULong]>;
+  def : Builtin<"clock_read_hilo_device", [VectorType<UInt, 2>]>;
+}
+let Extension = FunctionExtension<"cl_khr_kernel_clock __opencl_c_kernel_clock_scope_work_group"> in {
+  def : Builtin<"clock_read_work_group", [ULong]>;
+  def : Builtin<"clock_read_hilo_work_group", [VectorType<UInt, 2>]>;
+}
+let Extension = FunctionExtension<"cl_khr_kernel_clock __opencl_c_kernel_clock_scope_sub_group"> in {
+  def : Builtin<"clock_read_sub_group", [ULong]>;
+  def : Builtin<"clock_read_hilo_sub_group", [VectorType<UInt, 2>]>;
 }
 
 //--------------------------------------------------------------------

@@ -9,7 +9,7 @@
 #include "DWARFLinkerImpl.h"
 #include "DIEGenerator.h"
 #include "DependencyTracker.h"
-#include "Utils.h"
+#include "llvm/DWARFLinker/Utils.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugAbbrev.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Parallel.h"
@@ -20,11 +20,9 @@ using namespace dwarf_linker;
 using namespace dwarf_linker::parallel;
 
 DWARFLinkerImpl::DWARFLinkerImpl(MessageHandlerTy ErrorHandler,
-                                 MessageHandlerTy WarningHandler,
-                                 TranslatorFuncTy StringsTranslator)
+                                 MessageHandlerTy WarningHandler)
     : UniqueUnitID(0), DebugStrStrings(GlobalData),
       DebugLineStrStrings(GlobalData), CommonSections(GlobalData) {
-  GlobalData.setTranslator(StringsTranslator);
   GlobalData.setErrorHandler(ErrorHandler);
   GlobalData.setWarningHandler(WarningHandler);
 }
@@ -32,11 +30,9 @@ DWARFLinkerImpl::DWARFLinkerImpl(MessageHandlerTy ErrorHandler,
 DWARFLinkerImpl::LinkContext::LinkContext(LinkingGlobalData &GlobalData,
                                           DWARFFile &File,
                                           StringMap<uint64_t> &ClangModules,
-                                          std::atomic<size_t> &UniqueUnitID,
-                                          std::optional<Triple> TargetTriple)
+                                          std::atomic<size_t> &UniqueUnitID)
     : OutputSections(GlobalData), InputDWARFFile(File),
-      ClangModules(ClangModules), TargetTriple(TargetTriple),
-      UniqueUnitID(UniqueUnitID) {
+      ClangModules(ClangModules), UniqueUnitID(UniqueUnitID) {
 
   if (File.Dwarf) {
     if (!File.Dwarf->compile_units().empty())
@@ -63,25 +59,10 @@ void DWARFLinkerImpl::LinkContext::addModulesCompileUnit(
   ModulesCompileUnits.emplace_back(std::move(Unit));
 }
 
-Error DWARFLinkerImpl::createEmitter(const Triple &TheTriple,
-                                     OutputFileType FileType,
-                                     raw_pwrite_stream &OutFile) {
-
-  TheDwarfEmitter = std::make_unique<DwarfEmitterImpl>(FileType, OutFile);
-
-  return TheDwarfEmitter->init(TheTriple, "__DWARF");
-}
-
-ExtraDwarfEmitter *DWARFLinkerImpl::getEmitter() {
-  return TheDwarfEmitter.get();
-}
-
 void DWARFLinkerImpl::addObjectFile(DWARFFile &File, ObjFileLoaderTy Loader,
                                     CompileUnitHandlerTy OnCUDieLoaded) {
   ObjectContexts.emplace_back(std::make_unique<LinkContext>(
-      GlobalData, File, ClangModules, UniqueUnitID,
-      (TheDwarfEmitter.get() == nullptr ? std::optional<Triple>(std::nullopt)
-                                        : TheDwarfEmitter->getTargetTriple())));
+      GlobalData, File, ClangModules, UniqueUnitID));
 
   if (ObjectContexts.back()->InputDWARFFile.Dwarf) {
     for (const std::unique_ptr<DWARFUnit> &CU :
@@ -117,21 +98,23 @@ Error DWARFLinkerImpl::link() {
                                     0, dwarf::DwarfFormat::DWARF32};
   llvm::endianness GlobalEndianness = llvm::endianness::native;
 
-  if (TheDwarfEmitter) {
-    GlobalEndianness = TheDwarfEmitter->getTargetTriple().isLittleEndian()
+  if (std::optional<std::reference_wrapper<const Triple>> CurTriple =
+          GlobalData.getTargetTriple()) {
+    GlobalEndianness = (*CurTriple).get().isLittleEndian()
                            ? llvm::endianness::little
                            : llvm::endianness::big;
   }
   std::optional<uint16_t> Language;
 
   for (std::unique_ptr<LinkContext> &Context : ObjectContexts) {
-    if (Context->InputDWARFFile.Dwarf.get() == nullptr) {
+    if (Context->InputDWARFFile.Dwarf == nullptr) {
       Context->setOutputFormat(Context->getFormParams(), GlobalEndianness);
       continue;
     }
 
     if (GlobalData.getOptions().Verbose) {
-      outs() << "OBJECT: " << Context->InputDWARFFile.FileName << "\n";
+      outs() << "DEBUG MAP OBJECT: " << Context->InputDWARFFile.FileName
+             << "\n";
 
       for (const std::unique_ptr<DWARFUnit> &OrigCU :
            Context->InputDWARFFile.Dwarf->compile_units()) {
@@ -147,7 +130,7 @@ Error DWARFLinkerImpl::link() {
     if (GlobalData.getOptions().VerifyInputDWARF)
       verifyInput(Context->InputDWARFFile);
 
-    if (!TheDwarfEmitter)
+    if (!GlobalData.getTargetTriple())
       GlobalEndianness = Context->getEndianness();
     GlobalFormat.AddrSize =
         std::max(GlobalFormat.AddrSize, Context->getFormParams().AddrSize);
@@ -159,7 +142,7 @@ Error DWARFLinkerImpl::link() {
     // twice. And then following handling might be removed.
     for (const std::unique_ptr<DWARFUnit> &OrigCU :
          Context->InputDWARFFile.Dwarf->compile_units()) {
-      DWARFDie UnitDie = OrigCU.get()->getUnitDIE();
+      DWARFDie UnitDie = OrigCU->getUnitDIE();
 
       if (!Language) {
         if (std::optional<DWARFFormValue> Val =
@@ -173,9 +156,9 @@ Error DWARFLinkerImpl::link() {
   }
 
   if (GlobalFormat.AddrSize == 0) {
-    if (TheDwarfEmitter)
-      GlobalFormat.AddrSize =
-          TheDwarfEmitter->getTargetTriple().isArch32Bit() ? 4 : 8;
+    if (std::optional<std::reference_wrapper<const Triple>> TargetTriple =
+            GlobalData.getTargetTriple())
+      GlobalFormat.AddrSize = (*TargetTriple).get().isArch32Bit() ? 4 : 8;
     else
       GlobalFormat.AddrSize = 8;
   }
@@ -207,7 +190,7 @@ Error DWARFLinkerImpl::link() {
       Context->InputDWARFFile.unload();
     }
   } else {
-    ThreadPool Pool(llvm::parallel::strategy);
+    DefaultThreadPool Pool(llvm::parallel::strategy);
     for (std::unique_ptr<LinkContext> &Context : ObjectContexts)
       Pool.async([&]() {
         // Link object file.
@@ -220,17 +203,15 @@ Error DWARFLinkerImpl::link() {
     Pool.wait();
   }
 
-  if (ArtificialTypeUnit.get() != nullptr && !ArtificialTypeUnit->getTypePool()
-                                                  .getRoot()
-                                                  ->getValue()
-                                                  .load()
-                                                  ->Children.empty()) {
-    std::optional<Triple> OutTriple = TheDwarfEmitter.get() == nullptr
-                                          ? std::optional<Triple>(std::nullopt)
-                                          : TheDwarfEmitter->getTargetTriple();
-
-    if (Error Err = ArtificialTypeUnit.get()->finishCloningAndEmit(OutTriple))
-      return Err;
+  if (ArtificialTypeUnit != nullptr && !ArtificialTypeUnit->getTypePool()
+                                            .getRoot()
+                                            ->getValue()
+                                            .load()
+                                            ->Children.empty()) {
+    if (GlobalData.getTargetTriple().has_value())
+      if (Error Err = ArtificialTypeUnit->finishCloningAndEmit(
+              (*GlobalData.getTargetTriple()).get()))
+        return Err;
   }
 
   // At this stage each compile units are cloned to their own set of debug
@@ -257,8 +238,6 @@ Error DWARFLinkerImpl::validateAndUpdateOptions() {
   if (GlobalData.getOptions().TargetDWARFVersion == 0)
     return createStringError(std::errc::invalid_argument,
                              "target DWARF version is not set");
-
-  GlobalData.Options.NoOutput = TheDwarfEmitter.get() == nullptr;
 
   if (GlobalData.getOptions().Verbose && GlobalData.getOptions().Threads != 1) {
     GlobalData.Options.Threads = 1;
@@ -690,7 +669,8 @@ void DWARFLinkerImpl::LinkContext::linkSingleCompileUnit(
           if (CU.isClangModule() ||
               GlobalData.getOptions().UpdateIndexTablesOnly ||
               CU.getContaingFile().Addresses->hasValidRelocs()) {
-            if (Error Err = CU.cloneAndEmit(TargetTriple, ArtificialTypeUnit))
+            if (Error Err = CU.cloneAndEmit(GlobalData.getTargetTriple(),
+                                            ArtificialTypeUnit))
               return std::move(Err);
           }
 
@@ -727,7 +707,7 @@ void DWARFLinkerImpl::LinkContext::linkSingleCompileUnit(
 }
 
 Error DWARFLinkerImpl::LinkContext::emitInvariantSections() {
-  if (GlobalData.getOptions().NoOutput)
+  if (!GlobalData.getTargetTriple().has_value())
     return Error::success();
 
   getOrCreateSectionDescriptor(DebugSectionKind::DebugLoc).OS
@@ -749,10 +729,10 @@ Error DWARFLinkerImpl::LinkContext::emitInvariantSections() {
 }
 
 Error DWARFLinkerImpl::LinkContext::cloneAndEmitDebugFrame() {
-  if (GlobalData.getOptions().NoOutput)
+  if (!GlobalData.getTargetTriple().has_value())
     return Error::success();
 
-  if (InputDWARFFile.Dwarf.get() == nullptr)
+  if (InputDWARFFile.Dwarf == nullptr)
     return Error::success();
 
   const DWARFObject &InputDWARFObj = InputDWARFFile.Dwarf->getDWARFObj();
@@ -870,8 +850,9 @@ void DWARFLinkerImpl::LinkContext::emitFDE(uint32_t CIEOffset,
 }
 
 void DWARFLinkerImpl::glueCompileUnitsAndWriteToTheOutput() {
-  if (GlobalData.getOptions().NoOutput)
+  if (!GlobalData.getTargetTriple().has_value())
     return;
+  assert(SectionHandler);
 
   // Go through all object files, all compile units and assign
   // offsets to them.
@@ -884,7 +865,7 @@ void DWARFLinkerImpl::glueCompileUnitsAndWriteToTheOutput() {
   // units into the resulting file.
   emitCommonSectionsAndWriteCompileUnitsToTheOutput();
 
-  if (ArtificialTypeUnit.get() != nullptr)
+  if (ArtificialTypeUnit != nullptr)
     ArtificialTypeUnit.reset();
 
   // Write common debug sections into the resulting file.
@@ -1037,7 +1018,7 @@ void DWARFLinkerImpl::forEachOutputString(
     });
   });
 
-  if (ArtificialTypeUnit.get() != nullptr) {
+  if (ArtificialTypeUnit != nullptr) {
     ArtificialTypeUnit->forEach([&](SectionDescriptor &OutSection) {
       OutSection.ListDebugStrPatch.forEach([&](DebugStrPatch &Patch) {
         StringHandler(StringDestinationKind::DebugStr, Patch.String);
@@ -1068,7 +1049,7 @@ void DWARFLinkerImpl::forEachOutputString(
 void DWARFLinkerImpl::forEachObjectSectionsSet(
     function_ref<void(OutputSections &)> SectionsSetHandler) {
   // Handle artificial type unit first.
-  if (ArtificialTypeUnit.get() != nullptr)
+  if (ArtificialTypeUnit != nullptr)
     SectionsSetHandler(*ArtificialTypeUnit);
 
   // Then all modules(before regular compilation units).
@@ -1091,7 +1072,7 @@ void DWARFLinkerImpl::forEachObjectSectionsSet(
 
 void DWARFLinkerImpl::forEachCompileAndTypeUnit(
     function_ref<void(DwarfUnit *CU)> UnitHandler) {
-  if (ArtificialTypeUnit.get() != nullptr)
+  if (ArtificialTypeUnit != nullptr)
     UnitHandler(ArtificialTypeUnit.get());
 
   // Enumerate module units.
@@ -1154,21 +1135,23 @@ void DWARFLinkerImpl::emitCommonSectionsAndWriteCompileUnitsToTheOutput() {
                          AccelTableKind::DebugNames))
     CommonSections.getOrCreateSectionDescriptor(DebugSectionKind::DebugNames);
 
-  const Triple &TargetTriple = TheDwarfEmitter->getTargetTriple();
-
   // Emit .debug_str and .debug_line_str sections.
   TG.spawn([&]() { emitStringSections(); });
 
   if (llvm::is_contained(GlobalData.Options.AccelTables,
                          AccelTableKind::Apple)) {
     // Emit apple accelerator sections.
-    TG.spawn([&]() { emitAppleAcceleratorSections(TargetTriple); });
+    TG.spawn([&]() {
+      emitAppleAcceleratorSections((*GlobalData.getTargetTriple()).get());
+    });
   }
 
   if (llvm::is_contained(GlobalData.Options.AccelTables,
                          AccelTableKind::DebugNames)) {
     // Emit .debug_names section.
-    TG.spawn([&]() { emitDWARFv5DebugNamesSection(TargetTriple); });
+    TG.spawn([&]() {
+      emitDWARFv5DebugNamesSection((*GlobalData.getTargetTriple()).get());
+    });
   }
 
   // Write compile units to the output file.
@@ -1365,7 +1348,7 @@ void DWARFLinkerImpl::emitDWARFv5DebugNamesSection(const Triple &TargetTriple) {
   forEachCompileAndTypeUnit([&](DwarfUnit *CU) {
     bool HasRecords = false;
     CU->forEachAcceleratorRecord([&](const DwarfUnit::AccelInfo &Info) {
-      if (DebugNames.get() == nullptr)
+      if (DebugNames == nullptr)
         DebugNames = std::make_unique<DWARF5AccelTable>();
 
       HasRecords = true;
@@ -1374,7 +1357,9 @@ void DWARFLinkerImpl::emitDWARFv5DebugNamesSection(const Triple &TargetTriple) {
       case DwarfUnit::AccelType::Namespace:
       case DwarfUnit::AccelType::Type: {
         DebugNames->addName(*DebugStrStrings.getExistingEntry(Info.String),
-                            Info.OutOffset, Info.Tag, CU->getUniqueID());
+                            Info.OutOffset, std::nullopt /*ParentDIEOffset*/,
+                            Info.Tag, CU->getUniqueID(),
+                            CU->getTag() == dwarf::DW_TAG_type_unit);
       } break;
 
       default:
@@ -1390,7 +1375,7 @@ void DWARFLinkerImpl::emitDWARFv5DebugNamesSection(const Triple &TargetTriple) {
     }
   });
 
-  if (DebugNames.get() != nullptr) {
+  if (DebugNames != nullptr) {
     // FIXME: we use AsmPrinter to emit accelerator sections.
     // It might be beneficial to directly emit accelerator data
     // to the raw_svector_ostream.
@@ -1419,33 +1404,17 @@ void DWARFLinkerImpl::cleanupDataAfterDWARFOutputIsWritten() {
 }
 
 void DWARFLinkerImpl::writeCompileUnitsToTheOutput() {
-  bool HasAbbreviations = false;
-
   // Enumerate all sections and store them into the final emitter.
   forEachObjectSectionsSet([&](OutputSections &Sections) {
-    Sections.forEach([&](SectionDescriptor &OutSection) {
-      if (!HasAbbreviations && !OutSection.getContents().empty() &&
-          OutSection.getKind() == DebugSectionKind::DebugAbbrev)
-        HasAbbreviations = true;
-
+    Sections.forEach([&](std::shared_ptr<SectionDescriptor> OutSection) {
       // Emit section content.
-      TheDwarfEmitter->emitSectionContents(OutSection.getContents(),
-                                           OutSection.getName());
-      OutSection.clearSectionContent();
+      SectionHandler(OutSection);
     });
   });
-
-  if (!HasAbbreviations) {
-    const SmallVector<std::unique_ptr<DIEAbbrev>> Abbreviations;
-    TheDwarfEmitter->emitAbbrevs(Abbreviations, 3);
-  }
 }
 
 void DWARFLinkerImpl::writeCommonSectionsToTheOutput() {
-  CommonSections.forEach([&](SectionDescriptor &OutSection) {
-    // Emit section content.
-    TheDwarfEmitter->emitSectionContents(OutSection.getContents(),
-                                         OutSection.getName());
-    OutSection.clearSectionContent();
+  CommonSections.forEach([&](std::shared_ptr<SectionDescriptor> OutSection) {
+    SectionHandler(OutSection);
   });
 }

@@ -552,6 +552,7 @@ namespace std {
 template <typename T>
 class initializer_list {
  public:
+  const T *a, *b;
   initializer_list() noexcept;
 };
 
@@ -770,12 +771,17 @@ constexpr bool operator!=(const optional<T> &lhs, const optional<U> &rhs);
 
 template <typename T>
 constexpr bool operator==(const optional<T> &opt, nullopt_t);
+
+// C++20 and later do not define the following overloads because they are
+// provided by rewritten candidates instead.
+#if __cplusplus < 202002L
 template <typename T>
 constexpr bool operator==(nullopt_t, const optional<T> &opt);
 template <typename T>
 constexpr bool operator!=(const optional<T> &opt, nullopt_t);
 template <typename T>
 constexpr bool operator!=(nullopt_t, const optional<T> &opt);
+#endif  // __cplusplus < 202002L
 
 template <typename T, typename U>
 constexpr bool operator==(const optional<T> &opt, const U &value);
@@ -1289,6 +1295,15 @@ protected:
   template <typename FuncDeclMatcher>
   void ExpectDiagnosticsFor(std::string SourceCode,
                             FuncDeclMatcher FuncMatcher) {
+    // Run in C++17 and C++20 mode to cover differences in the AST between modes
+    // (e.g. C++20 can contain `CXXRewrittenBinaryOperator`).
+    for (const char *CxxMode : {"-std=c++17", "-std=c++20"})
+      ExpectDiagnosticsFor(SourceCode, FuncMatcher, CxxMode);
+  }
+
+  template <typename FuncDeclMatcher>
+  void ExpectDiagnosticsFor(std::string SourceCode, FuncDeclMatcher FuncMatcher,
+                            const char *CxxMode) {
     ReplaceAllOccurrences(SourceCode, "$ns", GetParam().NamespaceName);
     ReplaceAllOccurrences(SourceCode, "$optional", GetParam().TypeName);
 
@@ -1322,17 +1337,19 @@ protected:
             [](ASTContext &Ctx, Environment &Env) {
               return UncheckedOptionalAccessModel(Ctx, Env);
             })
-            .withPostVisitCFG(
-                [&Diagnostics,
-                 Diagnoser = UncheckedOptionalAccessDiagnoser(Options)](
-                    ASTContext &Ctx, const CFGElement &Elt,
-                    const TransferStateForDiagnostics<NoopLattice>
-                        &State) mutable {
-                  auto EltDiagnostics = Diagnoser(Elt, Ctx, State);
-                  llvm::move(EltDiagnostics, std::back_inserter(Diagnostics));
-                })
+            .withDiagnosisCallbacks(
+                {/*Before=*/[&Diagnostics,
+                             Diagnoser =
+                                 UncheckedOptionalAccessDiagnoser(Options)](
+                                ASTContext &Ctx, const CFGElement &Elt,
+                                const TransferStateForDiagnostics<NoopLattice>
+                                    &State) mutable {
+                   auto EltDiagnostics = Diagnoser(Elt, Ctx, State);
+                   llvm::move(EltDiagnostics, std::back_inserter(Diagnostics));
+                 },
+                 /*After=*/nullptr})
             .withASTBuildArgs(
-                {"-fsyntax-only", "-std=c++17", "-Wno-undefined-inline"})
+                {"-fsyntax-only", CxxMode, "-Wno-undefined-inline"})
             .withASTBuildVirtualMappedFiles(
                 tooling::FileContentMappings(Headers.begin(), Headers.end())),
         /*VerifyResults=*/[&Diagnostics](
@@ -2784,6 +2801,59 @@ TEST_P(UncheckedOptionalAccessTest, OptionalValueOptional) {
   )");
 }
 
+TEST_P(UncheckedOptionalAccessTest, NestedOptionalAssignValue) {
+  ExpectDiagnosticsFor(
+      R"(
+    #include "unchecked_optional_access_test.h"
+
+    using OptionalInt = $ns::$optional<int>;
+
+    void target($ns::$optional<OptionalInt> opt) {
+      if (!opt) return;
+
+      // Accessing the outer optional is OK now.
+      *opt;
+
+      // But accessing the nested optional is still unsafe because we haven't
+      // checked it.
+      **opt;  // [[unsafe]]
+
+      *opt = 1;
+
+      // Accessing the nested optional is safe after assigning a value to it.
+      **opt;
+    }
+  )");
+}
+
+TEST_P(UncheckedOptionalAccessTest, NestedOptionalAssignOptional) {
+  ExpectDiagnosticsFor(
+      R"(
+    #include "unchecked_optional_access_test.h"
+
+    using OptionalInt = $ns::$optional<int>;
+
+    void target($ns::$optional<OptionalInt> opt) {
+      if (!opt) return;
+
+      // Accessing the outer optional is OK now.
+      *opt;
+
+      // But accessing the nested optional is still unsafe because we haven't
+      // checked it.
+      **opt;  // [[unsafe]]
+
+      // Assign from `optional<short>` so that we trigger conversion assignment
+      // instead of move assignment.
+      *opt = $ns::$optional<short>();
+
+      // Accessing the nested optional is still unsafe after assigning an empty
+      // optional to it.
+      **opt;  // [[unsafe]]
+    }
+  )");
+}
+
 // Tests that structs can be nested. We use an optional field because its easy
 // to use in a test, but the type of the field shouldn't matter.
 TEST_P(UncheckedOptionalAccessTest, OptionalValueStruct) {
@@ -3369,6 +3439,82 @@ TEST_P(UncheckedOptionalAccessTest, LambdaCaptureStateNotPropagated) {
     }
   )");
 }
+
+TEST_P(UncheckedOptionalAccessTest, ClassDerivedFromOptional) {
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_optional_access_test.h"
+
+    struct Derived : public $ns::$optional<int> {};
+
+    void target(Derived opt) {
+      *opt;  // [[unsafe]]
+      if (opt.has_value())
+        *opt;
+
+      // The same thing, but with a pointer receiver.
+      Derived *popt = &opt;
+      **popt;  // [[unsafe]]
+      if (popt->has_value())
+        **popt;
+    }
+  )");
+}
+
+TEST_P(UncheckedOptionalAccessTest, ClassTemplateDerivedFromOptional) {
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_optional_access_test.h"
+
+    template <class T>
+    struct Derived : public $ns::$optional<T> {};
+
+    void target(Derived<int> opt) {
+      *opt;  // [[unsafe]]
+      if (opt.has_value())
+        *opt;
+
+      // The same thing, but with a pointer receiver.
+      Derived<int> *popt = &opt;
+      **popt;  // [[unsafe]]
+      if (popt->has_value())
+        **popt;
+    }
+  )");
+}
+
+TEST_P(UncheckedOptionalAccessTest, ClassDerivedPrivatelyFromOptional) {
+  // Classes that derive privately from optional can themselves still call
+  // member functions of optional. Check that we model the optional correctly
+  // in this situation.
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_optional_access_test.h"
+
+    struct Derived : private $ns::$optional<int> {
+      void Method() {
+        **this;  // [[unsafe]]
+        if (this->has_value())
+          **this;
+      }
+    };
+  )",
+                       ast_matchers::hasName("Method"));
+}
+
+TEST_P(UncheckedOptionalAccessTest, ClassDerivedFromOptionalValueConstructor) {
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_optional_access_test.h"
+
+    struct Derived : public $ns::$optional<int> {
+      Derived(int);
+    };
+
+    void target(Derived opt) {
+      *opt;  // [[unsafe]]
+      opt = 1;
+      *opt;
+    }
+  )");
+}
+
 // FIXME: Add support for:
 // - constructors (copy, move)
 // - assignment operators (default, copy, move)

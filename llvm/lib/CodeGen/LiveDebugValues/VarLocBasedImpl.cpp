@@ -86,7 +86,7 @@
 /// lookup the VarLoc in the VarLocMap. Rather than operate directly on machine
 /// locations, the dataflow analysis in this pass identifies locations by their
 /// indices in the VarLocMap, meaning all the variable locations in a block can
-/// be described by a sparse vector of VarLocMap indicies.
+/// be described by a sparse vector of VarLocMap indices.
 ///
 /// All the storage for the dataflow analysis is local to the ExtendRanges
 /// method and passed down to helper methods. "OutLocs" and "InLocs" record the
@@ -1312,7 +1312,7 @@ void VarLocBasedLDV::cleanupEntryValueTransfers(
     return;
 
   auto TransRange = EntryValTransfers.equal_range(TRInst);
-  for (auto &TDPair : llvm::make_range(TransRange.first, TransRange.second)) {
+  for (auto &TDPair : llvm::make_range(TransRange)) {
     const VarLoc &EmittedEV = VarLocIDs[TDPair.second];
     if (std::tie(EntryVL.Var, EntryVL.Locs[0].Value.RegNo, EntryVL.Expr) ==
         std::tie(EmittedEV.Var, EmittedEV.Locs[0].Value.RegNo,
@@ -1789,14 +1789,14 @@ void VarLocBasedLDV::transferSpillOrRestoreInst(MachineInstr &MI,
   if (isLocationSpill(MI, MF, Reg)) {
     TKind = TransferKind::TransferSpill;
     LLVM_DEBUG(dbgs() << "Recognized as spill: "; MI.dump(););
-    LLVM_DEBUG(dbgs() << "Register: " << Reg << " " << printReg(Reg, TRI)
+    LLVM_DEBUG(dbgs() << "Register: " << Reg.id() << " " << printReg(Reg, TRI)
                       << "\n");
   } else {
     if (!(Loc = isRestoreInstruction(MI, MF, Reg)))
       return;
     TKind = TransferKind::TransferRestore;
     LLVM_DEBUG(dbgs() << "Recognized as restore: "; MI.dump(););
-    LLVM_DEBUG(dbgs() << "Register: " << Reg << " " << printReg(Reg, TRI)
+    LLVM_DEBUG(dbgs() << "Register: " << Reg.id() << " " << printReg(Reg, TRI)
                       << "\n");
   }
   // Check if the register or spill location is the location of a debug value.

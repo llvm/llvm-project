@@ -7,8 +7,8 @@
 ; the workaround that ensures that an interpolation mode is also set in PSEnable.
 ; GCN-LABEL: {{^}}amdpal_psenable:
 ; GCN: .amdgpu_pal_metadata
-; GCN: 0xa1b3 (SPI_PS_INPUT_ENA): 0x2
-; GCN: 0xa1b4 (SPI_PS_INPUT_ADDR): 0x2
+; GCN: '0xa1b3 (SPI_PS_INPUT_ENA)': 0x2
+; GCN: '0xa1b4 (SPI_PS_INPUT_ADDR)': 0x2
 define amdgpu_ps void @amdpal_psenable(i32 inreg, i32 inreg, i32 inreg, i32 inreg %m0, <2 x float> %pos) #6 {
   %inst23 = extractelement <2 x float> %pos, i32 0
   %inst24 = extractelement <2 x float> %pos, i32 1

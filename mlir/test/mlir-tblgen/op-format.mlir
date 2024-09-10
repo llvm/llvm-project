@@ -195,6 +195,16 @@ test.format_optional_unit_attribute
 // CHECK: test.format_optional_unit_attribute_no_elide unit
 test.format_optional_unit_attribute_no_elide unit
 
+// CHECK: test.format_optional_unit_property is_optional
+test.format_optional_unit_property is_optional
+
+// CHECK: test.format_optional_unit_property
+// CHECK-NOT: is_optional
+test.format_optional_unit_property
+
+// CHECK: test.format_optional_unit_property_no_elide unit
+test.format_optional_unit_property_no_elide unit
+
 // CHECK: test.format_optional_enum_attr case5
 test.format_optional_enum_attr case5
 
@@ -479,6 +489,17 @@ test.format_infer_variadic_type_from_non_variadic %i64, %i64 : i64
 
 // CHECK: test.format_infer_type_variadic_operands(%[[I32]], %[[I32]] : i32, i32) (%[[I64]], %[[I64]] : i64, i64)
 %ignored_res13:4 = test.format_infer_type_variadic_operands(%i32, %i32 : i32, i32) (%i64, %i64 : i64, i64)
+
+// CHECK: test.with_properties_and_attr 16 < {rhs = 16 : i64}>
+test.with_properties_and_attr 16 <{rhs = 16 : i64}>
+
+// CHECK: test.with_properties_and_inferred_type 16 < {rhs = 16 : i64}>
+%should_be_i32 = test.with_properties_and_inferred_type 16 <{rhs = 16 : i64}>
+// Assert through the verifier that its inferred as i32.
+test.format_all_types_match_var %should_be_i32, %i32 : i32
+
+// CHECK: test.using_property_in_custom_and_other [1, 4, 20] < {other = 16 : i64}>
+test.using_property_in_custom_and_other [1, 4, 20] <{other = 16 : i64}>
 
 //===----------------------------------------------------------------------===//
 // Check DefaultValuedStrAttr

@@ -1,5 +1,5 @@
-; RUN: llc -amdgpu-scalarize-global-loads=false -verify-machineinstrs -march=amdgcn < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
-; RUN: llc -amdgpu-scalarize-global-loads=false -verify-machineinstrs -march=amdgcn -mcpu=tonga < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -verify-machineinstrs -mtriple=amdgcn < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -verify-machineinstrs -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
 
 ; When a frame index offset is more than 12-bits, make sure we don't store
 ; it in mubuf's offset field.

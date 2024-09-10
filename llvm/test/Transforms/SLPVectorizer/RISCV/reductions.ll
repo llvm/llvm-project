@@ -142,6 +142,64 @@ entry:
   ret i64 %add.15
 }
 
+
+define i64 @red_strided_ld_16xi64(ptr %ptr) {
+; CHECK-LABEL: @red_strided_ld_16xi64(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call <16 x i64> @llvm.experimental.vp.strided.load.v16i64.p0.i64(ptr align 8 [[PTR:%.*]], i64 16, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i32 16)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vector.reduce.add.v16i64(<16 x i64> [[TMP0]])
+; CHECK-NEXT:    ret i64 [[TMP1]]
+;
+entry:
+  %ld0 = load i64, ptr %ptr
+  %gep = getelementptr inbounds i64, ptr %ptr, i64 2
+  %ld1 = load i64, ptr %gep
+  %add.1 = add nuw nsw i64 %ld0, %ld1
+  %gep.1 = getelementptr inbounds i64, ptr %ptr, i64 4
+  %ld2 = load i64, ptr %gep.1
+  %add.2 = add nuw nsw i64 %add.1, %ld2
+  %gep.2 = getelementptr inbounds i64, ptr %ptr, i64 6
+  %ld3 = load i64, ptr %gep.2
+  %add.3 = add nuw nsw i64 %add.2, %ld3
+  %gep.3 = getelementptr inbounds i64, ptr %ptr, i64 8
+  %ld4 = load i64, ptr %gep.3
+  %add.4 = add nuw nsw i64 %add.3, %ld4
+  %gep.4 = getelementptr inbounds i64, ptr %ptr, i64 10
+  %ld5 = load i64, ptr %gep.4
+  %add.5 = add nuw nsw i64 %add.4, %ld5
+  %gep.5 = getelementptr inbounds i64, ptr %ptr, i64 12
+  %ld6 = load i64, ptr %gep.5
+  %add.6 = add nuw nsw i64 %add.5, %ld6
+  %gep.6 = getelementptr inbounds i64, ptr %ptr, i64 14
+  %ld7 = load i64, ptr %gep.6
+  %add.7 = add nuw nsw i64 %add.6, %ld7
+  %gep.7 = getelementptr inbounds i64, ptr %ptr, i64 16
+  %ld8 = load i64, ptr %gep.7
+  %add.8 = add nuw nsw i64 %add.7, %ld8
+  %gep.8 = getelementptr inbounds i64, ptr %ptr, i64 18
+  %ld9 = load i64, ptr %gep.8
+  %add.9 = add nuw nsw i64 %add.8, %ld9
+  %gep.9 = getelementptr inbounds i64, ptr %ptr, i64 20
+  %ld10 = load i64, ptr %gep.9
+  %add.10 = add nuw nsw i64 %add.9, %ld10
+  %gep.10 = getelementptr inbounds i64, ptr %ptr, i64 22
+  %ld11 = load i64, ptr %gep.10
+  %add.11 = add nuw nsw i64 %add.10, %ld11
+  %gep.11 = getelementptr inbounds i64, ptr %ptr, i64 24
+  %ld12 = load i64, ptr %gep.11
+  %add.12 = add nuw nsw i64 %add.11, %ld12
+  %gep.12 = getelementptr inbounds i64, ptr %ptr, i64 26
+  %ld13 = load i64, ptr %gep.12
+  %add.13 = add nuw nsw i64 %add.12, %ld13
+  %gep.13 = getelementptr inbounds i64, ptr %ptr, i64 28
+  %ld14 = load i64, ptr %gep.13
+  %add.14 = add nuw nsw i64 %add.13, %ld14
+  %gep.14 = getelementptr inbounds i64, ptr %ptr, i64 30
+  %ld15 = load i64, ptr %gep.14
+  %add.15 = add nuw nsw i64 %add.14, %ld15
+  ret i64 %add.15
+}
+
 ; Next batch test differen reductions kinds
 
 %struct.buf = type { [8 x i8] }
@@ -160,51 +218,51 @@ define i8 @reduce_and(ptr %a, ptr %b) {
 ;
 entry:
   %arrayidx = getelementptr inbounds %struct.buf, ptr %a, i64 0, i32 0, i64 0
-  %0 = load i8, i8* %arrayidx, align 1
+  %0 = load i8, ptr %arrayidx, align 1
   %arrayidx3 = getelementptr inbounds %struct.buf, ptr %b, i64 0, i32 0, i64 0
-  %1 = load i8, i8* %arrayidx3, align 1
+  %1 = load i8, ptr %arrayidx3, align 1
   %xor12 = xor i8 %1, %0
   %and13 = and i8 %xor12, 1
   %arrayidx.1 = getelementptr inbounds %struct.buf, ptr %a, i64 0, i32 0, i64 1
-  %2 = load i8, i8* %arrayidx.1, align 1
+  %2 = load i8, ptr %arrayidx.1, align 1
   %arrayidx3.1 = getelementptr inbounds %struct.buf, ptr %b, i64 0, i32 0, i64 1
-  %3 = load i8, i8* %arrayidx3.1, align 1
+  %3 = load i8, ptr %arrayidx3.1, align 1
   %xor12.1 = xor i8 %3, %2
   %and13.1 = and i8 %xor12.1, %and13
   %arrayidx.2 = getelementptr inbounds %struct.buf, ptr %a, i64 0, i32 0, i64 2
-  %4 = load i8, i8* %arrayidx.2, align 1
+  %4 = load i8, ptr %arrayidx.2, align 1
   %arrayidx3.2 = getelementptr inbounds %struct.buf, ptr %b, i64 0, i32 0, i64 2
-  %5 = load i8, i8* %arrayidx3.2, align 1
+  %5 = load i8, ptr %arrayidx3.2, align 1
   %xor12.2 = xor i8 %5, %4
   %and13.2 = and i8 %xor12.2, %and13.1
   %arrayidx.3 = getelementptr inbounds %struct.buf, ptr %a, i64 0, i32 0, i64 3
-  %6 = load i8, i8* %arrayidx.3, align 1
+  %6 = load i8, ptr %arrayidx.3, align 1
   %arrayidx3.3 = getelementptr inbounds %struct.buf, ptr %b, i64 0, i32 0, i64 3
-  %7 = load i8, i8* %arrayidx3.3, align 1
+  %7 = load i8, ptr %arrayidx3.3, align 1
   %xor12.3 = xor i8 %7, %6
   %and13.3 = and i8 %xor12.3, %and13.2
   %arrayidx.4 = getelementptr inbounds %struct.buf, ptr %a, i64 0, i32 0, i64 4
-  %8 = load i8, i8* %arrayidx.4, align 1
+  %8 = load i8, ptr %arrayidx.4, align 1
   %arrayidx3.4 = getelementptr inbounds %struct.buf, ptr %b, i64 0, i32 0, i64 4
-  %9 = load i8, i8* %arrayidx3.4, align 1
+  %9 = load i8, ptr %arrayidx3.4, align 1
   %xor12.4 = xor i8 %9, %8
   %and13.4 = and i8 %xor12.4, %and13.3
   %arrayidx.5 = getelementptr inbounds %struct.buf, ptr %a, i64 0, i32 0, i64 5
-  %10 = load i8, i8* %arrayidx.5, align 1
+  %10 = load i8, ptr %arrayidx.5, align 1
   %arrayidx3.5 = getelementptr inbounds %struct.buf, ptr %b, i64 0, i32 0, i64 5
-  %11 = load i8, i8* %arrayidx3.5, align 1
+  %11 = load i8, ptr %arrayidx3.5, align 1
   %xor12.5 = xor i8 %11, %10
   %and13.5 = and i8 %xor12.5, %and13.4
   %arrayidx.6 = getelementptr inbounds %struct.buf, ptr %a, i64 0, i32 0, i64 6
-  %12 = load i8, i8* %arrayidx.6, align 1
+  %12 = load i8, ptr %arrayidx.6, align 1
   %arrayidx3.6 = getelementptr inbounds %struct.buf, ptr %b, i64 0, i32 0, i64 6
-  %13 = load i8, i8* %arrayidx3.6, align 1
+  %13 = load i8, ptr %arrayidx3.6, align 1
   %xor12.6 = xor i8 %13, %12
   %and13.6 = and i8 %xor12.6, %and13.5
   %arrayidx.7 = getelementptr inbounds %struct.buf, ptr %a, i64 0, i32 0, i64 7
-  %14 = load i8, i8* %arrayidx.7, align 1
+  %14 = load i8, ptr %arrayidx.7, align 1
   %arrayidx3.7 = getelementptr inbounds %struct.buf, ptr %b, i64 0, i32 0, i64 7
-  %15 = load i8, i8* %arrayidx3.7, align 1
+  %15 = load i8, ptr %arrayidx3.7, align 1
   %xor12.7 = xor i8 %15, %14
   %and13.7 = and i8 %xor12.7, %and13.6
   ret i8 %and13.7
@@ -224,50 +282,50 @@ define i8 @reduce_or_1(ptr %a, ptr %b) {
 
 entry:
   %arrayidx = getelementptr inbounds %struct.buf, ptr %a, i64 0, i32 0, i64 0
-  %0 = load i8, i8* %arrayidx, align 1
+  %0 = load i8, ptr %arrayidx, align 1
   %arrayidx3 = getelementptr inbounds %struct.buf, ptr %b, i64 0, i32 0, i64 0
-  %1 = load i8, i8* %arrayidx3, align 1
+  %1 = load i8, ptr %arrayidx3, align 1
   %xor12 = xor i8 %1, %0
   %arrayidx.1 = getelementptr inbounds %struct.buf, ptr %a, i64 0, i32 0, i64 1
-  %2 = load i8, i8* %arrayidx.1, align 1
+  %2 = load i8, ptr %arrayidx.1, align 1
   %arrayidx3.1 = getelementptr inbounds %struct.buf, ptr %b, i64 0, i32 0, i64 1
-  %3 = load i8, i8* %arrayidx3.1, align 1
+  %3 = load i8, ptr %arrayidx3.1, align 1
   %xor12.1 = xor i8 %3, %2
   %or13.1 = or i8 %xor12.1, %xor12
   %arrayidx.2 = getelementptr inbounds %struct.buf, ptr %a, i64 0, i32 0, i64 2
-  %4 = load i8, i8* %arrayidx.2, align 1
+  %4 = load i8, ptr %arrayidx.2, align 1
   %arrayidx3.2 = getelementptr inbounds %struct.buf, ptr %b, i64 0, i32 0, i64 2
-  %5 = load i8, i8* %arrayidx3.2, align 1
+  %5 = load i8, ptr %arrayidx3.2, align 1
   %xor12.2 = xor i8 %5, %4
   %or13.2 = or i8 %xor12.2, %or13.1
   %arrayidx.3 = getelementptr inbounds %struct.buf, ptr %a, i64 0, i32 0, i64 3
-  %6 = load i8, i8* %arrayidx.3, align 1
+  %6 = load i8, ptr %arrayidx.3, align 1
   %arrayidx3.3 = getelementptr inbounds %struct.buf, ptr %b, i64 0, i32 0, i64 3
-  %7 = load i8, i8* %arrayidx3.3, align 1
+  %7 = load i8, ptr %arrayidx3.3, align 1
   %xor12.3 = xor i8 %7, %6
   %or13.3 = or i8 %xor12.3, %or13.2
   %arrayidx.4 = getelementptr inbounds %struct.buf, ptr %a, i64 0, i32 0, i64 4
-  %8 = load i8, i8* %arrayidx.4, align 1
+  %8 = load i8, ptr %arrayidx.4, align 1
   %arrayidx3.4 = getelementptr inbounds %struct.buf, ptr %b, i64 0, i32 0, i64 4
-  %9 = load i8, i8* %arrayidx3.4, align 1
+  %9 = load i8, ptr %arrayidx3.4, align 1
   %xor12.4 = xor i8 %9, %8
   %or13.4 = or i8 %xor12.4, %or13.3
   %arrayidx.5 = getelementptr inbounds %struct.buf, ptr %a, i64 0, i32 0, i64 5
-  %10 = load i8, i8* %arrayidx.5, align 1
+  %10 = load i8, ptr %arrayidx.5, align 1
   %arrayidx3.5 = getelementptr inbounds %struct.buf, ptr %b, i64 0, i32 0, i64 5
-  %11 = load i8, i8* %arrayidx3.5, align 1
+  %11 = load i8, ptr %arrayidx3.5, align 1
   %xor12.5 = xor i8 %11, %10
   %or13.5 = or i8 %xor12.5, %or13.4
   %arrayidx.6 = getelementptr inbounds %struct.buf, ptr %a, i64 0, i32 0, i64 6
-  %12 = load i8, i8* %arrayidx.6, align 1
+  %12 = load i8, ptr %arrayidx.6, align 1
   %arrayidx3.6 = getelementptr inbounds %struct.buf, ptr %b, i64 0, i32 0, i64 6
-  %13 = load i8, i8* %arrayidx3.6, align 1
+  %13 = load i8, ptr %arrayidx3.6, align 1
   %xor12.6 = xor i8 %13, %12
   %or13.6 = or i8 %xor12.6, %or13.5
   %arrayidx.7 = getelementptr inbounds %struct.buf, ptr %a, i64 0, i32 0, i64 7
-  %14 = load i8, i8* %arrayidx.7, align 1
+  %14 = load i8, ptr %arrayidx.7, align 1
   %arrayidx3.7 = getelementptr inbounds %struct.buf, ptr %b, i64 0, i32 0, i64 7
-  %15 = load i8, i8* %arrayidx3.7, align 1
+  %15 = load i8, ptr %arrayidx3.7, align 1
   %xor12.7 = xor i8 %15, %14
   %or13.7 = or i8 %xor12.7, %or13.6
   ret i8 %or13.7
@@ -403,50 +461,50 @@ define i8 @reduce_xor(ptr %a, ptr %b) {
 ;
 entry:
   %arrayidx = getelementptr inbounds %struct.buf, ptr %a, i64 0, i32 0, i64 0
-  %0 = load i8, i8* %arrayidx, align 1
+  %0 = load i8, ptr %arrayidx, align 1
   %arrayidx3 = getelementptr inbounds %struct.buf, ptr %b, i64 0, i32 0, i64 0
-  %1 = load i8, i8* %arrayidx3, align 1
+  %1 = load i8, ptr %arrayidx3, align 1
   %and12 = and i8 %1, %0
   %arrayidx.1 = getelementptr inbounds %struct.buf, ptr %a, i64 0, i32 0, i64 1
-  %2 = load i8, i8* %arrayidx.1, align 1
+  %2 = load i8, ptr %arrayidx.1, align 1
   %arrayidx3.1 = getelementptr inbounds %struct.buf, ptr %b, i64 0, i32 0, i64 1
-  %3 = load i8, i8* %arrayidx3.1, align 1
+  %3 = load i8, ptr %arrayidx3.1, align 1
   %and12.1 = and i8 %3, %2
   %4 = xor i8 %and12, %and12.1
   %arrayidx.2 = getelementptr inbounds %struct.buf, ptr %a, i64 0, i32 0, i64 2
-  %5 = load i8, i8* %arrayidx.2, align 1
+  %5 = load i8, ptr %arrayidx.2, align 1
   %arrayidx3.2 = getelementptr inbounds %struct.buf, ptr %b, i64 0, i32 0, i64 2
-  %6 = load i8, i8* %arrayidx3.2, align 1
+  %6 = load i8, ptr %arrayidx3.2, align 1
   %and12.2 = and i8 %6, %5
   %7 = xor i8 %4, %and12.2
   %arrayidx.3 = getelementptr inbounds %struct.buf, ptr %a, i64 0, i32 0, i64 3
-  %8 = load i8, i8* %arrayidx.3, align 1
+  %8 = load i8, ptr %arrayidx.3, align 1
   %arrayidx3.3 = getelementptr inbounds %struct.buf, ptr %b, i64 0, i32 0, i64 3
-  %9 = load i8, i8* %arrayidx3.3, align 1
+  %9 = load i8, ptr %arrayidx3.3, align 1
   %and12.3 = and i8 %9, %8
   %10 = xor i8 %7, %and12.3
   %arrayidx.4 = getelementptr inbounds %struct.buf, ptr %a, i64 0, i32 0, i64 4
-  %11 = load i8, i8* %arrayidx.4, align 1
+  %11 = load i8, ptr %arrayidx.4, align 1
   %arrayidx3.4 = getelementptr inbounds %struct.buf, ptr %b, i64 0, i32 0, i64 4
-  %12 = load i8, i8* %arrayidx3.4, align 1
+  %12 = load i8, ptr %arrayidx3.4, align 1
   %and12.4 = and i8 %12, %11
   %13 = xor i8 %10, %and12.4
   %arrayidx.5 = getelementptr inbounds %struct.buf, ptr %a, i64 0, i32 0, i64 5
-  %14 = load i8, i8* %arrayidx.5, align 1
+  %14 = load i8, ptr %arrayidx.5, align 1
   %arrayidx3.5 = getelementptr inbounds %struct.buf, ptr %b, i64 0, i32 0, i64 5
-  %15 = load i8, i8* %arrayidx3.5, align 1
+  %15 = load i8, ptr %arrayidx3.5, align 1
   %and12.5 = and i8 %15, %14
   %16 = xor i8 %13, %and12.5
   %arrayidx.6 = getelementptr inbounds %struct.buf, ptr %a, i64 0, i32 0, i64 6
-  %17 = load i8, i8* %arrayidx.6, align 1
+  %17 = load i8, ptr %arrayidx.6, align 1
   %arrayidx3.6 = getelementptr inbounds %struct.buf, ptr %b, i64 0, i32 0, i64 6
-  %18 = load i8, i8* %arrayidx3.6, align 1
+  %18 = load i8, ptr %arrayidx3.6, align 1
   %and12.6 = and i8 %18, %17
   %19 = xor i8 %16, %and12.6
   %arrayidx.7 = getelementptr inbounds %struct.buf, ptr %a, i64 0, i32 0, i64 7
-  %20 = load i8, i8* %arrayidx.7, align 1
+  %20 = load i8, ptr %arrayidx.7, align 1
   %arrayidx3.7 = getelementptr inbounds %struct.buf, ptr %b, i64 0, i32 0, i64 7
-  %21 = load i8, i8* %arrayidx3.7, align 1
+  %21 = load i8, ptr %arrayidx3.7, align 1
   %and12.7 = and i8 %21, %20
   %22 = xor i8 %19, %and12.7
   %xor13.7 = xor i8 %22, 1
@@ -469,50 +527,50 @@ define i8 @reduce_add(ptr %a, ptr %b) {
 ;
 entry:
   %arrayidx = getelementptr inbounds %struct.buf, ptr %a, i64 0, i32 0, i64 0
-  %0 = load i8, i8* %arrayidx, align 1
+  %0 = load i8, ptr %arrayidx, align 1
   %arrayidx3 = getelementptr inbounds %struct.buf, ptr %b, i64 0, i32 0, i64 0
-  %1 = load i8, i8* %arrayidx3, align 1
+  %1 = load i8, ptr %arrayidx3, align 1
   %and12 = and i8 %1, %0
   %arrayidx.1 = getelementptr inbounds %struct.buf, ptr %a, i64 0, i32 0, i64 1
-  %2 = load i8, i8* %arrayidx.1, align 1
+  %2 = load i8, ptr %arrayidx.1, align 1
   %arrayidx3.1 = getelementptr inbounds %struct.buf, ptr %b, i64 0, i32 0, i64 1
-  %3 = load i8, i8* %arrayidx3.1, align 1
+  %3 = load i8, ptr %arrayidx3.1, align 1
   %and12.1 = and i8 %3, %2
   %4 = add i8 %and12, %and12.1
   %arrayidx.2 = getelementptr inbounds %struct.buf, ptr %a, i64 0, i32 0, i64 2
-  %5 = load i8, i8* %arrayidx.2, align 1
+  %5 = load i8, ptr %arrayidx.2, align 1
   %arrayidx3.2 = getelementptr inbounds %struct.buf, ptr %b, i64 0, i32 0, i64 2
-  %6 = load i8, i8* %arrayidx3.2, align 1
+  %6 = load i8, ptr %arrayidx3.2, align 1
   %and12.2 = and i8 %6, %5
   %7 = add i8 %4, %and12.2
   %arrayidx.3 = getelementptr inbounds %struct.buf, ptr %a, i64 0, i32 0, i64 3
-  %8 = load i8, i8* %arrayidx.3, align 1
+  %8 = load i8, ptr %arrayidx.3, align 1
   %arrayidx3.3 = getelementptr inbounds %struct.buf, ptr %b, i64 0, i32 0, i64 3
-  %9 = load i8, i8* %arrayidx3.3, align 1
+  %9 = load i8, ptr %arrayidx3.3, align 1
   %and12.3 = and i8 %9, %8
   %10 = add i8 %7, %and12.3
   %arrayidx.4 = getelementptr inbounds %struct.buf, ptr %a, i64 0, i32 0, i64 4
-  %11 = load i8, i8* %arrayidx.4, align 1
+  %11 = load i8, ptr %arrayidx.4, align 1
   %arrayidx3.4 = getelementptr inbounds %struct.buf, ptr %b, i64 0, i32 0, i64 4
-  %12 = load i8, i8* %arrayidx3.4, align 1
+  %12 = load i8, ptr %arrayidx3.4, align 1
   %and12.4 = and i8 %12, %11
   %13 = add i8 %10, %and12.4
   %arrayidx.5 = getelementptr inbounds %struct.buf, ptr %a, i64 0, i32 0, i64 5
-  %14 = load i8, i8* %arrayidx.5, align 1
+  %14 = load i8, ptr %arrayidx.5, align 1
   %arrayidx3.5 = getelementptr inbounds %struct.buf, ptr %b, i64 0, i32 0, i64 5
-  %15 = load i8, i8* %arrayidx3.5, align 1
+  %15 = load i8, ptr %arrayidx3.5, align 1
   %and12.5 = and i8 %15, %14
   %16 = add i8 %13, %and12.5
   %arrayidx.6 = getelementptr inbounds %struct.buf, ptr %a, i64 0, i32 0, i64 6
-  %17 = load i8, i8* %arrayidx.6, align 1
+  %17 = load i8, ptr %arrayidx.6, align 1
   %arrayidx3.6 = getelementptr inbounds %struct.buf, ptr %b, i64 0, i32 0, i64 6
-  %18 = load i8, i8* %arrayidx3.6, align 1
+  %18 = load i8, ptr %arrayidx3.6, align 1
   %and12.6 = and i8 %18, %17
   %19 = add i8 %16, %and12.6
   %arrayidx.7 = getelementptr inbounds %struct.buf, ptr %a, i64 0, i32 0, i64 7
-  %20 = load i8, i8* %arrayidx.7, align 1
+  %20 = load i8, ptr %arrayidx.7, align 1
   %arrayidx3.7 = getelementptr inbounds %struct.buf, ptr %b, i64 0, i32 0, i64 7
-  %21 = load i8, i8* %arrayidx3.7, align 1
+  %21 = load i8, ptr %arrayidx3.7, align 1
   %and12.7 = and i8 %21, %20
   %22 = add i8 %19, %and12.7
   %add13.7 = add i8 %22, 1
@@ -534,50 +592,50 @@ define i8 @reduce_smin(ptr %a, ptr %b) {
 ;
 entry:
   %arrayidx = getelementptr inbounds %struct.buf, ptr %a, i64 0, i32 0, i64 0
-  %0 = load i8, i8* %arrayidx, align 1
+  %0 = load i8, ptr %arrayidx, align 1
   %arrayidx3 = getelementptr inbounds %struct.buf, ptr %b, i64 0, i32 0, i64 0
-  %1 = load i8, i8* %arrayidx3, align 1
+  %1 = load i8, ptr %arrayidx3, align 1
   %and12 = and i8 %1, %0
   %arrayidx.1 = getelementptr inbounds %struct.buf, ptr %a, i64 0, i32 0, i64 1
-  %2 = load i8, i8* %arrayidx.1, align 1
+  %2 = load i8, ptr %arrayidx.1, align 1
   %arrayidx3.1 = getelementptr inbounds %struct.buf, ptr %b, i64 0, i32 0, i64 1
-  %3 = load i8, i8* %arrayidx3.1, align 1
+  %3 = load i8, ptr %arrayidx3.1, align 1
   %and12.1 = and i8 %3, %2
   %4 = tail call i8 @llvm.smin.i8(i8 %and12, i8 %and12.1)
   %arrayidx.2 = getelementptr inbounds %struct.buf, ptr %a, i64 0, i32 0, i64 2
-  %5 = load i8, i8* %arrayidx.2, align 1
+  %5 = load i8, ptr %arrayidx.2, align 1
   %arrayidx3.2 = getelementptr inbounds %struct.buf, ptr %b, i64 0, i32 0, i64 2
-  %6 = load i8, i8* %arrayidx3.2, align 1
+  %6 = load i8, ptr %arrayidx3.2, align 1
   %and12.2 = and i8 %6, %5
   %7 = tail call i8 @llvm.smin.i8(i8 %4, i8 %and12.2)
   %arrayidx.3 = getelementptr inbounds %struct.buf, ptr %a, i64 0, i32 0, i64 3
-  %8 = load i8, i8* %arrayidx.3, align 1
+  %8 = load i8, ptr %arrayidx.3, align 1
   %arrayidx3.3 = getelementptr inbounds %struct.buf, ptr %b, i64 0, i32 0, i64 3
-  %9 = load i8, i8* %arrayidx3.3, align 1
+  %9 = load i8, ptr %arrayidx3.3, align 1
   %and12.3 = and i8 %9, %8
   %10 = tail call i8 @llvm.smin.i8(i8 %7, i8 %and12.3)
   %arrayidx.4 = getelementptr inbounds %struct.buf, ptr %a, i64 0, i32 0, i64 4
-  %11 = load i8, i8* %arrayidx.4, align 1
+  %11 = load i8, ptr %arrayidx.4, align 1
   %arrayidx3.4 = getelementptr inbounds %struct.buf, ptr %b, i64 0, i32 0, i64 4
-  %12 = load i8, i8* %arrayidx3.4, align 1
+  %12 = load i8, ptr %arrayidx3.4, align 1
   %and12.4 = and i8 %12, %11
   %13 = tail call i8 @llvm.smin.i8(i8 %10, i8 %and12.4)
   %arrayidx.5 = getelementptr inbounds %struct.buf, ptr %a, i64 0, i32 0, i64 5
-  %14 = load i8, i8* %arrayidx.5, align 1
+  %14 = load i8, ptr %arrayidx.5, align 1
   %arrayidx3.5 = getelementptr inbounds %struct.buf, ptr %b, i64 0, i32 0, i64 5
-  %15 = load i8, i8* %arrayidx3.5, align 1
+  %15 = load i8, ptr %arrayidx3.5, align 1
   %and12.5 = and i8 %15, %14
   %16 = tail call i8 @llvm.smin.i8(i8 %13, i8 %and12.5)
   %arrayidx.6 = getelementptr inbounds %struct.buf, ptr %a, i64 0, i32 0, i64 6
-  %17 = load i8, i8* %arrayidx.6, align 1
+  %17 = load i8, ptr %arrayidx.6, align 1
   %arrayidx3.6 = getelementptr inbounds %struct.buf, ptr %b, i64 0, i32 0, i64 6
-  %18 = load i8, i8* %arrayidx3.6, align 1
+  %18 = load i8, ptr %arrayidx3.6, align 1
   %and12.6 = and i8 %18, %17
   %19 = tail call i8 @llvm.smin.i8(i8 %16, i8 %and12.6)
   %arrayidx.7 = getelementptr inbounds %struct.buf, ptr %a, i64 0, i32 0, i64 7
-  %20 = load i8, i8* %arrayidx.7, align 1
+  %20 = load i8, ptr %arrayidx.7, align 1
   %arrayidx3.7 = getelementptr inbounds %struct.buf, ptr %b, i64 0, i32 0, i64 7
-  %21 = load i8, i8* %arrayidx3.7, align 1
+  %21 = load i8, ptr %arrayidx3.7, align 1
   %and12.7 = and i8 %21, %20
   %22 = tail call i8 @llvm.smin.i8(i8 %19, i8 %and12.7)
   ret i8 %22
@@ -598,50 +656,50 @@ define i8 @reduce_smax(ptr %a, ptr %b) {
 ;
 entry:
   %arrayidx = getelementptr inbounds %struct.buf, ptr %a, i64 0, i32 0, i64 0
-  %0 = load i8, i8* %arrayidx, align 1
+  %0 = load i8, ptr %arrayidx, align 1
   %arrayidx3 = getelementptr inbounds %struct.buf, ptr %b, i64 0, i32 0, i64 0
-  %1 = load i8, i8* %arrayidx3, align 1
+  %1 = load i8, ptr %arrayidx3, align 1
   %and12 = and i8 %1, %0
   %arrayidx.1 = getelementptr inbounds %struct.buf, ptr %a, i64 0, i32 0, i64 1
-  %2 = load i8, i8* %arrayidx.1, align 1
+  %2 = load i8, ptr %arrayidx.1, align 1
   %arrayidx3.1 = getelementptr inbounds %struct.buf, ptr %b, i64 0, i32 0, i64 1
-  %3 = load i8, i8* %arrayidx3.1, align 1
+  %3 = load i8, ptr %arrayidx3.1, align 1
   %and12.1 = and i8 %3, %2
   %4 = tail call i8 @llvm.smax.i8(i8 %and12, i8 %and12.1)
   %arrayidx.2 = getelementptr inbounds %struct.buf, ptr %a, i64 0, i32 0, i64 2
-  %5 = load i8, i8* %arrayidx.2, align 1
+  %5 = load i8, ptr %arrayidx.2, align 1
   %arrayidx3.2 = getelementptr inbounds %struct.buf, ptr %b, i64 0, i32 0, i64 2
-  %6 = load i8, i8* %arrayidx3.2, align 1
+  %6 = load i8, ptr %arrayidx3.2, align 1
   %and12.2 = and i8 %6, %5
   %7 = tail call i8 @llvm.smax.i8(i8 %4, i8 %and12.2)
   %arrayidx.3 = getelementptr inbounds %struct.buf, ptr %a, i64 0, i32 0, i64 3
-  %8 = load i8, i8* %arrayidx.3, align 1
+  %8 = load i8, ptr %arrayidx.3, align 1
   %arrayidx3.3 = getelementptr inbounds %struct.buf, ptr %b, i64 0, i32 0, i64 3
-  %9 = load i8, i8* %arrayidx3.3, align 1
+  %9 = load i8, ptr %arrayidx3.3, align 1
   %and12.3 = and i8 %9, %8
   %10 = tail call i8 @llvm.smax.i8(i8 %7, i8 %and12.3)
   %arrayidx.4 = getelementptr inbounds %struct.buf, ptr %a, i64 0, i32 0, i64 4
-  %11 = load i8, i8* %arrayidx.4, align 1
+  %11 = load i8, ptr %arrayidx.4, align 1
   %arrayidx3.4 = getelementptr inbounds %struct.buf, ptr %b, i64 0, i32 0, i64 4
-  %12 = load i8, i8* %arrayidx3.4, align 1
+  %12 = load i8, ptr %arrayidx3.4, align 1
   %and12.4 = and i8 %12, %11
   %13 = tail call i8 @llvm.smax.i8(i8 %10, i8 %and12.4)
   %arrayidx.5 = getelementptr inbounds %struct.buf, ptr %a, i64 0, i32 0, i64 5
-  %14 = load i8, i8* %arrayidx.5, align 1
+  %14 = load i8, ptr %arrayidx.5, align 1
   %arrayidx3.5 = getelementptr inbounds %struct.buf, ptr %b, i64 0, i32 0, i64 5
-  %15 = load i8, i8* %arrayidx3.5, align 1
+  %15 = load i8, ptr %arrayidx3.5, align 1
   %and12.5 = and i8 %15, %14
   %16 = tail call i8 @llvm.smax.i8(i8 %13, i8 %and12.5)
   %arrayidx.6 = getelementptr inbounds %struct.buf, ptr %a, i64 0, i32 0, i64 6
-  %17 = load i8, i8* %arrayidx.6, align 1
+  %17 = load i8, ptr %arrayidx.6, align 1
   %arrayidx3.6 = getelementptr inbounds %struct.buf, ptr %b, i64 0, i32 0, i64 6
-  %18 = load i8, i8* %arrayidx3.6, align 1
+  %18 = load i8, ptr %arrayidx3.6, align 1
   %and12.6 = and i8 %18, %17
   %19 = tail call i8 @llvm.smax.i8(i8 %16, i8 %and12.6)
   %arrayidx.7 = getelementptr inbounds %struct.buf, ptr %a, i64 0, i32 0, i64 7
-  %20 = load i8, i8* %arrayidx.7, align 1
+  %20 = load i8, ptr %arrayidx.7, align 1
   %arrayidx3.7 = getelementptr inbounds %struct.buf, ptr %b, i64 0, i32 0, i64 7
-  %21 = load i8, i8* %arrayidx3.7, align 1
+  %21 = load i8, ptr %arrayidx3.7, align 1
   %and12.7 = and i8 %21, %20
   %22 = tail call i8 @llvm.smax.i8(i8 %19, i8 %and12.7)
   ret i8 %22
@@ -662,50 +720,50 @@ define i8 @reduce_umax(ptr %a, ptr %b) {
 ;
 entry:
   %arrayidx = getelementptr inbounds %struct.buf, ptr %a, i64 0, i32 0, i64 0
-  %0 = load i8, i8* %arrayidx, align 1
+  %0 = load i8, ptr %arrayidx, align 1
   %arrayidx3 = getelementptr inbounds %struct.buf, ptr %b, i64 0, i32 0, i64 0
-  %1 = load i8, i8* %arrayidx3, align 1
+  %1 = load i8, ptr %arrayidx3, align 1
   %and12 = and i8 %1, %0
   %arrayidx.1 = getelementptr inbounds %struct.buf, ptr %a, i64 0, i32 0, i64 1
-  %2 = load i8, i8* %arrayidx.1, align 1
+  %2 = load i8, ptr %arrayidx.1, align 1
   %arrayidx3.1 = getelementptr inbounds %struct.buf, ptr %b, i64 0, i32 0, i64 1
-  %3 = load i8, i8* %arrayidx3.1, align 1
+  %3 = load i8, ptr %arrayidx3.1, align 1
   %and12.1 = and i8 %3, %2
   %4 = tail call i8 @llvm.umax.i8(i8 %and12, i8 %and12.1)
   %arrayidx.2 = getelementptr inbounds %struct.buf, ptr %a, i64 0, i32 0, i64 2
-  %5 = load i8, i8* %arrayidx.2, align 1
+  %5 = load i8, ptr %arrayidx.2, align 1
   %arrayidx3.2 = getelementptr inbounds %struct.buf, ptr %b, i64 0, i32 0, i64 2
-  %6 = load i8, i8* %arrayidx3.2, align 1
+  %6 = load i8, ptr %arrayidx3.2, align 1
   %and12.2 = and i8 %6, %5
   %7 = tail call i8 @llvm.umax.i8(i8 %4, i8 %and12.2)
   %arrayidx.3 = getelementptr inbounds %struct.buf, ptr %a, i64 0, i32 0, i64 3
-  %8 = load i8, i8* %arrayidx.3, align 1
+  %8 = load i8, ptr %arrayidx.3, align 1
   %arrayidx3.3 = getelementptr inbounds %struct.buf, ptr %b, i64 0, i32 0, i64 3
-  %9 = load i8, i8* %arrayidx3.3, align 1
+  %9 = load i8, ptr %arrayidx3.3, align 1
   %and12.3 = and i8 %9, %8
   %10 = tail call i8 @llvm.umax.i8(i8 %7, i8 %and12.3)
   %arrayidx.4 = getelementptr inbounds %struct.buf, ptr %a, i64 0, i32 0, i64 4
-  %11 = load i8, i8* %arrayidx.4, align 1
+  %11 = load i8, ptr %arrayidx.4, align 1
   %arrayidx3.4 = getelementptr inbounds %struct.buf, ptr %b, i64 0, i32 0, i64 4
-  %12 = load i8, i8* %arrayidx3.4, align 1
+  %12 = load i8, ptr %arrayidx3.4, align 1
   %and12.4 = and i8 %12, %11
   %13 = tail call i8 @llvm.umax.i8(i8 %10, i8 %and12.4)
   %arrayidx.5 = getelementptr inbounds %struct.buf, ptr %a, i64 0, i32 0, i64 5
-  %14 = load i8, i8* %arrayidx.5, align 1
+  %14 = load i8, ptr %arrayidx.5, align 1
   %arrayidx3.5 = getelementptr inbounds %struct.buf, ptr %b, i64 0, i32 0, i64 5
-  %15 = load i8, i8* %arrayidx3.5, align 1
+  %15 = load i8, ptr %arrayidx3.5, align 1
   %and12.5 = and i8 %15, %14
   %16 = tail call i8 @llvm.umax.i8(i8 %13, i8 %and12.5)
   %arrayidx.6 = getelementptr inbounds %struct.buf, ptr %a, i64 0, i32 0, i64 6
-  %17 = load i8, i8* %arrayidx.6, align 1
+  %17 = load i8, ptr %arrayidx.6, align 1
   %arrayidx3.6 = getelementptr inbounds %struct.buf, ptr %b, i64 0, i32 0, i64 6
-  %18 = load i8, i8* %arrayidx3.6, align 1
+  %18 = load i8, ptr %arrayidx3.6, align 1
   %and12.6 = and i8 %18, %17
   %19 = tail call i8 @llvm.umax.i8(i8 %16, i8 %and12.6)
   %arrayidx.7 = getelementptr inbounds %struct.buf, ptr %a, i64 0, i32 0, i64 7
-  %20 = load i8, i8* %arrayidx.7, align 1
+  %20 = load i8, ptr %arrayidx.7, align 1
   %arrayidx3.7 = getelementptr inbounds %struct.buf, ptr %b, i64 0, i32 0, i64 7
-  %21 = load i8, i8* %arrayidx3.7, align 1
+  %21 = load i8, ptr %arrayidx3.7, align 1
   %and12.7 = and i8 %21, %20
   %22 = tail call i8 @llvm.umax.i8(i8 %19, i8 %and12.7)
   ret i8 %22
@@ -726,50 +784,50 @@ define i8 @reduce_umin(ptr %a, ptr %b) {
 ;
 entry:
   %arrayidx = getelementptr inbounds %struct.buf, ptr %a, i64 0, i32 0, i64 0
-  %0 = load i8, i8* %arrayidx, align 1
+  %0 = load i8, ptr %arrayidx, align 1
   %arrayidx3 = getelementptr inbounds %struct.buf, ptr %b, i64 0, i32 0, i64 0
-  %1 = load i8, i8* %arrayidx3, align 1
+  %1 = load i8, ptr %arrayidx3, align 1
   %and12 = and i8 %1, %0
   %arrayidx.1 = getelementptr inbounds %struct.buf, ptr %a, i64 0, i32 0, i64 1
-  %2 = load i8, i8* %arrayidx.1, align 1
+  %2 = load i8, ptr %arrayidx.1, align 1
   %arrayidx3.1 = getelementptr inbounds %struct.buf, ptr %b, i64 0, i32 0, i64 1
-  %3 = load i8, i8* %arrayidx3.1, align 1
+  %3 = load i8, ptr %arrayidx3.1, align 1
   %and12.1 = and i8 %3, %2
   %4 = tail call i8 @llvm.umin.i8(i8 %and12, i8 %and12.1)
   %arrayidx.2 = getelementptr inbounds %struct.buf, ptr %a, i64 0, i32 0, i64 2
-  %5 = load i8, i8* %arrayidx.2, align 1
+  %5 = load i8, ptr %arrayidx.2, align 1
   %arrayidx3.2 = getelementptr inbounds %struct.buf, ptr %b, i64 0, i32 0, i64 2
-  %6 = load i8, i8* %arrayidx3.2, align 1
+  %6 = load i8, ptr %arrayidx3.2, align 1
   %and12.2 = and i8 %6, %5
   %7 = tail call i8 @llvm.umin.i8(i8 %4, i8 %and12.2)
   %arrayidx.3 = getelementptr inbounds %struct.buf, ptr %a, i64 0, i32 0, i64 3
-  %8 = load i8, i8* %arrayidx.3, align 1
+  %8 = load i8, ptr %arrayidx.3, align 1
   %arrayidx3.3 = getelementptr inbounds %struct.buf, ptr %b, i64 0, i32 0, i64 3
-  %9 = load i8, i8* %arrayidx3.3, align 1
+  %9 = load i8, ptr %arrayidx3.3, align 1
   %and12.3 = and i8 %9, %8
   %10 = tail call i8 @llvm.umin.i8(i8 %7, i8 %and12.3)
   %arrayidx.4 = getelementptr inbounds %struct.buf, ptr %a, i64 0, i32 0, i64 4
-  %11 = load i8, i8* %arrayidx.4, align 1
+  %11 = load i8, ptr %arrayidx.4, align 1
   %arrayidx3.4 = getelementptr inbounds %struct.buf, ptr %b, i64 0, i32 0, i64 4
-  %12 = load i8, i8* %arrayidx3.4, align 1
+  %12 = load i8, ptr %arrayidx3.4, align 1
   %and12.4 = and i8 %12, %11
   %13 = tail call i8 @llvm.umin.i8(i8 %10, i8 %and12.4)
   %arrayidx.5 = getelementptr inbounds %struct.buf, ptr %a, i64 0, i32 0, i64 5
-  %14 = load i8, i8* %arrayidx.5, align 1
+  %14 = load i8, ptr %arrayidx.5, align 1
   %arrayidx3.5 = getelementptr inbounds %struct.buf, ptr %b, i64 0, i32 0, i64 5
-  %15 = load i8, i8* %arrayidx3.5, align 1
+  %15 = load i8, ptr %arrayidx3.5, align 1
   %and12.5 = and i8 %15, %14
   %16 = tail call i8 @llvm.umin.i8(i8 %13, i8 %and12.5)
   %arrayidx.6 = getelementptr inbounds %struct.buf, ptr %a, i64 0, i32 0, i64 6
-  %17 = load i8, i8* %arrayidx.6, align 1
+  %17 = load i8, ptr %arrayidx.6, align 1
   %arrayidx3.6 = getelementptr inbounds %struct.buf, ptr %b, i64 0, i32 0, i64 6
-  %18 = load i8, i8* %arrayidx3.6, align 1
+  %18 = load i8, ptr %arrayidx3.6, align 1
   %and12.6 = and i8 %18, %17
   %19 = tail call i8 @llvm.umin.i8(i8 %16, i8 %and12.6)
   %arrayidx.7 = getelementptr inbounds %struct.buf, ptr %a, i64 0, i32 0, i64 7
-  %20 = load i8, i8* %arrayidx.7, align 1
+  %20 = load i8, ptr %arrayidx.7, align 1
   %arrayidx3.7 = getelementptr inbounds %struct.buf, ptr %b, i64 0, i32 0, i64 7
-  %21 = load i8, i8* %arrayidx3.7, align 1
+  %21 = load i8, ptr %arrayidx3.7, align 1
   %and12.7 = and i8 %21, %20
   %22 = tail call i8 @llvm.umin.i8(i8 %19, i8 %and12.7)
   ret i8 %22
@@ -801,10 +859,21 @@ entry:
 define i64 @red_zext_ld_4xi64(ptr %ptr) {
 ; CHECK-LABEL: @red_zext_ld_4xi64(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i8>, ptr [[PTR:%.*]], align 1
-; CHECK-NEXT:    [[TMP1:%.*]] = zext <4 x i8> [[TMP0]] to <4 x i64>
-; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> [[TMP1]])
-; CHECK-NEXT:    ret i64 [[TMP2]]
+; CHECK-NEXT:    [[LD0:%.*]] = load i8, ptr [[PTR:%.*]], align 1
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i8 [[LD0]] to i64
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i64 1
+; CHECK-NEXT:    [[LD1:%.*]] = load i8, ptr [[GEP]], align 1
+; CHECK-NEXT:    [[ZEXT_1:%.*]] = zext i8 [[LD1]] to i64
+; CHECK-NEXT:    [[ADD_1:%.*]] = add nuw nsw i64 [[ZEXT]], [[ZEXT_1]]
+; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i64 2
+; CHECK-NEXT:    [[LD2:%.*]] = load i8, ptr [[GEP_1]], align 1
+; CHECK-NEXT:    [[ZEXT_2:%.*]] = zext i8 [[LD2]] to i64
+; CHECK-NEXT:    [[ADD_2:%.*]] = add nuw nsw i64 [[ADD_1]], [[ZEXT_2]]
+; CHECK-NEXT:    [[GEP_2:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i64 3
+; CHECK-NEXT:    [[LD3:%.*]] = load i8, ptr [[GEP_2]], align 1
+; CHECK-NEXT:    [[ZEXT_3:%.*]] = zext i8 [[LD3]] to i64
+; CHECK-NEXT:    [[ADD_3:%.*]] = add nuw nsw i64 [[ADD_2]], [[ZEXT_3]]
+; CHECK-NEXT:    ret i64 [[ADD_3]]
 ;
 entry:
   %ld0 = load i8, ptr %ptr
@@ -944,22 +1013,20 @@ declare i32 @llvm.abs.i32(i32, i1)
 
 define i32 @stride_sum_abs_diff(ptr %p, ptr %q, i64 %stride) {
 ; CHECK-LABEL: @stride_sum_abs_diff(
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[P:%.*]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr [[Q:%.*]], align 4
-; CHECK-NEXT:    [[P_2:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 [[STRIDE:%.*]]
-; CHECK-NEXT:    [[Q_2:%.*]] = getelementptr inbounds i32, ptr [[Q]], i64 [[STRIDE]]
+; CHECK-NEXT:    [[P_2:%.*]] = getelementptr inbounds i32, ptr [[P:%.*]], i64 [[STRIDE:%.*]]
+; CHECK-NEXT:    [[Q_2:%.*]] = getelementptr inbounds i32, ptr [[Q:%.*]], i64 [[STRIDE]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[P]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr [[Q]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i32>, ptr [[P_2]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x i32>, ptr [[Q_2]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i32> [[TMP3]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i32> [[TMP5]], <4 x i32> [[TMP6]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <2 x i32> [[TMP4]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <4 x i32> [[TMP8]], <4 x i32> [[TMP9]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
-; CHECK-NEXT:    [[TMP11:%.*]] = sub <4 x i32> [[TMP7]], [[TMP10]]
-; CHECK-NEXT:    [[TMP12:%.*]] = call <4 x i32> @llvm.abs.v4i32(<4 x i32> [[TMP11]], i1 true)
-; CHECK-NEXT:    [[TMP13:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP12]])
-; CHECK-NEXT:    ret i32 [[TMP13]]
+; CHECK-NEXT:    [[TMP5:%.*]] = call <4 x i32> @llvm.vector.insert.v4i32.v2i32(<4 x i32> poison, <2 x i32> [[TMP1]], i64 0)
+; CHECK-NEXT:    [[TMP6:%.*]] = call <4 x i32> @llvm.vector.insert.v4i32.v2i32(<4 x i32> [[TMP5]], <2 x i32> [[TMP3]], i64 2)
+; CHECK-NEXT:    [[TMP7:%.*]] = call <4 x i32> @llvm.vector.insert.v4i32.v2i32(<4 x i32> poison, <2 x i32> [[TMP2]], i64 0)
+; CHECK-NEXT:    [[TMP8:%.*]] = call <4 x i32> @llvm.vector.insert.v4i32.v2i32(<4 x i32> [[TMP7]], <2 x i32> [[TMP4]], i64 2)
+; CHECK-NEXT:    [[TMP9:%.*]] = sub <4 x i32> [[TMP6]], [[TMP8]]
+; CHECK-NEXT:    [[TMP10:%.*]] = call <4 x i32> @llvm.abs.v4i32(<4 x i32> [[TMP9]], i1 true)
+; CHECK-NEXT:    [[TMP11:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP10]])
+; CHECK-NEXT:    ret i32 [[TMP11]]
 ;
   %x.0 = load i32, ptr %p
   %y.0 = load i32, ptr %q
@@ -999,12 +1066,11 @@ define i32 @reduce_sum_2arrays_a(ptr noalias %p, ptr noalias %q) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i8>, ptr [[P:%.*]], align 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i8>, ptr [[Q:%.*]], align 1
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i8> [[TMP1]], <4 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i8> [[TMP0]], <4 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <8 x i8> [[TMP2]], <8 x i8> [[TMP3]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
-; CHECK-NEXT:    [[TMP5:%.*]] = zext <8 x i8> [[TMP4]] to <8 x i32>
-; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP5]])
-; CHECK-NEXT:    ret i32 [[TMP6]]
+; CHECK-NEXT:    [[TMP2:%.*]] = call <8 x i8> @llvm.vector.insert.v8i8.v4i8(<8 x i8> poison, <4 x i8> [[TMP0]], i64 0)
+; CHECK-NEXT:    [[TMP3:%.*]] = call <8 x i8> @llvm.vector.insert.v8i8.v4i8(<8 x i8> [[TMP2]], <4 x i8> [[TMP1]], i64 4)
+; CHECK-NEXT:    [[TMP4:%.*]] = zext <8 x i8> [[TMP3]] to <8 x i32>
+; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP4]])
+; CHECK-NEXT:    ret i32 [[TMP5]]
 ;
 entry:
   %x.0 = load i8, ptr %p, align 1
@@ -1048,12 +1114,11 @@ define i32 @reduce_sum_2arrays_b(ptr noalias noundef %x, ptr noalias %y) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i8>, ptr [[X:%.*]], align 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i8>, ptr [[Y:%.*]], align 1
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i8> [[TMP0]], <4 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i8> [[TMP1]], <4 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <8 x i8> [[TMP2]], <8 x i8> [[TMP3]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
-; CHECK-NEXT:    [[TMP5:%.*]] = zext <8 x i8> [[TMP4]] to <8 x i32>
-; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP5]])
-; CHECK-NEXT:    ret i32 [[TMP6]]
+; CHECK-NEXT:    [[TMP2:%.*]] = call <8 x i8> @llvm.vector.insert.v8i8.v4i8(<8 x i8> poison, <4 x i8> [[TMP0]], i64 0)
+; CHECK-NEXT:    [[TMP3:%.*]] = call <8 x i8> @llvm.vector.insert.v8i8.v4i8(<8 x i8> [[TMP2]], <4 x i8> [[TMP1]], i64 4)
+; CHECK-NEXT:    [[TMP4:%.*]] = zext <8 x i8> [[TMP3]] to <8 x i32>
+; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP4]])
+; CHECK-NEXT:    ret i32 [[TMP5]]
 ;
   entry:
   %0 = load i8, ptr %x, align 1

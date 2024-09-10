@@ -188,7 +188,7 @@ define float @cst1() nounwind {
 ;
 ; X64-LABEL: cst1:
 ; X64:       # %bb.0:
-; X64-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X64-NEXT:    movss {{.*#+}} xmm0 = [-1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; X64-NEXT:    retq
   %tmp = tail call float @llvm.copysign.f32( float 1.0, float -2.0 )
   ret float %tmp
@@ -203,7 +203,7 @@ define double @cst2() nounwind {
 ;
 ; X64-LABEL: cst2:
 ; X64:       # %bb.0:
-; X64-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X64-NEXT:    movsd {{.*#+}} xmm0 = [-0.0E+0,0.0E+0]
 ; X64-NEXT:    retq
   %tmp1 = fadd float -1.0, -1.0
   %tmp2 = fpext float %tmp1 to double

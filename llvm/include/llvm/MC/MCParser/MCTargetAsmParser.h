@@ -514,9 +514,7 @@ public:
   /// by the tied-operands checks in the AsmMatcher. This method can be
   /// overridden to allow e.g. a sub- or super-register as the tied operand.
   virtual bool areEqualRegs(const MCParsedAsmOperand &Op1,
-                            const MCParsedAsmOperand &Op2) const {
-    return Op1.isReg() && Op2.isReg() && Op1.getReg() == Op2.getReg();
-  }
+                            const MCParsedAsmOperand &Op2) const;
 
   // Return whether this parser uses assignment statements with equals tokens
   virtual bool equalIsAsmAssignment() { return true; };
@@ -525,6 +523,10 @@ public:
   // Return whether this parser accept star as start of statement
   virtual bool starIsStartOfStatement() { return false; };
 
+  virtual MCSymbolRefExpr::VariantKind
+  getVariantKindForName(StringRef Name) const {
+    return MCSymbolRefExpr::getVariantKindForName(Name);
+  }
   virtual const MCExpr *applyModifierToExpr(const MCExpr *E,
                                             MCSymbolRefExpr::VariantKind,
                                             MCContext &Ctx) {

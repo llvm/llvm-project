@@ -9,6 +9,8 @@
 #ifndef LLVM_MC_MCELFOBJECTWRITER_H
 #define LLVM_MC_MCELFOBJECTWRITER_H
 
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSectionELF.h"
@@ -16,6 +18,8 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cstdint>
+#include <memory>
+#include <optional>
 #include <vector>
 
 namespace llvm {
@@ -25,6 +29,7 @@ class MCContext;
 class MCFixup;
 class MCSymbol;
 class MCSymbolELF;
+class MCTargetOptions;
 class MCValue;
 
 struct ELFRelocationEntry {
@@ -32,19 +37,14 @@ struct ELFRelocationEntry {
   const MCSymbolELF *Symbol; // The symbol to relocate with.
   unsigned Type;   // The type of the relocation.
   uint64_t Addend; // The addend to use.
-  const MCSymbolELF *OriginalSymbol; // The original value of Symbol if we changed it.
-  uint64_t OriginalAddend; // The original value of addend.
 
   ELFRelocationEntry(uint64_t Offset, const MCSymbolELF *Symbol, unsigned Type,
-                     uint64_t Addend, const MCSymbolELF *OriginalSymbol,
-                     uint64_t OriginalAddend)
-      : Offset(Offset), Symbol(Symbol), Type(Type), Addend(Addend),
-        OriginalSymbol(OriginalSymbol), OriginalAddend(OriginalAddend) {}
+                     uint64_t Addend)
+      : Offset(Offset), Symbol(Symbol), Type(Type), Addend(Addend) {}
 
   void print(raw_ostream &Out) const {
     Out << "Off=" << Offset << ", Sym=" << Symbol << ", Type=" << Type
-        << ", Addend=" << Addend << ", OriginalSymbol=" << OriginalSymbol
-        << ", OriginalAddend=" << OriginalAddend;
+        << ", Addend=" << Addend;
   }
 
   LLVM_DUMP_METHOD void dump() const { print(errs()); }
@@ -78,6 +78,8 @@ public:
         return ELF::ELFOSABI_FREEBSD;
       case Triple::Solaris:
         return ELF::ELFOSABI_SOLARIS;
+      case Triple::OpenBSD:
+        return ELF::ELFOSABI_OPENBSD;
       default:
         return ELF::ELFOSABI_NONE;
     }
@@ -91,8 +93,6 @@ public:
 
   virtual void sortRelocs(const MCAssembler &Asm,
                           std::vector<ELFRelocationEntry> &Relocs);
-
-  virtual void addTargetSectionFlags(MCContext &Ctx, MCSectionELF &Sec);
 
   /// \name Accessors
   /// @{
@@ -147,20 +147,66 @@ public:
   }
 };
 
-/// Construct a new ELF writer instance.
-///
-/// \param MOTW - The target specific ELF writer subclass.
-/// \param OS - The stream to write to.
-/// \returns The constructed object writer.
-std::unique_ptr<MCObjectWriter>
-createELFObjectWriter(std::unique_ptr<MCELFObjectTargetWriter> MOTW,
-                      raw_pwrite_stream &OS, bool IsLittleEndian);
+class ELFObjectWriter final : public MCObjectWriter {
+  unsigned ELFHeaderEFlags = 0;
 
-std::unique_ptr<MCObjectWriter>
-createELFDwoObjectWriter(std::unique_ptr<MCELFObjectTargetWriter> MOTW,
-                         raw_pwrite_stream &OS, raw_pwrite_stream &DwoOS,
-                         bool IsLittleEndian);
+public:
+  std::unique_ptr<MCELFObjectTargetWriter> TargetObjectWriter;
+  raw_pwrite_stream &OS;
+  raw_pwrite_stream *DwoOS = nullptr;
 
+  DenseMap<const MCSectionELF *, std::vector<ELFRelocationEntry>> Relocations;
+  DenseMap<const MCSymbolELF *, const MCSymbolELF *> Renames;
+  bool IsLittleEndian = false;
+  bool SeenGnuAbi = false;
+  std::optional<uint8_t> OverrideABIVersion;
+
+  struct Symver {
+    SMLoc Loc;
+    const MCSymbol *Sym;
+    StringRef Name;
+    // True if .symver *, *@@@* or .symver *, *, remove.
+    bool KeepOriginalSym;
+  };
+  SmallVector<Symver, 0> Symvers;
+
+  ELFObjectWriter(std::unique_ptr<MCELFObjectTargetWriter> MOTW,
+                  raw_pwrite_stream &OS, bool IsLittleEndian);
+  ELFObjectWriter(std::unique_ptr<MCELFObjectTargetWriter> MOTW,
+                  raw_pwrite_stream &OS, raw_pwrite_stream &DwoOS,
+                  bool IsLittleEndian);
+
+  void reset() override;
+  void executePostLayoutBinding(MCAssembler &Asm) override;
+  void recordRelocation(MCAssembler &Asm, const MCFragment *Fragment,
+                        const MCFixup &Fixup, MCValue Target,
+                        uint64_t &FixedValue) override;
+  bool isSymbolRefDifferenceFullyResolvedImpl(const MCAssembler &Asm,
+                                              const MCSymbol &SymA,
+                                              const MCFragment &FB, bool InSet,
+                                              bool IsPCRel) const override;
+  uint64_t writeObject(MCAssembler &Asm) override;
+
+  bool hasRelocationAddend() const;
+  bool usesRela(const MCTargetOptions *TO, const MCSectionELF &Sec) const;
+
+  bool shouldRelocateWithSymbol(const MCAssembler &Asm, const MCValue &Val,
+                                const MCSymbolELF *Sym, uint64_t C,
+                                unsigned Type) const;
+
+  bool checkRelocation(MCContext &Ctx, SMLoc Loc, const MCSectionELF *From,
+                       const MCSectionELF *To);
+
+  unsigned getELFHeaderEFlags() const { return ELFHeaderEFlags; }
+  void setELFHeaderEFlags(unsigned Flags) { ELFHeaderEFlags = Flags; }
+
+  // Mark that we have seen GNU ABI usage (e.g. SHF_GNU_RETAIN, STB_GNU_UNIQUE).
+  void markGnuAbi() { SeenGnuAbi = true; }
+  bool seenGnuAbi() const { return SeenGnuAbi; }
+
+  // Override the default e_ident[EI_ABIVERSION] in the ELF header.
+  void setOverrideABIVersion(uint8_t V) { OverrideABIVersion = V; }
+};
 } // end namespace llvm
 
 #endif // LLVM_MC_MCELFOBJECTWRITER_H

@@ -116,7 +116,7 @@ define <64 x i8> @combine_vpermi2var_64i8_as_vperm2(<64 x i8> %x0, <64 x i8> %x1
 define <64 x i8> @combine_permi2q_pshufb_as_permi2d(<8 x i64> %a0, <8 x i64> %a1) {
 ; CHECK-LABEL: combine_permi2q_pshufb_as_permi2d:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [14,14,14,14,11,11,11,11,24,24,24,24,29,29,29,29]
+; CHECK-NEXT:    vpmovsxbd {{.*#+}} zmm2 = [14,14,14,14,11,11,11,11,24,24,24,24,29,29,29,29]
 ; CHECK-NEXT:    vpermi2d %zmm0, %zmm1, %zmm2
 ; CHECK-NEXT:    vmovdqa64 %zmm2, %zmm0
 ; CHECK-NEXT:    ret{{[l|q]}}

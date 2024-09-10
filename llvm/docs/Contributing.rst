@@ -58,7 +58,7 @@ Once you have a patch ready, it is time to submit it. The patch should:
 * conform to the :doc:`CodingStandards`. You can use the `clang-format-diff.py`_ or `git-clang-format`_ tools to automatically format your patch properly.
 * not contain any unrelated changes
 * be an isolated change. Independent changes should be submitted as separate patches as this makes reviewing easier.
-* have a single commit (unless stacked on another Differential), up-to-date with the upstream ``origin/main`` branch, and don't have merges.
+* have a single commit, up-to-date with the upstream ``origin/main`` branch, and don't have merges.
 
 .. _format patches:
 
@@ -89,10 +89,9 @@ in order to update the last commit with all pending changes.
   ``clang/tools/clang-format/git-clang-format``.
 
 The LLVM project has migrated to GitHub Pull Requests as its review process.
-We still have an active :ref:`Phabricator <phabricator-reviews>`
-instance for the duration of the migration. If you want to contribute to LLVM
-now, please use GitHub. For more information about the workflow of using GitHub
-Pull Requests see our :ref:`GitHub <github-reviews>` documentation.
+For more information about the workflow of using GitHub Pull Requests see our
+:ref:`GitHub <github-reviews>` documentation. We still have an read-only
+`LLVM's Phabricator <https://reviews.llvm.org>`_ instance.
 
 To make sure the right people see your patch, please select suitable reviewers
 and add them to your patch when requesting a review. Suitable reviewers are the
@@ -185,5 +184,5 @@ of LLVM's high-level design, as well as its internals:
 .. _clang-format-diff.py: https://reviews.llvm.org/source/llvm-github/browse/main/clang/tools/clang-format/clang-format-diff.py
 .. _git-clang-format: https://reviews.llvm.org/source/llvm-github/browse/main/clang/tools/clang-format/git-clang-format
 .. _LLVM's GitHub: https://github.com/llvm/llvm-project
-.. _LLVM's Phabricator (deprecated): https://reviews.llvm.org/
+.. _LLVM's Phabricator (read-only): https://reviews.llvm.org/
 .. _LLVM's Open Projects page: https://llvm.org/OpenProjects.html#what

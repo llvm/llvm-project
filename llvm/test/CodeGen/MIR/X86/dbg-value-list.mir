@@ -1,4 +1,5 @@
 # RUN: llc -march=x86-64 -run-pass machineverifier -o - %s | FileCheck %s
+# RUN: llc -march=x86-64 --passes='machine-function(verify)' -o - %s | FileCheck %s
 # Simple round-trip test for DBG_VALUE_LIST.
 # CHECK: [[VAR_C:![0-9]+]] = !DILocalVariable(name: "c"
 # CHECK: DBG_VALUE_LIST [[VAR_C]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_stack_value), $edi, $esi, debug-location
@@ -7,7 +8,7 @@
   source_filename = "test.cpp"
   target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
   target triple = "x86_64-unknown-linux-gnu"
-  
+
   ; Function Attrs: norecurse nounwind readnone uwtable
   define dso_local i32 @_Z3fooii(i32 %a, i32 %b) local_unnamed_addr !dbg !7 {
   entry:
@@ -17,14 +18,14 @@
     %mul = mul nsw i32 %b, %a, !dbg !16
     ret i32 %mul, !dbg !17
   }
-  
+
   ; Function Attrs: nounwind readnone speculatable willreturn
   declare void @llvm.dbg.value(metadata, metadata, metadata)
-  
+
   !llvm.dbg.cu = !{!0}
   !llvm.module.flags = !{!3, !4, !5}
   !llvm.ident = !{!6}
-  
+
   !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang version 11.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, splitDebugInlining: false, nameTableKind: None)
   !1 = !DIFile(filename: "test.cpp", directory: "/")
   !2 = !{}
@@ -50,7 +51,7 @@ name:            _Z3fooii
 body:             |
   bb.0.entry:
     liveins: $edi, $esi
-  
+
     DBG_VALUE $edi, $noreg, !12, !DIExpression(), debug-location !15
     DBG_VALUE $esi, $noreg, !13, !DIExpression(), debug-location !15
     $eax = MOV32rr $edi

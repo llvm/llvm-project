@@ -37,8 +37,8 @@ e(x)
 e()
 
 zero_dot()
-one_dot(x)  /* empty ... argument: expected-warning {{must specify at least one argument for '...' parameter of variadic macro}}  */
-one_dot()   /* empty first argument, elided ...: expected-warning {{must specify at least one argument for '...' parameter of variadic macro}} */
+one_dot(x)  /* empty ... argument: expected-warning {{passing no argument for the '...' parameter of a variadic macro is a C23 extension}}  */
+one_dot()   /* empty first argument, elided ...: expected-warning {{passing no argument for the '...' parameter of a variadic macro is a C23 extension}} */
 
 
 /* Crash with function-like macro test at end of directive. */

@@ -20,16 +20,16 @@ Large L;
 void zeroInit() { int Z[3] = {0, 0, 0}; }
 // CHECK-LABEL: define dso_local void @_Z8zeroInitv
 // CHECK:       %Z = alloca [3 x i32], align 4, !DIAssignID ![[ID_0:[0-9]+]]
-// CHECK-NEXT:  call void @llvm.dbg.assign(metadata i1 undef, metadata ![[VAR_0:[0-9]+]], metadata !DIExpression(), metadata ![[ID_0]], metadata ptr %Z, metadata !DIExpression())
+// CHECK-NEXT:  #dbg_assign(i1 undef, ![[VAR_0:[0-9]+]], !DIExpression(), ![[ID_0]], ptr %Z, !DIExpression(),
 // CHECK:        @llvm.memset{{.*}}, !DIAssignID ![[ID_1:[0-9]+]]
-// CHECK-NEXT:   call void @llvm.dbg.assign(metadata i8 0, metadata ![[VAR_0]], metadata !DIExpression(), metadata ![[ID_1]], metadata ptr %Z, metadata !DIExpression())
+// CHECK-NEXT:   #dbg_assign(i8 0, ![[VAR_0]], !DIExpression(), ![[ID_1]], ptr %Z, !DIExpression(),
 
 void memcpyInit() { int A[4] = {0, 1, 2, 3}; }
 // CHECK-LABEL: define dso_local void @_Z10memcpyInitv
 // CHECK:       %A = alloca [4 x i32], align 16, !DIAssignID ![[ID_2:[0-9]+]]
-// CHECK-NEXT:  call void @llvm.dbg.assign(metadata i1 undef, metadata ![[VAR_1:[0-9]+]], metadata !DIExpression(), metadata ![[ID_2]], metadata ptr %A, metadata !DIExpression())
+// CHECK-NEXT:  #dbg_assign(i1 undef, ![[VAR_1:[0-9]+]], !DIExpression(), ![[ID_2]], ptr %A, !DIExpression(),
 // CHECK:        @llvm.memcpy{{.*}}, !DIAssignID ![[ID_3:[0-9]+]]
-// CHECK-NEXT:   call void @llvm.dbg.assign(metadata i1 undef, metadata ![[VAR_1]], metadata !DIExpression(), metadata ![[ID_3]], metadata ptr %A, metadata !DIExpression())
+// CHECK-NEXT:   #dbg_assign(i1 undef, ![[VAR_1]], !DIExpression(), ![[ID_3]], ptr %A, !DIExpression(),
 
 void setField() {
   Outer O;
@@ -37,9 +37,9 @@ void setField() {
 }
 // CHECK-LABEL: define dso_local void @_Z8setFieldv
 // CHECK:       %O = alloca %struct.Outer, align 4, !DIAssignID ![[ID_4:[0-9]+]]
-// CHECK-NEXT:  call void @llvm.dbg.assign(metadata i1 undef, metadata ![[VAR_2:[0-9]+]], metadata !DIExpression(), metadata ![[ID_4]], metadata ptr %O, metadata !DIExpression())
+// CHECK-NEXT:  #dbg_assign(i1 undef, ![[VAR_2:[0-9]+]], !DIExpression(), ![[ID_4]], ptr %O, !DIExpression(),
 // CHECK:       store i32 %0, ptr %B, align 4,{{.*}}!DIAssignID ![[ID_5:[0-9]+]]
-// CHECK-NEXT:  call void @llvm.dbg.assign(metadata i32 %0, metadata ![[VAR_2]], metadata !DIExpression(DW_OP_LLVM_fragment, 32, 32), metadata ![[ID_5]], metadata ptr %B, metadata !DIExpression())
+// CHECK-NEXT:  #dbg_assign(i32 %0, ![[VAR_2]], !DIExpression(DW_OP_LLVM_fragment, 32, 32), ![[ID_5]], ptr %B, !DIExpression(),
 
 void unknownOffset() {
   int A[2];
@@ -47,7 +47,7 @@ void unknownOffset() {
 }
 // CHECK-LABEL: define dso_local void @_Z13unknownOffsetv
 // CHECK:       %A = alloca [2 x i32], align 4, !DIAssignID ![[ID_6:[0-9]+]]
-// CHECK-NEXT:  call void @llvm.dbg.assign(metadata i1 undef, metadata ![[VAR_3:[0-9]+]], metadata !DIExpression(), metadata ![[ID_6]], metadata ptr %A, metadata !DIExpression())
+// CHECK-NEXT:  #dbg_assign(i1 undef, ![[VAR_3:[0-9]+]], !DIExpression(), ![[ID_6]], ptr %A, !DIExpression(),
 
 Inner sharedAlloca() {
   if (Cond) {
@@ -60,34 +60,34 @@ Inner sharedAlloca() {
 }
 // CHECK-LABEL: define dso_local i64 @_Z12sharedAllocav
 // CHECK:       %retval = alloca %struct.Inner, align 4, !DIAssignID ![[ID_7:[0-9]+]]
-// CHECK-NEXT:  call void @llvm.dbg.assign(metadata i1 undef, metadata ![[VAR_4:[0-9]+]], metadata !DIExpression(), metadata ![[ID_7]], metadata ptr %retval, metadata !DIExpression())
-// CHECK-NEXT:  call void @llvm.dbg.assign(metadata i1 undef, metadata ![[VAR_5:[0-9]+]], metadata !DIExpression(), metadata ![[ID_7]], metadata ptr %retval, metadata !DIExpression())
+// CHECK-NEXT:  #dbg_assign(i1 undef, ![[VAR_4:[0-9]+]], !DIExpression(), ![[ID_7]], ptr %retval, !DIExpression(),
+// CHECK-NEXT:  #dbg_assign(i1 undef, ![[VAR_5:[0-9]+]], !DIExpression(), ![[ID_7]], ptr %retval, !DIExpression(),
 // CHECK:     if.then:
 // CHECK:       call void @llvm.memcpy{{.*}}, !DIAssignID ![[ID_8:[0-9]+]]
-// CHECK-NEXT:  call void @llvm.dbg.assign(metadata i1 undef, metadata ![[VAR_4]], metadata !DIExpression(), metadata ![[ID_8]], metadata ptr %retval, metadata !DIExpression())
-// CHECK-NEXT:  call void @llvm.dbg.assign(metadata i1 undef, metadata ![[VAR_5]], metadata !DIExpression(), metadata ![[ID_8]], metadata ptr %retval, metadata !DIExpression())
+// CHECK-NEXT:  #dbg_assign(i1 undef, ![[VAR_4]], !DIExpression(), ![[ID_8]], ptr %retval, !DIExpression(),
+// CHECK-NEXT:  #dbg_assign(i1 undef, ![[VAR_5]], !DIExpression(), ![[ID_8]], ptr %retval, !DIExpression(),
 // CHECK:     if.else:
 // CHECK:       call void @llvm.memcpy{{.*}}, !DIAssignID ![[ID_9:[0-9]+]]
-// CHECK-NEXT:  call void @llvm.dbg.assign(metadata i1 undef, metadata ![[VAR_4]], metadata !DIExpression(), metadata ![[ID_9]], metadata ptr %retval, metadata !DIExpression())
-// CHECK-NEXT:  call void @llvm.dbg.assign(metadata i1 undef, metadata ![[VAR_5]], metadata !DIExpression(), metadata ![[ID_9]], metadata ptr %retval, metadata !DIExpression())
+// CHECK-NEXT:  #dbg_assign(i1 undef, ![[VAR_4]], !DIExpression(), ![[ID_9]], ptr %retval, !DIExpression(),
+// CHECK-NEXT:  #dbg_assign(i1 undef, ![[VAR_5]], !DIExpression(), ![[ID_9]], ptr %retval, !DIExpression(),
 
 Large sret() {
   Large X = L;
   return X;
 }
 // CHECK-LABEL: define dso_local void @_Z4sretv
-// CHECK:       llvm.dbg.declare
+// CHECK:       #dbg_declare
 
 void byval(Large X) {}
 // CHECK-LABEL: define dso_local void @_Z5byval5Large
-// CHECK:       llvm.dbg.declare
+// CHECK:       #dbg_declare
 
 LCopyCtor indirectReturn() {
   LCopyCtor R;
   return R;
 }
 // CHECK-LABEL: define dso_local void @_Z14indirectReturnv
-// CHECK:       call void @llvm.dbg.declare
+// CHECK:       #dbg_declare
 
 // CHECK-DAG: ![[VAR_0]] = !DILocalVariable(name: "Z",
 // CHECK-DAG: ![[VAR_1]] = !DILocalVariable(name: "A",

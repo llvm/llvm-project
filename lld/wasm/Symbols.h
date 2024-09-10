@@ -60,6 +60,8 @@ public:
     UndefinedTableKind,
     UndefinedTagKind,
     LazyKind,
+    SharedFunctionKind,
+    SharedDataKind,
   };
 
   Kind kind() const { return symbolKind; }
@@ -74,6 +76,9 @@ public:
   }
 
   bool isLazy() const { return symbolKind == LazyKind; }
+  bool isShared() const {
+    return symbolKind == SharedFunctionKind || symbolKind == SharedDataKind;
+  }
 
   bool isLocal() const;
   bool isWeak() const;
@@ -190,6 +195,7 @@ class FunctionSymbol : public Symbol {
 public:
   static bool classof(const Symbol *s) {
     return s->kind() == DefinedFunctionKind ||
+           s->kind() == SharedFunctionKind ||
            s->kind() == UndefinedFunctionKind;
   }
 
@@ -285,7 +291,8 @@ public:
 class DataSymbol : public Symbol {
 public:
   static bool classof(const Symbol *s) {
-    return s->kind() == DefinedDataKind || s->kind() == UndefinedDataKind;
+    return s->kind() == DefinedDataKind || s->kind() == UndefinedDataKind ||
+           s->kind() == SharedDataKind;
   }
 
 protected:
@@ -321,6 +328,12 @@ public:
 
 protected:
   uint64_t size = 0;
+};
+
+class SharedData : public DataSymbol {
+public:
+  SharedData(StringRef name, uint32_t flags, InputFile *f)
+      : DataSymbol(name, SharedDataKind, flags, f) {}
 };
 
 class UndefinedData : public DataSymbol {
@@ -486,9 +499,19 @@ public:
   static bool classof(const Symbol *s) { return s->kind() == UndefinedTagKind; }
 };
 
-// LazySymbol represents a symbol that is not yet in the link, but we know where
-// to find it if needed. If the resolver finds both Undefined and Lazy for the
-// same name, it will ask the Lazy to load a file.
+class SharedFunctionSymbol : public FunctionSymbol {
+public:
+  SharedFunctionSymbol(StringRef name, uint32_t flags, InputFile *file,
+                       const WasmSignature *sig)
+      : FunctionSymbol(name, SharedFunctionKind, flags, file, sig) {}
+  static bool classof(const Symbol *s) {
+    return s->kind() == SharedFunctionKind;
+  }
+};
+
+// LazySymbol symbols represent symbols in object files between --start-lib and
+// --end-lib options. LLD also handles traditional archives as if all the files
+// in the archive are surrounded by --start-lib and --end-lib.
 //
 // A special complication is the handling of weak undefined symbols. They should
 // not load a file, but we have to remember we have seen both the weak undefined
@@ -497,14 +520,12 @@ public:
 // symbols into consideration.
 class LazySymbol : public Symbol {
 public:
-  LazySymbol(StringRef name, uint32_t flags, InputFile *file,
-             const llvm::object::Archive::Symbol &sym)
-      : Symbol(name, LazyKind, flags, file), archiveSymbol(sym) {}
+  LazySymbol(StringRef name, uint32_t flags, InputFile *file)
+      : Symbol(name, LazyKind, flags, file) {}
 
   static bool classof(const Symbol *s) { return s->kind() == LazyKind; }
-  void fetch();
+  void extract();
   void setWeak();
-  MemoryBufferRef getMemberBuffer();
 
   // Lazy symbols can have a signature because they can replace an
   // UndefinedFunction in which case we need to be able to preserve the
@@ -512,9 +533,6 @@ public:
   // TODO(sbc): This repetition of the signature field is inelegant.  Revisit
   // the use of class hierarchy to represent symbol taxonomy.
   const WasmSignature *signature = nullptr;
-
-private:
-  llvm::object::Archive::Symbol archiveSymbol;
 };
 
 // linker-generated symbols
@@ -608,11 +626,6 @@ struct WasmSym {
   // Used in PIC code for offset of indirect function table
   static UndefinedGlobal *tableBase;
   static DefinedData *definedTableBase;
-  // 32-bit copy in wasm64 to work around init expr limitations.
-  // These can potentially be removed again once we have
-  // https://github.com/WebAssembly/extended-const 
-  static UndefinedGlobal *tableBase32;
-  static DefinedData *definedTableBase32;
 
   // __memory_base
   // Used in PIC code for offset of global data
@@ -640,6 +653,7 @@ union SymbolUnion {
   alignas(UndefinedGlobal) char i[sizeof(UndefinedGlobal)];
   alignas(UndefinedTable) char j[sizeof(UndefinedTable)];
   alignas(SectionSymbol) char k[sizeof(SectionSymbol)];
+  alignas(SharedFunctionSymbol) char l[sizeof(SharedFunctionSymbol)];
 };
 
 // It is important to keep the size of SymbolUnion small for performance and

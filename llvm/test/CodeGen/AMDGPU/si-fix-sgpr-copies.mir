@@ -1,4 +1,5 @@
-# RUN: llc -march=amdgcn -run-pass si-fix-sgpr-copies %s -o - | FileCheck %s -check-prefixes=GCN
+# RUN: llc -mtriple=amdgcn -run-pass si-fix-sgpr-copies %s -o - | FileCheck %s -check-prefixes=GCN
+# RUN: llc -mtriple=amdgcn -passes=si-fix-sgpr-copies %s -o - | FileCheck %s -check-prefixes=GCN
 
 ---
 

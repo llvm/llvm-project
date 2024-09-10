@@ -17,6 +17,8 @@
 
 name: f0
 tracksRegLiveness: true
+frameInfo:
+  adjustsStack:    true
 stack:
   - { id: 0, offset: 0, size: 128, alignment: 128 }
   - { id: 1, offset: 128, size: 128, alignment: 128 }

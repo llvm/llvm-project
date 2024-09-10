@@ -5,11 +5,11 @@
 struct S {};
 struct T : S {} t;
 
-consteval void test() { // cxx23-error{{consteval function never produces a constant expression}}
+consteval void test() {
     void* a = &t;
     const void* b = &t;
     volatile void* c = &t;
-    (void)static_cast<T*>(a); //cxx23-note {{cast from 'void *' is not allowed in a constant expression in C++ standards before C++2c}}
+    (void)static_cast<T*>(a);
     (void)static_cast<const T*>(a);
     (void)static_cast<volatile T*>(a);
 
@@ -37,3 +37,10 @@ void err() {
                                                 // cxx23-note {{cast from 'void *' is not allowed in a constant expression in C++ standards before C++2c}} \
                                                 // cxx26-note {{cast from 'void *' is not allowed in a constant expression because the pointed object type 'T' is not similar to the target type 'S'}}
 }
+
+int* p;
+constexpr int** pp = &p;
+constexpr void* vp = pp;
+constexpr auto cvp = static_cast<const int* volatile*>(vp);
+// cxx23-error@-1 {{constant expression}}
+// cxx23-note@-2 {{cast from 'void *' is not allowed in a constant expression}}

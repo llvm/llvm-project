@@ -1,0 +1,83 @@
+## Check how yaml2obj produces PGO Analysis Map in .llvm_bb_addr_map section.
+
+# RUN: yaml2obj --docnum=1 %s -o %t1
+# RUN: llvm-readobj --sections --section-data %t1 | FileCheck %s
+
+# Case 4: Specify Entries.
+# CHECK:        Name: .llvm_bb_addr_map (1)
+# CHECK:        SectionData (
+# CHECK-NEXT:     0000: 02072000 00000000 0000010B 010203E8
+# CHECK-NEXT:     0010: 07E80702 0CEEDDBB F70E0D91 A2C48801
+# CHECK-NEXT:   )
+
+# Case 7: Not including a field which is enabled in feature doesn't emit value
+# CHECK:        Name: .llvm_bb_addr_map (1)
+# CHECK:        SectionData (
+# CHECK-NEXT:     0000: 02012000 00000000 0000020D 010203 |
+# CHECK-NEXT:   )
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+
+## Test the following cases:
+
+## 1) We can produce an .llvm_bb_addr_map section from a description with
+##    Entries and PGO Analysis data.
+  - Name: '.llvm_bb_addr_map (1)'
+    Type: SHT_LLVM_BB_ADDR_MAP
+    Entries:
+      - Version: 2
+        Feature: 0x7
+        BBRanges:
+          - BaseAddress: 0x0000000000000020
+            BBEntries:
+              - ID:            11
+                AddressOffset: 0x00000001
+                Size:          0x00000002
+                Metadata:      0x00000003
+    PGOAnalyses:
+      - FuncEntryCount: 1000
+        PGOBBEntries:
+          - BBFreq:        1000
+            Successors:
+              - ID:        12
+                BrProb:    0xeeeeeeee
+              - ID:        13
+                BrProb:    0x11111111
+
+## 2) According to feature we have FuncEntryCount but none is provided in yaml
+  - Name: '.llvm_bb_addr_map (2)'
+    Type: SHT_LLVM_BB_ADDR_MAP
+    Entries:
+      - Version: 2
+        Feature: 0x1
+        BBRanges:
+          - BaseAddress:   0x0000000000000020
+            NumBlocks: 2
+            BBEntries:
+             - ID:            13
+               AddressOffset: 0x00000001
+               Size:          0x00000002
+               Metadata:      0x00000003
+
+## Check that yaml2obj generates a warning when we use unsupported feature.
+# RUN: yaml2obj --docnum=2  %s 2>&1 | FileCheck %s --check-prefix=INVALID-FEATURE
+# INVALID-FEATURE: warning: invalid encoding for BBAddrMap::Features: 0xff
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name: '.llvm_bb_addr_map'
+    Type: SHT_LLVM_BB_ADDR_MAP
+    Entries:
+      - Version: 2
+##  Specify unsupported feature
+        Feature: 0xFF
+

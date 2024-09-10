@@ -97,7 +97,7 @@ def RunLintOverAllFiles(linter, filenames):
     for filename in filenames:
         file = open(filename, "r")
         if not file:
-            print("Cound not open %s" % filename)
+            print("Could not open %s" % filename)
             continue
         lines = file.readlines()
         lint.extend(linter.RunOnFile(filename, lines))

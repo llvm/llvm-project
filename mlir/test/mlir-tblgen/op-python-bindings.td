@@ -7,7 +7,6 @@ include "mlir/Interfaces/InferTypeOpInterface.td"
 // CHECK: @_ods_cext.register_dialect
 // CHECK: class _Dialect(_ods_ir.Dialect):
   // CHECK: DIALECT_NAMESPACE = "test"
-  // CHECK: pass
 def Test_Dialect : Dialect {
   let name = "test";
   let cppNamespace = "Test";
@@ -123,7 +122,7 @@ def AttributedOp : TestOp<"attributed_op"> {
   // CHECK:   attributes = {}
   // CHECK:   regions = None
   // CHECK:   attributes["i32attr"] = (i32attr if (
-  // CHECK-NEXT:   issubclass(type(i32attr), _ods_ir.Attribute) or
+  // CHECK-NEXT:   isinstance(i32attr, _ods_ir.Attribute) or
   // CHECK-NEXT:   not _ods_ir.AttrBuilder.contains('I32Attr')
   // CHECK-NEXT:   _ods_ir.AttrBuilder.get('I32Attr')(i32attr, context=_ods_context)
   // CHECK:   if optionalF32Attr is not None: attributes["optionalF32Attr"] = (optionalF32Attr
@@ -481,18 +480,18 @@ def SameVariadicOperandSizeOp : TestOp<"same_variadic_operand",
                                        [SameVariadicOperandSize]> {
   // CHECK: @builtins.property
   // CHECK: def variadic1(self):
-  // CHECK:   start, pg = _ods_equally_sized_accessor(operation.operands, 2, 0, 0)
-  // CHECK:   return self.operation.operands[start:start + pg]
+  // CHECK:   start, elements_per_group = _ods_equally_sized_accessor(self.operation.operands, 1, 2, 0, 0)
+  // CHECK:   return self.operation.operands[start:start + elements_per_group]
   //
   // CHECK: @builtins.property
   // CHECK: def non_variadic(self):
-  // CHECK:   start, pg = _ods_equally_sized_accessor(operation.operands, 2, 0, 1)
+  // CHECK:   start, elements_per_group = _ods_equally_sized_accessor(self.operation.operands, 1, 2, 0, 1)
   // CHECK:   return self.operation.operands[start]
   //
   // CHECK: @builtins.property
   // CHECK: def variadic2(self):
-  // CHECK:   start, pg = _ods_equally_sized_accessor(operation.operands, 2, 1, 1)
-  // CHECK:   return self.operation.operands[start:start + pg]
+  // CHECK:   start, elements_per_group = _ods_equally_sized_accessor(self.operation.operands, 1, 2, 1, 1)
+  // CHECK:   return self.operation.operands[start:start + elements_per_group]
   let arguments = (ins Variadic<AnyType>:$variadic1, AnyType:$non_variadic,
                    Variadic<AnyType>:$variadic2);
 }
@@ -507,18 +506,18 @@ def SameVariadicResultSizeOp : TestOp<"same_variadic_result",
                                       [SameVariadicResultSize]> {
   // CHECK: @builtins.property
   // CHECK: def variadic1(self):
-  // CHECK:   start, pg = _ods_equally_sized_accessor(operation.results, 2, 0, 0)
-  // CHECK:   return self.operation.results[start:start + pg]
+  // CHECK:   start, elements_per_group = _ods_equally_sized_accessor(self.operation.results, 1, 2, 0, 0)
+  // CHECK:   return self.operation.results[start:start + elements_per_group]
   //
   // CHECK: @builtins.property
   // CHECK: def non_variadic(self):
-  // CHECK:   start, pg = _ods_equally_sized_accessor(operation.results, 2, 0, 1)
+  // CHECK:   start, elements_per_group = _ods_equally_sized_accessor(self.operation.results, 1, 2, 0, 1)
   // CHECK:   return self.operation.results[start]
   //
   // CHECK: @builtins.property
   // CHECK: def variadic2(self):
-  // CHECK:   start, pg = _ods_equally_sized_accessor(operation.results, 2, 1, 1)
-  // CHECK:   return self.operation.results[start:start + pg]
+  // CHECK:   start, elements_per_group = _ods_equally_sized_accessor(self.operation.results, 1, 2, 1, 1)
+  // CHECK:   return self.operation.results[start:start + elements_per_group]
   let results = (outs Variadic<AnyType>:$variadic1, AnyType:$non_variadic,
                  Variadic<AnyType>:$variadic2);
 }

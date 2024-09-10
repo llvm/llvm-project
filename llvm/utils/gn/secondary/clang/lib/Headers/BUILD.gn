@@ -22,11 +22,11 @@ clang_tablegen("arm_sve") {
   output_name = "arm_sve.h"
 }
 
-# Generate arm_sme_draft_spec_subject_to_change.h
-clang_tablegen("arm_sme_draft_spec_subject_to_change") {
+# Generate arm_sme.h
+clang_tablegen("arm_sme") {
   args = [ "-gen-arm-sme-header" ]
   td_file = "//clang/include/clang/Basic/arm_sme.td"
-  output_name = "arm_sme_draft_spec_subject_to_change.h"
+  output_name = "arm_sme.h"
 }
 
 # Generate arm_bf16.h
@@ -72,7 +72,7 @@ copy("tablegen_headers") {
     ":arm_fp16",
     ":arm_mve",
     ":arm_neon",
-    ":arm_sme_draft_spec_subject_to_change",
+    ":arm_sme",
     ":arm_sve",
     ":arm_vector_types",
     ":riscv_vector",
@@ -105,9 +105,11 @@ copy("Headers") {
     "__clang_hip_stdlib.h",
     "__stdarg___gnuc_va_list.h",
     "__stdarg___va_copy.h",
+    "__stdarg_header_macro.h",
     "__stdarg_va_arg.h",
     "__stdarg_va_copy.h",
     "__stdarg_va_list.h",
+    "__stddef_header_macro.h",
     "__stddef_max_align_t.h",
     "__stddef_null.h",
     "__stddef_nullptr_t.h",
@@ -132,18 +134,26 @@ copy("Headers") {
     "arm_cmse.h",
     "arm_neon_sve_bridge.h",
     "armintr.h",
+    "avx10_2_512bf16intrin.h",
+    "avx10_2_512convertintrin.h",
+    "avx10_2_512minmaxintrin.h",
+    "avx10_2_512niintrin.h",
+    "avx10_2_512satcvtintrin.h",
+    "avx10_2bf16intrin.h",
+    "avx10_2convertintrin.h",
+    "avx10_2minmaxintrin.h",
+    "avx10_2niintrin.h",
+    "avx10_2satcvtintrin.h",
     "avx2intrin.h",
     "avx512bf16intrin.h",
     "avx512bitalgintrin.h",
     "avx512bwintrin.h",
     "avx512cdintrin.h",
     "avx512dqintrin.h",
-    "avx512erintrin.h",
     "avx512fintrin.h",
     "avx512fp16intrin.h",
     "avx512ifmaintrin.h",
     "avx512ifmavlintrin.h",
-    "avx512pfintrin.h",
     "avx512vbmi2intrin.h",
     "avx512vbmiintrin.h",
     "avx512vbmivlintrin.h",
@@ -205,6 +215,7 @@ copy("Headers") {
     "ia32intrin.h",
     "immintrin.h",
     "intrin.h",
+    "intrin0.h",
     "inttypes.h",
     "invpcidintrin.h",
     "iso646.h",
@@ -219,6 +230,9 @@ copy("Headers") {
     "llvm_libc_wrappers/stdlib.h",
     "llvm_libc_wrappers/string.h",
     "llvm_libc_wrappers/time.h",
+    "llvm_offload_wrappers/__llvm_offload.h",
+    "llvm_offload_wrappers/__llvm_offload_device.h",
+    "llvm_offload_wrappers/__llvm_offload_host.h",
     "lsxintrin.h",
     "lwpintrin.h",
     "lzcntintrin.h",
@@ -256,6 +270,7 @@ copy("Headers") {
     "ppc_wrappers/xmmintrin.h",
     "prfchiintrin.h",
     "prfchwintrin.h",
+    "ptrauth.h",
     "ptwriteintrin.h",
     "raointintrin.h",
     "rdpruintrin.h",
@@ -309,6 +324,8 @@ copy("Headers") {
     "xsaveoptintrin.h",
     "xsavesintrin.h",
     "xtestintrin.h",
+    "yvals_core.h",
+    "zos_wrappers/builtins.h",
   ]
   outputs = [ "$clang_resource_dir/include/{{source_target_relative}}" ]
 }

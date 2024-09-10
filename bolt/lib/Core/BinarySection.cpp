@@ -72,7 +72,8 @@ BinarySection::hash(const BinaryData &BD,
 
 void BinarySection::emitAsData(MCStreamer &Streamer,
                                const Twine &SectionName) const {
-  StringRef SectionContents = getContents();
+  StringRef SectionContents =
+      isFinalized() ? getOutputContents() : getContents();
   MCSectionELF *ELFSection =
       BC.Ctx->getELFSection(SectionName, getELFType(), getELFFlags());
 
@@ -189,18 +190,7 @@ void BinarySection::flushPendingRelocations(raw_pwrite_stream &OS,
   clearList(PendingRelocations);
 }
 
-BinarySection::~BinarySection() {
-  if (isReordered()) {
-    delete[] getData();
-    return;
-  }
-
-  if (!isAllocatable() && !hasValidSectionID() &&
-      (!hasSectionRef() ||
-       OutputContents.data() != getContents(Section).data())) {
-    delete[] getOutputData();
-  }
-}
+BinarySection::~BinarySection() { updateContents(nullptr, 0); }
 
 void BinarySection::clearRelocations() { clearList(Relocations); }
 

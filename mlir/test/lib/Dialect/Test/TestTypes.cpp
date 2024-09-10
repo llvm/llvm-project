@@ -139,6 +139,7 @@ static void printBarString(AsmPrinter &printer, StringRef foo) {
 // Tablegen Generated Definitions
 //===----------------------------------------------------------------------===//
 
+#include "TestTypeInterfaces.cpp.inc"
 #define GET_TYPEDEF_CLASSES
 #include "TestTypeDefs.cpp.inc"
 
@@ -276,6 +277,12 @@ uint64_t TestTypeWithLayoutType::getPreferredAlignment(
   return extractKind(params, "preferred");
 }
 
+std::optional<uint64_t>
+TestTypeWithLayoutType::getIndexBitwidth(const DataLayout &dataLayout,
+                                         DataLayoutEntryListRef params) const {
+  return extractKind(params, "index");
+}
+
 bool TestTypeWithLayoutType::areCompatible(
     DataLayoutEntryListRef oldLayout, DataLayoutEntryListRef newLayout) const {
   unsigned old = extractKind(oldLayout, "alignment");
@@ -297,7 +304,7 @@ TestTypeWithLayoutType::verifyEntries(DataLayoutEntryListRef params,
     (void)kind;
     assert(kind &&
            (kind.getValue() == "size" || kind.getValue() == "alignment" ||
-            kind.getValue() == "preferred") &&
+            kind.getValue() == "preferred" || kind.getValue() == "index") &&
            "unexpected kind");
     assert(llvm::isa<IntegerAttr>(array.getValue().back()));
   }

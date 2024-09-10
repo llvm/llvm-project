@@ -795,3 +795,360 @@ join:
   store i8 %v, ptr %q, align 1
   ret void
 }
+
+; Dominating condition implies value already exists, optimize store
+define void @remove_tautological_store_eq(ptr %x) {
+; CHECK-LABEL: @remove_tautological_store_eq(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[X:%.*]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[VAL]], 4
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_EQ:%.*]], label [[END:%.*]]
+; CHECK:       if.eq:
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %val = load i32, ptr %x, align 4
+  %cmp = icmp eq i32 %val, 4
+  br i1 %cmp, label %if.eq, label %end
+
+if.eq:
+  store i32 4, ptr %x, align 4
+  br label %end
+
+end:
+  ret void
+}
+
+; Dominating condition implies value already exists, optimize store
+define void @remove_tautological_store_var(ptr %x, ptr %y) {
+; CHECK-LABEL: @remove_tautological_store_var(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[VALX:%.*]] = load i32, ptr [[X:%.*]], align 4
+; CHECK-NEXT:    [[VALY:%.*]] = load i32, ptr [[Y:%.*]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[VALX]], [[VALY]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_EQ:%.*]], label [[END:%.*]]
+; CHECK:       if.eq:
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %valx = load i32, ptr %x, align 4
+  %valy = load i32, ptr %y, align 4
+  %cmp = icmp eq i32 %valx, %valy
+  br i1 %cmp, label %if.eq, label %end
+
+if.eq:
+  store i32 %valy, ptr %x, align 4
+  br label %end
+
+end:
+  ret void
+}
+
+; Dominating condition implies value already exists, optimize store
+define void @remove_tautological_store_ne(ptr %x) {
+; CHECK-LABEL: @remove_tautological_store_ne(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[X:%.*]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[VAL]], 4
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_NE:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.ne:
+; CHECK-NEXT:    br label [[END:%.*]]
+; CHECK:       if.else:
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %val = load i32, ptr %x, align 4
+  %cmp = icmp ne i32 %val, 4
+  br i1 %cmp, label %if.ne, label %if.else
+
+if.ne:
+  br label %end
+
+if.else:
+  store i32 4, ptr %x, align 4
+  br label %end
+
+end:
+  ret void
+}
+
+; Dominating condition implies value already exists, optimize store
+; Optimizes unordered atomic stores
+define void @remove_tautological_store_atomic_unordered(ptr %x) {
+; CHECK-LABEL: @remove_tautological_store_atomic_unordered(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[X:%.*]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[VAL]], 4
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_EQ:%.*]], label [[END:%.*]]
+; CHECK:       if.eq:
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %val = load i32, ptr %x, align 4
+  %cmp = icmp eq i32 %val, 4
+  br i1 %cmp, label %if.eq, label %end
+
+if.eq:
+  store atomic i32 4, ptr %x unordered, align 4
+  br label %end
+
+end:
+  ret void
+}
+
+; Should not optimize ordered atomic stores
+define void @remove_tautological_store_atomic_monotonic(ptr %x) {
+; CHECK-LABEL: @remove_tautological_store_atomic_monotonic(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[X:%.*]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[VAL]], 4
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_EQ:%.*]], label [[END:%.*]]
+; CHECK:       if.eq:
+; CHECK-NEXT:    store atomic i32 4, ptr [[X]] monotonic, align 4
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %val = load i32, ptr %x, align 4
+  %cmp = icmp eq i32 %val, 4
+  br i1 %cmp, label %if.eq, label %end
+
+if.eq:
+  store atomic i32 4, ptr %x monotonic, align 4
+  br label %end
+
+end:
+  ret void
+}
+
+; Should not optimize since the store is in incorrect branch
+define void @remove_tautological_store_eq_wrong_branch(ptr %x, ptr %y) {
+; CHECK-LABEL: @remove_tautological_store_eq_wrong_branch(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[VALX:%.*]] = load i32, ptr [[X:%.*]], align 4
+; CHECK-NEXT:    [[VALY:%.*]] = load i32, ptr [[Y:%.*]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[VALX]], [[VALY]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_EQ:%.*]], label [[END:%.*]]
+; CHECK:       if.eq:
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    store i32 [[VALY]], ptr [[X]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %valx = load i32, ptr %x, align 4
+  %valy = load i32, ptr %y, align 4
+  %cmp = icmp eq i32 %valx, %valy
+  br i1 %cmp, label %if.eq, label %end
+
+if.eq:
+  br label %end
+
+end:
+  store i32 %valy, ptr %x, align 4
+  ret void
+}
+
+; Should not optimize since the store is in incorrect branch
+define void @remove_tautological_store_ne_wrong_branch(ptr %x) {
+; CHECK-LABEL: @remove_tautological_store_ne_wrong_branch(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[X:%.*]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[VAL]], 4
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_NE:%.*]], label [[END:%.*]]
+; CHECK:       if.ne:
+; CHECK-NEXT:    store i32 4, ptr [[X]], align 4
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %val = load i32, ptr %x, align 4
+  %cmp = icmp ne i32 %val, 4
+  br i1 %cmp, label %if.ne, label %end
+
+if.ne:
+  store i32 4, ptr %x, align 4
+  br label %end
+
+end:
+  ret void
+}
+
+; Dominating condition implies value already exists, optimize store
+; Should not optimize since we cannot determine if we should when both
+; branches are the same
+define void @remove_tautological_store_same_branch(ptr %x) {
+; CHECK-LABEL: @remove_tautological_store_same_branch(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[X:%.*]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[VAL]], 4
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_EQ:%.*]], label [[IF_EQ]]
+; CHECK:       if.eq:
+; CHECK-NEXT:    store i32 4, ptr [[X]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %val = load i32, ptr %x, align 4
+  %cmp = icmp eq i32 %val, 4
+  br i1 %cmp, label %if.eq, label %if.eq
+
+if.eq:
+  store i32 4, ptr %x, align 4
+  ret void
+}
+
+; Dominating condition implies value already exists, optimize store
+; Should not optimize since value being stored is different from cond check
+define void @remove_tautological_store_wrong_value(ptr %x) {
+; CHECK-LABEL: @remove_tautological_store_wrong_value(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[X:%.*]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[VAL]], 4
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_EQ:%.*]], label [[END:%.*]]
+; CHECK:       if.eq:
+; CHECK-NEXT:    store i32 5, ptr [[X]], align 4
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %val = load i32, ptr %x, align 4
+  %cmp = icmp eq i32 %val, 4
+  br i1 %cmp, label %if.eq, label %end
+
+if.eq:
+  store i32 5, ptr %x, align 4
+  br label %end
+
+end:
+  ret void
+}
+
+; Should not optimize since there is a clobbering acc after load
+define void @remove_tautological_store_clobber(ptr %x) {
+; CHECK-LABEL: @remove_tautological_store_clobber(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[X:%.*]], align 4
+; CHECK-NEXT:    store i32 5, ptr [[X]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[VAL]], 4
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_EQ:%.*]], label [[END:%.*]]
+; CHECK:       if.eq:
+; CHECK-NEXT:    store i32 4, ptr [[X]], align 4
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %val = load i32, ptr %x, align 4
+  store i32 5, ptr %x, align 4
+  %cmp = icmp eq i32 %val, 4
+  br i1 %cmp, label %if.eq, label %end
+
+if.eq:
+  store i32 4, ptr %x, align 4
+  br label %end
+
+end:
+  ret void
+}
+
+; Should not optimize since the condition does not dominate the store
+define void @remove_tautological_store_no_dom(ptr %x) {
+; CHECK-LABEL: @remove_tautological_store_no_dom(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[X:%.*]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[VAL]], 4
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_EQ:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.eq:
+; CHECK-NEXT:    br label [[END:%.*]]
+; CHECK:       if.else:
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    store i32 4, ptr [[X]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %val = load i32, ptr %x, align 4
+  store i32 5, ptr %x, align 4
+  %cmp = icmp eq i32 %val, 4
+  br i1 %cmp, label %if.eq, label %if.else
+
+if.eq:
+  br label %end
+
+if.else:
+  br label %end
+
+end:
+  store i32 4, ptr %x, align 4
+  ret void
+}
+
+; Should not optimize volatile stores
+define void @remove_tautological_store_volatile(ptr %x) {
+; CHECK-LABEL: @remove_tautological_store_volatile(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[X:%.*]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[VAL]], 4
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_EQ:%.*]], label [[END:%.*]]
+; CHECK:       if.eq:
+; CHECK-NEXT:    store volatile i32 4, ptr [[X]], align 4
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %val = load i32, ptr %x, align 4
+  %cmp = icmp eq i32 %val, 4
+  br i1 %cmp, label %if.eq, label %end
+
+if.eq:
+  store volatile i32 4, ptr %x, align 4
+  br label %end
+
+end:
+  ret void
+}
+
+; Should not optimize stores where the edge from branch inst to
+; conditional block does not dominate the conditional block.
+; (A conditional block post dominates the branch inst.)
+define void @remove_tautological_store_no_edge_domination(ptr %x) {
+; CHECK-LABEL: @remove_tautological_store_no_edge_domination(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[X1:%.*]] = load ptr, ptr [[X:%.*]], align 8
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[X1]], null
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_EQ:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.eq:
+; CHECK-NEXT:    store ptr null, ptr [[X]], align 8
+; CHECK-NEXT:    br label [[END:%.*]]
+; CHECK:       if.else:
+; CHECK-NEXT:    br label [[IF_EQ]]
+; CHECK:       end:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %x1 = load ptr, ptr %x, align 8
+  %cmp = icmp eq ptr %x1, null
+  br i1 %cmp, label %if.eq, label %if.else
+
+if.eq:
+  store ptr null, ptr %x, align 8
+  br label %end
+
+if.else:
+  br label %if.eq
+
+end:
+  ret void
+}

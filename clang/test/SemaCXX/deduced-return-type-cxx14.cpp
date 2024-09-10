@@ -1,11 +1,11 @@
-// RUN: %clang_cc1 -std=c++23 -fsyntax-only -verify=expected,cxx20_23,cxx23    %s
-// RUN: %clang_cc1 -std=c++23 -fsyntax-only -verify=expected,cxx20_23,cxx23    %s -fdelayed-template-parsing -DDELAYED_TEMPLATE_PARSING
+// RUN: %clang_cc1 -std=c++23 -fsyntax-only -verify=expected,since-cxx20,since-cxx14,cxx20_23,cxx23    %s
+// RUN: %clang_cc1 -std=c++23 -fsyntax-only -verify=expected,since-cxx20,since-cxx14,cxx20_23,cxx23    %s -fdelayed-template-parsing -DDELAYED_TEMPLATE_PARSING
 
-// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify=expected,cxx14_20,cxx20_23 %s
-// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify=expected,cxx14_20,cxx20_23 %s -fdelayed-template-parsing -DDELAYED_TEMPLATE_PARSING
+// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify=expected,cxx20,since-cxx20,since-cxx14,cxx14_20,cxx20_23 %s
+// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify=expected,cxx20,since-cxx20,since-cxx14,cxx14_20,cxx20_23 %s -fdelayed-template-parsing -DDELAYED_TEMPLATE_PARSING
 
-// RUN: %clang_cc1 -std=c++14 -fsyntax-only -verify=expected,cxx14_20,cxx14    %s
-// RUN: %clang_cc1 -std=c++14 -fsyntax-only -verify=expected,cxx14_20,cxx14    %s -fdelayed-template-parsing -DDELAYED_TEMPLATE_PARSING
+// RUN: %clang_cc1 -std=c++14 -fsyntax-only -verify=expected,since-cxx14,cxx14_20,cxx14    %s
+// RUN: %clang_cc1 -std=c++14 -fsyntax-only -verify=expected,since-cxx14,cxx14_20,cxx14    %s -fdelayed-template-parsing -DDELAYED_TEMPLATE_PARSING
 
 auto f(); // expected-note {{previous}}
 int f(); // expected-error {{differ only in their return type}}
@@ -237,6 +237,24 @@ namespace Templates {
     int (S::*(*p)())(double) = f;
     int (S::*(*q)())(double) = f<S, double>;
   }
+
+  template<typename T>
+  struct MemberSpecialization {
+    auto f();
+    template<typename U> auto f(U);
+    template<typename U> auto *f(U);
+  };
+
+  template<>
+  auto MemberSpecialization<int>::f();
+
+  template<>
+  template<typename U>
+  auto MemberSpecialization<int>::f(U);
+
+  template<>
+  template<typename U>
+  auto *MemberSpecialization<int>::f(U);
 }
 
 auto fwd_decl_using();
@@ -299,8 +317,8 @@ namespace Constexpr {
     constexpr int q = Y<int>().f(); // expected-error {{must be initialized by a constant expression}} expected-note {{in call to 'Y<int>().f()'}}
   }
   struct NonLiteral { ~NonLiteral(); } nl; // cxx14-note {{user-provided destructor}}
-  // cxx20_23-note@-1 {{'NonLiteral' is not literal because its destructor is not constexpr}}
-  constexpr auto f2(int n) { return nl; } // expected-error {{return type 'struct NonLiteral' is not a literal type}}
+  // cxx20-note@-1 {{'NonLiteral' is not literal because its destructor is not constexpr}}
+  constexpr auto f2(int n) { return nl; } // cxx14_20-error {{constexpr function's return type 'struct NonLiteral' is not a literal type}}
 }
 
 // It's not really clear whether these are valid, but this matches g++.
@@ -685,4 +703,51 @@ auto f(auto x) { // cxx14-error {{'auto' not allowed in function prototype}}
   return f(1) + 1;
 }
 
+}
+
+#if __cplusplus >= 202002L
+template <typename T>
+concept C = true;
+#endif
+
+struct DeducedTargetTypeOfConversionFunction {
+  operator auto() const { return char(); }
+  operator const auto() const { return float(); }
+  operator const auto&() const { return int(); }
+  // expected-warning@-1 {{returning reference to local temporary object}}
+  operator decltype(auto)() const { return double(); }
+#if __cplusplus >= 202002L
+  operator C auto() const { return unsigned(); }
+  operator C decltype(auto)() const { return long(); }
+#endif
+
+  template <typename T>
+  operator auto() const { return short(); }
+  // since-cxx14-error@-1 {{'auto' not allowed in declaration of conversion function template}}
+  template <typename T>
+  operator const auto() const { return int(); }
+  // since-cxx14-error@-1 {{'auto' not allowed in declaration of conversion function template}}
+  template <typename T>
+  operator const auto&() const { return char(); }
+  // since-cxx14-error@-1 {{'auto' not allowed in declaration of conversion function template}}
+  template <typename T>
+  operator decltype(auto)() const { return unsigned(); }
+  // since-cxx14-error@-1 {{'decltype(auto)' not allowed in declaration of conversion function template}}
+#if __cplusplus >= 202002L
+  template <typename T>
+  operator C auto() const { return float(); }
+  // since-cxx20-error@-1 {{'auto' not allowed in declaration of conversion function template}}
+  template <typename T>
+  operator C decltype(auto)() const { return double(); }
+  // since-cxx20-error@-1 {{'decltype(auto)' not allowed in declaration of conversion function template}}
+#endif
+};
+
+namespace GH79745 {
+template <typename = int> struct a; // expected-note {{template is declared here}}
+auto f() {
+  a c; // cxx20_23-error {{implicit instantiation of undefined template}} \
+       // cxx14-error {{use of class template 'a' requires template arguments}}
+  return c;
+}
 }

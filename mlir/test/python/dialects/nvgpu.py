@@ -15,6 +15,23 @@ def constructAndPrintInModule(f):
     return f
 
 
+# CHECK-LABEL: testTypes
+@constructAndPrintInModule
+def testTypes():
+    tensorMemrefType = MemRefType.get(
+        (128, 64), F16Type.get(), memory_space=Attribute.parse("3")
+    )
+    # CHECK: !nvgpu.tensormap.descriptor<tensor = memref<128x64xf16, 3>, swizzle = swizzle_128b, l2promo = l2promo_256b, oob = nan, interleave = none>
+    tma_desc = nvgpu.TensorMapDescriptorType.get(
+        tensorMemrefType,
+        nvgpu.TensorMapSwizzleKind.SWIZZLE_128B,
+        nvgpu.TensorMapL2PromoKind.L2PROMO_256B,
+        nvgpu.TensorMapOOBKind.OOB_NAN,
+        nvgpu.TensorMapInterleaveKind.INTERLEAVE_NONE,
+    )
+    print(tma_desc)
+
+
 # CHECK-LABEL: testSmoke
 @constructAndPrintInModule
 def testSmoke():

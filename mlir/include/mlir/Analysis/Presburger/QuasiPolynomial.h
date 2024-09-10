@@ -36,8 +36,10 @@ namespace presburger {
 // g_{ij} : Q^n -> Q are affine functionals.
 class QuasiPolynomial : public PresburgerSpace {
 public:
-  QuasiPolynomial(unsigned numVars, SmallVector<Fraction> coeffs = {},
-                  std::vector<std::vector<SmallVector<Fraction>>> aff = {});
+  QuasiPolynomial(unsigned numVars, ArrayRef<Fraction> coeffs = {},
+                  ArrayRef<std::vector<SmallVector<Fraction>>> aff = {});
+
+  QuasiPolynomial(unsigned numVars, const Fraction &constant);
 
   // Find the number of inputs (numDomain) to the polynomial.
   // numSymbols is set to zero.
@@ -55,10 +57,17 @@ public:
   QuasiPolynomial operator+(const QuasiPolynomial &x) const;
   QuasiPolynomial operator-(const QuasiPolynomial &x) const;
   QuasiPolynomial operator*(const QuasiPolynomial &x) const;
-  QuasiPolynomial operator/(const Fraction x) const;
+  QuasiPolynomial operator/(const Fraction &x) const;
 
-  // Removes terms which evaluate to zero from the expression.
+  // Removes terms which evaluate to zero from the expression
+  // and folds affine functions which are constant into the
+  // constant coefficients.
   QuasiPolynomial simplify();
+
+  // Group together like terms in the expression.
+  QuasiPolynomial collectTerms();
+
+  Fraction getConstantTerm();
 
 private:
   SmallVector<Fraction> coefficients;

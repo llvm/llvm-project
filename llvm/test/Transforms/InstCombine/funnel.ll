@@ -43,24 +43,24 @@ define <2 x i16> @fshl_v2i16_constant_splat(<2 x i16> %x, <2 x i16> %y) {
   ret <2 x i16> %r
 }
 
-define <2 x i16> @fshl_v2i16_constant_splat_undef0(<2 x i16> %x, <2 x i16> %y) {
-; CHECK-LABEL: @fshl_v2i16_constant_splat_undef0(
+define <2 x i16> @fshl_v2i16_constant_splat_poison0(<2 x i16> %x, <2 x i16> %y) {
+; CHECK-LABEL: @fshl_v2i16_constant_splat_poison0(
 ; CHECK-NEXT:    [[R:%.*]] = call <2 x i16> @llvm.fshl.v2i16(<2 x i16> [[X:%.*]], <2 x i16> [[Y:%.*]], <2 x i16> <i16 1, i16 1>)
 ; CHECK-NEXT:    ret <2 x i16> [[R]]
 ;
-  %shl = shl <2 x i16> %x, <i16 undef, i16 1>
+  %shl = shl <2 x i16> %x, <i16 poison, i16 1>
   %shr = lshr <2 x i16> %y, <i16 15, i16 15>
   %r = or <2 x i16> %shl, %shr
   ret <2 x i16> %r
 }
 
-define <2 x i16> @fshl_v2i16_constant_splat_undef1(<2 x i16> %x, <2 x i16> %y) {
-; CHECK-LABEL: @fshl_v2i16_constant_splat_undef1(
+define <2 x i16> @fshl_v2i16_constant_splat_poison1(<2 x i16> %x, <2 x i16> %y) {
+; CHECK-LABEL: @fshl_v2i16_constant_splat_poison1(
 ; CHECK-NEXT:    [[R:%.*]] = call <2 x i16> @llvm.fshl.v2i16(<2 x i16> [[X:%.*]], <2 x i16> [[Y:%.*]], <2 x i16> <i16 1, i16 1>)
 ; CHECK-NEXT:    ret <2 x i16> [[R]]
 ;
   %shl = shl <2 x i16> %x, <i16 1, i16 1>
-  %shr = lshr <2 x i16> %y, <i16 15, i16 undef>
+  %shr = lshr <2 x i16> %y, <i16 15, i16 poison>
   %r = or <2 x i16> %shl, %shr
   ret <2 x i16> %r
 }
@@ -78,30 +78,30 @@ define <2 x i17> @fshr_v2i17_constant_splat(<2 x i17> %x, <2 x i17> %y) {
   ret <2 x i17> %r
 }
 
-define <2 x i17> @fshr_v2i17_constant_splat_undef0(<2 x i17> %x, <2 x i17> %y) {
-; CHECK-LABEL: @fshr_v2i17_constant_splat_undef0(
+define <2 x i17> @fshr_v2i17_constant_splat_poison0(<2 x i17> %x, <2 x i17> %y) {
+; CHECK-LABEL: @fshr_v2i17_constant_splat_poison0(
 ; CHECK-NEXT:    [[R:%.*]] = call <2 x i17> @llvm.fshl.v2i17(<2 x i17> [[Y:%.*]], <2 x i17> [[X:%.*]], <2 x i17> <i17 5, i17 5>)
 ; CHECK-NEXT:    ret <2 x i17> [[R]]
 ;
-  %shr = lshr <2 x i17> %x, <i17 12, i17 undef>
-  %shl = shl <2 x i17> %y, <i17 undef, i17 5>
+  %shr = lshr <2 x i17> %x, <i17 12, i17 poison>
+  %shl = shl <2 x i17> %y, <i17 poison, i17 5>
   %r = or <2 x i17> %shr, %shl
   ret <2 x i17> %r
 }
 
-define <2 x i17> @fshr_v2i17_constant_splat_undef1(<2 x i17> %x, <2 x i17> %y) {
-; CHECK-LABEL: @fshr_v2i17_constant_splat_undef1(
+define <2 x i17> @fshr_v2i17_constant_splat_poison1(<2 x i17> %x, <2 x i17> %y) {
+; CHECK-LABEL: @fshr_v2i17_constant_splat_poison1(
 ; CHECK-NEXT:    [[R:%.*]] = call <2 x i17> @llvm.fshl.v2i17(<2 x i17> [[Y:%.*]], <2 x i17> [[X:%.*]], <2 x i17> <i17 5, i17 5>)
 ; CHECK-NEXT:    ret <2 x i17> [[R]]
 ;
-  %shr = lshr <2 x i17> %x, <i17 12, i17 undef>
-  %shl = shl <2 x i17> %y, <i17 5, i17 undef>
+  %shr = lshr <2 x i17> %x, <i17 12, i17 poison>
+  %shl = shl <2 x i17> %y, <i17 5, i17 poison>
   %r = or <2 x i17> %shr, %shl
   ret <2 x i17> %r
 }
 
 ; Allow arbitrary shift constants.
-; Support undef elements.
+; Support poison elements.
 
 define <2 x i32> @fshr_v2i32_constant_nonsplat(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @fshr_v2i32_constant_nonsplat(
@@ -114,24 +114,24 @@ define <2 x i32> @fshr_v2i32_constant_nonsplat(<2 x i32> %x, <2 x i32> %y) {
   ret <2 x i32> %r
 }
 
-define <2 x i32> @fshr_v2i32_constant_nonsplat_undef0(<2 x i32> %x, <2 x i32> %y) {
-; CHECK-LABEL: @fshr_v2i32_constant_nonsplat_undef0(
+define <2 x i32> @fshr_v2i32_constant_nonsplat_poison0(<2 x i32> %x, <2 x i32> %y) {
+; CHECK-LABEL: @fshr_v2i32_constant_nonsplat_poison0(
 ; CHECK-NEXT:    [[R:%.*]] = call <2 x i32> @llvm.fshl.v2i32(<2 x i32> [[Y:%.*]], <2 x i32> [[X:%.*]], <2 x i32> <i32 0, i32 13>)
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
-  %shr = lshr <2 x i32> %x, <i32 undef, i32 19>
+  %shr = lshr <2 x i32> %x, <i32 poison, i32 19>
   %shl = shl <2 x i32> %y, <i32 15, i32 13>
   %r = or <2 x i32> %shl, %shr
   ret <2 x i32> %r
 }
 
-define <2 x i32> @fshr_v2i32_constant_nonsplat_undef1(<2 x i32> %x, <2 x i32> %y) {
-; CHECK-LABEL: @fshr_v2i32_constant_nonsplat_undef1(
-; CHECK-NEXT:    [[R:%.*]] = call <2 x i32> @llvm.fshl.v2i32(<2 x i32> [[Y:%.*]], <2 x i32> [[X:%.*]], <2 x i32> <i32 15, i32 0>)
+define <2 x i32> @fshr_v2i32_constant_nonsplat_poison1(<2 x i32> %x, <2 x i32> %y) {
+; CHECK-LABEL: @fshr_v2i32_constant_nonsplat_poison1(
+; CHECK-NEXT:    [[R:%.*]] = call <2 x i32> @llvm.fshl.v2i32(<2 x i32> [[Y:%.*]], <2 x i32> [[X:%.*]], <2 x i32> <i32 15, i32 poison>)
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %shr = lshr <2 x i32> %x, <i32 17, i32 19>
-  %shl = shl <2 x i32> %y, <i32 15, i32 undef>
+  %shl = shl <2 x i32> %y, <i32 15, i32 poison>
   %r = or <2 x i32> %shl, %shr
   ret <2 x i32> %r
 }
@@ -147,13 +147,13 @@ define <2 x i36> @fshl_v2i36_constant_nonsplat(<2 x i36> %x, <2 x i36> %y) {
   ret <2 x i36> %r
 }
 
-define <3 x i36> @fshl_v3i36_constant_nonsplat_undef0(<3 x i36> %x, <3 x i36> %y) {
-; CHECK-LABEL: @fshl_v3i36_constant_nonsplat_undef0(
-; CHECK-NEXT:    [[R:%.*]] = call <3 x i36> @llvm.fshl.v3i36(<3 x i36> [[X:%.*]], <3 x i36> [[Y:%.*]], <3 x i36> <i36 21, i36 11, i36 0>)
+define <3 x i36> @fshl_v3i36_constant_nonsplat_poison0(<3 x i36> %x, <3 x i36> %y) {
+; CHECK-LABEL: @fshl_v3i36_constant_nonsplat_poison0(
+; CHECK-NEXT:    [[R:%.*]] = call <3 x i36> @llvm.fshl.v3i36(<3 x i36> [[X:%.*]], <3 x i36> [[Y:%.*]], <3 x i36> <i36 21, i36 11, i36 poison>)
 ; CHECK-NEXT:    ret <3 x i36> [[R]]
 ;
-  %shl = shl <3 x i36> %x, <i36 21, i36 11, i36 undef>
-  %shr = lshr <3 x i36> %y, <i36 15, i36 25, i36 undef>
+  %shl = shl <3 x i36> %x, <i36 21, i36 11, i36 poison>
+  %shr = lshr <3 x i36> %y, <i36 15, i36 25, i36 poison>
   %r = or <3 x i36> %shl, %shr
   ret <3 x i36> %r
 }
@@ -464,10 +464,10 @@ define i32 @fshl_concat_i8_i8_different_slot(i8 %x, i8 %y, ptr %addr) {
 define i32 @fshl_concat_unknown_source(i32 %zext.x, i32 %zext.y, ptr %addr) {
 ; CHECK-LABEL: @fshl_concat_unknown_source(
 ; CHECK-NEXT:    [[SLX:%.*]] = shl i32 [[ZEXT_X:%.*]], 16
-; CHECK-NEXT:    [[XY:%.*]] = or i32 [[SLX]], [[ZEXT_Y:%.*]]
+; CHECK-NEXT:    [[XY:%.*]] = or i32 [[ZEXT_Y:%.*]], [[SLX]]
 ; CHECK-NEXT:    store i32 [[XY]], ptr [[ADDR:%.*]], align 4
 ; CHECK-NEXT:    [[SLY:%.*]] = shl i32 [[ZEXT_Y]], 16
-; CHECK-NEXT:    [[YX:%.*]] = or i32 [[SLY]], [[ZEXT_X]]
+; CHECK-NEXT:    [[YX:%.*]] = or i32 [[ZEXT_X]], [[SLY]]
 ; CHECK-NEXT:    ret i32 [[YX]]
 ;
   %slx = shl i32 %zext.x, 16
@@ -558,4 +558,80 @@ define i8 @unmasked_shlop_masked_shift_amount(i16 %x, i16 %y, i16 %shamt) {
   %t7 = or i16 %t5, %t6
   %t8 = trunc i16 %t7 to i8
   ret i8 %t8
+}
+
+define i32 @test_rotl_and_neg(i32 %x, i32 %shamt) {
+; CHECK-LABEL: @test_rotl_and_neg(
+; CHECK-NEXT:    [[OR:%.*]] = call i32 @llvm.fshl.i32(i32 [[X:%.*]], i32 [[X]], i32 [[SHAMT:%.*]])
+; CHECK-NEXT:    ret i32 [[OR]]
+;
+  %shl = shl i32 %x, %shamt
+  %neg = sub i32 0, %shamt
+  %and = and i32 %neg, 31
+  %shr = lshr i32 %x, %and
+  %or = or i32 %shl, %shr
+  ret i32 %or
+}
+
+define i32 @test_rotl_and_neg_commuted(i32 %x, i32 %shamt) {
+; CHECK-LABEL: @test_rotl_and_neg_commuted(
+; CHECK-NEXT:    [[OR:%.*]] = call i32 @llvm.fshl.i32(i32 [[X:%.*]], i32 [[X]], i32 [[SHAMT:%.*]])
+; CHECK-NEXT:    ret i32 [[OR]]
+;
+  %shl = shl i32 %x, %shamt
+  %neg = sub i32 0, %shamt
+  %and = and i32 %neg, 31
+  %shr = lshr i32 %x, %and
+  %or = or i32 %shr, %shl
+  ret i32 %or
+}
+
+define i32 @test_rotr_and_neg(i32 %x, i32 %shamt) {
+; CHECK-LABEL: @test_rotr_and_neg(
+; CHECK-NEXT:    [[OR:%.*]] = call i32 @llvm.fshr.i32(i32 [[X:%.*]], i32 [[X]], i32 [[SHAMT:%.*]])
+; CHECK-NEXT:    ret i32 [[OR]]
+;
+  %shr = lshr i32 %x, %shamt
+  %neg = sub i32 0, %shamt
+  %and = and i32 %neg, 31
+  %shl = shl i32 %x, %and
+  %or = or i32 %shl, %shr
+  ret i32 %or
+}
+
+; Negative tests
+
+; Only work for rotation patterns
+define i32 @test_fshl_and_neg(i32 %x, i32 %y, i32 %shamt) {
+; CHECK-LABEL: @test_fshl_and_neg(
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[X:%.*]], [[SHAMT:%.*]]
+; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[SHAMT]]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[NEG]], 31
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[Y:%.*]], [[AND]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SHL]], [[SHR]]
+; CHECK-NEXT:    ret i32 [[OR]]
+;
+  %shl = shl i32 %x, %shamt
+  %neg = sub i32 0, %shamt
+  %and = and i32 %neg, 31
+  %shr = lshr i32 %y, %and
+  %or = or i32 %shl, %shr
+  ret i32 %or
+}
+
+define i32 @test_rotl_and_neg_wrong_mask(i32 %x, i32 %shamt) {
+; CHECK-LABEL: @test_rotl_and_neg_wrong_mask(
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[X:%.*]], [[SHAMT:%.*]]
+; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[SHAMT]]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[NEG]], 15
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[X]], [[AND]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SHL]], [[SHR]]
+; CHECK-NEXT:    ret i32 [[OR]]
+;
+  %shl = shl i32 %x, %shamt
+  %neg = sub i32 0, %shamt
+  %and = and i32 %neg, 15
+  %shr = lshr i32 %x, %and
+  %or = or i32 %shl, %shr
+  ret i32 %or
 }

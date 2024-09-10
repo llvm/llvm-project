@@ -17,12 +17,15 @@ add_llvm_component_library(LLVMDWARFLinkerParallel
   DEPENDS
   intrinsics_gen
 
+  LINK_LIBS
+  ${LLVM_PTHREAD_LIB}
+
   LINK_COMPONENTS
   AsmPrinter
   BinaryFormat
   CodeGen
   DebugInfoDWARF
-  DWARFLinkerBase
+  DWARFLinker
   MC
   Object
   Support

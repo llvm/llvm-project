@@ -46,9 +46,7 @@ export namespace std {
   // [alg.contains], contains
   namespace ranges {
     using std::ranges::contains;
-#if 0
     using std::ranges::contains_subrange;
-#endif
   } // namespace ranges
 #endif // _LIBCPP_STD_VER >= 23
 
@@ -79,13 +77,14 @@ export namespace std {
     using std::ranges::find_if_not;
   } // namespace ranges
 
+#if _LIBCPP_STD_VER >= 23
+  // [alg.find.last], find last
   namespace ranges {
-#if 0
     using std::ranges::find_last;
     using std::ranges::find_last_if;
     using std::ranges::find_last_if_not;
-#endif
   } // namespace ranges
+#endif
 
   // [alg.find.end], find end
   using std::find_end;

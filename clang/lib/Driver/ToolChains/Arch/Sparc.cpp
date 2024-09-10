@@ -178,4 +178,103 @@ void sparc::getSparcTargetFeatures(const Driver &D, const ArgList &Args,
     else
       Features.push_back("-hard-quad-float");
   }
+
+  if (Arg *A = Args.getLastArg(options::OPT_mv8plus, options::OPT_mno_v8plus)) {
+    if (A->getOption().matches(options::OPT_mv8plus))
+      Features.push_back("+v8plus");
+  }
+
+  if (Args.hasArg(options::OPT_ffixed_g1))
+    Features.push_back("+reserve-g1");
+
+  if (Args.hasArg(options::OPT_ffixed_g2))
+    Features.push_back("+reserve-g2");
+
+  if (Args.hasArg(options::OPT_ffixed_g3))
+    Features.push_back("+reserve-g3");
+
+  if (Args.hasArg(options::OPT_ffixed_g4))
+    Features.push_back("+reserve-g4");
+
+  if (Args.hasArg(options::OPT_ffixed_g5))
+    Features.push_back("+reserve-g5");
+
+  if (Args.hasArg(options::OPT_ffixed_g6))
+    Features.push_back("+reserve-g6");
+
+  if (Args.hasArg(options::OPT_ffixed_g7))
+    Features.push_back("+reserve-g7");
+
+  if (Args.hasArg(options::OPT_ffixed_o0))
+    Features.push_back("+reserve-o0");
+
+  if (Args.hasArg(options::OPT_ffixed_o1))
+    Features.push_back("+reserve-o1");
+
+  if (Args.hasArg(options::OPT_ffixed_o2))
+    Features.push_back("+reserve-o2");
+
+  if (Args.hasArg(options::OPT_ffixed_o3))
+    Features.push_back("+reserve-o3");
+
+  if (Args.hasArg(options::OPT_ffixed_o4))
+    Features.push_back("+reserve-o4");
+
+  if (Args.hasArg(options::OPT_ffixed_o5))
+    Features.push_back("+reserve-o5");
+
+  if (Args.hasArg(options::OPT_ffixed_l0))
+    Features.push_back("+reserve-l0");
+
+  if (Args.hasArg(options::OPT_ffixed_l1))
+    Features.push_back("+reserve-l1");
+
+  if (Args.hasArg(options::OPT_ffixed_l2))
+    Features.push_back("+reserve-l2");
+
+  if (Args.hasArg(options::OPT_ffixed_l3))
+    Features.push_back("+reserve-l3");
+
+  if (Args.hasArg(options::OPT_ffixed_l4))
+    Features.push_back("+reserve-l4");
+
+  if (Args.hasArg(options::OPT_ffixed_l5))
+    Features.push_back("+reserve-l5");
+
+  if (Args.hasArg(options::OPT_ffixed_l6))
+    Features.push_back("+reserve-l6");
+
+  if (Args.hasArg(options::OPT_ffixed_l7))
+    Features.push_back("+reserve-l7");
+
+  if (Args.hasArg(options::OPT_ffixed_i0))
+    Features.push_back("+reserve-i0");
+
+  if (Args.hasArg(options::OPT_ffixed_i1))
+    Features.push_back("+reserve-i1");
+
+  if (Args.hasArg(options::OPT_ffixed_i2))
+    Features.push_back("+reserve-i2");
+
+  if (Args.hasArg(options::OPT_ffixed_i3))
+    Features.push_back("+reserve-i3");
+
+  if (Args.hasArg(options::OPT_ffixed_i4))
+    Features.push_back("+reserve-i4");
+
+  if (Args.hasArg(options::OPT_ffixed_i5))
+    Features.push_back("+reserve-i5");
+
+  if (Args.hasArg(options::OPT_mfix_gr712rc)) {
+    Features.push_back("+fix-tn0009");
+    Features.push_back("+fix-tn0011");
+    Features.push_back("+fix-tn0012");
+    Features.push_back("+fix-tn0013");
+  }
+
+  if (Args.hasArg(options::OPT_mfix_ut700)) {
+    Features.push_back("+fix-tn0009");
+    Features.push_back("+fix-tn0010");
+    Features.push_back("+fix-tn0013");
+  }
 }

@@ -22,16 +22,19 @@ CompileUnit::CompileUnit(const lldb::ModuleSP &module_sp, void *user_data,
                          const char *pathname, const lldb::user_id_t cu_sym_id,
                          lldb::LanguageType language,
                          lldb_private::LazyBool is_optimized)
-    : CompileUnit(module_sp, user_data, FileSpec(pathname), cu_sym_id, language,
-                  is_optimized) {}
+    : CompileUnit(module_sp, user_data,
+                  std::make_shared<SupportFile>(FileSpec(pathname)), cu_sym_id,
+                  language, is_optimized) {}
 
 CompileUnit::CompileUnit(const lldb::ModuleSP &module_sp, void *user_data,
-                         const FileSpec &fspec, const lldb::user_id_t cu_sym_id,
+                         lldb::SupportFileSP support_file_sp,
+                         const lldb::user_id_t cu_sym_id,
                          lldb::LanguageType language,
                          lldb_private::LazyBool is_optimized,
                          SupportFileList &&support_files)
     : ModuleChild(module_sp), UserID(cu_sym_id), m_user_data(user_data),
-      m_language(language), m_flags(0), m_file_spec(fspec),
+      m_language(language), m_flags(0),
+      m_primary_support_file_sp(support_file_sp),
       m_support_files(std::move(support_files)), m_is_optimized(is_optimized) {
   if (language != eLanguageTypeUnknown)
     m_flags.Set(flagsParsedLanguage);
@@ -210,11 +213,12 @@ VariableListSP CompileUnit::GetVariableList(bool can_create) {
   return m_variables;
 }
 
-std::vector<uint32_t> FindFileIndexes(const SupportFileList &files,
-                                      const FileSpec &file) {
+std::vector<uint32_t>
+FindFileIndexes(const SupportFileList &files, const FileSpec &file,
+                RealpathPrefixes *realpath_prefixes = nullptr) {
   std::vector<uint32_t> result;
   uint32_t idx = -1;
-  while ((idx = files.FindCompatibleIndex(idx + 1, file)) !=
+  while ((idx = files.FindCompatibleIndex(idx + 1, file, realpath_prefixes)) !=
          UINT32_MAX)
     result.push_back(idx);
   return result;
@@ -244,7 +248,8 @@ uint32_t CompileUnit::FindLineEntry(uint32_t start_idx, uint32_t line,
 
 void CompileUnit::ResolveSymbolContext(
     const SourceLocationSpec &src_location_spec,
-    SymbolContextItem resolve_scope, SymbolContextList &sc_list) {
+    SymbolContextItem resolve_scope, SymbolContextList &sc_list,
+    RealpathPrefixes *realpath_prefixes) {
   const FileSpec file_spec = src_location_spec.GetFileSpec();
   const uint32_t line = src_location_spec.GetLine().value_or(0);
   const bool check_inlines = src_location_spec.GetCheckInlines();
@@ -272,8 +277,8 @@ void CompileUnit::ResolveSymbolContext(
     return;
   }
 
-  std::vector<uint32_t> file_indexes = FindFileIndexes(GetSupportFiles(),
-                                                       file_spec);
+  std::vector<uint32_t> file_indexes =
+      FindFileIndexes(GetSupportFiles(), file_spec, realpath_prefixes);
   const size_t num_file_indexes = file_indexes.size();
   if (num_file_indexes == 0)
     return;
@@ -317,7 +322,7 @@ void CompileUnit::ResolveSymbolContext(
       src_location_spec.GetColumn() ? std::optional<uint16_t>(line_entry.column)
                                     : std::nullopt;
 
-  SourceLocationSpec found_entry(line_entry.file, line_entry.line, column,
+  SourceLocationSpec found_entry(line_entry.GetFile(), line_entry.line, column,
                                  inlines, exact);
 
   while (line_idx != UINT32_MAX) {

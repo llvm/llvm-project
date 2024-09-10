@@ -20,6 +20,7 @@
 #include "clang/Lex/PreprocessorOptions.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Process.h"
 #include "gtest/gtest.h"
 #include <cstddef>
@@ -453,6 +454,65 @@ TEST_F(SourceManagerTest, loadedSLocEntryIsInTheSameTranslationUnit) {
 
 #if defined(LLVM_ON_UNIX)
 
+// A single SourceManager instance is sometimes reused across multiple
+// compilations. This test makes sure we're resetting caches built for tracking
+// include locations that are based on FileIDs, to make sure we don't report
+// wrong include locations when FileIDs coincide between two different runs.
+TEST_F(SourceManagerTest, ResetsIncludeLocMap) {
+  auto ParseFile = [&] {
+    TrivialModuleLoader ModLoader;
+    HeaderSearch HeaderInfo(std::make_shared<HeaderSearchOptions>(), SourceMgr,
+                            Diags, LangOpts, &*Target);
+    Preprocessor PP(std::make_shared<PreprocessorOptions>(), Diags, LangOpts,
+                    SourceMgr, HeaderInfo, ModLoader,
+                    /*IILookup =*/nullptr,
+                    /*OwnsHeaderSearch =*/false);
+    PP.Initialize(*Target);
+    PP.EnterMainSourceFile();
+    PP.LexTokensUntilEOF();
+    EXPECT_FALSE(Diags.hasErrorOccurred());
+  };
+
+  auto Buf = llvm::MemoryBuffer::getMemBuffer("");
+  FileEntryRef HeaderFile =
+      FileMgr.getVirtualFileRef("/foo.h", Buf->getBufferSize(), 0);
+  SourceMgr.overrideFileContents(HeaderFile, std::move(Buf));
+
+  Buf = llvm::MemoryBuffer::getMemBuffer(R"cpp(#include "/foo.h")cpp");
+  FileEntryRef BarFile =
+      FileMgr.getVirtualFileRef("/bar.h", Buf->getBufferSize(), 0);
+  SourceMgr.overrideFileContents(BarFile, std::move(Buf));
+  SourceMgr.createFileID(BarFile, {}, clang::SrcMgr::C_User);
+
+  Buf = llvm::MemoryBuffer::getMemBuffer(R"cpp(#include "/foo.h")cpp");
+  FileID MFID = SourceMgr.createFileID(std::move(Buf));
+  SourceMgr.setMainFileID(MFID);
+
+  ParseFile();
+  auto FooFID = SourceMgr.getOrCreateFileID(HeaderFile, clang::SrcMgr::C_User);
+  auto IncFID = SourceMgr.getDecomposedIncludedLoc(FooFID).first;
+  EXPECT_EQ(IncFID, MFID);
+
+  // Clean up source-manager state before we start next parse.
+  SourceMgr.clearIDTables();
+
+  // Set up a new main file.
+  Buf = llvm::MemoryBuffer::getMemBuffer(R"cpp(
+  // silly comment 42
+  #include "/bar.h")cpp");
+  MFID = SourceMgr.createFileID(std::move(Buf));
+  SourceMgr.setMainFileID(MFID);
+
+  ParseFile();
+  // Make sure foo.h got the same file-id in both runs.
+  EXPECT_EQ(FooFID,
+            SourceMgr.getOrCreateFileID(HeaderFile, clang::SrcMgr::C_User));
+  auto BarFID = SourceMgr.getOrCreateFileID(BarFile, clang::SrcMgr::C_User);
+  IncFID = SourceMgr.getDecomposedIncludedLoc(FooFID).first;
+  // Check that includer is bar.h during this run.
+  EXPECT_EQ(IncFID, BarFID);
+}
+
 TEST_F(SourceManagerTest, getMacroArgExpandedLocation) {
   const char *header =
     "#define FM(x,y) x\n";
@@ -530,6 +590,7 @@ struct MacroAction {
 
   SourceLocation Loc;
   std::string Name;
+  LLVM_PREFERRED_TYPE(Kind)
   unsigned MAKind : 3;
 
   MacroAction(SourceLocation Loc, StringRef Name, unsigned K)

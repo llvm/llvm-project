@@ -14,7 +14,7 @@
 // CHECK: @_ZGVZ2h2vE1i = linkonce_odr global i64 0, comdat, align 8{{$}}
 // CHECK: @_ZZN5test1L6getvarEiE3var = internal constant [4 x i32] [i32 1, i32 0, i32 2, i32 4], align 16
 // CHECK98: @_ZZN5test414useStaticLocalEvE3obj = linkonce_odr global %"struct.test4::HasVTable" zeroinitializer, comdat, align 8
-// CHECK11: @_ZZN5test414useStaticLocalEvE3obj = linkonce_odr global %"struct.test4::HasVTable" { ptr getelementptr inbounds ({ [3 x ptr] }, ptr @_ZTVN5test49HasVTableE, i32 0, inrange i32 0, i32 2) }, comdat, align 8
+// CHECK11: @_ZZN5test414useStaticLocalEvE3obj = linkonce_odr global %"struct.test4::HasVTable" { ptr getelementptr inbounds inrange(-16, 8) ({ [3 x ptr] }, ptr @_ZTVN5test49HasVTableE, i32 0, i32 0, i32 2) }, comdat, align 8
 
 struct A {
   A();

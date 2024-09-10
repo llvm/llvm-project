@@ -111,3 +111,5 @@ _CLC_OVERLOAD _CLC_DEF double atanh(double x) {
 _CLC_UNARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, double, atanh, double)
 
 #endif
+
+_CLC_DEFINE_UNARY_BUILTIN_FP16(atanh)

@@ -1,6 +1,8 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.unix.Stream -analyzer-output text \
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.Stream -analyzer-output text \
+// RUN:   -analyzer-config unix.Stream:Pedantic=true \
 // RUN:   -verify %s
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.unix.Stream,unix.StdCLibraryFunctions -analyzer-output text \
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.Stream,unix.StdCLibraryFunctions -analyzer-output text \
+// RUN:   -analyzer-config unix.Stream:Pedantic=true \
 // RUN:   -analyzer-config unix.StdCLibraryFunctions:ModelPOSIX=true -verify=expected,stdargs %s
 
 #include "Inputs/system-header-simulator.h"
@@ -56,6 +58,7 @@ void check_note_freopen(void) {
 
 void check_note_fdopen(int fd) {
   FILE *F = fdopen(fd, "r"); // expected-note {{Stream opened here}}
+  // stdargs-note@-1 {{'fdopen' is successful}}
   if (!F)
     // expected-note@-1 {{'F' is non-null}}
     // expected-note@-2 {{Taking false branch}}
@@ -163,5 +166,101 @@ void check_eof_notes_feof_or_no_error(void) {
     fread(Buf, 1, 1, F); // expected-warning {{Read function called when stream is in EOF state. Function has no effect}}
     // expected-note@-1 {{Read function called when stream is in EOF state. Function has no effect}}
   }
+  fclose(F);
+}
+
+void check_indeterminate_notes(void) {
+  FILE *F;
+  F = fopen("foo1.c", "r");
+  if (F == NULL)     // expected-note {{Taking false branch}} \
+                     // expected-note {{'F' is not equal to NULL}}
+    return;
+  int R = fgetc(F);  // no note
+  if (R >= 0) {      // expected-note {{Taking true branch}} \
+                     // expected-note {{'R' is >= 0}}
+    fgetc(F);        // expected-note {{Assuming this stream operation fails}}
+    if (ferror(F))   // expected-note {{Taking true branch}}
+      fgetc(F);      // expected-warning {{File position of the stream might be 'indeterminate' after a failed operation. Can cause undefined behavior}} \
+                     // expected-note {{File position of the stream might be 'indeterminate' after a failed operation. Can cause undefined behavior}}
+  }
+  fclose(F);
+}
+
+void check_indeterminate_after_clearerr(void) {
+  FILE *F;
+  char Buf[10];
+  F = fopen("foo1.c", "r");
+  if (F == NULL)          // expected-note {{Taking false branch}} \
+                          // expected-note {{'F' is not equal to NULL}}
+    return;
+  fread(Buf, 1, 1, F);    // expected-note {{Assuming this stream operation fails}}
+  if (ferror(F)) {        // expected-note {{Taking true branch}}
+    clearerr(F);
+    fread(Buf, 1, 1, F);  // expected-warning {{might be 'indeterminate' after a failed operation}} \
+                          // expected-note {{might be 'indeterminate' after a failed operation}}
+  }
+  fclose(F);
+}
+
+void check_indeterminate_eof(void) {
+  FILE *F;
+  char Buf[2];
+  F = fopen("foo1.c", "r");
+  if (F == NULL)               // expected-note {{Taking false branch}} \
+                               // expected-note {{'F' is not equal to NULL}} \
+                               // expected-note {{Taking false branch}} \
+                               // expected-note {{'F' is not equal to NULL}}
+    return;
+  fgets(Buf, sizeof(Buf), F);  // expected-note {{Assuming this stream operation fails}} \
+                               // expected-note {{Assuming stream reaches end-of-file here}}
+
+  fgets(Buf, sizeof(Buf), F);  // expected-warning {{might be 'indeterminate'}} \
+                               // expected-note {{might be 'indeterminate'}} \
+                               // expected-warning {{stream is in EOF state}} \
+                               // expected-note {{stream is in EOF state}}
+  fclose(F);
+}
+
+void check_indeterminate_fseek(void) {
+  FILE *F = fopen("file", "r");
+  if (!F)                           // expected-note {{Taking false branch}} \
+                                    // expected-note {{'F' is non-null}}
+    return;
+  int Ret = fseek(F, 1, SEEK_SET);  // expected-note {{Assuming this stream operation fails}}
+  if (Ret) {                        // expected-note {{Taking true branch}} \
+                                    // expected-note {{'Ret' is -1}}
+    char Buf[2];
+    fwrite(Buf, 1, 2, F);           // expected-warning {{might be 'indeterminate'}} \
+                                    // expected-note {{might be 'indeterminate'}}
+  }
+  fclose(F);
+}
+
+void error_fseek_ftell(void) {
+  FILE *F = fopen("file", "r");
+  if (!F)                 // expected-note {{Taking false branch}} \
+                          // expected-note {{'F' is non-null}}
+    return;
+  fseek(F, 0, SEEK_END);  // expected-note {{Assuming this stream operation fails}}
+  long size = ftell(F);   // expected-warning {{might be 'indeterminate'}} \
+                          // expected-note {{might be 'indeterminate'}}
+  if (size == -1) {
+    fclose(F);
+    return;
+  }
+  if (size == 1)
+    fprintf(F, "abcd");
+  fclose(F);
+}
+
+void error_fseek_read_eof(void) {
+  FILE *F = fopen("file", "r");
+  if (!F)
+    return;
+  if (fseek(F, 22, SEEK_SET) == -1) {
+    fclose(F);
+    return;
+  }
+  fgetc(F); // no warning
   fclose(F);
 }

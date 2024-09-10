@@ -26,27 +26,27 @@
 ; Which is copied from `test/CodeGen/RISCV/reserved-regs.ll`.
 ; But currently we have problem doing codegen for the above snippet
 ; (https://bugs.llvm.org/show_bug.cgi?id=50377).
-define void @foo(i32* nocapture readonly %a, i32* nocapture readonly %b, i32* nocapture readonly %c, i32* nocapture readonly %d,
-                 i32* nocapture readonly %a1, i32* nocapture readonly %b1, i32* nocapture readonly %c1, i32* nocapture readonly %d1,
-                 i32* nocapture readonly %a2, i32* nocapture readonly %b2, i32* nocapture readonly %c2, i32* nocapture readonly %d2,
-                 i32* nocapture readonly %a3, i32* nocapture readonly %b3, i32* nocapture readonly %c3, i32* nocapture readonly %d3) {
+define void @foo(ptr nocapture readonly %a, ptr nocapture readonly %b, ptr nocapture readonly %c, ptr nocapture readonly %d,
+                 ptr nocapture readonly %a1, ptr nocapture readonly %b1, ptr nocapture readonly %c1, ptr nocapture readonly %d1,
+                 ptr nocapture readonly %a2, ptr nocapture readonly %b2, ptr nocapture readonly %c2, ptr nocapture readonly %d2,
+                 ptr nocapture readonly %a3, ptr nocapture readonly %b3, ptr nocapture readonly %c3, ptr nocapture readonly %d3) {
 entry:
-  %0 = load i32, i32* %a, align 4
-  %1 = load i32, i32* %b, align 4
-  %2 = load i32, i32* %c, align 4
-  %3 = load i32, i32* %d, align 4
-  %4 = load i32, i32* %a1, align 4
-  %5 = load i32, i32* %b1, align 4
-  %6 = load i32, i32* %c1, align 4
-  %7 = load i32, i32* %d1, align 4
-  %8 = load i32, i32* %a2, align 4
-  %9 = load i32, i32* %b2, align 4
-  %10 = load i32, i32* %c2, align 4
-  %11 = load i32, i32* %d2, align 4
-  %12 = load i32, i32* %a3, align 4
-  %13 = load i32, i32* %b3, align 4
-  %14 = load i32, i32* %c3, align 4
-  %15 = load i32, i32* %d3, align 4
+  %0 = load i32, ptr %a, align 4
+  %1 = load i32, ptr %b, align 4
+  %2 = load i32, ptr %c, align 4
+  %3 = load i32, ptr %d, align 4
+  %4 = load i32, ptr %a1, align 4
+  %5 = load i32, ptr %b1, align 4
+  %6 = load i32, ptr %c1, align 4
+  %7 = load i32, ptr %d1, align 4
+  %8 = load i32, ptr %a2, align 4
+  %9 = load i32, ptr %b2, align 4
+  %10 = load i32, ptr %c2, align 4
+  %11 = load i32, ptr %d2, align 4
+  %12 = load i32, ptr %a3, align 4
+  %13 = load i32, ptr %b3, align 4
+  %14 = load i32, ptr %c3, align 4
+  %15 = load i32, ptr %d3, align 4
   ; A0-NOT: %a0
   ; A1-NOT: %a1
   ; A2-NOT: %a2

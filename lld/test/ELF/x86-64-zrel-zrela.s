@@ -25,7 +25,7 @@
 # RELA-NEXT:   R_X86_64_JUMP_SLOT func 0x0
 # RELA-NEXT: }
 
-# RUN: ld.lld -shared -z rela -z rel %t.o -o %t2.so
+# RUN: ld.lld -shared -z rela -z rel %t.o -o %t2.so --fatal-warnings
 # RUN: llvm-readobj -d -r -x .data %t2.so | FileCheck --check-prefix=REL %s
 
 # REL:      REL      {{.*}}

@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -run-pass si-fold-operands -verify-machineinstrs -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgcn -run-pass si-fold-operands -verify-machineinstrs -o - %s | FileCheck %s
 ---
 # Make sure there is no crash when trying to fold an immediate into an
 # implicit use

@@ -86,20 +86,20 @@ hint #19
 // ERROR-NO-GCS-NOT: [[@LINE-2]]:1: error: instruction requires: gcs
 // NO-GCS: hint #19                              // encoding: [0x7f,0x22,0x03,0xd5]
 
-gcsstr x26, x27
-// CHECK: gcsstr x26, x27                          // encoding: [0x7a,0x0f,0x1f,0xd9]
+gcsstr x26, [x27]
+// CHECK: gcsstr x26, [x27]                        // encoding: [0x7a,0x0f,0x1f,0xd9]
 // ERROR-NO-GCS: [[@LINE-2]]:1: error: instruction requires: gcs
 
-gcsstr x26, sp
-// CHECK: gcsstr x26, sp                           // encoding: [0xfa,0x0f,0x1f,0xd9]
+gcsstr x26, [sp]
+// CHECK: gcsstr x26, [sp]                         // encoding: [0xfa,0x0f,0x1f,0xd9]
 // ERROR-NO-GCS: [[@LINE-2]]:1: error: instruction requires: gcs
 
-gcssttr x26, x27
-// CHECK: gcssttr x26, x27                         // encoding: [0x7a,0x1f,0x1f,0xd9]
+gcssttr x26, [x27]
+// CHECK: gcssttr x26, [x27]                       // encoding: [0x7a,0x1f,0x1f,0xd9]
 // ERROR-NO-GCS: [[@LINE-2]]:1: error: instruction requires: gcs
 
-gcssttr x26, sp
-// CHECK: gcssttr x26, sp                          // encoding: [0xfa,0x1f,0x1f,0xd9]
+gcssttr x26, [sp]
+// CHECK: gcssttr x26, [sp]                        // encoding: [0xfa,0x1f,0x1f,0xd9]
 // ERROR-NO-GCS: [[@LINE-2]]:1: error: instruction requires: gcs
 
 gcspushx

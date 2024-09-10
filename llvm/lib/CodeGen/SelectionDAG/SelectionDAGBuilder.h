@@ -21,11 +21,11 @@
 #include "llvm/CodeGen/AssignmentTrackingAnalysis.h"
 #include "llvm/CodeGen/CodeGenCommonISel.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
-#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/SwitchLoweringUtils.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/Support/BranchProbability.h"
@@ -385,6 +385,11 @@ public:
     N = NewN;
   }
 
+  bool shouldKeepJumpConditionsTogether(
+      const FunctionLoweringInfo &FuncInfo, const BranchInst &I,
+      Instruction::BinaryOps Opc, const Value *Lhs, const Value *Rhs,
+      TargetLoweringBase::CondMergingParams Params) const;
+
   void FindMergedConditions(const Value *Cond, MachineBasicBlock *TBB,
                             MachineBasicBlock *FBB, MachineBasicBlock *CurBB,
                             MachineBasicBlock *SwitchBB,
@@ -401,7 +406,8 @@ public:
   void CopyToExportRegsIfNeeded(const Value *V);
   void ExportFromCurrentBlock(const Value *V);
   void LowerCallTo(const CallBase &CB, SDValue Callee, bool IsTailCall,
-                   bool IsMustTailCall, const BasicBlock *EHPadBB = nullptr);
+                   bool IsMustTailCall, const BasicBlock *EHPadBB = nullptr,
+                   const TargetLowering::PtrAuthInfo *PAI = nullptr);
 
   // Lower range metadata from 0 to N to assert zext to an integer of nearest
   // floor power of two.
@@ -433,8 +439,8 @@ public:
     /// The set of gc.relocate calls associated with this gc.statepoint.
     SmallVector<const GCRelocateInst *, 16> GCRelocates;
 
-    /// The full list of gc arguments to the gc.statepoint being lowered.
-    ArrayRef<const Use> GCArgs;
+    /// The full list of gc-live arguments to the gc.statepoint being lowered.
+    ArrayRef<const Use> GCLives;
 
     /// The gc.statepoint instruction.
     const Instruction *StatepointInstr = nullptr;
@@ -444,7 +450,7 @@ public:
     ArrayRef<const Use> GCTransitionArgs;
 
     /// The ID that the resulting STATEPOINT instruction has to report.
-    unsigned ID = -1;
+    uint64_t ID = -1;
 
     /// Information regarding the underlying call instruction.
     TargetLowering::CallLoweringInfo CLI;
@@ -484,6 +490,9 @@ public:
                                         const BasicBlock *EHPadBB,
                                         bool VarArgDisallowed,
                                         bool ForceVoidReturnTy);
+
+  void LowerCallSiteWithPtrAuthBundle(const CallBase &CB,
+                                      const BasicBlock *EHPadBB);
 
   /// Returns the type of FrameIndex and TargetFrameIndex nodes.
   MVT getFrameIndexTy() {
@@ -554,8 +563,8 @@ private:
   void visitShl (const User &I) { visitShift(I, ISD::SHL); }
   void visitLShr(const User &I) { visitShift(I, ISD::SRL); }
   void visitAShr(const User &I) { visitShift(I, ISD::SRA); }
-  void visitICmp(const User &I);
-  void visitFCmp(const User &I);
+  void visitICmp(const ICmpInst &I);
+  void visitFCmp(const FCmpInst &I);
   // Visit the conversion instructions
   void visitTrunc(const User &I);
   void visitZExt(const User &I);
@@ -612,10 +621,14 @@ private:
   void visitInlineAsm(const CallBase &Call,
                       const BasicBlock *EHPadBB = nullptr);
 
-  bool visitEntryValueDbgValue(const DbgValueInst &I);
+  bool visitEntryValueDbgValue(ArrayRef<const Value *> Values,
+                               DILocalVariable *Variable, DIExpression *Expr,
+                               DebugLoc DbgLoc);
   void visitIntrinsicCall(const CallInst &I, unsigned Intrinsic);
   void visitTargetIntrinsic(const CallInst &I, unsigned Intrinsic);
   void visitConstrainedFPIntrinsic(const ConstrainedFPIntrinsic &FPI);
+  void visitConvergenceControl(const CallInst &I, unsigned Intrinsic);
+  void visitVectorHistogram(const CallInst &I, unsigned IntrinsicID);
   void visitVPLoad(const VPIntrinsic &VPIntrin, EVT VT,
                    const SmallVectorImpl<SDValue> &OpValues);
   void visitVPStore(const VPIntrinsic &VPIntrin,

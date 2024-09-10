@@ -50,20 +50,18 @@
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm %s \
 // RUN:     -fgpu-rdc -fcuda-include-gpubinary %t -o - -x hip \
 // RUN:   | FileCheck -allow-deprecated-dag-overlap %s --check-prefixes=ALL,LNX,RDC,HIP,HIPEF
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm %s -o - -x hip\
+// RUN: %clang_cc1 -cuid=123 -triple x86_64-linux-gnu -emit-llvm %s -o - -x hip\
 // RUN:   | FileCheck -allow-deprecated-dag-overlap %s -check-prefixes=ALL,LNX,NORDC,HIP,HIPNEF
 
 // RUN: %clang_cc1 -triple x86_64-pc-windows-msvc -aux-triple amdgcn -emit-llvm %s \
 // RUN:     -fcuda-include-gpubinary %t -o - -x hip\
 // RUN:   | FileCheck -allow-deprecated-dag-overlap %s --check-prefixes=ALL,WIN
 
-// RUN: %clang_cc1 -triple x86_64-pc-windows-msvc -aux-triple amdgcn -emit-llvm %s \
+// RUN: %clang_cc1 -cuid=123 -triple x86_64-pc-windows-msvc -aux-triple amdgcn -emit-llvm %s \
 // RUN:     -o - -x hip\
 // RUN:   | FileCheck -allow-deprecated-dag-overlap %s --check-prefixes=ALL,WIN,HIP,HIPNEF
 
 #include "Inputs/cuda.h"
-
-// HIPNEF: $__hip_gpubin_handle = comdat any
 
 #ifndef NOGLOBALS
 // NORDC-DAG: @device_var = internal global i32
@@ -161,7 +159,7 @@ __device__ void device_use() {
 // * constant unnamed string with GPU binary
 // CUDA: @[[FATBIN:.*]] = private constant{{.*}} c"GPU binary would be here.",
 // HIPEF: @[[FATBIN:.*]] = private constant{{.*}} c"GPU binary would be here.",{{.*}}align 4096
-// HIPNEF: @[[FATBIN:__hip_fatbin]] = external constant i8, section ".hip_fatbin"
+// HIPNEF: @[[FATBIN:__hip_fatbin_[0-9a-f]+]] = external constant i8, section ".hip_fatbin"
 // CUDANORDC-SAME: section ".nv_fatbin", align 8
 // CUDARDC-SAME: section "__nv_relfatbin", align 8
 // * constant struct that wraps GPU binary
@@ -177,7 +175,7 @@ __device__ void device_use() {
 // HIP-SAME: section ".hipFatBinSegment"
 // * variable to save GPU binary handle after initialization
 // CUDANORDC: @__[[PREFIX]]_gpubin_handle = internal global ptr null
-// HIPNEF: @__[[PREFIX]]_gpubin_handle = linkonce hidden global ptr null
+// HIPNEF: @__[[PREFIX]]_gpubin_handle_{{[0-9a-f]+}} = external hidden global ptr, align 8
 // * constant unnamed string with NVModuleID
 // CUDARDC: [[MODULE_ID_GLOBAL:@.*]] = private constant
 // CUDARDC-SAME: c"[[MODULE_ID:.+]]\00", section "__nv_module_id", align 32

@@ -15,7 +15,7 @@
 --- |
   @g = hidden local_unnamed_addr global i32 0, align 4
 
-  define hidden void @bar(void ()* nocapture %f) "branch-target-enforcement"="true" {
+  define hidden void @bar(ptr nocapture %f) "branch-target-enforcement" {
   entry:
     ret void
   }

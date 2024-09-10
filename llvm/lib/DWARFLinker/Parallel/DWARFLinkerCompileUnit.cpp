@@ -12,6 +12,7 @@
 #include "DIEGenerator.h"
 #include "DependencyTracker.h"
 #include "SyntheticTypeNameBuilder.h"
+#include "llvm/DWARFLinker/Utils.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugAbbrev.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugMacro.h"
 #include "llvm/Support/DJB.h"
@@ -247,20 +248,6 @@ void CompileUnit::cleanupDataAfterClonning() {
   getOrigUnit().clear();
 }
 
-/// Make a best effort to guess the
-/// Xcode.app/Contents/Developer/Toolchains/ path from an SDK path.
-static SmallString<128> guessToolchainBaseDir(StringRef SysRoot) {
-  SmallString<128> Result;
-  // Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk
-  StringRef Base = sys::path::parent_path(SysRoot);
-  if (sys::path::filename(Base) != "SDKs")
-    return Result;
-  Base = sys::path::parent_path(Base);
-  Result = Base;
-  Result += "/Toolchains";
-  return Result;
-}
-
 /// Collect references to parseable Swift interfaces in imported
 /// DW_TAG_module blocks.
 void CompileUnit::analyzeImportedModule(const DWARFDebugInfoEntry *DieEntry) {
@@ -283,8 +270,10 @@ void CompileUnit::analyzeImportedModule(const DWARFDebugInfoEntry *DieEntry) {
     return;
   // Don't track interfaces that are part of the toolchain.
   // For example: Swift, _Concurrency, ...
-  SmallString<128> Toolchain = guessToolchainBaseDir(SysRoot);
-  if (!Toolchain.empty() && Path.starts_with(Toolchain))
+  StringRef DeveloperDir = guessDeveloperDir(SysRoot);
+  if (!DeveloperDir.empty() && Path.starts_with(DeveloperDir))
+    return;
+  if (isInToolchainDir(Path))
     return;
   if (std::optional<DWARFFormValue> Val = find(DieEntry, dwarf::DW_AT_name)) {
     Expected<const char *> Name = Val->getAsCString();
@@ -307,7 +296,7 @@ void CompileUnit::analyzeImportedModule(const DWARFDebugInfoEntry *DieEntry) {
                ": " + Entry + " and " + Path + ".",
            &Die);
     }
-    Entry = std::string(ResolvedPath.str());
+    Entry = std::string(ResolvedPath);
   }
 }
 
@@ -392,38 +381,36 @@ void CompileUnit::updateDieRefPatchesWithClonedOffsets() {
 std::optional<UnitEntryPairTy> CompileUnit::resolveDIEReference(
     const DWARFFormValue &RefValue,
     ResolveInterCUReferencesMode CanResolveInterCUReferences) {
-  if (std::optional<DWARFFormValue::UnitOffset> Ref =
-          *RefValue.getAsRelativeReference()) {
-    if (Ref->Unit == OrigUnit) {
-      // Referenced DIE is in current compile unit.
-      if (std::optional<uint32_t> RefDieIdx =
-              getDIEIndexForOffset(OrigUnit->getOffset() + Ref->Offset))
-        return UnitEntryPairTy{this, OrigUnit->getDebugInfoEntry(*RefDieIdx)};
-    }
-    uint64_t RefDIEOffset =
-        Ref->Unit ? Ref->Unit->getOffset() + Ref->Offset : Ref->Offset;
-    if (CompileUnit *RefCU = getUnitFromOffset(RefDIEOffset)) {
-      if (RefCU == this) {
-        // Referenced DIE is in current compile unit.
-        if (std::optional<uint32_t> RefDieIdx =
-                getDIEIndexForOffset(RefDIEOffset))
-          return UnitEntryPairTy{this, getDebugInfoEntry(*RefDieIdx)};
-      } else if (CanResolveInterCUReferences) {
-        // Referenced DIE is in other compile unit.
-
-        // Check whether DIEs are loaded for that compile unit.
-        enum Stage ReferredCUStage = RefCU->getStage();
-        if (ReferredCUStage < Stage::Loaded || ReferredCUStage > Stage::Cloned)
-          return UnitEntryPairTy{RefCU, nullptr};
-
-        if (std::optional<uint32_t> RefDieIdx =
-                RefCU->getDIEIndexForOffset(RefDIEOffset))
-          return UnitEntryPairTy{RefCU, RefCU->getDebugInfoEntry(*RefDieIdx)};
-      } else
-        return UnitEntryPairTy{RefCU, nullptr};
-    }
+  CompileUnit *RefCU;
+  uint64_t RefDIEOffset;
+  if (std::optional<uint64_t> Offset = RefValue.getAsRelativeReference()) {
+    RefCU = this;
+    RefDIEOffset = RefValue.getUnit()->getOffset() + *Offset;
+  } else if (Offset = RefValue.getAsDebugInfoReference(); Offset) {
+    RefCU = getUnitFromOffset(*Offset);
+    RefDIEOffset = *Offset;
+  } else {
+    return std::nullopt;
   }
 
+  if (RefCU == this) {
+    // Referenced DIE is in current compile unit.
+    if (std::optional<uint32_t> RefDieIdx = getDIEIndexForOffset(RefDIEOffset))
+      return UnitEntryPairTy{this, getDebugInfoEntry(*RefDieIdx)};
+  } else if (RefCU && CanResolveInterCUReferences) {
+    // Referenced DIE is in other compile unit.
+
+    // Check whether DIEs are loaded for that compile unit.
+    enum Stage ReferredCUStage = RefCU->getStage();
+    if (ReferredCUStage < Stage::Loaded || ReferredCUStage > Stage::Cloned)
+      return UnitEntryPairTy{RefCU, nullptr};
+
+    if (std::optional<uint32_t> RefDieIdx =
+            RefCU->getDIEIndexForOffset(RefDIEOffset))
+      return UnitEntryPairTy{RefCU, RefCU->getDebugInfoEntry(*RefDieIdx)};
+  } else {
+    return UnitEntryPairTy{RefCU, nullptr};
+  }
   return std::nullopt;
 }
 
@@ -1242,8 +1229,9 @@ void CompileUnit::cloneDieAttrExpression(
   }
 }
 
-Error CompileUnit::cloneAndEmit(std::optional<Triple> TargetTriple,
-                                TypeUnit *ArtificialTypeUnit) {
+Error CompileUnit::cloneAndEmit(
+    std::optional<std::reference_wrapper<const Triple>> TargetTriple,
+    TypeUnit *ArtificialTypeUnit) {
   BumpPtrAllocator Allocator;
 
   DWARFDie OrigUnitDIE = getOrigUnit().getUnitDIE();
@@ -1260,18 +1248,17 @@ Error CompileUnit::cloneAndEmit(std::optional<Triple> TargetTriple,
       std::nullopt, std::nullopt, Allocator, ArtificialTypeUnit);
   setOutUnitDIE(OutCUDie.first);
 
-  if (getGlobalData().getOptions().NoOutput || (OutCUDie.first == nullptr))
+  if (!TargetTriple.has_value() || (OutCUDie.first == nullptr))
     return Error::success();
 
-  assert(TargetTriple.has_value());
-  if (Error Err = cloneAndEmitLineTable(*TargetTriple))
+  if (Error Err = cloneAndEmitLineTable((*TargetTriple).get()))
     return Err;
 
   if (Error Err = cloneAndEmitDebugMacro())
     return Err;
 
   getOrCreateSectionDescriptor(DebugSectionKind::DebugInfo);
-  if (Error Err = emitDebugInfo(*TargetTriple))
+  if (Error Err = emitDebugInfo((*TargetTriple).get()))
     return Err;
 
   // ASSUMPTION: .debug_info section should already be emitted at this point.
@@ -1385,7 +1372,7 @@ DIE *CompileUnit::createPlainDIEandCloneAttributes(
     // Get relocation adjustment value for the current function.
     FuncAddressAdjustment =
         getContaingFile().Addresses->getSubprogramRelocAdjustment(
-            getDIE(InputDieEntry));
+            getDIE(InputDieEntry), false);
   } else if (InputDieEntry->getTag() == dwarf::DW_TAG_label) {
     // Get relocation adjustment value for the current label.
     std::optional<uint64_t> lowPC =
@@ -1399,7 +1386,7 @@ DIE *CompileUnit::createPlainDIEandCloneAttributes(
     // Get relocation adjustment value for the current variable.
     std::pair<bool, std::optional<int64_t>> LocExprAddrAndRelocAdjustment =
         getContaingFile().Addresses->getVariableRelocAdjustment(
-            getDIE(InputDieEntry));
+            getDIE(InputDieEntry), false);
 
     HasLocationExpressionAddress = LocExprAddrAndRelocAdjustment.first;
     if (LocExprAddrAndRelocAdjustment.first &&
@@ -1527,7 +1514,7 @@ TypeEntry *CompileUnit::createTypeDIEandCloneAttributes(
   return Entry;
 }
 
-Error CompileUnit::cloneAndEmitLineTable(Triple &TargetTriple) {
+Error CompileUnit::cloneAndEmitLineTable(const Triple &TargetTriple) {
   const DWARFDebugLine::LineTable *InputLineTable =
       getContaingFile().Dwarf->getLineTableForUnit(&getOrigUnit());
   if (InputLineTable == nullptr) {
@@ -1698,14 +1685,6 @@ CompileUnit::getDirAndFilenameFromLineTable(
   return getDirAndFilenameFromLineTable(FileIdx);
 }
 
-static bool isPathAbsoluteOnWindowsOrPosix(const Twine &Path) {
-  // Debug info can contain paths from any OS, not necessarily
-  // an OS we're currently running on. Moreover different compilation units can
-  // be compiled on different operating systems and linked together later.
-  return sys::path::is_absolute(Path, sys::path::Style::posix) ||
-         sys::path::is_absolute(Path, sys::path::Style::windows);
-}
-
 std::optional<std::pair<StringRef, StringRef>>
 CompileUnit::getDirAndFilenameFromLineTable(uint64_t FileIdx) {
   FileNamesCache::iterator FileData = FileNames.find(FileIdx);
@@ -1852,7 +1831,7 @@ TypeUnit *CompileUnit::OutputUnitVariantPtr::getAsTypeUnit() {
 
 bool CompileUnit::resolveDependenciesAndMarkLiveness(
     bool InterCUProcessingStarted, std::atomic<bool> &HasNewInterconnectedCUs) {
-  if (!Dependencies.get())
+  if (!Dependencies)
     Dependencies.reset(new DependencyTracker(*this));
 
   return Dependencies->resolveDependenciesAndMarkLiveness(
@@ -1862,13 +1841,13 @@ bool CompileUnit::resolveDependenciesAndMarkLiveness(
 bool CompileUnit::updateDependenciesCompleteness() {
   assert(Dependencies.get());
 
-  return Dependencies.get()->updateDependenciesCompleteness();
+  return Dependencies->updateDependenciesCompleteness();
 }
 
 void CompileUnit::verifyDependencies() {
   assert(Dependencies.get());
 
-  Dependencies.get()->verifyKeepChain();
+  Dependencies->verifyKeepChain();
 }
 
 ArrayRef<dwarf::Attribute> dwarf_linker::parallel::getODRAttributes() {

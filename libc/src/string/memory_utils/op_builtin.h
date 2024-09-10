@@ -16,9 +16,11 @@
 #define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_OP_BUILTIN_H
 
 #include "src/__support/CPP/type_traits.h"
+#include "src/__support/macros/config.h"
 #include "src/string/memory_utils/utils.h"
 
-namespace LIBC_NAMESPACE::builtin {
+namespace LIBC_NAMESPACE_DECL {
+namespace builtin {
 
 ///////////////////////////////////////////////////////////////////////////////
 // Memcpy
@@ -105,22 +107,22 @@ template <size_t Size> struct Bcmp {
   LIBC_INLINE static BcmpReturnType block(CPtr, CPtr) {
     static_assert(cpp::always_false<decltype(Size)>,
                   "Missing __builtin_memcmp_inline");
-    return BcmpReturnType::ZERO();
+    return BcmpReturnType::zero();
   }
 
   LIBC_INLINE static BcmpReturnType tail(CPtr, CPtr, size_t) {
     static_assert(cpp::always_false<decltype(Size)>, "Not implemented");
-    return BcmpReturnType::ZERO();
+    return BcmpReturnType::zero();
   }
 
   LIBC_INLINE static BcmpReturnType head_tail(CPtr, CPtr, size_t) {
     static_assert(cpp::always_false<decltype(Size)>, "Not implemented");
-    return BcmpReturnType::ZERO();
+    return BcmpReturnType::zero();
   }
 
   LIBC_INLINE static BcmpReturnType loop_and_tail(CPtr, CPtr, size_t) {
     static_assert(cpp::always_false<decltype(Size)>, "Not implemented");
-    return BcmpReturnType::ZERO();
+    return BcmpReturnType::zero();
   }
 };
 
@@ -132,25 +134,26 @@ template <size_t Size> struct Memcmp {
   LIBC_INLINE static MemcmpReturnType block(CPtr, CPtr) {
     static_assert(cpp::always_false<decltype(Size)>,
                   "Missing __builtin_memcmp_inline");
-    return MemcmpReturnType::ZERO();
+    return MemcmpReturnType::zero();
   }
 
   LIBC_INLINE static MemcmpReturnType tail(CPtr, CPtr, size_t) {
     static_assert(cpp::always_false<decltype(Size)>, "Not implemented");
-    return MemcmpReturnType::ZERO();
+    return MemcmpReturnType::zero();
   }
 
   LIBC_INLINE static MemcmpReturnType head_tail(CPtr, CPtr, size_t) {
     static_assert(cpp::always_false<decltype(Size)>, "Not implemented");
-    return MemcmpReturnType::ZERO();
+    return MemcmpReturnType::zero();
   }
 
   LIBC_INLINE static MemcmpReturnType loop_and_tail(CPtr, CPtr, size_t) {
     static_assert(cpp::always_false<decltype(Size)>, "Not implemented");
-    return MemcmpReturnType::ZERO();
+    return MemcmpReturnType::zero();
   }
 };
 
-} // namespace LIBC_NAMESPACE::builtin
+} // namespace builtin
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STRING_MEMORY_UTILS_OP_BUILTIN_H

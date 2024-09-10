@@ -1,6 +1,10 @@
 ; RUN: llc %s -o - -stop-after=finalize-isel \
 ; RUN: | FileCheck %s --implicit-check-not=DBG
 
+
+; RUN: llc --try-experimental-debuginfo-iterators %s -o - -stop-after=finalize-isel \
+; RUN: | FileCheck %s --implicit-check-not=DBG
+
 ;; Hand written. Check that we fall back to emitting a list of defs for
 ;; variables with split allocas (i.e. we want to see DBG_VALUEs and no
 ;; debug-info-variable entry in the stack slot table).

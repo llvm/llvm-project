@@ -128,6 +128,16 @@ class GITypeOf<string opName> : GISpecialType {
   string OpName = opName;
 }
 
+// The type of an operand that can match a variable amount of operands.
+// This type contains a minimum and maximum number of operands to match.
+// The minimum must be 1 or more, as we cannot have an operand representing
+// zero operands, and the max can be zero (which means "unlimited") or a value
+// greater than the minimum.
+class GIVariadic<int min = 1, int max = 0> : GISpecialType {
+  int MinArgs = min;
+  int MaxArgs = max;
+}
+
 //===----------------------------------------------------------------------===//
 // Pattern Builtins
 //===----------------------------------------------------------------------===//
@@ -179,6 +189,10 @@ def FmArcp      : MIFlagEnum<"FmArcp">;
 def FmContract  : MIFlagEnum<"FmContract">;
 def FmAfn       : MIFlagEnum<"FmAfn">;
 def FmReassoc   : MIFlagEnum<"FmReassoc">;
+def IsExact     : MIFlagEnum<"IsExact">;
+def NoSWrap     : MIFlagEnum<"NoSWrap">;
+def NoUWrap     : MIFlagEnum<"NoUWrap">;
+def NonNeg      : MIFlagEnum<"NonNeg">;
 
 def MIFlags;
 // def not; -> Already defined as a SDNode
@@ -217,6 +231,13 @@ def idempotent_prop : GICombineRule<
    (match (idempotent_prop_frags $dst, $src)),
    (apply (GIReplaceReg $dst, $src))>;
 
+// Convert freeze(Op(Op0, NonPoisonOps...)) to Op(freeze(Op0), NonPoisonOps...)
+// when Op0 is not guaranteed non-poison
+def push_freeze_to_prevent_poison_from_propagating : GICombineRule<
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (match (G_FREEZE $dst, $src):$root,
+         [{ return !isGuaranteedNotToBePoison(${src}.getReg(), MRI) && Helper.matchFreezeOfSingleMaybePoisonOperand(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
 
 def extending_loads : GICombineRule<
   (defs root:$root, extending_load_matchdata:$matchinfo),
@@ -264,7 +285,7 @@ def combine_extracted_vector_load : GICombineRule<
   (match (wip_match_opcode G_EXTRACT_VECTOR_ELT):$root,
         [{ return Helper.matchCombineExtractedVectorLoad(*${root}, ${matchinfo}); }]),
   (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
-  
+
 def combine_indexed_load_store : GICombineRule<
   (defs root:$root, indexed_load_store_matchdata:$matchinfo),
   (match (wip_match_opcode G_LOAD, G_SEXTLOAD, G_ZEXTLOAD, G_STORE):$root,
@@ -308,9 +329,8 @@ def shift_of_shifted_logic_chain : GICombineRule<
          [{ return Helper.matchShiftOfShiftedLogic(*${d}, ${matchinfo}); }]),
   (apply [{ Helper.applyShiftOfShiftedLogic(*${d}, ${matchinfo}); }])>;
 
-def mul_to_shl_matchdata : GIDefMatchData<"unsigned">;
 def mul_to_shl : GICombineRule<
-  (defs root:$d, mul_to_shl_matchdata:$matchinfo),
+  (defs root:$d, unsigned_matchinfo:$matchinfo),
   (match (G_MUL $d, $op1, $op2):$mi,
          [{ return Helper.matchCombineMulToShl(*${mi}, ${matchinfo}); }]),
   (apply [{ Helper.applyCombineMulToShl(*${mi}, ${matchinfo}); }])>;
@@ -322,6 +342,28 @@ def reduce_shl_of_extend : GICombineRule<
   (match (G_SHL $dst, $src0, $src1):$mi,
          [{ return Helper.matchCombineShlOfExtend(*${mi}, ${matchinfo}); }]),
   (apply [{ Helper.applyCombineShlOfExtend(*${mi}, ${matchinfo}); }])>;
+
+// Combine bitreverse(shl (bitreverse x), y)) -> (lshr x, y)
+def bitreverse_shl : GICombineRule<
+  (defs root:$d),
+  (match (G_BITREVERSE $rev, $val),
+         (G_SHL $src, $rev, $amt):$mi,
+         (G_BITREVERSE $d, $src),
+         [{ return Helper.isLegalOrBeforeLegalizer({TargetOpcode::G_LSHR,
+                                                   {MRI.getType(${val}.getReg()),
+                                                    MRI.getType(${amt}.getReg())}}); }]),
+  (apply (G_LSHR $d, $val, $amt))>;
+
+// Combine bitreverse(lshr (bitreverse x), y)) -> (shl x, y)
+def bitreverse_lshr : GICombineRule<
+  (defs root:$d),
+  (match (G_BITREVERSE $rev, $val),
+         (G_LSHR $src, $rev, $amt):$mi,
+         (G_BITREVERSE $d, $src),
+         [{ return Helper.isLegalOrBeforeLegalizer({TargetOpcode::G_SHL,
+                                                   {MRI.getType(${val}.getReg()),
+                                                    MRI.getType(${amt}.getReg())}}); }]),
+  (apply (G_SHL $d, $val, $amt))>;
 
 // Combine (shl (add x, c1), c2) -> (add (shl x, c2), c1 << c2)
 // Combine (shl (or x, c1), c2) -> (or (shl x, c2), c1 << c2)
@@ -429,9 +471,8 @@ def select_undef_cmp: GICombineRule<
 
 // Fold (true ? x : y) -> x
 // Fold (false ? x : y) -> y
-def select_constant_cmp_matchdata : GIDefMatchData<"unsigned">;
 def select_constant_cmp: GICombineRule<
-  (defs root:$root, select_constant_cmp_matchdata:$matchinfo),
+  (defs root:$root, unsigned_matchinfo:$matchinfo),
   (match (wip_match_opcode G_SELECT):$root,
     [{ return Helper.matchConstantSelectCmp(*${root}, ${matchinfo}); }]),
   (apply [{ Helper.replaceSingleDefInstWithOperand(*${root}, ${matchinfo}); }])
@@ -442,14 +483,20 @@ def select_constant_cmp: GICombineRule<
 // TODO: handle compares (currently not marked as isCommutable)
 def commute_int_constant_to_rhs : GICombineRule<
   (defs root:$root),
-  (match (wip_match_opcode G_ADD, G_MUL, G_AND, G_OR, G_XOR):$root,
+  (match (wip_match_opcode G_ADD, G_MUL, G_AND, G_OR, G_XOR,
+                           G_SMIN, G_SMAX, G_UMIN, G_UMAX, G_UADDO, G_SADDO,
+                           G_UMULO, G_SMULO, G_UMULH, G_SMULH,
+                           G_UADDSAT, G_SADDSAT, G_SMULFIX, G_UMULFIX,
+                           G_SMULFIXSAT, G_UMULFIXSAT):$root,
     [{ return Helper.matchCommuteConstantToRHS(*${root}); }]),
   (apply [{ Helper.applyCommuteBinOpOperands(*${root}); }])
 >;
 
 def commute_fp_constant_to_rhs : GICombineRule<
   (defs root:$root),
-  (match (wip_match_opcode G_FADD, G_FMUL):$root,
+  (match (wip_match_opcode G_FADD, G_FMUL, G_FMINNUM, G_FMAXNUM,
+                           G_FMINNUM_IEEE, G_FMAXNUM_IEEE,
+                           G_FMINIMUM, G_FMAXIMUM):$root,
     [{ return Helper.matchCommuteFPConstantToRHS(*${root}); }]),
   (apply [{ Helper.applyCommuteBinOpOperands(*${root}); }])
 >;
@@ -491,6 +538,13 @@ def right_identity_one_fp: GICombineRule<
   (match (G_FMUL $dst, $x, $y):$root,
     [{ return Helper.matchConstantFPOp(${y}, 1.0); }]),
   (apply (GIReplaceReg $dst, $x))
+>;
+
+def right_identity_neg_one_fp: GICombineRule<
+  (defs root:$dst),
+  (match (G_FMUL $dst, $x, $y):$root,
+    [{ return Helper.matchConstantFPOp(${y}, -1.0); }]),
+  (apply (G_FNEG $dst, $x))
 >;
 
 def right_identity_one : GICombineGroup<[right_identity_one_int, right_identity_one_fp]>;
@@ -637,9 +691,8 @@ def add_p2i_to_ptradd : GICombineRule<
 >;
 
 // Fold (ptr_add (int2ptr C1), C2) -> C1 + C2
-def const_ptradd_to_i2p_matchinfo : GIDefMatchData<"APInt">;
 def const_ptradd_to_i2p: GICombineRule<
-  (defs root:$root, const_ptradd_to_i2p_matchinfo:$info),
+  (defs root:$root, apint_matchinfo:$info),
   (match (wip_match_opcode G_PTR_ADD):$root,
     [{ return Helper.matchCombineConstPtrAddToI2P(*${root}, ${info}); }]),
   (apply [{ Helper.applyCombineConstPtrAddToI2P(*${root}, ${info}); }])
@@ -707,21 +760,11 @@ def anyext_trunc_fold: GICombineRule <
 
 // Fold (zext (trunc x)) -> x if the source type is same as the destination type
 // and truncated bits are known to be zero.
-def zext_trunc_fold_matchinfo : GIDefMatchData<"Register">;
 def zext_trunc_fold: GICombineRule <
-  (defs root:$root, zext_trunc_fold_matchinfo:$matchinfo),
+  (defs root:$root, register_matchinfo:$matchinfo),
   (match (wip_match_opcode G_ZEXT):$root,
          [{ return Helper.matchCombineZextTrunc(*${root}, ${matchinfo}); }]),
   (apply [{ Helper.replaceSingleDefInstWithReg(*${root}, ${matchinfo}); }])
->;
-
-// Fold ([asz]ext ([asz]ext x)) -> ([asz]ext x).
-def ext_ext_fold_matchinfo : GIDefMatchData<"std::tuple<Register, unsigned>">;
-def ext_ext_fold: GICombineRule <
-  (defs root:$root, ext_ext_fold_matchinfo:$matchinfo),
-  (match (wip_match_opcode G_ANYEXT, G_SEXT, G_ZEXT):$root,
-         [{ return Helper.matchCombineExtOfExt(*${root}, ${matchinfo}); }]),
-  (apply [{ Helper.applyCombineExtOfExt(*${root}, ${matchinfo}); }])
 >;
 
 def not_cmp_fold_matchinfo : GIDefMatchData<"SmallVector<Register, 4>">;
@@ -795,15 +838,6 @@ def unmerge_zext_to_zext : GICombineRule<
   (match (wip_match_opcode G_UNMERGE_VALUES): $d,
   [{ return Helper.matchCombineUnmergeZExtToZExt(*${d}); }]),
   (apply [{ Helper.applyCombineUnmergeZExtToZExt(*${d}); }])
->;
-
-// Fold trunc ([asz]ext x) -> x or ([asz]ext x) or (trunc x).
-def trunc_ext_fold_matchinfo : GIDefMatchData<"std::pair<Register, unsigned>">;
-def trunc_ext_fold: GICombineRule <
-  (defs root:$root, trunc_ext_fold_matchinfo:$matchinfo),
-  (match (wip_match_opcode G_TRUNC):$root,
-         [{ return Helper.matchCombineTruncOfExt(*${root}, ${matchinfo}); }]),
-  (apply [{ Helper.applyCombineTruncOfExt(*${root}, ${matchinfo}); }])
 >;
 
 // Under certain conditions, transform:
@@ -945,6 +979,37 @@ def redundant_binop_in_equality : GICombineRule<
          [{ return Helper.matchRedundantBinOpInEquality(*${root}, ${info}); }]),
   (apply [{ Helper.applyBuildFn(*${root}, ${info}); }])>;
 
+// Transform: (X == 0 & Y == 0) -> (X | Y) == 0
+def double_icmp_zero_and_combine: GICombineRule<
+  (defs root:$root),
+  (match (G_ICMP $d1, $p, $s1, 0),
+         (G_ICMP $d2, $p, $s2, 0),
+         (G_AND $root, $d1, $d2),
+         [{ return ${p}.getPredicate() == CmpInst::ICMP_EQ &&
+                       !MRI.getType(${s1}.getReg()).getScalarType().isPointer() &&
+                       (MRI.getType(${s1}.getReg()) ==
+                           MRI.getType(${s2}.getReg())); }]),
+  (apply (G_OR $ordst, $s1, $s2),
+         (G_ICMP $root, $p, $ordst, 0))
+>;
+
+// Transform: (X != 0 | Y != 0) -> (X | Y) != 0
+def double_icmp_zero_or_combine: GICombineRule<
+  (defs root:$root),
+  (match (G_ICMP $d1, $p, $s1, 0),
+         (G_ICMP $d2, $p, $s2, 0),
+         (G_OR $root, $d1, $d2),
+         [{ return ${p}.getPredicate() == CmpInst::ICMP_NE &&
+                       !MRI.getType(${s1}.getReg()).getScalarType().isPointer() &&
+                       (MRI.getType(${s1}.getReg()) ==
+                           MRI.getType(${s2}.getReg())); }]),
+  (apply (G_OR $ordst, $s1, $s2),
+         (G_ICMP $root, $p, $ordst, 0))
+>;
+
+def double_icmp_zero_and_or_combine : GICombineGroup<[double_icmp_zero_and_combine,
+                                                      double_icmp_zero_or_combine]>;
+
 def and_or_disjoint_mask : GICombineRule<
   (defs root:$root, build_fn_matchinfo:$info),
   (match (wip_match_opcode G_AND):$root,
@@ -953,7 +1018,10 @@ def and_or_disjoint_mask : GICombineRule<
 
 def bitfield_extract_from_and : GICombineRule<
   (defs root:$root, build_fn_matchinfo:$info),
-  (match (wip_match_opcode G_AND):$root,
+  (match (G_CONSTANT $mask, $imm2),
+         (G_CONSTANT $lsb, $imm1),
+         (G_LSHR $shift, $x, $lsb),
+         (G_AND $root, $shift, $mask):$root,
     [{ return Helper.matchBitfieldExtractFromAnd(*${root}, ${info}); }]),
   (apply [{ Helper.applyBuildFn(*${root}, ${info}); }])>;
 
@@ -998,7 +1066,20 @@ def sdiv_by_const : GICombineRule<
    [{ return Helper.matchSDivByConst(*${root}); }]),
   (apply [{ Helper.applySDivByConst(*${root}); }])>;
 
-def intdiv_combines : GICombineGroup<[udiv_by_const, sdiv_by_const]>;
+def sdiv_by_pow2 : GICombineRule<
+  (defs root:$root),
+  (match (G_SDIV $dst, $x, $y, (MIFlags (not IsExact))):$root,
+   [{ return Helper.matchDivByPow2(*${root}, /*IsSigned=*/true); }]),
+  (apply [{ Helper.applySDivByPow2(*${root}); }])>;
+
+def udiv_by_pow2 : GICombineRule<
+  (defs root:$root),
+  (match (G_UDIV $dst, $x, $y, (MIFlags (not IsExact))):$root,
+   [{ return Helper.matchDivByPow2(*${root}, /*IsSigned=*/false); }]),
+  (apply [{ Helper.applyUDivByPow2(*${root}); }])>;
+
+def intdiv_combines : GICombineGroup<[udiv_by_const, sdiv_by_const,
+                                      sdiv_by_pow2, udiv_by_pow2]>;
 
 def reassoc_ptradd : GICombineRule<
   (defs root:$root, build_fn_matchinfo:$matchinfo),
@@ -1017,7 +1098,9 @@ def reassocs : GICombineGroup<[reassoc_ptradd, reassoc_comm_binops]>;
 // Constant fold operations.
 def constant_fold_binop : GICombineRule<
   (defs root:$d, apint_matchinfo:$matchinfo),
-  (match (wip_match_opcode G_ADD, G_SUB, G_MUL, G_AND, G_OR, G_XOR, G_SHL, G_LSHR, G_ASHR):$d,
+  (match (wip_match_opcode G_ADD, G_PTR_ADD, G_AND, G_ASHR, G_LSHR, G_MUL, G_OR,
+                           G_SHL, G_SUB, G_XOR, G_UDIV, G_SDIV, G_UREM, G_SREM,
+                           G_SMIN, G_SMAX, G_UMIN, G_UMAX):$d,
    [{ return Helper.matchConstantFoldBinOp(*${d}, ${matchinfo}); }]),
   (apply [{ Helper.replaceInstWithConstant(*${d}, ${matchinfo}); }])>;
 
@@ -1050,12 +1133,6 @@ def mulo_by_0: GICombineRule<
   (defs root:$root, build_fn_matchinfo:$matchinfo),
   (match (wip_match_opcode G_UMULO, G_SMULO):$root,
          [{ return Helper.matchMulOBy0(*${root}, ${matchinfo}); }]),
-  (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
-
-def addo_by_0: GICombineRule<
-  (defs root:$root, build_fn_matchinfo:$matchinfo),
-  (match (wip_match_opcode G_UADDO, G_SADDO):$root,
-         [{ return Helper.matchAddOBy0(*${root}, ${matchinfo}); }]),
   (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
 
 // Transform (uadde x, y, 0) -> (uaddo x, y)
@@ -1235,11 +1312,578 @@ def select_to_minmax: GICombineRule<
          [{ return Helper.matchSimplifySelectToMinMax(*${root}, ${info}); }]),
   (apply [{ Helper.applyBuildFn(*${root}, ${info}); }])>;
 
+def select_to_iminmax: GICombineRule<
+  (defs root:$root, build_fn_matchinfo:$info),
+  (match (G_ICMP $tst, $tst1, $a, $b),
+         (G_SELECT $root, $tst, $x, $y),
+         [{ return Helper.matchSelectIMinMax(${root}, ${info}); }]),
+  (apply [{ Helper.applyBuildFnMO(${root}, ${info}); }])>;
+
 def match_selects : GICombineRule<
   (defs root:$root, build_fn_matchinfo:$matchinfo),
   (match (wip_match_opcode G_SELECT):$root,
         [{ return Helper.matchSelect(*${root}, ${matchinfo}); }]),
   (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
+
+def match_ands : GICombineRule<
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_AND):$root,
+        [{ return Helper.matchAnd(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
+
+def match_ors : GICombineRule<
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_OR):$root,
+        [{ return Helper.matchOr(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
+
+def match_addos : GICombineRule<
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_SADDO, G_UADDO):$root,
+        [{ return Helper.matchAddOverflow(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
+
+def match_extract_of_element_undef_vector: GICombineRule <
+  (defs root:$root),
+  (match (G_IMPLICIT_DEF $vector),
+         (G_EXTRACT_VECTOR_ELT $root, $vector, $idx)),
+  (apply (G_IMPLICIT_DEF $root))
+>;
+
+def match_extract_of_element_undef_index: GICombineRule <
+  (defs root:$root),
+  (match (G_IMPLICIT_DEF $idx),
+         (G_EXTRACT_VECTOR_ELT $root, $vector, $idx)),
+  (apply (G_IMPLICIT_DEF $root))
+>;
+
+def match_extract_of_element : GICombineRule<
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_EXTRACT_VECTOR_ELT):$root,
+        [{ return Helper.matchExtractVectorElement(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
+
+def extract_vector_element_not_const : GICombineRule<
+   (defs root:$root),
+   (match (G_INSERT_VECTOR_ELT $src, $x, $value, $idx),
+          (G_EXTRACT_VECTOR_ELT $root, $src, $idx)),
+   (apply (GIReplaceReg $root, $value))>;
+
+def extract_vector_element_different_indices : GICombineRule<
+   (defs root:$root, build_fn_matchinfo:$matchinfo),
+   (match (G_INSERT_VECTOR_ELT $src, $x, $value, $idx2),
+          (G_EXTRACT_VECTOR_ELT $root, $src, $idx1),
+   [{ return Helper.matchExtractVectorElementWithDifferentIndices(${root}, ${matchinfo}); }]),
+   (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
+
+def extract_vector_element_build_vector2 : GICombineRule<
+   (defs root:$root, build_fn_matchinfo:$matchinfo),
+   (match (G_BUILD_VECTOR $src, $x, $y),
+          (G_EXTRACT_VECTOR_ELT $root, $src, $idx),
+   [{ return Helper.matchExtractVectorElementWithBuildVector(${root}, ${matchinfo}); }]),
+   (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
+
+def extract_vector_element_build_vector3 : GICombineRule<
+   (defs root:$root, build_fn_matchinfo:$matchinfo),
+   (match (G_BUILD_VECTOR $src, $x, $y, $z),
+          (G_EXTRACT_VECTOR_ELT $root, $src, $idx),
+   [{ return Helper.matchExtractVectorElementWithBuildVector(${root}, ${matchinfo}); }]),
+   (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
+
+def extract_vector_element_build_vector4 : GICombineRule<
+   (defs root:$root, build_fn_matchinfo:$matchinfo),
+   (match (G_BUILD_VECTOR $src, $x, $y, $z, $a),
+          (G_EXTRACT_VECTOR_ELT $root, $src, $idx),
+   [{ return Helper.matchExtractVectorElementWithBuildVector(${root}, ${matchinfo}); }]),
+   (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
+
+def extract_vector_element_build_vector5 : GICombineRule<
+   (defs root:$root, build_fn_matchinfo:$matchinfo),
+   (match (G_BUILD_VECTOR $src, $x, $y, $z, $a, $b),
+          (G_EXTRACT_VECTOR_ELT $root, $src, $idx),
+   [{ return Helper.matchExtractVectorElementWithBuildVector(${root}, ${matchinfo}); }]),
+   (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
+
+def extract_vector_element_build_vector6 : GICombineRule<
+   (defs root:$root, build_fn_matchinfo:$matchinfo),
+   (match (G_BUILD_VECTOR $src, $x, $y, $z, $a, $b, $c),
+          (G_EXTRACT_VECTOR_ELT $root, $src, $idx),
+   [{ return Helper.matchExtractVectorElementWithBuildVector(${root}, ${matchinfo}); }]),
+   (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
+
+def extract_vector_element_build_vector7 : GICombineRule<
+   (defs root:$root, build_fn_matchinfo:$matchinfo),
+   (match (G_BUILD_VECTOR $src, $x, $y, $z, $a, $b, $c, $d),
+          (G_EXTRACT_VECTOR_ELT $root, $src, $idx),
+   [{ return Helper.matchExtractVectorElementWithBuildVector(${root}, ${matchinfo}); }]),
+   (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
+
+def extract_vector_element_build_vector8 : GICombineRule<
+   (defs root:$root, build_fn_matchinfo:$matchinfo),
+   (match (G_BUILD_VECTOR $src, $x, $y, $z, $a, $b, $c, $d, $e),
+          (G_EXTRACT_VECTOR_ELT $root, $src, $idx),
+   [{ return Helper.matchExtractVectorElementWithBuildVector(${root}, ${matchinfo}); }]),
+   (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
+
+def extract_vector_element_build_vector9 : GICombineRule<
+   (defs root:$root, build_fn_matchinfo:$matchinfo),
+   (match (G_BUILD_VECTOR $src, $x, $y, $z, $a, $b, $c, $d, $e, $f),
+          (G_EXTRACT_VECTOR_ELT $root, $src, $idx),
+   [{ return Helper.matchExtractVectorElementWithBuildVector(${root}, ${matchinfo}); }]),
+   (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
+
+def extract_vector_element_build_vector10 : GICombineRule<
+   (defs root:$root, build_fn_matchinfo:$matchinfo),
+   (match (G_BUILD_VECTOR $src, $x, $y, $z, $a, $b, $c, $d, $e, $f, $g),
+          (G_EXTRACT_VECTOR_ELT $root, $src, $idx),
+   [{ return Helper.matchExtractVectorElementWithBuildVector(${root}, ${matchinfo}); }]),
+   (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
+
+def extract_vector_element_build_vector11 : GICombineRule<
+   (defs root:$root, build_fn_matchinfo:$matchinfo),
+   (match (G_BUILD_VECTOR $src, $x, $y, $z, $a, $b, $c, $d, $e, $f, $g, $h),
+          (G_EXTRACT_VECTOR_ELT $root, $src, $idx),
+   [{ return Helper.matchExtractVectorElementWithBuildVector(${root}, ${matchinfo}); }]),
+   (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
+
+def extract_vector_element_build_vector12 : GICombineRule<
+   (defs root:$root, build_fn_matchinfo:$matchinfo),
+   (match (G_BUILD_VECTOR $src, $x, $y, $z, $a, $b, $c, $d, $e, $f, $g, $h, $i),
+          (G_EXTRACT_VECTOR_ELT $root, $src, $idx),
+   [{ return Helper.matchExtractVectorElementWithBuildVector(${root}, ${matchinfo}); }]),
+   (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
+
+def extract_vector_element_build_vector13 : GICombineRule<
+   (defs root:$root, build_fn_matchinfo:$matchinfo),
+   (match (G_BUILD_VECTOR $src, $x, $y, $z, $a, $b, $c, $d, $e, $f, $g, $h, $i, $j),
+          (G_EXTRACT_VECTOR_ELT $root, $src, $idx),
+   [{ return Helper.matchExtractVectorElementWithBuildVector(${root}, ${matchinfo}); }]),
+   (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
+
+def extract_vector_element_build_vector14 : GICombineRule<
+   (defs root:$root, build_fn_matchinfo:$matchinfo),
+   (match (G_BUILD_VECTOR $src, $x, $y, $z, $a, $b, $c, $d, $e, $f, $g, $h, $i, $j, $k),
+          (G_EXTRACT_VECTOR_ELT $root, $src, $idx),
+   [{ return Helper.matchExtractVectorElementWithBuildVector(${root}, ${matchinfo}); }]),
+   (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
+
+def extract_vector_element_build_vector15 : GICombineRule<
+   (defs root:$root, build_fn_matchinfo:$matchinfo),
+   (match (G_BUILD_VECTOR $src, $x, $y, $z, $a, $b, $c, $d, $e, $f, $g, $h, $i, $j, $k, $l),
+          (G_EXTRACT_VECTOR_ELT $root, $src, $idx),
+   [{ return Helper.matchExtractVectorElementWithBuildVector(${root}, ${matchinfo}); }]),
+   (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
+
+def extract_vector_element_build_vector16 : GICombineRule<
+   (defs root:$root, build_fn_matchinfo:$matchinfo),
+   (match (G_BUILD_VECTOR $src, $x, $y, $z, $a, $b, $c, $d, $e, $f, $g, $h, $i, $j, $k, $l, $m),
+          (G_EXTRACT_VECTOR_ELT $root, $src, $idx),
+   [{ return Helper.matchExtractVectorElementWithBuildVector(${root}, ${matchinfo}); }]),
+   (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
+
+def extract_vector_element_build_vector_trunc2 : GICombineRule<
+   (defs root:$root, build_fn_matchinfo:$matchinfo),
+   (match (G_BUILD_VECTOR_TRUNC $src, $x, $y),
+          (G_EXTRACT_VECTOR_ELT $root, $src, $idx),
+   [{ return Helper.matchExtractVectorElementWithBuildVectorTrunc(${root}, ${matchinfo}); }]),
+   (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
+
+def extract_vector_element_build_vector_trunc3 : GICombineRule<
+   (defs root:$root, build_fn_matchinfo:$matchinfo),
+   (match (G_BUILD_VECTOR_TRUNC $src, $x, $y, $z),
+          (G_EXTRACT_VECTOR_ELT $root, $src, $idx),
+   [{ return Helper.matchExtractVectorElementWithBuildVectorTrunc(${root}, ${matchinfo}); }]),
+   (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
+
+def extract_vector_element_build_vector_trunc4 : GICombineRule<
+   (defs root:$root, build_fn_matchinfo:$matchinfo),
+   (match (G_BUILD_VECTOR_TRUNC $src, $x, $y, $z, $a),
+          (G_EXTRACT_VECTOR_ELT $root, $src, $idx),
+   [{ return Helper.matchExtractVectorElementWithBuildVectorTrunc(${root}, ${matchinfo}); }]),
+   (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
+
+def extract_vector_element_build_vector_trunc5 : GICombineRule<
+   (defs root:$root, build_fn_matchinfo:$matchinfo),
+   (match (G_BUILD_VECTOR_TRUNC $src, $x, $y, $z, $a, $b),
+          (G_EXTRACT_VECTOR_ELT $root, $src, $idx),
+   [{ return Helper.matchExtractVectorElementWithBuildVectorTrunc(${root}, ${matchinfo}); }]),
+   (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
+
+def extract_vector_element_build_vector_trunc6 : GICombineRule<
+   (defs root:$root, build_fn_matchinfo:$matchinfo),
+   (match (G_BUILD_VECTOR_TRUNC $src, $x, $y, $z, $a, $b, $c),
+          (G_EXTRACT_VECTOR_ELT $root, $src, $idx),
+   [{ return Helper.matchExtractVectorElementWithBuildVectorTrunc(${root}, ${matchinfo}); }]),
+   (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
+
+def extract_vector_element_build_vector_trunc7 : GICombineRule<
+   (defs root:$root, build_fn_matchinfo:$matchinfo),
+   (match (G_BUILD_VECTOR_TRUNC $src, $x, $y, $z, $a, $b, $c, $d),
+          (G_EXTRACT_VECTOR_ELT $root, $src, $idx),
+   [{ return Helper.matchExtractVectorElementWithBuildVectorTrunc(${root}, ${matchinfo}); }]),
+   (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
+
+def extract_vector_element_build_vector_trunc8 : GICombineRule<
+   (defs root:$root, build_fn_matchinfo:$matchinfo),
+   (match (G_BUILD_VECTOR_TRUNC $src, $x, $y, $z, $a, $b, $c, $d, $e),
+          (G_EXTRACT_VECTOR_ELT $root, $src, $idx),
+   [{ return Helper.matchExtractVectorElementWithBuildVectorTrunc(${root}, ${matchinfo}); }]),
+   (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
+
+def sext_trunc : GICombineRule<
+   (defs root:$root, build_fn_matchinfo:$matchinfo),
+   (match (G_TRUNC $src, $x, (MIFlags NoSWrap)),
+          (G_SEXT $root, $src),
+   [{ return Helper.matchSextOfTrunc(${root}, ${matchinfo}); }]),
+   (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
+
+def zext_trunc : GICombineRule<
+   (defs root:$root, build_fn_matchinfo:$matchinfo),
+   (match (G_TRUNC $src, $x, (MIFlags NoUWrap)),
+          (G_ZEXT $root, $src),
+   [{ return Helper.matchZextOfTrunc(${root}, ${matchinfo}); }]),
+   (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
+
+def nneg_zext : GICombineRule<
+   (defs root:$root, build_fn_matchinfo:$matchinfo),
+   (match (G_ZEXT $root, $x, (MIFlags NonNeg)),
+   [{ return Helper.matchNonNegZext(${root}, ${matchinfo}); }]),
+   (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
+
+def extract_vector_element_shuffle_vector : GICombineRule<
+   (defs root:$root, build_fn_matchinfo:$matchinfo),
+   (match (G_SHUFFLE_VECTOR $src, $src1, $src2, $mask),
+          (G_EXTRACT_VECTOR_ELT $root, $src, $idx),
+   [{ return Helper.matchExtractVectorElementWithShuffleVector(${root}, ${matchinfo}); }]),
+   (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
+
+// Combines concat operations
+def concat_matchinfo : GIDefMatchData<"SmallVector<Register>">;
+def combine_concat_vector : GICombineRule<
+  (defs root:$root, concat_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_CONCAT_VECTORS):$root,
+        [{ return Helper.matchCombineConcatVectors(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyCombineConcatVectors(*${root}, ${matchinfo}); }])>;
+
+// Combines Shuffles of Concats
+// a = G_CONCAT_VECTORS x, y, undef, undef
+// b = G_CONCAT_VECTORS z, undef, undef, undef
+// c = G_SHUFFLE_VECTORS a, b, <0, 1, 4, undef>
+// ===>
+// c = G_CONCAT_VECTORS x, y, z, undef
+def combine_shuffle_concat : GICombineRule<
+  (defs root:$root, concat_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_SHUFFLE_VECTOR):$root,
+        [{ return Helper.matchCombineShuffleConcat(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyCombineShuffleConcat(*${root}, ${matchinfo}); }])>;
+
+def insert_vector_element_idx_undef : GICombineRule<
+   (defs root:$root),
+   (match (G_IMPLICIT_DEF $idx),
+          (G_INSERT_VECTOR_ELT $root, $src, $elt, $idx)),
+   (apply (G_IMPLICIT_DEF $root))>;
+
+def insert_vector_element_elt_undef : GICombineRule<
+   (defs root:$root),
+   (match (G_IMPLICIT_DEF $elt),
+          (G_INSERT_VECTOR_ELT $root, $src, $elt, $idx),
+          [{ return isGuaranteedNotToBePoison(${src}.getReg(), MRI); }]),
+   (apply (GIReplaceReg $root, $src))>;
+
+def insert_vector_element_extract_vector_element : GICombineRule<
+   (defs root:$root),
+   (match (G_EXTRACT_VECTOR_ELT $elt, $src, $idx),
+          (G_INSERT_VECTOR_ELT $root, $src, $elt, $idx)),
+   (apply (GIReplaceReg $root, $src))>;
+
+def insert_vector_elt_oob : GICombineRule<
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_INSERT_VECTOR_ELT):$root,
+         [{ return Helper.matchInsertVectorElementOOB(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
+
+def add_of_vscale : GICombineRule<
+   (defs root:$root, build_fn_matchinfo:$matchinfo),
+   (match (G_VSCALE $left, $imm1),
+          (G_VSCALE $right, $imm2),
+          (G_ADD $root, $left, $right, (MIFlags NoSWrap)),
+   [{ return Helper.matchAddOfVScale(${root}, ${matchinfo}); }]),
+   (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
+
+def mul_of_vscale : GICombineRule<
+   (defs root:$root, build_fn_matchinfo:$matchinfo),
+   (match (G_VSCALE $left, $scale),
+          (G_CONSTANT $x, $imm1),
+          (G_MUL $root, $left, $x, (MIFlags NoSWrap)),
+   [{ return Helper.matchMulOfVScale(${root}, ${matchinfo}); }]),
+   (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
+
+def shl_of_vscale : GICombineRule<
+   (defs root:$root, build_fn_matchinfo:$matchinfo),
+   (match (G_VSCALE $left, $imm),
+          (G_CONSTANT $x, $imm1),
+          (G_SHL $root, $left, $x, (MIFlags NoSWrap)),
+   [{ return Helper.matchShlOfVScale(${root}, ${matchinfo}); }]),
+   (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
+
+def sub_of_vscale : GICombineRule<
+   (defs root:$root, build_fn_matchinfo:$matchinfo),
+   (match (G_VSCALE $right, $imm),
+          (G_SUB $root, $x, $right, (MIFlags NoSWrap)),
+   [{ return Helper.matchSubOfVScale(${root}, ${matchinfo}); }]),
+   (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
+
+def expand_const_fpowi : GICombineRule<
+   (defs root:$root),
+   (match (G_CONSTANT $int, $imm),
+          (G_FPOWI $dst, $float, $int):$root,
+          [{ return Helper.matchFPowIExpansion(*${root}, ${imm}.getCImm()->getSExtValue()); }]),
+   (apply [{ Helper.applyExpandFPowI(*${root}, ${imm}.getCImm()->getSExtValue()); }])>;
+
+// match_extract_of_element and insert_vector_elt_oob must be the first!
+def vector_ops_combines: GICombineGroup<[
+match_extract_of_element_undef_vector,
+match_extract_of_element_undef_index,
+insert_vector_element_idx_undef,
+insert_vector_element_elt_undef,
+match_extract_of_element,
+insert_vector_elt_oob,
+extract_vector_element_not_const,
+extract_vector_element_different_indices,
+extract_vector_element_build_vector2,
+extract_vector_element_build_vector3,
+extract_vector_element_build_vector4,
+extract_vector_element_build_vector5,
+extract_vector_element_build_vector7,
+extract_vector_element_build_vector8,
+extract_vector_element_build_vector9,
+extract_vector_element_build_vector10,
+extract_vector_element_build_vector11,
+extract_vector_element_build_vector12,
+extract_vector_element_build_vector13,
+extract_vector_element_build_vector14,
+extract_vector_element_build_vector15,
+extract_vector_element_build_vector16,
+extract_vector_element_build_vector_trunc2,
+extract_vector_element_build_vector_trunc3,
+extract_vector_element_build_vector_trunc4,
+extract_vector_element_build_vector_trunc5,
+extract_vector_element_build_vector_trunc6,
+extract_vector_element_build_vector_trunc7,
+extract_vector_element_build_vector_trunc8,
+extract_vector_element_shuffle_vector,
+insert_vector_element_extract_vector_element,
+add_of_vscale,
+mul_of_vscale,
+shl_of_vscale,
+sub_of_vscale,
+]>;
+
+
+// fold ((0-A) + B) -> B-A
+def ZeroMinusAPlusB : GICombineRule<
+   (defs root:$root),
+   (match (G_SUB $sub, 0, $A),
+          (G_ADD $root, $sub, $B)),
+   (apply (G_SUB $root, $B, $A))>;
+
+// fold (A + (0-B)) -> A-B
+def APlusZeroMinusB : GICombineRule<
+   (defs root:$root),
+   (match (G_SUB $sub, 0, $B),
+          (G_ADD $root, $A, $sub)),
+   (apply (G_SUB $root, $A, $B))>;
+
+ // fold (A+(B-A)) -> B
+ def APlusBMinusB : GICombineRule<
+   (defs root:$root),
+   (match (G_SUB $sub, $B, $A),
+          (G_ADD $root, $A, $sub)),
+   (apply (GIReplaceReg $root, $B))>;
+
+// fold ((B-A)+A) -> B
+ def BMinusAPlusA : GICombineRule<
+   (defs root:$root),
+   (match (G_SUB $sub, $B, $A),
+          (G_ADD $root, $sub, $A)),
+   (apply (GIReplaceReg $root, $B))>;
+
+// fold ((A-B)+(C-A)) -> (C-B)
+def AMinusBPlusCMinusA : GICombineRule<
+   (defs root:$root),
+   (match (G_SUB $sub1, $A, $B),
+          (G_SUB $sub2, $C, $A),
+          (G_ADD $root, $sub1, $sub2)),
+   (apply (G_SUB $root, $C, $B))>;
+
+// fold ((A-B)+(B-C)) -> (A-C)
+def AMinusBPlusBMinusC : GICombineRule<
+   (defs root:$root),
+   (match (G_SUB $sub1, $A, $B),
+          (G_SUB $sub2, $B, $C),
+          (G_ADD $root, $sub1, $sub2)),
+   (apply (G_SUB $root, $A, $C))>;
+
+// fold (A+(B-(A+C))) to (B-C)
+def APlusBMinusAplusC : GICombineRule<
+   (defs root:$root),
+   (match (G_ADD $add1, $A, $C),
+          (G_SUB $sub1, $B, $add1),
+          (G_ADD $root, $A, $sub1)),
+   (apply (G_SUB $root, $B, $C))>;
+
+// fold (A+(B-(C+A))) to (B-C)
+def APlusBMinusCPlusA : GICombineRule<
+   (defs root:$root),
+   (match (G_ADD $add1, $C, $A),
+          (G_SUB $sub1, $B, $add1),
+          (G_ADD $root, $A, $sub1)),
+   (apply (G_SUB $root, $B, $C))>;
+
+// fold (A+C1)-C2 -> A+(C1-C2)
+def APlusC1MinusC2: GICombineRule<
+   (defs root:$root, build_fn_matchinfo:$matchinfo),
+   (match (G_CONSTANT $c2, $imm2),
+          (G_CONSTANT $c1, $imm1),
+          (G_ADD $add, $A, $c1),
+          (G_SUB $root, $add, $c2):$root,
+   [{ return Helper.matchFoldAPlusC1MinusC2(*${root}, ${matchinfo}); }]),
+   (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
+
+// fold C2-(A+C1) -> (C2-C1)-A
+def C2MinusAPlusC1: GICombineRule<
+   (defs root:$root, build_fn_matchinfo:$matchinfo),
+   (match (G_CONSTANT $c2, $imm2),
+          (G_CONSTANT $c1, $imm1),
+          (G_ADD $add, $A, $c1),
+          (G_SUB $root, $c2, $add):$root,
+   [{ return Helper.matchFoldC2MinusAPlusC1(*${root}, ${matchinfo}); }]),
+   (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
+
+// fold (A-C1)-C2 -> A-(C1+C2)
+def AMinusC1MinusC2: GICombineRule<
+   (defs root:$root, build_fn_matchinfo:$matchinfo),
+   (match (G_CONSTANT $c2, $imm2),
+          (G_CONSTANT $c1, $imm1),
+          (G_SUB $sub1, $A, $c1),
+          (G_SUB $root, $sub1, $c2):$root,
+   [{ return Helper.matchFoldAMinusC1MinusC2(*${root}, ${matchinfo}); }]),
+   (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
+
+// fold (C1-A)-C2 -> (C1-C2)-A
+def C1Minus2MinusC2: GICombineRule<
+   (defs root:$root, build_fn_matchinfo:$matchinfo),
+   (match (G_CONSTANT $c2, $imm2),
+          (G_CONSTANT $c1, $imm1),
+          (G_SUB $sub1, $c1, $A),
+          (G_SUB $root, $sub1, $c2):$root,
+   [{ return Helper.matchFoldC1Minus2MinusC2(*${root}, ${matchinfo}); }]),
+   (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
+
+// fold ((A-C1)+C2) -> (A+(C2-C1))
+def AMinusC1PlusC2: GICombineRule<
+   (defs root:$root, build_fn_matchinfo:$matchinfo),
+   (match (G_CONSTANT $c2, $imm2),
+          (G_CONSTANT $c1, $imm1),
+          (G_SUB $sub, $A, $c1),
+          (G_ADD $root, $sub, $c2):$root,
+   [{ return Helper.matchFoldAMinusC1PlusC2(*${root}, ${matchinfo}); }]),
+   (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
+
+def integer_reassoc_combines: GICombineGroup<[
+  ZeroMinusAPlusB,
+  APlusZeroMinusB,
+  APlusBMinusB,
+  BMinusAPlusA,
+  AMinusBPlusCMinusA,
+  AMinusBPlusBMinusC,
+  APlusBMinusAplusC,
+  APlusBMinusCPlusA,
+  APlusC1MinusC2,
+  C2MinusAPlusC1,
+  AMinusC1MinusC2,
+  C1Minus2MinusC2,
+  AMinusC1PlusC2
+]>;
+
+def freeze_of_non_undef_non_poison : GICombineRule<
+   (defs root:$root),
+   (match (G_FREEZE $root, $src),
+          [{ return isGuaranteedNotToBeUndefOrPoison(${src}.getReg(), MRI); }]),
+   (apply (GIReplaceReg $root, $src))>;
+
+def freeze_combines: GICombineGroup<[
+  freeze_of_non_undef_non_poison,
+  push_freeze_to_prevent_poison_from_propagating
+]>;
+
+/// Transform trunc ([asz]ext x) to x or ([asz]ext x) or (trunc x).
+class truncate_of_opcode<Instruction extOpcode> : GICombineRule <
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (match (extOpcode $ext, $src):$ExtMI,
+         (G_TRUNC $root, $ext):$root,
+         [{ return Helper.matchTruncateOfExt(*${root}, *${ExtMI}, ${matchinfo}); }]),
+  (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
+
+def truncate_of_zext : truncate_of_opcode<G_ZEXT>;
+def truncate_of_sext : truncate_of_opcode<G_SEXT>;
+def truncate_of_anyext : truncate_of_opcode<G_ANYEXT>;
+
+// Push cast through select.
+class select_of_opcode<Instruction castOpcode> : GICombineRule <
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (match (G_SELECT $select, $cond, $true, $false):$Select,
+         (castOpcode $root, $select):$Cast,
+         [{ return Helper.matchCastOfSelect(*${Cast}, *${Select}, ${matchinfo}); }]),
+  (apply [{ Helper.applyBuildFn(*${Cast}, ${matchinfo}); }])>;
+
+def select_of_zext : select_of_opcode<G_ZEXT>;
+def select_of_anyext : select_of_opcode<G_ANYEXT>;
+def select_of_truncate : select_of_opcode<G_TRUNC>;
+
+// Fold ([asz]ext ([asz]ext x)) -> ([asz]ext x).
+class ext_of_ext_opcodes<Instruction ext1Opcode, Instruction ext2Opcode> : GICombineRule <
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (match (ext2Opcode $second, $src):$Second,
+         (ext1Opcode $root, $second):$First,
+         [{ return Helper.matchExtOfExt(*${First}, *${Second}, ${matchinfo}); }]),
+  (apply [{ Helper.applyBuildFn(*${First}, ${matchinfo}); }])>;
+
+def zext_of_zext : ext_of_ext_opcodes<G_ZEXT, G_ZEXT>;
+def zext_of_anyext : ext_of_ext_opcodes<G_ZEXT, G_ANYEXT>;
+def sext_of_sext : ext_of_ext_opcodes<G_SEXT, G_SEXT>;
+def sext_of_anyext : ext_of_ext_opcodes<G_SEXT, G_ANYEXT>;
+def anyext_of_anyext : ext_of_ext_opcodes<G_ANYEXT, G_ANYEXT>;
+def anyext_of_zext : ext_of_ext_opcodes<G_ANYEXT, G_ZEXT>;
+def anyext_of_sext : ext_of_ext_opcodes<G_ANYEXT, G_SEXT>;
+
+// Push cast through build vector.
+class buildvector_of_opcode<Instruction castOpcode> : GICombineRule <
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (match (G_BUILD_VECTOR $bv, GIVariadic<>:$unused):$Build,
+         (castOpcode $root, $bv):$Cast,
+         [{ return Helper.matchCastOfBuildVector(*${Cast}, *${Build}, ${matchinfo}); }]),
+  (apply [{ Helper.applyBuildFn(*${Cast}, ${matchinfo}); }])>;
+
+def buildvector_of_truncate : buildvector_of_opcode<G_TRUNC>;
+
+def cast_combines: GICombineGroup<[
+  truncate_of_zext,
+  truncate_of_sext,
+  truncate_of_anyext,
+  select_of_zext,
+  select_of_anyext,
+  select_of_truncate,
+  zext_of_zext,
+  zext_of_anyext,
+  sext_of_sext,
+  sext_of_anyext,
+  anyext_of_anyext,
+  anyext_of_zext,
+  anyext_of_sext,
+  buildvector_of_truncate
+]>;
+
 
 // FIXME: These should use the custom predicate feature once it lands.
 def undef_combines : GICombineGroup<[undef_to_fp_zero, undef_to_int_zero,
@@ -1263,12 +1907,13 @@ def identity_combines : GICombineGroup<[select_same_val, right_identity_zero,
                                         trunc_buildvector_fold,
                                         trunc_lshr_buildvector_fold,
                                         bitcast_bitcast_fold, fptrunc_fpext_fold,
-                                        right_identity_neg_zero_fp]>;
+                                        right_identity_neg_zero_fp,
+                                        right_identity_neg_one_fp]>;
 
 def const_combines : GICombineGroup<[constant_fold_fp_ops, const_ptradd_to_i2p,
                                      overlapping_and, mulo_by_2, mulo_by_0,
-                                     addo_by_0, adde_to_addo,
-                                     combine_minmax_nan]>;
+                                     adde_to_addo,
+                                     combine_minmax_nan, expand_const_fpowi]>;
 
 def known_bits_simplifications : GICombineGroup<[
   redundant_and, redundant_sext_inreg, redundant_or, urem_pow2_to_mask,
@@ -1280,8 +1925,10 @@ def width_reduction_combines : GICombineGroup<[reduce_shl_of_extend,
 
 def phi_combines : GICombineGroup<[extend_through_phis]>;
 
+def bitreverse_shift : GICombineGroup<[bitreverse_shl, bitreverse_lshr]>;
+
 def select_combines : GICombineGroup<[select_undef_cmp, select_constant_cmp,
-                                      match_selects]>;
+                                      select_to_iminmax, match_selects]>;
 
 def trivial_combines : GICombineGroup<[copy_prop, mul_to_shl, add_p2i_to_ptradd,
                                        mul_by_neg_one, idempotent_prop]>;
@@ -1295,30 +1942,36 @@ def fma_combines : GICombineGroup<[combine_fadd_fmul_to_fmad_or_fma,
 def constant_fold_binops : GICombineGroup<[constant_fold_binop,
                                            constant_fold_fp_binop]>;
 
-def all_combines : GICombineGroup<[trivial_combines, insert_vec_elt_combines,
-    extract_vec_elt_combines, combines_for_extload, combine_extracted_vector_load,
-    undef_combines, identity_combines, phi_combines, 
+def prefer_sign_combines : GICombineGroup<[nneg_zext]>;
+
+def all_combines : GICombineGroup<[integer_reassoc_combines, trivial_combines,
+    vector_ops_combines, freeze_combines, cast_combines,
+    insert_vec_elt_combines, extract_vec_elt_combines, combines_for_extload,
+    combine_extracted_vector_load,
+    undef_combines, identity_combines, phi_combines,
     simplify_add_to_sub, hoist_logic_op_with_same_opcode_hands, shifts_too_big,
     reassocs, ptr_add_immed_chain,
     shl_ashr_to_sext_inreg, sext_inreg_of_load,
     width_reduction_combines, select_combines,
-    known_bits_simplifications, ext_ext_fold,
+    known_bits_simplifications,
     not_cmp_fold, opt_brcond_by_inverting_cond,
     unmerge_merge, unmerge_cst, unmerge_dead_to_trunc,
-    unmerge_zext_to_zext, merge_unmerge, trunc_ext_fold, trunc_shift,
+    unmerge_zext_to_zext, merge_unmerge, trunc_shift,
     const_combines, xor_of_and_with_same_reg, ptr_add_with_zero,
     shift_immed_chain, shift_of_shifted_logic_chain, load_or_combine,
-    div_rem_to_divrem, funnel_shift_combines, commute_shift,
+    div_rem_to_divrem, funnel_shift_combines, bitreverse_shift, commute_shift,
     form_bitfield_extract, constant_fold_binops, constant_fold_fma,
     constant_fold_cast_op, fabs_fneg_fold,
     intdiv_combines, mulh_combines, redundant_neg_operands,
     and_or_disjoint_mask, fma_combines, fold_binop_into_select,
     sub_add_reg, select_to_minmax, redundant_binop_in_equality,
-    fsub_to_fneg, commute_constant_to_rhs]>;
+    fsub_to_fneg, commute_constant_to_rhs, match_ands, match_ors,
+    combine_concat_vector, double_icmp_zero_and_or_combine, match_addos,
+    sext_trunc, zext_trunc, prefer_sign_combines, combine_shuffle_concat]>;
 
 // A combine group used to for prelegalizer combiners at -O0. The combines in
 // this group have been selected based on experiments to balance code size and
 // compile time performance.
 def optnone_combines : GICombineGroup<[trivial_combines,
     ptr_add_immed_chain, combines_for_extload,
-    not_cmp_fold, opt_brcond_by_inverting_cond]>;
+    not_cmp_fold, opt_brcond_by_inverting_cond, combine_concat_vector]>;

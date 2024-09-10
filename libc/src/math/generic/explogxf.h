@@ -10,7 +10,6 @@
 #define LLVM_LIBC_SRC_MATH_GENERIC_EXPLOGXF_H
 
 #include "common_constants.h"
-#include "math_utils.h"
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/optional.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
@@ -18,11 +17,12 @@
 #include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/FPUtil/nearest_integer.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/cpu_features.h"
 
 #include <errno.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 struct ExpBase {
   // Base = e
@@ -283,7 +283,7 @@ LIBC_INLINE static double log2_eval(double x) {
   int p1 = (bs.get_mantissa() >> (FPB::FRACTION_LEN - LOG_P1_BITS)) &
            (LOG_P1_SIZE - 1);
 
-  bs.bits &= FPB::FRACTION_MASK >> LOG_P1_BITS;
+  bs.set_uintval(bs.uintval() & (FPB::FRACTION_MASK >> LOG_P1_BITS));
   bs.set_biased_exponent(FPB::EXP_BIAS);
   double dx = (bs.get_val() - 1.0) * LOG_P1_1_OVER[p1];
 
@@ -313,7 +313,7 @@ LIBC_INLINE static double log_eval(double x) {
   int p1 = static_cast<int>(bs.get_mantissa() >> (FPB::FRACTION_LEN - 7));
 
   // Set bs to (1 + (mx - p1*2^(-7))
-  bs.bits &= FPB::FRACTION_MASK >> 7;
+  bs.set_uintval(bs.uintval() & (FPB::FRACTION_MASK >> 7));
   bs.set_biased_exponent(FPB::EXP_BIAS);
   // dx = (mx - p1*2^(-7)) / (1 + p1*2^(-7)).
   double dx = (bs.get_val() - 1.0) * ONE_OVER_F[p1];
@@ -380,6 +380,6 @@ LIBC_INLINE cpp::optional<double> ziv_test_denorm(int hi, double mid, double lo,
   return cpp::nullopt;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_MATH_GENERIC_EXPLOGXF_H

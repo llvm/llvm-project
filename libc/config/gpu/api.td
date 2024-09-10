@@ -4,37 +4,9 @@ include "spec/stdc.td"
 include "spec/posix.td"
 include "spec/gpu_ext.td"
 include "spec/gnu_ext.td"
+include "spec/stdc_ext.td"
 include "spec/llvm_libc_ext.td"
 
-def AssertMacro : MacroDef<"assert"> {
-  let Defn = [{
-    #undef assert
-
-    #ifdef NDEBUG
-    #define assert(e) (void)0
-    #else
-
-    #define assert(e)  \
-      ((e) ? (void)0 : __assert_fail(#e, __FILE__, __LINE__, __PRETTY_FUNCTION__))
-    #endif
-  }];
-}
-
-def StaticAssertMacro : MacroDef<"static_assert"> {
-  let Defn = [{
-    #ifndef __cplusplus
-    #undef static_assert
-    #define static_assert _Static_assert
-    #endif
-  }];
-}
-
-def AssertAPI : PublicAPI<"assert.h"> {
-  let Macros = [
-    AssertMacro,
-    StaticAssertMacro,
-  ];
-}
 
 def StringAPI : PublicAPI<"string.h"> {
   let Types = ["size_t"];
@@ -58,13 +30,11 @@ def FenvAPI: PublicAPI<"fenv.h"> {
 }
 
 def StdIOAPI : PublicAPI<"stdio.h"> {
-  let Macros = [
-    SimpleMacroDef<"_IOFBF", "0">,
-    SimpleMacroDef<"_IOLBF", "1">,
-    SimpleMacroDef<"_IONBF", "2">,
-    SimpleMacroDef<"EOF", "-1">,
+  let Types = [
+    "FILE",
+    "off_t",
+    "size_t",
   ];
-  let Types = ["size_t", "FILE"];
 }
 
 def IntTypesAPI : PublicAPI<"inttypes.h"> {

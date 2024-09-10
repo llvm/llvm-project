@@ -33,7 +33,7 @@ static void tryEmitAutoInitRemark(ArrayRef<Instruction *> Instructions,
       continue;
 
     Function &F = *I->getParent()->getParent();
-    const DataLayout &DL = F.getParent()->getDataLayout();
+    const DataLayout &DL = F.getDataLayout();
     AutoInitRemark Remark(ORE, REMARK_PASS, DL, TLI);
     Remark.visit(I);
   }

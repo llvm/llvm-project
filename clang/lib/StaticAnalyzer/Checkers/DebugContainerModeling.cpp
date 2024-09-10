@@ -42,9 +42,9 @@ class DebugContainerModeling
                                                  CheckerContext &) const;
 
   CallDescriptionMap<FnCheck> Callbacks = {
-      {{{"clang_analyzer_container_begin"}, 1},
+      {{CDM::SimpleFunc, {"clang_analyzer_container_begin"}, 1},
        &DebugContainerModeling::analyzerContainerBegin},
-      {{{"clang_analyzer_container_end"}, 1},
+      {{CDM::SimpleFunc, {"clang_analyzer_container_end"}, 1},
        &DebugContainerModeling::analyzerContainerEnd},
   };
 
@@ -52,7 +52,7 @@ public:
   bool evalCall(const CallEvent &Call, CheckerContext &C) const;
 };
 
-} //namespace
+} // namespace
 
 bool DebugContainerModeling::evalCall(const CallEvent &Call,
                                       CheckerContext &C) const {

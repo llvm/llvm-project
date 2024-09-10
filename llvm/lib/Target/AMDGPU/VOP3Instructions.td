@@ -13,9 +13,11 @@ def VOP_F32_F32_F32_F32_VCC : VOPProfile<[f32, f32, f32, f32]> {
   let Outs64 = (outs DstRC.RegClass:$vdst);
   let HasExtVOP3DPP = 0;
   let HasExtDPP = 0;
+  let IsSingle = 1;
 }
 def VOP_F64_F64_F64_F64_VCC : VOPProfile<[f64, f64, f64, f64]> {
   let Outs64 = (outs DstRC.RegClass:$vdst);
+  let IsSingle = 1;
 }
 }
 
@@ -62,7 +64,7 @@ def VOP3_INTERP : VOPProfile<[f32, f32, i32, untyped]> {
   let Src0Mod = FPVRegInputMods;
   let Ins64 = (ins Src0Mod:$src0_modifiers, VRegSrc_32:$src0,
                    InterpAttr:$attr, InterpAttrChan:$attrchan,
-                   clampmod0:$clamp, omod0:$omod);
+                   Clamp0:$clamp, omod0:$omod);
 
   let Asm64 = "$vdst, $src0_modifiers, $attr$attrchan$clamp$omod";
 }
@@ -70,7 +72,7 @@ def VOP3_INTERP : VOPProfile<[f32, f32, i32, untyped]> {
 def VOP3_INTERP_MOV : VOPProfile<[f32, i32, i32, untyped]> {
   let Ins64 = (ins InterpSlot:$src0,
                    InterpAttr:$attr, InterpAttrChan:$attrchan,
-                   clampmod0:$clamp, omod0:$omod);
+                   Clamp0:$clamp, omod0:$omod);
 
   let Asm64 = "$vdst, $src0, $attr$attrchan$clamp$omod";
 
@@ -92,20 +94,20 @@ class getInterp16Ins <bit HasSrc2, bit HasOMod,
                     (ins Src0Mod:$src0_modifiers, VRegSrc_32:$src0,
                          InterpAttr:$attr, InterpAttrChan:$attrchan,
                          Src2Mod:$src2_modifiers, VRegSrc_32:$src2,
-                         highmod:$high, clampmod0:$clamp, omod0:$omod),
+                         highmod:$high, Clamp0:$clamp, omod0:$omod),
                     (ins Src0Mod:$src0_modifiers, VRegSrc_32:$src0,
                          InterpAttr:$attr, InterpAttrChan:$attrchan,
                          Src2Mod:$src2_modifiers, VRegSrc_32:$src2,
-                         highmod:$high, clampmod0:$clamp)
+                         highmod:$high, Clamp0:$clamp)
                 ),
                 (ins Src0Mod:$src0_modifiers, VRegSrc_32:$src0,
                      InterpAttr:$attr, InterpAttrChan:$attrchan,
-                     highmod:$high, clampmod0:$clamp, omod0:$omod)
+                     highmod:$high, Clamp0:$clamp, omod0:$omod)
             );
 }
 
 class VOP3_INTERP16 <list<ValueType> ArgVT> : VOPProfile<ArgVT> {
-
+  let IsSingle = 1;
   let HasOMod = !ne(DstVT.Value, f16.Value);
   let HasHigh = 1;
 
@@ -155,12 +157,12 @@ defm V_MAX_F64 : VOP3Inst <"v_max_f64", VOP3_Profile<VOP_F64_F64_F64>, fmaxnum_l
 } // End SubtargetPredicate = isNotGFX12Plus
 } // End SchedRW = [WriteDoubleAdd]
 
-let SchedRW = [WriteIntMul] in {
+let SchedRW = [WriteIntMul], IsInvalidSingleUseConsumer = 1 in {
 defm V_MUL_LO_U32 : VOP3Inst <"v_mul_lo_u32", V_MUL_PROF<VOP_I32_I32_I32>, DivergentBinFrag<mul>>;
 defm V_MUL_HI_U32 : VOP3Inst <"v_mul_hi_u32", V_MUL_PROF<VOP_I32_I32_I32>, mulhu>;
 defm V_MUL_LO_I32 : VOP3Inst <"v_mul_lo_i32", V_MUL_PROF<VOP_I32_I32_I32>>;
 defm V_MUL_HI_I32 : VOP3Inst <"v_mul_hi_i32", V_MUL_PROF<VOP_I32_I32_I32>, mulhs>;
-} // End SchedRW = [WriteIntMul]
+} // End SchedRW = [WriteIntMul], IsInvalidSingleUseConsumer = 1
 
 let SubtargetPredicate = isGFX12Plus, ReadsModeReg = 0 in {
 defm V_MINIMUM_F32 : VOP3Inst <"v_minimum_f32", VOP3_Profile<VOP_F32_F32_F32>, DivergentBinFrag<fminimum>>;
@@ -258,9 +260,9 @@ let mayRaiseFPException = 0 in { // Seems suspicious but manual doesn't say it d
 let isReMaterializable = 1 in
 defm V_MSAD_U8 : VOP3Inst <"v_msad_u8", VOP3_Profile<VOP_I32_I32_I32_I32, VOP3_CLAMP>>;
 
-let Constraints = "@earlyclobber $vdst" in {
+let Constraints = "@earlyclobber $vdst", IsInvalidSingleUseConsumer = 1 in {
 defm V_MQSAD_PK_U16_U8 : VOP3Inst <"v_mqsad_pk_u16_u8", VOP3_Profile<VOP_I64_I64_I32_I64, VOP3_CLAMP>>;
-} // End Constraints = "@earlyclobber $vdst"
+} // End Constraints = "@earlyclobber $vdst", IsInvalidSingleUseConsumer = 1
 
 
 let isReMaterializable = 1 in {
@@ -275,14 +277,16 @@ let SchedRW = [Write64Bit] in {
   defm V_ASHR_I64 : VOP3Inst <"v_ashr_i64", VOP3_Profile<VOP_I64_I64_I32>, csra_64>;
   } // End SubtargetPredicate = isGFX6GFX7
 
+  let IsInvalidSingleUseConsumer = 1 in {
   let SubtargetPredicate = isGFX8Plus in {
   defm V_LSHRREV_B64 : VOP3Inst <"v_lshrrev_b64", VOP3_Profile<VOP_I64_I32_I64>, clshr_rev_64>;
   defm V_ASHRREV_I64 : VOP3Inst <"v_ashrrev_i64", VOP3_Profile<VOP_I64_I32_I64>, cashr_rev_64>;
-  } // End SubtargetPredicate = isGFX8Plus
+  } // End SubtargetPredicate = isGFX8Plus, , IsInvalidSingleUseConsumer = 1
 
   let SubtargetPredicate = isGFX8GFX9GFX10GFX11 in {
   defm V_LSHLREV_B64 : VOP3Inst <"v_lshlrev_b64", VOP3_Profile<VOP_I64_I32_I64>, clshl_rev_64>;
   } // End SubtargetPredicate = isGFX8GFX9GFX10GFX11
+  } // End IsInvalidSingleUseConsumer = 1
 } // End SchedRW = [Write64Bit]
 } // End isReMaterializable = 1
 
@@ -307,14 +311,14 @@ def VOPProfileMQSAD : VOP3_Profile<VOP_V4I32_I64_I32_V4I32, VOP3_CLAMP> {
   let HasModifiers = 0;
 }
 
-let SubtargetPredicate = isGFX7Plus in {
+let SubtargetPredicate = isGFX7Plus, IsInvalidSingleUseConsumer = 1 in {
 let Constraints = "@earlyclobber $vdst", SchedRW = [WriteQuarterRate32] in {
 defm V_QSAD_PK_U16_U8 : VOP3Inst <"v_qsad_pk_u16_u8", VOP3_Profile<VOP_I64_I64_I32_I64, VOP3_CLAMP>>;
 defm V_MQSAD_U32_U8 : VOP3Inst <"v_mqsad_u32_u8", VOPProfileMQSAD>;
 } // End Constraints = "@earlyclobber $vdst", SchedRW = [WriteQuarterRate32]
-} // End SubtargetPredicate = isGFX7Plus
+} // End SubtargetPredicate = isGFX7Plus, IsInvalidSingleUseConsumer = 1
 
-let isCommutable = 1, SchedRW = [WriteIntMul, WriteSALU] in {
+let isCommutable = 1, SchedRW = [WriteIntMul, WriteSALU], IsInvalidSingleUseConsumer = 1 in {
   let SubtargetPredicate = isGFX7Plus, OtherPredicates = [HasNotMADIntraFwdBug] in {
     defm V_MAD_U64_U32 : VOP3Inst <"v_mad_u64_u32", VOP3b_I64_I1_I32_I32_I64>;
     defm V_MAD_I64_I32 : VOP3Inst <"v_mad_i64_i32", VOP3b_I64_I1_I32_I32_I64>;
@@ -324,7 +328,7 @@ let isCommutable = 1, SchedRW = [WriteIntMul, WriteSALU] in {
     defm V_MAD_U64_U32_gfx11 : VOP3Inst <"v_mad_u64_u32", VOP3b_I64_I1_I32_I32_I64>;
     defm V_MAD_I64_I32_gfx11 : VOP3Inst <"v_mad_i64_i32", VOP3b_I64_I1_I32_I32_I64>;
   }
-} // End isCommutable = 1, SchedRW = [WriteIntMul, WriteSALU]
+} // End isCommutable = 1, SchedRW = [WriteIntMul, WriteSALU], IsInvalidSingleUseConsumer = 1
 
 
 let FPDPRounding = 1 in {
@@ -520,8 +524,26 @@ def VOP3_CVT_PK_F8_F32_Profile : VOP3_Profile<VOP_I32_F32_F32, VOP3_OPSEL> {
   let InsVOP3OpSel = (ins FP32InputMods:$src0_modifiers, Src0RC64:$src0,
                           FP32InputMods:$src1_modifiers, Src1RC64:$src1,
                           VGPR_32:$vdst_in, op_sel0:$op_sel);
+  let InsVOP3DPP = (ins VGPR_32:$old,
+                        FP32InputMods:$src0_modifiers, Src0VOP3DPP:$src0,
+                        FP32InputMods:$src1_modifiers, Src1VOP3DPP:$src1,
+                        VGPR_32:$vdst_in, op_sel0:$op_sel,
+                        dpp_ctrl:$dpp_ctrl, DppRowMask:$row_mask,
+                        DppBankMask:$bank_mask, DppBoundCtrl:$bound_ctrl);
+
+  let InsVOP3DPP16 = (ins VGPR_32:$old,
+                          FP32InputMods:$src0_modifiers, Src0VOP3DPP:$src0,
+                          FP32InputMods:$src1_modifiers, Src1VOP3DPP:$src1,
+                          VGPR_32:$vdst_in, op_sel0:$op_sel,
+                          dpp_ctrl:$dpp_ctrl, DppRowMask:$row_mask,
+                          DppBankMask:$bank_mask, DppBoundCtrl:$bound_ctrl, Dpp16FI:$fi);
+  let InsVOP3DPP8 = (ins VGPR_32:$old,
+                         FP32InputMods:$src0_modifiers, Src0VOP3DPP:$src0,
+                         FP32InputMods:$src1_modifiers, Src1VOP3DPP:$src1,
+                         VGPR_32:$vdst_in, op_sel0:$op_sel, dpp8:$dpp8, Dpp8FI:$fi);
+
   let HasClamp = 0;
-  let HasExtVOP3DPP = 0;
+  let HasExtVOP3DPP = 1;
 }
 
 def VOP3_CVT_SR_F8_F32_Profile : VOP3_Profile<VOPProfile<[i32, f32, i32, f32]>,
@@ -530,14 +552,54 @@ def VOP3_CVT_SR_F8_F32_Profile : VOP3_Profile<VOPProfile<[i32, f32, i32, f32]>,
                           FP32InputMods:$src1_modifiers, Src1RC64:$src1,
                           FP32InputMods:$src2_modifiers, VGPR_32:$src2,
                           op_sel0:$op_sel);
+  let InsVOP3DPP16 = (ins VGPR_32:$old,
+                          FP32InputMods:$src0_modifiers, Src0VOP3DPP:$src0,
+                          FP32InputMods:$src1_modifiers, Src1VOP3DPP:$src1,
+                          FP32InputMods:$src2_modifiers, VGPR_32:$src2,
+                          op_sel0:$op_sel, dpp_ctrl:$dpp_ctrl, DppRowMask:$row_mask,
+                          DppBankMask:$bank_mask, DppBoundCtrl:$bound_ctrl, Dpp16FI:$fi);
+  let InsVOP3DPP8 = (ins VGPR_32:$old,
+                         FP32InputMods:$src0_modifiers, Src0VOP3DPP:$src0,
+                         FP32InputMods:$src1_modifiers, Src1VOP3DPP:$src1,
+                         FP32InputMods:$src2_modifiers, VGPR_32:$src2,
+                         op_sel0:$op_sel, dpp8:$dpp8, Dpp8FI:$fi);
   let HasClamp = 0;
   let HasSrc2 = 0;
   let HasSrc2Mods = 1;
+  let HasExtVOP3DPP = 1;
+  let HasOpSel = 1;
+  let HasFP8DstByteSel = 1;
   let AsmVOP3OpSel = !subst(", $src2_modifiers", "",
                             getAsmVOP3OpSel<3, HasClamp, HasOMod,
                                             HasSrc0FloatMods, HasSrc1FloatMods,
                                             HasSrc2FloatMods>.ret);
-  let HasExtVOP3DPP = 0;
+  let AsmVOP3DPP16 = !subst(", $src2_modifiers", "",
+                            getAsmVOP3DPP16<getAsmVOP3Base<3, 1, HasClamp, 1,
+                                            HasOMod, 0, 1, HasSrc0FloatMods,
+                                            HasSrc1FloatMods,
+                                            HasSrc2FloatMods>.ret>.ret);
+  let AsmVOP3DPP8 = !subst(", $src2_modifiers", "",
+                           getAsmVOP3DPP8<getAsmVOP3Base<3, 1, HasClamp, 1,
+                                          HasOMod, 0, 1, HasSrc0FloatMods,
+                                          HasSrc1FloatMods,
+                                          HasSrc2FloatMods>.ret>.ret);
+}
+
+class VOP3_CVT_SR_F8_ByteSel_Profile<ValueType SrcVT> :
+  VOP3_Profile<VOPProfile<[i32, SrcVT, i32, untyped]>> {
+  let IsFP8DstByteSel = 1;
+  let HasFP8DstByteSel = 1;
+  let HasClamp = 0;
+  defvar bytesel = (ins VGPR_32:$vdst_in, ByteSel:$byte_sel);
+  let Ins64 = !con(getIns64<Src0RC64, Src1RC64, Src2RC64, NumSrcArgs,
+                            HasClamp, HasModifiers, HasSrc2Mods,
+                            HasOMod, Src0Mod, Src1Mod, Src2Mod>.ret,
+                   bytesel);
+  let InsVOP3Base = !con(
+    getInsVOP3Base<Src0VOP3DPP, Src1VOP3DPP,
+                   Src2VOP3DPP, NumSrcArgs, HasClamp, HasModifiers, HasSrc2Mods, HasOMod,
+                   Src0ModVOP3DPP, Src1ModVOP3DPP, Src2ModVOP3DPP, HasOpSel>.ret,
+    bytesel);
 }
 
 def IsPow2Plus1: PatLeaf<(i32 imm), [{
@@ -600,17 +662,22 @@ defm V_LSHL_OR_B32 : VOP3Inst <"v_lshl_or_b32", VOP3_Profile<VOP_I32_I32_I32_I32
 let SubtargetPredicate = isGFX940Plus in
 defm V_LSHL_ADD_U64 : VOP3Inst <"v_lshl_add_u64", VOP3_Profile<VOP_I64_I64_I32_I64>>;
 
-let SubtargetPredicate = HasFP8Insts, mayRaiseFPException = 0,
+let OtherPredicates = [HasFP8ConversionInsts], mayRaiseFPException = 0,
     SchedRW = [WriteFloatCvt] in {
   let Constraints = "$vdst = $vdst_in", DisableEncoding = "$vdst_in" in {
     defm V_CVT_PK_FP8_F32 : VOP3Inst<"v_cvt_pk_fp8_f32", VOP3_CVT_PK_F8_F32_Profile>;
     defm V_CVT_PK_BF8_F32 : VOP3Inst<"v_cvt_pk_bf8_f32", VOP3_CVT_PK_F8_F32_Profile>;
+
+    let SubtargetPredicate = isGFX12Plus in {
+      defm V_CVT_SR_FP8_F32_gfx12 : VOP3Inst<"v_cvt_sr_fp8_f32_gfx12", VOP3_CVT_SR_F8_ByteSel_Profile<f32>>;
+      defm V_CVT_SR_BF8_F32_gfx12 : VOP3Inst<"v_cvt_sr_bf8_f32_gfx12", VOP3_CVT_SR_F8_ByteSel_Profile<f32>>;
+    }
   }
 
   // These instructions have non-standard use of op_sel. In particular they are
   // using op_sel bits 2 and 3 while only having two sources. Therefore dummy
   // src2 is used to hold the op_sel value.
-  let Constraints = "$vdst = $src2", DisableEncoding = "$src2" in {
+  let Constraints = "$vdst = $src2", DisableEncoding = "$src2", SubtargetPredicate = isGFX940Plus in {
     defm V_CVT_SR_FP8_F32 : VOP3Inst<"v_cvt_sr_fp8_f32", VOP3_CVT_SR_F8_F32_Profile>;
     defm V_CVT_SR_BF8_F32 : VOP3Inst<"v_cvt_sr_bf8_f32", VOP3_CVT_SR_F8_F32_Profile>;
   }
@@ -618,23 +685,38 @@ let SubtargetPredicate = HasFP8Insts, mayRaiseFPException = 0,
 
 class Cvt_PK_F8_F32_Pat<SDPatternOperator node, int index, VOP3_Pseudo inst> : GCNPat<
     (i32 (node f32:$src0, f32:$src1, i32:$old, index)),
-    (inst !if(index, SRCMODS.DST_OP_SEL, 0), $src0, 0, $src1, $old, !if(index, SRCMODS.OP_SEL_0, 0))
+    (inst !if(index, SRCMODS.DST_OP_SEL, 0), $src0, 0, $src1, $old, 0)
 >;
 
 class Cvt_SR_F8_F32_Pat<SDPatternOperator node, bits<2> index, VOP3_Pseudo inst> : GCNPat<
     (i32 (node f32:$src0, i32:$src1, i32:$old, index)),
     (inst !if(index{1}, SRCMODS.DST_OP_SEL, 0), $src0, 0, $src1,
-          !if(index{0}, SRCMODS.OP_SEL_0, 0), $old, !if(index{1}, SRCMODS.OP_SEL_0, 0))
+          !if(index{0}, SRCMODS.OP_SEL_0, 0), $old, 0)
 >;
 
+class Cvt_SR_F8_ByteSel_Pat<SDPatternOperator node, VOP3_Pseudo inst, ValueType SrcVT> : GCNPat<
+    (i32 (node (VOP3Mods SrcVT:$src0, i32:$src0_modifiers), (VOP3Mods i32:$src1, i32:$src1_modifiers),
+          i32:$old, timm:$byte_sel)),
+    (inst $src0_modifiers, $src0, $src1_modifiers, $src1, $old, (as_i32timm $byte_sel))
+>;
+
+let OtherPredicates = [HasFP8ConversionInsts] in {
 foreach Index = [0, -1] in {
   def : Cvt_PK_F8_F32_Pat<int_amdgcn_cvt_pk_fp8_f32, Index, V_CVT_PK_FP8_F32_e64>;
   def : Cvt_PK_F8_F32_Pat<int_amdgcn_cvt_pk_bf8_f32, Index, V_CVT_PK_BF8_F32_e64>;
 }
 
-foreach Index = [0, 1, 2, 3] in {
-  def : Cvt_SR_F8_F32_Pat<int_amdgcn_cvt_sr_fp8_f32, Index, V_CVT_SR_FP8_F32_e64>;
-  def : Cvt_SR_F8_F32_Pat<int_amdgcn_cvt_sr_bf8_f32, Index, V_CVT_SR_BF8_F32_e64>;
+let SubtargetPredicate = isGFX940Plus in {
+  foreach Index = [0, 1, 2, 3] in {
+    def : Cvt_SR_F8_F32_Pat<int_amdgcn_cvt_sr_fp8_f32, Index, V_CVT_SR_FP8_F32_e64>;
+    def : Cvt_SR_F8_F32_Pat<int_amdgcn_cvt_sr_bf8_f32, Index, V_CVT_SR_BF8_F32_e64>;
+  }
+}
+
+let SubtargetPredicate = isGFX12Plus in {
+  def : Cvt_SR_F8_ByteSel_Pat<int_amdgcn_cvt_sr_fp8_f32, V_CVT_SR_FP8_F32_gfx12_e64, f32>;
+  def : Cvt_SR_F8_ByteSel_Pat<int_amdgcn_cvt_sr_bf8_f32, V_CVT_SR_BF8_F32_gfx12_e64, f32>;
+}
 }
 
 class ThreeOp_i32_Pats <SDPatternOperator op1, SDPatternOperator op2, Instruction inst> : GCNPat <
@@ -686,25 +768,34 @@ def : OpSelBinOpClampPat<saddsat, V_ADD_I16_e64>;
 def : OpSelBinOpClampPat<ssubsat, V_SUB_I16_e64>;
 } // End SubtargetPredicate = isGFX9Plus
 
-// FIXME: GlobalISel in general does not handle instructions with 2 results,
-// so it cannot use these patterns.
 multiclass IMAD32_Pats <VOP3_Pseudo inst> {
   def : GCNPat <
         (ThreeOpFrag<mul, add> i32:$src0, i32:$src1, i32:$src2),
-        (EXTRACT_SUBREG (inst $src0, $src1,
+        (EXTRACT_SUBREG (inst i32:$src0, i32:$src1,
                               (REG_SEQUENCE SReg_64, // Use scalar and let it be legalized
                                             $src2, sub0,
                                             (i32 (IMPLICIT_DEF)), sub1),
                                             0 /* clamp */),
                         sub0)
         >;
+
+  // GISel-specific pattern that avoids creating a SGPR->VGPR copy if
+  // $src2 is a VGPR.
+  def : GCNPat <
+        (ThreeOpFrag<mul, add> i32:$src0, i32:$src1, VGPR_32:$src2),
+        (EXTRACT_SUBREG (inst i32:$src0, i32:$src1,
+                              (REG_SEQUENCE VReg_64,
+                                            $src2, sub0,
+                                            (i32 (IMPLICIT_DEF)), sub1),
+                                            0 /* clamp */),
+                        sub0)
+        >;
+
   // Immediate src2 in the pattern above will not fold because it would be partially
   // undef. Hence define specialized pattern for this case.
-  // FIXME: GlobalISel pattern exporter fails to export a pattern like this and asserts,
-  // make it SDAG only.
   def : GCNPat <
-        (ThreeOpFragSDAG<mul, add> i32:$src0, i32:$src1, (i32 imm:$src2)),
-        (EXTRACT_SUBREG (inst $src0, $src1, (i64 (as_i64imm $src2)), 0 /* clamp */), sub0)
+        (ThreeOpFrag<mul, add> i32:$src0, i32:$src1, (i32 imm:$src2)),
+        (EXTRACT_SUBREG (inst i32:$src0, i32:$src1, (i64 (as_i64imm $src2)), 0 /* clamp */), sub0)
         >;
 }
 
@@ -753,9 +844,9 @@ def gi_opsel_i1timm : GICustomOperandRenderer<"renderOpSelTImm">,
   GISDNodeXFormEquiv<opsel_i1timm>;
 
 class PermlanePat<SDPatternOperator permlane,
-  Instruction inst> : GCNPat<
-  (permlane i32:$vdst_in, i32:$src0, i32:$src1, i32:$src2,
-            timm:$fi, timm:$bc),
+  Instruction inst, ValueType vt> : GCNPat<
+  (vt (permlane vt:$vdst_in, vt:$src0, i32:$src1, i32:$src2,
+            timm:$fi, timm:$bc)),
   (inst (opsel_i1timm $fi), VGPR_32:$src0, (opsel_i1timm $bc),
         SCSrc_b32:$src1, 0, SCSrc_b32:$src2, VGPR_32:$vdst_in)
 >;
@@ -774,13 +865,15 @@ let SubtargetPredicate = isGFX10Plus in {
   } // End isCommutable = 1, isReMaterializable = 1
   def : ThreeOp_i32_Pats<xor, xor, V_XOR3_B32_e64>;
 
-  let Constraints = "$vdst = $vdst_in", DisableEncoding="$vdst_in" in {
+  let Constraints = "$vdst = $vdst_in", DisableEncoding="$vdst_in", IsInvalidSingleUseConsumer = 1, IsInvalidSingleUseProducer = 1 in {
     defm V_PERMLANE16_B32 : VOP3Inst<"v_permlane16_b32", VOP3_PERMLANE_Profile>;
     defm V_PERMLANEX16_B32 : VOP3Inst<"v_permlanex16_b32", VOP3_PERMLANE_Profile>;
-  } // End $vdst = $vdst_in, DisableEncoding $vdst_in
+  } // End $vdst = $vdst_in, DisableEncoding $vdst_in, IsInvalidSingleUseConsumer = 1, IsInvalidSingleUseProducer = 1
 
-  def : PermlanePat<int_amdgcn_permlane16, V_PERMLANE16_B32_e64>;
-  def : PermlanePat<int_amdgcn_permlanex16, V_PERMLANEX16_B32_e64>;
+  foreach vt = Reg32Types.types in {
+    def : PermlanePat<int_amdgcn_permlane16, V_PERMLANE16_B32_e64, vt>;
+    def : PermlanePat<int_amdgcn_permlanex16, V_PERMLANEX16_B32_e64, vt>;
+  }
 
   defm V_ADD_NC_U16 : VOP3Inst <"v_add_nc_u16", VOP3_Profile<VOP_I16_I16_I16, VOP3_OPSEL>, add>;
   defm V_SUB_NC_U16 : VOP3Inst <"v_sub_nc_u16", VOP3_Profile<VOP_I16_I16_I16, VOP3_OPSEL>, sub>;
@@ -826,20 +919,9 @@ def : DivFmasPat<f32, V_DIV_FMAS_F32_e64, VCC_LO>;
 def : DivFmasPat<f64, V_DIV_FMAS_F64_e64, VCC_LO>;
 }
 
-class VOP3_DOT_Profile<VOPProfile P, VOP3Features Features = VOP3_REGULAR> : VOP3_Profile<P, Features> {
+class VOP3_DOT_Profile<VOPProfile P> : VOP3_Profile<P, VOP3_OPSEL> {
   let HasClamp = 0;
   let HasOMod = 0;
-  // Override modifiers for bf16(i16) (same as float modifiers).
-  let HasSrc0Mods = 1;
-  let HasSrc1Mods = 1;
-  let HasSrc2Mods = 1;
-  let Src0ModVOP3DPP = FPVRegInputMods;
-  let Src1ModVOP3DPP = FPVRegInputMods;
-  let Src2ModVOP3DPP = FP16InputMods;
-  let InsVOP3OpSel = getInsVOP3OpSel<Src0RC64, Src1RC64, Src2RC64, NumSrcArgs,
-                                     HasClamp, HasOMod, FP16InputMods,
-                                     FP16InputMods, FP16InputMods>.ret;
-  let AsmVOP3OpSel = getAsmVOP3OpSel<NumSrcArgs, HasClamp, HasOMod, 1, 1, 1>.ret;
 }
 
 let SubtargetPredicate = isGFX11Plus in {
@@ -862,9 +944,9 @@ let SubtargetPredicate = isGFX12Plus, ReadsModeReg = 0 in {
   defm V_MINIMUMMAXIMUM_F16 : VOP3Inst<"v_minimummaximum_f16", VOP3_Profile<VOP_F16_F16_F16_F16, VOP3_OPSEL>>;
 } // End SubtargetPredicate = isGFX12Plus, ReadsModeReg = 0
 
-let SubtargetPredicate = HasDot9Insts, IsDOT=1 in {
+let OtherPredicates = [HasDot9Insts], IsDOT=1 in {
   defm V_DOT2_F16_F16 :   VOP3Inst<"v_dot2_f16_f16",   VOP3_DOT_Profile<VOP_F16_V2F16_V2F16_F16>, int_amdgcn_fdot2_f16_f16>;
-  defm V_DOT2_BF16_BF16 : VOP3Inst<"v_dot2_bf16_bf16", VOP3_DOT_Profile<VOP_I16_V2I16_V2I16_I16>, int_amdgcn_fdot2_bf16_bf16>;
+  defm V_DOT2_BF16_BF16 : VOP3Inst<"v_dot2_bf16_bf16", VOP3_DOT_Profile<VOP_BF16_V2BF16_V2BF16_BF16>, int_amdgcn_fdot2_bf16_bf16>;
 }
 
 class VOP_Pseudo_Scalar<RegisterClass Dst, RegisterOperand SrcOp,
@@ -997,6 +1079,11 @@ defm V_MAXIMUM_F16        : VOP3Only_Realtriple_t16_gfx12<0x368>;
 
 defm V_PERMLANE16_VAR_B32  : VOP3Only_Real_Base_gfx12<0x30f>;
 defm V_PERMLANEX16_VAR_B32 : VOP3Only_Real_Base_gfx12<0x310>;
+
+defm V_CVT_PK_FP8_F32  : VOP3Only_Realtriple_gfx12<0x369>;
+defm V_CVT_PK_BF8_F32  : VOP3Only_Realtriple_gfx12<0x36a>;
+defm V_CVT_SR_FP8_F32_gfx12 : VOP3_Realtriple_with_name_gfx12<0x36b, "V_CVT_SR_FP8_F32_gfx12", "v_cvt_sr_fp8_f32" >;
+defm V_CVT_SR_BF8_F32_gfx12 : VOP3_Realtriple_with_name_gfx12<0x36c, "V_CVT_SR_BF8_F32_gfx12", "v_cvt_sr_bf8_f32">;
 
 //===----------------------------------------------------------------------===//
 // GFX11, GFX12
@@ -1142,8 +1229,11 @@ let InOperandList = (ins SSrcOrLds_b32:$src0, SCSrc_b32:$src1, VGPR_32:$vdst_in)
   defm V_WRITELANE_B32     : VOP3_Real_No_Suffix_gfx11_gfx12<0x361>; // Pseudo in VOP2
 } // End InOperandList = (ins SSrcOrLds_b32:$src0, SCSrc_b32:$src1, VGPR_32:$vdst_in)
 defm V_AND_B16_t16         : VOP3Only_Realtriple_t16_gfx11_gfx12<0x362, "v_and_b16">;
+defm V_AND_B16_fake16      : VOP3Only_Realtriple_t16_gfx11_gfx12<0x362, "v_and_b16">;
 defm V_OR_B16_t16          : VOP3Only_Realtriple_t16_gfx11_gfx12<0x363, "v_or_b16">;
+defm V_OR_B16_fake16       : VOP3Only_Realtriple_t16_gfx11_gfx12<0x363, "v_or_b16">;
 defm V_XOR_B16_t16         : VOP3Only_Realtriple_t16_gfx11_gfx12<0x364, "v_xor_b16">;
+defm V_XOR_B16_fake16      : VOP3Only_Realtriple_t16_gfx11_gfx12<0x364, "v_xor_b16">;
 
 //===----------------------------------------------------------------------===//
 // GFX10.
@@ -1196,11 +1286,12 @@ let AssemblerPredicate = isGFX10Only, DecoderNamespace = "GFX10" in {
   }
 } // End AssemblerPredicate = isGFX10Only, DecoderNamespace = "GFX10"
 
-defm V_READLANE_B32  : VOP3_Real_No_Suffix_gfx10<0x360>;
-
-let InOperandList = (ins SSrcOrLds_b32:$src0, SCSrc_b32:$src1, VGPR_32:$vdst_in) in {
-  defm V_WRITELANE_B32 : VOP3_Real_No_Suffix_gfx10<0x361>;
-} // End InOperandList = (ins SSrcOrLds_b32:$src0, SCSrc_b32:$src1, VGPR_32:$vdst_in)
+let IsInvalidSingleUseConsumer = 1 in {
+  defm V_READLANE_B32  : VOP3_Real_No_Suffix_gfx10<0x360>;
+  let InOperandList = (ins SSrcOrLds_b32:$src0, SCSrc_b32:$src1, VGPR_32:$vdst_in), IsInvalidSingleUseProducer = 1 in {
+    defm V_WRITELANE_B32 : VOP3_Real_No_Suffix_gfx10<0x361>;
+  } // End InOperandList = (ins SSrcOrLds_b32:$src0, SCSrc_b32: $src1, VGPR_32:$vdst_in), IsInvalidSingleUseProducer = 1
+} // End IsInvalidSingleUseConsumer = 1
 
 let SubtargetPredicate = isGFX10Before1030 in {
   defm V_MUL_LO_I32      : VOP3_Real_gfx10<0x16b>;
@@ -1611,9 +1702,7 @@ defm V_CVT_PKNORM_U16_F16 : VOP3OpSel_Real_gfx9 <0x29a>;
 
 defm V_LSHL_ADD_U64 : VOP3_Real_vi <0x208>;
 
-let OtherPredicates = [HasFP8Insts] in {
 defm V_CVT_PK_FP8_F32 : VOP3OpSel_Real_gfx9 <0x2a2>;
 defm V_CVT_PK_BF8_F32 : VOP3OpSel_Real_gfx9 <0x2a3>;
 defm V_CVT_SR_FP8_F32 : VOP3OpSel_Real_gfx9_forced_opsel2 <0x2a4>;
 defm V_CVT_SR_BF8_F32 : VOP3OpSel_Real_gfx9_forced_opsel2 <0x2a5>;
-}

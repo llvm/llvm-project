@@ -10,9 +10,10 @@
 // DEFINE: %{compile} = mlir-opt %s --sparsifier="%{sparsifier_opts}"
 // DEFINE: %{compile_sve} = mlir-opt %s --sparsifier="%{sparsifier_opts_sve}"
 // DEFINE: %{run_libs} = -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils
-// DEFINE: %{run_opts} = -e entry -entry-point-result=void
+// DEFINE: %{run_libs_sve} = -shared-libs=%native_mlir_runner_utils,%native_mlir_c_runner_utils
+// DEFINE: %{run_opts} = -e main -entry-point-result=void
 // DEFINE: %{run} = mlir-cpu-runner %{run_opts} %{run_libs}
-// DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs}
+// DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs_sve}
 //
 // DEFINE: %{env} =
 //--------------------------------------------------------------------------------------------------
@@ -162,7 +163,8 @@ module {
     return
   }
 
-  func.func @entry() {
+  func.func @main() {
+    // Note: Constants bufferize to read-only buffers.
     %ri = arith.constant dense< 7   > : tensor<i32>
     %rf = arith.constant dense< 2.0 > : tensor<f32>
 
@@ -269,6 +271,17 @@ module {
     bufferization.dealloc_tensor %s1_i32 : tensor<32xi32, #SV>
     bufferization.dealloc_tensor %s1_f32 : tensor<32xf32, #SV>
     bufferization.dealloc_tensor %s0     : tensor<32xi32, #SV>
+    bufferization.dealloc_tensor %0 : tensor<i32>
+    bufferization.dealloc_tensor %1 : tensor<f32>
+    bufferization.dealloc_tensor %2 : tensor<i32>
+    bufferization.dealloc_tensor %3 : tensor<f32>
+    bufferization.dealloc_tensor %4 : tensor<i32>
+    bufferization.dealloc_tensor %5 : tensor<f32>
+    bufferization.dealloc_tensor %6 : tensor<i32>
+    bufferization.dealloc_tensor %7 : tensor<f32>
+    bufferization.dealloc_tensor %8 : tensor<i32>
+    bufferization.dealloc_tensor %9 : tensor<i32>
+    bufferization.dealloc_tensor %10 : tensor<i32>
 
     return
   }

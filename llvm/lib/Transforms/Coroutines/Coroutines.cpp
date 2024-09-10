@@ -47,15 +47,15 @@ coro::LowererBase::LowererBase(Module &M)
 //
 //    call ptr @llvm.coro.subfn.addr(ptr %Arg, i8 %index)
 
-Value *coro::LowererBase::makeSubFnCall(Value *Arg, int Index,
-                                        Instruction *InsertPt) {
+CallInst *coro::LowererBase::makeSubFnCall(Value *Arg, int Index,
+                                           Instruction *InsertPt) {
   auto *IndexVal = ConstantInt::get(Type::getInt8Ty(Context), Index);
   auto *Fn = Intrinsic::getDeclaration(&TheModule, Intrinsic::coro_subfn_addr);
 
   assert(Index >= CoroSubFnInst::IndexFirst &&
          Index < CoroSubFnInst::IndexLast &&
          "makeSubFnCall: Index value out of range");
-  return CallInst::Create(Fn, {Arg, IndexVal}, "", InsertPt);
+  return CallInst::Create(Fn, {Arg, IndexVal}, "", InsertPt->getIterator());
 }
 
 // NOTE: Must be sorted!
@@ -67,6 +67,9 @@ static const char *const CoroIntrinsics[] = {
     "llvm.coro.async.resume",
     "llvm.coro.async.size.replace",
     "llvm.coro.async.store_resume",
+    "llvm.coro.await.suspend.bool",
+    "llvm.coro.await.suspend.handle",
+    "llvm.coro.await.suspend.void",
     "llvm.coro.begin",
     "llvm.coro.destroy",
     "llvm.coro.done",
@@ -142,6 +145,33 @@ void coro::replaceCoroFree(CoroIdInst *CoroId, bool Elide) {
   }
 }
 
+void coro::suppressCoroAllocs(CoroIdInst *CoroId) {
+  SmallVector<CoroAllocInst *, 4> CoroAllocs;
+  for (User *U : CoroId->users())
+    if (auto *CA = dyn_cast<CoroAllocInst>(U))
+      CoroAllocs.push_back(CA);
+
+  if (CoroAllocs.empty())
+    return;
+
+  coro::suppressCoroAllocs(CoroId->getContext(), CoroAllocs);
+}
+
+// Replacing llvm.coro.alloc with false will suppress dynamic
+// allocation as it is expected for the frontend to generate the code that
+// looks like:
+//   id = coro.id(...)
+//   mem = coro.alloc(id) ? malloc(coro.size()) : 0;
+//   coro.begin(id, mem)
+void coro::suppressCoroAllocs(LLVMContext &Context,
+                              ArrayRef<CoroAllocInst *> CoroAllocs) {
+  auto *False = ConstantInt::getFalse(Context);
+  for (auto *CA : CoroAllocs) {
+    CA->replaceAllUsesWith(False);
+    CA->eraseFromParent();
+  }
+}
+
 static void clear(coro::Shape &Shape) {
   Shape.CoroBegin = nullptr;
   Shape.CoroEnds.clear();
@@ -157,8 +187,8 @@ static CoroSaveInst *createCoroSave(CoroBeginInst *CoroBegin,
                                     CoroSuspendInst *SuspendInst) {
   Module *M = SuspendInst->getModule();
   auto *Fn = Intrinsic::getDeclaration(M, Intrinsic::coro_save);
-  auto *SaveInst =
-      cast<CoroSaveInst>(CallInst::Create(Fn, CoroBegin, "", SuspendInst));
+  auto *SaveInst = cast<CoroSaveInst>(
+      CallInst::Create(Fn, CoroBegin, "", SuspendInst->getIterator()));
   assert(!SuspendInst->getCoroSave());
   SuspendInst->setArgOperand(0, SaveInst);
   return SaveInst;
@@ -174,7 +204,11 @@ void coro::Shape::buildFrom(Function &F) {
   SmallVector<CoroSaveInst *, 2> UnusedCoroSaves;
 
   for (Instruction &I : instructions(F)) {
-    if (auto II = dyn_cast<IntrinsicInst>(&I)) {
+    // FIXME: coro_await_suspend_* are not proper `IntrinisicInst`s
+    // because they might be invoked
+    if (auto AWS = dyn_cast<CoroAwaitSuspendInst>(&I)) {
+      CoroAwaitSuspends.push_back(AWS);
+    } else if (auto II = dyn_cast<IntrinsicInst>(&I)) {
       switch (II->getIntrinsicID()) {
       default:
         continue;
@@ -362,7 +396,7 @@ void coro::Shape::buildFrom(Function &F) {
           // calls, but that messes with our invariants.  Re-insert the
           // bitcast and ignore this type mismatch.
           if (CastInst::isBitCastable(SrcTy, *RI)) {
-            auto BCI = new BitCastInst(*SI, *RI, "", Suspend);
+            auto BCI = new BitCastInst(*SI, *RI, "", Suspend->getIterator());
             SI->set(BCI);
             continue;
           }

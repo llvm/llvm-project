@@ -44,7 +44,7 @@ void LoongArchMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
 }
 
 bool LoongArchMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
-                                                const MCAsmLayout *Layout,
+                                                const MCAssembler *Asm,
                                                 const MCFixup *Fixup) const {
   // Explicitly drop the layout and assembler to prevent any symbolic folding in
   // the expression handling.  This is required to preserve symbolic difference
@@ -73,7 +73,7 @@ StringRef LoongArchMCExpr::getVariantKindName(VariantKind Kind) {
   case VK_LoongArch_B21:
     return "b21";
   case VK_LoongArch_B26:
-    return "b21";
+    return "b26";
   case VK_LoongArch_ABS_HI20:
     return "abs_hi20";
   case VK_LoongArch_ABS_LO12:
@@ -140,6 +140,40 @@ StringRef LoongArchMCExpr::getVariantKindName(VariantKind Kind) {
     return "gd_hi20";
   case VK_LoongArch_CALL36:
     return "call36";
+  case VK_LoongArch_TLS_DESC_PC_HI20:
+    return "desc_pc_hi20";
+  case VK_LoongArch_TLS_DESC_PC_LO12:
+    return "desc_pc_lo12";
+  case VK_LoongArch_TLS_DESC64_PC_LO20:
+    return "desc64_pc_lo20";
+  case VK_LoongArch_TLS_DESC64_PC_HI12:
+    return "desc64_pc_hi12";
+  case VK_LoongArch_TLS_DESC_HI20:
+    return "desc_hi20";
+  case VK_LoongArch_TLS_DESC_LO12:
+    return "desc_lo12";
+  case VK_LoongArch_TLS_DESC64_LO20:
+    return "desc64_lo20";
+  case VK_LoongArch_TLS_DESC64_HI12:
+    return "desc64_hi12";
+  case VK_LoongArch_TLS_DESC_LD:
+    return "desc_ld";
+  case VK_LoongArch_TLS_DESC_CALL:
+    return "desc_call";
+  case VK_LoongArch_TLS_LE_HI20_R:
+    return "le_hi20_r";
+  case VK_LoongArch_TLS_LE_ADD_R:
+    return "le_add_r";
+  case VK_LoongArch_TLS_LE_LO12_R:
+    return "le_lo12_r";
+  case VK_LoongArch_PCREL20_S2:
+    return "pcrel_20";
+  case VK_LoongArch_TLS_LD_PCREL20_S2:
+    return "ld_pcrel_20";
+  case VK_LoongArch_TLS_GD_PCREL20_S2:
+    return "gd_pcrel_20";
+  case VK_LoongArch_TLS_DESC_PCREL20_S2:
+    return "desc_pcrel_20";
   }
 }
 
@@ -183,6 +217,23 @@ LoongArchMCExpr::getVariantKindForName(StringRef name) {
       .Case("gd_pc_hi20", VK_LoongArch_TLS_GD_PC_HI20)
       .Case("gd_hi20", VK_LoongArch_TLS_GD_HI20)
       .Case("call36", VK_LoongArch_CALL36)
+      .Case("desc_pc_hi20", VK_LoongArch_TLS_DESC_PC_HI20)
+      .Case("desc_pc_lo12", VK_LoongArch_TLS_DESC_PC_LO12)
+      .Case("desc64_pc_lo20", VK_LoongArch_TLS_DESC64_PC_LO20)
+      .Case("desc64_pc_hi12", VK_LoongArch_TLS_DESC64_PC_HI12)
+      .Case("desc_hi20", VK_LoongArch_TLS_DESC_HI20)
+      .Case("desc_lo12", VK_LoongArch_TLS_DESC_LO12)
+      .Case("desc64_lo20", VK_LoongArch_TLS_DESC64_LO20)
+      .Case("desc64_hi12", VK_LoongArch_TLS_DESC64_HI12)
+      .Case("desc_ld", VK_LoongArch_TLS_DESC_LD)
+      .Case("desc_call", VK_LoongArch_TLS_DESC_CALL)
+      .Case("le_hi20_r", VK_LoongArch_TLS_LE_HI20_R)
+      .Case("le_add_r", VK_LoongArch_TLS_LE_ADD_R)
+      .Case("le_lo12_r", VK_LoongArch_TLS_LE_LO12_R)
+      .Case("pcrel_20", VK_LoongArch_PCREL20_S2)
+      .Case("ld_pcrel_20", VK_LoongArch_TLS_LD_PCREL20_S2)
+      .Case("gd_pcrel_20", VK_LoongArch_TLS_GD_PCREL20_S2)
+      .Case("desc_pcrel_20", VK_LoongArch_TLS_DESC_PCREL20_S2)
       .Default(VK_LoongArch_Invalid);
 }
 
@@ -223,6 +274,11 @@ void LoongArchMCExpr::fixELFSymbolsInTLSFixups(MCAssembler &Asm) const {
   case VK_LoongArch_TLS_LD_HI20:
   case VK_LoongArch_TLS_GD_PC_HI20:
   case VK_LoongArch_TLS_GD_HI20:
+  case VK_LoongArch_TLS_DESC_PC_HI20:
+  case VK_LoongArch_TLS_DESC_HI20:
+  case VK_LoongArch_TLS_LD_PCREL20_S2:
+  case VK_LoongArch_TLS_GD_PCREL20_S2:
+  case VK_LoongArch_TLS_DESC_PCREL20_S2:
     break;
   }
   fixELFSymbolsInTLSFixupsImpl(getSubExpr(), Asm);

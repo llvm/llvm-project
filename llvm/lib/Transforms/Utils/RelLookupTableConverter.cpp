@@ -100,10 +100,10 @@ static GlobalVariable *createRelLookupTable(Function &Func,
       ArrayType::get(Type::getInt32Ty(M.getContext()), NumElts);
 
   GlobalVariable *RelLookupTable = new GlobalVariable(
-    M, IntArrayTy, LookupTable.isConstant(), LookupTable.getLinkage(),
-    nullptr, "reltable." + Func.getName(), &LookupTable,
-    LookupTable.getThreadLocalMode(), LookupTable.getAddressSpace(),
-    LookupTable.isExternallyInitialized());
+      M, IntArrayTy, LookupTable.isConstant(), LookupTable.getLinkage(),
+      nullptr, LookupTable.getName() + ".rel", &LookupTable,
+      LookupTable.getThreadLocalMode(), LookupTable.getAddressSpace(),
+      LookupTable.isExternallyInitialized());
 
   uint64_t Idx = 0;
   SmallVector<Constant *, 64> RelLookupTableContents(NumElts);

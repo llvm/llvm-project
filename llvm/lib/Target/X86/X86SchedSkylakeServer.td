@@ -236,10 +236,10 @@ defm : X86WriteRes<WriteFStoreNT,      [SKXPort237,SKXPort4], 1, [1,1], 2>;
 defm : X86WriteRes<WriteFStoreNTX,     [SKXPort237,SKXPort4], 1, [1,1], 2>;
 defm : X86WriteRes<WriteFStoreNTY,     [SKXPort237,SKXPort4], 1, [1,1], 2>;
 
-defm : X86WriteRes<WriteFMaskedStore32,  [SKXPort23,SKXPort0,SKXPort4], 2, [1,1,1], 2>;
-defm : X86WriteRes<WriteFMaskedStore32Y, [SKXPort23,SKXPort0,SKXPort4], 2, [1,1,1], 2>;
-defm : X86WriteRes<WriteFMaskedStore64,  [SKXPort23,SKXPort0,SKXPort4], 2, [1,1,1], 2>;
-defm : X86WriteRes<WriteFMaskedStore64Y, [SKXPort23,SKXPort0,SKXPort4], 2, [1,1,1], 2>;
+defm : X86WriteRes<WriteFMaskedStore32,  [SKXPort23,SKXPort0,SKXPort4], 2, [1,1,1], 3>;
+defm : X86WriteRes<WriteFMaskedStore32Y, [SKXPort23,SKXPort0,SKXPort4], 2, [1,1,1], 3>;
+defm : X86WriteRes<WriteFMaskedStore64,  [SKXPort23,SKXPort0,SKXPort4], 2, [1,1,1], 3>;
+defm : X86WriteRes<WriteFMaskedStore64Y, [SKXPort23,SKXPort0,SKXPort4], 2, [1,1,1], 3>;
 
 defm : X86WriteRes<WriteFMove,         [SKXPort015], 1, [1], 1>;
 defm : X86WriteRes<WriteFMoveX,        [SKXPort015], 1, [1], 1>;
@@ -311,8 +311,10 @@ defm : SKXWriteResPair<WriteFMAX, [SKXPort01],  4, [1], 1, 6>;
 defm : SKXWriteResPair<WriteFMAY, [SKXPort01],  4, [1], 1, 7>;
 defm : SKXWriteResPair<WriteFMAZ, [SKXPort05],  4, [1], 1, 7>;
 defm : SKXWriteResPair<WriteDPPD, [SKXPort5,SKXPort015],  9, [1,2], 3, 6>; // Floating point double dot product.
-defm : SKXWriteResPair<WriteDPPS, [SKXPort5,SKXPort015], 13, [1,3], 4, 6>;
-defm : SKXWriteResPair<WriteDPPSY,[SKXPort5,SKXPort015], 13, [1,3], 4, 7>;
+defm : X86WriteRes<WriteDPPS,       [SKXPort5,SKXPort01], 13, [1,3], 4>;
+defm : X86WriteRes<WriteDPPSY,      [SKXPort5,SKXPort01], 13, [1,3], 4>;
+defm : X86WriteRes<WriteDPPSLd,     [SKXPort5,SKXPort01,SKXPort06,SKXPort23], 19, [1,3,1,1], 6>;
+defm : X86WriteRes<WriteDPPSYLd,    [SKXPort5,SKXPort01,SKXPort06,SKXPort23], 20, [1,3,1,1], 6>;
 defm : SKXWriteResPair<WriteFSign,  [SKXPort0],  1>; // Floating point fabs/fchs.
 defm : SKXWriteResPair<WriteFRnd,   [SKXPort01], 8, [2], 2, 6>; // Floating point rounding.
 defm : SKXWriteResPair<WriteFRndY,  [SKXPort01], 8, [2], 2, 7>;
@@ -352,10 +354,10 @@ defm : X86WriteRes<WriteVecStoreX,       [SKXPort237,SKXPort4], 1, [1,1], 2>;
 defm : X86WriteRes<WriteVecStoreY,       [SKXPort237,SKXPort4], 1, [1,1], 2>;
 defm : X86WriteRes<WriteVecStoreNT,      [SKXPort237,SKXPort4], 1, [1,1], 2>;
 defm : X86WriteRes<WriteVecStoreNTY,     [SKXPort237,SKXPort4], 1, [1,1], 2>;
-defm : X86WriteRes<WriteVecMaskedStore32,  [SKXPort23,SKXPort0,SKXPort4], 2, [1,1,1], 2>;
-defm : X86WriteRes<WriteVecMaskedStore32Y, [SKXPort23,SKXPort0,SKXPort4], 2, [1,1,1], 2>;
-defm : X86WriteRes<WriteVecMaskedStore64,  [SKXPort23,SKXPort0,SKXPort4], 2, [1,1,1], 2>;
-defm : X86WriteRes<WriteVecMaskedStore64Y, [SKXPort23,SKXPort0,SKXPort4], 2, [1,1,1], 2>;
+defm : X86WriteRes<WriteVecMaskedStore32,  [SKXPort23,SKXPort0,SKXPort4], 2, [1,1,1], 3>;
+defm : X86WriteRes<WriteVecMaskedStore32Y, [SKXPort23,SKXPort0,SKXPort4], 2, [1,1,1], 3>;
+defm : X86WriteRes<WriteVecMaskedStore64,  [SKXPort23,SKXPort0,SKXPort4], 2, [1,1,1], 3>;
+defm : X86WriteRes<WriteVecMaskedStore64Y, [SKXPort23,SKXPort0,SKXPort4], 2, [1,1,1], 3>;
 defm : X86WriteRes<WriteVecMove,         [SKXPort05],  1, [1], 1>;
 defm : X86WriteRes<WriteVecMoveX,        [SKXPort015], 1, [1], 1>;
 defm : X86WriteRes<WriteVecMoveY,        [SKXPort015], 1, [1], 1>;
@@ -613,8 +615,8 @@ def : WriteRes<WriteNop, []>;
 // Horizontal add/sub  instructions.
 ////////////////////////////////////////////////////////////////////////////////
 
-defm : SKXWriteResPair<WriteFHAdd,  [SKXPort5,SKXPort015], 6, [2,1], 3, 6>;
-defm : SKXWriteResPair<WriteFHAddY, [SKXPort5,SKXPort015], 6, [2,1], 3, 7>;
+defm : SKXWriteResPair<WriteFHAdd,  [SKXPort5,SKXPort01], 6, [2,1], 3, 6>;
+defm : SKXWriteResPair<WriteFHAddY, [SKXPort5,SKXPort01], 6, [2,1], 3, 7>;
 defm : SKXWriteResPair<WritePHAdd,  [SKXPort5,SKXPort05],  3, [2,1], 3, 5>;
 defm : SKXWriteResPair<WritePHAddX, [SKXPort5,SKXPort015], 3, [2,1], 3, 6>;
 defm : SKXWriteResPair<WritePHAddY, [SKXPort5,SKXPort015], 3, [2,1], 3, 7>;
@@ -876,10 +878,10 @@ def SKXWriteResGroup38 : SchedWriteRes<[SKXPort5,SKXPort01]> {
 }
 def: InstRW<[SKXWriteResGroup38], (instregex "(V?)PH(ADD|SUB)SW(Y?)rr")>;
 
-def SKXWriteResGroup41 : SchedWriteRes<[SKXPort5,SKXPort0156]> {
-  let Latency = 3;
-  let NumMicroOps = 3;
-  let ReleaseAtCycles = [2,1];
+def SKXWriteResGroup41 : SchedWriteRes<[SKXPort5]> {
+  let Latency = 2;
+  let NumMicroOps = 2;
+  let ReleaseAtCycles = [2];
 }
 def: InstRW<[SKXWriteResGroup41], (instrs MMX_PACKSSDWrr,
                                           MMX_PACKSSWBrr,
@@ -1497,8 +1499,10 @@ def SKXWriteResGroup113 : SchedWriteRes<[SKXPort0,SKXPort4,SKXPort237,SKXPort015
   let ReleaseAtCycles = [1,8,8,2];
 }
 def: InstRW<[SKXWriteResGroup113], (instrs VPSCATTERDQZmr,
+                                           VPSCATTERQDZmr,
                                            VPSCATTERQQZmr,
                                            VSCATTERDPDZmr,
+                                           VSCATTERQPSZmr,
                                            VSCATTERQPDZmr)>;
 
 def SKXWriteResGroup114 : SchedWriteRes<[SKXPort0,SKXPort4,SKXPort5,SKXPort237,SKXPort0156]> {

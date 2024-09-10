@@ -41,13 +41,6 @@ static cl::opt<bool> DisableX86DomainReassignment(
 namespace {
 enum RegDomain { NoDomain = -1, GPRDomain, MaskDomain, OtherDomain, NumDomains };
 
-static bool isGPR(const TargetRegisterClass *RC) {
-  return X86::GR64RegClass.hasSubClassEq(RC) ||
-         X86::GR32RegClass.hasSubClassEq(RC) ||
-         X86::GR16RegClass.hasSubClassEq(RC) ||
-         X86::GR8RegClass.hasSubClassEq(RC);
-}
-
 static bool isMask(const TargetRegisterClass *RC,
                    const TargetRegisterInfo *TRI) {
   return X86::VK16RegClass.hasSubClassEq(RC);
@@ -55,7 +48,7 @@ static bool isMask(const TargetRegisterClass *RC,
 
 static RegDomain getDomain(const TargetRegisterClass *RC,
                            const TargetRegisterInfo *TRI) {
-  if (isGPR(RC))
+  if (TRI->isGeneralPurposeRegisterClass(RC))
     return GPRDomain;
   if (isMask(RC, TRI))
     return MaskDomain;
@@ -650,6 +643,16 @@ void X86DomainReassignment::initConverters() {
   createReplacer(X86::AND16rr, X86::KANDWrr);
   createReplacer(X86::XOR16rr, X86::KXORWrr);
 
+  bool HasNDD = STI->hasNDD();
+  if (HasNDD) {
+    createReplacer(X86::SHR16ri_ND, X86::KSHIFTRWri);
+    createReplacer(X86::SHL16ri_ND, X86::KSHIFTLWri);
+    createReplacer(X86::NOT16r_ND, X86::KNOTWrr);
+    createReplacer(X86::OR16rr_ND, X86::KORWrr);
+    createReplacer(X86::AND16rr_ND, X86::KANDWrr);
+    createReplacer(X86::XOR16rr_ND, X86::KXORWrr);
+  }
+
   if (STI->hasBWI()) {
     createReplacer(X86::MOV32rm, GET_EGPR_IF_ENABLED(X86::KMOVDkm));
     createReplacer(X86::MOV64rm, GET_EGPR_IF_ENABLED(X86::KMOVQkm));
@@ -684,6 +687,23 @@ void X86DomainReassignment::initConverters() {
     createReplacer(X86::XOR32rr, X86::KXORDrr);
     createReplacer(X86::XOR64rr, X86::KXORQrr);
 
+    if (HasNDD) {
+      createReplacer(X86::SHR32ri_ND, X86::KSHIFTRDri);
+      createReplacer(X86::SHL32ri_ND, X86::KSHIFTLDri);
+      createReplacer(X86::ADD32rr_ND, X86::KADDDrr);
+      createReplacer(X86::NOT32r_ND, X86::KNOTDrr);
+      createReplacer(X86::OR32rr_ND, X86::KORDrr);
+      createReplacer(X86::AND32rr_ND, X86::KANDDrr);
+      createReplacer(X86::XOR32rr_ND, X86::KXORDrr);
+      createReplacer(X86::SHR64ri_ND, X86::KSHIFTRQri);
+      createReplacer(X86::SHL64ri_ND, X86::KSHIFTLQri);
+      createReplacer(X86::ADD64rr_ND, X86::KADDQrr);
+      createReplacer(X86::NOT64r_ND, X86::KNOTQrr);
+      createReplacer(X86::OR64rr_ND, X86::KORQrr);
+      createReplacer(X86::AND64rr_ND, X86::KANDQrr);
+      createReplacer(X86::XOR64rr_ND, X86::KXORQrr);
+    }
+
     // TODO: KTEST is not a replacement for TEST due to flag differences. Need
     // to prove only Z flag is used.
     // createReplacer(X86::TEST32rr, X86::KTESTDrr);
@@ -713,6 +733,17 @@ void X86DomainReassignment::initConverters() {
     // createReplacer(X86::TEST16rr, X86::KTESTWrr);
 
     createReplacer(X86::XOR8rr, X86::KXORBrr);
+
+    if (HasNDD) {
+      createReplacer(X86::ADD8rr_ND, X86::KADDBrr);
+      createReplacer(X86::ADD16rr_ND, X86::KADDWrr);
+      createReplacer(X86::AND8rr_ND, X86::KANDBrr);
+      createReplacer(X86::NOT8r_ND, X86::KNOTBrr);
+      createReplacer(X86::OR8rr_ND, X86::KORBrr);
+      createReplacer(X86::SHR8ri_ND, X86::KSHIFTRBri);
+      createReplacer(X86::SHL8ri_ND, X86::KSHIFTLBri);
+      createReplacer(X86::XOR8rr_ND, X86::KXORBrr);
+    }
   }
 #undef GET_EGPR_IF_ENABLED
 }
@@ -754,8 +785,13 @@ bool X86DomainReassignment::runOnMachineFunction(MachineFunction &MF) {
   for (unsigned Idx = 0; Idx < MRI->getNumVirtRegs(); ++Idx) {
     Register Reg = Register::index2VirtReg(Idx);
 
+    // Skip unused VRegs.
+    if (MRI->reg_nodbg_empty(Reg))
+      continue;
+
     // GPR only current source domain supported.
-    if (!isGPR(MRI->getRegClass(Reg)))
+    if (!MRI->getTargetRegisterInfo()->isGeneralPurposeRegisterClass(
+            MRI->getRegClass(Reg)))
       continue;
 
     // Register already in closure.

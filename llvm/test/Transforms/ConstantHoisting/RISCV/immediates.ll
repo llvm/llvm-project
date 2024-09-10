@@ -150,3 +150,125 @@ define i64 @test16(i64 %a) nounwind {
   ret i64 %2
 }
 
+; Check that we hoist the absolute address of the stores to the entry block.
+define void @test17(ptr %s, i32 %size) nounwind {
+; CHECK-LABEL: test17
+; CHECK: %const = bitcast i32 -1073741792 to i32
+; CHECK: %0 = inttoptr i32 %const to ptr
+; CHECK: store i32 20, ptr %0
+; CHECK: %1 = inttoptr i32 %const to ptr
+; CHECK: store i32 10, ptr %1
+entry:
+  %cond = icmp eq i32 %size, 0
+  br i1 %cond, label %if.true, label %exit
+if.true:
+  store i32 20, ptr inttoptr (i32 -1073741792 to ptr)
+  br label %exit
+exit:
+  store i32 10, ptr inttoptr (i32 -1073741792 to ptr)
+  ret void
+}
+
+; Check that we hoist the absolute address of the loads to the entry block.
+define i32 @test18(ptr %s, i32 %size) nounwind {
+; CHECK-LABEL: test18
+; CHECK: %const = bitcast i32 -1073741792 to i32
+; CHECK: %0 = inttoptr i32 %const to ptr
+; CHECK: %1 = load i32, ptr %0
+; CHECK: %2 = inttoptr i32 %const to ptr
+; CHECK: %3 = load i32, ptr %2
+entry:
+  %cond = icmp eq i32 %size, 0
+  br i1 %cond, label %if.true, label %if.false
+if.true:
+  %0 = load i32, ptr inttoptr (i32 -1073741792 to ptr)
+  br label %return
+if.false:
+  %1 = load i32, ptr inttoptr (i32 -1073741792 to ptr)
+  br label %return
+return:
+  %val = phi i32 [%0, %if.true], [%1, %if.false]
+  ret i32 %val
+}
+
+
+; For addresses between [0, 2048), we can use ld/sd xN, address(zero), so don't
+; hoist.
+define void @test19(ptr %s, i32 %size) nounwind {
+; CHECK-LABEL: test19
+; CHECK: store i32 20, ptr inttoptr (i32 2044 to ptr)
+; CHECK: store i32 10, ptr inttoptr (i32 2044 to ptr)
+entry:
+  %cond = icmp eq i32 %size, 0
+  br i1 %cond, label %if.true, label %exit
+if.true:
+  store i32 20, ptr inttoptr (i32 2044 to ptr)
+  br label %exit
+exit:
+  store i32 10, ptr inttoptr (i32 2044 to ptr)
+  ret void
+}
+
+; Check that we use a common base for immediates needed by a store if the
+; constants require more than 1 instruction.
+define void @test20(ptr %p1, ptr %p2) {
+; CHECK-LABEL: test20
+; CHECK: %const = bitcast i32 15111111 to i32
+; CHECK: store i32 %const, ptr %p1, align 4
+; CHECK: %const_mat = add i32 %const, 1
+; CHECK: store i32 %const_mat, ptr %p2, align 4
+  store i32 15111111, ptr %p1, align 4
+  store i32 15111112, ptr %p2, align 4
+  ret void
+}
+
+define void @test21(ptr %p1, ptr %p2) {
+; CHECK-LABEL: define void @test21(
+; CHECK-SAME: ptr [[P1:%.*]], ptr [[P2:%.*]]) {
+; CHECK-NEXT:    store i32 15111111, ptr [[P1]], align 1
+; CHECK-NEXT:    store i32 15111112, ptr [[P2]], align 1
+; CHECK-NEXT:    ret void
+;
+  store i32 15111111, ptr %p1, align 1
+  store i32 15111112, ptr %p2, align 1
+  ret void
+}
+
+; 0 immediates shouldn't be hoisted.
+define void @test22(ptr %p1, ptr %p2) {
+; CHECK-LABEL: define void @test22(
+; CHECK-SAME: ptr [[P1:%.*]], ptr [[P2:%.*]]) {
+; CHECK-NEXT:    store i64 0, ptr [[P1]], align 8
+; CHECK-NEXT:    store i64 -1, ptr [[P2]], align 8
+; CHECK-NEXT:    ret void
+;
+  store i64 0, ptr %p1, align 8
+  store i64 -1, ptr %p2, align 8
+  ret void
+}
+
+; 0 immediates shouldn't be hoisted.
+define void @test23(ptr %p1, ptr %p2) {
+; CHECK-LABEL: define void @test23(
+; CHECK-SAME: ptr [[P1:%.*]], ptr [[P2:%.*]]) {
+; CHECK-NEXT:    store i127 0, ptr [[P1]], align 8
+; CHECK-NEXT:    store i127 -1, ptr [[P2]], align 8
+; CHECK-NEXT:    ret void
+;
+  store i127 0, ptr %p1, align 8
+  store i127 -1, ptr %p2, align 8
+  ret void
+}
+
+; Hoisting doesn't happen for types that aren't legal.
+define void @test24(ptr %p1, ptr %p2) {
+; CHECK-LABEL: define void @test24(
+; CHECK-SAME: ptr [[P1:%.*]], ptr [[P2:%.*]]) {
+; CHECK-NEXT:    store i128 15111111, ptr [[P1]], align 4
+; CHECK-NEXT:    store i128 15111112, ptr [[P2]], align 4
+; CHECK-NEXT:    ret void
+;
+  store i128 15111111, ptr %p1, align 4
+  store i128 15111112, ptr %p2, align 4
+  ret void
+}

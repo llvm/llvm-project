@@ -8,7 +8,12 @@ let Definition = "modulelist" in {
   def EnableBackgroundLookup: Property<"enable-background-lookup", "Boolean">,
     Global,
     DefaultFalse,
-    Desc<"On macOS, enable calling dsymForUUID (or an equivalent script/binary) in the background to locate symbol files that weren't found.">;
+    Desc<"Alias for backward compatibility: when enabled this is the equivalent to 'symbols.auto-download background'.">;
+  def AutoDownload: Property<"auto-download", "Enum">,
+    Global,
+    DefaultEnumValue<"eSymbolDownloadOff">,
+    EnumValues<"OptionEnumValues(g_auto_download_enum_values)">,
+    Desc<"On macOS, automatically download symbols with dsymForUUID (or an equivalent script/binary) for relevant images in the debug session.">;
   def ClangModulesCachePath: Property<"clang-modules-cache-path", "FileSpec">,
     Global,
     DefaultStringValue<"">,
@@ -127,7 +132,7 @@ let Definition = "debugger" in {
     Global,
     DefaultStringValue<"${ansi.normal}">,
     Desc<"When displaying the line marker in a color-enabled terminal, use the ANSI terminal code specified in this format immediately after the line to be marked.">;
-  def TerminalWidth: Property<"term-width", "SInt64">,
+  def TerminalWidth: Property<"term-width", "UInt64">,
     Global,
     DefaultUnsignedValue<80>,
     Desc<"The maximum number of columns to use for displaying text.">;

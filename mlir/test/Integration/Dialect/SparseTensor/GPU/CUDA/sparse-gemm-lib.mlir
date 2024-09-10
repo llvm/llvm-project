@@ -62,23 +62,17 @@ module {
                                              tensor<8x8xf32, #CSR>) -> tensor<8x8xf32, #CSR>
 
     //
-    // Verify computed result (expected output, with only 20 nonzeros).
+    // Verify computed result.
     //
-    // CHECK:    ( ( 1, 39, 52, 0, 0, 0, 45, 51 ),
-    // CHECK-SAME: ( 0, 0, 0, 0, 0, 0, 0, 0 ),
-    // CHECK-SAME: ( 0, 0, 16, 0, 0, 0, 0, 0 ),
-    // CHECK-SAME: ( 0, 0, 0, 25, 0, 0, 0, 0 ),
-    // CHECK-SAME: ( 0, 0, 0, 0, 36, 0, 0, 0 ),
-    // CHECK-SAME: ( 0, 117, 158, 0, 0, 0, 135, 144 ),
-    // CHECK-SAME: ( 0, 156, 318, 0, 0, 0, 301, 324 ),
-    // CHECK-SAME: ( 0, 208, 430, 0, 0, 0, 405, 436 ) )
-    // CHECK-NEXT: 20
-    %d = sparse_tensor.convert %Ccsr : tensor<8x8xf32, #CSR> to tensor<8x8xf32>
-    %v = vector.transfer_read %d[%c0, %c0], %f0: tensor<8x8xf32>, vector<8x8xf32>
-    vector.print %v : vector<8x8xf32>
-    %nnz = sparse_tensor.number_of_entries %Ccsr : tensor<8x8xf32, #CSR>
-    %x = sparse_tensor.number_of_entries %Ccsr : tensor<8x8xf32, #CSR>
-    vector.print %nnz : index
+    // CHECK:      ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 20
+    // CHECK-NEXT: dim = ( 8, 8 )
+    // CHECK-NEXT: lvl = ( 8, 8 )
+    // CHECK-NEXT: pos[1] : ( 0, 5, 5, 6, 7, 8, 12, 16, 20 )
+    // CHECK-NEXT: crd[1] : ( 0, 1, 2, 6, 7, 2, 3, 4, 1, 2, 6, 7, 1, 2, 6, 7, 1, 2, 6, 7 )
+    // CHECK-NEXT: values : ( 1, 39, 52, 45, 51, 16, 25, 36, 117, 158, 135, 144, 156, 318, 301, 324, 208, 430, 405, 436 )
+    // CHECK-NEXT: ----
+    sparse_tensor.print %Ccsr : tensor<8x8xf32, #CSR>
 
     llvm.call @mgpuDestroySparseEnv(): () -> ()
     return

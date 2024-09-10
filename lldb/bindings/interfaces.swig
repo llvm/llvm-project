@@ -12,6 +12,8 @@
 
 /* Docstrings for SB classes and methods */
 %include "./interface/SBAddressDocstrings.i"
+%include "./interface/SBAddressRangeDocstrings.i"
+%include "./interface/SBAddressRangeListDocstrings.i"
 %include "./interface/SBAttachInfoDocstrings.i"
 %include "./interface/SBBlockDocstrings.i"
 %include "./interface/SBBreakpointDocstrings.i"
@@ -23,6 +25,7 @@
 %include "./interface/SBCommandReturnObjectDocstrings.i"
 %include "./interface/SBCommunicationDocstrings.i"
 %include "./interface/SBCompileUnitDocstrings.i"
+%include "./interface/SBSaveCoreOptionsDocstrings.i"
 %include "./interface/SBDataDocstrings.i"
 %include "./interface/SBDebuggerDocstrings.i"
 %include "./interface/SBDeclarationDocstrings.i"
@@ -56,6 +59,7 @@
 %include "./interface/SBReproducerDocstrings.i"
 %include "./interface/SBSectionDocstrings.i"
 %include "./interface/SBSourceManagerDocstrings.i"
+%include "./interface/SBStatisticsOptionsDocstrings.i"
 %include "./interface/SBStreamDocstrings.i"
 %include "./interface/SBStringListDocstrings.i"
 %include "./interface/SBStructuredDataDocstrings.i"
@@ -85,6 +89,8 @@
 
 /* API headers */
 %include "lldb/API/SBAddress.h"
+%include "lldb/API/SBAddressRange.h"
+%include "lldb/API/SBAddressRangeList.h"
 %include "lldb/API/SBAttachInfo.h"
 %include "lldb/API/SBBlock.h"
 %include "lldb/API/SBBreakpoint.h"
@@ -96,6 +102,7 @@
 %include "lldb/API/SBCommandReturnObject.h"
 %include "lldb/API/SBCommunication.h"
 %include "lldb/API/SBCompileUnit.h"
+%include "lldb/API/SBSaveCoreOptions.h"
 %include "lldb/API/SBData.h"
 %include "lldb/API/SBDebugger.h"
 %include "lldb/API/SBDeclaration.h"
@@ -113,6 +120,7 @@
 %include "lldb/API/SBHostOS.h"
 %include "lldb/API/SBInstruction.h"
 %include "lldb/API/SBInstructionList.h"
+%include "lldb/API/SBLanguages.h"
 %include "lldb/API/SBLanguageRuntime.h"
 %include "lldb/API/SBLaunchInfo.h"
 %include "lldb/API/SBLineEntry.h"
@@ -131,6 +139,7 @@
 %include "lldb/API/SBScriptObject.h"
 %include "lldb/API/SBSection.h"
 %include "lldb/API/SBSourceManager.h"
+%include "lldb/API/SBStatisticsOptions.h"
 %include "lldb/API/SBStream.h"
 %include "lldb/API/SBStringList.h"
 %include "lldb/API/SBStructuredData.h"
@@ -160,6 +169,8 @@
 
 /* Extensions for SB classes */
 %include "./interface/SBAddressExtensions.i"
+%include "./interface/SBAddressRangeExtensions.i"
+%include "./interface/SBAddressRangeListExtensions.i"
 %include "./interface/SBBlockExtensions.i"
 %include "./interface/SBBreakpointExtensions.i"
 %include "./interface/SBBreakpointListExtensions.i"

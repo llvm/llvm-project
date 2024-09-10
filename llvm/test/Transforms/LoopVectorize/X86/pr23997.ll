@@ -12,8 +12,7 @@ define void @foo(ptr addrspace(1) align 8 dereferenceable_or_null(16), ptr addrs
 ; CHECK:       preheader:
 ; CHECK-NEXT:    [[DOT10:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP0:%.*]], i64 16
 ; CHECK-NEXT:    [[DOT12:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP1:%.*]], i64 16
-; CHECK-NEXT:    [[UMAX2:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP2:%.*]], i64 1)
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP2]], 16
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP2:%.*]], 16
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK:       vector.memcheck:
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP2]], 3
@@ -25,31 +24,31 @@ define void @foo(ptr addrspace(1) align 8 dereferenceable_or_null(16), ptr addrs
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[UMAX2]], -16
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP2]], -16
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds ptr addrspace(1), ptr addrspace(1) [[DOT12]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds ptr addrspace(1), ptr addrspace(1) [[TMP5]], i64 4
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds ptr addrspace(1), ptr addrspace(1) [[TMP5]], i64 8
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds ptr addrspace(1), ptr addrspace(1) [[TMP5]], i64 12
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x ptr addrspace(1)>, ptr addrspace(1) [[TMP5]], align 8, !alias.scope !0
-; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <4 x ptr addrspace(1)>, ptr addrspace(1) [[TMP6]], align 8, !alias.scope !0
-; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x ptr addrspace(1)>, ptr addrspace(1) [[TMP7]], align 8, !alias.scope !0
-; CHECK-NEXT:    [[WIDE_LOAD5:%.*]] = load <4 x ptr addrspace(1)>, ptr addrspace(1) [[TMP8]], align 8, !alias.scope !0
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP5]], i64 32
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP5]], i64 64
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP5]], i64 96
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x ptr addrspace(1)>, ptr addrspace(1) [[TMP5]], align 8, !alias.scope [[META0:![0-9]+]]
+; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <4 x ptr addrspace(1)>, ptr addrspace(1) [[TMP6]], align 8, !alias.scope [[META0]]
+; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x ptr addrspace(1)>, ptr addrspace(1) [[TMP7]], align 8, !alias.scope [[META0]]
+; CHECK-NEXT:    [[WIDE_LOAD5:%.*]] = load <4 x ptr addrspace(1)>, ptr addrspace(1) [[TMP8]], align 8, !alias.scope [[META0]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds ptr addrspace(1), ptr addrspace(1) [[DOT10]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds ptr addrspace(1), ptr addrspace(1) [[TMP9]], i64 4
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds ptr addrspace(1), ptr addrspace(1) [[TMP9]], i64 8
-; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds ptr addrspace(1), ptr addrspace(1) [[TMP9]], i64 12
-; CHECK-NEXT:    store <4 x ptr addrspace(1)> [[WIDE_LOAD]], ptr addrspace(1) [[TMP9]], align 8, !alias.scope !3, !noalias !0
-; CHECK-NEXT:    store <4 x ptr addrspace(1)> [[WIDE_LOAD3]], ptr addrspace(1) [[TMP10]], align 8, !alias.scope !3, !noalias !0
-; CHECK-NEXT:    store <4 x ptr addrspace(1)> [[WIDE_LOAD4]], ptr addrspace(1) [[TMP11]], align 8, !alias.scope !3, !noalias !0
-; CHECK-NEXT:    store <4 x ptr addrspace(1)> [[WIDE_LOAD5]], ptr addrspace(1) [[TMP12]], align 8, !alias.scope !3, !noalias !0
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP9]], i64 32
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP9]], i64 64
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP9]], i64 96
+; CHECK-NEXT:    store <4 x ptr addrspace(1)> [[WIDE_LOAD]], ptr addrspace(1) [[TMP9]], align 8, !alias.scope [[META3:![0-9]+]], !noalias [[META0]]
+; CHECK-NEXT:    store <4 x ptr addrspace(1)> [[WIDE_LOAD3]], ptr addrspace(1) [[TMP10]], align 8, !alias.scope [[META3]], !noalias [[META0]]
+; CHECK-NEXT:    store <4 x ptr addrspace(1)> [[WIDE_LOAD4]], ptr addrspace(1) [[TMP11]], align 8, !alias.scope [[META3]], !noalias [[META0]]
+; CHECK-NEXT:    store <4 x ptr addrspace(1)> [[WIDE_LOAD5]], ptr addrspace(1) [[TMP12]], align 8, !alias.scope [[META3]], !noalias [[META0]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[UMAX2]], [[N_VEC]]
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP2]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[PREHEADER]] ], [ 0, [[VECTOR_MEMCHECK]] ]
@@ -88,7 +87,7 @@ loopexit:
   ret void
 }
 
-attributes #0 = { uwtable "target-cpu"="skylake" "target-features"="+sse2,+cx16,+sahf,-tbm,-avx512ifma,-sha,-gfni,-fma4,-vpclmulqdq,+prfchw,+bmi2,-cldemote,+fsgsbase,+xsavec,+popcnt,+aes,-avx512bitalg,+xsaves,-avx512er,-avx512vnni,-avx512vpopcntdq,-clwb,-avx512f,-clzero,-pku,+mmx,-lwp,-rdpid,-xop,+rdseed,-waitpkg,-sse4a,-avx512bw,+clflushopt,+xsave,-avx512vbmi2,-avx512vl,-avx512cd,+avx,-vaes,+rtm,+fma,+bmi,+rdrnd,-mwaitx,+sse4.1,+sse4.2,+avx2,-wbnoinvd,+sse,+lzcnt,+pclmul,-prefetchwt1,+f16c,+ssse3,+sgx,-shstk,+cmov,-avx512vbmi,+movbe,+xsaveopt,-avx512dq,+adx,-avx512pf,+sse3" }
+attributes #0 = { uwtable "target-cpu"="skylake" "target-features"="+sse2,+cx16,+sahf,-tbm,-avx512ifma,-sha,-gfni,-fma4,-vpclmulqdq,+prfchw,+bmi2,-cldemote,+fsgsbase,+xsavec,+popcnt,+aes,-avx512bitalg,+xsaves,-avx512vnni,-avx512vpopcntdq,-clwb,-avx512f,-clzero,-pku,+mmx,-lwp,-rdpid,-xop,+rdseed,-waitpkg,-sse4a,-avx512bw,+clflushopt,+xsave,-avx512vbmi2,-avx512vl,-avx512cd,+avx,-vaes,+rtm,+fma,+bmi,+rdrnd,-mwaitx,+sse4.1,+sse4.2,+avx2,-wbnoinvd,+sse,+lzcnt,+pclmul,+f16c,+ssse3,+sgx,-shstk,+cmov,-avx512vbmi,+movbe,+xsaveopt,-avx512dq,+adx,-avx512pf,+sse3" }
 
 !0 = !{i32 0, i32 2147483646}
 !1 = !{}

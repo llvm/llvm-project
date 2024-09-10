@@ -39,6 +39,7 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCSectionWasm.h"
 #include "llvm/MC/MCStreamer.h"
@@ -62,7 +63,7 @@ MVT WebAssemblyAsmPrinter::getRegType(unsigned RegNo) const {
   const TargetRegisterInfo *TRI = Subtarget->getRegisterInfo();
   const TargetRegisterClass *TRC = MRI->getRegClass(RegNo);
   for (MVT T : {MVT::i32, MVT::i64, MVT::f32, MVT::f64, MVT::v16i8, MVT::v8i16,
-                MVT::v4i32, MVT::v2i64, MVT::v4f32, MVT::v2f64})
+                MVT::v4i32, MVT::v2i64, MVT::v4f32, MVT::v2f64, MVT::v8f16})
     if (TRI->isTypeLegalForClass(*TRC, T))
       return T;
   LLVM_DEBUG(errs() << "Unknown type for register number: " << RegNo);
@@ -125,8 +126,11 @@ static char getInvokeSig(wasm::ValType VT) {
     return 'F';
   case wasm::ValType::EXTERNREF:
     return 'X';
+  case wasm::ValType::EXNREF:
+    return 'E';
+  default:
+    llvm_unreachable("Unhandled wasm::ValType enum");
   }
-  llvm_unreachable("Unhandled wasm::ValType enum");
 }
 
 // Given the wasm signature, generate the invoke name in the format JS glue code
@@ -192,7 +196,7 @@ void WebAssemblyAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
       // can actually calculate the legal VTs.
       const WebAssemblyTargetLowering &TLI = *Subtarget->getTargetLowering();
       computeLegalValueVTs(TLI, GV->getParent()->getContext(),
-                           GV->getParent()->getDataLayout(), GlobalVT, VTs);
+                           GV->getDataLayout(), GlobalVT, VTs);
     }
     WebAssembly::wasmSymbolSetType(Sym, GlobalVT, VTs);
   }
@@ -263,12 +267,12 @@ MCSymbol *WebAssemblyAsmPrinter::getOrCreateWasmSymbol(StringRef Name) {
     Params.push_back(AddrType);
   } else { // Function symbols
     WasmSym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
-    getLibcallSignature(Subtarget, Name, Returns, Params);
+    WebAssembly::getLibcallSignature(Subtarget, Name, Returns, Params);
   }
-  auto Signature = std::make_unique<wasm::WasmSignature>(std::move(Returns),
-                                                         std::move(Params));
-  WasmSym->setSignature(Signature.get());
-  addSignature(std::move(Signature));
+  auto Signature = OutContext.createWasmSignature();
+  Signature->Returns = std::move(Returns);
+  Signature->Params = std::move(Params);
+  WasmSym->setSignature(Signature);
 
   return WasmSym;
 }
@@ -316,8 +320,8 @@ void WebAssemblyAsmPrinter::emitDecls(const Module &M) {
     // Emit .globaltype, .tagtype, or .tabletype declarations for extern
     // declarations, i.e. those that have only been declared (but not defined)
     // in the current module
-    auto Sym = cast<MCSymbolWasm>(It.getValue());
-    if (!Sym->isDefined())
+    auto Sym = cast_or_null<MCSymbolWasm>(It.getValue().Symbol);
+    if (Sym && !Sym->isDefined())
       emitSymbolType(Sym);
   }
 
@@ -337,11 +341,11 @@ void WebAssemblyAsmPrinter::emitDecls(const Module &M) {
     // and thus also contain a signature, but we need to get the signature
     // anyway here in case it is an invoke that has not yet been created. We
     // will discard it later if it turns out not to be necessary.
-    auto Signature = signatureFromMVTs(Results, Params);
+    auto Signature = signatureFromMVTs(OutContext, Results, Params);
     bool InvokeDetected = false;
     auto *Sym = getMCSymbolForFunction(
         &F, WebAssembly::WasmEnableEmEH || WebAssembly::WasmEnableEmSjLj,
-        Signature.get(), InvokeDetected);
+        Signature, InvokeDetected);
 
     // Multiple functions can be mapped to the same invoke symbol. For
     // example, two IR functions '__invoke_void_i8*' and '__invoke_void_i32'
@@ -352,11 +356,7 @@ void WebAssemblyAsmPrinter::emitDecls(const Module &M) {
 
     Sym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
     if (!Sym->getSignature()) {
-      Sym->setSignature(Signature.get());
-      addSignature(std::move(Signature));
-    } else {
-      // This symbol has already been created and had a signature. Discard it.
-      Signature.reset();
+      Sym->setSignature(Signature);
     }
 
     getTargetStreamer()->emitFunctionType(Sym);
@@ -364,7 +364,7 @@ void WebAssemblyAsmPrinter::emitDecls(const Module &M) {
     if (F.hasFnAttribute("wasm-import-module")) {
       StringRef Name =
           F.getFnAttribute("wasm-import-module").getValueAsString();
-      Sym->setImportModule(storeName(Name));
+      Sym->setImportModule(OutContext.allocateString(Name));
       getTargetStreamer()->emitImportModule(Sym, Name);
     }
     if (F.hasFnAttribute("wasm-import-name")) {
@@ -374,14 +374,14 @@ void WebAssemblyAsmPrinter::emitDecls(const Module &M) {
           InvokeDetected
               ? Sym->getName()
               : F.getFnAttribute("wasm-import-name").getValueAsString();
-      Sym->setImportName(storeName(Name));
+      Sym->setImportName(OutContext.allocateString(Name));
       getTargetStreamer()->emitImportName(Sym, Name);
     }
 
     if (F.hasFnAttribute("wasm-export-name")) {
       auto *Sym = cast<MCSymbolWasm>(getSymbol(&F));
       StringRef Name = F.getFnAttribute("wasm-export-name").getValueAsString();
-      Sym->setExportName(storeName(Name));
+      Sym->setExportName(OutContext.allocateString(Name));
       getTargetStreamer()->emitExportName(Sym, Name);
     }
   }
@@ -617,10 +617,9 @@ void WebAssemblyAsmPrinter::emitFunctionBodyStart() {
   SmallVector<MVT, 4> ParamVTs;
   computeSignatureVTs(F.getFunctionType(), &F, F, TM, ParamVTs, ResultVTs);
 
-  auto Signature = signatureFromMVTs(ResultVTs, ParamVTs);
+  auto Signature = signatureFromMVTs(OutContext, ResultVTs, ParamVTs);
   auto *WasmSym = cast<MCSymbolWasm>(CurrentFnSym);
-  WasmSym->setSignature(Signature.get());
-  addSignature(std::move(Signature));
+  WasmSym->setSignature(Signature);
   WasmSym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
 
   getTargetStreamer()->emitFunctionType(WasmSym);
@@ -666,6 +665,8 @@ void WebAssemblyAsmPrinter::emitInstruction(const MachineInstr *MI) {
   case WebAssembly::ARGUMENT_v4f32_S:
   case WebAssembly::ARGUMENT_v2f64:
   case WebAssembly::ARGUMENT_v2f64_S:
+  case WebAssembly::ARGUMENT_v8f16:
+  case WebAssembly::ARGUMENT_v8f16_S:
     // These represent values which are live into the function entry, so there's
     // no instruction to emit.
     break;

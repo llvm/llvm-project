@@ -585,6 +585,11 @@ TEST(CommandLineTest, AddToAllSubCommands) {
                            cl::init(false));
   StackSubCommand SC2("sc2", "Second subcommand");
 
+  EXPECT_TRUE(cl::SubCommand::getTopLevel().OptionsMap.contains("everywhere"));
+  EXPECT_TRUE(cl::SubCommand::getAll().OptionsMap.contains("everywhere"));
+  EXPECT_TRUE(SC1.OptionsMap.contains("everywhere"));
+  EXPECT_TRUE(SC2.OptionsMap.contains("everywhere"));
+
   const char *args[] = {"prog", "-everywhere"};
   const char *args2[] = {"prog", "sc1", "-everywhere"};
   const char *args3[] = {"prog", "sc2", "-everywhere"};
@@ -1112,7 +1117,6 @@ TEST(CommandLineTest, BadResponseFile) {
   ASSERT_STREQ(Argv[0], "clang");
   ASSERT_STREQ(Argv[1], AFileExp.c_str());
 
-#if !defined(_AIX) && !defined(__MVS__)
   std::string ADirExp = std::string("@") + std::string(ADir.path());
   Argv = {"clang", ADirExp.c_str()};
   Res = cl::ExpandResponseFiles(Saver, cl::TokenizeGNUCommandLine, Argv);
@@ -1120,7 +1124,6 @@ TEST(CommandLineTest, BadResponseFile) {
   ASSERT_EQ(2U, Argv.size());
   ASSERT_STREQ(Argv[0], "clang");
   ASSERT_STREQ(Argv[1], ADirExp.c_str());
-#endif
 }
 
 TEST(CommandLineTest, SetDefaultValue) {

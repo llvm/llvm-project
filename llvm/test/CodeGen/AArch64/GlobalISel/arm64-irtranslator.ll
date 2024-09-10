@@ -1385,6 +1385,16 @@ define i32 @test_intrinsic_lrint(float %a) {
   ret i32 %res
 }
 
+declare i32 @llvm.llrint.i32.f32(float)
+define i32 @test_intrinsic_llrint(float %a) {
+; CHECK-LABEL: name: test_intrinsic_llrint
+; CHECK: [[A:%[0-9]+]]:_(s32) = COPY $s0
+; CHECK: [[RES:%[0-9]+]]:_(s32) = G_INTRINSIC_LLRINT [[A]]
+; CHECK: $w0 = COPY [[RES]]
+  %res = call i32 @llvm.llrint.i32.f32(float %a)
+  ret i32 %res
+}
+
 declare i32 @llvm.ctlz.i32(i32, i1)
 define i32 @test_ctlz_intrinsic_zero_not_undef(i32 %a) {
 ; CHECK-LABEL: name: test_ctlz_intrinsic_zero_not_undef
@@ -1538,7 +1548,8 @@ define <2 x i32> @test_insertelement(<2 x i32> %vec, i32 %elt, i32 %idx){
 ; CHECK: [[VEC:%[0-9]+]]:_(<2 x s32>) = COPY $d0
 ; CHECK: [[ELT:%[0-9]+]]:_(s32) = COPY $w0
 ; CHECK: [[IDX:%[0-9]+]]:_(s32) = COPY $w1
-; CHECK: [[RES:%[0-9]+]]:_(<2 x s32>) = G_INSERT_VECTOR_ELT [[VEC]], [[ELT]](s32), [[IDX]](s32)
+; CHECK: [[IDX2:%[0-9]+]]:_(s64) = G_ZEXT [[IDX]]
+; CHECK: [[RES:%[0-9]+]]:_(<2 x s32>) = G_INSERT_VECTOR_ELT [[VEC]], [[ELT]](s32), [[IDX2]](s64)
 ; CHECK: $d0 = COPY [[RES]](<2 x s32>)
   %res = insertelement <2 x i32> %vec, i32 %elt, i32 %idx
   ret <2 x i32> %res
@@ -2299,6 +2310,62 @@ define float @test_sin_f32(float %x) {
   ; CHECK-LABEL: name:            test_sin_f32
   ; CHECK: %{{[0-9]+}}:_(s32) = G_FSIN %{{[0-9]+}}
   %y = call float @llvm.sin.f32(float %x)
+  ret float %y
+}
+
+declare float @llvm.tan.f32(float)
+define float @test_tan_f32(float %x) {
+  ; CHECK-LABEL: name:            test_tan_f32
+  ; CHECK: %{{[0-9]+}}:_(s32) = G_FTAN %{{[0-9]+}}
+  %y = call float @llvm.tan.f32(float %x)
+  ret float %y
+}
+
+declare float @llvm.acos.f32(float)
+define float @test_acos_f32(float %x) {
+  ; CHECK-LABEL: name:            test_acos_f32
+  ; CHECK: %{{[0-9]+}}:_(s32) = G_FACOS %{{[0-9]+}}
+  %y = call float @llvm.acos.f32(float %x)
+  ret float %y
+}
+
+declare float @llvm.asin.f32(float)
+define float @test_asin_f32(float %x) {
+  ; CHECK-LABEL: name:            test_asin_f32
+  ; CHECK: %{{[0-9]+}}:_(s32) = G_FASIN %{{[0-9]+}}
+  %y = call float @llvm.asin.f32(float %x)
+  ret float %y
+}
+
+declare float @llvm.atan.f32(float)
+define float @test_atan_f32(float %x) {
+  ; CHECK-LABEL: name:            test_atan_f32
+  ; CHECK: %{{[0-9]+}}:_(s32) = G_FATAN %{{[0-9]+}}
+  %y = call float @llvm.atan.f32(float %x)
+  ret float %y
+}
+
+declare float @llvm.cosh.f32(float)
+define float @test_cosh_f32(float %x) {
+  ; CHECK-LABEL: name:            test_cosh_f32
+  ; CHECK: %{{[0-9]+}}:_(s32) = G_FCOSH %{{[0-9]+}}
+  %y = call float @llvm.cosh.f32(float %x)
+  ret float %y
+}
+
+declare float @llvm.sinh.f32(float)
+define float @test_sinh_f32(float %x) {
+  ; CHECK-LABEL: name:            test_sinh_f32
+  ; CHECK: %{{[0-9]+}}:_(s32) = G_FSINH %{{[0-9]+}}
+  %y = call float @llvm.sinh.f32(float %x)
+  ret float %y
+}
+
+declare float @llvm.tanh.f32(float)
+define float @test_tanh_f32(float %x) {
+  ; CHECK-LABEL: name:            test_tanh_f32
+  ; CHECK: %{{[0-9]+}}:_(s32) = G_FTANH %{{[0-9]+}}
+  %y = call float @llvm.tanh.f32(float %x)
   ret float %y
 }
 

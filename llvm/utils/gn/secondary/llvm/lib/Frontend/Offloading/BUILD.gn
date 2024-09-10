@@ -5,5 +5,8 @@ static_library("Offloading") {
     "//llvm/lib/Support",
     "//llvm/lib/Transforms/Utils",
   ]
-  sources = [ "Utility.cpp" ]
+  sources = [
+    "OffloadWrapper.cpp",
+    "Utility.cpp",
+  ]
 }

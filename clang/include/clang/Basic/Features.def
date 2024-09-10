@@ -54,6 +54,8 @@ FEATURE(memtag_globals,
 FEATURE(xray_instrument, LangOpts.XRayInstrument)
 FEATURE(undefined_behavior_sanitizer,
         LangOpts.Sanitize.hasOneOf(SanitizerKind::Undefined))
+FEATURE(realtime_sanitizer,
+        LangOpts.Sanitize.has(SanitizerKind::Realtime))
 FEATURE(coverage_sanitizer, LangOpts.SanitizeCoverage)
 FEATURE(assume_nonnull, true)
 FEATURE(attribute_analyzer_noreturn, true)
@@ -94,14 +96,30 @@ EXTENSION(define_target_os_macros,
 FEATURE(enumerator_attributes, true)
 FEATURE(nullability, true)
 FEATURE(nullability_on_arrays, true)
+FEATURE(nullability_on_classes, true)
 FEATURE(nullability_nullable_result, true)
+FEATURE(numerical_stability_sanitizer, LangOpts.Sanitize.has(SanitizerKind::NumericalStability))
 FEATURE(memory_sanitizer,
         LangOpts.Sanitize.hasOneOf(SanitizerKind::Memory |
                                    SanitizerKind::KernelMemory))
 FEATURE(thread_sanitizer, LangOpts.Sanitize.has(SanitizerKind::Thread))
 FEATURE(dataflow_sanitizer, LangOpts.Sanitize.has(SanitizerKind::DataFlow))
 FEATURE(scudo, LangOpts.Sanitize.hasOneOf(SanitizerKind::Scudo))
-FEATURE(swiftasynccc,
+FEATURE(ptrauth_intrinsics, LangOpts.PointerAuthIntrinsics)
+FEATURE(ptrauth_calls, LangOpts.PointerAuthCalls)
+FEATURE(ptrauth_returns, LangOpts.PointerAuthReturns)
+FEATURE(ptrauth_vtable_pointer_address_discrimination, LangOpts.PointerAuthVTPtrAddressDiscrimination)
+FEATURE(ptrauth_vtable_pointer_type_discrimination, LangOpts.PointerAuthVTPtrTypeDiscrimination)
+FEATURE(ptrauth_type_info_vtable_pointer_discrimination, LangOpts.PointerAuthTypeInfoVTPtrDiscrimination)
+FEATURE(ptrauth_member_function_pointer_type_discrimination, LangOpts.PointerAuthCalls)
+FEATURE(ptrauth_function_pointer_type_discrimination, LangOpts.PointerAuthFunctionTypeDiscrimination)
+FEATURE(ptrauth_indirect_gotos, LangOpts.PointerAuthIndirectGotos)
+FEATURE(ptrauth_init_fini, LangOpts.PointerAuthInitFini)
+FEATURE(ptrauth_init_fini_address_discrimination, LangOpts.PointerAuthInitFiniAddressDiscrimination)
+EXTENSION(swiftcc,
+  PP.getTargetInfo().checkCallingConvention(CC_Swift) ==
+  clang::TargetInfo::CCCR_OK)
+EXTENSION(swiftasynccc,
   PP.getTargetInfo().checkCallingConvention(CC_SwiftAsync) ==
   clang::TargetInfo::CCCR_OK)
 FEATURE(pragma_stdc_cx_limited_range, true)
@@ -257,6 +275,7 @@ EXTENSION(cxx_defaulted_functions, LangOpts.CPlusPlus)
 EXTENSION(cxx_deleted_functions, LangOpts.CPlusPlus)
 EXTENSION(cxx_explicit_conversions, LangOpts.CPlusPlus)
 EXTENSION(cxx_inline_namespaces, LangOpts.CPlusPlus)
+EXTENSION(cxx_lambdas, LangOpts.CPlusPlus)
 EXTENSION(cxx_local_type_template_args, LangOpts.CPlusPlus)
 EXTENSION(cxx_nonstatic_member_init, LangOpts.CPlusPlus)
 EXTENSION(cxx_override_control, LangOpts.CPlusPlus)
@@ -269,6 +288,10 @@ EXTENSION(cxx_fixed_enum, true)
 EXTENSION(cxx_binary_literals, true)
 EXTENSION(cxx_init_captures, LangOpts.CPlusPlus11)
 EXTENSION(cxx_variable_templates, LangOpts.CPlusPlus)
+//C++20
+EXTENSION(cxx_generalized_nttp, LangOpts.CPlusPlus20)
+//C++23
+EXTENSION(cxx_explicit_this_parameter, LangOpts.CPlusPlus23)
 // Miscellaneous language extensions
 EXTENSION(overloadable_unmarked, true)
 EXTENSION(pragma_clang_attribute_namespaces, true)

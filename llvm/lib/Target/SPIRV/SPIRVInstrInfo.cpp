@@ -40,6 +40,17 @@ bool SPIRVInstrInfo::isConstantInstr(const MachineInstr &MI) const {
   case SPIRV::OpSpecConstantComposite:
   case SPIRV::OpSpecConstantOp:
   case SPIRV::OpUndef:
+  case SPIRV::OpConstantFunctionPointerINTEL:
+    return true;
+  default:
+    return false;
+  }
+}
+
+bool SPIRVInstrInfo::isInlineAsmDefInstr(const MachineInstr &MI) const {
+  switch (MI.getOpcode()) {
+  case SPIRV::OpAsmTargetINTEL:
+  case SPIRV::OpAsmINTEL:
     return true;
   default:
     return false;
@@ -230,7 +241,8 @@ unsigned SPIRVInstrInfo::insertBranch(
 void SPIRVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator I,
                                  const DebugLoc &DL, MCRegister DestReg,
-                                 MCRegister SrcReg, bool KillSrc) const {
+                                 MCRegister SrcReg, bool KillSrc,
+                                 bool RenamableDest, bool RenamableSrc) const {
   // Actually we don't need this COPY instruction. However if we do nothing with
   // it, post RA pseudo instrs expansion just removes it and we get the code
   // with undef registers. Therefore, we need to replace all uses of dst with
@@ -247,7 +259,7 @@ void SPIRVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 bool SPIRVInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   if (MI.getOpcode() == SPIRV::GET_ID || MI.getOpcode() == SPIRV::GET_fID ||
       MI.getOpcode() == SPIRV::GET_pID || MI.getOpcode() == SPIRV::GET_vfID ||
-      MI.getOpcode() == SPIRV::GET_vID) {
+      MI.getOpcode() == SPIRV::GET_vID || MI.getOpcode() == SPIRV::GET_vpID) {
     auto &MRI = MI.getMF()->getRegInfo();
     MRI.replaceRegWith(MI.getOperand(0).getReg(), MI.getOperand(1).getReg());
     MI.eraseFromParent();

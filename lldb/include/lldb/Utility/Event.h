@@ -48,6 +48,17 @@ public:
   virtual void Dump(Stream *s) const;
 
 private:
+  /// This will be queried for a Broadcaster with a primary and some secondary
+  /// listeners after the primary listener pulled the event from the event queue
+  /// and ran its DoOnRemoval, right before the event is delivered.
+  /// If it returns true, the event will also be forwarded to the secondary
+  /// listeners, and if false, event propagation stops at the primary listener.
+  /// Some broadcasters (particularly the Process broadcaster) fetch events on
+  /// a private Listener, and then forward the event to the Public Listeners
+  /// after some processing.  The Process broadcaster does not want to forward
+  /// to the secondary listeners at the private processing stage.
+  virtual bool ForwardEventToPendingListeners(Event *event_ptr) { return true; }
+
   virtual void DoOnRemoval(Event *event_ptr) {}
 
   EventData(const EventData &) = delete;
@@ -60,11 +71,7 @@ public:
   // Constructors
   EventDataBytes();
 
-  EventDataBytes(const char *cstr);
-
   EventDataBytes(llvm::StringRef str);
-
-  EventDataBytes(const void *src, size_t src_len);
 
   ~EventDataBytes() override;
 
@@ -76,12 +83,6 @@ public:
   const void *GetBytes() const;
 
   size_t GetByteSize() const;
-
-  void SetBytes(const void *src, size_t src_len);
-
-  void SwapBytes(std::string &new_bytes);
-
-  void SetBytesFromCString(const char *cstr);
 
   // Static functions
   static const EventDataBytes *GetEventDataFromEvent(const Event *event_ptr);

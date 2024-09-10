@@ -9,18 +9,9 @@
 // RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify %t/d.cpp \
 // RUN:     -fprebuilt-module-path=%t
 //
-// RUN: %clang_cc1 -std=c++20 -emit-module-interface %t/e.cppm -o %t/e.pcm
-// RUN: %clang_cc1 -std=c++20 -emit-module-interface %t/f.cppm -o %t/f.pcm
-// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify %t/g.cpp \
-// RUN:     -fprebuilt-module-path=%t
-//
 // RUN: %clang_cc1 -std=c++20 -emit-module-interface %t/h.cppm \
 // RUN:     -fprebuilt-module-path=%t -o %t/h.pcm
-// RUN: %clang_cc1 -std=c++20 -emit-module-interface %t/i.cppm \
-// RUN:     -fprebuilt-module-path=%t -o %t/i.pcm
 // RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify %t/j.cpp \
-// RUN:     -fprebuilt-module-path=%t
-// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify %t/k.cpp \
 // RUN:     -fprebuilt-module-path=%t
 
 //--- a.cppm
@@ -53,46 +44,13 @@ void use() {
            // expected-note@* {{but in 'a' found a different body}}
 }
 
-//--- foo.h
-void foo() {
-
-}
-
-//--- bar.h
-void bar();
-void foo() {
-    bar();
-}
-
-//--- e.cppm
-module;
-#include "foo.h"
-export module e;
-export using ::foo;
-
-//--- f.cppm
-module;
-#include "bar.h"
-export module f;
-export using ::foo;
-
-//--- g.cpp
-import e;
-import f;
-void use() {
-    foo(); // expected-error@* {{'foo' has different definitions in different modules;}}
-           // expected-note@* {{but in 'e.<global>' found a different body}}
-}
+// expected-error@a.cppm:* {{declaration 'foo' attached to named module 'a' can't be attached to other modules}}
+// expected-note@b.cppm:* {{}}
 
 //--- h.cppm
 export module h;
 export import a;
 export import b;
-
-//--- i.cppm
-export module i;
-export import e;
-export import f;
 
 //--- j.cpp
 import h;
@@ -101,10 +59,5 @@ void use() {
            // expected-note@* {{but in 'a' found a different body}}
 }
 
-//--- k.cpp
-import i;
-void use() {
-    foo(); // expected-error@* {{'foo' has different definitions in different modules;}}
-           // expected-note@* {{but in 'e.<global>' found a different body}}
-}
-
+// expected-error@a.cppm:* {{declaration 'foo' attached to named module 'a' can't be attached to other modules}}
+// expected-note@b.cppm:* {{}}

@@ -51,7 +51,7 @@ class MaskedData_SyntheticChildrenProvider:
             return None
         if index > self.num_children():
             return None
-        if self.valobj.IsValid() == False:
+        if not self.valobj.IsValid():
             return None
         if index == 0:
             return self.valobj.GetChildMemberWithName("value")

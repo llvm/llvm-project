@@ -33,11 +33,11 @@ public:
 
   ~LibcxxStdUnorderedMapSyntheticFrontEnd() override = default;
 
-  size_t CalculateNumChildren() override;
+  llvm::Expected<uint32_t> CalculateNumChildren() override;
 
-  lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
+  lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 
-  bool Update() override;
+  lldb::ChildCacheState Update() override;
 
   bool MightHaveChildren() override;
 
@@ -51,6 +51,30 @@ private:
   ValueObject *m_next_element = nullptr;
   std::vector<std::pair<ValueObject *, uint64_t>> m_elements_cache;
 };
+
+class LibCxxUnorderedMapIteratorSyntheticFrontEnd
+    : public SyntheticChildrenFrontEnd {
+public:
+  LibCxxUnorderedMapIteratorSyntheticFrontEnd(lldb::ValueObjectSP valobj_sp);
+
+  ~LibCxxUnorderedMapIteratorSyntheticFrontEnd() override = default;
+
+  llvm::Expected<uint32_t> CalculateNumChildren() override;
+
+  lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
+
+  lldb::ChildCacheState Update() override;
+
+  bool MightHaveChildren() override;
+
+  size_t GetIndexOfChildWithName(ConstString name) override;
+
+private:
+  lldb::ValueObjectSP m_pair_sp; ///< ValueObject for the key/value pair
+                                 ///< that the iterator currently points
+                                 ///< to.
+};
+
 } // namespace formatters
 } // namespace lldb_private
 
@@ -62,8 +86,8 @@ lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEnd::
     Update();
 }
 
-size_t lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEnd::
-    CalculateNumChildren() {
+llvm::Expected<uint32_t> lldb_private::formatters::
+    LibcxxStdUnorderedMapSyntheticFrontEnd::CalculateNumChildren() {
   return m_num_elements;
 }
 
@@ -93,8 +117,8 @@ static bool isUnorderedMap(ConstString type_name) {
 }
 
 lldb::ValueObjectSP lldb_private::formatters::
-    LibcxxStdUnorderedMapSyntheticFrontEnd::GetChildAtIndex(size_t idx) {
-  if (idx >= CalculateNumChildren())
+    LibcxxStdUnorderedMapSyntheticFrontEnd::GetChildAtIndex(uint32_t idx) {
+  if (idx >= CalculateNumChildrenIgnoringErrors())
     return lldb::ValueObjectSP();
   if (m_tree == nullptr)
     return lldb::ValueObjectSP();
@@ -116,25 +140,10 @@ lldb::ValueObjectSP lldb_private::formatters::
         if (!p1_sp)
           return nullptr;
 
-        ValueObjectSP first_sp = nullptr;
-        switch (p1_sp->GetCompilerType().GetNumDirectBaseClasses()) {
-        case 1:
-          // Assume a pre llvm r300140 __compressed_pair implementation:
-          first_sp = p1_sp->GetChildMemberWithName("__first_");
-          break;
-        case 2: {
-          // Assume a post llvm r300140 __compressed_pair implementation:
-          ValueObjectSP first_elem_parent_sp =
-            p1_sp->GetChildAtIndex(0);
-          first_sp = p1_sp->GetChildMemberWithName("__value_");
-          break;
-        }
-        default:
-          return nullptr;
-        }
-
+        ValueObjectSP first_sp = GetFirstValueOfLibCXXCompressedPair(*p1_sp);
         if (!first_sp)
           return nullptr;
+
         m_element_type = first_sp->GetCompilerType();
         m_element_type = m_element_type.GetTypeTemplateArgument(0);
         m_element_type = m_element_type.GetPointeeType();
@@ -208,48 +217,41 @@ lldb::ValueObjectSP lldb_private::formatters::
                                    m_element_type);
 }
 
-bool lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEnd::
-    Update() {
+lldb::ChildCacheState
+lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEnd::Update() {
   m_num_elements = 0;
   m_next_element = nullptr;
   m_elements_cache.clear();
   ValueObjectSP table_sp = m_backend.GetChildMemberWithName("__table_");
   if (!table_sp)
-    return false;
+    return lldb::ChildCacheState::eRefetch;
 
   ValueObjectSP p2_sp = table_sp->GetChildMemberWithName("__p2_");
-  ValueObjectSP num_elements_sp = nullptr;
-  llvm::SmallVector<llvm::StringRef, 3> next_path;
-  switch (p2_sp->GetCompilerType().GetNumDirectBaseClasses()) {
-  case 1:
-    // Assume a pre llvm r300140 __compressed_pair implementation:
-    num_elements_sp = p2_sp->GetChildMemberWithName("__first_");
-    next_path.append({"__p1_", "__first_", "__next_"});
-    break;
-  case 2: {
-    // Assume a post llvm r300140 __compressed_pair implementation:
-    ValueObjectSP first_elem_parent = p2_sp->GetChildAtIndex(0);
-    num_elements_sp = first_elem_parent->GetChildMemberWithName("__value_");
-    next_path.append({"__p1_", "__value_", "__next_"});
-    break;
-  }
-  default:
-    return false;
-  }
+  if (!p2_sp)
+    return lldb::ChildCacheState::eRefetch;
 
+  ValueObjectSP num_elements_sp = GetFirstValueOfLibCXXCompressedPair(*p2_sp);
   if (!num_elements_sp)
-    return false;
+    return lldb::ChildCacheState::eRefetch;
 
-  m_tree = table_sp->GetChildAtNamePath(next_path).get();
+  ValueObjectSP p1_sp = table_sp->GetChildMemberWithName("__p1_");
+  if (!p1_sp)
+    return lldb::ChildCacheState::eRefetch;
+
+  ValueObjectSP value_sp = GetFirstValueOfLibCXXCompressedPair(*p1_sp);
+  if (!value_sp)
+    return lldb::ChildCacheState::eRefetch;
+
+  m_tree = value_sp->GetChildMemberWithName("__next_").get();
   if (m_tree == nullptr)
-    return false;
+    return lldb::ChildCacheState::eRefetch;
 
   m_num_elements = num_elements_sp->GetValueAsUnsigned(0);
 
   if (m_num_elements > 0)
-    m_next_element =
-        table_sp->GetChildAtNamePath(next_path).get();
-  return false;
+    m_next_element = m_tree;
+
+  return lldb::ChildCacheState::eRefetch;
 }
 
 bool lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEnd::
@@ -266,5 +268,121 @@ SyntheticChildrenFrontEnd *
 lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEndCreator(
     CXXSyntheticChildren *, lldb::ValueObjectSP valobj_sp) {
   return (valobj_sp ? new LibcxxStdUnorderedMapSyntheticFrontEnd(valobj_sp)
+                    : nullptr);
+}
+
+lldb_private::formatters::LibCxxUnorderedMapIteratorSyntheticFrontEnd::
+    LibCxxUnorderedMapIteratorSyntheticFrontEnd(lldb::ValueObjectSP valobj_sp)
+    : SyntheticChildrenFrontEnd(*valobj_sp) {
+  if (valobj_sp)
+    Update();
+}
+
+lldb::ChildCacheState lldb_private::formatters::
+    LibCxxUnorderedMapIteratorSyntheticFrontEnd::Update() {
+  m_pair_sp.reset();
+
+  ValueObjectSP valobj_sp = m_backend.GetSP();
+  if (!valobj_sp)
+    return lldb::ChildCacheState::eRefetch;
+
+  TargetSP target_sp(valobj_sp->GetTargetSP());
+
+  if (!target_sp)
+    return lldb::ChildCacheState::eRefetch;
+
+  // Get the unordered_map::iterator
+  // m_backend is an 'unordered_map::iterator', aka a
+  // '__hash_map_iterator<__hash_table::iterator>'
+  //
+  // __hash_map_iterator::__i_ is a __hash_table::iterator (aka
+  // __hash_iterator<__node_pointer>)
+  auto hash_iter_sp = valobj_sp->GetChildMemberWithName("__i_");
+  if (!hash_iter_sp)
+    return lldb::ChildCacheState::eRefetch;
+
+  // Type is '__hash_iterator<__node_pointer>'
+  auto hash_iter_type = hash_iter_sp->GetCompilerType();
+  if (!hash_iter_type.IsValid())
+    return lldb::ChildCacheState::eRefetch;
+
+  // Type is '__node_pointer'
+  auto node_pointer_type = hash_iter_type.GetTypeTemplateArgument(0);
+  if (!node_pointer_type.IsValid())
+    return lldb::ChildCacheState::eRefetch;
+
+  // Cast the __hash_iterator to a __node_pointer (which stores our key/value
+  // pair)
+  auto hash_node_sp = hash_iter_sp->Cast(node_pointer_type);
+  if (!hash_node_sp)
+    return lldb::ChildCacheState::eRefetch;
+
+  auto key_value_sp = hash_node_sp->GetChildMemberWithName("__value_");
+  if (!key_value_sp) {
+    // clang-format off
+    // Since D101206 (ba79fb2e1f), libc++ wraps the `__value_` in an
+    // anonymous union.
+    // Child 0: __hash_node_base base class
+    // Child 1: __hash_
+    // Child 2: anonymous union
+    // clang-format on
+    auto anon_union_sp = hash_node_sp->GetChildAtIndex(2);
+    if (!anon_union_sp)
+      return lldb::ChildCacheState::eRefetch;
+
+    key_value_sp = anon_union_sp->GetChildMemberWithName("__value_");
+    if (!key_value_sp)
+      return lldb::ChildCacheState::eRefetch;
+  }
+
+  // Create the synthetic child, which is a pair where the key and value can be
+  // retrieved by querying the synthetic frontend for
+  // GetIndexOfChildWithName("first") and GetIndexOfChildWithName("second")
+  // respectively.
+  //
+  // std::unordered_map stores the actual key/value pair in
+  // __hash_value_type::__cc_ (or previously __cc).
+  auto potential_child_sp = key_value_sp->Clone(ConstString("pair"));
+  if (potential_child_sp)
+    if (potential_child_sp->GetNumChildrenIgnoringErrors() == 1)
+      if (auto child0_sp = potential_child_sp->GetChildAtIndex(0);
+          child0_sp->GetName() == "__cc_" || child0_sp->GetName() == "__cc")
+        potential_child_sp = child0_sp->Clone(ConstString("pair"));
+
+  m_pair_sp = potential_child_sp;
+
+  return lldb::ChildCacheState::eRefetch;
+}
+
+llvm::Expected<uint32_t> lldb_private::formatters::
+    LibCxxUnorderedMapIteratorSyntheticFrontEnd::CalculateNumChildren() {
+  return 2;
+}
+
+lldb::ValueObjectSP lldb_private::formatters::
+    LibCxxUnorderedMapIteratorSyntheticFrontEnd::GetChildAtIndex(uint32_t idx) {
+  if (m_pair_sp)
+    return m_pair_sp->GetChildAtIndex(idx);
+  return lldb::ValueObjectSP();
+}
+
+bool lldb_private::formatters::LibCxxUnorderedMapIteratorSyntheticFrontEnd::
+    MightHaveChildren() {
+  return true;
+}
+
+size_t lldb_private::formatters::LibCxxUnorderedMapIteratorSyntheticFrontEnd::
+    GetIndexOfChildWithName(ConstString name) {
+  if (name == "first")
+    return 0;
+  if (name == "second")
+    return 1;
+  return UINT32_MAX;
+}
+
+SyntheticChildrenFrontEnd *
+lldb_private::formatters::LibCxxUnorderedMapIteratorSyntheticFrontEndCreator(
+    CXXSyntheticChildren *, lldb::ValueObjectSP valobj_sp) {
+  return (valobj_sp ? new LibCxxUnorderedMapIteratorSyntheticFrontEnd(valobj_sp)
                     : nullptr);
 }

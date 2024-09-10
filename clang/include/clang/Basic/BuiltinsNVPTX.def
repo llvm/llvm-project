@@ -44,6 +44,7 @@
 #pragma push_macro("PTX42")
 #pragma push_macro("PTX60")
 #pragma push_macro("PTX61")
+#pragma push_macro("PTX62")
 #pragma push_macro("PTX63")
 #pragma push_macro("PTX64")
 #pragma push_macro("PTX65")
@@ -60,7 +61,11 @@
 #pragma push_macro("PTX81")
 #pragma push_macro("PTX82")
 #pragma push_macro("PTX83")
-#define PTX83 "ptx83"
+#pragma push_macro("PTX84")
+#pragma push_macro("PTX85")
+#define PTX85 "ptx85"
+#define PTX84 "ptx84|" PTX85
+#define PTX83 "ptx83|" PTX84
 #define PTX82 "ptx82|" PTX83
 #define PTX81 "ptx81|" PTX82
 #define PTX80 "ptx80|" PTX81
@@ -76,7 +81,8 @@
 #define PTX65 "ptx65|" PTX70
 #define PTX64 "ptx64|" PTX65
 #define PTX63 "ptx63|" PTX64
-#define PTX61 "ptx61|" PTX63
+#define PTX62 "ptx62|" PTX63
+#define PTX61 "ptx61|" PTX62
 #define PTX60 "ptx60|" PTX61
 #define PTX42 "ptx42|" PTX60
 
@@ -146,6 +152,7 @@ BUILTIN(__nvvm_read_ptx_sreg_lanemask_gt, "i", "nc")
 
 BUILTIN(__nvvm_read_ptx_sreg_clock, "i", "n")
 BUILTIN(__nvvm_read_ptx_sreg_clock64, "LLi", "n")
+BUILTIN(__nvvm_read_ptx_sreg_globaltimer, "LLi", "n")
 
 BUILTIN(__nvvm_read_ptx_sreg_pm0, "i", "n")
 BUILTIN(__nvvm_read_ptx_sreg_pm1, "i", "n")
@@ -155,6 +162,9 @@ BUILTIN(__nvvm_read_ptx_sreg_pm3, "i", "n")
 // MISC
 
 BUILTIN(__nvvm_prmt, "UiUiUiUi", "")
+BUILTIN(__nvvm_exit, "v", "r")
+BUILTIN(__nvvm_reflect, "UicC*", "r")
+TARGET_BUILTIN(__nvvm_nanosleep, "vUi", "n", AND(SM_70, PTX63))
 
 // Min Max
 
@@ -574,6 +584,21 @@ TARGET_BUILTIN(__nvvm_f2bf16_rz_relu, "yf", "", AND(SM_80,PTX70))
 
 TARGET_BUILTIN(__nvvm_f2tf32_rna, "ZUif", "", AND(SM_80,PTX70))
 
+TARGET_BUILTIN(__nvvm_ff_to_e4m3x2_rn, "sff", "", AND(SM_89,PTX81))
+TARGET_BUILTIN(__nvvm_ff_to_e4m3x2_rn_relu, "sff", "", AND(SM_89,PTX81))
+TARGET_BUILTIN(__nvvm_ff_to_e5m2x2_rn, "sff", "", AND(SM_89,PTX81))
+TARGET_BUILTIN(__nvvm_ff_to_e5m2x2_rn_relu, "sff", "", AND(SM_89,PTX81))
+
+TARGET_BUILTIN(__nvvm_f16x2_to_e4m3x2_rn, "sV2h", "", AND(SM_89,PTX81))
+TARGET_BUILTIN(__nvvm_f16x2_to_e4m3x2_rn_relu, "sV2h", "", AND(SM_89,PTX81))
+TARGET_BUILTIN(__nvvm_f16x2_to_e5m2x2_rn, "sV2h", "", AND(SM_89,PTX81))
+TARGET_BUILTIN(__nvvm_f16x2_to_e5m2x2_rn_relu, "sV2h", "", AND(SM_89,PTX81))
+
+TARGET_BUILTIN(__nvvm_e4m3x2_to_f16x2_rn, "V2hs", "", AND(SM_89,PTX81))
+TARGET_BUILTIN(__nvvm_e4m3x2_to_f16x2_rn_relu, "V2hs", "", AND(SM_89,PTX81))
+TARGET_BUILTIN(__nvvm_e5m2x2_to_f16x2_rn, "V2hs", "", AND(SM_89,PTX81))
+TARGET_BUILTIN(__nvvm_e5m2x2_to_f16x2_rn_relu, "V2hs", "", AND(SM_89,PTX81))
+
 // Bitcast
 
 BUILTIN(__nvvm_bitcast_f2i, "if", "")
@@ -631,6 +656,9 @@ TARGET_BUILTIN(__nvvm_vote_all_sync, "bUib", "", PTX60)
 TARGET_BUILTIN(__nvvm_vote_any_sync, "bUib", "", PTX60)
 TARGET_BUILTIN(__nvvm_vote_uni_sync, "bUib", "", PTX60)
 TARGET_BUILTIN(__nvvm_vote_ballot_sync, "UiUib", "", PTX60)
+
+// Mask
+TARGET_BUILTIN(__nvvm_activemask, "Ui", "n", PTX62)
 
 // Match
 TARGET_BUILTIN(__nvvm_match_any_sync_i32, "UiUiUi", "", AND(SM_70,PTX60))
@@ -816,6 +844,9 @@ BUILTIN(__nvvm_atom_xor_gen_ll, "LLiLLiD*LLi", "n")
 TARGET_BUILTIN(__nvvm_atom_cta_xor_gen_ll, "LLiLLiD*LLi", "n", SM_60)
 TARGET_BUILTIN(__nvvm_atom_sys_xor_gen_ll, "LLiLLiD*LLi", "n", SM_60)
 
+TARGET_BUILTIN(__nvvm_atom_cas_gen_us, "UsUsD*UsUs", "n", SM_70)
+TARGET_BUILTIN(__nvvm_atom_cta_cas_gen_us, "UsUsD*UsUs", "n", SM_70)
+TARGET_BUILTIN(__nvvm_atom_sys_cas_gen_us, "UsUsD*UsUs", "n", SM_70)
 BUILTIN(__nvvm_atom_cas_gen_i, "iiD*ii", "n")
 TARGET_BUILTIN(__nvvm_atom_cta_cas_gen_i, "iiD*ii", "n", SM_60)
 TARGET_BUILTIN(__nvvm_atom_sys_cas_gen_i, "iiD*ii", "n", SM_60)
@@ -1065,6 +1096,7 @@ TARGET_BUILTIN(__nvvm_getctarank_shared_cluster, "iv*3", "", AND(SM_90,PTX78))
 #pragma pop_macro("PTX42")
 #pragma pop_macro("PTX60")
 #pragma pop_macro("PTX61")
+#pragma pop_macro("PTX62")
 #pragma pop_macro("PTX63")
 #pragma pop_macro("PTX64")
 #pragma pop_macro("PTX65")
@@ -1081,3 +1113,5 @@ TARGET_BUILTIN(__nvvm_getctarank_shared_cluster, "iv*3", "", AND(SM_90,PTX78))
 #pragma pop_macro("PTX81")
 #pragma pop_macro("PTX82")
 #pragma pop_macro("PTX83")
+#pragma pop_macro("PTX84")
+#pragma pop_macro("PTX85")

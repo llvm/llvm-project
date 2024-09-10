@@ -620,6 +620,40 @@ func.func @vector_reduction(%laneid: index) -> (f32) {
 
 // -----
 
+// CHECK-PROP-LABEL: func @warp_distribute(
+//  CHECK-PROP-SAME:    %[[ID:[a-zA-Z0-9]+]]
+//  CHECK-PROP-SAME:    %[[SRC:[a-zA-Z0-9]+]]
+//  CHECK-PROP-SAME:    %[[DEST:[a-zA-Z0-9]+]]
+//       CHECK-PROP:    vector.warp_execute_on_lane_0(%[[ID]])[32]
+//  CHECK-PROP-NEXT:      "some_def"() : () -> vector<4096xf32>
+//  CHECK-PROP-NEXT:      %{{.*}} = vector.reduction
+//       CHECK-PROP:      %[[DEF:.*]] = arith.divf %{{.*}}, %{{.*}} : vector<1xf32>
+//   CHECK-PROP-NOT:      vector.warp_execute_on_lane_0
+//       CHECK-PROP:      scf.for
+//       CHECK-PROP:        %{{.*}} = arith.subf %{{.*}}, %[[DEF]] : vector<1xf32>
+func.func @warp_distribute(%arg0: index, %src: memref<128xf32>, %dest: memref<128xf32>){
+  %cst = arith.constant 0.000000e+00 : f32
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c128 = arith.constant 128 : index
+  %f0 = arith.constant 0.000000e+00 : f32
+  vector.warp_execute_on_lane_0(%arg0)[32]{
+    %cst_1 = arith.constant dense<2.621440e+05> : vector<1xf32>
+    %0 = "some_def"() : () -> (vector<4096xf32>)
+    %1 = vector.reduction <add>, %0, %cst : vector<4096xf32> into f32
+    %2 = vector.broadcast %1 : f32 to vector<1xf32>
+    %3 = arith.divf %2, %cst_1 : vector<1xf32>
+    scf.for %arg1 = %c0 to %c128 step %c1 {
+        %4 = vector.transfer_read %src[%arg1], %f0 {in_bounds = [true]} : memref<128xf32>, vector<1xf32>
+        %5 = arith.subf %4, %3 : vector<1xf32>
+        vector.transfer_write %5, %dest[%arg1] : vector<1xf32>, memref<128xf32>
+    }
+  }
+  return
+}
+
+// -----
+
 func.func @vector_reduction(%laneid: index, %m0: memref<4x2x32xf32>, %m1: memref<f32>) {
   %c0 = arith.constant 0: index
   %f0 = arith.constant 0.0: f32
@@ -895,6 +929,25 @@ func.func @vector_extractelement_1d(%laneid: index, %pos: index) -> (f32) {
     vector.yield %1 : f32
   }
   return %r : f32
+}
+
+// -----
+
+// Index-typed values cannot be shuffled at the moment.
+
+// CHECK-PROP-LABEL: func.func @vector_extractelement_1d_index(
+//       CHECK-PROP:   vector.warp_execute_on_lane_0(%{{.*}})[32] -> (index) {
+//       CHECK-PROP:     "some_def"
+//       CHECK-PROP:     vector.extractelement
+//       CHECK-PROP:     vector.yield {{.*}} : index
+//       CHECK-PROP:   }
+func.func @vector_extractelement_1d_index(%laneid: index, %pos: index) -> (index) {
+  %r = vector.warp_execute_on_lane_0(%laneid)[32] -> (index) {
+    %0 = "some_def"() : () -> (vector<96xindex>)
+    %1 = vector.extractelement %0[%pos : index] : vector<96xindex>
+    vector.yield %1 : index
+  }
+  return %r : index
 }
 
 // -----
@@ -1248,12 +1301,12 @@ func.func @vector_insert_2d_broadcast(%laneid: index) -> (vector<4x96xf32>) {
 
 // -----
 
-// Check that we don't propagate transfer_reads that have dependencies on
-// values inside the warp_execute_on_lane_0.
-// In this case, propagating would create transfer_read that depends on the
-// extractelment defined in the body.
+// Make sure that all operands of the transfer_read op are properly propagated.
+// The vector.extractelement op cannot be propagated because index-typed
+// shuffles are not supported at the moment.
 
-// CHECK-PROP-LABEL: func @transfer_read_no_prop(
+// CHECK-PROP: #[[$MAP:.*]] = affine_map<()[s0] -> (s0 * 2)>
+// CHECK-PROP-LABEL: func @transfer_read_prop_operands(
 //  CHECK-PROP-SAME:     %[[IN2:[^ :]*]]: vector<1x2xindex>,
 //  CHECK-PROP-SAME:     %[[AR1:[^ :]*]]: memref<1x4x2xi32>,
 //  CHECK-PROP-SAME:     %[[AR2:[^ :]*]]: memref<1x4x1024xf32>)
@@ -1264,10 +1317,11 @@ func.func @vector_insert_2d_broadcast(%laneid: index) -> (vector<4x96xf32>) {
 //       CHECK-PROP:     %[[EXTRACT:.*]] = vector.extract %[[GATHER]][0] : vector<64xi32> from vector<1x64xi32>
 //       CHECK-PROP:     %[[CAST:.*]] = arith.index_cast %[[EXTRACT]] : vector<64xi32> to vector<64xindex>
 //       CHECK-PROP:     %[[EXTRACTELT:.*]] = vector.extractelement %[[CAST]][{{.*}}: i32] : vector<64xindex>
-//       CHECK-PROP:     %[[TRANSFERREAD:.*]] = vector.transfer_read %[[AR2]][%[[C0]], %[[EXTRACTELT]], %[[C0]]],
-//       CHECK-PROP:     vector.yield %[[TRANSFERREAD]] : vector<64xf32>
-//       CHECK-PROP:   return %[[W]]
-func.func @transfer_read_no_prop(%in2: vector<1x2xindex>, %ar1 :  memref<1x4x2xi32>, %ar2 : memref<1x4x1024xf32>)-> vector<2xf32> {
+//       CHECK-PROP:     vector.yield %[[EXTRACTELT]] : index
+//       CHECK-PROP:   %[[APPLY:.*]] = affine.apply #[[$MAP]]()[%[[THREADID]]]
+//       CHECK-PROP:   %[[TRANSFERREAD:.*]] = vector.transfer_read %[[AR2]][%[[C0]], %[[W]], %[[APPLY]]],
+//       CHECK-PROP:   return %[[TRANSFERREAD]]
+func.func @transfer_read_prop_operands(%in2: vector<1x2xindex>, %ar1 :  memref<1x4x2xi32>, %ar2 : memref<1x4x1024xf32>)-> vector<2xf32> {
   %0 = gpu.thread_id  x
   %c0_i32 = arith.constant 0 : i32
   %c0 = arith.constant 0 : index
@@ -1539,3 +1593,28 @@ func.func @warp_propagate_multi_dim_create_mask(%laneid: index, %m0: index, %m1:
 //       CHECK-PROP:   %[[DISTM0:.+]] = affine.apply #[[$SUBM0]]()[%[[M0]], %[[LANEID]]]
 //       CHECK-PROP:   %[[DISTM1:.+]] = affine.apply #[[$SUBM1]]()[%[[M1]], %[[LANEID]]]
 //       CHECK-PROP:   vector.create_mask %[[DISTM0]], %[[DISTM1]], %[[M2]] : vector<1x2x4xi1>
+
+// -----
+
+func.func @warp_propagate_nd_write(%laneid: index, %dest: memref<4x1024xf32>) {
+  %c0 = arith.constant 0 : index
+  vector.warp_execute_on_lane_0(%laneid)[32] -> () {
+    %0 = "some_def"() : () -> (vector<4x1024xf32>)
+    vector.transfer_write %0, %dest[%c0, %c0] : vector<4x1024xf32>, memref<4x1024xf32>
+    vector.yield
+  }
+  return
+}
+
+//       CHECK-DIST-AND-PROP: #[[$MAP:.+]] = affine_map<()[s0] -> (s0 * 128)>
+
+// CHECK-DIST-AND-PROP-LABEL: func.func @warp_propagate_nd_write(
+//       CHECK-DIST-AND-PROP:   %[[W:.*]] = vector.warp_execute_on_lane_0(%{{.*}})[32] -> (vector<1x128xf32>) {
+//       CHECK-DIST-AND-PROP:     %[[V0:.*]] = "some_def"
+//       CHECK-DIST-AND-PROP:     vector.yield %[[V0]]
+//  CHECK-DIST-AND-PROP-SAME:       vector<4x1024xf32>
+//       CHECK-DIST-AND-PROP:   }
+
+//       CHECK-DIST-AND-PROP:   %[[IDS:.+]]:2 = affine.delinearize_index %{{.*}} into (%c4, %c8) : index, index
+//       CHECK-DIST-AND-PROP:   %[[INNER_ID:.+]] = affine.apply #map()[%[[IDS]]#1]
+//       CHECK-DIST-AND-PROP:   vector.transfer_write %[[W]], %{{.*}}[%[[IDS]]#0, %[[INNER_ID]]] {{.*}} : vector<1x128xf32>

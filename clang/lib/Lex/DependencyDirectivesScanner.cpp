@@ -73,8 +73,8 @@ struct Scanner {
     // Set the lexer to use 'tok::at' for '@', instead of 'tok::unknown'.
     LangOpts.ObjC = true;
     LangOpts.LineComment = true;
-    // FIXME: we do not enable C11 or C++11, so we are missing u/u8/U"" and
-    // R"()" literals.
+    LangOpts.RawStringLiterals = true;
+    // FIXME: we do not enable C11 or C++11, so we are missing u/u8/U"".
     return LangOpts;
   }
 
@@ -88,8 +88,8 @@ private:
   [[nodiscard]] dependency_directives_scan::Token &
   lexToken(const char *&First, const char *const End);
 
-  dependency_directives_scan::Token &lexIncludeFilename(const char *&First,
-                                                        const char *const End);
+  [[nodiscard]] dependency_directives_scan::Token &
+  lexIncludeFilename(const char *&First, const char *const End);
 
   void skipLine(const char *&First, const char *const End);
   void skipDirective(StringRef Name, const char *&First, const char *const End);
@@ -369,7 +369,7 @@ static void skipBlockComment(const char *&First, const char *const End) {
     }
 }
 
-/// \returns True if the current single quotation mark character is a C++ 14
+/// \returns True if the current single quotation mark character is a C++14
 /// digit separator.
 static bool isQuoteCppDigitSeparator(const char *const Start,
                                      const char *const Cur,
@@ -544,7 +544,7 @@ Scanner::lexIncludeFilename(const char *&First, const char *const End) {
 void Scanner::lexPPDirectiveBody(const char *&First, const char *const End) {
   while (true) {
     const dependency_directives_scan::Token &Tok = lexToken(First, End);
-    if (Tok.is(tok::eod))
+    if (Tok.is(tok::eod) || Tok.is(tok::eof))
       break;
   }
 }
@@ -660,7 +660,18 @@ bool Scanner::lexModule(const char *&First, const char *const End) {
   // an import.
 
   switch (*First) {
-  case ':':
+  case ':': {
+    // `module :` is never the start of a valid module declaration.
+    if (Id == "module") {
+      skipLine(First, End);
+      return false;
+    }
+    // `import:(type)name` is a valid ObjC method decl, so check one more token.
+    (void)lexToken(First, End);
+    if (!tryLexIdentifierOrSkipLine(First, End))
+      return false;
+    break;
+  }
   case '<':
   case '"':
     break;
@@ -901,7 +912,10 @@ bool Scanner::lexPPLine(const char *&First, const char *const End) {
   case pp___include_macros:
   case pp_include_next:
   case pp_import:
-    lexIncludeFilename(First, End);
+    // Ignore missing filenames in include or import directives.
+    if (lexIncludeFilename(First, End).is(tok::eod)) {
+      return false;
+    }
     break;
   default:
     break;

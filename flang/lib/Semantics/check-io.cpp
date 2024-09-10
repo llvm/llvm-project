@@ -675,6 +675,7 @@ void IoChecker::Leave(const parser::BackspaceStmt &) {
   CheckForPureSubprogram();
   CheckForRequiredSpecifier(
       flags_.test(Flag::NumberUnit), "UNIT number"); // C1240
+  CheckForUselessIomsg();
   Done();
 }
 
@@ -682,6 +683,7 @@ void IoChecker::Leave(const parser::CloseStmt &) {
   CheckForPureSubprogram();
   CheckForRequiredSpecifier(
       flags_.test(Flag::NumberUnit), "UNIT number"); // C1208
+  CheckForUselessIomsg();
   Done();
 }
 
@@ -689,6 +691,7 @@ void IoChecker::Leave(const parser::EndfileStmt &) {
   CheckForPureSubprogram();
   CheckForRequiredSpecifier(
       flags_.test(Flag::NumberUnit), "UNIT number"); // C1240
+  CheckForUselessIomsg();
   Done();
 }
 
@@ -696,6 +699,7 @@ void IoChecker::Leave(const parser::FlushStmt &) {
   CheckForPureSubprogram();
   CheckForRequiredSpecifier(
       flags_.test(Flag::NumberUnit), "UNIT number"); // C1243
+  CheckForUselessIomsg();
   Done();
 }
 
@@ -708,6 +712,7 @@ void IoChecker::Leave(const parser::InquireStmt &stmt) {
         "UNIT number or FILE"); // C1246
     CheckForProhibitedSpecifier(IoSpecKind::File, IoSpecKind::Unit); // C1246
     CheckForRequiredSpecifier(IoSpecKind::Id, IoSpecKind::Pending); // C1248
+    CheckForUselessIomsg();
   }
   Done();
 }
@@ -742,11 +747,13 @@ void IoChecker::Leave(const parser::OpenStmt &) {
     CheckForProhibitedSpecifier(flags_.test(Flag::AccessStream),
         "STATUS='STREAM'", IoSpecKind::Recl); // 12.5.6.15
   }
+  CheckForUselessIomsg();
   Done();
 }
 
 void IoChecker::Leave(const parser::PrintStmt &) {
   CheckForPureSubprogram();
+  CheckForUselessIomsg();
   Done();
 }
 
@@ -795,10 +802,12 @@ void IoChecker::Leave(const parser::ReadStmt &readStmt) {
   CheckForProhibitedSpecifier(IoSpecKind::Rec, IoSpecKind::End); // C1220
   if (specifierSet_.test(IoSpecKind::Size)) {
     // F'2023 C1214 - allow with a warning
-    if (specifierSet_.test(IoSpecKind::Nml)) {
-      context_.Say("If NML appears, SIZE should not appear"_port_en_US);
-    } else if (flags_.test(Flag::StarFmt)) {
-      context_.Say("If FMT=* appears, SIZE should not appear"_port_en_US);
+    if (context_.ShouldWarn(common::LanguageFeature::ListDirectedSize)) {
+      if (specifierSet_.test(IoSpecKind::Nml)) {
+        context_.Say("If NML appears, SIZE should not appear"_port_en_US);
+      } else if (flags_.test(Flag::StarFmt)) {
+        context_.Say("If FMT=* appears, SIZE should not appear"_port_en_US);
+      }
     }
   }
   CheckForRequiredSpecifier(IoSpecKind::Eor,
@@ -815,6 +824,7 @@ void IoChecker::Leave(const parser::RewindStmt &) {
   CheckForRequiredSpecifier(
       flags_.test(Flag::NumberUnit), "UNIT number"); // C1240
   CheckForPureSubprogram();
+  CheckForUselessIomsg();
   Done();
 }
 
@@ -822,6 +832,7 @@ void IoChecker::Leave(const parser::WaitStmt &) {
   CheckForRequiredSpecifier(
       flags_.test(Flag::NumberUnit), "UNIT number"); // C1237
   CheckForPureSubprogram();
+  CheckForUselessIomsg();
   Done();
 }
 
@@ -881,6 +892,7 @@ void IoChecker::LeaveReadWrite() const {
       "FMT or NML"); // C1227
   CheckForRequiredSpecifier(IoSpecKind::Round, flags_.test(Flag::FmtOrNml),
       "FMT or NML"); // C1227
+  CheckForUselessIomsg();
 }
 
 void IoChecker::SetSpecifier(IoSpecKind specKind) {
@@ -918,7 +930,7 @@ void IoChecker::CheckStringValue(IoSpecKind specKind, const std::string &value,
           // Open values; Close values are {"DELETE", "KEEP"}.
           {"NEW", "OLD", "REPLACE", "SCRATCH", "UNKNOWN"}},
       {IoSpecKind::Carriagecontrol, {"LIST", "FORTRAN", "NONE"}},
-      {IoSpecKind::Convert, {"BIG_ENDIAN", "LITTLE_ENDIAN", "NATIVE"}},
+      {IoSpecKind::Convert, {"BIG_ENDIAN", "LITTLE_ENDIAN", "NATIVE", "SWAP"}},
       {IoSpecKind::Dispose, {"DELETE", "KEEP"}},
   };
   auto upper{Normalize(value)};
@@ -1032,11 +1044,16 @@ void IoChecker::CheckForDefinableVariable(
       if (auto whyNot{WhyNotDefinable(at, context_.FindScope(at),
               DefinabilityFlags{DefinabilityFlag::VectorSubscriptIsOk},
               *expr)}) {
-        const Symbol *base{GetFirstSymbol(*expr)};
-        context_
-            .Say(at, "%s variable '%s' is not definable"_err_en_US, s,
-                (base ? base->name() : at).ToString())
-            .Attach(std::move(*whyNot));
+        if (whyNot->IsFatal()) {
+          const Symbol *base{GetFirstSymbol(*expr)};
+          context_
+              .Say(at, "%s variable '%s' is not definable"_err_en_US, s,
+                  (base ? base->name() : at).ToString())
+              .Attach(
+                  std::move(whyNot->set_severity(parser::Severity::Because)));
+        } else {
+          context_.Say(std::move(*whyNot));
+        }
       }
     }
   }
@@ -1047,6 +1064,15 @@ void IoChecker::CheckForPureSubprogram() const { // C1597
   const Scope &scope{context_.FindScope(*context_.location())};
   if (FindPureProcedureContaining(scope)) {
     context_.Say("External I/O is not allowed in a pure subprogram"_err_en_US);
+  }
+}
+
+void IoChecker::CheckForUselessIomsg() const {
+  if (specifierSet_.test(IoSpecKind::Iomsg) &&
+      !specifierSet_.test(IoSpecKind::Err) &&
+      !specifierSet_.test(IoSpecKind::Iostat) &&
+      context_.ShouldWarn(common::UsageWarning::UselessIomsg)) {
+    context_.Say("IOMSG= is useless without either ERR= or IOSTAT="_warn_en_US);
   }
 }
 
@@ -1145,6 +1171,12 @@ parser::Message *IoChecker::CheckForBadIoType(const evaluate::DynamicType &type,
             "Derived type '%s' in I/O may not be polymorphic unless using defined I/O"_err_en_US,
             derived.name());
       }
+      if ((IsBuiltinDerivedType(&derived, "c_ptr") ||
+              IsBuiltinDerivedType(&derived, "c_devptr")) &&
+          !context_.ShouldWarn(common::LanguageFeature::PrintCptr)) {
+        // Bypass the check below for c_ptr and c_devptr.
+        return nullptr;
+      }
       if (const Symbol *
           bad{FindInaccessibleComponent(which, derived, scope)}) {
         return &context_.Say(where,
@@ -1189,7 +1221,7 @@ void IoChecker::CheckNamelist(const Symbol &namelist, common::DefinedIo which,
               .Say(namelistLocation,
                   "NAMELIST input group must not contain undefinable item '%s'"_err_en_US,
                   object.name())
-              .Attach(std::move(*why));
+              .Attach(std::move(why->set_severity(parser::Severity::Because)));
           context_.SetError(namelist);
         }
       }

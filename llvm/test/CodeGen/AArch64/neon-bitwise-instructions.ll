@@ -1117,8 +1117,13 @@ define <4 x i16> @vselect_constant_cond_zero_v4i16(<4 x i16> %a) {
 ;
 ; CHECK-GI-LABEL: vselect_constant_cond_zero_v4i16:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI84_0
-; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI84_0]
+; CHECK-GI-NEXT:    mov w8, #1 // =0x1
+; CHECK-GI-NEXT:    mov w9, #0 // =0x0
+; CHECK-GI-NEXT:    fmov s1, w8
+; CHECK-GI-NEXT:    mov v1.b[1], w9
+; CHECK-GI-NEXT:    mov v1.b[2], w9
+; CHECK-GI-NEXT:    mov v1.b[3], w8
+; CHECK-GI-NEXT:    ushll v1.8h, v1.8b, #0
 ; CHECK-GI-NEXT:    shl v1.4h, v1.4h, #15
 ; CHECK-GI-NEXT:    sshr v1.4h, v1.4h, #15
 ; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
@@ -1137,10 +1142,14 @@ define <4 x i32> @vselect_constant_cond_zero_v4i32(<4 x i32> %a) {
 ;
 ; CHECK-GI-LABEL: vselect_constant_cond_zero_v4i32:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI85_1
-; CHECK-GI-NEXT:    adrp x9, .LCPI85_0
-; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI85_1]
-; CHECK-GI-NEXT:    ldr d2, [x9, :lo12:.LCPI85_0]
+; CHECK-GI-NEXT:    mov w8, #1 // =0x1
+; CHECK-GI-NEXT:    mov w9, #0 // =0x0
+; CHECK-GI-NEXT:    fmov s1, w8
+; CHECK-GI-NEXT:    fmov s2, w9
+; CHECK-GI-NEXT:    mov v2.h[1], w8
+; CHECK-GI-NEXT:    mov v1.h[1], w9
+; CHECK-GI-NEXT:    ushll v1.4s, v1.4h, #0
+; CHECK-GI-NEXT:    ushll v2.4s, v2.4h, #0
 ; CHECK-GI-NEXT:    mov v1.d[1], v2.d[0]
 ; CHECK-GI-NEXT:    shl v1.4s, v1.4s, #31
 ; CHECK-GI-NEXT:    sshr v1.4s, v1.4s, #31
@@ -1184,8 +1193,13 @@ define <4 x i16> @vselect_constant_cond_v4i16(<4 x i16> %a, <4 x i16> %b) {
 ;
 ; CHECK-GI-LABEL: vselect_constant_cond_v4i16:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI87_0
-; CHECK-GI-NEXT:    ldr d2, [x8, :lo12:.LCPI87_0]
+; CHECK-GI-NEXT:    mov w8, #1 // =0x1
+; CHECK-GI-NEXT:    mov w9, #0 // =0x0
+; CHECK-GI-NEXT:    fmov s2, w8
+; CHECK-GI-NEXT:    mov v2.b[1], w9
+; CHECK-GI-NEXT:    mov v2.b[2], w9
+; CHECK-GI-NEXT:    mov v2.b[3], w8
+; CHECK-GI-NEXT:    ushll v2.8h, v2.8b, #0
 ; CHECK-GI-NEXT:    shl v2.4h, v2.4h, #15
 ; CHECK-GI-NEXT:    sshr v2.4h, v2.4h, #15
 ; CHECK-GI-NEXT:    bif v0.8b, v1.8b, v2.8b
@@ -1204,10 +1218,14 @@ define <4 x i32> @vselect_constant_cond_v4i32(<4 x i32> %a, <4 x i32> %b) {
 ;
 ; CHECK-GI-LABEL: vselect_constant_cond_v4i32:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI88_1
-; CHECK-GI-NEXT:    adrp x9, .LCPI88_0
-; CHECK-GI-NEXT:    ldr d2, [x8, :lo12:.LCPI88_1]
-; CHECK-GI-NEXT:    ldr d3, [x9, :lo12:.LCPI88_0]
+; CHECK-GI-NEXT:    mov w8, #1 // =0x1
+; CHECK-GI-NEXT:    mov w9, #0 // =0x0
+; CHECK-GI-NEXT:    fmov s2, w8
+; CHECK-GI-NEXT:    fmov s3, w9
+; CHECK-GI-NEXT:    mov v3.h[1], w8
+; CHECK-GI-NEXT:    mov v2.h[1], w9
+; CHECK-GI-NEXT:    ushll v2.4s, v2.4h, #0
+; CHECK-GI-NEXT:    ushll v3.4s, v3.4h, #0
 ; CHECK-GI-NEXT:    mov v2.d[1], v3.d[0]
 ; CHECK-GI-NEXT:    shl v2.4s, v2.4s, #31
 ; CHECK-GI-NEXT:    sshr v2.4s, v2.4s, #31
@@ -1489,8 +1507,7 @@ define <8 x i8> @vselect_cmpz_ne(<8 x i8> %a, <8 x i8> %b, <8 x i8> %c) {
 ;
 ; CHECK-GI-LABEL: vselect_cmpz_ne:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi v3.2d, #0000000000000000
-; CHECK-GI-NEXT:    cmeq v0.8b, v0.8b, v3.8b
+; CHECK-GI-NEXT:    cmeq v0.8b, v0.8b, #0
 ; CHECK-GI-NEXT:    mvn v0.8b, v0.8b
 ; CHECK-GI-NEXT:    bsl v0.8b, v1.8b, v2.8b
 ; CHECK-GI-NEXT:    ret
@@ -1500,38 +1517,23 @@ define <8 x i8> @vselect_cmpz_ne(<8 x i8> %a, <8 x i8> %b, <8 x i8> %c) {
 }
 
 define <8 x i8> @vselect_cmpz_eq(<8 x i8> %a, <8 x i8> %b, <8 x i8> %c) {
-; CHECK-SD-LABEL: vselect_cmpz_eq:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    cmeq v0.8b, v0.8b, #0
-; CHECK-SD-NEXT:    bsl v0.8b, v1.8b, v2.8b
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: vselect_cmpz_eq:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi v3.2d, #0000000000000000
-; CHECK-GI-NEXT:    cmeq v0.8b, v0.8b, v3.8b
-; CHECK-GI-NEXT:    bsl v0.8b, v1.8b, v2.8b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: vselect_cmpz_eq:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmeq v0.8b, v0.8b, #0
+; CHECK-NEXT:    bsl v0.8b, v1.8b, v2.8b
+; CHECK-NEXT:    ret
   %cmp = icmp eq <8 x i8> %a, zeroinitializer
   %d = select <8 x i1> %cmp, <8 x i8> %b, <8 x i8> %c
   ret <8 x i8> %d
 }
 
 define <8 x i8> @vselect_tst(<8 x i8> %a, <8 x i8> %b, <8 x i8> %c) {
-; CHECK-SD-LABEL: vselect_tst:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-SD-NEXT:    cmeq v0.8b, v0.8b, #0
-; CHECK-SD-NEXT:    bsl v0.8b, v2.8b, v1.8b
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: vselect_tst:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi v3.2d, #0000000000000000
-; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    cmeq v0.8b, v0.8b, v3.8b
-; CHECK-GI-NEXT:    bsl v0.8b, v2.8b, v1.8b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: vselect_tst:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    cmeq v0.8b, v0.8b, #0
+; CHECK-NEXT:    bsl v0.8b, v2.8b, v1.8b
+; CHECK-NEXT:    ret
   %tmp3 = and <8 x i8> %a, %b
   %tmp4 = icmp eq <8 x i8> %tmp3, zeroinitializer
   %d = select <8 x i1> %tmp4, <8 x i8> %c, <8 x i8> %b
@@ -1546,9 +1548,8 @@ define <8 x i8> @sext_tst(<8 x i8> %a, <8 x i8> %b, <8 x i8> %c) {
 ;
 ; CHECK-GI-LABEL: sext_tst:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi v2.2d, #0000000000000000
 ; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    cmeq v0.8b, v0.8b, v2.8b
+; CHECK-GI-NEXT:    cmeq v0.8b, v0.8b, #0
 ; CHECK-GI-NEXT:    mvn v0.8b, v0.8b
 ; CHECK-GI-NEXT:    ret
   %tmp3 = and <8 x i8> %a, %b

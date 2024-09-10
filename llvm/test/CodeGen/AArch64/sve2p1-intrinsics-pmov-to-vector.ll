@@ -6,12 +6,7 @@
 define <vscale x 8 x i16> @test_pmov_to_vector_i16(<vscale x 8 x i16> %zn, <vscale x 8 x i1> %pn) {
 ; CHECK-LABEL: test_pmov_to_vector_i16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    mov w0, #1 // =0x1
-; CHECK-NEXT:    bl llvm.aarch64.sve.pmov.to.vector.lane.merging.nxv8i16
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    pmov z0[1], p0.h
 ; CHECK-NEXT:    ret
   entry:
   %res = call <vscale x 8 x i16> @llvm.aarch64.sve.pmov.to.vector.lane.merging.nxv8i16(<vscale x 8 x i16> %zn, <vscale x 8 x i1> %pn, i32 1)
@@ -21,12 +16,7 @@ define <vscale x 8 x i16> @test_pmov_to_vector_i16(<vscale x 8 x i16> %zn, <vsca
 define <vscale x 4 x i32> @test_pmov_to_vector_i32(<vscale x 4 x i32> %zn, <vscale x 4 x i1> %pn) {
 ; CHECK-LABEL: test_pmov_to_vector_i32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    mov w0, #3 // =0x3
-; CHECK-NEXT:    bl llvm.aarch64.sve.pmov.to.vector.lane.merging.nxv4i32
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    pmov z0[3], p0.s
 ; CHECK-NEXT:    ret
   entry:
   %res = call <vscale x 4 x i32> @llvm.aarch64.sve.pmov.to.vector.lane.merging.nxv4i32(<vscale x 4 x i32> %zn, <vscale x 4 x i1> %pn, i32 3)
@@ -36,12 +26,7 @@ define <vscale x 4 x i32> @test_pmov_to_vector_i32(<vscale x 4 x i32> %zn, <vsca
 define <vscale x 2 x i64> @test_pmov_to_vector_i64(<vscale x 2 x i64> %zn, <vscale x 2 x i1> %pn) {
 ; CHECK-LABEL: test_pmov_to_vector_i64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    mov w0, #7 // =0x7
-; CHECK-NEXT:    bl llvm.aarch64.sve.pmov.to.vector.lane.merging.nxv2i64
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    pmov z0[7], p0.d
 ; CHECK-NEXT:    ret
   entry:
   %res = call <vscale x 2 x i64> @llvm.aarch64.sve.pmov.to.vector.lane.merging.nxv2i64(<vscale x 2 x i64> %zn, <vscale x 2 x i1> %pn, i32 7)
@@ -54,11 +39,7 @@ define <vscale x 2 x i64> @test_pmov_to_vector_i64(<vscale x 2 x i64> %zn, <vsca
 define <vscale x 16 x i8> @test_pmov_to_vector_zero_i8(<vscale x 16 x i1> %pn) {
 ; CHECK-LABEL: test_pmov_to_vector_zero_i8:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl llvm.aarch64.sve.pmov.to.vector.lane.zeroing.nxv16i8
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    pmov z0, p0.b
 ; CHECK-NEXT:    ret
   entry:
   %res = call <vscale x 16 x i8> @llvm.aarch64.sve.pmov.to.vector.lane.zeroing.nxv16i8(<vscale x 16 x i1> %pn)
@@ -68,11 +49,7 @@ define <vscale x 16 x i8> @test_pmov_to_vector_zero_i8(<vscale x 16 x i1> %pn) {
 define <vscale x 8 x i16> @test_pmov_to_vector_zero_i16(<vscale x 8 x i1> %pn) {
 ; CHECK-LABEL: test_pmov_to_vector_zero_i16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl llvm.aarch64.sve.pmov.to.vector.lane.zeroing.nxv8i16
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    pmov z0[0], p0.h
 ; CHECK-NEXT:    ret
   entry:
   %res = call <vscale x 8 x i16> @llvm.aarch64.sve.pmov.to.vector.lane.zeroing.nxv8i16(<vscale x 8 x i1> %pn)
@@ -82,11 +59,7 @@ define <vscale x 8 x i16> @test_pmov_to_vector_zero_i16(<vscale x 8 x i1> %pn) {
 define <vscale x 4 x i32> @test_pmov_to_vector_zero_i32(<vscale x 4 x i1> %pn) {
 ; CHECK-LABEL: test_pmov_to_vector_zero_i32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl llvm.aarch64.sve.pmov.to.vector.lane.zeroing.nxv4i32
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    pmov z0[0], p0.s
 ; CHECK-NEXT:    ret
   entry:
   %res = call <vscale x 4 x i32> @llvm.aarch64.sve.pmov.to.vector.lane.zeroing.nxv4i32(<vscale x 4 x i1> %pn)
@@ -96,11 +69,7 @@ define <vscale x 4 x i32> @test_pmov_to_vector_zero_i32(<vscale x 4 x i1> %pn) {
 define <vscale x 2 x i64> @test_pmov_to_vector_zero_i64(<vscale x 2 x i1> %pn) {
 ; CHECK-LABEL: test_pmov_to_vector_zero_i64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl llvm.aarch64.sve.pmov.to.vector.lane.zeroing.nxv2i64
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    pmov z0[0], p0.d
 ; CHECK-NEXT:    ret
   entry:
   %res = call <vscale x 2 x i64> @llvm.aarch64.sve.pmov.to.vector.lane.zeroing.nxv2i64(<vscale x 2 x i1> %pn)

@@ -537,14 +537,23 @@ public:
   /// that didn't match.
   /// Return true if there are still any patterns left.
   bool consumeNameSuffix(StringRef NodeName, bool CanSkip) {
-    for (size_t I = 0; I < Patterns.size();) {
-      if (::clang::ast_matchers::internal::consumeNameSuffix(Patterns[I].P,
-                                                             NodeName) ||
-          CanSkip) {
-        ++I;
-      } else {
-        Patterns.erase(Patterns.begin() + I);
+    if (CanSkip) {
+      // If we can skip the node, then we need to handle the case where a
+      // skipped node has the same name as its parent.
+      // namespace a { inline namespace a { class A; } }
+      // cxxRecordDecl(hasName("::a::A"))
+      // To do this, any patterns that match should be duplicated in our set,
+      // one of them with the tail removed.
+      for (size_t I = 0, E = Patterns.size(); I != E; ++I) {
+        StringRef Pattern = Patterns[I].P;
+        if (ast_matchers::internal::consumeNameSuffix(Patterns[I].P, NodeName))
+          Patterns.push_back({Pattern, Patterns[I].IsFullyQualified});
       }
+    } else {
+      llvm::erase_if(Patterns, [&NodeName](auto &Pattern) {
+        return !::clang::ast_matchers::internal::consumeNameSuffix(Pattern.P,
+                                                                   NodeName);
+      });
     }
     return !Patterns.empty();
   }
@@ -893,6 +902,7 @@ const internal::VariadicDynCastAllOfMatcher<Stmt, CXXOperatorCallExpr>
     cxxOperatorCallExpr;
 const internal::VariadicDynCastAllOfMatcher<Stmt, CXXRewrittenBinaryOperator>
     cxxRewrittenBinaryOperator;
+const internal::VariadicDynCastAllOfMatcher<Stmt, CXXFoldExpr> cxxFoldExpr;
 const internal::VariadicDynCastAllOfMatcher<Stmt, Expr> expr;
 const internal::VariadicDynCastAllOfMatcher<Stmt, DeclRefExpr> declRefExpr;
 const internal::VariadicDynCastAllOfMatcher<Stmt, ObjCIvarRefExpr> objcIvarRefExpr;

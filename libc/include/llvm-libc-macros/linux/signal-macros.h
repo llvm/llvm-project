@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LLVM_LIBC_MACROS_LINUX_SIGNUM_MACROS_H
-#define __LLVM_LIBC_MACROS_LINUX_SIGNUM_MACROS_H
+#ifndef LLVM_LIBC_MACROS_LINUX_SIGNAL_MACROS_H
+#define LLVM_LIBC_MACROS_LINUX_SIGNAL_MACROS_H
 
 #define SIGHUP 1
 #define SIGINT 2
@@ -101,4 +101,4 @@
 #define CLD_STOPPED 5   // child has stopped
 #define CLD_CONTINUED 6 // stopped child has continued
 
-#endif // __LLVM_LIBC_MACROS_LINUX_SIGNUM_MACROS_H
+#endif // LLVM_LIBC_MACROS_LINUX_SIGNAL_MACROS_H

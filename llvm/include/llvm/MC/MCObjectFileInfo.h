@@ -228,6 +228,7 @@ protected:
   // GOFF specific sections.
   MCSection *PPA1Section = nullptr;
   MCSection *PPA2Section = nullptr;
+  MCSection *PPA2ListSection = nullptr;
   MCSection *ADASection = nullptr;
   MCSection *IDRLSection = nullptr;
 
@@ -434,6 +435,7 @@ public:
   // GOFF specific sections.
   MCSection *getPPA1Section() const { return PPA1Section; }
   MCSection *getPPA2Section() const { return PPA2Section; }
+  MCSection *getPPA2ListSection() const { return PPA2ListSection; }
   MCSection *getADASection() const { return ADASection; }
   MCSection *getIDRLSection() const { return IDRLSection; }
 
@@ -456,9 +458,6 @@ public:
 private:
   bool PositionIndependent = false;
   MCContext *Ctx = nullptr;
-  VersionTuple SDKVersion;
-  std::optional<Triple> DarwinTargetVariantTriple;
-  VersionTuple DarwinTargetVariantSDKVersion;
 
   void initMachOMCObjectFileInfo(const Triple &T);
   void initELFMCObjectFileInfo(const Triple &T, bool Large);
@@ -469,29 +468,6 @@ private:
   void initXCOFFMCObjectFileInfo(const Triple &T);
   void initDXContainerObjectFileInfo(const Triple &T);
   MCSection *getDwarfComdatSection(const char *Name, uint64_t Hash) const;
-
-public:
-  void setSDKVersion(const VersionTuple &TheSDKVersion) {
-    SDKVersion = TheSDKVersion;
-  }
-
-  const VersionTuple &getSDKVersion() const { return SDKVersion; }
-
-  void setDarwinTargetVariantTriple(const Triple &T) {
-    DarwinTargetVariantTriple = T;
-  }
-
-  const Triple *getDarwinTargetVariantTriple() const {
-    return DarwinTargetVariantTriple ? &*DarwinTargetVariantTriple : nullptr;
-  }
-
-  void setDarwinTargetVariantSDKVersion(const VersionTuple &TheSDKVersion) {
-    DarwinTargetVariantSDKVersion = TheSDKVersion;
-  }
-
-  const VersionTuple &getDarwinTargetVariantSDKVersion() const {
-    return DarwinTargetVariantSDKVersion;
-  }
 };
 
 } // end namespace llvm

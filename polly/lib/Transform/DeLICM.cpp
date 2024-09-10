@@ -24,8 +24,10 @@
 #include "polly/Support/ISLTools.h"
 #include "polly/ZoneAlgo.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 
+#include "polly/Support/PollyDebug.h"
 #define DEBUG_TYPE "polly-delicm"
 
 using namespace polly;
@@ -547,7 +549,7 @@ private:
   /// @see Knowledge::isConflicting
   bool isConflicting(const Knowledge &Proposed) {
     raw_ostream *OS = nullptr;
-    LLVM_DEBUG(OS = &llvm::dbgs());
+    POLLY_DEBUG(OS = &llvm::dbgs());
     return Knowledge::isConflicting(Zone, Proposed, OS, 4);
   }
 
@@ -559,7 +561,7 @@ private:
     if (SAI->isValueKind()) {
       auto *MA = S->getValueDef(SAI);
       if (!MA) {
-        LLVM_DEBUG(
+        POLLY_DEBUG(
             dbgs()
             << "    Reject because value is read-only within the scop\n");
         return false;
@@ -576,7 +578,7 @@ private:
         auto UserInst = cast<Instruction>(User);
 
         if (!S->contains(UserInst)) {
-          LLVM_DEBUG(dbgs() << "    Reject because value is escaping\n");
+          POLLY_DEBUG(dbgs() << "    Reject because value is escaping\n");
           return false;
         }
       }
@@ -593,9 +595,9 @@ private:
       auto PHI = cast<PHINode>(MA->getAccessInstruction());
       for (auto Incoming : PHI->blocks()) {
         if (!S->contains(Incoming)) {
-          LLVM_DEBUG(dbgs()
-                     << "    Reject because at least one incoming block is "
-                        "not in the scop region\n");
+          POLLY_DEBUG(dbgs()
+                      << "    Reject because at least one incoming block is "
+                         "not in the scop region\n");
           return false;
         }
       }
@@ -603,7 +605,7 @@ private:
       return true;
     }
 
-    LLVM_DEBUG(dbgs() << "    Reject ExitPHI or other non-value\n");
+    POLLY_DEBUG(dbgs() << "    Reject ExitPHI or other non-value\n");
     return false;
   }
 
@@ -686,12 +688,12 @@ private:
     // { DomainDef[] -> Element[] }
     auto DefTarget = TargetElt.apply_domain(DefSched.reverse());
     simplify(DefTarget);
-    LLVM_DEBUG(dbgs() << "    Def Mapping: " << DefTarget << '\n');
+    POLLY_DEBUG(dbgs() << "    Def Mapping: " << DefTarget << '\n');
 
     auto OrigDomain = getDomainFor(DefMA);
     auto MappedDomain = DefTarget.domain();
     if (!OrigDomain.is_subset(MappedDomain)) {
-      LLVM_DEBUG(
+      POLLY_DEBUG(
           dbgs()
           << "    Reject because mapping does not encompass all instances\n");
       return false;
@@ -704,7 +706,7 @@ private:
     isl::union_map DefUses;
 
     std::tie(DefUses, Lifetime) = computeValueUses(SAI);
-    LLVM_DEBUG(dbgs() << "    Lifetime: " << Lifetime << '\n');
+    POLLY_DEBUG(dbgs() << "    Lifetime: " << Lifetime << '\n');
 
     /// { [Element[] -> Zone[]] }
     auto EltZone = Lifetime.apply_domain(DefTarget).wrap();
@@ -858,12 +860,12 @@ private:
     // { DomainRead[] -> Element[] }
     auto PHITarget = PHISched.apply_range(TargetElt);
     simplify(PHITarget);
-    LLVM_DEBUG(dbgs() << "    Mapping: " << PHITarget << '\n');
+    POLLY_DEBUG(dbgs() << "    Mapping: " << PHITarget << '\n');
 
     auto OrigDomain = getDomainFor(PHIRead);
     auto MappedDomain = PHITarget.domain();
     if (!OrigDomain.is_subset(MappedDomain)) {
-      LLVM_DEBUG(
+      POLLY_DEBUG(
           dbgs()
           << "    Reject because mapping does not encompass all instances\n");
       return false;
@@ -872,7 +874,7 @@ private:
     // { DomainRead[] -> DomainWrite[] }
     auto PerPHIWrites = computePerPHI(SAI);
     if (PerPHIWrites.is_null()) {
-      LLVM_DEBUG(
+      POLLY_DEBUG(
           dbgs() << "    Reject because cannot determine incoming values\n");
       return false;
     }
@@ -894,17 +896,17 @@ private:
     auto ExpandedWritesDom = WritesTarget.domain();
     if (!DelicmPartialWrites &&
         !UniverseWritesDom.is_subset(ExpandedWritesDom)) {
-      LLVM_DEBUG(
+      POLLY_DEBUG(
           dbgs() << "    Reject because did not find PHI write mapping for "
                     "all instances\n");
       if (DelicmOverapproximateWrites)
-        LLVM_DEBUG(dbgs() << "      Relevant Mapping:    "
-                          << RelevantWritesTarget << '\n');
-      LLVM_DEBUG(dbgs() << "      Deduced Mapping:     " << WritesTarget
-                        << '\n');
-      LLVM_DEBUG(dbgs() << "      Missing instances:    "
-                        << UniverseWritesDom.subtract(ExpandedWritesDom)
-                        << '\n');
+        POLLY_DEBUG(dbgs() << "      Relevant Mapping:    "
+                           << RelevantWritesTarget << '\n');
+      POLLY_DEBUG(dbgs() << "      Deduced Mapping:     " << WritesTarget
+                         << '\n');
+      POLLY_DEBUG(dbgs() << "      Missing instances:    "
+                         << UniverseWritesDom.subtract(ExpandedWritesDom)
+                         << '\n');
       return false;
     }
 
@@ -916,7 +918,7 @@ private:
     // { DomainRead[] -> Zone[] }
     auto Lifetime = betweenScatter(PerPHIWriteScatter, PHISched, false, true);
     simplify(Lifetime);
-    LLVM_DEBUG(dbgs() << "    Lifetime: " << Lifetime << "\n");
+    POLLY_DEBUG(dbgs() << "    Lifetime: " << Lifetime << "\n");
 
     // { DomainWrite[] -> Zone[] }
     auto WriteLifetime = isl::union_map(Lifetime).apply_domain(PerPHIWrites);
@@ -1029,7 +1031,7 @@ private:
     // Use the target store's write location as a suggestion to map scalars to.
     auto EltTarget = Target.apply_range(TargetAccRel);
     simplify(EltTarget);
-    LLVM_DEBUG(dbgs() << "    Target mapping is " << EltTarget << '\n');
+    POLLY_DEBUG(dbgs() << "    Target mapping is " << EltTarget << '\n');
 
     // Stack of elements not yet processed.
     SmallVector<MemoryAccess *, 16> Worklist;
@@ -1067,8 +1069,8 @@ private:
       if (Closed.count(SAI))
         continue;
       Closed.insert(SAI);
-      LLVM_DEBUG(dbgs() << "\n    Trying to map " << MA << " (SAI: " << SAI
-                        << ")\n");
+      POLLY_DEBUG(dbgs() << "\n    Trying to map " << MA << " (SAI: " << SAI
+                         << ")\n");
 
       // Skip non-mappable scalars.
       if (!isMappable(SAI))
@@ -1076,7 +1078,7 @@ private:
 
       auto MASize = DL.getTypeAllocSize(MA->getAccessValue()->getType());
       if (MASize > StoreSize) {
-        LLVM_DEBUG(
+        POLLY_DEBUG(
             dbgs() << "    Reject because storage size is insufficient\n");
         continue;
       }
@@ -1212,7 +1214,7 @@ public:
              "The only reason that these things have not been computed should "
              "be if the max-operations limit hit");
       DeLICMOutOfQuota++;
-      LLVM_DEBUG(dbgs() << "DeLICM analysis exceeded max_operations\n");
+      POLLY_DEBUG(dbgs() << "DeLICM analysis exceeded max_operations\n");
       DebugLoc Begin, End;
       getDebugLocations(getBBPairForRegion(&S->getRegion()), Begin, End);
       OptimizationRemarkAnalysis R(DEBUG_TYPE, "OutOfQuota", Begin,
@@ -1223,7 +1225,7 @@ public:
     }
 
     Zone = OriginalZone = Knowledge({}, EltUnused, EltKnown, EltWritten);
-    LLVM_DEBUG(dbgs() << "Computed Zone:\n"; OriginalZone.print(dbgs(), 4));
+    POLLY_DEBUG(dbgs() << "Computed Zone:\n"; OriginalZone.print(dbgs(), 4));
 
     assert(Zone.isUsable() && OriginalZone.isUsable());
     return true;
@@ -1245,8 +1247,8 @@ public:
           continue;
 
         if (MA->isMayWrite()) {
-          LLVM_DEBUG(dbgs() << "Access " << MA
-                            << " pruned because it is a MAY_WRITE\n");
+          POLLY_DEBUG(dbgs() << "Access " << MA
+                             << " pruned because it is a MAY_WRITE\n");
           OptimizationRemarkMissed R(DEBUG_TYPE, "TargetMayWrite",
                                      MA->getAccessInstruction());
           R << "Skipped possible mapping target because it is not an "
@@ -1256,8 +1258,8 @@ public:
         }
 
         if (Stmt.getNumIterators() == 0) {
-          LLVM_DEBUG(dbgs() << "Access " << MA
-                            << " pruned because it is not in a loop\n");
+          POLLY_DEBUG(dbgs() << "Access " << MA
+                             << " pruned because it is not in a loop\n");
           OptimizationRemarkMissed R(DEBUG_TYPE, "WriteNotInLoop",
                                      MA->getAccessInstruction());
           R << "skipped possible mapping target because it is not in a loop";
@@ -1266,9 +1268,9 @@ public:
         }
 
         if (isScalarAccess(MA)) {
-          LLVM_DEBUG(dbgs()
-                     << "Access " << MA
-                     << " pruned because it writes only a single element\n");
+          POLLY_DEBUG(dbgs()
+                      << "Access " << MA
+                      << " pruned because it writes only a single element\n");
           OptimizationRemarkMissed R(DEBUG_TYPE, "ScalarWrite",
                                      MA->getAccessInstruction());
           R << "skipped possible mapping target because the memory location "
@@ -1278,8 +1280,8 @@ public:
         }
 
         if (!isa<StoreInst>(MA->getAccessInstruction())) {
-          LLVM_DEBUG(dbgs() << "Access " << MA
-                            << " pruned because it is not a StoreInst\n");
+          POLLY_DEBUG(dbgs() << "Access " << MA
+                             << " pruned because it is not a StoreInst\n");
           OptimizationRemarkMissed R(DEBUG_TYPE, "NotAStore",
                                      MA->getAccessInstruction());
           R << "skipped possible mapping target because non-store instructions "
@@ -1301,9 +1303,9 @@ public:
         // arguments.
         isl::union_map AccRel = MA->getLatestAccessRelation();
         if (!AccRel.is_single_valued().is_true()) {
-          LLVM_DEBUG(dbgs() << "Access " << MA
-                            << " is incompatible because it writes multiple "
-                               "elements per instance\n");
+          POLLY_DEBUG(dbgs() << "Access " << MA
+                             << " is incompatible because it writes multiple "
+                                "elements per instance\n");
           OptimizationRemarkMissed R(DEBUG_TYPE, "NonFunctionalAccRel",
                                      MA->getAccessInstruction());
           R << "skipped possible mapping target because it writes more than "
@@ -1314,7 +1316,7 @@ public:
 
         isl::union_set TouchedElts = AccRel.range();
         if (!TouchedElts.is_subset(CompatibleElts)) {
-          LLVM_DEBUG(
+          POLLY_DEBUG(
               dbgs()
               << "Access " << MA
               << " is incompatible because it touches incompatible elements\n");
@@ -1328,7 +1330,7 @@ public:
 
         assert(isCompatibleAccess(MA));
         NumberOfCompatibleTargets++;
-        LLVM_DEBUG(dbgs() << "Analyzing target access " << MA << "\n");
+        POLLY_DEBUG(dbgs() << "Analyzing target access " << MA << "\n");
         if (collapseScalarsToStore(MA))
           Modified = true;
       }
@@ -1361,15 +1363,15 @@ static std::unique_ptr<DeLICMImpl> collapseToUnused(Scop &S, LoopInfo &LI) {
   std::unique_ptr<DeLICMImpl> Impl = std::make_unique<DeLICMImpl>(&S, &LI);
 
   if (!Impl->computeZone()) {
-    LLVM_DEBUG(dbgs() << "Abort because cannot reliably compute lifetimes\n");
+    POLLY_DEBUG(dbgs() << "Abort because cannot reliably compute lifetimes\n");
     return Impl;
   }
 
-  LLVM_DEBUG(dbgs() << "Collapsing scalars to unused array elements...\n");
+  POLLY_DEBUG(dbgs() << "Collapsing scalars to unused array elements...\n");
   Impl->greedyCollapse();
 
-  LLVM_DEBUG(dbgs() << "\nFinal Scop:\n");
-  LLVM_DEBUG(dbgs() << S);
+  POLLY_DEBUG(dbgs() << "\nFinal Scop:\n");
+  POLLY_DEBUG(dbgs() << S);
 
   return Impl;
 }
@@ -1463,7 +1465,7 @@ class DeLICMPrinterLegacyPass final : public ScopPass {
 public:
   static char ID;
 
-  DeLICMPrinterLegacyPass() : DeLICMPrinterLegacyPass(outs()){};
+  DeLICMPrinterLegacyPass() : DeLICMPrinterLegacyPass(outs()) {}
   explicit DeLICMPrinterLegacyPass(llvm::raw_ostream &OS)
       : ScopPass(ID), OS(OS) {}
 

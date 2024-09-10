@@ -156,15 +156,15 @@ define void @ld_div2_step1_start0_ind2(ptr noalias %A, ptr noalias %B) {
 ; VF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; VF2-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; VF2-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 0
-; VF2-NEXT:    [[TMP2:%.*]] = udiv i64 [[TMP1]], 2
-; VF2-NEXT:    [[TMP3:%.*]] = udiv i64 [[TMP0]], 2
+; VF2-NEXT:    [[TMP2:%.*]] = udiv i64 [[TMP0]], 2
+; VF2-NEXT:    [[TMP3:%.*]] = udiv i64 [[TMP1]], 2
 ; VF2-NEXT:    [[TMP4:%.*]] = add i64 [[TMP2]], [[TMP3]]
 ; VF2-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP4]]
 ; VF2-NEXT:    [[TMP6:%.*]] = load i64, ptr [[TMP5]], align 8
 ; VF2-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[TMP6]], i64 0
 ; VF2-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i64> [[BROADCAST_SPLATINSERT]], <2 x i64> poison, <2 x i32> zeroinitializer
 ; VF2-NEXT:    [[TMP7:%.*]] = add nsw <2 x i64> [[BROADCAST_SPLAT]], <i64 42, i64 42>
-; VF2-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP1]]
+; VF2-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP0]]
 ; VF2-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i64, ptr [[TMP8]], i32 0
 ; VF2-NEXT:    store <2 x i64> [[TMP7]], ptr [[TMP9]], align 8
 ; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2

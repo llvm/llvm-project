@@ -15,6 +15,25 @@ func.func @f(%arg0: i32, %f: !emitc.opaque<"int32_t">) {
   return
 }
 
+emitc.declare_func @func
+
+emitc.func @func(%arg0 : i32) {
+  emitc.call_opaque "foo"(%arg0) : (i32) -> ()
+  emitc.return
+}
+
+emitc.func @return_i32() -> i32 attributes {specifiers = ["static","inline"]} {
+  %0 = emitc.call_opaque "foo"(): () -> i32
+  emitc.return %0 : i32
+}
+
+emitc.func @call() -> i32 {
+  %0 = emitc.call @return_i32() : () -> (i32)
+  emitc.return %0 : i32
+}
+
+emitc.func private @extern(i32) attributes {specifiers = ["extern"]}
+
 func.func @cast(%arg0: i32) {
   %1 = emitc.cast %arg0: i32 to f32
   return
@@ -22,12 +41,17 @@ func.func @cast(%arg0: i32) {
 
 func.func @c() {
   %1 = "emitc.constant"(){value = 42 : i32} : () -> i32
+  %2 = "emitc.constant"(){value = 42 : index} : () -> !emitc.size_t
+  %3 = "emitc.constant"(){value = 42 : index} : () -> !emitc.ssize_t
+  %4 = "emitc.constant"(){value = 42 : index} : () -> !emitc.ptrdiff_t
   return
 }
 
-func.func @a(%arg0: i32, %arg1: i32) {
-  %1 = "emitc.apply"(%arg0) {applicableOperator = "&"} : (i32) -> !emitc.ptr<i32>
-  %2 = emitc.apply "&"(%arg1) : (i32) -> !emitc.ptr<i32>
+func.func @a() {
+  %0 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<i32>
+  %1 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<i32>
+  %2 = "emitc.apply"(%0) {applicableOperator = "&"} : (!emitc.lvalue<i32>) -> !emitc.ptr<i32>
+  %3 = emitc.apply "&"(%1) : (!emitc.lvalue<i32>) -> !emitc.ptr<i32>
   return
 }
 
@@ -39,6 +63,21 @@ func.func @add_int(%arg0: i32, %arg1: i32) {
 func.func @add_pointer(%arg0: !emitc.ptr<f32>, %arg1: i32, %arg2: !emitc.opaque<"unsigned int">) {
   %1 = "emitc.add" (%arg0, %arg1) : (!emitc.ptr<f32>, i32) -> !emitc.ptr<f32>
   %2 = "emitc.add" (%arg0, %arg2) : (!emitc.ptr<f32>, !emitc.opaque<"unsigned int">) -> !emitc.ptr<f32>
+  return
+}
+
+func.func @bitwise(%arg0: i32, %arg1: i32) -> () {
+  %0 = emitc.bitwise_and %arg0, %arg1 : (i32, i32) -> i32
+  %1 = emitc.bitwise_left_shift %arg0, %arg1 : (i32, i32) -> i32
+  %2 = emitc.bitwise_not %arg0 : (i32) -> i32
+  %3 = emitc.bitwise_or %arg0, %arg1 : (i32, i32) -> i32
+  %4 = emitc.bitwise_right_shift %arg0, %arg1 : (i32, i32) -> i32
+  %5 = emitc.bitwise_xor %arg0, %arg1 : (i32, i32) -> i32
+  return
+}
+
+func.func @cond(%cond: i1, %arg0: i32, %arg1: i32) -> () {
+  %0 = emitc.conditional %cond, %arg0, %arg1 : i32
   return
 }
 
@@ -77,6 +116,7 @@ func.func @sub_pointer(%arg0: !emitc.ptr<f32>, %arg1: i32, %arg2: !emitc.opaque<
   %2 = "emitc.sub" (%arg0, %arg2) : (!emitc.ptr<f32>, !emitc.opaque<"unsigned int">) -> !emitc.ptr<f32>
   %3 = "emitc.sub" (%arg0, %arg3) : (!emitc.ptr<f32>, !emitc.ptr<f32>) -> !emitc.opaque<"ptrdiff_t">
   %4 = "emitc.sub" (%arg0, %arg3) : (!emitc.ptr<f32>, !emitc.ptr<f32>) -> i32
+  %5 = "emitc.sub" (%arg0, %arg3) : (!emitc.ptr<f32>, !emitc.ptr<f32>) -> !emitc.ptrdiff_t
   return
 }
 
@@ -95,6 +135,19 @@ func.func @cmp(%arg0 : i32, %arg1 : f32, %arg2 : i64, %arg3 : f64, %arg4 : !emit
   %12 = emitc.cmp ge, %arg5, %arg5 : (!emitc.opaque<"std::valarray<int>">, !emitc.opaque<"std::valarray<int>">) -> !emitc.opaque<"std::valarray<bool>">
   %13 = "emitc.cmp" (%arg6, %arg6) {predicate = 6} : (!emitc.opaque<"custom">, !emitc.opaque<"custom">) -> !emitc.opaque<"custom">
   %14 = emitc.cmp three_way, %arg6, %arg6 : (!emitc.opaque<"custom">, !emitc.opaque<"custom">) -> !emitc.opaque<"custom">
+  return
+}
+
+func.func @logical(%arg0: i32, %arg1: i32) {
+  %0 = emitc.logical_and %arg0, %arg1 : i32, i32
+  %1 = emitc.logical_not %arg0 : i32
+  %2 = emitc.logical_or %arg0, %arg1 : i32, i32
+  return
+}
+
+func.func @unary(%arg0: i32) {
+  %0 = emitc.unary_minus %arg0 : (i32) -> i32
+  %1 = emitc.unary_plus %arg0 : (i32) -> i32
   return
 }
 
@@ -123,8 +176,8 @@ func.func @test_if_else(%arg0: i1, %arg1: f32) {
 }
 
 func.func @test_assign(%arg1: f32) {
-  %v = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> f32
-  emitc.assign %arg1 : f32 to %v : f32
+  %v = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<f32>
+  emitc.assign %arg1 : f32 to %v : !emitc.lvalue<f32>
   return
 }
 
@@ -165,4 +218,70 @@ func.func @test_for_not_index_induction(%arg0 : i16, %arg1 : i16, %arg2 : i16) {
     %0 = emitc.call_opaque "func_const"(%i0) : (i16) -> i32
   }
   return
+}
+
+func.func @test_subscript(%arg0 : !emitc.array<2x3xf32>, %arg1 : !emitc.ptr<i32>, %arg2 : !emitc.opaque<"std::map<char, int>">, %idx0 : index, %idx1 : i32, %idx2 : !emitc.opaque<"char">) {
+  %0 = emitc.subscript %arg0[%idx0, %idx1] : (!emitc.array<2x3xf32>, index, i32) -> !emitc.lvalue<f32>
+  %1 = emitc.subscript %arg1[%idx0] : (!emitc.ptr<i32>, index) -> !emitc.lvalue<i32>
+  %2 = emitc.subscript %arg2[%idx2] : (!emitc.opaque<"std::map<char, int>">, !emitc.opaque<"char">) -> !emitc.lvalue<!emitc.opaque<"int">>
+  return
+}
+
+emitc.verbatim "#ifdef __cplusplus"
+emitc.verbatim "extern \"C\" {"
+emitc.verbatim "#endif  // __cplusplus"
+
+emitc.verbatim "#ifdef __cplusplus"
+emitc.verbatim "}  // extern \"C\""
+emitc.verbatim "#endif  // __cplusplus"
+
+emitc.verbatim "typedef int32_t i32;"
+emitc.verbatim "typedef float f32;"
+
+
+emitc.global @uninit : i32
+emitc.global @myglobal_int : i32 = 4
+emitc.global extern @external_linkage : i32
+emitc.global static @internal_linkage : i32
+emitc.global @myglobal : !emitc.array<2xf32> = dense<4.000000e+00>
+emitc.global const @myconstant : !emitc.array<2xi16> = dense<2>
+
+func.func @use_global(%i: index) -> f32 {
+  %0 = emitc.get_global @myglobal : !emitc.array<2xf32>
+  %1 = emitc.subscript %0[%i] : (!emitc.array<2xf32>, index) -> !emitc.lvalue<f32>
+  %2 = emitc.load %1 : <f32>
+  return %2 : f32
+}
+
+func.func @assign_global(%arg0 : i32) {
+  %0 = emitc.get_global @myglobal_int : !emitc.lvalue<i32>
+  emitc.assign %arg0 : i32 to %0 : !emitc.lvalue<i32>
+  return
+}
+
+func.func @member_access(%arg0: !emitc.lvalue<!emitc.opaque<"mystruct">>, %arg1: !emitc.lvalue<!emitc.opaque<"mystruct_ptr">>, %arg2: !emitc.lvalue<!emitc.ptr<!emitc.opaque<"mystruct">>>) {
+  %0 = "emitc.member" (%arg0) {member = "a"} : (!emitc.lvalue<!emitc.opaque<"mystruct">>) -> !emitc.lvalue<i32>
+  %1 = "emitc.member_of_ptr" (%arg1) {member = "a"} : (!emitc.lvalue<!emitc.opaque<"mystruct_ptr">>) -> !emitc.lvalue<i32>
+  %2 = "emitc.member_of_ptr" (%arg2) {member = "a"} : (!emitc.lvalue<!emitc.ptr<!emitc.opaque<"mystruct">>>) -> !emitc.lvalue<i32>
+  return
+}
+
+func.func @switch() {
+  %0 = "emitc.constant"(){value = 1 : index} : () -> !emitc.ptrdiff_t
+
+  emitc.switch %0 : !emitc.ptrdiff_t
+  case 1 {
+    %1 = emitc.call_opaque "func_b" () : () -> i32
+    emitc.yield
+  }
+  case 2 {
+    %2 = emitc.call_opaque "func_a" () : () -> i32
+    emitc.yield
+  }
+  default {
+    %3 = "emitc.constant"(){value = 42.0 : f32} : () -> f32
+    emitc.call_opaque "func2" (%3) : (f32) -> ()
+  }
+
+  return 
 }

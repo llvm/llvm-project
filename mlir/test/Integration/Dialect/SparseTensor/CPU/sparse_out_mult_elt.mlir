@@ -10,9 +10,10 @@
 // DEFINE: %{compile} = mlir-opt %s --sparsifier="%{sparsifier_opts}"
 // DEFINE: %{compile_sve} = mlir-opt %s --sparsifier="%{sparsifier_opts_sve}"
 // DEFINE: %{run_libs} = -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils
-// DEFINE: %{run_opts} = -e entry -entry-point-result=void
+// DEFINE: %{run_libs_sve} = -shared-libs=%native_mlir_runner_utils,%native_mlir_c_runner_utils
+// DEFINE: %{run_opts} = -e main -entry-point-result=void
 // DEFINE: %{run} = mlir-cpu-runner %{run_opts} %{run_libs}
-// DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs}
+// DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs_sve}
 //
 // DEFINE: %{env} =
 //--------------------------------------------------------------------------------------------------
@@ -60,7 +61,7 @@ module {
   }
 
   // Driver method to call and verify kernel.
-  func.func @entry() {
+  func.func @main() {
     %c0 = arith.constant 0 : index
     %f0 = arith.constant 0.0 : f32
 
@@ -84,11 +85,18 @@ module {
     //
     // Verify results. Only two entries stored in result!
     //
-    // CHECK: ( 14, 20, 0, 0 )
+    // CHECK:      ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 2
+    // CHECK-NEXT: dim = ( 32, 16 )
+    // CHECK-NEXT: lvl = ( 32, 16 )
+    // CHECK-NEXT: pos[0] : ( 0, 2 )
+    // CHECK-NEXT: crd[0] : ( 2, 31 )
+    // CHECK-NEXT: pos[1] : ( 0, 1, 2 )
+    // CHECK-NEXT: crd[1] : ( 2, 0 )
+    // CHECK-NEXT: values : ( 14, 20 )
+    // CHECK-NEXT: ----
     //
-    %val = sparse_tensor.values %0 : tensor<32x16xf32, #DCSR> to memref<?xf32>
-    %vv = vector.transfer_read %val[%c0], %f0: memref<?xf32>, vector<4xf32>
-    vector.print %vv : vector<4xf32>
+    sparse_tensor.print %0 : tensor<32x16xf32, #DCSR>
 
     // Release the resources.
     bufferization.dealloc_tensor %sta : tensor<32x16xf32, #DCSR>

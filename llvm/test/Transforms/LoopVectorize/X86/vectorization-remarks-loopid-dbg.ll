@@ -6,7 +6,7 @@
 ; DEBUG-OUTPUT-NOT: .loc
 ; DEBUG-OUTPUT-NOT: {{.*}}.debug_info
 
-; VECTORIZED: remark: vectorization-remarks.c:17:8: vectorized loop (vectorization width: 4, interleaved count: 1)
+; VECTORIZED: remark: vectorization-remarks.c:17:8: vectorized loop (vectorization width: 4, interleaved count: 2)
 ; UNROLLED: remark: vectorization-remarks.c:17:8: interleaved loop (interleaved count: 4)
 ; NONE: remark: vectorization-remarks.c:17:8: loop not vectorized: vectorization and interleaving are explicitly disabled, or the loop has already been vectorized
 

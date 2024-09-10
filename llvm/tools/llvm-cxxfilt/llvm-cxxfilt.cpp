@@ -13,7 +13,6 @@
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
@@ -146,7 +145,6 @@ static void demangleLine(llvm::raw_ostream &OS, StringRef Mangled, bool Split) {
 }
 
 int llvm_cxxfilt_main(int argc, char **argv, const llvm::ToolContext &) {
-  InitLLVM X(argc, argv);
   BumpPtrAllocator A;
   StringSaver Saver(A);
   CxxfiltOptTable Tbl;
@@ -167,13 +165,8 @@ int llvm_cxxfilt_main(int argc, char **argv, const llvm::ToolContext &) {
     return 0;
   }
 
-  // The default value depends on the default triple. Mach-O has symbols
-  // prefixed with "_", so strip by default.
-  if (opt::Arg *A =
-          Args.getLastArg(OPT_strip_underscore, OPT_no_strip_underscore))
-    StripUnderscore = A->getOption().matches(OPT_strip_underscore);
-  else
-    StripUnderscore = Triple(sys::getProcessTriple()).isOSBinFormatMachO();
+  StripUnderscore =
+      Args.hasFlag(OPT_strip_underscore, OPT_no_strip_underscore, false);
 
   ParseParams = !Args.hasArg(OPT_no_params);
 

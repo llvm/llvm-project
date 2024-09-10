@@ -1,9 +1,9 @@
 ---
-TpiStream:       
+TpiStream:
   Version:         VC80
-  Records:         
+  Records:
     - Kind:            LF_STRUCTURE
-      Class:           
+      Class:
         MemberCount:     0
         Options:         [ None, HasUniqueName ]
         FieldList:       0
@@ -14,7 +14,7 @@ TpiStream:
         Size:            1
 
     - Kind:            LF_STRUCTURE
-      Class:           
+      Class:
         MemberCount:     0
         Options:         [ None ]
         FieldList:       0

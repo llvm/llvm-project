@@ -7,10 +7,10 @@
 // RUN: %clang_cc1 -std=c++20 A-interface.cpp -emit-module-interface \
 // RUN:   -fmodule-file=A-PubPart.pcm -o A.pcm
 
-// RUN: %clang_cc1 -std=c++20 A-impl-top.cpp -fsyntax-only -fmodule-file=A.pcm
-// RUN: %clang_cc1 -std=c++20 A-impl-part.cpp -fsyntax-only -fmodule-file=A.pcm
-// RUN: %clang_cc1 -std=c++20 A-impl-1.cpp -fsyntax-only -fmodule-file=A.pcm
-// RUN: %clang_cc1 -std=c++20 A-impl-2.cpp -fsyntax-only -fmodule-file=A.pcm
+// RUN: %clang_cc1 -std=c++20 A-impl-top.cpp -fsyntax-only -fprebuilt-module-path=%t
+// RUN: %clang_cc1 -std=c++20 A-impl-part.cpp -fsyntax-only -fprebuilt-module-path=%t
+// RUN: %clang_cc1 -std=c++20 A-impl-1.cpp -fsyntax-only -fprebuilt-module-path=%t
+// RUN: %clang_cc1 -std=c++20 A-impl-2.cpp -fsyntax-only -fprebuilt-module-path=%t
 
 //--- A-interface.cpp
 export module A;

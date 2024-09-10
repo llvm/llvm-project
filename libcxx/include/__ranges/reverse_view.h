@@ -33,6 +33,9 @@
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER >= 20
@@ -178,9 +181,8 @@ struct __fn : __range_adaptor_closure<__fn> {
   template <class _Range>
     requires(!__is_reverse_view<remove_cvref_t<_Range>> && !__is_sized_reverse_subrange<remove_cvref_t<_Range>> &&
              !__is_unsized_reverse_subrange<remove_cvref_t<_Range>>)
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Range&& __range) const
-      noexcept(noexcept(reverse_view{std::forward<_Range>(__range)}))
-          -> decltype(reverse_view{std::forward<_Range>(__range)}) {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Range&& __range) const noexcept(noexcept(reverse_view{
+      std::forward<_Range>(__range)})) -> decltype(reverse_view{std::forward<_Range>(__range)}) {
     return reverse_view{std::forward<_Range>(__range)};
   }
 };
@@ -195,5 +197,7 @@ inline constexpr auto reverse = __reverse::__fn{};
 #endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___RANGES_REVERSE_VIEW_H

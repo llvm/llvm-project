@@ -13,6 +13,7 @@
 #include "CodeGenTypes.h"
 #include "CGCXXABI.h"
 #include "CGCall.h"
+#include "CGHLSLRuntime.h"
 #include "CGOpenCLRuntime.h"
 #include "CGRecordLayout.h"
 #include "TargetInfo.h"
@@ -30,9 +31,8 @@ using namespace clang;
 using namespace CodeGen;
 
 CodeGenTypes::CodeGenTypes(CodeGenModule &cgm)
-  : CGM(cgm), Context(cgm.getContext()), TheModule(cgm.getModule()),
-    Target(cgm.getTarget()), TheCXXABI(cgm.getCXXABI()),
-    TheABIInfo(cgm.getTargetCodeGenInfo().getABIInfo()) {
+    : CGM(cgm), Context(cgm.getContext()), TheModule(cgm.getModule()),
+      Target(cgm.getTarget()) {
   SkippedLayout = false;
   LongDoubleReferenced = false;
 }
@@ -42,6 +42,8 @@ CodeGenTypes::~CodeGenTypes() {
        I = FunctionInfos.begin(), E = FunctionInfos.end(); I != E; )
     delete &*I++;
 }
+
+CGCXXABI &CodeGenTypes::getCXXABI() const { return getCGM().getCXXABI(); }
 
 const CodeGenOptions &CodeGenTypes::getCodeGenOpts() const {
   return CGM.getCodeGenOpts();
@@ -89,7 +91,14 @@ void CodeGenTypes::addRecordTypeName(const RecordDecl *RD,
 /// ConvertType in that it is used to convert to the memory representation for
 /// a type.  For example, the scalar representation for _Bool is i1, but the
 /// memory representation is usually i8 or i32, depending on the target.
-llvm::Type *CodeGenTypes::ConvertTypeForMem(QualType T, bool ForBitField) {
+///
+/// We generally assume that the alloc size of this type under the LLVM
+/// data layout is the same as the size of the AST type.  The alignment
+/// does not have to match: Clang should always use explicit alignments
+/// and packed structs as necessary to produce the layout it needs.
+/// But the size does need to be exactly right or else things like struct
+/// layout will break.
+llvm::Type *CodeGenTypes::ConvertTypeForMem(QualType T) {
   if (T->isConstantMatrixType()) {
     const Type *Ty = Context.getCanonicalType(T).getTypePtr();
     const ConstantMatrixType *MT = cast<ConstantMatrixType>(Ty);
@@ -107,15 +116,63 @@ llvm::Type *CodeGenTypes::ConvertTypeForMem(QualType T, bool ForBitField) {
     return llvm::IntegerType::get(FixedVT->getContext(), BytePadded);
   }
 
-  // If this is a bool type, or a bit-precise integer type in a bitfield
-  // representation, map this integer to the target-specified size.
-  if ((ForBitField && T->isBitIntType()) ||
-      (!T->isBitIntType() && R->isIntegerTy(1)))
+  // If T is _Bool or a _BitInt type, ConvertType will produce an IR type
+  // with the exact semantic bit-width of the AST type; for example,
+  // _BitInt(17) will turn into i17. In memory, however, we need to store
+  // such values extended to their full storage size as decided by AST
+  // layout; this is an ABI requirement. Ideally, we would always use an
+  // integer type that's just the bit-size of the AST type; for example, if
+  // sizeof(_BitInt(17)) == 4, _BitInt(17) would turn into i32. That is what's
+  // returned by convertTypeForLoadStore. However, that type does not
+  // always satisfy the size requirement on memory representation types
+  // describe above. For example, a 32-bit platform might reasonably set
+  // sizeof(_BitInt(65)) == 12, but i96 is likely to have to have an alloc size
+  // of 16 bytes in the LLVM data layout. In these cases, we simply return
+  // a byte array of the appropriate size.
+  if (T->isBitIntType()) {
+    if (typeRequiresSplitIntoByteArray(T, R))
+      return llvm::ArrayType::get(CGM.Int8Ty,
+                                  Context.getTypeSizeInChars(T).getQuantity());
+    return llvm::IntegerType::get(getLLVMContext(),
+                                  (unsigned)Context.getTypeSize(T));
+  }
+
+  if (R->isIntegerTy(1))
     return llvm::IntegerType::get(getLLVMContext(),
                                   (unsigned)Context.getTypeSize(T));
 
   // Else, don't map it.
   return R;
+}
+
+bool CodeGenTypes::typeRequiresSplitIntoByteArray(QualType ASTTy,
+                                                  llvm::Type *LLVMTy) {
+  if (!LLVMTy)
+    LLVMTy = ConvertType(ASTTy);
+
+  CharUnits ASTSize = Context.getTypeSizeInChars(ASTTy);
+  CharUnits LLVMSize =
+      CharUnits::fromQuantity(getDataLayout().getTypeAllocSize(LLVMTy));
+  return ASTSize != LLVMSize;
+}
+
+llvm::Type *CodeGenTypes::convertTypeForLoadStore(QualType T,
+                                                  llvm::Type *LLVMTy) {
+  if (!LLVMTy)
+    LLVMTy = ConvertType(T);
+
+  if (T->isBitIntType())
+    return llvm::Type::getIntNTy(
+        getLLVMContext(), Context.getTypeSizeInChars(T).getQuantity() * 8);
+
+  if (LLVMTy->isIntegerTy(1))
+    return llvm::IntegerType::get(getLLVMContext(),
+                                  (unsigned)Context.getTypeSize(T));
+
+  if (T->isExtVectorBoolType())
+    return ConvertTypeForMem(T);
+
+  return LLVMTy;
 }
 
 /// isRecordLayoutComplete - Return true if the specified type is already
@@ -409,7 +466,7 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
       break;
     case BuiltinType::LongDouble:
       LongDoubleReferenced = true;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case BuiltinType::BFloat16:
     case BuiltinType::Float:
     case BuiltinType::Double:
@@ -513,18 +570,18 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
       {
         ASTContext::BuiltinVectorTypeInfo Info =
             Context.getBuiltinVectorTypeInfo(cast<BuiltinType>(Ty));
-        // Tuple types are expressed as aggregregate types of the same scalable
-        // vector type (e.g. vint32m1x2_t is two vint32m1_t, which is {<vscale x
-        // 2 x i32>, <vscale x 2 x i32>}).
         if (Info.NumVectors != 1) {
-          llvm::Type *EltTy = llvm::ScalableVectorType::get(
-              ConvertType(Info.ElementType), Info.EC.getKnownMinValue());
-          llvm::SmallVector<llvm::Type *, 4> EltTys(Info.NumVectors, EltTy);
-          return llvm::StructType::get(getLLVMContext(), EltTys);
+          unsigned I8EltCount =
+              Info.EC.getKnownMinValue() *
+              ConvertType(Info.ElementType)->getScalarSizeInBits() / 8;
+          return llvm::TargetExtType::get(
+              getLLVMContext(), "riscv.vector.tuple",
+              llvm::ScalableVectorType::get(
+                  llvm::Type::getInt8Ty(getLLVMContext()), I8EltCount),
+              Info.NumVectors);
         }
         return llvm::ScalableVectorType::get(ConvertType(Info.ElementType),
-                                             Info.EC.getKnownMinValue() *
-                                                 Info.NumVectors);
+                                             Info.EC.getKnownMinValue());
       }
 #define WASM_REF_TYPE(Name, MangledName, Id, SingletonId, AS)                  \
   case BuiltinType::Id: {                                                      \
@@ -534,6 +591,15 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
       llvm_unreachable("Unexpected wasm reference builtin type!");             \
   } break;
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
+#define AMDGPU_OPAQUE_PTR_TYPE(Name, MangledName, AS, Width, Align, Id,        \
+                               SingletonId)                                    \
+  case BuiltinType::Id:                                                        \
+    return llvm::PointerType::get(getLLVMContext(), AS);
+#include "clang/Basic/AMDGPUTypes.def"
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/HLSLIntangibleTypes.def"
+      ResultType = CGM.getHLSLRuntime().convertHLSLSpecificType(Ty);
+      break;
     case BuiltinType::Dependent:
 #define BUILTIN_TYPE(Id, SingletonId)
 #define PLACEHOLDER_TYPE(Id, SingletonId) \
@@ -590,6 +656,7 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
     ResultType = llvm::ArrayType::get(ResultType, 0);
     break;
   }
+  case Type::ArrayParameter:
   case Type::ConstantArray: {
     const ConstantArrayType *A = cast<ConstantArrayType>(Ty);
     llvm::Type *EltTy = ConvertTypeForMem(A->getElementType());
@@ -601,7 +668,7 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
       EltTy = llvm::Type::getInt8Ty(getLLVMContext());
     }
 
-    ResultType = llvm::ArrayType::get(EltTy, A->getSize().getZExtValue());
+    ResultType = llvm::ArrayType::get(EltTy, A->getZExtSize());
     break;
   }
   case Type::ExtVector:

@@ -126,8 +126,7 @@ public:
   constexpr Result result() const { return result_; }
 
   constexpr DynamicType GetType() const { return result_.GetType(); }
-  llvm::raw_ostream &AsFortran(llvm::raw_ostream &,
-      const parser::CharBlock *derivedTypeRename = nullptr) const;
+  llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
 
 protected:
   std::vector<Element> Reshape(const ConstantSubscripts &) const;
@@ -186,6 +185,8 @@ public:
 
   const Scalar<Result> &values() const { return values_; }
   ConstantSubscript LEN() const { return length_; }
+  bool wasHollerith() const { return wasHollerith_; }
+  void set_wasHollerith(bool yes = true) { wasHollerith_ = yes; }
 
   std::optional<Scalar<Result>> GetScalarValue() const {
     if (Rank() == 0) {
@@ -210,6 +211,7 @@ public:
 private:
   Scalar<Result> values_; // one contiguous string
   ConstantSubscript length_;
+  bool wasHollerith_{false};
 };
 
 class StructureConstructor;

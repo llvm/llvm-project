@@ -34,16 +34,16 @@
 ; Round trip it through llvm-as
 ; RUN: llvm-dis %t.o.thinlto.bc -o - | llvm-as -o - | llvm-dis -o - | FileCheck %s --check-prefix=CHECK-DIS
 ; CHECK-DIS: ^0 = module: (path: "{{.*}}thinlto-distributed-cfi-devirt.ll.tmp.o", hash: ({{.*}}, {{.*}}, {{.*}}, {{.*}}, {{.*}}))
-; CHECK-DIS: ^1 = gv: (guid: 8346051122425466633, summaries: (function: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 1, dsoLocal: 0, canAutoHide: 0), insts: 18, funcFlags: (readNone: 0, readOnly: 0, noRecurse: 0, returnDoesNotAlias: 0, noInline: 0, alwaysInline: 0, noUnwind: 0, mayThrow: 0, hasUnknownCall: 1, mustBeUnreachable: 0), typeIdInfo: (typeTests: (^2), typeCheckedLoadVCalls: (vFuncId: (^2, offset: 8), vFuncId: (^2, offset: 0))))))
+; CHECK-DIS: ^1 = gv: (guid: 8346051122425466633, summaries: (function: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 1, dsoLocal: 0, canAutoHide: 0, importType: definition), insts: 18, funcFlags: (readNone: 0, readOnly: 0, noRecurse: 0, returnDoesNotAlias: 0, noInline: 0, alwaysInline: 0, noUnwind: 0, mayThrow: 0, hasUnknownCall: 1, mustBeUnreachable: 0), typeIdInfo: (typeTests: (^2), typeCheckedLoadVCalls: (vFuncId: (^2, offset: 8), vFuncId: (^2, offset: 0))))))
 ; CHECK-DIS: ^2 = typeid: (name: "_ZTS1A", summary: (typeTestRes: (kind: allOnes, sizeM1BitWidth: 7), wpdResolutions: ((offset: 0, wpdRes: (kind: branchFunnel)), (offset: 8, wpdRes: (kind: singleImpl, singleImplName: "_ZN1A1nEi"))))) ; guid = 7004155349499253778
 
 ; RUN: %clang_cc1 -triple x86_64-grtev4-linux-gnu \
-; RUN:   -emit-obj -fthinlto-index=%t.o.thinlto.bc -O2 -Rpass=wholeprogramdevirt \
+; RUN:   -fthinlto-index=%t.o.thinlto.bc -O2 -Rpass=wholeprogramdevirt \
 ; RUN:   -emit-llvm -o - -x ir %t.o 2>&1 | FileCheck %s --check-prefixes=CHECK-IR --check-prefixes=REMARKS
 
 ; Check that the devirtualization is suppressed via -wholeprogramdevirt-skip
 ; RUN: %clang_cc1 -triple x86_64-grtev4-linux-gnu -mllvm -wholeprogramdevirt-skip=_ZN1A1nEi \
-; RUN:   -emit-obj -fthinlto-index=%t.o.thinlto.bc -O2 -Rpass=wholeprogramdevirt \
+; RUN:   -fthinlto-index=%t.o.thinlto.bc -O2 -Rpass=wholeprogramdevirt \
 ; RUN:   -emit-llvm -o - -x ir %t.o 2>&1 | FileCheck %s --check-prefixes=SKIP-IR --check-prefixes=SKIP-REMARKS
 
 ; REMARKS: single-impl: devirtualized a call to _ZN1A1nEi

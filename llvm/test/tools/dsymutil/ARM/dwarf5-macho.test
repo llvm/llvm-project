@@ -22,14 +22,14 @@ RUN: dsymutil -y %p/dummy-debug-map-amr64.map -oso-prepend-path=%p/../Inputs/DWA
 RUN: llvm-dwarfdump %t.dir/dwarf5-macho.dSYM -a --verbose | FileCheck %s
 
 RUN: rm -rf %t.dir && mkdir -p %t.dir
-RUN: dsymutil --linker llvm --no-odr -y %p/dummy-debug-map-amr64.map \
+RUN: dsymutil --linker parallel --no-odr -y %p/dummy-debug-map-amr64.map \
 RUN:   -oso-prepend-path=%p/../Inputs/DWARF5 -o %t.dir/dwarf5-macho.dSYM
 RUN: llvm-dwarfdump %t.dir/dwarf5-macho.dSYM -a --verbose | FileCheck %s
 
 ### Uncomment following when llvm-dwarfdump will print resolved address ranges
 ### for the case mutiplue compile units.
 COM: rm -rf %t.dir && mkdir -p %t.dir
-COM: dsymutil --linker llvm -y %p/dummy-debug-map-amr64.map \
+COM: dsymutil --linker parallel -y %p/dummy-debug-map-amr64.map \
 COM:   -oso-prepend-path=%p/../Inputs/DWARF5 -o %t.dir/dwarf5-macho.dSYM
 COM: llvm-dwarfdump %t.dir/dwarf5-macho.dSYM -a --verbose | FileCheck %s \
 COM: --check-prefixes=CHECK,CHECK-LLVM
@@ -109,16 +109,16 @@ CHECK-NEXT: 0x0000000e: [DW_RLE_offset_pair  ]: {{.*}}[0x[[RANGELIST_OFFSET_STAR
 CHECK-NEXT: 0x00000011: [DW_RLE_end_of_list  ]
 
 CHECK: .debug_names contents:
-CHECK-NEX:T Name Index @ 0x0 {
-CHECK-NEX:T   Header {
-CHECK-NEX:T     Length: 0x7C
-CHECK-NEX:T     Format: DWARF32
-CHECK-NEX:T     Version: 5
-CHECK-NEX:T     CU count: 1
-CHECK-NEX:T     Local TU count: 0
-CHECK-NEX:T     Foreign TU count: 0
-CHECK-NEX:T     Bucket count: 3
-CHECK-NEX:T     Name count: 3
-CHECK-NEX:T     Abbreviations table size: 0xD
-CHECK-NEX:T     Augmentation: 'LLVM0700'
-CHECK-NEX:T   }
+CHECK-NEXT: Name Index @ 0x0 {
+CHECK-NEXT:   Header {
+CHECK-NEXT:     Length:
+CHECK-NEXT:     Format: DWARF32
+CHECK-NEXT:     Version: 5
+CHECK-NEXT:     CU count: 1
+CHECK-NEXT:     Local TU count: 0
+CHECK-NEXT:     Foreign TU count: 0
+CHECK-NEXT:     Bucket count: 3
+CHECK-NEXT:     Name count: 3
+CHECK-NEXT:     Abbreviations table size:
+CHECK-NEXT:     Augmentation: 'LLVM0700'
+CHECK-NEXT:   }

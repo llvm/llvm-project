@@ -21,12 +21,7 @@ class RISCVSubtarget;
 
 class RISCVFrameLowering : public TargetFrameLowering {
 public:
-  explicit RISCVFrameLowering(const RISCVSubtarget &STI)
-      : TargetFrameLowering(StackGrowsDown,
-                            /*StackAlignment=*/Align(16),
-                            /*LocalAreaOffset=*/0,
-                            /*TransientStackAlignment=*/Align(16)),
-        STI(STI) {}
+  explicit RISCVFrameLowering(const RISCVSubtarget &STI);
 
   void emitPrologue(MachineFunction &MF, MachineBasicBlock &MBB) const override;
   void emitEpilogue(MachineFunction &MF, MachineBasicBlock &MBB) const override;
@@ -50,6 +45,12 @@ public:
   MachineBasicBlock::iterator
   eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
                                 MachineBasicBlock::iterator MI) const override;
+
+  bool assignCalleeSavedSpillSlots(MachineFunction &MF,
+                                   const TargetRegisterInfo *TRI,
+                                   std::vector<CalleeSavedInfo> &CSI,
+                                   unsigned &MinCSFrameIndex,
+                                   unsigned &MaxCSFrameIndex) const override;
   bool spillCalleeSavedRegisters(MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator MI,
                                  ArrayRef<CalleeSavedInfo> CSI,
@@ -87,6 +88,9 @@ private:
   void adjustStackForRVV(MachineFunction &MF, MachineBasicBlock &MBB,
                          MachineBasicBlock::iterator MBBI, const DebugLoc &DL,
                          int64_t Amount, MachineInstr::MIFlag Flag) const;
+  void emitCalleeSavedRVVPrologCFI(MachineBasicBlock &MBB,
+                                   MachineBasicBlock::iterator MI,
+                                   bool HasFP) const;
   std::pair<int64_t, Align>
   assignRVVStackObjectOffsets(MachineFunction &MF) const;
 };

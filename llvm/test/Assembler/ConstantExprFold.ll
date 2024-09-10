@@ -16,13 +16,6 @@
 %Ty = type { i32, i32 }
 @B = external global %Ty
 
-; @icmp_ult1 and @icmp_ult2 will be folded by the target-dependent constant folder instead.
-@icmp_ult1 = global i1 icmp ult (ptr @A, ptr getelementptr (i64, ptr @A, i64 1))        ; true
-@icmp_slt = global i1 icmp slt (ptr @A, ptr @A)        ; false
-@icmp_ult2 = global i1 icmp ult (ptr @B,
-  ptr getelementptr (%Ty, ptr @B, i64 0, i32 1))            ; true
-;global i1 icmp ne (ptr @A, ptr @B)                 ; true
-
 ; PR2206
 @cons = weak global i32 0, align 8              ; <ptr> [#uses=1]
 
@@ -37,22 +30,19 @@
 
 ; Need a function to make update_test_checks.py work.
 ;.
-; CHECK: @[[A:[a-zA-Z0-9_$"\\.-]+]] = global i64 0
-; CHECK: @[[ADD:[a-zA-Z0-9_$"\\.-]+]] = global ptr @A
-; CHECK: @[[SUB:[a-zA-Z0-9_$"\\.-]+]] = global ptr @A
-; CHECK: @[[MUL:[a-zA-Z0-9_$"\\.-]+]] = global ptr null
-; CHECK: @[[XOR:[a-zA-Z0-9_$"\\.-]+]] = global ptr @A
-; CHECK: @[[B:[a-zA-Z0-9_$"\\.-]+]] = external global [[TY:%.*]]
-; CHECK: @[[ICMP_ULT1:[a-zA-Z0-9_$"\\.-]+]] = global i1 icmp ugt (ptr getelementptr inbounds (i64, ptr @A, i64 1), ptr @A)
-; CHECK: @[[ICMP_SLT:[a-zA-Z0-9_$"\\.-]+]] = global i1 false
-; CHECK: @[[ICMP_ULT2:[a-zA-Z0-9_$"\\.-]+]] = global i1 icmp ugt (ptr getelementptr inbounds ([[TY:%.*]], ptr @B, i64 0, i32 1), ptr @B)
-; CHECK: @[[CONS:[a-zA-Z0-9_$"\\.-]+]] = weak global i32 0, align 8
-; CHECK: @[[GEP1:[a-zA-Z0-9_$"\\.-]+]] = global <2 x ptr> undef
-; CHECK: @[[GEP2:[a-zA-Z0-9_$"\\.-]+]] = global <2 x ptr> undef
-; CHECK: @[[GEP3:[a-zA-Z0-9_$"\\.-]+]] = global <2 x ptr> zeroinitializer
-; CHECK: @[[GEP4:[a-zA-Z0-9_$"\\.-]+]] = global <2 x ptr> zeroinitializer
-; CHECK: @[[BITCAST1:[a-zA-Z0-9_$"\\.-]+]] = global <2 x i32> <i32 -1, i32 -1>
-; CHECK: @[[BITCAST2:[a-zA-Z0-9_$"\\.-]+]] = global <4 x i16> <i16 -1, i16 -1, i16 -1, i16 -1>
+; CHECK: @A = global i64 0
+; CHECK: @add = global ptr @A
+; CHECK: @sub = global ptr @A
+; CHECK: @mul = global ptr null
+; CHECK: @xor = global ptr @A
+; CHECK: @B = external global %Ty
+; CHECK: @cons = weak global i32 0, align 8
+; CHECK: @gep1 = global <2 x ptr> undef
+; CHECK: @gep2 = global <2 x ptr> undef
+; CHECK: @gep3 = global <2 x ptr> zeroinitializer
+; CHECK: @gep4 = global <2 x ptr> zeroinitializer
+; CHECK: @bitcast1 = global <2 x i32> <i32 -1, i32 -1>
+; CHECK: @bitcast2 = global <4 x i16> <i16 -1, i16 -1, i16 -1, i16 -1>
 ;.
 define void @dummy() {
 ; CHECK-LABEL: @dummy(

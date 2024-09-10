@@ -9,7 +9,7 @@ subroutine foo(x)
 ! CHECK-DAG:  %[[VAL_3:.*]] = arith.constant 21 : index
 ! CHECK-DAG:  %[[VAL_4:.*]] = arith.constant 10 : index
 ! CHECK:  %[[VAL_5:.*]] = fir.shape_shift %[[VAL_3]], %[[VAL_4]] : (index, index) -> !fir.shapeshift<1>
-! CHECK:  %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_5]]) {uniq_name = "_QFfooEx"} : (!fir.ref<!fir.array<10xi32>>, !fir.shapeshift<1>) -> (!fir.box<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
+! CHECK:  %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_5]]) dummy_scope %{{[0-9]+}} {uniq_name = "_QFfooEx"} : (!fir.ref<!fir.array<10xi32>>, !fir.shapeshift<1>, !fir.dscope) -> (!fir.box<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
 ! CHECK:  fir.embox %[[VAL_6]]#1(%[[VAL_5]]) : (!fir.ref<!fir.array<10xi32>>, !fir.shapeshift<1>) -> !fir.box<!fir.array<10xi32>>
 end subroutine
 

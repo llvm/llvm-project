@@ -55,12 +55,13 @@ define i64 @test2_PR2274(i32 %x, i32 %v) nounwind {
 define i32 @PR30366(i1 %a) {
 ; CHECK-LABEL: @PR30366(
 ; CHECK-NEXT:    [[Z:%.*]] = zext i1 [[A:%.*]] to i32
-; CHECK-NEXT:    [[Z2:%.*]] = zext nneg i16 shl (i16 1, i16 ptrtoint (ptr @b to i16)) to i32
-; CHECK-NEXT:    [[D:%.*]] = udiv i32 [[Z]], [[Z2]]
-; CHECK-NEXT:    ret i32 [[D]]
+; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i16 ptrtoint (ptr @b to i16) to i32
+; CHECK-NEXT:    [[D1:%.*]] = lshr i32 [[Z]], [[TMP1]]
+; CHECK-NEXT:    ret i32 [[D1]]
 ;
   %z = zext i1 %a to i32
-  %z2 = zext i16 shl (i16 1, i16 ptrtoint (ptr @b to i16)) to i32
+  %shl = shl i16 1, ptrtoint (ptr @b to i16)
+  %z2 = zext i16 %shl to i32
   %d = udiv i32 %z, %z2
   ret i32 %d
 }
@@ -157,11 +158,11 @@ define i8 @udiv_exact_demanded_low_bits_clear(i8 %a) {
 
 define <vscale x 1 x i32> @udiv_demanded3(<vscale x 1 x i32> %a) {
 ; CHECK-LABEL: @udiv_demanded3(
-; CHECK-NEXT:    [[U:%.*]] = udiv <vscale x 1 x i32> [[A:%.*]], shufflevector (<vscale x 1 x i32> insertelement (<vscale x 1 x i32> poison, i32 12, i32 0), <vscale x 1 x i32> poison, <vscale x 1 x i32> zeroinitializer)
+; CHECK-NEXT:    [[U:%.*]] = udiv <vscale x 1 x i32> [[A:%.*]], shufflevector (<vscale x 1 x i32> insertelement (<vscale x 1 x i32> poison, i32 12, i64 0), <vscale x 1 x i32> poison, <vscale x 1 x i32> zeroinitializer)
 ; CHECK-NEXT:    ret <vscale x 1 x i32> [[U]]
 ;
-  %o = or <vscale x 1 x i32> %a, shufflevector (<vscale x 1 x i32> insertelement (<vscale x 1 x i32> poison, i32 3, i32 0), <vscale x 1 x i32> poison, <vscale x 1 x i32> zeroinitializer)
-  %u = udiv <vscale x 1 x i32> %o, shufflevector (<vscale x 1 x i32> insertelement (<vscale x 1 x i32> poison, i32 12, i32 0), <vscale x 1 x i32> poison, <vscale x 1 x i32> zeroinitializer)
+  %o = or <vscale x 1 x i32> %a, splat (i32 3)
+  %u = udiv <vscale x 1 x i32> %o, splat (i32 12)
   ret <vscale x 1 x i32> %u
 }
 

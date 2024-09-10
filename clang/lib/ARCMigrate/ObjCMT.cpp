@@ -36,6 +36,7 @@
 using namespace clang;
 using namespace arcmt;
 using namespace ento;
+using llvm::RewriteBuffer;
 
 namespace {
 
@@ -484,7 +485,7 @@ static void rewriteToObjCProperty(const ObjCMethodDecl *Getter,
 
   // Short circuit 'delegate' properties that contain the name "delegate" or
   // "dataSource", or have exact name "target" to have 'assign' attribute.
-  if (PropertyName.equals("target") || PropertyName.contains("delegate") ||
+  if (PropertyName == "target" || PropertyName.contains("delegate") ||
       PropertyName.contains("dataSource")) {
     QualType QT = Getter->getReturnType();
     if (!QT->isRealType())
@@ -1144,7 +1145,7 @@ static bool IsValidIdentifier(ASTContext &Ctx,
     return false;
   std::string NameString = Name;
   NameString[0] = toLowercase(NameString[0]);
-  IdentifierInfo *II = &Ctx.Idents.get(NameString);
+  const IdentifierInfo *II = &Ctx.Idents.get(NameString);
   return II->getTokenID() ==  tok::identifier;
 }
 
@@ -1166,7 +1167,7 @@ bool ObjCMigrateASTConsumer::migrateProperty(ASTContext &Ctx,
   if (OIT_Family != OIT_None)
     return false;
 
-  IdentifierInfo *getterName = GetterSelector.getIdentifierInfoForSlot(0);
+  const IdentifierInfo *getterName = GetterSelector.getIdentifierInfoForSlot(0);
   Selector SetterSelector =
   SelectorTable::constructSetterSelector(PP.getIdentifierTable(),
                                          PP.getSelectorTable(),
@@ -1311,7 +1312,8 @@ void ObjCMigrateASTConsumer::migrateFactoryMethod(ASTContext &Ctx,
   std::string StringLoweredClassName = LoweredClassName.lower();
   LoweredClassName = StringLoweredClassName;
 
-  IdentifierInfo *MethodIdName = OM->getSelector().getIdentifierInfoForSlot(0);
+  const IdentifierInfo *MethodIdName =
+      OM->getSelector().getIdentifierInfoForSlot(0);
   // Handle method with no name at its first selector slot; e.g. + (id):(int)x.
   if (!MethodIdName)
     return;
@@ -1962,8 +1964,7 @@ void ObjCMigrateASTConsumer::HandleTranslationUnit(ASTContext &Ctx) {
     llvm::raw_svector_ostream vecOS(newText);
     buf.write(vecOS);
     std::unique_ptr<llvm::MemoryBuffer> memBuf(
-        llvm::MemoryBuffer::getMemBufferCopy(
-            StringRef(newText.data(), newText.size()), file->getName()));
+        llvm::MemoryBuffer::getMemBufferCopy(newText.str(), file->getName()));
     SmallString<64> filePath(file->getName());
     FileMgr.FixupRelativePath(filePath);
     Remapper.remap(filePath.str(), std::move(memBuf));
@@ -2201,7 +2202,7 @@ static std::string applyEditsToTemp(FileEntryRef FE,
   TmpOut.write(NewText.data(), NewText.size());
   TmpOut.close();
 
-  return std::string(TempPath.str());
+  return std::string(TempPath);
 }
 
 bool arcmt::getFileRemappingsFromFileList(

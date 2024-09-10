@@ -15,7 +15,7 @@ module attributes {transform.with_named_sequence} {
     %matmul = transform.structured.match ops{["linalg.matmul"]} in %arg1
       : (!transform.any_op) -> !transform.any_op
 
-    %matmul_l1, %loops_l1 = transform.structured.tile_using_for %matmul [5] : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    %matmul_l1, %loops_l1 = transform.structured.tile_using_for %matmul tile_sizes [5] : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
 
     %matmul_padded, %0, %copy_back = transform.structured.pad %matmul_l1 {
       padding_values=[0.0: f32, 0.0 : f32, 0.0 : f32],
@@ -49,7 +49,7 @@ module attributes {transform.with_named_sequence} {
     %matmul = transform.structured.match ops{["linalg.matmul"]} in %arg1
       : (!transform.any_op) -> !transform.any_op
 
-    %matmul_l1, %loops_l1 = transform.structured.tile_using_for %matmul [5] : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    %matmul_l1, %loops_l1 = transform.structured.tile_using_for %matmul tile_sizes [5] : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
 
     %matmul_padded, %0, %copy_back = transform.structured.pad %matmul_l1 {
       padding_values=[0.0: f32, 0.0 : f32, 0.0 : f32],
@@ -89,7 +89,7 @@ module attributes {transform.with_named_sequence} {
     %matmul = transform.structured.match ops{["linalg.matmul"]} in %arg1
       : (!transform.any_op) -> !transform.any_op
 
-    %matmul_l1, %loops_l1 = transform.structured.tile_using_for %matmul [5] : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    %matmul_l1, %loops_l1 = transform.structured.tile_using_for %matmul tile_sizes [5] : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
 
     %matmul_padded, %0, %copy_back = transform.structured.pad %matmul_l1 {
       padding_values=[0.0: f32, 0.0 : f32, 0.0 : f32],
@@ -129,7 +129,7 @@ module attributes {transform.with_named_sequence} {
     %matmul = transform.structured.match ops{["linalg.matmul"]} in %arg1
       : (!transform.any_op) -> !transform.any_op
 
-    %matmul_l1, %loops_l1 = transform.structured.tile_using_for %matmul [5] : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    %matmul_l1, %loops_l1 = transform.structured.tile_using_for %matmul tile_sizes [5] : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
 
     %matmul_padded, %0, %copy_back = transform.structured.pad %matmul_l1 {
       padding_values=[0.0: f32, 0.0 : f32, 0.0 : f32],
@@ -167,7 +167,7 @@ module attributes {transform.with_named_sequence} {
     %matmul = transform.structured.match ops{["linalg.matmul"]} in %arg1
       : (!transform.any_op) -> !transform.any_op
 
-    %matmul_l1, %loops_l1:2 = transform.structured.tile_using_for %matmul [5, 0, 7] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+    %matmul_l1, %loops_l1:2 = transform.structured.tile_using_for %matmul tile_sizes [5, 0, 7] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
 
     %matmul_padded, %0, %copy_back = transform.structured.pad %matmul_l1 {
       padding_values=[0.0: f32, 0.0 : f32, 0.0 : f32],
@@ -177,8 +177,10 @@ module attributes {transform.with_named_sequence} {
     %pad = transform.get_producer_of_operand %matmul_padded[2]
       : (!transform.any_op) -> !transform.any_op
 
+    transform.apply_licm to %loops_l1#1 : !transform.any_op
+
     transform.structured.hoist_pad.build_packing_loop_nest %pad above %loops_l1#1
        : (!transform.any_op, !transform.any_op) -> !transform.any_op
-       transform.yield
+    transform.yield
   }
 }

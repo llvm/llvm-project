@@ -11,12 +11,13 @@
 
 // This header has the _impl prefix in its name to avoid conflict with the
 // public header setjmp.h which is also included. here.
-#include <setjmp.h>
+#include "hdr/types/jmp_buf.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
-int setjmp(__jmp_buf *buf);
+int setjmp(jmp_buf buf);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_SETJMP_SETJMP_IMPL_H

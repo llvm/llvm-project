@@ -336,6 +336,16 @@ void MCSubtargetInfo::initInstrItins(InstrItineraryData &InstrItins) const {
                                   ForwardingPaths);
 }
 
+std::vector<SubtargetFeatureKV>
+MCSubtargetInfo::getEnabledProcessorFeatures() const {
+  std::vector<SubtargetFeatureKV> EnabledFeatures;
+  auto IsEnabled = [&](const SubtargetFeatureKV &FeatureKV) {
+    return FeatureBits.test(FeatureKV.Value);
+  };
+  llvm::copy_if(ProcFeatures, std::back_inserter(EnabledFeatures), IsEnabled);
+  return EnabledFeatures;
+}
+
 std::optional<unsigned> MCSubtargetInfo::getCacheSize(unsigned Level) const {
   return std::nullopt;
 }

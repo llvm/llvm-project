@@ -1,5 +1,5 @@
-; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s --spirv-extensions=SPV_KHR_bit_instructions -o - | FileCheck %s --check-prefix=CHECK-EXTENSION
-; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-NO-EXTENSION
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown %s --spirv-ext=+SPV_KHR_bit_instructions -o - | FileCheck %s --check-prefix=CHECK-EXTENSION
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-NO-EXTENSION
 
 ; CHECK-EXTENSION:      OpCapability BitInstructions
 ; CHECK-EXTENSION-NEXT: OpExtension "SPV_KHR_bit_instructions"

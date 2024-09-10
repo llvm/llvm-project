@@ -3,7 +3,7 @@
 // RUN:   -target-feature +cdecp0 -target-feature +cdecp1 \
 // RUN:   -target-feature +mve.fp \
 // RUN:   -mfloat-abi hard -O0 -disable-O0-optnone \
-// RUN:   -S -emit-llvm -o - %s | opt -S -passes=mem2reg | FileCheck %s
+// RUN:   -emit-llvm -o - %s | opt -S -passes=mem2reg | FileCheck %s
 
 // REQUIRES: aarch64-registered-target || arm-registered-target
 

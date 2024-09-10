@@ -12,6 +12,7 @@ declare void @llvm.memmove.p0.p0.i32(ptr %dest, ptr %src, i32 %len, i1 %isvolati
 declare void @llvm.memset.p0.i64(ptr %dest, i8 %val, i64 %len, i1 %isvolatile)
 
 declare void @unknown_call(ptr %dest)
+declare void @unknown_call_int(i64 %i)
 declare ptr @retptr(ptr returned)
 
 ; Address leaked.
@@ -1103,6 +1104,19 @@ define void @StoreArg(ptr %p) {
 ; CHECK-EMPTY:
 entry:
   store i32 1, ptr %p
+  ret void
+}
+
+define void @NonPointer(ptr %p) {
+; CHECK-LABEL: @NonPointer
+; CHECK-NEXT: args uses:
+; LOCAL-NEXT: p[]: empty-set, @unknown_call_int(arg0, full-set)
+; GLOBAL-NEXT: p[]: full-set, @unknown_call_int(arg0, full-set)
+; CHECK-NEXT: allocas uses:
+; GLOBAL-NEXT: safe accesses:
+; CHECK-EMPTY:
+  %int = ptrtoint ptr %p to i64
+  call void @unknown_call_int(i64 %int)
   ret void
 }
 

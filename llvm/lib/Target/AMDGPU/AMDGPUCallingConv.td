@@ -66,6 +66,8 @@ def RetCC_SI_Gfx : CallingConv<[
 
 def CC_SI_SHADER : CallingConv<[
 
+  CCIfType<[i1], CCPromoteToType<i32>>,
+  
   CCIfInReg<CCIfType<[f32, i32, f16, i16, v2i16, v2f16, bf16, v2bf16] , CCAssignToReg<[
     SGPR0, SGPR1, SGPR2, SGPR3, SGPR4, SGPR5, SGPR6, SGPR7,
     SGPR8, SGPR9, SGPR10, SGPR11, SGPR12, SGPR13, SGPR14, SGPR15,
@@ -212,13 +214,11 @@ def RetCC_AMDGPU_Func : CallingConv<[
 ]>;
 
 def CC_AMDGPU : CallingConv<[
-   CCIf<"static_cast<const GCNSubtarget&>"
-         "(State.getMachineFunction().getSubtarget()).getGeneration() >= "
-           "AMDGPUSubtarget::SOUTHERN_ISLANDS",
+   CCIf<"State.getMachineFunction().getSubtarget<GCNSubtarget>().getGeneration() >= "
+          "AMDGPUSubtarget::SOUTHERN_ISLANDS",
         CCDelegateTo<CC_SI_SHADER>>,
-   CCIf<"static_cast<const GCNSubtarget&>"
-         "(State.getMachineFunction().getSubtarget()).getGeneration() >= "
-           "AMDGPUSubtarget::SOUTHERN_ISLANDS && State.getCallingConv() == CallingConv::C",
+   CCIf<"State.getMachineFunction().getSubtarget<GCNSubtarget>().getGeneration() >= "
+          "AMDGPUSubtarget::SOUTHERN_ISLANDS && State.getCallingConv() == CallingConv::C",
         CCDelegateTo<CC_AMDGPU_Func>>
 ]>;
 

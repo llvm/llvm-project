@@ -7,8 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/MachineModuleInfo.h"
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/Constants.h"
@@ -16,34 +14,19 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/MC/MCContext.h"
-#include "llvm/Pass.h"
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
-#include <algorithm>
 #include <cassert>
-#include <memory>
-#include <utility>
-#include <vector>
 
 using namespace llvm;
 using namespace llvm::dwarf;
-
-static cl::opt<bool>
-    DisableDebugInfoPrinting("disable-debug-info-print", cl::Hidden,
-                             cl::desc("Disable debug info printing"));
 
 // Out of line virtual method.
 MachineModuleInfoImpl::~MachineModuleInfoImpl() = default;
 
 void MachineModuleInfo::initialize() {
   ObjFileMMI = nullptr;
-  CurCallSite = 0;
   NextFnNum = 0;
-  UsesMSVCFloatingPoint = false;
-  DbgInfoAvailable = false;
 }
 
 void MachineModuleInfo::finalize() {
@@ -61,7 +44,6 @@ MachineModuleInfo::MachineModuleInfo(MachineModuleInfo &&MMI)
       MachineFunctions(std::move(MMI.MachineFunctions)) {
   Context.setObjectFileInfo(TM.getObjFileLowering());
   ObjFileMMI = MMI.ObjFileMMI;
-  CurCallSite = MMI.CurCallSite;
   ExternalContext = MMI.ExternalContext;
   TheModule = MMI.TheModule;
 }
@@ -104,7 +86,7 @@ MachineFunction &MachineModuleInfo::getOrCreateMachineFunction(Function &F) {
   if (I.second) {
     // No pre-existing machine function, create a new one.
     const TargetSubtargetInfo &STI = *TM.getSubtargetImpl(F);
-    MF = new MachineFunction(F, TM, STI, NextFnNum++, *this);
+    MF = new MachineFunction(F, TM, STI, getContext(), NextFnNum++);
     MF->initTargetMachineFunctionInfo(STI);
 
     // MRI callback for target specific initializations.
@@ -185,7 +167,7 @@ INITIALIZE_PASS(MachineModuleInfoWrapperPass, "machinemoduleinfo",
                 "Machine Module Information", false, false)
 char MachineModuleInfoWrapperPass::ID = 0;
 
-static unsigned getLocCookie(const SMDiagnostic &SMD, const SourceMgr &SrcMgr,
+static uint64_t getLocCookie(const SMDiagnostic &SMD, const SourceMgr &SrcMgr,
                              std::vector<const MDNode *> &LocInfos) {
   // Look up a LocInfo for the buffer this diagnostic is coming from.
   unsigned BufNum = SrcMgr.FindBufferContainingLoc(SMD.getLoc());
@@ -195,7 +177,7 @@ static unsigned getLocCookie(const SMDiagnostic &SMD, const SourceMgr &SrcMgr,
 
   // If the inline asm had metadata associated with it, pull out a location
   // cookie corresponding to which line the error occurred on.
-  unsigned LocCookie = 0;
+  uint64_t LocCookie = 0;
   if (LocInfo) {
     unsigned ErrorLine = SMD.getLineNo() - 1;
     if (ErrorLine >= LocInfo->getNumOperands())
@@ -213,7 +195,30 @@ static unsigned getLocCookie(const SMDiagnostic &SMD, const SourceMgr &SrcMgr,
 bool MachineModuleInfoWrapperPass::doInitialization(Module &M) {
   MMI.initialize();
   MMI.TheModule = &M;
-  // FIXME: Do this for new pass manager.
+  LLVMContext &Ctx = M.getContext();
+  MMI.getContext().setDiagnosticHandler(
+      [&Ctx, &M](const SMDiagnostic &SMD, bool IsInlineAsm,
+                 const SourceMgr &SrcMgr,
+                 std::vector<const MDNode *> &LocInfos) {
+        uint64_t LocCookie = 0;
+        if (IsInlineAsm)
+          LocCookie = getLocCookie(SMD, SrcMgr, LocInfos);
+        Ctx.diagnose(
+            DiagnosticInfoSrcMgr(SMD, M.getName(), IsInlineAsm, LocCookie));
+      });
+  return false;
+}
+
+bool MachineModuleInfoWrapperPass::doFinalization(Module &M) {
+  MMI.finalize();
+  return false;
+}
+
+AnalysisKey MachineModuleAnalysis::Key;
+
+MachineModuleAnalysis::Result
+MachineModuleAnalysis::run(Module &M, ModuleAnalysisManager &) {
+  MMI.TheModule = &M;
   LLVMContext &Ctx = M.getContext();
   MMI.getContext().setDiagnosticHandler(
       [&Ctx, &M](const SMDiagnostic &SMD, bool IsInlineAsm,
@@ -225,23 +230,5 @@ bool MachineModuleInfoWrapperPass::doInitialization(Module &M) {
         Ctx.diagnose(
             DiagnosticInfoSrcMgr(SMD, M.getName(), IsInlineAsm, LocCookie));
       });
-  MMI.DbgInfoAvailable = !DisableDebugInfoPrinting &&
-                         !M.debug_compile_units().empty();
-  return false;
-}
-
-bool MachineModuleInfoWrapperPass::doFinalization(Module &M) {
-  MMI.finalize();
-  return false;
-}
-
-AnalysisKey MachineModuleAnalysis::Key;
-
-MachineModuleInfo MachineModuleAnalysis::run(Module &M,
-                                             ModuleAnalysisManager &) {
-  MachineModuleInfo MMI(TM);
-  MMI.TheModule = &M;
-  MMI.DbgInfoAvailable = !DisableDebugInfoPrinting &&
-                         !M.debug_compile_units().empty();
-  return MMI;
+  return Result(MMI);
 }

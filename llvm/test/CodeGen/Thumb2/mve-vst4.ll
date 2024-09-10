@@ -238,27 +238,23 @@ define void @vst4_v2i16(ptr %src, ptr %dst) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r6, lr}
 ; CHECK-NEXT:    push {r4, r5, r6, lr}
-; CHECK-NEXT:    ldrh r3, [r0, #2]
-; CHECK-NEXT:    ldrh r2, [r0]
-; CHECK-NEXT:    ldrh.w r12, [r0, #10]
-; CHECK-NEXT:    ldrh.w lr, [r0, #4]
-; CHECK-NEXT:    vmov q1[2], q1[0], r2, r3
-; CHECK-NEXT:    ldrh r4, [r0, #12]
-; CHECK-NEXT:    ldrh r5, [r0, #6]
+; CHECK-NEXT:    ldrh r2, [r0, #4]
+; CHECK-NEXT:    ldrh r3, [r0, #8]
+; CHECK-NEXT:    ldrh.w r12, [r0, #12]
+; CHECK-NEXT:    ldrh.w lr, [r0, #2]
+; CHECK-NEXT:    ldrh r4, [r0, #6]
+; CHECK-NEXT:    ldrh r5, [r0, #10]
 ; CHECK-NEXT:    ldrh r6, [r0, #14]
-; CHECK-NEXT:    ldrh r0, [r0, #8]
-; CHECK-NEXT:    vmov q0[2], q0[0], r0, r12
-; CHECK-NEXT:    vmov r0, s4
-; CHECK-NEXT:    vmov.16 q1[0], r0
-; CHECK-NEXT:    vmov r0, s0
-; CHECK-NEXT:    vmov.16 q1[1], lr
-; CHECK-NEXT:    vmov.16 q1[2], r0
-; CHECK-NEXT:    vmov.16 q1[3], r4
-; CHECK-NEXT:    vmov.16 q1[4], r3
-; CHECK-NEXT:    vmov.16 q1[5], r5
-; CHECK-NEXT:    vmov.16 q1[6], r12
-; CHECK-NEXT:    vmov.16 q1[7], r6
-; CHECK-NEXT:    vstrh.16 q1, [r1]
+; CHECK-NEXT:    ldrh r0, [r0]
+; CHECK-NEXT:    vmov.16 q0[0], r0
+; CHECK-NEXT:    vmov.16 q0[1], r2
+; CHECK-NEXT:    vmov.16 q0[2], r3
+; CHECK-NEXT:    vmov.16 q0[3], r12
+; CHECK-NEXT:    vmov.16 q0[4], lr
+; CHECK-NEXT:    vmov.16 q0[5], r4
+; CHECK-NEXT:    vmov.16 q0[6], r5
+; CHECK-NEXT:    vmov.16 q0[7], r6
+; CHECK-NEXT:    vstrh.16 q0, [r1]
 ; CHECK-NEXT:    pop {r4, r5, r6, pc}
 entry:
   %l1 = load <2 x i16>, ptr %src, align 4
@@ -475,26 +471,22 @@ define void @vst4_v2i8(ptr %src, ptr %dst) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r6, lr}
 ; CHECK-NEXT:    push {r4, r5, r6, lr}
-; CHECK-NEXT:    ldrb r4, [r0, #5]
-; CHECK-NEXT:    ldrb r5, [r0, #4]
-; CHECK-NEXT:    ldrb r2, [r0]
-; CHECK-NEXT:    ldrb r3, [r0, #1]
-; CHECK-NEXT:    vmov q0[2], q0[0], r5, r4
-; CHECK-NEXT:    vmov r5, s0
-; CHECK-NEXT:    ldrb.w r12, [r0, #2]
-; CHECK-NEXT:    vmov q0[2], q0[0], r2, r3
-; CHECK-NEXT:    ldrb.w lr, [r0, #3]
-; CHECK-NEXT:    vmov r2, s0
-; CHECK-NEXT:    ldrb r6, [r0, #7]
-; CHECK-NEXT:    vmov.16 q0[0], r2
-; CHECK-NEXT:    ldrb r0, [r0, #6]
-; CHECK-NEXT:    vmov.16 q0[1], r12
-; CHECK-NEXT:    vmov.16 q0[2], r5
-; CHECK-NEXT:    vmov.16 q0[3], r0
-; CHECK-NEXT:    vmov.16 q0[4], r3
-; CHECK-NEXT:    vmov.16 q0[5], lr
-; CHECK-NEXT:    vmov.16 q0[6], r4
-; CHECK-NEXT:    vmov.16 q0[7], r6
+; CHECK-NEXT:    ldrb r4, [r0]
+; CHECK-NEXT:    ldrb r6, [r0, #2]
+; CHECK-NEXT:    vmov.16 q0[0], r4
+; CHECK-NEXT:    ldrb r2, [r0, #4]
+; CHECK-NEXT:    vmov.16 q0[1], r6
+; CHECK-NEXT:    ldrb r3, [r0, #6]
+; CHECK-NEXT:    vmov.16 q0[2], r2
+; CHECK-NEXT:    ldrb r5, [r0, #1]
+; CHECK-NEXT:    vmov.16 q0[3], r3
+; CHECK-NEXT:    ldrb.w r12, [r0, #5]
+; CHECK-NEXT:    ldrb.w lr, [r0, #7]
+; CHECK-NEXT:    vmov.16 q0[4], r5
+; CHECK-NEXT:    ldrb r0, [r0, #3]
+; CHECK-NEXT:    vmov.16 q0[5], r0
+; CHECK-NEXT:    vmov.16 q0[6], r12
+; CHECK-NEXT:    vmov.16 q0[7], lr
 ; CHECK-NEXT:    vstrb.16 q0, [r1]
 ; CHECK-NEXT:    pop {r4, r5, r6, pc}
 entry:

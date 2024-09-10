@@ -8,11 +8,11 @@
 @recursive.kernel.lds = addrspace(3) global i16 poison
 
 ;.
-; CHECK: @[[LLVM_AMDGCN_KERNEL_K0_F0_LDS:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global [[LLVM_AMDGCN_KERNEL_K0_F0_LDS_T:%.*]] poison, align 2, !absolute_symbol !0
-; CHECK: @[[LLVM_AMDGCN_KERNEL_K1_F0_LDS:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global [[LLVM_AMDGCN_KERNEL_K1_F0_LDS_T:%.*]] poison, align 2, !absolute_symbol !0
-; CHECK: @[[LLVM_AMDGCN_KERNEL_KERNEL_LDS_LDS:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global [[LLVM_AMDGCN_KERNEL_KERNEL_LDS_LDS_T:%.*]] poison, align 2, !absolute_symbol !0
-; CHECK: @[[LLVM_AMDGCN_KERNEL_KERNEL_LDS_RECURSION_LDS:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global [[LLVM_AMDGCN_KERNEL_KERNEL_LDS_RECURSION_LDS_T:%.*]] poison, align 2, !absolute_symbol !0
-; CHECK: @[[LLVM_AMDGCN_LDS_OFFSET_TABLE:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(4) constant [3 x [2 x i32]]
+; CHECK: @llvm.amdgcn.kernel.k0_f0.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k0_f0.lds.t poison, align 2, !absolute_symbol [[META0:![0-9]+]]
+; CHECK: @llvm.amdgcn.kernel.k1_f0.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k1_f0.lds.t poison, align 2, !absolute_symbol [[META0]]
+; CHECK: @llvm.amdgcn.kernel.kernel_lds.lds = internal addrspace(3) global %llvm.amdgcn.kernel.kernel_lds.lds.t poison, align 2, !absolute_symbol [[META0]]
+; CHECK: @llvm.amdgcn.kernel.kernel_lds_recursion.lds = internal addrspace(3) global %llvm.amdgcn.kernel.kernel_lds_recursion.lds.t poison, align 2, !absolute_symbol [[META0]]
+; CHECK: @llvm.amdgcn.lds.offset.table = internal addrspace(4) constant [3 x [2 x i32]]
 ;.
 define internal void @lds_use_through_indirect() {
 ; CHECK-LABEL: define internal void @lds_use_through_indirect(
@@ -105,7 +105,7 @@ define internal void @f0_transitive() {
 
 define amdgpu_kernel void @k0_f0() {
 ; CHECK-LABEL: define amdgpu_kernel void @k0_f0(
-; CHECK-SAME: ) #[[ATTR2:[0-9]+]] !llvm.amdgcn.lds.kernel.id !1 {
+; CHECK-SAME: ) #[[ATTR2:[0-9]+]] !llvm.amdgcn.lds.kernel.id [[META2:![0-9]+]] {
 ; CHECK-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.kernel.k0_f0.lds) ]
 ; CHECK-NEXT:    call void @f0_transitive()
 ; CHECK-NEXT:    ret void
@@ -116,8 +116,8 @@ define amdgpu_kernel void @k0_f0() {
 
 define amdgpu_kernel void @k1_f0() {
 ; CHECK-LABEL: define amdgpu_kernel void @k1_f0(
-; CHECK-SAME: ) #[[ATTR3:[0-9]+]] !llvm.amdgcn.lds.kernel.id !2 {
-; CHECK-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.kernel.k1_f0.lds) ], !alias.scope !3, !noalias !6
+; CHECK-SAME: ) #[[ATTR3:[0-9]+]] !llvm.amdgcn.lds.kernel.id [[META3:![0-9]+]] {
+; CHECK-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.kernel.k1_f0.lds) ], !alias.scope [[META4:![0-9]+]], !noalias [[META7:![0-9]+]]
 ; CHECK-NEXT:    call void @f0_transitive()
 ; CHECK-NEXT:    [[FPTR:%.*]] = load volatile ptr, ptr addrspace(1) null, align 8
 ; CHECK-NEXT:    call void [[FPTR]]()
@@ -178,7 +178,7 @@ define internal void @mutual_recursion_1(i16 %arg) {
 
 define amdgpu_kernel void @kernel_lds_recursion() {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_lds_recursion(
-; CHECK-SAME: ) #[[ATTR2]] !llvm.amdgcn.lds.kernel.id !8 {
+; CHECK-SAME: ) #[[ATTR2]] !llvm.amdgcn.lds.kernel.id [[META9:![0-9]+]] {
 ; CHECK-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.kernel.kernel_lds_recursion.lds) ]
 ; CHECK-NEXT:    call void @mutual_recursion_0(i16 0)
 ; CHECK-NEXT:    ret void
@@ -187,24 +187,28 @@ define amdgpu_kernel void @kernel_lds_recursion() {
   ret void
 }
 
+!llvm.module.flags = !{!1}
+!1 = !{i32 1, !"amdhsa_code_object_version", i32 400}
+
 ;.
-; CHECK: attributes #[[ATTR0]] = { "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-waves-per-eu"="4,10" "uniform-work-group-size"="false" }
-; CHECK: attributes #[[ATTR1]] = { "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-waves-per-eu"="4,10" "uniform-work-group-size"="false" }
-; CHECK: attributes #[[ATTR2]] = { "amdgpu-lds-size"="2" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-waves-per-eu"="4,10" "uniform-work-group-size"="false" }
+; CHECK: attributes #[[ATTR0]] = { "amdgpu-no-agpr" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-waves-per-eu"="4,10" "uniform-work-group-size"="false" }
+; CHECK: attributes #[[ATTR1]] = { "amdgpu-no-agpr" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-waves-per-eu"="4,10" "uniform-work-group-size"="false" }
+; CHECK: attributes #[[ATTR2]] = { "amdgpu-lds-size"="2" "amdgpu-no-agpr" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-waves-per-eu"="4,10" "uniform-work-group-size"="false" }
 ; CHECK: attributes #[[ATTR3]] = { "amdgpu-lds-size"="4" "amdgpu-waves-per-eu"="4,10" "uniform-work-group-size"="false" }
-; CHECK: attributes #[[ATTR4]] = { "amdgpu-lds-size"="2" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "uniform-work-group-size"="false" }
+; CHECK: attributes #[[ATTR4]] = { "amdgpu-lds-size"="2" "amdgpu-no-agpr" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "uniform-work-group-size"="false" }
 ; CHECK: attributes #[[ATTR5:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; CHECK: attributes #[[ATTR6:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 ;.
-; CHECK: [[META0:![0-9]+]] = !{i32 0, i32 1}
-; CHECK: [[META1:![0-9]+]] = !{i32 0}
-; CHECK: [[META2:![0-9]+]] = !{i32 1}
-; CHECK: [[META3:![0-9]+]] = !{!4}
-; CHECK: [[META4:![0-9]+]] = distinct !{!4, !5}
-; CHECK: [[META5:![0-9]+]] = distinct !{!5}
-; CHECK: [[META6:![0-9]+]] = !{!7}
-; CHECK: [[META7:![0-9]+]] = distinct !{!7, !5}
-; CHECK: [[META8:![0-9]+]] = !{i32 2}
+; CHECK: [[META0]] = !{i32 0, i32 1}
+; CHECK: [[META1:![0-9]+]] = !{i32 1, !"amdhsa_code_object_version", i32 400}
+; CHECK: [[META2]] = !{i32 0}
+; CHECK: [[META3]] = !{i32 1}
+; CHECK: [[META4]] = !{[[META5:![0-9]+]]}
+; CHECK: [[META5]] = distinct !{[[META5]], [[META6:![0-9]+]]}
+; CHECK: [[META6]] = distinct !{[[META6]]}
+; CHECK: [[META7]] = !{[[META8:![0-9]+]]}
+; CHECK: [[META8]] = distinct !{[[META8]], [[META6]]}
+; CHECK: [[META9]] = !{i32 2}
 ;.
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; TABLE: {{.*}}

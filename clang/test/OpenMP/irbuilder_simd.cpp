@@ -25,12 +25,12 @@ void simple(float *a, float *b, int *c) {
     // CHECK-NEXT: %[[IDXPROM:.+]] = sext i32 %[[TMP4:.+]] to i64
     // CHECK-NEXT: %[[ARRAYIDX:.+]] = getelementptr inbounds float, ptr %[[TMP3:.+]], i64 %[[IDXPROM:.+]]
     // CHECK-NEXT: %[[TMP5:.+]] = load float, ptr %[[ARRAYIDX:.+]], align 4, !llvm.access.group ![[META3:[0-9]+]]
-    // CHECK-NEXT: %[[A2:.+]] = getelementptr inbounds %struct.S, ptr %[[S:.+]], i32 0, i32 0
+    // CHECK-NEXT: %[[A2:.+]] = getelementptr inbounds nuw %struct.S, ptr %[[S:.+]], i32 0, i32 0
     // CHECK-NEXT: %[[TMP6:.+]] = load i32, ptr %[[A2:.+]], align 4, !llvm.access.group ![[META3:[0-9]+]]
     // CHECK-NEXT: %[[CONV:.+]] = sitofp i32 %[[TMP6:.+]] to float
     // CHECK-NEXT: %[[ADD:.+]] = fadd float %[[TMP5:.+]], %[[CONV:.+]]
     // CHECK-NEXT: %[[TMP7:.+]] = load ptr, ptr %[[P:.+]], align 8, !llvm.access.group ![[META3:[0-9]+]]
-    // CHECK-NEXT: %[[A3:.+]] = getelementptr inbounds %struct.S, ptr %[[TMP7:.+]], i32 0, i32 0
+    // CHECK-NEXT: %[[A3:.+]] = getelementptr inbounds nuw %struct.S, ptr %[[TMP7:.+]], i32 0, i32 0
     // CHECK-NEXT: %[[TMP8:.+]] = load i32, ptr %[[A3:.+]], align 4, !llvm.access.group ![[META3:[0-9]+]]
     // CHECK-NEXT: %[[CONV4:.+]] = sitofp i32 %[[TMP8:.+]] to float
     // CHECK-NEXT: %[[ADD5:.+]] = fadd float %[[ADD:.+]], %[[CONV4:.+]]
@@ -48,7 +48,7 @@ void simple(float *a, float *b, int *c) {
 #pragma omp simd
   for (int j = 3; j < 32; j += 5) {
     // test if unique access groups were used for a second loop
-    // CHECK: %[[A22:.+]] = getelementptr inbounds %struct.P, ptr %[[PP:.+]], i32 0, i32 0
+    // CHECK: %[[A22:.+]] = getelementptr inbounds nuw %struct.P, ptr %[[PP:.+]], i32 0, i32 0
     // CHECK-NEXT: %[[TMP14:.+]] = load i32, ptr %[[A22:.+]], align 4, !llvm.access.group ![[META7:[0-9]+]]
     // CHECK-NEXT: %[[TMP15:.+]] = load ptr, ptr %[[C_ADDR:.+]], align 8, !llvm.access.group ![[META7:[0-9]+]]
     // CHECK-NEXT: %[[TMP16:.+]] = load i32, ptr %[[J:.+]], align 4, !llvm.access.group ![[META7:[0-9]+]]

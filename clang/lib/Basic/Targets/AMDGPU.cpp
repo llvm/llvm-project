@@ -17,6 +17,7 @@
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/MacroBuilder.h"
 #include "clang/Basic/TargetBuiltins.h"
+#include "llvm/ADT/SmallString.h"
 using namespace clang;
 using namespace clang::targets;
 
@@ -186,9 +187,15 @@ bool AMDGPUTargetInfo::initFeatureMap(
     return false;
 
   // TODO: Should move this logic into TargetParser
-  std::string ErrorMsg;
-  if (!insertWaveSizeFeature(CPU, getTriple(), Features, ErrorMsg)) {
-    Diags.Report(diag::err_invalid_feature_combination) << ErrorMsg;
+  auto HasError = insertWaveSizeFeature(CPU, getTriple(), Features);
+  switch (HasError.first) {
+  default:
+    break;
+  case llvm::AMDGPU::INVALID_FEATURE_COMBINATION:
+    Diags.Report(diag::err_invalid_feature_combination) << HasError.second;
+    return false;
+  case llvm::AMDGPU::UNSUPPORTED_TARGET_FEATURE:
+    Diags.Report(diag::err_opt_not_valid_on_target) << HasError.second;
     return false;
   }
 
@@ -231,7 +238,7 @@ AMDGPUTargetInfo::AMDGPUTargetInfo(const llvm::Triple &Triple,
 
   HasLegalHalfType = true;
   HasFloat16 = true;
-  WavefrontSize = GPUFeatures & llvm::AMDGPU::FEATURE_WAVE32 ? 32 : 64;
+  WavefrontSize = (GPUFeatures & llvm::AMDGPU::FEATURE_WAVE32) ? 32 : 64;
   AllowAMDGPUUnsafeFPAtomics = Opts.AllowAMDGPUUnsafeFPAtomics;
 
   // Set pointer width and alignment for the generic address space.
@@ -274,30 +281,42 @@ void AMDGPUTargetInfo::getTargetDefines(const LangOptions &Opts,
   else
     Builder.defineMacro("__R600__");
 
-  if (GPUKind != llvm::AMDGPU::GK_NONE) {
-    StringRef CanonName = isAMDGCN(getTriple()) ?
-      getArchNameAMDGCN(GPUKind) : getArchNameR600(GPUKind);
-    Builder.defineMacro(Twine("__") + Twine(CanonName) + Twine("__"));
-    // Emit macros for gfx family e.g. gfx906 -> __GFX9__, gfx1030 -> __GFX10___
-    if (isAMDGCN(getTriple())) {
-      assert(CanonName.starts_with("gfx") && "Invalid amdgcn canonical name");
-      Builder.defineMacro(Twine("__") + Twine(CanonName.drop_back(2).upper()) +
-                          Twine("__"));
-    }
-    if (isAMDGCN(getTriple())) {
-      Builder.defineMacro("__amdgcn_processor__",
-                          Twine("\"") + Twine(CanonName) + Twine("\""));
-      Builder.defineMacro("__amdgcn_target_id__",
-                          Twine("\"") + Twine(*getTargetID()) + Twine("\""));
-      for (auto F : getAllPossibleTargetIDFeatures(getTriple(), CanonName)) {
-        auto Loc = OffloadArchFeatures.find(F);
-        if (Loc != OffloadArchFeatures.end()) {
-          std::string NewF = F.str();
-          std::replace(NewF.begin(), NewF.end(), '-', '_');
-          Builder.defineMacro(Twine("__amdgcn_feature_") + Twine(NewF) +
-                                  Twine("__"),
-                              Loc->second ? "1" : "0");
-        }
+  // Legacy HIP host code relies on these default attributes to be defined.
+  bool IsHIPHost = Opts.HIP && !Opts.CUDAIsDevice;
+  if (GPUKind == llvm::AMDGPU::GK_NONE && !IsHIPHost)
+    return;
+
+  llvm::SmallString<16> CanonName =
+      (isAMDGCN(getTriple()) ? getArchNameAMDGCN(GPUKind)
+                             : getArchNameR600(GPUKind));
+
+  // Sanitize the name of generic targets.
+  // e.g. gfx10-1-generic -> gfx10_1_generic
+  if (GPUKind >= llvm::AMDGPU::GK_AMDGCN_GENERIC_FIRST &&
+      GPUKind <= llvm::AMDGPU::GK_AMDGCN_GENERIC_LAST) {
+    std::replace(CanonName.begin(), CanonName.end(), '-', '_');
+  }
+
+  Builder.defineMacro(Twine("__") + Twine(CanonName) + Twine("__"));
+  // Emit macros for gfx family e.g. gfx906 -> __GFX9__, gfx1030 -> __GFX10___
+  if (isAMDGCN(getTriple()) && !IsHIPHost) {
+    assert(StringRef(CanonName).starts_with("gfx") &&
+           "Invalid amdgcn canonical name");
+    StringRef CanonFamilyName = getArchFamilyNameAMDGCN(GPUKind);
+    Builder.defineMacro(Twine("__") + Twine(CanonFamilyName.upper()) +
+                        Twine("__"));
+    Builder.defineMacro("__amdgcn_processor__",
+                        Twine("\"") + Twine(CanonName) + Twine("\""));
+    Builder.defineMacro("__amdgcn_target_id__",
+                        Twine("\"") + Twine(*getTargetID()) + Twine("\""));
+    for (auto F : getAllPossibleTargetIDFeatures(getTriple(), CanonName)) {
+      auto Loc = OffloadArchFeatures.find(F);
+      if (Loc != OffloadArchFeatures.end()) {
+        std::string NewF = F.str();
+        std::replace(NewF.begin(), NewF.end(), '-', '_');
+        Builder.defineMacro(Twine("__amdgcn_feature_") + Twine(NewF) +
+                                Twine("__"),
+                            Loc->second ? "1" : "0");
       }
     }
   }

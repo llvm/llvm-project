@@ -17,11 +17,12 @@ namespace clang::tidy::modernize {
 
 namespace {
 AST_MATCHER(FunctionDecl, hasAnyDefinition) {
-  if (Node.hasBody() || Node.isPure() || Node.isDefaulted() || Node.isDeleted())
+  if (Node.hasBody() || Node.isPureVirtual() || Node.isDefaulted() ||
+      Node.isDeleted())
     return true;
 
   if (const FunctionDecl *Definition = Node.getDefinition())
-    if (Definition->hasBody() || Definition->isPure() ||
+    if (Definition->hasBody() || Definition->isPureVirtual() ||
         Definition->isDefaulted() || Definition->isDeleted())
       return true;
 

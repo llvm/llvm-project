@@ -270,7 +270,7 @@ define <3 x i32> @smulo_v3i32(<3 x i32> %a0, <3 x i32> %a1, ptr %p2) nounwind {
 ; AVX512-NEXT:    vpshufd {{.*#+}} xmm3 = xmm1[1,1,3,3]
 ; AVX512-NEXT:    vpshufd {{.*#+}} xmm4 = xmm0[1,1,3,3]
 ; AVX512-NEXT:    vpmuldq %xmm3, %xmm4, %xmm3
-; AVX512-NEXT:    vmovdqa {{.*#+}} xmm4 = [1,5,3,7]
+; AVX512-NEXT:    vpmovsxbd {{.*#+}} xmm4 = [1,5,3,7]
 ; AVX512-NEXT:    vpermi2d %xmm3, %xmm2, %xmm4
 ; AVX512-NEXT:    vpmulld %xmm1, %xmm0, %xmm1
 ; AVX512-NEXT:    vpsrad $31, %xmm1, %xmm0
@@ -401,7 +401,7 @@ define <4 x i32> @smulo_v4i32(<4 x i32> %a0, <4 x i32> %a1, ptr %p2) nounwind {
 ; AVX512-NEXT:    vpshufd {{.*#+}} xmm3 = xmm1[1,1,3,3]
 ; AVX512-NEXT:    vpshufd {{.*#+}} xmm4 = xmm0[1,1,3,3]
 ; AVX512-NEXT:    vpmuldq %xmm3, %xmm4, %xmm3
-; AVX512-NEXT:    vmovdqa {{.*#+}} xmm4 = [1,5,3,7]
+; AVX512-NEXT:    vpmovsxbd {{.*#+}} xmm4 = [1,5,3,7]
 ; AVX512-NEXT:    vpermi2d %xmm3, %xmm2, %xmm4
 ; AVX512-NEXT:    vpmulld %xmm1, %xmm0, %xmm1
 ; AVX512-NEXT:    vpsrad $31, %xmm1, %xmm0
@@ -672,7 +672,7 @@ define <6 x i32> @smulo_v6i32(<6 x i32> %a0, <6 x i32> %a1, ptr %p2) nounwind {
 ; AVX512-NEXT:    vpshufd {{.*#+}} ymm3 = ymm1[1,1,3,3,5,5,7,7]
 ; AVX512-NEXT:    vpshufd {{.*#+}} ymm4 = ymm0[1,1,3,3,5,5,7,7]
 ; AVX512-NEXT:    vpmuldq %ymm3, %ymm4, %ymm3
-; AVX512-NEXT:    vmovdqa {{.*#+}} ymm4 = [1,9,3,11,5,13,7,15]
+; AVX512-NEXT:    vpmovsxbd {{.*#+}} ymm4 = [1,9,3,11,5,13,7,15]
 ; AVX512-NEXT:    vpermi2d %ymm3, %ymm2, %ymm4
 ; AVX512-NEXT:    vpmulld %ymm1, %ymm0, %ymm1
 ; AVX512-NEXT:    vpsrad $31, %ymm1, %ymm0
@@ -871,7 +871,7 @@ define <8 x i32> @smulo_v8i32(<8 x i32> %a0, <8 x i32> %a1, ptr %p2) nounwind {
 ; AVX512-NEXT:    vpshufd {{.*#+}} ymm3 = ymm1[1,1,3,3,5,5,7,7]
 ; AVX512-NEXT:    vpshufd {{.*#+}} ymm4 = ymm0[1,1,3,3,5,5,7,7]
 ; AVX512-NEXT:    vpmuldq %ymm3, %ymm4, %ymm3
-; AVX512-NEXT:    vmovdqa {{.*#+}} ymm4 = [1,9,3,11,5,13,7,15]
+; AVX512-NEXT:    vpmovsxbd {{.*#+}} ymm4 = [1,9,3,11,5,13,7,15]
 ; AVX512-NEXT:    vpermi2d %ymm3, %ymm2, %ymm4
 ; AVX512-NEXT:    vpmulld %ymm1, %ymm0, %ymm1
 ; AVX512-NEXT:    vpsrad $31, %ymm1, %ymm0
@@ -1229,7 +1229,7 @@ define <16 x i32> @smulo_v16i32(<16 x i32> %a0, <16 x i32> %a1, ptr %p2) nounwin
 ; AVX512-NEXT:    vpshufd {{.*#+}} zmm3 = zmm1[1,1,3,3,5,5,7,7,9,9,11,11,13,13,15,15]
 ; AVX512-NEXT:    vpshufd {{.*#+}} zmm4 = zmm0[1,1,3,3,5,5,7,7,9,9,11,11,13,13,15,15]
 ; AVX512-NEXT:    vpmuldq %zmm3, %zmm4, %zmm3
-; AVX512-NEXT:    vmovdqa64 {{.*#+}} zmm4 = [1,17,3,19,5,21,7,23,9,25,11,27,13,29,15,31]
+; AVX512-NEXT:    vpmovsxbd {{.*#+}} zmm4 = [1,17,3,19,5,21,7,23,9,25,11,27,13,29,15,31]
 ; AVX512-NEXT:    vpermi2d %zmm3, %zmm2, %zmm4
 ; AVX512-NEXT:    vpmulld %zmm1, %zmm0, %zmm1
 ; AVX512-NEXT:    vpsrad $31, %zmm1, %zmm0
@@ -1354,7 +1354,7 @@ define <16 x i32> @smulo_v16i8(<16 x i8> %a0, <16 x i8> %a1, ptr %p2) nounwind {
 ; SSE41-NEXT:    movdqa %xmm4, %xmm0
 ; SSE41-NEXT:    psrlw $8, %xmm0
 ; SSE41-NEXT:    packuswb %xmm3, %xmm0
-; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [255,255,255,255,255,255,255,255]
+; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm1 = [255,255,255,255,255,255,255,255]
 ; SSE41-NEXT:    pand %xmm1, %xmm5
 ; SSE41-NEXT:    pand %xmm1, %xmm4
 ; SSE41-NEXT:    packuswb %xmm5, %xmm4
@@ -1674,7 +1674,7 @@ define <32 x i32> @smulo_v32i8(<32 x i8> %a0, <32 x i8> %a1, ptr %p2) nounwind {
 ; SSE41-NEXT:    movdqa %xmm3, %xmm7
 ; SSE41-NEXT:    psrlw $8, %xmm7
 ; SSE41-NEXT:    packuswb %xmm5, %xmm7
-; SSE41-NEXT:    movdqa {{.*#+}} xmm5 = [255,255,255,255,255,255,255,255]
+; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm5 = [255,255,255,255,255,255,255,255]
 ; SSE41-NEXT:    pand %xmm5, %xmm6
 ; SSE41-NEXT:    pand %xmm5, %xmm3
 ; SSE41-NEXT:    packuswb %xmm6, %xmm3
@@ -2260,7 +2260,7 @@ define <64 x i32> @smulo_v64i8(<64 x i8> %a0, <64 x i8> %a1, ptr %p2) nounwind {
 ; SSE41-NEXT:    movdqa %xmm7, %xmm10
 ; SSE41-NEXT:    psrlw $8, %xmm10
 ; SSE41-NEXT:    packuswb %xmm8, %xmm10
-; SSE41-NEXT:    movdqa {{.*#+}} xmm8 = [255,255,255,255,255,255,255,255]
+; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm8 = [255,255,255,255,255,255,255,255]
 ; SSE41-NEXT:    pand %xmm8, %xmm9
 ; SSE41-NEXT:    pand %xmm8, %xmm7
 ; SSE41-NEXT:    packuswb %xmm9, %xmm7
@@ -3191,7 +3191,7 @@ define <4 x i32> @smulo_v4i24(<4 x i24> %a0, <4 x i24> %a1, ptr %p2) nounwind {
 ; AVX512-NEXT:    vpshufd {{.*#+}} xmm3 = xmm1[1,1,3,3]
 ; AVX512-NEXT:    vpshufd {{.*#+}} xmm4 = xmm0[1,1,3,3]
 ; AVX512-NEXT:    vpmuldq %xmm3, %xmm4, %xmm3
-; AVX512-NEXT:    vmovdqa {{.*#+}} xmm4 = [1,5,3,7]
+; AVX512-NEXT:    vpmovsxbd {{.*#+}} xmm4 = [1,5,3,7]
 ; AVX512-NEXT:    vpermi2d %xmm3, %xmm2, %xmm4
 ; AVX512-NEXT:    vpmulld %xmm1, %xmm0, %xmm1
 ; AVX512-NEXT:    vpsrad $31, %xmm1, %xmm0

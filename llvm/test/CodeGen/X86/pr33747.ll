@@ -5,18 +5,19 @@ define void @PR33747(ptr nocapture) {
 ; CHECK-LABEL: PR33747:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl 24(%rdi), %eax
+; CHECK-NEXT:    leal 1(%rax), %ecx
+; CHECK-NEXT:    cmpl $3, %ecx
+; CHECK-NEXT:    setb %cl
 ; CHECK-NEXT:    testl %eax, %eax
-; CHECK-NEXT:    je .LBB0_3
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    incl %eax
-; CHECK-NEXT:    cmpl $3, %eax
-; CHECK-NEXT:    jae .LBB0_3
+; CHECK-NEXT:    setne %al
+; CHECK-NEXT:    testb %cl, %al
+; CHECK-NEXT:    je .LBB0_2
+; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:  .LBB0_1: # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    jmp .LBB0_1
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB0_2: # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    jmp .LBB0_2
-; CHECK-NEXT:    .p2align 4, 0x90
-; CHECK-NEXT:  .LBB0_3: # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    jmp .LBB0_3
   %2 = getelementptr inbounds i32, ptr %0, i64 6
   %3 = load i32, ptr %2, align 4
   %4 = add i32 %3, 1

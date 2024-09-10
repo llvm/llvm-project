@@ -52,6 +52,7 @@ def DirectivePwr7: SubtargetFeature<"", "CPUDirective", "PPC::DIR_PWR7", "">;
 def DirectivePwr8: SubtargetFeature<"", "CPUDirective", "PPC::DIR_PWR8", "">;
 def DirectivePwr9: SubtargetFeature<"", "CPUDirective", "PPC::DIR_PWR9", "">;
 def DirectivePwr10: SubtargetFeature<"", "CPUDirective", "PPC::DIR_PWR10", "">;
+def DirectivePwr11: SubtargetFeature<"", "CPUDirective", "PPC::DIR_PWR11", "">;
 def DirectivePwrFuture
     : SubtargetFeature<"", "CPUDirective", "PPC::DIR_PWR_FUTURE", "">;
 
@@ -296,8 +297,7 @@ def FeatureVectorsUseTwoUnits : SubtargetFeature<"vectors-use-two-units",
 def FeaturePrefixInstrs : SubtargetFeature<"prefix-instrs", "HasPrefixInstrs",
                                            "true",
                                            "Enable prefixed instructions",
-                                           [FeatureISA3_0, FeatureP8Vector,
-                                            FeatureP9Altivec]>;
+                                           [FeatureISA3_1]>;
 def FeaturePCRelativeMemops :
   SubtargetFeature<"pcrelative-memops", "HasPCRelativeMemops", "true",
                    "Enable PC relative Memory Ops",
@@ -328,6 +328,21 @@ def FeatureAIXLocalExecTLS :
   SubtargetFeature<"aix-small-local-exec-tls", "HasAIXSmallLocalExecTLS", "true",
                    "Produce a TOC-free local-exec TLS sequence for this function "
                    "for 64-bit AIX">;
+
+// Specifies that local-dynamic TLS accesses in any function with this target
+// attribute should use the optimized sequence (where the offset is an immediate
+// off the module-handle for which the linker might add fix-up code for if the
+// immediate is too large).
+def FeatureAIXLocalDynamicTLS :
+  SubtargetFeature<"aix-small-local-dynamic-tls", "HasAIXSmallLocalDynamicTLS",
+                   "true", "Produce a faster local-dynamic TLS sequence for this "
+                   "function for 64-bit AIX">;
+
+def FeatureAIXSharedLibTLSModelOpt :
+  SubtargetFeature<"aix-shared-lib-tls-model-opt",
+                   "HasAIXShLibTLSModelOpt", "true",
+                   "Tune TLS model at function level in shared library loaded "
+                   "with the main program (for 64-bit AIX only)">;
 
 def FeaturePredictableSelectIsExpensive :
   SubtargetFeature<"predictable-select-expensive",
@@ -453,13 +468,25 @@ def ProcessorFeatures {
   list<SubtargetFeature> P10Features =
     !listconcat(P10InheritableFeatures, P10SpecificFeatures);
 
-  // Future
-  // For future CPU we assume that all of the existing features from Power10
+  // Power11
+  // For P11 CPU we assume that all the existing features from Power10
   // still exist with the exception of those we know are Power10 specific.
+  list<SubtargetFeature> P11AdditionalFeatures =
+    [DirectivePwr11];
+  list<SubtargetFeature> P11SpecificFeatures =
+    [];
+  list<SubtargetFeature> P11InheritableFeatures =
+    !listconcat(P10InheritableFeatures, P11AdditionalFeatures);
+  list<SubtargetFeature> P11Features =
+    !listconcat(P11InheritableFeatures, P11SpecificFeatures);
+
+  // Future
+  // For future CPU we assume that all of the existing features from Power11
+  // still exist with the exception of those we know are Power11 specific.
   list<SubtargetFeature> FutureAdditionalFeatures = [FeatureISAFuture];
   list<SubtargetFeature> FutureSpecificFeatures = [];
   list<SubtargetFeature> FutureInheritableFeatures =
-    !listconcat(P10InheritableFeatures, FutureAdditionalFeatures);
+    !listconcat(P11InheritableFeatures, FutureAdditionalFeatures);
   list<SubtargetFeature> FutureFeatures =
     !listconcat(FutureInheritableFeatures, FutureSpecificFeatures);
 }
@@ -658,6 +685,7 @@ def : ProcessorModel<"pwr7", P7Model, ProcessorFeatures.P7Features>;
 def : ProcessorModel<"pwr8", P8Model, ProcessorFeatures.P8Features>;
 def : ProcessorModel<"pwr9", P9Model, ProcessorFeatures.P9Features>;
 def : ProcessorModel<"pwr10", P10Model, ProcessorFeatures.P10Features>;
+def : ProcessorModel<"pwr11", P10Model, ProcessorFeatures.P11Features>;
 // No scheduler model for future CPU.
 def : ProcessorModel<"future", NoSchedModel,
                   ProcessorFeatures.FutureFeatures>;

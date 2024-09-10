@@ -29,12 +29,26 @@ set(LLVM_LINK_COMPONENTS
   Passes
   )
 
-add_llvm_tool(opt
+# We don't want to link this into libLLVM
+add_llvm_library(LLVMOptDriver
+  STATIC
   NewPMDriver.cpp
-  opt.cpp
+  optdriver.cpp
+  PARTIAL_SOURCES_INTENDED
+  DEPENDS
+  intrinsics_gen
+)
 
+add_llvm_tool(opt
+  PARTIAL_SOURCES_INTENDED
+  opt.cpp
   DEPENDS
   intrinsics_gen
   SUPPORT_PLUGINS
+
   )
+target_link_libraries(opt PRIVATE LLVMOptDriver)
+
+setup_host_tool(opt OPT opt_exe opt_target)
+
 export_executable_symbols_for_plugins(opt)

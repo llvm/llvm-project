@@ -613,6 +613,40 @@ define void @extract_subvector_v32f64(ptr %a, ptr %b) vscale_range(16,0) #0 {
   ret void
 }
 
+; Test for infinite loop due to fold:
+; extract_subvector(insert_subvector(x,y,c1),c2)--> extract_subvector(y,c2-c1)
+define void @extract_subvector_legalization_v8i32() vscale_range(2,2) #0 {
+; CHECK-LABEL: extract_subvector_legalization_v8i32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    adrp x8, .LCPI40_0
+; CHECK-NEXT:    add x8, x8, :lo12:.LCPI40_0
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-NEXT:    ptrue p1.d
+; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x8]
+; CHECK-NEXT:    mov z1.d, z0.d
+; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #16
+; CHECK-NEXT:    cmeq v0.4s, v0.4s, v2.4s
+; CHECK-NEXT:    cmeq v1.4s, v1.4s, v2.4s
+; CHECK-NEXT:    sunpklo z0.d, z0.s
+; CHECK-NEXT:    sunpklo z1.d, z1.s
+; CHECK-NEXT:    cmpne p0.d, p1/z, z1.d, #0
+; CHECK-NEXT:    cmpne p1.d, p1/z, z0.d, #0
+; CHECK-NEXT:  .LBB40_1: // %body
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    st1d { z0.d }, p1, [x8]
+; CHECK-NEXT:    st1d { z0.d }, p0, [x8]
+; CHECK-NEXT:    b .LBB40_1
+entry:
+  %splat = shufflevector <8 x i32> poison, <8 x i32> poison, <8 x i32> zeroinitializer
+  br label %body
+body:
+  %0 = icmp eq <8 x i32> zeroinitializer, %splat
+  tail call void @llvm.masked.store.v8f64.p0(<8 x double> poison, ptr poison, i32 8, <8 x i1> %0)
+  br label %body
+}
+declare void @llvm.masked.store.v8f64.p0(<8 x double>, ptr nocapture, i32 immarg, <8 x i1>)
+
 declare <4 x i8> @llvm.vector.extract.v4i8.v8i8(<8 x i8>, i64)
 declare <8 x i8> @llvm.vector.extract.v8i8.v16i8(<16 x i8>, i64)
 declare <16 x i8> @llvm.vector.extract.v16i8.v32i8(<32 x i8>, i64)

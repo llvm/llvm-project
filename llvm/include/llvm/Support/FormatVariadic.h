@@ -43,21 +43,20 @@
 
 namespace llvm {
 
-enum class ReplacementType { Empty, Format, Literal };
+enum class ReplacementType { Format, Literal };
 
 struct ReplacementItem {
-  ReplacementItem() = default;
   explicit ReplacementItem(StringRef Literal)
       : Type(ReplacementType::Literal), Spec(Literal) {}
-  ReplacementItem(StringRef Spec, size_t Index, size_t Align, AlignStyle Where,
-                  char Pad, StringRef Options)
-      : Type(ReplacementType::Format), Spec(Spec), Index(Index), Align(Align),
+  ReplacementItem(StringRef Spec, unsigned Index, unsigned Width,
+                  AlignStyle Where, char Pad, StringRef Options)
+      : Type(ReplacementType::Format), Spec(Spec), Index(Index), Width(Width),
         Where(Where), Pad(Pad), Options(Options) {}
 
-  ReplacementType Type = ReplacementType::Empty;
+  ReplacementType Type;
   StringRef Spec;
-  size_t Index = 0;
-  size_t Align = 0;
+  unsigned Index = 0;
+  unsigned Width = 0;
   AlignStyle Where = AlignStyle::Right;
   char Pad = 0;
   StringRef Options;
@@ -66,26 +65,21 @@ struct ReplacementItem {
 class formatv_object_base {
 protected:
   StringRef Fmt;
-  ArrayRef<detail::format_adapter *> Adapters;
-
-  static bool consumeFieldLayout(StringRef &Spec, AlignStyle &Where,
-                                 size_t &Align, char &Pad);
-
-  static std::pair<ReplacementItem, StringRef>
-  splitLiteralAndReplacement(StringRef Fmt);
+  ArrayRef<support::detail::format_adapter *> Adapters;
+  bool Validate;
 
   formatv_object_base(StringRef Fmt,
-                      ArrayRef<detail::format_adapter *> Adapters)
-      : Fmt(Fmt), Adapters(Adapters) {}
+                      ArrayRef<support::detail::format_adapter *> Adapters,
+                      bool Validate)
+      : Fmt(Fmt), Adapters(Adapters), Validate(Validate) {}
 
   formatv_object_base(formatv_object_base const &rhs) = delete;
   formatv_object_base(formatv_object_base &&rhs) = default;
 
 public:
   void format(raw_ostream &S) const {
-    for (auto &R : parseFormatString(Fmt)) {
-      if (R.Type == ReplacementType::Empty)
-        continue;
+    const auto Replacements = parseFormatString(Fmt, Adapters.size(), Validate);
+    for (const auto &R : Replacements) {
       if (R.Type == ReplacementType::Literal) {
         S << R.Spec;
         continue;
@@ -97,13 +91,14 @@ public:
 
       auto *W = Adapters[R.Index];
 
-      FmtAlign Align(*W, R.Where, R.Align, R.Pad);
+      FmtAlign Align(*W, R.Where, R.Width, R.Pad);
       Align.format(S, R.Options);
     }
   }
-  static SmallVector<ReplacementItem, 2> parseFormatString(StringRef Fmt);
 
-  static std::optional<ReplacementItem> parseReplacementItem(StringRef Spec);
+  // Parse and optionally validate format string (in debug builds).
+  static SmallVector<ReplacementItem, 2>
+  parseFormatString(StringRef Fmt, size_t NumArgs, bool Validate);
 
   std::string str() const {
     std::string Result;
@@ -130,7 +125,7 @@ template <typename Tuple> class formatv_object : public formatv_object_base {
   // of the parameters, we have to own the storage for the parameters here, and
   // have the base class store type-erased pointers into this tuple.
   Tuple Parameters;
-  std::array<detail::format_adapter *, std::tuple_size<Tuple>::value>
+  std::array<support::detail::format_adapter *, std::tuple_size<Tuple>::value>
       ParameterPointers;
 
   // The parameters are stored in a std::tuple, which does not provide runtime
@@ -142,15 +137,15 @@ template <typename Tuple> class formatv_object : public formatv_object_base {
   // std::array<Base*>.
   struct create_adapters {
     template <typename... Ts>
-    std::array<detail::format_adapter *, std::tuple_size<Tuple>::value>
-    operator()(Ts &... Items) {
+    std::array<support::detail::format_adapter *, std::tuple_size<Tuple>::value>
+    operator()(Ts &...Items) {
       return {{&Items...}};
     }
   };
 
 public:
-  formatv_object(StringRef Fmt, Tuple &&Params)
-      : formatv_object_base(Fmt, ParameterPointers),
+  formatv_object(StringRef Fmt, Tuple &&Params, bool Validate)
+      : formatv_object_base(Fmt, ParameterPointers, Validate),
         Parameters(std::move(Params)) {
     ParameterPointers = std::apply(create_adapters(), Parameters);
   }
@@ -247,14 +242,18 @@ public:
 // assertion.  Otherwise, it will try to do something reasonable, but in general
 // the details of what that is are undefined.
 //
+
+// formatv() with validation enable/disable controlled by the first argument.
 template <typename... Ts>
-inline auto formatv(const char *Fmt, Ts &&... Vals) -> formatv_object<decltype(
-    std::make_tuple(detail::build_format_adapter(std::forward<Ts>(Vals))...))> {
-  using ParamTuple = decltype(
-      std::make_tuple(detail::build_format_adapter(std::forward<Ts>(Vals))...));
-  return formatv_object<ParamTuple>(
-      Fmt,
-      std::make_tuple(detail::build_format_adapter(std::forward<Ts>(Vals))...));
+inline auto formatv(bool Validate, const char *Fmt, Ts &&...Vals) {
+  auto Params = std::make_tuple(
+      support::detail::build_format_adapter(std::forward<Ts>(Vals))...);
+  return formatv_object<decltype(Params)>(Fmt, std::move(Params), Validate);
+}
+
+// formatv() with validation enabled.
+template <typename... Ts> inline auto formatv(const char *Fmt, Ts &&...Vals) {
+  return formatv<Ts...>(true, Fmt, std::forward<Ts>(Vals)...);
 }
 
 } // end namespace llvm

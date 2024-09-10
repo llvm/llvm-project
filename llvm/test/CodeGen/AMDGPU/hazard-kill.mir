@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs -run-pass post-RA-sched %s -o - | FileCheck -check-prefix=GFX90 %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs -run-pass post-RA-sched %s -o - | FileCheck -check-prefix=GFX90 %s
 
 # This tests that a KILL isn't considered as a valid instruction for a hazard
 # slot (e.g. m0 def followed by V_INTERP for gfx9)

@@ -215,3 +215,14 @@ namespace PR20735 {
     // fix-it:"{{.*}}":{[[@LINE-9]]:20-[[@LINE-9]]:20}:")"
   }
 }
+
+void consecutive_builtin_compare(int x, int y, int z) {
+  (void)(x < y < z);  // expected-warning {{comparisons like 'X<=Y<=Z' don't have their mathematical meaning}}
+  (void)(x < y > z);  // expected-warning {{comparisons like 'X<=Y<=Z' don't have their mathematical meaning}}
+  (void)(x < y <= z); // expected-warning {{comparisons like 'X<=Y<=Z' don't have their mathematical meaning}}
+  (void)(x <= y > z); // expected-warning {{comparisons like 'X<=Y<=Z' don't have their mathematical meaning}}
+  (void)((x < y) < z);  // no-warning
+  (void)((x < y) >= z); // no-warning
+
+  // TODO: Also issue warning for consecutive comparisons that use overloaded comparison operators?
+}

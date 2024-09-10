@@ -74,7 +74,8 @@ public:
         this->TLSSupported = !Triple.isOSVersionLT(3);
     } else if (Triple.isDriverKit()) {
       // No TLS on DriverKit.
-    }
+    } else if (Triple.isXROS())
+      this->TLSSupported = true;
 
     this->MCountName = "\01mcount";
   }
@@ -108,6 +109,9 @@ public:
       break;
     case llvm::Triple::WatchOS: // Earliest supporting version is 5.0.0.
       MinVersion = llvm::VersionTuple(5U);
+      break;
+    case llvm::Triple::XROS:
+      MinVersion = llvm::VersionTuple(0);
       break;
     default:
       // Conservatively return 8 bytes if OS is unknown.
@@ -837,9 +841,6 @@ public:
                             "i64:64-i128:128-n8:16:32:64-S128");
     } else if (Triple.getArch() == llvm::Triple::mipsel) {
       // Handled on mips' setDataLayout.
-    } else {
-      assert(Triple.getArch() == llvm::Triple::le32);
-      this->resetDataLayout("e-p:32:32-i64:64");
     }
   }
 };
@@ -864,6 +865,7 @@ protected:
 public:
   FuchsiaTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
       : OSTargetInfo<Target>(Triple, Opts) {
+    this->WIntType = TargetInfo::UnsignedInt;
     this->MCountName = "__mcount";
     this->TheCXXABI.set(TargetCXXABI::Fuchsia);
   }

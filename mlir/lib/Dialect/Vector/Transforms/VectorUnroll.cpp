@@ -15,7 +15,6 @@
 #include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/Interfaces/VectorInterfaces.h"
-#include "mlir/Support/MathExtras.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Debug.h"
@@ -42,7 +41,7 @@ static SmallVector<Value> sliceTransferIndices(ArrayRef<int64_t> elementOffsets,
     return false;
   };
   // Compute 'sliceIndices' by adding 'sliceOffsets[i]' to 'indices[i]'.
-  SmallVector<Value> slicedIndices(indices.begin(), indices.end());
+  SmallVector<Value> slicedIndices(indices);
   for (const auto &dim : llvm::enumerate(permutationMap.getResults())) {
     if (isBroadcast(dim.value()))
       continue;
@@ -311,7 +310,7 @@ struct UnrollContractionPattern
           applyPermutationMap(accPermutationMap, ArrayRef<int64_t>(offsets));
       // If a version of the accumulator has already been computed, use it
       // otherwise extract the first version from the original operand.
-      auto accIt = accCache.find(accOffets);
+      auto *accIt = accCache.find(accOffets);
       if (accIt != accCache.end())
         slicesOperands[2] = accIt->second;
       else
@@ -387,7 +386,7 @@ struct UnrollMultiReductionPattern
       SmallVector<int64_t> accStrides(destOffset.size(), 1);
       // If a version of the accumulator has already been computed, use it
       // otherwise extract the first version from the original operand.
-      auto accIt = accCache.find(destOffset);
+      auto *accIt = accCache.find(destOffset);
       if (accIt != accCache.end())
         acc = accIt->second;
       else

@@ -9,6 +9,8 @@
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/ExecutionEngine/JITLink/x86_64.h"
 #include "llvm/ExecutionEngine/Orc/Layer.h"
+#include "llvm/ExecutionEngine/Orc/LoadLinkableFile.h"
+#include "llvm/ExecutionEngine/Orc/MachO.h"
 #include "llvm/ExecutionEngine/Orc/ObjectFileInterface.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
@@ -17,6 +19,7 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/MachOUniversal.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/StringSaver.h"
 #include "llvm/Target/TargetMachine.h"
 #include <string>
 
@@ -117,7 +120,7 @@ void CtorDtorRunner::add(iterator_range<CtorDtorIterator> CtorDtors) {
 
   MangleAndInterner Mangle(
       JD.getExecutionSession(),
-      (*CtorDtors.begin()).Func->getParent()->getDataLayout());
+      (*CtorDtors.begin()).Func->getDataLayout());
 
   for (auto CtorDtor : CtorDtors) {
     assert(CtorDtor.Func && CtorDtor.Func->hasName() &&
@@ -275,45 +278,12 @@ StaticLibraryDefinitionGenerator::Load(
     ObjectLayer &L, const char *FileName,
     GetObjectFileInterface GetObjFileInterface) {
 
-  auto B = object::createBinary(FileName);
-  if (!B)
-    return createFileError(FileName, B.takeError());
+  const auto &TT = L.getExecutionSession().getTargetTriple();
+  auto Linkable = loadLinkableFile(FileName, TT, LoadArchives::Required);
+  if (!Linkable)
+    return Linkable.takeError();
 
-  // If this is a regular archive then create an instance from it.
-  if (isa<object::Archive>(B->getBinary())) {
-    auto [Archive, ArchiveBuffer] = B->takeBinary();
-    return Create(L, std::move(ArchiveBuffer),
-                  std::unique_ptr<object::Archive>(
-                      static_cast<object::Archive *>(Archive.release())),
-                  std::move(GetObjFileInterface));
-  }
-
-  // If this is a universal binary then search for a slice matching the given
-  // Triple.
-  if (auto *UB = dyn_cast<object::MachOUniversalBinary>(B->getBinary())) {
-
-    const auto &TT = L.getExecutionSession().getTargetTriple();
-
-    auto SliceRange = getSliceRangeForArch(*UB, TT);
-    if (!SliceRange)
-      return SliceRange.takeError();
-
-    auto SliceBuffer = MemoryBuffer::getFileSlice(FileName, SliceRange->second,
-                                                  SliceRange->first);
-    if (!SliceBuffer)
-      return make_error<StringError>(
-          Twine("Could not create buffer for ") + TT.str() + " slice of " +
-              FileName + ": [ " + formatv("{0:x}", SliceRange->first) + " .. " +
-              formatv("{0:x}", SliceRange->first + SliceRange->second) + ": " +
-              SliceBuffer.getError().message(),
-          SliceBuffer.getError());
-
-    return Create(L, std::move(*SliceBuffer), std::move(GetObjFileInterface));
-  }
-
-  return make_error<StringError>(Twine("Unrecognized file type for ") +
-                                     FileName,
-                                 inconvertibleErrorCode());
+  return Create(L, std::move(Linkable->first), std::move(GetObjFileInterface));
 }
 
 Expected<std::unique_ptr<StaticLibraryDefinitionGenerator>>
@@ -357,7 +327,7 @@ StaticLibraryDefinitionGenerator::Create(
 
     const auto &TT = L.getExecutionSession().getTargetTriple();
 
-    auto SliceRange = getSliceRangeForArch(*UB, TT);
+    auto SliceRange = getMachOSliceRangeForTriple(*UB, TT);
     if (!SliceRange)
       return SliceRange.takeError();
 
@@ -422,6 +392,7 @@ Error StaticLibraryDefinitionGenerator::buildObjectFilesMap() {
   DenseMap<uint64_t, MemoryBufferRef> MemoryBuffers;
   DenseSet<uint64_t> Visited;
   DenseSet<uint64_t> Excluded;
+  StringSaver FileNames(ObjFileNameStorage);
   for (auto &S : Archive->symbols()) {
     StringRef SymName = S.getName();
     auto Member = S.getMember();
@@ -438,7 +409,17 @@ Error StaticLibraryDefinitionGenerator::buildObjectFilesMap() {
         Excluded.insert(DataOffset);
         continue;
       }
-      MemoryBuffers[DataOffset] = (*Child)->getMemoryBufferRef();
+
+      // Give members of the archive a name that contains the archive path so
+      // that they can be differentiated from a member with the same name in a
+      // different archive. This also ensure initializer symbols names will be
+      // unique within a JITDylib.
+      StringRef FullName = FileNames.save(Archive->getFileName() + "(" +
+                                          (*Child)->getFileName() + ")");
+      MemoryBufferRef MemBuffer((*Child)->getMemoryBufferRef().getBuffer(),
+                                FullName);
+
+      MemoryBuffers[DataOffset] = MemBuffer;
     }
     if (!Excluded.count(DataOffset))
       ObjectFilesMap[L.getExecutionSession().intern(SymName)] =
@@ -446,27 +427,6 @@ Error StaticLibraryDefinitionGenerator::buildObjectFilesMap() {
   }
 
   return Error::success();
-}
-
-Expected<std::pair<size_t, size_t>>
-StaticLibraryDefinitionGenerator::getSliceRangeForArch(
-    object::MachOUniversalBinary &UB, const Triple &TT) {
-
-  for (const auto &Obj : UB.objects()) {
-    auto ObjTT = Obj.getTriple();
-    if (ObjTT.getArch() == TT.getArch() &&
-        ObjTT.getSubArch() == TT.getSubArch() &&
-        (TT.getVendor() == Triple::UnknownVendor ||
-         ObjTT.getVendor() == TT.getVendor())) {
-      // We found a match. Return the range for the slice.
-      return std::make_pair(Obj.getOffset(), Obj.getSize());
-    }
-  }
-
-  return make_error<StringError>(Twine("Universal binary ") + UB.getFileName() +
-                                     " does not contain a slice for " +
-                                     TT.str(),
-                                 inconvertibleErrorCode());
 }
 
 StaticLibraryDefinitionGenerator::StaticLibraryDefinitionGenerator(
@@ -545,7 +505,7 @@ DLLImportDefinitionGenerator::getTargetPointerSize(const Triple &TT) {
 }
 
 Expected<llvm::endianness>
-DLLImportDefinitionGenerator::getTargetEndianness(const Triple &TT) {
+DLLImportDefinitionGenerator::getEndianness(const Triple &TT) {
   switch (TT.getArch()) {
   case Triple::x86_64:
     return llvm::endianness::little;
@@ -562,7 +522,7 @@ DLLImportDefinitionGenerator::createStubsGraph(const SymbolMap &Resolved) {
   auto PointerSize = getTargetPointerSize(TT);
   if (!PointerSize)
     return PointerSize.takeError();
-  auto Endianness = getTargetEndianness(TT);
+  auto Endianness = getEndianness(TT);
   if (!Endianness)
     return Endianness.takeError();
 

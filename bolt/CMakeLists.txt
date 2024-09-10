@@ -1,4 +1,17 @@
-include(ExternalProject)
+cmake_minimum_required(VERSION 3.20.0)
+
+set(LLVM_SUBPROJECT_TITLE "BOLT")
+
+if(NOT DEFINED LLVM_COMMON_CMAKE_UTILS)
+  set(LLVM_COMMON_CMAKE_UTILS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
+endif()
+include(${LLVM_COMMON_CMAKE_UTILS}/Modules/CMakePolicy.cmake
+  NO_POLICY_SCOPE)
+
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+  project(bolt)
+  set(BOLT_BUILT_STANDALONE TRUE)
+endif()
 
 set(BOLT_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(BOLT_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
@@ -6,6 +19,42 @@ set(CMAKE_CXX_STANDARD 17)
 
 # Add path for custom modules.
 list(INSERT CMAKE_MODULE_PATH 0 "${BOLT_SOURCE_DIR}/cmake/modules")
+
+include(GNUInstallDirs)
+
+# standalone build, copied from clang
+if(BOLT_BUILT_STANDALONE)
+  set(CMAKE_CXX_STANDARD 17 CACHE STRING "C++ standard to conform to")
+  set(CMAKE_CXX_STANDARD_REQUIRED YES)
+  set(CMAKE_CXX_EXTENSIONS NO)
+
+  if(NOT MSVC_IDE)
+    set(LLVM_ENABLE_ASSERTIONS ${ENABLE_ASSERTIONS}
+      CACHE BOOL "Enable assertions")
+    # Assertions should follow llvm-config's.
+    mark_as_advanced(LLVM_ENABLE_ASSERTIONS)
+  endif()
+
+  find_package(LLVM REQUIRED HINTS "${LLVM_CMAKE_DIR}")
+  list(APPEND CMAKE_MODULE_PATH "${LLVM_DIR}")
+
+  set(LLVM_MAIN_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../llvm" CACHE PATH "Path to LLVM source tree")
+  find_program(LLVM_TABLEGEN_EXE "llvm-tblgen" ${LLVM_TOOLS_BINARY_DIR}
+    NO_DEFAULT_PATH)
+
+  # They are used as destination of target generators.
+  set(LLVM_RUNTIME_OUTPUT_INTDIR ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin)
+  set(LLVM_LIBRARY_OUTPUT_INTDIR ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/lib${LLVM_LIBDIR_SUFFIX})
+
+  include(AddLLVM)
+  include(TableGen)
+  include_directories(${LLVM_INCLUDE_DIRS})
+  link_directories("${LLVM_LIBRARY_DIR}")
+
+  set( CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_INSTALL_BINDIR}" )
+  set( CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_INSTALL_LIBDIR}/${LLVM_LIBDIR_SUFFIX}" )
+  set( CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_INSTALL_LIBDIR}/${LLVM_LIBDIR_SUFFIX}")
+endif() # standalone
 
 # Determine default set of targets to build -- the intersection of
 # those BOLT supports and those LLVM is targeting.
@@ -33,7 +82,7 @@ endforeach()
 
 set(BOLT_ENABLE_RUNTIME_default OFF)
 if ((CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64"
-    OR CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64")
+    OR CMAKE_SYSTEM_PROCESSOR MATCHES "^(arm64|aarch64)$")
     AND (CMAKE_SYSTEM_NAME STREQUAL "Linux"
       OR CMAKE_SYSTEM_NAME STREQUAL "Darwin")
     AND (NOT CMAKE_CROSSCOMPILING))
@@ -45,9 +94,9 @@ if (BOLT_ENABLE_RUNTIME)
   execute_process(COMMAND ls /proc/self/map_files
     RESULT_VARIABLE LS OUTPUT_QUIET ERROR_QUIET)
   if (LS)
-    set(BOLT_ENABLE_RUNTIME OFF)
     message(WARNING
-      "BOLT runtime is disabled as /proc/self/map_files is unreadable.")
+      "BOLT runtime may not be able to read /proc/self/map_files. Please use
+      `--instrumentation-binpath <path-to-instrumented-binary>` option.")
   endif()
 endif()
 
@@ -92,6 +141,8 @@ if (BOLT_ENABLE_RUNTIME)
   if(CMAKE_SYSROOT)
     list(APPEND extra_args -DCMAKE_SYSROOT=${CMAKE_SYSROOT})
   endif()
+
+  include(ExternalProject)
   ExternalProject_Add(bolt_rt
     SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/runtime"
     STAMP_DIR ${CMAKE_CURRENT_BINARY_DIR}/bolt_rt-stamps
@@ -102,6 +153,7 @@ if (BOLT_ENABLE_RUNTIME)
                -DCMAKE_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}
                -DLLVM_LIBDIR_SUFFIX=${LLVM_LIBDIR_SUFFIX}
                -DLLVM_LIBRARY_DIR=${LLVM_LIBRARY_DIR}
+               -DBOLT_BUILT_STANDALONE=${BOLT_BUILT_STANDALONE}
                ${extra_args}
     INSTALL_COMMAND ""
     BUILD_ALWAYS True
@@ -111,6 +163,8 @@ if (BOLT_ENABLE_RUNTIME)
   add_llvm_install_targets(install-bolt_rt
     DEPENDS bolt_rt bolt
     COMPONENT bolt)
+  set(LIBBOLT_RT_INSTR "${CMAKE_CURRENT_BINARY_DIR}/bolt_rt-bins/lib/libbolt_rt_instr.a")
+  set(LIBBOLT_RT_HUGIFY "${CMAKE_CURRENT_BINARY_DIR}/bolt_rt-bins/lib/libbolt_rt_hugify.a")
 endif()
 
 find_program(GNU_LD_EXECUTABLE NAMES ${LLVM_DEFAULT_TARGET_TRIPLE}-ld.bfd ld.bfd DOC "GNU ld")
@@ -121,7 +175,7 @@ option(BOLT_BUILD_TOOLS
   "Build the BOLT tools. If OFF, just generate build targets." ON)
 
 add_custom_target(bolt)
-set_target_properties(bolt PROPERTIES FOLDER "BOLT")
+set_target_properties(bolt PROPERTIES FOLDER "BOLT/Metatargets")
 add_llvm_install_targets(install-bolt DEPENDS bolt COMPONENT bolt)
 
 include_directories(

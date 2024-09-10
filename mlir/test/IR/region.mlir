@@ -87,18 +87,17 @@ func.func @named_region_has_wrong_number_of_blocks() {
 // CHECK: test.single_no_terminator_op
 "test.single_no_terminator_op"() (
   {
-    func.func @foo1() { return }
-    func.func @foo2() { return }
+    %foo = arith.constant 1 : i32
   }
 ) : () -> ()
 
 // CHECK: test.variadic_no_terminator_op
 "test.variadic_no_terminator_op"() (
   {
-    func.func @foo1() { return }
+    %foo = arith.constant 1 : i32
   },
   {
-    func.func @foo2() { return }
+    %bar = arith.constant 1 : i32
   }
 ) : () -> ()
 

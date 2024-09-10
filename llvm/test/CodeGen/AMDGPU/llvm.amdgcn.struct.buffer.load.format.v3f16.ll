@@ -128,6 +128,7 @@ define amdgpu_gs void @main(<4 x i32> %arg, i32 %arg1) {
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_and_b32 s0, vcc_lo, s0
 ; GFX12-NEXT:    s_and_saveexec_b32 s0, s0
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    buffer_load_d16_format_xyz v[5:6], v4, s[4:7], null idxen
 ; GFX12-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
 ; GFX12-NEXT:    ; implicit-def: $vgpr4
@@ -135,7 +136,7 @@ define amdgpu_gs void @main(<4 x i32> %arg, i32 %arg1) {
 ; GFX12-NEXT:    s_cbranch_execnz .LBB0_1
 ; GFX12-NEXT:  ; %bb.2:
 ; GFX12-NEXT:    s_mov_b32 exec_lo, s1
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_lshrrev_b32_e32 v0, 16, v5
 ; GFX12-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_and_b32 v1, 0xffff, v6
 ; GFX12-NEXT:    ds_store_2addr_b32 v2, v0, v1 offset0:7 offset1:8

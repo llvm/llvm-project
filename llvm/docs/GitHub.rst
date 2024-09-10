@@ -23,12 +23,35 @@ intended to be able to support "stacked" pull-request. Do not create any branche
 llvm/llvm-project repository otherwise, please use a fork (see below). User branches that
 aren't associated with a pull-request **will be deleted**.
 
+Using Graphite for stacked Pull Requests
+========================================
+
+`Graphite <https://app.graphite.dev/>`_ is a stacked pull request tool supported
+by the LLVM repo (the other being `reviewable.io <https://reviewable.io>`_).
+
+Graphite will want to create branches under ``llvm/llvm-project`` rather than your
+private fork, so the guidance above, about branch naming, is critical, otherwise
+``gt submit`` (i.e. publish your PRs for review) will fail.
+
+Use ``gt config`` then ``Branch naming settings`` and ``Set a prefix for branch names``.
+Include the last ``/``.
+
+If you didn't do the above and Graphite created non-prefixed branches, a simple way to
+unblock is to rename (``git -m <old name> <new name>``), and then checkout the branch
+and ``gt track``.
+
 Pull Requests
 =============
 The LLVM project is using GitHub Pull Requests for Code Reviews. This document
 describes the typical workflow of creating a Pull Request and getting it reviewed
 and accepted. This is meant as an overview of the GitHub workflow, for complete
 documentation refer to `GitHub's documentation <https://docs.github.com/pull-requests>`_.
+
+.. note::
+   If you are using a Pull Request for purposes other than review
+   (eg: precommit CI results, convenient web-based reverts, etc)
+   `skip-precommit-approval <https://github.com/llvm/llvm-project/labels?q=skip-precommit-approval>`_
+   label to the PR.
 
 GitHub Tools
 ------------
@@ -168,6 +191,17 @@ was initially authored vs. when you intended to merge it). Since you're pushing
 to a branch in your fork, this is ok and expected. Github's UI for the pull
 request will understand that you're rebasing just your patches, and display
 this result correctly with a note that a force push did occur.
+
+
+Problems After Landing Your Change
+==================================
+
+Even though your PR passed the pre-commit checks and is approved by reviewers, it
+may cause problems for some configurations after it lands. You will be notified
+if this happens and the community is ready to help you fix the problems.
+
+This process is described in detail
+:ref:`here <MyFirstTypoFix Issues After Landing Your PR>`.
 
 
 Checking out another PR locally
@@ -359,10 +393,10 @@ Releases
 
 Backporting Fixes to the Release Branches
 -----------------------------------------
-You can use special comments on issues to make backport requests for the
-release branches.  This is done by making a comment containing one of the
-following commands on any issue that has been added to one of the "X.Y.Z Release"
-milestones.
+You can use special comments on issues or pull requests to make backport
+requests for the release branches.  This is done by making a comment containing
+the following command on any issue or pull request that has been added to one
+of the "X.Y.Z Release" milestones.
 
 ::
 
@@ -371,13 +405,9 @@ milestones.
 This command takes one or more git commit hashes as arguments and will attempt
 to cherry-pick the commit(s) to the release branch.  If the commit(s) fail to
 apply cleanly, then a comment with a link to the failing job will be added to
-the issue.  If the commit(s) do apply cleanly, then a pull request will
-be created with the specified commits.
+the issue/pull request.  If the commit(s) do apply cleanly, then a pull request
+will be created with the specified commits.
 
-::
-
-  /branch <owner>/<repo>/<branch>
-
-This command will create a pull request against the latest release branch using
-the <branch> from the <owner>/<repo> repository.  <branch> cannot contain any
-forward slash '/' characters.
+If a commit you want to backport does not apply cleanly, you may resolve
+the conflicts locally and then create a pull request against the release
+branch.  Just make sure to add the release milestone to the pull request.

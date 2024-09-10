@@ -54,6 +54,8 @@
 
 using namespace llvm;
 
+extern cl::opt<bool> UseNewDbgInfoFormat;
+
 //===----------------------------------------------------------------------===//
 // Methods to implement the globals and functions lists.
 //
@@ -71,8 +73,8 @@ template class llvm::SymbolTableListTraits<GlobalIFunc>;
 
 Module::Module(StringRef MID, LLVMContext &C)
     : Context(C), ValSymTab(std::make_unique<ValueSymbolTable>(-1)),
-      ModuleID(std::string(MID)), SourceFileName(std::string(MID)), DL(""),
-      IsNewDbgInfoFormat(false) {
+      ModuleID(std::string(MID)), SourceFileName(std::string(MID)),
+      IsNewDbgInfoFormat(UseNewDbgInfoFormat) {
   Context.addModule(this);
 }
 
@@ -83,6 +85,28 @@ Module::~Module() {
   FunctionList.clear();
   AliasList.clear();
   IFuncList.clear();
+}
+
+void Module::removeDebugIntrinsicDeclarations() {
+  auto *DeclareIntrinsicFn =
+      Intrinsic::getDeclaration(this, Intrinsic::dbg_declare);
+  assert((!isMaterialized() || DeclareIntrinsicFn->hasZeroLiveUses()) &&
+         "Debug declare intrinsic should have had uses removed.");
+  DeclareIntrinsicFn->eraseFromParent();
+  auto *ValueIntrinsicFn =
+      Intrinsic::getDeclaration(this, Intrinsic::dbg_value);
+  assert((!isMaterialized() || ValueIntrinsicFn->hasZeroLiveUses()) &&
+         "Debug value intrinsic should have had uses removed.");
+  ValueIntrinsicFn->eraseFromParent();
+  auto *AssignIntrinsicFn =
+      Intrinsic::getDeclaration(this, Intrinsic::dbg_assign);
+  assert((!isMaterialized() || AssignIntrinsicFn->hasZeroLiveUses()) &&
+         "Debug assign intrinsic should have had uses removed.");
+  AssignIntrinsicFn->eraseFromParent();
+  auto *LabelntrinsicFn = Intrinsic::getDeclaration(this, Intrinsic::dbg_label);
+  assert((!isMaterialized() || LabelntrinsicFn->hasZeroLiveUses()) &&
+         "Debug label intrinsic should have had uses removed.");
+  LabelntrinsicFn->eraseFromParent();
 }
 
 std::unique_ptr<RandomNumberGenerator>
@@ -149,10 +173,9 @@ FunctionCallee Module::getOrInsertFunction(StringRef Name, FunctionType *Ty,
   if (!F) {
     // Nope, add it
     Function *New = Function::Create(Ty, GlobalVariable::ExternalLinkage,
-                                     DL.getProgramAddressSpace(), Name);
+                                     DL.getProgramAddressSpace(), Name, this);
     if (!New->isIntrinsic())       // Intrinsics get attrs set on construction
       New->setAttributes(AttributeList);
-    FunctionList.push_back(New);
     return {Ty, New}; // Return the new prototype.
   }
 
@@ -236,10 +259,8 @@ GlobalIFunc *Module::getNamedIFunc(StringRef Name) const {
 /// getNamedMetadata - Return the first NamedMDNode in the module with the
 /// specified name. This method returns null if a NamedMDNode with the
 /// specified name is not found.
-NamedMDNode *Module::getNamedMetadata(const Twine &Name) const {
-  SmallString<256> NameData;
-  StringRef NameRef = Name.toStringRef(NameData);
-  return NamedMDSymTab.lookup(NameRef);
+NamedMDNode *Module::getNamedMetadata(StringRef Name) const {
+  return NamedMDSymTab.lookup(Name);
 }
 
 /// getOrInsertNamedMetadata - Return the first named MDNode in the module
@@ -251,6 +272,8 @@ NamedMDNode *Module::getOrInsertNamedMetadata(StringRef Name) {
     NMD = new NamedMDNode(Name);
     NMD->setParent(this);
     insertNamedMDNode(NMD);
+    if (Name == "llvm.module.flags")
+      ModuleFlags = NMD;
   }
   return NMD;
 }
@@ -259,6 +282,8 @@ NamedMDNode *Module::getOrInsertNamedMetadata(StringRef Name) {
 /// delete it.
 void Module::eraseNamedMetadata(NamedMDNode *NMD) {
   NamedMDSymTab.erase(NMD->getName());
+  if (NMD == ModuleFlags)
+    ModuleFlags = nullptr;
   eraseNamedMDNode(NMD);
 }
 
@@ -273,20 +298,6 @@ bool Module::isValidModFlagBehavior(Metadata *MD, ModFlagBehavior &MFB) {
   return false;
 }
 
-bool Module::isValidModuleFlag(const MDNode &ModFlag, ModFlagBehavior &MFB,
-                               MDString *&Key, Metadata *&Val) {
-  if (ModFlag.getNumOperands() < 3)
-    return false;
-  if (!isValidModFlagBehavior(ModFlag.getOperand(0), MFB))
-    return false;
-  MDString *K = dyn_cast_or_null<MDString>(ModFlag.getOperand(1));
-  if (!K)
-    return false;
-  Key = K;
-  Val = ModFlag.getOperand(2);
-  return true;
-}
-
 /// getModuleFlagsMetadata - Returns the module flags in the provided vector.
 void Module::
 getModuleFlagsMetadata(SmallVectorImpl<ModuleFlagEntry> &Flags) const {
@@ -294,40 +305,34 @@ getModuleFlagsMetadata(SmallVectorImpl<ModuleFlagEntry> &Flags) const {
   if (!ModFlags) return;
 
   for (const MDNode *Flag : ModFlags->operands()) {
-    ModFlagBehavior MFB;
-    MDString *Key = nullptr;
-    Metadata *Val = nullptr;
-    if (isValidModuleFlag(*Flag, MFB, Key, Val)) {
-      // Check the operands of the MDNode before accessing the operands.
-      // The verifier will actually catch these failures.
-      Flags.push_back(ModuleFlagEntry(MFB, Key, Val));
-    }
+    // The verifier will catch errors, so no need to check them here.
+    auto *MFBConstant = mdconst::extract<ConstantInt>(Flag->getOperand(0));
+    auto MFB = static_cast<ModFlagBehavior>(MFBConstant->getLimitedValue());
+    MDString *Key = cast<MDString>(Flag->getOperand(1));
+    Metadata *Val = Flag->getOperand(2);
+    Flags.push_back(ModuleFlagEntry(MFB, Key, Val));
   }
 }
 
 /// Return the corresponding value if Key appears in module flags, otherwise
 /// return null.
 Metadata *Module::getModuleFlag(StringRef Key) const {
-  SmallVector<Module::ModuleFlagEntry, 8> ModuleFlags;
-  getModuleFlagsMetadata(ModuleFlags);
-  for (const ModuleFlagEntry &MFE : ModuleFlags) {
-    if (Key == MFE.Key->getString())
-      return MFE.Val;
+  const NamedMDNode *ModFlags = getModuleFlagsMetadata();
+  if (!ModFlags)
+    return nullptr;
+  for (const MDNode *Flag : ModFlags->operands()) {
+    if (Key == cast<MDString>(Flag->getOperand(1))->getString())
+      return Flag->getOperand(2);
   }
   return nullptr;
-}
-
-/// getModuleFlagsMetadata - Returns the NamedMDNode in the module that
-/// represents module-level flags. This method returns null if there are no
-/// module-level flags.
-NamedMDNode *Module::getModuleFlagsMetadata() const {
-  return getNamedMetadata("llvm.module.flags");
 }
 
 /// getOrInsertModuleFlagsMetadata - Returns the NamedMDNode in the module that
 /// represents module-level flags. If module-level flags aren't found, it
 /// creates the named metadata that contains them.
 NamedMDNode *Module::getOrInsertModuleFlagsMetadata() {
+  if (ModuleFlags)
+    return ModuleFlags;
   return getOrInsertNamedMetadata("llvm.module.flags");
 }
 
@@ -364,22 +369,25 @@ void Module::setModuleFlag(ModFlagBehavior Behavior, StringRef Key,
                            Metadata *Val) {
   NamedMDNode *ModFlags = getOrInsertModuleFlagsMetadata();
   // Replace the flag if it already exists.
-  for (unsigned I = 0, E = ModFlags->getNumOperands(); I != E; ++I) {
-    MDNode *Flag = ModFlags->getOperand(I);
-    ModFlagBehavior MFB;
-    MDString *K = nullptr;
-    Metadata *V = nullptr;
-    if (isValidModuleFlag(*Flag, MFB, K, V) && K->getString() == Key) {
+  for (MDNode *Flag : ModFlags->operands()) {
+    if (cast<MDString>(Flag->getOperand(1))->getString() == Key) {
       Flag->replaceOperandWith(2, Val);
       return;
     }
   }
   addModuleFlag(Behavior, Key, Val);
 }
-
-void Module::setDataLayout(StringRef Desc) {
-  DL.reset(Desc);
+void Module::setModuleFlag(ModFlagBehavior Behavior, StringRef Key,
+                           Constant *Val) {
+  setModuleFlag(Behavior, Key, ConstantAsMetadata::get(Val));
 }
+void Module::setModuleFlag(ModFlagBehavior Behavior, StringRef Key,
+                           uint32_t Val) {
+  Type *Int32Ty = Type::getInt32Ty(Context);
+  setModuleFlag(Behavior, Key, ConstantInt::get(Int32Ty, Val));
+}
+
+void Module::setDataLayout(StringRef Desc) { DL = DataLayout(Desc); }
 
 void Module::setDataLayout(const DataLayout &Other) { DL = Other; }
 
@@ -861,7 +869,7 @@ StringRef Module::getDarwinTargetVariantTriple() const {
 }
 
 void Module::setDarwinTargetVariantTriple(StringRef T) {
-  addModuleFlag(ModFlagBehavior::Override, "darwin.target_variant.triple",
+  addModuleFlag(ModFlagBehavior::Warning, "darwin.target_variant.triple",
                 MDString::get(getContext(), T));
 }
 

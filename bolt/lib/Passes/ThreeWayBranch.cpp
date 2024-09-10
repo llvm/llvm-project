@@ -147,7 +147,7 @@ void ThreeWayBranch::runOnFunction(BinaryFunction &Function) {
   }
 }
 
-void ThreeWayBranch::runOnFunctions(BinaryContext &BC) {
+Error ThreeWayBranch::runOnFunctions(BinaryContext &BC) {
   for (auto &It : BC.getBinaryFunctions()) {
     BinaryFunction &Function = It.second;
     if (!shouldRunOnFunction(Function))
@@ -155,8 +155,9 @@ void ThreeWayBranch::runOnFunctions(BinaryContext &BC) {
     runOnFunction(Function);
   }
 
-  outs() << "BOLT-INFO: number of three way branches order changed: "
-         << BranchesAltered << "\n";
+  BC.outs() << "BOLT-INFO: number of three way branches order changed: "
+            << BranchesAltered << "\n";
+  return Error::success();
 }
 
 } // end namespace bolt

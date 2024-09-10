@@ -291,12 +291,11 @@ void AArch64TargetWinCOFFStreamer::emitARM64WinCFISaveAnyRegQPX(unsigned Reg,
   emitARM64WinUnwindCode(Win64EH::UOP_SaveAnyRegQPX, Reg, Offset);
 }
 
-MCWinCOFFStreamer *llvm::createAArch64WinCOFFStreamer(
-    MCContext &Context, std::unique_ptr<MCAsmBackend> MAB,
-    std::unique_ptr<MCObjectWriter> OW, std::unique_ptr<MCCodeEmitter> Emitter,
-    bool RelaxAll, bool IncrementalLinkerCompatible) {
-  auto *S = new AArch64WinCOFFStreamer(Context, std::move(MAB),
-                                       std::move(Emitter), std::move(OW));
-  S->getAssembler().setIncrementalLinkerCompatible(IncrementalLinkerCompatible);
-  return S;
+MCWinCOFFStreamer *
+llvm::createAArch64WinCOFFStreamer(MCContext &Context,
+                                   std::unique_ptr<MCAsmBackend> MAB,
+                                   std::unique_ptr<MCObjectWriter> OW,
+                                   std::unique_ptr<MCCodeEmitter> Emitter) {
+  return new AArch64WinCOFFStreamer(Context, std::move(MAB), std::move(Emitter),
+                                    std::move(OW));
 }

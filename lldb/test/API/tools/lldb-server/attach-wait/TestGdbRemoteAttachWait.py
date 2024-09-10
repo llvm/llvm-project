@@ -17,7 +17,10 @@ class TestGdbRemoteAttachWait(gdbremote_testcase.GdbRemoteTestCaseBase):
             # Use a shim to ensure that the process is ready to be attached from
             # the get-go.
             self._exe_to_run = "shim"
-            self._run_args = [self.getBuildArtifact(self._exe_to_attach)]
+            self._exe_to_attach = lldbutil.install_to_target(
+                self, self.getBuildArtifact(self._exe_to_attach)
+            )
+            self._run_args = [self._exe_to_attach]
             self.build(dictionary={"EXE": self._exe_to_run, "CXX_SOURCES": "shim.cpp"})
         else:
             self._exe_to_run = self._exe_to_attach
@@ -26,7 +29,7 @@ class TestGdbRemoteAttachWait(gdbremote_testcase.GdbRemoteTestCaseBase):
     def _launch_inferior(self, args):
         inferior = self.spawnSubprocess(self.getBuildArtifact(self._exe_to_run), args)
         self.assertIsNotNone(inferior)
-        self.assertTrue(inferior.pid > 0)
+        self.assertGreater(inferior.pid, 0)
         self.assertTrue(lldbgdbserverutils.process_is_running(inferior.pid, True))
         return inferior
 

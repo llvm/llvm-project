@@ -25,6 +25,9 @@ class RecordKeeper;
 
 namespace llvm_libc {
 
+enum class AttributeStyle { Cxx11 = 0, Gnu = 1, Declspec = 2 };
+enum class AttributeNamespace { None = 0, Clang = 1, Gnu = 2 };
+
 class PublicAPICommand : public Command {
 private:
   const std::vector<std::string> &EntrypointNameList;
@@ -36,7 +39,7 @@ public:
       : EntrypointNameList(EntrypointNames) {}
 
   void run(llvm::raw_ostream &OS, const ArgVector &Args,
-           llvm::StringRef StdHeader, llvm::RecordKeeper &Records,
+           llvm::StringRef StdHeader, const llvm::RecordKeeper &Records,
            const Command::ErrorReporter &Reporter) const override;
 };
 

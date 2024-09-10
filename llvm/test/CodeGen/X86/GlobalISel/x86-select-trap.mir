@@ -23,6 +23,6 @@ body:             |
   bb.1 (%ir-block.0):
     ; CHECK-LABEL: name: trap
     ; CHECK: TRAP
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.trap)
+    G_TRAP
 
 ...

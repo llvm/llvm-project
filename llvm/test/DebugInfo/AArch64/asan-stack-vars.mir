@@ -39,85 +39,85 @@
   target triple = "arm64-apple-ios"
 
   %0 = type opaque
-  %struct._class_t = type { %struct._class_t*, %struct._class_t*, %struct._objc_cache*, i8* (i8*, i8*)**, %struct._class_ro_t* }
+  %struct._class_t = type { ptr, ptr, ptr, ptr, ptr }
   %struct._objc_cache = type opaque
-  %struct._class_ro_t = type { i32, i32, i32, i8*, i8*, %struct.__method_list_t*, %struct._objc_protocol_list*, %struct._ivar_list_t*, i8*, %struct._prop_list_t* }
+  %struct._class_ro_t = type { i32, i32, i32, ptr, ptr, ptr, ptr, ptr, ptr, ptr }
   %struct.__method_list_t = type { i32, i32, [0 x %struct._objc_method] }
-  %struct._objc_method = type { i8*, i8*, i8* }
-  %struct._objc_protocol_list = type { i64, [0 x %struct._protocol_t*] }
-  %struct._protocol_t = type { i8*, i8*, %struct._objc_protocol_list*, %struct.__method_list_t*, %struct.__method_list_t*, %struct.__method_list_t*, %struct.__method_list_t*, %struct._prop_list_t*, i32, i32, i8**, i8*, %struct._prop_list_t* }
+  %struct._objc_method = type { ptr, ptr, ptr }
+  %struct._objc_protocol_list = type { i64, [0 x ptr] }
+  %struct._protocol_t = type { ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, i32, i32, ptr, ptr, ptr }
   %struct._ivar_list_t = type { i32, i32, [0 x %struct._ivar_t] }
-  %struct._ivar_t = type { i32*, i8*, i8*, i32, i32 }
+  %struct._ivar_t = type { ptr, ptr, ptr, i32, i32 }
   %struct._prop_list_t = type { i32, i32, [0 x %struct._prop_t] }
-  %struct._prop_t = type { i8*, i8* }
+  %struct._prop_t = type { ptr, ptr }
   %struct.CGSize = type { double, double }
 
   @"OBJC_CLASS_$_Object" = external global %struct._class_t
-  @"OBJC_CLASSLIST_REFERENCES_$_" = private global %struct._class_t* @"OBJC_CLASS_$_Object", section "__DATA, __objc_classrefs, regular, no_dead_strip", align 8
+  @"OBJC_CLASSLIST_REFERENCES_$_" = private global ptr @"OBJC_CLASS_$_Object", section "__DATA, __objc_classrefs, regular, no_dead_strip", align 8
   @OBJC_METH_VAR_NAME_ = private unnamed_addr constant [6 x i8] c"alloc\00", section "__TEXT,__objc_methname,cstring_literals", align 1
-  @OBJC_SELECTOR_REFERENCES_ = private externally_initialized global i8* getelementptr inbounds ([6 x i8], [6 x i8]* @OBJC_METH_VAR_NAME_, i32 0, i32 0), section "__DATA, __objc_selrefs, literal_pointers, no_dead_strip", align 8
+  @OBJC_SELECTOR_REFERENCES_ = private externally_initialized global ptr @OBJC_METH_VAR_NAME_, section "__DATA, __objc_selrefs, literal_pointers, no_dead_strip", align 8
   @OBJC_METH_VAR_NAME_.1 = private unnamed_addr constant [14 x i8] c"initWithSize:\00", section "__TEXT,__objc_methname,cstring_literals", align 1
-  @OBJC_SELECTOR_REFERENCES_.2 = private externally_initialized global i8* getelementptr inbounds ([14 x i8], [14 x i8]* @OBJC_METH_VAR_NAME_.1, i32 0, i32 0), section "__DATA, __objc_selrefs, literal_pointers, no_dead_strip", align 8
+  @OBJC_SELECTOR_REFERENCES_.2 = private externally_initialized global ptr @OBJC_METH_VAR_NAME_.1, section "__DATA, __objc_selrefs, literal_pointers, no_dead_strip", align 8
   @OBJC_METH_VAR_NAME_.3 = private unnamed_addr constant [9 x i8] c"aMessage\00", section "__TEXT,__objc_methname,cstring_literals", align 1
-  @OBJC_SELECTOR_REFERENCES_.4 = private externally_initialized global i8* getelementptr inbounds ([9 x i8], [9 x i8]* @OBJC_METH_VAR_NAME_.3, i32 0, i32 0), section "__DATA, __objc_selrefs, literal_pointers, no_dead_strip", align 8
+  @OBJC_SELECTOR_REFERENCES_.4 = private externally_initialized global ptr @OBJC_METH_VAR_NAME_.3, section "__DATA, __objc_selrefs, literal_pointers, no_dead_strip", align 8
   @_objc_empty_cache = external global %struct._objc_cache
-  @"OBJC_CLASS_$_MyObject" = global %struct._class_t { %struct._class_t* @"OBJC_METACLASS_$_MyObject", %struct._class_t* null, %struct._objc_cache* @_objc_empty_cache, i8* (i8*, i8*)** null, %struct._class_ro_t* @"\01l_OBJC_CLASS_RO_$_MyObject" }, section "__DATA, __objc_data", align 8
-  @"OBJC_METACLASS_$_MyObject" = global %struct._class_t { %struct._class_t* @"OBJC_METACLASS_$_MyObject", %struct._class_t* @"OBJC_CLASS_$_MyObject", %struct._objc_cache* @_objc_empty_cache, i8* (i8*, i8*)** null, %struct._class_ro_t* @"\01l_OBJC_METACLASS_RO_$_MyObject" }, section "__DATA, __objc_data", align 8
+  @"OBJC_CLASS_$_MyObject" = global %struct._class_t { ptr @"OBJC_METACLASS_$_MyObject", ptr null, ptr @_objc_empty_cache, ptr null, ptr @"\01l_OBJC_CLASS_RO_$_MyObject" }, section "__DATA, __objc_data", align 8
+  @"OBJC_METACLASS_$_MyObject" = global %struct._class_t { ptr @"OBJC_METACLASS_$_MyObject", ptr @"OBJC_CLASS_$_MyObject", ptr @_objc_empty_cache, ptr null, ptr @"\01l_OBJC_METACLASS_RO_$_MyObject" }, section "__DATA, __objc_data", align 8
   @OBJC_CLASS_NAME_ = private unnamed_addr constant [9 x i8] c"MyObject\00", section "__TEXT,__objc_classname,cstring_literals", align 1
   @OBJC_METH_VAR_NAME_.5 = private unnamed_addr constant [12 x i8] c"doWithSize:\00", section "__TEXT,__objc_methname,cstring_literals", align 1
   @OBJC_METH_VAR_TYPE_ = private unnamed_addr constant [21 x i8] c"@32@0:8{CGSize=dd}16\00", section "__TEXT,__objc_methtype,cstring_literals", align 1
-  @"\01l_OBJC_$_CLASS_METHODS_MyObject" = private global { i32, i32, [1 x %struct._objc_method] } { i32 24, i32 1, [1 x %struct._objc_method] [%struct._objc_method { i8* getelementptr inbounds ([12 x i8], [12 x i8]* @OBJC_METH_VAR_NAME_.5, i32 0, i32 0), i8* getelementptr inbounds ([21 x i8], [21 x i8]* @OBJC_METH_VAR_TYPE_, i32 0, i32 0), i8* bitcast (i8* (i8*, i8*, [2 x double])* @"\01+[MyObject doWithSize:]" to i8*) }] }, section "__DATA, __objc_const", align 8
-  @"\01l_OBJC_METACLASS_RO_$_MyObject" = private global %struct._class_ro_t { i32 131, i32 40, i32 40, i8* null, i8* getelementptr inbounds ([9 x i8], [9 x i8]* @OBJC_CLASS_NAME_, i32 0, i32 0), %struct.__method_list_t* bitcast ({ i32, i32, [1 x %struct._objc_method] }* @"\01l_OBJC_$_CLASS_METHODS_MyObject" to %struct.__method_list_t*), %struct._objc_protocol_list* null, %struct._ivar_list_t* null, i8* null, %struct._prop_list_t* null }, section "__DATA, __objc_const", align 8
-  @"\01l_OBJC_CLASS_RO_$_MyObject" = private global %struct._class_ro_t { i32 130, i32 0, i32 0, i8* null, i8* getelementptr inbounds ([9 x i8], [9 x i8]* @OBJC_CLASS_NAME_, i32 0, i32 0), %struct.__method_list_t* null, %struct._objc_protocol_list* null, %struct._ivar_list_t* null, i8* null, %struct._prop_list_t* null }, section "__DATA, __objc_const", align 8
-  @"OBJC_LABEL_CLASS_$" = private global [1 x i8*] [i8* bitcast (%struct._class_t* @"OBJC_CLASS_$_MyObject" to i8*)], section "__DATA, __objc_classlist, regular, no_dead_strip", align 8
-  @llvm.compiler.used = appending global [12 x i8*] [i8* bitcast (%struct._class_t** @"OBJC_CLASSLIST_REFERENCES_$_" to i8*), i8* getelementptr inbounds ([6 x i8], [6 x i8]* @OBJC_METH_VAR_NAME_, i32 0, i32 0), i8* bitcast (i8** @OBJC_SELECTOR_REFERENCES_ to i8*), i8* getelementptr inbounds ([14 x i8], [14 x i8]* @OBJC_METH_VAR_NAME_.1, i32 0, i32 0), i8* bitcast (i8** @OBJC_SELECTOR_REFERENCES_.2 to i8*), i8* getelementptr inbounds ([9 x i8], [9 x i8]* @OBJC_METH_VAR_NAME_.3, i32 0, i32 0), i8* bitcast (i8** @OBJC_SELECTOR_REFERENCES_.4 to i8*), i8* getelementptr inbounds ([9 x i8], [9 x i8]* @OBJC_CLASS_NAME_, i32 0, i32 0), i8* getelementptr inbounds ([12 x i8], [12 x i8]* @OBJC_METH_VAR_NAME_.5, i32 0, i32 0), i8* getelementptr inbounds ([21 x i8], [21 x i8]* @OBJC_METH_VAR_TYPE_, i32 0, i32 0), i8* bitcast ({ i32, i32, [1 x %struct._objc_method] }* @"\01l_OBJC_$_CLASS_METHODS_MyObject" to i8*), i8* bitcast ([1 x i8*]* @"OBJC_LABEL_CLASS_$" to i8*)], section "llvm.metadata"
-  @llvm.global_ctors = appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 1, void ()* @asan.module_ctor, i8* null }]
+  @"\01l_OBJC_$_CLASS_METHODS_MyObject" = private global { i32, i32, [1 x %struct._objc_method] } { i32 24, i32 1, [1 x %struct._objc_method] [%struct._objc_method { ptr @OBJC_METH_VAR_NAME_.5, ptr @OBJC_METH_VAR_TYPE_, ptr @"\01+[MyObject doWithSize:]" }] }, section "__DATA, __objc_const", align 8
+  @"\01l_OBJC_METACLASS_RO_$_MyObject" = private global %struct._class_ro_t { i32 131, i32 40, i32 40, ptr null, ptr @OBJC_CLASS_NAME_, ptr @"\01l_OBJC_$_CLASS_METHODS_MyObject", ptr null, ptr null, ptr null, ptr null }, section "__DATA, __objc_const", align 8
+  @"\01l_OBJC_CLASS_RO_$_MyObject" = private global %struct._class_ro_t { i32 130, i32 0, i32 0, ptr null, ptr @OBJC_CLASS_NAME_, ptr null, ptr null, ptr null, ptr null, ptr null }, section "__DATA, __objc_const", align 8
+  @"OBJC_LABEL_CLASS_$" = private global [1 x ptr] [ptr @"OBJC_CLASS_$_MyObject"], section "__DATA, __objc_classlist, regular, no_dead_strip", align 8
+  @llvm.compiler.used = appending global [12 x ptr] [ptr @"OBJC_CLASSLIST_REFERENCES_$_", ptr @OBJC_METH_VAR_NAME_, ptr @OBJC_SELECTOR_REFERENCES_, ptr @OBJC_METH_VAR_NAME_.1, ptr @OBJC_SELECTOR_REFERENCES_.2, ptr @OBJC_METH_VAR_NAME_.3, ptr @OBJC_SELECTOR_REFERENCES_.4, ptr @OBJC_CLASS_NAME_, ptr @OBJC_METH_VAR_NAME_.5, ptr @OBJC_METH_VAR_TYPE_, ptr @"\01l_OBJC_$_CLASS_METHODS_MyObject", ptr @"OBJC_LABEL_CLASS_$"], section "llvm.metadata"
+  @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 1, ptr @asan.module_ctor, ptr null }]
   @__asan_shadow_memory_dynamic_address = external global i64
   @___asan_gen_ = private unnamed_addr constant [34 x i8] c"2 32 16 9 imageSize 64 8 6 object\00", align 1
-  @__stack_chk_guard = external global i8*
+  @__stack_chk_guard = external global ptr
 
   ; Function Attrs: noinline sanitize_address ssp uwtable
-  define internal i8* @"\01+[MyObject doWithSize:]"(i8* %self, i8* %_cmd, [2 x double] %imageSize.coerce) #0 !dbg !14 {
+  define internal ptr @"\01+[MyObject doWithSize:]"(ptr %self, ptr %_cmd, [2 x double] %imageSize.coerce) #0 !dbg !14 {
   entry:
-    %StackGuardSlot = alloca i8*
-    %0 = call i8* @llvm.stackguard()
-    call void @llvm.stackprotector(i8* %0, i8** %StackGuardSlot)
-    %1 = load i64, i64* @__asan_shadow_memory_dynamic_address
-    %self.addr = alloca i8*, align 8
-    %_cmd.addr = alloca i8*, align 8
+    %StackGuardSlot = alloca ptr
+    %0 = call ptr @llvm.stackguard()
+    call void @llvm.stackprotector(ptr %0, ptr %StackGuardSlot)
+    %1 = load i64, ptr @__asan_shadow_memory_dynamic_address
+    %self.addr = alloca ptr, align 8
+    %_cmd.addr = alloca ptr, align 8
     %MyAlloca = alloca [96 x i8], align 32, !dbg !35
-    %2 = ptrtoint [96 x i8]* %MyAlloca to i64, !dbg !35
+    %2 = ptrtoint ptr %MyAlloca to i64, !dbg !35
     %3 = add i64 %2, 32, !dbg !35
-    %4 = inttoptr i64 %3 to %struct.CGSize*, !dbg !35
+    %4 = inttoptr i64 %3 to ptr, !dbg !35
     %5 = add i64 %2, 64, !dbg !35
-    %6 = inttoptr i64 %5 to %0**, !dbg !35
-    %7 = inttoptr i64 %2 to i64*, !dbg !35
-    store i64 1102416563, i64* %7, !dbg !35
+    %6 = inttoptr i64 %5 to ptr, !dbg !35
+    %7 = inttoptr i64 %2 to ptr, !dbg !35
+    store i64 1102416563, ptr %7, !dbg !35
     %8 = add i64 %2, 8, !dbg !35
-    %9 = inttoptr i64 %8 to i64*, !dbg !35
-    store i64 ptrtoint ([34 x i8]* @___asan_gen_ to i64), i64* %9, !dbg !35
+    %9 = inttoptr i64 %8 to ptr, !dbg !35
+    store i64 ptrtoint (ptr @___asan_gen_ to i64), ptr %9, !dbg !35
     %10 = add i64 %2, 16, !dbg !35
-    %11 = inttoptr i64 %10 to i64*, !dbg !35
-    store i64 ptrtoint (i8* (i8*, i8*, [2 x double])* @"\01+[MyObject doWithSize:]" to i64), i64* %11, !dbg !35
+    %11 = inttoptr i64 %10 to ptr, !dbg !35
+    store i64 ptrtoint (ptr @"\01+[MyObject doWithSize:]" to i64), ptr %11, !dbg !35
     %12 = lshr i64 %2, 3, !dbg !35
     %13 = add i64 %12, %1, !dbg !35
     %14 = add i64 %13, 0, !dbg !35
-    %15 = inttoptr i64 %14 to i64*, !dbg !35
-    store i64 -940689368107847183, i64* %15, align 1, !dbg !35
+    %15 = inttoptr i64 %14 to ptr, !dbg !35
+    store i64 -940689368107847183, ptr %15, align 1, !dbg !35
     %16 = add i64 %13, 9, !dbg !35
-    %17 = inttoptr i64 %16 to i16*, !dbg !35
-    store i16 -3085, i16* %17, align 1, !dbg !35
+    %17 = inttoptr i64 %16 to ptr, !dbg !35
+    store i16 -3085, ptr %17, align 1, !dbg !35
     %18 = add i64 %13, 11, !dbg !35
-    %19 = inttoptr i64 %18 to i8*, !dbg !35
-    store i8 -13, i8* %19, align 1, !dbg !35
-    call void @llvm.dbg.declare(metadata %struct.CGSize* %4, metadata !36, metadata !DIExpression(DW_OP_deref)), !dbg !37
-    call void @llvm.dbg.declare(metadata %0** %6, metadata !38, metadata !DIExpression(DW_OP_deref)), !dbg !44
-    %20 = bitcast %struct.CGSize* %4 to [2 x double]*
-    %21 = ptrtoint [2 x double]* %20 to i64
+    %19 = inttoptr i64 %18 to ptr, !dbg !35
+    store i8 -13, ptr %19, align 1, !dbg !35
+    call void @llvm.dbg.declare(metadata ptr %4, metadata !36, metadata !DIExpression(DW_OP_deref)), !dbg !37
+    call void @llvm.dbg.declare(metadata ptr %6, metadata !38, metadata !DIExpression(DW_OP_deref)), !dbg !44
+    %20 = bitcast ptr %4 to ptr
+    %21 = ptrtoint ptr %20 to i64
     %22 = lshr i64 %21, 3
     %23 = add i64 %22, %1
-    %24 = inttoptr i64 %23 to i16*
-    %25 = load i16, i16* %24
+    %24 = inttoptr i64 %23 to ptr
+    %25 = load i16, ptr %24
     %26 = icmp ne i16 %25, 0
     br i1 %26, label %27, label %28
 
@@ -127,50 +127,50 @@
     unreachable
 
   ; <label>:28:                                     ; preds = %entry
-    store [2 x double] %imageSize.coerce, [2 x double]* %20, align 8
-    store i8* %self, i8** %self.addr, align 8
-    call void @llvm.dbg.declare(metadata i8** %self.addr, metadata !45, metadata !DIExpression()), !dbg !47
-    store i8* %_cmd, i8** %_cmd.addr, align 8
-    call void @llvm.dbg.declare(metadata i8** %_cmd.addr, metadata !48, metadata !DIExpression()), !dbg !47
-    %29 = load %struct._class_t*, %struct._class_t** @"OBJC_CLASSLIST_REFERENCES_$_", align 8, !dbg !50
-    %lshr1 = lshr i64 ptrtoint (i8** @OBJC_SELECTOR_REFERENCES_ to i64), 3, !dbg !50
+    store [2 x double] %imageSize.coerce, ptr %20, align 8
+    store ptr %self, ptr %self.addr, align 8
+    call void @llvm.dbg.declare(metadata ptr %self.addr, metadata !45, metadata !DIExpression()), !dbg !47
+    store ptr %_cmd, ptr %_cmd.addr, align 8
+    call void @llvm.dbg.declare(metadata ptr %_cmd.addr, metadata !48, metadata !DIExpression()), !dbg !47
+    %29 = load ptr, ptr @"OBJC_CLASSLIST_REFERENCES_$_", align 8, !dbg !50
+    %lshr1 = lshr i64 ptrtoint (ptr @OBJC_SELECTOR_REFERENCES_ to i64), 3, !dbg !50
     %30 = add i64 %lshr1, %1, !dbg !50
-    %31 = inttoptr i64 %30 to i8*, !dbg !50
-    %32 = load i8, i8* %31, !dbg !50
+    %31 = inttoptr i64 %30 to ptr, !dbg !50
+    %32 = load i8, ptr %31, !dbg !50
     %33 = icmp ne i8 %32, 0, !dbg !50
     br i1 %33, label %34, label %35, !dbg !50
 
   ; <label>:34:                                     ; preds = %28
-    call void @__asan_report_load8(i64 ptrtoint (i8** @OBJC_SELECTOR_REFERENCES_ to i64)), !dbg !50
+    call void @__asan_report_load8(i64 ptrtoint (ptr @OBJC_SELECTOR_REFERENCES_ to i64)), !dbg !50
     call void asm sideeffect "", ""(), !dbg !50
     unreachable, !dbg !50
 
   ; <label>:35:                                     ; preds = %28
-    %36 = load i8*, i8** @OBJC_SELECTOR_REFERENCES_, align 8, !dbg !50, !invariant.load !2
-    %37 = bitcast %struct._class_t* %29 to i8*, !dbg !50
-    %call = call i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* (i8*, i8*)*)(i8* %37, i8* %36), !dbg !50
-    %38 = bitcast i8* %call to %0*, !dbg !50
-    %lshr2 = lshr i64 ptrtoint (i8** @OBJC_SELECTOR_REFERENCES_.2 to i64), 3, !dbg !51
+    %36 = load ptr, ptr @OBJC_SELECTOR_REFERENCES_, align 8, !dbg !50, !invariant.load !2
+    %37 = bitcast ptr %29 to ptr, !dbg !50
+    %call = call ptr @objc_msgSend(ptr %37, ptr %36), !dbg !50
+    %38 = bitcast ptr %call to ptr, !dbg !50
+    %lshr2 = lshr i64 ptrtoint (ptr @OBJC_SELECTOR_REFERENCES_.2 to i64), 3, !dbg !51
     %39 = add i64 %lshr2, %1, !dbg !51
-    %40 = inttoptr i64 %39 to i8*, !dbg !51
-    %41 = load i8, i8* %40, !dbg !51
+    %40 = inttoptr i64 %39 to ptr, !dbg !51
+    %41 = load i8, ptr %40, !dbg !51
     %42 = icmp ne i8 %41, 0, !dbg !51
     br i1 %42, label %43, label %44, !dbg !51
 
   ; <label>:43:                                     ; preds = %35
-    call void @__asan_report_load8(i64 ptrtoint (i8** @OBJC_SELECTOR_REFERENCES_.2 to i64)), !dbg !51
+    call void @__asan_report_load8(i64 ptrtoint (ptr @OBJC_SELECTOR_REFERENCES_.2 to i64)), !dbg !51
     call void asm sideeffect "", ""(), !dbg !51
     unreachable, !dbg !51
 
   ; <label>:44:                                     ; preds = %35
-    %45 = load i8*, i8** @OBJC_SELECTOR_REFERENCES_.2, align 8, !dbg !51, !invariant.load !2
-    %46 = bitcast %0* %38 to i8*, !dbg !51
-    %47 = bitcast %struct.CGSize* %4 to [2 x double]*, !dbg !51
-    %48 = ptrtoint [2 x double]* %47 to i64, !dbg !51
+    %45 = load ptr, ptr @OBJC_SELECTOR_REFERENCES_.2, align 8, !dbg !51, !invariant.load !2
+    %46 = bitcast ptr %38 to ptr, !dbg !51
+    %47 = bitcast ptr %4 to ptr, !dbg !51
+    %48 = ptrtoint ptr %47 to i64, !dbg !51
     %49 = lshr i64 %48, 3, !dbg !51
     %50 = add i64 %49, %1, !dbg !51
-    %51 = inttoptr i64 %50 to i16*, !dbg !51
-    %52 = load i16, i16* %51, !dbg !51
+    %51 = inttoptr i64 %50 to ptr, !dbg !51
+    %52 = load i16, ptr %51, !dbg !51
     %53 = icmp ne i16 %52, 0, !dbg !51
     br i1 %53, label %54, label %55, !dbg !51
 
@@ -180,14 +180,14 @@
     unreachable, !dbg !51
 
   ; <label>:55:                                     ; preds = %44
-    %56 = load [2 x double], [2 x double]* %47, align 8, !dbg !51
-    %call1 = call i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* (i8*, i8*, [2 x double])*)(i8* %46, i8* %45, [2 x double] %56), !dbg !51
-    %57 = bitcast i8* %call1 to %0*, !dbg !51
-    %58 = ptrtoint %0** %6 to i64, !dbg !44
+    %56 = load [2 x double], ptr %47, align 8, !dbg !51
+    %call1 = call ptr @objc_msgSend(ptr %46, ptr %45, [2 x double] %56), !dbg !51
+    %57 = bitcast ptr %call1 to ptr, !dbg !51
+    %58 = ptrtoint ptr %6 to i64, !dbg !44
     %59 = lshr i64 %58, 3, !dbg !44
     %60 = add i64 %59, %1, !dbg !44
-    %61 = inttoptr i64 %60 to i8*, !dbg !44
-    %62 = load i8, i8* %61, !dbg !44
+    %61 = inttoptr i64 %60 to ptr, !dbg !44
+    %62 = load i8, ptr %61, !dbg !44
     %63 = icmp ne i8 %62, 0, !dbg !44
     br i1 %63, label %64, label %65, !dbg !44
 
@@ -197,46 +197,46 @@
     unreachable, !dbg !44
 
   ; <label>:65:                                     ; preds = %55
-    store %0* %57, %0** %6, align 8, !dbg !44
-    %66 = load %0*, %0** %6, align 8, !dbg !52
-    %lshr3 = lshr i64 ptrtoint (i8** @OBJC_SELECTOR_REFERENCES_.4 to i64), 3, !dbg !53
+    store ptr %57, ptr %6, align 8, !dbg !44
+    %66 = load ptr, ptr %6, align 8, !dbg !52
+    %lshr3 = lshr i64 ptrtoint (ptr @OBJC_SELECTOR_REFERENCES_.4 to i64), 3, !dbg !53
     %67 = add i64 %lshr3, %1, !dbg !53
-    %68 = inttoptr i64 %67 to i8*, !dbg !53
-    %69 = load i8, i8* %68, !dbg !53
+    %68 = inttoptr i64 %67 to ptr, !dbg !53
+    %69 = load i8, ptr %68, !dbg !53
     %70 = icmp ne i8 %69, 0, !dbg !53
     br i1 %70, label %71, label %72, !dbg !53
 
   ; <label>:71:                                     ; preds = %65
-    call void @__asan_report_load8(i64 ptrtoint (i8** @OBJC_SELECTOR_REFERENCES_.4 to i64)), !dbg !53
+    call void @__asan_report_load8(i64 ptrtoint (ptr @OBJC_SELECTOR_REFERENCES_.4 to i64)), !dbg !53
     call void asm sideeffect "", ""(), !dbg !53
     unreachable, !dbg !53
 
   ; <label>:72:                                     ; preds = %65
-    %73 = load i8*, i8** @OBJC_SELECTOR_REFERENCES_.4, align 8, !dbg !53, !invariant.load !2
-    %74 = bitcast %0* %66 to i8*, !dbg !53
-    %call2 = call i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* (i8*, i8*)*)(i8* %74, i8* %73), !dbg !53
+    %73 = load ptr, ptr @OBJC_SELECTOR_REFERENCES_.4, align 8, !dbg !53, !invariant.load !2
+    %74 = bitcast ptr %66 to ptr, !dbg !53
+    %call2 = call ptr @objc_msgSend(ptr %74, ptr %73), !dbg !53
     call void asm sideeffect "mov\09fp, fp\09\09; marker for objc_retainAutoreleaseReturnValue", ""(), !dbg !53
-    %75 = call i8* @objc_retainAutoreleasedReturnValue(i8* %call2) #3, !dbg !53
-    %76 = bitcast %0** %6 to i8**, !dbg !54
-    call void @objc_storeStrong(i8** %76, i8* null) #3, !dbg !54
-    %77 = tail call i8* @objc_autoreleaseReturnValue(i8* %75) #3, !dbg !54
-    store i64 1172321806, i64* %7, !dbg !54
+    %75 = call ptr @objc_retainAutoreleasedReturnValue(ptr %call2) #3, !dbg !53
+    %76 = bitcast ptr %6 to ptr, !dbg !54
+    call void @objc_storeStrong(ptr %76, ptr null) #3, !dbg !54
+    %77 = tail call ptr @objc_autoreleaseReturnValue(ptr %75) #3, !dbg !54
+    store i64 1172321806, ptr %7, !dbg !54
     %78 = add i64 %13, 0, !dbg !54
-    %79 = inttoptr i64 %78 to i64*, !dbg !54
-    store i64 0, i64* %79, align 1, !dbg !54
+    %79 = inttoptr i64 %78 to ptr, !dbg !54
+    store i64 0, ptr %79, align 1, !dbg !54
     %80 = add i64 %13, 9, !dbg !54
-    %81 = inttoptr i64 %80 to i16*, !dbg !54
-    store i16 0, i16* %81, align 1, !dbg !54
+    %81 = inttoptr i64 %80 to ptr, !dbg !54
+    store i16 0, ptr %81, align 1, !dbg !54
     %82 = add i64 %13, 11, !dbg !54
-    %83 = inttoptr i64 %82 to i8*, !dbg !54
-    store i8 0, i8* %83, align 1, !dbg !54
-    %84 = call i8* @llvm.stackguard()
-    %85 = load volatile i8*, i8** %StackGuardSlot
-    %86 = icmp eq i8* %84, %85
+    %83 = inttoptr i64 %82 to ptr, !dbg !54
+    store i8 0, ptr %83, align 1, !dbg !54
+    %84 = call ptr @llvm.stackguard()
+    %85 = load volatile ptr, ptr %StackGuardSlot
+    %86 = icmp eq ptr %84, %85
     br i1 %86, label %SP_return, label %CallStackCheckFailBlk, !prof !55
 
   SP_return:                                        ; preds = %72
-    ret i8* %77, !dbg !54
+    ret ptr %77, !dbg !54
 
   CallStackCheckFailBlk:                            ; preds = %72
     call void @__stack_chk_fail(), !dbg !47
@@ -247,13 +247,13 @@
   declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
   ; Function Attrs: nonlazybind
-  declare i8* @objc_msgSend(i8*, i8*, ...) #2
+  declare ptr @objc_msgSend(ptr, ptr, ...) #2
 
-  declare i8* @objc_retainAutoreleasedReturnValue(i8* returned)
+  declare ptr @objc_retainAutoreleasedReturnValue(ptr returned)
 
-  declare void @objc_storeStrong(i8**, i8*)
+  declare void @objc_storeStrong(ptr, ptr)
 
-  declare i8* @objc_autoreleaseReturnValue(i8* returned)
+  declare ptr @objc_autoreleaseReturnValue(ptr returned)
 
   define internal void @asan.module_ctor() {
     call void @__asan_init()
@@ -274,10 +274,10 @@
   declare void @__asan_report_store16(i64)
 
   ; Function Attrs: nounwind
-  declare void @llvm.stackprotector(i8*, i8**) #3
+  declare void @llvm.stackprotector(ptr, ptr) #3
 
   ; Function Attrs: nounwind
-  declare i8* @llvm.stackguard() #3
+  declare ptr @llvm.stackguard() #3
 
   declare void @__stack_chk_fail()
 

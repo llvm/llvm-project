@@ -1024,7 +1024,7 @@ inline uptr RestoreAddr(uptr addr) {
 
 void InitializePlatform();
 void InitializePlatformEarly();
-void CheckAndProtect();
+bool CheckAndProtect(bool protect, bool ignore_heap, bool print_warnings);
 void InitializeShadowMemoryPlatform();
 void WriteMemoryProfile(char *buf, uptr buf_size, u64 uptime_ns);
 int ExtractResolvFDs(void *state, int *fds, int nfd);

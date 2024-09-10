@@ -75,7 +75,9 @@
 #error Unknown compiler
 #endif
 
-#if (KMP_OS_LINUX || KMP_OS_WINDOWS || KMP_OS_FREEBSD) && !KMP_OS_WASI
+#if (KMP_OS_LINUX || KMP_OS_WINDOWS || KMP_OS_FREEBSD || KMP_OS_NETBSD ||      \
+     KMP_OS_DRAGONFLY || KMP_OS_AIX) &&                                        \
+    !KMP_OS_WASI && !KMP_OS_EMSCRIPTEN
 #define KMP_AFFINITY_SUPPORTED 1
 #if KMP_OS_WINDOWS && KMP_ARCH_X86_64
 #define KMP_GROUP_AFFINITY 1
@@ -177,7 +179,7 @@ typedef unsigned long long kmp_uint64;
 #endif /* KMP_OS_UNIX */
 
 #if KMP_ARCH_X86 || KMP_ARCH_ARM || KMP_ARCH_MIPS || KMP_ARCH_WASM ||          \
-    KMP_ARCH_PPC
+    KMP_ARCH_PPC || KMP_ARCH_AARCH64_32
 #define KMP_SIZE_T_SPEC KMP_UINT32_SPEC
 #elif KMP_ARCH_X86_64 || KMP_ARCH_PPC64 || KMP_ARCH_AARCH64 ||                 \
     KMP_ARCH_MIPS64 || KMP_ARCH_RISCV64 || KMP_ARCH_LOONGARCH64 ||             \
@@ -306,6 +308,8 @@ template <> struct traits_t<unsigned long long> {
    !KMP_MIC)
 
 #if KMP_OS_WINDOWS
+// Don't include everything related to NT status code, we'll do that explicitly
+#define WIN32_NO_STATUS
 #include <windows.h>
 
 static inline int KMP_GET_PAGE_SIZE(void) {
@@ -465,7 +469,7 @@ enum kmp_mem_fence_type {
 #pragma intrinsic(InterlockedExchangeAdd)
 #pragma intrinsic(InterlockedCompareExchange)
 #pragma intrinsic(InterlockedExchange)
-#if !(KMP_COMPILER_ICX && KMP_32_BIT_ARCH)
+#if !KMP_32_BIT_ARCH
 #pragma intrinsic(InterlockedExchange64)
 #endif
 #endif
@@ -1047,7 +1051,7 @@ extern kmp_real64 __kmp_xchg_real64(volatile kmp_real64 *p, kmp_real64 v);
 
 #if KMP_ARCH_PPC64 || KMP_ARCH_ARM || KMP_ARCH_AARCH64 || KMP_ARCH_MIPS ||     \
     KMP_ARCH_MIPS64 || KMP_ARCH_RISCV64 || KMP_ARCH_LOONGARCH64 ||             \
-    KMP_ARCH_VE || KMP_ARCH_S390X || KMP_ARCH_PPC
+    KMP_ARCH_VE || KMP_ARCH_S390X || KMP_ARCH_PPC || KMP_ARCH_AARCH64_32
 #if KMP_OS_WINDOWS
 #undef KMP_MB
 #define KMP_MB() std::atomic_thread_fence(std::memory_order_seq_cst)
@@ -1289,12 +1293,26 @@ bool __kmp_atomic_compare_store_rel(std::atomic<T> *p, T expected, T desired) {
 extern void *__kmp_lookup_symbol(const char *name, bool next = false);
 #define KMP_DLSYM(name) __kmp_lookup_symbol(name)
 #define KMP_DLSYM_NEXT(name) __kmp_lookup_symbol(name, true)
-#elif KMP_OS_WASI
+#elif KMP_OS_WASI || KMP_OS_EMSCRIPTEN
 #define KMP_DLSYM(name) nullptr
 #define KMP_DLSYM_NEXT(name) nullptr
 #else
 #define KMP_DLSYM(name) dlsym(RTLD_DEFAULT, name)
 #define KMP_DLSYM_NEXT(name) dlsym(RTLD_NEXT, name)
+#endif
+
+// MSVC doesn't have this, but clang/clang-cl does.
+#ifndef __has_builtin
+#define __has_builtin(x) 0
+#endif
+
+// Same as LLVM_BUILTIN_UNREACHABLE. States that it is UB to reach this point.
+#if __has_builtin(__builtin_unreachable) || defined(__GNUC__)
+#define KMP_BUILTIN_UNREACHABLE __builtin_unreachable()
+#elif defined(_MSC_VER)
+#define KMP_BUILTIN_UNREACHABLE __assume(false)
+#else
+#define KMP_BUILTIN_UNREACHABLE
 #endif
 
 #endif /* KMP_OS_H */

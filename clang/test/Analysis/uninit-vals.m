@@ -158,7 +158,7 @@ Point makePoint(float x, float y) {
 }
 
 void PR14765_test(void) {
-  Circle *testObj = calloc(sizeof(Circle), 1);
+  Circle *testObj = calloc(1, sizeof(Circle));
 
   clang_analyzer_eval(testObj->size == 0); // expected-warning{{TRUE}}
                                            // expected-note@-1{{TRUE}}
@@ -207,7 +207,7 @@ IntPoint makeIntPoint(int x, int y) {
 }
 
 void PR14765_test_int(void) {
-  IntCircle *testObj = calloc(sizeof(IntCircle), 1);
+  IntCircle *testObj = calloc(1, sizeof(IntCircle));
 
   clang_analyzer_eval(testObj->size == 0); // expected-warning{{TRUE}}
                                            // expected-note@-1{{TRUE}}
@@ -311,7 +311,7 @@ void testLargeStructsNotCopiedPerField(void) {
 }
 
 void testSmallStructInLargerStruct(void) {
-  IntCircle2D *testObj = calloc(sizeof(IntCircle2D), 1);
+  IntCircle2D *testObj = calloc(1, sizeof(IntCircle2D));
 
   clang_analyzer_eval(testObj->size == 0); // expected-warning{{TRUE}}
                                            // expected-note@-1{{TRUE}}

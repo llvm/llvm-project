@@ -3,9 +3,9 @@
 
 # ERROR-COUNT-60: error:
 # ERROR-NOT: error:
-# CHECK: {evex}	cmpaxadd	%ecx, %edx, 123(%rax,%rbx,4)
-# CHECK: encoding: [0x62,0xf2,0x75,0x08,0xe7,0x54,0x98,0x7b]
-         {evex}	cmpaxadd	%ecx, %edx, 123(%rax,%rbx,4)
+# CHECK: {evex}	cmpaxadd	%ecx, %edx, 123(%eax,%ebx,4)
+# CHECK: encoding: [0x67,0x62,0xf2,0x75,0x08,0xe7,0x54,0x98,0x7b]
+         {evex}	cmpaxadd	%ecx, %edx, 123(%eax,%ebx,4)
 
 # CHECK: {evex}	cmpaxadd	%r9, %r15, 123(%rax,%rbx,4)
 # CHECK: encoding: [0x62,0x72,0xb5,0x08,0xe7,0x7c,0x98,0x7b]

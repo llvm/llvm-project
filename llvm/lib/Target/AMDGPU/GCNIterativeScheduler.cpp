@@ -24,9 +24,9 @@ namespace llvm {
 std::vector<const SUnit *> makeMinRegSchedule(ArrayRef<const SUnit *> TopRoots,
                                               const ScheduleDAG &DAG);
 
-  std::vector<const SUnit*> makeGCNILPScheduler(ArrayRef<const SUnit*> BotRoots,
-    const ScheduleDAG &DAG);
-}
+std::vector<const SUnit *> makeGCNILPScheduler(ArrayRef<const SUnit *> BotRoots,
+                                               const ScheduleDAG &DAG);
+} // namespace llvm
 
 // shim accessors for different order containers
 static inline MachineInstr *getMachineInstr(MachineInstr *MI) {
@@ -383,7 +383,7 @@ void GCNIterativeScheduler::scheduleRegion(Region &R, Range &&Schedule,
 
   // Schedule consisting of MachineInstr* is considered 'detached'
   // and already interleaved with debug values
-  if (!std::is_same<decltype(*Schedule.begin()), MachineInstr*>::value) {
+  if (!std::is_same_v<decltype(*Schedule.begin()), MachineInstr*>) {
     placeDebugValues();
     // Unfortunately placeDebugValues incorrectly modifies RegionEnd, restore
     // assert(R.End == RegionEnd);
@@ -409,9 +409,8 @@ void GCNIterativeScheduler::scheduleRegion(Region &R, Range &&Schedule,
 
 // Sort recorded regions by pressure - highest at the front
 void GCNIterativeScheduler::sortRegionsByPressure(unsigned TargetOcc) {
-  const auto &ST = MF.getSubtarget<GCNSubtarget>();
-  llvm::sort(Regions, [&ST, TargetOcc](const Region *R1, const Region *R2) {
-    return R2->MaxPressure.less(ST, R1->MaxPressure, TargetOcc);
+  llvm::sort(Regions, [this, TargetOcc](const Region *R1, const Region *R2) {
+    return R2->MaxPressure.less(MF, R1->MaxPressure, TargetOcc);
   });
 }
 
@@ -517,26 +516,25 @@ void GCNIterativeScheduler::scheduleLegacyMaxOccupancy(
 // Minimal Register Strategy
 
 void GCNIterativeScheduler::scheduleMinReg(bool force) {
-  const auto &ST = MF.getSubtarget<GCNSubtarget>();
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
   const auto TgtOcc = MFI->getOccupancy();
   sortRegionsByPressure(TgtOcc);
 
   auto MaxPressure = Regions.front()->MaxPressure;
   for (auto *R : Regions) {
-    if (!force && R->MaxPressure.less(ST, MaxPressure, TgtOcc))
+    if (!force && R->MaxPressure.less(MF, MaxPressure, TgtOcc))
       break;
 
     BuildDAG DAG(*R, *this);
     const auto MinSchedule = makeMinRegSchedule(DAG.getTopRoots(), *this);
 
     const auto RP = getSchedulePressure(*R, MinSchedule);
-    LLVM_DEBUG(if (R->MaxPressure.less(ST, RP, TgtOcc)) {
+    LLVM_DEBUG(if (R->MaxPressure.less(MF, RP, TgtOcc)) {
       dbgs() << "\nWarning: Pressure becomes worse after minreg!";
       printSchedRP(dbgs(), R->MaxPressure, RP);
     });
 
-    if (!force && MaxPressure.less(ST, RP, TgtOcc))
+    if (!force && MaxPressure.less(MF, RP, TgtOcc))
       break;
 
     scheduleRegion(*R, MinSchedule, RP);

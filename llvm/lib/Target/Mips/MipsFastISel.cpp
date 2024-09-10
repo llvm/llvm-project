@@ -35,10 +35,10 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Constant.h"
@@ -464,7 +464,7 @@ bool MipsFastISel::computeAddress(const Value *Obj, Address &Addr) {
     // Don't walk into other basic blocks unless the object is an alloca from
     // another block, otherwise it may not have a virtual register assigned.
     if (FuncInfo.StaticAllocaMap.count(static_cast<const AllocaInst *>(Obj)) ||
-        FuncInfo.MBBMap[I->getParent()] == FuncInfo.MBB) {
+        FuncInfo.getMBB(I->getParent()) == FuncInfo.MBB) {
       Opcode = I->getOpcode();
       U = I;
     }
@@ -942,8 +942,8 @@ bool MipsFastISel::selectBranch(const Instruction *I) {
   // goto FBB
   // TBB:
   //
-  MachineBasicBlock *TBB = FuncInfo.MBBMap[BI->getSuccessor(0)];
-  MachineBasicBlock *FBB = FuncInfo.MBBMap[BI->getSuccessor(1)];
+  MachineBasicBlock *TBB = FuncInfo.getMBB(BI->getSuccessor(0));
+  MachineBasicBlock *FBB = FuncInfo.getMBB(BI->getSuccessor(1));
 
   // Fold the common case of a conditional branch with a comparison
   // in the same block.
@@ -1608,8 +1608,8 @@ bool MipsFastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
         }
         emitInst(Mips::SLL, TempReg[0]).addReg(SrcReg).addImm(8);
         emitInst(Mips::SRL, TempReg[1]).addReg(SrcReg).addImm(8);
-        emitInst(Mips::OR, TempReg[2]).addReg(TempReg[0]).addReg(TempReg[1]);
-        emitInst(Mips::ANDi, DestReg).addReg(TempReg[2]).addImm(0xFFFF);
+        emitInst(Mips::ANDi, TempReg[2]).addReg(TempReg[1]).addImm(0xFF);
+        emitInst(Mips::OR, DestReg).addReg(TempReg[0]).addReg(TempReg[2]);
         updateValueMap(II, DestReg);
         return true;
       }
@@ -1763,8 +1763,8 @@ bool MipsFastISel::selectRet(const Instruction *I) {
     RetRegs.push_back(VA.getLocReg());
   }
   MachineInstrBuilder MIB = emitInst(Mips::RetRA);
-  for (unsigned i = 0, e = RetRegs.size(); i != e; ++i)
-    MIB.addReg(RetRegs[i], RegState::Implicit);
+  for (unsigned Reg : RetRegs)
+    MIB.addReg(Reg, RegState::Implicit);
   return true;
 }
 

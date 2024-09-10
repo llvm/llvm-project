@@ -7,13 +7,11 @@ target datalayout = "e-n32"
 define i32 @test1(i32 %a) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[A:%.*]], 97
-; CHECK-NEXT:    [[TMP2:%.*]] = lshr i32 [[TMP1]], 2
-; CHECK-NEXT:    [[TMP3:%.*]] = shl i32 [[TMP1]], 30
-; CHECK-NEXT:    [[TMP4:%.*]] = or i32 [[TMP2]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i32 [[TMP4]], 4
-; CHECK-NEXT:    br i1 [[TMP5]], label [[SWITCH_LOOKUP:%.*]], label [[COMMON_RET:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.fshl.i32(i32 [[TMP1]], i32 [[TMP1]], i32 30)
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i32 [[TMP2]], 4
+; CHECK-NEXT:    br i1 [[TMP3]], label [[SWITCH_LOOKUP:%.*]], label [[COMMON_RET:%.*]]
 ; CHECK:       switch.lookup:
-; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [4 x i32], ptr @switch.table.test1, i32 0, i32 [[TMP4]]
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [4 x i32], ptr @switch.table.test1, i32 0, i32 [[TMP2]]
 ; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, ptr [[SWITCH_GEP]], align 4
 ; CHECK-NEXT:    br label [[COMMON_RET]]
 ; CHECK:       common.ret:
@@ -42,10 +40,10 @@ three:
 define i128 @test2(i128 %a) {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:    switch i128 [[A:%.*]], label [[COMMON_RET:%.*]] [
-; CHECK-NEXT:    i128 97, label [[ONE:%.*]]
-; CHECK-NEXT:    i128 101, label [[TWO:%.*]]
-; CHECK-NEXT:    i128 105, label [[THREE:%.*]]
-; CHECK-NEXT:    i128 109, label [[THREE]]
+; CHECK-NEXT:      i128 97, label [[ONE:%.*]]
+; CHECK-NEXT:      i128 101, label [[TWO:%.*]]
+; CHECK-NEXT:      i128 105, label [[THREE:%.*]]
+; CHECK-NEXT:      i128 109, label [[THREE]]
 ; CHECK-NEXT:    ]
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i128 [ 11984, [[ONE]] ], [ 1143, [[TWO]] ], [ 99783, [[THREE]] ], [ 8867, [[TMP0:%.*]] ]
@@ -110,10 +108,10 @@ three:
 define i32 @test4(i32 %a) {
 ; CHECK-LABEL: @test4(
 ; CHECK-NEXT:    switch i32 [[A:%.*]], label [[COMMON_RET:%.*]] [
-; CHECK-NEXT:    i32 97, label [[ONE:%.*]]
-; CHECK-NEXT:    i32 102, label [[TWO:%.*]]
-; CHECK-NEXT:    i32 105, label [[THREE:%.*]]
-; CHECK-NEXT:    i32 109, label [[THREE]]
+; CHECK-NEXT:      i32 97, label [[ONE:%.*]]
+; CHECK-NEXT:      i32 102, label [[TWO:%.*]]
+; CHECK-NEXT:      i32 105, label [[THREE:%.*]]
+; CHECK-NEXT:      i32 109, label [[THREE]]
 ; CHECK-NEXT:    ]
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ 11984, [[ONE]] ], [ 1143, [[TWO]] ], [ 99783, [[THREE]] ], [ 8867, [[TMP0:%.*]] ]
@@ -147,10 +145,10 @@ three:
 define i32 @test5(i32 %a) {
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:    switch i32 [[A:%.*]], label [[COMMON_RET:%.*]] [
-; CHECK-NEXT:    i32 97, label [[ONE:%.*]]
-; CHECK-NEXT:    i32 102, label [[TWO:%.*]]
-; CHECK-NEXT:    i32 107, label [[THREE:%.*]]
-; CHECK-NEXT:    i32 112, label [[THREE]]
+; CHECK-NEXT:      i32 97, label [[ONE:%.*]]
+; CHECK-NEXT:      i32 102, label [[TWO:%.*]]
+; CHECK-NEXT:      i32 107, label [[THREE:%.*]]
+; CHECK-NEXT:      i32 112, label [[THREE]]
 ; CHECK-NEXT:    ]
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ 11984, [[ONE]] ], [ 1143, [[TWO]] ], [ 99783, [[THREE]] ], [ 8867, [[TMP0:%.*]] ]
@@ -183,13 +181,11 @@ three:
 define i32 @test6(i32 %a) optsize {
 ; CHECK-LABEL: @test6(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[A:%.*]], -109
-; CHECK-NEXT:    [[TMP2:%.*]] = lshr i32 [[TMP1]], 2
-; CHECK-NEXT:    [[TMP3:%.*]] = shl i32 [[TMP1]], 30
-; CHECK-NEXT:    [[TMP4:%.*]] = or i32 [[TMP2]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i32 [[TMP4]], 4
-; CHECK-NEXT:    br i1 [[TMP5]], label [[SWITCH_LOOKUP:%.*]], label [[COMMON_RET:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.fshl.i32(i32 [[TMP1]], i32 [[TMP1]], i32 30)
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i32 [[TMP2]], 4
+; CHECK-NEXT:    br i1 [[TMP3]], label [[SWITCH_LOOKUP:%.*]], label [[COMMON_RET:%.*]]
 ; CHECK:       switch.lookup:
-; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [4 x i32], ptr @switch.table.test6, i32 0, i32 [[TMP4]]
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [4 x i32], ptr @switch.table.test6, i32 0, i32 [[TMP2]]
 ; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, ptr [[SWITCH_GEP]], align 4
 ; CHECK-NEXT:    br label [[COMMON_RET]]
 ; CHECK:       common.ret:
@@ -218,15 +214,13 @@ define i8 @test7(i8 %a) optsize {
 ; CHECK-LABEL: @test7(
 ; CHECK-NEXT:  common.ret:
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i8 [[A:%.*]], -36
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr i8 [[TMP0]], 2
-; CHECK-NEXT:    [[TMP2:%.*]] = shl i8 [[TMP0]], 6
-; CHECK-NEXT:    [[TMP3:%.*]] = or i8 [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult i8 [[TMP3]], 4
-; CHECK-NEXT:    [[SWITCH_CAST:%.*]] = zext i8 [[TMP3]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.fshl.i8(i8 [[TMP0]], i8 [[TMP0]], i8 6)
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i8 [[TMP1]], 4
+; CHECK-NEXT:    [[SWITCH_CAST:%.*]] = zext i8 [[TMP1]] to i32
 ; CHECK-NEXT:    [[SWITCH_SHIFTAMT:%.*]] = mul nuw nsw i32 [[SWITCH_CAST]], 8
 ; CHECK-NEXT:    [[SWITCH_DOWNSHIFT:%.*]] = lshr i32 -943228976, [[SWITCH_SHIFTAMT]]
 ; CHECK-NEXT:    [[SWITCH_MASKED:%.*]] = trunc i32 [[SWITCH_DOWNSHIFT]] to i8
-; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = select i1 [[TMP4]], i8 [[SWITCH_MASKED]], i8 -93
+; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = select i1 [[TMP2]], i8 [[SWITCH_MASKED]], i8 -93
 ; CHECK-NEXT:    ret i8 [[COMMON_RET_OP]]
 ;
   switch i8 %a, label %def [
@@ -250,13 +244,11 @@ three:
 define i32 @test8(i32 %a) optsize {
 ; CHECK-LABEL: @test8(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[A:%.*]], 97
-; CHECK-NEXT:    [[TMP2:%.*]] = lshr i32 [[TMP1]], 2
-; CHECK-NEXT:    [[TMP3:%.*]] = shl i32 [[TMP1]], 30
-; CHECK-NEXT:    [[TMP4:%.*]] = or i32 [[TMP2]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i32 [[TMP4]], 5
-; CHECK-NEXT:    br i1 [[TMP5]], label [[SWITCH_LOOKUP:%.*]], label [[COMMON_RET:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.fshl.i32(i32 [[TMP1]], i32 [[TMP1]], i32 30)
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i32 [[TMP2]], 5
+; CHECK-NEXT:    br i1 [[TMP3]], label [[SWITCH_LOOKUP:%.*]], label [[COMMON_RET:%.*]]
 ; CHECK:       switch.lookup:
-; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [5 x i32], ptr @switch.table.test8, i32 0, i32 [[TMP4]]
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [5 x i32], ptr @switch.table.test8, i32 0, i32 [[TMP2]]
 ; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, ptr [[SWITCH_GEP]], align 4
 ; CHECK-NEXT:    br label [[COMMON_RET]]
 ; CHECK:       common.ret:
@@ -284,13 +276,11 @@ three:
 define i32 @test9(i32 %a) {
 ; CHECK-LABEL: @test9(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[A:%.*]], 6
-; CHECK-NEXT:    [[TMP2:%.*]] = lshr i32 [[TMP1]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = shl i32 [[TMP1]], 31
-; CHECK-NEXT:    [[TMP4:%.*]] = or i32 [[TMP2]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i32 [[TMP4]], 8
-; CHECK-NEXT:    br i1 [[TMP5]], label [[SWITCH_LOOKUP:%.*]], label [[COMMON_RET:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.fshl.i32(i32 [[TMP1]], i32 [[TMP1]], i32 31)
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i32 [[TMP2]], 8
+; CHECK-NEXT:    br i1 [[TMP3]], label [[SWITCH_LOOKUP:%.*]], label [[COMMON_RET:%.*]]
 ; CHECK:       switch.lookup:
-; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [8 x i32], ptr @switch.table.test9, i32 0, i32 [[TMP4]]
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [8 x i32], ptr @switch.table.test9, i32 0, i32 [[TMP2]]
 ; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, ptr [[SWITCH_GEP]], align 4
 ; CHECK-NEXT:    br label [[COMMON_RET]]
 ; CHECK:       common.ret:

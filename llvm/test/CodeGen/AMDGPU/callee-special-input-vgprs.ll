@@ -1,4 +1,6 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=kaveri -enable-ipra=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,FIXEDABI %s
+; RUN: opt -mcpu=kaveri -passes=amdgpu-attributor < %s | llc -enable-ipra=0 | FileCheck -enable-var-scope -check-prefixes=GCN,FIXEDABI %s
+
+target triple = "amdgcn-amd-amdhsa"
 
 ; GCN-LABEL: {{^}}use_workitem_id_x:
 ; GCN: s_waitcnt
@@ -529,16 +531,16 @@ define void @too_many_args_use_workitem_id_x_byval(
 ; FIXEDABI: v_mov_b32_e32 v31, v0
 ; FIXEDABI: v_mov_b32_e32 [[K0:v[0-9]+]], 0x3e7
 ; FIXEDABI: s_movk_i32 s32, 0x400{{$}}
-; FIXEDABI: buffer_store_dword [[K0]], off, s[0:3], 0 offset:4{{$}}
+; FIXEDABI: buffer_store_dword [[K0]], off, s[0:3], 0{{$}}
 ; FIXEDABI: v_mov_b32_e32 [[K1:v[0-9]+]], 0x140
 
 ; FIXEDABI: buffer_store_dword [[K1]], off, s[0:3], s32{{$}}
 
 ; FIXME: Why this reload?
-; FIXEDABI: buffer_load_dword [[RELOAD:v[0-9]+]], off, s[0:3], 0 offset:4{{$}}
+; FIXEDABI: buffer_load_dword [[RELOAD:v[0-9]+]], off, s[0:3], 0{{$}}
 
 ; FIXEDABI-NOT: s32
-; FIXEDABI: buffer_store_dword [[RELOAD]], off, s[0:3], s32 offset:4
+; FIXEDABI: buffer_store_dword [[RELOAD]], off, s[0:3], s32
 ; FIXEDABI: s_swappc_b64
 define amdgpu_kernel void @kern_call_too_many_args_use_workitem_id_x_byval() #1 {
   %alloca = alloca i32, align 4, addrspace(5)
@@ -813,4 +815,4 @@ attributes #1 = { nounwind noinline }
 attributes #2 = { nounwind "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }
 
 !llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdgpu_code_object_version", i32 400}
+!0 = !{i32 1, !"amdhsa_code_object_version", i32 400}

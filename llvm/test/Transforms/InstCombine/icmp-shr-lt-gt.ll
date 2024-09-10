@@ -3379,7 +3379,7 @@ define i1 @ashrslt_01_01_exact(i4 %x) {
 
 define i1 @ashrslt_01_02_exact(i4 %x) {
 ; CHECK-LABEL: @ashrslt_01_02_exact(
-; CHECK-NEXT:    [[C:%.*]] = icmp slt i4 [[X:%.*]], 4
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i4 [[X:%.*]], 3
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %s = ashr exact i4 %x, 1
@@ -3389,7 +3389,7 @@ define i1 @ashrslt_01_02_exact(i4 %x) {
 
 define i1 @ashrslt_01_03_exact(i4 %x) {
 ; CHECK-LABEL: @ashrslt_01_03_exact(
-; CHECK-NEXT:    [[C:%.*]] = icmp slt i4 [[X:%.*]], 6
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i4 [[X:%.*]], 5
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %s = ashr exact i4 %x, 1
@@ -3800,3 +3800,62 @@ define i1 @ashrslt_03_15_exact(i4 %x) {
   ret i1 %c
 }
 
+define i1 @ashr_slt_exact_near_pow2_cmpval(i8 %x) {
+; CHECK-LABEL: @ashr_slt_exact_near_pow2_cmpval(
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i8 [[X:%.*]], 9
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %s = ashr exact i8 %x, 1
+  %c = icmp slt i8 %s, 5
+  ret i1 %c
+}
+
+define i1 @ashr_ult_exact_near_pow2_cmpval(i8 %x) {
+; CHECK-LABEL: @ashr_ult_exact_near_pow2_cmpval(
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i8 [[X:%.*]], 9
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %s = ashr exact i8 %x, 1
+  %c = icmp ult i8 %s, 5
+  ret i1 %c
+}
+
+define i1 @negtest_near_pow2_cmpval_ashr_slt_noexact(i8 %x) {
+; CHECK-LABEL: @negtest_near_pow2_cmpval_ashr_slt_noexact(
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i8 [[X:%.*]], 10
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %s = ashr i8 %x, 1
+  %c = icmp slt i8 %s, 5
+  ret i1 %c
+}
+
+define i1 @negtest_near_pow2_cmpval_ashr_wrong_cmp_pred(i8 %x) {
+; CHECK-LABEL: @negtest_near_pow2_cmpval_ashr_wrong_cmp_pred(
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[X:%.*]], 10
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %s = ashr exact i8 %x, 1
+  %c = icmp eq i8 %s, 5
+  ret i1 %c
+}
+
+define i1 @negtest_near_pow2_cmpval_isnt_close_to_pow2(i8 %x) {
+; CHECK-LABEL: @negtest_near_pow2_cmpval_isnt_close_to_pow2(
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i8 [[X:%.*]], 12
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %s = ashr exact i8 %x, 1
+  %c = icmp slt i8 %s, 6
+  ret i1 %c
+}
+
+define i1 @negtest_near_pow2_cmpval_would_overflow_into_signbit(i8 %x) {
+; CHECK-LABEL: @negtest_near_pow2_cmpval_would_overflow_into_signbit(
+; CHECK-NEXT:    [[C:%.*]] = icmp sgt i8 [[X:%.*]], -1
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %s = ashr exact i8 %x, 2
+  %c = icmp ult i8 %s, 33
+  ret i1 %c
+}

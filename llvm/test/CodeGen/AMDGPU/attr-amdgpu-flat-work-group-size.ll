@@ -130,7 +130,7 @@ define amdgpu_kernel void @min_1024_max_1024() #3 {
 attributes #3 = {"amdgpu-flat-work-group-size"="1024,1024"}
 
 !llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdgpu_code_object_version", i32 400}
+!0 = !{i32 1, !"amdhsa_code_object_version", i32 400}
 
 ; HSAMD: amdhsa.kernels
 ; HSAMD:  .max_flat_workgroup_size: 64

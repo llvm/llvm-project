@@ -1,7 +1,7 @@
-RUN: dsymutil --linker llvm -accelerator=Dwarf \
+RUN: dsymutil --linker parallel -accelerator=Dwarf \
 RUN:   -oso-prepend-path=%p/../../Inputs \
 RUN:   %p/../../Inputs/accel-imported-declaration.macho-arm64 -o %t.dwarf.dSYM
-RUN: dsymutil --linker llvm -accelerator=Apple \
+RUN: dsymutil --linker parallel -accelerator=Apple \
 RUN:   -oso-prepend-path=%p/../../Inputs \
 RUN:   %p/../../Inputs/accel-imported-declaration.macho-arm64 -o %t.apple.dSYM
 

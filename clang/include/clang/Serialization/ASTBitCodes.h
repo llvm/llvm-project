@@ -17,13 +17,16 @@
 #ifndef LLVM_CLANG_SERIALIZATION_ASTBITCODES_H
 #define LLVM_CLANG_SERIALIZATION_ASTBITCODES_H
 
+#include "clang/AST/DeclID.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Serialization/SourceLocationEncoding.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/Bitstream/BitCodes.h"
+#include "llvm/Support/MathExtras.h"
 #include <cassert>
 #include <cstdint>
 
@@ -41,7 +44,7 @@ namespace serialization {
 /// Version 4 of AST files also requires that the version control branch and
 /// revision match exactly, since there is no backward compatibility of
 /// AST files at this time.
-const unsigned VERSION_MAJOR = 29;
+const unsigned VERSION_MAJOR = 31;
 
 /// AST file minor version number supported by this version of
 /// Clang.
@@ -57,57 +60,74 @@ const unsigned VERSION_MINOR = 1;
 ///
 /// The ID numbers of identifiers are consecutive (in order of discovery)
 /// and start at 1. 0 is reserved for NULL.
-using IdentifierID = uint32_t;
+using IdentifierID = uint64_t;
 
-/// An ID number that refers to a declaration in an AST file.
-///
-/// The ID numbers of declarations are consecutive (in order of
-/// discovery), with values below NUM_PREDEF_DECL_IDS being reserved.
-/// At the start of a chain of precompiled headers, declaration ID 1 is
-/// used for the translation unit declaration.
-using DeclID = uint32_t;
+/// The number of predefined identifier IDs.
+const unsigned int NUM_PREDEF_IDENT_IDS = 1;
 
-// FIXME: Turn these into classes so we can have some type safety when
-// we go from local ID to global and vice-versa.
-using LocalDeclID = DeclID;
-using GlobalDeclID = DeclID;
+/// An ID number that refers to a declaration in an AST file. See the comments
+/// in DeclIDBase for details.
+using DeclID = DeclIDBase::DeclID;
 
 /// An ID number that refers to a type in an AST file.
 ///
-/// The ID of a type is partitioned into two parts: the lower
-/// three bits are used to store the const/volatile/restrict
-/// qualifiers (as with QualType) and the upper bits provide a
-/// type index. The type index values are partitioned into two
+/// The ID of a type is partitioned into three parts:
+/// - the lower three bits are used to store the const/volatile/restrict
+///   qualifiers (as with QualType).
+/// - the next 29 bits provide a type index in the corresponding
+///   module file.
+/// - the upper 32 bits provide a module file index.
+///
+/// The type index values are partitioned into two
 /// sets. The values below NUM_PREDEF_TYPE_IDs are predefined type
 /// IDs (based on the PREDEF_TYPE_*_ID constants), with 0 as a
-/// placeholder for "no type". Values from NUM_PREDEF_TYPE_IDs are
-/// other types that have serialized representations.
-using TypeID = uint32_t;
+/// placeholder for "no type". The module file index for predefined
+/// types are always 0 since they don't belong to any modules.
+/// Values from NUM_PREDEF_TYPE_IDs are other types that have
+/// serialized representations.
+using TypeID = uint64_t;
+/// Same with TypeID except that the LocalTypeID is only meaningful
+/// with the corresponding ModuleFile.
+///
+/// FIXME: Make TypeID and LocalTypeID a class to improve the type
+/// safety.
+using LocalTypeID = TypeID;
 
 /// A type index; the type ID with the qualifier bits removed.
+/// Keep structure alignment 32-bit since the blob is assumed as 32-bit
+/// aligned.
 class TypeIdx {
+  uint32_t ModuleFileIndex = 0;
   uint32_t Idx = 0;
 
 public:
   TypeIdx() = default;
-  explicit TypeIdx(uint32_t index) : Idx(index) {}
 
-  uint32_t getIndex() const { return Idx; }
+  explicit TypeIdx(uint32_t ModuleFileIdx, uint32_t Idx)
+      : ModuleFileIndex(ModuleFileIdx), Idx(Idx) {}
+
+  uint32_t getModuleFileIndex() const { return ModuleFileIndex; }
+
+  uint64_t getValue() const { return ((uint64_t)ModuleFileIndex << 32) | Idx; }
 
   TypeID asTypeID(unsigned FastQuals) const {
     if (Idx == uint32_t(-1))
       return TypeID(-1);
 
-    return (Idx << Qualifiers::FastWidth) | FastQuals;
+    unsigned Index = (Idx << Qualifiers::FastWidth) | FastQuals;
+    return ((uint64_t)ModuleFileIndex << 32) | Index;
   }
 
   static TypeIdx fromTypeID(TypeID ID) {
     if (ID == TypeID(-1))
-      return TypeIdx(-1);
+      return TypeIdx(0, -1);
 
-    return TypeIdx(ID >> Qualifiers::FastWidth);
+    return TypeIdx(ID >> 32, (ID & llvm::maskTrailingOnes<TypeID>(32)) >>
+                                 Qualifiers::FastWidth);
   }
 };
+
+static_assert(alignof(TypeIdx) == 4);
 
 /// A structure for putting "fast"-unqualified QualTypes into a
 /// DenseMap.  This uses the standard pointer hash function.
@@ -129,12 +149,6 @@ struct UnsafeQualTypeDenseMapInfo {
     return (unsigned(v) >> 4) ^ (unsigned(v) >> 9);
   }
 };
-
-/// An ID number that refers to an identifier in an AST file.
-using IdentID = uint32_t;
-
-/// The number of predefined identifier IDs.
-const unsigned int NUM_PREDEF_IDENT_IDS = 1;
 
 /// An ID number that refers to a macro in an AST file.
 using MacroID = uint32_t;
@@ -173,101 +187,103 @@ using SubmoduleID = uint32_t;
 /// The number of predefined submodule IDs.
 const unsigned int NUM_PREDEF_SUBMODULE_IDS = 1;
 
+/// 32 aligned uint64_t in the AST file. Use splitted 64-bit integer into
+/// low/high parts to keep structure alignment 32-bit (it is important
+/// because blobs in bitstream are 32-bit aligned). This structure is
+/// serialized "as is" to the AST file.
+class UnalignedUInt64 {
+  uint32_t BitLow = 0;
+  uint32_t BitHigh = 0;
+
+public:
+  UnalignedUInt64() = default;
+  UnalignedUInt64(uint64_t BitOffset) { set(BitOffset); }
+
+  void set(uint64_t Offset) {
+    BitLow = Offset;
+    BitHigh = Offset >> 32;
+  }
+
+  uint64_t get() const { return BitLow | (uint64_t(BitHigh) << 32); }
+};
+
 /// Source range/offset of a preprocessed entity.
-struct PPEntityOffset {
+class PPEntityOffset {
+  using RawLocEncoding = SourceLocationEncoding::RawLocEncoding;
+
   /// Raw source location of beginning of range.
-  SourceLocation::UIntTy Begin;
+  UnalignedUInt64 Begin;
 
   /// Raw source location of end of range.
-  SourceLocation::UIntTy End;
+  UnalignedUInt64 End;
 
   /// Offset in the AST file relative to ModuleFile::MacroOffsetsBase.
   uint32_t BitOffset;
 
-  PPEntityOffset(SourceRange R, uint32_t BitOffset)
-      : Begin(R.getBegin().getRawEncoding()), End(R.getEnd().getRawEncoding()),
-        BitOffset(BitOffset) {}
+public:
+  PPEntityOffset(RawLocEncoding Begin, RawLocEncoding End, uint32_t BitOffset)
+      : Begin(Begin), End(End), BitOffset(BitOffset) {}
 
-  SourceLocation getBegin() const {
-    return SourceLocation::getFromRawEncoding(Begin);
-  }
+  RawLocEncoding getBegin() const { return Begin.get(); }
+  RawLocEncoding getEnd() const { return End.get(); }
 
-  SourceLocation getEnd() const {
-    return SourceLocation::getFromRawEncoding(End);
-  }
+  uint32_t getOffset() const { return BitOffset; }
 };
 
 /// Source range of a skipped preprocessor region
-struct PPSkippedRange {
+class PPSkippedRange {
+  using RawLocEncoding = SourceLocationEncoding::RawLocEncoding;
+
   /// Raw source location of beginning of range.
-  SourceLocation::UIntTy Begin;
+  UnalignedUInt64 Begin;
   /// Raw source location of end of range.
-  SourceLocation::UIntTy End;
+  UnalignedUInt64 End;
 
-  PPSkippedRange(SourceRange R)
-      : Begin(R.getBegin().getRawEncoding()), End(R.getEnd().getRawEncoding()) {
-  }
+public:
+  PPSkippedRange(RawLocEncoding Begin, RawLocEncoding End)
+      : Begin(Begin), End(End) {}
 
-  SourceLocation getBegin() const {
-    return SourceLocation::getFromRawEncoding(Begin);
-  }
-  SourceLocation getEnd() const {
-    return SourceLocation::getFromRawEncoding(End);
-  }
+  RawLocEncoding getBegin() const { return Begin.get(); }
+  RawLocEncoding getEnd() const { return End.get(); }
 };
 
-/// Offset in the AST file. Use splitted 64-bit integer into low/high
-/// parts to keep structure alignment 32-bit (it is important because
-/// blobs in bitstream are 32-bit aligned). This structure is serialized
-/// "as is" to the AST file.
-struct UnderalignedInt64 {
-  uint32_t BitOffsetLow = 0;
-  uint32_t BitOffsetHigh = 0;
+/// Source location and bit offset of a declaration. Keep
+/// structure alignment 32-bit since the blob is assumed as 32-bit aligned.
+class DeclOffset {
+  using RawLocEncoding = SourceLocationEncoding::RawLocEncoding;
 
-  UnderalignedInt64() = default;
-  UnderalignedInt64(uint64_t BitOffset) { setBitOffset(BitOffset); }
-
-  void setBitOffset(uint64_t Offset) {
-    BitOffsetLow = Offset;
-    BitOffsetHigh = Offset >> 32;
-  }
-
-  uint64_t getBitOffset() const {
-    return BitOffsetLow | (uint64_t(BitOffsetHigh) << 32);
-  }
-};
-
-/// Source location and bit offset of a declaration.
-struct DeclOffset {
   /// Raw source location.
-  SourceLocation::UIntTy Loc = 0;
+  UnalignedUInt64 RawLoc;
 
-  /// Offset relative to the start of the DECLTYPES_BLOCK block. Keep
-  /// structure alignment 32-bit and avoid padding gap because undefined
-  /// value in the padding affects AST hash.
-  UnderalignedInt64 BitOffset;
+  /// Offset relative to the start of the DECLTYPES_BLOCK block.
+  UnalignedUInt64 BitOffset;
 
+public:
   DeclOffset() = default;
-  DeclOffset(SourceLocation Loc, uint64_t BitOffset,
-             uint64_t DeclTypesBlockStartOffset) {
-    setLocation(Loc);
+  DeclOffset(RawLocEncoding RawLoc, uint64_t BitOffset,
+             uint64_t DeclTypesBlockStartOffset)
+      : RawLoc(RawLoc) {
     setBitOffset(BitOffset, DeclTypesBlockStartOffset);
   }
 
-  void setLocation(SourceLocation L) { Loc = L.getRawEncoding(); }
+  void setRawLoc(RawLocEncoding Loc) { RawLoc = Loc; }
 
-  SourceLocation getLocation() const {
-    return SourceLocation::getFromRawEncoding(Loc);
-  }
+  RawLocEncoding getRawLoc() const { return RawLoc.get(); }
 
   void setBitOffset(uint64_t Offset, const uint64_t DeclTypesBlockStartOffset) {
-    BitOffset.setBitOffset(Offset - DeclTypesBlockStartOffset);
+    BitOffset.set(Offset - DeclTypesBlockStartOffset);
   }
 
   uint64_t getBitOffset(const uint64_t DeclTypesBlockStartOffset) const {
-    return BitOffset.getBitOffset() + DeclTypesBlockStartOffset;
+    return BitOffset.get() + DeclTypesBlockStartOffset;
   }
 };
+
+// The unaligned decl ID used in the Blobs of bistreams.
+using unaligned_decl_id_t =
+    llvm::support::detail::packed_endian_specific_integral<
+        serialization::DeclID, llvm::endianness::native,
+        llvm::support::unaligned>;
 
 /// The number of predefined preprocessed entity IDs.
 const unsigned int NUM_PREDEF_PP_ENTITY_IDS = 1;
@@ -405,6 +421,9 @@ enum UnhashedControlBlockRecordTypes {
 
   /// Record code for the indices of used header search entries.
   HEADER_SEARCH_ENTRY_USAGE,
+
+  /// Record code for the indices of used VFSs.
+  VFS_USAGE,
 };
 
 /// Record code for extension blocks.
@@ -695,6 +714,16 @@ enum ASTRecordTypes {
   /// Record code for an unterminated \#pragma clang assume_nonnull begin
   /// recorded in a preamble.
   PP_ASSUME_NONNULL_LOC = 67,
+
+  /// Record code for lexical and visible block for delayed namespace in
+  /// reduced BMI.
+  DELAYED_NAMESPACE_LEXICAL_VISIBLE_RECORD = 68,
+
+  /// Record code for \#pragma clang unsafe_buffer_usage begin/end
+  PP_UNSAFE_BUFFER_USAGE = 69,
+
+  /// Record code for vtables to emit.
+  VTABLES_TO_EMIT = 70,
 };
 
 /// Record types used within a source manager block.
@@ -974,8 +1003,8 @@ enum PredefinedTypeIDs {
   /// OpenCL reserve_id type.
   PREDEF_TYPE_RESERVE_ID_ID = 41,
 
-  /// The placeholder type for OpenMP array section.
-  PREDEF_TYPE_OMP_ARRAY_SECTION = 42,
+  /// The placeholder type for an array section.
+  PREDEF_TYPE_ARRAY_SECTION = 42,
 
   /// The '__float128' type
   PREDEF_TYPE_FLOAT128_ID = 43,
@@ -1092,6 +1121,15 @@ enum PredefinedTypeIDs {
 // \brief WebAssembly reference types with auto numeration
 #define WASM_TYPE(Name, Id, SingletonId) PREDEF_TYPE_##Id##_ID,
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
+// \brief AMDGPU types with auto numeration
+#define AMDGPU_TYPE(Name, Id, SingletonId) PREDEF_TYPE_##Id##_ID,
+#include "clang/Basic/AMDGPUTypes.def"
+// \brief HLSL intangible types with auto numeration
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) PREDEF_TYPE_##Id##_ID,
+#include "clang/Basic/HLSLIntangibleTypes.def"
+
+  /// The placeholder type for unresolved templates.
+  PREDEF_TYPE_UNRESOLVED_TEMPLATE,
   // Sentinel value. Considered a predefined type but not useable as one.
   PREDEF_TYPE_LAST_ID
 };
@@ -1101,7 +1139,7 @@ enum PredefinedTypeIDs {
 ///
 /// Type IDs for non-predefined types will start at
 /// NUM_PREDEF_TYPE_IDs.
-const unsigned NUM_PREDEF_TYPE_IDS = 502;
+const unsigned NUM_PREDEF_TYPE_IDS = 505;
 
 // Ensure we do not overrun the predefined types we reserved
 // in the enum PredefinedTypeIDs above.
@@ -1157,74 +1195,6 @@ enum SpecialTypeIDs {
 
 /// The number of special type IDs.
 const unsigned NumSpecialTypeIDs = 8;
-
-/// Predefined declaration IDs.
-///
-/// These declaration IDs correspond to predefined declarations in the AST
-/// context, such as the NULL declaration ID. Such declarations are never
-/// actually serialized, since they will be built by the AST context when
-/// it is created.
-enum PredefinedDeclIDs {
-  /// The NULL declaration.
-  PREDEF_DECL_NULL_ID = 0,
-
-  /// The translation unit.
-  PREDEF_DECL_TRANSLATION_UNIT_ID = 1,
-
-  /// The Objective-C 'id' type.
-  PREDEF_DECL_OBJC_ID_ID = 2,
-
-  /// The Objective-C 'SEL' type.
-  PREDEF_DECL_OBJC_SEL_ID = 3,
-
-  /// The Objective-C 'Class' type.
-  PREDEF_DECL_OBJC_CLASS_ID = 4,
-
-  /// The Objective-C 'Protocol' type.
-  PREDEF_DECL_OBJC_PROTOCOL_ID = 5,
-
-  /// The signed 128-bit integer type.
-  PREDEF_DECL_INT_128_ID = 6,
-
-  /// The unsigned 128-bit integer type.
-  PREDEF_DECL_UNSIGNED_INT_128_ID = 7,
-
-  /// The internal 'instancetype' typedef.
-  PREDEF_DECL_OBJC_INSTANCETYPE_ID = 8,
-
-  /// The internal '__builtin_va_list' typedef.
-  PREDEF_DECL_BUILTIN_VA_LIST_ID = 9,
-
-  /// The internal '__va_list_tag' struct, if any.
-  PREDEF_DECL_VA_LIST_TAG = 10,
-
-  /// The internal '__builtin_ms_va_list' typedef.
-  PREDEF_DECL_BUILTIN_MS_VA_LIST_ID = 11,
-
-  /// The predeclared '_GUID' struct.
-  PREDEF_DECL_BUILTIN_MS_GUID_ID = 12,
-
-  /// The extern "C" context.
-  PREDEF_DECL_EXTERN_C_CONTEXT_ID = 13,
-
-  /// The internal '__make_integer_seq' template.
-  PREDEF_DECL_MAKE_INTEGER_SEQ_ID = 14,
-
-  /// The internal '__NSConstantString' typedef.
-  PREDEF_DECL_CF_CONSTANT_STRING_ID = 15,
-
-  /// The internal '__NSConstantString' tag type.
-  PREDEF_DECL_CF_CONSTANT_STRING_TAG_ID = 16,
-
-  /// The internal '__type_pack_element' template.
-  PREDEF_DECL_TYPE_PACK_ELEMENT_ID = 17,
-};
-
-/// The number of declaration IDs that are predefined.
-///
-/// For more information about predefined declarations, see the
-/// \c PredefinedDeclIDs type and the PREDEF_DECL_*_ID constants.
-const unsigned int NUM_PREDEF_DECL_IDS = 18;
 
 /// Record of updates for a declaration that was modified after
 /// being deserialized. This can occur within DECLTYPES_BLOCK_ID.
@@ -1715,6 +1685,9 @@ enum StmtCode {
   /// A SourceLocExpr record.
   EXPR_SOURCE_LOC,
 
+  /// A EmbedExpr record.
+  EXPR_BUILTIN_PP_EMBED,
+
   /// A ShuffleVectorExpr record.
   EXPR_SHUFFLE_VECTOR,
 
@@ -1895,6 +1868,7 @@ enum StmtCode {
   EXPR_ARRAY_TYPE_TRAIT,            // ArrayTypeTraitIntExpr
 
   EXPR_PACK_EXPANSION,                    // PackExpansionExpr
+  EXPR_PACK_INDEXING,                     // PackIndexingExpr
   EXPR_SIZEOF_PACK,                       // SizeOfPackExpr
   EXPR_SUBST_NON_TYPE_TEMPLATE_PARM,      // SubstNonTypeTemplateParmExpr
   EXPR_SUBST_NON_TYPE_TEMPLATE_PARM_PACK, // SubstNonTypeTemplateParmPackExpr
@@ -1927,6 +1901,8 @@ enum StmtCode {
   STMT_OMP_SIMD_DIRECTIVE,
   STMT_OMP_TILE_DIRECTIVE,
   STMT_OMP_UNROLL_DIRECTIVE,
+  STMT_OMP_REVERSE_DIRECTIVE,
+  STMT_OMP_INTERCHANGE_DIRECTIVE,
   STMT_OMP_FOR_DIRECTIVE,
   STMT_OMP_FOR_SIMD_DIRECTIVE,
   STMT_OMP_SECTIONS_DIRECTIVE,
@@ -1994,7 +1970,8 @@ enum StmtCode {
   STMT_OMP_TARGET_TEAMS_GENERIC_LOOP_DIRECTIVE,
   STMT_OMP_PARALLEL_GENERIC_LOOP_DIRECTIVE,
   STMT_OMP_TARGET_PARALLEL_GENERIC_LOOP_DIRECTIVE,
-  EXPR_OMP_ARRAY_SECTION,
+  STMT_OMP_ASSUME_DIRECTIVE,
+  EXPR_ARRAY_SECTION,
   EXPR_OMP_ARRAY_SHAPING,
   EXPR_OMP_ITERATOR,
 
@@ -2014,6 +1991,13 @@ enum StmtCode {
 
   // SYCLUniqueStableNameExpr
   EXPR_SYCL_UNIQUE_STABLE_NAME,
+
+  // OpenACC Constructs
+  STMT_OPENACC_COMPUTE_CONSTRUCT,
+  STMT_OPENACC_LOOP_CONSTRUCT,
+
+  // HLSL Constructs
+  EXPR_HLSL_OUT_ARG,
 };
 
 /// The kinds of designators that can occur in a
@@ -2045,63 +2029,45 @@ enum CtorInitializerType {
 /// Kinds of cleanup objects owned by ExprWithCleanups.
 enum CleanupObjectKind { COK_Block, COK_CompoundLiteral };
 
-/// Describes the redeclarations of a declaration.
-struct LocalRedeclarationsInfo {
-  // The ID of the first declaration
-  DeclID FirstID;
-
-  // Offset into the array of redeclaration chains.
-  unsigned Offset;
-
-  friend bool operator<(const LocalRedeclarationsInfo &X,
-                        const LocalRedeclarationsInfo &Y) {
-    return X.FirstID < Y.FirstID;
-  }
-
-  friend bool operator>(const LocalRedeclarationsInfo &X,
-                        const LocalRedeclarationsInfo &Y) {
-    return X.FirstID > Y.FirstID;
-  }
-
-  friend bool operator<=(const LocalRedeclarationsInfo &X,
-                         const LocalRedeclarationsInfo &Y) {
-    return X.FirstID <= Y.FirstID;
-  }
-
-  friend bool operator>=(const LocalRedeclarationsInfo &X,
-                         const LocalRedeclarationsInfo &Y) {
-    return X.FirstID >= Y.FirstID;
-  }
-};
-
 /// Describes the categories of an Objective-C class.
 struct ObjCCategoriesInfo {
-  // The ID of the definition
-  DeclID DefinitionID;
+  // The ID of the definition. Use unaligned_decl_id_t to keep
+  // ObjCCategoriesInfo 32-bit aligned.
+  unaligned_decl_id_t DefinitionID;
 
   // Offset into the array of category lists.
   unsigned Offset;
 
+  ObjCCategoriesInfo() = default;
+  ObjCCategoriesInfo(LocalDeclID ID, unsigned Offset)
+      : DefinitionID(ID.getRawValue()), Offset(Offset) {}
+
+  DeclID getDefinitionID() const { return DefinitionID; }
+
   friend bool operator<(const ObjCCategoriesInfo &X,
                         const ObjCCategoriesInfo &Y) {
-    return X.DefinitionID < Y.DefinitionID;
+    return X.getDefinitionID() < Y.getDefinitionID();
   }
 
   friend bool operator>(const ObjCCategoriesInfo &X,
                         const ObjCCategoriesInfo &Y) {
-    return X.DefinitionID > Y.DefinitionID;
+    return X.getDefinitionID() > Y.getDefinitionID();
   }
 
   friend bool operator<=(const ObjCCategoriesInfo &X,
                          const ObjCCategoriesInfo &Y) {
-    return X.DefinitionID <= Y.DefinitionID;
+    return X.getDefinitionID() <= Y.getDefinitionID();
   }
 
   friend bool operator>=(const ObjCCategoriesInfo &X,
                          const ObjCCategoriesInfo &Y) {
-    return X.DefinitionID >= Y.DefinitionID;
+    return X.getDefinitionID() >= Y.getDefinitionID();
   }
 };
+
+static_assert(alignof(ObjCCategoriesInfo) <= 4);
+static_assert(std::is_standard_layout_v<ObjCCategoriesInfo> &&
+              std::is_trivial_v<ObjCCategoriesInfo>);
 
 /// A key used when looking up entities by \ref DeclarationName.
 ///

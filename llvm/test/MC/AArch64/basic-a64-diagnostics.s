@@ -1149,6 +1149,10 @@
 // CHECK-ERROR-NEXT:           cbz x29, #1
 // CHECK-ERROR-NEXT:                    ^
 
+/// Test "bad" names
+cbz w1, lsl
+// CHECK-ERROR: [[#@LINE-1]]:12: error: expected #imm after shift specifier
+
 //------------------------------------------------------------------------------
 // Conditional branch (immediate)
 //------------------------------------------------------------------------------
@@ -1343,6 +1347,7 @@
         csel sp, x2, x3, ne
         csel x10, x11, sp, ge
         csel x1, x2, x3, #3
+        csel x1, x2, x3, lsl #1, eq
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR-NEXT:        csel w4, wsp, w9, eq
 // CHECK-ERROR-NEXT:                 ^
@@ -1366,6 +1371,9 @@
 // CHECK-ERROR-NEXT:                       ^
 // CHECK-ERROR-NEXT: error: expected AArch64 condition code
 // CHECK-ERROR-NEXT:        csel x1, x2, x3, #3
+// CHECK-ERROR-NEXT:                         ^
+// CHECK-ERROR-NEXT: error: expected AArch64 condition code
+// CHECK-ERROR-NEXT:        csel x1, x2, x3, lsl #1, eq
 // CHECK-ERROR-NEXT:                         ^
 
         csinc w20, w21, wsp, mi

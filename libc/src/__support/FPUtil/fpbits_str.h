@@ -6,16 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_FP_BITS_STR_H
-#define LLVM_LIBC_SRC___SUPPORT_FPUTIL_FP_BITS_STR_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_FPBITS_STR_H
+#define LLVM_LIBC_SRC___SUPPORT_FPUTIL_FPBITS_STR_H
 
 #include "src/__support/CPP/string.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/integer_to_string.h"
 #include "src/__support/macros/attributes.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 namespace details {
 
@@ -39,9 +40,11 @@ template <typename T> LIBC_INLINE cpp::string str(fputil::FPBits<T> x) {
   if (x.is_nan())
     return "(NaN)";
   if (x.is_inf())
-    return x.get_sign() ? "(-Infinity)" : "(+Infinity)";
+    return x.is_neg() ? "(-Infinity)" : "(+Infinity)";
 
-  const auto sign_char = [](bool sign) -> char { return sign ? '1' : '0'; };
+  const auto sign_char = [](Sign sign) -> char {
+    return sign.is_neg() ? '1' : '0';
+  };
 
   cpp::string s;
 
@@ -49,7 +52,7 @@ template <typename T> LIBC_INLINE cpp::string str(fputil::FPBits<T> x) {
   s += bits.view();
 
   s += " = (S: ";
-  s += sign_char(x.get_sign());
+  s += sign_char(x.sign());
 
   s += ", E: ";
   const details::ZeroPaddedHexFmt<uint16_t> exponent(x.get_biased_exponent());
@@ -57,7 +60,7 @@ template <typename T> LIBC_INLINE cpp::string str(fputil::FPBits<T> x) {
 
   if constexpr (fputil::get_fp_type<T>() == fputil::FPType::X86_Binary80) {
     s += ", I: ";
-    s += sign_char(x.get_implicit_bit());
+    s += sign_char(x.get_implicit_bit() ? Sign::NEG : Sign::POS);
   }
 
   s += ", M: ";
@@ -68,6 +71,6 @@ template <typename T> LIBC_INLINE cpp::string str(fputil::FPBits<T> x) {
   return s;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_FP_BITS_STR_H
+#endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_FPBITS_STR_H

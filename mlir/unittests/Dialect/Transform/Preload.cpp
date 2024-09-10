@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Transform/DebugExtension/DebugExtension.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/IR/Utils.h"
 #include "mlir/Dialect/Transform/Transforms/TransformInterpreterUtils.h"
@@ -29,14 +30,11 @@ namespace test {
 std::unique_ptr<Pass> createTestTransformDialectInterpreterPass();
 } // namespace test
 } // namespace mlir
-namespace test {
-void registerTestTransformDialectExtension(DialectRegistry &registry);
-} // namespace test
 
 const static llvm::StringLiteral library = R"MLIR(
 module attributes {transform.with_named_sequence} {
   transform.named_sequence private @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
-    transform.test_print_remark_at_operand %arg0, "from external symbol" : !transform.any_op
+    transform.debug.emit_remark_at %arg0, "from external symbol" : !transform.any_op
     transform.yield
   }
 })MLIR";
@@ -57,7 +55,7 @@ TEST(Preload, ContextPreloadConstructedLibrary) {
   MLIRContext context;
   auto *dialect = context.getOrLoadDialect<transform::TransformDialect>();
   DialectRegistry registry;
-  ::test::registerTestTransformDialectExtension(registry);
+  mlir::transform::registerDebugExtension(registry);
   registry.applyExtensions(&context);
   ParserConfig parserConfig(&context);
 

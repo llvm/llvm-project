@@ -4,7 +4,7 @@
 define float @fadd_fpext_op0(float %x, double %y) {
 ; CHECK-LABEL: @fadd_fpext_op0(
 ; CHECK-NEXT:    [[EXT:%.*]] = fpext float [[X:%.*]] to double
-; CHECK-NEXT:    [[BO:%.*]] = fadd reassoc double [[EXT]], [[Y:%.*]]
+; CHECK-NEXT:    [[BO:%.*]] = fadd reassoc double [[Y:%.*]], [[EXT]]
 ; CHECK-NEXT:    [[R:%.*]] = fptrunc double [[BO]] to float
 ; CHECK-NEXT:    ret float [[R]]
 ;
@@ -189,4 +189,17 @@ define half @ItoFtoF_u25_f32_f16(i25 %i) {
   %x = uitofp i25 %i to float
   %r = fptrunc float %x to half
   ret half %r
+}
+
+; Negative test - bitcast bfloat to half is not optimized
+
+define half @fptrunc_to_bfloat_bitcast_to_half(float %src) {
+; CHECK-LABEL: @fptrunc_to_bfloat_bitcast_to_half(
+; CHECK-NEXT:    [[TRUNC:%.*]] = fptrunc float [[SRC:%.*]] to bfloat
+; CHECK-NEXT:    [[CAST:%.*]] = bitcast bfloat [[TRUNC]] to half
+; CHECK-NEXT:    ret half [[CAST]]
+;
+  %trunc = fptrunc float %src to bfloat
+  %cast = bitcast bfloat %trunc to half
+  ret half %cast
 }

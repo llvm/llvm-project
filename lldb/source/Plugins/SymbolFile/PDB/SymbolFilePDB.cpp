@@ -28,6 +28,7 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegularExpression.h"
 
+#include "llvm/Config/llvm-config.h" // for LLVM_ENABLE_DIA_SDK
 #include "llvm/DebugInfo/PDB/ConcreteSymbolEnumerator.h"
 #include "llvm/DebugInfo/PDB/GenericError.h"
 #include "llvm/DebugInfo/PDB/IPDBDataStream.h"
@@ -1141,8 +1142,8 @@ void SymbolFilePDB::FindGlobalVariables(
     sc.module_sp = m_objfile_sp->GetModule();
     lldbassert(sc.module_sp.get());
 
-    if (!name.GetStringRef().equals(
-            MSVCUndecoratedNameParser::DropScope(pdb_data->getName())))
+    if (name.GetStringRef() !=
+        MSVCUndecoratedNameParser::DropScope(pdb_data->getName()))
       continue;
 
     sc.comp_unit = ParseCompileUnitForUID(GetCompilandId(*pdb_data)).get();

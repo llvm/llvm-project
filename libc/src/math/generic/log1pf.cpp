@@ -15,6 +15,7 @@
 #include "src/__support/FPUtil/except_value_utils.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 #include "src/__support/macros/properties/cpu_features.h"
 
@@ -30,7 +31,7 @@
 // generated with Sollya using the following command:
 //   fpminimax(log(1 + x)/x, 7, [|D...|], [-2^-6; 2^-6]);
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 namespace internal {
 
@@ -43,11 +44,11 @@ LIBC_INLINE float log(double x) {
 
   uint64_t x_u = xbits.uintval();
 
-  if (LIBC_UNLIKELY(x_u > FPBits::MAX_NORMAL)) {
-    if (xbits.get_sign() && !xbits.is_nan()) {
+  if (LIBC_UNLIKELY(x_u > FPBits::max_normal().uintval())) {
+    if (xbits.is_neg() && !xbits.is_nan()) {
       fputil::set_errno_if_required(EDOM);
       fputil::raise_except_if_required(FE_INVALID);
-      return fputil::FPBits<float>::build_quiet_nan(0);
+      return fputil::FPBits<float>::quiet_nan().get_val();
     }
     return static_cast<float>(x);
   }
@@ -64,9 +65,9 @@ LIBC_INLINE float log(double x) {
   FPBits f = xbits;
 
   // Clear the lowest 45 bits.
-  f.bits &= ~0x0000'1FFF'FFFF'FFFFULL;
+  f.set_uintval(f.uintval() & ~0x0000'1FFF'FFFF'FFFFULL);
 
-  double d = static_cast<double>(xbits) - static_cast<double>(f);
+  double d = xbits.get_val() - f.get_val();
   d *= ONE_OVER_F[f_index];
 
   double extra_factor = fputil::multiply_add(m, LOG_2, LOG_F[f_index]);
@@ -106,7 +107,7 @@ LLVM_LIBC_FUNCTION(float, log1pf, (float x)) {
     case 0xbf800000U: // x = -1.0
       fputil::set_errno_if_required(ERANGE);
       fputil::raise_except_if_required(FE_DIVBYZERO);
-      return static_cast<float>(fputil::FPBits<float>::neg_inf());
+      return FPBits::inf(Sign::NEG).get_val();
 #ifndef LIBC_TARGET_CPU_HAS_FMA
     case 0x4cc1c80bU: // x = 0x1.839016p+26f
       return fputil::round_result_slightly_down(0x1.26fc04p+4f);
@@ -153,4 +154,4 @@ LLVM_LIBC_FUNCTION(float, log1pf, (float x)) {
   return static_cast<float>(r);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

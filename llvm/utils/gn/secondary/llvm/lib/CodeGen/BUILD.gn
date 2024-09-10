@@ -1,18 +1,3 @@
-static_library("CodeGenTypes") {
-  output_name = "LLVMCodeGenType"
-  public_deps = [
-    # Must be a public_dep because CodeGen's headers include llvm-config.h.
-    "//llvm/include/llvm/Config:llvm-config",
-  ]
-  deps = [
-    "//llvm/include/llvm/CodeGen:GenVT",
-    "//llvm/lib/Support",
-  ]
-  sources = [
-    "LowLevelType.cpp"
-  ]
-}
-
 static_library("CodeGen") {
   output_name = "LLVMCodeGen"
   public_deps = [
@@ -24,6 +9,7 @@ static_library("CodeGen") {
     "//llvm/lib/Analysis",
     "//llvm/lib/Bitcode/Reader",
     "//llvm/lib/Bitcode/Writer",
+    "//llvm/lib/CodeGenTypes",
     "//llvm/lib/IR",
     "//llvm/lib/MC",
     "//llvm/lib/ProfileData",
@@ -50,13 +36,11 @@ static_library("CodeGen") {
     "CFGuardLongjmp.cpp",
     "CFIFixup.cpp",
     "CFIInstrInserter.cpp",
-    "GCEmptyBasicBlocks.cpp",
     "CalcSpillWeights.cpp",
     "CallBrPrepare.cpp",
     "CallingConvLower.cpp",
     "CodeGen.cpp",
     "CodeGenCommonISel.cpp",
-    "CodeGenPassBuilder.cpp",
     "CodeGenPrepare.cpp",
     "CommandFlags.cpp",
     "ComplexDeinterleavingPass.cpp",
@@ -80,6 +64,7 @@ static_library("CodeGen") {
     "FinalizeISel.cpp",
     "FixupStatepointCallerSaved.cpp",
     "FuncletLayout.cpp",
+    "GCEmptyBasicBlocks.cpp",
     "GCMetadata.cpp",
     "GCMetadataPrinter.cpp",
     "GCRootLowering.cpp",
@@ -88,6 +73,7 @@ static_library("CodeGen") {
     "IfConversion.cpp",
     "ImplicitNullChecks.cpp",
     "IndirectBrExpandPass.cpp",
+    "InitUndef.cpp",
     "InlineSpiller.cpp",
     "InterferenceCache.cpp",
     "InterleavedAccessPass.cpp",
@@ -117,7 +103,6 @@ static_library("CodeGen") {
     "LiveVariables.cpp",
     "LocalStackSlotAllocation.cpp",
     "LoopTraversal.cpp",
-    "LowLevelType.cpp",
     "LowLevelTypeUtils.cpp",
     "LowerEmuTLS.cpp",
     "MBFIWrapper.cpp",
@@ -139,13 +124,16 @@ static_library("CodeGen") {
     "MachineCSE.cpp",
     "MachineCheckDebugify.cpp",
     "MachineCombiner.cpp",
+    "MachineConvergenceVerifier.cpp",
     "MachineCopyPropagation.cpp",
     "MachineCycleAnalysis.cpp",
     "MachineDebugify.cpp",
+    "MachineDomTreeUpdater.cpp",
     "MachineDominanceFrontier.cpp",
     "MachineDominators.cpp",
     "MachineFrameInfo.cpp",
     "MachineFunction.cpp",
+    "MachineFunctionAnalysis.cpp",
     "MachineFunctionPass.cpp",
     "MachineFunctionPrinterPass.cpp",
     "MachineFunctionSplitter.cpp",
@@ -183,7 +171,6 @@ static_library("CodeGen") {
     "OptimizePHIs.cpp",
     "PHIElimination.cpp",
     "PHIEliminationUtils.cpp",
-    "ParallelCG.cpp",
     "PatchableFunction.cpp",
     "PeepholeOptimizer.cpp",
     "PostRAHazardRecognizer.cpp",
@@ -214,6 +201,7 @@ static_library("CodeGen") {
     "RegisterPressure.cpp",
     "RegisterScavenging.cpp",
     "RegisterUsageInfo.cpp",
+    "RemoveLoadsIntoFakeUses.cpp",
     "RemoveRedundantDebugValues.cpp",
     "RenameIndependentSubregs.cpp",
     "ReplaceWithVeclib.cpp",
@@ -259,6 +247,7 @@ static_library("CodeGen") {
     "VirtRegMap.cpp",
     "WasmEHPrepare.cpp",
     "WinEHPrepare.cpp",
+    "WindowScheduler.cpp",
     "XRayInstrumentation.cpp",
   ]
 }

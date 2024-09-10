@@ -14,7 +14,9 @@
 # CHECK: Address            Line   Column File   ISA Discriminator OpIndex Flags
 # CHECK-NEXT:                ---
 # CHECK-NEXT:                 25      0      1   0             0         0 is_stmt
+# CHECK-NEXT:                  0      0      1   0             0         0
 # CHECK-NEXT:                 29     28      1   0             0         0 is_stmt prologue_end
+# CHECK-NEXT:                 29     28      1   0             0         0 is_stmt
 # CHECK-NEXT:                 29     28      1   0             0         0 is_stmt end_sequence
 --- |
   source_filename = "t.ll"
@@ -25,27 +27,27 @@
   %class.D = type { %class.B }
   %class.B = type { %class.A, %class.A }
   %class.A = type { i8 }
-  %class.C = type <{ %class.E*, %class.B, [2 x i8] }>
+  %class.C = type <{ ptr, %class.B, [2 x i8] }>
 
-  @a = local_unnamed_addr global %class.E* null, align 4
+  @a = local_unnamed_addr global ptr null, align 4
 
-  define i32 @_ZN1C5m_fn3Ev(%class.C* nocapture) local_unnamed_addr align 2 !dbg !6 {
+  define i32 @_ZN1C5m_fn3Ev(ptr nocapture) local_unnamed_addr align 2 !dbg !6 {
     %2 = alloca %class.B, align 1
-    %3 = load %class.E*, %class.E** @a, align 4
-    %4 = icmp eq %class.E* %3, null
+    %3 = load ptr, ptr @a, align 4
+    %4 = icmp eq ptr %3, null
     br i1 %4, label %10, label %5
 
   ; <label>:5:                                      ; preds = %1
-    %6 = bitcast %class.C* %0 to %class.D**
-    %7 = load %class.D*, %class.D** %6, align 4
-    %8 = bitcast %class.D* %7 to i8*
-    %9 = load i8, i8* %8, align 1
+    %6 = bitcast ptr %0 to ptr
+    %7 = load ptr, ptr %6, align 4
+    %8 = bitcast ptr %7 to ptr
+    %9 = load i8, ptr %8, align 1
     br label %10
 
   ; <label>:10:                                     ; preds = %5, %1
     %11 = phi i8 [ %9, %5 ], [ undef, %1 ], !dbg !10
-    %12 = getelementptr inbounds %class.C, %class.C* %0, i32 0, i32 1, i32 0, i32 0
-    store i8 %11, i8* %12, align 1, !dbg !14
+    %12 = getelementptr inbounds %class.C, ptr %0, i32 0, i32 1, i32 0, i32 0
+    store i8 %11, ptr %12, align 1, !dbg !14
     ret i32 undef
   }
 

@@ -119,14 +119,14 @@ for_j.body:
   %gepCurr = getelementptr inbounds i8, ptr %curr, i64 %j
   %gepB = getelementptr inbounds i8, ptr %B, i64 %j
   %gepB1 = getelementptr inbounds i8, ptr %gepB, i64 %j
-  %gepB2 = getelementptr inbounds i8, i8* %gepB1, i64 0
-  %gepB3 = getelementptr inbounds i8, i8* %gepB2, i64 0
-  %gepB4 = getelementptr inbounds i8, i8* %gepB3, i64 0
-  %gepB5 = getelementptr inbounds i8, i8* %gepB4, i64 0
-  %gepB6 = getelementptr inbounds i8, i8* %gepB5, i64 0
-  %gepB7 = getelementptr inbounds i8, i8* %gepB6, i64 0
-  %gepB8 = getelementptr inbounds i8, i8* %gepB7, i64 0
-  %gepB9 = getelementptr inbounds i8, i8* %gepB8, i64 0
+  %gepB2 = getelementptr inbounds i8, ptr %gepB1, i64 0
+  %gepB3 = getelementptr inbounds i8, ptr %gepB2, i64 0
+  %gepB4 = getelementptr inbounds i8, ptr %gepB3, i64 0
+  %gepB5 = getelementptr inbounds i8, ptr %gepB4, i64 0
+  %gepB6 = getelementptr inbounds i8, ptr %gepB5, i64 0
+  %gepB7 = getelementptr inbounds i8, ptr %gepB6, i64 0
+  %gepB8 = getelementptr inbounds i8, ptr %gepB7, i64 0
+  %gepB9 = getelementptr inbounds i8, ptr %gepB8, i64 0
 
   %loadPrev = load i8, ptr %gepPrev, align 1
   %loadB = load i8, ptr %gepB9, align 1

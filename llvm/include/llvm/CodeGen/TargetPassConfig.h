@@ -15,6 +15,7 @@
 
 #include "llvm/Pass.h"
 #include "llvm/Support/CodeGen.h"
+#include "llvm/Support/Error.h"
 #include <cassert>
 #include <string>
 
@@ -139,6 +140,9 @@ protected:
   /// callers.
   bool RequireCodeGenSCCOrder = false;
 
+  /// Enable LoopTermFold immediately after LSR
+  bool EnableLoopTermFold = false;
+
   /// Add the actual instruction selection passes. This does not include
   /// preparation passes on IR.
   bool addCoreISelPasses();
@@ -170,11 +174,24 @@ public:
   /// set.
   static bool willCompleteCodeGenPipeline();
 
-  /// If hasLimitedCodeGenPipeline is true, this method
-  /// returns a string with the name of the options, separated
-  /// by \p Separator that caused this pipeline to be limited.
-  static std::string
-  getLimitedCodeGenPipelineReason(const char *Separator = "/");
+  /// If hasLimitedCodeGenPipeline is true, this method returns
+  /// a string with the name of the options that caused this
+  /// pipeline to be limited.
+  static std::string getLimitedCodeGenPipelineReason();
+
+  struct StartStopInfo {
+    bool StartAfter;
+    bool StopAfter;
+    unsigned StartInstanceNum;
+    unsigned StopInstanceNum;
+    StringRef StartPass;
+    StringRef StopPass;
+  };
+
+  /// Returns pass name in `-stop-before` or `-stop-after`
+  /// NOTE: New pass manager migration only
+  static Expected<StartStopInfo>
+  getStartStopInfo(PassInstrumentationCallbacks &PIC);
 
   void setDisableVerify(bool Disable) { setOpt(DisableVerify, Disable); }
 

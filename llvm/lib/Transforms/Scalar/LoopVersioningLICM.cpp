@@ -258,13 +258,13 @@ bool LoopVersioningLICM::legalLoopMemoryAccesses() {
     // With MustAlias its not worth adding runtime bound check.
     if (AS.isMustAlias())
       return false;
-    Value *SomePtr = AS.begin()->getValue();
+    const Value *SomePtr = AS.begin()->Ptr;
     bool TypeCheck = true;
     // Check for Mod & MayAlias
     HasMayAlias |= AS.isMayAlias();
     HasMod |= AS.isMod();
-    for (const auto &A : AS) {
-      Value *Ptr = A.getValue();
+    for (const auto &MemLoc : AS) {
+      const Value *Ptr = MemLoc.Ptr;
       // Alias tracker should have pointers of same data type.
       //
       // FIXME: check no longer effective since opaque pointers?
@@ -582,7 +582,7 @@ PreservedAnalyses LoopVersioningLICMPass::run(Loop &L, LoopAnalysisManager &AM,
   const Function *F = L.getHeader()->getParent();
   OptimizationRemarkEmitter ORE(F);
 
-  LoopAccessInfoManager LAIs(*SE, *AA, *DT, LAR.LI, nullptr);
+  LoopAccessInfoManager LAIs(*SE, *AA, *DT, LAR.LI, nullptr, nullptr);
   if (!LoopVersioningLICM(AA, SE, &ORE, LAIs, LAR.LI, &L).run(DT))
     return PreservedAnalyses::all();
   return getLoopPassPreservedAnalyses();

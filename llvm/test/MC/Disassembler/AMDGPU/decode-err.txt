@@ -1,22 +1,35 @@
-# RUN: llvm-mc -triple=amdgcn -mcpu=gfx900 -disassemble -show-encoding < %s 2>&1 | FileCheck -check-prefix=GCN %s
-# RUN: llvm-mc -triple=amdgcn -mcpu=gfx1100 -disassemble -show-encoding < %s 2>&1 | FileCheck -check-prefixes=GFX11,W32 %s
-# RUN: llvm-mc -triple=amdgcn -mcpu=gfx1100 -mattr=-WavefrontSize32,+WavefrontSize64 -disassemble -show-encoding < %s 2>&1 | FileCheck -check-prefixes=GFX11,W64 %s
-# RUN: llvm-mc -triple=amdgcn -mcpu=gfx1200 -disassemble -show-encoding < %s 2>&1 | FileCheck -check-prefix=GFX12 %s
+# RUN: llvm-mc -triple=amdgcn -mcpu=gfx900 -disassemble -show-encoding -filetype=null < %s 2>&1 | FileCheck -check-prefix=GCN-ERR %s
+# RUN: llvm-mc -triple=amdgcn -mcpu=gfx1100 -disassemble -show-encoding < %s 2>&1 | FileCheck -check-prefixes=W32 %s
+# RUN: llvm-mc -triple=amdgcn -mcpu=gfx1100 -mattr=+wavefrontsize64 -disassemble -show-encoding < %s 2>&1 | FileCheck -check-prefixes=W64 %s
+# RUN: llvm-mc -triple=amdgcn -mcpu=gfx1100 -disassemble -show-encoding -filetype=null < %s 2>&1 | FileCheck -check-prefix=GFX11-ERR %s
+# RUN: llvm-mc -triple=amdgcn -mcpu=gfx1200 -disassemble -show-encoding -filetype=null < %s 2>&1 | FileCheck -check-prefix=GFX12-ERR %s
 
-# GCN: [[@LINE+1]]:1: warning: invalid instruction encoding
+# GCN-ERR: [[@LINE+1]]:1: warning: invalid instruction encoding
 0xdf,0x00,0x00,0x02
 
 # this is s_singleuse_vdst 0x1234, which is only valid on gfx1150
-# GFX11: [[@LINE+1]]:1: warning: invalid instruction encoding
+# GFX11-ERR: [[@LINE+1]]:1: warning: invalid instruction encoding
 0x34,0x12,0x93,0xbf
 
 # this is s_waitcnt_vscnt exec_hi, 0x1234, which is valid on gfx11, but not on gfx12
-# GFX12: [[@LINE+1]]:1: warning: invalid instruction encoding
+# GFX12-ERR: [[@LINE+1]]:1: warning: invalid instruction encoding
 0x34,0x12,0x7f,0xbc
 
 # W32: v_dual_add_f32 v5, 0xaf123456, v2 :: v_dual_fmaak_f32 v6, v3, v1, 0xaf123456 ; encoding: [0xff,0x04,0x02,0xc9,0x03,0x03,0x06,0x05,0x56,0x34,0x12,0xaf]
 # W64: [[@LINE+1]]:1: warning: invalid instruction encoding
 0xff,0x04,0x02,0xc9,0x03,0x03,0x06,0x05,0x56,0x34,0x12,0xaf
+
+# GFX11: v_swap_b16 v5.h, s1/*Invalid register, operand has 'VGPR_16_Lo128' register class*/ ; encoding: [0x01,0xcc,0x0a,0x7f]
+# GFX12: v_swap_b16 v5.h, s1/*Invalid register, operand has 'VGPR_16_Lo128' register class*/ ; encoding: [0x01,0xcc,0x0a,0x7f]
+0x01,0xcc,0x0a,0x7f
+
+# GFX11: v_swap_b16 v5.h, 0x3c00/*Invalid immediate*/ ; encoding: [0x00,0xcc,0x0a,0x7f]
+# GFX12: v_swap_b16 v5.h, 0x3c00/*Invalid immediate*/ ; encoding: [0x00,0xcc,0x0a,0x7f]
+0xf2,0xcc,0x0a,0x7f
+
+# GFX11: v_swap_b16 v5.h, 0x78563412/*Invalid immediate*/ ; encoding: [0x12,0xcc,0x0a,0x7f]
+# GFX12: v_swap_b16 v5.h, 0x78563412/*Invalid immediate*/ ; encoding: [0x12,0xcc,0x0a,0x7f]
+0xff,0xcc,0x0a,0x7f,0x12,0x34,0x56,0x78
 
 # W32: v_wmma_f32_16x16x16_f16 v[16:23], v[0:7], v[8:15], v[16:23] ; encoding: [0x10,0x40,0x40,0xcc,0x00,0x11,0x42,0x1c]
 # W64: v_wmma_f32_16x16x16_f16 v[16:19], v[0:7], v[8:15], v[16:19] ; encoding: [0x10,0x40,0x40,0xcc,0x00,0x11,0x42,0x1c]
@@ -39,11 +52,11 @@
 0x10,0x40,0x40,0xcc,0x00,0x11,0x02,0x18 # src2 sgpr0
 
 # this is ds_add_f32 with gds bit which is not valid on gfx12+
-# GFX12: [[@LINE+1]]:1: warning: invalid instruction encoding
+# GFX12-ERR: [[@LINE+1]]:1: warning: invalid instruction encoding
 0x00,0x00,0x56,0xd8,0x00,0x01,0x00,0x00
 
 # this is image_msaa_load where samp field for gfx12 VSAMPLE is not all zeros
-# GFX12: [[@LINE+1]]:1: warning: invalid instruction encoding
+# GFX12-ERR: [[@LINE+1]]:1: warning: invalid instruction encoding
 0x06,0x00,0x46,0xe4,0x01,0x10,0x80,0x00,0x05,0x06,0x07,0x00
 
 # This is ds_read_b32 with gds bit which is not valid on gfx90a.

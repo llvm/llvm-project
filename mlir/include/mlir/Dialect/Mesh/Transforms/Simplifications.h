@@ -38,7 +38,7 @@ namespace mesh {
 // the algebraic structure.
 template <typename AlgebraicOp>
 void populateAllReduceEndomorphismSimplificationPatterns(
-    RewritePatternSet &patterns, Partial reduction) {
+    RewritePatternSet &patterns, ReductionKind reduction) {
   auto getEndomorphismOpOperand = [](Operation *op) {
     auto allReduceOp = llvm::cast<AllReduceOp>(op);
     return &allReduceOp.getInputMutable();

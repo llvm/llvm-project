@@ -129,7 +129,7 @@ public:
     return *this;
   }
 
-  _LIBCPP_HIDE_FROM_ABI decltype(auto) operator++(int) {
+  _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator++(int) {
     _LIBCPP_ASSERT_UNCATEGORIZED(__count_ > 0, "Iterator already at or past end.");
     --__count_;
 #  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
@@ -249,7 +249,7 @@ public:
     return __rhs.__count_ <=> __lhs.__count_;
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr iter_rvalue_reference_t<_Iter>
+  _LIBCPP_HIDE_FROM_ABI friend constexpr decltype(auto)
   iter_move(const counted_iterator& __i) noexcept(noexcept(ranges::iter_move(__i.__current_)))
     requires input_iterator<_Iter>
   {

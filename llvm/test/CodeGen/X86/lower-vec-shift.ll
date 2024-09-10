@@ -258,8 +258,8 @@ define <8 x i32> @test10(ptr %a) {
 define <16 x i16> @test11(<16 x i16> %a) {
 ; SSE-LABEL: test11:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [2,8,2,2,2,8,8,8]
+; SSE-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 # [8,8,8,2,2,2,8,2]
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: test11:
@@ -276,7 +276,7 @@ define <16 x i16> @test11(<16 x i16> %a) {
 ;
 ; AVX2-LABEL: test11:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; AVX2-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # [2,8,2,2,2,8,8,8,8,8,8,2,2,2,8,2]
 ; AVX2-NEXT:    retq
   %lshr = shl <16 x i16> %a, <i16 1, i16 3, i16 1, i16 1, i16 1, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 1, i16 1, i16 1, i16 3, i16 1>
   ret <16 x i16> %lshr

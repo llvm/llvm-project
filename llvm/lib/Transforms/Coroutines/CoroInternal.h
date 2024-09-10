@@ -12,6 +12,7 @@
 #define LLVM_LIB_TRANSFORMS_COROUTINES_COROINTERNAL_H
 
 #include "CoroInstr.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/IRBuilder.h"
 
 namespace llvm {
@@ -25,17 +26,24 @@ bool declaresIntrinsics(const Module &M,
                         const std::initializer_list<StringRef>);
 void replaceCoroFree(CoroIdInst *CoroId, bool Elide);
 
+/// Replaces all @llvm.coro.alloc intrinsics calls associated with a given
+/// call @llvm.coro.id instruction with boolean value false.
+void suppressCoroAllocs(CoroIdInst *CoroId);
+/// Replaces CoroAllocs with boolean value false.
+void suppressCoroAllocs(LLVMContext &Context,
+                        ArrayRef<CoroAllocInst *> CoroAllocs);
+
 /// Attempts to rewrite the location operand of debug intrinsics in terms of
 /// the coroutine frame pointer, folding pointer offsets into the DIExpression
 /// of the intrinsic.
-/// If the frame pointer is an Argument, store it into an alloca if
-/// OptimizeFrame is false.
+/// If the frame pointer is an Argument, store it into an alloca to enhance the
+/// debugability.
 void salvageDebugInfo(
     SmallDenseMap<Argument *, AllocaInst *, 4> &ArgToAllocaMap,
-    DbgVariableIntrinsic &DVI, bool OptimizeFrame, bool IsEntryPoint);
+    DbgVariableIntrinsic &DVI, bool IsEntryPoint);
 void salvageDebugInfo(
-    SmallDenseMap<Argument *, AllocaInst *, 4> &ArgToAllocaMap, DPValue &DPV,
-    bool OptimizeFrame, bool UseEntryValue);
+    SmallDenseMap<Argument *, AllocaInst *, 4> &ArgToAllocaMap,
+    DbgVariableRecord &DVR, bool UseEntryValue);
 
 // Keeps data and helper functions for lowering coroutine intrinsics.
 struct LowererBase {
@@ -46,7 +54,7 @@ struct LowererBase {
   ConstantPointerNull *const NullPtr;
 
   LowererBase(Module &M);
-  Value *makeSubFnCall(Value *Arg, int Index, Instruction *InsertPt);
+  CallInst *makeSubFnCall(Value *Arg, int Index, Instruction *InsertPt);
 };
 
 enum class ABI {
@@ -83,6 +91,8 @@ struct LLVM_LIBRARY_VISIBILITY Shape {
   SmallVector<CoroAlignInst *, 2> CoroAligns;
   SmallVector<AnyCoroSuspendInst *, 4> CoroSuspends;
   SmallVector<CallInst*, 2> SwiftErrorOps;
+  SmallVector<CoroAwaitSuspendInst *, 4> CoroAwaitSuspends;
+  SmallVector<CallInst *, 2> SymmetricTransfers;
 
   // Field indexes for special fields in the switch lowering.
   struct SwitchFieldIndex {
@@ -272,9 +282,10 @@ struct LLVM_LIBRARY_VISIBILITY Shape {
 
 bool defaultMaterializable(Instruction &V);
 void buildCoroutineFrame(
-    Function &F, Shape &Shape,
+    Function &F, Shape &Shape, TargetTransformInfo &TTI,
     const std::function<bool(Instruction &)> &MaterializableCallback);
 CallInst *createMustTailCall(DebugLoc Loc, Function *MustTailCallFn,
+                             TargetTransformInfo &TTI,
                              ArrayRef<Value *> Arguments, IRBuilder<> &);
 } // End namespace coro.
 } // End namespace llvm

@@ -10,9 +10,10 @@
 // DEFINE: %{compile} = mlir-opt %s --sparsifier="%{sparsifier_opts}"
 // DEFINE: %{compile_sve} = mlir-opt %s --sparsifier="%{sparsifier_opts_sve}"
 // DEFINE: %{run_libs} = -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils
-// DEFINE: %{run_opts} = -e entry -entry-point-result=void
+// DEFINE: %{run_libs_sve} = -shared-libs=%native_mlir_runner_utils,%native_mlir_c_runner_utils
+// DEFINE: %{run_opts} = -e main -entry-point-result=void
 // DEFINE: %{run} = mlir-cpu-runner %{run_opts} %{run_libs}
-// DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs}
+// DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs_sve}
 //
 // DEFINE: %{env} =
 //--------------------------------------------------------------------------------------------------
@@ -49,7 +50,7 @@ module {
   //
   // Main driver.
   //
-  func.func @entry() {
+  func.func @main() {
     // Setup two sparse vectors.
     %d1 = arith.constant sparse<
         [ [0], [1], [22], [23], [1022] ], [1.0, 2.0, 3.0, 4.0, 5.0]
@@ -59,6 +60,30 @@ module {
     > : tensor<1024xf32>
     %s1 = sparse_tensor.convert %d1 : tensor<1024xf32> to tensor<1024xf32, #SparseVector>
     %s2 = sparse_tensor.convert %d2 : tensor<1024xf32> to tensor<1024xf32, #SparseVector>
+
+    //
+    // Verify the inputs.
+    //
+    // CHECK:      ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 5
+    // CHECK-NEXT: dim = ( 1024 )
+    // CHECK-NEXT: lvl = ( 1024 )
+    // CHECK-NEXT: pos[0] : ( 0, 5 )
+    // CHECK-NEXT: crd[0] : ( 0, 1, 22, 23, 1022 )
+    // CHECK-NEXT: values : ( 1, 2, 3, 4, 5 )
+    // CHECK-NEXT: ----
+    //
+    // CHECK:      ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 3
+    // CHECK-NEXT: dim = ( 1024 )
+    // CHECK-NEXT: lvl = ( 1024 )
+    // CHECK-NEXT: pos[0] : ( 0, 3 )
+    // CHECK-NEXT: crd[0] : ( 22, 1022, 1023 )
+    // CHECK-NEXT: values : ( 6, 7, 8 )
+    // CHECK-NEXT: ----
+    //
+    sparse_tensor.print %s1 : tensor<1024xf32, #SparseVector>
+    sparse_tensor.print %s2 : tensor<1024xf32, #SparseVector>
 
     // Call the kernel and verify the output.
     //
@@ -73,17 +98,8 @@ module {
     %1 = tensor.extract %0[] : tensor<f32>
     vector.print %1 : f32
 
-    // Print number of entries in the sparse vectors.
-    //
-    // CHECK: 5
-    // CHECK: 3
-    //
-    %noe1 = sparse_tensor.number_of_entries %s1 : tensor<1024xf32, #SparseVector>
-    %noe2 = sparse_tensor.number_of_entries %s2 : tensor<1024xf32, #SparseVector>
-    vector.print %noe1 : index
-    vector.print %noe2 : index
-
     // Release the resources.
+    bufferization.dealloc_tensor %0 : tensor<f32>
     bufferization.dealloc_tensor %s1 : tensor<1024xf32, #SparseVector>
     bufferization.dealloc_tensor %s2 : tensor<1024xf32, #SparseVector>
 

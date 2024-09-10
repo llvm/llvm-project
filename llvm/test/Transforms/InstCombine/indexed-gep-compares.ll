@@ -73,8 +73,8 @@ define ptr @test3_no_inbounds1(ptr %A, i32 %Offset) {
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
 ; CHECK-NEXT:    [[RHS:%.*]] = phi ptr [ [[RHS_NEXT:%.*]], [[BB]] ], [ [[TMP]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[LHS:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 100
-; CHECK-NEXT:    [[RHS_NEXT]] = getelementptr inbounds i32, ptr [[RHS]], i32 1
+; CHECK-NEXT:    [[LHS:%.*]] = getelementptr inbounds i8, ptr [[A]], i32 400
+; CHECK-NEXT:    [[RHS_NEXT]] = getelementptr inbounds i8, ptr [[RHS]], i32 4
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ult ptr [[LHS]], [[RHS]]
 ; CHECK-NEXT:    br i1 [[COND]], label [[BB2:%.*]], label [[BB]]
 ; CHECK:       bb2:
@@ -102,8 +102,8 @@ define ptr @test3_no_inbounds2(ptr %A, i32 %Offset) {
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
 ; CHECK-NEXT:    [[RHS:%.*]] = phi ptr [ [[RHS_NEXT:%.*]], [[BB]] ], [ [[TMP]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[LHS:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 100
-; CHECK-NEXT:    [[RHS_NEXT]] = getelementptr i32, ptr [[RHS]], i32 1
+; CHECK-NEXT:    [[LHS:%.*]] = getelementptr inbounds i8, ptr [[A]], i32 400
+; CHECK-NEXT:    [[RHS_NEXT]] = getelementptr i8, ptr [[RHS]], i32 4
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ult ptr [[LHS]], [[RHS]]
 ; CHECK-NEXT:    br i1 [[COND]], label [[BB2:%.*]], label [[BB]]
 ; CHECK:       bb2:
@@ -131,8 +131,8 @@ define ptr @test3_no_inbounds3(ptr %A, i32 %Offset) {
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
 ; CHECK-NEXT:    [[RHS:%.*]] = phi ptr [ [[RHS_NEXT:%.*]], [[BB]] ], [ [[TMP]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[LHS:%.*]] = getelementptr i32, ptr [[A]], i32 100
-; CHECK-NEXT:    [[RHS_NEXT]] = getelementptr inbounds i32, ptr [[RHS]], i32 1
+; CHECK-NEXT:    [[LHS:%.*]] = getelementptr i8, ptr [[A]], i32 400
+; CHECK-NEXT:    [[RHS_NEXT]] = getelementptr inbounds i8, ptr [[RHS]], i32 4
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ult ptr [[LHS]], [[RHS]]
 ; CHECK-NEXT:    br i1 [[COND]], label [[BB2:%.*]], label [[BB]]
 ; CHECK:       bb2:
@@ -292,7 +292,7 @@ define i1 @test7() {
 ; CHECK-NEXT:    [[CMP:%.*]] = phi i1 [ false, [[ENTRY:%.*]] ], [ true, [[BB7]] ]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[BB10:%.*]], label [[BB7]]
 ; CHECK:       bb10:
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   br label %bb7
@@ -318,7 +318,7 @@ define i1 @test8(ptr %in, i64 %offset) {
 ; CHECK-NEXT:    [[GEPI8:%.*]] = getelementptr inbounds i8, ptr [[CASTI8]], i32 [[TMP1]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[LD]] to i32
 ; CHECK-NEXT:    [[PTRCAST:%.*]] = inttoptr i32 [[TMP2]] to ptr
-; CHECK-NEXT:    [[GEPI32:%.*]] = getelementptr inbounds ptr, ptr [[PTRCAST]], i32 1
+; CHECK-NEXT:    [[GEPI32:%.*]] = getelementptr inbounds i8, ptr [[PTRCAST]], i32 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[GEPI32]], [[GEPI8]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -335,7 +335,7 @@ entry:
 define void @test_zero_offset_cycle(ptr %arg) {
 ; CHECK-LABEL: @test_zero_offset_cycle(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds { i64, i64 }, ptr [[ARG:%.*]], i32 0, i32 1
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[ARG:%.*]], i32 8
 ; CHECK-NEXT:    [[GEP_INT:%.*]] = ptrtoint ptr [[GEP]] to i32
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:

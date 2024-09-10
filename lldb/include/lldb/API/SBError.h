@@ -77,6 +77,7 @@ protected:
   friend class SBBreakpointName;
   friend class SBCommandReturnObject;
   friend class SBCommunication;
+  friend class SBSaveCoreOptions;
   friend class SBData;
   friend class SBDebugger;
   friend class SBFile;
@@ -96,7 +97,7 @@ protected:
   friend class lldb_private::ScriptInterpreter;
   friend class lldb_private::python::SWIGBridge;
 
-  SBError(const lldb_private::Status &error);
+  SBError(lldb_private::Status &&error);
 
   lldb_private::Status *get();
 
@@ -106,7 +107,7 @@ protected:
 
   lldb_private::Status &ref();
 
-  void SetError(const lldb_private::Status &lldb_error);
+  void SetError(lldb_private::Status &&lldb_error);
 
 private:
   std::unique_ptr<lldb_private::Status> m_opaque_up;

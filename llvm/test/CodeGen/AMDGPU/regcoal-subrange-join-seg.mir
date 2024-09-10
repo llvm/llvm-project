@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -run-pass register-coalescer -o - %s | FileCheck --check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -run-pass register-coalescer -o - %s | FileCheck --check-prefix=GCN %s
 # REQUIRES: asserts
 #
 # This test will provoke a Couldn't join subrange unreachable without the

@@ -1,4 +1,4 @@
-﻿"""
+"""
 Test that SBProcess.LoadImageUsingPaths uses RTLD_LAZY
 """
 
@@ -62,4 +62,4 @@ class LoadUsingLazyBind(TestBase):
         frame = thread.GetFrameAtIndex(0)
         val = frame.EvaluateExpression("f1()")
         self.assertTrue(val.IsValid())
-        self.assertEquals(val.GetValueAsSigned(-1), 5)
+        self.assertEqual(val.GetValueAsSigned(-1), 5)

@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -mcpu=gfx908 -o - -run-pass si-fix-sgpr-copies -verify-machineinstrs %s | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx908 -o - -run-pass si-fix-sgpr-copies -verify-machineinstrs %s | FileCheck -check-prefix=GCN %s
 
 # GCN-LABEL: fold_acc_copy_into_valu
 # GCN: [[COPY:%[0-9]+]]:vgpr_32 = COPY %0.sub0

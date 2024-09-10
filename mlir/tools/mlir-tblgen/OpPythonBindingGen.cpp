@@ -31,7 +31,6 @@ constexpr const char *fileHeader = R"Py(
 
 from ._ods_common import _cext as _ods_cext
 from ._ods_common import (
-    SubClassValueT as _SubClassValueT,
     equally_sized_accessor as _ods_equally_sized_accessor,
     get_default_loc_context as _ods_get_default_loc_context,
     get_op_result_or_op_results as _get_op_result_or_op_results,
@@ -52,8 +51,6 @@ constexpr const char *dialectClassTemplate = R"Py(
 @_ods_cext.register_dialect
 class _Dialect(_ods_ir.Dialect):
   DIALECT_NAMESPACE = "{0}"
-  pass
-
 )Py";
 
 constexpr const char *dialectExtensionTemplate = R"Py(
@@ -142,13 +139,14 @@ constexpr const char *opOneVariadicTemplate = R"Py(
 /// First part of the template for equally-sized variadic group accessor:
 ///   {0} is the name of the accessor;
 ///   {1} is either 'operand' or 'result';
-///   {2} is the total number of variadic groups;
-///   {3} is the number of non-variadic groups preceding the current group;
-///   {3} is the number of variadic groups preceding the current group.
+///   {2} is the total number of non-variadic groups;
+///   {3} is the total number of variadic groups;
+///   {4} is the number of non-variadic groups preceding the current group;
+///   {5} is the number of variadic groups preceding the current group.
 constexpr const char *opVariadicEqualPrefixTemplate = R"Py(
   @builtins.property
   def {0}(self):
-    start, pg = _ods_equally_sized_accessor(operation.{1}s, {2}, {3}, {4}))Py";
+    start, elements_per_group = _ods_equally_sized_accessor(self.operation.{1}s, {2}, {3}, {4}, {5}))Py";
 
 /// Second part of the template for equally-sized case, accessing a single
 /// element:
@@ -161,7 +159,7 @@ constexpr const char *opVariadicEqualSimpleTemplate = R"Py(
 /// group:
 ///   {0} is either 'operand' or 'result'.
 constexpr const char *opVariadicEqualVariadicTemplate = R"Py(
-    return self.operation.{0}s[start:start + pg]
+    return self.operation.{0}s[start:start + elements_per_group]
 )Py";
 
 /// Template for an attribute-sized group accessor:
@@ -327,8 +325,7 @@ static std::string attrSizedTraitForKind(const char *kind) {
 /// `operand` or `result` and is used verbatim in the emitted code.
 static void emitElementAccessors(
     const Operator &op, raw_ostream &os, const char *kind,
-    llvm::function_ref<unsigned(const Operator &)> getNumVariableLength,
-    llvm::function_ref<int(const Operator &)> getNumElements,
+    unsigned numVariadicGroups, unsigned numElements,
     llvm::function_ref<const NamedTypeConstraint &(const Operator &, int)>
         getElement) {
   assert(llvm::is_contained(
@@ -342,14 +339,12 @@ static void emitElementAccessors(
                     llvm::StringRef(kind).drop_front());
   std::string attrSizedTrait = attrSizedTraitForKind(kind);
 
-  unsigned numVariableLength = getNumVariableLength(op);
-
   // If there is only one variable-length element group, its size can be
   // inferred from the total number of elements. If there are none, the
   // generation is straightforward.
-  if (numVariableLength <= 1) {
+  if (numVariadicGroups <= 1) {
     bool seenVariableLength = false;
-    for (int i = 0, e = getNumElements(op); i < e; ++i) {
+    for (unsigned i = 0; i < numElements; ++i) {
       const NamedTypeConstraint &element = getElement(op, i);
       if (element.isVariableLength())
         seenVariableLength = true;
@@ -358,12 +353,10 @@ static void emitElementAccessors(
       if (element.isVariableLength()) {
         os << llvm::formatv(element.isOptional() ? opOneOptionalTemplate
                                                  : opOneVariadicTemplate,
-                            sanitizeName(element.name), kind,
-                            getNumElements(op), i);
+                            sanitizeName(element.name), kind, numElements, i);
       } else if (seenVariableLength) {
         os << llvm::formatv(opSingleAfterVariableTemplate,
-                            sanitizeName(element.name), kind,
-                            getNumElements(op), i);
+                            sanitizeName(element.name), kind, numElements, i);
       } else {
         os << llvm::formatv(opSingleTemplate, sanitizeName(element.name), kind,
                             i);
@@ -374,14 +367,25 @@ static void emitElementAccessors(
 
   // Handle the operations where variadic groups have the same size.
   if (op.getTrait(sameSizeTrait)) {
+    // Count the number of simple elements
+    unsigned numSimpleLength = 0;
+    for (unsigned i = 0; i < numElements; ++i) {
+      const NamedTypeConstraint &element = getElement(op, i);
+      if (!element.isVariableLength()) {
+        ++numSimpleLength;
+      }
+    }
+
+    // Generate the accessors
     int numPrecedingSimple = 0;
     int numPrecedingVariadic = 0;
-    for (int i = 0, e = getNumElements(op); i < e; ++i) {
+    for (unsigned i = 0; i < numElements; ++i) {
       const NamedTypeConstraint &element = getElement(op, i);
       if (!element.name.empty()) {
         os << llvm::formatv(opVariadicEqualPrefixTemplate,
-                            sanitizeName(element.name), kind, numVariableLength,
-                            numPrecedingSimple, numPrecedingVariadic);
+                            sanitizeName(element.name), kind, numSimpleLength,
+                            numVariadicGroups, numPrecedingSimple,
+                            numPrecedingVariadic);
         os << llvm::formatv(element.isVariableLength()
                                 ? opVariadicEqualVariadicTemplate
                                 : opVariadicEqualSimpleTemplate,
@@ -399,7 +403,7 @@ static void emitElementAccessors(
   // provided as an attribute. For non-variadic elements, make sure to return
   // an element rather than a singleton container.
   if (op.getTrait(attrSizedTrait)) {
-    for (int i = 0, e = getNumElements(op); i < e; ++i) {
+    for (unsigned i = 0; i < numElements; ++i) {
       const NamedTypeConstraint &element = getElement(op, i);
       if (element.name.empty())
         continue;
@@ -430,20 +434,14 @@ static const NamedTypeConstraint &getResult(const Operator &op, int i) {
 
 /// Emits accessors to Op operands.
 static void emitOperandAccessors(const Operator &op, raw_ostream &os) {
-  auto getNumVariableLengthOperands = [](const Operator &oper) {
-    return oper.getNumVariableLengthOperands();
-  };
-  emitElementAccessors(op, os, "operand", getNumVariableLengthOperands,
-                       getNumOperands, getOperand);
+  emitElementAccessors(op, os, "operand", op.getNumVariableLengthOperands(),
+                       getNumOperands(op), getOperand);
 }
 
 /// Emits accessors Op results.
 static void emitResultAccessors(const Operator &op, raw_ostream &os) {
-  auto getNumVariableLengthResults = [](const Operator &oper) {
-    return oper.getNumVariableLengthResults();
-  };
-  emitElementAccessors(op, os, "result", getNumVariableLengthResults,
-                       getNumResults, getResult);
+  emitElementAccessors(op, os, "result", op.getNumVariableLengthResults(),
+                       getNumResults(op), getResult);
 }
 
 /// Emits accessors to Op attributes.
@@ -460,7 +458,7 @@ static void emitAttributeAccessors(const Operator &op, raw_ostream &os) {
     std::string sanitizedName = sanitizeName(namedAttr.name);
 
     // Unit attributes are handled specially.
-    if (namedAttr.attr.getStorageType().trim().equals("::mlir::UnitAttr")) {
+    if (namedAttr.attr.getStorageType().trim() == "::mlir::UnitAttr") {
       os << llvm::formatv(unitAttributeGetterTemplate, sanitizedName,
                           namedAttr.name);
       os << llvm::formatv(unitAttributeSetterTemplate, sanitizedName,
@@ -534,7 +532,7 @@ constexpr const char *multiResultAppendTemplate = "results.extend({0})";
 /// there is no method registered to make it an Attribute.
 constexpr const char *initAttributeWithBuilderTemplate =
     R"Py(attributes["{1}"] = ({0} if (
-    issubclass(type({0}), _ods_ir.Attribute) or
+    isinstance({0}, _ods_ir.Attribute) or
     not _ods_ir.AttrBuilder.contains('{2}')) else
       _ods_ir.AttrBuilder.get('{2}')({0}, context=_ods_context)))Py";
 
@@ -547,7 +545,7 @@ constexpr const char *initAttributeWithBuilderTemplate =
 /// there is no method registered to make it an Attribute.
 constexpr const char *initOptionalAttributeWithBuilderTemplate =
     R"Py(if {0} is not None: attributes["{1}"] = ({0} if (
-        issubclass(type({0}), _ods_ir.Attribute) or
+        isinstance({0}, _ods_ir.Attribute) or
         not _ods_ir.AttrBuilder.contains('{2}')) else
           _ods_ir.AttrBuilder.get('{2}')({0}, context=_ods_context)))Py";
 
@@ -671,7 +669,7 @@ populateBuilderLinesAttr(const Operator &op,
       continue;
 
     // Unit attributes are handled specially.
-    if (attribute->attr.getStorageType().trim().equals("::mlir::UnitAttr")) {
+    if (attribute->attr.getStorageType().trim() == "::mlir::UnitAttr") {
       builderLines.push_back(llvm::formatv(initUnitAttributeTemplate,
                                            attribute->name, argNames[i]));
       continue;
@@ -1007,14 +1005,13 @@ static void emitValueBuilder(const Operator &op,
       });
   std::string nameWithoutDialect =
       op.getOperationName().substr(op.getOperationName().find('.') + 1);
-  os << llvm::formatv(valueBuilderTemplate, sanitizeName(nameWithoutDialect),
-                      op.getCppClassName(),
-                      llvm::join(valueBuilderParams, ", "),
-                      llvm::join(opBuilderArgs, ", "),
-                      (op.getNumResults() > 1
-                           ? "_Sequence[_SubClassValueT]"
-                           : (op.getNumResults() > 0 ? "_SubClassValueT"
-                                                     : "_ods_ir.Operation")));
+  os << llvm::formatv(
+      valueBuilderTemplate, sanitizeName(nameWithoutDialect),
+      op.getCppClassName(), llvm::join(valueBuilderParams, ", "),
+      llvm::join(opBuilderArgs, ", "),
+      (op.getNumResults() > 1
+           ? "_Sequence[_ods_ir.Value]"
+           : (op.getNumResults() > 0 ? "_ods_ir.Value" : "_ods_ir.Operation")));
 }
 
 /// Emits bindings for a specific Op to the given output stream.

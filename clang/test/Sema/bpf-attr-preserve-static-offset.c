@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -ast-dump -triple bpf-pc-linux-gnu %s | FileCheck %s
+// RUN: %clang_cc1 -ast-dump -triple bpf-pc-linux-gnu %s | FileCheck %s
 
 // The 'preserve_static_offset' attribute should be propagated to
 // inline declarations (foo's 'b', 'bb', 'c' but not 'd').

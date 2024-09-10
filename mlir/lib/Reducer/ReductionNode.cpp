@@ -74,8 +74,8 @@ ArrayRef<ReductionNode *> ReductionNode::generateNewVariants() {
   // the above example, we split the range {4, 9} into {4, 6}, {6, 9}, and
   // create two variants with range {{1, 3}, {4, 6}} and {{1, 3}, {6, 9}}. The
   // final ranges vector will be {{1, 3}, {4, 6}, {6, 9}}.
-  auto maxElement = std::max_element(
-      ranges.begin(), ranges.end(), [](const Range &lhs, const Range &rhs) {
+  auto maxElement =
+      llvm::max_element(ranges, [](const Range &lhs, const Range &rhs) {
         return (lhs.second - lhs.first) > (rhs.second - rhs.first);
       });
 

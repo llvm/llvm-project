@@ -91,8 +91,6 @@ bool AArch64O0PreLegalizerCombinerImpl::tryCombineAll(MachineInstr &MI) const {
 
   unsigned Opc = MI.getOpcode();
   switch (Opc) {
-  case TargetOpcode::G_CONCAT_VECTORS:
-    return Helper.tryCombineConcatVectors(MI);
   case TargetOpcode::G_SHUFFLE_VECTOR:
     return Helper.tryCombineShuffleVector(MI);
   case TargetOpcode::G_MEMCPY_INLINE:
@@ -167,6 +165,10 @@ bool AArch64O0PreLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
   CombinerInfo CInfo(/*AllowIllegalOps*/ true, /*ShouldLegalizeIllegal*/ false,
                      /*LegalizerInfo*/ nullptr, /*EnableOpt*/ false,
                      F.hasOptSize(), F.hasMinSize());
+  // Disable fixed-point iteration in the Combiner. This improves compile-time
+  // at the cost of possibly missing optimizations. See PR#94291 for details.
+  CInfo.MaxIterations = 1;
+
   AArch64O0PreLegalizerCombinerImpl Impl(MF, CInfo, &TPC, *KB,
                                          /*CSEInfo*/ nullptr, RuleConfig, ST);
   return Impl.combineMachineInstrs();

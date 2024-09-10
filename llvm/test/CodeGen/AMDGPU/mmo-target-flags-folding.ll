@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=gfx900 < %s | FileCheck --check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck --check-prefix=GCN %s
 
 ; This is used to crash due to mismatch of MMO target flags when folding
 ; a LOAD SDNodes with different flags.

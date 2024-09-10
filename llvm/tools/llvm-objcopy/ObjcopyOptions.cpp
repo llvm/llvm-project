@@ -10,10 +10,12 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/ObjCopy/CommonConfig.h"
 #include "llvm/ObjCopy/ConfigManager.h"
 #include "llvm/ObjCopy/MachO/MachOConfig.h"
+#include "llvm/Object/Binary.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/CRC.h"
@@ -25,6 +27,7 @@
 
 using namespace llvm;
 using namespace llvm::objcopy;
+using namespace llvm::object;
 using namespace llvm::opt;
 
 namespace {
@@ -254,6 +257,21 @@ parseSetSectionFlagValue(StringRef FlagValue) {
   return SFU;
 }
 
+static Expected<uint8_t> parseVisibilityType(StringRef VisType) {
+  const uint8_t Invalid = 0xff;
+  uint8_t type = StringSwitch<uint8_t>(VisType)
+                     .Case("default", ELF::STV_DEFAULT)
+                     .Case("hidden", ELF::STV_HIDDEN)
+                     .Case("internal", ELF::STV_INTERNAL)
+                     .Case("protected", ELF::STV_PROTECTED)
+                     .Default(Invalid);
+  if (type == Invalid)
+    return createStringError(errc::invalid_argument,
+                             "'%s' is not a valid symbol visibility",
+                             VisType.str().c_str());
+  return type;
+}
+
 namespace {
 struct TargetInfo {
   FileFormat Format;
@@ -299,6 +317,8 @@ static const StringMap<MachineInfo> TargetMap{
     // LoongArch
     {"elf32-loongarch", {ELF::EM_LOONGARCH, false, true}},
     {"elf64-loongarch", {ELF::EM_LOONGARCH, true, true}},
+    // SystemZ
+    {"elf64-s390", {ELF::EM_S390, true, false}},
 };
 
 static Expected<TargetInfo>
@@ -511,7 +531,7 @@ static Expected<NewSymbolInfo> parseNewSymbolInfo(StringRef FlagValue) {
 // ArgValue, loads data from the file, and stores section name and data
 // into the vector of new sections \p NewSections.
 static Error loadNewSectionData(StringRef ArgValue, StringRef OptionName,
-                                std::vector<NewSectionInfo> &NewSections) {
+                                SmallVector<NewSectionInfo, 0> &NewSections) {
   if (!ArgValue.contains('='))
     return createStringError(errc::invalid_argument,
                              "bad format for " + OptionName + ": missing '='");
@@ -532,6 +552,100 @@ static Error loadNewSectionData(StringRef ArgValue, StringRef OptionName,
   return Error::success();
 }
 
+static Expected<int64_t> parseChangeSectionLMA(StringRef ArgValue,
+                                               StringRef OptionName) {
+  StringRef StringValue;
+  if (ArgValue.starts_with("*+")) {
+    StringValue = ArgValue.substr(2);
+  } else if (ArgValue.starts_with("*-")) {
+    StringValue = ArgValue.substr(1);
+  } else if (ArgValue.contains("=")) {
+    return createStringError(errc::invalid_argument,
+                             "bad format for " + OptionName +
+                                 ": changing LMA to a specific value is not "
+                                 "supported. Use *+val or *-val instead");
+  } else if (ArgValue.contains("+") || ArgValue.contains("-")) {
+    return createStringError(errc::invalid_argument,
+                             "bad format for " + OptionName +
+                                 ": changing a specific section LMA is not "
+                                 "supported. Use *+val or *-val instead");
+  }
+  if (StringValue.empty())
+    return createStringError(errc::invalid_argument,
+                             "bad format for " + OptionName +
+                                 ": missing LMA offset");
+
+  auto LMAValue = getAsInteger<int64_t>(StringValue);
+  if (!LMAValue)
+    return createStringError(LMAValue.getError(),
+                             "bad format for " + OptionName + ": value after " +
+                                 ArgValue.slice(0, 2) + " is " + StringValue +
+                                 " when it should be an integer");
+  return *LMAValue;
+}
+
+static Expected<SectionPatternAddressUpdate>
+parseChangeSectionAddr(StringRef ArgValue, StringRef OptionName,
+                       MatchStyle SectionMatchStyle,
+                       function_ref<Error(Error)> ErrorCallback) {
+  SectionPatternAddressUpdate PatternUpdate;
+
+  size_t LastSymbolIndex = ArgValue.find_last_of("+-=");
+  if (LastSymbolIndex == StringRef::npos)
+    return createStringError(errc::invalid_argument,
+                             "bad format for " + OptionName +
+                                 ": argument value " + ArgValue +
+                                 " is invalid. See --help");
+  char UpdateSymbol = ArgValue[LastSymbolIndex];
+
+  StringRef SectionPattern = ArgValue.slice(0, LastSymbolIndex);
+  if (SectionPattern.empty())
+    return createStringError(
+        errc::invalid_argument,
+        "bad format for " + OptionName +
+            ": missing section pattern to apply address change to");
+  if (Error E = PatternUpdate.SectionPattern.addMatcher(NameOrPattern::create(
+          SectionPattern, SectionMatchStyle, ErrorCallback)))
+    return std::move(E);
+
+  StringRef Value = ArgValue.substr(LastSymbolIndex + 1);
+  if (Value.empty()) {
+    switch (UpdateSymbol) {
+    case '+':
+    case '-':
+      return createStringError(errc::invalid_argument,
+                               "bad format for " + OptionName +
+                                   ": missing value of offset after '" +
+                                   std::string({UpdateSymbol}) + "'");
+
+    case '=':
+      return createStringError(errc::invalid_argument,
+                               "bad format for " + OptionName +
+                                   ": missing address value after '='");
+    }
+  }
+  auto AddrValue = getAsInteger<uint64_t>(Value);
+  if (!AddrValue)
+    return createStringError(AddrValue.getError(),
+                             "bad format for " + OptionName + ": value after " +
+                                 std::string({UpdateSymbol}) + " is " + Value +
+                                 " when it should be a 64-bit integer");
+
+  switch (UpdateSymbol) {
+  case '+':
+    PatternUpdate.Update.Kind = AdjustKind::Add;
+    break;
+  case '-':
+    PatternUpdate.Update.Kind = AdjustKind::Subtract;
+    break;
+  case '=':
+    PatternUpdate.Update.Kind = AdjustKind::Set;
+  }
+
+  PatternUpdate.Update.Value = *AddrValue;
+  return PatternUpdate;
+}
+
 // parseObjcopyOptions returns the config and sets the input arguments. If a
 // help flag is set then parseObjcopyOptions will print the help messege and
 // exit.
@@ -550,6 +664,12 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
   unsigned MissingArgumentIndex, MissingArgumentCount;
   llvm::opt::InputArgList InputArgs =
       T.ParseArgs(ArgsArr, MissingArgumentIndex, MissingArgumentCount);
+
+  if (MissingArgumentCount)
+    return createStringError(
+        errc::invalid_argument,
+        "argument to '%s' is missing (expected %d value(s))",
+        InputArgs.getArgString(MissingArgumentIndex), MissingArgumentCount);
 
   if (InputArgs.size() == 0 && DashDash == RawArgsArr.end()) {
     printHelp(T, errs(), ToolType::Objcopy);
@@ -652,12 +772,13 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
             .Case("boot_application",
                   COFF::IMAGE_SUBSYSTEM_WINDOWS_BOOT_APPLICATION)
             .Case("console", COFF::IMAGE_SUBSYSTEM_WINDOWS_CUI)
-            .Case("efi_application", COFF::IMAGE_SUBSYSTEM_EFI_APPLICATION)
-            .Case("efi_boot_service_driver",
-                  COFF::IMAGE_SUBSYSTEM_EFI_BOOT_SERVICE_DRIVER)
+            .Cases("efi_application", "efi-app",
+                   COFF::IMAGE_SUBSYSTEM_EFI_APPLICATION)
+            .Cases("efi_boot_service_driver", "efi-bsd",
+                   COFF::IMAGE_SUBSYSTEM_EFI_BOOT_SERVICE_DRIVER)
             .Case("efi_rom", COFF::IMAGE_SUBSYSTEM_EFI_ROM)
-            .Case("efi_runtime_driver",
-                  COFF::IMAGE_SUBSYSTEM_EFI_RUNTIME_DRIVER)
+            .Cases("efi_runtime_driver", "efi-rtd",
+                   COFF::IMAGE_SUBSYSTEM_EFI_RUNTIME_DRIVER)
             .Case("native", COFF::IMAGE_SUBSYSTEM_NATIVE)
             .Case("posix", COFF::IMAGE_SUBSYSTEM_POSIX_CUI)
             .Case("windows", COFF::IMAGE_SUBSYSTEM_WINDOWS_GUI)
@@ -687,6 +808,7 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
   Config.OutputFormat = StringSwitch<FileFormat>(OutputFormat)
                             .Case("binary", FileFormat::Binary)
                             .Case("ihex", FileFormat::IHex)
+                            .Case("srec", FileFormat::SREC)
                             .Default(FileFormat::Unspecified);
   if (Config.OutputFormat == FileFormat::Unspecified) {
     if (OutputFormat.empty()) {
@@ -717,6 +839,42 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
       return createStringError(errc::invalid_argument, Reason);
   }
 
+  for (const auto *A : InputArgs.filtered(OBJCOPY_compress_sections)) {
+    SmallVector<StringRef, 0> Fields;
+    StringRef(A->getValue()).split(Fields, '=');
+    if (Fields.size() != 2 || Fields[1].empty()) {
+      return createStringError(
+          errc::invalid_argument,
+          A->getSpelling() +
+              ": parse error, not 'section-glob=[none|zlib|zstd]'");
+    }
+
+    auto Type = StringSwitch<DebugCompressionType>(Fields[1])
+                    .Case("zlib", DebugCompressionType::Zlib)
+                    .Case("zstd", DebugCompressionType::Zstd)
+                    .Default(DebugCompressionType::None);
+    if (Type == DebugCompressionType::None && Fields[1] != "none") {
+      return createStringError(
+          errc::invalid_argument,
+          "invalid or unsupported --compress-sections format: %s",
+          A->getValue());
+    }
+
+    auto &P = Config.compressSections.emplace_back();
+    P.second = Type;
+    auto Matcher =
+        NameOrPattern::create(Fields[0], SectionMatchStyle, ErrorCallback);
+    // =none allows overriding a previous =zlib or =zstd. Reject negative
+    // patterns, which would be confusing.
+    if (Matcher && !Matcher->isPositiveMatch()) {
+      return createStringError(
+          errc::invalid_argument,
+          "--compress-sections: negative pattern is unsupported");
+    }
+    if (Error E = P.first.addMatcher(std::move(Matcher)))
+      return std::move(E);
+  }
+
   Config.AddGnuDebugLink = InputArgs.getLastArgValue(OBJCOPY_add_gnu_debuglink);
   // The gnu_debuglink's target is expected to not change or else its CRC would
   // become invalidated and get rejected. We can avoid recalculating the
@@ -731,7 +889,11 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
         llvm::crc32(arrayRefFromStringRef(Debug->getBuffer()));
   }
   Config.SplitDWO = InputArgs.getLastArgValue(OBJCOPY_split_dwo);
+
   Config.SymbolsPrefix = InputArgs.getLastArgValue(OBJCOPY_prefix_symbols);
+  Config.SymbolsPrefixRemove =
+      InputArgs.getLastArgValue(OBJCOPY_remove_symbol_prefix);
+
   Config.AllocSectionsPrefix =
       InputArgs.getLastArgValue(OBJCOPY_prefix_alloc_sections);
   if (auto Arg = InputArgs.getLastArg(OBJCOPY_extract_partition))
@@ -764,6 +926,23 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
       return createStringError(Addr.getError(), "--pad-to: bad number: %s",
                                A->getValue());
     Config.PadTo = *Addr;
+  }
+
+  if (const auto *Arg = InputArgs.getLastArg(OBJCOPY_change_section_lma)) {
+    Expected<int64_t> LMAValue =
+        parseChangeSectionLMA(Arg->getValue(), Arg->getSpelling());
+    if (!LMAValue)
+      return LMAValue.takeError();
+    Config.ChangeSectionLMAValAll = *LMAValue;
+  }
+
+  for (auto *Arg : InputArgs.filtered(OBJCOPY_change_section_address)) {
+    Expected<SectionPatternAddressUpdate> AddressUpdate =
+        parseChangeSectionAddr(Arg->getValue(), Arg->getSpelling(),
+                               SectionMatchStyle, ErrorCallback);
+    if (!AddressUpdate)
+      return AddressUpdate.takeError();
+    Config.ChangeSectionAddress.push_back(*AddressUpdate);
   }
 
   for (auto *Arg : InputArgs.filtered(OBJCOPY_redefine_symbol)) {
@@ -882,6 +1061,10 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
                              ? DiscardType::All
                              : DiscardType::Locals;
   }
+
+  ELFConfig.VerifyNoteSections = InputArgs.hasFlag(
+      OBJCOPY_verify_note_sections, OBJCOPY_no_verify_note_sections, true);
+
   Config.OnlyKeepDebug = InputArgs.hasArg(OBJCOPY_only_keep_debug);
   ELFConfig.KeepFileSymbols = InputArgs.hasArg(OBJCOPY_keep_file_symbols);
   MachOConfig.KeepUndefined = InputArgs.hasArg(OBJCOPY_keep_undefined);
@@ -955,12 +1138,48 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
             addSymbolsFromFile(Config.SymbolsToKeep, DC.Alloc, Arg->getValue(),
                                SymbolMatchStyle, ErrorCallback))
       return std::move(E);
+  for (auto *Arg : InputArgs.filtered(OBJCOPY_skip_symbol))
+    if (Error E = Config.SymbolsToSkip.addMatcher(NameOrPattern::create(
+            Arg->getValue(), SymbolMatchStyle, ErrorCallback)))
+      return std::move(E);
+  for (auto *Arg : InputArgs.filtered(OBJCOPY_skip_symbols))
+    if (Error E =
+            addSymbolsFromFile(Config.SymbolsToSkip, DC.Alloc, Arg->getValue(),
+                               SymbolMatchStyle, ErrorCallback))
+      return std::move(E);
   for (auto *Arg : InputArgs.filtered(OBJCOPY_add_symbol)) {
     Expected<NewSymbolInfo> SymInfo = parseNewSymbolInfo(Arg->getValue());
     if (!SymInfo)
       return SymInfo.takeError();
 
     Config.SymbolsToAdd.push_back(*SymInfo);
+  }
+  for (auto *Arg : InputArgs.filtered(OBJCOPY_set_symbol_visibility)) {
+    if (!StringRef(Arg->getValue()).contains('='))
+      return createStringError(errc::invalid_argument,
+                               "bad format for --set-symbol-visibility");
+    auto [Sym, Visibility] = StringRef(Arg->getValue()).split('=');
+    Expected<uint8_t> Type = parseVisibilityType(Visibility);
+    if (!Type)
+      return Type.takeError();
+    ELFConfig.SymbolsToSetVisibility.emplace_back(NameMatcher(), *Type);
+    if (Error E = ELFConfig.SymbolsToSetVisibility.back().first.addMatcher(
+            NameOrPattern::create(Sym, SymbolMatchStyle, ErrorCallback)))
+      return std::move(E);
+  }
+  for (auto *Arg : InputArgs.filtered(OBJCOPY_set_symbols_visibility)) {
+    if (!StringRef(Arg->getValue()).contains('='))
+      return createStringError(errc::invalid_argument,
+                               "bad format for --set-symbols-visibility");
+    auto [File, Visibility] = StringRef(Arg->getValue()).split('=');
+    Expected<uint8_t> Type = parseVisibilityType(Visibility);
+    if (!Type)
+      return Type.takeError();
+    ELFConfig.SymbolsToSetVisibility.emplace_back(NameMatcher(), *Type);
+    if (Error E =
+            addSymbolsFromFile(ELFConfig.SymbolsToSetVisibility.back().first,
+                               DC.Alloc, File, SymbolMatchStyle, ErrorCallback))
+      return std::move(E);
   }
 
   ELFConfig.AllowBrokenLinks = InputArgs.hasArg(OBJCOPY_allow_broken_links);
@@ -1146,6 +1365,16 @@ objcopy::parseInstallNameToolOptions(ArrayRef<const char *> ArgsArr) {
         "llvm-install-name-tool expects a single input file");
   Config.InputFilename = Positional[0];
   Config.OutputFilename = Positional[0];
+
+  Expected<OwningBinary<Binary>> BinaryOrErr =
+      createBinary(Config.InputFilename);
+  if (!BinaryOrErr)
+    return createFileError(Config.InputFilename, BinaryOrErr.takeError());
+  auto *Binary = (*BinaryOrErr).getBinary();
+  if (!Binary->isMachO() && !Binary->isMachOUniversalBinary())
+    return createStringError(errc::invalid_argument,
+                             "input file: %s is not a Mach-O file",
+                             Config.InputFilename.str().c_str());
 
   DC.CopyConfigs.push_back(std::move(ConfigMgr));
   return std::move(DC);

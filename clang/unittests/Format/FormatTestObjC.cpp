@@ -31,6 +31,14 @@ protected:
   _verifyIncompleteFormat(__FILE__, __LINE__, __VA_ARGS__)
 #define verifyFormat(...) _verifyFormat(__FILE__, __LINE__, __VA_ARGS__)
 
+TEST(FormatTestObjCStyle, DetectsObjCInStdin) {
+  auto Style = getStyle("LLVM", "<stdin>", "none",
+                        "@interface\n"
+                        "- (id)init;");
+  ASSERT_TRUE((bool)Style);
+  EXPECT_EQ(FormatStyle::LK_ObjC, Style->Language);
+}
+
 TEST(FormatTestObjCStyle, DetectsObjCInHeaders) {
   auto Style = getStyle("LLVM", "a.h", "none",
                         "@interface\n"
@@ -369,7 +377,7 @@ TEST_F(FormatTestObjC, FormatObjCInterface) {
                "    ddddddddddddd> {\n"
                "}");
 
-  Style.BinPackParameters = false;
+  Style.BinPackParameters = FormatStyle::BPPS_OnePerLine;
   Style.ObjCBinPackProtocolList = FormatStyle::BPS_Auto;
   verifyFormat("@interface eeeeeeeeeeeee () <\n"
                "    eeeeeeeeeeeee,\n"
@@ -403,7 +411,7 @@ TEST_F(FormatTestObjC, FormatObjCInterface) {
                "+ (id)init;\n"
                "@end");
   Style.ColumnLimit = 40;
-  // BinPackParameters should be true by default.
+  // BinPackParameters should be BPPS_BinPack by default.
   verifyFormat("void eeeeeeee(int eeeee, int eeeee,\n"
                "              int eeeee, int eeeee);");
   // ObjCBinPackProtocolList should be BPS_Never by default.
