@@ -539,9 +539,9 @@ define i1 @isKnownNeverNaN_invoke_callsite(ptr %ptr) personality i8 1 {
 ; CHECK:       normal:
 ; CHECK-NEXT:    ret i1 true
 ; CHECK:       unwind:
-; CHECK-NEXT:    [[TMP1:%.*]] = landingpad ptr
+; CHECK-NEXT:    [[TMP1:%.*]] = landingpad { ptr, i8 }
 ; CHECK-NEXT:    cleanup
-; CHECK-NEXT:    resume ptr null
+; CHECK-NEXT:    resume { ptr, i8 } %cleanup
 ;
   %invoke = invoke nofpclass(nan) float %ptr() to label %normal unwind label %unwind
 
@@ -550,8 +550,8 @@ normal:
   ret i1 %ord
 
 unwind:
-  landingpad ptr cleanup
-  resume ptr null
+  %cleanup = landingpad { ptr, i8 } cleanup
+  resume { ptr, i8 } %cleanup
 }
 
 ; This should not fold to false because fmul 0 * inf = nan

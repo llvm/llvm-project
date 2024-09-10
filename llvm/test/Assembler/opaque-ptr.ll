@@ -157,7 +157,7 @@ continue:
   ret void
 
 cleanup:
-  landingpad {}
+  landingpad { ptr, i8 }
     cleanup
   ret void
 }

@@ -401,9 +401,9 @@ define void @terminator_lastuse() personality i32 0 {
 ; CHECK-NEXT:    [[RV:%.*]] = invoke i32 @use_nocapture(ptr [[SRC]])
 ; CHECK-NEXT:    to label [[SUC:%.*]] unwind label [[UNW:%.*]]
 ; CHECK:       unw:
-; CHECK-NEXT:    [[LP:%.*]] = landingpad i32
+; CHECK-NEXT:    [[LP:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:    cleanup
-; CHECK-NEXT:    resume i32 0
+; CHECK-NEXT:    resume { ptr, i32 } zeroinitializer
 ; CHECK:       suc:
 ; CHECK-NEXT:    ret void
 ;
@@ -420,8 +420,8 @@ define void @terminator_lastuse() personality i32 0 {
   %rv = invoke i32 @use_nocapture(ptr %dest)
   to label %suc unwind label %unw
 unw:
-  %lp = landingpad i32 cleanup
-  resume i32 0
+  %lp = landingpad { ptr, i32 } cleanup
+  resume { ptr, i32 } {ptr null, i32 0}
 suc:
   ret void
 }

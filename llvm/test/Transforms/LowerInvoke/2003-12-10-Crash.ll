@@ -15,7 +15,7 @@ invoke_cont.0:		; preds = %then
 			to label %try_exit unwind label %try_catch
 try_catch:		; preds = %invoke_cont.0, %then
 	%__tmp.0 = phi ptr [ null, %invoke_cont.0 ], [ null, %then ]		; <ptr> [#uses=0]
-  %res = landingpad { ptr }
+  %res = landingpad { ptr, i8 }
           cleanup
 	ret void
 try_exit:		; preds = %invoke_cont.0

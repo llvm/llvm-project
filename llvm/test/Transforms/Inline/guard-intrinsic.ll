@@ -30,7 +30,7 @@ entry:
        unwind label %unwind
 
 unwind:
-  %lp = landingpad i32 cleanup
+  %lp = landingpad { ptr, i32 } cleanup
   ret i32 43
 
 normal:

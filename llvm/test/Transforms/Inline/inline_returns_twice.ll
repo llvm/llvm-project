@@ -48,8 +48,8 @@ cont:
   ret i32 %add
 
 lpad:
-  %lp = landingpad i32 cleanup
-  resume i32 %lp
+  %lp = landingpad { ptr, i32 } cleanup
+  resume {ptr, i32} %lp
 }
 
 define i32 @outer3() {
@@ -71,8 +71,8 @@ cont:
   ret i32 %add
 
 lpad:
-  %lp = landingpad i32 cleanup
-  resume i32 %lp
+  %lp = landingpad { ptr, i32 } cleanup
+  resume {ptr, i32} %lp
 }
 
 define i32 @outer4() {

@@ -730,7 +730,7 @@ define void @f.no_personality() personality i8 3 {
 ; CHECK: define void @f.no_personality() personality i8 3
   invoke void @llvm.donothing() to label %normal unwind label %exception
 exception:
-  %cleanup = landingpad i8 cleanup
+  %cleanup = landingpad { ptr, i8 } cleanup
   br label %normal
 normal:
   ret void
@@ -742,7 +742,7 @@ define void @f.personality() personality ptr @f.personality_handler {
 ; CHECK: define void @f.personality() personality ptr @f.personality_handler
   invoke void @llvm.donothing() to label %normal unwind label %exception
 exception:
-  %cleanup = landingpad i32 cleanup
+  %cleanup = landingpad { ptr, i32 } cleanup
   br label %normal
 normal:
   ret void
@@ -1203,12 +1203,12 @@ defaultdest.2:
          to label %defaultdest unwind label %exc
          ; CHECK: to label %defaultdest unwind label %exc
 exc:
-  %cleanup = landingpad i32 cleanup
+  %cleanup = landingpad { ptr, i32 } cleanup
 
-  resume i32 undef
-  ; CHECK: resume i32 undef
-  resume i32 poison
-  ; CHECK: resume i32 poison
+  resume { ptr, i32 } undef
+  ; CHECK: resume { ptr, i32 } undef
+  resume { ptr, i32 } poison
+  ; CHECK: resume { ptr, i32 } poison
   unreachable
   ; CHECK: unreachable
 
@@ -1631,15 +1631,15 @@ define void @instructions.landingpad() personality i32 -2 {
   invoke void @llvm.donothing() to label %proceed unwind label %catch4
 
 catch1:
-  landingpad i32
-  ; CHECK: landingpad i32
+  landingpad { ptr, i32 }
+  ; CHECK: landingpad { ptr, i32 }
              cleanup
              ; CHECK: cleanup
   br label %proceed
 
 catch2:
-  landingpad i32
-  ; CHECK: landingpad i32
+  landingpad { ptr, i32 }
+  ; CHECK: landingpad { ptr, i32 }
              cleanup
              ; CHECK: cleanup
              catch ptr null
@@ -1647,8 +1647,8 @@ catch2:
   br label %proceed
 
 catch3:
-  landingpad i32
-  ; CHECK: landingpad i32
+  landingpad { ptr, i32 }
+  ; CHECK: landingpad { ptr, i32 }
              cleanup
              ; CHECK: cleanup
              catch ptr null
@@ -1658,8 +1658,8 @@ catch3:
   br label %proceed
 
 catch4:
-  landingpad i32
-  ; CHECK: landingpad i32
+  landingpad { ptr, i32 }
+  ; CHECK: landingpad { ptr, i32 }
              filter [2 x i32] zeroinitializer
              ; CHECK: filter [2 x i32] zeroinitializer
   br label %proceed
@@ -1861,7 +1861,7 @@ define void @invoke_with_operand_bundle0(ptr %ptr) personality i8 3 {
 ; CHECK: invoke void @op_bundle_callee_0() [ "foo"(i32 42, i64 100, i32 %x), "bar"(float  0.000000e+00, i64 100, i32 %l) ]
 
 exception:
-  %cleanup = landingpad i8 cleanup
+  %cleanup = landingpad { ptr, i8 } cleanup
   br label %normal
 normal:
   ret void
@@ -1877,7 +1877,7 @@ define void @invoke_with_operand_bundle1(ptr %ptr) personality i8 3 {
 ; CHECK: invoke void @op_bundle_callee_0(){{$}}
 
 exception:
-  %cleanup = landingpad i8 cleanup
+  %cleanup = landingpad { ptr, i8 } cleanup
   br label %normal
 
 normal:
@@ -1885,7 +1885,7 @@ normal:
 ; CHECK: invoke void @op_bundle_callee_0() [ "foo"() ]
 
 exception1:
-  %cleanup1 = landingpad i8 cleanup
+  %cleanup1 = landingpad { ptr, i8 } cleanup
   br label %normal1
 
 normal1:
@@ -1893,7 +1893,7 @@ normal1:
 ; CHECK: invoke void @op_bundle_callee_0() [ "foo"(i32 42, i64 100, i32 %x), "foo"(i32 42, float  0.000000e+00, i32 %l) ]
 
 exception2:
-  %cleanup2 = landingpad i8 cleanup
+  %cleanup2 = landingpad { ptr, i8 } cleanup
   br label %normal2
 
 normal2:
@@ -1907,7 +1907,7 @@ define void @invoke_with_operand_bundle2(ptr %ptr) personality i8 3 {
 ; CHECK: invoke void @op_bundle_callee_0() [ "foo"() ]
 
 exception:
-  %cleanup = landingpad i8 cleanup
+  %cleanup = landingpad { ptr, i8 } cleanup
   br label %normal
 normal:
   ret void
@@ -1922,7 +1922,7 @@ define void @invoke_with_operand_bundle3(ptr %ptr) personality i8 3 {
 ; CHECK: invoke void @op_bundle_callee_0() [ "foo"(i32 42, i64 100, i32 %x), "foo"(i32 42, float  0.000000e+00, i32 %l) ]
 
 exception:
-  %cleanup = landingpad i8 cleanup
+  %cleanup = landingpad { ptr, i8 } cleanup
   br label %normal
 normal:
   ret void
@@ -1938,7 +1938,7 @@ define void @invoke_with_operand_bundle4(ptr %ptr) personality i8 3 {
 ; CHECK: invoke void @op_bundle_callee_1(i32 10, i32 %x) [ "foo"(i32 42, i64 100, i32 %x), "foo"(i32 42, float  0.000000e+00, i32 %l) ]
 
 exception:
-  %cleanup = landingpad i8 cleanup
+  %cleanup = landingpad { ptr, i8 } cleanup
   br label %normal
 normal:
   ret void
@@ -1955,7 +1955,7 @@ define void @invoke_with_operand_bundle_vaarg(ptr %ptr) personality i8 3 {
 ; CHECK: invoke void (...) @vaargs_func(i32 10, i32 %x) [ "foo"(i32 42, i64 100, i32 %x), "foo"(i32 42, float  0.000000e+00, i32 %l) ]
 
 exception:
-  %cleanup = landingpad i8 cleanup
+  %cleanup = landingpad { ptr, i8 } cleanup
   br label %normal
 normal:
   ret void

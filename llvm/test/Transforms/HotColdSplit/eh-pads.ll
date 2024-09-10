@@ -12,7 +12,7 @@ entry:
 
 exception:
   ; Note: EH pads are not candidates for region entry points.
-  %cleanup = landingpad i8 cleanup
+  %cleanup = landingpad { ptr, i8 } cleanup
   br label %continue_exception
 
 continue_exception:
@@ -42,7 +42,7 @@ continue:
 
 exception:
   ; Note: EH pads are not candidates for region entry points.
-  %cleanup = landingpad i8 cleanup
+  %cleanup = landingpad { ptr, i8 } cleanup
   br label %trivial-eh-handler
 
 trivial-eh-handler:
@@ -75,7 +75,7 @@ cold3:
   ret void
 
 cold4:
-  landingpad i8 cleanup
+  landingpad { ptr, i8 } cleanup
   ret void
 }
 

@@ -24,7 +24,7 @@ define i32 @call(ptr %obj) personality ptr undef {
   %result = invoke i32 %fptr(ptr %obj) to label %ret unwind label %unwind
 
 unwind:
-  %x = landingpad i32 cleanup
+  %x = landingpad { ptr, i32 } cleanup
   unreachable
 
 ret:
