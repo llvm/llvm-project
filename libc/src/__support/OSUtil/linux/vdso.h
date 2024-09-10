@@ -30,14 +30,6 @@ struct cpu_set_t;
 namespace LIBC_NAMESPACE_DECL {
 namespace vdso {
 
-#ifdef __clang__
-__extension__ template <typename T> using NullablePtr = T *_Nullable;
-__extension__ template <typename T> using NonNullPtr = T *_Nonnull;
-#else
-template <typename T> using NullablePtr = T *;
-template <typename T> using NonNullPtr = T *;
-#endif
-
 enum class VDSOSym {
   ClockGetTime,
   ClockGetTime64,
@@ -51,7 +43,7 @@ enum class VDSOSym {
   VDSOSymCount
 };
 } // namespace vdso
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #if defined(LIBC_TARGET_ARCH_IS_X86)
 #include "x86_64/vdso.h"
@@ -68,50 +60,33 @@ enum class VDSOSym {
 namespace LIBC_NAMESPACE {
 namespace vdso {
 
-template <VDSOSym sym> struct VDSOTypeDispatch {
-  using Type = void *;
-};
+template <VDSOSym sym> LIBC_INLINE constexpr auto dispatcher() {
+  if constexpr (sym == VDSOSym::ClockGetTime)
+    return static_cast<int (*)(clockid_t, timespec *)>(nullptr);
+  else if constexpr (sym == VDSOSym::ClockGetTime64)
+    return static_cast<int (*)(clockid_t, __kernel_timespec *)>(nullptr);
+  else if constexpr (sym == VDSOSym::GetTimeOfDay)
+    return static_cast<int (*)(timeval *__restrict, timezone *__restrict)>(
+        nullptr);
+  else if constexpr (sym == VDSOSym::GetCpu)
+    return static_cast<int (*)(unsigned *, unsigned *, getcpu_cache *)>(
+        nullptr);
+  else if constexpr (sym == VDSOSym::Time)
+    return static_cast<time_t (*)(time_t *)>(nullptr);
+  else if constexpr (sym == VDSOSym::ClockGetRes)
+    return static_cast<int (*)(clockid_t, timespec *)>(nullptr);
+  else if constexpr (sym == VDSOSym::RTSigReturn)
+    return static_cast<void (*)(void)>(nullptr);
+  else if constexpr (sym == VDSOSym::FlushICache)
+    return static_cast<void (*)(void *, void *, unsigned int)>(nullptr);
+  else if constexpr (sym == VDSOSym::RiscvHwProbe)
+    return static_cast<int (*)(riscv_hwprobe *, size_t, size_t, cpu_set_t *,
+                               unsigned)>(nullptr);
+  else
+    return static_cast<void *>(nullptr);
+}
 
-template <> struct VDSOTypeDispatch<VDSOSym::ClockGetTime> {
-  using Type = int (*)(clockid_t, NonNullPtr<timespec>);
-};
-
-template <> struct VDSOTypeDispatch<VDSOSym::ClockGetTime64> {
-  using Type = int (*)(clockid_t, NonNullPtr<__kernel_timespec>);
-};
-
-template <> struct VDSOTypeDispatch<VDSOSym::GetTimeOfDay> {
-  using Type = int (*)(NonNullPtr<timeval> __restrict,
-                       NullablePtr<timezone> __restrict);
-};
-
-template <> struct VDSOTypeDispatch<VDSOSym::GetCpu> {
-  using Type = int (*)(NullablePtr<unsigned>, NullablePtr<unsigned>,
-                       NullablePtr<getcpu_cache>);
-};
-
-template <> struct VDSOTypeDispatch<VDSOSym::Time> {
-  using Type = time_t (*)(NullablePtr<time_t>);
-};
-
-template <> struct VDSOTypeDispatch<VDSOSym::ClockGetRes> {
-  using Type = int (*)(clockid_t, NullablePtr<timespec>);
-};
-
-template <> struct VDSOTypeDispatch<VDSOSym::RTSigReturn> {
-  using Type = void (*)(void);
-};
-
-template <> struct VDSOTypeDispatch<VDSOSym::FlushICache> {
-  using Type = void (*)(NullablePtr<void>, NullablePtr<void>, unsigned int);
-};
-
-template <> struct VDSOTypeDispatch<VDSOSym::RiscvHwProbe> {
-  using Type = int (*)(NullablePtr<riscv_hwprobe> __restrict, size_t, size_t,
-                       NullablePtr<cpu_set_t> __restrict, unsigned);
-};
-
-template <VDSOSym sym> using VDSOSymType = typename VDSOTypeDispatch<sym>::Type;
+template <VDSOSym sym> using VDSOSymType = decltype(dispatcher<sym>());
 
 class Symbol {
   VDSOSym sym;
