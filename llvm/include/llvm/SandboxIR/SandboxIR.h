@@ -321,6 +321,7 @@ protected:
   friend class ConstantStruct;        // For `Val`.
   friend class ConstantAggregateZero; // For `Val`.
   friend class ConstantPointerNull;   // For `Val`.
+  friend class UndefValue;            // For `Val`.
   friend class PoisonValue;           // For `Val`.
 
   /// All values point to the context.
@@ -1020,10 +1021,61 @@ public:
 #endif
 };
 
-// TODO: Inherit from UndefValue.
-class PoisonValue final : public Constant {
+// TODO: Inherit from ConstantData.
+class UndefValue : public Constant {
+protected:
+  UndefValue(llvm::UndefValue *C, Context &Ctx)
+      : Constant(ClassID::UndefValue, C, Ctx) {}
+  UndefValue(ClassID ID, llvm::Constant *C, Context &Ctx)
+      : Constant(ID, C, Ctx) {}
+  friend class Context; // For constructor.
+
+public:
+  /// Static factory methods - Return an 'undef' object of the specified type.
+  static UndefValue *get(Type *T);
+
+  /// If this Undef has array or vector type, return a undef with the right
+  /// element type.
+  UndefValue *getSequentialElement() const;
+
+  /// If this undef has struct type, return a undef with the right element type
+  /// for the specified element.
+  UndefValue *getStructElement(unsigned Elt) const;
+
+  /// Return an undef of the right value for the specified GEP index if we can,
+  /// otherwise return null (e.g. if C is a ConstantExpr).
+  UndefValue *getElementValue(Constant *C) const;
+
+  /// Return an undef of the right value for the specified GEP index.
+  UndefValue *getElementValue(unsigned Idx) const;
+
+  /// Return the number of elements in the array, vector, or struct.
+  unsigned getNumElements() const {
+    return cast<llvm::UndefValue>(Val)->getNumElements();
+  }
+
+  /// For isa/dyn_cast.
+  static bool classof(const sandboxir::Value *From) {
+    return From->getSubclassID() == ClassID::UndefValue ||
+           From->getSubclassID() == ClassID::PoisonValue;
+  }
+  unsigned getUseOperandNo(const Use &Use) const final {
+    llvm_unreachable("UndefValue has no operands!");
+  }
+#ifndef NDEBUG
+  void verify() const override {
+    assert(isa<llvm::UndefValue>(Val) && "Expected an UndefValue!");
+  }
+  void dumpOS(raw_ostream &OS) const override {
+    dumpCommonPrefix(OS);
+    dumpCommonSuffix(OS);
+  }
+#endif
+};
+
+class PoisonValue final : public UndefValue {
   PoisonValue(llvm::PoisonValue *C, Context &Ctx)
-      : Constant(ClassID::PoisonValue, C, Ctx) {}
+      : UndefValue(ClassID::PoisonValue, C, Ctx) {}
   friend class Context; // For constructor.
 
 public:
@@ -1048,9 +1100,6 @@ public:
   /// For isa/dyn_cast.
   static bool classof(const sandboxir::Value *From) {
     return From->getSubclassID() == ClassID::PoisonValue;
-  }
-  unsigned getUseOperandNo(const Use &Use) const final {
-    llvm_unreachable("PoisonValue has no operands!");
   }
 #ifndef NDEBUG
   void verify() const override {
