@@ -312,3 +312,50 @@ define void @vmv.v.x_live(ptr %p, i64 %x) {
   store volatile i64 %x, ptr %p
   ret void
 }
+
+define void @vfmv.v.f(ptr %p, double %x) {
+; CHECK-LABEL: vfmv.v.f:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    csrr a1, vlenb
+; CHECK-NEXT:    slli a1, a1, 3
+; CHECK-NEXT:    sub sp, sp, a1
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 8 * vlenb
+; CHECK-NEXT:    vsetvli a1, zero, e64, m8, ta, ma
+; CHECK-NEXT:    vfmv.v.f v8, fa0
+; CHECK-NEXT:    vs8r.v v8, (a0)
+; CHECK-NEXT:    vl8re64.v v16, (a0)
+; CHECK-NEXT:    addi a1, sp, 16
+; CHECK-NEXT:    vs8r.v v16, (a1) # Unknown-size Folded Spill
+; CHECK-NEXT:    vl8re64.v v24, (a0)
+; CHECK-NEXT:    vl8re64.v v0, (a0)
+; CHECK-NEXT:    vl8re64.v v16, (a0)
+; CHECK-NEXT:    vs8r.v v16, (a0)
+; CHECK-NEXT:    vs8r.v v0, (a0)
+; CHECK-NEXT:    vs8r.v v24, (a0)
+; CHECK-NEXT:    vl8r.v v16, (a1) # Unknown-size Folded Reload
+; CHECK-NEXT:    vs8r.v v16, (a0)
+; CHECK-NEXT:    vs8r.v v8, (a0)
+; CHECK-NEXT:    fsd fa0, 0(a0)
+; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    slli a0, a0, 3
+; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    ret
+  %vfmv.v.f = call <vscale x 8 x double> @llvm.riscv.vfmv.v.f.nxv8f64(<vscale x 8 x double> poison, double %x, i64 -1)
+  store volatile <vscale x 8 x double> %vfmv.v.f, ptr %p
+
+  %a = load volatile <vscale x 8 x double>, ptr %p
+  %b = load volatile <vscale x 8 x double>, ptr %p
+  %c = load volatile <vscale x 8 x double>, ptr %p
+  %d = load volatile <vscale x 8 x double>, ptr %p
+  store volatile <vscale x 8 x double> %d, ptr %p
+  store volatile <vscale x 8 x double> %c, ptr %p
+  store volatile <vscale x 8 x double> %b, ptr %p
+  store volatile <vscale x 8 x double> %a, ptr %p
+
+  store volatile <vscale x 8 x double> %vfmv.v.f, ptr %p
+  store volatile double %x, ptr %p
+  ret void
+}
