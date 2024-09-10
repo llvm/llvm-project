@@ -296,8 +296,7 @@ public:
         }
       }
 
-      OldResult =
-          cast<Instruction>(IRB.CreateExtractValue(Op, 0));
+      OldResult = cast<Instruction>(IRB.CreateExtractValue(Op, 0));
       OldTy = ST->getElementType(0);
     }
 
