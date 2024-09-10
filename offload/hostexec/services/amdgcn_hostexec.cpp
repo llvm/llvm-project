@@ -32,7 +32,7 @@
 #endif
 
 /// Defines how many GPUs are maximally supported on a system
-#define AMD_MAX_HSA_AGENTS 16
+#define AMD_MAX_HSA_AGENTS 256
 
 /** Opaque wrapper for signal */
 typedef struct {
