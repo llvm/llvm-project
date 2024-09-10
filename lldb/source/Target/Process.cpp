@@ -6698,7 +6698,7 @@ Status Process::CalculateCoreFileSaveRanges(const SaveCoreOptions &options,
     return err;
 
   if (ranges.IsEmpty())
-    return Status::createWithFormat(
+    return Status::FromErrorStringWithFormat(
         "no valid address ranges found for core style");
 
   return ranges.FinalizeCoreFileSaveRanges();

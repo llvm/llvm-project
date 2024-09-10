@@ -59,7 +59,7 @@ Status CoreFileMemoryRanges::FinalizeCoreFileSaveRanges() {
       if (!PermissionsMatch(region_one, region_two)) {
         // Permissions mismatch and it's not a simple intersection.
         if (!OnlyIntersects(region_one, region_two)) {
-          error = Status::createWithFormat(
+          error = Status::FromErrorStringWithFormatv(
               "Memory region at {0}::{1} has different permssions than "
               "overlapping region at {2}::{3}",
               region_one->GetRangeBase(), region_one->GetRangeEnd(),
@@ -87,7 +87,7 @@ Status CoreFileMemoryRanges::FinalizeCoreFileSaveRanges() {
       region_two->data = core_range;
       // Erase is delete from [Inclusive, exclusive index).
       if (!this->Erase(i, i + 1)) {
-        error = Status::createWithFormat(
+        error = Status::FromErrorStringWithFormat(
             "Core file memory ranges mutated outside of "
             "CalculateCoreFileSaveRanges");
         return error;
