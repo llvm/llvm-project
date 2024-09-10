@@ -108,6 +108,10 @@ macro(add_clang_library name)
   endif()
   llvm_add_library(${name} ${LIBTYPE} ${ARG_UNPARSED_ARGUMENTS} ${srcs})
 
+  if(NOT ARG_SHARED AND NOT ARG_STATIC)
+    target_compile_definitions("obj.${name}" PRIVATE CLANG_EXPORTS)
+  endif()
+
   set(libs ${name})
   if(ARG_SHARED AND ARG_STATIC)
     list(APPEND libs ${name}_static)
