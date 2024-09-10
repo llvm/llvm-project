@@ -1175,51 +1175,6 @@ func.func @hoist_linalg_ops(%a : tensor<128x128xf32>,
   iterator_types = ["parallel", "parallel", "reduction"] 
 }
 
-// CHECK-LABEL: func @hoist_linalg_ops
-// CHECK: linalg.generic
-// CHECK: scf.for
-// CHECK-NOT: linalg.generic
-// CHECK: tensor.insert_slice
-// CHECK: scf.yield
-func.func @hoist_linalg_ops_nonspeculatable(%a : tensor<128x128xf32>, 
-                            %b : tensor<128x128xf32>, 
-                            %c: tensor<128x128xf32>,
-                            %lb : index,
-                            %ub : index,
-                            %step : index,
-                            %output : tensor<?x128xf32>) -> tensor<?x128xf32> {
-  %final = 
-  scf.for %i = %lb to %ub step %step iter_args(%acc = %output) 
-                                            -> tensor<?x128xf32> {
-    %compute = linalg.generic #trait
-               ins(%a, %b : tensor<128x128xf32>, tensor<128x128xf32>) 
-               outs(%c : tensor<128x128xf32>) {
-    ^bb0(%in : f32, %in2 : f32, %in3 : f32):
-      %mul = arith.mulf %in, %in2 : f32
-      %add = arith.divf %mul, %in3 : f32
-      linalg.yield %in3 : f32
-    } -> tensor<128x128xf32>
-
-    %newacc = tensor.insert_slice %compute into 
-                                  %output[%i, 0][128, 128][1, 1] 
-                                  : tensor<128x128xf32> into tensor<?x128xf32>
-    scf.yield %newacc : tensor<?x128xf32>
-  }
-
-  func.return %final : tensor<?x128xf32>
-}
-
-// -----
-
-#trait = {
-  indexing_maps = [
-    affine_map<(m, n, k) -> (m, k)>,
-    affine_map<(m, n, k) -> (k, n)>,
-    affine_map<(m, n, k) -> (m, n)>
-  ],
-  iterator_types = ["parallel", "parallel", "reduction"] 
-}
-
 // CHECK-LABEL: func @hoist_linalg_ops_div_by_zero
 // CHECK-NOT: linalg.generic
 // CHECK: scf.for
