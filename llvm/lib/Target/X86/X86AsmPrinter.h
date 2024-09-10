@@ -12,6 +12,7 @@
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/FaultMaps.h"
 #include "llvm/CodeGen/StackMaps.h"
+#include <set>
 
 // Implemented in X86MCInstLower.cpp
 namespace {
@@ -72,7 +73,7 @@ class LLVM_LIBRARY_VISIBILITY X86AsmPrinter : public AsmPrinter {
 
   StackMapShadowTracker SMShadowTracker;
   // Map holding information about register spills.
-  std::map<const MachineInstr *, std::map<Register, int64_t>> StackmapSpillMaps;
+  std::map<const MachineInstr *, std::map<Register, std::set<int64_t>>> StackmapSpillMaps;
 
   // All instructions emitted by the X86AsmPrinter should use this helper
   // method.

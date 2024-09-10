@@ -45,6 +45,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetMachine.h"
 
+#include <cstdint>
 #include <set>
 
 using namespace llvm;
@@ -59,30 +60,30 @@ X86AsmPrinter::X86AsmPrinter(TargetMachine &TM,
 //===----------------------------------------------------------------------===//
 
 const TargetInstrInfo *TII;
+const TargetRegisterInfo *TRI;
+
+/// Go up the super-register chain until we hit a valid dwarf register number.
+///
+/// (duplicated/adapted from StackMaps.cpp so as to not introduce extra link
+/// dependencies)
+static unsigned getDwarfRegNum(unsigned Reg) {
+  int RegNum;
+  for (MCPhysReg SR : TRI->superregs_inclusive(Reg)) {
+    RegNum = TRI->getDwarfRegNum(SR, false);
+    if (RegNum >= 0)
+      break;
+  }
+
+  assert(RegNum >= 0 && "Invalid Dwarf register number.");
+  return (unsigned)RegNum;
+}
 
 /// Clear any mappings that map to the given register.
-void clearRhs(Register Reg, std::map<Register, int64_t> &SpillMap) {
+void clearRhs(Register Reg, std::map<Register, std::set<int64_t>> &SpillMap) {
   auto I = SpillMap.begin();
   while (I != SpillMap.end()) {
-    if (I->second == Reg) {
-      // If there's a mapping A => B, where B has been reassigned and has a
-      // mapping B => C, then transitively apply the mapping so that A => C.
-      // This makes sure we don't remove mappings (especially to stack slots)
-      // when a register is reassigned. Example:
-      //   store $r13 in [$rbp - 8]
-      //   $rcx = $r13
-      //   $r13 = $rbx
-      // Upon assigning `$r13 = $rbx`, we apply `$r13`'s previous mapping to
-      // `$rcx` so that `SpillMap[$rcx] = -8`.
-      if(SpillMap.count(Reg) > 0) {
-        SpillMap[I->first] = SpillMap[Reg];
-        ++I;
-      } else {
-        I = SpillMap.erase(I);
-      }
-    } else {
-      ++I;
-    }
+    I->second.erase(Reg);
+    ++I;
   }
 }
 
@@ -94,8 +95,8 @@ void clearRhs(Register Reg, std::map<Register, int64_t> &SpillMap) {
 /// avoids having to alter the stackmap format.
 void processInstructions(
     const MachineBasicBlock *MBB,
-    std::map<Register, int64_t> &SpillMap,
-    std::map<const MachineInstr *, std::map<Register, int64_t>> &StackmapSpillMaps
+    std::map<Register, std::set<int64_t>> &SpillMap,
+    std::map<const MachineInstr *, std::map<Register, std::set<int64_t>>> &StackmapSpillMaps
   ) {
   for (const MachineInstr &Instr : MBB->instrs()) {
     // At each stackmap call, save the current mapping so it can later be
@@ -113,14 +114,21 @@ void processInstructions(
       const MachineOperand Rhs = Instr.getOperand(1);
       assert(Lhs.isReg() && "Is register.");
       assert(Rhs.isReg() && "Is register.");
+      auto LhsDwReg = getDwarfRegNum(Lhs.getReg());
+      auto RhsDwReg = getDwarfRegNum(Rhs.getReg());
+      if (LhsDwReg == RhsDwReg) {
+        // Moves like `mov rax, rax` are effectively a NOP for this analysis.
+        continue;
+      }
       // Reassigning a new value to LHS means any mappings to Lhs are now void
       // and need to be removed. We need to do this before updating the
       // mapping, so the transitive property of the SpillMap isn't violated
       // (see `clearRhs` for more info).
-      clearRhs(Lhs.getReg(), SpillMap);
-      SpillMap[Lhs.getReg()] = Rhs.getReg();
-      // YKFIXME: If the `mov` instruction has a killed-flag, remove the
-      // register from the map.
+      clearRhs(LhsDwReg, SpillMap);
+      SpillMap[LhsDwReg] = {RhsDwReg};
+      // Transitively apply the mappings of `Rhs` to this mapping too.
+      std::set<int64_t> Other = SpillMap[RhsDwReg];
+      SpillMap[LhsDwReg].insert(Other.begin(), Other.end());
       continue;
     }
 
@@ -131,11 +139,11 @@ void processInstructions(
       const MachineOperand OffsetOp = Instr.getOperand(3);
       const MachineOperand MO = Instr.getOperand(5);
       assert(MO.isReg() && "Is register.");
-      const Register Reg = MO.getReg();
+      const Register DwReg = getDwarfRegNum(MO.getReg());
       if (OffsetOp.isImm()) {
         const int64_t Offset = OffsetOp.getImm();
-        clearRhs(Reg, SpillMap);
-        SpillMap[Reg] = Offset;
+        clearRhs(DwReg, SpillMap);
+        SpillMap[DwReg] = {Offset};
       }
       continue;
     }
@@ -146,11 +154,11 @@ void processInstructions(
       const MachineOperand OffsetOp = Instr.getOperand(4);
       const MachineOperand Lhs = Instr.getOperand(0);
       assert(Lhs.isReg() && "Is register.");
-      const Register Reg = Lhs.getReg();
+      const Register DwReg = getDwarfRegNum(Lhs.getReg());
       if (OffsetOp.isImm()) {
         const int64_t Offset = OffsetOp.getImm();
-        clearRhs(Reg, SpillMap);
-        SpillMap[Reg] = Offset;
+        clearRhs(DwReg, SpillMap);
+        SpillMap[DwReg] = {Offset};
       }
       continue;
     }
@@ -158,8 +166,20 @@ void processInstructions(
     // Any other assignments to tracked registers removes their mapping.
     for (const MachineOperand MO : Instr.defs()) {
       assert(MO.isReg() && "Is register.");
-      SpillMap.erase(MO.getReg());
-      clearRhs(MO.getReg(), SpillMap);
+      auto DwReg = getDwarfRegNum(MO.getReg());
+      SpillMap.erase(DwReg);
+      clearRhs(DwReg, SpillMap);
+    }
+
+    // Delete registers that are "killed" (no longer live) after this
+    // intsruction. This prevents us deopting values at runtime that will never
+    // be used.
+    for (const MachineOperand MO : Instr.uses()) {
+      if (MO.isReg() && MO.isKill()) {
+        auto DwReg = getDwarfRegNum(MO.getReg());
+        SpillMap.erase(DwReg);
+        clearRhs(DwReg, SpillMap);
+      }
     }
   }
 }
@@ -171,8 +191,8 @@ void processInstructions(
 void findSpillLocations(
     const MachineBasicBlock *MBB,
     std::set<const MachineBasicBlock *> &Seen,
-    std::map<Register, int64_t> SpillMap,
-    std::map<const MachineInstr *, std::map<Register, int64_t>> &StackmapSpillMaps
+    std::map<Register, std::set<int64_t>> SpillMap,
+    std::map<const MachineInstr *, std::map<Register, std::set<int64_t>>> &StackmapSpillMaps
     ) {
 
   // Block has already been processed.
@@ -189,6 +209,7 @@ void findSpillLocations(
 /// runOnMachineFunction - Emit the function body.
 ///
 bool X86AsmPrinter::runOnMachineFunction(MachineFunction &MF) {
+  TRI = MF.getSubtarget().getRegisterInfo();
   Subtarget = &MF.getSubtarget<X86Subtarget>();
 
   SMShadowTracker.startFunction(MF);
@@ -217,7 +238,7 @@ bool X86AsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   // stack or to other registers, so we can also encode those in stackmaps.
   TII = MF.getSubtarget().getInstrInfo();
   std::set<const MachineBasicBlock *> S;
-  std::map<Register, int64_t> SpillMap;
+  std::map<Register, std::set<int64_t>> SpillMap;
   if (YkStackMapAdditionalLocs) {
     findSpillLocations(&*MF.begin(), S, SpillMap, StackmapSpillMaps);
   }

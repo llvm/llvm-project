@@ -18,6 +18,7 @@
 #include <cassert>
 #include <cstdint>
 #include <vector>
+#include <set>
 
 namespace llvm {
 
@@ -286,7 +287,9 @@ public:
   /// Generate a stackmap record for a stackmap instruction.
   ///
   /// MI must be a raw STACKMAP, not a PATCHPOINT.
-  void recordStackMap(const MCSymbol &L, const MachineInstr &MI, std::map<Register, int64_t> SpillsOffsets = {});
+  void recordStackMap(const MCSymbol &L,
+                      const MachineInstr &MI,
+                      std::map<Register, std::set<int64_t>> SpillsOffsets = {});
 
   /// Generate a stackmap record for a patchpoint instruction.
   void recordPatchPoint(const MCSymbol &L, const MachineInstr &MI);
@@ -318,7 +321,8 @@ private:
   parseOperand(MachineInstr::const_mop_iterator MOI,
                MachineInstr::const_mop_iterator MOE, LiveVarsVec &LiveVars,
                LiveOutVec &LiveOuts,
-               std::map<Register, int64_t> SpillOffsets = {}) const;
+               std::map<Register, std::set<int64_t>> SpillOffsets = {},
+               std::set<int64_t> TrackedRegisters = {}) const;
 
   /// Specialized parser of statepoint operands.
   /// They do not directly correspond to StackMap record entries.
@@ -345,7 +349,7 @@ private:
   void recordStackMapOpers(const MCSymbol &L, const MachineInstr &MI,
                            uint64_t ID, MachineInstr::const_mop_iterator MOI,
                            MachineInstr::const_mop_iterator MOE,
-                           std::map<Register, int64_t> SpillOffsets = {},
+                           std::map<Register, std::set<int64_t>> SpillOffsets = {},
                            bool recordResult = false);
 
   /// Emit the stackmap header.

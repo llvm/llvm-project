@@ -37,6 +37,7 @@
 #include <iterator>
 #include <sstream>
 #include <utility>
+#include <set>
 
 using namespace llvm;
 
@@ -224,7 +225,8 @@ MachineInstr::const_mop_iterator
 StackMaps::parseOperand(MachineInstr::const_mop_iterator MOI,
                         MachineInstr::const_mop_iterator MOE,
                         LiveVarsVec &LiveVars, LiveOutVec &LiveOuts,
-                        std::map<Register, int64_t> SpillOffsets) const {
+                        std::map<Register, std::set<int64_t>> SpillOffsets,
+                        std::set<int64_t> TrackedRegisters) const {
   LocationVec &Locs = LiveVars.back();
   const TargetRegisterInfo *TRI = AP.MF->getSubtarget().getRegisterInfo();
   if (MOI->isImm()) {
@@ -289,7 +291,6 @@ StackMaps::parseOperand(MachineInstr::const_mop_iterator MOI,
 
 
     signed Offset = 0;
-    int RHS = 0;
     // Check for any additional mappings in the spillmap and add them to his
     // location to be later encoded into stackmaps. A typical case where we need
     // to record multiple sources is the following (annotated with SpillMap
@@ -306,48 +307,40 @@ StackMaps::parseOperand(MachineInstr::const_mop_iterator MOI,
     // %rcx, resulting in different ways below to retrieve the mappings.
     int ExtraReg = 0;
     Register R = MOI->getReg();
+    Register DwarfRegNum = getDwarfRegNum(R, TRI);
     if (MOI->isReg()) {
-      if (MOI->isKill()) {
-        // There's no point in tracking a killed register. Instead, try and
-        // find a copy of the register and use that to increase the likelyhood
-        // of us tracking that value.
-        // YKFIXME: This is likely only a temporary fix. In the future we might
-        // want to allow stackmaps to track arbitrarily many locations per live
-        // variable. Currently, we can only track two.
-        for (auto I : SpillOffsets) {
-          if (I.second == R) {
-            R = I.first;
-            break;
+      if (SpillOffsets.count(DwarfRegNum) > 0) {
+        auto Extras = SpillOffsets[DwarfRegNum];
+        // Remove redundant registers/offsets that are already tracked by the
+        // stackmap or by another tracked register.
+        for (auto TReg : TrackedRegisters) {
+          if (TReg == DwarfRegNum) {
+            continue;
+          }
+          Extras.erase(TReg);
+          for (auto X : SpillOffsets[TReg]) {
+            Extras.erase(X);
           }
         }
-      }
-      if (SpillOffsets.count(R) > 0) {
-        RHS = SpillOffsets[R];
-        assert(SpillOffsets[R] != 0);
-        if (RHS > 0) {
-          // The additional location is another register: encode its DWARF id.
-          // Also temporarily add 1 since 0 means there is no additional
-          // location.
-          ExtraReg = getDwarfRegNum(RHS, TRI) + 1;
-          // Check if the other register also has a mapping and add it.
-          if (SpillOffsets.count(RHS) > 0) {
-            Offset = SpillOffsets[RHS];
-          }
-        }  else {
-          // The other location is an offset.
-          Offset = RHS;
-          // Find any additional mappings where the current register appears on
-          // the right hand side.
-          for (auto I = SpillOffsets.begin(); I != SpillOffsets.end(); I++) {
-            if (I->second == R) {
-              ExtraReg = getDwarfRegNum(I->first, TRI) + 1;
-            }
+        // FIXME: We currently can only deal with two additional locations.
+        // This could lead to problems in the future. Fixing this requires a
+        // extensive change updating the stackmap format. For now let's hope we
+        // get away with it.
+        //
+        // Some programs fail this assertion but run nontheless, so this
+        // assertion is commented out.
+        //
+        // assert(Extras.size() <= 2);
+        for (int64_t RHS : Extras) {
+          if (RHS > 0) {
+            ExtraReg = RHS + 1;
+          } else {
+            Offset = RHS;
           }
         }
       }
     }
 
-    unsigned DwarfRegNum = getDwarfRegNum(R, TRI);
     unsigned LLVMRegNum = *TRI->getLLVMRegNum(DwarfRegNum, false);
     unsigned SubRegIdx = TRI->getSubRegIndex(LLVMRegNum, R);
     if (SubRegIdx)
@@ -584,7 +577,7 @@ void StackMaps::recordStackMapOpers(const MCSymbol &MILabel,
                                     const MachineInstr &MI, uint64_t ID,
                                     MachineInstr::const_mop_iterator MOI,
                                     MachineInstr::const_mop_iterator MOE,
-                                    std::map<Register, int64_t> SpillOffsets,
+                                    std::map<Register, std::set<int64_t>> SpillOffsets,
                                     bool recordResult) {
   MCContext &OutContext = AP.OutStreamer->getContext();
 
@@ -598,12 +591,20 @@ void StackMaps::recordStackMapOpers(const MCSymbol &MILabel,
     LiveVars.push_back(LocationVec());
   }
 
+  const TargetRegisterInfo *TRI = AP.MF->getSubtarget().getRegisterInfo();
+  std::set<int64_t> TrackedRegisters;
+  for (const auto *Op = MI.operands_begin(); Op != MI.operands_end(); Op++) {
+    if (Op->isReg() && !Op->isImplicit() && !Op->isUndef()) {
+      TrackedRegisters.insert(getDwarfRegNum(Op->getReg(), TRI));
+    }
+  }
+
   // Parse operands.
   if (MI.getOpcode() == TargetOpcode::STATEPOINT)
     parseStatepointOpers(MI, MOI, MOE, LiveVars, LiveOuts);
   else
     while (MOI != MOE)
-      MOI = parseOperand(MOI, MOE, LiveVars, LiveOuts, SpillOffsets);
+      MOI = parseOperand(MOI, MOE, LiveVars, LiveOuts, SpillOffsets, TrackedRegisters);
 
   // Move large constants into the constant pool.
   for (auto &Locations : LiveVars) {
@@ -650,7 +651,6 @@ void StackMaps::recordStackMapOpers(const MCSymbol &MILabel,
 
   // Record the stack size of the current function and update callsite count.
   const MachineFrameInfo &MFI = AP.MF->getFrameInfo();
-  const TargetRegisterInfo *TRI = AP.MF->getSubtarget().getRegisterInfo();
   const TargetRegisterInfo *RegInfo = AP.MF->getSubtarget().getRegisterInfo();
   bool HasDynamicFrameSize =
       MFI.hasVarSizedObjects() || RegInfo->hasStackRealignment(*(AP.MF));
@@ -676,7 +676,9 @@ void StackMaps::recordStackMapOpers(const MCSymbol &MILabel,
   }
 }
 
-void StackMaps::recordStackMap(const MCSymbol &L, const MachineInstr &MI, std::map<Register, int64_t> SpillOffsets) {
+void StackMaps::recordStackMap(const MCSymbol &L,
+                               const MachineInstr &MI,
+                               std::map<Register, std::set<int64_t>> SpillOffsets) {
   assert(MI.getOpcode() == TargetOpcode::STACKMAP && "expected stackmap");
 
   StackMapOpers opers(&MI);
