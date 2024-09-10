@@ -176,3 +176,13 @@ define i1 @fold_icmp_shl_nuw_c2_precondition2(i32 %x) {
   %cmp = icmp ult i32 %shl, 63
   ret i1 %cmp
 }
+
+; Make sure we don't crash on this case.
+define i1 @fold_icmp_shl_nuw_c2_precondition3(i32 %x) {
+; CHECK-LABEL: @fold_icmp_shl_nuw_c2_precondition3(
+; CHECK-NEXT:    ret i1 false
+;
+  %shl = shl nuw i32 1, %x
+  %cmp = icmp ult i32 %shl, 1
+  ret i1 %cmp
+}

@@ -2239,7 +2239,7 @@ static Instruction *foldICmpShlLHSC(ICmpInst &Cmp, Instruction *Shl,
   unsigned TypeBits = C.getBitWidth();
   ICmpInst::Predicate Pred = Cmp.getPredicate();
   if (Cmp.isUnsigned()) {
-    assert(!C2->isZero() && C2->ult(C) &&
+    assert(!C2->isZero() && C2->ule(C) &&
            "Should be simplified by InstSimplify");
     APInt Div, Rem;
     APInt::udivrem(C, *C2, Div, Rem);
