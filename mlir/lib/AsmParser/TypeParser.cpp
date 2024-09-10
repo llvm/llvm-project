@@ -39,6 +39,7 @@ OptionalParseResult Parser::parseOptionalType(Type &type) {
   case Token::kw_tuple:
   case Token::kw_vector:
   case Token::inttype:
+  case Token::kw_f6E3M2FN:
   case Token::kw_f8E5M2:
   case Token::kw_f8E4M3:
   case Token::kw_f8E4M3FN:
@@ -303,6 +304,9 @@ Type Parser::parseNonFunctionType() {
   }
 
   // float-type
+  case Token::kw_f6E3M2FN:
+    consumeToken(Token::kw_f6E3M2FN);
+    return builder.getFloat6E3M2FNType();
   case Token::kw_f8E5M2:
     consumeToken(Token::kw_f8E5M2);
     return builder.getFloat8E5M2Type();
