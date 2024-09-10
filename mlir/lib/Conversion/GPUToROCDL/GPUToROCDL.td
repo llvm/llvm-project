@@ -17,6 +17,6 @@ include "mlir/IR/PatternBase.td"
 include "mlir/Dialect/GPU/IR/GPUOps.td"
 include "mlir/Dialect/LLVMIR/ROCDLOps.td"
 
-def : Pat<(GPU_BarrierOp), (ROCDL_BarrierOp)>;
+def : Pat<(GPU_BarrierOp : $op $memory_fence), (ROCDL_BarrierOp)>;
 
 #endif // MLIR_CONVERSION_GPUTOROCDL_TD

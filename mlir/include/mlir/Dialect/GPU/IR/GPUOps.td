@@ -1355,7 +1355,8 @@ def GPU_ShuffleOp : GPU_Op<
   ];
 }
 
-def GPU_BarrierOp : GPU_Op<"barrier"> {
+def GPU_BarrierOp : GPU_Op<"barrier">,
+    Arguments<(ins OptionalAttr<GPU_AddressSpaceAttrArray> :$address_spaces)> {
   let summary = "Synchronizes all work items of a workgroup.";
   let description = [{
     The "barrier" op synchronizes all work items of a workgroup. It is used
@@ -1371,11 +1372,25 @@ def GPU_BarrierOp : GPU_Op<"barrier"> {
     accessing the same memory can be avoided by synchronizing work items
     in-between these accesses.
 
+    The address space of visible memory accesses can be modified by adding a
+    list of address spaces required to be visible. By default all address spaces
+    are included.
+
+    ```mlir
+    // only workgroup address spaces accesses required to be visible
+    gpu.barrier memfence [#gpu.address_space<workgroup>]
+    // no memory accesses required to be visible
+    gpu.barrier memfence []
+    // all memory accesses required to be visible
+    gpu.barrier
+    ```
+
     Either none or all work items of a workgroup need to execute this op
     in convergence.
   }];
-  let assemblyFormat = "attr-dict";
+  let assemblyFormat = "(`memfence` $address_spaces^)? attr-dict";
   let hasCanonicalizer = 1;
+  let builders = [OpBuilder<(ins)>];
 }
 
 def GPU_GPUModuleOp : GPU_Op<"module", [

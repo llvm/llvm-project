@@ -141,6 +141,12 @@ module attributes {gpu.container_module} {
       %shfl3, %pred3 = gpu.shuffle idx %arg0, %offset, %width : f32
 
       "gpu.barrier"() : () -> ()
+      gpu.barrier
+      gpu.barrier memfence [#gpu.address_space<workgroup>]
+      gpu.barrier memfence [#gpu.address_space<global>]
+      gpu.barrier memfence [#gpu.address_space<global>, #gpu.address_space<workgroup>]
+      gpu.barrier memfence [#gpu.address_space<private>]
+      gpu.barrier memfence []
 
       "some_op"(%bIdX, %tIdX) : (index, index) -> ()
       %42 = memref.load %arg1[%bIdX] : memref<?xf32, 1>
