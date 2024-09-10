@@ -554,6 +554,18 @@ public:
       }
     } else if (&symbol.owner() != &scope_ || &ultimate.owner() != &scope_) {
       return std::nullopt; // host association is in play
+    } else if (semantics::IsSaved(ultimate) &&
+        semantics::IsInitialized(ultimate) &&
+        context_.languageFeatures().IsEnabled(
+            common::LanguageFeature::SavedLocalInSpecExpr)) {
+      if (!scope_.IsModuleFile() &&
+          context_.languageFeatures().ShouldWarn(
+              common::LanguageFeature::SavedLocalInSpecExpr)) {
+        context_.messages().Say(
+            "specification expression refers to local object '%s' (initialized and saved)"_port_en_US,
+            ultimate.name().ToString());
+      }
+      return std::nullopt;
     } else if (const auto *object{
                    ultimate.detailsIf<semantics::ObjectEntityDetails>()}) {
       if (object->commonBlock()) {
@@ -781,8 +793,9 @@ bool CheckSpecificationExprHelper::IsPermissibleInquiry(
 template <typename A>
 void CheckSpecificationExpr(const A &x, const semantics::Scope &scope,
     FoldingContext &context, bool forElementalFunctionResult) {
-  if (auto why{CheckSpecificationExprHelper{
-          scope, context, forElementalFunctionResult}(x)}) {
+  CheckSpecificationExprHelper helper{
+      scope, context, forElementalFunctionResult};
+  if (auto why{helper(x)}) {
     context.messages().Say("Invalid specification expression%s: %s"_err_en_US,
         forElementalFunctionResult ? " for elemental function result" : "",
         *why);
