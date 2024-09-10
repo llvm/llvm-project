@@ -3111,7 +3111,32 @@ void mlir::python::populateIRCore(py::module &m) {
           "Detaches the operation from its parent block.")
       .def("erase", [](PyOperationBase &self) { self.getOperation().erase(); })
       .def("walk", &PyOperationBase::walk, py::arg("callback"),
-           py::arg("walk_order") = MlirWalkPostOrder);
+           py::arg("walk_order") = MlirWalkPostOrder)
+      .def(
+          "try_fold",
+          [](PyOperationBase &self, MlirContext context) {
+            CollectDiagnosticsToStringScope scope(context);
+
+            size_t numResults;
+            size_t numConstants;
+            MlirValue *mlirResults;
+            MlirOperation *mlirConstants;
+
+            if (mlirLogicalResultIsFailure(mlirOperationTryFold(
+                    context, self.getOperation(), &mlirResults, &numResults,
+                    &mlirConstants, &numConstants)))
+              throw py::value_error(scope.takeMessage());
+
+            std::vector<MlirValue> result(mlirResults,
+                                          mlirResults + numResults);
+            std::vector<MlirOperation> generatedConstant(
+                mlirConstants, mlirConstants + numConstants);
+
+            free(mlirResults);
+            free(mlirConstants);
+            return std::pair(result, generatedConstant);
+          },
+          "context"_a = py::none());
 
   py::class_<PyOperation, PyOperationBase>(m, "Operation", py::module_local())
       .def_static("create", &PyOperation::create, py::arg("name"),

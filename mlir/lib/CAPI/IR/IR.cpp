@@ -15,10 +15,10 @@
 #include "mlir/CAPI/Support.h"
 #include "mlir/CAPI/Utils.h"
 #include "mlir/IR/Attributes.h"
+#include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Diagnostics.h"
-#include "mlir/IR/Dialect.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/OperationSupport.h"
@@ -30,7 +30,6 @@
 #include "mlir/Parser/Parser.h"
 #include "llvm/Support/ThreadPool.h"
 
-#include <cstddef>
 #include <memory>
 #include <optional>
 
@@ -754,6 +753,60 @@ void mlirOperationWalk(MlirOperation op, MlirOperationWalkCallback callback,
           return unwrap(callback(wrap(op), userData));
         });
   }
+}
+
+MlirLogicalResult mlirOperationTryFold(MlirContext mlirContext,
+                                       MlirOperation mlirOp, void *mlirResults,
+                                       void *mlirConstants) {
+  Operation *op = unwrap(mlirOp);
+  MLIRContext *context = unwrap(mlirContext);
+
+  SmallVector<MlirValue> *unwrappedResults;
+  unwrappedResults = static_cast<decltype(unwrappedResults)>(mlirResults);
+  SmallVector<MlirOperation> *unwrappedConstants;
+  unwrappedConstants = static_cast<decltype(unwrappedConstants)>(mlirConstants);
+
+  SmallVector<Value, 1> results;
+  SmallVector<Operation *, 1> generatedConstants;
+
+  if (failed(tryFold(context, op, results, generatedConstants)))
+    return mlirLogicalResultFailure();
+
+  for (auto &item : results)
+    unwrappedResults->push_back(wrap(item));
+
+  for (auto &item : generatedConstants)
+    unwrappedConstants->push_back(wrap(item));
+
+  return mlirLogicalResultSuccess();
+}
+
+MlirLogicalResult
+mlirOperationTryFold(MlirContext mlirContext, MlirOperation mlirOp,
+                     MlirValue **mlirResults, size_t *numResults,
+                     MlirOperation **mlirConstants, size_t *numConstants) {
+  Operation *op = unwrap(mlirOp);
+  MLIRContext *context = unwrap(mlirContext);
+
+  SmallVector<Value, 1> results;
+  SmallVector<Operation *, 1> generatedConstants;
+
+  if (failed(tryFold(context, op, results, generatedConstants)))
+    return mlirLogicalResultFailure();
+
+  *numResults = results.size();
+  *numConstants = generatedConstants.size();
+  *mlirResults =
+      reinterpret_cast<MlirValue *>(malloc(sizeof(MlirValue) * results.size()));
+  *mlirConstants = reinterpret_cast<MlirOperation *>(
+      malloc(sizeof(MlirOperation) * generatedConstants.size()));
+
+  for (size_t i = 0; i < results.size(); ++i)
+    (*mlirResults)[i] = wrap(results[i]);
+  for (size_t i = 0; i < generatedConstants.size(); ++i)
+    (*mlirConstants)[i] = wrap(generatedConstants[i]);
+
+  return mlirLogicalResultSuccess();
 }
 
 //===----------------------------------------------------------------------===//
