@@ -21824,6 +21824,14 @@ SDValue tryLowerPartialReductionToDot(SDNode *N,
 
   auto ExtA = MulOp->getOperand(0);
   auto ExtB = MulOp->getOperand(1);
+
+  bool AIsSExt = ExtA->getOpcode() == ISD::SIGN_EXTEND;
+  bool AIsZExt = ExtA->getOpcode() == ISD::ZERO_EXTEND;
+  bool BIsSExt = ExtB->getOpcode() == ISD::SIGN_EXTEND;
+  bool BIsZExt = ExtB->getOpcode() == ISD::ZERO_EXTEND;
+  if (!(AIsSExt || AIsZExt) || !(BIsSExt || BIsZExt))
+    return SDValue();
+
   auto A = ExtA->getOperand(0);
   auto B = ExtB->getOperand(0);
   if (A.getValueType() != B.getValueType())
@@ -21838,13 +21846,6 @@ SDValue tryLowerPartialReductionToDot(SDNode *N,
       !(ReducedType == MVT::nxv2i64 && MulSrcType == MVT::nxv8i16) &&
       !(ReducedType == MVT::v4i32 && MulSrcType == MVT::v16i8) &&
       !(ReducedType == MVT::v2i32 && MulSrcType == MVT::v8i8))
-    return SDValue();
-
-  bool AIsSExt = ExtA->getOpcode() == ISD::SIGN_EXTEND;
-  bool AIsZExt = ExtA->getOpcode() == ISD::ZERO_EXTEND;
-  bool BIsSExt = ExtB->getOpcode() == ISD::SIGN_EXTEND;
-  bool BIsZExt = ExtB->getOpcode() == ISD::ZERO_EXTEND;
-  if (!(AIsSExt || AIsZExt) || !(BIsSExt || BIsZExt))
     return SDValue();
 
   // If the extensions are mixed, we should lower it to a usdot instead
