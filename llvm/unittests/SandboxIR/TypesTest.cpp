@@ -333,9 +333,9 @@ define void @foo(<4 x i16> %vi0, <4 x float> %vf1, i8 %i0) {
   sandboxir::Context Ctx(C);
   auto *F = Ctx.createFunction(LLVMF);
   // Check classof(), creation, accessors
-  auto *VecTy = cast<sandboxir::FixedVectorType>(F->getArg(0)->getType());
-  EXPECT_TRUE(VecTy->getElementType()->isIntegerTy(16));
-  EXPECT_EQ(VecTy->getElementCount(), ElementCount::getFixed(4));
+  auto *Vec4i16Ty = cast<sandboxir::FixedVectorType>(F->getArg(0)->getType());
+  EXPECT_TRUE(Vec4i16Ty->getElementType()->isIntegerTy(16));
+  EXPECT_EQ(Vec4i16Ty->getElementCount(), ElementCount::getFixed(4));
 
   // get(ElementType, NumElements)
   EXPECT_EQ(
@@ -346,39 +346,39 @@ define void @foo(<4 x i16> %vi0, <4 x float> %vf1, i8 %i0) {
                 sandboxir::Type::getInt16Ty(Ctx),
                 cast<sandboxir::FixedVectorType>(F->getArg(0)->getType())),
             F->getArg(0)->getType());
-  auto *FVecTy = cast<sandboxir::FixedVectorType>(F->getArg(1)->getType());
-  EXPECT_TRUE(FVecTy->getElementType()->isFloatTy());
+  auto *Vec4FTy = cast<sandboxir::FixedVectorType>(F->getArg(1)->getType());
+  EXPECT_TRUE(Vec4FTy->getElementType()->isFloatTy());
   // getInteger
-  auto *IVecTy = sandboxir::FixedVectorType::getInteger(FVecTy);
-  EXPECT_TRUE(IVecTy->getElementType()->isIntegerTy(32));
-  EXPECT_EQ(IVecTy->getElementCount(), FVecTy->getElementCount());
+  auto *Vec4i32Ty = sandboxir::FixedVectorType::getInteger(Vec4FTy);
+  EXPECT_TRUE(Vec4i32Ty->getElementType()->isIntegerTy(32));
+  EXPECT_EQ(Vec4i32Ty->getElementCount(), Vec4FTy->getElementCount());
   // getExtendedElementCountVectorType
-  auto *ExtVecTy =
-      sandboxir::FixedVectorType::getExtendedElementVectorType(IVecTy);
-  EXPECT_TRUE(ExtVecTy->getElementType()->isIntegerTy(64));
-  EXPECT_EQ(ExtVecTy->getElementCount(), VecTy->getElementCount());
+  auto *Vec4i64Ty =
+      sandboxir::FixedVectorType::getExtendedElementVectorType(Vec4i32Ty);
+  EXPECT_TRUE(Vec4i64Ty->getElementType()->isIntegerTy(64));
+  EXPECT_EQ(Vec4i64Ty->getElementCount(), Vec4i16Ty->getElementCount());
   // getTruncatedElementVectorType
-  auto *TruncVecTy =
-      sandboxir::FixedVectorType::getTruncatedElementVectorType(IVecTy);
-  EXPECT_TRUE(TruncVecTy->getElementType()->isIntegerTy(16));
-  EXPECT_EQ(TruncVecTy->getElementCount(), VecTy->getElementCount());
+  auto *TVec4i16Ty =
+      sandboxir::FixedVectorType::getTruncatedElementVectorType(Vec4i32Ty);
+  EXPECT_TRUE(TVec4i16Ty->getElementType()->isIntegerTy(16));
+  EXPECT_EQ(TVec4i16Ty->getElementCount(), TVec4i16Ty->getElementCount());
   // getSubdividedVectorType
-  auto *SubVecTy =
-      sandboxir::FixedVectorType::getSubdividedVectorType(VecTy, 1);
-  EXPECT_TRUE(SubVecTy->getElementType()->isIntegerTy(8));
-  EXPECT_EQ(SubVecTy->getElementCount(), ElementCount::getFixed(8));
+  auto *Vec8i8Ty =
+      sandboxir::FixedVectorType::getSubdividedVectorType(Vec4i16Ty, 1);
+  EXPECT_TRUE(Vec8i8Ty->getElementType()->isIntegerTy(8));
+  EXPECT_EQ(Vec8i8Ty->getElementCount(), ElementCount::getFixed(8));
   // getNumElements
-  EXPECT_EQ(SubVecTy->getNumElements(), 8u);
+  EXPECT_EQ(Vec8i8Ty->getNumElements(), 8u);
   // getHalfElementsVectorType
-  auto *HalfVecTy =
-      sandboxir::FixedVectorType::getHalfElementsVectorType(VecTy);
-  EXPECT_TRUE(HalfVecTy->getElementType()->isIntegerTy(16));
-  EXPECT_EQ(HalfVecTy->getElementCount(), ElementCount::getFixed(2));
+  auto *Vec2i16Ty =
+      sandboxir::FixedVectorType::getHalfElementsVectorType(Vec4i16Ty);
+  EXPECT_TRUE(Vec2i16Ty->getElementType()->isIntegerTy(16));
+  EXPECT_EQ(Vec2i16Ty->getElementCount(), ElementCount::getFixed(2));
   // getDoubleElementsVectorType
-  auto *DoubleVecTy =
-      sandboxir::FixedVectorType::getDoubleElementsVectorType(VecTy);
-  EXPECT_TRUE(DoubleVecTy->getElementType()->isIntegerTy(16));
-  EXPECT_EQ(DoubleVecTy->getElementCount(), ElementCount::getFixed(8));
+  auto *Vec8i16Ty =
+      sandboxir::FixedVectorType::getDoubleElementsVectorType(Vec4i16Ty);
+  EXPECT_TRUE(Vec8i16Ty->getElementType()->isIntegerTy(16));
+  EXPECT_EQ(Vec8i16Ty->getElementCount(), ElementCount::getFixed(8));
 }
 
 TEST_F(SandboxTypeTest, FunctionType) {
