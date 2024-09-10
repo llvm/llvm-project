@@ -591,6 +591,10 @@ bool clang::CreateHLSLAttributedResourceType(Sema &S, QualType Wrapped,
       break;
     }
     case attr::HLSLROV:
+      if (ResAttrs.IsROV) {
+        S.Diag(A->getLocation(), diag::warn_duplicate_attribute_exact) << A;
+        return false;
+      }
       ResAttrs.IsROV = true;
       break;
     default:
