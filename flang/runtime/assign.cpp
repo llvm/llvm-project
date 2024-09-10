@@ -352,6 +352,17 @@ RT_API_ATTRS static void Assign(
     // the Assign() is invoked recursively for component-per-component
     // assignments.
     if (to.rank() == 0) {
+      if (to.IsAllocatable()) {
+        if (const auto *special{toDerived->FindSpecialBinding(typeInfo::
+                    SpecialBinding::Which::ScalarAllocatableAssignment)}) {
+          return DoScalarDefinedAssignment(to, from, *special);
+        }
+      } else if (to.IsPointer()) {
+        if (const auto *special{toDerived->FindSpecialBinding(
+                typeInfo::SpecialBinding::Which::ScalarPointerAssignment)}) {
+          return DoScalarDefinedAssignment(to, from, *special);
+        }
+      }
       if (const auto *special{toDerived->FindSpecialBinding(
               typeInfo::SpecialBinding::Which::ScalarAssignment)}) {
         return DoScalarDefinedAssignment(to, from, *special);
@@ -417,9 +428,8 @@ RT_API_ATTRS static void Assign(
             StaticDescriptor<maxRank, true, 10 /*?*/> statDesc[2];
             Descriptor &toCompDesc{statDesc[0].descriptor()};
             Descriptor &fromCompDesc{statDesc[1].descriptor()};
-            comp.CreatePointerDescriptor(toCompDesc, to, terminator, toAt);
-            comp.CreatePointerDescriptor(
-                fromCompDesc, from, terminator, fromAt);
+            comp.CreateTargetDescriptor(toCompDesc, to, terminator, toAt);
+            comp.CreateTargetDescriptor(fromCompDesc, from, terminator, fromAt);
             Assign(toCompDesc, fromCompDesc, terminator, nestedFlags);
           } else { // Component has intrinsic type; simply copy raw bytes
             std::size_t componentByteSize{comp.SizeInBytes(to)};

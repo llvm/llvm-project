@@ -62,14 +62,15 @@ module attributes {transform.with_named_sequence} {
 // -----
 
 // CHECK-LABEL: func.func @pack_as_pad(
+// CHECK: %[[SRC:.+]]: tensor<129x47x16x16xf32>,
+// CHECK: %[[OUT:.+]]: tensor<1x1x1x1x136x64x16x16xf32>)
 func.func @pack_as_pad(%arg0: tensor<129x47x16x16xf32>, %arg1: tensor<1x1x1x1x136x64x16x16xf32>) -> tensor<1x1x1x1x136x64x16x16xf32> {
   %cst_0 = arith.constant 0.0 : f32
 
   // tensor.pack is lowered to tensor.pad + tensor.insert_slice
-  //      CHECK: %[[PAD:.*]] = tensor.pad {{.*}} low[0, 0, 0, 0]
+  //      CHECK: %[[PAD:.*]] = tensor.pad %[[SRC]] low[0, 0, 0, 0] high[7, 17, 0, 0]
   //      CHECK:   : tensor<129x47x16x16xf32> to tensor<136x64x16x16xf32>
-  //      CHECK: %[[EMPTY:.*]] = tensor.empty() : tensor<1x1x1x1x136x64x16x16xf32>
-  //      CHECK: %[[RES:.*]] = tensor.insert_slice %[[PAD]] into %[[EMPTY]]
+  //      CHECK: %[[RES:.*]] = tensor.insert_slice %[[PAD]] into %[[OUT]]
   // offsets.
   // CHECK-SAME:   [0, 0, 0, 0, 0, 0, 0, 0]
   // sizes.
@@ -387,14 +388,15 @@ module attributes {transform.with_named_sequence} {
 // -----
 
 // CHECK-LABEL: func.func @pack_as_pad_with_outer_dims_perm(
+// CHECK: %[[SRC:.+]]: tensor<129x47x16x16xf32>,
+// CHECK: %[[OUT:.+]]: tensor<1x1x1x1x136x64x16x16xf32>)
 func.func @pack_as_pad_with_outer_dims_perm(%arg0: tensor<129x47x16x16xf32>, %arg1: tensor<1x1x1x1x136x64x16x16xf32>) -> tensor<1x1x1x1x136x64x16x16xf32> {
   %cst_0 = arith.constant 0.0 : f32
 
   // tensor.pack is lowered to tensor.pad + tensor.insert_slice
-  //      CHECK: %[[PAD:.*]] = tensor.pad {{.*}} low[0, 0, 0, 0]
+  //      CHECK: %[[PAD:.*]] = tensor.pad %[[SRC]] low[0, 0, 0, 0] high[7, 17, 0, 0]
   //      CHECK:   : tensor<129x47x16x16xf32> to tensor<136x64x16x16xf32>
-  //      CHECK: %[[EMPTY:.*]] = tensor.empty() : tensor<1x1x1x1x136x64x16x16xf32>
-  //      CHECK: %[[RES:.*]] = tensor.insert_slice %[[PAD]] into %[[EMPTY]]
+  //      CHECK: %[[RES:.*]] = tensor.insert_slice %[[PAD]] into %[[OUT]]
   // offsets.
   // CHECK-SAME:   [0, 0, 0, 0, 0, 0, 0, 0]
   // sizes.
