@@ -2265,7 +2265,7 @@ AddOrdinaryNameResults(SemaCodeCompletion::ParserCompletionContext CCC,
     [[fallthrough]];
 
   case SemaCodeCompletion::PCC_Template:
-    if (SemaRef.getLangOpts().CPlusPlus20 && 
+    if (SemaRef.getLangOpts().CPlusPlus20 &&
         CCC == SemaCodeCompletion::PCC_Template)
       Results.AddResult(Result("concept", CCP_Keyword));
     [[fallthrough]];
@@ -2282,9 +2282,9 @@ AddOrdinaryNameResults(SemaCodeCompletion::ParserCompletionContext CCC,
       Results.AddResult(Result("template", CodeCompletionResult::RK_Keyword));
     }
 
-    if(SemaRef.getLangOpts().CPlusPlus20 && 
-      (CCC == SemaCodeCompletion::PCC_Template || 
-       CCC == SemaCodeCompletion::PCC_MemberTemplate)) {
+    if (SemaRef.getLangOpts().CPlusPlus20 &&
+        (CCC == SemaCodeCompletion::PCC_Template ||
+         CCC == SemaCodeCompletion::PCC_MemberTemplate)) {
       Results.AddResult(Result("requires", CCP_Keyword));
     }
 
