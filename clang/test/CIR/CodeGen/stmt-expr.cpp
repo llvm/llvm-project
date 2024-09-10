@@ -19,13 +19,13 @@ void test1() {
 }
 // CHECK: @_Z5test1v
 // CHECK: cir.scope {
-// CHECK:   %[[#RETVAL:]] = cir.alloca !ty_22A22, !cir.ptr<!ty_22A22>
+// CHECK:   %[[#RETVAL:]] = cir.alloca !ty_A, !cir.ptr<!ty_A>
 // CHECK:   cir.scope {
-// CHECK:     %[[#VAR:]] = cir.alloca !ty_22A22, !cir.ptr<!ty_22A22>, ["a", init] {alignment = 4 : i64}
-// CHECK:     cir.call @_ZN1AC1Ev(%[[#VAR]]) : (!cir.ptr<!ty_22A22>) -> ()
-// CHECK:     cir.call @_ZN1AC1ERS_(%[[#RETVAL]], %[[#VAR]]) : (!cir.ptr<!ty_22A22>, !cir.ptr<!ty_22A22>) -> ()
+// CHECK:     %[[#VAR:]] = cir.alloca !ty_A, !cir.ptr<!ty_A>, ["a", init] {alignment = 4 : i64}
+// CHECK:     cir.call @_ZN1AC1Ev(%[[#VAR]]) : (!cir.ptr<!ty_A>) -> ()
+// CHECK:     cir.call @_ZN1AC1ERS_(%[[#RETVAL]], %[[#VAR]]) : (!cir.ptr<!ty_A>, !cir.ptr<!ty_A>) -> ()
 //            TODO(cir): the local VAR should be destroyed here.
 // CHECK:   }
-// CHECK:   cir.call @_ZN1A3FooEv(%[[#RETVAL]]) : (!cir.ptr<!ty_22A22>) -> ()
+// CHECK:   cir.call @_ZN1A3FooEv(%[[#RETVAL]]) : (!cir.ptr<!ty_A>) -> ()
 //          TODO(cir): the temporary RETVAL should be destroyed here.
 // CHECK: }

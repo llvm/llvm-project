@@ -8,18 +8,18 @@
 
 !ty_2222 = !cir.struct<struct {!cir.array<!cir.ptr<!u8i> x 5>}>
 !ty_22221 = !cir.struct<struct {!cir.ptr<!u8i>, !cir.ptr<!u8i>, !cir.ptr<!u8i>}>
-!ty_22A22 = !cir.struct<class "A" incomplete #cir.record.decl.ast>
-!ty_22i22 = !cir.struct<union "i" incomplete>
-!ty_22S22 = !cir.struct<struct "S" {!u8i, !u16i, !u32i}>
-!ty_22S122 = !cir.struct<struct "S1" {!s32i, !s32i}>
+!ty_A = !cir.struct<class "A" incomplete #cir.record.decl.ast>
+!ty_i = !cir.struct<union "i" incomplete>
+!ty_S = !cir.struct<struct "S" {!u8i, !u16i, !u32i}>
+!ty_S1_ = !cir.struct<struct "S1" {!s32i, !s32i}>
 
 // Test recursive struct parsing/printing.
-!ty_22Node22 = !cir.struct<struct "Node" {!cir.ptr<!cir.struct<struct "Node">>} #cir.record.decl.ast>
+!ty_Node = !cir.struct<struct "Node" {!cir.ptr<!cir.struct<struct "Node">>} #cir.record.decl.ast>
 // CHECK-DAG: !cir.struct<struct "Node" {!cir.ptr<!cir.struct<struct "Node">>} #cir.record.decl.ast>
 
 module  {
   // Dummy function to use types and force them to be printed.
-  cir.func @useTypes(%arg0: !ty_22Node22) {
+  cir.func @useTypes(%arg0: !ty_Node) {
     cir.return
   }
 
@@ -30,12 +30,12 @@ module  {
   }
 
 // CHECK: cir.func @structs() {
-// CHECK:     %0 = cir.alloca !cir.ptr<!ty_22S22>, !cir.ptr<!cir.ptr<!ty_22S22>>, ["s", init]
-// CHECK:     %1 = cir.alloca !cir.ptr<!ty_22i22>, !cir.ptr<!cir.ptr<!ty_22i22>>, ["i", init]
+// CHECK:     %0 = cir.alloca !cir.ptr<!ty_S>, !cir.ptr<!cir.ptr<!ty_S>>, ["s", init]
+// CHECK:     %1 = cir.alloca !cir.ptr<!ty_i>, !cir.ptr<!cir.ptr<!ty_i>>, ["i", init]
 
   cir.func @shouldSuccessfullyParseConstStructAttrs() {
-    %0 = cir.const #cir.const_struct<{#cir.int<1> : !s32i, #cir.int<2> : !s32i}> : !ty_22S122
-    // CHECK: cir.const #cir.const_struct<{#cir.int<1> : !s32i, #cir.int<2> : !s32i}> : !ty_22S122
+    %0 = cir.const #cir.const_struct<{#cir.int<1> : !s32i, #cir.int<2> : !s32i}> : !ty_S1_
+    // CHECK: cir.const #cir.const_struct<{#cir.int<1> : !s32i, #cir.int<2> : !s32i}> : !ty_S1_
     cir.return
   }
 }

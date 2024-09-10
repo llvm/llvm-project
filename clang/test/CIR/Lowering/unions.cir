@@ -4,26 +4,26 @@
 !s16i = !cir.int<s, 16>
 !s32i = !cir.int<s, 32>
 #true = #cir.bool<true> : !cir.bool
-!ty_22U122 = !cir.struct<union "U1" {!cir.bool, !s16i, !s32i} #cir.record.decl.ast>
-!ty_22U222 = !cir.struct<union "U2" {f64, !ty_22U122} #cir.record.decl.ast>
-!ty_22U322 = !cir.struct<union "U3" {!s16i, !ty_22U122} #cir.record.decl.ast>
+!ty_U1_ = !cir.struct<union "U1" {!cir.bool, !s16i, !s32i} #cir.record.decl.ast>
+!ty_U2_ = !cir.struct<union "U2" {f64, !ty_U1_} #cir.record.decl.ast>
+!ty_U3_ = !cir.struct<union "U3" {!s16i, !ty_U1_} #cir.record.decl.ast>
 module {
   // Should lower union to struct with only the largest member.
-  cir.global external @u1 = #cir.zero : !ty_22U122
+  cir.global external @u1 = #cir.zero : !ty_U1_
   // CHECK: llvm.mlir.global external @u1() {addr_space = 0 : i32} : !llvm.struct<"union.U1", (i32)>
 
   // Should recursively find the largest member if there are nested unions.
-  cir.global external @u2 = #cir.zero : !ty_22U222
-  cir.global external @u3 = #cir.zero : !ty_22U322
+  cir.global external @u2 = #cir.zero : !ty_U2_
+  cir.global external @u3 = #cir.zero : !ty_U3_
   // CHECK: llvm.mlir.global external @u2() {addr_space = 0 : i32} : !llvm.struct<"union.U2", (f64)>
   // CHECK: llvm.mlir.global external @u3() {addr_space = 0 : i32} : !llvm.struct<"union.U3", (i32)>
 
   // CHECK: llvm.func @test
-  cir.func @test(%arg0: !cir.ptr<!ty_22U122>) {
+  cir.func @test(%arg0: !cir.ptr<!ty_U1_>) {
 
     // Should store directly to the union's base address.
     %5 = cir.const #true
-    %6 = cir.get_member %arg0[0] {name = "b"} : !cir.ptr<!ty_22U122> -> !cir.ptr<!cir.bool>
+    %6 = cir.get_member %arg0[0] {name = "b"} : !cir.ptr<!ty_U1_> -> !cir.ptr<!cir.bool>
     cir.store %5, %6 : !cir.bool, !cir.ptr<!cir.bool>
     // CHECK: %[[#VAL:]] = llvm.mlir.constant(1 : i8) : i8
     // The bitcast it just to bypass the type checker. It will be replaced by an opaque pointer.
@@ -31,7 +31,7 @@ module {
     // CHECK: llvm.store %[[#VAL]], %[[#ADDR]] {{.*}}: i8, !llvm.ptr
 
     // Should load direclty from the union's base address.
-    %7 = cir.get_member %arg0[0] {name = "b"} : !cir.ptr<!ty_22U122> -> !cir.ptr<!cir.bool>
+    %7 = cir.get_member %arg0[0] {name = "b"} : !cir.ptr<!ty_U1_> -> !cir.ptr<!cir.bool>
     %8 = cir.load %7 : !cir.ptr<!cir.bool>, !cir.bool
     // The bitcast it just to bypass the type checker. It will be replaced by an opaque pointer.
     // CHECK: %[[#BASE:]] = llvm.bitcast %{{.+}} : !llvm.ptr

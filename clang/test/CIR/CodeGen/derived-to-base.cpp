@@ -75,32 +75,32 @@ void C3::Layer::Initialize() {
   }
 }
 
-// CHECK-DAG: !ty_22C23A3ALayer22 = !cir.struct<class "C2::Layer"
-// CHECK-DAG: !ty_22C33A3ALayer22 = !cir.struct<struct "C3::Layer"
-// CHECK-DAG: !ty_22A22 = !cir.struct<class "A"
-// CHECK-DAG: !ty_22A2Ebase22 = !cir.struct<class "A.base"
-// CHECK-DAG: !ty_22B22 = !cir.struct<class "B" {!cir.struct<class "A.base"
+// CHECK-DAG: !ty_C23A3ALayer = !cir.struct<class "C2::Layer"
+// CHECK-DAG: !ty_C33A3ALayer = !cir.struct<struct "C3::Layer"
+// CHECK-DAG: !ty_A = !cir.struct<class "A"
+// CHECK-DAG: !ty_A2Ebase = !cir.struct<class "A.base"
+// CHECK-DAG: !ty_B = !cir.struct<class "B" {!cir.struct<class "A.base"
 
 // CHECK: cir.func @_ZN2C35Layer10InitializeEv
 
 // CHECK:  cir.scope {
-// CHECK:    %2 = cir.base_class_addr(%1 : !cir.ptr<!ty_22C33A3ALayer22>) -> !cir.ptr<!ty_22C23A3ALayer22>
-// CHECK:    %3 = cir.get_member %2[1] {name = "m_C1"} : !cir.ptr<!ty_22C23A3ALayer22> -> !cir.ptr<!cir.ptr<!ty_22C222>>
-// CHECK:    %4 = cir.load %3 : !cir.ptr<!cir.ptr<!ty_22C222>>, !cir.ptr<!ty_22C222>
-// CHECK:    %5 = cir.const #cir.ptr<null> : !cir.ptr<!ty_22C222>
-// CHECK:    %6 = cir.cmp(eq, %4, %5) : !cir.ptr<!ty_22C222>, !cir.bool
+// CHECK:    %2 = cir.base_class_addr(%1 : !cir.ptr<!ty_C33A3ALayer>) -> !cir.ptr<!ty_C23A3ALayer>
+// CHECK:    %3 = cir.get_member %2[1] {name = "m_C1"} : !cir.ptr<!ty_C23A3ALayer> -> !cir.ptr<!cir.ptr<!ty_C2_>>
+// CHECK:    %4 = cir.load %3 : !cir.ptr<!cir.ptr<!ty_C2_>>, !cir.ptr<!ty_C2_>
+// CHECK:    %5 = cir.const #cir.ptr<null> : !cir.ptr<!ty_C2_>
+// CHECK:    %6 = cir.cmp(eq, %4, %5) : !cir.ptr<!ty_C2_>, !cir.bool
 
 enumy C3::Initialize() {
   return C2::Initialize();
 }
 
-// CHECK: cir.func @_ZN2C310InitializeEv(%arg0: !cir.ptr<!ty_22C322>
-// CHECK:     %0 = cir.alloca !cir.ptr<!ty_22C322>, !cir.ptr<!cir.ptr<!ty_22C322>>, ["this", init] {alignment = 8 : i64}
+// CHECK: cir.func @_ZN2C310InitializeEv(%arg0: !cir.ptr<!ty_C3_>
+// CHECK:     %0 = cir.alloca !cir.ptr<!ty_C3_>, !cir.ptr<!cir.ptr<!ty_C3_>>, ["this", init] {alignment = 8 : i64}
 
-// CHECK:     cir.store %arg0, %0 : !cir.ptr<!ty_22C322>, !cir.ptr<!cir.ptr<!ty_22C322>>
-// CHECK:     %2 = cir.load %0 : !cir.ptr<!cir.ptr<!ty_22C322>>, !cir.ptr<!ty_22C322>
-// CHECK:     %3 = cir.base_class_addr(%2 : !cir.ptr<!ty_22C322>) -> !cir.ptr<!ty_22C222>
-// CHECK:     %4 = cir.call @_ZN2C210InitializeEv(%3) : (!cir.ptr<!ty_22C222>) -> !s32i
+// CHECK:     cir.store %arg0, %0 : !cir.ptr<!ty_C3_>, !cir.ptr<!cir.ptr<!ty_C3_>>
+// CHECK:     %2 = cir.load %0 : !cir.ptr<!cir.ptr<!ty_C3_>>, !cir.ptr<!ty_C3_>
+// CHECK:     %3 = cir.base_class_addr(%2 : !cir.ptr<!ty_C3_>) -> !cir.ptr<!ty_C2_>
+// CHECK:     %4 = cir.call @_ZN2C210InitializeEv(%3) : (!cir.ptr<!ty_C2_>) -> !s32i
 
 void vcall(C1 &c1) {
   buffy b;
@@ -108,21 +108,21 @@ void vcall(C1 &c1) {
   c1.SetStuff(e, b);
 }
 
-// CHECK: cir.func @_Z5vcallR2C1(%arg0: !cir.ptr<!ty_22C122>
-// CHECK:   %0 = cir.alloca !cir.ptr<!ty_22C122>, !cir.ptr<!cir.ptr<!ty_22C122>>, ["c1", init] {alignment = 8 : i64}
-// CHECK:   %1 = cir.alloca !ty_22buffy22, !cir.ptr<!ty_22buffy22>, ["b"] {alignment = 8 : i64}
+// CHECK: cir.func @_Z5vcallR2C1(%arg0: !cir.ptr<!ty_C1_>
+// CHECK:   %0 = cir.alloca !cir.ptr<!ty_C1_>, !cir.ptr<!cir.ptr<!ty_C1_>>, ["c1", init] {alignment = 8 : i64}
+// CHECK:   %1 = cir.alloca !ty_buffy, !cir.ptr<!ty_buffy>, ["b"] {alignment = 8 : i64}
 // CHECK:   %2 = cir.alloca !s32i, !cir.ptr<!s32i>, ["e"] {alignment = 4 : i64}
-// CHECK:   %3 = cir.alloca !ty_22buffy22, !cir.ptr<!ty_22buffy22>, ["agg.tmp0"] {alignment = 8 : i64}
-// CHECK:   cir.store %arg0, %0 : !cir.ptr<!ty_22C122>, !cir.ptr<!cir.ptr<!ty_22C122>>
-// CHECK:   %4 = cir.load %0 : !cir.ptr<!cir.ptr<!ty_22C122>>, !cir.ptr<!ty_22C122>
+// CHECK:   %3 = cir.alloca !ty_buffy, !cir.ptr<!ty_buffy>, ["agg.tmp0"] {alignment = 8 : i64}
+// CHECK:   cir.store %arg0, %0 : !cir.ptr<!ty_C1_>, !cir.ptr<!cir.ptr<!ty_C1_>>
+// CHECK:   %4 = cir.load %0 : !cir.ptr<!cir.ptr<!ty_C1_>>, !cir.ptr<!ty_C1_>
 // CHECK:   %5 = cir.load %2 : !cir.ptr<!s32i>, !s32i
-// CHECK:   cir.call @_ZN5buffyC2ERKS_(%3, %1) : (!cir.ptr<!ty_22buffy22>, !cir.ptr<!ty_22buffy22>) -> ()
-// CHECK:   %6 = cir.load %3 : !cir.ptr<!ty_22buffy22>, !ty_22buffy22
-// CHECK:   %7 = cir.cast(bitcast, %4 : !cir.ptr<!ty_22C122>), !cir.ptr<!cir.ptr<!cir.ptr<!cir.func<!s32i (!cir.ptr<!ty_22C122>, !s32i, !ty_22buffy22)>>>>
-// CHECK:   %8 = cir.load %7 : !cir.ptr<!cir.ptr<!cir.ptr<!cir.func<!s32i (!cir.ptr<!ty_22C122>, !s32i, !ty_22buffy22)>>>>, !cir.ptr<!cir.ptr<!cir.func<!s32i (!cir.ptr<!ty_22C122>, !s32i, !ty_22buffy22)>>>
-// CHECK:   %9 = cir.vtable.address_point( %8 : !cir.ptr<!cir.ptr<!cir.func<!s32i (!cir.ptr<!ty_22C122>, !s32i, !ty_22buffy22)>>>, vtable_index = 0, address_point_index = 2) : !cir.ptr<!cir.ptr<!cir.func<!s32i (!cir.ptr<!ty_22C122>, !s32i, !ty_22buffy22)>>>
-// CHECK:   %10 = cir.load align(8) %9 : !cir.ptr<!cir.ptr<!cir.func<!s32i (!cir.ptr<!ty_22C122>, !s32i, !ty_22buffy22)>>>, !cir.ptr<!cir.func<!s32i (!cir.ptr<!ty_22C122>, !s32i, !ty_22buffy22)>>
-// CHECK:   %11 = cir.call %10(%4, %5, %6) : (!cir.ptr<!cir.func<!s32i (!cir.ptr<!ty_22C122>, !s32i, !ty_22buffy22)>>, !cir.ptr<!ty_22C122>, !s32i, !ty_22buffy22) -> !s32i
+// CHECK:   cir.call @_ZN5buffyC2ERKS_(%3, %1) : (!cir.ptr<!ty_buffy>, !cir.ptr<!ty_buffy>) -> ()
+// CHECK:   %6 = cir.load %3 : !cir.ptr<!ty_buffy>, !ty_buffy
+// CHECK:   %7 = cir.cast(bitcast, %4 : !cir.ptr<!ty_C1_>), !cir.ptr<!cir.ptr<!cir.ptr<!cir.func<!s32i (!cir.ptr<!ty_C1_>, !s32i, !ty_buffy)>>>>
+// CHECK:   %8 = cir.load %7 : !cir.ptr<!cir.ptr<!cir.ptr<!cir.func<!s32i (!cir.ptr<!ty_C1_>, !s32i, !ty_buffy)>>>>, !cir.ptr<!cir.ptr<!cir.func<!s32i (!cir.ptr<!ty_C1_>, !s32i, !ty_buffy)>>>
+// CHECK:   %9 = cir.vtable.address_point( %8 : !cir.ptr<!cir.ptr<!cir.func<!s32i (!cir.ptr<!ty_C1_>, !s32i, !ty_buffy)>>>, vtable_index = 0, address_point_index = 2) : !cir.ptr<!cir.ptr<!cir.func<!s32i (!cir.ptr<!ty_C1_>, !s32i, !ty_buffy)>>>
+// CHECK:   %10 = cir.load align(8) %9 : !cir.ptr<!cir.ptr<!cir.func<!s32i (!cir.ptr<!ty_C1_>, !s32i, !ty_buffy)>>>, !cir.ptr<!cir.func<!s32i (!cir.ptr<!ty_C1_>, !s32i, !ty_buffy)>>
+// CHECK:   %11 = cir.call %10(%4, %5, %6) : (!cir.ptr<!cir.func<!s32i (!cir.ptr<!ty_C1_>, !s32i, !ty_buffy)>>, !cir.ptr<!ty_C1_>, !s32i, !ty_buffy) -> !s32i
 // CHECK:   cir.return
 // CHECK: }
 
@@ -138,19 +138,19 @@ public:
   void foo ()  { static_cast<A>(*this).foo();}
 };
 
-// CHECK: cir.func linkonce_odr @_ZN1B3fooEv(%arg0: !cir.ptr<!ty_22B22>
-// CHECK:   %0 = cir.alloca !cir.ptr<!ty_22B22>, !cir.ptr<!cir.ptr<!ty_22B22>>, ["this", init] {alignment = 8 : i64}
-// CHECK:   cir.store %arg0, %0 : !cir.ptr<!ty_22B22>, !cir.ptr<!cir.ptr<!ty_22B22>>
-// CHECK:   %1 = cir.load deref %0 : !cir.ptr<!cir.ptr<!ty_22B22>>, !cir.ptr<!ty_22B22>
+// CHECK: cir.func linkonce_odr @_ZN1B3fooEv(%arg0: !cir.ptr<!ty_B>
+// CHECK:   %0 = cir.alloca !cir.ptr<!ty_B>, !cir.ptr<!cir.ptr<!ty_B>>, ["this", init] {alignment = 8 : i64}
+// CHECK:   cir.store %arg0, %0 : !cir.ptr<!ty_B>, !cir.ptr<!cir.ptr<!ty_B>>
+// CHECK:   %1 = cir.load deref %0 : !cir.ptr<!cir.ptr<!ty_B>>, !cir.ptr<!ty_B>
 // CHECK:   cir.scope {
-// CHECK:     %2 = cir.alloca !ty_22A22, !cir.ptr<!ty_22A22>, ["ref.tmp0"] {alignment = 8 : i64}
-// CHECK:     %3 = cir.base_class_addr(%1 : !cir.ptr<!ty_22B22>) -> !cir.ptr<!ty_22A22>
+// CHECK:     %2 = cir.alloca !ty_A, !cir.ptr<!ty_A>, ["ref.tmp0"] {alignment = 8 : i64}
+// CHECK:     %3 = cir.base_class_addr(%1 : !cir.ptr<!ty_B>) -> !cir.ptr<!ty_A>
 
 // Call @A::A(A const&)
-// CHECK:     cir.call @_ZN1AC2ERKS_(%2, %3) : (!cir.ptr<!ty_22A22>, !cir.ptr<!ty_22A22>) -> ()
+// CHECK:     cir.call @_ZN1AC2ERKS_(%2, %3) : (!cir.ptr<!ty_A>, !cir.ptr<!ty_A>) -> ()
 
 // Call @A::foo()
-// CHECK:     cir.call @_ZN1A3fooEv(%2) : (!cir.ptr<!ty_22A22>) -> ()
+// CHECK:     cir.call @_ZN1A3fooEv(%2) : (!cir.ptr<!ty_A>) -> ()
 // CHECK:   }
 // CHECK:   cir.return
 // CHECK: }

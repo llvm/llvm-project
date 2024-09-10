@@ -135,7 +135,7 @@ co_invoke_fn co_invoke;
 // CHECK-DAG: ![[SuspendAlways:.*]] = !cir.struct<struct "std::suspend_always" {!cir.int<u, 8>}>
 
 // CHECK: module {{.*}} {
-// CHECK-NEXT: cir.global external @_ZN5folly4coro9co_invokeE = #cir.zero : !ty_22folly3A3Acoro3A3Aco_invoke_fn22
+// CHECK-NEXT: cir.global external @_ZN5folly4coro9co_invokeE = #cir.zero : !ty_folly3A3Acoro3A3Aco_invoke_fn
 
 // CHECK: cir.func builtin private @__builtin_coro_id(!u32i, !cir.ptr<!void>, !cir.ptr<!void>, !cir.ptr<!void>) -> !u32i
 // CHECK: cir.func builtin private @__builtin_coro_alloc(!u32i) -> !cir.bool
@@ -274,7 +274,7 @@ folly::coro::Task<int> byRef(const std::string& s) {
 }
 
 // FIXME: this could be less redundant than two allocas + reloads
-// CHECK: cir.func coroutine @_Z5byRefRKSt6string(%arg0: !cir.ptr<![[StdString]]> {{.*}}22 extra{{.*}}{
+// CHECK: cir.func coroutine @_Z5byRefRKSt6string(%arg0: !cir.ptr<![[StdString]]> {{.*}} ![[IntTask]] extra{{.*}}{
 // CHECK: %[[#AllocaParam:]] = cir.alloca !cir.ptr<![[StdString]]>, {{.*}} ["s", init]
 // CHECK: %[[#AllocaFnUse:]] = cir.alloca !cir.ptr<![[StdString]]>, {{.*}} ["s", init]
 
@@ -291,7 +291,7 @@ folly::coro::Task<void> silly_coro() {
 // Make sure we properly handle OnFallthrough coro body sub stmt and
 // check there are not multiple co_returns emitted.
 
-// CHECK: cir.func coroutine @_Z10silly_corov() {{.*}}22 extra{{.*}}{
+// CHECK: cir.func coroutine @_Z10silly_corov() {{.*}} ![[VoidTask]] extra{{.*}}{
 // CHECK: cir.await(init, ready : {
 // CHECK: cir.call @_ZN5folly4coro4TaskIvE12promise_type11return_voidEv
 // CHECK-NOT: cir.call @_ZN5folly4coro4TaskIvE12promise_type11return_voidEv
@@ -303,7 +303,7 @@ folly::coro::Task<int> go1() {
   co_return co_await task;
 }
 
-// CHECK: cir.func coroutine @_Z3go1v() {{.*}}22 extra{{.*}}{
+// CHECK: cir.func coroutine @_Z3go1v() {{.*}} ![[IntTask]] extra{{.*}}{
 // CHECK: %[[#IntTaskAddr:]] = cir.alloca ![[IntTask]], !cir.ptr<![[IntTask]]>, ["task", init]
 
 // CHECK:   cir.await(init, ready : {
@@ -338,8 +338,8 @@ folly::coro::Task<int> go1_lambda() {
   co_return co_await task;
 }
 
-// CHECK: cir.func coroutine lambda internal private @_ZZ10go1_lambdavENK3$_0clEv{{.*}}22 extra{{.*}}{
-// CHECK: cir.func coroutine @_Z10go1_lambdav() {{.*}}22 extra{{.*}}{
+// CHECK: cir.func coroutine lambda internal private @_ZZ10go1_lambdavENK3$_0clEv{{.*}} ![[IntTask]] extra{{.*}}{
+// CHECK: cir.func coroutine @_Z10go1_lambdav() {{.*}} ![[IntTask]] extra{{.*}}{
 
 folly::coro::Task<int> go4() {
   auto* fn = +[](int const& i) -> folly::coro::Task<int> { co_return i; };
@@ -347,7 +347,7 @@ folly::coro::Task<int> go4() {
   co_return co_await std::move(task);
 }
 
-// CHECK: cir.func coroutine @_Z3go4v() {{.*}}22 extra{{.*}}{
+// CHECK: cir.func coroutine @_Z3go4v() {{.*}} ![[IntTask]] extra{{.*}}{
 
 // CHECK:   cir.await(init, ready : {
 // CHECK:   }, suspend : {
@@ -356,10 +356,10 @@ folly::coro::Task<int> go4() {
 // CHECK: }
 
 // CHECK: %12 = cir.scope {
-// CHECK:   %17 = cir.alloca !ty_22anon2E522, !cir.ptr<!ty_22anon2E522>, ["ref.tmp1"] {alignment = 1 : i64}
+// CHECK:   %17 = cir.alloca !ty_anon2E5_, !cir.ptr<!ty_anon2E5_>, ["ref.tmp1"] {alignment = 1 : i64}
 
 // Get the lambda invoker ptr via `lambda operator folly::coro::Task<int> (*)(int const&)()`
-// CHECK:   %18 = cir.call @_ZZ3go4vENK3$_0cvPFN5folly4coro4TaskIiEERKiEEv(%17) : (!cir.ptr<!ty_22anon2E522>) -> !cir.ptr<!cir.func<![[IntTask]] (!cir.ptr<!s32i>)>>
+// CHECK:   %18 = cir.call @_ZZ3go4vENK3$_0cvPFN5folly4coro4TaskIiEERKiEEv(%17) : (!cir.ptr<!ty_anon2E5_>) -> !cir.ptr<!cir.func<![[IntTask]] (!cir.ptr<!s32i>)>>
 // CHECK:   %19 = cir.unary(plus, %18) : !cir.ptr<!cir.func<![[IntTask]] (!cir.ptr<!s32i>)>>, !cir.ptr<!cir.func<![[IntTask]] (!cir.ptr<!s32i>)>>
 // CHECK:   cir.yield %19 : !cir.ptr<!cir.func<![[IntTask]] (!cir.ptr<!s32i>)>>
 // CHECK: }
@@ -387,7 +387,7 @@ folly::coro::Task<void> yield1() {
   co_yield t;
 }
 
-// CHECK: cir.func coroutine @_Z6yield1v() -> !ty_22folly3A3Acoro3A3ATask3Cvoid3E22
+// CHECK: cir.func coroutine @_Z6yield1v() -> !ty_folly3A3Acoro3A3ATask3Cvoid3E
 
 // CHECK: cir.await(init, ready : {
 // CHECK: }, suspend : {
@@ -395,30 +395,30 @@ folly::coro::Task<void> yield1() {
 // CHECK: },)
 
 //      CHECK: cir.scope {
-// CHECK-NEXT:   %[[#SUSPEND_PTR:]] = cir.alloca !ty_22std3A3Asuspend_always22, !cir.ptr<!ty_22std3A3Asuspend_always22>
-// CHECK-NEXT:   %[[#AWAITER_PTR:]] = cir.alloca !ty_22folly3A3Acoro3A3ATask3Cvoid3E22, !cir.ptr<!ty_22folly3A3Acoro3A3ATask3Cvoid3E22>
-// CHECK-NEXT:   %[[#CORO_PTR:]] = cir.alloca !ty_22std3A3Acoroutine_handle3Cvoid3E22, !cir.ptr<!ty_22std3A3Acoroutine_handle3Cvoid3E22>
-// CHECK-NEXT:   %[[#CORO2_PTR:]] = cir.alloca !ty_22std3A3Acoroutine_handle3Cfolly3A3Acoro3A3ATask3Cvoid3E3A3Apromise_type3E22, !cir.ptr<!ty_22std3A3Acoroutine_handle3Cfolly3A3Acoro3A3ATask3Cvoid3E3A3Apromise_type3E22>
-// CHECK-NEXT:   cir.call @_ZN5folly4coro4TaskIvEC1ERKS2_(%[[#AWAITER_PTR]], %{{.+}}) : (!cir.ptr<!ty_22folly3A3Acoro3A3ATask3Cvoid3E22>, !cir.ptr<!ty_22folly3A3Acoro3A3ATask3Cvoid3E22>) -> ()
-// CHECK-NEXT:   %[[#AWAITER:]] = cir.load %[[#AWAITER_PTR]] : !cir.ptr<!ty_22folly3A3Acoro3A3ATask3Cvoid3E22>, !ty_22folly3A3Acoro3A3ATask3Cvoid3E22
-// CHECK-NEXT:   %[[#SUSPEND:]] = cir.call @_ZN5folly4coro4TaskIvE12promise_type11yield_valueES2_(%{{.+}}, %[[#AWAITER]]) : (!cir.ptr<!ty_22folly3A3Acoro3A3ATask3Cvoid3E3A3Apromise_type22>, !ty_22folly3A3Acoro3A3ATask3Cvoid3E22) -> !ty_22std3A3Asuspend_always22
-// CHECK-NEXT:   cir.store %[[#SUSPEND]], %[[#SUSPEND_PTR]] : !ty_22std3A3Asuspend_always22, !cir.ptr<!ty_22std3A3Asuspend_always22>
+// CHECK-NEXT:   %[[#SUSPEND_PTR:]] = cir.alloca !ty_std3A3Asuspend_always, !cir.ptr<!ty_std3A3Asuspend_always>
+// CHECK-NEXT:   %[[#AWAITER_PTR:]] = cir.alloca !ty_folly3A3Acoro3A3ATask3Cvoid3E, !cir.ptr<!ty_folly3A3Acoro3A3ATask3Cvoid3E>
+// CHECK-NEXT:   %[[#CORO_PTR:]] = cir.alloca !ty_std3A3Acoroutine_handle3Cvoid3E, !cir.ptr<!ty_std3A3Acoroutine_handle3Cvoid3E>
+// CHECK-NEXT:   %[[#CORO2_PTR:]] = cir.alloca !ty_std3A3Acoroutine_handle3Cfolly3A3Acoro3A3ATask3Cvoid3E3A3Apromise_type3E, !cir.ptr<!ty_std3A3Acoroutine_handle3Cfolly3A3Acoro3A3ATask3Cvoid3E3A3Apromise_type3E>
+// CHECK-NEXT:   cir.call @_ZN5folly4coro4TaskIvEC1ERKS2_(%[[#AWAITER_PTR]], %{{.+}}) : (!cir.ptr<!ty_folly3A3Acoro3A3ATask3Cvoid3E>, !cir.ptr<!ty_folly3A3Acoro3A3ATask3Cvoid3E>) -> ()
+// CHECK-NEXT:   %[[#AWAITER:]] = cir.load %[[#AWAITER_PTR]] : !cir.ptr<!ty_folly3A3Acoro3A3ATask3Cvoid3E>, !ty_folly3A3Acoro3A3ATask3Cvoid3E
+// CHECK-NEXT:   %[[#SUSPEND:]] = cir.call @_ZN5folly4coro4TaskIvE12promise_type11yield_valueES2_(%{{.+}}, %[[#AWAITER]]) : (!cir.ptr<!ty_folly3A3Acoro3A3ATask3Cvoid3E3A3Apromise_type>, !ty_folly3A3Acoro3A3ATask3Cvoid3E) -> !ty_std3A3Asuspend_always
+// CHECK-NEXT:   cir.store %[[#SUSPEND]], %[[#SUSPEND_PTR]] : !ty_std3A3Asuspend_always, !cir.ptr<!ty_std3A3Asuspend_always>
 // CHECK-NEXT:   cir.await(yield, ready : {
 // CHECK-NEXT:     %[[#READY:]] = cir.scope {
-// CHECK-NEXT:       %[[#A:]] = cir.call @_ZNSt14suspend_always11await_readyEv(%[[#SUSPEND_PTR]]) : (!cir.ptr<!ty_22std3A3Asuspend_always22>) -> !cir.bool
+// CHECK-NEXT:       %[[#A:]] = cir.call @_ZNSt14suspend_always11await_readyEv(%[[#SUSPEND_PTR]]) : (!cir.ptr<!ty_std3A3Asuspend_always>) -> !cir.bool
 // CHECK-NEXT:       cir.yield %[[#A]] : !cir.bool
 // CHECK-NEXT:     } : !cir.bool
 // CHECK-NEXT:     cir.condition(%[[#READY]])
 // CHECK-NEXT:   }, suspend : {
-// CHECK-NEXT:     %[[#CORO2:]] = cir.call @_ZNSt16coroutine_handleIN5folly4coro4TaskIvE12promise_typeEE12from_addressEPv(%9) : (!cir.ptr<!void>) -> !ty_22std3A3Acoroutine_handle3Cfolly3A3Acoro3A3ATask3Cvoid3E3A3Apromise_type3E22
-// CHECK-NEXT:     cir.store %[[#CORO2]], %[[#CORO2_PTR]] : !ty_22std3A3Acoroutine_handle3Cfolly3A3Acoro3A3ATask3Cvoid3E3A3Apromise_type3E22, !cir.ptr<!ty_22std3A3Acoroutine_handle3Cfolly3A3Acoro3A3ATask3Cvoid3E3A3Apromise_type3E22>
-// CHECK-NEXT:     %[[#B:]] = cir.load %[[#CORO2_PTR]] : !cir.ptr<!ty_22std3A3Acoroutine_handle3Cfolly3A3Acoro3A3ATask3Cvoid3E3A3Apromise_type3E22>, !ty_22std3A3Acoroutine_handle3Cfolly3A3Acoro3A3ATask3Cvoid3E3A3Apromise_type3E22
-// CHECK-NEXT:     cir.call @_ZNSt16coroutine_handleIvEC1IN5folly4coro4TaskIvE12promise_typeEEES_IT_E(%[[#CORO_PTR]], %[[#B]]) : (!cir.ptr<!ty_22std3A3Acoroutine_handle3Cvoid3E22>, !ty_22std3A3Acoroutine_handle3Cfolly3A3Acoro3A3ATask3Cvoid3E3A3Apromise_type3E22) -> ()
-// CHECK-NEXT:     %[[#C:]] = cir.load %[[#CORO_PTR]] : !cir.ptr<!ty_22std3A3Acoroutine_handle3Cvoid3E22>, !ty_22std3A3Acoroutine_handle3Cvoid3E22
-// CHECK-NEXT:     cir.call @_ZNSt14suspend_always13await_suspendESt16coroutine_handleIvE(%[[#SUSPEND_PTR]], %[[#C]]) : (!cir.ptr<!ty_22std3A3Asuspend_always22>, !ty_22std3A3Acoroutine_handle3Cvoid3E22) -> ()
+// CHECK-NEXT:     %[[#CORO2:]] = cir.call @_ZNSt16coroutine_handleIN5folly4coro4TaskIvE12promise_typeEE12from_addressEPv(%9) : (!cir.ptr<!void>) -> !ty_std3A3Acoroutine_handle3Cfolly3A3Acoro3A3ATask3Cvoid3E3A3Apromise_type3E
+// CHECK-NEXT:     cir.store %[[#CORO2]], %[[#CORO2_PTR]] : !ty_std3A3Acoroutine_handle3Cfolly3A3Acoro3A3ATask3Cvoid3E3A3Apromise_type3E, !cir.ptr<!ty_std3A3Acoroutine_handle3Cfolly3A3Acoro3A3ATask3Cvoid3E3A3Apromise_type3E>
+// CHECK-NEXT:     %[[#B:]] = cir.load %[[#CORO2_PTR]] : !cir.ptr<!ty_std3A3Acoroutine_handle3Cfolly3A3Acoro3A3ATask3Cvoid3E3A3Apromise_type3E>, !ty_std3A3Acoroutine_handle3Cfolly3A3Acoro3A3ATask3Cvoid3E3A3Apromise_type3E
+// CHECK-NEXT:     cir.call @_ZNSt16coroutine_handleIvEC1IN5folly4coro4TaskIvE12promise_typeEEES_IT_E(%[[#CORO_PTR]], %[[#B]]) : (!cir.ptr<!ty_std3A3Acoroutine_handle3Cvoid3E>, !ty_std3A3Acoroutine_handle3Cfolly3A3Acoro3A3ATask3Cvoid3E3A3Apromise_type3E) -> ()
+// CHECK-NEXT:     %[[#C:]] = cir.load %[[#CORO_PTR]] : !cir.ptr<!ty_std3A3Acoroutine_handle3Cvoid3E>, !ty_std3A3Acoroutine_handle3Cvoid3E
+// CHECK-NEXT:     cir.call @_ZNSt14suspend_always13await_suspendESt16coroutine_handleIvE(%[[#SUSPEND_PTR]], %[[#C]]) : (!cir.ptr<!ty_std3A3Asuspend_always>, !ty_std3A3Acoroutine_handle3Cvoid3E) -> ()
 // CHECK-NEXT:     cir.yield
 // CHECK-NEXT:   }, resume : {
-// CHECK-NEXT:     cir.call @_ZNSt14suspend_always12await_resumeEv(%[[#SUSPEND_PTR]]) : (!cir.ptr<!ty_22std3A3Asuspend_always22>) -> ()
+// CHECK-NEXT:     cir.call @_ZNSt14suspend_always12await_resumeEv(%[[#SUSPEND_PTR]]) : (!cir.ptr<!ty_std3A3Asuspend_always>) -> ()
 // CHECK-NEXT:     cir.yield
 // CHECK-NEXT:   },)
 // CHECK-NEXT: }

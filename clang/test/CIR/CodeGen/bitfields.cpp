@@ -27,15 +27,15 @@ typedef struct {
   int a : 3;  // one bitfield with size < 8
   unsigned b;
 } T;
-// CHECK: !ty_22T22 = !cir.struct<struct "T" {!cir.int<u, 8>, !cir.int<u, 32>} #cir.record.decl.ast>
-// CHECK: !ty_22anon2E122 = !cir.struct<struct "anon.1" {!cir.int<u, 32>} #cir.record.decl.ast>
-// CHECK: !ty_22S22 = !cir.struct<struct "S" {!cir.int<u, 32>, !cir.array<!cir.int<u, 8> x 3>, !cir.int<u, 16>, !cir.int<u, 32>}>
-// CHECK: !ty_22__long22 = !cir.struct<struct "__long" {!cir.struct<struct "anon.1" {!cir.int<u, 32>} #cir.record.decl.ast>, !cir.int<u, 32>, !cir.ptr<!cir.int<u, 32>>}>
+// CHECK: !ty_T = !cir.struct<struct "T" {!cir.int<u, 8>, !cir.int<u, 32>} #cir.record.decl.ast>
+// CHECK: !ty_anon2E1_ = !cir.struct<struct "anon.1" {!cir.int<u, 32>} #cir.record.decl.ast>
+// CHECK: !ty_S = !cir.struct<struct "S" {!cir.int<u, 32>, !cir.array<!cir.int<u, 8> x 3>, !cir.int<u, 16>, !cir.int<u, 32>}>
+// CHECK: !ty___long = !cir.struct<struct "__long" {!cir.struct<struct "anon.1" {!cir.int<u, 32>} #cir.record.decl.ast>, !cir.int<u, 32>, !cir.ptr<!cir.int<u, 32>>}>
 
 // CHECK: cir.func @_Z11store_field
-// CHECK:   [[TMP0:%.*]] = cir.alloca !ty_22S22, !cir.ptr<!ty_22S22>
+// CHECK:   [[TMP0:%.*]] = cir.alloca !ty_S, !cir.ptr<!ty_S>
 // CHECK:   [[TMP1:%.*]] = cir.const #cir.int<3> : !s32i
-// CHECK:   [[TMP2:%.*]] = cir.cast(bitcast, [[TMP0]] : !cir.ptr<!ty_22S22>), !cir.ptr<!u32i>
+// CHECK:   [[TMP2:%.*]] = cir.cast(bitcast, [[TMP0]] : !cir.ptr<!ty_S>), !cir.ptr<!u32i>
 // CHECK:   cir.set_bitfield(#bfi_a, [[TMP2]] : !cir.ptr<!u32i>, [[TMP1]] : !s32i)
 void store_field() {
   S s;
@@ -43,16 +43,16 @@ void store_field() {
 }
 
 // CHECK: cir.func @_Z10load_field
-// CHECK:   [[TMP0:%.*]] = cir.alloca !cir.ptr<!ty_22S22>, !cir.ptr<!cir.ptr<!ty_22S22>>, ["s", init]
-// CHECK:   [[TMP1:%.*]] = cir.load [[TMP0]] : !cir.ptr<!cir.ptr<!ty_22S22>>, !cir.ptr<!ty_22S22>
-// CHECK:   [[TMP2:%.*]] = cir.get_member [[TMP1]][1] {name = "d"} : !cir.ptr<!ty_22S22> -> !cir.ptr<!cir.array<!u8i x 3>>
+// CHECK:   [[TMP0:%.*]] = cir.alloca !cir.ptr<!ty_S>, !cir.ptr<!cir.ptr<!ty_S>>, ["s", init]
+// CHECK:   [[TMP1:%.*]] = cir.load [[TMP0]] : !cir.ptr<!cir.ptr<!ty_S>>, !cir.ptr<!ty_S>
+// CHECK:   [[TMP2:%.*]] = cir.get_member [[TMP1]][1] {name = "d"} : !cir.ptr<!ty_S> -> !cir.ptr<!cir.array<!u8i x 3>>
 // CHECK:   [[TMP3:%.*]] = cir.get_bitfield(#bfi_d, [[TMP2]] : !cir.ptr<!cir.array<!u8i x 3>>) -> !s32i
 int load_field(S& s) {
   return s.d;
 }
 
 // CHECK: cir.func @_Z17load_non_bitfield
-// CHECK:   cir.get_member {{%.}}[3] {name = "f"} : !cir.ptr<!ty_22S22> -> !cir.ptr<!u32i>
+// CHECK:   cir.get_member {{%.}}[3] {name = "f"} : !cir.ptr<!ty_S> -> !cir.ptr<!u32i>
 unsigned load_non_bitfield(S& s) {
   return s.f;
 }

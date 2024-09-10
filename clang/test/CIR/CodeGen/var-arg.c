@@ -12,25 +12,25 @@ int f1(int n, ...) {
   return res;
 }
 
-// BEFORE: !ty_22__va_list22 = !cir.struct<struct "__va_list" {!cir.ptr<!cir.void>, !cir.ptr<!cir.void>, !cir.ptr<!cir.void>, !cir.int<s, 32>, !cir.int<s, 32>}
+// BEFORE: !ty___va_list = !cir.struct<struct "__va_list" {!cir.ptr<!cir.void>, !cir.ptr<!cir.void>, !cir.ptr<!cir.void>, !cir.int<s, 32>, !cir.int<s, 32>}
 // BEFORE:  cir.func @f1(%arg0: !s32i, ...) -> !s32i
 // BEFORE:  [[RETP:%.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
 // BEFORE:  [[RESP:%.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["res", init]
-// BEFORE:  cir.va.start [[VARLIST:%.*]] : !cir.ptr<!ty_22__va_list22>
-// BEFORE:  [[TMP0:%.*]] = cir.va.arg [[VARLIST]] : (!cir.ptr<!ty_22__va_list22>) -> !s32i
+// BEFORE:  cir.va.start [[VARLIST:%.*]] : !cir.ptr<!ty___va_list>
+// BEFORE:  [[TMP0:%.*]] = cir.va.arg [[VARLIST]] : (!cir.ptr<!ty___va_list>) -> !s32i
 // BEFORE:  cir.store [[TMP0]], [[RESP]] : !s32i, !cir.ptr<!s32i>
-// BEFORE:  cir.va.end [[VARLIST]] : !cir.ptr<!ty_22__va_list22>
+// BEFORE:  cir.va.end [[VARLIST]] : !cir.ptr<!ty___va_list>
 // BEFORE:  [[RES:%.*]] = cir.load [[RESP]] : !cir.ptr<!s32i>, !s32i
 // BEFORE:   cir.store [[RES]], [[RETP]] : !s32i, !cir.ptr<!s32i>
 // BEFORE:  [[RETV:%.*]] = cir.load [[RETP]] : !cir.ptr<!s32i>, !s32i
 // BEFORE:   cir.return [[RETV]] : !s32i
 
-// AFTER: !ty_22__va_list22 = !cir.struct<struct "__va_list" {!cir.ptr<!cir.void>, !cir.ptr<!cir.void>, !cir.ptr<!cir.void>, !cir.int<s, 32>, !cir.int<s, 32>}
+// AFTER: !ty___va_list = !cir.struct<struct "__va_list" {!cir.ptr<!cir.void>, !cir.ptr<!cir.void>, !cir.ptr<!cir.void>, !cir.int<s, 32>, !cir.int<s, 32>}
 // AFTER:  cir.func @f1(%arg0: !s32i, ...) -> !s32i
 // AFTER:  [[RETP:%.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
 // AFTER:  [[RESP:%.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["res", init]
-// AFTER:  cir.va.start [[VARLIST:%.*]] : !cir.ptr<!ty_22__va_list22>
-// AFTER:  [[GR_OFFS_P:%.*]] = cir.get_member [[VARLIST]][3] {name = "gr_offs"} : !cir.ptr<!ty_22__va_list22> -> !cir.ptr<!s32i>
+// AFTER:  cir.va.start [[VARLIST:%.*]] : !cir.ptr<!ty___va_list>
+// AFTER:  [[GR_OFFS_P:%.*]] = cir.get_member [[VARLIST]][3] {name = "gr_offs"} : !cir.ptr<!ty___va_list> -> !cir.ptr<!s32i>
 // AFTER:  [[GR_OFFS:%.*]] = cir.load [[GR_OFFS_P]] : !cir.ptr<!s32i>, !s32i
 // AFTER:  [[ZERO:%.*]] = cir.const #cir.int<0> : !s32i
 // AFTER:  [[CMP0:%.*]] = cir.cmp(ge, [[GR_OFFS]], [[ZERO]]) : !s32i, !cir.bool
@@ -46,7 +46,7 @@ int f1(int n, ...) {
 
 // arg is passed in register.
 // AFTER: [[BB_IN_REG]]:
-// AFTER-NEXT: [[GR_TOP_P:%.*]] = cir.get_member [[VARLIST]][1] {name = "gr_top"} : !cir.ptr<!ty_22__va_list22> -> !cir.ptr<!cir.ptr<!void>>
+// AFTER-NEXT: [[GR_TOP_P:%.*]] = cir.get_member [[VARLIST]][1] {name = "gr_top"} : !cir.ptr<!ty___va_list> -> !cir.ptr<!cir.ptr<!void>>
 // AFTER-NEXT: [[GR_TOP:%.*]] = cir.load [[GR_TOP_P]] : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
 // AFTER-NEXT: [[TMP2:%.*]] = cir.cast(bitcast, [[GR_TOP]] : !cir.ptr<!void>), !cir.ptr<i8>
 // AFTER-NEXT: [[TMP3:%.*]] = cir.ptr_stride([[TMP2]] : !cir.ptr<i8>, [[GR_OFFS]] : !s32i), !cir.ptr<i8>
@@ -55,7 +55,7 @@ int f1(int n, ...) {
 
 // arg is passed in stack.
 // AFTER: [[BB_ON_STACK]]:
-// AFTER-NEXT: [[STACK_P:%.*]] = cir.get_member [[VARLIST]][0] {name = "stack"} : !cir.ptr<!ty_22__va_list22> -> !cir.ptr<!cir.ptr<!void>>
+// AFTER-NEXT: [[STACK_P:%.*]] = cir.get_member [[VARLIST]][0] {name = "stack"} : !cir.ptr<!ty___va_list> -> !cir.ptr<!cir.ptr<!void>>
 // AFTER-NEXT: [[STACK_V:%.*]] = cir.load [[STACK_P]] : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
 // AFTER-NEXT: [[EIGHT_IN_PTR_ARITH:%.*]]  = cir.const #cir.int<8> : !u64i
 // AFTER-NEXT: [[TMP4:%.*]] = cir.cast(bitcast, [[STACK_V]] : !cir.ptr<!void>), !cir.ptr<i8>
@@ -72,7 +72,7 @@ int f1(int n, ...) {
 // AFTER-NEXT:  [[TMP0:%.*]] = cir.cast(bitcast, [[BLK_ARG]] : !cir.ptr<!void>), !cir.ptr<!s32i>
 // AFTER-NEXT:  [[TMP1:%.*]] = cir.load [[TMP0]] : !cir.ptr<!s32i>, !s32i
 // AFTER:   cir.store [[TMP1]], [[RESP]] : !s32i, !cir.ptr<!s32i>
-// AFTER:   cir.va.end [[VARLIST]] : !cir.ptr<!ty_22__va_list22>
+// AFTER:   cir.va.end [[VARLIST]] : !cir.ptr<!ty___va_list>
 // AFTER:   [[RES:%.*]] = cir.load [[RESP]] : !cir.ptr<!s32i>, !s32i
 // AFTER:   cir.store [[RES]], [[RETP]] : !s32i, !cir.ptr<!s32i>
 // AFTER:  [[RETV:%.*]] = cir.load [[RETP]] : !cir.ptr<!s32i>, !s32i

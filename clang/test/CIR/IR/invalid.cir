@@ -736,9 +736,9 @@ module {
 
 // -----
 !s8i = !cir.int<s, 8>
-!ty_22Init22 = !cir.struct<class "Init" {!s8i} #cir.record.decl.ast>
+!ty_Init = !cir.struct<class "Init" {!s8i} #cir.record.decl.ast>
 module {
-  cir.global "private" internal @_ZL8__ioinit = ctor : !ty_22Init22 {
+  cir.global "private" internal @_ZL8__ioinit = ctor : !ty_Init {
   }
   // expected-error@+1 {{custom op 'cir.global' ctor region must have exactly one block}}
 }
@@ -746,12 +746,12 @@ module {
 // -----
 !s8i = !cir.int<s, 8>
 #true = #cir.bool<true> : !cir.bool
-!ty_22Init22 = !cir.struct<class "Init" {!s8i} #cir.record.decl.ast>
+!ty_Init = !cir.struct<class "Init" {!s8i} #cir.record.decl.ast>
 module {
-  cir.func private @_ZN4InitC1Eb(!cir.ptr<!ty_22Init22>)
-  cir.global "private" internal @_ZL8__ioinit = ctor : !ty_22Init22 {
-    %0 = cir.get_global @_ZL8__ioinit : !cir.ptr<!ty_22Init22>
-    cir.call @_ZN4InitC1Eb(%0) : (!cir.ptr<!ty_22Init22>) -> ()
+  cir.func private @_ZN4InitC1Eb(!cir.ptr<!ty_Init>)
+  cir.global "private" internal @_ZL8__ioinit = ctor : !ty_Init {
+    %0 = cir.get_global @_ZL8__ioinit : !cir.ptr<!ty_Init>
+    cir.call @_ZN4InitC1Eb(%0) : (!cir.ptr<!ty_Init>) -> ()
   } dtor {}
   // expected-error@+1 {{custom op 'cir.global' dtor region must have exactly one block}}
 }

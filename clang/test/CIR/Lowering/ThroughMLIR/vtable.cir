@@ -13,34 +13,34 @@
 !ty_anon_struct2 = !cir.struct<struct  {!cir.array<!cir.ptr<!cir.int<u, 8>> x 4>}>
 !ty_anon_struct3 = !cir.struct<struct  {!cir.array<!cir.ptr<!cir.int<u, 8>> x 3>}>
 !ty_anon_struct4 = !cir.struct<struct  {!cir.array<!cir.ptr<!cir.int<u, 8>> x 4>, !cir.array<!cir.ptr<!cir.int<u, 8>> x 3>}>
-!ty_22Father22 = !cir.struct<class "Father" {!cir.ptr<!cir.ptr<!cir.func<!cir.int<u, 32> ()>>>} #cir.record.decl.ast>
-!ty_22Mother22 = !cir.struct<class "Mother" {!cir.ptr<!cir.ptr<!cir.func<!cir.int<u, 32> ()>>>} #cir.record.decl.ast>
-!ty_22Child22 = !cir.struct<class "Child" {!cir.struct<class "Mother" {!cir.ptr<!cir.ptr<!cir.func<!cir.int<u, 32> ()>>>} #cir.record.decl.ast>, !cir.struct<class "Father" {!cir.ptr<!cir.ptr<!cir.func<!cir.int<u, 32> ()>>>} #cir.record.decl.ast>} #cir.record.decl.ast>
+!ty_Father = !cir.struct<class "Father" {!cir.ptr<!cir.ptr<!cir.func<!cir.int<u, 32> ()>>>} #cir.record.decl.ast>
+!ty_Mother = !cir.struct<class "Mother" {!cir.ptr<!cir.ptr<!cir.func<!cir.int<u, 32> ()>>>} #cir.record.decl.ast>
+!ty_Child = !cir.struct<class "Child" {!cir.struct<class "Mother" {!cir.ptr<!cir.ptr<!cir.func<!cir.int<u, 32> ()>>>} #cir.record.decl.ast>, !cir.struct<class "Father" {!cir.ptr<!cir.ptr<!cir.func<!cir.int<u, 32> ()>>>} #cir.record.decl.ast>} #cir.record.decl.ast>
 
 module {
-  cir.func linkonce_odr @_ZN6Mother6simpleEv(%arg0: !cir.ptr<!ty_22Mother22>) { 
-    %0 = cir.alloca !cir.ptr<!ty_22Mother22>, !cir.ptr<!cir.ptr<!ty_22Mother22>>, ["this", init] {alignment = 8 : i64}
-    cir.store %arg0, %0 : !cir.ptr<!ty_22Mother22>, !cir.ptr<!cir.ptr<!ty_22Mother22>>
-    %1 = cir.load %0 : !cir.ptr<!cir.ptr<!ty_22Mother22>>, !cir.ptr<!ty_22Mother22>
+  cir.func linkonce_odr @_ZN6Mother6simpleEv(%arg0: !cir.ptr<!ty_Mother>) { 
+    %0 = cir.alloca !cir.ptr<!ty_Mother>, !cir.ptr<!cir.ptr<!ty_Mother>>, ["this", init] {alignment = 8 : i64}
+    cir.store %arg0, %0 : !cir.ptr<!ty_Mother>, !cir.ptr<!cir.ptr<!ty_Mother>>
+    %1 = cir.load %0 : !cir.ptr<!cir.ptr<!ty_Mother>>, !cir.ptr<!ty_Mother>
     cir.return 
   }
-  cir.func private @_ZN5ChildC2Ev(%arg0: !cir.ptr<!ty_22Child22>) { cir.return }
+  cir.func private @_ZN5ChildC2Ev(%arg0: !cir.ptr<!ty_Child>) { cir.return }
   cir.global linkonce_odr @_ZTV6Mother = #cir.vtable<{#cir.const_array<[#cir.ptr<null> : !cir.ptr<!u8i>, #cir.global_view<@_ZTI6Mother> : !cir.ptr<!u8i>, #cir.global_view<@_ZN6Mother9MotherFooEv> : !cir.ptr<!u8i>, #cir.global_view<@_ZN6Mother10MotherFoo2Ev> : !cir.ptr<!u8i>]> : !cir.array<!cir.ptr<!u8i> x 4>}> : !ty_anon_struct2 {alignment = 8 : i64} 
   cir.global "private" external @_ZTVN10__cxxabiv117__class_type_infoE : !cir.ptr<!cir.ptr<!u8i>> 
   cir.global linkonce_odr @_ZTS6Mother = #cir.const_array<"6Mother" : !cir.array<!s8i x 7>> : !cir.array<!s8i x 7> {alignment = 1 : i64} 
   cir.global constant external @_ZTI6Mother = #cir.typeinfo<{#cir.global_view<@_ZTVN10__cxxabiv117__class_type_infoE, [2 : i32]> : !cir.ptr<!u8i>, #cir.global_view<@_ZTS6Mother> : !cir.ptr<!u8i>}> : !ty_anon_struct {alignment = 8 : i64} 
-  cir.func linkonce_odr @_ZN6Mother9MotherFooEv(%arg0: !cir.ptr<!ty_22Mother22> ) { cir.return }
-  cir.func linkonce_odr @_ZN6Mother10MotherFoo2Ev(%arg0: !cir.ptr<!ty_22Mother22> ) { cir.return }
+  cir.func linkonce_odr @_ZN6Mother9MotherFooEv(%arg0: !cir.ptr<!ty_Mother> ) { cir.return }
+  cir.func linkonce_odr @_ZN6Mother10MotherFoo2Ev(%arg0: !cir.ptr<!ty_Mother> ) { cir.return }
   cir.global linkonce_odr @_ZTV6Father = #cir.vtable<{#cir.const_array<[#cir.ptr<null> : !cir.ptr<!u8i>, #cir.global_view<@_ZTI6Father> : !cir.ptr<!u8i>, #cir.global_view<@_ZN6Father9FatherFooEv> : !cir.ptr<!u8i>]> : !cir.array<!cir.ptr<!u8i> x 3>}> : !ty_anon_struct3 {alignment = 8 : i64} 
-  cir.func linkonce_odr @_ZN6FatherC2Ev(%arg0: !cir.ptr<!ty_22Father22> ) { cir.return }
+  cir.func linkonce_odr @_ZN6FatherC2Ev(%arg0: !cir.ptr<!ty_Father> ) { cir.return }
   cir.global linkonce_odr @_ZTV5Child = #cir.vtable<{#cir.const_array<[#cir.ptr<null> : !cir.ptr<!u8i>, #cir.global_view<@_ZTI5Child> : !cir.ptr<!u8i>, #cir.global_view<@_ZN5Child9MotherFooEv> : !cir.ptr<!u8i>, #cir.global_view<@_ZN6Mother10MotherFoo2Ev> : !cir.ptr<!u8i>]> : !cir.array<!cir.ptr<!u8i> x 4>, #cir.const_array<[#cir.ptr<-8 : i64> : !cir.ptr<!u8i>, #cir.global_view<@_ZTI5Child> : !cir.ptr<!u8i>, #cir.global_view<@_ZN6Father9FatherFooEv> : !cir.ptr<!u8i>]> : !cir.array<!cir.ptr<!u8i> x 3>}> : !ty_anon_struct4 {alignment = 8 : i64} 
   cir.global "private" external @_ZTVN10__cxxabiv121__vmi_class_type_infoE : !cir.ptr<!cir.ptr<!u8i>> 
   cir.global linkonce_odr @_ZTS5Child = #cir.const_array<"5Child" : !cir.array<!s8i x 6>> : !cir.array<!s8i x 6> {alignment = 1 : i64} 
   cir.global linkonce_odr @_ZTS6Father = #cir.const_array<"6Father" : !cir.array<!s8i x 7>> : !cir.array<!s8i x 7> {alignment = 1 : i64} 
   cir.global constant external @_ZTI6Father = #cir.typeinfo<{#cir.global_view<@_ZTVN10__cxxabiv117__class_type_infoE, [2 : i32]> : !cir.ptr<!u8i>, #cir.global_view<@_ZTS6Father> : !cir.ptr<!u8i>}> : !ty_anon_struct {alignment = 8 : i64} 
   cir.global constant external @_ZTI5Child = #cir.typeinfo<{#cir.global_view<@_ZTVN10__cxxabiv121__vmi_class_type_infoE, [2 : i32]> : !cir.ptr<!u8i>, #cir.global_view<@_ZTS5Child> : !cir.ptr<!u8i>, #cir.int<0> : !u32i, #cir.int<2> : !u32i, #cir.global_view<@_ZTI6Mother> : !cir.ptr<!u8i>, #cir.int<2> : !s64i, #cir.global_view<@_ZTI6Father> : !cir.ptr<!u8i>, #cir.int<2050> : !s64i}> : !ty_anon_struct1 {alignment = 8 : i64} 
-  cir.func linkonce_odr @_ZN5Child9MotherFooEv(%arg0: !cir.ptr<!ty_22Child22> ) { cir.return }
-  cir.func linkonce_odr @_ZN6Father9FatherFooEv(%arg0: !cir.ptr<!ty_22Father22> ) { cir.return }
+  cir.func linkonce_odr @_ZN5Child9MotherFooEv(%arg0: !cir.ptr<!ty_Child> ) { cir.return }
+  cir.func linkonce_odr @_ZN6Father9FatherFooEv(%arg0: !cir.ptr<!ty_Father> ) { cir.return }
 } 
 
 // MLIR:  llvm.mlir.global linkonce_odr @_ZTV5Child() {addr_space = 0 : i32, alignment = 8 : i64} : !llvm.struct<(array<4 x ptr>, array<3 x ptr>)> {

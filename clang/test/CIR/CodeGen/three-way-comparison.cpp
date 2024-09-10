@@ -7,8 +7,8 @@
 
 // BEFORE: #cmp3way_info_partial_ltn1eq0gt1unn127_ = #cir.cmp3way_info<partial, lt = -1, eq = 0, gt = 1, unordered = -127>
 // BEFORE: #cmp3way_info_strong_ltn1eq0gt1_ = #cir.cmp3way_info<strong, lt = -1, eq = 0, gt = 1>
-// BEFORE: !ty_22std3A3A__13A3Apartial_ordering22 = !cir.struct<class "std::__1::partial_ordering" {!cir.int<s, 8>}
-// BEFORE: !ty_22std3A3A__13A3Astrong_ordering22 = !cir.struct<class "std::__1::strong_ordering" {!cir.int<s, 8>}
+// BEFORE: !ty_std3A3A__13A3Apartial_ordering = !cir.struct<class "std::__1::partial_ordering" {!cir.int<s, 8>}
+// BEFORE: !ty_std3A3A__13A3Astrong_ordering = !cir.struct<class "std::__1::strong_ordering" {!cir.int<s, 8>}
 
 auto three_way_strong(int x, int y) {
   return x <=> y;

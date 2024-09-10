@@ -11,17 +11,17 @@ int f6(int a0, struct s6 a1, struct s6 a2) {
 
 // CIR-LABEL: @f6
 // CIR:  %[[A0:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a0"
-// CIR:  %[[A1:.*]] = cir.alloca !ty_22s622, !cir.ptr<!ty_22s622>, ["a1"
-// CIR:  %[[A2:.*]] = cir.alloca !ty_22s622, !cir.ptr<!ty_22s622>, ["a2"
-// CIR:  %[[TMP:.*]] = cir.alloca !ty_22s622, !cir.ptr<!ty_22s622>, ["tmp"] {alignment = 4 : i64}
+// CIR:  %[[A1:.*]] = cir.alloca !ty_s6_, !cir.ptr<!ty_s6_>, ["a1"
+// CIR:  %[[A2:.*]] = cir.alloca !ty_s6_, !cir.ptr<!ty_s6_>, ["a2"
+// CIR:  %[[TMP:.*]] = cir.alloca !ty_s6_, !cir.ptr<!ty_s6_>, ["tmp"] {alignment = 4 : i64}
 // CIR:  %[[LOAD_A0:.*]] = cir.load %[[A0]] : !cir.ptr<!s32i>, !s32i
 // CIR:  %[[COND:.*]] = cir.cast(int_to_bool, %[[LOAD_A0]] : !s32i), !cir.bool
 // CIR:  cir.if %[[COND]] {
-// CIR:    cir.copy %[[A1]] to %[[TMP]] : !cir.ptr<!ty_22s622>
+// CIR:    cir.copy %[[A1]] to %[[TMP]] : !cir.ptr<!ty_s6_>
 // CIR:  } else {
-// CIR:    cir.copy %[[A2]] to %[[TMP]] : !cir.ptr<!ty_22s622>
+// CIR:    cir.copy %[[A2]] to %[[TMP]] : !cir.ptr<!ty_s6_>
 // CIR:  }
-// CIR:  cir.get_member %[[TMP]][0] {name = "f0"} : !cir.ptr<!ty_22s622> -> !cir.ptr<!s32i>
+// CIR:  cir.get_member %[[TMP]][0] {name = "f0"} : !cir.ptr<!ty_s6_> -> !cir.ptr<!s32i>
 
 // LLVM-LABEL: @f6
 // LLVM:    %[[LOAD_A0:.*]] = load i32, ptr {{.*}}

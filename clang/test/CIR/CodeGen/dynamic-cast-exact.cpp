@@ -15,18 +15,18 @@ struct Derived final : Base1 {};
 
 Derived *ptr_cast(Base1 *ptr) {
   return dynamic_cast<Derived *>(ptr);
-  //      CHECK: %[[#SRC:]] = cir.load %{{.+}} : !cir.ptr<!cir.ptr<!ty_22Base122>>, !cir.ptr<!ty_22Base122>
+  //      CHECK: %[[#SRC:]] = cir.load %{{.+}} : !cir.ptr<!cir.ptr<!ty_Base1_>>, !cir.ptr<!ty_Base1_>
   // CHECK-NEXT: %[[#EXPECTED_VPTR:]] = cir.vtable.address_point(@_ZTV7Derived, vtable_index = 0, address_point_index = 2) : !cir.ptr<!cir.ptr<!cir.func<!u32i ()>>>
-  // CHECK-NEXT: %[[#SRC_VPTR_PTR:]] = cir.cast(bitcast, %[[#SRC]] : !cir.ptr<!ty_22Base122>), !cir.ptr<!cir.ptr<!cir.ptr<!cir.func<!u32i ()>>>>
+  // CHECK-NEXT: %[[#SRC_VPTR_PTR:]] = cir.cast(bitcast, %[[#SRC]] : !cir.ptr<!ty_Base1_>), !cir.ptr<!cir.ptr<!cir.ptr<!cir.func<!u32i ()>>>>
   // CHECK-NEXT: %[[#SRC_VPTR:]] = cir.load %[[#SRC_VPTR_PTR]] : !cir.ptr<!cir.ptr<!cir.ptr<!cir.func<!u32i ()>>>>, !cir.ptr<!cir.ptr<!cir.func<!u32i ()>>>
   // CHECK-NEXT: %[[#SUCCESS:]] = cir.cmp(eq, %[[#SRC_VPTR]], %[[#EXPECTED_VPTR]]) : !cir.ptr<!cir.ptr<!cir.func<!u32i ()>>>, !cir.bool
   // CHECK-NEXT: %{{.+}} = cir.ternary(%[[#SUCCESS]], true {
-  // CHECK-NEXT:   %[[#RES:]] = cir.cast(bitcast, %[[#SRC]] : !cir.ptr<!ty_22Base122>), !cir.ptr<!ty_22Derived22>
-  // CHECK-NEXT:   cir.yield %[[#RES]] : !cir.ptr<!ty_22Derived22>
+  // CHECK-NEXT:   %[[#RES:]] = cir.cast(bitcast, %[[#SRC]] : !cir.ptr<!ty_Base1_>), !cir.ptr<!ty_Derived>
+  // CHECK-NEXT:   cir.yield %[[#RES]] : !cir.ptr<!ty_Derived>
   // CHECK-NEXT: }, false {
-  // CHECK-NEXT:   %[[#NULL:]] = cir.const #cir.ptr<null> : !cir.ptr<!ty_22Derived22>
-  // CHECK-NEXT:   cir.yield %[[#NULL]] : !cir.ptr<!ty_22Derived22>
-  // CHECK-NEXT: }) : (!cir.bool) -> !cir.ptr<!ty_22Derived22>
+  // CHECK-NEXT:   %[[#NULL:]] = cir.const #cir.ptr<null> : !cir.ptr<!ty_Derived>
+  // CHECK-NEXT:   cir.yield %[[#NULL]] : !cir.ptr<!ty_Derived>
+  // CHECK-NEXT: }) : (!cir.bool) -> !cir.ptr<!ty_Derived>
 }
 
 //      LLVM: define dso_local ptr @_Z8ptr_castP5Base1(ptr readonly %[[#SRC:]])
@@ -38,9 +38,9 @@ Derived *ptr_cast(Base1 *ptr) {
 
 Derived &ref_cast(Base1 &ref) {
   return dynamic_cast<Derived &>(ref);
-  //      CHECK: %[[#SRC:]] = cir.load %{{.+}} : !cir.ptr<!cir.ptr<!ty_22Base122>>, !cir.ptr<!ty_22Base122>
+  //      CHECK: %[[#SRC:]] = cir.load %{{.+}} : !cir.ptr<!cir.ptr<!ty_Base1_>>, !cir.ptr<!ty_Base1_>
   // CHECK-NEXT: %[[#EXPECTED_VPTR:]] = cir.vtable.address_point(@_ZTV7Derived, vtable_index = 0, address_point_index = 2) : !cir.ptr<!cir.ptr<!cir.func<!u32i ()>>>
-  // CHECK-NEXT: %[[#SRC_VPTR_PTR:]] = cir.cast(bitcast, %[[#SRC]] : !cir.ptr<!ty_22Base122>), !cir.ptr<!cir.ptr<!cir.ptr<!cir.func<!u32i ()>>>>
+  // CHECK-NEXT: %[[#SRC_VPTR_PTR:]] = cir.cast(bitcast, %[[#SRC]] : !cir.ptr<!ty_Base1_>), !cir.ptr<!cir.ptr<!cir.ptr<!cir.func<!u32i ()>>>>
   // CHECK-NEXT: %[[#SRC_VPTR:]] = cir.load %[[#SRC_VPTR_PTR]] : !cir.ptr<!cir.ptr<!cir.ptr<!cir.func<!u32i ()>>>>, !cir.ptr<!cir.ptr<!cir.func<!u32i ()>>>
   // CHECK-NEXT: %[[#SUCCESS:]] = cir.cmp(eq, %[[#SRC_VPTR]], %[[#EXPECTED_VPTR]]) : !cir.ptr<!cir.ptr<!cir.func<!u32i ()>>>, !cir.bool
   // CHECK-NEXT: %[[#FAILED:]] = cir.unary(not, %[[#SUCCESS]]) : !cir.bool, !cir.bool
@@ -48,7 +48,7 @@ Derived &ref_cast(Base1 &ref) {
   // CHECK-NEXT:   cir.call @__cxa_bad_cast() : () -> ()
   // CHECK-NEXT:   cir.unreachable
   // CHECK-NEXT: }
-  // CHECK-NEXT: %{{.+}} = cir.cast(bitcast, %[[#SRC]] : !cir.ptr<!ty_22Base122>), !cir.ptr<!ty_22Derived22>
+  // CHECK-NEXT: %{{.+}} = cir.cast(bitcast, %[[#SRC]] : !cir.ptr<!ty_Base1_>), !cir.ptr<!ty_Derived>
 }
 
 //      LLVM: define dso_local noundef ptr @_Z8ref_castR5Base1(ptr readonly returned %[[#SRC:]])
@@ -64,9 +64,9 @@ Derived &ref_cast(Base1 &ref) {
 
 Derived *ptr_cast_always_fail(Base2 *ptr) {
   return dynamic_cast<Derived *>(ptr);
-  //      CHECK: %{{.+}} = cir.load %{{.+}} : !cir.ptr<!cir.ptr<!ty_22Base222>>, !cir.ptr<!ty_22Base222>
-  // CHECK-NEXT: %[[#RESULT:]] = cir.const #cir.ptr<null> : !cir.ptr<!ty_22Derived22>
-  // CHECK-NEXT: cir.store %[[#RESULT]], %{{.+}} : !cir.ptr<!ty_22Derived22>, !cir.ptr<!cir.ptr<!ty_22Derived22>>
+  //      CHECK: %{{.+}} = cir.load %{{.+}} : !cir.ptr<!cir.ptr<!ty_Base2_>>, !cir.ptr<!ty_Base2_>
+  // CHECK-NEXT: %[[#RESULT:]] = cir.const #cir.ptr<null> : !cir.ptr<!ty_Derived>
+  // CHECK-NEXT: cir.store %[[#RESULT]], %{{.+}} : !cir.ptr<!ty_Derived>, !cir.ptr<!cir.ptr<!ty_Derived>>
 }
 
 //      LLVM: define dso_local noalias noundef ptr @_Z20ptr_cast_always_failP5Base2(ptr nocapture readnone %{{.+}})
@@ -75,8 +75,8 @@ Derived *ptr_cast_always_fail(Base2 *ptr) {
 
 Derived &ref_cast_always_fail(Base2 &ref) {
   return dynamic_cast<Derived &>(ref);
-  //      CHECK: %{{.+}} = cir.load %{{.+}} : !cir.ptr<!cir.ptr<!ty_22Base222>>, !cir.ptr<!ty_22Base222>
-  // CHECK-NEXT: %{{.+}} = cir.const #cir.ptr<null> : !cir.ptr<!ty_22Derived22>
+  //      CHECK: %{{.+}} = cir.load %{{.+}} : !cir.ptr<!cir.ptr<!ty_Base2_>>, !cir.ptr<!ty_Base2_>
+  // CHECK-NEXT: %{{.+}} = cir.const #cir.ptr<null> : !cir.ptr<!ty_Derived>
   // CHECK-NEXT: cir.call @__cxa_bad_cast() : () -> ()
   // CHECK-NEXT: cir.unreachable
 }

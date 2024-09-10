@@ -230,7 +230,7 @@ void fd3(struct S *a, struct S *b, struct S *c) {
 }
 
 // CHECK-LABEL: @_Z3fd3P1SS0_S0_
-// CHECK: cir.atomic.xchg({{.*}} : !cir.ptr<!ty_22S22>, {{.*}} : !u64i, seq_cst) : !u64i
+// CHECK: cir.atomic.xchg({{.*}} : !cir.ptr<!ty_S>, {{.*}} : !u64i, seq_cst) : !u64i
 
 // FIXME: CIR is producing an over alignment of 8, only 4 needed.
 // LLVM-LABEL: @_Z3fd3P1SS0_S0_
@@ -252,7 +252,7 @@ bool fd4(struct S *a, struct S *b, struct S *c) {
 }
 
 // CHECK-LABEL: @_Z3fd4P1SS0_S0_
-// CHECK: %old, %cmp = cir.atomic.cmp_xchg({{.*}} : !cir.ptr<!ty_22S22>, {{.*}} : !u64i, {{.*}} : !u64i, success = seq_cst, failure = seq_cst) weak : (!u64i, !cir.bool)
+// CHECK: %old, %cmp = cir.atomic.cmp_xchg({{.*}} : !cir.ptr<!ty_S>, {{.*}} : !u64i, {{.*}} : !u64i, success = seq_cst, failure = seq_cst) weak : (!u64i, !cir.bool)
 
 // LLVM-LABEL: @_Z3fd4P1SS0_S0_
 // LLVM: cmpxchg weak ptr {{.*}}, i64 {{.*}}, i64 {{.*}} seq_cst seq_cst, align 8

@@ -4,28 +4,28 @@
 !s32i = !cir.int<s, 32>
 !u8i = !cir.int<u, 8>
 !u32i = !cir.int<u, 32>
-!ty_22S22 = !cir.struct<class "S" {!u8i, !s32i}>
-!ty_22S2A22 = !cir.struct<class "S2A" {!s32i} #cir.record.decl.ast>
-!ty_22S122 = !cir.struct<class "S1" {!s32i, !cir.float, !cir.ptr<!s32i>} #cir.record.decl.ast>
-!ty_22S222 = !cir.struct<class "S2" {!ty_22S2A22} #cir.record.decl.ast>
-!ty_22S322 = !cir.struct<class "S3" {!s32i} #cir.record.decl.ast>
+!ty_S = !cir.struct<class "S" {!u8i, !s32i}>
+!ty_S2A = !cir.struct<class "S2A" {!s32i} #cir.record.decl.ast>
+!ty_S1_ = !cir.struct<class "S1" {!s32i, !cir.float, !cir.ptr<!s32i>} #cir.record.decl.ast>
+!ty_S2_ = !cir.struct<class "S2" {!ty_S2A} #cir.record.decl.ast>
+!ty_S3_ = !cir.struct<class "S3" {!s32i} #cir.record.decl.ast>
 
 module {
   cir.func @test() {
-    %1 = cir.alloca !ty_22S22, !cir.ptr<!ty_22S22>, ["x"] {alignment = 4 : i64}
+    %1 = cir.alloca !ty_S, !cir.ptr<!ty_S>, ["x"] {alignment = 4 : i64}
     // CHECK: %[[#ARRSIZE:]] = llvm.mlir.constant(1 : index) : i64
     // CHECK: %[[#CLASS:]] = llvm.alloca %[[#ARRSIZE]] x !llvm.struct<"class.S", (i8, i32)>
-    %3 = cir.get_member %1[0] {name = "c"} : !cir.ptr<!ty_22S22> -> !cir.ptr<!u8i>
+    %3 = cir.get_member %1[0] {name = "c"} : !cir.ptr<!ty_S> -> !cir.ptr<!u8i>
     // CHECK: = llvm.getelementptr %[[#CLASS]][0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<"class.S", (i8, i32)>
-    %5 = cir.get_member %1[1] {name = "i"} : !cir.ptr<!ty_22S22> -> !cir.ptr<!s32i>
+    %5 = cir.get_member %1[1] {name = "i"} : !cir.ptr<!ty_S> -> !cir.ptr<!s32i>
     // CHECK: = llvm.getelementptr %[[#CLASS]][0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<"class.S", (i8, i32)>
     cir.return
   }
 
   cir.func @shouldConstInitLocalClassesWithConstStructAttr() {
-    %0 = cir.alloca !ty_22S2A22, !cir.ptr<!ty_22S2A22>, ["s"] {alignment = 4 : i64}
-    %1 = cir.const #cir.const_struct<{#cir.int<1> : !s32i}> : !ty_22S2A22
-    cir.store %1, %0 : !ty_22S2A22, !cir.ptr<!ty_22S2A22>
+    %0 = cir.alloca !ty_S2A, !cir.ptr<!ty_S2A>, ["s"] {alignment = 4 : i64}
+    %1 = cir.const #cir.const_struct<{#cir.int<1> : !s32i}> : !ty_S2A
+    cir.store %1, %0 : !ty_S2A, !cir.ptr<!ty_S2A>
     cir.return
   }
   // CHECK: llvm.func @shouldConstInitLocalClassesWithConstStructAttr()
@@ -39,7 +39,7 @@ module {
   // CHECK: }
 
   // Should lower basic #cir.const_struct initializer.
-  cir.global external @s1 = #cir.const_struct<{#cir.int<1> : !s32i, #cir.fp<1.000000e-01> : !cir.float, #cir.ptr<null> : !cir.ptr<!s32i>}> : !ty_22S122
+  cir.global external @s1 = #cir.const_struct<{#cir.int<1> : !s32i, #cir.fp<1.000000e-01> : !cir.float, #cir.ptr<null> : !cir.ptr<!s32i>}> : !ty_S1_
   // CHECK: llvm.mlir.global external @s1() {addr_space = 0 : i32} : !llvm.struct<"class.S1", (i32, f32, ptr)> {
   // CHECK:   %0 = llvm.mlir.undef : !llvm.struct<"class.S1", (i32, f32, ptr)>
   // CHECK:   %1 = llvm.mlir.constant(1 : i32) : i32
@@ -52,7 +52,7 @@ module {
   // CHECK: }
 
   // Should lower nested #cir.const_struct initializer.
-  cir.global external @s2 = #cir.const_struct<{#cir.const_struct<{#cir.int<1> : !s32i}> : !ty_22S2A22}> : !ty_22S222
+  cir.global external @s2 = #cir.const_struct<{#cir.const_struct<{#cir.int<1> : !s32i}> : !ty_S2A}> : !ty_S2_
   // CHECK: llvm.mlir.global external @s2() {addr_space = 0 : i32} : !llvm.struct<"class.S2", (struct<"class.S2A", (i32)>)> {
   // CHECK:   %0 = llvm.mlir.undef : !llvm.struct<"class.S2", (struct<"class.S2A", (i32)>)>
   // CHECK:   %1 = llvm.mlir.undef : !llvm.struct<"class.S2A", (i32)>
@@ -62,7 +62,7 @@ module {
   // CHECK:   llvm.return %4 : !llvm.struct<"class.S2", (struct<"class.S2A", (i32)>)>
   // CHECK: }
 
-  cir.global external @s3 = #cir.const_array<[#cir.const_struct<{#cir.int<1> : !s32i}> : !ty_22S322, #cir.const_struct<{#cir.int<2> : !s32i}> : !ty_22S322, #cir.const_struct<{#cir.int<3> : !s32i}> : !ty_22S322]> : !cir.array<!ty_22S322 x 3>
+  cir.global external @s3 = #cir.const_array<[#cir.const_struct<{#cir.int<1> : !s32i}> : !ty_S3_, #cir.const_struct<{#cir.int<2> : !s32i}> : !ty_S3_, #cir.const_struct<{#cir.int<3> : !s32i}> : !ty_S3_]> : !cir.array<!ty_S3_ x 3>
   // CHECK: llvm.mlir.global external @s3() {addr_space = 0 : i32} : !llvm.array<3 x struct<"class.S3", (i32)>> {
   // CHECK:   %0 = llvm.mlir.undef : !llvm.array<3 x struct<"class.S3", (i32)>>
   // CHECK:   %1 = llvm.mlir.undef : !llvm.struct<"class.S3", (i32)>
@@ -82,13 +82,13 @@ module {
 
   cir.func @shouldLowerClassCopies() {
   // CHECK: llvm.func @shouldLowerClassCopies()
-    %1 = cir.alloca !ty_22S22, !cir.ptr<!ty_22S22>, ["a"] {alignment = 4 : i64}
+    %1 = cir.alloca !ty_S, !cir.ptr<!ty_S>, ["a"] {alignment = 4 : i64}
     // CHECK: %[[#ONE:]] = llvm.mlir.constant(1 : index) : i64
     // CHECK: %[[#SA:]] = llvm.alloca %[[#ONE]] x !llvm.struct<"class.S", (i8, i32)> {alignment = 4 : i64} : (i64) -> !llvm.ptr
-    %2 = cir.alloca !ty_22S22, !cir.ptr<!ty_22S22>, ["b", init] {alignment = 4 : i64}
+    %2 = cir.alloca !ty_S, !cir.ptr<!ty_S>, ["b", init] {alignment = 4 : i64}
     // CHECK: %[[#ONE:]] = llvm.mlir.constant(1 : index) : i64
     // CHECK: %[[#SB:]] = llvm.alloca %[[#ONE]] x !llvm.struct<"class.S", (i8, i32)> {alignment = 4 : i64} : (i64) -> !llvm.ptr
-    cir.copy %1 to %2 : !cir.ptr<!ty_22S22>
+    cir.copy %1 to %2 : !cir.ptr<!ty_S>
     // CHECK: %[[#SIZE:]] = llvm.mlir.constant(8 : i32) : i32
     // CHECK: "llvm.intr.memcpy"(%[[#SB]], %[[#SA]], %[[#SIZE]]) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
     cir.return

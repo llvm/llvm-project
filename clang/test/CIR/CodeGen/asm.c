@@ -51,7 +51,7 @@ void empty5(int x) {
 // CHECK:   out = [],
 // CHECK:   in = [],
 // CHECK:   in_out = [%2 : !s32i],
-// CHECK:   {"" "=&r,=&r,1,~{dirflag},~{fpsr},~{flags}"}) side_effects -> !ty_22anon2E022
+// CHECK:   {"" "=&r,=&r,1,~{dirflag},~{fpsr},~{flags}"}) side_effects -> !ty_anon2E0_
 void empty6(int x) {
   __asm__ volatile("" : "=&r"(x), "+&r"(x));
 }
