@@ -771,12 +771,12 @@ Symbol *SymbolTable::addCommon(InputFile *f, StringRef n, uint64_t size,
   return s;
 }
 
-DefinedImportData *SymbolTable::addImportData(StringRef n, ImportFile *f) {
+Symbol *SymbolTable::addImportData(StringRef n, ImportFile *f) {
   auto [s, wasInserted] = insert(n, nullptr);
   s->isUsedInRegularObj = true;
   if (wasInserted || isa<Undefined>(s) || s->isLazy()) {
     replaceSymbol<DefinedImportData>(s, n, f);
-    return cast<DefinedImportData>(s);
+    return s;
   }
 
   reportDuplicate(s, f);

@@ -125,12 +125,13 @@ class MapInfoFinalizationPass
     // TODO: map the addendum segment of the descriptor, similarly to the
     // above base address/data pointer member.
 
-    auto addOperands = [&](mlir::OperandRange &operandsArr,
-                           mlir::MutableOperandRange &mutableOpRange,
-                           auto directiveOp) {
+    if (auto mapClauseOwner =
+            llvm::dyn_cast<mlir::omp::MapClauseOwningOpInterface>(target)) {
       llvm::SmallVector<mlir::Value> newMapOps;
-      for (size_t i = 0; i < operandsArr.size(); ++i) {
-        if (operandsArr[i] == op) {
+      mlir::OperandRange mapVarsArr = mapClauseOwner.getMapVars();
+
+      for (size_t i = 0; i < mapVarsArr.size(); ++i) {
+        if (mapVarsArr[i] == op) {
           // Push new implicit maps generated for the descriptor.
           newMapOps.push_back(baseAddr);
 
@@ -138,29 +139,13 @@ class MapInfoFinalizationPass
           // new additional map operand with an appropriate BlockArgument,
           // as the printing and later processing currently requires a 1:1
           // mapping of BlockArgs to MapInfoOp's at the same placement in
-          // each array (BlockArgs and MapOperands).
-          if (directiveOp) {
-            directiveOp.getRegion().insertArgument(i, baseAddr.getType(), loc);
-          }
+          // each array (BlockArgs and MapVars).
+          if (auto targetOp = llvm::dyn_cast<mlir::omp::TargetOp>(target))
+            targetOp.getRegion().insertArgument(i, baseAddr.getType(), loc);
         }
-        newMapOps.push_back(operandsArr[i]);
+        newMapOps.push_back(mapVarsArr[i]);
       }
-      mutableOpRange.assign(newMapOps);
-    };
-    if (auto mapClauseOwner =
-            llvm::dyn_cast<mlir::omp::MapClauseOwningOpInterface>(target)) {
-      mlir::OperandRange mapOperandsArr = mapClauseOwner.getMapVars();
-      mlir::MutableOperandRange mapMutableOpRange =
-          mapClauseOwner.getMapVarsMutable();
-      mlir::omp::TargetOp targetOp =
-          llvm::dyn_cast<mlir::omp::TargetOp>(target);
-      addOperands(mapOperandsArr, mapMutableOpRange, targetOp);
-    }
-    if (auto targetDataOp = llvm::dyn_cast<mlir::omp::TargetDataOp>(target)) {
-      mlir::OperandRange useDevAddrArr = targetDataOp.getUseDeviceAddrVars();
-      mlir::MutableOperandRange useDevAddrMutableOpRange =
-          targetDataOp.getUseDeviceAddrVarsMutable();
-      addOperands(useDevAddrArr, useDevAddrMutableOpRange, targetDataOp);
+      mapClauseOwner.getMapVarsMutable().assign(newMapOps);
     }
 
     mlir::Value newDescParentMapOp = builder.create<mlir::omp::MapInfoOp>(

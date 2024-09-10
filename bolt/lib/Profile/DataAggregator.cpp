@@ -34,7 +34,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include <map>
 #include <optional>
-#include <queue>
 #include <unordered_map>
 #include <utility>
 
@@ -2322,6 +2321,12 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
   BP.Header.Flags = opts::BasicAggregation ? BinaryFunction::PF_SAMPLE
                                            : BinaryFunction::PF_LBR;
 
+  // Add probe inline tree nodes.
+  YAMLProfileWriter::InlineTreeDesc InlineTree;
+  if (PseudoProbeDecoder)
+    std::tie(BP.PseudoProbeDesc, InlineTree) =
+        YAMLProfileWriter::convertPseudoProbeDesc(*PseudoProbeDecoder);
+
   if (!opts::BasicAggregation) {
     // Convert profile for functions not covered by BAT
     for (auto &BFI : BC.getBinaryFunctions()) {
@@ -2330,8 +2335,8 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
         continue;
       if (BAT->isBATFunction(Function.getAddress()))
         continue;
-      BP.Functions.emplace_back(
-          YAMLProfileWriter::convert(Function, /*UseDFS=*/false, BAT));
+      BP.Functions.emplace_back(YAMLProfileWriter::convert(
+          Function, /*UseDFS=*/false, InlineTree, BAT));
     }
 
     for (const auto &KV : NamesToBranches) {
@@ -2403,48 +2408,23 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
         const unsigned BlockIndex = BlockMap.getBBIndex(BI.To.Offset);
         YamlBF.Blocks[BlockIndex].ExecCount += BI.Branches;
       }
-      DenseMap<const MCDecodedPseudoProbeInlineTree *, uint32_t>
-          InlineTreeNodeId;
-      if (PseudoProbeDecoder && BF->getGUID()) {
-        std::queue<const MCDecodedPseudoProbeInlineTree *> ITWorklist;
-        // FIXME: faster inline tree lookup by top-level GUID
-        if (const MCDecodedPseudoProbeInlineTree *InlineTree = llvm::find_if(
-                PseudoProbeDecoder->getDummyInlineRoot().getChildren(),
-                [&](const auto &InlineTree) {
-                  return InlineTree.Guid == BF->getGUID();
-                })) {
-          ITWorklist.push(InlineTree);
-          InlineTreeNodeId[InlineTree] = 0;
-          auto Hash =
-              PseudoProbeDecoder->getFuncDescForGUID(BF->getGUID())->FuncHash;
-          YamlBF.InlineTree.emplace_back(
-              yaml::bolt::InlineTreeInfo{0, 0, 0, BF->getGUID(), Hash});
-        }
-        uint32_t ParentId = 0;
-        uint32_t NodeId = 1;
-        while (!ITWorklist.empty()) {
-          const MCDecodedPseudoProbeInlineTree *Cur = ITWorklist.front();
-          for (const MCDecodedPseudoProbeInlineTree &Child :
-               Cur->getChildren()) {
-            InlineTreeNodeId[&Child] = NodeId;
-            auto Hash =
-                PseudoProbeDecoder->getFuncDescForGUID(Child.Guid)->FuncHash;
-            YamlBF.InlineTree.emplace_back(yaml::bolt::InlineTreeInfo{
-                NodeId++, ParentId, std::get<1>(Child.getInlineSite()),
-                Child.Guid, Hash});
-            ITWorklist.push(&Child);
-          }
-          ITWorklist.pop();
-          ++ParentId;
-        }
-      }
-
       if (PseudoProbeDecoder) {
+        DenseMap<const MCDecodedPseudoProbeInlineTree *, uint32_t>
+            InlineTreeNodeId;
+        if (BF->getGUID()) {
+          std::tie(YamlBF.InlineTree, InlineTreeNodeId) =
+              YAMLProfileWriter::convertBFInlineTree(*PseudoProbeDecoder,
+                                                     InlineTree, BF->getGUID());
+        }
         // Fetch probes belonging to all fragments
         const AddressProbesMap &ProbeMap =
             PseudoProbeDecoder->getAddress2ProbesMap();
         BinaryFunction::FragmentsSetTy Fragments(BF->Fragments);
         Fragments.insert(BF);
+        DenseMap<
+            uint32_t,
+            std::vector<std::reference_wrapper<const MCDecodedPseudoProbe>>>
+            BlockProbes;
         for (const BinaryFunction *F : Fragments) {
           const uint64_t FuncAddr = F->getAddress();
           for (const MCDecodedPseudoProbe &Probe :
@@ -2452,25 +2432,25 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
             const uint32_t OutputAddress = Probe.getAddress();
             const uint32_t InputOffset = BAT->translate(
                 FuncAddr, OutputAddress - FuncAddr, /*IsBranchSrc=*/true);
-            const auto [BlockOffset, BlockIndex] = getBlock(InputOffset);
-            uint32_t NodeId = InlineTreeNodeId[Probe.getInlineTreeNode()];
-            uint32_t Offset = InputOffset - BlockOffset;
-            YamlBF.Blocks[BlockIndex].PseudoProbes.emplace_back(
-                yaml::bolt::PseudoProbeInfo{Probe.getIndex(), NodeId, Offset,
-                                            Probe.getType()});
+            const unsigned BlockIndex = getBlock(InputOffset).second;
+            BlockProbes[BlockIndex].emplace_back(Probe);
           }
         }
-        for (yaml::bolt::BinaryBasicBlockProfile &YamlBB : YamlBF.Blocks) {
-          llvm::sort(YamlBB.PseudoProbes);
-          YamlBB.PseudoProbes.erase(llvm::unique(YamlBB.PseudoProbes),
-                                    YamlBB.PseudoProbes.end());
+
+        for (auto &[Block, Probes] : BlockProbes) {
+          YamlBF.Blocks[Block].PseudoProbes =
+              YAMLProfileWriter::writeBlockProbes(Probes, InlineTreeNodeId);
         }
       }
-      // Drop blocks without a hash, won't be useful for stale matching.
-      llvm::erase_if(YamlBF.Blocks,
-                     [](const yaml::bolt::BinaryBasicBlockProfile &YamlBB) {
-                       return YamlBB.Hash == (yaml::Hex64)0;
-                     });
+      // Skip printing if there's no profile data
+      llvm::erase_if(
+          YamlBF.Blocks, [](const yaml::bolt::BinaryBasicBlockProfile &YamlBB) {
+            auto HasCount = [](const auto &SI) { return SI.Count; };
+            bool HasAnyCount = YamlBB.ExecCount ||
+                               llvm::any_of(YamlBB.Successors, HasCount) ||
+                               llvm::any_of(YamlBB.CallSites, HasCount);
+            return !HasAnyCount;
+          });
       BP.Functions.emplace_back(YamlBF);
     }
   }

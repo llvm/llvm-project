@@ -14,31 +14,23 @@
 # RUN: FileCheck --input-file %t.yaml2 %s --check-prefix CHECK-YAML
 # CHECK-YAML: name: bar
 # CHECK-YAML: - bid: 0
-# CHECK-YAML:      pseudo_probes:
-# CHECK-YAML-NEXT:   - { id: 1, type: 0
-# CHECK-YAML-NEXT:   - { id: 4, type: 0
-# CHECK-YAML:      inline_tree:
-# CHECK-YAML-NEXT:   - { guid: 0xE413754A191DB537, hash: 0x10E852DA94, id: 0 }
+# CHECK-YAML:   probes: [ { blk: 9 } ]
+# CHECK-YAML: inline_tree: [ { g: 1 } ]
 #
 # CHECK-YAML: name: foo
 # CHECK-YAML: - bid: 0
-# CHECK-YAML:      pseudo_probes:
-# CHECK-YAML-NEXT: - { id: 1, type: 0 }
-# CHECK-YAML-NEXT: - { id: 2, type: 0 }
-# CHECK-YAML:      inline_tree:
-# CHECK-YAML-NEXT:   - { guid: 0x5CF8C24CDB18BDAC, hash: 0x200205A19C5B4, id: 0 }
-# CHECK-YAML-NEXT:   - { guid: 0xE413754A191DB537, hash: 0x10E852DA94, id: 1, callsite: 8 }
+# CHECK-YAML:   probes: [ { blk: 3 } ]
+# CHECK-YAML: inline_tree: [ { g: 2 }, { g: 1, cs: 8 } ]
 #
 # CHECK-YAML: name: main
 # CHECK-YAML: - bid: 0
-# CHECK-YAML:      pseudo_probes:
-# CHECK-YAML-NEXT: - { id: 1, type: 0 }
-# CHECK-YAML-NEXT: - { id: 1, type: 0, inline_tree_id: 1 }
-# CHECK-YAML-NEXT: - { id: 2, type: 0, inline_tree_id: 1 }
-# CHECK-YAML:      inline_tree:
-# CHECK-YAML-NEXT:   - { guid: 0xDB956436E78DD5FA, hash: 0x10000FFFFFFFF, id: 0 }
-# CHECK-YAML-NEXT:   - { guid: 0x5CF8C24CDB18BDAC, hash: 0x200205A19C5B4, id: 1, callsite: 2 }
-# CHECK-YAML-NEXT:   - { guid: 0xE413754A191DB537, hash: 0x10E852DA94, id: 2, parent: 1, callsite: 8 }
+# CHECK-YAML:   probes: [ { blk: 3, id: 1 }, {  } ]
+# CHECK-YAML: inline_tree: [ { g: 3 }, { g: 2, cs: 2 }, { g: 1, p: 1, cs: 8 } ]
+#
+# CHECK-YAML: pseudo_probe_desc:
+# CHECK-YAML-NEXT: gs: [ 0xE413754A191DB537, 0x5CF8C24CDB18BDAC, 0xDB956436E78DD5FA ]
+# CHECK-YAML-NEXT: gh: [ 2, 0, 1 ]
+# CHECK-YAML-NEXT: hs: [ 0x200205A19C5B4, 0x10000FFFFFFFF, 0x10E852DA94 ]
 #
 ## Check that without --profile-write-pseudo-probes option, no pseudo probes are
 ## generated

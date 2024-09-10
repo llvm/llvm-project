@@ -198,9 +198,7 @@ class SROA {
   SmallSetVector<AllocaInst *, 16> PostPromotionWorklist;
 
   /// A collection of alloca instructions we can directly promote.
-  SetVector<AllocaInst *, SmallVector<AllocaInst *>,
-            SmallPtrSet<AllocaInst *, 16>, 16>
-      PromotableAllocas;
+  std::vector<AllocaInst *> PromotableAllocas;
 
   /// A worklist of PHIs to speculate prior to promoting allocas.
   ///
@@ -4801,7 +4799,9 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
 
   // Finally, don't try to promote any allocas that new require re-splitting.
   // They have already been added to the worklist above.
-  PromotableAllocas.set_subtract(ResplitPromotableAllocas);
+  llvm::erase_if(PromotableAllocas, [&](AllocaInst *AI) {
+    return ResplitPromotableAllocas.count(AI);
+  });
 
   return true;
 }
@@ -4963,7 +4963,7 @@ AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
     }
     if (PHIUsers.empty() && SelectUsers.empty()) {
       // Promote the alloca.
-      PromotableAllocas.insert(NewAI);
+      PromotableAllocas.push_back(NewAI);
     } else {
       // If we have either PHIs or Selects to speculate, add them to those
       // worklists and re-queue the new alloca so that we promote in on the
@@ -5598,7 +5598,7 @@ bool SROA::promoteAllocas(Function &F) {
     LLVM_DEBUG(dbgs() << "Not promoting allocas with mem2reg!\n");
   } else {
     LLVM_DEBUG(dbgs() << "Promoting allocas with mem2reg...\n");
-    PromoteMemToReg(PromotableAllocas.getArrayRef(), DTU->getDomTree(), AC);
+    PromoteMemToReg(PromotableAllocas, DTU->getDomTree(), AC);
   }
 
   PromotableAllocas.clear();
@@ -5615,7 +5615,7 @@ std::pair<bool /*Changed*/, bool /*CFGChanged*/> SROA::runSROA(Function &F) {
     if (AllocaInst *AI = dyn_cast<AllocaInst>(I)) {
       if (DL.getTypeAllocSize(AI->getAllocatedType()).isScalable() &&
           isAllocaPromotable(AI))
-        PromotableAllocas.insert(AI);
+        PromotableAllocas.push_back(AI);
       else
         Worklist.insert(AI);
     }
@@ -5639,9 +5639,10 @@ std::pair<bool /*Changed*/, bool /*CFGChanged*/> SROA::runSROA(Function &F) {
       // Remove the deleted allocas from various lists so that we don't try to
       // continue processing them.
       if (!DeletedAllocas.empty()) {
-        Worklist.set_subtract(DeletedAllocas);
-        PostPromotionWorklist.set_subtract(DeletedAllocas);
-        PromotableAllocas.set_subtract(DeletedAllocas);
+        auto IsInSet = [&](AllocaInst *AI) { return DeletedAllocas.count(AI); };
+        Worklist.remove_if(IsInSet);
+        PostPromotionWorklist.remove_if(IsInSet);
+        llvm::erase_if(PromotableAllocas, IsInSet);
         DeletedAllocas.clear();
       }
     }

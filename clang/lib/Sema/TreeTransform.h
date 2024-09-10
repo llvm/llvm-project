@@ -6687,10 +6687,10 @@ TreeTransform<Derived>::TransformPackIndexingType(TypeLocBuilder &TLB,
   bool NotYetExpanded = Types.empty();
   bool FullySubstituted = true;
 
-  if (Types.empty() && !PIT->expandsToEmptyPack())
+  if (Types.empty())
     Types = llvm::ArrayRef<QualType>(&Pattern, 1);
 
-  for (QualType T : Types) {
+  for (const QualType &T : Types) {
     if (!T->containsUnexpandedParameterPack()) {
       QualType Transformed = getDerived().TransformType(T);
       if (Transformed.isNull())

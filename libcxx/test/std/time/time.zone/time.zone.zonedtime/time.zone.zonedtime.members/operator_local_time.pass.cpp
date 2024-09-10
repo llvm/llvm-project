@@ -20,7 +20,6 @@
 // explicit operator local_time<duration>() const;
 
 #include <chrono>
-#include <cassert>
 #include <concepts>
 
 #include "../test_offset_time_zone.h"

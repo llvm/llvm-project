@@ -29,11 +29,10 @@
 //          (numeric_limits<index_type>::max() < numeric_limits<OtherIndexType>::max())
 
 #include <mdspan>
-#include <cassert>
-#include <concepts>
-#include <limits>
-#include <span> // dynamic_extent
 #include <type_traits>
+#include <concepts>
+#include <cassert>
+#include <limits>
 
 #include "test_macros.h"
 

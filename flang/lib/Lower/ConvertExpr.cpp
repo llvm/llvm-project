@@ -5590,8 +5590,7 @@ private:
     ty = unwrapBoxEleTy(ty);
     mlir::Location loc = getLoc();
     mlir::IndexType idxTy = builder.getIndexType();
-    auto seqType = mlir::cast<fir::SequenceType>(ty);
-    for (auto extent : seqType.getShape()) {
+    for (auto extent : mlir::cast<fir::SequenceType>(ty).getShape()) {
       auto v = extent == fir::SequenceType::getUnknownExtent()
                    ? builder.create<fir::UndefOp>(loc, idxTy).getResult()
                    : builder.createIntegerConstant(loc, idxTy, extent);

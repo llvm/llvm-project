@@ -23,10 +23,11 @@
 
 // System includes - They have to be included after framework includes because
 // they define some macros which collide with variable names in other modules
-#include <sys/ptrace.h>
 #include <sys/uio.h>
 // NT_PRSTATUS and NT_FPREGSET definition
 #include <elf.h>
+
+#define REG_CONTEXT_SIZE (GetGPRSize() + GetFPRSize())
 
 using namespace lldb;
 using namespace lldb_private;
@@ -37,21 +38,7 @@ NativeRegisterContextLinux::CreateHostNativeRegisterContextLinux(
     const ArchSpec &target_arch, NativeThreadLinux &native_thread) {
   switch (target_arch.GetMachine()) {
   case llvm::Triple::riscv64: {
-    Flags opt_regsets(RegisterInfoPOSIX_riscv64::eRegsetMaskDefault);
-
-    RegisterInfoPOSIX_riscv64::FPR fpr;
-    struct iovec ioVec;
-    ioVec.iov_base = &fpr;
-    ioVec.iov_len = sizeof(fpr);
-    unsigned int regset = NT_FPREGSET;
-
-    if (NativeProcessLinux::PtraceWrapper(PTRACE_GETREGSET,
-                                          native_thread.GetID(), &regset,
-                                          &ioVec, sizeof(fpr))
-            .Success()) {
-      opt_regsets.Set(RegisterInfoPOSIX_riscv64::eRegsetMaskFP);
-    }
-
+    Flags opt_regsets;
     auto register_info_up =
         std::make_unique<RegisterInfoPOSIX_riscv64>(target_arch, opt_regsets);
     return std::make_unique<NativeRegisterContextLinux_riscv64>(
@@ -207,23 +194,20 @@ Status NativeRegisterContextLinux_riscv64::ReadAllRegisterValues(
     lldb::WritableDataBufferSP &data_sp) {
   Status error;
 
-  data_sp.reset(new DataBufferHeap(GetRegContextSize(), 0));
+  data_sp.reset(new DataBufferHeap(REG_CONTEXT_SIZE, 0));
 
   error = ReadGPR();
   if (error.Fail())
     return error;
 
-  if (GetRegisterInfo().IsFPPresent()) {
-    error = ReadFPR();
-    if (error.Fail())
-      return error;
-  }
+  error = ReadFPR();
+  if (error.Fail())
+    return error;
 
   uint8_t *dst = const_cast<uint8_t *>(data_sp->GetBytes());
   ::memcpy(dst, GetGPRBuffer(), GetGPRSize());
   dst += GetGPRSize();
-  if (GetRegisterInfo().IsFPPresent())
-    ::memcpy(dst, GetFPRBuffer(), GetFPRSize());
+  ::memcpy(dst, GetFPRBuffer(), GetFPRSize());
 
   return error;
 }
@@ -239,11 +223,11 @@ Status NativeRegisterContextLinux_riscv64::WriteAllRegisterValues(
     return error;
   }
 
-  if (data_sp->GetByteSize() != GetRegContextSize()) {
+  if (data_sp->GetByteSize() != REG_CONTEXT_SIZE) {
     error = Status::FromErrorStringWithFormat(
         "NativeRegisterContextLinux_riscv64::%s data_sp contained mismatched "
         "data size, expected %" PRIu64 ", actual %" PRIu64,
-        __FUNCTION__, GetRegContextSize(), data_sp->GetByteSize());
+        __FUNCTION__, REG_CONTEXT_SIZE, data_sp->GetByteSize());
     return error;
   }
 
@@ -263,23 +247,13 @@ Status NativeRegisterContextLinux_riscv64::WriteAllRegisterValues(
     return error;
 
   src += GetRegisterInfoInterface().GetGPRSize();
+  ::memcpy(GetFPRBuffer(), src, GetFPRSize());
 
-  if (GetRegisterInfo().IsFPPresent()) {
-    ::memcpy(GetFPRBuffer(), src, GetFPRSize());
-
-    error = WriteFPR();
-    if (error.Fail())
-      return error;
-  }
+  error = WriteFPR();
+  if (error.Fail())
+    return error;
 
   return error;
-}
-
-size_t NativeRegisterContextLinux_riscv64::GetRegContextSize() {
-  size_t size = GetGPRSize();
-  if (GetRegisterInfo().IsFPPresent())
-    size += GetFPRSize();
-  return size;
 }
 
 bool NativeRegisterContextLinux_riscv64::IsGPR(unsigned reg) const {
@@ -288,7 +262,8 @@ bool NativeRegisterContextLinux_riscv64::IsGPR(unsigned reg) const {
 }
 
 bool NativeRegisterContextLinux_riscv64::IsFPR(unsigned reg) const {
-  return GetRegisterInfo().IsFPReg(reg);
+  return GetRegisterInfo().GetRegisterSetFromRegisterIndex(reg) ==
+         RegisterInfoPOSIX_riscv64::FPRegSet;
 }
 
 Status NativeRegisterContextLinux_riscv64::ReadGPR() {

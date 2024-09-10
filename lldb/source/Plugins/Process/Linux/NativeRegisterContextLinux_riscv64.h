@@ -75,8 +75,6 @@ private:
 
   RegisterInfoPOSIX_riscv64::FPR m_fpr;
 
-  size_t GetRegContextSize();
-
   bool IsGPR(unsigned reg) const;
 
   bool IsFPR(unsigned reg) const;

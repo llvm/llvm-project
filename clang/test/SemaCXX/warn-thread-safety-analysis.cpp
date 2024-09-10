@@ -6077,20 +6077,24 @@ namespace ReturnScopedLockable {
 class Object {
 public:
   MutexLock lock() EXCLUSIVE_LOCK_FUNCTION(mutex) {
-    return MutexLock(&mutex);
-  }
+    // TODO: False positive because scoped lock isn't destructed.
+    return MutexLock(&mutex); // expected-note {{mutex acquired here}}
+  }                           // expected-warning {{mutex 'mutex' is still held at the end of function}}
 
   ReaderMutexLock lockShared() SHARED_LOCK_FUNCTION(mutex) {
-    return ReaderMutexLock(&mutex);
-  }
+    // TODO: False positive because scoped lock isn't destructed.
+    return ReaderMutexLock(&mutex); // expected-note {{mutex acquired here}}
+  }                                 // expected-warning {{mutex 'mutex' is still held at the end of function}}
 
   MutexLock adopt() EXCLUSIVE_LOCKS_REQUIRED(mutex) {
-    return MutexLock(&mutex, true);
-  }
+    // TODO: False positive because scoped lock isn't destructed.
+    return MutexLock(&mutex, true); // expected-note {{mutex acquired here}}
+  }                                 // expected-warning {{mutex 'mutex' is still held at the end of function}}
 
   ReaderMutexLock adoptShared() SHARED_LOCKS_REQUIRED(mutex) {
-    return ReaderMutexLock(&mutex, true);
-  }
+    // TODO: False positive because scoped lock isn't destructed.
+    return ReaderMutexLock(&mutex, true); // expected-note {{mutex acquired here}}
+  }                                       // expected-warning {{mutex 'mutex' is still held at the end of function}}
 
   int x GUARDED_BY(mutex);
   void needsLock() EXCLUSIVE_LOCKS_REQUIRED(mutex);

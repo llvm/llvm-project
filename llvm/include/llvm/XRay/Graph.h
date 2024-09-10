@@ -378,17 +378,20 @@ public:
 
   /// Looks up the vertex with identifier I, if it does not exist it default
   /// constructs it.
-  VertexAttribute &operator[](const VertexIdentifier &I) { return Vertices[I]; }
+  VertexAttribute &operator[](const VertexIdentifier &I) {
+    return Vertices.FindAndConstruct(I).second;
+  }
 
   /// Looks up the edge with identifier I, if it does not exist it default
   /// constructs it, if it's endpoints do not exist it also default constructs
   /// them.
   EdgeAttribute &operator[](const EdgeIdentifier &I) {
-    Vertices.try_emplace(I.first);
-    Vertices.try_emplace(I.second);
+    auto &P = Edges.FindAndConstruct(I);
+    Vertices.FindAndConstruct(I.first);
+    Vertices.FindAndConstruct(I.second);
     InNeighbors[I.second].insert(I.first);
     OutNeighbors[I.first].insert(I.second);
-    return Edges[I];
+    return P.second;
   }
 
   /// Looks up a vertex with Identifier I, or an error if it does not exist.
@@ -476,8 +479,8 @@ public:
     auto EI = Val.first;
     const auto &p = Edges.insert(std::move(Val));
     if (p.second) {
-      Vertices.try_emplace(EI.first);
-      Vertices.try_emplace(EI.second);
+      Vertices.FindAndConstruct(EI.first);
+      Vertices.FindAndConstruct(EI.second);
       InNeighbors[EI.second].insert(EI.first);
       OutNeighbors[EI.first].insert(EI.second);
     };

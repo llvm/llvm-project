@@ -29,10 +29,9 @@
 //   - value-initializes acc_.
 
 #include <array>
-#include <cassert>
 #include <concepts>
+#include <cassert>
 #include <mdspan>
-#include <span> // dynamic_extent
 #include <type_traits>
 
 #include "test_macros.h"
