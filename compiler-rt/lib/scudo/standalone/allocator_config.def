@@ -87,15 +87,15 @@ PRIMARY_OPTIONAL(const bool, EnableRandomOffset, false)
 
 // This allows each size class to have multiple regions instead of one. Note
 // that this is an experimental option so it has a few constraints while using.
-//   a. Pointer compaction is diabled. Which means `CompactPtrT` needs to be the
-//      pointer integral type, i.e., uptr.
+//   a. Pointer compaction is disabled. Which means `CompactPtrT` needs to be
+//      a pointer integral type, i.e., uptr.
 //   b. `EnableRandomOffset` needs to be false. Pointer grouping requires
 //      the beginning of allocation address of a region to be aligned with
-//      `GroupSizeLog`. Without pointer compaction, it relies the region to be
-//      allocated with proper alignment and the random offset will break the
+//      `GroupSizeLog`. Without pointer compaction, it requires the region to be
+//      allocated with proper alignment and a random offset will break the
 //      assumption.
 //   c. Condition variable is not supported under this mode. This is still under
-//      developing.
+//      development.
 PRIMARY_OPTIONAL(const bool, EnableMultiRegions, false)
 
 PRIMARY_OPTIONAL(const s32, DefaultReleaseToOsIntervalMs, INT32_MIN)

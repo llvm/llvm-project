@@ -149,7 +149,7 @@ public:
       // Reserve the space required for the Primary.
       CHECK(ReservedMemory.create(/*Addr=*/0U, RegionSize * NumClasses,
                                   "scudo:primary_reserve", /*Flag=*/0,
-                                  Alignment));
+                                  Alignment / getPageSizeCached()));
       const uptr PrimaryBase = ReservedMemory.getBase();
 
       for (uptr I = 0; I < NumClasses; I++) {
@@ -1389,7 +1389,7 @@ private:
         DisablePtrCompaction ? (1UL << GroupSizeLog) : getPageSizeCached();
     if (UNLIKELY(!ReservedMemory.create(/*Addr=*/0U, RegionSize,
                                         "scudo:primary_reserve", MAP_ALLOWNOMEM,
-                                        Alignment))) {
+                                        Alignment / getPageSizeCached()))) {
       Printf("Can't populate a new region for size class %zu.\n",
              getSizeByClassId(ClassId));
       return nullptr;
@@ -1415,9 +1415,9 @@ private:
       const uptr Alignment =
           DisablePtrCompaction ? (1UL << GroupSizeLog) : getPageSizeCached();
       ReservedMemoryT ReservedMemory;
-      if (UNLIKELY(!ReservedMemory.create(/*Addr=*/0U, RegionSize,
-                                          "scudo:primary_reserve",
-                                          MAP_ALLOWNOMEM, Alignment))) {
+      if (UNLIKELY(!ReservedMemory.create(
+              /*Addr=*/0U, RegionSize, "scudo:primary_reserve", MAP_ALLOWNOMEM,
+              Alignment / getPageSizeCached()))) {
         Printf("Can't reserve pages for size class %zu.\n",
                getSizeByClassId(ClassId));
         return 0U;
