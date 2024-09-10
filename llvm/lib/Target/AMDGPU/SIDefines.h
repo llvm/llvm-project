@@ -841,7 +841,9 @@ enum Id : unsigned { // id of symbolic names
   ID_BITMASK_PERM,
   ID_SWAP,
   ID_REVERSE,
-  ID_BROADCAST
+  ID_BROADCAST,
+  ID_FFT,
+  ID_ROTATE
 };
 
 enum EncBits : unsigned {
@@ -853,6 +855,11 @@ enum EncBits : unsigned {
 
   BITMASK_PERM_ENC      = 0x0000,
   BITMASK_PERM_ENC_MASK = 0x8000,
+
+  FFT_MODE_ENC          = 0xE000,
+
+  ROTATE_MODE_ENC       = 0xC000,
+  FFT_ROTATE_MODE_MASK  = 0xF000,
 
   // QUAD_PERM encodings
 
@@ -869,7 +876,22 @@ enum EncBits : unsigned {
 
   BITMASK_AND_SHIFT     = 0,
   BITMASK_OR_SHIFT      = 5,
-  BITMASK_XOR_SHIFT     = 10
+  BITMASK_XOR_SHIFT     = 10,
+
+  // FFT encodings
+
+  FFT_NO_SWIZZLE        = 0x1F,
+  FFT_SWIZZLE_00        = 0x0,
+  FFT_SWIZZLE_10        = 0x10,
+
+  FFT_SWIZZLE_TYPE_MASK = 0x1F,
+
+  // ROTATE encodings
+  ROTATE_MAX_SIZE       = 0x1F,
+  ROTATE_DIR_SHIFT      = 10, // bit position of rotate direction
+  ROTATE_DIR_MASK       = 0x1,
+  ROTATE_SIZE_SHIFT     = 5, // bit position of rotate size
+  ROTATE_SIZE_MASK = ROTATE_MAX_SIZE,
 };
 
 } // namespace Swizzle

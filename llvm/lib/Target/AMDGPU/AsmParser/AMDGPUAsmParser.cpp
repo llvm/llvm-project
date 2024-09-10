@@ -1843,6 +1843,8 @@ public:
   bool parseSwizzleBroadcast(int64_t &Imm);
   bool parseSwizzleSwap(int64_t &Imm);
   bool parseSwizzleReverse(int64_t &Imm);
+  bool parseSwizzleFFT(int64_t &Imm);
+  bool parseSwizzleRotate(int64_t &Imm);
 
   ParseStatus parseGPRIdxMode(OperandVector &Operands);
   int64_t parseGPRIdxMacro();
@@ -8141,6 +8143,56 @@ AMDGPUAsmParser::parseSwizzleBitmaskPerm(int64_t &Imm) {
   return true;
 }
 
+bool AMDGPUAsmParser::parseSwizzleFFT(int64_t &Imm) {
+  using namespace llvm::AMDGPU::Swizzle;
+
+  if (!skipToken(AsmToken::Comma, "expected a comma"))
+    return false;
+
+  SMLoc Loc = getLoc();
+
+  int64_t Type;
+
+  if (!parseExpr(Type))
+    return false;
+
+  if (Type != FFT_NO_SWIZZLE && Type != FFT_SWIZZLE_00 &&
+      Type != FFT_SWIZZLE_10) {
+    const std::string ErrMsg = "invalid FFT swizzle type: must be " +
+                               std::to_string(FFT_SWIZZLE_00) + ", " +
+                               std::to_string(FFT_SWIZZLE_10) + ", or " +
+                               std::to_string(FFT_NO_SWIZZLE);
+    Error(Loc, ErrMsg);
+    return false;
+  }
+
+  Imm = FFT_MODE_ENC | Type;
+  return true;
+}
+
+bool AMDGPUAsmParser::parseSwizzleRotate(int64_t &Imm) {
+  using namespace llvm::AMDGPU::Swizzle;
+
+  SMLoc Loc;
+  int64_t Direction;
+
+  if (!parseSwizzleOperand(Direction, 0, 1,
+                           "direction must be 0 (left) or 1 (right)", Loc))
+    return false;
+
+  int64_t RotateSize;
+  const std::string ErrorMsg =
+      "number of threads to rotate must be in the interval [0," +
+      std::to_string(ROTATE_MAX_SIZE) + "]";
+
+  if (!parseSwizzleOperand(RotateSize, 0, ROTATE_MAX_SIZE, ErrorMsg, Loc))
+    return false;
+
+  Imm = ROTATE_MODE_ENC | (Direction << ROTATE_DIR_SHIFT) |
+        (RotateSize << ROTATE_SIZE_SHIFT);
+  return true;
+}
+
 bool
 AMDGPUAsmParser::parseSwizzleOffset(int64_t &Imm) {
 
@@ -8175,6 +8227,10 @@ AMDGPUAsmParser::parseSwizzleMacro(int64_t &Imm) {
       Ok = parseSwizzleSwap(Imm);
     } else if (trySkipId(IdSymbolic[ID_REVERSE])) {
       Ok = parseSwizzleReverse(Imm);
+    } else if (trySkipId(IdSymbolic[ID_FFT])) {
+      Ok = parseSwizzleFFT(Imm);
+    } else if (trySkipId(IdSymbolic[ID_ROTATE])) {
+      Ok = parseSwizzleRotate(Imm);
     } else {
       Error(ModeLoc, "expected a swizzle mode");
     }
