@@ -362,7 +362,7 @@ static RT_API_ATTRS bool HandleComponent(IoStatementState &io, Descriptor &desc,
             io.HandleRelativePosition(byteCount); // skip over '('
             StaticDescriptor<maxRank, true, 16> staticDesc;
             Descriptor &tmpDesc{staticDesc.descriptor()};
-            comp->CreatePointerDescriptor(tmpDesc, source, handler);
+            comp->CreateTargetDescriptor(tmpDesc, source, handler);
             if (!HandleSubscripts(io, desc, tmpDesc, compName)) {
               return false;
             }
@@ -370,7 +370,7 @@ static RT_API_ATTRS bool HandleComponent(IoStatementState &io, Descriptor &desc,
           }
         }
         if (!createdDesc) {
-          comp->CreatePointerDescriptor(desc, source, handler);
+          comp->CreateTargetDescriptor(desc, source, handler);
         }
         if (source.rank() > 0) {
           if (desc.rank() > 0) {

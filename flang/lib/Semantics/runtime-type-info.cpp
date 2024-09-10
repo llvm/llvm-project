@@ -150,6 +150,10 @@ private:
   SomeExpr lenParameterEnum_; // Value::Genre::LenParameter
   SomeExpr scalarAssignmentEnum_; // SpecialBinding::Which::ScalarAssignment
   SomeExpr
+      scalarAllocatableAssignmentEnum_; // SpecialBinding::Which::ScalarAllocatableAssignment
+  SomeExpr
+      scalarPointerAssignmentEnum_; // SpecialBinding::Which::ScalarPointerAssignment
+  SomeExpr
       elementalAssignmentEnum_; // SpecialBinding::Which::ElementalAssignment
   SomeExpr readFormattedEnum_; // SpecialBinding::Which::ReadFormatted
   SomeExpr readUnformattedEnum_; // SpecialBinding::Which::ReadUnformatted
@@ -174,6 +178,9 @@ RuntimeTableBuilder::RuntimeTableBuilder(
       explicitEnum_{GetEnumValue("explicit")},
       lenParameterEnum_{GetEnumValue("lenparameter")},
       scalarAssignmentEnum_{GetEnumValue("scalarassignment")},
+      scalarAllocatableAssignmentEnum_{
+          GetEnumValue("scalarallocatableassignment")},
+      scalarPointerAssignmentEnum_{GetEnumValue("scalarpointerassignment")},
       elementalAssignmentEnum_{GetEnumValue("elementalassignment")},
       readFormattedEnum_{GetEnumValue("readformatted")},
       readUnformattedEnum_{GetEnumValue("readunformatted")},
@@ -1122,10 +1129,10 @@ void RuntimeTableBuilder::DescribeSpecialProc(
       // Non-type-bound generic INTERFACEs and assignments from distinct
       // types must not be used for component intrinsic assignment.
       CHECK(proc->dummyArguments.size() == 2);
-      const auto t1{
+      const auto &ddo1{
           DEREF(std::get_if<evaluate::characteristics::DummyDataObject>(
-                    &proc->dummyArguments[0].u))
-              .type.type()};
+              &proc->dummyArguments[0].u))};
+      const auto t1{ddo1.type.type()};
       const auto t2{
           DEREF(std::get_if<evaluate::characteristics::DummyDataObject>(
                     &proc->dummyArguments[1].u))
@@ -1137,7 +1144,13 @@ void RuntimeTableBuilder::DescribeSpecialProc(
         return;
       }
       which = proc->IsElemental() ? elementalAssignmentEnum_
-                                  : scalarAssignmentEnum_;
+          : ddo1.attrs.test(
+                evaluate::characteristics::DummyDataObject::Attr::Allocatable)
+          ? scalarAllocatableAssignmentEnum_
+          : ddo1.attrs.test(
+                evaluate::characteristics::DummyDataObject::Attr::Pointer)
+          ? scalarPointerAssignmentEnum_
+          : scalarAssignmentEnum_;
       if (binding && binding->passName() &&
           *binding->passName() == proc->dummyArguments[1].name) {
         argThatMightBeDescriptor = 1;
