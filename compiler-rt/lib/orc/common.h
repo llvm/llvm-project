@@ -54,7 +54,7 @@ __orc_rt_jit_dispatch(__orc_rt_Opaque *DispatchCtx, const void *FnTag,
 template <typename RecordElement> class RecordSectionsTracker {
 public:
   /// Add a section to the "new" list.
-  void add(__orc_rt::span<RecordElement> Sec) { New.push_back(std::move(Sec)); }
+  void add(orc_rt::span<RecordElement> Sec) { New.push_back(std::move(Sec)); }
 
   /// Returns true if there are new sections to process.
   bool hasNewSections() const { return !New.empty(); }
@@ -65,7 +65,7 @@ public:
   /// Process all new sections.
   template <typename ProcessSectionFunc>
   std::enable_if_t<std::is_void_v<
-      std::invoke_result_t<ProcessSectionFunc, __orc_rt::span<RecordElement>>>>
+      std::invoke_result_t<ProcessSectionFunc, orc_rt::span<RecordElement>>>>
   processNewSections(ProcessSectionFunc &&ProcessSection) {
     for (auto &Sec : New)
       ProcessSection(Sec);
@@ -78,10 +78,10 @@ public:
   /// list.
   template <typename ProcessSectionFunc>
   std::enable_if_t<
-      std::is_same_v<__orc_rt::Error,
+      std::is_same_v<orc_rt::Error,
                      std::invoke_result_t<ProcessSectionFunc,
-                                          __orc_rt::span<RecordElement>>>,
-      __orc_rt::Error>
+                                          orc_rt::span<RecordElement>>>,
+      orc_rt::Error>
   processNewSections(ProcessSectionFunc &&ProcessSection) {
     for (size_t I = 0; I != New.size(); ++I) {
       if (auto Err = ProcessSection(New[I])) {
@@ -92,7 +92,7 @@ public:
       }
     }
     moveNewToProcessed();
-    return __orc_rt::Error::success();
+    return orc_rt::Error::success();
   }
 
   /// Move all sections back to New for reprocessing.
@@ -102,7 +102,7 @@ public:
   }
 
   /// Remove the section with the given range.
-  bool removeIfPresent(__orc_rt::ExecutorAddrRange R) {
+  bool removeIfPresent(orc_rt::ExecutorAddrRange R) {
     if (removeIfPresent(New, R))
       return true;
     return removeIfPresent(Processed, R);
@@ -119,11 +119,11 @@ private:
     }
   }
 
-  bool removeIfPresent(std::vector<__orc_rt::span<RecordElement>> &V,
-                       __orc_rt::ExecutorAddrRange R) {
+  bool removeIfPresent(std::vector<orc_rt::span<RecordElement>> &V,
+                       orc_rt::ExecutorAddrRange R) {
     auto RI = std::find_if(V.rbegin(), V.rend(),
                            [RS = R.toSpan<RecordElement>()](
-                               const __orc_rt::span<RecordElement> &E) {
+                               const orc_rt::span<RecordElement> &E) {
                              return E.data() == RS.data();
                            });
     if (RI != V.rend()) {
@@ -133,7 +133,7 @@ private:
     return false;
   }
 
-  std::vector<__orc_rt::span<RecordElement>> Processed;
-  std::vector<__orc_rt::span<RecordElement>> New;
+  std::vector<orc_rt::span<RecordElement>> Processed;
+  std::vector<orc_rt::span<RecordElement>> New;
 };
 #endif // ORC_RT_COMMON_H
