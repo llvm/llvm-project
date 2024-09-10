@@ -7314,9 +7314,10 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
   // Return true if the loop contains any instructions that are not also part of
   // the VPlan or are skipped for VPlan-based cost computations. This indicates
   // that the VPlan contains extra simplifications.
-  return any_of(TheLoop->blocks(), [&SeenInstrs, &CostCtx](BasicBlock *BB) {
-    return any_of(*BB, [&SeenInstrs, &CostCtx](Instruction &I) {
-      if (isa<PHINode>(&I))
+  return any_of(TheLoop->blocks(), [&SeenInstrs, &CostCtx,
+                                    TheLoop](BasicBlock *BB) {
+    return any_of(*BB, [&SeenInstrs, &CostCtx, TheLoop, BB](Instruction &I) {
+      if (isa<PHINode>(&I) && BB == TheLoop->getHeader())
         return false;
       return !SeenInstrs.contains(&I) && !CostCtx.skipCostComputation(&I, true);
     });
