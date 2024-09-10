@@ -932,9 +932,11 @@ void State::addInfoForInduction(ICmpInst *Cond, Loop *L) {
   else
     return;
 
+  assert(L->isLoopExiting(&BB) &&
+         "Most be called with a condition in a loop-exiting block");
   assert(InLoopSucc != L->getHeader() &&
          "Cannot inject condition back to loop header");
-  if (!L->contains(InLoopSucc) || !L->isLoopExiting(&BB) || InLoopSucc == &BB)
+  if (!L->contains(InLoopSucc) || InLoopSucc == &BB)
     return;
 
   auto *AR = dyn_cast_or_null<SCEVAddRecExpr>(SE.getSCEV(PN));
@@ -1066,8 +1068,8 @@ void State::addInfoForInductions(BasicBlock &BB) {
     auto *Term = dyn_cast<BranchInst>(Curr->getTerminator());
     if (!Term)
       break;
-    if (isa<ICmpInst>(Term->getCondition()))
-      addInfoForInduction(cast<ICmpInst>(Term->getCondition()), L);
+    if (auto *CmpI = dyn_cast<ICmpInst>(Term->getCondition()))
+      addInfoForInduction(CmpI, L);
     Curr = L->contains(Term->getSuccessor(0)) ? Term->getSuccessor(0)
                                               : Term->getSuccessor(1);
   }
