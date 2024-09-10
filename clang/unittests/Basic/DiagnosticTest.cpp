@@ -17,9 +17,6 @@ using namespace llvm;
 using namespace clang;
 
 void clang::DiagnosticsTestHelper(DiagnosticsEngine &diag) {
-  unsigned delayedDiagID = 0U;
-
-  EXPECT_EQ(diag.DelayedDiagID, delayedDiagID);
   EXPECT_FALSE(diag.DiagStates.empty());
   EXPECT_TRUE(diag.DiagStatesByLoc.empty());
   EXPECT_TRUE(diag.DiagStateOnPushStack.empty());
@@ -104,7 +101,6 @@ TEST(DiagnosticTest, softReset) {
   // Check for private variables of DiagnosticsEngine differentiating soft reset
   DiagnosticsTestHelper(Diags);
 
-  EXPECT_FALSE(Diags.isDiagnosticInFlight());
   EXPECT_TRUE(Diags.isLastDiagnosticIgnored());
 }
 
