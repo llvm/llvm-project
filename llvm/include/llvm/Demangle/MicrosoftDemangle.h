@@ -41,6 +41,24 @@ class ArenaAllocator {
     NewHead->Used = 0;
   }
 
+  uint8_t *allocAlignedBuffer(size_t Size, size_t Align) {
+    assert(Head && Head->Buf);
+
+    size_t P = (size_t)Head->Buf + Head->Used;
+    uintptr_t AlignedP =
+        (((size_t)P + Align - 1) & ~(size_t)(Align - 1));
+    uint8_t *PP = (uint8_t *)AlignedP;
+    size_t Adjustment = AlignedP - P;
+
+    Head->Used += Size + Adjustment;
+    if (Head->Used <= Head->Capacity)
+      return PP;
+
+    addNode(std::max(AllocUnit, Size));
+    Head->Used = Size;
+    return Head->Buf;
+  }
+
 public:
   ArenaAllocator() { addNode(AllocUnit); }
 
@@ -73,42 +91,14 @@ public:
   }
 
   template <typename T, typename... Args> T *allocArray(size_t Count) {
-    size_t Size = Count * sizeof(T);
-    assert(Head && Head->Buf);
-
-    size_t P = (size_t)Head->Buf + Head->Used;
-    uintptr_t AlignedP =
-        (((size_t)P + alignof(T) - 1) & ~(size_t)(alignof(T) - 1));
-    uint8_t *PP = (uint8_t *)AlignedP;
-    size_t Adjustment = AlignedP - P;
-
-    Head->Used += Size + Adjustment;
-    if (Head->Used <= Head->Capacity)
-      return new (PP) T[Count]();
-
-    addNode(std::max(AllocUnit, Size));
-    Head->Used = Size;
-    return new (Head->Buf) T[Count]();
+    uint8_t *Data = allocAlignedBuffer(Count * sizeof(T), alignof(T));
+    return new (Data) T[Count]();
   }
 
   template <typename T, typename... Args> T *alloc(Args &&... ConstructorArgs) {
-    constexpr size_t Size = sizeof(T);
-    assert(Head && Head->Buf);
-
-    size_t P = (size_t)Head->Buf + Head->Used;
-    uintptr_t AlignedP =
-        (((size_t)P + alignof(T) - 1) & ~(size_t)(alignof(T) - 1));
-    uint8_t *PP = (uint8_t *)AlignedP;
-    size_t Adjustment = AlignedP - P;
-
-    Head->Used += Size + Adjustment;
-    if (Head->Used <= Head->Capacity)
-      return new (PP) T(std::forward<Args>(ConstructorArgs)...);
-
-    static_assert(Size < AllocUnit);
-    addNode(AllocUnit);
-    Head->Used = Size;
-    return new (Head->Buf) T(std::forward<Args>(ConstructorArgs)...);
+    static_assert(sizeof(T) < AllocUnit);
+    uint8_t *Data = allocAlignedBuffer(sizeof(T), alignof(T));
+    return new (Data) T(std::forward<Args>(ConstructorArgs)...);
   }
 
 private:
