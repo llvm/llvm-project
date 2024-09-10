@@ -44,7 +44,9 @@ LLVM_LIBC_FUNCTION(float, fmul, (double x, double y)) {
     double result = fputil::FPBits<double>(result_bits).get_val();
     return static_cast<float>(result);
   }
-  return static_cast<float>(prod.hi + prod.lo);
+
+  double result = fputil::FPBits<double>(hi_bits.uintval() | 1).get_val();
+  return static_cast<float>(result);
 }
 
 } // namespace LIBC_NAMESPACE_DECL
