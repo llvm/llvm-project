@@ -12,13 +12,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/CodeGen/MachineCSE.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/ScopedHashTable.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/CFG.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
@@ -26,7 +26,6 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
-#include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
@@ -71,110 +70,113 @@ static cl::opt<bool> AggressiveMachineCSE(
 
 namespace {
 
-class MachineCSEImpl {
-  const TargetInstrInfo *TII = nullptr;
-  const TargetRegisterInfo *TRI = nullptr;
-  MachineDominatorTree *DT = nullptr;
-  MachineRegisterInfo *MRI = nullptr;
-  MachineBlockFrequencyInfo *MBFI = nullptr;
+  class MachineCSE : public MachineFunctionPass {
+    const TargetInstrInfo *TII = nullptr;
+    const TargetRegisterInfo *TRI = nullptr;
+    AliasAnalysis *AA = nullptr;
+    MachineDominatorTree *DT = nullptr;
+    MachineRegisterInfo *MRI = nullptr;
+    MachineBlockFrequencyInfo *MBFI = nullptr;
 
-public:
-  MachineCSEImpl(MachineDominatorTree *DT, MachineBlockFrequencyInfo *MBFI)
-      : DT(DT), MBFI(MBFI) {}
-  bool run(MachineFunction &MF);
+  public:
+    static char ID; // Pass identification
 
-private:
-  using AllocatorTy =
-      RecyclingAllocator<BumpPtrAllocator,
-                         ScopedHashTableVal<MachineInstr *, unsigned>>;
-  using ScopedHTType =
-      ScopedHashTable<MachineInstr *, unsigned, MachineInstrExpressionTrait,
-                      AllocatorTy>;
-  using ScopeType = ScopedHTType::ScopeTy;
-  using PhysDefVector = SmallVector<std::pair<unsigned, unsigned>, 2>;
+    MachineCSE() : MachineFunctionPass(ID) {
+      initializeMachineCSEPass(*PassRegistry::getPassRegistry());
+    }
 
-  unsigned LookAheadLimit = 0;
-  DenseMap<MachineBasicBlock *, ScopeType *> ScopeMap;
-  DenseMap<MachineInstr *, MachineBasicBlock *, MachineInstrExpressionTrait>
-      PREMap;
-  ScopedHTType VNT;
-  SmallVector<MachineInstr *, 64> Exps;
-  unsigned CurrVN = 0;
+    bool runOnMachineFunction(MachineFunction &MF) override;
 
-  bool PerformTrivialCopyPropagation(MachineInstr *MI, MachineBasicBlock *MBB);
-  bool isPhysDefTriviallyDead(MCRegister Reg,
-                              MachineBasicBlock::const_iterator I,
-                              MachineBasicBlock::const_iterator E) const;
-  bool hasLivePhysRegDefUses(const MachineInstr *MI,
-                             const MachineBasicBlock *MBB,
-                             SmallSet<MCRegister, 8> &PhysRefs,
-                             PhysDefVector &PhysDefs, bool &PhysUseDef) const;
-  bool PhysRegDefsReach(MachineInstr *CSMI, MachineInstr *MI,
-                        SmallSet<MCRegister, 8> &PhysRefs,
-                        PhysDefVector &PhysDefs, bool &NonLocal) const;
-  bool isCSECandidate(MachineInstr *MI);
-  bool isProfitableToCSE(Register CSReg, Register Reg, MachineBasicBlock *CSBB,
-                         MachineInstr *MI);
-  void EnterScope(MachineBasicBlock *MBB);
-  void ExitScope(MachineBasicBlock *MBB);
-  bool ProcessBlockCSE(MachineBasicBlock *MBB);
-  void ExitScopeIfDone(MachineDomTreeNode *Node,
-                       DenseMap<MachineDomTreeNode *, unsigned> &OpenChildren);
-  bool PerformCSE(MachineDomTreeNode *Node);
+    void getAnalysisUsage(AnalysisUsage &AU) const override {
+      AU.setPreservesCFG();
+      MachineFunctionPass::getAnalysisUsage(AU);
+      AU.addRequired<AAResultsWrapperPass>();
+      AU.addPreservedID(MachineLoopInfoID);
+      AU.addRequired<MachineDominatorTreeWrapperPass>();
+      AU.addPreserved<MachineDominatorTreeWrapperPass>();
+      AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
+      AU.addPreserved<MachineBlockFrequencyInfoWrapperPass>();
+    }
 
-  bool isPRECandidate(MachineInstr *MI, SmallSet<MCRegister, 8> &PhysRefs);
-  bool ProcessBlockPRE(MachineDominatorTree *MDT, MachineBasicBlock *MBB);
-  bool PerformSimplePRE(MachineDominatorTree *DT);
-  /// Heuristics to see if it's profitable to move common computations of MBB
-  /// and MBB1 to CandidateBB.
-  bool isProfitableToHoistInto(MachineBasicBlock *CandidateBB,
-                               MachineBasicBlock *MBB, MachineBasicBlock *MBB1);
-  void releaseMemory();
-};
+    MachineFunctionProperties getRequiredProperties() const override {
+      return MachineFunctionProperties()
+        .set(MachineFunctionProperties::Property::IsSSA);
+    }
 
-class MachineCSELegacy : public MachineFunctionPass {
-public:
-  static char ID; // Pass identification
+    void releaseMemory() override {
+      ScopeMap.clear();
+      PREMap.clear();
+      Exps.clear();
+    }
 
-  MachineCSELegacy() : MachineFunctionPass(ID) {
-    initializeMachineCSELegacyPass(*PassRegistry::getPassRegistry());
-  }
+  private:
+    using AllocatorTy = RecyclingAllocator<BumpPtrAllocator,
+                            ScopedHashTableVal<MachineInstr *, unsigned>>;
+    using ScopedHTType =
+        ScopedHashTable<MachineInstr *, unsigned, MachineInstrExpressionTrait,
+                        AllocatorTy>;
+    using ScopeType = ScopedHTType::ScopeTy;
+    using PhysDefVector = SmallVector<std::pair<unsigned, unsigned>, 2>;
 
-  bool runOnMachineFunction(MachineFunction &MF) override;
+    unsigned LookAheadLimit = 0;
+    DenseMap<MachineBasicBlock *, ScopeType *> ScopeMap;
+    DenseMap<MachineInstr *, MachineBasicBlock *, MachineInstrExpressionTrait>
+        PREMap;
+    ScopedHTType VNT;
+    SmallVector<MachineInstr *, 64> Exps;
+    unsigned CurrVN = 0;
 
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesCFG();
-    MachineFunctionPass::getAnalysisUsage(AU);
-    AU.addPreservedID(MachineLoopInfoID);
-    AU.addRequired<MachineDominatorTreeWrapperPass>();
-    AU.addPreserved<MachineDominatorTreeWrapperPass>();
-    AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
-    AU.addPreserved<MachineBlockFrequencyInfoWrapperPass>();
-  }
+    bool PerformTrivialCopyPropagation(MachineInstr *MI,
+                                       MachineBasicBlock *MBB);
+    bool isPhysDefTriviallyDead(MCRegister Reg,
+                                MachineBasicBlock::const_iterator I,
+                                MachineBasicBlock::const_iterator E) const;
+    bool hasLivePhysRegDefUses(const MachineInstr *MI,
+                               const MachineBasicBlock *MBB,
+                               SmallSet<MCRegister, 8> &PhysRefs,
+                               PhysDefVector &PhysDefs, bool &PhysUseDef) const;
+    bool PhysRegDefsReach(MachineInstr *CSMI, MachineInstr *MI,
+                          SmallSet<MCRegister, 8> &PhysRefs,
+                          PhysDefVector &PhysDefs, bool &NonLocal) const;
+    bool isCSECandidate(MachineInstr *MI);
+    bool isProfitableToCSE(Register CSReg, Register Reg,
+                           MachineBasicBlock *CSBB, MachineInstr *MI);
+    void EnterScope(MachineBasicBlock *MBB);
+    void ExitScope(MachineBasicBlock *MBB);
+    bool ProcessBlockCSE(MachineBasicBlock *MBB);
+    void ExitScopeIfDone(MachineDomTreeNode *Node,
+                         DenseMap<MachineDomTreeNode*, unsigned> &OpenChildren);
+    bool PerformCSE(MachineDomTreeNode *Node);
 
-  MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::IsSSA);
-  }
-};
+    bool isPRECandidate(MachineInstr *MI, SmallSet<MCRegister, 8> &PhysRefs);
+    bool ProcessBlockPRE(MachineDominatorTree *MDT, MachineBasicBlock *MBB);
+    bool PerformSimplePRE(MachineDominatorTree *DT);
+    /// Heuristics to see if it's profitable to move common computations of MBB
+    /// and MBB1 to CandidateBB.
+    bool isProfitableToHoistInto(MachineBasicBlock *CandidateBB,
+                                 MachineBasicBlock *MBB,
+                                 MachineBasicBlock *MBB1);
+  };
+
 } // end anonymous namespace
 
-char MachineCSELegacy::ID = 0;
+char MachineCSE::ID = 0;
 
-char &llvm::MachineCSELegacyID = MachineCSELegacy::ID;
+char &llvm::MachineCSEID = MachineCSE::ID;
 
-INITIALIZE_PASS_BEGIN(MachineCSELegacy, DEBUG_TYPE,
+INITIALIZE_PASS_BEGIN(MachineCSE, DEBUG_TYPE,
                       "Machine Common Subexpression Elimination", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
-INITIALIZE_PASS_END(MachineCSELegacy, DEBUG_TYPE,
+INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
+INITIALIZE_PASS_END(MachineCSE, DEBUG_TYPE,
                     "Machine Common Subexpression Elimination", false, false)
 
 /// The source register of a COPY machine instruction can be propagated to all
 /// its users, and this propagation could increase the probability of finding
 /// common subexpressions. If the COPY has only one user, the COPY itself can
 /// be removed.
-bool MachineCSEImpl::PerformTrivialCopyPropagation(MachineInstr *MI,
-                                                   MachineBasicBlock *MBB) {
+bool MachineCSE::PerformTrivialCopyPropagation(MachineInstr *MI,
+                                               MachineBasicBlock *MBB) {
   bool Changed = false;
   for (MachineOperand &MO : MI->all_uses()) {
     Register Reg = MO.getReg();
@@ -227,7 +229,7 @@ bool MachineCSEImpl::PerformTrivialCopyPropagation(MachineInstr *MI,
   return Changed;
 }
 
-bool MachineCSEImpl::isPhysDefTriviallyDead(
+bool MachineCSE::isPhysDefTriviallyDead(
     MCRegister Reg, MachineBasicBlock::const_iterator I,
     MachineBasicBlock::const_iterator E) const {
   unsigned LookAheadLeft = LookAheadLimit;
@@ -284,11 +286,11 @@ static bool isCallerPreservedOrConstPhysReg(MCRegister Reg,
 /// physical registers (except for dead defs of physical registers). It also
 /// returns the physical register def by reference if it's the only one and the
 /// instruction does not uses a physical register.
-bool MachineCSEImpl::hasLivePhysRegDefUses(const MachineInstr *MI,
-                                           const MachineBasicBlock *MBB,
-                                           SmallSet<MCRegister, 8> &PhysRefs,
-                                           PhysDefVector &PhysDefs,
-                                           bool &PhysUseDef) const {
+bool MachineCSE::hasLivePhysRegDefUses(const MachineInstr *MI,
+                                       const MachineBasicBlock *MBB,
+                                       SmallSet<MCRegister, 8> &PhysRefs,
+                                       PhysDefVector &PhysDefs,
+                                       bool &PhysUseDef) const {
   // First, add all uses to PhysRefs.
   for (const MachineOperand &MO : MI->all_uses()) {
     Register Reg = MO.getReg();
@@ -335,10 +337,10 @@ bool MachineCSEImpl::hasLivePhysRegDefUses(const MachineInstr *MI,
   return !PhysRefs.empty();
 }
 
-bool MachineCSEImpl::PhysRegDefsReach(MachineInstr *CSMI, MachineInstr *MI,
-                                      SmallSet<MCRegister, 8> &PhysRefs,
-                                      PhysDefVector &PhysDefs,
-                                      bool &NonLocal) const {
+bool MachineCSE::PhysRegDefsReach(MachineInstr *CSMI, MachineInstr *MI,
+                                  SmallSet<MCRegister, 8> &PhysRefs,
+                                  PhysDefVector &PhysDefs,
+                                  bool &NonLocal) const {
   // For now conservatively returns false if the common subexpression is
   // not in the same basic block as the given instruction. The only exception
   // is if the common subexpression is in the sole predecessor block.
@@ -402,7 +404,7 @@ bool MachineCSEImpl::PhysRegDefsReach(MachineInstr *CSMI, MachineInstr *MI,
   return false;
 }
 
-bool MachineCSEImpl::isCSECandidate(MachineInstr *MI) {
+bool MachineCSE::isCSECandidate(MachineInstr *MI) {
   if (MI->isPosition() || MI->isPHI() || MI->isImplicitDef() || MI->isKill() ||
       MI->isInlineAsm() || MI->isDebugInstr() || MI->isJumpTableDebugInfo() ||
       MI->isFakeUse())
@@ -439,9 +441,8 @@ bool MachineCSEImpl::isCSECandidate(MachineInstr *MI) {
 /// isProfitableToCSE - Return true if it's profitable to eliminate MI with a
 /// common expression that defines Reg. CSBB is basic block where CSReg is
 /// defined.
-bool MachineCSEImpl::isProfitableToCSE(Register CSReg, Register Reg,
-                                       MachineBasicBlock *CSBB,
-                                       MachineInstr *MI) {
+bool MachineCSE::isProfitableToCSE(Register CSReg, Register Reg,
+                                   MachineBasicBlock *CSBB, MachineInstr *MI) {
   if (AggressiveMachineCSE)
     return true;
 
@@ -516,13 +517,13 @@ bool MachineCSEImpl::isProfitableToCSE(Register CSReg, Register Reg,
   return !HasPHI;
 }
 
-void MachineCSEImpl::EnterScope(MachineBasicBlock *MBB) {
+void MachineCSE::EnterScope(MachineBasicBlock *MBB) {
   LLVM_DEBUG(dbgs() << "Entering: " << MBB->getName() << '\n');
   ScopeType *Scope = new ScopeType(VNT);
   ScopeMap[MBB] = Scope;
 }
 
-void MachineCSEImpl::ExitScope(MachineBasicBlock *MBB) {
+void MachineCSE::ExitScope(MachineBasicBlock *MBB) {
   LLVM_DEBUG(dbgs() << "Exiting: " << MBB->getName() << '\n');
   DenseMap<MachineBasicBlock*, ScopeType*>::iterator SI = ScopeMap.find(MBB);
   assert(SI != ScopeMap.end());
@@ -530,7 +531,7 @@ void MachineCSEImpl::ExitScope(MachineBasicBlock *MBB) {
   ScopeMap.erase(SI);
 }
 
-bool MachineCSEImpl::ProcessBlockCSE(MachineBasicBlock *MBB) {
+bool MachineCSE::ProcessBlockCSE(MachineBasicBlock *MBB) {
   bool Changed = false;
 
   SmallVector<std::pair<unsigned, unsigned>, 8> CSEPairs;
@@ -751,9 +752,9 @@ bool MachineCSEImpl::ProcessBlockCSE(MachineBasicBlock *MBB) {
 /// ExitScopeIfDone - Destroy scope for the MBB that corresponds to the given
 /// dominator tree node if its a leaf or all of its children are done. Walk
 /// up the dominator tree to destroy ancestors which are now done.
-void MachineCSEImpl::ExitScopeIfDone(
-    MachineDomTreeNode *Node,
-    DenseMap<MachineDomTreeNode *, unsigned> &OpenChildren) {
+void
+MachineCSE::ExitScopeIfDone(MachineDomTreeNode *Node,
+                        DenseMap<MachineDomTreeNode*, unsigned> &OpenChildren) {
   if (OpenChildren[Node])
     return;
 
@@ -770,7 +771,7 @@ void MachineCSEImpl::ExitScopeIfDone(
   }
 }
 
-bool MachineCSEImpl::PerformCSE(MachineDomTreeNode *Node) {
+bool MachineCSE::PerformCSE(MachineDomTreeNode *Node) {
   SmallVector<MachineDomTreeNode*, 32> Scopes;
   SmallVector<MachineDomTreeNode*, 8> WorkList;
   DenseMap<MachineDomTreeNode*, unsigned> OpenChildren;
@@ -802,8 +803,8 @@ bool MachineCSEImpl::PerformCSE(MachineDomTreeNode *Node) {
 // We use stronger checks for PRE candidate rather than for CSE ones to embrace
 // checks inside ProcessBlockCSE(), not only inside isCSECandidate(). This helps
 // to exclude instrs created by PRE that won't be CSEed later.
-bool MachineCSEImpl::isPRECandidate(MachineInstr *MI,
-                                    SmallSet<MCRegister, 8> &PhysRefs) {
+bool MachineCSE::isPRECandidate(MachineInstr *MI,
+                                SmallSet<MCRegister, 8> &PhysRefs) {
   if (!isCSECandidate(MI) ||
       MI->isNotDuplicable() ||
       MI->mayLoad() ||
@@ -824,8 +825,8 @@ bool MachineCSEImpl::isPRECandidate(MachineInstr *MI,
   return true;
 }
 
-bool MachineCSEImpl::ProcessBlockPRE(MachineDominatorTree *DT,
-                                     MachineBasicBlock *MBB) {
+bool MachineCSE::ProcessBlockPRE(MachineDominatorTree *DT,
+                                 MachineBasicBlock *MBB) {
   bool Changed = false;
   for (MachineInstr &MI : llvm::make_early_inc_range(*MBB)) {
     SmallSet<MCRegister, 8> PhysRefs;
@@ -905,7 +906,7 @@ bool MachineCSEImpl::ProcessBlockPRE(MachineDominatorTree *DT,
 // anticipating that the next CSE step will eliminate this created redundancy.
 // If CSE doesn't eliminate this, than created instruction will remain dead
 // and eliminated later by Remove Dead Machine Instructions pass.
-bool MachineCSEImpl::PerformSimplePRE(MachineDominatorTree *DT) {
+bool MachineCSE::PerformSimplePRE(MachineDominatorTree *DT) {
   SmallVector<MachineDomTreeNode *, 32> BBs;
 
   PREMap.clear();
@@ -923,9 +924,9 @@ bool MachineCSEImpl::PerformSimplePRE(MachineDominatorTree *DT) {
   return Changed;
 }
 
-bool MachineCSEImpl::isProfitableToHoistInto(MachineBasicBlock *CandidateBB,
-                                             MachineBasicBlock *MBB,
-                                             MachineBasicBlock *MBB1) {
+bool MachineCSE::isProfitableToHoistInto(MachineBasicBlock *CandidateBB,
+                                         MachineBasicBlock *MBB,
+                                         MachineBasicBlock *MBB1) {
   if (CandidateBB->getParent()->getFunction().hasMinSize())
     return true;
   assert(DT->dominates(CandidateBB, MBB) && "CandidateBB should dominate MBB");
@@ -935,55 +936,19 @@ bool MachineCSEImpl::isProfitableToHoistInto(MachineBasicBlock *CandidateBB,
          MBFI->getBlockFreq(MBB) + MBFI->getBlockFreq(MBB1);
 }
 
-void MachineCSEImpl::releaseMemory() {
-  ScopeMap.clear();
-  PREMap.clear();
-  Exps.clear();
-}
+bool MachineCSE::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
+    return false;
 
-bool MachineCSEImpl::run(MachineFunction &MF) {
   TII = MF.getSubtarget().getInstrInfo();
   TRI = MF.getSubtarget().getRegisterInfo();
   MRI = &MF.getRegInfo();
+  AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
+  DT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+  MBFI = &getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
   LookAheadLimit = TII->getMachineCSELookAheadLimit();
   bool ChangedPRE, ChangedCSE;
   ChangedPRE = PerformSimplePRE(DT);
   ChangedCSE = PerformCSE(DT->getRootNode());
-  releaseMemory();
   return ChangedPRE || ChangedCSE;
-}
-
-PreservedAnalyses MachineCSEPass::run(MachineFunction &MF,
-                                      MachineFunctionAnalysisManager &MFAM) {
-  MFPropsModifier _(*this, MF);
-
-  if (MF.getFunction().hasOptNone())
-    return PreservedAnalyses::all();
-
-  MachineDominatorTree &MDT = MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
-  MachineBlockFrequencyInfo &MBFI =
-      MFAM.getResult<MachineBlockFrequencyAnalysis>(MF);
-  MachineCSEImpl Impl(&MDT, &MBFI);
-  bool Changed = Impl.run(MF);
-  if (!Changed)
-    return PreservedAnalyses::all();
-
-  auto PA = getMachineFunctionPassPreservedAnalyses();
-  PA.preserve<MachineLoopAnalysis>();
-  PA.preserve<MachineDominatorTreeAnalysis>();
-  PA.preserve<MachineBlockFrequencyAnalysis>();
-  PA.preserveSet<CFGAnalyses>();
-  return PA;
-}
-
-bool MachineCSELegacy::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(MF.getFunction()))
-    return false;
-
-  MachineDominatorTree &MDT =
-      getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
-  MachineBlockFrequencyInfo &MBFI =
-      getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
-  MachineCSEImpl Impl(&MDT, &MBFI);
-  return Impl.run(MF);
 }

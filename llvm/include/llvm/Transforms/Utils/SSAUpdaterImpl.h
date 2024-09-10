@@ -139,16 +139,17 @@ public:
       for (unsigned p = 0; p != Info->NumPreds; ++p) {
         BlkT *Pred = Preds[p];
         // Check if BBMap already has a BBInfo for the predecessor block.
-        BBInfo *&BBMapBucket = BBMap[Pred];
-        if (BBMapBucket) {
-          Info->Preds[p] = BBMapBucket;
+        typename BBMapTy::value_type &BBMapBucket =
+          BBMap.FindAndConstruct(Pred);
+        if (BBMapBucket.second) {
+          Info->Preds[p] = BBMapBucket.second;
           continue;
         }
 
         // Create a new BBInfo for the predecessor.
         ValT PredVal = AvailableVals->lookup(Pred);
         BBInfo *PredInfo = new (Allocator) BBInfo(Pred, PredVal);
-        BBMapBucket = PredInfo;
+        BBMapBucket.second = PredInfo;
         Info->Preds[p] = PredInfo;
 
         if (PredInfo->AvailableVal) {

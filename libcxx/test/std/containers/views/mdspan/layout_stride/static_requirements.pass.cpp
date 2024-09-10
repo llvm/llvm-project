@@ -77,11 +77,9 @@
 //    Returns: true only if m.is_strided() is true for all possible objects m of type M.
 
 #include <mdspan>
-#include <cassert>
-#include <concepts>
-#include <span> // dynamic_extent
 #include <type_traits>
-#include <utility>
+#include <concepts>
+#include <cassert>
 
 #include "test_macros.h"
 

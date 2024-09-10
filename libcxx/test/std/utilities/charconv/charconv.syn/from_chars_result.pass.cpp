@@ -23,7 +23,6 @@
 #include <cassert>
 #include <compare>
 #include <concepts>
-#include <system_error>
 
 #include "test_macros.h"
 

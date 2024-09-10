@@ -63,9 +63,8 @@ class WebAssemblyCFGStackify final : public MachineFunctionPass {
   // over scoped regions when walking blocks.
   SmallVector<MachineBasicBlock *, 8> ScopeTops;
   void updateScopeTops(MachineBasicBlock *Begin, MachineBasicBlock *End) {
-    int BeginNo = Begin->getNumber();
     int EndNo = End->getNumber();
-    if (!ScopeTops[EndNo] || ScopeTops[EndNo]->getNumber() > BeginNo)
+    if (!ScopeTops[EndNo] || ScopeTops[EndNo]->getNumber() > Begin->getNumber())
       ScopeTops[EndNo] = Begin;
   }
 
@@ -78,8 +77,8 @@ class WebAssemblyCFGStackify final : public MachineFunctionPass {
   // Exception handling related functions
   bool fixCallUnwindMismatches(MachineFunction &MF);
   bool fixCatchUnwindMismatches(MachineFunction &MF);
-  void addNestedTryDelegate(MachineInstr *RangeBegin, MachineInstr *RangeEnd,
-                            MachineBasicBlock *UnwindDest);
+  void addTryDelegate(MachineInstr *RangeBegin, MachineInstr *RangeEnd,
+                      MachineBasicBlock *DelegateDest);
   void recalculateScopeTops(MachineFunction &MF);
   void removeUnnecessaryInstrs(MachineFunction &MF);
 
@@ -226,7 +225,7 @@ void WebAssemblyCFGStackify::registerScope(MachineInstr *Begin,
   EndToBegin[End] = Begin;
 }
 
-// When 'End' is not an 'end_try' but a 'delegate', EHPad is nullptr.
+// When 'End' is not an 'end_try' but 'delegate, EHPad is nullptr.
 void WebAssemblyCFGStackify::registerTryScope(MachineInstr *Begin,
                                               MachineInstr *End,
                                               MachineBasicBlock *EHPad) {
@@ -294,7 +293,7 @@ void WebAssemblyCFGStackify::placeBlockMarker(MachineBasicBlock &MBB) {
     }
   }
 
-  // Decide where in MBB to put the BLOCK.
+  // Decide where in Header to put the BLOCK.
 
   // Instructions that should go before the BLOCK.
   SmallPtrSet<const MachineInstr *, 4> BeforeSet;
@@ -360,20 +359,21 @@ void WebAssemblyCFGStackify::placeBlockMarker(MachineBasicBlock &MBB) {
               TII.get(WebAssembly::BLOCK))
           .addImm(int64_t(ReturnType));
 
-  // Decide where in MBB to put the END_BLOCK.
+  // Decide where in Header to put the END_BLOCK.
   BeforeSet.clear();
   AfterSet.clear();
   for (auto &MI : MBB) {
 #ifndef NDEBUG
-    // END_BLOCK should precede existing LOOP markers.
-    if (MI.getOpcode() == WebAssembly::LOOP)
+    // END_BLOCK should precede existing LOOP and TRY markers.
+    if (MI.getOpcode() == WebAssembly::LOOP ||
+        MI.getOpcode() == WebAssembly::TRY)
       AfterSet.insert(&MI);
 #endif
 
     // If there is a previously placed END_LOOP marker and the header of the
     // loop is above this block's header, the END_LOOP should be placed after
-    // the END_BLOCK, because the loop contains this block. Otherwise the
-    // END_LOOP should be placed before the END_BLOCK. The same for END_TRY.
+    // the BLOCK, because the loop contains this block. Otherwise the END_LOOP
+    // should be placed before the BLOCK. The same for END_TRY.
     if (MI.getOpcode() == WebAssembly::END_LOOP ||
         MI.getOpcode() == WebAssembly::END_TRY) {
       if (EndToBegin[&MI]->getParent()->getNumber() >= Header->getNumber())
@@ -437,7 +437,7 @@ void WebAssemblyCFGStackify::placeLoopMarker(MachineBasicBlock &MBB) {
                                 TII.get(WebAssembly::LOOP))
                             .addImm(int64_t(WebAssembly::BlockType::Void));
 
-  // Decide where in MBB to put the END_LOOP.
+  // Decide where in Header to put the END_LOOP.
   BeforeSet.clear();
   AfterSet.clear();
 #ifndef NDEBUG
@@ -491,6 +491,7 @@ void WebAssemblyCFGStackify::placeTryMarker(MachineBasicBlock &MBB) {
   WebAssemblyException *WE = WEI.getExceptionFor(&MBB);
   assert(WE);
   MachineBasicBlock *Bottom = SRI.getBottom(WE);
+
   auto Iter = std::next(Bottom->getIterator());
   if (Iter == MF.end()) {
     getAppendixBlock(MF);
@@ -498,9 +499,12 @@ void WebAssemblyCFGStackify::placeTryMarker(MachineBasicBlock &MBB) {
   }
   MachineBasicBlock *Cont = &*Iter;
 
+  assert(Cont != &MF.front());
+  MachineBasicBlock *LayoutPred = Cont->getPrevNode();
+
   // If the nearest common dominator is inside a more deeply nested context,
   // walk out to the nearest scope which isn't more deeply nested.
-  for (MachineFunction::iterator I(Bottom), E(Header); I != E; --I) {
+  for (MachineFunction::iterator I(LayoutPred), E(Header); I != E; --I) {
     if (MachineBasicBlock *ScopeTop = ScopeTops[I->getNumber()]) {
       if (ScopeTop->getNumber() > Header->getNumber()) {
         // Skip over an intervening scope.
@@ -534,7 +538,7 @@ void WebAssemblyCFGStackify::placeTryMarker(MachineBasicBlock &MBB) {
     }
 
     // All previously inserted BLOCK/TRY markers should be after the TRY because
-    // they are all nested blocks/trys.
+    // they are all nested trys.
     if (MI.getOpcode() == WebAssembly::BLOCK ||
         MI.getOpcode() == WebAssembly::TRY)
       AfterSet.insert(&MI);
@@ -603,13 +607,14 @@ void WebAssemblyCFGStackify::placeTryMarker(MachineBasicBlock &MBB) {
               TII.get(WebAssembly::TRY))
           .addImm(int64_t(WebAssembly::BlockType::Void));
 
-  // Decide where in Cont to put the END_TRY.
+  // Decide where in Header to put the END_TRY.
   BeforeSet.clear();
   AfterSet.clear();
   for (const auto &MI : *Cont) {
 #ifndef NDEBUG
-    // END_TRY should precede existing LOOP markers.
-    if (MI.getOpcode() == WebAssembly::LOOP)
+    // END_TRY should precede existing LOOP and BLOCK markers.
+    if (MI.getOpcode() == WebAssembly::LOOP ||
+        MI.getOpcode() == WebAssembly::BLOCK)
       AfterSet.insert(&MI);
 
     // All END_TRY markers placed earlier belong to exceptions that contains
@@ -638,8 +643,9 @@ void WebAssemblyCFGStackify::placeTryMarker(MachineBasicBlock &MBB) {
 
   // Mark the end of the TRY.
   InsertPos = getEarliestInsertPos(Cont, BeforeSet, AfterSet);
-  MachineInstr *End = BuildMI(*Cont, InsertPos, Bottom->findBranchDebugLoc(),
-                              TII.get(WebAssembly::END_TRY));
+  MachineInstr *End =
+      BuildMI(*Cont, InsertPos, Bottom->findBranchDebugLoc(),
+              TII.get(WebAssembly::END_TRY));
   registerTryScope(Begin, End, &MBB);
 
   // Track the farthest-spanning scope that ends at this point. We create two
@@ -839,9 +845,9 @@ static void unstackifyVRegsUsedInSplitBB(MachineBasicBlock &MBB,
 
 // Wrap the given range of instruction with try-delegate. RangeBegin and
 // RangeEnd are inclusive.
-void WebAssemblyCFGStackify::addNestedTryDelegate(
-    MachineInstr *RangeBegin, MachineInstr *RangeEnd,
-    MachineBasicBlock *UnwindDest) {
+void WebAssemblyCFGStackify::addTryDelegate(MachineInstr *RangeBegin,
+                                            MachineInstr *RangeEnd,
+                                            MachineBasicBlock *DelegateDest) {
   auto *BeginBB = RangeBegin->getParent();
   auto *EndBB = RangeEnd->getParent();
   MachineFunction &MF = *BeginBB->getParent();
@@ -873,8 +879,8 @@ void WebAssemblyCFGStackify::addNestedTryDelegate(
   MachineBasicBlock *DelegateBB = MF.CreateMachineBasicBlock();
   // If the destination of 'delegate' is not the caller, adds the destination to
   // the BB's successors.
-  if (UnwindDest != FakeCallerBB)
-    DelegateBB->addSuccessor(UnwindDest);
+  if (DelegateDest != FakeCallerBB)
+    DelegateBB->addSuccessor(DelegateDest);
 
   auto SplitPos = std::next(RangeEnd->getIterator());
   if (SplitPos == EndBB->end()) {
@@ -956,7 +962,7 @@ void WebAssemblyCFGStackify::addNestedTryDelegate(
   // Add 'delegate' instruction in the delegate BB created above.
   MachineInstr *Delegate = BuildMI(DelegateBB, RangeEnd->getDebugLoc(),
                                    TII.get(WebAssembly::DELEGATE))
-                               .addMBB(UnwindDest);
+                               .addMBB(DelegateDest);
   registerTryScope(Try, Delegate, nullptr);
 }
 
@@ -1124,7 +1130,7 @@ bool WebAssemblyCFGStackify::fixCallUnwindMismatches(MachineFunction &MF) {
       if (EHPadStack.back() == UnwindDest)
         continue;
 
-      // Include EH_LABELs in the range before and after the invoke
+      // Include EH_LABELs in the range before and afer the invoke
       MachineInstr *RangeBegin = &MI, *RangeEnd = &MI;
       if (RangeBegin->getIterator() != MBB.begin() &&
           std::prev(RangeBegin->getIterator())->isEHLabel())
@@ -1225,24 +1231,22 @@ bool WebAssemblyCFGStackify::fixCallUnwindMismatches(MachineFunction &MF) {
       std::tie(RangeBegin, RangeEnd) = Range;
       auto *MBB = RangeBegin->getParent();
 
-      // If this BB has an EH pad successor, i.e., ends with an 'invoke', and if
-      // the current range contains the invoke, now we are going to wrap the
-      // invoke with try-delegate, making the 'delegate' BB the new successor
-      // instead, so remove the EH pad succesor here. The BB may not have an EH
-      // pad successor if calls in this BB throw to the caller.
-      if (UnwindDest != getFakeCallerBlock(MF)) {
-        MachineBasicBlock *EHPad = nullptr;
-        for (auto *Succ : MBB->successors()) {
-          if (Succ->isEHPad()) {
-            EHPad = Succ;
-            break;
-          }
+      // If this BB has an EH pad successor, i.e., ends with an 'invoke', now we
+      // are going to wrap the invoke with try-delegate, making the 'delegate'
+      // BB the new successor instead, so remove the EH pad succesor here. The
+      // BB may not have an EH pad successor if calls in this BB throw to the
+      // caller.
+      MachineBasicBlock *EHPad = nullptr;
+      for (auto *Succ : MBB->successors()) {
+        if (Succ->isEHPad()) {
+          EHPad = Succ;
+          break;
         }
-        if (EHPad)
-          MBB->removeSuccessor(EHPad);
       }
+      if (EHPad)
+        MBB->removeSuccessor(EHPad);
 
-      addNestedTryDelegate(RangeBegin, RangeEnd, UnwindDest);
+      addTryDelegate(RangeBegin, RangeEnd, UnwindDest);
     }
   }
 
@@ -1350,10 +1354,12 @@ bool WebAssemblyCFGStackify::fixCatchUnwindMismatches(MachineFunction &MF) {
   NumCatchUnwindMismatches += EHPadToUnwindDest.size();
   SmallPtrSet<MachineBasicBlock *, 4> NewEndTryBBs;
 
-  for (auto &[EHPad, UnwindDest] : EHPadToUnwindDest) {
+  for (auto &P : EHPadToUnwindDest) {
+    MachineBasicBlock *EHPad = P.first;
+    MachineBasicBlock *UnwindDest = P.second;
     MachineInstr *Try = EHPadToTry[EHPad];
     MachineInstr *EndTry = BeginToEnd[Try];
-    addNestedTryDelegate(Try, EndTry, UnwindDest);
+    addTryDelegate(Try, EndTry, UnwindDest);
     NewEndTryBBs.insert(EndTry->getParent());
   }
 
@@ -1528,7 +1534,7 @@ static void appendEndToFunction(MachineFunction &MF,
           TII.get(WebAssembly::END_FUNCTION));
 }
 
-/// Insert BLOCK/LOOP/TRY markers at appropriate places.
+/// Insert LOOP/TRY/BLOCK markers at appropriate places.
 void WebAssemblyCFGStackify::placeMarkers(MachineFunction &MF) {
   // We allocate one more than the number of blocks in the function to
   // accommodate for the possible fake block we may insert at the end.
@@ -1552,9 +1558,9 @@ void WebAssemblyCFGStackify::placeMarkers(MachineFunction &MF) {
   // Fix mismatches in unwind destinations induced by linearizing the code.
   if (MCAI->getExceptionHandlingType() == ExceptionHandling::Wasm &&
       MF.getFunction().hasPersonalityFn()) {
-    bool MismatchFixed = fixCallUnwindMismatches(MF);
-    MismatchFixed |= fixCatchUnwindMismatches(MF);
-    if (MismatchFixed)
+    bool Changed = fixCallUnwindMismatches(MF);
+    Changed |= fixCatchUnwindMismatches(MF);
+    if (Changed)
       recalculateScopeTops(MF);
   }
 }
@@ -1648,23 +1654,6 @@ void WebAssemblyCFGStackify::rewriteDepthImmediates(MachineFunction &MF) {
   // Now rewrite references to basic blocks to be depth immediates.
   SmallVector<EndMarkerInfo, 8> Stack;
   SmallVector<const MachineBasicBlock *, 8> EHPadStack;
-
-  auto RewriteOperands = [&](MachineInstr &MI) {
-    // Rewrite MBB operands to be depth immediates.
-    SmallVector<MachineOperand, 4> Ops(MI.operands());
-    while (MI.getNumOperands() > 0)
-      MI.removeOperand(MI.getNumOperands() - 1);
-    for (auto MO : Ops) {
-      if (MO.isMBB()) {
-        if (MI.getOpcode() == WebAssembly::DELEGATE)
-          MO = MachineOperand::CreateImm(getDelegateDepth(Stack, MO.getMBB()));
-        else
-          MO = MachineOperand::CreateImm(getBranchDepth(Stack, MO.getMBB()));
-      }
-      MI.addOperand(MF, MO);
-    }
-  };
-
   for (auto &MBB : reverse(MF)) {
     for (MachineInstr &MI : llvm::reverse(MBB)) {
       switch (MI.getOpcode()) {
@@ -1708,8 +1697,23 @@ void WebAssemblyCFGStackify::rewriteDepthImmediates(MachineFunction &MF) {
         break;
 
       default:
-        if (MI.isTerminator())
-          RewriteOperands(MI);
+        if (MI.isTerminator()) {
+          // Rewrite MBB operands to be depth immediates.
+          SmallVector<MachineOperand, 4> Ops(MI.operands());
+          while (MI.getNumOperands() > 0)
+            MI.removeOperand(MI.getNumOperands() - 1);
+          for (auto MO : Ops) {
+            if (MO.isMBB()) {
+              if (MI.getOpcode() == WebAssembly::DELEGATE)
+                MO = MachineOperand::CreateImm(
+                    getDelegateDepth(Stack, MO.getMBB()));
+              else
+                MO = MachineOperand::CreateImm(
+                    getBranchDepth(Stack, MO.getMBB()));
+            }
+            MI.addOperand(MF, MO);
+          }
+        }
 
         if (MI.getOpcode() == WebAssembly::DELEGATE)
           Stack.push_back(std::make_pair(&MBB, &MI));
@@ -1763,7 +1767,10 @@ bool WebAssemblyCFGStackify::runOnMachineFunction(MachineFunction &MF) {
 
   // Add an end instruction at the end of the function body.
   const auto &TII = *MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();
-  appendEndToFunction(MF, TII);
+  if (!MF.getSubtarget<WebAssemblySubtarget>()
+           .getTargetTriple()
+           .isOSBinFormatELF())
+    appendEndToFunction(MF, TII);
 
   cleanupFunctionData(MF);
 

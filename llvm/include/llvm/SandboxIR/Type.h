@@ -50,8 +50,6 @@ protected:
   friend class ConstantArray;  // For LLVMTy.
   friend class ConstantStruct; // For LLVMTy.
   friend class ConstantVector; // For LLVMTy.
-  friend class CmpInst; // For LLVMTy. TODO: Cleanup after sandboxir::VectorType
-                        // is more complete.
 
   // Friend all instruction classes because `create()` functions use LLVMTy.
 #define DEF_INSTR(ID, OPCODE, CLASS) friend class CLASS;

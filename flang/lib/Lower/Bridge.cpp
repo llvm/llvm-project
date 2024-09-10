@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Lower/Bridge.h"
-#include "DirectivesCommon.h"
 #include "flang/Common/Version.h"
 #include "flang/Lower/Allocatable.h"
 #include "flang/Lower/CallInterface.h"
@@ -3000,12 +2999,6 @@ private:
     mlir::Block &b = op.getRegion().back();
     builder->setInsertionPointToStart(&b);
 
-    Fortran::lower::pft::Evaluation *crtEval = &getEval();
-    if (crtEval->lowerAsUnstructured())
-      Fortran::lower::createEmptyRegionBlocks<fir::FirEndOp>(
-          *builder, crtEval->getNestedEvaluations());
-    builder->setInsertionPointToStart(&b);
-
     for (auto [arg, value] : llvm::zip(
              op.getLoopRegions().front()->front().getArguments(), ivValues)) {
       mlir::Value convArg =
@@ -3013,6 +3006,7 @@ private:
       builder->create<fir::StoreOp>(loc, convArg, value);
     }
 
+    Fortran::lower::pft::Evaluation *crtEval = &getEval();
     if (crtEval->lowerAsStructured()) {
       crtEval = &crtEval->getFirstNestedEvaluation();
       for (int64_t i = 1; i < nestedLoops; i++)

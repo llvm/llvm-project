@@ -333,32 +333,48 @@ private:
 
     DenseMap<const FlowBlock *, uint32_t> FlowBlockMatchCount;
 
-    for (const yaml::bolt::PseudoProbeInfo &Probe : BlockPseudoProbes) {
-      const MCDecodedPseudoProbeInlineTree *InlineTreeNode =
-          getInlineTreeNode(Probe.InlineTreeIndex);
-      if (!InlineTreeNode) {
-        ++FlowBlockMatchCount[nullptr];
-        continue;
-      }
+    auto match = [&](uint32_t NodeId, uint64_t ProbeId) -> const FlowBlock * {
+      const MCDecodedPseudoProbeInlineTree *Node = getInlineTreeNode(NodeId);
+      if (!Node)
+        return nullptr;
       const MCDecodedPseudoProbe *BinaryProbe = nullptr;
-      for (const MCDecodedPseudoProbe &FuncProbe :
-           InlineTreeNode->getProbes()) {
-        if (FuncProbe.getIndex() != Probe.Index)
+      for (const MCDecodedPseudoProbe &Probe : Node->getProbes()) {
+        if (Probe.getIndex() != ProbeId)
           continue;
-        BinaryProbe = &FuncProbe;
+        BinaryProbe = &Probe;
         break;
       }
-      if (!BinaryProbe) {
-        ++FlowBlockMatchCount[nullptr];
-        continue;
-      }
+      if (!BinaryProbe)
+        return nullptr;
       auto It = BBPseudoProbeToBlock.find(BinaryProbe);
-      if (It == BBPseudoProbeToBlock.end()) {
-        ++FlowBlockMatchCount[nullptr];
-        continue;
+      if (It == BBPseudoProbeToBlock.end())
+        return nullptr;
+      return It->second;
+    };
+
+    auto matchProbe = [&](const yaml::bolt::PseudoProbeInfo &Probe,
+                          uint32_t NodeId, bool IsBlock1) {
+      if (IsBlock1) {
+        ++FlowBlockMatchCount[match(NodeId, 1)];
+        return;
       }
-      const FlowBlock *Block = It->second;
-      ++FlowBlockMatchCount[Block];
+      for (uint64_t Index = 0; Index < 64; ++Index)
+        if (Probe.BlockMask & 1ull << Index)
+          ++FlowBlockMatchCount[match(NodeId, Index + 1)];
+      for (const auto &Probes :
+           {Probe.BlockProbes, Probe.IndCallProbes, Probe.CallProbes})
+        for (uint64_t Probe : Probes)
+          ++FlowBlockMatchCount[match(NodeId, Probe)];
+    };
+
+    for (const yaml::bolt::PseudoProbeInfo &Probe : BlockPseudoProbes) {
+      bool IsBlock1 = Probe.BlockMask == 0 && Probe.BlockProbes.empty() &&
+                      Probe.IndCallProbes.empty() && Probe.CallProbes.empty();
+      if (!Probe.InlineTreeNodes.empty())
+        for (uint32_t Node : Probe.InlineTreeNodes)
+          matchProbe(Probe, Node, IsBlock1);
+      else
+        matchProbe(Probe, Probe.InlineTreeIndex, IsBlock1);
     }
     uint32_t BestMatchCount = 0;
     uint32_t TotalMatchCount = 0;
@@ -558,7 +574,7 @@ size_t matchWeightsByHashes(
     BinaryContext &BC, const BinaryFunction::BasicBlockOrderType &BlockOrder,
     const yaml::bolt::BinaryFunctionProfile &YamlBF, FlowFunction &Func,
     HashFunction HashFunction, YAMLProfileReader::ProfileLookupMap &IdToYamlBF,
-    const BinaryFunction &BF) {
+    const BinaryFunction &BF, const yaml::bolt::PseudoProbeDesc &YamlPD) {
 
   assert(Func.Blocks.size() == BlockOrder.size() + 2);
 
@@ -604,11 +620,23 @@ size_t matchWeightsByHashes(
     // Match inline tree nodes by GUID, checksum, parent, and call site.
     const MCDecodedPseudoProbeInlineTree *DummyInlineRoot =
         &PseudoProbeDecoder->getDummyInlineRoot();
+    uint32_t ParentId = 0;
+    uint32_t PrevGUIDIdx = 0;
+    uint32_t Index = 0;
     for (const yaml::bolt::InlineTreeInfo &InlineTreeNode : YamlBF.InlineTree) {
-      uint64_t GUID = InlineTreeNode.GUID;
-      uint64_t Hash = InlineTreeNode.Hash;
-      uint32_t InlineTreeNodeId = InlineTreeNode.Index;
-      uint32_t ParentId = InlineTreeNode.ParentIndex;
+      uint64_t GUIDIdx = InlineTreeNode.GUIDIndex;
+      if (GUIDIdx)
+        PrevGUIDIdx = GUIDIdx;
+      else
+        GUIDIdx = PrevGUIDIdx;
+      assert(GUIDIdx - 1 < YamlPD.GUID.size());
+      assert(GUIDIdx - 1 < YamlPD.GUIDHash.size());
+      uint64_t GUID = YamlPD.GUID[GUIDIdx - 1];
+      uint32_t HashIdx = YamlPD.GUIDHash[GUIDIdx - 1];
+      assert(HashIdx < YamlPD.Hash.size());
+      uint64_t Hash = YamlPD.Hash[HashIdx];
+      uint32_t InlineTreeNodeId = Index++;
+      ParentId += InlineTreeNode.ParentIndexDelta;
       uint32_t CallSiteProbe = InlineTreeNode.CallSiteProbe;
       const MCDecodedPseudoProbeInlineTree *ParentNode =
           InlineTreeNodeId ? Matcher.getInlineTreeNode(ParentId)
@@ -1000,9 +1028,9 @@ bool YAMLProfileReader::inferStaleProfile(
   FlowFunction Func = createFlowFunction(BlockOrder);
 
   // Match as many block/jump counts from the stale profile as possible
-  size_t MatchedBlocks =
-      matchWeightsByHashes(BF.getBinaryContext(), BlockOrder, YamlBF, Func,
-                           YamlBP.Header.HashFunction, IdToYamLBF, BF);
+  size_t MatchedBlocks = matchWeightsByHashes(
+      BF.getBinaryContext(), BlockOrder, YamlBF, Func,
+      YamlBP.Header.HashFunction, IdToYamLBF, BF, YamlBP.PseudoProbeDesc);
 
   // Adjust the flow function by marking unreachable blocks Unlikely so that
   // they don't get any counts assigned.

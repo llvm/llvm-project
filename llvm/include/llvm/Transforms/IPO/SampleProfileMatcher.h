@@ -198,7 +198,6 @@ private:
   // function and all inlinees.
   void countMismatchedCallsiteSamples(const FunctionSamples &FS);
   void computeAndReportProfileStaleness();
-  void UpdateWithSalvagedProfiles();
 
   LocToLocMap &getIRToProfileLocationMap(const Function &F) {
     auto Ret = FuncMappings.try_emplace(

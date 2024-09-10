@@ -702,94 +702,45 @@ static void createBodyOfOp(mlir::Operation &op, const OpWithBodyGenInfo &info,
   marker->erase();
 }
 
-void mapBodySymbols(lower::AbstractConverter &converter, mlir::Region &region,
-                    llvm::ArrayRef<const semantics::Symbol *> mapSyms) {
-  assert(region.hasOneBlock() && "target must have single region");
-  mlir::Block &regionBlock = region.front();
-  // Clones the `bounds` placing them inside the target region and returns them.
-  auto cloneBound = [&](mlir::Value bound) {
-    if (mlir::isMemoryEffectFree(bound.getDefiningOp())) {
-      mlir::Operation *clonedOp = bound.getDefiningOp()->clone();
-      regionBlock.push_back(clonedOp);
-      return clonedOp->getResult(0);
-    }
-    TODO(converter.getCurrentLocation(),
-         "target map clause operand unsupported bound type");
-  };
-
-  auto cloneBounds = [cloneBound](llvm::ArrayRef<mlir::Value> bounds) {
-    llvm::SmallVector<mlir::Value> clonedBounds;
-    for (mlir::Value bound : bounds)
-      clonedBounds.emplace_back(cloneBound(bound));
-    return clonedBounds;
-  };
-
-  // Bind the symbols to their corresponding block arguments.
-  for (auto [argIndex, argSymbol] : llvm::enumerate(mapSyms)) {
-    const mlir::BlockArgument &arg = region.getArgument(argIndex);
-    // Avoid capture of a reference to a structured binding.
-    const semantics::Symbol *sym = argSymbol;
-    // Structure component symbols don't have bindings.
-    if (sym->owner().IsDerivedType())
-      continue;
-    fir::ExtendedValue extVal = converter.getSymbolExtendedValue(*sym);
-    auto refType = mlir::dyn_cast<fir::ReferenceType>(arg.getType());
-    if (refType && fir::isa_builtin_cptr_type(refType.getElementType())) {
-      converter.bindSymbol(*argSymbol, arg);
-    } else {
-      extVal.match(
-          [&](const fir::BoxValue &v) {
-            converter.bindSymbol(*sym,
-                                 fir::BoxValue(arg, cloneBounds(v.getLBounds()),
-                                               v.getExplicitParameters(),
-                                               v.getExplicitExtents()));
-          },
-          [&](const fir::MutableBoxValue &v) {
-            converter.bindSymbol(
-                *sym, fir::MutableBoxValue(arg, cloneBounds(v.getLBounds()),
-                                           v.getMutableProperties()));
-          },
-          [&](const fir::ArrayBoxValue &v) {
-            converter.bindSymbol(
-                *sym, fir::ArrayBoxValue(arg, cloneBounds(v.getExtents()),
-                                         cloneBounds(v.getLBounds()),
-                                         v.getSourceBox()));
-          },
-          [&](const fir::CharArrayBoxValue &v) {
-            converter.bindSymbol(
-                *sym, fir::CharArrayBoxValue(arg, cloneBound(v.getLen()),
-                                             cloneBounds(v.getExtents()),
-                                             cloneBounds(v.getLBounds())));
-          },
-          [&](const fir::CharBoxValue &v) {
-            converter.bindSymbol(
-                *sym, fir::CharBoxValue(arg, cloneBound(v.getLen())));
-          },
-          [&](const fir::UnboxedValue &v) { converter.bindSymbol(*sym, arg); },
-          [&](const auto &) {
-            TODO(converter.getCurrentLocation(),
-                 "target map clause operand unsupported type");
-          });
-    }
-  }
-}
-
 static void genBodyOfTargetDataOp(
     lower::AbstractConverter &converter, lower::SymMap &symTable,
     semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
-    mlir::omp::TargetDataOp &dataOp,
-    llvm::ArrayRef<const semantics::Symbol *> useDeviceSymbols,
+    mlir::omp::TargetDataOp &dataOp, llvm::ArrayRef<mlir::Type> useDeviceTypes,
     llvm::ArrayRef<mlir::Location> useDeviceLocs,
-    llvm::ArrayRef<mlir::Type> useDeviceTypes,
+    llvm::ArrayRef<const semantics::Symbol *> useDeviceSymbols,
     const mlir::Location &currentLocation, const ConstructQueue &queue,
     ConstructQueue::const_iterator item) {
-  assert(useDeviceTypes.size() == useDeviceLocs.size());
-
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   mlir::Region &region = dataOp.getRegion();
+
   firOpBuilder.createBlock(&region, {}, useDeviceTypes, useDeviceLocs);
 
-  mapBodySymbols(converter, region, useDeviceSymbols);
+  for (auto [argIndex, argSymbol] : llvm::enumerate(useDeviceSymbols)) {
+    const mlir::BlockArgument &arg = region.front().getArgument(argIndex);
+    fir::ExtendedValue extVal = converter.getSymbolExtendedValue(*argSymbol);
+    if (auto refType = mlir::dyn_cast<fir::ReferenceType>(arg.getType())) {
+      if (fir::isa_builtin_cptr_type(refType.getElementType())) {
+        converter.bindSymbol(*argSymbol, arg);
+      } else {
+        // Avoid capture of a reference to a structured binding.
+        const semantics::Symbol *sym = argSymbol;
+        extVal.match(
+            [&](const fir::MutableBoxValue &mbv) {
+              converter.bindSymbol(
+                  *sym,
+                  fir::MutableBoxValue(
+                      arg, fir::factory::getNonDeferredLenParams(extVal), {}));
+            },
+            [&](const auto &) {
+              TODO(converter.getCurrentLocation(),
+                   "use_device clause operand unsupported type");
+            });
+      }
+    } else {
+      TODO(converter.getCurrentLocation(),
+           "use_device clause operand unsupported type");
+    }
+  }
 
   // Insert dummy instruction to remember the insertion position. The
   // marker will be deleted by clean up passes since there are no uses.
@@ -797,7 +748,7 @@ static void genBodyOfTargetDataOp(
   // there are hlfir.declares inserted above while setting block arguments
   // and new code from the body should be inserted after that.
   mlir::Value undefMarker = firOpBuilder.create<fir::UndefOp>(
-      dataOp.getLoc(), firOpBuilder.getIndexType());
+      dataOp.getOperation()->getLoc(), firOpBuilder.getIndexType());
 
   // Create blocks for unstructured regions. This has to be done since
   // blocks are initially allocated with the function as the parent region.
@@ -855,33 +806,93 @@ static void genBodyOfTargetOp(
     mlir::omp::TargetOp &targetOp,
     llvm::ArrayRef<const semantics::Symbol *> mapSyms,
     llvm::ArrayRef<mlir::Location> mapSymLocs,
-    llvm::ArrayRef<mlir::Type> mapSymTypes,
+    llvm::ArrayRef<mlir::Type> mapSymTypes, DataSharingProcessor &dsp,
     const mlir::Location &currentLocation, const ConstructQueue &queue,
-    ConstructQueue::const_iterator item, DataSharingProcessor &dsp) {
+    ConstructQueue::const_iterator item) {
   assert(mapSymTypes.size() == mapSymLocs.size());
 
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   mlir::Region &region = targetOp.getRegion();
 
   llvm::SmallVector<mlir::Type> allRegionArgTypes;
-  llvm::SmallVector<mlir::Location> allRegionArgLocs;
   mergePrivateVarsInfo(targetOp, mapSymTypes,
                        llvm::function_ref<mlir::Type(mlir::Value)>{
                            [](mlir::Value v) { return v.getType(); }},
                        allRegionArgTypes);
 
+  llvm::SmallVector<mlir::Location> allRegionArgLocs;
   mergePrivateVarsInfo(targetOp, mapSymLocs,
                        llvm::function_ref<mlir::Location(mlir::Value)>{
                            [](mlir::Value v) { return v.getLoc(); }},
                        allRegionArgLocs);
 
-  mlir::Block *regionBlock = firOpBuilder.createBlock(
-      &region, {}, allRegionArgTypes, allRegionArgLocs);
+  auto *regionBlock = firOpBuilder.createBlock(&region, {}, allRegionArgTypes,
+                                               allRegionArgLocs);
 
-  mapBodySymbols(converter, region, mapSyms);
+  // Clones the `bounds` placing them inside the target region and returns them.
+  auto cloneBound = [&](mlir::Value bound) {
+    if (mlir::isMemoryEffectFree(bound.getDefiningOp())) {
+      mlir::Operation *clonedOp = bound.getDefiningOp()->clone();
+      regionBlock->push_back(clonedOp);
+      return clonedOp->getResult(0);
+    }
+    TODO(converter.getCurrentLocation(),
+         "target map clause operand unsupported bound type");
+  };
+
+  auto cloneBounds = [cloneBound](llvm::ArrayRef<mlir::Value> bounds) {
+    llvm::SmallVector<mlir::Value> clonedBounds;
+    for (mlir::Value bound : bounds)
+      clonedBounds.emplace_back(cloneBound(bound));
+    return clonedBounds;
+  };
+
+  // Bind the symbols to their corresponding block arguments.
+  for (auto [argIndex, argSymbol] : llvm::enumerate(mapSyms)) {
+    const mlir::BlockArgument &arg = region.getArgument(argIndex);
+    // Avoid capture of a reference to a structured binding.
+    const semantics::Symbol *sym = argSymbol;
+    // Structure component symbols don't have bindings.
+    if (sym->owner().IsDerivedType())
+      continue;
+    fir::ExtendedValue extVal = converter.getSymbolExtendedValue(*sym);
+    extVal.match(
+        [&](const fir::BoxValue &v) {
+          converter.bindSymbol(*sym,
+                               fir::BoxValue(arg, cloneBounds(v.getLBounds()),
+                                             v.getExplicitParameters(),
+                                             v.getExplicitExtents()));
+        },
+        [&](const fir::MutableBoxValue &v) {
+          converter.bindSymbol(
+              *sym, fir::MutableBoxValue(arg, cloneBounds(v.getLBounds()),
+                                         v.getMutableProperties()));
+        },
+        [&](const fir::ArrayBoxValue &v) {
+          converter.bindSymbol(
+              *sym, fir::ArrayBoxValue(arg, cloneBounds(v.getExtents()),
+                                       cloneBounds(v.getLBounds()),
+                                       v.getSourceBox()));
+        },
+        [&](const fir::CharArrayBoxValue &v) {
+          converter.bindSymbol(
+              *sym, fir::CharArrayBoxValue(arg, cloneBound(v.getLen()),
+                                           cloneBounds(v.getExtents()),
+                                           cloneBounds(v.getLBounds())));
+        },
+        [&](const fir::CharBoxValue &v) {
+          converter.bindSymbol(*sym,
+                               fir::CharBoxValue(arg, cloneBound(v.getLen())));
+        },
+        [&](const fir::UnboxedValue &v) { converter.bindSymbol(*sym, arg); },
+        [&](const auto &) {
+          TODO(converter.getCurrentLocation(),
+               "target map clause operand unsupported type");
+        });
+  }
 
   for (auto [argIndex, argSymbol] :
-       llvm::enumerate(dsp.getAllSymbolsToPrivatize())) {
+       llvm::enumerate(dsp.getDelayedPrivSymbols())) {
     argIndex = mapSyms.size() + argIndex;
 
     const mlir::BlockArgument &arg = region.getArgument(argIndex);
@@ -929,9 +940,7 @@ static void genBodyOfTargetOp(
                 std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
                 llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT),
             mlir::omp::VariableCaptureKind::ByCopy, copyVal.getType());
-
         targetOp.getMapVarsMutable().append(mapOp);
-
         mlir::Value clonedValArg =
             region.addArgument(copyVal.getType(), copyVal.getLoc());
         firOpBuilder.setInsertionPointToStart(regionBlock);
@@ -953,7 +962,7 @@ static void genBodyOfTargetOp(
   // In the HLFIR flow there are hlfir.declares inserted above while
   // setting block arguments.
   mlir::Value undefMarker = firOpBuilder.create<fir::UndefOp>(
-      targetOp.getLoc(), firOpBuilder.getIndexType());
+      targetOp.getOperation()->getLoc(), firOpBuilder.getIndexType());
 
   // Create blocks for unstructured regions. This has to be done since
   // blocks are initially allocated with the function as the parent region.
@@ -1192,9 +1201,9 @@ static void genTargetDataClauses(
   cp.processDevice(stmtCtx, clauseOps);
   cp.processIf(llvm::omp::Directive::OMPD_target_data, clauseOps);
   cp.processMap(loc, stmtCtx, clauseOps);
-  cp.processUseDeviceAddr(stmtCtx, clauseOps, useDeviceTypes, useDeviceLocs,
+  cp.processUseDeviceAddr(clauseOps, useDeviceTypes, useDeviceLocs,
                           useDeviceSyms);
-  cp.processUseDevicePtr(stmtCtx, clauseOps, useDeviceTypes, useDeviceLocs,
+  cp.processUseDevicePtr(clauseOps, useDeviceTypes, useDeviceLocs,
                          useDeviceSyms);
 
   // This function implements the deprecated functionality of use_device_ptr
@@ -1798,7 +1807,7 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
 
   auto targetOp = firOpBuilder.create<mlir::omp::TargetOp>(loc, clauseOps);
   genBodyOfTargetOp(converter, symTable, semaCtx, eval, targetOp, mapSyms,
-                    mapLocs, mapTypes, loc, queue, item, dsp);
+                    mapLocs, mapTypes, dsp, loc, queue, item);
   return targetOp;
 }
 
@@ -1820,7 +1829,7 @@ genTargetDataOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
       converter.getFirOpBuilder().create<mlir::omp::TargetDataOp>(loc,
                                                                   clauseOps);
   genBodyOfTargetDataOp(converter, symTable, semaCtx, eval, targetDataOp,
-                        useDeviceSyms, useDeviceLocs, useDeviceTypes, loc,
+                        useDeviceTypes, useDeviceLocs, useDeviceSyms, loc,
                         queue, item);
   return targetDataOp;
 }

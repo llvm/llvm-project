@@ -343,15 +343,10 @@ template <int PREC, typename T> inline RT_API_ATTRS T Spacing(T x) {
     return x; // NaN -> same NaN
   } else if (ISINFTy<T>::compute(x)) {
     return QNANTy<T>::compute(); // +/-Inf -> NaN
-  } else if (x == 0) { // 0 -> TINY(x)
+  } else if (x == 0) {
     // The standard-mandated behavior seems broken, since TINY() can't be
     // subnormal.
-    if constexpr (PREC == 11) { // REAL(2)
-      return 0.00006103515625E-04; // TINY(0._2)
-    } else {
-      // N.B. TINY(0._3) == TINY(0._4) so this works even if no std::bfloat16_t.
-      return MINTy<T>::compute();
-    }
+    return MINTy<T>::compute(); // 0 -> TINY(x)
   } else {
     T result{LDEXPTy<T>::compute(
         static_cast<T>(1.0), ILOGBTy<T>::compute(x) + 1 - PREC)}; // 2**(e-p)

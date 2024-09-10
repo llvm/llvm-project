@@ -55,7 +55,9 @@ functions:
         hash:            0xFFFFFFFFFFFFFFF1
         insns:           1
         succ:            [ { bid: 3, cnt: 1} ]
-        pseudo_probes:
-          - { id: 1, type: 0, offset: 0xB }
-    inline_tree:
-      - { guid: 0xDB956436E78DD5FA, hash: 0xFFFFFFFF, id: 0 }
+        probes:          [ { } ]
+    inline_tree:         [ { g: 1 } ]
+pseudo_probe_desc:
+  gs:              [ 0xDB956436E78DD5FA ]
+  gh:              [ 0]
+  hs:              [ 0xFFFFFFFF ]

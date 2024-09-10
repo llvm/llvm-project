@@ -1451,12 +1451,10 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
   // Check whether the loop-related control flow in the loop nest is expected by
   // vectorizer.
   if (!canVectorizeLoopNestCFG(TheLoop, UseVPlanNativePath)) {
-    if (DoExtraAnalysis) {
-      LLVM_DEBUG(dbgs() << "LV: legality check failed: loop nest");
+    if (DoExtraAnalysis)
       Result = false;
-    } else {
+    else
       return false;
-    }
   }
 
   // We need to have a loop header.
@@ -1521,21 +1519,17 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
       return false;
   }
 
-  if (Result) {
-    LLVM_DEBUG(dbgs() << "LV: We can vectorize this loop"
-                      << (LAI->getRuntimePointerChecking()->Need
-                              ? " (with a runtime bound check)"
-                              : "")
-                      << "!\n");
-  }
+  LLVM_DEBUG(dbgs() << "LV: We can vectorize this loop"
+                    << (LAI->getRuntimePointerChecking()->Need
+                            ? " (with a runtime bound check)"
+                            : "")
+                    << "!\n");
 
   unsigned SCEVThreshold = VectorizeSCEVCheckThreshold;
   if (Hints->getForce() == LoopVectorizeHints::FK_Enabled)
     SCEVThreshold = PragmaVectorizeSCEVCheckThreshold;
 
   if (PSE.getPredicate().getComplexity() > SCEVThreshold) {
-    LLVM_DEBUG(dbgs() << "LV: Vectorization not profitable "
-                         "due to SCEVThreshold");
     reportVectorizationFailure("Too many SCEV checks needed",
         "Too many SCEV assumptions need to be made and checked at runtime",
         "TooManySCEVRunTimeChecks", ORE, TheLoop);

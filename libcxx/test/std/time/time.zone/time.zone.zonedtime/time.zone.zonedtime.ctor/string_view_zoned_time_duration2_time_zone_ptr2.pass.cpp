@@ -21,8 +21,8 @@
 // zoned_time(string_view name, const zoned_time<Duration2, TimeZonePtr2>& y);
 
 #include <chrono>
-#include <cassert>
 #include <concepts>
+#include <cassert>
 
 #include "../test_offset_time_zone.h"
 

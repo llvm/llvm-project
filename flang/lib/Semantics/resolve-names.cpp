@@ -3131,7 +3131,7 @@ void ModuleVisitor::DoAddUse(SourceName location, SourceName localName,
     combinedDerivedType = useDerivedType;
   } else {
     const Scope *localScope{localDerivedType->scope()};
-    const Scope *useScope{useDerivedType->GetUltimate().scope()};
+    const Scope *useScope{useDerivedType->scope()};
     if (localScope && useScope && localScope->derivedTypeSpec() &&
         useScope->derivedTypeSpec() &&
         evaluate::AreSameDerivedType(
@@ -3307,12 +3307,7 @@ void ModuleVisitor::DoAddUse(SourceName location, SourceName localName,
     AddGenericUse(newUseGeneric, localName, useUltimate);
     newUseGeneric.AddUse(*localSymbol);
     if (combinedDerivedType) {
-      if (const auto *oldDT{newUseGeneric.derivedType()}) {
-        CHECK(&oldDT->GetUltimate() == &combinedDerivedType->GetUltimate());
-      } else {
-        newUseGeneric.set_derivedType(
-            *const_cast<Symbol *>(combinedDerivedType));
-      }
+      newUseGeneric.set_derivedType(*const_cast<Symbol *>(combinedDerivedType));
     }
     if (combinedProcedure) {
       newUseGeneric.set_specific(*const_cast<Symbol *>(combinedProcedure));

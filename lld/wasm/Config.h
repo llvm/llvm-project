@@ -12,7 +12,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
-#include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/Support/CachePruning.h"
 #include <optional>
@@ -44,7 +43,6 @@ enum class BuildIdKind { None, Fast, Sha1, Hexstring, Uuid };
 // and such fields have the same name as the corresponding options.
 // Most fields are initialized by the driver.
 struct Configuration {
-  bool allowMultipleDefinition;
   bool bsymbolic;
   bool checkFeatures;
   bool compressRelocations;
@@ -66,7 +64,6 @@ struct Configuration {
   bool importUndefined;
   std::optional<bool> is64;
   bool mergeDataSegments;
-  bool noinhibitExec;
   bool pie;
   bool printGcSections;
   bool relocatable;
@@ -150,8 +147,6 @@ struct Ctx {
 };
 
 extern Ctx ctx;
-
-void errorOrWarn(const llvm::Twine &msg);
 
 } // namespace lld::wasm
 

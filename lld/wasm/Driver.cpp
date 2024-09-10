@@ -47,13 +47,6 @@ namespace lld::wasm {
 Configuration *config;
 Ctx ctx;
 
-void errorOrWarn(const llvm::Twine &msg) {
-  if (config->noinhibitExec)
-    warn(msg);
-  else
-    error(msg);
-}
-
 void Ctx::reset() {
   objectFiles.clear();
   stubFiles.clear();
@@ -106,16 +99,6 @@ private:
 
   std::vector<InputFile *> files;
 };
-
-static bool hasZOption(opt::InputArgList &args, StringRef key) {
-  bool ret = false;
-  for (const auto *arg : args.filtered(OPT_z))
-    if (key == arg->getValue()) {
-      ret = true;
-      arg->claim();
-    }
-  return ret;
-}
 } // anonymous namespace
 
 bool link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
@@ -484,10 +467,6 @@ getBuildId(opt::InputArgList &args) {
 
 // Initializes Config members by the command line options.
 static void readConfigs(opt::InputArgList &args) {
-  config->allowMultipleDefinition =
-      hasZOption(args, "muldefs") ||
-      args.hasFlag(OPT_allow_multiple_definition,
-                   OPT_no_allow_multiple_definition, false);
   config->bsymbolic = args.hasArg(OPT_Bsymbolic);
   config->checkFeatures =
       args.hasFlag(OPT_check_features, OPT_no_check_features, true);
@@ -500,7 +479,6 @@ static void readConfigs(opt::InputArgList &args) {
   config->exportAll = args.hasArg(OPT_export_all);
   config->exportTable = args.hasArg(OPT_export_table);
   config->growableTable = args.hasArg(OPT_growable_table);
-  config->noinhibitExec = args.hasArg(OPT_noinhibit_exec);
 
   if (args.hasArg(OPT_import_memory_with_name)) {
     config->memoryImport =
@@ -1195,7 +1173,7 @@ static void splitSections() {
 
 static bool isKnownZFlag(StringRef s) {
   // For now, we only support a very limited set of -z flags
-  return s.starts_with("stack-size=") || s.starts_with("muldefs");
+  return s.starts_with("stack-size=");
 }
 
 // Report a warning for an unknown -z option.

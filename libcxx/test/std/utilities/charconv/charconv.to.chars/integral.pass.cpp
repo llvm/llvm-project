@@ -19,7 +19,6 @@
 
 #include <charconv>
 #include <cstdint>
-#include <system_error>
 
 #include "test_macros.h"
 #include "charconv_test_helpers.h"
