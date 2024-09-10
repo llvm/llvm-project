@@ -57,7 +57,7 @@ enum class VDSOSym {
 #error "unknown arch"
 #endif
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace vdso {
 
 template <VDSOSym sym> LIBC_INLINE constexpr auto dispatcher() {
@@ -136,5 +136,5 @@ template <VDSOSym sym> struct TypedSymbol {
 
 } // namespace vdso
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 #endif // LLVM_LIBC_SRC___SUPPORT_OSUTIL_LINUX_VDSO_H

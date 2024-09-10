@@ -29,7 +29,7 @@ struct riscv_hwprobe {
   uint64_t value;
 };
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 // For x86_64, we explicitly test some traditional vdso symbols are indeed
 // available.
 
@@ -159,4 +159,4 @@ TEST(LlvmLibcOSUtilVDSOTest, RiscvHwProbe) {
   }
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
