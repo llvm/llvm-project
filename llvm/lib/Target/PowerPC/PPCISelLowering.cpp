@@ -14805,15 +14805,18 @@ SDValue PPCTargetLowering::DAGCombineExtBoolTrunc(SDNode *N,
       ShiftCst);
 }
 
-SDValue PPCTargetLowering::combineSetCC(SDNode *N,
-                                        DAGCombinerInfo &DCI) const {
-  assert(N->getOpcode() == ISD::SETCC &&
-         "Should be called with a SETCC node");
+SDValue PPCTargetLowering::combineSetCC(SDNode *N, DAGCombinerInfo &DCI) const {
+  assert(N->getOpcode() == ISD::SETCC && "Should be called with a SETCC node");
 
   ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+  SDLoc DL(N);
+  SelectionDAG &DAG = DCI.DAG;
+  EVT VT = N->getValueType(0);
+  EVT OpVT = LHS.getValueType();
+
   if (CC == ISD::SETNE || CC == ISD::SETEQ) {
-    SDValue LHS = N->getOperand(0);
-    SDValue RHS = N->getOperand(1);
 
     // If there is a '0 - y' pattern, canonicalize the pattern to the RHS.
     if (LHS.getOpcode() == ISD::SUB && isNullConstant(LHS.getOperand(0)) &&
@@ -14824,12 +14827,46 @@ SDValue PPCTargetLowering::combineSetCC(SDNode *N,
     // x != 0-y --> x+y != 0
     if (RHS.getOpcode() == ISD::SUB && isNullConstant(RHS.getOperand(0)) &&
         RHS.hasOneUse()) {
-      SDLoc DL(N);
-      SelectionDAG &DAG = DCI.DAG;
-      EVT VT = N->getValueType(0);
-      EVT OpVT = LHS.getValueType();
       SDValue Add = DAG.getNode(ISD::ADD, DL, OpVT, LHS, RHS.getOperand(1));
       return DAG.getSetCC(DL, VT, Add, DAG.getConstant(0, DL, OpVT), CC);
+    }
+  }
+
+  if (CC == ISD::SETULT) {
+    auto GetTruncExtCmp = [&](SDValue Src, EVT DstVT) {
+      return DAG.getSetCC(
+          DL, VT, Src,
+          DAG.getSExtOrTrunc(DAG.getSExtOrTrunc(Src, DL, DstVT), DL, OpVT),
+          ISD::SETNE);
+    };
+    // ult (add x -0x80000000) -0x100000000 -> ne x (sext:i64 (trunc:i32 x))
+    // ult (add x -0x8000) -0x10000 -> ne x (sext:i64 (trunc:i16 x))
+    // ult (add x -0x80) -0x100 -> ne x (sext:i64/i32/i16 (trunc:i8/i16/i8 x))
+    if (LHS.getOpcode() == ISD::ADD) {
+      const auto *Addend = dyn_cast<ConstantSDNode>(LHS.getOperand(1));
+      const auto *RhsC = dyn_cast<ConstantSDNode>(RHS);
+      if (Addend && RhsC) {
+        int64_t AddendVal = Addend->getSExtValue();
+        int64_t RhsVal = RhsC->getSExtValue();
+        if (AddendVal == -0x80000000L && RhsVal == -0x100000000L &&
+            OpVT == MVT::i64)
+          return GetTruncExtCmp(LHS.getOperand(0), MVT::i32);
+        if (AddendVal == -0x8000 && RhsVal == -0x10000 && OpVT == MVT::i64)
+          return GetTruncExtCmp(LHS.getOperand(0), MVT::i16);
+        if (AddendVal == -0x80 && RhsVal == -0x100 &&
+            (OpVT == MVT::i64 || OpVT == MVT::i32 || OpVT == MVT::i16))
+          return GetTruncExtCmp(LHS.getOperand(0), MVT::i8);
+      }
+    } else if (LHS.getOpcode() == ISD::SRL &&
+               LHS.getOperand(0).getOpcode() == ISD::ADD) {
+      // ult (srl (add x -0x8000) 16) 0xffff -> ne x (sext:i32 (trunc:i16 x))
+      const auto *SrlAmt = dyn_cast<ConstantSDNode>(LHS.getOperand(1));
+      const auto *Addend =
+          dyn_cast<ConstantSDNode>(LHS.getOperand(0).getOperand(1));
+      const auto *RhsC = dyn_cast<ConstantSDNode>(RHS);
+      if (SrlAmt && Addend && RhsC && SrlAmt->getSExtValue() == 16 &&
+          Addend->getSExtValue() == -0x8000 && RhsC->getSExtValue() == 0xffff)
+        return GetTruncExtCmp(LHS.getOperand(0).getOperand(0), MVT::i8);
     }
   }
 
