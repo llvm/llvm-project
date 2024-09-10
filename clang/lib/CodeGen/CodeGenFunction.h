@@ -4634,9 +4634,9 @@ public:
                                         ReturnValueSlot ReturnValue);
 
   std::vector<std::string> HostexecFns{
-      "printf",        "fprintf",         "hostexec",
-      "hostexec_uint", "hostexec_uint64", "hostexec_int",
-      "hostexec_long", "hostexec_float",  "hostexec_double"};
+      "printf",          "fprintf",        "hostexec",      "hostexec_uint",
+      "hostexec_uint64", "hostexec_int",   "hostexec_long", "hostexec_float",
+      "hostexec_double", "hostexec_fortrt"};
   RValue EmitHostexecAllocAndExecFns(const CallExpr *E,
                                      const char *allocate_name,
                                      const char *execute_name);

@@ -67,6 +67,13 @@ endif()
    add_compile_options($<$<OR:$<COMPILE_LANGUAGE:C>,$<COMPILE_LANGUAGE:CXX>>:-UNDEBUG>)
    set_property(TARGET amdgcn_hostexec_services PROPERTY POSITION_INDEPENDENT_CODE ON)
 
+   option(LIBOMPTARGET_BUILD_DEVICE_FORTRT "Build device fortran IO runtime to use hostexec" OFF)
+   if (LIBOMPTARGET_BUILD_DEVICE_FORTRT)
+     add_compile_definitions(_HOSTEXEC_BUILD_DEVICE_FORTRT)
+     target_link_libraries(amdgcn_hostexec_services FortranDecimal -L${CMAKE_BINARY_DIR}/../../lib  -L${CMAKE_INSTALL_PREFIX}/lib)
+     target_link_libraries(amdgcn_hostexec_services FortranRuntime -L${CMAKE_BINARY_DIR}/../../lib  -L${CMAKE_INSTALL_PREFIX}/lib)
+   endif()
+
 if (LIBOMPTARGET_DEP_CUDA_FOUND)
    list(APPEND HOSTRPC_ARCHS "nvptx")
    add_library(nvptx_hostexec_services STATIC 
@@ -156,8 +163,8 @@ foreach(archname ${HOSTRPC_ARCHS})
    foreach(mcpu ${mcpus})
       if (${archname} STREQUAL "amdgcn")
         find_package(AMDDeviceLibs REQUIRED CONFIG
-                     HINTS ${CMAKE_INSTALL_PREFIX}
-                           ${CMAKE_BINARY_DIR}/../../tools/rocm-device-libs
+		     HINTS ${CMAKE_BINARY_DIR}/../../tools/rocm-device-libs
+                           ${CMAKE_INSTALL_PREFIX}
                      PATHS /opt/rocm
         )
         get_target_property(ocml_path ocml IMPORTED_LOCATION)

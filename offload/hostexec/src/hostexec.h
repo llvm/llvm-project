@@ -27,6 +27,7 @@ typedef long hostexec_long_t(void *, ...);
 EXTERN void hostexec(void *fnptr, ...);
 EXTERN uint32_t hostexec_uint(void *fnptr, ...);
 EXTERN uint64_t hostexec_uint64(void *fnptr, ...);
+EXTERN uint64_t hostexec_fortrt(void *fnptr, ...);
 EXTERN double hostexec_double(void *fnptr, ...);
 EXTERN float hostexec_float(void *fnptr, ...);
 EXTERN int hostexec_int(void *fnptr, ...);
@@ -43,6 +44,10 @@ EXTERN long hostexec_long(void *fnptr, ...);
 #define hostexec_int(fn, ...) fn(fn, __VA_ARGS__)
 #define hostexec_long(fn, ...) fn(fn, __VA_ARGS__)
 #define hostexec(fn, ...) fn(fn, __VA_ARGS__)
+// FIXME: this should be defined as an aborting function
+//        if ever seen on a host pass because first arg
+//        is an enum for fortrt, not a function pointer
+#define hostexec_fortrt(fn, ...) fn(fn, __VA_ARGS__)
 
 #endif
 

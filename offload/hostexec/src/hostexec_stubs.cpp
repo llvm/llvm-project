@@ -100,6 +100,9 @@ char *hostexec_uint_allocate(uint32_t bufsz) {
 char *hostexec_uint64_allocate(uint32_t bufsz) {
   return hostexec_allocate(bufsz);
 }
+char *hostexec_fortrt_allocate(uint32_t bufsz) {
+  return hostexec_allocate(bufsz);
+}
 char *hostexec_int_allocate(uint32_t bufsz) { return hostexec_allocate(bufsz); }
 char *hostexec_long_allocate(uint32_t bufsz) {
   return hostexec_allocate(bufsz);
@@ -164,6 +167,14 @@ uint64_t hostexec_uint64_execute(char *print_buffer, uint32_t bufsz) {
   arg1 = (uint64_t)print_buffer;
   hostexec_result_t result =
       hostexec_invoke_zeros(PACK_VERS(HOSTEXEC_SID_UINT64), arg0, arg1);
+  return (uint64_t)result.arg0;
+}
+uint64_t hostexec_fortrt_execute(char *print_buffer, uint32_t bufsz) {
+  uint64_t arg0, arg1;
+  arg0 = (uint64_t)bufsz;
+  arg1 = (uint64_t)print_buffer;
+  hostexec_result_t result =
+      hostexec_invoke_zeros(PACK_VERS(HOSTEXEC_SID_FORTRT), arg0, arg1);
   return (uint64_t)result.arg0;
 }
 double hostexec_double_execute(char *print_buffer, uint32_t bufsz) {
@@ -233,6 +244,99 @@ uint32_t __strlen_max(char *instr, uint32_t maxstrlen) {
   return maxstrlen;
 }
 
-} // end extern "C"
+#if defined(__NVPTX__) || defined(__AMDGCN__)
+// These are function definitions of selected fortran device runtime functions
+// that will be executed on the host using hostexec. The host functions
+// that implement the service are defined in services/execute_service.cpp.
+// These functions begin with V_ because they are variadic functions.
+// Variadic functions make it easy to reconstruct the exact arguments for
+// the call to the actual fortran host runtime function.
 
+// Since these variadic functions are static functions in execute_service.cpp,
+// we only send the index from the enum set of known functions as a fake
+// function pointer in the first arg. See the switch(DeviceRuntime_idx) in
+// execute_service.cpp which determins the correct function pointer to
+// the V_ function based on this index.
+//
+// Note that eventually these device fortran runtime functions definitions
+// will be moved to flang/runtime under the same #if above as the
+// device alternative to the host version of the functions. This will
+// require hostexec to be available.
+
+uint32_t omp_get_thread_num();
+uint32_t omp_get_num_threads();
+uint32_t omp_get_team_num();
+uint32_t omp_get_num_teams();
+
+#define _EXTRA_ARGS                                                            \
+  omp_get_thread_num(), omp_get_num_threads(), omp_get_team_num(),             \
+      omp_get_num_teams()
+void *_FortranAioBeginExternalListOutput(uint32_t a1, const char *a2,
+                                         uint32_t a3) {
+  void *cookie = (void *)hostexec_fortrt(
+      (void *)_FortranAioBeginExternalListOutput_idx, _EXTRA_ARGS, a1, a2, a3);
+  return cookie;
+}
+bool _FortranAioOutputAscii(void *a1, char *a2, uint64_t a3) {
+  // TODO: must use string length from a3 arg
+  a2[a3 - 1] = (char)0; // loose a char, till we create hostexec_charlen_arg
+                        // that gets length from subsequent arg
+  return (bool)hostexec_fortrt((void *)_FortranAioOutputAscii_idx, _EXTRA_ARGS,
+                               a1, a2, a3);
+}
+bool _FortranAioOutputInteger32(void *a1, uint32_t a2) {
+  return (bool)hostexec_fortrt((void *)_FortranAioOutputInteger32_idx,
+                               _EXTRA_ARGS, a1, a2);
+}
+uint32_t _FortranAioEndIoStatement(void *a1) {
+  return (uint32_t)hostexec_fortrt((void *)_FortranAioEndIoStatement_idx,
+                                   _EXTRA_ARGS, a1);
+}
+bool _FortranAioOutputInteger8(void *cookie, int8_t n) {
+  return (bool)hostexec_fortrt((void *)_FortranAioOutputInteger8_idx,
+                               _EXTRA_ARGS, cookie, n);
+}
+bool _FortranAioOutputInteger16(void *cookie, int16_t n) {
+  return (bool)hostexec_fortrt((void *)_FortranAioOutputInteger16_idx,
+                               _EXTRA_ARGS, cookie, n);
+}
+bool _FortranAioOutputInteger64(void *cookie, int64_t n) {
+  return (bool)hostexec_fortrt((void *)_FortranAioOutputInteger64_idx,
+                               _EXTRA_ARGS, cookie, n);
+}
+bool _FortranAioOutputReal32(void *cookie, float x) {
+  return (bool)hostexec_fortrt((void *)_FortranAioOutputReal32_idx, _EXTRA_ARGS,
+                               cookie, x);
+}
+bool _FortranAioOutputReal64(void *cookie, double x) {
+  return (bool)hostexec_fortrt((void *)_FortranAioOutputReal64_idx, _EXTRA_ARGS,
+                               cookie, x);
+}
+bool _FortranAioOutputComplex32(void *cookie, float re, float im) {
+  return (bool)hostexec_fortrt((void *)_FortranAioOutputComplex32_idx,
+                               _EXTRA_ARGS, cookie, re, im);
+}
+bool _FortranAioOutputComplex64(void *cookie, double re, double im) {
+  return (bool)hostexec_fortrt((void *)_FortranAioOutputComplex64_idx,
+                               _EXTRA_ARGS, cookie, re, im);
+}
+bool _FortranAioOutputLogical(void *cookie, bool barg) {
+  return (bool)hostexec_fortrt((void *)_FortranAioOutputLogical_idx,
+                               _EXTRA_ARGS, cookie, barg);
+}
+void _FortranAAbort() {
+  hostexec_fortrt((void *)_FortranAAbort_idx);
+  // When  host service _FortranAAbort finishes, we must die from the device.
+  __builtin_trap();
+}
+void _FortranAStopStatementText(char *errmsg, int64_t a1, bool a2, bool a3) {
+  // TODO: must use string length from a1 arg
+  errmsg[a1 - 1] = (char)0;
+  hostexec_fortrt((void *)_FortranAStopStatementText_idx, errmsg, a1, a2, a3);
+  __builtin_trap();
+}
+#endif
+
+} // end extern "C"
 #pragma omp end declare target
+#undef _EXTRA_ARGS

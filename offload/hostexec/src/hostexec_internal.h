@@ -107,6 +107,45 @@ enum hostexec_sid {
   HOSTEXEC_SID_LONG,
   HOSTEXEC_SID_FLOAT,
   HOSTEXEC_SID_VOID,
+  HOSTEXEC_SID_FORTRT,
 };
+
+typedef enum fortran_device_rt_idx {
+  _FortranAio_INVALID,
+  _FortranAioBeginExternalListOutput_idx,
+  _FortranAioOutputAscii_idx,
+  _FortranAioOutputInteger32_idx,
+  _FortranAioEndIoStatement_idx,
+  _FortranAioOutputInteger8_idx,
+  _FortranAioOutputInteger16_idx,
+  _FortranAioOutputInteger64_idx,
+  _FortranAioOutputReal32_idx,
+  _FortranAioOutputReal64_idx,
+  _FortranAioOutputComplex32_idx,
+  _FortranAioOutputComplex64_idx,
+  _FortranAioOutputLogical_idx,
+  _FortranAAbort_idx,
+  _FortranAStopStatementText_idx,
+} fortran_device_rt_idx;
+
+extern "C" {
+extern void *_FortranAioBeginExternalListOutput(uint32_t a1, const char *a2,
+                                                uint32_t a3);
+extern bool _FortranAioOutputAscii(void *a1, char *a2, uint64_t a3);
+extern bool _FortranAioOutputInteger32(void *a1, uint32_t a2);
+extern uint32_t _FortranAioEndIoStatement(void *a1);
+extern bool _FortranAioOutputInteger8(void *cookie, __int8_t n);
+extern bool _FortranAioOutputInteger16(void *cookie, __int16_t n);
+extern bool _FortranAioOutputInteger64(void *cookie, __int64_t n);
+extern bool _FortranAioOutputReal32(void *cookie, float x);
+extern bool _FortranAioOutputReal64(void *cookie, double x);
+extern bool _FortranAioOutputComplex32(void *cookie, float re, float im);
+extern bool _FortranAioOutputComplex64(void *cookie, double re, double im);
+extern bool _FortranAioOutputLogical(void *cookie, bool truth);
+extern void _FortranAAbort();
+extern void _FortranAStopStatementText(char *errmsg, int64_t a1, bool a2,
+                                       bool a3);
+
+} // end of extern "C"
 
 #endif // __HOSTEXEC_INTERNAL_H__
