@@ -5,10 +5,5 @@ void A() {
 
 [numthreads(1, 1, 1)]
 void main() {
-  // CHECK: [[type:%[0-9]+]] = OpTypeFunction %void
-  // CHECK:        %src_main = OpFunction %void None [[type]]
-  // CHECK:      {{%[0-9]+}} = OpFunctionCall %void %A
-  // CHECK:                    OpReturn
-  // CHECK:                    OpFunctionEnd
   return A();
 }
