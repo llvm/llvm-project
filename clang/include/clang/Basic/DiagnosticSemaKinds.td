@@ -11636,6 +11636,8 @@ def err_omp_inscan_reduction_expected : Error<
   "expected 'reduction' clause with the 'inscan' modifier">;
 def note_omp_previous_inscan_reduction : Note<
   "'reduction' clause with 'inscan' modifier is used here">;
+def err_omp_multivar_xteam_scan_unsupported : Error<
+  "multiple list items are not yet supported with the 'inclusive' or the 'exclusive' clauses that appear with the 'scan' directive">;  
 def err_omp_expected_predefined_allocator : Error<
   "expected one of the predefined allocators for the variables with the static "
   "storage: 'omp_default_mem_alloc', 'omp_large_cap_mem_alloc', "

@@ -3793,6 +3793,11 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
   else
     GenerateArg(Consumer, OPT_fno_openmp_target_multi_device);
 
+  if (Opts.OpenMPTargetXteamScan)
+    GenerateArg(Consumer, OPT_fopenmp_target_xteam_scan);
+  else
+    GenerateArg(Consumer, OPT_fno_openmp_target_xteam_scan);
+
   if (Opts.OpenMPThreadSubscription)
     GenerateArg(Consumer, OPT_fopenmp_assume_threads_oversubscription);
 
@@ -4324,6 +4329,10 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
   // Multi-device kernels always run in fast xteam reduction mode:
   if (Opts.OpenMPTargetMultiDevice)
     Opts.OpenMPTargetFastReduction = true;
+
+  Opts.OpenMPTargetXteamScan =
+      Args.hasFlag(options::OPT_fopenmp_target_xteam_scan,
+                   options::OPT_fno_openmp_target_xteam_scan, false);
 
   Opts.OpenMPKernelIO =
       Args.hasFlag(options::OPT_fopenmp_allow_kernel_io,

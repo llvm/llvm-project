@@ -2863,6 +2863,81 @@ llvm::Value *CGOpenMPRuntimeGPU::getXteamRedSum(
   llvm_unreachable("No support for other types currently.");
 }
 
+llvm::Value *CGOpenMPRuntimeGPU::getXteamScanSum(
+    CodeGenFunction &CGF, llvm::Value *Val, llvm::Value *SumPtr,
+    llvm::Value *DTeamVals, llvm::Value *DTeamsDonePtr,
+    llvm::Value *DScanStorage, llvm::Value *ThreadStartIndex,
+    llvm::Value *NumTeams, int BlockSize, bool IsFast) {
+  // TODO handle more types
+  llvm::Type *SumType = Val->getType();
+  assert(
+      (SumType->isIntegerTy() && (SumType->getPrimitiveSizeInBits() == 32 ||
+                                  SumType->getPrimitiveSizeInBits() == 64)) &&
+      "Unhandled type");
+
+  llvm::Type *Int32Ty = llvm::Type::getInt32Ty(CGM.getLLVMContext());
+  llvm::Type *Int64Ty = llvm::Type::getInt64Ty(CGM.getLLVMContext());
+
+  std::pair<llvm::Value *, llvm::Value *> RfunPair =
+      getXteamRedFunctionPtrs(CGF, SumType);
+  llvm::Value *ZeroVal = SumType->getPrimitiveSizeInBits() == 32
+                             ? llvm::ConstantInt::get(Int32Ty, 0)
+                             : llvm::ConstantInt::get(Int64Ty, 0);
+
+  // TODO: The argument 'SumPtr' is useless for Xteam Scan. Plan to get rid of
+  // it in the future from both here and the DeviceRTL implementation.
+  llvm::Value *Args[] = {Val,
+                         DScanStorage,
+                         SumPtr,
+                         DTeamVals,
+                         DTeamsDonePtr,
+                         RfunPair.first,
+                         RfunPair.second,
+                         ZeroVal,
+                         ThreadStartIndex,
+                         NumTeams};
+
+  unsigned WarpSize = CGF.getTarget().getGridValue().GV_Warp_Size;
+  assert(WarpSize == 32 || WarpSize == 64);
+
+  assert(BlockSize > 0 && BlockSize <= llvm::omp::xteam_red::MaxBlockSize &&
+         "XTeam Reduction blocksize outside expected range");
+  assert(((BlockSize & (BlockSize - 1)) == 0) &&
+         "XTeam Reduction blocksize must be a power of two");
+
+  if (SumType->isIntegerTy()) {
+    if (WarpSize == 64) {
+      if (BlockSize == 512)
+        return CGF.EmitRuntimeCall(
+            OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(),
+                                                  OMPRTL___kmpc_xteams_i_8x64),
+            Args);
+      else if (BlockSize == 256)
+        return CGF.EmitRuntimeCall(
+            OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(),
+                                                  OMPRTL___kmpc_xteams_i_4x64),
+            Args);
+      else
+        llvm_unreachable("Block size should be 256 or 512.");
+    } else if (WarpSize == 32) {
+      if (BlockSize == 512)
+        return CGF.EmitRuntimeCall(
+            OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(),
+                                                  OMPRTL___kmpc_xteams_i_16x32),
+            Args);
+      else if (BlockSize == 256)
+        return CGF.EmitRuntimeCall(
+            OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(),
+                                                  OMPRTL___kmpc_xteams_i_8x32),
+            Args);
+      else
+        llvm_unreachable("Block size should be 256 or 512.");
+    } else
+      llvm_unreachable("Warp size should be 32 or 64.");
+  }
+  llvm_unreachable("No support for other types currently.");
+}
+
 bool CGOpenMPRuntimeGPU::needsHintsForFastFPAtomics() {
   return getOffloadArch(CGM) == OffloadArch::GFX90a;
 }

@@ -663,6 +663,11 @@ __OMP_RTL(__kmpc_xteamr_l_32x32_fast_sum, false, Void, Int64, Int64Ptr, Int64Ptr
 __OMP_RTL(__llvm_profile_register_function, false, Void, VoidPtr)
 __OMP_RTL(__llvm_profile_register_names_function, false, Void, VoidPtr, Int64)
 
+__OMP_RTL(__kmpc_xteams_i_4x64, false, Void, Int32, Int32Ptr, Int32Ptr, Int32Ptr, Int32Ptr, VoidPtr, VoidPtr, Int32, Int64, Int32)
+__OMP_RTL(__kmpc_xteams_i_8x64, false, Void, Int32, Int32Ptr, Int32Ptr, Int32Ptr, Int32Ptr, VoidPtr, VoidPtr, Int32, Int64, Int32)
+__OMP_RTL(__kmpc_xteams_i_8x32, false, Void, Int32, Int32Ptr, Int32Ptr, Int32Ptr, Int32Ptr, VoidPtr, VoidPtr, Int32, Int64, Int32)
+__OMP_RTL(__kmpc_xteams_i_16x32, false, Void, Int32, Int32Ptr, Int32Ptr, Int32Ptr, Int32Ptr, VoidPtr, VoidPtr, Int32, Int64, Int32)
+
 __OMP_RTL(__last, false, Void, )
 
 #undef __OMP_RTL

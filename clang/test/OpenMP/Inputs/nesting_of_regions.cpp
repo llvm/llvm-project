@@ -9271,7 +9271,7 @@ void foo() {
   }
 #pragma omp target teams distribute parallel for
   for (int i = 0; i < 10; ++i) {
-#pragma omp scan // expected-error {{region cannot be closely nested inside 'target teams distribute parallel for' region}}
+#pragma omp scan // omp45-error {{region cannot be closely nested inside 'target teams distribute parallel for' region}} omp50-error {{exactly one of 'inclusive' or 'exclusive' clauses is expected}} omp51-error {{exactly one of 'inclusive' or 'exclusive' clauses is expected}} 
     bar();
   }
 #pragma omp target teams distribute parallel for
@@ -18547,7 +18547,7 @@ void foo() {
   }
 #pragma omp target teams distribute parallel for
   for (int i = 0; i < 10; ++i) {
-#pragma omp scan // expected-error {{region cannot be closely nested inside 'target teams distribute parallel for' region}}
+#pragma omp scan // omp45-error {{region cannot be closely nested inside 'target teams distribute parallel for' region}} omp50-error {{exactly one of 'inclusive' or 'exclusive' clauses is expected}} omp51-error {{exactly one of 'inclusive' or 'exclusive' clauses is expected}} 
     bar();
   }
 #pragma omp target teams distribute parallel for

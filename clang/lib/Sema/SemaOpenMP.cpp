@@ -5404,8 +5404,10 @@ static bool checkNestingOfRegions(Sema &SemaRef, const DSAStackTy *Stack,
       // simd, or for simd. This has to take into account combined directives.
       // In 5.2 this seems to be implied by the fact that the specified
       // separated constructs are do, for, and simd.
-      NestingProhibited = !llvm::is_contained(
-          {OMPD_for, OMPD_simd, OMPD_for_simd}, EnclosingConstruct);
+      NestingProhibited =
+          !llvm::is_contained({OMPD_for, OMPD_simd, OMPD_for_simd},
+                              EnclosingConstruct) &&
+          ParentRegion != OMPD_target_teams_distribute_parallel_for;
     } else {
       NestingProhibited = true;
     }
@@ -19567,7 +19569,9 @@ OMPClause *SemaOpenMP::ActOnOpenMPReductionClause(
        DSAStack->getCurrentDirective() != OMPD_for_simd &&
        DSAStack->getCurrentDirective() != OMPD_simd &&
        DSAStack->getCurrentDirective() != OMPD_parallel_for &&
-       DSAStack->getCurrentDirective() != OMPD_parallel_for_simd)) {
+       DSAStack->getCurrentDirective() != OMPD_parallel_for_simd &&
+       DSAStack->getCurrentDirective() !=
+           OMPD_target_teams_distribute_parallel_for)) {
     Diag(ModifierLoc, diag::err_omp_wrong_inscan_reduction);
     return nullptr;
   }
@@ -23733,6 +23737,11 @@ OMPClause *SemaOpenMP::ActOnOpenMPInclusiveClause(ArrayRef<Expr *> VarList,
     Expr *SimpleRefExpr = RefExpr;
     auto Res = getPrivateItem(SemaRef, SimpleRefExpr, ELoc, ERange,
                               /*AllowArraySection=*/true);
+    if (!Vars.empty() && DSAStack->getParentDirective() ==
+                             OMPD_target_teams_distribute_parallel_for) {
+      Diag(ELoc, diag::err_omp_multivar_xteam_scan_unsupported)
+          << RefExpr->getSourceRange();
+    }
     if (Res.second)
       // It will be analyzed later.
       Vars.push_back(RefExpr);
@@ -23774,6 +23783,11 @@ OMPClause *SemaOpenMP::ActOnOpenMPExclusiveClause(ArrayRef<Expr *> VarList,
     Expr *SimpleRefExpr = RefExpr;
     auto Res = getPrivateItem(SemaRef, SimpleRefExpr, ELoc, ERange,
                               /*AllowArraySection=*/true);
+    if (!Vars.empty() && DSAStack->getParentDirective() ==
+                             OMPD_target_teams_distribute_parallel_for) {
+      Diag(ELoc, diag::err_omp_multivar_xteam_scan_unsupported)
+          << RefExpr->getSourceRange();
+    }
     if (Res.second)
       // It will be analyzed later.
       Vars.push_back(RefExpr);

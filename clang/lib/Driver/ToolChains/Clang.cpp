@@ -6943,6 +6943,11 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       else
         CmdArgs.push_back("-fno-openmp-target-multi-device");
 
+      if (Args.hasFlag(options::OPT_fopenmp_target_xteam_scan,
+                       options::OPT_fno_openmp_target_xteam_scan, false))
+        CmdArgs.push_back("-fopenmp-target-xteam-scan");
+      else
+        CmdArgs.push_back("-fno-openmp-target-xteam-scan");
       // When in OpenMP offloading mode with NVPTX target, forward
       // cuda-mode flag
       if (Args.hasFlag(options::OPT_fopenmp_cuda_mode,

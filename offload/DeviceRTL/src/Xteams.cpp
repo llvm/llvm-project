@@ -104,6 +104,7 @@ __attribute__((flatten, always_inline)) void _xteam_scan(
     void (*_rf_lds)(__XTEAM_SHARED_LDS T *, __XTEAM_SHARED_LDS T *),
     const T rnv, const uint64_t k, const uint32_t NumTeams) {
 
+  storage[k] = val;
   // More efficient to derive these constants than get from mapped API
   constexpr uint32_t _NT = _NW * _WSZ;      // number of threads within a team
   const uint32_t omp_thread_num = k % _NT;  // thread ID within a team

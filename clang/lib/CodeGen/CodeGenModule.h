@@ -443,6 +443,9 @@ private:
   /// Used by emitParallelCall
   bool isSPMDExecutionMode = false;
 
+  /// Used by Xteam Scan Codegen
+  bool isXteamScanCandidate = false;
+
   mutable std::unique_ptr<TargetCodeGenInfo> TheTargetCodeGenInfo;
 
   // This should not be moved earlier, since its initialization depends on some
@@ -468,7 +471,6 @@ private:
 
   /// Statement for which Xteam reduction code is being generated currently
   const Stmt *CurrentXteamRedStmt = nullptr;
-
   // Map associated statement from top-level to innermost level for optimized
   // kernels.
   Stmt2StmtMap OptKernelNestMap;
@@ -779,6 +781,9 @@ public:
   ~CodeGenModule();
 
   void clear();
+  bool isXteamScanPhaseOne = true;
+  llvm::SmallVector<llvm::Value *, 8> ReductionVars;
+  const OMPExecutableDirective *OMPPresentScanDirective = nullptr;
 
   /// Finalize LLVM code generation.
   void Release();
@@ -1847,6 +1852,10 @@ public:
 
   bool isFastXteamSumReduction() {
     return getLangOpts().OpenMPTargetFastReduction;
+  }
+
+  bool isXteamScanKernel() {
+    return getLangOpts().OpenMPTargetXteamScan && isXteamScanCandidate;
   }
 
   /// If we are able to generate a NoLoop kernel for this directive, return

@@ -8161,7 +8161,10 @@ public:
       IsAtTopLevel = false;
       // Not a binary operator, so not supported at this point. So ensure no
       // reduction variable is accessed.
-      if (CGM.hasXteamRedVar(cast<DeclRefExpr>(S), RedMap)) {
+      // Disable this check for Xteam scan because the RedVar could be being
+      // read in form of RHS of a binary operator
+      if (CGM.hasXteamRedVar(cast<DeclRefExpr>(S), RedMap) &&
+          !CGM.isXteamScanKernel()) {
         IsSupported = false;
         return;
       }
@@ -8836,6 +8839,8 @@ CodeGenModule::collectXteamRedVars(const OptKernelNestDirectives &NestDirs) {
   // Either we emit Xteam code for all reduction variables or none at all
   for (auto &D : NestDirs) {
     for (const auto *C : D->getClausesOfKind<OMPReductionClause>()) {
+      if (C->getModifier() == OMPC_REDUCTION_inscan)
+        isXteamScanCandidate = true;
       for (const Expr *Ref : C->varlist()) {
         // Only scalar variables supported today
         if (!isa<DeclRefExpr>(Ref))

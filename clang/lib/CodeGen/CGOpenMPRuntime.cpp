@@ -9464,7 +9464,13 @@ static void emitTargetCallKernelLaunch(
     CodeGenModule::XteamRedVarMap &XteamRVM = CGF.CGM.getXteamRedVarMap(FStmt);
     auto &XteamOrdVars = CGF.CGM.getXteamOrderedRedVar(FStmt);
 
-    assert((CapturedVars.size() == CapturedCount + 2 * XteamRVM.size()) &&
+    // The Xteam Reduction kernels require two helper variables - `team_vals`
+    // array and `teams_done_ptr`.
+    // The Xteam Scan Reduction kernels require a third helper variable - 
+    // `scan_storage` array.
+    int ExpectedNumArgs = CGF.CGM.isXteamScanKernel() ? 3 : 2;
+    assert((CapturedVars.size() ==
+            CapturedCount + ExpectedNumArgs * XteamRVM.size()) &&
            "Unexpected number of captured vars");
 
     // Needed for processing the xteam reduction var pairs:
@@ -9526,103 +9532,147 @@ static void emitTargetCallKernelLaunch(
     // reduction variables.
     size_t ArgPos = 0;
     size_t RedVarCount = 0;
-    for (; CapturedCount + ArgPos < CapturedVars.size();) {
-      // Process the pair of captured variables:
-      llvm::Value *DTeamValsInst = nullptr;
+    if (CGF.CGM.isXteamScanKernel() && !CGF.CGM.isXteamScanPhaseOne) {
+      // For the Phase 2 of the Xteam Scan codegen, fresh memory allocation for
+      // reduction helper data structures is not needed. The helpers generated
+      // during the Phase 1 will be re-used here.
+      assert(CGF.CGM.ReductionVars.size() == 3 &&
+             "Xteam Scan reduction code-generates three helper variables");
+      addXTeamReductionComponentHelper(
+          CGF, CombinedInfo, CGF.CGM.ReductionVars[0]); // team_vals
+      addXTeamReductionComponentHelper(
+          CGF, CombinedInfo, CGF.CGM.ReductionVars[1]); // teams_done_ptr
+      addXTeamReductionComponentHelper(
+          CGF, CombinedInfo, CGF.CGM.ReductionVars[2]); // scan_storage
+    } else {
+      for (; CapturedCount + ArgPos < CapturedVars.size();) {
+        // Process the pair of captured variables:
+        llvm::Value *DTeamValsInst = nullptr;
+        llvm::Value *DScanStorageInst = nullptr;
 
-      assert(CapturedCount + ArgPos < CapturedVars.size() &&
-             "Xteam reduction argument position out of bounds");
-      assert(RedVarCount < XteamOrdVars.size() &&
-             "Reduction variable count out of bounds");
-      const VarDecl *UserRedVar = XteamOrdVars[RedVarCount];
-      assert(XteamRVM.find(UserRedVar) != XteamRVM.end() &&
-             "Reduction variable not found in metadata");
-      auto RedVarQualType =
-          XteamRVM.find(UserRedVar)->second.RedVarExpr->getType();
-      llvm::Type *RedVarType = CGF.ConvertTypeForMem(RedVarQualType);
+        assert(CapturedCount + ArgPos < CapturedVars.size() &&
+               "Xteam reduction argument position out of bounds");
+        assert(RedVarCount < XteamOrdVars.size() &&
+               "Reduction variable count out of bounds");
+        const VarDecl *UserRedVar = XteamOrdVars[RedVarCount];
+        assert(XteamRVM.find(UserRedVar) != XteamRVM.end() &&
+               "Reduction variable not found in metadata");
+        auto RedVarQualType =
+            XteamRVM.find(UserRedVar)->second.RedVarExpr->getType();
+        llvm::Type *RedVarType = CGF.ConvertTypeForMem(RedVarQualType);
 
-      const ASTContext &Context = CGM.getContext();
-      if (IsXteamRedFast) {
-        // Placeholder for d_team_vals initialized to nullptr
-        DTeamValsInst =
-            CGF.Builder.CreateAlloca(RedVarType, nullptr, "d_team_vals");
-        Address DTeamValsAddr(DTeamValsInst, RedVarType,
-                              Context.getTypeAlignInChars(RedVarQualType));
-        llvm::Value *NullPtrDTeamVals =
-            llvm::ConstantPointerNull::get(RedVarType->getPointerTo());
-        CGF.Builder.CreateStore(NullPtrDTeamVals, DTeamValsAddr);
-      } else {
-        // dteam_vals = omp_target_alloc(sizeof(red-type) * num_teams, devid)
-        llvm::Value *RedVarTySz = llvm::ConstantInt::get(
-            CGF.Int64Ty,
-            CGF.CGM.getDataLayout().getTypeSizeInBits(RedVarType) / 8);
-        assert((XteamRedNumTeamsFromClauseVal != nullptr ||
-                XteamRedNumTeamsFromOccupancy != nullptr) &&
-               "Number of teams cannot be null");
-        llvm::Value *DTeamValsSz = CGF.Builder.CreateMul(
-            RedVarTySz,
-            XteamRedNumTeamsFromClauseVal ? XteamRedNumTeamsFromClauseVal
-                                          : XteamRedNumTeamsFromOccupancy,
-            "d_team_vals_sz");
-        llvm::Value *TgtAllocArgs[] = {DTeamValsSz, DevIdVal};
-        DTeamValsInst = CGF.EmitRuntimeCall(
-            OMPBuilder.getOrCreateRuntimeFunction(CGF.CGM.getModule(),
-                                                  OMPRTL_omp_target_alloc),
-            TgtAllocArgs, "d_team_vals");
+        const ASTContext &Context = CGM.getContext();
+        if (IsXteamRedFast) {
+          // Placeholder for d_team_vals initialized to nullptr
+          DTeamValsInst =
+              CGF.Builder.CreateAlloca(RedVarType, nullptr, "d_team_vals");
+          Address DTeamValsAddr(DTeamValsInst, RedVarType,
+                                Context.getTypeAlignInChars(RedVarQualType));
+          llvm::Value *NullPtrDTeamVals =
+              llvm::ConstantPointerNull::get(RedVarType->getPointerTo());
+          CGF.Builder.CreateStore(NullPtrDTeamVals, DTeamValsAddr);
+        } else {
+          // dteam_vals = omp_target_alloc(sizeof(red-type) * num_teams, devid)
+          llvm::Value *RedVarTySz = llvm::ConstantInt::get(
+              CGF.Int64Ty,
+              CGF.CGM.getDataLayout().getTypeSizeInBits(RedVarType) / 8);
+          assert((XteamRedNumTeamsFromClauseVal != nullptr ||
+                  XteamRedNumTeamsFromOccupancy != nullptr) &&
+                 "Number of teams cannot be null");
+          llvm::Value *DTeamValsSz = CGF.Builder.CreateMul(
+              RedVarTySz,
+              XteamRedNumTeamsFromClauseVal ? XteamRedNumTeamsFromClauseVal
+                                            : XteamRedNumTeamsFromOccupancy,
+              "d_team_vals_sz");
+          llvm::Value *TgtAllocArgs[] = {DTeamValsSz, DevIdVal};
+          DTeamValsInst = CGF.EmitRuntimeCall(
+              OMPBuilder.getOrCreateRuntimeFunction(CGF.CGM.getModule(),
+                                                    OMPRTL_omp_target_alloc),
+              TgtAllocArgs, "d_team_vals");
+
+          if (CGF.CGM.isXteamScanKernel()) {
+            // d_scan_storage = omp_target_alloc(sizeof(red-type) * (2*num_teams*num_threads + 1), devid)
+            llvm::Value *TotalNumThreads = CGF.Builder.CreateMul(
+                XteamRedNumTeamsFromClauseVal ? XteamRedNumTeamsFromClauseVal
+                                              : XteamRedNumTeamsFromOccupancy,
+                CGF.Builder.CreateIntCast(
+                    OMPRuntime->emitNumThreadsForTargetDirective(CGF, D),
+                    CGF.Int64Ty, false),
+                "total_num_threads");
+            llvm::Value *StorageSize = CGF.Builder.CreateAdd(
+                CGF.Builder.CreateMul(TotalNumThreads,
+                                      llvm::ConstantInt::get(CGF.Int64Ty, 2)),
+                llvm::ConstantInt::get(CGF.Int64Ty, 1), "storage_size");
+            llvm::Value *DScanStorageSz = CGF.Builder.CreateMul(
+                RedVarTySz, StorageSize, "d_scan_storage_sz");
+            llvm::Value *TgtAllocArgsScan[] = {DScanStorageSz, DevIdVal};
+            DScanStorageInst = CGF.EmitRuntimeCall(
+                OMPBuilder.getOrCreateRuntimeFunction(CGF.CGM.getModule(),
+                                                      OMPRTL_omp_target_alloc),
+                TgtAllocArgsScan, "d_scan_storage");
+          }
+        }
+        CGF.CGM.ReductionVars.push_back(DTeamValsInst);
+        addXTeamReductionComponentHelper(CGF, CombinedInfo, DTeamValsInst);
+
+        // Advance to the next reduction variable in the pair:
+        ++ArgPos;
+
+        llvm::Value *DTeamsDonePtrInst = nullptr;
+        if (IsXteamRedFast) {
+          // Placeholder for d_teams_done_ptr initialized to nullptr
+          DTeamsDonePtrInst = CGF.Builder.CreateAlloca(CGF.Int32Ty, nullptr,
+                                                       "d_teams_done_ptr");
+          Address DTeamsDoneAddr(
+              DTeamsDonePtrInst, CGF.Int32Ty,
+              Context.getTypeAlignInChars(Context.UnsignedIntTy));
+          llvm::Value *NullPtrDTeamsDone =
+              llvm::ConstantPointerNull::get(CGF.Int32Ty->getPointerTo());
+          CGF.Builder.CreateStore(NullPtrDTeamsDone, DTeamsDoneAddr);
+        } else {
+          // uint32 teams_done = 0
+          Address TeamsDoneAddr(
+              CapturedVars[CapturedCount + ArgPos], CGF.Int32Ty,
+              CGF.getContext().getTypeAlignInChars(CGF.getContext().IntTy));
+          CGF.Builder.CreateStore(Int32Zero, TeamsDoneAddr);
+
+          // d_teams_done_ptr = omp_target_alloc(4, devid)
+          llvm::Value *IntTySz = llvm::ConstantInt::get(CGF.Int64Ty, 4);
+          llvm::Value *DTeamsDonePtrArgs[] = {IntTySz, DevIdVal};
+          DTeamsDonePtrInst = CGF.EmitRuntimeCall(
+              OMPBuilder.getOrCreateRuntimeFunction(CGF.CGM.getModule(),
+                                                    OMPRTL_omp_target_alloc),
+              DTeamsDonePtrArgs, "d_teams_done_ptr");
+
+          // omp_target_memcpy(d_teams_done_ptr, &teams_done, 4 /*sizeof(uint32_t)
+          // */, 0 /* offset */, 0 /* offset */, devid, initial_devid)
+          llvm::Value *DTeamsDoneMemcpyArgs[] = {
+              DTeamsDonePtrInst,
+              TeamsDoneAddr.emitRawPointer(CGF),
+              /*sizeof(uint32_t)=*/llvm::ConstantInt::get(CGF.Int64Ty, 4),
+              /*dst_offset=*/llvm::ConstantInt::get(CGF.Int64Ty, 0),
+              /*src_offset=*/llvm::ConstantInt::get(CGF.Int64Ty, 0),
+              DevIdVal,
+              InitialDevInst};
+          CGF.EmitRuntimeCall(
+              OMPBuilder.getOrCreateRuntimeFunction(CGF.CGM.getModule(),
+                                                    OMPRTL_omp_target_memcpy),
+              DTeamsDoneMemcpyArgs);
+        }
+        CGF.CGM.ReductionVars.push_back(DTeamsDonePtrInst);
+        addXTeamReductionComponentHelper(CGF, CombinedInfo, DTeamsDonePtrInst);
+
+        if (CGF.CGM.isXteamScanKernel()) {
+          // Advance to the next reduction variable in the pair:
+          ++ArgPos;
+          CGF.CGM.ReductionVars.push_back(DScanStorageInst);
+          addXTeamReductionComponentHelper(CGF, CombinedInfo, DScanStorageInst);
+        }
+        // Advance to the next reduction variable in the pair:
+        ++ArgPos;
+
+        ++RedVarCount;
       }
-      ReductionVars.push_back(DTeamValsInst);
-      addXTeamReductionComponentHelper(CGF, CombinedInfo, DTeamValsInst);
-
-      // Advance to the next reduction variable in the pair:
-      ++ArgPos;
-
-      llvm::Value *DTeamsDonePtrInst = nullptr;
-      if (IsXteamRedFast) {
-        // Placeholder for d_teams_done_ptr initialized to nullptr
-        DTeamsDonePtrInst =
-            CGF.Builder.CreateAlloca(CGF.Int32Ty, nullptr, "d_teams_done_ptr");
-        Address DTeamsDoneAddr(
-            DTeamsDonePtrInst, CGF.Int32Ty,
-            Context.getTypeAlignInChars(Context.UnsignedIntTy));
-        llvm::Value *NullPtrDTeamsDone =
-            llvm::ConstantPointerNull::get(CGF.Int32Ty->getPointerTo());
-        CGF.Builder.CreateStore(NullPtrDTeamsDone, DTeamsDoneAddr);
-      } else {
-        // uint32 teams_done = 0
-        Address TeamsDoneAddr(
-            CapturedVars[CapturedCount + ArgPos], CGF.Int32Ty,
-            CGF.getContext().getTypeAlignInChars(CGF.getContext().IntTy));
-        CGF.Builder.CreateStore(Int32Zero, TeamsDoneAddr);
-
-        // d_teams_done_ptr = omp_target_alloc(4, devid)
-        llvm::Value *IntTySz = llvm::ConstantInt::get(CGF.Int64Ty, 4);
-        llvm::Value *DTeamsDonePtrArgs[] = {IntTySz, DevIdVal};
-        DTeamsDonePtrInst = CGF.EmitRuntimeCall(
-            OMPBuilder.getOrCreateRuntimeFunction(CGF.CGM.getModule(),
-                                                  OMPRTL_omp_target_alloc),
-            DTeamsDonePtrArgs, "d_teams_done_ptr");
-
-        // omp_target_memcpy(d_teams_done_ptr, &teams_done, 4 /*sizeof(uint32_t)
-        // */, 0 /* offset */, 0 /* offset */, devid, initial_devid)
-        llvm::Value *DTeamsDoneMemcpyArgs[] = {
-            DTeamsDonePtrInst,
-            TeamsDoneAddr.emitRawPointer(CGF),
-            /*sizeof(uint32_t)=*/llvm::ConstantInt::get(CGF.Int64Ty, 4),
-            /*dst_offset=*/llvm::ConstantInt::get(CGF.Int64Ty, 0),
-            /*src_offset=*/llvm::ConstantInt::get(CGF.Int64Ty, 0),
-            DevIdVal,
-            InitialDevInst};
-        CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
-                                CGF.CGM.getModule(), OMPRTL_omp_target_memcpy),
-                            DTeamsDoneMemcpyArgs);
-      }
-      ReductionVars.push_back(DTeamsDonePtrInst);
-      addXTeamReductionComponentHelper(CGF, CombinedInfo, DTeamsDonePtrInst);
-
-      // Advance to the next reduction variable in the pair:
-      ++ArgPos;
-
-      ++RedVarCount;
     }
   }
 
@@ -9726,14 +9776,16 @@ static void emitTargetCallKernelLaunch(
     OMPRuntime->emitInlinedDirective(CGF, D.getDirectiveKind(), ThenGen);
 
   if (HasXTeamReduction) {
-    if (!CGF.CGM.isXteamRedFast(FStmt)) {
+    if (!CGF.CGM.isXteamRedFast(FStmt) &&
+        !(CGF.CGM.isXteamScanKernel() && CGF.CGM.isXteamScanPhaseOne)) {
       // Deallocate XTeam reduction variables:
-      for (uint32_t I = 0; I < ReductionVars.size(); ++I) {
-        llvm::Value *FreeArgs[] = {ReductionVars[I], DevIdVal};
+      for (uint32_t I = 0; I < CGF.CGM.ReductionVars.size(); ++I) {
+        llvm::Value *FreeArgs[] = {CGF.CGM.ReductionVars[I], DevIdVal};
         CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
                                 CGF.CGM.getModule(), OMPRTL_omp_target_free),
                             FreeArgs);
       }
+      CGF.CGM.ReductionVars.clear();
     }
   }
 }
@@ -9891,6 +9943,10 @@ void CGOpenMPRuntime::scanForTargetRegionsFunctions(const Stmt *S,
       CodeGenFunction::EmitOMPTargetTeamsDistributeParallelForDeviceFunction(
           CGM, ParentName,
           cast<OMPTargetTeamsDistributeParallelForDirective>(E));
+      if (CGM.isXteamScanKernel() && !CGM.isXteamScanPhaseOne)
+        CodeGenFunction::EmitOMPTargetTeamsDistributeParallelForDeviceFunction(
+            CGM, ParentName,
+            cast<OMPTargetTeamsDistributeParallelForDirective>(E));
       break;
     case OMPD_target_teams_distribute_parallel_for_simd:
       CodeGenFunction::

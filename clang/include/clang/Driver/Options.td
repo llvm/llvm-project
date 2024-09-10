@@ -3734,6 +3734,14 @@ def fno_openmp_target_fast_reduction : Flag<["-"], "fno-openmp-target-fast-reduc
   Flags<[NoArgumentUnused, HelpHidden]>, Visibility<[ClangOption, CC1Option, FlangOption]>,
   HelpText<"Do not use the fast reduction code generation technique">,
   MarshallingInfoFlag<LangOpts<"OpenMPTargetFastReduction">>;
+def fopenmp_target_xteam_scan : Flag<["-"], "fopenmp-target-xteam-scan">, Group<f_Group>, 
+  Flags<[NoArgumentUnused, HelpHidden]>, Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Use the cross-team scan code generation technique.">,
+  MarshallingInfoFlag<LangOpts<"OpenMPTargetXteamScan">>;
+def fno_openmp_target_xteam_scan : Flag<["-"], "fno-openmp-target-xteam-scan">, Group<f_Group>, 
+  Flags<[NoArgumentUnused, HelpHidden]>, Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Do not use the cross-team scan code generation technique.">,
+  MarshallingInfoFlag<LangOpts<"OpenMPTargetXteamScan">>;
 def fopenmp_target_multi_device : Flag<["-"], "fopenmp-target-multi-device">, Group<f_Group>,
   Flags<[NoArgumentUnused, HelpHidden]>, Visibility<[ClangOption, CC1Option, FlangOption]>,
   HelpText<"Enable code generation to emit support for multi device target region execution">,
