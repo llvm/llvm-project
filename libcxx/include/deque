@@ -2594,7 +2594,7 @@ inline constexpr bool __format::__enable_insertable<std::deque<wchar_t>> = true;
 
 #endif // _LIBCPP_STD_VER >= 20
 
-_LIBCPP_CHECK_CONTAINER_VALUE_TYPE_REQUIREMENTS(deque);
+_LIBCPP_DEFINE__CONTAINER_VALUE_TYPE_REQUIREMENTS(deque);
 
 _LIBCPP_END_NAMESPACE_STD
 

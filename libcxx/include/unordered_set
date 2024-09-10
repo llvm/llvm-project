@@ -904,7 +904,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI void reserve(size_type __n) { __table_.__reserve_unique(__n); }
 };
 
-_LIBCPP_CHECK_CONTAINER_VALUE_TYPE_REQUIREMENTS(unordered_set);
+_LIBCPP_DEFINE__CONTAINER_VALUE_TYPE_REQUIREMENTS(unordered_set);
 
 #if _LIBCPP_STD_VER >= 17
 template <class _InputIterator,
@@ -1505,7 +1505,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI void reserve(size_type __n) { __table_.__reserve_multi(__n); }
 };
 
-_LIBCPP_CHECK_CONTAINER_VALUE_TYPE_REQUIREMENTS(unordered_multiset);
+_LIBCPP_DEFINE__CONTAINER_VALUE_TYPE_REQUIREMENTS(unordered_multiset);
 
 #if _LIBCPP_STD_VER >= 17
 template <class _InputIterator,

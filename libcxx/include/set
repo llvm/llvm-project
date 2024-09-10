@@ -894,7 +894,7 @@ public:
 #endif
 };
 
-_LIBCPP_CHECK_CONTAINER_VALUE_TYPE_REQUIREMENTS(set);
+_LIBCPP_DEFINE__CONTAINER_VALUE_TYPE_REQUIREMENTS(set);
 
 #if _LIBCPP_STD_VER >= 17
 template <class _InputIterator,
@@ -1355,7 +1355,7 @@ public:
 #endif
 };
 
-_LIBCPP_CHECK_CONTAINER_VALUE_TYPE_REQUIREMENTS(multiset);
+_LIBCPP_DEFINE__CONTAINER_VALUE_TYPE_REQUIREMENTS(multiset);
 
 #if _LIBCPP_STD_VER >= 17
 template <class _InputIterator,

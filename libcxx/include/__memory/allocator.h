@@ -168,7 +168,7 @@ inline _LIBCPP_HIDE_FROM_ABI bool operator!=(const allocator<_Tp>&, const alloca
 
 #endif
 
-_LIBCPP_CHECK_ALLOCATOR_VALUE_TYPE_REQUIREMENTS(allocator, "allocate");
+_LIBCPP_DEFINE__ALLOCATOR_VALUE_TYPE_REQUIREMENTS(allocator, "allocate");
 
 _LIBCPP_END_NAMESPACE_STD
 

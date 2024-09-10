@@ -596,7 +596,7 @@ private:
   _LIBCPP_HIDE_FROM_ABI void __move_assign_alloc(__list_imp&, false_type) _NOEXCEPT {}
 };
 
-_LIBCPP_CHECK_CONTAINER_VALUE_TYPE_REQUIREMENTS(list);
+_LIBCPP_DEFINE__CONTAINER_VALUE_TYPE_REQUIREMENTS(list);
 
 // Unlink nodes [__f, __l]
 template <class _Tp, class _Alloc>

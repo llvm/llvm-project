@@ -1022,7 +1022,7 @@ private:
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __move_assign_alloc(vector&, false_type) _NOEXCEPT {}
 };
 
-_LIBCPP_CHECK_CONTAINER_VALUE_TYPE_REQUIREMENTS(vector);
+_LIBCPP_DEFINE__CONTAINER_VALUE_TYPE_REQUIREMENTS(vector);
 
 #if _LIBCPP_STD_VER >= 17
 template <class _InputIterator,

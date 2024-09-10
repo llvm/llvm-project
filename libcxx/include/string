@@ -753,7 +753,7 @@ struct __init_with_sentinel_tag {};
 template <class _CharT, class _Traits, class _Allocator>
 class basic_string {
 private:
-  // This is_array check precedes _LIBCPP_CHECK_CONTAINER_VALUE_TYPE_REQUIREMENTS since basic_string
+  // This is_array check precedes _LIBCPP_DEFINE__CONTAINER_VALUE_TYPE_REQUIREMENTS since basic_string
   // never permits arrays, and earlier static_asserts suppress later ones (meaning that this one is
   // always emitted for both 'basic_string<char[]>' and 'basic_string<char[10]>', and doesn't say
   // "before C++20").
@@ -2260,7 +2260,7 @@ private:
   operator==(const basic_string<_CharT2, _Traits2, _Allocator2>&, const _CharT2*) _NOEXCEPT;
 };
 
-_LIBCPP_CHECK_CONTAINER_VALUE_TYPE_REQUIREMENTS(basic_string);
+_LIBCPP_DEFINE__CONTAINER_VALUE_TYPE_REQUIREMENTS(basic_string);
 
 // These declarations must appear before any functions are implicitly used
 // so that they have the correct visibility specifier.
