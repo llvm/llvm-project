@@ -1,7 +1,7 @@
 "Issue #","Issue Name","Meeting","Status","First released version","Notes"
 "`LWG2070 <https://wg21.link/LWG2070>`__","``allocate_shared``\  should use ``allocator_traits<A>::construct``\ ","2017-07 (Toronto)","|Nothing To Do|","","Resolved by `P0674R1 <https://wg21.link/P0674R1>`__"
 "`LWG2444 <https://wg21.link/LWG2444>`__","Inconsistent complexity for ``std::sort_heap``\ ","2017-07 (Toronto)","|Nothing To Do|","",""
-"`LWG2593 <https://wg21.link/LWG2593>`__","Moved-from state of Allocators","2017-07 (Toronto)","","",""
+"`LWG2593 <https://wg21.link/LWG2593>`__","Moved-from state of Allocators","2017-07 (Toronto)","|Nothing To Do|","",""
 "`LWG2597 <https://wg21.link/LWG2597>`__","``std::log``\  misspecified for complex numbers","2017-07 (Toronto)","","",""
 "`LWG2783 <https://wg21.link/LWG2783>`__","``stack::emplace()``\  and ``queue::emplace()``\  should return ``decltype(auto)``\ ","2017-07 (Toronto)","|Complete|","",""
 "`LWG2932 <https://wg21.link/LWG2932>`__","Constraints on parallel algorithm implementations are underspecified","2017-07 (Toronto)","","",""
