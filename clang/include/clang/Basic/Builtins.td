@@ -4916,7 +4916,7 @@ def ArithmeticFence : LangBuiltin<"ALL_LANGUAGES"> {
 }
 
 def GetCountedBy : Builtin {
-  let Spellings = ["__builtin_get_counted_by"];
+  let Spellings = ["__builtin_counted_by_ref"];
   let Attributes = [NoThrow, CustomTypeChecking];
   let Prototype = "int(...)";
 }

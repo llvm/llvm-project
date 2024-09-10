@@ -34,8 +34,8 @@ struct a {
 struct a *test1(int size) {
   struct a *p = __builtin_malloc(sizeof(struct a) + sizeof(int) * size);
 
-  *__builtin_get_counted_by(p->array) = size;
-  *__builtin_get_counted_by(&p->array[0]) = size;
+  *__builtin_counted_by_ref(p->array) = size;
+  *__builtin_counted_by_ref(&p->array[0]) = size;
   return p;
 }
 
@@ -87,8 +87,8 @@ struct b {
 struct b *test2(int size) {
   struct b *p = __builtin_malloc(sizeof(struct a) + sizeof(int) * size);
 
-  *__builtin_get_counted_by(p->array) = size;
-  *__builtin_get_counted_by(&p->array[0]) = size;
+  *__builtin_counted_by_ref(p->array) = size;
+  *__builtin_counted_by_ref(&p->array[0]) = size;
   return p;
 }
 
@@ -118,8 +118,8 @@ struct c {
 struct c *test3(int size) {
   struct c *p = __builtin_malloc(sizeof(struct c) + sizeof(int) * size);
 
-  if (__builtin_get_counted_by(&p->array[0]))
-    *__builtin_get_counted_by(&p->array[0]) = size;
+  if (__builtin_counted_by_ref(&p->array[0]))
+    *__builtin_counted_by_ref(&p->array[0]) = size;
 
   return p;
 }

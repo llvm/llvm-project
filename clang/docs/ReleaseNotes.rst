@@ -289,7 +289,7 @@ Non-comprehensive list of changes in this release
   as well as declarations.
 - ``__builtin_abs`` function can now be used in constant expressions.
 
-- The new builtin ``__builtin_get_counted_by`` was added. In contexts where the
+- The new builtin ``__builtin_counted_by_ref`` was added. In contexts where the
   programmer needs access to the ``counted_by`` attribute's field, but it's not
   available --- e.g. in macros. For instace, it can be used to automatically
   set the counter during allocation in the Linux kernel:
@@ -301,8 +301,8 @@ Non-comprehensive list of changes in this release
          typeof(P) __p;                                        \
          size_t __size = sizeof(*P) + sizeof(*P->FAM) * COUNT; \
          __p = malloc(__size);                                 \
-         if (__builtin_get_counted_by(__p->FAM))               \
-           *__builtin_get_counted_by(__p->FAM) = COUNT;        \
+         if (__builtin_counted_by_ref(__p->FAM))               \
+           *__builtin_counted_by_ref(__p->FAM) = COUNT;        \
          __p;                                                  \
      })
 

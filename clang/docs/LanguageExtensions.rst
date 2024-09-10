@@ -3774,10 +3774,10 @@ type-generic alternative to the ``__builtin_clz{,l,ll}`` (respectively
 ``__builtin_ctz{,l,ll}``) builtins, with support for other integer types, such
 as ``unsigned __int128`` and C23 ``unsigned _BitInt(N)``.
 
-``__builtin_get_counted_by``
+``__builtin_counted_by_ref``
 ----------------------------
 
-``__builtin_get_counted_by`` returns a pointer to the count field from the
+``__builtin_counted_by_ref`` returns a pointer to the count field from the
 ``counted_by`` attribute.
 
 the argument must be a pointer to a flexible array member. If the argument
@@ -3788,7 +3788,7 @@ returns ``(size_t *)0``.
 
 .. code-block:: c
 
-  T *__builtin_get_counted_by(void *array)
+  T *__builtin_counted_by_ref(void *array)
 
 **Examples**:
 
@@ -3798,14 +3798,14 @@ returns ``(size_t *)0``.
      typeof(P) __p = NULL;                                        \
      __p = malloc(MAX(sizeof(*__p),                               \
                       sizeof(*__p) + sizeof(*__p->FAM) * COUNT)); \
-     if (__builtin_get_counted_by(__p->FAM))                      \
-       *__builtin_get_counted_by(__p->FAM) = COUNT;               \
+     if (__builtin_counted_by_ref(__p->FAM))                      \
+       *__builtin_counted_by_ref(__p->FAM) = COUNT;               \
      __p;                                                         \
   })
 
 **Description**:
 
-the ``__builtin_get_counted_by`` builtin allows the programmer to prevent a
+the ``__builtin_counted_by_ref`` builtin allows the programmer to prevent a
 common error associated with the ``counted_by`` attribute. When using the
 ``counted_by`` attribute, the ``count`` field **must** be set before the
 flexible array member can be accessed. Otherwise, the sanitizers may view such

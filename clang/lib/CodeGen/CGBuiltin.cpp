@@ -3692,7 +3692,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     return RValue::get(emitBuiltinObjectSize(E->getArg(0), Type, ResType,
                                              /*EmittedE=*/nullptr, IsDynamic));
   }
-  case Builtin::BI__builtin_get_counted_by: {
+  case Builtin::BI__builtin_counted_by_ref: {
     llvm::Value *Result = llvm::ConstantPointerNull::get(
         cast<llvm::PointerType>(ConvertType(E->getType())));
 

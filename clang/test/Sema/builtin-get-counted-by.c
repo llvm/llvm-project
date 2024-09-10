@@ -15,16 +15,16 @@ struct non_fam_struct {
 void test1(int size) {
   int i = 0;
 
-  *__builtin_get_counted_by(p->array) = size;         // ok
-  *__builtin_get_counted_by(&p->array[i]) = size;     // ok
+  *__builtin_counted_by_ref(p->array) = size;         // ok
+  *__builtin_counted_by_ref(&p->array[i]) = size;     // ok
 
-  *__builtin_get_counted_by(q->array) = size          // expected-error {{'__builtin_get_counted_by' argument must reference a flexible array member}}
-  *__builtin_get_counted_by(&q->array[0]) = size;     // expected-error {{'__builtin_get_counted_by' argument must reference a flexible array member}}
-  __builtin_get_counted_by(p->x);                     // expected-error {{'__builtin_get_counted_by' argument must reference a flexible array member}}
-  __builtin_get_counted_by(&p->array[i++]);           // expected-warning {{'__builtin_get_counted_by' argument has side-effects that will be discarded}}
+  *__builtin_counted_by_ref(q->array) = size          // expected-error {{'__builtin_counted_by_ref' argument must reference a flexible array member}}
+  *__builtin_counted_by_ref(&q->array[0]) = size;     // expected-error {{'__builtin_counted_by_ref' argument must reference a flexible array member}}
+  __builtin_counted_by_ref(p->x);                     // expected-error {{'__builtin_counted_by_ref' argument must reference a flexible array member}}
+  __builtin_counted_by_ref(&p->array[i++]);           // expected-warning {{'__builtin_counted_by_ref' argument has side-effects that will be discarded}}
 
-  __builtin_get_counted_by();                         // expected-error {{too few arguments to function call, expected 1, have 0}}
-  __builtin_get_counted_by(p->array, p->x, p->count); // expected-error {{too many arguments to function call, expected 1, have 3}}
+  __builtin_counted_by_ref();                         // expected-error {{too few arguments to function call, expected 1, have 0}}
+  __builtin_counted_by_ref(p->array, p->x, p->count); // expected-error {{too many arguments to function call, expected 1, have 3}}
 }
 
 struct char_count {
@@ -58,10 +58,10 @@ struct unsigned_long_count {
 } *ulp;
 
 void test2(void) {
-  _Static_assert(_Generic(__builtin_get_counted_by(cp->array), char * : 1, default : 0) == 1, "wrong return type");
-  _Static_assert(_Generic(__builtin_get_counted_by(sp->array), short * : 1, default : 0) == 1, "wrong return type");
-  _Static_assert(_Generic(__builtin_get_counted_by(ip->array), int * : 1, default : 0) == 1, "wrong return type");
-  _Static_assert(_Generic(__builtin_get_counted_by(up->array), unsigned int * : 1, default : 0) == 1, "wrong return type");
-  _Static_assert(_Generic(__builtin_get_counted_by(lp->array), long * : 1, default : 0) == 1, "wrong return type");
-  _Static_assert(_Generic(__builtin_get_counted_by(ulp->array), unsigned long * : 1, default : 0) == 1, "wrong return type");
+  _Static_assert(_Generic(__builtin_counted_by_ref(cp->array), char * : 1, default : 0) == 1, "wrong return type");
+  _Static_assert(_Generic(__builtin_counted_by_ref(sp->array), short * : 1, default : 0) == 1, "wrong return type");
+  _Static_assert(_Generic(__builtin_counted_by_ref(ip->array), int * : 1, default : 0) == 1, "wrong return type");
+  _Static_assert(_Generic(__builtin_counted_by_ref(up->array), unsigned int * : 1, default : 0) == 1, "wrong return type");
+  _Static_assert(_Generic(__builtin_counted_by_ref(lp->array), long * : 1, default : 0) == 1, "wrong return type");
+  _Static_assert(_Generic(__builtin_counted_by_ref(ulp->array), unsigned long * : 1, default : 0) == 1, "wrong return type");
 }
