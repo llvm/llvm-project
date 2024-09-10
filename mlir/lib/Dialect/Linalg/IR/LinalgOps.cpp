@@ -1209,7 +1209,7 @@ getGenericSpeculatabilityImpl(LinalgOp linalgOp) {
   // semantics are not.
   if (!linalgOp.hasPureTensorSemantics())
     return Speculation::NotSpeculatable;
-  // The body of the op can still have speculation in it's region.
+  // The body of the op can still have speculation in its region.
   return Speculation::RecursivelySpeculatable;
 }
 
