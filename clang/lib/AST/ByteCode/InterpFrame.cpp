@@ -207,31 +207,40 @@ Pointer InterpFrame::getParamPointer(unsigned Off) {
   return Pointer(B);
 }
 
+static bool funcHasUsableBody(const Function *F) {
+  assert(F);
+
+  if (F->isConstructor() || F->isDestructor())
+    return true;
+
+  return !F->getDecl()->isImplicit();
+}
+
 SourceInfo InterpFrame::getSource(CodePtr PC) const {
   // Implicitly created functions don't have any code we could point at,
   // so return the call site.
-  if (Func && (!Func->hasBody() || Func->getDecl()->isImplicit()) && Caller)
+  if (Func && !funcHasUsableBody(Func) && Caller)
     return Caller->getSource(RetPC);
 
   return S.getSource(Func, PC);
 }
 
 const Expr *InterpFrame::getExpr(CodePtr PC) const {
-  if (Func && (!Func->hasBody() || Func->getDecl()->isImplicit()) && Caller)
-    return Caller->getExpr(RetPC);
+  if (Func && !funcHasUsableBody(Func) && Caller)
+    return Caller->getExpr(PC);
 
   return S.getExpr(Func, PC);
 }
 
 SourceLocation InterpFrame::getLocation(CodePtr PC) const {
-  if (Func && (!Func->hasBody() || Func->getDecl()->isImplicit()) && Caller)
+  if (Func && !funcHasUsableBody(Func) && Caller)
     return Caller->getLocation(RetPC);
 
   return S.getLocation(Func, PC);
 }
 
 SourceRange InterpFrame::getRange(CodePtr PC) const {
-  if (Func && (!Func->hasBody() || Func->getDecl()->isImplicit()) && Caller)
+  if (Func && !funcHasUsableBody(Func) && Caller)
     return Caller->getRange(RetPC);
 
   return S.getRange(Func, PC);
