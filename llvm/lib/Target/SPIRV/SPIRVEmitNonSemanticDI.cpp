@@ -4,6 +4,7 @@
 #include "SPIRVGlobalRegistry.h"
 #include "SPIRVRegisterInfo.h"
 #include "SPIRVTargetMachine.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/BinaryFormat/Dwarf.h"
@@ -87,7 +88,7 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
   unsigned SourceLanguage = 0;
   int64_t DwarfVersion = 0;
   int64_t DebugInfoVersion = 0;
-  SmallSet<DIBasicType *, 12> BasicTypes;
+  SmallPtrSet<DIBasicType *, 12> BasicTypes;
   // Searching through the Module metadata to find nescessary
   // information like DwarfVersion or SourceLanguage
   {
