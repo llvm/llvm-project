@@ -8754,6 +8754,22 @@ SDValue TargetLowering::expandIS_FPCLASS(EVT ResultVT, SDValue Op,
                           IsOrderedInf ? OrderedCmpOpcode : UnorderedCmpOpcode);
     }
 
+    if ((OrderedFPTestMask == fcPosInf || OrderedFPTestMask == fcNegInf) &&
+        isCondCodeLegalOrCustom(IsOrdered ? OrderedCmpOpcode
+                                          : UnorderedCmpOpcode,
+                                OperandVT.getSimpleVT())) {
+      // isposinf(x) --> x == inf
+      // isneginf(x) --> x == -inf
+      // isposinf(x) || nan --> x u== inf
+      // isneginf(x) || nan --> x u== -inf
+
+      SDValue Inf = DAG.getConstantFP(
+          APFloat::getInf(Semantics, OrderedFPTestMask == fcNegInf), DL,
+          OperandVT);
+      return DAG.getSetCC(DL, ResultVT, Op, Inf,
+                          IsOrdered ? OrderedCmpOpcode : UnorderedCmpOpcode);
+    }
+
     if (OrderedFPTestMask == (fcSubnormal | fcZero) && !IsOrdered) {
       // TODO: Could handle ordered case, but it produces worse code for
       // x86. Maybe handle ordered if fabs is free?
@@ -9541,13 +9557,13 @@ SDValue TargetLowering::expandAVG(SDNode *N, SelectionDAG &DAG) const {
     SDValue Overflow = UAddWithOverflow.getValue(1);
 
     // Right shift the sum by 1
-    SDValue One = DAG.getShiftAmountConstant(1, VT, dl);
-    SDValue LShrVal = DAG.getNode(ISD::SRL, dl, VT, Sum, One);
+    SDValue LShrVal = DAG.getNode(ISD::SRL, dl, VT, Sum,
+                                  DAG.getShiftAmountConstant(1, VT, dl));
 
     SDValue ZeroExtOverflow = DAG.getNode(ISD::ANY_EXTEND, dl, VT, Overflow);
-    SDValue OverflowShl =
-        DAG.getNode(ISD::SHL, dl, VT, ZeroExtOverflow,
-                    DAG.getConstant(VT.getScalarSizeInBits() - 1, dl, VT));
+    SDValue OverflowShl = DAG.getNode(
+        ISD::SHL, dl, VT, ZeroExtOverflow,
+        DAG.getShiftAmountConstant(VT.getScalarSizeInBits() - 1, VT, dl));
 
     return DAG.getNode(ISD::OR, dl, VT, LShrVal, OverflowShl);
   }

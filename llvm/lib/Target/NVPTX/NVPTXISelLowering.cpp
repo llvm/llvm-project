@@ -838,8 +838,8 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setOperationAction(ISD::FCOPYSIGN, MVT::v2f16, Expand);
   setOperationAction(ISD::FCOPYSIGN, MVT::bf16, Expand);
   setOperationAction(ISD::FCOPYSIGN, MVT::v2bf16, Expand);
-  setOperationAction(ISD::FCOPYSIGN, MVT::f32, Expand);
-  setOperationAction(ISD::FCOPYSIGN, MVT::f64, Expand);
+  setOperationAction(ISD::FCOPYSIGN, MVT::f32, Legal);
+  setOperationAction(ISD::FCOPYSIGN, MVT::f64, Legal);
 
   // These map to corresponding instructions for f32/f64. f16 must be
   // promoted to f32. v2f16 is expanded to f16, which is then promoted
@@ -6038,7 +6038,11 @@ static SDValue PerformLOADCombine(SDNode *N,
   // elements can be optimised away instead of being needlessly split during
   // legalization, which involves storing to the stack and loading it back.
   EVT VT = N->getValueType(0);
-  if (VT != MVT::v16i8)
+  bool CorrectlyAligned =
+      DCI.DAG.getTargetLoweringInfo().allowsMemoryAccessForAlignment(
+          *DAG.getContext(), DAG.getDataLayout(), LD->getMemoryVT(),
+          *LD->getMemOperand());
+  if (!(VT == MVT::v16i8 && CorrectlyAligned))
     return SDValue();
 
   SDLoc DL(N);

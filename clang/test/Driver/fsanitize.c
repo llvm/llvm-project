@@ -197,6 +197,8 @@
 // CHECK-SANMT-MT: "-target-feature" "+mte"
 // CHECK-SANMT-MT-SAME: "-fsanitize=memtag-stack,memtag-heap,memtag-globals"
 
+// RUN: not %clang --target=aarch64-linux -fsanitize=memtag -Xclang -target-feature -Xclang +mte %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANMT-MT
+
 // RUN: not %clang --target=aarch64-linux -fsanitize=memtag %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANMT-NOMT-0
 // CHECK-SANMT-NOMT-0: '-fsanitize=memtag-stack' requires hardware support (+memtag)
 
@@ -726,8 +728,8 @@
 // NO-SP-NOT: stack-protector
 // NO-SP: "-fsanitize=safe-stack"
 // SP-ASAN: error: invalid argument '-fsanitize=safe-stack' not allowed with '-fsanitize=address'
-// SP: "-fsanitize=safe-stack"
 // SP: -stack-protector
+// SP: "-fsanitize=safe-stack"
 // NO-SP-NOT: stack-protector
 
 // RUN: %clang --target=powerpc64-unknown-linux-gnu -fsanitize=memory %s -### 2>&1 | FileCheck %s -check-prefix=CHECK-SANM

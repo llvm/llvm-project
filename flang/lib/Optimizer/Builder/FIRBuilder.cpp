@@ -1580,6 +1580,24 @@ mlir::Value fir::factory::genCPtrOrCFunptrValue(fir::FirOpBuilder &builder,
                                                 mlir::Location loc,
                                                 mlir::Value cPtr) {
   mlir::Type cPtrTy = fir::unwrapRefType(cPtr.getType());
+  if (fir::isa_builtin_cdevptr_type(cPtrTy)) {
+    // Unwrap c_ptr from c_devptr.
+    auto [addrFieldIndex, addrFieldTy] =
+        genCPtrOrCFunptrFieldIndex(builder, loc, cPtrTy);
+    mlir::Value cPtrCoor;
+    if (fir::isa_ref_type(cPtr.getType())) {
+      cPtrCoor = builder.create<fir::CoordinateOp>(
+          loc, builder.getRefType(addrFieldTy), cPtr, addrFieldIndex);
+    } else {
+      auto arrayAttr = builder.getArrayAttr(
+          {builder.getIntegerAttr(builder.getIndexType(), 0)});
+      cPtrCoor = builder.create<fir::ExtractValueOp>(loc, addrFieldTy, cPtr,
+                                                     arrayAttr);
+    }
+    mlir::Value cptr = builder.create<fir::LoadOp>(loc, cPtrCoor);
+    return genCPtrOrCFunptrValue(builder, loc, cptr);
+  }
+
   if (fir::isa_ref_type(cPtr.getType())) {
     mlir::Value cPtrAddr =
         fir::factory::genCPtrOrCFunptrAddr(builder, loc, cPtr, cPtrTy);

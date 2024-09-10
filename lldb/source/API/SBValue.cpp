@@ -270,7 +270,7 @@ SBError SBValue::GetError() {
   ValueLocker locker;
   lldb::ValueObjectSP value_sp(GetSP(locker));
   if (value_sp)
-    sb_error.SetError(value_sp->GetError());
+    sb_error.SetError(value_sp->GetError().Clone());
   else
     sb_error = Status::FromErrorStringWithFormat("error: %s",
                                                  locker.GetError().AsCString());
@@ -1476,7 +1476,7 @@ lldb::SBWatchpoint SBValue::Watch(bool resolve_location, bool read, bool write,
     CompilerType type(value_sp->GetCompilerType());
     WatchpointSP watchpoint_sp =
         target_sp->CreateWatchpoint(addr, byte_size, &type, watch_type, rc);
-    error.SetError(rc);
+    error.SetError(std::move(rc));
 
     if (watchpoint_sp) {
       sb_watchpoint.SetSP(watchpoint_sp);

@@ -234,6 +234,27 @@ def Builtin_Float8E3M4 : Builtin_FloatType<"Float8E3M4", "f8E3M4"> {
 }
 
 //===----------------------------------------------------------------------===//
+// Float6E3M2FNType
+
+def Builtin_Float6E3M2FN : Builtin_FloatType<"Float6E3M2FN", "f6E3M2FN"> {
+  let summary = "6-bit floating point with 3 bits exponent and 2 bit mantissa";
+  let description = [{
+    An 6-bit floating point type with 1 sign bit, 3 bits exponent and 2 bits
+    mantissa. This is not a standard type as defined by IEEE-754, but it
+    follows similar conventions with the following characteristics:
+
+      * bit encoding: S1E3M2
+      * exponent bias: 3
+      * infinities: Not supported
+      * NaNs: Not supported
+      * denormals when exponent is 0
+
+    Open Compute Project (OCP) microscaling formats (MX) specification:
+    https://www.opencompute.org/documents/ocp-microscaling-formats-mx-v1-0-spec-final-pdf
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // BFloat16Type
 
 def Builtin_BFloat16 : Builtin_FloatType<"BFloat16", "bf16"> {
