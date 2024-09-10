@@ -71,15 +71,34 @@ PYBIND11_MODULE(_mlirExecutionEngine, m) {
   // Mapping of the top-level PassManager
   //----------------------------------------------------------------------------
   py::class_<PyExecutionEngine>(m, "ExecutionEngine", py::module_local())
-      .def(py::init<>([](MlirModule module, int optLevel,
+      .def(py::init<>([](py::object operation_or_module, int optLevel,
                          const std::vector<std::string> &sharedLibPaths,
                          bool enableObjectDump) {
+             // Manually type cast from either a Module or Operation. The
+             // automatic type casters do not handle such cascades well,
+             // so be explicit.
+             py::object capsule = mlirApiObjectToCapsule(operation_or_module);
+             MlirOperation module_op =
+                 mlirPythonCapsuleToOperation(capsule.ptr());
+             if (mlirOperationIsNull(module_op)) {
+               // If null, then a PyErr_Set has set an exception, which we must
+               // clear.
+               PyErr_Clear();
+               MlirModule mod = mlirPythonCapsuleToModule(capsule.ptr());
+               if (mlirModuleIsNull(mod)) {
+                 throw py::type_error(
+                     "ExecutionEngine expects a Module or Operation");
+               }
+               module_op = mlirModuleGetOperation(mod);
+             }
+
              llvm::SmallVector<MlirStringRef, 4> libPaths;
              for (const std::string &path : sharedLibPaths)
                libPaths.push_back({path.c_str(), path.length()});
              MlirExecutionEngine executionEngine =
-                 mlirExecutionEngineCreate(module, optLevel, libPaths.size(),
-                                           libPaths.data(), enableObjectDump);
+                 mlirExecutionEngineCreateFromOp(
+                     module_op, optLevel, libPaths.size(), libPaths.data(),
+                     enableObjectDump);
              if (mlirExecutionEngineIsNull(executionEngine))
                throw std::runtime_error(
                    "Failure while creating the ExecutionEngine.");

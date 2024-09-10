@@ -42,8 +42,15 @@ DEFINE_C_API_STRUCT(MlirExecutionEngine, void);
 /// that will be loaded are specified via `numPaths` and `sharedLibPaths`
 /// respectively.
 /// TODO: figure out other options.
+MLIR_CAPI_EXPORTED MlirExecutionEngine mlirExecutionEngineCreateFromOp(
+    MlirOperation op, int optLevel, int numPaths,
+    const MlirStringRef *sharedLibPaths, bool enableObjectDump);
+
+// Deprecated variant which takes an MlirModule instead of an operation.
+// This is being preserved as of 2024-Mar for short term consistency and should
+// be dropped soon.
 MLIR_CAPI_EXPORTED MlirExecutionEngine mlirExecutionEngineCreate(
-    MlirModule op, int optLevel, int numPaths,
+    MlirModule module, int optLevel, int numPaths,
     const MlirStringRef *sharedLibPaths, bool enableObjectDump);
 
 /// Destroy an ExecutionEngine instance.

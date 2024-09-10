@@ -20,9 +20,18 @@
 using namespace mlir;
 
 extern "C" MlirExecutionEngine
-mlirExecutionEngineCreate(MlirModule op, int optLevel, int numPaths,
+mlirExecutionEngineCreate(MlirModule module, int optLevel, int numPaths,
                           const MlirStringRef *sharedLibPaths,
                           bool enableObjectDump) {
+  return mlirExecutionEngineCreateFromOp(mlirModuleGetOperation(module),
+                                         optLevel, numPaths, sharedLibPaths,
+                                         enableObjectDump);
+}
+
+extern "C" MlirExecutionEngine
+mlirExecutionEngineCreateFromOp(MlirOperation op, int optLevel, int numPaths,
+                                const MlirStringRef *sharedLibPaths,
+                                bool enableObjectDump) {
   static bool initOnce = [] {
     llvm::InitializeNativeTarget();
     llvm::InitializeNativeTargetAsmParser(); // needed for inline_asm
@@ -104,9 +113,8 @@ extern "C" void mlirExecutionEngineRegisterSymbol(MlirExecutionEngine jit,
                                                   void *sym) {
   unwrap(jit)->registerSymbols([&](llvm::orc::MangleAndInterner interner) {
     llvm::orc::SymbolMap symbolMap;
-    symbolMap[interner(unwrap(name))] =
-        { llvm::orc::ExecutorAddr::fromPtr(sym),
-          llvm::JITSymbolFlags::Exported };
+    symbolMap[interner(unwrap(name))] = {llvm::orc::ExecutorAddr::fromPtr(sym),
+                                         llvm::JITSymbolFlags::Exported};
     return symbolMap;
   });
 }
