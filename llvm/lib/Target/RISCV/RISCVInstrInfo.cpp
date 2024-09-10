@@ -169,6 +169,7 @@ Register RISCVInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
 bool RISCVInstrInfo::isReallyTriviallyReMaterializable(
     const MachineInstr &MI) const {
   switch (RISCV::getRVVMCOpcode(MI.getOpcode())) {
+  case RISCV::VMV_V_X:
   case RISCV::VMV_V_I:
   case RISCV::VID_V:
     if (MI.getOperand(1).isUndef() &&
