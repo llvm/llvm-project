@@ -1855,6 +1855,21 @@ Decl *TemplateInstantiator::TransformDecl(SourceLocation Loc, Decl *D) {
     // template parameter.
   }
 
+  if (ParmVarDecl *PVD = dyn_cast<ParmVarDecl>(D);
+      PVD && SemaRef.ArgumentPackSubstitutionIndex == -1) {
+    if (auto *Found =
+            SemaRef.CurrentInstantiationScope->findInstantiationUnsafe(D)) {
+      using DeclArgumentPack = LocalInstantiationScope::DeclArgumentPack;
+      if (auto *Pack = Found->dyn_cast<DeclArgumentPack *>()) {
+        assert(SemaRef.getCurLambda() &&
+               "Only lambdas can hold off an expanded pack expansion");
+        return FunctionParmPackDecl::Create(SemaRef.getASTContext(),
+                                            PVD->getDeclContext(),
+                                            PVD->getLocation(), PVD, *Pack);
+      }
+    }
+  }
+
   return SemaRef.FindInstantiatedDecl(Loc, cast<NamedDecl>(D), TemplateArgs);
 }
 
@@ -4369,9 +4384,8 @@ static const Decl *getCanonicalParmVarDecl(const Decl *D) {
   return D;
 }
 
-
 llvm::PointerUnion<Decl *, LocalInstantiationScope::DeclArgumentPack *> *
-LocalInstantiationScope::findInstantiationOf(const Decl *D) {
+LocalInstantiationScope::findInstantiationUnsafe(const Decl *D) {
   D = getCanonicalParmVarDecl(D);
   for (LocalInstantiationScope *Current = this; Current;
        Current = Current->Outer) {
@@ -4395,6 +4409,13 @@ LocalInstantiationScope::findInstantiationOf(const Decl *D) {
     if (!Current->CombineWithOuterScope)
       break;
   }
+  return nullptr;
+}
+
+llvm::PointerUnion<Decl *, LocalInstantiationScope::DeclArgumentPack *> *
+LocalInstantiationScope::findInstantiationOf(const Decl *D) {
+  if (auto *Result = findInstantiationUnsafe(D))
+    return Result;
 
   // If we're performing a partial substitution during template argument
   // deduction, we may not have values for template parameters yet.

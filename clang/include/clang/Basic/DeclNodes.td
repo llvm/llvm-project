@@ -91,6 +91,7 @@ def Named : DeclNode<Decl, "named declarations", 1>;
   def ObjCProperty : DeclNode<Named, "Objective-C properties">;
   def ObjCCompatibleAlias : DeclNode<Named>;
 def ImplicitConceptSpecialization : DeclNode<Decl>;
+def FunctionParmPack : DeclNode<Decl>;
 def LinkageSpec : DeclNode<Decl>, DeclContext;
 def Export : DeclNode<Decl>, DeclContext;
 def ObjCPropertyImpl : DeclNode<Decl>;

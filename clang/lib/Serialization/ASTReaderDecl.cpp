@@ -389,6 +389,7 @@ public:
   void VisitUnresolvedUsingValueDecl(UnresolvedUsingValueDecl *D);
   void VisitDeclaratorDecl(DeclaratorDecl *DD);
   void VisitFunctionDecl(FunctionDecl *FD);
+  void VisitFunctionParmPackDecl(FunctionParmPackDecl *D);
   void VisitCXXDeductionGuideDecl(CXXDeductionGuideDecl *GD);
   void VisitCXXMethodDecl(CXXMethodDecl *D);
   void VisitCXXConstructorDecl(CXXConstructorDecl *D);
@@ -2406,6 +2407,13 @@ void ASTDeclReader::VisitImplicitConceptSpecializationDecl(
   D->setTemplateArguments(Args);
 }
 
+void ASTDeclReader::VisitFunctionParmPackDecl(FunctionParmPackDecl *D) {
+  SmallVector<VarDecl *, 4> Expanded;
+  for (unsigned I = 0; I < D->getNumExpansions(); ++I)
+    Expanded.push_back(cast<VarDecl>(Record.readDeclRef()));
+  D->setExpandedParams(Expanded);
+}
+
 void ASTDeclReader::VisitRequiresExprBodyDecl(RequiresExprBodyDecl *D) {
 }
 
@@ -4157,6 +4165,9 @@ Decl *ASTReader::ReadDeclRecord(GlobalDeclID ID) {
   case DECL_IMPLICIT_CONCEPT_SPECIALIZATION:
     D = ImplicitConceptSpecializationDecl::CreateDeserialized(Context, ID,
                                                               Record.readInt());
+    break;
+  case DECL_FUNCTION_PARM_PACK:
+    D = FunctionParmPackDecl::CreateDeserialized(Context, ID, Record.readInt());
     break;
   }
 

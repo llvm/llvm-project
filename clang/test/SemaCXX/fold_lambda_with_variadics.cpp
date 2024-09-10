@@ -57,28 +57,14 @@ template <class = void> void f() {
     })(1);
   }(2, 'b');
 
-#if 0
-  // FIXME: https://github.com/llvm/llvm-project/issues/18873
-  [](auto ...x) { // #1
-    ([&](auto ...y) {  // #2
-      ([x, y] { }(), ...); // #3
-    })(1, 'a');  // #4
-  }(2, 'b');  // #5
-
-  // We run into another crash for the above lambda because of the absence of a
-  // mechanism that rebuilds an unexpanded pack from an expanded Decls.
-  //
-  // Basically, this happens after `x` at #1 being expanded when the template
-  // arguments at #5, deduced as <int, char>, are ready. When we want to
-  // instantiate the body of #1, we first instantiate the CallExpr at #4, which
-  // boils down to the lambda's instantiation at #2. To that end, we have to
-  // instantiate the body of it, which turns out to be #3. #3 is a CXXFoldExpr,
-  // and we immediately have to hold off on the expansion because we don't have
-  // corresponding template arguments (arguments at #4 are not transformed yet) for it.
-  // Therefore, we want to rebuild a CXXFoldExpr, which requires another pattern
-  // transformation of the lambda inside #3. Then we need to find an unexpanded form
-  // of such a Decl of x at the time of transforming the capture, which is impossible
-  // because the instantiated form has been expanded at #1!
+  // https://github.com/llvm/llvm-project/issues/18873
+  static_assert([]<auto... z>(auto ...x) {
+    return [&](auto ...y) {
+      return ([x, y] {
+        return x + y + z;
+      }() + ...);
+    }(1, 'a');
+  }.template operator()<2, 'b'>(3, 'c') == 1 + 'a' + 2 + 'b' + 3 + 'c');
 
   [](auto ...x) {  // #outer
     ([&](auto ...y) { // #inner
@@ -89,7 +75,6 @@ template <class = void> void f() {
       // expected-note-re@#instantiate-f {{function template specialization {{.*}} requested here}}
     })('a', 'b', 'c');
   }(0, 1, 2, 3);
-#endif
 }
 
 template void f(); // #instantiate-f

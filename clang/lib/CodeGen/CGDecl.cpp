@@ -134,6 +134,7 @@ void CodeGenFunction::EmitDecl(const Decl &D) {
   case Decl::ImplicitConceptSpecialization:
   case Decl::LifetimeExtendedTemporary:
   case Decl::RequiresExprBody:
+  case Decl::FunctionParmPack:
     // None of these decls require codegen support.
     return;
 
