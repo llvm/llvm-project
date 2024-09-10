@@ -19,7 +19,7 @@
 declare i32 @bcmp(ptr, ptr, iXLen) nounwind readonly
 declare i32 @memcmp(ptr, ptr, iXLen) nounwind readonly
 
-define i32 @bcmp_size_0(ptr %s1, ptr %s2) nounwind {
+define i32 @bcmp_size_0(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-ALIGNED-RV32-LABEL: bcmp_size_0:
 ; CHECK-ALIGNED-RV32:       # %bb.0: # %entry
 ; CHECK-ALIGNED-RV32-NEXT:    addi sp, sp, -16
@@ -64,7 +64,7 @@ entry:
   ret i32 %bcmp
 }
 
-define i32 @bcmp_size_1(ptr %s1, ptr %s2) nounwind {
+define i32 @bcmp_size_1(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-ALIGNED-RV32-LABEL: bcmp_size_1:
 ; CHECK-ALIGNED-RV32:       # %bb.0: # %entry
 ; CHECK-ALIGNED-RV32-NEXT:    addi sp, sp, -16
@@ -109,7 +109,7 @@ entry:
   ret i32 %bcmp
 }
 
-define i32 @bcmp_size_2(ptr %s1, ptr %s2) nounwind {
+define i32 @bcmp_size_2(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-ALIGNED-RV32-LABEL: bcmp_size_2:
 ; CHECK-ALIGNED-RV32:       # %bb.0: # %entry
 ; CHECK-ALIGNED-RV32-NEXT:    addi sp, sp, -16
@@ -154,7 +154,7 @@ entry:
   ret i32 %bcmp
 }
 
-define i32 @bcmp_size_3(ptr %s1, ptr %s2) nounwind {
+define i32 @bcmp_size_3(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-ALIGNED-RV32-LABEL: bcmp_size_3:
 ; CHECK-ALIGNED-RV32:       # %bb.0: # %entry
 ; CHECK-ALIGNED-RV32-NEXT:    addi sp, sp, -16
@@ -199,7 +199,7 @@ entry:
   ret i32 %bcmp
 }
 
-define i32 @bcmp_size_4(ptr %s1, ptr %s2) nounwind {
+define i32 @bcmp_size_4(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-ALIGNED-RV32-LABEL: bcmp_size_4:
 ; CHECK-ALIGNED-RV32:       # %bb.0: # %entry
 ; CHECK-ALIGNED-RV32-NEXT:    addi sp, sp, -16
@@ -244,7 +244,7 @@ entry:
   ret i32 %bcmp
 }
 
-define i32 @bcmp_size_5(ptr %s1, ptr %s2) nounwind {
+define i32 @bcmp_size_5(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-ALIGNED-RV32-LABEL: bcmp_size_5:
 ; CHECK-ALIGNED-RV32:       # %bb.0: # %entry
 ; CHECK-ALIGNED-RV32-NEXT:    addi sp, sp, -16
@@ -289,7 +289,7 @@ entry:
   ret i32 %bcmp
 }
 
-define i32 @bcmp_size_6(ptr %s1, ptr %s2) nounwind {
+define i32 @bcmp_size_6(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-ALIGNED-RV32-LABEL: bcmp_size_6:
 ; CHECK-ALIGNED-RV32:       # %bb.0: # %entry
 ; CHECK-ALIGNED-RV32-NEXT:    addi sp, sp, -16
@@ -334,7 +334,7 @@ entry:
   ret i32 %bcmp
 }
 
-define i32 @bcmp_size_7(ptr %s1, ptr %s2) nounwind {
+define i32 @bcmp_size_7(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-ALIGNED-RV32-LABEL: bcmp_size_7:
 ; CHECK-ALIGNED-RV32:       # %bb.0: # %entry
 ; CHECK-ALIGNED-RV32-NEXT:    addi sp, sp, -16
@@ -379,7 +379,7 @@ entry:
   ret i32 %bcmp
 }
 
-define i32 @bcmp_size_8(ptr %s1, ptr %s2) nounwind {
+define i32 @bcmp_size_8(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-ALIGNED-RV32-LABEL: bcmp_size_8:
 ; CHECK-ALIGNED-RV32:       # %bb.0: # %entry
 ; CHECK-ALIGNED-RV32-NEXT:    addi sp, sp, -16
@@ -424,7 +424,7 @@ entry:
   ret i32 %bcmp
 }
 
-define i32 @bcmp_size_15(ptr %s1, ptr %s2) nounwind {
+define i32 @bcmp_size_15(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-ALIGNED-RV32-LABEL: bcmp_size_15:
 ; CHECK-ALIGNED-RV32:       # %bb.0: # %entry
 ; CHECK-ALIGNED-RV32-NEXT:    addi sp, sp, -16
@@ -469,7 +469,7 @@ entry:
   ret i32 %bcmp
 }
 
-define i32 @bcmp_size_16(ptr %s1, ptr %s2) nounwind {
+define i32 @bcmp_size_16(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-ALIGNED-RV32-LABEL: bcmp_size_16:
 ; CHECK-ALIGNED-RV32:       # %bb.0: # %entry
 ; CHECK-ALIGNED-RV32-NEXT:    addi sp, sp, -16
@@ -514,7 +514,7 @@ entry:
   ret i32 %bcmp
 }
 
-define i32 @bcmp_size_31(ptr %s1, ptr %s2) nounwind {
+define i32 @bcmp_size_31(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-ALIGNED-RV32-LABEL: bcmp_size_31:
 ; CHECK-ALIGNED-RV32:       # %bb.0: # %entry
 ; CHECK-ALIGNED-RV32-NEXT:    addi sp, sp, -16
@@ -559,7 +559,7 @@ entry:
   ret i32 %bcmp
 }
 
-define i32 @bcmp_size_32(ptr %s1, ptr %s2) nounwind {
+define i32 @bcmp_size_32(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-ALIGNED-RV32-LABEL: bcmp_size_32:
 ; CHECK-ALIGNED-RV32:       # %bb.0: # %entry
 ; CHECK-ALIGNED-RV32-NEXT:    addi sp, sp, -16
@@ -604,7 +604,7 @@ entry:
   ret i32 %bcmp
 }
 
-define i32 @bcmp_size_63(ptr %s1, ptr %s2) nounwind {
+define i32 @bcmp_size_63(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-ALIGNED-RV32-LABEL: bcmp_size_63:
 ; CHECK-ALIGNED-RV32:       # %bb.0: # %entry
 ; CHECK-ALIGNED-RV32-NEXT:    addi sp, sp, -16
@@ -649,7 +649,7 @@ entry:
   ret i32 %bcmp
 }
 
-define i32 @bcmp_size_64(ptr %s1, ptr %s2) nounwind {
+define i32 @bcmp_size_64(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-ALIGNED-RV32-LABEL: bcmp_size_64:
 ; CHECK-ALIGNED-RV32:       # %bb.0: # %entry
 ; CHECK-ALIGNED-RV32-NEXT:    addi sp, sp, -16
@@ -694,7 +694,7 @@ entry:
   ret i32 %bcmp
 }
 
-define i32 @bcmp_size_127(ptr %s1, ptr %s2) nounwind {
+define i32 @bcmp_size_127(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-ALIGNED-RV32-LABEL: bcmp_size_127:
 ; CHECK-ALIGNED-RV32:       # %bb.0: # %entry
 ; CHECK-ALIGNED-RV32-NEXT:    addi sp, sp, -16
@@ -739,7 +739,7 @@ entry:
   ret i32 %bcmp
 }
 
-define i32 @bcmp_size_128(ptr %s1, ptr %s2) nounwind {
+define i32 @bcmp_size_128(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-ALIGNED-RV32-LABEL: bcmp_size_128:
 ; CHECK-ALIGNED-RV32:       # %bb.0: # %entry
 ; CHECK-ALIGNED-RV32-NEXT:    addi sp, sp, -16
@@ -784,7 +784,7 @@ entry:
   ret i32 %bcmp
 }
 
-define i32 @bcmp_size_runtime(ptr %s1, ptr %s2, iXLen %len) nounwind {
+define i32 @bcmp_size_runtime(ptr %s1, ptr %s2, iXLen %len) nounwind optsize {
 ; CHECK-ALIGNED-RV32-LABEL: bcmp_size_runtime:
 ; CHECK-ALIGNED-RV32:       # %bb.0: # %entry
 ; CHECK-ALIGNED-RV32-NEXT:    addi sp, sp, -16
@@ -825,7 +825,7 @@ entry:
   ret i32 %bcmp
 }
 
-define i1 @bcmp_eq_zero(ptr %s1, ptr %s2) nounwind {
+define i1 @bcmp_eq_zero(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-ALIGNED-RV32-LABEL: bcmp_eq_zero:
 ; CHECK-ALIGNED-RV32:       # %bb.0: # %entry
 ; CHECK-ALIGNED-RV32-NEXT:    addi sp, sp, -16
@@ -877,7 +877,7 @@ entry:
   ret i1 %ret
 }
 
-define i1 @bcmp_lt_zero(ptr %s1, ptr %s2) nounwind {
+define i1 @bcmp_lt_zero(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-ALIGNED-RV32-LABEL: bcmp_lt_zero:
 ; CHECK-ALIGNED-RV32:       # %bb.0: # %entry
 ; CHECK-ALIGNED-RV32-NEXT:    addi sp, sp, -16
@@ -929,7 +929,7 @@ entry:
   ret i1 %ret
 }
 
-define i1 @bcmp_gt_zero(ptr %s1, ptr %s2) nounwind {
+define i1 @bcmp_gt_zero(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-ALIGNED-RV32-LABEL: bcmp_gt_zero:
 ; CHECK-ALIGNED-RV32:       # %bb.0: # %entry
 ; CHECK-ALIGNED-RV32-NEXT:    addi sp, sp, -16
@@ -981,7 +981,7 @@ entry:
   ret i1 %ret
 }
 
-define i32 @memcmp_size_0(ptr %s1, ptr %s2) nounwind {
+define i32 @memcmp_size_0(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-ALIGNED-RV32-LABEL: memcmp_size_0:
 ; CHECK-ALIGNED-RV32:       # %bb.0: # %entry
 ; CHECK-ALIGNED-RV32-NEXT:    li a0, 0
@@ -1006,7 +1006,7 @@ entry:
   ret i32 %memcmp
 }
 
-define i32 @memcmp_size_1(ptr %s1, ptr %s2) nounwind {
+define i32 @memcmp_size_1(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-ALIGNED-RV32-LABEL: memcmp_size_1:
 ; CHECK-ALIGNED-RV32:       # %bb.0: # %entry
 ; CHECK-ALIGNED-RV32-NEXT:    addi sp, sp, -16
@@ -1051,7 +1051,7 @@ entry:
   ret i32 %memcmp
 }
 
-define i32 @memcmp_size_2(ptr %s1, ptr %s2) nounwind {
+define i32 @memcmp_size_2(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-ALIGNED-RV32-LABEL: memcmp_size_2:
 ; CHECK-ALIGNED-RV32:       # %bb.0: # %entry
 ; CHECK-ALIGNED-RV32-NEXT:    addi sp, sp, -16
@@ -1096,7 +1096,7 @@ entry:
   ret i32 %memcmp
 }
 
-define i32 @memcmp_size_3(ptr %s1, ptr %s2) nounwind {
+define i32 @memcmp_size_3(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-ALIGNED-RV32-LABEL: memcmp_size_3:
 ; CHECK-ALIGNED-RV32:       # %bb.0: # %entry
 ; CHECK-ALIGNED-RV32-NEXT:    addi sp, sp, -16
@@ -1141,7 +1141,7 @@ entry:
   ret i32 %memcmp
 }
 
-define i32 @memcmp_size_4(ptr %s1, ptr %s2) nounwind {
+define i32 @memcmp_size_4(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-ALIGNED-RV32-LABEL: memcmp_size_4:
 ; CHECK-ALIGNED-RV32:       # %bb.0: # %entry
 ; CHECK-ALIGNED-RV32-NEXT:    addi sp, sp, -16
@@ -1186,7 +1186,7 @@ entry:
   ret i32 %memcmp
 }
 
-define i32 @memcmp_size_5(ptr %s1, ptr %s2) nounwind {
+define i32 @memcmp_size_5(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-ALIGNED-RV32-LABEL: memcmp_size_5:
 ; CHECK-ALIGNED-RV32:       # %bb.0: # %entry
 ; CHECK-ALIGNED-RV32-NEXT:    addi sp, sp, -16
@@ -1231,7 +1231,7 @@ entry:
   ret i32 %memcmp
 }
 
-define i32 @memcmp_size_6(ptr %s1, ptr %s2) nounwind {
+define i32 @memcmp_size_6(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-ALIGNED-RV32-LABEL: memcmp_size_6:
 ; CHECK-ALIGNED-RV32:       # %bb.0: # %entry
 ; CHECK-ALIGNED-RV32-NEXT:    addi sp, sp, -16
@@ -1276,7 +1276,7 @@ entry:
   ret i32 %memcmp
 }
 
-define i32 @memcmp_size_7(ptr %s1, ptr %s2) nounwind {
+define i32 @memcmp_size_7(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-ALIGNED-RV32-LABEL: memcmp_size_7:
 ; CHECK-ALIGNED-RV32:       # %bb.0: # %entry
 ; CHECK-ALIGNED-RV32-NEXT:    addi sp, sp, -16
@@ -1321,7 +1321,7 @@ entry:
   ret i32 %memcmp
 }
 
-define i32 @memcmp_size_8(ptr %s1, ptr %s2) nounwind {
+define i32 @memcmp_size_8(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-ALIGNED-RV32-LABEL: memcmp_size_8:
 ; CHECK-ALIGNED-RV32:       # %bb.0: # %entry
 ; CHECK-ALIGNED-RV32-NEXT:    addi sp, sp, -16
@@ -1366,7 +1366,7 @@ entry:
   ret i32 %memcmp
 }
 
-define i32 @memcmp_size_15(ptr %s1, ptr %s2) nounwind {
+define i32 @memcmp_size_15(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-ALIGNED-RV32-LABEL: memcmp_size_15:
 ; CHECK-ALIGNED-RV32:       # %bb.0: # %entry
 ; CHECK-ALIGNED-RV32-NEXT:    addi sp, sp, -16
@@ -1411,7 +1411,7 @@ entry:
   ret i32 %memcmp
 }
 
-define i32 @memcmp_size_16(ptr %s1, ptr %s2) nounwind {
+define i32 @memcmp_size_16(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-ALIGNED-RV32-LABEL: memcmp_size_16:
 ; CHECK-ALIGNED-RV32:       # %bb.0: # %entry
 ; CHECK-ALIGNED-RV32-NEXT:    addi sp, sp, -16
@@ -1456,7 +1456,7 @@ entry:
   ret i32 %memcmp
 }
 
-define i32 @memcmp_size_31(ptr %s1, ptr %s2) nounwind {
+define i32 @memcmp_size_31(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-ALIGNED-RV32-LABEL: memcmp_size_31:
 ; CHECK-ALIGNED-RV32:       # %bb.0: # %entry
 ; CHECK-ALIGNED-RV32-NEXT:    addi sp, sp, -16
@@ -1501,7 +1501,7 @@ entry:
   ret i32 %memcmp
 }
 
-define i32 @memcmp_size_32(ptr %s1, ptr %s2) nounwind {
+define i32 @memcmp_size_32(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-ALIGNED-RV32-LABEL: memcmp_size_32:
 ; CHECK-ALIGNED-RV32:       # %bb.0: # %entry
 ; CHECK-ALIGNED-RV32-NEXT:    addi sp, sp, -16
@@ -1546,7 +1546,7 @@ entry:
   ret i32 %memcmp
 }
 
-define i32 @memcmp_size_63(ptr %s1, ptr %s2) nounwind {
+define i32 @memcmp_size_63(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-ALIGNED-RV32-LABEL: memcmp_size_63:
 ; CHECK-ALIGNED-RV32:       # %bb.0: # %entry
 ; CHECK-ALIGNED-RV32-NEXT:    addi sp, sp, -16
@@ -1591,7 +1591,7 @@ entry:
   ret i32 %memcmp
 }
 
-define i32 @memcmp_size_64(ptr %s1, ptr %s2) nounwind {
+define i32 @memcmp_size_64(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-ALIGNED-RV32-LABEL: memcmp_size_64:
 ; CHECK-ALIGNED-RV32:       # %bb.0: # %entry
 ; CHECK-ALIGNED-RV32-NEXT:    addi sp, sp, -16
@@ -1636,7 +1636,7 @@ entry:
   ret i32 %memcmp
 }
 
-define i32 @memcmp_size_127(ptr %s1, ptr %s2) nounwind {
+define i32 @memcmp_size_127(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-ALIGNED-RV32-LABEL: memcmp_size_127:
 ; CHECK-ALIGNED-RV32:       # %bb.0: # %entry
 ; CHECK-ALIGNED-RV32-NEXT:    addi sp, sp, -16
@@ -1681,7 +1681,7 @@ entry:
   ret i32 %memcmp
 }
 
-define i32 @memcmp_size_128(ptr %s1, ptr %s2) nounwind {
+define i32 @memcmp_size_128(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-ALIGNED-RV32-LABEL: memcmp_size_128:
 ; CHECK-ALIGNED-RV32:       # %bb.0: # %entry
 ; CHECK-ALIGNED-RV32-NEXT:    addi sp, sp, -16
@@ -1726,7 +1726,7 @@ entry:
   ret i32 %memcmp
 }
 
-define i32 @memcmp_size_runtime(ptr %s1, ptr %s2, iXLen %len) nounwind {
+define i32 @memcmp_size_runtime(ptr %s1, ptr %s2, iXLen %len) nounwind optsize {
 ; CHECK-ALIGNED-RV32-LABEL: memcmp_size_runtime:
 ; CHECK-ALIGNED-RV32:       # %bb.0: # %entry
 ; CHECK-ALIGNED-RV32-NEXT:    addi sp, sp, -16
@@ -1767,7 +1767,7 @@ entry:
   ret i32 %memcmp
 }
 
-define i1 @memcmp_eq_zero(ptr %s1, ptr %s2) nounwind {
+define i1 @memcmp_eq_zero(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-ALIGNED-RV32-LABEL: memcmp_eq_zero:
 ; CHECK-ALIGNED-RV32:       # %bb.0: # %entry
 ; CHECK-ALIGNED-RV32-NEXT:    lbu a2, 1(a1)
@@ -1841,7 +1841,7 @@ entry:
   ret i1 %ret
 }
 
-define i1 @memcmp_lt_zero(ptr %s1, ptr %s2) nounwind {
+define i1 @memcmp_lt_zero(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-ALIGNED-RV32-LABEL: memcmp_lt_zero:
 ; CHECK-ALIGNED-RV32:       # %bb.0: # %entry
 ; CHECK-ALIGNED-RV32-NEXT:    addi sp, sp, -16
@@ -1893,7 +1893,7 @@ entry:
   ret i1 %ret
 }
 
-define i1 @memcmp_gt_zero(ptr %s1, ptr %s2) nounwind {
+define i1 @memcmp_gt_zero(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-ALIGNED-RV32-LABEL: memcmp_gt_zero:
 ; CHECK-ALIGNED-RV32:       # %bb.0: # %entry
 ; CHECK-ALIGNED-RV32-NEXT:    addi sp, sp, -16
