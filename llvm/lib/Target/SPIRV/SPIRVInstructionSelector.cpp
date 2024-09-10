@@ -28,6 +28,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/Support/Debug.h"
@@ -183,6 +184,9 @@ private:
 
   bool selectRsqrt(Register ResVReg, const SPIRVType *ResType,
                    MachineInstr &I) const;
+
+  bool selectSign(Register ResVReg, const SPIRVType *ResType,
+                  MachineInstr &I) const;
 
   bool selectFloatDot(Register ResVReg, const SPIRVType *ResType,
                       MachineInstr &I) const;
@@ -1603,6 +1607,52 @@ bool SPIRVInstructionSelector::selectSaturate(Register ResVReg,
       .constrainAllUses(TII, TRI, RBI);
 }
 
+bool SPIRVInstructionSelector::selectSign(Register ResVReg,
+                                          const SPIRVType *ResType,
+                                          MachineInstr &I) const {
+  assert(I.getNumOperands() == 3);
+  assert(I.getOperand(2).isReg());
+  MachineBasicBlock &BB = *I.getParent();
+  Register InputRegister = I.getOperand(2).getReg();
+  SPIRVType *InputType = GR.getSPIRVTypeForVReg(InputRegister);
+  auto &DL = I.getDebugLoc();
+
+  if (!InputType)
+    report_fatal_error("Input Type could not be determined.");
+
+  bool IsFloatTy = GR.isScalarOrVectorOfType(InputRegister, SPIRV::OpTypeFloat);
+
+  unsigned SignBitWidth = GR.getScalarOrVectorBitWidth(InputType);
+  unsigned ResBitWidth = GR.getScalarOrVectorBitWidth(ResType);
+
+  bool NeedsConversion = IsFloatTy || SignBitWidth != ResBitWidth;
+
+  auto SignOpcode = IsFloatTy ? GL::FSign : GL::SSign;
+  Register SignReg = NeedsConversion
+                         ? MRI->createVirtualRegister(&SPIRV::IDRegClass)
+                         : ResVReg;
+
+  bool Result =
+      BuildMI(BB, I, DL, TII.get(SPIRV::OpExtInst))
+          .addDef(SignReg)
+          .addUse(GR.getSPIRVTypeID(InputType))
+          .addImm(static_cast<uint32_t>(SPIRV::InstructionSet::GLSL_std_450))
+          .addImm(SignOpcode)
+          .addUse(InputRegister)
+          .constrainAllUses(TII, TRI, RBI);
+
+  if (NeedsConversion) {
+    auto ConvertOpcode = IsFloatTy ? SPIRV::OpConvertFToS : SPIRV::OpSConvert;
+    Result |= BuildMI(*I.getParent(), I, DL, TII.get(ConvertOpcode))
+                  .addDef(ResVReg)
+                  .addUse(GR.getSPIRVTypeID(ResType))
+                  .addUse(SignReg)
+                  .constrainAllUses(TII, TRI, RBI);
+  }
+
+  return Result;
+}
+
 bool SPIRVInstructionSelector::selectBitreverse(Register ResVReg,
                                                 const SPIRVType *ResType,
                                                 MachineInstr &I) const {
@@ -2339,6 +2389,8 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     return selectNormalize(ResVReg, ResType, I);
   case Intrinsic::spv_rsqrt:
     return selectRsqrt(ResVReg, ResType, I);
+  case Intrinsic::spv_sign:
+    return selectSign(ResVReg, ResType, I);
   case Intrinsic::spv_lifetime_start:
   case Intrinsic::spv_lifetime_end: {
     unsigned Op = IID == Intrinsic::spv_lifetime_start ? SPIRV::OpLifetimeStart

@@ -1185,14 +1185,14 @@ uint64_t ARMAsmBackendDarwin::generateCompactUnwindEncoding(
     return CU::UNWIND_ARM_MODE_DWARF;
 
   // Start off assuming CFA is at SP+0.
-  unsigned CFARegister = ARM::SP;
+  MCRegister CFARegister = ARM::SP;
   int CFARegisterOffset = 0;
   // Mark savable registers as initially unsaved
   DenseMap<unsigned, int> RegOffsets;
   int FloatRegCount = 0;
   // Process each .cfi directive and build up compact unwind info.
   for (const MCCFIInstruction &Inst : Instrs) {
-    unsigned Reg;
+    MCRegister Reg;
     switch (Inst.getOperation()) {
     case MCCFIInstruction::OpDefCfa: // DW_CFA_def_cfa
       CFARegisterOffset = Inst.getOffset();

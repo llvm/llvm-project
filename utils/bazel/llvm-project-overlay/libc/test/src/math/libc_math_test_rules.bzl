@@ -40,3 +40,19 @@ def math_test(name, hdrs = [], deps = [], **kwargs):
         ] + deps,
         **kwargs
     )
+
+def math_mpfr_test(name, hdrs = [], deps = [], **kwargs):
+    """Add a target for the unittest of a math function.
+
+    Args:
+      name: The name of the function being tested.
+      hdrs: List of headers to add.
+      deps: The list of other libraries to be linked in to the test target.
+      **kwargs: Attributes relevant for a cc_test. For example, name, srcs.
+    """
+    math_test(
+        name = name,
+        hdrs = hdrs,
+        deps = deps + ["//libc/utils/MPFRWrapper:mpfr_wrapper"],
+        **kwargs
+    )

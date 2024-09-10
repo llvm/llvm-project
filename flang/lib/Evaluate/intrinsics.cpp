@@ -2811,8 +2811,10 @@ IntrinsicProcTable::Implementation::HandleC_F_Pointer(
       if (auto type{expr->GetType()}) {
         if (type->category() != TypeCategory::Derived ||
             type->IsPolymorphic() ||
-            type->GetDerivedTypeSpec().typeSymbol().name() !=
-                "__builtin_c_ptr") {
+            (type->GetDerivedTypeSpec().typeSymbol().name() !=
+                    "__builtin_c_ptr" &&
+                type->GetDerivedTypeSpec().typeSymbol().name() !=
+                    "__builtin_c_devptr")) {
           context.messages().Say(arguments[0]->sourceLocation(),
               "CPTR= argument to C_F_POINTER() must be a C_PTR"_err_en_US);
         }

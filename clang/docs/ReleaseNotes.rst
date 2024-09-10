@@ -243,6 +243,9 @@ Attribute Changes in Clang
   instantiation by accidentally allowing it in C++ in some circumstances.
   (#GH106864)
 
+- Introduced a new attribute ``[[clang::coro_await_elidable]]`` on coroutine return types
+  to express elideability at call sites where the coroutine is co_awaited as a prvalue.
+
 Improvements to Clang's diagnostics
 -----------------------------------
 
@@ -373,8 +376,8 @@ Bug Fixes to C++ Support
 - Fixed a bug in the substitution of empty pack indexing types. (#GH105903)
 - Clang no longer tries to capture non-odr used default arguments of template parameters of generic lambdas (#GH107048)
 - Fixed a bug where defaulted comparison operators would remove ``const`` from base classes. (#GH102588)
-
 - Fix a crash when using ``source_location`` in the trailing return type of a lambda expression. (#GH67134)
+- A follow-up fix was added for (#GH61460), as the previous fix was not entirely correct. (#GH86361)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
