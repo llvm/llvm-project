@@ -2972,7 +2972,7 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     break;
   }
   case Builtin::BI__builtin_counted_by_ref:
-    if (BuiltinGetCountedBy(TheCall))
+    if (BuiltinCountedByRef(TheCall))
       return ExprError();
     break;
   }
@@ -5577,7 +5577,7 @@ bool Sema::BuiltinSetjmp(CallExpr *TheCall) {
   return false;
 }
 
-bool Sema::BuiltinGetCountedBy(CallExpr *TheCall) {
+bool Sema::BuiltinCountedByRef(CallExpr *TheCall) {
   // For simplicity, we support only a limited expressions for the argument.
   // Specifically 'ptr->array' and '&ptr->array[0]'. This allows us to reject
   // arguments with complex casting, which really shouldn't be a huge problem.
