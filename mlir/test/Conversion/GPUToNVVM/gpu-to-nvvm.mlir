@@ -50,7 +50,7 @@ gpu.module @test_module_0 {
     %gDimZ = gpu.grid_dim z
 
 
-    // CHECK: = nvvm.read.ptx.sreg.laneid : i32
+    // CHECK: = nvvm.read.ptx.sreg.laneid range <i32, 0, 32> : i32
     // CHECK: = llvm.sext %{{.*}} : i32 to i64
     %laneId = gpu.lane_id
 
@@ -936,8 +936,8 @@ gpu.module @test_module_49 {
     %0 = gpu.thread_id x upper_bound 32
     // CHECK: = nvvm.read.ptx.sreg.ntid.x range <i32, 1, 33> : i32
     %1 = gpu.block_dim x upper_bound 32
-    // CHECK: = nvvm.read.ptx.sreg.laneid range <i32, 0, 32> : i32
-    %2 = gpu.lane_id upper_bound 32
+    // CHECK: = nvvm.read.ptx.sreg.laneid range <i32, 0, 16> : i32
+    %2 = gpu.lane_id upper_bound 16
 
     return %0, %1, %2 : index, index, index
   }
