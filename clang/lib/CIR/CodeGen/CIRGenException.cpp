@@ -839,6 +839,7 @@ mlir::Operation *CIRGenFunction::getInvokeDestImpl() {
 
   if (Personality.usesFuncletPads()) {
     // We don't need separate landing pads in the funclet model.
+    llvm::errs() << "PersonalityFn: " << Personality.PersonalityFn << "\n";
     llvm_unreachable("NYI");
   } else {
     mlir::cir::TryOp tryOp = nullptr;
