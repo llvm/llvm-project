@@ -208,16 +208,6 @@ def int_amdgcn_init_exec_from_input : Intrinsic<[],
   [IntrConvergent, IntrHasSideEffects, IntrNoMem, IntrNoCallback,
    IntrNoFree, IntrWillReturn, ImmArg<ArgIndex<1>>]>;
 
-// Sets the function into whole-wave-mode and returns whether the lane was
-// active when entering the function. A branch depending on this return will
-// revert the EXEC mask to what it was when entering the function, thus
-// resulting in a no-op. This pattern is used to optimize branches when function
-// tails need to be run in whole-wave-mode. It may also have other consequences
-// (mostly related to WWM CSR handling) that differentiate it from using
-// a plain `amdgcn.init.exec -1`.
-def int_amdgcn_init_whole_wave : Intrinsic<[llvm_i1_ty], [], [
-    IntrHasSideEffects, IntrNoMem, IntrConvergent]>;
-
 def int_amdgcn_wavefrontsize :
   ClangBuiltin<"__builtin_amdgcn_wavefrontsize">,
   DefaultAttrsIntrinsic<[llvm_i32_ty], [], [NoUndef<RetIndex>, IntrNoMem, IntrSpeculatable]>;
