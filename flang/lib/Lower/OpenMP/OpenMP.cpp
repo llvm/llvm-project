@@ -1546,7 +1546,7 @@ genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   auto &builder = converter.getFirOpBuilder();
 
   // Insert privatizations before SECTIONS
-  symTable.pushScope();
+  lower::SymMapScope scope(symTable);
   DataSharingProcessor dsp(converter, semaCtx, item->clauses, eval,
                            lower::omp::isLastItemInQueue(item, queue));
   dsp.processStep1();
@@ -1643,7 +1643,6 @@ genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   if (clauseOps.nowait && !lastprivates.empty())
     builder.create<mlir::omp::BarrierOp>(loc);
 
-  symTable.popScope();
   return sectionsOp;
 }
 
@@ -2900,9 +2899,8 @@ void Fortran::lower::genOpenMPConstruct(lower::AbstractConverter &converter,
                                         semantics::SemanticsContext &semaCtx,
                                         lower::pft::Evaluation &eval,
                                         const parser::OpenMPConstruct &omp) {
-  symTable.pushScope();
+  lower::SymMapScope scope(symTable);
   genOMP(converter, symTable, semaCtx, eval, omp);
-  symTable.popScope();
 }
 
 void Fortran::lower::genOpenMPDeclarativeConstruct(
