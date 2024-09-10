@@ -1015,8 +1015,7 @@ TypeSourceInfo *buildInheritedConstructorDeductionGuideType(
 FunctionTemplateDecl *BuildDeductionGuideForTypeAlias(
     Sema &SemaRef, TypeAliasTemplateDecl *AliasTemplate,
     FunctionTemplateDecl *F, SourceLocation Loc,
-    InheritedConstructorDeductionInfo *FromInheritedCtor =
-        nullptr) {
+    InheritedConstructorDeductionInfo *FromInheritedCtor = nullptr) {
   LocalInstantiationScope Scope(SemaRef);
   Sema::InstantiatingTemplate BuildingDeductionGuides(
       SemaRef, AliasTemplate->getLocation(), F,
@@ -1236,8 +1235,7 @@ FunctionTemplateDecl *BuildDeductionGuideForTypeAlias(
 
 void DeclareImplicitDeductionGuidesForTypeAlias(
     Sema &SemaRef, TypeAliasTemplateDecl *AliasTemplate, SourceLocation Loc,
-    InheritedConstructorDeductionInfo *FromInheritedCtor =
-        nullptr) {
+    InheritedConstructorDeductionInfo *FromInheritedCtor = nullptr) {
   if (AliasTemplate->isInvalidDecl())
     return;
   TemplateDecl *DeducedTemplate = FromInheritedCtor
@@ -1347,12 +1345,14 @@ static bool IsDeducibleTemplate(TemplateDecl *TD) {
     if (!Alias)
       return false;
 
-    QualType AliasType = Alias->getTemplatedDecl()->getUnderlyingType().getCanonicalType();
+    QualType AliasType =
+        Alias->getTemplatedDecl()->getUnderlyingType().getCanonicalType();
 
     // ... whose defining-type-id is of the form
     // [typename] [nested-name-specifier] [template] simple-template-id ...
     if (const auto *TST = AliasType->getAs<TemplateSpecializationType>()) {
-      // ... and the template-name of the simple-template-id names a deducible template
+      // ... and the template-name of the simple-template-id names a deducible
+      // template
       TD = TST->getTemplateName().getAsTemplateDecl();
       continue;
     }
@@ -1380,8 +1380,9 @@ void DeclareImplicitDeductionGuidesFromInheritedConstructors(
 
   TemplateDecl *BaseTD = BaseTST->getTemplateName().getAsTemplateDecl();
 
-  // The alias template `A` that we build out of the base type must be a deducible template.
-  // `A` will be of the correct form, so it is deducible iff BaseTD is deducible
+  // The alias template `A` that we build out of the base type must be a
+  // deducible template. `A` will be of the correct form, so it is deducible iff
+  // BaseTD is deducible
   if (!BaseTD || !IsDeducibleTemplate(BaseTD))
     return;
 
@@ -1457,7 +1458,8 @@ void DeclareImplicitDeductionGuidesFromInheritedConstructors(
   // for heavy lifting.
   LocalInstantiationScope CloneScope(SemaRef);
   TemplateDeclInstantiator CloneTDI(SemaRef, DC, /*TemplateArgs=*/{});
-  TemplateParameterList *PartialSpecTPL = CloneTDI.SubstTemplateParams(AliasTPL);
+  TemplateParameterList *PartialSpecTPL =
+      CloneTDI.SubstTemplateParams(AliasTPL);
   CloneScope.Exit();
   for (NamedDecl *Param : *PartialSpecTPL) {
     if (auto *TTP = dyn_cast<TemplateTypeParmDecl>(Param)) {
@@ -1477,14 +1479,12 @@ void DeclareImplicitDeductionGuidesFromInheritedConstructors(
   auto *BaseAD = TypeAliasDecl::Create(
       Context, DC, SourceLocation(), BaseLoc,
       TransformedBase->getType().getBaseTypeIdentifier(), TransformedBase);
-  std::string AliasDeclName =
-      (Twine("__ctad_A_") + BaseTD->getName() + "_to_" +
-       Template->getName() + "_" + Twine(BaseIdx))
-          .str();
+  std::string AliasDeclName = (Twine("__ctad_A_") + BaseTD->getName() + "_to_" +
+                               Template->getName() + "_" + Twine(BaseIdx))
+                                  .str();
   IdentifierInfo *AliasIdentifier = &Context.Idents.get(AliasDeclName);
   auto *BaseATD = TypeAliasTemplateDecl::Create(
-      Context, DC, BaseLoc, DeclarationName(AliasIdentifier), AliasTPL,
-      BaseAD);
+      Context, DC, BaseLoc, DeclarationName(AliasIdentifier), AliasTPL, BaseAD);
   BaseAD->setDescribedAliasTemplate(BaseATD);
   BaseAD->setImplicit();
   BaseATD->setImplicit();
@@ -1502,8 +1502,8 @@ void DeclareImplicitDeductionGuidesFromInheritedConstructors(
       ArrayRef<NamedDecl *>(TParam), SourceLocation(), nullptr);
 
   std::string MapperDeclName =
-      (Twine("__ctad_CC_") + BaseTD->getName() + "_to_" +
-       Template->getName() + "_" + Twine(BaseIdx))
+      (Twine("__ctad_CC_") + BaseTD->getName() + "_to_" + Template->getName() +
+       "_" + Twine(BaseIdx))
           .str();
   IdentifierInfo *MapperII = &Context.Idents.get(MapperDeclName);
   CXXRecordDecl *MapperRD = CXXRecordDecl::Create(
