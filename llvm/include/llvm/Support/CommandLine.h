@@ -2283,6 +2283,9 @@ void ResetCommandLineParser();
 /// Parses `Arg` into the option handler `Handler`.
 bool ProvidePositionalOption(Option *Handler, StringRef Arg, int i);
 
+/// Verify that every Required/OneOrMore option has a value.
+bool CheckRequiredValues(const StringMap<Option *> &OptionsMap);
+
 } // end namespace cl
 
 } // end namespace llvm
