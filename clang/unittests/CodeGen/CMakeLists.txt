@@ -9,6 +9,7 @@ add_clang_unittest(ClangCodeGenTests
   CodeGenExternalTest.cpp
   TBAAMetadataTest.cpp
   CheckTargetFeaturesTest.cpp
+  TemplateInstantiationTest.cpp
   )
 
 clang_target_link_libraries(ClangCodeGenTests
