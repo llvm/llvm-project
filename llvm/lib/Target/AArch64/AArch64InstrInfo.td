@@ -758,6 +758,8 @@ def AArch64mvni_msl : SDNode<"AArch64ISD::MVNImsl", SDT_AArch64MOVIshift>;
 def AArch64movi : SDNode<"AArch64ISD::MOVI", SDT_AArch64MOVIedit>;
 def AArch64fmov : SDNode<"AArch64ISD::FMOV", SDT_AArch64MOVIedit>;
 
+def AArch64rev16_scalar : SDNode<"AArch64ISD::REV16", SDTIntUnaryOp>;
+
 def AArch64rev16 : SDNode<"AArch64ISD::REV16", SDT_AArch64UnaryVec>;
 def AArch64rev32 : SDNode<"AArch64ISD::REV32", SDT_AArch64UnaryVec>;
 def AArch64rev64 : SDNode<"AArch64ISD::REV64", SDT_AArch64UnaryVec>;
@@ -2839,6 +2841,9 @@ def : Pat<(bswap (rotr GPR64:$Rn, (i64 32))), (REV32Xr GPR64:$Rn)>;
 // Match (srl (bswap x), C) -> revC if the upper bswap bits are known zero.
 def : Pat<(srl (bswap top16Zero:$Rn), (i64 16)), (REV16Wr GPR32:$Rn)>;
 def : Pat<(srl (bswap top32Zero:$Rn), (i64 32)), (REV32Xr GPR64:$Rn)>;
+
+def : Pat<(AArch64rev16_scalar GPR32:$Rn), (REV16Wr GPR32:$Rn)>;
+def : Pat<(AArch64rev16_scalar GPR64:$Rn), (REV16Xr GPR64:$Rn)>;
 
 def : Pat<(or (and (srl GPR64:$Rn, (i64 8)), (i64 0x00ff00ff00ff00ff)),
               (and (shl GPR64:$Rn, (i64 8)), (i64 0xff00ff00ff00ff00))),
