@@ -221,7 +221,8 @@ void WebAssemblyMCInstLower::lower(const MachineInstr *MI,
 
           MCOp = lowerTypeIndexOperand(std::move(Returns), std::move(Params));
           break;
-        } else if (Info.OperandType == WebAssembly::OPERAND_SIGNATURE) {
+        }
+        if (Info.OperandType == WebAssembly::OPERAND_SIGNATURE) {
           auto BT = static_cast<WebAssembly::BlockType>(MO.getImm());
           assert(BT != WebAssembly::BlockType::Invalid);
           if (BT == WebAssembly::BlockType::Multivalue) {
