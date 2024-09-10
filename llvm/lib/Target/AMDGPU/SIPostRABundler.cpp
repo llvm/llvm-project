@@ -44,6 +44,7 @@ public:
   }
 
 private:
+  const SIInstrInfo *TII = nullptr;
   const SIRegisterInfo *TRI;
 
   SmallSet<Register, 16> Defs;
@@ -54,6 +55,9 @@ private:
   bool isBundleCandidate(const MachineInstr &MI) const;
   bool isDependentLoad(const MachineInstr &MI) const;
   bool canBundle(const MachineInstr &MI, const MachineInstr &NextMI) const;
+  void reorderLoads(MachineBasicBlock &MBB,
+                    MachineBasicBlock::instr_iterator &BundleStart,
+                    MachineBasicBlock::instr_iterator Next);
 };
 
 constexpr uint64_t MemFlags = SIInstrFlags::MTBUF | SIInstrFlags::MUBUF |
@@ -121,10 +125,132 @@ bool SIPostRABundler::canBundle(const MachineInstr &MI,
           !isDependentLoad(NextMI));
 }
 
+void SIPostRABundler::reorderLoads(
+    MachineBasicBlock &MBB, MachineBasicBlock::instr_iterator &BundleStart,
+    MachineBasicBlock::instr_iterator Next) {
+  auto II = BundleStart;
+  if (!TII->isMIMG(II->getOpcode()) || II->mayStore())
+    return;
+
+  LLVM_DEBUG(dbgs() << "Begin bundle reorder\n");
+
+  // Collect clause
+  SmallVector<MachineInstr *> Clause;
+  for (auto II = BundleStart; II != Next; ++II)
+    Clause.push_back(&*II);
+
+  // Search to find the usage distance of each defined register in the clause.
+  const int MaxSearch = 100;
+  SmallSet<Register, 16> DefRegs(Defs);
+  SmallSet<unsigned, 16> Distances;
+  DenseMap<Register, unsigned> UseDistance;
+  unsigned Dist = 0;
+  for (MachineBasicBlock::iterator SearchI = Next;
+       SearchI != MBB.end() && Dist < MaxSearch && !DefRegs.empty();
+       ++SearchI, ++Dist) {
+    SmallVector<Register, 4> Found;
+    // FIXME: fix search efficiency
+    for (Register DefReg : DefRegs) {
+      if (SearchI->readsRegister(DefReg, TRI))
+        Found.push_back(DefReg);
+    }
+    for (Register Reg : Found) {
+      UseDistance[Reg] = Dist;
+      DefRegs.erase(Reg);
+      Distances.insert(Dist);
+    }
+  }
+
+  if (Distances.size() <= 1)
+    return;
+
+  std::vector<std::pair<MachineInstr *, unsigned>> Schedule;
+  unsigned TotalOrder = Dist + 1;
+  bool Reorder = false;
+  for (MachineInstr *MI : Clause) {
+    unsigned Order = TotalOrder++;
+    if (MI->getNumExplicitDefs() >= 0) {
+      Register Reg = MI->defs().begin()->getReg();
+      if (!UseDistance.contains(Reg))
+        continue;
+      Order = std::min(Order, UseDistance[Reg]);
+      Reorder = true;
+    }
+    LLVM_DEBUG(dbgs() << "Order: " << Order << ", MI: " << *MI);
+    Schedule.push_back(std::pair(MI, Order));
+  }
+
+  if (!Reorder)
+    return;
+
+  std::sort(Schedule.begin(), Schedule.end(),
+            [](std::pair<MachineInstr *, unsigned> A,
+               std::pair<MachineInstr *, unsigned> B) {
+              return A.second < B.second;
+            });
+
+  // Rebuild clause order.
+  // Schedule holds ideal order for the load operations; however, each def
+  // can only be scheduled when it will no longer clobber any uses.
+  Clause.clear();
+  while (!Schedule.empty()) {
+    auto It = Schedule.begin();
+    while (It != Schedule.end()) {
+      MachineInstr *MI = It->first;
+
+      LLVM_DEBUG(dbgs() << "Try schedule: " << *MI);
+
+      if (MI->getNumExplicitDefs() == 0) {
+        // No defs, always schedule.
+        Clause.push_back(MI);
+        break;
+      }
+
+      // FIXME: make this scan more efficient
+      Register Reg = MI->defs().begin()->getReg();
+      bool ClobbersUse = false;
+      for (auto SearchIt = Schedule.begin(); SearchIt != Schedule.end();
+           ++SearchIt) {
+        // We are allowed to clobber our own uses.
+        if (SearchIt == It)
+          continue;
+        if (SearchIt->first->readsRegister(Reg, TRI)) {
+          ClobbersUse = true;
+          break;
+        }
+      }
+      if (ClobbersUse) {
+        // Use is clobbered; try next def in the schedule.
+        It++;
+        LLVM_DEBUG(dbgs() << "  Clobbers uses\n");
+        continue;
+      }
+
+      // Safe to schedule.
+      LLVM_DEBUG(dbgs() << "  OK!\n");
+      Clause.push_back(MI);
+      break;
+    }
+    assert(It != Schedule.end());
+    Schedule.erase(It);
+  }
+
+  // Apply order to instructions.
+  for (MachineInstr *MI : Clause)
+    MI->moveBefore(&*Next);
+
+  // FIXME: update kill flags
+
+  // Update start of bundle.
+  BundleStart = Clause[0]->getIterator();
+}
+
 bool SIPostRABundler::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
 
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  TII = ST.getInstrInfo();
   TRI = MF.getSubtarget<GCNSubtarget>().getRegisterInfo();
   BitVector BundleUsedRegUnits(TRI->getNumRegUnits());
   BitVector KillUsedRegUnits(TRI->getNumRegUnits());
@@ -214,6 +340,7 @@ bool SIPostRABundler::runOnMachineFunction(MachineFunction &MF) {
           BundleUsedRegUnits.reset();
         }
 
+        reorderLoads(MBB, BundleStart, Next);
         finalizeBundle(MBB, BundleStart, Next);
       }
 

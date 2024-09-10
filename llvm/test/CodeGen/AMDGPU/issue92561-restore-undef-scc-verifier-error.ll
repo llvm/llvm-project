@@ -61,15 +61,16 @@ define void @issue92561(ptr addrspace(1) %arg) {
 ; SDAG-NEXT:    s_mov_b32 s7, s12
 ; SDAG-NEXT:    s_clause 0x2
 ; SDAG-NEXT:    image_sample_c_lz v0, [v1, v1, v0, v1], s[0:7], s[12:15] dmask:0x1 dim:SQ_RSRC_IMG_2D_ARRAY
-; SDAG-NEXT:    image_sample_c_lz v3, [v1, v1, v1, v1], s[0:7], s[12:15] dmask:0x1 dim:SQ_RSRC_IMG_2D_ARRAY
 ; SDAG-NEXT:    image_sample_c_lz v2, [v1, v2, v1, v1], s[0:7], s[12:15] dmask:0x1 dim:SQ_RSRC_IMG_2D_ARRAY
+; SDAG-NEXT:    image_sample_c_lz v3, [v1, v1, v1, v1], s[0:7], s[12:15] dmask:0x1 dim:SQ_RSRC_IMG_2D_ARRAY
 ; SDAG-NEXT:    v_mov_b32_e32 v4, v1
 ; SDAG-NEXT:    s_waitcnt vmcnt(2)
 ; SDAG-NEXT:    v_add_f32_e32 v0, v9, v0
-; SDAG-NEXT:    s_waitcnt vmcnt(0)
-; SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; SDAG-NEXT:    s_waitcnt vmcnt(1)
+; SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_2)
 ; SDAG-NEXT:    v_add_f32_e32 v0, v2, v0
 ; SDAG-NEXT:    v_mov_b32_e32 v2, v1
+; SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; SDAG-NEXT:    v_dual_add_f32 v0, v3, v0 :: v_dual_mov_b32 v3, v1
 ; SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; SDAG-NEXT:    v_mul_f32_e32 v0, 0x3e800000, v0
