@@ -1121,6 +1121,8 @@ Bug Fixes to C++ Support
   Fixes (#GH85992).
 - Fixed a crash-on-invalid bug involving extraneous template parameter with concept substitution. (#GH73885)
 - Fixed assertion failure by skipping the analysis of an invalid field declaration. (#GH99868)
+- Fix an issue with dependent source location expressions (#GH106428), (#GH81155), (#GH80210), (#GH85373)
+
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
