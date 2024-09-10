@@ -1,4 +1,5 @@
 ; RUN: llc -verify-machineinstrs -mcpu=pwr7 < %s | FileCheck  %s -check-prefix=PWR7
+; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mtriple=powerpc64-ibm-aix-xcoff < %s | FileCheck  %s -check-prefixes=PWR7-AIX
 ; RUN: llc -verify-machineinstrs -mcpu=pwr8 < %s | FileCheck  %s -check-prefix=PWR8
 target datalayout = "E-m:e-i64:64-n32:64"
 target triple = "powerpc64-unknown-linux-gnu"
@@ -17,6 +18,11 @@ entry:
 ; PWR7-DAG: lxvd2x [[TMP1:[0-9]+]], 0, 4
 ; PWR7-DAG: stxvd2x [[TMP1]], 0, 3
 ; PWR7: blr
+
+; PWR7-AIX-LABEL: @foo1
+; PWR7-AIX: lxvw4x
+; PWR7-AIX: stxvw4x
+; PWR7-AIX: blr
 
 ; PWR8-LABEL: @foo1
 ; PWR8: lxvw4x
@@ -37,6 +43,11 @@ entry:
 ; PWR7: bl memcpy
 ; PWR7: blr
 
+; PWR7-AIX-LABEL: @foo2
+; PWR7-AIX: lxvw4x
+; PWR7-AIX: stxvw4x
+; PWR7-AIX: blr
+
 ; PWR8-LABEL: @foo2
 ; PWR8: lxvw4x
 ; PWR8: stxvw4x
@@ -54,6 +65,11 @@ entry:
 ; PWR7: stxvw4x
 ; PWR7: blr
 
+; PWR7-AIX-LABEL: @bar1
+; PWR7-AIX-NOT: bl memset
+; PWR7-AIX: stxvw4x
+; PWR7-AIX: blr
+
 ; PWR8-LABEL: @bar1
 ; PWR8-NOT: bl memset
 ; PWR8: stxvw4x
@@ -70,6 +86,11 @@ entry:
 ; PWR7-NOT: bl memset
 ; PWR7: stxvw4x
 ; PWR7: blr
+
+; PWR7-AIX-LABEL: @bar2
+; PWR7-AIX-NOT: bl memset
+; PWR7-AIX: stxvw4x
+; PWR7-AIX: blr
 
 ; PWR8-LABEL: @bar2
 ; PWR8-NOT: bl memset
