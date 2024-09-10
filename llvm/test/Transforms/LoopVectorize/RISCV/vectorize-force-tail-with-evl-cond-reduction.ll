@@ -513,8 +513,7 @@ define i32 @step_cond_add(ptr %a, i64 %n, i32 %start) {
 ; NO-VP-OUTLOOP-NEXT:    [[TMP13:%.*]] = add <vscale x 4 x i32> [[TMP12]], zeroinitializer
 ; NO-VP-OUTLOOP-NEXT:    [[TMP14:%.*]] = mul <vscale x 4 x i32> [[TMP13]], shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
 ; NO-VP-OUTLOOP-NEXT:    [[INDUCTION:%.*]] = add <vscale x 4 x i32> zeroinitializer, [[TMP14]]
-; NO-VP-OUTLOOP-NEXT:    [[TMP15:%.*]] = call i32 @llvm.vscale.i32()
-; NO-VP-OUTLOOP-NEXT:    [[TMP16:%.*]] = mul i32 [[TMP15]], 4
+; NO-VP-OUTLOOP-NEXT:    [[TMP16:%.*]] = trunc i64 [[TMP10]] to i32
 ; NO-VP-OUTLOOP-NEXT:    [[TMP17:%.*]] = mul i32 1, [[TMP16]]
 ; NO-VP-OUTLOOP-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[TMP17]], i64 0
 ; NO-VP-OUTLOOP-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[DOTSPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
@@ -576,8 +575,7 @@ define i32 @step_cond_add(ptr %a, i64 %n, i32 %start) {
 ; NO-VP-INLOOP-NEXT:    [[TMP7:%.*]] = add <vscale x 4 x i32> [[TMP6]], zeroinitializer
 ; NO-VP-INLOOP-NEXT:    [[TMP8:%.*]] = mul <vscale x 4 x i32> [[TMP7]], shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
 ; NO-VP-INLOOP-NEXT:    [[INDUCTION:%.*]] = add <vscale x 4 x i32> zeroinitializer, [[TMP8]]
-; NO-VP-INLOOP-NEXT:    [[TMP9:%.*]] = call i32 @llvm.vscale.i32()
-; NO-VP-INLOOP-NEXT:    [[TMP10:%.*]] = mul i32 [[TMP9]], 4
+; NO-VP-INLOOP-NEXT:    [[TMP10:%.*]] = trunc i64 [[TMP5]] to i32
 ; NO-VP-INLOOP-NEXT:    [[TMP11:%.*]] = mul i32 1, [[TMP10]]
 ; NO-VP-INLOOP-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[TMP11]], i64 0
 ; NO-VP-INLOOP-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[DOTSPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
@@ -709,8 +707,7 @@ define i32 @step_cond_add_pred(ptr %a, i64 %n, i32 %start) {
 ; NO-VP-OUTLOOP-NEXT:    [[TMP13:%.*]] = add <vscale x 4 x i32> [[TMP12]], zeroinitializer
 ; NO-VP-OUTLOOP-NEXT:    [[TMP14:%.*]] = mul <vscale x 4 x i32> [[TMP13]], shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
 ; NO-VP-OUTLOOP-NEXT:    [[INDUCTION:%.*]] = add <vscale x 4 x i32> zeroinitializer, [[TMP14]]
-; NO-VP-OUTLOOP-NEXT:    [[TMP15:%.*]] = call i32 @llvm.vscale.i32()
-; NO-VP-OUTLOOP-NEXT:    [[TMP16:%.*]] = mul i32 [[TMP15]], 4
+; NO-VP-OUTLOOP-NEXT:    [[TMP16:%.*]] = trunc i64 [[TMP10]] to i32
 ; NO-VP-OUTLOOP-NEXT:    [[TMP17:%.*]] = mul i32 1, [[TMP16]]
 ; NO-VP-OUTLOOP-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[TMP17]], i64 0
 ; NO-VP-OUTLOOP-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[DOTSPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
@@ -777,8 +774,7 @@ define i32 @step_cond_add_pred(ptr %a, i64 %n, i32 %start) {
 ; NO-VP-INLOOP-NEXT:    [[TMP7:%.*]] = add <vscale x 4 x i32> [[TMP6]], zeroinitializer
 ; NO-VP-INLOOP-NEXT:    [[TMP8:%.*]] = mul <vscale x 4 x i32> [[TMP7]], shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
 ; NO-VP-INLOOP-NEXT:    [[INDUCTION:%.*]] = add <vscale x 4 x i32> zeroinitializer, [[TMP8]]
-; NO-VP-INLOOP-NEXT:    [[TMP9:%.*]] = call i32 @llvm.vscale.i32()
-; NO-VP-INLOOP-NEXT:    [[TMP10:%.*]] = mul i32 [[TMP9]], 4
+; NO-VP-INLOOP-NEXT:    [[TMP10:%.*]] = trunc i64 [[TMP5]] to i32
 ; NO-VP-INLOOP-NEXT:    [[TMP11:%.*]] = mul i32 1, [[TMP10]]
 ; NO-VP-INLOOP-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[TMP11]], i64 0
 ; NO-VP-INLOOP-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[DOTSPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
