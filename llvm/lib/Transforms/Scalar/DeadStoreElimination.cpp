@@ -834,9 +834,8 @@ struct MemoryLocationWrapper {
 // A memory def wrapper that represents a MemoryDef and the MemoryLocation(s)
 // defined by this MemoryDef.
 struct MemoryDefWrapper {
-  MemoryDefWrapper(
-      MemoryDef *MemDef,
-      const SmallVectorImpl<std::pair<MemoryLocation, bool>> &MemLocations) {
+  MemoryDefWrapper(MemoryDef *MemDef,
+                   ArrayRef<std::pair<MemoryLocation, bool>> MemLocations) {
     DefInst = MemDef->getMemoryInst();
     for (auto &[MemLoc, DefByInitializesAttr] : MemLocations)
       DefinedLocations.push_back(
@@ -866,17 +865,16 @@ struct ArgumentInitInfo {
 // Return the intersected range list of the initializes attributes of "Args".
 // "Args" are call arguments that alias to each other.
 // If any argument in "Args" doesn't have dead_on_unwind attr and
-// "FuncHasNoUnwindAttr" is false, return empty.
-ConstantRangeList
-getIntersectedInitRangeList(const SmallVectorImpl<ArgumentInitInfo> &Args,
-                            bool FuncHasNoUnwindAttr) {
+// "CallHasNoUnwindAttr" is false, return empty.
+ConstantRangeList getIntersectedInitRangeList(ArrayRef<ArgumentInitInfo> Args,
+                                              bool CallHasNoUnwindAttr) {
   if (Args.empty())
     return {};
 
   // To address unwind, the function should have nounwind attribute or the
   // arguments have dead_on_unwind attribute. Otherwise, return empty.
   for (const auto &Arg : Args) {
-    if (!FuncHasNoUnwindAttr && !Arg.HasDeadOnUnwindAttr)
+    if (!CallHasNoUnwindAttr && !Arg.HasDeadOnUnwindAttr)
       return {};
     if (Arg.Inits.empty())
       return {};
@@ -885,14 +883,14 @@ getIntersectedInitRangeList(const SmallVectorImpl<ArgumentInitInfo> &Args,
   if (Args.size() == 1)
     return Args[0].Inits;
 
-  ConstantRangeList IntersectedIntervals = Args[0].Inits;
-  for (size_t I = 1, Count = Args.size(); I < Count; ++I)
-    IntersectedIntervals = IntersectedIntervals.intersectWith(Args[I].Inits);
+  ConstantRangeList IntersectedIntervals = Args.front().Inits;
+  for (auto &Arg : Args.drop_front())
+    IntersectedIntervals = IntersectedIntervals.intersectWith(Arg.Inits);
 
   return IntersectedIntervals;
 }
 
-// Return the locations wrote by the initializes attribute.
+// Return the locations written by the initializes attribute.
 // Note that this function considers:
 // 1. Unwind edge: apply "initializes" attribute only if the callee has
 //    "nounwind" attribute or the argument has "dead_on_unwind" attribute.
@@ -908,19 +906,20 @@ getInitializesArgMemLoc(const Instruction *I, BatchAAResults &BatchAA) {
   SmallMapVector<Value *, SmallVector<ArgumentInitInfo, 2>, 2> Arguments;
   for (unsigned Idx = 0, Count = CB->arg_size(); Idx < Count; ++Idx) {
     ConstantRangeList Inits;
-    if (CB->paramHasAttr(Idx, Attribute::Initializes))
-      Inits = CB->getParamAttr(Idx, Attribute::Initializes)
-                  .getValueAsConstantRangeList();
+    Attribute InitializesAttr = CB->getParamAttr(Idx, Attribute::Initializes);
+    if (InitializesAttr.isValid())
+      Inits = InitializesAttr.getValueAsConstantRangeList();
 
     bool HasDeadOnUnwindAttr = CB->paramHasAttr(Idx, Attribute::DeadOnUnwind);
     ArgumentInitInfo InitInfo{Idx, HasDeadOnUnwindAttr, Inits};
     Value *CurArg = CB->getArgOperand(Idx);
     bool FoundAliasing = false;
     for (auto &[Arg, AliasList] : Arguments) {
-      if (BatchAA.isMustAlias(Arg, CurArg)) {
-        FoundAliasing = true;
-        AliasList.push_back(InitInfo);
-      }
+      if (BatchAA.isNoAlias(Arg, CurArg))
+        continue;
+      // Conservatively consider must/may/partial-alias as aliasing.
+      FoundAliasing = true;
+      AliasList.push_back(InitInfo);
     }
     if (!FoundAliasing)
       Arguments[CurArg] = {InitInfo};
@@ -929,7 +928,7 @@ getInitializesArgMemLoc(const Instruction *I, BatchAAResults &BatchAA) {
   SmallVector<MemoryLocation, 1> Locations;
   for (const auto &[_, Args] : Arguments) {
     auto IntersectedRanges =
-        getIntersectedInitRangeList(Args, CB->hasFnAttr(Attribute::NoUnwind));
+        getIntersectedInitRangeList(Args, CB->doesNotThrow());
     if (IntersectedRanges.empty())
       continue;
 
@@ -1736,9 +1735,8 @@ struct DSEState {
       bool IsKillingDefFromInitAttr = false;
       if (IsInitializesAttrMemLoc) {
         if (KillingI == UseInst &&
-            KillingUndObj == getUnderlyingObject(MaybeDeadLoc.Ptr)) {
+            KillingUndObj == getUnderlyingObject(MaybeDeadLoc.Ptr))
           IsKillingDefFromInitAttr = true;
-        }
       }
 
       if (isReadClobber(MaybeDeadLoc, UseInst) && !IsKillingDefFromInitAttr) {
