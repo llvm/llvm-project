@@ -268,6 +268,7 @@ set(LLVM_TOOLCHAIN_TOOLS
 
 set(LLVM_DISTRIBUTION_COMPONENTS
   clang
+  clang-configs
   lld
   LTO
   clang-format
