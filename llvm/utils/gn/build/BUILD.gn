@@ -144,7 +144,6 @@ config("compiler_defaults") {
     if (symbol_level != 0) {
       cflags += [
         "/Zi",
-        "/FS",
       ]
       if (symbol_level == 1 && is_clang) {
         cflags += [ "-gline-tables-only" ]
@@ -181,6 +180,12 @@ config("compiler_defaults") {
       "UNICODE",
     ]
     cflags += [ "/EHs-c-" ]
+    cflags += [
+      "/Gy",  # Enable function-level linking.
+      "/FS",  # Preserve previous PDB behavior.
+      "/bigobj",  # Some of our files are bigger than the regular limits.
+      "/utf-8",  # Assume UTF-8 by default to avoid code page dependencies.
+    ]
     cflags_cc += [ "/std:c++17" ]
 
     # cl.exe doesn't set __cplusplus correctly by default.
