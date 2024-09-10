@@ -86,3 +86,25 @@ entry:
   ret i64 %1
 }
 
+define <4 x i32> @test(i512 %a) {
+; CHECK-LABEL: test:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    mtvsrdd v2, r4, r3
+; CHECK-NEXT:    blr
+;
+; CHECK-BE-LABEL: test:
+; CHECK-BE:       # %bb.0: # %entry
+; CHECK-BE-NEXT:    mtvsrdd v2, r9, r10
+; CHECK-BE-NEXT:    blr
+;
+; CHECK-P8-LABEL: test:
+; CHECK-P8:       # %bb.0: # %entry
+; CHECK-P8-NEXT:    mtfprd f0, r3
+; CHECK-P8-NEXT:    mtfprd f1, r4
+; CHECK-P8-NEXT:    xxmrghd v2, vs1, vs0
+; CHECK-P8-NEXT:    blr
+entry:
+  %0 = trunc i512 %a to i128
+  %1 = bitcast i128 %0 to <4 x i32>
+  ret <4 x i32> %1
+}
