@@ -2471,7 +2471,7 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
     B.addAttribute(llvm::Attribute::StackProtectReq);
 
   if (!D) {
-    // HLSL functions must always be inlined
+    // Non-entry HLSL functions must always be inlined.
     if (getLangOpts().HLSL && !F->hasFnAttribute("hlsl.shader"))
       B.addAttribute(llvm::Attribute::AlwaysInline);
     // If we don't have a declaration to control inlining, the function isn't
@@ -2505,7 +2505,7 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
   ShouldAddOptNone &= !D->hasAttr<MinSizeAttr>();
   ShouldAddOptNone &= !D->hasAttr<AlwaysInlineAttr>();
 
-  // alwaysinline all HLSL functions save entry points
+  // Non-entry HLSL functions must always be inlined.
   if (getLangOpts().HLSL && !F->hasFnAttribute("hlsl.shader"))
     B.addAttribute(llvm::Attribute::AlwaysInline);
   else if ((ShouldAddOptNone || D->hasAttr<OptimizeNoneAttr>()) &&
