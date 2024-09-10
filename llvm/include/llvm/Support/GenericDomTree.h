@@ -29,6 +29,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Allocator.h"
 #include "llvm/Support/CFGDiff.h"
 #include "llvm/Support/CFGUpdate.h"
 #include "llvm/Support/raw_ostream.h"
@@ -37,6 +38,7 @@
 #include <cstddef>
 #include <iterator>
 #include <memory>
+#include <new>
 #include <type_traits>
 #include <utility>
 
@@ -258,8 +260,7 @@ protected:
   // Dominators always have a single root, postdominators can have more.
   SmallVector<NodeT *, IsPostDom ? 4 : 1> Roots;
 
-  using DomTreeNodeStorageTy =
-      SmallVector<std::unique_ptr<DomTreeNodeBase<NodeT>>>;
+  using DomTreeNodeStorageTy = SmallVector<DomTreeNodeBase<NodeT> *>;
   DomTreeNodeStorageTy DomTreeNodes;
   // For graphs where blocks don't have numbers, create a numbering here.
   // TODO: use an empty struct with [[no_unique_address]] in C++20.
@@ -268,6 +269,8 @@ protected:
       NodeNumberMap;
   DomTreeNodeBase<NodeT> *RootNode = nullptr;
   ParentPtr Parent = nullptr;
+
+  SpecificBumpPtrAllocator<DomTreeNodeBase<NodeT>> NodeAllocator;
 
   mutable bool DFSInfoValid = false;
   mutable unsigned int SlowQueries = 0;
@@ -281,8 +284,9 @@ protected:
   DominatorTreeBase(DominatorTreeBase &&Arg)
       : Roots(std::move(Arg.Roots)), DomTreeNodes(std::move(Arg.DomTreeNodes)),
         NodeNumberMap(std::move(Arg.NodeNumberMap)), RootNode(Arg.RootNode),
-        Parent(Arg.Parent), DFSInfoValid(Arg.DFSInfoValid),
-        SlowQueries(Arg.SlowQueries), BlockNumberEpoch(Arg.BlockNumberEpoch) {
+        Parent(Arg.Parent), NodeAllocator(std::move(Arg.NodeAllocator)),
+        DFSInfoValid(Arg.DFSInfoValid), SlowQueries(Arg.SlowQueries),
+        BlockNumberEpoch(Arg.BlockNumberEpoch) {
     Arg.wipe();
   }
 
@@ -292,6 +296,7 @@ protected:
     NodeNumberMap = std::move(RHS.NodeNumberMap);
     RootNode = RHS.RootNode;
     Parent = RHS.Parent;
+    NodeAllocator = std::move(RHS.NodeAllocator);
     DFSInfoValid = RHS.DFSInfoValid;
     SlowQueries = RHS.SlowQueries;
     BlockNumberEpoch = RHS.BlockNumberEpoch;
@@ -400,7 +405,7 @@ public:
     assert((!BB || Parent == NodeTrait::getParent(const_cast<NodeT *>(BB))) &&
            "cannot get DomTreeNode of block with different parent");
     if (auto Idx = getNodeIndex(BB); Idx && *Idx < DomTreeNodes.size())
-      return DomTreeNodes[*Idx].get();
+      return DomTreeNodes[*Idx];
     return nullptr;
   }
 
@@ -720,7 +725,7 @@ public:
     std::optional<unsigned> IdxOpt = getNodeIndex(BB);
     assert(IdxOpt && DomTreeNodes[*IdxOpt] &&
            "Removing node that isn't in dominator tree.");
-    DomTreeNodeBase<NodeT> *Node = DomTreeNodes[*IdxOpt].get();
+    DomTreeNodeBase<NodeT> *Node = DomTreeNodes[*IdxOpt];
     assert(Node->isLeaf() && "Node is not a leaf node.");
 
     DFSInfoValid = false;
@@ -896,6 +901,7 @@ public:
     RootNode = nullptr;
     Parent = nullptr;
     DFSInfoValid = false;
+    NodeAllocator.DestroyAll();
     SlowQueries = 0;
   }
 
@@ -904,13 +910,13 @@ protected:
 
   DomTreeNodeBase<NodeT> *createNode(NodeT *BB,
                                      DomTreeNodeBase<NodeT> *IDom = nullptr) {
-    auto Node = std::make_unique<DomTreeNodeBase<NodeT>>(BB, IDom);
-    auto *NodePtr = Node.get();
+    auto *Node =
+        new (NodeAllocator.Allocate()) DomTreeNodeBase<NodeT>(BB, IDom);
     unsigned NodeIdx = getNodeIndexForInsert(BB);
-    DomTreeNodes[NodeIdx] = std::move(Node);
+    DomTreeNodes[NodeIdx] = Node;
     if (IDom)
-      IDom->addChild(NodePtr);
-    return NodePtr;
+      IDom->addChild(Node);
+    return Node;
   }
 
   // NewBB is split and now it has one successor. Update dominator tree to
@@ -995,6 +1001,7 @@ protected:
       NodeNumberMap.clear();
     RootNode = nullptr;
     Parent = nullptr;
+    NodeAllocator.DestroyAll();
   }
 };
 
