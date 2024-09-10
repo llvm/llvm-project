@@ -769,6 +769,28 @@ llvm::json::Value CreateStackFrame(lldb::SBFrame &frame) {
   return llvm::json::Value(std::move(object));
 }
 
+llvm::json::Value CreateExtendedStackFrameLabel(lldb::SBThread &thread) {
+  std::string name;
+  lldb::SBStream stream;
+  if (g_dap.thread_format &&
+      thread.GetDescriptionWithFormat(g_dap.thread_format, stream).Success()) {
+    name = stream.GetData();
+  } else {
+    const uint32_t thread_idx = thread.GetExtendedBacktraceOriginatingIndexID();
+    const char *queue_name = thread.GetQueueName();
+    if (queue_name != nullptr) {
+      name = llvm::formatv("Enqueued from {0} (Thread {1})", queue_name,
+                           thread_idx);
+    } else {
+      name = llvm::formatv("Thread {0}", thread_idx);
+    }
+  }
+
+  return llvm::json::Value(llvm::json::Object{{"id", thread.GetThreadID() + 1},
+                                              {"name", name},
+                                              {"presentationHint", "label"}});
+}
+
 // Response to `setInstructionBreakpoints` request.
 // "Breakpoint": {
 //   "type": "object",
