@@ -2753,6 +2753,11 @@ void AMDGPUDAGToDAGISel::SelectINTRINSIC_W_CHAIN(SDNode *N) {
   case Intrinsic::amdgcn_ds_bvh_stack_push8_pop2_rtn:
     SelectDSBvhStackIntrinsic(N, IntrID);
     return;
+  case Intrinsic::amdgcn_init_whole_wave:
+    CurDAG->getMachineFunction()
+        .getInfo<SIMachineFunctionInfo>()
+        ->setInitWholeWave();
+    break;
   }
 
   SelectCode(N);
