@@ -90,7 +90,7 @@ YAMLProfileWriter::convertPseudoProbeDesc(const MCPseudoProbeDecoder &Decoder) {
   InlineTreeDesc InlineTree;
 
   for (const MCDecodedPseudoProbeInlineTree &TopLev :
-      Decoder.getDummyInlineRoot().getChildren())
+       Decoder.getDummyInlineRoot().getChildren())
     InlineTree.TopLevelGUIDToInlineTree[TopLev.Guid] = &TopLev;
 
   for (const auto &FuncDesc : Decoder.getGUID2FuncDescMap())
