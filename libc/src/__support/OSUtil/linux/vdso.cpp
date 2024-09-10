@@ -6,31 +6,20 @@
 //
 //===----------------------------------------------------------------------===//
 #include "src/__support/OSUtil/linux/vdso.h"
+#include "hdr/link_macros.h"
+#include "hdr/sys_auxv_macros.h"
 #include "src/__support/CPP/array.h"
 #include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/threads/callonce.h"
 #include "src/__support/threads/linux/futex_word.h"
 #include "src/errno/libc_errno.h"
+#include "src/sys/auxv/getauxval.h"
 #include <linux/auxvec.h>
-#include <linux/elf.h>
 
 // TODO: This is a temporary workaround to avoid including elf.h
 // Include our own headers for ElfW and friends once we have them.
-#ifndef ElfW
-#if __POINTER_WIDTH__ == 32
-#define ElfW(type) Elf32_##type
-#else
-#define ElfW(type) Elf64_##type
-#endif
-#endif
-
-namespace LIBC_NAMESPACE {
-
-// we don't include getauxval.h as it may forcibly pull in elf.h (via
-// sys/auxv.h) in overlay mode instead, we provide a separate declaration for
-// getauxval
-unsigned long getauxval(unsigned long id);
+namespace LIBC_NAMESPACE_DECL {
 
 namespace vdso {
 

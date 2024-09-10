@@ -8,7 +8,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_OSUTIL_LINUX_AARCH64_VDSO_H
 #define LLVM_LIBC_SRC___SUPPORT_OSUTIL_LINUX_AARCH64_VDSO_H
 #include "src/__support/CPP/string_view.h"
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace vdso {
 // translate VDSOSym to symbol names
 // https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/arch/arm64/kernel/vdso/vdso.lds.S

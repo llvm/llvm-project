@@ -27,7 +27,7 @@ struct getcpu_cache;
 struct cpu_set_t;
 // NOLINTEND(llvmlibc-implementation-in-namespace)
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace vdso {
 
 #ifdef __clang__

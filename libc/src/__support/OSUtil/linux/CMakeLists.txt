@@ -41,6 +41,7 @@ add_object_library(
     libc.hdr.types.struct_timespec
     libc.hdr.types.clockid_t
     libc.hdr.types.time_t
+    libc.hdr.link_macros
     libc.src.errno.errno
     libc.src.sys.auxv.getauxval
 )

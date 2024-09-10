@@ -8,7 +8,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_OSUTIL_LINUX_X86_64_VDSO_H
 #define LLVM_LIBC_SRC___SUPPORT_OSUTIL_LINUX_X86_64_VDSO_H
 #include "src/__support/CPP/string_view.h"
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace vdso {
 // translate VDSOSym to symbol names
 // On x86, there are symbols defined without the __vdso_ prefix, however,

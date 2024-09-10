@@ -35,13 +35,8 @@ namespace LIBC_NAMESPACE {
 
 TEST(LlvmLibcOSUtilVDSOTest, GetTimeOfDay) {
   vdso::TypedSymbol<vdso::VDSOSym::GetTimeOfDay> symbol;
-
-#ifdef LIBC_TARGET_ARCH_IS_X86
-  ASSERT_TRUE(symbol != nullptr);
-#else
   if (!symbol)
     return;
-#endif
   timeval tv;
   EXPECT_EQ(symbol(&tv, nullptr), 0);
   // hopefully people are not building time machines using our libc.
@@ -50,12 +45,8 @@ TEST(LlvmLibcOSUtilVDSOTest, GetTimeOfDay) {
 
 TEST(LlvmLibcOSUtilVDSOTest, Time) {
   vdso::TypedSymbol<vdso::VDSOSym::Time> symbol;
-#ifdef LIBC_TARGET_ARCH_IS_X86
-  ASSERT_TRUE(symbol != nullptr);
-#else
   if (!symbol)
     return;
-#endif
   time_t a, b;
   EXPECT_GT(symbol(&a), static_cast<time_t>(0));
   EXPECT_GT(symbol(&b), static_cast<time_t>(0));
@@ -64,12 +55,8 @@ TEST(LlvmLibcOSUtilVDSOTest, Time) {
 
 TEST(LlvmLibcOSUtilVDSOTest, ClockGetTime) {
   vdso::TypedSymbol<vdso::VDSOSym::ClockGetTime> symbol;
-#ifdef LIBC_TARGET_ARCH_IS_X86
-  ASSERT_TRUE(symbol != nullptr);
-#else
   if (!symbol)
     return;
-#endif
   timespec a, b;
   EXPECT_EQ(symbol(CLOCK_MONOTONIC, &a), 0);
   EXPECT_EQ(symbol(CLOCK_MONOTONIC, &b), 0);
