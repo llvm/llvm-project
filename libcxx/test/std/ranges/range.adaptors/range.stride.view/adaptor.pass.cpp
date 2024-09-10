@@ -25,7 +25,7 @@ using RandomAccessStrideView = std::ranges::stride_view<BasicTestView<random_acc
 
 using SizedForwardStrideView =
     std::ranges::stride_view<BasicTestView<random_access_iterator<int*>, random_access_iterator<int*>>>;
-using SizedInputStrideView = std::ranges::stride_view<BasicTestView<SizedInputIterator, SizedInputIterator>>;
+using SizedInputStrideView = std::ranges::stride_view<BasicTestView<SizedInputIter, SizedInputIter>>;
 
 static_assert(std::ranges::forward_range<ForwardStrideView>);
 static_assert(std::ranges::bidirectional_range<BidirStrideView>);
