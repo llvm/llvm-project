@@ -9,13 +9,23 @@
 ; RUN: mkdir -p %t
 ; RUN: split-file %s %t
 ;
-; RUN: opt -module-summary %t/m1.ll -o %t/m1.bc
-; RUN: opt -module-summary %t/m2.ll -o %t/m2.bc
+; RUN: opt -module-summary -passes=assign-guid %t/m1.ll -o %t/m1.bc
+; RUN: opt -module-summary -passes=assign-guid %t/m2.ll -o %t/m2.bc
 ; RUN: llvm-dis %t/m1.bc -o - | FileCheck %s --check-prefix=GUIDS-1
 ; RUN: llvm-dis %t/m2.bc -o - | FileCheck %s --check-prefix=GUIDS-2
 ;
+; GUIDS-1-LABEL: @m1_f1
+; GUIDS-1-SAME: !guid ![[GUID1:[0-9]+]]
+; GUIDS-1:  ![[GUID1]] = !{i64 6019442868614718803}
+; GUIDS-1: ^0 = module:
 ; GUIDS-1: name: "m1_f1"
 ; GUIDS-1-SAME: guid = 6019442868614718803
+
+; note: -2853647799038631862 is 15593096274670919754
+; GUIDS-2-LABEL: @m2_f1
+; GUIDS-2-SAME: !guid ![[GUID2:[0-9]+]]
+; GUIDS-2: ![[GUID2]] = !{i64 -2853647799038631862}
+; GUIDS-2: ^0 = module:
 ; GUIDS-2: name: "m2_f1"
 ; GUIDS-2-SAME: guid = 15593096274670919754
 ;

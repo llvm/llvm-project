@@ -272,6 +272,8 @@ void tools::PS5cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(D.getLTOMode() == LTOK_Thin ? "--lto=thin"
                                                   : "--lto=full");
 
+  AddLTOFlag("-emit-jump-table-sizes-section");
+
   if (UseJMC)
     AddLTOFlag("-enable-jmc-instrument");
 
@@ -483,6 +485,12 @@ void toolchains::PS4PS5Base::addClangTargetOptions(
       CC1Args.push_back("-fvisibility-externs-nodllstorageclass=default");
     else
       CC1Args.push_back("-fvisibility-externs-nodllstorageclass=keep");
+  }
+
+  // Enable jump table sizes section for PS5.
+  if (getTriple().isPS5()) {
+    CC1Args.push_back("-mllvm");
+    CC1Args.push_back("-emit-jump-table-sizes-section");
   }
 }
 

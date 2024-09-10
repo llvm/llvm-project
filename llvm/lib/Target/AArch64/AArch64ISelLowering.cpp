@@ -16837,6 +16837,16 @@ bool AArch64TargetLowering::optimizeExtendOrTruncateConversion(
 
       DstTy = TruncDstType;
     }
+
+    // mul(zext(i8), sext) can be transformed into smull(zext, sext) which
+    // performs one extend implicitly. If DstWidth is at most 4 * SrcWidth, at
+    // most one extra extend step is needed and using tbl is not profitable.
+    if (SrcWidth * 4 <= DstWidth && I->hasOneUser()) {
+      auto *SingleUser = cast<Instruction>(*I->user_begin());
+      if (match(SingleUser, m_c_Mul(m_Specific(I), m_SExt(m_Value()))))
+        return false;
+    }
+
     IRBuilder<> Builder(ZExt);
     Value *Result = createTblShuffleForZExt(
         Builder, ZExt->getOperand(0), cast<FixedVectorType>(ZExt->getType()),
@@ -17078,6 +17088,16 @@ bool AArch64TargetLowering::lowerInterleavedLoad(
   // the vector types are divisible by 128.
   bool UseScalable;
   if (!isLegalInterleavedAccessType(VTy, DL, UseScalable))
+    return false;
+
+  // Check if the interleave is a zext(shuffle), that can be better optimized
+  // into shift / and masks. For the moment we do this just for uitofp (not
+  // zext) to avoid issues with widening instructions.
+  if (Shuffles.size() == 4 && all_of(Shuffles, [](ShuffleVectorInst *SI) {
+        return SI->hasOneUse() && match(SI->user_back(), m_UIToFP(m_Value())) &&
+               SI->getType()->getScalarSizeInBits() * 4 ==
+                   SI->user_back()->getType()->getScalarSizeInBits();
+      }))
     return false;
 
   unsigned NumLoads = getNumInterleavedAccesses(VTy, DL, UseScalable);
@@ -22358,6 +22378,25 @@ static SDValue performExtendCombine(SDNode *N,
       N->getOpcode() == ISD::SIGN_EXTEND &&
       N->getOperand(0)->getOpcode() == ISD::SETCC)
     return performSignExtendSetCCCombine(N, DCI, DAG);
+
+  // If we see (any_extend (bswap ...)) with bswap returning an i16, we know
+  // that the top half of the result register must be unused, due to the
+  // any_extend. This means that we can replace this pattern with (rev16
+  // (any_extend ...)). This saves a machine instruction compared to (lsr (rev
+  // ...)), which is what this pattern would otherwise be lowered to.
+  // Only apply this optimisation if any_extend in original pattern to i32 or
+  // i64, because this type will become the input type to REV16 in the new
+  // pattern, so must be a legitimate REV16 input type.
+  SDValue Bswap = N->getOperand(0);
+  if (N->getOpcode() == ISD::ANY_EXTEND && Bswap.getOpcode() == ISD::BSWAP &&
+      Bswap.getValueType() == MVT::i16 &&
+      (N->getValueType(0) == MVT::i32 || N->getValueType(0) == MVT::i64)) {
+    SDLoc DL(N);
+    SDValue NewAnyExtend = DAG.getNode(ISD::ANY_EXTEND, DL, N->getValueType(0),
+                                       Bswap->getOperand(0));
+    return DAG.getNode(AArch64ISD::REV16, SDLoc(N), N->getValueType(0),
+                       NewAnyExtend);
+  }
 
   return SDValue();
 }

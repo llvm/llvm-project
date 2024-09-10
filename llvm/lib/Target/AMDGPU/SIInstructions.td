@@ -583,6 +583,16 @@ def SI_INIT_EXEC_FROM_INPUT : SPseudoInstSI <
   let Defs = [EXEC];
 }
 
+// Sets EXEC to all lanes and returns the previous EXEC.
+def SI_INIT_WHOLE_WAVE : SPseudoInstSI <
+  (outs SReg_1:$dst), (ins),
+  [(set i1:$dst, (int_amdgcn_init_whole_wave))]> {
+  let Defs = [EXEC];
+  let Uses = [EXEC];
+
+  let isConvergent = 1;
+}
+
 // Return for returning shaders to a shader variant epilog.
 def SI_RETURN_TO_EPILOG : SPseudoInstSI <
   (outs), (ins variable_ops), [(AMDGPUreturn_to_epilog)]> {
@@ -3983,6 +3993,16 @@ def G_AMDGPU_S_BUFFER_LOAD_SBYTE : SBufferLoadInstruction;
 def G_AMDGPU_S_BUFFER_LOAD_UBYTE : SBufferLoadInstruction;
 def G_AMDGPU_S_BUFFER_LOAD_SSHORT : SBufferLoadInstruction;
 def G_AMDGPU_S_BUFFER_LOAD_USHORT : SBufferLoadInstruction;
+
+class SBufferPrefetchInstruction : AMDGPUGenericInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins type0:$rsrc, untyped_imm_0:$offset, type1:$len);
+  let hasSideEffects = 0;
+  let mayLoad = 1;
+  let mayStore = 1;
+}
+
+def G_AMDGPU_S_BUFFER_PREFETCH : SBufferPrefetchInstruction;
 
 def G_AMDGPU_S_MUL_U64_U32 : AMDGPUGenericInstruction {
   let OutOperandList = (outs type0:$dst);

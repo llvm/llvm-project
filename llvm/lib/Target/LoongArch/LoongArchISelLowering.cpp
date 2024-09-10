@@ -297,6 +297,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::INSERT_VECTOR_ELT, VT, Custom);
       setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Custom);
       setOperationAction(ISD::BUILD_VECTOR, VT, Custom);
+      setOperationAction(ISD::CONCAT_VECTORS, VT, Legal);
 
       setOperationAction(ISD::SETCC, VT, Legal);
       setOperationAction(ISD::VSELECT, VT, Legal);
@@ -5713,7 +5714,9 @@ LoongArchTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
   // operations, use CmpXChg to expand.
   if (AI->isFloatingPointOperation() ||
       AI->getOperation() == AtomicRMWInst::UIncWrap ||
-      AI->getOperation() == AtomicRMWInst::UDecWrap)
+      AI->getOperation() == AtomicRMWInst::UDecWrap ||
+      AI->getOperation() == AtomicRMWInst::USubCond ||
+      AI->getOperation() == AtomicRMWInst::USubSat)
     return AtomicExpansionKind::CmpXChg;
 
   unsigned Size = AI->getType()->getPrimitiveSizeInBits();

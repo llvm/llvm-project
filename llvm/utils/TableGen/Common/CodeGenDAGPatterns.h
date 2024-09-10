@@ -846,7 +846,8 @@ public: // Higher level manipulation routines.
   // Update node type with types inferred from an instruction operand or result
   // def from the ins/outs lists.
   // Return true if the type changed.
-  bool UpdateNodeTypeFromInst(unsigned ResNo, Record *Operand, TreePattern &TP);
+  bool UpdateNodeTypeFromInst(unsigned ResNo, const Record *Operand,
+                              TreePattern &TP);
 
   /// ContainsUnresolvedType - Return true if this tree contains any
   /// unresolved types.
@@ -1010,15 +1011,15 @@ struct DAGDefaultOperand {
 };
 
 class DAGInstruction {
-  std::vector<Record *> Results;
-  std::vector<Record *> Operands;
+  std::vector<const Record *> Results;
+  std::vector<const Record *> Operands;
   std::vector<Record *> ImpResults;
   TreePatternNodePtr SrcPattern;
   TreePatternNodePtr ResultPattern;
 
 public:
-  DAGInstruction(std::vector<Record *> &&results,
-                 std::vector<Record *> &&operands,
+  DAGInstruction(std::vector<const Record *> &&results,
+                 std::vector<const Record *> &&operands,
                  std::vector<Record *> &&impresults,
                  TreePatternNodePtr srcpattern = nullptr,
                  TreePatternNodePtr resultpattern = nullptr)
@@ -1031,12 +1032,12 @@ public:
   unsigned getNumImpResults() const { return ImpResults.size(); }
   const std::vector<Record *> &getImpResults() const { return ImpResults; }
 
-  Record *getResult(unsigned RN) const {
+  const Record *getResult(unsigned RN) const {
     assert(RN < Results.size());
     return Results[RN];
   }
 
-  Record *getOperand(unsigned ON) const {
+  const Record *getOperand(unsigned ON) const {
     assert(ON < Operands.size());
     return Operands[ON];
   }
@@ -1104,7 +1105,7 @@ class CodeGenDAGPatterns {
   std::map<Record *, ComplexPattern, LessRecordByID> ComplexPatterns;
   std::map<Record *, std::unique_ptr<TreePattern>, LessRecordByID>
       PatternFragments;
-  std::map<Record *, DAGDefaultOperand, LessRecordByID> DefaultOperands;
+  std::map<const Record *, DAGDefaultOperand, LessRecordByID> DefaultOperands;
   std::map<Record *, DAGInstruction, LessRecordByID> Instructions;
 
   // Specific SDNode definitions:
@@ -1173,7 +1174,7 @@ public:
     llvm_unreachable("Unknown intrinsic!");
   }
 
-  const DAGDefaultOperand &getDefaultOperand(Record *R) const {
+  const DAGDefaultOperand &getDefaultOperand(const Record *R) const {
     auto F = DefaultOperands.find(R);
     assert(F != DefaultOperands.end() && "Isn't an analyzed default operand!");
     return F->second;
@@ -1225,7 +1226,7 @@ public:
 
   unsigned allocateScope() { return ++NumScopes; }
 
-  bool operandHasDefault(Record *Op) const {
+  bool operandHasDefault(const Record *Op) const {
     return Op->isSubClassOf("OperandWithDefaultOps") &&
            !getDefaultOperand(Op).DefaultOps.empty();
   }

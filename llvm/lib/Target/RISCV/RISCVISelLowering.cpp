@@ -14,6 +14,7 @@
 #include "RISCVISelLowering.h"
 #include "MCTargetDesc/RISCVMatInt.h"
 #include "RISCV.h"
+#include "RISCVConstantPoolValue.h"
 #include "RISCVMachineFunctionInfo.h"
 #include "RISCVRegisterInfo.h"
 #include "RISCVSubtarget.h"
@@ -466,8 +467,11 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(FPRndMode, MVT::f16,
                          Subtarget.hasStdExtZfa() ? Legal : Custom);
       setOperationAction(ISD::IS_FPCLASS, MVT::f16, Custom);
+      setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM}, MVT::f16,
+                         Subtarget.hasStdExtZfa() ? Legal : Custom);
     } else {
       setOperationAction(ZfhminZfbfminPromoteOps, MVT::f16, Promote);
+      setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM}, MVT::f16, Promote);
       for (auto Op : {ISD::LROUND, ISD::LLROUND, ISD::LRINT, ISD::LLRINT,
                       ISD::STRICT_LROUND, ISD::STRICT_LLROUND,
                       ISD::STRICT_LRINT, ISD::STRICT_LLRINT})
@@ -486,8 +490,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::SELECT, MVT::f16, Custom);
     setOperationAction(ISD::BR_CC, MVT::f16, Expand);
 
-    setOperationAction(ISD::FNEARBYINT, MVT::f16,
-                       Subtarget.hasStdExtZfa() ? Legal : Promote);
+    setOperationAction(
+        ISD::FNEARBYINT, MVT::f16,
+        Subtarget.hasStdExtZfh() && Subtarget.hasStdExtZfa() ? Legal : Promote);
     setOperationAction({ISD::FREM, ISD::FPOW, ISD::FPOWI,
                         ISD::FCOS, ISD::FSIN, ISD::FSINCOS, ISD::FEXP,
                         ISD::FEXP2, ISD::FEXP10, ISD::FLOG, ISD::FLOG2,
@@ -505,9 +510,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     // We need to custom promote this.
     if (Subtarget.is64Bit())
       setOperationAction(ISD::FPOWI, MVT::i32, Custom);
-
-    setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM}, MVT::f16,
-                       Subtarget.hasStdExtZfa() ? Legal : Custom);
   }
 
   if (Subtarget.hasStdExtFOrZfinx()) {
@@ -7518,6 +7520,27 @@ static SDValue getTargetNode(JumpTableSDNode *N, const SDLoc &DL, EVT Ty,
   return DAG.getTargetJumpTable(N->getIndex(), Ty, Flags);
 }
 
+static SDValue getLargeGlobalAddress(GlobalAddressSDNode *N, const SDLoc &DL,
+                                     EVT Ty, SelectionDAG &DAG) {
+  RISCVConstantPoolValue *CPV = RISCVConstantPoolValue::Create(N->getGlobal());
+  SDValue CPAddr = DAG.getTargetConstantPool(CPV, Ty, Align(8));
+  SDValue LC = DAG.getNode(RISCVISD::LLA, DL, Ty, CPAddr);
+  return DAG.getLoad(
+      Ty, DL, DAG.getEntryNode(), LC,
+      MachinePointerInfo::getConstantPool(DAG.getMachineFunction()));
+}
+
+static SDValue getLargeExternalSymbol(ExternalSymbolSDNode *N, const SDLoc &DL,
+                                      EVT Ty, SelectionDAG &DAG) {
+  RISCVConstantPoolValue *CPV =
+      RISCVConstantPoolValue::Create(*DAG.getContext(), N->getSymbol());
+  SDValue CPAddr = DAG.getTargetConstantPool(CPV, Ty, Align(8));
+  SDValue LC = DAG.getNode(RISCVISD::LLA, DL, Ty, CPAddr);
+  return DAG.getLoad(
+      Ty, DL, DAG.getEntryNode(), LC,
+      MachinePointerInfo::getConstantPool(DAG.getMachineFunction()));
+}
+
 template <class NodeTy>
 SDValue RISCVTargetLowering::getAddr(NodeTy *N, SelectionDAG &DAG,
                                      bool IsLocal, bool IsExternWeak) const {
@@ -7584,6 +7607,14 @@ SDValue RISCVTargetLowering::getAddr(NodeTy *N, SelectionDAG &DAG,
     // Generate a sequence for accessing addresses within any 2GiB range within
     // the address space. This generates the pattern (PseudoLLA sym), which
     // expands to (addi (auipc %pcrel_hi(sym)) %pcrel_lo(auipc)).
+    return DAG.getNode(RISCVISD::LLA, DL, Ty, Addr);
+  }
+  case CodeModel::Large: {
+    if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(N))
+      return getLargeGlobalAddress(G, DL, Ty, DAG);
+
+    // Using pc-relative mode for other node type.
+    SDValue Addr = getTargetNode(N, DL, Ty, DAG, 0);
     return DAG.getNode(RISCVISD::LLA, DL, Ty, Addr);
   }
   }
@@ -18951,9 +18982,8 @@ void RISCVTargetLowering::analyzeInputArgs(
     else if (Ins[i].isOrigArg())
       ArgTy = FType->getParamType(Ins[i].getOrigArgIndex());
 
-    RISCVABI::ABI ABI = MF.getSubtarget<RISCVSubtarget>().getTargetABI();
-    if (Fn(MF.getDataLayout(), ABI, i, ArgVT, ArgVT, CCValAssign::Full,
-           ArgFlags, CCInfo, /*IsFixed=*/true, IsRet, ArgTy, *this)) {
+    if (Fn(i, ArgVT, ArgVT, CCValAssign::Full, ArgFlags, CCInfo,
+           /*IsFixed=*/true, IsRet, ArgTy)) {
       LLVM_DEBUG(dbgs() << "InputArg #" << i << " has unhandled type "
                         << ArgVT << '\n');
       llvm_unreachable(nullptr);
@@ -18972,9 +19002,8 @@ void RISCVTargetLowering::analyzeOutputArgs(
     ISD::ArgFlagsTy ArgFlags = Outs[i].Flags;
     Type *OrigTy = CLI ? CLI->getArgs()[Outs[i].OrigArgIndex].Ty : nullptr;
 
-    RISCVABI::ABI ABI = MF.getSubtarget<RISCVSubtarget>().getTargetABI();
-    if (Fn(MF.getDataLayout(), ABI, i, ArgVT, ArgVT, CCValAssign::Full,
-           ArgFlags, CCInfo, Outs[i].IsFixed, IsRet, OrigTy, *this)) {
+    if (Fn(i, ArgVT, ArgVT, CCValAssign::Full, ArgFlags, CCInfo,
+           Outs[i].IsFixed, IsRet, OrigTy)) {
       LLVM_DEBUG(dbgs() << "OutputArg #" << i << " has unhandled type "
                         << ArgVT << "\n");
       llvm_unreachable(nullptr);
@@ -19086,7 +19115,7 @@ static SDValue unpackFromMemLoc(SelectionDAG &DAG, SDValue Chain,
   EVT LocVT = VA.getLocVT();
   EVT ValVT = VA.getValVT();
   EVT PtrVT = MVT::getIntegerVT(DAG.getDataLayout().getPointerSizeInBits(0));
-  if (ValVT.isScalableVector()) {
+  if (VA.getLocInfo() == CCValAssign::Indirect) {
     // When the value is a scalable vector, we save the pointer which points to
     // the scalable vector value in the stack. The ValVT will be the pointer
     // type, instead of the scalable vector type.
@@ -19097,14 +19126,13 @@ static SDValue unpackFromMemLoc(SelectionDAG &DAG, SDValue Chain,
   SDValue FIN = DAG.getFrameIndex(FI, PtrVT);
   SDValue Val;
 
-  ISD::LoadExtType ExtType;
+  ISD::LoadExtType ExtType = ISD::NON_EXTLOAD;
   switch (VA.getLocInfo()) {
   default:
     llvm_unreachable("Unexpected CCValAssign::LocInfo");
   case CCValAssign::Full:
   case CCValAssign::Indirect:
   case CCValAssign::BCvt:
-    ExtType = ISD::NON_EXTLOAD;
     break;
   }
   Val = DAG.getExtLoad(
@@ -19593,7 +19621,12 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
   // If the callee is a GlobalAddress/ExternalSymbol node, turn it into a
   // TargetGlobalAddress/TargetExternalSymbol node so that legalize won't
   // split it and then direct call can be matched by PseudoCALL.
-  if (GlobalAddressSDNode *S = dyn_cast<GlobalAddressSDNode>(Callee)) {
+  if (getTargetMachine().getCodeModel() == CodeModel::Large) {
+    if (auto *S = dyn_cast<GlobalAddressSDNode>(Callee))
+      Callee = getLargeGlobalAddress(S, DL, PtrVT, DAG);
+    else if (auto *S = dyn_cast<ExternalSymbolSDNode>(Callee))
+      Callee = getLargeExternalSymbol(S, DL, PtrVT, DAG);
+  } else if (GlobalAddressSDNode *S = dyn_cast<GlobalAddressSDNode>(Callee)) {
     const GlobalValue *GV = S->getGlobal();
     Callee = DAG.getTargetGlobalAddress(GV, DL, PtrVT, 0, RISCVII::MO_CALL);
   } else if (ExternalSymbolSDNode *S = dyn_cast<ExternalSymbolSDNode>(Callee)) {
@@ -19688,10 +19721,8 @@ bool RISCVTargetLowering::CanLowerReturn(
   for (unsigned i = 0, e = Outs.size(); i != e; ++i) {
     MVT VT = Outs[i].VT;
     ISD::ArgFlagsTy ArgFlags = Outs[i].Flags;
-    RISCVABI::ABI ABI = MF.getSubtarget<RISCVSubtarget>().getTargetABI();
-    if (CC_RISCV(MF.getDataLayout(), ABI, i, VT, VT, CCValAssign::Full,
-                 ArgFlags, CCInfo, /*IsFixed=*/true, /*IsRet=*/true, nullptr,
-                 *this))
+    if (CC_RISCV(i, VT, VT, CCValAssign::Full, ArgFlags, CCInfo,
+                 /*IsFixed=*/true, /*IsRet=*/true, nullptr))
       return false;
   }
   return true;
@@ -20453,7 +20484,9 @@ RISCVTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
   // forward-progress guarantee.
   if (AI->isFloatingPointOperation() ||
       AI->getOperation() == AtomicRMWInst::UIncWrap ||
-      AI->getOperation() == AtomicRMWInst::UDecWrap)
+      AI->getOperation() == AtomicRMWInst::UDecWrap ||
+      AI->getOperation() == AtomicRMWInst::USubCond ||
+      AI->getOperation() == AtomicRMWInst::USubSat)
     return AtomicExpansionKind::CmpXChg;
 
   // Don't expand forced atomics, we want to have __sync libcalls instead.
