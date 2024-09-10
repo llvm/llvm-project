@@ -15,9 +15,10 @@
 namespace llvm {
 class Module;
 
-extern "C" bool SPIRVTranslateModule(Module *M, std::string &Buffer,
-                                     std::string &ErrMsg,
-                                     const std::vector<std::string> &Opts);
+extern "C" bool
+SPIRVTranslateModule(Module *M, std::string &SpirvObj, std::string &ErrMsg,
+                     const std::vector<std::string> &AllowExtNames,
+                     const std::vector<std::string> &Opts);
 } // namespace llvm
 
 #endif // LLVM_LIB_TARGET_SPIRV_SPIRVAPI_H

@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "SPIRVCommandLine.h"
+#include "SPIRVSubtarget.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/CodeGen/CommandFlags.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -76,6 +78,7 @@ namespace llvm {
 // of command line options.
 extern "C" LLVM_EXTERNAL_VISIBILITY bool
 SPIRVTranslateModule(Module *M, std::string &SpirvObj, std::string &ErrMsg,
+                     const std::vector<std::string> &AllowExtNames,
                      const std::vector<std::string> &Opts) {
   // Fallbacks for option values.
   static const std::string DefaultTriple = "spirv64-unknown-unknown";
@@ -97,6 +100,17 @@ SPIRVTranslateModule(Module *M, std::string &SpirvObj, std::string &ErrMsg,
     ErrMsg = "Invalid optimization level!";
     return false;
   }
+
+  // Overrides/ammends `-spirv-ext` command line switch (if present) by the
+  // explicit list of allowed SPIR-V extensions.
+  std::set<SPIRV::Extension::Extension> AllowedExtIds;
+  StringRef UnknownExt =
+      SPIRVExtensionsParser::checkExtensions(AllowExtNames, AllowedExtIds);
+  if (!UnknownExt.empty()) {
+    ErrMsg = "Unknown SPIR-V extension: " + UnknownExt.str();
+    return false;
+  }
+  SPIRVSubtarget::addExtensionsToClOpt(AllowedExtIds);
 
   // SPIR-V-specific target initialization.
   InitializeSPIRVTarget();
