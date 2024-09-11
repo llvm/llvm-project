@@ -16,6 +16,7 @@
 #include "clang/AST/ASTFwd.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/Type.h"
+#include "clang/AST/TypeLoc.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Sema/SemaBase.h"
 #include "llvm/ADT/SmallVector.h"
@@ -30,9 +31,9 @@ class Scope;
 
 // FIXME: This can be hidden (as static function in SemaHLSL.cpp) once we no
 // longer need to create builtin buffer types in HLSLExternalSemaSource.
-bool CreateHLSLAttributedResourceType(Sema &S, QualType Wrapped,
-                                      ArrayRef<const Attr *> AttrList,
-                                      QualType &ResType);
+bool CreateHLSLAttributedResourceType(
+    Sema &S, QualType Wrapped, ArrayRef<const Attr *> AttrList,
+    QualType &ResType, HLSLAttributedResourceLocInfo *LocInfo = nullptr);
 
 class SemaHLSL : public SemaBase {
 public:
@@ -73,7 +74,8 @@ public:
 
   bool CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
   QualType ProcessResourceTypeAttributes(QualType Wrapped);
-  SourceLocation TakeLocForHLSLAttribute(const HLSLAttributedResourceType *RT);
+  HLSLAttributedResourceLocInfo
+  TakeLocForHLSLAttribute(const HLSLAttributedResourceType *RT);
 
   // HLSL Type trait implementations
   bool IsScalarizedLayoutCompatible(QualType T1, QualType T2) const;
@@ -90,9 +92,10 @@ private:
   // This is a list to collect them.
   llvm::SmallVector<const Attr *> HLSLResourcesTypeAttrs;
 
-  /// SourceLocation corresponding to HLSLAttributedResourceTypeLocs that we
+  /// TypeLoc data for HLSLAttributedResourceType instances that we
   /// have not yet populated.
-  llvm::DenseMap<const HLSLAttributedResourceType *, SourceLocation>
+  llvm::DenseMap<const HLSLAttributedResourceType *,
+                 HLSLAttributedResourceLocInfo>
       LocsForHLSLAttributedResources;
 };
 

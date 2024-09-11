@@ -7470,13 +7470,16 @@ QualType TreeTransform<Derived>::TransformHLSLAttributedResourceType(
     return QualType();
 
   QualType ContainedTy = QualType();
-  if (!oldType->getContainedType().isNull()) {
-    TypeLocBuilder ContainedTyTLB;
-    TypeLoc ContainedTL = TL.getContainedLoc();
-    ContainedTyTLB.reserve(ContainedTL.getFullDataSize());
-    ContainedTy = getDerived().TransformType(ContainedTyTLB, ContainedTL);
-    if (ContainedTy.isNull())
+  QualType OldContainedTy = oldType->getContainedType();
+  if (!OldContainedTy.isNull()) {
+    TypeSourceInfo *oldContainedTSI = TL.getContainedTypeSourceInfo();
+    if (!oldContainedTSI)
+      oldContainedTSI = getSema().getASTContext().getTrivialTypeSourceInfo(
+          OldContainedTy, SourceLocation());
+    TypeSourceInfo *ContainedTSI = getDerived().TransformType(oldContainedTSI);
+    if (!ContainedTSI)
       return QualType();
+    ContainedTy = ContainedTSI->getType();
   }
 
   QualType Result = TL.getType();

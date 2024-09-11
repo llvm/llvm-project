@@ -2,7 +2,7 @@
 
 typedef vector<float, 4> float4;
 
-// CHECK: -TypeAliasDecl 0x{{[0-9a-f]+}} <line:[[# @LINE + 2]]:1, col:47>
+// CHECK: -TypeAliasDecl 0x{{[0-9a-f]+}} <line:[[# @LINE + 2]]:1, col:83>
 // CHECK: -HLSLAttributedResourceType 0x{{[0-9a-f]+}} '__hlsl_resource_t {{\[\[}}hlsl::resource_class(UAV)]] {{\[\[}}hlsl::contained_type(int)]]' sugar
 using ResourceIntAliasT = __hlsl_resource_t [[hlsl::resource_class(UAV)]] [[hlsl::contained_type(int)]];
 ResourceIntAliasT h1;

@@ -5801,8 +5801,10 @@ static void fillAttributedTypeLoc(AttributedTypeLoc TL,
 
 static void fillHLSLAttributedResourceTypeLoc(HLSLAttributedResourceTypeLoc TL,
                                               TypeProcessingState &State) {
-  TL.setSourceRange(
-      State.getSema().HLSL().TakeLocForHLSLAttribute(TL.getTypePtr()));
+  HLSLAttributedResourceLocInfo LocInfo =
+      State.getSema().HLSL().TakeLocForHLSLAttribute(TL.getTypePtr());
+  TL.setSourceRange(LocInfo.Range);
+  TL.setContainedTypeSourceInfo(LocInfo.ContainedTyTSI);
 }
 
 static void fillMatrixTypeLoc(MatrixTypeLoc MTL,
