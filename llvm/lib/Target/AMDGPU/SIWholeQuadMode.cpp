@@ -1596,10 +1596,14 @@ void SIWholeQuadMode::lowerInitExec(MachineInstr &MI) {
 
     // Replace all uses of MI's destination reg with EntryExec.
     MRI->replaceRegWith(MI.getOperand(0).getReg(), EntryExec);
-    MI.eraseFromParent();
 
     if (LIS) {
       LIS->RemoveMachineInstrFromMaps(MI);
+    }
+
+    MI.eraseFromParent();
+
+    if (LIS) {
       LIS->InsertMachineInstrInMaps(*SaveExec);
       LIS->createAndComputeVirtRegInterval(EntryExec);
     }
