@@ -40,9 +40,6 @@
   define amdgpu_vs void @no_wqm_in_vs() {
     ret void
   }
-  define amdgpu_ps void @preloaded_set_inactive() {
-    ret void
-  }
 ...
 ---
 
@@ -155,7 +152,7 @@ registers:
   - { id: 9, class: sreg_32, preferred-register: '' }
   - { id: 10, class: vgpr_32, preferred-register: '' }
   - { id: 11, class: vgpr_32, preferred-register: '' }
-  - { id: 12, class: sreg_32, preferred-register: '' }
+  - { id: 12, class: vgpr_32, preferred-register: '' }
   - { id: 13, class: vgpr_32, preferred-register: '' }
   - { id: 14, class: vgpr_32, preferred-register: '' }
   - { id: 15, class: vgpr_32, preferred-register: '' }
@@ -179,7 +176,8 @@ body:             |
     %8:vreg_64 = BUFFER_LOAD_DWORDX2_OFFSET %6, %7, 0, 0, 0, implicit $exec
     %16:vgpr_32 = COPY %8.sub1
     %11:vgpr_32 = COPY %16
-    %10:vgpr_32 = V_SET_INACTIVE_B32 %11, undef %12:sreg_32, implicit $exec, implicit-def $scc
+    %17:sreg_64_xexec = IMPLICIT_DEF
+    %10:vgpr_32 = V_SET_INACTIVE_B32 0, %11, 0, undef %12, undef %17, implicit $exec, implicit-def $scc
     %14:vgpr_32 = COPY %7
     %13:vgpr_32 = V_MOV_B32_dpp %14, killed %10, 323, 12, 15, 0, implicit $exec
     early-clobber %15:vgpr_32 = STRICT_WWM killed %13, implicit $exec
@@ -298,8 +296,9 @@ body:             |
     %0:sgpr_128 = COPY $sgpr0_sgpr1_sgpr2_sgpr3
     %1:vgpr_32 = COPY $vgpr0
     %2:vreg_64 = BUFFER_LOAD_DWORDX2_OFFEN %1:vgpr_32, %0:sgpr_128, 0, 0, 0, 0, implicit $exec
-    %2.sub0:vreg_64 = V_SET_INACTIVE_B32 %2.sub0:vreg_64, 0, implicit $exec, implicit-def $scc
-    %2.sub1:vreg_64 = V_SET_INACTIVE_B32 %2.sub1:vreg_64, 0, implicit $exec, implicit-def $scc
+    %4:sreg_64_xexec = IMPLICIT_DEF
+    %2.sub0:vreg_64 = V_SET_INACTIVE_B32 0, %2.sub0:vreg_64, 0, 0, undef %4, implicit $exec, implicit-def $scc
+    %2.sub1:vreg_64 = V_SET_INACTIVE_B32 0, %2.sub1:vreg_64, 0, 0, undef %4, implicit $exec, implicit-def $scc
     %3:vreg_64 = nnan nsz arcp contract reassoc nofpexcept V_MAX_F64_e64 0, %2:vreg_64, 0, %2:vreg_64, 0, 0, implicit $mode, implicit $exec
     $vgpr0 = STRICT_WWM %3.sub0:vreg_64, implicit $exec
     $vgpr1 = STRICT_WWM %3.sub1:vreg_64, implicit $exec
@@ -445,20 +444,4 @@ body:             |
     %101:sgpr_128 = IMPLICIT_DEF
 
     %4:vreg_128 = IMAGE_SAMPLE_V4_V2 %0:vreg_64, %100:sgpr_256, %101:sgpr_128, 15, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
-...
-
----
-# Preserve V_SET_INACTIVE with exec mask already specified
-#CHECK-LABEL: name: preloaded_set_inactive
-#CHECK: V_SET_INACTIVE_B32
-name:            preloaded_set_inactive
-tracksRegLiveness: true
-body:             |
-  bb.0:
-    liveins: $vgpr1, $vgpr2
-
-    %0:vgpr_32 = COPY $vgpr1
-    %1:vgpr_32 = COPY $vgpr2
-    %mask:sreg_64 = S_OR_SAVEEXEC_B64 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
-    %value:vgpr_32 = V_SET_INACTIVE_B32 %0:vgpr_32, %1:vgpr_32, implicit $exec, implicit-def $scc, implicit %mask:sreg_64
 ...
