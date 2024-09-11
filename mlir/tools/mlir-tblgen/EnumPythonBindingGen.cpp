@@ -136,13 +136,14 @@ static bool emitDialectEnumAttributeBuilder(StringRef attrDefName,
 static bool emitPythonEnums(const llvm::RecordKeeper &recordKeeper,
                             raw_ostream &os) {
   os << fileHeader;
-  for (auto &it :
+  for (const llvm::Record *it :
        recordKeeper.getAllDerivedDefinitionsIfDefined("EnumAttrInfo")) {
     EnumAttr enumAttr(*it);
     emitEnumClass(enumAttr, os);
     emitAttributeBuilder(enumAttr, os);
   }
-  for (auto &it : recordKeeper.getAllDerivedDefinitionsIfDefined("EnumAttr")) {
+  for (const llvm::Record *it :
+       recordKeeper.getAllDerivedDefinitionsIfDefined("EnumAttr")) {
     AttrOrTypeDef attr(&*it);
     if (!attr.getMnemonic()) {
       llvm::errs() << "enum case " << attr

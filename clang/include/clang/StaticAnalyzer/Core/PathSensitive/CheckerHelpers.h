@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-//  This file defines CheckerVisitor.
+//  This file defines various utilities used by checkers.
 //
 //===----------------------------------------------------------------------===//
 
@@ -113,6 +113,10 @@ OperatorKind operationKindFromOverloadedOperator(OverloadedOperatorKind OOK,
                                                  bool IsBinary);
 
 std::optional<SVal> getPointeeVal(SVal PtrSVal, ProgramStateRef State);
+
+/// Returns true if declaration \p D is in std namespace or any nested namespace
+/// or class scope.
+bool isWithinStdNamespace(const Decl *D);
 
 } // namespace ento
 

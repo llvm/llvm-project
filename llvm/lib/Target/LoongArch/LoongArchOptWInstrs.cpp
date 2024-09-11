@@ -637,6 +637,19 @@ static bool isSignExtendedW(Register SrcReg, const LoongArchSubtarget &ST,
         break;
       }
       return false;
+    // If all incoming values are sign-extended and all users only use
+    // the lower 32 bits, then convert them to W versions.
+    case LoongArch::DIV_D: {
+      if (!AddRegToWorkList(MI->getOperand(1).getReg()))
+        return false;
+      if (!AddRegToWorkList(MI->getOperand(2).getReg()))
+        return false;
+      if (hasAllWUsers(*MI, ST, MRI)) {
+        FixableDef.insert(MI);
+        break;
+      }
+      return false;
+    }
     }
   }
 
@@ -651,6 +664,8 @@ static unsigned getWOp(unsigned Opcode) {
     return LoongArch::ADDI_W;
   case LoongArch::ADD_D:
     return LoongArch::ADD_W;
+  case LoongArch::DIV_D:
+    return LoongArch::DIV_W;
   case LoongArch::LD_D:
   case LoongArch::LD_WU:
     return LoongArch::LD_W;

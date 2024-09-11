@@ -8,13 +8,40 @@ program main
   integer :: i
 
   ! TODO When composite constructs are supported add:
-  ! - DISTRIBUTE PARALLEL DO SIMD
-  ! - DISTRIBUTE PARALLEL DO
-  ! - TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD
-  ! - TARGET TEAMS DISTRIBUTE PARALLEL DO
   ! - TASKLOOP SIMD
-  ! - TEAMS DISTRIBUTE PARALLEL DO SIMD
-  ! - TEAMS DISTRIBUTE PARALLEL DO
+
+  ! ----------------------------------------------------------------------------
+  ! DISTRIBUTE PARALLEL DO
+  ! ----------------------------------------------------------------------------
+  !$omp teams
+
+  ! CHECK: omp.parallel
+  ! CHECK: omp.distribute
+  ! CHECK-NEXT: omp.wsloop
+  ! CHECK-NEXT: omp.loop_nest
+  !$omp distribute parallel do
+  do i = 1, 10
+  end do
+  !$omp end distribute parallel do
+
+  !$omp end teams
+
+  ! ----------------------------------------------------------------------------
+  ! DISTRIBUTE PARALLEL DO SIMD
+  ! ----------------------------------------------------------------------------
+  !$omp teams
+
+  ! CHECK: omp.parallel
+  ! CHECK: omp.distribute
+  ! CHECK-NEXT: omp.wsloop
+  ! CHECK-NEXT: omp.simd
+  ! CHECK-NEXT: omp.loop_nest
+  !$omp distribute parallel do simd
+  do i = 1, 10
+  end do
+  !$omp end distribute parallel do simd
+
+  !$omp end teams
 
   ! ----------------------------------------------------------------------------
   ! DISTRIBUTE SIMD
@@ -114,6 +141,35 @@ program main
   !$omp end target teams distribute
 
   ! ----------------------------------------------------------------------------
+  ! TARGET TEAMS DISTRIBUTE PARALLEL DO
+  ! ----------------------------------------------------------------------------
+  ! CHECK: omp.target
+  ! CHECK: omp.teams
+  ! CHECK: omp.parallel
+  ! CHECK: omp.distribute
+  ! CHECK-NEXT: omp.wsloop
+  ! CHECK-NEXT: omp.loop_nest
+  !$omp target teams distribute parallel do
+  do i = 1, 10
+  end do
+  !$omp end target teams distribute parallel do
+
+  ! ----------------------------------------------------------------------------
+  ! TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD
+  ! ----------------------------------------------------------------------------
+  ! CHECK: omp.target
+  ! CHECK: omp.teams
+  ! CHECK: omp.parallel
+  ! CHECK: omp.distribute
+  ! CHECK-NEXT: omp.wsloop
+  ! CHECK-NEXT: omp.simd
+  ! CHECK-NEXT: omp.loop_nest
+  !$omp target teams distribute parallel do simd
+  do i = 1, 10
+  end do
+  !$omp end target teams distribute parallel do simd
+
+  ! ----------------------------------------------------------------------------
   ! TARGET TEAMS DISTRIBUTE SIMD
   ! ----------------------------------------------------------------------------
   ! CHECK: omp.target
@@ -136,6 +192,33 @@ program main
   do i = 1, 10
   end do
   !$omp end teams distribute
+
+  ! ----------------------------------------------------------------------------
+  ! TEAMS DISTRIBUTE PARALLEL DO
+  ! ----------------------------------------------------------------------------
+  ! CHECK: omp.teams
+  ! CHECK: omp.parallel
+  ! CHECK: omp.distribute
+  ! CHECK-NEXT: omp.wsloop
+  ! CHECK-NEXT: omp.loop_nest
+  !$omp teams distribute parallel do
+  do i = 1, 10
+  end do
+  !$omp end teams distribute parallel do
+
+  ! ----------------------------------------------------------------------------
+  ! TEAMS DISTRIBUTE PARALLEL DO SIMD
+  ! ----------------------------------------------------------------------------
+  ! CHECK: omp.teams
+  ! CHECK: omp.parallel
+  ! CHECK: omp.distribute
+  ! CHECK-NEXT: omp.wsloop
+  ! CHECK-NEXT: omp.simd
+  ! CHECK-NEXT: omp.loop_nest
+  !$omp teams distribute parallel do simd
+  do i = 1, 10
+  end do
+  !$omp end teams distribute parallel do simd
 
   ! ----------------------------------------------------------------------------
   ! TEAMS DISTRIBUTE SIMD

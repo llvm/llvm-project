@@ -55,10 +55,10 @@ Status::Status(std::string err_str)
     : m_code(LLDB_GENERIC_ERROR), m_type(eErrorTypeGeneric),
       m_string(std::move(err_str)) {}
 
-const Status &Status::operator=(llvm::Error error) {
+Status::Status(llvm::Error error) {
   if (!error) {
     Clear();
-    return *this;
+    return;
   }
 
   // if the error happens to be a errno error, preserve the error code
@@ -79,8 +79,6 @@ const Status &Status::operator=(llvm::Error error) {
     m_type = eErrorTypeGeneric;
     m_string = llvm::toString(std::move(error));
   }
-
-  return *this;
 }
 
 Status Status::FromErrorStringWithFormat(const char *format, ...) {
@@ -96,6 +94,8 @@ Status Status::FromErrorStringWithFormat(const char *format, ...) {
   return Status(string);
 }
 
+Status Status::FromError(llvm::Error error) { return Status(std::move(error)); }
+
 llvm::Error Status::ToError() const {
   if (Success())
     return llvm::Error::success();
@@ -106,6 +106,13 @@ llvm::Error Status::ToError() const {
 }
 
 Status::~Status() = default;
+
+const Status &Status::operator=(Status &&other) {
+  m_code = other.m_code;
+  m_type = other.m_type;
+  m_string = std::move(other.m_string);
+  return *this;
+}
 
 #ifdef _WIN32
 static std::string RetrieveWin32ErrorString(uint32_t error_code) {
@@ -203,4 +210,30 @@ void llvm::format_provider<lldb_private::Status>::format(
     llvm::StringRef Options) {
   llvm::format_provider<llvm::StringRef>::format(error.AsCString(), OS,
                                                  Options);
+}
+
+const char *lldb_private::ExpressionResultAsCString(ExpressionResults result) {
+  switch (result) {
+  case eExpressionCompleted:
+    return "eExpressionCompleted";
+  case eExpressionDiscarded:
+    return "eExpressionDiscarded";
+  case eExpressionInterrupted:
+    return "eExpressionInterrupted";
+  case eExpressionHitBreakpoint:
+    return "eExpressionHitBreakpoint";
+  case eExpressionSetupError:
+    return "eExpressionSetupError";
+  case eExpressionParseError:
+    return "eExpressionParseError";
+  case eExpressionResultUnavailable:
+    return "eExpressionResultUnavailable";
+  case eExpressionTimedOut:
+    return "eExpressionTimedOut";
+  case eExpressionStoppedForDebug:
+    return "eExpressionStoppedForDebug";
+  case eExpressionThreadVanished:
+    return "eExpressionThreadVanished";
+  }
+  return "<unknown>";
 }

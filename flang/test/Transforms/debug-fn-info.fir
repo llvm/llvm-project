@@ -69,7 +69,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<>} {
 // CHECK: #[[TY2:.*]] = #llvm.di_subroutine_type<callingConvention = DW_CC_normal, types = #[[INT4]], #[[INT8]], #[[REAL4]], #[[LOG4]]>
 
 // Line numbers should match the number in corresponding loc entry.
-// CHECK: #llvm.di_subprogram<id = {{.*}}, compileUnit = {{.*}}, scope = {{.*}}, name = "_QQmain", linkageName = "_QQmain", file = {{.*}}, line = 15, scopeLine = 15, subprogramFlags = Definition, type = #[[TY0]]>
-// CHECK: #llvm.di_subprogram<id = {{.*}}, compileUnit = {{.*}}, scope = {{.*}}, name = "fn1", linkageName = "_QFPfn1", file = {{.*}}, line = 26, scopeLine = 26, subprogramFlags = Definition, type = #[[TY1]]>
-// CHECK: #llvm.di_subprogram<id = {{.*}}, compileUnit = {{.*}}, scope = {{.*}}, name = "fn2", linkageName = "_QFPfn2", file = {{.*}}, line = 43, scopeLine = 43, subprogramFlags = Definition, type = #[[TY2]]>
+// CHECK: #llvm.di_subprogram<{{.*}}name = "_QQmain", linkageName = "_QQmain", file = {{.*}}, line = 15, scopeLine = 15, subprogramFlags = Definition, type = #[[TY0]]>
+// CHECK: #llvm.di_subprogram<{{.*}}name = "fn1", linkageName = "_QFPfn1", file = {{.*}}, line = 26, scopeLine = 26, subprogramFlags = Definition, type = #[[TY1]]>
+// CHECK: #llvm.di_subprogram<{{.*}}name = "fn2", linkageName = "_QFPfn2", file = {{.*}}, line = 43, scopeLine = 43, subprogramFlags = Definition, type = #[[TY2]]>
 

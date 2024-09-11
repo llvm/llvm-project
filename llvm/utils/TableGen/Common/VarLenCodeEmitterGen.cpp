@@ -77,7 +77,7 @@ class VarLenCodeEmitterGen {
   // name suffix to improve readability of the generated code.
   std::map<AltEncodingTy, std::string> Modes;
 
-  DenseMap<Record *, DenseMap<AltEncodingTy, VarLenInst>> VarLenInsts;
+  DenseMap<const Record *, DenseMap<AltEncodingTy, VarLenInst>> VarLenInsts;
 
   // Emit based values (i.e. fixed bits in the encoded instructions)
   void emitInstructionBaseValues(
@@ -227,7 +227,7 @@ void VarLenCodeEmitterGen::run(raw_ostream &OS) {
   auto NumberedInstructions = Target.getInstructionsByEnumValue();
 
   for (const CodeGenInstruction *CGI : NumberedInstructions) {
-    Record *R = CGI->TheDef;
+    const Record *R = CGI->TheDef;
     // Create the corresponding VarLenInst instance.
     if (R->getValueAsString("Namespace") == "TargetOpcode" ||
         R->getValueAsBit("isPseudo"))
@@ -241,15 +241,15 @@ void VarLenCodeEmitterGen::run(raw_ostream &OS) {
         for (auto &KV : EBM) {
           AltEncodingTy Mode = KV.first;
           Modes.insert({Mode, "_" + HWM.getMode(Mode).Name.str()});
-          Record *EncodingDef = KV.second;
-          RecordVal *RV = EncodingDef->getValue("Inst");
+          const Record *EncodingDef = KV.second;
+          const RecordVal *RV = EncodingDef->getValue("Inst");
           DagInit *DI = cast<DagInit>(RV->getValue());
           VarLenInsts[R].insert({Mode, VarLenInst(DI, RV)});
         }
         continue;
       }
     }
-    RecordVal *RV = R->getValue("Inst");
+    const RecordVal *RV = R->getValue("Inst");
     DagInit *DI = cast<DagInit>(RV->getValue());
     VarLenInsts[R].insert({Universal, VarLenInst(DI, RV)});
   }
@@ -356,7 +356,7 @@ void VarLenCodeEmitterGen::emitInstructionBaseValues(
 
   unsigned NumFixedValueWords = 0U;
   for (const CodeGenInstruction *CGI : NumberedInstructions) {
-    Record *R = CGI->TheDef;
+    const Record *R = CGI->TheDef;
 
     if (R->getValueAsString("Namespace") == "TargetOpcode" ||
         R->getValueAsBit("isPseudo")) {
