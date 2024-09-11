@@ -477,7 +477,7 @@ struct ArgUseChecker : PtrUseVisitor<ArgUseChecker> {
     enqueueUsers(A);
 
     // Visit all the uses off the worklist until it is empty.
-    // Note that unlike PtrUseVisitor we're intentionally do not track offset.
+    // Note that unlike PtrUseVisitor we intentionally do not track offsets.
     // We're only interested in how we use the pointer.
     while (!(Worklist.empty() || PI.isAborted())) {
       UseToVisit ToVisit = Worklist.pop_back_val();
