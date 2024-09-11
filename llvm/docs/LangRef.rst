@@ -15244,7 +15244,7 @@ address spaces. Not all targets support all bit widths however.
 
 ::
 
-      declare void @llvm.memset.pattern.p0.i64.i128(ptr <dest>, i128 <val>,
+      declare void @llvm.memset.pattern.p0.i128.i64(ptr <dest>, i128 <val>,
                                                     i64 <count>, i1 <isvolatile>)
 
 Overview:
@@ -15280,7 +15280,8 @@ is known to be aligned to some boundary, this can be specified as an attribute
 on the argument. The pattern fills will respect the endianness of the target:
 i.e. on little endian targets, the least significant byte of the pattern is
 first in memory, while the most significant byte is first in memory for big
-endian targets.
+endian targets. The memory address is incremented by the allocation size of
+the type.
 
 If ``<count>`` is 0, it is no-op modulo the behavior of attributes attached to
 the arguments.
