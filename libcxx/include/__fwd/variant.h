@@ -18,6 +18,8 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
+#if _LIBCPP_STD_VER >= 17
+
 template <class... _Types>
 class _LIBCPP_TEMPLATE_VIS variant;
 
@@ -67,6 +69,8 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_THROW_BAD_VARIANT_ACCESS constexpr co
 template <class _Tp, class... _Types>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_THROW_BAD_VARIANT_ACCESS constexpr const _Tp&&
 get(const variant<_Types...>&&);
+
+#endif // _LIBCPP_STD_VER >= 17
 
 _LIBCPP_END_NAMESPACE_STD
 
