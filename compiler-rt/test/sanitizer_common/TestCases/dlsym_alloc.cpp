@@ -25,23 +25,35 @@ extern "C" const char *__asan_default_options()
     __attribute__((disable_sanitizer_instrumentation)) {
   return test();
 }
-
+extern "C" const char *__hwasan_default_options()
+    __attribute__((disable_sanitizer_instrumentation)) {
+  return test();
+}
 extern "C" const char *__lsan_default_options()
     __attribute__((disable_sanitizer_instrumentation)) {
   return test();
 }
-
+extern "C" const char *__memprof_default_options()
+    __attribute__((disable_sanitizer_instrumentation)) {
+  return test();
+}
 extern "C" const char *__msan_default_options()
     __attribute__((disable_sanitizer_instrumentation)) {
   return test();
 }
-
+extern "C" const char *__nsan_default_options()
+    __attribute__((disable_sanitizer_instrumentation)) {
+  return test();
+}
+extern "C" const char *__rtsan_default_options()
+    __attribute__((disable_sanitizer_instrumentation)) {
+  return test();
+}
 extern "C" const char *__tsan_default_options()
     __attribute__((disable_sanitizer_instrumentation)) {
   return test();
 }
-
-extern "C" const char *__hwasan_default_options()
+extern "C" const char *__ubsan_default_options()
     __attribute__((disable_sanitizer_instrumentation)) {
   return test();
 }
