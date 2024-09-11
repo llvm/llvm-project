@@ -2561,8 +2561,8 @@ SDValue NVPTXTargetLowering::LowerShiftLeftParts(SDValue Op,
   }
 }
 
-/// Convert the generic copysign to the NVPTXISD version which guarantees that
-/// the types of the operands will match
+/// If the types match, convert the generic copysign to the NVPTXISD version,
+/// otherwise bail ensuring that mismatched cases are properly expaned.
 SDValue NVPTXTargetLowering::LowerFCOPYSIGN(SDValue Op,
                                             SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
@@ -2573,7 +2573,7 @@ SDValue NVPTXTargetLowering::LowerFCOPYSIGN(SDValue Op,
   EVT SrcVT = In2.getValueType();
 
   if (!SrcVT.bitsEq(VT))
-    In2 = DAG.getFPExtendOrRound(In2, DL, VT);
+    return SDValue();
 
   return DAG.getNode(NVPTXISD::FCOPYSIGN, DL, VT, In1, In2);
 }
