@@ -82,13 +82,12 @@ including any system headers.
 Custom functions
 ----------------
 
-The options `CustomNormalFunctions` and `CustomAnnexKFunctions` allow the user
-to define custom functions to be checked. The format is the following, without
-newlines:
+The option `CustomFunctions` allows the user to define custom functions to be
+checked. The format is the following, without newlines:
 
 .. code::
 
-   bugprone-unsafe-functions.CustomNormalFunctions="
+   bugprone-unsafe-functions.CustomFunctions="
      functionRegex1, replacement1[, reason1]; 
      functionRegex2, replacement2[, reason2];
      ...
@@ -134,20 +133,12 @@ Options
     When `true`, the check reports the default set of functions.
     Default is `true`.
 
-.. option:: CustomNormalFunctions
+.. option:: CustomFunctions
 
     A semicolon-separated list of custom functions to be matched. A matched
     function contains a regular expression, the name of the replacement
     function, and an optional reason, separated by comma. For more information,
     see `Custom functions <unsafe-functions.html#custom-functions>`_.
-
-.. option:: CustomAnnexKFunctions
-
-    A semicolon-separated list of custom functions to be matched, if Annex K is
-    available. A matched function contains a regular expression, the name of the
-    replacement function, and an optional reason, separated by comma. For more
-    information, see `Custom functions
-    <unsafe-functions.html#custom-functions>`_.
 
 Examples
 --------
