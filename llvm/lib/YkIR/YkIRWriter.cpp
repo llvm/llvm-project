@@ -833,7 +833,7 @@ private:
     // The same will have to be done for store instructions.
     if ((I->getOrdering() != AtomicOrdering::NotAtomic) ||
         (I->getPointerAddressSpace() != 0) ||
-        (I->getAlign() < DL.getTypeSizeInBits(I->getType()) / 8)) {
+        (I->getAlign() < DL.getTypeAllocSize(I->getType()))) {
       serialiseUnimplementedInstruction(I, FLCtxt, BBIdx, InstIdx);
       return;
     }
@@ -863,7 +863,7 @@ private:
     if ((I->getOrdering() != AtomicOrdering::NotAtomic) ||
         (I->getPointerAddressSpace() != 0) ||
         (I->getAlign() <
-         DL.getTypeSizeInBits(I->getValueOperand()->getType()) / 8)) {
+         DL.getTypeAllocSize(I->getValueOperand()->getType()))) {
       serialiseUnimplementedInstruction(I, FLCtxt, BBIdx, InstIdx);
       return;
     }
