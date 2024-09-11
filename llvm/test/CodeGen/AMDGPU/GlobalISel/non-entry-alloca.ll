@@ -20,10 +20,16 @@ define amdgpu_kernel void @kernel_non_entry_block_static_alloca_uniformly_reache
 ; GCN-NEXT:    s_movk_i32 s32, 0x400
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_cmp_lg_u32 s4, 0
+; GCN-NEXT:    s_cselect_b32 s4, 1, 0
+; GCN-NEXT:    s_and_b32 s4, s4, 1
+; GCN-NEXT:    s_cmp_lg_u32 s4, 0
 ; GCN-NEXT:    s_cbranch_scc1 .LBB0_3
 ; GCN-NEXT:  ; %bb.1: ; %bb.0
 ; GCN-NEXT:    s_load_dword s4, s[6:7], 0xc
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    s_cmp_lg_u32 s4, 0
+; GCN-NEXT:    s_cselect_b32 s4, 1, 0
+; GCN-NEXT:    s_and_b32 s4, s4, 1
 ; GCN-NEXT:    s_cmp_lg_u32 s4, 0
 ; GCN-NEXT:    s_cbranch_scc1 .LBB0_3
 ; GCN-NEXT:  ; %bb.2: ; %bb.1
@@ -90,6 +96,9 @@ define amdgpu_kernel void @kernel_non_entry_block_static_alloca_uniformly_reache
 ; GCN-NEXT:    s_mov_b32 s33, 0
 ; GCN-NEXT:    s_movk_i32 s32, 0x1000
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    s_cmp_lg_u32 s4, 0
+; GCN-NEXT:    s_cselect_b32 s4, 1, 0
+; GCN-NEXT:    s_and_b32 s4, s4, 1
 ; GCN-NEXT:    s_cmp_lg_u32 s4, 0
 ; GCN-NEXT:    s_cbranch_scc1 .LBB1_2
 ; GCN-NEXT:  ; %bb.1: ; %bb.0

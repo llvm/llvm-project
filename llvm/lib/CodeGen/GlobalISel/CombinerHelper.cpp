@@ -2526,20 +2526,6 @@ bool CombinerHelper::matchCombineAnyExtTrunc(MachineInstr &MI, Register &Reg) {
                   m_GTrunc(m_all_of(m_Reg(Reg), m_SpecificType(DstTy))));
 }
 
-bool CombinerHelper::matchCombineZextTrunc(MachineInstr &MI, Register &Reg) {
-  assert(MI.getOpcode() == TargetOpcode::G_ZEXT && "Expected a G_ZEXT");
-  Register DstReg = MI.getOperand(0).getReg();
-  Register SrcReg = MI.getOperand(1).getReg();
-  LLT DstTy = MRI.getType(DstReg);
-  if (mi_match(SrcReg, MRI,
-               m_GTrunc(m_all_of(m_Reg(Reg), m_SpecificType(DstTy))))) {
-    unsigned DstSize = DstTy.getScalarSizeInBits();
-    unsigned SrcSize = MRI.getType(SrcReg).getScalarSizeInBits();
-    return KB->getKnownBits(Reg).countMinLeadingZeros() >= DstSize - SrcSize;
-  }
-  return false;
-}
-
 static LLT getMidVTForTruncRightShiftCombine(LLT ShiftTy, LLT TruncTy) {
   const unsigned ShiftSize = ShiftTy.getScalarSizeInBits();
   const unsigned TruncSize = TruncTy.getScalarSizeInBits();

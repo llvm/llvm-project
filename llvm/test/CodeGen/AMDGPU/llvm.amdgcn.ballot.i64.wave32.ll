@@ -114,19 +114,36 @@ define amdgpu_cs i64 @ctpop_of_ballot(float %x, float %y) {
 }
 
 define amdgpu_cs i32 @branch_divergent_ballot64_ne_zero_compare(i32 %v) {
-; CHECK-LABEL: branch_divergent_ballot64_ne_zero_compare:
-; CHECK:       ; %bb.0:
-; CHECK-NEXT:    v_cmp_gt_u32_e64 s0, 12, v0
-; CHECK-NEXT:    s_mov_b32 s1, 0
-; CHECK-NEXT:    s_cmp_eq_u64 s[0:1], 0
-; CHECK-NEXT:    s_cbranch_scc1 .LBB7_2
-; CHECK-NEXT:  ; %bb.1: ; %true
-; CHECK-NEXT:    s_mov_b32 s0, 42
-; CHECK-NEXT:    s_branch .LBB7_3
-; CHECK-NEXT:  .LBB7_2: ; %false
-; CHECK-NEXT:    s_mov_b32 s0, 33
-; CHECK-NEXT:    s_branch .LBB7_3
-; CHECK-NEXT:  .LBB7_3:
+; DAGISEL-LABEL: branch_divergent_ballot64_ne_zero_compare:
+; DAGISEL:       ; %bb.0:
+; DAGISEL-NEXT:    v_cmp_gt_u32_e64 s0, 12, v0
+; DAGISEL-NEXT:    s_mov_b32 s1, 0
+; DAGISEL-NEXT:    s_cmp_eq_u64 s[0:1], 0
+; DAGISEL-NEXT:    s_cbranch_scc1 .LBB7_2
+; DAGISEL-NEXT:  ; %bb.1: ; %true
+; DAGISEL-NEXT:    s_mov_b32 s0, 42
+; DAGISEL-NEXT:    s_branch .LBB7_3
+; DAGISEL-NEXT:  .LBB7_2: ; %false
+; DAGISEL-NEXT:    s_mov_b32 s0, 33
+; DAGISEL-NEXT:    s_branch .LBB7_3
+; DAGISEL-NEXT:  .LBB7_3:
+;
+; GISEL-LABEL: branch_divergent_ballot64_ne_zero_compare:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    v_cmp_gt_u32_e64 s0, 12, v0
+; GISEL-NEXT:    s_mov_b32 s1, 0
+; GISEL-NEXT:    s_cmp_eq_u64 s[0:1], 0
+; GISEL-NEXT:    s_cselect_b32 s0, 1, 0
+; GISEL-NEXT:    s_and_b32 s0, s0, 1
+; GISEL-NEXT:    s_cmp_lg_u32 s0, 0
+; GISEL-NEXT:    s_cbranch_scc1 .LBB7_2
+; GISEL-NEXT:  ; %bb.1: ; %true
+; GISEL-NEXT:    s_mov_b32 s0, 42
+; GISEL-NEXT:    s_branch .LBB7_3
+; GISEL-NEXT:  .LBB7_2: ; %false
+; GISEL-NEXT:    s_mov_b32 s0, 33
+; GISEL-NEXT:    s_branch .LBB7_3
+; GISEL-NEXT:  .LBB7_3:
   %c = icmp ult i32 %v, 12
   %ballot = call i64 @llvm.amdgcn.ballot.i64(i1 %c)
   %ballot_ne_zero = icmp ne i64 %ballot, 0
@@ -163,6 +180,9 @@ define amdgpu_cs i32 @branch_divergent_ballot64_ne_zero_and(i32 %v1, i32 %v2) {
 ; GISEL-NEXT:    s_mov_b32 s1, 0
 ; GISEL-NEXT:    s_and_b32 s0, vcc_lo, s0
 ; GISEL-NEXT:    s_cmp_eq_u64 s[0:1], 0
+; GISEL-NEXT:    s_cselect_b32 s0, 1, 0
+; GISEL-NEXT:    s_and_b32 s0, s0, 1
+; GISEL-NEXT:    s_cmp_lg_u32 s0, 0
 ; GISEL-NEXT:    s_cbranch_scc1 .LBB8_2
 ; GISEL-NEXT:  ; %bb.1: ; %true
 ; GISEL-NEXT:    s_mov_b32 s0, 42

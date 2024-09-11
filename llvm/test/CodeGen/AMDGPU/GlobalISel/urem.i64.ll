@@ -195,12 +195,15 @@ define amdgpu_ps i64 @s_urem_i64(i64 inreg %num, i64 inreg %den) {
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s3
 ; CHECK-NEXT:    v_cvt_f32_u32_e32 v1, s3
 ; CHECK-NEXT:    s_sub_u32 s4, 0, s2
+; CHECK-NEXT:    s_cselect_b32 s5, 1, 0
 ; CHECK-NEXT:    s_mov_b32 s6, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v3, s1
 ; CHECK-NEXT:    v_madmk_f32 v1, v1, 0x4f800000, v2
-; CHECK-NEXT:    s_subb_u32 s5, 0, s3
+; CHECK-NEXT:    s_and_b32 s5, s5, 1
 ; CHECK-NEXT:    v_rcp_iflag_f32_e32 v1, v1
 ; CHECK-NEXT:    v_mul_f32_e32 v1, 0x5f7ffffc, v1
+; CHECK-NEXT:    s_cmp_lg_u32 s5, 0
+; CHECK-NEXT:    s_subb_u32 s5, 0, s3
 ; CHECK-NEXT:    v_mul_f32_e32 v4, 0x2f800000, v1
 ; CHECK-NEXT:    v_trunc_f32_e32 v4, v4
 ; CHECK-NEXT:    v_mac_f32_e32 v1, 0xcf800000, v4
@@ -1098,18 +1101,24 @@ define <2 x i64> @v_urem_v2i64_oddk_denom(<2 x i64> %num) {
 ; GISEL-NEXT:    v_cvt_f32_u32_e32 v5, 0x12d8fb
 ; GISEL-NEXT:    v_cvt_f32_ubyte0_e32 v6, 0
 ; GISEL-NEXT:    s_sub_u32 s4, 0, 0x12d8fb
+; GISEL-NEXT:    s_cselect_b32 s5, 1, 0
 ; GISEL-NEXT:    v_mac_f32_e32 v5, 0x4f800000, v6
-; GISEL-NEXT:    s_subb_u32 s5, 0, 0
+; GISEL-NEXT:    s_and_b32 s5, s5, 1
 ; GISEL-NEXT:    v_rcp_iflag_f32_e32 v5, v5
-; GISEL-NEXT:    s_sub_u32 s6, 0, 0x12d8fb
 ; GISEL-NEXT:    v_mul_f32_e32 v5, 0x5f7ffffc, v5
-; GISEL-NEXT:    s_subb_u32 s7, 0, 0
+; GISEL-NEXT:    s_cmp_lg_u32 s5, 0
+; GISEL-NEXT:    s_subb_u32 s5, 0, 0
 ; GISEL-NEXT:    v_mul_f32_e32 v6, 0x2f800000, v5
+; GISEL-NEXT:    s_sub_u32 s6, 0, 0x12d8fb
+; GISEL-NEXT:    s_cselect_b32 s7, 1, 0
 ; GISEL-NEXT:    v_trunc_f32_e32 v6, v6
+; GISEL-NEXT:    s_and_b32 s7, s7, 1
 ; GISEL-NEXT:    v_mac_f32_e32 v5, 0xcf800000, v6
 ; GISEL-NEXT:    v_cvt_u32_f32_e32 v6, v6
 ; GISEL-NEXT:    v_cvt_u32_f32_e32 v5, v5
 ; GISEL-NEXT:    v_mul_lo_u32 v7, s4, v6
+; GISEL-NEXT:    s_cmp_lg_u32 s7, 0
+; GISEL-NEXT:    s_subb_u32 s7, 0, 0
 ; GISEL-NEXT:    v_mul_lo_u32 v8, s6, v6
 ; GISEL-NEXT:    v_mul_lo_u32 v9, s4, v5
 ; GISEL-NEXT:    v_mul_lo_u32 v10, s5, v5
