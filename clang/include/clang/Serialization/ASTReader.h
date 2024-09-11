@@ -2034,6 +2034,10 @@ public:
   /// lookup table as unmaterialized references.
   bool FindExternalVisibleDeclsByName(const DeclContext *DC,
                                       DeclarationName Name) override;
+  /// Return false if Name is none and Decl Context doesn't come from the reader.
+  bool FindVisibleDeclsByName(const DeclContext *DC, DeclarationName Name,
+                              SmallVectorImpl<NamedDecl*> &Decls);
+
 
   /// Read all of the declarations lexically stored in a
   /// declaration context.

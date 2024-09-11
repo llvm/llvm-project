@@ -8148,11 +8148,9 @@ void ASTReader::FindFileRegionDecls(FileID File,
         *DInfo.Mod, LocalDeclID::get(*this, *DInfo.Mod, *DIt))));
 }
 
-bool
-ASTReader::FindExternalVisibleDeclsByName(const DeclContext *DC,
-                                          DeclarationName Name) {
-  assert(DC->hasExternalVisibleStorage() && DC == DC->getPrimaryContext() &&
-         "DeclContext has no visible decls in storage");
+bool ASTReader::FindVisibleDeclsByName(const DeclContext *DC,
+                                       DeclarationName Name,
+                                       SmallVectorImpl<NamedDecl*> &Decls) {
   if (!Name)
     return false;
 
@@ -8163,7 +8161,6 @@ ASTReader::FindExternalVisibleDeclsByName(const DeclContext *DC,
   Deserializing LookupResults(this);
 
   // Load the list of declarations.
-  SmallVector<NamedDecl *, 64> Decls;
   llvm::SmallPtrSet<NamedDecl *, 8> Found;
 
   for (GlobalDeclID ID : It->second.Table.find(Name)) {
@@ -8171,6 +8168,22 @@ ASTReader::FindExternalVisibleDeclsByName(const DeclContext *DC,
     if (ND->getDeclName() == Name && Found.insert(ND).second)
       Decls.push_back(ND);
   }
+
+  return true;
+}
+
+bool
+ASTReader::FindExternalVisibleDeclsByName(const DeclContext *DC,
+                                          DeclarationName Name) {
+  assert(DC->hasExternalVisibleStorage() && DC == DC->getPrimaryContext() &&
+         "DeclContext has no visible decls in storage");
+
+  Deserializing LookupResults(this);
+
+  // Load the list of declarations.
+  SmallVector<NamedDecl *, 64> Decls;
+  if (!FindVisibleDeclsByName(DC, Name, Decls))
+    return false;
 
   ++NumVisibleDeclContextsRead;
   SetExternalVisibleDeclsForName(DC, Name, Decls);
