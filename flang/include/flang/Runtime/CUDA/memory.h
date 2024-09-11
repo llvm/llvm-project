@@ -21,21 +21,23 @@ namespace Fortran::runtime::cuda {
 
 extern "C" {
 
-// Set value to the data hold by a descriptor.
+/// Set value to the data hold by a descriptor. The \p value pointer must be
+/// addressable to the same amount of bytes specified by the element size of
+/// the descriptor \p desc.
 void RTDECL(CUFMemsetDescriptor)(const Descriptor &desc, void *value,
     const char *sourceFile = nullptr, int sourceLine = 0);
 
-// Data transfer from a pointer to a descriptor.
+/// Data transfer from a pointer to a descriptor.
 void RTDECL(CUFDataTransferDescPtr)(const Descriptor &dst, void *src,
     std::size_t bytes, unsigned mode, const char *sourceFile = nullptr,
     int sourceLine = 0);
 
-// Data transfer from a descriptor to a pointer.
+/// Data transfer from a descriptor to a pointer.
 void RTDECL(CUFDataTransferPtrDesc)(void *dst, const Descriptor &src,
     std::size_t bytes, unsigned mode, const char *sourceFile = nullptr,
     int sourceLine = 0);
 
-// Data transfer from a descriptor to a descriptor.
+/// Data transfer from a descriptor to a descriptor.
 void RTDECL(CUFDataTransferDescDesc)(const Descriptor &dst,
     const Descriptor &src, unsigned mode, const char *sourceFile = nullptr,
     int sourceLine = 0);
