@@ -76,10 +76,16 @@ public:
     return *OpcodeNameToOpcodeIdxMapping;
   };
 
+  // TODO(boomanaiden154): We are keeping this getter around to enable internal
+  // migration to getRegisterNumberFromName. Once that is complete and
+  // the changes have been pulled, we can remove this.
   const DenseMap<StringRef, MCRegister> &getRegNameToRegNoMapping() const {
     assert(RegNameToRegNoMapping);
     return *RegNameToRegNoMapping;
   }
+
+  std::optional<MCRegister>
+  getRegisterNumberFromName(StringRef RegisterName) const;
 
 private:
   std::unique_ptr<const DenseMap<StringRef, unsigned>>

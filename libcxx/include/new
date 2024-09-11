@@ -166,9 +166,9 @@ public:
 };
 #endif // defined(_LIBCPP_ABI_VCRUNTIME) && defined(_HAS_EXCEPTIONS) && _HAS_EXCEPTIONS == 0
 
-_LIBCPP_NORETURN _LIBCPP_EXPORTED_FROM_ABI void __throw_bad_alloc(); // not in C++ spec
+[[__noreturn__]] _LIBCPP_EXPORTED_FROM_ABI void __throw_bad_alloc(); // not in C++ spec
 
-_LIBCPP_NORETURN inline _LIBCPP_HIDE_FROM_ABI void __throw_bad_array_new_length() {
+[[__noreturn__]] inline _LIBCPP_HIDE_FROM_ABI void __throw_bad_array_new_length() {
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
   throw bad_array_new_length();
 #else

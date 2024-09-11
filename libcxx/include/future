@@ -472,7 +472,7 @@ inline _LIBCPP_HIDE_FROM_ABI error_condition make_error_condition(future_errc __
   return error_condition(static_cast<int>(__e), future_category());
 }
 
-_LIBCPP_NORETURN inline _LIBCPP_HIDE_FROM_ABI void __throw_future_error(future_errc __ev);
+[[__noreturn__]] inline _LIBCPP_HIDE_FROM_ABI void __throw_future_error(future_errc __ev);
 
 class _LIBCPP_EXPORTED_FROM_ABI future_error : public logic_error {
   error_code __ec_;

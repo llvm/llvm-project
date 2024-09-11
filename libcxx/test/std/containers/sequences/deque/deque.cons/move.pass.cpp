@@ -38,7 +38,7 @@ int main(int, char**)
         assert(c2 == c3);
         assert(c1.size() == 0);
         assert(c3.get_allocator() == old_a);
-        assert(c1.get_allocator() == A(test_alloc_base::moved_value));
+        assert(c1.get_allocator() == A(1));
         LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c1));
         LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c2));
         LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c3));
