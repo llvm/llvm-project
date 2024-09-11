@@ -40,10 +40,10 @@ class StructType;
 class Type {
 protected:
   llvm::Type *LLVMTy;
-  friend class ArrayType;        // For LLVMTy.
-  friend class StructType;       // For LLVMTy.
-  friend class VectorType;       // For LLVMTy.
-  friend class FixedVectorType;  // For LLVMTy.
+  friend class ArrayType;          // For LLVMTy.
+  friend class StructType;         // For LLVMTy.
+  friend class VectorType;         // For LLVMTy.
+  friend class FixedVectorType;    // For LLVMTy.
   friend class ScalableVectorType; // For LLVMTy.
   friend class PointerType;        // For LLVMTy.
   friend class FunctionType;       // For LLVMTy.
