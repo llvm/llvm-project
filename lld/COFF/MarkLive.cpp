@@ -43,13 +43,23 @@ void markLive(COFFLinkerContext &ctx) {
     worklist.push_back(c);
   };
 
-  auto addSym = [&](Symbol *b) {
-    if (auto *sym = dyn_cast<DefinedRegular>(b))
+  std::function<void(Symbol *)> addSym;
+
+  auto addImportFile = [&](ImportFile *file) {
+    file->live = true;
+    if (file->impchkThunk && file->impchkThunk->exitThunk)
+      addSym(file->impchkThunk->exitThunk);
+  };
+
+  addSym = [&](Symbol *b) {
+    if (auto *sym = dyn_cast<DefinedRegular>(b)) {
       enqueue(sym->getChunk());
-    else if (auto *sym = dyn_cast<DefinedImportData>(b))
-      sym->file->live = true;
-    else if (auto *sym = dyn_cast<DefinedImportThunk>(b))
-      sym->wrappedSym->file->live = sym->wrappedSym->file->thunkLive = true;
+    } else if (auto *sym = dyn_cast<DefinedImportData>(b)) {
+      addImportFile(sym->file);
+    } else if (auto *sym = dyn_cast<DefinedImportThunk>(b)) {
+      addImportFile(sym->wrappedSym->file);
+      sym->wrappedSym->file->thunkLive = true;
+    }
   };
 
   // Add GC root chunks.
