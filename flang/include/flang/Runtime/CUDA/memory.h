@@ -22,7 +22,7 @@ namespace Fortran::runtime::cuda {
 extern "C" {
 
 // Set value to the data hold by a descriptor.
-void RTDECL(CUFMemsetDescriptor)(const Descriptor &desc, void* value,
+void RTDECL(CUFMemsetDescriptor)(const Descriptor &desc, void *value,
     const char *sourceFile = nullptr, int sourceLine = 0);
 
 // Data transfer from a pointer to a descriptor.

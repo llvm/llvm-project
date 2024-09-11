@@ -14,24 +14,22 @@
 namespace Fortran::runtime::cuda {
 extern "C" {
 
-void RTDEF(CUFMemsetDescriptor)(const Descriptor &desc, void* value,
+void RTDEF(CUFMemsetDescriptor)(const Descriptor &desc, void *value,
     const char *sourceFile, int sourceLine) {
   Terminator terminator{sourceFile, sourceLine};
-  terminator.Crash(
-      "not yet implemented: CUDA data transfer from a scalar value to a descriptor");
+  terminator.Crash("not yet implemented: CUDA data transfer from a scalar "
+                   "value to a descriptor");
 }
 
 void RTDEF(CUFDataTransferDescPtr)(const Descriptor &desc, void *addr,
-    std::size_t bytes, unsigned mode, const char *sourceFile,
-    int sourceLine) {
+    std::size_t bytes, unsigned mode, const char *sourceFile, int sourceLine) {
   Terminator terminator{sourceFile, sourceLine};
   terminator.Crash(
       "not yet implemented: CUDA data transfer from a pointer to a descriptor");
 }
 
-void RTDEF(CUFDataTransferPtrDesc)(void* addr, const Descriptor &desc,
-    std::size_t bytes, unsigned mode, const char *sourceFile,
-    int sourceLine) {
+void RTDEF(CUFDataTransferPtrDesc)(void *addr, const Descriptor &desc,
+    std::size_t bytes, unsigned mode, const char *sourceFile, int sourceLine) {
   Terminator terminator{sourceFile, sourceLine};
   terminator.Crash(
       "not yet implemented: CUDA data transfer from a descriptor to a pointer");
@@ -44,6 +42,5 @@ void RTDECL(CUFDataTransferDescDesc)(const Descriptor &dstDesc,
   terminator.Crash(
       "not yet implemented: CUDA data transfer between two descriptors");
 }
-
 }
 } // namespace Fortran::runtime::cuda
