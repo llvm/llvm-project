@@ -41,8 +41,7 @@ public:
   };
 
 private:
-  const std::vector<CheckedFunction> CustomNormalFunctions;
-  const std::vector<CheckedFunction> CustomAnnexKFunctions;
+  const std::vector<CheckedFunction> CustomFunctions;
 
   // If true, the default set of functions are reported.
   const bool ReportDefaultFunctions;

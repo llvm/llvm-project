@@ -19,10 +19,8 @@ using namespace llvm;
 
 namespace clang::tidy::bugprone {
 
-static constexpr llvm::StringLiteral OptionNameCustomNormalFunctions =
-    "CustomNormalFunctions";
-static constexpr llvm::StringLiteral OptionNameCustomAnnexKFunctions =
-    "CustomAnnexKFunctions";
+static constexpr llvm::StringLiteral OptionNameCustomFunctions =
+    "CustomFunctions";
 static constexpr llvm::StringLiteral OptionNameReportDefaultFunctions =
     "ReportDefaultFunctions";
 static constexpr llvm::StringLiteral OptionNameReportMoreUnsafeFunctions =
@@ -35,8 +33,6 @@ static constexpr llvm::StringLiteral AdditionalFunctionNamesId =
     "AdditionalFunctionsNames";
 static constexpr llvm::StringLiteral CustomFunctionNamesId =
     "CustomFunctionNames";
-static constexpr llvm::StringLiteral CustomAnnexKFunctionNamesId =
-    "CustomAnnexKFunctionNames";
 static constexpr llvm::StringLiteral DeclRefId = "DRE";
 
 static std::optional<std::string>
@@ -139,8 +135,7 @@ static bool isAnnexKAvailable(std::optional<bool> &CacheVar, Preprocessor *PP,
 }
 
 static std::vector<UnsafeFunctionsCheck::CheckedFunction>
-parseCheckedFunctions(StringRef Option, StringRef OptionName,
-                      ClangTidyContext *Context) {
+parseCheckedFunctions(StringRef Option, ClangTidyContext *Context) {
   std::vector<StringRef> Functions = utils::options::parseStringList(Option);
   std::vector<UnsafeFunctionsCheck::CheckedFunction> Result;
   Result.reserve(Functions.size());
@@ -156,7 +151,7 @@ parseCheckedFunctions(StringRef Option, StringRef OptionName,
     if (Name.trim().empty()) {
       Context->configurationDiag("invalid configuration value for option '%0'; "
                                  "expected the name of an unsafe function")
-          << OptionName;
+          << OptionNameCustomFunctions;
       continue;
     }
 
@@ -164,7 +159,7 @@ parseCheckedFunctions(StringRef Option, StringRef OptionName,
       Context->configurationDiag(
           "invalid configuration value '%0' for option '%1'; "
           "expected a replacement function name")
-          << Name.trim() << OptionName;
+          << Name.trim() << OptionNameCustomFunctions;
       continue;
     }
 
@@ -196,22 +191,16 @@ static std::string serializeCheckedFunctions(
 UnsafeFunctionsCheck::UnsafeFunctionsCheck(StringRef Name,
                                            ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      CustomNormalFunctions(parseCheckedFunctions(
-          Options.get(OptionNameCustomNormalFunctions, ""),
-          OptionNameCustomNormalFunctions, Context)),
-      CustomAnnexKFunctions(parseCheckedFunctions(
-          Options.get(OptionNameCustomAnnexKFunctions, ""),
-          OptionNameCustomAnnexKFunctions, Context)),
+      CustomFunctions(parseCheckedFunctions(
+          Options.get(OptionNameCustomFunctions, ""), Context)),
       ReportDefaultFunctions(
           Options.get(OptionNameReportDefaultFunctions, true)),
       ReportMoreUnsafeFunctions(
           Options.get(OptionNameReportMoreUnsafeFunctions, true)) {}
 
 void UnsafeFunctionsCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
-  Options.store(Opts, OptionNameCustomNormalFunctions,
-                serializeCheckedFunctions(CustomNormalFunctions));
-  Options.store(Opts, OptionNameCustomAnnexKFunctions,
-                serializeCheckedFunctions(CustomAnnexKFunctions));
+  Options.store(Opts, OptionNameCustomFunctions,
+                serializeCheckedFunctions(CustomFunctions));
   Options.store(Opts, OptionNameReportDefaultFunctions, ReportDefaultFunctions);
   Options.store(Opts, OptionNameReportMoreUnsafeFunctions,
                 ReportMoreUnsafeFunctions);
@@ -262,27 +251,11 @@ void UnsafeFunctionsCheck::registerMatchers(MatchFinder *Finder) {
     }
   }
 
-  if (!CustomAnnexKFunctions.empty()) {
+  if (!CustomFunctions.empty()) {
     std::vector<llvm::StringRef> FunctionNames;
-    FunctionNames.reserve(CustomAnnexKFunctions.size());
+    FunctionNames.reserve(CustomFunctions.size());
 
-    for (const auto &Entry : CustomAnnexKFunctions)
-      FunctionNames.push_back(Entry.Name);
-
-    auto CustomAnnexKFunctionsMatcher =
-        matchers::matchesAnyListedName(FunctionNames);
-
-    Finder->addMatcher(declRefExpr(to(functionDecl(CustomAnnexKFunctionsMatcher)
-                                          .bind(CustomAnnexKFunctionNamesId)))
-                           .bind(DeclRefId),
-                       this);
-  }
-
-  if (!CustomNormalFunctions.empty()) {
-    std::vector<llvm::StringRef> FunctionNames;
-    FunctionNames.reserve(CustomNormalFunctions.size());
-
-    for (const auto &Entry : CustomNormalFunctions)
+    for (const auto &Entry : CustomFunctions)
       FunctionNames.push_back(Entry.Name);
 
     auto CustomFunctionsMatcher = matchers::matchesAnyListedName(FunctionNames);
@@ -305,47 +278,25 @@ void UnsafeFunctionsCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Normal = Result.Nodes.getNodeAs<FunctionDecl>(FunctionNamesId);
   const auto *Additional =
       Result.Nodes.getNodeAs<FunctionDecl>(AdditionalFunctionNamesId);
-  const auto *CustomAnnexK =
-      Result.Nodes.getNodeAs<FunctionDecl>(CustomAnnexKFunctionNamesId);
-  const auto *CustomNormal =
+  const auto *Custom =
       Result.Nodes.getNodeAs<FunctionDecl>(CustomFunctionNamesId);
-  assert((AnnexK || Normal || Additional || CustomAnnexK || CustomNormal) &&
+  assert((AnnexK || Normal || Additional || Custom) &&
          "No valid match category.");
 
   bool AnnexKIsAvailable =
       isAnnexKAvailable(IsAnnexKAvailable, PP, getLangOpts());
   StringRef FunctionName = FuncDecl->getName();
 
-  if (CustomAnnexK || CustomNormal) {
-    const auto ShowCheckedFunctionWarning = [&](const CheckedFunction &Entry) {
-      StringRef Reason =
-          Entry.Reason.empty() ? "is marked as unsafe" : Entry.Reason.c_str();
-      diag(DeclRef->getExprLoc(), "function %0 %1; '%2' should be used instead")
-          << FuncDecl << Reason << Entry.Replacement
-          << DeclRef->getSourceRange();
-    };
-
-    if (AnnexKIsAvailable) {
-      for (const auto &Entry : CustomAnnexKFunctions) {
-        if (Entry.Pattern.match(*FuncDecl)) {
-          // If both Annex K and Normal are matched, show Annex K warning only.
-          if (CustomAnnexK)
-            ShowCheckedFunctionWarning(Entry);
-
-          return;
-        }
-      }
-
-      assert(!CustomAnnexK && "No custom Annex K function was matched.");
-    }
-
-    // Annex K was not available, or the assertion failed.
-    if (CustomAnnexK)
-      return;
-
-    for (const auto &Entry : CustomNormalFunctions) {
+  if (Custom) {
+    for (const auto &Entry : CustomFunctions) {
       if (Entry.Pattern.match(*FuncDecl)) {
-        ShowCheckedFunctionWarning(Entry);
+        StringRef Reason =
+            Entry.Reason.empty() ? "is marked as unsafe" : Entry.Reason.c_str();
+
+        diag(DeclRef->getExprLoc(),
+             "function %0 %1; '%2' should be used instead")
+            << FuncDecl << Reason << Entry.Replacement
+            << DeclRef->getSourceRange();
         return;
       }
     }
