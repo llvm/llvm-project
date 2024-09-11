@@ -33,7 +33,6 @@ LLVM_LIBC_FUNCTION(float, fmul, (double x, double y)) {
   InFPBits x_bits(x);
   InFPBits y_bits(y);
 
-  
   Sign result_sign = x_bits.sign() == y_bits.sign() ? Sign::POS : Sign::NEG;
 
   if (LIBC_UNLIKELY(x_bits.is_inf_or_nan() || y_bits.is_inf_or_nan() ||
@@ -84,17 +83,17 @@ LLVM_LIBC_FUNCTION(float, fmul, (double x, double y)) {
     // Now either x or y is zero, and the other one is finite.
     return OutFPBits::zero(result_sign).get_val();
   }
-  
+
   if (prod.lo == 0.0)
     return static_cast<float>(prod.hi);
 
   if (lo_bits.sign() != hi_bits.sign()) {
     // Check if sticky bit of hi are all 0
     constexpr uint64_t STICKY_MASK =
-      0xFFF'FFFF; // Lower (52 - 23 - 1 = 28 bits)
+        0xFFF'FFFF; // Lower (52 - 23 - 1 = 28 bits)
     uint64_t sticky_bits = (hi_bits.uintval() & STICKY_MASK);
     uint64_t result_bits =
-      (sticky_bits == 0) ? (hi_bits.uintval() - 1) : hi_bits.uintval();
+        (sticky_bits == 0) ? (hi_bits.uintval() - 1) : hi_bits.uintval();
     double result = fputil::FPBits<double>(result_bits).get_val();
     return static_cast<float>(result);
   }
