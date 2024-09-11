@@ -1380,8 +1380,8 @@ define void @foo(i1 %c0, i8 %v0, i8 %v1, i1 %c1) {
   EXPECT_EQ(Select->getTrueValue(), V0);
   EXPECT_EQ(Select->getFalseValue(), V1);
   // Check areInvalidOperands.
-  EXPECT_EQ(sandboxir::SelectInst::areInvalidOperands(Cond, V0, V1), nullptr);
-  EXPECT_NE(sandboxir::SelectInst::areInvalidOperands(V0, V1, Cond), nullptr);
+  EXPECT_EQ(sandboxir::SelectInst::areInvalidOperands(Cond0, V0, V1), nullptr);
+  EXPECT_NE(sandboxir::SelectInst::areInvalidOperands(V0, V1, Cond0), nullptr);
 
   {
     // Check SelectInst::create() InsertBefore.
