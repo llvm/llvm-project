@@ -1658,31 +1658,15 @@ LowerUnalignedLoadRetParam(SelectionDAG &DAG, SDValue &Chain, uint64_t Offset,
   return RetVal;
 }
 
-static bool shouldConvertToIndirectCall(bool IsVarArg, unsigned ParamCount,
-                                        NVPTXTargetLowering::ArgListTy &Args,
-                                        const CallBase *CB,
-                                        GlobalAddressSDNode *Func) {
+static bool shouldConvertToIndirectCall(const CallBase *CB,
+                                        const GlobalAddressSDNode *Func) {
   if (!Func)
     return false;
   auto *CalleeFunc = dyn_cast<Function>(Func->getGlobal());
   if (!CalleeFunc)
     return false;
 
-  auto ActualReturnType = CalleeFunc->getReturnType();
-  if (CB->getType() != ActualReturnType)
-    return true;
-
-  if (IsVarArg)
-    return false;
-
-  auto ActualNumParams = CalleeFunc->getFunctionType()->getNumParams();
-  if (ParamCount != ActualNumParams)
-    return true;
-  for (const Argument &I : CalleeFunc->args())
-    if (I.getType() != Args[I.getArgNo()].Ty)
-      return true;
-
-  return false;
+  return CB->getFunctionType() != CalleeFunc->getFunctionType();
 }
 
 SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
@@ -1999,11 +1983,9 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
                     VADeclareParam->getVTList(), DeclareParamOps);
   }
 
-  // If the param count, type of any param, or return type of the callsite
-  // mismatches with that of the function signature, convert the callsite to an
-  // indirect call.
-  bool ConvertToIndirectCall =
-      shouldConvertToIndirectCall(CLI.IsVarArg, ParamCount, Args, CB, Func);
+  // If the type of the callsite does not match that of the function, convert
+  // the callsite to an indirect call.
+  bool ConvertToIndirectCall = shouldConvertToIndirectCall(CB, Func);
 
   // Both indirect calls and libcalls have nullptr Func. In order to distinguish
   // between them we must rely on the call site value which is valid for
