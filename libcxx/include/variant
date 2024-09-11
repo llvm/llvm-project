@@ -221,6 +221,7 @@ namespace std {
 #include <__functional/invoke.h>
 #include <__functional/operations.h>
 #include <__functional/unary_function.h>
+#include <__fwd/variant.h>
 #include <__memory/addressof.h>
 #include <__memory/construct_at.h>
 #include <__tuple/find_index.h>
@@ -307,15 +308,7 @@ __throw_bad_variant_access() {
 #  endif
 }
 
-template <class... _Types>
-class _LIBCPP_TEMPLATE_VIS variant;
-
-template <class _Tp>
-struct _LIBCPP_TEMPLATE_VIS variant_size;
-
-template <class _Tp>
-inline constexpr size_t variant_size_v = variant_size<_Tp>::value;
-
+// variant_size
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS variant_size<const _Tp> : variant_size<_Tp> {};
 
@@ -328,12 +321,7 @@ struct _LIBCPP_TEMPLATE_VIS variant_size<const volatile _Tp> : variant_size<_Tp>
 template <class... _Types>
 struct _LIBCPP_TEMPLATE_VIS variant_size<variant<_Types...>> : integral_constant<size_t, sizeof...(_Types)> {};
 
-template <size_t _Ip, class _Tp>
-struct _LIBCPP_TEMPLATE_VIS variant_alternative;
-
-template <size_t _Ip, class _Tp>
-using variant_alternative_t = typename variant_alternative<_Ip, _Tp>::type;
-
+// variant_alternative
 template <size_t _Ip, class _Tp>
 struct _LIBCPP_TEMPLATE_VIS variant_alternative<_Ip, const _Tp> : add_const<variant_alternative_t<_Ip, _Tp>> {};
 
@@ -348,8 +336,6 @@ struct _LIBCPP_TEMPLATE_VIS variant_alternative<_Ip, variant<_Types...>> {
   static_assert(_Ip < sizeof...(_Types), "Index out of bounds in std::variant_alternative<>");
   using type = __type_pack_element<_Ip, _Types...>;
 };
-
-inline constexpr size_t variant_npos = static_cast<size_t>(-1);
 
 template <size_t _NumAlternatives>
 _LIBCPP_HIDE_FROM_ABI constexpr auto __choose_index_type() {
@@ -368,9 +354,6 @@ using __variant_index_t = decltype(std::__choose_index_type<_NumAlts>());
 
 template <class _IndexType>
 constexpr _IndexType __variant_npos = static_cast<_IndexType>(-1);
-
-template <class... _Types>
-class _LIBCPP_TEMPLATE_VIS variant;
 
 template <class... _Types>
 _LIBCPP_HIDE_FROM_ABI constexpr variant<_Types...>& __as_variant(variant<_Types...>& __vs) noexcept {
