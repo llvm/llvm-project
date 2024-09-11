@@ -206,28 +206,6 @@ class LLDB(DebuggerBase):
 
     def step(self):
         self._thread.StepInto()
-        stop_reason = self._thread.GetStopReason()
-        # If lldb has stepped to a breakpoint, but not
-        # executed it yet, lldb used to report eStopReasonBreakpoint
-        # even though the breakpoint hadn't been hit.
-        # Now lldb will report eStopReasonPlanComplete for
-        # the step completing, and when you step again, you will
-        # hit the breakpoint at this location -- because you have
-        # now actually executed the breakpoint instruction.  This
-        # means that stepping past a source line with a breakpoint
-        # on the first instruction requires stepping twice.  All of
-        # the debuginfo tests assume that it will succed with a single
-        # step.  So we silently step again to hit the breakpoint, when
-        # we've stopped at a breakpoint location but haven't hit it yet.
-        if stop_reason == self._interface.eStopReasonPlanComplete:
-            stepped_to_breakpoint = False
-            pc = self._thread.GetFrameAtIndex(0).GetPC()
-            for bp in self._target.breakpoints:
-                for bploc in bp.locations:
-                    if bploc.GetAddress().GetLoadAddress(self._target) == pc:
-                        stepped_to_breakpoint = True
-            if stepped_to_breakpoint:
-                self._thread.StepInto()
 
     def go(self) -> ReturnCode:
         self._process.Continue()
