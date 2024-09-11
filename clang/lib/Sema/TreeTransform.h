@@ -4363,6 +4363,7 @@ bool TreeTransform<Derived>::TransformExprs(Expr *const *Inputs,
       // forgetting the partially-substituted parameter pack.
       if (RetainExpansion) {
         ForgetPartiallySubstitutedPackRAII Forget(getDerived());
+
         ExprResult Out = getDerived().TransformExpr(Pattern);
         if (Out.isInvalid())
           return true;
