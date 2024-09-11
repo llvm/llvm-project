@@ -1,0 +1,3300 @@
+# RUN: llvm-mc --disassemble %s -triple=i386 | FileCheck %s --check-prefixes=ATT
+# RUN: llvm-mc --disassemble %s -triple=i386 -x86-asm-syntax=intel --output-asm-variant=1 | FileCheck %s --check-prefixes=INTEL
+
+# VNNI FP16
+
+# ATT:   vdpphps %xmm4, %xmm3, %xmm2
+# INTEL: vdpphps xmm2, xmm3, xmm4
+0x62,0xf2,0x64,0x08,0x52,0xd4
+
+# ATT:   vdpphps %xmm4, %xmm3, %xmm2 {%k7}
+# INTEL: vdpphps xmm2 {k7}, xmm3, xmm4
+0x62,0xf2,0x64,0x0f,0x52,0xd4
+
+# ATT:   vdpphps %xmm4, %xmm3, %xmm2 {%k7} {z}
+# INTEL: vdpphps xmm2 {k7} {z}, xmm3, xmm4
+0x62,0xf2,0x64,0x8f,0x52,0xd4
+
+# ATT:   vdpphps %ymm4, %ymm3, %ymm2
+# INTEL: vdpphps ymm2, ymm3, ymm4
+0x62,0xf2,0x64,0x28,0x52,0xd4
+
+# ATT:   vdpphps %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vdpphps ymm2 {k7}, ymm3, ymm4
+0x62,0xf2,0x64,0x2f,0x52,0xd4
+
+# ATT:   vdpphps %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vdpphps ymm2 {k7} {z}, ymm3, ymm4
+0x62,0xf2,0x64,0xaf,0x52,0xd4
+
+# ATT:   vdpphps %zmm4, %zmm3, %zmm2
+# INTEL: vdpphps zmm2, zmm3, zmm4
+0x62,0xf2,0x64,0x48,0x52,0xd4
+
+# ATT:   vdpphps %zmm4, %zmm3, %zmm2 {%k7}
+# INTEL: vdpphps zmm2 {k7}, zmm3, zmm4
+0x62,0xf2,0x64,0x4f,0x52,0xd4
+
+# ATT:   vdpphps %zmm4, %zmm3, %zmm2 {%k7} {z}
+# INTEL: vdpphps zmm2 {k7} {z}, zmm3, zmm4
+0x62,0xf2,0x64,0xcf,0x52,0xd4
+
+# ATT:   vdpphps  268435456(%esp,%esi,8), %xmm3, %xmm2
+# INTEL: vdpphps xmm2, xmm3, xmmword ptr [esp + 8*esi + 268435456]
+0x62,0xf2,0x64,0x08,0x52,0x94,0xf4,0x00,0x00,0x00,0x10
+
+# ATT:   vdpphps  291(%edi,%eax,4), %xmm3, %xmm2 {%k7}
+# INTEL: vdpphps xmm2 {k7}, xmm3, xmmword ptr [edi + 4*eax + 291]
+0x62,0xf2,0x64,0x0f,0x52,0x94,0x87,0x23,0x01,0x00,0x00
+
+# ATT:   vdpphps  (%eax){1to4}, %xmm3, %xmm2
+# INTEL: vdpphps xmm2, xmm3, dword ptr [eax]{1to4}
+0x62,0xf2,0x64,0x18,0x52,0x10
+
+# ATT:   vdpphps  -512(,%ebp,2), %xmm3, %xmm2
+# INTEL: vdpphps xmm2, xmm3, xmmword ptr [2*ebp - 512]
+0x62,0xf2,0x64,0x08,0x52,0x14,0x6d,0x00,0xfe,0xff,0xff
+
+# ATT:   vdpphps  2032(%ecx), %xmm3, %xmm2 {%k7} {z}
+# INTEL: vdpphps xmm2 {k7} {z}, xmm3, xmmword ptr [ecx + 2032]
+0x62,0xf2,0x64,0x8f,0x52,0x51,0x7f
+
+# ATT:   vdpphps  -512(%edx){1to4}, %xmm3, %xmm2 {%k7} {z}
+# INTEL: vdpphps xmm2 {k7} {z}, xmm3, dword ptr [edx - 512]{1to4}
+0x62,0xf2,0x64,0x9f,0x52,0x52,0x80
+
+# ATT:   vdpphps  268435456(%esp,%esi,8), %ymm3, %ymm2
+# INTEL: vdpphps ymm2, ymm3, ymmword ptr [esp + 8*esi + 268435456]
+0x62,0xf2,0x64,0x28,0x52,0x94,0xf4,0x00,0x00,0x00,0x10
+
+# ATT:   vdpphps  291(%edi,%eax,4), %ymm3, %ymm2 {%k7}
+# INTEL: vdpphps ymm2 {k7}, ymm3, ymmword ptr [edi + 4*eax + 291]
+0x62,0xf2,0x64,0x2f,0x52,0x94,0x87,0x23,0x01,0x00,0x00
+
+# ATT:   vdpphps  (%eax){1to8}, %ymm3, %ymm2
+# INTEL: vdpphps ymm2, ymm3, dword ptr [eax]{1to8}
+0x62,0xf2,0x64,0x38,0x52,0x10
+
+# ATT:   vdpphps  -1024(,%ebp,2), %ymm3, %ymm2
+# INTEL: vdpphps ymm2, ymm3, ymmword ptr [2*ebp - 1024]
+0x62,0xf2,0x64,0x28,0x52,0x14,0x6d,0x00,0xfc,0xff,0xff
+
+# ATT:   vdpphps  4064(%ecx), %ymm3, %ymm2 {%k7} {z}
+# INTEL: vdpphps ymm2 {k7} {z}, ymm3, ymmword ptr [ecx + 4064]
+0x62,0xf2,0x64,0xaf,0x52,0x51,0x7f
+
+# ATT:   vdpphps  -512(%edx){1to8}, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vdpphps ymm2 {k7} {z}, ymm3, dword ptr [edx - 512]{1to8}
+0x62,0xf2,0x64,0xbf,0x52,0x52,0x80
+
+# ATT:   vdpphps  268435456(%esp,%esi,8), %zmm3, %zmm2
+# INTEL: vdpphps zmm2, zmm3, zmmword ptr [esp + 8*esi + 268435456]
+0x62,0xf2,0x64,0x48,0x52,0x94,0xf4,0x00,0x00,0x00,0x10
+
+# ATT:   vdpphps  291(%edi,%eax,4), %zmm3, %zmm2 {%k7}
+# INTEL: vdpphps zmm2 {k7}, zmm3, zmmword ptr [edi + 4*eax + 291]
+0x62,0xf2,0x64,0x4f,0x52,0x94,0x87,0x23,0x01,0x00,0x00
+
+# ATT:   vdpphps  (%eax){1to16}, %zmm3, %zmm2
+# INTEL: vdpphps zmm2, zmm3, dword ptr [eax]{1to16}
+0x62,0xf2,0x64,0x58,0x52,0x10
+
+# ATT:   vdpphps  -2048(,%ebp,2), %zmm3, %zmm2
+# INTEL: vdpphps zmm2, zmm3, zmmword ptr [2*ebp - 2048]
+0x62,0xf2,0x64,0x48,0x52,0x14,0x6d,0x00,0xf8,0xff,0xff
+
+# ATT:   vdpphps  8128(%ecx), %zmm3, %zmm2 {%k7} {z}
+# INTEL: vdpphps zmm2 {k7} {z}, zmm3, zmmword ptr [ecx + 8128]
+0x62,0xf2,0x64,0xcf,0x52,0x51,0x7f
+
+# ATT:   vdpphps  -512(%edx){1to16}, %zmm3, %zmm2 {%k7} {z}
+# INTEL: vdpphps zmm2 {k7} {z}, zmm3, dword ptr [edx - 512]{1to16}
+0x62,0xf2,0x64,0xdf,0x52,0x52,0x80
+
+# VNNI INT8
+
+# ATT:   vpdpbssd %xmm4, %xmm3, %xmm2
+# INTEL: vpdpbssd xmm2, xmm3, xmm4
+0xc4,0xe2,0x63,0x50,0xd4
+
+# ATT:   vpdpbssd %xmm4, %xmm3, %xmm2 {%k7}
+# INTEL: vpdpbssd xmm2 {k7}, xmm3, xmm4
+0x62,0xf2,0x67,0x0f,0x50,0xd4
+
+# ATT:   vpdpbssd %xmm4, %xmm3, %xmm2 {%k7} {z}
+# INTEL: vpdpbssd xmm2 {k7} {z}, xmm3, xmm4
+0x62,0xf2,0x67,0x8f,0x50,0xd4
+
+# ATT:   vpdpbssd %ymm4, %ymm3, %ymm2
+# INTEL: vpdpbssd ymm2, ymm3, ymm4
+0xc4,0xe2,0x67,0x50,0xd4
+
+# ATT:   vpdpbssd %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vpdpbssd ymm2 {k7}, ymm3, ymm4
+0x62,0xf2,0x67,0x2f,0x50,0xd4
+
+# ATT:   vpdpbssd %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vpdpbssd ymm2 {k7} {z}, ymm3, ymm4
+0x62,0xf2,0x67,0xaf,0x50,0xd4
+
+# ATT:   vpdpbssd %zmm4, %zmm3, %zmm2
+# INTEL: vpdpbssd zmm2, zmm3, zmm4
+0x62,0xf2,0x67,0x48,0x50,0xd4
+
+# ATT:   vpdpbssd %zmm4, %zmm3, %zmm2 {%k7}
+# INTEL: vpdpbssd zmm2 {k7}, zmm3, zmm4
+0x62,0xf2,0x67,0x4f,0x50,0xd4
+
+# ATT:   vpdpbssd %zmm4, %zmm3, %zmm2 {%k7} {z}
+# INTEL: vpdpbssd zmm2 {k7} {z}, zmm3, zmm4
+0x62,0xf2,0x67,0xcf,0x50,0xd4
+
+# ATT:   vpdpbssd  268435456(%esp,%esi,8), %xmm3, %xmm2
+# INTEL: vpdpbssd xmm2, xmm3, xmmword ptr [esp + 8*esi + 268435456]
+0xc4,0xe2,0x63,0x50,0x94,0xf4,0x00,0x00,0x00,0x10
+
+# ATT:   vpdpbssd  291(%edi,%eax,4), %xmm3, %xmm2 {%k7}
+# INTEL: vpdpbssd xmm2 {k7}, xmm3, xmmword ptr [edi + 4*eax + 291]
+0x62,0xf2,0x67,0x0f,0x50,0x94,0x87,0x23,0x01,0x00,0x00
+
+# ATT:   vpdpbssd  (%eax){1to4}, %xmm3, %xmm2
+# INTEL: vpdpbssd xmm2, xmm3, dword ptr [eax]{1to4}
+0x62,0xf2,0x67,0x18,0x50,0x10
+
+# ATT:   vpdpbssd  -512(,%ebp,2), %xmm3, %xmm2
+# INTEL: vpdpbssd xmm2, xmm3, xmmword ptr [2*ebp - 512]
+0xc4,0xe2,0x63,0x50,0x14,0x6d,0x00,0xfe,0xff,0xff
+
+# ATT:   vpdpbssd  2032(%ecx), %xmm3, %xmm2 {%k7} {z}
+# INTEL: vpdpbssd xmm2 {k7} {z}, xmm3, xmmword ptr [ecx + 2032]
+0x62,0xf2,0x67,0x8f,0x50,0x51,0x7f
+
+# ATT:   vpdpbssd  -512(%edx){1to4}, %xmm3, %xmm2 {%k7} {z}
+# INTEL: vpdpbssd xmm2 {k7} {z}, xmm3, dword ptr [edx - 512]{1to4}
+0x62,0xf2,0x67,0x9f,0x50,0x52,0x80
+
+# ATT:   vpdpbssd  268435456(%esp,%esi,8), %ymm3, %ymm2
+# INTEL: vpdpbssd ymm2, ymm3, ymmword ptr [esp + 8*esi + 268435456]
+0xc4,0xe2,0x67,0x50,0x94,0xf4,0x00,0x00,0x00,0x10
+
+# ATT:   vpdpbssd  291(%edi,%eax,4), %ymm3, %ymm2 {%k7}
+# INTEL: vpdpbssd ymm2 {k7}, ymm3, ymmword ptr [edi + 4*eax + 291]
+0x62,0xf2,0x67,0x2f,0x50,0x94,0x87,0x23,0x01,0x00,0x00
+
+# ATT:   vpdpbssd  (%eax){1to8}, %ymm3, %ymm2
+# INTEL: vpdpbssd ymm2, ymm3, dword ptr [eax]{1to8}
+0x62,0xf2,0x67,0x38,0x50,0x10
+
+# ATT:   vpdpbssd  -1024(,%ebp,2), %ymm3, %ymm2
+# INTEL: vpdpbssd ymm2, ymm3, ymmword ptr [2*ebp - 1024]
+0xc4,0xe2,0x67,0x50,0x14,0x6d,0x00,0xfc,0xff,0xff
+
+# ATT:   vpdpbssd  4064(%ecx), %ymm3, %ymm2 {%k7} {z}
+# INTEL: vpdpbssd ymm2 {k7} {z}, ymm3, ymmword ptr [ecx + 4064]
+0x62,0xf2,0x67,0xaf,0x50,0x51,0x7f
+
+# ATT:   vpdpbssd  -512(%edx){1to8}, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vpdpbssd ymm2 {k7} {z}, ymm3, dword ptr [edx - 512]{1to8}
+0x62,0xf2,0x67,0xbf,0x50,0x52,0x80
+
+# ATT:   vpdpbssd  268435456(%esp,%esi,8), %zmm3, %zmm2
+# INTEL: vpdpbssd zmm2, zmm3, zmmword ptr [esp + 8*esi + 268435456]
+0x62,0xf2,0x67,0x48,0x50,0x94,0xf4,0x00,0x00,0x00,0x10
+
+# ATT:   vpdpbssd  291(%edi,%eax,4), %zmm3, %zmm2 {%k7}
+# INTEL: vpdpbssd zmm2 {k7}, zmm3, zmmword ptr [edi + 4*eax + 291]
+0x62,0xf2,0x67,0x4f,0x50,0x94,0x87,0x23,0x01,0x00,0x00
+
+# ATT:   vpdpbssd  (%eax){1to16}, %zmm3, %zmm2
+# INTEL: vpdpbssd zmm2, zmm3, dword ptr [eax]{1to16}
+0x62,0xf2,0x67,0x58,0x50,0x10
+
+# ATT:   vpdpbssd  -2048(,%ebp,2), %zmm3, %zmm2
+# INTEL: vpdpbssd zmm2, zmm3, zmmword ptr [2*ebp - 2048]
+0x62,0xf2,0x67,0x48,0x50,0x14,0x6d,0x00,0xf8,0xff,0xff
+
+# ATT:   vpdpbssd  8128(%ecx), %zmm3, %zmm2 {%k7} {z}
+# INTEL: vpdpbssd zmm2 {k7} {z}, zmm3, zmmword ptr [ecx + 8128]
+0x62,0xf2,0x67,0xcf,0x50,0x51,0x7f
+
+# ATT:   vpdpbssd  -512(%edx){1to16}, %zmm3, %zmm2 {%k7} {z}
+# INTEL: vpdpbssd zmm2 {k7} {z}, zmm3, dword ptr [edx - 512]{1to16}
+0x62,0xf2,0x67,0xdf,0x50,0x52,0x80
+
+# ATT:   vpdpbssds %xmm4, %xmm3, %xmm2
+# INTEL: vpdpbssds xmm2, xmm3, xmm4
+0xc4,0xe2,0x63,0x51,0xd4
+
+# ATT:   vpdpbssds %xmm4, %xmm3, %xmm2 {%k7}
+# INTEL: vpdpbssds xmm2 {k7}, xmm3, xmm4
+0x62,0xf2,0x67,0x0f,0x51,0xd4
+
+# ATT:   vpdpbssds %xmm4, %xmm3, %xmm2 {%k7} {z}
+# INTEL: vpdpbssds xmm2 {k7} {z}, xmm3, xmm4
+0x62,0xf2,0x67,0x8f,0x51,0xd4
+
+# ATT:   vpdpbssds %ymm4, %ymm3, %ymm2
+# INTEL: vpdpbssds ymm2, ymm3, ymm4
+0xc4,0xe2,0x67,0x51,0xd4
+
+# ATT:   vpdpbssds %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vpdpbssds ymm2 {k7}, ymm3, ymm4
+0x62,0xf2,0x67,0x2f,0x51,0xd4
+
+# ATT:   vpdpbssds %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vpdpbssds ymm2 {k7} {z}, ymm3, ymm4
+0x62,0xf2,0x67,0xaf,0x51,0xd4
+
+# ATT:   vpdpbssds %zmm4, %zmm3, %zmm2
+# INTEL: vpdpbssds zmm2, zmm3, zmm4
+0x62,0xf2,0x67,0x48,0x51,0xd4
+
+# ATT:   vpdpbssds %zmm4, %zmm3, %zmm2 {%k7}
+# INTEL: vpdpbssds zmm2 {k7}, zmm3, zmm4
+0x62,0xf2,0x67,0x4f,0x51,0xd4
+
+# ATT:   vpdpbssds %zmm4, %zmm3, %zmm2 {%k7} {z}
+# INTEL: vpdpbssds zmm2 {k7} {z}, zmm3, zmm4
+0x62,0xf2,0x67,0xcf,0x51,0xd4
+
+# ATT:   vpdpbssds  268435456(%esp,%esi,8), %xmm3, %xmm2
+# INTEL: vpdpbssds xmm2, xmm3, xmmword ptr [esp + 8*esi + 268435456]
+0xc4,0xe2,0x63,0x51,0x94,0xf4,0x00,0x00,0x00,0x10
+
+# ATT:   vpdpbssds  291(%edi,%eax,4), %xmm3, %xmm2 {%k7}
+# INTEL: vpdpbssds xmm2 {k7}, xmm3, xmmword ptr [edi + 4*eax + 291]
+0x62,0xf2,0x67,0x0f,0x51,0x94,0x87,0x23,0x01,0x00,0x00
+
+# ATT:   vpdpbssds  (%eax){1to4}, %xmm3, %xmm2
+# INTEL: vpdpbssds xmm2, xmm3, dword ptr [eax]{1to4}
+0x62,0xf2,0x67,0x18,0x51,0x10
+
+# ATT:   vpdpbssds  -512(,%ebp,2), %xmm3, %xmm2
+# INTEL: vpdpbssds xmm2, xmm3, xmmword ptr [2*ebp - 512]
+0xc4,0xe2,0x63,0x51,0x14,0x6d,0x00,0xfe,0xff,0xff
+
+# ATT:   vpdpbssds  2032(%ecx), %xmm3, %xmm2 {%k7} {z}
+# INTEL: vpdpbssds xmm2 {k7} {z}, xmm3, xmmword ptr [ecx + 2032]
+0x62,0xf2,0x67,0x8f,0x51,0x51,0x7f
+
+# ATT:   vpdpbssds  -512(%edx){1to4}, %xmm3, %xmm2 {%k7} {z}
+# INTEL: vpdpbssds xmm2 {k7} {z}, xmm3, dword ptr [edx - 512]{1to4}
+0x62,0xf2,0x67,0x9f,0x51,0x52,0x80
+
+# ATT:   vpdpbssds  268435456(%esp,%esi,8), %ymm3, %ymm2
+# INTEL: vpdpbssds ymm2, ymm3, ymmword ptr [esp + 8*esi + 268435456]
+0xc4,0xe2,0x67,0x51,0x94,0xf4,0x00,0x00,0x00,0x10
+
+# ATT:   vpdpbssds  291(%edi,%eax,4), %ymm3, %ymm2 {%k7}
+# INTEL: vpdpbssds ymm2 {k7}, ymm3, ymmword ptr [edi + 4*eax + 291]
+0x62,0xf2,0x67,0x2f,0x51,0x94,0x87,0x23,0x01,0x00,0x00
+
+# ATT:   vpdpbssds  (%eax){1to8}, %ymm3, %ymm2
+# INTEL: vpdpbssds ymm2, ymm3, dword ptr [eax]{1to8}
+0x62,0xf2,0x67,0x38,0x51,0x10
+
+# ATT:   vpdpbssds  -1024(,%ebp,2), %ymm3, %ymm2
+# INTEL: vpdpbssds ymm2, ymm3, ymmword ptr [2*ebp - 1024]
+0xc4,0xe2,0x67,0x51,0x14,0x6d,0x00,0xfc,0xff,0xff
+
+# ATT:   vpdpbssds  4064(%ecx), %ymm3, %ymm2 {%k7} {z}
+# INTEL: vpdpbssds ymm2 {k7} {z}, ymm3, ymmword ptr [ecx + 4064]
+0x62,0xf2,0x67,0xaf,0x51,0x51,0x7f
+
+# ATT:   vpdpbssds  -512(%edx){1to8}, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vpdpbssds ymm2 {k7} {z}, ymm3, dword ptr [edx - 512]{1to8}
+0x62,0xf2,0x67,0xbf,0x51,0x52,0x80
+
+# ATT:   vpdpbssds  268435456(%esp,%esi,8), %zmm3, %zmm2
+# INTEL: vpdpbssds zmm2, zmm3, zmmword ptr [esp + 8*esi + 268435456]
+0x62,0xf2,0x67,0x48,0x51,0x94,0xf4,0x00,0x00,0x00,0x10
+
+# ATT:   vpdpbssds  291(%edi,%eax,4), %zmm3, %zmm2 {%k7}
+# INTEL: vpdpbssds zmm2 {k7}, zmm3, zmmword ptr [edi + 4*eax + 291]
+0x62,0xf2,0x67,0x4f,0x51,0x94,0x87,0x23,0x01,0x00,0x00
+
+# ATT:   vpdpbssds  (%eax){1to16}, %zmm3, %zmm2
+# INTEL: vpdpbssds zmm2, zmm3, dword ptr [eax]{1to16}
+0x62,0xf2,0x67,0x58,0x51,0x10
+
+# ATT:   vpdpbssds  -2048(,%ebp,2), %zmm3, %zmm2
+# INTEL: vpdpbssds zmm2, zmm3, zmmword ptr [2*ebp - 2048]
+0x62,0xf2,0x67,0x48,0x51,0x14,0x6d,0x00,0xf8,0xff,0xff
+
+# ATT:   vpdpbssds  8128(%ecx), %zmm3, %zmm2 {%k7} {z}
+# INTEL: vpdpbssds zmm2 {k7} {z}, zmm3, zmmword ptr [ecx + 8128]
+0x62,0xf2,0x67,0xcf,0x51,0x51,0x7f
+
+# ATT:   vpdpbssds  -512(%edx){1to16}, %zmm3, %zmm2 {%k7} {z}
+# INTEL: vpdpbssds zmm2 {k7} {z}, zmm3, dword ptr [edx - 512]{1to16}
+0x62,0xf2,0x67,0xdf,0x51,0x52,0x80
+
+# ATT:   vpdpbsud %xmm4, %xmm3, %xmm2
+# INTEL: vpdpbsud xmm2, xmm3, xmm4
+0xc4,0xe2,0x62,0x50,0xd4
+
+# ATT:   vpdpbsud %xmm4, %xmm3, %xmm2 {%k7}
+# INTEL: vpdpbsud xmm2 {k7}, xmm3, xmm4
+0x62,0xf2,0x66,0x0f,0x50,0xd4
+
+# ATT:   vpdpbsud %xmm4, %xmm3, %xmm2 {%k7} {z}
+# INTEL: vpdpbsud xmm2 {k7} {z}, xmm3, xmm4
+0x62,0xf2,0x66,0x8f,0x50,0xd4
+
+# ATT:   vpdpbsud %ymm4, %ymm3, %ymm2
+# INTEL: vpdpbsud ymm2, ymm3, ymm4
+0xc4,0xe2,0x66,0x50,0xd4
+
+# ATT:   vpdpbsud %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vpdpbsud ymm2 {k7}, ymm3, ymm4
+0x62,0xf2,0x66,0x2f,0x50,0xd4
+
+# ATT:   vpdpbsud %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vpdpbsud ymm2 {k7} {z}, ymm3, ymm4
+0x62,0xf2,0x66,0xaf,0x50,0xd4
+
+# ATT:   vpdpbsud %zmm4, %zmm3, %zmm2
+# INTEL: vpdpbsud zmm2, zmm3, zmm4
+0x62,0xf2,0x66,0x48,0x50,0xd4
+
+# ATT:   vpdpbsud %zmm4, %zmm3, %zmm2 {%k7}
+# INTEL: vpdpbsud zmm2 {k7}, zmm3, zmm4
+0x62,0xf2,0x66,0x4f,0x50,0xd4
+
+# ATT:   vpdpbsud %zmm4, %zmm3, %zmm2 {%k7} {z}
+# INTEL: vpdpbsud zmm2 {k7} {z}, zmm3, zmm4
+0x62,0xf2,0x66,0xcf,0x50,0xd4
+
+# ATT:   vpdpbsud  268435456(%esp,%esi,8), %xmm3, %xmm2
+# INTEL: vpdpbsud xmm2, xmm3, xmmword ptr [esp + 8*esi + 268435456]
+0xc4,0xe2,0x62,0x50,0x94,0xf4,0x00,0x00,0x00,0x10
+
+# ATT:   vpdpbsud  291(%edi,%eax,4), %xmm3, %xmm2 {%k7}
+# INTEL: vpdpbsud xmm2 {k7}, xmm3, xmmword ptr [edi + 4*eax + 291]
+0x62,0xf2,0x66,0x0f,0x50,0x94,0x87,0x23,0x01,0x00,0x00
+
+# ATT:   vpdpbsud  (%eax){1to4}, %xmm3, %xmm2
+# INTEL: vpdpbsud xmm2, xmm3, dword ptr [eax]{1to4}
+0x62,0xf2,0x66,0x18,0x50,0x10
+
+# ATT:   vpdpbsud  -512(,%ebp,2), %xmm3, %xmm2
+# INTEL: vpdpbsud xmm2, xmm3, xmmword ptr [2*ebp - 512]
+0xc4,0xe2,0x62,0x50,0x14,0x6d,0x00,0xfe,0xff,0xff
+
+# ATT:   vpdpbsud  2032(%ecx), %xmm3, %xmm2 {%k7} {z}
+# INTEL: vpdpbsud xmm2 {k7} {z}, xmm3, xmmword ptr [ecx + 2032]
+0x62,0xf2,0x66,0x8f,0x50,0x51,0x7f
+
+# ATT:   vpdpbsud  -512(%edx){1to4}, %xmm3, %xmm2 {%k7} {z}
+# INTEL: vpdpbsud xmm2 {k7} {z}, xmm3, dword ptr [edx - 512]{1to4}
+0x62,0xf2,0x66,0x9f,0x50,0x52,0x80
+
+# ATT:   vpdpbsud  268435456(%esp,%esi,8), %ymm3, %ymm2
+# INTEL: vpdpbsud ymm2, ymm3, ymmword ptr [esp + 8*esi + 268435456]
+0xc4,0xe2,0x66,0x50,0x94,0xf4,0x00,0x00,0x00,0x10
+
+# ATT:   vpdpbsud  291(%edi,%eax,4), %ymm3, %ymm2 {%k7}
+# INTEL: vpdpbsud ymm2 {k7}, ymm3, ymmword ptr [edi + 4*eax + 291]
+0x62,0xf2,0x66,0x2f,0x50,0x94,0x87,0x23,0x01,0x00,0x00
+
+# ATT:   vpdpbsud  (%eax){1to8}, %ymm3, %ymm2
+# INTEL: vpdpbsud ymm2, ymm3, dword ptr [eax]{1to8}
+0x62,0xf2,0x66,0x38,0x50,0x10
+
+# ATT:   vpdpbsud  -1024(,%ebp,2), %ymm3, %ymm2
+# INTEL: vpdpbsud ymm2, ymm3, ymmword ptr [2*ebp - 1024]
+0xc4,0xe2,0x66,0x50,0x14,0x6d,0x00,0xfc,0xff,0xff
+
+# ATT:   vpdpbsud  4064(%ecx), %ymm3, %ymm2 {%k7} {z}
+# INTEL: vpdpbsud ymm2 {k7} {z}, ymm3, ymmword ptr [ecx + 4064]
+0x62,0xf2,0x66,0xaf,0x50,0x51,0x7f
+
+# ATT:   vpdpbsud  -512(%edx){1to8}, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vpdpbsud ymm2 {k7} {z}, ymm3, dword ptr [edx - 512]{1to8}
+0x62,0xf2,0x66,0xbf,0x50,0x52,0x80
+
+# ATT:   vpdpbsud  268435456(%esp,%esi,8), %zmm3, %zmm2
+# INTEL: vpdpbsud zmm2, zmm3, zmmword ptr [esp + 8*esi + 268435456]
+0x62,0xf2,0x66,0x48,0x50,0x94,0xf4,0x00,0x00,0x00,0x10
+
+# ATT:   vpdpbsud  291(%edi,%eax,4), %zmm3, %zmm2 {%k7}
+# INTEL: vpdpbsud zmm2 {k7}, zmm3, zmmword ptr [edi + 4*eax + 291]
+0x62,0xf2,0x66,0x4f,0x50,0x94,0x87,0x23,0x01,0x00,0x00
+
+# ATT:   vpdpbsud  (%eax){1to16}, %zmm3, %zmm2
+# INTEL: vpdpbsud zmm2, zmm3, dword ptr [eax]{1to16}
+0x62,0xf2,0x66,0x58,0x50,0x10
+
+# ATT:   vpdpbsud  -2048(,%ebp,2), %zmm3, %zmm2
+# INTEL: vpdpbsud zmm2, zmm3, zmmword ptr [2*ebp - 2048]
+0x62,0xf2,0x66,0x48,0x50,0x14,0x6d,0x00,0xf8,0xff,0xff
+
+# ATT:   vpdpbsud  8128(%ecx), %zmm3, %zmm2 {%k7} {z}
+# INTEL: vpdpbsud zmm2 {k7} {z}, zmm3, zmmword ptr [ecx + 8128]
+0x62,0xf2,0x66,0xcf,0x50,0x51,0x7f
+
+# ATT:   vpdpbsud  -512(%edx){1to16}, %zmm3, %zmm2 {%k7} {z}
+# INTEL: vpdpbsud zmm2 {k7} {z}, zmm3, dword ptr [edx - 512]{1to16}
+0x62,0xf2,0x66,0xdf,0x50,0x52,0x80
+
+# ATT:   vpdpbsuds %xmm4, %xmm3, %xmm2
+# INTEL: vpdpbsuds xmm2, xmm3, xmm4
+0xc4,0xe2,0x62,0x51,0xd4
+
+# ATT:   vpdpbsuds %xmm4, %xmm3, %xmm2 {%k7}
+# INTEL: vpdpbsuds xmm2 {k7}, xmm3, xmm4
+0x62,0xf2,0x66,0x0f,0x51,0xd4
+
+# ATT:   vpdpbsuds %xmm4, %xmm3, %xmm2 {%k7} {z}
+# INTEL: vpdpbsuds xmm2 {k7} {z}, xmm3, xmm4
+0x62,0xf2,0x66,0x8f,0x51,0xd4
+
+# ATT:   vpdpbsuds %ymm4, %ymm3, %ymm2
+# INTEL: vpdpbsuds ymm2, ymm3, ymm4
+0xc4,0xe2,0x66,0x51,0xd4
+
+# ATT:   vpdpbsuds %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vpdpbsuds ymm2 {k7}, ymm3, ymm4
+0x62,0xf2,0x66,0x2f,0x51,0xd4
+
+# ATT:   vpdpbsuds %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vpdpbsuds ymm2 {k7} {z}, ymm3, ymm4
+0x62,0xf2,0x66,0xaf,0x51,0xd4
+
+# ATT:   vpdpbsuds %zmm4, %zmm3, %zmm2
+# INTEL: vpdpbsuds zmm2, zmm3, zmm4
+0x62,0xf2,0x66,0x48,0x51,0xd4
+
+# ATT:   vpdpbsuds %zmm4, %zmm3, %zmm2 {%k7}
+# INTEL: vpdpbsuds zmm2 {k7}, zmm3, zmm4
+0x62,0xf2,0x66,0x4f,0x51,0xd4
+
+# ATT:   vpdpbsuds %zmm4, %zmm3, %zmm2 {%k7} {z}
+# INTEL: vpdpbsuds zmm2 {k7} {z}, zmm3, zmm4
+0x62,0xf2,0x66,0xcf,0x51,0xd4
+
+# ATT:   vpdpbsuds  268435456(%esp,%esi,8), %xmm3, %xmm2
+# INTEL: vpdpbsuds xmm2, xmm3, xmmword ptr [esp + 8*esi + 268435456]
+0xc4,0xe2,0x62,0x51,0x94,0xf4,0x00,0x00,0x00,0x10
+
+# ATT:   vpdpbsuds  291(%edi,%eax,4), %xmm3, %xmm2 {%k7}
+# INTEL: vpdpbsuds xmm2 {k7}, xmm3, xmmword ptr [edi + 4*eax + 291]
+0x62,0xf2,0x66,0x0f,0x51,0x94,0x87,0x23,0x01,0x00,0x00
+
+# ATT:   vpdpbsuds  (%eax){1to4}, %xmm3, %xmm2
+# INTEL: vpdpbsuds xmm2, xmm3, dword ptr [eax]{1to4}
+0x62,0xf2,0x66,0x18,0x51,0x10
+
+# ATT:   vpdpbsuds  -512(,%ebp,2), %xmm3, %xmm2
+# INTEL: vpdpbsuds xmm2, xmm3, xmmword ptr [2*ebp - 512]
+0xc4,0xe2,0x62,0x51,0x14,0x6d,0x00,0xfe,0xff,0xff
+
+# ATT:   vpdpbsuds  2032(%ecx), %xmm3, %xmm2 {%k7} {z}
+# INTEL: vpdpbsuds xmm2 {k7} {z}, xmm3, xmmword ptr [ecx + 2032]
+0x62,0xf2,0x66,0x8f,0x51,0x51,0x7f
+
+# ATT:   vpdpbsuds  -512(%edx){1to4}, %xmm3, %xmm2 {%k7} {z}
+# INTEL: vpdpbsuds xmm2 {k7} {z}, xmm3, dword ptr [edx - 512]{1to4}
+0x62,0xf2,0x66,0x9f,0x51,0x52,0x80
+
+# ATT:   vpdpbsuds  268435456(%esp,%esi,8), %ymm3, %ymm2
+# INTEL: vpdpbsuds ymm2, ymm3, ymmword ptr [esp + 8*esi + 268435456]
+0xc4,0xe2,0x66,0x51,0x94,0xf4,0x00,0x00,0x00,0x10
+
+# ATT:   vpdpbsuds  291(%edi,%eax,4), %ymm3, %ymm2 {%k7}
+# INTEL: vpdpbsuds ymm2 {k7}, ymm3, ymmword ptr [edi + 4*eax + 291]
+0x62,0xf2,0x66,0x2f,0x51,0x94,0x87,0x23,0x01,0x00,0x00
+
+# ATT:   vpdpbsuds  (%eax){1to8}, %ymm3, %ymm2
+# INTEL: vpdpbsuds ymm2, ymm3, dword ptr [eax]{1to8}
+0x62,0xf2,0x66,0x38,0x51,0x10
+
+# ATT:   vpdpbsuds  -1024(,%ebp,2), %ymm3, %ymm2
+# INTEL: vpdpbsuds ymm2, ymm3, ymmword ptr [2*ebp - 1024]
+0xc4,0xe2,0x66,0x51,0x14,0x6d,0x00,0xfc,0xff,0xff
+
+# ATT:   vpdpbsuds  4064(%ecx), %ymm3, %ymm2 {%k7} {z}
+# INTEL: vpdpbsuds ymm2 {k7} {z}, ymm3, ymmword ptr [ecx + 4064]
+0x62,0xf2,0x66,0xaf,0x51,0x51,0x7f
+
+# ATT:   vpdpbsuds  -512(%edx){1to8}, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vpdpbsuds ymm2 {k7} {z}, ymm3, dword ptr [edx - 512]{1to8}
+0x62,0xf2,0x66,0xbf,0x51,0x52,0x80
+
+# ATT:   vpdpbsuds  268435456(%esp,%esi,8), %zmm3, %zmm2
+# INTEL: vpdpbsuds zmm2, zmm3, zmmword ptr [esp + 8*esi + 268435456]
+0x62,0xf2,0x66,0x48,0x51,0x94,0xf4,0x00,0x00,0x00,0x10
+
+# ATT:   vpdpbsuds  291(%edi,%eax,4), %zmm3, %zmm2 {%k7}
+# INTEL: vpdpbsuds zmm2 {k7}, zmm3, zmmword ptr [edi + 4*eax + 291]
+0x62,0xf2,0x66,0x4f,0x51,0x94,0x87,0x23,0x01,0x00,0x00
+
+# ATT:   vpdpbsuds  (%eax){1to16}, %zmm3, %zmm2
+# INTEL: vpdpbsuds zmm2, zmm3, dword ptr [eax]{1to16}
+0x62,0xf2,0x66,0x58,0x51,0x10
+
+# ATT:   vpdpbsuds  -2048(,%ebp,2), %zmm3, %zmm2
+# INTEL: vpdpbsuds zmm2, zmm3, zmmword ptr [2*ebp - 2048]
+0x62,0xf2,0x66,0x48,0x51,0x14,0x6d,0x00,0xf8,0xff,0xff
+
+# ATT:   vpdpbsuds  8128(%ecx), %zmm3, %zmm2 {%k7} {z}
+# INTEL: vpdpbsuds zmm2 {k7} {z}, zmm3, zmmword ptr [ecx + 8128]
+0x62,0xf2,0x66,0xcf,0x51,0x51,0x7f
+
+# ATT:   vpdpbsuds  -512(%edx){1to16}, %zmm3, %zmm2 {%k7} {z}
+# INTEL: vpdpbsuds zmm2 {k7} {z}, zmm3, dword ptr [edx - 512]{1to16}
+0x62,0xf2,0x66,0xdf,0x51,0x52,0x80
+
+# ATT:   vpdpbuud %xmm4, %xmm3, %xmm2
+# INTEL: vpdpbuud xmm2, xmm3, xmm4
+0xc4,0xe2,0x60,0x50,0xd4
+
+# ATT:   vpdpbuud %xmm4, %xmm3, %xmm2 {%k7}
+# INTEL: vpdpbuud xmm2 {k7}, xmm3, xmm4
+0x62,0xf2,0x64,0x0f,0x50,0xd4
+
+# ATT:   vpdpbuud %xmm4, %xmm3, %xmm2 {%k7} {z}
+# INTEL: vpdpbuud xmm2 {k7} {z}, xmm3, xmm4
+0x62,0xf2,0x64,0x8f,0x50,0xd4
+
+# ATT:   vpdpbuud %ymm4, %ymm3, %ymm2
+# INTEL: vpdpbuud ymm2, ymm3, ymm4
+0xc4,0xe2,0x64,0x50,0xd4
+
+# ATT:   vpdpbuud %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vpdpbuud ymm2 {k7}, ymm3, ymm4
+0x62,0xf2,0x64,0x2f,0x50,0xd4
+
+# ATT:   vpdpbuud %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vpdpbuud ymm2 {k7} {z}, ymm3, ymm4
+0x62,0xf2,0x64,0xaf,0x50,0xd4
+
+# ATT:   vpdpbuud %zmm4, %zmm3, %zmm2
+# INTEL: vpdpbuud zmm2, zmm3, zmm4
+0x62,0xf2,0x64,0x48,0x50,0xd4
+
+# ATT:   vpdpbuud %zmm4, %zmm3, %zmm2 {%k7}
+# INTEL: vpdpbuud zmm2 {k7}, zmm3, zmm4
+0x62,0xf2,0x64,0x4f,0x50,0xd4
+
+# ATT:   vpdpbuud %zmm4, %zmm3, %zmm2 {%k7} {z}
+# INTEL: vpdpbuud zmm2 {k7} {z}, zmm3, zmm4
+0x62,0xf2,0x64,0xcf,0x50,0xd4
+
+# ATT:   vpdpbuud  268435456(%esp,%esi,8), %xmm3, %xmm2
+# INTEL: vpdpbuud xmm2, xmm3, xmmword ptr [esp + 8*esi + 268435456]
+0xc4,0xe2,0x60,0x50,0x94,0xf4,0x00,0x00,0x00,0x10
+
+# ATT:   vpdpbuud  291(%edi,%eax,4), %xmm3, %xmm2 {%k7}
+# INTEL: vpdpbuud xmm2 {k7}, xmm3, xmmword ptr [edi + 4*eax + 291]
+0x62,0xf2,0x64,0x0f,0x50,0x94,0x87,0x23,0x01,0x00,0x00
+
+# ATT:   vpdpbuud  (%eax){1to4}, %xmm3, %xmm2
+# INTEL: vpdpbuud xmm2, xmm3, dword ptr [eax]{1to4}
+0x62,0xf2,0x64,0x18,0x50,0x10
+
+# ATT:   vpdpbuud  -512(,%ebp,2), %xmm3, %xmm2
+# INTEL: vpdpbuud xmm2, xmm3, xmmword ptr [2*ebp - 512]
+0xc4,0xe2,0x60,0x50,0x14,0x6d,0x00,0xfe,0xff,0xff
+
+# ATT:   vpdpbuud  2032(%ecx), %xmm3, %xmm2 {%k7} {z}
+# INTEL: vpdpbuud xmm2 {k7} {z}, xmm3, xmmword ptr [ecx + 2032]
+0x62,0xf2,0x64,0x8f,0x50,0x51,0x7f
+
+# ATT:   vpdpbuud  -512(%edx){1to4}, %xmm3, %xmm2 {%k7} {z}
+# INTEL: vpdpbuud xmm2 {k7} {z}, xmm3, dword ptr [edx - 512]{1to4}
+0x62,0xf2,0x64,0x9f,0x50,0x52,0x80
+
+# ATT:   vpdpbuud  268435456(%esp,%esi,8), %ymm3, %ymm2
+# INTEL: vpdpbuud ymm2, ymm3, ymmword ptr [esp + 8*esi + 268435456]
+0xc4,0xe2,0x64,0x50,0x94,0xf4,0x00,0x00,0x00,0x10
+
+# ATT:   vpdpbuud  291(%edi,%eax,4), %ymm3, %ymm2 {%k7}
+# INTEL: vpdpbuud ymm2 {k7}, ymm3, ymmword ptr [edi + 4*eax + 291]
+0x62,0xf2,0x64,0x2f,0x50,0x94,0x87,0x23,0x01,0x00,0x00
+
+# ATT:   vpdpbuud  (%eax){1to8}, %ymm3, %ymm2
+# INTEL: vpdpbuud ymm2, ymm3, dword ptr [eax]{1to8}
+0x62,0xf2,0x64,0x38,0x50,0x10
+
+# ATT:   vpdpbuud  -1024(,%ebp,2), %ymm3, %ymm2
+# INTEL: vpdpbuud ymm2, ymm3, ymmword ptr [2*ebp - 1024]
+0xc4,0xe2,0x64,0x50,0x14,0x6d,0x00,0xfc,0xff,0xff
+
+# ATT:   vpdpbuud  4064(%ecx), %ymm3, %ymm2 {%k7} {z}
+# INTEL: vpdpbuud ymm2 {k7} {z}, ymm3, ymmword ptr [ecx + 4064]
+0x62,0xf2,0x64,0xaf,0x50,0x51,0x7f
+
+# ATT:   vpdpbuud  -512(%edx){1to8}, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vpdpbuud ymm2 {k7} {z}, ymm3, dword ptr [edx - 512]{1to8}
+0x62,0xf2,0x64,0xbf,0x50,0x52,0x80
+
+# ATT:   vpdpbuud  268435456(%esp,%esi,8), %zmm3, %zmm2
+# INTEL: vpdpbuud zmm2, zmm3, zmmword ptr [esp + 8*esi + 268435456]
+0x62,0xf2,0x64,0x48,0x50,0x94,0xf4,0x00,0x00,0x00,0x10
+
+# ATT:   vpdpbuud  291(%edi,%eax,4), %zmm3, %zmm2 {%k7}
+# INTEL: vpdpbuud zmm2 {k7}, zmm3, zmmword ptr [edi + 4*eax + 291]
+0x62,0xf2,0x64,0x4f,0x50,0x94,0x87,0x23,0x01,0x00,0x00
+
+# ATT:   vpdpbuud  (%eax){1to16}, %zmm3, %zmm2
+# INTEL: vpdpbuud zmm2, zmm3, dword ptr [eax]{1to16}
+0x62,0xf2,0x64,0x58,0x50,0x10
+
+# ATT:   vpdpbuud  -2048(,%ebp,2), %zmm3, %zmm2
+# INTEL: vpdpbuud zmm2, zmm3, zmmword ptr [2*ebp - 2048]
+0x62,0xf2,0x64,0x48,0x50,0x14,0x6d,0x00,0xf8,0xff,0xff
+
+# ATT:   vpdpbuud  8128(%ecx), %zmm3, %zmm2 {%k7} {z}
+# INTEL: vpdpbuud zmm2 {k7} {z}, zmm3, zmmword ptr [ecx + 8128]
+0x62,0xf2,0x64,0xcf,0x50,0x51,0x7f
+
+# ATT:   vpdpbuud  -512(%edx){1to16}, %zmm3, %zmm2 {%k7} {z}
+# INTEL: vpdpbuud zmm2 {k7} {z}, zmm3, dword ptr [edx - 512]{1to16}
+0x62,0xf2,0x64,0xdf,0x50,0x52,0x80
+
+# ATT:   vpdpbuuds %xmm4, %xmm3, %xmm2
+# INTEL: vpdpbuuds xmm2, xmm3, xmm4
+0xc4,0xe2,0x60,0x51,0xd4
+
+# ATT:   vpdpbuuds %xmm4, %xmm3, %xmm2 {%k7}
+# INTEL: vpdpbuuds xmm2 {k7}, xmm3, xmm4
+0x62,0xf2,0x64,0x0f,0x51,0xd4
+
+# ATT:   vpdpbuuds %xmm4, %xmm3, %xmm2 {%k7} {z}
+# INTEL: vpdpbuuds xmm2 {k7} {z}, xmm3, xmm4
+0x62,0xf2,0x64,0x8f,0x51,0xd4
+
+# ATT:   vpdpbuuds %ymm4, %ymm3, %ymm2
+# INTEL: vpdpbuuds ymm2, ymm3, ymm4
+0xc4,0xe2,0x64,0x51,0xd4
+
+# ATT:   vpdpbuuds %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vpdpbuuds ymm2 {k7}, ymm3, ymm4
+0x62,0xf2,0x64,0x2f,0x51,0xd4
+
+# ATT:   vpdpbuuds %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vpdpbuuds ymm2 {k7} {z}, ymm3, ymm4
+0x62,0xf2,0x64,0xaf,0x51,0xd4
+
+# ATT:   vpdpbuuds %zmm4, %zmm3, %zmm2
+# INTEL: vpdpbuuds zmm2, zmm3, zmm4
+0x62,0xf2,0x64,0x48,0x51,0xd4
+
+# ATT:   vpdpbuuds %zmm4, %zmm3, %zmm2 {%k7}
+# INTEL: vpdpbuuds zmm2 {k7}, zmm3, zmm4
+0x62,0xf2,0x64,0x4f,0x51,0xd4
+
+# ATT:   vpdpbuuds %zmm4, %zmm3, %zmm2 {%k7} {z}
+# INTEL: vpdpbuuds zmm2 {k7} {z}, zmm3, zmm4
+0x62,0xf2,0x64,0xcf,0x51,0xd4
+
+# ATT:   vpdpbuuds  268435456(%esp,%esi,8), %xmm3, %xmm2
+# INTEL: vpdpbuuds xmm2, xmm3, xmmword ptr [esp + 8*esi + 268435456]
+0xc4,0xe2,0x60,0x51,0x94,0xf4,0x00,0x00,0x00,0x10
+
+# ATT:   vpdpbuuds  291(%edi,%eax,4), %xmm3, %xmm2 {%k7}
+# INTEL: vpdpbuuds xmm2 {k7}, xmm3, xmmword ptr [edi + 4*eax + 291]
+0x62,0xf2,0x64,0x0f,0x51,0x94,0x87,0x23,0x01,0x00,0x00
+
+# ATT:   vpdpbuuds  (%eax){1to4}, %xmm3, %xmm2
+# INTEL: vpdpbuuds xmm2, xmm3, dword ptr [eax]{1to4}
+0x62,0xf2,0x64,0x18,0x51,0x10
+
+# ATT:   vpdpbuuds  -512(,%ebp,2), %xmm3, %xmm2
+# INTEL: vpdpbuuds xmm2, xmm3, xmmword ptr [2*ebp - 512]
+0xc4,0xe2,0x60,0x51,0x14,0x6d,0x00,0xfe,0xff,0xff
+
+# ATT:   vpdpbuuds  2032(%ecx), %xmm3, %xmm2 {%k7} {z}
+# INTEL: vpdpbuuds xmm2 {k7} {z}, xmm3, xmmword ptr [ecx + 2032]
+0x62,0xf2,0x64,0x8f,0x51,0x51,0x7f
+
+# ATT:   vpdpbuuds  -512(%edx){1to4}, %xmm3, %xmm2 {%k7} {z}
+# INTEL: vpdpbuuds xmm2 {k7} {z}, xmm3, dword ptr [edx - 512]{1to4}
+0x62,0xf2,0x64,0x9f,0x51,0x52,0x80
+
+# ATT:   vpdpbuuds  268435456(%esp,%esi,8), %ymm3, %ymm2
+# INTEL: vpdpbuuds ymm2, ymm3, ymmword ptr [esp + 8*esi + 268435456]
+0xc4,0xe2,0x64,0x51,0x94,0xf4,0x00,0x00,0x00,0x10
+
+# ATT:   vpdpbuuds  291(%edi,%eax,4), %ymm3, %ymm2 {%k7}
+# INTEL: vpdpbuuds ymm2 {k7}, ymm3, ymmword ptr [edi + 4*eax + 291]
+0x62,0xf2,0x64,0x2f,0x51,0x94,0x87,0x23,0x01,0x00,0x00
+
+# ATT:   vpdpbuuds  (%eax){1to8}, %ymm3, %ymm2
+# INTEL: vpdpbuuds ymm2, ymm3, dword ptr [eax]{1to8}
+0x62,0xf2,0x64,0x38,0x51,0x10
+
+# ATT:   vpdpbuuds  -1024(,%ebp,2), %ymm3, %ymm2
+# INTEL: vpdpbuuds ymm2, ymm3, ymmword ptr [2*ebp - 1024]
+0xc4,0xe2,0x64,0x51,0x14,0x6d,0x00,0xfc,0xff,0xff
+
+# ATT:   vpdpbuuds  4064(%ecx), %ymm3, %ymm2 {%k7} {z}
+# INTEL: vpdpbuuds ymm2 {k7} {z}, ymm3, ymmword ptr [ecx + 4064]
+0x62,0xf2,0x64,0xaf,0x51,0x51,0x7f
+
+# ATT:   vpdpbuuds  -512(%edx){1to8}, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vpdpbuuds ymm2 {k7} {z}, ymm3, dword ptr [edx - 512]{1to8}
+0x62,0xf2,0x64,0xbf,0x51,0x52,0x80
+
+# ATT:   vpdpbuuds  268435456(%esp,%esi,8), %zmm3, %zmm2
+# INTEL: vpdpbuuds zmm2, zmm3, zmmword ptr [esp + 8*esi + 268435456]
+0x62,0xf2,0x64,0x48,0x51,0x94,0xf4,0x00,0x00,0x00,0x10
+
+# ATT:   vpdpbuuds  291(%edi,%eax,4), %zmm3, %zmm2 {%k7}
+# INTEL: vpdpbuuds zmm2 {k7}, zmm3, zmmword ptr [edi + 4*eax + 291]
+0x62,0xf2,0x64,0x4f,0x51,0x94,0x87,0x23,0x01,0x00,0x00
+
+# ATT:   vpdpbuuds  (%eax){1to16}, %zmm3, %zmm2
+# INTEL: vpdpbuuds zmm2, zmm3, dword ptr [eax]{1to16}
+0x62,0xf2,0x64,0x58,0x51,0x10
+
+# ATT:   vpdpbuuds  -2048(,%ebp,2), %zmm3, %zmm2
+# INTEL: vpdpbuuds zmm2, zmm3, zmmword ptr [2*ebp - 2048]
+0x62,0xf2,0x64,0x48,0x51,0x14,0x6d,0x00,0xf8,0xff,0xff
+
+# ATT:   vpdpbuuds  8128(%ecx), %zmm3, %zmm2 {%k7} {z}
+# INTEL: vpdpbuuds zmm2 {k7} {z}, zmm3, zmmword ptr [ecx + 8128]
+0x62,0xf2,0x64,0xcf,0x51,0x51,0x7f
+
+# ATT:   vpdpbuuds  -512(%edx){1to16}, %zmm3, %zmm2 {%k7} {z}
+# INTEL: vpdpbuuds zmm2 {k7} {z}, zmm3, dword ptr [edx - 512]{1to16}
+0x62,0xf2,0x64,0xdf,0x51,0x52,0x80
+
+# VNNI INT16
+
+# ATT:   vpdpwsud %xmm4, %xmm3, %xmm2
+# INTEL: vpdpwsud xmm2, xmm3, xmm4
+0xc4,0xe2,0x62,0xd2,0xd4
+
+# ATT:   vpdpwsud %xmm4, %xmm3, %xmm2 {%k7}
+# INTEL: vpdpwsud xmm2 {k7}, xmm3, xmm4
+0x62,0xf2,0x66,0x0f,0xd2,0xd4
+
+# ATT:   vpdpwsud %xmm4, %xmm3, %xmm2 {%k7} {z}
+# INTEL: vpdpwsud xmm2 {k7} {z}, xmm3, xmm4
+0x62,0xf2,0x66,0x8f,0xd2,0xd4
+
+# ATT:   vpdpwsud %ymm4, %ymm3, %ymm2
+# INTEL: vpdpwsud ymm2, ymm3, ymm4
+0xc4,0xe2,0x66,0xd2,0xd4
+
+# ATT:   vpdpwsud %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vpdpwsud ymm2 {k7}, ymm3, ymm4
+0x62,0xf2,0x66,0x2f,0xd2,0xd4
+
+# ATT:   vpdpwsud %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vpdpwsud ymm2 {k7} {z}, ymm3, ymm4
+0x62,0xf2,0x66,0xaf,0xd2,0xd4
+
+# ATT:   vpdpwsud %zmm4, %zmm3, %zmm2
+# INTEL: vpdpwsud zmm2, zmm3, zmm4
+0x62,0xf2,0x66,0x48,0xd2,0xd4
+
+# ATT:   vpdpwsud %zmm4, %zmm3, %zmm2 {%k7}
+# INTEL: vpdpwsud zmm2 {k7}, zmm3, zmm4
+0x62,0xf2,0x66,0x4f,0xd2,0xd4
+
+# ATT:   vpdpwsud %zmm4, %zmm3, %zmm2 {%k7} {z}
+# INTEL: vpdpwsud zmm2 {k7} {z}, zmm3, zmm4
+0x62,0xf2,0x66,0xcf,0xd2,0xd4
+
+# ATT:   vpdpwsud  268435456(%esp,%esi,8), %xmm3, %xmm2
+# INTEL: vpdpwsud xmm2, xmm3, xmmword ptr [esp + 8*esi + 268435456]
+0xc4,0xe2,0x62,0xd2,0x94,0xf4,0x00,0x00,0x00,0x10
+
+# ATT:   vpdpwsud  291(%edi,%eax,4), %xmm3, %xmm2 {%k7}
+# INTEL: vpdpwsud xmm2 {k7}, xmm3, xmmword ptr [edi + 4*eax + 291]
+0x62,0xf2,0x66,0x0f,0xd2,0x94,0x87,0x23,0x01,0x00,0x00
+
+# ATT:   vpdpwsud  (%eax){1to4}, %xmm3, %xmm2
+# INTEL: vpdpwsud xmm2, xmm3, dword ptr [eax]{1to4}
+0x62,0xf2,0x66,0x18,0xd2,0x10
+
+# ATT:   vpdpwsud  -512(,%ebp,2), %xmm3, %xmm2
+# INTEL: vpdpwsud xmm2, xmm3, xmmword ptr [2*ebp - 512]
+0xc4,0xe2,0x62,0xd2,0x14,0x6d,0x00,0xfe,0xff,0xff
+
+# ATT:   vpdpwsud  2032(%ecx), %xmm3, %xmm2 {%k7} {z}
+# INTEL: vpdpwsud xmm2 {k7} {z}, xmm3, xmmword ptr [ecx + 2032]
+0x62,0xf2,0x66,0x8f,0xd2,0x51,0x7f
+
+# ATT:   vpdpwsud  -512(%edx){1to4}, %xmm3, %xmm2 {%k7} {z}
+# INTEL: vpdpwsud xmm2 {k7} {z}, xmm3, dword ptr [edx - 512]{1to4}
+0x62,0xf2,0x66,0x9f,0xd2,0x52,0x80
+
+# ATT:   vpdpwsud  268435456(%esp,%esi,8), %ymm3, %ymm2
+# INTEL: vpdpwsud ymm2, ymm3, ymmword ptr [esp + 8*esi + 268435456]
+0xc4,0xe2,0x66,0xd2,0x94,0xf4,0x00,0x00,0x00,0x10
+
+# ATT:   vpdpwsud  291(%edi,%eax,4), %ymm3, %ymm2 {%k7}
+# INTEL: vpdpwsud ymm2 {k7}, ymm3, ymmword ptr [edi + 4*eax + 291]
+0x62,0xf2,0x66,0x2f,0xd2,0x94,0x87,0x23,0x01,0x00,0x00
+
+# ATT:   vpdpwsud  (%eax){1to8}, %ymm3, %ymm2
+# INTEL: vpdpwsud ymm2, ymm3, dword ptr [eax]{1to8}
+0x62,0xf2,0x66,0x38,0xd2,0x10
+
+# ATT:   vpdpwsud  -1024(,%ebp,2), %ymm3, %ymm2
+# INTEL: vpdpwsud ymm2, ymm3, ymmword ptr [2*ebp - 1024]
+0xc4,0xe2,0x66,0xd2,0x14,0x6d,0x00,0xfc,0xff,0xff
+
+# ATT:   vpdpwsud  4064(%ecx), %ymm3, %ymm2 {%k7} {z}
+# INTEL: vpdpwsud ymm2 {k7} {z}, ymm3, ymmword ptr [ecx + 4064]
+0x62,0xf2,0x66,0xaf,0xd2,0x51,0x7f
+
+# ATT:   vpdpwsud  -512(%edx){1to8}, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vpdpwsud ymm2 {k7} {z}, ymm3, dword ptr [edx - 512]{1to8}
+0x62,0xf2,0x66,0xbf,0xd2,0x52,0x80
+
+# ATT:   vpdpwsud  268435456(%esp,%esi,8), %zmm3, %zmm2
+# INTEL: vpdpwsud zmm2, zmm3, zmmword ptr [esp + 8*esi + 268435456]
+0x62,0xf2,0x66,0x48,0xd2,0x94,0xf4,0x00,0x00,0x00,0x10
+
+# ATT:   vpdpwsud  291(%edi,%eax,4), %zmm3, %zmm2 {%k7}
+# INTEL: vpdpwsud zmm2 {k7}, zmm3, zmmword ptr [edi + 4*eax + 291]
+0x62,0xf2,0x66,0x4f,0xd2,0x94,0x87,0x23,0x01,0x00,0x00
+
+# ATT:   vpdpwsud  (%eax){1to16}, %zmm3, %zmm2
+# INTEL: vpdpwsud zmm2, zmm3, dword ptr [eax]{1to16}
+0x62,0xf2,0x66,0x58,0xd2,0x10
+
+# ATT:   vpdpwsud  -2048(,%ebp,2), %zmm3, %zmm2
+# INTEL: vpdpwsud zmm2, zmm3, zmmword ptr [2*ebp - 2048]
+0x62,0xf2,0x66,0x48,0xd2,0x14,0x6d,0x00,0xf8,0xff,0xff
+
+# ATT:   vpdpwsud  8128(%ecx), %zmm3, %zmm2 {%k7} {z}
+# INTEL: vpdpwsud zmm2 {k7} {z}, zmm3, zmmword ptr [ecx + 8128]
+0x62,0xf2,0x66,0xcf,0xd2,0x51,0x7f
+
+# ATT:   vpdpwsud  -512(%edx){1to16}, %zmm3, %zmm2 {%k7} {z}
+# INTEL: vpdpwsud zmm2 {k7} {z}, zmm3, dword ptr [edx - 512]{1to16}
+0x62,0xf2,0x66,0xdf,0xd2,0x52,0x80
+
+# ATT:   vpdpwsuds %xmm4, %xmm3, %xmm2
+# INTEL: vpdpwsuds xmm2, xmm3, xmm4
+0xc4,0xe2,0x62,0xd3,0xd4
+
+# ATT:   vpdpwsuds %xmm4, %xmm3, %xmm2 {%k7}
+# INTEL: vpdpwsuds xmm2 {k7}, xmm3, xmm4
+0x62,0xf2,0x66,0x0f,0xd3,0xd4
+
+# ATT:   vpdpwsuds %xmm4, %xmm3, %xmm2 {%k7} {z}
+# INTEL: vpdpwsuds xmm2 {k7} {z}, xmm3, xmm4
+0x62,0xf2,0x66,0x8f,0xd3,0xd4
+
+# ATT:   vpdpwsuds %ymm4, %ymm3, %ymm2
+# INTEL: vpdpwsuds ymm2, ymm3, ymm4
+0xc4,0xe2,0x66,0xd3,0xd4
+
+# ATT:   vpdpwsuds %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vpdpwsuds ymm2 {k7}, ymm3, ymm4
+0x62,0xf2,0x66,0x2f,0xd3,0xd4
+
+# ATT:   vpdpwsuds %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vpdpwsuds ymm2 {k7} {z}, ymm3, ymm4
+0x62,0xf2,0x66,0xaf,0xd3,0xd4
+
+# ATT:   vpdpwsuds %zmm4, %zmm3, %zmm2
+# INTEL: vpdpwsuds zmm2, zmm3, zmm4
+0x62,0xf2,0x66,0x48,0xd3,0xd4
+
+# ATT:   vpdpwsuds %zmm4, %zmm3, %zmm2 {%k7}
+# INTEL: vpdpwsuds zmm2 {k7}, zmm3, zmm4
+0x62,0xf2,0x66,0x4f,0xd3,0xd4
+
+# ATT:   vpdpwsuds %zmm4, %zmm3, %zmm2 {%k7} {z}
+# INTEL: vpdpwsuds zmm2 {k7} {z}, zmm3, zmm4
+0x62,0xf2,0x66,0xcf,0xd3,0xd4
+
+# ATT:   vpdpwsuds  268435456(%esp,%esi,8), %xmm3, %xmm2
+# INTEL: vpdpwsuds xmm2, xmm3, xmmword ptr [esp + 8*esi + 268435456]
+0xc4,0xe2,0x62,0xd3,0x94,0xf4,0x00,0x00,0x00,0x10
+
+# ATT:   vpdpwsuds  291(%edi,%eax,4), %xmm3, %xmm2 {%k7}
+# INTEL: vpdpwsuds xmm2 {k7}, xmm3, xmmword ptr [edi + 4*eax + 291]
+0x62,0xf2,0x66,0x0f,0xd3,0x94,0x87,0x23,0x01,0x00,0x00
+
+# ATT:   vpdpwsuds  (%eax){1to4}, %xmm3, %xmm2
+# INTEL: vpdpwsuds xmm2, xmm3, dword ptr [eax]{1to4}
+0x62,0xf2,0x66,0x18,0xd3,0x10
+
+# ATT:   vpdpwsuds  -512(,%ebp,2), %xmm3, %xmm2
+# INTEL: vpdpwsuds xmm2, xmm3, xmmword ptr [2*ebp - 512]
+0xc4,0xe2,0x62,0xd3,0x14,0x6d,0x00,0xfe,0xff,0xff
+
+# ATT:   vpdpwsuds  2032(%ecx), %xmm3, %xmm2 {%k7} {z}
+# INTEL: vpdpwsuds xmm2 {k7} {z}, xmm3, xmmword ptr [ecx + 2032]
+0x62,0xf2,0x66,0x8f,0xd3,0x51,0x7f
+
+# ATT:   vpdpwsuds  -512(%edx){1to4}, %xmm3, %xmm2 {%k7} {z}
+# INTEL: vpdpwsuds xmm2 {k7} {z}, xmm3, dword ptr [edx - 512]{1to4}
+0x62,0xf2,0x66,0x9f,0xd3,0x52,0x80
+
+# ATT:   vpdpwsuds  268435456(%esp,%esi,8), %ymm3, %ymm2
+# INTEL: vpdpwsuds ymm2, ymm3, ymmword ptr [esp + 8*esi + 268435456]
+0xc4,0xe2,0x66,0xd3,0x94,0xf4,0x00,0x00,0x00,0x10
+
+# ATT:   vpdpwsuds  291(%edi,%eax,4), %ymm3, %ymm2 {%k7}
+# INTEL: vpdpwsuds ymm2 {k7}, ymm3, ymmword ptr [edi + 4*eax + 291]
+0x62,0xf2,0x66,0x2f,0xd3,0x94,0x87,0x23,0x01,0x00,0x00
+
+# ATT:   vpdpwsuds  (%eax){1to8}, %ymm3, %ymm2
+# INTEL: vpdpwsuds ymm2, ymm3, dword ptr [eax]{1to8}
+0x62,0xf2,0x66,0x38,0xd3,0x10
+
+# ATT:   vpdpwsuds  -1024(,%ebp,2), %ymm3, %ymm2
+# INTEL: vpdpwsuds ymm2, ymm3, ymmword ptr [2*ebp - 1024]
+0xc4,0xe2,0x66,0xd3,0x14,0x6d,0x00,0xfc,0xff,0xff
+
+# ATT:   vpdpwsuds  4064(%ecx), %ymm3, %ymm2 {%k7} {z}
+# INTEL: vpdpwsuds ymm2 {k7} {z}, ymm3, ymmword ptr [ecx + 4064]
+0x62,0xf2,0x66,0xaf,0xd3,0x51,0x7f
+
+# ATT:   vpdpwsuds  -512(%edx){1to8}, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vpdpwsuds ymm2 {k7} {z}, ymm3, dword ptr [edx - 512]{1to8}
+0x62,0xf2,0x66,0xbf,0xd3,0x52,0x80
+
+# ATT:   vpdpwsuds  268435456(%esp,%esi,8), %zmm3, %zmm2
+# INTEL: vpdpwsuds zmm2, zmm3, zmmword ptr [esp + 8*esi + 268435456]
+0x62,0xf2,0x66,0x48,0xd3,0x94,0xf4,0x00,0x00,0x00,0x10
+
+# ATT:   vpdpwsuds  291(%edi,%eax,4), %zmm3, %zmm2 {%k7}
+# INTEL: vpdpwsuds zmm2 {k7}, zmm3, zmmword ptr [edi + 4*eax + 291]
+0x62,0xf2,0x66,0x4f,0xd3,0x94,0x87,0x23,0x01,0x00,0x00
+
+# ATT:   vpdpwsuds  (%eax){1to16}, %zmm3, %zmm2
+# INTEL: vpdpwsuds zmm2, zmm3, dword ptr [eax]{1to16}
+0x62,0xf2,0x66,0x58,0xd3,0x10
+
+# ATT:   vpdpwsuds  -2048(,%ebp,2), %zmm3, %zmm2
+# INTEL: vpdpwsuds zmm2, zmm3, zmmword ptr [2*ebp - 2048]
+0x62,0xf2,0x66,0x48,0xd3,0x14,0x6d,0x00,0xf8,0xff,0xff
+
+# ATT:   vpdpwsuds  8128(%ecx), %zmm3, %zmm2 {%k7} {z}
+# INTEL: vpdpwsuds zmm2 {k7} {z}, zmm3, zmmword ptr [ecx + 8128]
+0x62,0xf2,0x66,0xcf,0xd3,0x51,0x7f
+
+# ATT:   vpdpwsuds  -512(%edx){1to16}, %zmm3, %zmm2 {%k7} {z}
+# INTEL: vpdpwsuds zmm2 {k7} {z}, zmm3, dword ptr [edx - 512]{1to16}
+0x62,0xf2,0x66,0xdf,0xd3,0x52,0x80
+
+# ATT:   vpdpwusd %xmm4, %xmm3, %xmm2
+# INTEL: vpdpwusd xmm2, xmm3, xmm4
+0xc4,0xe2,0x61,0xd2,0xd4
+
+# ATT:   vpdpwusd %xmm4, %xmm3, %xmm2 {%k7}
+# INTEL: vpdpwusd xmm2 {k7}, xmm3, xmm4
+0x62,0xf2,0x65,0x0f,0xd2,0xd4
+
+# ATT:   vpdpwusd %xmm4, %xmm3, %xmm2 {%k7} {z}
+# INTEL: vpdpwusd xmm2 {k7} {z}, xmm3, xmm4
+0x62,0xf2,0x65,0x8f,0xd2,0xd4
+
+# ATT:   vpdpwusd %ymm4, %ymm3, %ymm2
+# INTEL: vpdpwusd ymm2, ymm3, ymm4
+0xc4,0xe2,0x65,0xd2,0xd4
+
+# ATT:   vpdpwusd %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vpdpwusd ymm2 {k7}, ymm3, ymm4
+0x62,0xf2,0x65,0x2f,0xd2,0xd4
+
+# ATT:   vpdpwusd %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vpdpwusd ymm2 {k7} {z}, ymm3, ymm4
+0x62,0xf2,0x65,0xaf,0xd2,0xd4
+
+# ATT:   vpdpwusd %zmm4, %zmm3, %zmm2
+# INTEL: vpdpwusd zmm2, zmm3, zmm4
+0x62,0xf2,0x65,0x48,0xd2,0xd4
+
+# ATT:   vpdpwusd %zmm4, %zmm3, %zmm2 {%k7}
+# INTEL: vpdpwusd zmm2 {k7}, zmm3, zmm4
+0x62,0xf2,0x65,0x4f,0xd2,0xd4
+
+# ATT:   vpdpwusd %zmm4, %zmm3, %zmm2 {%k7} {z}
+# INTEL: vpdpwusd zmm2 {k7} {z}, zmm3, zmm4
+0x62,0xf2,0x65,0xcf,0xd2,0xd4
+
+# ATT:   vpdpwusd  268435456(%esp,%esi,8), %xmm3, %xmm2
+# INTEL: vpdpwusd xmm2, xmm3, xmmword ptr [esp + 8*esi + 268435456]
+0xc4,0xe2,0x61,0xd2,0x94,0xf4,0x00,0x00,0x00,0x10
+
+# ATT:   vpdpwusd  291(%edi,%eax,4), %xmm3, %xmm2 {%k7}
+# INTEL: vpdpwusd xmm2 {k7}, xmm3, xmmword ptr [edi + 4*eax + 291]
+0x62,0xf2,0x65,0x0f,0xd2,0x94,0x87,0x23,0x01,0x00,0x00
+
+# ATT:   vpdpwusd  (%eax){1to4}, %xmm3, %xmm2
+# INTEL: vpdpwusd xmm2, xmm3, dword ptr [eax]{1to4}
+0x62,0xf2,0x65,0x18,0xd2,0x10
+
+# ATT:   vpdpwusd  -512(,%ebp,2), %xmm3, %xmm2
+# INTEL: vpdpwusd xmm2, xmm3, xmmword ptr [2*ebp - 512]
+0xc4,0xe2,0x61,0xd2,0x14,0x6d,0x00,0xfe,0xff,0xff
+
+# ATT:   vpdpwusd  2032(%ecx), %xmm3, %xmm2 {%k7} {z}
+# INTEL: vpdpwusd xmm2 {k7} {z}, xmm3, xmmword ptr [ecx + 2032]
+0x62,0xf2,0x65,0x8f,0xd2,0x51,0x7f
+
+# ATT:   vpdpwusd  -512(%edx){1to4}, %xmm3, %xmm2 {%k7} {z}
+# INTEL: vpdpwusd xmm2 {k7} {z}, xmm3, dword ptr [edx - 512]{1to4}
+0x62,0xf2,0x65,0x9f,0xd2,0x52,0x80
+
+# ATT:   vpdpwusd  268435456(%esp,%esi,8), %ymm3, %ymm2
+# INTEL: vpdpwusd ymm2, ymm3, ymmword ptr [esp + 8*esi + 268435456]
+0xc4,0xe2,0x65,0xd2,0x94,0xf4,0x00,0x00,0x00,0x10
+
+# ATT:   vpdpwusd  291(%edi,%eax,4), %ymm3, %ymm2 {%k7}
+# INTEL: vpdpwusd ymm2 {k7}, ymm3, ymmword ptr [edi + 4*eax + 291]
+0x62,0xf2,0x65,0x2f,0xd2,0x94,0x87,0x23,0x01,0x00,0x00
+
+# ATT:   vpdpwusd  (%eax){1to8}, %ymm3, %ymm2
+# INTEL: vpdpwusd ymm2, ymm3, dword ptr [eax]{1to8}
+0x62,0xf2,0x65,0x38,0xd2,0x10
+
+# ATT:   vpdpwusd  -1024(,%ebp,2), %ymm3, %ymm2
+# INTEL: vpdpwusd ymm2, ymm3, ymmword ptr [2*ebp - 1024]
+0xc4,0xe2,0x65,0xd2,0x14,0x6d,0x00,0xfc,0xff,0xff
+
+# ATT:   vpdpwusd  4064(%ecx), %ymm3, %ymm2 {%k7} {z}
+# INTEL: vpdpwusd ymm2 {k7} {z}, ymm3, ymmword ptr [ecx + 4064]
+0x62,0xf2,0x65,0xaf,0xd2,0x51,0x7f
+
+# ATT:   vpdpwusd  -512(%edx){1to8}, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vpdpwusd ymm2 {k7} {z}, ymm3, dword ptr [edx - 512]{1to8}
+0x62,0xf2,0x65,0xbf,0xd2,0x52,0x80
+
+# ATT:   vpdpwusd  268435456(%esp,%esi,8), %zmm3, %zmm2
+# INTEL: vpdpwusd zmm2, zmm3, zmmword ptr [esp + 8*esi + 268435456]
+0x62,0xf2,0x65,0x48,0xd2,0x94,0xf4,0x00,0x00,0x00,0x10
+
+# ATT:   vpdpwusd  291(%edi,%eax,4), %zmm3, %zmm2 {%k7}
+# INTEL: vpdpwusd zmm2 {k7}, zmm3, zmmword ptr [edi + 4*eax + 291]
+0x62,0xf2,0x65,0x4f,0xd2,0x94,0x87,0x23,0x01,0x00,0x00
+
+# ATT:   vpdpwusd  (%eax){1to16}, %zmm3, %zmm2
+# INTEL: vpdpwusd zmm2, zmm3, dword ptr [eax]{1to16}
+0x62,0xf2,0x65,0x58,0xd2,0x10
+
+# ATT:   vpdpwusd  -2048(,%ebp,2), %zmm3, %zmm2
+# INTEL: vpdpwusd zmm2, zmm3, zmmword ptr [2*ebp - 2048]
+0x62,0xf2,0x65,0x48,0xd2,0x14,0x6d,0x00,0xf8,0xff,0xff
+
+# ATT:   vpdpwusd  8128(%ecx), %zmm3, %zmm2 {%k7} {z}
+# INTEL: vpdpwusd zmm2 {k7} {z}, zmm3, zmmword ptr [ecx + 8128]
+0x62,0xf2,0x65,0xcf,0xd2,0x51,0x7f
+
+# ATT:   vpdpwusd  -512(%edx){1to16}, %zmm3, %zmm2 {%k7} {z}
+# INTEL: vpdpwusd zmm2 {k7} {z}, zmm3, dword ptr [edx - 512]{1to16}
+0x62,0xf2,0x65,0xdf,0xd2,0x52,0x80
+
+# ATT:   vpdpwusds %xmm4, %xmm3, %xmm2
+# INTEL: vpdpwusds xmm2, xmm3, xmm4
+0xc4,0xe2,0x61,0xd3,0xd4
+
+# ATT:   vpdpwusds %xmm4, %xmm3, %xmm2 {%k7}
+# INTEL: vpdpwusds xmm2 {k7}, xmm3, xmm4
+0x62,0xf2,0x65,0x0f,0xd3,0xd4
+
+# ATT:   vpdpwusds %xmm4, %xmm3, %xmm2 {%k7} {z}
+# INTEL: vpdpwusds xmm2 {k7} {z}, xmm3, xmm4
+0x62,0xf2,0x65,0x8f,0xd3,0xd4
+
+# ATT:   vpdpwusds %ymm4, %ymm3, %ymm2
+# INTEL: vpdpwusds ymm2, ymm3, ymm4
+0xc4,0xe2,0x65,0xd3,0xd4
+
+# ATT:   vpdpwusds %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vpdpwusds ymm2 {k7}, ymm3, ymm4
+0x62,0xf2,0x65,0x2f,0xd3,0xd4
+
+# ATT:   vpdpwusds %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vpdpwusds ymm2 {k7} {z}, ymm3, ymm4
+0x62,0xf2,0x65,0xaf,0xd3,0xd4
+
+# ATT:   vpdpwusds %zmm4, %zmm3, %zmm2
+# INTEL: vpdpwusds zmm2, zmm3, zmm4
+0x62,0xf2,0x65,0x48,0xd3,0xd4
+
+# ATT:   vpdpwusds %zmm4, %zmm3, %zmm2 {%k7}
+# INTEL: vpdpwusds zmm2 {k7}, zmm3, zmm4
+0x62,0xf2,0x65,0x4f,0xd3,0xd4
+
+# ATT:   vpdpwusds %zmm4, %zmm3, %zmm2 {%k7} {z}
+# INTEL: vpdpwusds zmm2 {k7} {z}, zmm3, zmm4
+0x62,0xf2,0x65,0xcf,0xd3,0xd4
+
+# ATT:   vpdpwusds  268435456(%esp,%esi,8), %xmm3, %xmm2
+# INTEL: vpdpwusds xmm2, xmm3, xmmword ptr [esp + 8*esi + 268435456]
+0xc4,0xe2,0x61,0xd3,0x94,0xf4,0x00,0x00,0x00,0x10
+
+# ATT:   vpdpwusds  291(%edi,%eax,4), %xmm3, %xmm2 {%k7}
+# INTEL: vpdpwusds xmm2 {k7}, xmm3, xmmword ptr [edi + 4*eax + 291]
+0x62,0xf2,0x65,0x0f,0xd3,0x94,0x87,0x23,0x01,0x00,0x00
+
+# ATT:   vpdpwusds  (%eax){1to4}, %xmm3, %xmm2
+# INTEL: vpdpwusds xmm2, xmm3, dword ptr [eax]{1to4}
+0x62,0xf2,0x65,0x18,0xd3,0x10
+
+# ATT:   vpdpwusds  -512(,%ebp,2), %xmm3, %xmm2
+# INTEL: vpdpwusds xmm2, xmm3, xmmword ptr [2*ebp - 512]
+0xc4,0xe2,0x61,0xd3,0x14,0x6d,0x00,0xfe,0xff,0xff
+
+# ATT:   vpdpwusds  2032(%ecx), %xmm3, %xmm2 {%k7} {z}
+# INTEL: vpdpwusds xmm2 {k7} {z}, xmm3, xmmword ptr [ecx + 2032]
+0x62,0xf2,0x65,0x8f,0xd3,0x51,0x7f
+
+# ATT:   vpdpwusds  -512(%edx){1to4}, %xmm3, %xmm2 {%k7} {z}
+# INTEL: vpdpwusds xmm2 {k7} {z}, xmm3, dword ptr [edx - 512]{1to4}
+0x62,0xf2,0x65,0x9f,0xd3,0x52,0x80
+
+# ATT:   vpdpwusds  268435456(%esp,%esi,8), %ymm3, %ymm2
+# INTEL: vpdpwusds ymm2, ymm3, ymmword ptr [esp + 8*esi + 268435456]
+0xc4,0xe2,0x65,0xd3,0x94,0xf4,0x00,0x00,0x00,0x10
+
+# ATT:   vpdpwusds  291(%edi,%eax,4), %ymm3, %ymm2 {%k7}
+# INTEL: vpdpwusds ymm2 {k7}, ymm3, ymmword ptr [edi + 4*eax + 291]
+0x62,0xf2,0x65,0x2f,0xd3,0x94,0x87,0x23,0x01,0x00,0x00
+
+# ATT:   vpdpwusds  (%eax){1to8}, %ymm3, %ymm2
+# INTEL: vpdpwusds ymm2, ymm3, dword ptr [eax]{1to8}
+0x62,0xf2,0x65,0x38,0xd3,0x10
+
+# ATT:   vpdpwusds  -1024(,%ebp,2), %ymm3, %ymm2
+# INTEL: vpdpwusds ymm2, ymm3, ymmword ptr [2*ebp - 1024]
+0xc4,0xe2,0x65,0xd3,0x14,0x6d,0x00,0xfc,0xff,0xff
+
+# ATT:   vpdpwusds  4064(%ecx), %ymm3, %ymm2 {%k7} {z}
+# INTEL: vpdpwusds ymm2 {k7} {z}, ymm3, ymmword ptr [ecx + 4064]
+0x62,0xf2,0x65,0xaf,0xd3,0x51,0x7f
+
+# ATT:   vpdpwusds  -512(%edx){1to8}, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vpdpwusds ymm2 {k7} {z}, ymm3, dword ptr [edx - 512]{1to8}
+0x62,0xf2,0x65,0xbf,0xd3,0x52,0x80
+
+# ATT:   vpdpwusds  268435456(%esp,%esi,8), %zmm3, %zmm2
+# INTEL: vpdpwusds zmm2, zmm3, zmmword ptr [esp + 8*esi + 268435456]
+0x62,0xf2,0x65,0x48,0xd3,0x94,0xf4,0x00,0x00,0x00,0x10
+
+# ATT:   vpdpwusds  291(%edi,%eax,4), %zmm3, %zmm2 {%k7}
+# INTEL: vpdpwusds zmm2 {k7}, zmm3, zmmword ptr [edi + 4*eax + 291]
+0x62,0xf2,0x65,0x4f,0xd3,0x94,0x87,0x23,0x01,0x00,0x00
+
+# ATT:   vpdpwusds  (%eax){1to16}, %zmm3, %zmm2
+# INTEL: vpdpwusds zmm2, zmm3, dword ptr [eax]{1to16}
+0x62,0xf2,0x65,0x58,0xd3,0x10
+
+# ATT:   vpdpwusds  -2048(,%ebp,2), %zmm3, %zmm2
+# INTEL: vpdpwusds zmm2, zmm3, zmmword ptr [2*ebp - 2048]
+0x62,0xf2,0x65,0x48,0xd3,0x14,0x6d,0x00,0xf8,0xff,0xff
+
+# ATT:   vpdpwusds  8128(%ecx), %zmm3, %zmm2 {%k7} {z}
+# INTEL: vpdpwusds zmm2 {k7} {z}, zmm3, zmmword ptr [ecx + 8128]
+0x62,0xf2,0x65,0xcf,0xd3,0x51,0x7f
+
+# ATT:   vpdpwusds  -512(%edx){1to16}, %zmm3, %zmm2 {%k7} {z}
+# INTEL: vpdpwusds zmm2 {k7} {z}, zmm3, dword ptr [edx - 512]{1to16}
+0x62,0xf2,0x65,0xdf,0xd3,0x52,0x80
+
+# ATT:   vpdpwuud %xmm4, %xmm3, %xmm2
+# INTEL: vpdpwuud xmm2, xmm3, xmm4
+0xc4,0xe2,0x60,0xd2,0xd4
+
+# ATT:   vpdpwuud %xmm4, %xmm3, %xmm2 {%k7}
+# INTEL: vpdpwuud xmm2 {k7}, xmm3, xmm4
+0x62,0xf2,0x64,0x0f,0xd2,0xd4
+
+# ATT:   vpdpwuud %xmm4, %xmm3, %xmm2 {%k7} {z}
+# INTEL: vpdpwuud xmm2 {k7} {z}, xmm3, xmm4
+0x62,0xf2,0x64,0x8f,0xd2,0xd4
+
+# ATT:   vpdpwuud %ymm4, %ymm3, %ymm2
+# INTEL: vpdpwuud ymm2, ymm3, ymm4
+0xc4,0xe2,0x64,0xd2,0xd4
+
+# ATT:   vpdpwuud %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vpdpwuud ymm2 {k7}, ymm3, ymm4
+0x62,0xf2,0x64,0x2f,0xd2,0xd4
+
+# ATT:   vpdpwuud %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vpdpwuud ymm2 {k7} {z}, ymm3, ymm4
+0x62,0xf2,0x64,0xaf,0xd2,0xd4
+
+# ATT:   vpdpwuud %zmm4, %zmm3, %zmm2
+# INTEL: vpdpwuud zmm2, zmm3, zmm4
+0x62,0xf2,0x64,0x48,0xd2,0xd4
+
+# ATT:   vpdpwuud %zmm4, %zmm3, %zmm2 {%k7}
+# INTEL: vpdpwuud zmm2 {k7}, zmm3, zmm4
+0x62,0xf2,0x64,0x4f,0xd2,0xd4
+
+# ATT:   vpdpwuud %zmm4, %zmm3, %zmm2 {%k7} {z}
+# INTEL: vpdpwuud zmm2 {k7} {z}, zmm3, zmm4
+0x62,0xf2,0x64,0xcf,0xd2,0xd4
+
+# ATT:   vpdpwuud  268435456(%esp,%esi,8), %xmm3, %xmm2
+# INTEL: vpdpwuud xmm2, xmm3, xmmword ptr [esp + 8*esi + 268435456]
+0xc4,0xe2,0x60,0xd2,0x94,0xf4,0x00,0x00,0x00,0x10
+
+# ATT:   vpdpwuud  291(%edi,%eax,4), %xmm3, %xmm2 {%k7}
+# INTEL: vpdpwuud xmm2 {k7}, xmm3, xmmword ptr [edi + 4*eax + 291]
+0x62,0xf2,0x64,0x0f,0xd2,0x94,0x87,0x23,0x01,0x00,0x00
+
+# ATT:   vpdpwuud  (%eax){1to4}, %xmm3, %xmm2
+# INTEL: vpdpwuud xmm2, xmm3, dword ptr [eax]{1to4}
+0x62,0xf2,0x64,0x18,0xd2,0x10
+
+# ATT:   vpdpwuud  -512(,%ebp,2), %xmm3, %xmm2
+# INTEL: vpdpwuud xmm2, xmm3, xmmword ptr [2*ebp - 512]
+0xc4,0xe2,0x60,0xd2,0x14,0x6d,0x00,0xfe,0xff,0xff
+
+# ATT:   vpdpwuud  2032(%ecx), %xmm3, %xmm2 {%k7} {z}
+# INTEL: vpdpwuud xmm2 {k7} {z}, xmm3, xmmword ptr [ecx + 2032]
+0x62,0xf2,0x64,0x8f,0xd2,0x51,0x7f
+
+# ATT:   vpdpwuud  -512(%edx){1to4}, %xmm3, %xmm2 {%k7} {z}
+# INTEL: vpdpwuud xmm2 {k7} {z}, xmm3, dword ptr [edx - 512]{1to4}
+0x62,0xf2,0x64,0x9f,0xd2,0x52,0x80
+
+# ATT:   vpdpwuud  268435456(%esp,%esi,8), %ymm3, %ymm2
+# INTEL: vpdpwuud ymm2, ymm3, ymmword ptr [esp + 8*esi + 268435456]
+0xc4,0xe2,0x64,0xd2,0x94,0xf4,0x00,0x00,0x00,0x10
+
+# ATT:   vpdpwuud  291(%edi,%eax,4), %ymm3, %ymm2 {%k7}
+# INTEL: vpdpwuud ymm2 {k7}, ymm3, ymmword ptr [edi + 4*eax + 291]
+0x62,0xf2,0x64,0x2f,0xd2,0x94,0x87,0x23,0x01,0x00,0x00
+
+# ATT:   vpdpwuud  (%eax){1to8}, %ymm3, %ymm2
+# INTEL: vpdpwuud ymm2, ymm3, dword ptr [eax]{1to8}
+0x62,0xf2,0x64,0x38,0xd2,0x10
+
+# ATT:   vpdpwuud  -1024(,%ebp,2), %ymm3, %ymm2
+# INTEL: vpdpwuud ymm2, ymm3, ymmword ptr [2*ebp - 1024]
+0xc4,0xe2,0x64,0xd2,0x14,0x6d,0x00,0xfc,0xff,0xff
+
+# ATT:   vpdpwuud  4064(%ecx), %ymm3, %ymm2 {%k7} {z}
+# INTEL: vpdpwuud ymm2 {k7} {z}, ymm3, ymmword ptr [ecx + 4064]
+0x62,0xf2,0x64,0xaf,0xd2,0x51,0x7f
+
+# ATT:   vpdpwuud  -512(%edx){1to8}, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vpdpwuud ymm2 {k7} {z}, ymm3, dword ptr [edx - 512]{1to8}
+0x62,0xf2,0x64,0xbf,0xd2,0x52,0x80
+
+# ATT:   vpdpwuud  268435456(%esp,%esi,8), %zmm3, %zmm2
+# INTEL: vpdpwuud zmm2, zmm3, zmmword ptr [esp + 8*esi + 268435456]
+0x62,0xf2,0x64,0x48,0xd2,0x94,0xf4,0x00,0x00,0x00,0x10
+
+# ATT:   vpdpwuud  291(%edi,%eax,4), %zmm3, %zmm2 {%k7}
+# INTEL: vpdpwuud zmm2 {k7}, zmm3, zmmword ptr [edi + 4*eax + 291]
+0x62,0xf2,0x64,0x4f,0xd2,0x94,0x87,0x23,0x01,0x00,0x00
+
+# ATT:   vpdpwuud  (%eax){1to16}, %zmm3, %zmm2
+# INTEL: vpdpwuud zmm2, zmm3, dword ptr [eax]{1to16}
+0x62,0xf2,0x64,0x58,0xd2,0x10
+
+# ATT:   vpdpwuud  -2048(,%ebp,2), %zmm3, %zmm2
+# INTEL: vpdpwuud zmm2, zmm3, zmmword ptr [2*ebp - 2048]
+0x62,0xf2,0x64,0x48,0xd2,0x14,0x6d,0x00,0xf8,0xff,0xff
+
+# ATT:   vpdpwuud  8128(%ecx), %zmm3, %zmm2 {%k7} {z}
+# INTEL: vpdpwuud zmm2 {k7} {z}, zmm3, zmmword ptr [ecx + 8128]
+0x62,0xf2,0x64,0xcf,0xd2,0x51,0x7f
+
+# ATT:   vpdpwuud  -512(%edx){1to16}, %zmm3, %zmm2 {%k7} {z}
+# INTEL: vpdpwuud zmm2 {k7} {z}, zmm3, dword ptr [edx - 512]{1to16}
+0x62,0xf2,0x64,0xdf,0xd2,0x52,0x80
+
+# ATT:   vpdpwuuds %xmm4, %xmm3, %xmm2
+# INTEL: vpdpwuuds xmm2, xmm3, xmm4
+0xc4,0xe2,0x60,0xd3,0xd4
+
+# ATT:   vpdpwuuds %xmm4, %xmm3, %xmm2 {%k7}
+# INTEL: vpdpwuuds xmm2 {k7}, xmm3, xmm4
+0x62,0xf2,0x64,0x0f,0xd3,0xd4
+
+# ATT:   vpdpwuuds %xmm4, %xmm3, %xmm2 {%k7} {z}
+# INTEL: vpdpwuuds xmm2 {k7} {z}, xmm3, xmm4
+0x62,0xf2,0x64,0x8f,0xd3,0xd4
+
+# ATT:   vpdpwuuds %ymm4, %ymm3, %ymm2
+# INTEL: vpdpwuuds ymm2, ymm3, ymm4
+0xc4,0xe2,0x64,0xd3,0xd4
+
+# ATT:   vpdpwuuds %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vpdpwuuds ymm2 {k7}, ymm3, ymm4
+0x62,0xf2,0x64,0x2f,0xd3,0xd4
+
+# ATT:   vpdpwuuds %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vpdpwuuds ymm2 {k7} {z}, ymm3, ymm4
+0x62,0xf2,0x64,0xaf,0xd3,0xd4
+
+# ATT:   vpdpwuuds %zmm4, %zmm3, %zmm2
+# INTEL: vpdpwuuds zmm2, zmm3, zmm4
+0x62,0xf2,0x64,0x48,0xd3,0xd4
+
+# ATT:   vpdpwuuds %zmm4, %zmm3, %zmm2 {%k7}
+# INTEL: vpdpwuuds zmm2 {k7}, zmm3, zmm4
+0x62,0xf2,0x64,0x4f,0xd3,0xd4
+
+# ATT:   vpdpwuuds %zmm4, %zmm3, %zmm2 {%k7} {z}
+# INTEL: vpdpwuuds zmm2 {k7} {z}, zmm3, zmm4
+0x62,0xf2,0x64,0xcf,0xd3,0xd4
+
+# ATT:   vpdpwuuds  268435456(%esp,%esi,8), %xmm3, %xmm2
+# INTEL: vpdpwuuds xmm2, xmm3, xmmword ptr [esp + 8*esi + 268435456]
+0xc4,0xe2,0x60,0xd3,0x94,0xf4,0x00,0x00,0x00,0x10
+
+# ATT:   vpdpwuuds  291(%edi,%eax,4), %xmm3, %xmm2 {%k7}
+# INTEL: vpdpwuuds xmm2 {k7}, xmm3, xmmword ptr [edi + 4*eax + 291]
+0x62,0xf2,0x64,0x0f,0xd3,0x94,0x87,0x23,0x01,0x00,0x00
+
+# ATT:   vpdpwuuds  (%eax){1to4}, %xmm3, %xmm2
+# INTEL: vpdpwuuds xmm2, xmm3, dword ptr [eax]{1to4}
+0x62,0xf2,0x64,0x18,0xd3,0x10
+
+# ATT:   vpdpwuuds  -512(,%ebp,2), %xmm3, %xmm2
+# INTEL: vpdpwuuds xmm2, xmm3, xmmword ptr [2*ebp - 512]
+0xc4,0xe2,0x60,0xd3,0x14,0x6d,0x00,0xfe,0xff,0xff
+
+# ATT:   vpdpwuuds  2032(%ecx), %xmm3, %xmm2 {%k7} {z}
+# INTEL: vpdpwuuds xmm2 {k7} {z}, xmm3, xmmword ptr [ecx + 2032]
+0x62,0xf2,0x64,0x8f,0xd3,0x51,0x7f
+
+# ATT:   vpdpwuuds  -512(%edx){1to4}, %xmm3, %xmm2 {%k7} {z}
+# INTEL: vpdpwuuds xmm2 {k7} {z}, xmm3, dword ptr [edx - 512]{1to4}
+0x62,0xf2,0x64,0x9f,0xd3,0x52,0x80
+
+# ATT:   vpdpwuuds  268435456(%esp,%esi,8), %ymm3, %ymm2
+# INTEL: vpdpwuuds ymm2, ymm3, ymmword ptr [esp + 8*esi + 268435456]
+0xc4,0xe2,0x64,0xd3,0x94,0xf4,0x00,0x00,0x00,0x10
+
+# ATT:   vpdpwuuds  291(%edi,%eax,4), %ymm3, %ymm2 {%k7}
+# INTEL: vpdpwuuds ymm2 {k7}, ymm3, ymmword ptr [edi + 4*eax + 291]
+0x62,0xf2,0x64,0x2f,0xd3,0x94,0x87,0x23,0x01,0x00,0x00
+
+# ATT:   vpdpwuuds  (%eax){1to8}, %ymm3, %ymm2
+# INTEL: vpdpwuuds ymm2, ymm3, dword ptr [eax]{1to8}
+0x62,0xf2,0x64,0x38,0xd3,0x10
+
+# ATT:   vpdpwuuds  -1024(,%ebp,2), %ymm3, %ymm2
+# INTEL: vpdpwuuds ymm2, ymm3, ymmword ptr [2*ebp - 1024]
+0xc4,0xe2,0x64,0xd3,0x14,0x6d,0x00,0xfc,0xff,0xff
+
+# ATT:   vpdpwuuds  4064(%ecx), %ymm3, %ymm2 {%k7} {z}
+# INTEL: vpdpwuuds ymm2 {k7} {z}, ymm3, ymmword ptr [ecx + 4064]
+0x62,0xf2,0x64,0xaf,0xd3,0x51,0x7f
+
+# ATT:   vpdpwuuds  -512(%edx){1to8}, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vpdpwuuds ymm2 {k7} {z}, ymm3, dword ptr [edx - 512]{1to8}
+0x62,0xf2,0x64,0xbf,0xd3,0x52,0x80
+
+# ATT:   vpdpwuuds  268435456(%esp,%esi,8), %zmm3, %zmm2
+# INTEL: vpdpwuuds zmm2, zmm3, zmmword ptr [esp + 8*esi + 268435456]
+0x62,0xf2,0x64,0x48,0xd3,0x94,0xf4,0x00,0x00,0x00,0x10
+
+# ATT:   vpdpwuuds  291(%edi,%eax,4), %zmm3, %zmm2 {%k7}
+# INTEL: vpdpwuuds zmm2 {k7}, zmm3, zmmword ptr [edi + 4*eax + 291]
+0x62,0xf2,0x64,0x4f,0xd3,0x94,0x87,0x23,0x01,0x00,0x00
+
+# ATT:   vpdpwuuds  (%eax){1to16}, %zmm3, %zmm2
+# INTEL: vpdpwuuds zmm2, zmm3, dword ptr [eax]{1to16}
+0x62,0xf2,0x64,0x58,0xd3,0x10
+
+# ATT:   vpdpwuuds  -2048(,%ebp,2), %zmm3, %zmm2
+# INTEL: vpdpwuuds zmm2, zmm3, zmmword ptr [2*ebp - 2048]
+0x62,0xf2,0x64,0x48,0xd3,0x14,0x6d,0x00,0xf8,0xff,0xff
+
+# ATT:   vpdpwuuds  8128(%ecx), %zmm3, %zmm2 {%k7} {z}
+# INTEL: vpdpwuuds zmm2 {k7} {z}, zmm3, zmmword ptr [ecx + 8128]
+0x62,0xf2,0x64,0xcf,0xd3,0x51,0x7f
+
+# ATT:   vpdpwuuds  -512(%edx){1to16}, %zmm3, %zmm2 {%k7} {z}
+# INTEL: vpdpwuuds zmm2 {k7} {z}, zmm3, dword ptr [edx - 512]{1to16}
+0x62,0xf2,0x64,0xdf,0xd3,0x52,0x80
+
+# VMPSADBW
+
+# ATT:   vmpsadbw $123, %xmm4, %xmm3, %xmm2
+# INTEL: vmpsadbw xmm2, xmm3, xmm4, 123
+0xc4,0xe3,0x61,0x42,0xd4,0x7b
+
+# ATT:   vmpsadbw $123, %xmm4, %xmm3, %xmm2 {%k7}
+# INTEL: vmpsadbw xmm2 {k7}, xmm3, xmm4, 123
+0x62,0xf3,0x66,0x0f,0x42,0xd4,0x7b
+
+# ATT:   vmpsadbw $123, %xmm4, %xmm3, %xmm2 {%k7} {z}
+# INTEL: vmpsadbw xmm2 {k7} {z}, xmm3, xmm4, 123
+0x62,0xf3,0x66,0x8f,0x42,0xd4,0x7b
+
+# ATT:   vmpsadbw $123, %ymm4, %ymm3, %ymm2
+# INTEL: vmpsadbw ymm2, ymm3, ymm4, 123
+0xc4,0xe3,0x65,0x42,0xd4,0x7b
+
+# ATT:   vmpsadbw $123, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vmpsadbw ymm2 {k7}, ymm3, ymm4, 123
+0x62,0xf3,0x66,0x2f,0x42,0xd4,0x7b
+
+# ATT:   vmpsadbw $123, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vmpsadbw ymm2 {k7} {z}, ymm3, ymm4, 123
+0x62,0xf3,0x66,0xaf,0x42,0xd4,0x7b
+
+# ATT:   vmpsadbw $123, %zmm4, %zmm3, %zmm2
+# INTEL: vmpsadbw zmm2, zmm3, zmm4, 123
+0x62,0xf3,0x66,0x48,0x42,0xd4,0x7b
+
+# ATT:   vmpsadbw $123, %zmm4, %zmm3, %zmm2 {%k7}
+# INTEL: vmpsadbw zmm2 {k7}, zmm3, zmm4, 123
+0x62,0xf3,0x66,0x4f,0x42,0xd4,0x7b
+
+# ATT:   vmpsadbw $123, %zmm4, %zmm3, %zmm2 {%k7} {z}
+# INTEL: vmpsadbw zmm2 {k7} {z}, zmm3, zmm4, 123
+0x62,0xf3,0x66,0xcf,0x42,0xd4,0x7b
+
+# ATT:   vmpsadbw  $123, 268435456(%esp,%esi,8), %xmm3, %xmm2
+# INTEL: vmpsadbw xmm2, xmm3, xmmword ptr [esp + 8*esi + 268435456], 123
+0xc4,0xe3,0x61,0x42,0x94,0xf4,0x00,0x00,0x00,0x10,0x7b
+
+# ATT:   vmpsadbw  $123, 291(%edi,%eax,4), %xmm3, %xmm2 {%k7}
+# INTEL: vmpsadbw xmm2 {k7}, xmm3, xmmword ptr [edi + 4*eax + 291], 123
+0x62,0xf3,0x66,0x0f,0x42,0x94,0x87,0x23,0x01,0x00,0x00,0x7b
+
+# ATT:   vmpsadbw  $123, (%eax), %xmm3, %xmm2
+# INTEL: vmpsadbw xmm2, xmm3, xmmword ptr [eax], 123
+0xc4,0xe3,0x61,0x42,0x10,0x7b
+
+# ATT:   vmpsadbw  $123, -512(,%ebp,2), %xmm3, %xmm2
+# INTEL: vmpsadbw xmm2, xmm3, xmmword ptr [2*ebp - 512], 123
+0xc4,0xe3,0x61,0x42,0x14,0x6d,0x00,0xfe,0xff,0xff,0x7b
+
+# ATT:   vmpsadbw  $123, 2032(%ecx), %xmm3, %xmm2 {%k7} {z}
+# INTEL: vmpsadbw xmm2 {k7} {z}, xmm3, xmmword ptr [ecx + 2032], 123
+0x62,0xf3,0x66,0x8f,0x42,0x51,0x7f,0x7b
+
+# ATT:   vmpsadbw  $123, -2048(%edx), %xmm3, %xmm2 {%k7} {z}
+# INTEL: vmpsadbw xmm2 {k7} {z}, xmm3, xmmword ptr [edx - 2048], 123
+0x62,0xf3,0x66,0x8f,0x42,0x52,0x80,0x7b
+
+# ATT:   vmpsadbw  $123, 268435456(%esp,%esi,8), %ymm3, %ymm2
+# INTEL: vmpsadbw ymm2, ymm3, ymmword ptr [esp + 8*esi + 268435456], 123
+0xc4,0xe3,0x65,0x42,0x94,0xf4,0x00,0x00,0x00,0x10,0x7b
+
+# ATT:   vmpsadbw  $123, 291(%edi,%eax,4), %ymm3, %ymm2 {%k7}
+# INTEL: vmpsadbw ymm2 {k7}, ymm3, ymmword ptr [edi + 4*eax + 291], 123
+0x62,0xf3,0x66,0x2f,0x42,0x94,0x87,0x23,0x01,0x00,0x00,0x7b
+
+# ATT:   vmpsadbw  $123, (%eax), %ymm3, %ymm2
+# INTEL: vmpsadbw ymm2, ymm3, ymmword ptr [eax], 123
+0xc4,0xe3,0x65,0x42,0x10,0x7b
+
+# ATT:   vmpsadbw  $123, -1024(,%ebp,2), %ymm3, %ymm2
+# INTEL: vmpsadbw ymm2, ymm3, ymmword ptr [2*ebp - 1024], 123
+0xc4,0xe3,0x65,0x42,0x14,0x6d,0x00,0xfc,0xff,0xff,0x7b
+
+# ATT:   vmpsadbw  $123, 4064(%ecx), %ymm3, %ymm2 {%k7} {z}
+# INTEL: vmpsadbw ymm2 {k7} {z}, ymm3, ymmword ptr [ecx + 4064], 123
+0x62,0xf3,0x66,0xaf,0x42,0x51,0x7f,0x7b
+
+# ATT:   vmpsadbw  $123, -4096(%edx), %ymm3, %ymm2 {%k7} {z}
+# INTEL: vmpsadbw ymm2 {k7} {z}, ymm3, ymmword ptr [edx - 4096], 123
+0x62,0xf3,0x66,0xaf,0x42,0x52,0x80,0x7b
+
+# ATT:   vmpsadbw  $123, 268435456(%esp,%esi,8), %zmm3, %zmm2
+# INTEL: vmpsadbw zmm2, zmm3, zmmword ptr [esp + 8*esi + 268435456], 123
+0x62,0xf3,0x66,0x48,0x42,0x94,0xf4,0x00,0x00,0x00,0x10,0x7b
+
+# ATT:   vmpsadbw  $123, 291(%edi,%eax,4), %zmm3, %zmm2 {%k7}
+# INTEL: vmpsadbw zmm2 {k7}, zmm3, zmmword ptr [edi + 4*eax + 291], 123
+0x62,0xf3,0x66,0x4f,0x42,0x94,0x87,0x23,0x01,0x00,0x00,0x7b
+
+# ATT:   vmpsadbw  $123, (%eax), %zmm3, %zmm2
+# INTEL: vmpsadbw zmm2, zmm3, zmmword ptr [eax], 123
+0x62,0xf3,0x66,0x48,0x42,0x10,0x7b
+
+# ATT:   vmpsadbw  $123, -2048(,%ebp,2), %zmm3, %zmm2
+# INTEL: vmpsadbw zmm2, zmm3, zmmword ptr [2*ebp - 2048], 123
+0x62,0xf3,0x66,0x48,0x42,0x14,0x6d,0x00,0xf8,0xff,0xff,0x7b
+
+# ATT:   vmpsadbw  $123, 8128(%ecx), %zmm3, %zmm2 {%k7} {z}
+# INTEL: vmpsadbw zmm2 {k7} {z}, zmm3, zmmword ptr [ecx + 8128], 123
+0x62,0xf3,0x66,0xcf,0x42,0x51,0x7f,0x7b
+
+# ATT:   vmpsadbw  $123, -8192(%edx), %zmm3, %zmm2 {%k7} {z}
+# INTEL: vmpsadbw zmm2 {k7} {z}, zmm3, zmmword ptr [edx - 8192], 123
+0x62,0xf3,0x66,0xcf,0x42,0x52,0x80,0x7b
+
+# YMM Rounding
+
+# ATT:   vaddpd {rn-sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vaddpd ymm2, ymm3, ymm4, {rn-sae}
+0x62,0xf1,0xe1,0x18,0x58,0xd4
+
+# ATT:   vaddpd {rd-sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vaddpd ymm2 {k7}, ymm3, ymm4, {rd-sae}
+0x62,0xf1,0xe1,0x3f,0x58,0xd4
+
+# ATT:   vaddpd {rz-sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vaddpd ymm2 {k7} {z}, ymm3, ymm4, {rz-sae}
+0x62,0xf1,0xe1,0xff,0x58,0xd4
+
+# ATT:   vaddph {rn-sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vaddph ymm2, ymm3, ymm4, {rn-sae}
+0x62,0xf5,0x60,0x18,0x58,0xd4
+
+# ATT:   vaddph {rd-sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vaddph ymm2 {k7}, ymm3, ymm4, {rd-sae}
+0x62,0xf5,0x60,0x3f,0x58,0xd4
+
+# ATT:   vaddph {rz-sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vaddph ymm2 {k7} {z}, ymm3, ymm4, {rz-sae}
+0x62,0xf5,0x60,0xff,0x58,0xd4
+
+# ATT:   vaddps {rn-sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vaddps ymm2, ymm3, ymm4, {rn-sae}
+0x62,0xf1,0x60,0x18,0x58,0xd4
+
+# ATT:   vaddps {rd-sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vaddps ymm2 {k7}, ymm3, ymm4, {rd-sae}
+0x62,0xf1,0x60,0x3f,0x58,0xd4
+
+# ATT:   vaddps {rz-sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vaddps ymm2 {k7} {z}, ymm3, ymm4, {rz-sae}
+0x62,0xf1,0x60,0xff,0x58,0xd4
+
+# ATT:   vcmppd $123, {sae}, %ymm4, %ymm3, %k5
+# INTEL: vcmppd k5, ymm3, ymm4, {sae}, 123
+0x62,0xf1,0xe1,0x18,0xc2,0xec,0x7b
+
+# ATT:   vcmppd $123, {sae}, %ymm4, %ymm3, %k5 {%k7}
+# INTEL: vcmppd k5 {k7}, ymm3, ymm4, {sae}, 123
+0x62,0xf1,0xe1,0x1f,0xc2,0xec,0x7b
+
+# ATT:   vcmpph $123, {sae}, %ymm4, %ymm3, %k5
+# INTEL: vcmpph k5, ymm3, ymm4, {sae}, 123
+0x62,0xf3,0x60,0x18,0xc2,0xec,0x7b
+
+# ATT:   vcmpph $123, {sae}, %ymm4, %ymm3, %k5 {%k7}
+# INTEL: vcmpph k5 {k7}, ymm3, ymm4, {sae}, 123
+0x62,0xf3,0x60,0x1f,0xc2,0xec,0x7b
+
+# ATT:   vcmpps $123, {sae}, %ymm4, %ymm3, %k5
+# INTEL: vcmpps k5, ymm3, ymm4, {sae}, 123
+0x62,0xf1,0x60,0x18,0xc2,0xec,0x7b
+
+# ATT:   vcmpps $123, {sae}, %ymm4, %ymm3, %k5 {%k7}
+# INTEL: vcmpps k5 {k7}, ymm3, ymm4, {sae}, 123
+0x62,0xf1,0x60,0x1f,0xc2,0xec,0x7b
+
+# ATT:   vcvtdq2ph {rn-sae}, %ymm3, %xmm2
+# INTEL: vcvtdq2ph xmm2, ymm3, {rn-sae}
+0x62,0xf5,0x78,0x18,0x5b,0xd3
+
+# ATT:   vcvtdq2ph {rd-sae}, %ymm3, %xmm2 {%k7}
+# INTEL: vcvtdq2ph xmm2 {k7}, ymm3, {rd-sae}
+0x62,0xf5,0x78,0x3f,0x5b,0xd3
+
+# ATT:   vcvtdq2ph {rz-sae}, %ymm3, %xmm2 {%k7} {z}
+# INTEL: vcvtdq2ph xmm2 {k7} {z}, ymm3, {rz-sae}
+0x62,0xf5,0x78,0xff,0x5b,0xd3
+
+# ATT:   vcvtdq2ps {rn-sae}, %ymm3, %ymm2
+# INTEL: vcvtdq2ps ymm2, ymm3, {rn-sae}
+0x62,0xf1,0x78,0x18,0x5b,0xd3
+
+# ATT:   vcvtdq2ps {rd-sae}, %ymm3, %ymm2 {%k7}
+# INTEL: vcvtdq2ps ymm2 {k7}, ymm3, {rd-sae}
+0x62,0xf1,0x78,0x3f,0x5b,0xd3
+
+# ATT:   vcvtdq2ps {rz-sae}, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vcvtdq2ps ymm2 {k7} {z}, ymm3, {rz-sae}
+0x62,0xf1,0x78,0xff,0x5b,0xd3
+
+# ATT:   vcvtpd2dq {rn-sae}, %ymm3, %xmm2
+# INTEL: vcvtpd2dq xmm2, ymm3, {rn-sae}
+0x62,0xf1,0xfb,0x18,0xe6,0xd3
+
+# ATT:   vcvtpd2dq {rd-sae}, %ymm3, %xmm2 {%k7}
+# INTEL: vcvtpd2dq xmm2 {k7}, ymm3, {rd-sae}
+0x62,0xf1,0xfb,0x3f,0xe6,0xd3
+
+# ATT:   vcvtpd2dq {rz-sae}, %ymm3, %xmm2 {%k7} {z}
+# INTEL: vcvtpd2dq xmm2 {k7} {z}, ymm3, {rz-sae}
+0x62,0xf1,0xfb,0xff,0xe6,0xd3
+
+# ATT:   vcvtpd2ph {rn-sae}, %ymm3, %xmm2
+# INTEL: vcvtpd2ph xmm2, ymm3, {rn-sae}
+0x62,0xf5,0xf9,0x18,0x5a,0xd3
+
+# ATT:   vcvtpd2ph {rd-sae}, %ymm3, %xmm2 {%k7}
+# INTEL: vcvtpd2ph xmm2 {k7}, ymm3, {rd-sae}
+0x62,0xf5,0xf9,0x3f,0x5a,0xd3
+
+# ATT:   vcvtpd2ph {rz-sae}, %ymm3, %xmm2 {%k7} {z}
+# INTEL: vcvtpd2ph xmm2 {k7} {z}, ymm3, {rz-sae}
+0x62,0xf5,0xf9,0xff,0x5a,0xd3
+
+# ATT:   vcvtpd2ps {rn-sae}, %ymm3, %xmm2
+# INTEL: vcvtpd2ps xmm2, ymm3, {rn-sae}
+0x62,0xf1,0xf9,0x18,0x5a,0xd3
+
+# ATT:   vcvtpd2ps {rd-sae}, %ymm3, %xmm2 {%k7}
+# INTEL: vcvtpd2ps xmm2 {k7}, ymm3, {rd-sae}
+0x62,0xf1,0xf9,0x3f,0x5a,0xd3
+
+# ATT:   vcvtpd2ps {rz-sae}, %ymm3, %xmm2 {%k7} {z}
+# INTEL: vcvtpd2ps xmm2 {k7} {z}, ymm3, {rz-sae}
+0x62,0xf1,0xf9,0xff,0x5a,0xd3
+
+# ATT:   vcvtpd2qq {rn-sae}, %ymm3, %ymm2
+# INTEL: vcvtpd2qq ymm2, ymm3, {rn-sae}
+0x62,0xf1,0xf9,0x18,0x7b,0xd3
+
+# ATT:   vcvtpd2qq {rd-sae}, %ymm3, %ymm2 {%k7}
+# INTEL: vcvtpd2qq ymm2 {k7}, ymm3, {rd-sae}
+0x62,0xf1,0xf9,0x3f,0x7b,0xd3
+
+# ATT:   vcvtpd2qq {rz-sae}, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vcvtpd2qq ymm2 {k7} {z}, ymm3, {rz-sae}
+0x62,0xf1,0xf9,0xff,0x7b,0xd3
+
+# ATT:   vcvtpd2udq {rn-sae}, %ymm3, %xmm2
+# INTEL: vcvtpd2udq xmm2, ymm3, {rn-sae}
+0x62,0xf1,0xf8,0x18,0x79,0xd3
+
+# ATT:   vcvtpd2udq {rd-sae}, %ymm3, %xmm2 {%k7}
+# INTEL: vcvtpd2udq xmm2 {k7}, ymm3, {rd-sae}
+0x62,0xf1,0xf8,0x3f,0x79,0xd3
+
+# ATT:   vcvtpd2udq {rz-sae}, %ymm3, %xmm2 {%k7} {z}
+# INTEL: vcvtpd2udq xmm2 {k7} {z}, ymm3, {rz-sae}
+0x62,0xf1,0xf8,0xff,0x79,0xd3
+
+# ATT:   vcvtpd2uqq {rn-sae}, %ymm3, %ymm2
+# INTEL: vcvtpd2uqq ymm2, ymm3, {rn-sae}
+0x62,0xf1,0xf9,0x18,0x79,0xd3
+
+# ATT:   vcvtpd2uqq {rd-sae}, %ymm3, %ymm2 {%k7}
+# INTEL: vcvtpd2uqq ymm2 {k7}, ymm3, {rd-sae}
+0x62,0xf1,0xf9,0x3f,0x79,0xd3
+
+# ATT:   vcvtpd2uqq {rz-sae}, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vcvtpd2uqq ymm2 {k7} {z}, ymm3, {rz-sae}
+0x62,0xf1,0xf9,0xff,0x79,0xd3
+
+# ATT:   vcvtph2dq {rn-sae}, %xmm3, %ymm2
+# INTEL: vcvtph2dq ymm2, xmm3, {rn-sae}
+0x62,0xf5,0x79,0x18,0x5b,0xd3
+
+# ATT:   vcvtph2dq {rd-sae}, %xmm3, %ymm2 {%k7}
+# INTEL: vcvtph2dq ymm2 {k7}, xmm3, {rd-sae}
+0x62,0xf5,0x79,0x3f,0x5b,0xd3
+
+# ATT:   vcvtph2dq {rz-sae}, %xmm3, %ymm2 {%k7} {z}
+# INTEL: vcvtph2dq ymm2 {k7} {z}, xmm3, {rz-sae}
+0x62,0xf5,0x79,0xff,0x5b,0xd3
+
+# ATT:   vcvtph2pd {sae}, %xmm3, %ymm2
+# INTEL: vcvtph2pd ymm2, xmm3, {sae}
+0x62,0xf5,0x78,0x18,0x5a,0xd3
+
+# ATT:   vcvtph2pd {sae}, %xmm3, %ymm2 {%k7}
+# INTEL: vcvtph2pd ymm2 {k7}, xmm3, {sae}
+0x62,0xf5,0x78,0x1f,0x5a,0xd3
+
+# ATT:   vcvtph2pd {sae}, %xmm3, %ymm2 {%k7} {z}
+# INTEL: vcvtph2pd ymm2 {k7} {z}, xmm3, {sae}
+0x62,0xf5,0x78,0x9f,0x5a,0xd3
+
+# ATT:   vcvtph2ps {sae}, %xmm3, %ymm2
+# INTEL: vcvtph2ps ymm2, xmm3, {sae}
+0x62,0xf2,0x79,0x18,0x13,0xd3
+
+# ATT:   vcvtph2ps {sae}, %xmm3, %ymm2 {%k7}
+# INTEL: vcvtph2ps ymm2 {k7}, xmm3, {sae}
+0x62,0xf2,0x79,0x1f,0x13,0xd3
+
+# ATT:   vcvtph2ps {sae}, %xmm3, %ymm2 {%k7} {z}
+# INTEL: vcvtph2ps ymm2 {k7} {z}, xmm3, {sae}
+0x62,0xf2,0x79,0x9f,0x13,0xd3
+
+# ATT:   vcvtph2psx {sae}, %xmm3, %ymm2
+# INTEL: vcvtph2psx ymm2, xmm3, {sae}
+0x62,0xf6,0x79,0x18,0x13,0xd3
+
+# ATT:   vcvtph2psx {sae}, %xmm3, %ymm2 {%k7}
+# INTEL: vcvtph2psx ymm2 {k7}, xmm3, {sae}
+0x62,0xf6,0x79,0x1f,0x13,0xd3
+
+# ATT:   vcvtph2psx {sae}, %xmm3, %ymm2 {%k7} {z}
+# INTEL: vcvtph2psx ymm2 {k7} {z}, xmm3, {sae}
+0x62,0xf6,0x79,0x9f,0x13,0xd3
+
+# ATT:   vcvtph2qq {rn-sae}, %xmm3, %ymm2
+# INTEL: vcvtph2qq ymm2, xmm3, {rn-sae}
+0x62,0xf5,0x79,0x18,0x7b,0xd3
+
+# ATT:   vcvtph2qq {rd-sae}, %xmm3, %ymm2 {%k7}
+# INTEL: vcvtph2qq ymm2 {k7}, xmm3, {rd-sae}
+0x62,0xf5,0x79,0x3f,0x7b,0xd3
+
+# ATT:   vcvtph2qq {rz-sae}, %xmm3, %ymm2 {%k7} {z}
+# INTEL: vcvtph2qq ymm2 {k7} {z}, xmm3, {rz-sae}
+0x62,0xf5,0x79,0xff,0x7b,0xd3
+
+# ATT:   vcvtph2udq {rn-sae}, %xmm3, %ymm2
+# INTEL: vcvtph2udq ymm2, xmm3, {rn-sae}
+0x62,0xf5,0x78,0x18,0x79,0xd3
+
+# ATT:   vcvtph2udq {rd-sae}, %xmm3, %ymm2 {%k7}
+# INTEL: vcvtph2udq ymm2 {k7}, xmm3, {rd-sae}
+0x62,0xf5,0x78,0x3f,0x79,0xd3
+
+# ATT:   vcvtph2udq {rz-sae}, %xmm3, %ymm2 {%k7} {z}
+# INTEL: vcvtph2udq ymm2 {k7} {z}, xmm3, {rz-sae}
+0x62,0xf5,0x78,0xff,0x79,0xd3
+
+# ATT:   vcvtph2uqq {rn-sae}, %xmm3, %ymm2
+# INTEL: vcvtph2uqq ymm2, xmm3, {rn-sae}
+0x62,0xf5,0x79,0x18,0x79,0xd3
+
+# ATT:   vcvtph2uqq {rd-sae}, %xmm3, %ymm2 {%k7}
+# INTEL: vcvtph2uqq ymm2 {k7}, xmm3, {rd-sae}
+0x62,0xf5,0x79,0x3f,0x79,0xd3
+
+# ATT:   vcvtph2uqq {rz-sae}, %xmm3, %ymm2 {%k7} {z}
+# INTEL: vcvtph2uqq ymm2 {k7} {z}, xmm3, {rz-sae}
+0x62,0xf5,0x79,0xff,0x79,0xd3
+
+# ATT:   vcvtph2uw {rn-sae}, %ymm3, %ymm2
+# INTEL: vcvtph2uw ymm2, ymm3, {rn-sae}
+0x62,0xf5,0x78,0x18,0x7d,0xd3
+
+# ATT:   vcvtph2uw {rd-sae}, %ymm3, %ymm2 {%k7}
+# INTEL: vcvtph2uw ymm2 {k7}, ymm3, {rd-sae}
+0x62,0xf5,0x78,0x3f,0x7d,0xd3
+
+# ATT:   vcvtph2uw {rz-sae}, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vcvtph2uw ymm2 {k7} {z}, ymm3, {rz-sae}
+0x62,0xf5,0x78,0xff,0x7d,0xd3
+
+# ATT:   vcvtph2w {rn-sae}, %ymm3, %ymm2
+# INTEL: vcvtph2w ymm2, ymm3, {rn-sae}
+0x62,0xf5,0x79,0x18,0x7d,0xd3
+
+# ATT:   vcvtph2w {rd-sae}, %ymm3, %ymm2 {%k7}
+# INTEL: vcvtph2w ymm2 {k7}, ymm3, {rd-sae}
+0x62,0xf5,0x79,0x3f,0x7d,0xd3
+
+# ATT:   vcvtph2w {rz-sae}, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vcvtph2w ymm2 {k7} {z}, ymm3, {rz-sae}
+0x62,0xf5,0x79,0xff,0x7d,0xd3
+
+# ATT:   vcvtps2dq {rn-sae}, %ymm3, %ymm2
+# INTEL: vcvtps2dq ymm2, ymm3, {rn-sae}
+0x62,0xf1,0x79,0x18,0x5b,0xd3
+
+# ATT:   vcvtps2dq {rd-sae}, %ymm3, %ymm2 {%k7}
+# INTEL: vcvtps2dq ymm2 {k7}, ymm3, {rd-sae}
+0x62,0xf1,0x79,0x3f,0x5b,0xd3
+
+# ATT:   vcvtps2dq {rz-sae}, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vcvtps2dq ymm2 {k7} {z}, ymm3, {rz-sae}
+0x62,0xf1,0x79,0xff,0x5b,0xd3
+
+# ATT:   vcvtps2pd {sae}, %xmm3, %ymm2
+# INTEL: vcvtps2pd ymm2, xmm3, {sae}
+0x62,0xf1,0x78,0x18,0x5a,0xd3
+
+# ATT:   vcvtps2pd {sae}, %xmm3, %ymm2 {%k7}
+# INTEL: vcvtps2pd ymm2 {k7}, xmm3, {sae}
+0x62,0xf1,0x78,0x1f,0x5a,0xd3
+
+# ATT:   vcvtps2pd {sae}, %xmm3, %ymm2 {%k7} {z}
+# INTEL: vcvtps2pd ymm2 {k7} {z}, xmm3, {sae}
+0x62,0xf1,0x78,0x9f,0x5a,0xd3
+
+# ATT:   vcvtps2ph $123, {sae}, %ymm3, %xmm2
+# INTEL: vcvtps2ph xmm2, ymm3, {sae}, 123
+0x62,0xf3,0x79,0x18,0x1d,0xda,0x7b
+
+# ATT:   vcvtps2ph $123, {sae}, %ymm3, %xmm2 {%k7}
+# INTEL: vcvtps2ph xmm2 {k7}, ymm3, {sae}, 123
+0x62,0xf3,0x79,0x1f,0x1d,0xda,0x7b
+
+# ATT:   vcvtps2ph $123, {sae}, %ymm3, %xmm2 {%k7} {z}
+# INTEL: vcvtps2ph xmm2 {k7} {z}, ymm3, {sae}, 123
+0x62,0xf3,0x79,0x9f,0x1d,0xda,0x7b
+
+# ATT:   vcvtps2phx {rn-sae}, %ymm3, %xmm2
+# INTEL: vcvtps2phx xmm2, ymm3, {rn-sae}
+0x62,0xf5,0x79,0x18,0x1d,0xd3
+
+# ATT:   vcvtps2phx {rd-sae}, %ymm3, %xmm2 {%k7}
+# INTEL: vcvtps2phx xmm2 {k7}, ymm3, {rd-sae}
+0x62,0xf5,0x79,0x3f,0x1d,0xd3
+
+# ATT:   vcvtps2phx {rz-sae}, %ymm3, %xmm2 {%k7} {z}
+# INTEL: vcvtps2phx xmm2 {k7} {z}, ymm3, {rz-sae}
+0x62,0xf5,0x79,0xff,0x1d,0xd3
+
+# ATT:   vcvtps2qq {rn-sae}, %xmm3, %ymm2
+# INTEL: vcvtps2qq ymm2, xmm3, {rn-sae}
+0x62,0xf1,0x79,0x18,0x7b,0xd3
+
+# ATT:   vcvtps2qq {rd-sae}, %xmm3, %ymm2 {%k7}
+# INTEL: vcvtps2qq ymm2 {k7}, xmm3, {rd-sae}
+0x62,0xf1,0x79,0x3f,0x7b,0xd3
+
+# ATT:   vcvtps2qq {rz-sae}, %xmm3, %ymm2 {%k7} {z}
+# INTEL: vcvtps2qq ymm2 {k7} {z}, xmm3, {rz-sae}
+0x62,0xf1,0x79,0xff,0x7b,0xd3
+
+# ATT:   vcvtps2udq {rn-sae}, %ymm3, %ymm2
+# INTEL: vcvtps2udq ymm2, ymm3, {rn-sae}
+0x62,0xf1,0x78,0x18,0x79,0xd3
+
+# ATT:   vcvtps2udq {rd-sae}, %ymm3, %ymm2 {%k7}
+# INTEL: vcvtps2udq ymm2 {k7}, ymm3, {rd-sae}
+0x62,0xf1,0x78,0x3f,0x79,0xd3
+
+# ATT:   vcvtps2udq {rz-sae}, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vcvtps2udq ymm2 {k7} {z}, ymm3, {rz-sae}
+0x62,0xf1,0x78,0xff,0x79,0xd3
+
+# ATT:   vcvtps2uqq {rn-sae}, %xmm3, %ymm2
+# INTEL: vcvtps2uqq ymm2, xmm3, {rn-sae}
+0x62,0xf1,0x79,0x18,0x79,0xd3
+
+# ATT:   vcvtps2uqq {rd-sae}, %xmm3, %ymm2 {%k7}
+# INTEL: vcvtps2uqq ymm2 {k7}, xmm3, {rd-sae}
+0x62,0xf1,0x79,0x3f,0x79,0xd3
+
+# ATT:   vcvtps2uqq {rz-sae}, %xmm3, %ymm2 {%k7} {z}
+# INTEL: vcvtps2uqq ymm2 {k7} {z}, xmm3, {rz-sae}
+0x62,0xf1,0x79,0xff,0x79,0xd3
+
+# ATT:   vcvtqq2pd {rn-sae}, %ymm3, %ymm2
+# INTEL: vcvtqq2pd ymm2, ymm3, {rn-sae}
+0x62,0xf1,0xfa,0x18,0xe6,0xd3
+
+# ATT:   vcvtqq2pd {rd-sae}, %ymm3, %ymm2 {%k7}
+# INTEL: vcvtqq2pd ymm2 {k7}, ymm3, {rd-sae}
+0x62,0xf1,0xfa,0x3f,0xe6,0xd3
+
+# ATT:   vcvtqq2pd {rz-sae}, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vcvtqq2pd ymm2 {k7} {z}, ymm3, {rz-sae}
+0x62,0xf1,0xfa,0xff,0xe6,0xd3
+
+# ATT:   vcvtqq2ph {rn-sae}, %ymm3, %xmm2
+# INTEL: vcvtqq2ph xmm2, ymm3, {rn-sae}
+0x62,0xf5,0xf8,0x18,0x5b,0xd3
+
+# ATT:   vcvtqq2ph {rd-sae}, %ymm3, %xmm2 {%k7}
+# INTEL: vcvtqq2ph xmm2 {k7}, ymm3, {rd-sae}
+0x62,0xf5,0xf8,0x3f,0x5b,0xd3
+
+# ATT:   vcvtqq2ph {rz-sae}, %ymm3, %xmm2 {%k7} {z}
+# INTEL: vcvtqq2ph xmm2 {k7} {z}, ymm3, {rz-sae}
+0x62,0xf5,0xf8,0xff,0x5b,0xd3
+
+# ATT:   vcvtqq2ps {rn-sae}, %ymm3, %xmm2
+# INTEL: vcvtqq2ps xmm2, ymm3, {rn-sae}
+0x62,0xf1,0xf8,0x18,0x5b,0xd3
+
+# ATT:   vcvtqq2ps {rd-sae}, %ymm3, %xmm2 {%k7}
+# INTEL: vcvtqq2ps xmm2 {k7}, ymm3, {rd-sae}
+0x62,0xf1,0xf8,0x3f,0x5b,0xd3
+
+# ATT:   vcvtqq2ps {rz-sae}, %ymm3, %xmm2 {%k7} {z}
+# INTEL: vcvtqq2ps xmm2 {k7} {z}, ymm3, {rz-sae}
+0x62,0xf1,0xf8,0xff,0x5b,0xd3
+
+# ATT:   vcvttpd2dq {sae}, %ymm3, %xmm2
+# INTEL: vcvttpd2dq xmm2, ymm3, {sae}
+0x62,0xf1,0xf9,0x18,0xe6,0xd3
+
+# ATT:   vcvttpd2dq {sae}, %ymm3, %xmm2 {%k7}
+# INTEL: vcvttpd2dq xmm2 {k7}, ymm3, {sae}
+0x62,0xf1,0xf9,0x1f,0xe6,0xd3
+
+# ATT:   vcvttpd2dq {sae}, %ymm3, %xmm2 {%k7} {z}
+# INTEL: vcvttpd2dq xmm2 {k7} {z}, ymm3, {sae}
+0x62,0xf1,0xf9,0x9f,0xe6,0xd3
+
+# ATT:   vcvttpd2qq {sae}, %ymm3, %ymm2
+# INTEL: vcvttpd2qq ymm2, ymm3, {sae}
+0x62,0xf1,0xf9,0x18,0x7a,0xd3
+
+# ATT:   vcvttpd2qq {sae}, %ymm3, %ymm2 {%k7}
+# INTEL: vcvttpd2qq ymm2 {k7}, ymm3, {sae}
+0x62,0xf1,0xf9,0x1f,0x7a,0xd3
+
+# ATT:   vcvttpd2qq {sae}, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vcvttpd2qq ymm2 {k7} {z}, ymm3, {sae}
+0x62,0xf1,0xf9,0x9f,0x7a,0xd3
+
+# ATT:   vcvttpd2udq {sae}, %ymm3, %xmm2
+# INTEL: vcvttpd2udq xmm2, ymm3, {sae}
+0x62,0xf1,0xf8,0x18,0x78,0xd3
+
+# ATT:   vcvttpd2udq {sae}, %ymm3, %xmm2 {%k7}
+# INTEL: vcvttpd2udq xmm2 {k7}, ymm3, {sae}
+0x62,0xf1,0xf8,0x1f,0x78,0xd3
+
+# ATT:   vcvttpd2udq {sae}, %ymm3, %xmm2 {%k7} {z}
+# INTEL: vcvttpd2udq xmm2 {k7} {z}, ymm3, {sae}
+0x62,0xf1,0xf8,0x9f,0x78,0xd3
+
+# ATT:   vcvttpd2uqq {sae}, %ymm3, %ymm2
+# INTEL: vcvttpd2uqq ymm2, ymm3, {sae}
+0x62,0xf1,0xf9,0x18,0x78,0xd3
+
+# ATT:   vcvttpd2uqq {sae}, %ymm3, %ymm2 {%k7}
+# INTEL: vcvttpd2uqq ymm2 {k7}, ymm3, {sae}
+0x62,0xf1,0xf9,0x1f,0x78,0xd3
+
+# ATT:   vcvttpd2uqq {sae}, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vcvttpd2uqq ymm2 {k7} {z}, ymm3, {sae}
+0x62,0xf1,0xf9,0x9f,0x78,0xd3
+
+# ATT:   vcvttph2dq {sae}, %xmm3, %ymm2
+# INTEL: vcvttph2dq ymm2, xmm3, {sae}
+0x62,0xf5,0x7a,0x18,0x5b,0xd3
+
+# ATT:   vcvttph2dq {sae}, %xmm3, %ymm2 {%k7}
+# INTEL: vcvttph2dq ymm2 {k7}, xmm3, {sae}
+0x62,0xf5,0x7a,0x1f,0x5b,0xd3
+
+# ATT:   vcvttph2dq {sae}, %xmm3, %ymm2 {%k7} {z}
+# INTEL: vcvttph2dq ymm2 {k7} {z}, xmm3, {sae}
+0x62,0xf5,0x7a,0x9f,0x5b,0xd3
+
+# ATT:   vcvttph2qq {sae}, %xmm3, %ymm2
+# INTEL: vcvttph2qq ymm2, xmm3, {sae}
+0x62,0xf5,0x79,0x18,0x7a,0xd3
+
+# ATT:   vcvttph2qq {sae}, %xmm3, %ymm2 {%k7}
+# INTEL: vcvttph2qq ymm2 {k7}, xmm3, {sae}
+0x62,0xf5,0x79,0x1f,0x7a,0xd3
+
+# ATT:   vcvttph2qq {sae}, %xmm3, %ymm2 {%k7} {z}
+# INTEL: vcvttph2qq ymm2 {k7} {z}, xmm3, {sae}
+0x62,0xf5,0x79,0x9f,0x7a,0xd3
+
+# ATT:   vcvttph2udq {sae}, %xmm3, %ymm2
+# INTEL: vcvttph2udq ymm2, xmm3, {sae}
+0x62,0xf5,0x78,0x18,0x78,0xd3
+
+# ATT:   vcvttph2udq {sae}, %xmm3, %ymm2 {%k7}
+# INTEL: vcvttph2udq ymm2 {k7}, xmm3, {sae}
+0x62,0xf5,0x78,0x1f,0x78,0xd3
+
+# ATT:   vcvttph2udq {sae}, %xmm3, %ymm2 {%k7} {z}
+# INTEL: vcvttph2udq ymm2 {k7} {z}, xmm3, {sae}
+0x62,0xf5,0x78,0x9f,0x78,0xd3
+
+# ATT:   vcvttph2uqq {sae}, %xmm3, %ymm2
+# INTEL: vcvttph2uqq ymm2, xmm3, {sae}
+0x62,0xf5,0x79,0x18,0x78,0xd3
+
+# ATT:   vcvttph2uqq {sae}, %xmm3, %ymm2 {%k7}
+# INTEL: vcvttph2uqq ymm2 {k7}, xmm3, {sae}
+0x62,0xf5,0x79,0x1f,0x78,0xd3
+
+# ATT:   vcvttph2uqq {sae}, %xmm3, %ymm2 {%k7} {z}
+# INTEL: vcvttph2uqq ymm2 {k7} {z}, xmm3, {sae}
+0x62,0xf5,0x79,0x9f,0x78,0xd3
+
+# ATT:   vcvttph2uw {sae}, %ymm3, %ymm2
+# INTEL: vcvttph2uw ymm2, ymm3, {sae}
+0x62,0xf5,0x78,0x18,0x7c,0xd3
+
+# ATT:   vcvttph2uw {sae}, %ymm3, %ymm2 {%k7}
+# INTEL: vcvttph2uw ymm2 {k7}, ymm3, {sae}
+0x62,0xf5,0x78,0x1f,0x7c,0xd3
+
+# ATT:   vcvttph2uw {sae}, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vcvttph2uw ymm2 {k7} {z}, ymm3, {sae}
+0x62,0xf5,0x78,0x9f,0x7c,0xd3
+
+# ATT:   vcvttph2w {sae}, %ymm3, %ymm2
+# INTEL: vcvttph2w ymm2, ymm3, {sae}
+0x62,0xf5,0x79,0x18,0x7c,0xd3
+
+# ATT:   vcvttph2w {sae}, %ymm3, %ymm2 {%k7}
+# INTEL: vcvttph2w ymm2 {k7}, ymm3, {sae}
+0x62,0xf5,0x79,0x1f,0x7c,0xd3
+
+# ATT:   vcvttph2w {sae}, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vcvttph2w ymm2 {k7} {z}, ymm3, {sae}
+0x62,0xf5,0x79,0x9f,0x7c,0xd3
+
+# ATT:   vcvttps2dq {sae}, %ymm3, %ymm2
+# INTEL: vcvttps2dq ymm2, ymm3, {sae}
+0x62,0xf1,0x7a,0x18,0x5b,0xd3
+
+# ATT:   vcvttps2dq {sae}, %ymm3, %ymm2 {%k7}
+# INTEL: vcvttps2dq ymm2 {k7}, ymm3, {sae}
+0x62,0xf1,0x7a,0x1f,0x5b,0xd3
+
+# ATT:   vcvttps2dq {sae}, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vcvttps2dq ymm2 {k7} {z}, ymm3, {sae}
+0x62,0xf1,0x7a,0x9f,0x5b,0xd3
+
+# ATT:   vcvttps2qq {sae}, %xmm3, %ymm2
+# INTEL: vcvttps2qq ymm2, xmm3, {sae}
+0x62,0xf1,0x79,0x18,0x7a,0xd3
+
+# ATT:   vcvttps2qq {sae}, %xmm3, %ymm2 {%k7}
+# INTEL: vcvttps2qq ymm2 {k7}, xmm3, {sae}
+0x62,0xf1,0x79,0x1f,0x7a,0xd3
+
+# ATT:   vcvttps2qq {sae}, %xmm3, %ymm2 {%k7} {z}
+# INTEL: vcvttps2qq ymm2 {k7} {z}, xmm3, {sae}
+0x62,0xf1,0x79,0x9f,0x7a,0xd3
+
+# ATT:   vcvttps2udq {sae}, %ymm3, %ymm2
+# INTEL: vcvttps2udq ymm2, ymm3, {sae}
+0x62,0xf1,0x78,0x18,0x78,0xd3
+
+# ATT:   vcvttps2udq {sae}, %ymm3, %ymm2 {%k7}
+# INTEL: vcvttps2udq ymm2 {k7}, ymm3, {sae}
+0x62,0xf1,0x78,0x1f,0x78,0xd3
+
+# ATT:   vcvttps2udq {sae}, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vcvttps2udq ymm2 {k7} {z}, ymm3, {sae}
+0x62,0xf1,0x78,0x9f,0x78,0xd3
+
+# ATT:   vcvttps2uqq {sae}, %xmm3, %ymm2
+# INTEL: vcvttps2uqq ymm2, xmm3, {sae}
+0x62,0xf1,0x79,0x18,0x78,0xd3
+
+# ATT:   vcvttps2uqq {sae}, %xmm3, %ymm2 {%k7}
+# INTEL: vcvttps2uqq ymm2 {k7}, xmm3, {sae}
+0x62,0xf1,0x79,0x1f,0x78,0xd3
+
+# ATT:   vcvttps2uqq {sae}, %xmm3, %ymm2 {%k7} {z}
+# INTEL: vcvttps2uqq ymm2 {k7} {z}, xmm3, {sae}
+0x62,0xf1,0x79,0x9f,0x78,0xd3
+
+# ATT:   vcvtudq2ph {rn-sae}, %ymm3, %xmm2
+# INTEL: vcvtudq2ph xmm2, ymm3, {rn-sae}
+0x62,0xf5,0x7b,0x18,0x7a,0xd3
+
+# ATT:   vcvtudq2ph {rd-sae}, %ymm3, %xmm2 {%k7}
+# INTEL: vcvtudq2ph xmm2 {k7}, ymm3, {rd-sae}
+0x62,0xf5,0x7b,0x3f,0x7a,0xd3
+
+# ATT:   vcvtudq2ph {rz-sae}, %ymm3, %xmm2 {%k7} {z}
+# INTEL: vcvtudq2ph xmm2 {k7} {z}, ymm3, {rz-sae}
+0x62,0xf5,0x7b,0xff,0x7a,0xd3
+
+# ATT:   vcvtudq2ps {rn-sae}, %ymm3, %ymm2
+# INTEL: vcvtudq2ps ymm2, ymm3, {rn-sae}
+0x62,0xf1,0x7b,0x18,0x7a,0xd3
+
+# ATT:   vcvtudq2ps {rd-sae}, %ymm3, %ymm2 {%k7}
+# INTEL: vcvtudq2ps ymm2 {k7}, ymm3, {rd-sae}
+0x62,0xf1,0x7b,0x3f,0x7a,0xd3
+
+# ATT:   vcvtudq2ps {rz-sae}, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vcvtudq2ps ymm2 {k7} {z}, ymm3, {rz-sae}
+0x62,0xf1,0x7b,0xff,0x7a,0xd3
+
+# ATT:   vcvtuqq2pd {rn-sae}, %ymm3, %ymm2
+# INTEL: vcvtuqq2pd ymm2, ymm3, {rn-sae}
+0x62,0xf1,0xfa,0x18,0x7a,0xd3
+
+# ATT:   vcvtuqq2pd {rd-sae}, %ymm3, %ymm2 {%k7}
+# INTEL: vcvtuqq2pd ymm2 {k7}, ymm3, {rd-sae}
+0x62,0xf1,0xfa,0x3f,0x7a,0xd3
+
+# ATT:   vcvtuqq2pd {rz-sae}, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vcvtuqq2pd ymm2 {k7} {z}, ymm3, {rz-sae}
+0x62,0xf1,0xfa,0xff,0x7a,0xd3
+
+# ATT:   vcvtuqq2ph {rn-sae}, %ymm3, %xmm2
+# INTEL: vcvtuqq2ph xmm2, ymm3, {rn-sae}
+0x62,0xf5,0xfb,0x18,0x7a,0xd3
+
+# ATT:   vcvtuqq2ph {rd-sae}, %ymm3, %xmm2 {%k7}
+# INTEL: vcvtuqq2ph xmm2 {k7}, ymm3, {rd-sae}
+0x62,0xf5,0xfb,0x3f,0x7a,0xd3
+
+# ATT:   vcvtuqq2ph {rz-sae}, %ymm3, %xmm2 {%k7} {z}
+# INTEL: vcvtuqq2ph xmm2 {k7} {z}, ymm3, {rz-sae}
+0x62,0xf5,0xfb,0xff,0x7a,0xd3
+
+# ATT:   vcvtuqq2ps {rn-sae}, %ymm3, %xmm2
+# INTEL: vcvtuqq2ps xmm2, ymm3, {rn-sae}
+0x62,0xf1,0xfb,0x18,0x7a,0xd3
+
+# ATT:   vcvtuqq2ps {rd-sae}, %ymm3, %xmm2 {%k7}
+# INTEL: vcvtuqq2ps xmm2 {k7}, ymm3, {rd-sae}
+0x62,0xf1,0xfb,0x3f,0x7a,0xd3
+
+# ATT:   vcvtuqq2ps {rz-sae}, %ymm3, %xmm2 {%k7} {z}
+# INTEL: vcvtuqq2ps xmm2 {k7} {z}, ymm3, {rz-sae}
+0x62,0xf1,0xfb,0xff,0x7a,0xd3
+
+# ATT:   vcvtuw2ph {rn-sae}, %ymm3, %ymm2
+# INTEL: vcvtuw2ph ymm2, ymm3, {rn-sae}
+0x62,0xf5,0x7b,0x18,0x7d,0xd3
+
+# ATT:   vcvtuw2ph {rd-sae}, %ymm3, %ymm2 {%k7}
+# INTEL: vcvtuw2ph ymm2 {k7}, ymm3, {rd-sae}
+0x62,0xf5,0x7b,0x3f,0x7d,0xd3
+
+# ATT:   vcvtuw2ph {rz-sae}, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vcvtuw2ph ymm2 {k7} {z}, ymm3, {rz-sae}
+0x62,0xf5,0x7b,0xff,0x7d,0xd3
+
+# ATT:   vcvtw2ph {rn-sae}, %ymm3, %ymm2
+# INTEL: vcvtw2ph ymm2, ymm3, {rn-sae}
+0x62,0xf5,0x7a,0x18,0x7d,0xd3
+
+# ATT:   vcvtw2ph {rd-sae}, %ymm3, %ymm2 {%k7}
+# INTEL: vcvtw2ph ymm2 {k7}, ymm3, {rd-sae}
+0x62,0xf5,0x7a,0x3f,0x7d,0xd3
+
+# ATT:   vcvtw2ph {rz-sae}, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vcvtw2ph ymm2 {k7} {z}, ymm3, {rz-sae}
+0x62,0xf5,0x7a,0xff,0x7d,0xd3
+
+# ATT:   vdivpd {rn-sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vdivpd ymm2, ymm3, ymm4, {rn-sae}
+0x62,0xf1,0xe1,0x18,0x5e,0xd4
+
+# ATT:   vdivpd {rd-sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vdivpd ymm2 {k7}, ymm3, ymm4, {rd-sae}
+0x62,0xf1,0xe1,0x3f,0x5e,0xd4
+
+# ATT:   vdivpd {rz-sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vdivpd ymm2 {k7} {z}, ymm3, ymm4, {rz-sae}
+0x62,0xf1,0xe1,0xff,0x5e,0xd4
+
+# ATT:   vdivph {rn-sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vdivph ymm2, ymm3, ymm4, {rn-sae}
+0x62,0xf5,0x60,0x18,0x5e,0xd4
+
+# ATT:   vdivph {rd-sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vdivph ymm2 {k7}, ymm3, ymm4, {rd-sae}
+0x62,0xf5,0x60,0x3f,0x5e,0xd4
+
+# ATT:   vdivph {rz-sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vdivph ymm2 {k7} {z}, ymm3, ymm4, {rz-sae}
+0x62,0xf5,0x60,0xff,0x5e,0xd4
+
+# ATT:   vdivps {rn-sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vdivps ymm2, ymm3, ymm4, {rn-sae}
+0x62,0xf1,0x60,0x18,0x5e,0xd4
+
+# ATT:   vdivps {rd-sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vdivps ymm2 {k7}, ymm3, ymm4, {rd-sae}
+0x62,0xf1,0x60,0x3f,0x5e,0xd4
+
+# ATT:   vdivps {rz-sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vdivps ymm2 {k7} {z}, ymm3, ymm4, {rz-sae}
+0x62,0xf1,0x60,0xff,0x5e,0xd4
+
+# ATT:   vfcmaddcph {rn-sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vfcmaddcph ymm2, ymm3, ymm4, {rn-sae}
+0x62,0xf6,0x63,0x18,0x56,0xd4
+
+# ATT:   vfcmaddcph {rd-sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vfcmaddcph ymm2 {k7}, ymm3, ymm4, {rd-sae}
+0x62,0xf6,0x63,0x3f,0x56,0xd4
+
+# ATT:   vfcmaddcph {rz-sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vfcmaddcph ymm2 {k7} {z}, ymm3, ymm4, {rz-sae}
+0x62,0xf6,0x63,0xff,0x56,0xd4
+
+# ATT:   vfcmulcph {rn-sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vfcmulcph ymm2, ymm3, ymm4, {rn-sae}
+0x62,0xf6,0x63,0x18,0xd6,0xd4
+
+# ATT:   vfcmulcph {rd-sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vfcmulcph ymm2 {k7}, ymm3, ymm4, {rd-sae}
+0x62,0xf6,0x63,0x3f,0xd6,0xd4
+
+# ATT:   vfcmulcph {rz-sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vfcmulcph ymm2 {k7} {z}, ymm3, ymm4, {rz-sae}
+0x62,0xf6,0x63,0xff,0xd6,0xd4
+
+# ATT:   vfixupimmpd $123, {sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vfixupimmpd ymm2, ymm3, ymm4, {sae}, 123
+0x62,0xf3,0xe1,0x18,0x54,0xd4,0x7b
+
+# ATT:   vfixupimmpd $123, {sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vfixupimmpd ymm2 {k7}, ymm3, ymm4, {sae}, 123
+0x62,0xf3,0xe1,0x1f,0x54,0xd4,0x7b
+
+# ATT:   vfixupimmpd $123, {sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vfixupimmpd ymm2 {k7} {z}, ymm3, ymm4, {sae}, 123
+0x62,0xf3,0xe1,0x9f,0x54,0xd4,0x7b
+
+# ATT:   vfixupimmps $123, {sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vfixupimmps ymm2, ymm3, ymm4, {sae}, 123
+0x62,0xf3,0x61,0x18,0x54,0xd4,0x7b
+
+# ATT:   vfixupimmps $123, {sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vfixupimmps ymm2 {k7}, ymm3, ymm4, {sae}, 123
+0x62,0xf3,0x61,0x1f,0x54,0xd4,0x7b
+
+# ATT:   vfixupimmps $123, {sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vfixupimmps ymm2 {k7} {z}, ymm3, ymm4, {sae}, 123
+0x62,0xf3,0x61,0x9f,0x54,0xd4,0x7b
+
+# ATT:   vfmadd132pd {rn-sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vfmadd132pd ymm2, ymm3, ymm4, {rn-sae}
+0x62,0xf2,0xe1,0x18,0x98,0xd4
+
+# ATT:   vfmadd132pd {rd-sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vfmadd132pd ymm2 {k7}, ymm3, ymm4, {rd-sae}
+0x62,0xf2,0xe1,0x3f,0x98,0xd4
+
+# ATT:   vfmadd132pd {rz-sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vfmadd132pd ymm2 {k7} {z}, ymm3, ymm4, {rz-sae}
+0x62,0xf2,0xe1,0xff,0x98,0xd4
+
+# ATT:   vfmadd132ph {rn-sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vfmadd132ph ymm2, ymm3, ymm4, {rn-sae}
+0x62,0xf6,0x61,0x18,0x98,0xd4
+
+# ATT:   vfmadd132ph {rd-sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vfmadd132ph ymm2 {k7}, ymm3, ymm4, {rd-sae}
+0x62,0xf6,0x61,0x3f,0x98,0xd4
+
+# ATT:   vfmadd132ph {rz-sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vfmadd132ph ymm2 {k7} {z}, ymm3, ymm4, {rz-sae}
+0x62,0xf6,0x61,0xff,0x98,0xd4
+
+# ATT:   vfmadd132ps {rn-sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vfmadd132ps ymm2, ymm3, ymm4, {rn-sae}
+0x62,0xf2,0x61,0x18,0x98,0xd4
+
+# ATT:   vfmadd132ps {rd-sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vfmadd132ps ymm2 {k7}, ymm3, ymm4, {rd-sae}
+0x62,0xf2,0x61,0x3f,0x98,0xd4
+
+# ATT:   vfmadd132ps {rz-sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vfmadd132ps ymm2 {k7} {z}, ymm3, ymm4, {rz-sae}
+0x62,0xf2,0x61,0xff,0x98,0xd4
+
+# ATT:   vfmadd213pd {rn-sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vfmadd213pd ymm2, ymm3, ymm4, {rn-sae}
+0x62,0xf2,0xe1,0x18,0xa8,0xd4
+
+# ATT:   vfmadd213pd {rd-sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vfmadd213pd ymm2 {k7}, ymm3, ymm4, {rd-sae}
+0x62,0xf2,0xe1,0x3f,0xa8,0xd4
+
+# ATT:   vfmadd213pd {rz-sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vfmadd213pd ymm2 {k7} {z}, ymm3, ymm4, {rz-sae}
+0x62,0xf2,0xe1,0xff,0xa8,0xd4
+
+# ATT:   vfmadd213ph {rn-sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vfmadd213ph ymm2, ymm3, ymm4, {rn-sae}
+0x62,0xf6,0x61,0x18,0xa8,0xd4
+
+# ATT:   vfmadd213ph {rd-sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vfmadd213ph ymm2 {k7}, ymm3, ymm4, {rd-sae}
+0x62,0xf6,0x61,0x3f,0xa8,0xd4
+
+# ATT:   vfmadd213ph {rz-sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vfmadd213ph ymm2 {k7} {z}, ymm3, ymm4, {rz-sae}
+0x62,0xf6,0x61,0xff,0xa8,0xd4
+
+# ATT:   vfmadd213ps {rn-sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vfmadd213ps ymm2, ymm3, ymm4, {rn-sae}
+0x62,0xf2,0x61,0x18,0xa8,0xd4
+
+# ATT:   vfmadd213ps {rd-sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vfmadd213ps ymm2 {k7}, ymm3, ymm4, {rd-sae}
+0x62,0xf2,0x61,0x3f,0xa8,0xd4
+
+# ATT:   vfmadd213ps {rz-sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vfmadd213ps ymm2 {k7} {z}, ymm3, ymm4, {rz-sae}
+0x62,0xf2,0x61,0xff,0xa8,0xd4
+
+# ATT:   vfmadd231pd {rn-sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vfmadd231pd ymm2, ymm3, ymm4, {rn-sae}
+0x62,0xf2,0xe1,0x18,0xb8,0xd4
+
+# ATT:   vfmadd231pd {rd-sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vfmadd231pd ymm2 {k7}, ymm3, ymm4, {rd-sae}
+0x62,0xf2,0xe1,0x3f,0xb8,0xd4
+
+# ATT:   vfmadd231pd {rz-sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vfmadd231pd ymm2 {k7} {z}, ymm3, ymm4, {rz-sae}
+0x62,0xf2,0xe1,0xff,0xb8,0xd4
+
+# ATT:   vfmadd231ph {rn-sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vfmadd231ph ymm2, ymm3, ymm4, {rn-sae}
+0x62,0xf6,0x61,0x18,0xb8,0xd4
+
+# ATT:   vfmadd231ph {rd-sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vfmadd231ph ymm2 {k7}, ymm3, ymm4, {rd-sae}
+0x62,0xf6,0x61,0x3f,0xb8,0xd4
+
+# ATT:   vfmadd231ph {rz-sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vfmadd231ph ymm2 {k7} {z}, ymm3, ymm4, {rz-sae}
+0x62,0xf6,0x61,0xff,0xb8,0xd4
+
+# ATT:   vfmadd231ps {rn-sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vfmadd231ps ymm2, ymm3, ymm4, {rn-sae}
+0x62,0xf2,0x61,0x18,0xb8,0xd4
+
+# ATT:   vfmadd231ps {rd-sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vfmadd231ps ymm2 {k7}, ymm3, ymm4, {rd-sae}
+0x62,0xf2,0x61,0x3f,0xb8,0xd4
+
+# ATT:   vfmadd231ps {rz-sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vfmadd231ps ymm2 {k7} {z}, ymm3, ymm4, {rz-sae}
+0x62,0xf2,0x61,0xff,0xb8,0xd4
+
+# ATT:   vfmaddcph {rn-sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vfmaddcph ymm2, ymm3, ymm4, {rn-sae}
+0x62,0xf6,0x62,0x18,0x56,0xd4
+
+# ATT:   vfmaddcph {rd-sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vfmaddcph ymm2 {k7}, ymm3, ymm4, {rd-sae}
+0x62,0xf6,0x62,0x3f,0x56,0xd4
+
+# ATT:   vfmaddcph {rz-sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vfmaddcph ymm2 {k7} {z}, ymm3, ymm4, {rz-sae}
+0x62,0xf6,0x62,0xff,0x56,0xd4
+
+# ATT:   vfmaddsub132pd {rn-sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vfmaddsub132pd ymm2, ymm3, ymm4, {rn-sae}
+0x62,0xf2,0xe1,0x18,0x96,0xd4
+
+# ATT:   vfmaddsub132pd {rd-sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vfmaddsub132pd ymm2 {k7}, ymm3, ymm4, {rd-sae}
+0x62,0xf2,0xe1,0x3f,0x96,0xd4
+
+# ATT:   vfmaddsub132pd {rz-sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vfmaddsub132pd ymm2 {k7} {z}, ymm3, ymm4, {rz-sae}
+0x62,0xf2,0xe1,0xff,0x96,0xd4
+
+# ATT:   vfmaddsub132ph {rn-sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vfmaddsub132ph ymm2, ymm3, ymm4, {rn-sae}
+0x62,0xf6,0x61,0x18,0x96,0xd4
+
+# ATT:   vfmaddsub132ph {rd-sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vfmaddsub132ph ymm2 {k7}, ymm3, ymm4, {rd-sae}
+0x62,0xf6,0x61,0x3f,0x96,0xd4
+
+# ATT:   vfmaddsub132ph {rz-sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vfmaddsub132ph ymm2 {k7} {z}, ymm3, ymm4, {rz-sae}
+0x62,0xf6,0x61,0xff,0x96,0xd4
+
+# ATT:   vfmaddsub132ps {rn-sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vfmaddsub132ps ymm2, ymm3, ymm4, {rn-sae}
+0x62,0xf2,0x61,0x18,0x96,0xd4
+
+# ATT:   vfmaddsub132ps {rd-sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vfmaddsub132ps ymm2 {k7}, ymm3, ymm4, {rd-sae}
+0x62,0xf2,0x61,0x3f,0x96,0xd4
+
+# ATT:   vfmaddsub132ps {rz-sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vfmaddsub132ps ymm2 {k7} {z}, ymm3, ymm4, {rz-sae}
+0x62,0xf2,0x61,0xff,0x96,0xd4
+
+# ATT:   vfmaddsub213pd {rn-sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vfmaddsub213pd ymm2, ymm3, ymm4, {rn-sae}
+0x62,0xf2,0xe1,0x18,0xa6,0xd4
+
+# ATT:   vfmaddsub213pd {rd-sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vfmaddsub213pd ymm2 {k7}, ymm3, ymm4, {rd-sae}
+0x62,0xf2,0xe1,0x3f,0xa6,0xd4
+
+# ATT:   vfmaddsub213pd {rz-sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vfmaddsub213pd ymm2 {k7} {z}, ymm3, ymm4, {rz-sae}
+0x62,0xf2,0xe1,0xff,0xa6,0xd4
+
+# ATT:   vfmaddsub213ph {rn-sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vfmaddsub213ph ymm2, ymm3, ymm4, {rn-sae}
+0x62,0xf6,0x61,0x18,0xa6,0xd4
+
+# ATT:   vfmaddsub213ph {rd-sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vfmaddsub213ph ymm2 {k7}, ymm3, ymm4, {rd-sae}
+0x62,0xf6,0x61,0x3f,0xa6,0xd4
+
+# ATT:   vfmaddsub213ph {rz-sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vfmaddsub213ph ymm2 {k7} {z}, ymm3, ymm4, {rz-sae}
+0x62,0xf6,0x61,0xff,0xa6,0xd4
+
+# ATT:   vfmaddsub213ps {rn-sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vfmaddsub213ps ymm2, ymm3, ymm4, {rn-sae}
+0x62,0xf2,0x61,0x18,0xa6,0xd4
+
+# ATT:   vfmaddsub213ps {rd-sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vfmaddsub213ps ymm2 {k7}, ymm3, ymm4, {rd-sae}
+0x62,0xf2,0x61,0x3f,0xa6,0xd4
+
+# ATT:   vfmaddsub213ps {rz-sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vfmaddsub213ps ymm2 {k7} {z}, ymm3, ymm4, {rz-sae}
+0x62,0xf2,0x61,0xff,0xa6,0xd4
+
+# ATT:   vfmaddsub231pd {rn-sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vfmaddsub231pd ymm2, ymm3, ymm4, {rn-sae}
+0x62,0xf2,0xe1,0x18,0xb6,0xd4
+
+# ATT:   vfmaddsub231pd {rd-sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vfmaddsub231pd ymm2 {k7}, ymm3, ymm4, {rd-sae}
+0x62,0xf2,0xe1,0x3f,0xb6,0xd4
+
+# ATT:   vfmaddsub231pd {rz-sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vfmaddsub231pd ymm2 {k7} {z}, ymm3, ymm4, {rz-sae}
+0x62,0xf2,0xe1,0xff,0xb6,0xd4
+
+# ATT:   vfmaddsub231ph {rn-sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vfmaddsub231ph ymm2, ymm3, ymm4, {rn-sae}
+0x62,0xf6,0x61,0x18,0xb6,0xd4
+
+# ATT:   vfmaddsub231ph {rd-sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vfmaddsub231ph ymm2 {k7}, ymm3, ymm4, {rd-sae}
+0x62,0xf6,0x61,0x3f,0xb6,0xd4
+
+# ATT:   vfmaddsub231ph {rz-sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vfmaddsub231ph ymm2 {k7} {z}, ymm3, ymm4, {rz-sae}
+0x62,0xf6,0x61,0xff,0xb6,0xd4
+
+# ATT:   vfmaddsub231ps {rn-sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vfmaddsub231ps ymm2, ymm3, ymm4, {rn-sae}
+0x62,0xf2,0x61,0x18,0xb6,0xd4
+
+# ATT:   vfmaddsub231ps {rd-sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vfmaddsub231ps ymm2 {k7}, ymm3, ymm4, {rd-sae}
+0x62,0xf2,0x61,0x3f,0xb6,0xd4
+
+# ATT:   vfmaddsub231ps {rz-sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vfmaddsub231ps ymm2 {k7} {z}, ymm3, ymm4, {rz-sae}
+0x62,0xf2,0x61,0xff,0xb6,0xd4
+
+# ATT:   vfmsub132pd {rn-sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vfmsub132pd ymm2, ymm3, ymm4, {rn-sae}
+0x62,0xf2,0xe1,0x18,0x9a,0xd4
+
+# ATT:   vfmsub132pd {rd-sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vfmsub132pd ymm2 {k7}, ymm3, ymm4, {rd-sae}
+0x62,0xf2,0xe1,0x3f,0x9a,0xd4
+
+# ATT:   vfmsub132pd {rz-sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vfmsub132pd ymm2 {k7} {z}, ymm3, ymm4, {rz-sae}
+0x62,0xf2,0xe1,0xff,0x9a,0xd4
+
+# ATT:   vfmsub132ph {rn-sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vfmsub132ph ymm2, ymm3, ymm4, {rn-sae}
+0x62,0xf6,0x61,0x18,0x9a,0xd4
+
+# ATT:   vfmsub132ph {rd-sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vfmsub132ph ymm2 {k7}, ymm3, ymm4, {rd-sae}
+0x62,0xf6,0x61,0x3f,0x9a,0xd4
+
+# ATT:   vfmsub132ph {rz-sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vfmsub132ph ymm2 {k7} {z}, ymm3, ymm4, {rz-sae}
+0x62,0xf6,0x61,0xff,0x9a,0xd4
+
+# ATT:   vfmsub132ps {rn-sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vfmsub132ps ymm2, ymm3, ymm4, {rn-sae}
+0x62,0xf2,0x61,0x18,0x9a,0xd4
+
+# ATT:   vfmsub132ps {rd-sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vfmsub132ps ymm2 {k7}, ymm3, ymm4, {rd-sae}
+0x62,0xf2,0x61,0x3f,0x9a,0xd4
+
+# ATT:   vfmsub132ps {rz-sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vfmsub132ps ymm2 {k7} {z}, ymm3, ymm4, {rz-sae}
+0x62,0xf2,0x61,0xff,0x9a,0xd4
+
+# ATT:   vfmsub213pd {rn-sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vfmsub213pd ymm2, ymm3, ymm4, {rn-sae}
+0x62,0xf2,0xe1,0x18,0xaa,0xd4
+
+# ATT:   vfmsub213pd {rd-sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vfmsub213pd ymm2 {k7}, ymm3, ymm4, {rd-sae}
+0x62,0xf2,0xe1,0x3f,0xaa,0xd4
+
+# ATT:   vfmsub213pd {rz-sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vfmsub213pd ymm2 {k7} {z}, ymm3, ymm4, {rz-sae}
+0x62,0xf2,0xe1,0xff,0xaa,0xd4
+
+# ATT:   vfmsub213ph {rn-sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vfmsub213ph ymm2, ymm3, ymm4, {rn-sae}
+0x62,0xf6,0x61,0x18,0xaa,0xd4
+
+# ATT:   vfmsub213ph {rd-sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vfmsub213ph ymm2 {k7}, ymm3, ymm4, {rd-sae}
+0x62,0xf6,0x61,0x3f,0xaa,0xd4
+
+# ATT:   vfmsub213ph {rz-sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vfmsub213ph ymm2 {k7} {z}, ymm3, ymm4, {rz-sae}
+0x62,0xf6,0x61,0xff,0xaa,0xd4
+
+# ATT:   vfmsub213ps {rn-sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vfmsub213ps ymm2, ymm3, ymm4, {rn-sae}
+0x62,0xf2,0x61,0x18,0xaa,0xd4
+
+# ATT:   vfmsub213ps {rd-sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vfmsub213ps ymm2 {k7}, ymm3, ymm4, {rd-sae}
+0x62,0xf2,0x61,0x3f,0xaa,0xd4
+
+# ATT:   vfmsub213ps {rz-sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vfmsub213ps ymm2 {k7} {z}, ymm3, ymm4, {rz-sae}
+0x62,0xf2,0x61,0xff,0xaa,0xd4
+
+# ATT:   vfmsub231pd {rn-sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vfmsub231pd ymm2, ymm3, ymm4, {rn-sae}
+0x62,0xf2,0xe1,0x18,0xba,0xd4
+
+# ATT:   vfmsub231pd {rd-sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vfmsub231pd ymm2 {k7}, ymm3, ymm4, {rd-sae}
+0x62,0xf2,0xe1,0x3f,0xba,0xd4
+
+# ATT:   vfmsub231pd {rz-sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vfmsub231pd ymm2 {k7} {z}, ymm3, ymm4, {rz-sae}
+0x62,0xf2,0xe1,0xff,0xba,0xd4
+
+# ATT:   vfmsub231ph {rn-sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vfmsub231ph ymm2, ymm3, ymm4, {rn-sae}
+0x62,0xf6,0x61,0x18,0xba,0xd4
+
+# ATT:   vfmsub231ph {rd-sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vfmsub231ph ymm2 {k7}, ymm3, ymm4, {rd-sae}
+0x62,0xf6,0x61,0x3f,0xba,0xd4
+
+# ATT:   vfmsub231ph {rz-sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vfmsub231ph ymm2 {k7} {z}, ymm3, ymm4, {rz-sae}
+0x62,0xf6,0x61,0xff,0xba,0xd4
+
+# ATT:   vfmsub231ps {rn-sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vfmsub231ps ymm2, ymm3, ymm4, {rn-sae}
+0x62,0xf2,0x61,0x18,0xba,0xd4
+
+# ATT:   vfmsub231ps {rd-sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vfmsub231ps ymm2 {k7}, ymm3, ymm4, {rd-sae}
+0x62,0xf2,0x61,0x3f,0xba,0xd4
+
+# ATT:   vfmsub231ps {rz-sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vfmsub231ps ymm2 {k7} {z}, ymm3, ymm4, {rz-sae}
+0x62,0xf2,0x61,0xff,0xba,0xd4
+
+# ATT:   vfmsubadd132pd {rn-sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vfmsubadd132pd ymm2, ymm3, ymm4, {rn-sae}
+0x62,0xf2,0xe1,0x18,0x97,0xd4
+
+# ATT:   vfmsubadd132pd {rd-sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vfmsubadd132pd ymm2 {k7}, ymm3, ymm4, {rd-sae}
+0x62,0xf2,0xe1,0x3f,0x97,0xd4
+
+# ATT:   vfmsubadd132pd {rz-sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vfmsubadd132pd ymm2 {k7} {z}, ymm3, ymm4, {rz-sae}
+0x62,0xf2,0xe1,0xff,0x97,0xd4
+
+# ATT:   vfmsubadd132ph {rn-sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vfmsubadd132ph ymm2, ymm3, ymm4, {rn-sae}
+0x62,0xf6,0x61,0x18,0x97,0xd4
+
+# ATT:   vfmsubadd132ph {rd-sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vfmsubadd132ph ymm2 {k7}, ymm3, ymm4, {rd-sae}
+0x62,0xf6,0x61,0x3f,0x97,0xd4
+
+# ATT:   vfmsubadd132ph {rz-sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vfmsubadd132ph ymm2 {k7} {z}, ymm3, ymm4, {rz-sae}
+0x62,0xf6,0x61,0xff,0x97,0xd4
+
+# ATT:   vfmsubadd132ps {rn-sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vfmsubadd132ps ymm2, ymm3, ymm4, {rn-sae}
+0x62,0xf2,0x61,0x18,0x97,0xd4
+
+# ATT:   vfmsubadd132ps {rd-sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vfmsubadd132ps ymm2 {k7}, ymm3, ymm4, {rd-sae}
+0x62,0xf2,0x61,0x3f,0x97,0xd4
+
+# ATT:   vfmsubadd132ps {rz-sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vfmsubadd132ps ymm2 {k7} {z}, ymm3, ymm4, {rz-sae}
+0x62,0xf2,0x61,0xff,0x97,0xd4
+
+# ATT:   vfmsubadd213pd {rn-sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vfmsubadd213pd ymm2, ymm3, ymm4, {rn-sae}
+0x62,0xf2,0xe1,0x18,0xa7,0xd4
+
+# ATT:   vfmsubadd213pd {rd-sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vfmsubadd213pd ymm2 {k7}, ymm3, ymm4, {rd-sae}
+0x62,0xf2,0xe1,0x3f,0xa7,0xd4
+
+# ATT:   vfmsubadd213pd {rz-sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vfmsubadd213pd ymm2 {k7} {z}, ymm3, ymm4, {rz-sae}
+0x62,0xf2,0xe1,0xff,0xa7,0xd4
+
+# ATT:   vfmsubadd213ph {rn-sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vfmsubadd213ph ymm2, ymm3, ymm4, {rn-sae}
+0x62,0xf6,0x61,0x18,0xa7,0xd4
+
+# ATT:   vfmsubadd213ph {rd-sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vfmsubadd213ph ymm2 {k7}, ymm3, ymm4, {rd-sae}
+0x62,0xf6,0x61,0x3f,0xa7,0xd4
+
+# ATT:   vfmsubadd213ph {rz-sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vfmsubadd213ph ymm2 {k7} {z}, ymm3, ymm4, {rz-sae}
+0x62,0xf6,0x61,0xff,0xa7,0xd4
+
+# ATT:   vfmsubadd213ps {rn-sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vfmsubadd213ps ymm2, ymm3, ymm4, {rn-sae}
+0x62,0xf2,0x61,0x18,0xa7,0xd4
+
+# ATT:   vfmsubadd213ps {rd-sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vfmsubadd213ps ymm2 {k7}, ymm3, ymm4, {rd-sae}
+0x62,0xf2,0x61,0x3f,0xa7,0xd4
+
+# ATT:   vfmsubadd213ps {rz-sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vfmsubadd213ps ymm2 {k7} {z}, ymm3, ymm4, {rz-sae}
+0x62,0xf2,0x61,0xff,0xa7,0xd4
+
+# ATT:   vfmsubadd231pd {rn-sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vfmsubadd231pd ymm2, ymm3, ymm4, {rn-sae}
+0x62,0xf2,0xe1,0x18,0xb7,0xd4
+
+# ATT:   vfmsubadd231pd {rd-sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vfmsubadd231pd ymm2 {k7}, ymm3, ymm4, {rd-sae}
+0x62,0xf2,0xe1,0x3f,0xb7,0xd4
+
+# ATT:   vfmsubadd231pd {rz-sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vfmsubadd231pd ymm2 {k7} {z}, ymm3, ymm4, {rz-sae}
+0x62,0xf2,0xe1,0xff,0xb7,0xd4
+
+# ATT:   vfmsubadd231ph {rn-sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vfmsubadd231ph ymm2, ymm3, ymm4, {rn-sae}
+0x62,0xf6,0x61,0x18,0xb7,0xd4
+
+# ATT:   vfmsubadd231ph {rd-sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vfmsubadd231ph ymm2 {k7}, ymm3, ymm4, {rd-sae}
+0x62,0xf6,0x61,0x3f,0xb7,0xd4
+
+# ATT:   vfmsubadd231ph {rz-sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vfmsubadd231ph ymm2 {k7} {z}, ymm3, ymm4, {rz-sae}
+0x62,0xf6,0x61,0xff,0xb7,0xd4
+
+# ATT:   vfmsubadd231ps {rn-sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vfmsubadd231ps ymm2, ymm3, ymm4, {rn-sae}
+0x62,0xf2,0x61,0x18,0xb7,0xd4
+
+# ATT:   vfmsubadd231ps {rd-sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vfmsubadd231ps ymm2 {k7}, ymm3, ymm4, {rd-sae}
+0x62,0xf2,0x61,0x3f,0xb7,0xd4
+
+# ATT:   vfmsubadd231ps {rz-sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vfmsubadd231ps ymm2 {k7} {z}, ymm3, ymm4, {rz-sae}
+0x62,0xf2,0x61,0xff,0xb7,0xd4
+
+# ATT:   vfmulcph {rn-sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vfmulcph ymm2, ymm3, ymm4, {rn-sae}
+0x62,0xf6,0x62,0x18,0xd6,0xd4
+
+# ATT:   vfmulcph {rd-sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vfmulcph ymm2 {k7}, ymm3, ymm4, {rd-sae}
+0x62,0xf6,0x62,0x3f,0xd6,0xd4
+
+# ATT:   vfmulcph {rz-sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vfmulcph ymm2 {k7} {z}, ymm3, ymm4, {rz-sae}
+0x62,0xf6,0x62,0xff,0xd6,0xd4
+
+# ATT:   vfnmadd132pd {rn-sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vfnmadd132pd ymm2, ymm3, ymm4, {rn-sae}
+0x62,0xf2,0xe1,0x18,0x9c,0xd4
+
+# ATT:   vfnmadd132pd {rd-sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vfnmadd132pd ymm2 {k7}, ymm3, ymm4, {rd-sae}
+0x62,0xf2,0xe1,0x3f,0x9c,0xd4
+
+# ATT:   vfnmadd132pd {rz-sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vfnmadd132pd ymm2 {k7} {z}, ymm3, ymm4, {rz-sae}
+0x62,0xf2,0xe1,0xff,0x9c,0xd4
+
+# ATT:   vfnmadd132ph {rn-sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vfnmadd132ph ymm2, ymm3, ymm4, {rn-sae}
+0x62,0xf6,0x61,0x18,0x9c,0xd4
+
+# ATT:   vfnmadd132ph {rd-sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vfnmadd132ph ymm2 {k7}, ymm3, ymm4, {rd-sae}
+0x62,0xf6,0x61,0x3f,0x9c,0xd4
+
+# ATT:   vfnmadd132ph {rz-sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vfnmadd132ph ymm2 {k7} {z}, ymm3, ymm4, {rz-sae}
+0x62,0xf6,0x61,0xff,0x9c,0xd4
+
+# ATT:   vfnmadd132ps {rn-sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vfnmadd132ps ymm2, ymm3, ymm4, {rn-sae}
+0x62,0xf2,0x61,0x18,0x9c,0xd4
+
+# ATT:   vfnmadd132ps {rd-sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vfnmadd132ps ymm2 {k7}, ymm3, ymm4, {rd-sae}
+0x62,0xf2,0x61,0x3f,0x9c,0xd4
+
+# ATT:   vfnmadd132ps {rz-sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vfnmadd132ps ymm2 {k7} {z}, ymm3, ymm4, {rz-sae}
+0x62,0xf2,0x61,0xff,0x9c,0xd4
+
+# ATT:   vfnmadd213pd {rn-sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vfnmadd213pd ymm2, ymm3, ymm4, {rn-sae}
+0x62,0xf2,0xe1,0x18,0xac,0xd4
+
+# ATT:   vfnmadd213pd {rd-sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vfnmadd213pd ymm2 {k7}, ymm3, ymm4, {rd-sae}
+0x62,0xf2,0xe1,0x3f,0xac,0xd4
+
+# ATT:   vfnmadd213pd {rz-sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vfnmadd213pd ymm2 {k7} {z}, ymm3, ymm4, {rz-sae}
+0x62,0xf2,0xe1,0xff,0xac,0xd4
+
+# ATT:   vfnmadd213ph {rn-sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vfnmadd213ph ymm2, ymm3, ymm4, {rn-sae}
+0x62,0xf6,0x61,0x18,0xac,0xd4
+
+# ATT:   vfnmadd213ph {rd-sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vfnmadd213ph ymm2 {k7}, ymm3, ymm4, {rd-sae}
+0x62,0xf6,0x61,0x3f,0xac,0xd4
+
+# ATT:   vfnmadd213ph {rz-sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vfnmadd213ph ymm2 {k7} {z}, ymm3, ymm4, {rz-sae}
+0x62,0xf6,0x61,0xff,0xac,0xd4
+
+# ATT:   vfnmadd213ps {rn-sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vfnmadd213ps ymm2, ymm3, ymm4, {rn-sae}
+0x62,0xf2,0x61,0x18,0xac,0xd4
+
+# ATT:   vfnmadd213ps {rd-sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vfnmadd213ps ymm2 {k7}, ymm3, ymm4, {rd-sae}
+0x62,0xf2,0x61,0x3f,0xac,0xd4
+
+# ATT:   vfnmadd213ps {rz-sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vfnmadd213ps ymm2 {k7} {z}, ymm3, ymm4, {rz-sae}
+0x62,0xf2,0x61,0xff,0xac,0xd4
+
+# ATT:   vfnmadd231pd {rn-sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vfnmadd231pd ymm2, ymm3, ymm4, {rn-sae}
+0x62,0xf2,0xe1,0x18,0xbc,0xd4
+
+# ATT:   vfnmadd231pd {rd-sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vfnmadd231pd ymm2 {k7}, ymm3, ymm4, {rd-sae}
+0x62,0xf2,0xe1,0x3f,0xbc,0xd4
+
+# ATT:   vfnmadd231pd {rz-sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vfnmadd231pd ymm2 {k7} {z}, ymm3, ymm4, {rz-sae}
+0x62,0xf2,0xe1,0xff,0xbc,0xd4
+
+# ATT:   vfnmadd231ph {rn-sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vfnmadd231ph ymm2, ymm3, ymm4, {rn-sae}
+0x62,0xf6,0x61,0x18,0xbc,0xd4
+
+# ATT:   vfnmadd231ph {rd-sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vfnmadd231ph ymm2 {k7}, ymm3, ymm4, {rd-sae}
+0x62,0xf6,0x61,0x3f,0xbc,0xd4
+
+# ATT:   vfnmadd231ph {rz-sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vfnmadd231ph ymm2 {k7} {z}, ymm3, ymm4, {rz-sae}
+0x62,0xf6,0x61,0xff,0xbc,0xd4
+
+# ATT:   vfnmadd231ps {rn-sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vfnmadd231ps ymm2, ymm3, ymm4, {rn-sae}
+0x62,0xf2,0x61,0x18,0xbc,0xd4
+
+# ATT:   vfnmadd231ps {rd-sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vfnmadd231ps ymm2 {k7}, ymm3, ymm4, {rd-sae}
+0x62,0xf2,0x61,0x3f,0xbc,0xd4
+
+# ATT:   vfnmadd231ps {rz-sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vfnmadd231ps ymm2 {k7} {z}, ymm3, ymm4, {rz-sae}
+0x62,0xf2,0x61,0xff,0xbc,0xd4
+
+# ATT:   vfnmsub132pd {rn-sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vfnmsub132pd ymm2, ymm3, ymm4, {rn-sae}
+0x62,0xf2,0xe1,0x18,0x9e,0xd4
+
+# ATT:   vfnmsub132pd {rd-sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vfnmsub132pd ymm2 {k7}, ymm3, ymm4, {rd-sae}
+0x62,0xf2,0xe1,0x3f,0x9e,0xd4
+
+# ATT:   vfnmsub132pd {rz-sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vfnmsub132pd ymm2 {k7} {z}, ymm3, ymm4, {rz-sae}
+0x62,0xf2,0xe1,0xff,0x9e,0xd4
+
+# ATT:   vfnmsub132ph {rn-sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vfnmsub132ph ymm2, ymm3, ymm4, {rn-sae}
+0x62,0xf6,0x61,0x18,0x9e,0xd4
+
+# ATT:   vfnmsub132ph {rd-sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vfnmsub132ph ymm2 {k7}, ymm3, ymm4, {rd-sae}
+0x62,0xf6,0x61,0x3f,0x9e,0xd4
+
+# ATT:   vfnmsub132ph {rz-sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vfnmsub132ph ymm2 {k7} {z}, ymm3, ymm4, {rz-sae}
+0x62,0xf6,0x61,0xff,0x9e,0xd4
+
+# ATT:   vfnmsub132ps {rn-sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vfnmsub132ps ymm2, ymm3, ymm4, {rn-sae}
+0x62,0xf2,0x61,0x18,0x9e,0xd4
+
+# ATT:   vfnmsub132ps {rd-sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vfnmsub132ps ymm2 {k7}, ymm3, ymm4, {rd-sae}
+0x62,0xf2,0x61,0x3f,0x9e,0xd4
+
+# ATT:   vfnmsub132ps {rz-sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vfnmsub132ps ymm2 {k7} {z}, ymm3, ymm4, {rz-sae}
+0x62,0xf2,0x61,0xff,0x9e,0xd4
+
+# ATT:   vfnmsub213pd {rn-sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vfnmsub213pd ymm2, ymm3, ymm4, {rn-sae}
+0x62,0xf2,0xe1,0x18,0xae,0xd4
+
+# ATT:   vfnmsub213pd {rd-sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vfnmsub213pd ymm2 {k7}, ymm3, ymm4, {rd-sae}
+0x62,0xf2,0xe1,0x3f,0xae,0xd4
+
+# ATT:   vfnmsub213pd {rz-sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vfnmsub213pd ymm2 {k7} {z}, ymm3, ymm4, {rz-sae}
+0x62,0xf2,0xe1,0xff,0xae,0xd4
+
+# ATT:   vfnmsub213ph {rn-sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vfnmsub213ph ymm2, ymm3, ymm4, {rn-sae}
+0x62,0xf6,0x61,0x18,0xae,0xd4
+
+# ATT:   vfnmsub213ph {rd-sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vfnmsub213ph ymm2 {k7}, ymm3, ymm4, {rd-sae}
+0x62,0xf6,0x61,0x3f,0xae,0xd4
+
+# ATT:   vfnmsub213ph {rz-sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vfnmsub213ph ymm2 {k7} {z}, ymm3, ymm4, {rz-sae}
+0x62,0xf6,0x61,0xff,0xae,0xd4
+
+# ATT:   vfnmsub213ps {rn-sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vfnmsub213ps ymm2, ymm3, ymm4, {rn-sae}
+0x62,0xf2,0x61,0x18,0xae,0xd4
+
+# ATT:   vfnmsub213ps {rd-sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vfnmsub213ps ymm2 {k7}, ymm3, ymm4, {rd-sae}
+0x62,0xf2,0x61,0x3f,0xae,0xd4
+
+# ATT:   vfnmsub213ps {rz-sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vfnmsub213ps ymm2 {k7} {z}, ymm3, ymm4, {rz-sae}
+0x62,0xf2,0x61,0xff,0xae,0xd4
+
+# ATT:   vfnmsub231pd {rn-sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vfnmsub231pd ymm2, ymm3, ymm4, {rn-sae}
+0x62,0xf2,0xe1,0x18,0xbe,0xd4
+
+# ATT:   vfnmsub231pd {rd-sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vfnmsub231pd ymm2 {k7}, ymm3, ymm4, {rd-sae}
+0x62,0xf2,0xe1,0x3f,0xbe,0xd4
+
+# ATT:   vfnmsub231pd {rz-sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vfnmsub231pd ymm2 {k7} {z}, ymm3, ymm4, {rz-sae}
+0x62,0xf2,0xe1,0xff,0xbe,0xd4
+
+# ATT:   vfnmsub231ph {rn-sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vfnmsub231ph ymm2, ymm3, ymm4, {rn-sae}
+0x62,0xf6,0x61,0x18,0xbe,0xd4
+
+# ATT:   vfnmsub231ph {rd-sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vfnmsub231ph ymm2 {k7}, ymm3, ymm4, {rd-sae}
+0x62,0xf6,0x61,0x3f,0xbe,0xd4
+
+# ATT:   vfnmsub231ph {rz-sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vfnmsub231ph ymm2 {k7} {z}, ymm3, ymm4, {rz-sae}
+0x62,0xf6,0x61,0xff,0xbe,0xd4
+
+# ATT:   vfnmsub231ps {rn-sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vfnmsub231ps ymm2, ymm3, ymm4, {rn-sae}
+0x62,0xf2,0x61,0x18,0xbe,0xd4
+
+# ATT:   vfnmsub231ps {rd-sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vfnmsub231ps ymm2 {k7}, ymm3, ymm4, {rd-sae}
+0x62,0xf2,0x61,0x3f,0xbe,0xd4
+
+# ATT:   vfnmsub231ps {rz-sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vfnmsub231ps ymm2 {k7} {z}, ymm3, ymm4, {rz-sae}
+0x62,0xf2,0x61,0xff,0xbe,0xd4
+
+# ATT:   vgetexppd {sae}, %ymm3, %ymm2
+# INTEL: vgetexppd ymm2, ymm3, {sae}
+0x62,0xf2,0xf9,0x18,0x42,0xd3
+
+# ATT:   vgetexppd {sae}, %ymm3, %ymm2 {%k7}
+# INTEL: vgetexppd ymm2 {k7}, ymm3, {sae}
+0x62,0xf2,0xf9,0x1f,0x42,0xd3
+
+# ATT:   vgetexppd {sae}, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vgetexppd ymm2 {k7} {z}, ymm3, {sae}
+0x62,0xf2,0xf9,0x9f,0x42,0xd3
+
+# ATT:   vgetexpph {sae}, %ymm3, %ymm2
+# INTEL: vgetexpph ymm2, ymm3, {sae}
+0x62,0xf6,0x79,0x18,0x42,0xd3
+
+# ATT:   vgetexpph {sae}, %ymm3, %ymm2 {%k7}
+# INTEL: vgetexpph ymm2 {k7}, ymm3, {sae}
+0x62,0xf6,0x79,0x1f,0x42,0xd3
+
+# ATT:   vgetexpph {sae}, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vgetexpph ymm2 {k7} {z}, ymm3, {sae}
+0x62,0xf6,0x79,0x9f,0x42,0xd3
+
+# ATT:   vgetexpps {sae}, %ymm3, %ymm2
+# INTEL: vgetexpps ymm2, ymm3, {sae}
+0x62,0xf2,0x79,0x18,0x42,0xd3
+
+# ATT:   vgetexpps {sae}, %ymm3, %ymm2 {%k7}
+# INTEL: vgetexpps ymm2 {k7}, ymm3, {sae}
+0x62,0xf2,0x79,0x1f,0x42,0xd3
+
+# ATT:   vgetexpps {sae}, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vgetexpps ymm2 {k7} {z}, ymm3, {sae}
+0x62,0xf2,0x79,0x9f,0x42,0xd3
+
+# ATT:   vgetmantpd $123, {sae}, %ymm3, %ymm2
+# INTEL: vgetmantpd ymm2, ymm3, {sae}, 123
+0x62,0xf3,0xf9,0x18,0x26,0xd3,0x7b
+
+# ATT:   vgetmantpd $123, {sae}, %ymm3, %ymm2 {%k7}
+# INTEL: vgetmantpd ymm2 {k7}, ymm3, {sae}, 123
+0x62,0xf3,0xf9,0x1f,0x26,0xd3,0x7b
+
+# ATT:   vgetmantpd $123, {sae}, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vgetmantpd ymm2 {k7} {z}, ymm3, {sae}, 123
+0x62,0xf3,0xf9,0x9f,0x26,0xd3,0x7b
+
+# ATT:   vgetmantph $123, {sae}, %ymm3, %ymm2
+# INTEL: vgetmantph ymm2, ymm3, {sae}, 123
+0x62,0xf3,0x78,0x18,0x26,0xd3,0x7b
+
+# ATT:   vgetmantph $123, {sae}, %ymm3, %ymm2 {%k7}
+# INTEL: vgetmantph ymm2 {k7}, ymm3, {sae}, 123
+0x62,0xf3,0x78,0x1f,0x26,0xd3,0x7b
+
+# ATT:   vgetmantph $123, {sae}, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vgetmantph ymm2 {k7} {z}, ymm3, {sae}, 123
+0x62,0xf3,0x78,0x9f,0x26,0xd3,0x7b
+
+# ATT:   vgetmantps $123, {sae}, %ymm3, %ymm2
+# INTEL: vgetmantps ymm2, ymm3, {sae}, 123
+0x62,0xf3,0x79,0x18,0x26,0xd3,0x7b
+
+# ATT:   vgetmantps $123, {sae}, %ymm3, %ymm2 {%k7}
+# INTEL: vgetmantps ymm2 {k7}, ymm3, {sae}, 123
+0x62,0xf3,0x79,0x1f,0x26,0xd3,0x7b
+
+# ATT:   vgetmantps $123, {sae}, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vgetmantps ymm2 {k7} {z}, ymm3, {sae}, 123
+0x62,0xf3,0x79,0x9f,0x26,0xd3,0x7b
+
+# ATT:   vmaxpd {sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vmaxpd ymm2, ymm3, ymm4, {sae}
+0x62,0xf1,0xe1,0x18,0x5f,0xd4
+
+# ATT:   vmaxpd {sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vmaxpd ymm2 {k7}, ymm3, ymm4, {sae}
+0x62,0xf1,0xe1,0x1f,0x5f,0xd4
+
+# ATT:   vmaxpd {sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vmaxpd ymm2 {k7} {z}, ymm3, ymm4, {sae}
+0x62,0xf1,0xe1,0x9f,0x5f,0xd4
+
+# ATT:   vmaxph {sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vmaxph ymm2, ymm3, ymm4, {sae}
+0x62,0xf5,0x60,0x18,0x5f,0xd4
+
+# ATT:   vmaxph {sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vmaxph ymm2 {k7}, ymm3, ymm4, {sae}
+0x62,0xf5,0x60,0x1f,0x5f,0xd4
+
+# ATT:   vmaxph {sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vmaxph ymm2 {k7} {z}, ymm3, ymm4, {sae}
+0x62,0xf5,0x60,0x9f,0x5f,0xd4
+
+# ATT:   vmaxps {sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vmaxps ymm2, ymm3, ymm4, {sae}
+0x62,0xf1,0x60,0x18,0x5f,0xd4
+
+# ATT:   vmaxps {sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vmaxps ymm2 {k7}, ymm3, ymm4, {sae}
+0x62,0xf1,0x60,0x1f,0x5f,0xd4
+
+# ATT:   vmaxps {sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vmaxps ymm2 {k7} {z}, ymm3, ymm4, {sae}
+0x62,0xf1,0x60,0x9f,0x5f,0xd4
+
+# ATT:   vminpd {sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vminpd ymm2, ymm3, ymm4, {sae}
+0x62,0xf1,0xe1,0x18,0x5d,0xd4
+
+# ATT:   vminpd {sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vminpd ymm2 {k7}, ymm3, ymm4, {sae}
+0x62,0xf1,0xe1,0x1f,0x5d,0xd4
+
+# ATT:   vminpd {sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vminpd ymm2 {k7} {z}, ymm3, ymm4, {sae}
+0x62,0xf1,0xe1,0x9f,0x5d,0xd4
+
+# ATT:   vminph {sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vminph ymm2, ymm3, ymm4, {sae}
+0x62,0xf5,0x60,0x18,0x5d,0xd4
+
+# ATT:   vminph {sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vminph ymm2 {k7}, ymm3, ymm4, {sae}
+0x62,0xf5,0x60,0x1f,0x5d,0xd4
+
+# ATT:   vminph {sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vminph ymm2 {k7} {z}, ymm3, ymm4, {sae}
+0x62,0xf5,0x60,0x9f,0x5d,0xd4
+
+# ATT:   vminps {sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vminps ymm2, ymm3, ymm4, {sae}
+0x62,0xf1,0x60,0x18,0x5d,0xd4
+
+# ATT:   vminps {sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vminps ymm2 {k7}, ymm3, ymm4, {sae}
+0x62,0xf1,0x60,0x1f,0x5d,0xd4
+
+# ATT:   vminps {sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vminps ymm2 {k7} {z}, ymm3, ymm4, {sae}
+0x62,0xf1,0x60,0x9f,0x5d,0xd4
+
+# ATT:   vmulpd {rn-sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vmulpd ymm2, ymm3, ymm4, {rn-sae}
+0x62,0xf1,0xe1,0x18,0x59,0xd4
+
+# ATT:   vmulpd {rd-sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vmulpd ymm2 {k7}, ymm3, ymm4, {rd-sae}
+0x62,0xf1,0xe1,0x3f,0x59,0xd4
+
+# ATT:   vmulpd {rz-sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vmulpd ymm2 {k7} {z}, ymm3, ymm4, {rz-sae}
+0x62,0xf1,0xe1,0xff,0x59,0xd4
+
+# ATT:   vmulph {rn-sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vmulph ymm2, ymm3, ymm4, {rn-sae}
+0x62,0xf5,0x60,0x18,0x59,0xd4
+
+# ATT:   vmulph {rd-sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vmulph ymm2 {k7}, ymm3, ymm4, {rd-sae}
+0x62,0xf5,0x60,0x3f,0x59,0xd4
+
+# ATT:   vmulph {rz-sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vmulph ymm2 {k7} {z}, ymm3, ymm4, {rz-sae}
+0x62,0xf5,0x60,0xff,0x59,0xd4
+
+# ATT:   vmulps {rn-sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vmulps ymm2, ymm3, ymm4, {rn-sae}
+0x62,0xf1,0x60,0x18,0x59,0xd4
+
+# ATT:   vmulps {rd-sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vmulps ymm2 {k7}, ymm3, ymm4, {rd-sae}
+0x62,0xf1,0x60,0x3f,0x59,0xd4
+
+# ATT:   vmulps {rz-sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vmulps ymm2 {k7} {z}, ymm3, ymm4, {rz-sae}
+0x62,0xf1,0x60,0xff,0x59,0xd4
+
+# ATT:   vrangepd $123, {sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vrangepd ymm2, ymm3, ymm4, {sae}, 123
+0x62,0xf3,0xe1,0x18,0x50,0xd4,0x7b
+
+# ATT:   vrangepd $123, {sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vrangepd ymm2 {k7}, ymm3, ymm4, {sae}, 123
+0x62,0xf3,0xe1,0x1f,0x50,0xd4,0x7b
+
+# ATT:   vrangepd $123, {sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vrangepd ymm2 {k7} {z}, ymm3, ymm4, {sae}, 123
+0x62,0xf3,0xe1,0x9f,0x50,0xd4,0x7b
+
+# ATT:   vrangeps $123, {sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vrangeps ymm2, ymm3, ymm4, {sae}, 123
+0x62,0xf3,0x61,0x18,0x50,0xd4,0x7b
+
+# ATT:   vrangeps $123, {sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vrangeps ymm2 {k7}, ymm3, ymm4, {sae}, 123
+0x62,0xf3,0x61,0x1f,0x50,0xd4,0x7b
+
+# ATT:   vrangeps $123, {sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vrangeps ymm2 {k7} {z}, ymm3, ymm4, {sae}, 123
+0x62,0xf3,0x61,0x9f,0x50,0xd4,0x7b
+
+# ATT:   vreducepd $123, {sae}, %ymm3, %ymm2
+# INTEL: vreducepd ymm2, ymm3, {sae}, 123
+0x62,0xf3,0xf9,0x18,0x56,0xd3,0x7b
+
+# ATT:   vreducepd $123, {sae}, %ymm3, %ymm2 {%k7}
+# INTEL: vreducepd ymm2 {k7}, ymm3, {sae}, 123
+0x62,0xf3,0xf9,0x1f,0x56,0xd3,0x7b
+
+# ATT:   vreducepd $123, {sae}, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vreducepd ymm2 {k7} {z}, ymm3, {sae}, 123
+0x62,0xf3,0xf9,0x9f,0x56,0xd3,0x7b
+
+# ATT:   vreduceph $123, {sae}, %ymm3, %ymm2
+# INTEL: vreduceph ymm2, ymm3, {sae}, 123
+0x62,0xf3,0x78,0x18,0x56,0xd3,0x7b
+
+# ATT:   vreduceph $123, {sae}, %ymm3, %ymm2 {%k7}
+# INTEL: vreduceph ymm2 {k7}, ymm3, {sae}, 123
+0x62,0xf3,0x78,0x1f,0x56,0xd3,0x7b
+
+# ATT:   vreduceph $123, {sae}, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vreduceph ymm2 {k7} {z}, ymm3, {sae}, 123
+0x62,0xf3,0x78,0x9f,0x56,0xd3,0x7b
+
+# ATT:   vreduceps $123, {sae}, %ymm3, %ymm2
+# INTEL: vreduceps ymm2, ymm3, {sae}, 123
+0x62,0xf3,0x79,0x18,0x56,0xd3,0x7b
+
+# ATT:   vreduceps $123, {sae}, %ymm3, %ymm2 {%k7}
+# INTEL: vreduceps ymm2 {k7}, ymm3, {sae}, 123
+0x62,0xf3,0x79,0x1f,0x56,0xd3,0x7b
+
+# ATT:   vreduceps $123, {sae}, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vreduceps ymm2 {k7} {z}, ymm3, {sae}, 123
+0x62,0xf3,0x79,0x9f,0x56,0xd3,0x7b
+
+# ATT:   vrndscalepd $123, {sae}, %ymm3, %ymm2
+# INTEL: vrndscalepd ymm2, ymm3, {sae}, 123
+0x62,0xf3,0xf9,0x18,0x09,0xd3,0x7b
+
+# ATT:   vrndscalepd $123, {sae}, %ymm3, %ymm2 {%k7}
+# INTEL: vrndscalepd ymm2 {k7}, ymm3, {sae}, 123
+0x62,0xf3,0xf9,0x1f,0x09,0xd3,0x7b
+
+# ATT:   vrndscalepd $123, {sae}, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vrndscalepd ymm2 {k7} {z}, ymm3, {sae}, 123
+0x62,0xf3,0xf9,0x9f,0x09,0xd3,0x7b
+
+# ATT:   vrndscaleph $123, {sae}, %ymm3, %ymm2
+# INTEL: vrndscaleph ymm2, ymm3, {sae}, 123
+0x62,0xf3,0x78,0x18,0x08,0xd3,0x7b
+
+# ATT:   vrndscaleph $123, {sae}, %ymm3, %ymm2 {%k7}
+# INTEL: vrndscaleph ymm2 {k7}, ymm3, {sae}, 123
+0x62,0xf3,0x78,0x1f,0x08,0xd3,0x7b
+
+# ATT:   vrndscaleph $123, {sae}, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vrndscaleph ymm2 {k7} {z}, ymm3, {sae}, 123
+0x62,0xf3,0x78,0x9f,0x08,0xd3,0x7b
+
+# ATT:   vrndscaleps $123, {sae}, %ymm3, %ymm2
+# INTEL: vrndscaleps ymm2, ymm3, {sae}, 123
+0x62,0xf3,0x79,0x18,0x08,0xd3,0x7b
+
+# ATT:   vrndscaleps $123, {sae}, %ymm3, %ymm2 {%k7}
+# INTEL: vrndscaleps ymm2 {k7}, ymm3, {sae}, 123
+0x62,0xf3,0x79,0x1f,0x08,0xd3,0x7b
+
+# ATT:   vrndscaleps $123, {sae}, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vrndscaleps ymm2 {k7} {z}, ymm3, {sae}, 123
+0x62,0xf3,0x79,0x9f,0x08,0xd3,0x7b
+
+# ATT:   vscalefpd {rn-sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vscalefpd ymm2, ymm3, ymm4, {rn-sae}
+0x62,0xf2,0xe1,0x18,0x2c,0xd4
+
+# ATT:   vscalefpd {rd-sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vscalefpd ymm2 {k7}, ymm3, ymm4, {rd-sae}
+0x62,0xf2,0xe1,0x3f,0x2c,0xd4
+
+# ATT:   vscalefpd {rz-sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vscalefpd ymm2 {k7} {z}, ymm3, ymm4, {rz-sae}
+0x62,0xf2,0xe1,0xff,0x2c,0xd4
+
+# ATT:   vscalefph {rn-sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vscalefph ymm2, ymm3, ymm4, {rn-sae}
+0x62,0xf6,0x61,0x18,0x2c,0xd4
+
+# ATT:   vscalefph {rd-sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vscalefph ymm2 {k7}, ymm3, ymm4, {rd-sae}
+0x62,0xf6,0x61,0x3f,0x2c,0xd4
+
+# ATT:   vscalefph {rz-sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vscalefph ymm2 {k7} {z}, ymm3, ymm4, {rz-sae}
+0x62,0xf6,0x61,0xff,0x2c,0xd4
+
+# ATT:   vscalefps {rn-sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vscalefps ymm2, ymm3, ymm4, {rn-sae}
+0x62,0xf2,0x61,0x18,0x2c,0xd4
+
+# ATT:   vscalefps {rd-sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vscalefps ymm2 {k7}, ymm3, ymm4, {rd-sae}
+0x62,0xf2,0x61,0x3f,0x2c,0xd4
+
+# ATT:   vscalefps {rz-sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vscalefps ymm2 {k7} {z}, ymm3, ymm4, {rz-sae}
+0x62,0xf2,0x61,0xff,0x2c,0xd4
+
+# ATT:   vsqrtpd {rn-sae}, %ymm3, %ymm2
+# INTEL: vsqrtpd ymm2, ymm3, {rn-sae}
+0x62,0xf1,0xf9,0x18,0x51,0xd3
+
+# ATT:   vsqrtpd {rd-sae}, %ymm3, %ymm2 {%k7}
+# INTEL: vsqrtpd ymm2 {k7}, ymm3, {rd-sae}
+0x62,0xf1,0xf9,0x3f,0x51,0xd3
+
+# ATT:   vsqrtpd {rz-sae}, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vsqrtpd ymm2 {k7} {z}, ymm3, {rz-sae}
+0x62,0xf1,0xf9,0xff,0x51,0xd3
+
+# ATT:   vsqrtph {rn-sae}, %ymm3, %ymm2
+# INTEL: vsqrtph ymm2, ymm3, {rn-sae}
+0x62,0xf5,0x78,0x18,0x51,0xd3
+
+# ATT:   vsqrtph {rd-sae}, %ymm3, %ymm2 {%k7}
+# INTEL: vsqrtph ymm2 {k7}, ymm3, {rd-sae}
+0x62,0xf5,0x78,0x3f,0x51,0xd3
+
+# ATT:   vsqrtph {rz-sae}, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vsqrtph ymm2 {k7} {z}, ymm3, {rz-sae}
+0x62,0xf5,0x78,0xff,0x51,0xd3
+
+# ATT:   vsqrtps {rn-sae}, %ymm3, %ymm2
+# INTEL: vsqrtps ymm2, ymm3, {rn-sae}
+0x62,0xf1,0x78,0x18,0x51,0xd3
+
+# ATT:   vsqrtps {rd-sae}, %ymm3, %ymm2 {%k7}
+# INTEL: vsqrtps ymm2 {k7}, ymm3, {rd-sae}
+0x62,0xf1,0x78,0x3f,0x51,0xd3
+
+# ATT:   vsqrtps {rz-sae}, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vsqrtps ymm2 {k7} {z}, ymm3, {rz-sae}
+0x62,0xf1,0x78,0xff,0x51,0xd3
+
+# ATT:   vsubpd {rn-sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vsubpd ymm2, ymm3, ymm4, {rn-sae}
+0x62,0xf1,0xe1,0x18,0x5c,0xd4
+
+# ATT:   vsubpd {rd-sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vsubpd ymm2 {k7}, ymm3, ymm4, {rd-sae}
+0x62,0xf1,0xe1,0x3f,0x5c,0xd4
+
+# ATT:   vsubpd {rz-sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vsubpd ymm2 {k7} {z}, ymm3, ymm4, {rz-sae}
+0x62,0xf1,0xe1,0xff,0x5c,0xd4
+
+# ATT:   vsubph {rn-sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vsubph ymm2, ymm3, ymm4, {rn-sae}
+0x62,0xf5,0x60,0x18,0x5c,0xd4
+
+# ATT:   vsubph {rd-sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vsubph ymm2 {k7}, ymm3, ymm4, {rd-sae}
+0x62,0xf5,0x60,0x3f,0x5c,0xd4
+
+# ATT:   vsubph {rz-sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vsubph ymm2 {k7} {z}, ymm3, ymm4, {rz-sae}
+0x62,0xf5,0x60,0xff,0x5c,0xd4
+
+# ATT:   vsubps {rn-sae}, %ymm4, %ymm3, %ymm2
+# INTEL: vsubps ymm2, ymm3, ymm4, {rn-sae}
+0x62,0xf1,0x60,0x18,0x5c,0xd4
+
+# ATT:   vsubps {rd-sae}, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vsubps ymm2 {k7}, ymm3, ymm4, {rd-sae}
+0x62,0xf1,0x60,0x3f,0x5c,0xd4
+
+# ATT:   vsubps {rz-sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vsubps ymm2 {k7} {z}, ymm3, ymm4, {rz-sae}
+0x62,0xf1,0x60,0xff,0x5c,0xd4

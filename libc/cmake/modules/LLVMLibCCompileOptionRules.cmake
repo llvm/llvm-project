@@ -71,6 +71,10 @@ function(_get_compile_options_from_config output_var)
     list(APPEND config_options "-DLIBC_QSORT_IMPL=${LIBC_CONF_QSORT_IMPL}")
   endif()
 
+  if(LIBC_TYPES_TIME_T_IS_32_BIT AND LLVM_LIBC_FULL_BUILD)
+    list(APPEND config_options "-DLIBC_TYPES_TIME_T_IS_32_BIT")
+  endif()
+
   set(${output_var} ${config_options} PARENT_SCOPE)
 endfunction(_get_compile_options_from_config)
 
@@ -115,16 +119,7 @@ function(_get_common_compile_options output_var flags)
       list(APPEND compile_options "-ffixed-point")
     endif()
 
-    # Builtin recognition causes issues when trying to implement the builtin
-    # functions themselves. The GPU backends do not use libcalls so we disable
-    # the known problematic ones. This allows inlining during LTO linking.
-    if(LIBC_TARGET_OS_IS_GPU)
-      set(libc_builtins bcmp strlen memmem bzero memcmp memcpy memmem memmove
-                        memset strcmp strstr)
-      foreach(builtin ${libc_builtins})
-        list(APPEND compile_options "-fno-builtin-${builtin}")
-      endforeach()
-    else()
+    if(NOT LIBC_TARGET_OS_IS_GPU)
       list(APPEND compile_options "-fno-builtin")
     endif()
 

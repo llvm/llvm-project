@@ -179,9 +179,10 @@ const char *TargetThreadWindows::GetName() {
   Log *log = GetLog(LLDBLog::Thread);
   static GetThreadDescriptionFunctionPtr GetThreadDescription = []() {
     HMODULE hModule = ::LoadLibraryW(L"Kernel32.dll");
-    return hModule ? reinterpret_cast<GetThreadDescriptionFunctionPtr>(
-                         ::GetProcAddress(hModule, "GetThreadDescription"))
-                   : nullptr;
+    return hModule
+               ? reinterpret_cast<GetThreadDescriptionFunctionPtr>(
+                     (void *)::GetProcAddress(hModule, "GetThreadDescription"))
+               : nullptr;
   }();
   LLDB_LOGF(log, "GetProcAddress: %p",
             reinterpret_cast<void *>(GetThreadDescription));

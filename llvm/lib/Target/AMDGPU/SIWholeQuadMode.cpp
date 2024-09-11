@@ -1364,8 +1364,26 @@ void SIWholeQuadMode::processBlock(MachineBasicBlock &MBB, bool IsEntry) {
         llvm_unreachable("Unknown state");
         break;
       }
+      char StartState = State & StateStrict ? NonStrictState : State;
+      bool WQMToExact =
+          StartState == StateWQM && (Needs & StateExact) && !(Needs & StateWQM);
+      bool ExactToWQM = StartState == StateExact && (Needs & StateWQM) &&
+                        !(Needs & StateExact);
+      bool PreferLast = Needs == StateWQM;
+      // Exact regions in divergent control flow may run at EXEC=0, so try to
+      // exclude instructions with unexpected effects from them.
+      // FIXME: ideally we would branch over these when EXEC=0,
+      // but this requires updating implicit values, live intervals and CFG.
+      if ((WQMToExact && (OutNeeds & StateWQM)) || ExactToWQM) {
+        for (MachineBasicBlock::iterator I = First; I != II; ++I) {
+          if (TII->hasUnwantedEffectsWhenEXECEmpty(*I)) {
+            PreferLast = WQMToExact;
+            break;
+          }
+        }
+      }
       MachineBasicBlock::iterator Before =
-          prepareInsertion(MBB, First, II, Needs == StateWQM, SaveSCC);
+          prepareInsertion(MBB, First, II, PreferLast, SaveSCC);
 
       if (State & StateStrict) {
         assert(State == StateStrictWWM || State == StateStrictWQM);
@@ -1385,9 +1403,8 @@ void SIWholeQuadMode::processBlock(MachineBasicBlock &MBB, bool IsEntry) {
 
         toStrictMode(MBB, Before, SavedNonStrictReg, Needs);
         State = Needs;
-
       } else {
-        if (State == StateWQM && (Needs & StateExact) && !(Needs & StateWQM)) {
+        if (WQMToExact) {
           if (!WQMFromExec && (OutNeeds & StateWQM)) {
             assert(!SavedWQMReg);
             SavedWQMReg = MRI->createVirtualRegister(BoolRC);
@@ -1395,8 +1412,7 @@ void SIWholeQuadMode::processBlock(MachineBasicBlock &MBB, bool IsEntry) {
 
           toExact(MBB, Before, SavedWQMReg);
           State = StateExact;
-        } else if (State == StateExact && (Needs & StateWQM) &&
-                   !(Needs & StateExact)) {
+        } else if (ExactToWQM) {
           assert(WQMFromExec == (SavedWQMReg == 0));
 
           toWQM(MBB, Before, SavedWQMReg);

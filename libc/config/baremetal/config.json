@@ -18,11 +18,6 @@
       "value": false
     }
   },
-  "malloc": {
-    "LIBC_CONF_FREELIST_MALLOC_BUFFER_SIZE": {
-      "value": 102400
-    }
-  },
   "qsort": {
     "LIBC_CONF_QSORT_IMPL": {
       "value": "LIBC_QSORT_HEAP_SORT"

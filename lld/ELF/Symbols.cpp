@@ -58,23 +58,6 @@ std::string lld::toString(const elf::Symbol &sym) {
   return ret;
 }
 
-Defined *ElfSym::bss;
-Defined *ElfSym::etext1;
-Defined *ElfSym::etext2;
-Defined *ElfSym::edata1;
-Defined *ElfSym::edata2;
-Defined *ElfSym::end1;
-Defined *ElfSym::end2;
-Defined *ElfSym::globalOffsetTable;
-Defined *ElfSym::mipsGp;
-Defined *ElfSym::mipsGpDisp;
-Defined *ElfSym::mipsLocalGp;
-Defined *ElfSym::riscvGlobalPointer;
-Defined *ElfSym::relaIpltStart;
-Defined *ElfSym::relaIpltEnd;
-Defined *ElfSym::tlsModuleBase;
-SmallVector<SymbolAux, 0> elf::symAux;
-
 static uint64_t getSymVA(const Symbol &sym, int64_t addend) {
   switch (sym.kind()) {
   case Symbol::DefinedKind: {
@@ -136,10 +119,12 @@ static uint64_t getSymVA(const Symbol &sym, int64_t addend) {
       // after sections are finalized. (e.g. Measuring the size of .rela.dyn
       // for Android relocation packing requires knowing TLS symbol addresses
       // during section finalization.)
-      if (!Out::tlsPhdr || !Out::tlsPhdr->firstSec)
-        fatal(toString(d.file) +
-              " has an STT_TLS symbol but doesn't have an SHF_TLS section");
-      return va - Out::tlsPhdr->firstSec->addr;
+      if (!ctx.tlsPhdr || !ctx.tlsPhdr->firstSec) {
+        errorOrWarn(toString(d.file) +
+                    " has an STT_TLS symbol but doesn't have a PT_TLS segment");
+        return 0;
+      }
+      return va - ctx.tlsPhdr->firstSec->addr;
     }
     return va;
   }
@@ -167,7 +152,7 @@ uint64_t Symbol::getGotVA() const {
 }
 
 uint64_t Symbol::getGotOffset() const {
-  return getGotIdx() * target->gotEntrySize;
+  return getGotIdx() * ctx.target->gotEntrySize;
 }
 
 uint64_t Symbol::getGotPltVA() const {
@@ -178,15 +163,16 @@ uint64_t Symbol::getGotPltVA() const {
 
 uint64_t Symbol::getGotPltOffset() const {
   if (isInIplt)
-    return getPltIdx() * target->gotEntrySize;
-  return (getPltIdx() + target->gotPltHeaderEntriesNum) * target->gotEntrySize;
+    return getPltIdx() * ctx.target->gotEntrySize;
+  return (getPltIdx() + ctx.target->gotPltHeaderEntriesNum) *
+         ctx.target->gotEntrySize;
 }
 
 uint64_t Symbol::getPltVA() const {
-  uint64_t outVA = isInIplt
-                       ? in.iplt->getVA() + getPltIdx() * target->ipltEntrySize
-                       : in.plt->getVA() + in.plt->headerSize +
-                             getPltIdx() * target->pltEntrySize;
+  uint64_t outVA =
+      isInIplt ? in.iplt->getVA() + getPltIdx() * ctx.target->ipltEntrySize
+               : in.plt->getVA() + in.plt->headerSize +
+                     getPltIdx() * ctx.target->pltEntrySize;
 
   // While linking microMIPS code PLT code are always microMIPS
   // code. Set the less-significant bit to track that fact.

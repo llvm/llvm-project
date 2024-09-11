@@ -126,8 +126,9 @@ def no_call_graph_profile_sort : Flag<["--"], "no-call-graph-profile-sort">,
 def print_symbol_order_eq: Joined<["--"], "print-symbol-order=">,
     HelpText<"Print a symbol order specified by --call-graph-profile-sort into the specified file">,
     Group<grp_lld>;
-def irpgo_profile_sort: Joined<["--"], "irpgo-profile-sort=">,
-    MetaVarName<"<profile>">,
+def irpgo_profile_sort: Separate<["--"], "irpgo-profile-sort">, Group<grp_lld>;
+def irpgo_profile_sort_eq: Joined<["--"], "irpgo-profile-sort=">,
+    Alias<!cast<Separate>(irpgo_profile_sort)>, MetaVarName<"<profile>">,
     HelpText<"Read the IRPGO profile at <profile> to order sections to improve startup time">,
     Group<grp_lld>;
 def compression_sort: Joined<["--"], "compression-sort=">,

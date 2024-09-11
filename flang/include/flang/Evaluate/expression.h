@@ -660,7 +660,7 @@ extern template class Relational<SomeType>;
 // Logical expressions of a kind bigger than LogicalResult
 // do not include Relational<> operations as possibilities,
 // since the results of Relationals are always LogicalResult
-// (kind=1).
+// (kind=4).
 template <int KIND>
 class Expr<Type<TypeCategory::Logical, KIND>>
     : public ExpressionBase<Type<TypeCategory::Logical, KIND>> {

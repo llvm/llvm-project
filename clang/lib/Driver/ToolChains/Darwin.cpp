@@ -1519,6 +1519,8 @@ void DarwinClang::AddLinkRuntimeLibArgs(const ArgList &Args,
     const char *sanitizer = nullptr;
     if (Sanitize.needsUbsanRt()) {
       sanitizer = "UndefinedBehaviorSanitizer";
+    } else if (Sanitize.needsRtsanRt()) {
+      sanitizer = "RealtimeSanitizer";
     } else if (Sanitize.needsAsanRt()) {
       sanitizer = "AddressSanitizer";
     } else if (Sanitize.needsTsanRt()) {
@@ -1540,6 +1542,11 @@ void DarwinClang::AddLinkRuntimeLibArgs(const ArgList &Args,
                "Static sanitizer runtimes not supported");
         AddLinkSanitizerLibArgs(Args, CmdArgs, "asan");
       }
+    }
+    if (Sanitize.needsRtsanRt()) {
+      assert(Sanitize.needsSharedRt() &&
+             "Static sanitizer runtimes not supported");
+      AddLinkSanitizerLibArgs(Args, CmdArgs, "rtsan");
     }
     if (Sanitize.needsLsanRt())
       AddLinkSanitizerLibArgs(Args, CmdArgs, "lsan");
@@ -2923,22 +2930,53 @@ bool Darwin::isAlignedAllocationUnavailable() const {
   return TargetVersion < alignedAllocMinVersion(OS);
 }
 
-static bool sdkSupportsBuiltinModules(const Darwin::DarwinPlatformKind &TargetPlatform, const std::optional<DarwinSDKInfo> &SDKInfo) {
+static bool sdkSupportsBuiltinModules(
+    const Darwin::DarwinPlatformKind &TargetPlatform,
+    const Darwin::DarwinEnvironmentKind &TargetEnvironment,
+    const std::optional<DarwinSDKInfo> &SDKInfo) {
+  if (TargetEnvironment == Darwin::NativeEnvironment ||
+      TargetEnvironment == Darwin::Simulator ||
+      TargetEnvironment == Darwin::MacCatalyst) {
+    // Standard xnu/Mach/Darwin based environments
+    // depend on the SDK version.
+  } else {
+    // All other environments support builtin modules from the start.
+    return true;
+  }
+
   if (!SDKInfo)
+    // If there is no SDK info, assume this is building against a
+    // pre-SDK version of macOS (i.e. before Mac OS X 10.4). Those
+    // don't support modules anyway, but the headers definitely
+    // don't support builtin modules either. It might also be some
+    // kind of degenerate build environment, err on the side of
+    // the old behavior which is to not use builtin modules.
     return false;
 
   VersionTuple SDKVersion = SDKInfo->getVersion();
   switch (TargetPlatform) {
+  // Existing SDKs added support for builtin modules in the fall
+  // 2024 major releases.
   case Darwin::MacOS:
-    return SDKVersion >= VersionTuple(99U);
+    return SDKVersion >= VersionTuple(15U);
   case Darwin::IPhoneOS:
-    return SDKVersion >= VersionTuple(99U);
+    switch (TargetEnvironment) {
+    case Darwin::MacCatalyst:
+      // Mac Catalyst uses `-target arm64-apple-ios18.0-macabi` so the platform
+      // is iOS, but it builds with the macOS SDK, so it's the macOS SDK version
+      // that's relevant.
+      return SDKVersion >= VersionTuple(15U);
+    default:
+      return SDKVersion >= VersionTuple(18U);
+    }
   case Darwin::TvOS:
-    return SDKVersion >= VersionTuple(99U);
+    return SDKVersion >= VersionTuple(18U);
   case Darwin::WatchOS:
-    return SDKVersion >= VersionTuple(99U);
+    return SDKVersion >= VersionTuple(11U);
   case Darwin::XROS:
-    return SDKVersion >= VersionTuple(99U);
+    return SDKVersion >= VersionTuple(2U);
+
+  // New SDKs support builtin modules from the start.
   default:
     return true;
   }
@@ -3030,7 +3068,7 @@ void Darwin::addClangTargetOptions(
   // i.e. when the builtin stdint.h is in the Darwin module too, the cycle
   // goes away. Note that -fbuiltin-headers-in-system-modules does nothing
   // to fix the same problem with C++ headers, and is generally fragile.
-  if (!sdkSupportsBuiltinModules(TargetPlatform, SDKInfo))
+  if (!sdkSupportsBuiltinModules(TargetPlatform, TargetEnvironment, SDKInfo))
     CC1Args.push_back("-fbuiltin-headers-in-system-modules");
 
   if (!DriverArgs.hasArgNoClaim(options::OPT_fdefine_target_os_macros,
@@ -3508,6 +3546,7 @@ SanitizerMask Darwin::getSupportedSanitizers() const {
   Res |= SanitizerKind::Address;
   Res |= SanitizerKind::PointerCompare;
   Res |= SanitizerKind::PointerSubtract;
+  Res |= SanitizerKind::Realtime;
   Res |= SanitizerKind::Leak;
   Res |= SanitizerKind::Fuzzer;
   Res |= SanitizerKind::FuzzerNoLink;

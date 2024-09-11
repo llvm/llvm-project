@@ -1070,7 +1070,8 @@ static bool isMSP430(llvm::Triple::ArchType Arch) {
   return Arch == llvm::Triple::msp430;
 }
 
-static bool findMipsCsMultilibs(const Multilib::flags_list &Flags,
+static bool findMipsCsMultilibs(const Driver &D,
+                                const Multilib::flags_list &Flags,
                                 FilterNonExistent &NonExistent,
                                 DetectedMultilibs &Result) {
   // Check for Code Sourcery toolchain multilibs
@@ -1164,7 +1165,7 @@ static bool findMipsCsMultilibs(const Multilib::flags_list &Flags,
   if (CSMipsMultilibs.size() < DebianMipsMultilibs.size())
     std::iter_swap(Candidates, Candidates + 1);
   for (const MultilibSet *Candidate : Candidates) {
-    if (Candidate->select(Flags, Result.SelectedMultilibs)) {
+    if (Candidate->select(D, Flags, Result.SelectedMultilibs)) {
       if (Candidate == &DebianMipsMultilibs)
         Result.BiarchSibling = Multilib();
       Result.Multilibs = *Candidate;
@@ -1174,7 +1175,8 @@ static bool findMipsCsMultilibs(const Multilib::flags_list &Flags,
   return false;
 }
 
-static bool findMipsAndroidMultilibs(llvm::vfs::FileSystem &VFS, StringRef Path,
+static bool findMipsAndroidMultilibs(const Driver &D,
+                                     llvm::vfs::FileSystem &VFS, StringRef Path,
                                      const Multilib::flags_list &Flags,
                                      FilterNonExistent &NonExistent,
                                      DetectedMultilibs &Result) {
@@ -1213,14 +1215,15 @@ static bool findMipsAndroidMultilibs(llvm::vfs::FileSystem &VFS, StringRef Path,
     MS = &AndroidMipselMultilibs;
   else if (VFS.exists(Path + "/32"))
     MS = &AndroidMips64elMultilibs;
-  if (MS->select(Flags, Result.SelectedMultilibs)) {
+  if (MS->select(D, Flags, Result.SelectedMultilibs)) {
     Result.Multilibs = *MS;
     return true;
   }
   return false;
 }
 
-static bool findMipsMuslMultilibs(const Multilib::flags_list &Flags,
+static bool findMipsMuslMultilibs(const Driver &D,
+                                  const Multilib::flags_list &Flags,
                                   FilterNonExistent &NonExistent,
                                   DetectedMultilibs &Result) {
   // Musl toolchain multilibs
@@ -1247,14 +1250,15 @@ static bool findMipsMuslMultilibs(const Multilib::flags_list &Flags,
           {"/../sysroot" + M.osSuffix() + "/usr/include"});
     });
   }
-  if (MuslMipsMultilibs.select(Flags, Result.SelectedMultilibs)) {
+  if (MuslMipsMultilibs.select(D, Flags, Result.SelectedMultilibs)) {
     Result.Multilibs = MuslMipsMultilibs;
     return true;
   }
   return false;
 }
 
-static bool findMipsMtiMultilibs(const Multilib::flags_list &Flags,
+static bool findMipsMtiMultilibs(const Driver &D,
+                                 const Multilib::flags_list &Flags,
                                  FilterNonExistent &NonExistent,
                                  DetectedMultilibs &Result) {
   // CodeScape MTI toolchain v1.2 and early.
@@ -1432,7 +1436,7 @@ static bool findMipsMtiMultilibs(const Multilib::flags_list &Flags,
             });
   }
   for (auto *Candidate : {&MtiMipsMultilibsV1, &MtiMipsMultilibsV2}) {
-    if (Candidate->select(Flags, Result.SelectedMultilibs)) {
+    if (Candidate->select(D, Flags, Result.SelectedMultilibs)) {
       Result.Multilibs = *Candidate;
       return true;
     }
@@ -1440,7 +1444,8 @@ static bool findMipsMtiMultilibs(const Multilib::flags_list &Flags,
   return false;
 }
 
-static bool findMipsImgMultilibs(const Multilib::flags_list &Flags,
+static bool findMipsImgMultilibs(const Driver &D,
+                                 const Multilib::flags_list &Flags,
                                  FilterNonExistent &NonExistent,
                                  DetectedMultilibs &Result) {
   // CodeScape IMG toolchain v1.2 and early.
@@ -1538,7 +1543,7 @@ static bool findMipsImgMultilibs(const Multilib::flags_list &Flags,
             });
   }
   for (auto *Candidate : {&ImgMultilibsV1, &ImgMultilibsV2}) {
-    if (Candidate->select(Flags, Result.SelectedMultilibs)) {
+    if (Candidate->select(D, Flags, Result.SelectedMultilibs)) {
       Result.Multilibs = *Candidate;
       return true;
     }
@@ -1585,25 +1590,25 @@ bool clang::driver::findMIPSMultilibs(const Driver &D,
   addMultilibFlag(!isMipsEL(TargetArch), "-EB", Flags);
 
   if (TargetTriple.isAndroid())
-    return findMipsAndroidMultilibs(D.getVFS(), Path, Flags, NonExistent,
+    return findMipsAndroidMultilibs(D, D.getVFS(), Path, Flags, NonExistent,
                                     Result);
 
   if (TargetTriple.getVendor() == llvm::Triple::MipsTechnologies &&
       TargetTriple.getOS() == llvm::Triple::Linux &&
       TargetTriple.getEnvironment() == llvm::Triple::UnknownEnvironment)
-    return findMipsMuslMultilibs(Flags, NonExistent, Result);
+    return findMipsMuslMultilibs(D, Flags, NonExistent, Result);
 
   if (TargetTriple.getVendor() == llvm::Triple::MipsTechnologies &&
       TargetTriple.getOS() == llvm::Triple::Linux &&
       TargetTriple.isGNUEnvironment())
-    return findMipsMtiMultilibs(Flags, NonExistent, Result);
+    return findMipsMtiMultilibs(D, Flags, NonExistent, Result);
 
   if (TargetTriple.getVendor() == llvm::Triple::ImaginationTechnologies &&
       TargetTriple.getOS() == llvm::Triple::Linux &&
       TargetTriple.isGNUEnvironment())
-    return findMipsImgMultilibs(Flags, NonExistent, Result);
+    return findMipsImgMultilibs(D, Flags, NonExistent, Result);
 
-  if (findMipsCsMultilibs(Flags, NonExistent, Result))
+  if (findMipsCsMultilibs(D, Flags, NonExistent, Result))
     return true;
 
   // Fallback to the regular toolchain-tree structure.
@@ -1611,7 +1616,7 @@ bool clang::driver::findMIPSMultilibs(const Driver &D,
   Result.Multilibs.push_back(Default);
   Result.Multilibs.FilterOut(NonExistent);
 
-  if (Result.Multilibs.select(Flags, Result.SelectedMultilibs)) {
+  if (Result.Multilibs.select(D, Flags, Result.SelectedMultilibs)) {
     Result.BiarchSibling = Multilib();
     return true;
   }
@@ -1658,7 +1663,7 @@ static void findAndroidArmMultilibs(const Driver &D,
   addMultilibFlag(IsArmV7Mode, "-march=armv7-a", Flags);
   addMultilibFlag(IsThumbMode, "-mthumb", Flags);
 
-  if (AndroidArmMultilibs.select(Flags, Result.SelectedMultilibs))
+  if (AndroidArmMultilibs.select(D, Flags, Result.SelectedMultilibs))
     Result.Multilibs = AndroidArmMultilibs;
 }
 
@@ -1684,7 +1689,7 @@ static bool findMSP430Multilibs(const Driver &D,
   addMultilibFlag(Args.hasFlag(options::OPT_fexceptions,
                                options::OPT_fno_exceptions, false),
                   "-exceptions", Flags);
-  if (Result.Multilibs.select(Flags, Result.SelectedMultilibs))
+  if (Result.Multilibs.select(D, Flags, Result.SelectedMultilibs))
     return true;
 
   return false;
@@ -1751,7 +1756,7 @@ static void findCSKYMultilibs(const Driver &D, const llvm::Triple &TargetTriple,
           .makeMultilibSet()
           .FilterOut(NonExistent);
 
-  if (CSKYMultilibs.select(Flags, Result.SelectedMultilibs))
+  if (CSKYMultilibs.select(D, Flags, Result.SelectedMultilibs))
     Result.Multilibs = CSKYMultilibs;
 }
 
@@ -1766,11 +1771,11 @@ static void findCSKYMultilibs(const Driver &D, const llvm::Triple &TargetTriple,
 ///     march=rv32ima are not compatible, because software and hardware
 ///     atomic operation can't work together correctly.
 static bool
-selectRISCVMultilib(const MultilibSet &RISCVMultilibSet, StringRef Arch,
-                    const Multilib::flags_list &Flags,
+selectRISCVMultilib(const Driver &D, const MultilibSet &RISCVMultilibSet,
+                    StringRef Arch, const Multilib::flags_list &Flags,
                     llvm::SmallVectorImpl<Multilib> &SelectedMultilibs) {
   // Try to find the perfect matching multi-lib first.
-  if (RISCVMultilibSet.select(Flags, SelectedMultilibs))
+  if (RISCVMultilibSet.select(D, Flags, SelectedMultilibs))
     return true;
 
   Multilib::flags_list NewFlags;
@@ -1862,7 +1867,7 @@ selectRISCVMultilib(const MultilibSet &RISCVMultilibSet, StringRef Arch,
   MultilibSet NewRISCVMultilibs =
       MultilibSetBuilder().Either(NewMultilibs).makeMultilibSet();
 
-  if (NewRISCVMultilibs.select(NewFlags, SelectedMultilibs))
+  if (NewRISCVMultilibs.select(D, NewFlags, SelectedMultilibs))
     for (const Multilib &NewSelectedM : SelectedMultilibs)
       for (const auto &M : RISCVMultilibSet)
         // Look up the corresponding multi-lib entry in original multi-lib set.
@@ -1923,7 +1928,7 @@ static void findRISCVBareMetalMultilibs(const Driver &D,
     }
   }
 
-  if (selectRISCVMultilib(RISCVMultilibs, MArch, Flags,
+  if (selectRISCVMultilib(D, RISCVMultilibs, MArch, Flags,
                           Result.SelectedMultilibs))
     Result.Multilibs = RISCVMultilibs;
 }
@@ -1966,7 +1971,7 @@ static void findRISCVMultilibs(const Driver &D,
   addMultilibFlag(ABIName == "lp64f", "-mabi=lp64f", Flags);
   addMultilibFlag(ABIName == "lp64d", "-mabi=lp64d", Flags);
 
-  if (RISCVMultilibs.select(Flags, Result.SelectedMultilibs))
+  if (RISCVMultilibs.select(D, Flags, Result.SelectedMultilibs))
     Result.Multilibs = RISCVMultilibs;
 }
 
@@ -2086,7 +2091,7 @@ static bool findBiarchMultilibs(const Driver &D,
   addMultilibFlag(TargetTriple.isArch32Bit(), "-m32", Flags);
   addMultilibFlag(TargetTriple.isArch64Bit() && IsX32, "-mx32", Flags);
 
-  if (!Result.Multilibs.select(Flags, Result.SelectedMultilibs))
+  if (!Result.Multilibs.select(D, Flags, Result.SelectedMultilibs))
     return false;
 
   if (Result.SelectedMultilibs.back() == Alt64 ||
