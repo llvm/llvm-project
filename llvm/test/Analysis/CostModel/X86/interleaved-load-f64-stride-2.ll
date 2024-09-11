@@ -71,10 +71,10 @@ define void @test() {
 ; AVX512:  LV: Found an estimated cost of 0 for VF 8 For instruction: %v1 = load double, ptr %in1, align 8
 ; AVX512:  LV: Found an estimated cost of 22 for VF 16 For instruction: %v0 = load double, ptr %in0, align 8
 ; AVX512:  LV: Found an estimated cost of 0 for VF 16 For instruction: %v1 = load double, ptr %in1, align 8
-; AVX512:  LV: Found an estimated cost of 80 for VF 32 For instruction: %v0 = load double, ptr %in0, align 8
-; AVX512:  LV: Found an estimated cost of 0 for VF 32 For instruction: %v1 = load double, ptr %in1, align 8
-; AVX512:  LV: Found an estimated cost of 160 for VF 64 For instruction: %v0 = load double, ptr %in0, align 8
-; AVX512:  LV: Found an estimated cost of 0 for VF 64 For instruction: %v1 = load double, ptr %in1, align 8
+; AVX512:  LV: Found an estimated cost of 40 for VF 32 For instruction: %v0 = load double, ptr %in0, align 8
+; AVX512:  LV: Found an estimated cost of 40 for VF 32 For instruction: %v1 = load double, ptr %in1, align 8
+; AVX512:  LV: Found an estimated cost of 80 for VF 64 For instruction: %v0 = load double, ptr %in0, align 8
+; AVX512:  LV: Found an estimated cost of 80 for VF 64 For instruction: %v1 = load double, ptr %in1, align 8
 ;
 entry:
   br label %for.body
