@@ -2701,6 +2701,7 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(AArch64ISD::SADDLV)
     MAKE_CASE(AArch64ISD::SDOT)
     MAKE_CASE(AArch64ISD::UDOT)
+    MAKE_CASE(AArch64ISD::USDOT)
     MAKE_CASE(AArch64ISD::SMINV)
     MAKE_CASE(AArch64ISD::UMINV)
     MAKE_CASE(AArch64ISD::SMAXV)
@@ -21849,28 +21850,22 @@ SDValue tryLowerPartialReductionToDot(SDNode *N,
     return SDValue();
 
   // If the extensions are mixed, we should lower it to a usdot instead
+  unsigned Opcode = 0;
   if (AIsZExt != BIsZExt) {
     if (!Subtarget->hasMatMulInt8())
       return SDValue();
-    bool Scalable = N->getValueType(0).isScalableVT();
 
+    bool Scalable = N->getValueType(0).isScalableVT();
     // There's no nxv2i64 version of usdot
     if (Scalable && ReducedType != MVT::nxv4i32)
       return SDValue();
 
-    unsigned IntrinsicID =
-        Scalable ? Intrinsic::aarch64_sve_usdot : Intrinsic::aarch64_neon_usdot;
+    Opcode = AArch64ISD::USDOT;
     // USDOT expects the first operand to be unsigned, so swap the operands if
     // the first is signed and the second is unsigned
     if (AIsSExt && BIsZExt)
       std::swap(A, B);
-    return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, ReducedType,
-                       DAG.getConstant(IntrinsicID, DL, MVT::i64), NarrowOp, A,
-                       B);
-  }
-
-  unsigned Opcode = 0;
-  if (AIsSExt)
+  } else if (AIsSExt)
     Opcode = AArch64ISD::SDOT;
   else if (AIsZExt)
     Opcode = AArch64ISD::UDOT;

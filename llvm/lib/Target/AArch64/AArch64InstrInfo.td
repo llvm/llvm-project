@@ -855,6 +855,7 @@ def AArch64frsqrts  : SDNode<"AArch64ISD::FRSQRTS", SDTFPBinOp>;
 
 def AArch64sdot     : SDNode<"AArch64ISD::SDOT", SDT_AArch64Dot>;
 def AArch64udot     : SDNode<"AArch64ISD::UDOT", SDT_AArch64Dot>;
+def AArch64usdot    : SDNode<"AArch64ISD::USDOT", SDT_AArch64Dot>;
 
 def AArch64saddv    : SDNode<"AArch64ISD::SADDV", SDT_AArch64UnaryVec>;
 def AArch64uaddv    : SDNode<"AArch64ISD::UADDV", SDT_AArch64UnaryVec>;
@@ -1419,6 +1420,9 @@ def  UMMLA : SIMDThreeSameVectorMatMul<0, 1, "ummla", int_aarch64_neon_ummla>;
 def USMMLA : SIMDThreeSameVectorMatMul<1, 0, "usmmla", int_aarch64_neon_usmmla>;
 defm USDOT : SIMDThreeSameVectorDot<0, 1, "usdot", int_aarch64_neon_usdot>;
 defm USDOTlane : SIMDThreeSameVectorDotIndex<0, 1, 0b10, "usdot", int_aarch64_neon_usdot>;
+
+def : Pat<(v4i32 (AArch64usdot (v4i32 V128:$Rd), (v16i8 V128:$Rm), (v16i8 V128:$Rn))), (USDOTv16i8 $Rd, $Rm, $Rn)>;
+def : Pat<(v2i32 (AArch64usdot (v2i32 V64:$Rd), (v8i8 V64:$Rm), (v8i8 V64:$Rn))), (USDOTv8i8 $Rd, $Rm, $Rn)>;
 
 // sudot lane has a pattern where usdot is expected (there is no sudot).
 // The second operand is used in the dup operation to repeat the indexed
