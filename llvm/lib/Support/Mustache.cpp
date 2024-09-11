@@ -55,7 +55,7 @@ Token::Token(StringRef RawBody, StringRef InnerBody, char Identifier)
 }
 
 Token::Token(StringRef Str)
-    : RawBody(Str), TokenType(Type::Text), TokenBody(Str), Accessor({}) {}
+    : TokenType(Type::Text), RawBody(Str), Accessor({}), TokenBody(Str) {}
 
 Token::Type Token::getTokenType(char Identifier) {
   switch (Identifier) {
@@ -256,7 +256,7 @@ void Parser::parseMustache(std::shared_ptr<ASTNode> Parent) {
 }
 
 Template Template::createTemplate(StringRef TemplateStr) {
-  Parser P = Parser(TemplateStr);
+  Parser P = Parser(TemplateStr.str());
   std::shared_ptr<ASTNode> MustacheTree = P.parse();
   Template T = Template(MustacheTree);
   // the default behaviour is to escape html entities
@@ -333,6 +333,7 @@ ASTNode::render(Value Data,
           Partial->render(Data, Partials, Lambdas, SectionLambdas, Escapes);
       return Result;
     }
+    return Result;
   }
   case Variable: {
     if (Lambdas.find(Accessor[0]) != Lambdas.end()) {
@@ -373,7 +374,7 @@ ASTNode::render(Value Data,
       if (isFalsey(Return))
         return Result;
       StringRef LambdaStr = printJson(Return);
-      Parser P = Parser(LambdaStr);
+      Parser P = Parser(LambdaStr.str());
       std::shared_ptr<ASTNode> LambdaNode = P.parse();
       return LambdaNode->render(Data, Partials, Lambdas, SectionLambdas,
                                 Escapes);

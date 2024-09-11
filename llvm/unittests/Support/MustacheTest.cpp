@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/Mustache.h"
+#include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -784,9 +785,8 @@ TEST(MustachePartials, PaddingWhitespace) {
 TEST(MustacheLambdas, BasicInterpolation) {
   Value D = Object{};
   auto T = Template::createTemplate("Hello, {{lambda}}!");
-  Lambda L = []() -> llvm::SmallString<128> {
-    llvm::SmallString<128> Result("World");
-    return Result;
+  Lambda L = []() -> llvm::json::Value {
+    return "World";
   };
   T.registerLambda("lambda", L);
   auto Out = T.render(D);
@@ -796,8 +796,8 @@ TEST(MustacheLambdas, BasicInterpolation) {
 TEST(MustacheLambdas, InterpolationExpansion) {
   Value D = Object{{"planet", "World"}};
   auto T = Template::createTemplate("Hello, {{lambda}}!");
-  Lambda L = []() -> llvm::SmallString<128> {
-    return llvm::SmallString<128>("{{planet}}");
+  Lambda L = []() -> llvm::json::Value {
+    return "{{planet}}";
   };
   T.registerLambda("lambda", L);
   auto Out = T.render(D);

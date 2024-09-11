@@ -121,8 +121,8 @@ public:
 
   // Constructor for Section/InvertSection/Variable/UnescapeVariable
   ASTNode(Type T, Accessor Accessor, std::shared_ptr<ASTNode> Parent)
-      : T(T), Accessor(Accessor), Parent(Parent), LocalContext(nullptr),
-        Children({}) {};
+      : T(T), Parent(Parent), Children({}), Accessor(Accessor),
+        LocalContext(nullptr) {};
 
   void addChild(std::shared_ptr<ASTNode> Child) {
     Children.emplace_back(Child);
