@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fcxx-exceptions -fexceptions -mconstructor-aliases -fclangir -emit-cir %s -o %t.cir
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fcxx-exceptions -fexceptions -mconstructor-aliases -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
-// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fcxx-exceptions -fexceptions -mconstructor-aliases -fclangir -emit-llvm %s -o %t.ll
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -DLLVM_IMPLEMENTED -fcxx-exceptions -fexceptions -mconstructor-aliases -fclangir -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
 
 struct Vec {
@@ -19,6 +19,7 @@ void yo() {
 }
 
 // CIR-DAG: ![[VecTy:.*]] = !cir.struct<struct "Vec" {!cir.int<u, 8>}>
+// CIR-DAG: ![[S1:.*]] = !cir.struct<struct "S1" {!cir.struct<struct "Vec" {!cir.int<u, 8>}>}>
 
 // CIR: cir.scope {
 // CIR:   %[[VADDR:.*]] = cir.alloca ![[VecTy]], !cir.ptr<![[VecTy]]>, ["v", init]
@@ -59,3 +60,42 @@ void yo() {
 
 // LLVM: [[RET_BB]]:
 // LLVM:   ret void
+
+#ifndef LLVM_IMPLEMENTED
+struct S1 {
+  Vec v;
+};
+
+void yo2() {
+  int r = 1;
+  try {
+    Vec v;
+    S1((Vec&&) v);
+  } catch (...) {
+    r++;
+  }
+}
+#endif
+
+// CIR: cir.func  @_Z3yo2v()
+// CIR:   cir.scope {
+// CIR:     cir.alloca ![[VecTy]]
+// CIR:     cir.try {
+// CIR:       cir.call exception @_ZN3VecC1Ev
+// CIR:       cir.scope {
+// CIR:         cir.alloca ![[S1:.*]], !cir.ptr<![[S1:.*]]>, ["agg.tmp.ensured"]
+// CIR:         cir.call exception @_ZN3VecC1EOS_
+// CIR:         cir.call @_ZN2S1D2Ev
+// CIR:       }
+// CIR:       cir.call @_ZN3VecD1Ev
+// CIR:       cir.yield
+// CIR:     } cleanup {
+// CIR:       cir.call @_ZN3VecD1Ev
+// CIR:       cir.yield
+// CIR:     } catch [type #cir.all {
+// CIR:       cir.catch_param -> !cir.ptr<!void>
+// CIR:       cir.yield
+// CIR:     }]
+// CIR:   }
+// CIR:   cir.return
+// CIR: }
