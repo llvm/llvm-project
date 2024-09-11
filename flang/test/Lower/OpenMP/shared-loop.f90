@@ -9,7 +9,9 @@
 ! CHECK:        omp.section {
 ! CHECK:          %[[RES:.*]]:2 = fir.do_loop {{.*}} iter_args(%[[ARG:.*]] =
 ! CHECK:            fir.store %[[ARG]] to %[[DECL_I]]#1
-! CHECK:            fir.result
+! CHECK:            %[[LOAD_I:.*]] = fir.load %[[DECL_I]]#1
+! CHECK:            %[[RES_I:.*]] = arith.addi %[[LOAD_I]], %{{.*}}
+! CHECK:            fir.result {{.*}}, %[[RES_I]]
 ! CHECK:          }
 ! CHECK:          fir.store %[[RES]]#1 to %[[DECL_I]]#1
 ! CHECK:          omp.terminator
