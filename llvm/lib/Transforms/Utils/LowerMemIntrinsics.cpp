@@ -461,6 +461,7 @@ static void createMemSetPatternLoop(Instruction *InsertBefore, Value *DstAddr,
                                     Align DstAlign, bool IsVolatile) {
   BasicBlock *OrigBB = InsertBefore->getParent();
   Function *F = OrigBB->getParent();
+  const DataLayout &DL = F->getDataLayout();
 
   Type *TypeOfCount = Count->getType();
 
@@ -480,7 +481,9 @@ static void createMemSetPatternLoop(Instruction *InsertBefore, Value *DstAddr,
   PHINode *LoopCount = LoopBuilder.CreatePHI(TypeOfCount, 0);
   LoopCount->addIncoming(Count, OrigBB);
 
-  LoopBuilder.CreateAlignedStore(SetValue, CurrentDst, DstAlign, IsVolatile);
+  unsigned PatSize = DL.getTypeStoreSize(SetValue->getType());
+  Align PatAlign(commonAlignment(DstAlign, PatSize));
+  LoopBuilder.CreateAlignedStore(SetValue, CurrentDst, PatAlign, IsVolatile);
 
   Value *NextDst = LoopBuilder.CreateInBoundsGEP(
       SetValue->getType(), CurrentDst, ConstantInt::get(TypeOfCount, 1));

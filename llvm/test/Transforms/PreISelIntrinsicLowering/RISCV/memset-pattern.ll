@@ -98,3 +98,37 @@ define void @memset_pattern_i256_x(ptr %a, i256 %value, i64 %x) nounwind {
   tail call void @llvm.memset.pattern(ptr %a, i256 %value, i64 %x, i1 0)
   ret void
 }
+
+; The common alignment of the allocation of the pattern stride (its allocation
+; size) and the destination pointer should be used.
+define void @memset_pattern_i15_x_alignment(ptr %a, i15 %value, i64 %x) nounwind {
+; CHECK-LABEL: define void @memset_pattern_i15_x_alignment(
+; CHECK-SAME: ptr [[A:%.*]], i15 [[VALUE:%.*]], i64 [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 0, [[X]]
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[SPLIT:.*]], label %[[STORELOOP:.*]]
+; CHECK:       [[STORELOOP]]:
+; CHECK-NEXT:    [[TMP2:%.*]] = phi ptr [ [[A]], [[TMP0:%.*]] ], [ [[TMP4:%.*]], %[[STORELOOP]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = phi i64 [ [[X]], [[TMP0]] ], [ [[TMP5:%.*]], %[[STORELOOP]] ]
+; CHECK-NEXT:    store i15 [[VALUE]], ptr [[TMP2]], align 1
+; CHECK-NEXT:    [[TMP4]] = getelementptr inbounds i15, ptr [[TMP2]], i64 1
+; CHECK-NEXT:    [[TMP5]] = sub i64 [[TMP3]], 1
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne i64 [[TMP5]], 0
+; CHECK-NEXT:    br i1 [[TMP6]], label %[[STORELOOP]], label %[[SPLIT]]
+; CHECK:       [[SPLIT]]:
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 0, [[X]]
+; CHECK-NEXT:    br i1 [[TMP7]], label %[[SPLIT1:.*]], label %[[STORELOOP2:.*]]
+; CHECK:       [[STORELOOP2]]:
+; CHECK-NEXT:    [[TMP8:%.*]] = phi ptr [ [[A]], %[[SPLIT]] ], [ [[TMP10:%.*]], %[[STORELOOP2]] ]
+; CHECK-NEXT:    [[TMP9:%.*]] = phi i64 [ [[X]], %[[SPLIT]] ], [ [[TMP11:%.*]], %[[STORELOOP2]] ]
+; CHECK-NEXT:    store i15 [[VALUE]], ptr [[TMP8]], align 2
+; CHECK-NEXT:    [[TMP10]] = getelementptr inbounds i15, ptr [[TMP8]], i64 1
+; CHECK-NEXT:    [[TMP11]] = sub i64 [[TMP9]], 1
+; CHECK-NEXT:    [[TMP12:%.*]] = icmp ne i64 [[TMP11]], 0
+; CHECK-NEXT:    br i1 [[TMP12]], label %[[STORELOOP2]], label %[[SPLIT1]]
+; CHECK:       [[SPLIT1]]:
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.memset.pattern(ptr align 1 %a, i15 %value, i64 %x, i1 0)
+  call void @llvm.memset.pattern(ptr align 2 %a, i15 %value, i64 %x, i1 0)
+  ret void
+}
