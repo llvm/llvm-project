@@ -155,20 +155,27 @@ macro(add_clang_executable name)
 endmacro(add_clang_executable)
 
 macro(add_clang_tool name)
-  cmake_parse_arguments(ARG "DEPENDS;GENERATE_DRIVER" "" "" ${ARGN})
+  cmake_parse_arguments(ARG "DEPENDS;GENERATE_DRIVER;DISABLE_CLANG_LINK_DYLIB" "" "" ${ARGN})
   if (NOT CLANG_BUILD_TOOLS)
     set(EXCLUDE_FROM_ALL ON)
   endif()
+
+  set(args_list ${ARGN})
+
+  if(ARG_DISABLE_CLANG_LINK_DYLIB)
+    # Remove this so the llvm argument parsing doesn't get confused
+    list(REMOVE_ITEM args_list DISABLE_CLANG_LINK_DYLIB)
+  endif()
+
   if(ARG_GENERATE_DRIVER
      AND LLVM_TOOL_LLVM_DRIVER_BUILD
      AND (NOT LLVM_DISTRIBUTION_COMPONENTS OR ${name} IN_LIST LLVM_DISTRIBUTION_COMPONENTS)
     )
-    set(get_obj_args ${ARGN})
-    list(FILTER get_obj_args EXCLUDE REGEX "^SUPPORT_PLUGINS$")
-    generate_llvm_objects(${name} ${get_obj_args})
+    list(FILTER args_list EXCLUDE REGEX "^SUPPORT_PLUGINS$")
+    generate_llvm_objects(${name} ${args_list})
     add_custom_target(${name} DEPENDS llvm-driver clang-resource-headers)
   else()
-    add_clang_executable(${name} ${ARGN})
+    add_clang_executable(${name} ${args_list})
     add_dependencies(${name} clang-resource-headers)
 
     if (CLANG_BUILD_TOOLS)
@@ -187,6 +194,10 @@ macro(add_clang_tool name)
     endif()
   endif()
   set_target_properties(${name} PROPERTIES XCODE_GENERATE_SCHEME ON)
+
+  if(ARG_DISABLE_CLANG_LINK_DYLIB)
+    target_compile_definitions(${name} PRIVATE CLANG_BUILD_STATIC)
+  endif()
 endmacro()
 
 macro(add_clang_symlink name dest)
