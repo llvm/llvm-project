@@ -26177,49 +26177,36 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       SDValue Comi = DAG.getNode(ComiOpCode, dl, MVT::i32, LHS, RHS);
 
       SDValue SetCC;
-      if (HasAVX10_2_COMX & HasAVX10_2_COMX_Ty) {
-        switch (CC) {
-        case ISD::SETEQ: { // (ZF)
-          SetCC = getSETCC(X86::COND_E, Comi, dl, DAG);
+      switch (CC) {
+      case ISD::SETEQ: {
+        SetCC = getSETCC(X86::COND_E, Comi, dl, DAG);
+        if (HasAVX10_2_COMX & HasAVX10_2_COMX_Ty) // ZF == 1
           break;
-        }
-        case ISD::SETNE: { // (!ZF)
-          SetCC = getSETCC(X86::COND_NE, Comi, dl, DAG);
+        // (ZF = 1 and PF = 0)
+        SDValue SetNP = getSETCC(X86::COND_NP, Comi, dl, DAG);
+        SetCC = DAG.getNode(ISD::AND, dl, MVT::i8, SetCC, SetNP);
+        break;
+      }
+      case ISD::SETNE: {
+        SetCC = getSETCC(X86::COND_NE, Comi, dl, DAG);
+        if (HasAVX10_2_COMX & HasAVX10_2_COMX_Ty) // ZF == 0
           break;
-        }
-        case ISD::SETGT:
-        case ISD::SETLT:
-        case ISD::SETGE:
-        case ISD::SETLE:
-        default:
-          llvm_unreachable("Un-implemented condition!");
-        }
-      } else {
-        switch (CC) {
-        case ISD::SETEQ: { // (ZF = 0 and PF = 0)
-          SetCC = getSETCC(X86::COND_E, Comi, dl, DAG);
-          SDValue SetNP = getSETCC(X86::COND_NP, Comi, dl, DAG);
-          SetCC = DAG.getNode(ISD::AND, dl, MVT::i8, SetCC, SetNP);
-          break;
-        }
-        case ISD::SETNE: { // (ZF = 1 or PF = 1)
-          SetCC = getSETCC(X86::COND_NE, Comi, dl, DAG);
-          SDValue SetP = getSETCC(X86::COND_P, Comi, dl, DAG);
-          SetCC = DAG.getNode(ISD::OR, dl, MVT::i8, SetCC, SetP);
-          break;
-        }
-        case ISD::SETGT:   // (CF = 0 and ZF = 0)
-        case ISD::SETLT: { // Condition opposite to GT. Operands swapped above.
-          SetCC = getSETCC(X86::COND_A, Comi, dl, DAG);
-          break;
-        }
-        case ISD::SETGE: // CF = 0
-        case ISD::SETLE: // Condition opposite to GE. Operands swapped above.
-          SetCC = getSETCC(X86::COND_AE, Comi, dl, DAG);
-          break;
-        default:
-          llvm_unreachable("Unexpected illegal condition!");
-        }
+        // (ZF = 1 or PF = 0)
+        SDValue SetP = getSETCC(X86::COND_P, Comi, dl, DAG);
+        SetCC = DAG.getNode(ISD::OR, dl, MVT::i8, SetCC, SetP);
+        break;
+      }
+      case ISD::SETGT:   // (CF = 0 and ZF = 0)
+      case ISD::SETLT: { // Condition opposite to GT. Operands swapped above.
+        SetCC = getSETCC(X86::COND_A, Comi, dl, DAG);
+        break;
+      }
+      case ISD::SETGE: // CF = 0
+      case ISD::SETLE: // Condition opposite to GE. Operands swapped above.
+        SetCC = getSETCC(X86::COND_AE, Comi, dl, DAG);
+        break;
+      default:
+        llvm_unreachable("Unexpected illegal condition!");
       }
       return DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i32, SetCC);
     }
