@@ -533,12 +533,12 @@ gpu.module @kernels {
 // OPENCL-LABEL:   llvm.func spir_kernelcc @no_address_spaces_complex(
 // OPENCL-SAME:                                             %{{[a-zA-Z_][a-zA-Z0-9_]*}}: !llvm.ptr<1>
 // OPENCL-SAME:                                             %{{[a-zA-Z_][a-zA-Z0-9_]*}}: !llvm.ptr<1>
-// OPENCL:         llvm.call @no_address_spaces_callee
+// OPENCL:         llvm.call spir_funccc @no_address_spaces_callee
   gpu.func @no_address_spaces_complex(%arg0: memref<2x2xf32>, %arg1: memref<4xf32>) kernel {
     func.call @no_address_spaces_callee(%arg0, %arg1) : (memref<2x2xf32>, memref<4xf32>) -> ()
     gpu.return
   }
-// OPENCL-LABEL:   llvm.func @no_address_spaces_callee(
+// OPENCL-LABEL:   llvm.func spir_funccc @no_address_spaces_callee(
 // OPENCL-SAME:                                             %{{[a-zA-Z_][a-zA-Z0-9_]*}}: !llvm.ptr<1>
 // OPENCL-SAME:                                             %{{[a-zA-Z_][a-zA-Z0-9_]*}}: !llvm.ptr<1>
 // OPENCL:         [[C0:%.*]] = llvm.mlir.constant(0 : i32) : i32
