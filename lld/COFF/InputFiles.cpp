@@ -1009,6 +1009,20 @@ MachineTypes ImportFile::getMachineType() const {
   return MachineTypes(machine);
 }
 
+ImportThunkChunk *ImportFile::makeImportThunk() {
+  switch (hdr->Machine) {
+  case AMD64:
+    return make<ImportThunkChunkX64>(ctx, impSym);
+  case I386:
+    return make<ImportThunkChunkX86>(ctx, impSym);
+  case ARM64:
+    return make<ImportThunkChunkARM64>(ctx, impSym);
+  case ARMNT:
+    return make<ImportThunkChunkARM>(ctx, impSym);
+  }
+  llvm_unreachable("unknown machine type");
+}
+
 void ImportFile::parse() {
   const auto *hdr =
       reinterpret_cast<const coff_import_header *>(mb.getBufferStart());
@@ -1069,9 +1083,10 @@ void ImportFile::parse() {
   // DLL functions just like regular non-DLL functions.)
   if (hdr->getType() == llvm::COFF::IMPORT_CODE) {
     if (ctx.config.machine != ARM64EC) {
-      thunkSym = ctx.symtab.addImportThunk(name, impSym, hdr->Machine);
+      thunkSym = ctx.symtab.addImportThunk(name, impSym, makeImportThunk());
     } else {
-      thunkSym = ctx.symtab.addImportThunk(name, impSym, AMD64);
+      thunkSym = ctx.symtab.addImportThunk(
+          name, impSym, make<ImportThunkChunkX64>(ctx, impSym));
       // FIXME: Add aux IAT symbols.
     }
   }
