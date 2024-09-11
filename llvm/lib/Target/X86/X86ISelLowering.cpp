@@ -56096,34 +56096,50 @@ static SDValue combineSubABS(SDNode *N, SelectionDAG &DAG) {
   if (N1.getOpcode() != X86ISD::CMOV || !N1.hasOneUse())
     return SDValue();
 
-  X86::CondCode CC = (X86::CondCode)N1.getConstantOperandVal(2);
-  if (CC != X86::COND_S && CC != X86::COND_NS)
-    return SDValue();
-
-  // Condition should come from a negate operation.
   SDValue Cond = N1.getOperand(3);
-  if (Cond.getOpcode() != X86ISD::SUB || !isNullConstant(Cond.getOperand(0)))
+  if (Cond.getOpcode() != X86ISD::SUB)
     return SDValue();
   assert(Cond.getResNo() == 1 && "Unexpected result number");
 
-  // Get the X and -X from the negate.
-  SDValue NegX = Cond.getValue(0);
-  SDValue X = Cond.getOperand(1);
-
   SDValue FalseOp = N1.getOperand(0);
   SDValue TrueOp = N1.getOperand(1);
-
-  // Cmov operands should be X and NegX. Order doesn't matter.
-  if (!(TrueOp == X && FalseOp == NegX) && !(TrueOp == NegX && FalseOp == X))
-    return SDValue();
-
-  // Build a new CMOV with the operands swapped.
-  SDLoc DL(N);
+  X86::CondCode CC = (X86::CondCode)N1.getConstantOperandVal(2);
   MVT VT = N->getSimpleValueType(0);
-  SDValue Cmov = DAG.getNode(X86ISD::CMOV, DL, VT, TrueOp, FalseOp,
-                             N1.getOperand(2), Cond);
-  // Convert sub to add.
-  return DAG.getNode(ISD::ADD, DL, VT, N0, Cmov);
+  SDLoc DL(N);
+
+  // ABS condition should come from a negate operation.
+  if ((CC == X86::COND_S || CC == X86::COND_NS) &&
+      isNullConstant(Cond.getOperand(0))) {
+    // Get the X and -X from the negate.
+    SDValue NegX = Cond.getValue(0);
+    SDValue X = Cond.getOperand(1);
+
+    // Cmov operands should be X and NegX. Order doesn't matter.
+    if (!(TrueOp == X && FalseOp == NegX) && !(TrueOp == NegX && FalseOp == X))
+      return SDValue();
+
+    // Build a new CMOV with the operands swapped.
+    SDValue Cmov = DAG.getNode(X86ISD::CMOV, DL, VT, TrueOp, FalseOp,
+                               N1.getOperand(2), Cond);
+    // Convert sub to add.
+    return DAG.getNode(ISD::ADD, DL, VT, N0, Cmov);
+  }
+
+  // Handle ABD special case:
+  // NEG(ABD(X,Y)) -> NEG(CMOV(SUB(X,Y),SUB(Y,X))) -> CMOV(SUB(Y,X),SUB(X,Y)).
+  // ABD condition should come from a pair of matching subtracts.
+  if ((CC == X86::COND_L || CC == X86::COND_B) && isNullConstant(N0) &&
+      (FalseOp == Cond.getValue(0) || TrueOp == Cond.getValue(0)) &&
+      (TrueOp.getOpcode() == ISD::SUB || TrueOp.getOpcode() == X86ISD::SUB) &&
+      (FalseOp.getOpcode() == ISD::SUB || FalseOp.getOpcode() == X86ISD::SUB) &&
+      (TrueOp.getOperand(0) == FalseOp.getOperand(1)) &&
+      (TrueOp.getOperand(1) == FalseOp.getOperand(0))) {
+    // Build a new CMOV with the operands swapped.
+    return DAG.getNode(X86ISD::CMOV, DL, VT, TrueOp, FalseOp, N1.getOperand(2),
+                       Cond);
+  }
+
+  return SDValue();
 }
 
 static SDValue combineSubSetcc(SDNode *N, SelectionDAG &DAG) {
