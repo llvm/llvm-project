@@ -16207,9 +16207,6 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
     return isAtomicRMWLegalXChgTy(RMW)
                ? TargetLowering::AtomicExpansionKind::None
                : TargetLowering::AtomicExpansionKind::CmpXChg;
-
-    // PCIe supports add and xchg for system atomics.
-    return atomicSupportedIfLegalIntType(RMW);
   }
   case AtomicRMWInst::Add:
   case AtomicRMWInst::And:
