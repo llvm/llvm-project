@@ -461,12 +461,6 @@ static void createMemSetPatternLoop(Instruction *InsertBefore, Value *DstAddr,
                                     Align DstAlign, bool IsVolatile) {
   BasicBlock *OrigBB = InsertBefore->getParent();
   Function *F = OrigBB->getParent();
-  const DataLayout &DL = F->getDataLayout();
-
-  if (DL.isBigEndian())
-    report_fatal_error("memset.pattern expansion not currently "
-                       "implemented for big-endian targets",
-                       false);
 
   if (!isPowerOf2_32(SetValue->getType()->getScalarSizeInBits()))
     report_fatal_error("Pattern width for memset_pattern must be a power of 2",
