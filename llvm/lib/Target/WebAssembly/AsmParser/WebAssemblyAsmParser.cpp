@@ -45,7 +45,7 @@ namespace {
 /// WebAssemblyOperand - Instances of this class represent the operands in a
 /// parsed Wasm machine instruction.
 struct WebAssemblyOperand : public MCParsedAsmOperand {
-  enum KindTy { Token, Integer, Float, Symbol, BrList } Kind;
+  enum KindTy { Token, Integer, Float, Symbol, BrList, CatchList } Kind;
 
   SMLoc StartLoc, EndLoc;
 
@@ -99,6 +99,7 @@ struct WebAssemblyOperand : public MCParsedAsmOperand {
   bool isMem() const override { return false; }
   bool isReg() const override { return false; }
   bool isBrList() const { return Kind == BrList; }
+  bool isCatchList() const { return Kind == CatchList; }
 
   MCRegister getReg() const override {
     llvm_unreachable("Assembly inspects a register operand");
@@ -151,6 +152,10 @@ struct WebAssemblyOperand : public MCParsedAsmOperand {
       Inst.addOperand(MCOperand::createImm(Br));
   }
 
+  void addCatchListOperands(MCInst &Inst, unsigned N) const {
+    // TODO
+  }
+
   void print(raw_ostream &OS) const override {
     switch (Kind) {
     case Token:
@@ -167,6 +172,9 @@ struct WebAssemblyOperand : public MCParsedAsmOperand {
       break;
     case BrList:
       OS << "BrList:" << BrL.List.size();
+      break;
+    case CatchList:
+      // TODO
       break;
     }
   }
