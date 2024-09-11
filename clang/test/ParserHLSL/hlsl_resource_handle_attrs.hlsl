@@ -11,6 +11,6 @@ RWBuffer<float> Buffer1;
 // CHECK: -TemplateArgument type 'vector<float, 4>'
 // CHECK: `-ExtVectorType 0x{{[0-9a-f]+}} 'vector<float, 4>' 4
 // CHECK: `-BuiltinType 0x{{[0-9a-f]+}} 'float'
-// CHECK: -FieldDecl 0x{{[0-9a-f]+}} <<invalid sloc>> <invalid sloc> implicit referenced h 'vector<float *, 4> {{\[\[}}hlsl::resource_class(UAV)]] {{\[\[}}hlsl::is_rov()]]':'vector<float *, 4>'
+// CHECK: -FieldDecl 0x{{[0-9a-f]+}} <<invalid sloc>> <invalid sloc> implicit referenced h 'vector<float *, 4> {{\[\[}}hlsl::resource_class(UAV)]] {{\[\[}}hlsl::is_rov]]':'vector<float *, 4>'
 // CHECK: -HLSLResourceAttr 0x{{[0-9a-f]+}} <<invalid sloc>> Implicit TypedBuffer
 RasterizerOrderedBuffer<vector<float, 4> > BufferArray3[4];
