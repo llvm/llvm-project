@@ -1130,6 +1130,30 @@ func.func @extract_scalar_from_vec_1d_f32_scalable(%arg0: vector<[16]xf32>) -> f
 
 // -----
 
+func.func @extract_vec_1e_from_vec_1d_f32(%arg0: vector<16xf32>) -> vector<1xf32> {
+  %0 = vector.extract %arg0[15]: vector<1xf32> from vector<16xf32>
+  return %0 : vector<1xf32>
+}
+// CHECK-LABEL: @extract_vec_1e_from_vec_1d_f32(
+//  CHECK-SAME:   %[[A:.*]]: vector<16xf32>)
+//       CHECK:   %[[T0:.*]] = llvm.mlir.constant(15 : i64) : i64
+//       CHECK:   %[[T1:.*]] = llvm.extractelement %[[A]][%[[T0]] : i64] : vector<16xf32>
+//       CHECK:   %[[T2:.*]] = builtin.unrealized_conversion_cast %[[T1]] : f32 to vector<1xf32>
+//       CHECK:   return %[[T2]] : vector<1xf32>
+
+func.func @extract_vec_1e_from_vec_1d_f32_scalable(%arg0: vector<[16]xf32>) -> vector<1xf32> {
+  %0 = vector.extract %arg0[15]: vector<1xf32> from vector<[16]xf32>
+  return %0 : vector<1xf32>
+}
+// CHECK-LABEL: @extract_vec_1e_from_vec_1d_f32_scalable(
+//  CHECK-SAME:   %[[A:.*]]: vector<[16]xf32>)
+//       CHECK:   %[[T0:.*]] = llvm.mlir.constant(15 : i64) : i64
+//       CHECK:   %[[T1:.*]] = llvm.extractelement %[[A]][%[[T0]] : i64] : vector<[16]xf32>
+//       CHECK:   %[[T2:.*]] = builtin.unrealized_conversion_cast %[[T1]] : f32 to vector<1xf32>
+//       CHECK:   return %[[T2]] : vector<1xf32>
+
+// -----
+
 func.func @extract_scalar_from_vec_1d_index(%arg0: vector<16xindex>) -> index {
   %0 = vector.extract %arg0[15]: index from vector<16xindex>
   return %0 : index
@@ -2517,6 +2541,16 @@ func.func @transfer_write_1d_scalable_mask(%arg0: memref<1x?xf32>, %vec: vector<
   %c0 = arith.constant 0 : index
   vector.transfer_write %vec, %arg0[%c0, %c0], %mask {in_bounds = [true]} : vector<[4]xf32>, memref<1x?xf32>
   return
+}
+
+// -----
+
+// CHECK-LABEL: func @transfer_write_tensor
+//       CHECK:   vector.transfer_write
+func.func @transfer_write_tensor(%arg0: vector<4xf32>,%arg1: tensor<?xf32>) -> tensor<?xf32> {
+  %c0 = arith.constant 0 : index
+  %0 = vector.transfer_write %arg0, %arg1[%c0] : vector<4xf32>, tensor<?xf32>
+  return %0 : tensor<?xf32>
 }
 
 // -----
