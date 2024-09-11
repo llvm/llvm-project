@@ -2925,11 +2925,6 @@ void DWARFASTParserClang::ParseSingleMember(
       detect_unnamed_bitfields =
           die.GetCU()->Supports_unnamed_objc_bitfields();
 
-    // TODO:
-    //   for each ParseSingleMember, check if the field start <= last_field_end.
-    //   In that case we have an overlap, so we need to adjust the
-    //   this_field_info in such a way that the next last_field_end will be that
-    //   of the field that we just overlapped with.
     if (detect_unnamed_bitfields)
       AddUnnamedBitfieldToRecordTypeIfNeeded(layout_info, class_clang_type,
                                              last_field_info, this_field_info);
