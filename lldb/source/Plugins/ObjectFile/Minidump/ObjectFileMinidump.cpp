@@ -81,28 +81,33 @@ bool ObjectFileMinidump::SaveCore(const lldb::ProcessSP &process_sp,
   if (error.Fail()) {
     LLDB_LOGF(log, "AddHeaderAndCalculateDirectories failed: %s",
               error.AsCString());
+    builder.DeleteFile();
     return false;
   };
   error = builder.AddSystemInfo();
   if (error.Fail()) {
     LLDB_LOGF(log, "AddSystemInfo failed: %s", error.AsCString());
+    builder.DeleteFile();
     return false;
   }
 
   error = builder.AddModuleList();
   if (error.Fail()) {
     LLDB_LOGF(log, "AddModuleList failed: %s", error.AsCString());
+    builder.DeleteFile();
     return false;
   }
   error = builder.AddMiscInfo();
   if (error.Fail()) {
     LLDB_LOGF(log, "AddMiscInfo failed: %s", error.AsCString());
+    builder.DeleteFile();
     return false;
   }
 
   error = builder.AddThreadList();
   if (error.Fail()) {
     LLDB_LOGF(log, "AddThreadList failed: %s", error.AsCString());
+    builder.DeleteFile();
     return false;
   }
 
@@ -116,6 +121,7 @@ bool ObjectFileMinidump::SaveCore(const lldb::ProcessSP &process_sp,
   error = builder.AddExceptions();
   if (error.Fail()) {
     LLDB_LOGF(log, "AddExceptions failed: %s", error.AsCString());
+    builder.DeleteFile();
     return false;
   }
 
@@ -124,12 +130,14 @@ bool ObjectFileMinidump::SaveCore(const lldb::ProcessSP &process_sp,
   error = builder.AddMemoryList();
   if (error.Fail()) {
     LLDB_LOGF(log, "AddMemoryList failed: %s", error.AsCString());
+    builder.DeleteFile();
     return false;
   }
 
   error = builder.DumpFile();
   if (error.Fail()) {
     LLDB_LOGF(log, "DumpFile failed: %s", error.AsCString());
+    builder.DeleteFile();
     return false;
   }
 
