@@ -204,6 +204,24 @@ class SemaPPCallbacks;
 class TemplateDeductionInfo;
 } // namespace sema
 
+// AssignmentAction - This is used by all the assignment diagnostic functions
+// to represent what is actually causing the operation
+enum class AssignmentAction {
+  Assigning,
+  Passing,
+  Returning,
+  Converting,
+  Initializing,
+  Sending,
+  Casting,
+  Passing_CFAudited
+};
+inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
+                                             const AssignmentAction &AA) {
+  DB << llvm::to_underlying(AA);
+  return DB;
+}
+
 namespace threadSafety {
 class BeforeSet;
 void threadSafetyCleanup(BeforeSet *Cache);
@@ -1805,6 +1823,9 @@ public:
 
   /// Add [[gsl::Owner]] and [[gsl::Pointer]] attributes for std:: types.
   void inferGslOwnerPointerAttribute(CXXRecordDecl *Record);
+
+  /// Add [[clang:::lifetimebound]] attr for std:: functions and methods.
+  void inferLifetimeBoundAttribute(FunctionDecl *FD);
 
   /// Add [[gsl::Pointer]] attributes for std:: types.
   void inferGslPointerAttribute(TypedefNameDecl *TD);
@@ -6489,19 +6510,6 @@ public:
   /// ExprCleanupObjects - This is the stack of objects requiring
   /// cleanup that are created by the current full expression.
   SmallVector<ExprWithCleanups::CleanupObject, 8> ExprCleanupObjects;
-
-  // AssignmentAction - This is used by all the assignment diagnostic functions
-  // to represent what is actually causing the operation
-  enum AssignmentAction {
-    AA_Assigning,
-    AA_Passing,
-    AA_Returning,
-    AA_Converting,
-    AA_Initializing,
-    AA_Sending,
-    AA_Casting,
-    AA_Passing_CFAudited
-  };
 
   /// Determine whether the use of this declaration is valid, without
   /// emitting diagnostics.
@@ -11725,6 +11733,9 @@ public:
   /// receive true if the cause for the error is the associated constraints of
   /// the template not being satisfied by the template arguments.
   ///
+  /// \param DefaultArgs any default arguments from template specialization
+  /// deduction.
+  ///
   /// \param PartialOrderingTTP If true, assume these template arguments are
   /// the injected template arguments for a template template parameter.
   /// This will relax the requirement that all its possible uses are valid:
@@ -11734,7 +11745,8 @@ public:
   /// \returns true if an error occurred, false otherwise.
   bool CheckTemplateArgumentList(
       TemplateDecl *Template, SourceLocation TemplateLoc,
-      TemplateArgumentListInfo &TemplateArgs, bool PartialTemplateArgs,
+      TemplateArgumentListInfo &TemplateArgs,
+      const DefaultArguments &DefaultArgs, bool PartialTemplateArgs,
       SmallVectorImpl<TemplateArgument> &SugaredConverted,
       SmallVectorImpl<TemplateArgument> &CanonicalConverted,
       bool UpdateArgsWithConversions = true,
@@ -12471,8 +12483,8 @@ public:
                                     sema::TemplateDeductionInfo &Info);
 
   bool isTemplateTemplateParameterAtLeastAsSpecializedAs(
-      TemplateParameterList *PParam, TemplateDecl *AArg, SourceLocation Loc,
-      bool IsDeduced);
+      TemplateParameterList *PParam, TemplateDecl *AArg,
+      const DefaultArguments &DefaultArgs, SourceLocation Loc, bool IsDeduced);
 
   /// Mark which template parameters are used in a given expression.
   ///
@@ -13280,6 +13292,10 @@ public:
   /// \param AllowDeducedTST Whether a DeducedTemplateSpecializationType is
   /// acceptable as the top level type of the result.
   ///
+  /// \param IsIncompleteSubstitution If provided, the pointee will be set
+  /// whenever substitution would perform a replacement with a null or
+  /// non-existent template argument.
+  ///
   /// \returns If the instantiation succeeds, the instantiated
   /// type. Otherwise, produces diagnostics and returns a NULL type.
   TypeSourceInfo *SubstType(TypeSourceInfo *T,
@@ -13289,7 +13305,8 @@ public:
 
   QualType SubstType(QualType T,
                      const MultiLevelTemplateArgumentList &TemplateArgs,
-                     SourceLocation Loc, DeclarationName Entity);
+                     SourceLocation Loc, DeclarationName Entity,
+                     bool *IsIncompleteSubstitution = nullptr);
 
   TypeSourceInfo *SubstType(TypeLoc TL,
                             const MultiLevelTemplateArgumentList &TemplateArgs,

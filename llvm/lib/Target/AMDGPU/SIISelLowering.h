@@ -145,7 +145,6 @@ private:
 
   /// Custom lowering for ISD::FP_ROUND for MVT::f16.
   SDValue lowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerFPTRUNC_ROUND(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFMINNUM_FMAXNUM(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFLDEXP(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerMUL(SDValue Op, SelectionDAG &DAG) const;
@@ -347,7 +346,6 @@ public:
   EVT getOptimalMemOpType(const MemOp &Op,
                           const AttributeList &FuncAttributes) const override;
 
-  bool isMemOpUniform(const SDNode *N) const;
   bool isMemOpHasNoClobberedMemOperand(const SDNode *N) const;
 
   static bool isNonGlobalAddrSpace(unsigned AS);

@@ -38,7 +38,7 @@ static T getParam(const InterpFrame *Frame, unsigned Index) {
 }
 
 PrimType getIntPrimType(const InterpState &S) {
-  const TargetInfo &TI = S.getCtx().getTargetInfo();
+  const TargetInfo &TI = S.getASTContext().getTargetInfo();
   unsigned IntWidth = TI.getIntWidth();
 
   if (IntWidth == 32)
@@ -49,7 +49,7 @@ PrimType getIntPrimType(const InterpState &S) {
 }
 
 PrimType getLongPrimType(const InterpState &S) {
-  const TargetInfo &TI = S.getCtx().getTargetInfo();
+  const TargetInfo &TI = S.getASTContext().getTargetInfo();
   unsigned LongWidth = TI.getLongWidth();
 
   if (LongWidth == 64)
@@ -272,10 +272,10 @@ static bool interp__builtin_nan(InterpState &S, CodePtr OpPC,
     return false;
 
   const llvm::fltSemantics &TargetSemantics =
-      S.getCtx().getFloatTypeSemantics(F->getDecl()->getReturnType());
+      S.getASTContext().getFloatTypeSemantics(F->getDecl()->getReturnType());
 
   Floating Result;
-  if (S.getCtx().getTargetInfo().isNan2008()) {
+  if (S.getASTContext().getTargetInfo().isNan2008()) {
     if (Signaling)
       Result = Floating(
           llvm::APFloat::getSNaN(TargetSemantics, /*Negative=*/false, &Fill));
@@ -303,7 +303,7 @@ static bool interp__builtin_nan(InterpState &S, CodePtr OpPC,
 static bool interp__builtin_inf(InterpState &S, CodePtr OpPC,
                                 const InterpFrame *Frame, const Function *F) {
   const llvm::fltSemantics &TargetSemantics =
-      S.getCtx().getFloatTypeSemantics(F->getDecl()->getReturnType());
+      S.getASTContext().getFloatTypeSemantics(F->getDecl()->getReturnType());
 
   S.Stk.push<Floating>(Floating::getInf(TargetSemantics));
   return true;
@@ -689,8 +689,8 @@ static bool interp__builtin_eh_return_data_regno(InterpState &S, CodePtr OpPC,
   PrimType ArgT = *S.getContext().classify(Call->getArg(0)->getType());
   APSInt Arg = peekToAPSInt(S.Stk, ArgT);
 
-  int Result =
-      S.getCtx().getTargetInfo().getEHDataRegisterNumber(Arg.getZExtValue());
+  int Result = S.getASTContext().getTargetInfo().getEHDataRegisterNumber(
+      Arg.getZExtValue());
   pushInteger(S, Result, Call->getType());
   return true;
 }
@@ -734,7 +734,7 @@ static bool interp__builtin_overflowop(InterpState &S, CodePtr OpPC,
                      ResultType->isSignedIntegerOrEnumerationType();
     uint64_t LHSSize = LHS.getBitWidth();
     uint64_t RHSSize = RHS.getBitWidth();
-    uint64_t ResultSize = S.getCtx().getTypeSize(ResultType);
+    uint64_t ResultSize = S.getASTContext().getTypeSize(ResultType);
     uint64_t MaxBits = std::max(std::max(LHSSize, RHSSize), ResultSize);
 
     // Add an additional bit if the signedness isn't uniformly agreed to. We
@@ -794,7 +794,7 @@ static bool interp__builtin_overflowop(InterpState &S, CodePtr OpPC,
     // since it will give us the behavior of a TruncOrSelf in the case where
     // its parameter <= its size.  We previously set Result to be at least the
     // type-size of the result, so getTypeSize(ResultType) <= Resu
-    APSInt Temp = Result.extOrTrunc(S.getCtx().getTypeSize(ResultType));
+    APSInt Temp = Result.extOrTrunc(S.getASTContext().getTypeSize(ResultType));
     Temp.setIsSigned(ResultType->isSignedIntegerOrEnumerationType());
 
     if (!APSInt::isSameValue(Temp, Result))
@@ -974,8 +974,8 @@ static bool interp__builtin_atomic_lock_free(InterpState &S, CodePtr OpPC,
   if (Size.isPowerOfTwo()) {
     // Check against inlining width.
     unsigned InlineWidthBits =
-        S.getCtx().getTargetInfo().getMaxAtomicInlineWidth();
-    if (Size <= S.getCtx().toCharUnitsFromBits(InlineWidthBits)) {
+        S.getASTContext().getTargetInfo().getMaxAtomicInlineWidth();
+    if (Size <= S.getASTContext().toCharUnitsFromBits(InlineWidthBits)) {
 
       // OK, we will inline appropriately-aligned operations of this size,
       // and _Atomic(T) is appropriately-aligned.
@@ -1007,7 +1007,7 @@ static bool interp__builtin_atomic_lock_free(InterpState &S, CodePtr OpPC,
       if (auto PtrTy = PtrArg->getType()->getAs<PointerType>()) {
         QualType PointeeType = PtrTy->getPointeeType();
         if (!PointeeType->isIncompleteType() &&
-            S.getCtx().getTypeAlignInChars(PointeeType) >= Size) {
+            S.getASTContext().getTypeAlignInChars(PointeeType) >= Size) {
           // OK, we will inline operations on this object.
           return returnBool(true);
         }
@@ -1059,7 +1059,7 @@ static bool interp__builtin_is_aligned_up_down(InterpState &S, CodePtr OpPC,
     S.FFDiag(Call, diag::note_constexpr_invalid_alignment) << Alignment;
     return false;
   }
-  unsigned SrcWidth = S.getCtx().getIntWidth(Call->getArg(0)->getType());
+  unsigned SrcWidth = S.getASTContext().getIntWidth(Call->getArg(0)->getType());
   APSInt MaxValue(APInt::getOneBitSet(SrcWidth, SrcWidth - 1));
   if (APSInt::compareValues(Alignment, MaxValue) > 0) {
     S.FFDiag(Call, diag::note_constexpr_alignment_too_big)
@@ -1094,7 +1094,7 @@ static bool interp__builtin_is_aligned_up_down(InterpState &S, CodePtr OpPC,
   unsigned PtrOffset = Ptr.getByteOffset();
   PtrOffset = Ptr.getIndex();
   CharUnits BaseAlignment =
-      S.getCtx().getDeclAlign(Ptr.getDeclDesc()->asValueDecl());
+      S.getASTContext().getDeclAlign(Ptr.getDeclDesc()->asValueDecl());
   CharUnits PtrAlign =
       BaseAlignment.alignmentAtOffset(CharUnits::fromQuantity(PtrOffset));
 
@@ -1157,7 +1157,7 @@ static bool interp__builtin_os_log_format_buffer_size(InterpState &S,
                                                       const Function *Func,
                                                       const CallExpr *Call) {
   analyze_os_log::OSLogBufferLayout Layout;
-  analyze_os_log::computeOSLogBufferLayout(S.getCtx(), Call, Layout);
+  analyze_os_log::computeOSLogBufferLayout(S.getASTContext(), Call, Layout);
   pushInteger(S, Layout.size().getQuantity(), Call->getType());
   return true;
 }
@@ -1244,14 +1244,164 @@ static bool interp__builtin_constant_p(InterpState &S, CodePtr OpPC,
   return returnInt(false);
 }
 
+static bool interp__builtin_operator_new(InterpState &S, CodePtr OpPC,
+                                         const InterpFrame *Frame,
+                                         const Function *Func,
+                                         const CallExpr *Call) {
+  // A call to __operator_new is only valid within std::allocate<>::allocate.
+  // Walk up the call stack to find the appropriate caller and get the
+  // element type from it.
+  QualType ElemType;
+
+  for (const InterpFrame *F = Frame; F; F = F->Caller) {
+    const Function *Func = F->getFunction();
+    if (!Func)
+      continue;
+    const auto *MD = dyn_cast_if_present<CXXMethodDecl>(Func->getDecl());
+    if (!MD)
+      continue;
+    const IdentifierInfo *FnII = MD->getIdentifier();
+    if (!FnII || !FnII->isStr("allocate"))
+      continue;
+
+    const auto *CTSD =
+        dyn_cast<ClassTemplateSpecializationDecl>(MD->getParent());
+    if (!CTSD)
+      continue;
+
+    const IdentifierInfo *ClassII = CTSD->getIdentifier();
+    const TemplateArgumentList &TAL = CTSD->getTemplateArgs();
+    if (CTSD->isInStdNamespace() && ClassII && ClassII->isStr("allocator") &&
+        TAL.size() >= 1 && TAL[0].getKind() == TemplateArgument::Type) {
+      ElemType = TAL[0].getAsType();
+      break;
+    }
+  }
+
+  if (ElemType.isNull()) {
+    S.FFDiag(Call, S.getLangOpts().CPlusPlus20
+                       ? diag::note_constexpr_new_untyped
+                       : diag::note_constexpr_new);
+    return false;
+  }
+
+  if (ElemType->isIncompleteType() || ElemType->isFunctionType()) {
+    S.FFDiag(Call, diag::note_constexpr_new_not_complete_object_type)
+        << (ElemType->isIncompleteType() ? 0 : 1) << ElemType;
+    return false;
+  }
+
+  APSInt Bytes = peekToAPSInt(S.Stk, *S.getContext().classify(Call->getArg(0)));
+  CharUnits ElemSize = S.getASTContext().getTypeSizeInChars(ElemType);
+  assert(!ElemSize.isZero());
+  // Divide the number of bytes by sizeof(ElemType), so we get the number of
+  // elements we should allocate.
+  APInt NumElems, Remainder;
+  APInt ElemSizeAP(Bytes.getBitWidth(), ElemSize.getQuantity());
+  APInt::udivrem(Bytes, ElemSizeAP, NumElems, Remainder);
+  if (Remainder != 0) {
+    // This likely indicates a bug in the implementation of 'std::allocator'.
+    S.FFDiag(Call, diag::note_constexpr_operator_new_bad_size)
+        << Bytes << APSInt(ElemSizeAP, true) << ElemType;
+    return false;
+  }
+
+  // FIXME: CheckArraySize for NumElems?
+
+  std::optional<PrimType> ElemT = S.getContext().classify(ElemType);
+  DynamicAllocator &Allocator = S.getAllocator();
+  if (ElemT) {
+    if (NumElems.ule(1)) {
+      const Descriptor *Desc =
+          S.P.createDescriptor(Call, *ElemT, Descriptor::InlineDescMD,
+                               /*IsConst=*/false, /*IsTemporary=*/false,
+                               /*IsMutable=*/false);
+      Block *B = Allocator.allocate(Desc, S.getContext().getEvalID(),
+                                    DynamicAllocator::Form::Operator);
+      assert(B);
+
+      S.Stk.push<Pointer>(B);
+      return true;
+    }
+    assert(NumElems.ugt(1));
+
+    Block *B =
+        Allocator.allocate(Call, *ElemT, NumElems.getZExtValue(),
+                           S.Ctx.getEvalID(), DynamicAllocator::Form::Operator);
+    assert(B);
+    S.Stk.push<Pointer>(B);
+    return true;
+  }
+
+  assert(!ElemT);
+  // Structs etc.
+  const Descriptor *Desc = S.P.createDescriptor(
+      Call, ElemType.getTypePtr(),
+      NumElems.ule(1) ? std::nullopt : Descriptor::InlineDescMD,
+      /*IsConst=*/false, /*IsTemporary=*/false, /*IsMutable=*/false,
+      /*Init=*/nullptr);
+
+  if (NumElems.ule(1)) {
+    Block *B = Allocator.allocate(Desc, S.getContext().getEvalID(),
+                                  DynamicAllocator::Form::Operator);
+    assert(B);
+    S.Stk.push<Pointer>(B);
+    return true;
+  }
+
+  Block *B =
+      Allocator.allocate(Desc, NumElems.getZExtValue(), S.Ctx.getEvalID(),
+                         DynamicAllocator::Form::Operator);
+  assert(B);
+  S.Stk.push<Pointer>(B);
+  return true;
+}
+
+static bool interp__builtin_operator_delete(InterpState &S, CodePtr OpPC,
+                                            const InterpFrame *Frame,
+                                            const Function *Func,
+                                            const CallExpr *Call) {
+  const Expr *Source = nullptr;
+  const Block *BlockToDelete = nullptr;
+
+  {
+    const Pointer &Ptr = S.Stk.peek<Pointer>();
+
+    if (Ptr.isZero()) {
+      S.CCEDiag(Call, diag::note_constexpr_deallocate_null);
+      return true;
+    }
+
+    Source = Ptr.getDeclDesc()->asExpr();
+    BlockToDelete = Ptr.block();
+  }
+  assert(BlockToDelete);
+
+  DynamicAllocator &Allocator = S.getAllocator();
+  const Descriptor *BlockDesc = BlockToDelete->getDescriptor();
+  std::optional<DynamicAllocator::Form> AllocForm =
+      Allocator.getAllocationForm(Source);
+
+  if (!Allocator.deallocate(Source, BlockToDelete, S)) {
+    // Nothing has been deallocated, this must be a double-delete.
+    const SourceInfo &Loc = S.Current->getSource(OpPC);
+    S.FFDiag(Loc, diag::note_constexpr_double_delete);
+    return false;
+  }
+  assert(AllocForm);
+
+  return CheckNewDeleteForms(
+      S, OpPC, *AllocForm, DynamicAllocator::Form::Operator, BlockDesc, Source);
+}
+
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
-                      const CallExpr *Call) {
+                      const CallExpr *Call, uint32_t BuiltinID) {
   const InterpFrame *Frame = S.Current;
   APValue Dummy;
 
   std::optional<PrimType> ReturnT = S.getContext().classify(Call);
 
-  switch (F->getBuiltinID()) {
+  switch (BuiltinID) {
   case Builtin::BI__builtin_is_constant_evaluated:
     if (!interp__builtin_is_constant_evaluated(S, OpPC, Frame, Call))
       return false;
@@ -1593,6 +1743,20 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
       return false;
     break;
 
+  case Builtin::BI__noop:
+    pushInteger(S, 0, Call->getType());
+    break;
+
+  case Builtin::BI__builtin_operator_new:
+    if (!interp__builtin_operator_new(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
+  case Builtin::BI__builtin_operator_delete:
+    if (!interp__builtin_operator_delete(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
   default:
     S.FFDiag(S.Current->getLocation(OpPC),
              diag::note_invalid_subexpr_in_const_expr)
@@ -1624,10 +1788,11 @@ bool InterpretOffsetOf(InterpState &S, CodePtr OpPC, const OffsetOfExpr *E,
       const RecordDecl *RD = RT->getDecl();
       if (RD->isInvalidDecl())
         return false;
-      const ASTRecordLayout &RL = S.getCtx().getASTRecordLayout(RD);
+      const ASTRecordLayout &RL = S.getASTContext().getASTRecordLayout(RD);
       unsigned FieldIndex = MemberDecl->getFieldIndex();
       assert(FieldIndex < RL.getFieldCount() && "offsetof field in wrong type");
-      Result += S.getCtx().toCharUnitsFromBits(RL.getFieldOffset(FieldIndex));
+      Result +=
+          S.getASTContext().toCharUnitsFromBits(RL.getFieldOffset(FieldIndex));
       CurrentType = MemberDecl->getType().getNonReferenceType();
       break;
     }
@@ -1635,11 +1800,11 @@ bool InterpretOffsetOf(InterpState &S, CodePtr OpPC, const OffsetOfExpr *E,
       // When generating bytecode, we put all the index expressions as Sint64 on
       // the stack.
       int64_t Index = ArrayIndices[ArrayIndex];
-      const ArrayType *AT = S.getCtx().getAsArrayType(CurrentType);
+      const ArrayType *AT = S.getASTContext().getAsArrayType(CurrentType);
       if (!AT)
         return false;
       CurrentType = AT->getElementType();
-      CharUnits ElementSize = S.getCtx().getTypeSizeInChars(CurrentType);
+      CharUnits ElementSize = S.getASTContext().getTypeSizeInChars(CurrentType);
       Result += Index * ElementSize;
       ++ArrayIndex;
       break;
@@ -1656,7 +1821,7 @@ bool InterpretOffsetOf(InterpState &S, CodePtr OpPC, const OffsetOfExpr *E,
       const RecordDecl *RD = RT->getDecl();
       if (RD->isInvalidDecl())
         return false;
-      const ASTRecordLayout &RL = S.getCtx().getASTRecordLayout(RD);
+      const ASTRecordLayout &RL = S.getASTContext().getASTRecordLayout(RD);
 
       // Find the base class itself.
       CurrentType = BaseSpec->getType();

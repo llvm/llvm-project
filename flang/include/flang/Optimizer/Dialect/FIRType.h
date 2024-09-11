@@ -139,6 +139,13 @@ inline bool isa_builtin_cptr_type(mlir::Type t) {
   return false;
 }
 
+/// Is `t` type(c_devptr)?
+inline bool isa_builtin_cdevptr_type(mlir::Type t) {
+  if (auto recTy = mlir::dyn_cast_or_null<fir::RecordType>(t))
+    return recTy.getName().ends_with("T__builtin_c_devptr");
+  return false;
+}
+
 /// Is `t` a FIR dialect aggregate type?
 inline bool isa_aggregate(mlir::Type t) {
   return mlir::isa<SequenceType, mlir::TupleType>(t) || fir::isa_derived(t);
@@ -487,11 +494,18 @@ std::string getTypeAsString(mlir::Type ty, const KindMapping &kindMap,
 /// target dependent type size inquiries in lowering. It would also not be
 /// straightforward given the need for a kind map that would need to be
 /// converted in terms of mlir::DataLayoutEntryKey.
+
+/// This variant terminates the compilation if an unsupported type is passed.
 std::pair<std::uint64_t, unsigned short>
+getTypeSizeAndAlignmentOrCrash(mlir::Location loc, mlir::Type ty,
+                               const mlir::DataLayout &dl,
+                               const fir::KindMapping &kindMap);
+
+/// This variant returns std::nullopt if an unsupported type is passed.
+std::optional<std::pair<uint64_t, unsigned short>>
 getTypeSizeAndAlignment(mlir::Location loc, mlir::Type ty,
                         const mlir::DataLayout &dl,
                         const fir::KindMapping &kindMap);
-
 } // namespace fir
 
 #endif // FORTRAN_OPTIMIZER_DIALECT_FIRTYPE_H

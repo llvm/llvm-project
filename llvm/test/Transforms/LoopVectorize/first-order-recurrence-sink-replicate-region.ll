@@ -9,6 +9,7 @@ target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 define void @sink_replicate_region_1(i32 %x, ptr %ptr, ptr noalias %dst) optsize {
 ; CHECK-LABEL: sink_replicate_region_1
 ; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
+; CHECK-NEXT: Live-in vp<[[VF:%.+]]> = VF
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in vp<[[BTC:%.+]]> = backedge-taken count
@@ -21,7 +22,7 @@ define void @sink_replicate_region_1(i32 %x, ptr %ptr, ptr noalias %dst) optsize
 ; CHECK-NEXT: vector.body:
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
 ; CHECK-NEXT:   FIRST-ORDER-RECURRENCE-PHI ir<%0> = phi ir<0>, ir<%conv>
-; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 0, %iv.next, ir<1>
+; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 0, %iv.next, ir<1>, vp<[[VF]]>
 ; CHECK-NEXT:   vp<[[STEPS:%.]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK-NEXT:   EMIT vp<[[MASK:%.+]]> = icmp ule ir<%iv>, vp<[[BTC]]>
 ; CHECK-NEXT: Successor(s): pred.load
@@ -110,6 +111,7 @@ exit:
 define void @sink_replicate_region_2(i32 %x, i8 %y, ptr %ptr) optsize {
 ; CHECK-LABEL: sink_replicate_region_2
 ; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
+; CHECK-NEXT: Live-in vp<[[VF:%.+]]> = VF
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in vp<[[BTC:%.+]]> = backedge-taken count
@@ -122,7 +124,7 @@ define void @sink_replicate_region_2(i32 %x, i8 %y, ptr %ptr) optsize {
 ; CHECK-NEXT: vector.body:
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
 ; CHECK-NEXT:   FIRST-ORDER-RECURRENCE-PHI ir<%recur> = phi ir<0>, ir<%recur.next>
-; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 0, %iv.next, ir<1>
+; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 0, %iv.next, ir<1>, vp<[[VF]]>
 ; CHECK-NEXT:   EMIT vp<[[MASK:%.+]]> = icmp ule ir<%iv>, vp<[[BTC]]>
 ; CHECK-NEXT:   WIDEN-CAST ir<%recur.next> = sext ir<%y> to i32
 ; CHECK-NEXT:   EMIT vp<[[SPLICE:%.+]]> = first-order splice ir<%recur>, ir<%recur.next>
@@ -260,6 +262,7 @@ exit:
 define void @sink_replicate_region_4_requires_split_at_end_of_block(i32 %x, ptr %ptr, ptr noalias %dst) optsize {
 ; CHECK-LABEL: sink_replicate_region_4_requires_split_at_end_of_block
 ; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
+; CHECK-NEXT: Live-in vp<[[VF:%.+]]> = VF
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in vp<[[BTC:%.+]]> = backedge-taken count
@@ -272,7 +275,7 @@ define void @sink_replicate_region_4_requires_split_at_end_of_block(i32 %x, ptr 
 ; CHECK-NEXT: vector.body:
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
 ; CHECK-NEXT:   FIRST-ORDER-RECURRENCE-PHI ir<%0> = phi ir<0>, ir<%conv>
-; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 0, %iv.next, ir<1>
+; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 0, %iv.next, ir<1>, vp<[[VF]]>
 ; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK-NEXT:   EMIT vp<[[MASK:%.+]]> = icmp ule ir<%iv>, vp<[[BTC]]>
 ; CHECK-NEXT:   REPLICATE ir<%gep> = getelementptr ir<%ptr>, vp<[[STEPS]]>
@@ -368,6 +371,7 @@ exit:
 define void @sink_replicate_region_after_replicate_region(ptr %ptr, ptr noalias %dst.2, i32 %x, i8 %y) optsize {
 ; CHECK-LABEL: sink_replicate_region_after_replicate_region
 ; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
+; CHECK-NEXT: Live-in vp<[[VF:%.+]]> = VF
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in vp<[[BTC:%.+]]> = backedge-taken count
@@ -384,7 +388,7 @@ define void @sink_replicate_region_after_replicate_region(ptr %ptr, ptr noalias 
 ; CHECK-NEXT: vector.body:
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
 ; CHECK-NEXT:   FIRST-ORDER-RECURRENCE-PHI ir<%recur> = phi ir<0>, ir<%recur.next>
-; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 0, %iv.next, ir<1>
+; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 0, %iv.next, ir<1>, vp<[[VF]]>
 ; CHECK-NEXT:   EMIT vp<[[MASK:%.+]]> = icmp ule ir<%iv>, vp<[[BTC]]>
 ; CHECK-NEXT:   WIDEN-CAST ir<%recur.next> = sext ir<%y> to i32
 ; CHECK-NEXT:   EMIT vp<[[SPLICE:%.+]]> = first-order splice ir<%recur>, ir<%recur.next>
