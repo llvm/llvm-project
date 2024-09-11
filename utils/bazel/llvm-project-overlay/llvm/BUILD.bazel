@@ -3690,20 +3690,39 @@ cc_binary(
     ],
 )
 
-cc_binary(
-    name = "llvm-debuginfod-find",
+gentbl(
+    name = "DebugInfodFindOptsTableGen",
+    strip_include_prefix = "tools/llvm-debuginfod-find",
+    tbl_outs = [(
+        "-gen-opt-parser-defs",
+        "tools/llvm-debuginfod-find/Opts.inc",
+    )],
+    tblgen = ":llvm-tblgen",
+    td_file = "tools/llvm-debuginfod-find/Opts.td",
+    td_srcs = ["include/llvm/Option/OptParser.td"],
+)
+
+cc_library(
+    name = "llvm-debuginfod-find-lib",
     srcs = glob([
         "tools/llvm-debuginfod-find/*.cpp",
     ]),
     copts = llvm_copts,
-    stamp = 0,
     deps = [
         ":BitReader",
         ":Core",
+        ":DebugInfodFindOptsTableGen",
         ":Debuginfod",
+        ":Option",
         ":Support",
         ":Symbolize",
     ],
+)
+
+llvm_driver_cc_binary(
+    name = "llvm-debuginfod-find",
+    stamp = 0,
+    deps = [":llvm-debuginfod-find-lib"],
 )
 
 cc_binary(
