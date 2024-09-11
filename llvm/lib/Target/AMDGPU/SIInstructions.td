@@ -1161,11 +1161,11 @@ multiclass f16_fp_Pats<Instruction cvt_f16_f32_inst_e64, Instruction cvt_f32_f16
   >;
 }
 
-let SubtargetPredicate = NotHasTrue16BitInsts in
+let True16Predicate = NotHasTrue16BitInsts in
 defm : f16_fp_Pats<V_CVT_F16_F32_e64, V_CVT_F32_F16_e64>;
 
-let SubtargetPredicate = HasTrue16BitInsts in
-defm : f16_fp_Pats<V_CVT_F16_F32_t16_e64, V_CVT_F32_F16_t16_e64>;
+let True16Predicate = UseFakeTrue16Insts in
+defm : f16_fp_Pats<V_CVT_F16_F32_fake16_e64, V_CVT_F32_F16_fake16_e64>;
 
 //===----------------------------------------------------------------------===//
 // VOP2 Patterns
@@ -2778,7 +2778,7 @@ def : GCNPat <
 let SubtargetPredicate = HasTrue16BitInsts in
 def : GCNPat <
   (f16 (sint_to_fp i1:$src)),
-  (V_CVT_F16_F32_t16_e32 (
+  (V_CVT_F16_F32_fake16_e32 (
       V_CNDMASK_B32_e64 /*src0mod*/(i32 0), /*src0*/(i32 0),
                         /*src1mod*/(i32 0), /*src1*/(i32 CONST.FP32_NEG_ONE),
                         SSrc_i1:$src))
@@ -2795,7 +2795,7 @@ def : GCNPat <
 let SubtargetPredicate = HasTrue16BitInsts in
 def : GCNPat <
   (f16 (uint_to_fp i1:$src)),
-  (V_CVT_F16_F32_t16_e32 (
+  (V_CVT_F16_F32_fake16_e32 (
       V_CNDMASK_B32_e64 /*src0mod*/(i32 0), /*src0*/(i32 0),
                         /*src1mod*/(i32 0), /*src1*/(i32 CONST.FP32_ONE),
                         SSrc_i1:$src))

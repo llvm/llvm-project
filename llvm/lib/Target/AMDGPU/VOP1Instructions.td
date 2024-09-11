@@ -294,16 +294,22 @@ defm V_CVT_F32_U32 : VOP1Inst <"v_cvt_f32_u32", VOP1_F32_I32, uint_to_fp>;
 defm V_CVT_U32_F32 : VOP1Inst <"v_cvt_u32_f32", VOP_I32_F32_SPECIAL_OMOD, fp_to_uint>;
 defm V_CVT_I32_F32 : VOP1Inst <"v_cvt_i32_f32", VOP_I32_F32_SPECIAL_OMOD, fp_to_sint>;
 let FPDPRounding = 1, isReMaterializable = 0 in {
+  // V_CVT_F16_F32 and V_CVT_F32_F16 are special cases because they are
+  // present in targets without Has16BitInsts. Otherwise they could use
+  // class VOP1Inst_t16
   let OtherPredicates = [NotHasTrue16BitInsts] in
-  defm V_CVT_F16_F32 : VOP1Inst <"v_cvt_f16_f32", VOP_F16_F32, any_fpround>;
-  let OtherPredicates = [HasTrue16BitInsts] in
-  defm V_CVT_F16_F32_t16 : VOP1Inst <"v_cvt_f16_f32_t16", VOPProfile_Fake16<VOP_F16_F32>, any_fpround>;
+    defm V_CVT_F16_F32 : VOP1Inst <"v_cvt_f16_f32", VOP_F16_F32, any_fpround>;
+  let OtherPredicates = [UseRealTrue16Insts] in
+    defm V_CVT_F16_F32_t16 : VOP1Inst <"v_cvt_f16_f32_t16", VOPProfile_True16<VOP_F16_F32>, any_fpround>;
+  let OtherPredicates = [UseFakeTrue16Insts] in
+    defm V_CVT_F16_F32_fake16 : VOP1Inst <"v_cvt_f16_f32_fake16", VOPProfile_Fake16<VOP_F16_F32>, any_fpround>;
 } // End FPDPRounding = 1, isReMaterializable = 0
-
 let OtherPredicates = [NotHasTrue16BitInsts] in
-defm V_CVT_F32_F16 : VOP1Inst <"v_cvt_f32_f16", VOP_F32_F16, any_fpextend>;
-let OtherPredicates = [HasTrue16BitInsts] in
-defm V_CVT_F32_F16_t16 : VOP1Inst <"v_cvt_f32_f16_t16", VOPProfile_Fake16<VOP_F32_F16>, any_fpextend>;
+  defm V_CVT_F32_F16 : VOP1Inst <"v_cvt_f32_f16", VOP_F32_F16, any_fpextend>;
+let OtherPredicates = [UseRealTrue16Insts] in
+  defm V_CVT_F32_F16_t16 : VOP1Inst <"v_cvt_f32_f16_t16", VOPProfile_True16<VOP_F32_F16>, any_fpextend>;
+let OtherPredicates = [UseFakeTrue16Insts] in
+  defm V_CVT_F32_F16_fake16 : VOP1Inst <"v_cvt_f32_f16_fake16", VOPProfile_Fake16<VOP_F32_F16>, any_fpextend>;
 
 let ReadsModeReg = 0, mayRaiseFPException = 0 in {
 defm V_CVT_RPI_I32_F32 : VOP1Inst <"v_cvt_rpi_i32_f32", VOP_I32_F32, cvt_rpi_i32_f32>;
@@ -1003,7 +1009,9 @@ defm V_CVT_NORM_I16_F16_t16  : VOP1_Real_FULL_t16_gfx11_gfx12<0x063, "v_cvt_norm
 defm V_CVT_NORM_U16_F16_t16  : VOP1_Real_FULL_t16_gfx11_gfx12<0x064, "v_cvt_norm_u16_f16">;
 
 defm V_CVT_F16_F32_t16       : VOP1_Real_FULL_t16_gfx11_gfx12<0x00a, "v_cvt_f16_f32">;
+defm V_CVT_F16_F32_fake16    : VOP1_Real_FULL_t16_gfx11_gfx12<0x00a, "v_cvt_f16_f32">;
 defm V_CVT_F32_F16_t16       : VOP1_Real_FULL_t16_gfx11_gfx12<0x00b, "v_cvt_f32_f16">;
+defm V_CVT_F32_F16_fake16    : VOP1_Real_FULL_t16_gfx11_gfx12<0x00b, "v_cvt_f32_f16">;
 
 //===----------------------------------------------------------------------===//
 // GFX10.
