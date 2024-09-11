@@ -5556,9 +5556,13 @@ unsigned SIInstrInfo::getVALUOp(const MachineInstr &MI) const {
   case AMDGPU::S_CVT_F32_U32: return AMDGPU::V_CVT_F32_U32_e64;
   case AMDGPU::S_CVT_I32_F32: return AMDGPU::V_CVT_I32_F32_e64;
   case AMDGPU::S_CVT_U32_F32: return AMDGPU::V_CVT_U32_F32_e64;
-  case AMDGPU::S_CVT_F32_F16: return AMDGPU::V_CVT_F32_F16_t16_e64;
-  case AMDGPU::S_CVT_HI_F32_F16: return AMDGPU::V_CVT_F32_F16_t16_e64;
-  case AMDGPU::S_CVT_F16_F32: return AMDGPU::V_CVT_F16_F32_t16_e64;
+  case AMDGPU::S_CVT_F32_F16:
+  case AMDGPU::S_CVT_HI_F32_F16:
+    return ST.useRealTrue16Insts() ? AMDGPU::V_CVT_F32_F16_t16_e64
+                                   : AMDGPU::V_CVT_F32_F16_fake16_e64;
+  case AMDGPU::S_CVT_F16_F32:
+    return ST.useRealTrue16Insts() ? AMDGPU::V_CVT_F16_F32_t16_e64
+                                   : AMDGPU::V_CVT_F16_F32_fake16_e64;
   case AMDGPU::S_CEIL_F32: return AMDGPU::V_CEIL_F32_e64;
   case AMDGPU::S_FLOOR_F32: return AMDGPU::V_FLOOR_F32_e64;
   case AMDGPU::S_TRUNC_F32: return AMDGPU::V_TRUNC_F32_e64;

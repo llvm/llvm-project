@@ -139,8 +139,8 @@ body: |
     ; GFX11: liveins: $vgpr0
     ; GFX11-NEXT: {{  $}}
     ; GFX11-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX11-NEXT: [[V_CVT_F32_F16_t16_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_F32_F16_t16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; GFX11-NEXT: [[V_CVT_I32_F32_e32_:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F32_e32 [[V_CVT_F32_F16_t16_e64_]], implicit $mode, implicit $exec
+    ; GFX11-NEXT: [[V_CVT_F32_F16_fake16_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_F32_F16_fake16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX11-NEXT: [[V_CVT_I32_F32_e32_:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F32_e32 [[V_CVT_F32_F16_fake16_e64_]], implicit $mode, implicit $exec
     ; GFX11-NEXT: $vgpr0 = COPY [[V_CVT_I32_F32_e32_]]
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s16) = G_TRUNC %0
@@ -178,8 +178,8 @@ body: |
     ; GFX11: liveins: $sgpr0
     ; GFX11-NEXT: {{  $}}
     ; GFX11-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; GFX11-NEXT: [[V_CVT_F32_F16_t16_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_F32_F16_t16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; GFX11-NEXT: [[V_CVT_I32_F32_e32_:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F32_e32 [[V_CVT_F32_F16_t16_e64_]], implicit $mode, implicit $exec
+    ; GFX11-NEXT: [[V_CVT_F32_F16_fake16_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_F32_F16_fake16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX11-NEXT: [[V_CVT_I32_F32_e32_:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F32_e32 [[V_CVT_F32_F16_fake16_e64_]], implicit $mode, implicit $exec
     ; GFX11-NEXT: $vgpr0 = COPY [[V_CVT_I32_F32_e32_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s16) = G_TRUNC %0
@@ -223,8 +223,8 @@ body: |
     ; GFX11-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX11-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 32768
     ; GFX11-NEXT: [[V_XOR_B32_e64_:%[0-9]+]]:vgpr_32 = V_XOR_B32_e64 [[S_MOV_B32_]], [[COPY]], implicit $exec
-    ; GFX11-NEXT: [[V_CVT_F32_F16_t16_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_F32_F16_t16_e64 0, [[V_XOR_B32_e64_]], 0, 0, implicit $mode, implicit $exec
-    ; GFX11-NEXT: [[V_CVT_I32_F32_e32_:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F32_e32 [[V_CVT_F32_F16_t16_e64_]], implicit $mode, implicit $exec
+    ; GFX11-NEXT: [[V_CVT_F32_F16_fake16_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_F32_F16_fake16_e64 0, [[V_XOR_B32_e64_]], 0, 0, implicit $mode, implicit $exec
+    ; GFX11-NEXT: [[V_CVT_I32_F32_e32_:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F32_e32 [[V_CVT_F32_F16_fake16_e64_]], implicit $mode, implicit $exec
     ; GFX11-NEXT: $vgpr0 = COPY [[V_CVT_I32_F32_e32_]]
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s16) = G_TRUNC %0
@@ -263,8 +263,8 @@ body: |
     ; GFX11: liveins: $vgpr0
     ; GFX11-NEXT: {{  $}}
     ; GFX11-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX11-NEXT: [[V_CVT_F32_F16_t16_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_F32_F16_t16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; GFX11-NEXT: [[V_CVT_I32_F32_e32_:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F32_e32 [[V_CVT_F32_F16_t16_e64_]], implicit $mode, implicit $exec
+    ; GFX11-NEXT: [[V_CVT_F32_F16_fake16_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_F32_F16_fake16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX11-NEXT: [[V_CVT_I32_F32_e32_:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F32_e32 [[V_CVT_F32_F16_fake16_e64_]], implicit $mode, implicit $exec
     ; GFX11-NEXT: S_ENDPGM 0, implicit [[V_CVT_I32_F32_e32_]]
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s16) = G_TRUNC %0
@@ -303,8 +303,8 @@ body: |
     ; GFX11: liveins: $sgpr0
     ; GFX11-NEXT: {{  $}}
     ; GFX11-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; GFX11-NEXT: [[V_CVT_F32_F16_t16_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_F32_F16_t16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; GFX11-NEXT: [[V_CVT_I32_F32_e32_:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F32_e32 [[V_CVT_F32_F16_t16_e64_]], implicit $mode, implicit $exec
+    ; GFX11-NEXT: [[V_CVT_F32_F16_fake16_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_F32_F16_fake16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX11-NEXT: [[V_CVT_I32_F32_e32_:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F32_e32 [[V_CVT_F32_F16_fake16_e64_]], implicit $mode, implicit $exec
     ; GFX11-NEXT: S_ENDPGM 0, implicit [[V_CVT_I32_F32_e32_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s16) = G_TRUNC %0
@@ -349,8 +349,8 @@ body: |
     ; GFX11-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX11-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 32768
     ; GFX11-NEXT: [[V_XOR_B32_e64_:%[0-9]+]]:vgpr_32 = V_XOR_B32_e64 [[S_MOV_B32_]], [[COPY]], implicit $exec
-    ; GFX11-NEXT: [[V_CVT_F32_F16_t16_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_F32_F16_t16_e64 0, [[V_XOR_B32_e64_]], 0, 0, implicit $mode, implicit $exec
-    ; GFX11-NEXT: [[V_CVT_I32_F32_e32_:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F32_e32 [[V_CVT_F32_F16_t16_e64_]], implicit $mode, implicit $exec
+    ; GFX11-NEXT: [[V_CVT_F32_F16_fake16_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_F32_F16_fake16_e64 0, [[V_XOR_B32_e64_]], 0, 0, implicit $mode, implicit $exec
+    ; GFX11-NEXT: [[V_CVT_I32_F32_e32_:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F32_e32 [[V_CVT_F32_F16_fake16_e64_]], implicit $mode, implicit $exec
     ; GFX11-NEXT: S_ENDPGM 0, implicit [[V_CVT_I32_F32_e32_]]
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s16) = G_TRUNC %0
