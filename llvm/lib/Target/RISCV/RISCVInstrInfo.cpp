@@ -170,6 +170,7 @@ bool RISCVInstrInfo::isReallyTriviallyReMaterializable(
     const MachineInstr &MI) const {
   switch (RISCV::getRVVMCOpcode(MI.getOpcode())) {
   case RISCV::VMV_V_X:
+  case RISCV::VFMV_V_F:
   case RISCV::VMV_V_I:
   case RISCV::VID_V:
     if (MI.getOperand(1).isUndef() &&
