@@ -662,6 +662,12 @@ Value *SelectInst::create(Value *Cond, Value *True, Value *False,
   return createCommon(Cond, True, False, Name, Builder, Ctx);
 }
 
+void SelectInst::swapValues() {
+  Ctx.getTracker().emplaceIfTracking<UseSwap>(getOperandUse(1),
+                                              getOperandUse(2));
+  cast<llvm::SelectInst>(Val)->swapValues();
+}
+
 bool SelectInst::classof(const Value *From) {
   return From->getSubclassID() == ClassID::Select;
 }

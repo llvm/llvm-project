@@ -1354,14 +1354,18 @@ define void @foo(i1 %c0, i8 %v0, i8 %v1, i1 %c1) {
   auto *BB = &*F->begin();
   auto It = BB->begin();
   auto *Select = cast<sandboxir::SelectInst>(&*It++);
+  const auto *ConstSelect = Select; // To test the const getters.
   auto *Ret = &*It++;
 
   // Check getCondition().
   EXPECT_EQ(Select->getCondition(), Cond0);
+  EXPECT_EQ(ConstSelect->getCondition(), Cond0);
   // Check getTrueValue().
   EXPECT_EQ(Select->getTrueValue(), V0);
+  EXPECT_EQ(ConstSelect->getTrueValue(), V0);
   // Check getFalseValue().
   EXPECT_EQ(Select->getFalseValue(), V1);
+  EXPECT_EQ(ConstSelect->getFalseValue(), V1);
   // Check setCondition().
   Select->setCondition(Cond1);
   EXPECT_EQ(Select->getCondition(), Cond1);
@@ -1371,6 +1375,13 @@ define void @foo(i1 %c0, i8 %v0, i8 %v1, i1 %c1) {
   // Check setFalseValue().
   Select->setFalseValue(V0);
   EXPECT_EQ(Select->getFalseValue(), V0);
+  // Check swapValues().
+  Select->swapValues();
+  EXPECT_EQ(Select->getTrueValue(), V0);
+  EXPECT_EQ(Select->getFalseValue(), V1);
+  // Check areInvalidOperands.
+  EXPECT_EQ(sandboxir::SelectInst::areInvalidOperands(Cond0, V0, V1), nullptr);
+  EXPECT_NE(sandboxir::SelectInst::areInvalidOperands(V0, V1, Cond0), nullptr);
 
   {
     // Check SelectInst::create() InsertBefore.
