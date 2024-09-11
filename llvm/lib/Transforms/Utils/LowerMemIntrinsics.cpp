@@ -480,7 +480,6 @@ static void createMemSetPatternLoop(Instruction *InsertBefore, Value *DstAddr,
   PHINode *LoopCount = LoopBuilder.CreatePHI(TypeOfCount, 0);
   LoopCount->addIncoming(Count, OrigBB);
 
-  // Create the store instruction for the pattern
   LoopBuilder.CreateAlignedStore(SetValue, CurrentDst, DstAlign, IsVolatile);
 
   Value *NextDst = LoopBuilder.CreateInBoundsGEP(
