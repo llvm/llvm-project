@@ -244,6 +244,7 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
     PrefLoopAlignment = Align(32);
     MaxBytesForLoopAlignment = 16;
     VScaleForTuning = 1;
+    MaxInterleaveFactor = 4;
     break;
   case NeoverseV1:
     PrefFunctionAlignment = Align(16);
