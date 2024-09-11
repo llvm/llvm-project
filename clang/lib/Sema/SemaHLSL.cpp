@@ -16,6 +16,7 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Type.h"
+#include "clang/Basic/Builtins.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
@@ -591,6 +592,10 @@ bool clang::CreateHLSLAttributedResourceType(Sema &S, QualType Wrapped,
       break;
     }
     case attr::HLSLROV:
+      if (ResAttrs.IsROV) {
+        S.Diag(A->getLocation(), diag::warn_duplicate_attribute_exact) << A;
+        return false;
+      }
       ResAttrs.IsROV = true;
       break;
     default:
@@ -1513,6 +1518,14 @@ bool CheckNoDoubleVectors(Sema *S, CallExpr *TheCall) {
   return CheckArgsTypesAreCorrect(S, TheCall, S->Context.FloatTy,
                                   checkDoubleVector);
 }
+bool CheckFloatingOrSignedIntRepresentation(Sema *S, CallExpr *TheCall) {
+  auto checkAllSignedTypes = [](clang::QualType PassedType) -> bool {
+    return !PassedType->hasSignedIntegerRepresentation() &&
+           !PassedType->hasFloatingRepresentation();
+  };
+  return CheckArgsTypesAreCorrect(S, TheCall, S->Context.IntTy,
+                                  checkAllSignedTypes);
+}
 
 bool CheckUnsignedIntRepresentation(Sema *S, CallExpr *TheCall) {
   auto checkAllUnsignedTypes = [](clang::QualType PassedType) -> bool {
@@ -1529,6 +1542,79 @@ void SetElementTypeAsReturnType(Sema *S, CallExpr *TheCall,
     ReturnType = S->Context.getVectorType(ReturnType, VecTyA->getNumElements(),
                                           VectorKind::Generic);
   TheCall->setType(ReturnType);
+}
+
+static bool CheckScalarOrVector(Sema *S, CallExpr *TheCall, QualType Scalar,
+                                unsigned ArgIndex) {
+  assert(TheCall->getNumArgs() >= ArgIndex);
+  QualType ArgType = TheCall->getArg(ArgIndex)->getType();
+  auto *VTy = ArgType->getAs<VectorType>();
+  // not the scalar or vector<scalar>
+  if (!(S->Context.hasSameUnqualifiedType(ArgType, Scalar) ||
+        (VTy &&
+         S->Context.hasSameUnqualifiedType(VTy->getElementType(), Scalar)))) {
+    S->Diag(TheCall->getArg(0)->getBeginLoc(),
+            diag::err_typecheck_expect_scalar_or_vector)
+        << ArgType << Scalar;
+    return true;
+  }
+  return false;
+}
+
+static bool CheckBoolSelect(Sema *S, CallExpr *TheCall) {
+  assert(TheCall->getNumArgs() == 3);
+  Expr *Arg1 = TheCall->getArg(1);
+  Expr *Arg2 = TheCall->getArg(2);
+  if (!S->Context.hasSameUnqualifiedType(Arg1->getType(), Arg2->getType())) {
+    S->Diag(TheCall->getBeginLoc(),
+            diag::err_typecheck_call_different_arg_types)
+        << Arg1->getType() << Arg2->getType() << Arg1->getSourceRange()
+        << Arg2->getSourceRange();
+    return true;
+  }
+
+  TheCall->setType(Arg1->getType());
+  return false;
+}
+
+static bool CheckVectorSelect(Sema *S, CallExpr *TheCall) {
+  assert(TheCall->getNumArgs() == 3);
+  Expr *Arg1 = TheCall->getArg(1);
+  Expr *Arg2 = TheCall->getArg(2);
+  if (!Arg1->getType()->isVectorType()) {
+    S->Diag(Arg1->getBeginLoc(), diag::err_builtin_non_vector_type)
+        << "Second" << TheCall->getDirectCallee() << Arg1->getType()
+        << Arg1->getSourceRange();
+    return true;
+  }
+
+  if (!Arg2->getType()->isVectorType()) {
+    S->Diag(Arg2->getBeginLoc(), diag::err_builtin_non_vector_type)
+        << "Third" << TheCall->getDirectCallee() << Arg2->getType()
+        << Arg2->getSourceRange();
+    return true;
+  }
+
+  if (!S->Context.hasSameUnqualifiedType(Arg1->getType(), Arg2->getType())) {
+    S->Diag(TheCall->getBeginLoc(),
+            diag::err_typecheck_call_different_arg_types)
+        << Arg1->getType() << Arg2->getType() << Arg1->getSourceRange()
+        << Arg2->getSourceRange();
+    return true;
+  }
+
+  // caller has checked that Arg0 is a vector.
+  // check all three args have the same length.
+  if (TheCall->getArg(0)->getType()->getAs<VectorType>()->getNumElements() !=
+      Arg1->getType()->getAs<VectorType>()->getNumElements()) {
+    S->Diag(TheCall->getBeginLoc(),
+            diag::err_typecheck_vector_lengths_not_equal)
+        << TheCall->getArg(0)->getType() << Arg1->getType()
+        << TheCall->getArg(0)->getSourceRange() << Arg1->getSourceRange();
+    return true;
+  }
+  TheCall->setType(Arg1->getType());
+  return false;
 }
 
 // Note: returning true in this case results in CheckBuiltinFunctionCall
@@ -1560,6 +1646,20 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     if (SemaRef.BuiltinVectorToScalarMath(TheCall))
       return true;
     if (CheckNoDoubleVectors(&SemaRef, TheCall))
+      return true;
+    break;
+  }
+  case Builtin::BI__builtin_hlsl_select: {
+    if (SemaRef.checkArgCount(TheCall, 3))
+      return true;
+    if (CheckScalarOrVector(&SemaRef, TheCall, getASTContext().BoolTy, 0))
+      return true;
+    QualType ArgTy = TheCall->getArg(0)->getType();
+    if (ArgTy->isBooleanType() && CheckBoolSelect(&SemaRef, TheCall))
+      return true;
+    auto *VTy = ArgTy->getAs<VectorType>();
+    if (VTy && VTy->getElementType()->isBooleanType() &&
+        CheckVectorSelect(&SemaRef, TheCall))
       return true;
     break;
   }
@@ -1637,6 +1737,14 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     QualType ArgTyA = A.get()->getType();
     // return type is the same as the input type
     TheCall->setType(ArgTyA);
+    break;
+  }
+  case Builtin::BI__builtin_hlsl_elementwise_sign: {
+    if (CheckFloatingOrSignedIntRepresentation(&SemaRef, TheCall))
+      return true;
+    if (SemaRef.PrepareBuiltinElementwiseMathOneArgCall(TheCall))
+      return true;
+    SetElementTypeAsReturnType(&SemaRef, TheCall, getASTContext().IntTy);
     break;
   }
   // Note these are llvm builtins that we want to catch invalid intrinsic

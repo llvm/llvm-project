@@ -642,6 +642,7 @@ define void @foo() {
   // Check classof() and creation.
   auto *Poison = cast<sandboxir::PoisonValue>(I0->getOperand(0));
   EXPECT_EQ(Poison->getType(), Int32Ty);
+  EXPECT_TRUE(isa<sandboxir::UndefValue>(Poison)); // Poison is Undef
   // Check get().
   auto *NewPoison = sandboxir::PoisonValue::get(Int32Ty);
   EXPECT_EQ(NewPoison, Poison);
@@ -668,6 +669,112 @@ define void @foo() {
             sandboxir::PoisonValue::get(Int32Ty));
   EXPECT_EQ(PoisonStruct->getElementValue(1u),
             sandboxir::PoisonValue::get(Int8Ty));
+}
+
+TEST_F(SandboxIRTest, UndefValue) {
+  parseIR(C, R"IR(
+define void @foo() {
+  %i0 = add i32 undef, undef
+  %i1 = add <2 x i32> undef, undef
+  %i2 = extractvalue {i32, i8} undef, 0
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto &BB = *F.begin();
+  auto It = BB.begin();
+  auto *I0 = &*It++;
+  auto *I1 = &*It++;
+  auto *I2 = &*It++;
+  auto *Int32Ty = sandboxir::Type::getInt32Ty(Ctx);
+  auto *Int8Ty = sandboxir::Type::getInt8Ty(Ctx);
+  auto *Zero32 = sandboxir::ConstantInt::get(Int32Ty, 0u);
+  auto *One32 = sandboxir::ConstantInt::get(Int32Ty, 1u);
+
+  // Check classof() and creation.
+  auto *Undef = cast<sandboxir::UndefValue>(I0->getOperand(0));
+  EXPECT_EQ(Undef->getType(), Int32Ty);
+  EXPECT_FALSE(isa<sandboxir::PoisonValue>(Undef)); // Undef is not Poison
+  // Check get().
+  auto *NewUndef = sandboxir::UndefValue::get(Int32Ty);
+  EXPECT_EQ(NewUndef, Undef);
+  auto *NewUndef2 =
+      sandboxir::UndefValue::get(sandboxir::PointerType::get(Ctx, 0u));
+  EXPECT_NE(NewUndef2, Undef);
+  // Check getSequentialElement().
+  auto *UndefVector = cast<sandboxir::UndefValue>(I1->getOperand(0));
+  auto *SeqElm = UndefVector->getSequentialElement();
+  EXPECT_EQ(SeqElm->getType(), Int32Ty);
+  // Check getStructElement().
+  auto *UndefStruct = cast<sandboxir::UndefValue>(I2->getOperand(0));
+  auto *StrElm0 = UndefStruct->getStructElement(0);
+  auto *StrElm1 = UndefStruct->getStructElement(1);
+  EXPECT_EQ(StrElm0->getType(), Int32Ty);
+  EXPECT_EQ(StrElm1->getType(), Int8Ty);
+  // Check getElementValue(Constant)
+  EXPECT_EQ(UndefStruct->getElementValue(Zero32),
+            sandboxir::UndefValue::get(Int32Ty));
+  EXPECT_EQ(UndefStruct->getElementValue(One32),
+            sandboxir::UndefValue::get(Int8Ty));
+  // Check getElementValue(unsigned)
+  EXPECT_EQ(UndefStruct->getElementValue(0u),
+            sandboxir::UndefValue::get(Int32Ty));
+  EXPECT_EQ(UndefStruct->getElementValue(1u),
+            sandboxir::UndefValue::get(Int8Ty));
+  // Check getNumElements().
+  EXPECT_EQ(UndefVector->getNumElements(), 2u);
+  EXPECT_EQ(UndefStruct->getNumElements(), 2u);
+}
+
+TEST_F(SandboxIRTest, BlockAddress) {
+  parseIR(C, R"IR(
+define void @foo(ptr %ptr) {
+bb0:
+  store ptr blockaddress(@foo, %bb0), ptr %ptr
+  ret void
+bb1:
+  ret void
+bb2:
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto *BB0 = cast<sandboxir::BasicBlock>(
+      Ctx.getValue(getBasicBlockByName(LLVMF, "bb0")));
+  auto *BB1 = cast<sandboxir::BasicBlock>(
+      Ctx.getValue(getBasicBlockByName(LLVMF, "bb1")));
+  auto *BB2 = cast<sandboxir::BasicBlock>(
+      Ctx.getValue(getBasicBlockByName(LLVMF, "bb2")));
+  auto It = BB0->begin();
+  auto *SI = cast<sandboxir::StoreInst>(&*It++);
+  [[maybe_unused]] auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
+
+  // Check classof(), creation, getFunction(), getBasicBlock().
+  auto *BB0Addr = cast<sandboxir::BlockAddress>(SI->getValueOperand());
+  EXPECT_EQ(BB0Addr->getBasicBlock(), BB0);
+  EXPECT_EQ(BB0Addr->getFunction(), &F);
+  // Check get(F, BB).
+  auto *NewBB0Addr = sandboxir::BlockAddress::get(&F, BB0);
+  EXPECT_EQ(NewBB0Addr, BB0Addr);
+  // Check get(BB).
+  auto *NewBB0Addr2 = sandboxir::BlockAddress::get(BB0);
+  EXPECT_EQ(NewBB0Addr2, BB0Addr);
+  auto *BB1Addr = sandboxir::BlockAddress::get(BB1);
+  EXPECT_EQ(BB1Addr->getBasicBlock(), BB1);
+  EXPECT_NE(BB1Addr, BB0Addr);
+  // Check lookup().
+  auto *LookupBB0Addr = sandboxir::BlockAddress::lookup(BB0);
+  EXPECT_EQ(LookupBB0Addr, BB0Addr);
+  auto *LookupBB1Addr = sandboxir::BlockAddress::lookup(BB1);
+  EXPECT_EQ(LookupBB1Addr, BB1Addr);
+  auto *LookupBB2Addr = sandboxir::BlockAddress::lookup(BB2);
+  EXPECT_EQ(LookupBB2Addr, nullptr);
 }
 
 TEST_F(SandboxIRTest, Use) {

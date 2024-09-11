@@ -1513,9 +1513,8 @@ multiclass VOP2be_Real_dpp8<GFXGen Gen, bits<6> op, string opName, string asmNam
 }
 
 // We don't want to override separate decoderNamespaces within these
-multiclass VOP2_Realtriple_e64<GFXGen Gen, bits<6> op> {
-  defm NAME : VOP3_Realtriple<Gen, {0, 1, 0, 0, op{5-0}}, /*isSingle=*/ 0, NAME> ;
-}
+multiclass VOP2_Realtriple_e64<GFXGen Gen, bits<6> op> :
+  VOP3_Realtriple<Gen, {0, 1, 0, 0, op{5-0}}, /*isSingle=*/ 0, NAME>;
 
 multiclass VOP2_Realtriple_e64_with_name<GFXGen Gen, bits<6> op, string opName,
                                                string asmName> {

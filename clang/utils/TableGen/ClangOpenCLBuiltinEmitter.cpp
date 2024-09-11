@@ -510,10 +510,7 @@ void BuiltinNameEmitter::GetOverloads() {
   std::vector<Record *> Builtins = Records.getAllDerivedDefinitions("Builtin");
   for (const auto *B : Builtins) {
     StringRef BName = B->getValueAsString("Name");
-    if (!FctOverloadMap.contains(BName)) {
-      FctOverloadMap.insert(std::make_pair(
-          BName, std::vector<std::pair<const Record *, unsigned>>{}));
-    }
+    FctOverloadMap.try_emplace(BName);
 
     auto Signature = B->getValueAsListOfDefs("Signature");
     // Reuse signatures to avoid unnecessary duplicates.
@@ -812,17 +809,8 @@ static void OCL2Qual(Sema &S, const OpenCLTypeStruct &Ty,
 
   // Map an image type name to its 3 access-qualified types (RO, WO, RW).
   StringMap<SmallVector<Record *, 3>> ImageTypesMap;
-  for (auto *IT : ImageTypes) {
-    auto Entry = ImageTypesMap.find(IT->getValueAsString("Name"));
-    if (Entry == ImageTypesMap.end()) {
-      SmallVector<Record *, 3> ImageList;
-      ImageList.push_back(IT);
-      ImageTypesMap.insert(
-          std::make_pair(IT->getValueAsString("Name"), ImageList));
-    } else {
-      Entry->second.push_back(IT);
-    }
-  }
+  for (auto *IT : ImageTypes)
+    ImageTypesMap[IT->getValueAsString("Name")].push_back(IT);
 
   // Emit the cases for the image types.  For an image type name, there are 3
   // corresponding QualTypes ("RO", "WO", "RW").  The "AccessQualifier" field

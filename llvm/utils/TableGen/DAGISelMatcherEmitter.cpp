@@ -71,9 +71,9 @@ class MatcherTableEmitter {
   MapVector<std::string, unsigned, StringMap<unsigned>> VecPatterns;
 
   unsigned getPatternIdxFromTable(std::string &&P, std::string &&include_loc) {
-    const auto It = VecPatterns.find(P);
-    if (It == VecPatterns.end()) {
-      VecPatterns.insert(std::pair(std::move(P), VecPatterns.size()));
+    const auto [It, Inserted] =
+        VecPatterns.try_emplace(std::move(P), VecPatterns.size());
+    if (Inserted) {
       VecIncludeStrings.push_back(std::move(include_loc));
       return VecIncludeStrings.size() - 1;
     }

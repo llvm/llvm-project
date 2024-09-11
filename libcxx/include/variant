@@ -298,7 +298,7 @@ struct __farray {
   _LIBCPP_HIDE_FROM_ABI constexpr const _Tp& operator[](size_t __n) const noexcept { return __buf_[__n]; }
 };
 
-_LIBCPP_NORETURN inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_THROW_BAD_VARIANT_ACCESS void
+[[noreturn]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_THROW_BAD_VARIANT_ACCESS void
 __throw_bad_variant_access() {
 #  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
   throw bad_variant_access();

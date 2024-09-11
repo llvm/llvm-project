@@ -7,6 +7,8 @@ add_llvm_component_library(LLVMCoroutines
   CoroElide.cpp
   CoroFrame.cpp
   CoroSplit.cpp
+  SuspendCrossingInfo.cpp
+  SpillUtils.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/Transforms/Coroutines

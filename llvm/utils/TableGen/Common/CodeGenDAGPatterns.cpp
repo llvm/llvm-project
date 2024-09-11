@@ -1721,7 +1721,8 @@ bool SDTypeConstraint::ApplyTypeConstraint(TreePatternNode &N,
 // Update the node type to match an instruction operand or result as specified
 // in the ins or outs lists on the instruction definition. Return true if the
 // type was actually changed.
-bool TreePatternNode::UpdateNodeTypeFromInst(unsigned ResNo, Record *Operand,
+bool TreePatternNode::UpdateNodeTypeFromInst(unsigned ResNo,
+                                             const Record *Operand,
                                              TreePattern &TP) {
   // The 'unknown' operand indicates that types should be inferred from the
   // context.
@@ -1741,7 +1742,7 @@ bool TreePatternNode::UpdateNodeTypeFromInst(unsigned ResNo, Record *Operand,
 
   // Both RegisterClass and RegisterOperand operands derive their types from a
   // register class def.
-  Record *RC = nullptr;
+  const Record *RC = nullptr;
   if (Operand->isSubClassOf("RegisterClass"))
     RC = Operand;
   else if (Operand->isSubClassOf("RegisterOperand"))
@@ -1891,7 +1892,7 @@ static unsigned GetNumNodeResults(Record *Operator, CodeGenDAGPatterns &CDP) {
 
     // Subtract any defaulted outputs.
     for (unsigned i = 0; i != InstInfo.Operands.NumDefs; ++i) {
-      Record *OperandNode = InstInfo.Operands[i].Rec;
+      const Record *OperandNode = InstInfo.Operands[i].Rec;
 
       if (OperandNode->isSubClassOf("OperandWithDefaultOps") &&
           !CDP.getDefaultOperand(OperandNode).DefaultOps.empty())
@@ -2627,7 +2628,7 @@ bool TreePatternNode::ApplyTypeConstraints(TreePattern &TP, bool NotRegisters) {
     unsigned ChildNo = 0;
     assert(NumResults <= NumFixedOperands);
     for (unsigned i = NumResults, e = NumFixedOperands; i != e; ++i) {
-      Record *OperandNode = InstInfo.Operands[i].Rec;
+      const Record *OperandNode = InstInfo.Operands[i].Rec;
 
       // If the operand has a default value, do we use it? We must use the
       // default if we've run out of children of the pattern DAG to consume,
@@ -3807,7 +3808,7 @@ void CodeGenDAGPatterns::parseInstructionPattern(CodeGenInstruction &CGI,
   assert(I.getArgList().empty() && "Args list should still be empty here!");
 
   // Check that all of the results occur first in the list.
-  std::vector<Record *> Results;
+  std::vector<const Record *> Results;
   std::vector<unsigned> ResultIndices;
   SmallVector<TreePatternNodePtr, 2> ResNodes;
   for (unsigned i = 0; i != NumResults; ++i) {
@@ -3853,7 +3854,7 @@ void CodeGenDAGPatterns::parseInstructionPattern(CodeGenInstruction &CGI,
 
   // Loop over the inputs next.
   std::vector<TreePatternNodePtr> ResultNodeOperands;
-  std::vector<Record *> Operands;
+  std::vector<const Record *> Operands;
   for (unsigned i = NumResults, e = CGI.Operands.size(); i != e; ++i) {
     CGIOperandList::OperandInfo &Op = CGI.Operands[i];
     const std::string &OpName = Op.Name;
@@ -3961,8 +3962,8 @@ void CodeGenDAGPatterns::ParseInstructions() {
     // is from a multiclass expansion w/ a SDPatternOperator passed in as
     // null_frag.
     if (!LI || LI->empty() || hasNullFragReference(LI)) {
-      std::vector<Record *> Results;
-      std::vector<Record *> Operands;
+      std::vector<const Record *> Results;
+      std::vector<const Record *> Operands;
 
       CodeGenInstruction &InstInfo = Target.getInstruction(Instr);
 

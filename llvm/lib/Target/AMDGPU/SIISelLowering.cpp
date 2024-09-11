@@ -1914,12 +1914,6 @@ bool SITargetLowering::isFreeAddrSpaceCast(unsigned SrcAS,
   return TM.isNoopAddrSpaceCast(SrcAS, DestAS);
 }
 
-bool SITargetLowering::isMemOpUniform(const SDNode *N) const {
-  const MemSDNode *MemNode = cast<MemSDNode>(N);
-
-  return AMDGPUInstrInfo::isUniformMMO(MemNode->getMemOperand());
-}
-
 TargetLoweringBase::LegalizeTypeAction
 SITargetLowering::getPreferredVectorAction(MVT VT) const {
   if (!VT.isScalableVector() && VT.getVectorNumElements() != 1 &&
@@ -4568,7 +4562,7 @@ loadM0FromVGPR(const SIInstrInfo *TII, MachineBasicBlock &MBB, MachineInstr &MI,
   const DebugLoc &DL = MI.getDebugLoc();
   MachineBasicBlock::iterator I(&MI);
 
-  const auto *BoolXExecRC = TRI->getRegClass(AMDGPU::SReg_1_XEXECRegClassID);
+  const auto *BoolXExecRC = TRI->getWaveMaskRegClass();
   Register DstReg = MI.getOperand(0).getReg();
   Register SaveExec = MRI.createVirtualRegister(BoolXExecRC);
   Register TmpExec = MRI.createVirtualRegister(BoolXExecRC);
@@ -5070,7 +5064,7 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
       return BB;
     }
 
-    const auto *CarryRC = TRI->getRegClass(AMDGPU::SReg_1_XEXECRegClassID);
+    const auto *CarryRC = TRI->getWaveMaskRegClass();
 
     Register DestSub0 = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
     Register DestSub1 = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
@@ -5302,7 +5296,7 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
 
     Register DstLo = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
     Register DstHi = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
-    const auto *CondRC = TRI->getRegClass(AMDGPU::SReg_1_XEXECRegClassID);
+    const auto *CondRC = TRI->getWaveMaskRegClass();
     Register SrcCondCopy = MRI.createVirtualRegister(CondRC);
 
     const TargetRegisterClass *Src0RC = Src0.isReg()

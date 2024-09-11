@@ -1523,17 +1523,17 @@ bool SIWholeQuadMode::lowerCopyInstrs() {
     if (MI->getOpcode() == AMDGPU::V_SET_INACTIVE_B32) {
       assert(MI->getNumExplicitOperands() == 6);
 
-      LiveInterval *LI = nullptr;
+      LiveInterval *RecomputeLI = nullptr;
       if (MI->getOperand(4).isReg())
-        LI = &LIS->getInterval(MI->getOperand(4).getReg());
+        RecomputeLI = &LIS->getInterval(MI->getOperand(4).getReg());
 
       MI->removeOperand(5);
       MI->removeOperand(4);
       MI->removeOperand(3);
       MI->removeOperand(1);
 
-      if (LI)
-        LIS->shrinkToUses(LI);
+      if (RecomputeLI)
+        LIS->shrinkToUses(RecomputeLI);
     } else {
       assert(MI->getNumExplicitOperands() == 2);
     }

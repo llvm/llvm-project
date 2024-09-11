@@ -24086,36 +24086,38 @@ static SDValue LowerSELECTWithCmpZero(SDValue CmpVal, SDValue LHS, SDValue RHS,
 
   if (X86CC == X86::COND_E && CmpVal.getOpcode() == ISD::AND &&
       isOneConstant(CmpVal.getOperand(1))) {
-    auto SplatLSB = [&]() {
+    auto SplatLSB = [&](EVT SplatVT) {
       // we need mask of all zeros or ones with same size of the other
       // operands.
       SDValue Neg = CmpVal;
-      if (CmpVT.bitsGT(VT))
-        Neg = DAG.getNode(ISD::TRUNCATE, DL, VT, CmpVal);
-      else if (CmpVT.bitsLT(VT))
+      if (CmpVT.bitsGT(SplatVT))
+        Neg = DAG.getNode(ISD::TRUNCATE, DL, SplatVT, CmpVal);
+      else if (CmpVT.bitsLT(SplatVT))
         Neg = DAG.getNode(
-            ISD::AND, DL, VT,
-            DAG.getNode(ISD::ANY_EXTEND, DL, VT, CmpVal.getOperand(0)),
-            DAG.getConstant(1, DL, VT));
-      return DAG.getNegative(Neg, DL, VT); // -(and (x, 0x1))
+            ISD::AND, DL, SplatVT,
+            DAG.getNode(ISD::ANY_EXTEND, DL, SplatVT, CmpVal.getOperand(0)),
+            DAG.getConstant(1, DL, SplatVT));
+      return DAG.getNegative(Neg, DL, SplatVT); // -(and (x, 0x1))
     };
 
     // SELECT (AND(X,1) == 0), 0, -1 -> NEG(AND(X,1))
     if (isNullConstant(LHS) && isAllOnesConstant(RHS))
-      return SplatLSB();
+      return SplatLSB(VT);
 
     // SELECT (AND(X,1) == 0), C1, C2 -> XOR(C1,AND(NEG(AND(X,1)),XOR(C1,C2))
     if (!Subtarget.canUseCMOV() && isa<ConstantSDNode>(LHS) &&
         isa<ConstantSDNode>(RHS)) {
-      SDValue Mask = SplatLSB();
+      SDValue Mask = SplatLSB(VT);
       SDValue Diff = DAG.getNode(ISD::XOR, DL, VT, LHS, RHS);
       SDValue Flip = DAG.getNode(ISD::AND, DL, VT, Mask, Diff);
       return DAG.getNode(ISD::XOR, DL, VT, LHS, Flip);
     }
 
     SDValue Src1, Src2;
-    auto isIdentityPattern = [&]() {
+    auto isIdentityPatternZero = [&]() {
       switch (RHS.getOpcode()) {
+      default:
+        break;
       case ISD::OR:
       case ISD::XOR:
       case ISD::ADD:
@@ -24125,10 +24127,28 @@ static SDValue LowerSELECTWithCmpZero(SDValue CmpVal, SDValue LHS, SDValue RHS,
           return true;
         }
         break;
+      case ISD::SHL:
+      case ISD::SRA:
+      case ISD::SRL:
       case ISD::SUB:
         if (RHS.getOperand(0) == LHS) {
           Src1 = RHS.getOperand(1);
           Src2 = LHS;
+          return true;
+        }
+        break;
+      }
+      return false;
+    };
+
+    auto isIdentityPatternOnes = [&]() {
+      switch (LHS.getOpcode()) {
+      default:
+        break;
+      case ISD::AND:
+        if (LHS.getOperand(0) == RHS || LHS.getOperand(1) == RHS) {
+          Src1 = LHS.getOperand(LHS.getOperand(0) == RHS ? 1 : 0);
+          Src2 = RHS;
           return true;
         }
         break;
@@ -24141,10 +24161,20 @@ static SDValue LowerSELECTWithCmpZero(SDValue CmpVal, SDValue LHS, SDValue RHS,
     // SELECT (AND(X,1) == 0), Y, (XOR Y, Z) -> (XOR Y, (AND NEG(AND(X,1)), Z))
     // SELECT (AND(X,1) == 0), Y, (ADD Y, Z) -> (ADD Y, (AND NEG(AND(X,1)), Z))
     // SELECT (AND(X,1) == 0), Y, (SUB Y, Z) -> (SUB Y, (AND NEG(AND(X,1)), Z))
-    if (!Subtarget.canUseCMOV() && isIdentityPattern()) {
-      SDValue Mask = SplatLSB();
-      SDValue And = DAG.getNode(ISD::AND, DL, VT, Mask, Src1); // Mask & z
-      return DAG.getNode(RHS.getOpcode(), DL, VT, Src2, And);  // y Op And
+    // SELECT (AND(X,1) == 0), Y, (SHL Y, Z) -> (SHL Y, (AND NEG(AND(X,1)), Z))
+    // SELECT (AND(X,1) == 0), Y, (SRA Y, Z) -> (SRA Y, (AND NEG(AND(X,1)), Z))
+    // SELECT (AND(X,1) == 0), Y, (SRL Y, Z) -> (SRL Y, (AND NEG(AND(X,1)), Z))
+    if (!Subtarget.canUseCMOV() && isIdentityPatternZero()) {
+      SDValue Mask = SplatLSB(Src1.getValueType());
+      SDValue And = DAG.getNode(ISD::AND, DL, Src1.getValueType(), Mask,
+                                Src1);                        // Mask & z
+      return DAG.getNode(RHS.getOpcode(), DL, VT, Src2, And); // y Op And
+    }
+    // SELECT (AND(X,1) == 0), (AND Y, Z), Y -> (AND Y, (OR NEG(AND(X, 1)), Z))
+    if (!Subtarget.canUseCMOV() && isIdentityPatternOnes()) {
+      SDValue Mask = SplatLSB(VT);
+      SDValue Or = DAG.getNode(ISD::OR, DL, VT, Mask, Src1); // Mask | z
+      return DAG.getNode(LHS.getOpcode(), DL, VT, Src2, Or); // y Op Or
     }
   }
 
@@ -56066,34 +56096,50 @@ static SDValue combineSubABS(SDNode *N, SelectionDAG &DAG) {
   if (N1.getOpcode() != X86ISD::CMOV || !N1.hasOneUse())
     return SDValue();
 
-  X86::CondCode CC = (X86::CondCode)N1.getConstantOperandVal(2);
-  if (CC != X86::COND_S && CC != X86::COND_NS)
-    return SDValue();
-
-  // Condition should come from a negate operation.
   SDValue Cond = N1.getOperand(3);
-  if (Cond.getOpcode() != X86ISD::SUB || !isNullConstant(Cond.getOperand(0)))
+  if (Cond.getOpcode() != X86ISD::SUB)
     return SDValue();
   assert(Cond.getResNo() == 1 && "Unexpected result number");
 
-  // Get the X and -X from the negate.
-  SDValue NegX = Cond.getValue(0);
-  SDValue X = Cond.getOperand(1);
-
   SDValue FalseOp = N1.getOperand(0);
   SDValue TrueOp = N1.getOperand(1);
-
-  // Cmov operands should be X and NegX. Order doesn't matter.
-  if (!(TrueOp == X && FalseOp == NegX) && !(TrueOp == NegX && FalseOp == X))
-    return SDValue();
-
-  // Build a new CMOV with the operands swapped.
-  SDLoc DL(N);
+  X86::CondCode CC = (X86::CondCode)N1.getConstantOperandVal(2);
   MVT VT = N->getSimpleValueType(0);
-  SDValue Cmov = DAG.getNode(X86ISD::CMOV, DL, VT, TrueOp, FalseOp,
-                             N1.getOperand(2), Cond);
-  // Convert sub to add.
-  return DAG.getNode(ISD::ADD, DL, VT, N0, Cmov);
+  SDLoc DL(N);
+
+  // ABS condition should come from a negate operation.
+  if ((CC == X86::COND_S || CC == X86::COND_NS) &&
+      isNullConstant(Cond.getOperand(0))) {
+    // Get the X and -X from the negate.
+    SDValue NegX = Cond.getValue(0);
+    SDValue X = Cond.getOperand(1);
+
+    // Cmov operands should be X and NegX. Order doesn't matter.
+    if (!(TrueOp == X && FalseOp == NegX) && !(TrueOp == NegX && FalseOp == X))
+      return SDValue();
+
+    // Build a new CMOV with the operands swapped.
+    SDValue Cmov = DAG.getNode(X86ISD::CMOV, DL, VT, TrueOp, FalseOp,
+                               N1.getOperand(2), Cond);
+    // Convert sub to add.
+    return DAG.getNode(ISD::ADD, DL, VT, N0, Cmov);
+  }
+
+  // Handle ABD special case:
+  // NEG(ABD(X,Y)) -> NEG(CMOV(SUB(X,Y),SUB(Y,X))) -> CMOV(SUB(Y,X),SUB(X,Y)).
+  // ABD condition should come from a pair of matching subtracts.
+  if ((CC == X86::COND_L || CC == X86::COND_B) && isNullConstant(N0) &&
+      (FalseOp == Cond.getValue(0) || TrueOp == Cond.getValue(0)) &&
+      (TrueOp.getOpcode() == ISD::SUB || TrueOp.getOpcode() == X86ISD::SUB) &&
+      (FalseOp.getOpcode() == ISD::SUB || FalseOp.getOpcode() == X86ISD::SUB) &&
+      (TrueOp.getOperand(0) == FalseOp.getOperand(1)) &&
+      (TrueOp.getOperand(1) == FalseOp.getOperand(0))) {
+    // Build a new CMOV with the operands swapped.
+    return DAG.getNode(X86ISD::CMOV, DL, VT, TrueOp, FalseOp, N1.getOperand(2),
+                       Cond);
+  }
+
+  return SDValue();
 }
 
 static SDValue combineSubSetcc(SDNode *N, SelectionDAG &DAG) {

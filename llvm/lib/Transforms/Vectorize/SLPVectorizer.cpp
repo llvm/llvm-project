@@ -8464,6 +8464,9 @@ void BoUpSLP::transformNodes() {
       for (unsigned VF = VL.size() / 2; VF >= MinVF; VF /= 2) {
         for (unsigned Cnt = StartIdx; Cnt + VF <= End; Cnt += VF) {
           ArrayRef<Value *> Slice = VL.slice(Cnt, VF);
+          // If any instruction is vectorized already - do not try again.
+          if (getTreeEntry(Slice.front()) || getTreeEntry(Slice.back()))
+            continue;
           InstructionsState S = getSameOpcode(Slice, *TLI);
           if (!S.getOpcode() || S.isAltShuffle() ||
               (S.getOpcode() != Instruction::Load &&
@@ -8472,20 +8475,18 @@ void BoUpSLP::transformNodes() {
                                                UserIgnoreList);
                })))
             continue;
-          if (!getTreeEntry(Slice.front()) && !getTreeEntry(Slice.back())) {
-            unsigned PrevSize = VectorizableTree.size();
-            buildTree_rec(Slice, 0, EdgeInfo(&E, UINT_MAX));
-            if (PrevSize + 1 == VectorizableTree.size() &&
-                VectorizableTree[PrevSize]->isGather()) {
-              VectorizableTree.pop_back();
-              continue;
-            }
-            E.CombinedEntriesWithIndices.emplace_back(PrevSize, Cnt);
-            if (StartIdx == Cnt)
-              StartIdx = Cnt + VF;
-            if (End == Cnt + VF)
-              End = Cnt;
+          unsigned PrevSize = VectorizableTree.size();
+          buildTree_rec(Slice, 0, EdgeInfo(&E, UINT_MAX));
+          if (PrevSize + 1 == VectorizableTree.size() &&
+              VectorizableTree[PrevSize]->isGather()) {
+            VectorizableTree.pop_back();
+            continue;
           }
+          E.CombinedEntriesWithIndices.emplace_back(PrevSize, Cnt);
+          if (StartIdx == Cnt)
+            StartIdx = Cnt + VF;
+          if (End == Cnt + VF)
+            End = Cnt;
         }
       }
     }
