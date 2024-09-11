@@ -294,31 +294,35 @@ std::vector<Fraction> multiplyPolynomials(ArrayRef<Fraction> a,
 
 bool isRangeZero(ArrayRef<Fraction> arr);
 
+/// An example to print .12, 3.4, 56.7 where preAlign = ".", minSpacing = 1,
+/// and (`,~) indicates (PreIndent, PostIndent) respectively:
+/// ```.12```.12
+/// ``3.4~``3.4~
+/// `56.7~`56.7~
 struct PrintTableMetrics {
   // If unknown, set to 0 and pass the struct into updatePrintMetrics.
   unsigned maxPreIndent;
   unsigned maxPostIndent;
-  // The substring expected prior to alignment.
   std::string preAlign;
 };
 
-// Updates 'm' given a table entry val. Iterate over each val in the table
-// with .maxPreIndent and .maxPostIndent initialized to 0.
-// class T is any type that can be handled by llvm::raw_string_ostream.
+/// Iterate over each val in the table and update 'm' where
+/// .maxPreIndent and .maxPostIndent are initialized to 0.
+/// class T is any type that can be handled by llvm::raw_string_ostream.
 template <class T>
 void updatePrintMetrics(T val, PrintTableMetrics &m) {
   std::string str;
   llvm::raw_string_ostream(str) << val;
-  if (str.length() == 0)
+  if (str.empty())
     return;
-  unsigned int preIndent = str.find(m.preAlign);
+  unsigned preIndent = str.find(m.preAlign);
   preIndent = (preIndent != std::string::npos) ? preIndent + 1 : 0;
   m.maxPreIndent = std::max(m.maxPreIndent, preIndent);
   m.maxPostIndent =
       std::max(m.maxPostIndent, (unsigned int)(str.length() - preIndent));
 }
 
-// Print val in the table with metrics specified in 'm'.
+/// Print val in the table with metrics specified in 'm'.
 template <class T>
 void printWithPrintMetrics(raw_ostream &os, T val, unsigned minSpacing,
                            const PrintTableMetrics &m) {
@@ -328,8 +332,9 @@ void printWithPrintMetrics(raw_ostream &os, T val, unsigned minSpacing,
   if (str.length() != 0) {
     preIndent = str.find(m.preAlign);
     preIndent = (preIndent != std::string::npos) ? preIndent + 1 : 0;
-  } else
+  } else {
     preIndent = 0;
+  }
   for (unsigned i = 0; i < (minSpacing + m.maxPreIndent - preIndent); ++i)
     os << " ";
   os << str;
