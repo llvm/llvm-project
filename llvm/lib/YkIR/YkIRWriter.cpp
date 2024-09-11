@@ -1574,12 +1574,10 @@ private:
     // ty_idx:
     OutStreamer.emitSizeT(typeIndex(CI->getType()));
 
-    // Figure out how many bytes it'd take to store that many bits.
+    // Figure out how many bits and bytes it'd take to store the type of the
+    // constant (without padding).
     unsigned BitWidth = CI->getBitWidth();
-    unsigned ByteWidth = BitWidth / 8;
-    if (BitWidth % 8 != 0) {
-      ByteWidth++;
-    }
+    unsigned ByteWidth = DL.getTypeStoreSize(CI->getType());
     OutStreamer.emitSizeT(ByteWidth);
 
     unsigned BitsRemain = BitWidth;
