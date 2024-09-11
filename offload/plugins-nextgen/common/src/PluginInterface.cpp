@@ -738,6 +738,9 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
                                  NumBlocks, NumThreads, KernelArgs.Tripcount);
   }
 
+  // Get achieved occupancy for this kernel.
+  computeAchievedOccupancy(GenericDevice, NumThreads, NumBlocks);
+
   if (auto Err = printLaunchInfo(GenericDevice, KernelArgs, NumThreads,
                                  NumBlocks, MultiDeviceLB, MultiDeviceUB))
     return Err;

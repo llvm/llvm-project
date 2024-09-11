@@ -319,6 +319,17 @@ struct GenericKernelTy {
     return MaxOccupancy;
   }
 
+  /// Compute achieved occupancy
+  /// This function computes the achieved occupancy for a launched kernel based
+  /// on the number of threads, number of teams and the max occupancy of this
+  /// kernel. It returns in ratio representing the occupancy for each CU(SM).
+  virtual unsigned computeAchievedOccupancy(GenericDeviceTy &Device,
+                                            uint32_t numThreads,
+                                            uint64_t numTeams) const {
+    // This function should be overridden in the derived class.
+    return AchievedOccupancy;
+  }
+
 protected:
   /// Get the execution mode name of the kernel.
   const char *getExecutionModeName() const {
@@ -435,8 +446,12 @@ protected:
   bool IsBareKernel = false;
 
   /// Upper-bound for the launched kernel occupancy.
-  /// -1 indicates an invalid result.
-  mutable unsigned MaxOccupancy = -1;
+  /// 0 indicates an invalid result.
+  mutable unsigned MaxOccupancy = 0;
+
+  /// Achieved occupancy for the launched kernel.
+  /// 0 indications an invalid result.
+  mutable unsigned AchievedOccupancy = 0;
 };
 
 /// Information about an allocation, when it has been allocated, and when/if it

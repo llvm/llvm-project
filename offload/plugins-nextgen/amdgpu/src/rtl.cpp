@@ -1332,6 +1332,47 @@ private:
 
     return Occupancy;
   }
+
+  /// Compute the achieved kernel occupancy for AMD GPU.
+  unsigned computeAchievedOccupancy(GenericDeviceTy &Device,
+                                    uint32_t numThreads,
+                                    uint64_t numTeams) const override {
+    // Check if max occupancy is available
+    if (MaxOccupancy <= 0) {
+      return 0;
+    }
+
+    // Default number of waves per EU.
+    unsigned MaxWavesPerEU = llvm::omp::amdgpu_arch::MaxWavesPerEU10;
+
+    // Get GPU info.
+    bool IsEquippedWithGFX90A = Device.hasGfx90aDevice();
+    if (IsEquippedWithGFX90A) {
+      MaxWavesPerEU = llvm::omp::amdgpu_arch::MaxWavesPerEU8;
+    }
+
+    // Get the max number of waves per CU.
+    unsigned MaxNumWaves = MaxOccupancy * llvm::omp::amdgpu_arch::SIMDPerCU;
+    // Get the number of waves from the kernel launch parameters.
+    unsigned AchievedNumWaves =
+        divideCeil(numThreads, llvm::omp::amdgpu_arch::WaveFrontSize64) *
+        numTeams;
+    // Get the number of waves per CU.
+    AchievedNumWaves =
+        divideCeil(AchievedNumWaves, Device.getNumComputeUnits());
+    // Get the min waves.
+    AchievedNumWaves = std::min(MaxNumWaves, AchievedNumWaves);
+    // Total number of wave slots each CU supports.
+    unsigned TotalWaveSlotsPerCU =
+        MaxWavesPerEU * llvm::omp::amdgpu_arch::SIMDPerCU;
+    // Compute occupancy ratio representing in percentage.
+    unsigned Occupancy = (AchievedNumWaves * 100) / TotalWaveSlotsPerCU;
+
+    // Cache the result.
+    AchievedOccupancy = Occupancy;
+
+    return Occupancy;
+  }
 };
 
 /// Class representing an HSA signal. Signals are used to define dependencies
@@ -5029,12 +5070,14 @@ void AMDGPUKernelTy::printAMDOneLineKernelTrace(GenericDeviceTy &GenericDevice,
           "DEVID: %2d SGN:%d ConstWGSize:%-4d args:%2d teamsXthrds:(%4luX%4d) "
           "reqd:(%4dX%4d) lds_usage:%uB sgpr_count:%u vgpr_count:%u "
           "sgpr_spill_count:%u vgpr_spill_count:%u tripcount:%lu rpc:%d "
-          "md:%d md_LB:%ld md_UB:%ld Occupancy: %u n:%s\n",
+          "md:%d md_LB:%ld md_UB:%ld Max Occupancy: %u Achieved Occupancy: "
+          "%d%% n:%s\n",
           GenericDevice.getDeviceId(), getExecutionModeFlags(), ConstWGSize,
           KernelArgs.NumArgs, NumBlocks, NumThreads, 0, 0, GroupSegmentSize,
           SGPRCount, VGPRCount, SGPRSpillCount, VGPRSpillCount,
           KernelArgs.Tripcount, NeedsHostServices, isMultiDeviceKernel(),
-          MultiDeviceLB, MultiDeviceUB, MaxOccupancy, getName());
+          MultiDeviceLB, MultiDeviceUB, MaxOccupancy, AchievedOccupancy,
+          getName());
 }
 
 Error AMDGPUKernelTy::printLaunchInfoDetails(GenericDeviceTy &GenericDevice,
