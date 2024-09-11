@@ -3569,8 +3569,7 @@ bool Sema::resolveAssumedTemplateNameAsType(Scope *S, TemplateName &Name,
                                 << ATN->getDeclName());
     Name = Context.getQualifiedTemplateName(
         /*NNS=*/nullptr, /*TemplateKeyword=*/false,
-        TemplateName(
-            TemplateName(Corrected.getCorrectionDeclAs<TemplateDecl>())));
+        TemplateName(Corrected.getCorrectionDeclAs<TemplateDecl>()));
     return false;
   }
 
