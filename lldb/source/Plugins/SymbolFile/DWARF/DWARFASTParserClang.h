@@ -325,8 +325,8 @@ private:
   ///
   /// This is necessary because Clang (and GCC) doesn't emit a DW_TAG_member
   /// entry for unnamed bit-fields. So we derive it (with some exceptions),
-  /// by checking whether there is a gap between where the storage of a DW_TAG_member
-  /// ended and the subsequent DW_TAG_member began.
+  /// by checking whether there is a gap between where the storage of a
+  /// DW_TAG_member ended and the subsequent DW_TAG_member began.
   ///
   /// \param[in,out] layout_info Layout information of all decls parsed by the
   ///                            current parser. Will contain an entry for
