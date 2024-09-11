@@ -270,6 +270,7 @@ void CIRGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough) {
 
       destroyOptimisticNormalEntry(*this, Scope);
       EHStack.popCleanup();
+      Scope.markEmitted();
       buildCleanup(*this, Fn, cleanupFlags, NormalActiveFlag);
 
       // Otherwise, the best approach is to thread everything through

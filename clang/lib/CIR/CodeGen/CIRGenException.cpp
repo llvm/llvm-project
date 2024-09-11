@@ -346,7 +346,7 @@ CIRGenFunction::buildCXXTryStmtUnderScope(const CXXTryStmt &S) {
   // don't populate right away. Reserve some space to store the exception
   // info but don't emit the bulk right away, for now only make sure the
   // scope returns the exception information.
-  auto tryScope = builder.create<mlir::cir::TryOp>(
+  auto tryOp = builder.create<mlir::cir::TryOp>(
       tryLoc, /*scopeBuilder=*/
       [&](mlir::OpBuilder &b, mlir::Location loc) {
         beginInsertTryBody = getBuilder().saveInsertionPoint();
@@ -370,20 +370,23 @@ CIRGenFunction::buildCXXTryStmtUnderScope(const CXXTryStmt &S) {
 
   // Finally emit the body for try/catch.
   auto emitTryCatchBody = [&]() -> mlir::LogicalResult {
-    auto loc = tryScope.getLoc();
+    auto loc = tryOp.getLoc();
     mlir::OpBuilder::InsertionGuard guard(getBuilder());
     getBuilder().restoreInsertionPoint(beginInsertTryBody);
-    CIRGenFunction::LexicalScope lexScope{*this, loc,
+    CIRGenFunction::LexicalScope tryScope{*this, loc,
                                           getBuilder().getInsertionBlock()};
 
     {
-      lexScope.setAsTry(tryScope);
+      tryScope.setAsTry(tryOp);
       // Attach the basic blocks for the catch regions.
-      enterCXXTryStmt(S, tryScope);
+      enterCXXTryStmt(S, tryOp);
       // Emit the body for the `try {}` part.
-      if (buildStmt(S.getTryBlock(), /*useCurrentScope=*/true).failed())
-        return mlir::failure();
-      getBuilder().create<mlir::cir::YieldOp>(loc);
+      {
+        CIRGenFunction::LexicalScope tryBodyScope{
+            *this, loc, getBuilder().getInsertionBlock()};
+        if (buildStmt(S.getTryBlock(), /*useCurrentScope=*/true).failed())
+          return mlir::failure();
+      }
     }
 
     {
