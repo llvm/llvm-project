@@ -2489,6 +2489,32 @@ PoisonValue *PoisonValue::getElementValue(unsigned Idx) const {
       cast<llvm::PoisonValue>(Val)->getElementValue(Idx)));
 }
 
+BlockAddress *BlockAddress::get(Function *F, BasicBlock *BB) {
+  auto *LLVMC = llvm::BlockAddress::get(cast<llvm::Function>(F->Val),
+                                        cast<llvm::BasicBlock>(BB->Val));
+  return cast<BlockAddress>(F->getContext().getOrCreateConstant(LLVMC));
+}
+
+BlockAddress *BlockAddress::get(BasicBlock *BB) {
+  auto *LLVMC = llvm::BlockAddress::get(cast<llvm::BasicBlock>(BB->Val));
+  return cast<BlockAddress>(BB->getContext().getOrCreateConstant(LLVMC));
+}
+
+BlockAddress *BlockAddress::lookup(const BasicBlock *BB) {
+  auto *LLVMC = llvm::BlockAddress::lookup(cast<llvm::BasicBlock>(BB->Val));
+  return cast_or_null<BlockAddress>(BB->getContext().getValue(LLVMC));
+}
+
+Function *BlockAddress::getFunction() const {
+  return cast<Function>(
+      Ctx.getValue(cast<llvm::BlockAddress>(Val)->getFunction()));
+}
+
+BasicBlock *BlockAddress::getBasicBlock() const {
+  return cast<BasicBlock>(
+      Ctx.getValue(cast<llvm::BlockAddress>(Val)->getBasicBlock()));
+}
+
 FunctionType *Function::getFunctionType() const {
   return cast<FunctionType>(
       Ctx.getType(cast<llvm::Function>(Val)->getFunctionType()));
@@ -2585,6 +2611,10 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
       It->second = std::unique_ptr<ConstantFP>(
           new ConstantFP(cast<llvm::ConstantFP>(C), *this));
       return It->second.get();
+    case llvm::Value::BlockAddressVal:
+      It->second = std::unique_ptr<BlockAddress>(
+          new BlockAddress(cast<llvm::BlockAddress>(C), *this));
+      return It->second.get();
     case llvm::Value::ConstantAggregateZeroVal: {
       auto *CAZ = cast<llvm::ConstantAggregateZero>(C);
       It->second = std::unique_ptr<ConstantAggregateZero>(
@@ -2640,7 +2670,7 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
     return It->second.get();
   }
   if (auto *BB = dyn_cast<llvm::BasicBlock>(LLVMV)) {
-    assert(isa<BlockAddress>(U) &&
+    assert(isa<llvm::BlockAddress>(U) &&
            "This won't create a SBBB, don't call this function directly!");
     if (auto *SBBB = getValue(BB))
       return SBBB;

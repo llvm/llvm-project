@@ -123,6 +123,7 @@ class ConstantFP;
 class ConstantAggregateZero;
 class ConstantPointerNull;
 class PoisonValue;
+class BlockAddress;
 class Context;
 class Function;
 class Instruction;
@@ -323,6 +324,7 @@ protected:
   friend class ConstantPointerNull;   // For `Val`.
   friend class UndefValue;            // For `Val`.
   friend class PoisonValue;           // For `Val`.
+  friend class BlockAddress;          // For `Val`.
 
   /// All values point to the context.
   Context &Ctx;
@@ -1110,6 +1112,33 @@ public:
     dumpCommonSuffix(OS);
   }
 #endif
+};
+
+class BlockAddress final : public Constant {
+  BlockAddress(llvm::BlockAddress *C, Context &Ctx)
+      : Constant(ClassID::BlockAddress, C, Ctx) {}
+  friend class Context; // For constructor.
+
+public:
+  /// Return a BlockAddress for the specified function and basic block.
+  static BlockAddress *get(Function *F, BasicBlock *BB);
+
+  /// Return a BlockAddress for the specified basic block.  The basic
+  /// block must be embedded into a function.
+  static BlockAddress *get(BasicBlock *BB);
+
+  /// Lookup an existing \c BlockAddress constant for the given BasicBlock.
+  ///
+  /// \returns 0 if \c !BB->hasAddressTaken(), otherwise the \c BlockAddress.
+  static BlockAddress *lookup(const BasicBlock *BB);
+
+  Function *getFunction() const;
+  BasicBlock *getBasicBlock() const;
+
+  /// For isa/dyn_cast.
+  static bool classof(const sandboxir::Value *From) {
+    return From->getSubclassID() == ClassID::BlockAddress;
+  }
 };
 
 /// Iterator for `Instruction`s in a `BasicBlock.
