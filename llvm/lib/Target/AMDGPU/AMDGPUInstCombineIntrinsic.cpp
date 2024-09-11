@@ -354,8 +354,8 @@ bool GCNTTIImpl::canSimplifyLegacyMulToMul(const Instruction &I,
 
 /// Match an fpext from half to float, or a constant we can convert.
 static std::optional<Value *> matchFPExtFromF16(Value *Arg) {
-  Value *Src;
-  ConstantFP *CFP;
+  Value *Src = nullptr;
+  ConstantFP *CFP = nullptr;
   if (match(Arg, m_OneUse(m_FPExt(m_Value(Src))))) {
     if (Src->getType()->isHalfTy())
       return Src;
@@ -366,7 +366,7 @@ static std::optional<Value *> matchFPExtFromF16(Value *Arg) {
     if (!LosesInfo)
       return ConstantFP::get(Type::getHalfTy(Arg->getContext()), Val);
   }
-  return {};
+  return std::nullopt;
 }
 
 // Trim all zero components from the end of the vector \p UseV and return
