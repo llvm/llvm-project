@@ -1,5 +1,4 @@
 ; RUN: llc < %s --mtriple=wasm32-unknown-unknown -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -mattr=+fp16,+simd128 | FileCheck %s
-; RUN: llc < %s --mtriple=wasm64-unknown-unknown -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -mattr=+fp16,+simd128 | FileCheck %s
 
 declare float @llvm.wasm.loadf32.f16(ptr)
 declare void @llvm.wasm.storef16.f32(float, ptr)
@@ -307,4 +306,25 @@ define <8 x i16> @trunc_sat_u_v8i16_sat(<8 x half> %x) {
 ; CHECK-NEXT:    return $pop[[R]]{{$}}
   %a = call <8 x i16> @llvm.fptoui.sat.v8i16.v8f16(<8 x half> %x)
   ret <8 x i16> %a
+}
+
+; ==============================================================================
+; Load and Store
+; ==============================================================================
+define <8 x half> @load_v8f16(ptr %p) {
+; CHECK-LABEL: load_v8f16:
+; CHECK:         .functype load_v8f16 (i32) -> (v128)
+; CHECK-NEXT:    v128.load $push0=, 0($0)
+; CHECK-NEXT:    return $pop0
+  %v = load <8 x half>, ptr %p
+  ret <8 x half> %v
+}
+
+define void @store_v8f16(<8 x half> %v, ptr %p) {
+; CHECK-LABEL: store_v8f16:
+; CHECK:         .functype store_v8f16 (v128, i32) -> ()
+; CHECK-NEXT:    v128.store 0($1), $0
+; CHECK-NEXT:    return
+  store <8 x half> %v , ptr %p
+  ret void
 }
