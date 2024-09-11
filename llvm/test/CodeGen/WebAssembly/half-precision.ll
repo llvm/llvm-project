@@ -27,6 +27,13 @@ define <8 x half> @splat_v8f16(float %x) {
   ret <8 x half> %v
 }
 
+; CHECK-LABEL: const_splat_v8f16:
+; CHECK:       v128.const      $push0=, 20800, 0, 0, 0, 0, 0, 0, 20800
+; CHECK-NEXT:  return $pop0
+define <8 x half> @const_splat_v8f16() {
+  ret <8 x half> <half 42., half 0., half 0., half 0., half 0., half 0., half 0., half 42.>
+}
+
 ; CHECK-LABEL: extract_lane_v8f16:
 ; CHECK:       f16x8.extract_lane $push0=, $0, 1
 ; CHECK-NEXT:  return $pop0
