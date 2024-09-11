@@ -143,7 +143,7 @@ bool isReturnValueRefCounted(const clang::FunctionDecl *F) {
   return false;
 }
 
-std::optional<bool> isUncounted(const clang::QualType T) {
+std::optional<bool> isUncounted(const QualType T) {
   if (auto *Subst = dyn_cast<SubstTemplateTypeParmType>(T)) {
     if (auto *Decl = Subst->getAssociatedDecl()) {
       if (isRefType(safeGetName(Decl)))
