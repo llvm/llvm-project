@@ -136,7 +136,8 @@ static bool isAnnexKAvailable(std::optional<bool> &CacheVar, Preprocessor *PP,
 
 static std::vector<UnsafeFunctionsCheck::CheckedFunction>
 parseCheckedFunctions(StringRef Option, ClangTidyContext *Context) {
-  std::vector<StringRef> Functions = utils::options::parseStringList(Option);
+  const std::vector<StringRef> Functions =
+      utils::options::parseStringList(Option);
   std::vector<UnsafeFunctionsCheck::CheckedFunction> Result;
   Result.reserve(Functions.size());
 
