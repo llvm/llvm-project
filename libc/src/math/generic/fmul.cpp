@@ -24,13 +24,9 @@ LLVM_LIBC_FUNCTION(float, fmul, (double x, double y)) {
   fputil::FPBits<double> hi_bits(prod.hi), lo_bits(prod.lo);
 
   if (LIBC_UNLIKELY(hi_bits.is_inf_or_nan() || hi_bits.is_zero()))
-    return static_cast<float>(prod.hi);
-  if (LIBC_UNLIKELY(fputil::FPBits<double>(prod.hi).is_inf() ||
-                    fputil::FPBits<double>(prod.hi).is_zero())) {
     fputil::set_errno_if_required(EDOM);
     fputil::raise_except_if_required(FE_INVALID);
-    return fputil::FPBits<double>::quiet_nan().get_val();
-  }
+    return static_cast<float>(prod.hi);
   if (prod.lo == 0.0)
     return static_cast<float>(prod.hi);
 
