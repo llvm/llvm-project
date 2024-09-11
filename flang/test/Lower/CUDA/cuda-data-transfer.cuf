@@ -353,3 +353,13 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPsub17()
 ! CHECK: cuf.kernel<<<*, *>>>
 ! CHECK-NOT: cuf.data_transfer
+
+subroutine sub18()
+  integer, device, allocatable :: a(:)
+  integer :: isz
+
+  isz = size(a)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPsub18()
+! CHECK-NOT: cuf.data_transfer
