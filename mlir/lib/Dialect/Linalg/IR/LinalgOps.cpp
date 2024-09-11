@@ -2134,9 +2134,85 @@ void BroadcastOp::getEffects(
   getGenericEffectsImpl(effects, cast<LinalgOp>(getOperation()));
 }
 
+/// If the broadcasted shape size is 1, it can be droped.
+/// e.g.
+///    ```
+///    %0 = linalg.broadcast ins(%input : tensor<4xf32>)
+///                          outs(%init : tensor<1x4xf32>)
+///                          dimensions = [0]
+///    ```
+/// converted to:
+///    ```
+///    %collapsed = tensor.collapse_shape %init [[0, 1]] :
+///                    tensor<1x4xf32> into tensor<4xf32>
+///    %0 = linalg.broadcast ins(%input : tensor<4xf32>)
+///                          outs(%collapsed : tensor<4xf32>)
+///                          dimensions = []
+///    %expanded = tensor.expand_shape %0 [[0, 1]] output_shape [1, 4] :
+///                    tensor<4xf32> into tensor<1x4xf32>
+///    ```
+struct DropUnitDimOfBroadcastOp : OpRewritePattern<linalg::BroadcastOp> {
+  using OpRewritePattern<linalg::BroadcastOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(linalg::BroadcastOp broadcastOp,
+                                PatternRewriter &rewriter) const override {
+    if (!broadcastOp.hasPureTensorSemantics())
+      return failure();
+
+    auto init = broadcastOp.getInit();
+    auto initType = dyn_cast<RankedTensorType>(init.getType());
+    if (!initType)
+      return failure();
+    auto initShape = initType.getShape();
+    ArrayRef<int64_t> dimensions = broadcastOp.getDimensions();
+    if (!llvm::any_of(dimensions,
+                      [&](auto dim) { return initShape[dim] == 1; }))
+      return failure();
+
+    SmallVector<int64_t> newDimensions;
+    int64_t dropDim = 0;
+    // Adjust dimensions of broadcast.
+    for (int64_t dim : dimensions) {
+      if (initShape[dim] != 1) {
+        newDimensions.push_back(dim - dropDim);
+      } else {
+        ++dropDim;
+      }
+    }
+    SmallVector<ReassociationIndices> reassociation;
+    // Build reassociation indices by grouping consecutive size-1 dimensions.
+    bool needCollapse = false;
+    for (int64_t dim = 0; dim < initType.getRank(); ++dim) {
+      if (needCollapse) {
+        reassociation.back().push_back(dim);
+      } else {
+        reassociation.push_back({dim});
+      }
+      // Update the needCollapse flag.
+      needCollapse =
+          (initShape[dim] == 1 && llvm::is_contained(dimensions, dim));
+    }
+
+    Location loc = broadcastOp.getLoc();
+    auto collapsedType =
+        tensor::CollapseShapeOp::inferCollapsedType(initType, reassociation);
+    auto collapsedInit = rewriter.create<tensor::CollapseShapeOp>(
+        loc, collapsedType, init, reassociation);
+    auto newBroadcast =
+        rewriter
+            .create<linalg::BroadcastOp>(loc, broadcastOp.getInput(),
+                                         collapsedInit, newDimensions)
+            .getResult()[0];
+    rewriter.replaceOpWithNewOp<tensor::ExpandShapeOp>(
+        broadcastOp, initType, newBroadcast, reassociation);
+    return success();
+  }
+};
+
 void BroadcastOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                               MLIRContext *context) {
-  results.add<EraseIdentityLinalgOp<BroadcastOp>>(context);
+  results.add<DropUnitDimOfBroadcastOp, EraseIdentityLinalgOp<BroadcastOp>>(
+      context);
 }
 
 //===----------------------------------------------------------------------===//
