@@ -837,35 +837,43 @@ mlir::Operation *CIRGenFunction::getInvokeDestImpl() {
   // if (!CurFn->hasPersonalityFn())
   //   CurFn->setPersonalityFn(getOpaquePersonalityFn(CGM, Personality));
 
+  auto createSurroundingTryOp = [&]() {
+    // In OG, we build the landing pad for this scope. In CIR, we emit a
+    // synthetic cir.try because this didn't come from codegenerating from a
+    // try/catch in C++.
+    auto tryOp = builder.create<mlir::cir::TryOp>(
+        *currSrcLoc, /*scopeBuilder=*/
+        [&](mlir::OpBuilder &b, mlir::Location loc) {},
+        // Don't emit the code right away for catch clauses, for
+        // now create the regions and consume the try scope result.
+        // Note that clauses are later populated in
+        // CIRGenFunction::buildLandingPad.
+        [&](mlir::OpBuilder &b, mlir::Location loc,
+            mlir::OperationState &result) {
+          // Since this didn't come from an explicit try, we only need one
+          // handler: unwind.
+          auto *r = result.addRegion();
+          builder.createBlock(r);
+        });
+    tryOp.setSynthetic(true);
+    return tryOp;
+  };
+
   if (Personality.usesFuncletPads()) {
     // We don't need separate landing pads in the funclet model.
     llvm::errs() << "PersonalityFn: " << Personality.PersonalityFn << "\n";
     llvm_unreachable("NYI");
   } else {
     mlir::cir::TryOp tryOp = nullptr;
-    if (!currLexScope) {
-      // In OG, we build the landing pad for this scope. In CIR, we emit a
-      // synthetic cir.try because this didn't come from codegenerating from a
-      // try/catch in C++.
-      tryOp = builder.create<mlir::cir::TryOp>(
-          *currSrcLoc, /*scopeBuilder=*/
-          [&](mlir::OpBuilder &b, mlir::Location loc) {},
-          // Don't emit the code right away for catch clauses, for
-          // now create the regions and consume the try scope result.
-          // Note that clauses are later populated in
-          // CIRGenFunction::buildLandingPad.
-          [&](mlir::OpBuilder &b, mlir::Location loc,
-              mlir::OperationState &result) {
-            // Since this didn't come from an explicit try, we only need one
-            // handler: unwind.
-            auto *r = result.addRegion();
-            builder.createBlock(r);
-          });
-      tryOp.setSynthetic(true);
-    } else {
+    // Attempt to find a suitable existing parent try/catch, if none
+    // is available, create a synthetic cir.try in order to wrap the side
+    // effects of a potential throw.
+    if (currLexScope)
       tryOp = currLexScope->getClosestTryParent();
-      assert(tryOp && "cir.try expected");
-    }
+    if (!tryOp)
+      tryOp = createSurroundingTryOp();
+
+    assert(tryOp && "cir.try expected");
     LP = buildLandingPad(tryOp);
   }
 
