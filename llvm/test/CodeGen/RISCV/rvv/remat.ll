@@ -171,3 +171,144 @@ define void @vmv.v.i(ptr %p) {
   store volatile <vscale x 8 x i64> %vmv.v.i, ptr %p
   ret void
 }
+
+; The live range of %x needs extended down to the use of vmv.v.x at the end of
+; the block.
+define void @vmv.v.x_needs_extended(ptr %p, i64 %x) {
+; POSTRA-LABEL: vmv.v.x_needs_extended:
+; POSTRA:       # %bb.0:
+; POSTRA-NEXT:    addi sp, sp, -16
+; POSTRA-NEXT:    .cfi_def_cfa_offset 16
+; POSTRA-NEXT:    csrr a2, vlenb
+; POSTRA-NEXT:    slli a2, a2, 3
+; POSTRA-NEXT:    sub sp, sp, a2
+; POSTRA-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 8 * vlenb
+; POSTRA-NEXT:    vsetvli a2, zero, e64, m8, ta, ma
+; POSTRA-NEXT:    vmv.v.x v8, a1
+; POSTRA-NEXT:    addi a1, sp, 16
+; POSTRA-NEXT:    vs8r.v v8, (a1) # Unknown-size Folded Spill
+; POSTRA-NEXT:    vs8r.v v8, (a0)
+; POSTRA-NEXT:    vl8re64.v v16, (a0)
+; POSTRA-NEXT:    vl8re64.v v24, (a0)
+; POSTRA-NEXT:    vl8re64.v v0, (a0)
+; POSTRA-NEXT:    vl8re64.v v8, (a0)
+; POSTRA-NEXT:    vs8r.v v8, (a0)
+; POSTRA-NEXT:    vs8r.v v0, (a0)
+; POSTRA-NEXT:    vs8r.v v24, (a0)
+; POSTRA-NEXT:    vs8r.v v16, (a0)
+; POSTRA-NEXT:    vl8r.v v8, (a1) # Unknown-size Folded Reload
+; POSTRA-NEXT:    vs8r.v v8, (a0)
+; POSTRA-NEXT:    csrr a0, vlenb
+; POSTRA-NEXT:    slli a0, a0, 3
+; POSTRA-NEXT:    add sp, sp, a0
+; POSTRA-NEXT:    addi sp, sp, 16
+; POSTRA-NEXT:    ret
+;
+; PRERA-LABEL: vmv.v.x_needs_extended:
+; PRERA:       # %bb.0:
+; PRERA-NEXT:    addi sp, sp, -16
+; PRERA-NEXT:    .cfi_def_cfa_offset 16
+; PRERA-NEXT:    csrr a2, vlenb
+; PRERA-NEXT:    slli a2, a2, 3
+; PRERA-NEXT:    sub sp, sp, a2
+; PRERA-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 8 * vlenb
+; PRERA-NEXT:    vsetvli a2, zero, e64, m8, ta, ma
+; PRERA-NEXT:    vmv.v.x v8, a1
+; PRERA-NEXT:    vs8r.v v8, (a0)
+; PRERA-NEXT:    vl8re64.v v16, (a0)
+; PRERA-NEXT:    addi a1, sp, 16
+; PRERA-NEXT:    vs8r.v v16, (a1) # Unknown-size Folded Spill
+; PRERA-NEXT:    vl8re64.v v24, (a0)
+; PRERA-NEXT:    vl8re64.v v0, (a0)
+; PRERA-NEXT:    vl8re64.v v16, (a0)
+; PRERA-NEXT:    vs8r.v v16, (a0)
+; PRERA-NEXT:    vs8r.v v0, (a0)
+; PRERA-NEXT:    vs8r.v v24, (a0)
+; PRERA-NEXT:    vl8r.v v16, (a1) # Unknown-size Folded Reload
+; PRERA-NEXT:    vs8r.v v16, (a0)
+; PRERA-NEXT:    vs8r.v v8, (a0)
+; PRERA-NEXT:    csrr a0, vlenb
+; PRERA-NEXT:    slli a0, a0, 3
+; PRERA-NEXT:    add sp, sp, a0
+; PRERA-NEXT:    addi sp, sp, 16
+; PRERA-NEXT:    ret
+  %vmv.v.x = call <vscale x 8 x i64> @llvm.riscv.vmv.v.x.nxv8i64(<vscale x 8 x i64> poison, i64 %x, i64 -1)
+  store volatile <vscale x 8 x i64> %vmv.v.x, ptr %p
+
+  %a = load volatile <vscale x 8 x i64>, ptr %p
+  %b = load volatile <vscale x 8 x i64>, ptr %p
+  %c = load volatile <vscale x 8 x i64>, ptr %p
+  %d = load volatile <vscale x 8 x i64>, ptr %p
+  store volatile <vscale x 8 x i64> %d, ptr %p
+  store volatile <vscale x 8 x i64> %c, ptr %p
+  store volatile <vscale x 8 x i64> %b, ptr %p
+  store volatile <vscale x 8 x i64> %a, ptr %p
+
+  store volatile <vscale x 8 x i64> %vmv.v.x, ptr %p
+  ret void
+}
+
+define void @vmv.v.x_live(ptr %p, i64 %x) {
+; POSTRA-LABEL: vmv.v.x_live:
+; POSTRA:       # %bb.0:
+; POSTRA-NEXT:    vsetvli a2, zero, e64, m8, ta, ma
+; POSTRA-NEXT:    vmv.v.x v8, a1
+; POSTRA-NEXT:    vs8r.v v8, (a0)
+; POSTRA-NEXT:    vl8re64.v v16, (a0)
+; POSTRA-NEXT:    vl8re64.v v24, (a0)
+; POSTRA-NEXT:    vl8re64.v v0, (a0)
+; POSTRA-NEXT:    vl8re64.v v8, (a0)
+; POSTRA-NEXT:    vs8r.v v8, (a0)
+; POSTRA-NEXT:    vs8r.v v0, (a0)
+; POSTRA-NEXT:    vs8r.v v24, (a0)
+; POSTRA-NEXT:    vs8r.v v16, (a0)
+; POSTRA-NEXT:    vmv.v.x v8, a1
+; POSTRA-NEXT:    vs8r.v v8, (a0)
+; POSTRA-NEXT:    sd a1, 0(a0)
+; POSTRA-NEXT:    ret
+;
+; PRERA-LABEL: vmv.v.x_live:
+; PRERA:       # %bb.0:
+; PRERA-NEXT:    addi sp, sp, -16
+; PRERA-NEXT:    .cfi_def_cfa_offset 16
+; PRERA-NEXT:    csrr a2, vlenb
+; PRERA-NEXT:    slli a2, a2, 3
+; PRERA-NEXT:    sub sp, sp, a2
+; PRERA-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 8 * vlenb
+; PRERA-NEXT:    vsetvli a2, zero, e64, m8, ta, ma
+; PRERA-NEXT:    vmv.v.x v8, a1
+; PRERA-NEXT:    vs8r.v v8, (a0)
+; PRERA-NEXT:    vl8re64.v v16, (a0)
+; PRERA-NEXT:    addi a2, sp, 16
+; PRERA-NEXT:    vs8r.v v16, (a2) # Unknown-size Folded Spill
+; PRERA-NEXT:    vl8re64.v v24, (a0)
+; PRERA-NEXT:    vl8re64.v v0, (a0)
+; PRERA-NEXT:    vl8re64.v v16, (a0)
+; PRERA-NEXT:    vs8r.v v16, (a0)
+; PRERA-NEXT:    vs8r.v v0, (a0)
+; PRERA-NEXT:    vs8r.v v24, (a0)
+; PRERA-NEXT:    vl8r.v v16, (a2) # Unknown-size Folded Reload
+; PRERA-NEXT:    vs8r.v v16, (a0)
+; PRERA-NEXT:    vs8r.v v8, (a0)
+; PRERA-NEXT:    sd a1, 0(a0)
+; PRERA-NEXT:    csrr a0, vlenb
+; PRERA-NEXT:    slli a0, a0, 3
+; PRERA-NEXT:    add sp, sp, a0
+; PRERA-NEXT:    addi sp, sp, 16
+; PRERA-NEXT:    ret
+  %vmv.v.x = call <vscale x 8 x i64> @llvm.riscv.vmv.v.x.nxv8i64(<vscale x 8 x i64> poison, i64 %x, i64 -1)
+  store volatile <vscale x 8 x i64> %vmv.v.x, ptr %p
+
+  %a = load volatile <vscale x 8 x i64>, ptr %p
+  %b = load volatile <vscale x 8 x i64>, ptr %p
+  %c = load volatile <vscale x 8 x i64>, ptr %p
+  %d = load volatile <vscale x 8 x i64>, ptr %p
+  store volatile <vscale x 8 x i64> %d, ptr %p
+  store volatile <vscale x 8 x i64> %c, ptr %p
+  store volatile <vscale x 8 x i64> %b, ptr %p
+  store volatile <vscale x 8 x i64> %a, ptr %p
+
+  store volatile <vscale x 8 x i64> %vmv.v.x, ptr %p
+  store volatile i64 %x, ptr %p
+  ret void
+}
