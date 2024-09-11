@@ -5502,10 +5502,6 @@ static TemplateDeductionResult CheckDeductionConsistency(
     ArrayRef<TemplateArgument> DeducedArgs, bool CheckConsistency) {
   MultiLevelTemplateArgumentList MLTAL(FTD, DeducedArgs,
                                        /*Final=*/true);
-  if (ArgIdx != -1)
-    if (auto *MD = dyn_cast<CXXMethodDecl>(FTD->getTemplatedDecl());
-        MD && MD->isImplicitObjectMemberFunction())
-      ArgIdx -= 1;
   Sema::ArgumentPackSubstitutionIndexRAII PackIndex(
       S, ArgIdx != -1 ? ::getPackIndexForParam(S, FTD, MLTAL, ArgIdx) : -1);
   bool IsIncompleteSubstitution = false;
@@ -5576,12 +5572,10 @@ static TemplateDeductionResult FinishTemplateArgumentDeduction(
 
 /// Determine whether the function template \p FT1 is at least as
 /// specialized as \p FT2.
-static bool isAtLeastAsSpecializedAs(Sema &S, SourceLocation Loc,
-                                     FunctionTemplateDecl *FT1,
-                                     FunctionTemplateDecl *FT2,
-                                     TemplatePartialOrderingContext TPOC,
-                                     ArrayRef<QualType> Args1,
-                                     ArrayRef<QualType> Args2) {
+static bool isAtLeastAsSpecializedAs(
+    Sema &S, SourceLocation Loc, FunctionTemplateDecl *FT1,
+    FunctionTemplateDecl *FT2, TemplatePartialOrderingContext TPOC,
+    ArrayRef<QualType> Args1, ArrayRef<QualType> Args2, bool Args1Offset) {
   FunctionDecl *FD1 = FT1->getTemplatedDecl();
   FunctionDecl *FD2 = FT2->getTemplatedDecl();
   const FunctionProtoType *Proto1 = FD1->getType()->getAs<FunctionProtoType>();
@@ -5676,6 +5670,8 @@ static bool isAtLeastAsSpecializedAs(Sema &S, SourceLocation Loc,
                       TemplateDeductionInfo &Info,
                       SmallVectorImpl<DeducedTemplateArgument> &Deduced,
                       PartialOrderingKind) {
+                    if (ArgIdx != -1)
+                      ArgIdx -= Args1Offset;
                     return ::CheckDeductionConsistency(
                         S, FTD, ArgIdx, P, A, DeducedArgs,
                         /*CheckConsistency=*/HasDeducedParam[ParamIdx]);
@@ -5763,6 +5759,8 @@ FunctionTemplateDecl *Sema::getMoreSpecializedTemplate(
   const FunctionDecl *FD2 = FT2->getTemplatedDecl();
   bool ShouldConvert1 = false;
   bool ShouldConvert2 = false;
+  bool Args1Offset = false;
+  bool Args2Offset = false;
   QualType Obj1Ty;
   QualType Obj2Ty;
   if (TPOC == TPOC_Call) {
@@ -5811,6 +5809,7 @@ FunctionTemplateDecl *Sema::getMoreSpecializedTemplate(
         Obj1Ty = GetImplicitObjectParameterType(this->Context, Method1,
                                                 RawObj1Ty, IsRValRef2);
         Args1.push_back(Obj1Ty);
+        Args1Offset = true;
       }
       if (ShouldConvert2) {
         bool IsRValRef1 =
@@ -5821,6 +5820,7 @@ FunctionTemplateDecl *Sema::getMoreSpecializedTemplate(
         Obj2Ty = GetImplicitObjectParameterType(this->Context, Method2,
                                                 RawObj2Ty, IsRValRef1);
         Args2.push_back(Obj2Ty);
+        Args2Offset = true;
       }
     } else {
       if (NonStaticMethod1 && Method1->hasCXXExplicitFunctionObjectParameter())
@@ -5842,10 +5842,10 @@ FunctionTemplateDecl *Sema::getMoreSpecializedTemplate(
   } else {
     assert(!Reversed && "Only call context could have reversed arguments");
   }
-  bool Better1 =
-      isAtLeastAsSpecializedAs(*this, Loc, FT1, FT2, TPOC, Args1, Args2);
-  bool Better2 =
-      isAtLeastAsSpecializedAs(*this, Loc, FT2, FT1, TPOC, Args2, Args1);
+  bool Better1 = isAtLeastAsSpecializedAs(*this, Loc, FT1, FT2, TPOC, Args1,
+                                          Args2, Args2Offset);
+  bool Better2 = isAtLeastAsSpecializedAs(*this, Loc, FT2, FT1, TPOC, Args2,
+                                          Args1, Args1Offset);
   // C++ [temp.deduct.partial]p10:
   //   F is more specialized than G if F is at least as specialized as G and G
   //   is not at least as specialized as F.
