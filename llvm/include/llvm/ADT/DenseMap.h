@@ -120,7 +120,7 @@ public:
     }
 
     const KeyT EmptyKey = getEmptyKey();
-    if (std::is_trivially_destructible<ValueT>::value) {
+    if constexpr (std::is_trivially_destructible_v<ValueT>) {
       // Use a simpler loop when values don't need destruction.
       for (BucketT *P = getBuckets(), *E = getBucketsEnd(); P != E; ++P)
         P->getFirst() = EmptyKey;
