@@ -298,7 +298,7 @@ MaybeExpr ExpressionAnalyzer::CompleteSubscripts(ArrayRef &&ref) {
     // Subscripts of named constants are checked in folding.
     // Subscripts of DATA statement objects are checked in data statement
     // conversion to initializers.
-    CheckConstantSubscripts(ref);
+    CheckSubscripts(ref);
   }
   return Designate(DataRef{std::move(ref)});
 }
@@ -326,7 +326,7 @@ MaybeExpr ExpressionAnalyzer::ApplySubscripts(
       std::move(dataRef.u));
 }
 
-void ExpressionAnalyzer::CheckConstantSubscripts(ArrayRef &ref) {
+void ExpressionAnalyzer::CheckSubscripts(ArrayRef &ref) {
   // Fold subscript expressions and check for an empty triplet.
   const Symbol &arraySymbol{ref.base().GetLastSymbol()};
   Shape lb{GetLBOUNDs(foldingContext_, NamedEntity{arraySymbol})};
@@ -390,6 +390,13 @@ void ExpressionAnalyzer::CheckConstantSubscripts(ArrayRef &ref) {
   for (Subscript &ss : ref.subscript()) {
     auto dimLB{ToInt64(lb[dim])};
     auto dimUB{ToInt64(ub[dim])};
+    if (dimUB && dimLB && *dimUB < *dimLB) {
+      AttachDeclaration(
+          Say("Empty array dimension %d cannot be subscripted as an element or non-empty array section"_err_en_US,
+              dim + 1),
+          arraySymbol);
+      break;
+    }
     std::optional<ConstantSubscript> val[2];
     int vals{0};
     if (auto *triplet{std::get_if<Triplet>(&ss.u)}) {
