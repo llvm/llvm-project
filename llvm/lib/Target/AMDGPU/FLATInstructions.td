@@ -2122,6 +2122,19 @@ def prefetch_global : PatFrag <(ops node:$ptr, node:$rw, node:$loc, node:$type),
   }];
 }
 
+multiclass FlatIntrPrefetchPats<string inst, SDPatternOperator intr> {
+  def : GCNPat <
+    (intr (FlatOffset i64:$vaddr, i32:$offset), timm:$cpol),
+    (!cast<FLAT_Pseudo>(inst) $vaddr, $offset, $cpol)
+  >;
+
+  def : GCNPat <
+    (intr (GlobalSAddr (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset), timm:$cpol),
+    (!cast<FLAT_Pseudo>(inst#"_SADDR") $saddr, $voffset, $offset, $cpol)> {
+      let AddedComplexity = 11;
+    }
+}
+
 let SubtargetPredicate = HasVectorPrefetch in {
   def : GCNPat <
     (prefetch_flat (FlatOffset i64:$vaddr, i32:$offset), i32imm_zero, (i32 timm:$loc), i32imm_one),
@@ -2161,7 +2174,11 @@ let SubtargetPredicate = HasVectorPrefetch in {
   > {
     let AddedComplexity = 30;
   }
-}
+
+  // Patterns for target intrinsics
+  defm : FlatIntrPrefetchPats<"FLAT_PREFETCH_B8", int_amdgcn_flat_prefetch>;
+  defm : FlatIntrPrefetchPats<"GLOBAL_PREFETCH_B8", int_amdgcn_global_prefetch>;
+} // End SubtargetPredicate = HasVectorPrefetch
 
 //===----------------------------------------------------------------------===//
 // Target
