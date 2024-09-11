@@ -36,6 +36,36 @@ exit:
   ret i1 %r
 }
 
+; When one of the incoming values is ucmp/scmp and the other is not we can still perform the transformation
+define i1 @icmp_of_phi_of_one_scmp_with_constant(i1 %c, i16 %x, i16 %y, i8 %false_val)
+; CHECK-LABEL: define i1 @icmp_of_phi_of_one_scmp_with_constant(
+; CHECK-SAME: i1 [[C:%.*]], i16 [[X:%.*]], i16 [[Y:%.*]], i8 [[FALSE_VAL:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br i1 [[C]], label %[[TRUE:.*]], label %[[FALSE:.*]]
+; CHECK:       [[TRUE]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp slt i16 [[X]], [[Y]]
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[FALSE]]:
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i8 [[FALSE_VAL]], 0
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i1 [ [[TMP0]], %[[TRUE]] ], [ [[TMP1]], %[[FALSE]] ]
+; CHECK-NEXT:    ret i1 [[PHI]]
+;
+{
+entry:
+  br i1 %c, label %true, label %false
+true:
+  %cmp1 = call i8 @llvm.scmp(i16 %x, i16 %y)
+  br label %exit
+false:
+  br label %exit
+exit:
+  %phi = phi i8 [%cmp1, %true], [%false_val, %false]
+  %r = icmp slt i8 %phi, 0
+  ret i1 %r
+}
+
 ; Negative test: the RHS of comparison that uses the phi node is not constant
 define i1 @icmp_of_phi_of_scmp_with_non_constant(i1 %c, i16 %x, i16 %y, i8 %cmp)
 ; CHECK-LABEL: define i1 @icmp_of_phi_of_scmp_with_non_constant(
