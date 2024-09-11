@@ -327,8 +327,9 @@ void CIRGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough) {
     // active or was used before it was deactivated.
     if (EHActiveFlag.isValid() || IsActive) {
       cleanupFlags.setIsForEHCleanup();
-      assert(tryOp.isCleanupActive() && "expected active cleanup");
       mlir::OpBuilder::InsertionGuard guard(builder);
+      if (!tryOp.isCleanupActive())
+        builder.createBlock(&tryOp.getCleanupRegion());
       mlir::Block *cleanup = &tryOp.getCleanupRegion().back();
       if (cleanup->empty()) {
         builder.setInsertionPointToEnd(cleanup);
