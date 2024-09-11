@@ -1,4 +1,4 @@
-// RUN: %clangxx -O0 -pthread %s -o %t && %run %t
+// RUN: %clangxx -O0 %s -o %t && %run %t
 
 // FIXME: TSAN does not use DlsymAlloc.
 // UNSUPPORTED: tsan
