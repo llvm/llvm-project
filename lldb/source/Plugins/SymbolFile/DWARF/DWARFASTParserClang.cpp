@@ -2925,8 +2925,13 @@ void DWARFASTParserClang::ParseSingleMember(
       detect_unnamed_bitfields =
           die.GetCU()->Supports_unnamed_objc_bitfields();
 
+    // TODO:
+    //   for each ParseSingleMember, check if the field start <= last_field_end.
+    //   In that case we have an overlap, so we need to adjust the this_field_info
+    //   in such a way that the next last_field_end will be that of the field that we
+    //   just overlapped with.
     if (detect_unnamed_bitfields)
-      AddUnnamedBitfieldToRecordTypeIfNeeded(layout_info, accessibility,
+      AddUnnamedBitfieldToRecordTypeIfNeeded(layout_info,
                                              class_clang_type, last_field_info,
                                              this_field_info);
 
@@ -3735,7 +3740,7 @@ bool DWARFASTParserClang::ShouldCreateUnnamedBitfield(
 
 void DWARFASTParserClang::AddUnnamedBitfieldToRecordTypeIfNeeded(
     ClangASTImporter::LayoutInfo &class_layout_info,
-    lldb::AccessType accessibility, const CompilerType &class_clang_type,
+    const CompilerType &class_clang_type,
     const FieldInfo &previous_field, const FieldInfo &current_field) {
   // TODO: get this value from target
   const uint64_t word_width = 32;
@@ -3755,20 +3760,19 @@ void DWARFASTParserClang::AddUnnamedBitfieldToRecordTypeIfNeeded(
                                    current_field, class_layout_info))
     return;
 
-  FieldInfo unnamed_field_info{.bit_size =
-                                   current_field.bit_offset - last_field_end,
-                               .bit_offset = last_field_end,
-                               .is_bitfield = false,
-                               .is_artificial = false};
+  // Place the unnamed bitfield into the gap between the previous field's end
+  // and the current field's start.
+  const uint64_t unnamed_bit_size = current_field.bit_offset - last_field_end;
+  const uint64_t unnamed_bit_offset = last_field_end;
 
   clang::FieldDecl *unnamed_bitfield_decl =
       TypeSystemClang::AddFieldToRecordType(
           class_clang_type, llvm::StringRef(),
           m_ast.GetBuiltinTypeForEncodingAndBitSize(eEncodingSint, word_width),
-          accessibility, unnamed_field_info.bit_size);
+          lldb::AccessType::eAccessPrivate, unnamed_bit_size);
 
   class_layout_info.field_offsets.insert(
-      std::make_pair(unnamed_bitfield_decl, unnamed_field_info.bit_offset));
+      std::make_pair(unnamed_bitfield_decl, unnamed_bit_offset));
 }
 
 void DWARFASTParserClang::ParseRustVariantPart(

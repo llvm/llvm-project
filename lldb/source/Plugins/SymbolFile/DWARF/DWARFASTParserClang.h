@@ -333,8 +333,6 @@ private:
   ///                            the unnamed bit-field if this function created
   ///                            one.
   ///
-  /// \param[in] accessibility AccessType of the unnamed bitfield.
-  ///
   /// \param[in] class_clang_type The RecordType to which the unnamed bit-field
   ///                             will be added (if any).
   ///
@@ -346,7 +344,6 @@ private:
   ///
   void AddUnnamedBitfieldToRecordTypeIfNeeded(
       lldb_private::ClangASTImporter::LayoutInfo &class_layout_info,
-      lldb::AccessType accessibility,
       const lldb_private::CompilerType &class_clang_type,
       const FieldInfo &previous_field, const FieldInfo &current_field);
 
