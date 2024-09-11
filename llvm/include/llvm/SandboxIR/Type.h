@@ -25,6 +25,7 @@ class Context;
 // Forward declare friend classes for MSVC.
 class PointerType;
 class VectorType;
+class FixedVectorType;
 class IntegerType;
 class FunctionType;
 class ArrayType;
@@ -41,6 +42,7 @@ protected:
   friend class ArrayType;      // For LLVMTy.
   friend class StructType;     // For LLVMTy.
   friend class VectorType;     // For LLVMTy.
+  friend class FixedVectorType; // For LLVMTy.
   friend class PointerType;    // For LLVMTy.
   friend class FunctionType;   // For LLVMTy.
   friend class IntegerType;    // For LLVMTy.
@@ -341,6 +343,50 @@ public:
 
   static bool classof(const Type *From) {
     return isa<llvm::VectorType>(From->LLVMTy);
+  }
+};
+
+class FixedVectorType : public VectorType {
+public:
+  static FixedVectorType *get(Type *ElementType, unsigned NumElts);
+
+  static FixedVectorType *get(Type *ElementType, const FixedVectorType *FVTy) {
+    return get(ElementType, FVTy->getNumElements());
+  }
+
+  static FixedVectorType *getInteger(FixedVectorType *VTy) {
+    return cast<FixedVectorType>(VectorType::getInteger(VTy));
+  }
+
+  static FixedVectorType *getExtendedElementVectorType(FixedVectorType *VTy) {
+    return cast<FixedVectorType>(VectorType::getExtendedElementVectorType(VTy));
+  }
+
+  static FixedVectorType *getTruncatedElementVectorType(FixedVectorType *VTy) {
+    return cast<FixedVectorType>(
+        VectorType::getTruncatedElementVectorType(VTy));
+  }
+
+  static FixedVectorType *getSubdividedVectorType(FixedVectorType *VTy,
+                                                  int NumSubdivs) {
+    return cast<FixedVectorType>(
+        VectorType::getSubdividedVectorType(VTy, NumSubdivs));
+  }
+
+  static FixedVectorType *getHalfElementsVectorType(FixedVectorType *VTy) {
+    return cast<FixedVectorType>(VectorType::getHalfElementsVectorType(VTy));
+  }
+
+  static FixedVectorType *getDoubleElementsVectorType(FixedVectorType *VTy) {
+    return cast<FixedVectorType>(VectorType::getDoubleElementsVectorType(VTy));
+  }
+
+  static bool classof(const Type *T) {
+    return isa<llvm::FixedVectorType>(T->LLVMTy);
+  }
+
+  unsigned getNumElements() const {
+    return cast<llvm::FixedVectorType>(LLVMTy)->getNumElements();
   }
 };
 
