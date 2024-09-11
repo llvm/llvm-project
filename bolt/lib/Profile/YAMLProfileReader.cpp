@@ -20,6 +20,9 @@
 #include "llvm/Support/CommandLine.h"
 #include <algorithm>
 
+#undef DEBUG_TYPE
+#define DEBUG_TYPE "bolt-prof"
+
 using namespace llvm;
 
 namespace opts {
@@ -666,24 +669,35 @@ size_t YAMLProfileReader::matchWithPseudoProbes(BinaryContext &BC) {
 
   // Get unused profile functions GUID.
   for (yaml::bolt::BinaryFunctionProfile &YamlBF : YamlBP.Functions) {
-    if (YamlBF.Used || YamlBF.InlineTree.empty())
+    if (YamlBF.Used)
       continue;
+    LLVM_DEBUG(dbgs() << "Attempting to match " << YamlBF.Name
+                      << " using pseudo probes: ");
+    if (YamlBF.InlineTree.empty()) {
+      LLVM_DEBUG(dbgs() << "no probe information\n");
+      continue;
+    }
     uint64_t GUIDIdx = YamlBF.InlineTree.front().GUIDIndex;
     assert(GUIDIdx - 1 < YamlPD.GUID.size());
     uint64_t YamlGUID = YamlPD.GUID[GUIDIdx - 1];
 
     // Look up corresponding GUID in binary.
     auto It = GUID2FuncDescMap.find(YamlGUID);
-    if (It == GUID2FuncDescMap.end())
+    if (It == GUID2FuncDescMap.end()) {
+      LLVM_DEBUG(dbgs() << "no function with GUID=" << YamlGUID
+                        << " in the binary\n");
       continue;
+    }
 
     // Check if checksums match between profile and binary.
     assert(GUIDIdx - 1 < YamlPD.GUIDHash.size());
     uint64_t HashIdx = YamlPD.GUIDHash[GUIDIdx - 1];
     assert(HashIdx < YamlPD.Hash.size());
     uint64_t YamlHash = YamlPD.Hash[HashIdx];
-    if (YamlHash != It->FuncHash)
+    if (YamlHash != It->FuncHash) {
+      LLVM_DEBUG(dbgs() << "hash mismatch\n");
       continue;
+    }
 
     // Look for binary inline trees with the best match to YAML inline tree.
     auto Range = llvm::make_range(std::equal_range(
@@ -707,6 +721,8 @@ size_t YAMLProfileReader::matchWithPseudoProbes(BinaryContext &BC) {
       BestNodes.push_back(Node);
     }
 
+    LLVM_DEBUG(dbgs() << BestNodes.size() << " candidates: ");
+
     // Find binary functions containing best matching binary inline tree nodes.
     DenseMap<BinaryFunction *, uint32_t> BFProbeCountMap;
     for (const MCDecodedPseudoProbeInlineTree *Node : BestNodes) {
@@ -714,10 +730,6 @@ size_t YAMLProfileReader::matchWithPseudoProbes(BinaryContext &BC) {
       const MCDecodedPseudoProbeInlineTree *Root = Node;
       while (!Root->Parent->isRoot())
         Root = (const MCDecodedPseudoProbeInlineTree *)Root->Parent;
-      // Get containing non-profiled binary function.
-      auto GUIDToBFIt = GUIDToBF.find(Root->Guid);
-      if (GUIDToBFIt == GUIDToBF.end())
-        continue;
       // Compute the number of probes belonging to functions.
       for (const MCDecodedPseudoProbe &Probe : Node->getProbes()) {
         uint64_t Address = Probe.getAddress();
@@ -732,10 +744,13 @@ size_t YAMLProfileReader::matchWithPseudoProbes(BinaryContext &BC) {
     llvm::sort(BFProbeCountVec);
     for (BinaryFunction *BF : llvm::make_second_range(BFProbeCountVec)) {
       // Check if BF already has profile attached, bail for now.
-      if (ProfiledFunctions.count(BF))
+      if (ProfiledFunctions.count(BF)) {
+        LLVM_DEBUG(dbgs() << *BF << " is already profiled, ");
         continue;
+      }
       matchProfileToFunction(YamlBF, *BF);
       ++MatchedWithPseudoProbes;
+      LLVM_DEBUG(dbgs() << "matched to " << *BF << '\n');
       break;
     }
   }
