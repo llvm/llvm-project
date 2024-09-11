@@ -1883,9 +1883,8 @@ Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN) {
   NewPN->takeName(PN);
   NewPN->setDebugLoc(PN->getDebugLoc());
 
-  for (unsigned i = 0; i != NumPHIValues; ++i) {
+  for (unsigned i = 0; i != NumPHIValues; ++i)
     NewPN->addIncoming(NewPhiValues[i], PN->getIncomingBlock(i));
-  }
 
   for (User *U : make_early_inc_range(PN->users())) {
     Instruction *User = cast<Instruction>(U);
