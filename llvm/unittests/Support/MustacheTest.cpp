@@ -785,9 +785,7 @@ TEST(MustachePartials, PaddingWhitespace) {
 TEST(MustacheLambdas, BasicInterpolation) {
   Value D = Object{};
   auto T = Template::createTemplate("Hello, {{lambda}}!");
-  Lambda L = []() -> llvm::json::Value {
-    return "World";
-  };
+  Lambda L = []() -> llvm::json::Value { return "World"; };
   T.registerLambda("lambda", L);
   auto Out = T.render(D);
   EXPECT_EQ("Hello, World!", Out);
@@ -796,9 +794,7 @@ TEST(MustacheLambdas, BasicInterpolation) {
 TEST(MustacheLambdas, InterpolationExpansion) {
   Value D = Object{{"planet", "World"}};
   auto T = Template::createTemplate("Hello, {{lambda}}!");
-  Lambda L = []() -> llvm::json::Value {
-    return "{{planet}}";
-  };
+  Lambda L = []() -> llvm::json::Value { return "{{planet}}"; };
   T.registerLambda("lambda", L);
   auto Out = T.render(D);
   EXPECT_EQ("Hello, World!", Out);
