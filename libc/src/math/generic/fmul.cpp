@@ -23,23 +23,80 @@ LLVM_LIBC_FUNCTION(float, fmul, (double x, double y)) {
   fputil::DoubleDouble prod = fputil::exact_mult(x, y);
   fputil::FPBits<double> hi_bits(prod.hi), lo_bits(prod.lo);
 
-  if (LIBC_UNLIKELY(hi_bits.is_inf_or_nan() || hi_bits.is_zero())) {
-    fputil::set_errno_if_required(EDOM);
-    fputil::raise_except_if_required(FE_INVALID);
-    return static_cast<float>(prod.hi);
-  }
-    if (prod.lo == 0.0)
-      return static_cast<float>(prod.hi);
+  float prod_hif = static_cast<float>(prod.hi);
+  fputil::FPBits<float> hif_bits(prod_hif);
+  using OutFPBits = fputil::FPBits<float>;
+  using OutStorageType = typename OutFPBits::StorageType;
+  using InFPBits = FPBits<double>;
+  using InStorageType = typename InFPBits::StorageType;
 
-    if (lo_bits.sign() != hi_bits.sign()) {
-      // Check if sticky bit of hi are all 0
-      constexpr uint64_t STICKY_MASK =
-          0xFFF'FFFF; // Lower (52 - 23 - 1 = 28 bits)
-      uint64_t sticky_bits = (hi_bits.uintval() & STICKY_MASK);
-      uint64_t result_bits =
-          (sticky_bits == 0) ? (hi_bits.uintval() - 1) : hi_bits.uintval();
-      double result = fputil::FPBits<double>(result_bits).get_val();
-      return static_cast<float>(result);
+  InFPBits x_bits(x);
+  InFPBits y_bits(y);
+
+  
+  Sign result_sign = x_bits.sign() == y_bits.sign() ? Sign::POS : Sign::NEG;
+
+  if (LIBC_UNLIKELY(x_bits.is_inf_or_nan() || y_bits.is_inf_or_nan() ||
+                    x_bits.is_zero() || y_bits.is_zero())) {
+    if (x_bits.is_nan() || y_bits.is_nan()) {
+      if (x_bits.is_signaling_nan() || y_bits.is_signaling_nan())
+        raise_except_if_required(FE_INVALID);
+
+      if (x_bits.is_quiet_nan()) {
+        InStorageType x_payload = x_bits.get_mantissa();
+        x_payload >>= InFPBits::FRACTION_LEN - OutFPBits::FRACTION_LEN;
+        return OutFPBits::quiet_nan(x_bits.sign(),
+                                    static_cast<OutStorageType>(x_payload))
+            .get_val();
+      }
+
+      if (y_bits.is_quiet_nan()) {
+        InStorageType y_payload = y_bits.get_mantissa();
+        y_payload >>= InFPBits::FRACTION_LEN - OutFPBits::FRACTION_LEN;
+        return OutFPBits::quiet_nan(y_bits.sign(),
+                                    static_cast<OutStorageType>(y_payload))
+            .get_val();
+      }
+
+      return OutFPBits::quiet_nan().get_val();
+    }
+
+    if (x_bits.is_inf()) {
+      if (y_bits.is_zero()) {
+        set_errno_if_required(EDOM);
+        raise_except_if_required(FE_INVALID);
+        return OutFPBits::quiet_nan().get_val();
+      }
+
+      return OutFPBits::inf(result_sign).get_val();
+    }
+
+    if (y_bits.is_inf()) {
+      if (x_bits.is_zero()) {
+        set_errno_if_required(EDOM);
+        raise_except_if_required(FE_INVALID);
+        return OutFPBits::quiet_nan().get_val();
+      }
+
+      return OutFPBits::inf(result_sign).get_val();
+    }
+
+    // Now either x or y is zero, and the other one is finite.
+    return OutFPBits::zero(result_sign).get_val();
+  }
+  
+  if (prod.lo == 0.0)
+    return static_cast<float>(prod.hi);
+
+  if (lo_bits.sign() != hi_bits.sign()) {
+    // Check if sticky bit of hi are all 0
+    constexpr uint64_t STICKY_MASK =
+      0xFFF'FFFF; // Lower (52 - 23 - 1 = 28 bits)
+    uint64_t sticky_bits = (hi_bits.uintval() & STICKY_MASK);
+    uint64_t result_bits =
+      (sticky_bits == 0) ? (hi_bits.uintval() - 1) : hi_bits.uintval();
+    double result = fputil::FPBits<double>(result_bits).get_val();
+    return static_cast<float>(result);
   }
 
   double result = fputil::FPBits<double>(hi_bits.uintval() | 1).get_val();
