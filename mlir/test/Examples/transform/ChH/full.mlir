@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --transform-interpreter \
+// RUN: mlir-opt %s --transform-interpreter="debug-payload-root-tag=payload" \
 // RUN:             --test-transform-dialect-erase-schedule \
 // RUN:             --math-uplift-to-fma \
 // RUN:             --convert-bufferization-to-memref \
@@ -19,6 +19,7 @@
 // tensors annotated with attributes from the `bufferization` dialect. These
 // attributes hint the bufferization pass to assume buffers can be directly
 // used for these tensors without reshaping.
+module @payload attributes { transform.target_tag = "payload" } {
 func.func @conv(
     %input: !tinput {bufferization.writable = false,
                      bufferization.access = "read",
@@ -84,7 +85,7 @@ func.func @conv(
 
   return %relued : !toutput
 }
-
+}
 // Module containing the transformation script to be applied. The attribute
 // is required to correctly verify the use of named (macro-like) sequences.
 module attributes { transform.with_named_sequence } {
