@@ -1,4 +1,4 @@
-//===- OptEmitter.cpp - Helper for emitting options.----------- -----------===//
+//===- OptEmitter.cpp - Helper for emitting options -------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -39,21 +39,19 @@ static int StrCmpOptionName(const char *A, const char *B) {
   return (a < b) ? -1 : 1;
 }
 
-int CompareOptionRecords(Record *const *Av, Record *const *Bv) {
-  const Record *A = *Av;
-  const Record *B = *Bv;
-
+// Returns true if A is ordered before B.
+bool CompareOptionRecords(const Record *A, const Record *B) {
   // Sentinel options precede all others and are only ordered by precedence.
   bool ASent = A->getValueAsDef("Kind")->getValueAsBit("Sentinel");
   bool BSent = B->getValueAsDef("Kind")->getValueAsBit("Sentinel");
   if (ASent != BSent)
-    return ASent ? -1 : 1;
+    return ASent;
 
   // Compare options by name, unless they are sentinels.
   if (!ASent)
     if (int Cmp = StrCmpOptionName(A->getValueAsString("Name").str().c_str(),
                                    B->getValueAsString("Name").str().c_str()))
-      return Cmp;
+      return Cmp < 0;
 
   if (!ASent) {
     std::vector<StringRef> APrefixes = A->getValueAsListOfStrings("Prefixes");
@@ -65,7 +63,7 @@ int CompareOptionRecords(Record *const *Av, Record *const *Bv) {
                                                 BEPre = BPrefixes.end();
          APre != AEPre && BPre != BEPre; ++APre, ++BPre) {
       if (int Cmp = StrCmpOptionName(APre->str().c_str(), BPre->str().c_str()))
-        return Cmp;
+        return Cmp < 0;
     }
   }
 
@@ -78,7 +76,7 @@ int CompareOptionRecords(Record *const *Av, Record *const *Bv) {
     PrintError(B->getLoc(), Twine("Other defined here"));
     PrintFatalError("Equivalent Options found.");
   }
-  return APrec < BPrec ? -1 : 1;
+  return APrec < BPrec;
 }
 
 } // namespace llvm
