@@ -210,6 +210,7 @@ protected:
   static PromotionKey GetFloatPromoKey(const llvm::fltSemantics &semantics);
 
 private:
+  friend llvm::APFloat::cmpResult compare(Scalar lhs, Scalar rhs);
   friend const Scalar operator+(const Scalar &lhs, const Scalar &rhs);
   friend const Scalar operator-(Scalar lhs, Scalar rhs);
   friend const Scalar operator/(Scalar lhs, Scalar rhs);
@@ -220,12 +221,12 @@ private:
   friend const Scalar operator^(Scalar lhs, Scalar rhs);
   friend const Scalar operator<<(const Scalar &lhs, const Scalar &rhs);
   friend const Scalar operator>>(const Scalar &lhs, const Scalar &rhs);
-  friend bool operator==(Scalar lhs, Scalar rhs);
+  friend bool operator==(const Scalar &lhs, const Scalar &rhs);
   friend bool operator!=(const Scalar &lhs, const Scalar &rhs);
-  friend bool operator<(Scalar lhs, Scalar rhs);
-  friend bool operator<=(Scalar lhs, Scalar rhs);
+  friend bool operator<(const Scalar &lhs, const Scalar &rhs);
+  friend bool operator<=(const Scalar &lhs, const Scalar &rhs);
   friend bool operator>(const Scalar &lhs, const Scalar &rhs);
-  friend bool operator>=(Scalar lhs, Scalar rhs);
+  friend bool operator>=(const Scalar &lhs, const Scalar &rhs);
 };
 
 // Split out the operators into a format where the compiler will be able to
@@ -241,6 +242,7 @@ private:
 //  Item 19 of "Effective C++ Second Edition" by Scott Meyers
 //  Differentiate among members functions, non-member functions, and
 //  friend functions
+llvm::APFloat::cmpResult compare(Scalar lhs, Scalar rhs);
 const Scalar operator+(const Scalar &lhs, const Scalar &rhs);
 const Scalar operator-(Scalar lhs, Scalar rhs);
 const Scalar operator/(Scalar lhs, Scalar rhs);
@@ -251,12 +253,12 @@ const Scalar operator%(Scalar lhs, Scalar rhs);
 const Scalar operator^(Scalar lhs, Scalar rhs);
 const Scalar operator<<(const Scalar &lhs, const Scalar &rhs);
 const Scalar operator>>(const Scalar &lhs, const Scalar &rhs);
-bool operator==(Scalar lhs, Scalar rhs);
+bool operator==(const Scalar &lhs, const Scalar &rhs);
 bool operator!=(const Scalar &lhs, const Scalar &rhs);
-bool operator<(Scalar lhs, Scalar rhs);
-bool operator<=(Scalar lhs, Scalar rhs);
+bool operator<(const Scalar &lhs, const Scalar &rhs);
+bool operator<=(const Scalar &lhs, const Scalar &rhs);
 bool operator>(const Scalar &lhs, const Scalar &rhs);
-bool operator>=(Scalar lhs, Scalar rhs);
+bool operator>=(const Scalar &lhs, const Scalar &rhs);
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Scalar &scalar);
 
