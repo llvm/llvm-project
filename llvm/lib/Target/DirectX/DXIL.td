@@ -719,6 +719,15 @@ def BufferStore : DXILOp<69, bufferStore> {
   let stages = [Stages<DXIL1_0, [all_stages]>];
 }
 
+def CheckAccessFullyMapped : DXILOp<71, checkAccessFullyMapped> {
+  let Doc = "checks whether a Sample, Gather, or Load operation "
+            "accessed mapped tiles in a tiled resource";
+  let arguments = [OverloadTy];
+  let result = Int1Ty;
+  let overloads = [Overloads<DXIL1_0, [Int32Ty]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+}
+
 def ThreadId :  DXILOp<93, threadId> {
   let Doc = "Reads the thread ID";
   let LLVMIntrinsic = int_dx_thread_id;
