@@ -8,11 +8,15 @@
 
 #include "PassDetail.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/IR/Block.h"
+#include "mlir/IR/Operation.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/IR/Region.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/Passes.h"
+#include "llvm/ADT/SmallVector.h"
 
 using namespace mlir;
 using namespace cir;
@@ -107,6 +111,85 @@ struct RemoveTrivialTry : public OpRewritePattern<TryOp> {
   }
 };
 
+/// Simplify suitable ternary operations into select operations.
+///
+/// For now we only simplify those ternary operations whose true and false
+/// branches directly yield a value or a constant. That is, both of the true and
+/// the false branch must either contain a cir.yield operation as the only
+/// operation in the branch, or contain a cir.const operation followed by a
+/// cir.yield operation that yields the constant value.
+///
+/// For example, we will simplify the following ternary operation:
+///
+///   %0 = cir.ternary (%condition, true {
+///     %1 = cir.const ...
+///     cir.yield %1
+///   } false {
+///     cir.yield %2
+///   })
+///
+/// into the following sequence of operations:
+///
+///   %1 = cir.const ...
+///   %0 = cir.select if %condition then %1 else %2
+struct SimplifyTernary final : public OpRewritePattern<TernaryOp> {
+  using OpRewritePattern<TernaryOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(TernaryOp op,
+                                PatternRewriter &rewriter) const override {
+    if (op->getNumResults() != 1)
+      return mlir::failure();
+
+    if (!isSimpleTernaryBranch(op.getTrueRegion()) ||
+        !isSimpleTernaryBranch(op.getFalseRegion()))
+      return mlir::failure();
+
+    mlir::cir::YieldOp trueBranchYieldOp = mlir::cast<mlir::cir::YieldOp>(
+        op.getTrueRegion().front().getTerminator());
+    mlir::cir::YieldOp falseBranchYieldOp = mlir::cast<mlir::cir::YieldOp>(
+        op.getFalseRegion().front().getTerminator());
+    auto trueValue = trueBranchYieldOp.getArgs()[0];
+    auto falseValue = falseBranchYieldOp.getArgs()[0];
+
+    rewriter.inlineBlockBefore(&op.getTrueRegion().front(), op);
+    rewriter.inlineBlockBefore(&op.getFalseRegion().front(), op);
+    rewriter.eraseOp(trueBranchYieldOp);
+    rewriter.eraseOp(falseBranchYieldOp);
+    rewriter.replaceOpWithNewOp<mlir::cir::SelectOp>(op, op.getCond(),
+                                                     trueValue, falseValue);
+
+    return mlir::success();
+  }
+
+private:
+  bool isSimpleTernaryBranch(mlir::Region &region) const {
+    if (!region.hasOneBlock())
+      return false;
+
+    mlir::Block &onlyBlock = region.front();
+    auto &ops = onlyBlock.getOperations();
+
+    // The region/block could only contain at most 2 operations.
+    if (ops.size() > 2)
+      return false;
+
+    if (ops.size() == 1) {
+      // The region/block only contain a cir.yield operation.
+      return true;
+    }
+
+    // Check whether the region/block contains a cir.const followed by a
+    // cir.yield that yields the value.
+    auto yieldOp = mlir::cast<mlir::cir::YieldOp>(onlyBlock.getTerminator());
+    auto yieldValueDefOp = mlir::dyn_cast_if_present<mlir::cir::ConstantOp>(
+        yieldOp.getArgs()[0].getDefiningOp());
+    if (!yieldValueDefOp || yieldValueDefOp->getBlock() != &onlyBlock)
+      return false;
+
+    return true;
+  }
+};
+
 struct SimplifySelect : public OpRewritePattern<SelectOp> {
   using OpRewritePattern<SelectOp>::OpRewritePattern;
 
@@ -171,6 +254,7 @@ void populateMergeCleanupPatterns(RewritePatternSet &patterns) {
     RemoveEmptyScope,
     RemoveEmptySwitch,
     RemoveTrivialTry,
+    SimplifyTernary,
     SimplifySelect
   >(patterns.getContext());
   // clang-format on
@@ -186,8 +270,9 @@ void CIRSimplifyPass::runOnOperation() {
   getOperation()->walk([&](Operation *op) {
     // CastOp here is to perform a manual `fold` in
     // applyOpPatternsAndFold
-    if (isa<BrOp, BrCondOp, ScopeOp, SwitchOp, CastOp, TryOp, UnaryOp, SelectOp,
-            ComplexCreateOp, ComplexRealOp, ComplexImagOp>(op))
+    if (isa<BrOp, BrCondOp, ScopeOp, SwitchOp, CastOp, TryOp, UnaryOp,
+            TernaryOp, SelectOp, ComplexCreateOp, ComplexRealOp, ComplexImagOp>(
+            op))
       ops.push_back(op);
   });
 

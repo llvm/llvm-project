@@ -32,13 +32,7 @@ void b1(bool a, bool b) {
 
 // CHECK: cir.ternary(%3, true
 // CHECK-NEXT: %7 = cir.load %1
-// CHECK-NEXT: cir.ternary(%7, true
-// CHECK-NEXT: cir.const #true
-// CHECK-NEXT: cir.yield
-// CHECK-NEXT: false {
-// CHECK-NEXT: cir.const #false
-// CHECK-NEXT: cir.yield
-// CHECK: cir.yield
+// CHECK-NEXT: cir.yield %7
 // CHECK-NEXT: false {
 // CHECK-NEXT: cir.const #false
 // CHECK-NEXT: cir.yield
@@ -48,11 +42,6 @@ void b1(bool a, bool b) {
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: false {
 // CHECK-NEXT: %7 = cir.load %1
-// CHECK-NEXT: cir.ternary(%7, true
-// CHECK-NEXT: cir.const #true
-// CHECK-NEXT: cir.yield
-// CHECK-NEXT: false {
-// CHECK-NEXT: cir.const #false
 // CHECK-NEXT: cir.yield
 
 void b2(bool a) {
@@ -90,16 +79,10 @@ void b3(int a, int b, int c, int d) {
 // CHECK-NEXT: %13 = cir.load %2
 // CHECK-NEXT: %14 = cir.load %3
 // CHECK-NEXT: %15 = cir.cmp(eq, %13, %14)
-// CHECK-NEXT: cir.ternary(%15, true
-// CHECK: %9 = cir.load %0
-// CHECK-NEXT: %10 = cir.load %1
-// CHECK-NEXT: %11 = cir.cmp(eq, %9, %10)
-// CHECK-NEXT: %12 = cir.ternary(%11, true {
-// CHECK: }, false {
-// CHECK-NEXT: %13 = cir.load %2
-// CHECK-NEXT:      %14 = cir.load %3
-// CHECK-NEXT:      %15 = cir.cmp(eq, %13, %14)
-// CHECK-NEXT:      %16 = cir.ternary(%15, true
+// CHECK-NEXT: cir.yield %15
+// CHECK-NEXT: }, false {
+// CHECK-NEXT: %13 = cir.const #false
+// CHECK-NEXT: cir.yield %13
 
 void testFloatingPointBinOps(float a, float b) {
   a * b;
