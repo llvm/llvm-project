@@ -14131,6 +14131,32 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
     return DAG.getNode(ISD::SUB, DL, VT, Shift1, Shift2);
   }
 
+  if (HasShlAdd) {
+    for (uint64_t Divisor : {3, 5, 9}) {
+      if (MulAmt % Divisor != 0)
+        continue;
+      uint64_t MulAmt2 = MulAmt / Divisor;
+      // 3/5/9 * 3/5/9 * 2^N - In particular, this covers multiples
+      // of 25 which happen to be quite common.
+      for (uint64_t Divisor2 : {3, 5, 9}) {
+        if (MulAmt2 % Divisor2 != 0)
+          continue;
+        uint64_t MulAmt3 = MulAmt2 / Divisor2;
+        if (isPowerOf2_64(MulAmt3)) {
+          SDLoc DL(N);
+          SDValue Mul359A =
+              DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
+                          DAG.getConstant(Log2_64(Divisor - 1), DL, VT), X);
+          SDValue Mul359B = DAG.getNode(
+              RISCVISD::SHL_ADD, DL, VT, Mul359A,
+              DAG.getConstant(Log2_64(Divisor2 - 1), DL, VT), Mul359A);
+          return DAG.getNode(ISD::SHL, DL, VT, Mul359B,
+                             DAG.getConstant(Log2_64(MulAmt3), DL, VT));
+        }
+      }
+    }
+  }
+
   return SDValue();
 }
 
