@@ -1,0 +1,7 @@
+RUN: mkdir -p %t
+RUN: cp %S/Inputs/main.c %t/main.c
+RUN: %clang_host %t/main.c -std=c99 -gdwarf-5 -o %t/main.out
+RUN: echo "// Modify source file hash" >> %t/main.c
+RUN: %lldb -b %t/main.out -o 'b main' -o 'r' 2>&1 | FileCheck %s
+
+CHECK: warning: main.c: source file checksum mismatch between line table ({{.*}}) and file on disk ({{.*}})
