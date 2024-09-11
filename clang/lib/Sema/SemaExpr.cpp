@@ -9189,12 +9189,26 @@ Sema::CheckAssignmentConstraints(QualType LHSType, ExprResult &RHS,
 
   // __builtin_counted_by_ref cannot be assigned to a variable, used in
   // function call, or in a return.
-  if (auto *CE = dyn_cast<CallExpr>(RHS.get()->IgnoreParenCasts())) {
-    if (FunctionDecl *FDecl = CE->getDirectCallee();
-        FDecl && FDecl->getBuiltinID() == Builtin::BI__builtin_counted_by_ref)
-      Diag(RHS.get()->getExprLoc(),
-           diag::err_builtin_counted_by_ref_cannot_leak_reference);
-  }
+  auto FindBuiltinCountedByRefExpr = [](Expr *E) {
+    struct BuiltinCountedByRefVisitor
+        : public RecursiveASTVisitor<BuiltinCountedByRefVisitor> {
+      CallExpr *TheCall = nullptr;
+      bool VisitCallExpr(CallExpr *E) {
+        if (FunctionDecl *FD = E->getDirectCallee())
+          if (FD->getBuiltinID() == Builtin::BI__builtin_counted_by_ref) {
+            TheCall = E;
+            return true;
+          }
+        return false;
+      }
+    } V;
+    V.TraverseStmt(E);
+    return V.TheCall;
+  };
+
+  if (auto *CE = FindBuiltinCountedByRefExpr(RHS.get()))
+    Diag(RHS.get()->getExprLoc(),
+         diag::err_builtin_counted_by_ref_cannot_leak_reference);
 
   // Common case: no conversion required.
   if (LHSType == RHSType) {
