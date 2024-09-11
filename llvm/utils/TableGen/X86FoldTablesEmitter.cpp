@@ -446,7 +446,7 @@ void X86FoldTablesEmitter::addEntryWithFlags(FoldTable &Table,
   assert((IsManual || Table.find(RegInst) == Table.end()) &&
          "Override entry unexpectedly");
   X86FoldTableEntry Result = X86FoldTableEntry(RegInst, MemInst);
-  Record *RegRec = RegInst->TheDef;
+  const Record *RegRec = RegInst->TheDef;
   Result.NoReverse = S & TB_NO_REVERSE;
   Result.NoForward = S & TB_NO_FORWARD;
   Result.FoldLoad = S & TB_FOLDED_LOAD;
@@ -537,8 +537,8 @@ void X86FoldTablesEmitter::updateTables(const CodeGenInstruction *RegInst,
                                         uint16_t S, bool IsManual,
                                         bool IsBroadcast) {
 
-  Record *RegRec = RegInst->TheDef;
-  Record *MemRec = MemInst->TheDef;
+  const Record *RegRec = RegInst->TheDef;
+  const Record *MemRec = MemInst->TheDef;
   unsigned MemOutSize = MemRec->getValueAsDag("OutOperandList")->getNumArgs();
   unsigned RegOutSize = RegRec->getValueAsDag("OutOperandList")->getNumArgs();
   unsigned MemInSize = MemRec->getValueAsDag("InOperandList")->getNumArgs();

@@ -222,8 +222,8 @@ public:
 
 class CodeGenInstruction {
 public:
-  Record *TheDef;      // The actual record defining this instruction.
-  StringRef Namespace; // The namespace the instruction is in.
+  const Record *TheDef; // The actual record defining this instruction.
+  StringRef Namespace;  // The namespace the instruction is in.
 
   /// AsmString - The format string used to emit a .s file for the
   /// instruction.
@@ -297,12 +297,12 @@ public:
 
   // The record used to infer instruction flags, or NULL if no flag values
   // have been inferred.
-  Record *InferredFrom;
+  const Record *InferredFrom;
 
   // The enum value assigned by CodeGenTarget::computeInstrsByEnum.
   mutable unsigned EnumVal = 0;
 
-  CodeGenInstruction(Record *R);
+  CodeGenInstruction(const Record *R);
 
   /// HasOneImplicitDefWithKnownVT - If the instruction has at least one
   /// implicit def and it has a known VT, return the VT, otherwise return
