@@ -24,8 +24,8 @@ using namespace llvm;
 
 namespace {
 struct DocumentedOption {
-  Record *Option;
-  std::vector<Record*> Aliases;
+  const Record *Option;
+  std::vector<const Record *> Aliases;
 };
 struct DocumentedGroup;
 struct Documentation {
@@ -37,7 +37,7 @@ struct Documentation {
   }
 };
 struct DocumentedGroup : Documentation {
-  Record *Group;
+  const Record *Group;
 };
 
 static bool hasFlag(const Record *Option, StringRef OptionFlag,
@@ -63,25 +63,25 @@ static bool isOptionVisible(const Record *Option, const Record *DocInfo) {
 }
 
 // Reorganize the records into a suitable form for emitting documentation.
-Documentation extractDocumentation(RecordKeeper &Records,
+Documentation extractDocumentation(const RecordKeeper &Records,
                                    const Record *DocInfo) {
   Documentation Result;
 
   // Build the tree of groups. The root in the tree is the fake option group
   // (Record*)nullptr, which contains all top-level groups and options.
-  std::map<Record*, std::vector<Record*> > OptionsInGroup;
-  std::map<Record*, std::vector<Record*> > GroupsInGroup;
-  std::map<Record*, std::vector<Record*> > Aliases;
+  std::map<const Record *, std::vector<const Record *>> OptionsInGroup;
+  std::map<const Record *, std::vector<const Record *>> GroupsInGroup;
+  std::map<const Record *, std::vector<const Record *>> Aliases;
 
-  std::map<std::string, Record*> OptionsByName;
-  for (Record *R : Records.getAllDerivedDefinitions("Option"))
+  std::map<std::string, const Record *> OptionsByName;
+  for (const Record *R : Records.getAllDerivedDefinitions("Option"))
     OptionsByName[std::string(R->getValueAsString("Name"))] = R;
 
-  auto Flatten = [](Record *R) {
+  auto Flatten = [](const Record *R) {
     return R->getValue("DocFlatten") && R->getValueAsBit("DocFlatten");
   };
 
-  auto SkipFlattened = [&](Record *R) -> Record* {
+  auto SkipFlattened = [&](const Record *R) -> const Record * {
     while (R && Flatten(R)) {
       auto *G = dyn_cast<DefInit>(R->getValueInit("Group"));
       if (!G)
@@ -91,17 +91,17 @@ Documentation extractDocumentation(RecordKeeper &Records,
     return R;
   };
 
-  for (Record *R : Records.getAllDerivedDefinitions("OptionGroup")) {
+  for (const Record *R : Records.getAllDerivedDefinitions("OptionGroup")) {
     if (Flatten(R))
       continue;
 
-    Record *Group = nullptr;
+    const Record *Group = nullptr;
     if (auto *G = dyn_cast<DefInit>(R->getValueInit("Group")))
       Group = SkipFlattened(G->getDef());
     GroupsInGroup[Group].push_back(R);
   }
 
-  for (Record *R : Records.getAllDerivedDefinitions("Option")) {
+  for (const Record *R : Records.getAllDerivedDefinitions("Option")) {
     if (auto *A = dyn_cast<DefInit>(R->getValueInit("Alias"))) {
       Aliases[A->getDef()].push_back(R);
       continue;
@@ -120,33 +120,33 @@ Documentation extractDocumentation(RecordKeeper &Records,
       }
     }
 
-    Record *Group = nullptr;
+    const Record *Group = nullptr;
     if (auto *G = dyn_cast<DefInit>(R->getValueInit("Group")))
       Group = SkipFlattened(G->getDef());
     OptionsInGroup[Group].push_back(R);
   }
 
-  auto CompareByName = [](Record *A, Record *B) {
+  auto CompareByName = [](const Record *A, const Record *B) {
     return A->getValueAsString("Name") < B->getValueAsString("Name");
   };
 
-  auto CompareByLocation = [](Record *A, Record *B) {
+  auto CompareByLocation = [](const Record *A, const Record *B) {
     return A->getLoc()[0].getPointer() < B->getLoc()[0].getPointer();
   };
 
-  auto DocumentationForOption = [&](Record *R) -> DocumentedOption {
+  auto DocumentationForOption = [&](const Record *R) -> DocumentedOption {
     auto &A = Aliases[R];
     llvm::sort(A, CompareByName);
     return {R, std::move(A)};
   };
 
-  std::function<Documentation(Record *)> DocumentationForGroup =
-      [&](Record *R) -> Documentation {
+  std::function<Documentation(const Record *)> DocumentationForGroup =
+      [&](const Record *R) -> Documentation {
     Documentation D;
 
     auto &Groups = GroupsInGroup[R];
     llvm::sort(Groups, CompareByLocation);
-    for (Record *G : Groups) {
+    for (const Record *G : Groups) {
       D.Groups.emplace_back();
       D.Groups.back().Group = G;
       Documentation &Base = D.Groups.back();
@@ -157,7 +157,7 @@ Documentation extractDocumentation(RecordKeeper &Records,
 
     auto &Options = OptionsInGroup[R];
     llvm::sort(Options, CompareByName);
-    for (Record *O : Options)
+    for (const Record *O : Options)
       if (isOptionVisible(O, DocInfo))
         D.Options.push_back(DocumentationForOption(O));
 
@@ -444,7 +444,7 @@ void emitDocumentation(int Depth, const Documentation &Doc,
 
 }  // namespace
 
-void clang::EmitClangOptDocs(RecordKeeper &Records, raw_ostream &OS) {
+void clang::EmitClangOptDocs(const RecordKeeper &Records, raw_ostream &OS) {
   const Record *DocInfo = Records.getDef("GlobalDocumentation");
   if (!DocInfo) {
     PrintFatalError("The GlobalDocumentation top-level definition is missing, "
