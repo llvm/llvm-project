@@ -45,13 +45,13 @@ TEST(LlvmLibcCtime, ValidUnixTimestamp32Int) {
   struct time_t t = 2147483647;
   char *result;
   // 2038-01-19 03:14:07. Test with a valid buffer size.
-  char* result = LIBC_NAMESPACE::ctime_r(t, buffer);
+  char *result = LIBC_NAMESPACE::ctime_r(t, buffer);
   ASSERT_STREQ("Tue Jan  19 03:14:07 2038\n", result);
 }
 
 TEST(LlvmLibcCtimeR, InvalidArgument) {
   struct time_t t = 2147483648;
-  char* result = call_ctime(&t);
+  char *result = call_ctime(&t);
   ASSERT_ERRNO_EQ(EINVAL);
   ASSERT_STREQ(nullptr, result);
 }
