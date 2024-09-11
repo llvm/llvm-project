@@ -121,11 +121,11 @@ private:
 
   bool removeIfPresent(std::vector<orc_rt::span<RecordElement>> &V,
                        orc_rt::ExecutorAddrRange R) {
-    auto RI = std::find_if(V.rbegin(), V.rend(),
-                           [RS = R.toSpan<RecordElement>()](
-                               const orc_rt::span<RecordElement> &E) {
-                             return E.data() == RS.data();
-                           });
+    auto RI = std::find_if(
+        V.rbegin(), V.rend(),
+        [RS = R.toSpan<RecordElement>()](const orc_rt::span<RecordElement> &E) {
+          return E.data() == RS.data();
+        });
     if (RI != V.rend()) {
       V.erase(std::next(RI).base());
       return true;
