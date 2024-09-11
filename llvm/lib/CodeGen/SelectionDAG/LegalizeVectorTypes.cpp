@@ -4537,6 +4537,8 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::VP_FMINIMUM:
   case ISD::FMAXIMUM:
   case ISD::VP_FMAXIMUM:
+  case ISD::FMINIMUMNUM:
+  case ISD::FMAXIMUMNUM:
   case ISD::SMIN: case ISD::VP_SMIN:
   case ISD::SMAX: case ISD::VP_SMAX:
   case ISD::UMIN: case ISD::VP_UMIN:
