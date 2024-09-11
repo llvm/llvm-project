@@ -290,8 +290,15 @@ void CIRGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough) {
           [&](mlir::cir::TryOp op) { trys.push_back(op); });
       assert(trys.size() == 1 && "unknow global initialization style");
       tryOp = trys[0];
+    } else {
+      SmallVector<mlir::cir::TryOp> trys;
+      auto funcOp = dyn_cast<mlir::cir::FuncOp>(CurFn);
+      funcOp.walk([&](mlir::cir::TryOp op) { trys.push_back(op); });
+      assert(trys.size() == 1 && "nested or multiple try/catch NYI");
+      tryOp = trys[0];
     }
 
+    assert(tryOp && "expected available cir.try");
     auto *NextAction = getEHDispatchBlock(EHParent, tryOp);
     (void)NextAction;
 
