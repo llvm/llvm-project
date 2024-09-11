@@ -14,7 +14,7 @@ target triple = "dxil-pc-shadermodel6.0-compute"
 
 declare i32 @some_val();
 
-define void @test_buffers() #0 {
+define void @test_buffers() {
   ; RWBuffer<float4> Buf : register(u5, space3)
   %typed0 = call target("dx.TypedBuffer", <4 x float>, 1, 0, 0)
               @llvm.dx.handle.fromBinding.tdx.TypedBuffer_v4f32_1_0_0(
@@ -68,4 +68,4 @@ define void @test_buffers() #0 {
 ; CHECK-DAG: [[SRVMD]] = !{!{{[0-9]+}}, !{{[0-9]+}}, !{{[0-9]+}}, !{{[0-9]+}}}
 ; CHECK-DAG: [[UAVMD]] = !{!{{[0-9]+}}, !{{[0-9]+}}}
 
-attributes #0 = { nocallback nofree nosync nounwind willreturn memory(none) "hlsl.numthreads"="1,2,1" "hlsl.shader"="compute"}
+attributes #0 = { nocallback nofree nosync nounwind willreturn memory(none) }

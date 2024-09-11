@@ -15,6 +15,8 @@
 #include "llvm/Analysis/DXILMetadataAnalysis.h"
 #include "llvm/Analysis/DXILResource.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LLVMContext.h"
@@ -29,8 +31,38 @@
 using namespace llvm;
 using namespace llvm::dxil;
 
-static void emitResourceMetadata(Module &M, const DXILResourceMap &DRM,
-                                 const dxil::Resources &MDResources) {
+/// A simple Wrapper DiagnosticInfo that generates Module-level diagnostic
+class DiagnosticInfoModuleFormat : public DiagnosticInfo {
+private:
+  Twine Msg;
+  const Module &Mod;
+
+public:
+  /// \p M is the module for which the diagnostic is being emitted. \p Msg is
+  /// the message to show. Note that this class does not copy this message, so
+  /// this reference must be valid for the whole life time of the diagnostic.
+  DiagnosticInfoModuleFormat(const Module &M, const Twine &Msg,
+                             DiagnosticSeverity Severity = DS_Error)
+      : DiagnosticInfo(DK_Unsupported, Severity), Msg(Msg), Mod(M) {}
+
+  static bool classof(const DiagnosticInfo *DI) {
+    return DI->getKind() == DK_Unsupported;
+  }
+
+  const Twine &getMessage() const { return Msg; }
+
+  void print(DiagnosticPrinter &DP) const override {
+    std::string Str;
+    raw_string_ostream OS(Str);
+
+    OS << Mod.getName() << ": " << Msg << '\n';
+    OS.flush();
+    DP << Str;
+  }
+};
+
+static NamedMDNode *emitResourceMetadata(Module &M, const DXILResourceMap &DRM,
+                                         const dxil::Resources &MDResources) {
   LLVMContext &Context = M.getContext();
 
   SmallVector<Metadata *> SRVs, UAVs, CBufs, Smps;
@@ -62,11 +94,13 @@ static void emitResourceMetadata(Module &M, const DXILResourceMap &DRM,
   }
 
   if (!HasResources)
-    return;
+    return nullptr;
 
   NamedMDNode *ResourceMD = M.getOrInsertNamedMetadata("dx.resources");
   ResourceMD->addOperand(
       MDNode::get(M.getContext(), {SRVMD, UAVMD, CBufMD, SmpMD}));
+
+  return ResourceMD;
 }
 
 static StringRef getShortShaderStage(Triple::EnvironmentType Env) {
@@ -93,198 +127,212 @@ static StringRef getShortShaderStage(Triple::EnvironmentType Env) {
     break;
   }
   llvm_unreachable("Unsupported environment for DXIL generation.");
-  return "";
 }
 
 static uint32_t getShaderStage(Triple::EnvironmentType Env) {
   return (uint32_t)Env - (uint32_t)llvm::Triple::Pixel;
 }
 
-struct ShaderEntryMDInfo : EntryProperties {
-
-  enum EntryPropsTag {
-    ShaderFlagsTag = 0,
-    GSStateTag,
-    DSStateTag,
-    HSStateTag,
-    NumThreadsTag,
-    AutoBindingSpaceTag,
-    RayPayloadSizeTag,
-    RayAttribSizeTag,
-    ShaderKindTag,
-    MSStateTag,
-    ASStateTag,
-    WaveSizeTag,
-    EntryRootSigTag,
-  };
-
-  ShaderEntryMDInfo(EntryProperties &EP, LLVMContext &C,
-                    Triple::EnvironmentType SP, MDTuple *MDR = nullptr,
-                    uint64_t ShaderFlags = 0)
-      : EntryProperties(EP), Ctx(C), EntryShaderFlags(ShaderFlags),
-        MDResources(MDR), ShaderProfile(SP) {};
-
-  MDTuple *getAsMetadata() {
-    MDTuple *Properties = constructEntryPropMetadata();
-    // FIXME: Add support to construct Signatures
-    // See https://github.com/llvm/llvm-project/issues/57928
-    MDTuple *Signatures = nullptr;
-    return constructEntryMetadata(Signatures, MDResources, Properties);
-  }
-
-private:
-  LLVMContext &Ctx;
-  // Shader Flags for the Entry - from ShadeFLagsAnalysis pass
-  uint64_t EntryShaderFlags{0};
-  MDTuple *MDResources{nullptr};
-  Triple::EnvironmentType ShaderProfile{
-      Triple::EnvironmentType::UnknownEnvironment};
-  // Each entry point metadata record specifies:
-  //  * reference to the entry point function global symbol
-  //  * unmangled name
-  //  * list of signatures
-  //  * list of resources
-  //  * list of tag-value pairs of shader capabilities and other properties
-
-  MDTuple *constructEntryMetadata(MDTuple *Signatures, MDTuple *Resources,
-                                  MDTuple *Properties) {
-    Metadata *MDVals[5];
-    MDVals[0] =
-        Entry ? ValueAsMetadata::get(const_cast<Function *>(Entry)) : nullptr;
-    MDVals[1] = MDString::get(Ctx, Entry ? Entry->getName() : "");
-    MDVals[2] = Signatures;
-    MDVals[3] = Resources;
-    MDVals[4] = Properties;
-    return MDNode::get(Ctx, MDVals);
-  }
-
-  SmallVector<Metadata *> getTagValueAsMetadata(EntryPropsTag Tag,
-                                                uint64_t Value) {
-    SmallVector<Metadata *> MDVals;
-    MDVals.emplace_back(
-        ConstantAsMetadata::get(ConstantInt::get(Type::getInt32Ty(Ctx), Tag)));
-    switch (Tag) {
-    case ShaderFlagsTag:
-      MDVals.emplace_back(ConstantAsMetadata::get(
-          ConstantInt::get(Type::getInt64Ty(Ctx), Value)));
-      break;
-    case ShaderKindTag:
-      MDVals.emplace_back(ConstantAsMetadata::get(
-          ConstantInt::get(Type::getInt32Ty(Ctx), Value)));
-      break;
-    default:
-      assert(false && "NYI: Unhandled entry property tag");
-    }
-    return MDVals;
-  }
-
-  MDTuple *constructEntryPropMetadata() {
-    SmallVector<Metadata *> MDVals;
-    if (EntryShaderFlags != 0)
-      MDVals.append(getTagValueAsMetadata(ShaderFlagsTag, EntryShaderFlags));
-
-    if (Entry != nullptr) {
-      // FIXME: support more props.
-      // See https://github.com/llvm/llvm-project/issues/57948.
-      // Add shader kind for lib entries.
-      if (ShaderProfile == Triple::EnvironmentType::Library &&
-          ShaderStage != Triple::EnvironmentType::Library)
-        MDVals.append(
-            getTagValueAsMetadata(ShaderKindTag, getShaderStage(ShaderStage)));
-
-      if (ShaderStage == Triple::EnvironmentType::Compute) {
-        MDVals.emplace_back(ConstantAsMetadata::get(
-            ConstantInt::get(Type::getInt32Ty(Ctx), NumThreadsTag)));
-        std::vector<Metadata *> NumThreadVals;
-        NumThreadVals.emplace_back(ConstantAsMetadata::get(
-            ConstantInt::get(Type::getInt32Ty(Ctx), NumThreadsX)));
-        NumThreadVals.emplace_back(ConstantAsMetadata::get(
-            ConstantInt::get(Type::getInt32Ty(Ctx), NumThreadsY)));
-        NumThreadVals.emplace_back(ConstantAsMetadata::get(
-            ConstantInt::get(Type::getInt32Ty(Ctx), NumThreadsZ)));
-        MDVals.emplace_back(MDNode::get(Ctx, NumThreadVals));
-      }
-    }
-    if (MDVals.empty())
-      return nullptr;
-    return MDNode::get(Ctx, MDVals);
-  }
+namespace {
+enum EntryPropsTag {
+  ShaderFlagsTag = 0,
+  GSStateTag,
+  DSStateTag,
+  HSStateTag,
+  NumThreadsTag,
+  AutoBindingSpaceTag,
+  RayPayloadSizeTag,
+  RayAttribSizeTag,
+  ShaderKindTag,
+  MSStateTag,
+  ASStateTag,
+  WaveSizeTag,
+  EntryRootSigTag,
 };
+} // namespace
 
-static void createEntryMD(Module &M, const uint64_t ShaderFlags,
-                          const dxil::ModuleMetadataInfo &MDAnalysisInfo) {
-  auto &Ctx = M.getContext();
-  // FIXME: generate metadata for resource.
-  MDTuple *MDResources = nullptr;
-  if (auto *NamedResources = M.getNamedMetadata("dx.resources"))
-    MDResources = dyn_cast<MDTuple>(NamedResources->getOperand(0));
-
-  std::vector<MDNode *> EntryFnMDNodes;
-  switch (MDAnalysisInfo.ShaderProfile) {
-  case Triple::EnvironmentType::Library: {
-    // Library has an entry metadata with resource table metadata and all other
-    // MDNodes as null.
-    EntryProperties EP{};
-    // FIXME: ShaderFlagsAnalysis pass needs to collect and provide ShaderFlags
-    // for each entry function. Currently, ShaderFlags value provided by
-    // ShaderFlagsAnalysis pass is created by walking *all* the function
-    // instructions of the module. Is it is correct to use this value for
-    // metadata of the empty library entry?
-    ShaderEntryMDInfo EmptyFunEntryProps(EP, Ctx, MDAnalysisInfo.ShaderProfile,
-                                         MDResources, ShaderFlags);
-    MDTuple *EmptyMDT = EmptyFunEntryProps.getAsMetadata();
-    EntryFnMDNodes.emplace_back(EmptyMDT);
-
-    for (auto EntryProp : MDAnalysisInfo.EntryPropertyVec) {
-      // FIXME: ShaderFlagsAnalysis pass needs to collect and provide
-      // ShaderFlags for each entry function. For now, assume shader flags value
-      // of entry functions being compiled for lib_* shader profile viz.,
-      // EntryPro.Entry is 0.
-      ShaderEntryMDInfo SEP(EntryProp, Ctx, MDAnalysisInfo.ShaderProfile,
-                            nullptr, 0);
-      MDTuple *MDT = SEP.getAsMetadata();
-      EntryFnMDNodes.emplace_back(MDT);
-    }
-  } break;
-  case Triple::EnvironmentType::Compute: {
-    size_t NumEntries = MDAnalysisInfo.EntryPropertyVec.size();
-    assert(NumEntries == 1 &&
-           "Compute shader: One and only one entry expected");
-    EntryProperties EntryProp = MDAnalysisInfo.EntryPropertyVec[0];
-    // ShaderFlagsAnalysis pass needs to collect and provide ShaderFlags for
-    // each entry function. Currently, even though the ShaderFlags value
-    // provided by ShaderFlagsAnalysis pass is created by walking all the
-    // function instructions of the module, it is sufficient to since there is
-    // only one entry function in the module.
-    ShaderEntryMDInfo SEP(EntryProp, Ctx, MDAnalysisInfo.ShaderProfile,
-                          MDResources, ShaderFlags);
-    MDTuple *MDT = SEP.getAsMetadata();
-    EntryFnMDNodes.emplace_back(MDT);
+static SmallVector<Metadata *>
+getTagValueAsMetadata(EntryPropsTag Tag, uint64_t Value, LLVMContext &Ctx) {
+  SmallVector<Metadata *> MDVals;
+  MDVals.emplace_back(
+      ConstantAsMetadata::get(ConstantInt::get(Type::getInt32Ty(Ctx), Tag)));
+  switch (Tag) {
+  case ShaderFlagsTag:
+    MDVals.emplace_back(ConstantAsMetadata::get(
+        ConstantInt::get(Type::getInt64Ty(Ctx), Value)));
     break;
-  }
-  case Triple::EnvironmentType::Amplification:
-  case Triple::EnvironmentType::Mesh:
-  case Triple::EnvironmentType::Vertex:
-  case Triple::EnvironmentType::Hull:
-  case Triple::EnvironmentType::Domain:
-  case Triple::EnvironmentType::Geometry:
-  case Triple::EnvironmentType::Pixel: {
-    size_t NumEntries = MDAnalysisInfo.EntryPropertyVec.size();
-    assert(NumEntries == 1 && "non-lib profiles should only have one entry");
-    EntryProperties EntryProp = MDAnalysisInfo.EntryPropertyVec[0];
-    // ShaderFlagsAnalysis pass needs to collect and provide ShaderFlags for
-    // each entry function. Currently, even though the ShaderFlags value
-    // provided by ShaderFlagsAnalysis pass is created by walking all the
-    // function instructions of the module, it is sufficient to since there is
-    // only one entry function in the module.
-    ShaderEntryMDInfo SEP(EntryProp, Ctx, MDAnalysisInfo.ShaderProfile,
-                          MDResources, ShaderFlags);
-    MDTuple *MDT = SEP.getAsMetadata();
-    EntryFnMDNodes.emplace_back(MDT);
-  } break;
+  case ShaderKindTag:
+    MDVals.emplace_back(ConstantAsMetadata::get(
+        ConstantInt::get(Type::getInt32Ty(Ctx), Value)));
+    break;
   default:
-    assert(0 && "invalid profile");
-    break;
+    assert(false && "NYI: Unhandled entry property tag");
+  }
+  return MDVals;
+}
+
+static MDTuple *
+getEntryPropAsMetadata(const EntryProperties &EP, uint64_t EntryShaderFlags,
+                       const Triple::EnvironmentType ShaderProfile) {
+  SmallVector<Metadata *> MDVals;
+  LLVMContext &Ctx = EP.Entry->getContext();
+  if (EntryShaderFlags != 0)
+    MDVals.append(getTagValueAsMetadata(ShaderFlagsTag, EntryShaderFlags, Ctx));
+
+  if (EP.Entry != nullptr) {
+    // FIXME: support more props.
+    // See https://github.com/llvm/llvm-project/issues/57948.
+    // Add shader kind for lib entries.
+    if (ShaderProfile == Triple::EnvironmentType::Library &&
+        EP.ShaderStage != Triple::EnvironmentType::Library)
+      MDVals.append(getTagValueAsMetadata(ShaderKindTag,
+                                          getShaderStage(EP.ShaderStage), Ctx));
+
+    if (EP.ShaderStage == Triple::EnvironmentType::Compute) {
+      MDVals.emplace_back(ConstantAsMetadata::get(
+          ConstantInt::get(Type::getInt32Ty(Ctx), NumThreadsTag)));
+      std::vector<Metadata *> NumThreadVals;
+      NumThreadVals.emplace_back(ConstantAsMetadata::get(
+          ConstantInt::get(Type::getInt32Ty(Ctx), EP.NumThreadsX)));
+      NumThreadVals.emplace_back(ConstantAsMetadata::get(
+          ConstantInt::get(Type::getInt32Ty(Ctx), EP.NumThreadsY)));
+      NumThreadVals.emplace_back(ConstantAsMetadata::get(
+          ConstantInt::get(Type::getInt32Ty(Ctx), EP.NumThreadsZ)));
+      MDVals.emplace_back(MDNode::get(Ctx, NumThreadVals));
+    }
+  }
+  if (MDVals.empty())
+    return nullptr;
+  return MDNode::get(Ctx, MDVals);
+}
+
+// Each entry point metadata record specifies:
+//  * reference to the entry point function global symbol
+//  * unmangled name
+//  * list of signatures
+//  * list of resources
+//  * list of tag-value pairs of shader capabilities and other properties
+
+MDTuple *constructEntryMetadata(const Function *EntryFn, MDTuple *Signatures,
+                                MDNode *Resources, MDTuple *Properties,
+                                LLVMContext &Ctx) {
+  Metadata *MDVals[5];
+  MDVals[0] =
+      EntryFn ? ValueAsMetadata::get(const_cast<Function *>(EntryFn)) : nullptr;
+  MDVals[1] = MDString::get(Ctx, EntryFn ? EntryFn->getName() : "");
+  MDVals[2] = Signatures;
+  MDVals[3] = Resources;
+  MDVals[4] = Properties;
+  return MDNode::get(Ctx, MDVals);
+}
+
+static MDTuple *emitEntryMD(const EntryProperties &EP, MDTuple *Signatures,
+                            MDNode *MDResources,
+                            const uint64_t EntryShaderFlags,
+                            const Triple::EnvironmentType ShaderProfile) {
+  MDTuple *Properties =
+      getEntryPropAsMetadata(EP, EntryShaderFlags, ShaderProfile);
+  return constructEntryMetadata(EP.Entry, Signatures, MDResources, Properties,
+                                EP.Entry->getContext());
+}
+
+static void emitValidatorVersionMD(Module &M, const ModuleMetadataInfo &MMDI) {
+  if (!MMDI.ValidatorVersion.empty()) {
+    LLVMContext &Ctx = M.getContext();
+    IRBuilder<> IRB(Ctx);
+    Metadata *MDVals[2];
+    MDVals[0] =
+        ConstantAsMetadata::get(IRB.getInt32(MMDI.ValidatorVersion.getMajor()));
+    MDVals[1] = ConstantAsMetadata::get(
+        IRB.getInt32(MMDI.ValidatorVersion.getMinor().value_or(0)));
+    NamedMDNode *ValVerNode = M.getOrInsertNamedMetadata("dx.valver");
+    // Set validator version obtained from DXIL Metadata Analysis pass
+    ValVerNode->clearOperands();
+    ValVerNode->addOperand(MDNode::get(Ctx, MDVals));
+  }
+}
+
+static void emitShaderModelVersionMD(Module &M,
+                                     const ModuleMetadataInfo &MMDI) {
+  LLVMContext &Ctx = M.getContext();
+  IRBuilder<> IRB(Ctx);
+  Metadata *SMVals[3];
+  VersionTuple SM = MMDI.ShaderModelVersion;
+  SMVals[0] = MDString::get(Ctx, getShortShaderStage(MMDI.ShaderProfile));
+  SMVals[1] = ConstantAsMetadata::get(IRB.getInt32(SM.getMajor()));
+  SMVals[2] = ConstantAsMetadata::get(IRB.getInt32(SM.getMinor().value_or(0)));
+  NamedMDNode *SMMDNode = M.getOrInsertNamedMetadata("dx.shaderModel");
+  SMMDNode->addOperand(MDNode::get(Ctx, SMVals));
+}
+
+static void emitDXILVersionTupleMD(Module &M, const ModuleMetadataInfo &MMDI) {
+  LLVMContext &Ctx = M.getContext();
+  IRBuilder<> IRB(Ctx);
+  VersionTuple DXILVer = MMDI.DXILVersion;
+  Metadata *DXILVals[2];
+  DXILVals[0] = ConstantAsMetadata::get(IRB.getInt32(DXILVer.getMajor()));
+  DXILVals[1] =
+      ConstantAsMetadata::get(IRB.getInt32(DXILVer.getMinor().value_or(0)));
+  NamedMDNode *DXILVerMDNode = M.getOrInsertNamedMetadata("dx.version");
+  DXILVerMDNode->addOperand(MDNode::get(Ctx, DXILVals));
+}
+
+static MDTuple *emitTopLevelLibraryNode(Module &M, MDNode *RMD,
+                                        uint64_t ShaderFlags) {
+  LLVMContext &Ctx = M.getContext();
+  MDTuple *Properties = nullptr;
+  if (ShaderFlags != 0) {
+    SmallVector<Metadata *> MDVals;
+    // FIXME: ShaderFlagsAnalysis pass needs to collect and provide
+    // ShaderFlags for each entry function. Currently, ShaderFlags value
+    // provided by ShaderFlagsAnalysis pass is created by walking *all* the
+    // function instructions of the module. Is it is correct to use this value
+    // for metadata of the empty library entry?
+    MDVals.append(getTagValueAsMetadata(ShaderFlagsTag, ShaderFlags, Ctx));
+    Properties = MDNode::get(Ctx, MDVals);
+  }
+  // Library has an entry metadata with resource table metadata and all other
+  // MDNodes as null.
+  return constructEntryMetadata(nullptr, nullptr, RMD, Properties, Ctx);
+}
+
+static void translateMetadata(Module &M, const DXILResourceMap &DRM,
+                              const Resources &MDResources,
+                              const ComputedShaderFlags &ShaderFlags,
+                              const ModuleMetadataInfo &MMDI) {
+  LLVMContext &Ctx = M.getContext();
+  IRBuilder<> IRB(Ctx);
+  SmallVector<MDNode *> EntryFnMDNodes;
+
+  emitValidatorVersionMD(M, MMDI);
+  emitShaderModelVersionMD(M, MMDI);
+  emitDXILVersionTupleMD(M, MMDI);
+  NamedMDNode *NamedResourceMD = emitResourceMetadata(M, DRM, MDResources);
+  auto *ResourceMD =
+      (NamedResourceMD != nullptr) ? NamedResourceMD->getOperand(0) : nullptr;
+  // FIXME: Add support to construct Signatures
+  // See https://github.com/llvm/llvm-project/issues/57928
+  MDTuple *Signatures = nullptr;
+
+  if (MMDI.ShaderProfile == Triple::EnvironmentType::Library)
+    EntryFnMDNodes.emplace_back(
+        emitTopLevelLibraryNode(M, ResourceMD, ShaderFlags));
+  else if (MMDI.EntryPropertyVec.size() > 1) {
+    M.getContext().diagnose(DiagnosticInfoModuleFormat(
+        M, "Non-library shader: One and only one entry expected"));
+  }
+
+  for (const EntryProperties &EntryProp : MMDI.EntryPropertyVec) {
+    // FIXME: ShaderFlagsAnalysis pass needs to collect and provide
+    // ShaderFlags for each entry function. For now, assume shader flags value
+    // of entry functions being compiled for lib_* shader profile viz.,
+    // EntryPro.Entry is 0.
+    uint64_t EntryShaderFlags =
+        (MMDI.ShaderProfile == Triple::EnvironmentType::Library) ? 0
+                                                                 : ShaderFlags;
+    EntryFnMDNodes.emplace_back(emitEntryMD(EntryProp, Signatures, ResourceMD,
+                                            EntryShaderFlags,
+                                            MMDI.ShaderProfile));
   }
 
   NamedMDNode *EntryPointsNamedMD =
@@ -293,57 +341,15 @@ static void createEntryMD(Module &M, const uint64_t ShaderFlags,
     EntryPointsNamedMD->addOperand(Entry);
 }
 
-static void translateMetadata(Module &M, const DXILResourceMap &DRM,
-                              const dxil::Resources &MDResources,
-                              const ComputedShaderFlags &ShaderFlags,
-                              const dxil::ModuleMetadataInfo &MDAnalysisInfo) {
-  LLVMContext &Ctx = M.getContext();
-  IRBuilder<> IRB(Ctx);
-  if (MDAnalysisInfo.ValidatorVersion.empty()) {
-    // Module has no metadata node signifying valid validator version.
-    // Create metadata dx.valver node with version value of 1.0
-    const VersionTuple DefaultValidatorVer{1, 0};
-    Metadata *MDVals[2];
-    MDVals[0] =
-        ConstantAsMetadata::get(IRB.getInt32(DefaultValidatorVer.getMajor()));
-    MDVals[1] = ConstantAsMetadata::get(
-        IRB.getInt32(DefaultValidatorVer.getMinor().value_or(0)));
-    NamedMDNode *ValVerNode = M.getOrInsertNamedMetadata("dx.valver");
-    ValVerNode->addOperand(MDNode::get(Ctx, MDVals));
-  }
-
-  Metadata *SMVals[3];
-  VersionTuple SM = MDAnalysisInfo.ShaderModelVersion;
-  SMVals[0] =
-      MDString::get(Ctx, getShortShaderStage(MDAnalysisInfo.ShaderProfile));
-  SMVals[1] = ConstantAsMetadata::get(IRB.getInt32(SM.getMajor()));
-  SMVals[2] = ConstantAsMetadata::get(IRB.getInt32(SM.getMinor().value_or(0)));
-  NamedMDNode *SMMDNode = M.getOrInsertNamedMetadata("dx.shaderModel");
-  SMMDNode->addOperand(MDNode::get(Ctx, SMVals));
-
-  VersionTuple DXILVer = MDAnalysisInfo.DXILVersion;
-  Metadata *DXILVals[2];
-  DXILVals[0] = ConstantAsMetadata::get(IRB.getInt32(DXILVer.getMajor()));
-  DXILVals[1] =
-      ConstantAsMetadata::get(IRB.getInt32(DXILVer.getMinor().value_or(0)));
-  NamedMDNode *DXILVerMDNode = M.getOrInsertNamedMetadata("dx.version");
-  DXILVerMDNode->addOperand(MDNode::get(Ctx, DXILVals));
-
-  emitResourceMetadata(M, DRM, MDResources);
-
-  createEntryMD(M, static_cast<uint64_t>(ShaderFlags), MDAnalysisInfo);
-}
-
 PreservedAnalyses DXILTranslateMetadata::run(Module &M,
                                              ModuleAnalysisManager &MAM) {
   const DXILResourceMap &DRM = MAM.getResult<DXILResourceAnalysis>(M);
   const dxil::Resources &MDResources = MAM.getResult<DXILResourceMDAnalysis>(M);
   const ComputedShaderFlags &ShaderFlags =
       MAM.getResult<ShaderFlagsAnalysis>(M);
-  const dxil::ModuleMetadataInfo MetadataInfo =
-      MAM.getResult<DXILMetadataAnalysis>(M);
+  const dxil::ModuleMetadataInfo MMDI = MAM.getResult<DXILMetadataAnalysis>(M);
 
-  translateMetadata(M, DRM, MDResources, ShaderFlags, MetadataInfo);
+  translateMetadata(M, DRM, MDResources, ShaderFlags, MMDI);
 
   return PreservedAnalyses::all();
 }
@@ -371,10 +377,10 @@ public:
         getAnalysis<DXILResourceMDWrapper>().getDXILResource();
     const ComputedShaderFlags &ShaderFlags =
         getAnalysis<ShaderFlagsAnalysisWrapper>().getShaderFlags();
-    dxil::ModuleMetadataInfo MetadataInfo =
+    dxil::ModuleMetadataInfo MMDI =
         getAnalysis<DXILMetadataAnalysisWrapperPass>().getModuleMetadata();
 
-    translateMetadata(M, DRM, MDResources, ShaderFlags, MetadataInfo);
+    translateMetadata(M, DRM, MDResources, ShaderFlags, MMDI);
     return true;
   }
 };

@@ -2,12 +2,10 @@
 target triple = "dxil-pc-shadermodel6.8-library"
 
 
-; CHECK: !dx.valver = !{![[DXVALVER:[0-9]+]]}
 ; CHECK: !dx.shaderModel = !{![[SM:[0-9]+]]}
 ; CHECK: !dx.version = !{![[DXVER:[0-9]+]]}
 ; CHECK: !dx.entryPoints = !{![[LIB:[0-9]+]], ![[AS:[0-9]+]], ![[MS:[0-9]+]], ![[CS:[0-9]+]]}
 
-; CHECK: ![[DXVALVER]] = !{i32 1, i32 0}
 ; CHECK: ![[SM]] = !{!"lib", i32 6, i32 8}
 ; CHECK: ![[DXVER]] = !{i32 1, i32 8}
 ; CHECK: ![[LIB]] = !{null, !"", null, null, null}
