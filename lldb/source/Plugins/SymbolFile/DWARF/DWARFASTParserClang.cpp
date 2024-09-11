@@ -2927,13 +2927,12 @@ void DWARFASTParserClang::ParseSingleMember(
 
     // TODO:
     //   for each ParseSingleMember, check if the field start <= last_field_end.
-    //   In that case we have an overlap, so we need to adjust the this_field_info
-    //   in such a way that the next last_field_end will be that of the field that we
-    //   just overlapped with.
+    //   In that case we have an overlap, so we need to adjust the
+    //   this_field_info in such a way that the next last_field_end will be that
+    //   of the field that we just overlapped with.
     if (detect_unnamed_bitfields)
-      AddUnnamedBitfieldToRecordTypeIfNeeded(layout_info,
-                                             class_clang_type, last_field_info,
-                                             this_field_info);
+      AddUnnamedBitfieldToRecordTypeIfNeeded(layout_info, class_clang_type,
+                                             last_field_info, this_field_info);
 
     last_field_info = this_field_info;
     last_field_info.SetIsBitfield(true);
@@ -3740,8 +3739,8 @@ bool DWARFASTParserClang::ShouldCreateUnnamedBitfield(
 
 void DWARFASTParserClang::AddUnnamedBitfieldToRecordTypeIfNeeded(
     ClangASTImporter::LayoutInfo &class_layout_info,
-    const CompilerType &class_clang_type,
-    const FieldInfo &previous_field, const FieldInfo &current_field) {
+    const CompilerType &class_clang_type, const FieldInfo &previous_field,
+    const FieldInfo &current_field) {
   // TODO: get this value from target
   const uint64_t word_width = 32;
   uint64_t last_field_end = previous_field.bit_offset + previous_field.bit_size;
