@@ -341,6 +341,12 @@ public:
     return s_RefCounted;
   }
 
+  static RefCounted& otherSingleton() {
+    static RefCounted s_RefCounted;
+    s_RefCounted.ref();
+    return s_RefCounted;
+  }
+
   Number nonTrivial1() { return Number(3) + Number(4); }
   Number nonTrivial2() { return Number { 0.3 }; }
   int nonTrivial3() { return v ? otherFunction() : 0; }
@@ -509,6 +515,8 @@ public:
 
     RefCounted::singleton().trivial18(); // no-warning
     RefCounted::singleton().someFunction(); // no-warning
+    RefCounted::otherSingleton().trivial18(); // no-warning
+    RefCounted::otherSingleton().someFunction(); // no-warning
 
     getFieldTrivial().recursiveTrivialFunction(7); // no-warning
     getFieldTrivial().recursiveComplexFunction(9);
