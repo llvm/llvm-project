@@ -46,6 +46,19 @@ add_dependencies(mlir-headers LinalgOdsGen)
 
 add_mlir_dialect(LinalgOps linalg)
 
+if(XCODE)
+  # The Xcode generator needs a dependency between these two, one way or
+  # another, since all three targets generate the same file:
+  # tools/mlir/include/mlir/Dialect/Linalg/IR/LinalgNamedStructuredOps.yamlgen.td
+  add_dependencies(
+    MLIRLinalgOpsIncGen
+    MLIRLinalgNamedStructuredOpsYamlIncGen
+    MLIRLinalgOpsEnumsIncGen)
+  add_dependencies(
+    MLIRLinalgNamedStructuredOpsYamlIncGen
+    MLIRLinalgOpsEnumsIncGen)
+endif()
+
 set(LLVM_TARGET_DEFINITIONS LinalgEnums.td)
 mlir_tablegen(LinalgOpsEnums.h.inc -gen-enum-decls)
 mlir_tablegen(LinalgOpsEnums.cpp.inc -gen-enum-defs)
