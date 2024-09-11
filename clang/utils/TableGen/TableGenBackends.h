@@ -91,9 +91,9 @@ void EmitClangCommentHTMLTagsProperties(llvm::RecordKeeper &Records,
 void EmitClangCommentHTMLNamedCharacterReferences(llvm::RecordKeeper &Records,
                                                   llvm::raw_ostream &OS);
 
-void EmitClangCommentCommandInfo(llvm::RecordKeeper &Records,
+void EmitClangCommentCommandInfo(const llvm::RecordKeeper &Records,
                                  llvm::raw_ostream &OS);
-void EmitClangCommentCommandList(llvm::RecordKeeper &Records,
+void EmitClangCommentCommandList(const llvm::RecordKeeper &Records,
                                  llvm::raw_ostream &OS);
 void EmitClangOpcodes(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 
