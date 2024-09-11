@@ -7816,7 +7816,7 @@ public:
     return currentEvaluationContext().InLifetimeExtendingContext;
   }
 
-  bool needRebuildDefaultArgOrInit() const {
+  bool needsRebuildOfDefaultArgOrInit() const {
     return currentEvaluationContext().RebuildDefaultArgOrDefaultInit;
   }
 
