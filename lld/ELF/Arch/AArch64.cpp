@@ -268,13 +268,13 @@ int64_t AArch64::getImplicitAddend(const uint8_t *buf, RelType type) const {
   case R_AARCH64_MOVW_UABS_G2:
   case R_AARCH64_MOVW_UABS_G2_NC:
   case R_AARCH64_MOVW_UABS_G3:
-    return SignExtend64<16>(getBits(read32(buf), 5, 20));
+    return SignExtend64<16>(getBits(read32le(buf), 5, 20));
 
     // R_AARCH64_TSTBR14 points at a TBZ or TBNZ instruction, which
     // has a 14-bit offset measured in instructions, i.e. shifted left
     // by 2.
   case R_AARCH64_TSTBR14:
-    return SignExtend64<16>(getBits(read32(buf), 5, 18) << 2);
+    return SignExtend64<16>(getBits(read32le(buf), 5, 18) << 2);
 
     // R_AARCH64_CONDBR19 operates on the ordinary B.cond instruction,
     // which has a 19-bit offset measured in instructions.
@@ -285,13 +285,13 @@ int64_t AArch64::getImplicitAddend(const uint8_t *buf, RelType type) const {
     // R_AARCH64_CONDBR19.
   case R_AARCH64_CONDBR19:
   case R_AARCH64_LD_PREL_LO19:
-    return SignExtend64<21>(getBits(read32(buf), 5, 23) << 2);
+    return SignExtend64<21>(getBits(read32le(buf), 5, 23) << 2);
 
     // R_AARCH64_ADD_ABS_LO12_NC operates on ADD (immediate). The
     // immediate can optionally be shifted left by 12 bits, but this
     // relocation is intended for the case where it is not.
   case R_AARCH64_ADD_ABS_LO12_NC:
-    return SignExtend64<12>(getBits(read32(buf), 10, 21));
+    return SignExtend64<12>(getBits(read32le(buf), 10, 21));
 
     // R_AARCH64_ADR_PREL_LO21 operates on an ADR instruction, whose
     // 21-bit immediate is split between two bits high up in the word
@@ -305,14 +305,14 @@ int64_t AArch64::getImplicitAddend(const uint8_t *buf, RelType type) const {
   case R_AARCH64_ADR_PREL_LO21:
   case R_AARCH64_ADR_PREL_PG_HI21:
   case R_AARCH64_ADR_PREL_PG_HI21_NC:
-    return SignExtend64<21>((getBits(read32(buf), 5, 23) << 2) |
-                            getBits(read32(buf), 29, 30));
+    return SignExtend64<21>((getBits(read32le(buf), 5, 23) << 2) |
+                            getBits(read32le(buf), 29, 30));
 
     // R_AARCH64_{JUMP,CALL}26 operate on B and BL, which have a
     // 26-bit offset measured in instructions.
   case R_AARCH64_JUMP26:
   case R_AARCH64_CALL26:
-    return SignExtend64<28>(getBits(read32(buf), 0, 25) << 2);
+    return SignExtend64<28>(getBits(read32le(buf), 0, 25) << 2);
 
   default:
     internalLinkerError(getErrorLocation(buf),

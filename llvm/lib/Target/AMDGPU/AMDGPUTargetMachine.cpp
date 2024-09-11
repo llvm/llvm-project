@@ -28,14 +28,19 @@
 #include "AMDGPUTargetObjectFile.h"
 #include "AMDGPUTargetTransformInfo.h"
 #include "AMDGPUUnifyDivergentExitNodes.h"
+#include "GCNDPPCombine.h"
 #include "GCNIterativeScheduler.h"
 #include "GCNSchedStrategy.h"
 #include "GCNVOPDUtils.h"
 #include "R600.h"
 #include "R600TargetMachine.h"
 #include "SIFixSGPRCopies.h"
+#include "SIFoldOperands.h"
+#include "SILoadStoreOptimizer.h"
 #include "SIMachineFunctionInfo.h"
 #include "SIMachineScheduler.h"
+#include "SIPeepholeSDWA.h"
+#include "SIShrinkInstructions.h"
 #include "TargetInfo/AMDGPUTargetInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
@@ -402,7 +407,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeR600VectorRegMergerPass(*PR);
   initializeGlobalISel(*PR);
   initializeAMDGPUDAGToDAGISelLegacyPass(*PR);
-  initializeGCNDPPCombinePass(*PR);
+  initializeGCNDPPCombineLegacyPass(*PR);
   initializeSILowerI1CopiesLegacyPass(*PR);
   initializeAMDGPUGlobalISelDivergenceLoweringPass(*PR);
   initializeSILowerWWMCopiesPass(*PR);
@@ -410,12 +415,12 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeSILowerSGPRSpillsPass(*PR);
   initializeSIFixSGPRCopiesLegacyPass(*PR);
   initializeSIFixVGPRCopiesPass(*PR);
-  initializeSIFoldOperandsPass(*PR);
-  initializeSIPeepholeSDWAPass(*PR);
-  initializeSIShrinkInstructionsPass(*PR);
+  initializeSIFoldOperandsLegacyPass(*PR);
+  initializeSIPeepholeSDWALegacyPass(*PR);
+  initializeSIShrinkInstructionsLegacyPass(*PR);
   initializeSIOptimizeExecMaskingPreRAPass(*PR);
   initializeSIOptimizeVGPRLiveRangePass(*PR);
-  initializeSILoadStoreOptimizerPass(*PR);
+  initializeSILoadStoreOptimizerLegacyPass(*PR);
   initializeAMDGPUCtorDtorLoweringLegacyPass(*PR);
   initializeAMDGPUAlwaysInlinePass(*PR);
   initializeAMDGPUSwLowerLDSLegacyPass(*PR);
@@ -769,12 +774,8 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
           PM.addPass(AMDGPUSwLowerLDSPass(*this));
         if (EnableLowerModuleLDS)
           PM.addPass(AMDGPULowerModuleLDSPass(*this));
-
-        if (EnableAMDGPUAttributor && Level != OptimizationLevel::O0) {
-          AMDGPUAttributorOptions Opts;
-          Opts.IsClosedWorld = true;
-          PM.addPass(AMDGPUAttributorPass(*this, Opts));
-        }
+        if (EnableAMDGPUAttributor && Level != OptimizationLevel::O0)
+          PM.addPass(AMDGPUAttributorPass(*this));
       });
 
   PB.registerRegClassFilterParsingCallback(
@@ -1270,18 +1271,18 @@ void GCNPassConfig::addMachineSSAOptimization() {
   // instructions leftover after the operands are folded as well.
   //
   // XXX - Can we get away without running DeadMachineInstructionElim again?
-  addPass(&SIFoldOperandsID);
+  addPass(&SIFoldOperandsLegacyID);
   if (EnableDPPCombine)
-    addPass(&GCNDPPCombineID);
-  addPass(&SILoadStoreOptimizerID);
+    addPass(&GCNDPPCombineLegacyID);
+  addPass(&SILoadStoreOptimizerLegacyID);
   if (isPassEnabled(EnableSDWAPeephole)) {
-    addPass(&SIPeepholeSDWAID);
+    addPass(&SIPeepholeSDWALegacyID);
     addPass(&EarlyMachineLICMID);
-    addPass(&MachineCSEID);
-    addPass(&SIFoldOperandsID);
+    addPass(&MachineCSELegacyID);
+    addPass(&SIFoldOperandsLegacyID);
   }
   addPass(&DeadMachineInstructionElimID);
-  addPass(createSIShrinkInstructionsPass());
+  addPass(createSIShrinkInstructionsLegacyPass());
 }
 
 bool GCNPassConfig::addILPOpts() {
@@ -1485,7 +1486,7 @@ void GCNPassConfig::addPostRegAlloc() {
 
 void GCNPassConfig::addPreSched2() {
   if (TM->getOptLevel() > CodeGenOptLevel::None)
-    addPass(createSIShrinkInstructionsPass());
+    addPass(createSIShrinkInstructionsLegacyPass());
   addPass(&SIPostRABundlerID);
 }
 

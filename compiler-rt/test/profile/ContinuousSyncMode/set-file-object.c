@@ -1,4 +1,4 @@
-// REQUIRES: darwin || linux
+// REQUIRES: target={{.*(darwin|linux|solaris).*}}
 
 // Test using __llvm_profile_set_file_object in continuous mode (%c).
 // Create & cd into a temporary directory.

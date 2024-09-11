@@ -213,6 +213,23 @@ private:
 const MipsInstrInfo *createMips16InstrInfo(const MipsSubtarget &STI);
 const MipsInstrInfo *createMipsSEInstrInfo(const MipsSubtarget &STI);
 
+namespace Mips {
+// Mask assignments for floating-point.
+enum FClassMask {
+  FClassMaskSignalingNaN = 1 << 0,
+  FClassMaskQuietNaN = 1 << 1,
+  FClassMaskNegativeInfinity = 1 << 2,
+  FClassMaskNegativeNormal = 1 << 3,
+  FClassMaskNegativeSubnormal = 1 << 4,
+  FClassMaskNegativeZero = 1 << 5,
+  FClassMaskPositiveInfinity = 1 << 6,
+  FClassMaskPositiveNormal = 1 << 7,
+  FClassMaskPositiveSubnormal = 1 << 8,
+  FClassMaskPositiveZero = 1 << 9
+};
+
+} // namespace Mips
+
 } // end namespace llvm
 
 #endif // LLVM_LIB_TARGET_MIPS_MIPSINSTRINFO_H

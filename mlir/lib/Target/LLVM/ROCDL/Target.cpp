@@ -506,13 +506,15 @@ ROCDLTargetAttrImpl::createObject(Attribute attribute, Operation *module,
   gpu::CompilationTarget format = options.getCompilationTarget();
   // If format is `fatbin` transform it to binary as `fatbin` is not yet
   // supported.
-  if (format > gpu::CompilationTarget::Binary)
+  gpu::KernelTableAttr kernels;
+  if (format > gpu::CompilationTarget::Binary) {
     format = gpu::CompilationTarget::Binary;
-
+    kernels = ROCDL::getKernelMetadata(module, object);
+  }
   DictionaryAttr properties{};
   Builder builder(attribute.getContext());
-  return builder.getAttr<gpu::ObjectAttr>(
-      attribute, format,
-      builder.getStringAttr(StringRef(object.data(), object.size())),
-      properties);
+  StringAttr objectStr =
+      builder.getStringAttr(StringRef(object.data(), object.size()));
+  return builder.getAttr<gpu::ObjectAttr>(attribute, format, objectStr,
+                                          properties, kernels);
 }

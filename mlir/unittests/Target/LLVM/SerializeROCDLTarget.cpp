@@ -158,3 +158,69 @@ TEST_F(MLIRTargetLLVMROCDL, SKIP_WITHOUT_AMDGPU(SerializeROCDLToBinary)) {
     ASSERT_FALSE(object->empty());
   }
 }
+
+// Test ROCDL metadata.
+TEST_F(MLIRTargetLLVMROCDL, SKIP_WITHOUT_AMDGPU(GetELFMetadata)) {
+  if (!hasROCMTools())
+    GTEST_SKIP() << "ROCm installation not found, skipping test.";
+
+  MLIRContext context(registry);
+
+  // MLIR module used for the tests.
+  const std::string moduleStr = R"mlir(
+    gpu.module @rocdl_test {
+    llvm.func @rocdl_kernel_1(%arg0: f32) attributes {gpu.kernel, rocdl.kernel} {
+      llvm.return
+    }
+    llvm.func @rocdl_kernel_0(%arg0: f32) attributes {gpu.kernel, rocdl.kernel} {
+      llvm.return
+    }
+    llvm.func @rocdl_kernel_2(%arg0: f32) attributes {gpu.kernel, rocdl.kernel} {
+      llvm.return
+    }
+    llvm.func @a_kernel(%arg0: f32) attributes {gpu.kernel, rocdl.kernel} {
+      llvm.return
+    }
+  })mlir";
+
+  OwningOpRef<ModuleOp> module =
+      parseSourceString<ModuleOp>(moduleStr, &context);
+  ASSERT_TRUE(!!module);
+
+  // Create a ROCDL target.
+  ROCDL::ROCDLTargetAttr target = ROCDL::ROCDLTargetAttr::get(&context);
+
+  // Serialize the module.
+  auto serializer = dyn_cast<gpu::TargetAttrInterface>(target);
+  ASSERT_TRUE(!!serializer);
+  gpu::TargetOptions options("", {}, "", gpu::CompilationTarget::Binary);
+  for (auto gpuModule : (*module).getBody()->getOps<gpu::GPUModuleOp>()) {
+    std::optional<SmallVector<char, 0>> object =
+        serializer.serializeToObject(gpuModule, options);
+    // Check that the serializer was successful.
+    ASSERT_TRUE(object != std::nullopt);
+    ASSERT_FALSE(object->empty());
+    if (!object)
+      continue;
+    // Get the metadata.
+    gpu::KernelTableAttr metadata =
+        ROCDL::getKernelMetadata(gpuModule, *object);
+    ASSERT_TRUE(metadata != nullptr);
+    // There should be 4 kernels.
+    ASSERT_TRUE(metadata.size() == 4);
+    // Check that the lookup method returns finds the kernel.
+    ASSERT_TRUE(metadata.lookup("a_kernel") != nullptr);
+    ASSERT_TRUE(metadata.lookup("rocdl_kernel_0") != nullptr);
+    // Check that the kernel doesn't exist.
+    ASSERT_TRUE(metadata.lookup("not_existent_kernel") == nullptr);
+    // Test the `KernelMetadataAttr` iterators.
+    for (gpu::KernelMetadataAttr kernel : metadata) {
+      // Check that the ELF metadata is present.
+      ASSERT_TRUE(kernel.getMetadata() != nullptr);
+      // Verify that `sgpr_count` is present and it is an integer attribute.
+      ASSERT_TRUE(kernel.getAttr<IntegerAttr>("sgpr_count") != nullptr);
+      // Verify that `vgpr_count` is present and it is an integer attribute.
+      ASSERT_TRUE(kernel.getAttr<IntegerAttr>("vgpr_count") != nullptr);
+    }
+  }
+}

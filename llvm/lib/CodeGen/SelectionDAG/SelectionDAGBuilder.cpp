@@ -1622,6 +1622,7 @@ bool SelectionDAGBuilder::handleDebugValue(ArrayRef<const Value *> Values,
     SDValue N = NodeMap[V];
     if (!N.getNode() && isa<Argument>(V)) // Check unused arguments map.
       N = UnusedArgNodeMap[V];
+
     if (N.getNode()) {
       // Only emit func arg dbg value for non-variadic dbg.values for now.
       if (!IsVariadic &&
@@ -5111,6 +5112,12 @@ void SelectionDAGBuilder::visitAtomicRMW(const AtomicRMWInst &I) {
   case AtomicRMWInst::UDecWrap:
     NT = ISD::ATOMIC_LOAD_UDEC_WRAP;
     break;
+  case AtomicRMWInst::USubCond:
+    NT = ISD::ATOMIC_LOAD_USUB_COND;
+    break;
+  case AtomicRMWInst::USubSat:
+    NT = ISD::ATOMIC_LOAD_USUB_SAT;
+    break;
   }
   AtomicOrdering Ordering = I.getOrdering();
   SyncScope::ID SSID = I.getSyncScopeID();
@@ -6957,8 +6964,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     SDValue Result;
     Result = DAG.getNode(
         ISD::FPTRUNC_ROUND, sdl, VT, getValue(I.getArgOperand(0)),
-        DAG.getTargetConstant((int)*RoundMode, sdl,
-                              TLI.getPointerTy(DAG.getDataLayout())));
+        DAG.getTargetConstant((int)*RoundMode, sdl, MVT::i32));
     setValue(&I, Result);
 
     return;
@@ -7032,7 +7038,8 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     // If ISD::IS_FPCLASS should be expanded, do it right now, because the
     // expansion can use illegal types. Making expansion early allows
     // legalizing these types prior to selection.
-    if (!TLI.isOperationLegalOrCustom(ISD::IS_FPCLASS, ArgVT)) {
+    if (!TLI.isOperationLegal(ISD::IS_FPCLASS, ArgVT) &&
+        !TLI.isOperationCustom(ISD::IS_FPCLASS, ArgVT)) {
       SDValue Result = TLI.expandIS_FPCLASS(DestVT, Op, Test, Flags, sdl, DAG);
       setValue(&I, Result);
       return;
@@ -7703,6 +7710,38 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     return;
   }
 
+  case Intrinsic::fake_use: {
+    Value *V = I.getArgOperand(0);
+    SDValue Ops[2];
+    // For Values not declared or previously used in this basic block, the
+    // NodeMap will not have an entry, and `getValue` will assert if V has no
+    // valid register value.
+    auto FakeUseValue = [&]() -> SDValue {
+      SDValue &N = NodeMap[V];
+      if (N.getNode())
+        return N;
+
+      // If there's a virtual register allocated and initialized for this
+      // value, use it.
+      if (SDValue copyFromReg = getCopyFromRegs(V, V->getType()))
+        return copyFromReg;
+      // FIXME: Do we want to preserve constants? It seems pointless.
+      if (isa<Constant>(V))
+        return getValue(V);
+      return SDValue();
+    }();
+    if (!FakeUseValue || FakeUseValue.isUndef())
+      return;
+    Ops[0] = getRoot();
+    Ops[1] = FakeUseValue;
+    // Also, do not translate a fake use with an undef operand, or any other
+    // empty SDValues.
+    if (!Ops[1] || Ops[1].isUndef())
+      return;
+    DAG.setRoot(DAG.getNode(ISD::FAKE_USE, sdl, MVT::Other, Ops));
+    return;
+  }
+
   case Intrinsic::eh_exceptionpointer:
   case Intrinsic::eh_exceptioncode: {
     // Get the exception pointer vreg, copy from it, and resize it to fit.
@@ -7781,7 +7820,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   case Intrinsic::experimental_deoptimize:
     LowerDeoptimizeCall(&I);
     return;
-  case Intrinsic::experimental_stepvector:
+  case Intrinsic::stepvector:
     visitStepVector(I);
     return;
   case Intrinsic::vector_reduce_fadd:
@@ -8005,34 +8044,15 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     return;
   }
   case Intrinsic::experimental_vector_partial_reduce_add: {
-    SDValue OpNode = getValue(I.getOperand(1));
-    EVT ReducedTy = EVT::getEVT(I.getType());
-    EVT FullTy = OpNode.getValueType();
 
-    unsigned Stride = ReducedTy.getVectorMinNumElements();
-    unsigned ScaleFactor = FullTy.getVectorMinNumElements() / Stride;
-
-    // Collect all of the subvectors
-    std::deque<SDValue> Subvectors;
-    Subvectors.push_back(getValue(I.getOperand(0)));
-    for (unsigned i = 0; i < ScaleFactor; i++) {
-      auto SourceIndex = DAG.getVectorIdxConstant(i * Stride, sdl);
-      Subvectors.push_back(DAG.getNode(ISD::EXTRACT_SUBVECTOR, sdl, ReducedTy,
-                                       {OpNode, SourceIndex}));
+    if (!TLI.shouldExpandPartialReductionIntrinsic(cast<IntrinsicInst>(&I))) {
+      visitTargetIntrinsic(I, Intrinsic);
+      return;
     }
 
-    // Flatten the subvector tree
-    while (Subvectors.size() > 1) {
-      Subvectors.push_back(DAG.getNode(ISD::ADD, sdl, ReducedTy,
-                                       {Subvectors[0], Subvectors[1]}));
-      Subvectors.pop_front();
-      Subvectors.pop_front();
-    }
-
-    assert(Subvectors.size() == 1 &&
-           "There should only be one subvector after tree flattening");
-
-    setValue(&I, Subvectors[0]);
+    setValue(&I, DAG.getPartialReduceAdd(sdl, EVT::getEVT(I.getType()),
+                                         getValue(I.getOperand(0)),
+                                         getValue(I.getOperand(1))));
     return;
   }
   case Intrinsic::experimental_cttz_elts: {
@@ -9558,9 +9578,11 @@ static void patchMatchingInput(const SDISelAsmOperandInfo &OpInfo,
   std::pair<unsigned, const TargetRegisterClass *> InputRC =
       TLI.getRegForInlineAsmConstraint(TRI, MatchingOpInfo.ConstraintCode,
                                        MatchingOpInfo.ConstraintVT);
-  if ((OpInfo.ConstraintVT.isInteger() !=
-       MatchingOpInfo.ConstraintVT.isInteger()) ||
-      (MatchRC.second != InputRC.second)) {
+  const bool OutOpIsIntOrFP =
+      OpInfo.ConstraintVT.isInteger() || OpInfo.ConstraintVT.isFloatingPoint();
+  const bool InOpIsIntOrFP = MatchingOpInfo.ConstraintVT.isInteger() ||
+                             MatchingOpInfo.ConstraintVT.isFloatingPoint();
+  if ((OutOpIsIntOrFP != InOpIsIntOrFP) || (MatchRC.second != InputRC.second)) {
     // FIXME: error out in a more elegant fashion
     report_fatal_error("Unsupported asm: input constraint"
                        " with a matching output constraint of"
