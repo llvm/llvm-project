@@ -487,8 +487,10 @@ buildCallLikeOp(CIRGenFunction &CGF, mlir::Location callLoc,
   assert(builder.getInsertionBlock() && "expected valid basic block");
   if (indirectFuncTy)
     return builder.createIndirectCallOp(
-        callLoc, indirectFuncVal, indirectFuncTy, CIRCallArgs, extraFnAttrs);
-  return builder.createCallOp(callLoc, directFuncOp, CIRCallArgs, extraFnAttrs);
+        callLoc, indirectFuncVal, indirectFuncTy, CIRCallArgs,
+        mlir::cir::CallingConv::C, extraFnAttrs);
+  return builder.createCallOp(callLoc, directFuncOp, CIRCallArgs,
+                              mlir::cir::CallingConv::C, extraFnAttrs);
 }
 
 RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,

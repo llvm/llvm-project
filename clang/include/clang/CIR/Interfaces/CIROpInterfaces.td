@@ -34,6 +34,9 @@ let cppNamespace = "::mlir::cir" in {
           "Return the number of operands, accounts for indirect call or "
           "exception info",
           "unsigned", "getNumArgOperands", (ins)>,
+      InterfaceMethod<
+          "Return the calling convention of the call operation",
+          "mlir::cir::CallingConv", "getCallingConv", (ins)>,
     ];
   }
 

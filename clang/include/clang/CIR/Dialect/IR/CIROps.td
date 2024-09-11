@@ -3208,6 +3208,7 @@ class CIR_CallOp<string mnemonic, list<Trait> extra_traits = []> :
   dag commonArgs = (ins
     OptionalAttr<FlatSymbolRefAttr>:$callee,
     Variadic<CIR_AnyType>:$arg_ops,
+    DefaultValuedAttr<CallingConv, "CallingConv::C">:$calling_conv,
     ExtraFuncAttr:$extra_attrs,
     OptionalAttr<ASTCallExprInterface>:$ast
   );
@@ -3251,10 +3252,13 @@ def CallOp : CIR_CallOp<"call"> {
   let builders = [
     OpBuilder<(ins "SymbolRefAttr":$callee, "mlir::Type":$resType,
               CArg<"ValueRange", "{}">:$operands,
+              CArg<"CallingConv", "CallingConv::C">:$callingConv,
               CArg<"UnitAttr", "{}">:$exception), [{
       $_state.addOperands(operands);
       if (callee)
         $_state.addAttribute("callee", callee);
+      $_state.addAttribute("calling_conv",
+        CallingConvAttr::get($_builder.getContext(), callingConv));
       if (exception)
         $_state.addAttribute("exception", exception);
       if (resType && !isa<VoidType>(resType))
@@ -3263,11 +3267,14 @@ def CallOp : CIR_CallOp<"call"> {
     OpBuilder<(ins "Value":$ind_target,
                "FuncType":$fn_type,
                CArg<"ValueRange", "{}">:$operands,
+               CArg<"CallingConv", "CallingConv::C">:$callingConv,
                CArg<"UnitAttr", "{}">:$exception), [{
       $_state.addOperands(ValueRange{ind_target});
       $_state.addOperands(operands);
       if (!fn_type.isVoid())
         $_state.addTypes(fn_type.getReturnType());
+      $_state.addAttribute("calling_conv",
+        CallingConvAttr::get($_builder.getContext(), callingConv));
       if (exception)
         $_state.addAttribute("exception", exception);
     }]>
@@ -3307,12 +3314,16 @@ def TryCallOp : CIR_CallOp<"try_call",
                "Block *":$cont, "Block *":$landing_pad,
                CArg<"ValueRange", "{}">:$operands,
                CArg<"ValueRange", "{}">:$contOperands,
-               CArg<"ValueRange", "{}">:$landingPadOperands), [{
+               CArg<"ValueRange", "{}">:$landingPadOperands,
+               CArg<"CallingConv", "CallingConv::C">:$callingConv), [{
       $_state.addOperands(operands);
       if (callee)
         $_state.addAttribute("callee", callee);
       if (resType && !isa<VoidType>(resType))
         $_state.addTypes(resType);
+
+      $_state.addAttribute("calling_conv",
+        CallingConvAttr::get($_builder.getContext(), callingConv));
 
       // Handle branches
       $_state.addOperands(contOperands);
@@ -3332,13 +3343,17 @@ def TryCallOp : CIR_CallOp<"try_call",
                "Block *":$cont, "Block *":$landing_pad,
                CArg<"ValueRange", "{}">:$operands,
                CArg<"ValueRange", "{}">:$contOperands,
-               CArg<"ValueRange", "{}">:$landingPadOperands), [{
+               CArg<"ValueRange", "{}">:$landingPadOperands,
+               CArg<"CallingConv", "CallingConv::C">:$callingConv), [{
       ::llvm::SmallVector<mlir::Value, 4> finalCallOperands({ind_target});
       finalCallOperands.append(operands.begin(), operands.end());
       $_state.addOperands(finalCallOperands);
 
       if (!fn_type.isVoid())
         $_state.addTypes(fn_type.getReturnType());
+
+      $_state.addAttribute("calling_conv",
+        CallingConvAttr::get($_builder.getContext(), callingConv));
 
       // Handle branches
       $_state.addOperands(contOperands);
