@@ -29,6 +29,7 @@
 // CHECK-NOT: num_live_dtls 5
 //
 // CHECK0-NOT: __tls_get_addr
+
 /*
 cc=your-compiler
 
