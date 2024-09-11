@@ -55,6 +55,7 @@ class Defined;
 class DefinedImportData;
 class DefinedImportThunk;
 class DefinedRegular;
+class ImportThunkChunk;
 class SectionChunk;
 class Symbol;
 class Undefined;
@@ -352,6 +353,7 @@ public:
 
 private:
   void parse() override;
+  ImportThunkChunk *makeImportThunk();
 
 public:
   StringRef externalName;
