@@ -79,8 +79,8 @@ void  operator delete[](void* ptr, const std::nothrow_t&) noexcept;     // repla
 void  operator delete[](void* ptr, std::align_val_t alignment,
                         const std::nothrow_t&) noexcept;                // replaceable, C++17
 
-void* operator new  (std::size_t size, void* ptr) noexcept;             // nodiscard in C++20
-void* operator new[](std::size_t size, void* ptr) noexcept;             // nodiscard in C++20
+void* operator new  (std::size_t size, void* ptr) noexcept;             // nodiscard in C++20, constexpr since C++26
+void* operator new[](std::size_t size, void* ptr) noexcept;             // nodiscard in C++20, constexpr since C++26
 void  operator delete  (void* ptr, void*) noexcept;
 void  operator delete[](void* ptr, void*) noexcept;
 
@@ -166,9 +166,9 @@ public:
 };
 #endif // defined(_LIBCPP_ABI_VCRUNTIME) && defined(_HAS_EXCEPTIONS) && _HAS_EXCEPTIONS == 0
 
-_LIBCPP_NORETURN _LIBCPP_EXPORTED_FROM_ABI void __throw_bad_alloc(); // not in C++ spec
+[[__noreturn__]] _LIBCPP_EXPORTED_FROM_ABI void __throw_bad_alloc(); // not in C++ spec
 
-_LIBCPP_NORETURN inline _LIBCPP_HIDE_FROM_ABI void __throw_bad_array_new_length() {
+[[__noreturn__]] inline _LIBCPP_HIDE_FROM_ABI void __throw_bad_array_new_length() {
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
   throw bad_array_new_length();
 #else
@@ -242,8 +242,14 @@ _LIBCPP_OVERRIDABLE_FUNC_VIS void operator delete[](void* __p, std::size_t __sz,
 #    endif
 #  endif
 
-_LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI void* operator new(std::size_t, void* __p) _NOEXCEPT { return __p; }
-_LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI void* operator new[](std::size_t, void* __p) _NOEXCEPT { return __p; }
+_LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void*
+operator new(std::size_t, void* __p) _NOEXCEPT {
+  return __p;
+}
+_LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void*
+operator new[](std::size_t, void* __p) _NOEXCEPT {
+  return __p;
+}
 inline _LIBCPP_HIDE_FROM_ABI void operator delete(void*, void*) _NOEXCEPT {}
 inline _LIBCPP_HIDE_FROM_ABI void operator delete[](void*, void*) _NOEXCEPT {}
 

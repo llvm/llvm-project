@@ -7,7 +7,9 @@ unittest("SandboxIRTests") {
     "//llvm/lib/SandboxIR",
   ]
   sources = [
+    "PassTest.cpp",
     "SandboxIRTest.cpp",
     "TrackerTest.cpp",
+    "TypesTest.cpp",
   ]
 }

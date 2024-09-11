@@ -943,9 +943,12 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
         VecCallVariantsFound = true;
 
       // Check that the instruction return type is vectorizable.
+      // We can't vectorize casts from vector type to scalar type.
       // Also, we can't vectorize extractelement instructions.
       if ((!VectorType::isValidElementType(I.getType()) &&
            !I.getType()->isVoidTy()) ||
+          (isa<CastInst>(I) &&
+           !VectorType::isValidElementType(I.getOperand(0)->getType())) ||
           isa<ExtractElementInst>(I)) {
         reportVectorizationFailure("Found unvectorizable type",
             "instruction return type cannot be vectorized",
@@ -1451,10 +1454,12 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
   // Check whether the loop-related control flow in the loop nest is expected by
   // vectorizer.
   if (!canVectorizeLoopNestCFG(TheLoop, UseVPlanNativePath)) {
-    if (DoExtraAnalysis)
+    if (DoExtraAnalysis) {
+      LLVM_DEBUG(dbgs() << "LV: legality check failed: loop nest");
       Result = false;
-    else
+    } else {
       return false;
+    }
   }
 
   // We need to have a loop header.
@@ -1519,17 +1524,21 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
       return false;
   }
 
-  LLVM_DEBUG(dbgs() << "LV: We can vectorize this loop"
-                    << (LAI->getRuntimePointerChecking()->Need
-                            ? " (with a runtime bound check)"
-                            : "")
-                    << "!\n");
+  if (Result) {
+    LLVM_DEBUG(dbgs() << "LV: We can vectorize this loop"
+                      << (LAI->getRuntimePointerChecking()->Need
+                              ? " (with a runtime bound check)"
+                              : "")
+                      << "!\n");
+  }
 
   unsigned SCEVThreshold = VectorizeSCEVCheckThreshold;
   if (Hints->getForce() == LoopVectorizeHints::FK_Enabled)
     SCEVThreshold = PragmaVectorizeSCEVCheckThreshold;
 
   if (PSE.getPredicate().getComplexity() > SCEVThreshold) {
+    LLVM_DEBUG(dbgs() << "LV: Vectorization not profitable "
+                         "due to SCEVThreshold");
     reportVectorizationFailure("Too many SCEV checks needed",
         "Too many SCEV assumptions need to be made and checked at runtime",
         "TooManySCEVRunTimeChecks", ORE, TheLoop);

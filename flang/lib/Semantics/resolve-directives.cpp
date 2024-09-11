@@ -2152,7 +2152,9 @@ void OmpAttributeVisitor::CreateImplicitSymbols(
         dirContext.defaultDSA == Symbol::Flag::OmpShared) {
       // 1) default
       // Allowed only with parallel, teams and task generating constructs.
-      assert(parallelDir || taskGenDir || teamsDir);
+      if (!parallelDir && !taskGenDir && !teamsDir) {
+        return;
+      }
       if (dirContext.defaultDSA != Symbol::Flag::OmpShared)
         makePrivateSymbol(dirContext.defaultDSA);
       else
@@ -2514,14 +2516,14 @@ void OmpAttributeVisitor::CheckMultipleAppearances(
       target = &details->symbol();
     }
   }
-  if (HasDataSharingAttributeObject(*target) &&
+  if (HasDataSharingAttributeObject(target->GetUltimate()) &&
       !WithMultipleAppearancesOmpException(symbol, ompFlag)) {
     context_.Say(name.source,
         "'%s' appears in more than one data-sharing clause "
         "on the same OpenMP directive"_err_en_US,
         name.ToString());
   } else {
-    AddDataSharingAttributeObject(*target);
+    AddDataSharingAttributeObject(target->GetUltimate());
     if (privateDataSharingAttributeFlags.test(ompFlag)) {
       AddPrivateDataSharingAttributeObjects(*target);
     }

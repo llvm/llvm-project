@@ -77,6 +77,8 @@ INTERCEPTOR(void*, malloc, uptr size) {
 }
 
 INTERCEPTOR(void, free, void *p) {
+  if (UNLIKELY(!p))
+    return;
   if (DlsymAlloc::PointerIsMine(p))
     return DlsymAlloc::Free(p);
   ENSURE_LSAN_INITED;

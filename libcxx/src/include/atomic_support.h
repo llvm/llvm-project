@@ -125,7 +125,7 @@ __libcpp_atomic_compare_exchange(_ValueType* __val, _ValueType* __expected, _Val
 
 #endif // _LIBCPP_HAS_NO_THREADS
 
-} // end namespace
+} // namespace
 
 _LIBCPP_END_NAMESPACE_STD
 
