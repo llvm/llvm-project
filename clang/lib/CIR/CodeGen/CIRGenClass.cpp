@@ -1109,7 +1109,14 @@ void CIRGenFunction::buildDestructorBody(FunctionArgList &Args) {
   // in fact emit references to them from other compilations, so emit them
   // as functions containing a trap instruction.
   if (DtorType != Dtor_Base && Dtor->getParent()->isAbstract()) {
-    llvm_unreachable("NYI");
+    SourceLocation Loc =
+        Dtor->hasBody() ? Dtor->getBody()->getBeginLoc() : Dtor->getLocation();
+    builder.create<mlir::cir::TrapOp>(getLoc(Loc));
+    // The corresponding clang/CodeGen logic clears the insertion point here,
+    // but MLIR's builder requires a valid insertion point, so we create a dummy
+    // block (since the trap is a block terminator).
+    builder.createBlock(builder.getBlock()->getParent());
+    return;
   }
 
   Stmt *Body = Dtor->getBody();
