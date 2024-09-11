@@ -77,6 +77,15 @@ add_header_macro(
 )
 
 add_header_macro(
+  ftw
+  ../libc/newhdrgen/yaml/ftw.yaml
+  ftw.h.def
+  ftw.h
+  DEPENDS
+    .llvm_libc_common_h
+)
+
+add_header_macro(
   dlfcn
   ../libc/newhdrgen/yaml/dlfcn.yaml
   dlfcn.h.def

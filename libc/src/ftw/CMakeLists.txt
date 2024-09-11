@@ -1,0 +1,11 @@
+add_entrypoint_object(
+  ftw
+  SRCS
+    ftw.cpp
+  HDRS
+    ftw.h
+  DEPENDS
+    libc.src.__support.FPUtil.fenv_impl
+  COMPILE_OPTIONS
+    -O2
+)
