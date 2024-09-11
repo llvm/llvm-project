@@ -275,6 +275,12 @@ struct PseudoProbeDesc {
   std::vector<Hex64> GUID;
   std::vector<Hex64> Hash;
   std::vector<uint32_t> GUIDHash; // Index of hash for that GUID in Hash
+
+  bool operator==(const PseudoProbeDesc &Other) const {
+    // Only treat empty Desc as equal
+    return GUID.empty() && Other.GUID.empty() && Hash.empty() &&
+           Other.Hash.empty() && GUIDHash.empty() && Other.GUIDHash.empty();
+  }
 };
 } // end namespace bolt
 
@@ -306,7 +312,8 @@ template <> struct MappingTraits<bolt::BinaryProfile> {
   static void mapping(IO &YamlIO, bolt::BinaryProfile &BP) {
     YamlIO.mapRequired("header", BP.Header);
     YamlIO.mapRequired("functions", BP.Functions);
-    YamlIO.mapOptional("pseudo_probe_desc", BP.PseudoProbeDesc);
+    YamlIO.mapOptional("pseudo_probe_desc", BP.PseudoProbeDesc,
+                       bolt::PseudoProbeDesc());
   }
 };
 
