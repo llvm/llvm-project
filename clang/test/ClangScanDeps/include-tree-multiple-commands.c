@@ -9,21 +9,23 @@
 // RUN: rm -rf %t
 // RUN: split-file %s %t
 
-// RUN: mv %t/tu_define_foo_0.c %t/tu.c
 // RUN: clang-scan-deps -format experimental-include-tree-full -cas-path %t/cas -module-files-dir %t/modules \
-// RUN:   -- %clang -target x86_64-apple-darwin -c %t/tu.c -save-temps=obj -o %t/tu.o \
+// RUN:   -- %clang -target x86_64-apple-darwin -c %t/src0/tu.c -save-temps=obj -o %t/dst0/tu.o -I %t/include \
+// RUN:     -fdepscan-prefix-map=%t/src0=^src -fdepscan-prefix-map=%t/include=^include \
 // RUN:     -fmodules -fimplicit-modules -fimplicit-module-maps -fmodules-cache-path=%t/cache \
 // RUN:   > %t/deps.0.json
 
-// RUN: cat %t/deps.0.json | sed 's:\\\\\?:/:g' | FileCheck %s -DPREFIX=%/t
+// RUN: cat %t/deps.0.json | sed 's:\\\\\?:/:g' | FileCheck %s -DPREFIX=%/t -DSRC=%/t/src0 -DDST=%/t/dst0
 
 // RUN: c-index-test core -scan-deps -working-dir %t -cas-path %t/cas -output-dir %t/modules -- \
-// RUN:   %clang -target x86_64-apple-darwin -c %t/tu.c -save-temps=obj -o %t/tu.o \
+// RUN:   %clang -target x86_64-apple-darwin -c %t/src0/tu.c -save-temps=obj -o %t/dst0/tu.o -I %t/include \
+// RUN:   -fdepscan-prefix-map=%t/src0=^srcx \
 // RUN:   -fmodules -fimplicit-modules -fimplicit-module-maps -fmodules-cache-path=%t/cache \
 // RUN:   > %t/deps.txt
 
-// RUN: cat %t/deps.txt | sed 's:\\\\\?:/:g' | FileCheck %s -DPREFIX=%/t -check-prefix=CHECK-LIBCLANG
+// RUN: cat %t/deps.txt | sed 's:\\\\\?:/:g' | FileCheck %s -DPREFIX=%/t -DSRC=%/t/src0 -DDST=%/t/dst0 -check-prefix=CHECK-LIBCLANG
 
+// RUN: mkdir %t/dst0
 // RUN: %deps-to-rsp %t/deps.0.json --module-name=Mod             > %t/Mod.0.rsp
 // RUN: %deps-to-rsp %t/deps.0.json --tu-index 0 --tu-cmd-index 0 > %t/tu-cpp.0.rsp
 // RUN: %deps-to-rsp %t/deps.0.json --tu-index 0 --tu-cmd-index 1 > %t/tu-emit-ir.0.rsp
@@ -34,21 +36,18 @@
 // RUN: %clang @%t/tu-emit-ir.0.rsp  -Rcompile-job-cache 2>&1 | FileCheck %s -check-prefix=CACHE-MISS
 // RUN: %clang @%t/tu-emit-asm.0.rsp -Rcompile-job-cache 2>&1 | FileCheck %s -check-prefix=CACHE-MISS
 // RUN: %clang @%t/tu-cc1as.0.rsp
-// RUN: mv %t/tu.i  %t/tu.0.i
-// RUN: mv %t/tu.bc %t/tu.0.bc
-// RUN: mv %t/tu.s  %t/tu.0.s
-// RUN: mv %t/tu.o  %t/tu.0.o
 
-// RUN: mv %t/tu_define_foo_1.c %t/tu.c
 // RUN: clang-scan-deps -format experimental-include-tree-full -cas-path %t/cas -module-files-dir %t/modules \
-// RUN:   -- %clang -target x86_64-apple-darwin -c %t/tu.c -save-temps=obj -o %t/tu.o \
+// RUN:   -- %clang -target x86_64-apple-darwin -c %t/src1/tu.c -save-temps=obj -o %t/dst1/tu.o -I %t/include \
+// RUN:     -fdepscan-prefix-map=%t/src1=^src -fdepscan-prefix-map=%t/include=^include \
 // RUN:     -fmodules -fimplicit-modules -fimplicit-module-maps -fmodules-cache-path=%t/cache \
 // RUN:   > %t/deps.1.json
 
-// The dependency graph has identical structure, just the include-tree ID and dependent cache keys are different.
-// RUN: cat %t/deps.1.json | sed 's:\\\\\?:/:g' | FileCheck %s -DPREFIX=%/t
+// The dependency graph has identical structure, just the include-tree ID, dependent cache keys and prefix mappings are different.
+// RUN: cat %t/deps.1.json | sed 's:\\\\\?:/:g' | FileCheck %s -DPREFIX=%/t -DSRC=%/t/src1 -DDST=%/t/dst1
 // RUN: not diff %t/deps.1.json %t/deps.0.json
 
+// RUN: mkdir %t/dst1
 // RUN: %deps-to-rsp %t/deps.1.json --module-name=Mod             > %t/Mod.1.rsp
 // RUN: %deps-to-rsp %t/deps.1.json --tu-index 0 --tu-cmd-index 0 > %t/tu-cpp.1.rsp
 // RUN: %deps-to-rsp %t/deps.1.json --tu-index 0 --tu-cmd-index 1 > %t/tu-emit-ir.1.rsp
@@ -59,15 +58,11 @@
 // RUN: %clang @%t/tu-emit-ir.1.rsp  -Rcompile-job-cache 2>&1 | FileCheck %s -check-prefix=CACHE-HIT
 // RUN: %clang @%t/tu-emit-asm.1.rsp -Rcompile-job-cache 2>&1 | FileCheck %s -check-prefix=CACHE-HIT
 // RUN: %clang @%t/tu-cc1as.1.rsp
-// RUN: mv %t/tu.i  %t/tu.1.i
-// RUN: mv %t/tu.bc %t/tu.1.bc
-// RUN: mv %t/tu.s  %t/tu.1.s
-// RUN: mv %t/tu.o  %t/tu.1.o
 
-// RUN: diff %t/tu.1.i  %t/tu.0.i
-// RUN: diff %t/tu.1.bc %t/tu.0.bc
-// RUN: diff %t/tu.1.s  %t/tu.0.s
-// RUN: diff %t/tu.1.o  %t/tu.0.o
+// RUN: diff %t/dst1/tu.i  %t/dst0/tu.i
+// RUN: diff %t/dst1/tu.bc %t/dst0/tu.bc
+// RUN: diff %t/dst1/tu.s  %t/dst0/tu.s
+// RUN: diff %t/dst1/tu.o  %t/dst0/tu.o
 
 // CACHE-HIT: remark: compile job cache hit
 // CACHE-MISS: remark: compile job cache miss
@@ -77,7 +72,7 @@
 // CHECK-NEXT:     "cache-key": "[[M_CACHE_KEY:llvmcas://[[:xdigit:]]+]]"
 // CHECK-NEXT:     "cas-include-tree-id": "[[M_INCLUDE_TREE:llvmcas://[[:xdigit:]]+]]"
 // CHECK-NEXT:     "clang-module-deps": []
-// CHECK-NEXT:     "clang-modulemap-file": "[[PREFIX]]/module.modulemap"
+// CHECK-NEXT:     "clang-modulemap-file": "[[PREFIX]]/include/module.modulemap"
 // CHECK-NEXT:     "command-line": [
 // CHECK:            "-fcas-include-tree"
 // CHECK-NEXT:       "[[M_INCLUDE_TREE]]"
@@ -101,7 +96,7 @@
 // CHECK-NEXT:         "command-line": [
 // CHECK-NEXT:           "-cc1"
 // CHECK:                "-o"
-// CHECK-NEXT:           "[[PREFIX]]/tu.i"
+// CHECK-NEXT:           "[[DST]]/tu.i"
 // CHECK:                "-fcas-include-tree"
 // CHECK-NEXT:           "[[CPP_INCLUDE_TREE]]"
 // CHECK-NOT:            "-fcas-input-file-cache-key"
@@ -115,9 +110,10 @@
 // CHECK:                "-fmodule-file={{.*}}[[PREFIX]]/modules/{{.*}}/Mod-{{.*}}.pcm"
 // CHECK:              ]
 // CHECK:              "file-deps": [
-// CHECK-NEXT:           "[[PREFIX]]/tu.c"
+// CHECK-NEXT:           "[[SRC]]/tu.c"
+// CHECK-NEXT:           "[[SRC]]/header.h"
 // CHECK-NEXT:         ]
-// CHECK:              "input-file": "[[PREFIX]]/tu.c"
+// CHECK:              "input-file": "[[SRC]]/tu.c"
 // CHECK-NEXT:       }
 // CHECK-NEXT:       {
 // CHECK-NEXT:         "cache-key": "[[COMPILER_CACHE_KEY:llvmcas://[[:xdigit:]]+]]"
@@ -133,7 +129,7 @@
 // CHECK-NEXT:         "command-line": [
 // CHECK-NEXT:           "-cc1"
 // CHECK:                "-o"
-// CHECK-NEXT:           "[[PREFIX]]/tu.bc"
+// CHECK-NEXT:           "[[DST]]/tu.bc"
 // CHECK-NOT:            "-fcas-include-tree"
 // CHECK:                "-fcas-input-file-cache-key"
 // CHECK-NEXT:           "[[CPP_CACHE_KEY]]"
@@ -146,7 +142,7 @@
 // CHECK-NOT:            "{{.*}}tu.i"
 // CHECK:                "-fmodule-file={{.*}}[[PREFIX]]/modules/{{.*}}/Mod-{{.*}}.pcm"
 // CHECK:              ]
-// CHECK:              "input-file": "[[PREFIX]]{{.}}tu.c"
+// CHECK:              "input-file": "[[SRC]]/tu.c"
 // CHECK-NEXT:       }
 // CHECK-NEXT:       {
 // CHECK-NEXT:         "cache-key": "[[BACKEND_CACHE_KEY:llvmcas://[[:xdigit:]]+]]"
@@ -163,14 +159,14 @@
 // CHECK-NEXT:         "command-line": [
 // CHECK-NEXT:           "-cc1"
 // CHECK:                "-o"
-// CHECK-NEXT:           "[[PREFIX]]/tu.s"
+// CHECK-NEXT:           "[[DST]]/tu.s"
 // CHECK:                "-fcas-input-file-cache-key"
 // CHECK-NEXT:           "[[COMPILER_CACHE_KEY]]"
 // CHECK:                "-S"
 // CHECK:                "-x"
 // CHECK-NEXT:           "ir"
 // CHECK:              ]
-// CHECK:              "input-file": "[[PREFIX]]{{.}}tu.c"
+// CHECK:              "input-file": "[[SRC]]/tu.c"
 // CHECK-NEXT:       }
 // CHECK-NEXT:       {
 // FIXME: This should be empty.
@@ -185,11 +181,11 @@
 // CHECK-NEXT:         "command-line": [
 // CHECK-NEXT:           "-cc1as"
 // CHECK:                "-o"
-// CHECK-NEXT:           "[[PREFIX]]/tu.o"
+// CHECK-NEXT:           "[[DST]]/tu.o"
 // FIXME: The integrated assembler should support caching too.
-// CHECK:                "[[PREFIX]]/tu.s"
+// CHECK:                "[[DST]]/tu.s"
 // CHECK:              ]
-// CHECK:              "input-file": "[[PREFIX]]/tu.c"
+// CHECK:              "input-file": "[[SRC]]/tu.c"
 // CHECK-NEXT:       }
 // CHECK-NEXT:     ]
 // CHECK-NEXT:   }
@@ -199,13 +195,13 @@
 // CHECK-LIBCLANG-NEXT:   module:
 // CHECK-LIBCLANG-NEXT:     name: Mod
 // CHECK-LIBCLANG-NEXT:     context-hash: {{.*}}
-// CHECK-LIBCLANG-NEXT:     module-map-path: [[PREFIX]]/module.modulemap
+// CHECK-LIBCLANG-NEXT:     module-map-path: [[PREFIX]]/include/module.modulemap
 // CHECK-LIBCLANG-NEXT:     include-tree-id: [[M_INCLUDE_TREE:llvmcas://[[:xdigit:]]+]]
 // CHECK-LIBCLANG-NEXT:     cache-key: [[M_CACHE_KEY:llvmcas://[[:xdigit:]]+]]
 // CHECK-LIBCLANG-NEXT:     module-deps:
 // CHECK-LIBCLANG-NEXT:     file-deps:
-// CHECK-LIBCLANG-NEXT:       [[PREFIX]]/module.h
-// CHECK-LIBCLANG-NEXT:       [[PREFIX]]/module.modulemap
+// CHECK-LIBCLANG-NEXT:       [[PREFIX]]/include/module.h
+// CHECK-LIBCLANG-NEXT:       [[PREFIX]]/include/module.modulemap
 // CHECK-LIBCLANG-NEXT:     build-args: -cc1 {{.*}} -fcas-include-tree [[M_INCLUDE_TREE]]
 // CHECK-LIBCLANG-NEXT: dependencies:
 // CHECK-LIBCLANG-NEXT:   command 0:
@@ -215,10 +211,11 @@
 // CHECK-LIBCLANG-NEXT:     module-deps:
 // CHECK-LIBCLANG-NEXT:       Mod:{{.*}}
 // CHECK-LIBCLANG-NEXT:     file-deps:
-// CHECK-LIBCLANG-NEXT:       [[PREFIX]]/tu.c
+// CHECK-LIBCLANG-NEXT:       [[SRC]]/tu.c
+// CHECK-LIBCLANG-NEXT:       [[SRC]]/header.h
 // CHECK-LIBCLANG-NOT:             -fcas-input-file-cache-key
 // CHECK-LIBCLANG-NOT:             {{.*}}tu.c
-// CHECK-LIBCLANG-NEXT:     build-args: -cc1 {{.*}} -o [[PREFIX]]/tu.i {{.*}} -E -fmodule-file-cache-key {{.*}} [[M_CACHE_KEY]] -x c {{.*}} -fmodule-file={{.*}}[[PREFIX]]/modules/Mod_{{.*}}.pcm
+// CHECK-LIBCLANG-NEXT:     build-args: -cc1 {{.*}} -o [[DST]]/tu.i {{.*}} -E -fmodule-file-cache-key {{.*}} [[M_CACHE_KEY]] -x c {{.*}} -fmodule-file={{.*}}[[PREFIX]]/modules/Mod_{{.*}}.pcm
 // CHECK-LIBCLANG-NEXT:   command 1:
 // CHECK-LIBCLANG-NEXT:     context-hash: {{.*}}
 // FIXME: This should be empty.
@@ -227,10 +224,11 @@
 // CHECK-LIBCLANG-NEXT:     module-deps:
 // CHECK-LIBCLANG-NEXT:       Mod:{{.*}}
 // CHECK-LIBCLANG-NEXT:     file-deps:
-// CHECK-LIBCLANG-NEXT:       [[PREFIX]]/tu.c
+// CHECK-LIBCLANG-NEXT:       [[SRC]]/tu.c
+// CHECK-LIBCLANG-NEXT:       [[SRC]]/header.h
 // CHECK-LIBCLANG-NOT:                  -fcas-include-tree
 // CHECK-LIBCLANG-NOT:                  {{.*}}tu.i
-// CHECK-LIBCLANG-NEXT:     build-args: -cc1 {{.*}} -o [[PREFIX]]/tu.bc {{.*}} -fcas-input-file-cache-key [[CPP_CACHE_KEY]] {{.*}} -emit-llvm-bc -fmodule-file-cache-key {{.*}} [[M_CACHE_KEY]] -x c-cpp-output {{.*}} -fmodule-file={{.*}}[[PREFIX]]/modules/Mod_{{.*}}.pcm
+// CHECK-LIBCLANG-NEXT:     build-args: -cc1 {{.*}} -o [[DST]]/tu.bc {{.*}} -fcas-input-file-cache-key [[CPP_CACHE_KEY]] {{.*}} -emit-llvm-bc -fmodule-file-cache-key {{.*}} [[M_CACHE_KEY]] -x c-cpp-output {{.*}} -fmodule-file={{.*}}[[PREFIX]]/modules/Mod_{{.*}}.pcm
 // CHECK-LIBCLANG-NEXT:   command 2:
 // CHECK-LIBCLANG-NEXT:     context-hash: {{.*}}
 // FIXME: This should be empty.
@@ -240,8 +238,9 @@
 // CHECK-LIBCLANG-NEXT:     module-deps:
 // CHECK-LIBCLANG-NEXT:       Mod:{{.*}}
 // CHECK-LIBCLANG-NEXT:     file-deps:
-// CHECK-LIBCLANG-NEXT:       [[PREFIX]]/tu.c
-// CHECK-LIBCLANG-NEXT:     build-args: -cc1 {{.*}} -o [[PREFIX]]/tu.s {{.*}} -fcas-input-file-cache-key [[COMPILER_CACHE_KEY]] {{.*}} -S -x ir
+// CHECK-LIBCLANG-NEXT:       [[SRC]]/tu.c
+// CHECK-LIBCLANG-NEXT:       [[SRC]]/header.h
+// CHECK-LIBCLANG-NEXT:     build-args: -cc1 {{.*}} -o [[DST]]/tu.s {{.*}} -fcas-input-file-cache-key [[COMPILER_CACHE_KEY]] {{.*}} -S -x ir
 // CHECK-LIBCLANG-NEXT:   command 3:
 // CHECK-LIBCLANG-NEXT:     context-hash: {{.*}}
 // FIXME: This should be empty.
@@ -250,22 +249,27 @@
 // CHECK-LIBCLANG-NEXT:     module-deps:
 // CHECK-LIBCLANG-NEXT:       Mod:{{.*}}
 // CHECK-LIBCLANG-NEXT:     file-deps:
-// CHECK-LIBCLANG-NEXT:       [[PREFIX]]/tu.c
+// CHECK-LIBCLANG-NEXT:       [[SRC]]/tu.c
+// CHECK-LIBCLANG-NEXT:       [[SRC]]/header.h
 // FIXME: The integrated assembler should support caching too.
-// CHECK-LIBCLANG-NEXT:     build-args: -cc1as {{.*}} -o [[PREFIX]]/tu.o [[PREFIX]]/tu.s
+// CHECK-LIBCLANG-NEXT:     build-args: -cc1as {{.*}} -o [[DST]]/tu.o [[DST]]/tu.s
 
-//--- module.h
+//--- include/module.h
 void bar(void);
 
-//--- module.modulemap
+//--- include/module.modulemap
 module Mod { header "module.h" }
 
-//--- tu_define_foo_0.c
+//--- src0/header.h
+//--- src0/tu.c
 #include "module.h"
+#include "header.h"
 #define FOO 0
 void tu_save_temps(void) { bar(); }
 
-//--- tu_define_foo_1.c
+//--- src1/header.h
+//--- src1/tu.c
 #include "module.h"
+#include "header.h"
 #define FOO 1
 void tu_save_temps(void) { bar(); }

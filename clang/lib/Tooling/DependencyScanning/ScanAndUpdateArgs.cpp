@@ -102,6 +102,8 @@ void tooling::dependencies::configureInvocationForCaching(
   case CachingInputKind::CachedCompilation: {
     FrontendOpts.Inputs.clear();
     FrontendOpts.CASInputFileCacheKey = std::move(InputID);
+    FrontendOpts.ModuleMapFiles.clear();
+    // TODO: Strip more of the things we already strip for include-tree.
     break;
   case CachingInputKind::Object: {
     assert(false && "Object should not be available during scanning");
