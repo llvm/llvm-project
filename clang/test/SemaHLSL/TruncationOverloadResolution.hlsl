@@ -24,6 +24,42 @@ void Case2(float4 F) {
   Half2Double2(F); // expected-warning{{implicit conversion truncates vector: 'float4' (aka 'vector<float, 4>') to 'vector<double, 2>' (vector of 2 'double' values)}}
 }
 
+// Case 3: Allow truncation down to vector<T,1> or T.
+void Half(half H);
+void Float(float F);
+void Double(double D);
+
+void Half1(half1 H);
+void Float1(float1 F);
+void Double1(double1 D);
+
+void Case3(half3 H, float3 F, double3 D) {
+  Half(H); // expected-warning{{implicit conversion turns vector to scalar: 'half3' (aka 'vector<half, 3>') to 'half'}}
+  Half(F); // expected-warning{{implicit conversion turns vector to scalar: 'float3' (aka 'vector<float, 3>') to 'half'}}
+  Half(D); // expected-warning{{implicit conversion turns vector to scalar: 'double3' (aka 'vector<double, 3>') to 'half'}}
+
+  Float(H); // expected-warning{{implicit conversion turns vector to scalar: 'half3' (aka 'vector<half, 3>') to 'float'}}
+  Float(F); // expected-warning{{implicit conversion turns vector to scalar: 'float3' (aka 'vector<float, 3>') to 'float'}}
+  Float(D); // expected-warning{{implicit conversion turns vector to scalar: 'double3' (aka 'vector<double, 3>') to 'float'}}
+
+  Double(H); // expected-warning{{implicit conversion turns vector to scalar: 'half3' (aka 'vector<half, 3>') to 'double'}}
+  Double(F); // expected-warning{{implicit conversion turns vector to scalar: 'float3' (aka 'vector<float, 3>') to 'double'}}
+  Double(D); // expected-warning{{implicit conversion turns vector to scalar: 'double3' (aka 'vector<double, 3>') to 'double'}}
+
+  Half1(H); // expected-warning{{implicit conversion truncates vector: 'half3' (aka 'vector<half, 3>') to 'vector<half, 1>' (vector of 1 'half' value)}}
+  Half1(F); // expected-warning{{implicit conversion truncates vector: 'float3' (aka 'vector<float, 3>') to 'vector<half, 1>' (vector of 1 'half' value)}} expected-warning{{implicit conversion loses floating-point precision: 'float3' (aka 'vector<float, 3>') to 'vector<half, 1>' (vector of 1 'half' value)}}
+  Half1(D); // expected-warning{{implicit conversion truncates vector: 'double3' (aka 'vector<double, 3>') to 'vector<half, 1>' (vector of 1 'half' value)}} expected-warning{{implicit conversion loses floating-point precision: 'double3' (aka 'vector<double, 3>') to 'vector<half, 1>' (vector of 1 'half' value)}}
+
+  Float1(H); // expected-warning{{implicit conversion truncates vector: 'half3' (aka 'vector<half, 3>') to 'vector<float, 1>' (vector of 1 'float' value)}}
+  Float1(F); // expected-warning{{implicit conversion truncates vector: 'float3' (aka 'vector<float, 3>') to 'vector<float, 1>' (vector of 1 'float' value)}}
+  Float1(D); // expected-warning{{implicit conversion truncates vector: 'double3' (aka 'vector<double, 3>') to 'vector<float, 1>' (vector of 1 'float' value)}} expected-warning{{implicit conversion loses floating-point precision: 'double3' (aka 'vector<double, 3>') to 'vector<float, 1>' (vector of 1 'float' value)}}
+
+  Double1(H); // expected-warning{{implicit conversion truncates vector: 'half3' (aka 'vector<half, 3>') to 'vector<double, 1>' (vector of 1 'double' value)}}
+  Double1(F); // expected-warning{{implicit conversion truncates vector: 'float3' (aka 'vector<float, 3>') to 'vector<double, 1>' (vector of 1 'double' value)}}
+  Double1(D); // expected-warning{{implicit conversion truncates vector: 'double3' (aka 'vector<double, 3>') to 'vector<double, 1>' (vector of 1 'double' value)}}
+}
+
+
 #if ERROR
 // Case 3: Two promotions or two conversions are ambiguous.
 void Float2Double2(double2 D); // expected-note{{candidate function}}

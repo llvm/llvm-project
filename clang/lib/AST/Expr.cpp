@@ -1924,7 +1924,6 @@ bool CastExpr::CastConsistency() const {
   case CK_FixedPointToIntegral:
   case CK_IntegralToFixedPoint:
   case CK_MatrixCast:
-  case CK_HLSLVectorTruncation:
     assert(!getType()->isBooleanType() && "unheralded conversion to bool");
     goto CheckNoBasePath;
 
@@ -1945,6 +1944,7 @@ bool CastExpr::CastConsistency() const {
   case CK_BuiltinFnToFnPtr:
   case CK_FixedPointToBoolean:
   case CK_HLSLArrayRValue:
+  case CK_HLSLVectorTruncation:
   CheckNoBasePath:
     assert(path_empty() && "Cast kind should not have a base path!");
     break;
