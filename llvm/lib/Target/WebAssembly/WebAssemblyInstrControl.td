@@ -125,14 +125,45 @@ defm DEBUG_UNREACHABLE : NRI<(outs), (ins), [(debugtrap)], "unreachable", 0x00>;
 // Exception handling instructions
 //===----------------------------------------------------------------------===//
 
+// A list of catch clauses attached to try_table.
+def CatchListAsmOperand : AsmOperandClass { let Name = "CatchList"; }
+let OperandNamespace = "WebAssembly", OperandType = "OPERAND_CATCH_LIST" in
+def catch_list : Operand<i32> {
+  let ParserMatchClass = CatchListAsmOperand;
+  let PrintMethod = "printCatchList";
+}
+
 let Predicates = [HasExceptionHandling] in {
 
-// Throwing an exception: throw
+// Throwing an exception: throw / throw_ref
 let isTerminator = 1, hasCtrlDep = 1, isBarrier = 1 in {
 defm THROW : I<(outs), (ins tag_op:$tag, variable_ops),
                (outs), (ins tag_op:$tag), [],
                "throw   \t$tag", "throw   \t$tag", 0x08>;
+defm THROW_REF : I<(outs), (ins EXNREF:$exn), (outs), (ins), [],
+                   "throw_ref \t$exn", "throw_ref", 0x0a>;
 } // isTerminator = 1, hasCtrlDep = 1, isBarrier = 1
+
+// Region within which an exception is caught: try / end_try
+let Uses = [VALUE_STACK], Defs = [VALUE_STACK] in {
+defm TRY_TABLE : I<(outs), (ins Signature:$sig, variable_ops),
+                   (outs), (ins Signature:$sig, catch_list:$cal), [],
+                   "try_table \t$sig", "try_table \t$sig $cal", 0x1f>;
+defm END_TRY_TABLE : NRI<(outs), (ins), [], "end_try_table", 0x0b>;
+} // Uses = [VALUE_STACK], Defs = [VALUE_STACK]
+
+// Pseudo instructions that represent catch / catch_ref / catch_all /
+// catch_all_ref clauses in a try_table instruction.
+let hasCtrlDep = 1, hasSideEffects = 1, isCodeGenOnly = 1 in {
+let variadicOpsAreDefs = 1 in {
+defm CATCH : I<(outs), (ins tag_op:$tag, variable_ops),
+               (outs), (ins tag_op:$tag), []>;
+defm CATCH_REF : I<(outs), (ins tag_op:$tag, variable_ops),
+                   (outs), (ins tag_op:$tag), []>;
+}
+defm CATCH_ALL : NRI<(outs), (ins), []>;
+defm CATCH_ALL_REF : I<(outs EXNREF:$dst), (ins), (outs), (ins), []>;
+}
 
 // Pseudo instructions: cleanupret / catchret
 let isTerminator = 1, hasSideEffects = 1, isBarrier = 1, hasCtrlDep = 1,
@@ -147,9 +178,10 @@ let isTerminator = 1, hasSideEffects = 1, isBarrier = 1, hasCtrlDep = 1,
 // usage gets low enough.
 
 // Rethrowing an exception: rethrow
+// The new exnref proposal also uses this instruction as an interim pseudo
+// instruction before we convert it to a THROW_REF.
 let isTerminator = 1, hasCtrlDep = 1, isBarrier = 1 in
 defm RETHROW : NRI<(outs), (ins i32imm:$depth), [], "rethrow \t$depth", 0x09>;
-// isTerminator = 1, hasCtrlDep = 1, isBarrier = 1
 // The depth argument will be computed in CFGStackify. We set it to 0 here for
 // now.
 def : Pat<(int_wasm_rethrow), (RETHROW 0)>;
