@@ -667,8 +667,8 @@ define i96 @v_mul_i96(i96 %num, i96 %den) {
 ; GFX11-NEXT:    v_mul_lo_u32 v0, v6, v5
 ; GFX11-NEXT:    v_mad_u64_u32 v[8:9], null, v7, v4, v[0:1]
 ; GFX11-NEXT:    v_mad_u64_u32 v[0:1], null, v6, v3, 0
-; GFX11-NEXT:    v_mad_u64_u32 v[9:10], null, v2, v3, v[8:9]
-; GFX11-NEXT:    v_mov_b32_e32 v2, v9
+; GFX11-NEXT:    v_mad_u64_u32 v[10:11], null, v2, v3, v[8:9]
+; GFX11-NEXT:    v_mov_b32_e32 v2, v10
 ; GFX11-NEXT:    v_mad_u64_u32 v[1:2], null, v6, v4, v[1:2]
 ; GFX11-NEXT:    v_mad_u64_u32 v[1:2], null, v7, v3, v[1:2]
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -2691,9 +2691,9 @@ define amdgpu_ps void @s_mul_u64_sext_with_vregs(ptr addrspace(1) %out, ptr addr
 ; GFX11-NEXT:    global_load_b32 v4, v[2:3], off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_mad_u64_u32 v[2:3], null, 0x50, v4, 0
-; GFX11-NEXT:    v_ashrrev_i32_e32 v6, 31, v4
-; GFX11-NEXT:    v_mad_u64_u32 v[4:5], null, 0x50, v6, v[3:4]
-; GFX11-NEXT:    v_mov_b32_e32 v3, v4
+; GFX11-NEXT:    v_ashrrev_i32_e32 v7, 31, v4
+; GFX11-NEXT:    v_mad_u64_u32 v[5:6], null, 0x50, v7, v[3:4]
+; GFX11-NEXT:    v_mov_b32_e32 v3, v5
 ; GFX11-NEXT:    global_store_b64 v[0:1], v[2:3], off
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)

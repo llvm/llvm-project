@@ -561,10 +561,10 @@ define i64 @mad_i64_i32_extops_i32_i64(i32 %arg0, i32 %arg1, i64 %arg2) #0 {
 ; GFX1100-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v5, v0
 ; GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX1100-NEXT:    v_mad_u64_u32 v[0:1], null, v5, v4, v[2:3]
-; GFX1100-NEXT:    v_ashrrev_i32_e32 v5, 31, v5
-; GFX1100-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1100-NEXT:    v_ashrrev_i32_e32 v3, 31, v5
+; GFX1100-NEXT:    v_mov_b32_e32 v5, v1
 ; GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1100-NEXT:    v_mad_u64_u32 v[1:2], null, v5, v4, v[3:4]
+; GFX1100-NEXT:    v_mad_u64_u32 v[1:2], null, v3, v4, v[5:6]
 ; GFX1100-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1150-LABEL: mad_i64_i32_extops_i32_i64:
@@ -686,11 +686,12 @@ define i64 @mad_u64_u32_bitops_lhs_mask_small(i64 %arg0, i64 %arg1, i64 %arg2) #
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1100-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v0
 ; GFX1100-NEXT:    v_mov_b32_e32 v6, v1
-; GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1100-NEXT:    v_mad_u64_u32 v[0:1], null, v2, v3, v[4:5]
-; GFX1100-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_and_b32 v5, 1, v6
-; GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1100-NEXT:    v_mad_u64_u32 v[1:2], null, v5, v3, v[4:5]
+; GFX1100-NEXT:    v_and_b32_e32 v6, 1, v6
+; GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1100-NEXT:    v_mov_b32_e32 v4, v1
+; GFX1100-NEXT:    v_mad_u64_u32 v[1:2], null, v6, v3, v[4:5]
 ; GFX1100-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1150-LABEL: mad_u64_u32_bitops_lhs_mask_small:
@@ -761,11 +762,12 @@ define i64 @mad_u64_u32_bitops_rhs_mask_small(i64 %arg0, i64 %arg1, i64 %arg2) #
 ; GFX1100:       ; %bb.0:
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1100-NEXT:    v_mov_b32_e32 v6, v0
-; GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_2)
 ; GFX1100-NEXT:    v_mad_u64_u32 v[0:1], null, v6, v2, v[4:5]
-; GFX1100-NEXT:    v_dual_mov_b32 v3, v1 :: v_dual_and_b32 v4, 1, v3
+; GFX1100-NEXT:    v_and_b32_e32 v5, 1, v3
+; GFX1100-NEXT:    v_mov_b32_e32 v3, v1
 ; GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1100-NEXT:    v_mad_u64_u32 v[1:2], null, v6, v4, v[3:4]
+; GFX1100-NEXT:    v_mad_u64_u32 v[1:2], null, v6, v5, v[3:4]
 ; GFX1100-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1150-LABEL: mad_u64_u32_bitops_rhs_mask_small:

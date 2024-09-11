@@ -18,9 +18,9 @@ define amdgpu_ps float @mad_i32_vvv(i32 %a, i32 %b, i32 %c) {
 ;
 ; GFX11-LABEL: mad_i32_vvv:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_mov_b32_e32 v3, v1
-; GFX11-NEXT:    v_mov_b32_e32 v4, v0
-; GFX11-NEXT:    v_mad_u64_u32 v[0:1], null, v4, v3, v[2:3]
+; GFX11-NEXT:    v_mov_b32_e32 v4, v1
+; GFX11-NEXT:    v_mov_b32_e32 v5, v0
+; GFX11-NEXT:    v_mad_u64_u32 v[0:1], null, v5, v4, v[2:3]
 ; GFX11-NEXT:    ; return to shader part epilog
   %mul = mul i32 %a, %b
   %add = add i32 %mul, %c
@@ -127,8 +127,8 @@ define amdgpu_ps float @mad_i32_vcv(i32 %a, i32 %c) {
 ;
 ; GFX11-LABEL: mad_i32_vcv:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_mad_u64_u32 v[2:3], null, v0, 42, v[1:2]
-; GFX11-NEXT:    v_mov_b32_e32 v0, v2
+; GFX11-NEXT:    v_mad_u64_u32 v[3:4], null, v0, 42, v[1:2]
+; GFX11-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX11-NEXT:    ; return to shader part epilog
   %mul = mul i32 %a, 42
   %add = add i32 %mul, %c
@@ -194,8 +194,8 @@ define amdgpu_ps float @mad_i32_vsv(i32 %a, i32 inreg %b, i32 %c) {
 ;
 ; GFX11-LABEL: mad_i32_vsv:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_mad_u64_u32 v[2:3], null, v0, s0, v[1:2]
-; GFX11-NEXT:    v_mov_b32_e32 v0, v2
+; GFX11-NEXT:    v_mad_u64_u32 v[3:4], null, v0, s0, v[1:2]
+; GFX11-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX11-NEXT:    ; return to shader part epilog
   %mul = mul i32 %a, %b
   %add = add i32 %mul, %c
@@ -216,8 +216,8 @@ define amdgpu_ps float @mad_i32_svv(i32 inreg %a, i32 %b, i32 %c) {
 ;
 ; GFX11-LABEL: mad_i32_svv:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_mad_u64_u32 v[2:3], null, s0, v0, v[1:2]
-; GFX11-NEXT:    v_mov_b32_e32 v0, v2
+; GFX11-NEXT:    v_mad_u64_u32 v[3:4], null, s0, v0, v[1:2]
+; GFX11-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX11-NEXT:    ; return to shader part epilog
   %mul = mul i32 %a, %b
   %add = add i32 %mul, %c
@@ -289,8 +289,8 @@ define amdgpu_ps float @mad_i32_ssv(i32 inreg %a, i32 inreg %b, i32 %c) {
 ;
 ; GFX11-LABEL: mad_i32_ssv:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_mad_u64_u32 v[1:2], null, s0, s1, v[0:1]
-; GFX11-NEXT:    v_mov_b32_e32 v0, v1
+; GFX11-NEXT:    v_mad_u64_u32 v[2:3], null, s0, s1, v[0:1]
+; GFX11-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX11-NEXT:    ; return to shader part epilog
   %mul = mul i32 %a, %b
   %add = add i32 %mul, %c
