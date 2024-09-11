@@ -504,7 +504,7 @@ struct MatchableInfo {
 
   /// TheDef - This is the definition of the instruction or InstAlias that this
   /// matchable came from.
-  Record *const TheDef;
+  const Record *const TheDef;
 
   // ResInstSize - The size of the resulting instruction for this matchable.
   unsigned ResInstSize;
