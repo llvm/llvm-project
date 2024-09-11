@@ -26,6 +26,7 @@ class Context;
 class PointerType;
 class VectorType;
 class FixedVectorType;
+class ScalableVectorType;
 class IntegerType;
 class FunctionType;
 class ArrayType;
@@ -39,21 +40,22 @@ class StructType;
 class Type {
 protected:
   llvm::Type *LLVMTy;
-  friend class ArrayType;      // For LLVMTy.
-  friend class StructType;     // For LLVMTy.
-  friend class VectorType;     // For LLVMTy.
-  friend class FixedVectorType; // For LLVMTy.
-  friend class PointerType;    // For LLVMTy.
-  friend class FunctionType;   // For LLVMTy.
-  friend class IntegerType;    // For LLVMTy.
-  friend class Function;       // For LLVMTy.
-  friend class CallBase;       // For LLVMTy.
-  friend class ConstantInt;    // For LLVMTy.
-  friend class ConstantArray;  // For LLVMTy.
-  friend class ConstantStruct; // For LLVMTy.
-  friend class ConstantVector; // For LLVMTy.
-  friend class CmpInst;        // For LLVMTy. TODO: Cleanup after
-                               // sandboxir::VectorType is more complete.
+  friend class ArrayType;          // For LLVMTy.
+  friend class StructType;         // For LLVMTy.
+  friend class VectorType;         // For LLVMTy.
+  friend class FixedVectorType;    // For LLVMTy.
+  friend class ScalableVectorType; // For LLVMTy.
+  friend class PointerType;        // For LLVMTy.
+  friend class FunctionType;       // For LLVMTy.
+  friend class IntegerType;        // For LLVMTy.
+  friend class Function;           // For LLVMTy.
+  friend class CallBase;           // For LLVMTy.
+  friend class ConstantInt;        // For LLVMTy.
+  friend class ConstantArray;      // For LLVMTy.
+  friend class ConstantStruct;     // For LLVMTy.
+  friend class ConstantVector;     // For LLVMTy.
+  friend class CmpInst;            // For LLVMTy. TODO: Cleanup after
+                                   // sandboxir::VectorType is more complete.
 
   // Friend all instruction classes because `create()` functions use LLVMTy.
 #define DEF_INSTR(ID, OPCODE, CLASS) friend class CLASS;
@@ -387,6 +389,57 @@ public:
 
   unsigned getNumElements() const {
     return cast<llvm::FixedVectorType>(LLVMTy)->getNumElements();
+  }
+};
+
+class ScalableVectorType : public VectorType {
+public:
+  static ScalableVectorType *get(Type *ElementType, unsigned MinNumElts);
+
+  static ScalableVectorType *get(Type *ElementType,
+                                 const ScalableVectorType *SVTy) {
+    return get(ElementType, SVTy->getMinNumElements());
+  }
+
+  static ScalableVectorType *getInteger(ScalableVectorType *VTy) {
+    return cast<ScalableVectorType>(VectorType::getInteger(VTy));
+  }
+
+  static ScalableVectorType *
+  getExtendedElementVectorType(ScalableVectorType *VTy) {
+    return cast<ScalableVectorType>(
+        VectorType::getExtendedElementVectorType(VTy));
+  }
+
+  static ScalableVectorType *
+  getTruncatedElementVectorType(ScalableVectorType *VTy) {
+    return cast<ScalableVectorType>(
+        VectorType::getTruncatedElementVectorType(VTy));
+  }
+
+  static ScalableVectorType *getSubdividedVectorType(ScalableVectorType *VTy,
+                                                     int NumSubdivs) {
+    return cast<ScalableVectorType>(
+        VectorType::getSubdividedVectorType(VTy, NumSubdivs));
+  }
+
+  static ScalableVectorType *
+  getHalfElementsVectorType(ScalableVectorType *VTy) {
+    return cast<ScalableVectorType>(VectorType::getHalfElementsVectorType(VTy));
+  }
+
+  static ScalableVectorType *
+  getDoubleElementsVectorType(ScalableVectorType *VTy) {
+    return cast<ScalableVectorType>(
+        VectorType::getDoubleElementsVectorType(VTy));
+  }
+
+  unsigned getMinNumElements() const {
+    return cast<llvm::ScalableVectorType>(LLVMTy)->getMinNumElements();
+  }
+
+  static bool classof(const Type *T) {
+    return isa<llvm::ScalableVectorType>(T->LLVMTy);
   }
 };
 
