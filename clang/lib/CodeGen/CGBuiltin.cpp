@@ -3836,7 +3836,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
         *this, E, llvm::Intrinsic::floor, "elt.floor"));
   case Builtin::BI__builtin_elementwise_popcount:
     return RValue::get(emitBuiltinWithOneOverloadedType<1>(
-	*this, E, llvm::Intrinsic::ctpop, "elt.ctpop"));
+        *this, E, llvm::Intrinsic::ctpop, "elt.ctpop"));
   case Builtin::BI__builtin_elementwise_roundeven:
     return RValue::get(emitBuiltinWithOneOverloadedType<1>(
         *this, E, llvm::Intrinsic::roundeven, "elt.roundeven"));

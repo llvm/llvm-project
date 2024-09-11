@@ -524,6 +524,18 @@ void test_builtin_elementwise_popcount(int i, float f, double d, float4 v, int3 
 
   v = __builtin_elementwise_popcount(v);
   // expected-error@-1 {{1st argument must be a vector of integers (was 'float4' (vector of 4 'float' values))}}
+
+  int2 i2 = __builtin_elementwise_popcount(iv);
+  // expected-error@-1 {{initializing 'int2' (vector of 2 'int' values) with an expression of incompatible type 'int3' (vector of 3 'int' values)}}
+
+  iv = __builtin_elementwise_popcount(i2);
+  // expected-error@-1 {{assigning to 'int3' (vector of 3 'int' values) from incompatible type 'int2' (vector of 2 'int' values)}}
+
+  unsigned3 u3 = __builtin_elementwise_popcount(iv);
+  // expected-error@-1 {{initializing 'unsigned3' (vector of 3 'unsigned int' values) with an expression of incompatible type 'int3' (vector of 3 'int' values)}}
+
+  iv = __builtin_elementwise_popcount(u3);
+  // expected-error@-1 {{assigning to 'int3' (vector of 3 'int' values) from incompatible type 'unsigned3' (vector of 3 'unsigned int' values)}}
 }
 
 void test_builtin_elementwise_pow(int i, short s, double d, float4 v, int3 iv, unsigned3 uv, int *p) {
