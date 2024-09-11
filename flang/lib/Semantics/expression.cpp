@@ -2667,9 +2667,12 @@ const Symbol *ExpressionAnalyzer::ResolveForward(const Symbol &symbol) {
       // procedure.  Resolve its names now so that its interface
       // is known.
       const semantics::Scope &scope{symbol.owner()};
+      // Save the name, since "symbol" may vanish.
+      std::string name{symbol.name().ToString()};
       semantics::ResolveSpecificationParts(context_, symbol);
       const Symbol *resolved{nullptr};
-      if (auto iter{scope.find(symbol.name())}; iter != scope.cend()) {
+      if (auto iter{scope.find(parser::CharBlock{name})};
+          iter != scope.cend()) {
         resolved = &*iter->second;
       }
       if (!resolved || resolved->has<semantics::SubprogramNameDetails>()) {
@@ -2678,8 +2681,10 @@ const Symbol *ExpressionAnalyzer::ResolveForward(const Symbol &symbol) {
         // specification part; but recursive function calls are not
         // allowed in specification parts (10.1.11 para 5).
         Say("The module function '%s' may not be referenced recursively in a specification expression"_err_en_US,
-            symbol.name());
-        context_.SetError(symbol);
+            name);
+        if (resolved) {
+          context_.SetError(*resolved);
+        }
       }
       return resolved;
     } else if (inStmtFunctionDefinition_) {
