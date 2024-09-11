@@ -1349,10 +1349,10 @@ static void codegenDataGenerate() {
   assert(!fileName.empty());
   raw_fd_ostream Output(fileName, EC, sys::fs::OF_None);
   if (EC)
-    error("fail to create raw_fd_ostream");
+    error("fail to create " + fileName + ": " + EC.message());
 
   if (auto E = Writer.write(Output))
-    error("fail to write CGData");
+    error("fail to write CGData: " + toString(std::move(E)));
 }
 
 static void foldIdenticalLiterals() {

@@ -6,10 +6,10 @@
 # Synthesize raw cgdata without the header (24 byte) from the indexed cgdata.
 # RUN: llvm-cgdata --convert --format binary %t/raw-1.cgtext -o %t/raw-1.cgdata
 # RUN: od -t x1 -j 24 -An %t/raw-1.cgdata | tr -d '\n\r\t' | sed 's/ \+/ /g; s/^ *//; s/ *$//; s/ /,0x/g; s/^/0x/' > %t/raw-1-bytes.txt
-# RUN: sed "s/<RAW_1_BYTES>/$(cat %t/raw-1-bytes.txt)/g" %t/merge-1-template.s > %t/merge-1.s
+# RUN: sed "s/<RAW_BYTES>/$(cat %t/raw-1-bytes.txt)/g" %t/merge-template.s > %t/merge-1.s
 # RUN: llvm-cgdata --convert --format binary %t/raw-2.cgtext -o %t/raw-2.cgdata
 # RUN: od -t x1 -j 24 -An %t/raw-2.cgdata | tr -d '\n\r\t' | sed 's/ \+/ /g; s/^ *//; s/ *$//; s/ /,0x/g; s/^/0x/' > %t/raw-2-bytes.txt
-# RUN: sed "s/<RAW_2_BYTES>/$(cat %t/raw-2-bytes.txt)/g" %t/merge-2-template.s > %t/merge-2.s
+# RUN: sed "s/<RAW_BYTES>/$(cat %t/raw-2-bytes.txt)/g" %t/merge-template.s > %t/merge-2.s
 
 # RUN: llvm-mc -filetype obj -triple arm64-apple-darwin %t/merge-1.s -o %t/merge-1.o
 # RUN: llvm-mc -filetype obj -triple arm64-apple-darwin %t/merge-2.s -o %t/merge-2.o
@@ -28,7 +28,7 @@
 
 # We can also generate the merged codegen data from the executable that is not dead-stripped.
 # RUN: llvm-objdump -h %t/out| FileCheck %s
-CHECK: __llvm_outline
+# CHECK: __llvm_outline
 # RUN: llvm-cgdata --merge %t/out -o %t/merge-cgdata-exe
 # RUN: diff %t/merge-cgdata-exe %t/merge-cgdata
 
@@ -42,7 +42,7 @@ CHECK: __llvm_outline
 
 # Ensure no __llvm_outline section remains in the executable.
 # RUN: llvm-objdump -h %t/out-strip | FileCheck %s --check-prefix=STRIP
-STRIP-NOT: __llvm_outline
+# STRIP-NOT: __llvm_outline
 
 #--- raw-1.cgtext
 :outlined_hash_tree
@@ -60,11 +60,6 @@ STRIP-NOT: __llvm_outline
   SuccessorIds:    [  ]
 ...
 
-#--- merge-1-template.s
-.section __DATA,__llvm_outline
-_data:
-.byte <RAW_1_BYTES>
-
 #--- raw-2.cgtext
 :outlined_hash_tree
 0:
@@ -81,10 +76,10 @@ _data:
   SuccessorIds:    [  ]
 ...
 
-#--- merge-2-template.s
+#--- merge-template.s
 .section __DATA,__llvm_outline
 _data:
-.byte <RAW_2_BYTES>
+.byte <RAW_BYTES>
 
 #--- main.s
 .globl _main

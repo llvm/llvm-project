@@ -162,8 +162,10 @@ def no_objc_category_merging : Flag<["-"], "no_objc_category_merging">,
     Group<grp_lld>;
 def lto_debug_pass_manager: Flag<["--"], "lto-debug-pass-manager">,
     HelpText<"Debug new pass manager">, Group<grp_lld>;
-def codegen_data_generate_path : Joined<["--"], "codegen-data-generate-path=">,
-    HelpText<"Codegen data file path">, Group<grp_lld>;
+def codegen_data_generate_path : Separate<["--"], "codegen-data-generate-path">, Group<grp_lld>;
+def codegen_data_generate_path_eq : Joined<["--"], "codegen-data-generate-path=">,
+    Alias<!cast<Separate>(codegen_data_generate_path)>, MetaVarName<"<cgdata>">,
+    HelpText<"Write the CG data to the specified path <cgdata>.">, Group<grp_lld>;
 def cs_profile_generate: Flag<["--"], "cs-profile-generate">,
     HelpText<"Perform context sensitive PGO instrumentation">, Group<grp_lld>;
 def cs_profile_path: Joined<["--"], "cs-profile-path=">,
