@@ -190,6 +190,8 @@ void ObjFile::initializeECThunks() {
         ctx.symtab.addEntryThunk(getSymbol(entry->src), getSymbol(entry->dst));
         break;
       case Arm64ECThunkType::Exit:
+        ctx.symtab.addExitThunk(getSymbol(entry->src), getSymbol(entry->dst));
+        break;
       case Arm64ECThunkType::GuestExit:
         break;
       default:
@@ -1088,6 +1090,11 @@ void ImportFile::parse() {
       thunkSym = ctx.symtab.addImportThunk(
           name, impSym, make<ImportThunkChunkX64>(ctx, impSym));
       // FIXME: Add aux IAT symbols.
+
+      StringRef impChkName = saver().save("__impchk_" + name);
+      impchkThunk = make<ImportThunkChunkARM64EC>(this);
+      ctx.symtab.addImportThunk(impChkName, impSym, impchkThunk);
+      ctx.driver.pullArm64ECIcallHelper();
     }
   }
 }
