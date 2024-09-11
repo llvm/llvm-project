@@ -392,6 +392,22 @@ the configuration (without a prefix: ``Auto``).
       a &= 2;
       bbb = 2;
 
+  * ``bool AlignFunctionDeclarations`` :versionbadge:`clang-format 20`
+  Only for ``AlignConsecutiveDeclarations``. Whether function declarations
+    are aligned.
+
+    .. code-block:: c++
+
+      true:
+      unsigned int f1(void);
+      void         f2(void);
+      size_t       f3(void);
+
+      false:
+      unsigned int f1(void);
+      void f2(void);
+      size_t f3(void);
+
   * ``bool AlignFunctionPointers`` Only for ``AlignConsecutiveDeclarations``. Whether function pointers are
     aligned.
 
@@ -533,6 +549,22 @@ the configuration (without a prefix: ``Auto``).
       false:
       a &= 2;
       bbb = 2;
+
+  * ``bool AlignFunctionDeclarations`` :versionbadge:`clang-format 20`
+  Only for ``AlignConsecutiveDeclarations``. Whether function declarations
+    are aligned.
+
+    .. code-block:: c++
+
+      true:
+      unsigned int f1(void);
+      void         f2(void);
+      size_t       f3(void);
+
+      false:
+      unsigned int f1(void);
+      void f2(void);
+      size_t f3(void);
 
   * ``bool AlignFunctionPointers`` Only for ``AlignConsecutiveDeclarations``. Whether function pointers are
     aligned.
@@ -676,6 +708,22 @@ the configuration (without a prefix: ``Auto``).
       a &= 2;
       bbb = 2;
 
+  * ``bool AlignFunctionDeclarations`` :versionbadge:`clang-format 20`
+  Only for ``AlignConsecutiveDeclarations``. Whether function declarations
+    are aligned.
+
+    .. code-block:: c++
+
+      true:
+      unsigned int f1(void);
+      void         f2(void);
+      size_t       f3(void);
+
+      false:
+      unsigned int f1(void);
+      void f2(void);
+      size_t f3(void);
+
   * ``bool AlignFunctionPointers`` Only for ``AlignConsecutiveDeclarations``. Whether function pointers are
     aligned.
 
@@ -818,6 +866,22 @@ the configuration (without a prefix: ``Auto``).
       false:
       a &= 2;
       bbb = 2;
+
+  * ``bool AlignFunctionDeclarations`` :versionbadge:`clang-format 20`
+  Only for ``AlignConsecutiveDeclarations``. Whether function declarations
+    are aligned.
+
+    .. code-block:: c++
+
+      true:
+      unsigned int f1(void);
+      void         f2(void);
+      size_t       f3(void);
+
+      false:
+      unsigned int f1(void);
+      void f2(void);
+      size_t f3(void);
 
   * ``bool AlignFunctionPointers`` Only for ``AlignConsecutiveDeclarations``. Whether function pointers are
     aligned.
@@ -1081,6 +1145,22 @@ the configuration (without a prefix: ``Auto``).
       a &= 2;
       bbb = 2;
 
+  * ``bool AlignFunctionDeclarations`` :versionbadge:`clang-format 20`
+  Only for ``AlignConsecutiveDeclarations``. Whether function declarations
+    are aligned.
+
+    .. code-block:: c++
+
+      true:
+      unsigned int f1(void);
+      void         f2(void);
+      size_t       f3(void);
+
+      false:
+      unsigned int f1(void);
+      void f2(void);
+      size_t f3(void);
+
   * ``bool AlignFunctionPointers`` Only for ``AlignConsecutiveDeclarations``. Whether function pointers are
     aligned.
 
@@ -1221,6 +1301,22 @@ the configuration (without a prefix: ``Auto``).
       a &= 2;
       bbb = 2;
 
+  * ``bool AlignFunctionDeclarations`` :versionbadge:`clang-format 20`
+  Only for ``AlignConsecutiveDeclarations``. Whether function declarations
+    are aligned.
+
+    .. code-block:: c++
+
+      true:
+      unsigned int f1(void);
+      void         f2(void);
+      size_t       f3(void);
+
+      false:
+      unsigned int f1(void);
+      void f2(void);
+      size_t f3(void);
+
   * ``bool AlignFunctionPointers`` Only for ``AlignConsecutiveDeclarations``. Whether function pointers are
     aligned.
 
@@ -1360,6 +1456,22 @@ the configuration (without a prefix: ``Auto``).
       false:
       a &= 2;
       bbb = 2;
+
+  * ``bool AlignFunctionDeclarations`` :versionbadge:`clang-format 20`
+  Only for ``AlignConsecutiveDeclarations``. Whether function declarations
+    are aligned.
+
+    .. code-block:: c++
+
+      true:
+      unsigned int f1(void);
+      void         f2(void);
+      size_t       f3(void);
+
+      false:
+      unsigned int f1(void);
+      void f2(void);
+      size_t f3(void);
 
   * ``bool AlignFunctionPointers`` Only for ``AlignConsecutiveDeclarations``. Whether function pointers are
     aligned.

@@ -20010,6 +20010,17 @@ TEST_F(FormatTest, AlignConsecutiveDeclarations) {
                "  return 0;\n"
                "}() };",
                BracedAlign);
+
+  Alignment.AlignConsecutiveDeclarations.AlignFunctionDeclarations = false;
+  verifyFormat("unsigned int f1(void);\n"
+               "void f2(void);\n"
+               "size_t f3(void);\n",
+               Alignment);
+  Alignment.AlignConsecutiveDeclarations.AlignFunctionDeclarations = true;
+  verifyFormat("unsigned int f1(void);\n"
+               "void         f2(void);\n"
+               "size_t       f3(void);\n",
+               Alignment);
 }
 
 TEST_F(FormatTest, AlignConsecutiveShortCaseStatements) {
@@ -20253,9 +20264,16 @@ TEST_F(FormatTest, AlignWithLineBreaks) {
             FormatStyle::AlignConsecutiveStyle(
                 {/*Enabled=*/false, /*AcrossEmptyLines=*/false,
                  /*AcrossComments=*/false, /*AlignCompound=*/false,
-                 /*AlignFunctionPointers=*/false, /*PadOperators=*/true}));
+                 /*AlignFunctionDeclarations=*/false,
+                 /*AlignFunctionPointers=*/false,
+                 /*PadOperators=*/true}));
   EXPECT_EQ(Style.AlignConsecutiveDeclarations,
-            FormatStyle::AlignConsecutiveStyle({}));
+            FormatStyle::AlignConsecutiveStyle(
+                {/*Enabled=*/false, /*AcrossEmptyLines=*/false,
+                 /*AcrossComments=*/false, /*AlignCompound=*/false,
+                 /*AlignFunctionDeclarations=*/true,
+                 /*AlignFunctionPointers=*/false,
+                 /*PadOperators=*/false}));
   verifyFormat("void foo() {\n"
                "  int myVar = 5;\n"
                "  double x = 3.14;\n"
