@@ -15238,7 +15238,7 @@ external functions.
 Syntax:
 """""""
 
-This is an overloaded intrinsic. You can use ``llvm.memset_pattern`` on
+This is an overloaded intrinsic. You can use ``llvm.memset.pattern`` on
 any integer bit width that is an integral number of bytes and for different
 address spaces. Not all targets support all bit widths however.
 
