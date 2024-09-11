@@ -116,7 +116,7 @@ public:
   lldb_private::Status DumpFile();
 
   // Delete the file if it exists
-  void DeleteFile();
+  void DeleteFile() noexcept;
 
 private:
   // Add data to the end of the buffer, if the buffer exceeds the flush level,

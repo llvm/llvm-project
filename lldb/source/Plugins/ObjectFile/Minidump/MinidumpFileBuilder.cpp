@@ -1220,7 +1220,7 @@ Status MinidumpFileBuilder::DumpFile() {
 }
 
 
-void MinidumpFileBuilder::DeleteFile() {
+void MinidumpFileBuilder::DeleteFile() noexcept {
   Log *log = GetLog(LLDBLog::Object);
 
   if (m_core_file) {

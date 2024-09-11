@@ -55,6 +55,21 @@ size_t ObjectFileMinidump::GetModuleSpecifications(
   return 0;
 }
 
+struct SaveCoreRequest {
+  SaveCoreRequest(MinidumpFileBuilder &builder) : m_builder(builder) {}
+
+  ~SaveCoreRequest() {
+    if (!m_success)
+      m_builder.DeleteFile();
+  }
+
+  void SetSuccess() { m_success = true; }
+
+  private:
+    MinidumpFileBuilder &m_builder;
+    bool m_success = false;
+};
+
 bool ObjectFileMinidump::SaveCore(const lldb::ProcessSP &process_sp,
                                   lldb_private::SaveCoreOptions &options,
                                   lldb_private::Status &error) {
@@ -75,39 +90,35 @@ bool ObjectFileMinidump::SaveCore(const lldb::ProcessSP &process_sp,
   }
   MinidumpFileBuilder builder(std::move(maybe_core_file.get()), process_sp,
                               options);
+  SaveCoreRequest request(builder);
 
   Log *log = GetLog(LLDBLog::Object);
   error = builder.AddHeaderAndCalculateDirectories();
   if (error.Fail()) {
     LLDB_LOGF(log, "AddHeaderAndCalculateDirectories failed: %s",
               error.AsCString());
-    builder.DeleteFile();
     return false;
   };
   error = builder.AddSystemInfo();
   if (error.Fail()) {
     LLDB_LOGF(log, "AddSystemInfo failed: %s", error.AsCString());
-    builder.DeleteFile();
     return false;
   }
 
   error = builder.AddModuleList();
   if (error.Fail()) {
     LLDB_LOGF(log, "AddModuleList failed: %s", error.AsCString());
-    builder.DeleteFile();
     return false;
   }
   error = builder.AddMiscInfo();
   if (error.Fail()) {
     LLDB_LOGF(log, "AddMiscInfo failed: %s", error.AsCString());
-    builder.DeleteFile();
     return false;
   }
 
   error = builder.AddThreadList();
   if (error.Fail()) {
     LLDB_LOGF(log, "AddThreadList failed: %s", error.AsCString());
-    builder.DeleteFile();
     return false;
   }
 
@@ -121,7 +132,6 @@ bool ObjectFileMinidump::SaveCore(const lldb::ProcessSP &process_sp,
   error = builder.AddExceptions();
   if (error.Fail()) {
     LLDB_LOGF(log, "AddExceptions failed: %s", error.AsCString());
-    builder.DeleteFile();
     return false;
   }
 
@@ -130,16 +140,16 @@ bool ObjectFileMinidump::SaveCore(const lldb::ProcessSP &process_sp,
   error = builder.AddMemoryList();
   if (error.Fail()) {
     LLDB_LOGF(log, "AddMemoryList failed: %s", error.AsCString());
-    builder.DeleteFile();
     return false;
   }
 
   error = builder.DumpFile();
   if (error.Fail()) {
     LLDB_LOGF(log, "DumpFile failed: %s", error.AsCString());
-    builder.DeleteFile();
     return false;
   }
+
+  request.SetSuccess();
 
   return true;
 }
