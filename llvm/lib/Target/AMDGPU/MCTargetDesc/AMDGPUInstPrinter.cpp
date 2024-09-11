@@ -1557,8 +1557,8 @@ void AMDGPUInstPrinter::printSwizzle(const MCInst *MI, unsigned OpNo,
       }
     }
   } else if ((Imm & FFT_ROTATE_MODE_MASK) == FFT_MODE_ENC) {
-    O << "swizzle(" << IdSymbolic[ID_FFT] << ","
-      << (Imm & FFT_SWIZZLE_TYPE_MASK) << ")";
+    O << "swizzle(" << IdSymbolic[ID_FFT] << "," << (Imm & FFT_SWIZZLE_MASK)
+      << ")";
   } else if ((Imm & FFT_ROTATE_MODE_MASK) == ROTATE_MODE_ENC) {
     O << "swizzle(" << IdSymbolic[ID_ROTATE] << ","
       << ((Imm >> ROTATE_DIR_SHIFT) & ROTATE_DIR_MASK) << ","
