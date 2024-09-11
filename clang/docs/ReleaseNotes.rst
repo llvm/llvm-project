@@ -305,6 +305,8 @@ Improvements to Clang's diagnostics
 
 - Clang now diagnose when importing module implementation partition units in module interface units.
 
+- Don't emit bogus dangling diagnostics when ``[[gsl::Owner]]`` and `[[clang::lifetimebound]]` are used together (#GH108272).
+
 Improvements to Clang's time-trace
 ----------------------------------
 
