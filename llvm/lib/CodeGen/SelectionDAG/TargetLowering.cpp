@@ -8616,10 +8616,7 @@ SDValue TargetLowering::expandFMINIMUMNUM_FMAXIMUMNUM(SDNode *Node,
   // If MinMax is NaN, let's quiet it.
   if (!Flags.hasNoNaNs() && !DAG.isKnownNeverNaN(LHS) &&
       !DAG.isKnownNeverNaN(RHS)) {
-    SDValue MinMaxQuiet =
-        DAG.getNode(ISD::FCANONICALIZE, DL, VT, MinMax, Flags);
-    MinMax =
-        DAG.getSelectCC(DL, MinMax, MinMax, MinMaxQuiet, MinMax, ISD::SETUO);
+    MinMax = DAG.getNode(ISD::FCANONICALIZE, DL, VT, MinMax, Flags);
   }
 
   // Fixup signed zero behavior.
@@ -9557,13 +9554,13 @@ SDValue TargetLowering::expandAVG(SDNode *N, SelectionDAG &DAG) const {
     SDValue Overflow = UAddWithOverflow.getValue(1);
 
     // Right shift the sum by 1
-    SDValue One = DAG.getShiftAmountConstant(1, VT, dl);
-    SDValue LShrVal = DAG.getNode(ISD::SRL, dl, VT, Sum, One);
+    SDValue LShrVal = DAG.getNode(ISD::SRL, dl, VT, Sum,
+                                  DAG.getShiftAmountConstant(1, VT, dl));
 
     SDValue ZeroExtOverflow = DAG.getNode(ISD::ANY_EXTEND, dl, VT, Overflow);
-    SDValue OverflowShl =
-        DAG.getNode(ISD::SHL, dl, VT, ZeroExtOverflow,
-                    DAG.getConstant(VT.getScalarSizeInBits() - 1, dl, VT));
+    SDValue OverflowShl = DAG.getNode(
+        ISD::SHL, dl, VT, ZeroExtOverflow,
+        DAG.getShiftAmountConstant(VT.getScalarSizeInBits() - 1, VT, dl));
 
     return DAG.getNode(ISD::OR, dl, VT, LShrVal, OverflowShl);
   }

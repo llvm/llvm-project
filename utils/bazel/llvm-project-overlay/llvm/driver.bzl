@@ -14,6 +14,7 @@ _TOOLS = {
     "dsymutil": "//llvm:dsymutil-lib",
     "lld": "//lld:lld-lib",
     "llvm-ar": "//llvm:llvm-ar-lib",
+    "llvm-cgdata": "//llvm:llvm-cgdata-lib",
     "llvm-cxxfilt": "//llvm:llvm-cxxfilt-lib",
     "llvm-dwp": "//llvm:llvm-dwp-lib",
     "llvm-gsymutil": "//llvm:llvm-gsymutil-lib",

@@ -879,6 +879,10 @@ static TargetTypeInfo getTargetTypeInfo(const TargetExtType *Ty) {
         ScalableVectorType::get(Type::getInt8Ty(C), TotalNumElts));
   }
 
+  // DirectX resources
+  if (Name.starts_with("dx."))
+    return TargetTypeInfo(PointerType::get(C, 0));
+
   // Opaque types in the AMDGPU name space.
   if (Name == "amdgcn.semaphore") {
     return TargetTypeInfo(FixedVectorType::get(Type::getInt32Ty(C), 4),
