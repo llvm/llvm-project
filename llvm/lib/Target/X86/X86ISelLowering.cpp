@@ -58150,25 +58150,8 @@ SDValue combineCanonicalize(SDNode *Node, SelectionDAG &DAG) {
   SDLoc dl(Node);
 
   // Canonicalize scalar variable FP Nodes.
-  SDValue MulNode;
-  SDValue One;
-  if (VT == MVT::f32 || VT == MVT::f64) {
-    One = DAG.getConstantFP(1.0f, dl, VT);
-  } else if (VT == MVT::f80) {
-    APFloat Val = APFloat::getOne(APFloat::x87DoubleExtended());
-    One = DAG.getConstantFP(Val, dl, VT);
-  } else if (VT == MVT::f16) {
-    APFloat Val(APFloat::IEEEhalf(), "1.0");
-    One = DAG.getConstantFP(Val, dl, VT);
-  } else if (VT == MVT::bf16) {
-    APFloat Val(APFloat::BFloat(), "1.0");
-    One = DAG.getConstantFP(Val, dl, VT);
-  } else {
-    // Is it better to assert? when we encounter an unknown FP type,Than to
-    // just replace with the operand!
-    return Operand;
-  }
-
+  SDValue One =
+      DAG.getNode(ISD::SINT_TO_FP, dl, VT, DAG.getConstant(1, dl, MVT::i32));
   // TODO: Fix Crash for bf16 when generating strict_fmul as it
   // leads to a error : SoftPromoteHalfResult #0: t11: bf16,ch = strict_fmul t0,
   // ConstantFP:bf16<APFloat(16256)>, t5 LLVM ERROR: Do not know how to soft
