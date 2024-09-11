@@ -45,17 +45,17 @@ protected:
   friend class VectorType;       // For LLVMTy.
   friend class FixedVectorType;  // For LLVMTy.
   friend class ScalableVectorType; // For LLVMTy.
-  friend class PointerType;      // For LLVMTy.
-  friend class FunctionType;     // For LLVMTy.
-  friend class IntegerType;      // For LLVMTy.
-  friend class Function;         // For LLVMTy.
-  friend class CallBase;         // For LLVMTy.
-  friend class ConstantInt;      // For LLVMTy.
-  friend class ConstantArray;    // For LLVMTy.
-  friend class ConstantStruct;   // For LLVMTy.
-  friend class ConstantVector;   // For LLVMTy.
-  friend class CmpInst;          // For LLVMTy. TODO: Cleanup after
-                                 // sandboxir::VectorType is more complete.
+  friend class PointerType;        // For LLVMTy.
+  friend class FunctionType;       // For LLVMTy.
+  friend class IntegerType;        // For LLVMTy.
+  friend class Function;           // For LLVMTy.
+  friend class CallBase;           // For LLVMTy.
+  friend class ConstantInt;        // For LLVMTy.
+  friend class ConstantArray;      // For LLVMTy.
+  friend class ConstantStruct;     // For LLVMTy.
+  friend class ConstantVector;     // For LLVMTy.
+  friend class CmpInst;            // For LLVMTy. TODO: Cleanup after
+                                   // sandboxir::VectorType is more complete.
 
   // Friend all instruction classes because `create()` functions use LLVMTy.
 #define DEF_INSTR(ID, OPCODE, CLASS) friend class CLASS;
