@@ -923,14 +923,14 @@ def LDEXP_F16_VOPProfile : VOPProfile <[f16, f16, f16, untyped]> {
   let Src1ModSDWA = Int16SDWAInputMods;
 }
 def LDEXP_F16_VOPProfile_True16 : VOPProfile_True16<VOP_F16_F16_F16> {
-  let Src1RC32 = RegisterOperand<VGPR_16_Lo128>;
-  let Src1DPP = RegisterOperand<VGPR_16_Lo128>;
-  let Src1ModDPP = IntT16VRegInputMods<0/*IsFake16*/>;
+  let Src1Mod = IntT16InputMods<0/*IsFake16*/>;
+  let Src1ModDPP = IntT16_Lo128VRegInputMods<0/*IsFake16*/>;
+  let Src1ModVOP3DPP = IntT16VCSrcInputMods<0/*IsFake16*/>;
 }
 def LDEXP_F16_VOPProfile_Fake16 : VOPProfile_Fake16<VOP_F16_F16_F16> {
-  let Src1RC32 = RegisterOperand<VGPR_32_Lo128>;
-  let Src1DPP = RegisterOperand<VGPR_32_Lo128>;
-  let Src1ModDPP = IntT16VRegInputMods<1/*IsFake16*/>;
+  let Src1Mod = Int32InputMods;
+  let Src1ModDPP = IntT16_Lo128VRegInputMods<1/*IsFake16*/>;
+  let Src1ModVOP3DPP = IntT16VCSrcInputMods<1/*IsFake16*/>;
 }
 
 let isReMaterializable = 1 in {

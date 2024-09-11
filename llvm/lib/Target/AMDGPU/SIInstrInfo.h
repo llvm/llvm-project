@@ -1453,8 +1453,6 @@ public:
   // This is used if an operand is a 32 bit register but needs to be aligned
   // regardless.
   void enforceOperandRCAlignment(MachineInstr &MI, unsigned OpName) const;
-
-  static Register findSetInactiveMask(const MachineInstr &MI);
 };
 
 /// \brief Returns true if a reg:subreg pair P has a TRC class

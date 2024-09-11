@@ -22,6 +22,8 @@ define void @test1(ptr noalias nocapture %points, ptr noalias nocapture readonly
 ; DISABLED_MASKED_STRIDED-LABEL: 'test1'
 ; DISABLED_MASKED_STRIDED:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i16 %0, ptr %arrayidx2, align 2
 ; DISABLED_MASKED_STRIDED:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i16 %2, ptr %arrayidx7, align 2
+; DISABLED_MASKED_STRIDED:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i16 %0, ptr %arrayidx2, align 2
+; DISABLED_MASKED_STRIDED:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i16 %2, ptr %arrayidx7, align 2
 ; DISABLED_MASKED_STRIDED:  LV: Found an estimated cost of 6 for VF 2 For instruction: store i16 %0, ptr %arrayidx2, align 2
 ; DISABLED_MASKED_STRIDED:  LV: Found an estimated cost of 6 for VF 2 For instruction: store i16 %2, ptr %arrayidx7, align 2
 ; DISABLED_MASKED_STRIDED:  LV: Found an estimated cost of 13 for VF 4 For instruction: store i16 %0, ptr %arrayidx2, align 2
@@ -32,6 +34,8 @@ define void @test1(ptr noalias nocapture %points, ptr noalias nocapture readonly
 ; DISABLED_MASKED_STRIDED:  LV: Found an estimated cost of 55 for VF 16 For instruction: store i16 %2, ptr %arrayidx7, align 2
 ;
 ; ENABLED_MASKED_STRIDED-LABEL: 'test1'
+; ENABLED_MASKED_STRIDED:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i16 %0, ptr %arrayidx2, align 2
+; ENABLED_MASKED_STRIDED:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i16 %2, ptr %arrayidx7, align 2
 ; ENABLED_MASKED_STRIDED:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i16 %0, ptr %arrayidx2, align 2
 ; ENABLED_MASKED_STRIDED:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i16 %2, ptr %arrayidx7, align 2
 ; ENABLED_MASKED_STRIDED:  LV: Found an estimated cost of 0 for VF 2 For instruction: store i16 %0, ptr %arrayidx2, align 2
@@ -79,6 +83,8 @@ define void @test2(ptr noalias nocapture %points, i32 %numPoints, ptr noalias no
 ; DISABLED_MASKED_STRIDED-LABEL: 'test2'
 ; DISABLED_MASKED_STRIDED:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i16 %0, ptr %arrayidx2, align 2
 ; DISABLED_MASKED_STRIDED:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i16 %2, ptr %arrayidx7, align 2
+; DISABLED_MASKED_STRIDED:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i16 %0, ptr %arrayidx2, align 2
+; DISABLED_MASKED_STRIDED:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i16 %2, ptr %arrayidx7, align 2
 ; DISABLED_MASKED_STRIDED:  LV: Found an estimated cost of 5 for VF 2 For instruction: store i16 %0, ptr %arrayidx2, align 2
 ; DISABLED_MASKED_STRIDED:  LV: Found an estimated cost of 3000000 for VF 2 For instruction: store i16 %2, ptr %arrayidx7, align 2
 ; DISABLED_MASKED_STRIDED:  LV: Found an estimated cost of 10 for VF 4 For instruction: store i16 %0, ptr %arrayidx2, align 2
@@ -89,6 +95,8 @@ define void @test2(ptr noalias nocapture %points, i32 %numPoints, ptr noalias no
 ; DISABLED_MASKED_STRIDED:  LV: Found an estimated cost of 3000000 for VF 16 For instruction: store i16 %2, ptr %arrayidx7, align 2
 ;
 ; ENABLED_MASKED_STRIDED-LABEL: 'test2'
+; ENABLED_MASKED_STRIDED:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i16 %0, ptr %arrayidx2, align 2
+; ENABLED_MASKED_STRIDED:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i16 %2, ptr %arrayidx7, align 2
 ; ENABLED_MASKED_STRIDED:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i16 %0, ptr %arrayidx2, align 2
 ; ENABLED_MASKED_STRIDED:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i16 %2, ptr %arrayidx7, align 2
 ; ENABLED_MASKED_STRIDED:  LV: Found an estimated cost of 0 for VF 2 For instruction: store i16 %0, ptr %arrayidx2, align 2
@@ -145,12 +153,14 @@ for.end:
 define void @test(ptr noalias nocapture %points, ptr noalias nocapture readonly %x, ptr noalias nocapture readnone %y) {
 ; DISABLED_MASKED_STRIDED-LABEL: 'test'
 ; DISABLED_MASKED_STRIDED:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i16 %0, ptr %arrayidx6, align 2
+; DISABLED_MASKED_STRIDED:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i16 %0, ptr %arrayidx6, align 2
 ; DISABLED_MASKED_STRIDED:  LV: Found an estimated cost of 2 for VF 2 For instruction: store i16 %0, ptr %arrayidx6, align 2
 ; DISABLED_MASKED_STRIDED:  LV: Found an estimated cost of 4 for VF 4 For instruction: store i16 %0, ptr %arrayidx6, align 2
 ; DISABLED_MASKED_STRIDED:  LV: Found an estimated cost of 8 for VF 8 For instruction: store i16 %0, ptr %arrayidx6, align 2
 ; DISABLED_MASKED_STRIDED:  LV: Found an estimated cost of 16 for VF 16 For instruction: store i16 %0, ptr %arrayidx6, align 2
 ;
 ; ENABLED_MASKED_STRIDED-LABEL: 'test'
+; ENABLED_MASKED_STRIDED:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i16 %0, ptr %arrayidx6, align 2
 ; ENABLED_MASKED_STRIDED:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i16 %0, ptr %arrayidx6, align 2
 ; ENABLED_MASKED_STRIDED:  LV: Found an estimated cost of 2 for VF 2 For instruction: store i16 %0, ptr %arrayidx6, align 2
 ; ENABLED_MASKED_STRIDED:  LV: Found an estimated cost of 4 for VF 4 For instruction: store i16 %0, ptr %arrayidx6, align 2
