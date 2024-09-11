@@ -110,10 +110,6 @@ class Builder:
         if not cc:
             return []
 
-        exe_ext = ""
-        if lldbplatformutil.getHostPlatform() == "windows":
-            exe_ext = ".exe"
-
         cc = cc.strip()
         cc_path = pathlib.Path(cc)
 
