@@ -267,6 +267,26 @@ static bool isInStlNamespace(const Decl *D) {
   return DC->isStdNamespace();
 }
 
+// Returns true if the given Record decl is a form of `GSLOwner<Pointer>`
+// type, e.g. std::vector<string_view>, std::optional<string_view>.
+static bool isContainerOfPointer(const RecordDecl *Container) {
+  if (const auto *CTSD =
+          dyn_cast_if_present<ClassTemplateSpecializationDecl>(Container)) {
+    if (!CTSD->hasAttr<OwnerAttr>()) // Container must be a GSL owner type.
+      return false;
+    const auto &TAs = CTSD->getTemplateArgs();
+    return TAs.size() > 0 && TAs[0].getKind() == TemplateArgument::Type &&
+           (isRecordWithAttr<PointerAttr>(TAs[0].getAsType()) ||
+            TAs[0].getAsType()->isPointerType());
+  }
+  return false;
+}
+
+static bool isGSLOwner(QualType T) {
+  return isRecordWithAttr<OwnerAttr>(T) &&
+         !isContainerOfPointer(T->getAsRecordDecl());
+}
+
 static bool shouldTrackImplicitObjectArg(const CXXMethodDecl *Callee) {
   if (auto *Conv = dyn_cast_or_null<CXXConversionDecl>(Callee))
     if (isRecordWithAttr<PointerAttr>(Conv->getConversionType()))
@@ -275,7 +295,7 @@ static bool shouldTrackImplicitObjectArg(const CXXMethodDecl *Callee) {
     return false;
   if (!isRecordWithAttr<PointerAttr>(
           Callee->getFunctionObjectParameterType()) &&
-      !isRecordWithAttr<OwnerAttr>(Callee->getFunctionObjectParameterType()))
+      !isGSLOwner(Callee->getFunctionObjectParameterType()))
     return false;
   if (Callee->getReturnType()->isPointerType() ||
       isRecordWithAttr<PointerAttr>(Callee->getReturnType())) {
@@ -413,7 +433,7 @@ static void visitFunctionCallArguments(IndirectLocalPath &Path, Expr *Call,
     // Once we initialized a value with a non gsl-owner reference, it can no
     // longer dangle.
     if (ReturnType->isReferenceType() &&
-        !isRecordWithAttr<OwnerAttr>(ReturnType->getPointeeType())) {
+        !isGSLOwner(ReturnType->getPointeeType())) {
       for (const IndirectLocalPathEntry &PE : llvm::reverse(Path)) {
         if (PE.Kind == IndirectLocalPathEntry::GslReferenceInit ||
             PE.Kind == IndirectLocalPathEntry::LifetimeBoundCall)
@@ -468,12 +488,17 @@ static void visitFunctionCallArguments(IndirectLocalPath &Path, Expr *Call,
     if (CheckCoroCall || Callee->getParamDecl(I)->hasAttr<LifetimeBoundAttr>())
       VisitLifetimeBoundArg(Callee->getParamDecl(I), Args[I]);
     else if (EnableGSLAnalysis && I == 0) {
+      // Perform GSL analysis for the first argument
       if (shouldTrackFirstArgument(Callee)) {
         VisitGSLPointerArg(Callee, Args[0]);
-      } else if (auto *CCE = dyn_cast<CXXConstructExpr>(Call);
-                 CCE &&
-                 CCE->getConstructor()->getParent()->hasAttr<PointerAttr>()) {
-        VisitGSLPointerArg(CCE->getConstructor(), Args[0]);
+      } else if (auto *Ctor = dyn_cast<CXXConstructExpr>(Call)) {
+        const auto *ClassD = Ctor->getConstructor()->getParent();
+        // Two cases:
+        //  a GSL pointer, e.g. std::string_view
+        //  a container of GSL pointer, e.g. std::vector<string_view>
+        if (ClassD->hasAttr<PointerAttr>() ||
+            (isContainerOfPointer(ClassD) && Callee->getNumParams() == 1))
+          VisitGSLPointerArg(Ctor->getConstructor(), Args[0]);
       }
     }
   }
@@ -990,13 +1015,12 @@ static void checkExprLifetimeImpl(Sema &SemaRef,
         //   int &p = *localUniquePtr;
         //   someContainer.add(std::move(localUniquePtr));
         //   return p;
-        IsLocalGslOwner = isRecordWithAttr<OwnerAttr>(L->getType());
+        IsLocalGslOwner = isGSLOwner(L->getType());
         if (pathContainsInit(Path) || !IsLocalGslOwner)
           return false;
       } else {
         IsGslPtrValueFromGslTempOwner =
-            MTE && !MTE->getExtendingDecl() &&
-            isRecordWithAttr<OwnerAttr>(MTE->getType());
+            MTE && !MTE->getExtendingDecl() && isGSLOwner(MTE->getType());
         // Skipping a chain of initializing gsl::Pointer annotated objects.
         // We are looking only for the final source to find out if it was
         // a local or temporary owner or the address of a local variable/param.
