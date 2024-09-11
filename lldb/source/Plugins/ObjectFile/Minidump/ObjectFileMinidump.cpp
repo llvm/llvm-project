@@ -65,9 +65,9 @@ struct SaveCoreRequest {
 
   void SetSuccess() { m_success = true; }
 
-  private:
-    MinidumpFileBuilder &m_builder;
-    bool m_success = false;
+private:
+  MinidumpFileBuilder &m_builder;
+  bool m_success = false;
 };
 
 bool ObjectFileMinidump::SaveCore(const lldb::ProcessSP &process_sp,
