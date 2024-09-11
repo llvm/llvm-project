@@ -20,7 +20,11 @@
 // Pre-D128285 layout.
 #define PACKED_ANON_STRUCT
 #endif
-// REVISION == 4: current layout
+#if REVISION <= 4
+// Pre-TODO layout.
+#define UB_PADDING
+#endif
+// REVISION == 5: current layout
 
 #ifdef PACKED_ANON_STRUCT
 #define BEGIN_PACKED_ANON_STRUCT struct __attribute__((packed)) {
@@ -34,13 +38,23 @@
 namespace std {
 namespace __lldb {
 
-#if defined(ALTERNATE_LAYOUT) && defined(SUBCLASS_PADDING)
+#if defined(ALTERNATE_LAYOUT)
+#if defined(SUBCLASS_PADDING)
 template <class _CharT, size_t = sizeof(_CharT)> struct __padding {
   unsigned char __xx[sizeof(_CharT) - 1];
 };
 
 template <class _CharT> struct __padding<_CharT, 1> {};
-#endif
+#else // !SUBCLASS_PADDING
+template <size_t _PaddingSize>
+struct __padding {
+  char __padding_[_PaddingSize];
+};
+
+template <>
+struct __padding<0> {};
+#endif // SUBCLASS_PADDING
+#endif // ALTERNATE_LAYOUT
 
 template <class _CharT, class _Traits, class _Allocator> class basic_string {
 public:
@@ -71,18 +85,23 @@ public:
 
   struct __short {
     value_type __data_[__min_cap];
-#ifdef BITMASKS
 #ifdef SUBCLASS_PADDING
     struct : __padding<value_type> {
       unsigned char __size_;
     };
-#else
+#elif defined(UB_PADDING)
     unsigned char __padding[sizeof(value_type) - 1];
-    unsigned char __size_;
+#else
+    [[no_unique_address]] __padding<sizeof(value_type) - 1> __padding_;
 #endif
-#else // !BITMASKS
+
+#ifndef SUBCLASS_PADDING
+#ifdef BITMASKS
+    unsigned char __size_;
+#else
     unsigned char __size_ : 7;
     unsigned char __is_long_ : 1;
+#endif
 #endif
   };
 
