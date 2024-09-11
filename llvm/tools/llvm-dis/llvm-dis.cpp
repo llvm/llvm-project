@@ -10,19 +10,19 @@
 //  llvm-dis [options]      - Read LLVM bitcode from stdin, write asm to stdout
 //  llvm-dis [options] x.bc - Read LLVM bitcode from the x.bc file, write asm
 //                            to the x.ll file.
-// Options:
+//  Options:
 //
-// Color Options:
+//  Color Options:
 //      --color                 - Use colors in output (default=autodetect)
 //
-// Disassembler Options:
+//  Disassembler Options:
 //      -f                      - Enable binary output on terminals
 //      --materialize-metadata  - Load module without materializing metadata,
 //                                then materialize only the metadata
 //      -o <filename>           - Override output filename
 //      --show-annotations      - Add informational comments to the .ll file
 //
-// Generic Options:
+//  Generic Options:
 //      --help                  - Display available options
 //                                (--help-hidden for more)
 //      --help-list             - Display list of available options
