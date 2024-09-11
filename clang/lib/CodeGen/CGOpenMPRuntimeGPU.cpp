@@ -2890,21 +2890,23 @@ CGOpenMPRuntimeGPU::emitFastFPAtomicCall(CodeGenFunction &CGF, LValue X,
                                          RValue Update, BinaryOperatorKind BO,
                                          bool IsXBinopExpr) {
   CGBuilderTy &Bld = CGF.Builder;
-  llvm::AtomicRMWInst::BinOp Kind = llvm::AtomicRMWInst::FAdd;
+  unsigned int IID = -1;
   RValue UpdateFixed = Update;
   switch (BO) {
   case BO_Sub:
     UpdateFixed = RValue::get(Bld.CreateFNeg(Update.getScalarVal()));
-    Kind = llvm::AtomicRMWInst::FAdd;
+    IID = llvm::Intrinsic::amdgcn_flat_atomic_fadd;
     break;
   case BO_Add:
-    Kind = llvm::AtomicRMWInst::FAdd;
+    IID = llvm::Intrinsic::amdgcn_flat_atomic_fadd;
     break;
   case BO_LT:
-    Kind = IsXBinopExpr ? llvm::AtomicRMWInst::FMax : llvm::AtomicRMWInst::FMin;
+    IID = IsXBinopExpr ? llvm::Intrinsic::amdgcn_flat_atomic_fmax
+                       : llvm::Intrinsic::amdgcn_flat_atomic_fmin;
     break;
   case BO_GT:
-    Kind = IsXBinopExpr ? llvm::AtomicRMWInst::FMin : llvm::AtomicRMWInst::FMax;
+    IID = IsXBinopExpr ? llvm::Intrinsic::amdgcn_flat_atomic_fmin
+                       : llvm::Intrinsic::amdgcn_flat_atomic_fmax;
     break;
   default:
     // remaining operations are not supported yet
@@ -2928,9 +2930,10 @@ CGOpenMPRuntimeGPU::emitFastFPAtomicCall(CodeGenFunction &CGF, LValue X,
                                 CGM.getModule(), OMPRTL___kmpc_unsafeAtomicAdd),
                             FPAtomicArgs);
   } else {
-    CallInst =
-        Bld.CreateAtomicRMW(Kind, X.getAddress(), FPAtomicArgs[1],
-                            llvm::AtomicOrdering::SequentiallyConsistent);
+    llvm::Function *AtomicF = CGM.getIntrinsic(
+        IID, {FPAtomicArgs[1]->getType(), FPAtomicArgs[0]->getType(),
+              FPAtomicArgs[1]->getType()});
+    CallInst = CGF.EmitNounwindRuntimeCall(AtomicF, FPAtomicArgs);
   }
   return std::make_pair(true, RValue::get(CallInst));
 }
