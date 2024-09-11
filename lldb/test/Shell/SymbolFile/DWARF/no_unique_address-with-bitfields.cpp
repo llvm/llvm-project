@@ -1,10 +1,10 @@
 // LLDB currently erroneously adds an unnamed bitfield
-// into the AST when a overlapping no_unique_address
+// into the AST when an overlapping no_unique_address
 // field precedes a bitfield.
 
 // XFAIL: *
 
-// RUN: %clangxx_host -gdwarf -o %t %s
+// RUN: %clangxx_host -c -gdwarf -o %t %s
 // RUN: %lldb %t \
 // RUN:   -o "target var global" \
 // RUN:   -o "image dump ast" \
