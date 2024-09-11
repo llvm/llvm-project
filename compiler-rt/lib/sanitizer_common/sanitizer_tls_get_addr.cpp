@@ -116,7 +116,7 @@ static bool GetDTLSRange(uptr &tls_beg, uptr &tls_size) {
     return false;
   tls_beg = (uptr)start;
   tls_size = __sanitizer_get_allocated_size(start);
-  VReport(2, "__tls_get_addr: glibc >=2.25 suspected; tls={%p,0x%zx}\n",
+  VReport(2, "__tls_get_addr: glibc DTLS suspected; tls={%p,0x%zx}\n",
           (void *)tls_beg, tls_size);
   return true;
 }
