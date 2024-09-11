@@ -134,6 +134,45 @@ template <IR IRTy> static void RAUW(benchmark::State &State) {
   }
 }
 
+static std::string generateRUOWIR(unsigned NumOperands) {
+  std::stringstream SS;
+  auto GenOps = [&SS, NumOperands]() {
+    for (auto Cnt : seq<unsigned>(0, NumOperands)) {
+      SS << "i8 %arg" << Cnt;
+      bool IsLast = Cnt + 1 == NumOperands;
+      if (!IsLast)
+        SS << ", ";
+    }
+  };
+
+  SS << "define void @foo(";
+  GenOps();
+  SS << ") {\n";
+
+  SS << "   call void @foo(";
+  GenOps();
+  SS << ")\n";
+  SS << "ret void";
+  SS << "}";
+  return SS.str();
+}
+
+template <IR IRTy> static void RUOW(benchmark::State &State) {
+  LLVMContext LLVMCtx;
+  sandboxir::Context Ctx(LLVMCtx);
+  std::unique_ptr<llvm::Module> LLVMM;
+  unsigned NumOperands = State.range(0);
+  auto *BB = genIR<IRTy>(LLVMM, LLVMCtx, Ctx, generateRUOWIR, NumOperands);
+
+  auto It = BB->begin();
+  auto *F = BB->getParent();
+  auto *Arg0 = F->getArg(0);
+  auto *Arg1 = F->getArg(1);
+  auto *Call = &*It++;
+  for (auto _ : State)
+    Call->replaceUsesOfWith(Arg0, Arg1);
+}
+
 BENCHMARK(GetType<IR::LLVM>);
 BENCHMARK(GetType<IR::SBox>);
 
@@ -142,5 +181,8 @@ BENCHMARK(BBWalk<IR::SBox>)->Args({1024});
 
 BENCHMARK(RAUW<IR::LLVM>)->Args({512});
 BENCHMARK(RAUW<IR::SBox>)->Args({512});
+
+BENCHMARK(RUOW<IR::LLVM>)->Args({4096});
+BENCHMARK(RUOW<IR::SBox>)->Args({4096});
 
 BENCHMARK_MAIN();
