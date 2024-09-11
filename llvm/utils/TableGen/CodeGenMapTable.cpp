@@ -185,7 +185,7 @@ private:
 
   // KeyInstrVec - list of key instructions.
   std::vector<Record *> KeyInstrVec;
-  DenseMap<Record *, std::vector<Record *>> MapTable;
+  DenseMap<const Record *, std::vector<Record *>> MapTable;
 
 public:
   MapTableEmitter(CodeGenTarget &Target, RecordKeeper &Records, Record *IMRec)
@@ -371,7 +371,7 @@ unsigned MapTableEmitter::emitBinSearchTable(raw_ostream &OS) {
   // emitted as first column.
   OS << "Table[][" << NumCol + 1 << "] = {\n";
   for (unsigned i = 0; i < TotalNumInstr; i++) {
-    Record *CurInstr = NumberedInstructions[i]->TheDef;
+    const Record *CurInstr = NumberedInstructions[i]->TheDef;
     std::vector<Record *> ColInstrs = MapTable[CurInstr];
     std::string OutStr;
     unsigned RelExists = 0;

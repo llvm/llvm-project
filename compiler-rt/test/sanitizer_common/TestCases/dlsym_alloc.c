@@ -1,4 +1,4 @@
-// RUN: %clangxx -O0 %s -o %t && %run %t
+// RUN: %clang -O0 %s -o %t && %run %t
 
 // FIXME: TSAN does not use DlsymAlloc.
 // UNSUPPORTED: tsan
@@ -16,44 +16,44 @@ const char *test() __attribute__((disable_sanitizer_instrumentation)) {
   p = calloc(3, 7);
   free(p);
 
-  free(nullptr);
+  free(NULL);
 
   return "";
 }
 
-extern "C" const char *__asan_default_options()
+const char *__asan_default_options()
     __attribute__((disable_sanitizer_instrumentation)) {
   return test();
 }
-extern "C" const char *__hwasan_default_options()
+const char *__hwasan_default_options()
     __attribute__((disable_sanitizer_instrumentation)) {
   return test();
 }
-extern "C" const char *__lsan_default_options()
+const char *__lsan_default_options()
     __attribute__((disable_sanitizer_instrumentation)) {
   return test();
 }
-extern "C" const char *__memprof_default_options()
+const char *__memprof_default_options()
     __attribute__((disable_sanitizer_instrumentation)) {
   return test();
 }
-extern "C" const char *__msan_default_options()
+const char *__msan_default_options()
     __attribute__((disable_sanitizer_instrumentation)) {
   return test();
 }
-extern "C" const char *__nsan_default_options()
+const char *__nsan_default_options()
     __attribute__((disable_sanitizer_instrumentation)) {
   return test();
 }
-extern "C" const char *__rtsan_default_options()
+const char *__rtsan_default_options()
     __attribute__((disable_sanitizer_instrumentation)) {
   return test();
 }
-extern "C" const char *__tsan_default_options()
+const char *__tsan_default_options()
     __attribute__((disable_sanitizer_instrumentation)) {
   return test();
 }
-extern "C" const char *__ubsan_default_options()
+const char *__ubsan_default_options()
     __attribute__((disable_sanitizer_instrumentation)) {
   return test();
 }

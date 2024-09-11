@@ -82,26 +82,26 @@ define void @test() {
 ; AVX2:  LV: Found an estimated cost of 1 for VF 1 For instruction: %v2 = load float, ptr %in2, align 4
 ; AVX2:  LV: Found an estimated cost of 1 for VF 1 For instruction: %v3 = load float, ptr %in3, align 4
 ; AVX2:  LV: Found an estimated cost of 1 for VF 1 For instruction: %v4 = load float, ptr %in4, align 4
-; AVX2:  LV: Found an estimated cost of 15 for VF 2 For instruction: %v0 = load float, ptr %in0, align 4
-; AVX2:  LV: Found an estimated cost of 0 for VF 2 For instruction: %v1 = load float, ptr %in1, align 4
-; AVX2:  LV: Found an estimated cost of 0 for VF 2 For instruction: %v2 = load float, ptr %in2, align 4
-; AVX2:  LV: Found an estimated cost of 0 for VF 2 For instruction: %v3 = load float, ptr %in3, align 4
-; AVX2:  LV: Found an estimated cost of 0 for VF 2 For instruction: %v4 = load float, ptr %in4, align 4
-; AVX2:  LV: Found an estimated cost of 35 for VF 4 For instruction: %v0 = load float, ptr %in0, align 4
-; AVX2:  LV: Found an estimated cost of 0 for VF 4 For instruction: %v1 = load float, ptr %in1, align 4
-; AVX2:  LV: Found an estimated cost of 0 for VF 4 For instruction: %v2 = load float, ptr %in2, align 4
-; AVX2:  LV: Found an estimated cost of 0 for VF 4 For instruction: %v3 = load float, ptr %in3, align 4
-; AVX2:  LV: Found an estimated cost of 0 for VF 4 For instruction: %v4 = load float, ptr %in4, align 4
-; AVX2:  LV: Found an estimated cost of 75 for VF 8 For instruction: %v0 = load float, ptr %in0, align 4
-; AVX2:  LV: Found an estimated cost of 0 for VF 8 For instruction: %v1 = load float, ptr %in1, align 4
-; AVX2:  LV: Found an estimated cost of 0 for VF 8 For instruction: %v2 = load float, ptr %in2, align 4
-; AVX2:  LV: Found an estimated cost of 0 for VF 8 For instruction: %v3 = load float, ptr %in3, align 4
-; AVX2:  LV: Found an estimated cost of 0 for VF 8 For instruction: %v4 = load float, ptr %in4, align 4
-; AVX2:  LV: Found an estimated cost of 150 for VF 16 For instruction: %v0 = load float, ptr %in0, align 4
-; AVX2:  LV: Found an estimated cost of 0 for VF 16 For instruction: %v1 = load float, ptr %in1, align 4
-; AVX2:  LV: Found an estimated cost of 0 for VF 16 For instruction: %v2 = load float, ptr %in2, align 4
-; AVX2:  LV: Found an estimated cost of 0 for VF 16 For instruction: %v3 = load float, ptr %in3, align 4
-; AVX2:  LV: Found an estimated cost of 0 for VF 16 For instruction: %v4 = load float, ptr %in4, align 4
+; AVX2:  LV: Found an estimated cost of 3 for VF 2 For instruction: %v0 = load float, ptr %in0, align 4
+; AVX2:  LV: Found an estimated cost of 3 for VF 2 For instruction: %v1 = load float, ptr %in1, align 4
+; AVX2:  LV: Found an estimated cost of 3 for VF 2 For instruction: %v2 = load float, ptr %in2, align 4
+; AVX2:  LV: Found an estimated cost of 3 for VF 2 For instruction: %v3 = load float, ptr %in3, align 4
+; AVX2:  LV: Found an estimated cost of 3 for VF 2 For instruction: %v4 = load float, ptr %in4, align 4
+; AVX2:  LV: Found an estimated cost of 7 for VF 4 For instruction: %v0 = load float, ptr %in0, align 4
+; AVX2:  LV: Found an estimated cost of 7 for VF 4 For instruction: %v1 = load float, ptr %in1, align 4
+; AVX2:  LV: Found an estimated cost of 7 for VF 4 For instruction: %v2 = load float, ptr %in2, align 4
+; AVX2:  LV: Found an estimated cost of 7 for VF 4 For instruction: %v3 = load float, ptr %in3, align 4
+; AVX2:  LV: Found an estimated cost of 7 for VF 4 For instruction: %v4 = load float, ptr %in4, align 4
+; AVX2:  LV: Found an estimated cost of 15 for VF 8 For instruction: %v0 = load float, ptr %in0, align 4
+; AVX2:  LV: Found an estimated cost of 15 for VF 8 For instruction: %v1 = load float, ptr %in1, align 4
+; AVX2:  LV: Found an estimated cost of 15 for VF 8 For instruction: %v2 = load float, ptr %in2, align 4
+; AVX2:  LV: Found an estimated cost of 15 for VF 8 For instruction: %v3 = load float, ptr %in3, align 4
+; AVX2:  LV: Found an estimated cost of 15 for VF 8 For instruction: %v4 = load float, ptr %in4, align 4
+; AVX2:  LV: Found an estimated cost of 30 for VF 16 For instruction: %v0 = load float, ptr %in0, align 4
+; AVX2:  LV: Found an estimated cost of 30 for VF 16 For instruction: %v1 = load float, ptr %in1, align 4
+; AVX2:  LV: Found an estimated cost of 30 for VF 16 For instruction: %v2 = load float, ptr %in2, align 4
+; AVX2:  LV: Found an estimated cost of 30 for VF 16 For instruction: %v3 = load float, ptr %in3, align 4
+; AVX2:  LV: Found an estimated cost of 30 for VF 16 For instruction: %v4 = load float, ptr %in4, align 4
 ;
 ; AVX512-LABEL: 'test'
 ; AVX512:  LV: Found an estimated cost of 1 for VF 1 For instruction: %v0 = load float, ptr %in0, align 4
@@ -139,11 +139,11 @@ define void @test() {
 ; AVX512:  LV: Found an estimated cost of 0 for VF 32 For instruction: %v2 = load float, ptr %in2, align 4
 ; AVX512:  LV: Found an estimated cost of 0 for VF 32 For instruction: %v3 = load float, ptr %in3, align 4
 ; AVX512:  LV: Found an estimated cost of 0 for VF 32 For instruction: %v4 = load float, ptr %in4, align 4
-; AVX512:  LV: Found an estimated cost of 400 for VF 64 For instruction: %v0 = load float, ptr %in0, align 4
-; AVX512:  LV: Found an estimated cost of 0 for VF 64 For instruction: %v1 = load float, ptr %in1, align 4
-; AVX512:  LV: Found an estimated cost of 0 for VF 64 For instruction: %v2 = load float, ptr %in2, align 4
-; AVX512:  LV: Found an estimated cost of 0 for VF 64 For instruction: %v3 = load float, ptr %in3, align 4
-; AVX512:  LV: Found an estimated cost of 0 for VF 64 For instruction: %v4 = load float, ptr %in4, align 4
+; AVX512:  LV: Found an estimated cost of 80 for VF 64 For instruction: %v0 = load float, ptr %in0, align 4
+; AVX512:  LV: Found an estimated cost of 80 for VF 64 For instruction: %v1 = load float, ptr %in1, align 4
+; AVX512:  LV: Found an estimated cost of 80 for VF 64 For instruction: %v2 = load float, ptr %in2, align 4
+; AVX512:  LV: Found an estimated cost of 80 for VF 64 For instruction: %v3 = load float, ptr %in3, align 4
+; AVX512:  LV: Found an estimated cost of 80 for VF 64 For instruction: %v4 = load float, ptr %in4, align 4
 ;
 entry:
   br label %for.body
