@@ -1118,6 +1118,11 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         if (Subtarget.hasStdExtZfbfmin())
           setOperationAction(ISD::SPLAT_VECTOR, VT, Custom);
         setOperationAction({ISD::LOAD, ISD::STORE}, VT, Custom);
+
+        setOperationAction(ISD::FNEG, VT, Expand);
+        setOperationAction(ISD::FABS, VT, Expand);
+        setOperationAction(ISD::FCOPYSIGN, VT, Expand);
+
         // TODO: Promote to fp32.
       }
     }
