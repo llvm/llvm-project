@@ -28,7 +28,7 @@
 //      --help-list             - Display list of available options
 //                                (--help-list-hidden for more)
 //      --version               - Display the version of this program
-// 
+//
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Bitcode/BitcodeReader.h"
