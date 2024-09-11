@@ -1309,10 +1309,8 @@ public:
   static bool isRequired() { return true; }
 };
 
-#ifdef _WIN32
 extern template struct LLVM_TEMPLATE_ABI
     Any::TypeId<const LazyCallGraph::SCC *>;
-#endif
 } // end namespace llvm
 
 #endif // LLVM_ANALYSIS_LAZYCALLGRAPH_H

@@ -66,11 +66,9 @@ class Module;
 class Loop;
 class Function;
 
-#ifdef _WIN32
 extern template struct LLVM_TEMPLATE_ABI Any::TypeId<const Module *>;
 extern template struct LLVM_TEMPLATE_ABI Any::TypeId<const Function *>;
 extern template struct LLVM_TEMPLATE_ABI Any::TypeId<const Loop *>;
-#endif
 
 /// This class manages callbacks registration, as well as provides a way for
 /// PassInstrumentation to pass control to the registered callbacks.
