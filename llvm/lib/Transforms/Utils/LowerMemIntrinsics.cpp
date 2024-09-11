@@ -462,10 +462,6 @@ static void createMemSetPatternLoop(Instruction *InsertBefore, Value *DstAddr,
   BasicBlock *OrigBB = InsertBefore->getParent();
   Function *F = OrigBB->getParent();
 
-  if (!isPowerOf2_32(SetValue->getType()->getScalarSizeInBits()))
-    report_fatal_error("Pattern width for memset_pattern must be a power of 2",
-                       false);
-
   Type *TypeOfCount = Count->getType();
 
   BasicBlock *NewBB = OrigBB->splitBasicBlock(InsertBefore, "split");

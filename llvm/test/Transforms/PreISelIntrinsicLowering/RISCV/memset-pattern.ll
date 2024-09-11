@@ -39,6 +39,26 @@ define void @memset_pattern_i128_16(ptr %a, i128 %value) nounwind {
   ret void
 }
 
+define void @memset_pattern_i127_x(ptr %a, i127 %value, i64 %x) nounwind {
+; CHECK-LABEL: define void @memset_pattern_i127_x(
+; CHECK-SAME: ptr [[A:%.*]], i127 [[VALUE:%.*]], i64 [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 0, [[X]]
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[SPLIT:.*]], label %[[STORELOOP:.*]]
+; CHECK:       [[STORELOOP]]:
+; CHECK-NEXT:    [[TMP2:%.*]] = phi ptr [ [[A]], [[TMP0:%.*]] ], [ [[TMP4:%.*]], %[[STORELOOP]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = phi i64 [ [[X]], [[TMP0]] ], [ [[TMP5:%.*]], %[[STORELOOP]] ]
+; CHECK-NEXT:    store i127 [[VALUE]], ptr [[TMP2]], align 1
+; CHECK-NEXT:    [[TMP4]] = getelementptr inbounds i127, ptr [[TMP2]], i64 1
+; CHECK-NEXT:    [[TMP5]] = sub i64 [[TMP3]], 1
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne i64 [[TMP5]], 0
+; CHECK-NEXT:    br i1 [[TMP6]], label %[[STORELOOP]], label %[[SPLIT]]
+; CHECK:       [[SPLIT]]:
+; CHECK-NEXT:    ret void
+;
+  tail call void @llvm.memset.pattern(ptr %a, i127 %value, i64 %x, i1 0)
+  ret void
+}
+
 define void @memset_pattern_i128_x(ptr %a, i128 %value, i64 %x) nounwind {
 ; CHECK-LABEL: define void @memset_pattern_i128_x(
 ; CHECK-SAME: ptr [[A:%.*]], i128 [[VALUE:%.*]], i64 [[X:%.*]]) #[[ATTR0]] {
