@@ -4361,7 +4361,7 @@ bool TreeTransform<Derived>::TransformExprs(Expr *const *Inputs,
       // forgetting the partially-substituted parameter pack.
       if (RetainExpansion) {
         ForgetPartiallySubstitutedPackRAII Forget(getDerived());
-
+        Sema::ArgumentPackSubstitutionIndexRAII SubstIndex(getSema(), -1);
         ExprResult Out = getDerived().TransformExpr(Pattern);
         if (Out.isInvalid())
           return true;
