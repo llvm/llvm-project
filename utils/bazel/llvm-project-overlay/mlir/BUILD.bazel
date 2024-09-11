@@ -11780,6 +11780,7 @@ cc_library(
         ":MaskableOpInterface",
         ":MemRefDialect",
         ":Pass",
+        ":TensorDialect",
         ":ToLLVMIRTranslation",
         ":TransformUtils",
         ":VectorDialect",
