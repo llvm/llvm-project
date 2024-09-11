@@ -2,8 +2,6 @@
 // into the AST when an overlapping no_unique_address
 // field precedes a bitfield.
 
-// XFAIL: *
-
 // RUN: %clangxx_host -c -gdwarf -o %t %s
 // RUN: %lldb %t \
 // RUN:   -o "target var global" \
@@ -11,12 +9,12 @@
 // RUN:   -o exit | FileCheck %s
 
 // CHECK:      (lldb) image dump ast
-// CHECK-NEXT: CXXRecordDecl {{.*}} struct Foo definition
+// CHECK:      CXXRecordDecl {{.*}} struct Foo definition
 // CHECK:      |-FieldDecl {{.*}} data 'char[5]'
 // CHECK-NEXT: |-FieldDecl {{.*}} padding 'Empty'
 // CHECK-NEXT: |-FieldDecl {{.*}} 'int'
 // CHECK-NEXT: | `-IntegerLiteral {{.*}} 'int' 8
-// CHECK-NEXT: `-FieldDecl {{.*}} sloc> mem 'unsigned long'
+// CHECK-NEXT: `-FieldDecl {{.*}} sloc> flag 'unsigned long'
 // CHECK-NEXT:   `-IntegerLiteral {{.*}} 'int' 1
 
 struct Empty {};
