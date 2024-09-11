@@ -152,8 +152,8 @@ protected:
 };
 
 struct ValueTypeByHwMode : public InfoByHwMode<MVT> {
-  ValueTypeByHwMode(Record *R, const CodeGenHwModes &CGH);
-  ValueTypeByHwMode(Record *R, MVT T);
+  ValueTypeByHwMode(const Record *R, const CodeGenHwModes &CGH);
+  ValueTypeByHwMode(const Record *R, MVT T);
   ValueTypeByHwMode(MVT T) { Map.insert({DefaultMode, T}); }
   ValueTypeByHwMode() = default;
 
@@ -174,7 +174,8 @@ struct ValueTypeByHwMode : public InfoByHwMode<MVT> {
   }
 };
 
-ValueTypeByHwMode getValueTypeByHwMode(Record *Rec, const CodeGenHwModes &CGH);
+ValueTypeByHwMode getValueTypeByHwMode(const Record *Rec,
+                                       const CodeGenHwModes &CGH);
 
 raw_ostream &operator<<(raw_ostream &OS, const ValueTypeByHwMode &T);
 
