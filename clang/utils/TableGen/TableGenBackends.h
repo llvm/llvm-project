@@ -145,11 +145,11 @@ void EmitClangAttrDocs(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitClangDiagDocs(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitClangOptDocs(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 
-void EmitClangOpenCLBuiltins(llvm::RecordKeeper &Records,
+void EmitClangOpenCLBuiltins(const llvm::RecordKeeper &Records,
                              llvm::raw_ostream &OS);
-void EmitClangOpenCLBuiltinHeader(llvm::RecordKeeper &Records,
+void EmitClangOpenCLBuiltinHeader(const llvm::RecordKeeper &Records,
                                   llvm::raw_ostream &OS);
-void EmitClangOpenCLBuiltinTests(llvm::RecordKeeper &Records,
+void EmitClangOpenCLBuiltinTests(const llvm::RecordKeeper &Records,
                                  llvm::raw_ostream &OS);
 
 void EmitClangDataCollectors(const llvm::RecordKeeper &Records,
