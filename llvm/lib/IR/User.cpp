@@ -113,7 +113,17 @@ MutableArrayRef<uint8_t> User::getDescriptor() {
 }
 
 bool User::isDroppable() const {
-  return isa<AssumeInst>(this) || isa<PseudoProbeInst>(this);
+  if (auto *II = dyn_cast<IntrinsicInst>(this)) {
+    switch (II->getIntrinsicID()) {
+    default:
+      return false;
+    case Intrinsic::assume:
+    case Intrinsic::pseudoprobe:
+    case Intrinsic::experimental_noalias_scope_decl:
+      return true;
+    }
+  }
+  return false;
 }
 
 //===----------------------------------------------------------------------===//
