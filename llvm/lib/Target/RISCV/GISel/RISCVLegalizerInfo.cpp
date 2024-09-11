@@ -839,7 +839,7 @@ static LLT getLMUL1Ty(LLT VecTy) {
 static std::optional<LLT>
 getSmallestLLTForIndex(LLT VecTy, unsigned MaxIdx,
                        const RISCVSubtarget &Subtarget) {
-  assert(VecTy.isScalableVector());
+  assert(VecTy.isScalableVector() && "Expected scalable vector");
   const unsigned EltSize = VecTy.getScalarSizeInBits();
   const unsigned VectorBitsMin = Subtarget.getRealMinVLen();
   const unsigned MinVLMAX = VectorBitsMin / EltSize;
