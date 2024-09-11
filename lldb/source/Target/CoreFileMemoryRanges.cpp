@@ -14,7 +14,8 @@ using namespace lldb_private;
 using Entry = CoreFileMemoryRanges::Entry;
 
 static bool Overlaps(const Entry *region_one, const Entry *region_two) {
-  return !(region_one->GetRangeEnd() < region_two->GetRangeBase() || region_two->GetRangeEnd() < region_one->GetRangeBase());
+  return !(region_one->GetRangeEnd() < region_two->GetRangeBase() ||
+           region_two->GetRangeEnd() < region_one->GetRangeBase());
 }
 
 static bool IntersectHelper(const Entry *region_one, const Entry *region_two) {
