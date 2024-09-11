@@ -22,4 +22,4 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<>} {
 
 // CHECK-DAG: #[[TY:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "real", sizeInBits = 64, encoding = DW_ATE_float>
 // CHECK-DAG: #[[TY1:.*]] = #llvm.di_subroutine_type<callingConvention = DW_CC_normal, types = #[[TY]], #[[TY]], #[[TY]]>
-// CHECK-DAG: #{{.*}} = #llvm.di_subprogram<scope = #{{.*}}, name = "cabs", linkageName = "cabs", file = #{{.*}}, line = {{.*}}, scopeLine = {{.*}}, type = #[[TY1]]>
+// CHECK-DAG: #{{.*}} = #llvm.di_subprogram<{{.*}}name = "cabs", linkageName = "cabs"{{.*}}, type = #[[TY1]]>
