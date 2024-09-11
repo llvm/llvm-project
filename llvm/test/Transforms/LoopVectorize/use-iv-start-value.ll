@@ -35,7 +35,7 @@ define i64 @foo(ptr %p1, ptr %p2, i64 %start, i64 %end) {
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[IND_END]], %[[MIDDLE_BLOCK]] ], [ [[START2]], %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[IND1:%.*]] = phi i64 [ [[IND_NEXT1:%.*]], %[[FOR_BODY]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
+; CHECK-NEXT:    [[IND1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IND_NEXT1:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i32, ptr [[P1]], i64 [[IND1]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[ARRAYIDX3]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, ptr [[P2]], i64 [[IND1]]
@@ -52,7 +52,7 @@ entry:
   br label %for.body
 
 for.body:
-  %ind = phi i64 [ %ind.next, %for.body ], [ %start2, %entry ]
+  %ind = phi i64 [ %start2, %entry ], [ %ind.next, %for.body ]
   %arrayidx1 = getelementptr inbounds i32, ptr %p1, i64 %ind
   %0 = load i32, ptr %arrayidx1, align 4
   %arrayidx2 = getelementptr inbounds i32, ptr %p2, i64 %ind
