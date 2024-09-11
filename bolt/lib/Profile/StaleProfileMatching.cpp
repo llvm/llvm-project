@@ -117,8 +117,8 @@ cl::opt<unsigned> StaleMatchingCostJumpUnknownFTInc(
         "The cost of increasing an unknown fall-through jump count by one."),
     cl::init(3), cl::ReallyHidden, cl::cat(BoltOptCategory));
 
-cl::opt<bool> StaleMatchingWithBlockPseudoProbes(
-    "stale-matching-with-block-pseudo-probes",
+cl::opt<bool> StaleMatchingWithPseudoProbes(
+    "stale-matching-with-pseudo-probes",
     cl::desc("Turns on stale matching with block pseudo probes."),
     cl::init(false), cl::ReallyHidden, cl::cat(BoltOptCategory));
 
@@ -328,7 +328,7 @@ private:
   std::pair<const FlowBlock *, bool> matchWithPseudoProbes(
       const ArrayRef<yaml::bolt::PseudoProbeInfo> BlockPseudoProbes,
       const ArrayRef<yaml::bolt::InlineTreeInfo> InlineTree) const {
-    if (!opts::StaleMatchingWithBlockPseudoProbes)
+    if (!opts::StaleMatchingWithPseudoProbes)
       return {nullptr, false};
 
     DenseMap<const FlowBlock *, uint32_t> FlowBlockMatchCount;
@@ -574,7 +574,8 @@ size_t matchWeightsByHashes(
     BinaryContext &BC, const BinaryFunction::BasicBlockOrderType &BlockOrder,
     const yaml::bolt::BinaryFunctionProfile &YamlBF, FlowFunction &Func,
     HashFunction HashFunction, YAMLProfileReader::ProfileLookupMap &IdToYamlBF,
-    const BinaryFunction &BF, const yaml::bolt::PseudoProbeDesc &YamlPD) {
+    const BinaryFunction &BF, const yaml::bolt::PseudoProbeDesc &YamlPD,
+    const YAMLProfileReader::GUIDInlineTreeMap &TopLevelGUIDToInlineTree) {
 
   assert(Func.Blocks.size() == BlockOrder.size() + 2);
 
@@ -605,21 +606,19 @@ size_t matchWeightsByHashes(
   }
   StaleMatcher Matcher;
   // Collects function pseudo probes for use in the StaleMatcher.
-  if (opts::StaleMatchingWithBlockPseudoProbes) {
-    const MCPseudoProbeDecoder *PseudoProbeDecoder = BC.getPseudoProbeDecoder();
-    assert(PseudoProbeDecoder &&
+  if (opts::StaleMatchingWithPseudoProbes) {
+    const MCPseudoProbeDecoder *Decoder = BC.getPseudoProbeDecoder();
+    assert(Decoder &&
            "If pseudo probes are in use, pseudo probe decoder should exist");
-    const AddressProbesMap &ProbeMap =
-        PseudoProbeDecoder->getAddress2ProbesMap();
+    const AddressProbesMap &ProbeMap = Decoder->getAddress2ProbesMap();
     const uint64_t FuncAddr = BF.getAddress();
     for (const MCDecodedPseudoProbe &Probe :
          ProbeMap.find(FuncAddr, FuncAddr + BF.getSize()))
       if (const BinaryBasicBlock *BB =
               BF.getBasicBlockContainingOffset(Probe.getAddress() - FuncAddr))
         Matcher.mapProbeToBB(&Probe, Blocks[BB->getIndex()]);
+
     // Match inline tree nodes by GUID, checksum, parent, and call site.
-    const MCDecodedPseudoProbeInlineTree *DummyInlineRoot =
-        &PseudoProbeDecoder->getDummyInlineRoot();
     uint32_t ParentId = 0;
     uint32_t PrevGUIDIdx = 0;
     uint32_t Index = 0;
@@ -638,23 +637,24 @@ size_t matchWeightsByHashes(
       uint32_t InlineTreeNodeId = Index++;
       ParentId += InlineTreeNode.ParentIndexDelta;
       uint32_t CallSiteProbe = InlineTreeNode.CallSiteProbe;
-      const MCDecodedPseudoProbeInlineTree *ParentNode =
-          InlineTreeNodeId ? Matcher.getInlineTreeNode(ParentId)
-                           : DummyInlineRoot;
-      if (!ParentNode)
-        continue;
-      for (const MCDecodedPseudoProbeInlineTree &Child :
-           ParentNode->getChildren()) {
-        if (Child.Guid != GUID ||
-            PseudoProbeDecoder->getFuncDescForGUID(GUID)->FuncHash != Hash)
-          continue;
-        // Check inline site for non-toplev inline tree nodes.
-        if (ParentNode != DummyInlineRoot &&
-            std::get<1>(Child.getInlineSite()) != CallSiteProbe)
-          continue;
-        Matcher.mapInlineTreeNode(InlineTreeNodeId, &Child);
-        break;
+      const MCDecodedPseudoProbeInlineTree *Cur = nullptr;
+      if (!InlineTreeNodeId) {
+        auto It = TopLevelGUIDToInlineTree.find(GUID);
+        if (It != TopLevelGUIDToInlineTree.end())
+          Cur = It->second;
+      } else if (const MCDecodedPseudoProbeInlineTree *Parent =
+                     Matcher.getInlineTreeNode(ParentId)) {
+        for (const MCDecodedPseudoProbeInlineTree &Child :
+             Parent->getChildren()) {
+          if (Child.Guid == GUID) {
+            if (std::get<1>(Child.getInlineSite()) == CallSiteProbe)
+              Cur = &Child;
+            break;
+          }
+        }
       }
+      if (Cur && Decoder->getFuncDescForGUID(GUID)->FuncHash == Hash)
+        Matcher.mapInlineTreeNode(InlineTreeNodeId, Cur);
     }
   }
   Matcher.init(Blocks, BlendedHashes, CallHashes);
@@ -1028,9 +1028,10 @@ bool YAMLProfileReader::inferStaleProfile(
   FlowFunction Func = createFlowFunction(BlockOrder);
 
   // Match as many block/jump counts from the stale profile as possible
-  size_t MatchedBlocks = matchWeightsByHashes(
-      BF.getBinaryContext(), BlockOrder, YamlBF, Func,
-      YamlBP.Header.HashFunction, IdToYamLBF, BF, YamlBP.PseudoProbeDesc);
+  size_t MatchedBlocks =
+      matchWeightsByHashes(BF.getBinaryContext(), BlockOrder, YamlBF, Func,
+                           YamlBP.Header.HashFunction, IdToYamLBF, BF,
+                           YamlBP.PseudoProbeDesc, TopLevelGUIDToInlineTree);
 
   // Adjust the flow function by marking unreachable blocks Unlikely so that
   // they don't get any counts assigned.

@@ -14,6 +14,8 @@
 #include <unordered_set>
 
 namespace llvm {
+class MCDecodedPseudoProbeInlineTree;
+
 namespace bolt {
 
 class YAMLProfileReader : public ProfileReaderBase {
@@ -42,6 +44,9 @@ public:
 
   using ProfileLookupMap =
       DenseMap<uint32_t, yaml::bolt::BinaryFunctionProfile *>;
+
+  using GUIDInlineTreeMap =
+      std::unordered_map<uint64_t, const MCDecodedPseudoProbeInlineTree *>;
 
   /// A class for matching binary functions in functions in the YAML profile.
   /// First, a call graph is constructed for both profiled and binary functions.
@@ -128,6 +133,9 @@ private:
 
   /// BinaryFunction pointers indexed by YamlBP functions.
   std::vector<BinaryFunction *> ProfileBFs;
+
+  // Pseudo probe function GUID to inline tree node
+  GUIDInlineTreeMap TopLevelGUIDToInlineTree;
 
   /// Populate \p Function profile with the one supplied in YAML format.
   bool parseFunctionProfile(BinaryFunction &Function,

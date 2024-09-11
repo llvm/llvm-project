@@ -51,7 +51,7 @@ static cl::opt<PrintPseudoProbesOptions> PrintPseudoProbes(
     cl::Hidden, cl::cat(BoltCategory));
 
 extern cl::opt<bool> ProfileWritePseudoProbes;
-extern cl::opt<bool> StaleMatchingWithBlockPseudoProbes;
+extern cl::opt<bool> StaleMatchingWithPseudoProbes;
 } // namespace opts
 
 namespace {
@@ -94,14 +94,14 @@ public:
 
 Error PseudoProbeRewriter::preCFGInitializer() {
   if (opts::ProfileWritePseudoProbes ||
-      opts::StaleMatchingWithBlockPseudoProbes)
+      opts::StaleMatchingWithPseudoProbes)
     parsePseudoProbe(opts::ProfileWritePseudoProbes);
 
   return Error::success();
 }
 
 Error PseudoProbeRewriter::postEmitFinalizer() {
-  if (!opts::StaleMatchingWithBlockPseudoProbes)
+  if (!opts::StaleMatchingWithPseudoProbes)
     parsePseudoProbe();
   updatePseudoProbes();
 
