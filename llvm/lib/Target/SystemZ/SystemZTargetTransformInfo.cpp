@@ -135,7 +135,6 @@ unsigned SystemZTTIImpl::adjustInliningThreshold(const CallBase *CB) const {
 
   LLVM_DEBUG(if (Bonus)
                dbgs() << "++ SZTTI Adding inlining bonus: " << Bonus << "\n";);
-
   return Bonus;
 }
 
