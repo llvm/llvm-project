@@ -79,12 +79,8 @@ _LIBCPP_NODISCARD inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI boo
   return __builtin_isinf(__x);
 }
 
-_LIBCPP_NODISCARD inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI
-#ifdef _LIBCPP_PREFERRED_OVERLOAD
-_LIBCPP_PREFERRED_OVERLOAD
-#endif
-    bool
-    isinf(double __x) _NOEXCEPT {
+template <class = void>
+_LIBCPP_NODISCARD inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool isinf(double __x) _NOEXCEPT {
   return __builtin_isinf(__x);
 }
 
@@ -103,12 +99,8 @@ _LIBCPP_NODISCARD inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI boo
   return __builtin_isnan(__x);
 }
 
-_LIBCPP_NODISCARD inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI
-#ifdef _LIBCPP_PREFERRED_OVERLOAD
-_LIBCPP_PREFERRED_OVERLOAD
-#endif
-    bool
-    isnan(double __x) _NOEXCEPT {
+template <class = void>
+_LIBCPP_NODISCARD inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool isnan(double __x) _NOEXCEPT {
   return __builtin_isnan(__x);
 }
 
