@@ -351,7 +351,7 @@ void RegisterInfoEmitter::EmitRegUnitPressure(raw_ostream &OS,
      << "}\n\n";
 }
 
-using DwarfRegNumsMapPair = std::pair<Record *, std::vector<int64_t>>;
+using DwarfRegNumsMapPair = std::pair<const Record *, std::vector<int64_t>>;
 using DwarfRegNumsVecTy = std::vector<DwarfRegNumsMapPair>;
 
 static void finalizeDwarfRegNumsKeys(DwarfRegNumsVecTy &DwarfRegNums) {
@@ -385,7 +385,7 @@ void RegisterInfoEmitter::EmitRegMappingTables(
   // First, just pull all provided information to the map
   unsigned maxLength = 0;
   for (auto &RE : Regs) {
-    Record *Reg = RE.TheDef;
+    const Record *Reg = RE.TheDef;
     std::vector<int64_t> RegNums = Reg->getValueAsListOfInts("DwarfNumbers");
     maxLength = std::max((size_t)maxLength, RegNums.size());
     DwarfRegNums.emplace_back(Reg, std::move(RegNums));
@@ -416,7 +416,7 @@ void RegisterInfoEmitter::EmitRegMappingTables(
 
         // Store the mapping sorted by the LLVM reg num so lookup can be done
         // with a binary search.
-        std::map<uint64_t, Record *> Dwarf2LMap;
+        std::map<uint64_t, const Record *> Dwarf2LMap;
         for (auto &DwarfRegNum : DwarfRegNums) {
           int DwarfRegNo = DwarfRegNum.second[I];
           if (DwarfRegNo < 0)
@@ -446,7 +446,7 @@ void RegisterInfoEmitter::EmitRegMappingTables(
   }
 
   for (auto &RE : Regs) {
-    Record *Reg = RE.TheDef;
+    const Record *Reg = RE.TheDef;
     const RecordVal *V = Reg->getValue("DwarfAlias");
     if (!V || !V->getValue())
       continue;
@@ -510,7 +510,7 @@ void RegisterInfoEmitter::EmitRegMapping(
   // to the MCRegisterInfo object.
   unsigned maxLength = 0;
   for (auto &RE : Regs) {
-    Record *Reg = RE.TheDef;
+    const Record *Reg = RE.TheDef;
     maxLength = std::max((size_t)maxLength,
                          Reg->getValueAsListOfInts("DwarfNumbers").size());
   }
@@ -1006,7 +1006,7 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, CodeGenTarget &Target,
 
   // Emit the register enum value arrays for each RegisterClass
   for (const auto &RC : RegisterClasses) {
-    ArrayRef<Record *> Order = RC.getOrder();
+    ArrayRef<const Record *> Order = RC.getOrder();
 
     // Give the register class a legal C name if it's anonymous.
     const std::string &Name = RC.getName();
@@ -1017,7 +1017,7 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, CodeGenTarget &Target,
     if (!Order.empty()) {
       OS << "  // " << Name << " Register Class...\n"
          << "  const MCPhysReg " << Name << "[] = {\n    ";
-      for (Record *Reg : Order) {
+      for (const Record *Reg : Order) {
         OS << getQualifiedName(Reg) << ", ";
       }
       OS << "\n  };\n\n";
@@ -1025,7 +1025,7 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, CodeGenTarget &Target,
       OS << "  // " << Name << " Bit set.\n"
          << "  const uint8_t " << Name << "Bits[] = {\n    ";
       BitVectorEmitter BVE;
-      for (Record *Reg : Order) {
+      for (const Record *Reg : Order) {
         BVE.add(Target.getRegBank().getReg(Reg)->EnumValue);
       }
       BVE.print(OS);
@@ -1042,7 +1042,7 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, CodeGenTarget &Target,
      << "MCRegisterClasses[] = {\n";
 
   for (const auto &RC : RegisterClasses) {
-    ArrayRef<Record *> Order = RC.getOrder();
+    ArrayRef<const Record *> Order = RC.getOrder();
     std::string RCName = Order.empty() ? "nullptr" : RC.getName();
     std::string RCBitsName = Order.empty() ? "nullptr" : RC.getName() + "Bits";
     std::string RCBitsSize = Order.empty() ? "0" : "sizeof(" + RCBitsName + ")";
@@ -1068,7 +1068,7 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, CodeGenTarget &Target,
   // Add entry for NoRegister
   OS << "  0,\n";
   for (const auto &RE : Regs) {
-    Record *Reg = RE.TheDef;
+    const Record *Reg = RE.TheDef;
     BitsInit *BI = Reg->getValueAsBitsInit("HWEncoding");
     uint64_t Value = 0;
     for (unsigned b = 0, be = BI->getNumBits(); b != be; ++b) {
@@ -1206,11 +1206,11 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, CodeGenTarget &Target,
   const auto &SubRegIndices = RegBank.getSubRegIndices();
 
   // Collect all registers belonging to any allocatable class.
-  std::set<Record *> AllocatableRegs;
+  std::set<const Record *> AllocatableRegs;
 
   // Collect allocatable registers.
   for (const auto &RC : RegisterClasses) {
-    ArrayRef<Record *> Order = RC.getOrder();
+    ArrayRef<const Record *> Order = RC.getOrder();
 
     if (RC.Allocatable)
       AllocatableRegs.insert(Order.begin(), Order.end());
@@ -1375,7 +1375,7 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, CodeGenTarget &Target,
            << "static ArrayRef<MCPhysReg> " << RC.getName()
            << "GetRawAllocationOrder(const MachineFunction &MF) {\n";
         for (unsigned oi = 1, oe = RC.getNumOrders(); oi != oe; ++oi) {
-          ArrayRef<Record *> Elems = RC.getOrder(oi);
+          ArrayRef<const Record *> Elems = RC.getOrder(oi);
           if (!Elems.empty()) {
             OS << "  static const MCPhysReg AltOrder" << oi << "[] = {";
             for (unsigned elem = 0; elem != Elems.size(); ++elem)
@@ -1694,7 +1694,7 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, CodeGenTarget &Target,
       SetTheory::RecSet OPSet;
       RegBank.getSets().evaluate(OPDag, OPSet, CSRSet->getLoc());
       Covered |= RegBank.computeCoveredRegisters(
-          ArrayRef<Record *>(OPSet.begin(), OPSet.end()));
+          ArrayRef<const Record *>(OPSet.begin(), OPSet.end()));
     }
 
     // Add all constant physical registers to the preserved mask:
@@ -1704,7 +1704,7 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, CodeGenTarget &Target,
         ConstantSet.insert(Reg.TheDef);
     }
     Covered |= RegBank.computeCoveredRegisters(
-        ArrayRef<Record *>(ConstantSet.begin(), ConstantSet.end()));
+        ArrayRef<const Record *>(ConstantSet.begin(), ConstantSet.end()));
 
     OS << "static const uint32_t " << CSRSet->getName() << "_RegMask[] = { ";
     printBitVectorAsHex(OS, Covered, 32);

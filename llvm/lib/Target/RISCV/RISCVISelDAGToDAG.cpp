@@ -2691,7 +2691,7 @@ bool RISCVDAGToDAGISel::SelectAddrRegImm(SDValue Addr, SDValue &Base,
           Align Alignment = commonAlignment(
               GA->getGlobal()->getPointerAlignment(DL), GA->getOffset());
           if ((CVal == 0 || Alignment > CVal) &&
-              (!IsRV32Zdinx || Alignment > (CVal + 4))) {
+              (!IsRV32Zdinx || commonAlignment(Alignment, CVal) > 4)) {
             int64_t CombinedOffset = CVal + GA->getOffset();
             Base = Base.getOperand(0);
             Offset = CurDAG->getTargetGlobalAddress(
@@ -3833,15 +3833,8 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N) {
   uint64_t TrueTSFlags = TrueMCID.TSFlags;
   bool HasTiedDest = RISCVII::isFirstDefTiedToFirstUse(TrueMCID);
 
-  bool IsMasked = false;
   const RISCV::RISCVMaskedPseudoInfo *Info =
       RISCV::lookupMaskedIntrinsicByUnmasked(TrueOpc);
-  if (!Info && HasTiedDest) {
-    Info = RISCV::getMaskedPseudoInfo(TrueOpc);
-    IsMasked = true;
-  }
-  assert(!(IsMasked && !HasTiedDest) && "Expected tied dest");
-
   if (!Info)
     return false;
 
@@ -3850,19 +3843,6 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N) {
   if (HasTiedDest && !isImplicitDef(True->getOperand(0))) {
     SDValue PassthruOpTrue = True->getOperand(0);
     if (False != PassthruOpTrue)
-      return false;
-  }
-
-  // If True is masked then the vmerge must have either the same mask or an all
-  // 1s mask, since we're going to keep the mask from True.
-  if (IsMasked) {
-    // FIXME: Support mask agnostic True instruction which would have an
-    // undef passthru operand.
-    SDValue TrueMask =
-        getMaskSetter(True->getOperand(Info->MaskOpIdx),
-                      True->getOperand(True->getNumOperands() - 1));
-    assert(TrueMask);
-    if (!usesAllOnesMask(Mask, Glue) && getMaskSetter(Mask, Glue) != TrueMask)
       return false;
   }
 
@@ -3930,23 +3910,12 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N) {
       (Mask && !usesAllOnesMask(Mask, Glue)))
     return false;
 
-  // If we end up changing the VL or mask of True, then we need to make sure it
-  // doesn't raise any observable fp exceptions, since changing the active
-  // elements will affect how fflags is set.
-  if (TrueVL != VL || !IsMasked)
-    if (mayRaiseFPException(True.getNode()) &&
-        !True->getFlags().hasNoFPExcept())
-      return false;
+  // Make sure it doesn't raise any observable fp exceptions, since changing the
+  // active elements will affect how fflags is set.
+  if (mayRaiseFPException(True.getNode()) && !True->getFlags().hasNoFPExcept())
+    return false;
 
   SDLoc DL(N);
-
-  // From the preconditions we checked above, we know the mask and thus glue
-  // for the result node will be taken from True.
-  if (IsMasked) {
-    Mask = True->getOperand(Info->MaskOpIdx);
-    Glue = True->getOperand(True->getNumOperands() - 1);
-    assert(Glue.getValueType() == MVT::Glue);
-  }
 
   unsigned MaskedOpc = Info->MaskedPseudo;
 #ifndef NDEBUG
@@ -3977,8 +3946,7 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N) {
   Ops.push_back(False);
 
   const bool HasRoundingMode = RISCVII::hasRoundModeOp(TrueTSFlags);
-  const unsigned NormalOpsEnd = TrueVLIndex - IsMasked - HasRoundingMode;
-  assert(!IsMasked || NormalOpsEnd == Info->MaskOpIdx);
+  const unsigned NormalOpsEnd = TrueVLIndex - HasRoundingMode;
   Ops.append(True->op_begin() + HasTiedDest, True->op_begin() + NormalOpsEnd);
 
   Ops.push_back(Mask);

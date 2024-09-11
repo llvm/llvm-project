@@ -2,7 +2,7 @@
 
 template<typename T>
 struct MyTemplatedSRV {
-  [[hlsl::resource_class(SRV)]] T x;
+  __hlsl_resource_t [[hlsl::resource_class(SRV)]] x;
 };
 
 // valid, The register keyword in this statement isn't binding a resource, rather it is

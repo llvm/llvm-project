@@ -55,6 +55,7 @@ class Defined;
 class DefinedImportData;
 class DefinedImportThunk;
 class DefinedRegular;
+class ImportThunkChunk;
 class SectionChunk;
 class Symbol;
 class Undefined;
@@ -346,12 +347,13 @@ public:
   static bool classof(const InputFile *f) { return f->kind() == ImportKind; }
   MachineTypes getMachineType() const override;
 
-  Symbol *impSym = nullptr;
+  DefinedImportData *impSym = nullptr;
   Symbol *thunkSym = nullptr;
   std::string dllName;
 
 private:
   void parse() override;
+  ImportThunkChunk *makeImportThunk();
 
 public:
   StringRef externalName;

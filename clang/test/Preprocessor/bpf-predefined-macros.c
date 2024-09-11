@@ -1,5 +1,5 @@
-// RUN: %clang -E -target bpfel -x c -o - %s | FileCheck -check-prefix=CHECK -check-prefix=CPU_NO %s
-// RUN: %clang -E -target bpfeb -x c -o - %s | FileCheck -check-prefix=CHECK -check-prefix=CPU_NO %s
+// RUN: %clang -E -target bpfel -mcpu=v1 -x c -o - %s | FileCheck -check-prefix=CHECK -check-prefix=CPU_NO %s
+// RUN: %clang -E -target bpfeb -mcpu=v1 -x c -o - %s | FileCheck -check-prefix=CHECK -check-prefix=CPU_NO %s
 // RUN: %clang -E -target bpfel -mcpu=v1 -x c -o - %s | FileCheck -check-prefix=CHECK -check-prefix=CPU_V1 %s
 // RUN: %clang -E -target bpfel -mcpu=v2 -x c -o - %s | FileCheck -check-prefix=CHECK -check-prefix=CPU_V2 %s
 // RUN: %clang -E -target bpfel -mcpu=v3 -x c -o - %s | FileCheck -check-prefix=CHECK -check-prefix=CPU_V3 %s

@@ -6690,6 +6690,20 @@ When the Owner's lifetime ends, it will consider the Pointer to be dangling.
     P.getInt(); // P is dangling
   }
 
+If a template class is annotated with ``[[gsl::Owner]]``, and the first
+instantiated template argument is a pointer type (raw pointer, or ``[[gsl::Pointer]]``),
+the analysis will consider the instantiated class as a container of the pointer.
+When constructing such an object from a GSL owner object, the analysis will
+assume that the container holds a pointer to the owner object. Consequently,
+when the owner object is destroyed, the pointer will be considered dangling.
+
+.. code-block:: c++
+
+   int f() {
+     std::vector<std::string_view> v = {std::string()}; // v holds a dangling pointer.
+     std::optional<std::string_view> o = std::string(); // o holds a dangling pointer.
+   }
+
 }];
 }
 
@@ -8255,6 +8269,38 @@ but do not pass them to the underlying coroutine or pass them by value.
 }];
 }
 
+def CoroAwaitElidableDoc : Documentation {
+  let Category = DocCatDecl;
+  let Content = [{
+The ``[[clang::coro_await_elidable]]`` is a class attribute which can be applied
+to a coroutine return type.
+
+When a coroutine function that returns such a type calls another coroutine function,
+the compiler performs heap allocation elision when the call to the coroutine function
+is immediately co_awaited as a prvalue. In this case, the coroutine frame for the
+callee will be a local variable within the enclosing braces in the caller's stack
+frame. And the local variable, like other variables in coroutines, may be collected
+into the coroutine frame, which may be allocated on the heap.
+
+Example:
+
+.. code-block:: c++
+
+  class [[clang::coro_await_elidable]] Task { ... };
+
+  Task foo();
+  Task bar() {
+    co_await foo(); // foo()'s coroutine frame on this line is elidable
+    auto t = foo(); // foo()'s coroutine frame on this line is NOT elidable
+    co_await t;
+  }
+
+The behavior is undefined if the caller coroutine is destroyed earlier than the
+callee coroutine.
+
+}];
+}
+
 def CountedByDocs : Documentation {
   let Category = DocCatField;
   let Content = [{
@@ -8414,4 +8460,3 @@ Declares that a function potentially allocates heap memory, and prevents any pot
 of ``nonallocating`` by the compiler.
   }];
 }
-

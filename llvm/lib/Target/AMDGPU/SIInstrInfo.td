@@ -312,6 +312,14 @@ class isIntType<ValueType SrcVT> {
   bit ret = !and(SrcVT.isInteger, !ne(SrcVT.Value, i1.Value));
 }
 
+def SDTSBufferPrefetch : SDTypeProfile<0, 3,
+    [SDTCisVT<0, v4i32>, // rsrc
+     SDTCisVT<1, i32>,   // offset(imm)
+     SDTCisVT<2, i32>]>; // length
+
+def SIsbuffer_prefetch : SDNode<"AMDGPUISD::SBUFFER_PREFETCH_DATA", SDTSBufferPrefetch,
+                                [SDNPMayLoad, SDNPMayStore, SDNPMemOperand, SDNPHasChain]>;
+
 //===----------------------------------------------------------------------===//
 // SDNodes PatFrags for loads/stores with a glue input.
 // This is for SDNodes and PatFrag for local loads and stores to

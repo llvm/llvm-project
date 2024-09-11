@@ -882,9 +882,8 @@ multiclass VOP1_Real_dpp8_with_name<GFXGen Gen, bits<9> op, string opName,
   }
 }
 
-multiclass VOP1_Realtriple_e64<GFXGen Gen, bits<9> op> {
-  defm NAME : VOP3_Realtriple<Gen, {0, 1, 1, op{6-0}}, /*isSingle=*/ 0, NAME>;
-}
+multiclass VOP1_Realtriple_e64<GFXGen Gen, bits<9> op> :
+  VOP3_Realtriple<Gen, {0, 1, 1, op{6-0}}, /*isSingle=*/ 0, NAME>;
 
 multiclass VOP1_Realtriple_e64_with_name<GFXGen Gen, bits<9> op, string opName,
   string asmName> {
