@@ -4,16 +4,10 @@
 define void @pr108052(i64 %n) {
 ; CHECK-LABEL: define void @pr108052(
 ; CHECK-SAME: i64 [[N:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
-; CHECK:       [[FOR_EXIT:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[FOR_EXIT:.*]]
+; CHECK:       [[FOR_EXIT]]:
 ; CHECK-NEXT:    ret void
-; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[INDVAR:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INC:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META0:![0-9]+]])
-; CHECK-NEXT:    [[INC]] = add nuw i64 [[INDVAR]], 1
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INC]], [[N]]
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_EXIT]], label %[[FOR_BODY]]
 ;
 entry:
   br label %for.body
@@ -32,8 +26,3 @@ for.body:
 !0 = !{!1}
 !1 = distinct !{!1, !2, !"x: %a"}
 !2 = distinct !{!2, !"x"}
-;.
-; CHECK: [[META0]] = !{[[META1:![0-9]+]]}
-; CHECK: [[META1]] = distinct !{[[META1]], [[META2:![0-9]+]], !"x: %a"}
-; CHECK: [[META2]] = distinct !{[[META2]], !"x"}
-;.
