@@ -5788,41 +5788,42 @@ static AMDNote getAMDNote(uint32_t NoteType, ArrayRef<uint8_t> Desc) {
 struct AMDGPUNote {
   std::string Type;
   std::string Value;
+  bool IsError;
 };
 
 template <typename ELFT>
 static AMDGPUNote getAMDGPUNote(uint32_t NoteType, ArrayRef<uint8_t> Desc) {
   switch (NoteType) {
   default:
-    return {"", ""};
+    return {"", "", true};
   case ELF::NT_AMDGPU_METADATA: {
     StringRef MsgPackString =
         StringRef(reinterpret_cast<const char *>(Desc.data()), Desc.size());
     msgpack::Document MsgPackDoc;
-    if (!MsgPackDoc.readFromBlob(MsgPackString, /*Multi=*/false))
-      return {"", ""};
+    if (Error E = MsgPackDoc.readFromBlob(MsgPackString, /*Multi=*/false))
+      return {"AMDGPU Metadata", toString(std::move(E)), /*IsError=*/true};
 
-    std::string MetadataString;
-
-    // FIXME: Metadata Verifier only works with AMDHSA.
-    //  This is an ugly workaround to avoid the verifier for other MD
-    //  formats (e.g. amdpal)
-    if (MsgPackString.contains("amdhsa.")) {
-      AMDGPU::HSAMD::V3::MetadataVerifier Verifier(true);
-      if (!Verifier.verify(MsgPackDoc.getRoot()))
-        MetadataString = "Invalid AMDGPU Metadata\n";
-    }
-
-    raw_string_ostream StrOS(MetadataString);
     if (MsgPackDoc.getRoot().isScalar()) {
       // TODO: passing a scalar root to toYAML() asserts:
       // (PolymorphicTraits<T>::getKind(Val) != NodeKind::Scalar &&
       //    "plain scalar documents are not supported")
       // To avoid this crash we print the raw data instead.
-      return {"", ""};
+      return {"AMDGPU Metadata", "Invalid AMDGPU Metadata", /*IsError=*/true};
     }
+
+    std::string MetadataString;
+    raw_string_ostream StrOS(MetadataString);
+
+    // FIXME: Metadata Verifier only works with AMDHSA. This is an ugly
+    // workaround to avoid the verifier for other MD formats (e.g. amdpal)
+    if (MsgPackString.contains("amdhsa.")) {
+      AMDGPU::HSAMD::V3::MetadataVerifier Verifier(true);
+      if (!Verifier.verify(MsgPackDoc.getRoot()))
+        StrOS << "Invalid AMDGPU Metadata\n";
+    }
+
     MsgPackDoc.toYAML(StrOS);
-    return {"AMDGPU Metadata", StrOS.str()};
+    return {"AMDGPU Metadata", StrOS.str(), /*IsError=*/false};
   }
   }
 }
@@ -6240,7 +6241,9 @@ template <class ELFT> void GNUELFDumper<ELFT>::printNotes() {
       const AMDGPUNote N = getAMDGPUNote<ELFT>(Type, Descriptor);
       if (!N.Type.empty()) {
         OS << "    " << N.Type << ":\n        " << N.Value << '\n';
-        return Error::success();
+        if (!N.IsError)
+          return Error::success();
+        // Fallthrough to printing the description data blob on error.
       }
     } else if (Name == "LLVMOMPOFFLOAD") {
       if (printLLVMOMPOFFLOADNote<ELFT>(OS, Type, Descriptor))
@@ -8074,7 +8077,9 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printNotes() {
       const AMDGPUNote N = getAMDGPUNote<ELFT>(Type, Descriptor);
       if (!N.Type.empty()) {
         W.printString(N.Type, N.Value);
-        return Error::success();
+        if (!N.IsError)
+          return Error::success();
+        // Fallthrough to printing the description data blob on error.
       }
     } else if (Name == "LLVMOMPOFFLOAD") {
       if (printLLVMOMPOFFLOADNoteLLVMStyle<ELFT>(Type, Descriptor, W))

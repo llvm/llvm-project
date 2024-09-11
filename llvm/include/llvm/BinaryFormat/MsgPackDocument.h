@@ -407,7 +407,7 @@ public:
   /// into the original blob). If Multi, then this sets root to an array and
   /// adds top-level objects to it. If !Multi, then it only reads a single
   /// top-level object, even if there are more, and sets root to that. Returns
-  /// false if failed due to illegal format or merge error.
+  /// an error if failed due to illegal format or merge error.
   ///
   /// The Merger arg is a callback function that is called when the merge has a
   /// conflict, that is, it is trying to set an item that is already set. If the
@@ -424,7 +424,7 @@ public:
   /// map entry, a nil node otherwise.
   ///
   /// The default for Merger is to disallow any conflict.
-  bool readFromBlob(
+  Error readFromBlob(
       StringRef Blob, bool Multi,
       function_ref<int(DocNode *DestNode, DocNode SrcNode, DocNode MapKey)>
           Merger = [](DocNode *DestNode, DocNode SrcNode, DocNode MapKey) {
