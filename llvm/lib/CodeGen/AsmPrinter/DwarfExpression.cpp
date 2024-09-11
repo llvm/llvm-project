@@ -105,6 +105,12 @@ bool DwarfExpression::addMachineReg(const TargetRegisterInfo &TRI,
       DwarfRegs.push_back(Register::createRegister(-1, nullptr));
       return true;
     }
+    // Try getting dwarf register for virtual register anyway, eg. for NVPTX.
+    int64_t Reg = TRI.getDwarfRegNum(MachineReg, false);
+    if (Reg > 0) {
+      DwarfRegs.push_back(Register::createRegister(Reg, nullptr));
+      return true;
+    }
     return false;
   }
 
