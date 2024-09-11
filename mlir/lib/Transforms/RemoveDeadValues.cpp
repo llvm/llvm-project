@@ -169,7 +169,10 @@ static SmallVector<OpOperand *> operandsToOpOperands(OperandRange operands) {
 /// Here, cleaning means:
 ///   (1) Dropping all its uses, AND
 ///   (2) Erasing it
-/// iff it has no memory effects and none of its results are live.
+/// iff:
+///   (1) It has no memory effects
+///   (2) None of its results are live
+///   (3) It is not used as an argument in a public function call
 ///
 /// It is assumed that `op` is simple. Here, a simple op is one which isn't a
 /// symbol op, a symbol-user op, a region branch op, a branch op, a region
@@ -177,6 +180,12 @@ static SmallVector<OpOperand *> operandsToOpOperands(OperandRange operands) {
 static void cleanSimpleOp(Operation *op, RunLivenessAnalysis &la) {
   if (!isMemoryEffectFree(op) || hasLive(op->getResults(), la))
     return;
+
+  for (OpOperand &use : op->getUses())
+    if (auto callOp = dyn_cast<CallOpInterface>(use.getOwner()))
+      if (auto funcOp = dyn_cast<FunctionOpInterface>(callOp.resolveCallable()))
+        if (funcOp.isPublic())
+          return;
 
   op->dropAllUses();
   op->erase();
