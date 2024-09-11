@@ -505,8 +505,7 @@ define <8 x i16> @loadv8i16_roW(ptr %p, i32 %o) {
 define <2 x i32> @loadv2i32_roW(ptr %p, i32 %o) {
 ; CHECK-LABEL: loadv2i32_roW:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add x8, x0, w1, sxtw #2
-; CHECK-NEXT:    ldr s0, [x8]
+; CHECK-NEXT:    ldr s0, [x0, w1, sxtw #2]
 ; CHECK-NEXT:    ret
   %g = getelementptr inbounds i32, ptr %p, i32 %o
   %l = load i32, ptr %g
@@ -517,8 +516,7 @@ define <2 x i32> @loadv2i32_roW(ptr %p, i32 %o) {
 define <4 x i32> @loadv4i32_roW(ptr %p, i32 %o) {
 ; CHECK-LABEL: loadv4i32_roW:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add x8, x0, w1, sxtw #2
-; CHECK-NEXT:    ldr s0, [x8]
+; CHECK-NEXT:    ldr s0, [x0, w1, sxtw #2]
 ; CHECK-NEXT:    ret
   %g = getelementptr inbounds i32, ptr %p, i32 %o
   %l = load i32, ptr %g
@@ -584,8 +582,7 @@ define <8 x bfloat> @loadv8bf16_roW(ptr %p, i32 %o) {
 define <2 x float> @loadv2f32_roW(ptr %p, i32 %o) {
 ; CHECK-LABEL: loadv2f32_roW:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add x8, x0, w1, sxtw #2
-; CHECK-NEXT:    ldr s0, [x8]
+; CHECK-NEXT:    ldr s0, [x0, w1, sxtw #2]
 ; CHECK-NEXT:    ret
   %g = getelementptr inbounds float, ptr %p, i32 %o
   %l = load float, ptr %g
@@ -596,8 +593,7 @@ define <2 x float> @loadv2f32_roW(ptr %p, i32 %o) {
 define <4 x float> @loadv4f32_roW(ptr %p, i32 %o) {
 ; CHECK-LABEL: loadv4f32_roW:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add x8, x0, w1, sxtw #2
-; CHECK-NEXT:    ldr s0, [x8]
+; CHECK-NEXT:    ldr s0, [x0, w1, sxtw #2]
 ; CHECK-NEXT:    ret
   %g = getelementptr inbounds float, ptr %p, i32 %o
   %l = load float, ptr %g
@@ -666,8 +662,7 @@ define <8 x i16> @loadv8i16_roX(ptr %p, i64 %o) {
 define <2 x i32> @loadv2i32_roX(ptr %p, i64 %o) {
 ; CHECK-LABEL: loadv2i32_roX:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add x8, x0, x1, lsl #2
-; CHECK-NEXT:    ldr s0, [x8]
+; CHECK-NEXT:    ldr s0, [x0, x1, lsl #2]
 ; CHECK-NEXT:    ret
   %g = getelementptr inbounds i32, ptr %p, i64 %o
   %l = load i32, ptr %g
@@ -678,8 +673,7 @@ define <2 x i32> @loadv2i32_roX(ptr %p, i64 %o) {
 define <4 x i32> @loadv4i32_roX(ptr %p, i64 %o) {
 ; CHECK-LABEL: loadv4i32_roX:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add x8, x0, x1, lsl #2
-; CHECK-NEXT:    ldr s0, [x8]
+; CHECK-NEXT:    ldr s0, [x0, x1, lsl #2]
 ; CHECK-NEXT:    ret
   %g = getelementptr inbounds i32, ptr %p, i64 %o
   %l = load i32, ptr %g
@@ -745,8 +739,7 @@ define <8 x bfloat> @loadv8bf16_roX(ptr %p, i64 %o) {
 define <2 x float> @loadv2f32_roX(ptr %p, i64 %o) {
 ; CHECK-LABEL: loadv2f32_roX:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add x8, x0, x1, lsl #2
-; CHECK-NEXT:    ldr s0, [x8]
+; CHECK-NEXT:    ldr s0, [x0, x1, lsl #2]
 ; CHECK-NEXT:    ret
   %g = getelementptr inbounds float, ptr %p, i64 %o
   %l = load float, ptr %g
@@ -757,8 +750,7 @@ define <2 x float> @loadv2f32_roX(ptr %p, i64 %o) {
 define <4 x float> @loadv4f32_roX(ptr %p, i64 %o) {
 ; CHECK-LABEL: loadv4f32_roX:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add x8, x0, x1, lsl #2
-; CHECK-NEXT:    ldr s0, [x8]
+; CHECK-NEXT:    ldr s0, [x0, x1, lsl #2]
 ; CHECK-NEXT:    ret
   %g = getelementptr inbounds float, ptr %p, i64 %o
   %l = load float, ptr %g
