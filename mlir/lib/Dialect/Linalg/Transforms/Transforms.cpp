@@ -305,8 +305,6 @@ FailureOr<LowerPackResult> linalg::lowerPack(RewriterBase &rewriter,
     if (rankReduces == SliceVerificationResult::Success) {
       // This pack is just a plain pad.
       // Just insert the pad in the higher ranked tensor.
-      auto emptyOp =
-          rewriter.create<tensor::EmptyOp>(loc, packedTensorType, ValueRange{});
       // Offsets.
       SmallVector<OpFoldResult> zeros(packOp.getDestRank(),
                                       rewriter.getIndexAttr(0));
@@ -317,9 +315,8 @@ FailureOr<LowerPackResult> linalg::lowerPack(RewriterBase &rewriter,
           tensor::getMixedSizes(rewriter, loc, packOp.getDest());
 
       auto insertSliceOp = rewriter.create<tensor::InsertSliceOp>(
-          loc, /*source=*/padOp, /*dest=*/emptyOp,
-          /*offsets=*/zeros, sizes,
-          /*strides=*/ones);
+          loc, /*source=*/padOp, /*dest=*/packOp.getDest(),
+          /*offsets=*/zeros, sizes, /*strides=*/ones);
 
       LLVM_DEBUG(DBGS() << "insert_slice op: " << insertSliceOp; DBGSNL(););
 

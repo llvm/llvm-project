@@ -320,6 +320,9 @@ public:
   static void attachPreviousDecl(ASTReader &Reader, Decl *D, Decl *Previous,
                                  Decl *Canon);
 
+  static void checkMultipleDefinitionInNamedModules(ASTReader &Reader, Decl *D,
+                                                    Decl *Previous);
+
   template <typename DeclT>
   static void attachLatestDeclImpl(Redeclarable<DeclT> *D, Decl *Latest);
   static void attachLatestDeclImpl(...);
@@ -1152,6 +1155,16 @@ void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
   for (unsigned I = 0; I != NumParams; ++I)
     Params.push_back(readDeclAs<ParmVarDecl>());
   FD->setParams(Reader.getContext(), Params);
+
+  // For the first decl add all lambdas inside for loading them later,
+  // otherwise skip them.
+  unsigned NumLambdas = Record.readInt();
+  if (FD->isFirstDecl()) {
+    for (unsigned I = 0; I != NumLambdas; ++I)
+      Reader.PendingLambdas.push_back(Record.readDeclID());
+  } else {
+    Record.skipInts(NumLambdas);
+  }
 }
 
 void ASTDeclReader::VisitObjCMethodDecl(ObjCMethodDecl *MD) {
@@ -2064,7 +2077,7 @@ void ASTDeclMerger::MergeDefinitionData(
     Reader.MergedDeclContexts.insert(std::make_pair(MergeDD.Definition,
                                                     DD.Definition));
     Reader.PendingDefinitions.erase(MergeDD.Definition);
-    MergeDD.Definition->setCompleteDefinition(false);
+    MergeDD.Definition->demoteThisDefinitionToDeclaration();
     Reader.mergeDefinitionVisibility(DD.Definition, MergeDD.Definition);
     assert(!Reader.Lookups.contains(MergeDD.Definition) &&
            "already loaded pending lookups for merged definition");
@@ -2175,6 +2188,9 @@ void ASTDeclReader::ReadCXXRecordDefinition(CXXRecordDecl *D, bool Update,
   D->DefinitionData = Canon->DefinitionData;
   ReadCXXDefinitionData(*DD, D, LambdaContext, IndexInLambdaContext);
 
+  // Mark this declaration as being a definition.
+  D->setCompleteDefinition(true);
+
   // We might already have a different definition for this record. This can
   // happen either because we're reading an update record, or because we've
   // already done some merging. Either way, just merge into it.
@@ -2182,9 +2198,6 @@ void ASTDeclReader::ReadCXXRecordDefinition(CXXRecordDecl *D, bool Update,
     MergeImpl.MergeDefinitionData(Canon, std::move(*DD));
     return;
   }
-
-  // Mark this declaration as being a definition.
-  D->setCompleteDefinition(true);
 
   // If this is not the first declaration or is an update record, we can have
   // other redeclarations already. Make a note that we need to propagate the
@@ -3502,7 +3515,8 @@ ASTDeclReader::FindExistingResult ASTDeclReader::findExisting(NamedDecl *D) {
   // same template specialization into the same CXXRecordDecl.
   auto MergedDCIt = Reader.MergedDeclContexts.find(D->getLexicalDeclContext());
   if (MergedDCIt != Reader.MergedDeclContexts.end() &&
-      !shouldSkipCheckingODR(D) && MergedDCIt->second == D->getDeclContext())
+      !shouldSkipCheckingODR(D) && MergedDCIt->second == D->getDeclContext() &&
+      !shouldSkipCheckingODR(cast<Decl>(D->getDeclContext())))
     Reader.PendingOdrMergeChecks.push_back(D);
 
   return FindExistingResult(Reader, D, /*Existing=*/nullptr,
@@ -3690,14 +3704,9 @@ static void inheritDefaultTemplateArguments(ASTContext &Context,
 // [basic.link]/p10:
 //    If two declarations of an entity are attached to different modules,
 //    the program is ill-formed;
-static void checkMultipleDefinitionInNamedModules(ASTReader &Reader, Decl *D,
-                                                  Decl *Previous) {
-  Module *M = Previous->getOwningModule();
-
-  // We only care about the case in named modules.
-  if (!M || !M->isNamedModule())
-    return;
-
+void ASTDeclReader::checkMultipleDefinitionInNamedModules(ASTReader &Reader,
+                                                          Decl *D,
+                                                          Decl *Previous) {
   // If it is previous implcitly introduced, it is not meaningful to
   // diagnose it.
   if (Previous->isImplicit())
@@ -3714,16 +3723,32 @@ static void checkMultipleDefinitionInNamedModules(ASTReader &Reader, Decl *D,
   // FIXME: Maybe this shows the implicit instantiations may have incorrect
   // module owner ships. But given we've finished the compilation of a module,
   // how can we add new entities to that module?
-  if (auto *VTSD = dyn_cast<VarTemplateSpecializationDecl>(Previous);
-      VTSD && !VTSD->isExplicitSpecialization())
+  if (isa<VarTemplateSpecializationDecl>(Previous))
     return;
-  if (auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(Previous);
-      CTSD && !CTSD->isExplicitSpecialization())
+  if (isa<ClassTemplateSpecializationDecl>(Previous))
     return;
-  if (auto *Func = dyn_cast<FunctionDecl>(Previous))
-    if (auto *FTSI = Func->getTemplateSpecializationInfo();
-        FTSI && !FTSI->isExplicitSpecialization())
+  if (auto *Func = dyn_cast<FunctionDecl>(Previous);
+      Func && Func->getTemplateSpecializationInfo())
+    return;
+
+  Module *M = Previous->getOwningModule();
+  if (!M)
+    return;
+
+  // We only forbids merging decls within named modules.
+  if (!M->isNamedModule()) {
+    // Try to warn the case that we merged decls from global module.
+    if (!M->isGlobalModule())
       return;
+
+    if (D->getOwningModule() &&
+        M->getTopLevelModule() == D->getOwningModule()->getTopLevelModule())
+      return;
+
+    Reader.PendingWarningForDuplicatedDefsInModuleUnits.push_back(
+        {D, Previous});
+    return;
+  }
 
   // It is fine if they are in the same module.
   if (Reader.getContext().isInSameModule(M, D->getOwningModule()))

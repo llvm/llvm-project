@@ -345,7 +345,7 @@ void EmitBuiltin(llvm::raw_ostream &OS, const Record *Builtin) {
 }
 } // namespace
 
-void clang::EmitClangBuiltins(llvm::RecordKeeper &Records,
+void clang::EmitClangBuiltins(const llvm::RecordKeeper &Records,
                               llvm::raw_ostream &OS) {
   emitSourceFileHeader("List of builtins that Clang recognizes", OS);
 

@@ -55,7 +55,7 @@ GDBRemoteCommunicationServer::GetPacketAndSendResponse(
       break;
 
     case StringExtractorGDBRemote::eServerPacketType_invalid:
-      error.SetErrorString("invalid packet");
+      error = Status::FromErrorString("invalid packet");
       quit = true;
       break;
 
@@ -73,10 +73,10 @@ GDBRemoteCommunicationServer::GetPacketAndSendResponse(
     }
   } else {
     if (!IsConnected()) {
-      error.SetErrorString("lost connection");
+      error = Status::FromErrorString("lost connection");
       quit = true;
     } else {
-      error.SetErrorString("timeout");
+      error = Status::FromErrorString("timeout");
     }
   }
 
@@ -123,7 +123,7 @@ GDBRemoteCommunicationServer::SendErrorResponse(llvm::Error error) {
       [&](std::unique_ptr<llvm::ErrorInfoBase> E) { EIB = std::move(E); });
 
   if (EIB)
-    return SendErrorResponse(Status(llvm::Error(std::move(EIB))));
+    return SendErrorResponse(Status::FromError(llvm::Error(std::move(EIB))));
   return SendUnimplementedResponse("");
 }
 

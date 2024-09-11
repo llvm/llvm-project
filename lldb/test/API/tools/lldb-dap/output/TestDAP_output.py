@@ -8,6 +8,7 @@ import lldbdap_testcase
 
 
 class TestDAP_output(lldbdap_testcase.DAPTestCaseBase):
+    @skipIfWindows
     def test_output(self):
         program = self.getBuildArtifact("a.out")
         self.build_and_launch(program)

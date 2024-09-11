@@ -32,7 +32,7 @@ unexpected_handler set_unexpected(unexpected_handler func) noexcept { return ::s
 
 unexpected_handler get_unexpected() noexcept { return ::_get_unexpected(); }
 
-_LIBCPP_NORETURN void unexpected() {
+[[noreturn]] void unexpected() {
   (*get_unexpected())();
   // unexpected handler should not return
   terminate();
@@ -42,7 +42,7 @@ terminate_handler set_terminate(terminate_handler func) noexcept { return ::set_
 
 terminate_handler get_terminate() noexcept { return ::_get_terminate(); }
 
-_LIBCPP_NORETURN void terminate() noexcept {
+[[noreturn]] void terminate() noexcept {
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
   try {
 #endif // _LIBCPP_HAS_NO_EXCEPTIONS

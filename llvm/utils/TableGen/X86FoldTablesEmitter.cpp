@@ -404,8 +404,8 @@ public:
 
     bool FoundFoldedOp = false;
     for (unsigned I = 0, E = MemInst->Operands.size(); I != E; I++) {
-      Record *MemOpRec = MemInst->Operands[I].Rec;
-      Record *RegOpRec = RegInst->Operands[I + RegStartIdx].Rec;
+      const Record *MemOpRec = MemInst->Operands[I].Rec;
+      const Record *RegOpRec = RegInst->Operands[I + RegStartIdx].Rec;
 
       if (MemOpRec == RegOpRec)
         continue;
@@ -446,7 +446,7 @@ void X86FoldTablesEmitter::addEntryWithFlags(FoldTable &Table,
   assert((IsManual || Table.find(RegInst) == Table.end()) &&
          "Override entry unexpectedly");
   X86FoldTableEntry Result = X86FoldTableEntry(RegInst, MemInst);
-  Record *RegRec = RegInst->TheDef;
+  const Record *RegRec = RegInst->TheDef;
   Result.NoReverse = S & TB_NO_REVERSE;
   Result.NoForward = S & TB_NO_FORWARD;
   Result.FoldLoad = S & TB_FOLDED_LOAD;
@@ -457,8 +457,8 @@ void X86FoldTablesEmitter::addEntryWithFlags(FoldTable &Table,
     return;
   }
 
-  Record *RegOpRec = RegInst->Operands[FoldedIdx].Rec;
-  Record *MemOpRec = MemInst->Operands[FoldedIdx].Rec;
+  const Record *RegOpRec = RegInst->Operands[FoldedIdx].Rec;
+  const Record *MemOpRec = MemInst->Operands[FoldedIdx].Rec;
 
   // Unfolding code generates a load/store instruction according to the size of
   // the register in the register form instruction.
@@ -537,8 +537,8 @@ void X86FoldTablesEmitter::updateTables(const CodeGenInstruction *RegInst,
                                         uint16_t S, bool IsManual,
                                         bool IsBroadcast) {
 
-  Record *RegRec = RegInst->TheDef;
-  Record *MemRec = MemInst->TheDef;
+  const Record *RegRec = RegInst->TheDef;
+  const Record *MemRec = MemInst->TheDef;
   unsigned MemOutSize = MemRec->getValueAsDag("OutOperandList")->getNumArgs();
   unsigned RegOutSize = RegRec->getValueAsDag("OutOperandList")->getNumArgs();
   unsigned MemInSize = MemRec->getValueAsDag("InOperandList")->getNumArgs();
@@ -563,8 +563,8 @@ void X86FoldTablesEmitter::updateTables(const CodeGenInstruction *RegInst,
     // If the i'th register form operand is a register and the i'th memory form
     // operand is a memory operand, add instructions to Table#i.
     for (unsigned I = RegOutSize, E = RegInst->Operands.size(); I < E; I++) {
-      Record *RegOpRec = RegInst->Operands[I].Rec;
-      Record *MemOpRec = MemInst->Operands[I].Rec;
+      const Record *RegOpRec = RegInst->Operands[I].Rec;
+      const Record *MemOpRec = MemInst->Operands[I].Rec;
       // PointerLikeRegClass: For instructions like TAILJMPr, TAILJMPr64,
       // TAILJMPr64_REX
       if ((isRegisterOperand(RegOpRec) ||
@@ -607,8 +607,8 @@ void X86FoldTablesEmitter::updateTables(const CodeGenInstruction *RegInst,
     // For example:
     //   MOVAPSrr => (outs VR128:$dst), (ins VR128:$src)
     //   MOVAPSmr => (outs), (ins f128mem:$dst, VR128:$src)
-    Record *RegOpRec = RegInst->Operands[RegOutSize - 1].Rec;
-    Record *MemOpRec = MemInst->Operands[RegOutSize - 1].Rec;
+    const Record *RegOpRec = RegInst->Operands[RegOutSize - 1].Rec;
+    const Record *MemOpRec = MemInst->Operands[RegOutSize - 1].Rec;
     if (isRegisterOperand(RegOpRec) && isMemoryOperand(MemOpRec) &&
         getRegOperandSize(RegOpRec) == getMemOperandSize(MemOpRec)) {
       assert(!IsBroadcast && "Store can not be broadcast");

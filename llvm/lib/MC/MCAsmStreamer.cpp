@@ -491,7 +491,7 @@ void MCAsmStreamer::addExplicitComment(const Twine &T) {
     ExplicitCommentToEmit.append("\t");
     ExplicitCommentToEmit.append(MAI->getCommentString());
     // drop //
-    ExplicitCommentToEmit.append(c.slice(2, c.size()).str());
+    ExplicitCommentToEmit.append(c.substr(2).str());
   } else if (c.starts_with(StringRef("/*"))) {
     size_t p = 2, len = c.size() - 2;
     // emit each line in comment as separate newline.
@@ -512,7 +512,7 @@ void MCAsmStreamer::addExplicitComment(const Twine &T) {
 
     ExplicitCommentToEmit.append("\t");
     ExplicitCommentToEmit.append(MAI->getCommentString());
-    ExplicitCommentToEmit.append(c.slice(1, c.size()).str());
+    ExplicitCommentToEmit.append(c.substr(1).str());
   } else
     assert(false && "Unexpected Assembly Comment");
   // full line comments immediately output
@@ -1971,7 +1971,7 @@ void MCAsmStreamer::EmitRegisterName(int64_t Register) {
     // just ones that map to LLVM register numbers and have known names.
     // Fall back to using the original number directly if no name is known.
     const MCRegisterInfo *MRI = getContext().getRegisterInfo();
-    if (std::optional<unsigned> LLVMRegister =
+    if (std::optional<MCRegister> LLVMRegister =
             MRI->getLLVMRegNum(Register, true)) {
       InstPrinter->printRegName(OS, *LLVMRegister);
       return;

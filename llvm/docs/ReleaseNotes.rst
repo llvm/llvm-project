@@ -52,6 +52,9 @@ Changes to the LLVM IR
 
 * The ``x86_mmx`` IR type has been removed. It will be translated to
   the standard vector type ``<1 x i64>`` in bitcode upgrade.
+* Renamed ``llvm.experimental.stepvector`` intrinsic to ``llvm.stepvector``.
+
+* Added ``usub_cond`` and ``usub_sat`` operations to ``atomicrmw``.
 
 Changes to LLVM infrastructure
 ------------------------------
@@ -74,6 +77,11 @@ Changes to the AArch64 Backend
 
 Changes to the AMDGPU Backend
 -----------------------------
+
+* Removed ``llvm.amdgcn.flat.atomic.fadd`` and
+  ``llvm.amdgcn.global.atomic.fadd`` intrinsics. Users should use the
+  :ref:`atomicrmw <i_atomicrmw>` instruction with `fadd` and
+  addrspace(0) or addrspace(1) instead.
 
 Changes to the ARM Backend
 --------------------------
@@ -114,6 +122,7 @@ Changes to the RISC-V Backend
   means Zve32x and Zve32f will also require Zvl64b. The prior support was
   largely untested.
 * The ``Zvbc32e`` and ``Zvkgs`` extensions are now supported experimentally.
+* Added ``Smctr`` and ``Ssctr`` extensions.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -182,6 +191,9 @@ Changes to the C API
   * ``LLVMIsAtomic`` to check if an instruction is atomic, for use with the above functions.
     Because of backwards compatibility, ``LLVMIsAtomicSingleThread`` and
     ``LLVMSetAtomicSingleThread`` continue to work with any instruction type.
+
+* The `LLVMSetPersonalityFn` and `LLVMSetInitializer` APIs now support clearing the
+  personality function and initializer respectively by passing a null pointer.
 
 
 Changes to the CodeGen infrastructure

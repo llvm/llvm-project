@@ -158,6 +158,9 @@ def SDTFPUnaryOp  : SDTypeProfile<1, 1, [   // fneg, fsqrt, etc
 def SDTFPRoundOp  : SDTypeProfile<1, 1, [   // fpround
   SDTCisFP<0>, SDTCisFP<1>, SDTCisOpSmallerThanOp<0, 1>, SDTCisSameNumEltsAs<0, 1>
 ]>;
+def SDTFPTruncRoundOp  : SDTypeProfile<1, 2, [
+  SDTCisFP<0>, SDTCisFP<1>, SDTCisInt<2>, SDTCisOpSmallerThanOp<0, 1>, SDTCisSameNumEltsAs<0, 1>
+]>;
 def SDTFPExtendOp  : SDTypeProfile<1, 1, [  // fpextend
   SDTCisFP<0>, SDTCisFP<1>, SDTCisOpSmallerThanOp<1, 0>, SDTCisSameNumEltsAs<0, 1>
 ]>;
@@ -552,6 +555,8 @@ def llround    : SDNode<"ISD::LLROUND"    , SDTFPToIntOp>;
 def lrint      : SDNode<"ISD::LRINT"      , SDTFPToIntOp>;
 def llrint     : SDNode<"ISD::LLRINT"     , SDTFPToIntOp>;
 
+def fptrunc_round : SDNode<"ISD::FPTRUNC_ROUND", SDTFPTruncRoundOp>;
+
 def fpround    : SDNode<"ISD::FP_ROUND"   , SDTFPRoundOp>;
 def fpextend   : SDNode<"ISD::FP_EXTEND"  , SDTFPExtendOp>;
 def fcopysign  : SDNode<"ISD::FCOPYSIGN"  , SDTFPSignOp>;
@@ -752,6 +757,10 @@ def atomic_load_fmin : SDNode<"ISD::ATOMIC_LOAD_FMIN", SDTFPAtomic2,
 def atomic_load_uinc_wrap : SDNode<"ISD::ATOMIC_LOAD_UINC_WRAP", SDTAtomic2,
                     [SDNPHasChain, SDNPMayStore, SDNPMayLoad, SDNPMemOperand]>;
 def atomic_load_udec_wrap : SDNode<"ISD::ATOMIC_LOAD_UDEC_WRAP", SDTAtomic2,
+                    [SDNPHasChain, SDNPMayStore, SDNPMayLoad, SDNPMemOperand]>;
+def atomic_load_usub_cond : SDNode<"ISD::ATOMIC_LOAD_USUB_COND", SDTAtomic2,
+                    [SDNPHasChain, SDNPMayStore, SDNPMayLoad, SDNPMemOperand]>;
+def atomic_load_usub_sat : SDNode<"ISD::ATOMIC_LOAD_USUB_SAT", SDTAtomic2,
                     [SDNPHasChain, SDNPMayStore, SDNPMayLoad, SDNPMemOperand]>;
 
 def atomic_load      : SDNode<"ISD::ATOMIC_LOAD", SDTAtomicLoad,

@@ -14,6 +14,7 @@ tablegen(LLVM SPIRVGenTables.inc -gen-searchable-tables)
 add_public_tablegen_target(SPIRVCommonTableGen)
 
 add_llvm_target(SPIRVCodeGen
+  SPIRVAPI.cpp
   SPIRVAsmPrinter.cpp
   SPIRVBuiltins.cpp
   SPIRVCallLowering.cpp
@@ -40,6 +41,7 @@ add_llvm_target(SPIRVCodeGen
   SPIRVSubtarget.cpp
   SPIRVTargetMachine.cpp
   SPIRVUtils.cpp
+  SPIRVEmitNonSemanticDI.cpp
 
   LINK_COMPONENTS
   Analysis

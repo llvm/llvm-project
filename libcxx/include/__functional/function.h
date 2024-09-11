@@ -78,7 +78,7 @@ public:
 };
 _LIBCPP_DIAGNOSTIC_POP
 
-_LIBCPP_NORETURN inline _LIBCPP_HIDE_FROM_ABI void __throw_bad_function_call() {
+[[__noreturn__]] inline _LIBCPP_HIDE_FROM_ABI void __throw_bad_function_call() {
 #  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
   throw bad_function_call();
 #  else

@@ -1054,6 +1054,40 @@ void applyLowerVectorFCMP(MachineInstr &MI, MachineRegisterInfo &MRI,
   MI.eraseFromParent();
 }
 
+// Matches G_BUILD_VECTOR where at least one source operand is not a constant
+bool matchLowerBuildToInsertVecElt(MachineInstr &MI, MachineRegisterInfo &MRI) {
+  auto *GBuildVec = cast<GBuildVector>(&MI);
+
+  // Check if the values are all constants
+  for (unsigned I = 0; I < GBuildVec->getNumSources(); ++I) {
+    auto ConstVal =
+        getAnyConstantVRegValWithLookThrough(GBuildVec->getSourceReg(I), MRI);
+
+    if (!ConstVal.has_value())
+      return true;
+  }
+
+  return false;
+}
+
+void applyLowerBuildToInsertVecElt(MachineInstr &MI, MachineRegisterInfo &MRI,
+                                   MachineIRBuilder &B) {
+  auto *GBuildVec = cast<GBuildVector>(&MI);
+  LLT DstTy = MRI.getType(GBuildVec->getReg(0));
+  Register DstReg = B.buildUndef(DstTy).getReg(0);
+
+  for (unsigned I = 0; I < GBuildVec->getNumSources(); ++I) {
+    Register SrcReg = GBuildVec->getSourceReg(I);
+    if (mi_match(SrcReg, MRI, m_GImplicitDef()))
+      continue;
+    auto IdxReg = B.buildConstant(LLT::scalar(64), I);
+    DstReg =
+        B.buildInsertVectorElement(DstTy, DstReg, SrcReg, IdxReg).getReg(0);
+  }
+  B.buildCopy(GBuildVec->getReg(0), DstReg);
+  GBuildVec->eraseFromParent();
+}
+
 bool matchFormTruncstore(MachineInstr &MI, MachineRegisterInfo &MRI,
                          Register &SrcReg) {
   assert(MI.getOpcode() == TargetOpcode::G_STORE);

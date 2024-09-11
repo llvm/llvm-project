@@ -344,6 +344,12 @@ class LoopVectorizationPlanner {
   /// been retired.
   InstructionCost cost(VPlan &Plan, ElementCount VF) const;
 
+  /// Precompute costs for certain instructions using the legacy cost model. The
+  /// function is used to bring up the VPlan-based cost model to initially avoid
+  /// taking different decisions due to inaccuracies in the legacy cost model.
+  InstructionCost precomputeCosts(VPlan &Plan, ElementCount VF,
+                                  VPCostContext &CostCtx) const;
+
 public:
   LoopVectorizationPlanner(
       Loop *L, LoopInfo *LI, DominatorTree *DT, const TargetLibraryInfo *TLI,

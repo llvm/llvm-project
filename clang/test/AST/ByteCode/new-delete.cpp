@@ -245,7 +245,7 @@ namespace std {
 namespace PlacementNew {
   constexpr int foo() { // both-error {{never produces a constant expression}}
     char c[sizeof(int)];
-    new (c) int{12}; // ref-note {{call to placement 'operator new'}} \
+    new (c) int{12}; // ref-note {{this placement new expression is not supported in constant expressions before C++2c}} \
                      // expected-note {{subexpression not valid in a constant expression}}
     return 0;
   }
@@ -309,7 +309,7 @@ namespace placement_new_delete {
   constexpr bool bad(int which) {
     switch (which) {
     case 0:
-      delete new (placement_new_arg{}) int; // ref-note {{call to placement 'operator new'}} \
+      delete new (placement_new_arg{}) int; // ref-note {{this placement new expression is not supported in constant expressions}} \
                                             // expected-note {{subexpression not valid in a constant expression}}
       break;
 
@@ -328,7 +328,7 @@ namespace placement_new_delete {
     case 4:
       // FIXME: This technically follows the standard's rules, but it seems
       // unreasonable to expect implementations to support this.
-      delete new (std::align_val_t{64}) Overaligned; // ref-note {{placement new expression is not yet supported}} \
+      delete new (std::align_val_t{64}) Overaligned; // ref-note {{this placement new expression is not supported in constant expressions}} \
                                                      // expected-note {{subexpression not valid in a constant expression}}
       break;
     }
@@ -404,7 +404,7 @@ constexpr typename std::remove_reference<T>::type&& move(T &&t) noexcept {
 
 namespace cxx2a {
 struct A {
-  int* p = new int(42); // both-note 7{{heap allocation performed here}}
+  int* p = new int(42); // both-note 3{{heap allocation performed here}}
   consteval int ret_i() const { return p ? *p : 0; }
   consteval A ret_a() const { return A{}; }
   constexpr ~A() { delete p; }
@@ -433,9 +433,7 @@ void test() {
   { A k = to_lvalue_ref(A()); } // both-error {{'cxx2a::to_lvalue_ref' is not a constant expression}} \
                                 // both-note {{reference to temporary is not a constant expression}} \
                                 // both-note {{temporary created here}}
-  { A k = to_lvalue_ref(A().ret_a()); } // both-error {{'cxx2a::A::ret_a' is not a constant expression}} \
-                                        // both-note {{heap-allocated object is not a constant expression}} \
-                                        // both-error {{'cxx2a::to_lvalue_ref' is not a constant expression}} \
+  { A k = to_lvalue_ref(A().ret_a()); } // both-error {{'cxx2a::to_lvalue_ref' is not a constant expression}} \
                                         // both-note {{reference to temporary is not a constant expression}} \
                                         // both-note {{temporary created here}}
   { int k = A().ret_a().ret_i(); } // both-error {{'cxx2a::A::ret_a' is not a constant expression}} \
@@ -445,19 +443,15 @@ void test() {
   { int k = const_a_ref(a); }
   { int k = rvalue_ref(A()); }
   { int k = rvalue_ref(std::move(a)); }
-  { int k = const_a_ref(A().ret_a()); } // both-error {{'cxx2a::A::ret_a' is not a constant expression}} \
-                                        // both-note {{is not a constant expression}}
-  { int k = const_a_ref(to_lvalue_ref(A().ret_a())); } // both-error {{'cxx2a::A::ret_a' is not a constant expression}} \
-                                                       // both-note {{is not a constant expression}}
+  { int k = const_a_ref(A().ret_a()); }
+  { int k = const_a_ref(to_lvalue_ref(A().ret_a())); }
   { int k = const_a_ref(to_lvalue_ref(std::move(a))); }
   { int k = by_value_a(A().ret_a()); }
   { int k = by_value_a(to_lvalue_ref(static_cast<const A&&>(a))); }
   { int k = (A().ret_a(), A().ret_i()); } // both-error {{'cxx2a::A::ret_a' is not a constant expression}} \
                                           // both-note {{is not a constant expression}} \
                                           // both-warning {{left operand of comma operator has no effect}}
-  { int k = (const_a_ref(A().ret_a()), A().ret_i()); }  // both-error {{'cxx2a::A::ret_a' is not a constant expression}} \
-                                                        // both-note {{is not a constant expression}} \
-                                                        // both-warning {{left operand of comma operator has no effect}}
+  { int k = (const_a_ref(A().ret_a()), A().ret_i()); } // both-warning {{left operand of comma operator has no effect}}
 }
 }
 
@@ -583,6 +577,145 @@ namespace CastedDelete {
   }
   static_assert(vdtor_1() == 1); // expected-error {{not an integral constant expression}} \
                                  // expected-note {{in call to}}
+}
+
+constexpr void use_after_free_2() { // both-error {{never produces a constant expression}}
+  struct X { constexpr void f() {} };
+  X *p = new X;
+  delete p;
+  p->f(); // both-note {{member call on heap allocated object that has been deleted}}
+}
+
+
+/// std::allocator definition
+namespace std {
+  using size_t = decltype(sizeof(0));
+  template<typename T> struct allocator {
+    constexpr T *allocate(size_t N) {
+      return (T*)__builtin_operator_new(sizeof(T) * N); // both-note 2{{allocation performed here}}
+    }
+    constexpr void deallocate(void *p) {
+      __builtin_operator_delete(p); // both-note 2{{std::allocator<...>::deallocate' used to delete pointer to object allocated with 'new'}} \
+                                    // both-note {{used to delete a null pointer}}
+    }
+  };
+}
+
+/// Specialization for float, using operator new/delete.
+namespace std {
+  using size_t = decltype(sizeof(0));
+  template<> struct allocator<float> {
+    constexpr float *allocate(size_t N) {
+      return (float*)operator new (sizeof(float) * N);
+    }
+    constexpr void deallocate(void *p) {
+      operator delete(p);
+    }
+  };
+}
+
+namespace OperatorNewDelete {
+
+  constexpr bool mismatched(int alloc_kind, int dealloc_kind) {
+    int *p;
+    switch (alloc_kind) {
+    case 0:
+      p = new int; // both-note {{heap allocation performed here}}
+      break;
+    case 1:
+      p = new int[1]; // both-note {{heap allocation performed here}}
+      break;
+    case 2:
+      p = std::allocator<int>().allocate(1);
+      break;
+    }
+    switch (dealloc_kind) {
+    case 0:
+      delete p; // both-note {{'delete' used to delete pointer to object allocated with 'std::allocator<...>::allocate'}}
+      break;
+    case 1:
+      delete[] p; // both-note {{'delete' used to delete pointer to object allocated with 'std::allocator<...>::allocate'}}
+      break;
+    case 2:
+      std::allocator<int>().deallocate(p); // both-note 2{{in call}}
+      break;
+    }
+    return true;
+  }
+  static_assert(mismatched(0, 2)); // both-error {{constant expression}} \
+                                   // both-note {{in call to}}
+  static_assert(mismatched(1, 2)); // both-error {{constant expression}} \
+                                   // both-note {{in call to}}
+  static_assert(mismatched(2, 0)); // both-error {{constant expression}} \
+                                   // both-note {{in call}}
+  static_assert(mismatched(2, 1)); // both-error {{constant expression}} \
+                                   // both-note {{in call}}
+  static_assert(mismatched(2, 2));
+
+  constexpr bool zeroAlloc() {
+    int *F = std::allocator<int>().allocate(0);
+    std::allocator<int>().deallocate(F);
+    return true;
+  }
+  static_assert(zeroAlloc());
+
+  /// FIXME: This is broken in the current interpreter.
+  constexpr int arrayAlloc() {
+    int *F = std::allocator<int>().allocate(2);
+    F[0] = 10; // ref-note {{assignment to object outside its lifetime is not allowed in a constant expression}}
+    F[1] = 13;
+    int Res = F[1] + F[0];
+    std::allocator<int>().deallocate(F);
+    return Res;
+  }
+  static_assert(arrayAlloc() == 23); // ref-error {{not an integral constant expression}} \
+                                     // ref-note {{in call to}}
+
+  struct S {
+    int i;
+    constexpr S(int i) : i(i) {}
+    constexpr ~S() { }
+  };
+
+  /// FIXME: This is broken in the current interpreter.
+  constexpr bool structAlloc() {
+    S *s = std::allocator<S>().allocate(1);
+
+    s->i = 12; // ref-note {{assignment to object outside its lifetime is not allowed in a constant expression}}
+
+    bool Res = (s->i == 12);
+    std::allocator<S>().deallocate(s);
+
+    return Res;
+  }
+  static_assert(structAlloc()); // ref-error {{not an integral constant expression}} \
+                                // ref-note {{in call to}}
+
+  constexpr bool structAllocArray() {
+    S *s = std::allocator<S>().allocate(9);
+
+    s[2].i = 12; // ref-note {{assignment to object outside its lifetime is not allowed in a constant expression}}
+    bool Res = (s[2].i == 12);
+    std::allocator<S>().deallocate(s);
+
+    return Res;
+  }
+  static_assert(structAllocArray()); // ref-error {{not an integral constant expression}} \
+                                     // ref-note {{in call to}}
+
+  constexpr bool alloc_from_user_code() {
+    void *p = __builtin_operator_new(sizeof(int)); // both-note {{cannot allocate untyped memory in a constant expression; use 'std::allocator<T>::allocate'}}
+    __builtin_operator_delete(p);
+    return true;
+  }
+  static_assert(alloc_from_user_code()); // both-error {{constant expression}} \
+                                         // both-note {{in call to}}
+
+
+  constexpr int no_deallocate_nullptr = (std::allocator<int>().deallocate(nullptr), 1); // both-error {{constant expression}} \
+                                                                                        // both-note {{in call}}
+
+  static_assert((std::allocator<float>().deallocate(std::allocator<float>().allocate(10)), 1) == 1);
 }
 
 #else

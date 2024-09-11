@@ -218,6 +218,22 @@ template <typename A, typename B> A *UnwrapExpr(std::optional<B> &x) {
   }
 }
 
+template <typename A, typename B> const A *UnwrapExpr(const B *x) {
+  if (x) {
+    return UnwrapExpr<A>(*x);
+  } else {
+    return nullptr;
+  }
+}
+
+template <typename A, typename B> A *UnwrapExpr(B *x) {
+  if (x) {
+    return UnwrapExpr<A>(*x);
+  } else {
+    return nullptr;
+  }
+}
+
 // A variant of UnwrapExpr above that also skips through (parentheses)
 // and conversions of kinds within a category.  Useful for extracting LEN
 // type parameter inquiries, at least.

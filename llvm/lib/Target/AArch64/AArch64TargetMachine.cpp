@@ -98,7 +98,7 @@ static cl::opt<bool> EnableCollectLOH(
 static cl::opt<bool>
     EnableDeadRegisterElimination("aarch64-enable-dead-defs", cl::Hidden,
                                   cl::desc("Enable the pass that removes dead"
-                                           " definitons and replaces stores to"
+                                           " definitions and replaces stores to"
                                            " them with stores to the zero"
                                            " register"),
                                   cl::init(true));

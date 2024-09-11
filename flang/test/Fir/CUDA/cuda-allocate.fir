@@ -68,6 +68,31 @@ func.func @_QPsub4() attributes {cuf.proc_attr = #cuf.cuda_proc<device>} {
 // CHECK: fir.alloca
 // CHECK-NOT: cuf.free
 
+fir.global @_QMglobalsEa_pinned {data_attr = #cuf.cuda<pinned>} : !fir.box<!fir.heap<!fir.array<?xf32>>> {
+  %0 = fir.zero_bits !fir.heap<!fir.array<?xf32>>
+  %c0 = arith.constant 0 : index
+  %1 = fir.shape %c0 : (index) -> !fir.shape<1>
+  %2 = fir.embox %0(%1) {allocator_idx = 1 : i32} : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
+  fir.has_value %2 : !fir.box<!fir.heap<!fir.array<?xf32>>>
 }
 
+func.func @_QPsub5() {
+  %4 = fir.address_of(@_QMglobalsEa_pinned) : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  %5:2 = hlfir.declare %4 {data_attr = #cuf.cuda<pinned>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMglobalsEa_pinned"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>)
+  %c1 = arith.constant 1 : index
+  %c10_i32 = arith.constant 10 : i32
+  %c0_i32 = arith.constant 0 : i32
+  %6 = fir.convert %5#1 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<none>>
+  %7 = fir.convert %c1 : (index) -> i64
+  %8 = fir.convert %c10_i32 : (i32) -> i64
+  %9 = fir.call @_FortranAAllocatableSetBounds(%6, %c0_i32, %7, %8) fastmath<contract> : (!fir.ref<!fir.box<none>>, i32, i64, i64) -> none
+  %10 = cuf.allocate %5#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<pinned>} -> i32
+  %11 = cuf.deallocate %5#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<pinned>} -> i32
+  return
+}
 
+// CHECK-LABEL: func.func @_QPsub5()
+// CHECK: fir.call @_FortranAAllocatableAllocate({{.*}}) : (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+// CHECK: fir.call @_FortranAAllocatableDeallocate({{.*}}) : (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+
+} // end of module

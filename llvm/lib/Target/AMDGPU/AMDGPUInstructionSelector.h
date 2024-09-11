@@ -359,6 +359,9 @@ private:
   void renderFPPow2ToExponent(MachineInstrBuilder &MIB, const MachineInstr &MI,
                               int OpIdx) const;
 
+  void renderRoundMode(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                       int OpIdx) const;
+
   bool isInlineImmediate(const APInt &Imm) const;
   bool isInlineImmediate(const APFloat &Imm) const;
 
@@ -371,7 +374,6 @@ private:
   const AMDGPURegisterBankInfo &RBI;
   const AMDGPUTargetMachine &TM;
   const GCNSubtarget &STI;
-  bool EnableLateStructurizeCFG;
 #define GET_GLOBALISEL_PREDICATES_DECL
 #define AMDGPUSubtarget GCNSubtarget
 #include "AMDGPUGenGlobalISel.inc"

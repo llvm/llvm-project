@@ -632,14 +632,17 @@ bool CodeExtractor::isEligible() const {
 }
 
 void CodeExtractor::findInputsOutputs(ValueSet &Inputs, ValueSet &Outputs,
-                                      const ValueSet &SinkCands) const {
+                                      const ValueSet &SinkCands,
+                                      bool CollectGlobalInputs) const {
   for (BasicBlock *BB : Blocks) {
     // If a used value is defined outside the region, it's an input.  If an
     // instruction is used outside the region, it's an output.
     for (Instruction &II : *BB) {
       for (auto &OI : II.operands()) {
         Value *V = OI;
-        if (!SinkCands.count(V) && definedInCaller(Blocks, V))
+        if (!SinkCands.count(V) &&
+            (definedInCaller(Blocks, V) ||
+             (CollectGlobalInputs && llvm::isa<llvm::GlobalVariable>(V))))
           Inputs.insert(V);
       }
 
@@ -913,6 +916,7 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
       case Attribute::Memory:
       case Attribute::NoFPClass:
       case Attribute::CoroDestroyOnlyWhenComplete:
+      case Attribute::CoroElideSafe:
         continue;
       // Those attributes should be safe to propagate to the extracted function.
       case Attribute::AlwaysInline:
