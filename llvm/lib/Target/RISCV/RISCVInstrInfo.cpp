@@ -172,6 +172,8 @@ bool RISCVInstrInfo::isReallyTriviallyReMaterializable(
   case RISCV::VMV_V_X:
   case RISCV::VFMV_V_F:
   case RISCV::VMV_V_I:
+  case RISCV::VMV_S_X:
+  case RISCV::VFMV_S_F:
   case RISCV::VID_V:
     if (MI.getOperand(1).isUndef() &&
         /* After RISCVInsertVSETVLI most pseudos will have implicit uses on vl
