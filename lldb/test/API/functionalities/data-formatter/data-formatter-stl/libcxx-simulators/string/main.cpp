@@ -45,14 +45,12 @@ template <class _CharT, size_t = sizeof(_CharT)> struct __padding {
 };
 
 template <class _CharT> struct __padding<_CharT, 1> {};
-#else // !SUBCLASS_PADDING
-template <size_t _PaddingSize>
-struct __padding {
+#else  // !SUBCLASS_PADDING
+template <size_t _PaddingSize> struct __padding {
   char __padding_[_PaddingSize];
 };
 
-template <>
-struct __padding<0> {};
+template <> struct __padding<0> {};
 #endif // SUBCLASS_PADDING
 #endif // ALTERNATE_LAYOUT
 
