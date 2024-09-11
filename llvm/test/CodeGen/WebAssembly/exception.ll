@@ -1,6 +1,6 @@
-; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -wasm-enable-eh -exception-model=wasm -mattr=+exception-handling -verify-machineinstrs | FileCheck --implicit-check-not=ehgcr -allow-deprecated-dag-overlap %s
-; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -wasm-enable-eh -exception-model=wasm -mattr=+exception-handling -verify-machineinstrs -O0
-; RUN: llc < %s -disable-wasm-fallthrough-return-opt -wasm-keep-registers -wasm-enable-eh -exception-model=wasm -mattr=+exception-handling
+; RUN: llc < %s -asm-verbose=false -wasm-enable-eh -exception-model=wasm -mattr=+exception-handling -wasm-enable-exnref -verify-machineinstrs | FileCheck --implicit-check-not=ehgcr -allow-deprecated-dag-overlap %s
+; RUN: llc < %s -asm-verbose=false -wasm-enable-eh -exception-model=wasm -mattr=+exception-handling -wasm-enable-exnref -verify-machineinstrs -O0
+; RUN: llc < %s -wasm-enable-eh -exception-model=wasm -mattr=+exception-handling -wasm-enable-exnref
 
 target triple = "wasm32-unknown-unknown"
 
@@ -11,7 +11,7 @@ target triple = "wasm32-unknown-unknown"
 ; CHECK: .tagtype  __cpp_exception i32
 
 ; CHECK-LABEL: throw:
-; CHECK:     throw __cpp_exception, $0
+; CHECK:     throw __cpp_exception
 ; CHECK-NOT: unreachable
 define void @throw(ptr %p) {
   call void @llvm.wasm.throw(i32 0, ptr %p)
@@ -29,21 +29,29 @@ define void @throw(ptr %p) {
 ; }
 
 ; CHECK-LABEL: catch:
-; CHECK:     global.get  ${{.+}}=, __stack_pointer
-; CHECK:     try
-; CHECK:       call      foo
-; CHECK:     catch     $[[EXN:[0-9]+]]=, __cpp_exception
-; CHECK:       global.set  __stack_pointer
-; CHECK:       i32.{{store|const}} {{.*}} __wasm_lpad_context
-; CHECK:       call       $drop=, _Unwind_CallPersonality, $[[EXN]]
-; CHECK:       block
-; CHECK:         br_if     0
-; CHECK:         call      $drop=, __cxa_begin_catch
-; CHECK:         call      __cxa_end_catch
-; CHECK:         br        1
-; CHECK:       end_block
-; CHECK:       rethrow   0
-; CHECK:     end_try
+; CHECK: global.get  __stack_pointer
+; CHECK: local.set  0
+; CHECK: block
+; CHECK:   block     () -> (i32, exnref)
+; CHECK:     try_table    (catch_ref __cpp_exception 0)
+; CHECK:       call  foo
+; CHECK:       br        2
+; CHECK:     end_try_table
+; CHECK:   end_block
+; CHECK:   local.set  2
+; CHECK:   local.get  0
+; CHECK:   global.set  __stack_pointer
+; CHECK:   i32.store  __wasm_lpad_context
+; CHECK:   call  _Unwind_CallPersonality
+; CHECK:   block
+; CHECK:     br_if     0
+; CHECK:     call  __cxa_begin_catch
+; CHECK:     call  __cxa_end_catch
+; CHECK:     br        1
+; CHECK:   end_block
+; CHECK:   local.get  2
+; CHECK:   throw_ref
+; CHECK: end_block
 define void @catch() personality ptr @__gxx_wasm_personality_v0 {
 entry:
   invoke void @foo()
@@ -85,13 +93,20 @@ try.cont:                                         ; preds = %catch, %entry
 ; }
 
 ; CHECK-LABEL: cleanup:
-; CHECK: try
-; CHECK:   call      foo
-; CHECK: catch_all
+; CHECK: block
+; CHECK:   block     exnref
+; CHECK:     try_table    (catch_all_ref 0)
+; CHECK:       call  foo
+; CHECK:       br        2
+; CHECK:     end_try_table
+; CHECK:   end_block
+; CHECK:   local.set  1
 ; CHECK:   global.set  __stack_pointer
-; CHECK:   call      $drop=, _ZN4TempD2Ev
-; CHECK:   rethrow   0
-; CHECK: end_try
+; CHECK:   call  _ZN4TempD2Ev
+; CHECK:   local.get  1
+; CHECK:   throw_ref
+; CHECK: end_block
+; CHECK: call  _ZN4TempD2Ev
 define void @cleanup() personality ptr @__gxx_wasm_personality_v0 {
 entry:
   %t = alloca %struct.Temp, align 1
@@ -121,23 +136,37 @@ ehcleanup:                                        ; preds = %entry
 ; }
 
 ; CHECK-LABEL: terminatepad
-; CHECK: try
-; CHECK:   call      foo
-; CHECK: catch
-; CHECK:   call      $drop=, __cxa_begin_catch
-; CHECK:   try
-; CHECK:     call      foo
-; CHECK:   catch_all
-; CHECK:     try
-; CHECK:       call      __cxa_end_catch
-; CHECK:     catch_all
-; CHECK:       call      _ZSt9terminatev
+; CHECK: block
+; CHECK:   block     i32
+; CHECK:     try_table    (catch __cpp_exception 0)
+; CHECK:       call  foo
+; CHECK:       br        2
+; CHECK:     end_try_table
+; CHECK:   end_block
+; CHECK:   call  __cxa_begin_catch
+; CHECK:   block
+; CHECK:     block     exnref
+; CHECK:       try_table    (catch_all_ref 0)
+; CHECK:         call  foo
+; CHECK:         br        2
+; CHECK:       end_try_table
+; CHECK:     end_block
+; CHECK:     local.set  2
+; CHECK:     block
+; CHECK:       block
+; CHECK:         try_table    (catch_all 0)
+; CHECK:           call  __cxa_end_catch
+; CHECK:           br        2
+; CHECK:         end_try_table
+; CHECK:       end_block
+; CHECK:       call  _ZSt9terminatev
 ; CHECK:       unreachable
-; CHECK:     end_try
-; CHECK:     rethrow
-; CHECK:   end_try
-; CHECK:   call      __cxa_end_catch
-; CHECK: end_try
+; CHECK:     end_block
+; CHECK:     local.get  2
+; CHECK:     throw_ref
+; CHECK:   end_block
+; CHECK:   call  __cxa_end_catch
+; CHECK: end_block
 define void @terminatepad() personality ptr @__gxx_wasm_personality_v0 {
 entry:
   invoke void @foo()
@@ -193,30 +222,41 @@ terminate:                                        ; preds = %ehcleanup
 ; }
 
 ; CHECK-LABEL: no_prolog_epilog_in_ehpad
-; CHECK:     try
-; CHECK:       call      foo
-; CHECK:     catch
-; CHECK-NOT:   global.get  $push{{.+}}=, __stack_pointer
-; CHECK:       global.set  __stack_pointer
+; CHECK:   call  bar
+; CHECK:   block
+; CHECK:     block     () -> (i32, exnref)
+; CHECK:       try_table    (catch_ref __cpp_exception 0)
+; CHECK:         call  foo
+; CHECK:         br        2
+; CHECK:       end_try_table
+; CHECK:     end_block
+; CHECK:     local.set  2
+; CHECK-NOT: global.get  __stack_pointer
+; CHECK:     global.set  __stack_pointer
+; CHECK:     block
 ; CHECK:       block
-; CHECK:         block
-; CHECK:           br_if     0
-; CHECK:           call      $drop=, __cxa_begin_catch
-; CHECK:           try
-; CHECK:             call      foo
-; CHECK:           catch
-; CHECK-NOT:         global.get  $push{{.+}}=, __stack_pointer
-; CHECK:             global.set  __stack_pointer
-; CHECK:             call      __cxa_end_catch
-; CHECK:             rethrow
-; CHECK-NOT:         global.set  __stack_pointer, $pop{{.+}}
-; CHECK:           end_try
+; CHECK:         br_if     0
+; CHECK:         call  __cxa_begin_catch
+; CHECK:         block     exnref
+; CHECK:           try_table    (catch_all_ref 0)
+; CHECK:             call  foo
+; CHECK:             br        3
+; CHECK:           end_try_table
 ; CHECK:         end_block
-; CHECK:         rethrow
+; CHECK:         local.set  2
+; CHECK-NOT:     global.get  __stack_pointer
+; CHECK:         global.set  __stack_pointer
+; CHECK:         call  __cxa_end_catch
+; CHECK:         local.get  2
+; CHECK:         throw_ref
+; CHECK-NOT:     global.set  __stack_pointer
 ; CHECK:       end_block
-; CHECK-NOT:   global.set  __stack_pointer, $pop{{.+}}
-; CHECK:       call      __cxa_end_catch
-; CHECK:     end_try
+; CHECK:       local.get  2
+; CHECK:       throw_ref
+; CHECK:     end_block
+; CHECK-NOT: global.set  __stack_pointer
+; CHECK:     call  __cxa_end_catch
+; CHECK:   end_block
 define void @no_prolog_epilog_in_ehpad() personality ptr @__gxx_wasm_personality_v0 {
 entry:
   %stack_var = alloca i32, align 4
@@ -270,14 +310,18 @@ ehcleanup:                                        ; preds = %catch
 ; }
 
 ; CHECK-LABEL: no_sp_writeback
-; CHECK:     try
-; CHECK:       call      foo
-; CHECK:     catch
-; CHECK:       call      $drop=, __cxa_begin_catch
-; CHECK:       call      __cxa_end_catch
-; CHECK:     end_try
+; CHECK:     block
+; CHECK:       block     i32
+; CHECK:         try_table    (catch __cpp_exception 0)
+; CHECK:           call  foo
+; CHECK:           br        2
+; CHECK:         end_try_table
+; CHECK:       end_block
+; CHECK:       call  __cxa_begin_catch
+; CHECK:       call  __cxa_end_catch
+; CHECK:     end_block
 ; CHECK-NOT: global.set  __stack_pointer
-; CHECK:     return
+; CHECK:     end_function
 define void @no_sp_writeback() personality ptr @__gxx_wasm_personality_v0 {
 entry:
   invoke void @foo()
