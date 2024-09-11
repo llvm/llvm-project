@@ -353,7 +353,7 @@ bool GCNTTIImpl::canSimplifyLegacyMulToMul(const Instruction &I,
 }
 
 /// Match an fpext from half to float, or a constant we can convert.
-static std::optional<Value *> matchFPExtFromF16(Value *Arg) {
+static Value *matchFPExtFromF16(Value *Arg) {
   Value *Src = nullptr;
   ConstantFP *CFP = nullptr;
   if (match(Arg, m_OneUse(m_FPExt(m_Value(Src))))) {
@@ -366,7 +366,7 @@ static std::optional<Value *> matchFPExtFromF16(Value *Arg) {
     if (!LosesInfo)
       return ConstantFP::get(Type::getHalfTy(Arg->getContext()), Val);
   }
-  return std::nullopt;
+  return nullptr;
 }
 
 // Trim all zero components from the end of the vector \p UseV and return
@@ -838,11 +838,11 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
 
     // Repeat floating-point width reduction done for minnum/maxnum.
     // fmed3((fpext X), (fpext Y), (fpext Z)) -> fpext (fmed3(X, Y, Z))
-    if (auto X = matchFPExtFromF16(Src0)) {
-      if (auto Y = matchFPExtFromF16(Src1)) {
-        if (auto Z = matchFPExtFromF16(Src2)) {
+    if (Value *X = matchFPExtFromF16(Src0)) {
+      if (Value *Y = matchFPExtFromF16(Src1)) {
+        if (Value *Z = matchFPExtFromF16(Src2)) {
           Value *NewCall = IC.Builder.CreateIntrinsic(
-              IID, {(*X)->getType()}, {*X, *Y, *Z}, &II, II.getName());
+              IID, {X->getType()}, {X, Y, Z}, &II, II.getName());
           return new FPExtInst(NewCall, II.getType());
         }
       }
