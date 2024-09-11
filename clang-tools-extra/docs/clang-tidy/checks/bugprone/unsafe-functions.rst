@@ -19,8 +19,7 @@ The check implements the following rules from the CERT C Coding Standard:
 Unsafe functions
 ----------------
 
-The following functions are reported if `ReportDefaultFunctions
-<unsafe-functions.html#option-ReportDefaultFunctions>`_ is enabled.
+The following functions are reported if :ref:`ReportDefaultFunctions<option-ReportDefaultFunctions>` is enabled.
 
 If *Annex K.* is available, a replacement from *Annex K.* is suggested for the
 following functions:
@@ -48,8 +47,7 @@ The following functions are always checked, regardless of *Annex K* availability
  - ``rewind``, suggested replacement: ``fseek``
  - ``setbuf``, suggested replacement: ``setvbuf``
 
-If `ReportMoreUnsafeFunctions
-<unsafe-functions.html#option-ReportMoreUnsafeFunctions>`_ is enabled,
+If :ref:`ReportMoreUnsafeFunctions<option-ReportMoreUnsafeFunctions>` is enabled,
 the following functions are also checked:
 
  - ``bcmp``, suggested replacement: ``memcmp``
@@ -77,7 +75,7 @@ Both macros have to be defined to suggest replacement functions from *Annex K.*
 ``__STDC_WANT_LIB_EXT1__`` must be defined to ``1`` by the user **before**
 including any system headers.
 
-.. _custom-functions:
+.. _CustomFunctions:
 
 Custom functions
 ----------------
@@ -138,7 +136,7 @@ Options
     A semicolon-separated list of custom functions to be matched. A matched
     function contains a regular expression, the name of the replacement
     function, and an optional reason, separated by comma. For more information,
-    see `Custom functions <unsafe-functions.html#custom-functions>`_.
+    see :ref:`Custom functions<CustomFunctions>`.
 
 Examples
 --------
