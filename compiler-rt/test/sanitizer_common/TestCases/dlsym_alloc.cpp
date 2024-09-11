@@ -9,7 +9,7 @@
 #include <stdlib.h>
 
 const char *test() __attribute__((disable_sanitizer_instrumentation)) {
-  void * volatile p = malloc(3);
+  void *volatile p = malloc(3);
   p = realloc(p, 7);
   free(p);
 
