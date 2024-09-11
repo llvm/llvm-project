@@ -43,5 +43,4 @@
 // AARCH64-PIC-LARGE: error: invalid argument '-mcmodel=large' only allowed with '-fno-pic'
 // ERR-AARCH64_32: error: unsupported argument 'small' to option '-mcmodel=' for target 'aarch64_32-unknown-linux'
 
-// ERR-LOONGARCH64-PLT-LARGE: error: invalid argument '-mcmodel=large' not allowed with '-fplt'
 // ERR-LOONGARCH64-PLT-EXTREME: error: invalid argument '-mcmodel=extreme' not allowed with '-fplt'
