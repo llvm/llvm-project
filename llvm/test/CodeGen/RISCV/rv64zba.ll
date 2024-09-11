@@ -651,7 +651,7 @@ define i64 @mul162(i64 %a) {
 ; RV64ZBA-LABEL: mul162:
 ; RV64ZBA:       # %bb.0:
 ; RV64ZBA-NEXT:    sh3add a0, a0, a0
-; RV64ZBA-NEXT:    sh1add a0, a0, a0
+; RV64ZBA-NEXT:    sh3add a0, a0, a0
 ; RV64ZBA-NEXT:    slli a0, a0, 1
 ; RV64ZBA-NEXT:    ret
   %c = mul i64 %a, 162
@@ -669,7 +669,7 @@ define i64 @addmul162(i64 %a, i64 %b) {
 ; RV64ZBA-LABEL: addmul162:
 ; RV64ZBA:       # %bb.0:
 ; RV64ZBA-NEXT:    sh3add a0, a0, a0
-; RV64ZBA-NEXT:    sh1add a0, a0, a0
+; RV64ZBA-NEXT:    sh3add a0, a0, a0
 ; RV64ZBA-NEXT:    sh1add a0, a0, a1
 ; RV64ZBA-NEXT:    ret
   %c = mul i64 %a, 162
@@ -686,9 +686,9 @@ define i64 @mul180(i64 %a) {
 ;
 ; RV64ZBA-LABEL: mul180:
 ; RV64ZBA:       # %bb.0:
-; RV64ZBA-NEXT:    sh3add a0, a0, a0
 ; RV64ZBA-NEXT:    sh2add a0, a0, a0
-; RV64ZBA-NEXT:    slli a0, a0, 1
+; RV64ZBA-NEXT:    sh3add a0, a0, a0
+; RV64ZBA-NEXT:    slli a0, a0, 2
 ; RV64ZBA-NEXT:    ret
   %c = mul i64 %a, 180
   ret i64 %c
@@ -704,9 +704,9 @@ define i64 @addmul180(i64 %a, i64 %b) {
 ;
 ; RV64ZBA-LABEL: addmul180:
 ; RV64ZBA:       # %bb.0:
-; RV64ZBA-NEXT:    sh3add a0, a0, a0
 ; RV64ZBA-NEXT:    sh2add a0, a0, a0
-; RV64ZBA-NEXT:    sh1add a0, a0, a1
+; RV64ZBA-NEXT:    sh3add a0, a0, a0
+; RV64ZBA-NEXT:    sh2add a0, a0, a1
 ; RV64ZBA-NEXT:    ret
   %c = mul i64 %a, 180
   %d = add i64 %c, %b
@@ -723,9 +723,9 @@ define i64 @add255mul180(i64 %a) {
 ;
 ; RV64ZBA-LABEL: add255mul180:
 ; RV64ZBA:       # %bb.0:
-; RV64ZBA-NEXT:    sh3add a0, a0, a0
 ; RV64ZBA-NEXT:    sh2add a0, a0, a0
-; RV64ZBA-NEXT:    slli a0, a0, 1
+; RV64ZBA-NEXT:    sh3add a0, a0, a0
+; RV64ZBA-NEXT:    slli a0, a0, 2
 ; RV64ZBA-NEXT:    addi a0, a0, 255
 ; RV64ZBA-NEXT:    ret
   %c = mul i64 %a, 180

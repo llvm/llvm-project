@@ -14141,7 +14141,7 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
       for (uint64_t Divisor2 : {3, 5, 9}) {
         if (MulAmt2 % Divisor2 != 0)
           continue;
-        uint64_t MulAmt3 = MulAmt2 / Divisor;
+        uint64_t MulAmt3 = MulAmt2 / Divisor2;
         if (isPowerOf2_64(MulAmt3)) {
           SDLoc DL(N);
           SDValue Mul359A =
