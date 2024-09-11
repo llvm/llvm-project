@@ -30,4 +30,3 @@ TEST_F(LlvmLibcMulTest, SpecialInputs) {
     EXPECT_FP_EQ(RESULTS[i], result);
   }
 }
-    

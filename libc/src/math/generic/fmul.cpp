@@ -27,18 +27,18 @@ LLVM_LIBC_FUNCTION(float, fmul, (double x, double y)) {
     fputil::set_errno_if_required(EDOM);
     fputil::raise_except_if_required(FE_INVALID);
     return static_cast<float>(prod.hi);
-  if (prod.lo == 0.0)
-    return static_cast<float>(prod.hi);
+    if (prod.lo == 0.0)
+      return static_cast<float>(prod.hi);
 
-  if (lo_bits.sign() != hi_bits.sign()) {
-    // Check if sticky bit of hi are all 0
-    constexpr uint64_t STICKY_MASK =
-        0xFFF'FFFF; // Lower (52 - 23 - 1 = 28 bits)
-    uint64_t sticky_bits = (hi_bits.uintval() & STICKY_MASK);
-    uint64_t result_bits =
-        (sticky_bits == 0) ? (hi_bits.uintval() - 1) : hi_bits.uintval();
-    double result = fputil::FPBits<double>(result_bits).get_val();
-    return static_cast<float>(result);
+    if (lo_bits.sign() != hi_bits.sign()) {
+      // Check if sticky bit of hi are all 0
+      constexpr uint64_t STICKY_MASK =
+          0xFFF'FFFF; // Lower (52 - 23 - 1 = 28 bits)
+      uint64_t sticky_bits = (hi_bits.uintval() & STICKY_MASK);
+      uint64_t result_bits =
+          (sticky_bits == 0) ? (hi_bits.uintval() - 1) : hi_bits.uintval();
+      double result = fputil::FPBits<double>(result_bits).get_val();
+      return static_cast<float>(result);
   }
 
   double result = fputil::FPBits<double>(hi_bits.uintval() | 1).get_val();
