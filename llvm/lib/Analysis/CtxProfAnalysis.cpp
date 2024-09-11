@@ -29,6 +29,15 @@ cl::opt<std::string>
     UseCtxProfile("use-ctx-profile", cl::init(""), cl::Hidden,
                   cl::desc("Use the specified contextual profile file"));
 
+static cl::opt<CtxProfAnalysisPrinterPass::PrintMode> PrintLevel(
+    "ctx-profile-printer-level",
+    cl::init(CtxProfAnalysisPrinterPass::PrintMode::JSON), cl::Hidden,
+    cl::values(clEnumValN(CtxProfAnalysisPrinterPass::PrintMode::Everything,
+                          "everything", "print everything - most verbose"),
+               clEnumValN(CtxProfAnalysisPrinterPass::PrintMode::JSON, "json",
+                          "just the json representation of the profile")),
+    cl::desc("Verbosity level of the contextual profile printer pass."));
+
 namespace llvm {
 namespace json {
 Value toJSON(const PGOCtxProfContext &P) {
@@ -96,12 +105,20 @@ GlobalValue::GUID AssignGUIDPass::getGUID(const Function &F) {
 }
 AnalysisKey CtxProfAnalysis::Key;
 
-CtxProfAnalysis::CtxProfAnalysis(StringRef Profile)
-    : Profile(Profile.empty() ? UseCtxProfile : Profile) {}
+CtxProfAnalysis::CtxProfAnalysis(std::optional<StringRef> Profile)
+    : Profile([&]() -> std::optional<StringRef> {
+        if (Profile)
+          return *Profile;
+        if (UseCtxProfile.getNumOccurrences())
+          return UseCtxProfile;
+        return std::nullopt;
+      }()) {}
 
 PGOContextualProfile CtxProfAnalysis::run(Module &M,
                                           ModuleAnalysisManager &MAM) {
-  ErrorOr<std::unique_ptr<MemoryBuffer>> MB = MemoryBuffer::getFile(Profile);
+  if (!Profile)
+    return {};
+  ErrorOr<std::unique_ptr<MemoryBuffer>> MB = MemoryBuffer::getFile(*Profile);
   if (auto EC = MB.getError()) {
     M.getContext().emitError("could not open contextual profile file: " +
                              EC.message());
@@ -115,6 +132,23 @@ PGOContextualProfile CtxProfAnalysis::run(Module &M,
     return {};
   }
 
+  DenseSet<GlobalValue::GUID> ProfileRootsInModule;
+  for (const auto &F : M)
+    if (!F.isDeclaration())
+      if (auto GUID = AssignGUIDPass::getGUID(F);
+          MaybeCtx->find(GUID) != MaybeCtx->end())
+        ProfileRootsInModule.insert(GUID);
+
+  // Trim first the roots that aren't in this module.
+  for (auto &[RootGuid, _] : llvm::make_early_inc_range(*MaybeCtx))
+    if (!ProfileRootsInModule.contains(RootGuid))
+      MaybeCtx->erase(RootGuid);
+  // If none of the roots are in the module, we have no profile (for this
+  // module)
+  if (MaybeCtx->empty())
+    return {};
+
+  // OK, so we have a valid profile and it's applicable to roots in this module.
   PGOContextualProfile Result;
 
   for (const auto &F : M) {
@@ -149,11 +183,6 @@ PGOContextualProfile CtxProfAnalysis::run(Module &M,
   }
   // If we made it this far, the Result is valid - which we mark by setting
   // .Profiles.
-  // Trim first the roots that aren't in this module.
-  DenseSet<GlobalValue::GUID> ProfiledGUIDs;
-  for (auto &[RootGuid, _] : llvm::make_early_inc_range(*MaybeCtx))
-    if (!Result.FuncInfo.contains(RootGuid))
-      MaybeCtx->erase(RootGuid);
   Result.Profiles = std::move(*MaybeCtx);
   return Result;
 }
@@ -165,11 +194,14 @@ PGOContextualProfile::getDefinedFunctionGUID(const Function &F) const {
   return 0;
 }
 
+CtxProfAnalysisPrinterPass::CtxProfAnalysisPrinterPass(raw_ostream &OS)
+    : OS(OS), Mode(PrintLevel) {}
+
 PreservedAnalyses CtxProfAnalysisPrinterPass::run(Module &M,
                                                   ModuleAnalysisManager &MAM) {
   CtxProfAnalysis::Result &C = MAM.getResult<CtxProfAnalysis>(M);
   if (!C) {
-    M.getContext().emitError("Invalid CtxProfAnalysis");
+    OS << "No contextual profile was provided.\n";
     return PreservedAnalyses::all();
   }
 

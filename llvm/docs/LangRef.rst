@@ -2189,10 +2189,6 @@ example:
 ``nosanitize_coverage``
     This attribute indicates that SanitizerCoverage instrumentation is disabled
     for this function.
-``nosanitize_realtime``
-    This attribute indicates that the Realtime Sanitizer instrumentation is
-    disabled for this function.
-    This attribute is incompatible with the ``sanitize_realtime`` attribute.
 ``null_pointer_is_valid``
    If ``null_pointer_is_valid`` is set, then the ``null`` address
    in address-space 0 is considered to be a valid address for memory loads and
@@ -2319,7 +2315,6 @@ example:
     This attribute indicates that RealtimeSanitizer checks
     (realtime safety analysis - no allocations, syscalls or exceptions) are enabled
     for this function.
-    This attribute is incompatible with the ``nosanitize_realtime`` attribute.
 ``speculative_load_hardening``
     This attribute indicates that
     `Speculative Load Hardening <https://llvm.org/docs/SpeculativeLoadHardening.html>`_
@@ -11246,6 +11241,8 @@ operation. The operation must be one of the following keywords:
 -  fmin
 -  uinc_wrap
 -  udec_wrap
+-  usub_cond
+-  usub_sat
 
 For most of these operations, the type of '<value>' must be an integer
 type whose bit width is a power of two greater than or equal to eight
@@ -11296,6 +11293,8 @@ operation argument:
 -  fmin: ``*ptr = minnum(*ptr, val)`` (match the `llvm.minnum.*`` intrinsic)
 -  uinc_wrap: ``*ptr = (*ptr u>= val) ? 0 : (*ptr + 1)`` (increment value with wraparound to zero when incremented above input value)
 -  udec_wrap: ``*ptr = ((*ptr == 0) || (*ptr u> val)) ? val : (*ptr - 1)`` (decrement with wraparound to input value when decremented below zero).
+-  usub_cond: ``*ptr = (*ptr u>= val) ? *ptr - val : *ptr`` (subtract only if no unsigned overflow).
+-  usub_sat: ``*ptr = (*ptr u>= val) ? *ptr - val : 0`` (subtract with unsigned clamping to zero).
 
 
 Example:
@@ -29476,6 +29475,42 @@ Semantics:
 execution, but is unknown at compile time.
 If the result value does not fit in the result type, then the result is
 a :ref:`poison value <poisonvalues>`.
+
+.. _llvm_fake_use:
+
+'``llvm.fake.use``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare void @llvm.fake.use(...)
+
+Overview:
+"""""""""
+
+The ``llvm.fake.use`` intrinsic is a no-op. It takes a single
+value as an operand and is treated as a use of that operand, to force the
+optimizer to preserve that value prior to the fake use. This is used for
+extending the lifetimes of variables, where this intrinsic placed at the end of
+a variable's scope helps prevent that variable from being optimized out.
+
+Arguments:
+""""""""""
+
+The ``llvm.fake.use`` intrinsic takes one argument, which may be any
+function-local SSA value. Note that the signature is variadic so that the
+intrinsic can take any type of argument, but passing more than one argument will
+result in an error.
+
+Semantics:
+""""""""""
+
+This intrinsic does nothing, but optimizers must consider it a use of its single
+operand and should try to preserve the intrinsic and its position in the
+function.
 
 
 Stack Map Intrinsics

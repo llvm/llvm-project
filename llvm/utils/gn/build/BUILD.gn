@@ -72,9 +72,9 @@ config("compiler_defaults") {
     ldflags += [ "-miphoneos-version-min=8.0" ]
   }
   if (current_os == "mac") {
-    asmflags += [ "-mmacos-version-min=10.10" ]
-    cflags += [ "-mmacos-version-min=10.10" ]
-    ldflags += [ "-mmacos-version-min=10.10" ]
+    asmflags += [ "-mmacos-version-min=$mac_deployment_target" ]
+    cflags += [ "-mmacos-version-min=$mac_deployment_target" ]
+    ldflags += [ "-mmacos-version-min=$mac_deployment_target" ]
   }
 
   assert(symbol_level == 0 || symbol_level == 1 || symbol_level == 2,

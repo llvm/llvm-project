@@ -19,14 +19,18 @@ FailureOr<Chipset> Chipset::parse(StringRef name) {
 
   unsigned major = 0;
   unsigned minor = 0;
+  unsigned stepping = 0;
 
   StringRef majorRef = name.drop_back(2);
-  StringRef minorRef = name.take_back(2);
+  StringRef minorRef = name.take_back(2).drop_back(1);
+  StringRef steppingRef = name.take_back(1);
   if (majorRef.getAsInteger(10, major))
     return failure();
   if (minorRef.getAsInteger(16, minor))
     return failure();
-  return Chipset(major, minor);
+  if (steppingRef.getAsInteger(16, stepping))
+    return failure();
+  return Chipset(major, minor, stepping);
 }
 
 } // namespace mlir::amdgpu

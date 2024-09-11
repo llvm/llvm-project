@@ -34,6 +34,30 @@
 
 using namespace clang;
 
+DeducedTemplateStorage::DeducedTemplateStorage(TemplateName Underlying,
+                                               const DefaultArguments &DefArgs)
+    : UncommonTemplateNameStorage(Deduced, /*Index=*/DefArgs.StartPos,
+                                  DefArgs.Args.size()),
+      Underlying(Underlying) {
+  llvm::copy(DefArgs.Args, reinterpret_cast<TemplateArgument *>(this + 1));
+}
+
+void DeducedTemplateStorage::Profile(llvm::FoldingSetNodeID &ID,
+                                     const ASTContext &Context) const {
+  Profile(ID, Context, Underlying, getDefaultArguments());
+}
+
+void DeducedTemplateStorage::Profile(llvm::FoldingSetNodeID &ID,
+                                     const ASTContext &Context,
+                                     TemplateName Underlying,
+                                     const DefaultArguments &DefArgs) {
+  Underlying.Profile(ID);
+  ID.AddInteger(DefArgs.StartPos);
+  ID.AddInteger(DefArgs.Args.size());
+  for (const TemplateArgument &Arg : DefArgs.Args)
+    Arg.Profile(ID, Context);
+}
+
 TemplateArgument
 SubstTemplateTemplateParmPackStorage::getArgumentPack() const {
   return TemplateArgument(llvm::ArrayRef(Arguments, Bits.Data));
@@ -115,6 +139,8 @@ TemplateName::TemplateName(SubstTemplateTemplateParmPackStorage *Storage)
 TemplateName::TemplateName(QualifiedTemplateName *Qual) : Storage(Qual) {}
 TemplateName::TemplateName(DependentTemplateName *Dep) : Storage(Dep) {}
 TemplateName::TemplateName(UsingShadowDecl *Using) : Storage(Using) {}
+TemplateName::TemplateName(DeducedTemplateStorage *Deduced)
+    : Storage(Deduced) {}
 
 bool TemplateName::isNull() const { return Storage.isNull(); }
 
@@ -139,28 +165,63 @@ TemplateName::NameKind TemplateName::getKind() const {
     return AssumedTemplate;
   if (uncommon->getAsSubstTemplateTemplateParm())
     return SubstTemplateTemplateParm;
+  if (uncommon->getAsDeducedTemplateName())
+    return DeducedTemplate;
+
+  assert(uncommon->getAsSubstTemplateTemplateParmPack() != nullptr);
   return SubstTemplateTemplateParmPack;
 }
 
-TemplateDecl *TemplateName::getAsTemplateDecl() const {
-  if (Decl *TemplateOrUsing = Storage.dyn_cast<Decl *>()) {
-    if (UsingShadowDecl *USD = dyn_cast<UsingShadowDecl>(TemplateOrUsing))
-      return cast<TemplateDecl>(USD->getTargetDecl());
+TemplateDecl *TemplateName::getAsTemplateDecl(bool IgnoreDeduced) const {
+  TemplateName Name = *this;
+  while (std::optional<TemplateName> UnderlyingOrNone =
+             Name.desugar(IgnoreDeduced))
+    Name = *UnderlyingOrNone;
 
-    assert(isa<TemplateDecl>(TemplateOrUsing));
-    return cast<TemplateDecl>(TemplateOrUsing);
+  if (!IgnoreDeduced)
+    assert(Name.getAsDeducedTemplateName() == nullptr &&
+           "Unexpected canonical DeducedTemplateName; Did you mean to use "
+           "getTemplateDeclAndDefaultArgs instead?");
+
+  return cast_if_present<TemplateDecl>(Name.Storage.dyn_cast<Decl *>());
+}
+
+std::pair<TemplateDecl *, DefaultArguments>
+TemplateName::getTemplateDeclAndDefaultArgs() const {
+  for (TemplateName Name = *this; /**/; /**/) {
+    if (Name.getKind() == TemplateName::DeducedTemplate) {
+      DeducedTemplateStorage *DTS = Name.getAsDeducedTemplateName();
+      TemplateDecl *TD =
+          DTS->getUnderlying().getAsTemplateDecl(/*IgnoreDeduced=*/true);
+      DefaultArguments DefArgs = DTS->getDefaultArguments();
+      if (TD && DefArgs)
+        assert(DefArgs.StartPos + DefArgs.Args.size() <=
+               TD->getTemplateParameters()->size());
+      return {TD, DTS->getDefaultArguments()};
+    }
+    if (std::optional<TemplateName> UnderlyingOrNone =
+            Name.desugar(/*IgnoreDeduced=*/false)) {
+      Name = *UnderlyingOrNone;
+      continue;
+    }
+    return {cast_if_present<TemplateDecl>(Name.Storage.dyn_cast<Decl *>()), {}};
   }
+}
 
+std::optional<TemplateName> TemplateName::desugar(bool IgnoreDeduced) const {
+  if (Decl *D = Storage.dyn_cast<Decl *>()) {
+    if (auto *USD = dyn_cast<UsingShadowDecl>(D))
+      return TemplateName(USD->getTargetDecl());
+    return std::nullopt;
+  }
   if (QualifiedTemplateName *QTN = getAsQualifiedTemplateName())
-    return QTN->getUnderlyingTemplate().getAsTemplateDecl();
-
-  if (SubstTemplateTemplateParmStorage *sub = getAsSubstTemplateTemplateParm())
-    return sub->getReplacement().getAsTemplateDecl();
-
-  if (UsingShadowDecl *USD = getAsUsingShadowDecl())
-    return cast<TemplateDecl>(USD->getTargetDecl());
-
-  return nullptr;
+    return QTN->getUnderlyingTemplate();
+  if (SubstTemplateTemplateParmStorage *S = getAsSubstTemplateTemplateParm())
+    return S->getReplacement();
+  if (IgnoreDeduced)
+    if (DeducedTemplateStorage *S = getAsDeducedTemplateName())
+      return S->getUnderlying();
+  return std::nullopt;
 }
 
 OverloadedTemplateStorage *TemplateName::getAsOverloadedTemplate() const {
@@ -214,26 +275,20 @@ UsingShadowDecl *TemplateName::getAsUsingShadowDecl() const {
   return nullptr;
 }
 
+DeducedTemplateStorage *TemplateName::getAsDeducedTemplateName() const {
+  if (UncommonTemplateNameStorage *Uncommon =
+          Storage.dyn_cast<UncommonTemplateNameStorage *>())
+    return Uncommon->getAsDeducedTemplateName();
+
+  return nullptr;
+}
+
 TemplateNameDependence TemplateName::getDependence() const {
-  auto D = TemplateNameDependence::None;
   switch (getKind()) {
-  case TemplateName::NameKind::QualifiedTemplate:
-    if (NestedNameSpecifier *NNS = getAsQualifiedTemplateName()->getQualifier())
-      D |= toTemplateNameDependence(NNS->getDependence());
-    break;
-  case TemplateName::NameKind::DependentTemplate:
-    D |= toTemplateNameDependence(
-        getAsDependentTemplateName()->getQualifier()->getDependence());
-    break;
-  case TemplateName::NameKind::SubstTemplateTemplateParmPack:
-    D |= TemplateNameDependence::UnexpandedPack;
-    break;
-  case TemplateName::NameKind::OverloadedTemplate:
-    llvm_unreachable("overloaded templates shouldn't survive to here.");
-  default:
-    break;
-  }
-  if (TemplateDecl *Template = getAsTemplateDecl()) {
+  case NameKind::Template:
+  case NameKind::UsingTemplate: {
+    TemplateDecl *Template = getAsTemplateDecl();
+    auto D = TemplateNameDependence::None;
     if (auto *TTP = dyn_cast<TemplateTemplateParmDecl>(Template)) {
       D |= TemplateNameDependence::DependentInstantiation;
       if (TTP->isParameterPack())
@@ -246,10 +301,41 @@ TemplateNameDependence TemplateName::getDependence() const {
     if (Template->getDeclContext() &&
         Template->getDeclContext()->isDependentContext())
       D |= TemplateNameDependence::DependentInstantiation;
-  } else {
-    D |= TemplateNameDependence::DependentInstantiation;
+    return D;
   }
-  return D;
+  case NameKind::QualifiedTemplate: {
+    QualifiedTemplateName *S = getAsQualifiedTemplateName();
+    TemplateNameDependence D = S->getUnderlyingTemplate().getDependence();
+    if (NestedNameSpecifier *NNS = S->getQualifier())
+      D |= toTemplateNameDependence(NNS->getDependence());
+    return D;
+  }
+  case NameKind::DependentTemplate: {
+    DependentTemplateName *S = getAsDependentTemplateName();
+    auto D = TemplateNameDependence::DependentInstantiation;
+    D |= toTemplateNameDependence(S->getQualifier()->getDependence());
+    return D;
+  }
+  case NameKind::SubstTemplateTemplateParm: {
+    auto *S = getAsSubstTemplateTemplateParm();
+    return S->getReplacement().getDependence();
+  }
+  case NameKind::SubstTemplateTemplateParmPack:
+    return TemplateNameDependence::UnexpandedPack |
+           TemplateNameDependence::DependentInstantiation;
+  case NameKind::DeducedTemplate: {
+    DeducedTemplateStorage *DTS = getAsDeducedTemplateName();
+    TemplateNameDependence D = DTS->getUnderlying().getDependence();
+    for (const TemplateArgument &Arg : DTS->getDefaultArguments().Args)
+      D |= toTemplateNameDependence(Arg.getDependence());
+    return D;
+  }
+  case NameKind::AssumedTemplate:
+    return TemplateNameDependence::DependentInstantiation;
+  case NameKind::OverloadedTemplate:
+    llvm_unreachable("overloaded templates shouldn't survive to here.");
+  }
+  llvm_unreachable("Unknown TemplateName kind");
 }
 
 bool TemplateName::isDependent() const {
@@ -331,6 +417,11 @@ void TemplateName::print(raw_ostream &OS, const PrintingPolicy &Policy,
     OS << *SubstPack->getParameterPack();
   else if (AssumedTemplateStorage *Assumed = getAsAssumedTemplateName()) {
     Assumed->getDeclName().print(OS, Policy);
+  } else if (DeducedTemplateStorage *Deduced = getAsDeducedTemplateName()) {
+    Deduced->getUnderlying().print(OS, Policy);
+    DefaultArguments DefArgs = Deduced->getDefaultArguments();
+    OS << ":" << DefArgs.StartPos;
+    printTemplateArgumentList(OS, DefArgs.Args, Policy);
   } else {
     assert(getKind() == TemplateName::OverloadedTemplate);
     OverloadedTemplateStorage *OTS = getAsOverloadedTemplate();

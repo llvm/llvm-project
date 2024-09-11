@@ -831,6 +831,12 @@ public:
   /// Combine ors.
   bool matchOr(MachineInstr &MI, BuildFnTy &MatchInfo);
 
+  /// trunc (binop X, C) --> binop (trunc X, trunc C).
+  bool matchNarrowBinop(const MachineInstr &TruncMI,
+                        const MachineInstr &BinopMI, BuildFnTy &MatchInfo);
+
+  bool matchCastOfInteger(const MachineInstr &CastMI, APInt &MatchInfo);
+
   /// Combine addos.
   bool matchAddOverflow(MachineInstr &MI, BuildFnTy &MatchInfo);
 

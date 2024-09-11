@@ -634,7 +634,7 @@ ArrayAttr {0}::getIndexingMaps() {{
   MLIRContext *context = getContext();
   auto symbolBindings = getSymbolBindings(*this);
   SmallVector<AffineMap> maps;
-  {2}
+  {1}
   cached = Builder(context).getAffineMapArrayAttr(maps);
   getOperation()->setAttr(memoizeAttr, cached);
   return cached;
@@ -656,7 +656,7 @@ ArrayAttr {0}::getIndexingMaps() {{
 }
 )FMT";
 
-// Implementations of fold and getEffects.
+// Implementations of fold, getEffects and getSpeculatability.
 // Parameters:
 // {0}: Class name
 const char structuredOpFoldersFormat[] = R"FMT(
@@ -668,6 +668,9 @@ void {0}::getEffects(SmallVectorImpl<
     SideEffects::EffectInstance<MemoryEffects::Effect> >&effects) {{
       if (hasPureTensorSemantics()) return;
       getGenericEffectsImpl(effects, cast<LinalgOp>(getOperation()));
+}
+Speculation::Speculatability {0}::getSpeculatability() {{
+  return getGenericSpeculatabilityImpl(cast<LinalgOp>(getOperation()));
 }
 )FMT";
 
@@ -929,7 +932,7 @@ exprs.push_back(getAffineConstantExpr(cst{1}, context));
         // TODO: This needs to be memoized and/or converted to non-parser based
         // C++ codegen prior to real use.
         os << llvm::formatv(structuredOpIndexingMapsFormat, className,
-                            dimIdentsStr, interleaveToString(stmts, "\n  "));
+                            interleaveToString(stmts, "\n  "));
       }
     } else {
       os << llvm::formatv(rankPolyStructuredOpIndexingMapsFormat, className);

@@ -1041,9 +1041,10 @@ unsigned MachineInstr::getBundleSize() const {
 /// Returns true if the MachineInstr has an implicit-use operand of exactly
 /// the given register (not considering sub/super-registers).
 bool MachineInstr::hasRegisterImplicitUseOperand(Register Reg) const {
-  for (const MachineOperand &MO : all_uses())
-    if (MO.isImplicit() && MO.getReg() == Reg)
+  for (const MachineOperand &MO : implicit_operands()) {
+    if (MO.isReg() && MO.isUse() && MO.getReg() == Reg)
       return true;
+  }
   return false;
 }
 
@@ -1263,8 +1264,10 @@ unsigned MachineInstr::findTiedOperandIdx(unsigned OpIdx) const {
 /// clearKillInfo - Clears kill flags on all operands.
 ///
 void MachineInstr::clearKillInfo() {
-  for (MachineOperand &MO : all_uses())
-    MO.setIsKill(false);
+  for (MachineOperand &MO : operands()) {
+    if (MO.isReg() && MO.isUse())
+      MO.setIsKill(false);
+  }
 }
 
 void MachineInstr::substituteRegister(Register FromReg, Register ToReg,
@@ -1318,6 +1321,28 @@ bool MachineInstr::isSafeToMove(bool &SawStore) const {
     return !SawStore;
 
   return true;
+}
+
+bool MachineInstr::wouldBeTriviallyDead() const {
+  // Don't delete frame allocation labels.
+  // FIXME: Why is LOCAL_ESCAPE not considered in MachineInstr::isLabel?
+  if (getOpcode() == TargetOpcode::LOCAL_ESCAPE)
+    return false;
+
+  // Don't delete FAKE_USE.
+  // FIXME: Why is FAKE_USE not considered in MachineInstr::isPosition?
+  if (isFakeUse())
+    return false;
+
+  // LIFETIME markers should be preserved.
+  // FIXME: Why are LIFETIME markers not considered in MachineInstr::isPosition?
+  if (isLifetimeMarker())
+    return false;
+
+  // If we can move an instruction, we can remove it.  Otherwise, it has
+  // a side-effect of some sort.
+  bool SawStore = false;
+  return isPHI() || isSafeToMove(SawStore);
 }
 
 static bool MemOperandsHaveAlias(const MachineFrameInfo &MFI, AAResults *AA,
@@ -1546,9 +1571,12 @@ bool MachineInstr::isLoadFoldBarrier() const {
 /// allDefsAreDead - Return true if all the defs of this instruction are dead.
 ///
 bool MachineInstr::allDefsAreDead() const {
-  for (const MachineOperand &MO : all_defs())
+  for (const MachineOperand &MO : operands()) {
+    if (!MO.isReg() || MO.isUse())
+      continue;
     if (!MO.isDead())
       return false;
+  }
   return true;
 }
 
@@ -2057,8 +2085,8 @@ void MachineInstr::clearRegisterKills(Register Reg,
                                       const TargetRegisterInfo *RegInfo) {
   if (!Reg.isPhysical())
     RegInfo = nullptr;
-  for (MachineOperand &MO : all_uses()) {
-    if (!MO.isKill())
+  for (MachineOperand &MO : operands()) {
+    if (!MO.isReg() || !MO.isUse() || !MO.isKill())
       continue;
     Register OpReg = MO.getReg();
     if ((RegInfo && RegInfo->regsOverlap(Reg, OpReg)) || Reg == OpReg)

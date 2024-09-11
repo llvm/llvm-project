@@ -1207,9 +1207,14 @@ void ExprEngine::ProcessInitializer(const CFGInitializer CFGInit,
           Init = ASE->getBase()->IgnoreImplicit();
 
         SVal LValue = State->getSVal(Init, stackFrame);
-        if (!Field->getType()->isReferenceType())
-          if (std::optional<Loc> LValueLoc = LValue.getAs<Loc>())
+        if (!Field->getType()->isReferenceType()) {
+          if (std::optional<Loc> LValueLoc = LValue.getAs<Loc>()) {
             InitVal = State->getSVal(*LValueLoc);
+          } else if (auto CV = LValue.getAs<nonloc::CompoundVal>()) {
+            // Initializer list for an array.
+            InitVal = *CV;
+          }
+        }
 
         // If we fail to get the value for some reason, use a symbolic value.
         if (InitVal.isUnknownOrUndef()) {
@@ -1830,7 +1835,8 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::OpenACCComputeConstructClass:
     case Stmt::OpenACCLoopConstructClass:
     case Stmt::OMPUnrollDirectiveClass:
-    case Stmt::OMPMetaDirectiveClass: {
+    case Stmt::OMPMetaDirectiveClass:
+    case Stmt::HLSLOutArgExprClass: {
       const ExplodedNode *node = Bldr.generateSink(S, Pred, Pred->getState());
       Engine.addAbortedBlock(node, currBldrCtx->getBlock());
       break;
@@ -1932,6 +1938,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::CXXRewrittenBinaryOperatorClass:
     case Stmt::RequiresExprClass:
     case Expr::CXXParenListInitExprClass:
+    case Stmt::EmbedExprClass:
       // Fall through.
 
     // Cases we intentionally don't evaluate, since they don't need
@@ -2434,10 +2441,6 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       Bldr.addNodes(Dst);
       break;
     }
-
-    case Stmt::EmbedExprClass:
-      llvm::report_fatal_error("Support for EmbedExpr is not implemented.");
-      break;
   }
 }
 
