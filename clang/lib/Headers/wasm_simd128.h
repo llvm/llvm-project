@@ -1889,6 +1889,8 @@ static __inline__ v128_t __FP16_FN_ATTRS wasm_f16x8_splat(float __a) {
 }
 
 #ifdef __wasm_fp16__
+// TODO Replace the following macros with regular C functions and use normal
+// target-independent vector code like the other replace/extract instructions.
 
 #define wasm_f16x8_extract_lane(__a, __i)                                      \
   (__builtin_wasm_extract_lane_f16x8((__f16x8)(__a), __i))
