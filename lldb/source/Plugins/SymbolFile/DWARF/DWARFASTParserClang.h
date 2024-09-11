@@ -266,7 +266,7 @@ private:
     FieldInfo() = default;
 
     void SetIsBitfield(bool flag) { is_bitfield = flag; }
-    bool IsBitfield() { return is_bitfield; }
+    bool IsBitfield() const { return is_bitfield; }
 
     void SetIsArtificial(bool flag) { is_artificial = flag; }
     bool IsArtificial() const { return is_artificial; }
@@ -317,6 +317,12 @@ private:
       FieldInfo const &last_field_info, uint64_t last_field_end,
       FieldInfo const &this_field_info,
       lldb_private::ClangASTImporter::LayoutInfo const &layout_info) const;
+
+  void AddUnnamedBitfieldToRecordTypeIfNeeded(
+      lldb_private::ClangASTImporter::LayoutInfo &class_layout_info,
+      lldb::AccessType accessibility,
+      const lldb_private::CompilerType &class_clang_type,
+      const FieldInfo &previous_field, const FieldInfo &current_field);
 
   /// Parses a DW_TAG_APPLE_property DIE and appends the parsed data to the
   /// list of delayed Objective-C properties.
