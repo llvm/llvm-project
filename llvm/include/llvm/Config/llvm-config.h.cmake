@@ -198,4 +198,7 @@
 /* Define if plugins enabled */
 #cmakedefine LLVM_ENABLE_PLUGINS
 
+/* Define if LLVM is build with address sanitizers enabled */
+#cmakedefine01 LLVM_ADDRESS_SANITIZER_BUILD
+
 #endif

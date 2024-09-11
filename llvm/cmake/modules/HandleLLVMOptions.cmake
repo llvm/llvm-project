@@ -1052,13 +1052,6 @@ if(LLVM_USE_SANITIZER)
   endif()
 endif()
 
-# Add a compile option to indicate if LLVM is building with address sanitizers.
-if(LLVM_ADDRESS_SANITIZER_BUILD)
-  add_compile_definitions(LLVM_ADDRESS_SANITIZER_BUILD=1)
-else()
-  add_compile_definitions(LLVM_ADDRESS_SANITIZER_BUILD=0)
-endif()
-
 # Turn on -gsplit-dwarf if requested in debug builds.
 if (LLVM_USE_SPLIT_DWARF AND
     ((uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG") OR

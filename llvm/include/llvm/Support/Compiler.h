@@ -436,12 +436,16 @@
 # define LLVM_NO_SANITIZE_MEMORY_ATTRIBUTE
 #endif
 
-/// \macro LLVM_ADDRESS_SANITIZER_BUILD
-/// Whether LLVM itself is built with AddressSanitizer instrumentation.
-#ifndef LLVM_ADDRESS_SANITIZER_BUILD
-# define LLVM_ADDRESS_SANITIZER_BUILD 0
-#endif
 #if LLVM_ADDRESS_SANITIZER_BUILD
+
+// These kind of sanitizer mismatches can lead to sporadic false positives that
+// are very hard to debug.
+#if !defined(LLVM_BUILD_LLVM_DYLIB) && \
+    !__has_feature(address_sanitizer) && \
+    !defined(__SANITIZE_ADDRESS__)
+#error An address sanitized LLVM build cannot be combined with unsanitized code.
+#endif
+
 #if __has_include(<sanitizer/asan_interface.h>)
 # include <sanitizer/asan_interface.h>
 #else
