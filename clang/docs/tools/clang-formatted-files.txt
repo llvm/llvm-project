@@ -3062,10 +3062,6 @@ libc/src/time/asctime.cpp
 libc/src/time/asctime.h
 libc/src/time/asctime_r.cpp
 libc/src/time/asctime_r.h
-libc/src/time/ctime.cpp
-libc/src/time/ctime.h
-libc/src/time/ctime_r.cpp
-libc/src/time/ctime_r.h
 libc/src/time/gmtime.cpp
 libc/src/time/gmtime.h
 libc/src/time/gmtime_r.cpp
