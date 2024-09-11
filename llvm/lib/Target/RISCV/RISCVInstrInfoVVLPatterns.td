@@ -2009,13 +2009,18 @@ multiclass VPatWidenFPMulAccVL_VV_VF<SDNode vop, string instruction_name> {
   }
 }
 
-multiclass VPatWidenFPMulAccVL_VV_VF_RM<SDNode vop, string instruction_name> {
-  foreach vtiToWti = AllWidenableFloatVectors in {
+multiclass VPatWidenFPMulAccVL_VV_VF_RM<SDNode vop, string instruction_name,
+                                        list<VTypeInfoToWide> vtiToWtis =
+                                        AllWidenableFloatVectors> {
+  foreach vtiToWti = vtiToWtis in {
     defvar vti = vtiToWti.Vti;
     defvar wti = vtiToWti.Wti;
     defvar suffix = vti.LMul.MX # "_E" # vti.SEW;
     let Predicates = !listconcat(GetVTypePredicates<vti>.Predicates,
-                                 GetVTypePredicates<wti>.Predicates) in {
+                                 GetVTypePredicates<wti>.Predicates,
+                                 !if(!eq(vti.Scalar, bf16),
+                                     [HasStdExtZvfbfwma],
+                                     [])) in {
       def : Pat<(vop (vti.Vector vti.RegClass:$rs1),
                      (vti.Vector vti.RegClass:$rs2),
                      (wti.Vector wti.RegClass:$rd), (vti.Mask V0),
@@ -2451,6 +2456,8 @@ defm : VPatFPMulAccVL_VV_VF_RM<riscv_vfnmsub_vl_oneuse, "PseudoVFNMSAC">;
 
 // 13.7. Vector Widening Floating-Point Fused Multiply-Add Instructions
 defm : VPatWidenFPMulAccVL_VV_VF_RM<riscv_vfwmadd_vl, "PseudoVFWMACC">;
+defm : VPatWidenFPMulAccVL_VV_VF_RM<riscv_vfwmadd_vl, "PseudoVFWMACCBF16",
+                                    AllWidenableBFloatToFloatVectors>;
 defm : VPatWidenFPMulAccVL_VV_VF_RM<riscv_vfwnmadd_vl, "PseudoVFWNMACC">;
 defm : VPatWidenFPMulAccVL_VV_VF_RM<riscv_vfwmsub_vl, "PseudoVFWMSAC">;
 defm : VPatWidenFPMulAccVL_VV_VF_RM<riscv_vfwnmsub_vl, "PseudoVFWNMSAC">;
