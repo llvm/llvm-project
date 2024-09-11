@@ -8663,6 +8663,7 @@ static MapVector<PHINode *, VPValue *> collectUsersInExitBlock(
          !cast<VPWidenIntOrFpInductionRecipe>(V)->getTruncInst()) ||
         isa<VPWidenPointerInductionRecipe>(V) ||
         (isa<Instruction>(IncomingValue) &&
+         OrigLoop->contains(cast<Instruction>(IncomingValue)) &&
          any_of(IncomingValue->users(), [&Inductions](User *U) {
            auto *P = dyn_cast<PHINode>(U);
            return P && Inductions.contains(P);
