@@ -113,9 +113,11 @@ class TreeTransform {
   class ForgetPartiallySubstitutedPackRAII {
     Derived &Self;
     TemplateArgument Old;
+    Sema::ArgumentPackSubstitutionIndexRAII ResetPackSubstIndex;
 
   public:
-    ForgetPartiallySubstitutedPackRAII(Derived &Self) : Self(Self) {
+    ForgetPartiallySubstitutedPackRAII(Derived &Self)
+        : Self(Self), ResetPackSubstIndex(Self.getSema(), -1) {
       Old = Self.ForgetPartiallySubstitutedPack();
     }
 
@@ -4361,8 +4363,6 @@ bool TreeTransform<Derived>::TransformExprs(Expr *const *Inputs,
       // forgetting the partially-substituted parameter pack.
       if (RetainExpansion) {
         ForgetPartiallySubstitutedPackRAII Forget(getDerived());
-        // Simple transform producing another pack expansion.
-        Sema::ArgumentPackSubstitutionIndexRAII SubstIndex(getSema(), -1);
         ExprResult Out = getDerived().TransformExpr(Pattern);
         if (Out.isInvalid())
           return true;
