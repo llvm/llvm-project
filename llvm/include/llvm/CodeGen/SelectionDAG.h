@@ -87,6 +87,7 @@ class TargetLibraryInfo;
 class TargetLowering;
 class TargetMachine;
 class TargetSubtargetInfo;
+class TargetTransformInfo;
 class Value;
 
 template <typename T> class GenericSSAContext;
@@ -584,8 +585,10 @@ public:
     return Root;
   }
 
-#ifndef NDEBUG
-  void VerifyDAGDivergence();
+#ifdef NDEBUG
+  void VerifyDAGDivergence(TargetTransformInfo *TTI) {}
+#else
+  void VerifyDAGDivergence(TargetTransformInfo *TTI);
 #endif
 
   /// This iterates over the nodes in the SelectionDAG, folding

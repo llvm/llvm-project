@@ -940,10 +940,7 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
                    << "'\n";
             CurDAG->dump());
 
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
-  if (TTI->hasBranchDivergence())
-    CurDAG->VerifyDAGDivergence();
-#endif
+  CurDAG->VerifyDAGDivergence(TTI);
 
   if (ViewDAGCombine1 && MatchFilterBB)
     CurDAG->viewGraph("dag-combine1 input for " + BlockName);
@@ -960,10 +957,7 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
                    << "'\n";
             CurDAG->dump());
 
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
-  if (TTI->hasBranchDivergence())
-    CurDAG->VerifyDAGDivergence();
-#endif
+  CurDAG->VerifyDAGDivergence(TTI);
 
   // Second step, hack on the DAG until it only uses operations and types that
   // the target supports.
@@ -982,10 +976,7 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
                    << "'\n";
             CurDAG->dump());
 
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
-  if (TTI->hasBranchDivergence())
-    CurDAG->VerifyDAGDivergence();
-#endif
+  CurDAG->VerifyDAGDivergence(TTI);
 
   // Only allow creation of legal node types.
   CurDAG->NewNodesMustHaveLegalTypes = true;
@@ -1006,10 +997,7 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
                      << "'\n";
               CurDAG->dump());
 
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
-    if (TTI->hasBranchDivergence())
-      CurDAG->VerifyDAGDivergence();
-#endif
+    CurDAG->VerifyDAGDivergence(TTI);
   }
 
   {
@@ -1024,10 +1012,7 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
                      << "'\n";
               CurDAG->dump());
 
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
-    if (TTI->hasBranchDivergence())
-      CurDAG->VerifyDAGDivergence();
-#endif
+    CurDAG->VerifyDAGDivergence(TTI);
 
     {
       NamedRegionTimer T("legalize_types2", "Type Legalization 2", GroupName,
@@ -1040,10 +1025,7 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
                      << "'\n";
               CurDAG->dump());
 
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
-    if (TTI->hasBranchDivergence())
-      CurDAG->VerifyDAGDivergence();
-#endif
+    CurDAG->VerifyDAGDivergence(TTI);
 
     if (ViewDAGCombineLT && MatchFilterBB)
       CurDAG->viewGraph("dag-combine-lv input for " + BlockName);
@@ -1060,10 +1042,7 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
                      << "'\n";
               CurDAG->dump());
 
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
-    if (TTI->hasBranchDivergence())
-      CurDAG->VerifyDAGDivergence();
-#endif
+    CurDAG->VerifyDAGDivergence(TTI);
   }
 
   if (ViewLegalizeDAGs && MatchFilterBB)
@@ -1080,10 +1059,7 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
                    << "'\n";
             CurDAG->dump());
 
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
-  if (TTI->hasBranchDivergence())
-    CurDAG->VerifyDAGDivergence();
-#endif
+  CurDAG->VerifyDAGDivergence(TTI);
 
   if (ViewDAGCombine2 && MatchFilterBB)
     CurDAG->viewGraph("dag-combine2 input for " + BlockName);
@@ -1100,10 +1076,7 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
                    << "'\n";
             CurDAG->dump());
 
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
-  if (TTI->hasBranchDivergence())
-    CurDAG->VerifyDAGDivergence();
-#endif
+  CurDAG->VerifyDAGDivergence(TTI);
 
   if (OptLevel != CodeGenOptLevel::None)
     ComputeLiveOutVRegInfo();
