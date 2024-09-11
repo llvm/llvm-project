@@ -152,8 +152,8 @@ DTLS::DTV *DTLS_on_tls_get_addr(void *arg_void, void *res,
     tls_size = 0;
   }
   if (tls_size) {
-    CHECK_LE(tls_beg, reinterpret_cast<uptr>(res));
-    CHECK_LT(reinterpret_cast<uptr>(res), tls_beg + tls_size);
+    CHECK_LE(tls_beg, reinterpret_cast<uptr>(res) + kDtvOffset);
+    CHECK_LT(reinterpret_cast<uptr>(res) + kDtvOffset, tls_beg + tls_size);
   }
   dtv->beg = tls_beg;
   dtv->size = tls_size;
