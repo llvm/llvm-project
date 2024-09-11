@@ -1872,6 +1872,25 @@ cc_library(
 )
 
 cc_library(
+    name = "CGData",
+    srcs = glob(["lib/CGData/**/*.cpp"]),
+    hdrs = glob([
+        "include/llvm/CGData/**/*.h",
+        "include/llvm/CGData/**/*.inc",
+    ]),
+    copts = llvm_copts,
+    deps = [
+        ":BitReader",
+        ":BitWriter",
+        ":Core",
+        ":Object",
+        ":ObjectYAML",
+        ":Support",
+        ":TargetParser",
+    ],
+)
+
+cc_library(
     name = "CodeGen",
     srcs = glob(
         [
@@ -1900,6 +1919,7 @@ cc_library(
         ":BitReader",
         ":BitWriter",
         ":CFGuard",
+        ":CGData",
         ":CodeGenTypes",
         ":Core",
         ":DebugInfoCodeView",
@@ -3486,6 +3506,39 @@ cc_binary(
         ":IRReader",
         ":Support",
     ],
+)
+
+gentbl(
+    name = "CGDataOptsTableGen",
+    strip_include_prefix = "tools/llvm-cgdata",
+    tbl_outs = [(
+        "-gen-opt-parser-defs",
+        "tools/llvm-cgdata/Opts.inc",
+    )],
+    tblgen = ":llvm-tblgen",
+    td_file = "tools/llvm-cgdata/Opts.td",
+    td_srcs = ["include/llvm/Option/OptParser.td"],
+)
+
+cc_library(
+    name = "llvm-cgdata-lib",
+    srcs = glob(["tools/llvm-cgdata/*.cpp"]),
+    copts = llvm_copts,
+    deps = [
+        ":CGData",
+        ":CGDataOptsTableGen",
+        ":CodeGen",
+        ":Core",
+        ":Object",
+        ":Option",
+        ":Support",
+    ],
+)
+
+llvm_driver_cc_binary(
+    name = "llvm-cgdata",
+    stamp = 0,
+    deps = [":llvm-cgdata-lib"],
 )
 
 cc_binary(

@@ -115,6 +115,7 @@ private:
   bool foldShuffleOfBinops(Instruction &I);
   bool foldShuffleOfCastops(Instruction &I);
   bool foldShuffleOfShuffles(Instruction &I);
+  bool foldShuffleOfIntrinsics(Instruction &I);
   bool foldShuffleToIdentity(Instruction &I);
   bool foldShuffleFromReductions(Instruction &I);
   bool foldCastFromReductions(Instruction &I);
@@ -1674,6 +1675,89 @@ bool VectorCombine::foldShuffleOfShuffles(Instruction &I) {
   return true;
 }
 
+/// Try to convert
+/// "shuffle (intrinsic), (intrinsic)" into "intrinsic (shuffle), (shuffle)".
+bool VectorCombine::foldShuffleOfIntrinsics(Instruction &I) {
+  Value *V0, *V1;
+  ArrayRef<int> OldMask;
+  if (!match(&I, m_Shuffle(m_OneUse(m_Value(V0)), m_OneUse(m_Value(V1)),
+                           m_Mask(OldMask))))
+    return false;
+
+  auto *II0 = dyn_cast<IntrinsicInst>(V0);
+  auto *II1 = dyn_cast<IntrinsicInst>(V1);
+  if (!II0 || !II1)
+    return false;
+
+  Intrinsic::ID IID = II0->getIntrinsicID();
+  if (IID != II1->getIntrinsicID())
+    return false;
+
+  auto *ShuffleDstTy = dyn_cast<FixedVectorType>(I.getType());
+  auto *II0Ty = dyn_cast<FixedVectorType>(II0->getType());
+  if (!ShuffleDstTy || !II0Ty)
+    return false;
+
+  if (!isTriviallyVectorizable(IID))
+    return false;
+
+  for (unsigned I = 0, E = II0->arg_size(); I != E; ++I)
+    if (isVectorIntrinsicWithScalarOpAtArg(IID, I) &&
+        II0->getArgOperand(I) != II1->getArgOperand(I))
+      return false;
+
+  InstructionCost OldCost =
+      TTI.getIntrinsicInstrCost(IntrinsicCostAttributes(IID, *II0),
+                                TTI::TCK_RecipThroughput) +
+      TTI.getIntrinsicInstrCost(IntrinsicCostAttributes(IID, *II1),
+                                TTI::TCK_RecipThroughput) +
+      TTI.getShuffleCost(TargetTransformInfo::SK_PermuteTwoSrc, II0Ty, OldMask,
+                         TTI::TCK_RecipThroughput, 0, nullptr, {II0, II1}, &I);
+
+  SmallVector<Type *> NewArgsTy;
+  InstructionCost NewCost = 0;
+  for (unsigned I = 0, E = II0->arg_size(); I != E; ++I)
+    if (isVectorIntrinsicWithScalarOpAtArg(IID, I)) {
+      NewArgsTy.push_back(II0->getArgOperand(I)->getType());
+    } else {
+      auto *VecTy = cast<FixedVectorType>(II0->getArgOperand(I)->getType());
+      NewArgsTy.push_back(FixedVectorType::get(VecTy->getElementType(),
+                                               VecTy->getNumElements() * 2));
+      NewCost += TTI.getShuffleCost(TargetTransformInfo::SK_PermuteTwoSrc,
+                                    VecTy, OldMask, TTI::TCK_RecipThroughput);
+    }
+  IntrinsicCostAttributes NewAttr(IID, ShuffleDstTy, NewArgsTy);
+  NewCost += TTI.getIntrinsicInstrCost(NewAttr, TTI::TCK_RecipThroughput);
+
+  LLVM_DEBUG(dbgs() << "Found a shuffle feeding two intrinsics: " << I
+                    << "\n  OldCost: " << OldCost << " vs NewCost: " << NewCost
+                    << "\n");
+
+  if (NewCost > OldCost)
+    return false;
+
+  SmallVector<Value *> NewArgs;
+  for (unsigned I = 0, E = II0->arg_size(); I != E; ++I)
+    if (isVectorIntrinsicWithScalarOpAtArg(IID, I)) {
+      NewArgs.push_back(II0->getArgOperand(I));
+    } else {
+      Value *Shuf = Builder.CreateShuffleVector(II0->getArgOperand(I),
+                                                II1->getArgOperand(I), OldMask);
+      NewArgs.push_back(Shuf);
+      Worklist.pushValue(Shuf);
+    }
+  Value *NewIntrinsic = Builder.CreateIntrinsic(ShuffleDstTy, IID, NewArgs);
+
+  // Intersect flags from the old intrinsics.
+  if (auto *NewInst = dyn_cast<Instruction>(NewIntrinsic)) {
+    NewInst->copyIRFlags(II0);
+    NewInst->andIRFlags(II1);
+  }
+
+  replaceValue(I, *NewIntrinsic);
+  return true;
+}
+
 using InstLane = std::pair<Use *, int>;
 
 static InstLane lookThroughShuffles(Use *U, int Lane) {
@@ -2645,6 +2729,7 @@ bool VectorCombine::run() {
         MadeChange |= foldShuffleOfBinops(I);
         MadeChange |= foldShuffleOfCastops(I);
         MadeChange |= foldShuffleOfShuffles(I);
+        MadeChange |= foldShuffleOfIntrinsics(I);
         MadeChange |= foldSelectShuffle(I);
         MadeChange |= foldShuffleToIdentity(I);
         break;
