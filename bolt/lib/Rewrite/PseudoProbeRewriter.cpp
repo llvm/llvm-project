@@ -93,8 +93,7 @@ public:
 };
 
 Error PseudoProbeRewriter::preCFGInitializer() {
-  if (opts::ProfileWritePseudoProbes ||
-      opts::StaleMatchingWithPseudoProbes)
+  if (opts::ProfileWritePseudoProbes || opts::StaleMatchingWithPseudoProbes)
     parsePseudoProbe(opts::ProfileWritePseudoProbes);
 
   return Error::success();
