@@ -868,7 +868,6 @@ void ASTWriter::WriteBlockInfoBlock() {
   BLOCK(OPTIONS_BLOCK);
   RECORD(LANGUAGE_OPTIONS);
   RECORD(TARGET_OPTIONS);
-  RECORD(FILE_SYSTEM_OPTIONS);
   RECORD(HEADER_SEARCH_OPTIONS);
   RECORD(PREPROCESSOR_OPTIONS);
 
@@ -1112,6 +1111,7 @@ void ASTWriter::WriteBlockInfoBlock() {
   RECORD(SIGNATURE);
   RECORD(AST_BLOCK_HASH);
   RECORD(DIAGNOSTIC_OPTIONS);
+  RECORD(FILE_SYSTEM_OPTIONS);
   RECORD(HEADER_SEARCH_PATHS);
   RECORD(DIAG_PRAGMA_MAPPINGS);
 
@@ -1341,6 +1341,19 @@ void ASTWriter::writeUnhashedControlBlock(Preprocessor &PP,
     Record.clear();
   }
 
+  // File system options.
+  const FileSystemOptions &FSOpts =
+      Context.getSourceManager().getFileManager().getFileSystemOpts();
+
+  AddString(FSOpts.WorkingDir, Record);
+
+  Record.push_back(FSOpts.VFSOverlayFiles.size());
+  for (StringRef VFSOverlayFile : FSOpts.VFSOverlayFiles)
+    AddString(VFSOverlayFile, Record);
+
+  Stream.EmitRecord(FILE_SYSTEM_OPTIONS, Record);
+  Record.clear();
+
   // Header search paths.
   if (!HSOpts.ModulesSkipHeaderSearchPaths) {
     // Include entries.
@@ -1359,11 +1372,6 @@ void ASTWriter::writeUnhashedControlBlock(Preprocessor &PP,
       AddString(HSOpts.SystemHeaderPrefixes[I].Prefix, Record);
       Record.push_back(HSOpts.SystemHeaderPrefixes[I].IsSystemHeader);
     }
-
-    // VFS overlay files.
-    Record.push_back(HSOpts.VFSOverlayFiles.size());
-    for (StringRef VFSOverlayFile : HSOpts.VFSOverlayFiles)
-      AddString(VFSOverlayFile, Record);
 
     Stream.EmitRecord(HEADER_SEARCH_PATHS, Record);
   }
@@ -1605,13 +1613,6 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, ASTContext &Context,
     AddString(TargetOpts.Features[I], Record);
   }
   Stream.EmitRecord(TARGET_OPTIONS, Record);
-
-  // File system options.
-  Record.clear();
-  const FileSystemOptions &FSOpts =
-      Context.getSourceManager().getFileManager().getFileSystemOpts();
-  AddString(FSOpts.WorkingDir, Record);
-  Stream.EmitRecord(FILE_SYSTEM_OPTIONS, Record);
 
   // Header search options.
   Record.clear();
@@ -4993,8 +4994,7 @@ void ASTWriter::computeNonAffectingInputFiles() {
   FileManager &FileMgr = PP->getFileManager();
   FileMgr.trackVFSUsage(true);
   // Lookup the paths in the VFS to trigger `-ivfsoverlay` usage tracking.
-  for (StringRef Path :
-       PP->getHeaderSearchInfo().getHeaderSearchOpts().VFSOverlayFiles)
+  for (StringRef Path : FileMgr.getFileSystemOpts().VFSOverlayFiles)
     FileMgr.getVirtualFileSystem().exists(Path);
   for (unsigned I = 1; I != N; ++I) {
     if (IsSLocAffecting[I]) {
