@@ -201,4 +201,7 @@
 /* Define if logf128 is available */
 #cmakedefine LLVM_HAS_LOGF128
 
+/* Define if building LLVM with ASAN */
+#cmakedefine01 LLVM_ADDRESS_SANITIZER_BUILD
+
 #endif
