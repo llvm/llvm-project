@@ -83,6 +83,7 @@ Ctx elf::ctx;
 
 static void setConfigs(opt::InputArgList &args);
 static void readConfigs(opt::InputArgList &args);
+static bool checkFileFormat(InputFile *file);
 
 void elf::errorOrWarn(const Twine &msg) {
   if (config->noinhibitExec)
@@ -1249,6 +1250,9 @@ static void readConfigs(opt::InputArgList &args) {
   errorHandler().verbose = args.hasArg(OPT_verbose);
   errorHandler().vsDiagnostics =
       args.hasArg(OPT_visual_studio_diagnostics_format, false);
+
+  config->CheckFormat =
+      args.hasFlag(OPT_check_format, OPT_no_check_format, true);
 
   config->allowMultipleDefinition =
       hasZOption(args, "muldefs") ||
@@ -3199,4 +3203,91 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
 
   // Write the result to the file.
   writeResult<ELFT>();
+}
+
+static bool checkFileFormat(InputFile *file) {
+  if (!file->isElf() && !isa<BitcodeFile>(file))
+    return true;
+
+  if (file->ekind == config->ekind && file->emachine == config->emachine) {
+    if (config->emachine != EM_MIPS)
+      return true;
+    if (isMipsN32Abi(file) == config->mipsN32Abi)
+      return true;
+  }
+
+  StringRef target =
+      !config->bfdname.empty() ? config->bfdname : config->emulation;
+  warn(toString(file) + " is incompatible with " + target);
+  return false;
+}
+
+bool LinkerDriver::checkFile(StringRef path) {
+  using namespace sys::fs;
+  if (config->ekind == ELFNoneKind || !config->CheckFormat)
+    return true;
+
+  std::optional<MemoryBufferRef> buffer = readFile(path);
+  if (!buffer)
+    return false;
+
+  MemoryBufferRef mbref = *buffer;
+
+  if (config->formatBinary) {
+    return checkFileFormat(make<BinaryFile>(mbref));
+  }
+
+  switch (identify_magic(mbref.getBuffer())) {
+  case file_magic::unknown:
+    return true;
+  case file_magic::archive: {
+    auto members = getArchiveMembers(mbref);
+    if (inWholeArchive) {
+      for (const auto &p : members) {
+        bool SingleFile = isBitcode(p.first)
+                              ? checkFileFormat(make<BitcodeFile>(
+                                    p.first, path, p.second, false))
+                              : checkFileFormat(createObjFile(p.first, path));
+        return SingleFile;
+      }
+    }
+    for (const auto &p : members) {
+      auto magic = identify_magic(p.first.getBuffer());
+      switch (magic) {
+      case file_magic::elf_relocatable:
+        if (!tryAddFatLTOFile(p.first, path, p.second, true))
+          return checkFileFormat(createObjFile(p.first, path, true));
+        break;
+      case file_magic::bitcode:
+        return checkFileFormat(
+            make<BitcodeFile>(p.first, path, p.second, true));
+        break;
+      default: {
+        warn(path + ": archive member '" + p.first.getBufferIdentifier() +
+             "' is neither ET_REL nor LLVM bitcode");
+      }
+      }
+    }
+    return true;
+  }
+  case file_magic::elf_shared_object: {
+    if (config->isStatic || config->relocatable) {
+      warn("attempted static link of dynamic object " + path);
+      return false;
+    }
+    path = mbref.getBufferIdentifier();
+    auto *f = make<SharedFile>(mbref, false ? path::filename(path) : path);
+    f->init();
+    return checkFileFormat(f);
+  }
+  case file_magic::bitcode:
+    return checkFileFormat(make<BitcodeFile>(mbref, "", 0, inLib));
+  case file_magic::elf_relocatable:
+    if (!tryAddFatLTOFile(mbref, "", 0, inLib))
+      return checkFileFormat(createObjFile(mbref, "", inLib));
+    break;
+  default:
+    warn(path + ": unknown file type");
+    return false;
+  }
 }
