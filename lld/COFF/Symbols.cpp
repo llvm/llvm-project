@@ -107,22 +107,10 @@ COFFSymbolRef DefinedCOFF::getCOFFSymbol() {
 
 uint64_t DefinedAbsolute::getRVA() { return va - ctx.config.imageBase; }
 
-static Chunk *makeImportThunk(COFFLinkerContext &ctx, DefinedImportData *s,
-                              uint16_t machine) {
-  if (machine == AMD64)
-    return make<ImportThunkChunkX64>(ctx, s);
-  if (machine == I386)
-    return make<ImportThunkChunkX86>(ctx, s);
-  if (machine == ARM64)
-    return make<ImportThunkChunkARM64>(ctx, s);
-  assert(machine == ARMNT);
-  return make<ImportThunkChunkARM>(ctx, s);
-}
-
 DefinedImportThunk::DefinedImportThunk(COFFLinkerContext &ctx, StringRef name,
-                                       DefinedImportData *s, uint16_t machine)
-    : Defined(DefinedImportThunkKind, name), wrappedSym(s),
-      data(makeImportThunk(ctx, s, machine)) {}
+                                       DefinedImportData *s,
+                                       ImportThunkChunk *chunk)
+    : Defined(DefinedImportThunkKind, name), wrappedSym(s), data(chunk) {}
 
 Defined *Undefined::getWeakAlias() {
   // A weak alias may be a weak alias to another symbol, so check recursively.

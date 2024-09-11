@@ -607,10 +607,7 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
   case TargetOpcode::G_ADDRSPACE_CAST:
     return selectAddrSpaceCast(ResVReg, ResType, I);
   case TargetOpcode::G_PTR_ADD: {
-    // Currently, we get G_PTR_ADD only as a result of translating
-    // global variables, initialized with constant expressions like GV + Const
-    // (see test opencl/basic/progvar_prog_scope_init.ll).
-    // TODO: extend the handler once we have other cases.
+    // Currently, we get G_PTR_ADD only applied to global variables.
     assert(I.getOperand(1).isReg() && I.getOperand(2).isReg());
     Register GV = I.getOperand(1).getReg();
     MachineRegisterInfo::def_instr_iterator II = MRI->def_instr_begin(GV);
@@ -619,8 +616,68 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
             (*II).getOpcode() == TargetOpcode::COPY ||
             (*II).getOpcode() == SPIRV::OpVariable) &&
            isImm(I.getOperand(2), MRI));
-    Register Idx = buildZerosVal(GR.getOrCreateSPIRVIntegerType(32, I, TII), I);
+    // It may be the initialization of a global variable.
+    bool IsGVInit = false;
+    for (MachineRegisterInfo::use_instr_iterator
+             UseIt = MRI->use_instr_begin(I.getOperand(0).getReg()),
+             UseEnd = MRI->use_instr_end();
+         UseIt != UseEnd; UseIt = std::next(UseIt)) {
+      if ((*UseIt).getOpcode() == TargetOpcode::G_GLOBAL_VALUE ||
+          (*UseIt).getOpcode() == SPIRV::OpVariable) {
+        IsGVInit = true;
+        break;
+      }
+    }
     MachineBasicBlock &BB = *I.getParent();
+    if (!IsGVInit) {
+      SPIRVType *GVType = GR.getSPIRVTypeForVReg(GV);
+      SPIRVType *GVPointeeType = GR.getPointeeType(GVType);
+      SPIRVType *ResPointeeType = GR.getPointeeType(ResType);
+      if (GVPointeeType && ResPointeeType && GVPointeeType != ResPointeeType) {
+        // Build a new virtual register that is associated with the required
+        // data type.
+        Register NewVReg = MRI->createGenericVirtualRegister(MRI->getType(GV));
+        MRI->setRegClass(NewVReg, MRI->getRegClass(GV));
+        //  Having a correctly typed base we are ready to build the actually
+        //  required GEP. It may not be a constant though, because all Operands
+        //  of OpSpecConstantOp is to originate from other const instructions,
+        //  and only the AccessChain named opcodes accept a global OpVariable
+        //  instruction. We can't use an AccessChain opcode because of the type
+        //  mismatch between result and base types.
+        if (!GR.isBitcastCompatible(ResType, GVType))
+          report_fatal_error(
+              "incompatible result and operand types in a bitcast");
+        Register ResTypeReg = GR.getSPIRVTypeID(ResType);
+        MachineInstrBuilder MIB =
+            BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpBitcast))
+                .addDef(NewVReg)
+                .addUse(ResTypeReg)
+                .addUse(GV);
+        return MIB.constrainAllUses(TII, TRI, RBI) &&
+               BuildMI(BB, I, I.getDebugLoc(),
+                       TII.get(STI.isVulkanEnv()
+                                   ? SPIRV::OpInBoundsAccessChain
+                                   : SPIRV::OpInBoundsPtrAccessChain))
+                   .addDef(ResVReg)
+                   .addUse(ResTypeReg)
+                   .addUse(NewVReg)
+                   .addUse(I.getOperand(2).getReg())
+                   .constrainAllUses(TII, TRI, RBI);
+      } else {
+        return BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpSpecConstantOp))
+            .addDef(ResVReg)
+            .addUse(GR.getSPIRVTypeID(ResType))
+            .addImm(
+                static_cast<uint32_t>(SPIRV::Opcode::InBoundsPtrAccessChain))
+            .addUse(GV)
+            .addUse(I.getOperand(2).getReg())
+            .constrainAllUses(TII, TRI, RBI);
+      }
+    }
+    // It's possible to translate G_PTR_ADD to OpSpecConstantOp: either to
+    // initialize a global variable with a constant expression (e.g., the test
+    // case opencl/basic/progvar_prog_scope_init.ll), or for another use case
+    Register Idx = buildZerosVal(GR.getOrCreateSPIRVIntegerType(32, I, TII), I);
     auto MIB = BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpSpecConstantOp))
                    .addDef(ResVReg)
                    .addUse(GR.getSPIRVTypeID(ResType))
