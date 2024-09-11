@@ -268,6 +268,12 @@ Attribute Parser::parseExtendedAttr(Type type) {
 
           // Parse the attribute.
           CustomDialectAsmParser customParser(symbolData, *this);
+          if (auto iface = dyn_cast<OpAsmDialectInterface>(dialect)) {
+            Attribute attr{};
+            if (succeeded(iface->parseDialectAlias(customParser, attr, type)))
+              return attr;
+            resetToken(symbolData.data());
+          }
           Attribute attr = dialect->parseAttribute(customParser, attrType);
           resetToken(curLexerPos);
           return attr;
@@ -309,6 +315,12 @@ Type Parser::parseExtendedType() {
 
           // Parse the type.
           CustomDialectAsmParser customParser(symbolData, *this);
+          if (auto iface = dyn_cast<OpAsmDialectInterface>(dialect)) {
+            Type type{};
+            if (succeeded(iface->parseDialectAlias(customParser, type)))
+              return type;
+            resetToken(symbolData.data());
+          }
           Type type = dialect->parseType(customParser);
           resetToken(curLexerPos);
           return type;

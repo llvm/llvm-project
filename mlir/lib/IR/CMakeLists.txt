@@ -7,6 +7,7 @@ endif()
 add_mlir_library(MLIRIR
   AffineExpr.cpp
   AffineMap.cpp
+  AsmInterfaces.cpp
   AsmPrinter.cpp
   Attributes.cpp
   AttrTypeSubElements.cpp
@@ -48,6 +49,7 @@ add_mlir_library(MLIRIR
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/IR
 
   DEPENDS
+  MLIRAsmInterfacesIncGen
   MLIRBuiltinAttributesIncGen
   MLIRBuiltinAttributeInterfacesIncGen
   MLIRBuiltinDialectBytecodeIncGen
