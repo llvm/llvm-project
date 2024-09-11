@@ -847,13 +847,8 @@ struct MemoryDefWrapper {
 
 bool hasInitializesAttr(Instruction *I) {
   CallBase *CB = dyn_cast<CallBase>(I);
-  if (!CB)
-    return false;
-
-  for (unsigned Idx = 0, Count = CB->arg_size(); Idx < Count; ++Idx)
-    if (CB->paramHasAttr(Idx, Attribute::Initializes))
-      return true;
-  return false;
+  return CB != nullptr &&
+         CB->getArgOperandWithAttribute(Attribute::Initializes) != nullptr;
 }
 
 struct ArgumentInitInfo {
@@ -915,11 +910,19 @@ getInitializesArgMemLoc(const Instruction *I, BatchAAResults &BatchAA) {
     Value *CurArg = CB->getArgOperand(Idx);
     bool FoundAliasing = false;
     for (auto &[Arg, AliasList] : Arguments) {
-      if (BatchAA.isNoAlias(Arg, CurArg))
+      if (BatchAA.isNoAlias(Arg, CurArg)) {
         continue;
-      // Conservatively consider must/may/partial-alias as aliasing.
-      FoundAliasing = true;
-      AliasList.push_back(InitInfo);
+      } else if (BatchAA.isMustAlias(Arg, CurArg)) {
+        FoundAliasing = true;
+        AliasList.push_back(InitInfo);
+      } else {
+        // For ParitialAlias and MayAlias, there is an offset or may be an
+        // unknown offset between the arguments and we insert an empty init
+        // range to discard the entire initializes info while intersecting.
+        FoundAliasing = true;
+        AliasList.push_back(
+            ArgumentInitInfo{Idx, HasDeadOnUnwindAttr, ConstantRangeList()});
+      }
     }
     if (!FoundAliasing)
       Arguments[CurArg] = {InitInfo};

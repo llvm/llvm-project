@@ -12,10 +12,10 @@ declare void @p2_no_dead_on_unwind_but_nounwind(ptr nocapture noundef initialize
 ; Function Attrs: mustprogress nounwind uwtable
 define i16 @p1_write_only_caller() {
 ; CHECK-LABEL: @p1_write_only_caller(
-; CHECK-NEXT:    %ptr = alloca i16, align 2
-; CHECK-NEXT:    call void @p1_write_only(ptr %ptr)
-; CHECK-NEXT:    %l = load i16, ptr %ptr
-; CHECK-NEXT:    ret i16 %l
+; CHECK-NEXT:    [[PTR:%.*]] = alloca i16, align 2
+; CHECK-NEXT:    call void @p1_write_only(ptr [[PTR]])
+; CHECK-NEXT:    [[L:%.*]] = load i16, ptr [[PTR]], align 2
+; CHECK-NEXT:    ret i16 [[L]]
 ;
   %ptr = alloca i16
   store i16 0, ptr %ptr
@@ -27,10 +27,10 @@ define i16 @p1_write_only_caller() {
 ; Function Attrs: mustprogress nounwind uwtable
 define i16 @p1_write_then_read_caller() {
 ; CHECK-LABEL: @p1_write_then_read_caller(
-; CHECK-NEXT:    %ptr = alloca i16, align 2
-; CHECK-NEXT:    call void @p1_write_then_read(ptr %ptr)
-; CHECK-NEXT:    %l = load i16, ptr %ptr
-; CHECK-NEXT:    ret i16 %l
+; CHECK-NEXT:    [[PTR:%.*]] = alloca i16, align 2
+; CHECK-NEXT:    call void @p1_write_then_read(ptr [[PTR]])
+; CHECK-NEXT:    [[L:%.*]] = load i16, ptr [[PTR]], align 2
+; CHECK-NEXT:    ret i16 [[L]]
 ;
   %ptr = alloca i16
   store i16 0, ptr %ptr
@@ -42,12 +42,12 @@ define i16 @p1_write_then_read_caller() {
 ; Function Attrs: mustprogress nounwind uwtable
 define i16 @p1_write_then_read_caller_with_clobber() {
 ; CHECK-LABEL: @p1_write_then_read_caller_with_clobber(
-; CHECK-NEXT:    %ptr = alloca i16, align 2
-; CHECK-NEXT:    store i16 0, ptr %ptr
-; CHECK-NEXT:    call void @p1_clobber(ptr %ptr)
-; CHECK-NEXT:    call void @p1_write_then_read(ptr %ptr)
-; CHECK-NEXT:    %l = load i16, ptr %ptr
-; CHECK-NEXT:    ret i16 %l
+; CHECK-NEXT:    [[PTR:%.*]] = alloca i16, align 2
+; CHECK-NEXT:    store i16 0, ptr [[PTR]], align 2
+; CHECK-NEXT:    call void @p1_clobber(ptr [[PTR]])
+; CHECK-NEXT:    call void @p1_write_then_read(ptr [[PTR]])
+; CHECK-NEXT:    [[L:%.*]] = load i16, ptr [[PTR]], align 2
+; CHECK-NEXT:    ret i16 [[L]]
 ;
   %ptr = alloca i16
   store i16 0, ptr %ptr
@@ -58,13 +58,13 @@ define i16 @p1_write_then_read_caller_with_clobber() {
 }
 
 ; Function Attrs: mustprogress nounwind uwtable
-define i16 @p2_same_range_nonalias_caller() {
-; CHECK-LABEL: @p2_same_range_nonalias_caller(
-; CHECK-NEXT:    %ptr1 = alloca i16, align 2
-; CHECK-NEXT:    %ptr2 = alloca i16, align 2
-; CHECK-NEXT:    call void @p2_same_range(ptr %ptr1, ptr %ptr2)
-; CHECK-NEXT:    %l = load i16, ptr %ptr1
-; CHECK-NEXT:    ret i16 %l
+define i16 @p2_same_range_noalias_caller() {
+; CHECK-LABEL: @p2_same_range_noalias_caller(
+; CHECK-NEXT:    [[PTR1:%.*]] = alloca i16, align 2
+; CHECK-NEXT:    [[PTR2:%.*]] = alloca i16, align 2
+; CHECK-NEXT:    call void @p2_same_range(ptr [[PTR1]], ptr [[PTR2]])
+; CHECK-NEXT:    [[L:%.*]] = load i16, ptr [[PTR1]], align 2
+; CHECK-NEXT:    ret i16 [[L]]
 ;
   %ptr1 = alloca i16
   %ptr2 = alloca i16
@@ -76,12 +76,12 @@ define i16 @p2_same_range_nonalias_caller() {
 }
 
 ; Function Attrs: mustprogress nounwind uwtable
-define i16 @p2_same_range_alias_caller() {
-; CHECK-LABEL: @p2_same_range_alias_caller(
-; CHECK-NEXT:    %ptr = alloca i16, align 2
-; CHECK-NEXT:    call void @p2_same_range(ptr %ptr, ptr %ptr)
-; CHECK-NEXT:    %l = load i16, ptr %ptr
-; CHECK-NEXT:    ret i16 %l
+define i16 @p2_same_range_must_alias_caller() {
+; CHECK-LABEL: @p2_same_range_must_alias_caller(
+; CHECK-NEXT:    [[PTR:%.*]] = alloca i16, align 2
+; CHECK-NEXT:    call void @p2_same_range(ptr [[PTR]], ptr [[PTR]])
+; CHECK-NEXT:    [[L:%.*]] = load i16, ptr [[PTR]], align 2
+; CHECK-NEXT:    ret i16 [[L]]
 ;
   %ptr = alloca i16
   store i16 0, ptr %ptr
@@ -91,13 +91,45 @@ define i16 @p2_same_range_alias_caller() {
 }
 
 ; Function Attrs: mustprogress nounwind uwtable
+define i16 @p2_same_range_may_or_partial_alias_caller1(ptr %base, i1 %x) {
+; CHECK-LABEL: @p2_same_range_may_or_partial_alias_caller1(
+; CHECK-NEXT:    [[BASEPLUS:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 1
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[X:%.*]], ptr [[BASEPLUS]], ptr [[BASE]]
+; CHECK-NEXT:    store i32 0, ptr [[BASE]], align 4
+; CHECK-NEXT:    call void @p2_same_range(ptr [[BASE]], ptr [[SEL]])
+; CHECK-NEXT:    [[L:%.*]] = load i16, ptr [[BASE]], align 2
+; CHECK-NEXT:    ret i16 [[L]]
+;
+  %baseplus = getelementptr i8, ptr %base, i64 1
+  %sel = select i1 %x, ptr %baseplus, ptr %base
+  store i32 0, ptr %base
+  call void @p2_same_range(ptr %base, ptr %sel)
+  %l = load i16, ptr %base
+  ret i16 %l
+}
+
+; Function Attrs: mustprogress nounwind uwtable
+define i16 @p2_same_range_may_or_partial_alias_caller2(ptr %base1, ptr %base2) {
+; CHECK-LABEL: @p2_same_range_may_or_partial_alias_caller2(
+; CHECK-NEXT:    store i32 0, ptr [[BASE1:%.*]], align 4
+; CHECK-NEXT:    call void @p2_same_range(ptr [[BASE1]], ptr [[BASE2:%.*]])
+; CHECK-NEXT:    [[L:%.*]] = load i16, ptr [[BASE1]], align 2
+; CHECK-NEXT:    ret i16 [[L]]
+;
+  store i32 0, ptr %base1
+  call void @p2_same_range(ptr %base1, ptr %base2)
+  %l = load i16, ptr %base1
+  ret i16 %l
+}
+
+; Function Attrs: mustprogress nounwind uwtable
 define i16 @p2_no_init_alias_caller() {
 ; CHECK-LABEL: @p2_no_init_alias_caller(
-; CHECK-NEXT:    %ptr = alloca i16, align 2
-; CHECK-NEXT:    store i16 0, ptr %ptr
-; CHECK-NEXT:    call void @p2_no_init(ptr %ptr, ptr %ptr)
-; CHECK-NEXT:    %l = load i16, ptr %ptr
-; CHECK-NEXT:    ret i16 %l
+; CHECK-NEXT:    [[PTR:%.*]] = alloca i16, align 2
+; CHECK-NEXT:    store i16 0, ptr [[PTR]], align 2
+; CHECK-NEXT:    call void @p2_no_init(ptr [[PTR]], ptr [[PTR]])
+; CHECK-NEXT:    [[L:%.*]] = load i16, ptr [[PTR]], align 2
+; CHECK-NEXT:    ret i16 [[L]]
 ;
   %ptr = alloca i16
   store i16 0, ptr %ptr
@@ -109,11 +141,11 @@ define i16 @p2_no_init_alias_caller() {
 ; Function Attrs: mustprogress nounwind uwtable
 define i16 @p2_no_dead_on_unwind_alias_caller() {
 ; CHECK-LABEL: @p2_no_dead_on_unwind_alias_caller(
-; CHECK-NEXT:    %ptr = alloca i16, align 2
-; CHECK-NEXT:    store i16 0, ptr %ptr
-; CHECK-NEXT:    call void @p2_no_dead_on_unwind(ptr %ptr, ptr %ptr)
-; CHECK-NEXT:    %l = load i16, ptr %ptr
-; CHECK-NEXT:    ret i16 %l
+; CHECK-NEXT:    [[PTR:%.*]] = alloca i16, align 2
+; CHECK-NEXT:    store i16 0, ptr [[PTR]], align 2
+; CHECK-NEXT:    call void @p2_no_dead_on_unwind(ptr [[PTR]], ptr [[PTR]])
+; CHECK-NEXT:    [[L:%.*]] = load i16, ptr [[PTR]], align 2
+; CHECK-NEXT:    ret i16 [[L]]
 ;
   %ptr = alloca i16
   store i16 0, ptr %ptr
@@ -125,10 +157,10 @@ define i16 @p2_no_dead_on_unwind_alias_caller() {
 ; Function Attrs: mustprogress nounwind uwtable
 define i16 @p2_no_dead_on_unwind_but_nounwind_alias_caller() {
 ; CHECK-LABEL: @p2_no_dead_on_unwind_but_nounwind_alias_caller(
-; CHECK-NEXT:    %ptr = alloca i16, align 2
-; CHECK-NEXT:    call void @p2_no_dead_on_unwind_but_nounwind(ptr %ptr, ptr %ptr)
-; CHECK-NEXT:    %l = load i16, ptr %ptr
-; CHECK-NEXT:    ret i16 %l
+; CHECK-NEXT:    [[PTR:%.*]] = alloca i16, align 2
+; CHECK-NEXT:    call void @p2_no_dead_on_unwind_but_nounwind(ptr [[PTR]], ptr [[PTR]])
+; CHECK-NEXT:    [[L:%.*]] = load i16, ptr [[PTR]], align 2
+; CHECK-NEXT:    ret i16 [[L]]
 ;
   %ptr = alloca i16
   store i16 0, ptr %ptr
@@ -144,10 +176,10 @@ declare void @large_p2(ptr nocapture noundef initializes((0, 200)), ptr nocaptur
 ; Function Attrs: mustprogress nounwind uwtable
 define i16 @large_p1_caller() {
 ; CHECK-LABEL: @large_p1_caller(
-; CHECK-NEXT:    %ptr = alloca i16, align 2
-; CHECK-NEXT:    call void @large_p1(ptr %ptr)
-; CHECK-NEXT:    %l = load i16, ptr %ptr
-; CHECK-NEXT:    ret i16 %l
+; CHECK-NEXT:    [[PTR:%.*]] = alloca i16, align 2
+; CHECK-NEXT:    call void @large_p1(ptr [[PTR]])
+; CHECK-NEXT:    [[L:%.*]] = load i16, ptr [[PTR]], align 2
+; CHECK-NEXT:    ret i16 [[L]]
 ;
   %ptr = alloca i16
   call void @llvm.memset.p0.i64(ptr %ptr, i8 42, i64 100, i1 false)
@@ -159,11 +191,11 @@ define i16 @large_p1_caller() {
 ; Function Attrs: mustprogress nounwind uwtable
 define i16 @large_p2_nonalias_caller() {
 ; CHECK-LABEL: @large_p2_nonalias_caller(
-; CHECK-NEXT:    %ptr1 = alloca i16, align 2
-; CHECK-NEXT:    %ptr2 = alloca i16, align 2
-; CHECK-NEXT:    call void @large_p2(ptr %ptr1, ptr %ptr2)
-; CHECK-NEXT:    %l = load i16, ptr %ptr1
-; CHECK-NEXT:    ret i16 %l
+; CHECK-NEXT:    [[PTR1:%.*]] = alloca i16, align 2
+; CHECK-NEXT:    [[PTR2:%.*]] = alloca i16, align 2
+; CHECK-NEXT:    call void @large_p2(ptr [[PTR1]], ptr [[PTR2]])
+; CHECK-NEXT:    [[L:%.*]] = load i16, ptr [[PTR1]], align 2
+; CHECK-NEXT:    ret i16 [[L]]
 ;
   %ptr1 = alloca i16
   %ptr2 = alloca i16
@@ -176,14 +208,14 @@ define i16 @large_p2_nonalias_caller() {
 
 
 ; Function Attrs: mustprogress nounwind uwtable
-define i16 @large_p2_alias_caller() {
-; CHECK-LABEL: @large_p2_alias_caller(
-; CHECK-NEXT:    %ptr = alloca i16, align 2
-; CHECK-NEXT:    %1 = getelementptr inbounds i8, ptr %ptr, i64 100
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 %1, i8 42, i64 200, i1 false)
-; CHECK-NEXT:    call void @large_p2(ptr %ptr, ptr %ptr)
-; CHECK-NEXT:    %l = load i16, ptr %ptr
-; CHECK-NEXT:    ret i16 %l
+define i16 @large_p2_must_alias_caller() {
+; CHECK-LABEL: @large_p2_must_alias_caller(
+; CHECK-NEXT:    [[PTR:%.*]] = alloca i16, align 2
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i64 100
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP1]], i8 42, i64 200, i1 false)
+; CHECK-NEXT:    call void @large_p2(ptr [[PTR]], ptr [[PTR]])
+; CHECK-NEXT:    [[L:%.*]] = load i16, ptr [[PTR]], align 2
+; CHECK-NEXT:    ret i16 [[L]]
 ;
   %ptr = alloca i16
   call void @llvm.memset.p0.i64(ptr %ptr, i8 42, i64 300, i1 false)
