@@ -46,18 +46,13 @@ define amdgpu_cs void @test_uniform_load_b96(i32 %arg) "amdgpu-flat-work-group-s
 ; GFX12-NEXT:    s_endpgm
 bb:
   %i = zext i32 %arg to i64
-  %i1 = getelementptr <{ [4294967295 x i32] }>, ptr addrspace(1) null, i64 0, i32 0, i64 %i
-  %i2 = load i32, ptr addrspace(1) %i1, align 4
-  %i3 = add nuw i32 %arg, 1
-  %i4 = zext i32 %i3 to i64
-  %i5 = getelementptr <{ [4294967295 x i32] }>, ptr addrspace(1) null, i64 0, i32 0, i64 %i4
-  %i6 = load i32, ptr addrspace(1) %i5, align 4
-  %i7 = add nuw i32 %arg, 2
-  %i8 = zext i32 %i7 to i64
-  %i9 = getelementptr <{ [4294967295 x i32] }>, ptr addrspace(1) null, i64 0, i32 0, i64 %i8
-  %i10 = load i32, ptr addrspace(1) %i9, align 4
-  %i11 = or i32 %i2, %i6
-  %i12 = or i32 %i10, %i11
-  store i32 %i12, ptr addrspace(1) null, align 4
+  %i1 = getelementptr i32, ptr addrspace(1) null, i64 %i
+  %i2 = load <3 x i32>, ptr addrspace(1) %i1, align 4
+  %i3 = extractelement <3 x i32> %i2, i32 0
+  %i4 = extractelement <3 x i32> %i2, i32 1
+  %i5 = extractelement <3 x i32> %i2, i32 2
+  %i6 = or i32 %i3, %i4
+  %i7 = or i32 %i5, %i6
+  store i32 %i7, ptr addrspace(1) null, align 4
   ret void
 }
