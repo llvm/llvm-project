@@ -4,6 +4,7 @@ LD_EXTRAS := -L. -lfoo
 CFLAGS_EXTRAS := -target $(ARCH)-apple-ios13.0-macabi
 
 # FIXME: rdar://problem/54986190
+override CC_TYPE=clang
 override CC=xcrun clang
 
 all: libfoo.dylib a.out
