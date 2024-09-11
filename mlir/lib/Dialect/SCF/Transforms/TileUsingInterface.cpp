@@ -1481,12 +1481,8 @@ static FailureOr<OpOperand *> getConsumerFromUses(Value val,
   return &operand;
 }
 
-/// Recursively find the outer nest loops of given loop(included) sorted from
+/// Find the perfectly nested loops outside of given loop(included) sorted from
 /// outer to inner.
-///
-/// @param loop: target loop, note that this loop will be also included. I.e.
-///              if no other nest loops were found, just return itself.
-/// @return Outer Nest Loops: nest loops outside given target loop(included).
 ///
 /// E.g.
 ///
@@ -1494,34 +1490,36 @@ static FailureOr<OpOperand *> getConsumerFromUses(Value val,
 ///  %0 = scf.for()
 ///    %1 = scf.for()
 ///      %2 = scf.for()
+///         %3 = ...
+///         yield %3
+///      yield %2
+///    yield %1
 /// ```
 ///
-/// This function will return three nest loops: %0 + %1 + %2.
-static SmallVector<LoopLikeOpInterface>
-getPerfectlyOuterNestedLoops(LoopLikeOpInterface loop) {
-  SmallVector<LoopLikeOpInterface> nestLoops = {loop};
-  auto outerLoop = dyn_cast<LoopLikeOpInterface>(loop->getParentOp());
+/// This function will return three perfectly nested loops: %0 + %1 + %2, when
+/// target inner loop is %2.
+static SmallVector<scf::ForOp>
+getPerfectlyNestedLoopsOutsideOf(scf::ForOp loop) {
+  SmallVector<scf::ForOp> nestLoops = {loop};
+  auto outerLoop = dyn_cast<scf::ForOp>(loop->getParentOp());
 
-  /// Check if it is the ForOp that yield the result of inner loop.
+  // Check if it is the ForOp that yield the result of inner loop.
   auto isForOpYieldResultOfInnerLoop =
-      [](LoopLikeOpInterface outerLoop) -> LogicalResult {
-    auto forOp = dyn_cast<scf::ForOp>(outerLoop.getOperation());
-    if (!forOp)
-      return failure();
-    Block *body = forOp.getBody();
+      [](scf::ForOp outerLoop) -> LogicalResult {
+    Block *body = outerLoop.getBody();
     if (!llvm::hasSingleElement(body->without_terminator()))
       return failure();
     auto yieldOp = cast<scf::YieldOp>(body->getTerminator());
     auto innerForOp = dyn_cast<scf::ForOp>(body->front());
     if (!innerForOp)
       return failure();
-    // If any of the innerForOp results are not yielded.
+    // All of innerForOp results should be yielded.
     return success(innerForOp->getNumResults() == yieldOp->getNumOperands());
   };
 
   while (outerLoop && succeeded(isForOpYieldResultOfInnerLoop(outerLoop))) {
     nestLoops.push_back(outerLoop);
-    outerLoop = dyn_cast<LoopLikeOpInterface>(outerLoop->getParentOp());
+    outerLoop = dyn_cast<scf::ForOp>(outerLoop->getParentOp());
   }
   // sorted from outer to inner
   return {nestLoops.rbegin(), nestLoops.rend()};
@@ -1544,8 +1542,7 @@ getUntiledConsumerFromSlice(tensor::InsertSliceOp candidateSliceOp) {
   auto forOp = dyn_cast<scf::ForOp>(containingOp);
   if (!forOp)
     return failure();
-  LoopLikeOpInterface topLevelForOp =
-      getPerfectlyOuterNestedLoops(forOp).front();
+  scf::ForOp topLevelForOp = getPerfectlyNestedLoopsOutsideOf(forOp).front();
   Value resultingValue = topLevelForOp->getResult(resultNumber);
 
   return getConsumerFromUses(resultingValue, topLevelForOp->getBlock());
@@ -1649,7 +1646,12 @@ mlir::scf::tileAndFuseConsumerOfSlice(RewriterBase &rewriter,
       candidateSliceOp->getParentOfType<LoopLikeOpInterface>();
   SmallVector<LoopLikeOpInterface> nestedLoops;
   if (isInsertSliceOp) {
-    nestedLoops = getPerfectlyOuterNestedLoops(innerMostLoop);
+    nestedLoops = llvm::map_to_vector(
+        getPerfectlyNestedLoopsOutsideOf(
+            cast<scf::ForOp>(innerMostLoop.getOperation())),
+        [](scf::ForOp forOp) {
+          return cast<LoopLikeOpInterface>(forOp.getOperation());
+        });
   } else {
     nestedLoops = {innerMostLoop};
   }
@@ -1683,7 +1685,7 @@ mlir::scf::tileAndFuseConsumerOfSlice(RewriterBase &rewriter,
 
   // 3. Move the whole loop structure right before consumer Op, the dominance
   // should be already ensured by `checkAssumptionForLoop`.
-  outerMostLoop->moveBefore(consumerOp);
+  rewriter.moveOpBefore(outerMostLoop, consumerOp);
 
   // 4. Set insertion point before terminator op of the loop and create a new
   // tensor.insert_slice. In the scf.for case this is a clone of the
@@ -1713,7 +1715,7 @@ mlir::scf::tileAndFuseConsumerOfSlice(RewriterBase &rewriter,
     operandToReplace.set(clonedInsertSliceOp.getResult());
   });
 
-  // 6 - Perform tiling of the cloned consumer and replace the operand at
+  // 6. Perform tiling of the cloned consumer and replace the operand at
   // `operandNumber` with the source of the cloned tensor.insert_slice op.
   auto ossSliceOp =
       cast<OffsetSizeAndStrideOpInterface>(clonedInsertSliceOp.getOperation());
@@ -1727,14 +1729,14 @@ mlir::scf::tileAndFuseConsumerOfSlice(RewriterBase &rewriter,
   rewriter.replaceAllUsesWith(tiledConsumerOp->getOperand(operandNumber),
                               clonedInsertSliceOp.getSource());
 
-  // 7 - Reconstruct [nested] loop with new inits.
+  // 7. Reconstruct [nested] loop with new inits.
   YieldTiledValuesFn newYieldValuesFn =
       [&](RewriterBase &innerRewriter, Location loc, ValueRange /*ivs*/,
           ValueRange newRegionIterArgs, SmallVector<Value> &tiledResult,
           SmallVector<SmallVector<OpFoldResult>> &tiledOffset,
           SmallVector<SmallVector<OpFoldResult>> &tiledSizes) -> LogicalResult {
     OpBuilder::InsertionGuard g(innerRewriter);
-    // 9. Set inner insertPoint right before tiled consumer op.
+    // 8. Set inner insertPoint right before tiled consumer op.
     innerRewriter.setInsertionPoint(tiledConsumerOp);
 
     SmallVector<OpFoldResult> offsets = ossSliceOp.getMixedOffsets();
