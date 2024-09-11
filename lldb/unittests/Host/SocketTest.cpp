@@ -88,7 +88,8 @@ TEST_P(SocketTest, DomainListenConnectAccept) {
 
 TEST_P(SocketTest, DomainMainLoopAccept) {
   llvm::SmallString<64> Path;
-  std::error_code EC = llvm::sys::fs::createUniqueDirectory("DomainListenConnectAccept", Path);
+  std::error_code EC =
+      llvm::sys::fs::createUniqueDirectory("DomainListenConnectAccept", Path);
   ASSERT_FALSE(EC);
   llvm::sys::path::append(Path, "test");
 
