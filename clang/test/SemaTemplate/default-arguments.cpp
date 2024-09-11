@@ -229,3 +229,55 @@ namespace unevaluated {
   template<int = 0> int f(int = a); // expected-warning 0-1{{extension}}
   int k = sizeof(f());
 }
+
+#if __cplusplus >= 201103L
+namespace GH68490 {
+
+template <typename T> struct S {
+  template <typename U>
+  constexpr int SizeOfU(int param = sizeof(U)) const;
+
+  template <typename U>
+  constexpr int SizeOfT(int param = sizeof(T)) const;
+};
+
+template <typename T> struct S<T *> {
+  template <typename U>
+  constexpr int SizeOfU(int param = sizeof(U)) const;
+
+  template <typename U>
+  constexpr int SizeOfT(int param = sizeof(T *)) const;
+};
+
+template <typename T>
+template <typename U>
+constexpr int S<T *>::SizeOfU(int param) const {
+  return param;
+}
+
+template <typename T>
+template <typename U>
+constexpr int S<T *>::SizeOfT(int param) const {
+  return param;
+}
+
+template <>
+template <typename T>
+constexpr int S<int>::SizeOfU(int param) const {
+  return param;
+}
+
+template <>
+template <typename T>
+constexpr int S<int>::SizeOfT(int param) const {
+  return param;
+}
+
+static_assert(S<int>().SizeOfU<char>() == sizeof(char), "");
+static_assert(S<int>().SizeOfT<char>() == sizeof(int), "");
+static_assert(S<short *>().SizeOfU<char>() == sizeof(char), "");
+static_assert(S<short *>().SizeOfT<char>() == sizeof(short *), "");
+
+} // namespace GH68490
+
+#endif

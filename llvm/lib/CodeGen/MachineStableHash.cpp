@@ -33,6 +33,7 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/xxhash.h"
 
 #define DEBUG_TYPE "machine-stable-hash"
 
@@ -62,10 +63,10 @@ stable_hash llvm::stableHashValue(const MachineOperand &MO) {
   case MachineOperand::MO_Register:
     if (MO.getReg().isVirtual()) {
       const MachineRegisterInfo &MRI = MO.getParent()->getMF()->getRegInfo();
-      SmallVector<unsigned> DefOpcodes;
+      SmallVector<stable_hash> DefOpcodes;
       for (auto &Def : MRI.def_instructions(MO.getReg()))
         DefOpcodes.push_back(Def.getOpcode());
-      return hash_combine_range(DefOpcodes.begin(), DefOpcodes.end());
+      return stable_hash_combine(DefOpcodes);
     }
 
     // Register operands don't have target flags.
@@ -77,32 +78,39 @@ stable_hash llvm::stableHashValue(const MachineOperand &MO) {
   case MachineOperand::MO_FPImmediate: {
     auto Val = MO.isCImm() ? MO.getCImm()->getValue()
                            : MO.getFPImm()->getValueAPF().bitcastToAPInt();
-    auto ValHash =
-        stable_hash_combine_array(Val.getRawData(), Val.getNumWords());
-    return hash_combine(MO.getType(), MO.getTargetFlags(), ValHash);
+    auto ValHash = stable_hash_combine(
+        ArrayRef<stable_hash>(Val.getRawData(), Val.getNumWords()));
+    return stable_hash_combine(MO.getType(), MO.getTargetFlags(), ValHash);
   }
 
   case MachineOperand::MO_MachineBasicBlock:
-    StableHashBailingMachineBasicBlock++;
+    ++StableHashBailingMachineBasicBlock;
     return 0;
   case MachineOperand::MO_ConstantPoolIndex:
-    StableHashBailingConstantPoolIndex++;
+    ++StableHashBailingConstantPoolIndex;
     return 0;
   case MachineOperand::MO_BlockAddress:
-    StableHashBailingBlockAddress++;
+    ++StableHashBailingBlockAddress;
     return 0;
   case MachineOperand::MO_Metadata:
-    StableHashBailingMetadataUnsupported++;
+    ++StableHashBailingMetadataUnsupported;
     return 0;
-  case MachineOperand::MO_GlobalAddress:
-    StableHashBailingGlobalAddress++;
-    return 0;
+  case MachineOperand::MO_GlobalAddress: {
+    const GlobalValue *GV = MO.getGlobal();
+    if (!GV->hasName()) {
+      ++StableHashBailingGlobalAddress;
+      return 0;
+    }
+    auto Name = GV->getName();
+    return stable_hash_combine(MO.getType(), MO.getTargetFlags(),
+                               stable_hash_name(Name), MO.getOffset());
+  }
+
   case MachineOperand::MO_TargetIndex: {
     if (const char *Name = MO.getTargetIndexName())
       return stable_hash_combine(MO.getType(), MO.getTargetFlags(),
-                                 stable_hash_combine_string(Name),
-                                 MO.getOffset());
-    StableHashBailingTargetIndexNoName++;
+                                 stable_hash_name(Name), MO.getOffset());
+    ++StableHashBailingTargetIndexNoName;
     return 0;
   }
 
@@ -112,8 +120,9 @@ stable_hash llvm::stableHashValue(const MachineOperand &MO) {
                                MO.getIndex());
 
   case MachineOperand::MO_ExternalSymbol:
-    return hash_combine(MO.getType(), MO.getTargetFlags(), MO.getOffset(),
-                        stable_hash_combine_string(MO.getSymbolName()));
+    return stable_hash_combine(MO.getType(), MO.getTargetFlags(),
+                               MO.getOffset(),
+                               stable_hash_name(MO.getSymbolName()));
 
   case MachineOperand::MO_RegisterMask:
   case MachineOperand::MO_RegisterLiveOut: {
@@ -126,15 +135,14 @@ stable_hash llvm::stableHashValue(const MachineOperand &MO) {
           const uint32_t *RegMask = MO.getRegMask();
           std::vector<llvm::stable_hash> RegMaskHashes(RegMask,
                                                        RegMask + RegMaskSize);
-          return hash_combine(MO.getType(), MO.getTargetFlags(),
-                              stable_hash_combine_array(RegMaskHashes.data(),
-                                                        RegMaskHashes.size()));
+          return stable_hash_combine(MO.getType(), MO.getTargetFlags(),
+                                     stable_hash_combine(RegMaskHashes));
         }
       }
     }
 
     assert(0 && "MachineOperand not associated with any MachineFunction");
-    return hash_combine(MO.getType(), MO.getTargetFlags());
+    return stable_hash_combine(MO.getType(), MO.getTargetFlags());
   }
 
   case MachineOperand::MO_ShuffleMask: {
@@ -144,14 +152,13 @@ stable_hash llvm::stableHashValue(const MachineOperand &MO) {
         MO.getShuffleMask(), std::back_inserter(ShuffleMaskHashes),
         [](int S) -> llvm::stable_hash { return llvm::stable_hash(S); });
 
-    return hash_combine(MO.getType(), MO.getTargetFlags(),
-                        stable_hash_combine_array(ShuffleMaskHashes.data(),
-                                                  ShuffleMaskHashes.size()));
+    return stable_hash_combine(MO.getType(), MO.getTargetFlags(),
+                               stable_hash_combine(ShuffleMaskHashes));
   }
   case MachineOperand::MO_MCSymbol: {
     auto SymbolName = MO.getMCSymbol()->getName();
-    return hash_combine(MO.getType(), MO.getTargetFlags(),
-                        stable_hash_combine_string(SymbolName));
+    return stable_hash_combine(MO.getType(), MO.getTargetFlags(),
+                               stable_hash_name(SymbolName));
   }
   case MachineOperand::MO_CFIIndex:
     return stable_hash_combine(MO.getType(), MO.getTargetFlags(),
@@ -210,8 +217,7 @@ stable_hash llvm::stableHashValue(const MachineInstr &MI, bool HashVRegs,
     HashComponents.push_back(static_cast<unsigned>(Op->getFailureOrdering()));
   }
 
-  return stable_hash_combine_range(HashComponents.begin(),
-                                   HashComponents.end());
+  return stable_hash_combine(HashComponents);
 }
 
 stable_hash llvm::stableHashValue(const MachineBasicBlock &MBB) {
@@ -219,8 +225,7 @@ stable_hash llvm::stableHashValue(const MachineBasicBlock &MBB) {
   // TODO: Hash more stuff like block alignment and branch probabilities.
   for (const auto &MI : MBB)
     HashComponents.push_back(stableHashValue(MI));
-  return stable_hash_combine_range(HashComponents.begin(),
-                                   HashComponents.end());
+  return stable_hash_combine(HashComponents);
 }
 
 stable_hash llvm::stableHashValue(const MachineFunction &MF) {
@@ -228,6 +233,5 @@ stable_hash llvm::stableHashValue(const MachineFunction &MF) {
   // TODO: Hash lots more stuff like function alignment and stack objects.
   for (const auto &MBB : MF)
     HashComponents.push_back(stableHashValue(MBB));
-  return stable_hash_combine_range(HashComponents.begin(),
-                                   HashComponents.end());
+  return stable_hash_combine(HashComponents);
 }

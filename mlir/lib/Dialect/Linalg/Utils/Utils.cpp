@@ -264,8 +264,7 @@ GenericOp makeTransposeOp(OpBuilder &b, Location loc, Value inputTensor,
   // Compute the transpose and the indentity indexing maps.
   SmallVector<AffineMap> indexingMaps = {
       inversePermutation(AffineMap::getPermutationMap(
-          SmallVector<unsigned>(transposeVector.begin(), transposeVector.end()),
-          b.getContext())),
+          SmallVector<unsigned>(transposeVector), b.getContext())),
       AffineMap::getMultiDimIdentityMap(transposeVector.size(),
                                         b.getContext())};
   SmallVector<utils::IteratorType> iteratorTypes(transposeVector.size(),

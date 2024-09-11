@@ -213,6 +213,12 @@ static cl::opt<bool> RenumberBlocksBeforeView(
         "into a dot graph. Only used when a function is being printed."),
     cl::init(false), cl::Hidden);
 
+static cl::opt<unsigned> ExtTspBlockPlacementMaxBlocks(
+    "ext-tsp-block-placement-max-blocks",
+    cl::desc("Maximum number of basic blocks in a function to run ext-TSP "
+             "block placement."),
+    cl::init(UINT_MAX), cl::Hidden);
+
 namespace llvm {
 extern cl::opt<bool> EnableExtTspBlockPlacement;
 extern cl::opt<bool> ApplyExtTspWithoutProfile;
@@ -3523,7 +3529,8 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
 
   // Apply a post-processing optimizing block placement.
   if (MF.size() >= 3 && EnableExtTspBlockPlacement &&
-      (ApplyExtTspWithoutProfile || MF.getFunction().hasProfileData())) {
+      (ApplyExtTspWithoutProfile || MF.getFunction().hasProfileData()) &&
+      MF.size() <= ExtTspBlockPlacementMaxBlocks) {
     // Find a new placement and modify the layout of the blocks in the function.
     applyExtTsp();
 
@@ -3642,6 +3649,11 @@ void MachineBlockPlacement::assignBlockOrder(
     const std::vector<const MachineBasicBlock *> &NewBlockOrder) {
   assert(F->size() == NewBlockOrder.size() && "Incorrect size of block order");
   F->RenumberBlocks();
+  // At this point, we possibly removed blocks from the function, so we can't
+  // renumber the domtree. At this point, we don't need it anymore, though.
+  // TODO: move this to the point where the dominator tree is actually
+  // invalidated (i.e., where blocks are removed without updating the domtree).
+  MPDT = nullptr;
 
   bool HasChanges = false;
   for (size_t I = 0; I < NewBlockOrder.size(); I++) {

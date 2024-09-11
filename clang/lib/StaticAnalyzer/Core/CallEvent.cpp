@@ -38,6 +38,7 @@
 #include "clang/CrossTU/CrossTranslationUnit.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallDescription.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/CheckerHelpers.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/DynamicType.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/DynamicTypeInfo.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/MemRegion.h"
@@ -929,6 +930,14 @@ void AnyCXXConstructorCall::getExtraInvalidatedValues(ValueList &Values,
   if (SymbolRef Sym = V.getAsSymbol(true))
     ETraits->setTrait(Sym,
                       RegionAndSymbolInvalidationTraits::TK_SuppressEscape);
+
+  // Standard classes don't reinterpret-cast and modify super regions.
+  const bool IsStdClassCtor = isWithinStdNamespace(getDecl());
+  if (const MemRegion *Obj = V.getAsRegion(); Obj && IsStdClassCtor) {
+    ETraits->setTrait(
+        Obj, RegionAndSymbolInvalidationTraits::TK_DoNotInvalidateSuperRegion);
+  }
+
   Values.push_back(V);
 }
 

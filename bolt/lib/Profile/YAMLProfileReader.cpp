@@ -16,6 +16,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/edit_distance.h"
 #include "llvm/Demangle/Demangle.h"
+#include "llvm/MC/MCPseudoProbe.h"
 #include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
@@ -50,10 +51,7 @@ llvm::cl::opt<bool> ProfileUseDFS("profile-use-dfs",
                                   cl::desc("use DFS order for YAML profile"),
                                   cl::Hidden, cl::cat(BoltOptCategory));
 
-llvm::cl::opt<bool> ProfileUsePseudoProbes(
-    "profile-use-pseudo-probes",
-    cl::desc("Use pseudo probes for profile generation and matching"),
-    cl::Hidden, cl::cat(BoltOptCategory));
+extern llvm::cl::opt<bool> StaleMatchingWithPseudoProbes;
 } // namespace opts
 
 namespace llvm {
@@ -373,6 +371,7 @@ Error YAMLProfileReader::preprocessProfile(BinaryContext &BC) {
     return errorCodeToError(EC);
   }
   yaml::Input YamlInput(MB.get()->getBuffer());
+  YamlInput.setAllowUnknownKeys(true);
 
   // Consume YAML file.
   YamlInput >> YamlBP;
@@ -724,6 +723,15 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
         continue;
       BF->computeHash(YamlBP.Header.IsDFSOrder, YamlBP.Header.HashFunction);
     }
+  }
+
+  if (opts::StaleMatchingWithPseudoProbes) {
+    const MCPseudoProbeDecoder *Decoder = BC.getPseudoProbeDecoder();
+    assert(Decoder &&
+           "If pseudo probes are in use, pseudo probe decoder should exist");
+    for (const MCDecodedPseudoProbeInlineTree &TopLev :
+         Decoder->getDummyInlineRoot().getChildren())
+      TopLevelGUIDToInlineTree[TopLev.Guid] = &TopLev;
   }
 
   // Map profiled function ids to names.
