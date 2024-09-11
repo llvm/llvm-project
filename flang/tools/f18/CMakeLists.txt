@@ -80,7 +80,7 @@ if (NOT CMAKE_CROSSCOMPILING)
         set(depends ${depends} ${FLANG_INTRINSIC_MODULES_DIR}/__fortran_ieee_exceptions.mod)
       endif()
     endif()
-    if(NOT ${filename} STREQUAL "__fortran_type_info")
+    if(NOT ${filename} STREQUAL "__fortran_type_info" AND NOT ${filename} STREQUAL "__fortran_builtins")
       set(depends ${depends} ${FLANG_INTRINSIC_MODULES_DIR}/__fortran_type_info.mod)
     endif()
 
