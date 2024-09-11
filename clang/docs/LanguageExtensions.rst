@@ -3780,9 +3780,9 @@ as ``unsigned __int128`` and C23 ``unsigned _BitInt(N)``.
 ``__builtin_counted_by_ref`` returns a pointer to the count field from the
 ``counted_by`` attribute.
 
-the argument must be a pointer to a flexible array member. If the argument
-isn't a flexible array member or doesn't have the ``counted_by`` attribute, it
-returns ``(size_t *)0``.
+The argument must be a pointer to a flexible array member. If the argument
+isn't a flexible array member or doesn't have the ``counted_by`` attribute, the
+builtin returns ``(size_t *)0``.
 
 **Syntax**:
 
@@ -3805,7 +3805,7 @@ returns ``(size_t *)0``.
 
 **Description**:
 
-the ``__builtin_counted_by_ref`` builtin allows the programmer to prevent a
+The ``__builtin_counted_by_ref`` builtin allows the programmer to prevent a
 common error associated with the ``counted_by`` attribute. When using the
 ``counted_by`` attribute, the ``count`` field **must** be set before the
 flexible array member can be accessed. Otherwise, the sanitizers may view such
@@ -3829,10 +3829,13 @@ initialize the flexible array before setting the ``count`` field:
 
 Enforcing the rule that ``ptr->count = COUNT;`` must occur after every
 allocation of a struct with a flexible array member that has the ``counted_by``
-attribute is prone to failure in large code bases.
+attribute is prone to failure in large code bases. This builtin mitigates this
+for allocators (like in Linux) that are implemented via macros where the
+assignment happens automatically.
 
-This builtin works best with allocators that are implemented via macros (like
-in Linux) where the assignment happens automatically.
+**Note: The value returned by ``__builtin_counted_by_ref`` cannot be assigned
+to a variable or passed into a function. Doing so violates bounds safety
+conventions.**
 
 Multiprecision Arithmetic Builtins
 ----------------------------------

@@ -12,8 +12,14 @@ struct non_fam_struct {
   short count;
 } *q;
 
-void test1(int size) {
+void g(char *);
+
+void *test1(int size) {
   int i = 0;
+  char *ref = __builtin_counted_by_ref(p->array);     // expected-error {{value returned by '__builtin_counted_by_ref' cannot be assigned to a variable or used as a function argument}}
+
+  ref = __builtin_counted_by_ref(p->array);           // expected-error {{value returned by '__builtin_counted_by_ref' cannot be assigned to a variable or used as a function argument}}
+  g(__builtin_counted_by_ref(p->array));              // expected-error {{value returned by '__builtin_counted_by_ref' cannot be assigned to a variable or used as a function argument}}
 
   *__builtin_counted_by_ref(p->array) = size;         // ok
   *__builtin_counted_by_ref(&p->array[i]) = size;     // ok
@@ -25,6 +31,8 @@ void test1(int size) {
 
   __builtin_counted_by_ref();                         // expected-error {{too few arguments to function call, expected 1, have 0}}
   __builtin_counted_by_ref(p->array, p->x, p->count); // expected-error {{too many arguments to function call, expected 1, have 3}}
+
+  return __builtin_counted_by_ref(p->array);          // expected-error {{value returned by '__builtin_counted_by_ref' cannot be assigned to a variable or used as a function argument}}
 }
 
 struct char_count {

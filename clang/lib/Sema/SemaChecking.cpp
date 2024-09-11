@@ -5591,11 +5591,11 @@ bool Sema::BuiltinCountedByRef(CallExpr *TheCall) {
   const Expr *Arg = ArgRes.get()->IgnoreParenImpCasts();
   if (!isa<PointerType>(Arg->getType()) && !Arg->getType()->isArrayType())
     return Diag(Arg->getBeginLoc(),
-                diag::err_builtin_get_counted_by_must_be_flex_array_member)
+                diag::err_builtin_counted_by_ref_must_be_flex_array_member)
            << Arg->getSourceRange();
 
   if (Arg->HasSideEffects(Context))
-    Diag(Arg->getBeginLoc(), diag::warn_builtin_get_counted_by_has_side_effects)
+    Diag(Arg->getBeginLoc(), diag::warn_builtin_counted_by_ref_has_side_effects)
         << Arg->getSourceRange();
 
   // See if we have something like '&ptr->fam[0]`.
@@ -5615,7 +5615,7 @@ bool Sema::BuiltinCountedByRef(CallExpr *TheCall) {
     if (!ME->isFlexibleArrayMemberLike(
             Context, getLangOpts().getStrictFlexArraysLevel()))
       return Diag(Arg->getBeginLoc(),
-                  diag::err_builtin_get_counted_by_must_be_flex_array_member)
+                  diag::err_builtin_counted_by_ref_must_be_flex_array_member)
              << Arg->getSourceRange();
 
     if (ME->getMemberDecl()->getType()->isCountAttributedType())

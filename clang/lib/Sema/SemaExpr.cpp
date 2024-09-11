@@ -9187,6 +9187,15 @@ Sema::CheckAssignmentConstraints(QualType LHSType, ExprResult &RHS,
   LHSType = Context.getCanonicalType(LHSType).getUnqualifiedType();
   RHSType = Context.getCanonicalType(RHSType).getUnqualifiedType();
 
+  // __builtin_counted_by_ref cannot be assigned to a variable, used in
+  // function call, or in a return.
+  if (auto *CE = dyn_cast<CallExpr>(RHS.get())) {
+    if (FunctionDecl *FDecl = CE->getDirectCallee();
+        FDecl && FDecl->getBuiltinID() == Builtin::BI__builtin_counted_by_ref)
+      Diag(RHS.get()->getExprLoc(),
+           diag::err_builtin_counted_by_ref_cannot_leak_reference);
+  }
+
   // Common case: no conversion required.
   if (LHSType == RHSType) {
     Kind = CK_NoOp;
