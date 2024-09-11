@@ -64,13 +64,15 @@ INTERCEPTOR(int, open, const char *path, int oflag, ...) {
   // O_NONBLOCK
   __rtsan_notify_intercepted_call("open");
 
-  va_list args;
-  va_start(args, oflag);
-  const mode_t mode = va_arg(args, int);
-  va_end(args);
+  if (oflag & O_CREAT) {
+    va_list args;
+    va_start(args, oflag);
+    const mode_t mode = va_arg(args, int);
+    va_end(args);
+    return REAL(open)(path, oflag, mode);
+  }
 
-  const int result = REAL(open)(path, oflag, mode);
-  return result;
+  return REAL(open)(path, oflag);
 }
 
 #if SANITIZER_INTERCEPT_OPEN64
@@ -97,13 +99,15 @@ INTERCEPTOR(int, openat, int fd, const char *path, int oflag, ...) {
   // O_NONBLOCK
   __rtsan_notify_intercepted_call("openat");
 
-  va_list args;
-  va_start(args, oflag);
-  mode_t mode = va_arg(args, int);
-  va_end(args);
+  if (oflag & O_CREAT) {
+    va_list args;
+    va_start(args, oflag);
+    const mode_t mode = va_arg(args, int);
+    va_end(args);
+    return REAL(openat)(fd, path, oflag, mode);
+  }
 
-  const int result = REAL(openat)(fd, path, oflag, mode);
-  return result;
+  return REAL(openat)(fd, path, oflag);
 }
 
 #if SANITIZER_INTERCEPT_OPENAT64
