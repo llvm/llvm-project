@@ -6,6 +6,7 @@
 void WTFBreakpointTrap();
 void WTFCrashWithInfo(int, const char*, const char*, int);
 void WTFReportAssertionFailure(const char* file, int line, const char* function, const char* assertion);
+void WTFReportBacktrace(void);
 
 void WTFCrash(void);
 void WTFCrashWithSecurityImplication(void);
@@ -334,6 +335,7 @@ public:
   }
   unsigned trivial60() { return ObjectWithNonTrivialDestructor { 5 }.value(); }
   unsigned trivial61() { return DerivedNumber('7').value(); }
+  void trivial62() { WTFReportBacktrace(); }
 
   static RefCounted& singleton() {
     static RefCounted s_RefCounted;
@@ -506,6 +508,7 @@ public:
     getFieldTrivial().trivial59(); // no-warning
     getFieldTrivial().trivial60(); // no-warning
     getFieldTrivial().trivial61(); // no-warning
+    getFieldTrivial().trivial62(); // no-warning
 
     RefCounted::singleton().trivial18(); // no-warning
     RefCounted::singleton().someFunction(); // no-warning
