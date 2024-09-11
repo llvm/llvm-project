@@ -29,6 +29,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
+#include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/CRC.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -121,7 +122,7 @@ private:
 
   Function *createInternalFunction(FunctionType *FTy, StringRef Name,
                                    StringRef MangledType = "");
-  void emitGlobalConstructor(
+  void emitModuleInitFunctionPtrs(
       SmallVectorImpl<std::pair<GlobalVariable *, MDNode *>> &CountersBySP);
 
   bool isFunctionInstrumented(const Function &F);
@@ -914,6 +915,7 @@ bool GCOVProfiler::emitProfileNotes(
         GlobalVariable *Counters = new GlobalVariable(
             *M, CounterTy, false, GlobalValue::InternalLinkage,
             Constant::getNullValue(CounterTy), "__llvm_gcov_ctr");
+        Counters->setSection("__llvm_gcov_ctr_section");
         CountersBySP.emplace_back(Counters, SP);
 
         for (size_t I : llvm::seq<size_t>(0, Measured)) {
@@ -980,7 +982,7 @@ bool GCOVProfiler::emitProfileNotes(
     }
 
     if (EmitGCDA) {
-      emitGlobalConstructor(CountersBySP);
+      emitModuleInitFunctionPtrs(CountersBySP);
       EmitGCDA = false;
     }
   }
@@ -1001,32 +1003,38 @@ Function *GCOVProfiler::createInternalFunction(FunctionType *FTy,
   return F;
 }
 
-void GCOVProfiler::emitGlobalConstructor(
+void GCOVProfiler::emitModuleInitFunctionPtrs(
     SmallVectorImpl<std::pair<GlobalVariable *, MDNode *>> &CountersBySP) {
   Function *WriteoutF = insertCounterWriteout(CountersBySP);
   Function *ResetF = insertReset(CountersBySP);
 
-  // Create a small bit of code that registers the "__llvm_gcov_writeout" to
-  // be executed at exit and the "__llvm_gcov_reset" function to be executed
-  // when "__gcov_flush" is called.
-  FunctionType *FTy = FunctionType::get(Type::getVoidTy(*Ctx), false);
-  Function *F = createInternalFunction(FTy, "__llvm_gcov_init", "_ZTSFvvE");
-  F->addFnAttr(Attribute::NoInline);
+  // Instead of creating a function call and add it to the constructors list,
+  // create a global variable in the __llvm_covinit section so the functions
+  // can be registered by a constructor in the runtime.
 
-  BasicBlock *BB = BasicBlock::Create(*Ctx, "entry", F);
-  IRBuilder<> Builder(BB);
+  auto &Ctx = M->getContext();
 
-  FTy = FunctionType::get(Type::getVoidTy(*Ctx), false);
-  auto *PFTy = PointerType::get(FTy, 0);
-  FTy = FunctionType::get(Builder.getVoidTy(), {PFTy, PFTy}, false);
+  Type *InitFuncDataTy[] = {
+#define COVINIT_FUNC(Type, LLVMType, Name, Init) LLVMType,
+#include "llvm/ProfileData/InstrProfData.inc"
+  };
 
-  // Initialize the environment and register the local writeout, flush and
-  // reset functions.
-  FunctionCallee GCOVInit = M->getOrInsertFunction("llvm_gcov_init", FTy);
-  Builder.CreateCall(GCOVInit, {WriteoutF, ResetF});
-  Builder.CreateRetVoid();
+  auto STy = StructType::get(Ctx, ArrayRef(InitFuncDataTy));
 
-  appendToGlobalCtors(*M, F, 0);
+  Constant *InitFuncPtrs[] = {
+#define COVINIT_FUNC(Type, LLVMType, Name, Init) Init,
+#include "llvm/ProfileData/InstrProfData.inc"
+  };
+
+  auto *CovInitGV =
+      new GlobalVariable(*M, STy, false, GlobalValue::PrivateLinkage, nullptr,
+                         "__llvm_covinit_functions");
+  CovInitGV->setInitializer(ConstantStruct::get(STy, InitFuncPtrs));
+  CovInitGV->setVisibility(GlobalValue::VisibilityTypes::DefaultVisibility);
+  CovInitGV->setSection(getInstrProfSectionName(
+      IPSK_covinit, Triple(M->getTargetTriple()).getObjectFormat()));
+  CovInitGV->setAlignment(Align(INSTR_PROF_DATA_ALIGNMENT));
+  CovInitGV->setConstant(true);
 }
 
 FunctionCallee GCOVProfiler::getStartFileFunc(const TargetLibraryInfo *TLI) {

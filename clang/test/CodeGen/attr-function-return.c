@@ -17,6 +17,9 @@
 // RUN:  -mfunction-return=thunk-extern -fsanitize=thread \
 // RUN:   | FileCheck %s --check-prefix=CHECK-TSAN
 
+// Check for gcov initialization function pointers.
+// CHECK-GCOV: @__llvm_covinit_functions = private constant { ptr, ptr } { ptr @__llvm_gcov_writeout, ptr @__llvm_gcov_reset }, section "__llvm_covinit"
+
 #if !__has_attribute(function_return)
 #error "missing attribute support for function_return"
 #endif
@@ -104,7 +107,7 @@ void no_attrs(void) {}
 // Test synthetic functions.
 // CHECK-GCOV: @__llvm_gcov_writeout() unnamed_addr [[EXTERNGCOV:#[0-9]+]]
 // CHECK-GCOV: @__llvm_gcov_reset() unnamed_addr [[EXTERNGCOV]]
-// CHECK-GCOV: @__llvm_gcov_init() unnamed_addr [[EXTERNGCOV]]
+// CHECK-GCOV-NOT: @__llvm_gcov_init() unnamed_addr [[EXTERNGCOV]]
 // CHECK-ASAN: @asan.module_ctor() [[EXTERNASAN:#[0-9]+]]
 // CHECK-TSAN: @tsan.module_ctor() [[EXTERNTSAN:#[0-9]+]]
 

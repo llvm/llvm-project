@@ -49,10 +49,13 @@ int test2(int b) {
 /// 0x3430382a '4' '0' '8' '*'
 // 408-SAME: i32 875575338
 
+// Check for gcov initialization function pointers.
+// CHECK: @__llvm_covinit_functions = private constant { ptr, ptr } { ptr @__llvm_gcov_writeout, ptr @__llvm_gcov_reset }, section "__llvm_covinit"
+
 // Check that the noredzone flag is set on the generated functions.
 
 // CHECK: void @__llvm_gcov_writeout() unnamed_addr [[NRZ:#[0-9]+]]
-// CHECK: void @__llvm_gcov_init() unnamed_addr [[NRZ]]
+// CHECK-NOT: void @__llvm_gcov_init() unnamed_addr [[NRZ]]
 
 // CHECK: attributes [[NRZ]] = { {{.*}}noredzone{{.*}} }
 

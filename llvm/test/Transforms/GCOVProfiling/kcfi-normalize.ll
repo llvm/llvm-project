@@ -1,7 +1,10 @@
-;; Ensure __llvm_gcov_(writeout|reset|init) have the correct !kcfi_type
+;; Ensure __llvm_gcov_(writeout|reset) have the correct !kcfi_type
 ;; with integer normalization.
 ; RUN: mkdir -p %t && cd %t
 ; RUN: opt < %s -S -passes=insert-gcov-profiling | FileCheck %s
+
+; Check for gcov initialization function pointers.
+; CHECK: @__llvm_covinit_functions = private constant { ptr, ptr } { ptr @__llvm_gcov_writeout, ptr @__llvm_gcov_reset }, section "__llvm_covinit"
 
 target triple = "x86_64-unknown-linux-gnu"
 
@@ -28,8 +31,6 @@ entry:
 ; CHECK: define internal void @__llvm_gcov_writeout()
 ; CHECK-SAME: !kcfi_type ![[#TYPE:]]
 ; CHECK: define internal void @__llvm_gcov_reset()
-; CHECK-SAME: !kcfi_type ![[#TYPE]]
-; CHECK: define internal void @__llvm_gcov_init()
 ; CHECK-SAME: !kcfi_type ![[#TYPE]]
 
 ; CHECK: ![[#TYPE]] = !{i32 -440107680}

@@ -1,6 +1,9 @@
 ; RUN: mkdir -p %t && cd %t
 ; RUN: opt < %s -S -passes=insert-gcov-profiling | FileCheck %s
 
+; Check for gcov initialization function pointers.
+; CHECK: @__llvm_covinit_functions = private constant { ptr, ptr } { ptr @__llvm_gcov_writeout, ptr @__llvm_gcov_reset }, section "__llvm_covinit"
+
 target triple = "x86_64-unknown-linux-gnu"
 
 define dso_local void @empty() !dbg !5 {
@@ -30,5 +33,4 @@ entry:
 ;; Infer uwtable and "frame-pointer" from the module flags.
 ; CHECK: define internal void @__llvm_gcov_writeout() unnamed_addr #[[#ATTR:]]
 ; CHECK: define internal void @__llvm_gcov_reset() unnamed_addr #[[#ATTR]]
-; CHECK: define internal void @__llvm_gcov_init() unnamed_addr #[[#ATTR]]
 ; CHECK: attributes #[[#ATTR]] = { noinline nounwind uwtable "frame-pointer"="all" }
