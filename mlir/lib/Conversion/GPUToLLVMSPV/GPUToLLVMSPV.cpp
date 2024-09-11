@@ -388,12 +388,12 @@ struct GPUToLLVMSPVConversionPass final
 
     // `func.func`s are not handled by the lowering, so need a proper calling
     // convention set separately.
-    getOperation().walk([&](LLVM::LLVMFuncOp f) {
+    getOperation().walk([](LLVM::LLVMFuncOp f) {
       if (f.getCConv() == LLVM::CConv::C) {
         f.setCConv(LLVM::CConv::SPIR_FUNC);
       }
     });
-    getOperation().walk([&](LLVM::CallOp c) {
+    getOperation().walk([](LLVM::CallOp c) {
       if (c.getCConv() == LLVM::CConv::C) {
         c.setCConv(LLVM::CConv::SPIR_FUNC);
       }
