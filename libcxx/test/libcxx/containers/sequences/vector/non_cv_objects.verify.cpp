@@ -42,6 +42,7 @@ std::vector<int[2]> C10;
 // expected-error@*:* 0+ {{[allocator.requirements]}}
 // expected-error@*:* 0+ {{cannot initialize a variable of type}}
 // expected-error@*:* 0+ {{object expression of non-scalar type}}
+// expected-error@*:* 0+ {{cannot initialize a parameter of type 'const void *'}}
 // expected-error@*:* 1+ {{'std::allocator' cannot allocate}}
 // expected-error@*:* 1+ {{arithmetic on}}
 // expected-error@*:* 1+ {{cannot form a reference to 'void'}}

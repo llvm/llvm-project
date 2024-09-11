@@ -31,12 +31,12 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <template <class...> class _Template, class _Tp, bool = is_same<__decay_t<_Tp>, _Tp>::value>
 struct __requires_cv_unqualified_object_type : true_type {};
 
-#define _LIBCPP_DEFINE__REQUIRES_CV_UNQUALIFIED_OBJECT_TYPE(_Template, _Verb)                                              \
-  template <class _Tp>                                                                                             \
-  struct __requires_cv_unqualified_object_type<_Template, _Tp, false>                                                    \
-      : integral_constant<bool,                                                                                    \
-                          !(is_const<_Tp>::value || is_volatile<_Tp>::value || is_reference<_Tp>::value ||         \
-                            is_function<_Tp>::value)> {       \
+#define _LIBCPP_DEFINE__REQUIRES_CV_UNQUALIFIED_OBJECT_TYPE(_Template, _Verb)                                          \
+  template <class _Tp>                                                                                                 \
+  struct __requires_cv_unqualified_object_type<_Template, _Tp, false>                                                  \
+      : integral_constant<bool,                                                                                        \
+                          !(is_const<_Tp>::value || is_volatile<_Tp>::value || is_reference<_Tp>::value ||             \
+                            is_function<_Tp>::value)> {                                                                \
     static_assert(!is_const<_Tp>::value, "'std::" #_Template "' cannot " _Verb " const types");                        \
     static_assert(!is_volatile<_Tp>::value, "'std::" #_Template "' cannot " _Verb " volatile types");                  \
     static_assert(!is_reference<_Tp>::value, "'std::" #_Template "' cannot " _Verb " references");                     \
@@ -58,23 +58,27 @@ template <class _Tp>
 inline const bool __bounded_arrays_allowed_only_after_cxx20 = __libcpp_is_bounded_array<_Tp>::value;
 #endif
 
-#define _LIBCPP_DEFINE__ALLOCATOR_VALUE_TYPE_REQUIREMENTS(_Template, _Verb)                                              \
-  _LIBCPP_DEFINE__REQUIRES_CV_UNQUALIFIED_OBJECT_TYPE(_Template, _Verb);                                                       \
+#define _LIBCPP_DEFINE__ALLOCATOR_VALUE_TYPE_REQUIREMENTS(_Template, _Verb)                                            \
+  _LIBCPP_DEFINE__REQUIRES_CV_UNQUALIFIED_OBJECT_TYPE(_Template, _Verb);                                               \
   template <class _Tp>                                                                                                 \
   struct __allocator_requirements<_Template, _Tp, false>                                                               \
-      : integral_constant<bool, __requires_cv_unqualified_object_type<_Template, _Tp>::value && !__bounded_arrays_allowed_only_after_cxx20<_Tp> > {       \
-    static_assert(!__bounded_arrays_allowed_only_after_cxx20<_Tp>, "'std::" #_Template "' cannot " _Verb " C arrays before C++20");                                     \
+      : integral_constant<bool,                                                                                        \
+                          __requires_cv_unqualified_object_type<_Template, _Tp>::value &&                              \
+                              !__bounded_arrays_allowed_only_after_cxx20<_Tp> > {                                      \
+    static_assert(!__bounded_arrays_allowed_only_after_cxx20<_Tp>,                                                     \
+                  "'std::" #_Template "' cannot " _Verb " C arrays before C++20");                                     \
   }
 
 template <template <class...> class, class>
 struct __container_requirements : false_type {
-  static_assert(false,
-                "a new container has been defined; please define '_LIBCPP_DEFINE__CONTAINER_VALUE_TYPE_REQUIREMENTS' for "
-                "that container");
+  static_assert(
+      false,
+      "a new container has been defined; please define '_LIBCPP_DEFINE__CONTAINER_VALUE_TYPE_REQUIREMENTS' for "
+      "that container");
 };
 
-#define _LIBCPP_DEFINE__CONTAINER_VALUE_TYPE_REQUIREMENTS(_Template)                                                     \
-  _LIBCPP_DEFINE__ALLOCATOR_VALUE_TYPE_REQUIREMENTS(_Template, "hold");                                                  \
+#define _LIBCPP_DEFINE__CONTAINER_VALUE_TYPE_REQUIREMENTS(_Template)                                                   \
+  _LIBCPP_DEFINE__ALLOCATOR_VALUE_TYPE_REQUIREMENTS(_Template, "hold");                                                \
   template <class _Tp>                                                                                                 \
   struct __container_requirements<_Template, _Tp>                                                                      \
       : integral_constant<bool,                                                                                        \

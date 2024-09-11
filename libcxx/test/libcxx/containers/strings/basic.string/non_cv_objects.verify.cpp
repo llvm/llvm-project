@@ -45,6 +45,7 @@ std::basic_string<int[2]> C10;
 // expected-error@*:* 0+ {{call to implicitly-deleted}}
 // expected-error@*:* 0+ {{cannot initialize a variable of type}}
 // expected-error@*:* 0+ {{multiple overloads}}
+// expected-error@*:* 0+ {{cannot initialize a parameter of type 'const void *'}}
 // expected-error@*:* 1+ {{'std::allocator' cannot allocate}}
 // expected-error@*:* 1+ {{cannot form a reference to 'void'}}
 // expected-error@*:* 1+ {{declared as a pointer}}
