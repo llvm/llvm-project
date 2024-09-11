@@ -11,7 +11,7 @@
 // RUN: %clangxx_asan -x c -DSO_NAME=f1 %s -shared -o %t-f1.so -fPIC
 // RUN: %clangxx_asan -x c -DSO_NAME=f2 %s -shared -o %t-f2.so -fPIC
 // RUN: %clangxx_asan %s -ldl -pthread -o %t
-// RUN: %env_asan_opts=verbosity=2 %run %t 0 3
+// RUN: %env_asan_opts=verbosity=2 %run not %t 0 3
 // RUN: %env_asan_opts=verbosity=2 %run %t 2 3
 // RUN: %env_asan_opts=verbosity=2 %run %t 10 2 2>&1 | FileCheck %s
 // RUN: %env_asan_opts=verbosity=2:intercept_tls_get_addr=1 %run %t 10 2 2>&1 | FileCheck %s
