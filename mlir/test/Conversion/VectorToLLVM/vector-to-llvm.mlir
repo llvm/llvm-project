@@ -2521,6 +2521,16 @@ func.func @transfer_write_1d_scalable_mask(%arg0: memref<1x?xf32>, %vec: vector<
 
 // -----
 
+// CHECK-LABEL: func @transfer_write_tensor
+//       CHECK:   vector.transfer_write
+func.func @transfer_write_tensor(%arg0: vector<4xf32>,%arg1: tensor<?xf32>) -> tensor<?xf32> {
+  %c0 = arith.constant 0 : index
+  %0 = vector.transfer_write %arg0, %arg1[%c0] : vector<4xf32>, tensor<?xf32>
+  return %0 : tensor<?xf32>
+}
+
+// -----
+
 func.func @genbool_0d_f() -> vector<i1> {
   %0 = vector.constant_mask [0] : vector<i1>
   return %0 : vector<i1>
