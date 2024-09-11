@@ -5,14 +5,14 @@
 target triple = "nvptx64-nvidia-cuda"
 target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v16:16:16-v32:32:32-v64:64:64-v128:128:128-n16:32:64"
 
-define float @fcopysign_f(float %a, float %b) {
-; CHECK-LABEL: fcopysign_f(
+define float @fcopysign_f_f(float %a, float %b) {
+; CHECK-LABEL: fcopysign_f_f(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .f32 %f<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.f32 %f1, [fcopysign_f_param_0];
-; CHECK-NEXT:    ld.param.f32 %f2, [fcopysign_f_param_1];
+; CHECK-NEXT:    ld.param.f32 %f1, [fcopysign_f_f_param_0];
+; CHECK-NEXT:    ld.param.f32 %f2, [fcopysign_f_f_param_1];
 ; CHECK-NEXT:    copysign.f32 %f3, %f2, %f1;
 ; CHECK-NEXT:    st.param.f32 [func_retval0+0], %f3;
 ; CHECK-NEXT:    ret;
@@ -20,20 +20,93 @@ define float @fcopysign_f(float %a, float %b) {
   ret float %val
 }
 
-define double @fcopysign_d(double %a, double %b) {
-; CHECK-LABEL: fcopysign_d(
+define double @fcopysign_d_d(double %a, double %b) {
+; CHECK-LABEL: fcopysign_d_d(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .f64 %fd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.f64 %fd1, [fcopysign_d_param_0];
-; CHECK-NEXT:    ld.param.f64 %fd2, [fcopysign_d_param_1];
+; CHECK-NEXT:    ld.param.f64 %fd1, [fcopysign_d_d_param_0];
+; CHECK-NEXT:    ld.param.f64 %fd2, [fcopysign_d_d_param_1];
 ; CHECK-NEXT:    copysign.f64 %fd3, %fd2, %fd1;
 ; CHECK-NEXT:    st.param.f64 [func_retval0+0], %fd3;
 ; CHECK-NEXT:    ret;
   %val = call double @llvm.copysign.f64(double %a, double %b)
   ret double %val
 }
+
+define float @fcopysign_f_d(float %a, double %b) {
+; CHECK-LABEL: fcopysign_f_d(
+; CHECK:       {
+; CHECK-NEXT:    .reg .f32 %f<4>;
+; CHECK-NEXT:    .reg .f64 %fd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.f32 %f1, [fcopysign_f_d_param_0];
+; CHECK-NEXT:    ld.param.f64 %fd1, [fcopysign_f_d_param_1];
+; CHECK-NEXT:    cvt.rn.f32.f64 %f2, %fd1;
+; CHECK-NEXT:    copysign.f32 %f3, %f2, %f1;
+; CHECK-NEXT:    st.param.f32 [func_retval0+0], %f3;
+; CHECK-NEXT:    ret;
+  %c = fptrunc double %b to float
+  %val = call float @llvm.copysign.f32(float %a, float %c)
+  ret float %val
+}
+
+define float @fcopysign_f_h(float %a, half %b) {
+; CHECK-LABEL: fcopysign_f_h(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<2>;
+; CHECK-NEXT:    .reg .f32 %f<4>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.f32 %f1, [fcopysign_f_h_param_0];
+; CHECK-NEXT:    ld.param.b16 %rs1, [fcopysign_f_h_param_1];
+; CHECK-NEXT:    cvt.f32.f16 %f2, %rs1;
+; CHECK-NEXT:    copysign.f32 %f3, %f2, %f1;
+; CHECK-NEXT:    st.param.f32 [func_retval0+0], %f3;
+; CHECK-NEXT:    ret;
+  %c = fpext half %b to float
+  %val = call float @llvm.copysign.f32(float %a, float %c)
+  ret float %val
+}
+
+define double @fcopysign_d_f(double %a, float %b) {
+; CHECK-LABEL: fcopysign_d_f(
+; CHECK:       {
+; CHECK-NEXT:    .reg .f32 %f<2>;
+; CHECK-NEXT:    .reg .f64 %fd<4>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.f64 %fd1, [fcopysign_d_f_param_0];
+; CHECK-NEXT:    ld.param.f32 %f1, [fcopysign_d_f_param_1];
+; CHECK-NEXT:    cvt.f64.f32 %fd2, %f1;
+; CHECK-NEXT:    copysign.f64 %fd3, %fd2, %fd1;
+; CHECK-NEXT:    st.param.f64 [func_retval0+0], %fd3;
+; CHECK-NEXT:    ret;
+  %c = fpext float %b to double
+  %val = call double @llvm.copysign.f64(double %a, double %c)
+  ret double %val
+}
+
+define double @fcopysign_d_h(double %a, half %b) {
+; CHECK-LABEL: fcopysign_d_h(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<2>;
+; CHECK-NEXT:    .reg .f64 %fd<4>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.f64 %fd1, [fcopysign_d_h_param_0];
+; CHECK-NEXT:    ld.param.b16 %rs1, [fcopysign_d_h_param_1];
+; CHECK-NEXT:    cvt.f64.f16 %fd2, %rs1;
+; CHECK-NEXT:    copysign.f64 %fd3, %fd2, %fd1;
+; CHECK-NEXT:    st.param.f64 [func_retval0+0], %fd3;
+; CHECK-NEXT:    ret;
+  %c = fpext half %b to double
+  %val = call double @llvm.copysign.f64(double %a, double %c)
+  ret double %val
+}
+
 
 declare float @llvm.copysign.f32(float, float)
 declare double @llvm.copysign.f64(double, double)
