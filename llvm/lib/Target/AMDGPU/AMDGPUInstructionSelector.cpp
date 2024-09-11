@@ -5237,7 +5237,8 @@ getConstantZext32Val(Register Reg, const MachineRegisterInfo &MRI) {
 
 InstructionSelector::ComplexRendererFns
 AMDGPUInstructionSelector::selectSMRDBufferImm(MachineOperand &Root) const {
-  std::optional<uint64_t> OffsetVal = getConstantZext32Val(Root.getReg(), *MRI);
+  std::optional<uint64_t> OffsetVal =
+      Root.isImm() ? Root.getImm() : getConstantZext32Val(Root.getReg(), *MRI);
   if (!OffsetVal)
     return {};
 
@@ -5541,7 +5542,12 @@ void AMDGPUInstructionSelector::renderPopcntImm(MachineInstrBuilder &MIB,
 void AMDGPUInstructionSelector::renderTruncTImm(MachineInstrBuilder &MIB,
                                                 const MachineInstr &MI,
                                                 int OpIdx) const {
-  MIB.addImm(MI.getOperand(OpIdx).getImm());
+  const MachineOperand &Op = MI.getOperand(OpIdx);
+  int64_t Imm;
+  if (Op.isReg() && mi_match(Op.getReg(), *MRI, m_ICst(Imm)))
+    MIB.addImm(Imm);
+  else
+    MIB.addImm(Op.getImm());
 }
 
 void AMDGPUInstructionSelector::renderOpSelTImm(MachineInstrBuilder &MIB,

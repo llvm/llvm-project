@@ -1540,9 +1540,6 @@ Sema::BuildCXXTypeConstructExpr(TypeSourceInfo *TInfo,
                                 bool ListInitialization) {
   QualType Ty = TInfo->getType();
   SourceLocation TyBeginLoc = TInfo->getTypeLoc().getBeginLoc();
-
-  assert((!ListInitialization || Exprs.size() == 1) &&
-         "List initialization must have exactly one expression.");
   SourceRange FullRange = SourceRange(TyBeginLoc, RParenOrBraceLoc);
 
   InitializedEntity Entity =
@@ -4313,8 +4310,10 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
 // from type to the elements of the to type without resizing the vector.
 static QualType adjustVectorType(ASTContext &Context, QualType FromTy,
                                  QualType ToType, QualType *ElTy = nullptr) {
-  auto *ToVec = ToType->castAs<VectorType>();
-  QualType ElType = ToVec->getElementType();
+  QualType ElType = ToType;
+  if (auto *ToVec = ToType->getAs<VectorType>())
+    ElType = ToVec->getElementType();
+
   if (ElTy)
     *ElTy = ElType;
   if (!FromTy->isVectorType())
@@ -4475,7 +4474,7 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
   case ICK_Integral_Conversion: {
     QualType ElTy = ToType;
     QualType StepTy = ToType;
-    if (ToType->isVectorType())
+    if (FromType->isVectorType() || ToType->isVectorType())
       StepTy = adjustVectorType(Context, FromType, ToType, &ElTy);
     if (ElTy->isBooleanType()) {
       assert(FromType->castAs<EnumType>()->getDecl()->isFixed() &&
@@ -4495,7 +4494,7 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
   case ICK_Floating_Promotion:
   case ICK_Floating_Conversion: {
     QualType StepTy = ToType;
-    if (ToType->isVectorType())
+    if (FromType->isVectorType() || ToType->isVectorType())
       StepTy = adjustVectorType(Context, FromType, ToType);
     From = ImpCastExprToType(From, StepTy, CK_FloatingCast, VK_PRValue,
                              /*BasePath=*/nullptr, CCK)
@@ -4527,7 +4526,7 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
   case ICK_Floating_Integral: {
     QualType ElTy = ToType;
     QualType StepTy = ToType;
-    if (ToType->isVectorType())
+    if (FromType->isVectorType() || ToType->isVectorType())
       StepTy = adjustVectorType(Context, FromType, ToType, &ElTy);
     if (ElTy->isRealFloatingType())
       From = ImpCastExprToType(From, StepTy, CK_IntegralToFloating, VK_PRValue,
@@ -4669,11 +4668,11 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
     }
     QualType ElTy = FromType;
     QualType StepTy = ToType;
-    if (FromType->isVectorType()) {
-      if (getLangOpts().HLSL)
-        StepTy = adjustVectorType(Context, FromType, ToType);
+    if (FromType->isVectorType())
       ElTy = FromType->castAs<VectorType>()->getElementType();
-    }
+    if (getLangOpts().HLSL &&
+        (FromType->isVectorType() || ToType->isVectorType()))
+      StepTy = adjustVectorType(Context, FromType, ToType);
 
     From = ImpCastExprToType(From, StepTy, ScalarTypeToBooleanCastKind(ElTy),
                              VK_PRValue,
@@ -4828,8 +4827,8 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
     // TODO: Support HLSL matrices.
     assert((!From->getType()->isMatrixType() && !ToType->isMatrixType()) &&
            "Dimension conversion for matrix types is not implemented yet.");
-    assert(ToType->isVectorType() &&
-           "Dimension conversion is only supported for vector types.");
+    assert((ToType->isVectorType() || ToType->isBuiltinType()) &&
+           "Dimension conversion output must be vector or scalar type.");
     switch (SCS.Dimension) {
     case ICK_HLSL_Vector_Splat: {
       // Vector splat from any arithmetic type to a vector.
@@ -4841,18 +4840,18 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
     }
     case ICK_HLSL_Vector_Truncation: {
       // Note: HLSL built-in vectors are ExtVectors. Since this truncates a
-      // vector to a smaller vector, this can only operate on arguments where
-      // the source and destination types are ExtVectors.
-      assert(From->getType()->isExtVectorType() && ToType->isExtVectorType() &&
-             "HLSL vector truncation should only apply to ExtVectors");
+      // vector to a smaller vector or to a scalar, this can only operate on
+      // arguments where the source type is an ExtVector and the destination
+      // type is destination type is either an ExtVectorType or a builtin scalar
+      // type.
       auto *FromVec = From->getType()->castAs<VectorType>();
-      auto *ToVec = ToType->castAs<VectorType>();
-      QualType ElType = FromVec->getElementType();
-      QualType TruncTy =
-          Context.getExtVectorType(ElType, ToVec->getNumElements());
+      QualType TruncTy = FromVec->getElementType();
+      if (auto *ToVec = ToType->getAs<VectorType>())
+        TruncTy = Context.getExtVectorType(TruncTy, ToVec->getNumElements());
       From = ImpCastExprToType(From, TruncTy, CK_HLSLVectorTruncation,
                                From->getValueKind())
                  .get();
+
       break;
     }
     case ICK_Identity:
@@ -5111,6 +5110,7 @@ static bool CheckUnaryTypeTraitTypeCompleteness(Sema &S, TypeTrait UTT,
   case UTT_IsDestructible:
   case UTT_IsNothrowDestructible:
   case UTT_IsTriviallyDestructible:
+  case UTT_IsIntangibleType:
     if (ArgTy->isIncompleteArrayType() || ArgTy->isVoidType())
       return true;
 
@@ -5170,7 +5170,8 @@ static bool HasNonDeletedDefaultedEqualityComparison(Sema &S,
 
     // const ClassT& obj;
     OpaqueValueExpr Operand(
-        {}, Decl->getTypeForDecl()->getCanonicalTypeUnqualified().withConst(),
+        KeyLoc,
+        Decl->getTypeForDecl()->getCanonicalTypeUnqualified().withConst(),
         ExprValueKind::VK_LValue);
     UnresolvedSet<16> Functions;
     // obj == obj;
@@ -5696,6 +5697,16 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
         return true;
     return false;
   }
+  case UTT_IsIntangibleType:
+    assert(Self.getLangOpts().HLSL && "intangible types are HLSL-only feature");
+    if (!T->isVoidType() && !T->isIncompleteArrayType())
+      if (Self.RequireCompleteType(TInfo->getTypeLoc().getBeginLoc(), T,
+                                   diag::err_incomplete_type))
+        return false;
+    if (DiagnoseVLAInCXXTypeTrait(Self, TInfo,
+                                  tok::kw___builtin_hlsl_is_intangible))
+      return false;
+    return Self.HLSL().IsIntangibleType(T);
   }
 }
 

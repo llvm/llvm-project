@@ -25,6 +25,7 @@
 #include "llvm/DebugInfo/CodeView/TypeDeserializer.h"
 #include "llvm/DebugInfo/PDB/Native/NativeSession.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
+#include "llvm/IR/Mangler.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/COFF.h"
@@ -189,6 +190,8 @@ void ObjFile::initializeECThunks() {
         ctx.symtab.addEntryThunk(getSymbol(entry->src), getSymbol(entry->dst));
         break;
       case Arm64ECThunkType::Exit:
+        ctx.symtab.addExitThunk(getSymbol(entry->src), getSymbol(entry->dst));
+        break;
       case Arm64ECThunkType::GuestExit:
         break;
       default:
@@ -1008,6 +1011,20 @@ MachineTypes ImportFile::getMachineType() const {
   return MachineTypes(machine);
 }
 
+ImportThunkChunk *ImportFile::makeImportThunk() {
+  switch (hdr->Machine) {
+  case AMD64:
+    return make<ImportThunkChunkX64>(ctx, impSym);
+  case I386:
+    return make<ImportThunkChunkX86>(ctx, impSym);
+  case ARM64:
+    return make<ImportThunkChunkARM64>(ctx, impSym);
+  case ARMNT:
+    return make<ImportThunkChunkARM>(ctx, impSym);
+  }
+  llvm_unreachable("unknown machine type");
+}
+
 void ImportFile::parse() {
   const auto *hdr =
       reinterpret_cast<const coff_import_header *>(mb.getBufferStart());
@@ -1019,9 +1036,17 @@ void ImportFile::parse() {
 
   // Read names and create an __imp_ symbol.
   StringRef buf = mb.getBuffer().substr(sizeof(*hdr));
-  StringRef name = saver().save(buf.split('\0').first);
+  auto split = buf.split('\0');
+  buf = split.second;
+  StringRef name;
+  if (isArm64EC(hdr->Machine)) {
+    if (std::optional<std::string> demangledName =
+            getArm64ECDemangledFunctionName(split.first))
+      name = saver().save(*demangledName);
+  }
+  if (name.empty())
+    name = saver().save(split.first);
   StringRef impName = saver().save("__imp_" + name);
-  buf = buf.substr(name.size() + 1);
   dllName = buf.split('\0').first;
   StringRef extName;
   switch (hdr->getNameType()) {
@@ -1058,9 +1083,20 @@ void ImportFile::parse() {
   // If type is function, we need to create a thunk which jump to an
   // address pointed by the __imp_ symbol. (This allows you to call
   // DLL functions just like regular non-DLL functions.)
-  if (hdr->getType() == llvm::COFF::IMPORT_CODE)
-    thunkSym = ctx.symtab.addImportThunk(
-        name, cast_or_null<DefinedImportData>(impSym), hdr->Machine);
+  if (hdr->getType() == llvm::COFF::IMPORT_CODE) {
+    if (ctx.config.machine != ARM64EC) {
+      thunkSym = ctx.symtab.addImportThunk(name, impSym, makeImportThunk());
+    } else {
+      thunkSym = ctx.symtab.addImportThunk(
+          name, impSym, make<ImportThunkChunkX64>(ctx, impSym));
+      // FIXME: Add aux IAT symbols.
+
+      StringRef impChkName = saver().save("__impchk_" + name);
+      impchkThunk = make<ImportThunkChunkARM64EC>(this);
+      ctx.symtab.addImportThunk(impChkName, impSym, impchkThunk);
+      ctx.driver.pullArm64ECIcallHelper();
+    }
+  }
 }
 
 BitcodeFile::BitcodeFile(COFFLinkerContext &ctx, MemoryBufferRef mb,

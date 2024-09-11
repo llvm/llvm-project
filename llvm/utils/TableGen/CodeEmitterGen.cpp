@@ -58,7 +58,7 @@ private:
   int getVariableBit(const std::string &VarName, BitsInit *BI, int bit);
   std::pair<std::string, std::string>
   getInstructionCases(Record *R, CodeGenTarget &Target);
-  void addInstructionCasesForEncoding(Record *R, Record *EncodingDef,
+  void addInstructionCasesForEncoding(Record *R, const Record *EncodingDef,
                                       CodeGenTarget &Target, std::string &Case,
                                       std::string &BitOffsetCase);
   bool addCodeToMergeInOperand(Record *R, BitsInit *BI,
@@ -342,8 +342,8 @@ CodeEmitterGen::getInstructionCases(Record *R, CodeGenTarget &Target) {
 }
 
 void CodeEmitterGen::addInstructionCasesForEncoding(
-    Record *R, Record *EncodingDef, CodeGenTarget &Target, std::string &Case,
-    std::string &BitOffsetCase) {
+    Record *R, const Record *EncodingDef, CodeGenTarget &Target,
+    std::string &Case, std::string &BitOffsetCase) {
   BitsInit *BI = EncodingDef->getValueAsBitsInit("Inst");
 
   // Loop over all of the fields in the instruction, determining which are the
@@ -403,7 +403,7 @@ void CodeEmitterGen::emitInstructionBaseValues(
       << HWM.getModeName(HwMode, /*IncludeDefault=*/true) << "[] = {\n";
 
   for (const CodeGenInstruction *CGI : NumberedInstructions) {
-    Record *R = CGI->TheDef;
+    const Record *R = CGI->TheDef;
 
     if (R->getValueAsString("Namespace") == "TargetOpcode" ||
         R->getValueAsBit("isPseudo")) {
@@ -413,7 +413,7 @@ void CodeEmitterGen::emitInstructionBaseValues(
       continue;
     }
 
-    Record *EncodingDef = R;
+    const Record *EncodingDef = R;
     if (const RecordVal *RV = R->getValue("EncodingInfos")) {
       if (auto *DI = dyn_cast_or_null<DefInit>(RV->getValue())) {
         EncodingInfoByHwMode EBM(DI->getDef(), HWM);
@@ -485,7 +485,7 @@ void CodeEmitterGen::run(raw_ostream &o) {
     std::set<unsigned> HwModes;
     BitWidth = 0;
     for (const CodeGenInstruction *CGI : NumberedInstructions) {
-      Record *R = CGI->TheDef;
+      const Record *R = CGI->TheDef;
       if (R->getValueAsString("Namespace") == "TargetOpcode" ||
           R->getValueAsBit("isPseudo"))
         continue;

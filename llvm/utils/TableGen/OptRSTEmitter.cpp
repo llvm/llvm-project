@@ -16,30 +16,24 @@ using namespace llvm;
 
 /// OptParserEmitter - This tablegen backend takes an input .td file
 /// describing a list of options and emits a RST man page.
-static void EmitOptRST(RecordKeeper &Records, raw_ostream &OS) {
-  llvm::StringMap<std::vector<Record *>> OptionsByGroup;
+static void EmitOptRST(const RecordKeeper &Records, raw_ostream &OS) {
+  llvm::StringMap<std::vector<const Record *>> OptionsByGroup;
   std::vector<Record *> OptionsWithoutGroup;
 
   // Get the options.
-  std::vector<Record *> Opts = Records.getAllDerivedDefinitions("Option");
-  array_pod_sort(Opts.begin(), Opts.end(), CompareOptionRecords);
+  std::vector<const Record *> Opts = Records.getAllDerivedDefinitions("Option");
+  llvm::sort(Opts, CompareOptionRecords);
 
   // Get the option groups.
-  const std::vector<Record *> &Groups =
-      Records.getAllDerivedDefinitions("OptionGroup");
-  for (unsigned i = 0, e = Groups.size(); i != e; ++i) {
-    const Record &R = *Groups[i];
-    OptionsByGroup.try_emplace(R.getValueAsString("Name"));
-  }
+  for (const Record *R : Records.getAllDerivedDefinitions("OptionGroup"))
+    OptionsByGroup.try_emplace(R->getValueAsString("Name"));
 
   // Map options to their group.
-  for (unsigned i = 0, e = Opts.size(); i != e; ++i) {
-    const Record &R = *Opts[i];
-    if (const DefInit *DI = dyn_cast<DefInit>(R.getValueInit("Group"))) {
-      OptionsByGroup[DI->getDef()->getValueAsString("Name")].push_back(Opts[i]);
-    } else {
-      OptionsByGroup["options"].push_back(Opts[i]);
-    }
+  for (const Record *R : Opts) {
+    if (const DefInit *DI = dyn_cast<DefInit>(R->getValueInit("Group")))
+      OptionsByGroup[DI->getDef()->getValueAsString("Name")].push_back(R);
+    else
+      OptionsByGroup["options"].push_back(R);
   }
 
   // Print options under their group.
@@ -49,7 +43,7 @@ static void EmitOptRST(RecordKeeper &Records, raw_ostream &OS) {
     OS << std::string(GroupName.size(), '-') << '\n';
     OS << '\n';
 
-    for (Record *R : KV.getValue()) {
+    for (const Record *R : KV.getValue()) {
       OS << ".. option:: ";
 
       // Print the prefix.

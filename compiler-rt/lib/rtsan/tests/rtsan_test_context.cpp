@@ -10,31 +10,37 @@
 
 #include "rtsan_test_utilities.h"
 
-#include "rtsan_context.h"
+#include "rtsan/rtsan.h"
+#include "rtsan/rtsan_context.h"
 
-TEST(TestRtsanContext, CanCreateContext) { __rtsan::Context context{}; }
+#include <gtest/gtest.h>
 
-TEST(TestRtsanContext, ExpectNotRealtimeDoesNotDieBeforeRealtimePush) {
+class TestRtsanContext : public ::testing::Test {
+protected:
+  void SetUp() override { __rtsan_ensure_initialized(); }
+};
+
+TEST_F(TestRtsanContext, ExpectNotRealtimeDoesNotDieBeforeRealtimePush) {
   __rtsan::Context context{};
   ExpectNotRealtime(context, "do_some_stuff");
 }
 
-TEST(TestRtsanContext, ExpectNotRealtimeDoesNotDieAfterPushAndPop) {
+TEST_F(TestRtsanContext, ExpectNotRealtimeDoesNotDieAfterPushAndPop) {
   __rtsan::Context context{};
   context.RealtimePush();
   context.RealtimePop();
   ExpectNotRealtime(context, "do_some_stuff");
 }
 
-TEST(TestRtsanContext, ExpectNotRealtimeDiesAfterRealtimePush) {
+TEST_F(TestRtsanContext, ExpectNotRealtimeDiesAfterRealtimePush) {
   __rtsan::Context context{};
 
   context.RealtimePush();
   EXPECT_DEATH(ExpectNotRealtime(context, "do_some_stuff"), "");
 }
 
-TEST(TestRtsanContext,
-     ExpectNotRealtimeDiesAfterRealtimeAfterMorePushesThanPops) {
+TEST_F(TestRtsanContext,
+       ExpectNotRealtimeDiesAfterRealtimeAfterMorePushesThanPops) {
   __rtsan::Context context{};
 
   context.RealtimePush();
@@ -45,7 +51,7 @@ TEST(TestRtsanContext,
   EXPECT_DEATH(ExpectNotRealtime(context, "do_some_stuff"), "");
 }
 
-TEST(TestRtsanContext, ExpectNotRealtimeDoesNotDieAfterBypassPush) {
+TEST_F(TestRtsanContext, ExpectNotRealtimeDoesNotDieAfterBypassPush) {
   __rtsan::Context context{};
 
   context.RealtimePush();
@@ -53,8 +59,8 @@ TEST(TestRtsanContext, ExpectNotRealtimeDoesNotDieAfterBypassPush) {
   ExpectNotRealtime(context, "do_some_stuff");
 }
 
-TEST(TestRtsanContext,
-     ExpectNotRealtimeDoesNotDieIfBypassDepthIsGreaterThanZero) {
+TEST_F(TestRtsanContext,
+       ExpectNotRealtimeDoesNotDieIfBypassDepthIsGreaterThanZero) {
   __rtsan::Context context{};
 
   context.RealtimePush();

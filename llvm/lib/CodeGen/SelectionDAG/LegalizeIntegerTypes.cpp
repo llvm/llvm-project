@@ -3496,7 +3496,6 @@ void DAGTypeLegalizer::ExpandIntRes_ADDSUB(SDNode *N,
 
   if (N->getOpcode() == ISD::ADD) {
     Lo = DAG.getNode(ISD::ADD, dl, NVT, LoOps);
-    Hi = DAG.getNode(ISD::ADD, dl, NVT, ArrayRef(HiOps, 2));
     SDValue Cmp;
     // Special case: X+1 has a carry out if X+1==0. This may reduce the live
     // range of X. We assume comparing with 0 is cheap.
@@ -3521,10 +3520,12 @@ void DAGTypeLegalizer::ExpandIntRes_ADDSUB(SDNode *N,
       Carry = DAG.getSelect(dl, NVT, Cmp, DAG.getConstant(1, dl, NVT),
                              DAG.getConstant(0, dl, NVT));
 
-    if (isAllOnesConstant(LoOps[1]) && isAllOnesConstant(HiOps[1]))
+    if (isAllOnesConstant(LoOps[1]) && isAllOnesConstant(HiOps[1])) {
       Hi = DAG.getNode(ISD::SUB, dl, NVT, HiOps[0], Carry);
-    else
+    } else {
+      Hi = DAG.getNode(ISD::ADD, dl, NVT, ArrayRef(HiOps, 2));
       Hi = DAG.getNode(ISD::ADD, dl, NVT, Hi, Carry);
+    }
   } else {
     Lo = DAG.getNode(ISD::SUB, dl, NVT, LoOps);
     Hi = DAG.getNode(ISD::SUB, dl, NVT, ArrayRef(HiOps, 2));
