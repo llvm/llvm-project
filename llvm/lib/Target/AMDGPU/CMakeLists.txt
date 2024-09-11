@@ -59,6 +59,8 @@ add_llvm_target(AMDGPUCodeGen
   AMDGPUGlobalISelDivergenceLowering.cpp
   AMDGPURBSelect.cpp
   AMDGPURBLegalize.cpp
+  AMDGPURBLegalizeRules.cpp
+  AMDGPURBLegalizeHelper.cpp
   AMDGPUGlobalISelUtils.cpp
   AMDGPUHSAMetadataStreamer.cpp
   AMDGPUInsertDelayAlu.cpp
