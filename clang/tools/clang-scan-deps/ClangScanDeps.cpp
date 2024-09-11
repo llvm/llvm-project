@@ -1042,7 +1042,9 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
     Pool.wait();
   }
 
-  if (Verbose) {
+  T.stopTimer();
+
+  if (Verbose)
     llvm::errs() << "\n*** Virtual File System Stats:\n"
                  << NumStatusCalls << " status() calls\n"
                  << NumOpenFileForReadCalls << " openFileForRead() calls\n"
@@ -1050,9 +1052,7 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
                  << NumGetRealPathCalls << " getRealPath() calls\n"
                  << NumExistsCalls << " exists() calls\n"
                  << NumIsLocalCalls << " isLocal() calls\n";
-  }
 
-  T.stopTimer();
   if (PrintTiming)
     llvm::errs() << llvm::format(
         "clang-scan-deps timing: %0.2fs wall, %0.2fs process\n",
