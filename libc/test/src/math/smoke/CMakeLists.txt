@@ -2895,9 +2895,10 @@ add_fp_unittest(
   SRCS
     nanf_test.cpp
   DEPENDS
-    libc.include.signal
+    libc.hdr.signal_macros
     libc.src.math.nanf
     libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.macros.sanitizer
   # FIXME: The nan tests currently have death tests, which aren't supported for
   # hermetic tests.
   UNIT_TEST_ONLY
@@ -2910,9 +2911,10 @@ add_fp_unittest(
   SRCS
     nan_test.cpp
   DEPENDS
-    libc.include.signal
+    libc.hdr.signal_macros
     libc.src.math.nan
     libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.macros.sanitizer
   # FIXME: The nan tests currently have death tests, which aren't supported for
   # hermetic tests.
   UNIT_TEST_ONLY
@@ -2925,9 +2927,10 @@ add_fp_unittest(
   SRCS
     nanl_test.cpp
   DEPENDS
-    libc.include.signal
+    libc.hdr.signal_macros
     libc.src.math.nanl
     libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.macros.sanitizer
   # FIXME: The nan tests currently have death tests, which aren't supported for
   # hermetic tests.
   UNIT_TEST_ONLY
@@ -2940,7 +2943,7 @@ add_fp_unittest(
   SRCS
     nanf16_test.cpp
   DEPENDS
-    libc.include.signal
+    libc.hdr.signal_macros
     libc.src.math.nanf16
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.macros.sanitizer
@@ -2956,9 +2959,10 @@ add_fp_unittest(
   SRCS
     nanf128_test.cpp
   DEPENDS
-    libc.include.signal
+    libc.hdr.signal_macros
     libc.src.math.nanf128
     libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.macros.sanitizer
   # FIXME: The nan tests currently have death tests, which aren't supported for
   # hermetic tests.
   UNIT_TEST_ONLY

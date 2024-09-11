@@ -609,7 +609,7 @@ void CodeGenSchedModels::collectSchedRW() {
   // Find all SchedReadWrites referenced by instruction defs.
   RecVec SWDefs, SRDefs;
   for (const CodeGenInstruction *Inst : Target.getInstructionsByEnumValue()) {
-    Record *SchedDef = Inst->TheDef;
+    const Record *SchedDef = Inst->TheDef;
     if (SchedDef->isValueUnset("SchedRW"))
       continue;
     RecVec RWs = SchedDef->getValueAsListOfDefs("SchedRW");
