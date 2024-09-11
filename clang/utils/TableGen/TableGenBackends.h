@@ -24,7 +24,7 @@ class RecordKeeper;
 
 namespace clang {
 
-void EmitClangDeclContext(llvm::RecordKeeper &RK, llvm::raw_ostream &OS);
+void EmitClangDeclContext(const llvm::RecordKeeper &RK, llvm::raw_ostream &OS);
 /**
   @param PriorizeIfSubclassOf These classes should be prioritized in the output.
   This is useful to force enum generation/jump tables/lookup tables to be more
@@ -32,7 +32,7 @@ void EmitClangDeclContext(llvm::RecordKeeper &RK, llvm::raw_ostream &OS);
   in Decl for classes that inherit from DeclContext, for functions like
   castFromDeclContext.
   */
-void EmitClangASTNodes(llvm::RecordKeeper &RK, llvm::raw_ostream &OS,
+void EmitClangASTNodes(const llvm::RecordKeeper &RK, llvm::raw_ostream &OS,
                        const std::string &N, const std::string &S,
                        std::string_view PriorizeIfSubclassOf = "");
 void EmitClangBasicReader(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
