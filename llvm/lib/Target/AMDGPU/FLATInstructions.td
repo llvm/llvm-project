@@ -2122,6 +2122,22 @@ def prefetch_global : PatFrag <(ops node:$ptr, node:$rw, node:$loc, node:$type),
   }];
 }
 
+multiclass FlatPrefetchPats<string inst, SDPatternOperator prefetch_kind, SDPatternOperator rw> {
+  def : GCNPat <
+    (prefetch_kind (GlobalOffset (i64 VReg_64:$vaddr), i32:$offset), rw, (i32 timm:$loc), i32imm_one),
+    (!cast<FLAT_Pseudo>(inst) $vaddr, $offset, (i32 (PrefetchLoc $loc)))
+  > {
+    let AddedComplexity = !if(!eq(rw, i32imm_zero), 0, 25);
+  }
+
+  def : GCNPat <
+    (prefetch_kind (GlobalSAddr (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset), rw, (i32 timm:$loc), i32imm_one),
+    (!cast<FLAT_Pseudo>(inst#"_SADDR") $saddr, $voffset, $offset, (i32 (PrefetchLoc $loc)))
+  > {
+    let AddedComplexity = !if(!eq(rw, i32imm_zero), 11, 30);
+  }
+}
+
 multiclass FlatIntrPrefetchPats<string inst, SDPatternOperator intr> {
   def : GCNPat <
     (intr (FlatOffset i64:$vaddr, i32:$offset), timm:$cpol),
@@ -2136,44 +2152,12 @@ multiclass FlatIntrPrefetchPats<string inst, SDPatternOperator intr> {
 }
 
 let SubtargetPredicate = HasVectorPrefetch in {
-  def : GCNPat <
-    (prefetch_flat (FlatOffset i64:$vaddr, i32:$offset), i32imm_zero, (i32 timm:$loc), i32imm_one),
-    (FLAT_PREFETCH_B8 $vaddr, $offset, (i32 (PrefetchLoc $loc)))
-  >;
-
-  def : GCNPat <
-    (prefetch_global (GlobalOffset (i64 VReg_64:$vaddr), i32:$offset), i32imm_zero, (i32 timm:$loc), i32imm_one),
-    (GLOBAL_PREFETCH_B8 $vaddr, $offset, (i32 (PrefetchLoc $loc)))
-  >;
-
-  def : GCNPat <
-    (prefetch_global (GlobalSAddr (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset), i32imm_zero, (i32 timm:$loc), i32imm_one),
-    (GLOBAL_PREFETCH_B8_SADDR $saddr, $voffset, $offset, (i32 (PrefetchLoc $loc)))
-  > {
-    let AddedComplexity = 11;
-  }
+  defm : FlatPrefetchPats<"FLAT_PREFETCH_B8", prefetch_flat, i32imm_zero>;
+  defm : FlatPrefetchPats<"GLOBAL_PREFETCH_B8", prefetch_global, i32imm_zero>;
 
   // Patterns for forced vector prefetch with rw = 1.
-  def : GCNPat <
-    (prefetch_flat (FlatOffset i64:$vaddr, i32:$offset), i32imm_one, (i32 timm:$loc), i32imm_one),
-    (FLAT_PREFETCH_B8 $vaddr, $offset, (i32 (PrefetchLoc $loc)))
-  > {
-    let AddedComplexity = 25;
-  }
-
-  def : GCNPat <
-    (prefetch_global (GlobalOffset (i64 VReg_64:$vaddr), i32:$offset), i32imm_one, (i32 timm:$loc), i32imm_one),
-    (GLOBAL_PREFETCH_B8 $vaddr, $offset, (i32 (PrefetchLoc $loc)))
-  > {
-    let AddedComplexity = 25;
-  }
-
-  def : GCNPat <
-    (prefetch_global (GlobalSAddr (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset), i32imm_one, (i32 timm:$loc), i32imm_one),
-    (GLOBAL_PREFETCH_B8_SADDR $saddr, $voffset, $offset, (i32 (PrefetchLoc $loc)))
-  > {
-    let AddedComplexity = 30;
-  }
+  defm : FlatPrefetchPats<"FLAT_PREFETCH_B8", prefetch_flat, i32imm_one>;
+  defm : FlatPrefetchPats<"GLOBAL_PREFETCH_B8", prefetch_global, i32imm_one>;
 
   // Patterns for target intrinsics
   defm : FlatIntrPrefetchPats<"FLAT_PREFETCH_B8", int_amdgcn_flat_prefetch>;
