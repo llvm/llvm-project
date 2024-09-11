@@ -1395,19 +1395,21 @@ CreateRunInTerminalReverseRequest(const llvm::json::Object &launch_request,
   if (!cwd.empty())
     run_in_terminal_args.try_emplace("cwd", cwd);
 
-  std::unordered_map<std::string, std::string> envMap =
-      GetStringMap(*launch_request_arguments, "env");
-  llvm::json::Object environment;
-  for (const auto &[key, value] : envMap) {
+  auto envs = GetEnvironmentFromArguments(*launch_request_arguments);
+  llvm::json::Object env_json;
+  for (size_t index = 0; index < envs.GetNumValues(); index++) {
+    auto key = llvm::StringRef(envs.GetNameAtIndex(index));
+    auto value = llvm::StringRef(envs.GetValueAtIndex(index));
+
     if (key.empty())
       g_dap.SendOutput(OutputType::Stderr,
-                       "empty environment variable for value: \"" + value +
-                           '\"');
+                       "empty environment variable for value: \"" +
+                           value.str() + '\"');
     else
-      environment.try_emplace(key, value);
+      env_json.try_emplace(key, value);
   }
   run_in_terminal_args.try_emplace("env",
-                                   llvm::json::Value(std::move(environment)));
+                                   llvm::json::Value(std::move(env_json)));
 
   return run_in_terminal_args;
 }
