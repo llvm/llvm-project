@@ -72,10 +72,11 @@ static FindArgsResult findArgs(const CallExpr *Call) {
   return Result;
 }
 
-static std::pair<bool, SmallVector<FixItHint>> generateReplacements(
-    const MatchFinder::MatchResult &Match, const CallExpr *TopCall,
-    const FindArgsResult &Result, const bool IgnoreNonTrivialTypes,
-    const std::uint64_t IgnoreTrivialTypesOfSizeAbove, bool FoundNestedCall) {
+static std::pair<bool, SmallVector<FixItHint>>
+generateReplacements(const MatchFinder::MatchResult &Match,
+                     const CallExpr *TopCall, const FindArgsResult &Result,
+                     const bool IgnoreNonTrivialTypes,
+                     const std::uint64_t IgnoreTrivialTypesOfSizeAbove) {
   SmallVector<FixItHint> FixItHints;
   const SourceManager &SourceMngr = *Match.SourceManager;
   const LangOptions &LanguageOpts = Match.Context->getLangOpts();
@@ -97,6 +98,8 @@ static std::pair<bool, SmallVector<FixItHint>> generateReplacements(
           Match.Context->getTypeSizeInChars(ResultType).getQuantity()) >
           IgnoreTrivialTypesOfSizeAbove)
     return {false, FixItHints};
+
+  bool FoundNestedCall = false;
 
   for (const Expr *Arg : Result.Args) {
     const auto *InnerCall = dyn_cast<CallExpr>(Arg->IgnoreParenImpCasts());
@@ -170,11 +173,9 @@ static std::pair<bool, SmallVector<FixItHint>> generateReplacements(
           CharSourceRange::getTokenRange(InnerResult.First->getEndLoc())));
     }
 
-    const auto [FoundNestedCallInner, InnerReplacements] = generateReplacements(
+    const auto [_, InnerReplacements] = generateReplacements(
         Match, InnerCall, InnerResult, IgnoreNonTrivialTypes,
-        IgnoreTrivialTypesOfSizeAbove, false);
-
-    FoundNestedCall |= FoundNestedCallInner;
+        IgnoreTrivialTypesOfSizeAbove);
 
     FixItHints.append(InnerReplacements);
 
@@ -244,7 +245,7 @@ void MinMaxUseInitializerListCheck::check(
   const FindArgsResult Result = findArgs(TopCall);
   const auto [FoundNestedCall, Replacements] =
       generateReplacements(Match, TopCall, Result, IgnoreNonTrivialTypes,
-                           IgnoreTrivialTypesOfSizeAbove, false);
+                           IgnoreTrivialTypesOfSizeAbove);
 
   if (!FoundNestedCall)
     return;
