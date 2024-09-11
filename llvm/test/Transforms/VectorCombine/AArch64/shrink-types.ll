@@ -73,4 +73,31 @@ entry:
   ret i32 %6
 }
 
+define i32 @phi_bug(<16 x i32> %a, ptr %b) {
+; CHECK-LABEL: @phi_bug(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[B:%.*]], align 1
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[A_PHI:%.*]] = phi <16 x i32> [ [[A:%.*]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[WIDE_LOAD_PHI:%.*]] = phi <16 x i8> [ [[WIDE_LOAD]], [[ENTRY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = trunc <16 x i32> [[A_PHI]] to <16 x i8>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <16 x i8> [[WIDE_LOAD_PHI]], [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = zext <16 x i8> [[TMP1]] to <16 x i32>
+; CHECK-NEXT:    [[TMP3:%.*]] = tail call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> [[TMP2]])
+; CHECK-NEXT:    ret i32 [[TMP3]]
+;
+entry:
+  %wide.load = load <16 x i8>, ptr %b, align 1
+  br label %vector.body
+
+vector.body:
+  %a.phi = phi <16 x i32> [ %a, %entry ]
+  %wide.load.phi = phi <16 x i8> [ %wide.load, %entry ]
+  %0 = zext <16 x i8> %wide.load.phi to <16 x i32>
+  %1 = and <16 x i32> %0, %a.phi
+  %2 = tail call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %1)
+  ret i32 %2
+}
+
 declare i32 @llvm.vector.reduce.add.v16i32(<16 x i32>)

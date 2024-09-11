@@ -2652,8 +2652,12 @@ bool VectorCombine::shrinkType(llvm::Instruction &I) {
     return false;
 
   Value *Op0 = ZExted;
-  if (auto *OI = dyn_cast<Instruction>(OtherOperand))
-    Builder.SetInsertPoint(OI->getNextNode());
+  if (auto *OI = dyn_cast<Instruction>(OtherOperand)) {
+    if (isa<PHINode>(OI))
+      Builder.SetInsertPoint(OI->getParent()->getFirstInsertionPt());
+    else
+      Builder.SetInsertPoint(OI->getNextNode());
+  }
   Value *Op1 = Builder.CreateTrunc(OtherOperand, SmallTy);
   Builder.SetInsertPoint(&I);
   // Keep the order of operands the same
