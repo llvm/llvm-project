@@ -115,18 +115,15 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
             rewriter.getIntegerType(floatType.getWidth()));
     }
     if (auto dataVector = dyn_cast<VectorType>(wantedDataType)) {
-      uint32_t vecLen = dataVector.getNumElements();
       uint32_t elemBits = dataVector.getElementTypeBitWidth();
-      uint32_t totalBits = elemBits * vecLen;
-      bool usePackedFp16 =
-          dyn_cast_or_null<RawBufferAtomicFaddOp>(*gpuOp) && vecLen == 2;
+      uint32_t totalBits = elemBits * dataVector.getNumElements();
       if (totalBits > maxVectorOpWidth)
         return gpuOp.emitOpError(
             "Total width of loads or stores must be no more than " +
             Twine(maxVectorOpWidth) + " bits, but we call for " +
             Twine(totalBits) +
             " bits. This should've been caught in validation");
-      else if (!usePackedFp16 && elemBits < 32) {
+      if (elemBits < 32) {
         if (totalBits > 32) {
           if (totalBits % 32 != 0)
             return gpuOp.emitOpError("Load or store of more than 32-bits that "
