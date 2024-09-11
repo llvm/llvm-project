@@ -9189,7 +9189,7 @@ Sema::CheckAssignmentConstraints(QualType LHSType, ExprResult &RHS,
 
   // __builtin_counted_by_ref cannot be assigned to a variable, used in
   // function call, or in a return.
-  if (auto *CE = dyn_cast<CallExpr>(RHS.get())) {
+  if (auto *CE = dyn_cast<CallExpr>(RHS.get()->IgnoreParenCasts())) {
     if (FunctionDecl *FDecl = CE->getDirectCallee();
         FDecl && FDecl->getBuiltinID() == Builtin::BI__builtin_counted_by_ref)
       Diag(RHS.get()->getExprLoc(),
