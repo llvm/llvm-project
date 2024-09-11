@@ -1046,8 +1046,8 @@ bool ModuleList::LoadScriptingResourcesInTarget(Target *target,
     return false;
   std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
   for (auto module : m_modules) {
-    Status error;
     if (module) {
+      Status error;
       if (!module->LoadScriptingResourceInTarget(target, error,
                                                  feedback_stream)) {
         if (error.Fail() && error.AsCString()) {
@@ -1058,8 +1058,7 @@ bool ModuleList::LoadScriptingResourcesInTarget(Target *target,
                   .GetFileNameStrippingExtension()
                   .GetCString(),
               error.AsCString());
-          errors.push_back(error);
-
+          errors.push_back(std::move(error));
           if (!continue_on_error)
             return false;
         }

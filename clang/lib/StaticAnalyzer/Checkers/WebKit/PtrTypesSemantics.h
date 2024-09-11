@@ -20,6 +20,7 @@ class CXXMethodDecl;
 class CXXRecordDecl;
 class Decl;
 class FunctionDecl;
+class QualType;
 class Stmt;
 class Type;
 
@@ -41,6 +42,10 @@ std::optional<bool> isRefCountable(const clang::CXXRecordDecl* Class);
 
 /// \returns true if \p Class is ref-counted, false if not.
 bool isRefCounted(const clang::CXXRecordDecl *Class);
+
+/// \returns true if \p Class is ref-countable AND not ref-counted, false if
+/// not, std::nullopt if inconclusive.
+std::optional<bool> isUncounted(const clang::QualType T);
 
 /// \returns true if \p Class is ref-countable AND not ref-counted, false if
 /// not, std::nullopt if inconclusive.

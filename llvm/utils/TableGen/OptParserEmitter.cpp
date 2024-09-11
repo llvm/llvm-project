@@ -250,15 +250,15 @@ static void EmitHelpTextsForVariants(
 /// OptParserEmitter - This tablegen backend takes an input .td file
 /// describing a list of options and emits a data structure for parsing and
 /// working with those options when given an input command line.
-static void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
+static void EmitOptParser(const RecordKeeper &Records, raw_ostream &OS) {
   // Get the option groups and options.
-  const std::vector<Record *> &Groups =
+  ArrayRef<const Record *> Groups =
       Records.getAllDerivedDefinitions("OptionGroup");
-  std::vector<Record *> Opts = Records.getAllDerivedDefinitions("Option");
+  std::vector<const Record *> Opts = Records.getAllDerivedDefinitions("Option");
 
   emitSourceFileHeader("Option Parsing Definitions", OS);
 
-  array_pod_sort(Opts.begin(), Opts.end(), CompareOptionRecords);
+  llvm::sort(Opts, CompareOptionRecords);
   // Generate prefix groups.
   typedef SmallVector<SmallString<2>, 2> PrefixKeyT;
   typedef std::map<PrefixKeyT, std::string> PrefixesT;

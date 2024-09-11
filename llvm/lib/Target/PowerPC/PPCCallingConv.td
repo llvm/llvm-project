@@ -13,13 +13,11 @@
 
 /// CCIfSubtarget - Match if the current subtarget has a feature F.
 class CCIfSubtarget<string F, CCAction A>
-    : CCIf<!strconcat("static_cast<const PPCSubtarget&>"
-                       "(State.getMachineFunction().getSubtarget()).",
+    : CCIf<!strconcat("State.getMachineFunction().getSubtarget<PPCSubtarget>().",
                      F),
           A>;
 class CCIfNotSubtarget<string F, CCAction A>
-    : CCIf<!strconcat("!static_cast<const PPCSubtarget&>"
-                       "(State.getMachineFunction().getSubtarget()).",
+    : CCIf<!strconcat("!State.getMachineFunction().getSubtarget<PPCSubtarget>().",
                      F),
           A>;
 class CCIfOrigArgWasNotPPCF128<CCAction A>

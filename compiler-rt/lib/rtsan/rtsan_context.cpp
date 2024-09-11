@@ -8,6 +8,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <rtsan/rtsan.h>
 #include <rtsan/rtsan_context.h>
 
 #include <rtsan/rtsan_stack.h>
@@ -75,6 +76,7 @@ void __rtsan::Context::BypassPop() { bypass_depth_--; }
 
 void __rtsan::ExpectNotRealtime(Context &context,
                                 const char *intercepted_function_name) {
+  CHECK(__rtsan_is_initialized());
   if (context.InRealtimeContext() && !context.IsBypassed()) {
     context.BypassPush();
 
@@ -93,10 +95,11 @@ void __rtsan::PrintDiagnostics(const char *intercepted_function_name, uptr pc,
                                uptr bp) {
   ScopedErrorReportLock l;
 
-  fprintf(stderr,
-          "Real-time violation: intercepted call to real-time unsafe function "
-          "`%s` in real-time context! Stack trace:\n",
-          intercepted_function_name);
+  Report("ERROR: RealtimeSanitizer: unsafe-library-call\n");
+  Printf("Intercepted call to real-time unsafe function "
+         "`%s` in real-time context!\n",
+         intercepted_function_name);
+
   __rtsan::PrintStackTrace(pc, bp);
 }
 

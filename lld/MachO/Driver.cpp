@@ -847,8 +847,14 @@ static ICFLevel getICFLevel(const ArgList &args) {
   auto icfLevel = StringSwitch<ICFLevel>(icfLevelStr)
                       .Cases("none", "", ICFLevel::none)
                       .Case("safe", ICFLevel::safe)
+                      .Case("safe_thunks", ICFLevel::safe_thunks)
                       .Case("all", ICFLevel::all)
                       .Default(ICFLevel::unknown);
+
+  if ((icfLevel == ICFLevel::safe_thunks) && (config->arch() != AK_arm64)) {
+    error("--icf=safe_thunks is only supported on arm64 targets");
+  }
+
   if (icfLevel == ICFLevel::unknown) {
     warn(Twine("unknown --icf=OPTION `") + icfLevelStr +
          "', defaulting to `none'");
@@ -1772,6 +1778,13 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     config->irpgoProfileSortProfilePath = arg->getValue();
     IncompatWithCGSort(arg->getSpelling());
   }
+  config->compressionSortStartupFunctions =
+      args.hasFlag(OPT_compression_sort_startup_functions,
+                   OPT_no_compression_sort_startup_functions, false);
+  if (config->irpgoProfileSortProfilePath.empty() &&
+      config->compressionSortStartupFunctions)
+    error("--compression-sort-startup-functions must be used with "
+          "--irpgo-profile-sort");
   if (const Arg *arg = args.getLastArg(OPT_compression_sort)) {
     StringRef compressionSortStr = arg->getValue();
     if (compressionSortStr == "function") {
@@ -1882,9 +1895,21 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     StringRef segName = arg->getValue(0);
     uint32_t maxProt = parseProtection(arg->getValue(1));
     uint32_t initProt = parseProtection(arg->getValue(2));
-    if (maxProt != initProt && config->arch() != AK_i386)
-      error("invalid argument '" + arg->getAsString(args) +
-            "': max and init must be the same for non-i386 archs");
+
+    // FIXME: Check if this works on more platforms.
+    bool allowsDifferentInitAndMaxProt =
+        config->platform() == PLATFORM_MACOS ||
+        config->platform() == PLATFORM_MACCATALYST;
+    if (allowsDifferentInitAndMaxProt) {
+      if (initProt > maxProt)
+        error("invalid argument '" + arg->getAsString(args) +
+              "': init must not be more permissive than max");
+    } else {
+      if (maxProt != initProt && config->arch() != AK_i386)
+        error("invalid argument '" + arg->getAsString(args) +
+              "': max and init must be the same for non-macOS non-i386 archs");
+    }
+
     if (segName == segment_names::linkEdit)
       error("-segprot cannot be used to change __LINKEDIT's protections");
     config->segmentProtections.push_back({segName, maxProt, initProt});
@@ -2104,7 +2129,8 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     // foldIdenticalLiterals before foldIdenticalSections.
     foldIdenticalLiterals();
     if (config->icfLevel != ICFLevel::none) {
-      if (config->icfLevel == ICFLevel::safe)
+      if (config->icfLevel == ICFLevel::safe ||
+          config->icfLevel == ICFLevel::safe_thunks)
         markAddrSigSymbols();
       foldIdenticalSections(/*onlyCfStrings=*/false);
     } else if (config->dedupStrings) {
