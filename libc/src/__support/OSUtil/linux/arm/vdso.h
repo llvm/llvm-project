@@ -8,6 +8,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_OSUTIL_LINUX_ARM_VDSO_H
 #define LLVM_LIBC_SRC___SUPPORT_OSUTIL_LINUX_ARM_VDSO_H
 #include "src/__support/CPP/string_view.h"
+#include "src/__support/OSUtil/linux/vdso_sym.h"
 namespace LIBC_NAMESPACE_DECL {
 namespace vdso {
 // translate VDSOSym to symbol names

@@ -24,6 +24,14 @@ add_object_library(
     libc.hdr.types.off_t
 )
 
+add_header_library(
+  vdso_sym
+  HDRS
+    vdso_sym.h
+  DEPENDS
+    libc.src.__support.common
+)
+
 add_object_library(
   vdso
   HDRS

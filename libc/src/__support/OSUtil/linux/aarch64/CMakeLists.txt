@@ -13,4 +13,5 @@ add_header_library(
   DEPENDS
     libc.src.__support.common
     libc.src.__support.CPP.string_view
+    libc.src.__support.OSUtil.linux.vdso_sym
 )
