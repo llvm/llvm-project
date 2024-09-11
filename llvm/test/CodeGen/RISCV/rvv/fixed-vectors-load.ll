@@ -7,6 +7,22 @@ define <5 x i8> @load_v5i8(ptr %p) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 5, e8, mf2, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
+; CHECK-NEXT:    vslidedown.vi v9, v8, 1
+; CHECK-NEXT:    vmv.x.s a0, v9
+; CHECK-NEXT:    vmv.x.s a1, v8
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-NEXT:    vmv.v.x v9, a1
+; CHECK-NEXT:    vslide1down.vx v9, v9, a0
+; CHECK-NEXT:    vslidedown.vi v10, v8, 2
+; CHECK-NEXT:    vmv.x.s a0, v10
+; CHECK-NEXT:    vslide1down.vx v9, v9, a0
+; CHECK-NEXT:    vslidedown.vi v10, v8, 3
+; CHECK-NEXT:    vmv.x.s a0, v10
+; CHECK-NEXT:    vslide1down.vx v9, v9, a0
+; CHECK-NEXT:    vslidedown.vi v8, v8, 4
+; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    vslide1down.vx v8, v9, a0
+; CHECK-NEXT:    vslidedown.vi v8, v8, 3
 ; CHECK-NEXT:    ret
   %x = load <5 x i8>, ptr %p
   ret <5 x i8> %x
@@ -17,6 +33,22 @@ define <5 x i8> @load_v5i8_align1(ptr %p) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 5, e8, mf2, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
+; CHECK-NEXT:    vslidedown.vi v9, v8, 1
+; CHECK-NEXT:    vmv.x.s a0, v9
+; CHECK-NEXT:    vmv.x.s a1, v8
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-NEXT:    vmv.v.x v9, a1
+; CHECK-NEXT:    vslide1down.vx v9, v9, a0
+; CHECK-NEXT:    vslidedown.vi v10, v8, 2
+; CHECK-NEXT:    vmv.x.s a0, v10
+; CHECK-NEXT:    vslide1down.vx v9, v9, a0
+; CHECK-NEXT:    vslidedown.vi v10, v8, 3
+; CHECK-NEXT:    vmv.x.s a0, v10
+; CHECK-NEXT:    vslide1down.vx v9, v9, a0
+; CHECK-NEXT:    vslidedown.vi v8, v8, 4
+; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    vslide1down.vx v8, v9, a0
+; CHECK-NEXT:    vslidedown.vi v8, v8, 3
 ; CHECK-NEXT:    ret
   %x = load <5 x i8>, ptr %p, align 1
   ret <5 x i8> %x
@@ -27,6 +59,25 @@ define <6 x i8> @load_v6i8(ptr %p) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 6, e8, mf2, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
+; CHECK-NEXT:    vslidedown.vi v9, v8, 1
+; CHECK-NEXT:    vmv.x.s a0, v9
+; CHECK-NEXT:    vmv.x.s a1, v8
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-NEXT:    vmv.v.x v9, a1
+; CHECK-NEXT:    vslide1down.vx v9, v9, a0
+; CHECK-NEXT:    vslidedown.vi v10, v8, 2
+; CHECK-NEXT:    vmv.x.s a0, v10
+; CHECK-NEXT:    vslide1down.vx v9, v9, a0
+; CHECK-NEXT:    vslidedown.vi v10, v8, 3
+; CHECK-NEXT:    vmv.x.s a0, v10
+; CHECK-NEXT:    vslide1down.vx v9, v9, a0
+; CHECK-NEXT:    vslidedown.vi v10, v8, 4
+; CHECK-NEXT:    vmv.x.s a0, v10
+; CHECK-NEXT:    vslide1down.vx v9, v9, a0
+; CHECK-NEXT:    vslidedown.vi v8, v8, 5
+; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    vslide1down.vx v8, v9, a0
+; CHECK-NEXT:    vslidedown.vi v8, v8, 2
 ; CHECK-NEXT:    ret
   %x = load <6 x i8>, ptr %p
   ret <6 x i8> %x
@@ -37,6 +88,48 @@ define <12 x i8> @load_v12i8(ptr %p) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 12, e8, m1, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
+; CHECK-NEXT:    vslidedown.vi v9, v8, 1
+; CHECK-NEXT:    vmv.x.s a0, v9
+; CHECK-NEXT:    vmv.x.s a1, v8
+; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; CHECK-NEXT:    vmv.v.x v9, a1
+; CHECK-NEXT:    vslide1down.vx v9, v9, a0
+; CHECK-NEXT:    vslidedown.vi v10, v8, 2
+; CHECK-NEXT:    vmv.x.s a0, v10
+; CHECK-NEXT:    vslide1down.vx v9, v9, a0
+; CHECK-NEXT:    vslidedown.vi v10, v8, 3
+; CHECK-NEXT:    vmv.x.s a0, v10
+; CHECK-NEXT:    vslide1down.vx v9, v9, a0
+; CHECK-NEXT:    vslidedown.vi v10, v8, 4
+; CHECK-NEXT:    vmv.x.s a0, v10
+; CHECK-NEXT:    vslide1down.vx v9, v9, a0
+; CHECK-NEXT:    vslidedown.vi v10, v8, 5
+; CHECK-NEXT:    vmv.x.s a0, v10
+; CHECK-NEXT:    vslide1down.vx v9, v9, a0
+; CHECK-NEXT:    vslidedown.vi v10, v8, 6
+; CHECK-NEXT:    vmv.x.s a0, v10
+; CHECK-NEXT:    vslide1down.vx v9, v9, a0
+; CHECK-NEXT:    vslidedown.vi v10, v8, 7
+; CHECK-NEXT:    vmv.x.s a0, v10
+; CHECK-NEXT:    vslide1down.vx v9, v9, a0
+; CHECK-NEXT:    vslidedown.vi v10, v8, 9
+; CHECK-NEXT:    vmv.x.s a0, v10
+; CHECK-NEXT:    vslidedown.vi v10, v8, 8
+; CHECK-NEXT:    vmv.x.s a1, v10
+; CHECK-NEXT:    vmv.v.x v10, a1
+; CHECK-NEXT:    vslide1down.vx v10, v10, a0
+; CHECK-NEXT:    vslidedown.vi v11, v8, 10
+; CHECK-NEXT:    vmv.x.s a0, v11
+; CHECK-NEXT:    vslide1down.vx v10, v10, a0
+; CHECK-NEXT:    vslidedown.vi v8, v8, 11
+; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    vslide1down.vx v8, v10, a0
+; CHECK-NEXT:    li a0, 255
+; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
+; CHECK-NEXT:    vmv.s.x v0, a0
+; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, mu
+; CHECK-NEXT:    vslidedown.vi v8, v8, 4
+; CHECK-NEXT:    vslidedown.vi v8, v9, 8, v0.t
 ; CHECK-NEXT:    ret
   %x = load <12 x i8>, ptr %p
   ret <12 x i8> %x
@@ -47,6 +140,25 @@ define <6 x i16> @load_v6i16(ptr %p) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0)
+; CHECK-NEXT:    vslidedown.vi v9, v8, 1
+; CHECK-NEXT:    vmv.x.s a0, v9
+; CHECK-NEXT:    vmv.x.s a1, v8
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; CHECK-NEXT:    vmv.v.x v9, a1
+; CHECK-NEXT:    vslide1down.vx v9, v9, a0
+; CHECK-NEXT:    vslidedown.vi v10, v8, 2
+; CHECK-NEXT:    vmv.x.s a0, v10
+; CHECK-NEXT:    vslide1down.vx v9, v9, a0
+; CHECK-NEXT:    vslidedown.vi v10, v8, 3
+; CHECK-NEXT:    vmv.x.s a0, v10
+; CHECK-NEXT:    vslide1down.vx v9, v9, a0
+; CHECK-NEXT:    vslidedown.vi v10, v8, 4
+; CHECK-NEXT:    vmv.x.s a0, v10
+; CHECK-NEXT:    vslide1down.vx v9, v9, a0
+; CHECK-NEXT:    vslidedown.vi v8, v8, 5
+; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    vslide1down.vx v8, v9, a0
+; CHECK-NEXT:    vslidedown.vi v8, v8, 2
 ; CHECK-NEXT:    ret
   %x = load <6 x i16>, ptr %p
   ret <6 x i16> %x
@@ -57,6 +169,25 @@ define <6 x half> @load_v6f16(ptr %p) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0)
+; CHECK-NEXT:    vslidedown.vi v9, v8, 1
+; CHECK-NEXT:    vfmv.f.s fa5, v9
+; CHECK-NEXT:    vfmv.f.s fa4, v8
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; CHECK-NEXT:    vfmv.v.f v9, fa4
+; CHECK-NEXT:    vfslide1down.vf v9, v9, fa5
+; CHECK-NEXT:    vslidedown.vi v10, v8, 2
+; CHECK-NEXT:    vfmv.f.s fa5, v10
+; CHECK-NEXT:    vfslide1down.vf v9, v9, fa5
+; CHECK-NEXT:    vslidedown.vi v10, v8, 3
+; CHECK-NEXT:    vfmv.f.s fa5, v10
+; CHECK-NEXT:    vfslide1down.vf v9, v9, fa5
+; CHECK-NEXT:    vslidedown.vi v10, v8, 4
+; CHECK-NEXT:    vfmv.f.s fa5, v10
+; CHECK-NEXT:    vfslide1down.vf v9, v9, fa5
+; CHECK-NEXT:    vslidedown.vi v8, v8, 5
+; CHECK-NEXT:    vfmv.f.s fa5, v8
+; CHECK-NEXT:    vfslide1down.vf v8, v9, fa5
+; CHECK-NEXT:    vslidedown.vi v8, v8, 2
 ; CHECK-NEXT:    ret
   %x = load <6 x half>, ptr %p
   ret <6 x half> %x
@@ -67,17 +198,129 @@ define <6 x float> @load_v6f32(ptr %p) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; CHECK-NEXT:    vslidedown.vi v10, v8, 1
+; CHECK-NEXT:    vfmv.f.s fa5, v10
+; CHECK-NEXT:    vfmv.f.s fa4, v8
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; CHECK-NEXT:    vfmv.v.f v10, fa4
+; CHECK-NEXT:    vfslide1down.vf v10, v10, fa5
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; CHECK-NEXT:    vslidedown.vi v12, v8, 2
+; CHECK-NEXT:    vfmv.f.s fa5, v12
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; CHECK-NEXT:    vfslide1down.vf v10, v10, fa5
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; CHECK-NEXT:    vslidedown.vi v12, v8, 3
+; CHECK-NEXT:    vfmv.f.s fa5, v12
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; CHECK-NEXT:    vfslide1down.vf v10, v10, fa5
+; CHECK-NEXT:    vslidedown.vi v12, v8, 4
+; CHECK-NEXT:    vfmv.f.s fa5, v12
+; CHECK-NEXT:    vfslide1down.vf v10, v10, fa5
+; CHECK-NEXT:    vslidedown.vi v8, v8, 5
+; CHECK-NEXT:    vfmv.f.s fa5, v8
+; CHECK-NEXT:    vfslide1down.vf v8, v10, fa5
+; CHECK-NEXT:    vslidedown.vi v8, v8, 2
 ; CHECK-NEXT:    ret
   %x = load <6 x float>, ptr %p
   ret <6 x float> %x
 }
 
 define <6 x double> @load_v6f64(ptr %p) {
-; CHECK-LABEL: load_v6f64:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 6, e64, m4, ta, ma
-; CHECK-NEXT:    vle64.v v8, (a0)
-; CHECK-NEXT:    ret
+; RV32-LABEL: load_v6f64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    addi sp, sp, -128
+; RV32-NEXT:    .cfi_def_cfa_offset 128
+; RV32-NEXT:    sw ra, 124(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s0, 120(sp) # 4-byte Folded Spill
+; RV32-NEXT:    .cfi_offset ra, -4
+; RV32-NEXT:    .cfi_offset s0, -8
+; RV32-NEXT:    addi s0, sp, 128
+; RV32-NEXT:    .cfi_def_cfa s0, 0
+; RV32-NEXT:    andi sp, sp, -64
+; RV32-NEXT:    vsetivli zero, 6, e64, m4, ta, ma
+; RV32-NEXT:    vle64.v v8, (a0)
+; RV32-NEXT:    mv a0, sp
+; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
+; RV32-NEXT:    vse64.v v8, (a0)
+; RV32-NEXT:    vsetivli zero, 1, e64, m4, ta, ma
+; RV32-NEXT:    vslidedown.vi v12, v8, 5
+; RV32-NEXT:    addi a1, sp, 40
+; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
+; RV32-NEXT:    vse64.v v12, (a1)
+; RV32-NEXT:    vsetivli zero, 1, e64, m4, ta, ma
+; RV32-NEXT:    vslidedown.vi v12, v8, 4
+; RV32-NEXT:    addi a1, sp, 32
+; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
+; RV32-NEXT:    vse64.v v12, (a1)
+; RV32-NEXT:    vslidedown.vi v10, v8, 1
+; RV32-NEXT:    addi a1, sp, 8
+; RV32-NEXT:    vse64.v v10, (a1)
+; RV32-NEXT:    vsetivli zero, 1, e64, m2, ta, ma
+; RV32-NEXT:    vslidedown.vi v10, v8, 3
+; RV32-NEXT:    addi a1, sp, 24
+; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
+; RV32-NEXT:    vse64.v v10, (a1)
+; RV32-NEXT:    vsetivli zero, 1, e64, m2, ta, ma
+; RV32-NEXT:    vslidedown.vi v8, v8, 2
+; RV32-NEXT:    addi a1, sp, 16
+; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
+; RV32-NEXT:    vse64.v v8, (a1)
+; RV32-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
+; RV32-NEXT:    vle64.v v8, (a0)
+; RV32-NEXT:    addi sp, s0, -128
+; RV32-NEXT:    lw ra, 124(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s0, 120(sp) # 4-byte Folded Reload
+; RV32-NEXT:    addi sp, sp, 128
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: load_v6f64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    addi sp, sp, -128
+; RV64-NEXT:    .cfi_def_cfa_offset 128
+; RV64-NEXT:    sd ra, 120(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd s0, 112(sp) # 8-byte Folded Spill
+; RV64-NEXT:    .cfi_offset ra, -8
+; RV64-NEXT:    .cfi_offset s0, -16
+; RV64-NEXT:    addi s0, sp, 128
+; RV64-NEXT:    .cfi_def_cfa s0, 0
+; RV64-NEXT:    andi sp, sp, -64
+; RV64-NEXT:    vsetivli zero, 6, e64, m4, ta, ma
+; RV64-NEXT:    vle64.v v8, (a0)
+; RV64-NEXT:    mv a0, sp
+; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
+; RV64-NEXT:    vse64.v v8, (a0)
+; RV64-NEXT:    vsetivli zero, 1, e64, m4, ta, ma
+; RV64-NEXT:    vslidedown.vi v12, v8, 5
+; RV64-NEXT:    addi a1, sp, 40
+; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
+; RV64-NEXT:    vse64.v v12, (a1)
+; RV64-NEXT:    vsetivli zero, 1, e64, m4, ta, ma
+; RV64-NEXT:    vslidedown.vi v12, v8, 4
+; RV64-NEXT:    addi a1, sp, 32
+; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
+; RV64-NEXT:    vse64.v v12, (a1)
+; RV64-NEXT:    vslidedown.vi v10, v8, 1
+; RV64-NEXT:    addi a1, sp, 8
+; RV64-NEXT:    vse64.v v10, (a1)
+; RV64-NEXT:    vsetivli zero, 1, e64, m2, ta, ma
+; RV64-NEXT:    vslidedown.vi v10, v8, 3
+; RV64-NEXT:    addi a1, sp, 24
+; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
+; RV64-NEXT:    vse64.v v10, (a1)
+; RV64-NEXT:    vsetivli zero, 1, e64, m2, ta, ma
+; RV64-NEXT:    vslidedown.vi v8, v8, 2
+; RV64-NEXT:    addi a1, sp, 16
+; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
+; RV64-NEXT:    vse64.v v8, (a1)
+; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
+; RV64-NEXT:    vle64.v v8, (a0)
+; RV64-NEXT:    addi sp, s0, -128
+; RV64-NEXT:    ld ra, 120(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s0, 112(sp) # 8-byte Folded Reload
+; RV64-NEXT:    addi sp, sp, 128
+; RV64-NEXT:    ret
   %x = load <6 x double>, ptr %p
   ret <6 x double> %x
 }

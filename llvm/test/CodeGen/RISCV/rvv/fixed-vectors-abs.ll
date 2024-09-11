@@ -39,7 +39,25 @@ define void @abs_v6i16(ptr %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0)
+; CHECK-NEXT:    vslidedown.vi v9, v8, 1
+; CHECK-NEXT:    vmv.x.s a1, v9
+; CHECK-NEXT:    vmv.x.s a2, v8
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; CHECK-NEXT:    vmv.v.x v9, a2
+; CHECK-NEXT:    vslide1down.vx v9, v9, a1
+; CHECK-NEXT:    vslidedown.vi v10, v8, 2
+; CHECK-NEXT:    vmv.x.s a1, v10
+; CHECK-NEXT:    vslide1down.vx v9, v9, a1
+; CHECK-NEXT:    vslidedown.vi v10, v8, 3
+; CHECK-NEXT:    vmv.x.s a1, v10
+; CHECK-NEXT:    vslide1down.vx v9, v9, a1
+; CHECK-NEXT:    vslidedown.vi v10, v8, 4
+; CHECK-NEXT:    vmv.x.s a1, v10
+; CHECK-NEXT:    vslide1down.vx v9, v9, a1
+; CHECK-NEXT:    vslidedown.vi v8, v8, 5
+; CHECK-NEXT:    vmv.x.s a1, v8
+; CHECK-NEXT:    vslide1down.vx v8, v9, a1
+; CHECK-NEXT:    vslidedown.vi v8, v8, 2
 ; CHECK-NEXT:    vrsub.vi v9, v8, 0
 ; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
 ; CHECK-NEXT:    vmax.vv v8, v8, v9
