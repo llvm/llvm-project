@@ -94,7 +94,7 @@ void EmitClangCommentCommandInfo(llvm::RecordKeeper &Records,
                                  llvm::raw_ostream &OS);
 void EmitClangCommentCommandList(llvm::RecordKeeper &Records,
                                  llvm::raw_ostream &OS);
-void EmitClangOpcodes(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitClangOpcodes(const llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 
 void EmitClangSyntaxNodeList(llvm::RecordKeeper &Records,
                              llvm::raw_ostream &OS);
