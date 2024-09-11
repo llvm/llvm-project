@@ -1,6 +1,16 @@
-// ARMWidenStrings.cpp - Widen strings to word boundaries to speed up
-// programs that use simple strcpy's with constant strings as source
-// and stack allocated array for destination.
+//===- ARMWidenStrings.cpp - Widen strings to ---------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// Widen strings to word boundaries to speed up  programs that use simple
+// strcpy's with constant strings as source and stack allocated array for
+// destination.
+//
+//===----------------------------------------------------------------------===//
 
 #define DEBUG_TYPE "arm-widen-strings"
 
@@ -25,8 +35,7 @@
 
 using namespace llvm;
 
-cl::opt<bool> DisableARMWidenStrings("disable-arm-widen-strings",
-                                     cl::init(false));
+cl::opt<bool> DisableARMWidenStrings("disable-arm-widen-strings");
 
 namespace {
 
@@ -73,71 +82,53 @@ bool ARMWidenStrings::run(Function &F) {
         continue;
       }
 
-      LLVM_DEBUG(dbgs() << "Found call to strcpy/memcpy:\n" << *CI << "\n");
-
       auto *Alloca = dyn_cast<AllocaInst>(CI->getArgOperand(0));
       auto *SourceVar = dyn_cast<GlobalVariable>(CI->getArgOperand(1));
       auto *BytesToCopy = dyn_cast<ConstantInt>(CI->getArgOperand(2));
       auto *IsVolatile = dyn_cast<ConstantInt>(CI->getArgOperand(3));
 
       if (!BytesToCopy) {
-        LLVM_DEBUG(dbgs() << "Number of bytes to copy is null\n");
         continue;
       }
 
       uint64_t NumBytesToCopy = BytesToCopy->getZExtValue();
 
       if (!Alloca) {
-        LLVM_DEBUG(dbgs() << "Destination isn't a Alloca\n");
         continue;
       }
 
+      // Source isn't a global constant variable
       if (!SourceVar) {
-        LLVM_DEBUG(dbgs() << "Source isn't a global constant variable\n");
         continue;
       }
 
       if (!IsVolatile || IsVolatile->isOne()) {
-        LLVM_DEBUG(
-            dbgs() << "Not widening strings for this memcpy because it's "
-                      "a volatile operations\n");
         continue;
       }
 
       if (NumBytesToCopy % 4 == 0) {
-        LLVM_DEBUG(dbgs() << "Bytes to copy in strcpy/memcpy is already word "
-                             "aligned so nothing to do here.\n");
         continue;
       }
 
       if (!SourceVar->hasInitializer() || !SourceVar->isConstant() ||
           !SourceVar->hasLocalLinkage() || !SourceVar->hasGlobalUnnamedAddr()) {
-        LLVM_DEBUG(dbgs() << "Source is not constant global, thus it's "
-                             "mutable therefore it's not safe to pad\n");
         continue;
       }
 
       ConstantDataArray *SourceDataArray =
           dyn_cast<ConstantDataArray>(SourceVar->getInitializer());
       if (!SourceDataArray || !IsCharArray(SourceDataArray->getType())) {
-        LLVM_DEBUG(dbgs() << "Source isn't a constant data array\n");
         continue;
       }
 
       if (!Alloca->isStaticAlloca()) {
-        LLVM_DEBUG(dbgs() << "Destination allocation isn't a static "
-                             "constant which is locally allocated in this "
-                             "function, so skipping.\n");
         continue;
       }
 
       // Make sure destination is definitley a char array.
       if (!IsCharArray(Alloca->getAllocatedType())) {
-        LLVM_DEBUG(dbgs() << "Destination doesn't look like a constant char (8 "
-                             "bits) array\n");
         continue;
       }
-      LLVM_DEBUG(dbgs() << "With Alloca: " << *Alloca << "\n");
 
       uint64_t DZSize = Alloca->getAllocatedType()->getArrayNumElements();
       uint64_t SZSize = SourceDataArray->getType()->getNumElements();
@@ -145,29 +136,13 @@ bool ARMWidenStrings::run(Function &F) {
       // For safety purposes lets add a constraint and only padd when
       // num bytes to copy == destination array size == source string
       // which is a constant
-      LLVM_DEBUG(dbgs() << "Number of bytes to copy is: " << NumBytesToCopy
-                        << "\n");
-      LLVM_DEBUG(dbgs() << "Size of destination array is: " << DZSize << "\n");
-      LLVM_DEBUG(dbgs() << "Size of source array is: " << SZSize << "\n");
       if (NumBytesToCopy != DZSize || DZSize != SZSize) {
-        LLVM_DEBUG(dbgs() << "Size of number of bytes to copy, destination "
-                             "array and source string don't match, so "
-                             "skipping\n");
         continue;
       }
-      LLVM_DEBUG(dbgs() << "Going to widen.\n");
       unsigned int NumBytesToPad = 4 - (NumBytesToCopy % 4);
-      LLVM_DEBUG(dbgs() << "Number of bytes to pad by is " << NumBytesToPad
-                        << "\n");
       unsigned int TotalBytes = NumBytesToCopy + NumBytesToPad;
 
       if (TotalBytes > MemcpyInliningLimit) {
-        LLVM_DEBUG(
-            dbgs() << "Not going to pad because total number of bytes is "
-                   << TotalBytes
-                   << "  which be greater than the inlining "
-                      "limit for memcpy which is "
-                   << MemcpyInliningLimit << "\n");
         continue;
       }
 
@@ -179,9 +154,6 @@ bool ARMWidenStrings::run(Function &F) {
       NewAlloca->takeName(Alloca);
       NewAlloca->setAlignment(Alloca->getAlign());
       Alloca->replaceAllUsesWith(NewAlloca);
-
-      LLVM_DEBUG(dbgs() << "Updating users of destination stack object to use "
-                        << "new size\n");
 
       // update source to be word aligned (memcpy(...,X,...))
       // create replacement string with padded null bytes.
@@ -208,9 +180,6 @@ bool ARMWidenStrings::run(Function &F) {
       // Update number of bytes to copy (memcpy(...,...,X))
       CI->setArgOperand(2,
                         ConstantInt::get(BytesToCopy->getType(), TotalBytes));
-      LLVM_DEBUG(dbgs() << "Padded dest/source and increased number of bytes:\n"
-                        << *CI << "\n"
-                        << *NewAlloca << "\n");
     }
   }
   return true;
