@@ -12,16 +12,12 @@ int x(int y) {
 // CHECK:     %2 = cir.load %0 : !cir.ptr<!s32i>, !s32i
 // CHECK:     %3 = cir.const #cir.int<0> : !s32i
 // CHECK:     %4 = cir.cmp(gt, %2, %3) : !s32i, !cir.bool
-// CHECK:     %5 = cir.ternary(%4, true {
-// CHECK:       %7 = cir.const #cir.int<3> : !s32i
-// CHECK:       cir.yield %7 : !s32i
-// CHECK:     }, false {
-// CHECK:       %7 = cir.const #cir.int<5> : !s32i
-// CHECK:       cir.yield %7 : !s32i
-// CHECK:     }) : (!cir.bool) -> !s32i
-// CHECK:     cir.store %5, %1 : !s32i, !cir.ptr<!s32i>
-// CHECK:     %6 = cir.load %1 : !cir.ptr<!s32i>, !s32i
-// CHECK:     cir.return %6 : !s32i
+// CHECK:     %5 = cir.const #cir.int<3> : !s32i
+// CHECK:     %6 = cir.const #cir.int<5> : !s32i
+// CHECK:     %7 = cir.select if %4 then %5 else %6 : (!cir.bool, !s32i, !s32i) -> !s32i
+// CHECK:     cir.store %7, %1 : !s32i, !cir.ptr<!s32i>
+// CHECK:     %8 = cir.load %1 : !cir.ptr<!s32i>, !s32i
+// CHECK:     cir.return %8 : !s32i
 // CHECK:   }
 
 typedef enum {
