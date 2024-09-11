@@ -98,9 +98,10 @@ inline bool isReductionLoop(utils::IteratorType iType) {
   return iType == utils::IteratorType::reduction;
 }
 
+// Remove empty subarrays of `array` until a minimum lengh of one is reached.
 template <typename T>
 void removeTrailingEmptySubArray(SmallVector<SmallVector<T>> &array) {
-  while (!array.empty() && array.back().empty())
+  while (array.size() > 1 && array.back().empty())
     array.pop_back();
 }
 
