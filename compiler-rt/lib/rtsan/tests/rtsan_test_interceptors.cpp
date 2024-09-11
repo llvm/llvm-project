@@ -472,11 +472,12 @@ TEST_F(PthreadMutexLockTest, PthreadMutexUnlockSurvivesWhenNotRealtime) {
   ExpectNonRealtimeSurvival(Func);
 }
 
-TEST(TestRtsanInterceptors, PthreadMutexJoinDiesWhenRealtime) {
-  auto Func = []() {
-    pthread_t thread{};
-    pthread_join(thread, nullptr);
-  };
+TEST(TestRtsanInterceptors, PthreadJoinDiesWhenRealtime) {
+  pthread_t thread{};
+  ASSERT_EQ(0,
+            pthread_create(&thread, nullptr, &FakeThreadEntryPoint, nullptr));
+
+  auto Func = [&thread]() { pthread_join(thread, nullptr); };
 
   ExpectRealtimeDeath(Func, "pthread_join");
   ExpectNonRealtimeSurvival(Func);

@@ -86,4 +86,29 @@ namespace func_pointer {
     template <class _Tp> void pow(_Tp, complex<typename __promote<_Tp>::type>) = delete;
     void (*ptr)(const complex<float> &, complex<float>){pow};
   } // namespace param
-} // namespace t3
+} // namespace func_pointer
+
+namespace static_vs_nonstatic {
+  namespace implicit_obj_param {
+    struct A {
+      template <class... Args>
+        static void f(int a, Args... args) {}
+      template <class... Args>
+        void f(Args... args) = delete;
+    };
+    void g(){
+      A::f(0);
+    }
+  } // namespace implicit_obj_param
+  namespace explicit_obj_param {
+    struct A {
+      template <class... Args>
+        static void f(int, Args... args) {}
+      template <class... Args>
+        void f(this A *, Args... args) = delete;
+    };
+    void g(){
+      A::f(0);
+    }
+  } // namespace explicit_obj_param
+} // namespace static_vs_nonstatic
