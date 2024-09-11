@@ -4137,25 +4137,23 @@ libc_function(
     ],
 )
 
-#TODO: Enable once epoll_pwait2 availablilty can be checked first.
-# https://github.com/llvm/llvm-project/issues/80060
-# libc_function(
-#     name = "epoll_pwait2",
-#     srcs = ["src/sys/epoll/linux/epoll_pwait2.cpp"],
-#     hdrs = ["src/sys/epoll/epoll_pwait2.h"],
-#     target_compatible_with = select({
-#         "@platforms//os:linux": [],
-#         "//conditions:default": ["@platforms//:incompatible"],
-#     }),
-#     weak = True,
-#     deps = [
-#         ":__support_macros_sanitizer",
-#         ":__support_osutil_syscall",
-#         ":errno",
-#         ":hdr_signal_macros",
-#         ":hdr_sys_epoll_macros",
-#         ":types_sigset_t",
-#         ":types_struct_epoll_event",
-#         ":types_struct_timespec",
-#     ],
-# )
+libc_function(
+    name = "epoll_pwait2",
+    srcs = ["src/sys/epoll/linux/epoll_pwait2.cpp"],
+    hdrs = ["src/sys/epoll/epoll_pwait2.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    weak = True,
+    deps = [
+        ":__support_macros_sanitizer",
+        ":__support_osutil_syscall",
+        ":errno",
+        ":hdr_signal_macros",
+        ":hdr_sys_epoll_macros",
+        ":types_sigset_t",
+        ":types_struct_epoll_event",
+        ":types_struct_timespec",
+    ],
+)
