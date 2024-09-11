@@ -152,7 +152,7 @@ void EmitClangOpenCLBuiltinHeader(llvm::RecordKeeper &Records,
 void EmitClangOpenCLBuiltinTests(llvm::RecordKeeper &Records,
                                  llvm::raw_ostream &OS);
 
-void EmitClangDataCollectors(llvm::RecordKeeper &Records,
+void EmitClangDataCollectors(const llvm::RecordKeeper &Records,
                              llvm::raw_ostream &OS);
 
 void EmitTestPragmaAttributeSupportedAttributes(llvm::RecordKeeper &Records,
