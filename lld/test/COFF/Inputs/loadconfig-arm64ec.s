@@ -30,6 +30,8 @@ __os_arm64x_dispatch_ret:
         .xword 0
 __os_arm64x_check_call:
         .xword 0
+        .globl __os_arm64x_dispatch_icall
+__os_arm64x_dispatch_icall:
 __os_arm64x_check_icall:
         .xword 0
 __os_arm64x_get_x64_information:

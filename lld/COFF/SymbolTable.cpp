@@ -557,7 +557,11 @@ void SymbolTable::addEntryThunk(Symbol *from, Symbol *to) {
   entryThunks.push_back({from, to});
 }
 
-void SymbolTable::initializeEntryThunks() {
+void SymbolTable::addExitThunk(Symbol *from, Symbol *to) {
+  exitThunks[from] = to;
+}
+
+void SymbolTable::initializeECThunks() {
   for (auto it : entryThunks) {
     auto *to = dyn_cast<Defined>(it.second);
     if (!to)
@@ -572,6 +576,16 @@ void SymbolTable::initializeEntryThunks() {
       continue;
     }
     from->getChunk()->setEntryThunk(to);
+  }
+
+  for (ImportFile *file : ctx.importFileInstances) {
+    if (!file->impchkThunk)
+      continue;
+
+    Symbol *sym = exitThunks.lookup(file->thunkSym);
+    if (!sym)
+      sym = exitThunks.lookup(file->impSym);
+    file->impchkThunk->exitThunk = dyn_cast_or_null<Defined>(sym);
   }
 }
 
