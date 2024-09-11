@@ -3763,7 +3763,7 @@ void DWARFASTParserClang::AddUnnamedBitfieldToRecordTypeIfNeeded(
       TypeSystemClang::AddFieldToRecordType(
           class_clang_type, llvm::StringRef(),
           m_ast.GetBuiltinTypeForEncodingAndBitSize(eEncodingSint, word_width),
-          lldb::AccessType::eAccessPrivate, unnamed_bit_size);
+          lldb::AccessType::eAccessPublic, unnamed_bit_size);
 
   class_layout_info.field_offsets.insert(
       std::make_pair(unnamed_bitfield_decl, unnamed_bit_offset));
