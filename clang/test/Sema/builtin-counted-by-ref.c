@@ -8,6 +8,7 @@ struct fam_struct {
 
 struct non_fam_struct {
   char x;
+  long *pointer;
   int array[42];
   short count;
 } *q;
@@ -27,6 +28,8 @@ void *test1(int size) {
 
   *__builtin_counted_by_ref(q->array) = size          // expected-error {{'__builtin_counted_by_ref' argument must reference a flexible array member}}
   *__builtin_counted_by_ref(&q->array[0]) = size;     // expected-error {{'__builtin_counted_by_ref' argument must reference a flexible array member}}
+  *__builtin_counted_by_ref(q->pointer) = size;       // expected-error {{'__builtin_counted_by_ref' argument must reference a flexible array member}}
+  *__builtin_counted_by_ref(&q->pointer[0]) = size;   // expected-error {{'__builtin_counted_by_ref' argument must reference a flexible array member}}
   __builtin_counted_by_ref(p->x);                     // expected-error {{'__builtin_counted_by_ref' argument must reference a flexible array member}}
   __builtin_counted_by_ref(&p->array[i++]);           // expected-warning {{'__builtin_counted_by_ref' argument has side-effects that will be discarded}}
 
