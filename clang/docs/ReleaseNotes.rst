@@ -708,6 +708,31 @@ Improvements to Clang's diagnostics
 - Fixed a bug where Clang hung on an unsupported optional scope specifier ``::`` when parsing
   Objective-C. Clang now emits a diagnostic message instead of hanging.
 
+- The :doc:`ThreadSafetyAnalysis` now supports passing scoped capabilities into functions:
+  an attribute on the scoped capability parameter indicates both the expected associated capabilities and,
+  like in the case of attributes on the function declaration itself, their state before and after the call.
+
+  .. code-block:: c++
+
+    #include "mutex.h"
+
+    Mutex mu1, mu2;
+    int a GUARDED_BY(mu1);
+
+    void require(MutexLocker& scope REQUIRES(mu1)) {
+      scope.Unlock();
+      a = 0; // Warning!  Requires mu1.
+      scope.Lock();
+    }
+
+    void testParameter() {
+      MutexLocker scope(&mu1), scope2(&mu2);
+      require(scope2); // Warning! Mutex managed by 'scope2' is 'mu2' instead of 'mu1'
+      require(scope); // OK.
+      scope.Unlock();
+      require(scope); // Warning!  Requires mu1.
+    }
+
 Improvements to Clang's time-trace
 ----------------------------------
 
