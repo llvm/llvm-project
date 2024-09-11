@@ -729,6 +729,54 @@ define void @foo() {
   EXPECT_EQ(UndefStruct->getNumElements(), 2u);
 }
 
+TEST_F(SandboxIRTest, BlockAddress) {
+  parseIR(C, R"IR(
+define void @foo(ptr %ptr) {
+bb0:
+  store ptr blockaddress(@foo, %bb0), ptr %ptr
+  ret void
+bb1:
+  ret void
+bb2:
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto *BB0 = cast<sandboxir::BasicBlock>(
+      Ctx.getValue(getBasicBlockByName(LLVMF, "bb0")));
+  auto *BB1 = cast<sandboxir::BasicBlock>(
+      Ctx.getValue(getBasicBlockByName(LLVMF, "bb1")));
+  auto *BB2 = cast<sandboxir::BasicBlock>(
+      Ctx.getValue(getBasicBlockByName(LLVMF, "bb2")));
+  auto It = BB0->begin();
+  auto *SI = cast<sandboxir::StoreInst>(&*It++);
+  [[maybe_unused]] auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
+
+  // Check classof(), creation, getFunction(), getBasicBlock().
+  auto *BB0Addr = cast<sandboxir::BlockAddress>(SI->getValueOperand());
+  EXPECT_EQ(BB0Addr->getBasicBlock(), BB0);
+  EXPECT_EQ(BB0Addr->getFunction(), &F);
+  // Check get(F, BB).
+  auto *NewBB0Addr = sandboxir::BlockAddress::get(&F, BB0);
+  EXPECT_EQ(NewBB0Addr, BB0Addr);
+  // Check get(BB).
+  auto *NewBB0Addr2 = sandboxir::BlockAddress::get(BB0);
+  EXPECT_EQ(NewBB0Addr2, BB0Addr);
+  auto *BB1Addr = sandboxir::BlockAddress::get(BB1);
+  EXPECT_EQ(BB1Addr->getBasicBlock(), BB1);
+  EXPECT_NE(BB1Addr, BB0Addr);
+  // Check lookup().
+  auto *LookupBB0Addr = sandboxir::BlockAddress::lookup(BB0);
+  EXPECT_EQ(LookupBB0Addr, BB0Addr);
+  auto *LookupBB1Addr = sandboxir::BlockAddress::lookup(BB1);
+  EXPECT_EQ(LookupBB1Addr, BB1Addr);
+  auto *LookupBB2Addr = sandboxir::BlockAddress::lookup(BB2);
+  EXPECT_EQ(LookupBB2Addr, nullptr);
+}
+
 TEST_F(SandboxIRTest, Use) {
   parseIR(C, R"IR(
 define i32 @foo(i32 %v0, i32 %v1) {

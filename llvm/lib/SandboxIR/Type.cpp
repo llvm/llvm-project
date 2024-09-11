@@ -103,6 +103,11 @@ bool VectorType::isValidElementType(Type *ElemTy) {
   return llvm::VectorType::isValidElementType(ElemTy->LLVMTy);
 }
 
+FixedVectorType *FixedVectorType::get(Type *ElementType, unsigned NumElts) {
+  return cast<FixedVectorType>(ElementType->getContext().getType(
+      llvm::FixedVectorType::get(ElementType->LLVMTy, NumElts)));
+}
+
 IntegerType *IntegerType::get(Context &Ctx, unsigned NumBits) {
   return cast<IntegerType>(
       Ctx.getType(llvm::IntegerType::get(Ctx.LLVMCtx, NumBits)));

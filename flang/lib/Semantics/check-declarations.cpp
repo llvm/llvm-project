@@ -3003,17 +3003,17 @@ parser::Messages CheckHelper::WhyNotInteroperableDerivedType(
           } else {
             msgs.Annex(std::move(bad));
           }
-        } else if (!IsInteroperableIntrinsicType(
-                       *type, context_.languageFeatures())
+        } else if (auto dyType{evaluate::DynamicType::From(*type)}; dyType &&
+                   !evaluate::IsInteroperableIntrinsicType(
+                       *dyType, &context_.languageFeatures())
                         .value_or(false)) {
-          auto maybeDyType{evaluate::DynamicType::From(*type)};
           if (type->category() == DeclTypeSpec::Logical) {
             if (context_.ShouldWarn(common::UsageWarning::LogicalVsCBool)) {
               msgs.Say(component.name(),
                   "A LOGICAL component of an interoperable type should have the interoperable KIND=C_BOOL"_port_en_US);
             }
-          } else if (type->category() == DeclTypeSpec::Character &&
-              maybeDyType && maybeDyType->kind() == 1) {
+          } else if (type->category() == DeclTypeSpec::Character && dyType &&
+              dyType->kind() == 1) {
             if (context_.ShouldWarn(common::UsageWarning::BindCCharLength)) {
               msgs.Say(component.name(),
                   "A CHARACTER component of an interoperable type should have length 1"_port_en_US);
@@ -3106,10 +3106,15 @@ parser::Messages CheckHelper::WhyNotInteroperableObject(const Symbol &symbol) {
         type->category() == DeclTypeSpec::Character &&
         type->characterTypeSpec().length().isDeferred()) {
       // ok; F'2023 18.3.7 p2(6)
-    } else if (derived ||
-        IsInteroperableIntrinsicType(*type, context_.languageFeatures())
-            .value_or(false)) {
+    } else if (derived) { // type has been checked
+    } else if (auto dyType{evaluate::DynamicType::From(*type)}; dyType &&
+               evaluate::IsInteroperableIntrinsicType(*dyType,
+                   InModuleFile() ? nullptr : &context_.languageFeatures())
+                   .value_or(false)) {
       // F'2023 18.3.7 p2(4,5)
+      // N.B. Language features are not passed to IsInteroperableIntrinsicType
+      // when processing a module file, since the module file might have been
+      // compiled with CUDA while the client is not.
     } else if (type->category() == DeclTypeSpec::Logical) {
       if (context_.ShouldWarn(common::UsageWarning::LogicalVsCBool) &&
           !InModuleFile()) {
