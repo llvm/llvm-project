@@ -837,14 +837,16 @@ Status MinidumpFileBuilder::AddMemoryList() {
   error = m_process_sp->CalculateCoreFileSaveRanges(m_save_core_options,
                                                     all_core_memory_ranges);
 
+  if (error.Fail())
+    return error;
+
+  lldb_private::Progress progress_tracker("Saving Minidump File", "", all_core_memory_ranges.GetSize());
   std::vector<CoreFileMemoryRange> all_core_memory_vec;
   // Extract all the data into just a vector of data. So we can mutate this in
   // place.
   for (const auto &core_range : all_core_memory_ranges)
     all_core_memory_vec.push_back(core_range.data);
 
-  if (error.Fail())
-    return error;
 
   // Start by saving all of the stacks and ensuring they fit under the 32b
   // limit.
@@ -892,13 +894,13 @@ Status MinidumpFileBuilder::AddMemoryList() {
     }
   }
 
-  error = AddMemoryList_32(ranges_32);
+  error = AddMemoryList_32(ranges_32, progress_tracker);
   if (error.Fail())
     return error;
 
   // Add the remaining memory as a 64b range.
   if (!ranges_64.empty()) {
-    error = AddMemoryList_64(ranges_64);
+    error = AddMemoryList_64(ranges_64, progress_tracker);
     if (error.Fail())
       return error;
   }
@@ -973,7 +975,7 @@ GetLargestRangeSize(const std::vector<CoreFileMemoryRange> &ranges) {
 }
 
 Status MinidumpFileBuilder::AddMemoryList_32(
-    std::vector<CoreFileMemoryRange> &ranges) {
+    std::vector<CoreFileMemoryRange> &ranges, Progress &progressTracker) {
   std::vector<MemoryDescriptor> descriptors;
   Status error;
   if (ranges.size() == 0)
@@ -1024,6 +1026,8 @@ Status MinidumpFileBuilder::AddMemoryList_32(
     error = AddData(data_up->GetBytes(), bytes_read);
     if (error.Fail())
       return error;
+
+    progressTracker.Increment();
   }
 
   // Add a directory that references this list
@@ -1050,7 +1054,7 @@ Status MinidumpFileBuilder::AddMemoryList_32(
 }
 
 Status MinidumpFileBuilder::AddMemoryList_64(
-    std::vector<CoreFileMemoryRange> &ranges) {
+    std::vector<CoreFileMemoryRange> &ranges, Progress &progressTracker) {
   Status error;
   if (ranges.empty())
     return error;
@@ -1132,6 +1136,8 @@ Status MinidumpFileBuilder::AddMemoryList_64(
     error = AddData(data_up->GetBytes(), bytes_read);
     if (error.Fail())
       return error;
+
+    progressTracker.Increment();
   }
 
   // Early return if there is no cleanup needed.
