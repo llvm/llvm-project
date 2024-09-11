@@ -48,26 +48,10 @@ mlir::Value fir::runtime::genGetCommand(fir::FirOpBuilder &builder,
   return builder.create<fir::CallOp>(loc, runtimeFunc, args).getResult(0);
 }
 
-mlir::Value fir::runtime::genGetGID(fir::FirOpBuilder &builder,
-                                    mlir::Location loc) {
-  auto runtimeFunc =
-      fir::runtime::getRuntimeFunc<mkRTKey(GetGID)>(loc, builder);
-
-  return builder.create<fir::CallOp>(loc, runtimeFunc).getResult(0);
-}
-
 mlir::Value fir::runtime::genGetPID(fir::FirOpBuilder &builder,
                                     mlir::Location loc) {
   auto runtimeFunc =
       fir::runtime::getRuntimeFunc<mkRTKey(GetPID)>(loc, builder);
-
-  return builder.create<fir::CallOp>(loc, runtimeFunc).getResult(0);
-}
-
-mlir::Value fir::runtime::genGetUID(fir::FirOpBuilder &builder,
-                                    mlir::Location loc) {
-  auto runtimeFunc =
-      fir::runtime::getRuntimeFunc<mkRTKey(GetUID)>(loc, builder);
 
   return builder.create<fir::CallOp>(loc, runtimeFunc).getResult(0);
 }

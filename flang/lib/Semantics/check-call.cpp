@@ -2023,6 +2023,8 @@ bool CheckPPCIntrinsic(const Symbol &generic, const Symbol &specific,
 bool CheckWindowsIntrinsic(
     const Symbol &intrinsic, evaluate::FoldingContext &foldingContext) {
   parser::ContextualMessages &messages{foldingContext.messages()};
+  // TODO: there are other intrinsics that are unsupported on Windows that
+  // should be added here.
   if (intrinsic.name() == "getuid") {
     messages.Say(
         "User IDs do not exist on Windows. This function will always return 1"_warn_en_US);

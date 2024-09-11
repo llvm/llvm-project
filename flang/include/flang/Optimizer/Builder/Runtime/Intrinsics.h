@@ -47,6 +47,9 @@ void genDateAndTime(fir::FirOpBuilder &, mlir::Location,
 void genEtime(fir::FirOpBuilder &builder, mlir::Location loc,
               mlir::Value values, mlir::Value time);
 
+mlir::Value genGetUID(fir::FirOpBuilder &, mlir::Location);
+mlir::Value genGetGID(fir::FirOpBuilder &, mlir::Location);
+
 void genRandomInit(fir::FirOpBuilder &, mlir::Location, mlir::Value repeatable,
                    mlir::Value imageDistinct);
 void genRandomNumber(fir::FirOpBuilder &, mlir::Location, mlir::Value harvest);

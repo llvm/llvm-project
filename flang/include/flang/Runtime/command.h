@@ -15,9 +15,6 @@
 #ifdef _WIN32
 // On Windows* OS GetCurrentProcessId returns DWORD aka uint32_t
 typedef std::uint32_t pid_t;
-// UID and GID don't exist on Windows, these exist to avoid errors.
-typedef std::uint32_t uid_t;
-typedef std::uint32_t gid_t;
 #else
 #include "sys/types.h" //pid_t
 #endif
@@ -32,14 +29,8 @@ extern "C" {
 // integer kind.
 std::int32_t RTNAME(ArgumentCount)();
 
-// Calls getgid()
-gid_t RTNAME(GetGID)();
-
 // Calls getpid()
 pid_t RTNAME(GetPID)();
-
-// Calls getuid()
-uid_t RTNAME(GetUID)();
 
 // 16.9.82 GET_COMMAND
 // Try to get the value of the whole command. All of the parameters are

@@ -42,25 +42,7 @@ std::int32_t RTNAME(ArgumentCount)() {
   return 0;
 }
 
-gid_t RTNAME(GetGID)() {
-#ifdef _WIN32
-  // Group IDs don't exist on Windows, return 1 to avoid errors
-  return 1;
-#else
-  return getgid();
-#endif
-}
-
 pid_t RTNAME(GetPID)() { return getpid(); }
-
-uid_t RTNAME(GetUID)() {
-#ifdef _WIN32
-  // User IDs don't exist on Windows, return 1 to avoid errors
-  return 1;
-#else
-  return getuid();
-#endif
-}
 
 // Returns the length of the \p string. Assumes \p string is valid.
 static std::int64_t StringLength(const char *string) {
