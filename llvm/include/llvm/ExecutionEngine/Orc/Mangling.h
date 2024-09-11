@@ -15,6 +15,7 @@
 
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/ThreadSafeModule.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/MemoryBuffer.h"
 
@@ -33,16 +34,18 @@ private:
   const DataLayout &DL;
 };
 
-/// Maps IR global values to their linker symbol names / flags.
-///
-/// This utility can be used when adding new IR globals in the JIT.
 class IRSymbolMapper {
 public:
+  // Stores options to guide symbol mapping for IR symbols
   struct ManglingOptions {
-    bool EmulatedTLS = false;
+    bool EmulatedTLS;
   };
 
   using SymbolNameToDefinitionMap = std::map<SymbolStringPtr, GlobalValue *>;
+  using SymbolMapperFunction = unique_function<void(
+      ArrayRef<GlobalValue *> Gvs, ExecutionSession &ES,
+      const ManglingOptions &MO, SymbolFlagsMap &SymbolFlags,
+      SymbolNameToDefinitionMap *SymbolToDef)>;
 
   /// Add mangled symbols for the given GlobalValues to SymbolFlags.
   /// If a SymbolToDefinitionMap pointer is supplied then it will be populated
@@ -50,9 +53,10 @@ public:
   /// necessarily one-to-one: thread-local GlobalValues, for example, may
   /// produce more than one symbol, in which case the map will contain duplicate
   /// values.
-  static void add(ExecutionSession &ES, const ManglingOptions &MO,
-                  ArrayRef<GlobalValue *> GVs, SymbolFlagsMap &SymbolFlags,
-                  SymbolNameToDefinitionMap *SymbolToDefinition = nullptr);
+  static void
+  defaultSymbolMapper(ArrayRef<GlobalValue *> GVs, ExecutionSession &ES,
+                      const ManglingOptions &MO, SymbolFlagsMap &SymbolFlags,
+                      SymbolNameToDefinitionMap *SymbolToDefinition = nullptr);
 };
 
 } // End namespace orc

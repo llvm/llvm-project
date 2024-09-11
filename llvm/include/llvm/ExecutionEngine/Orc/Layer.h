@@ -36,7 +36,9 @@ public:
   /// SymbolFlags and SymbolToDefinition maps.
   IRMaterializationUnit(ExecutionSession &ES,
                         const IRSymbolMapper::ManglingOptions &MO,
-                        ThreadSafeModule TSM);
+                        ThreadSafeModule TSM,
+                        IRSymbolMapper::SymbolMapperFunction SymMapper =
+                            IRSymbolMapper::defaultSymbolMapper);
 
   /// Create an IRMaterializationLayer from a module, and pre-existing
   /// SymbolFlags and SymbolToDefinition maps. The maps must provide
@@ -51,6 +53,21 @@ public:
 
   /// Return a reference to the contained ThreadSafeModule.
   const ThreadSafeModule &getModule() const { return TSM; }
+
+  // Stores Interface and SymbolToDefinitionMap
+  struct SymbolInfo {
+  public:
+    SymbolInfo(MaterializationUnit::Interface I, SymbolNameToDefinitionMap SMap)
+        : Interface(I), SymbolToDefinition(SMap) {}
+
+    MaterializationUnit::Interface Interface;
+    SymbolNameToDefinitionMap SymbolToDefinition;
+  };
+
+  static IRMaterializationUnit::SymbolInfo
+  getSymbolInfo(const Module &M, ExecutionSession &ES,
+                const IRSymbolMapper::ManglingOptions &MO,
+                IRSymbolMapper::SymbolMapperFunction &SymMapper);
 
 protected:
   ThreadSafeModule TSM;
@@ -95,14 +112,19 @@ public:
   /// Returns the current value of the CloneToNewContextOnEmit flag.
   bool getCloneToNewContextOnEmit() const { return CloneToNewContextOnEmit; }
 
-  /// Add a MaterializatinoUnit representing the given IR to the JITDylib
+  /// Adds a MaterializatinoUnit representing the given IR to the JITDylib
   /// targeted by the given tracker.
-  virtual Error add(ResourceTrackerSP RT, ThreadSafeModule TSM);
+  virtual Error add(ResourceTrackerSP RT, ThreadSafeModule TSM,
+                    IRSymbolMapper::SymbolMapperFunction SymMapper =
+                        IRSymbolMapper::defaultSymbolMapper);
 
   /// Adds a MaterializationUnit representing the given IR to the given
-  /// JITDylib. If RT is not specif
-  Error add(JITDylib &JD, ThreadSafeModule TSM) {
-    return add(JD.getDefaultResourceTracker(), std::move(TSM));
+  /// JITDylib. If RT is not specified, use the default tracker for this Dylib.
+  Error add(JITDylib &JD, ThreadSafeModule TSM,
+            IRSymbolMapper::SymbolMapperFunction SymMapper =
+                IRSymbolMapper::defaultSymbolMapper) {
+    return add(JD.getDefaultResourceTracker(), std::move(TSM),
+               std::move(SymMapper));
   }
 
   /// Emit should materialize the given IR.
@@ -119,9 +141,8 @@ private:
 /// on the given IRLayer.
 class BasicIRLayerMaterializationUnit : public IRMaterializationUnit {
 public:
-  BasicIRLayerMaterializationUnit(IRLayer &L,
-                                  const IRSymbolMapper::ManglingOptions &MO,
-                                  ThreadSafeModule TSM);
+  BasicIRLayerMaterializationUnit(IRLayer &L, const ThreadSafeModule TSM,
+                                  SymbolInfo SymInfo);
 
 private:
   void materialize(std::unique_ptr<MaterializationResponsibility> R) override;
