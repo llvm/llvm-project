@@ -802,12 +802,18 @@ InstructionCost PPCTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
   // explicitly check this case. There are also corresponding store
   // instructions.
   unsigned MemBytes = Src->getPrimitiveSizeInBits();
-  if (ST->hasVSX() && IsAltivecType &&
-      (MemBytes == 64 || (ST->hasP8Vector() && MemBytes == 32)))
-    return 1;
+  Align AlignBytes = Alignment ? *Alignment : Align(1);
+  unsigned SrcBytes = LT.second.getStoreSize();
+  if (ST->hasVSX() && IsAltivecType) {
+    if (MemBytes == 64 || (ST->hasP8Vector() && MemBytes == 32))
+      return 1;
+    // Use lfiwax/xxspltw
+    if (Opcode == Instruction::Load && MemBytes == 32)
+      if (AlignBytes < SrcBytes || Cost > 2)
+        return 2;
+  }
 
   // Aligned loads and stores are easy.
-  unsigned SrcBytes = LT.second.getStoreSize();
   if (!SrcBytes || !Alignment || *Alignment >= SrcBytes)
     return Cost;
 
