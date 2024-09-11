@@ -33,6 +33,7 @@
 #include "clang/Basic/SourceManager.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Intrinsics.h"
@@ -295,6 +296,29 @@ void CodeGenFunction::EmitAnyExprToMem(const Expr *E,
     EmitStoreThroughLValue(RV, LV);
     return;
   }
+  }
+  llvm_unreachable("bad evaluation kind");
+}
+
+void CodeGenFunction::EmitInitializationToLValue(
+    const Expr *E, LValue LV, AggValueSlot::IsZeroed_t IsZeroed) {
+  QualType Type = LV.getType();
+  switch (getEvaluationKind(Type)) {
+  case TEK_Complex:
+    EmitComplexExprIntoLValue(E, LV, /*isInit*/ true);
+    return;
+  case TEK_Aggregate:
+    EmitAggExpr(E, AggValueSlot::forLValue(LV, AggValueSlot::IsDestructed,
+                                           AggValueSlot::DoesNotNeedGCBarriers,
+                                           AggValueSlot::IsNotAliased,
+                                           AggValueSlot::MayOverlap, IsZeroed));
+    return;
+  case TEK_Scalar:
+    if (LV.isSimple())
+      EmitScalarInit(E, /*D=*/nullptr, LV, /*Captured=*/false);
+    else
+      EmitStoreThroughLValue(RValue::get(EmitScalarExpr(E)), LV);
+    return;
   }
   llvm_unreachable("bad evaluation kind");
 }
@@ -1672,6 +1696,8 @@ LValue CodeGenFunction::EmitLValueHelper(const Expr *E,
     return EmitCoyieldLValue(cast<CoyieldExpr>(E));
   case Expr::PackIndexingExprClass:
     return EmitLValue(cast<PackIndexingExpr>(E)->getSelectedExpr());
+  case Expr::HLSLOutArgExprClass:
+    llvm_unreachable("cannot emit a HLSL out argument directly");
   }
 }
 
@@ -5432,6 +5458,36 @@ LValue CodeGenFunction::EmitOpaqueValueLValue(const OpaqueValueExpr *e) {
   return getOrCreateOpaqueLValueMapping(e);
 }
 
+void CodeGenFunction::EmitHLSLOutArgExpr(const HLSLOutArgExpr *E,
+                                         CallArgList &Args, QualType Ty) {
+
+  // Emitting the casted temporary through an opaque value.
+  LValue BaseLV = EmitLValue(E->getArgLValue());
+  OpaqueValueMappingData::bind(*this, E->getOpaqueArgLValue(), BaseLV);
+
+  QualType ExprTy = E->getType();
+  Address OutTemp = CreateIRTemp(ExprTy);
+  LValue TempLV = MakeAddrLValue(OutTemp, ExprTy);
+
+  if (E->isInOut())
+    EmitInitializationToLValue(E->getCastedTemporary()->getSourceExpr(),
+                               TempLV);
+
+  OpaqueValueMappingData::bind(*this, E->getCastedTemporary(), TempLV);
+
+  llvm::Value *Addr = TempLV.getAddress().getBasePointer();
+  llvm::Type *ElTy = ConvertTypeForMem(TempLV.getType());
+
+  llvm::TypeSize Sz = CGM.getDataLayout().getTypeAllocSize(ElTy);
+
+  llvm::Value *LifetimeSize = EmitLifetimeStart(Sz, Addr);
+
+  Address TmpAddr(Addr, ElTy, TempLV.getAlignment());
+  Args.addWriteback(BaseLV, TmpAddr, nullptr, E->getWritebackCast(),
+                    LifetimeSize);
+  Args.add(RValue::get(TmpAddr, *this), Ty);
+}
+
 LValue
 CodeGenFunction::getOrCreateOpaqueLValueMapping(const OpaqueValueExpr *e) {
   assert(OpaqueValueMapping::shouldBindAsLValue(e));
@@ -5489,16 +5545,30 @@ RValue CodeGenFunction::EmitRValueForField(LValue LV,
 //===--------------------------------------------------------------------===//
 
 RValue CodeGenFunction::EmitCallExpr(const CallExpr *E,
-                                     ReturnValueSlot ReturnValue) {
+                                     ReturnValueSlot ReturnValue,
+                                     llvm::CallBase **CallOrInvoke) {
+  llvm::CallBase *CallOrInvokeStorage;
+  if (!CallOrInvoke) {
+    CallOrInvoke = &CallOrInvokeStorage;
+  }
+
+  auto AddCoroElideSafeOnExit = llvm::make_scope_exit([&] {
+    if (E->isCoroElideSafe()) {
+      auto *I = *CallOrInvoke;
+      if (I)
+        I->addFnAttr(llvm::Attribute::CoroElideSafe);
+    }
+  });
+
   // Builtins never have block type.
   if (E->getCallee()->getType()->isBlockPointerType())
-    return EmitBlockCallExpr(E, ReturnValue);
+    return EmitBlockCallExpr(E, ReturnValue, CallOrInvoke);
 
   if (const auto *CE = dyn_cast<CXXMemberCallExpr>(E))
-    return EmitCXXMemberCallExpr(CE, ReturnValue);
+    return EmitCXXMemberCallExpr(CE, ReturnValue, CallOrInvoke);
 
   if (const auto *CE = dyn_cast<CUDAKernelCallExpr>(E))
-    return EmitCUDAKernelCallExpr(CE, ReturnValue);
+    return EmitCUDAKernelCallExpr(CE, ReturnValue, CallOrInvoke);
 
   // A CXXOperatorCallExpr is created even for explicit object methods, but
   // these should be treated like static function call.
@@ -5506,7 +5576,7 @@ RValue CodeGenFunction::EmitCallExpr(const CallExpr *E,
     if (const auto *MD =
             dyn_cast_if_present<CXXMethodDecl>(CE->getCalleeDecl());
         MD && MD->isImplicitObjectMemberFunction())
-      return EmitCXXOperatorMemberCallExpr(CE, MD, ReturnValue);
+      return EmitCXXOperatorMemberCallExpr(CE, MD, ReturnValue, CallOrInvoke);
 
   CGCallee callee = EmitCallee(E->getCallee());
 
@@ -5519,14 +5589,17 @@ RValue CodeGenFunction::EmitCallExpr(const CallExpr *E,
     return EmitCXXPseudoDestructorExpr(callee.getPseudoDestructorExpr());
   }
 
-  return EmitCall(E->getCallee()->getType(), callee, E, ReturnValue);
+  return EmitCall(E->getCallee()->getType(), callee, E, ReturnValue,
+                  /*Chain=*/nullptr, CallOrInvoke);
 }
 
 /// Emit a CallExpr without considering whether it might be a subclass.
 RValue CodeGenFunction::EmitSimpleCallExpr(const CallExpr *E,
-                                           ReturnValueSlot ReturnValue) {
+                                           ReturnValueSlot ReturnValue,
+                                           llvm::CallBase **CallOrInvoke) {
   CGCallee Callee = EmitCallee(E->getCallee());
-  return EmitCall(E->getCallee()->getType(), Callee, E, ReturnValue);
+  return EmitCall(E->getCallee()->getType(), Callee, E, ReturnValue,
+                  /*Chain=*/nullptr, CallOrInvoke);
 }
 
 // Detect the unusual situation where an inline version is shadowed by a
@@ -5730,8 +5803,9 @@ LValue CodeGenFunction::EmitBinaryOperatorLValue(const BinaryOperator *E) {
   llvm_unreachable("bad evaluation kind");
 }
 
-LValue CodeGenFunction::EmitCallExprLValue(const CallExpr *E) {
-  RValue RV = EmitCallExpr(E);
+LValue CodeGenFunction::EmitCallExprLValue(const CallExpr *E,
+                                           llvm::CallBase **CallOrInvoke) {
+  RValue RV = EmitCallExpr(E, ReturnValueSlot(), CallOrInvoke);
 
   if (!RV.isScalar())
     return MakeAddrLValue(RV.getAggregateAddress(), E->getType(),
@@ -5854,9 +5928,11 @@ LValue CodeGenFunction::EmitStmtExprLValue(const StmtExpr *E) {
                         AlignmentSource::Decl);
 }
 
-RValue CodeGenFunction::EmitCall(QualType CalleeType, const CGCallee &OrigCallee,
-                                 const CallExpr *E, ReturnValueSlot ReturnValue,
-                                 llvm::Value *Chain) {
+RValue CodeGenFunction::EmitCall(QualType CalleeType,
+                                 const CGCallee &OrigCallee, const CallExpr *E,
+                                 ReturnValueSlot ReturnValue,
+                                 llvm::Value *Chain,
+                                 llvm::CallBase **CallOrInvoke) {
   // Get the actual function type. The callee type will always be a pointer to
   // function type or a block pointer type.
   assert(CalleeType->isFunctionPointerType() &&
@@ -6076,8 +6152,8 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType, const CGCallee &OrigCallee
         Address(Handle, Handle->getType(), CGM.getPointerAlign()));
     Callee.setFunctionPointer(Stub);
   }
-  llvm::CallBase *CallOrInvoke = nullptr;
-  RValue Call = EmitCall(FnInfo, Callee, ReturnValue, Args, &CallOrInvoke,
+  llvm::CallBase *LocalCallOrInvoke = nullptr;
+  RValue Call = EmitCall(FnInfo, Callee, ReturnValue, Args, &LocalCallOrInvoke,
                          E == MustTailCall, E->getExprLoc());
 
   // Generate function declaration DISuprogram in order to be used
@@ -6086,11 +6162,13 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType, const CGCallee &OrigCallee
     if (auto *CalleeDecl = dyn_cast_or_null<FunctionDecl>(TargetDecl)) {
       FunctionArgList Args;
       QualType ResTy = BuildFunctionArgList(CalleeDecl, Args);
-      DI->EmitFuncDeclForCallSite(CallOrInvoke,
+      DI->EmitFuncDeclForCallSite(LocalCallOrInvoke,
                                   DI->getFunctionType(CalleeDecl, ResTy, Args),
                                   CalleeDecl);
     }
   }
+  if (CallOrInvoke)
+    *CallOrInvoke = LocalCallOrInvoke;
 
   return Call;
 }

@@ -1204,15 +1204,6 @@ public:
     return false;
   }
 
-  /// Returns the Largest Super Class that is being initialized. There
-  /// should be a Pseudo Instruction implemented for the super class
-  /// that is being returned to ensure that Init Undef can apply the
-  /// initialization correctly.
-  virtual const TargetRegisterClass *
-  getLargestSuperClass(const TargetRegisterClass *RC) const {
-    llvm_unreachable("Unexpected target register class.");
-  }
-
   /// Returns if the architecture being targeted has the required Pseudo
   /// Instructions for initializing the register. By default this returns false,
   /// but where it is overriden for an architecture, the behaviour will be

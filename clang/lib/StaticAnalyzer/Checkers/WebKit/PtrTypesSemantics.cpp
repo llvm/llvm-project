@@ -143,6 +143,16 @@ bool isReturnValueRefCounted(const clang::FunctionDecl *F) {
   return false;
 }
 
+std::optional<bool> isUncounted(const QualType T) {
+  if (auto *Subst = dyn_cast<SubstTemplateTypeParmType>(T)) {
+    if (auto *Decl = Subst->getAssociatedDecl()) {
+      if (isRefType(safeGetName(Decl)))
+        return false;
+    }
+  }
+  return isUncounted(T->getAsCXXRecordDecl());
+}
+
 std::optional<bool> isUncounted(const CXXRecordDecl* Class)
 {
   // Keep isRefCounted first as it's cheaper.
@@ -231,11 +241,9 @@ bool isSingleton(const FunctionDecl *F) {
     if (!MethodDecl->isStatic())
       return false;
   }
-  const auto &Name = safeGetName(F);
-  std::string SingletonStr = "singleton";
-  auto index = Name.find(SingletonStr);
-  return index != std::string::npos &&
-         index == Name.size() - SingletonStr.size();
+  const auto &NameStr = safeGetName(F);
+  StringRef Name = NameStr; // FIXME: Make safeGetName return StringRef.
+  return Name == "singleton" || Name.ends_with("Singleton");
 }
 
 // We only care about statements so let's use the simple
@@ -397,6 +405,7 @@ public:
       return true;
 
     if (Name == "WTFCrashWithInfo" || Name == "WTFBreakpointTrap" ||
+        Name == "WTFReportBacktrace" ||
         Name == "WTFCrashWithSecurityImplication" || Name == "WTFCrash" ||
         Name == "WTFReportAssertionFailure" || Name == "isMainThread" ||
         Name == "isMainThreadOrGCThread" || Name == "isMainRunLoop" ||

@@ -53,6 +53,12 @@ inline stable_hash stable_hash_combine(stable_hash A, stable_hash B,
 // Removes suffixes introduced by LLVM from the name to enhance stability and
 // maintain closeness to the original name across different builds.
 inline StringRef get_stable_name(StringRef Name) {
+  // Return the part after ".content." that represents contents.
+  auto [P0, S0] = Name.rsplit(".content.");
+  if (!S0.empty())
+    return S0;
+
+  // Ignore these suffixes.
   auto [P1, S1] = Name.rsplit(".llvm.");
   auto [P2, S2] = P1.rsplit(".__uniq.");
   return P2;

@@ -218,6 +218,7 @@ template <class T, class Allocator, class Predicate>
 #include <__ranges/container_compatible_range.h>
 #include <__ranges/from_range.h>
 #include <__type_traits/conditional.h>
+#include <__type_traits/enable_if.h>
 #include <__type_traits/is_allocator.h>
 #include <__type_traits/is_const.h>
 #include <__type_traits/is_nothrow_assignable.h>
@@ -1517,8 +1518,7 @@ operator<=(const forward_list<_Tp, _Alloc>& __x, const forward_list<_Tp, _Alloc>
 template <class _Tp, class _Allocator>
 _LIBCPP_HIDE_FROM_ABI __synth_three_way_result<_Tp>
 operator<=>(const forward_list<_Tp, _Allocator>& __x, const forward_list<_Tp, _Allocator>& __y) {
-  return std::lexicographical_compare_three_way(
-      __x.begin(), __x.end(), __y.begin(), __y.end(), std::__synth_three_way);
+  return std::lexicographical_compare_three_way(__x.begin(), __x.end(), __y.begin(), __y.end(), std::__synth_three_way);
 }
 
 #endif // #if _LIBCPP_STD_VER <= 17

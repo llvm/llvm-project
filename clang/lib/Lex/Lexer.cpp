@@ -2428,7 +2428,9 @@ bool Lexer::LexCharConstant(Token &Result, const char *CurPtr,
                           ? diag::warn_cxx98_compat_unicode_literal
                           : diag::warn_c99_compat_unicode_literal);
     else if (Kind == tok::utf8_char_constant)
-      Diag(BufferPtr, diag::warn_cxx14_compat_u8_character_literal);
+      Diag(BufferPtr, LangOpts.CPlusPlus
+                          ? diag::warn_cxx14_compat_u8_character_literal
+                          : diag::warn_c17_compat_u8_character_literal);
   }
 
   char C = getAndAdvanceChar(CurPtr, Result);

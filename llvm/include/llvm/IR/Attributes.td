@@ -212,9 +212,6 @@ def NoSanitizeBounds : EnumAttr<"nosanitize_bounds", [FnAttr]>;
 /// No SanitizeCoverage instrumentation.
 def NoSanitizeCoverage : EnumAttr<"nosanitize_coverage", [FnAttr]>;
 
-/// No SanitizeRealtime instrumentation.
-def NoSanitizeRealtime : EnumAttr<"nosanitize_realtime", [FnAttr]>;
-
 /// Null pointer in address space zero is valid.
 def NullPointerIsValid : EnumAttr<"null_pointer_is_valid", [FnAttr]>;
 
@@ -347,6 +344,10 @@ def PresplitCoroutine : EnumAttr<"presplitcoroutine", [FnAttr]>;
 
 /// The coroutine would only be destroyed when it is complete.
 def CoroDestroyOnlyWhenComplete : EnumAttr<"coro_only_destroy_when_complete", [FnAttr]>;
+
+/// The coroutine call meets the elide requirement. Hint the optimization
+/// pipeline to perform elide on the call or invoke instruction.
+def CoroElideSafe : EnumAttr<"coro_elide_safe", [FnAttr]>;
 
 /// Target-independent string attributes.
 def LessPreciseFPMAD : StrBoolAttr<"less-precise-fpmad">;

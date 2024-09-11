@@ -87,8 +87,7 @@ public:
         }
         auto *E = MemberCallExpr->getImplicitObjectArgument();
         QualType ArgType = MemberCallExpr->getObjectType();
-        std::optional<bool> IsUncounted =
-            isUncounted(ArgType->getAsCXXRecordDecl());
+        std::optional<bool> IsUncounted = isUncounted(ArgType);
         if (IsUncounted && *IsUncounted && !isPtrOriginSafe(E))
           reportBugOnThis(E);
       }

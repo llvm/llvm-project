@@ -7123,19 +7123,6 @@ static SDValue isVMOVModifiedImm(uint64_t SplatBits, uint64_t SplatUndef,
       ImmMask <<= 1;
     }
 
-    if (DAG.getDataLayout().isBigEndian()) {
-      // Reverse the order of elements within the vector.
-      unsigned BytesPerElem = VectorVT.getScalarSizeInBits() / 8;
-      unsigned Mask = (1 << BytesPerElem) - 1;
-      unsigned NumElems = 8 / BytesPerElem;
-      unsigned NewImm = 0;
-      for (unsigned ElemNum = 0; ElemNum < NumElems; ++ElemNum) {
-        unsigned Elem = ((Imm >> ElemNum * BytesPerElem) & Mask);
-        NewImm |= Elem << (NumElems - ElemNum - 1) * BytesPerElem;
-      }
-      Imm = NewImm;
-    }
-
     // Op=1, Cmode=1110.
     OpCmode = 0x1e;
     VT = is128Bits ? MVT::v2i64 : MVT::v1i64;
@@ -7968,7 +7955,7 @@ SDValue ARMTargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
 
       if (Val.getNode()) {
         SDValue Vmov = DAG.getNode(ARMISD::VMOVIMM, dl, VmovVT, Val);
-        return DAG.getNode(ISD::BITCAST, dl, VT, Vmov);
+        return DAG.getNode(ARMISD::VECTOR_REG_CAST, dl, VT, Vmov);
       }
 
       // Try an immediate VMVN.
@@ -7978,7 +7965,7 @@ SDValue ARMTargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
           VT, ST->hasMVEIntegerOps() ? MVEVMVNModImm : VMVNModImm);
       if (Val.getNode()) {
         SDValue Vmov = DAG.getNode(ARMISD::VMVNIMM, dl, VmovVT, Val);
-        return DAG.getNode(ISD::BITCAST, dl, VT, Vmov);
+        return DAG.getNode(ARMISD::VECTOR_REG_CAST, dl, VT, Vmov);
       }
 
       // Use vmov.f32 to materialize other v2f32 and v4f32 splats.
@@ -10479,33 +10466,42 @@ static void ReplaceREADCYCLECOUNTER(SDNode *N,
   Results.push_back(Cycles32.getValue(1));
 }
 
-static SDValue createGPRPairNode(SelectionDAG &DAG, SDValue V) {
-  SDLoc dl(V.getNode());
-  auto [VLo, VHi] = DAG.SplitScalar(V, dl, MVT::i32, MVT::i32);
-  bool isBigEndian = DAG.getDataLayout().isBigEndian();
-  if (isBigEndian)
-    std::swap (VLo, VHi);
+static SDValue createGPRPairNode2xi32(SelectionDAG &DAG, SDValue V0,
+                                      SDValue V1) {
+  SDLoc dl(V0.getNode());
   SDValue RegClass =
       DAG.getTargetConstant(ARM::GPRPairRegClassID, dl, MVT::i32);
   SDValue SubReg0 = DAG.getTargetConstant(ARM::gsub_0, dl, MVT::i32);
   SDValue SubReg1 = DAG.getTargetConstant(ARM::gsub_1, dl, MVT::i32);
-  const SDValue Ops[] = { RegClass, VLo, SubReg0, VHi, SubReg1 };
+  const SDValue Ops[] = {RegClass, V0, SubReg0, V1, SubReg1};
   return SDValue(
       DAG.getMachineNode(TargetOpcode::REG_SEQUENCE, dl, MVT::Untyped, Ops), 0);
 }
 
+static SDValue createGPRPairNodei64(SelectionDAG &DAG, SDValue V) {
+  SDLoc dl(V.getNode());
+  auto [VLo, VHi] = DAG.SplitScalar(V, dl, MVT::i32, MVT::i32);
+  bool isBigEndian = DAG.getDataLayout().isBigEndian();
+  if (isBigEndian)
+    std::swap(VLo, VHi);
+  return createGPRPairNode2xi32(DAG, VLo, VHi);
+}
+
 static void ReplaceCMP_SWAP_64Results(SDNode *N,
-                                       SmallVectorImpl<SDValue> & Results,
-                                       SelectionDAG &DAG) {
+                                      SmallVectorImpl<SDValue> &Results,
+                                      SelectionDAG &DAG) {
   assert(N->getValueType(0) == MVT::i64 &&
          "AtomicCmpSwap on types less than 64 should be legal");
-  SDValue Ops[] = {N->getOperand(1),
-                   createGPRPairNode(DAG, N->getOperand(2)),
-                   createGPRPairNode(DAG, N->getOperand(3)),
-                   N->getOperand(0)};
+  SDValue Ops[] = {
+      createGPRPairNode2xi32(DAG, N->getOperand(1),
+                             DAG.getUNDEF(MVT::i32)), // pointer, temp
+      createGPRPairNodei64(DAG, N->getOperand(2)),    // expected
+      createGPRPairNodei64(DAG, N->getOperand(3)),    // new
+      N->getOperand(0),                               // chain in
+  };
   SDNode *CmpSwap = DAG.getMachineNode(
       ARM::CMP_SWAP_64, SDLoc(N),
-      DAG.getVTList(MVT::Untyped, MVT::i32, MVT::Other), Ops);
+      DAG.getVTList(MVT::Untyped, MVT::Untyped, MVT::Other), Ops);
 
   MachineMemOperand *MemOp = cast<MemSDNode>(N)->getMemOperand();
   DAG.setNodeMemRefs(cast<MachineSDNode>(CmpSwap), {MemOp});
@@ -18597,7 +18593,9 @@ static SDValue PerformBITCASTCombine(SDNode *N,
 
   // We may have a bitcast of something that has already had this bitcast
   // combine performed on it, so skip past any VECTOR_REG_CASTs.
-  while (Src.getOpcode() == ARMISD::VECTOR_REG_CAST)
+  if (Src.getOpcode() == ARMISD::VECTOR_REG_CAST &&
+      Src.getOperand(0).getValueType().getScalarSizeInBits() <=
+          Src.getValueType().getScalarSizeInBits())
     Src = Src.getOperand(0);
 
   // Bitcast from element-wise VMOV or VMVN doesn't need VREV if the VREV that
@@ -21064,7 +21062,7 @@ bool ARMTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.memVT = EVT::getVectorVT(I.getType()->getContext(), MVT::i64, NumElts);
     Info.ptrVal = I.getArgOperand(I.arg_size() - 1);
     Info.offset = 0;
-    Info.align.reset();
+    Info.align = I.getParamAlign(I.arg_size() - 1).valueOrOne();
     // volatile loads with NEON intrinsics not supported
     Info.flags = MachineMemOperand::MOLoad;
     return true;
@@ -21111,7 +21109,7 @@ bool ARMTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.memVT = EVT::getVectorVT(I.getType()->getContext(), MVT::i64, NumElts);
     Info.ptrVal = I.getArgOperand(0);
     Info.offset = 0;
-    Info.align.reset();
+    Info.align = I.getParamAlign(0).valueOrOne();
     // volatile stores with NEON intrinsics not supported
     Info.flags = MachineMemOperand::MOStore;
     return true;
