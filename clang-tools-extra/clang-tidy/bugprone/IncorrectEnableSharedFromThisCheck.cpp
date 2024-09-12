@@ -44,12 +44,13 @@ void IncorrectEnableSharedFromThisCheck::check(
       for (const auto &Base : RDecl->bases()) {
         const auto *BaseRecord =
             Base.getType()->getAsCXXRecordDecl()->getCanonicalDecl();
+        const auto isStdEnableSharedFromThisBool =
+            isStdEnableSharedFromThis(BaseRecord);
 
         if (EnableSharedClassSet.contains(BaseRecord) ||
-            isStdEnableSharedFromThis(BaseRecord)) {
+            isStdEnableSharedFromThisBool) {
 
-          if (isStdEnableSharedFromThis(BaseRecord) &&
-              Base.getAccessSpecifier() != clang::AS_public) {
+          if (Base.getAccessSpecifier() != clang::AS_public) {
             const SourceRange ReplacementRange = Base.getSourceRange();
             const std::string ReplacementString =
                 // Base.getType().getAsString() results in
@@ -58,29 +59,18 @@ void IncorrectEnableSharedFromThisCheck::check(
                 "public " + Base.getType().getAsString();
             const FixItHint Hint = FixItHint::CreateReplacement(
                 ReplacementRange, ReplacementString);
-            Check.diag(
-                RDecl->getLocation(),
-                "this is not publicly inheriting from "
-                "std::enable_shared_from_this, will cause unintended behaviour "
-                "on shared_from_this. fix this by making it public inheritance",
-                DiagnosticIDs::Warning)
+            Check.diag(RDecl->getLocation(),
+                       "%2 is not publicly inheriting from "
+                       "%select{%1|'std::enable_shared_from_this',}0 "
+                       "%select{which inherits from "
+                       "'std::enable_shared_from_this', |}0 "
+                       "will cause unintended behaviour "
+                       "on 'shared_from_this'. fix this by making it public "
+                       "inheritance",
+                       DiagnosticIDs::Warning)
+                << isStdEnableSharedFromThisBool
+                << BaseRecord->getNameAsString() << RDecl->getNameAsString()
                 << Hint;
-          } else if (EnableSharedClassSet.contains(BaseRecord) &&
-                     Base.getAccessSpecifier() != clang::AS_public) {
-            // actually the same FixItHint, just different diag
-            const SourceRange ReplacementRange = Base.getSourceRange();
-            const std::string ReplacementString =
-                "public " + Base.getType().getAsString();
-            const FixItHint Hint = FixItHint::CreateReplacement(
-                ReplacementRange, ReplacementString);
-            Check.diag(
-                RDecl->getLocation(),
-                "this is not publicly inheriting from %0 "
-                "which inherits from std::enable_shared_from_this, "
-                "will cause unintended behaviour "
-                "on shared_from_this. fix this by making it public inheritance",
-                DiagnosticIDs::Warning)
-                << BaseRecord->getNameAsString() << Hint;
           }
 
           EnableSharedClassSet.insert(RDecl->getCanonicalDecl());

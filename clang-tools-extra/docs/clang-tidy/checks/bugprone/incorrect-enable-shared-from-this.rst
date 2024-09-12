@@ -28,6 +28,6 @@ Consider the following code:
         b_ex->bar();
     }
 
-Using ``libstd`` implementation, `shared_from_this`` will throw 
+Using ``libstd`` implementation, ``shared_from_this`` will throw 
 ``std::bad_weak_ptr``. When ``using_not_public()`` is called, this code will 
 crash without exception handling.
