@@ -8,34 +8,26 @@ declare void @stack_realign_helper(i32 %a, ptr %b)
 ;; that the local var is accessed via stack pointer (to %o1), and that
 ;; the argument is accessed via frame pointer not stack pointer (to %o0).
 
-define void @stack_realign(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g) {
+define void @stack_realign(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g) nounwind {
 ; CHECK32-LABEL: stack_realign:
-; CHECK32:         .cfi_startproc
-; CHECK32-NEXT:  ! %bb.0: ! %entry
+; CHECK32:       ! %bb.0: ! %entry
 ; CHECK32-NEXT:    save %sp, -96, %sp
-; CHECK32-NEXT:    .cfi_def_cfa_register %fp
-; CHECK32-NEXT:    .cfi_window_save
-; CHECK32-NEXT:    .cfi_register %o7, %i7
 ; CHECK32-NEXT:    ld [%fp+92], %o0
-; CHECK32-NEXT:    add %sp, -64, %i0
+; CHECK32-NEXT:    add %sp, -72, %i0
 ; CHECK32-NEXT:    and %i0, -64, %i0
-; CHECK32-NEXT:    add %i0, -16, %sp
+; CHECK32-NEXT:    add %i0, 96, %o1
 ; CHECK32-NEXT:    call stack_realign_helper
-; CHECK32-NEXT:    add %i0, 80, %o1
+; CHECK32-NEXT:    mov %i0, %sp
 ; CHECK32-NEXT:    ret
 ; CHECK32-NEXT:    restore
 ;
 ; CHECK64-LABEL: stack_realign:
-; CHECK64:         .cfi_startproc
-; CHECK64-NEXT:  ! %bb.0: ! %entry
+; CHECK64:       ! %bb.0: ! %entry
 ; CHECK64-NEXT:    save %sp, -128, %sp
-; CHECK64-NEXT:    .cfi_def_cfa_register %fp
-; CHECK64-NEXT:    .cfi_window_save
-; CHECK64-NEXT:    .cfi_register %o7, %i7
-; CHECK64-NEXT:    add %sp, 1983, %i0
+; CHECK64-NEXT:    add %sp, 1967, %i0
 ; CHECK64-NEXT:    and %i0, -64, %i0
-; CHECK64-NEXT:    add %i0, -2063, %sp
-; CHECK64-NEXT:    add %i0, -1935, %o1
+; CHECK64-NEXT:    add %i0, -2047, %sp
+; CHECK64-NEXT:    add %i0, -1919, %o1
 ; CHECK64-NEXT:    add %sp, -48, %sp
 ; CHECK64-NEXT:    call stack_realign_helper
 ; CHECK64-NEXT:    ld [%fp+2227], %o0

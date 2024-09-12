@@ -36,7 +36,7 @@ SparcFrameLowering::SparcFrameLowering(const SparcSubtarget &ST)
     : TargetFrameLowering(TargetFrameLowering::StackGrowsDown,
                           ST.is64Bit() ? Align(16) : Align(8), 0,
                           ST.is64Bit() ? Align(16) : Align(8),
-                          /* StackRealignable */ false) {}
+                          /*StackRealignable=*/false) {}
 
 void SparcFrameLowering::emitSPAdjustment(MachineFunction &MF,
                                           MachineBasicBlock &MBB,

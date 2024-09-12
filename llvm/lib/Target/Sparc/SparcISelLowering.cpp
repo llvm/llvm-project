@@ -2764,27 +2764,28 @@ static SDValue LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG,
                                        const SparcSubtarget *Subtarget) {
   SDValue Chain = Op.getOperand(0);  // Legalize the chain.
   SDValue Size  = Op.getOperand(1);  // Legalize the size.
-  SDValue Alignment = Op.getOperand(2); // Legalize the alignment.
+  SDValue Alignment = Op.getOperand(2);
   MaybeAlign MaybeAlignment =
       cast<ConstantSDNode>(Alignment)->getMaybeAlignValue();
-  Align StackAlign = Subtarget->getFrameLowering()->getStackAlign();
   EVT VT = Size->getValueType(0);
   SDLoc dl(Op);
 
   int64_t Bias = Subtarget->getStackPointerBias();
   unsigned SPReg = SP::O6;
   SDValue SP = DAG.getCopyFromReg(Chain, dl, SPReg, VT);
-  SDValue AlignedPtr = SP;
+  SDValue AllocatedPtr = DAG.getNode(ISD::SUB, dl, VT, SP, Size);
 
-  bool IsOveraligned = MaybeAlignment && *MaybeAlignment > StackAlign;
-  if (IsOveraligned)
-    AlignedPtr = DAG.getNode(
-        ISD::AND, dl, VT,
-        DAG.getNode(
-            ISD::SUB, dl, VT,
-            DAG.getNode(ISD::ADD, dl, VT, SP, DAG.getConstant(Bias, dl, VT)),
-            Alignment),
-        DAG.getNode(ISD::SUB, dl, VT, DAG.getConstant(0, dl, VT), Alignment));
+  bool IsOveraligned = MaybeAlignment.has_value();
+  SDValue AlignedPtr =
+      IsOveraligned
+          ? DAG.getNode(ISD::AND, dl, VT,
+                        DAG.getNode(ISD::SUB, dl, VT,
+                                    DAG.getNode(ISD::ADD, dl, VT, AllocatedPtr,
+                                                DAG.getConstant(Bias, dl, VT)),
+                                    Alignment),
+                        DAG.getNode(ISD::SUB, dl, VT,
+                                    DAG.getConstant(0, dl, VT), Alignment))
+          : AllocatedPtr;
 
   // The resultant pointer needs to be above the register spill area
   // at the bottom of the stack.
@@ -2817,8 +2818,6 @@ static SDValue LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG,
                        DAG.getConstant(8, dl, VT));
     regSpillArea = 96;
   }
-
-  AlignedPtr = DAG.getNode(ISD::SUB, dl, VT, AlignedPtr, Size);
 
   // If we are allocating overaligned memory then the bias is already accounted
   // for in AlignedPtr calculation, so:
