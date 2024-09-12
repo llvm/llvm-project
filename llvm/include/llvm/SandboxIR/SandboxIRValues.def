@@ -35,6 +35,7 @@ DEF_CONST(ConstantPointerNull, ConstantPointerNull)
 DEF_CONST(UndefValue, UndefValue)
 DEF_CONST(PoisonValue, PoisonValue)
 DEF_CONST(BlockAddress, BlockAddress)
+DEF_CONST(ConstantTokenNone, ConstantTokenNone)
 
 #ifndef DEF_INSTR
 #define DEF_INSTR(ID, OPCODE, CLASS)
