@@ -2890,7 +2890,7 @@ void CodeGenFunction::EmitMultiVersionResolver(
 static int getPriorityFromAttrString(StringRef AttrStr) {
   SmallVector<StringRef, 8> Attrs;
 
-  AttrStr.split(Attrs, ";");
+  AttrStr.split(Attrs, ';');
 
   // Default Priority is zero.
   int Priority = 0;
@@ -2978,7 +2978,7 @@ void CodeGenFunction::EmitRISCVMultiVersionResolver(
 
     for (auto &Feat : TargetAttrFeats) {
       StringRef CurrFeat = Feat;
-      if (CurrFeat.starts_with("+"))
+      if (CurrFeat.starts_with('+'))
         CurrTargetAttrFeats.push_back(CurrFeat.substr(1));
     }
 

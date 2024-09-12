@@ -88,7 +88,7 @@ void RISCVABIInfo::appendAttributeMangling(StringRef AttrStr,
   Out << '.';
 
   SmallVector<StringRef, 8> Attrs;
-  AttrStr.split(Attrs, ";");
+  AttrStr.split(Attrs, ';');
 
   // Only consider the arch string.
   StringRef ArchStr;
@@ -100,7 +100,7 @@ void RISCVABIInfo::appendAttributeMangling(StringRef AttrStr,
   // Extract features string.
   SmallVector<StringRef, 8> Features;
   ArchStr.consume_front("arch=");
-  ArchStr.split(Features, ",");
+  ArchStr.split(Features, ',');
 
   llvm::stable_sort(Features);
 
