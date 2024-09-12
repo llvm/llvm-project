@@ -17,6 +17,7 @@
 #include "clang/Interpreter/PartialTranslationUnit.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Sema/Sema.h"
+#include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/Error.h"
 
