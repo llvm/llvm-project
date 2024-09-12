@@ -55,10 +55,10 @@ size_t ObjectFileMinidump::GetModuleSpecifications(
   return 0;
 }
 
-struct SaveCoreRequest {
-  SaveCoreRequest(MinidumpFileBuilder &builder) : m_builder(builder) {}
+struct DumpFailRemoveHolder {
+  DumpFailRemoveHolder(MinidumpFileBuilder &builder) : m_builder(builder) {}
 
-  ~SaveCoreRequest() {
+  ~DumpFailRemoveHolder() {
     if (!m_success)
       m_builder.DeleteFile();
   }
@@ -90,7 +90,7 @@ bool ObjectFileMinidump::SaveCore(const lldb::ProcessSP &process_sp,
   }
   MinidumpFileBuilder builder(std::move(maybe_core_file.get()), process_sp,
                               options);
-  SaveCoreRequest request(builder);
+  DumpFailRemoveHolder request(builder);
 
   Log *log = GetLog(LLDBLog::Object);
   error = builder.AddHeaderAndCalculateDirectories();
