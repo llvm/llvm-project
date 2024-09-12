@@ -478,8 +478,7 @@ void darwin::Linker::AddLinkArgs(Compilation &C, const ArgList &Args,
     }
 
     auto *CodeGenDataGenArg =
-        Args.getLastArg(options::OPT_fcodegen_data_generate,
-                        options::OPT_fcodegen_data_generate_EQ);
+        Args.getLastArg(options::OPT_fcodegen_data_generate_EQ);
     if (CodeGenDataGenArg) {
       SmallString<128> Path(CodeGenDataGenArg->getNumValues() == 0
                                 ? ""
@@ -648,10 +647,8 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   // Propagate codegen data flags to the linker for the LLVM backend.
   auto *CodeGenDataGenArg =
-      Args.getLastArg(options::OPT_fcodegen_data_generate,
-                      options::OPT_fcodegen_data_generate_EQ);
-  auto *CodeGenDataUseArg = Args.getLastArg(options::OPT_fcodegen_data_use,
-                                            options::OPT_fcodegen_data_use_EQ);
+      Args.getLastArg(options::OPT_fcodegen_data_generate_EQ);
+  auto *CodeGenDataUseArg = Args.getLastArg(options::OPT_fcodegen_data_use_EQ);
 
   // We only allow one of them to be specified.
   const Driver &D = getToolChain().getDriver();

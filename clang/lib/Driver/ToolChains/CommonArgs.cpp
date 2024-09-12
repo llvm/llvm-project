@@ -2755,10 +2755,8 @@ void tools::addMachineOutlinerArgs(const Driver &D,
   }
 
   auto *CodeGenDataGenArg =
-      Args.getLastArg(options::OPT_fcodegen_data_generate,
-                      options::OPT_fcodegen_data_generate_EQ);
-  auto *CodeGenDataUseArg = Args.getLastArg(options::OPT_fcodegen_data_use,
-                                            options::OPT_fcodegen_data_use_EQ);
+      Args.getLastArg(options::OPT_fcodegen_data_generate_EQ);
+  auto *CodeGenDataUseArg = Args.getLastArg(options::OPT_fcodegen_data_use_EQ);
 
   // We only allow one of them to be specified.
   if (CodeGenDataGenArg && CodeGenDataUseArg)
