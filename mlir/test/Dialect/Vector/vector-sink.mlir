@@ -282,13 +282,13 @@ func.func @transpose_elementwise_diff_operand_types(%cond: vector<4x2xi1>, %a : 
 
 // CHECK-LABEL: func @transpose_elementwise_diff_operand_result_type
 //  CHECK-SAME: (%[[A:.+]]: vector<4x2xf32>, %[[B:.+]]: vector<4x2xf32>)
-//       CHECK:   %[[CMP:.+]] = arith.cmpf old, %[[A]], %[[B]] : vector<4x2xf32>
+//       CHECK:   %[[CMP:.+]] = arith.cmpf olt, %[[A]], %[[B]] : vector<4x2xf32>
 //       CHECK:   %[[T:.+]] = vector.transpose %[[CMP]], [1, 0] : vector<4x2xi1> to vector<2x4xi1>
 //       CHECK:   return %[[T]]
 func.func @transpose_elementwise_diff_operand_result_type(%a : vector<4x2xf32>, %b : vector<4x2xf32>) -> vector<2x4xi1> {
   %at = vector.transpose %a, [1, 0]: vector<4x2xf32> to vector<2x4xf32>
   %bt = vector.transpose %b, [1, 0]: vector<4x2xf32> to vector<2x4xf32>
-  %r = arith.cmpf old, %at, %bt : vector<2x4xf32>
+  %r = arith.cmpf olt, %at, %bt : vector<2x4xf32>
   return %r : vector<2x4xi1>
 }
 

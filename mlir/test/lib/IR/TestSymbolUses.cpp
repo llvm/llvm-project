@@ -25,7 +25,7 @@ struct SymbolUsesPass
   }
   WalkResult operateOnSymbol(Operation *symbol, ModuleOp module,
                              SmallVectorImpl<func::FuncOp> &deadFunctions) {
-    // Test computing uses on a non symboldable op.
+    // Test computing uses on a non symboltable op.
     std::optional<SymbolTable::UseRange> symbolUses =
         SymbolTable::getSymbolUses(symbol);
 

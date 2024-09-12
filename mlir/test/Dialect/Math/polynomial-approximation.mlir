@@ -37,10 +37,10 @@
 // CHECK-DAG:     %[[val_cst_26:.*]] = arith.constant 8.000000e-01 : f32
 // CHECK-DAG:     %[[val_cst_27:.*]] = arith.constant 2.000000e+00 : f32
 // CHECK-DAG:     %[[val_cst_28:.*]] = arith.constant 3.750000e+00 : f32
-// CHECK:         %[[val_0:.*]] = arith.cmpf old, %[[val_arg0]], %[[val_cst]] : f32
+// CHECK:         %[[val_0:.*]] = arith.cmpf olt, %[[val_arg0]], %[[val_cst]] : f32
 // CHECK:         %[[val_1:.*]] = arith.negf %[[val_arg0]] : f32
 // CHECK:         %[[val_2:.*]] = arith.select %[[val_0]], %[[val_1]], %[[val_arg0]] : f32
-// CHECK:         %[[val_3:.*]] = arith.cmpf old, %[[val_2]], %[[val_cst_26]] : f32
+// CHECK:         %[[val_3:.*]] = arith.cmpf olt, %[[val_2]], %[[val_cst_26]] : f32
 // CHECK:         %[[val_4:.*]] = arith.select %[[val_3]], %[[val_cst_1]], %[[val_cst_5]] : f32
 // CHECK:         %[[val_5:.*]] = arith.select %[[val_3]], %[[val_cst_14]], %[[val_cst_18]] : f32
 // CHECK:         %[[val_6:.*]] = arith.select %[[val_3]], %[[val_cst_2]], %[[val_cst_6]] : f32
@@ -49,7 +49,7 @@
 // CHECK:         %[[val_9:.*]] = arith.select %[[val_3]], %[[val_cst_16]], %[[val_cst_20]] : f32
 // CHECK:         %[[val_10:.*]] = arith.select %[[val_3]], %[[val_cst_4]], %[[val_cst_8]] : f32
 // CHECK:         %[[val_11:.*]] = arith.select %[[val_3]], %[[val_cst_17]], %[[val_cst_21]] : f32
-// CHECK:         %[[val_12:.*]] = arith.cmpf old, %[[val_2]], %[[val_cst_27]] : f32
+// CHECK:         %[[val_12:.*]] = arith.cmpf olt, %[[val_2]], %[[val_cst_27]] : f32
 // CHECK:         %[[val_13:.*]] = arith.select %[[val_12]], %[[val_cst]], %[[val_cst_9]] : f32
 // CHECK:         %[[val_14:.*]] = arith.select %[[val_12]], %[[val_4]], %[[val_cst_10]] : f32
 // CHECK:         %[[val_15:.*]] = arith.select %[[val_12]], %[[val_5]], %[[val_cst_22]] : f32
@@ -253,7 +253,7 @@ func.func @exp_scalable_vector(%arg0: vector<[8]xf32>) -> vector<[8]xf32> {
 // CHECK-DAG:       %[[VAL_73:.*]] = arith.shrui %[[VAL_72]], %[[VAL_16]] : i32
 // CHECK-DAG:       %[[VAL_74:.*]] = arith.sitofp %[[VAL_73]] : i32 to f32
 // CHECK-DAG:       %[[VAL_75:.*]] = arith.subf %[[VAL_74]], %[[VAL_34]] : f32
-// CHECK-DAG:       %[[VAL_76:.*]] = arith.cmpf old, %[[VAL_71]], %[[VAL_24]] : f32
+// CHECK-DAG:       %[[VAL_76:.*]] = arith.cmpf olt, %[[VAL_71]], %[[VAL_24]] : f32
 // CHECK-DAG:       %[[VAL_77:.*]] = arith.select %[[VAL_76]], %[[VAL_71]], %[[VAL_18]] : f32
 // CHECK-DAG:       %[[VAL_78:.*]] = arith.subf %[[VAL_71]], %[[VAL_1]] : f32
 // CHECK-DAG:       %[[VAL_79:.*]] = arith.select %[[VAL_76]], %[[VAL_1]], %[[VAL_18]] : f32
@@ -353,7 +353,7 @@ func.func @expm1_scalable_vector(%arg0: vector<8x[8]xf32>) -> vector<8x[8]xf32> 
 // CHECK:           %[[VAL_30:.*]] = arith.shrui %[[VAL_29]], %[[VAL_21]] : i32
 // CHECK:           %[[VAL_31:.*]] = arith.sitofp %[[VAL_30]] : i32 to f32
 // CHECK:           %[[VAL_32:.*]] = arith.subf %[[VAL_31]], %[[VAL_18]] : f32
-// CHECK:           %[[VAL_33:.*]] = arith.cmpf old, %[[VAL_28]], %[[VAL_8]] : f32
+// CHECK:           %[[VAL_33:.*]] = arith.cmpf olt, %[[VAL_28]], %[[VAL_8]] : f32
 // CHECK:           %[[VAL_34:.*]] = arith.select %[[VAL_33]], %[[VAL_28]], %[[VAL_1]] : f32
 // CHECK:           %[[VAL_35:.*]] = arith.subf %[[VAL_28]], %[[VAL_2]] : f32
 // CHECK:           %[[VAL_36:.*]] = arith.select %[[VAL_33]], %[[VAL_2]], %[[VAL_1]] : f32
@@ -512,7 +512,7 @@ func.func @log1p_scalable_vector(%arg0: vector<[8]xf32>) -> vector<[8]xf32> {
 // CHECK:           %[[VAL_17:.*]] = arith.cmpf ugt, %[[VAL_16]], %[[VAL_1]] : f32
 // CHECK:           %[[VAL_18:.*]] = arith.select %[[VAL_17]], %[[VAL_16]], %[[VAL_1]] : f32
 // CHECK:           %[[VAL_19:.*]] = math.absf %[[VAL_0]] : f32
-// CHECK:           %[[VAL_20:.*]] = arith.cmpf old, %[[VAL_19]], %[[VAL_3]] : f32
+// CHECK:           %[[VAL_20:.*]] = arith.cmpf olt, %[[VAL_19]], %[[VAL_3]] : f32
 // CHECK:           %[[VAL_21:.*]] = arith.mulf %[[VAL_18]], %[[VAL_18]] : f32
 // CHECK:           %[[VAL_22:.*]] = math.fma %[[VAL_21]], %[[VAL_10]], %[[VAL_9]] : f32
 // CHECK:           %[[VAL_23:.*]] = math.fma %[[VAL_21]], %[[VAL_22]], %[[VAL_8]] : f32
@@ -578,7 +578,7 @@ func.func @rsqrt_scalar(%arg0: f32) -> f32 {
 // AVX2:   %[[VAL_3:.*]] = arith.constant dense<-5.000000e-01> : vector<8xf32>
 // AVX2:   %[[VAL_4:.*]] = arith.constant dense<1.17549435E-38> : vector<8xf32>
 // AVX2:   %[[VAL_5:.*]] = arith.mulf %[[VAL_0]], %[[VAL_3]] : vector<8xf32>
-// AVX2:   %[[VAL_6:.*]] = arith.cmpf old, %[[VAL_0]], %[[VAL_4]] : vector<8xf32>
+// AVX2:   %[[VAL_6:.*]] = arith.cmpf olt, %[[VAL_0]], %[[VAL_4]] : vector<8xf32>
 // AVX2:   %[[VAL_7:.*]] = arith.cmpf oeq, %[[VAL_0]], %[[VAL_1]] : vector<8xf32>
 // AVX2:   %[[VAL_8:.*]] = arith.ori %[[VAL_6]], %[[VAL_7]] : vector<8xi1>
 // AVX2:   %[[VAL_9:.*]] = x86vector.avx.rsqrt %[[VAL_0]] : vector<8xf32>
@@ -788,7 +788,7 @@ func.func @atan_scalar(%arg0: f32) -> f32 {
 // CHECK-DAG:       %[[VAL_58:.*]] = arith.cmpf ogt, %[[VAL_21]], %[[VAL_17]] : f32
 // CHECK-DAG:       %[[VAL_59:.*]] = arith.andi %[[VAL_57]], %[[VAL_58]] : i1
 // CHECK-DAG:       %[[VAL_60:.*]] = arith.select %[[VAL_59]], %[[VAL_16]], %[[VAL_56]] : f32
-// CHECK-DAG:       %[[VAL_61:.*]] = arith.cmpf old, %[[VAL_21]], %[[VAL_17]] : f32
+// CHECK-DAG:       %[[VAL_61:.*]] = arith.cmpf olt, %[[VAL_21]], %[[VAL_17]] : f32
 // CHECK-DAG:       %[[VAL_62:.*]] = arith.andi %[[VAL_57]], %[[VAL_61]] : i1
 // CHECK-DAG:       %[[VAL_63:.*]] = arith.select %[[VAL_62]], %[[VAL_19]], %[[VAL_60]] : f32
 // CHECK-DAG:       %[[VAL_64:.*]] = arith.cmpf oeq, %[[VAL_21]], %[[VAL_17]] : f32

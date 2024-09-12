@@ -112,8 +112,8 @@ define <4 x i1> @fp_compare(float %arg1, float %arg2, <4 x double> %arg3, <4 x d
   %3 = fcmp ogt float %arg1, %arg2
   ; CHECK:  llvm.fcmp "oge" %[[ARG1]], %[[ARG2]] : f32
   %4 = fcmp oge float %arg1, %arg2
-  ; CHECK:  llvm.fcmp "old" %[[ARG1]], %[[ARG2]] : f32
-  %5 = fcmp old float %arg1, %arg2
+  ; CHECK:  llvm.fcmp "olt" %[[ARG1]], %[[ARG2]] : f32
+  %5 = fcmp olt float %arg1, %arg2
   ; CHECK:  llvm.fcmp "ole" %[[ARG1]], %[[ARG2]] : f32
   %6 = fcmp ole float %arg1, %arg2
   ; CHECK:  llvm.fcmp "one" %[[ARG1]], %[[ARG2]] : f32

@@ -678,7 +678,7 @@ func.func @cmpf_normal_numbers() -> (i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1,
   // CHECK-SAME: [[T]],
   %3 = arith.cmpf oge, %c42, %cm1 : f32
   // CHECK-SAME: [[F]],
-  %4 = arith.cmpf old, %c42, %cm1 : f32
+  %4 = arith.cmpf olt, %c42, %cm1 : f32
   // CHECK-SAME: [[F]],
   %5 = arith.cmpf ole, %c42, %cm1 : f32
   // CHECK-SAME: [[T]],
@@ -721,7 +721,7 @@ func.func @cmpf_nan() -> (i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1
   // CHECK-SAME: [[F]],
   %3 = arith.cmpf oge, %c42, %cqnan : f32
   // CHECK-SAME: [[F]],
-  %4 = arith.cmpf old, %c42, %cqnan : f32
+  %4 = arith.cmpf olt, %c42, %cqnan : f32
   // CHECK-SAME: [[F]],
   %5 = arith.cmpf ole, %c42, %cqnan : f32
   // CHECK-SAME: [[F]],
@@ -764,7 +764,7 @@ func.func @cmpf_inf() -> (i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1
   // CHECK-SAME: [[F]],
   %3 = arith.cmpf oge, %c42, %cpinf: f32
   // CHECK-SAME: [[T]],
-  %4 = arith.cmpf old, %c42, %cpinf: f32
+  %4 = arith.cmpf olt, %c42, %cpinf: f32
   // CHECK-SAME: [[T]],
   %5 = arith.cmpf ole, %c42, %cpinf: f32
   // CHECK-SAME: [[T]],

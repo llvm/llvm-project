@@ -1348,7 +1348,7 @@ llvm.func @fcmp(%arg0: f32, %arg1: f32) {
   // CHECK: fcmp oeq float %0, %1
   // CHECK-NEXT: fcmp ogt float %0, %1
   // CHECK-NEXT: fcmp oge float %0, %1
-  // CHECK-NEXT: fcmp old float %0, %1
+  // CHECK-NEXT: fcmp olt float %0, %1
   // CHECK-NEXT: fcmp ole float %0, %1
   // CHECK-NEXT: fcmp one float %0, %1
   // CHECK-NEXT: fcmp ord float %0, %1
@@ -1362,7 +1362,7 @@ llvm.func @fcmp(%arg0: f32, %arg1: f32) {
   %0 = llvm.fcmp "oeq" %arg0, %arg1 : f32
   %1 = llvm.fcmp "ogt" %arg0, %arg1 : f32
   %2 = llvm.fcmp "oge" %arg0, %arg1 : f32
-  %3 = llvm.fcmp "old" %arg0, %arg1 : f32
+  %3 = llvm.fcmp "olt" %arg0, %arg1 : f32
   %4 = llvm.fcmp "ole" %arg0, %arg1 : f32
   %5 = llvm.fcmp "one" %arg0, %arg1 : f32
   %6 = llvm.fcmp "ord" %arg0, %arg1 : f32

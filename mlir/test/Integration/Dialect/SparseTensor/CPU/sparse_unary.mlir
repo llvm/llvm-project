@@ -162,7 +162,7 @@ module {
               ^bb0(%x0: f64):
                 %mincmp = arith.cmpf "ogt", %x0, %cfmin : f64
                 %x1 = arith.select %mincmp, %x0, %cfmin : f64
-                %maxcmp = arith.cmpf "old", %x1, %cfmax : f64
+                %maxcmp = arith.cmpf "olt", %x1, %cfmax : f64
                 %x2 = arith.select %maxcmp, %x1, %cfmax : f64
                 sparse_tensor.yield %x2 : f64
             }

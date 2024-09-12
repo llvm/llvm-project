@@ -334,7 +334,7 @@ func.func @fcmp(f32, f32) -> () {
   // CHECK:      llvm.fcmp "oeq" %arg0, %arg1 : f32
   // CHECK-NEXT: llvm.fcmp "ogt" %arg0, %arg1 : f32
   // CHECK-NEXT: llvm.fcmp "oge" %arg0, %arg1 : f32
-  // CHECK-NEXT: llvm.fcmp "old" %arg0, %arg1 : f32
+  // CHECK-NEXT: llvm.fcmp "olt" %arg0, %arg1 : f32
   // CHECK-NEXT: llvm.fcmp "ole" %arg0, %arg1 : f32
   // CHECK-NEXT: llvm.fcmp "one" %arg0, %arg1 : f32
   // CHECK-NEXT: llvm.fcmp "ord" %arg0, %arg1 : f32
@@ -350,7 +350,7 @@ func.func @fcmp(f32, f32) -> () {
   %1 = arith.cmpf oeq, %arg0, %arg1 : f32
   %2 = arith.cmpf ogt, %arg0, %arg1 : f32
   %3 = arith.cmpf oge, %arg0, %arg1 : f32
-  %4 = arith.cmpf old, %arg0, %arg1 : f32
+  %4 = arith.cmpf olt, %arg0, %arg1 : f32
   %5 = arith.cmpf ole, %arg0, %arg1 : f32
   %6 = arith.cmpf one, %arg0, %arg1 : f32
   %7 = arith.cmpf ord, %arg0, %arg1 : f32
@@ -484,9 +484,9 @@ func.func @cmpf_2dvector(%arg0 : vector<4x3xf32>, %arg1 : vector<4x3xf32>) {
   // CHECK-DAG: %[[ARG1:.*]] = builtin.unrealized_conversion_cast %[[OARG1]]
   // CHECK: %[[EXTRACT1:.*]] = llvm.extractvalue %[[ARG0]][0] : !llvm.array<4 x vector<3xf32>>
   // CHECK: %[[EXTRACT2:.*]] = llvm.extractvalue %[[ARG1]][0] : !llvm.array<4 x vector<3xf32>>
-  // CHECK: %[[CMP:.*]] = llvm.fcmp "old" %[[EXTRACT1]], %[[EXTRACT2]] : vector<3xf32>
+  // CHECK: %[[CMP:.*]] = llvm.fcmp "olt" %[[EXTRACT1]], %[[EXTRACT2]] : vector<3xf32>
   // CHECK: %[[INSERT:.*]] = llvm.insertvalue %[[CMP]], %2[0] : !llvm.array<4 x vector<3xi1>>
-  %0 = arith.cmpf old, %arg0, %arg1 : vector<4x3xf32>
+  %0 = arith.cmpf olt, %arg0, %arg1 : vector<4x3xf32>
   func.return
 }
 
