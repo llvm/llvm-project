@@ -108,6 +108,9 @@ C++ Language Changes
 - Allow single element access of GCC vector/ext_vector_type object to be
   constant expression. Supports the `V.xyzw` syntax and other tidbits
   as seen in OpenCL. Selecting multiple elements is left as a future work.
+- Implement `CWG1815 <https://wg21.link/CWG1815>`_. Support lifetime extension 
+  of temporary created by aggregate initialization using a default member
+  initializer.
 
 - Accept C++26 user-defined ``static_assert`` messages in C++11 as an extension.
 
@@ -456,6 +459,8 @@ LoongArch Support
 
 RISC-V Support
 ^^^^^^^^^^^^^^
+
+- The option ``-mcmodel=large`` for the large code model is supported.
 
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^

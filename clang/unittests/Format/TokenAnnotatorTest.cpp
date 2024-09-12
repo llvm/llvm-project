@@ -2050,7 +2050,7 @@ TEST_F(TokenAnnotatorTest, UnderstandsFunctionDeclarationNames) {
   EXPECT_TOKEN(Tokens[4], tok::l_paren, TT_FunctionTypeLParen);
 
   Tokens = annotate("void instanceof();");
-  ASSERT_EQ(Tokens.size(), 6u);
+  ASSERT_EQ(Tokens.size(), 6u) << Tokens;
   EXPECT_TOKEN(Tokens[1], tok::identifier, TT_FunctionDeclarationName);
   EXPECT_TOKEN(Tokens[2], tok::l_paren, TT_FunctionDeclarationLParen);
 
@@ -3365,55 +3365,55 @@ TEST_F(TokenAnnotatorTest, SwitchExpression) {
 
 TEST_F(TokenAnnotatorTest, CppAltOperatorKeywords) {
   auto Tokens = annotate("a = b and c;");
-  ASSERT_EQ(Tokens.size(), 7u);
+  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
   EXPECT_TOKEN(Tokens[3], tok::ampamp, TT_BinaryOperator);
 
   Tokens = annotate("a = b and_eq c;");
-  ASSERT_EQ(Tokens.size(), 7u);
+  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
   EXPECT_TOKEN(Tokens[3], tok::ampequal, TT_BinaryOperator);
 
   Tokens = annotate("a = b bitand c;");
-  ASSERT_EQ(Tokens.size(), 7u);
+  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
   EXPECT_TOKEN(Tokens[3], tok::amp, TT_BinaryOperator);
 
   Tokens = annotate("a = b bitor c;");
-  ASSERT_EQ(Tokens.size(), 7u);
+  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
   EXPECT_TOKEN(Tokens[3], tok::pipe, TT_BinaryOperator);
 
   Tokens = annotate("a = b compl c;");
-  ASSERT_EQ(Tokens.size(), 7u);
+  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
   EXPECT_TOKEN(Tokens[3], tok::tilde, TT_UnaryOperator);
 
   Tokens = annotate("a = b not c;");
-  ASSERT_EQ(Tokens.size(), 7u);
+  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
   EXPECT_TOKEN(Tokens[3], tok::exclaim, TT_UnaryOperator);
 
   Tokens = annotate("a = b not_eq c;");
-  ASSERT_EQ(Tokens.size(), 7u);
+  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
   EXPECT_TOKEN(Tokens[3], tok::exclaimequal, TT_BinaryOperator);
 
   Tokens = annotate("a = b or c;");
-  ASSERT_EQ(Tokens.size(), 7u);
+  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
   EXPECT_TOKEN(Tokens[3], tok::pipepipe, TT_BinaryOperator);
 
   Tokens = annotate("a = b or_eq c;");
-  ASSERT_EQ(Tokens.size(), 7u);
+  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
   EXPECT_TOKEN(Tokens[3], tok::pipeequal, TT_BinaryOperator);
 
   Tokens = annotate("a = b xor c;");
-  ASSERT_EQ(Tokens.size(), 7u);
+  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
   EXPECT_TOKEN(Tokens[3], tok::caret, TT_BinaryOperator);
 
   Tokens = annotate("a = b xor_eq c;");
-  ASSERT_EQ(Tokens.size(), 7u);
+  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
   EXPECT_TOKEN(Tokens[3], tok::caretequal, TT_BinaryOperator);
 
   Tokens = annotate("xor = foo;");
-  ASSERT_EQ(Tokens.size(), 5u);
+  ASSERT_EQ(Tokens.size(), 5u) << Tokens;
   EXPECT_TOKEN(Tokens[0], tok::identifier, TT_Unknown);
 
   Tokens = annotate("int xor = foo;");
-  ASSERT_EQ(Tokens.size(), 6u);
+  ASSERT_EQ(Tokens.size(), 6u) << Tokens;
   EXPECT_TOKEN(Tokens[1], tok::identifier, TT_StartOfName);
 }
 
@@ -3423,7 +3423,7 @@ TEST_F(TokenAnnotatorTest, FunctionTryBlock) {
                "    : foo{[] -> std::string { return {}; }(), x}, bar{y} {\n"
                "} catch (...) {\n"
                "}");
-  ASSERT_EQ(Tokens.size(), 45u);
+  ASSERT_EQ(Tokens.size(), 45u) << Tokens;
   EXPECT_TOKEN(Tokens[2], tok::identifier, TT_CtorDtorDeclName);
   EXPECT_TOKEN(Tokens[3], tok::l_paren, TT_FunctionDeclarationLParen);
   EXPECT_TOKEN(Tokens[11], tok::colon, TT_CtorInitializerColon);
@@ -3439,7 +3439,7 @@ TEST_F(TokenAnnotatorTest, TypenameMacro) {
   Style.TypenameMacros.push_back("STRUCT");
 
   auto Tokens = annotate("STRUCT(T, B) { int i; };", Style);
-  ASSERT_EQ(Tokens.size(), 13u);
+  ASSERT_EQ(Tokens.size(), 13u) << Tokens;
   EXPECT_TOKEN(Tokens[0], tok::identifier, TT_TypenameMacro);
   EXPECT_TOKEN(Tokens[1], tok::l_paren, TT_TypeDeclarationParen);
   EXPECT_TOKEN(Tokens[5], tok::r_paren, TT_TypeDeclarationParen);
@@ -3451,7 +3451,7 @@ TEST_F(TokenAnnotatorTest, GNULanguageStandard) {
   EXPECT_EQ(Style.Standard, FormatStyle::LS_Latest);
 
   auto Tokens = annotate("return 1 <=> 2;", Style);
-  ASSERT_EQ(Tokens.size(), 6u);
+  ASSERT_EQ(Tokens.size(), 6u) << Tokens;
   EXPECT_TOKEN(Tokens[2], tok::spaceship, TT_BinaryOperator);
 }
 

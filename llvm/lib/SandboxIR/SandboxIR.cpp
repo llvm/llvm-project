@@ -2521,6 +2521,11 @@ BasicBlock *BlockAddress::getBasicBlock() const {
       Ctx.getValue(cast<llvm::BlockAddress>(Val)->getBasicBlock()));
 }
 
+ConstantTokenNone *ConstantTokenNone::get(Context &Ctx) {
+  auto *LLVMC = llvm::ConstantTokenNone::get(Ctx.LLVMCtx);
+  return cast<ConstantTokenNone>(Ctx.getOrCreateConstant(LLVMC));
+}
+
 FunctionType *Function::getFunctionType() const {
   return cast<FunctionType>(
       Ctx.getType(cast<llvm::Function>(Val)->getFunctionType()));
@@ -2620,6 +2625,10 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
     case llvm::Value::BlockAddressVal:
       It->second = std::unique_ptr<BlockAddress>(
           new BlockAddress(cast<llvm::BlockAddress>(C), *this));
+      return It->second.get();
+    case llvm::Value::ConstantTokenNoneVal:
+      It->second = std::unique_ptr<ConstantTokenNone>(
+          new ConstantTokenNone(cast<llvm::ConstantTokenNone>(C), *this));
       return It->second.get();
     case llvm::Value::ConstantAggregateZeroVal: {
       auto *CAZ = cast<llvm::ConstantAggregateZero>(C);

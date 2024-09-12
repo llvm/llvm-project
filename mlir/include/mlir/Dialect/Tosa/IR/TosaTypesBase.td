@@ -176,9 +176,6 @@ def Tosa_Int8Like : Tosa_TypeLike<[Tosa_Int8], "signless-integer-8-bit-like">;
 //===----------------------------------------------------------------------===//
 // Attribute predicates and classes.
 //===----------------------------------------------------------------------===//
-class DenseArrayMaxCt<int n> : AttrConstraint<
-    CPred<"::llvm::cast<::mlir::DenseArrayAttr>($_self).size() <= " # n>,
-    "with at least " # n # " elements">;
 
 def Tosa_Fp32ArrayAttr2 : ConfinedAttr<DenseF32ArrayAttr, [DenseArrayCount<2>]>;
 def Tosa_Fp32ArrayAttr3 : ConfinedAttr<DenseF32ArrayAttr, [DenseArrayCount<3>]>;
