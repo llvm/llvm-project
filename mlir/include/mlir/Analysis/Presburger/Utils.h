@@ -317,7 +317,7 @@ void updatePrintMetrics(T val, PrintTableMetrics &m) {
   if (str.empty())
     return;
   unsigned preIndent = str.find(m.preAlign);
-  preIndent = (preIndent != std::string::npos) ? preIndent + 1 : 0;
+  preIndent = (preIndent != (unsigned)std::string::npos) ? preIndent + 1 : 0;
   m.maxPreIndent = std::max(m.maxPreIndent, preIndent);
   m.maxPostIndent =
       std::max(m.maxPostIndent, (unsigned int)(str.length() - preIndent));
@@ -332,7 +332,7 @@ void printWithPrintMetrics(raw_ostream &os, T val, unsigned minSpacing,
   unsigned preIndent;
   if (!str.empty()) {
     preIndent = str.find(m.preAlign);
-    preIndent = (preIndent != std::string::npos) ? preIndent + 1 : 0;
+    preIndent = (preIndent != (unsigned)std::string::npos) ? preIndent + 1 : 0;
   } else {
     preIndent = 0;
   }
