@@ -272,7 +272,7 @@ static cl::opt<bool>
                               "expressed in bytes."),
                      cat(DwarfDumpCategory));
 static cl::opt<bool> ManuallyGenerateUnitIndex(
-    "manaully-generate-unit-index",
+    "manually-generate-unit-index",
     cl::desc("if the input is dwp file, parse .debug_info "
              "section and use it to populate "
              "DW_SECT_INFO contributions in cu-index. "
