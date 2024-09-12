@@ -10,6 +10,7 @@ def FlatOffset : ComplexPattern<iPTR, 2, "SelectFlatOffset", [], [SDNPWantRoot],
 def GlobalOffset : ComplexPattern<iPTR, 2, "SelectGlobalOffset", [], [SDNPWantRoot], -10>;
 def ScratchOffset : ComplexPattern<iPTR, 2, "SelectScratchOffset", [], [SDNPWantRoot], -10>;
 
+def GlobalSAddrNoIOffset : ComplexPattern<iPTR, 4, "SelectGlobalSAddrNoIOffset", [], [SDNPWantRoot], -3>;
 def GlobalSAddr : ComplexPattern<iPTR, 4, "SelectGlobalSAddr", [], [SDNPWantRoot], -10>;
 def GlobalSAddrGLC : ComplexPattern<iPTR, 4, "SelectGlobalSAddrGLC", [], [SDNPWantRoot], -10>;
 def ScratchSAddr : ComplexPattern<iPTR, 2, "SelectScratchSAddr", [], [SDNPWantRoot], -10>;
@@ -1243,32 +1244,32 @@ class FlatLoadSaddrPat_D16 <FLAT_Pseudo inst, SDPatternOperator node, ValueType 
 >;
 
 class FlatLoadLDSSignedPat_M0 <FLAT_Pseudo inst, SDPatternOperator node> : GCNPat <
-  (node (GlobalOffset (i64 VReg_64:$vaddr), i32:$offset), (i32 VGPR_32:$dsaddr), (i32 timm:$cpol), M0),
+  (node (i64 VReg_64:$vaddr), (i32 VGPR_32:$dsaddr), (i32 timm:$offset), (i32 timm:$cpol), M0),
   (inst $dsaddr, $vaddr, $offset, $cpol)
 >;
 
 class GlobalLoadLDSSaddrPat_M0 <FLAT_Pseudo inst, SDPatternOperator node> : GCNPat <
-  (node (GlobalSAddr (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset), (i32 VGPR_32:$dsaddr), (i32 timm:$cpol), M0),
+  (node (GlobalSAddrNoIOffset (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset)), (i32 VGPR_32:$dsaddr), (i32 timm:$offset), (i32 timm:$cpol), M0),
   (inst $dsaddr, $saddr, $voffset, $offset, $cpol)
 >;
 
 class FlatLoadLDSSignedPat <FLAT_Pseudo inst, SDPatternOperator node> : GCNPat <
-  (node (GlobalOffset (i64 VReg_64:$vaddr), i32:$offset), (i32 VGPR_32:$dsaddr), (i32 timm:$cpol)),
+  (node (i64 VReg_64:$vaddr), (i32 VGPR_32:$dsaddr), (i32 timm:$offset), (i32 timm:$cpol)),
   (inst $dsaddr, $vaddr, $offset, $cpol)
 >;
 
 class GlobalLoadLDSSaddrPat <FLAT_Pseudo inst, SDPatternOperator node> : GCNPat <
-  (node (GlobalSAddr (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset), (i32 VGPR_32:$dsaddr), (i32 timm:$cpol)),
+  (node (GlobalSAddrNoIOffset (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset)), (i32 VGPR_32:$dsaddr), (i32 timm:$offset), (i32 timm:$cpol)),
   (inst $dsaddr, $saddr, $voffset, $offset, $cpol)
 >;
 
 class FlatStoreLDSSignedPat <FLAT_Pseudo inst, SDPatternOperator node> : GCNPat <
-  (node (GlobalOffset (i64 VReg_64:$vaddr), i32:$offset), (i32 VGPR_32:$dsaddr), (i32 timm:$cpol)),
+  (node (i64 VReg_64:$vaddr), (i32 VGPR_32:$dsaddr), (i32 timm:$offset), (i32 timm:$cpol)),
   (inst $vaddr, $dsaddr, $offset, $cpol)
 >;
 
 class GlobalStoreLDSSaddrPat <FLAT_Pseudo inst, SDPatternOperator node> : GCNPat <
-  (node (GlobalSAddr (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset), (i32 VGPR_32:$dsaddr), (i32 timm:$cpol)),
+  (node (GlobalSAddrNoIOffset (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset)), (i32 VGPR_32:$dsaddr), (i32 timm:$offset), (i32 timm:$cpol)),
   (inst $saddr, $voffset, $dsaddr, $offset, $cpol)
 >;
 

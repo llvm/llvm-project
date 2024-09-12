@@ -1815,7 +1815,8 @@ bool AMDGPUDAGToDAGISel::SelectGlobalSAddr(SDNode *N,
                                            SDValue &SAddr,
                                            SDValue &VOffset,
                                            SDValue &Offset,
-                                           bool &ScaleOffset) const {
+                                           bool &ScaleOffset,
+                                           bool NeedIOffset) const {
   int64_t ImmOffset = 0;
   ScaleOffset = false;
 
@@ -1827,8 +1828,9 @@ bool AMDGPUDAGToDAGISel::SelectGlobalSAddr(SDNode *N,
     int64_t COffsetVal = cast<ConstantSDNode>(RHS)->getSExtValue();
     const SIInstrInfo *TII = Subtarget->getInstrInfo();
 
-    if (TII->isLegalFLATOffset(COffsetVal, AMDGPUAS::GLOBAL_ADDRESS,
-                               SIInstrFlags::FlatGlobal)) {
+    if (NeedIOffset && TII->isLegalFLATOffset(COffsetVal,
+                                              AMDGPUAS::GLOBAL_ADDRESS,
+                                              SIInstrFlags::FlatGlobal)) {
       Addr = LHS;
       ImmOffset = COffsetVal;
     } else if (!LHS->isDivergent()) {
@@ -1837,9 +1839,11 @@ bool AMDGPUDAGToDAGISel::SelectGlobalSAddr(SDNode *N,
         // saddr + large_offset -> saddr +
         //                         (voffset = large_offset & ~MaxOffset) +
         //                         (large_offset & MaxOffset);
-        int64_t SplitImmOffset, RemainderOffset;
-        std::tie(SplitImmOffset, RemainderOffset) = TII->splitFlatOffset(
-            COffsetVal, AMDGPUAS::GLOBAL_ADDRESS, SIInstrFlags::FlatGlobal);
+        int64_t SplitImmOffset = 0, RemainderOffset = COffsetVal;
+        if (NeedIOffset) {
+          std::tie(SplitImmOffset, RemainderOffset) = TII->splitFlatOffset(
+              COffsetVal, AMDGPUAS::GLOBAL_ADDRESS, SIInstrFlags::FlatGlobal);
+        }
 
         if (Subtarget->hasSignedGVSOffset() ? isInt<32>(RemainderOffset)
                                             : isUInt<32>(RemainderOffset)) {
@@ -1963,6 +1967,21 @@ bool AMDGPUDAGToDAGISel::SelectGlobalSAddrGLC(SDNode *N,
 
   unsigned CPolVal = (ScaleOffset ? AMDGPU::CPol::SCAL : 0) | AMDGPU::CPol::GLC;
   CPol = CurDAG->getTargetConstant(CPolVal, SDLoc(), MVT::i32);
+  return true;
+}
+
+bool AMDGPUDAGToDAGISel::SelectGlobalSAddrNoIOffset(SDNode *N,
+                                                    SDValue Addr,
+                                                    SDValue &SAddr,
+                                                    SDValue &VOffset,
+                                                    SDValue &Offset,
+                                                    SDValue &CPol) const {
+  bool ScaleOffset;
+  if (!SelectGlobalSAddr(N, Addr, SAddr, VOffset, Offset, ScaleOffset, false))
+    return false;
+
+  CPol = CurDAG->getTargetConstant(ScaleOffset ? AMDGPU::CPol::SCAL : 0,
+                                   SDLoc(), MVT::i32);
   return true;
 }
 

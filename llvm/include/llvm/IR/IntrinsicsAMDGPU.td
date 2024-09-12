@@ -3694,13 +3694,14 @@ def int_amdgcn_fdiv_fast : DefaultAttrsIntrinsic<
 class AMDGPUAsyncClusterLoadLDS : Intrinsic <
   [],
   [global_ptr_ty,          // Base global pointer to load from
-   local_ptr_ty,            // LDS base pointer to store to
+   local_ptr_ty,           // LDS base pointer to store to
+   llvm_i32_ty,            // offset
    llvm_i32_ty,            // gfx12+ cachepolicy:
                            //   bits [0-2] = th
                            //   bits [3-4] = scope
    llvm_i32_ty],           // workgroup broadcast mask (to M0)
   [IntrInaccessibleMemOrArgMemOnly, ReadOnly<ArgIndex<0>>, WriteOnly<ArgIndex<1>>,  NoCapture<ArgIndex<0>>,
-   NoCapture<ArgIndex<1>>, ImmArg<ArgIndex<2>>, IntrWillReturn, IntrNoCallback, IntrNoFree],
+   NoCapture<ArgIndex<1>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>, IntrWillReturn, IntrNoCallback, IntrNoFree],
   "", [SDNPMemOperand]
 >;
 
@@ -3708,11 +3709,12 @@ class AMDGPUAsyncGlobalLoadStoreLDS : Intrinsic <
   [],
   [global_ptr_ty,          // Base global pointer to load from or store to
    local_ptr_ty,           // LDS base pointer to store to or load from
+   llvm_i32_ty,            // offset
    llvm_i32_ty],           // gfx12+ cachepolicy:
                            //   bits [0-2] = th
                            //   bits [3-4] = scope
   [IntrInaccessibleMemOrArgMemOnly, ReadOnly<ArgIndex<0>>, WriteOnly<ArgIndex<1>>, NoCapture<ArgIndex<0>>,
-   NoCapture<ArgIndex<1>>, ImmArg<ArgIndex<2>>, IntrWillReturn, IntrNoCallback, IntrNoFree],
+   NoCapture<ArgIndex<1>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>, IntrWillReturn, IntrNoCallback, IntrNoFree],
   "", [SDNPMemOperand]
 >;
 
