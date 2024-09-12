@@ -8039,7 +8039,7 @@ ExprResult Sema::ActOnStartCXXMemberReference(Scope *S, Expr *Base,
       if (IsDependent) {
         // BuildOverloadedArrowExpr sets IsDependent to indicate that we need
         // to build a dependent overloaded arrow expression.
-        assert(BaseType->isDependentType());
+        assert(Base->isTypeDependent());
         BaseType = Context.DependentTy;
         break;
       }
