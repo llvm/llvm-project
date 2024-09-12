@@ -266,7 +266,7 @@ private:
     FieldInfo() = default;
 
     void SetIsBitfield(bool flag) { is_bitfield = flag; }
-    bool IsBitfield() { return is_bitfield; }
+    bool IsBitfield() const { return is_bitfield; }
 
     void SetIsArtificial(bool flag) { is_artificial = flag; }
     bool IsArtificial() const { return is_artificial; }
@@ -317,6 +317,35 @@ private:
       FieldInfo const &last_field_info, uint64_t last_field_end,
       FieldInfo const &this_field_info,
       lldb_private::ClangASTImporter::LayoutInfo const &layout_info) const;
+
+  /// Tries to detect whether \ref class_clang_type contained an unnamed
+  /// bit-field between \ref previous_field and \ref current_field, and if
+  /// so, adds a clang::FieldDecl representing that bit-field to
+  /// \ref class_clang_type.
+  ///
+  /// This is necessary because Clang (and GCC) doesn't emit a DW_TAG_member
+  /// entry for unnamed bit-fields. So we derive it (with some exceptions),
+  /// by checking whether there is a gap between where the storage of a
+  /// DW_TAG_member ended and the subsequent DW_TAG_member began.
+  ///
+  /// \param[in,out] layout_info Layout information of all decls parsed by the
+  ///                            current parser. Will contain an entry for
+  ///                            the unnamed bit-field if this function created
+  ///                            one.
+  ///
+  /// \param[in] class_clang_type The RecordType to which the unnamed bit-field
+  ///                             will be added (if any).
+  ///
+  /// \param[in] previous_field FieldInfo of the previous DW_TAG_member
+  ///                           we parsed.
+  ///
+  /// \param[in] current_field FieldInfo of the current DW_TAG_member
+  ///                          being parsed.
+  ///
+  void AddUnnamedBitfieldToRecordTypeIfNeeded(
+      lldb_private::ClangASTImporter::LayoutInfo &class_layout_info,
+      const lldb_private::CompilerType &class_clang_type,
+      const FieldInfo &previous_field, const FieldInfo &current_field);
 
   /// Parses a DW_TAG_APPLE_property DIE and appends the parsed data to the
   /// list of delayed Objective-C properties.

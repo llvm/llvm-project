@@ -326,8 +326,6 @@ Improvements to Clang's diagnostics
 
 - Clang now warns for u8 character literals used in C23 with ``-Wpre-c23-compat`` instead of ``-Wpre-c++17-compat``.
 
-- Clang now diagnoses cases where a dangling ``GSLOwner<GSLPointer>`` object is constructed, e.g. ``std::vector<string_view> v = {std::string()};`` (#GH100526).
-
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -408,6 +406,7 @@ Bug Fixes to C++ Support
 - Fixed a bug where defaulted comparison operators would remove ``const`` from base classes. (#GH102588)
 - Fix a crash when using ``source_location`` in the trailing return type of a lambda expression. (#GH67134)
 - A follow-up fix was added for (#GH61460), as the previous fix was not entirely correct. (#GH86361)
+- Fixed a crash in the typo correction of an invalid CTAD guide. (#GH107887)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -484,6 +483,8 @@ LoongArch Support
 
 RISC-V Support
 ^^^^^^^^^^^^^^
+
+- The option ``-mcmodel=large`` for the large code model is supported.
 
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^

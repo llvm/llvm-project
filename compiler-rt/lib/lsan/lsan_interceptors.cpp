@@ -26,7 +26,6 @@
 #if SANITIZER_POSIX
 #include "sanitizer_common/sanitizer_posix.h"
 #endif
-#include "sanitizer_common/sanitizer_tls_get_addr.h"
 #include "lsan.h"
 #include "lsan_allocator.h"
 #include "lsan_common.h"
@@ -135,9 +134,7 @@ INTERCEPTOR(void*, memalign, uptr alignment, uptr size) {
 INTERCEPTOR(void *, __libc_memalign, uptr alignment, uptr size) {
   ENSURE_LSAN_INITED;
   GET_STACK_TRACE_MALLOC;
-  void *res = lsan_memalign(alignment, size, stack);
-  DTLS_on_libc_memalign(res, size);
-  return res;
+  return lsan_memalign(alignment, size, stack);
 }
 #define LSAN_MAYBE_INTERCEPT___LIBC_MEMALIGN INTERCEPT_FUNCTION(__libc_memalign)
 #else
