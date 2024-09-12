@@ -9,7 +9,9 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CLANGTIDYFORCELINKER_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CLANGTIDYFORCELINKER_H
 
+#ifndef CLANG_TIDY_CONFIG_H
 #include "clang-tidy-config.h"
+#endif
 #include "llvm/Support/Compiler.h"
 
 namespace clang::tidy {
@@ -136,6 +138,13 @@ static int LLVM_ATTRIBUTE_UNUSED ReadabilityModuleAnchorDestination =
 extern volatile int ZirconModuleAnchorSource;
 static int LLVM_ATTRIBUTE_UNUSED ZirconModuleAnchorDestination =
     ZirconModuleAnchorSource;
+
+#if CLANG_ENABLE_CIR
+// This anchor is used to force the linker to link the CIRModule.
+extern volatile int CIRModuleAnchorSource;
+static int LLVM_ATTRIBUTE_UNUSED CIRModuleAnchorDestination =
+    CIRModuleAnchorSource;
+#endif
 
 } // namespace clang::tidy
 

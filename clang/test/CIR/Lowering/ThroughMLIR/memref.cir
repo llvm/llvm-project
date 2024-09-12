@@ -1,0 +1,34 @@
+// RUN: cir-opt %s -cir-to-mlir -o - | FileCheck %s -check-prefix=MLIR
+// RUN: cir-opt %s -cir-to-mlir -cir-mlir-to-llvm -o - | mlir-translate -mlir-to-llvmir | FileCheck %s -check-prefix=LLVM
+
+!u32i = !cir.int<u, 32>
+module {
+  cir.func @foo() -> !u32i {
+    %0 = cir.alloca !u32i, !cir.ptr<!u32i>, ["x", init] {alignment = 4 : i64}
+    %1 = cir.const #cir.int<1> : !u32i
+    cir.store %1, %0 : !u32i, !cir.ptr<!u32i>
+    %2 = cir.load %0 : !cir.ptr<!u32i>, !u32i
+    cir.return %2 : !u32i
+  }
+}
+
+//      MLIR: module {
+// MLIR-NEXT:   func @foo() -> i32 {
+// MLIR-NEXT:     [[alloca:%[a-z0-9]+]] = memref.alloca() {alignment = 4 : i64} : memref<i32>
+// MLIR-NEXT:     %c1_i32 = arith.constant 1 : i32
+// MLIR-NEXT:     memref.store %c1_i32, [[alloca]][] : memref<i32>
+// MLIR-NEXT:     [[load:%[a-z0-9]+]] = memref.load [[alloca]][] : memref<i32>
+// MLIR-NEXT:     return [[load]] : i32
+// MLIR-NEXT:   }
+// MLIR-NEXT: }
+
+//      LLVM: define i32 @foo()
+// LLVM-NEXT:   %1 = alloca i32, i64
+// LLVM-NEXT:   %2 = insertvalue { ptr, ptr, i64 } undef, ptr %1, 0
+// LLVM-NEXT:   %3 = insertvalue { ptr, ptr, i64 } %2, ptr %1, 1
+// LLVM-NEXT:   %4 = insertvalue { ptr, ptr, i64 } %3, i64 0, 2
+// LLVM-NEXT:   %5 = extractvalue { ptr, ptr, i64 } %4, 1
+// LLVM-NEXT:   store i32 1, ptr %5, align 4
+// LLVM-NEXT:   %6 = extractvalue { ptr, ptr, i64 } %4, 1
+// LLVM-NEXT:   %7 = load i32, ptr %6, align 4
+// LLVM-NEXT:   ret i32 %7

@@ -20,7 +20,10 @@
 #include "ClangTidyModuleRegistry.h"
 #include "ClangTidyProfiling.h"
 #include "ExpandModularHeadersPPCallbacks.h"
+#ifndef CLANG_TIDY_CONFIG_H
 #include "clang-tidy-config.h"
+#endif
+#include "utils/OptionsUtils.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Format/Format.h"
@@ -466,6 +469,7 @@ ClangTidyASTConsumerFactory::createASTConsumer(
     Consumers.push_back(std::move(AnalysisConsumer));
   }
 #endif // CLANG_TIDY_ENABLE_STATIC_ANALYZER
+
   return std::make_unique<ClangTidyASTConsumer>(
       std::move(Consumers), std::move(Profiling), std::move(Finder),
       std::move(Checks));

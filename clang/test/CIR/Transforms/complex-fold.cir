@@ -1,0 +1,44 @@
+// RUN: cir-opt --canonicalize -o %t.cir %s
+// RUN: FileCheck --input-file %t.cir %s
+
+!s32i = !cir.int<s, 32>
+
+module {
+  cir.func @complex_create_fold() -> !cir.complex<!s32i> {
+    %0 = cir.const #cir.int<1> : !s32i
+    %1 = cir.const #cir.int<2> : !s32i
+    %2 = cir.complex.create %0, %1 : !s32i -> !cir.complex<!s32i>
+    cir.return %2 : !cir.complex<!s32i>
+  }
+
+  // CHECK-LABEL: cir.func @complex_create_fold() -> !cir.complex<!s32i> {
+  //  CHECK-NEXT:   %[[#A:]] = cir.const #cir.complex<#cir.int<1> : !s32i, #cir.int<2> : !s32i> : !cir.complex<!s32i>
+  //  CHECK-NEXT:   cir.return %[[#A]] : !cir.complex<!s32i>
+  //  CHECK-NEXT: }
+
+  cir.func @fold_complex_real() -> !s32i {
+    %0 = cir.const #cir.int<1> : !s32i
+    %1 = cir.const #cir.int<2> : !s32i
+    %2 = cir.complex.create %0, %1 : !s32i -> !cir.complex<!s32i>
+    %3 = cir.complex.real %2 : !cir.complex<!s32i> -> !s32i
+    cir.return %3 : !s32i
+  }
+
+  // CHECK-LABEL: cir.func @fold_complex_real() -> !s32i {
+  //  CHECK-NEXT:   %[[#A:]] = cir.const #cir.int<1> : !s32i
+  //  CHECK-NEXT:   cir.return %[[#A]] : !s32i
+  //  CHECK-NEXT: }
+
+  cir.func @fold_complex_imag() -> !s32i {
+    %0 = cir.const #cir.int<1> : !s32i
+    %1 = cir.const #cir.int<2> : !s32i
+    %2 = cir.complex.create %0, %1 : !s32i -> !cir.complex<!s32i>
+    %3 = cir.complex.imag %2 : !cir.complex<!s32i> -> !s32i
+    cir.return %3 : !s32i
+  }
+
+  // CHECK-LABEL: cir.func @fold_complex_imag() -> !s32i {
+  //  CHECK-NEXT:   %[[#A:]] = cir.const #cir.int<2> : !s32i
+  //  CHECK-NEXT:   cir.return %[[#A]] : !s32i
+  //  CHECK-NEXT: }
+}

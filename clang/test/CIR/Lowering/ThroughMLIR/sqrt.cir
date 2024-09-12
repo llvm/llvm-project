@@ -1,0 +1,30 @@
+// RUN: cir-opt %s -cir-to-mlir -o %t.mlir
+// RUN: FileCheck %s --input-file %t.mlir
+
+module {
+  cir.func @foo() {
+    %0 = cir.const #cir.fp<9.0> : !cir.float
+    %1 = cir.const #cir.fp<100.0> : !cir.long_double<!cir.f80>
+    %2 = cir.const #cir.fp<1.0> : !cir.double
+    %3 = cir.const #cir.fp<2.56> : !cir.long_double<!cir.double>
+    %4 = cir.sqrt %0 : !cir.float
+    %5 = cir.sqrt %1 : !cir.long_double<!cir.f80>
+    %6 = cir.sqrt %2 : !cir.double
+    %7 = cir.sqrt %3 : !cir.long_double<!cir.double>
+    cir.return
+  }
+}
+
+// CHECK:      module {
+// CHECK-NEXT:   func.func @foo() {
+// CHECK-NEXT:     %[[C0:.+]] = arith.constant 9.000000e+00 : f32
+// CHECK-NEXT:     %[[C1:.+]] = arith.constant 1.000000e+02 : f80
+// CHECK-NEXT:     %[[C2:.+]] = arith.constant 1.000000e+00 : f64
+// CHECK-NEXT:     %[[C3:.+]] = arith.constant 2.560000e+00 : f64
+// CHECK-NEXT:     %{{.+}} = math.sqrt %[[C0]] : f32
+// CHECK-NEXT:     %{{.+}} = math.sqrt %[[C1]] : f80
+// CHECK-NEXT:     %{{.+}} = math.sqrt %[[C2]] : f64
+// CHECK-NEXT:     %{{.+}} = math.sqrt %[[C3]] : f64
+// CHECK-NEXT:     return
+// CHECK-NEXT:   }
+// CHECK-NEXT: }

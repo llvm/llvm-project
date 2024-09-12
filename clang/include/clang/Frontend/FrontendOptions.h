@@ -68,6 +68,15 @@ enum ActionKind {
   /// Emit a .cir file
   EmitCIR,
 
+  /// Emit a .cir file with flat ClangIR
+  EmitCIRFlat,
+
+  /// Generate CIR, bud don't emit anything.
+  EmitCIROnly,
+
+  /// Emit a .mlir file
+  EmitMLIR,
+
   /// Emit a .ll file.
   EmitLLVM,
 
@@ -157,11 +166,7 @@ enum ActionKind {
 class InputKind {
 public:
   /// The input file format.
-  enum Format {
-    Source,
-    ModuleMap,
-    Precompiled
-  };
+  enum Format { Source, ModuleMap, Precompiled };
 
   // If we are building a header unit, what kind it is; this affects whether
   // we look for the file in the user or system include search paths before
@@ -415,6 +420,36 @@ public:
   LLVM_PREFERRED_TYPE(bool)
   unsigned UseClangIRPipeline : 1;
 
+  /// Lower directly from ClangIR to LLVM
+  unsigned ClangIRDirectLowering : 1;
+
+  /// Disable Clang IR specific (CIR) passes
+  unsigned ClangIRDisablePasses : 1;
+
+  /// Disable Clang IR (CIR) verifier
+  unsigned ClangIRDisableCIRVerifier : 1;
+
+  /// Disable ClangIR emission for CXX default (compiler generated methods).
+  unsigned ClangIRDisableEmitCXXDefault : 1;
+
+  /// Enable diagnostic verification for CIR
+  unsigned ClangIRVerifyDiags : 1;
+
+  // Enable Clang IR based lifetime check
+  unsigned ClangIRLifetimeCheck : 1;
+
+  // Enable Clang IR idiom recognizer
+  unsigned ClangIRIdiomRecognizer : 1;
+
+  // Enable Clang IR library optimizations
+  unsigned ClangIRLibOpt : 1;
+
+  // Enable Clang IR call conv lowering pass.
+  unsigned ClangIREnableCallConvLowering : 1;
+
+  // Enable Clang IR mem2reg pass on the flat CIR.
+  unsigned ClangIREnableMem2Reg : 1;
+
   CodeCompleteOptions CodeCompleteOpts;
 
   /// Specifies the output format of the AST.
@@ -472,11 +507,11 @@ public:
     /// Enable converting setter/getter expressions to property-dot syntx.
     ObjCMT_PropertyDotSyntax = 0x1000,
 
-    ObjCMT_MigrateDecls = (ObjCMT_ReadonlyProperty | ObjCMT_ReadwriteProperty |
-                           ObjCMT_Annotation | ObjCMT_Instancetype |
-                           ObjCMT_NsMacros | ObjCMT_ProtocolConformance |
-                           ObjCMT_NsAtomicIOSOnlyProperty |
-                           ObjCMT_DesignatedInitializer),
+    ObjCMT_MigrateDecls =
+        (ObjCMT_ReadonlyProperty | ObjCMT_ReadwriteProperty |
+         ObjCMT_Annotation | ObjCMT_Instancetype | ObjCMT_NsMacros |
+         ObjCMT_ProtocolConformance | ObjCMT_NsAtomicIOSOnlyProperty |
+         ObjCMT_DesignatedInitializer),
     ObjCMT_MigrateAll = (ObjCMT_Literals | ObjCMT_Subscripting |
                          ObjCMT_MigrateDecls | ObjCMT_PropertyDotSyntax)
   };
@@ -485,6 +520,10 @@ public:
 
   std::string MTMigrateDir;
   std::string ARCMTMigrateReportOut;
+
+  std::string ClangIRLifetimeCheckOpts;
+  std::string ClangIRIdiomRecognizerOpts;
+  std::string ClangIRLibOptOpts;
 
   /// The input kind, either specified via -x argument or deduced from the input
   /// file name.
@@ -557,6 +596,10 @@ public:
   /// should only be used for debugging and experimental features.
   std::vector<std::string> LLVMArgs;
 
+  /// A list of arguments to forward to MLIR's option processing; this
+  /// should only be used for debugging and experimental features.
+  std::vector<std::string> MLIRArgs;
+
   /// File name of the file that will provide record layouts
   /// (in the format produced by -fdump-record-layouts).
   std::string OverrideRecordLayoutsFile;
@@ -597,7 +640,11 @@ public:
         EmitSymbolGraph(false), EmitExtensionSymbolGraphs(false),
         EmitSymbolGraphSymbolLabelsForTesting(false),
         EmitPrettySymbolGraphs(false), GenReducedBMI(false),
-        UseClangIRPipeline(false), TimeTraceGranularity(500) {}
+        UseClangIRPipeline(false), ClangIRDirectLowering(false),
+        ClangIRDisablePasses(false), ClangIRDisableCIRVerifier(false),
+        ClangIRDisableEmitCXXDefault(false), ClangIRLifetimeCheck(false),
+        ClangIRIdiomRecognizer(false), ClangIRLibOpt(false),
+        TimeTraceGranularity(500) {}
 
   /// getInputKindForExtension - Return the appropriate input kind for a file
   /// extension. For example, "c" would return Language::C.

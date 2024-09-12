@@ -1,0 +1,14 @@
+// RUN: cir-translate %s -cir-to-llvmir | FileCheck %s
+
+
+module {
+  cir.func @omp_taskyield_1() {
+    omp.taskyield
+    cir.return
+  }
+}
+
+// CHECK: define void @omp_taskyield_1()
+// CHECK: call i32 @__kmpc_global_thread_num(ptr {{.*}})
+// CHECK: call i32 @__kmpc_omp_taskyield(ptr {{.*}}, i32 {{.*}}, i32 {{.*}})
+// CHECK: ret void

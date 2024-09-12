@@ -13,6 +13,14 @@ clang_tablegen(OpenCLBuiltins.inc -gen-clang-opencl-builtins
   TARGET ClangOpenCLBuiltinsImpl
   )
 
+if(CLANG_ENABLE_CIR)
+  set(CIR_DEPS
+    MLIRCIROpsIncGen
+    MLIRCIR
+  )
+endif()
+
+
 add_clang_library(clangSema
   AnalysisBasedWarnings.cpp
   CodeCompleteConsumer.cpp
@@ -93,6 +101,7 @@ add_clang_library(clangSema
   ClangOpenCLBuiltinsImpl
   omp_gen
   ClangDriverOptions
+  ${CIR_DEPS}
 
   LINK_LIBS
   clangAPINotes

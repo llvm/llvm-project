@@ -1,0 +1,20 @@
+// RUN: cir-translate %s -cir-to-llvmir -o %t.ll
+// RUN: FileCheck %s --input-file=%t.ll --check-prefix=LLVM
+
+!s32i = !cir.int<s, 32>
+module {
+    // LLVM: define void @foo()
+    cir.func @foo() cc(c) {
+        cir.return
+    }
+
+    // LLVM: define spir_kernel void @bar()
+    cir.func @bar() cc(spir_kernel) {
+        cir.return
+    }
+
+    // LLVM: define spir_func void @baz()
+    cir.func @baz() cc(spir_function) {
+        cir.return
+    }
+}
