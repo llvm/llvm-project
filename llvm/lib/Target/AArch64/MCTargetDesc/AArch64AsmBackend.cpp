@@ -646,8 +646,8 @@ public:
           return CU::UNWIND_ARM64_MODE_DWARF;
         CurOffset = FPPush.getOffset();
 
-        unsigned LRReg = *MRI.getLLVMRegNum(LRPush.getRegister(), true);
-        unsigned FPReg = *MRI.getLLVMRegNum(FPPush.getRegister(), true);
+        MCRegister LRReg = *MRI.getLLVMRegNum(LRPush.getRegister(), true);
+        MCRegister FPReg = *MRI.getLLVMRegNum(FPPush.getRegister(), true);
 
         LRReg = getXRegFromWReg(LRReg);
         FPReg = getXRegFromWReg(FPReg);
@@ -669,7 +669,7 @@ public:
       case MCCFIInstruction::OpOffset: {
         // Registers are saved in pairs. We expect there to be two consecutive
         // `.cfi_offset' instructions with the appropriate registers specified.
-        unsigned Reg1 = *MRI.getLLVMRegNum(Inst.getRegister(), true);
+        MCRegister Reg1 = *MRI.getLLVMRegNum(Inst.getRegister(), true);
         if (i + 1 == e)
           return CU::UNWIND_ARM64_MODE_DWARF;
 
@@ -680,7 +680,7 @@ public:
         const MCCFIInstruction &Inst2 = Instrs[++i];
         if (Inst2.getOperation() != MCCFIInstruction::OpOffset)
           return CU::UNWIND_ARM64_MODE_DWARF;
-        unsigned Reg2 = *MRI.getLLVMRegNum(Inst2.getRegister(), true);
+        MCRegister Reg2 = *MRI.getLLVMRegNum(Inst2.getRegister(), true);
 
         if (Inst2.getOffset() != CurOffset - 8)
           return CU::UNWIND_ARM64_MODE_DWARF;

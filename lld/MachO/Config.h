@@ -68,6 +68,7 @@ enum class ICFLevel {
   unknown,
   none,
   safe,
+  safe_thunks,
   all,
 };
 
@@ -218,6 +219,7 @@ struct Configuration {
   llvm::StringRef printSymbolOrder;
 
   llvm::StringRef irpgoProfileSortProfilePath;
+  bool compressionSortStartupFunctions = false;
   bool functionOrderForCompression = false;
   bool dataOrderForCompression = false;
   bool verboseBpSectionOrderer = false;

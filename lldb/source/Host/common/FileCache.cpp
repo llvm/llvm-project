@@ -32,7 +32,7 @@ lldb::user_id_t FileCache::OpenFile(const FileSpec &file_spec,
   }
   auto file = FileSystem::Instance().Open(file_spec, flags, mode);
   if (!file) {
-    error = file.takeError();
+    error = Status::FromError(file.takeError());
     return UINT64_MAX;
   }
   lldb::user_id_t fd = file.get()->GetDescriptor();

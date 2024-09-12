@@ -46,6 +46,6 @@ TEST_AVAILABILITY_SYNC std::jthread make_test_jthread(F&& f, Args&&... args) {
 }
 #endif
 
-} // end namespace support
+} // namespace support
 
 #endif // TEST_SUPPORT_MAKE_TEST_THREAD_H

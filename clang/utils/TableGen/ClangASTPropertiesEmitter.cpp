@@ -88,99 +88,98 @@ struct CasedTypeInfo {
 };
 
 class ASTPropsEmitter {
-	raw_ostream &Out;
-	RecordKeeper &Records;
-	std::map<HasProperties, NodeInfo> NodeInfos;
+  raw_ostream &Out;
+  RecordKeeper &Records;
+  std::map<HasProperties, NodeInfo> NodeInfos;
   std::vector<PropertyType> AllPropertyTypes;
   std::map<PropertyType, CasedTypeInfo> CasedTypeInfos;
 
 public:
-	ASTPropsEmitter(RecordKeeper &records, raw_ostream &out)
-		: Out(out), Records(records) {
+  ASTPropsEmitter(RecordKeeper &records, raw_ostream &out)
+      : Out(out), Records(records) {
 
-		// Find all the properties.
-		for (Property property :
-           records.getAllDerivedDefinitions(PropertyClassName)) {
-			HasProperties node = property.getClass();
-			NodeInfos[node].Properties.push_back(property);
-		}
+    // Find all the properties.
+    for (Property property :
+         records.getAllDerivedDefinitions(PropertyClassName)) {
+      HasProperties node = property.getClass();
+      NodeInfos[node].Properties.push_back(property);
+    }
 
     // Find all the creation rules.
     for (CreationRule creationRule :
-           records.getAllDerivedDefinitions(CreationRuleClassName)) {
+         records.getAllDerivedDefinitions(CreationRuleClassName)) {
       HasProperties node = creationRule.getClass();
 
       auto &info = NodeInfos[node];
       if (info.Creator) {
-        PrintFatalError(creationRule.getLoc(),
-                        "multiple creator rules for \"" + node.getName()
-                          + "\"");
+        PrintFatalError(creationRule.getLoc(), "multiple creator rules for \"" +
+                                                   node.getName() + "\"");
       }
       info.Creator = creationRule;
     }
 
     // Find all the override rules.
     for (OverrideRule overrideRule :
-           records.getAllDerivedDefinitions(OverrideRuleClassName)) {
+         records.getAllDerivedDefinitions(OverrideRuleClassName)) {
       HasProperties node = overrideRule.getClass();
 
       auto &info = NodeInfos[node];
       if (info.Override) {
         PrintFatalError(overrideRule.getLoc(),
-                        "multiple override rules for \"" + node.getName()
-                          + "\"");
+                        "multiple override rules for \"" + node.getName() +
+                            "\"");
       }
       info.Override = overrideRule;
     }
 
     // Find all the write helper rules.
     for (ReadHelperRule helperRule :
-           records.getAllDerivedDefinitions(ReadHelperRuleClassName)) {
+         records.getAllDerivedDefinitions(ReadHelperRuleClassName)) {
       HasProperties node = helperRule.getClass();
 
       auto &info = NodeInfos[node];
       if (info.ReadHelper) {
         PrintFatalError(helperRule.getLoc(),
-                        "multiple write helper rules for \"" + node.getName()
-                          + "\"");
+                        "multiple write helper rules for \"" + node.getName() +
+                            "\"");
       }
       info.ReadHelper = helperRule;
     }
 
     // Find all the concrete property types.
     for (PropertyType type :
-           records.getAllDerivedDefinitions(PropertyTypeClassName)) {
+         records.getAllDerivedDefinitions(PropertyTypeClassName)) {
       // Ignore generic specializations; they're generally not useful when
       // emitting basic emitters etc.
-      if (type.isGenericSpecialization()) continue;
+      if (type.isGenericSpecialization())
+        continue;
 
       AllPropertyTypes.push_back(type);
     }
 
     // Find all the type kind rules.
     for (TypeKindRule kindRule :
-           records.getAllDerivedDefinitions(TypeKindClassName)) {
+         records.getAllDerivedDefinitions(TypeKindClassName)) {
       PropertyType type = kindRule.getParentType();
       auto &info = CasedTypeInfos[type];
       if (info.KindRule) {
-        PrintFatalError(kindRule.getLoc(),
-                        "multiple kind rules for \""
-                           + type.getCXXTypeName() + "\"");
+        PrintFatalError(kindRule.getLoc(), "multiple kind rules for \"" +
+                                               type.getCXXTypeName() + "\"");
       }
       info.KindRule = kindRule;
     }
 
     // Find all the type cases.
     for (TypeCase typeCase :
-           records.getAllDerivedDefinitions(TypeCaseClassName)) {
+         records.getAllDerivedDefinitions(TypeCaseClassName)) {
       CasedTypeInfos[typeCase.getParentType()].Cases.push_back(typeCase);
     }
 
     Validator(*this).validate();
-	}
+  }
 
   void visitAllProperties(HasProperties derived, const NodeInfo &derivedInfo,
-                          function_ref<void (Property)> visit) {
+                          function_ref<void(Property)> visit) {
     std::set<StringRef> ignoredProperties;
 
     auto overrideRule = derivedInfo.Override;
@@ -195,20 +194,19 @@ public:
 
     visitAllNodesWithInfo(derived, derivedInfo,
                           [&](HasProperties node, const NodeInfo &info) {
-      for (Property prop : info.Properties) {
-        if (ignoredProperties.count(prop.getName()))
-          continue;
+                            for (Property prop : info.Properties) {
+                              if (ignoredProperties.count(prop.getName()))
+                                continue;
 
-        visit(prop);
-      }
-    });
+                              visit(prop);
+                            }
+                          });
   }
 
-  void visitAllNodesWithInfo(HasProperties derivedNode,
-                             const NodeInfo &derivedNodeInfo,
-                             llvm::function_ref<void (HasProperties node,
-                                                      const NodeInfo &info)>
-                               visit) {
+  void visitAllNodesWithInfo(
+      HasProperties derivedNode, const NodeInfo &derivedNodeInfo,
+      llvm::function_ref<void(HasProperties node, const NodeInfo &info)>
+          visit) {
     visit(derivedNode, derivedNodeInfo);
 
     // Also walk the bases if appropriate.
@@ -217,7 +215,8 @@ public:
         auto it = NodeInfos.find(base);
 
         // Ignore intermediate nodes that don't add interesting properties.
-        if (it == NodeInfos.end()) continue;
+        if (it == NodeInfos.end())
+          continue;
         auto &baseInfo = it->second;
 
         visit(base, baseInfo);
@@ -225,14 +224,12 @@ public:
     }
   }
 
-  template <class NodeClass>
-  void emitNodeReaderClass() {
+  template <class NodeClass> void emitNodeReaderClass() {
     auto info = ReaderWriterInfo::forReader<NodeClass>();
     emitNodeReaderWriterClass<NodeClass>(info);
   }
 
-  template <class NodeClass>
-  void emitNodeWriterClass() {
+  template <class NodeClass> void emitNodeWriterClass() {
     auto info = ReaderWriterInfo::forWriter<NodeClass>();
     emitNodeReaderWriterClass<NodeClass>(info);
   }
@@ -241,8 +238,7 @@ public:
   void emitNodeReaderWriterClass(const ReaderWriterInfo &info);
 
   template <class NodeClass>
-  void emitNodeReaderWriterMethod(NodeClass node,
-                                  const ReaderWriterInfo &info);
+  void emitNodeReaderWriterMethod(NodeClass node, const ReaderWriterInfo &info);
 
   void emitPropertiedReaderWriterBody(HasProperties node,
                                       const ReaderWriterInfo &info);

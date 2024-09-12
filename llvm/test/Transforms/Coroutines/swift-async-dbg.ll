@@ -30,7 +30,7 @@ define swifttailcc void @coroutineA(ptr swiftasync %arg) !dbg !48 {
 ; CHECK-LABEL: define {{.*}} @coroutineA(
 ; CHECK-SAME:    ptr swiftasync %[[frame_ptr:.*]])
 ; CHECK:      #dbg_declare(ptr %[[frame_ptr]], {{.*}} !DIExpression(
-; CHECK-SAME:                   DW_OP_plus_uconst, 16, DW_OP_plus_uconst, 8)
+; CHECK-SAME:                   DW_OP_plus_uconst, 24)
 ; CHECK:      #dbg_value(ptr %[[frame_ptr]], {{.*}} !DIExpression(
 ; CHECK-SAME:                 DW_OP_plus_uconst, 16, DW_OP_deref)
 ; CHECK:      call {{.*}} @swift_task_switch
@@ -49,7 +49,7 @@ define swifttailcc void @coroutineA(ptr swiftasync %arg) !dbg !48 {
 ; CHECK-LABEL: define {{.*}} @coroutineATY0_(
 ; CHECK-SAME:    ptr swiftasync %[[frame_ptr:.*]])
 ; CHECK:      #dbg_declare(ptr %[[frame_ptr]], {{.*}} !DIExpression(
-; CHECK-SAME:                   DW_OP_LLVM_entry_value, 1, DW_OP_plus_uconst, 16, DW_OP_plus_uconst, 8)
+; CHECK-SAME:                   DW_OP_LLVM_entry_value, 1, DW_OP_plus_uconst, 24)
 ; CHECK:      #dbg_value(ptr %[[frame_ptr]], {{.*}} !DIExpression(
 ; CHECK-SAME:                 DW_OP_LLVM_entry_value, 1, DW_OP_plus_uconst, 16, DW_OP_deref)
 ; CHECK:      #dbg_value(!DIArgList(ptr %[[frame_ptr]], i32 %{{.*}}), {{.*}} !DIExpression(
@@ -70,7 +70,7 @@ define swifttailcc void @coroutineA(ptr swiftasync %arg) !dbg !48 {
 ; CHECK-SAME:    ptr swiftasync %[[frame_ptr:.*]])
 ; Note the extra level of indirection that shows up here!
 ; CHECK:      #dbg_declare(ptr %[[frame_ptr]], {{.*}} !DIExpression(
-; CHECK-SAME:                   DW_OP_LLVM_entry_value, 1, DW_OP_deref, DW_OP_plus_uconst, 16, DW_OP_plus_uconst, 8)
+; CHECK-SAME:                   DW_OP_LLVM_entry_value, 1, DW_OP_deref, DW_OP_plus_uconst, 24)
 ; CHECK:      #dbg_value(ptr %[[frame_ptr]], {{.*}} !DIExpression(
 ; CHECK-SAME:                 DW_OP_LLVM_entry_value, 1, DW_OP_deref, DW_OP_plus_uconst, 16, DW_OP_deref)
 ; CHECK:      call {{.*}} @swift_task_switch
@@ -85,7 +85,7 @@ define swifttailcc void @coroutineA(ptr swiftasync %arg) !dbg !48 {
 ; CHECK-LABEL: define {{.*}} @coroutineATY2_(
 ; CHECK-SAME:    ptr swiftasync %[[frame_ptr:.*]])
 ; CHECK:      #dbg_declare(ptr %[[frame_ptr]], {{.*}} !DIExpression(
-; CHECK-SAME:                   DW_OP_LLVM_entry_value, 1, DW_OP_plus_uconst, 16, DW_OP_plus_uconst, 8)
+; CHECK-SAME:                   DW_OP_LLVM_entry_value, 1, DW_OP_plus_uconst, 24)
 }
 
 ; Everything from here on is just support code for the coroutines.

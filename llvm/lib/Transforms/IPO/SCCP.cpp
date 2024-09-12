@@ -337,9 +337,13 @@ static bool runIPSCCP(
       continue;
     LLVM_DEBUG(dbgs() << "Found that GV '" << GV->getName()
                       << "' is constant!\n");
-    while (!GV->use_empty()) {
-      StoreInst *SI = cast<StoreInst>(GV->user_back());
-      SI->eraseFromParent();
+    for (User *U : make_early_inc_range(GV->users())) {
+      // We can remove LoadInst here, because we already replaced its users
+      // with a constant.
+      assert((isa<StoreInst>(U) || isa<LoadInst>(U)) &&
+             "Only Store|Load Instruction can be user of GlobalVariable at "
+             "reaching here.");
+      cast<Instruction>(U)->eraseFromParent();
     }
 
     // Try to create a debug constant expression for the global variable

@@ -2658,6 +2658,7 @@ public:
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) bool is##Id##Type() const;
 #include "clang/Basic/HLSLIntangibleTypes.def"
   bool isHLSLSpecificType() const; // Any HLSL specific type
+  bool isHLSLIntangibleType() const; // Any HLSL intangible type
 
   /// Determines if this type, which must satisfy
   /// isObjCLifetimeType(), is implicitly __unsafe_unretained rather
@@ -8339,6 +8340,12 @@ inline bool Type::isHLSLSpecificType() const {
   return
 #include "clang/Basic/HLSLIntangibleTypes.def"
       false; // end boolean or operation
+}
+
+inline bool Type::isHLSLIntangibleType() const {
+  // All HLSL specific types are currently intangible type as well, but that
+  // might change in the future.
+  return isHLSLSpecificType();
 }
 
 inline bool Type::isTemplateTypeParmType() const {

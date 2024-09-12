@@ -444,7 +444,7 @@ Status PlatformWindows::UnloadImage(Process *process, uint32_t image_token) {
     return result;
 
   if (value->GetError().Fail())
-    return value->GetError();
+    return value->GetError().Clone();
 
   Scalar scalar;
   if (value->ResolveValue(scalar)) {
@@ -805,7 +805,7 @@ extern "C" {
     return error;
 
   if (value->GetError().Fail())
-    return value->GetError();
+    return value->GetError().Clone();
 
   return Status();
 }

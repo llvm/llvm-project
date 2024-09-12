@@ -258,7 +258,7 @@ Status Debugger::SetPropertyValue(const ExecutionContext *exe_ctx,
         StreamString feedback_stream;
         if (!target_sp->LoadScriptingResources(errors, feedback_stream)) {
           Stream &s = GetErrorStream();
-          for (auto error : errors) {
+          for (auto &error : errors) {
             s.Printf("%s\n", error.AsCString());
           }
           if (feedback_stream.GetSize())

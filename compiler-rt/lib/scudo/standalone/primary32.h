@@ -332,6 +332,12 @@ public:
     }
   }
 
+  void getMemoryGroupFragmentationInfo(ScopedString *Str) {
+    // Each region is also a memory group because region size is the same as
+    // group size.
+    getFragmentationInfo(Str);
+  }
+
   bool setOption(Option O, sptr Value) {
     if (O == Option::ReleaseInterval) {
       const s32 Interval = Max(
@@ -940,7 +946,7 @@ private:
 
     uptr Integral;
     uptr Fractional;
-    computePercentage(BlockSize * InUseBlocks, InUsePages * PageSize, &Integral,
+    computePercentage(BlockSize * InUseBlocks, InUseBytes, &Integral,
                       &Fractional);
     Str->append("  %02zu (%6zu): inuse/total blocks: %6zu/%6zu inuse/total "
                 "pages: %6zu/%6zu inuse bytes: %6zuK util: %3zu.%02zu%%\n",

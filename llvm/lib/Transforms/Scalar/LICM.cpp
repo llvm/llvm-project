@@ -2803,15 +2803,14 @@ static bool hoistMulAddAssociation(Instruction &I, Loop &L,
 
 /// Reassociate associative binary expressions of the form
 ///
-/// 1. "(LV op C1) op C2" ==> "LV op (C1 op C2)" if op is an associative BinOp
-/// 2. "(C1 op LV) op C2" ==> "LV op (C1 op C2)" if op is a commutative BinOp
+/// 1. "(LV op C1) op C2" ==> "LV op (C1 op C2)"
+/// 2. "(C1 op LV) op C2" ==> "LV op (C1 op C2)"
+/// 3. "C2 op (C1 op LV)" ==> "LV op (C1 op C2)"
+/// 4. "C2 op (LV op C1)" ==> "LV op (C1 op C2)"
 ///
-/// where LV is a loop variant, and C1 and C2 are loop invariants that we want
-/// to hoist.
-///
-/// TODO: This can be extended to more cases such as
-/// 1. "C1 op (C2 op LV)" ==> "(C1 op C2) op LV" if op an associative BinOp
-/// 2. "C1 op (LV op C2)" ==> "(C1 op C2) op LV" if op is a commutative BinOp
+/// where op is an associative BinOp, LV is a loop variant, and C1 and C2 are
+/// loop invariants that we want to hoist, noting that associativity implies
+/// commutativity.
 static bool hoistBOAssociation(Instruction &I, Loop &L,
                                ICFLoopSafetyInfo &SafetyInfo,
                                MemorySSAUpdater &MSSAU, AssumptionCache *AC,
@@ -2825,19 +2824,20 @@ static bool hoistBOAssociation(Instruction &I, Loop &L,
   if (Opcode != Instruction::Add && Opcode != Instruction::Mul)
     return false;
 
-  auto *BO0 = dyn_cast<BinaryOperator>(BO->getOperand(0));
+  bool LVInRHS = L.isLoopInvariant(BO->getOperand(0));
+  auto *BO0 = dyn_cast<BinaryOperator>(BO->getOperand(LVInRHS));
   if (!BO0 || BO0->getOpcode() != Opcode || !BO0->isAssociative() ||
       BO0->hasNUsesOrMore(3))
     return false;
 
   Value *LV = BO0->getOperand(0);
   Value *C1 = BO0->getOperand(1);
-  Value *C2 = BO->getOperand(1);
+  Value *C2 = BO->getOperand(!LVInRHS);
 
-  if (L.isLoopInvariant(LV) && !L.isLoopInvariant(C1)) {
-    assert(BO0->isCommutative() && "Associativity implies commutativity");
+  assert(BO->isCommutative() && BO0->isCommutative() &&
+         "Associativity implies commutativity");
+  if (L.isLoopInvariant(LV) && !L.isLoopInvariant(C1))
     std::swap(LV, C1);
-  }
   if (L.isLoopInvariant(LV) || !L.isLoopInvariant(C1) || !L.isLoopInvariant(C2))
     return false;
 

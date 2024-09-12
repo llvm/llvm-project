@@ -283,7 +283,7 @@ bool lldb_private::python::SWIGBridge::LLDBSwigPythonStopHookCallHandleStop(
 }
 
 python::PythonObject
-lldb_private::python::SWIGBridge::ToSWIGWrapper(const Status &status) {
+lldb_private::python::SWIGBridge::ToSWIGWrapper(Status status) {
   return python::PythonObject();
 }
 
