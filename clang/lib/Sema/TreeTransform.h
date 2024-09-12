@@ -113,6 +113,8 @@ class TreeTransform {
   class ForgetPartiallySubstitutedPackRAII {
     Derived &Self;
     TemplateArgument Old;
+    // Set the pack expansion index to -1 to avoid pack substitution and
+    // indicate that parameter packs should be instantiated as themselves.
     Sema::ArgumentPackSubstitutionIndexRAII ResetPackSubstIndex;
 
   public:
