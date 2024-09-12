@@ -28,9 +28,9 @@
 //
 // The Template class is container class outputs the Mustache template string
 // and is main class for users. It stores all the lambdas and the ASTNode Tree.
-// When the Template is instantiated it tokenize the Template String and creates 
-// a vector of Tokens. Then it calls a basic recursive descent parser to 
-// construct the ASTNode Tree. The ASTNodes are all stored in an arena
+// When the Template is instantiated it tokenize the Template String and 
+// creates a vector of Tokens. Then it calls a basic recursive descent parser
+// to construct the ASTNode Tree. The ASTNodes are all stored in an arena
 // allocator which is freed once the template class goes out of scope
 //
 // Usage:
