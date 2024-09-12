@@ -838,8 +838,8 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setOperationAction(ISD::FCOPYSIGN, MVT::v2f16, Expand);
   setOperationAction(ISD::FCOPYSIGN, MVT::bf16, Expand);
   setOperationAction(ISD::FCOPYSIGN, MVT::v2bf16, Expand);
-  setOperationAction(ISD::FCOPYSIGN, MVT::f32, Expand);
-  setOperationAction(ISD::FCOPYSIGN, MVT::f64, Expand);
+  setOperationAction(ISD::FCOPYSIGN, MVT::f32, Custom);
+  setOperationAction(ISD::FCOPYSIGN, MVT::f64, Custom);
 
   // These map to corresponding instructions for f32/f64. f16 must be
   // promoted to f32. v2f16 is expanded to f16, which is then promoted
@@ -964,6 +964,7 @@ const char *NVPTXTargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(NVPTXISD::BFE)
     MAKE_CASE(NVPTXISD::BFI)
     MAKE_CASE(NVPTXISD::PRMT)
+    MAKE_CASE(NVPTXISD::FCOPYSIGN)
     MAKE_CASE(NVPTXISD::DYNAMIC_STACKALLOC)
     MAKE_CASE(NVPTXISD::SETP_F16X2)
     MAKE_CASE(NVPTXISD::SETP_BF16X2)
@@ -2560,6 +2561,23 @@ SDValue NVPTXTargetLowering::LowerShiftLeftParts(SDValue Op,
   }
 }
 
+/// If the types match, convert the generic copysign to the NVPTXISD version,
+/// otherwise bail ensuring that mismatched cases are properly expaned.
+SDValue NVPTXTargetLowering::LowerFCOPYSIGN(SDValue Op,
+                                            SelectionDAG &DAG) const {
+  EVT VT = Op.getValueType();
+  SDLoc DL(Op);
+
+  SDValue In1 = Op.getOperand(0);
+  SDValue In2 = Op.getOperand(1);
+  EVT SrcVT = In2.getValueType();
+
+  if (!SrcVT.bitsEq(VT))
+    return SDValue();
+
+  return DAG.getNode(NVPTXISD::FCOPYSIGN, DL, VT, In1, In2);
+}
+
 SDValue NVPTXTargetLowering::LowerFROUND(SDValue Op, SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
 
@@ -2803,6 +2821,8 @@ NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerSelect(Op, DAG);
   case ISD::FROUND:
     return LowerFROUND(Op, DAG);
+  case ISD::FCOPYSIGN:
+    return LowerFCOPYSIGN(Op, DAG);
   case ISD::SINT_TO_FP:
   case ISD::UINT_TO_FP:
     return LowerINT_TO_FP(Op, DAG);

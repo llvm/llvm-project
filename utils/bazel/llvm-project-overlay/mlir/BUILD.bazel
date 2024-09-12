@@ -6004,6 +6004,7 @@ cc_library(
         ":LLVMCommonConversion",
         ":LLVMDialect",
         ":MathDialect",
+        ":MathToLLVM",
         ":MathToROCDL",
         ":MemRefDialect",
         ":MemRefToLLVM",

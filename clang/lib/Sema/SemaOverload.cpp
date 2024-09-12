@@ -2067,7 +2067,7 @@ static bool IsVectorConversion(Sema &S, QualType FromType, QualType ToType,
 
   // There are no conversions between extended vector types, only identity.
   if (auto *ToExtType = ToType->getAs<ExtVectorType>()) {
-    if (auto *FromExtType = FromType->getAs<ExtVectorType>()) {
+    if (FromType->getAs<ExtVectorType>()) {
       // There are no conversions between extended vector types other than the
       // identity conversion.
       return false;

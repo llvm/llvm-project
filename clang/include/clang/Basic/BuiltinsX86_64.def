@@ -99,6 +99,12 @@ TARGET_BUILTIN(__builtin_ia32_vcvttsh2si64, "OiV8xIi", "ncV:128:", "avx512fp16")
 TARGET_BUILTIN(__builtin_ia32_vcvttsh2usi64, "UOiV8xIi", "ncV:128:", "avx512fp16")
 TARGET_BUILTIN(__builtin_ia32_directstore_u64, "vULi*ULi", "n", "movdiri")
 
+// AVX10.2 SATCVT-DS
+TARGET_BUILTIN(__builtin_ia32_vcvttsd2sis64, "OiV2dIi", "ncV:128:", "avx10.2-256")
+TARGET_BUILTIN(__builtin_ia32_vcvttsd2usis64, "UOiV2dIi", "ncV:128:", "avx10.2-256")
+TARGET_BUILTIN(__builtin_ia32_vcvttss2sis64, "OiV4fIi", "ncV:128:", "avx10.2-256")
+TARGET_BUILTIN(__builtin_ia32_vcvttss2usis64, "UOiV4fIi", "ncV:128:", "avx10.2-256")
+
 // UINTR
 TARGET_BUILTIN(__builtin_ia32_clui, "v", "n", "uintr")
 TARGET_BUILTIN(__builtin_ia32_stui, "v", "n", "uintr")
