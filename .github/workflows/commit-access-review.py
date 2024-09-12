@@ -360,7 +360,7 @@ def main():
     repo = org.get_repo("llvm-project")
     one_year_ago = datetime.datetime.now() - datetime.timedelta(days=365)
     triage_list = {}
-    for collaborator in repo.get_collaborators(permission='push'):
+    for collaborator in repo.get_collaborators(permission="push"):
         triage_list[collaborator.login] = User(collaborator.login, triage_list)
 
     print("Start:", len(triage_list), "triagers")
