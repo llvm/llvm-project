@@ -80,6 +80,21 @@ TEST(DiagnosticTest, fatalsAsError) {
   }
 }
 
+TEST(DiagnosticTest, tooManyErrorsIsAlwaysFatal) {
+  DiagnosticsEngine Diags(new DiagnosticIDs(), new DiagnosticOptions,
+                          new IgnoringDiagConsumer());
+  Diags.setFatalsAsError(true);
+
+  // Report a fatal_too_many_errors diagnostic to ensure that still
+  // acts as a fatal error despite downgrading fatal errors to errors.
+  Diags.Report(diag::fatal_too_many_errors);
+  EXPECT_TRUE(Diags.hasFatalErrorOccurred());
+
+  // Ensure that the severity of that diagnostic is really "fatal".
+  EXPECT_EQ(Diags.getDiagnosticLevel(diag::fatal_too_many_errors, {}),
+            DiagnosticsEngine::Level::Fatal);
+}
+
 // Check that soft RESET works as intended
 TEST(DiagnosticTest, softReset) {
   DiagnosticsEngine Diags(new DiagnosticIDs(), new DiagnosticOptions,
