@@ -144,6 +144,14 @@ enum : unsigned {
   WASM_OPCODE_I32_RMW_CMPXCHG = 0x48,
 };
 
+// Sub-opcodes for catch clauses in a try_table instruction
+enum : unsigned {
+  WASM_OPCODE_CATCH = 0x00,
+  WASM_OPCODE_CATCH_REF = 0x01,
+  WASM_OPCODE_CATCH_ALL = 0x02,
+  WASM_OPCODE_CATCH_ALL_REF = 0x03,
+};
+
 enum : unsigned {
   WASM_LIMITS_FLAG_NONE = 0x0,
   WASM_LIMITS_FLAG_HAS_MAX = 0x1,

@@ -273,6 +273,16 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_macros_null_check",
+    hdrs = ["src/__support/macros/null_check.h"],
+    deps = [
+        ":__support_macros_config",
+        ":__support_macros_optimization",
+        ":__support_macros_sanitizer",
+    ],
+)
+
+libc_support_library(
     name = "__support_common",
     hdrs = [
         "src/__support/common.h",
@@ -377,6 +387,7 @@ libc_support_library(
     hdrs = ["src/__support/CPP/new.h"],
     deps = [
         ":__support_common",
+        ":__support_macros_properties_os",
     ],
 )
 
@@ -665,6 +676,7 @@ libc_support_library(
         ":__support_ctype_utils",
         ":__support_fputil_fp_bits",
         ":__support_fputil_rounding_mode",
+        ":__support_macros_null_check",
         ":__support_str_to_integer",
         ":__support_str_to_num_result",
         ":__support_uint128",
@@ -4126,25 +4138,23 @@ libc_function(
     ],
 )
 
-#TODO: Enable once epoll_pwait2 availablilty can be checked first.
-# https://github.com/llvm/llvm-project/issues/80060
-# libc_function(
-#     name = "epoll_pwait2",
-#     srcs = ["src/sys/epoll/linux/epoll_pwait2.cpp"],
-#     hdrs = ["src/sys/epoll/epoll_pwait2.h"],
-#     target_compatible_with = select({
-#         "@platforms//os:linux": [],
-#         "//conditions:default": ["@platforms//:incompatible"],
-#     }),
-#     weak = True,
-#     deps = [
-#         ":__support_macros_sanitizer",
-#         ":__support_osutil_syscall",
-#         ":errno",
-#         ":hdr_signal_macros",
-#         ":hdr_sys_epoll_macros",
-#         ":types_sigset_t",
-#         ":types_struct_epoll_event",
-#         ":types_struct_timespec",
-#     ],
-# )
+libc_function(
+    name = "epoll_pwait2",
+    srcs = ["src/sys/epoll/linux/epoll_pwait2.cpp"],
+    hdrs = ["src/sys/epoll/epoll_pwait2.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    weak = True,
+    deps = [
+        ":__support_macros_sanitizer",
+        ":__support_osutil_syscall",
+        ":errno",
+        ":hdr_signal_macros",
+        ":hdr_sys_epoll_macros",
+        ":types_sigset_t",
+        ":types_struct_epoll_event",
+        ":types_struct_timespec",
+    ],
+)

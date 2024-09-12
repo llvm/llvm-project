@@ -610,10 +610,6 @@ module std_experimental [system] {
     header "experimental/utility"
     export *
   }
-  module __config {
-    textual header "experimental/__config"
-    export *
-  }
 }
 
 // Convenience method to get all of the above modules in a single import statement.

@@ -46,7 +46,6 @@
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <cassert>
 #include <memory>
-#include <set>
 #include <string>
 #include <system_error>
 #include <tuple>

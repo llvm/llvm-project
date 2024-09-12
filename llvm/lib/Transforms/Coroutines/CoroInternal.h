@@ -281,8 +281,10 @@ struct LLVM_LIBRARY_VISIBILITY Shape {
 };
 
 bool defaultMaterializable(Instruction &V);
+void normalizeCoroutine(Function &F, coro::Shape &Shape,
+                        TargetTransformInfo &TTI);
 void buildCoroutineFrame(
-    Function &F, Shape &Shape, TargetTransformInfo &TTI,
+    Function &F, Shape &Shape,
     const std::function<bool(Instruction &)> &MaterializableCallback);
 CallInst *createMustTailCall(DebugLoc Loc, Function *MustTailCallFn,
                              TargetTransformInfo &TTI,

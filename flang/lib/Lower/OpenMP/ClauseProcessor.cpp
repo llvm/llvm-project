@@ -181,7 +181,7 @@ static void addUseDeviceClause(
 
 static void convertLoopBounds(lower::AbstractConverter &converter,
                               mlir::Location loc,
-                              mlir::omp::LoopRelatedOps &result,
+                              mlir::omp::LoopRelatedClauseOps &result,
                               std::size_t loopVarTypeSize) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   // The types of lower bound, upper bound, and step are converted into the
@@ -203,7 +203,7 @@ static void convertLoopBounds(lower::AbstractConverter &converter,
 
 bool ClauseProcessor::processCollapse(
     mlir::Location currentLocation, lower::pft::Evaluation &eval,
-    mlir::omp::LoopRelatedOps &result,
+    mlir::omp::LoopRelatedClauseOps &result,
     llvm::SmallVectorImpl<const semantics::Symbol *> &iv) const {
   bool found = false;
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
@@ -855,7 +855,7 @@ bool ClauseProcessor::processIf(
     // Assume that, at most, a single 'if' clause will be applicable to the
     // given directive.
     if (operand) {
-      result.ifVar = operand;
+      result.ifExpr = operand;
       found = true;
     }
   });

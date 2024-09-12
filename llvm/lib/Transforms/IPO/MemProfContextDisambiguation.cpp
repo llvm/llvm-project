@@ -470,8 +470,20 @@ protected:
 private:
   using EdgeIter = typename std::vector<std::shared_ptr<ContextEdge>>::iterator;
 
-  using CallContextInfo = std::tuple<CallTy, std::vector<uint64_t>,
-                                     const FuncTy *, DenseSet<uint32_t>>;
+  // Structure to keep track of information for each call as we are matching
+  // non-allocation callsites onto context nodes created from the allocation
+  // call metadata / summary contexts.
+  struct CallContextInfo {
+    // The callsite we're trying to match.
+    CallTy Call;
+    // The callsites stack ids that have a context node in the graph.
+    std::vector<uint64_t> StackIds;
+    // The function containing this callsite.
+    const FuncTy *Func;
+    // Initially empty, if needed this will be updated to contain the context
+    // ids for use in a new context node created for this callsite.
+    DenseSet<uint32_t> ContextIds;
+  };
 
   /// Assigns the given Node to calls at or inlined into the location with
   /// the Node's stack id, after post order traversing and processing its
@@ -1458,7 +1470,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::updateStackNodes() {
     auto &Calls = It.getSecond();
     // Skip single calls with a single stack id. These don't need a new node.
     if (Calls.size() == 1) {
-      auto &Ids = std::get<1>(Calls[0]);
+      auto &Ids = Calls[0].StackIds;
       if (Ids.size() == 1)
         continue;
     }
@@ -1474,18 +1486,15 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::updateStackNodes() {
     // that to sort by.
     DenseMap<const FuncTy *, unsigned> FuncToIndex;
     for (const auto &[Idx, CallCtxInfo] : enumerate(Calls))
-      FuncToIndex.insert({std::get<2>(CallCtxInfo), Idx});
+      FuncToIndex.insert({CallCtxInfo.Func, Idx});
     std::stable_sort(
         Calls.begin(), Calls.end(),
         [&FuncToIndex](const CallContextInfo &A, const CallContextInfo &B) {
-          auto &IdsA = std::get<1>(A);
-          auto &IdsB = std::get<1>(B);
-          auto *FuncA = std::get<2>(A);
-          auto *FuncB = std::get<2>(B);
-          return IdsA.size() > IdsB.size() ||
-                 (IdsA.size() == IdsB.size() &&
-                  (IdsA < IdsB ||
-                   (IdsA == IdsB && FuncToIndex[FuncA] < FuncToIndex[FuncB])));
+          return A.StackIds.size() > B.StackIds.size() ||
+                 (A.StackIds.size() == B.StackIds.size() &&
+                  (A.StackIds < B.StackIds ||
+                   (A.StackIds == B.StackIds &&
+                    FuncToIndex[A.Func] < FuncToIndex[B.Func])));
         });
 
     // Find the node for the last stack id, which should be the same
@@ -1520,7 +1529,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::updateStackNodes() {
 #ifndef NDEBUG
       // If this call has a different set of ids than the last one, clear the
       // set used to ensure they are sorted properly.
-      if (I > 0 && Ids != std::get<1>(Calls[I - 1]))
+      if (I > 0 && Ids != Calls[I - 1].StackIds)
         MatchingIdsFuncSet.clear();
       else
         // If the prior call had the same stack ids this set would not be empty.
@@ -1607,17 +1616,18 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::updateStackNodes() {
       // assigned to the same context node, and skip them.
       bool DuplicateContextIds = false;
       for (unsigned J = I + 1; J < Calls.size(); J++) {
-        auto &NextIds = std::get<1>(Calls[J]);
+        auto &CallCtxInfo = Calls[J];
+        auto &NextIds = CallCtxInfo.StackIds;
         if (NextIds != Ids)
           break;
-        auto *NextFunc = std::get<2>(Calls[J]);
+        auto *NextFunc = CallCtxInfo.Func;
         if (NextFunc != Func) {
           // We have another Call with the same ids but that cannot share this
           // node, must duplicate ids for it.
           DuplicateContextIds = true;
           break;
         }
-        auto &NextCall = std::get<0>(Calls[J]);
+        auto &NextCall = CallCtxInfo.Call;
         CallToMatchingCall[NextCall] = Call;
         // Update I so that it gets incremented correctly to skip this call.
         I = J;

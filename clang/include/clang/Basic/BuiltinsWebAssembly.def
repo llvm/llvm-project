@@ -209,8 +209,8 @@ TARGET_BUILTIN(__builtin_wasm_relaxed_dot_bf16x8_add_f32_f32x4, "V4fV8UsV8UsV4f"
 TARGET_BUILTIN(__builtin_wasm_loadf16_f32, "fh*", "nU", "fp16")
 TARGET_BUILTIN(__builtin_wasm_storef16_f32, "vfh*", "n", "fp16")
 TARGET_BUILTIN(__builtin_wasm_splat_f16x8, "V8hf", "nc", "fp16")
-TARGET_BUILTIN(__builtin_wasm_extract_lane_f16x8, "fV8hi", "nc", "fp16")
-TARGET_BUILTIN(__builtin_wasm_replace_lane_f16x8, "V8hV8hif", "nc", "fp16")
+TARGET_BUILTIN(__builtin_wasm_extract_lane_f16x8, "fV8hIi", "nc", "fp16")
+TARGET_BUILTIN(__builtin_wasm_replace_lane_f16x8, "V8hV8hIif", "nc", "fp16")
 
 // Reference Types builtins
 // Some builtins are custom type-checked - see 't' as part of the third argument,
