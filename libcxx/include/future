@@ -329,7 +329,7 @@ public:
     template <class F>
         explicit packaged_task(F&& f);
     template <class F, class Allocator>
-        packaged_task(allocator_arg_t, const Allocator& a, F&& f);
+        packaged_task(allocator_arg_t, const Allocator& a, F&& f);              // removed in C++17
     ~packaged_task();
 
     // no copy
@@ -356,7 +356,7 @@ public:
 template <class R>
   void swap(packaged_task<R(ArgTypes...)&, packaged_task<R(ArgTypes...)>&) noexcept;
 
-template <class R, class Alloc> struct uses_allocator<packaged_task<R>, Alloc>;
+template <class R, class Alloc> struct uses_allocator<packaged_task<R>, Alloc>; // removed in C++17
 
 }  // std
 
@@ -1606,9 +1606,11 @@ public:
   template <class _Fp, __enable_if_t<!is_same<__remove_cvref_t<_Fp>, packaged_task>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI explicit packaged_task(_Fp&& __f) : __f_(std::forward<_Fp>(__f)) {}
 
+#  if _LIBCPP_STD_VER <= 14
   template <class _Fp, class _Allocator, __enable_if_t<!is_same<__remove_cvref_t<_Fp>, packaged_task>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI packaged_task(allocator_arg_t, const _Allocator& __a, _Fp&& __f)
       : __f_(allocator_arg_t(), __a, std::forward<_Fp>(__f)), __p_(allocator_arg_t(), __a) {}
+#  endif
   // ~packaged_task() = default;
 
   // no copy
@@ -1696,9 +1698,11 @@ public:
   _LIBCPP_HIDE_FROM_ABI packaged_task() _NOEXCEPT : __p_(nullptr) {}
   template <class _Fp, __enable_if_t<!is_same<__remove_cvref_t<_Fp>, packaged_task>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI explicit packaged_task(_Fp&& __f) : __f_(std::forward<_Fp>(__f)) {}
+#  if _LIBCPP_STD_VER <= 14
   template <class _Fp, class _Allocator, __enable_if_t<!is_same<__remove_cvref_t<_Fp>, packaged_task>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI packaged_task(allocator_arg_t, const _Allocator& __a, _Fp&& __f)
       : __f_(allocator_arg_t(), __a, std::forward<_Fp>(__f)), __p_(allocator_arg_t(), __a) {}
+#  endif
   // ~packaged_task() = default;
 
   // no copy
@@ -1790,8 +1794,10 @@ swap(packaged_task<_Rp(_ArgTypes...)>& __x, packaged_task<_Rp(_ArgTypes...)>& __
   __x.swap(__y);
 }
 
+#  if _LIBCPP_STD_VER <= 14
 template <class _Callable, class _Alloc>
 struct _LIBCPP_TEMPLATE_VIS uses_allocator<packaged_task<_Callable>, _Alloc> : public true_type {};
+#  endif
 
 template <class _Rp, class _Fp>
 _LIBCPP_HIDE_FROM_ABI future<_Rp> __make_deferred_assoc_state(_Fp&& __f) {
