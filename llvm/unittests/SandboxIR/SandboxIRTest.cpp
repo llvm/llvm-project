@@ -777,6 +777,30 @@ bb2:
   EXPECT_EQ(LookupBB2Addr, nullptr);
 }
 
+TEST_F(SandboxIRTest, ConstantTokenNone) {
+  parseIR(C, R"IR(
+define void @foo(ptr %ptr) {
+ bb0:
+   %cs = catchswitch within none [label %handler] unwind to caller
+ handler:
+   ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+
+  [[maybe_unused]] auto &F = *Ctx.createFunction(&LLVMF);
+  auto *BB0 = cast<sandboxir::BasicBlock>(
+      Ctx.getValue(getBasicBlockByName(LLVMF, "bb0")));
+  auto *CS = cast<sandboxir::CatchSwitchInst>(&*BB0->begin());
+
+  // Check classof(), creation, getFunction(), getBasicBlock().
+  auto *CTN = cast<sandboxir::ConstantTokenNone>(CS->getParentPad());
+  // Check get().
+  auto *NewCTN = sandboxir::ConstantTokenNone::get(Ctx);
+  EXPECT_EQ(NewCTN, CTN);
+}
+
 TEST_F(SandboxIRTest, Use) {
   parseIR(C, R"IR(
 define i32 @foo(i32 %v0, i32 %v1) {

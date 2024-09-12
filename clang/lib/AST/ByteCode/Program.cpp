@@ -144,22 +144,33 @@ std::optional<unsigned> Program::getOrCreateGlobal(const ValueDecl *VD,
   return std::nullopt;
 }
 
-std::optional<unsigned> Program::getOrCreateDummy(const ValueDecl *VD) {
+std::optional<unsigned> Program::getOrCreateDummy(const DeclTy &D) {
+  assert(D);
   // Dedup blocks since they are immutable and pointers cannot be compared.
-  if (auto It = DummyVariables.find(VD); It != DummyVariables.end())
+  if (auto It = DummyVariables.find(D.getOpaqueValue());
+      It != DummyVariables.end())
     return It->second;
 
-  QualType QT = VD->getType();
-  if (const auto *RT = QT->getAs<ReferenceType>())
-    QT = RT->getPointeeType();
+  QualType QT;
+  if (const auto *E = D.dyn_cast<const Expr *>()) {
+    QT = E->getType();
+  } else {
+    const ValueDecl *VD = cast<ValueDecl>(D.get<const Decl *>());
+    QT = VD->getType();
+    if (const auto *RT = QT->getAs<ReferenceType>())
+      QT = RT->getPointeeType();
+  }
+  assert(!QT.isNull());
 
   Descriptor *Desc;
   if (std::optional<PrimType> T = Ctx.classify(QT))
-    Desc = createDescriptor(VD, *T, std::nullopt, true, false);
+    Desc = createDescriptor(D, *T, std::nullopt, /*IsTemporary=*/true,
+                            /*IsMutable=*/false);
   else
-    Desc = createDescriptor(VD, QT.getTypePtr(), std::nullopt, true, false);
+    Desc = createDescriptor(D, QT.getTypePtr(), std::nullopt,
+                            /*IsTemporary=*/true, /*IsMutable=*/false);
   if (!Desc)
-    Desc = allocateDescriptor(VD);
+    Desc = allocateDescriptor(D);
 
   assert(Desc);
   Desc->makeDummy();
@@ -175,7 +186,7 @@ std::optional<unsigned> Program::getOrCreateDummy(const ValueDecl *VD) {
   G->block()->invokeCtor();
 
   Globals.push_back(G);
-  DummyVariables[VD] = I;
+  DummyVariables[D.getOpaqueValue()] = I;
   return I;
 }
 

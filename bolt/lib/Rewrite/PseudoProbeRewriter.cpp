@@ -50,7 +50,7 @@ static cl::opt<PrintPseudoProbesOptions> PrintPseudoProbes(
                clEnumValN(PPP_All, "all", "enable all debugging printout")),
     cl::Hidden, cl::cat(BoltCategory));
 
-extern cl::opt<bool> ProfileUsePseudoProbes;
+extern cl::opt<bool> ProfileWritePseudoProbes;
 } // namespace opts
 
 namespace {
@@ -72,7 +72,8 @@ class PseudoProbeRewriter final : public MetadataRewriter {
 
   /// Parse .pseudo_probe_desc section and .pseudo_probe section
   /// Setup Pseudo probe decoder
-  void parsePseudoProbe();
+  /// If \p ProfiledOnly is set, only parse records for functions with profile.
+  void parsePseudoProbe(bool ProfiledOnly = false);
 
   /// PseudoProbe decoder
   std::shared_ptr<MCPseudoProbeDecoder> ProbeDecoderPtr;
@@ -91,21 +92,21 @@ public:
 };
 
 Error PseudoProbeRewriter::preCFGInitializer() {
-  if (opts::ProfileUsePseudoProbes)
-    parsePseudoProbe();
+  if (opts::ProfileWritePseudoProbes)
+    parsePseudoProbe(true);
 
   return Error::success();
 }
 
 Error PseudoProbeRewriter::postEmitFinalizer() {
-  if (!opts::ProfileUsePseudoProbes)
+  if (!opts::ProfileWritePseudoProbes)
     parsePseudoProbe();
   updatePseudoProbes();
 
   return Error::success();
 }
 
-void PseudoProbeRewriter::parsePseudoProbe() {
+void PseudoProbeRewriter::parsePseudoProbe(bool ProfiledOnly) {
   MCPseudoProbeDecoder &ProbeDecoder(*ProbeDecoderPtr);
   PseudoProbeDescSection = BC.getUniqueSectionByName(".pseudo_probe_desc");
   PseudoProbeSection = BC.getUniqueSectionByName(".pseudo_probe");
@@ -137,6 +138,7 @@ void PseudoProbeRewriter::parsePseudoProbe() {
   SmallVector<StringRef, 0> Suffixes(
       {".destroy", ".resume", ".llvm.", ".cold", ".warm"});
   for (const BinaryFunction *F : BC.getAllBinaryFunctions()) {
+    bool HasProfile = F->hasProfileAvailable();
     for (const MCSymbol *Sym : F->getSymbols()) {
       StringRef SymName = Sym->getName();
       for (auto Name : {std::optional(NameResolver::restore(SymName)),
@@ -146,6 +148,8 @@ void PseudoProbeRewriter::parsePseudoProbe() {
         SymName = *Name;
         uint64_t GUID = Function::getGUID(SymName);
         FuncStartAddrs[GUID] = F->getAddress();
+        if (ProfiledOnly && HasProfile)
+          GuidFilter.insert(GUID);
       }
     }
   }
