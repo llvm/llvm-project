@@ -38,7 +38,7 @@ DelegatingWithZeroing::DelegatingWithZeroing(int) : DelegatingWithZeroing() {}
 // CHECK-NEXT:    %2 = cir.load %0 : !cir.ptr<!cir.ptr<!ty_DelegatingWithZeroing>>, !cir.ptr<!ty_DelegatingWithZeroing>
 // CHECK-NEXT:    %3 = cir.const #cir.zero : !ty_DelegatingWithZeroing
 // CHECK-NEXT:    cir.store %3, %2 : !ty_DelegatingWithZeroing, !cir.ptr<!ty_DelegatingWithZeroing>
-// CHECK-NEXT:    cir.call @_ZN21DelegatingWithZeroingC2Ev(%2) : (!cir.ptr<!ty_DelegatingWithZeroing>) -> () extra(#fn_attr1)
+// CHECK-NEXT:    cir.call @_ZN21DelegatingWithZeroingC2Ev(%2) : (!cir.ptr<!ty_DelegatingWithZeroing>) -> () extra(#fn_attr{{[0-9]*}})
 // CHECK-NEXT:    cir.return
 // CHECK-NEXT:  }
 
