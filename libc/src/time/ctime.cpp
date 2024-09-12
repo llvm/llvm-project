@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ctime.h"
+#include "src/__support/CPP/limits.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 #include "time_utils.h"

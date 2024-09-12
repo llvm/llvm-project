@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC_TIME_CTIME_H
 #define LLVM_LIBC_SRC_TIME_CTIME_H
 
+#include "hdr/types/time_t.h"
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
