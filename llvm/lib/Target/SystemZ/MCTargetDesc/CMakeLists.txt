@@ -1,6 +1,7 @@
 add_llvm_component_library(LLVMSystemZDesc
   SystemZELFObjectWriter.cpp
   SystemZGOFFObjectWriter.cpp
+  SystemZHLASMAsmStreamer.cpp
   SystemZInstPrinter.cpp
   SystemZMCAsmBackend.cpp
   SystemZMCAsmInfo.cpp
