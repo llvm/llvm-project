@@ -12,7 +12,6 @@
 #include <__config>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_arithmetic.h>
-#include <__type_traits/is_floating_point.h>
 #include <__type_traits/is_integral.h>
 #include <__type_traits/is_signed.h>
 #include <__type_traits/promote.h>
