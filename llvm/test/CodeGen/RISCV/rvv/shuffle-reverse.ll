@@ -234,10 +234,10 @@ define <32 x i16> @v16i16_2(<16 x i16> %a, <16 x i16> %b) {
 ; CHECK-NEXT:    lui a1, %hi(.LCPI15_0)
 ; CHECK-NEXT:    addi a1, a1, %lo(.LCPI15_0)
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
-; CHECK-NEXT:    vle16.v v16, (a1)
-; CHECK-NEXT:    vmv2r.v v20, v10
+; CHECK-NEXT:    vle16.v v20, (a1)
+; CHECK-NEXT:    vmv2r.v v16, v10
 ; CHECK-NEXT:    vmv2r.v v12, v8
-; CHECK-NEXT:    vrgather.vv v8, v12, v16
+; CHECK-NEXT:    vrgather.vv v8, v12, v20
 ; CHECK-NEXT:    vid.v v12
 ; CHECK-NEXT:    vrsub.vi v12, v12, 15
 ; CHECK-NEXT:    lui a0, 16
@@ -245,7 +245,7 @@ define <32 x i16> @v16i16_2(<16 x i16> %a, <16 x i16> %b) {
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m4, ta, mu
-; CHECK-NEXT:    vrgather.vv v8, v20, v12, v0.t
+; CHECK-NEXT:    vrgather.vv v8, v16, v12, v0.t
 ; CHECK-NEXT:    ret
   %v32i16 = shufflevector <16 x i16> %a, <16 x i16> %b,  <32 x i32> <i32 31, i32 30, i32 29, i32 28, i32 27, i32 26, i32 25, i32 24, i32 23, i32 22, i32 21, i32 20, i32 19, i32 18, i32 17, i32 16, i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
   ret <32 x i16> %v32i16
@@ -296,12 +296,12 @@ define <8 x i32> @v4i32_2(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmv1r.v v12, v9
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; CHECK-NEXT:    vid.v v9
-; CHECK-NEXT:    vrsub.vi v13, v9, 7
+; CHECK-NEXT:    vid.v v13
+; CHECK-NEXT:    vrsub.vi v14, v13, 7
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vrgatherei16.vv v10, v8, v13
+; CHECK-NEXT:    vrgatherei16.vv v10, v8, v14
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
-; CHECK-NEXT:    vrsub.vi v8, v9, 3
+; CHECK-NEXT:    vrsub.vi v8, v13, 3
 ; CHECK-NEXT:    vmv.v.i v0, 15
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, mu
 ; CHECK-NEXT:    vrgatherei16.vv v10, v12, v8, v0.t
@@ -330,12 +330,12 @@ define <16 x i32> @v8i32_2(<8 x i32> %a, <8 x i32> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmv2r.v v16, v10
 ; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
-; CHECK-NEXT:    vid.v v10
-; CHECK-NEXT:    vrsub.vi v18, v10, 15
+; CHECK-NEXT:    vid.v v18
+; CHECK-NEXT:    vrsub.vi v20, v18, 15
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; CHECK-NEXT:    vrgatherei16.vv v12, v8, v18
+; CHECK-NEXT:    vrgatherei16.vv v12, v8, v20
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; CHECK-NEXT:    vrsub.vi v8, v10, 7
+; CHECK-NEXT:    vrsub.vi v8, v18, 7
 ; CHECK-NEXT:    li a0, 255
 ; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, mu
@@ -367,10 +367,10 @@ define <32 x i32> @v16i32_2(<16 x i32> %a, <16 x i32> %b) {
 ; CHECK-NEXT:    lui a1, %hi(.LCPI23_0)
 ; CHECK-NEXT:    addi a1, a1, %lo(.LCPI23_0)
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
-; CHECK-NEXT:    vle16.v v20, (a1)
+; CHECK-NEXT:    vle16.v v28, (a1)
 ; CHECK-NEXT:    vmv4r.v v24, v12
 ; CHECK-NEXT:    vmv4r.v v16, v8
-; CHECK-NEXT:    vrgatherei16.vv v8, v16, v20
+; CHECK-NEXT:    vrgatherei16.vv v8, v16, v28
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
 ; CHECK-NEXT:    vid.v v16
 ; CHECK-NEXT:    vrsub.vi v16, v16, 15
@@ -430,12 +430,12 @@ define <8 x i64> @v4i64_2(<4 x i64> %a, <4 x i64> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmv2r.v v16, v10
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; CHECK-NEXT:    vid.v v10
-; CHECK-NEXT:    vrsub.vi v11, v10, 7
+; CHECK-NEXT:    vid.v v18
+; CHECK-NEXT:    vrsub.vi v19, v18, 7
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
-; CHECK-NEXT:    vrgatherei16.vv v12, v8, v11
+; CHECK-NEXT:    vrgatherei16.vv v12, v8, v19
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
-; CHECK-NEXT:    vrsub.vi v8, v10, 3
+; CHECK-NEXT:    vrsub.vi v8, v18, 3
 ; CHECK-NEXT:    vmv.v.i v0, 15
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m4, ta, mu
 ; CHECK-NEXT:    vrgatherei16.vv v12, v16, v8, v0.t
@@ -605,12 +605,12 @@ define <8 x float> @v4f32_2(<4 x float> %a, <4 x float> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmv1r.v v12, v9
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; CHECK-NEXT:    vid.v v9
-; CHECK-NEXT:    vrsub.vi v13, v9, 7
+; CHECK-NEXT:    vid.v v13
+; CHECK-NEXT:    vrsub.vi v14, v13, 7
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vrgatherei16.vv v10, v8, v13
+; CHECK-NEXT:    vrgatherei16.vv v10, v8, v14
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
-; CHECK-NEXT:    vrsub.vi v8, v9, 3
+; CHECK-NEXT:    vrsub.vi v8, v13, 3
 ; CHECK-NEXT:    vmv.v.i v0, 15
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, mu
 ; CHECK-NEXT:    vrgatherei16.vv v10, v12, v8, v0.t
@@ -639,12 +639,12 @@ define <16 x float> @v8f32_2(<8 x float> %a, <8 x float> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmv2r.v v16, v10
 ; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
-; CHECK-NEXT:    vid.v v10
-; CHECK-NEXT:    vrsub.vi v18, v10, 15
+; CHECK-NEXT:    vid.v v18
+; CHECK-NEXT:    vrsub.vi v20, v18, 15
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; CHECK-NEXT:    vrgatherei16.vv v12, v8, v18
+; CHECK-NEXT:    vrgatherei16.vv v12, v8, v20
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; CHECK-NEXT:    vrsub.vi v8, v10, 7
+; CHECK-NEXT:    vrsub.vi v8, v18, 7
 ; CHECK-NEXT:    li a0, 255
 ; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, mu
@@ -701,12 +701,12 @@ define <8 x double> @v4f64_2(<4 x double> %a, <4 x double> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmv2r.v v16, v10
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; CHECK-NEXT:    vid.v v10
-; CHECK-NEXT:    vrsub.vi v11, v10, 7
+; CHECK-NEXT:    vid.v v18
+; CHECK-NEXT:    vrsub.vi v19, v18, 7
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
-; CHECK-NEXT:    vrgatherei16.vv v12, v8, v11
+; CHECK-NEXT:    vrgatherei16.vv v12, v8, v19
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
-; CHECK-NEXT:    vrsub.vi v8, v10, 3
+; CHECK-NEXT:    vrsub.vi v8, v18, 3
 ; CHECK-NEXT:    vmv.v.i v0, 15
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m4, ta, mu
 ; CHECK-NEXT:    vrgatherei16.vv v12, v16, v8, v0.t
