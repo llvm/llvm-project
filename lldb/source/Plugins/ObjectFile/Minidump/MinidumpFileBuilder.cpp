@@ -75,8 +75,7 @@ Status MinidumpFileBuilder::AddHeaderAndCalculateDirectories() {
     StopInfoSP stop_info_sp = thread_sp->GetStopInfo();
     if (stop_info_sp) {
       const StopReason &stop_reason = stop_info_sp->GetStopReason();
-      if (stop_reason == StopReason::eStopReasonException ||
-          stop_reason == StopReason::eStopReasonSignal)
+      if (m_thread_stop_reasons.count(stop_reason) > 0)
         m_expected_directories++;
     }
   }
@@ -686,16 +685,10 @@ Status MinidumpFileBuilder::AddExceptions() {
   for (const ThreadSP &thread_sp : thread_list) {
     StopInfoSP stop_info_sp = thread_sp->GetStopInfo();
     bool add_exception = false;
-    if (stop_info_sp) {
-      switch (stop_info_sp->GetStopReason()) {
-      case eStopReasonSignal:
-      case eStopReasonException:
+    if (stop_info_sp && m_thread_stop_reasons.count(stop_info_sp->GetStopReason()) > 0) {
         add_exception = true;
-        break;
-      default:
-        break;
-      }
     }
+
     if (add_exception) {
       constexpr size_t minidump_exception_size =
           sizeof(llvm::minidump::ExceptionStream);

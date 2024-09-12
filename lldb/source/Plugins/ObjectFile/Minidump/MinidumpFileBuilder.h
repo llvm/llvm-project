@@ -173,7 +173,9 @@ private:
   std::unordered_map<lldb::tid_t, llvm::minidump::LocationDescriptor>
       m_tid_to_reg_ctx;
   lldb::FileUP m_core_file;
-  lldb_private::SaveCoreOptions m_save_core_options;
+  lldb_private::SaveCoreOptions m_save_core_options; 
+  const std::unordered_set<lldb::StopReason> m_thread_stop_reasons = {lldb::StopReason::eStopReasonException, lldb::StopReason::eStopReasonSignal,
+  lldb::StopReason::eStopReasonBreakpoint };
 };
 
 #endif // LLDB_SOURCE_PLUGINS_OBJECTFILE_MINIDUMP_MINIDUMPFILEBUILDER_H
