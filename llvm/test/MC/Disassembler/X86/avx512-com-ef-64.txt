@@ -1,9 +1,14 @@
+# REQUIRES: intel_feature_isa_avx512_com_ef
 # RUN: llvm-mc --disassemble %s -triple=x86_64 | FileCheck %s --check-prefixes=ATT
-# RUN: llvm-mc --disassemble %s -triple=x86_64 -x86-asm-syntax=intel --output-asm-variant=1 | FileCheck %s --check-prefixes=INTEL
+# RUN: llvm-mc --disassemble %s -triple=x86_64 --output-asm-variant=1 | FileCheck %s --check-prefixes=INTEL
 
 # ATT:   vcomxsd %xmm23, %xmm22
 # INTEL: vcomxsd xmm22, xmm23
 0x62,0xa1,0xfe,0x08,0x2f,0xf7
+
+# ATT:   vcomxsd {sae}, %xmm23, %xmm22
+# INTEL: vcomxsd xmm22, xmm23, {sae}
+0x62,0xa1,0xfe,0x18,0x2f,0xf7
 
 # ATT:   vcomxsd  268435456(%rbp,%r14,8), %xmm22
 # INTEL: vcomxsd xmm22, qword ptr [rbp + 8*r14 + 268435456]
@@ -33,6 +38,10 @@
 # INTEL: vcomxsh xmm22, xmm23
 0x62,0xa5,0x7f,0x08,0x2f,0xf7
 
+# ATT:   vcomxsh {sae}, %xmm23, %xmm22
+# INTEL: vcomxsh xmm22, xmm23, {sae}
+0x62,0xa5,0x7f,0x18,0x2f,0xf7
+
 # ATT:   vcomxsh  268435456(%rbp,%r14,8), %xmm22
 # INTEL: vcomxsh xmm22, word ptr [rbp + 8*r14 + 268435456]
 0x62,0xa5,0x7f,0x08,0x2f,0xb4,0xf5,0x00,0x00,0x00,0x10
@@ -60,6 +69,10 @@
 # ATT:   vcomxss %xmm23, %xmm22
 # INTEL: vcomxss xmm22, xmm23
 0x62,0xa1,0x7f,0x08,0x2f,0xf7
+
+# ATT:   vcomxss {sae}, %xmm23, %xmm22
+# INTEL: vcomxss xmm22, xmm23, {sae}
+0x62,0xa1,0x7f,0x18,0x2f,0xf7
 
 # ATT:   vcomxss  268435456(%rbp,%r14,8), %xmm22
 # INTEL: vcomxss xmm22, dword ptr [rbp + 8*r14 + 268435456]
@@ -89,6 +102,10 @@
 # INTEL: vucomxsd xmm22, xmm23
 0x62,0xa1,0xfe,0x08,0x2e,0xf7
 
+# ATT:   vucomxsd {sae}, %xmm23, %xmm22
+# INTEL: vucomxsd xmm22, xmm23, {sae}
+0x62,0xa1,0xfe,0x18,0x2e,0xf7
+
 # ATT:   vucomxsd  268435456(%rbp,%r14,8), %xmm22
 # INTEL: vucomxsd xmm22, qword ptr [rbp + 8*r14 + 268435456]
 0x62,0xa1,0xfe,0x08,0x2e,0xb4,0xf5,0x00,0x00,0x00,0x10
@@ -117,6 +134,10 @@
 # INTEL: vucomxsh xmm22, xmm23
 0x62,0xa5,0x7f,0x08,0x2e,0xf7
 
+# ATT:   vucomxsh {sae}, %xmm23, %xmm22
+# INTEL: vucomxsh xmm22, xmm23, {sae}
+0x62,0xa5,0x7f,0x18,0x2e,0xf7
+
 # ATT:   vucomxsh  268435456(%rbp,%r14,8), %xmm22
 # INTEL: vucomxsh xmm22, word ptr [rbp + 8*r14 + 268435456]
 0x62,0xa5,0x7f,0x08,0x2e,0xb4,0xf5,0x00,0x00,0x00,0x10
@@ -144,6 +165,10 @@
 # ATT:   vucomxss %xmm23, %xmm22
 # INTEL: vucomxss xmm22, xmm23
 0x62,0xa1,0x7f,0x08,0x2e,0xf7
+
+# ATT:   vucomxss {sae}, %xmm23, %xmm22
+# INTEL: vucomxss xmm22, xmm23, {sae}
+0x62,0xa1,0x7f,0x18,0x2e,0xf7
 
 # ATT:   vucomxss  268435456(%rbp,%r14,8), %xmm22
 # INTEL: vucomxss xmm22, dword ptr [rbp + 8*r14 + 268435456]

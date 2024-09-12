@@ -1,9 +1,14 @@
+# REQUIRES: intel_feature_isa_avx512_com_ef
 # RUN: llvm-mc --disassemble %s -triple=i386 | FileCheck %s --check-prefixes=ATT
-# RUN: llvm-mc --disassemble %s -triple=i386 -x86-asm-syntax=intel --output-asm-variant=1 | FileCheck %s --check-prefixes=INTEL
+# RUN: llvm-mc --disassemble %s -triple=i386 --output-asm-variant=1 | FileCheck %s --check-prefixes=INTEL
 
 # ATT:   vcomxsd %xmm3, %xmm2
 # INTEL: vcomxsd xmm2, xmm3
 0x62,0xf1,0xfe,0x08,0x2f,0xd3
+
+# ATT:   vcomxsd {sae}, %xmm3, %xmm2
+# INTEL: vcomxsd xmm2, xmm3, {sae}
+0x62,0xf1,0xfe,0x18,0x2f,0xd3
 
 # ATT:   vcomxsd  268435456(%esp,%esi,8), %xmm2
 # INTEL: vcomxsd xmm2, qword ptr [esp + 8*esi + 268435456]
@@ -33,6 +38,10 @@
 # INTEL: vcomxsh xmm2, xmm3
 0x62,0xf5,0x7f,0x08,0x2f,0xd3
 
+# ATT:   vcomxsh {sae}, %xmm3, %xmm2
+# INTEL: vcomxsh xmm2, xmm3, {sae}
+0x62,0xf5,0x7f,0x18,0x2f,0xd3
+
 # ATT:   vcomxsh  268435456(%esp,%esi,8), %xmm2
 # INTEL: vcomxsh xmm2, word ptr [esp + 8*esi + 268435456]
 0x62,0xf5,0x7f,0x08,0x2f,0x94,0xf4,0x00,0x00,0x00,0x10
@@ -61,6 +70,9 @@
 # INTEL: vcomxss xmm2, xmm3
 0x62,0xf1,0x7f,0x08,0x2f,0xd3
 
+# ATT:   vcomxss {sae}, %xmm3, %xmm2
+# INTEL: vcomxss xmm2, xmm3, {sae}
+0x62,0xf1,0x7f,0x18,0x2f,0xd3
 
 # ATT:   vcomxss  268435456(%esp,%esi,8), %xmm2
 # INTEL: vcomxss xmm2, dword ptr [esp + 8*esi + 268435456]
@@ -90,6 +102,9 @@
 # INTEL: vucomxsd xmm2, xmm3
 0x62,0xf1,0xfe,0x08,0x2e,0xd3
 
+# ATT:   vucomxsd {sae}, %xmm3, %xmm2
+# INTEL: vucomxsd xmm2, xmm3, {sae}
+0x62,0xf1,0xfe,0x18,0x2e,0xd3
 
 # ATT:   vucomxsd  268435456(%esp,%esi,8), %xmm2
 # INTEL: vucomxsd xmm2, qword ptr [esp + 8*esi + 268435456]
@@ -119,6 +134,10 @@
 # INTEL: vucomxsh xmm2, xmm3
 0x62,0xf5,0x7f,0x08,0x2e,0xd3
 
+# ATT:   vucomxsh {sae}, %xmm3, %xmm2
+# INTEL: vucomxsh xmm2, xmm3, {sae}
+0x62,0xf5,0x7f,0x18,0x2e,0xd3
+
 # ATT:   vucomxsh  268435456(%esp,%esi,8), %xmm2
 # INTEL: vucomxsh xmm2, word ptr [esp + 8*esi + 268435456]
 0x62,0xf5,0x7f,0x08,0x2e,0x94,0xf4,0x00,0x00,0x00,0x10
@@ -147,6 +166,9 @@
 # INTEL: vucomxss xmm2, xmm3
 0x62,0xf1,0x7f,0x08,0x2e,0xd3
 
+# ATT:   vucomxss {sae}, %xmm3, %xmm2
+# INTEL: vucomxss xmm2, xmm3, {sae}
+0x62,0xf1,0x7f,0x18,0x2e,0xd3
 
 # ATT:   vucomxss  268435456(%esp,%esi,8), %xmm2
 # INTEL: vucomxss xmm2, dword ptr [esp + 8*esi + 268435456]
