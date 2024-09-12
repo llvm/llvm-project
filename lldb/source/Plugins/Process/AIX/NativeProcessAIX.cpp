@@ -862,7 +862,7 @@ Status NativeProcessAIX::Detach() {
     Status e = Detach(thread->GetID());
     if (e.Fail())
       error =
-          e; // Save the error, but still attempt to detach from other threads.
+          e.Clone(); // Save the error, but still attempt to detach from other threads.
   }
 
   return error;
@@ -1240,7 +1240,7 @@ Status NativeProcessAIX::ReadMemoryTags(int32_t type, lldb::addr_t addr,
   llvm::Expected<NativeRegisterContextAIX::MemoryTaggingDetails> details =
       GetCurrentThread()->GetRegisterContext().GetMemoryTaggingDetails(type);
   if (!details)
-    return Status(details.takeError());
+    return Status::FromError(details.takeError());
 
   // Ignore 0 length read
   if (!len)
@@ -1295,7 +1295,7 @@ Status NativeProcessAIX::WriteMemoryTags(int32_t type, lldb::addr_t addr,
   llvm::Expected<NativeRegisterContextAIX::MemoryTaggingDetails> details =
       GetCurrentThread()->GetRegisterContext().GetMemoryTaggingDetails(type);
   if (!details)
-    return Status(details.takeError());
+    return Status::FromError(details.takeError());
 
   // Ignore 0 length write
   if (!len)
@@ -1312,18 +1312,18 @@ Status NativeProcessAIX::WriteMemoryTags(int32_t type, lldb::addr_t addr,
   llvm::Expected<std::vector<lldb::addr_t>> unpacked_tags_or_err =
       details->manager->UnpackTagsData(tags);
   if (!unpacked_tags_or_err)
-    return Status(unpacked_tags_or_err.takeError());
+    return Status::FromError(unpacked_tags_or_err.takeError());
 
   llvm::Expected<std::vector<lldb::addr_t>> repeated_tags_or_err =
       details->manager->RepeatTagsForRange(*unpacked_tags_or_err, range);
   if (!repeated_tags_or_err)
-    return Status(repeated_tags_or_err.takeError());
+    return Status::FromError(repeated_tags_or_err.takeError());
 
   // Repack them for ptrace to use
   llvm::Expected<std::vector<uint8_t>> final_tag_data =
       details->manager->PackTags(*repeated_tags_or_err);
   if (!final_tag_data)
-    return Status(final_tag_data.takeError());
+    return Status::FromError(final_tag_data.takeError());
 
   struct iovec tags_vec;
   uint8_t *src = final_tag_data->data();
@@ -1609,13 +1609,13 @@ Status NativeProcessAIX::ResumeThread(NativeThreadAIX &thread,
   // reflect it is running after this completes.
   switch (state) {
   case eStateRunning: {
-    const auto resume_result = thread.Resume(signo);
+    Status resume_result = thread.Resume(signo);
     if (resume_result.Success())
       SetState(eStateRunning, true);
     return resume_result;
   }
   case eStateStepping: {
-    const auto step_result = thread.SingleStep(signo);
+    Status step_result = thread.SingleStep(signo);
     if (step_result.Success())
       SetState(eStateRunning, true);
     return step_result;
