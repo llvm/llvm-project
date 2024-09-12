@@ -56,6 +56,13 @@ Changes to the LLVM IR
 
 * Added ``usub_cond`` and ``usub_sat`` operations to ``atomicrmw``.
 
+* Remove the following intrinsics which can be replaced with a ``bitcast``:
+
+  * ``llvm.nvvm.bitcast.f2i``
+  * ``llvm.nvvm.bitcast.i2f``
+  * ``llvm.nvvm.bitcast.d2ll``
+  * ``llvm.nvvm.bitcast.ll2d``
+
 Changes to LLVM infrastructure
 ------------------------------
 
