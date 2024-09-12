@@ -334,16 +334,17 @@ static void AddAttributesFromFunctionProtoType(CIRGenBuilderTy &builder,
 ///     target-configuration logic, as well as for code defined in library
 ///     modules such as CUDA's libdevice.
 ///
-///   - ConstructAttributeList builds on top of getDefaultFunctionAttributes
+///   - constructAttributeList builds on top of getDefaultFunctionAttributes
 ///     and adds declaration-specific, convention-specific, and
 ///     frontend-specific logic.  The last is of particular importance:
 ///     attributes that restrict how the frontend generates code must be
 ///     added here rather than getDefaultFunctionAttributes.
 ///
-void CIRGenModule::ConstructAttributeList(StringRef Name,
+void CIRGenModule::constructAttributeList(StringRef Name,
                                           const CIRGenFunctionInfo &FI,
                                           CIRGenCalleeInfo CalleeInfo,
-                                          mlir::DictionaryAttr &Attrs,
+                                          mlir::NamedAttrList &funcAttrs,
+                                          mlir::cir::CallingConv &callingConv,
                                           bool AttrOnCallSite, bool IsThunk) {
   // Implementation Disclaimer
   //
@@ -355,13 +356,13 @@ void CIRGenModule::ConstructAttributeList(StringRef Name,
   // That said, for the most part, the approach here is very specific compared
   // to the rest of CIRGen and attributes and other handling should be done upon
   // demand.
-  mlir::NamedAttrList FuncAttrs;
 
   // Collect function CIR attributes from the CC lowering.
+  callingConv = FI.getEffectiveCallingConvention();
   // TODO: NoReturn, cmse_nonsecure_call
 
   // Collect function CIR attributes from the callee prototype if we have one.
-  AddAttributesFromFunctionProtoType(getBuilder(), astCtx, FuncAttrs,
+  AddAttributesFromFunctionProtoType(getBuilder(), astCtx, funcAttrs,
                                      CalleeInfo.getCalleeFunctionProtoType());
 
   const Decl *TargetDecl = CalleeInfo.getCalleeDecl().getDecl();
@@ -378,12 +379,12 @@ void CIRGenModule::ConstructAttributeList(StringRef Name,
 
     if (TargetDecl->hasAttr<NoThrowAttr>()) {
       auto nu = mlir::cir::NoThrowAttr::get(builder.getContext());
-      FuncAttrs.set(nu.getMnemonic(), nu);
+      funcAttrs.set(nu.getMnemonic(), nu);
     }
 
     if (const FunctionDecl *Fn = dyn_cast<FunctionDecl>(TargetDecl)) {
       AddAttributesFromFunctionProtoType(
-          getBuilder(), astCtx, FuncAttrs,
+          getBuilder(), astCtx, funcAttrs,
           Fn->getType()->getAs<FunctionProtoType>());
       if (AttrOnCallSite && Fn->isReplaceableGlobalAllocationFunction()) {
         // A sane operator new returns a non-aliasing pointer.
@@ -439,8 +440,6 @@ void CIRGenModule::ConstructAttributeList(StringRef Name,
     if (TargetDecl->hasAttr<ArmLocallyStreamingAttr>())
       ;
   }
-
-  Attrs = mlir::DictionaryAttr::get(builder.getContext(), FuncAttrs);
 }
 
 static mlir::cir::CIRCallOpInterface
@@ -679,11 +678,14 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
   // TODO: Update the largest vector width if any arguments have vector types.
 
   // Compute the calling convention and attributes.
-  mlir::DictionaryAttr Attrs;
+  mlir::NamedAttrList Attrs;
   StringRef FnName;
   if (auto calleeFnOp = dyn_cast<mlir::cir::FuncOp>(CalleePtr))
     FnName = calleeFnOp.getName();
-  CGM.ConstructAttributeList(FnName, CallInfo, Callee.getAbstractInfo(), Attrs,
+
+  mlir::cir::CallingConv callingConv;
+  CGM.constructAttributeList(FnName, CallInfo, Callee.getAbstractInfo(), Attrs,
+                             callingConv,
                              /*AttrOnCallSite=*/true,
                              /*IsThunk=*/false);
 
@@ -716,7 +718,7 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
   } else {
     // Otherwise, nounwind call sites will never throw.
     auto noThrowAttr = mlir::cir::NoThrowAttr::get(builder.getContext());
-    CannotThrow = Attrs.contains(noThrowAttr.getMnemonic());
+    CannotThrow = Attrs.getNamed(noThrowAttr.getMnemonic()).has_value();
 
     if (auto fptr = dyn_cast<mlir::cir::FuncOp>(CalleePtr))
       if (fptr.getExtraAttrs().getElements().contains(
@@ -760,10 +762,12 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
       indirectFuncVal = CalleePtr->getResult(0);
     }
 
-    mlir::cir::CIRCallOpInterface callLikeOp = buildCallLikeOp(
-        *this, callLoc, indirectFuncTy, indirectFuncVal, directFuncOp,
-        CIRCallArgs, InvokeDest,
-        mlir::cir::ExtraFuncAttributesAttr::get(builder.getContext(), Attrs));
+    auto extraFnAttrs = mlir::cir::ExtraFuncAttributesAttr::get(
+        builder.getContext(), Attrs.getDictionary(builder.getContext()));
+
+    mlir::cir::CIRCallOpInterface callLikeOp =
+        buildCallLikeOp(*this, callLoc, indirectFuncTy, indirectFuncVal,
+                        directFuncOp, CIRCallArgs, InvokeDest, extraFnAttrs);
 
     if (E)
       callLikeOp->setAttr(

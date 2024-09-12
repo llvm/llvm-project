@@ -2422,9 +2422,14 @@ void CIRGenModule::setCIRFunctionAttributes(GlobalDecl GD,
                                             mlir::cir::FuncOp func,
                                             bool isThunk) {
   // TODO(cir): More logic of constructAttributeList is needed.
-  // NOTE(cir): Here we only need CallConv, so a call to constructAttributeList
-  // is omitted for simplicity.
-  mlir::cir::CallingConv callingConv = info.getEffectiveCallingConvention();
+  mlir::cir::CallingConv callingConv;
+
+  // Initialize PAL with existing attributes to merge attributes.
+  mlir::NamedAttrList PAL{func.getExtraAttrs().getElements().getValue()};
+  constructAttributeList(func.getName(), info, GD, PAL, callingConv,
+                         /*AttrOnCallSite=*/false, isThunk);
+  func.setExtraAttrsAttr(mlir::cir::ExtraFuncAttributesAttr::get(
+      builder.getContext(), PAL.getDictionary(builder.getContext())));
 
   // TODO(cir): Check X86_VectorCall incompatibility with WinARM64EC
 
