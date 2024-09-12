@@ -1368,14 +1368,8 @@ void request_evaluate(const llvm::json::Object &request) {
       ((!expression.empty() &&
        g_dap.DetectExpressionContext(frame, expression) ==
        ExpressionContext::Command) ||
-       (expression.empty() &&
-        g_dap.last_expression_context == ExpressionContext::Command))) {
-    // If the current expression is empty, and the last expression context was
-    // for a command, pass the empty expression along to the
-    // CommandInterpreter, to repeat the previous command. Also set the
-    // expression context properly for the next (possibly empty) expression.
-    g_dap.last_expression_context = ExpressionContext::Command;
-    // Since the current expression context is not for a variable, clear the
+       (expression.empty() && g_dap.last_nonempty_var_expression.empty()))) {
+    // Since the current expression is not for a variable, clear the
     // last_nonempty_var_expression field.
     g_dap.last_nonempty_var_expression.clear();
     // If we're evaluating a command relative to the current frame, set the
@@ -1389,12 +1383,10 @@ void request_evaluate(const llvm::json::Object &request) {
     body.try_emplace("variablesReference", (int64_t)0);
   } else {
     if (context != "hover") {
-      // If the expression is empty and the last expression context was for a
+      // If the expression is empty and the last expression was for a
       // variable, set the expression to the previous expression (repeat the
       // evaluation); otherwise save the current non-empty expression for the
-      // next (possibly empty) variable expression. Also set the expression
-      // context for the next (possibly empty) expression.
-      g_dap.last_expression_context = ExpressionContext::Variable;
+      // next (possibly empty) variable expression.
       if (expression.empty())
         expression = g_dap.last_nonempty_var_expression;
       else

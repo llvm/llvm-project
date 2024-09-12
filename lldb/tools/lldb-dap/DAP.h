@@ -205,17 +205,11 @@ struct DAP {
   std::string command_escape_prefix = "`";
   lldb::SBFormat frame_format;
   lldb::SBFormat thread_format;
-  // The next two fields are for allowing empty expressions (user just hits
-  // 'return') to repeat the last non-empty expression. last_expression_context
-  // indicates whether the last non-empty expression was for a variable or for
-  // a command, as we treat the two cases differently: empty commands get
-  // passed to the CommandInterpreter, to handle in the usual manner; empty
-  // variable expressions are replaced by the last nonempty expression, which
-  // was a variable expression (last_expression_context says so).
-  // last_nonempty_var_expression is either empty, if the last expression was
-  // a command; or it contains the last nonempty expression, which was for a
-  // variable evaulation.
-  ExpressionContext last_expression_context;
+  // This is used to allow request_evaluate to handle empty expressions
+  // (ie the user pressed 'return' and expects the previous expression to
+  // repeat). If the previous expression was a command, this string will be
+  // empty; if the previous expression was a variable expression, this string
+  // will contain that expression.
   std::string last_nonempty_var_expression;
 
   DAP();
