@@ -378,8 +378,8 @@ Instruction *MemCpyOptPass::tryMergingIntoMemset(Instruction *StartInst,
   // after MemInsertPoint.
   MemoryUseOrDef *MemInsertPoint = nullptr;
   for (++BI; !BI->isTerminator(); ++BI) {
-    auto *CurrentAcc = cast_or_null<MemoryUseOrDef>(
-        MSSAU->getMemorySSA()->getMemoryAccess(&*BI));
+    auto *CurrentAcc =
+        cast_or_null<MemoryUseOrDef>(MSSA->getMemoryAccess(&*BI));
     if (CurrentAcc)
       MemInsertPoint = CurrentAcc;
 
@@ -605,13 +605,13 @@ bool MemCpyOptPass::moveUp(StoreInst *SI, Instruction *P, const LoadInst *LI) {
   // TODO: Simplify this once P will be determined by MSSA, in which case the
   // discrepancy can no longer occur.
   MemoryUseOrDef *MemInsertPoint = nullptr;
-  if (MemoryUseOrDef *MA = MSSAU->getMemorySSA()->getMemoryAccess(P)) {
+  if (MemoryUseOrDef *MA = MSSA->getMemoryAccess(P)) {
     MemInsertPoint = cast<MemoryUseOrDef>(--MA->getIterator());
   } else {
     const Instruction *ConstP = P;
     for (const Instruction &I : make_range(++ConstP->getReverseIterator(),
                                            ++LI->getReverseIterator())) {
-      if (MemoryUseOrDef *MA = MSSAU->getMemorySSA()->getMemoryAccess(&I)) {
+      if (MemoryUseOrDef *MA = MSSA->getMemoryAccess(&I)) {
         MemInsertPoint = MA;
         break;
       }
@@ -623,7 +623,7 @@ bool MemCpyOptPass::moveUp(StoreInst *SI, Instruction *P, const LoadInst *LI) {
     LLVM_DEBUG(dbgs() << "Lifting " << *I << " before " << *P << "\n");
     I->moveBefore(P);
     assert(MemInsertPoint && "Must have found insert point");
-    if (MemoryUseOrDef *MA = MSSAU->getMemorySSA()->getMemoryAccess(I)) {
+    if (MemoryUseOrDef *MA = MSSA->getMemoryAccess(I)) {
       MSSAU->moveAfter(MA, MemInsertPoint);
       MemInsertPoint = MA;
     }
@@ -697,8 +697,7 @@ bool MemCpyOptPass::processStoreOfLoad(StoreInst *SI, LoadInst *LI,
       LLVM_DEBUG(dbgs() << "Promoting " << *LI << " to " << *SI << " => " << *M
                         << "\n");
 
-      auto *LastDef =
-          cast<MemoryDef>(MSSAU->getMemorySSA()->getMemoryAccess(SI));
+      auto *LastDef = cast<MemoryDef>(MSSA->getMemoryAccess(SI));
       auto *NewAccess = MSSAU->createMemoryAccessAfter(M, nullptr, LastDef);
       MSSAU->insertDef(cast<MemoryDef>(NewAccess), /*RenameUses=*/true);
 
@@ -1258,8 +1257,8 @@ bool MemCpyOptPass::processMemCpyMemCpyDependence(MemCpyInst *M,
                              CopySourceAlign, M->getLength(), M->isVolatile());
   NewM->copyMetadata(*M, LLVMContext::MD_DIAssignID);
 
-  assert(isa<MemoryDef>(MSSAU->getMemorySSA()->getMemoryAccess(M)));
-  auto *LastDef = cast<MemoryDef>(MSSAU->getMemorySSA()->getMemoryAccess(M));
+  assert(isa<MemoryDef>(MSSA->getMemoryAccess(M)));
+  auto *LastDef = cast<MemoryDef>(MSSA->getMemoryAccess(M));
   auto *NewAccess = MSSAU->createMemoryAccessAfter(NewM, nullptr, LastDef);
   MSSAU->insertDef(cast<MemoryDef>(NewAccess), /*RenameUses=*/true);
 
@@ -1369,12 +1368,11 @@ bool MemCpyOptPass::processMemSetMemCpyDependence(MemCpyInst *MemCpy,
       Builder.CreateMemSet(Builder.CreatePtrAdd(Dest, SrcSize),
                            MemSet->getOperand(1), MemsetLen, Alignment);
 
-  assert(isa<MemoryDef>(MSSAU->getMemorySSA()->getMemoryAccess(MemCpy)) &&
+  assert(isa<MemoryDef>(MSSA->getMemoryAccess(MemCpy)) &&
          "MemCpy must be a MemoryDef");
   // The new memset is inserted before the memcpy, and it is known that the
   // memcpy's defining access is the memset about to be removed.
-  auto *LastDef =
-      cast<MemoryDef>(MSSAU->getMemorySSA()->getMemoryAccess(MemCpy));
+  auto *LastDef = cast<MemoryDef>(MSSA->getMemoryAccess(MemCpy));
   auto *NewAccess =
       MSSAU->createMemoryAccessBefore(NewMemSet, nullptr, LastDef);
   MSSAU->insertDef(cast<MemoryDef>(NewAccess), /*RenameUses=*/true);
@@ -1479,8 +1477,7 @@ bool MemCpyOptPass::performMemCpyToMemSetOptzn(MemCpyInst *MemCpy,
   Instruction *NewM =
       Builder.CreateMemSet(MemCpy->getRawDest(), MemSet->getOperand(1),
                            CopySize, MemCpy->getDestAlign());
-  auto *LastDef =
-      cast<MemoryDef>(MSSAU->getMemorySSA()->getMemoryAccess(MemCpy));
+  auto *LastDef = cast<MemoryDef>(MSSA->getMemoryAccess(MemCpy));
   auto *NewAccess = MSSAU->createMemoryAccessAfter(NewM, nullptr, LastDef);
   MSSAU->insertDef(cast<MemoryDef>(NewAccess), /*RenameUses=*/true);
 
