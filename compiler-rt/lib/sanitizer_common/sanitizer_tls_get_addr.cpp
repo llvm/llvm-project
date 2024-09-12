@@ -116,7 +116,7 @@ static bool GetDTLSRange(uptr &tls_beg, uptr &tls_size) {
     return false;
   tls_beg = (uptr)start;
   tls_size = __sanitizer_get_allocated_size(start);
-  VReport(2, "__tls_get_addr: glibc >=2.25 suspected; tls={%p,0x%zx}\n",
+  VReport(2, "__tls_get_addr: glibc DTLS suspected; tls={%p,0x%zx}\n",
           (void *)tls_beg, tls_size);
   return true;
 }
@@ -137,11 +137,7 @@ DTLS::DTV *DTLS_on_tls_get_addr(void *arg_void, void *res,
           (void *)arg, arg->dso_id, arg->offset, res, (void *)tls_beg,
           (void *)&tls_beg,
           atomic_load(&number_of_live_dtls, memory_order_relaxed));
-  if (dtls.last_memalign_ptr == tls_beg) {
-    tls_size = dtls.last_memalign_size;
-    VReport(2, "__tls_get_addr: glibc <=2.24 suspected; tls={%p,0x%zx}\n",
-            (void *)tls_beg, tls_size);
-  } else if (tls_beg >= static_tls_begin && tls_beg < static_tls_end) {
+  if (tls_beg >= static_tls_begin && tls_beg < static_tls_end) {
     // This is the static TLS block which was initialized / unpoisoned at thread
     // creation.
     VReport(2, "__tls_get_addr: static tls: %p\n", (void *)tls_beg);
@@ -156,13 +152,6 @@ DTLS::DTV *DTLS_on_tls_get_addr(void *arg_void, void *res,
   return dtv;
 }
 
-void DTLS_on_libc_memalign(void *ptr, uptr size) {
-  if (!common_flags()->intercept_tls_get_addr) return;
-  VReport(2, "DTLS_on_libc_memalign: %p 0x%zx\n", ptr, size);
-  dtls.last_memalign_ptr = reinterpret_cast<uptr>(ptr);
-  dtls.last_memalign_size = size;
-}
-
 DTLS *DTLS_Get() { return &dtls; }
 
 bool DTLSInDestruction(DTLS *dtls) {
@@ -171,7 +160,6 @@ bool DTLSInDestruction(DTLS *dtls) {
 }
 
 #else
-void DTLS_on_libc_memalign(void *ptr, uptr size) {}
 DTLS::DTV *DTLS_on_tls_get_addr(void *arg, void *res,
   unsigned long, unsigned long) { return 0; }
 DTLS *DTLS_Get() { return 0; }

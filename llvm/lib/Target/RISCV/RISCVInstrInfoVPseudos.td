@@ -236,7 +236,8 @@ def VLOpFrag : PatFrag<(ops), (XLenVT (VLOp (XLenVT AVL:$vl)))>;
 // This must be kept in sync with RISCV::VLMaxSentinel.
 def VLMax : OutPatFrag<(ops), (XLenVT -1)>;
 
-def SelectFPImm : ComplexPattern<fAny, 1, "selectFPImm", [], [], 1>;
+def SelectScalarFPAsInt : ComplexPattern<fAny, 1, "selectScalarFPAsInt", [], [],
+                                         1>;
 
 // List of EEW.
 defvar EEWList = [8, 16, 32, 64];

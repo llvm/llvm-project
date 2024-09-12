@@ -158,30 +158,17 @@ auto begin(C &c) -> decltype(c.begin());
 template<typename T, int N>
 T *begin(T (&array)[N]);
 
-using size_t = decltype(sizeof(0));
-
-template<typename T>
-struct initializer_list {
-  const T* ptr; size_t sz;
-};
 template <typename T>
 struct vector {
   typedef __gnu_cxx::basic_iterator<T> iterator;
   iterator begin();
   iterator end();
   const T *data() const;
-  vector();
-  vector(initializer_list<T> __l);
-  
-  template<typename InputIterator>
-	vector(InputIterator first, InputIterator __last);
-
   T &at(int n);
 };
 
 template<typename T>
 struct basic_string_view {
-  basic_string_view();
   basic_string_view(const T *);
   const T *begin() const;
 };
@@ -216,21 +203,11 @@ template<typename T>
 struct optional {
   optional();
   optional(const T&);
-
-  template<typename U = T>
-	optional(U&& t);
-
-  template<typename U>
-	optional(optional<U>&& __t);
-
   T &operator*() &;
   T &&operator*() &&;
   T &value() &;
   T &&value() &&;
 };
-template<typename T>
-optional<__decay(T)> make_optional(T&&);
-
 
 template<typename T>
 struct stack {
@@ -576,57 +553,3 @@ void test() {
   std::string_view svjkk1 = ReturnStringView(StrCat("bar", "x")); // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}}
 }
 } // namespace GH100549
-
-namespace GH100526 {
-void test() {
-  std::vector<std::string_view> v1({std::string()}); // expected-warning {{object backing the pointer will be destroyed at the end}}
-  std::vector<std::string_view> v2({
-    std::string(), // expected-warning {{object backing the pointer will be destroyed at the end}}
-    std::string_view()
-  });
-  std::vector<std::string_view> v3({
-    std::string_view(),
-    std::string()  // expected-warning {{object backing the pointer will be destroyed at the end}}
-  });
-
-  std::optional<std::string_view> o1 = std::string(); // expected-warning {{object backing the pointer}}
-
-  std::string s;
-  // This is a tricky use-after-free case, what it does:
-  //   1. make_optional creates a temporary "optional<string>"" object
-  //   2. the temporary object owns the underlying string which is copied from s.
-  //   3. the t3 object holds the view to the underlying string of the temporary object.
-  std::optional<std::string_view> o2 = std::make_optional(s); // expected-warning {{object backing the pointer}}
-  std::optional<std::string_view> o3 = std::optional<std::string>(s); // expected-warning {{object backing the pointer}}
-  std::optional<std::string_view> o4 = std::optional<std::string_view>(s); 
-
-  // FIXME: should work for assignment cases
-  v1 = {std::string()};
-  o1 = std::string();
-
-  // no warning on copying pointers.
-  std::vector<std::string_view> n1 = {std::string_view()};
-  std::optional<std::string_view> n2 = {std::string_view()};
-  std::optional<std::string_view> n3 = std::string_view();
-  std::optional<std::string_view> n4 = std::make_optional(std::string_view());
-  const char* b = "";
-  std::optional<std::string_view> n5 = std::make_optional(b);
-  std::optional<std::string_view> n6 = std::make_optional("test");
-}
-
-std::vector<std::string_view> test2(int i) {
-  std::vector<std::string_view> t;
-  if (i)
-    return t; // this is fine, no dangling
-  return std::vector<std::string_view>(t.begin(), t.end());
-}
-
-std::optional<std::string_view> test3(int i) {
-  std::string s;
-  std::string_view sv;
-  if (i)
-   return s; // expected-warning {{address of stack memory associated}}
-  return sv; // fine
-}
-
-} // namespace GH100526
