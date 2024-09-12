@@ -714,6 +714,7 @@ static RValue emitLibraryCall(CodeGenFunction &CGF, const FunctionDecl *FD,
         Context.BuiltinInfo.isConstWithoutErrnoAndExceptions(BuiltinID);
     // Restrict to target with errno, for example, MacOS doesn't set errno.
     bool CallWithPointerArgsOrPointerReturnType =
+        Call.isScalar() && Call.getScalarVal() &&
         hasPointerArgsOrPointerReturnType(Call.getScalarVal());
     if (ConstWithoutErrnoAndExceptions && CGF.CGM.getLangOpts().MathErrno &&
         !CGF.Builder.getIsFPConstrained() && Call.isScalar() &&
