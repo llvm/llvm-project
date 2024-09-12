@@ -19,21 +19,23 @@ Example:
 .. code-block:: c++
 
   struct Base {
-  virtual ~Base();
-  int i;
+    virtual ~Base();
+    int i;
   };
-
+  
   struct Derived : public Base {};
-
-  void foo() {
-  Base *b = new Derived[10];
-
-  b += 1;
-  // warning: pointer arithmetic on class that declares a virtual function can
-  // result in undefined behavior if the dynamic type differs from the
-  // pointer type
-
-  delete[] static_cast<Derived*>(b);
+  
+  // Function that takes a pointer and performs pointer arithmetic
+  void foo(Base* b) {
+    b += 1;
+    // warning: pointer arithmetic on class that declares a virtual function can
+    // result in undefined behavior if the dynamic type differs from the
+    // pointer type
+  }
+  
+  void bar() {
+    Derived d[10];  // Array of derived objects
+    foo(d);         // Passing Derived pointer to foo(), which performs arithmetic
   }
 
   // Another example showing array access with polymorphic objects.
