@@ -101,7 +101,7 @@ template <size_t Bits> struct DyadicFloat {
     return exponent + (Bits - 1);
   }
 
-  template <typename T>
+  template <typename T, bool ShouldSignalExceptions>
   LIBC_INLINE constexpr cpp::enable_if_t<
       cpp::is_floating_point_v<T> && (FPBits<T>::FRACTION_LEN < Bits), T>
   generic_as() const {
@@ -116,8 +116,10 @@ template <size_t Bits> struct DyadicFloat {
     int unbiased_exp = get_unbiased_exponent();
 
     if (unbiased_exp + FPBits::EXP_BIAS >= FPBits::MAX_BIASED_EXPONENT) {
-      set_errno_if_required(ERANGE);
-      raise_except_if_required(FE_OVERFLOW | FE_INEXACT);
+      if constexpr (ShouldSignalExceptions) {
+        set_errno_if_required(ERANGE);
+        raise_except_if_required(FE_OVERFLOW | FE_INEXACT);
+      }
 
       switch (quick_get_round()) {
       case FE_TONEAREST:
@@ -191,7 +193,7 @@ template <size_t Bits> struct DyadicFloat {
       break;
     }
 
-    if (round || sticky) {
+    if (ShouldSignalExceptions && (round || sticky)) {
       int excepts = FE_INEXACT;
       if (FPBits(result).is_inf()) {
         set_errno_if_required(ERANGE);
@@ -339,10 +341,8 @@ template <size_t Bits> struct DyadicFloat {
                                         void>>
   LIBC_INLINE constexpr T as() const {
 #if defined(LIBC_TYPES_HAS_FLOAT16) && !defined(__LIBC_USE_FLOAT16_CONVERSION)
-    if constexpr (cpp::is_same_v<T, float16>) {
-      static_assert(ShouldSignalExceptions);
-      return generic_as<T>();
-    }
+    if constexpr (cpp::is_same_v<T, float16>)
+      return generic_as<T, ShouldSignalExceptions>();
 #endif
     return fast_as<T, ShouldSignalExceptions>();
   }
