@@ -182,6 +182,19 @@ void CloneFunctionAttributesInto(Function *NewFunc, const Function *OldFunc,
                                  ValueMapTypeRemapper *TypeMapper = nullptr,
                                  ValueMaterializer *Materializer = nullptr);
 
+/// Clone OldFunc's metadata into NewFunc.
+///
+/// The caller is expected to populate \p VMap beforehand and set an appropriate
+/// \p RemapFlag. Subprograms/CUs/types that were already mapped to themselves
+/// won't be duplicated.
+///
+/// NOTE: This function doesn't clone !llvm.dbg.cu when cloning into a different
+/// module. Use CloneFunctionInto for that behavior.
+void CloneFunctionMetadataInto(Function &NewFunc, const Function &OldFunc,
+                               ValueToValueMapTy &VMap, RemapFlags RemapFlag,
+                               ValueMapTypeRemapper *TypeMapper = nullptr,
+                               ValueMaterializer *Materializer = nullptr);
+
 void CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
                                const Instruction *StartingInst,
                                ValueToValueMapTy &VMap, bool ModuleLevelChanges,
