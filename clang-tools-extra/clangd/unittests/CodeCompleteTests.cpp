@@ -1450,8 +1450,9 @@ TEST(SignatureHelpTest, ShowOperatorParensForImmediatelyInvokedLambda) {
   const auto Results = signatures(R"cpp(
     auto foo = [](int x, int y){}(^);
   )cpp");
-  EXPECT_THAT(Results.signatures,
-              UnorderedElementsAre(sig("operator()([[int x]], [[int y]]) -> void")));
+  EXPECT_THAT(
+      Results.signatures,
+      UnorderedElementsAre(sig("operator()([[int x]], [[int y]]) -> void")));
 }
 
 TEST(SignatureHelpTest, ShowOperatorParensForLambdaReturnedFromFunction) {
@@ -1461,8 +1462,9 @@ TEST(SignatureHelpTest, ShowOperatorParensForLambdaReturnedFromFunction) {
     }
     int main() { returnsLambda()(^); }
   )cpp");
-  EXPECT_THAT(Results.signatures,
-              UnorderedElementsAre(sig("operator()([[int x]], [[int y]]) -> void")));
+  EXPECT_THAT(
+      Results.signatures,
+      UnorderedElementsAre(sig("operator()([[int x]], [[int y]]) -> void")));
 }
 
 TEST(SignatureHelpTest, ShowOperatorParensForLambdaInParameterPack) {
@@ -1472,8 +1474,9 @@ TEST(SignatureHelpTest, ShowOperatorParensForLambdaInParameterPack) {
     
     foo([](int x, int y){}(^))
   )cpp");
-  EXPECT_THAT(Results.signatures,
-              UnorderedElementsAre(sig("operator()([[int x]], [[int y]]) -> void")));
+  EXPECT_THAT(
+      Results.signatures,
+      UnorderedElementsAre(sig("operator()([[int x]], [[int y]]) -> void")));
 }
 
 TEST(SignatureHelpTest, FunctionPointers) {

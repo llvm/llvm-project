@@ -6298,9 +6298,10 @@ SemaCodeCompletion::ProduceCallSignatureHelp(Expr *Fn, ArrayRef<Expr *> Args,
         SmallVector<Expr *, 12> ArgExprs(1, NakedFn);
         ArgExprs.append(ArgsWithoutDependentTypes.begin(),
                         ArgsWithoutDependentTypes.end());
-        auto *const LambdaDecl =
-            DC->isLambda() ? dyn_cast_if_present<VarDecl>(NakedFn->getReferencedDeclOfCallee())
-                           : nullptr;
+        auto *const LambdaDecl = DC->isLambda()
+                                     ? dyn_cast_if_present<VarDecl>(
+                                           NakedFn->getReferencedDeclOfCallee())
+                                     : nullptr;
         SemaRef.AddFunctionCandidates(R.asUnresolvedSet(), ArgExprs,
                                       CandidateSet,
                                       /*ExplicitArgs=*/nullptr,
