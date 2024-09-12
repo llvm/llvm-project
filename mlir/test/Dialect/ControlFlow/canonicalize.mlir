@@ -146,7 +146,7 @@ func.func @cond_br_pass_through_fail(%cond : i1) {
 // CHECK-SAME: %[[FLAG:[a-zA-Z0-9_]+]]
 // CHECK-SAME: %[[CASE_OPERAND_0:[a-zA-Z0-9_]+]]
 func.func @switch_only_default(%flag : i32, %caseOperand0 : f32) {
-  // add predecessors for all blocks to avoid other canonicalization.
+  // add predecessors for all blocks to avoid other canonicalizations.
   "foo.pred"() [^bb1, ^bb2] : () -> ()
   ^bb1:
     // CHECK-NOT: cf.switch
@@ -166,7 +166,7 @@ func.func @switch_only_default(%flag : i32, %caseOperand0 : f32) {
 // CHECK-SAME: %[[CASE_OPERAND_0:[a-zA-Z0-9_]+]]
 // CHECK-SAME: %[[CASE_OPERAND_1:[a-zA-Z0-9_]+]]
 func.func @switch_case_matching_default(%flag : i32, %caseOperand0 : f32, %caseOperand1 : f32) {
-  // add predecessors for all blocks to avoid other canonicalization.
+  // add predecessors for all blocks to avoid other canonicalizations.
   "foo.pred"() [^bb1, ^bb2, ^bb3] : () -> ()
   ^bb1:
     // CHECK: cf.switch %[[FLAG]]
@@ -191,7 +191,7 @@ func.func @switch_case_matching_default(%flag : i32, %caseOperand0 : f32, %caseO
 // CHECK-SAME: %[[CASE_OPERAND_1:[a-zA-Z0-9_]+]]
 // CHECK-SAME: %[[CASE_OPERAND_2:[a-zA-Z0-9_]+]]
 func.func @switch_on_const_no_match(%caseOperand0 : f32, %caseOperand1 : f32, %caseOperand2 : f32) {
-  // add predecessors for all blocks to avoid other canonicalization.
+  // add predecessors for all blocks to avoid other canonicalizations.
   "foo.pred"() [^bb1, ^bb2, ^bb3, ^bb4] : () -> ()
   ^bb1:
     // CHECK-NOT: cf.switch
@@ -217,7 +217,7 @@ func.func @switch_on_const_no_match(%caseOperand0 : f32, %caseOperand1 : f32, %c
 // CHECK-SAME: %[[CASE_OPERAND_1:[a-zA-Z0-9_]+]]
 // CHECK-SAME: %[[CASE_OPERAND_2:[a-zA-Z0-9_]+]]
 func.func @switch_on_const_with_match(%caseOperand0 : f32, %caseOperand1 : f32, %caseOperand2 : f32) {
-  // add predecessors for all blocks to avoid other canonicalization.
+  // add predecessors for all blocks to avoid other canonicalizations.
   "foo.pred"() [^bb1, ^bb2, ^bb3, ^bb4] : () -> ()
   ^bb1:
     // CHECK-NOT: cf.switch
@@ -249,7 +249,7 @@ func.func @switch_passthrough(%flag : i32,
                          %caseOperand1 : f32,
                          %caseOperand2 : f32,
                          %caseOperand3 : f32) {
-  // add predecessors for all blocks to avoid other canonicalization.
+  // add predecessors for all blocks to avoid other canonicalizations.
   "foo.pred"() [^bb1, ^bb2, ^bb3, ^bb4, ^bb5, ^bb6] : () -> ()
 
   ^bb1:
@@ -286,7 +286,7 @@ func.func @switch_passthrough(%flag : i32,
 // CHECK-SAME: %[[CASE_OPERAND_0:[a-zA-Z0-9_]+]]
 // CHECK-SAME: %[[CASE_OPERAND_1:[a-zA-Z0-9_]+]]
 func.func @switch_from_switch_with_same_value_with_match(%flag : i32, %caseOperand0 : f32, %caseOperand1 : f32) {
-  // add predecessors for all blocks except ^bb3 to avoid other canonicalization.
+  // add predecessors for all blocks except ^bb3 to avoid other canonicalizations.
   "foo.pred"() [^bb1, ^bb2, ^bb4, ^bb5] : () -> ()
 
   ^bb1:
@@ -323,7 +323,7 @@ func.func @switch_from_switch_with_same_value_with_match(%flag : i32, %caseOpera
 // CHECK-SAME: %[[CASE_OPERAND_1:[a-zA-Z0-9_]+]]
 // CHECK-SAME: %[[CASE_OPERAND_2:[a-zA-Z0-9_]+]]
 func.func @switch_from_switch_with_same_value_no_match(%flag : i32, %caseOperand0 : f32, %caseOperand1 : f32, %caseOperand2 : f32) {
-  // add predecessors for all blocks except ^bb3 to avoid other canonicalization.
+  // add predecessors for all blocks except ^bb3 to avoid other canonicalizations.
   "foo.pred"() [^bb1, ^bb2, ^bb4, ^bb5, ^bb6] : () -> ()
 
   ^bb1:
@@ -363,7 +363,7 @@ func.func @switch_from_switch_with_same_value_no_match(%flag : i32, %caseOperand
 // CHECK-SAME: %[[CASE_OPERAND_1:[a-zA-Z0-9_]+]]
 // CHECK-SAME: %[[CASE_OPERAND_2:[a-zA-Z0-9_]+]]
 func.func @switch_from_switch_default_with_same_value(%flag : i32, %caseOperand0 : f32, %caseOperand1 : f32, %caseOperand2 : f32) {
-  // add predecessors for all blocks except ^bb3 to avoid other canonicalization.
+  // add predecessors for all blocks except ^bb3 to avoid other canonicalizations.
   "foo.pred"() [^bb1, ^bb2, ^bb4, ^bb5, ^bb6] : () -> ()
 
   ^bb1:

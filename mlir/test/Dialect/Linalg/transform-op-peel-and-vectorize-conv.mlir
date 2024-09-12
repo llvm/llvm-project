@@ -3,7 +3,7 @@
 // Demonstrates what happens when peeling the 4th loop (that corresponds to the
 // "depth" dimension in depthwise convs) followed by vectorization in the
 // presence of _scalable_ vectors (these are introduced through scalable
-// tiling). The main goal is to verify that canonicalization fold away the
+// tiling). The main goal is to verify that canonicalizations fold away the
 // masks in the main loop.
 
 func.func @conv(%arg0: tensor<1x1080x1962x48xi32>, %arg1: tensor<1x43x48xi32>) -> tensor<1x1080x1920x48xi32> {

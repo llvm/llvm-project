@@ -998,7 +998,7 @@ func.func @test_cmpf(%arg0 : f64, %arg1 : f64) -> i1 {
 
 // CHECK-LABEL: test_cmpf_tensor
 func.func @test_cmpf_tensor(%arg0 : tensor<8x8xf64>, %arg1 : tensor<8x8xf64>) -> tensor<8x8xi1> {
-  %0 = arith.cmpf old, %arg0, %arg1 : tensor<8x8xf64>
+  %0 = arith.cmpf olt, %arg0, %arg1 : tensor<8x8xf64>
   return %0 : tensor<8x8xi1>
 }
 

@@ -240,14 +240,14 @@ spirv.func @f_ord_greater_than_vector(%arg0: vector<2xf64>, %arg1: vector<2xf64>
 
 // CHECK-LABEL: @f_ord_less_than_scalar
 spirv.func @f_ord_less_than_scalar(%arg0: f64, %arg1: f64) "None" {
-  // CHECK: llvm.fcmp "old" %{{.*}}, %{{.*}} : f64
+  // CHECK: llvm.fcmp "olt" %{{.*}}, %{{.*}} : f64
   %0 = spirv.FOrdLessThan %arg0, %arg1 : f64
   spirv.Return
 }
 
 // CHECK-LABEL: @f_ord_less_than_vector
 spirv.func @f_ord_less_than_vector(%arg0: vector<2xf64>, %arg1: vector<2xf64>) "None" {
-  // CHECK: llvm.fcmp "old" %{{.*}}, %{{.*}} : vector<2xf64>
+  // CHECK: llvm.fcmp "olt" %{{.*}}, %{{.*}} : vector<2xf64>
   %0 = spirv.FOrdLessThan %arg0, %arg1 : vector<2xf64>
   spirv.Return
 }

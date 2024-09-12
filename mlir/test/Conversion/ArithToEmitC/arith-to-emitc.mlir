@@ -318,17 +318,17 @@ func.func @arith_cmpf_oge(%arg0: f32, %arg1: f32) -> i1 {
 
 // -----
 
-func.func @arith_cmpf_old(%arg0: f32, %arg1: f32) -> i1 {
-  // CHECK-LABEL: arith_cmpf_old
+func.func @arith_cmpf_olt(%arg0: f32, %arg1: f32) -> i1 {
+  // CHECK-LABEL: arith_cmpf_olt
   // CHECK-SAME: ([[Arg0:[^ ]*]]: f32, [[Arg1:[^ ]*]]: f32)
   // CHECK-DAG: [[LT:[^ ]*]] = emitc.cmp lt, [[Arg0]], [[Arg1]] : (f32, f32) -> i1
   // CHECK-DAG: [[NotNaNArg0:[^ ]*]] = emitc.cmp eq, [[Arg0]], [[Arg0]] : (f32, f32) -> i1
   // CHECK-DAG: [[NotNaNArg1:[^ ]*]] = emitc.cmp eq, [[Arg1]], [[Arg1]] : (f32, f32) -> i1
   // CHECK-DAG: [[Ordered:[^ ]*]] = emitc.logical_and [[NotNaNArg0]], [[NotNaNArg1]] : i1, i1
   // CHECK-DAG: [[OLT:[^ ]*]] = emitc.logical_and [[Ordered]], [[LT]] : i1, i1
-  %old = arith.cmpf old, %arg0, %arg1 : f32
+  %olt = arith.cmpf olt, %arg0, %arg1 : f32
   // CHECK: return [[OLT]]
-  return %old: i1
+  return %olt: i1
 }
 
 // -----
