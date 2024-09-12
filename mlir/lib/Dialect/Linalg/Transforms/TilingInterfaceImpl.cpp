@@ -120,8 +120,16 @@ struct LinalgOpTilingInterface
     Location loc = op->getLoc();
     LinalgOp linalgOp = cast<LinalgOp>(op);
     SmallVector<Value> valuesToTile = linalgOp->getOperands();
-    SmallVector<Value, 4> tiledOperands = makeTiledShapes(
+    SmallVector<Value> tiledOperands = makeTiledShapes(
         b, loc, linalgOp, valuesToTile, offsets, sizes, {}, true);
+    SmallVector<Operation *> generatedSlices = llvm::map_to_vector(
+        llvm::make_filter_range(
+            tiledOperands,
+            [](Value v) -> bool {
+              return isa_and_nonnull<tensor::ExtractSliceOp, memref::SubViewOp>(
+                  v.getDefiningOp());
+            }),
+        [](Value v) -> Operation * { return v.getDefiningOp(); });
 
     SmallVector<Type> resultTensorTypes =
         getTensorOutputTypes(linalgOp, tiledOperands);
@@ -129,7 +137,8 @@ struct LinalgOpTilingInterface
     Operation *tiledOp = clone(b, linalgOp, resultTensorTypes, tiledOperands);
     offsetIndices(b, cast<LinalgOp>(tiledOp), offsets);
 
-    return TilingResult{{tiledOp}, SmallVector<Value>(tiledOp->getResults())};
+    return TilingResult{
+        {tiledOp}, SmallVector<Value>(tiledOp->getResults()), generatedSlices};
   }
 
   /// Utility to fetch the offsets and sizes when applied as per the indexing
@@ -260,7 +269,8 @@ struct LinalgOpTilingInterface
 
     return TilingResult{
         tilingResult->tiledOps,
-        SmallVector<Value>{tilingResult->tiledValues[resultNumber]}};
+        SmallVector<Value>{tilingResult->tiledValues[resultNumber]},
+        tilingResult->generatedSlices};
   }
 
   /// Method to generate the tiled implementation of an operation from the tile
@@ -406,8 +416,12 @@ struct LinalgOpPartialReductionInterface
     }
 
     // Step 2a: Extract a slice of the input operands.
-    SmallVector<Value, 4> tiledInputs = makeTiledShapes(
+    SmallVector<Value> tiledInputs = makeTiledShapes(
         b, loc, linalgOp, linalgOp.getDpsInputs(), offsets, sizes, {}, true);
+    SmallVector<Operation *> generatedSlices = llvm::map_to_vector(
+        llvm::make_filter_range(
+            tiledInputs, [](Value v) -> bool { return v.getDefiningOp(); }),
+        [](Value v) -> Operation * { return v.getDefiningOp(); });
 
     // Step 2b: Extract a slice of the init operands.
     SmallVector<Value, 1> tiledInits;
@@ -424,6 +438,7 @@ struct LinalgOpPartialReductionInterface
       auto extractSlice = b.create<tensor::ExtractSliceOp>(
           loc, valueToTile, initOffset, initSizes, initStride);
       tiledInits.push_back(extractSlice);
+      generatedSlices.push_back(extractSlice);
     }
 
     // Update the indexing maps.
@@ -453,7 +468,8 @@ struct LinalgOpPartialReductionInterface
     return TilingResult{
         {genericOp.getOperation()},
         llvm::map_to_vector(genericOp->getResults(),
-                            [](OpResult r) -> Value { return r; })};
+                            [](OpResult r) -> Value { return r; }),
+        generatedSlices};
   }
 
   FailureOr<MergeResult> mergeReductions(Operation *op, OpBuilder &b,
