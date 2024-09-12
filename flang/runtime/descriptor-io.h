@@ -255,7 +255,7 @@ static RT_API_ATTRS bool DefaultComponentIO(IoStatementState &io,
     // Create a descriptor for the component
     StaticDescriptor<maxRank, true, 16 /*?*/> statDesc;
     Descriptor &desc{statDesc.descriptor()};
-    component.CreateTargetDescriptor(
+    component.CreatePointerDescriptor(
         desc, origDescriptor, terminator, origSubscripts);
     return DescriptorIO<DIR>(io, desc, table);
   } else {

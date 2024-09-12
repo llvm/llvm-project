@@ -84,7 +84,7 @@ public:
 
 private:
   bool processBasicBlock(MachineFunction &MF, MachineBasicBlock &MBB,
-                         const DeadLaneDetector &DLD);
+                         const DeadLaneDetector *DLD);
   bool handleSubReg(MachineFunction &MF, MachineInstr &MI,
                     const DeadLaneDetector &DLD);
   bool fixupIllOperand(MachineInstr *MI, MachineOperand &MO);
@@ -210,7 +210,7 @@ bool InitUndef::fixupIllOperand(MachineInstr *MI, MachineOperand &MO) {
 }
 
 bool InitUndef::processBasicBlock(MachineFunction &MF, MachineBasicBlock &MBB,
-                                  const DeadLaneDetector &DLD) {
+                                  const DeadLaneDetector *DLD) {
   bool Changed = false;
   for (MachineBasicBlock::iterator I = MBB.begin(); I != MBB.end(); ++I) {
     MachineInstr &MI = *I;
@@ -236,7 +236,7 @@ bool InitUndef::processBasicBlock(MachineFunction &MF, MachineBasicBlock &MBB,
 
     if (isEarlyClobberMI(MI)) {
       if (MRI->subRegLivenessEnabled())
-        Changed |= handleSubReg(MF, MI, DLD);
+        Changed |= handleSubReg(MF, MI, *DLD);
       Changed |= handleReg(&MI);
     }
   }
@@ -260,11 +260,14 @@ bool InitUndef::runOnMachineFunction(MachineFunction &MF) {
   TRI = MRI->getTargetRegisterInfo();
 
   bool Changed = false;
-  DeadLaneDetector DLD(MRI, TRI);
-  DLD.computeSubRegisterLaneBitInfo();
+  std::unique_ptr<DeadLaneDetector> DLD;
+  if (MRI->subRegLivenessEnabled()) {
+    DLD = std::make_unique<DeadLaneDetector>(MRI, TRI);
+    DLD->computeSubRegisterLaneBitInfo();
+  }
 
   for (MachineBasicBlock &BB : MF)
-    Changed |= processBasicBlock(MF, BB, DLD);
+    Changed |= processBasicBlock(MF, BB, DLD.get());
 
   for (auto *DeadMI : DeadInsts)
     DeadMI->eraseFromParent();

@@ -47,7 +47,7 @@ static unsigned getResultPatternCost(TreePatternNode &P,
     return 0;
 
   unsigned Cost = 0;
-  Record *Op = P.getOperator();
+  const Record *Op = P.getOperator();
   if (Op->isSubClassOf("Instruction")) {
     Cost++;
     CodeGenInstruction &II = CGP.getTargetInfo().getInstruction(Op);
@@ -67,7 +67,7 @@ static unsigned getResultPatternSize(TreePatternNode &P,
     return 0;
 
   unsigned Cost = 0;
-  Record *Op = P.getOperator();
+  const Record *Op = P.getOperator();
   if (Op->isSubClassOf("Instruction")) {
     Cost += Op->getValueAsInt("CodeSize");
   }

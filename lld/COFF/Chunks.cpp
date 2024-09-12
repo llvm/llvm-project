@@ -1093,4 +1093,26 @@ void CHPERedirectionChunk::writeTo(uint8_t *buf) const {
   }
 }
 
+ImportThunkChunkARM64EC::ImportThunkChunkARM64EC(ImportFile *file)
+    : ImportThunkChunk(file->ctx, file->impSym), file(file) {}
+
+void ImportThunkChunkARM64EC::writeTo(uint8_t *buf) const {
+  memcpy(buf, importThunkARM64EC, sizeof(importThunkARM64EC));
+  applyArm64Addr(buf, file->impSym->getRVA(), rva, 12);
+  applyArm64Ldr(buf + 4, file->impSym->getRVA() & 0xfff);
+
+  // The exit thunk may be missing. This can happen if the application only
+  // references a function by its address (in which case the thunk is never
+  // actually used, but is still required to fill the auxiliary IAT), or in
+  // cases of hand-written assembly calling an imported ARM64EC function (where
+  // the exit thunk is ignored by __icall_helper_arm64ec). In such cases, MSVC
+  // link.exe uses 0 as the RVA.
+  uint32_t exitThunkRVA = exitThunk ? exitThunk->getRVA() : 0;
+  applyArm64Addr(buf + 8, exitThunkRVA, rva + 8, 12);
+  applyArm64Imm(buf + 12, exitThunkRVA & 0xfff, 0);
+
+  Defined *helper = cast<Defined>(file->ctx.config.arm64ECIcallHelper);
+  applyArm64Branch26(buf + 16, helper->getRVA() - rva - 16);
+}
+
 } // namespace lld::coff

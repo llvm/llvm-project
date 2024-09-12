@@ -2744,7 +2744,6 @@ std::pair<const Symbol *, bool> ExpressionAnalyzer::ResolveGeneric(
               (!procedure->IsElemental() && nonElemental)) {
             int d{ComputeCudaMatchingDistance(
                 context_.languageFeatures(), *procedure, localActuals)};
-            llvm::errs() << "matching distance: " << d << "\n";
             if (d != crtMatchingDistance) {
               if (d > crtMatchingDistance) {
                 continue;
@@ -4610,8 +4609,7 @@ std::optional<ProcedureRef> ArgumentAnalyzer::GetDefinedAssignmentProc() {
     }
     for (std::size_t i{0}; !proc && i < actuals_.size(); ++i) {
       const Symbol *generic{nullptr};
-      if (const Symbol *
-          binding{FindBoundOp(oprName, i, generic, /*isSubroutine=*/true)}) {
+      if (const Symbol *binding{FindBoundOp(oprName, i, generic, true)}) {
         if (CheckAccessibleSymbol(scope, DEREF(generic))) {
           // ignore inaccessible type-bound ASSIGNMENT(=) generic
         } else if (const Symbol *

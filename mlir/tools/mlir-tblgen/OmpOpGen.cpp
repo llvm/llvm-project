@@ -199,7 +199,7 @@ static StringRef translateArgumentType(ArrayRef<SMLoc> loc, StringInit *name,
                                        Init *init, int &nest, int &rank) {
   Record *def = cast<DefInit>(init)->getDef();
 
-  llvm::StringSet superClasses;
+  llvm::StringSet<> superClasses;
   for (auto [sc, _] : def->getSuperClasses())
     superClasses.insert(sc->getNameInitAsString());
 
@@ -236,7 +236,7 @@ static StringRef translateArgumentType(ArrayRef<SMLoc> loc, StringInit *name,
   }
 
   // Handle simple attribute and value types.
-  bool isAttr = superClasses.contains("Attr");
+  [[maybe_unused]] bool isAttr = superClasses.contains("Attr");
   bool isValue = superClasses.contains("TypeConstraint");
   if (superClasses.contains("Variadic"))
     ++nest;

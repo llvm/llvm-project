@@ -124,6 +124,7 @@ class ConstantAggregateZero;
 class ConstantPointerNull;
 class PoisonValue;
 class BlockAddress;
+class ConstantTokenNone;
 class Context;
 class Function;
 class Instruction;
@@ -1141,6 +1142,37 @@ public:
   }
 };
 
+// TODO: This should inherit from ConstantData.
+class ConstantTokenNone final : public Constant {
+  ConstantTokenNone(llvm::ConstantTokenNone *C, Context &Ctx)
+      : Constant(ClassID::ConstantTokenNone, C, Ctx) {}
+  friend class Context; // For constructor.
+
+public:
+  /// Return the ConstantTokenNone.
+  static ConstantTokenNone *get(Context &Ctx);
+
+  /// For isa/dyn_cast.
+  static bool classof(const sandboxir::Value *From) {
+    return From->getSubclassID() == ClassID::ConstantTokenNone;
+  }
+
+  unsigned getUseOperandNo(const Use &Use) const final {
+    llvm_unreachable("ConstantTokenNone has no operands!");
+  }
+
+#ifndef NDEBUG
+  void verify() const override {
+    assert(isa<llvm::ConstantTokenNone>(Val) &&
+           "Expected a ConstantTokenNone!");
+  }
+  void dumpOS(raw_ostream &OS) const override {
+    dumpCommonPrefix(OS);
+    dumpCommonSuffix(OS);
+  }
+#endif
+};
+
 /// Iterator for `Instruction`s in a `BasicBlock.
 /// \Returns an sandboxir::Instruction & when derereferenced.
 class BBIterator {
@@ -1506,6 +1538,10 @@ public:
   static Value *create(Value *Cond, Value *True, Value *False,
                        BasicBlock *InsertAtEnd, Context &Ctx,
                        const Twine &Name = "");
+
+  const Value *getCondition() const { return getOperand(0); }
+  const Value *getTrueValue() const { return getOperand(1); }
+  const Value *getFalseValue() const { return getOperand(2); }
   Value *getCondition() { return getOperand(0); }
   Value *getTrueValue() { return getOperand(1); }
   Value *getFalseValue() { return getOperand(2); }
@@ -1513,7 +1549,16 @@ public:
   void setCondition(Value *New) { setOperand(0, New); }
   void setTrueValue(Value *New) { setOperand(1, New); }
   void setFalseValue(Value *New) { setOperand(2, New); }
-  void swapValues() { cast<llvm::SelectInst>(Val)->swapValues(); }
+  void swapValues();
+
+  /// Return a string if the specified operands are invalid for a select
+  /// operation, otherwise return null.
+  static const char *areInvalidOperands(Value *Cond, Value *True,
+                                        Value *False) {
+    return llvm::SelectInst::areInvalidOperands(Cond->Val, True->Val,
+                                                False->Val);
+  }
+
   /// For isa/dyn_cast.
   static bool classof(const Value *From);
 };

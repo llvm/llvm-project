@@ -108,7 +108,8 @@ public:
                          ImportThunkChunk *chunk);
   void addLibcall(StringRef name);
   void addEntryThunk(Symbol *from, Symbol *to);
-  void initializeEntryThunks();
+  void addExitThunk(Symbol *from, Symbol *to);
+  void initializeECThunks();
 
   void reportDuplicate(Symbol *existing, InputFile *newFile,
                        SectionChunk *newSc = nullptr,
@@ -141,6 +142,7 @@ private:
   std::unique_ptr<BitcodeCompiler> lto;
   bool ltoCompilationDone = false;
   std::vector<std::pair<Symbol *, Symbol *>> entryThunks;
+  llvm::DenseMap<Symbol *, Symbol *> exitThunks;
 
   COFFLinkerContext &ctx;
 };
