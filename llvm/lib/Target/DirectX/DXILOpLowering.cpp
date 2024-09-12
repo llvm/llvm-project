@@ -118,7 +118,7 @@ public:
         Args.append(CI->arg_begin(), CI->arg_end());
 
       Expected<CallInst *> OpCall =
-          OpBuilder.tryCreateOp(DXILOp, Args, F.getReturnType());
+          OpBuilder.tryCreateOp(DXILOp, Args, CI->getName(), F.getReturnType());
       if (Error E = OpCall.takeError())
         return E;
 
@@ -198,7 +198,7 @@ public:
           ConstantInt::get(Int32Ty, Binding.RecordID), CI->getArgOperand(3),
           CI->getArgOperand(4)};
       Expected<CallInst *> OpCall =
-          OpBuilder.tryCreateOp(OpCode::CreateHandle, Args);
+          OpBuilder.tryCreateOp(OpCode::CreateHandle, Args, CI->getName());
       if (Error E = OpCall.takeError())
         return E;
 
@@ -233,15 +233,16 @@ public:
           Binding.LowerBound, UpperBound, Binding.Space, RI.getResourceClass());
       std::array<Value *, 3> BindArgs{ResBind, CI->getArgOperand(3),
                                       CI->getArgOperand(4)};
-      Expected<CallInst *> OpBind =
-          OpBuilder.tryCreateOp(OpCode::CreateHandleFromBinding, BindArgs);
+      Expected<CallInst *> OpBind = OpBuilder.tryCreateOp(
+          OpCode::CreateHandleFromBinding, BindArgs, CI->getName());
       if (Error E = OpBind.takeError())
         return E;
 
       std::array<Value *, 2> AnnotateArgs{
           *OpBind, OpBuilder.getResProps(Props.first, Props.second)};
-      Expected<CallInst *> OpAnnotate =
-          OpBuilder.tryCreateOp(OpCode::AnnotateHandle, AnnotateArgs);
+      Expected<CallInst *> OpAnnotate = OpBuilder.tryCreateOp(
+          OpCode::AnnotateHandle, AnnotateArgs,
+          CI->hasName() ? CI->getName() + "_annot" : Twine());
       if (Error E = OpAnnotate.takeError())
         return E;
 
@@ -286,7 +287,10 @@ public:
           if (!CheckOp) {
             Value *NewEVI = IRB.CreateExtractValue(Op, 4);
             Expected<CallInst *> OpCall = OpBuilder.tryCreateOp(
-                OpCode::CheckAccessFullyMapped, {NewEVI}, Int32Ty);
+                OpCode::CheckAccessFullyMapped, {NewEVI},
+                OldResult->hasName() ? OldResult->getName() + "_check"
+                                     : Twine(),
+                Int32Ty);
             if (Error E = OpCall.takeError())
               return E;
             CheckOp = *OpCall;
@@ -296,7 +300,8 @@ public:
         }
       }
 
-      OldResult = cast<Instruction>(IRB.CreateExtractValue(Op, 0));
+      OldResult = cast<Instruction>(
+          IRB.CreateExtractValue(Op, 0, OldResult->getName()));
       OldTy = ST->getElementType(0);
     }
 
@@ -403,8 +408,8 @@ public:
       Type *NewRetTy = OpBuilder.getResRetType(OldTy->getScalarType());
 
       std::array<Value *, 3> Args{Handle, Index0, Index1};
-      Expected<CallInst *> OpCall =
-          OpBuilder.tryCreateOp(OpCode::BufferLoad, Args, NewRetTy);
+      Expected<CallInst *> OpCall = OpBuilder.tryCreateOp(
+          OpCode::BufferLoad, Args, CI->getName(), NewRetTy);
       if (Error E = OpCall.takeError())
         return E;
       if (Error E = replaceResRetUses(CI, *OpCall, HasCheckBit))
@@ -447,7 +452,7 @@ public:
       std::array<Value *, 8> Args{Handle, Index0, Index1, Data0,
                                   Data1,  Data2,  Data3,  Mask};
       Expected<CallInst *> OpCall =
-          OpBuilder.tryCreateOp(OpCode::BufferStore, Args);
+          OpBuilder.tryCreateOp(OpCode::BufferStore, Args, CI->getName());
       if (Error E = OpCall.takeError())
         return E;
 
