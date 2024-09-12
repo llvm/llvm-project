@@ -4819,12 +4819,6 @@ BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
   // representation is better than just gather.
   auto CheckForShuffledLoads = [&, &TTI = *TTI](Align CommonAlignment,
                                                 bool ProfitableGatherPointers) {
-    // FIXME: The following code has not been updated for non-power-of-2
-    // vectors.  The splitting logic here does not cover the original
-    // vector if the vector factor is not a power of two.  FIXME
-    if (!has_single_bit(VL.size()))
-      return false;
-
     // Compare masked gather cost and loads + insert subvector costs.
     TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
     auto [ScalarGEPCost, VectorGEPCost] =
@@ -4874,6 +4868,13 @@ BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
     constexpr unsigned ListLimit = 4;
     if (!TryRecursiveCheck || VL.size() < ListLimit)
       return MaskedGatherCost - GatherCost >= -SLPCostThreshold;
+
+    // FIXME: The following code has not been updated for non-power-of-2
+    // vectors.  The splitting logic here does not cover the original
+    // vector if the vector factor is not a power of two.  FIXME
+    if (!has_single_bit(VL.size()))
+      return false;
+
     unsigned Sz = DL->getTypeSizeInBits(ScalarTy);
     unsigned MinVF = getMinVF(2 * Sz);
     DemandedElts.clearAllBits();

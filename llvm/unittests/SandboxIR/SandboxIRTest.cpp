@@ -777,6 +777,30 @@ bb2:
   EXPECT_EQ(LookupBB2Addr, nullptr);
 }
 
+TEST_F(SandboxIRTest, ConstantTokenNone) {
+  parseIR(C, R"IR(
+define void @foo(ptr %ptr) {
+ bb0:
+   %cs = catchswitch within none [label %handler] unwind to caller
+ handler:
+   ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+
+  [[maybe_unused]] auto &F = *Ctx.createFunction(&LLVMF);
+  auto *BB0 = cast<sandboxir::BasicBlock>(
+      Ctx.getValue(getBasicBlockByName(LLVMF, "bb0")));
+  auto *CS = cast<sandboxir::CatchSwitchInst>(&*BB0->begin());
+
+  // Check classof(), creation, getFunction(), getBasicBlock().
+  auto *CTN = cast<sandboxir::ConstantTokenNone>(CS->getParentPad());
+  // Check get().
+  auto *NewCTN = sandboxir::ConstantTokenNone::get(Ctx);
+  EXPECT_EQ(NewCTN, CTN);
+}
+
 TEST_F(SandboxIRTest, Use) {
   parseIR(C, R"IR(
 define i32 @foo(i32 %v0, i32 %v1) {
@@ -1354,14 +1378,18 @@ define void @foo(i1 %c0, i8 %v0, i8 %v1, i1 %c1) {
   auto *BB = &*F->begin();
   auto It = BB->begin();
   auto *Select = cast<sandboxir::SelectInst>(&*It++);
+  const auto *ConstSelect = Select; // To test the const getters.
   auto *Ret = &*It++;
 
   // Check getCondition().
   EXPECT_EQ(Select->getCondition(), Cond0);
+  EXPECT_EQ(ConstSelect->getCondition(), Cond0);
   // Check getTrueValue().
   EXPECT_EQ(Select->getTrueValue(), V0);
+  EXPECT_EQ(ConstSelect->getTrueValue(), V0);
   // Check getFalseValue().
   EXPECT_EQ(Select->getFalseValue(), V1);
+  EXPECT_EQ(ConstSelect->getFalseValue(), V1);
   // Check setCondition().
   Select->setCondition(Cond1);
   EXPECT_EQ(Select->getCondition(), Cond1);
@@ -1371,6 +1399,13 @@ define void @foo(i1 %c0, i8 %v0, i8 %v1, i1 %c1) {
   // Check setFalseValue().
   Select->setFalseValue(V0);
   EXPECT_EQ(Select->getFalseValue(), V0);
+  // Check swapValues().
+  Select->swapValues();
+  EXPECT_EQ(Select->getTrueValue(), V0);
+  EXPECT_EQ(Select->getFalseValue(), V1);
+  // Check areInvalidOperands.
+  EXPECT_EQ(sandboxir::SelectInst::areInvalidOperands(Cond0, V0, V1), nullptr);
+  EXPECT_NE(sandboxir::SelectInst::areInvalidOperands(V0, V1, Cond0), nullptr);
 
   {
     // Check SelectInst::create() InsertBefore.
