@@ -209,11 +209,10 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
                           {DebugInfoVersionReg, DwarfVersionReg,
                            DebugSourceResIdReg, SourceLanguageReg});
 
-    // Emit DebugInfoNone. This instruction is a wildcard accepted
-    // by standard to put into debug instructions arguments
-    // as Not Available/Null
-    const Register DebugInfoNoneReg =
-        EmitDIInstruction(SPIRV::NonSemanticExtInst::DebugInfoNone, {});
+    // We aren't extracting any DebugInfoFlags now so we
+    // emitting zero to use as <id>Flags argument for DebugBasicType
+    const Register I32ZeroReg =
+        GR->buildConstantInt(0, MIRBuilder, I32Ty, false);
 
     for (auto *BasicType : BasicTypes) {
       const Register BasicTypeStrReg = EmitOpString(BasicType->getName());
@@ -252,7 +251,7 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
       const Register BasicTypeReg =
           EmitDIInstruction(SPIRV::NonSemanticExtInst::DebugTypeBasic,
                             {BasicTypeStrReg, ConstIntBitwidthReg,
-                             AttributeEncodingReg, DebugInfoNoneReg});
+                             AttributeEncodingReg, I32ZeroReg});
     }
   }
   return true;
