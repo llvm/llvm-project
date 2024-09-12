@@ -592,6 +592,10 @@ bool clang::CreateHLSLAttributedResourceType(Sema &S, QualType Wrapped,
       break;
     }
     case attr::HLSLROV:
+      if (ResAttrs.IsROV) {
+        S.Diag(A->getLocation(), diag::warn_duplicate_attribute_exact) << A;
+        return false;
+      }
       ResAttrs.IsROV = true;
       break;
     default:
@@ -1741,6 +1745,18 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     if (SemaRef.PrepareBuiltinElementwiseMathOneArgCall(TheCall))
       return true;
     SetElementTypeAsReturnType(&SemaRef, TheCall, getASTContext().IntTy);
+    break;
+  }
+  case Builtin::BI__builtin_hlsl_step: {
+    if (SemaRef.checkArgCount(TheCall, 2))
+      return true;
+    if (CheckFloatOrHalfRepresentations(&SemaRef, TheCall))
+      return true;
+
+    ExprResult A = TheCall->getArg(0);
+    QualType ArgTyA = A.get()->getType();
+    // return type is the same as the input type
+    TheCall->setType(ArgTyA);
     break;
   }
   // Note these are llvm builtins that we want to catch invalid intrinsic

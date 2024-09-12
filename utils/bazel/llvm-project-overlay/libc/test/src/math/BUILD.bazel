@@ -8,7 +8,7 @@ load("//libc/test/src/math:libc_math_test_rules.bzl", "math_mpfr_test")
 
 package(default_visibility = ["//visibility:public"])
 
-exports_files(["libc_math_mpfr_test_rules.bzl"])
+exports_files(["libc_math_test_rules.bzl"])
 
 licenses(["notice"])
 

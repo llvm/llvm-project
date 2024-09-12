@@ -827,6 +827,7 @@ struct AA::PointerInfo::State : public AbstractState {
     AccessList = R.AccessList;
     OffsetBins = R.OffsetBins;
     RemoteIMap = R.RemoteIMap;
+    ReachesReturn = R.ReachesReturn;
     return *this;
   }
 
@@ -837,6 +838,7 @@ struct AA::PointerInfo::State : public AbstractState {
     std::swap(AccessList, R.AccessList);
     std::swap(OffsetBins, R.OffsetBins);
     std::swap(RemoteIMap, R.RemoteIMap);
+    std::swap(ReachesReturn, R.ReachesReturn);
     return *this;
   }
 
@@ -878,11 +880,16 @@ protected:
   AAPointerInfo::OffsetBinsTy OffsetBins;
   DenseMap<const Instruction *, SmallVector<unsigned>> RemoteIMap;
 
+  /// Flag to determine if the underlying pointer is reaching a return statement
+  /// in the associated function or not. Returns in other functions cause
+  /// invalidation.
+  bool ReachesReturn = false;
+
   /// See AAPointerInfo::forallInterferingAccesses.
   bool forallInterferingAccesses(
       AA::RangeTy Range,
       function_ref<bool(const AAPointerInfo::Access &, bool)> CB) const {
-    if (!isValidState())
+    if (!isValidState() || ReachesReturn)
       return false;
 
     for (const auto &It : OffsetBins) {
@@ -904,7 +911,7 @@ protected:
       Instruction &I,
       function_ref<bool(const AAPointerInfo::Access &, bool)> CB,
       AA::RangeTy &Range) const {
-    if (!isValidState())
+    if (!isValidState() || ReachesReturn)
       return false;
 
     auto LocalList = RemoteIMap.find(&I);
@@ -1071,7 +1078,8 @@ struct AAPointerInfoImpl
     return std::string("PointerInfo ") +
            (isValidState() ? (std::string("#") +
                               std::to_string(OffsetBins.size()) + " bins")
-                           : "<invalid>");
+                           : "<invalid>") +
+           (ReachesReturn ? " (returned)" : "");
   }
 
   /// See AbstractAttribute::manifest(...).
@@ -1084,6 +1092,7 @@ struct AAPointerInfoImpl
   virtual int64_t numOffsetBins() const override {
     return State::numOffsetBins();
   }
+  virtual bool reachesReturn() const override { return ReachesReturn; }
 
   bool forallInterferingAccesses(
       AA::RangeTy Range,
@@ -1373,6 +1382,7 @@ struct AAPointerInfoImpl
 
     const auto &OtherAAImpl = static_cast<const AAPointerInfoImpl &>(OtherAA);
     bool IsByval = OtherAAImpl.getAssociatedArgument()->hasByValAttr();
+    ReachesReturn = OtherAAImpl.ReachesReturn;
 
     // Combine the accesses bin by bin.
     ChangeStatus Changed = ChangeStatus::UNCHANGED;
@@ -1666,8 +1676,13 @@ ChangeStatus AAPointerInfoFloating::updateImpl(Attributor &A) {
     }
     if (isa<PtrToIntInst>(Usr))
       return false;
-    if (isa<CastInst>(Usr) || isa<SelectInst>(Usr) || isa<ReturnInst>(Usr))
+    if (isa<CastInst>(Usr) || isa<SelectInst>(Usr))
       return HandlePassthroughUser(Usr, CurPtr, Follow);
+    // Returns are allowed if they are in the associated functions. Users can
+    // then check the call site return. Returns from other functions can't be
+    // tracked and are cause for invalidation.
+    if (auto *RI = dyn_cast<ReturnInst>(Usr))
+      return ReachesReturn = RI->getFunction() == getAssociatedFunction();
 
     // For PHIs we need to take care of the recurrence explicitly as the value
     // might change while we iterate through a loop. For now, we give up if
@@ -1898,15 +1913,37 @@ ChangeStatus AAPointerInfoFloating::updateImpl(Attributor &A) {
             DepClassTy::REQUIRED);
         if (!CSArgPI)
           return false;
-        bool IsMustAcc = (getUnderlyingObject(CurPtr) == &AssociatedValue);
+        bool IsArgMustAcc = (getUnderlyingObject(CurPtr) == &AssociatedValue);
         Changed = translateAndAddState(A, *CSArgPI, OffsetInfoMap[CurPtr], *CB,
-                                       IsMustAcc) |
+                                       IsArgMustAcc) |
+                  Changed;
+        if (!CSArgPI->reachesReturn())
+          return isValidState();
+
+        Function *Callee = CB->getCalledFunction();
+        if (!Callee || Callee->arg_size() <= ArgNo)
+          return false;
+        bool UsedAssumedInformation = false;
+        auto ReturnedValue = A.getAssumedSimplified(
+            IRPosition::returned(*Callee), *this, UsedAssumedInformation,
+            AA::ValueScope::Intraprocedural);
+        auto *ReturnedArg =
+            dyn_cast_or_null<Argument>(ReturnedValue.value_or(nullptr));
+        auto *Arg = Callee->getArg(ArgNo);
+        if (ReturnedArg && Arg != ReturnedArg)
+          return true;
+        bool IsRetMustAcc = IsArgMustAcc && (ReturnedArg == Arg);
+        const auto *CSRetPI = A.getAAFor<AAPointerInfo>(
+            *this, IRPosition::callsite_returned(*CB), DepClassTy::REQUIRED);
+        if (!CSRetPI)
+          return false;
+        Changed = translateAndAddState(A, *CSRetPI, OffsetInfoMap[CurPtr], *CB,
+                                       IsRetMustAcc) |
                   Changed;
         return isValidState();
       }
       LLVM_DEBUG(dbgs() << "[AAPointerInfo] Call user not handled " << *CB
                         << "\n");
-      // TODO: Allow some call uses
       return false;
     }
 
@@ -2342,8 +2379,10 @@ struct AANoFreeFloating : AANoFreeImpl {
         Follow = true;
         return true;
       }
-      if (isa<StoreInst>(UserI) || isa<LoadInst>(UserI) ||
-          isa<ReturnInst>(UserI))
+      if (isa<StoreInst>(UserI) || isa<LoadInst>(UserI))
+        return true;
+
+      if (isa<ReturnInst>(UserI) && getIRPosition().isArgumentPosition())
         return true;
 
       // Unknown user.
@@ -12740,7 +12779,7 @@ struct AAAllocationInfoImpl : public AAAllocationInfo {
     if (!PI)
       return indicatePessimisticFixpoint();
 
-    if (!PI->getState().isValidState())
+    if (!PI->getState().isValidState() || PI->reachesReturn())
       return indicatePessimisticFixpoint();
 
     const DataLayout &DL = A.getDataLayout();

@@ -472,9 +472,7 @@ define void @immut_param_mayalias(ptr align 4 noalias %val) {
 ; argument doesn't matter.
 define void @immut_param_unescaped_alloca(ptr align 4 noalias %val) {
 ; CHECK-LABEL: @immut_param_unescaped_alloca(
-; CHECK-NEXT:    [[VAL1:%.*]] = alloca i8, align 4
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[VAL1]], ptr align 4 [[VAL:%.*]], i64 1, i1 false)
-; CHECK-NEXT:    call void @f(ptr nocapture readonly align 4 [[VAL1]])
+; CHECK-NEXT:    call void @f(ptr nocapture readonly align 4 [[VAL:%.*]])
 ; CHECK-NEXT:    ret void
 ;
   %val1 = alloca i8, align 4
@@ -489,8 +487,7 @@ define void @immut_param_memory_argmem_read(ptr align 4 noalias %val) {
 ; CHECK-LABEL: @immut_param_memory_argmem_read(
 ; CHECK-NEXT:    [[VAL1:%.*]] = alloca i8, align 4
 ; CHECK-NEXT:    call void @f(ptr [[VAL1]])
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[VAL1]], ptr align 4 [[VAL:%.*]], i64 1, i1 false)
-; CHECK-NEXT:    call void @f(ptr nocapture readonly align 4 [[VAL1]]) #[[ATTR6:[0-9]+]]
+; CHECK-NEXT:    call void @f(ptr nocapture readonly align 4 [[VAL:%.*]]) #[[ATTR6:[0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   %val1 = alloca i8, align 4

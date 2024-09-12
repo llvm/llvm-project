@@ -233,6 +233,47 @@ DIRecursiveTypeAttrInterface DISubprogramAttr::getRecSelf(DistinctAttr recId) {
 }
 
 //===----------------------------------------------------------------------===//
+// ConstantRangeAttr
+//===----------------------------------------------------------------------===//
+
+Attribute ConstantRangeAttr::parse(AsmParser &parser, Type odsType) {
+  llvm::SMLoc loc = parser.getCurrentLocation();
+  IntegerType widthType;
+  if (parser.parseLess() || parser.parseType(widthType) ||
+      parser.parseComma()) {
+    return Attribute{};
+  }
+  unsigned bitWidth = widthType.getWidth();
+  APInt lower(bitWidth, 0);
+  APInt upper(bitWidth, 0);
+  if (parser.parseInteger(lower) || parser.parseComma() ||
+      parser.parseInteger(upper) || parser.parseGreater())
+    return Attribute{};
+  // For some reason, 0 is always parsed as 64-bits, fix that if needed.
+  if (lower.isZero())
+    lower = lower.sextOrTrunc(bitWidth);
+  if (upper.isZero())
+    upper = upper.sextOrTrunc(bitWidth);
+  return parser.getChecked<ConstantRangeAttr>(loc, parser.getContext(), lower,
+                                              upper);
+}
+
+void ConstantRangeAttr::print(AsmPrinter &printer) const {
+  printer << "<i" << getLower().getBitWidth() << ", " << getLower() << ", "
+          << getUpper() << ">";
+}
+
+LogicalResult
+ConstantRangeAttr::verify(llvm::function_ref<InFlightDiagnostic()> emitError,
+                          APInt lower, APInt upper) {
+  if (lower.getBitWidth() != upper.getBitWidth())
+    return emitError()
+           << "expected lower and upper to have matching bitwidths but got "
+           << lower.getBitWidth() << " vs. " << upper.getBitWidth();
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // TargetFeaturesAttr
 //===----------------------------------------------------------------------===//
 

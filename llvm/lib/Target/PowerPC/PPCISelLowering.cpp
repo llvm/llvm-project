@@ -9470,12 +9470,13 @@ SDValue PPCTargetLowering::LowerBITCAST(SDValue Op, SelectionDAG &DAG) const {
   SDLoc dl(Op);
   SDValue Op0 = Op->getOperand(0);
 
+  if (!Subtarget.isPPC64() || (Op0.getOpcode() != ISD::BUILD_PAIR) ||
+      (Op.getValueType() != MVT::f128))
+    return SDValue();
+
   SDValue Lo = Op0.getOperand(0);
   SDValue Hi = Op0.getOperand(1);
-
-  if ((Op.getValueType() != MVT::f128) ||
-      (Op0.getOpcode() != ISD::BUILD_PAIR) || (Lo.getValueType() != MVT::i64) ||
-      (Hi.getValueType() != MVT::i64) || !Subtarget.isPPC64())
+  if ((Lo.getValueType() != MVT::i64) || (Hi.getValueType() != MVT::i64))
     return SDValue();
 
   if (!Subtarget.isLittleEndian())

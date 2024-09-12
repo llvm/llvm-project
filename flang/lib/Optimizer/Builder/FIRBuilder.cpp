@@ -1594,8 +1594,7 @@ mlir::Value fir::factory::genCPtrOrCFunptrValue(fir::FirOpBuilder &builder,
       cPtrCoor = builder.create<fir::ExtractValueOp>(loc, addrFieldTy, cPtr,
                                                      arrayAttr);
     }
-    mlir::Value cptr = builder.create<fir::LoadOp>(loc, cPtrCoor);
-    return genCPtrOrCFunptrValue(builder, loc, cptr);
+    return genCPtrOrCFunptrValue(builder, loc, cPtrCoor);
   }
 
   if (fir::isa_ref_type(cPtr.getType())) {

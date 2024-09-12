@@ -746,7 +746,7 @@ void MatcherGen::EmitResultLeafAsOperand(const TreePatternNode &N,
 
 static bool mayInstNodeLoadOrStore(const TreePatternNode &N,
                                    const CodeGenDAGPatterns &CGP) {
-  Record *Op = N.getOperator();
+  const Record *Op = N.getOperator();
   const CodeGenTarget &CGT = CGP.getTargetInfo();
   CodeGenInstruction &II = CGT.getInstruction(Op);
   return II.mayLoad || II.mayStore;
@@ -757,7 +757,7 @@ static unsigned numNodesThatMayLoadOrStore(const TreePatternNode &N,
   if (N.isLeaf())
     return 0;
 
-  Record *OpRec = N.getOperator();
+  const Record *OpRec = N.getOperator();
   if (!OpRec->isSubClassOf("Instruction"))
     return 0;
 
@@ -773,7 +773,7 @@ static unsigned numNodesThatMayLoadOrStore(const TreePatternNode &N,
 
 void MatcherGen::EmitResultInstructionAsOperand(
     const TreePatternNode &N, SmallVectorImpl<unsigned> &OutputOps) {
-  Record *Op = N.getOperator();
+  const Record *Op = N.getOperator();
   const CodeGenTarget &CGT = CGP.getTargetInfo();
   CodeGenInstruction &II = CGT.getInstruction(Op);
   const DAGInstruction &Inst = CGP.getInstruction(Op);
@@ -1010,7 +1010,7 @@ void MatcherGen::EmitResultOperand(const TreePatternNode &N,
   if (N.isLeaf())
     return EmitResultLeafAsOperand(N, ResultOps);
 
-  Record *OpRec = N.getOperator();
+  const Record *OpRec = N.getOperator();
   if (OpRec->isSubClassOf("Instruction"))
     return EmitResultInstructionAsOperand(N, ResultOps);
   if (OpRec->isSubClassOf("SDNodeXForm"))
