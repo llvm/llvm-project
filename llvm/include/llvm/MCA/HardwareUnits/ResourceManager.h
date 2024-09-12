@@ -232,6 +232,8 @@ public:
   /// `NumUnits` available units.
   bool isReady(unsigned NumUnits = 1) const;
 
+  uint64_t getNumReadyUnits() const { return llvm::popcount(ReadyMask); }
+
   bool isAResourceGroup() const { return IsAGroup; }
 
   bool containsResource(uint64_t ID) const { return ResourceMask & ID; }
@@ -428,9 +430,21 @@ public:
   uint64_t getProcResUnitMask() const { return ProcResUnitMask; }
   uint64_t getAvailableProcResUnits() const { return AvailableProcResUnits; }
 
-  void issueInstruction(
-      const InstrDesc &Desc,
-      SmallVectorImpl<std::pair<ResourceRef, ReleaseAtCycles>> &Pipes);
+  using ResourceWithCycles = std::pair<ResourceRef, ReleaseAtCycles>;
+
+  void issueInstruction(const InstrDesc &Desc,
+                        SmallVectorImpl<ResourceWithCycles> &Pipes) {
+    if (Desc.HasPartiallyOverlappingGroups)
+      return issueInstructionImpl(Desc, Pipes);
+
+    return fastIssueInstruction(Desc, Pipes);
+  }
+
+  void fastIssueInstruction(const InstrDesc &Desc,
+                            SmallVectorImpl<ResourceWithCycles> &Pipes);
+
+  void issueInstructionImpl(const InstrDesc &Desc,
+                            SmallVectorImpl<ResourceWithCycles> &Pipes);
 
   void cycleEvent(SmallVectorImpl<ResourceRef> &ResourcesFreed);
 
