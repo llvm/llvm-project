@@ -22,30 +22,18 @@ Example:
     virtual ~Base();
     int i;
   };
-  
   struct Derived : public Base {};
-  
-  // Function that takes a pointer and performs pointer arithmetic
   void foo(Base* b) {
     b += 1;
     // warning: pointer arithmetic on class that declares a virtual function can
     // result in undefined behavior if the dynamic type differs from the
     // pointer type
   }
-  
-  void bar() {
-    Derived d[10];  // Array of derived objects
-    foo(d);         // Passing Derived pointer to foo(), which performs arithmetic
-  }
-
-  // Another example showing array access with polymorphic objects.
   int bar(const Derived d[]) {
     return d[1].i; // warning due to pointer arithmetic on polymorphic object
   }
-
   // Making Derived final suppresses the warning
   struct FinalDerived final : public Base {};
-
   int baz(const FinalDerived d[]) {
     return d[1].i; // no warning as FinalDerived is final
   }
@@ -62,22 +50,9 @@ Options
 
   .. code-block:: c++
   
-    void bar() {
-      Base *b = new Base[10];
+    void bar(Base b[], Derived d[]) {
       b += 1; // warning, as Base declares a virtual destructor
-
-      delete[] b;
-
-      Derived *d = new Derived[10]; // Derived overrides the destructor, and
-                                    // declares no other virtual functions
       d += 1; // warning only if IgnoreVirtualDeclarationsOnly is set to false
-
-      delete[] d;
-
-      FinalDerived *f = new FinalDerived[10];
-      f += 1; // no warning, FinalDerived is final and cannot be further derived
-
-      delete[] f;
     }
 
 References
