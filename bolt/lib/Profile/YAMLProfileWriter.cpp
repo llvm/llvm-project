@@ -173,10 +173,6 @@ YAMLProfileWriter::convertNodeProbes(NodeIdToProbes &NodeProbes) {
     else
       YamlBPI.InlineTreeNodes = Nodes;
     handleMask(BPI.BlockProbes, YamlBPI.BlockProbes, YamlBPI.BlockMask);
-    // Assume BlockMask == 1 if no other probes are set
-    if (YamlBPI.BlockMask == 1 && YamlBPI.CallProbes.empty() &&
-        YamlBPI.IndCallProbes.empty())
-      YamlBPI.BlockMask = 0;
   }
   return YamlProbes;
 }
@@ -195,7 +191,7 @@ YAMLProfileWriter::convertBFInlineTree(const MCPseudoProbeDecoder &Decoder,
   assert(Root && "Malformed TopLevelGUIDToInlineTree");
   uint32_t Index = 0;
   uint32_t PrevParent = 0;
-  uint32_t PrevGUIDIdx = UINT32_MAX;
+  uint32_t PrevGUIDIdx = 0;
   for (const auto &Node : collectInlineTree(Decoder, *Root)) {
     InlineTreeNodeId[Node.InlineTree] = Index++;
     auto GUIDIdxIt = InlineTree.GUIDIdxMap.find(Node.GUID);

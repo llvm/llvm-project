@@ -96,8 +96,7 @@ template <> struct MappingTraits<bolt::SuccessorInfo> {
 namespace bolt {
 struct PseudoProbeInfo {
   uint32_t InlineTreeIndex = 0;
-  uint64_t BlockMask = 0; // bitset with probe indices
-  // Assume BlockMask == 1 if no other probes are set
+  uint64_t BlockMask = 0; // bitset with probe indices from 1 to 64
   std::vector<uint64_t> BlockProbes; // block probes with indices above 64
   std::vector<uint64_t> CallProbes;
   std::vector<uint64_t> IndCallProbes;
