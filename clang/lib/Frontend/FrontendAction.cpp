@@ -779,6 +779,26 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
     return true;
   }
 
+  // TODO: blindly duplicating for now
+  if (Input.getKind().getLanguage() == Language::CIR) {
+    assert(hasCIRSupport() && "This action does not have CIR file support!");
+
+    // Inform the diagnostic client we are processing a source file.
+    CI.getDiagnosticClient().BeginSourceFile(CI.getLangOpts(), nullptr);
+    HasBegunSourceFile = true;
+
+    // Initialize the action.
+    if (!BeginSourceFileAction(CI))
+      return false;
+
+    // Initialize the main file entry.
+    if (!CI.InitializeSourceManager(CurrentInput))
+      return false;
+
+    FailureCleanup.release();
+    return true;
+  }
+
   // If the implicit PCH include is actually a directory, rather than
   // a single file, search for a suitable PCH file in that directory.
   if (!CI.getPreprocessorOpts().ImplicitPCHInclude.empty()) {

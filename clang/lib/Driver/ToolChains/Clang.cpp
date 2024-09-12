@@ -4967,6 +4967,31 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
+  if (Args.hasArg(options::OPT_fclangir) ||
+      Args.hasArg(options::OPT_emit_cir) ||
+      Args.hasArg(options::OPT_emit_cir_flat))
+    CmdArgs.push_back("-fclangir");
+
+  Args.addOptOutFlag(CmdArgs, options::OPT_fclangir_direct_lowering,
+                     options::OPT_fno_clangir_direct_lowering);
+
+  if (Args.hasArg(options::OPT_clangir_disable_passes))
+    CmdArgs.push_back("-clangir-disable-passes");
+
+  if (Args.hasArg(options::OPT_fclangir_call_conv_lowering))
+    CmdArgs.push_back("-fclangir-call-conv-lowering");
+
+  if (Args.hasArg(options::OPT_fclangir_mem2reg))
+    CmdArgs.push_back("-fclangir-mem2reg");
+
+  // ClangIR lib opt requires idiom recognizer.
+  if (Args.hasArg(options::OPT_fclangir_lib_opt,
+                  options::OPT_fclangir_lib_opt_EQ)) {
+    if (!Args.hasArg(options::OPT_fclangir_idiom_recognizer,
+                     options::OPT_fclangir_idiom_recognizer_EQ))
+      CmdArgs.push_back("-fclangir-idiom-recognizer");
+  }
+
   if (IsOpenMPDevice) {
     // We have to pass the triple of the host if compiling for an OpenMP device.
     std::string NormalizedTriple =
@@ -5105,6 +5130,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     } else if (JA.getType() == types::TY_LLVM_IR ||
                JA.getType() == types::TY_LTO_IR) {
       CmdArgs.push_back("-emit-llvm");
+    } else if (JA.getType() == types::TY_CIR) {
+      CmdArgs.push_back("-emit-cir");
+    } else if (JA.getType() == types::TY_CIR_FLAT) {
+      CmdArgs.push_back("-emit-cir-flat");
     } else if (JA.getType() == types::TY_LLVM_BC ||
                JA.getType() == types::TY_LTO_BC) {
       // Emit textual llvm IR for AMDGPU offloading for -emit-llvm -S
@@ -7562,6 +7591,11 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     } else {
       A->render(Args, CmdArgs);
     }
+  }
+
+  for (const Arg *A : Args.filtered(options::OPT_mmlir)) {
+    A->claim();
+    A->render(Args, CmdArgs);
   }
 
   // With -save-temps, we want to save the unoptimized bitcode output from the

@@ -1,0 +1,48 @@
+// RUN: cir-opt %s -cir-to-mlir -o %t.mlir
+// RUN: FileCheck %s -input-file=%t.mlir -check-prefix=MLIR
+// RUN: cir-opt %s -cir-to-mlir -cir-mlir-to-llvm -o %t.mlir
+// RUN: FileCheck %s -input-file=%t.mlir -check-prefix=LLVM
+
+!u32i = !cir.int<u, 32>
+module {
+  cir.func @foo() {
+    cir.scope {
+      %0 = cir.alloca !u32i, !cir.ptr<!u32i>, ["a", init] {alignment = 4 : i64}
+      %1 = cir.const #cir.int<4> : !u32i
+      cir.store %1, %0 : !u32i, !cir.ptr<!u32i>
+    }
+    cir.return
+  }
+
+//      MLIR: func.func @foo()
+// MLIR-NEXT:   memref.alloca_scope
+// MLIR-NEXT:     %alloca = memref.alloca() {alignment = 4 : i64} : memref<i32>
+// MLIR-NEXT:     %c4_i32 = arith.constant 4 : i32
+// MLIR-NEXT:     memref.store %c4_i32, %alloca[] : memref<i32>
+// MLIR-NEXT:   }
+// MLIR-NEXT:   return
+
+// LLVM:  llvm.func @foo() {
+// LLVM:    %0 = llvm.intr.stacksave : !llvm.ptr
+// LLVM:    llvm.br ^bb1
+// LLVM:  ^bb1:
+//          [...]
+// LLVM:    llvm.intr.stackrestore %0 : !llvm.ptr
+// LLVM:    llvm.br ^bb2
+// LLVM:  ^bb2:
+// LLVM:    llvm.return
+// LLVM:  }
+
+  // Should drop empty scopes.
+  cir.func @empty_scope() {
+    cir.scope {
+    }
+    cir.return
+  }
+  //      MLIR: func.func @empty_scope()
+  // MLIR-NEXT:   return
+  // MLIR-NEXT: }
+
+  // LLVM: llvm.func @empty_scope()
+  // LLVM:   llvm.return
+}

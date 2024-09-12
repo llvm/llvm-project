@@ -1,0 +1,114 @@
+// RUN: cir-opt %s -o %t.cir
+// RUN: FileCheck --input-file=%t.cir %s
+!s8i = !cir.int<s, 8>
+!s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
+!ty_Init = !cir.struct<class "Init" {!s8i} #cir.record.decl.ast>
+module {
+  cir.global external @a = #cir.int<3> : !s32i
+  cir.global external @rgb = #cir.const_array<[#cir.int<0> : !s8i, #cir.int<-23> : !s8i, #cir.int<33> : !s8i] : !cir.array<!s8i x 3>>
+  cir.global external @b = #cir.const_array<"example\00" : !cir.array<!s8i x 8>>
+  cir.global external @rgb2 = #cir.const_struct<{#cir.int<0> : !s8i, #cir.int<5> : !s64i, #cir.ptr<null> : !cir.ptr<!s8i>}> : !cir.struct<struct {!s8i, !s64i, !cir.ptr<!s8i>}>
+  cir.global "private" constant internal @".str" : !cir.array<!s8i x 8> {alignment = 1 : i64}
+  cir.global "private" internal @c : !s32i
+  cir.global "private" constant internal @".str2" = #cir.const_array<"example\00" : !cir.array<!s8i x 8>> : !cir.array<!s8i x 8> {alignment = 1 : i64}
+  cir.global external @s = #cir.global_view<@".str2"> : !cir.ptr<!s8i>
+  cir.func @use_global() {
+    %0 = cir.get_global @a : !cir.ptr<!s32i>
+    cir.return
+  }
+  cir.global external @table = #cir.global_view<@s> : !cir.ptr<!s8i>
+  cir.global external @elt_ptr = #cir.global_view<@rgb, [1]> : !cir.ptr<!s8i>
+  cir.global external @table_of_ptrs = #cir.const_array<[#cir.global_view<@rgb, [1]> : !cir.ptr<!s8i>] : !cir.array<!cir.ptr<!s8i> x 1>>
+
+  // Note MLIR requires "private" for global declarations, should get
+  // rid of this somehow in favor of clarity?
+  cir.global "private" external @_ZTVN10__cxxabiv120__si_class_type_infoE : !cir.ptr<!s32i>
+  cir.global "private" constant external @type_info_A : !cir.ptr<!s8i>
+  cir.global constant external @type_info_name_B = #cir.const_array<"1B\00" : !cir.array<!s8i x 3>>
+
+  cir.global external @type_info_B = #cir.typeinfo<{
+    #cir.global_view<@_ZTVN10__cxxabiv120__si_class_type_infoE, [2]> : !cir.ptr<!s8i>,
+    #cir.global_view<@type_info_name_B> : !cir.ptr<!s8i>,
+    #cir.global_view<@type_info_A> : !cir.ptr<!s8i>}>
+  : !cir.struct<struct {!cir.ptr<!s8i>, !cir.ptr<!s8i>, !cir.ptr<!s8i>}>
+  cir.func private @_ZN4InitC1Eb(!cir.ptr<!ty_Init>, !s8i)
+  cir.func private @_ZN4InitD1Ev(!cir.ptr<!ty_Init>)
+  cir.global "private" internal @_ZL8__ioinit = ctor : !ty_Init {
+    %0 = cir.get_global @_ZL8__ioinit : !cir.ptr<!ty_Init>
+    %1 = cir.const #cir.int<3> : !s8i
+    cir.call @_ZN4InitC1Eb(%0, %1) : (!cir.ptr<!ty_Init>, !s8i) -> ()
+  } dtor {
+    %0 = cir.get_global @_ZL8__ioinit : !cir.ptr<!ty_Init>
+    cir.call @_ZN4InitD1Ev(%0) : (!cir.ptr<!ty_Init>) -> ()
+  }
+
+  cir.func @f31() global_ctor {
+    cir.return
+  }
+
+  cir.func @f32() global_ctor(777) {
+    cir.return
+  }
+
+  cir.func @f33() global_dtor {
+    cir.return
+  }
+
+  cir.func @f34() global_dtor(777) {
+    cir.return
+  }
+
+  cir.global external tls_dyn @model0 = #cir.int<0> : !s32i
+  cir.global external tls_local_dyn @model1 = #cir.int<0> : !s32i
+  cir.global external tls_init_exec @model2 = #cir.int<0> : !s32i
+  cir.global external tls_local_exec @model3 = #cir.int<0> : !s32i
+
+  cir.global "private" external tls_dyn @batata : !s32i
+  cir.func @f35() {
+    %0 = cir.get_global thread_local @batata : !cir.ptr<!s32i>
+    cir.return
+  }
+
+  cir.global external addrspace(offload_global) @addrspace1 = #cir.int<1> : !s32i
+  cir.global "private" internal addrspace(offload_local) @addrspace2 : !s32i
+  cir.global external addrspace(target<1>) @addrspace3 = #cir.int<3> : !s32i
+}
+
+// CHECK: cir.global external @a = #cir.int<3> : !s32i
+// CHECK: cir.global external @rgb = #cir.const_array<[#cir.int<0> : !s8i, #cir.int<-23> : !s8i, #cir.int<33> : !s8i]> : !cir.array<!s8i x 3>
+// CHECK: cir.global external @b = #cir.const_array<"example\00" : !cir.array<!s8i x 8>>
+// CHECK: cir.global "private" constant internal @".str" : !cir.array<!s8i x 8> {alignment = 1 : i64}
+// CHECK: cir.global "private" internal @c : !s32i
+// CHECK: cir.global "private" constant internal @".str2" = #cir.const_array<"example\00" : !cir.array<!s8i x 8>> : !cir.array<!s8i x 8> {alignment = 1 : i64}
+// CHECK: cir.global external @s = #cir.global_view<@".str2"> : !cir.ptr<!s8i>
+
+
+// CHECK: cir.func @use_global()
+// CHECK-NEXT: %0 = cir.get_global @a : !cir.ptr<!s32i>
+
+// CHECK:      cir.global "private" internal @_ZL8__ioinit = ctor : !ty_Init {
+// CHECK-NEXT:  %0 = cir.get_global @_ZL8__ioinit : !cir.ptr<!ty_Init>
+// CHECK-NEXT:  %1 = cir.const #cir.int<3> : !s8i
+// CHECK-NEXT:  cir.call @_ZN4InitC1Eb(%0, %1) : (!cir.ptr<!ty_Init>, !s8i) -> ()
+// CHECK-NEXT: }
+
+// CHECK: cir.func @f31() global_ctor
+// CHECK: cir.func @f32() global_ctor(777)
+// CHECK: cir.func @f33() global_dtor
+// CHECK: cir.func @f34() global_dtor(777)
+
+// CHECK: cir.global external tls_dyn @model0 = #cir.int<0> : !s32i
+// CHECK: cir.global external tls_local_dyn @model1 = #cir.int<0> : !s32i
+// CHECK: cir.global external tls_init_exec @model2 = #cir.int<0> : !s32i
+// CHECK: cir.global external tls_local_exec @model3 = #cir.int<0> : !s32i
+
+// CHECK: cir.global "private" external tls_dyn @batata : !s32i
+// CHECK: cir.func @f35() {
+// CHECK:   %0 = cir.get_global thread_local @batata : !cir.ptr<!s32i>
+// CHECK:   cir.return
+// CHECK: }
+
+// CHECK: cir.global external addrspace(offload_global) @addrspace1 = #cir.int<1> : !s32i
+// CHECK: cir.global "private" internal addrspace(offload_local) @addrspace2 : !s32i
+// CHECK: cir.global external addrspace(target<1>) @addrspace3 = #cir.int<3> : !s32i

@@ -26,6 +26,7 @@ using namespace clang;
 enum ActionType {
   PrintRecords,
   DumpJSON,
+  GenCIRBuiltinsLowering,
   GenClangAttrClasses,
   GenClangAttrParserStringSwitches,
   GenClangAttrSubjectMatchRulesParserStringSwitches,
@@ -119,6 +120,9 @@ cl::opt<ActionType> Action(
                    "Print all records to stdout (default)"),
         clEnumValN(DumpJSON, "dump-json",
                    "Dump all records as machine-readable JSON"),
+        clEnumValN(GenCIRBuiltinsLowering, "gen-cir-builtins-lowering",
+                   "Generate lowering of ClangIR builtins to equivalent LLVM "
+                   "IR builtins"),
         clEnumValN(GenClangAttrClasses, "gen-clang-attr-classes",
                    "Generate clang attribute clases"),
         clEnumValN(GenClangAttrParserStringSwitches,
@@ -319,6 +323,9 @@ bool ClangTableGenMain(raw_ostream &OS, RecordKeeper &Records) {
     break;
   case DumpJSON:
     EmitJSON(Records, OS);
+    break;
+  case GenCIRBuiltinsLowering:
+    EmitCIRBuiltinsLowering(Records, OS);
     break;
   case GenClangAttrClasses:
     EmitClangAttrClass(Records, OS);
