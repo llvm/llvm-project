@@ -173,7 +173,7 @@ Maintainers
 
 The LLVM Project aims to evolve features quickly while continually being in a
 release-ready state. In order to accomplish this, the project needs volunteers
-willing to do the less-glamorous work to ensure we produce robust, high-quality
+willing to do the less glamorous work to ensure we produce robust, high-quality
 products.
 
 Maintainers are those volunteers; they are regular contributors who volunteer
