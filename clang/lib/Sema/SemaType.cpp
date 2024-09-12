@@ -8844,7 +8844,7 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
     }
     case ParsedAttr::AT_HLSLResourceClass:
     case ParsedAttr::AT_HLSLROV:
-    case ParsedAttr::AT_HLSLRowAccess: {
+    case ParsedAttr::AT_HLSLRawBuffer: {
       // Only collect HLSL resource type attributes that are in
       // decl-specifier-seq; do not collect attributes on declarations or those
       // that get to slide after declaration name.

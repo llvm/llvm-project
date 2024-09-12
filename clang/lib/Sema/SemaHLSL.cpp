@@ -598,12 +598,12 @@ bool clang::CreateHLSLAttributedResourceType(Sema &S, QualType Wrapped,
       }
       ResAttrs.IsROV = true;
       break;
-    case attr::HLSLRowAccess:
-      if (ResAttrs.RowAccess) {
+    case attr::HLSLRawBuffer:
+      if (ResAttrs.RawBuffer) {
         S.Diag(A->getLocation(), diag::warn_duplicate_attribute_exact) << A;
         return false;
       }
-      ResAttrs.RowAccess = true;
+      ResAttrs.RawBuffer = true;
       break;
     default:
       llvm_unreachable("unhandled resource attribute type");
@@ -657,8 +657,8 @@ bool SemaHLSL::handleResourceTypeAttr(const ParsedAttr &AL) {
   case ParsedAttr::AT_HLSLROV:
     A = HLSLROVAttr::Create(getASTContext(), AL.getLoc());
     break;
-  case ParsedAttr::AT_HLSLRowAccess:
-    A = HLSLRowAccessAttr::Create(getASTContext(), AL.getLoc());
+  case ParsedAttr::AT_HLSLRawBuffer:
+    A = HLSLRawBufferAttr::Create(getASTContext(), AL.getLoc());
     break;
   default:
     llvm_unreachable("unhandled HLSL attribute");

@@ -6173,14 +6173,14 @@ public:
     uint8_t IsROV : 1;
 
     LLVM_PREFERRED_TYPE(bool)
-    uint8_t RowAccess : 1;
+    uint8_t RawBuffer : 1;
 
     Attributes(llvm::dxil::ResourceClass ResourceClass, bool IsROV,
-               bool RowAccess)
-        : ResourceClass(ResourceClass), IsROV(IsROV), RowAccess(RowAccess) {}
+               bool RawBuffer)
+        : ResourceClass(ResourceClass), IsROV(IsROV), RawBuffer(RawBuffer) {}
     Attributes()
         : ResourceClass(llvm::dxil::ResourceClass::UAV), IsROV(false),
-          RowAccess(false) {}
+          RawBuffer(false) {}
   };
 
 private:
@@ -6213,7 +6213,7 @@ public:
     ID.AddPointer(Contained.getAsOpaquePtr());
     ID.AddInteger(static_cast<uint32_t>(Attrs.ResourceClass));
     ID.AddBoolean(Attrs.IsROV);
-    ID.AddBoolean(Attrs.RowAccess);
+    ID.AddBoolean(Attrs.RawBuffer);
   }
 
   static bool classof(const Type *T) {

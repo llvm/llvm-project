@@ -4669,8 +4669,8 @@ def HLSLResourceClass : TypeAttr {
   let Documentation = [InternalOnly];
 }
 
-def HLSLRowAccess : TypeAttr {
-  let Spellings = [CXX11<"hlsl", "row_access">];
+def HLSLRawBuffer : TypeAttr {
+  let Spellings = [CXX11<"hlsl", "raw_buffer">];
   let LangOpts = [HLSL]; 
   let Documentation = [InternalOnly];
 }
