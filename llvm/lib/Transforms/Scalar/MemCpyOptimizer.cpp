@@ -661,18 +661,11 @@ bool MemCpyOptPass::processStoreOfLoad(StoreInst *SI, LoadInst *LI,
       }
     }
 
-    // We found an instruction that may write to the loaded memory.
-    // We can try to promote at this position instead of the store
+    // If we found an instruction that may write to the loaded memory,
+    // we can try to promote at this position instead of the store
     // position if nothing aliases the store memory after this and the store
     // destination is not in the range.
-    if (P && P != SI) {
-      if (!moveUp(SI, P, LI))
-        P = nullptr;
-    }
-
-    // If a valid insertion position is found, then we can promote
-    // the load/store pair to a memcpy.
-    if (P) {
+    if (P == SI || moveUp(SI, P, LI)) {
       // If we load from memory that may alias the memory we store to,
       // memmove must be used to preserve semantic. If not, memcpy can
       // be used. Also, if we load from constant memory, memcpy can be used
