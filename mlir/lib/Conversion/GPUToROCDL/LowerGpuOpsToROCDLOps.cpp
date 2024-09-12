@@ -334,12 +334,10 @@ void mlir::configureGpuToROCDLConversionLegality(ConversionTarget &target) {
   target.addIllegalOp<LLVM::CosOp, LLVM::ExpOp, LLVM::Exp2Op, LLVM::FCeilOp,
                       LLVM::FFloorOp, LLVM::FRemOp, LLVM::LogOp, LLVM::Log10Op,
                       LLVM::Log2Op, LLVM::PowOp, LLVM::SinOp>();
-  // These ops are not legal for f64 type but are legal for narrower float
-  // types.
+  // These ops are legal for f16 and f32 type.
   target.addDynamicallyLegalOp<LLVM::ExpOp, LLVM::LogOp>([](Operation *op) {
-    return any_of(op->getOperandTypes(), [](Type type) {
-      return isa<FloatType>(type) && type.getIntOrFloatBitWidth() < 64;
-    });
+    return any_of(op->getOperandTypes(),
+                  llvm::IsaPred<Float16Type, Float32Type>);
   });
   // TODO: Remove once we support replacing non-root ops.
   target.addLegalOp<gpu::YieldOp, gpu::GPUModuleOp>();
