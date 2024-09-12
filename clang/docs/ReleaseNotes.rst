@@ -460,6 +460,8 @@ LoongArch Support
 RISC-V Support
 ^^^^^^^^^^^^^^
 
+- The option ``-mcmodel=large`` for the large code model is supported.
+
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
