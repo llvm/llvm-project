@@ -411,6 +411,11 @@ void AMDGPUTargetCodeGenInfo::setFunctionDeclAttributes(
                                     llvm::ConstantAsMetadata::get(Z)};
     F->setMetadata("reqd_work_group_size",
                    llvm::MDNode::get(F->getContext(), AttrMDArgs));
+    unsigned Min, Max;
+    Min = Max =
+        Attr->getBlockDimX() * Attr->getBlockDimY() * Attr->getBlockDimZ();
+    std::string AttrVal = llvm::utostr(Min) + "," + llvm::utostr(Max);
+    F->addFnAttr("amdgpu-flat-work-group-size", AttrVal);
   }
 
   if (auto *Attr = FD->getAttr<CUDAClusterDimsAttr>()) {

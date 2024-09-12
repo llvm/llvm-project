@@ -1656,14 +1656,18 @@ public:
 
   /// \returns the maximum number of VGPRs that can be used and still achieved
   /// at least the specified number of waves \p WavesPerEU.
-  unsigned getMaxNumVGPRs(unsigned WavesPerEU) const {
-    return AMDGPU::IsaInfo::getMaxNumVGPRs(this, WavesPerEU);
+  /// The NumExcludedVGPRs is for the lane-shared VGPRs in wavegroup mode.
+  unsigned getMaxNumVGPRs(unsigned WavesPerEU,
+                          unsigned NumExcludedVGPRs = 0) const {
+    return AMDGPU::IsaInfo::getMaxNumVGPRs(this, WavesPerEU, NumExcludedVGPRs);
   }
 
   /// \returns max num VGPRs. This is the common utility function
   /// called by MachineFunction and Function variants of getMaxNumVGPRs.
+  /// The NumExcludedVGPRs is for the lane-shared VGPRs in wavegroup mode.
   unsigned getBaseMaxNumVGPRs(const Function &F,
-                              std::pair<unsigned, unsigned> WavesPerEU) const;
+                              std::pair<unsigned, unsigned> WavesPerEU,
+                              const unsigned NumExcludedVGPRs = 0) const;
   /// \returns Maximum number of VGPRs that meets number of waves per execution
   /// unit requirement for function \p F, or number of VGPRs explicitly
   /// requested using "amdgpu-num-vgpr" attribute attached to function \p F.

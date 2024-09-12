@@ -500,11 +500,13 @@ unsigned GCNSubtarget::getMaxNumSGPRs(const Function &F) const {
                             getReservedNumSGPRs(F));
 }
 
-unsigned GCNSubtarget::getBaseMaxNumVGPRs(
-    const Function &F, std::pair<unsigned, unsigned> WavesPerEU) const {
+unsigned
+GCNSubtarget::getBaseMaxNumVGPRs(const Function &F,
+                                 std::pair<unsigned, unsigned> WavesPerEU,
+                                 unsigned NumExcludedVGRs) const {
   // Compute maximum number of VGPRs function can use using default/requested
   // minimum number of waves per execution unit.
-  unsigned MaxNumVGPRs = getMaxNumVGPRs(WavesPerEU.first);
+  unsigned MaxNumVGPRs = getMaxNumVGPRs(WavesPerEU.first, NumExcludedVGRs);
 
   // Check if maximum number of VGPRs was explicitly requested using
   // "amdgpu-num-vgpr" attribute.
@@ -517,7 +519,7 @@ unsigned GCNSubtarget::getBaseMaxNumVGPRs(
 
     // Make sure requested value is compatible with values implied by
     // default/requested minimum/maximum number of waves per execution unit.
-    if (Requested && Requested > getMaxNumVGPRs(WavesPerEU.first))
+    if (Requested && Requested > MaxNumVGPRs)
       Requested = 0;
     if (WavesPerEU.second && Requested &&
         Requested < getMinNumVGPRs(WavesPerEU.second))
@@ -537,7 +539,8 @@ unsigned GCNSubtarget::getMaxNumVGPRs(const Function &F) const {
 unsigned GCNSubtarget::getMaxNumVGPRs(const MachineFunction &MF) const {
   const Function &F = MF.getFunction();
   const SIMachineFunctionInfo &MFI = *MF.getInfo<SIMachineFunctionInfo>();
-  return getBaseMaxNumVGPRs(F, MFI.getWavesPerEU());
+  auto NumExcludedVGRs = divideCeil(MFI.getLaneSharedVGPRSize(), 4u);
+  return getBaseMaxNumVGPRs(F, MFI.getWavesPerEU(), NumExcludedVGRs);
 }
 
 void GCNSubtarget::adjustSchedDependency(
