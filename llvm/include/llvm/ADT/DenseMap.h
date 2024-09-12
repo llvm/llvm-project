@@ -473,14 +473,14 @@ protected:
 
     BucketT *Buckets = getBuckets();
     const BucketT *OtherBuckets = other.getBuckets();
+    const size_t NumBuckets = getNumBuckets();
     if constexpr (std::is_trivially_copyable_v<KeyT> &&
                   std::is_trivially_copyable_v<ValueT>) {
       memcpy(reinterpret_cast<void *>(Buckets), OtherBuckets,
-             getNumBuckets() * sizeof(BucketT));
+             NumBuckets * sizeof(BucketT));
     } else {
       const KeyT EmptyKey = getEmptyKey();
       const KeyT TombstoneKey = getTombstoneKey();
-      const size_t NumBuckets = getNumBuckets();
       for (size_t I = 0; I < NumBuckets; ++I) {
         ::new (&Buckets[I].getFirst()) KeyT(OtherBuckets[I].getFirst());
         if (!KeyInfoT::isEqual(Buckets[I].getFirst(), EmptyKey) &&
