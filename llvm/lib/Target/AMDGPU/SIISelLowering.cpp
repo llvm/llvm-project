@@ -6285,15 +6285,15 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
     if (TII->isFLATScratch(MI)) {
       const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
       if (ST.hasVGPRIndexingRegisters()) {
-        bool LaneSharedOrPrivateInVGPR = false;
+        bool Promotable = false;
         for (const auto *MemOp : MI.memoperands()) {
           if (AMDGPU::IsLaneSharedInVGPR(MemOp) ||
               AMDGPU::IsPrivateInVGPR(MemOp)) {
-            LaneSharedOrPrivateInVGPR = true;
+            Promotable = true;
             break;
           }
         }
-        if (LaneSharedOrPrivateInVGPR) {
+        if (Promotable) {
           return emitVLoadStoreIdx(MI, *BB, *getSubtarget());
         }
       }
