@@ -19,6 +19,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
 #include "llvm/TargetParser/TargetParser.h"
+#include <queue>
 
 using namespace llvm;
 
@@ -495,21 +496,18 @@ hasHazard(StateT State,
   return false;
 }
 
-// Returns a minimum wait states since \p I walking all predecessors.
-// Only scans until \p IsExpired does not return true.
-// Can only be run in a hazard recognizer mode.
-static int getWaitStatesSince(
+// Update \p WaitStates while iterating from \p I to hazard in \p MBB.
+static HazardFnResult countWaitStatesSince(
     GCNHazardRecognizer::IsHazardFn IsHazard, const MachineBasicBlock *MBB,
-    MachineBasicBlock::const_reverse_instr_iterator I, int WaitStates,
-    IsExpiredFn IsExpired, DenseSet<const MachineBasicBlock *> &Visited,
-    GetNumWaitStatesFn GetNumWaitStates = SIInstrInfo::getNumWaitStates) {
+    MachineBasicBlock::const_reverse_instr_iterator I, int &WaitStates,
+    IsExpiredFn IsExpired, GetNumWaitStatesFn GetNumWaitStates) {
   for (auto E = MBB->instr_rend(); I != E; ++I) {
     // Don't add WaitStates for parent BUNDLE instructions.
     if (I->isBundle())
       continue;
 
     if (IsHazard(*I))
-      return WaitStates;
+      return HazardFound;
 
     if (I->isInlineAsm())
       continue;
@@ -517,29 +515,85 @@ static int getWaitStatesSince(
     WaitStates += GetNumWaitStates(*I);
 
     if (IsExpired(*I, WaitStates))
-      return std::numeric_limits<int>::max();
+      return HazardExpired;
   }
 
+  return NoHazardFound;
+}
+
+// Implements predecessor search for getWaitStatesSince.
+static int getWaitStatesSinceImpl(
+    GCNHazardRecognizer::IsHazardFn IsHazard,
+    const MachineBasicBlock *InitialMBB, int InitialWaitStates,
+    IsExpiredFn IsExpired,
+    GetNumWaitStatesFn GetNumWaitStates = SIInstrInfo::getNumWaitStates) {
+  DenseMap<const MachineBasicBlock *, int> Visited;
+
+  // Build worklist of predecessors.
+  // Note: use queue so search is breadth first, which reduces search space
+  // when a hazard is found.
+  std::queue<const MachineBasicBlock *> Worklist;
+  for (MachineBasicBlock *Pred : InitialMBB->predecessors()) {
+    Visited[Pred] = InitialWaitStates;
+    Worklist.push(Pred);
+  }
+
+  // Find minimum wait states to hazard or determine that all paths expire.
   int MinWaitStates = std::numeric_limits<int>::max();
-  for (MachineBasicBlock *Pred : MBB->predecessors()) {
-    if (!Visited.insert(Pred).second)
+  while (!Worklist.empty()) {
+    const MachineBasicBlock *MBB = Worklist.front();
+    int WaitStates = Visited[MBB];
+    Worklist.pop();
+
+    // No reason to search blocks when wait states exceed established minimum.
+    if (WaitStates >= MinWaitStates)
       continue;
 
-    int W = getWaitStatesSince(IsHazard, Pred, Pred->instr_rbegin(), WaitStates,
-                               IsExpired, Visited, GetNumWaitStates);
-
-    MinWaitStates = std::min(MinWaitStates, W);
+    // Search for hazard
+    auto Search = countWaitStatesSince(IsHazard, MBB, MBB->instr_rbegin(),
+                                       WaitStates, IsExpired, GetNumWaitStates);
+    if (Search == HazardFound) {
+      // Update minimum.
+      MinWaitStates = std::min(MinWaitStates, WaitStates);
+    } else if (Search == NoHazardFound && WaitStates < MinWaitStates) {
+      // Search predecessors.
+      for (MachineBasicBlock *Pred : MBB->predecessors()) {
+        if (!Visited.contains(Pred) || WaitStates < Visited[Pred]) {
+          // Store lowest wait states required to visit this block.
+          Visited[Pred] = WaitStates;
+          Worklist.push(Pred);
+        }
+      }
+    }
   }
 
   return MinWaitStates;
 }
 
+// Returns minimum wait states since \p I walking all predecessors.
+// Only scans until \p IsExpired does not return true.
+// Can only be run in a hazard recognizer mode.
+static int getWaitStatesSince(
+    GCNHazardRecognizer::IsHazardFn IsHazard, const MachineBasicBlock *MBB,
+    MachineBasicBlock::const_reverse_instr_iterator I, int WaitStates,
+    IsExpiredFn IsExpired,
+    GetNumWaitStatesFn GetNumWaitStates = SIInstrInfo::getNumWaitStates) {
+  // Scan this block from I.
+  auto InitSearch = countWaitStatesSince(IsHazard, MBB, I, WaitStates,
+                                         IsExpired, GetNumWaitStates);
+  if (InitSearch == HazardFound)
+    return WaitStates;
+  else if (InitSearch == HazardExpired)
+    return std::numeric_limits<int>::max();
+  else
+    return getWaitStatesSinceImpl(IsHazard, MBB, WaitStates, IsExpired,
+                                  GetNumWaitStates);
+}
+
 static int getWaitStatesSince(GCNHazardRecognizer::IsHazardFn IsHazard,
                               const MachineInstr *MI, IsExpiredFn IsExpired) {
-  DenseSet<const MachineBasicBlock *> Visited;
   return getWaitStatesSince(IsHazard, MI->getParent(),
-                            std::next(MI->getReverseIterator()),
-                            0, IsExpired, Visited);
+                            std::next(MI->getReverseIterator()), 0, IsExpired);
 }
 
 int GCNHazardRecognizer::getWaitStatesSince(IsHazardFn IsHazard, int Limit) {
@@ -1524,10 +1578,9 @@ bool GCNHazardRecognizer::fixLdsDirectVALUHazard(MachineInstr *MI) {
     return SIInstrInfo::isVALU(MI) ? 1 : 0;
   };
 
-  DenseSet<const MachineBasicBlock *> Visited;
   auto Count = ::getWaitStatesSince(IsHazardFn, MI->getParent(),
                                     std::next(MI->getReverseIterator()), 0,
-                                    IsExpiredFn, Visited, GetWaitStatesFn);
+                                    IsExpiredFn, GetWaitStatesFn);
 
   // Transcendentals can execute in parallel to other VALUs.
   // This makes va_vdst count unusable with a mixture of VALU and TRANS.
@@ -3234,10 +3287,9 @@ bool GCNHazardRecognizer::fixVALUReadSGPRHazard(MachineInstr *MI) {
   };
 
   // Check for the hazard.
-  DenseSet<const MachineBasicBlock *> Visited;
   int WaitStates = ::getWaitStatesSince(IsHazardFn, MI->getParent(),
                                         std::next(MI->getReverseIterator()), 0,
-                                        IsExpiredFn, Visited, WaitStatesFn);
+                                        IsExpiredFn, WaitStatesFn);
 
   if (WaitStates >= SALUExpiryCount)
     return false;
