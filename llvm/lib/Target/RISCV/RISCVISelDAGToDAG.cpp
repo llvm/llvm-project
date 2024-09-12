@@ -3535,7 +3535,21 @@ bool RISCVDAGToDAGISel::selectLow8BitsVSplat(SDValue N, SDValue &SplatVal) {
   return selectVSplat(N, SplatVal);
 }
 
-bool RISCVDAGToDAGISel::selectFPImm(SDValue N, SDValue &Imm) {
+bool RISCVDAGToDAGISel::selectScalarFPAsInt(SDValue N, SDValue &Imm) {
+  // Allow bitcasts from XLenVT -> FP.
+  if (N.getOpcode() == ISD::BITCAST &&
+      N.getOperand(0).getValueType() == Subtarget->getXLenVT()) {
+    Imm = N.getOperand(0);
+    return true;
+  }
+  // Allow moves from XLenVT to FP.
+  if (N.getOpcode() == RISCVISD::FMV_H_X ||
+      N.getOpcode() == RISCVISD::FMV_W_X_RV64) {
+    Imm = N.getOperand(0);
+    return true;
+  }
+
+  // Otherwise, look for FP constants that can materialized with scalar int.
   ConstantFPSDNode *CFP = dyn_cast<ConstantFPSDNode>(N.getNode());
   if (!CFP)
     return false;
