@@ -1397,9 +1397,10 @@ CreateRunInTerminalReverseRequest(const llvm::json::Object &launch_request,
 
   auto envs = GetEnvironmentFromArguments(*launch_request_arguments);
   llvm::json::Object env_json;
-  for (size_t index = 0; index < envs.GetNumValues(); index++) {
-    auto key = llvm::StringRef(envs.GetNameAtIndex(index));
-    auto value = llvm::StringRef(envs.GetValueAtIndex(index));
+  for (size_t index = 0, env_count = envs.GetNumValues(); index < env_count;
+       index++) {
+    llvm::StringRef key = envs.GetNameAtIndex(index);
+    llvm::StringRef value = envs.GetValueAtIndex(index);
 
     if (key.empty())
       g_dap.SendOutput(OutputType::Stderr,
