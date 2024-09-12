@@ -20,9 +20,9 @@ subroutine implicit_dsa_test1
   !$omp end task
 
   !$omp task default(shared)
-    !DEF: /implicit_dsa_test1/OtherConstruct2/x (OmpShared) HostAssoc INTEGER(4)
-    !DEF: /implicit_dsa_test1/OtherConstruct2/y (OmpShared) HostAssoc INTEGER(4)
-    !DEF: /implicit_dsa_test1/OtherConstruct2/z (OmpShared) HostAssoc INTEGER(4)
+    !DEF: /implicit_dsa_test1/OtherConstruct2/x HostAssoc INTEGER(4)
+    !DEF: /implicit_dsa_test1/OtherConstruct2/y HostAssoc INTEGER(4)
+    !DEF: /implicit_dsa_test1/OtherConstruct2/z HostAssoc INTEGER(4)
     x = y + z
   !$omp end task
 
