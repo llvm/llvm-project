@@ -34,6 +34,7 @@
 #include "llvm/Transforms/Instrumentation/PGOInstrumentation.h"
 #include "llvm/Transforms/Scalar/DCE.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include <deque>
 
 using namespace llvm;
 
@@ -110,7 +111,7 @@ class ProfileAnnotator final {
     }
 
     bool tryTakeCountFromKnownOutEdges(const BasicBlock &BB) {
-      if (!succ_empty(&BB) && !UnknownCountOutEdges) {
+      if (!UnknownCountOutEdges) {
         computeCountFrom(OutEdges);
         return true;
       }
@@ -118,7 +119,7 @@ class ProfileAnnotator final {
     }
 
     bool tryTakeCountFromKnownInEdges(const BasicBlock &BB) {
-      if (!BB.isEntryBlock() && !UnknownCountInEdges) {
+      if (!UnknownCountInEdges) {
         computeCountFrom(InEdges);
         return true;
       }
@@ -198,6 +199,50 @@ class ProfileAnnotator final {
 
   BBInfo &getBBInfo(const BasicBlock &BB) { return BBInfos.find(&BB)->second; }
 
+  const BBInfo &getBBInfo(const BasicBlock &BB) const {
+    return BBInfos.find(&BB)->second;
+  }
+
+  // validation function after we propagate the counters: all BBs and edges'
+  // counters must have a value.
+  bool allCountersAreAssinged() const {
+    for (const auto &BBInfo : BBInfos)
+      if (!BBInfo.second.hasCount())
+        return false;
+    for (const auto &EdgeInfo : EdgeInfos)
+      if (!EdgeInfo.Count.has_value())
+        return false;
+    return true;
+  }
+
+  bool allTakenPathsExit() const {
+    std::deque<const BasicBlock *> Worklist;
+    DenseSet<const BasicBlock *> Visited;
+    Worklist.push_back(&F.getEntryBlock());
+    Visited.insert(&F.getEntryBlock());
+    while (!Worklist.empty()) {
+      const auto *BB = Worklist.front();
+      Worklist.pop_front();
+      if (succ_size(BB) <= 1)
+        continue;
+      const auto &BBInfo = getBBInfo(*BB);
+      bool Inserted = false;
+      for (auto I = 0U; I < BB->getTerminator()->getNumSuccessors(); ++I) {
+        const auto *Succ = BB->getTerminator()->getSuccessor(I);
+        if (!shouldExcludeEdge(*BB, *Succ)) {
+          if (BBInfo.getEdgeCount(I) > 0)
+            if (Visited.insert(Succ).second) {
+              Worklist.push_back(Succ);
+              Inserted = true;
+            }
+        }
+      }
+      if (!Inserted)
+        return false;
+    }
+    return true;
+  }
+
 public:
   ProfileAnnotator(Function &F, const SmallVectorImpl<uint64_t> &Counters,
                    InstrProfSummaryBuilder &PB)
@@ -268,14 +313,16 @@ public:
         PB.addInternalCount(EdgeCount);
       }
 
-      if (MaxCount == 0)
-        F.getContext().emitError(
-            "[ctx-prof] Encountered a BB with more than one successor, where "
-            "all outgoing edges have a 0 count. This occurs in non-exiting "
-            "functions (message pumps, usually) which are not supported in the "
-            "contextual profiling case");
-      setProfMetadata(F.getParent(), Term, EdgeCounts, MaxCount);
+      if (MaxCount != 0)
+        setProfMetadata(F.getParent(), Term, EdgeCounts, MaxCount);
     }
+    assert(allCountersAreAssinged() &&
+           "Expected all counters have been assigned.");
+    assert(allTakenPathsExit() &&
+           "[ctx-prof] Encountered a BB with more than one successor, where "
+           "all outgoing edges have a 0 count. This occurs in non-exiting "
+           "functions (message pumps, usually) which are not supported in the "
+           "contextual profiling case");
   }
 };
 
