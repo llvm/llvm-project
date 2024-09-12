@@ -421,7 +421,6 @@ namespace std
 */
 
 #include <__config>
-#include <__fwd/functional.h> // This is https://llvm.org/PR56938
 #include <__type_traits/add_const.h>
 #include <__type_traits/add_cv.h>
 #include <__type_traits/add_lvalue_reference.h>

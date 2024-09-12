@@ -921,11 +921,11 @@ VPlanPtr VPlan::createInitialVPlan(const SCEV *TripCount, ScalarEvolution &SE,
 void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
                              Value *CanonicalIVStartValue,
                              VPTransformState &State) {
+  Type *TCTy = TripCountV->getType();
   // Check if the backedge taken count is needed, and if so build it.
   if (BackedgeTakenCount && BackedgeTakenCount->getNumUsers()) {
     IRBuilder<> Builder(State.CFG.PrevBB->getTerminator());
-    auto *TCMO = Builder.CreateSub(TripCountV,
-                                   ConstantInt::get(TripCountV->getType(), 1),
+    auto *TCMO = Builder.CreateSub(TripCountV, ConstantInt::get(TCTy, 1),
                                    "trip.count.minus.1");
     BackedgeTakenCount->setUnderlyingValue(TCMO);
   }
@@ -935,8 +935,17 @@ void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
   IRBuilder<> Builder(State.CFG.PrevBB->getTerminator());
   // FIXME: Model VF * UF computation completely in VPlan.
   assert(VFxUF.getNumUsers() && "VFxUF expected to always have users");
-  VFxUF.setUnderlyingValue(
-      createStepForVF(Builder, TripCountV->getType(), State.VF, State.UF));
+  if (VF.getNumUsers()) {
+    Value *RuntimeVF = getRuntimeVF(Builder, TCTy, State.VF);
+    VF.setUnderlyingValue(RuntimeVF);
+    VFxUF.setUnderlyingValue(
+        State.UF > 1
+            ? Builder.CreateMul(RuntimeVF, ConstantInt::get(TCTy, State.UF))
+            : RuntimeVF);
+  } else {
+    VFxUF.setUnderlyingValue(
+        createStepForVF(Builder, TCTy, State.VF, State.UF));
+  }
 
   // When vectorizing the epilogue loop, the canonical induction start value
   // needs to be changed from zero to the value after the main vector loop.
@@ -1099,6 +1108,12 @@ InstructionCost VPlan::cost(ElementCount VF, VPCostContext &Ctx) {
 void VPlan::printLiveIns(raw_ostream &O) const {
   VPSlotTracker SlotTracker(this);
 
+  if (VF.getNumUsers() > 0) {
+    O << "\nLive-in ";
+    VF.printAsOperand(O, SlotTracker);
+    O << " = VF";
+  }
+
   if (VFxUF.getNumUsers() > 0) {
     O << "\nLive-in ";
     VFxUF.printAsOperand(O, SlotTracker);
@@ -1241,6 +1256,7 @@ VPlan *VPlan::duplicate() {
         NewPlan->getOrAddLiveIn(OldLiveIn->getLiveInIRValue());
   }
   Old2NewVPValues[&VectorTripCount] = &NewPlan->VectorTripCount;
+  Old2NewVPValues[&VF] = &NewPlan->VF;
   Old2NewVPValues[&VFxUF] = &NewPlan->VFxUF;
   if (BackedgeTakenCount) {
     NewPlan->BackedgeTakenCount = new VPValue();
@@ -1551,6 +1567,8 @@ void VPSlotTracker::assignName(const VPValue *V) {
 }
 
 void VPSlotTracker::assignNames(const VPlan &Plan) {
+  if (Plan.VF.getNumUsers() > 0)
+    assignName(&Plan.VF);
   if (Plan.VFxUF.getNumUsers() > 0)
     assignName(&Plan.VFxUF);
   assignName(&Plan.VectorTripCount);

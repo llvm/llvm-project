@@ -16615,7 +16615,7 @@ bool AArch64TargetLowering::shouldSinkOperands(
 static bool createTblShuffleMask(unsigned SrcWidth, unsigned DstWidth,
                                  unsigned NumElts, bool IsLittleEndian,
                                  SmallVectorImpl<int> &Mask) {
-  if (DstWidth % 8 != 0 || DstWidth <= 16 || DstWidth >= 64)
+  if (DstWidth % 8 != 0 || DstWidth <= 16 || DstWidth > 64)
     return false;
 
   assert(DstWidth % SrcWidth == 0 &&
@@ -16649,7 +16649,7 @@ static Value *createTblShuffleForZExt(IRBuilderBase &Builder, Value *Op,
     return nullptr;
 
   auto *FirstEltZero = Builder.CreateInsertElement(
-      PoisonValue::get(SrcTy), Builder.getInt8(0), uint64_t(0));
+      PoisonValue::get(SrcTy), Builder.getIntN(SrcWidth, 0), uint64_t(0));
   Value *Result = Builder.CreateShuffleVector(Op, FirstEltZero, Mask);
   Result = Builder.CreateBitCast(Result, DstTy);
   if (DstTy != ZExtTy)
@@ -16670,7 +16670,7 @@ static Value *createTblShuffleForSExt(IRBuilderBase &Builder, Value *Op,
     return nullptr;
 
   auto *FirstEltZero = Builder.CreateInsertElement(
-      PoisonValue::get(SrcTy), Builder.getInt8(0), uint64_t(0));
+      PoisonValue::get(SrcTy), Builder.getIntN(SrcWidth, 0), uint64_t(0));
 
   return Builder.CreateShuffleVector(Op, FirstEltZero, Mask);
 }
@@ -16847,6 +16847,9 @@ bool AArch64TargetLowering::optimizeExtendOrTruncateConversion(
         return false;
     }
 
+    if (DstTy->getScalarSizeInBits() >= 64)
+      return false;
+
     IRBuilder<> Builder(ZExt);
     Value *Result = createTblShuffleForZExt(
         Builder, ZExt->getOperand(0), cast<FixedVectorType>(ZExt->getType()),
@@ -16859,8 +16862,10 @@ bool AArch64TargetLowering::optimizeExtendOrTruncateConversion(
   }
 
   auto *UIToFP = dyn_cast<UIToFPInst>(I);
-  if (UIToFP && SrcTy->getElementType()->isIntegerTy(8) &&
-      DstTy->getElementType()->isFloatTy()) {
+  if (UIToFP && ((SrcTy->getElementType()->isIntegerTy(8) &&
+                  DstTy->getElementType()->isFloatTy()) ||
+                 (SrcTy->getElementType()->isIntegerTy(16) &&
+                  DstTy->getElementType()->isDoubleTy()))) {
     IRBuilder<> Builder(I);
     Value *ZExt = createTblShuffleForZExt(
         Builder, I->getOperand(0), FixedVectorType::getInteger(DstTy),
@@ -22378,6 +22383,25 @@ static SDValue performExtendCombine(SDNode *N,
       N->getOpcode() == ISD::SIGN_EXTEND &&
       N->getOperand(0)->getOpcode() == ISD::SETCC)
     return performSignExtendSetCCCombine(N, DCI, DAG);
+
+  // If we see (any_extend (bswap ...)) with bswap returning an i16, we know
+  // that the top half of the result register must be unused, due to the
+  // any_extend. This means that we can replace this pattern with (rev16
+  // (any_extend ...)). This saves a machine instruction compared to (lsr (rev
+  // ...)), which is what this pattern would otherwise be lowered to.
+  // Only apply this optimisation if any_extend in original pattern to i32 or
+  // i64, because this type will become the input type to REV16 in the new
+  // pattern, so must be a legitimate REV16 input type.
+  SDValue Bswap = N->getOperand(0);
+  if (N->getOpcode() == ISD::ANY_EXTEND && Bswap.getOpcode() == ISD::BSWAP &&
+      Bswap.getValueType() == MVT::i16 &&
+      (N->getValueType(0) == MVT::i32 || N->getValueType(0) == MVT::i64)) {
+    SDLoc DL(N);
+    SDValue NewAnyExtend = DAG.getNode(ISD::ANY_EXTEND, DL, N->getValueType(0),
+                                       Bswap->getOperand(0));
+    return DAG.getNode(AArch64ISD::REV16, SDLoc(N), N->getValueType(0),
+                       NewAnyExtend);
+  }
 
   return SDValue();
 }

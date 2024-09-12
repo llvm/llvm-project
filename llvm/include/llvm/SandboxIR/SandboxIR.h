@@ -123,6 +123,8 @@ class ConstantFP;
 class ConstantAggregateZero;
 class ConstantPointerNull;
 class PoisonValue;
+class BlockAddress;
+class ConstantTokenNone;
 class Context;
 class Function;
 class Instruction;
@@ -321,7 +323,9 @@ protected:
   friend class ConstantStruct;        // For `Val`.
   friend class ConstantAggregateZero; // For `Val`.
   friend class ConstantPointerNull;   // For `Val`.
+  friend class UndefValue;            // For `Val`.
   friend class PoisonValue;           // For `Val`.
+  friend class BlockAddress;          // For `Val`.
 
   /// All values point to the context.
   Context &Ctx;
@@ -1020,10 +1024,61 @@ public:
 #endif
 };
 
-// TODO: Inherit from UndefValue.
-class PoisonValue final : public Constant {
+// TODO: Inherit from ConstantData.
+class UndefValue : public Constant {
+protected:
+  UndefValue(llvm::UndefValue *C, Context &Ctx)
+      : Constant(ClassID::UndefValue, C, Ctx) {}
+  UndefValue(ClassID ID, llvm::Constant *C, Context &Ctx)
+      : Constant(ID, C, Ctx) {}
+  friend class Context; // For constructor.
+
+public:
+  /// Static factory methods - Return an 'undef' object of the specified type.
+  static UndefValue *get(Type *T);
+
+  /// If this Undef has array or vector type, return a undef with the right
+  /// element type.
+  UndefValue *getSequentialElement() const;
+
+  /// If this undef has struct type, return a undef with the right element type
+  /// for the specified element.
+  UndefValue *getStructElement(unsigned Elt) const;
+
+  /// Return an undef of the right value for the specified GEP index if we can,
+  /// otherwise return null (e.g. if C is a ConstantExpr).
+  UndefValue *getElementValue(Constant *C) const;
+
+  /// Return an undef of the right value for the specified GEP index.
+  UndefValue *getElementValue(unsigned Idx) const;
+
+  /// Return the number of elements in the array, vector, or struct.
+  unsigned getNumElements() const {
+    return cast<llvm::UndefValue>(Val)->getNumElements();
+  }
+
+  /// For isa/dyn_cast.
+  static bool classof(const sandboxir::Value *From) {
+    return From->getSubclassID() == ClassID::UndefValue ||
+           From->getSubclassID() == ClassID::PoisonValue;
+  }
+  unsigned getUseOperandNo(const Use &Use) const final {
+    llvm_unreachable("UndefValue has no operands!");
+  }
+#ifndef NDEBUG
+  void verify() const override {
+    assert(isa<llvm::UndefValue>(Val) && "Expected an UndefValue!");
+  }
+  void dumpOS(raw_ostream &OS) const override {
+    dumpCommonPrefix(OS);
+    dumpCommonSuffix(OS);
+  }
+#endif
+};
+
+class PoisonValue final : public UndefValue {
   PoisonValue(llvm::PoisonValue *C, Context &Ctx)
-      : Constant(ClassID::PoisonValue, C, Ctx) {}
+      : UndefValue(ClassID::PoisonValue, C, Ctx) {}
   friend class Context; // For constructor.
 
 public:
@@ -1049,12 +1104,67 @@ public:
   static bool classof(const sandboxir::Value *From) {
     return From->getSubclassID() == ClassID::PoisonValue;
   }
-  unsigned getUseOperandNo(const Use &Use) const final {
-    llvm_unreachable("PoisonValue has no operands!");
-  }
 #ifndef NDEBUG
   void verify() const override {
     assert(isa<llvm::PoisonValue>(Val) && "Expected a PoisonValue!");
+  }
+  void dumpOS(raw_ostream &OS) const override {
+    dumpCommonPrefix(OS);
+    dumpCommonSuffix(OS);
+  }
+#endif
+};
+
+class BlockAddress final : public Constant {
+  BlockAddress(llvm::BlockAddress *C, Context &Ctx)
+      : Constant(ClassID::BlockAddress, C, Ctx) {}
+  friend class Context; // For constructor.
+
+public:
+  /// Return a BlockAddress for the specified function and basic block.
+  static BlockAddress *get(Function *F, BasicBlock *BB);
+
+  /// Return a BlockAddress for the specified basic block.  The basic
+  /// block must be embedded into a function.
+  static BlockAddress *get(BasicBlock *BB);
+
+  /// Lookup an existing \c BlockAddress constant for the given BasicBlock.
+  ///
+  /// \returns 0 if \c !BB->hasAddressTaken(), otherwise the \c BlockAddress.
+  static BlockAddress *lookup(const BasicBlock *BB);
+
+  Function *getFunction() const;
+  BasicBlock *getBasicBlock() const;
+
+  /// For isa/dyn_cast.
+  static bool classof(const sandboxir::Value *From) {
+    return From->getSubclassID() == ClassID::BlockAddress;
+  }
+};
+
+// TODO: This should inherit from ConstantData.
+class ConstantTokenNone final : public Constant {
+  ConstantTokenNone(llvm::ConstantTokenNone *C, Context &Ctx)
+      : Constant(ClassID::ConstantTokenNone, C, Ctx) {}
+  friend class Context; // For constructor.
+
+public:
+  /// Return the ConstantTokenNone.
+  static ConstantTokenNone *get(Context &Ctx);
+
+  /// For isa/dyn_cast.
+  static bool classof(const sandboxir::Value *From) {
+    return From->getSubclassID() == ClassID::ConstantTokenNone;
+  }
+
+  unsigned getUseOperandNo(const Use &Use) const final {
+    llvm_unreachable("ConstantTokenNone has no operands!");
+  }
+
+#ifndef NDEBUG
+  void verify() const override {
+    assert(isa<llvm::ConstantTokenNone>(Val) &&
+           "Expected a ConstantTokenNone!");
   }
   void dumpOS(raw_ostream &OS) const override {
     dumpCommonPrefix(OS);
@@ -1145,9 +1255,7 @@ public:
   Instruction &back() const;
 
 #ifndef NDEBUG
-  void verify() const final {
-    assert(isa<llvm::BasicBlock>(Val) && "Expected BasicBlock!");
-  }
+  void verify() const final;
   void dumpOS(raw_ostream &OS) const final;
 #endif
 };
@@ -1386,7 +1494,7 @@ public:
 #endif
 };
 
-class FenceInst : public SingleLLVMInstructionImpl<llvm::SelectInst> {
+class FenceInst : public SingleLLVMInstructionImpl<llvm::FenceInst> {
   FenceInst(llvm::FenceInst *FI, Context &Ctx)
       : SingleLLVMInstructionImpl(ClassID::Fence, Opcode::Fence, FI, Ctx) {}
   friend Context; // For constructor;
@@ -1430,6 +1538,10 @@ public:
   static Value *create(Value *Cond, Value *True, Value *False,
                        BasicBlock *InsertAtEnd, Context &Ctx,
                        const Twine &Name = "");
+
+  const Value *getCondition() const { return getOperand(0); }
+  const Value *getTrueValue() const { return getOperand(1); }
+  const Value *getFalseValue() const { return getOperand(2); }
   Value *getCondition() { return getOperand(0); }
   Value *getTrueValue() { return getOperand(1); }
   Value *getFalseValue() { return getOperand(2); }
@@ -1437,7 +1549,16 @@ public:
   void setCondition(Value *New) { setOperand(0, New); }
   void setTrueValue(Value *New) { setOperand(1, New); }
   void setFalseValue(Value *New) { setOperand(2, New); }
-  void swapValues() { cast<llvm::SelectInst>(Val)->swapValues(); }
+  void swapValues();
+
+  /// Return a string if the specified operands are invalid for a select
+  /// operation, otherwise return null.
+  static const char *areInvalidOperands(Value *Cond, Value *True,
+                                        Value *False) {
+    return llvm::SelectInst::areInvalidOperands(Cond->Val, True->Val,
+                                                False->Val);
+  }
+
   /// For isa/dyn_cast.
   static bool classof(const Value *From);
 };

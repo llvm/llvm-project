@@ -18861,6 +18861,16 @@ case Builtin::BI__builtin_hlsl_elementwise_isinf: {
 
     return SelectVal;
   }
+  case Builtin::BI__builtin_hlsl_step: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    Value *Op1 = EmitScalarExpr(E->getArg(1));
+    assert(E->getArg(0)->getType()->hasFloatingRepresentation() &&
+           E->getArg(1)->getType()->hasFloatingRepresentation() &&
+           "step operands must have a float representation");
+    return Builder.CreateIntrinsic(
+        /*ReturnType=*/Op0->getType(), CGM.getHLSLRuntime().getStepIntrinsic(),
+        ArrayRef<Value *>{Op0, Op1}, nullptr, "hlsl.step");
+  }
   case Builtin::BI__builtin_hlsl_wave_get_lane_index: {
     return EmitRuntimeCall(CGM.CreateRuntimeFunction(
         llvm::FunctionType::get(IntTy, {}, false), "__hlsl_wave_get_lane_index",
@@ -18869,6 +18879,23 @@ case Builtin::BI__builtin_hlsl_elementwise_isinf: {
   case Builtin::BI__builtin_hlsl_wave_is_first_lane: {
     Intrinsic::ID ID = CGM.getHLSLRuntime().getWaveIsFirstLaneIntrinsic();
     return EmitRuntimeCall(Intrinsic::getDeclaration(&CGM.getModule(), ID));
+  }
+  case Builtin::BI__builtin_hlsl_elementwise_sign: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    llvm::Type *Xty = Op0->getType();
+    llvm::Type *retType = llvm::Type::getInt32Ty(this->getLLVMContext());
+    if (Xty->isVectorTy()) {
+      auto *XVecTy = E->getArg(0)->getType()->getAs<VectorType>();
+      retType = llvm::VectorType::get(
+          retType, ElementCount::getFixed(XVecTy->getNumElements()));
+    }
+    assert((E->getArg(0)->getType()->hasFloatingRepresentation() ||
+            E->getArg(0)->getType()->hasSignedIntegerRepresentation()) &&
+           "sign operand must have a float or int representation");
+
+    return Builder.CreateIntrinsic(
+        retType, CGM.getHLSLRuntime().getSignIntrinsic(),
+        ArrayRef<Value *>{Op0}, nullptr, "hlsl.sign");
   }
   }
   return nullptr;

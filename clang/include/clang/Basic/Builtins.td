@@ -4763,8 +4763,21 @@ def HLSLSaturate : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "void(...)";
 }
 
+
 def HLSLSelect : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_select"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
+def HLSLSign : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_elementwise_sign"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
+def HLSLStep: LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_step"];
   let Attributes = [NoThrow, Const];
   let Prototype = "void(...)";
 }

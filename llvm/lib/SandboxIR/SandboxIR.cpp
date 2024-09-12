@@ -662,6 +662,12 @@ Value *SelectInst::create(Value *Cond, Value *True, Value *False,
   return createCommon(Cond, True, False, Name, Builder, Ctx);
 }
 
+void SelectInst::swapValues() {
+  Ctx.getTracker().emplaceIfTracking<UseSwap>(getOperandUse(1),
+                                              getOperandUse(2));
+  cast<llvm::SelectInst>(Val)->swapValues();
+}
+
 bool SelectInst::classof(const Value *From) {
   return From->getSubclassID() == ClassID::Select;
 }
@@ -2437,6 +2443,32 @@ PointerType *ConstantPointerNull::getType() const {
       Ctx.getType(cast<llvm::ConstantPointerNull>(Val)->getType()));
 }
 
+UndefValue *UndefValue::get(Type *T) {
+  auto *LLVMC = llvm::UndefValue::get(T->LLVMTy);
+  return cast<UndefValue>(T->getContext().getOrCreateConstant(LLVMC));
+}
+
+UndefValue *UndefValue::getSequentialElement() const {
+  return cast<UndefValue>(Ctx.getOrCreateConstant(
+      cast<llvm::UndefValue>(Val)->getSequentialElement()));
+}
+
+UndefValue *UndefValue::getStructElement(unsigned Elt) const {
+  return cast<UndefValue>(Ctx.getOrCreateConstant(
+      cast<llvm::UndefValue>(Val)->getStructElement(Elt)));
+}
+
+UndefValue *UndefValue::getElementValue(Constant *C) const {
+  return cast<UndefValue>(
+      Ctx.getOrCreateConstant(cast<llvm::UndefValue>(Val)->getElementValue(
+          cast<llvm::Constant>(C->Val))));
+}
+
+UndefValue *UndefValue::getElementValue(unsigned Idx) const {
+  return cast<UndefValue>(Ctx.getOrCreateConstant(
+      cast<llvm::UndefValue>(Val)->getElementValue(Idx)));
+}
+
 PoisonValue *PoisonValue::get(Type *T) {
   auto *LLVMC = llvm::PoisonValue::get(T->LLVMTy);
   return cast<PoisonValue>(T->getContext().getOrCreateConstant(LLVMC));
@@ -2461,6 +2493,37 @@ PoisonValue *PoisonValue::getElementValue(Constant *C) const {
 PoisonValue *PoisonValue::getElementValue(unsigned Idx) const {
   return cast<PoisonValue>(Ctx.getOrCreateConstant(
       cast<llvm::PoisonValue>(Val)->getElementValue(Idx)));
+}
+
+BlockAddress *BlockAddress::get(Function *F, BasicBlock *BB) {
+  auto *LLVMC = llvm::BlockAddress::get(cast<llvm::Function>(F->Val),
+                                        cast<llvm::BasicBlock>(BB->Val));
+  return cast<BlockAddress>(F->getContext().getOrCreateConstant(LLVMC));
+}
+
+BlockAddress *BlockAddress::get(BasicBlock *BB) {
+  auto *LLVMC = llvm::BlockAddress::get(cast<llvm::BasicBlock>(BB->Val));
+  return cast<BlockAddress>(BB->getContext().getOrCreateConstant(LLVMC));
+}
+
+BlockAddress *BlockAddress::lookup(const BasicBlock *BB) {
+  auto *LLVMC = llvm::BlockAddress::lookup(cast<llvm::BasicBlock>(BB->Val));
+  return cast_or_null<BlockAddress>(BB->getContext().getValue(LLVMC));
+}
+
+Function *BlockAddress::getFunction() const {
+  return cast<Function>(
+      Ctx.getValue(cast<llvm::BlockAddress>(Val)->getFunction()));
+}
+
+BasicBlock *BlockAddress::getBasicBlock() const {
+  return cast<BasicBlock>(
+      Ctx.getValue(cast<llvm::BlockAddress>(Val)->getBasicBlock()));
+}
+
+ConstantTokenNone *ConstantTokenNone::get(Context &Ctx) {
+  auto *LLVMC = llvm::ConstantTokenNone::get(Ctx.LLVMCtx);
+  return cast<ConstantTokenNone>(Ctx.getOrCreateConstant(LLVMC));
 }
 
 FunctionType *Function::getFunctionType() const {
@@ -2559,6 +2622,14 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
       It->second = std::unique_ptr<ConstantFP>(
           new ConstantFP(cast<llvm::ConstantFP>(C), *this));
       return It->second.get();
+    case llvm::Value::BlockAddressVal:
+      It->second = std::unique_ptr<BlockAddress>(
+          new BlockAddress(cast<llvm::BlockAddress>(C), *this));
+      return It->second.get();
+    case llvm::Value::ConstantTokenNoneVal:
+      It->second = std::unique_ptr<ConstantTokenNone>(
+          new ConstantTokenNone(cast<llvm::ConstantTokenNone>(C), *this));
+      return It->second.get();
     case llvm::Value::ConstantAggregateZeroVal: {
       auto *CAZ = cast<llvm::ConstantAggregateZero>(C);
       It->second = std::unique_ptr<ConstantAggregateZero>(
@@ -2579,6 +2650,10 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
     case llvm::Value::PoisonValueVal:
       It->second = std::unique_ptr<PoisonValue>(
           new PoisonValue(cast<llvm::PoisonValue>(C), *this));
+      return It->second.get();
+    case llvm::Value::UndefValueVal:
+      It->second = std::unique_ptr<UndefValue>(
+          new UndefValue(cast<llvm::UndefValue>(C), *this));
       return It->second.get();
     case llvm::Value::ConstantArrayVal:
       It->second = std::unique_ptr<ConstantArray>(
@@ -2610,7 +2685,7 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
     return It->second.get();
   }
   if (auto *BB = dyn_cast<llvm::BasicBlock>(LLVMV)) {
-    assert(isa<BlockAddress>(U) &&
+    assert(isa<llvm::BlockAddress>(U) &&
            "This won't create a SBBB, don't call this function directly!");
     if (auto *SBBB = getValue(BB))
       return SBBB;
@@ -3143,7 +3218,7 @@ void BasicBlock::buildBasicBlockFromLLVMIR(llvm::BasicBlock *LLVMBB) {
       Ctx.getOrCreateValue(Op);
     }
   }
-#if !defined(NDEBUG) && defined(SBVEC_EXPENSIVE_CHECKS)
+#if !defined(NDEBUG)
   verify();
 #endif
 }
@@ -3219,4 +3294,12 @@ void BasicBlock::dumpOS(raw_ostream &OS) const {
     }
   }
 }
+
+void BasicBlock::verify() const {
+  assert(isa<llvm::BasicBlock>(Val) && "Expected BasicBlock!");
+  for (const auto &I : *this) {
+    I.verify();
+  }
+}
+
 #endif // NDEBUG

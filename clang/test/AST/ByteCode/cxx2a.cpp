@@ -34,3 +34,79 @@ namespace Covariant {
   constexpr const Covariant1 *cb1 = &cb;
   static_assert(cb1->f()->a == 'Z');
 }
+
+namespace DtorOrder {
+  struct Buf {
+    char buf[64];
+    int n = 0;
+    constexpr void operator+=(char c) { buf[n++] = c; }
+    constexpr bool operator==(const char *str) const {
+      if (str[n] != 0)
+        return false;
+
+      for (int i = 0; i < n; ++i) {
+        if (buf[n] != str[n])
+          return false;
+      }
+      return true;
+
+      return __builtin_memcmp(str, buf, n) == 0;
+    }
+    constexpr bool operator!=(const char *str) const { return !operator==(str); }
+  };
+
+  struct A {
+    constexpr A(Buf &buf, char c) : buf(buf), c(c) { buf += c; }
+    constexpr ~A() { buf += (c - 32);}
+    constexpr operator bool() const { return true; }
+    Buf &buf;
+    char c;
+  };
+
+  constexpr void abnormal_termination(Buf &buf) {
+    struct Indestructible {
+      constexpr ~Indestructible(); // not defined
+    };
+    A a(buf, 'a');
+    A(buf, 'b');
+    int n = 0;
+
+    for (A &&c = A(buf, 'c'); A d = A(buf, 'd'); A(buf, 'e')) {
+      switch (A f(buf, 'f'); A g = A(buf, 'g')) { // both-warning {{boolean}}
+      case false: {
+        A x(buf, 'x');
+      }
+
+      case true: {
+        A h(buf, 'h');
+        switch (n++) {
+        case 0:
+          break;
+        case 1:
+          continue;
+        case 2:
+          return;
+        }
+        break;
+      }
+
+      default:
+        Indestructible indest;
+      }
+
+      A j = (A(buf, 'i'), A(buf, 'j'));
+    }
+  }
+
+  constexpr bool check_abnormal_termination() {
+    Buf buf = {};
+    abnormal_termination(buf);
+    return buf ==
+      "abBc"
+        "dfgh" /*break*/ "HGFijIJeED"
+        "dfgh" /*continue*/ "HGFeED"
+        "dfgh" /*return*/ "HGFD"
+      "CA";
+  }
+  static_assert(check_abnormal_termination());
+}

@@ -822,7 +822,7 @@ SaveAndRestore<GISelFlags> RuleMatcher::setGISelFlags(const Record *R) {
 }
 
 Error RuleMatcher::defineComplexSubOperand(StringRef SymbolicName,
-                                           Record *ComplexPattern,
+                                           const Record *ComplexPattern,
                                            unsigned RendererID,
                                            unsigned SubOperandID,
                                            StringRef ParentSymbolicName) {

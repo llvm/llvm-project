@@ -1718,6 +1718,39 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_sqrt)
 float4 sqrt(float4);
 
 //===----------------------------------------------------------------------===//
+// step builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn T step(T x, T y)
+/// \brief Returns 1 if the x parameter is greater than or equal to the y
+/// parameter; otherwise, 0. vector. \param x [in] The first floating-point
+/// value to compare. \param y [in] The first floating-point value to compare.
+///
+/// Step is based on the following formula: (x >= y) ? 1 : 0
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_step)
+half step(half, half);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_step)
+half2 step(half2, half2);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_step)
+half3 step(half3, half3);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_step)
+half4 step(half4, half4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_step)
+float step(float, float);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_step)
+float2 step(float2, float2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_step)
+float3 step(float3, float3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_step)
+float4 step(float4, float4);
+
+//===----------------------------------------------------------------------===//
 // tan builtins
 //===----------------------------------------------------------------------===//
 
@@ -1826,5 +1859,76 @@ _HLSL_AVAILABILITY(shadermodel, 6.0)
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_is_first_lane)
 __attribute__((convergent)) bool WaveIsFirstLane();
 
+//===----------------------------------------------------------------------===//
+// sign builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn T sign(T Val)
+/// \brief Returns -1 if \a Val is less than zero; 0 if \a Val equals zero; and
+/// 1 if \a Val is greater than zero. \param Val The input value.
+
+#ifdef __HLSL_ENABLE_16_BIT
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int sign(int16_t);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int2 sign(int16_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int3 sign(int16_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int4 sign(int16_t4);
+#endif
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int sign(half);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int2 sign(half2);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int3 sign(half3);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int4 sign(half4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int sign(int);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int2 sign(int2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int3 sign(int3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int4 sign(int4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int sign(float);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int2 sign(float2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int3 sign(float3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int4 sign(float4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int sign(int64_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int2 sign(int64_t2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int3 sign(int64_t3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int4 sign(int64_t4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int sign(double);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int2 sign(double2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int3 sign(double3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int4 sign(double4);
 } // namespace hlsl
 #endif //_HLSL_HLSL_INTRINSICS_H_
