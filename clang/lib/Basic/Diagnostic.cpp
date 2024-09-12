@@ -522,12 +522,12 @@ bool DiagnosticsEngine::EmitDiagnostic(const DiagnosticBuilder &DB,
   return Emitted;
 }
 
-DiagnosticBuilder::DiagnosticBuilder(DiagnosticsEngine *diagObj,
+DiagnosticBuilder::DiagnosticBuilder(DiagnosticsEngine *DiagObj,
                                      SourceLocation CurDiagLoc,
                                      unsigned CurDiagID)
-    : StreamingDiagnostic(diagObj->DiagAllocator), DiagObj(diagObj),
+    : StreamingDiagnostic(DiagObj->DiagAllocator), DiagObj(DiagObj),
       CurDiagLoc(CurDiagLoc), CurDiagID(CurDiagID), IsActive(true) {
-  assert(diagObj && "DiagnosticBuilder requires a valid DiagnosticsEngine!");
+  assert(DiagObj && "DiagnosticBuilder requires a valid DiagnosticsEngine!");
 }
 
 DiagnosticBuilder::DiagnosticBuilder(const DiagnosticBuilder &D)
@@ -552,9 +552,9 @@ Diagnostic::Diagnostic(const DiagnosticsEngine *DO,
 
 Diagnostic::Diagnostic(const DiagnosticsEngine *DO, SourceLocation CurDiagLoc,
                        unsigned CurDiagID, const DiagnosticStorage &DiagStorage,
-                       StringRef storedDiagMessage)
+                       StringRef StoredDiagMessage)
     : DiagObj(DO), CurDiagLoc(CurDiagLoc), CurDiagID(CurDiagID),
-      DiagStorage(DiagStorage), StoredDiagMessage(storedDiagMessage) {}
+      DiagStorage(DiagStorage), StoredDiagMessage(StoredDiagMessage) {}
 
 DiagnosticConsumer::~DiagnosticConsumer() = default;
 

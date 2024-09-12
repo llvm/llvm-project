@@ -1225,7 +1225,7 @@ class DiagnosticBuilder : public StreamingDiagnostic {
 
   DiagnosticBuilder() = default;
 
-  DiagnosticBuilder(DiagnosticsEngine *diagObj, SourceLocation CurDiagLoc,
+  DiagnosticBuilder(DiagnosticsEngine *DiagObj, SourceLocation CurDiagLoc,
                     unsigned CurDiagID);
 
 protected:
@@ -1499,7 +1499,7 @@ public:
   Diagnostic(const DiagnosticsEngine *DO, const DiagnosticBuilder &DiagBuilder);
   Diagnostic(const DiagnosticsEngine *DO, SourceLocation CurDiagLoc,
              unsigned CurDiagID, const DiagnosticStorage &DiagStorage,
-             StringRef storedDiagMessage);
+             StringRef StoredDiagMessage);
 
   const DiagnosticsEngine *getDiags() const { return DiagObj; }
   unsigned getID() const { return CurDiagID; }
