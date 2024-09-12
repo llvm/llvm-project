@@ -22,6 +22,7 @@
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Progress.h"
+#include "lldb/Core/Telemetry.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/DynamicCheckerFunctions.h"
 #include "lldb/Expression/UserExpression.h"
@@ -74,6 +75,8 @@
 #include "lldb/Utility/SelectHelper.h"
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/Timer.h"
+#include "llvm/Telemetry/Telemetry.h"
+#include <chrono>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -1065,6 +1068,9 @@ bool Process::SetExitStatus(int status, llvm::StringRef exit_string) {
   // Use a mutex to protect setting the exit status.
   std::lock_guard<std::mutex> guard(m_exit_status_mutex);
 
+  llvm::telemetry::SteadyTimePoint start_time =
+      std::chrono::steady_clock::now();
+
   Log *log(GetLog(LLDBLog::State | LLDBLog::Process));
   LLDB_LOG(log, "(plugin = {0} status = {1} ({1:x8}), description=\"{2}\")",
            GetPluginName(), status, exit_string);
@@ -1093,6 +1099,11 @@ bool Process::SetExitStatus(int status, llvm::StringRef exit_string) {
 
   // Allow subclasses to do some cleanup
   DidExit();
+
+  llvm::telemetry::EventStats stats = {start_time,
+                                       std::chrono::steady_clock::now()};
+  GetTarget().GetDebugger().GetTelemeter()->LogProcessExit(status, exit_string,
+                                                           stats, &GetTarget());
 
   return true;
 }

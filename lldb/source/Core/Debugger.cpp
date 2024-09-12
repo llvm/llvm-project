@@ -69,6 +69,7 @@
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <chrono>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -733,12 +734,18 @@ void Debugger::InstanceInitialize() {
 
 DebuggerSP Debugger::CreateInstance(lldb::LogOutputCallback log_callback,
                                     void *baton) {
+  llvm::telemetry::SteadyTimePoint start_time =
+      std::chrono::steady_clock::now();
   DebuggerSP debugger_sp(new Debugger(log_callback, baton));
   if (g_debugger_list_ptr && g_debugger_list_mutex_ptr) {
     std::lock_guard<std::recursive_mutex> guard(*g_debugger_list_mutex_ptr);
     g_debugger_list_ptr->push_back(debugger_sp);
   }
   debugger_sp->InstanceInitialize();
+  llvm::telemetry::TelemetryInfo entry;
+  entry.Stats = {start_time, std::chrono::steady_clock::now()};
+  debugger_sp->m_telemeter->logStartup(HostInfo::GetProgramFileSpec().GetPath(),
+                                       &entry);
   return debugger_sp;
 }
 
@@ -860,7 +867,8 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
       m_sync_broadcaster(nullptr, "lldb.debugger.sync"),
       m_broadcaster(m_broadcaster_manager_sp,
                     GetStaticBroadcasterClass().str()),
-      m_forward_listener_sp(), m_clear_once() {
+      m_forward_listener_sp(), m_clear_once(),
+      m_telemeter(LldbTelemeter::CreateInstance(this)) {
   // Initialize the debugger properties as early as possible as other parts of
   // LLDB will start querying them during construction.
   m_collection_sp->Initialize(g_debugger_properties);
@@ -952,6 +960,8 @@ void Debugger::Clear() {
   //     static void Debugger::Destroy(lldb::DebuggerSP &debugger_sp);
   //     static void Debugger::Terminate();
   llvm::call_once(m_clear_once, [this]() {
+    llvm::telemetry::SteadyTimePoint quit_start_time =
+        std::chrono::steady_clock::now();
     ClearIOHandlers();
     StopIOHandlerThread();
     StopEventHandlerThread();
@@ -974,6 +984,12 @@ void Debugger::Clear() {
 
     if (Diagnostics::Enabled())
       Diagnostics::Instance().RemoveCallback(m_diagnostics_callback_id);
+
+    // Log the "quit" event (including stats on how long the teardown took)
+    // TBD: We *may* have to send off the log  BEFORE the ClearIOHanders()?
+    llvm::telemetry::TelemetryInfo entry;
+    entry.Stats = {quit_start_time, std::chrono::steady_clock::now()};
+    m_telemeter->logExit(HostInfo::GetProgramFileSpec().GetPath(), &entry);
   });
 }
 
@@ -2238,4 +2254,8 @@ llvm::ThreadPoolInterface &Debugger::GetThreadPool() {
   assert(g_thread_pool &&
          "Debugger::GetThreadPool called before Debugger::Initialize");
   return *g_thread_pool;
+}
+
+void Debugger::SendClientTelemetry(const llvm::json::Object &entry) {
+  m_telemeter->LogClientTelemetry(entry);
 }

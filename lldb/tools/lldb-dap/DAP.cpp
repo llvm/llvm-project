@@ -682,17 +682,32 @@ PacketStatus DAP::GetNextObject(llvm::json::Object &object) {
 }
 
 bool DAP::HandleObject(const llvm::json::Object &object) {
+  auto start_time = std::chrono::steady_clock::now();
   const auto packet_type = GetString(object, "type");
   if (packet_type == "request") {
     const auto command = GetString(object, "command");
     auto handler_pos = request_handlers.find(std::string(command));
+    llvm::json::Object telemetry_entry;
+    telemetry_entry.insert({"request_name", std::string(command)});
+    telemetry_entry.insert(
+        {"start_time", start_time.time_since_epoch().count()});
+
     if (handler_pos != request_handlers.end()) {
       handler_pos->second(object);
+      auto end_time = std::chrono::steady_clock::now();
+      telemetry_entry.insert({"end_time", end_time.time_since_epoch().count()});
+      debugger.SendTelemetry(telemetry_entry);
       return true; // Success
     } else {
       if (log)
         *log << "error: unhandled command \"" << command.data() << "\""
              << std::endl;
+      auto end_time = std::chrono::steady_clock::now();
+      telemetry_entry.insert({"end_time", end_time.time_since_epoch().count()});
+      telemetry_entry.insert(
+          {"error", "unhandled-command:" + std::string(command)});
+      debugger.SendTelemetry(telemetry_entry);
+      debugger.SendTelemetry(telemetry_entry);
       return false; // Fail
     }
   }
