@@ -447,7 +447,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
   if (Subtarget.hasStdExtZfbfmin()) {
     setOperationAction(ISD::BITCAST, MVT::i16, Custom);
-    setOperationAction(ISD::BITCAST, MVT::bf16, Custom);
     setOperationAction(ISD::ConstantFP, MVT::bf16, Expand);
     setOperationAction(ISD::SELECT_CC, MVT::bf16, Expand);
     setOperationAction(ISD::SELECT, MVT::bf16, Custom);
