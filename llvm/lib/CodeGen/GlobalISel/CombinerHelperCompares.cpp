@@ -60,11 +60,10 @@ bool CombinerHelper::constantFoldICmp(const GICmp &ICmp,
   return true;
 }
 
-bool CombinerHelper::visitICmp(const MachineInstr &MI, BuildFnTy &MatchInfo) {
+bool CombinerHelper::matchICmp(const MachineInstr &MI, BuildFnTy &MatchInfo) {
   const GICmp *Cmp = cast<GICmp>(&MI);
 
   Register Dst = Cmp->getReg(0);
-  LLT DstTy = MRI.getType(Dst);
   Register LHS = Cmp->getLHSReg();
   Register RHS = Cmp->getRHSReg();
 
@@ -79,32 +78,6 @@ bool CombinerHelper::visitICmp(const MachineInstr &MI, BuildFnTy &MatchInfo) {
     Pred = CmpInst::getSwappedPredicate(Pred);
 
     MatchInfo = [=](MachineIRBuilder &B) { B.buildICmp(Pred, Dst, LHS, RHS); };
-    return true;
-  }
-
-  MachineInstr *MIRHS = MRI.getVRegDef(RHS);
-
-  // For EQ and NE, we can always pick a value for the undef to make the
-  // predicate pass or fail, so we can return undef.
-  // Matches behavior in llvm::ConstantFoldCompareInstruction.
-  if (isa<GImplicitDef>(MIRHS) && ICmpInst::isEquality(Pred) &&
-      isLegalOrBeforeLegalizer({TargetOpcode::G_IMPLICIT_DEF, {DstTy}})) {
-    MatchInfo = [=](MachineIRBuilder &B) { B.buildUndef(Dst); };
-    return true;
-  }
-
-  // icmp X, X -> true/false
-  // icmp X, undef -> true/false because undef could be X.
-  if ((LHS == RHS || isa<GImplicitDef>(MIRHS)) &&
-      isConstantLegalOrBeforeLegalizer(DstTy)) {
-    MatchInfo = [=](MachineIRBuilder &B) {
-      if (CmpInst::isTrueWhenEqual(Pred))
-        B.buildConstant(Dst, getICmpTrueVal(getTargetLowering(),
-                                            /*IsVector=*/DstTy.isVector(),
-                                            /*IsFP=*/false));
-      else
-        B.buildConstant(Dst, 0);
-    };
     return true;
   }
 

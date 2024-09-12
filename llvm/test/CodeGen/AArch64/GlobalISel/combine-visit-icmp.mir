@@ -6,7 +6,9 @@ name:            test_icmp_of_eq_and_right_undef
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_icmp_of_eq_and_right_undef
-    ; CHECK: %res:_(s32) = G_IMPLICIT_DEF
+    ; CHECK: %lhs:_(s64) = COPY $x0
+    ; CHECK-NEXT: %rhs:_(s64) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: %res:_(s32) = G_ICMP intpred(ne), %lhs(s64), %rhs
     ; CHECK-NEXT: $w0 = COPY %res(s32)
     %lhs:_(s64) = COPY $x0
     %rhs:_(s64) = G_IMPLICIT_DEF
@@ -18,7 +20,9 @@ name:            test_icmp_of_not_eq_and_right_undef
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_icmp_of_not_eq_and_right_undef
-    ; CHECK: %res:_(s32) = G_CONSTANT i32 0
+    ; CHECK: %lhs:_(s64) = COPY $x0
+    ; CHECK-NEXT: %rhs:_(s64) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: %res:_(s32) = G_ICMP intpred(ugt), %lhs(s64), %rhs
     ; CHECK-NEXT: $w0 = COPY %res(s32)
     %lhs:_(s64) = COPY $x0
     %rhs:_(s64) = G_IMPLICIT_DEF
@@ -30,7 +34,9 @@ name:            test_icmp_of_is_eq_and_right_undef
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_icmp_of_is_eq_and_right_undef
-    ; CHECK: %res:_(s32) = G_IMPLICIT_DEF
+    ; CHECK: %lhs:_(s64) = COPY $x0
+    ; CHECK-NEXT: %rhs:_(s64) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: %res:_(s32) = G_ICMP intpred(ne), %lhs(s64), %rhs
     ; CHECK-NEXT: $w0 = COPY %res(s32)
     %lhs:_(s64) = COPY $x0
     %rhs:_(s64) = G_IMPLICIT_DEF
@@ -42,7 +48,8 @@ name:            test_icmp_of_eq_not_eq
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_icmp_of_eq_not_eq
-    ; CHECK: %res:_(s32) = G_CONSTANT i32 0
+    ; CHECK: %lhs:_(s64) = COPY $x0
+    ; CHECK-NEXT: %res:_(s32) = G_ICMP intpred(ugt), %lhs(s64), %lhs
     ; CHECK-NEXT: $w0 = COPY %res(s32)
     %lhs:_(s64) = COPY $x0
     %rhs:_(s64) = COPY $x0
@@ -54,7 +61,8 @@ name:            test_icmp_of_eq_is_eq
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_icmp_of_eq_is_eq
-    ; CHECK: %res:_(s32) = G_CONSTANT i32 1
+    ; CHECK: %lhs:_(s64) = COPY $x0
+    ; CHECK-NEXT: %res:_(s32) = G_ICMP intpred(eq), %lhs(s64), %lhs
     ; CHECK-NEXT: $w0 = COPY %res(s32)
     %lhs:_(s64) = COPY $x0
     %rhs:_(s64) = COPY $x0

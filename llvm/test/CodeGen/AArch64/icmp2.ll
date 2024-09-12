@@ -33,30 +33,48 @@ entry:
 }
 
 define i1 @i64_i64_undef_eq(i64 %a, i64 %b) {
-; CHECK-LABEL: i64_i64_undef_eq:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w0, wzr
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: i64_i64_undef_eq:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    mov w0, wzr
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: i64_i64_undef_eq:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    cmp x0, x8
+; CHECK-GI-NEXT:    cset w0, eq
+; CHECK-GI-NEXT:    ret
 entry:
   %c = icmp eq i64 %a, undef
   ret i1 %c
 }
 
 define i1 @i64_i64_slt_eq(i64 %a, i64 %b) {
-; CHECK-LABEL: i64_i64_slt_eq:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w0, wzr
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: i64_i64_slt_eq:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    mov w0, wzr
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: i64_i64_slt_eq:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    cmp x0, x0
+; CHECK-GI-NEXT:    cset w0, lt
+; CHECK-GI-NEXT:    ret
 entry:
   %c = icmp slt i64 %a, %a
   ret i1 %c
 }
 
 define i1 @i64_i64_not_eq_undef(i64 %a, i64 %b) {
-; CHECK-LABEL: i64_i64_not_eq_undef:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w0, wzr
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: i64_i64_not_eq_undef:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    mov w0, wzr
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: i64_i64_not_eq_undef:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    cmp x0, x8
+; CHECK-GI-NEXT:    cset w0, lt
+; CHECK-GI-NEXT:    ret
 entry:
   %c = icmp slt i64 %a, undef
   ret i1 %c

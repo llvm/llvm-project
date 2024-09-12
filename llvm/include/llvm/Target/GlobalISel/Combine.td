@@ -1881,10 +1881,10 @@ def cast_combines: GICombineGroup<[
   buildvector_of_truncate
 ]>;
 
-def visit_icmp : GICombineRule<
+def prepare_icmp : GICombineRule<
   (defs root:$root, build_fn_matchinfo:$matchinfo),
   (match (G_ICMP $root, $pred, $lhs, $rhs):$cmp,
-         [{ return Helper.visitICmp(*${cmp}, ${matchinfo}); }]),
+         [{ return Helper.matchICmp(*${cmp}, ${matchinfo}); }]),
   (apply [{ Helper.applyBuildFn(*${cmp}, ${matchinfo}); }])>;
 
 def icmp_of_zero : GICombineRule<
@@ -1895,7 +1895,7 @@ def icmp_of_zero : GICombineRule<
   (apply [{ Helper.applyBuildFn(*${cmp}, ${matchinfo}); }])>;
 
 def icmp_combines: GICombineGroup<[
-  visit_icmp,
+  prepare_icmp,
   icmp_of_zero,
   icmp_to_true_false_known_bits,
   icmp_to_lhs_known_bits,
