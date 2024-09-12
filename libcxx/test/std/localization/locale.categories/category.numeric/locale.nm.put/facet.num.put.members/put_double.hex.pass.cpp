@@ -23,17 +23,17 @@
 #include "test_iterators.h"
 
 #ifdef _AIX
-#define LC_SUFFIX ".0"
-#define LG_SUFFIX ";0"
-#define SP_LC_SUFFIX ".0"
-#define SP_LG_SUFFIX ";0"
-#define PADDING "****************"
+#  define LC_SUFFIX ".0"
+#  define LG_SUFFIX ";0"
+#  define SP_LC_SUFFIX ".0"
+#  define SP_LG_SUFFIX ";0"
+#  define PADDING "****************"
 #else
-#define LC_SUFFIX ""
-#define LG_SUFFIX ""
-#define SP_LC_SUFFIX "."
-#define SP_LC_SUFFIX ";"
-#define PADDING "*****************"
+#  define LC_SUFFIX ""
+#  define LG_SUFFIX ""
+#  define SP_LC_SUFFIX "."
+#  define SP_LG_SUFFIX ";"
+#  define PADDING "*****************"
 #endif
 
 typedef std::num_put<char, cpp17_output_iterator<char*> > F;
