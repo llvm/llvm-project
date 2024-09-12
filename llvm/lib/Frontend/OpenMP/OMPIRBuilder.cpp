@@ -6352,8 +6352,6 @@ void OpenMPIRBuilder::emitTargetRegionFunction(
   OutlinedFn = Config.isTargetDevice() || !Config.openMPOffloadMandatory()
                    ? GenerateFunctionCallback(EntryFnName)
                    : nullptr;
-  // DORU: This is where the generated kernel can be printed.
-  // OutlinedFn->dump();
 
   // If this target outline function is not an offload entry, we don't need to
   // register it. This may be in the case of a false if clause, or if there are

@@ -948,7 +948,8 @@ llvm::Function *CodeGenFunction::GenerateOpenMPCapturedStmtFunction(
     // args in the meantime it is always false.
     WrapperF = emitOutlinedFunctionPrologue(
         WrapperCGF, D, Args, LocalAddrs, VLASizes, WrapperCGF.CXXThisValue,
-        WrapperFO, isKernel, isXteamKernel, false, false);
+        WrapperFO, isKernel, isXteamKernel, /*AddMultiDeviceArgs*/ false,
+        /*AddArgsToTopKernelOnly*/ false);
     Out << "_debug__";
   }
   FunctionOptions FO(&S, !NeedWrapperFunction, /*RegisterCastedArgsOnly=*/false,

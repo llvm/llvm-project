@@ -487,6 +487,10 @@ static inline int targetKernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
   }
 #endif
 
+  // Deallocate the multi-device async infos if any were allocated.
+  for (TargetAsyncInfoTy *LocalTAI : TargetAsyncInfos)
+    delete LocalTAI;
+
   handleTargetOutcome(PostSyncRc == OFFLOAD_SUCCESS, Loc);
   assert(PostSyncRc == OFFLOAD_SUCCESS && "offload failed");
   assert(PostSyncRc == OFFLOAD_SUCCESS &&

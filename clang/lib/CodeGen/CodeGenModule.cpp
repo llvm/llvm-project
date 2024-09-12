@@ -9118,6 +9118,11 @@ bool CodeGenModule::checkAndSetMultiDeviceKernel(
   NoLoopXteamErr NxStatus = NxSuccess;
 
   bool IsMultiDeviceKernel = false;
+
+  if (!getLangOpts().OpenMPTargetMultiDevice ||
+      !getLangOpts().OpenMPIsTargetDevice)
+    return IsMultiDeviceKernel;
+
   OptKernelNestDirectives NestDirs;
   if (checkNest(D, &NestDirs) == NxSuccess &&
       getMultiDeviceStatusForClauses(NestDirs) == NxSuccess &&
@@ -9131,8 +9136,7 @@ bool CodeGenModule::checkAndSetMultiDeviceKernel(
       const ForStmt *FStmt = getSingleForStmt(InnermostDir.getAssociatedStmt());
 
       // Check that we are on the device and that multi device has been enabled.
-      if (getLangOpts().OpenMPTargetMultiDevice &&
-          getLangOpts().OpenMPIsTargetDevice && FStmt) {
+      if (FStmt) {
         // Set the entry only if we have not set it before otherwise just return
         // the outcome of the isMultiDeviceKernel check. If this is the first
         // time the function is called the code below will add an entry to the

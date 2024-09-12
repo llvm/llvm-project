@@ -524,7 +524,7 @@ Error GenericKernelTy::init(GenericDeviceTy &GenericDevice,
     ExecutionMode = ExecModeGlobal.getValue();
   }
 
-  // Create a metadata object for the exec mode global (auto-generated).
+  // Create a metadata object for the multi-device global (auto-generated).
   StaticGlobalTy<int8_t> MultiDeviceGlobal(Name, "_multi_device");
   if (auto Err = GHandler.readGlobalFromImage(GenericDevice, Image,
                                               MultiDeviceGlobal)) {

@@ -145,8 +145,6 @@ extern "C" {
 __kmpc_parallel_51(IdentTy *ident, int32_t, int32_t if_expr,
                    int32_t num_threads, int proc_bind, void *fn,
                    void *wrapper_fn, void **args, int64_t nargs) {
-  // printf("PARALLEL 51: LB = %d, UB = %d\n", *((int*)args[2]),
-  // *((int*)args[3]));
   uint32_t TId = mapping::getThreadIdInBlock();
 
   // Assert the parallelism level is zero if disabled by the user.
