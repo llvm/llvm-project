@@ -23,3 +23,25 @@ body: |
     BUFFER_STORE_DWORD_OFFSET $vgpr65, $sgpr76_sgpr77_sgpr78_sgpr79, 0, 676, 0, 0, implicit $exec, implicit $vgpr64_vgpr65
     S_ENDPGM 0
 ...
+
+# Make sure that while ignoring implicit operands we will not ignore implicit $vcc on VALU
+
+---
+name: load_vcc_wait
+
+body: |
+  bb.0:
+    liveins: $vgpr0, $sgpr10_sgpr11
+
+    ; GCN-LABEL: name: load_vcc_wait
+    ; GCN: liveins: $vgpr0, $sgpr10_sgpr11
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: S_WAITCNT 0
+    ; GCN-NEXT: $vcc_lo = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
+    ; GCN-NEXT: S_WAITCNT 49279
+    ; GCN-NEXT: $vgpr1 = V_ADDC_U32_e32 0, $vgpr0, implicit-def $vcc, implicit $vcc, implicit $exec
+    ; GCN-NEXT: S_ENDPGM 0
+    $vcc_lo = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
+    $vgpr1 = V_ADDC_U32_e32 0, $vgpr0, implicit-def $vcc, implicit $vcc, implicit $exec
+    S_ENDPGM 0
+...

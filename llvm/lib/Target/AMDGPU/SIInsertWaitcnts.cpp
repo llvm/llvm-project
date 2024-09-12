@@ -901,13 +901,17 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
     }
   } else /* LGKM_CNT || EXP_CNT || VS_CNT || NUM_INST_CNTS */ {
     // Match the score to the destination registers.
+    //
     // Check only explicit operands. Stores, especially spill stores, include
     // implicit uses and defs of their super registers which would create an
     // artificial dependency, while these are there only for register liveness
     // accounting purposes.
+    //
     // Special cases where implicit register defs and uses exists, such as
     // M0, FLAT_SCR or VCC, but there is no way to load these registers from
-    // memory, so these do not need tracking.
+    // memory except VCC, and no VALU instructions implicetly useing VCC may
+    // come to this place, so these do not need tracking. Memory instructions
+    // also do not implicetly define any of these registers.
     for (unsigned I = 0, E = Inst.getNumExplicitOperands(); I != E; ++I) {
       auto &Op = Inst.getOperand(I);
       if (!Op.isReg() || !Op.isDef())
