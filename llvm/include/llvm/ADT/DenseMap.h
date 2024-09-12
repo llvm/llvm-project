@@ -480,7 +480,8 @@ protected:
     } else {
       const KeyT EmptyKey = getEmptyKey();
       const KeyT TombstoneKey = getTombstoneKey();
-      for (size_t I = 0; I < getNumBuckets(); ++I) {
+      const size_t NumBuckets = getNumBuckets();
+      for (size_t I = 0; I < NumBuckets; ++I) {
         ::new (&Buckets[I].getFirst()) KeyT(OtherBuckets[I].getFirst());
         if (!KeyInfoT::isEqual(Buckets[I].getFirst(), EmptyKey) &&
             !KeyInfoT::isEqual(Buckets[I].getFirst(), TombstoneKey))
