@@ -2593,14 +2593,12 @@ void IntegerRelation::print(raw_ostream &os) const {
   assert(hasConsistentState());
   printSpace(os);
   PrintTableMetrics ptm = {0, 0, "-"};
-  for (unsigned i = 0, e = getNumEqualities(); i < e; ++i) {
+  for (unsigned i = 0, e = getNumEqualities(); i < e; ++i)
     for (unsigned j = 0, f = getNumCols(); j < f; ++j)
       updatePrintMetrics<DynamicAPInt>(atEq(i, j), ptm);
-  }
-  for (unsigned i = 0, e = getNumInequalities(); i < e; ++i) {
+  for (unsigned i = 0, e = getNumInequalities(); i < e; ++i)
     for (unsigned j = 0, f = getNumCols(); j < f; ++j)
       updatePrintMetrics<DynamicAPInt>(atIneq(i, j), ptm);
-  }
   // Print using PrintMetrics.
   unsigned MIN_SPACING = 1;
   for (unsigned i = 0, e = getNumEqualities(); i < e; ++i) {

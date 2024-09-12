@@ -294,11 +294,12 @@ std::vector<Fraction> multiplyPolynomials(ArrayRef<Fraction> a,
 
 bool isRangeZero(ArrayRef<Fraction> arr);
 
-/// An example to print .12, 3.4, 56.7 where preAlign = ".", minSpacing = 1,
-/// and (`,~) indicates (PreIndent, PostIndent) respectively:
-/// ```.12```.12
-/// ``3.4~``3.4~
-/// `56.7~`56.7~
+/// Example usage:
+/// Print .12, 3.4, 56.7
+/// preAlign = ".", minSpacing = 1,
+///    .12   .12
+///   3.4   3.4
+///  56.7  56.7
 struct PrintTableMetrics {
   // If unknown, set to 0 and pass the struct into updatePrintMetrics.
   unsigned maxPreIndent;
@@ -329,7 +330,7 @@ void printWithPrintMetrics(raw_ostream &os, T val, unsigned minSpacing,
   std::string str;
   llvm::raw_string_ostream(str) << val;
   unsigned preIndent;
-  if (str.length() != 0) {
+  if (!str.empty()) {
     preIndent = str.find(m.preAlign);
     preIndent = (preIndent != std::string::npos) ? preIndent + 1 : 0;
   } else {
