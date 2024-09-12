@@ -281,7 +281,8 @@ static bool isContainerOfPointer(const RecordDecl *Container) {
     const auto &TAs = CTSD->getTemplateArgs();
     return TAs.size() > 0 && TAs[0].getKind() == TemplateArgument::Type &&
            (isRecordWithAttr<PointerAttr>(TAs[0].getAsType()) ||
-            TAs[0].getAsType()->isPointerType());
+            TAs[0].getAsType()->isPointerType() ||
+            TAs[0].getAsType()->isNullPtrType());
   }
   return false;
 }
