@@ -33,7 +33,6 @@ enum CPUFeatures {
   FEAT_FP,
   FEAT_SIMD,
   FEAT_CRC,
-  FEAT_SHA1,
   FEAT_SHA2,
   FEAT_SHA3,
   FEAT_AES,

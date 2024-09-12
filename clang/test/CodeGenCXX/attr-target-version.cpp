@@ -235,8 +235,8 @@ int bar() {
 // CHECK-NEXT:  [[RESOLVER_ENTRY:.*:]]
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 36028797153181696
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 36028797153181696
+// CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 18014398576590848
+// CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 18014398576590848
 // CHECK-NEXT:    [[TMP3:%.*]] = and i1 true, [[TMP2]]
 // CHECK-NEXT:    br i1 [[TMP3]], label %[[RESOLVER_RETURN:.*]], label %[[RESOLVER_ELSE:.*]]
 // CHECK:       [[RESOLVER_RETURN]]:
@@ -249,8 +249,8 @@ int bar() {
 // CHECK-NEXT:  [[RESOLVER_ENTRY:.*:]]
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 268435488
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 268435488
+// CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 134217760
+// CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 134217760
 // CHECK-NEXT:    [[TMP3:%.*]] = and i1 true, [[TMP2]]
 // CHECK-NEXT:    br i1 [[TMP3]], label %[[RESOLVER_RETURN:.*]], label %[[RESOLVER_ELSE:.*]]
 // CHECK:       [[RESOLVER_RETURN]]:
@@ -285,8 +285,8 @@ int bar() {
 // CHECK-NEXT:  [[RESOLVER_ENTRY:.*:]]
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 1073741824
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 1073741824
+// CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 536870912
+// CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 536870912
 // CHECK-NEXT:    [[TMP3:%.*]] = and i1 true, [[TMP2]]
 // CHECK-NEXT:    br i1 [[TMP3]], label %[[RESOLVER_RETURN:.*]], label %[[RESOLVER_ELSE:.*]]
 // CHECK:       [[RESOLVER_RETURN]]:
@@ -299,8 +299,8 @@ int bar() {
 // CHECK-NEXT:  [[RESOLVER_ENTRY:.*:]]
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 65536
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 65536
+// CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 32768
+// CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 32768
 // CHECK-NEXT:    [[TMP3:%.*]] = and i1 true, [[TMP2]]
 // CHECK-NEXT:    br i1 [[TMP3]], label %[[RESOLVER_RETURN:.*]], label %[[RESOLVER_ELSE:.*]]
 // CHECK:       [[RESOLVER_RETURN]]:
