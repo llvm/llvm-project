@@ -111,6 +111,10 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/casting-through-void>` check to suggest replacing
   the offending code with ``reinterpret_cast``, to more clearly express intent.
 
+- Improved :doc:`modernize-avoid-c-arrays
+  <clang-tidy/checks/modernize/avoid-c-arrays>` check to suggest use std::span
+  as replacement of c array in C++20.
+
 - Improved :doc:`modernize-use-std-format
   <clang-tidy/checks/modernize/use-std-format>` check to support replacing
   member function calls too.
