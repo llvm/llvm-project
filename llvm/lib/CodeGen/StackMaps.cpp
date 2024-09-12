@@ -43,6 +43,8 @@ using namespace llvm;
 
 #define DEBUG_TYPE "stackmaps"
 
+extern bool YkStackMapAdditionalLocs;
+
 static cl::opt<int> StackMapVersion(
     "stackmap-version", cl::init(3), cl::Hidden,
     cl::desc("Specify the stackmap encoding version (default = 3)"));
@@ -305,12 +307,12 @@ StackMaps::parseOperand(MachineInstr::const_mop_iterator MOI,
     // and during deoptimisation we need to make sure we write the value back to
     // each one of them. Note, that the stackmap may track either of %rbx or
     // %rcx, resulting in different ways below to retrieve the mappings.
-    int ExtraReg = 0;
     Register R = MOI->getReg();
     Register DwarfRegNum = getDwarfRegNum(R, TRI);
+    std::set<int64_t> Extras;
     if (MOI->isReg()) {
       if (SpillOffsets.count(DwarfRegNum) > 0) {
-        auto Extras = SpillOffsets[DwarfRegNum];
+        Extras = SpillOffsets[DwarfRegNum];
         // Remove redundant registers/offsets that are already tracked by the
         // stackmap or by another tracked register.
         for (auto TReg : TrackedRegisters) {
@@ -322,22 +324,6 @@ StackMaps::parseOperand(MachineInstr::const_mop_iterator MOI,
             Extras.erase(X);
           }
         }
-        // FIXME: We currently can only deal with two additional locations.
-        // This could lead to problems in the future. Fixing this requires a
-        // extensive change updating the stackmap format. For now let's hope we
-        // get away with it.
-        //
-        // Some programs fail this assertion but run nontheless, so this
-        // assertion is commented out.
-        //
-        // assert(Extras.size() <= 2);
-        for (int64_t RHS : Extras) {
-          if (RHS > 0) {
-            ExtraReg = RHS + 1;
-          } else {
-            Offset = RHS;
-          }
-        }
       }
     }
 
@@ -347,7 +333,7 @@ StackMaps::parseOperand(MachineInstr::const_mop_iterator MOI,
       Offset = TRI->getSubRegIdxOffset(SubRegIdx);
 
     Locs.emplace_back(Location::Register, TRI->getSpillSize(*RC), DwarfRegNum,
-                      Offset, ExtraReg);
+                      Offset, Extras);
     return ++MOI;
   }
 
@@ -857,7 +843,13 @@ void StackMaps::emitCallsiteEntries(MCStreamer &OS) {
         OS.emitIntValue(0, 1); // Reserved
         OS.emitInt16(Loc.Size);
         OS.emitInt16(Loc.Reg);
-        OS.emitInt16(Loc.ExtraReg); // Reserved
+        OS.emitInt16(0); // Reserved
+        if (YkStackMapAdditionalLocs) {
+          OS.emitInt16(Loc.Extras.size());
+          for (int64_t Extra : Loc.Extras) {
+            OS.emitInt16(Extra);
+          }
+        }
         OS.emitInt32(Loc.Offset);
       }
       LiveIdx++;
@@ -934,7 +926,9 @@ void StackMaps::serializeToStackMapSection() {
   emitFunctionFrameRecords(OS);
   emitConstantPoolEntries(OS);
   emitCallsiteEntries(OS);
-  emitCSRInfo(OS);
+  if (YkStackMapAdditionalLocs) {
+    emitCSRInfo(OS);
+  }
   OS.addBlankLine();
 
   // Clean up.

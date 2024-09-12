@@ -87,6 +87,16 @@ void clearRhs(Register Reg, std::map<Register, std::set<int64_t>> &SpillMap) {
   }
 }
 
+void clearOffset(unsigned int Reg, int Offset, std::map<Register, std::set<int64_t>> &SpillMap) {
+  auto I = SpillMap.begin();
+  while (I != SpillMap.end()) {
+    if (I->second.count(Reg) == 0) {
+      I->second.erase(Offset);
+    }
+    ++I;
+  }
+}
+
 /// Given a MachineBasicBlock, analyse its instructions to build a mapping of
 /// where duplicate values live. This can be either in another register or on
 /// the stack. Since registers are always positive and stack offsets negative,
@@ -142,8 +152,12 @@ void processInstructions(
       const Register DwReg = getDwarfRegNum(MO.getReg());
       if (OffsetOp.isImm()) {
         const int64_t Offset = OffsetOp.getImm();
-        clearRhs(DwReg, SpillMap);
-        SpillMap[DwReg] = {Offset};
+        // We don't need to do `clearRhs(DwReg)` and reset the `SpillMap` entry
+        // here since the store, unlike the load and move, doesn't overwrite
+        // the register. We do, however, now need to remove all previous
+        // mappings to this offset (unless the other mapping contains `DwReg`).
+        clearOffset(DwReg, Offset, SpillMap);
+        SpillMap[DwReg].insert(Offset);
       }
       continue;
     }

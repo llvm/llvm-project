@@ -196,11 +196,14 @@ public:
     unsigned Size = 0;
     unsigned Reg = 0;
     int64_t Offset = 0;
-    unsigned ExtraReg = 0;
+    /// Additional locations for this live variable. Positive values are
+    /// registers in Dwarf notation. Negative values are offsets relative to
+    /// RBP.
+    std::set<int64_t> Extras;
 
     Location() = default;
-    Location(LocationType Type, unsigned Size, unsigned Reg, int64_t Offset, unsigned ExtraReg = 0)
-        : Type(Type), Size(Size), Reg(Reg), Offset(Offset), ExtraReg(ExtraReg) {}
+    Location(LocationType Type, unsigned Size, unsigned Reg, int64_t Offset, std::set<int64_t> Extras = {})
+        : Type(Type), Size(Size), Reg(Reg), Offset(Offset), Extras(Extras) {}
   };
 
   struct LiveOutReg {
