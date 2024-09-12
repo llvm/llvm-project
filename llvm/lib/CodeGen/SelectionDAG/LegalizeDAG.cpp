@@ -2355,8 +2355,7 @@ void SelectionDAGLegalize::ExpandSinCosLibCall(
 
   // Find users of the node that store the results. The destination pointers
   // can be used instead of creating stack allocations.
-  StoreSDNode *SinST = nullptr;
-  StoreSDNode *CosST = nullptr;
+  std::array<StoreSDNode *, 2> ResultStores = {nullptr};
   for (SDNode::use_iterator UI = Node->use_begin(), UE = Node->use_end();
        UI != UE; ++UI) {
     SDUse &Use = UI.getUse();
@@ -2367,22 +2366,18 @@ void SelectionDAGLegalize::ExpandSinCosLibCall(
     if (!ST->isSimple() || ST->getPointerInfo().getAddrSpace() != 0 ||
         ST->getAlign() < DAG.getDataLayout().getABITypeAlign(RetTy))
       continue;
-    if (Use.getResNo() == 0)
-      SinST = ST;
-    if (Use.getResNo() == 1)
-      CosST = ST;
+    ResultStores[Use.getResNo()] = ST;
   }
 
-  auto GetOrCreateOutPointer = [&](StoreSDNode *MaybeStore) {
-    if (MaybeStore)
-      return std::make_pair(MaybeStore->getBasePtr(),
-                            MaybeStore->getPointerInfo());
-    SDValue StackSlot = DAG.CreateStackTemporary(RetVT);
-    auto PtrInfo = MachinePointerInfo::getFixedStack(
-        DAG.getMachineFunction(),
-        cast<FrameIndexSDNode>(StackSlot)->getIndex());
-    return std::make_pair(StackSlot, PtrInfo);
-  };
+  // Collect input chains (and avoid chains referring to one of the stores).
+  SmallVector<SDValue> InChains;
+  for (auto [ResNum, ST] : llvm::enumerate(ResultStores)) {
+    unsigned OtherResNum = ResNum == 0 ? 1 : 0;
+    if (ST && ST->getChain().getNode() != ResultStores[OtherResNum])
+      InChains.push_back(ST->getChain());
+  }
+  if (InChains.empty())
+    InChains.push_back(DAG.getEntryNode());
 
   TargetLowering::ArgListTy Args;
   TargetLowering::ArgListEntry Entry{};
@@ -2392,28 +2387,19 @@ void SelectionDAGLegalize::ExpandSinCosLibCall(
   Entry.Ty = RetTy;
   Args.push_back(Entry);
 
-  // Pass the return address of sin.
-  auto SinPtr = GetOrCreateOutPointer(SinST);
-  Entry.Node = SinPtr.first;
-  Entry.Ty = PointerType::getUnqual(RetTy->getContext());
-  Args.push_back(Entry);
-
-  // Also pass the return address of the cos.
-  auto CosPtr = GetOrCreateOutPointer(CosST);
-  Entry.Node = CosPtr.first;
-  Entry.Ty = PointerType::getUnqual(RetTy->getContext());
-  Args.push_back(Entry);
-
-  // Combine any input chains from the stores.
-  SmallVector<SDValue, 2> InChains{};
-  for (StoreSDNode *ST : {SinST, CosST}) {
-    if (ST)
-      InChains.push_back(ST->getChain());
+  // Pass the output pointers for sin and cos.
+  SmallVector<SDValue, 2> ResultPtrs{};
+  for (StoreSDNode *ST : ResultStores) {
+    SDValue ResultPtr = ST ? ST->getBasePtr() : DAG.CreateStackTemporary(RetVT);
+    Entry.Node = ResultPtr;
+    Entry.Ty = PointerType::getUnqual(RetTy->getContext());
+    Args.push_back(Entry);
+    ResultPtrs.push_back(ResultPtr);
   }
-  if (InChains.empty())
-    InChains.push_back(DAG.getEntryNode());
 
   SDLoc DL(Node);
+
+  // Combine any input chains from the stores.
   SDValue InChain = DAG.getTokenFactor(DL, InChains);
   SDValue Callee = DAG.getExternalSymbol(TLI.getLibcallName(LC),
                                          TLI.getPointerTy(DAG.getDataLayout()));
@@ -2424,16 +2410,19 @@ void SelectionDAGLegalize::ExpandSinCosLibCall(
 
   auto [Call, OutChain] = TLI.LowerCallTo(CLI);
 
-  // Replace the stores with the library call.
-  for (StoreSDNode *ST : {SinST, CosST}) {
-    if (!ST)
-      continue;
-    DAG.ReplaceAllUsesOfValueWith(SDValue(ST, 0), OutChain);
-  }
-
-  for (auto [Ptr, PtrInfo] : {SinPtr, CosPtr}) {
-    SDValue LoadExp = DAG.getLoad(RetVT, DL, OutChain, Ptr, PtrInfo);
-    Results.push_back(LoadExp);
+  for (auto [ResNo, ResultPtr] : llvm::enumerate(ResultPtrs)) {
+    MachinePointerInfo PtrInfo;
+    if (StoreSDNode *ST = ResultStores[ResNo]) {
+      // Replace store with the library call.
+      DAG.ReplaceAllUsesOfValueWith(SDValue(ST, 0), OutChain);
+      PtrInfo = ST->getPointerInfo();
+    } else {
+      PtrInfo = MachinePointerInfo::getFixedStack(
+          DAG.getMachineFunction(),
+          cast<FrameIndexSDNode>(ResultPtr)->getIndex());
+    }
+    SDValue LoadResult = DAG.getLoad(RetVT, DL, OutChain, ResultPtr, PtrInfo);
+    Results.push_back(LoadResult);
   }
 }
 

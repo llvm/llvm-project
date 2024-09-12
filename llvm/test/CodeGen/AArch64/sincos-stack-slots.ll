@@ -118,7 +118,7 @@ entry:
 
 ; Negative test. We can't fold volatile stores into the library call.
 define void @sincos_volatile_result_stores(float %x, ptr %out_sin, ptr %out_cos) {
-; CHECK-LABEL: negative_fold_sincos_volatile_store:
+; CHECK-LABEL: sincos_volatile_result_stores:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    str x30, [sp, #-32]! // 8-byte Folded Spill
 ; CHECK-NEXT:    stp x20, x19, [sp, #16] // 16-byte Folded Spill
@@ -147,7 +147,7 @@ entry:
 
 ; Negative test. We can't fold atomic stores into the library call.
 define void @sincos_atomic_result_stores(float %x, ptr %out_sin, ptr %out_cos) {
-; CHECK-LABEL: negative_fold_sincos_atomic_store:
+; CHECK-LABEL: sincos_atomic_result_stores:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    str x30, [sp, #-32]! // 8-byte Folded Spill
 ; CHECK-NEXT:    stp x20, x19, [sp, #16] // 16-byte Folded Spill
@@ -177,7 +177,7 @@ entry:
 
 ; Negative test. We can't fold misaligned stores into the library call.
 define void @sincos_misaligned_result_stores(double %x, ptr %out_sin, ptr %out_cos) {
-; CHECK-LABEL: negative_sincos_bad_alignment:
+; CHECK-LABEL: sincos_misaligned_result_stores:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sub sp, sp, #48
 ; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
