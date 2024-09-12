@@ -833,7 +833,7 @@ private:
     // The same will have to be done for store instructions.
     if ((I->getOrdering() != AtomicOrdering::NotAtomic) ||
         (I->getPointerAddressSpace() != 0) ||
-        (I->getAlign() < DL.getTypeSizeInBits(I->getType()) / 8)) {
+        (I->getAlign() < DL.getTypeAllocSize(I->getType()))) {
       serialiseUnimplementedInstruction(I, FLCtxt, BBIdx, InstIdx);
       return;
     }
@@ -863,7 +863,7 @@ private:
     if ((I->getOrdering() != AtomicOrdering::NotAtomic) ||
         (I->getPointerAddressSpace() != 0) ||
         (I->getAlign() <
-         DL.getTypeSizeInBits(I->getValueOperand()->getType()) / 8)) {
+         DL.getTypeAllocSize(I->getValueOperand()->getType()))) {
       serialiseUnimplementedInstruction(I, FLCtxt, BBIdx, InstIdx);
       return;
     }
@@ -1574,12 +1574,10 @@ private:
     // ty_idx:
     OutStreamer.emitSizeT(typeIndex(CI->getType()));
 
-    // Figure out how many bytes it'd take to store that many bits.
+    // Figure out how many bits and bytes it'd take to store the type of the
+    // constant (without padding).
     unsigned BitWidth = CI->getBitWidth();
-    unsigned ByteWidth = BitWidth / 8;
-    if (BitWidth % 8 != 0) {
-      ByteWidth++;
-    }
+    unsigned ByteWidth = DL.getTypeStoreSize(CI->getType());
     OutStreamer.emitSizeT(ByteWidth);
 
     unsigned BitsRemain = BitWidth;
