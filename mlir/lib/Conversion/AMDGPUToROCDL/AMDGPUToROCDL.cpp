@@ -672,7 +672,10 @@ struct WMMAOpLowering : public ConvertOpToLLVMPattern<WMMAOp> {
                   ConversionPatternRewriter &rewriter) const override {
     Location loc = op.getLoc();
     auto outType =
-        cast<VectorType>(typeConverter->convertType(op.getDestD().getType()));
+        typeConverter->convertType<VectorType>(op.getDestD().getType());
+    if (!outType)
+      return rewriter.notifyMatchFailure(
+          op, "wmma output doesn't convert to a vector for no clear reason");
 
     if (chipset.majorVersion != 11 && chipset.majorVersion != 12)
       return op->emitOpError("WMMA only supported on gfx11 and gfx12");
