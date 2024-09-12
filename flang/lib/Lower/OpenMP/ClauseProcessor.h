@@ -121,6 +121,7 @@ public:
       llvm::SmallVectorImpl<const semantics::Symbol *> *mapSyms = nullptr,
       llvm::SmallVectorImpl<mlir::Location> *mapSymLocs = nullptr,
       llvm::SmallVectorImpl<mlir::Type> *mapSymTypes = nullptr) const;
+  bool processNontemporal(mlir::omp::NontemporalClauseOps &result) const;
   bool processReduction(
       mlir::Location currentLocation, mlir::omp::ReductionClauseOps &result,
       llvm::SmallVectorImpl<mlir::Type> *reductionTypes = nullptr,

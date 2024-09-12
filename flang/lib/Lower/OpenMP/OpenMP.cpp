@@ -1123,13 +1123,13 @@ static void genSimdClauses(lower::AbstractConverter &converter,
   ClauseProcessor cp(converter, semaCtx, clauses);
   cp.processAligned(clauseOps);
   cp.processIf(llvm::omp::Directive::OMPD_simd, clauseOps);
+  cp.processNontemporal(clauseOps);
   cp.processOrder(clauseOps);
   cp.processReduction(loc, clauseOps);
   cp.processSafelen(clauseOps);
   cp.processSimdlen(clauseOps);
 
-  cp.processTODO<clause::Linear, clause::Nontemporal>(
-      loc, llvm::omp::Directive::OMPD_simd);
+  cp.processTODO<clause::Linear>(loc, llvm::omp::Directive::OMPD_simd);
 }
 
 static void genSingleClauses(lower::AbstractConverter &converter,

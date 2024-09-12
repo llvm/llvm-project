@@ -223,3 +223,21 @@ subroutine simdloop_aligned_allocatable()
     A(i) = i
   end do
 end subroutine
+
+!CHECK-LABEL: func @_QPsimd_with_nontemporal_clause
+subroutine simd_with_nontemporal_clause(n)
+  !CHECK: %[[A_DECL:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFsimd_with_nontemporal_clauseEa"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  !CHECK: %[[C_DECL:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFsimd_with_nontemporal_clauseEc"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  integer :: i, n
+  integer :: A, B, C
+  !CHECK: %[[LB:.*]] = arith.constant 1 : i32
+  !CHECK: %[[UB:.*]] = fir.load %{{.*}}#0 : !fir.ref<i32>
+  !CHECK: %[[STEP:.*]] = arith.constant 1 : i32
+  !CHECK: omp.simd nontemporal(%[[A_DECL]]#1, %[[C_DECL]]#1 : !fir.ref<i32>, !fir.ref<i32>) {
+  !CHECK-NEXT: omp.loop_nest (%[[I:.*]]) : i32 = (%[[LB]]) to (%[[UB]]) inclusive step (%[[STEP]]) {
+  !$OMP SIMD NONTEMPORAL(A, C)
+  do i = 1, n
+    C = A + B
+  end do
+  !$OMP END SIMD
+end subroutine
