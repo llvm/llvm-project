@@ -352,7 +352,7 @@ define half @freeze_half_undef() nounwind {
   ret half %t1
 }
 
-define half @freeze_half_poison(half %poison) nounwind {
+define half @freeze_half_poison(half %maybe.poison) nounwind {
 ; LA32-LABEL: freeze_half_poison:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    addi.w $sp, $sp, -16
@@ -374,7 +374,7 @@ define half @freeze_half_poison(half %poison) nounwind {
 ; LA64-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; LA64-NEXT:    addi.d $sp, $sp, 16
 ; LA64-NEXT:    ret
-  %y1 = freeze half %poison
+  %y1 = freeze half %maybe.poison
   %t1 = fadd half %y1, %y1
   ret half %t1
 }
