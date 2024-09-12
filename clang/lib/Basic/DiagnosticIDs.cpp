@@ -102,12 +102,13 @@ const uint32_t StaticDiagInfoDescriptionOffsets[] = {
 #undef DIAG
 };
 
+// Diagnostic classes.
 enum DiagnosticClass {
-  CLASS_NOTE = DiagnosticIDs::CLASS_NOTE,
-  CLASS_REMARK = DiagnosticIDs::CLASS_REMARK,
-  CLASS_WARNING = DiagnosticIDs::CLASS_WARNING,
-  CLASS_EXTENSION = DiagnosticIDs::CLASS_EXTENSION,
-  CLASS_ERROR = DiagnosticIDs::CLASS_ERROR,
+  CLASS_NOTE       = 0x01,
+  CLASS_REMARK     = 0x02,
+  CLASS_WARNING    = 0x03,
+  CLASS_EXTENSION  = 0x04,
+  CLASS_ERROR      = 0x05
 };
 
 struct StaticDiagInfoRec {
@@ -268,60 +269,11 @@ CATEGORY(INSTALLAPI, REFACTORING)
   return Found;
 }
 
-//===----------------------------------------------------------------------===//
-// Custom Diagnostic information
-//===----------------------------------------------------------------------===//
-
-namespace clang {
-namespace diag {
-using CustomDiagDesc = DiagnosticIDs::CustomDiagDesc;
-class CustomDiagInfo {
-  std::vector<CustomDiagDesc> DiagInfo;
-  std::map<CustomDiagDesc, unsigned> DiagIDs;
-  std::map<diag::Group, std::vector<unsigned>> GroupToDiags;
-
-public:
-  /// getDescription - Return the description of the specified custom
-  /// diagnostic.
-  const CustomDiagDesc &getDescription(unsigned DiagID) const {
-    assert(DiagID - DIAG_UPPER_LIMIT < DiagInfo.size() &&
-           "Invalid diagnostic ID");
-    return DiagInfo[DiagID - DIAG_UPPER_LIMIT];
-  }
-
-  unsigned getOrCreateDiagID(DiagnosticIDs::CustomDiagDesc D) {
-    // Check to see if it already exists.
-    std::map<CustomDiagDesc, unsigned>::iterator I = DiagIDs.lower_bound(D);
-    if (I != DiagIDs.end() && I->first == D)
-      return I->second;
-
-    // If not, assign a new ID.
-    unsigned ID = DiagInfo.size() + DIAG_UPPER_LIMIT;
-    DiagIDs.insert(std::make_pair(D, ID));
-    DiagInfo.push_back(D);
-    if (auto Group = D.GetGroup())
-      GroupToDiags[*Group].emplace_back(ID);
-    return ID;
-  }
-
-  ArrayRef<unsigned> getDiagsInGroup(diag::Group G) const {
-    if (auto Diags = GroupToDiags.find(G); Diags != GroupToDiags.end())
-      return Diags->second;
-    return {};
-  }
-};
-
-} // namespace diag
-} // namespace clang
-
-DiagnosticMapping DiagnosticIDs::getDefaultMapping(unsigned DiagID) const {
+DiagnosticMapping DiagnosticIDs::getDefaultMapping(unsigned DiagID) {
   DiagnosticMapping Info = DiagnosticMapping::Make(
       diag::Severity::Fatal, /*IsUser=*/false, /*IsPragma=*/false);
 
-  if (IsCustomDiag(DiagID)) {
-    Info.setSeverity(
-        CustomDiagInfo->getDescription(DiagID).GetDefaultSeverity());
-  } else if (const StaticDiagInfoRec *StaticInfo = GetDiagInfo(DiagID)) {
+  if (const StaticDiagInfoRec *StaticInfo = GetDiagInfo(DiagID)) {
     Info.setSeverity((diag::Severity)StaticInfo->DefaultSeverity);
 
     if (StaticInfo->WarnNoWerror) {
@@ -332,18 +284,6 @@ DiagnosticMapping DiagnosticIDs::getDefaultMapping(unsigned DiagID) const {
   }
 
   return Info;
-}
-
-void DiagnosticIDs::initCustomDiagMapping(DiagnosticMapping &Mapping,
-                                          unsigned DiagID) {
-  assert(IsCustomDiag(DiagID));
-  const auto &Diag = CustomDiagInfo->getDescription(DiagID);
-  if (auto Group = Diag.GetGroup()) {
-    GroupInfo GroupInfo = GroupInfos[static_cast<size_t>(*Group)];
-    if (static_cast<diag::Severity>(GroupInfo.Severity) != diag::Severity())
-      Mapping.setSeverity(static_cast<diag::Severity>(GroupInfo.Severity));
-    Mapping.setNoWarningAsError(GroupInfo.HasNoWarningAsError);
-  }
 }
 
 /// getCategoryNumberForDiag - Return the category number that a specified
@@ -403,6 +343,61 @@ bool DiagnosticIDs::isDeferrable(unsigned DiagID) {
   return false;
 }
 
+/// getBuiltinDiagClass - Return the class field of the diagnostic.
+///
+static unsigned getBuiltinDiagClass(unsigned DiagID) {
+  if (const StaticDiagInfoRec *Info = GetDiagInfo(DiagID))
+    return Info->Class;
+  return ~0U;
+}
+
+//===----------------------------------------------------------------------===//
+// Custom Diagnostic information
+//===----------------------------------------------------------------------===//
+
+namespace clang {
+  namespace diag {
+    class CustomDiagInfo {
+      typedef std::pair<DiagnosticIDs::Level, std::string> DiagDesc;
+      std::vector<DiagDesc> DiagInfo;
+      std::map<DiagDesc, unsigned> DiagIDs;
+    public:
+
+      /// getDescription - Return the description of the specified custom
+      /// diagnostic.
+      StringRef getDescription(unsigned DiagID) const {
+        assert(DiagID - DIAG_UPPER_LIMIT < DiagInfo.size() &&
+               "Invalid diagnostic ID");
+        return DiagInfo[DiagID-DIAG_UPPER_LIMIT].second;
+      }
+
+      /// getLevel - Return the level of the specified custom diagnostic.
+      DiagnosticIDs::Level getLevel(unsigned DiagID) const {
+        assert(DiagID - DIAG_UPPER_LIMIT < DiagInfo.size() &&
+               "Invalid diagnostic ID");
+        return DiagInfo[DiagID-DIAG_UPPER_LIMIT].first;
+      }
+
+      unsigned getOrCreateDiagID(DiagnosticIDs::Level L, StringRef Message,
+                                 DiagnosticIDs &Diags) {
+        DiagDesc D(L, std::string(Message));
+        // Check to see if it already exists.
+        std::map<DiagDesc, unsigned>::iterator I = DiagIDs.lower_bound(D);
+        if (I != DiagIDs.end() && I->first == D)
+          return I->second;
+
+        // If not, assign a new ID.
+        unsigned ID = DiagInfo.size()+DIAG_UPPER_LIMIT;
+        DiagIDs.insert(std::make_pair(D, ID));
+        DiagInfo.push_back(D);
+        return ID;
+      }
+    };
+
+  } // end diag namespace
+} // end clang namespace
+
+
 //===----------------------------------------------------------------------===//
 // Common Diagnostic implementation
 //===----------------------------------------------------------------------===//
@@ -417,32 +412,38 @@ DiagnosticIDs::~DiagnosticIDs() {}
 ///
 /// \param FormatString A fixed diagnostic format string that will be hashed and
 /// mapped to a unique DiagID.
-unsigned DiagnosticIDs::getCustomDiagID(CustomDiagDesc Diag) {
+unsigned DiagnosticIDs::getCustomDiagID(Level L, StringRef FormatString) {
   if (!CustomDiagInfo)
     CustomDiagInfo.reset(new diag::CustomDiagInfo());
-  return CustomDiagInfo->getOrCreateDiagID(Diag);
+  return CustomDiagInfo->getOrCreateDiagID(L, FormatString, *this);
 }
 
-bool DiagnosticIDs::isWarningOrExtension(unsigned DiagID) const {
-  return DiagID < diag::DIAG_UPPER_LIMIT
-             ? getDiagClass(DiagID) != CLASS_ERROR
-             : CustomDiagInfo->getDescription(DiagID).GetClass() != CLASS_ERROR;
+
+/// isBuiltinWarningOrExtension - Return true if the unmapped diagnostic
+/// level of the specified diagnostic ID is a Warning or Extension.
+/// This only works on builtin diagnostics, not custom ones, and is not legal to
+/// call on NOTEs.
+bool DiagnosticIDs::isBuiltinWarningOrExtension(unsigned DiagID) {
+  return DiagID < diag::DIAG_UPPER_LIMIT &&
+         getBuiltinDiagClass(DiagID) != CLASS_ERROR;
 }
 
 /// Determine whether the given built-in diagnostic ID is a
 /// Note.
-bool DiagnosticIDs::isNote(unsigned DiagID) const {
-  return DiagID < diag::DIAG_UPPER_LIMIT && getDiagClass(DiagID) == CLASS_NOTE;
+bool DiagnosticIDs::isBuiltinNote(unsigned DiagID) {
+  return DiagID < diag::DIAG_UPPER_LIMIT &&
+    getBuiltinDiagClass(DiagID) == CLASS_NOTE;
 }
 
-/// isExtensionDiag - Determine whether the given built-in diagnostic
+/// isBuiltinExtensionDiag - Determine whether the given built-in diagnostic
 /// ID is for an extension of some sort.  This also returns EnabledByDefault,
 /// which is set to indicate whether the diagnostic is ignored by default (in
 /// which case -pedantic enables it) or treated as a warning/error by default.
 ///
-bool DiagnosticIDs::isExtensionDiag(unsigned DiagID,
-                                    bool &EnabledByDefault) const {
-  if (IsCustomDiag(DiagID) || getDiagClass(DiagID) != CLASS_EXTENSION)
+bool DiagnosticIDs::isBuiltinExtensionDiag(unsigned DiagID,
+                                        bool &EnabledByDefault) {
+  if (DiagID >= diag::DIAG_UPPER_LIMIT ||
+      getBuiltinDiagClass(DiagID) != CLASS_EXTENSION)
     return false;
 
   EnabledByDefault =
@@ -450,7 +451,10 @@ bool DiagnosticIDs::isExtensionDiag(unsigned DiagID,
   return true;
 }
 
-bool DiagnosticIDs::isDefaultMappingAsError(unsigned DiagID) const {
+bool DiagnosticIDs::isDefaultMappingAsError(unsigned DiagID) {
+  if (DiagID >= diag::DIAG_UPPER_LIMIT)
+    return false;
+
   return getDefaultMapping(DiagID).getSeverity() >= diag::Severity::Error;
 }
 
@@ -460,7 +464,7 @@ StringRef DiagnosticIDs::getDescription(unsigned DiagID) const {
   if (const StaticDiagInfoRec *Info = GetDiagInfo(DiagID))
     return Info->getDescription();
   assert(CustomDiagInfo && "Invalid CustomDiagInfo");
-  return CustomDiagInfo->getDescription(DiagID).GetDescription();
+  return CustomDiagInfo->getDescription(DiagID);
 }
 
 static DiagnosticIDs::Level toLevel(diag::Severity SV) {
@@ -485,7 +489,13 @@ static DiagnosticIDs::Level toLevel(diag::Severity SV) {
 DiagnosticIDs::Level
 DiagnosticIDs::getDiagnosticLevel(unsigned DiagID, SourceLocation Loc,
                                   const DiagnosticsEngine &Diag) const {
-  unsigned DiagClass = getDiagClass(DiagID);
+  // Handle custom diagnostics, which cannot be mapped.
+  if (DiagID >= diag::DIAG_UPPER_LIMIT) {
+    assert(CustomDiagInfo && "Invalid CustomDiagInfo");
+    return CustomDiagInfo->getLevel(DiagID);
+  }
+
+  unsigned DiagClass = getBuiltinDiagClass(DiagID);
   if (DiagClass == CLASS_NOTE) return DiagnosticIDs::Note;
   return toLevel(getDiagnosticSeverity(DiagID, Loc, Diag));
 }
@@ -499,8 +509,7 @@ DiagnosticIDs::getDiagnosticLevel(unsigned DiagID, SourceLocation Loc,
 diag::Severity
 DiagnosticIDs::getDiagnosticSeverity(unsigned DiagID, SourceLocation Loc,
                                      const DiagnosticsEngine &Diag) const {
-  bool IsCustomDiag = DiagnosticIDs::IsCustomDiag(DiagID);
-  assert(getDiagClass(DiagID) != CLASS_NOTE);
+  assert(getBuiltinDiagClass(DiagID) != CLASS_NOTE);
 
   // Specific non-error diagnostics may be mapped to various levels from ignored
   // to error.  Errors can only be mapped to fatal.
@@ -508,7 +517,7 @@ DiagnosticIDs::getDiagnosticSeverity(unsigned DiagID, SourceLocation Loc,
 
   // Get the mapping information, or compute it lazily.
   DiagnosticsEngine::DiagState *State = Diag.GetDiagStateForLoc(Loc);
-  DiagnosticMapping Mapping = State->getOrAddMapping((diag::kind)DiagID);
+  DiagnosticMapping &Mapping = State->getOrAddMapping((diag::kind)DiagID);
 
   // TODO: Can a null severity really get here?
   if (Mapping.getSeverity() != diag::Severity())
@@ -516,15 +525,14 @@ DiagnosticIDs::getDiagnosticSeverity(unsigned DiagID, SourceLocation Loc,
 
   // Upgrade ignored diagnostics if -Weverything is enabled.
   if (State->EnableAllWarnings && Result == diag::Severity::Ignored &&
-      !Mapping.isUser() &&
-      (IsCustomDiag || getDiagClass(DiagID) != CLASS_REMARK))
+      !Mapping.isUser() && getBuiltinDiagClass(DiagID) != CLASS_REMARK)
     Result = diag::Severity::Warning;
 
   // Ignore -pedantic diagnostics inside __extension__ blocks.
   // (The diagnostics controlled by -pedantic are the extension diagnostics
   // that are not enabled by default.)
   bool EnabledByDefault = false;
-  bool IsExtensionDiag = isExtensionDiag(DiagID, EnabledByDefault);
+  bool IsExtensionDiag = isBuiltinExtensionDiag(DiagID, EnabledByDefault);
   if (Diag.AllExtensionsSilenced && IsExtensionDiag && !EnabledByDefault)
     return diag::Severity::Ignored;
 
@@ -542,12 +550,10 @@ DiagnosticIDs::getDiagnosticSeverity(unsigned DiagID, SourceLocation Loc,
   // as well as disabling all messages which are currently mapped to Warning
   // (whether by default or downgraded from Error via e.g. -Wno-error or #pragma
   // diagnostic.)
-  // FIXME: Should -w be ignored for custom warnings without a group?
   if (State->IgnoreAllWarnings) {
-    if ((!IsCustomDiag || CustomDiagInfo->getDescription(DiagID).GetGroup()) &&
-        (Result == diag::Severity::Warning ||
-         (Result >= diag::Severity::Error &&
-          !isDefaultMappingAsError((diag::kind)DiagID))))
+    if (Result == diag::Severity::Warning ||
+        (Result >= diag::Severity::Error &&
+         !isDefaultMappingAsError((diag::kind)DiagID)))
       return diag::Severity::Ignored;
   }
 
@@ -569,10 +575,9 @@ DiagnosticIDs::getDiagnosticSeverity(unsigned DiagID, SourceLocation Loc,
       Diag.CurDiagID != diag::fatal_too_many_errors && Diag.FatalsAsError)
     Result = diag::Severity::Error;
 
+  // Custom diagnostics always are emitted in system headers.
   bool ShowInSystemHeader =
-      IsCustomDiag
-          ? CustomDiagInfo->getDescription(DiagID).ShouldShowInSystemHeader()
-          : !GetDiagInfo(DiagID) || GetDiagInfo(DiagID)->WarnShowInSystemHeader;
+      !GetDiagInfo(DiagID) || GetDiagInfo(DiagID)->WarnShowInSystemHeader;
 
   // If we are in a system header, we ignore it. We look at the diagnostic class
   // because we also want to ignore extensions and warnings in -Werror and
@@ -590,15 +595,6 @@ DiagnosticIDs::getDiagnosticSeverity(unsigned DiagID, SourceLocation Loc,
     return diag::Severity::Ignored;
 
   return Result;
-}
-
-DiagnosticIDs::Class DiagnosticIDs::getDiagClass(unsigned DiagID) const {
-  if (IsCustomDiag(DiagID))
-    return Class(CustomDiagInfo->getDescription(DiagID).GetClass());
-
-  if (const StaticDiagInfoRec *Info = GetDiagInfo(DiagID))
-    return Class(Info->Class);
-  return CLASS_INVALID;
 }
 
 #define GET_DIAG_ARRAYS
@@ -646,12 +642,7 @@ DiagnosticIDs::getGroupForWarningOption(StringRef Name) {
   return static_cast<diag::Group>(Found - OptionTable);
 }
 
-std::optional<diag::Group>
-DiagnosticIDs::getGroupForDiag(unsigned DiagID) const {
-  if (IsCustomDiag(DiagID)) {
-    assert(CustomDiagInfo);
-    return CustomDiagInfo->getDescription(DiagID).GetGroup();
-  }
+std::optional<diag::Group> DiagnosticIDs::getGroupForDiag(unsigned DiagID) {
   if (const StaticDiagInfoRec *Info = GetDiagInfo(DiagID))
     return static_cast<diag::Group>(Info->getOptionGroupIndex());
   return std::nullopt;
@@ -682,8 +673,7 @@ std::vector<std::string> DiagnosticIDs::getDiagnosticFlags() {
 /// were filtered out due to having the wrong flavor.
 static bool getDiagnosticsInGroup(diag::Flavor Flavor,
                                   const WarningOption *Group,
-                                  SmallVectorImpl<diag::kind> &Diags,
-                                  diag::CustomDiagInfo *CustomDiagInfo) {
+                                  SmallVectorImpl<diag::kind> &Diags) {
   // An empty group is considered to be a warning group: we have empty groups
   // for GCC compatibility, and GCC does not have remarks.
   if (!Group->Members && !Group->SubGroups)
@@ -702,14 +692,9 @@ static bool getDiagnosticsInGroup(diag::Flavor Flavor,
 
   // Add the members of the subgroups.
   const int16_t *SubGroups = DiagSubGroups + Group->SubGroups;
-  for (; *SubGroups != (int16_t)-1; ++SubGroups) {
-    if (CustomDiagInfo)
-      llvm::copy(
-          CustomDiagInfo->getDiagsInGroup(static_cast<diag::Group>(*SubGroups)),
-          std::back_inserter(Diags));
+  for (; *SubGroups != (int16_t)-1; ++SubGroups)
     NotFound &= getDiagnosticsInGroup(Flavor, &OptionTable[(short)*SubGroups],
-                                      Diags, CustomDiagInfo);
-  }
+                                      Diags);
 
   return NotFound;
 }
@@ -717,47 +702,10 @@ static bool getDiagnosticsInGroup(diag::Flavor Flavor,
 bool
 DiagnosticIDs::getDiagnosticsInGroup(diag::Flavor Flavor, StringRef Group,
                                      SmallVectorImpl<diag::kind> &Diags) const {
-  if (std::optional<diag::Group> G = getGroupForWarningOption(Group)) {
-    if (CustomDiagInfo)
-      llvm::copy(CustomDiagInfo->getDiagsInGroup(*G),
-                 std::back_inserter(Diags));
-    return ::getDiagnosticsInGroup(Flavor,
-                                   &OptionTable[static_cast<unsigned>(*G)],
-                                   Diags, CustomDiagInfo.get());
-  }
+  if (std::optional<diag::Group> G = getGroupForWarningOption(Group))
+    return ::getDiagnosticsInGroup(
+        Flavor, &OptionTable[static_cast<unsigned>(*G)], Diags);
   return true;
-}
-
-template <class Func>
-static void forEachSubGroupImpl(const WarningOption *Group, Func func) {
-  for (const int16_t *SubGroups = DiagSubGroups + Group->SubGroups;
-       *SubGroups != -1; ++SubGroups) {
-    func(static_cast<size_t>(*SubGroups));
-    forEachSubGroupImpl(&OptionTable[*SubGroups], std::move(func));
-  }
-}
-
-template <class Func>
-static void forEachSubGroup(diag::Group Group, Func func) {
-  const WarningOption *WarningOpt = &OptionTable[static_cast<size_t>(Group)];
-  func(static_cast<size_t>(Group));
-  ::forEachSubGroupImpl(WarningOpt, std::move(func));
-}
-
-void DiagnosticIDs::setGroupSeverity(StringRef Group, diag::Severity Sev) {
-  if (std::optional<diag::Group> G = getGroupForWarningOption(Group)) {
-    ::forEachSubGroup(*G, [&](size_t SubGroup) {
-      GroupInfos[SubGroup].Severity = static_cast<unsigned>(Sev);
-    });
-  }
-}
-
-void DiagnosticIDs::setGroupNoWarningsAsError(StringRef Group, bool Val) {
-  if (std::optional<diag::Group> G = getGroupForWarningOption(Group)) {
-    ::forEachSubGroup(*G, [&](size_t SubGroup) {
-      GroupInfos[static_cast<size_t>(*G)].HasNoWarningAsError = Val;
-    });
-  }
 }
 
 void DiagnosticIDs::getAllDiagnostics(diag::Flavor Flavor,
@@ -782,7 +730,7 @@ StringRef DiagnosticIDs::getNearestOption(diag::Flavor Flavor,
 
     // Don't suggest groups that are not of this kind.
     llvm::SmallVector<diag::kind, 8> Diags;
-    if (::getDiagnosticsInGroup(Flavor, &O, Diags, nullptr) || Diags.empty())
+    if (::getDiagnosticsInGroup(Flavor, &O, Diags) || Diags.empty())
       continue;
 
     if (Distance == BestDistance) {
@@ -895,8 +843,14 @@ void DiagnosticIDs::EmitDiag(DiagnosticsEngine &Diag, Level DiagLevel) const {
 }
 
 bool DiagnosticIDs::isUnrecoverable(unsigned DiagID) const {
+  if (DiagID >= diag::DIAG_UPPER_LIMIT) {
+    assert(CustomDiagInfo && "Invalid CustomDiagInfo");
+    // Custom diagnostics.
+    return CustomDiagInfo->getLevel(DiagID) >= DiagnosticIDs::Error;
+  }
+
   // Only errors may be unrecoverable.
-  if (getDiagClass(DiagID) < CLASS_ERROR)
+  if (getBuiltinDiagClass(DiagID) < CLASS_ERROR)
     return false;
 
   if (DiagID == diag::err_unavailable ||
