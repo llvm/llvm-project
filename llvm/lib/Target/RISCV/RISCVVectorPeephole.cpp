@@ -65,7 +65,8 @@ private:
   bool convertToVLMAX(MachineInstr &MI) const;
   bool convertToWholeRegister(MachineInstr &MI) const;
   bool convertToUnmasked(MachineInstr &MI) const;
-  bool convertVMergeToVMv(MachineInstr &MI) const;
+  bool convertAllOnesVMergeToVMv(MachineInstr &MI) const;
+  bool convertSameMaskVMergeToVMv(MachineInstr &MI);
   bool foldUndefPassthruVMV_V_V(MachineInstr &MI);
   bool foldVMV_V_V(MachineInstr &MI);
 
@@ -143,6 +144,24 @@ bool RISCVVectorPeephole::tryToReduceVL(MachineInstr &MI) const {
     break;
   case RISCV::VMERGE_VVM:
     SrcIdx = 3; // TODO: We can also handle the false operand.
+    break;
+  case RISCV::VREDSUM_VS:
+  case RISCV::VREDMAXU_VS:
+  case RISCV::VREDMAX_VS:
+  case RISCV::VREDMINU_VS:
+  case RISCV::VREDMIN_VS:
+  case RISCV::VREDAND_VS:
+  case RISCV::VREDOR_VS:
+  case RISCV::VREDXOR_VS:
+  case RISCV::VWREDSUM_VS:
+  case RISCV::VWREDSUMU_VS:
+  case RISCV::VFREDUSUM_VS:
+  case RISCV::VFREDOSUM_VS:
+  case RISCV::VFREDMAX_VS:
+  case RISCV::VFREDMIN_VS:
+  case RISCV::VFWREDUSUM_VS:
+  case RISCV::VFWREDOSUM_VS:
+    SrcIdx = 2;
     break;
   }
 
@@ -342,17 +361,13 @@ bool RISCVVectorPeephole::convertToWholeRegister(MachineInstr &MI) const {
   return true;
 }
 
-// Transform (VMERGE_VVM_<LMUL> pt, false, true, allones, vl, sew) to
-// (VMV_V_V_<LMUL> pt, true, vl, sew). It may decrease uses of VMSET.
-bool RISCVVectorPeephole::convertVMergeToVMv(MachineInstr &MI) const {
+static unsigned getVMV_V_VOpcodeForVMERGE_VVM(const MachineInstr &MI) {
 #define CASE_VMERGE_TO_VMV(lmul)                                               \
   case RISCV::PseudoVMERGE_VVM_##lmul:                                         \
-    NewOpc = RISCV::PseudoVMV_V_V_##lmul;                                      \
-    break;
-  unsigned NewOpc;
+    return RISCV::PseudoVMV_V_V_##lmul;
   switch (MI.getOpcode()) {
   default:
-    return false;
+    return 0;
     CASE_VMERGE_TO_VMV(MF8)
     CASE_VMERGE_TO_VMV(MF4)
     CASE_VMERGE_TO_VMV(MF2)
@@ -361,14 +376,78 @@ bool RISCVVectorPeephole::convertVMergeToVMv(MachineInstr &MI) const {
     CASE_VMERGE_TO_VMV(M4)
     CASE_VMERGE_TO_VMV(M8)
   }
+}
 
+/// Convert a PseudoVMERGE_VVM with an all ones mask to a PseudoVMV_V_V.
+///
+/// %x = PseudoVMERGE_VVM %passthru, %false, %true, %allones, sew, vl
+/// ->
+/// %x = PseudoVMV_V_V %passthru, %true, vl, sew, tu_mu
+bool RISCVVectorPeephole::convertAllOnesVMergeToVMv(MachineInstr &MI) const {
+  unsigned NewOpc = getVMV_V_VOpcodeForVMERGE_VVM(MI);
+  if (!NewOpc)
+    return false;
   assert(MI.getOperand(4).isReg() && MI.getOperand(4).getReg() == RISCV::V0);
   if (!isAllOnesMask(V0Defs.lookup(&MI)))
     return false;
 
   MI.setDesc(TII->get(NewOpc));
-  MI.removeOperand(2);  // False operand
-  MI.removeOperand(3);  // Mask operand
+  MI.removeOperand(2); // False operand
+  MI.removeOperand(3); // Mask operand
+  MI.addOperand(
+      MachineOperand::CreateImm(RISCVII::TAIL_UNDISTURBED_MASK_UNDISTURBED));
+
+  // vmv.v.v doesn't have a mask operand, so we may be able to inflate the
+  // register class for the destination and passthru operands e.g. VRNoV0 -> VR
+  MRI->recomputeRegClass(MI.getOperand(0).getReg());
+  if (MI.getOperand(1).getReg() != RISCV::NoRegister)
+    MRI->recomputeRegClass(MI.getOperand(1).getReg());
+  return true;
+}
+
+/// If a PseudoVMERGE_VVM's true operand is a masked pseudo and both have the
+/// same mask, and the masked pseudo's passthru is the same as the false
+/// operand, we can convert the PseudoVMERGE_VVM to a PseudoVMV_V_V.
+///
+/// %true = PseudoVADD_VV_M1_MASK %false, %x, %y, %mask, vl1, sew, policy
+/// %x = PseudoVMERGE_VVM %passthru, %false, %true, %mask, vl2, sew
+/// ->
+/// %true = PseudoVADD_VV_M1_MASK %false, %x, %y, %mask, vl1, sew, policy
+/// %x = PseudoVMV_V_V %passthru, %true, vl2, sew, tu_mu
+bool RISCVVectorPeephole::convertSameMaskVMergeToVMv(MachineInstr &MI) {
+  unsigned NewOpc = getVMV_V_VOpcodeForVMERGE_VVM(MI);
+  if (!NewOpc)
+    return false;
+  MachineInstr *True = MRI->getVRegDef(MI.getOperand(3).getReg());
+  if (!True || !RISCV::getMaskedPseudoInfo(True->getOpcode()) ||
+      !hasSameEEW(MI, *True))
+    return false;
+
+  const MachineInstr *TrueV0Def = V0Defs.lookup(True);
+  const MachineInstr *MIV0Def = V0Defs.lookup(&MI);
+  assert(TrueV0Def && TrueV0Def->isCopy() && MIV0Def && MIV0Def->isCopy());
+  if (TrueV0Def->getOperand(1).getReg() != MIV0Def->getOperand(1).getReg())
+    return false;
+
+  // True's passthru needs to be equivalent to False
+  Register TruePassthruReg = True->getOperand(1).getReg();
+  Register FalseReg = MI.getOperand(2).getReg();
+  if (TruePassthruReg != FalseReg) {
+    // If True's passthru is undef see if we can change it to False
+    if (TruePassthruReg != RISCV::NoRegister ||
+        !MRI->hasOneUse(MI.getOperand(3).getReg()) ||
+        !ensureDominates(MI.getOperand(2), *True))
+      return false;
+    True->getOperand(1).setReg(MI.getOperand(2).getReg());
+    // If True is masked then its passthru needs to be in VRNoV0.
+    MRI->constrainRegClass(True->getOperand(1).getReg(),
+                           TII->getRegClass(True->getDesc(), 1, TRI,
+                                            *True->getParent()->getParent()));
+  }
+
+  MI.setDesc(TII->get(NewOpc));
+  MI.removeOperand(2); // False operand
+  MI.removeOperand(3); // Mask operand
   MI.addOperand(
       MachineOperand::CreateImm(RISCVII::TAIL_UNDISTURBED_MASK_UNDISTURBED));
 
@@ -474,7 +553,6 @@ bool RISCVVectorPeephole::ensureDominates(const MachineOperand &MO,
   if (Def->getParent() == Src.getParent() && !dominates(Def, Src)) {
     if (!isSafeToMove(Src, *Def->getNextNode()))
       return false;
-    // FIXME: Update V0Defs
     Src.moveBefore(Def->getNextNode());
   }
 
@@ -622,7 +700,8 @@ bool RISCVVectorPeephole::runOnMachineFunction(MachineFunction &MF) {
       Changed |= tryToReduceVL(MI);
       Changed |= convertToUnmasked(MI);
       Changed |= convertToWholeRegister(MI);
-      Changed |= convertVMergeToVMv(MI);
+      Changed |= convertAllOnesVMergeToVMv(MI);
+      Changed |= convertSameMaskVMergeToVMv(MI);
       if (foldUndefPassthruVMV_V_V(MI)) {
         Changed |= true;
         continue; // MI is erased

@@ -5,11 +5,22 @@ target triple = "amdgcn-amd-amdhsa"
 
 ; HSA-LABEL: {{^}}use_group_to_flat_addrspacecast:
 
-; CI-DAG: s_load_dword [[APERTURE:s[0-9]+]], s[6:7], 0x0{{$}}
-; GFX9-DAG: s_load_dword [[APERTURE:s[0-9]+]], s[4:5], 0x0{{$}}
-; HSA-DAG: v_mov_b32_e32 [[PTR:v[0-9]+]], [[APERTURE]]
+; CI-DAG: s_load_dword [[PTR:s[0-9]+]], s[6:7], 0x0{{$}}
+; CI-DAG: s_load_dword [[APERTURE:s[0-9]+]], s[4:5], 0x10{{$}}
+; CI-DAG: s_cmp_lg_u32 [[PTR]], -1
+; CI-DAG: s_cselect_b32 s[[HI:[0-9]+]], [[APERTURE]], 0
+; CI-DAG: s_cselect_b32 s[[LO:[0-9]+]], [[PTR]], 0
+
+; GFX9-DAG: s_mov_b64 s[{{[0-9]+}}:[[HIBASE:[0-9]+]]], src_shared_base
+
 ; HSA-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 7
-; HSA-DAG: ds_write_b32 [[PTR]], [[K]]
+; GFX9-DAG: s_load_dword [[PTR:s[0-9]+]], s[4:5], 0x0{{$}}
+
+; GFX9: s_cmp_lg_u32 [[PTR]], -1
+; GFX9-DAG: s_cselect_b32 s[[LO:[0-9]+]], s[[HIBASE]], 0
+; GFX9-DAG: s_cselect_b32 s[[HI:[0-9]+]], [[PTR]], 0
+
+; HSA: flat_store_dword v[[[LO]]:[[HI]]], [[K]]
 
 ; HSA:  .amdhsa_user_sgpr_private_segment_buffer 1
 ; HSA:  .amdhsa_user_sgpr_dispatch_ptr 0
@@ -28,8 +39,22 @@ define amdgpu_kernel void @use_group_to_flat_addrspacecast(ptr addrspace(3) %ptr
 
 ; Test handling inside a non-kernel
 ; HSA-LABEL: {{^}}use_group_to_flat_addrspacecast_func:
+; CI-DAG: s_load_dword [[APERTURE:s[0-9]+]], s[6:7], 0x10{{$}}
+; CI-DAG: v_mov_b32_e32 [[VAPERTURE:v[0-9]+]], [[APERTURE]]
+; CI-DAG: v_cmp_ne_u32_e32 vcc, -1, v0
+; CI-DAG: v_cndmask_b32_e32 v[[HI:[0-9]+]], 0, [[VAPERTURE]], vcc
+; CI-DAG: v_cndmask_b32_e32 v[[LO:[0-9]+]], 0, v0
+
+; GFX9-DAG: s_mov_b64 s[{{[0-9]+}}:[[HIBASE:[0-9]+]]], src_shared_base
+
 ; HSA-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 7
-; HSA-DAG: ds_write_b32 v0, [[K]]
+
+; GFX9-DAG: v_mov_b32_e32 v[[VREG_HIBASE:[0-9]+]], s[[HIBASE]]
+; GFX9-DAG: v_cmp_ne_u32_e32 vcc, -1, v0
+; GFX9-DAG: v_cndmask_b32_e32 v[[LO:[0-9]+]], 0, v0, vcc
+; GFX9-DAG: v_cndmask_b32_e32 v[[HI:[0-9]+]], 0, v[[VREG_HIBASE]], vcc
+
+; HSA: flat_store_dword v[[[LO]]:[[HI]]], [[K]]
 define void @use_group_to_flat_addrspacecast_func(ptr addrspace(3) %ptr) #0 {
   %stof = addrspacecast ptr addrspace(3) %ptr to ptr
   store volatile i32 7, ptr %stof
@@ -38,16 +63,23 @@ define void @use_group_to_flat_addrspacecast_func(ptr addrspace(3) %ptr) #0 {
 
 ; HSA-LABEL: {{^}}use_private_to_flat_addrspacecast:
 
-; CI-DAG: s_load_dword [[APERTURE:s[0-9]+]], s[6:7], 0x0{{$}}
-; GFX9-DAG: s_load_dword [[APERTURE:s[0-9]+]], s[4:5], 0x0{{$}}
-; HSA-DAG: v_mov_b32_e32 [[PTR:v[0-9]+]], [[APERTURE]]
-; HSA-DAG: s_mov_b64 s[{{[0-9]+}}:[[RSRCHI:[0-9]+]]], s[2:3]
-; HSA-DAG: s_mov_b64 s[[[BASELO:[0-9]+]]:[[BASEHI:[0-9]+]]], s[0:1]
-; SI-DAG: s_add_u32 s[[BASELO]], s[[BASELO]], s9
-; GFX9-DAG: s_add_u32 s[[BASELO]], s[[BASELO]], s7
-; HSA-DAG: s_addc_u32 s[[BASEHI]], s[[BASEHI]], 0
-; HSA-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 7
-; HSA: buffer_store_dword [[K]], [[PTR]], s[[[BASELO]]:[[RSRCHI]]], 0 offen
+; CI-DAG: s_load_dword [[PTR:s[0-9]+]], s[6:7], 0x0{{$}}
+; CI-DAG: s_load_dword [[APERTURE:s[0-9]+]], s[4:5], 0x11{{$}}
+
+; CI-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 7
+; CI-DAG: s_cmp_lg_u32 [[PTR]], -1
+; CI-DAG: s_cselect_b32 s[[HI:[0-9]+]], [[APERTURE]], 0
+; CI-DAG: s_cselect_b32 s[[LO:[0-9]+]], [[PTR]], 0
+
+; GFX9-DAG: s_load_dword [[PTR:s[0-9]+]], s[4:5], 0x0{{$}}
+; GFX9-DAG: s_mov_b64 s[{{[0-9]+}}:[[HIBASE:[0-9]+]]], src_private_base
+
+; GFX9-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 7
+; GFX9: s_cmp_lg_u32 [[PTR]], -1
+; GFX9: s_cselect_b32 s[[LO:[0-9]+]], s[[HIBASE]], 0
+; GFX9: s_cselect_b32 s[[HI:[0-9]+]], [[PTR]], 0
+
+; HSA: flat_store_dword v[[[LO]]:[[HI]]], [[K]]
 
 ; HSA:  .amdhsa_user_sgpr_private_segment_buffer 1
 ; HSA:  .amdhsa_user_sgpr_dispatch_ptr 0
@@ -65,12 +97,10 @@ define amdgpu_kernel void @use_private_to_flat_addrspacecast(ptr addrspace(5) %p
 ; HSA-LABEL: {{^}}use_global_to_flat_addrspacecast:
 
 ; HSA: s_load_dwordx2 s[[[PTRLO:[0-9]+]]:[[PTRHI:[0-9]+]]]
-; CI-DAG: v_mov_b32_e32 v[[VPTRLO:[0-9]+]], s[[PTRLO]]
-; CI-DAG: v_mov_b32_e32 v[[VPTRHI:[0-9]+]], s[[PTRHI]]
+; HSA-DAG: v_mov_b32_e32 v[[VPTRLO:[0-9]+]], s[[PTRLO]]
+; HSA-DAG: v_mov_b32_e32 v[[VPTRHI:[0-9]+]], s[[PTRHI]]
 ; HSA-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 7
-; CI: flat_store_dword v[[[VPTRLO]]:[[VPTRHI]]], [[K]]
-; GFX9-DAG: v_mov_b32_e32 [[ADDR:v[0-9]+]], 0
-; GFX9: global_store_dword [[ADDR]], [[K]], s[[[PTRLO]]:[[PTRHI]]]
+; HSA: flat_store_dword v[[[VPTRLO]]:[[VPTRHI]]], [[K]]
 
 ; HSA:  .amdhsa_user_sgpr_queue_ptr 0
 define amdgpu_kernel void @use_global_to_flat_addrspacecast(ptr addrspace(1) %ptr) #0 {
@@ -82,7 +112,9 @@ define amdgpu_kernel void @use_global_to_flat_addrspacecast(ptr addrspace(1) %pt
 ; no-op
 ; HSA-LABEL: {{^}}use_constant_to_flat_addrspacecast:
 ; HSA: s_load_dwordx2 s[[[PTRLO:[0-9]+]]:[[PTRHI:[0-9]+]]]
-; HSA-DAG: s_load_dword s0, s[[[PTRLO]]:[[PTRHI]]], 0x0
+; HSA-DAG: v_mov_b32_e32 v[[VPTRLO:[0-9]+]], s[[PTRLO]]
+; HSA-DAG: v_mov_b32_e32 v[[VPTRHI:[0-9]+]], s[[PTRHI]]
+; HSA: flat_load_dword v{{[0-9]+}}, v[[[VPTRLO]]:[[VPTRHI]]]
 define amdgpu_kernel void @use_constant_to_flat_addrspacecast(ptr addrspace(4) %ptr) #0 {
   %stof = addrspacecast ptr addrspace(4) %ptr to ptr
   %ld = load volatile i32, ptr %stof
@@ -183,9 +215,11 @@ define amdgpu_kernel void @use_flat_to_constant_addrspacecast(ptr %ptr) #0 {
 }
 
 ; HSA-LABEL: {{^}}cast_0_group_to_flat_addrspacecast:
+
 ; HSA-DAG: v_mov_b32_e32 v[[LO:[0-9]+]], 0{{$}}
+; HSA-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], 0{{$}}
 ; HSA-DAG: v_mov_b32_e32 v[[K:[0-9]+]], 7{{$}}
-; HSA: ds_write_b32 v[[LO]], v[[K]]
+; HSA: flat_store_dword v[[[LO]]:[[HI]]], v[[K]]
 define amdgpu_kernel void @cast_0_group_to_flat_addrspacecast() #0 {
   %cast = addrspacecast ptr addrspace(3) null to ptr
   store volatile i32 7, ptr %cast
@@ -203,9 +237,10 @@ define amdgpu_kernel void @cast_0_flat_to_group_addrspacecast() #0 {
 }
 
 ; HSA-LABEL: {{^}}cast_neg1_group_to_flat_addrspacecast:
+; HSA: v_mov_b32_e32 v[[LO:[0-9]+]], 0{{$}}
 ; HSA-DAG: v_mov_b32_e32 v[[K:[0-9]+]], 7{{$}}
-; HSA-DAG: v_mov_b32_e32 v[[LO:[0-9]+]], -1
-; HSA: ds_write_b32 v[[LO]], v[[K]]
+; HSA-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], 0{{$}}
+; HSA: {{flat|global}}_store_dword v[[[LO]]:[[HI]]], v[[K]]
 define amdgpu_kernel void @cast_neg1_group_to_flat_addrspacecast() #0 {
   %cast = addrspacecast ptr addrspace(3) inttoptr (i32 -1 to ptr addrspace(3)) to ptr
   store volatile i32 7, ptr %cast
@@ -224,13 +259,10 @@ define amdgpu_kernel void @cast_neg1_flat_to_group_addrspacecast() #0 {
 
 ; FIXME: Shouldn't need to enable queue ptr
 ; HSA-LABEL: {{^}}cast_0_private_to_flat_addrspacecast:
-; HSA-DAG: s_mov_b64 s[{{[0-9]+}}:[[RSRCHI:[0-9]+]]], s[2:3]
-; HSA-DAG: s_mov_b64 s[[[BASELO:[0-9]+]]:[[BASEHI:[0-9]+]]], s[0:1]
-; CI-DAG: s_add_u32 s[[BASELO]], s[[BASELO]], s7
-; GFX9-DAG: s_add_u32 s[[BASELO]], s[[BASELO]], s5
-; HSA-DAG: s_addc_u32 s[[BASEHI]], s[[BASEHI]], 0
+; HSA-DAG: v_mov_b32_e32 v[[LO:[0-9]+]], 0{{$}}
+; HSA-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], 0{{$}}
 ; HSA-DAG: v_mov_b32_e32 v[[K:[0-9]+]], 7{{$}}
-; HSA: buffer_store_dword v[[K]], off, s[[[BASELO]]:[[RSRCHI]]], 0
+; HSA: flat_store_dword v[[[LO]]:[[HI]]], v[[K]]
 define amdgpu_kernel void @cast_0_private_to_flat_addrspacecast() #0 {
   %cast = addrspacecast ptr addrspace(5) null to ptr
   store volatile i32 7, ptr %cast
@@ -249,14 +281,10 @@ define amdgpu_kernel void @cast_0_flat_to_private_addrspacecast() #0 {
 
 ; HSA-LABEL: {{^}}cast_neg1_private_to_flat_addrspacecast:
 
-; HSA-DAG: s_mov_b64 s[{{[0-9]+}}:[[RSRCHI:[0-9]+]]], s[2:3]
-; HSA-DAG: s_mov_b64 s[[[BASELO:[0-9]+]]:[[BASEHI:[0-9]+]]], s[0:1]
-; CI-DAG: s_add_u32 s[[BASELO]], s[[BASELO]], s7
-; GFX9-DAG: s_add_u32 s[[BASELO]], s[[BASELO]], s5
-; HSA-DAG: s_addc_u32 s[[BASEHI]], s[[BASEHI]], 0
-; HSA-DAG: v_mov_b32_e32 [[PTR:v[0-9]+]], -1{{$}}
+; HSA: v_mov_b32_e32 v[[LO:[0-9]+]], 0{{$}}
 ; HSA-DAG: v_mov_b32_e32 v[[K:[0-9]+]], 7{{$}}
-; HSA: buffer_store_dword v[[K]], [[PTR]], s[[[BASELO]]:[[RSRCHI]]], 0 offen
+; HSA-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], 0{{$}}
+; HSA: {{flat|global}}_store_dword v[[[LO]]:[[HI]]], v[[K]]
 
 ; CI:  .amdhsa_user_sgpr_queue_ptr 1
 ; GFX9:  .amdhsa_user_sgpr_queue_ptr 0
@@ -306,18 +334,16 @@ end:
 
 ; Check for prologue initializing special SGPRs pointing to scratch.
 ; HSA-LABEL: {{^}}store_flat_scratch:
+; CI-DAG: s_mov_b32 flat_scratch_lo, s9
 ; CI-DAG: s_add_i32 [[ADD:s[0-9]+]], s8, s11
 ; CI-DAG: s_lshr_b32 flat_scratch_hi, [[ADD]], 8
-; HSA: buffer_store_dword
-; HSA:  s_barrier
-; HSA: buffer_load_dword [[K:v[0-9]+]], v{{[0-9]+}}, s[0:3], 0 offen glc
-; HSA-DAG: s_load_dwordx2
-; CI-DAG: s_mov_b32 flat_scratch_lo, s9
-; CI-DAG: v_mov_b32_e32 v[[LO:[0-9]+]], s4
-; CI-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], s5
-; GFX9-DAG: v_mov_b32_e32 [[PTR:v[0-9]+]], 0
-; CI: flat_store_dword v[[[LO]]:[[HI]]], [[K]]
-; GFX9: global_store_dword [[PTR]], [[K]]
+
+; GFX9: s_add_u32 flat_scratch_lo, s6, s9
+; GFX9: s_addc_u32 flat_scratch_hi, s7, 0
+
+; HSA: {{flat|global}}_store_dword
+; HSA: s_barrier
+; HSA: {{flat|global}}_load_dword
 define amdgpu_kernel void @store_flat_scratch(ptr addrspace(1) noalias %out, i32) #0 {
   %alloca = alloca i32, i32 9, align 4, addrspace(5)
   %x = call i32 @llvm.amdgcn.workitem.id.x() #2

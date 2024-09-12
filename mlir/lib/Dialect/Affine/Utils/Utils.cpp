@@ -860,8 +860,7 @@ static void forwardStoreToLoad(
     // 3. The store must reach the load. Access function equivalence only
     // guarantees this for accesses in the same block. The load could be in a
     // nested block that is unreachable.
-    if (storeOp->getBlock() != loadOp->getBlock() &&
-        !mustReachAtInnermost(srcAccess, destAccess))
+    if (!mustReachAtInnermost(srcAccess, destAccess))
       continue;
 
     // 4. Ensure there is no intermediate operation which could replace the

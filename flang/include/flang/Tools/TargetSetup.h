@@ -12,6 +12,7 @@
 #include "flang/Evaluate/target.h"
 #include "flang/Frontend/TargetOptions.h"
 #include "llvm/Target/TargetMachine.h"
+#include <cfloat>
 
 namespace Fortran::tools {
 
@@ -23,9 +24,27 @@ namespace Fortran::tools {
 
   const llvm::Triple &targetTriple{targetMachine.getTargetTriple()};
   // FIXME: Handle real(3) ?
-  if (targetTriple.getArch() != llvm::Triple::ArchType::x86_64)
+  if (targetTriple.getArch() != llvm::Triple::ArchType::x86_64) {
     targetCharacteristics.DisableType(
         Fortran::common::TypeCategory::Real, /*kind=*/10);
+  }
+
+  // Figure out if we can support F128: see
+  // flang/runtime/Float128Math/math-entries.h
+  // TODO: this should be taken from TargetInfo::getLongDoubleFormat to support
+  // cross-compilation
+#ifdef FLANG_RUNTIME_F128_MATH_LIB
+  // we can use libquadmath wrappers
+  constexpr bool f128Support = true;
+#elif LDBL_MANT_DIG == 113
+  // we can use libm wrappers
+  constexpr bool f128Support = true;
+#else
+  constexpr bool f128Support = false;
+#endif
+
+  if constexpr (!f128Support)
+    targetCharacteristics.DisableType(Fortran::common::TypeCategory::Real, 16);
 
   for (auto realKind : targetOptions.disabledRealKinds)
     targetCharacteristics.DisableType(common::TypeCategory::Real, realKind);

@@ -47,7 +47,7 @@ static cl::opt<unsigned> CallWithManyArgumentsThreshold(
              "it is considered having many arguments."));
 
 namespace {
-int64_t getNrBlocksFromCond(const BasicBlock &BB) {
+int64_t getNumBlocksFromCond(const BasicBlock &BB) {
   int64_t Ret = 0;
   if (const auto *BI = dyn_cast<BranchInst>(BB.getTerminator())) {
     if (BI->isConditional())
@@ -72,7 +72,7 @@ void FunctionPropertiesInfo::updateForBB(const BasicBlock &BB,
   assert(Direction == 1 || Direction == -1);
   BasicBlockCount += Direction;
   BlocksReachedFromConditionalInstruction +=
-      (Direction * getNrBlocksFromCond(BB));
+      (Direction * getNumBlocksFromCond(BB));
   for (const auto &I : BB) {
     if (auto *CS = dyn_cast<CallBase>(&I)) {
       const auto *Callee = CS->getCalledFunction();

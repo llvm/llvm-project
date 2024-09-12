@@ -4103,11 +4103,23 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
       sd_match(N1, m_SMin(m_Specific(A), m_Specific(B))))
     return DAG.getNode(ISD::ABDS, DL, VT, A, B);
 
+  // smin(a,b) - smax(a,b) --> neg(abds(a,b))
+  if (hasOperation(ISD::ABDS, VT) &&
+      sd_match(N0, m_SMin(m_Value(A), m_Value(B))) &&
+      sd_match(N1, m_SMax(m_Specific(A), m_Specific(B))))
+    return DAG.getNegative(DAG.getNode(ISD::ABDS, DL, VT, A, B), DL, VT);
+
   // umax(a,b) - umin(a,b) --> abdu(a,b)
   if ((!LegalOperations || hasOperation(ISD::ABDU, VT)) &&
       sd_match(N0, m_UMax(m_Value(A), m_Value(B))) &&
       sd_match(N1, m_UMin(m_Specific(A), m_Specific(B))))
     return DAG.getNode(ISD::ABDU, DL, VT, A, B);
+
+  // umin(a,b) - umax(a,b) --> neg(abdu(a,b))
+  if (hasOperation(ISD::ABDU, VT) &&
+      sd_match(N0, m_UMin(m_Value(A), m_Value(B))) &&
+      sd_match(N1, m_UMax(m_Specific(A), m_Specific(B))))
+    return DAG.getNegative(DAG.getNode(ISD::ABDU, DL, VT, A, B), DL, VT);
 
   return SDValue();
 }
@@ -11605,6 +11617,10 @@ SDValue DAGCombiner::foldSelectToABD(SDValue LHS, SDValue RHS, SDValue True,
     if (sd_match(True, m_Sub(m_Specific(LHS), m_Specific(RHS))) &&
         sd_match(False, m_Sub(m_Specific(RHS), m_Specific(LHS))))
       return DAG.getNode(ABDOpc, DL, VT, LHS, RHS);
+    if (sd_match(True, m_Sub(m_Specific(RHS), m_Specific(LHS))) &&
+        sd_match(False, m_Sub(m_Specific(LHS), m_Specific(RHS))) &&
+        hasOperation(ABDOpc, VT))
+      return DAG.getNegative(DAG.getNode(ABDOpc, DL, VT, LHS, RHS), DL, VT);
     break;
   case ISD::SETLT:
   case ISD::SETLE:
@@ -11613,6 +11629,10 @@ SDValue DAGCombiner::foldSelectToABD(SDValue LHS, SDValue RHS, SDValue True,
     if (sd_match(True, m_Sub(m_Specific(RHS), m_Specific(LHS))) &&
         sd_match(False, m_Sub(m_Specific(LHS), m_Specific(RHS))))
       return DAG.getNode(ABDOpc, DL, VT, LHS, RHS);
+    if (sd_match(True, m_Sub(m_Specific(LHS), m_Specific(RHS))) &&
+        sd_match(False, m_Sub(m_Specific(RHS), m_Specific(LHS))) &&
+        hasOperation(ABDOpc, VT))
+      return DAG.getNegative(DAG.getNode(ABDOpc, DL, VT, LHS, RHS), DL, VT);
     break;
   default:
     break;

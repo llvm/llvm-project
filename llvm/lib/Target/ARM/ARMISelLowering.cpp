@@ -7123,19 +7123,6 @@ static SDValue isVMOVModifiedImm(uint64_t SplatBits, uint64_t SplatUndef,
       ImmMask <<= 1;
     }
 
-    if (DAG.getDataLayout().isBigEndian()) {
-      // Reverse the order of elements within the vector.
-      unsigned BytesPerElem = VectorVT.getScalarSizeInBits() / 8;
-      unsigned Mask = (1 << BytesPerElem) - 1;
-      unsigned NumElems = 8 / BytesPerElem;
-      unsigned NewImm = 0;
-      for (unsigned ElemNum = 0; ElemNum < NumElems; ++ElemNum) {
-        unsigned Elem = ((Imm >> ElemNum * BytesPerElem) & Mask);
-        NewImm |= Elem << (NumElems - ElemNum - 1) * BytesPerElem;
-      }
-      Imm = NewImm;
-    }
-
     // Op=1, Cmode=1110.
     OpCmode = 0x1e;
     VT = is128Bits ? MVT::v2i64 : MVT::v1i64;
@@ -7968,7 +7955,7 @@ SDValue ARMTargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
 
       if (Val.getNode()) {
         SDValue Vmov = DAG.getNode(ARMISD::VMOVIMM, dl, VmovVT, Val);
-        return DAG.getNode(ISD::BITCAST, dl, VT, Vmov);
+        return DAG.getNode(ARMISD::VECTOR_REG_CAST, dl, VT, Vmov);
       }
 
       // Try an immediate VMVN.
@@ -7978,7 +7965,7 @@ SDValue ARMTargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
           VT, ST->hasMVEIntegerOps() ? MVEVMVNModImm : VMVNModImm);
       if (Val.getNode()) {
         SDValue Vmov = DAG.getNode(ARMISD::VMVNIMM, dl, VmovVT, Val);
-        return DAG.getNode(ISD::BITCAST, dl, VT, Vmov);
+        return DAG.getNode(ARMISD::VECTOR_REG_CAST, dl, VT, Vmov);
       }
 
       // Use vmov.f32 to materialize other v2f32 and v4f32 splats.
@@ -18606,7 +18593,9 @@ static SDValue PerformBITCASTCombine(SDNode *N,
 
   // We may have a bitcast of something that has already had this bitcast
   // combine performed on it, so skip past any VECTOR_REG_CASTs.
-  while (Src.getOpcode() == ARMISD::VECTOR_REG_CAST)
+  if (Src.getOpcode() == ARMISD::VECTOR_REG_CAST &&
+      Src.getOperand(0).getValueType().getScalarSizeInBits() <=
+          Src.getValueType().getScalarSizeInBits())
     Src = Src.getOperand(0);
 
   // Bitcast from element-wise VMOV or VMVN doesn't need VREV if the VREV that

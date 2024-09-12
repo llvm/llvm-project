@@ -4,6 +4,7 @@
 ; There is no scenario currently of doing ctx profile use without thinlto.
 ;
 ; RUN: opt -passes='thinlto-pre-link<O2>' -use-ctx-profile=something_that_does_not_exist %s -S | FileCheck %s
+; RUN: opt -debug-info-for-profiling -passes='thinlto-pre-link<O2>' -use-ctx-profile=something_that_does_not_exist %s -S | FileCheck %s
 
 declare void @bar()
 

@@ -943,9 +943,12 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
         VecCallVariantsFound = true;
 
       // Check that the instruction return type is vectorizable.
+      // We can't vectorize casts from vector type to scalar type.
       // Also, we can't vectorize extractelement instructions.
       if ((!VectorType::isValidElementType(I.getType()) &&
            !I.getType()->isVoidTy()) ||
+          (isa<CastInst>(I) &&
+           !VectorType::isValidElementType(I.getOperand(0)->getType())) ||
           isa<ExtractElementInst>(I)) {
         reportVectorizationFailure("Found unvectorizable type",
             "instruction return type cannot be vectorized",
