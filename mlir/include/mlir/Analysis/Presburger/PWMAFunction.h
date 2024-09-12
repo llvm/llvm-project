@@ -119,7 +119,7 @@ private:
   /// The space of this function. The domain variables are considered as the
   /// input variables of the function. The range variables are considered as
   /// the outputs. The symbols parametrize the function and locals are used to
-  /// represent divisions. Each local variable has a corressponding division
+  /// represent divisions. Each local variable has a corresponding division
   /// representation stored in `divs`.
   PresburgerSpace space;
 

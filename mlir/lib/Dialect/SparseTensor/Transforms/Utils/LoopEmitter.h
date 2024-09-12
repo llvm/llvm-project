@@ -367,7 +367,7 @@ private:
 
   void initSubSectIterator(OpBuilder &builder, Location loc);
 
-  /// Get the reduced number of contraints on tensor[tid][lvl].
+  /// Get the reduced number of constraints on tensor[tid][lvl].
   unsigned redDepOnLevel(TensorId tid, Level lvl) const {
     return levelReducedDep[tid][lvl];
   };
