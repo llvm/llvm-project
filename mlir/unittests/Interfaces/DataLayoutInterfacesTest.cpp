@@ -77,7 +77,7 @@ struct CustomDataLayoutSpec
   }
   DataLayoutEntryListRef getEntries() const { return getImpl()->entries; }
   LogicalResult verifySpec(Location loc) { return success(); }
-  StringAttr getEndiannesssIdentifier(MLIRContext *context) const {
+  StringAttr getEndiannessIdentifier(MLIRContext *context) const {
     return Builder(context).getStringAttr(kEndiannessKeyName);
   }
   StringAttr getAllocaMemorySpaceIdentifier(MLIRContext *context) const {
@@ -189,7 +189,7 @@ struct SingleQueryType
     return 4;
   }
 
-  Attribute getEndiannesss(DataLayoutEntryInterface entry) {
+  Attribute getEndianness(DataLayoutEntryInterface entry) {
     static bool executed = false;
     if (executed)
       llvm::report_fatal_error("repeated call");
@@ -463,7 +463,7 @@ module {}
   EXPECT_EQ(layout.getTypePreferredAlignment(IntegerType::get(&ctx, 42)), 8u);
   EXPECT_EQ(layout.getTypePreferredAlignment(Float16Type::get(&ctx)), 2u);
 
-  EXPECT_EQ(layout.getEndiannesss(), Attribute());
+  EXPECT_EQ(layout.getEndianness(), Attribute());
   EXPECT_EQ(layout.getAllocaMemorySpace(), Attribute());
   EXPECT_EQ(layout.getProgramMemorySpace(), Attribute());
   EXPECT_EQ(layout.getGlobalMemorySpace(), Attribute());
@@ -495,7 +495,7 @@ TEST(DataLayout, NullSpec) {
   EXPECT_EQ(layout.getTypeIndexBitwidth(Float16Type::get(&ctx)), std::nullopt);
   EXPECT_EQ(layout.getTypeIndexBitwidth(IndexType::get(&ctx)), 64u);
 
-  EXPECT_EQ(layout.getEndiannesss(), Attribute());
+  EXPECT_EQ(layout.getEndianness(), Attribute());
   EXPECT_EQ(layout.getAllocaMemorySpace(), Attribute());
   EXPECT_EQ(layout.getProgramMemorySpace(), Attribute());
   EXPECT_EQ(layout.getGlobalMemorySpace(), Attribute());
@@ -535,7 +535,7 @@ TEST(DataLayout, EmptySpec) {
   EXPECT_EQ(layout.getTypeIndexBitwidth(Float16Type::get(&ctx)), std::nullopt);
   EXPECT_EQ(layout.getTypeIndexBitwidth(IndexType::get(&ctx)), 64u);
 
-  EXPECT_EQ(layout.getEndiannesss(), Attribute());
+  EXPECT_EQ(layout.getEndianness(), Attribute());
   EXPECT_EQ(layout.getAllocaMemorySpace(), Attribute());
   EXPECT_EQ(layout.getProgramMemorySpace(), Attribute());
   EXPECT_EQ(layout.getGlobalMemorySpace(), Attribute());
@@ -593,7 +593,7 @@ TEST(DataLayout, SpecWithEntries) {
   EXPECT_EQ(layout.getTypePreferredAlignment(IntegerType::get(&ctx, 32)), 64u);
   EXPECT_EQ(layout.getTypePreferredAlignment(Float32Type::get(&ctx)), 64u);
 
-  EXPECT_EQ(layout.getEndiannesss(), Builder(&ctx).getStringAttr("little"));
+  EXPECT_EQ(layout.getEndianness(), Builder(&ctx).getStringAttr("little"));
   EXPECT_EQ(layout.getAllocaMemorySpace(), Builder(&ctx).getI32IntegerAttr(5));
   EXPECT_EQ(layout.getProgramMemorySpace(), Builder(&ctx).getI32IntegerAttr(3));
   EXPECT_EQ(layout.getGlobalMemorySpace(), Builder(&ctx).getI32IntegerAttr(2));

@@ -190,10 +190,10 @@ translateDataLayout(DataLayoutSpecInterface attribute,
     auto key = llvm::dyn_cast_if_present<StringAttr>(entry.getKey());
     if (!key)
       continue;
-    if (key.getValue() == DLTIDialect::kDataLayoutEndiannesssKey) {
+    if (key.getValue() == DLTIDialect::kDataLayoutEndiannessKey) {
       auto value = cast<StringAttr>(entry.getValue());
       bool isLittleEndian =
-          value.getValue() == DLTIDialect::kDataLayoutEndiannesssLittle;
+          value.getValue() == DLTIDialect::kDataLayoutEndiannessLittle;
       layoutStream << "-" << (isLittleEndian ? "e" : "E");
       layoutStream.flush();
       continue;

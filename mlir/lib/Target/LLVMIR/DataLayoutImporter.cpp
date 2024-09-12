@@ -149,9 +149,9 @@ DataLayoutImporter::tryToEmplacePointerAlignmentEntry(LLVMPointerType type,
 }
 
 LogicalResult
-DataLayoutImporter::tryToEmplaceEndiannesssEntry(StringRef endianness,
+DataLayoutImporter::tryToEmplaceEndiannessEntry(StringRef endianness,
                                                 StringRef token) {
-  auto key = StringAttr::get(context, DLTIDialect::kDataLayoutEndiannesssKey);
+  auto key = StringAttr::get(context, DLTIDialect::kDataLayoutEndiannessKey);
   if (keyEntries.count(key))
     return success();
 
@@ -236,14 +236,14 @@ void DataLayoutImporter::translateDataLayout(
 
     // Parse the endianness.
     if (*prefix == "e") {
-      if (failed(tryToEmplaceEndiannesssEntry(
-              DLTIDialect::kDataLayoutEndiannesssLittle, token)))
+      if (failed(tryToEmplaceEndiannessEntry(
+              DLTIDialect::kDataLayoutEndiannessLittle, token)))
         return;
       continue;
     }
     if (*prefix == "E") {
-      if (failed(tryToEmplaceEndiannesssEntry(
-              DLTIDialect::kDataLayoutEndiannesssBig, token)))
+      if (failed(tryToEmplaceEndiannessEntry(
+              DLTIDialect::kDataLayoutEndiannessBig, token)))
         return;
       continue;
     }

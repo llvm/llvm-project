@@ -239,7 +239,7 @@ std::optional<uint64_t> mlir::detail::getDefaultIndexBitwidth(
 
 // Returns the endianness if specified in the given entry. If the entry is empty
 // the default endianness represented by an empty attribute is returned.
-Attribute mlir::detail::getDefaultEndiannesss(DataLayoutEntryInterface entry) {
+Attribute mlir::detail::getDefaultEndianness(DataLayoutEntryInterface entry) {
   if (entry == DataLayoutEntryInterface())
     return Attribute();
 
@@ -580,19 +580,19 @@ std::optional<uint64_t> mlir::DataLayout::getTypeIndexBitwidth(Type t) const {
   });
 }
 
-mlir::Attribute mlir::DataLayout::getEndiannesss() const {
+mlir::Attribute mlir::DataLayout::getEndianness() const {
   checkValid();
   if (endianness)
     return *endianness;
   DataLayoutEntryInterface entry;
   if (originalLayout)
     entry = originalLayout.getSpecForIdentifier(
-        originalLayout.getEndiannesssIdentifier(originalLayout.getContext()));
+        originalLayout.getEndiannessIdentifier(originalLayout.getContext()));
 
   if (auto iface = dyn_cast_or_null<DataLayoutOpInterface>(scope))
-    endianness = iface.getEndiannesss(entry);
+    endianness = iface.getEndianness(entry);
   else
-    endianness = detail::getDefaultEndiannesss(entry);
+    endianness = detail::getDefaultEndianness(entry);
   return *endianness;
 }
 

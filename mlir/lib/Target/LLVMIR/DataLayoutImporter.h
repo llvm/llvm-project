@@ -93,7 +93,7 @@ private:
                                                   StringRef token);
 
   /// Adds an endianness entry if there is none yet.
-  LogicalResult tryToEmplaceEndiannesssEntry(StringRef endianness,
+  LogicalResult tryToEmplaceEndiannessEntry(StringRef endianness,
                                             StringRef token);
 
   /// Adds an alloca address space entry if there is none yet.
