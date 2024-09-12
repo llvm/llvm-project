@@ -394,6 +394,11 @@ static cl::opt<bool>
                            cl::desc("Enable AMDGPUAttributorPass"),
                            cl::init(true), cl::Hidden);
 
+static cl::opt<bool>
+    EnableLTOInternalization("amdgpu-lto-internalization",
+                             cl::desc("Enable LTO function internalization."),
+                             cl::Hidden, cl::init(false));
+
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   // Register the target
   RegisterTargetMachine<R600TargetMachine> X(getTheR600Target());
@@ -674,6 +679,8 @@ parseAMDGPUAttributorPassOptions(StringRef Params) {
     std::tie(ParamName, Params) = Params.split(';');
     if (ParamName == "closed-world") {
       Result.IsClosedWorld = true;
+    } else if (ParamName == "internalization") {
+      Result.EnableInternalization = true;
     } else {
       return make_error<StringError>(
           formatv("invalid AMDGPUAttributor pass parameter '{0}' ", ParamName)
@@ -774,8 +781,11 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
           PM.addPass(AMDGPUSwLowerLDSPass(*this));
         if (EnableLowerModuleLDS)
           PM.addPass(AMDGPULowerModuleLDSPass(*this));
-        if (EnableAMDGPUAttributor && Level != OptimizationLevel::O0)
-          PM.addPass(AMDGPUAttributorPass(*this));
+        if (EnableAMDGPUAttributor && Level != OptimizationLevel::O0) {
+          AMDGPUAttributorOptions Options;
+          Options.EnableInternalization = EnableLTOInternalization;
+          PM.addPass(AMDGPUAttributorPass(*this, Options));
+        }
       });
 
   PB.registerRegClassFilterParsingCallback(

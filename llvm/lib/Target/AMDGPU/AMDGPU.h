@@ -311,6 +311,7 @@ public:
 
 struct AMDGPUAttributorOptions {
   bool IsClosedWorld = false;
+  bool EnableInternalization = false;
 };
 
 class AMDGPUAttributorPass : public PassInfoMixin<AMDGPUAttributorPass> {
