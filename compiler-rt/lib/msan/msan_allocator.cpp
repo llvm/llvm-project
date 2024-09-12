@@ -232,6 +232,7 @@ static void *MsanAllocate(BufferedStackTrace *stack, uptr size, uptr alignment,
   }
   UnpoisonParam(2);
   RunMallocHooks(allocated, size);
+  Printf("%p %zu\n", allocated, size);
   return allocated;
 }
 

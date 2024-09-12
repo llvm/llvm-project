@@ -1,6 +1,7 @@
 // RUN: %clangxx -O0 -g %s -o %t && %run %env_tool_opts=verbosity=2 %t
 
 #include <stdlib.h>
+#include <stdio.h>
 #include <unistd.h>
 #include <grp.h>
 
