@@ -8691,14 +8691,7 @@ addUsersInExitBlock(VPlan &Plan,
       cast<VPBasicBlock>(Plan.getVectorLoopRegion()->getSingleSuccessor());
   BasicBlock *ExitBB =
       cast<VPIRBasicBlock>(MiddleVPBB->getSuccessors()[0])->getIRBasicBlock();
-  // TODO: set B to MiddleVPBB->getFirstNonPhi(), taking care of affected tests.
-  VPBuilder B(MiddleVPBB);
-  if (auto *Terminator = MiddleVPBB->getTerminator()) {
-    auto *Condition = dyn_cast<VPInstruction>(Terminator->getOperand(0));
-    assert((!Condition || Condition->getParent() == MiddleVPBB) &&
-           "Condition expected in MiddleVPBB");
-    B.setInsertPoint(Condition ? Condition : Terminator);
-  }
+  VPBuilder B(MiddleVPBB, MiddleVPBB->getFirstNonPhi());
 
   // Introduce VPUsers modeling the exit values.
   for (const auto &[ExitPhi, V] : ExitingValuesToFix) {
