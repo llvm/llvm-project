@@ -1128,6 +1128,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
           continue;
         SetCommonVFPActions(VT);
         SetCommonVFPExtLoadTruncStoreActions(VT, F16VecVTs);
+        SetCommonVFPExtLoadTruncStoreActions(VT, BF16VecVTs);
       }
     }
 
@@ -1137,6 +1138,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
           continue;
         SetCommonVFPActions(VT);
         SetCommonVFPExtLoadTruncStoreActions(VT, F16VecVTs);
+        SetCommonVFPExtLoadTruncStoreActions(VT, BF16VecVTs);
         SetCommonVFPExtLoadTruncStoreActions(VT, F32VecVTs);
       }
     }
