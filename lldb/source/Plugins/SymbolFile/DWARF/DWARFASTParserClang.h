@@ -258,27 +258,27 @@ protected:
 
 private:
   struct FieldInfo {
-    ///< Size in bits that this field occupies. Can but
-    ///< need not be the DW_AT_bit_size of the field.
+    /// Size in bits that this field occupies. Can but
+    /// need not be the DW_AT_bit_size of the field.
     uint64_t bit_size = 0;
 
-    ///< Offset of this field in bits from the beginning
-    ///< of the containing struct. Can but need not
-    ///< be the DW_AT_data_bit_offset of the field.
+    /// Offset of this field in bits from the beginning
+    /// of the containing struct. Can but need not
+    /// be the DW_AT_data_bit_offset of the field.
     uint64_t bit_offset = 0;
 
-    ///< In case this field is folded into the storage
-    ///< of a previous member's storage (for example
-    ///< with [[no_unique_address]]), the effective field
-    ///< end is the offset in bits from the beginning of
-    ///< the containing struct where the field we were
-    ///< folded into ended.
+    /// In case this field is folded into the storage
+    /// of a previous member's storage (for example
+    /// with [[no_unique_address]]), the effective field
+    /// end is the offset in bits from the beginning of
+    /// the containing struct where the field we were
+    /// folded into ended.
     std::optional<uint64_t> effective_field_end;
 
-    ///< Set to 'true' if this field is a bit-field.
+    /// Set to 'true' if this field is a bit-field.
     bool is_bitfield = false;
 
-    ///< Set to 'true' if this field is DW_AT_artificial.
+    /// Set to 'true' if this field is DW_AT_artificial.
     bool is_artificial = false;
 
     FieldInfo() = default;
