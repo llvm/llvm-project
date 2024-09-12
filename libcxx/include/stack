@@ -231,7 +231,7 @@ public:
 
 #endif
 
-  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI bool empty() const { return c.empty(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool empty() const { return c.empty(); }
   _LIBCPP_HIDE_FROM_ABI size_type size() const { return c.size(); }
   _LIBCPP_HIDE_FROM_ABI reference top() { return c.back(); }
   _LIBCPP_HIDE_FROM_ABI const_reference top() const { return c.back(); }
@@ -273,7 +273,7 @@ public:
     swap(c, __s.c);
   }
 
-  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI const _Container& __get_container() const { return c; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI const _Container& __get_container() const { return c; }
 
   template <class _T1, class _OtherContainer>
   friend bool operator==(const stack<_T1, _OtherContainer>& __x, const stack<_T1, _OtherContainer>& __y);
