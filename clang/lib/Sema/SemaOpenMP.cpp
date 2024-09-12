@@ -42,6 +42,7 @@
 #include "llvm/ADT/PointerEmbeddedInt.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Frontend/OpenMP/OMPAssume.h"
@@ -3707,6 +3708,17 @@ getMapClauseKindFromModifier(OpenMPDefaultmapClauseModifier M,
 }
 
 namespace {
+struct VariableImplicitInfo {
+  static const unsigned MapKindNum = OMPC_MAP_unknown;
+  static const unsigned DefaultmapKindNum = OMPC_DEFAULTMAP_unknown + 1;
+
+  llvm::SetVector<Expr *> Privates;
+  llvm::SetVector<Expr *> Firstprivates;
+  llvm::SetVector<Expr *> Mappings[DefaultmapKindNum][MapKindNum];
+  llvm::SmallVector<OpenMPMapModifierKind, NumberOfOMPMapClauseModifiers>
+      MapModifiers[DefaultmapKindNum];
+};
+
 class DSAAttrChecker final : public StmtVisitor<DSAAttrChecker, void> {
   DSAStackTy *Stack;
   Sema &SemaRef;
@@ -3714,12 +3726,8 @@ class DSAAttrChecker final : public StmtVisitor<DSAAttrChecker, void> {
   bool ErrorFound = false;
   bool TryCaptureCXXThisMembers = false;
   CapturedStmt *CS = nullptr;
-  const static unsigned DefaultmapKindNum = OMPC_DEFAULTMAP_unknown + 1;
-  llvm::SmallVector<Expr *, 4> ImplicitFirstprivate;
-  llvm::SmallVector<Expr *, 4> ImplicitPrivate;
-  llvm::SmallVector<Expr *, 4> ImplicitMap[DefaultmapKindNum][OMPC_MAP_delete];
-  llvm::SmallVector<OpenMPMapModifierKind, NumberOfOMPMapClauseModifiers>
-      ImplicitMapModifier[DefaultmapKindNum];
+
+  VariableImplicitInfo ImpInfo;
   SemaOpenMP::VarsWithInheritedDSAType VarsWithInheritedDSA;
   llvm::SmallDenseSet<const ValueDecl *, 4> ImplicitDeclarations;
 
@@ -3871,9 +3879,9 @@ public:
         bool IsModifierPresent = Stack->getDefaultmapModifier(ClauseKind) ==
                                  OMPC_DEFAULTMAP_MODIFIER_present;
         if (IsModifierPresent) {
-          if (!llvm::is_contained(ImplicitMapModifier[ClauseKind],
+          if (!llvm::is_contained(ImpInfo.MapModifiers[ClauseKind],
                                   OMPC_MAP_MODIFIER_present)) {
-            ImplicitMapModifier[ClauseKind].push_back(
+            ImpInfo.MapModifiers[ClauseKind].push_back(
                 OMPC_MAP_MODIFIER_present);
           }
         }
@@ -3913,13 +3921,13 @@ public:
           IsFirstprivate =
               IsFirstprivate || (Stack->mustBeFirstprivate(ClauseKind) && !Res);
           if (IsFirstprivate) {
-            ImplicitFirstprivate.emplace_back(E);
+            ImpInfo.Firstprivates.insert(E);
           } else {
             OpenMPDefaultmapClauseModifier M =
                 Stack->getDefaultmapModifier(ClauseKind);
             OpenMPMapClauseKind Kind = getMapClauseKindFromModifier(
                 M, ClauseKind == OMPC_DEFAULTMAP_aggregate || Res);
-            ImplicitMap[ClauseKind][Kind].emplace_back(E);
+            ImpInfo.Mappings[ClauseKind][Kind].insert(E);
           }
           return;
         }
@@ -3956,9 +3964,9 @@ public:
             !DVar.RefExpr)) &&
           !Stack->isLoopControlVariable(VD).first) {
         if (Stack->getDefaultDSA() == DSA_private)
-          ImplicitPrivate.push_back(E);
+          ImpInfo.Privates.insert(E);
         else
-          ImplicitFirstprivate.push_back(E);
+          ImpInfo.Firstprivates.insert(E);
         return;
       }
 
@@ -4015,7 +4023,7 @@ public:
             getVariableCategoryFromDecl(SemaRef.getLangOpts(), FD);
         OpenMPMapClauseKind Kind = getMapClauseKindFromModifier(
             Modifier, /*IsAggregateOrDeclareTarget=*/true);
-        ImplicitMap[ClauseKind][Kind].emplace_back(E);
+        ImpInfo.Mappings[ClauseKind][Kind].insert(E);
         return;
       }
 
@@ -4050,7 +4058,7 @@ public:
         // expression.
         // TODO: try to make it firstprivate.
         if (DVar.CKind != OMPC_unknown)
-          ImplicitFirstprivate.push_back(E);
+          ImpInfo.Firstprivates.insert(E);
       }
       return;
     }
@@ -4172,18 +4180,7 @@ public:
     }
   }
   bool isErrorFound() const { return ErrorFound; }
-  ArrayRef<Expr *> getImplicitFirstprivate() const {
-    return ImplicitFirstprivate;
-  }
-  ArrayRef<Expr *> getImplicitPrivate() const { return ImplicitPrivate; }
-  ArrayRef<Expr *> getImplicitMap(OpenMPDefaultmapClauseKind DK,
-                                  OpenMPMapClauseKind MK) const {
-    return ImplicitMap[DK][MK];
-  }
-  ArrayRef<OpenMPMapModifierKind>
-  getImplicitMapModifier(OpenMPDefaultmapClauseKind Kind) const {
-    return ImplicitMapModifier[Kind];
-  }
+  const VariableImplicitInfo &getImplicitInfo() const { return ImpInfo; }
   const SemaOpenMP::VarsWithInheritedDSAType &getVarsWithInheritedDSA() const {
     return VarsWithInheritedDSA;
   }
@@ -6060,69 +6057,56 @@ StmtResult SemaOpenMP::ActOnOpenMPExecutableDirective(
       return StmtError();
     // Generate list of implicitly defined firstprivate variables.
     VarsWithInheritedDSA = DSAChecker.getVarsWithInheritedDSA();
+    VariableImplicitInfo ImpInfo = DSAChecker.getImplicitInfo();
 
-    SmallVector<Expr *, 4> ImplicitFirstprivates(
-        DSAChecker.getImplicitFirstprivate());
-    SmallVector<Expr *, 4> ImplicitPrivates(DSAChecker.getImplicitPrivate());
-    const unsigned DefaultmapKindNum = OMPC_DEFAULTMAP_unknown + 1;
-    SmallVector<Expr *, 4> ImplicitMaps[DefaultmapKindNum][OMPC_MAP_delete];
-    SmallVector<OpenMPMapModifierKind, NumberOfOMPMapClauseModifiers>
-        ImplicitMapModifiers[DefaultmapKindNum];
     SmallVector<SourceLocation, NumberOfOMPMapClauseModifiers>
-        ImplicitMapModifiersLoc[DefaultmapKindNum];
+        ImplicitMapModifiersLoc[VariableImplicitInfo::DefaultmapKindNum];
     // Get the original location of present modifier from Defaultmap clause.
-    SourceLocation PresentModifierLocs[DefaultmapKindNum];
+    SourceLocation PresentModifierLocs[VariableImplicitInfo::DefaultmapKindNum];
     for (OMPClause *C : Clauses) {
       if (auto *DMC = dyn_cast<OMPDefaultmapClause>(C))
         if (DMC->getDefaultmapModifier() == OMPC_DEFAULTMAP_MODIFIER_present)
           PresentModifierLocs[DMC->getDefaultmapKind()] =
               DMC->getDefaultmapModifierLoc();
     }
-    for (unsigned VC = 0; VC < DefaultmapKindNum; ++VC) {
-      auto K = static_cast<OpenMPDefaultmapClauseKind>(VC);
-      for (unsigned I = 0; I < OMPC_MAP_delete; ++I) {
-        ArrayRef<Expr *> ImplicitMap =
-            DSAChecker.getImplicitMap(K, static_cast<OpenMPMapClauseKind>(I));
-        ImplicitMaps[VC][I].append(ImplicitMap.begin(), ImplicitMap.end());
-      }
-      ArrayRef<OpenMPMapModifierKind> ImplicitModifier =
-          DSAChecker.getImplicitMapModifier(K);
-      ImplicitMapModifiers[VC].append(ImplicitModifier.begin(),
-                                      ImplicitModifier.end());
-      std::fill_n(std::back_inserter(ImplicitMapModifiersLoc[VC]),
-                  ImplicitModifier.size(), PresentModifierLocs[VC]);
+
+    for (OpenMPDefaultmapClauseKind K :
+         llvm::enum_seq_inclusive<OpenMPDefaultmapClauseKind>(
+             OpenMPDefaultmapClauseKind(), OMPC_DEFAULTMAP_unknown)) {
+      std::fill_n(std::back_inserter(ImplicitMapModifiersLoc[K]),
+                  ImpInfo.MapModifiers[K].size(), PresentModifierLocs[K]);
     }
     // Mark taskgroup task_reduction descriptors as implicitly firstprivate.
     for (OMPClause *C : Clauses) {
       if (auto *IRC = dyn_cast<OMPInReductionClause>(C)) {
         for (Expr *E : IRC->taskgroup_descriptors())
           if (E)
-            ImplicitFirstprivates.emplace_back(E);
+            ImpInfo.Firstprivates.insert(E);
       }
       // OpenMP 5.0, 2.10.1 task Construct
       // [detach clause]... The event-handle will be considered as if it was
       // specified on a firstprivate clause.
       if (auto *DC = dyn_cast<OMPDetachClause>(C))
-        ImplicitFirstprivates.push_back(DC->getEventHandler());
+        ImpInfo.Firstprivates.insert(DC->getEventHandler());
     }
-    if (!ImplicitFirstprivates.empty()) {
+    if (!ImpInfo.Firstprivates.empty()) {
       if (OMPClause *Implicit = ActOnOpenMPFirstprivateClause(
-              ImplicitFirstprivates, SourceLocation(), SourceLocation(),
-              SourceLocation())) {
+              ImpInfo.Firstprivates.getArrayRef(), SourceLocation(),
+              SourceLocation(), SourceLocation())) {
         ClausesWithImplicit.push_back(Implicit);
         ErrorFound = cast<OMPFirstprivateClause>(Implicit)->varlist_size() !=
-                     ImplicitFirstprivates.size();
+                     ImpInfo.Firstprivates.size();
       } else {
         ErrorFound = true;
       }
     }
-    if (!ImplicitPrivates.empty()) {
-      if (OMPClause *Implicit =
-              ActOnOpenMPPrivateClause(ImplicitPrivates, SourceLocation(),
-                                       SourceLocation(), SourceLocation())) {
+    if (!ImpInfo.Privates.empty()) {
+      if (OMPClause *Implicit = ActOnOpenMPPrivateClause(
+              ImpInfo.Privates.getArrayRef(), SourceLocation(),
+              SourceLocation(), SourceLocation())) {
         ClausesWithImplicit.push_back(Implicit);
         ErrorFound = cast<OMPPrivateClause>(Implicit)->varlist_size() !=
-                     ImplicitPrivates.size();
+                     ImpInfo.Privates.size();
       } else {
         ErrorFound = true;
       }
@@ -6152,9 +6136,10 @@ StmtResult SemaOpenMP::ActOnOpenMPExecutableDirective(
           ClausesWithImplicit.emplace_back(Implicit);
       }
     }
-    for (unsigned I = 0, E = DefaultmapKindNum; I < E; ++I) {
+    for (unsigned I = 0; I < VariableImplicitInfo::DefaultmapKindNum; ++I) {
       int ClauseKindCnt = -1;
-      for (ArrayRef<Expr *> ImplicitMap : ImplicitMaps[I]) {
+      for (unsigned J = 0; J < VariableImplicitInfo::MapKindNum; ++J) {
+        ArrayRef<Expr *> ImplicitMap = ImpInfo.Mappings[I][J].getArrayRef();
         ++ClauseKindCnt;
         if (ImplicitMap.empty())
           continue;
@@ -6162,7 +6147,7 @@ StmtResult SemaOpenMP::ActOnOpenMPExecutableDirective(
         DeclarationNameInfo MapperId;
         auto K = static_cast<OpenMPMapClauseKind>(ClauseKindCnt);
         if (OMPClause *Implicit = ActOnOpenMPMapClause(
-                nullptr, ImplicitMapModifiers[I], ImplicitMapModifiersLoc[I],
+                nullptr, ImpInfo.MapModifiers[I], ImplicitMapModifiersLoc[I],
                 MapperIdScopeSpec, MapperId, K, /*IsMapTypeImplicit=*/true,
                 SourceLocation(), SourceLocation(), ImplicitMap,
                 OMPVarListLocTy())) {
@@ -7395,7 +7380,8 @@ SemaOpenMP::checkOpenMPDeclareVariantFunction(SemaOpenMP::DeclGroupPtrTy DG,
         return std::nullopt;
       }
       VariantRefCast = SemaRef.PerformImplicitConversion(
-          VariantRef, FnPtrType.getUnqualifiedType(), Sema::AA_Converting);
+          VariantRef, FnPtrType.getUnqualifiedType(),
+          AssignmentAction::Converting);
       if (!VariantRefCast.isUsable())
         return std::nullopt;
     }
@@ -8415,9 +8401,10 @@ tryBuildCapture(Sema &SemaRef, Expr *Capture,
   if (SemaRef.CurContext->isDependentContext() || Capture->containsErrors())
     return Capture;
   if (Capture->isEvaluatable(SemaRef.Context, Expr::SE_AllowSideEffects))
-    return SemaRef.PerformImplicitConversion(
-        Capture->IgnoreImpCasts(), Capture->getType(), Sema::AA_Converting,
-        /*AllowExplicit=*/true);
+    return SemaRef.PerformImplicitConversion(Capture->IgnoreImpCasts(),
+                                             Capture->getType(),
+                                             AssignmentAction::Converting,
+                                             /*AllowExplicit=*/true);
   auto I = Captures.find(Capture);
   if (I != Captures.end())
     return buildCapture(SemaRef, Capture, I->second, Name);
@@ -8517,7 +8504,7 @@ calculateNumIters(Sema &SemaRef, Scope *S, SourceLocation DefaultLoc,
           SemaRef
               .PerformImplicitConversion(
                   SemaRef.ActOnParenExpr(DefaultLoc, DefaultLoc, Upper).get(),
-                  CastType, Sema::AA_Converting)
+                  CastType, AssignmentAction::Converting)
               .get();
       Lower = SemaRef.ActOnParenExpr(DefaultLoc, DefaultLoc, Lower).get();
       NewStep = SemaRef.ActOnParenExpr(DefaultLoc, DefaultLoc, NewStep.get());
@@ -8801,8 +8788,9 @@ Expr *OpenMPIterationSpaceChecker::buildNumIterations(
                                : Type->hasSignedIntegerRepresentation();
     Type = C.getIntTypeForBitwidth(NewSize, IsSigned);
     if (!SemaRef.Context.hasSameType(Diff.get()->getType(), Type)) {
-      Diff = SemaRef.PerformImplicitConversion(
-          Diff.get(), Type, Sema::AA_Converting, /*AllowExplicit=*/true);
+      Diff = SemaRef.PerformImplicitConversion(Diff.get(), Type,
+                                               AssignmentAction::Converting,
+                                               /*AllowExplicit=*/true);
       if (!Diff.isUsable())
         return nullptr;
     }
@@ -8820,7 +8808,8 @@ Expr *OpenMPIterationSpaceChecker::buildNumIterations(
                        C.getTypeSize(Type) < NewSize);
       if (!SemaRef.Context.hasSameType(Diff.get()->getType(), NewType)) {
         Diff = SemaRef.PerformImplicitConversion(Diff.get(), NewType,
-                                                 Sema::AA_Converting, true);
+                                                 AssignmentAction::Converting,
+                                                 /*AllowExplicit=*/true);
         if (!Diff.isUsable())
           return nullptr;
       }
@@ -8892,7 +8881,7 @@ std::pair<Expr *, Expr *> OpenMPIterationSpaceChecker::buildMinMaxValues(
           SemaRef.Context.getUnsignedPointerDiffType())) {
     Diff = SemaRef.PerformImplicitConversion(
         Diff.get(), SemaRef.Context.getUnsignedPointerDiffType(),
-        Sema::AA_Converting, /*AllowExplicit=*/true);
+        AssignmentAction::Converting, /*AllowExplicit=*/true);
   }
   if (!Diff.isUsable())
     return std::make_pair(nullptr, nullptr);
@@ -8920,7 +8909,7 @@ std::pair<Expr *, Expr *> OpenMPIterationSpaceChecker::buildMinMaxValues(
   // Convert to the original type.
   if (SemaRef.Context.hasSameType(Diff.get()->getType(), VarType))
     Diff = SemaRef.PerformImplicitConversion(Diff.get(), VarType,
-                                             Sema::AA_Converting,
+                                             AssignmentAction::Converting,
                                              /*AllowExplicit=*/true);
   if (!Diff.isUsable())
     return std::make_pair(nullptr, nullptr);
@@ -8955,7 +8944,7 @@ Expr *OpenMPIterationSpaceChecker::buildPreCond(
     return SemaRef
         .PerformImplicitConversion(
             SemaRef.ActOnIntegerConstant(SourceLocation(), 1).get(),
-            SemaRef.Context.BoolTy, /*Action=*/Sema::AA_Casting,
+            SemaRef.Context.BoolTy, /*Action=*/AssignmentAction::Casting,
             /*AllowExplicit=*/true)
         .get();
 
@@ -8976,7 +8965,8 @@ Expr *OpenMPIterationSpaceChecker::buildPreCond(
     if (!SemaRef.Context.hasSameUnqualifiedType(CondExpr.get()->getType(),
                                                 SemaRef.Context.BoolTy))
       CondExpr = SemaRef.PerformImplicitConversion(
-          CondExpr.get(), SemaRef.Context.BoolTy, /*Action=*/Sema::AA_Casting,
+          CondExpr.get(), SemaRef.Context.BoolTy,
+          /*Action=*/AssignmentAction::Casting,
           /*AllowExplicit=*/true);
   }
 
@@ -9393,7 +9383,7 @@ buildCounterInit(Sema &SemaRef, Scope *S, SourceLocation Loc, ExprResult VarRef,
   if (!SemaRef.Context.hasSameType(NewStart.get()->getType(),
                                    VarRef.get()->getType())) {
     NewStart = SemaRef.PerformImplicitConversion(
-        NewStart.get(), VarRef.get()->getType(), Sema::AA_Converting,
+        NewStart.get(), VarRef.get()->getType(), AssignmentAction::Converting,
         /*AllowExplicit=*/true);
     if (!NewStart.isUsable())
       return ExprError();
@@ -9469,7 +9459,8 @@ static ExprResult buildCounterUpdate(
     if (!SemaRef.Context.hasSameType(Update.get()->getType(),
                                      VarRef.get()->getType())) {
       Update = SemaRef.PerformImplicitConversion(
-          Update.get(), VarRef.get()->getType(), Sema::AA_Converting, true);
+          Update.get(), VarRef.get()->getType(), AssignmentAction::Converting,
+          /*AllowExplicit=*/true);
       if (!Update.isUsable())
         return ExprError();
     }
@@ -9491,8 +9482,8 @@ static ExprResult widenIterationCount(unsigned Bits, Expr *E, Sema &SemaRef) {
     return ExprResult(E);
   // OK to convert to signed, because new type has more bits than old.
   QualType NewType = C.getIntTypeForBitwidth(Bits, /*Signed=*/true);
-  return SemaRef.PerformImplicitConversion(E, NewType, Sema::AA_Converting,
-                                           true);
+  return SemaRef.PerformImplicitConversion(
+      E, NewType, AssignmentAction::Converting, /*AllowExplicit=*/true);
 }
 
 /// Check if the given expression \a E is a constant integer that fits
@@ -9752,19 +9743,19 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
   // true).
   auto PreCond = ExprResult(IterSpaces[0].PreCond);
   Expr *N0 = IterSpaces[0].NumIterations;
-  ExprResult LastIteration32 =
-      widenIterationCount(/*Bits=*/32,
-                          SemaRef
-                              .PerformImplicitConversion(
-                                  N0->IgnoreImpCasts(), N0->getType(),
-                                  Sema::AA_Converting, /*AllowExplicit=*/true)
-                              .get(),
-                          SemaRef);
+  ExprResult LastIteration32 = widenIterationCount(
+      /*Bits=*/32,
+      SemaRef
+          .PerformImplicitConversion(N0->IgnoreImpCasts(), N0->getType(),
+                                     AssignmentAction::Converting,
+                                     /*AllowExplicit=*/true)
+          .get(),
+      SemaRef);
   ExprResult LastIteration64 = widenIterationCount(
       /*Bits=*/64,
       SemaRef
           .PerformImplicitConversion(N0->IgnoreImpCasts(), N0->getType(),
-                                     Sema::AA_Converting,
+                                     AssignmentAction::Converting,
                                      /*AllowExplicit=*/true)
           .get(),
       SemaRef);
@@ -9790,7 +9781,7 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
           CurScope, Loc, BO_Mul, LastIteration32.get(),
           SemaRef
               .PerformImplicitConversion(N->IgnoreImpCasts(), N->getType(),
-                                         Sema::AA_Converting,
+                                         AssignmentAction::Converting,
                                          /*AllowExplicit=*/true)
               .get());
     if (LastIteration64.isUsable())
@@ -9798,7 +9789,7 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
           CurScope, Loc, BO_Mul, LastIteration64.get(),
           SemaRef
               .PerformImplicitConversion(N->IgnoreImpCasts(), N->getType(),
-                                         Sema::AA_Converting,
+                                         AssignmentAction::Converting,
                                          /*AllowExplicit=*/true)
               .get());
   }
@@ -11538,7 +11529,7 @@ bool OpenMPAtomicUpdateChecker::checkStatement(Stmt *S, unsigned DiagId,
     if (Update.isInvalid())
       return true;
     Update = SemaRef.PerformImplicitConversion(Update.get(), X->getType(),
-                                               Sema::AA_Casting);
+                                               AssignmentAction::Casting);
     if (Update.isInvalid())
       return true;
     UpdateExpr = Update.get();
@@ -15655,7 +15646,7 @@ static bool findOMPAllocatorHandleT(Sema &S, SourceLocation Loc,
       break;
     }
     Res = S.PerformImplicitConversion(Res.get(), AllocatorHandleEnumTy,
-                                      Sema::AA_Initializing,
+                                      AssignmentAction::Initializing,
                                       /*AllowExplicit=*/true);
     if (!Res.isUsable()) {
       ErrorFound = true;
@@ -15686,7 +15677,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPAllocatorClause(Expr *A,
     return nullptr;
   Allocator = SemaRef.PerformImplicitConversion(
       Allocator.get(), DSAStack->getOMPAllocatorHandleT(),
-      Sema::AA_Initializing,
+      AssignmentAction::Initializing,
       /*AllowExplicit=*/true);
   if (Allocator.isInvalid())
     return nullptr;
@@ -23096,7 +23087,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPAllocateClause(
       return nullptr;
     AllocatorRes = SemaRef.PerformImplicitConversion(
         AllocatorRes.get(), DSAStack->getOMPAllocatorHandleT(),
-        Sema::AA_Initializing,
+        AssignmentAction::Initializing,
         /*AllowExplicit=*/true);
     if (AllocatorRes.isInvalid())
       return nullptr;
@@ -23939,14 +23930,14 @@ ExprResult SemaOpenMP::ActOnOMPIteratorExpr(Scope *S,
 
     Expr *Begin = D.Range.Begin;
     if (!IsDeclTyDependent && Begin && !Begin->isTypeDependent()) {
-      ExprResult BeginRes =
-          SemaRef.PerformImplicitConversion(Begin, DeclTy, Sema::AA_Converting);
+      ExprResult BeginRes = SemaRef.PerformImplicitConversion(
+          Begin, DeclTy, AssignmentAction::Converting);
       Begin = BeginRes.get();
     }
     Expr *End = D.Range.End;
     if (!IsDeclTyDependent && End && !End->isTypeDependent()) {
-      ExprResult EndRes =
-          SemaRef.PerformImplicitConversion(End, DeclTy, Sema::AA_Converting);
+      ExprResult EndRes = SemaRef.PerformImplicitConversion(
+          End, DeclTy, AssignmentAction::Converting);
       End = EndRes.get();
     }
     Expr *Step = D.Range.Step;

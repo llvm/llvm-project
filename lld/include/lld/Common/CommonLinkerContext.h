@@ -38,6 +38,7 @@ public:
 
   llvm::BumpPtrAllocator bAlloc;
   llvm::StringSaver saver{bAlloc};
+  llvm::UniqueStringSaver unique_saver{bAlloc};
   llvm::DenseMap<void *, SpecificAllocBase *> instances;
 
   ErrorHandler e;
@@ -54,8 +55,13 @@ template <typename T = CommonLinkerContext> T &context() {
 
 bool hasContext();
 
-inline llvm::StringSaver &saver() { return context().saver; }
 inline llvm::BumpPtrAllocator &bAlloc() { return context().bAlloc; }
+inline llvm::StringSaver &saver() { return context().saver; }
+inline llvm::UniqueStringSaver &unique_saver() {
+  // FIXME: Look into other places where duplications are common in saved
+  // strings and unique saver make sense.
+  return context().unique_saver;
+}
 } // namespace lld
 
 #endif

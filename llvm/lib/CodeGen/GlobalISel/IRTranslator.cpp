@@ -2193,6 +2193,14 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     }
     return true;
   }
+  case Intrinsic::fake_use: {
+    SmallVector<llvm::SrcOp, 4> VRegs;
+    for (const auto &Arg : CI.args())
+      for (auto VReg : getOrCreateVRegs(*Arg))
+        VRegs.push_back(VReg);
+    MIRBuilder.buildInstr(TargetOpcode::FAKE_USE, std::nullopt, VRegs);
+    return true;
+  }
   case Intrinsic::dbg_declare: {
     const DbgDeclareInst &DI = cast<DbgDeclareInst>(CI);
     assert(DI.getVariable() && "Missing variable");
@@ -3175,15 +3183,14 @@ bool IRTranslator::translateExtractElement(const User &U,
 
 bool IRTranslator::translateShuffleVector(const User &U,
                                           MachineIRBuilder &MIRBuilder) {
-  // A ShuffleVector that has operates on scalable vectors is a splat vector
-  // where the value of the splat vector is the 0th element of the first
-  // operand, since the index mask operand is the zeroinitializer (undef and
+  // A ShuffleVector that operates on scalable vectors is a splat vector where
+  // the value of the splat vector is the 0th element of the first operand,
+  // since the index mask operand is the zeroinitializer (undef and
   // poison are treated as zeroinitializer here).
   if (U.getOperand(0)->getType()->isScalableTy()) {
-    Value *Op0 = U.getOperand(0);
+    Register Val = getOrCreateVReg(*U.getOperand(0));
     auto SplatVal = MIRBuilder.buildExtractVectorElementConstant(
-        LLT::scalar(Op0->getType()->getScalarSizeInBits()),
-        getOrCreateVReg(*Op0), 0);
+        MRI->getType(Val).getElementType(), Val, 0);
     MIRBuilder.buildSplatVector(getOrCreateVReg(U), SplatVal);
     return true;
   }
@@ -3300,6 +3307,12 @@ bool IRTranslator::translateAtomicRMW(const User &U,
     break;
   case AtomicRMWInst::UDecWrap:
     Opcode = TargetOpcode::G_ATOMICRMW_UDEC_WRAP;
+    break;
+  case AtomicRMWInst::USubCond:
+    Opcode = TargetOpcode::G_ATOMICRMW_USUB_COND;
+    break;
+  case AtomicRMWInst::USubSat:
+    Opcode = TargetOpcode::G_ATOMICRMW_USUB_SAT;
     break;
   }
 
@@ -3930,7 +3943,8 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
   if (CLI->fallBackToDAGISel(*MF)) {
     OptimizationRemarkMissed R("gisel-irtranslator", "GISelFailure",
                                F.getSubprogram(), &F.getEntryBlock());
-    R << "unable to lower function: " << ore::NV("Prototype", F.getType());
+    R << "unable to lower function: "
+      << ore::NV("Prototype", F.getFunctionType());
     reportTranslationError(*MF, *TPC, *ORE, R);
     return false;
   }
@@ -3952,7 +3966,8 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
   if (!CLI->lowerFormalArguments(*EntryBuilder, F, VRegArgs, FuncInfo)) {
     OptimizationRemarkMissed R("gisel-irtranslator", "GISelFailure",
                                F.getSubprogram(), &F.getEntryBlock());
-    R << "unable to lower arguments: " << ore::NV("Prototype", F.getType());
+    R << "unable to lower arguments: "
+      << ore::NV("Prototype", F.getFunctionType());
     reportTranslationError(*MF, *TPC, *ORE, R);
     return false;
   }

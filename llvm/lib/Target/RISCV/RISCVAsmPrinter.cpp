@@ -17,6 +17,7 @@
 #include "MCTargetDesc/RISCVMatInt.h"
 #include "MCTargetDesc/RISCVTargetStreamer.h"
 #include "RISCV.h"
+#include "RISCVConstantPoolValue.h"
 #include "RISCVMachineFunctionInfo.h"
 #include "RISCVTargetMachine.h"
 #include "TargetInfo/RISCVTargetInfo.h"
@@ -76,6 +77,8 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   void emitInstruction(const MachineInstr *MI) override;
+
+  void emitMachineConstantPoolValue(MachineConstantPoolValue *MCPV) override;
 
   bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
                        const char *ExtraCode, raw_ostream &OS) override;
@@ -303,11 +306,6 @@ void RISCVAsmPrinter::emitInstruction(const MachineInstr *MI) {
   case RISCV::KCFI_CHECK:
     LowerKCFI_CHECK(*MI);
     return;
-  case RISCV::PseudoRVVInitUndefM1:
-  case RISCV::PseudoRVVInitUndefM2:
-  case RISCV::PseudoRVVInitUndefM4:
-  case RISCV::PseudoRVVInitUndefM8:
-    return;
   case TargetOpcode::STACKMAP:
     return LowerSTACKMAP(*OutStreamer, SM, *MI);
   case TargetOpcode::PATCHPOINT:
@@ -396,6 +394,15 @@ bool RISCVAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
     OS << MCO.getImm();
   else if (Offset.isGlobal() || Offset.isBlockAddress() || Offset.isMCSymbol())
     OS << *MCO.getExpr();
+
+  if (Offset.isMCSymbol())
+    MMI->getContext().registerInlineAsmLabel(Offset.getMCSymbol());
+  if (Offset.isBlockAddress()) {
+    const BlockAddress *BA = Offset.getBlockAddress();
+    MCSymbol *Sym = GetBlockAddressSymbol(BA);
+    MMI->getContext().registerInlineAsmLabel(Sym);
+  }
+
   OS << "(" << RISCVInstPrinter::getRegisterName(AddrReg.getReg()) << ")";
   return false;
 }
@@ -1075,4 +1082,24 @@ bool RISCVAsmPrinter::lowerToMCInst(const MachineInstr *MI, MCInst &OutMI) {
   }
   }
   return false;
+}
+
+void RISCVAsmPrinter::emitMachineConstantPoolValue(
+    MachineConstantPoolValue *MCPV) {
+  auto *RCPV = static_cast<RISCVConstantPoolValue *>(MCPV);
+  MCSymbol *MCSym;
+
+  if (RCPV->isGlobalValue()) {
+    auto *GV = RCPV->getGlobalValue();
+    MCSym = getSymbol(GV);
+  } else {
+    assert(RCPV->isExtSymbol() && "unrecognized constant pool type");
+    auto Sym = RCPV->getSymbol();
+    MCSym = GetExternalSymbolSymbol(Sym);
+  }
+
+  const MCExpr *Expr =
+      MCSymbolRefExpr::create(MCSym, MCSymbolRefExpr::VK_None, OutContext);
+  uint64_t Size = getDataLayout().getTypeAllocSize(RCPV->getType());
+  OutStreamer->emitValue(Expr, Size);
 }

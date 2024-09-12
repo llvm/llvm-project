@@ -24,6 +24,7 @@
 #include "llvm/IR/TypedPointerType.h"
 
 #include <queue>
+#include <unordered_set>
 
 // This pass performs the following transformation on LLVM IR level required
 // for the following translation to SPIR-V:

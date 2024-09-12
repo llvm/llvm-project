@@ -1168,6 +1168,13 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
       }
       break; // No other 'experimental.vector.*'.
     }
+    if (Name.consume_front("experimental.stepvector.")) {
+      Intrinsic::ID ID = Intrinsic::stepvector;
+      rename(F);
+      NewFn = Intrinsic::getDeclaration(F->getParent(), ID,
+                                        F->getFunctionType()->getReturnType());
+      return true;
+    }
     break; // No other 'e*'.
   case 'f':
     if (Name.starts_with("flt.rounds")) {
@@ -4323,7 +4330,8 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
              "Must have same number of elements");
 
       SmallVector<Value *> Args(CI->args());
-      Value *NewCI = Builder.CreateCall(NewFn, Args);
+      CallInst *NewCI = Builder.CreateCall(NewFn, Args);
+      NewCI->setAttributes(CI->getAttributes());
       Value *Res = PoisonValue::get(OldST);
       for (unsigned Idx = 0; Idx < OldST->getNumElements(); ++Idx) {
         Value *Elem = Builder.CreateExtractValue(NewCI, Idx);

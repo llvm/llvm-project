@@ -25,6 +25,7 @@
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/AST/TypeLocVisitor.h"
+#include "clang/Basic/LangOptions.h"
 #include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
@@ -37,6 +38,7 @@
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaCUDA.h"
+#include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenMP.h"
@@ -221,10 +223,15 @@ namespace {
     /// validating that noderef was used on a pointer or array.
     bool parsedNoDeref;
 
+    // Flag to indicate that we already parsed a HLSL parameter modifier
+    // attribute. This prevents double-mutating the type.
+    bool ParsedHLSLParamMod;
+
   public:
     TypeProcessingState(Sema &sema, Declarator &declarator)
         : sema(sema), declarator(declarator),
-          chunkIndex(declarator.getNumTypeObjects()), parsedNoDeref(false) {}
+          chunkIndex(declarator.getNumTypeObjects()), parsedNoDeref(false),
+          ParsedHLSLParamMod(false) {}
 
     Sema &getSema() const {
       return sema;
@@ -350,6 +357,10 @@ namespace {
     void setParsedNoDeref(bool parsed) { parsedNoDeref = parsed; }
 
     bool didParseNoDeref() const { return parsedNoDeref; }
+
+    void setParsedHLSLParamMod(bool Parsed) { ParsedHLSLParamMod = Parsed; }
+
+    bool didParseHLSLParamMod() const { return ParsedHLSLParamMod; }
 
     ~TypeProcessingState() {
       if (savedAttrs.empty())
@@ -1546,6 +1557,9 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
       Result = Qualified;
   }
 
+  if (S.getLangOpts().HLSL)
+    Result = S.HLSL().ProcessResourceTypeAttributes(Result);
+
   assert(!Result.isNull() && "This function should not return a null type");
   return Result;
 }
@@ -2573,6 +2587,8 @@ static void checkExtParameterInfos(Sema &S, ArrayRef<QualType> paramTypes,
     switch (EPI.ExtParameterInfos[paramIndex].getABI()) {
     // Nothing interesting to check for orindary-ABI parameters.
     case ParameterABI::Ordinary:
+    case ParameterABI::HLSLOut:
+    case ParameterABI::HLSLInOut:
       continue;
 
     // swift_indirect_result parameters must be a prefix of the function
@@ -5783,6 +5799,12 @@ static void fillAttributedTypeLoc(AttributedTypeLoc TL,
   TL.setAttr(State.takeAttrForAttributedType(TL.getTypePtr()));
 }
 
+static void fillHLSLAttributedResourceTypeLoc(HLSLAttributedResourceTypeLoc TL,
+                                              TypeProcessingState &State) {
+  TL.setSourceRange(
+      State.getSema().HLSL().TakeLocForHLSLAttribute(TL.getTypePtr()));
+}
+
 static void fillMatrixTypeLoc(MatrixTypeLoc MTL,
                               const ParsedAttributesView &Attrs) {
   for (const ParsedAttr &AL : Attrs) {
@@ -5816,6 +5838,10 @@ namespace {
     }
     void VisitBTFTagAttributedTypeLoc(BTFTagAttributedTypeLoc TL) {
       Visit(TL.getWrappedLoc());
+    }
+    void VisitHLSLAttributedResourceTypeLoc(HLSLAttributedResourceTypeLoc TL) {
+      Visit(TL.getWrappedLoc());
+      fillHLSLAttributedResourceTypeLoc(TL, State);
     }
     void VisitMacroQualifiedTypeLoc(MacroQualifiedTypeLoc TL) {
       Visit(TL.getInnerLoc());
@@ -6463,6 +6489,15 @@ QualType Sema::BuildAddressSpaceAttr(QualType &T, Expr *AddrSpace,
 static void HandleBTFTypeTagAttribute(QualType &Type, const ParsedAttr &Attr,
                                       TypeProcessingState &State) {
   Sema &S = State.getSema();
+
+  // This attribute is only supported in C.
+  // FIXME: we should implement checkCommonAttributeFeatures() in SemaAttr.cpp
+  // such that it handles type attributes, and then call that from
+  // processTypeAttrs() instead of one-off checks like this.
+  if (!Attr.diagnoseLangOpts(S)) {
+    Attr.setInvalid();
+    return;
+  }
 
   // Check the number of attribute arguments.
   if (Attr.getNumArgs() != 1) {
@@ -8503,15 +8538,19 @@ static void HandleLifetimeBoundAttr(TypeProcessingState &State,
   }
 }
 
-static void HandleHLSLParamModifierAttr(QualType &CurType,
+static void HandleHLSLParamModifierAttr(TypeProcessingState &State,
+                                        QualType &CurType,
                                         const ParsedAttr &Attr, Sema &S) {
   // Don't apply this attribute to template dependent types. It is applied on
-  // substitution during template instantiation.
-  if (CurType->isDependentType())
+  // substitution during template instantiation. Also skip parsing this if we've
+  // already modified the type based on an earlier attribute.
+  if (CurType->isDependentType() || State.didParseHLSLParamMod())
     return;
   if (Attr.getSemanticSpelling() == HLSLParamModifierAttr::Keyword_inout ||
-      Attr.getSemanticSpelling() == HLSLParamModifierAttr::Keyword_out)
-    CurType = S.getASTContext().getLValueReferenceType(CurType);
+      Attr.getSemanticSpelling() == HLSLParamModifierAttr::Keyword_out) {
+    CurType = S.HLSL().getInoutParameterType(CurType);
+    State.setParsedHLSLParamMod(true);
+  }
 }
 
 static void processTypeAttrs(TypeProcessingState &state, QualType &type,
@@ -8691,7 +8730,7 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
     }
 
     case ParsedAttr::AT_HLSLParamModifier: {
-      HandleHLSLParamModifierAttr(type, attr, state.getSema());
+      HandleHLSLParamModifierAttr(state, type, attr, state.getSema());
       attr.setUsedAsTypeAttr();
       break;
     }
@@ -8801,6 +8840,16 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
     case ParsedAttr::AT_AnnotateType: {
       HandleAnnotateTypeAttr(state, type, attr);
       attr.setUsedAsTypeAttr();
+      break;
+    }
+    case ParsedAttr::AT_HLSLResourceClass:
+    case ParsedAttr::AT_HLSLROV: {
+      // Only collect HLSL resource type attributes that are in
+      // decl-specifier-seq; do not collect attributes on declarations or those
+      // that get to slide after declaration name.
+      if (TAL == TAL_DeclSpec &&
+          state.getSema().HLSL().handleResourceTypeAttr(attr))
+        attr.setUsedAsTypeAttr();
       break;
     }
     }

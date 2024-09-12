@@ -1789,14 +1789,14 @@ void VarLocBasedLDV::transferSpillOrRestoreInst(MachineInstr &MI,
   if (isLocationSpill(MI, MF, Reg)) {
     TKind = TransferKind::TransferSpill;
     LLVM_DEBUG(dbgs() << "Recognized as spill: "; MI.dump(););
-    LLVM_DEBUG(dbgs() << "Register: " << Reg << " " << printReg(Reg, TRI)
+    LLVM_DEBUG(dbgs() << "Register: " << Reg.id() << " " << printReg(Reg, TRI)
                       << "\n");
   } else {
     if (!(Loc = isRestoreInstruction(MI, MF, Reg)))
       return;
     TKind = TransferKind::TransferRestore;
     LLVM_DEBUG(dbgs() << "Recognized as restore: "; MI.dump(););
-    LLVM_DEBUG(dbgs() << "Register: " << Reg << " " << printReg(Reg, TRI)
+    LLVM_DEBUG(dbgs() << "Register: " << Reg.id() << " " << printReg(Reg, TRI)
                       << "\n");
   }
   // Check if the register or spill location is the location of a debug value.

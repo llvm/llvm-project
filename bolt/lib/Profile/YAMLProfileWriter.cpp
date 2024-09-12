@@ -13,6 +13,7 @@
 #include "bolt/Profile/DataAggregator.h"
 #include "bolt/Profile/ProfileReaderBase.h"
 #include "bolt/Rewrite/RewriteInstance.h"
+#include "bolt/Utils/CommandLineOpts.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
@@ -21,8 +22,12 @@
 #define DEBUG_TYPE "bolt-prof"
 
 namespace opts {
-extern llvm::cl::opt<bool> ProfileUseDFS;
-extern llvm::cl::opt<bool> ProfileUsePseudoProbes;
+using namespace llvm;
+extern cl::opt<bool> ProfileUseDFS;
+cl::opt<bool> ProfileWritePseudoProbes(
+    "profile-write-pseudo-probes",
+    cl::desc("Use pseudo probes in profile generation"), cl::Hidden,
+    cl::cat(BoltOptCategory));
 } // namespace opts
 
 namespace llvm {
@@ -59,7 +64,7 @@ YAMLProfileWriter::convert(const BinaryFunction &BF, bool UseDFS,
   yaml::bolt::BinaryFunctionProfile YamlBF;
   const BinaryContext &BC = BF.getBinaryContext();
   const MCPseudoProbeDecoder *PseudoProbeDecoder =
-      opts::ProfileUsePseudoProbes ? BC.getPseudoProbeDecoder() : nullptr;
+      opts::ProfileWritePseudoProbes ? BC.getPseudoProbeDecoder() : nullptr;
 
   const uint16_t LBRProfile = BF.getProfileFlags() & BinaryFunction::PF_LBR;
 
@@ -193,13 +198,10 @@ YAMLProfileWriter::convert(const BinaryFunction &BF, bool UseDFS,
       const uint64_t FuncAddr = BF.getAddress();
       const std::pair<uint64_t, uint64_t> &BlockRange =
           BB->getInputAddressRange();
-      const auto &BlockProbes =
-          llvm::make_range(ProbeMap.lower_bound(FuncAddr + BlockRange.first),
-                           ProbeMap.lower_bound(FuncAddr + BlockRange.second));
-      for (const auto &[_, Probes] : BlockProbes)
-        for (const MCDecodedPseudoProbe &Probe : Probes)
-          YamlBB.PseudoProbes.emplace_back(yaml::bolt::PseudoProbeInfo{
-              Probe.getGuid(), Probe.getIndex(), Probe.getType()});
+      for (const MCDecodedPseudoProbe &Probe : ProbeMap.find(
+               FuncAddr + BlockRange.first, FuncAddr + BlockRange.second))
+        YamlBB.PseudoProbes.emplace_back(yaml::bolt::PseudoProbeInfo{
+            Probe.getGuid(), Probe.getIndex(), Probe.getType()});
     }
 
     YamlBF.Blocks.emplace_back(YamlBB);

@@ -303,7 +303,7 @@ llvm.func @masked_scatter_intr_wrong_type_scalable(%vec : vector<[7]xf32>, %ptrs
 
 llvm.func @stepvector_intr_wrong_type() -> vector<7xf32> {
   // expected-error @below{{op result #0 must be LLVM dialect-compatible vector of signless integer, but got 'vector<7xf32>'}}
-  %0 = llvm.intr.experimental.stepvector : vector<7xf32>
+  %0 = llvm.intr.stepvector : vector<7xf32>
   llvm.return %0 : vector<7xf32>
 }
 

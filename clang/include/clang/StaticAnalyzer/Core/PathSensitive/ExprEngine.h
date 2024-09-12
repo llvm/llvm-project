@@ -286,6 +286,10 @@ public:
             const Stmt *DiagnosticStmt = nullptr,
             ProgramPoint::Kind K = ProgramPoint::PreStmtPurgeDeadSymbolsKind);
 
+  /// A tag to track convenience transitions, which can be removed at cleanup.
+  /// This tag applies to a node created after removeDead.
+  static const ProgramPointTag *cleanupNodeTag();
+
   /// processCFGElement - Called by CoreEngine. Used to generate new successor
   ///  nodes by processing the 'effects' of a CFG element.
   void processCFGElement(const CFGElement E, ExplodedNode *Pred,

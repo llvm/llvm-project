@@ -1383,6 +1383,11 @@ void LinkerDriver::createECExportThunks() {
   }
 }
 
+void LinkerDriver::pullArm64ECIcallHelper() {
+  if (!ctx.config.arm64ECIcallHelper)
+    ctx.config.arm64ECIcallHelper = addUndefined("__icall_helper_arm64ec");
+}
+
 // In MinGW, if no symbols are chosen to be exported, then all symbols are
 // automatically exported by default. This behavior can be forced by the
 // -export-all-symbols option, so that it happens even when exports are
@@ -2685,7 +2690,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   if (auto *arg = args.getLastArg(OPT_print_symbol_order))
     config->printSymbolOrder = arg->getValue();
 
-  ctx.symtab.initializeEntryThunks();
+  ctx.symtab.initializeECThunks();
 
   // Identify unreferenced COMDAT sections.
   if (config->doGC) {

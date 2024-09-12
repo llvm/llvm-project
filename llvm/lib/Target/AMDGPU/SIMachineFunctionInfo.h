@@ -100,19 +100,25 @@ struct SIArgument {
   SIArgument() : IsRegister(false), StackOffset(0) {}
   SIArgument(const SIArgument &Other) {
     IsRegister = Other.IsRegister;
-    if (IsRegister) {
-      ::new ((void *)std::addressof(RegisterName))
-          StringValue(Other.RegisterName);
-    } else
+    if (IsRegister)
+      new (&RegisterName) StringValue(Other.RegisterName);
+    else
       StackOffset = Other.StackOffset;
     Mask = Other.Mask;
   }
   SIArgument &operator=(const SIArgument &Other) {
+    // Default-construct or destruct the old RegisterName in case of switching
+    // union members
+    if (IsRegister != Other.IsRegister) {
+      if (Other.IsRegister)
+        new (&RegisterName) StringValue();
+      else
+        RegisterName.~StringValue();
+    }
     IsRegister = Other.IsRegister;
-    if (IsRegister) {
-      ::new ((void *)std::addressof(RegisterName))
-          StringValue(Other.RegisterName);
-    } else
+    if (IsRegister)
+      RegisterName = Other.RegisterName;
+    else
       StackOffset = Other.StackOffset;
     Mask = Other.Mask;
     return *this;
