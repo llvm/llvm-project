@@ -1595,7 +1595,7 @@ exit:
   ret i32 0
 }
 
-define i32 @ptr_induction_eq_1(ptr %a, ptr %b) {
+define void @ptr_induction_eq_1(ptr %a, ptr %b) {
 ; CHECK-LABEL: 'ptr_induction_eq_1'
 ; CHECK-NEXT:  Classifying expressions for: @ptr_induction_eq_1
 ; CHECK-NEXT:    %ptr.iv = phi ptr [ %ptr.iv.next, %loop ], [ %a, %entry ]
@@ -1619,10 +1619,10 @@ loop:
   br i1 %exitcond, label %exit, label %loop
 
 exit:
-  ret i32 0
+  ret void
 }
 
-define i32 @ptr_induction_eq_2(ptr %a, i64 %n) {
+define void @ptr_induction_eq_2(ptr %a, i64 %n) {
 ; CHECK-LABEL: 'ptr_induction_eq_2'
 ; CHECK-NEXT:  Classifying expressions for: @ptr_induction_eq_2
 ; CHECK-NEXT:    %b = getelementptr inbounds ptr, ptr %a, i64 %n
@@ -1649,14 +1649,14 @@ loop:
   br i1 %exitcond, label %exit, label %loop
 
 exit:
-  ret i32 0
+  ret void
 }
 
 ; TODO: It feels like we should be able to calculate the symbolic max
 ; exit count for the loop.inc block here, in the same way as
 ; ptr_induction_eq_1. The problem seems to be in howFarToZero when the
 ; ControlsOnlyExit is set to false.
-define i32 @ptr_induction_early_exit_eq_1(ptr %a, ptr %b, ptr %c) {
+define void @ptr_induction_early_exit_eq_1(ptr %a, ptr %b, ptr %c) {
 ; CHECK-LABEL: 'ptr_induction_early_exit_eq_1'
 ; CHECK-NEXT:  Classifying expressions for: @ptr_induction_early_exit_eq_1
 ; CHECK-NEXT:    %ptr.iv = phi ptr [ %ptr.iv.next, %loop.inc ], [ %a, %entry ]
@@ -1690,10 +1690,10 @@ loop.inc:
   br i1 %exitcond, label %exit, label %loop
 
 exit:
-  ret i32 0
+  ret void
 }
 
-define i32 @ptr_induction_early_exit_eq_2(ptr %a, i64 %n, ptr %c) {
+define void @ptr_induction_early_exit_eq_2(ptr %a, i64 %n, ptr %c) {
 ; CHECK-LABEL: 'ptr_induction_early_exit_eq_2'
 ; CHECK-NEXT:  Classifying expressions for: @ptr_induction_early_exit_eq_2
 ; CHECK-NEXT:    %b = getelementptr inbounds ptr, ptr %a, i64 %n
@@ -1730,7 +1730,7 @@ loop.inc:
   br i1 %exitcond, label %exit, label %loop
 
 exit:
-  ret i32 0
+  ret void
 }
 
 
