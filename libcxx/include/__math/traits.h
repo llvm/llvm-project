@@ -12,7 +12,6 @@
 #include <__config>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_arithmetic.h>
-#include <__type_traits/is_floating_point.h>
 #include <__type_traits/is_integral.h>
 #include <__type_traits/is_signed.h>
 #include <__type_traits/promote.h>
@@ -34,8 +33,21 @@ namespace __math {
 #  define _LIBCPP_SIGNBIT_CONSTEXPR
 #endif
 
-template <class _A1, __enable_if_t<is_floating_point<_A1>::value, int> = 0>
-_LIBCPP_NODISCARD inline _LIBCPP_SIGNBIT_CONSTEXPR _LIBCPP_HIDE_FROM_ABI bool signbit(_A1 __x) _NOEXCEPT {
+// The universal C runtime (UCRT) in the WinSDK provides floating point overloads
+// for std::signbit(). By defining our overloads as templates, we can work around
+// this issue as templates are less preferred than non-template functions.
+template <class = void>
+_LIBCPP_NODISCARD inline _LIBCPP_SIGNBIT_CONSTEXPR _LIBCPP_HIDE_FROM_ABI bool signbit(float __x) _NOEXCEPT {
+  return __builtin_signbit(__x);
+}
+
+template <class = void>
+_LIBCPP_NODISCARD inline _LIBCPP_SIGNBIT_CONSTEXPR _LIBCPP_HIDE_FROM_ABI bool signbit(double __x) _NOEXCEPT {
+  return __builtin_signbit(__x);
+}
+
+template <class = void>
+_LIBCPP_NODISCARD inline _LIBCPP_SIGNBIT_CONSTEXPR _LIBCPP_HIDE_FROM_ABI bool signbit(long double __x) _NOEXCEPT {
   return __builtin_signbit(__x);
 }
 
