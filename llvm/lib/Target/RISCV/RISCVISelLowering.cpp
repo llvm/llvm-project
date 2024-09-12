@@ -19079,7 +19079,7 @@ static SDValue convertLocVTToValVT(SelectionDAG &DAG, SDValue Val,
   if (VA.needsCustom()) {
     if (VA.getLocVT().isInteger() &&
         (VA.getValVT() == MVT::f16 || VA.getValVT() == MVT::bf16))
-      return  DAG.getNode(RISCVISD::FMV_H_X, DL, VA.getValVT(), Val);
+      return DAG.getNode(RISCVISD::FMV_H_X, DL, VA.getValVT(), Val);
     if (VA.getLocVT() == MVT::i64 && VA.getValVT() == MVT::f32)
       return DAG.getNode(RISCVISD::FMV_W_X_RV64, DL, MVT::f32, Val);
     if (VA.getValVT().isFixedLengthVector() && VA.getLocVT().isScalableVector())

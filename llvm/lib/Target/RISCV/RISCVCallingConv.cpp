@@ -450,7 +450,8 @@ bool llvm::CC_RISCV(unsigned ValNo, MVT ValVT, MVT LocVT,
       // container types.
       if (ValVT.isFixedLengthVector()) {
         LocVT = TLI.getContainerForFixedLengthVector(LocVT);
-        State.addLoc(CCValAssign::getCustomReg(ValNo, ValVT, Reg, LocVT, LocInfo));
+        State.addLoc(
+            CCValAssign::getCustomReg(ValNo, ValVT, Reg, LocVT, LocInfo));
         return false;
       }
     } else {
@@ -588,7 +589,8 @@ bool llvm::CC_RISCV_FastCC(unsigned ValNo, MVT ValVT, MVT LocVT,
       // container types.
       if (LocVT.isFixedLengthVector()) {
         LocVT = TLI.getContainerForFixedLengthVector(LocVT);
-        State.addLoc(CCValAssign::getCustomReg(ValNo, ValVT, Reg, LocVT, LocInfo));
+        State.addLoc(
+            CCValAssign::getCustomReg(ValNo, ValVT, Reg, LocVT, LocInfo));
         return false;
       }
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
