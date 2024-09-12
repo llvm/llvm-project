@@ -79,6 +79,9 @@ struct ValueMapConfig {
   static mutex_type *getMutex(const ExtraDataT &/*Data*/) { return nullptr; }
 };
 
+/// This type stores Metadata. Used in ValueMap.
+using MDMapT = DenseMap<const Metadata *, TrackingMDRef>;
+
 /// See the file comment.
 template<typename KeyT, typename ValueT, typename Config =ValueMapConfig<KeyT>>
 class ValueMap {
@@ -86,7 +89,6 @@ class ValueMap {
 
   using ValueMapCVH = ValueMapCallbackVH<KeyT, ValueT, Config>;
   using MapT = DenseMap<ValueMapCVH, ValueT, DenseMapInfo<ValueMapCVH>>;
-  using MDMapT = DenseMap<const Metadata *, TrackingMDRef>;
   using ExtraData = typename Config::ExtraData;
 
   MapT Map;
