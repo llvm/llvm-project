@@ -6115,6 +6115,11 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return DAG.getNode(Opcode, dl, Op.getValueType(), Op.getOperand(1),
                        Op.getOperand(2), Op.getOperand(3));
   }
+  case Intrinsic::aarch64_neon_usdot:
+  case Intrinsic::aarch64_sve_usdot: {
+    return DAG.getNode(AArch64ISD::USDOT, dl, Op.getValueType(),
+                       Op.getOperand(1), Op.getOperand(2), Op.getOperand(3));
+  }
   case Intrinsic::get_active_lane_mask: {
     SDValue ID =
         DAG.getTargetConstant(Intrinsic::aarch64_sve_whilelo, dl, MVT::i64);

@@ -3405,10 +3405,9 @@ let Predicates = [HasSVE, HasMatMulInt8] in {
 } // End HasSVE, HasMatMulInt8
 
 let Predicates = [HasSVEorSME, HasMatMulInt8] in {
-  defm USDOT_ZZZ  : sve_int_dot_mixed<"usdot", int_aarch64_sve_usdot>;
+  defm USDOT_ZZZ  : sve_int_dot_mixed<"usdot", AArch64usdot>;
   defm USDOT_ZZZI : sve_int_dot_mixed_indexed<0, "usdot", int_aarch64_sve_usdot_lane>;
   defm SUDOT_ZZZI : sve_int_dot_mixed_indexed<1, "sudot", int_aarch64_sve_sudot_lane>;
-  def : Pat<(nxv4i32 (AArch64usdot (nxv4i32 ZPR32:$Rd), (nxv16i8 ZPR8:$Rm), (nxv16i8 ZPR8:$Rn))), (USDOT_ZZZ $Rd, $Rm, $Rn)>;
 } // End HasSVEorSME, HasMatMulInt8
 
 let Predicates = [HasSVE, HasMatMulFP32] in {
