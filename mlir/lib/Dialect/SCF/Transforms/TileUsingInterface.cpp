@@ -854,7 +854,8 @@ mlir::scf::tileUsingSCF(RewriterBase &rewriter, TilingInterface op,
     if (llvm::all_of(tileSizes, isZeroIndex)) {
       tiledResults.append(clonedOp->result_begin(), clonedOp->result_end());
       tilingResult =
-          TilingResult{/*tiledOps=*/{clonedOp}, clonedOp->getResults()};
+          TilingResult{/*tiledOps=*/{clonedOp}, clonedOp->getResults(),
+                       /*generatedSlices=*/{}};
       return success();
     }
 
@@ -910,12 +911,14 @@ mlir::scf::tileUsingSCF(RewriterBase &rewriter, TilingInterface op,
   // op.
   if (loops.empty()) {
     return scf::SCFTilingResult{tilingResult->tiledOps, loops,
-                                tilingResult->tiledValues};
+                                tilingResult->tiledValues,
+                                tilingResult->generatedSlices};
   }
 
   SmallVector<Value> replacements = llvm::map_to_vector(
       loops.front()->getResults(), [](OpResult r) -> Value { return r; });
-  return scf::SCFTilingResult{tilingResult->tiledOps, loops, replacements};
+  return scf::SCFTilingResult{tilingResult->tiledOps, loops, replacements,
+                              tilingResult->generatedSlices};
 }
 
 FailureOr<scf::SCFReductionTilingResult>
@@ -1180,13 +1183,13 @@ mlir::scf::tileAndFuseProducerOfSlice(
         ->getOpOperands()[destinationInitArg.value()->getOperandNumber()]
         .set(origDestinationTensors[resultNumber]);
   }
-  return scf::SCFFuseProducerOfSliceResult{fusableProducer,
-                                           tileAndFuseResult->tiledValues[0],
-                                           tileAndFuseResult->tiledOps};
+  return scf::SCFFuseProducerOfSliceResult{
+      fusableProducer, tileAndFuseResult->tiledValues[0],
+      tileAndFuseResult->tiledOps, tileAndFuseResult->generatedSlices};
 }
 
 /// Reconstruct the fused producer from within the tiled-and-fused code.
-LogicalResult mlir::scf::yieldReplacementForFusedProducer(
+FailureOr<SmallVector<Operation *>> mlir::scf::yieldReplacementForFusedProducer(
     RewriterBase &rewriter, tensor::ExtractSliceOp sliceOp,
     scf::SCFFuseProducerOfSliceResult fusedProducerInfo,
     MutableArrayRef<LoopLikeOpInterface> loops,
@@ -1214,6 +1217,7 @@ LogicalResult mlir::scf::yieldReplacementForFusedProducer(
     }
   }
 
+  SmallVector<Operation *> generatedSlices;
   YieldTiledValuesFn newYieldValuesFn =
       [&](RewriterBase &innerRewriter, Location loc, ValueRange /*ivs*/,
           ValueRange newRegionIterArgs, SmallVector<Value> &tiledResult,
@@ -1284,6 +1288,7 @@ LogicalResult mlir::scf::yieldReplacementForFusedProducer(
             loc, newRegionArg, offsetList[index], sizesList[index],
             SmallVector<OpFoldResult>(offsetList[index].size(),
                                       rewriter.getIndexAttr(1)));
+        generatedSlices.push_back(destSlice);
         unsigned resultNumber = initNumberList[index];
         rewriter.modifyOpInPlace(tiledDestStyleOp, [&]() {
           tiledDestStyleOp.getDpsInitsMutable()[resultNumber].set(destSlice);
@@ -1303,8 +1308,11 @@ LogicalResult mlir::scf::yieldReplacementForFusedProducer(
     return success();
   };
 
-  return addInitOperandsToLoopNest(rewriter, loops, initValueList,
-                                   newYieldValuesFn);
+  if (failed(addInitOperandsToLoopNest(rewriter, loops, initValueList,
+                                       newYieldValuesFn))) {
+    return failure();
+  }
+  return generatedSlices;
 }
 
 /// Implementation of tile consumer and fuse producer greedily.
@@ -1358,52 +1366,62 @@ mlir::scf::tileConsumerAndFuseProducersUsingSCF(
   //    operations. If the producers of the source of the `tensor.extract_slice`
   //    can be tiled such that the tiled value is generated in-place, that
   //    effectively tiles + fuses the operations.
-  auto addCandidateSlices = [](Operation *fusedOp,
-                               std::deque<tensor::ExtractSliceOp> &candidates) {
-    for (Value operand : fusedOp->getOperands())
-      if (auto sliceOp = operand.getDefiningOp<tensor::ExtractSliceOp>())
-        candidates.push_back(sliceOp);
+  struct WorklistItem {
+    tensor::ExtractSliceOp candidateSlice;
+    SCFTileAndFuseOptions::ControlFnResult controlFnResult;
+  };
+  std::deque<WorklistItem> worklist;
+  auto addCandidateSlices = [&worklist, &options,
+                             &loops](ArrayRef<Operation *> candidates) {
+    for (auto candidate : candidates) {
+      auto sliceOp = dyn_cast<tensor::ExtractSliceOp>(candidate);
+      if (!sliceOp || sliceOp.use_empty())
+        continue;
+
+      auto [fusableProducer, destinationInitArg] =
+          getUntiledProducerFromSliceSource(&sliceOp.getSourceMutable(), loops);
+      if (!fusableProducer)
+        continue;
+      std::optional<SCFTileAndFuseOptions::ControlFnResult> controlFnResult =
+          options.fusionControlFn(sliceOp, fusableProducer,
+                                  destinationInitArg.has_value());
+      if (!controlFnResult)
+        continue;
+      worklist.emplace_back(WorklistItem{sliceOp, controlFnResult.value()});
+    }
   };
 
-  std::deque<tensor::ExtractSliceOp> candidates;
-  addCandidateSlices(tiledAndFusedOps.back(), candidates);
+  addCandidateSlices(tilingResult->generatedSlices);
   OpBuilder::InsertionGuard g(rewriter);
-  while (!candidates.empty()) {
+  while (!worklist.empty()) {
     // Traverse the slices in BFS fashion.
-    tensor::ExtractSliceOp candidateSliceOp = candidates.front();
-    candidates.pop_front();
-
-    // Find the original producer of the slice.
-    auto [fusableProducer, destinationInitArg] =
-        getUntiledProducerFromSliceSource(&candidateSliceOp.getSourceMutable(),
-                                          loops);
-    if (!fusableProducer)
-      continue;
-
-    auto [fuseSlice, yieldReplacement] = options.fusionControlFn(
-        candidateSliceOp, fusableProducer, destinationInitArg.has_value());
-    if (!fuseSlice)
-      continue;
+    WorklistItem worklistItem = worklist.front();
+    worklist.pop_front();
 
     // The operands of the fused producer might themselved be slices of
     // values produced by operations that implement the `TilingInterface`.
     // Add these operations to the worklist.
     std::optional<scf::SCFFuseProducerOfSliceResult> fusedResult =
-        tileAndFuseProducerOfSlice(rewriter, candidateSliceOp, loops);
+        tileAndFuseProducerOfSlice(rewriter, worklistItem.candidateSlice,
+                                   loops);
     if (!fusedResult)
       continue;
 
-    if (yieldReplacement) {
+    if (worklistItem.controlFnResult.yieldProducerReplacement) {
       // Reconstruct and yield all opResult of fusableProducerOp by default. The
       // caller can specific which one to yield by designating optional argument
       // named `yieldResultNumber` of `yieldReplacementForFusedProducer`.
-      Operation *fusableProducerOp = fusableProducer.getOwner();
-      if (failed(yieldReplacementForFusedProducer(
-              rewriter, candidateSliceOp, fusedResult.value(), loops))) {
+      Operation *fusableProducerOp = fusedResult->origProducer.getOwner();
+      FailureOr<SmallVector<Operation *>> newSlices =
+          yieldReplacementForFusedProducer(rewriter,
+                                           worklistItem.candidateSlice,
+                                           fusedResult.value(), loops);
+      if (failed(newSlices)) {
         return rewriter.notifyMatchFailure(
             fusableProducerOp, "failed to replacement value for this "
                                "operation from within the tiled loop");
       }
+      addCandidateSlices(newSlices.value());
       for (auto [index, result] :
            llvm::enumerate(fusableProducerOp->getResults())) {
         origValToResultNumber[result] = loops.front()->getNumResults() -
@@ -1411,12 +1429,11 @@ mlir::scf::tileConsumerAndFuseProducersUsingSCF(
                                         index;
       }
     }
-
+    addCandidateSlices(fusedResult->generatedSlices);
     if (Operation *tiledAndFusedOp =
             fusedResult->tiledAndFusedProducer.getDefiningOp()) {
       fusedProducers.insert(fusedResult->origProducer.getDefiningOp());
       tiledAndFusedOps.insert(tiledAndFusedOp);
-      addCandidateSlices(tiledAndFusedOp, candidates);
     }
   }
 
