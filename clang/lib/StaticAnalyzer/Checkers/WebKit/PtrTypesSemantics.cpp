@@ -53,7 +53,9 @@ hasPublicMethodInBase(const CXXBaseSpecifier *Base, const char *NameToMatch) {
   return hasPublicMethodInBaseClass(R, NameToMatch) ? R : nullptr;
 }
 
-std::optional<bool> isRefCountable(const CXXRecordDecl* R)
+std::optional<bool> isSmartPtrCompatible(const CXXRecordDecl *R,
+                                         const char *IncMethodName,
+                                         const char *DecMethodName)
 {
   assert(R);
 
@@ -61,8 +63,8 @@ std::optional<bool> isRefCountable(const CXXRecordDecl* R)
   if (!R)
     return std::nullopt;
 
-  bool hasRef = hasPublicMethodInBaseClass(R, "ref");
-  bool hasDeref = hasPublicMethodInBaseClass(R, "deref");
+  bool hasRef = hasPublicMethodInBaseClass(R, IncMethodName);
+  bool hasDeref = hasPublicMethodInBaseClass(R, DecMethodName);
   if (hasRef && hasDeref)
     return true;
 
@@ -71,8 +73,8 @@ std::optional<bool> isRefCountable(const CXXRecordDecl* R)
 
   bool AnyInconclusiveBase = false;
   const auto hasPublicRefInBase =
-      [&AnyInconclusiveBase](const CXXBaseSpecifier *Base, CXXBasePath &) {
-        auto hasRefInBase = clang::hasPublicMethodInBase(Base, "ref");
+      [&](const CXXBaseSpecifier *Base, CXXBasePath &) {
+        auto hasRefInBase = clang::hasPublicMethodInBase(Base, IncMethodName);
         if (!hasRefInBase) {
           AnyInconclusiveBase = true;
           return false;
@@ -87,8 +89,8 @@ std::optional<bool> isRefCountable(const CXXRecordDecl* R)
 
   Paths.clear();
   const auto hasPublicDerefInBase =
-      [&AnyInconclusiveBase](const CXXBaseSpecifier *Base, CXXBasePath &) {
-        auto hasDerefInBase = clang::hasPublicMethodInBase(Base, "deref");
+      [&](const CXXBaseSpecifier *Base, CXXBasePath &) {
+        auto hasDerefInBase = clang::hasPublicMethodInBase(Base, DecMethodName);
         if (!hasDerefInBase) {
           AnyInconclusiveBase = true;
           return false;
@@ -103,9 +105,21 @@ std::optional<bool> isRefCountable(const CXXRecordDecl* R)
   return hasRef && hasDeref;
 }
 
+std::optional<bool> isRefCountable(const clang::CXXRecordDecl *R) {
+  return isSmartPtrCompatible(R, "ref", "deref");
+}
+
+std::optional<bool> isCheckedPtrCapable(const clang::CXXRecordDecl *R) {
+  return isSmartPtrCompatible(R, "incrementPtrCount", "decrementPtrCount");
+}
+
 bool isRefType(const std::string &Name) {
   return Name == "Ref" || Name == "RefAllowingPartiallyDestroyed" ||
          Name == "RefPtr" || Name == "RefPtrAllowingPartiallyDestroyed";
+}
+
+bool isCheckedPtr(const std::string &Name) {
+  return Name == "CheckedPtr" || Name == "CheckedRef";
 }
 
 bool isCtorOfRefCounted(const clang::FunctionDecl *F) {
@@ -214,6 +228,15 @@ bool isRefCounted(const CXXRecordDecl *R) {
     // FIXME: String/AtomString/UniqueString
     const auto &ClassName = safeGetName(TmplR);
     return isRefType(ClassName);
+  }
+  return false;
+}
+
+bool isCheckedPtr(const CXXRecordDecl *R) {
+  assert(R);
+  if (auto *TmplR = R->getTemplateInstantiationPattern()) {
+    const auto &ClassName = safeGetName(TmplR);
+    return isCheckedPtr(ClassName);
   }
   return false;
 }
