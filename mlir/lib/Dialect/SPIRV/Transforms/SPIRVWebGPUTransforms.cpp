@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements SPIR-V transforms used when targetting WebGPU.
+// This file implements SPIR-V transforms used when targeting WebGPU.
 //
 //===----------------------------------------------------------------------===//
 

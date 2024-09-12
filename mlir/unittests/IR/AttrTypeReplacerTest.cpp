@@ -181,7 +181,8 @@ public:
   int invokeCount = 0;
 };
 
-TEST_F(CyclicAttrTypeReplacerBranchingRecursionPruningTest, testPruneAnywhere0) {
+TEST_F(CyclicAttrTypeReplacerBranchingRecursionPruningTest,
+       testPruneAnywhere0) {
   setBaseCase(std::nullopt);
 
   // No recursion case.
@@ -203,7 +204,8 @@ TEST_F(CyclicAttrTypeReplacerBranchingRecursionPruningTest, testPruneAnywhere0) 
   EXPECT_EQ(invokeCount, 2);
 }
 
-TEST_F(CyclicAttrTypeReplacerBranchingRecursionPruningTest, testPruneAnywhere1) {
+TEST_F(CyclicAttrTypeReplacerBranchingRecursionPruningTest,
+       testPruneAnywhere1) {
   setBaseCase(std::nullopt);
 
   // Starting at 1. Cycle length is 3.
@@ -212,7 +214,8 @@ TEST_F(CyclicAttrTypeReplacerBranchingRecursionPruningTest, testPruneAnywhere1) 
   EXPECT_EQ(invokeCount, 3);
 }
 
-TEST_F(CyclicAttrTypeReplacerBranchingRecursionPruningTest, testPruneSpecific0) {
+TEST_F(CyclicAttrTypeReplacerBranchingRecursionPruningTest,
+       testPruneSpecific0) {
   setBaseCase(0);
 
   // Starting at 0. Cycle length is 3.
@@ -221,7 +224,8 @@ TEST_F(CyclicAttrTypeReplacerBranchingRecursionPruningTest, testPruneSpecific0) 
   EXPECT_EQ(invokeCount, 3);
 }
 
-TEST_F(CyclicAttrTypeReplacerBranchingRecursionPruningTest, testPruneSpecific1) {
+TEST_F(CyclicAttrTypeReplacerBranchingRecursionPruningTest,
+       testPruneSpecific1) {
   setBaseCase(0);
 
   // Starting at 1. Cycle length is 5 (1 -> 2 -> 0 -> 1 -> 2 -> Prune).

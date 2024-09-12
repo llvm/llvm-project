@@ -434,7 +434,7 @@ private:
                                          const ods::Operation *odsOp,
                                          SmallVectorImpl<ast::Expr *> &results);
   void checkOperationResultTypeInference(SMRange loc, StringRef name,
-                                          const ods::Operation *odsOp);
+                                         const ods::Operation *odsOp);
   LogicalResult validateOperationOperandsOrResults(
       StringRef groupName, SMRange loc, std::optional<SMRange> odsOpLoc,
       std::optional<StringRef> name, SmallVectorImpl<ast::Expr *> &values,
@@ -2892,7 +2892,7 @@ Parser::validateOperationResults(SMRange loc, std::optional<StringRef> name,
 }
 
 void Parser::checkOperationResultTypeInference(SMRange loc, StringRef opName,
-                                                const ods::Operation *odsOp) {
+                                               const ods::Operation *odsOp) {
   // If the operation might not have inference support, emit a warning to the
   // user. We don't emit an error because the interface might be added to the
   // operation at runtime. It's rare, but it could still happen. We emit a

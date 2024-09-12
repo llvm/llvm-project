@@ -64,11 +64,11 @@ module.exports = {
                     // operation ::= `arith.divf` $lhs `,` $rhs (`fastmath` ``
                     // $fastmath^)?
                     //                attr-dict `:` type($result)
-                    // operation ::= `arith.maximumf` $lhs `,` $rhs (`fastmath` ``
-                    // $fastmath^)?
+                    // operation ::= `arith.maximumf` $lhs `,` $rhs (`fastmath`
+                    // `` $fastmath^)?
                     //                attr-dict `:` type($result)
-                    // operation ::= `arith.minimumf` $lhs `,` $rhs (`fastmath` ``
-                    // $fastmath^)?
+                    // operation ::= `arith.minimumf` $lhs `,` $rhs (`fastmath`
+                    // `` $fastmath^)?
                     //                attr-dict `:` type($result)
                     // operation ::= `arith.mulf` $lhs `,` $rhs (`fastmath` ``
                     // $fastmath^)?
