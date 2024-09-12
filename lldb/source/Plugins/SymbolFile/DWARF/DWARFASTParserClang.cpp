@@ -2943,7 +2943,8 @@ void DWARFASTParserClang::ParseSingleMember(
     }
 
     if (this_field_info.GetFieldEnd() <= last_field_info.GetEffectiveFieldEnd())
-      this_field_info.SetEffectiveFieldEnd(last_field_info.GetEffectiveFieldEnd());
+      this_field_info.SetEffectiveFieldEnd(
+          last_field_info.GetEffectiveFieldEnd());
 
     last_field_info = this_field_info;
   }
