@@ -65,18 +65,16 @@
 ; CHECK:    %[[#bb44:]] = OpLabel
 ; CHECK:                  OpSelectionMerge %[[#bb45:]] None
 ; CHECK:                  OpBranchConditional %[[#]] %[[#bb46:]] %[[#bb47:]]
-; CHECK:    %[[#bb47:]] = OpLabel
-; CHECK:                  OpBranch %[[#bb45:]]
-; CHECK:    %[[#bb45:]] = OpLabel
-; CHECK:                  OpReturnValue %[[#]]
 ; CHECK:    %[[#bb46:]] = OpLabel
 ; CHECK:                  OpSelectionMerge %[[#bb48:]] None
 ; CHECK:                  OpSwitch %[[#]] %[[#bb48:]] 1 %[[#bb49:]] 2 %[[#bb50:]] 5 %[[#bb51:]]
-; CHECK:    %[[#bb51:]] = OpLabel
+; CHECK:    %[[#bb47:]] = OpLabel
+; CHECK:                  OpBranch %[[#bb45:]]
+; CHECK:    %[[#bb49:]] = OpLabel
 ; CHECK:                  OpBranch %[[#bb48:]]
 ; CHECK:    %[[#bb50:]] = OpLabel
 ; CHECK:                  OpBranch %[[#bb48:]]
-; CHECK:    %[[#bb49:]] = OpLabel
+; CHECK:    %[[#bb51:]] = OpLabel
 ; CHECK:                  OpBranch %[[#bb48:]]
 ; CHECK:    %[[#bb48:]] = OpLabel
 ; CHECK:                  OpBranchConditional %[[#]] %[[#bb52:]] %[[#bb45:]]
@@ -98,6 +96,8 @@
 ; CHECK:                  OpBranchConditional %[[#]] %[[#bb59:]] %[[#bb45:]]
 ; CHECK:    %[[#bb59:]] = OpLabel
 ; CHECK:                  OpBranch %[[#bb45:]]
+; CHECK:    %[[#bb45:]] = OpLabel
+; CHECK:                  OpReturnValue %[[#]]
 ; CHECK:                  OpFunctionEnd
 ; CHECK: %[[#func_39:]] = OpFunction %[[#void:]] DontInline %[[#]]
 ; CHECK:    %[[#bb60:]] = OpLabel
@@ -107,8 +107,6 @@
 ; CHECK:    %[[#bb61:]] = OpLabel
 ; CHECK:                  OpReturn
 ; CHECK:                  OpFunctionEnd
-
-
 
 target datalayout = "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-G1"
 target triple = "spirv-unknown-vulkan1.3-compute"

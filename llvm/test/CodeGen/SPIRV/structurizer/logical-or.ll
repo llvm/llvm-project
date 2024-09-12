@@ -29,14 +29,34 @@ define internal spir_func void @main() #3 {
 ; CHECK:       %[[#tmp:]] = OpLoad %[[#type:]] %[[#var_a]] Aligned 4
 ; CHECK:      %[[#cond:]] = OpINotEqual %[[#bool]] %[[#tmp]] %[[#const:]]
 ; CHECK:                    OpSelectionMerge %[[#if_end:]] None
-; CHECK:                    OpBranchConditional %[[#true]] %[[#entry:]] %[[#dead:]]
+; CHECK:                    OpBranchConditional %[[#true]] %[[#cond1:]] %[[#dead:]]
+
+; CHECK:      %[[#cond1]] = OpLabel
+; CHECK:                    OpSelectionMerge %[[#new_exit:]] None
+; CHECK:                    OpBranchConditional %[[#cond]] %[[#new_exit]] %[[#lor_lhs_false:]]
 
 ; CHECK:       %[[#dead]] = OpLabel
 ; CHECK-NEXT:               OpUnreachable
 
-; CHECK:       %[[#entry]] = OpLabel
-; CHECK:                     OpSelectionMerge %[[#new_exit:]] None
-; CHECK:                     OpBranchConditional %[[#cond]] %[[#if_then:]] %[[#lor_lhs_false:]]
+; CHECK:  %[[#lor_lhs_false]] = OpLabel
+; CHECK:           %[[#tmp:]] = OpLoad %[[#type:]] %[[#var_b]] Aligned 4
+; CHECK:          %[[#cond:]] = OpINotEqual %[[#bool]] %[[#tmp]] %[[#value:]]
+; CHECK:                        OpBranchConditional %[[#cond]] %[[#new_exit]] %[[#alias_exit:]]
+
+; CHECK: %[[#alias_exit]] = OpLabel
+; CHECK:                    OpBranch %[[#new_exit]]
+
+; CHECK:   %[[#new_exit]] = OpLabel
+; CHECK:       %[[#tmp:]] = OpPhi %[[#type:]] %[[#A:]] %[[#cond1]] %[[#A:]] %[[#lor_lhs_false]] %[[#B:]] %[[#alias_exit]]
+; CHECK:      %[[#cond:]] = OpIEqual %[[#bool]] %[[#A]] %[[#tmp]]
+; CHECK:                    OpBranchConditional %[[#cond]] %[[#if_then:]] %[[#if_end]]
+
+; CHECK:    %[[#if_then]] = OpLabel
+; CHECK:                    OpBranch %[[#if_end]]
+
+; CHECK:     %[[#if_end]] = OpLabel
+; CHECK:                    OpReturn
+
 entry:
   %0 = call token @llvm.experimental.convergence.entry()
   %a = alloca i32, align 4
@@ -47,37 +67,19 @@ entry:
   %tobool = icmp ne i32 %1, 0
   br i1 %tobool, label %if.then, label %lor.lhs.false
 
-
-; CHECK:  %[[#lor_lhs_false]] = OpLabel
-; CHECK:           %[[#tmp:]] = OpLoad %[[#type:]] %[[#var_b]] Aligned 4
-; CHECK:          %[[#cond:]] = OpINotEqual %[[#bool]] %[[#tmp]] %[[#value:]]
-; CHECK:                        OpBranchConditional %[[#cond]] %[[#new_exit]] %[[#alias_exit:]]
-
 lor.lhs.false:
   %2 = load i32, ptr %b, align 4
   %tobool1 = icmp ne i32 %2, 0
   br i1 %tobool1, label %if.then, label %if.end
 
-; CHECK: %[[#alias_exit]] = OpLabel
-; CHECK:                    OpBranch %[[#new_exit]]
-
-; CHECK: %[[#new_exit]] = OpLabel
-; CHECK:      %[[#tmp:]] = OpPhi %[[#type:]] %[[#A:]] %[[#entry]] %[[#A:]] %[[#lor_lhs_false]] %[[#B:]] %[[#alias_exit]]
-; CHECK:     %[[#cond:]] = OpIEqual %[[#bool]] %[[#A]] %[[#tmp]]
-; CHECK:                  OpBranchConditional %[[#cond]] %[[#if_then:]] %[[#if_end:]]
-
-; CHECK: %[[#if_end]] = OpLabel
-; CHECK:                OpReturn
-if.end:
-  ret void
-
-; CHECK: %[[#if_then]] = OpLabel
-; CHECK:                 OpBranch %[[#if_end]]
 if.then:
   %8 = load i32, ptr %val, align 4
   %inc = add nsw i32 %8, 1
   store i32 %inc, ptr %val, align 4
   br label %if.end
+
+if.end:
+  ret void
 }
 
 declare token @llvm.experimental.convergence.entry() #2

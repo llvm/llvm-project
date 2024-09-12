@@ -35,29 +35,29 @@
 ; CHECK:    %[[#bb30:]] = OpLabel
 ; CHECK:                  OpSelectionMerge %[[#bb31:]] None
 ; CHECK:                  OpBranchConditional %[[#]] %[[#bb32:]] %[[#bb33:]]
-; CHECK:    %[[#bb33:]] = OpLabel
+; CHECK:    %[[#bb32:]] = OpLabel
 ; CHECK:                  OpSelectionMerge %[[#bb34:]] None
-; CHECK:                  OpBranchConditional %[[#]] %[[#bb35:]] %[[#bb36:]]
-; CHECK:    %[[#bb36:]] = OpLabel
-; CHECK:                  OpSelectionMerge %[[#bb37:]] None
-; CHECK:                  OpBranchConditional %[[#]] %[[#bb38:]] %[[#bb37:]]
-; CHECK:    %[[#bb37:]] = OpLabel
-; CHECK:                  OpBranch %[[#bb34:]]
-; CHECK:    %[[#bb34:]] = OpLabel
-; CHECK:                  OpBranch %[[#bb31:]]
-; CHECK:    %[[#bb31:]] = OpLabel
-; CHECK:                  OpReturnValue %[[#]]
-; CHECK:    %[[#bb38:]] = OpLabel
-; CHECK:                  OpBranch %[[#bb37:]]
+; CHECK:                  OpBranchConditional %[[#]] %[[#bb35:]] %[[#bb34:]]
+; CHECK:    %[[#bb33:]] = OpLabel
+; CHECK:                  OpSelectionMerge %[[#bb36:]] None
+; CHECK:                  OpBranchConditional %[[#]] %[[#bb37:]] %[[#bb38:]]
 ; CHECK:    %[[#bb35:]] = OpLabel
 ; CHECK:                  OpBranch %[[#bb34:]]
-; CHECK:    %[[#bb32:]] = OpLabel
+; CHECK:    %[[#bb37:]] = OpLabel
+; CHECK:                  OpBranch %[[#bb36:]]
+; CHECK:    %[[#bb38:]] = OpLabel
 ; CHECK:                  OpSelectionMerge %[[#bb39:]] None
 ; CHECK:                  OpBranchConditional %[[#]] %[[#bb40:]] %[[#bb39:]]
-; CHECK:    %[[#bb39:]] = OpLabel
+; CHECK:    %[[#bb34:]] = OpLabel
 ; CHECK:                  OpBranch %[[#bb31:]]
 ; CHECK:    %[[#bb40:]] = OpLabel
 ; CHECK:                  OpBranch %[[#bb39:]]
+; CHECK:    %[[#bb39:]] = OpLabel
+; CHECK:                  OpBranch %[[#bb36:]]
+; CHECK:    %[[#bb36:]] = OpLabel
+; CHECK:                  OpBranch %[[#bb31:]]
+; CHECK:    %[[#bb31:]] = OpLabel
+; CHECK:                  OpReturnValue %[[#]]
 ; CHECK:                  OpFunctionEnd
 ; CHECK: %[[#func_26:]] = OpFunction %[[#void:]] DontInline %[[#]]
 ; CHECK:    %[[#bb41:]] = OpLabel
@@ -67,8 +67,6 @@
 ; CHECK:    %[[#bb42:]] = OpLabel
 ; CHECK:                  OpReturn
 ; CHECK:                  OpFunctionEnd
-
-
 
 target datalayout = "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-G1"
 target triple = "spirv-unknown-vulkan1.3-compute"

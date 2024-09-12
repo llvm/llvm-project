@@ -31,18 +31,11 @@ entry:
 ; CHECK:                      OpLoopMerge %[[#new_end:]] %[[#if_end:]] None
 ; CHECK:                      OpBranchConditional %[[#cmp]] %[[#while_body:]] %[[#new_end]]
 
-; CHECK:   %[[#new_end]] = OpLabel
-; CHECK:                   OpBranch %[[#while_end:]]
 while.cond:
   %1 = call token @llvm.experimental.convergence.loop() [ "convergencectrl"(token %0) ]
   %2 = load i32, ptr %idx, align 4
   %cmp = icmp ne i32 %2, 10
   br i1 %cmp, label %while.body, label %while.end
-
-; CHECK:   %[[#while_end]] = OpLabel
-; CHECK:                     OpReturn
-while.end:
-  ret void
 
 ; CHECK:   %[[#while_body]] = OpLabel
 ; CHECK-NEXT:    %[[#tmp:]] = OpLoad %[[#int_ty]] %[[#builtin]] Aligned 1
@@ -57,13 +50,21 @@ while.body:
   %cmp1 = icmp eq i32 %4, 0
   br i1 %cmp1, label %if.then, label %if.end
 
+; CHECK:   %[[#new_end]] = OpLabel
+; CHECK:                   OpBranch %[[#while_end:]]
+
+if.then:
+  br label %while.end
+
 ; CHECK:   %[[#if_end]] = OpLabel
 ; CHECK:                  OpBranch %[[#while_cond]]
 if.end:
   br label %while.cond
 
-if.then:
-  br label %while.end
+; CHECK:   %[[#while_end]] = OpLabel
+; CHECK:                     OpReturn
+while.end:
+  ret void
 }
 
 declare token @llvm.experimental.convergence.entry() #2

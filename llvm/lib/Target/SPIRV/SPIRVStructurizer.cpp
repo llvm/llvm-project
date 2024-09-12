@@ -71,9 +71,18 @@ using Edge = std::pair<BasicBlock *, BasicBlock *>;
 class PartialOrderingVisitor {
   DomTreeBuilder::BBDomTree DT;
   LoopInfo LI;
-  BlockSet Visited;
-  std::unordered_map<BasicBlock *, size_t> B2R;
-  std::vector<std::pair<BasicBlock *, size_t>> Order;
+  BlockSet Visited = {};
+
+  struct OrderInfo {
+    size_t Rank;
+    size_t TraversalIndex;
+  };
+
+  using BlockToOrderInfoMap = std::unordered_map<BasicBlock *, OrderInfo>;
+  BlockToOrderInfoMap BlockToOrder;
+
+  // std::unordered_map<BasicBlock *, std::pair<size_t, size_t>> B2R = {};
+  std::vector<BasicBlock *> Order = {};
 
   // Get all basic-blocks reachable from Start.
   BlockSet getReachableFrom(BasicBlock *Start) {
@@ -106,10 +115,11 @@ class PartialOrderingVisitor {
     Loop *L = LI.getLoopFor(BB);
     const bool isLoopHeader = LI.isLoopHeader(BB);
 
-    if (B2R.count(BB) == 0) {
-      B2R.emplace(BB, Rank);
+    if (BlockToOrder.count(BB) == 0) {
+      OrderInfo Info = {Rank, Visited.size()};
+      BlockToOrder.emplace(BB, Info);
     } else {
-      B2R[BB] = std::max(B2R[BB], Rank);
+      BlockToOrder[BB].Rank = std::max(BlockToOrder[BB].Rank, Rank);
     }
 
     for (BasicBlock *Predecessor : predecessors(BB)) {
@@ -117,7 +127,7 @@ class PartialOrderingVisitor {
         continue;
       }
 
-      if (B2R.count(Predecessor) == 0) {
+      if (BlockToOrder.count(Predecessor) == 0) {
         return Rank;
       }
     }
@@ -155,45 +165,56 @@ public:
 
     visit(&*F.begin(), 0);
 
-    for (auto &[BB, Rank] : B2R)
-      Order.emplace_back(BB, Rank);
+    Order.reserve(F.size());
+    for (auto &[BB, Info] : BlockToOrder)
+      Order.emplace_back(BB);
 
-    std::sort(Order.begin(), Order.end(), [](const auto &LHS, const auto &RHS) {
-      return LHS.second < RHS.second;
-    });
-
-    for (size_t i = 0; i < Order.size(); i++)
-      B2R[Order[i].first] = i;
+    std::sort(
+        Order.begin(), Order.end(),
+        [&](const auto &LHS, const auto &RHS) { return compare(LHS, RHS); });
   }
 
-  size_t getRank(BasicBlock *BB) {
-    return B2R[BB];
+  bool compare(const BasicBlock *LHS, const BasicBlock *RHS) const {
+    const OrderInfo &InfoLHS = BlockToOrder.at(const_cast<BasicBlock *>(LHS));
+    const OrderInfo &InfoRHS = BlockToOrder.at(const_cast<BasicBlock *>(RHS));
+    if (InfoLHS.Rank != InfoRHS.Rank)
+      return InfoLHS.Rank < InfoRHS.Rank;
+    return InfoLHS.TraversalIndex < InfoRHS.TraversalIndex;
   }
 
   // Visit the function starting from the basic block |Start|, and calling |Op|
   // on each visited BB. This traversal ignores back-edges, meaning this won't
   // visit a node to which |Start| is not an ancestor.
+  // If Op returns |true|, the visitor continues. If |Op| returns false, the
+  // visitor will stop at that rank. This means if 2 nodes share the same rank,
+  // and Op returns false when visiting the first, the second will be visited
+  // afterwards. But none of their successors will.
   void partialOrderVisit(BasicBlock &Start,
                          std::function<bool(BasicBlock *)> Op) {
     BlockSet Reachable = getReachableFrom(&Start);
-    assert(B2R.count(&Start) != 0);
-    size_t Rank = Order[B2R[&Start]].second;
+    assert(BlockToOrder.count(&Start) != 0);
 
+    // Skipping blocks with a rank inferior to |Start|'s rank.
     auto It = Order.begin();
-    while (It != Order.end() && It->second < Rank)
+    while (It != Order.end() && *It != &Start)
       ++It;
 
-    if (It == Order.end())
-      return;
+    // This is unexpected. Worst case |Start| is the last block,
+    // so It should point to the last block, not past-end.
+    assert(It != Order.end());
 
-    size_t EndRank = Order.rbegin()->second + 1;
-    for (; It != Order.end() && It->second <= EndRank; ++It) {
-      if (Reachable.count(It->first) == 0) {
+    // By default, there is no rank limit. Setting it to the maximum value.
+    std::optional<size_t> EndRank = std::nullopt;
+    for (; It != Order.end(); ++It) {
+      if (EndRank.has_value() && BlockToOrder[*It].Rank > *EndRank)
+        break;
+
+      if (Reachable.count(*It) == 0) {
         continue;
       }
 
-      if (!Op(It->first)) {
-        EndRank = It->second;
+      if (!Op(*It)) {
+        EndRank = BlockToOrder[*It].Rank;
       }
     }
   }
@@ -641,7 +662,6 @@ class SPIRVStructurizer : public FunctionPass {
       auto NewExit = BasicBlock::Create(F.getContext(), "new.exit", &F);
       IRBuilder<> ExitBuilder(NewExit);
 
-      BlockSet SeenDst;
       std::vector<BasicBlock *> Dsts;
       std::unordered_map<BasicBlock *, ConstantInt *> DstToIndex;
 
@@ -846,10 +866,10 @@ class SPIRVStructurizer : public FunctionPass {
     std::sort(MergeInstructions.begin(), MergeInstructions.end(),
               [&Visitor](Instruction *Left, Instruction *Right) {
                 if (Left == Right)
-                  return true;
+                  return false;
                 BasicBlock *RightMerge = getDesignatedMergeBlock(Right);
                 BasicBlock *LeftMerge = getDesignatedMergeBlock(Left);
-                return Visitor.getRank(RightMerge) >= Visitor.getRank(LeftMerge);
+                return !Visitor.compare(RightMerge, LeftMerge);
               });
 
     for (Instruction *I : MergeInstructions) {
@@ -1041,8 +1061,6 @@ class SPIRVStructurizer : public FunctionPass {
     assert(Node->Parent->Header && Node->Parent->Merge);
 
     BlockSet ConstructBlocks = getConstructBlocks(S, Node);
-    BlockSet ParentBlocks = getConstructBlocks(S, Node->Parent);
-
     auto Edges = getExitsFrom(ConstructBlocks, *Node->Header);
 
     //  No edges exiting the construct.
@@ -1300,6 +1318,44 @@ class SPIRVStructurizer : public FunctionPass {
     return Modified;
   }
 
+  // Sort blocks in a partial ordering, so each block is after all its
+  // dominators. This should match both the SPIR-V and the MIR requirements.
+  bool sortBlocks(Function &F) {
+    if (F.size() == 0)
+      return false;
+
+    bool Modified = false;
+
+    std::vector<BasicBlock *> Order;
+    Order.reserve(F.size());
+
+    PartialOrderingVisitor Visitor(F);
+    Visitor.partialOrderVisit(*F.begin(), [&Order](BasicBlock *Block) {
+      Order.push_back(Block);
+      return true;
+    });
+
+    assert(&*F.begin() == Order[0]);
+    BasicBlock *LastBlock = &*F.begin();
+    for (BasicBlock *BB : Order) {
+      if (BB != LastBlock && &*LastBlock->getNextNode() != BB) {
+        Modified = true;
+        BB->moveAfter(LastBlock);
+      }
+      LastBlock = BB;
+    }
+#if 0
+    for (auto It = Order.begin() + 1; It != Order.end(); ++It) {
+      if (*It != &*LastBlock->getNextNode()) {
+        Modified = true;
+        (*It)->moveAfter(LastBlock);
+      }
+      LastBlock = *It;
+    }
+#endif
+    return Modified;
+  }
+
 public:
   static char ID;
 
@@ -1366,6 +1422,9 @@ public:
     // blocks are branching with no header. Those are often simple conditional
     // branches with 1 or 2 returning edges. Adding a header for those.
     Modified |= addHeaderToRemainingDivergentDAG(F);
+
+    // STEP 9: sort basic blocks to match both the LLVM & SPIR-V requirements.
+    Modified |= sortBlocks(F);
 
     return Modified;
   }

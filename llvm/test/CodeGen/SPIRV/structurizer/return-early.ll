@@ -1,5 +1,5 @@
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-vulkan-compute %s -o - -filetype=obj | spirv-val %}
 ; RUN: llc -mtriple=spirv-unknown-vulkan-compute -O0 %s -o - | FileCheck %s --match-full-lines
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-vulkan-compute %s -o - -filetype=obj | spirv-val %}
 
 target datalayout = "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-G1"
 target triple = "spirv-unknown-vulkan1.3-compute"
@@ -25,11 +25,6 @@ while.cond:
   %tobool = icmp ne i32 %2, 0
   br i1 %tobool, label %while.body, label %while.end
 
-; CHECK: %[[#while_end]] = OpLabel
-; CHECK:                   OpReturn
-while.end:
-  ret void
-
 ; CHECK: %[[#while_body]] = OpLabel
 ; CHECK:                    OpSelectionMerge %[[#switch_end:]] None
 ; CHECK:                    OpSwitch %[[#cond:]] %[[#switch_end]] 1 %[[#case_1:]] 2 %[[#case_2:]] 5 %[[#case_5:]]
@@ -41,10 +36,10 @@ while.body:
     i32 5, label %sw.bb2
   ]
 
-; CHECK: %[[#case_5]] = OpLabel
+; CHECK: %[[#case_1]] = OpLabel
 ; CHECK:                OpBranch %[[#switch_end]]
-sw.bb2:
-  store i32 5, ptr %a, align 4
+sw.bb:
+  store i32 1, ptr %a, align 4
   br label %while.end
 
 ; CHECK: %[[#case_2]] = OpLabel
@@ -53,10 +48,10 @@ sw.bb1:
   store i32 3, ptr %a, align 4
   br label %while.end
 
-; CHECK: %[[#case_1]] = OpLabel
+; CHECK: %[[#case_5]] = OpLabel
 ; CHECK:                OpBranch %[[#switch_end]]
-sw.bb:
-  store i32 1, ptr %a, align 4
+sw.bb2:
+  store i32 5, ptr %a, align 4
   br label %while.end
 
 ; CHECK: %[[#switch_end]] = OpLabel
@@ -90,7 +85,6 @@ for.end:
 ; CHECK:      %[[#tmp:]] = OpIEqual %[[#type:]] %[[#A]] %[[#phi]]
 ; CHECK:                   OpBranchConditional %[[#tmp]] %[[#for_body:]] %[[#while_end]]
 
-
 ; CHECK: %[[#for_body]] = OpLabel
 ; CHECK:                  OpSelectionMerge %[[#if_merge:]] None
 ; CHECK:                  OpBranchConditional %[[#cond:]] %[[#if_merge]] %[[#if_else:]]
@@ -109,6 +103,11 @@ if.else:
 if.then:
   br label %while.end
 
+; CHECK: %[[#while_end]] = OpLabel
+; CHECK:                   OpReturn
+while.end:
+  ret void
+
 ; CHECK-NOT: %[[#for_inc:]] = OpLabel
 ; This block is not emitted since it's unreachable.
 for.inc:
@@ -116,6 +115,7 @@ for.inc:
   %inc = add nsw i32 %7, 1
   store i32 %inc, ptr %i, align 4
   br label %for.cond
+
 }
 
 declare token @llvm.experimental.convergence.entry() #1

@@ -30,22 +30,22 @@
 ; CHECK:    %[[#bb25:]] = OpLabel
 ; CHECK:                  OpSelectionMerge %[[#bb26:]] None
 ; CHECK:                  OpBranchConditional %[[#]] %[[#bb27:]] %[[#bb28:]]
-; CHECK:    %[[#bb28:]] = OpLabel
 ; CHECK:    %[[#bb27:]] = OpLabel
 ; CHECK:                  OpSelectionMerge %[[#bb29:]] None
 ; CHECK:                  OpSwitch %[[#]] %[[#bb30:]] 50 %[[#bb31:]] 4 %[[#bb29:]] 5 %[[#bb32:]]
+; CHECK:    %[[#bb28:]] = OpLabel
+; CHECK:    %[[#bb30:]] = OpLabel
+; CHECK:                  OpBranch %[[#bb29:]]
+; CHECK:    %[[#bb31:]] = OpLabel
+; CHECK:                  OpBranch %[[#bb29:]]
 ; CHECK:    %[[#bb32:]] = OpLabel
 ; CHECK:                  OpBranch %[[#bb29:]]
 ; CHECK:    %[[#bb29:]] = OpLabel
 ; CHECK:                  OpBranchConditional %[[#]] %[[#bb33:]] %[[#bb26:]]
-; CHECK:    %[[#bb26:]] = OpLabel
-; CHECK:                  OpReturnValue %[[#]]
 ; CHECK:    %[[#bb33:]] = OpLabel
 ; CHECK:                  OpBranch %[[#bb26:]]
-; CHECK:    %[[#bb31:]] = OpLabel
-; CHECK:                  OpBranch %[[#bb29:]]
-; CHECK:    %[[#bb30:]] = OpLabel
-; CHECK:                  OpBranch %[[#bb29:]]
+; CHECK:    %[[#bb26:]] = OpLabel
+; CHECK:                  OpReturnValue %[[#]]
 ; CHECK:                  OpFunctionEnd
 ; CHECK: %[[#func_21:]] = OpFunction %[[#void:]] DontInline %[[#]]
 ; CHECK:    %[[#bb34:]] = OpLabel

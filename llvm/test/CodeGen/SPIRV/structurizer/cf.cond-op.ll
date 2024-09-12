@@ -1,5 +1,5 @@
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-vulkan-compute %s -o - -filetype=obj | spirv-val %}
 ; RUN: llc -mtriple=spirv-unknown-vulkan-compute -O0 %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-vulkan-compute %s -o - -filetype=obj | spirv-val %}
 
 target datalayout = "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-G1"
 target triple = "spirv-unknown-vulkan1.3-compute"
@@ -67,21 +67,35 @@ entry:
   ; CHECK:                     OpSelectionMerge %[[#cond_end:]]
   ; CHECK:                     OpBranchConditional %[[#cond]] %[[#cond_true:]] %[[#cond_false:]]
 
+cond.true:                                        ; preds = %entry
+  %2 = load i32, ptr %b, align 4
+  br label %cond.end
+  ; CHECK: %[[#cond_true]] = OpLabel
+  ; CHECK:                   OpBranch %[[#cond_end]]
+
 cond.false:                                       ; preds = %entry
-  %2 = load i32, ptr %c, align 4
+  %3 = load i32, ptr %c, align 4
   br label %cond.end
   ; CHECK: %[[#cond_false]] = OpLabel
   ; CHECK:    %[[#load_c:]] = OpLoad %[[#]] %[[#c]]
   ; CHECK:                    OpBranch %[[#cond_end]]
 
 cond.end:                                         ; preds = %cond.false, %cond.true
-  %cond = phi i32 [ %6, %cond.true ], [ %2, %cond.false ]
+  %cond = phi i32 [ %2, %cond.true ], [ %3, %cond.false ]
   %tobool1 = icmp ne i32 %cond, 0
   br i1 %tobool1, label %if.then, label %if.end
   ; CHECK: %[[#cond_end]] = OpLabel
   ; CHECK:     %[[#tmp:]] = OpPhi %[[#int_ty]] %[[#load_b:]] %[[#cond_true]] %[[#load_c]] %[[#cond_false]]
   ; CHECK:                  OpSelectionMerge %[[#if_end:]]
   ; CHECK:                  OpBranchConditional %[[#]] %[[#if_then:]] %[[#if_end]]
+
+if.then:                                          ; preds = %cond.end
+  %4 = load i32, ptr %val, align 4
+  %inc = add nsw i32 %4, 1
+  store i32 %inc, ptr %val, align 4
+  br label %if.end
+  ; CHECK: %[[#if_then]] = OpLabel
+  ; CHECK:                 OpBranch %[[#if_end]]
 
 if.end:                                           ; preds = %if.then, %cond.end
   %call2 = call spir_func noundef i32 @_Z2fnv() #4 [ "convergencectrl"(token %0) ]
@@ -90,6 +104,12 @@ if.end:                                           ; preds = %if.then, %cond.end
   ; CHECK: %[[#if_end]] = OpLabel
   ; CHECK:                OpSelectionMerge %[[#cond_end8:]]
   ; CHECK:                OpBranchConditional %[[#]] %[[#cond_true4:]] %[[#cond_false6:]]
+
+cond.true4:                                       ; preds = %if.end
+  %call5 = call spir_func noundef i32 @_Z3fn1v() #4 [ "convergencectrl"(token %0) ]
+  br label %cond.end8
+  ; CHECK: %[[#cond_true4]] = OpLabel
+  ; CHECK:                   OpBranch %[[#cond_end8]]
 
 cond.false6:                                      ; preds = %if.end
   %call7 = call spir_func noundef i32 @_Z3fn2v() #4 [ "convergencectrl"(token %0) ]
@@ -105,39 +125,19 @@ cond.end8:                                        ; preds = %cond.false6, %cond.
   ; CHECK:                   OpSelectionMerge %[[#if_end13:]]
   ; CHECK:                   OpBranchConditional %[[#]] %[[#if_then11:]] %[[#if_end13]]
 
-if.end13:                                         ; preds = %if.then11, %cond.end8
-  %3 = load i32, ptr %val, align 4
-  ret i32 %3
-  ; CHECK: %[[#if_end13]] = OpLabel
-  ; CHECK:                  OpReturnValue
-
 if.then11:                                        ; preds = %cond.end8
-  %4 = load i32, ptr %val, align 4
-  %inc12 = add nsw i32 %4, 1
+  %5 = load i32, ptr %val, align 4
+  %inc12 = add nsw i32 %5, 1
   store i32 %inc12, ptr %val, align 4
   br label %if.end13
   ; CHECK: %[[#if_then11]] = OpLabel
   ; CHECK:                   OpBranch %[[#if_end13]]
 
-cond.true4:                                       ; preds = %if.end
-  %call5 = call spir_func noundef i32 @_Z3fn1v() #4 [ "convergencectrl"(token %0) ]
-  br label %cond.end8
-  ; CHECK: %[[#cond_true4]] = OpLabel
-  ; CHECK:                   OpBranch %[[#cond_end8]]
-
-if.then:                                          ; preds = %cond.end
-  %5 = load i32, ptr %val, align 4
-  %inc = add nsw i32 %5, 1
-  store i32 %inc, ptr %val, align 4
-  br label %if.end
-  ; CHECK: %[[#if_then]] = OpLabel
-  ; CHECK:                 OpBranch %[[#if_end]]
-
-cond.true:                                        ; preds = %entry
-  %6 = load i32, ptr %b, align 4
-  br label %cond.end
-  ; CHECK: %[[#cond_true]] = OpLabel
-  ; CHECK:                   OpBranch %[[#cond_end]]
+if.end13:                                         ; preds = %if.then11, %cond.end8
+  %6 = load i32, ptr %val, align 4
+  ret i32 %6
+  ; CHECK: %[[#if_end13]] = OpLabel
+  ; CHECK:                  OpReturnValue
 }
 
 ; Function Attrs: convergent noinline norecurse nounwind optnone

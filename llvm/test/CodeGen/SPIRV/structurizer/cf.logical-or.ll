@@ -33,65 +33,65 @@
 ; CHECK:    %[[#bb53:]] = OpLabel
 ; CHECK:                  OpSelectionMerge %[[#bb54:]] None
 ; CHECK:                  OpBranchConditional %[[#]] %[[#bb55:]] %[[#bb56:]]
-; CHECK:    %[[#bb56:]] = OpLabel
 ; CHECK:    %[[#bb55:]] = OpLabel
 ; CHECK:                  OpSelectionMerge %[[#bb57:]] None
 ; CHECK:                  OpBranchConditional %[[#]] %[[#bb57:]] %[[#bb58:]]
+; CHECK:    %[[#bb56:]] = OpLabel
 ; CHECK:    %[[#bb58:]] = OpLabel
 ; CHECK:                  OpBranchConditional %[[#]] %[[#bb57:]] %[[#bb59:]]
 ; CHECK:    %[[#bb59:]] = OpLabel
 ; CHECK:                  OpBranch %[[#bb57:]]
 ; CHECK:    %[[#bb57:]] = OpLabel
 ; CHECK:                  OpBranchConditional %[[#]] %[[#bb60:]] %[[#bb54:]]
+; CHECK:    %[[#bb60:]] = OpLabel
+; CHECK:                  OpBranch %[[#bb54:]]
 ; CHECK:    %[[#bb54:]] = OpLabel
 ; CHECK:                  OpSelectionMerge %[[#bb61:]] None
 ; CHECK:                  OpBranchConditional %[[#]] %[[#bb62:]] %[[#bb63:]]
-; CHECK:    %[[#bb63:]] = OpLabel
 ; CHECK:    %[[#bb62:]] = OpLabel
 ; CHECK:                  OpSelectionMerge %[[#bb64:]] None
 ; CHECK:                  OpBranchConditional %[[#]] %[[#bb64:]] %[[#bb65:]]
+; CHECK:    %[[#bb63:]] = OpLabel
 ; CHECK:    %[[#bb65:]] = OpLabel
 ; CHECK:                  OpBranchConditional %[[#]] %[[#bb64:]] %[[#bb66:]]
 ; CHECK:    %[[#bb66:]] = OpLabel
 ; CHECK:                  OpBranch %[[#bb64:]]
 ; CHECK:    %[[#bb64:]] = OpLabel
 ; CHECK:                  OpBranchConditional %[[#]] %[[#bb67:]] %[[#bb61:]]
+; CHECK:    %[[#bb67:]] = OpLabel
+; CHECK:                  OpBranch %[[#bb61:]]
 ; CHECK:    %[[#bb61:]] = OpLabel
 ; CHECK:                  OpSelectionMerge %[[#bb68:]] None
 ; CHECK:                  OpBranchConditional %[[#]] %[[#bb69:]] %[[#bb70:]]
-; CHECK:    %[[#bb70:]] = OpLabel
 ; CHECK:    %[[#bb69:]] = OpLabel
 ; CHECK:                  OpSelectionMerge %[[#bb71:]] None
 ; CHECK:                  OpBranchConditional %[[#]] %[[#bb71:]] %[[#bb72:]]
+; CHECK:    %[[#bb70:]] = OpLabel
 ; CHECK:    %[[#bb72:]] = OpLabel
 ; CHECK:                  OpBranchConditional %[[#]] %[[#bb71:]] %[[#bb73:]]
 ; CHECK:    %[[#bb73:]] = OpLabel
 ; CHECK:                  OpBranch %[[#bb71:]]
 ; CHECK:    %[[#bb71:]] = OpLabel
 ; CHECK:                  OpBranchConditional %[[#]] %[[#bb74:]] %[[#bb68:]]
+; CHECK:    %[[#bb74:]] = OpLabel
+; CHECK:                  OpBranch %[[#bb68:]]
 ; CHECK:    %[[#bb68:]] = OpLabel
 ; CHECK:                  OpSelectionMerge %[[#bb75:]] None
 ; CHECK:                  OpBranchConditional %[[#]] %[[#bb76:]] %[[#bb77:]]
-; CHECK:    %[[#bb77:]] = OpLabel
 ; CHECK:    %[[#bb76:]] = OpLabel
 ; CHECK:                  OpSelectionMerge %[[#bb78:]] None
 ; CHECK:                  OpBranchConditional %[[#]] %[[#bb78:]] %[[#bb79:]]
+; CHECK:    %[[#bb77:]] = OpLabel
 ; CHECK:    %[[#bb79:]] = OpLabel
 ; CHECK:                  OpBranchConditional %[[#]] %[[#bb78:]] %[[#bb80:]]
 ; CHECK:    %[[#bb80:]] = OpLabel
 ; CHECK:                  OpBranch %[[#bb78:]]
 ; CHECK:    %[[#bb78:]] = OpLabel
 ; CHECK:                  OpBranchConditional %[[#]] %[[#bb81:]] %[[#bb75:]]
-; CHECK:    %[[#bb75:]] = OpLabel
-; CHECK:                  OpReturnValue %[[#]]
 ; CHECK:    %[[#bb81:]] = OpLabel
 ; CHECK:                  OpBranch %[[#bb75:]]
-; CHECK:    %[[#bb74:]] = OpLabel
-; CHECK:                  OpBranch %[[#bb68:]]
-; CHECK:    %[[#bb67:]] = OpLabel
-; CHECK:                  OpBranch %[[#bb61:]]
-; CHECK:    %[[#bb60:]] = OpLabel
-; CHECK:                  OpBranch %[[#bb54:]]
+; CHECK:    %[[#bb75:]] = OpLabel
+; CHECK:                  OpReturnValue %[[#]]
 ; CHECK:                  OpFunctionEnd
 ; CHECK: %[[#func_48:]] = OpFunction %[[#void:]] DontInline %[[#]]
 ; CHECK:    %[[#bb82:]] = OpLabel
@@ -101,8 +101,6 @@
 ; CHECK:    %[[#bb83:]] = OpLabel
 ; CHECK:                  OpReturn
 ; CHECK:                  OpFunctionEnd
-
-
 
 target datalayout = "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-G1"
 target triple = "spirv-unknown-vulkan1.3-compute"

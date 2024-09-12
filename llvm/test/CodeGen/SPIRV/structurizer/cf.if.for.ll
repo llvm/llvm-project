@@ -51,59 +51,59 @@
 ; CHECK:    %[[#bb65:]] = OpLabel
 ; CHECK:                  OpSelectionMerge %[[#bb66:]] None
 ; CHECK:                  OpBranchConditional %[[#]] %[[#bb67:]] %[[#bb66:]]
+; CHECK:    %[[#bb67:]] = OpLabel
+; CHECK:                  OpBranch %[[#bb66:]]
 ; CHECK:    %[[#bb66:]] = OpLabel
 ; CHECK:                  OpBranch %[[#bb68:]]
 ; CHECK:    %[[#bb68:]] = OpLabel
 ; CHECK:                  OpLoopMerge %[[#bb69:]] %[[#bb70:]] None
 ; CHECK:                  OpBranchConditional %[[#]] %[[#bb71:]] %[[#bb69:]]
-; CHECK:    %[[#bb69:]] = OpLabel
+; CHECK:    %[[#bb71:]] = OpLabel
 ; CHECK:                  OpSelectionMerge %[[#bb72:]] None
 ; CHECK:                  OpBranchConditional %[[#]] %[[#bb73:]] %[[#bb72:]]
-; CHECK:    %[[#bb72:]] = OpLabel
-; CHECK:                  OpReturnValue %[[#]]
 ; CHECK:    %[[#bb73:]] = OpLabel
-; CHECK:                  OpBranch %[[#bb72:]]
-; CHECK:    %[[#bb71:]] = OpLabel
-; CHECK:                  OpSelectionMerge %[[#bb74:]] None
-; CHECK:                  OpBranchConditional %[[#]] %[[#bb75:]] %[[#bb74:]]
+; CHECK:                  OpBranch %[[#bb74:]]
 ; CHECK:    %[[#bb74:]] = OpLabel
-; CHECK:                  OpSelectionMerge %[[#bb76:]] None
-; CHECK:                  OpBranchConditional %[[#]] %[[#bb77:]] %[[#bb78:]]
-; CHECK:    %[[#bb78:]] = OpLabel
-; CHECK:                  OpBranch %[[#bb79:]]
-; CHECK:    %[[#bb79:]] = OpLabel
-; CHECK:                  OpLoopMerge %[[#bb80:]] %[[#bb81:]] None
-; CHECK:                  OpBranchConditional %[[#]] %[[#bb82:]] %[[#bb80:]]
-; CHECK:    %[[#bb80:]] = OpLabel
+; CHECK:                  OpLoopMerge %[[#bb75:]] %[[#bb76:]] None
+; CHECK:                  OpBranchConditional %[[#]] %[[#bb77:]] %[[#bb75:]]
+; CHECK:    %[[#bb77:]] = OpLabel
 ; CHECK:                  OpBranch %[[#bb76:]]
 ; CHECK:    %[[#bb76:]] = OpLabel
+; CHECK:                  OpBranch %[[#bb74:]]
+; CHECK:    %[[#bb75:]] = OpLabel
+; CHECK:                  OpBranch %[[#bb72:]]
+; CHECK:    %[[#bb72:]] = OpLabel
+; CHECK:                  OpSelectionMerge %[[#bb78:]] None
+; CHECK:                  OpBranchConditional %[[#]] %[[#bb79:]] %[[#bb80:]]
+; CHECK:    %[[#bb79:]] = OpLabel
+; CHECK:                  OpBranch %[[#bb78:]]
+; CHECK:    %[[#bb80:]] = OpLabel
+; CHECK:                  OpBranch %[[#bb81:]]
+; CHECK:    %[[#bb81:]] = OpLabel
+; CHECK:                  OpLoopMerge %[[#bb82:]] %[[#bb83:]] None
+; CHECK:                  OpBranchConditional %[[#]] %[[#bb84:]] %[[#bb82:]]
+; CHECK:    %[[#bb84:]] = OpLabel
+; CHECK:                  OpSelectionMerge %[[#bb85:]] None
+; CHECK:                  OpBranchConditional %[[#]] %[[#bb86:]] %[[#bb85:]]
+; CHECK:    %[[#bb86:]] = OpLabel
+; CHECK:                  OpBranch %[[#bb85:]]
+; CHECK:    %[[#bb85:]] = OpLabel
+; CHECK:                  OpBranch %[[#bb83:]]
+; CHECK:    %[[#bb83:]] = OpLabel
+; CHECK:                  OpBranch %[[#bb81:]]
+; CHECK:    %[[#bb82:]] = OpLabel
+; CHECK:                  OpBranch %[[#bb78:]]
+; CHECK:    %[[#bb78:]] = OpLabel
 ; CHECK:                  OpBranch %[[#bb70:]]
 ; CHECK:    %[[#bb70:]] = OpLabel
 ; CHECK:                  OpBranch %[[#bb68:]]
-; CHECK:    %[[#bb82:]] = OpLabel
-; CHECK:                  OpSelectionMerge %[[#bb83:]] None
-; CHECK:                  OpBranchConditional %[[#]] %[[#bb84:]] %[[#bb83:]]
-; CHECK:    %[[#bb83:]] = OpLabel
-; CHECK:                  OpBranch %[[#bb81:]]
-; CHECK:    %[[#bb81:]] = OpLabel
-; CHECK:                  OpBranch %[[#bb79:]]
-; CHECK:    %[[#bb84:]] = OpLabel
-; CHECK:                  OpBranch %[[#bb83:]]
-; CHECK:    %[[#bb77:]] = OpLabel
-; CHECK:                  OpBranch %[[#bb76:]]
-; CHECK:    %[[#bb75:]] = OpLabel
-; CHECK:                  OpBranch %[[#bb85:]]
-; CHECK:    %[[#bb85:]] = OpLabel
-; CHECK:                  OpLoopMerge %[[#bb86:]] %[[#bb87:]] None
-; CHECK:                  OpBranchConditional %[[#]] %[[#bb88:]] %[[#bb86:]]
-; CHECK:    %[[#bb86:]] = OpLabel
-; CHECK:                  OpBranch %[[#bb74:]]
+; CHECK:    %[[#bb69:]] = OpLabel
+; CHECK:                  OpSelectionMerge %[[#bb87:]] None
+; CHECK:                  OpBranchConditional %[[#]] %[[#bb88:]] %[[#bb87:]]
 ; CHECK:    %[[#bb88:]] = OpLabel
 ; CHECK:                  OpBranch %[[#bb87:]]
 ; CHECK:    %[[#bb87:]] = OpLabel
-; CHECK:                  OpBranch %[[#bb85:]]
-; CHECK:    %[[#bb67:]] = OpLabel
-; CHECK:                  OpBranch %[[#bb66:]]
+; CHECK:                  OpReturnValue %[[#]]
 ; CHECK:                  OpFunctionEnd
 ; CHECK: %[[#func_61:]] = OpFunction %[[#void:]] DontInline %[[#]]
 ; CHECK:    %[[#bb89:]] = OpLabel

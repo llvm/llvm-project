@@ -40,6 +40,8 @@ entry:
   %tobool = icmp ne i32 %1, 0
   br i1 %tobool, label %cond.true, label %cond.false
 
+; CHECK:  %[[#cond_true]] = OpLabel
+; CHECK:                    OpBranch %[[#cond_end]]
 cond.true:
   %2 = load i32, ptr %b, align 4
   br label %cond.end
@@ -60,6 +62,13 @@ cond.end:
   %tobool1 = icmp ne i32 %cond, 0
   br i1 %tobool1, label %if.then, label %if.end
 
+; CHECK:  %[[#if_then]] = OpLabel
+; CHECK:                  OpBranch %[[#if_end]]
+if.then:
+  %4 = load i32, ptr %val, align 4
+  %inc = add nsw i32 %4, 1
+  store i32 %inc, ptr %val, align 4
+  br label %if.end
 
 ; CHECK:    %[[#if_end]] = OpLabel
 ; CHECK:                   OpSelectionMerge %[[#cond_end8:]] None
@@ -68,6 +77,12 @@ if.end:
   %call2 = call spir_func noundef i32 @fn() #4 [ "convergencectrl"(token %0) ]
   %tobool3 = icmp ne i32 %call2, 0
   br i1 %tobool3, label %cond.true4, label %cond.false6
+
+; CHECK:  %[[#cond4_true]] = OpLabel
+; CHECK:                     OpBranch %[[#cond_end8]]
+cond.true4:
+  %call5 = call spir_func noundef i32 @fn1() #4 [ "convergencectrl"(token %0) ]
+  br label %cond.end8
 
 ; CHECK:  %[[#cond_false6]] = OpLabel
 ; CHECK:                      OpBranch %[[#cond_end8]]
@@ -83,35 +98,18 @@ cond.end8:
   %tobool10 = icmp ne i32 %cond9, 0
   br i1 %tobool10, label %if.then11, label %if.end13
 
+; CHECK:  %[[#if_then11]] = OpLabel
+; CHECK:                    OpBranch %[[#if_end13]]
+if.then11:
+  %5 = load i32, ptr %val, align 4
+  %inc12 = add nsw i32 %5, 1
+  store i32 %inc12, ptr %val, align 4
+  br label %if.end13
+
 ; CHECK:  %[[#if_end13]] = OpLabel
 ; CHECK:                  OpReturn
 if.end13:
   ret void
-
-; CHECK:  %[[#if_then11]] = OpLabel
-; CHECK:                    OpBranch %[[#if_end13]]
-if.then11:
-  %4 = load i32, ptr %val, align 4
-  %inc12 = add nsw i32 %4, 1
-  store i32 %inc12, ptr %val, align 4
-  br label %if.end13
-
-; CHECK:  %[[#cond4_true]] = OpLabel
-; CHECK:                     OpBranch %[[#cond_end8]]
-cond.true4:
-  %call5 = call spir_func noundef i32 @fn1() #4 [ "convergencectrl"(token %0) ]
-  br label %cond.end8
-
-; CHECK:  %[[#if_then]] = OpLabel
-; CHECK:                  OpBranch %[[#if_end]]
-if.then:
-  %5 = load i32, ptr %val, align 4
-  %inc = add nsw i32 %5, 1
-  store i32 %inc, ptr %val, align 4
-  br label %if.end
-
-; CHECK:  %[[#cond_true]] = OpLabel
-; CHECK:                    OpBranch %[[#cond_end]]
 }
 
 declare token @llvm.experimental.convergence.entry() #2
