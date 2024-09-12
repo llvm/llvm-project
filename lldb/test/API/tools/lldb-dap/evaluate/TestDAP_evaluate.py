@@ -201,10 +201,11 @@ class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
         # Test memory read, especially with 'empty' repeat commands.
         if context == "repl":
           self.continue_to_next_stop()
-          self.assertEvaluate("memory read &my_ints",
-                              ".*00 00 00 00 02 00 00 00 04 00 00 00 06 00 00 00.*\n.*08 00 00 00 0a 00 00 00 0c 00 00 00 0e 00 00 00.*\n")
-          self.assertEvaluate("",
-                              ".*10 00 00 00 12 00 00 00 14 00 00 00 16 00 00 00.*\n.*18 00 00 00 1a 00 00 00 1c 00 00 00.*\n")
+          self.assertEvaluate("memory read -c 1 &my_ints", ".* 05 .*\n")
+          self.assertEvaluate("", ".* 0a .*\n")
+          self.assertEvaluate("", ".* 0f .*\n")
+          self.assertEvaluate("", ".* 14 .*\n")
+          self.assertEvaluate("", ".* 19 .*\n")
 
     @skipIfWindows
     def test_generic_evaluate_expressions(self):

@@ -1,5 +1,6 @@
 #include "foo.h"
 
+#include <cstdint>
 #include <map>
 #include <vector>
 
@@ -45,6 +46,6 @@ int main(int argc, char const *argv[]) {
   my_bool_vec.push_back(false); // breakpoint 6
   my_bool_vec.push_back(true);  // breakpoint 7
 
-  int my_ints[] = {0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28};
-  return my_ints[0]; // breakpoint 8
+  uint8_t my_ints[] = {5, 10, 15, 20, 25, 30};
+  return 0; // breakpoint 8
 }

@@ -1371,7 +1371,7 @@ void request_evaluate(const llvm::json::Object &request) {
        (expression.empty() &&
         g_dap.last_expression_context == ExpressionContext::Command))) {
     // If the current expression is empty, and the last expression context was
-    // for a  command, pass the empty expression along to the
+    // for a command, pass the empty expression along to the
     // CommandInterpreter, to repeat the previous command. Also set the
     // expression context properly for the next (possibly empty) expression.
     g_dap.last_expression_context = ExpressionContext::Command;
