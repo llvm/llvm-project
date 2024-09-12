@@ -35,10 +35,11 @@ public:
   RawPtrRefMemberChecker(const char *description)
       : Bug(this, description, "WebKit coding guidelines") {}
 
-  virtual std::optional<bool> isPtrCompatible(const clang::CXXRecordDecl *) const = 0;
+  virtual std::optional<bool>
+  isPtrCompatible(const clang::CXXRecordDecl *) const = 0;
   virtual bool isPtrCls(const clang::CXXRecordDecl *) const = 0;
-  virtual const char* typeName() const = 0;
-  virtual const char* invariantName() const = 0;
+  virtual const char *typeName() const = 0;
+  virtual const char *invariant() const = 0;
 
   void checkASTDecl(const TranslationUnitDecl *TUD, AnalysisManager &MGR,
                     BugReporter &BRArg) const {
@@ -79,9 +80,9 @@ public:
       if (auto *MemberCXXRD = MemberType->getPointeeCXXRecordDecl()) {
         // If we don't see the definition we just don't know.
         if (MemberCXXRD->hasDefinition()) {
-            std::optional<bool> isRCAble = isPtrCompatible(MemberCXXRD);
-            if (isRCAble && *isRCAble)
-                reportBug(Member, MemberType, MemberCXXRD, RD);
+          std::optional<bool> isRCAble = isPtrCompatible(MemberCXXRD);
+          if (isRCAble && *isRCAble)
+              reportBug(Member, MemberType, MemberCXXRD, RD);
         }
       }
     }
@@ -136,14 +137,10 @@ public:
     Os << " in ";
     printQuotedQualifiedName(Os, ClassCXXRD);
     Os << " is a "
-       << (isa<PointerType>(MemberType) ? "raw pointer" : "reference")
-       << " to "
-       << typeName()
-       << " ";
+       << (isa<PointerType>(MemberType) ? "raw pointer" : "reference") << " to "
+       << typeName() << " ";
     printQuotedQualifiedName(Os, MemberCXXRD);
-    Os << "; "
-       << invariantName()
-       << ".";
+    Os << "; " << invariant() << ".";
 
     PathDiagnosticLocation BSLoc(Member->getSourceRange().getBegin(),
                                  BR->getSourceManager());
@@ -159,7 +156,8 @@ public:
       : RawPtrRefMemberChecker("Member variable is a raw-pointer/reference to "
                                "reference-countable type") {}
 
-  std::optional<bool> isPtrCompatible(const clang::CXXRecordDecl *R) const final {
+  std::optional<bool>
+  isPtrCompatible(const clang::CXXRecordDecl *R) const final {
     return isRefCountable(R);
   }
 
@@ -167,11 +165,9 @@ public:
     return isRefCounted(R);
   }
 
-  const char* typeName() const final {
-    return "ref-countable type";
-  }
+  const char *typeName() const final { return "ref-countable type"; }
 
-  const char* invariantName() const final {
+  const char *invariant() const final {
     return "member variables must be Ref, RefPtr, WeakRef, or WeakPtr";
   }
 };
@@ -182,7 +178,8 @@ public:
       : RawPtrRefMemberChecker("Member variable is a raw-pointer/reference to "
                                "checked-pointer capable type") {}
 
-  std::optional<bool> isPtrCompatible(const clang::CXXRecordDecl *R) const final {
+  std::optional<bool>
+  isPtrCompatible(const clang::CXXRecordDecl *R) const final {
     return isCheckedPtrCapable(R);
   }
 
@@ -190,12 +187,11 @@ public:
     return isCheckedPtr(R);
   }
 
-  const char* typeName() const final {
-    return "CheckedPtr capable type";
-  }
+  const char *typeName() const final { return "CheckedPtr capable type"; }
 
-  const char* invariantName() const final {
-    return "member variables must be a CheckedPtr, CheckedRef, WeakRef, or WeakPtr";
+  const char *invariant() const final {
+    return "member variables must be a CheckedPtr, CheckedRef, WeakRef, or "
+           "WeakPtr";
   }
 };
 
@@ -205,8 +201,7 @@ void ento::registerNoUncountedMemberChecker(CheckerManager &Mgr) {
   Mgr.registerChecker<NoUncountedMemberChecker>();
 }
 
-bool ento::shouldRegisterNoUncountedMemberChecker(
-    const CheckerManager &Mgr) {
+bool ento::shouldRegisterNoUncountedMemberChecker(const CheckerManager &Mgr) {
   return true;
 }
 

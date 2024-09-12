@@ -55,8 +55,7 @@ hasPublicMethodInBase(const CXXBaseSpecifier *Base, const char *NameToMatch) {
 
 std::optional<bool> isSmartPtrCompatible(const CXXRecordDecl *R,
                                          const char *IncMethodName,
-                                         const char *DecMethodName)
-{
+                                         const char *DecMethodName) {
   assert(R);
 
   R = R->getDefinition();
@@ -72,15 +71,15 @@ std::optional<bool> isSmartPtrCompatible(const CXXRecordDecl *R,
   Paths.setOrigin(const_cast<CXXRecordDecl *>(R));
 
   bool AnyInconclusiveBase = false;
-  const auto hasPublicRefInBase =
-      [&](const CXXBaseSpecifier *Base, CXXBasePath &) {
-        auto hasRefInBase = clang::hasPublicMethodInBase(Base, IncMethodName);
-        if (!hasRefInBase) {
-          AnyInconclusiveBase = true;
-          return false;
-        }
-        return (*hasRefInBase) != nullptr;
-      };
+  const auto hasPublicRefInBase = [&](const CXXBaseSpecifier *Base,
+                                      CXXBasePath &) {
+    auto hasRefInBase = clang::hasPublicMethodInBase(Base, IncMethodName);
+    if (!hasRefInBase) {
+      AnyInconclusiveBase = true;
+      return false;
+    }
+    return (*hasRefInBase) != nullptr;
+  };
 
   hasRef = hasRef || R->lookupInBases(hasPublicRefInBase, Paths,
                                       /*LookupInDependent =*/true);
@@ -88,15 +87,15 @@ std::optional<bool> isSmartPtrCompatible(const CXXRecordDecl *R,
     return std::nullopt;
 
   Paths.clear();
-  const auto hasPublicDerefInBase =
-      [&](const CXXBaseSpecifier *Base, CXXBasePath &) {
-        auto hasDerefInBase = clang::hasPublicMethodInBase(Base, DecMethodName);
-        if (!hasDerefInBase) {
-          AnyInconclusiveBase = true;
-          return false;
-        }
-        return (*hasDerefInBase) != nullptr;
-      };
+  const auto hasPublicDerefInBase = [&](const CXXBaseSpecifier *Base,
+                                        CXXBasePath &) {
+    auto hasDerefInBase = clang::hasPublicMethodInBase(Base, DecMethodName);
+    if (!hasDerefInBase) {
+      AnyInconclusiveBase = true;
+      return false;
+    }
+    return (*hasDerefInBase) != nullptr;
+  };
   hasDeref = hasDeref || R->lookupInBases(hasPublicDerefInBase, Paths,
                                           /*LookupInDependent =*/true);
   if (AnyInconclusiveBase)
