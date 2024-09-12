@@ -120,7 +120,7 @@ struct BuiltinTypeDeclBuilder {
 
     QualType Ty = Record->getASTContext().VoidPtrTy;
     if (Template) {
-      if (const TemplateTypeParmDecl *TTD = dyn_cast<TemplateTypeParmDecl>(
+      if (const auto *TTD = dyn_cast<TemplateTypeParmDecl>(
               Template->getTemplateParameters()->getParam(0))) {
         Ty = Record->getASTContext().getPointerType(
             QualType(TTD->getTypeForDecl(), 0));
