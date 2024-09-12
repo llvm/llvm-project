@@ -17,7 +17,6 @@ define noundef half @test_step_half(half noundef %p0, half noundef %p1) {
 entry:
   ; CHECK: %0 = fcmp olt half %p1, %p0
   ; CHECK: %1 = select i1 %0, half 0xH0000, half 0xH3C00
-  ; DOPCHECK: asdahg
   %hlsl.step = call half @llvm.dx.step.f16(half %p0, half %p1)
   ret half %hlsl.step
 }

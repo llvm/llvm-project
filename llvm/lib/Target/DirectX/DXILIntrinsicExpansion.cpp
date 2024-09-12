@@ -330,19 +330,19 @@ static Value *expandStepIntrinsic(CallInst *Orig) {
   Type *Ty = X->getType();
   IRBuilder<> Builder(Orig);
 
-  Constant *one = ConstantFP::get(Ty->getScalarType(), 1.0);
-  Constant *zero = ConstantFP::get(Ty->getScalarType(), 0.0);
-  Value *cond = Builder.CreateFCmpOLT(Y, X);
+  Constant *One = ConstantFP::get(Ty->getScalarType(), 1.0);
+  Constant *Zero = ConstantFP::get(Ty->getScalarType(), 0.0);
+  Value *Cond = Builder.CreateFCmpOLT(Y, X);
 
   if (Ty != Ty->getScalarType()) {
     auto *XVec = dyn_cast<FixedVectorType>(Ty);
-    one = ConstantVector::getSplat(
-        ElementCount::getFixed(XVec->getNumElements()), one);
-    zero = ConstantVector::getSplat(
-        ElementCount::getFixed(XVec->getNumElements()), zero);
+    One = ConstantVector::getSplat(
+        ElementCount::getFixed(XVec->getNumElements()), One);
+    Zero = ConstantVector::getSplat(
+        ElementCount::getFixed(XVec->getNumElements()), Zero);
   }
 
-  return Builder.CreateSelect(cond, zero, one);
+  return Builder.CreateSelect(Cond, Zero, One);
 }
 
 static Intrinsic::ID getMaxForClamp(Type *ElemTy,
@@ -456,9 +456,9 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
   case Intrinsic::dx_sign:
     Result = expandSignIntrinsic(Orig);
     break;
-  }
   case Intrinsic::dx_step:
     Result = expandStepIntrinsic(Orig);
+  }
   if (Result) {
     Orig->replaceAllUsesWith(Result);
     Orig->eraseFromParent();
