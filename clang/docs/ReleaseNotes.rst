@@ -747,6 +747,7 @@ clang-format
 - Add ``EnumTrailingComma`` option for inserting/removing commas at the end of
   ``enum`` enumerator lists.
 - Add ``OneLineFormatOffRegex`` option for turning formatting off for one line.
+- Adds ``AlignAfterControlStatement`` option.
 
 libclang
 --------
