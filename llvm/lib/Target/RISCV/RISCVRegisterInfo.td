@@ -614,6 +614,8 @@ def GPRF16 : RISCVRegisterClass<[f16], 16, (add (sequence "X%u_H", 10, 17),
                                                 (sequence "X%u_H", 8, 9),
                                                 (sequence "X%u_H", 18, 27),
                                                 (sequence "X%u_H", 0, 4))>;
+def GPRF16C : RISCVRegisterClass<[f16], 16, (add (sequence "X%u_H", 10, 15),
+                                                 (sequence "X%u_H", 8, 9))>;
 
 let RegInfos = XLenRI in {
 def GPRF32  : RISCVRegisterClass<[f32], 32, (add GPR)>;
