@@ -1895,16 +1895,16 @@ def fprofile_selected_function_group :
   HelpText<"Partition functions into N groups using -fprofile-function-groups and select only functions in group i to be instrumented. The valid range is 0 to N-1 inclusive">,
   MarshallingInfoInt<CodeGenOpts<"ProfileSelectedFunctionGroup">>;
 def fcodegen_data_generate_EQ : Joined<["-"], "fcodegen-data-generate=">,
-    Group<f_Group>, Visibility<[ClangOption, CC1Option]>, MetaVarName<"<path>">,
+    Group<f_Group>, Visibility<[ClangOption, CLOption]>, MetaVarName<"<path>">,
     HelpText<"Emit codegen data into the object file. LLD for MachO (currently) merges them into a <path> file. If the path is a directory, it writes to <path>/default.cgdata.">;
 def fcodegen_data_generate : Flag<["-"], "fcodegen-data-generate">,
     Group<f_Group>, Visibility<[ClangOption, CLOption]>, Alias<fcodegen_data_generate_EQ>,
     HelpText<"Emit codegen data into the object file. LLD for MachO (currently) merges them into default.cgdata.">;
 def fcodegen_data_use_EQ : Joined<["-"], "fcodegen-data-use=">,
-    Group<f_Group>, Visibility<[ClangOption, CC1Option]>, MetaVarName<"<path>">,
+    Group<f_Group>, Visibility<[ClangOption, CLOption]>, MetaVarName<"<path>">,
     HelpText<"Use codegen data read from a <path> file. If the path is a directory, it reads from <path>/default.cgdata.">;
 def fcodegen_data_use : Flag<["-"], "fcodegen-data-use">,
-    Group<f_Group>, Visibility<[ClangOption, CC1Option]>, Alias<fcodegen_data_use_EQ>,
+    Group<f_Group>, Visibility<[ClangOption, CLOption]>, Alias<fcodegen_data_use_EQ>,
     HelpText<"Use codegen data read from default.cgdata to optimize the binary">;
 def fswift_async_fp_EQ : Joined<["-"], "fswift-async-fp=">,
     Group<f_Group>,
