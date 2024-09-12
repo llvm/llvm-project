@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This file implements conversions between named ops that can be seens as
-// canonicalization of named ops.
+// canonicalizations of named ops.
 //
 //===----------------------------------------------------------------------===//
 

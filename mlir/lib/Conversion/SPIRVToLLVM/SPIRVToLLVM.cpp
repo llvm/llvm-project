@@ -1573,7 +1573,7 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       FComparePattern<spirv::FOrdGreaterThanOp, LLVM::FCmpPredicate::ogt>,
       FComparePattern<spirv::FOrdGreaterThanEqualOp, LLVM::FCmpPredicate::oge>,
       FComparePattern<spirv::FOrdLessThanEqualOp, LLVM::FCmpPredicate::ole>,
-      FComparePattern<spirv::FOrdLessThanOp, LLVM::FCmpPredicate::old>,
+      FComparePattern<spirv::FOrdLessThanOp, LLVM::FCmpPredicate::olt>,
       FComparePattern<spirv::FOrdNotEqualOp, LLVM::FCmpPredicate::one>,
       FComparePattern<spirv::FUnordEqualOp, LLVM::FCmpPredicate::ueq>,
       FComparePattern<spirv::FUnordGreaterThanOp, LLVM::FCmpPredicate::ugt>,
