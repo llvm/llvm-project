@@ -1465,6 +1465,17 @@ TEST(SignatureHelpTest, ShowOperatorParensForLambdaReturnedFromFunction) {
               UnorderedElementsAre(sig("operator()([[int x]], [[int y]]) -> void")));
 }
 
+TEST(SignatureHelpTest, ShowOperatorParensForLambdaInParameterPack) {
+  const auto Results = signatures(R"cpp(
+    template <typename... Types>
+    auto foo(Types... args) {}
+    
+    foo([](int x, int y){}(^))
+  )cpp");
+  EXPECT_THAT(Results.signatures,
+              UnorderedElementsAre(sig("operator()([[int x]], [[int y]]) -> void")));
+}
+
 TEST(SignatureHelpTest, FunctionPointers) {
   llvm::StringLiteral Tests[] = {
       // Variable of function pointer type
