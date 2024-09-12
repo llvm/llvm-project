@@ -1611,6 +1611,12 @@ inline bool GetPtrDerivedPop(InterpState &S, CodePtr OpPC, uint32_t Off) {
 
 inline bool GetPtrBase(InterpState &S, CodePtr OpPC, uint32_t Off) {
   const Pointer &Ptr = S.Stk.peek<Pointer>();
+
+  if (!Ptr.isBlockPointer()) {
+    S.Stk.push<Pointer>(Ptr.asIntPointer().baseCast(S.getASTContext(), Off));
+    return true;
+  }
+
   if (!CheckNull(S, OpPC, Ptr, CSK_Base))
     return false;
   if (!CheckSubobject(S, OpPC, Ptr, CSK_Base))
@@ -1624,6 +1630,12 @@ inline bool GetPtrBase(InterpState &S, CodePtr OpPC, uint32_t Off) {
 
 inline bool GetPtrBasePop(InterpState &S, CodePtr OpPC, uint32_t Off) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
+
+  if (!Ptr.isBlockPointer()) {
+    S.Stk.push<Pointer>(Ptr.asIntPointer().baseCast(S.getASTContext(), Off));
+    return true;
+  }
+
   if (!CheckNull(S, OpPC, Ptr, CSK_Base))
     return false;
   if (!CheckSubobject(S, OpPC, Ptr, CSK_Base))
