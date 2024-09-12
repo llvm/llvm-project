@@ -872,8 +872,9 @@ public:
   /// \param FormatString A fixed diagnostic format string that will be hashed
   /// and mapped to a unique DiagID.
   template <unsigned N>
-  [[deprecated("Use a CustomDiagDesc instead of a Level")]] unsigned
-  getCustomDiagID(Level L, const char (&FormatString)[N]) {
+  // TODO: Deprecate this once all uses are removed from LLVM
+  // [[deprecated("Use a CustomDiagDesc instead of a Level")]]
+  unsigned getCustomDiagID(Level L, const char (&FormatString)[N]) {
     return Diags->getCustomDiagID((DiagnosticIDs::Level)L,
                                   StringRef(FormatString, N - 1));
   }

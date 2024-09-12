@@ -339,9 +339,9 @@ void DiagnosticIDs::initCustomDiagMapping(DiagnosticMapping &Mapping,
   assert(IsCustomDiag(DiagID));
   const auto &Diag = CustomDiagInfo->getDescription(DiagID);
   if (auto Group = Diag.GetGroup()) {
-    auto GroupInfo = GroupInfos[static_cast<size_t>(*Group)];
-    if (GroupInfo.Severity != diag::Severity())
-      Mapping.setSeverity(GroupInfo.Severity);
+    GroupInfo GroupInfo = GroupInfos[static_cast<size_t>(*Group)];
+    if (static_cast<diag::Severity>(GroupInfo.Severity) != diag::Severity())
+      Mapping.setSeverity(static_cast<diag::Severity>(GroupInfo.Severity));
     Mapping.setNoWarningAsError(GroupInfo.HasNoWarningAsError);
   }
 }
@@ -499,7 +499,7 @@ DiagnosticIDs::getDiagnosticLevel(unsigned DiagID, SourceLocation Loc,
 diag::Severity
 DiagnosticIDs::getDiagnosticSeverity(unsigned DiagID, SourceLocation Loc,
                                      const DiagnosticsEngine &Diag) const {
-  const bool IsCustomDiag = DiagnosticIDs::IsCustomDiag(DiagID);
+  bool IsCustomDiag = DiagnosticIDs::IsCustomDiag(DiagID);
   assert(getDiagClass(DiagID) != CLASS_NOTE);
 
   // Specific non-error diagnostics may be mapped to various levels from ignored
@@ -508,7 +508,7 @@ DiagnosticIDs::getDiagnosticSeverity(unsigned DiagID, SourceLocation Loc,
 
   // Get the mapping information, or compute it lazily.
   DiagnosticsEngine::DiagState *State = Diag.GetDiagStateForLoc(Loc);
-  const DiagnosticMapping Mapping = State->getOrAddMapping((diag::kind)DiagID);
+  DiagnosticMapping Mapping = State->getOrAddMapping((diag::kind)DiagID);
 
   // TODO: Can a null severity really get here?
   if (Mapping.getSeverity() != diag::Severity())
@@ -598,7 +598,7 @@ DiagnosticIDs::Class DiagnosticIDs::getDiagClass(unsigned DiagID) const {
 
   if (const StaticDiagInfoRec *Info = GetDiagInfo(DiagID))
     return Class(Info->Class);
-  return Class(~0U);
+  return CLASS_INVALID;
 }
 
 #define GET_DIAG_ARRAYS
@@ -746,8 +746,9 @@ static void forEachSubGroup(diag::Group Group, Func func) {
 
 void DiagnosticIDs::setGroupSeverity(StringRef Group, diag::Severity Sev) {
   if (std::optional<diag::Group> G = getGroupForWarningOption(Group)) {
-    ::forEachSubGroup(
-        *G, [&](size_t SubGroup) { GroupInfos[SubGroup].Severity = Sev; });
+    ::forEachSubGroup(*G, [&](size_t SubGroup) {
+      GroupInfos[SubGroup].Severity = static_cast<unsigned>(Sev);
+    });
   }
 }
 

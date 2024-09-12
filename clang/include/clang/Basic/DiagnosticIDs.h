@@ -184,6 +184,7 @@ public:
 
   // Diagnostic classes.
   enum Class {
+    CLASS_INVALID = 0x00,
     CLASS_NOTE = 0x01,
     CLASS_REMARK = 0x02,
     CLASS_WARNING = 0x03,
@@ -196,16 +197,21 @@ public:
   }
 
   class CustomDiagDesc {
-    diag::Severity DefaultSeverity : 3;
-    unsigned Class : 3;
+    LLVM_PREFERRED_TYPE(diag::Severity)
+    unsigned DefaultSeverity : 3;
+    LLVM_PREFERRED_TYPE(Class)
+    unsigned DiagClass : 3;
+    LLVM_PREFERRED_TYPE(bool)
     unsigned ShowInSystemHeader : 1;
+    LLVM_PREFERRED_TYPE(bool)
     unsigned ShowInSystemMacro : 1;
+    LLVM_PREFERRED_TYPE(bool)
     unsigned HasGroup : 1;
     diag::Group Group;
     std::string Description;
 
     auto get_as_tuple() const {
-      return std::tuple(DefaultSeverity, Class, ShowInSystemHeader,
+      return std::tuple(DefaultSeverity, DiagClass, ShowInSystemHeader,
                         ShowInSystemMacro, HasGroup, Group,
                         std::string_view{Description});
     }
@@ -216,8 +222,8 @@ public:
                    bool ShowInSystemHeader = false,
                    bool ShowInSystemMacro = false,
                    std::optional<diag::Group> Group = std::nullopt)
-        : DefaultSeverity(DefaultSeverity), Class(Class),
-          ShowInSystemHeader(ShowInSystemHeader),
+        : DefaultSeverity(static_cast<unsigned>(DefaultSeverity)),
+          DiagClass(Class), ShowInSystemHeader(ShowInSystemHeader),
           ShowInSystemMacro(ShowInSystemMacro), HasGroup(Group != std::nullopt),
           Group(Group.value_or(diag::Group{})),
           Description(std::move(Description)) {}
@@ -228,8 +234,11 @@ public:
       return std::nullopt;
     }
 
-    diag::Severity GetDefaultSeverity() const { return DefaultSeverity; }
-    unsigned GetClass() const { return Class; }
+    diag::Severity GetDefaultSeverity() const {
+      return static_cast<diag::Severity>(DefaultSeverity);
+    }
+
+    Class GetClass() const { return static_cast<Class>(DiagClass); }
     std::string_view GetDescription() const { return Description; }
     bool ShouldShowInSystemHeader() const { return ShowInSystemHeader; }
 
@@ -245,8 +254,10 @@ public:
   };
 
   struct GroupInfo {
-    diag::Severity Severity : 3;
-    bool HasNoWarningAsError : 1;
+    LLVM_PREFERRED_TYPE(diag::Severity)
+    unsigned Severity : 3;
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned HasNoWarningAsError : 1;
   };
 
 private:
@@ -275,8 +286,9 @@ public:
   // writing, nearly all callers of this function were invalid.
   unsigned getCustomDiagID(CustomDiagDesc Diag);
 
-  [[deprecated("Use a CustomDiagDesc instead of a Level")]] unsigned
-  getCustomDiagID(Level Level, StringRef Message) {
+  // TODO: Deprecate this once all uses are removed from LLVM
+  // [[deprecated("Use a CustomDiagDesc instead of a Level")]]
+  unsigned getCustomDiagID(Level Level, StringRef Message) {
     return getCustomDiagID([&]() -> CustomDiagDesc {
       switch (Level) {
       case DiagnosticIDs::Level::Ignored:

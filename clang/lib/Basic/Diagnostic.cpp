@@ -168,9 +168,8 @@ DiagnosticsEngine::DiagState::getOrAddMapping(diag::kind Diag) {
   // Initialize the entry if we added it.
   if (Result.second) {
     Result.first->second = DiagIDs.getDefaultMapping(Diag);
-    if (DiagnosticIDs::IsCustomDiag(Diag)) {
+    if (DiagnosticIDs::IsCustomDiag(Diag))
       DiagIDs.initCustomDiagMapping(Result.first->second, Diag);
-    }
   }
 
   return Result.first->second;
