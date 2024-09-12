@@ -1183,10 +1183,8 @@ void Sema::PrintPragmaAttributeInstantiationPoint() {
 void Sema::DiagnoseExcessPrecision() {
   if (NumExcessPrecisionNotSatisfied > 0) {
     for (auto &[Loc, Type, Num] : ExcessPrecisionNotSatisfied)
-      if (Num > 1)
-        Diag(Loc, diag::warn_excess_precision_not_supported) << 0 << Type << 1;
-      else
-        Diag(Loc, diag::warn_excess_precision_not_supported) << 0 << Type << 0;
+      Diag(Loc, diag::warn_excess_precision_not_supported)
+          << 0 << Type << static_cast<bool>(Num);
   }
 }
 
