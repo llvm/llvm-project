@@ -58160,10 +58160,10 @@ static SDValue combineINTRINSIC_VOID(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
-SDValue combineCanonicalize(SDNode *Node, SelectionDAG &DAG) {
-  SDValue Operand = Node->getOperand(0);
+static SDValue combineCanonicalize(SDNode *N, SelectionDAG &DAG) {
+  SDValue Operand = N->getOperand(0);
   EVT VT = Operand.getValueType();
-  SDLoc dl(Node);
+  SDLoc dl(N);
 
   // Canonicalize scalar variable FP Nodes.
   SDValue One =
@@ -58218,7 +58218,7 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::AND:            return combineAnd(N, DAG, DCI, Subtarget);
   case ISD::OR:             return combineOr(N, DAG, DCI, Subtarget);
   case ISD::XOR:            return combineXor(N, DAG, DCI, Subtarget);
-  case ISD::FCANONICALIZE:  return combineCanonicalize(N,DAG);
+  case ISD::FCANONICALIZE:  return combineCanonicalize(N, DAG);
   case ISD::BITREVERSE:     return combineBITREVERSE(N, DAG, DCI, Subtarget);
   case ISD::AVGCEILS:
   case ISD::AVGCEILU:
