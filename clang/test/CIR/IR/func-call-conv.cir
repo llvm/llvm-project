@@ -1,0 +1,27 @@
+// RUN: cir-opt %s -o %t.cir
+// RUN: FileCheck --input-file=%t.cir %s
+
+!s32i = !cir.int<s, 32>
+
+#fn_attr = #cir<extra({inline = #cir.inline<no>})>
+
+module {
+    // CHECK: cir.func @foo() {
+    cir.func @foo() cc(c) {
+        cir.return
+    }
+
+    // CHECK: cir.func @bar() cc(spir_kernel)
+    cir.func @bar() cc(spir_kernel) {
+        cir.return
+    }
+
+    // CHECK: cir.func @bar_alias() alias(@bar) cc(spir_kernel)
+    cir.func @bar_alias() alias(@bar) cc(spir_kernel)
+
+    // CHECK: cir.func @baz() cc(spir_function) extra(#fn_attr)
+    cir.func @baz() cc(spir_function) extra(#fn_attr) {
+        cir.return
+    }
+}
+

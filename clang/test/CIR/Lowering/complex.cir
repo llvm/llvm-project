@@ -1,0 +1,15 @@
+// RUN: cir-translate -cir-to-llvmir -o %t.ll %s
+// RUN: FileCheck --input-file %t.ll -check-prefix=LLVM %s
+
+!s32i = !cir.int<s, 32>
+
+module {
+  cir.func @complex_const() -> !cir.complex<!s32i> {
+    %0 = cir.const #cir.complex<#cir.int<1> : !s32i, #cir.int<2> : !s32i> : !cir.complex<!s32i>
+    cir.return %0 : !cir.complex<!s32i>
+  }
+
+  // LLVM-LABEL: define { i32, i32 } @complex_const()
+  //  LLVM-NEXT:   ret { i32, i32 } { i32 1, i32 2 }
+  //  LLVM-NEXT: }
+}

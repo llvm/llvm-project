@@ -1,0 +1,21 @@
+// RUN: cir-opt %s | FileCheck %s
+
+cir.func @test_branch_parsing(%arg0: !cir.bool) {
+  // CHECK: cir.br ^bb1
+  cir.br ^bb1
+^bb1:
+  // CHECK: cir.br ^bb2(%arg0 : !cir.bool)
+  cir.br ^bb2(%arg0 : !cir.bool)
+// CHECK: ^bb2(%0: !cir.bool):
+^bb2(%x: !cir.bool):
+  cir.return
+}
+
+cir.func @test_conditional_branch_parsing(%arg0 : !cir.bool) {
+  // CHEK: cir.brcond %arg0 ^bb1, ^bb2
+  cir.brcond %arg0 ^bb1, ^bb2
+^bb1:
+  cir.return
+^bb2:
+  cir.return
+}

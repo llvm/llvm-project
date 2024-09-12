@@ -1,0 +1,18 @@
+// RUN: cir-opt %s -o %t.cir
+// RUN: FileCheck --input-file=%t.cir %s
+
+cir.func @testPrintingAndParsing (%arg0 : !cir.bool) -> !cir.void {
+  cir.do {
+    cir.yield
+  } while {
+    cir.condition(%arg0)
+  }
+  cir.return
+}
+
+// CHECK: testPrintingAndParsing
+// CHECK: cir.do {
+// CHECK:   cir.yield
+// CHECK: } while {
+// CHECK:   cir.condition(%arg0)
+// CHECK: }

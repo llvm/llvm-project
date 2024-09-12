@@ -23,7 +23,6 @@
 namespace clang {
 namespace targets {
 
-LLVM_LIBRARY_VISIBILITY
 std::unique_ptr<clang::TargetInfo>
 AllocateTarget(const llvm::Triple &Triple, const clang::TargetOptions &Opts);
 

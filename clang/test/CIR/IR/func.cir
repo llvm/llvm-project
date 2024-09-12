@@ -1,0 +1,56 @@
+// RUN: cir-opt %s | FileCheck %s
+!s32i = !cir.int<s, 32>
+!u8i = !cir.int<u, 8>
+module {
+  cir.func @l0() {
+    cir.return
+  }
+
+  // Should print/parse function aliases.
+  // CHECK: cir.func @l1() alias(@l0)
+  cir.func @l1() alias(@l0)
+
+  // Should print/parse variadic function types.
+  // CHECK: cir.func private @variadic(!s32i, ...) -> !s32i
+  cir.func private @variadic(!s32i, ...) -> !s32i
+
+  // Should accept call with only the required parameters.
+  cir.func @variadic_call_1(%0: !s32i) -> !s32i {
+    %9 = cir.call @variadic(%0) : (!s32i) -> !s32i
+    cir.return %9 : !s32i
+  }
+
+  // Should accept calls with variadic parameters.
+  cir.func @variadic_call_2(%0: !s32i, %1: !s32i,  %2: !u8i) -> !s32i {
+    %9 = cir.call @variadic(%0, %1, %2) : (!s32i, !s32i, !u8i) -> !s32i
+    cir.return %9 : !s32i
+  }
+
+  // Should parse custom assembly format.
+  cir.func @parse_func_type() -> () {
+    %1 = cir.alloca !cir.ptr<!cir.func<!s32i (!s32i, ...)>>, !cir.ptr<!cir.ptr<!cir.func<!s32i (!s32i, ...)>>>, ["fn", init] {alignment = 8 : i64}
+    cir.return
+  }
+
+  // Should drop void return types.
+  // CHECK: cir.func @parse_explicit_void_func() {
+  cir.func @parse_explicit_void_func() -> !cir.void {
+    cir.return
+  }
+
+  // Should print/parse omitted void return type.
+  // CHECK: cir.func @parse_func_type_with_omitted_void() {
+  cir.func @parse_func_type_with_omitted_void() {
+    cir.return
+  }
+
+  // Should print/parse variadic no-proto functions.
+  // CHECK: cir.func no_proto private @no_proto(...) -> !s32i
+  cir.func no_proto private @no_proto(...) -> !s32i
+
+  // Should print/parse argument and result attributes.
+  // CHECK: cir.func @parse_arg_res_attrs(%arg0: !u8i {cir.zeroext}) -> (!u8i {cir.zeroext}) {
+  cir.func @parse_arg_res_attrs(%0: !u8i {cir.zeroext}) -> (!u8i {cir.zeroext}) {
+    cir.return %0 : !u8i
+  }
+}

@@ -1530,6 +1530,13 @@ void CompilerInvocationBase::GenerateCodeGenArgs(const CodeGenOptions &Opts,
   if (Opts.NewStructPathTBAA)
     GenerateArg(Consumer, OPT_new_struct_path_tbaa);
 
+  if (Opts.ClangIRBuildDeferredThreshold)
+    GenerateArg(Consumer, OPT_fclangir_disable_deferred_EQ,
+                Twine(Opts.ClangIRBuildDeferredThreshold));
+
+  if (Opts.ClangIRSkipFunctionsFromSystemHeaders)
+    GenerateArg(Consumer, OPT_fclangir_skip_system_headers);
+
   if (Opts.OptimizeSize == 1)
     GenerateArg(Consumer, OPT_O, "s");
   else if (Opts.OptimizeSize == 2)
@@ -2553,6 +2560,9 @@ static const auto &getFrontendActionTable() {
       {frontend::EmitAssembly, OPT_S},
       {frontend::EmitBC, OPT_emit_llvm_bc},
       {frontend::EmitCIR, OPT_emit_cir},
+      {frontend::EmitCIRFlat, OPT_emit_cir_flat},
+      {frontend::EmitCIROnly, OPT_emit_cir_only},
+      {frontend::EmitMLIR, OPT_emit_mlir},
       {frontend::EmitHTML, OPT_emit_html},
       {frontend::EmitLLVM, OPT_emit_llvm},
       {frontend::EmitLLVMOnly, OPT_emit_llvm_only},
@@ -2695,6 +2705,17 @@ static void GenerateFrontendArgs(const FrontendOptions &Opts,
 
   for (const auto &ModuleFile : Opts.ModuleFiles)
     GenerateArg(Consumer, OPT_fmodule_file, ModuleFile);
+
+  if (Opts.ClangIRLifetimeCheck)
+    GenerateArg(Consumer, OPT_fclangir_lifetime_check_EQ,
+                Opts.ClangIRLifetimeCheckOpts);
+
+  if (Opts.ClangIRIdiomRecognizer)
+    GenerateArg(Consumer, OPT_fclangir_idiom_recognizer_EQ,
+                Opts.ClangIRIdiomRecognizerOpts);
+
+  if (Opts.ClangIRLibOpt)
+    GenerateArg(Consumer, OPT_fclangir_lib_opt_EQ, Opts.ClangIRLibOptOpts);
 
   if (Opts.AuxTargetCPU)
     GenerateArg(Consumer, OPT_aux_target_cpu, *Opts.AuxTargetCPU);
@@ -2919,8 +2940,48 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
   if (Opts.ProgramAction != frontend::GenerateModule && Opts.IsSystemModule)
     Diags.Report(diag::err_drv_argument_only_allowed_with) << "-fsystem-module"
                                                            << "-emit-module";
-  if (Args.hasArg(OPT_fclangir) || Args.hasArg(OPT_emit_cir))
+  if (Args.hasArg(OPT_fclangir) || Args.hasArg(OPT_emit_cir) ||
+      Args.hasArg(OPT_emit_cir_flat))
     Opts.UseClangIRPipeline = true;
+
+  if (Args.hasArg(OPT_fclangir_direct_lowering))
+    Opts.ClangIRDirectLowering = true;
+
+  if (Args.hasArg(OPT_clangir_disable_passes))
+    Opts.ClangIRDisablePasses = true;
+
+  if (Args.hasArg(OPT_clangir_disable_verifier))
+    Opts.ClangIRDisableCIRVerifier = true;
+
+  if (Args.hasArg(OPT_clangir_disable_emit_cxx_default))
+    Opts.ClangIRDisableEmitCXXDefault = true;
+
+  if (Args.hasArg(OPT_clangir_verify_diagnostics))
+    Opts.ClangIRVerifyDiags = true;
+
+  if (Args.hasArg(OPT_fclangir_call_conv_lowering))
+    Opts.ClangIREnableCallConvLowering = true;
+
+  if (const Arg *A = Args.getLastArg(OPT_fclangir_lifetime_check,
+                                     OPT_fclangir_lifetime_check_EQ)) {
+    Opts.ClangIRLifetimeCheck = true;
+    Opts.ClangIRLifetimeCheckOpts = A->getValue();
+  }
+
+  if (const Arg *A = Args.getLastArg(OPT_fclangir_idiom_recognizer,
+                                     OPT_fclangir_idiom_recognizer_EQ)) {
+    Opts.ClangIRIdiomRecognizer = true;
+    Opts.ClangIRIdiomRecognizerOpts = A->getValue();
+  }
+
+  if (const Arg *A =
+          Args.getLastArg(OPT_fclangir_lib_opt, OPT_fclangir_lib_opt_EQ)) {
+    Opts.ClangIRLibOpt = true;
+    Opts.ClangIRLibOptOpts = A->getValue();
+  }
+
+  if (Args.hasArg(OPT_fclangir_mem2reg))
+    Opts.ClangIREnableMem2Reg = true;
 
   if (Args.hasArg(OPT_aux_target_cpu))
     Opts.AuxTargetCPU = std::string(Args.getLastArgValue(OPT_aux_target_cpu));
@@ -4388,6 +4449,9 @@ static bool isStrictlyPreprocessorAction(frontend::ActionKind Action) {
   case frontend::EmitAssembly:
   case frontend::EmitBC:
   case frontend::EmitCIR:
+  case frontend::EmitCIRFlat:
+  case frontend::EmitCIROnly:
+  case frontend::EmitMLIR:
   case frontend::EmitHTML:
   case frontend::EmitLLVM:
   case frontend::EmitLLVMOnly:
