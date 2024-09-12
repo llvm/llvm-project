@@ -7964,7 +7964,7 @@ public:
   /// Do an explicit extend of the given block pointer if we're in ARC.
   void maybeExtendBlockObject(ExprResult &E);
 
-   std::vector<std::tuple<SourceLocation, QualType, unsigned>>
+  std::vector<std::tuple<SourceLocation, QualType, unsigned>>
       ExcessPrecisionNotSatisfied;
   unsigned NumExcessPrecisionNotSatisfied = 0;
   SourceLocation LocationOfExcessPrecisionNotSatisfied;
