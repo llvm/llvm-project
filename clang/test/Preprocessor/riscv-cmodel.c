@@ -31,7 +31,7 @@
 // CHECK-MEDANY-NOT: __riscv_cmodel_medlow
 // CHECK-MEDANY-NOT: __riscv_cmodel_large
 
-// RUN: %clang --target=riscv64-unknown-linux-gnu -march=rv64i -x c -E -dM %s \
+// RUN: %clang --target=riscv64-unknown-linux-gnu -march=rv64i -fno-pic -x c -E -dM %s \
 // RUN: -mcmodel=large -o - | FileCheck --check-prefix=CHECK-LARGE %s
 
 // CHECK-LARGE: #define __riscv_cmodel_large 1
