@@ -19,18 +19,20 @@
 namespace llvm {
 struct SubtargetFeatureInfo;
 using SubtargetFeatureInfoMap =
-    std::map<Record *, SubtargetFeatureInfo, LessRecordByID>;
+    std::map<const Record *, SubtargetFeatureInfo, LessRecordByID>;
+using SubtargetFeaturesInfoVec =
+    std::vector<std::pair<const Record *, SubtargetFeatureInfo>>;
 
 /// Helper class for storing information on a subtarget feature which
 /// participates in instruction matching.
 struct SubtargetFeatureInfo {
   /// The predicate record for this feature.
-  Record *TheDef;
+  const Record *TheDef;
 
   /// An unique index assigned to represent this feature.
   uint64_t Index;
 
-  SubtargetFeatureInfo(Record *D, uint64_t Idx) : TheDef(D), Index(Idx) {}
+  SubtargetFeatureInfo(const Record *D, uint64_t Idx) : TheDef(D), Index(Idx) {}
 
   /// The name of the enumerated constant identifying this feature.
   std::string getEnumName() const {
@@ -48,8 +50,8 @@ struct SubtargetFeatureInfo {
   }
 
   void dump() const;
-  static std::vector<std::pair<Record *, SubtargetFeatureInfo>>
-  getAll(RecordKeeper &Records);
+
+  static SubtargetFeaturesInfoVec getAll(const RecordKeeper &Records);
 
   /// Emit the subtarget feature flag definitions.
   ///

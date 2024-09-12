@@ -120,7 +120,7 @@ static std::string explainPredicates(const TreePatternNode &N) {
     if (P.isTruncStore())
       Explanation += " truncstore";
 
-    if (Record *VT = P.getMemoryVT())
+    if (const Record *VT = P.getMemoryVT())
       Explanation += (" MemVT=" + VT->getName()).str();
     if (Record *VT = P.getScalarMemoryVT())
       Explanation += (" ScalarVT(MemVT)=" + VT->getName()).str();
@@ -168,7 +168,7 @@ static std::string explainPredicates(const TreePatternNode &N) {
   return Explanation;
 }
 
-std::string explainOperator(Record *Operator) {
+std::string explainOperator(const Record *Operator) {
   if (Operator->isSubClassOf("SDNode"))
     return (" (" + Operator->getValueAsString("Opcode") + ")").str();
 
@@ -346,7 +346,7 @@ private:
   /// SDNodes to the GINodeEquiv mapping. We need to map to the GINodeEquiv to
   /// check for attributes on the relation such as CheckMMOIsNonAtomic.
   /// This is defined using 'GINodeEquiv' in the target description.
-  DenseMap<Record *, Record *> NodeEquivs;
+  DenseMap<const Record *, Record *> NodeEquivs;
 
   /// Keep track of the equivalence between ComplexPattern's and
   /// GIComplexOperandMatcher. Map entries are specified by subclassing
@@ -379,7 +379,7 @@ private:
   void gatherTypeIDValues();
   void gatherNodeEquivs();
 
-  Record *findNodeEquiv(Record *N) const;
+  Record *findNodeEquiv(const Record *N) const;
   const CodeGenInstruction *getEquivNode(Record &Equiv,
                                          const TreePatternNode &N) const;
 
@@ -388,7 +388,7 @@ private:
   createAndImportSelDAGMatcher(RuleMatcher &Rule,
                                InstructionMatcher &InsnMatcher,
                                const TreePatternNode &Src, unsigned &TempOpIdx);
-  Error importComplexPatternOperandMatcher(OperandMatcher &OM, Record *R,
+  Error importComplexPatternOperandMatcher(OperandMatcher &OM, const Record *R,
                                            unsigned &TempOpIdx) const;
   Error importChildMatcher(RuleMatcher &Rule, InstructionMatcher &InsnMatcher,
                            const TreePatternNode &SrcChild,
@@ -504,7 +504,7 @@ void GlobalISelEmitter::gatherNodeEquivs() {
   }
 }
 
-Record *GlobalISelEmitter::findNodeEquiv(Record *N) const {
+Record *GlobalISelEmitter::findNodeEquiv(const Record *N) const {
   return NodeEquivs.lookup(N);
 }
 
@@ -928,7 +928,7 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
 }
 
 Error GlobalISelEmitter::importComplexPatternOperandMatcher(
-    OperandMatcher &OM, Record *R, unsigned &TempOpIdx) const {
+    OperandMatcher &OM, const Record *R, unsigned &TempOpIdx) const {
   const auto &ComplexPattern = ComplexPatternEquivs.find(R);
   if (ComplexPattern == ComplexPatternEquivs.end())
     return failedImport("SelectionDAG ComplexPattern (" + R->getName() +
@@ -1508,7 +1508,7 @@ GlobalISelEmitter::createAndImportSubInstructionRenderer(
 
 Expected<action_iterator> GlobalISelEmitter::createInstructionRenderer(
     action_iterator InsertPt, RuleMatcher &M, const TreePatternNode &Dst) {
-  Record *DstOp = Dst.getOperator();
+  const Record *DstOp = Dst.getOperator();
   if (!DstOp->isSubClassOf("Instruction")) {
     if (DstOp->isSubClassOf("ValueType"))
       return failedImport(
@@ -1813,7 +1813,7 @@ GlobalISelEmitter::inferRegClassFromPattern(const TreePatternNode &N) {
   // just take the first one).
   if (N.getNumTypes() < 1)
     return std::nullopt;
-  Record *OpRec = N.getOperator();
+  const Record *OpRec = N.getOperator();
 
   // We only want instructions.
   if (!OpRec->isSubClassOf("Instruction"))
@@ -2011,7 +2011,7 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
   }
 
   // Start with the defined operands (i.e., the results of the root operator).
-  Record *DstOp = Dst.getOperator();
+  const Record *DstOp = Dst.getOperator();
   if (!DstOp->isSubClassOf("Instruction"))
     return failedImport("Pattern operator isn't an instruction");
 

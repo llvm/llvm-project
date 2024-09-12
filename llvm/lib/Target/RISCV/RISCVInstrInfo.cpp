@@ -2918,7 +2918,7 @@ RISCVInstrInfo::getOutliningTypeImpl(const MachineModuleInfo &MMI,
     // if any possible.
     if (MO.getTargetFlags() == RISCVII::MO_PCREL_LO &&
         (MI.getMF()->getTarget().getFunctionSections() || F.hasComdat() ||
-         F.hasSection()))
+         F.hasSection() || F.getSectionPrefix()))
       return outliner::InstrType::Illegal;
   }
 

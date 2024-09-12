@@ -28,24 +28,24 @@ PreservedAnalyses SandboxVectorizerPass::run(Function &F,
   return PA;
 }
 
-bool SandboxVectorizerPass::runImpl(Function &F) {
+bool SandboxVectorizerPass::runImpl(Function &LLVMF) {
   // If the target claims to have no vector registers early return.
   if (!TTI->getNumberOfRegisters(TTI->getRegisterClassForType(true))) {
     LLVM_DEBUG(dbgs() << "SBVec: Target has no vector registers, return.\n");
     return false;
   }
-  LLVM_DEBUG(dbgs() << "SBVec: Analyzing " << F.getName() << ".\n");
+  LLVM_DEBUG(dbgs() << "SBVec: Analyzing " << LLVMF.getName() << ".\n");
   // Early return if the attribute NoImplicitFloat is used.
-  if (F.hasFnAttribute(Attribute::NoImplicitFloat)) {
+  if (LLVMF.hasFnAttribute(Attribute::NoImplicitFloat)) {
     LLVM_DEBUG(dbgs() << "SBVec: NoImplicitFloat attribute, return.\n");
     return false;
   }
 
-  sandboxir::Context Ctx(F.getContext());
-  // Create SandboxIR for `F`.
-  sandboxir::Function &SBF = *Ctx.createFunction(&F);
+  sandboxir::Context Ctx(LLVMF.getContext());
+  // Create SandboxIR for `LLVMF`.
+  sandboxir::Function &F = *Ctx.createFunction(&LLVMF);
   // TODO: Initialize SBVec Pass Manager
-  (void)SBF;
+  (void)F;
 
   return false;
 }

@@ -932,8 +932,7 @@ class VOP3_BITOP3_Profile<VOPProfile pfl, VOP3Features f> : VOP3_Profile<pfl, f>
                    (ins bitop3_0:$bitop3));
 
   let InsVOP3OpSel = !con(getInsVOP3Base<Src0RC64, Src1RC64, Src2RC64, NumSrcArgs, 0, 1, 1, 0,
-                                         getOpSelMod<Src0VT>.ret, getOpSelMod<Src1VT>.ret,
-                                         getOpSelMod<Src2VT>.ret, 0>.ret,
+                                         Src0Mod, Src1Mod, Src2Mod, 0>.ret,
                           (ins bitop3_0:$bitop3, op_sel0:$op_sel));
 
   let Asm64 = "$vdst, $src0, $src1, $src2$bitop3";
