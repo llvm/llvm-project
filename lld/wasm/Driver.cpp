@@ -333,9 +333,15 @@ void LinkerDriver::addFile(StringRef path) {
     return;
   }
   case file_magic::bitcode:
-  case file_magic::wasm_object:
-    files.push_back(createObjectFile(mbref, "", 0, inLib));
+  case file_magic::wasm_object: {
+    auto obj = createObjectFile(mbref, "", 0, inLib);
+    if (config->isStatic && isa<SharedFile>(obj)) {
+      error("attempted static link of dynamic object " + path);
+      break;
+    }
+    files.push_back(obj);
     break;
+  }
   case file_magic::unknown:
     if (mbref.getBuffer().starts_with("#STUB")) {
       files.push_back(make<StubFile>(mbref));

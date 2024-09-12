@@ -1182,13 +1182,23 @@ public:
                            InstructionCost Cost) {
     assert(VF.isVector() && "Expected VF >=2");
     /// Broadcast this decicion to all instructions inside the group.
-    /// But the cost will be assigned to one instruction only.
+    /// When interleaving, the cost will only be assigned one instruction, the
+    /// insert position. For other cases, add the appropriate fraction of the
+    /// total cost to each instruction. This ensures accurate costs are used,
+    /// even if the insert position instruction is not used.
+    InstructionCost InsertPosCost = Cost;
+    InstructionCost OtherMemberCost = 0;
+    if (W != CM_Interleave)
+      OtherMemberCost = InsertPosCost = Cost / Grp->getNumMembers();
+    ;
     for (unsigned Idx = 0; Idx < Grp->getFactor(); ++Idx) {
       if (auto *I = Grp->getMember(Idx)) {
         if (Grp->getInsertPos() == I)
-          WideningDecisions[std::make_pair(I, VF)] = std::make_pair(W, Cost);
+          WideningDecisions[std::make_pair(I, VF)] =
+              std::make_pair(W, InsertPosCost);
         else
-          WideningDecisions[std::make_pair(I, VF)] = std::make_pair(W, 0);
+          WideningDecisions[std::make_pair(I, VF)] =
+              std::make_pair(W, OtherMemberCost);
       }
     }
   }

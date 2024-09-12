@@ -1506,6 +1506,10 @@ public:
   static Value *create(Value *Cond, Value *True, Value *False,
                        BasicBlock *InsertAtEnd, Context &Ctx,
                        const Twine &Name = "");
+
+  const Value *getCondition() const { return getOperand(0); }
+  const Value *getTrueValue() const { return getOperand(1); }
+  const Value *getFalseValue() const { return getOperand(2); }
   Value *getCondition() { return getOperand(0); }
   Value *getTrueValue() { return getOperand(1); }
   Value *getFalseValue() { return getOperand(2); }
@@ -1513,7 +1517,16 @@ public:
   void setCondition(Value *New) { setOperand(0, New); }
   void setTrueValue(Value *New) { setOperand(1, New); }
   void setFalseValue(Value *New) { setOperand(2, New); }
-  void swapValues() { cast<llvm::SelectInst>(Val)->swapValues(); }
+  void swapValues();
+
+  /// Return a string if the specified operands are invalid for a select
+  /// operation, otherwise return null.
+  static const char *areInvalidOperands(Value *Cond, Value *True,
+                                        Value *False) {
+    return llvm::SelectInst::areInvalidOperands(Cond->Val, True->Val,
+                                                False->Val);
+  }
+
   /// For isa/dyn_cast.
   static bool classof(const Value *From);
 };
