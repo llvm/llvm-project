@@ -978,6 +978,22 @@ def INT_NVVM_FABS_D : F_MATH_1<"abs.f64 \t$dst, $src0;", Float64Regs,
   Float64Regs, int_nvvm_fabs_d>;
 
 //
+// copysign
+//
+
+def fcopysign_nvptx : SDNode<"NVPTXISD::FCOPYSIGN", SDTFPBinOp>;
+
+def COPYSIGN_F :
+    NVPTXInst<(outs Float32Regs:$dst), (ins Float32Regs:$src0, Float32Regs:$src1),
+              "copysign.f32 \t$dst, $src0, $src1;",
+              [(set Float32Regs:$dst, (fcopysign_nvptx Float32Regs:$src1, Float32Regs:$src0))]>;
+
+def COPYSIGN_D :
+    NVPTXInst<(outs Float64Regs:$dst), (ins Float64Regs:$src0, Float64Regs:$src1),
+              "copysign.f64 \t$dst, $src0, $src1;",
+              [(set Float64Regs:$dst, (fcopysign_nvptx Float64Regs:$src1, Float64Regs:$src0))]>;
+
+//
 // Abs, Neg bf16, bf16x2
 //
 

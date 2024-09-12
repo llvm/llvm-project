@@ -3335,7 +3335,11 @@ bool Compiler<Emitter>::VisitObjCBoxedExpr(const ObjCBoxedExpr *E) {
   if (!E->isExpressibleAsConstantInitializer())
     return this->discard(SubExpr) && this->emitInvalid(E);
 
-  return this->delegate(SubExpr);
+  assert(classifyPrim(E) == PT_Ptr);
+  if (std::optional<unsigned> I = P.getOrCreateDummy(E))
+    return this->emitGetPtrGlobal(*I, E);
+
+  return false;
 }
 
 template <class Emitter>
@@ -4118,7 +4122,7 @@ bool Compiler<Emitter>::VisitBuiltinCallExpr(const CallExpr *E,
       BuiltinID == Builtin::BI__builtin___NSStringMakeConstantString ||
       BuiltinID == Builtin::BI__builtin_ptrauth_sign_constant ||
       BuiltinID == Builtin::BI__builtin_function_start) {
-    if (std::optional<unsigned> GlobalOffset = P.createGlobal(E)) {
+    if (std::optional<unsigned> GlobalOffset = P.getOrCreateDummy(E)) {
       if (!this->emitGetPtrGlobal(*GlobalOffset, E))
         return false;
 
