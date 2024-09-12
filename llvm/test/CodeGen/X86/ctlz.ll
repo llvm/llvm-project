@@ -17,7 +17,7 @@ define i8 @ctlz_i8(i8 %x) {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    bsrl %eax, %eax
-; X86-NEXT:    xorl $7, %eax
+; X86-NEXT:    xorb $7, %al
 ; X86-NEXT:    # kill: def $al killed $al killed $eax
 ; X86-NEXT:    retl
 ;
@@ -25,7 +25,7 @@ define i8 @ctlz_i8(i8 %x) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    movzbl %dil, %eax
 ; X64-NEXT:    bsrl %eax, %eax
-; X64-NEXT:    xorl $7, %eax
+; X64-NEXT:    xorb $7, %al
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
 ;
@@ -226,7 +226,7 @@ define i8 @ctlz_i8_zero_test(i8 %n) {
 ; X86-NOCMOV-NEXT:  # %bb.2: # %cond.false
 ; X86-NOCMOV-NEXT:    movzbl %al, %eax
 ; X86-NOCMOV-NEXT:    bsrl %eax, %eax
-; X86-NOCMOV-NEXT:    xorl $7, %eax
+; X86-NOCMOV-NEXT:    xorb $7, %al
 ; X86-NOCMOV-NEXT:    # kill: def $al killed $al killed $eax
 ; X86-NOCMOV-NEXT:    retl
 ; X86-NOCMOV-NEXT:  .LBB4_1:
@@ -240,7 +240,7 @@ define i8 @ctlz_i8_zero_test(i8 %n) {
 ; X86-CMOV-NEXT:    bsrl %eax, %ecx
 ; X86-CMOV-NEXT:    movl $15, %eax
 ; X86-CMOV-NEXT:    cmovnel %ecx, %eax
-; X86-CMOV-NEXT:    xorl $7, %eax
+; X86-CMOV-NEXT:    xorb $7, %al
 ; X86-CMOV-NEXT:    # kill: def $al killed $al killed $eax
 ; X86-CMOV-NEXT:    retl
 ;
@@ -257,7 +257,7 @@ define i8 @ctlz_i8_zero_test(i8 %n) {
 ; X86-CLZ:       # %bb.0:
 ; X86-CLZ-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-CLZ-NEXT:    lzcntl %eax, %eax
-; X86-CLZ-NEXT:    addl $-24, %eax
+; X86-CLZ-NEXT:    addb $-24, %al
 ; X86-CLZ-NEXT:    # kill: def $al killed $al killed $eax
 ; X86-CLZ-NEXT:    retl
 ;
@@ -265,7 +265,7 @@ define i8 @ctlz_i8_zero_test(i8 %n) {
 ; X64-CLZ:       # %bb.0:
 ; X64-CLZ-NEXT:    movzbl %dil, %eax
 ; X64-CLZ-NEXT:    lzcntl %eax, %eax
-; X64-CLZ-NEXT:    addl $-24, %eax
+; X64-CLZ-NEXT:    addb $-24, %al
 ; X64-CLZ-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-CLZ-NEXT:    retq
 ;
@@ -273,7 +273,7 @@ define i8 @ctlz_i8_zero_test(i8 %n) {
 ; X64-FASTLZCNT:       # %bb.0:
 ; X64-FASTLZCNT-NEXT:    movzbl %dil, %eax
 ; X64-FASTLZCNT-NEXT:    lzcntl %eax, %eax
-; X64-FASTLZCNT-NEXT:    addl $-24, %eax
+; X64-FASTLZCNT-NEXT:    addb $-24, %al
 ; X64-FASTLZCNT-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-FASTLZCNT-NEXT:    retq
 ;
@@ -281,7 +281,7 @@ define i8 @ctlz_i8_zero_test(i8 %n) {
 ; X86-FASTLZCNT:       # %bb.0:
 ; X86-FASTLZCNT-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-FASTLZCNT-NEXT:    lzcntl %eax, %eax
-; X86-FASTLZCNT-NEXT:    addl $-24, %eax
+; X86-FASTLZCNT-NEXT:    addb $-24, %al
 ; X86-FASTLZCNT-NEXT:    # kill: def $al killed $al killed $eax
 ; X86-FASTLZCNT-NEXT:    retl
   %tmp1 = call i8 @llvm.ctlz.i8(i8 %n, i1 false)
@@ -654,7 +654,7 @@ define i8 @ctlz_i8_knownbits(i8 %x)  {
 ; X86-NEXT:    orb $64, %al
 ; X86-NEXT:    movzbl %al, %eax
 ; X86-NEXT:    bsrl %eax, %eax
-; X86-NEXT:    xorl $7, %eax
+; X86-NEXT:    xorb $7, %al
 ; X86-NEXT:    # kill: def $al killed $al killed $eax
 ; X86-NEXT:    retl
 ;
@@ -663,7 +663,7 @@ define i8 @ctlz_i8_knownbits(i8 %x)  {
 ; X64-NEXT:    orb $64, %dil
 ; X64-NEXT:    movzbl %dil, %eax
 ; X64-NEXT:    bsrl %eax, %eax
-; X64-NEXT:    xorl $7, %eax
+; X64-NEXT:    xorb $7, %al
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
 ;
@@ -963,7 +963,7 @@ define i8 @ctlz_xor7_i8_false(i8 %x) {
 ; X86-NOCMOV-NEXT:  # %bb.2: # %cond.false
 ; X86-NOCMOV-NEXT:    movzbl %al, %eax
 ; X86-NOCMOV-NEXT:    bsrl %eax, %eax
-; X86-NOCMOV-NEXT:    xorl $7, %eax
+; X86-NOCMOV-NEXT:    xorb $7, %al
 ; X86-NOCMOV-NEXT:    xorb $7, %al
 ; X86-NOCMOV-NEXT:    # kill: def $al killed $al killed $eax
 ; X86-NOCMOV-NEXT:    retl
@@ -994,7 +994,7 @@ define i8 @ctlz_xor7_i8_false(i8 %x) {
 ; X86-CLZ:       # %bb.0:
 ; X86-CLZ-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-CLZ-NEXT:    lzcntl %eax, %eax
-; X86-CLZ-NEXT:    addl $-24, %eax
+; X86-CLZ-NEXT:    addb $-24, %al
 ; X86-CLZ-NEXT:    xorb $7, %al
 ; X86-CLZ-NEXT:    # kill: def $al killed $al killed $eax
 ; X86-CLZ-NEXT:    retl
@@ -1003,7 +1003,7 @@ define i8 @ctlz_xor7_i8_false(i8 %x) {
 ; X64-CLZ:       # %bb.0:
 ; X64-CLZ-NEXT:    movzbl %dil, %eax
 ; X64-CLZ-NEXT:    lzcntl %eax, %eax
-; X64-CLZ-NEXT:    addl $-24, %eax
+; X64-CLZ-NEXT:    addb $-24, %al
 ; X64-CLZ-NEXT:    xorb $7, %al
 ; X64-CLZ-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-CLZ-NEXT:    retq
@@ -1012,7 +1012,7 @@ define i8 @ctlz_xor7_i8_false(i8 %x) {
 ; X64-FASTLZCNT:       # %bb.0:
 ; X64-FASTLZCNT-NEXT:    movzbl %dil, %eax
 ; X64-FASTLZCNT-NEXT:    lzcntl %eax, %eax
-; X64-FASTLZCNT-NEXT:    addl $-24, %eax
+; X64-FASTLZCNT-NEXT:    addb $-24, %al
 ; X64-FASTLZCNT-NEXT:    xorb $7, %al
 ; X64-FASTLZCNT-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-FASTLZCNT-NEXT:    retq
@@ -1021,7 +1021,7 @@ define i8 @ctlz_xor7_i8_false(i8 %x) {
 ; X86-FASTLZCNT:       # %bb.0:
 ; X86-FASTLZCNT-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-FASTLZCNT-NEXT:    lzcntl %eax, %eax
-; X86-FASTLZCNT-NEXT:    addl $-24, %eax
+; X86-FASTLZCNT-NEXT:    addb $-24, %al
 ; X86-FASTLZCNT-NEXT:    xorb $7, %al
 ; X86-FASTLZCNT-NEXT:    # kill: def $al killed $al killed $eax
 ; X86-FASTLZCNT-NEXT:    retl

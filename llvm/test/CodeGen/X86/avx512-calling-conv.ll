@@ -931,7 +931,7 @@ define <17 x i1> @test16(<17 x i1> %a, <17 x i1> %b) nounwind {
 ; KNL-NEXT:    kshiftrw $13, %k0, %k1
 ; KNL-NEXT:    kmovw %k1, %r13d
 ; KNL-NEXT:    kshiftrw $14, %k0, %k1
-; KNL-NEXT:    andl $1, %edx
+; KNL-NEXT:    andb $1, %dl
 ; KNL-NEXT:    movb %dl, 2(%rax)
 ; KNL-NEXT:    kmovw %k0, %edx
 ; KNL-NEXT:    andl $1, %edx
@@ -1244,7 +1244,7 @@ define <17 x i1> @test16(<17 x i1> %a, <17 x i1> %b) nounwind {
 ; SKX-NEXT:    kshiftrd $13, %k0, %k1
 ; SKX-NEXT:    kmovd %k1, %r13d
 ; SKX-NEXT:    kshiftrd $14, %k0, %k1
-; SKX-NEXT:    andl $1, %edx
+; SKX-NEXT:    andb $1, %dl
 ; SKX-NEXT:    movb %dl, 2(%rax)
 ; SKX-NEXT:    kmovd %k0, %edx
 ; SKX-NEXT:    andl $1, %edx
@@ -1550,7 +1550,7 @@ define <17 x i1> @test16(<17 x i1> %a, <17 x i1> %b) nounwind {
 ; KNL_X32-NEXT:    kshiftrw $5, %k0, %k1
 ; KNL_X32-NEXT:    kmovw %k1, %ecx
 ; KNL_X32-NEXT:    kshiftrw $6, %k0, %k1
-; KNL_X32-NEXT:    andl $1, %ebx
+; KNL_X32-NEXT:    andb $1, %bl
 ; KNL_X32-NEXT:    movb %bl, 2(%eax)
 ; KNL_X32-NEXT:    kmovw %k0, %ebx
 ; KNL_X32-NEXT:    andl $1, %ebx
@@ -1878,7 +1878,7 @@ define <17 x i1> @test16(<17 x i1> %a, <17 x i1> %b) nounwind {
 ; FASTISEL-NEXT:    kshiftrd $13, %k0, %k1
 ; FASTISEL-NEXT:    kmovd %k1, %r13d
 ; FASTISEL-NEXT:    kshiftrd $14, %k0, %k1
-; FASTISEL-NEXT:    andl $1, %edx
+; FASTISEL-NEXT:    andb $1, %dl
 ; FASTISEL-NEXT:    movb %dl, 2(%rax)
 ; FASTISEL-NEXT:    kmovd %k0, %edx
 ; FASTISEL-NEXT:    andl $1, %edx

@@ -4,7 +4,7 @@
 define i1 @cmp_allbits_concat_i8(i8 %x, i8 %y) {
 ; CHECK-LABEL: cmp_allbits_concat_i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    andl %esi, %edi
+; CHECK-NEXT:    andb %sil, %dil
 ; CHECK-NEXT:    cmpb $-1, %dil
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    retq
