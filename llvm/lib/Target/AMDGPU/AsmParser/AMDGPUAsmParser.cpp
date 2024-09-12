@@ -1829,7 +1829,7 @@ public:
   bool parseSwizzleOperand(int64_t &Op,
                            const unsigned MinVal,
                            const unsigned MaxVal,
-                           const StringRef ErrMsg,
+                           const Twine ErrMsg,
                            SMLoc &Loc);
   bool parseSwizzleOperands(const unsigned OpNum, int64_t* Op,
                             const unsigned MinVal,
@@ -7977,7 +7977,7 @@ bool
 AMDGPUAsmParser::parseSwizzleOperand(int64_t &Op,
                                      const unsigned MinVal,
                                      const unsigned MaxVal,
-                                     const StringRef ErrMsg,
+                                     const Twine ErrMsg,
                                      SMLoc &Loc) {
   if (!skipToken(AsmToken::Comma, "expected a comma")) {
     return false;
@@ -8155,7 +8155,7 @@ bool AMDGPUAsmParser::parseSwizzleFFT(int64_t &Imm) {
   SMLoc Loc;
   if (!parseSwizzleOperand(Swizzle, 0, FFT_SWIZZLE_MAX,
                            "FFT swizzle must be in the interval [0," +
-                               Twine(FFT_SWIZZLE_MAX).str() + Twine(']').str(),
+                               Twine(FFT_SWIZZLE_MAX) + Twine(']'),
                            Loc))
     return false;
 
@@ -8182,7 +8182,7 @@ bool AMDGPUAsmParser::parseSwizzleRotate(int64_t &Imm) {
   if (!parseSwizzleOperand(
           RotateSize, 0, ROTATE_MAX_SIZE,
           "number of threads to rotate must be in the interval [0," +
-              Twine(ROTATE_MAX_SIZE).str() + Twine(']').str(),
+              Twine(ROTATE_MAX_SIZE) + Twine(']'),
           Loc))
     return false;
 
