@@ -2078,7 +2078,7 @@ void TypePrinter::printHLSLAttributedResourceAfter(
      << HLSLResourceClassAttr::ConvertResourceClassToStr(Attrs.ResourceClass)
      << ")]]";
   if (Attrs.IsROV)
-    OS << " [[hlsl::is_rov()]]";
+    OS << " [[hlsl::is_rov]]";
 
   QualType ContainedTy = T->getContainedType();
   if (!ContainedTy.isNull()) {
