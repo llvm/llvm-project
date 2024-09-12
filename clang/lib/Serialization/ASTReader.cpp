@@ -9830,8 +9830,7 @@ void ASTReader::finishPendingActions() {
       !PendingDeducedVarTypes.empty() || !PendingIncompleteDeclChains.empty() ||
       !PendingDeclChains.empty() || !PendingMacroIDs.empty() ||
       !PendingDeclContextInfos.empty() || !PendingUpdateRecords.empty() ||
-      !PendingObjCExtensionIvarRedeclarations.empty() ||
-      !PendingLambdas.empty()) {
+      !PendingObjCExtensionIvarRedeclarations.empty()) {
     // If any identifiers with corresponding top-level declarations have
     // been loaded, load those declarations now.
     using TopLevelDeclsMap =
@@ -9976,11 +9975,6 @@ void ASTReader::finishPendingActions() {
       }
       PendingObjCExtensionIvarRedeclarations.pop_back();
     }
-
-    // Load any pendiong lambdas.
-    for (auto ID : PendingLambdas)
-      GetDecl(ID);
-    PendingLambdas.clear();
   }
 
   // At this point, all update records for loaded decls are in place, so any
