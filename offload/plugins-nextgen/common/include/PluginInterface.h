@@ -124,6 +124,7 @@ enum InfoLevelKind { InfoLevel1 = 1, InfoLevel2, InfoLevel3 };
 /// we use the level to determine the indentation of the key-value property at
 /// printing time. See the enum InfoLevelKind for the list of accepted levels.
 class InfoQueueTy {
+public:
   struct InfoQueueEntryTy {
     std::string Key;
     std::string Value;
@@ -131,6 +132,8 @@ class InfoQueueTy {
     uint64_t Level;
   };
 
+
+private:
   std::deque<InfoQueueEntryTy> Queue;
 
 public:
@@ -151,6 +154,10 @@ public:
       Queue.push_back({Key, std::to_string(Value), Units, L});
     else
       Queue.push_back({Key, Value, Units, L});
+  }
+
+  const std::deque<InfoQueueEntryTy> &getQueue() const {
+    return Queue;
   }
 
   /// Print all info entries added to the queue.
