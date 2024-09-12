@@ -840,8 +840,8 @@ Status MinidumpFileBuilder::AddMemoryList() {
   if (error.Fail())
     return error;
 
-  lldb_private::Progress progress_tracker("Saving Minidump File", "",
-                                          all_core_memory_ranges.GetSize());
+  lldb_private::Progress progress("Saving Minidump File", "",
+                                  all_core_memory_ranges.GetSize());
   std::vector<CoreFileMemoryRange> all_core_memory_vec;
   // Extract all the data into just a vector of data. So we can mutate this in
   // place.
@@ -894,13 +894,13 @@ Status MinidumpFileBuilder::AddMemoryList() {
     }
   }
 
-  error = AddMemoryList_32(ranges_32, progress_tracker);
+  error = AddMemoryList_32(ranges_32, progress);
   if (error.Fail())
     return error;
 
   // Add the remaining memory as a 64b range.
   if (!ranges_64.empty()) {
-    error = AddMemoryList_64(ranges_64, progress_tracker);
+    error = AddMemoryList_64(ranges_64, progress);
     if (error.Fail())
       return error;
   }
@@ -976,7 +976,7 @@ GetLargestRangeSize(const std::vector<CoreFileMemoryRange> &ranges) {
 
 Status
 MinidumpFileBuilder::AddMemoryList_32(std::vector<CoreFileMemoryRange> &ranges,
-                                      Progress &progressTracker) {
+                                      Progress &progress) {
   std::vector<MemoryDescriptor> descriptors;
   Status error;
   if (ranges.size() == 0)
@@ -1028,7 +1028,7 @@ MinidumpFileBuilder::AddMemoryList_32(std::vector<CoreFileMemoryRange> &ranges,
     if (error.Fail())
       return error;
 
-    progressTracker.Increment();
+    progress.Increment();
   }
 
   // Add a directory that references this list
@@ -1056,7 +1056,7 @@ MinidumpFileBuilder::AddMemoryList_32(std::vector<CoreFileMemoryRange> &ranges,
 
 Status
 MinidumpFileBuilder::AddMemoryList_64(std::vector<CoreFileMemoryRange> &ranges,
-                                      Progress &progressTracker) {
+                                      Progress &progress) {
   Status error;
   if (ranges.empty())
     return error;
@@ -1139,7 +1139,7 @@ MinidumpFileBuilder::AddMemoryList_64(std::vector<CoreFileMemoryRange> &ranges,
     if (error.Fail())
       return error;
 
-    progressTracker.Increment();
+    progress.Increment();
   }
 
   // Early return if there is no cleanup needed.

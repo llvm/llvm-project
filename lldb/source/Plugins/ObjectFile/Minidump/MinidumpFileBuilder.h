@@ -123,10 +123,10 @@ private:
   // Add MemoryList stream, containing dumps of important memory segments
   lldb_private::Status
   AddMemoryList_64(std::vector<lldb_private::CoreFileMemoryRange> &ranges,
-                   lldb_private::Progress &progressTracker);
+                   lldb_private::Progress &progress);
   lldb_private::Status
   AddMemoryList_32(std::vector<lldb_private::CoreFileMemoryRange> &ranges,
-                   lldb_private::Progress &progressTracker);
+                   lldb_private::Progress &progress);
   // Update the thread list on disk with the newly emitted stack RVAs.
   lldb_private::Status FixThreadStacks();
   lldb_private::Status FlushBufferToDisk();
