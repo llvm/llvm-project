@@ -380,6 +380,6 @@ def err_ast_action_on_llvm_ir : Error<
   DefaultFatal;
 
 def err_os_unsupport_riscv_fmv : Error<
-  "fmv is currently only supported on Linux">;
+  "function multiversioning is currently only supported on Linux">;
 
 }
