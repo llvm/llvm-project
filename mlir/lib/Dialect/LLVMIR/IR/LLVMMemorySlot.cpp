@@ -174,7 +174,7 @@ static bool areConversionCompatible(const DataLayout &layout, Type targetType,
 
 /// Checks if `dataLayout` describes a little endian layout.
 static bool isBigEndian(const DataLayout &dataLayout) {
-  auto endiannessStr = dyn_cast_or_null<StringAttr>(dataLayout.getEndianness());
+  auto endiannessStr = dyn_cast_or_null<StringAttr>(dataLayout.getEndiannesss());
   return endiannessStr && endiannessStr == "big";
 }
 

@@ -110,7 +110,7 @@ SmallVector<scf::ForOp> mlir::replaceLoopNestWithNewYields(
 /// Assumes the FuncOp result types is the type of the yielded operands of the
 /// single block. This constraint makes it easy to determine the result.
 /// This method also clones the `arith::ConstantIndexOp` at the start of
-/// `outlinedFuncBody` to alloc simple canonicalizations. If `callOp` is
+/// `outlinedFuncBody` to alloc simple canonicalization. If `callOp` is
 /// provided, it will be set to point to the operation that calls the outlined
 /// function.
 // TODO: support more than single-block regions.

@@ -637,7 +637,7 @@ static int64_t getLargestKnownDivisor(AffineExpr e, ArrayRef<Value> operands) {
   // We simply exploit information from loop IVs.
   // We don't need to use mlir::getLargestKnownDivisorOfValue since the other
   // desired simplifications are expected to be part of other
-  // canonicalizations. Also, mlir::getLargestKnownDivisorOfValue is part of the
+  // canonicalization. Also, mlir::getLargestKnownDivisorOfValue is part of the
   // LoopAnalysis library.
   Value operand = operands[dimExpr.getPosition()];
   int64_t operandDivisor = 1;

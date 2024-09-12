@@ -478,7 +478,7 @@ The key implication is that this conversion to deep predication needs to be
 undone once we are done with Linalg transformations. After iterators and
 induction variables are materialized (i.e. after lowering out of
 `linalg.generic` occurred), the overall performance will be greatly influenced
-by the quality of canonicalizations, foldings and *Loop Independent Code Motion*
+by the quality of canonicalization, foldings and *Loop Independent Code Motion*
 (LICM).
 
 In the grander scheme, the reliance on late LICM was deemed a necessary risk.

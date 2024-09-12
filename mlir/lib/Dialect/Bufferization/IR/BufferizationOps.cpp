@@ -1076,7 +1076,7 @@ struct EraseAlwaysFalseDealloc : public OpRewritePattern<DeallocOp> {
 /// memref if the operand is not already guaranteed to be the result of a memref
 /// allocation operation. This canonicalization pattern removes this extraction
 /// operation if the operand is now produced by an allocation operation (e.g.,
-/// due to other canonicalizations simplifying the IR).
+/// due to other canonicalization simplifying the IR).
 ///
 /// Example:
 /// ```mlir

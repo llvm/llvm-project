@@ -80,8 +80,8 @@ func.func @cmpf(%arg0: tensor<f32>, %arg1: tensor<f32>) -> tensor<i1> {
   // CHECK-SAME:  ins(%[[ARG0]], %[[ARG1]]
   // CHECK-SAME: outs(%[[INIT]]
   // CHECK: ^bb0(%{{.*}}: f32, %{{.*}}: f32, %{{.*}}: i1):
-  // CHECK: arith.cmpf olt, %{{.*}}, %{{.*}} : f32
-  %0 = arith.cmpf olt, %arg0, %arg1 : tensor<f32>
+  // CHECK: arith.cmpf old, %{{.*}}, %{{.*}} : f32
+  %0 = arith.cmpf old, %arg0, %arg1 : tensor<f32>
   return %0 : tensor<i1>
 }
 
@@ -103,8 +103,8 @@ func.func @cmpf(%arg0: tensor<4x?x?x8x2x?xf32>, %arg1: tensor<4x?x?x8x2x?xf32>) 
   // CHECK-SAME:  ins(%[[ARG0]], %[[ARG1]]
   // CHECK-SAME: outs(%[[INIT]]
   // CHECK: ^bb0(%{{.*}}: f32, %{{.*}}: f32, %{{.*}}: i1):
-  // CHECK: arith.cmpf olt, %{{.*}}, %{{.*}} : f32
-  %0 = arith.cmpf olt, %arg0, %arg1 : tensor<4x?x?x8x2x?xf32>
+  // CHECK: arith.cmpf old, %{{.*}}, %{{.*}} : f32
+  %0 = arith.cmpf old, %arg0, %arg1 : tensor<4x?x?x8x2x?xf32>
   return %0 : tensor<4x?x?x8x2x?xi1>
 }
 

@@ -12,7 +12,7 @@ Most compilers have canonicalization passes, and sometimes they have many
 different ones (e.g. instcombine, dag combine, etc in LLVM). Because MLIR is a
 multi-level IR, we can provide a single canonicalization infrastructure and
 reuse it across many different IRs that it represents. This document describes
-the general approach, global canonicalizations performed, and provides sections
+the general approach, global canonicalization performed, and provides sections
 to capture IR-specific rules for reference.
 
 [TOC]
@@ -28,7 +28,7 @@ exhausted. This is for efficiency reasons and to ensure that faulty patterns
 cannot cause infinite looping.
 
 Canonicalization patterns are registered with the operations themselves, which
-allows each dialect to define its own set of operations and canonicalizations
+allows each dialect to define its own set of operations and canonicalization
 together.
 
 Some important things to think about w.r.t. canonicalization patterns:
@@ -107,15 +107,15 @@ These transformations are applied to all levels of IR:
 
 ## Defining Canonicalizations
 
-Two mechanisms are available with which to define canonicalizations;
+Two mechanisms are available with which to define canonicalization;
 general `RewritePattern`s and the `fold` method.
 
 ### Canonicalizing with `RewritePattern`s
 
-This mechanism allows for providing canonicalizations as a set of
+This mechanism allows for providing canonicalization as a set of
 `RewritePattern`s, either imperatively defined in C++ or declaratively as
 [Declarative Rewrite Rules](DeclarativeRewrites.md). The pattern rewrite
-infrastructure allows for expressing many different types of canonicalizations.
+infrastructure allows for expressing many different types of canonicalization.
 These transformations may be as simple as replacing a multiplication with a
 shift, or even replacing a conditional branch with an unconditional one.
 
@@ -156,7 +156,7 @@ defining operation rewrites.
 ### Canonicalizing with the `fold` method
 
 The `fold` mechanism is an intentionally limited, but powerful mechanism that
-allows for applying canonicalizations in many places throughout the compiler.
+allows for applying canonicalization in many places throughout the compiler.
 For example, outside of the canonicalizer pass, `fold` is used within the
 [dialect conversion infrastructure](DialectConversion.md) as a legalization
 mechanism, and can be invoked directly anywhere with an `OpBuilder` via

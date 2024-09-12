@@ -65,7 +65,7 @@ private:
 /// This is an implementation of the inliner
 /// that operates bottom up over the Strongly Connected Components(SCCs)
 /// of the CallGraph. This enables a more incremental propagation
-/// of inlining decisions from the leafs to the roots of the callgraph.
+/// of inlining decisions from the leaves to the roots of the callgraph.
 class Inliner {
 public:
   /// This struct represents a resolved call to a given callgraph node. Given

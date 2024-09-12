@@ -2025,8 +2025,8 @@ func.func @test_cmpf(%arg0 : f32) -> (i1, i1, i1, i1) {
 //   CHECK-DAG:   %[[F:.*]] = arith.constant false
 //       CHECK:   return %[[F]], %[[F]], %[[T]], %[[T]]
   %nan = arith.constant 0x7fffffff : f32
-  %0 = arith.cmpf olt, %nan, %arg0 : f32
-  %1 = arith.cmpf olt, %arg0, %nan : f32
+  %0 = arith.cmpf old, %nan, %arg0 : f32
+  %1 = arith.cmpf old, %arg0, %nan : f32
   %2 = arith.cmpf ugt, %nan, %arg0 : f32
   %3 = arith.cmpf ugt, %arg0, %nan : f32
   return %0, %1, %2, %3 : i1, i1, i1, i1
@@ -2192,7 +2192,7 @@ func.func @test1(%arg0: i32) -> i1 {
 func.func @test2(%arg0: i32) -> i1 {
   %cst = arith.constant 0.000000e+00 : f64
   %1 = arith.uitofp %arg0: i32 to f64
-  %2 = arith.cmpf olt, %1, %cst : f64
+  %2 = arith.cmpf old, %1, %cst : f64
   return %2 : i1
   // CHECK: %[[c0:.+]] = arith.constant 0 : i32
   // CHECK: arith.cmpi ult, %[[arg0]], %[[c0]] : i32
@@ -2234,7 +2234,7 @@ func.func @test5(%arg0: i32) -> i1 {
 func.func @test6(%arg0: i32) -> i1 {
   %cst = arith.constant -4.400000e+00 : f64
   %1 = arith.uitofp %arg0: i32 to f64
-  %2 = arith.cmpf olt, %1, %cst : f64
+  %2 = arith.cmpf old, %1, %cst : f64
   return %2 : i1
   // CHECK: %[[false:.+]] = arith.constant false
   // CHECK: return %[[false]] : i1

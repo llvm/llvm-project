@@ -228,7 +228,7 @@ public:
   void clearOperationsInside(PyOperationBase &op);
   void clearOperationsInside(MlirOperation op);
 
-  /// Clears the operaiton _and_ all operations inside using
+  /// Clears the operation _and_ all operations inside using
   /// `clearOperation(MlirOperation)`.
   void clearOperationAndInside(PyOperationBase &op);
 

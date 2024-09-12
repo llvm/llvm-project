@@ -31,7 +31,7 @@ void populatePrepareVectorToMMAPatterns(RewritePatternSet &patterns,
 /// The rest of the vector operations are left untouched.
 LogicalResult convertVectorToMMAOps(RewriterBase &rewriter, Operation *rootOp);
 
-/// Convert vector ops ops nested under `rootOp` to vector and GPU operaitons
+/// Convert vector ops ops nested under `rootOp` to vector and GPU operations
 /// compatible with the `nvvm.mma.sync` lowering path. This will convert a slice
 /// of operations that can be legally lowered on this path while the rest of
 /// the vector operations are left untouched.

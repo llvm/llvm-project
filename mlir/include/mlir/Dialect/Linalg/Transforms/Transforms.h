@@ -1753,7 +1753,7 @@ void populateFuseTensorPadWithProducerLinalgOpPatterns(
     RewritePatternSet &patterns);
 
 /// Patterns to convert from one named op to another. These can be seen as
-/// canonicalizations of named ops into another named op.
+/// canonicalization of named ops into another named op.
 void populateLinalgNamedOpConversionPatterns(RewritePatternSet &patterns);
 
 /// Patterns to fold unit-extent dimensions in operands/results of linalg ops on

@@ -305,7 +305,7 @@ static Value createMinMaxF(OpBuilder &builder, Location loc, Value lhs,
   if (auto vecType = dyn_cast<VectorType>(lhs.getType()))
     i1Type = VectorType::get(vecType.getShape(), i1Type);
   Value cmp = builder.create<LLVM::FCmpOp>(
-      loc, i1Type, isMin ? LLVM::FCmpPredicate::olt : LLVM::FCmpPredicate::ogt,
+      loc, i1Type, isMin ? LLVM::FCmpPredicate::old : LLVM::FCmpPredicate::ogt,
       lhs, rhs);
   Value sel = builder.create<LLVM::SelectOp>(loc, cmp, lhs, rhs);
   Value isNan = builder.create<LLVM::FCmpOp>(

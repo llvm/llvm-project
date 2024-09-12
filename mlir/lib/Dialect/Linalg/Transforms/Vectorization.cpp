@@ -1283,8 +1283,8 @@ vectorizeOneOp(RewriterBase &rewriter, VectorizationState &state,
 /// permutation_map of the vector.transfer_read operations. The eager
 /// broadcasting makes it trivial to detrmine where broadcast, transposes and
 /// reductions should occur, without any bookkeeping. The tradeoff is that, in
-/// the absence of good canonicalizations, the amount of work increases.
-/// This is not deemed a problem as we expect canonicalizations and foldings to
+/// the absence of good canonicalization, the amount of work increases.
+/// This is not deemed a problem as we expect canonicalization and foldings to
 /// aggressively clean up the useless work.
 static LogicalResult
 vectorizeAsLinalgGeneric(RewriterBase &rewriter, VectorizationState &state,

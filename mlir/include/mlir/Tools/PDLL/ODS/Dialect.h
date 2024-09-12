@@ -35,7 +35,7 @@ public:
   /// operation already existed).
   std::pair<Operation *, bool>
   insertOperation(StringRef name, StringRef summary, StringRef desc,
-                  StringRef nativeClassName, bool supportsResultTypeInferrence,
+                  StringRef nativeClassName, bool supportsResultTypeInference,
                   SMLoc loc);
 
   /// Lookup an operation registered with the given name, or null if no

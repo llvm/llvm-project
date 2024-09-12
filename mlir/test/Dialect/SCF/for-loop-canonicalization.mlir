@@ -128,7 +128,7 @@ func.func @scf_for_canonicalize_partly(%A : memref<i64>) {
 //       CHECK:   arith.index_cast
 func.func @scf_for_not_canonicalizable_2(%A : memref<i64>, %step : index) {
   // This example should simplify but affine_map is currently missing
-  // semi-affine canonicalizations: `((s0 * 42 - 1) floordiv s0) * s0`
+  // semi-affine canonicalization: `((s0 * 42 - 1) floordiv s0) * s0`
   // should evaluate to 41 * s0.
   // Note that this may require positivity assumptions on `s0`.
   // Revisit when support is added.
@@ -151,7 +151,7 @@ func.func @scf_for_not_canonicalizable_2(%A : memref<i64>, %step : index) {
 //       CHECK:   arith.index_cast
 func.func @scf_for_not_canonicalizable_3(%A : memref<i64>, %step : index) {
   // This example should simplify but affine_map is currently missing
-  // semi-affine canonicalizations: `-(((s0 * s0 - 1) floordiv s0) * s0)`
+  // semi-affine canonicalization: `-(((s0 * s0 - 1) floordiv s0) * s0)`
   // should evaluate to (s0 - 1) * s0.
   // Note that this may require positivity assumptions on `s0`.
   // Revisit when support is added.

@@ -92,7 +92,7 @@ def ApplyMergeConsecutiveInsertExtractSlicePatternsOp : Op<Transform_Dialect,
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
   let description = [{
     Indicates that consecutive tensor.extract_slice/tensor.insert_slice ops
-    should be merged into a single op. These patterns are not canonicalizations
+    should be merged into a single op. These patterns are not canonicalization
     because the bufferization is sensitive to IR structure.
   }];
 

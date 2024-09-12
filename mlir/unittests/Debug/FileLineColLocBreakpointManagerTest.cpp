@@ -110,7 +110,7 @@ TEST(FileLineColLocBreakpointManager, OperationMatch) {
   };
   checkMatchIdxs({1});
 
-  // Check that disabling the breakpoing brings us back to the original
+  // Check that disabling the breakpoint brings us back to the original
   // behavior.
   breakpoint->disable();
   checkNoMatch();

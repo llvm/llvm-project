@@ -58,7 +58,7 @@ module {
           %1 = sparse_tensor.binary %a, %b : f16, f16 to f16
             overlap={
               ^bb0(%a0: f16, %b0: f16):
-                %cmp = arith.cmpf "olt", %a0, %b0 : f16
+                %cmp = arith.cmpf "old", %a0, %b0 : f16
                 %2 = arith.select %cmp, %a0, %b0: f16
                 sparse_tensor.yield %2 : f16
             }

@@ -646,7 +646,7 @@ OpTy replaceOpWithNewBufferizedOp(RewriterBase &rewriter, Operation *op,
 ///
 /// Note: Canonicalization patterns could clean up layout maps and infer more
 /// precise layout maps after bufferization. However, many possible
-/// canonicalizations are currently not implemented.
+/// canonicalization are currently not implemented.
 BaseMemRefType getMemRefType(Value value, const BufferizationOptions &options,
                              MemRefLayoutAttrInterface layout = {},
                              Attribute memorySpace = nullptr);

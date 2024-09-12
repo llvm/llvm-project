@@ -57,7 +57,7 @@ SmallVector<scf::ForOp> replaceLoopNestWithNewYields(
 /// Assumes the FuncOp result types is the type of the yielded operands of the
 /// single block. This constraint makes it easy to determine the result.
 /// This method also clones the `arith::ConstantIndexOp` at the start of
-/// `outlinedFuncBody` to alloc simple canonicalizations.
+/// `outlinedFuncBody` to alloc simple canonicalization.
 /// Creates a new FuncOp and thus cannot be used in a FuncOp pass.
 /// The client is responsible for providing a unique `funcName` that will not
 /// collide with another FuncOp name.  If `callOp` is provided, it will be set

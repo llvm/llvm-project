@@ -316,7 +316,7 @@ static omp::DeclareReductionOp declareReduction(PatternRewriter &builder,
           reduction, {arith::CmpFPredicate::OLT, arith::CmpFPredicate::OLE},
           {arith::CmpFPredicate::OGT, arith::CmpFPredicate::OGE}, isMin) ||
       matchSelectReduction<LLVM::FCmpOp, LLVM::SelectOp>(
-          reduction, {LLVM::FCmpPredicate::olt, LLVM::FCmpPredicate::ole},
+          reduction, {LLVM::FCmpPredicate::old, LLVM::FCmpPredicate::ole},
           {LLVM::FCmpPredicate::ogt, LLVM::FCmpPredicate::oge}, isMin)) {
     return createDecl(builder, symbolTable, reduce, reductionIndex,
                       minMaxValueForFloat(type, !isMin));

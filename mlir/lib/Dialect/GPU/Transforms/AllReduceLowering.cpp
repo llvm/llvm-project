@@ -81,7 +81,7 @@ struct GpuAllReduceRewriter {
     Value invocationIdx = create<arith::AddIOp>(int32Type, tmp3, tidX);
     Value workgroupSize = create<arith::MulIOp>(int32Type, tmp4, dimZ);
 
-    // Compute lane id (invocation id withing the subgroup).
+    // Compute lane id (invocation id within the subgroup).
     Value subgroupMask =
         create<arith::ConstantIntOp>(kSubgroupSize - 1, int32Type);
     Value laneId = create<arith::AndIOp>(invocationIdx, subgroupMask);

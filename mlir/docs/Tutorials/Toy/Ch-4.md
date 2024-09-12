@@ -16,7 +16,7 @@ like Toy to get the information they need.
 
 MLIR provides a set of always available-hooks for certain core transformations,
 as seen in the [previous chapter](Ch-3.md), where we registered some
-canonicalizations via a hook on our operations (`getCanonicalizationPatterns`).
+canonicalization via a hook on our operations (`getCanonicalizationPatterns`).
 However, these types of hooks don't really scale well. Therefore, a more generic
 solution was designed, in the form of [interfaces](../../Interfaces.md), to make
 the MLIR infrastructure as extensible as the representation. Interfaces provide

@@ -121,7 +121,7 @@ struct EmulateWideIntPass final
         [&typeConverter](Operation *op) { return typeConverter.isLegal(op); });
 
     RewritePatternSet patterns(ctx);
-    // Add common pattenrs to support contants, functions, etc.
+    // Add common pattenrs to support contains, functions, etc.
     arith::populateArithWideIntEmulationPatterns(typeConverter, patterns);
 
     memref::populateMemRefWideIntEmulationPatterns(typeConverter, patterns);

@@ -53,9 +53,9 @@ func.func @testFailingOperationFolder(%arg0: i32) -> i32 {
 // CHECK-LABEL: func @testInhibitInvolution
 // CHECK-SAME:  ([[ARG0:%.+]]: i32)
 func.func @testInhibitInvolution(%arg0: i32) -> i32 {
-  // CHECK: [[OP:%.+]] = "test.op_involution_trait_succesful_operation_fold"([[ARG0]])
-  %0 = "test.op_involution_trait_succesful_operation_fold"(%arg0) : (i32) -> i32
-  %1 = "test.op_involution_trait_succesful_operation_fold"(%0) : (i32) -> i32
+  // CHECK: [[OP:%.+]] = "test.op_involution_trait_successful_operation_fold"([[ARG0]])
+  %0 = "test.op_involution_trait_successful_operation_fold"(%arg0) : (i32) -> i32
+  %1 = "test.op_involution_trait_successful_operation_fold"(%0) : (i32) -> i32
   // CHECK: return [[OP]]
   return %1: i32
 }

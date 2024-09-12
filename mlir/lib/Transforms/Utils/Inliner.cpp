@@ -9,7 +9,7 @@
 // This file implements Inliner that uses a basic inlining
 // algorithm that operates bottom up over the Strongly Connect Components(SCCs)
 // of the CallGraph. This enables a more incremental propagation of inlining
-// decisions from the leafs to the roots of the callgraph.
+// decisions from the leaves to the roots of the callgraph.
 //
 //===----------------------------------------------------------------------===//
 

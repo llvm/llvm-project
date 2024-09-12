@@ -27,7 +27,7 @@ namespace intrange {
 using InferRangeFn =
     std::function<ConstantIntRanges(ArrayRef<ConstantIntRanges>)>;
 
-/// Function that performs inferrence on an array of `IntegerValueRange`.
+/// Function that performs inference on an array of `IntegerValueRange`.
 using InferIntegerValueRangeFn =
     std::function<IntegerValueRange(ArrayRef<IntegerValueRange>)>;
 

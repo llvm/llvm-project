@@ -254,8 +254,8 @@ DataLayoutSpecAttr::combineWith(ArrayRef<DataLayoutSpecInterface> specs) const {
 }
 
 StringAttr
-DataLayoutSpecAttr::getEndiannessIdentifier(MLIRContext *context) const {
-  return Builder(context).getStringAttr(DLTIDialect::kDataLayoutEndiannessKey);
+DataLayoutSpecAttr::getEndiannesssIdentifier(MLIRContext *context) const {
+  return Builder(context).getStringAttr(DLTIDialect::kDataLayoutEndiannesssKey);
 }
 
 StringAttr
@@ -490,9 +490,9 @@ dlti::query(Operation *op, ArrayRef<DataLayoutEntryKey> keys, bool emitError) {
 }
 
 constexpr const StringLiteral mlir::DLTIDialect::kDataLayoutAttrName;
-constexpr const StringLiteral mlir::DLTIDialect::kDataLayoutEndiannessKey;
-constexpr const StringLiteral mlir::DLTIDialect::kDataLayoutEndiannessBig;
-constexpr const StringLiteral mlir::DLTIDialect::kDataLayoutEndiannessLittle;
+constexpr const StringLiteral mlir::DLTIDialect::kDataLayoutEndiannesssKey;
+constexpr const StringLiteral mlir::DLTIDialect::kDataLayoutEndiannesssBig;
+constexpr const StringLiteral mlir::DLTIDialect::kDataLayoutEndiannesssLittle;
 
 namespace {
 class TargetDataLayoutInterface : public DataLayoutDialectInterface {
@@ -502,16 +502,16 @@ public:
   LogicalResult verifyEntry(DataLayoutEntryInterface entry,
                             Location loc) const final {
     StringRef entryName = entry.getKey().get<StringAttr>().strref();
-    if (entryName == DLTIDialect::kDataLayoutEndiannessKey) {
+    if (entryName == DLTIDialect::kDataLayoutEndiannesssKey) {
       auto value = llvm::dyn_cast<StringAttr>(entry.getValue());
       if (value &&
-          (value.getValue() == DLTIDialect::kDataLayoutEndiannessBig ||
-           value.getValue() == DLTIDialect::kDataLayoutEndiannessLittle))
+          (value.getValue() == DLTIDialect::kDataLayoutEndiannesssBig ||
+           value.getValue() == DLTIDialect::kDataLayoutEndiannesssLittle))
         return success();
       return emitError(loc) << "'" << entryName
                             << "' data layout entry is expected to be either '"
-                            << DLTIDialect::kDataLayoutEndiannessBig << "' or '"
-                            << DLTIDialect::kDataLayoutEndiannessLittle << "'";
+                            << DLTIDialect::kDataLayoutEndiannesssBig << "' or '"
+                            << DLTIDialect::kDataLayoutEndiannesssLittle << "'";
     }
     if (entryName == DLTIDialect::kDataLayoutAllocaMemorySpaceKey ||
         entryName == DLTIDialect::kDataLayoutProgramMemorySpaceKey ||

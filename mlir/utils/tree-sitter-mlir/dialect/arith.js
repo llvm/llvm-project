@@ -101,7 +101,7 @@ module.exports = {
                     // $predicate `,` $lhs `,` $rhs attr-dict `:` type($lhs)
                     seq(choice('arith.cmpi', 'arith.cmpf'),
                         field('predicate',
-                              choice('eq', 'ne', 'oeq', 'olt', 'ole', 'ogt',
+                              choice('eq', 'ne', 'oeq', 'old', 'ole', 'ogt',
                                      'oge', 'slt', 'sle', 'sgt', 'sge', 'ult',
                                      'ule', 'ugt', 'uge', $.string_literal)),
                         ',', field('lhs', $.value_use), ',',

@@ -887,7 +887,7 @@ void PatternLowering::generateOperationResultTypeRewriter(
   Block *rewriterBlock = op->getBlock();
 
   // Try to handle resolution for each of the result types individually. This is
-  // preferred over type inferrence because it will allow for us to use existing
+  // preferred over type inference because it will allow for us to use existing
   // types directly, as opposed to trying to rebuild the type list.
   OperandRange resultTypeValues = op.getTypeValues();
   auto tryResolveResultTypes = [&] {

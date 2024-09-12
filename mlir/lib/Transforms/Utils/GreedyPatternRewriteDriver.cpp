@@ -898,7 +898,7 @@ mlir::applyPatternsAndFoldGreedily(Region &region,
                                    const FrozenRewritePatternSet &patterns,
                                    GreedyRewriteConfig config, bool *changed) {
   // The top-level operation must be known to be isolated from above to
-  // prevent performing canonicalizations on operations defined at or above
+  // prevent performing canonicalization on operations defined at or above
   // the region containing 'op'.
   assert(region.getParentOp()->hasTrait<OpTrait::IsIsolatedFromAbove>() &&
          "patterns can only be applied to operations IsolatedFromAbove");

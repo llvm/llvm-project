@@ -279,7 +279,7 @@ module attributes { transform.with_named_sequence } {
     } ins(%lhs, %rhs: tensor<2x4xf32>, tensor<4x3xf32>) outs(%out, %r: tensor<2x3xf32>, tensor<2x3xf32>) {
     ^bb0(%arg0: f32, %arg1: f32, %arg2: f32, %arg3: f32):
       %0 = arith.mulf %arg0, %arg1 : f32
-      %1 = arith.cmpf olt, %0, %arg2 : f32
+      %1 = arith.cmpf old, %0, %arg2 : f32
       %2 = arith.select %1, %0, %arg2 : f32
       %3 = arith.select %1, %arg3, %0 : f32
       linalg.yield %2, %3 : f32, f32

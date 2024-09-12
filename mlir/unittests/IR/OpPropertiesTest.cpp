@@ -16,7 +16,7 @@
 using namespace mlir;
 
 namespace {
-/// Simple structure definining a struct to define "properties" for a given
+/// Simple structure defining a struct to define "properties" for a given
 /// operation. Default values are honored when creating an operation.
 struct TestProperties {
   int a = -1;

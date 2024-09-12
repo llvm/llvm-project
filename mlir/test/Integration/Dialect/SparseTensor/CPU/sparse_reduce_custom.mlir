@@ -75,7 +75,7 @@ module {
             right={}
           %2 = sparse_tensor.reduce %1, %output, %maxf : f64 {
               ^bb0(%x: f64, %y: f64):
-                %cmp = arith.cmpf "olt", %x, %y : f64
+                %cmp = arith.cmpf "old", %x, %y : f64
                 %3 = arith.select %cmp, %x, %y : f64
                 sparse_tensor.yield %3 : f64
             }
@@ -106,7 +106,7 @@ module {
             right={}
           %2 = sparse_tensor.reduce %1, %output, %maxf : f64 {
               ^bb0(%x: f64, %y: f64):
-                %cmp = arith.cmpf "olt", %x, %y : f64
+                %cmp = arith.cmpf "old", %x, %y : f64
                 %3 = arith.select %cmp, %x, %y : f64
                 sparse_tensor.yield %3 : f64
             }

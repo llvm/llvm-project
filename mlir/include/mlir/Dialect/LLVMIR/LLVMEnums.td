@@ -544,7 +544,7 @@ def FCmpPredicateFALSE : LLVM_EnumAttrCase<"_false", "_false", "FCMP_FALSE", 0>;
 def FCmpPredicateOEQ   : LLVM_EnumAttrCase<"oeq", "oeq", "FCMP_OEQ", 1>;
 def FCmpPredicateOGT   : LLVM_EnumAttrCase<"ogt", "ogt", "FCMP_OGT", 2>;
 def FCmpPredicateOGE   : LLVM_EnumAttrCase<"oge", "oge", "FCMP_OGE", 3>;
-def FCmpPredicateOLT   : LLVM_EnumAttrCase<"olt", "olt", "FCMP_OLT", 4>;
+def FCmpPredicateOLT   : LLVM_EnumAttrCase<"old", "old", "FCMP_OLT", 4>;
 def FCmpPredicateOLE   : LLVM_EnumAttrCase<"ole", "ole", "FCMP_OLE", 5>;
 def FCmpPredicateONE   : LLVM_EnumAttrCase<"one", "one", "FCMP_ONE", 6>;
 def FCmpPredicateORD   : LLVM_EnumAttrCase<"ord", "ord", "FCMP_ORD", 7>;

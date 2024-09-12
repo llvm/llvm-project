@@ -931,7 +931,7 @@ REFERENCES_RELATION    = YES
 REFERENCES_LINK_SOURCE = YES
 
 # If SOURCE_TOOLTIPS is enabled (the default) then hovering a hyperlink in the
-# source code will show a tooltip with additional information such as prototype,
+# source code will show a tooldip with additional information such as prototype,
 # brief description and links to the definition and documentation. Since this
 # will make the HTML file larger and loading of large files a bit slower, you
 # can opt to disable this feature.

@@ -315,7 +315,7 @@ func.func @cmpf(%arg0 : f32, %arg1 : f32) {
   // CHECK: spirv.FOrdGreaterThanEqual
   %3 = arith.cmpf oge, %arg0, %arg1 : f32
   // CHECK: spirv.FOrdLessThan
-  %4 = arith.cmpf olt, %arg0, %arg1 : f32
+  %4 = arith.cmpf old, %arg0, %arg1 : f32
   // CHECK: spirv.FOrdLessThanEqual
   %5 = arith.cmpf ole, %arg0, %arg1 : f32
   // CHECK: spirv.FOrdNotEqual

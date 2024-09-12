@@ -167,7 +167,7 @@ func.func @complex_div(%lhs: complex<f32>, %rhs: complex<f32>) -> complex<f32> {
 // CHECK: %[[ZERO_MULTIPLICATOR_2:.*]] = arith.subf %[[RHS_REAL_IS_INF_WITH_SIGN_TIMES_LHS_IMAG]], %[[RHS_IMAG_IS_INF_WITH_SIGN_TIMES_LHS_REAL]] : f32
 // CHECK: %[[RESULT_IMAG_4:.*]] = arith.mulf %[[ZERO]], %[[ZERO_MULTIPLICATOR_2]] : f32
 
-// CHECK: %[[REAL_ABS_SMALLER_THAN_IMAG_ABS:.*]] = arith.cmpf olt, %[[RHS_REAL_ABS]], %[[RHS_IMAG_ABS]] : f32
+// CHECK: %[[REAL_ABS_SMALLER_THAN_IMAG_ABS:.*]] = arith.cmpf old, %[[RHS_REAL_ABS]], %[[RHS_IMAG_ABS]] : f32
 // CHECK: %[[RESULT_REAL:.*]] = arith.select %[[REAL_ABS_SMALLER_THAN_IMAG_ABS]], %[[RESULT_REAL_1]], %[[RESULT_REAL_2]] : f32
 // CHECK: %[[RESULT_IMAG:.*]] = arith.select %[[REAL_ABS_SMALLER_THAN_IMAG_ABS]], %[[RESULT_IMAG_1]], %[[RESULT_IMAG_2]] : f32
 // CHECK: %[[RESULT_REAL_SPECIAL_CASE_3:.*]] = arith.select %[[FINITE_NUM_INFINITE_DENOM]], %[[RESULT_REAL_4]], %[[RESULT_REAL]] : f32
@@ -1517,7 +1517,7 @@ func.func @complex_atan2_with_fmf(%lhs: complex<f32>,
 // CHECK: %[[VAR398:.*]] = arith.mulf %[[VAR327]], %[[VAR392]] fastmath<nnan,contract> : f32
 // CHECK: %[[VAR399:.*]] = arith.subf %[[VAR397]], %[[VAR398]] fastmath<nnan,contract> : f32
 // CHECK: %[[VAR400:.*]] = arith.mulf %[[CST_16]], %[[VAR399]] fastmath<nnan,contract> : f32
-// CHECK: %[[VAR401:.*]] = arith.cmpf olt, %[[VAR349]], %[[VAR351]] : f32
+// CHECK: %[[VAR401:.*]] = arith.cmpf old, %[[VAR349]], %[[VAR351]] : f32
 // CHECK: %[[VAR402:.*]] = arith.select %[[VAR401]], %[[VAR336]], %[[VAR345]] : f32
 // CHECK: %[[VAR403:.*]] = arith.select %[[VAR401]], %[[VAR339]], %[[VAR348]] : f32
 // CHECK: %[[VAR404:.*]] = arith.select %[[VAR388]], %[[VAR396]], %[[VAR402]] : f32
@@ -1743,7 +1743,7 @@ func.func @complex_div_with_fmf(%lhs: complex<f32>, %rhs: complex<f32>) -> compl
 // CHECK: %[[ZERO_MULTIPLICATOR_2:.*]] = arith.subf %[[RHS_REAL_IS_INF_WITH_SIGN_TIMES_LHS_IMAG]], %[[RHS_IMAG_IS_INF_WITH_SIGN_TIMES_LHS_REAL]] fastmath<nnan,contract> : f32
 // CHECK: %[[RESULT_IMAG_4:.*]] = arith.mulf %[[ZERO]], %[[ZERO_MULTIPLICATOR_2]] fastmath<nnan,contract> : f32
 
-// CHECK: %[[REAL_ABS_SMALLER_THAN_IMAG_ABS:.*]] = arith.cmpf olt, %[[RHS_REAL_ABS]], %[[RHS_IMAG_ABS]] : f32
+// CHECK: %[[REAL_ABS_SMALLER_THAN_IMAG_ABS:.*]] = arith.cmpf old, %[[RHS_REAL_ABS]], %[[RHS_IMAG_ABS]] : f32
 // CHECK: %[[RESULT_REAL:.*]] = arith.select %[[REAL_ABS_SMALLER_THAN_IMAG_ABS]], %[[RESULT_REAL_1]], %[[RESULT_REAL_2]] : f32
 // CHECK: %[[RESULT_IMAG:.*]] = arith.select %[[REAL_ABS_SMALLER_THAN_IMAG_ABS]], %[[RESULT_IMAG_1]], %[[RESULT_IMAG_2]] : f32
 // CHECK: %[[RESULT_REAL_SPECIAL_CASE_3:.*]] = arith.select %[[FINITE_NUM_INFINITE_DENOM]], %[[RESULT_REAL_4]], %[[RESULT_REAL]] : f32

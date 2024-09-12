@@ -164,7 +164,7 @@ class AttrOrTypeDef<string valueType, string name, list<Trait> defTraits,
   // Name of storage class to generate or use.
   string storageClass = name # valueType # "Storage";
 
-  // Namespace (withing dialect c++ namespace) in which the storage class
+  // Namespace (within dialect c++ namespace) in which the storage class
   // resides.
   string storageNamespace = "detail";
 

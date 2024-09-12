@@ -1288,7 +1288,7 @@ def SparseTensor_SelectOp : SparseTensor_Op<"select", [Pure, SameOperandsAndResu
           %col = linalg.index 1 : index
           %result = sparse_tensor.select %a : f64 {
               ^bb0(%arg0: f64):
-                %keep = arith.cmpf "olt", %col, %row : f64
+                %keep = arith.cmpf "old", %col, %row : f64
                 sparse_tensor.yield %keep : i1
             }
           linalg.yield %result : f64

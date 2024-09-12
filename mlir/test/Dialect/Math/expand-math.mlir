@@ -8,7 +8,7 @@ func.func @tanh(%arg: f32) -> f32 {
 // CHECK-DAG: %[[ZERO:.+]] = arith.constant 0.000000e+00 : f32
 // CHECK-DAG: %[[ONE:.+]] = arith.constant 1.000000e+00 : f32
 // CHECK-DAG: %[[TWO:.+]] = arith.constant -2.000000e+00 : f32
-// CHECK: %[[VAL0:.+]] = arith.cmpf olt, %arg0, %[[ZERO]] : f32
+// CHECK: %[[VAL0:.+]] = arith.cmpf old, %arg0, %[[ZERO]] : f32
 // CHECK: %[[VAL1:.+]] = arith.uitofp %[[VAL0]] : i1 to f32
 // CHECK: %[[VAL2:.+]] = arith.mulf %[[VAL1]], %[[TWO]] : f32
 // CHECK: %[[SIGN:.+]] = arith.addf %[[VAL2]], %[[ONE]] : f32
@@ -141,7 +141,7 @@ func.func @floorf_func(%a: f64) -> f64 {
   // CHECK-NEXT:   [[CVTI:%.+]] = arith.fptosi [[ARG0]]
   // CHECK-NEXT:   [[CVTF:%.+]] = arith.sitofp [[CVTI]]
   // CHECK-NEXT:   [[COPYSIGN:%.+]] = math.copysign [[CVTF]], [[ARG0]]
-  // CHECK-NEXT:   [[COMP:%.+]] = arith.cmpf olt, [[ARG0]], [[CST]]
+  // CHECK-NEXT:   [[COMP:%.+]] = arith.cmpf old, [[ARG0]], [[CST]]
   // CHECK-NEXT:   [[INCR:%.+]] = arith.select [[COMP]], [[CST_0]], [[CST]]
   // CHECK-NEXT:   [[ADDF:%.+]] = arith.addf [[COPYSIGN]], [[INCR]]
   // CHECK-NEXT:   return [[ADDF]]
@@ -231,7 +231,7 @@ func.func @powf_func(%a: f64, %b: f64) ->f64 {
   // CHECK-DAG: [[EXPR:%.+]] = math.exp [[MULT]]
   // CHECK-DAG: [[NEGEXPR:%.+]] = arith.mulf [[EXPR]], [[NEGONE]]
   // CHECK-DAG: [[REMF:%.+]] = arith.remf [[ARG1]], [[TWO]]
-  // CHECK-DAG: [[CMPNEG:%.+]] = arith.cmpf olt, [[ARG0]]
+  // CHECK-DAG: [[CMPNEG:%.+]] = arith.cmpf old, [[ARG0]]
   // CHECK-DAG: [[CMPZERO:%.+]] = arith.cmpf one, [[REMF]]
   // CHECK-DAG: [[AND:%.+]] = arith.andi [[CMPZERO]], [[CMPNEG]]
   // CHECK-DAG: [[SEL:%.+]] = arith.select [[AND]], [[NEGEXPR]], [[EXPR]]
@@ -628,7 +628,7 @@ func.func @math_fpowi_to_powf_tensor(%0 : tensor<8xf32>, %1: tensor<8xi32>) -> t
 // CHECK:        %[[EXP:.*]] = math.exp %[[MUL]] : tensor<8xf32>
 // CHECK:        %[[MUL1:.*]] = arith.mulf %[[EXP]], %[[CSTNEG1]] : tensor<8xf32>
 // CHECK:        %[[REM:.*]] = arith.remf %[[TOFP]], %[[CST2]] : tensor<8xf32>
-// CHECK:        %[[CMPF:.*]] = arith.cmpf olt, %[[ARG0]], %[[CST0]] : tensor<8xf32>
+// CHECK:        %[[CMPF:.*]] = arith.cmpf old, %[[ARG0]], %[[CST0]] : tensor<8xf32>
 // CHECK:        %[[CMPF1:.*]] = arith.cmpf one, %[[REM]], %[[CST0]] : tensor<8xf32>
 // CHECK:        %[[AND:.*]] = arith.andi %[[CMPF1]], %[[CMPF]] : tensor<8xi1>
 // CHECK:        %[[SEL:.*]] = arith.select %[[AND]], %[[MUL1]], %[[EXP]] : tensor<8xi1>, tensor<8xf32>
@@ -653,7 +653,7 @@ func.func @math_fpowi_to_powf_scalar(%0 : f32, %1: i64) -> f32 {
 // CHECK:        %[[EXP:.*]] = math.exp %[[MUL]] : f32
 // CHECK:        %[[MUL1:.*]] = arith.mulf %[[EXP]], %[[CSTNEG1]] : f32
 // CHECK:        %[[REM:.*]] = arith.remf %[[TOFP]], %[[CST2]] : f32
-// CHECK:        %[[CMPF:.*]] = arith.cmpf olt, %[[ARG0]], %[[CST0]] : f32
+// CHECK:        %[[CMPF:.*]] = arith.cmpf old, %[[ARG0]], %[[CST0]] : f32
 // CHECK:        %[[CMPF1:.*]] = arith.cmpf one, %[[REM]], %[[CST0]] : f32
 // CHECK:        %[[AND:.*]] = arith.andi %[[CMPF1]], %[[CMPF]] : i1
 // CHECK:        %[[SEL:.*]] = arith.select %[[AND]], %[[MUL1]], %[[EXP]] : f32

@@ -18,7 +18,7 @@ using namespace mlir::tensor;
 
 /// Compute a map that for a given dimension of the expanded type gives the
 /// dimension in the collapsed type it maps to. Essentially its the inverse of
-/// the `reassocation` maps.
+/// the `reassociation` maps.
 static llvm::DenseMap<int64_t, int64_t>
 getExpandedDimToCollapsedDimMap(ArrayRef<AffineMap> reassociation) {
   llvm::DenseMap<int64_t, int64_t> expandedDimToCollapsedDim;
@@ -134,14 +134,14 @@ static SmallVector<OpFoldResult, 4> getExpandedOutputShapeFromInputShape(
 static SmallVector<OpFoldResult, 4>
 getReshapeOutputShapeFromInputShape(OpBuilder &builder, Location loc, Value src,
                                     ArrayRef<int64_t> dstStaticShape,
-                                    ArrayRef<AffineMap> reassocation) {
+                                    ArrayRef<AffineMap> reassociation) {
   return dstStaticShape.size() >
                  static_cast<size_t>(
                      llvm::cast<ShapedType>(src.getType()).getRank())
              ? getExpandedOutputShapeFromInputShape(
-                   builder, loc, src, dstStaticShape, reassocation)
+                   builder, loc, src, dstStaticShape, reassociation)
              : getCollapsedOutputShapeFromInputShape(
-                   builder, loc, src, dstStaticShape, reassocation);
+                   builder, loc, src, dstStaticShape, reassociation);
 }
 
 template <typename OpTy>

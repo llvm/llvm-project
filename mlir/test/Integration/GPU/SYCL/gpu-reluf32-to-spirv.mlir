@@ -60,7 +60,7 @@ module @relu attributes {gpu.container_module} {
       %0 = gpu.block_id  x
       %1 = gpu.block_id  y
       %2 = memref.load %arg0[%0, %1] : memref<4x5xf32>
-      %3 = arith.cmpf olt, %2, %arg1 : f32
+      %3 = arith.cmpf old, %2, %arg1 : f32
       memref.store %3, %arg2[%0, %1] : memref<4x5xi1>
       gpu.return
     }

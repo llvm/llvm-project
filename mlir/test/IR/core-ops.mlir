@@ -84,8 +84,8 @@ func.func @standard_instrs(tensor<4x4x?xf32>, f32, i32, index, i64, f16) {
   // CHECK: %{{.*}} = arith.cmpf oeq, %{{.*}}, %{{.*}} : f32
   %66 = "arith.cmpf"(%f3, %f4) {predicate = 1} : (f32, f32) -> i1
 
-  // CHECK: %{{.*}} = arith.cmpf olt, %{{.*}}, %{{.*}}: vector<4xf32>
-  %67 = arith.cmpf olt, %vcf32, %vcf32 : vector<4 x f32>
+  // CHECK: %{{.*}} = arith.cmpf old, %{{.*}}, %{{.*}}: vector<4xf32>
+  %67 = arith.cmpf old, %vcf32, %vcf32 : vector<4 x f32>
 
   // CHECK: %{{.*}} = arith.cmpf oeq, %{{.*}}, %{{.*}}: vector<4xf32>
   %68 = "arith.cmpf"(%vcf32, %vcf32) {predicate = 1} : (vector<4 x f32>, vector<4 x f32>) -> vector<4 x i1>

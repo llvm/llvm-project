@@ -507,7 +507,7 @@ struct LegalizeMultiTileTransferWriteAsStoreLoop
 };
 
 //===----------------------------------------------------------------------===//
-// ArmSME-specific fixup canonicalizations/folds
+// ArmSME-specific fixup canonicalization/folds
 //===----------------------------------------------------------------------===//
 
 /// Folds an extract from a 3D `vector.create_mask` (which is a vector of

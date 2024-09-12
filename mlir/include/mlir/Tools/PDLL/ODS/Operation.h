@@ -167,12 +167,12 @@ public:
   /// Returns the results of this operation.
   ArrayRef<OperandOrResult> getResults() const { return results; }
 
-  /// Return if the operation is known to support result type inferrence.
-  bool hasResultTypeInferrence() const { return supportsTypeInferrence; }
+  /// Return if the operation is known to support result type inference.
+  bool hasResultTypeInference() const { return supportsTypeInference; }
 
 private:
   Operation(StringRef name, StringRef summary, StringRef desc,
-            StringRef nativeClassName, bool supportsTypeInferrence, SMLoc loc);
+            StringRef nativeClassName, bool supportsTypeInference, SMLoc loc);
 
   /// The name of the operation.
   std::string name;
@@ -184,8 +184,8 @@ private:
   /// The native class name of the operation, used when generating native code.
   std::string nativeClassName;
 
-  /// Flag indicating if the operation is known to support type inferrence.
-  bool supportsTypeInferrence;
+  /// Flag indicating if the operation is known to support type inference.
+  bool supportsTypeInference;
 
   /// The source location of this operation.
   SMRange location;

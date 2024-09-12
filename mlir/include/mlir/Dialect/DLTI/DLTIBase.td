@@ -41,13 +41,13 @@ def DLTI_Dialect : Dialect {
 
     // Constants used in entries.
     constexpr const static ::llvm::StringLiteral
-    kDataLayoutEndiannessKey = "dlti.endianness";
+    kDataLayoutEndiannesssKey = "dlti.endianness";
 
     constexpr const static ::llvm::StringLiteral
-    kDataLayoutEndiannessBig = "big";
+    kDataLayoutEndiannesssBig = "big";
 
     constexpr const static ::llvm::StringLiteral
-    kDataLayoutEndiannessLittle = "little";
+    kDataLayoutEndiannesssLittle = "little";
 
     constexpr const static ::llvm::StringLiteral
     kDataLayoutAllocaMemorySpaceKey = "dlti.alloca_memory_space";

@@ -374,7 +374,7 @@ struct RemoveUnusedCycleInGenericOp : public OpRewritePattern<GenericOp> {
 /// Assuming that all %a and %b have the same index map:
 /// * All uses of %in0 and %in2 are replaced with %out1
 /// * All uses of %in1 are replaced with %in3
-/// This pattern can enable additional canonicalizations: In the above example,
+/// This pattern can enable additional canonicalization: In the above example,
 /// %in0, %in1 and %in3 have no uses anymore and their corresponding operands
 /// can be folded away. This pattern does not modify uses of output block args.
 struct FoldDuplicateInputBbArgs : public OpRewritePattern<GenericOp> {

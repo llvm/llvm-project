@@ -351,7 +351,7 @@ func.func @gather_like(
                           (float_type))))))))))))))
 
 ================================================================================
-tensor.collapse_shape and tensor.expand_shape without reassocation
+tensor.collapse_shape and tensor.expand_shape without reassociation
 ================================================================================
 func.func @tensor_reshape_zero_dim(%arg0 : tensor<1x1xf32>, %arg1 : tensor<f32>)
     -> (tensor<f32>, tensor<1x1xf32>) {
@@ -444,7 +444,7 @@ func.func @tensor_reshape_zero_dim(%arg0 : tensor<1x1xf32>, %arg1 : tensor<f32>)
                           (float_type))))))))))))))
 
 ================================================================================
-tensor.collapse_shape with reassocation
+tensor.collapse_shape with reassociation
 ================================================================================
 func.func @legal_collapsing_reshape_dynamic_tensor
   (%arg0: tensor<?x?x?x4x?xf32>) -> tensor<?x?x?xf32>

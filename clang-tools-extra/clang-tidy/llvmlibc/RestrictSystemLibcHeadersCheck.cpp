@@ -25,9 +25,9 @@ class RestrictedIncludesPPCallbacks
 public:
   explicit RestrictedIncludesPPCallbacks(
       RestrictSystemLibcHeadersCheck &Check, const SourceManager &SM,
-      const SmallString<128> CompilerIncudeDir)
+      const SmallString<128> CompilerIncludeDir)
       : portability::RestrictedIncludesPPCallbacks(Check, SM),
-        CompilerIncudeDir(CompilerIncudeDir) {}
+        CompilerIncludeDir(CompilerIncludeDir) {}
 
   void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
                           StringRef FileName, bool IsAngled,
@@ -38,7 +38,7 @@ public:
                           SrcMgr::CharacteristicKind FileType) override;
 
 private:
-  const SmallString<128> CompilerIncudeDir;
+  const SmallString<128> CompilerIncludeDir;
 };
 
 } // namespace
@@ -49,7 +49,7 @@ void RestrictedIncludesPPCallbacks::InclusionDirective(
     StringRef SearchPath, StringRef RelativePath, const Module *SuggestedModule,
     bool ModuleImported, SrcMgr::CharacteristicKind FileType) {
   // Compiler provided headers are allowed (e.g stddef.h).
-  if (SrcMgr::isSystem(FileType) && SearchPath == CompilerIncudeDir)
+  if (SrcMgr::isSystem(FileType) && SearchPath == CompilerIncludeDir)
     return;
   portability::RestrictedIncludesPPCallbacks::InclusionDirective(
       HashLoc, IncludeTok, FileName, IsAngled, FilenameRange, File, SearchPath,
@@ -58,11 +58,11 @@ void RestrictedIncludesPPCallbacks::InclusionDirective(
 
 void RestrictSystemLibcHeadersCheck::registerPPCallbacks(
     const SourceManager &SM, Preprocessor *PP, Preprocessor *ModuleExpanderPP) {
-  SmallString<128> CompilerIncudeDir =
+  SmallString<128> CompilerIncludeDir =
       StringRef(PP->getHeaderSearchInfo().getHeaderSearchOpts().ResourceDir);
-  llvm::sys::path::append(CompilerIncudeDir, "include");
+  llvm::sys::path::append(CompilerIncludeDir, "include");
   PP->addPPCallbacks(std::make_unique<RestrictedIncludesPPCallbacks>(
-      *this, SM, CompilerIncudeDir));
+      *this, SM, CompilerIncludeDir));
 }
 
 } // namespace clang::tidy::llvm_libc

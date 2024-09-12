@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file containts common utilities for implementing the file-parsing
+// This file contains common utilities for implementing the file-parsing
 // behaviour for MLIR tools.
 //
 //===----------------------------------------------------------------------===//
