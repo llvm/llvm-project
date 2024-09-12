@@ -683,7 +683,7 @@ std::vector<std::string> DiagnosticIDs::getDiagnosticFlags() {
 static bool getDiagnosticsInGroup(diag::Flavor Flavor,
                                   const WarningOption *Group,
                                   SmallVectorImpl<diag::kind> &Diags,
-                                  diag::CustomDiagInfo* CustomDiagInfo) {
+                                  diag::CustomDiagInfo *CustomDiagInfo) {
   // An empty group is considered to be a warning group: we have empty groups
   // for GCC compatibility, and GCC does not have remarks.
   if (!Group->Members && !Group->SubGroups)

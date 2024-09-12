@@ -536,7 +536,7 @@ unsigned SDiagsWriter::getEmitCategory(unsigned int category) {
 }
 
 unsigned SDiagsWriter::getEmitDiagnosticFlag(DiagnosticsEngine::Level DiagLevel,
-                                             const Diagnostic* Diag) {
+                                             const Diagnostic *Diag) {
   if (!Diag || DiagLevel == DiagnosticsEngine::Note)
     return 0; // No flag for notes.
 
