@@ -287,7 +287,7 @@ mlir::cir::FuncOp CIRGenModule::codegenCXXStructor(GlobalDecl GD) {
   CurCGF = nullptr;
 
   setNonAliasAttributes(GD, Fn);
-  // TODO: SetLLVMFunctionAttributesForDefinition
+  setCIRFunctionAttributesForDefinition(cast<CXXMethodDecl>(GD.getDecl()), Fn);
   return Fn;
 }
 

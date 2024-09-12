@@ -573,7 +573,12 @@ public:
 
   /// Set the CIR function attributes (sext, zext, etc).
   void setCIRFunctionAttributes(GlobalDecl GD, const CIRGenFunctionInfo &info,
-                                 mlir::cir::FuncOp func, bool isThunk);
+                                mlir::cir::FuncOp func, bool isThunk);
+
+  /// Set the CIR function attributes which only apply to a function
+  /// definition.
+  void setCIRFunctionAttributesForDefinition(const Decl *decl,
+                                             mlir::cir::FuncOp func);
 
   void buildGlobalDefinition(clang::GlobalDecl D,
                              mlir::Operation *Op = nullptr);
@@ -665,9 +670,6 @@ public:
 
   void ReplaceUsesOfNonProtoTypeWithRealFunction(mlir::Operation *Old,
                                                  mlir::cir::FuncOp NewFn);
-
-  void setExtraAttributesForFunc(mlir::cir::FuncOp f,
-                                 const clang::FunctionDecl *FD);
 
   // TODO: CodeGen also passes an AttributeList here. We'll have to match that
   // in CIR

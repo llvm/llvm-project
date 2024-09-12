@@ -14,7 +14,7 @@ int __attribute__((section(".shared"))) glob = 42;
 
 
 void __attribute__((__visibility__("hidden"))) foo();
-// CIR: cir.func no_proto private hidden @foo(...) extra(#fn_attr)
+// CIR: cir.func no_proto private hidden @foo(...)
 int bah()
 {
   foo();

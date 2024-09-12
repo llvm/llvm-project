@@ -19,15 +19,15 @@ int call_glob()
 }
 
 void foo_default();
-// CIR: cir.func no_proto private @foo_default(...) extra(#fn_attr)
+// CIR: cir.func no_proto private @foo_default(...)
 // LLVM: declare {{.*}} void @foo_default(...)
 
 void __attribute__((__visibility__("hidden"))) foo_hidden();
-// CIR: cir.func no_proto private hidden @foo_hidden(...) extra(#fn_attr)
+// CIR: cir.func no_proto private hidden @foo_hidden(...)
 // LLVM: declare {{.*}} hidden void @foo_hidden(...)
 
 void __attribute__((__visibility__("protected"))) foo_protected();
-// CIR: cir.func no_proto private protected @foo_protected(...) extra(#fn_attr)
+// CIR: cir.func no_proto private protected @foo_protected(...)
 // LLVM: declare {{.*}} protected void @foo_protected(...)
 
 void call_foo()
