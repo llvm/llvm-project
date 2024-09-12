@@ -25,7 +25,7 @@ class CtxProfAnalysis;
 // counter, and then, because all contexts belonging to a function have the same
 // size, there'll be at most one other heap allocation.
 using CtxProfFlatProfile =
-    DenseMap<GlobalValue::GUID, SmallVector<uint64_t, 1>>;
+    std::map<GlobalValue::GUID, SmallVector<uint64_t, 1>>;
 
 /// The instrumented contextual profile, produced by the CtxProfAnalysis.
 class PGOContextualProfile {
@@ -41,7 +41,7 @@ class PGOContextualProfile {
   std::optional<PGOCtxProfContext::CallTargetMapTy> Profiles;
   // For the GUIDs in this module, associate metadata about each function which
   // we'll need when we maintain the profiles during IPO transformations.
-  DenseMap<GlobalValue::GUID, FunctionInfo> FuncInfo;
+  std::map<GlobalValue::GUID, FunctionInfo> FuncInfo;
 
   /// Get the GUID of this Function if it's defined in this module.
   GlobalValue::GUID getDefinedFunctionGUID(const Function &F) const;

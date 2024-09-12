@@ -3388,6 +3388,10 @@ private:
     TreeEntry *Last = VectorizableTree.back().get();
     Last->Idx = VectorizableTree.size() - 1;
     Last->State = EntryState;
+    // FIXME: Remove once support for ReuseShuffleIndices has been implemented
+    // for non-power-of-two vectors.
+    assert((has_single_bit(VL.size()) || ReuseShuffleIndices.empty()) &&
+           "Reshuffling scalars not yet supported for nodes with padding");
     Last->ReuseShuffleIndices.append(ReuseShuffleIndices.begin(),
                                      ReuseShuffleIndices.end());
     if (ReorderIndices.empty()) {
@@ -3452,11 +3456,8 @@ private:
       MustGather.insert(VL.begin(), VL.end());
     }
 
-    if (UserTreeIdx.UserTE) {
+    if (UserTreeIdx.UserTE)
       Last->UserTreeIndices.push_back(UserTreeIdx);
-      assert((!Last->isNonPowOf2Vec() || Last->ReorderIndices.empty()) &&
-             "Reordering isn't implemented for non-power-of-2 nodes yet");
-    }
     return Last;
   }
 
@@ -4731,12 +4732,6 @@ BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
   auto *VecTy = getWidenedType(ScalarTy, Sz);
   // Check the order of pointer operands or that all pointers are the same.
   bool IsSorted = sortPtrAccesses(PointerOps, ScalarTy, *DL, *SE, Order);
-  // FIXME: Reordering isn't implemented for non-power-of-2 nodes yet.
-  if (!Order.empty() && !has_single_bit(VL.size())) {
-    assert(VectorizeNonPowerOf2 && "non-power-of-2 number of loads only "
-                                   "supported with VectorizeNonPowerOf2");
-    return LoadsState::Gather;
-  }
 
   Align CommonAlignment = computeCommonAlignment<LoadInst>(VL);
   if (!IsSorted && Sz > MinProfitableStridedLoads && TTI->isTypeLegal(VecTy) &&
@@ -4873,6 +4868,13 @@ BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
     constexpr unsigned ListLimit = 4;
     if (!TryRecursiveCheck || VL.size() < ListLimit)
       return MaskedGatherCost - GatherCost >= -SLPCostThreshold;
+
+    // FIXME: The following code has not been updated for non-power-of-2
+    // vectors.  The splitting logic here does not cover the original
+    // vector if the vector factor is not a power of two.  FIXME
+    if (!has_single_bit(VL.size()))
+      return false;
+
     unsigned Sz = DL->getTypeSizeInBits(ScalarTy);
     unsigned MinVF = getMinVF(2 * Sz);
     DemandedElts.clearAllBits();
@@ -5195,13 +5197,13 @@ static bool areTwoInsertFromSameBuildVector(
 
 std::optional<BoUpSLP::OrdersType>
 BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom) {
-  // FIXME: Vectorizing is not supported yet for non-power-of-2 ops.
-  if (TE.isNonPowOf2Vec())
-    return std::nullopt;
-
   // No need to reorder if need to shuffle reuses, still need to shuffle the
   // node.
   if (!TE.ReuseShuffleIndices.empty()) {
+    // FIXME: Support ReuseShuffleIndices for non-power-of-two vectors.
+    assert(!TE.isNonPowOf2Vec() &&
+           "Reshuffling scalars not yet supported for nodes with padding");
+
     if (isSplat(TE.Scalars))
       return std::nullopt;
     // Check if reuse shuffle indices can be improved by reordering.
@@ -5424,11 +5426,15 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom) {
     }
     if (isSplat(TE.Scalars))
       return std::nullopt;
-    if (TE.Scalars.size() >= 4)
+    if (TE.Scalars.size() >= 3)
       if (std::optional<OrdersType> Order = findPartiallyOrderedLoads(TE))
         return Order;
-    if (std::optional<OrdersType> CurrentOrder = findReusedOrderedScalars(TE))
-      return CurrentOrder;
+
+    // FIXME: Remove the non-power-of-two check once findReusedOrderedScalars
+    // has been auditted for correctness with non-power-of-two vectors.
+    if (!TE.isNonPowOf2Vec())
+      if (std::optional<OrdersType> CurrentOrder = findReusedOrderedScalars(TE))
+        return CurrentOrder;
   }
   return std::nullopt;
 }
@@ -5580,7 +5586,7 @@ void BoUpSLP::reorderTopToBottom() {
 
   // Reorder the graph nodes according to their vectorization factor.
   for (unsigned VF = VectorizableTree.front()->getVectorFactor(); VF > 1;
-       VF /= 2) {
+       VF = bit_ceil(VF) / 2) {
     auto It = VFToOrderedEntries.find(VF);
     if (It == VFToOrderedEntries.end())
       continue;
@@ -5752,10 +5758,6 @@ bool BoUpSLP::canReorderOperands(
     TreeEntry *UserTE, SmallVectorImpl<std::pair<unsigned, TreeEntry *>> &Edges,
     ArrayRef<TreeEntry *> ReorderableGathers,
     SmallVectorImpl<TreeEntry *> &GatherOps) {
-  // FIXME: Reordering isn't implemented for non-power-of-2 nodes yet.
-  if (UserTE->isNonPowOf2Vec())
-    return false;
-
   for (unsigned I = 0, E = UserTE->getNumOperands(); I < E; ++I) {
     if (any_of(Edges, [I](const std::pair<unsigned, TreeEntry *> &OpData) {
           return OpData.first == I &&
@@ -5853,13 +5855,8 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
       }
       // Build a map between user nodes and their operands order to speedup
       // search. The graph currently does not provide this dependency directly.
-      for (EdgeInfo &EI : TE->UserTreeIndices) {
-        TreeEntry *UserTE = EI.UserTE;
-        auto It = Users.find(UserTE);
-        if (It == Users.end())
-          It = Users.insert({UserTE, {}}).first;
-        It->second.emplace_back(EI.EdgeIdx, TE);
-      }
+      for (EdgeInfo &EI : TE->UserTreeIndices)
+        Users[EI.UserTE].emplace_back(EI.EdgeIdx, TE);
     }
     // Erase filtered entries.
     for (TreeEntry *TE : Filtered)
@@ -5927,9 +5924,6 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
         }
         auto Res = OrdersUses.insert(std::make_pair(OrdersType(), 0));
         const auto AllowsReordering = [&](const TreeEntry *TE) {
-          // FIXME: Reordering isn't implemented for non-power-of-2 nodes yet.
-          if (TE->isNonPowOf2Vec())
-            return false;
           if (!TE->ReorderIndices.empty() || !TE->ReuseShuffleIndices.empty() ||
               (TE->State == TreeEntry::Vectorize && TE->isAltShuffle()) ||
               (IgnoreReorder && TE->Idx == 0))
@@ -6991,7 +6985,8 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
       ReuseShuffleIndices.clear();
     } else {
       // FIXME: Reshuffing scalars is not supported yet for non-power-of-2 ops.
-      if (UserTreeIdx.UserTE && UserTreeIdx.UserTE->isNonPowOf2Vec()) {
+      if ((UserTreeIdx.UserTE && UserTreeIdx.UserTE->isNonPowOf2Vec()) ||
+          !llvm::has_single_bit(VL.size())) {
         LLVM_DEBUG(dbgs() << "SLP: Reshuffling scalars not yet supported "
                              "for nodes with padding.\n");
         newTreeEntry(VL, std::nullopt /*not vectorized*/, S, UserTreeIdx);
@@ -8470,6 +8465,9 @@ void BoUpSLP::transformNodes() {
       for (unsigned VF = VL.size() / 2; VF >= MinVF; VF /= 2) {
         for (unsigned Cnt = StartIdx; Cnt + VF <= End; Cnt += VF) {
           ArrayRef<Value *> Slice = VL.slice(Cnt, VF);
+          // If any instruction is vectorized already - do not try again.
+          if (getTreeEntry(Slice.front()) || getTreeEntry(Slice.back()))
+            continue;
           InstructionsState S = getSameOpcode(Slice, *TLI);
           if (!S.getOpcode() || S.isAltShuffle() ||
               (S.getOpcode() != Instruction::Load &&
@@ -8478,20 +8476,18 @@ void BoUpSLP::transformNodes() {
                                                UserIgnoreList);
                })))
             continue;
-          if (!getTreeEntry(Slice.front()) && !getTreeEntry(Slice.back())) {
-            unsigned PrevSize = VectorizableTree.size();
-            buildTree_rec(Slice, 0, EdgeInfo(&E, UINT_MAX));
-            if (PrevSize + 1 == VectorizableTree.size() &&
-                VectorizableTree[PrevSize]->isGather()) {
-              VectorizableTree.pop_back();
-              continue;
-            }
-            E.CombinedEntriesWithIndices.emplace_back(PrevSize, Cnt);
-            if (StartIdx == Cnt)
-              StartIdx = Cnt + VF;
-            if (End == Cnt + VF)
-              End = Cnt;
+          unsigned PrevSize = VectorizableTree.size();
+          buildTree_rec(Slice, 0, EdgeInfo(&E, UINT_MAX));
+          if (PrevSize + 1 == VectorizableTree.size() &&
+              VectorizableTree[PrevSize]->isGather()) {
+            VectorizableTree.pop_back();
+            continue;
           }
+          E.CombinedEntriesWithIndices.emplace_back(PrevSize, Cnt);
+          if (StartIdx == Cnt)
+            StartIdx = Cnt + VF;
+          if (End == Cnt + VF)
+            End = Cnt;
         }
       }
     }

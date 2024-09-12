@@ -964,6 +964,32 @@ define void @foo(i32 %cond0, i32 %cond1) {
   EXPECT_EQ(Switch->findCaseDest(BB1), One);
 }
 
+TEST_F(TrackerTest, SelectInst) {
+  parseIR(C, R"IR(
+define void @foo(i1 %c0, i8 %v0, i8 %v1) {
+  %sel = select i1 %c0, i8 %v0, i8 %v1
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  sandboxir::Function *F = Ctx.createFunction(LLVMF);
+  auto *V0 = F->getArg(1);
+  auto *V1 = F->getArg(2);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *Select = cast<sandboxir::SelectInst>(&*It++);
+
+  // Check tracking for swapValues.
+  Ctx.save();
+  Select->swapValues();
+  EXPECT_EQ(Select->getTrueValue(), V1);
+  EXPECT_EQ(Select->getFalseValue(), V0);
+  Ctx.revert();
+  EXPECT_EQ(Select->getTrueValue(), V0);
+  EXPECT_EQ(Select->getFalseValue(), V1);
+}
+
 TEST_F(TrackerTest, ShuffleVectorInst) {
   parseIR(C, R"IR(
 define void @foo(<2 x i8> %v1, <2 x i8> %v2) {

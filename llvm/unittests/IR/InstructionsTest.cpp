@@ -1733,6 +1733,20 @@ TEST(InstructionsTest, BranchWeightOverflow) {
   ASSERT_EQ(ProfWeight, UINT32_MAX);
 }
 
+TEST(InstructionsTest, FreezeInst) {
+  LLVMContext C;
+  std::unique_ptr<Module> M = parseIR(C,
+                                      R"(
+      define void @foo(i8 %arg) {
+        freeze i8 %arg
+        ret void
+  }
+  )");
+  ASSERT_TRUE(M);
+  Value *FI = &M->getFunction("foo")->getEntryBlock().front();
+  EXPECT_TRUE(isa<UnaryInstruction>(FI));
+}
+
 TEST(InstructionsTest, AllocaInst) {
   LLVMContext Ctx;
   std::unique_ptr<Module> M = parseIR(Ctx, R"(

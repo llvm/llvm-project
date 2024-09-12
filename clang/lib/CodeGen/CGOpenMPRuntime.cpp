@@ -11674,9 +11674,7 @@ CGOpenMPRuntime::LastprivateConditionalRAII::~LastprivateConditionalRAII() {
 Address CGOpenMPRuntime::emitLastprivateConditionalInit(CodeGenFunction &CGF,
                                                         const VarDecl *VD) {
   ASTContext &C = CGM.getContext();
-  auto I = LastprivateConditionalToTypes.find(CGF.CurFn);
-  if (I == LastprivateConditionalToTypes.end())
-    I = LastprivateConditionalToTypes.try_emplace(CGF.CurFn).first;
+  auto I = LastprivateConditionalToTypes.try_emplace(CGF.CurFn).first;
   QualType NewType;
   const FieldDecl *VDField;
   const FieldDecl *FiredField;

@@ -621,6 +621,7 @@ basic_string<char32_t> operator""s( const char32_t *str, size_t len );          
 #include <__string/char_traits.h>
 #include <__string/extern_template_lists.h>
 #include <__type_traits/conditional.h>
+#include <__type_traits/enable_if.h>
 #include <__type_traits/is_allocator.h>
 #include <__type_traits/is_array.h>
 #include <__type_traits/is_convertible.h>
@@ -2229,11 +2230,11 @@ private:
     return std::__is_pointer_in_range(data(), data() + size() + 1, std::addressof(__v));
   }
 
-  _LIBCPP_NORETURN _LIBCPP_HIDE_FROM_ABI void __throw_length_error() const {
+  [[__noreturn__]] _LIBCPP_HIDE_FROM_ABI void __throw_length_error() const {
     std::__throw_length_error("basic_string");
   }
 
-  _LIBCPP_NORETURN _LIBCPP_HIDE_FROM_ABI void __throw_out_of_range() const {
+  [[__noreturn__]] _LIBCPP_HIDE_FROM_ABI void __throw_out_of_range() const {
     std::__throw_out_of_range("basic_string");
   }
 

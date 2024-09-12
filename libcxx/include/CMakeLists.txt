@@ -324,6 +324,11 @@ set(files
   __coroutine/coroutine_traits.h
   __coroutine/noop_coroutine_handle.h
   __coroutine/trivial_awaitables.h
+  __cstddef/byte.h
+  __cstddef/max_align_t.h
+  __cstddef/nullptr_t.h
+  __cstddef/ptrdiff_t.h
+  __cstddef/size_t.h
   __debug_utils/randomize_range.h
   __debug_utils/sanitizers.h
   __debug_utils/strict_weak_ordering_check.h
@@ -413,6 +418,7 @@ set(files
   __functional/weak_result_type.h
   __fwd/array.h
   __fwd/bit_reference.h
+  __fwd/byte.h
   __fwd/complex.h
   __fwd/deque.h
   __fwd/format.h
@@ -919,7 +925,6 @@ set(files
   exception
   execution
   expected
-  experimental/__config
   experimental/__simd/aligned_tag.h
   experimental/__simd/declaration.h
   experimental/__simd/reference.h

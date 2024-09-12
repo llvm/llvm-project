@@ -454,6 +454,7 @@ def PseudoQuietFLT_S : PseudoQuietFCMP<FPR32>;
 } // Predicates = [HasStdExtF]
 
 let Predicates = [HasStdExtZfinx] in {
+def : InstAlias<"fmv.s $rd, $rs",  (FSGNJ_S_INX  FPR32INX:$rd, FPR32INX:$rs, FPR32INX:$rs)>;
 def : InstAlias<"fabs.s $rd, $rs", (FSGNJX_S_INX FPR32INX:$rd, FPR32INX:$rs, FPR32INX:$rs)>;
 def : InstAlias<"fneg.s $rd, $rs", (FSGNJN_S_INX FPR32INX:$rd, FPR32INX:$rs, FPR32INX:$rs)>;
 

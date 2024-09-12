@@ -715,6 +715,29 @@ mingw-dll-i686)
           -C "${MONOREPO_ROOT}/libcxx/cmake/caches/MinGW.cmake"
     check-runtimes
 ;;
+mingw-incomplete-sysroot)
+    # When bringing up a new cross compiler from scratch, we build
+    # libunwind/libcxx in a setup where the toolchain is incomplete and
+    # unable to perform the normal linker checks; this requires a few
+    # special cases in the CMake files.
+    #
+    # Building in an incomplete setup requires setting CMAKE_*_COMPILER_WORKS,
+    # as CMake fails to probe the compiler. This case also requires
+    # setting CMAKE_CXX_COMPILER_TARGET, as LLVM's heuristics for setting
+    # the triple fails when CMake hasn't been able to probe the environment.
+    # (This is what one has to do when building the initial libunwind/libcxx
+    # for a new toolchain.)
+    clean
+    generate-cmake \
+          -DCMAKE_C_COMPILER_WORKS=TRUE \
+          -DCMAKE_CXX_COMPILER_WORKS=TRUE \
+          -DCMAKE_C_COMPILER_TARGET=x86_64-w64-windows-gnu \
+          -DCMAKE_CXX_COMPILER_TARGET=x86_64-w64-windows-gnu \
+          -C "${MONOREPO_ROOT}/libcxx/cmake/caches/MinGW.cmake"
+    # Only test that building succeeds; there's not much extra value in running
+    # the tests here, as it would be equivalent to the mingw-dll config above.
+    ${NINJA} -vC "${BUILD_DIR}"
+;;
 aix)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/AIX.cmake" \

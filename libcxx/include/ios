@@ -440,7 +440,7 @@ public:
   ~failure() _NOEXCEPT override;
 };
 
-_LIBCPP_NORETURN inline _LIBCPP_HIDE_FROM_ABI void __throw_failure(char const* __msg) {
+[[__noreturn__]] inline _LIBCPP_HIDE_FROM_ABI void __throw_failure(char const* __msg) {
 #  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
   throw ios_base::failure(__msg);
 #  else

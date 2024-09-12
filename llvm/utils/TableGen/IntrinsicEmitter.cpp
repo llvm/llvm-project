@@ -14,7 +14,6 @@
 #include "Basic/SequenceToOffsetTable.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/CommandLine.h"
@@ -122,7 +121,8 @@ void IntrinsicEmitter::EmitEnumInfo(const CodeGenIntrinsicTable &Ints,
   // Find the TargetSet for which to generate enums. There will be an initial
   // set with an empty target prefix which will include target independent
   // intrinsics like dbg.value.
-  const CodeGenIntrinsicTable::TargetSet *Set = nullptr;
+  using TargetSet = CodeGenIntrinsicTable::TargetSet;
+  const TargetSet *Set = nullptr;
   for (const auto &Target : Ints.Targets) {
     if (Target.Name == IntrinsicPrefix) {
       Set = &Target;
@@ -130,13 +130,15 @@ void IntrinsicEmitter::EmitEnumInfo(const CodeGenIntrinsicTable &Ints,
     }
   }
   if (!Set) {
-    std::vector<std::string> KnownTargets;
-    for (const auto &Target : Ints.Targets)
-      if (!Target.Name.empty())
-        KnownTargets.push_back(Target.Name.str());
-    PrintFatalError("tried to generate intrinsics for unknown target " +
-                    IntrinsicPrefix +
-                    "\nKnown targets are: " + join(KnownTargets, ", ") + "\n");
+    // The first entry is for target independent intrinsics, so drop it.
+    auto KnowTargets = ArrayRef<TargetSet>(Ints.Targets).drop_front();
+    PrintFatalError([KnowTargets](raw_ostream &OS) {
+      OS << "tried to generate intrinsics for unknown target "
+         << IntrinsicPrefix << "\nKnown targets are: ";
+      interleaveComma(KnowTargets, OS,
+                      [&OS](const TargetSet &Target) { OS << Target.Name; });
+      OS << '\n';
+    });
   }
 
   // Generate a complete header for target specific intrinsics.

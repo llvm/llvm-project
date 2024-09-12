@@ -29,12 +29,21 @@ CodeGenIntrinsicContext::CodeGenIntrinsicContext(const RecordKeeper &RC) {
   for (const Record *Rec : RC.getAllDerivedDefinitions("IntrinsicProperty"))
     if (Rec->getValueAsBit("IsDefault"))
       DefaultProperties.push_back(Rec);
+
+  // The maximum number of values that an intrinsic can return is the size of
+  // of `IIT_RetNumbers` list - 1 (since we index into this list using the
+  // number of return values as the index).
+  const auto *IIT_RetNumbers =
+      dyn_cast_or_null<ListInit>(RC.getGlobal("IIT_RetNumbers"));
+  if (!IIT_RetNumbers)
+    PrintFatalError("unable to find 'IIT_RetNumbers' list");
+  MaxNumReturn = IIT_RetNumbers->size() - 1;
 }
 
 CodeGenIntrinsicTable::CodeGenIntrinsicTable(const RecordKeeper &RC) {
   CodeGenIntrinsicContext Ctx(RC);
 
-  std::vector<Record *> Defs = RC.getAllDerivedDefinitions("Intrinsic");
+  ArrayRef<const Record *> Defs = RC.getAllDerivedDefinitions("Intrinsic");
   Intrinsics.reserve(Defs.size());
 
   for (const Record *Def : Defs)
@@ -106,6 +115,13 @@ CodeGenIntrinsic::CodeGenIntrinsic(const Record *R,
                                   TargetPrefix + ".'!");
   }
 
+  unsigned NumRet = R->getValueAsListInit("RetTypes")->size();
+  if (NumRet > Ctx.MaxNumReturn)
+    PrintFatalError(DefLoc, "intrinsics can only return upto " +
+                                Twine(Ctx.MaxNumReturn) + " values, '" +
+                                DefName + "' returns " + Twine(NumRet) +
+                                " values");
+
   const Record *TypeInfo = R->getValueAsDef("TypeInfo");
   if (!TypeInfo->isSubClassOf("TypeInfoGen"))
     PrintFatalError(DefLoc, "TypeInfo field in " + DefName +
@@ -116,7 +132,6 @@ CodeGenIntrinsic::CodeGenIntrinsic(const Record *R,
 
   // Types field is a concatenation of Return types followed by Param types.
   unsigned Idx = 0;
-  unsigned NumRet = R->getValueAsListInit("RetTypes")->size();
   for (; Idx < NumRet; ++Idx)
     IS.RetTys.push_back(TypeList->getElementAsRecord(Idx));
 

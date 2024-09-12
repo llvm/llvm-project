@@ -36,7 +36,7 @@ void initializeAMDGPURegBankSelectPass(PassRegistry &);
 FunctionPass *createGCNDPPCombinePass();
 FunctionPass *createSIAnnotateControlFlowLegacyPass();
 FunctionPass *createSIFoldOperandsLegacyPass();
-FunctionPass *createSIPeepholeSDWAPass();
+FunctionPass *createSIPeepholeSDWALegacyPass();
 FunctionPass *createSILowerI1CopiesLegacyPass();
 FunctionPass *createAMDGPUGlobalISelDivergenceLoweringPass();
 FunctionPass *createSIShrinkInstructionsLegacyPass();
@@ -163,8 +163,8 @@ extern char &GCNDPPCombineLegacyID;
 void initializeSIFoldOperandsLegacyPass(PassRegistry &);
 extern char &SIFoldOperandsLegacyID;
 
-void initializeSIPeepholeSDWAPass(PassRegistry &);
-extern char &SIPeepholeSDWAID;
+void initializeSIPeepholeSDWALegacyPass(PassRegistry &);
+extern char &SIPeepholeSDWALegacyID;
 
 void initializeSIShrinkInstructionsLegacyPass(PassRegistry &);
 extern char &SIShrinkInstructionsLegacyID;

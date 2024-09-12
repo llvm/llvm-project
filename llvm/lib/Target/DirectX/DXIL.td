@@ -40,7 +40,10 @@ def Int64Ty : DXILOpParamType;
 def HalfTy : DXILOpParamType;
 def FloatTy : DXILOpParamType;
 def DoubleTy : DXILOpParamType;
-def ResRetTy : DXILOpParamType;
+def ResRetHalfTy : DXILOpParamType;
+def ResRetFloatTy : DXILOpParamType;
+def ResRetInt16Ty : DXILOpParamType;
+def ResRetInt32Ty : DXILOpParamType;
 def HandleTy : DXILOpParamType;
 def ResBindTy : DXILOpParamType;
 def ResPropsTy : DXILOpParamType;
@@ -691,6 +694,38 @@ def CreateHandle : DXILOp<57, createHandle> {
   let arguments = [Int8Ty, Int32Ty, Int32Ty, Int1Ty];
   let result = HandleTy;
   let stages = [Stages<DXIL1_0, [all_stages]>, Stages<DXIL1_6, [removed]>];
+}
+
+def BufferLoad : DXILOp<68, bufferLoad> {
+  let Doc = "reads from a TypedBuffer";
+  // Handle, Coord0, Coord1
+  let arguments = [HandleTy, Int32Ty, Int32Ty];
+  let result = OverloadTy;
+  let overloads =
+      [Overloads<DXIL1_0,
+                 [ResRetHalfTy, ResRetFloatTy, ResRetInt16Ty, ResRetInt32Ty]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+}
+
+def BufferStore : DXILOp<69, bufferStore> {
+  let Doc = "writes to an RWTypedBuffer";
+  // Handle, Coord0, Coord1, Val0, Val1, Val2, Val3, Mask
+  let arguments = [
+    HandleTy, Int32Ty, Int32Ty, OverloadTy, OverloadTy, OverloadTy, OverloadTy,
+    Int8Ty
+  ];
+  let result = VoidTy;
+  let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy, Int16Ty, Int32Ty]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+}
+
+def CheckAccessFullyMapped : DXILOp<71, checkAccessFullyMapped> {
+  let Doc = "checks whether a Sample, Gather, or Load operation "
+            "accessed mapped tiles in a tiled resource";
+  let arguments = [OverloadTy];
+  let result = Int1Ty;
+  let overloads = [Overloads<DXIL1_0, [Int32Ty]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
 }
 
 def ThreadId :  DXILOp<93, threadId> {
