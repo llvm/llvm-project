@@ -2932,14 +2932,21 @@ void DWARFASTParserClang::ParseSingleMember(
     last_field_info = this_field_info;
     last_field_info.SetIsBitfield(true);
   } else {
-    last_field_info.bit_offset = field_bit_offset;
+    FieldInfo this_field_info{.is_bitfield = false};
+    this_field_info.bit_offset = field_bit_offset;
 
+    // TODO: we shouldn't silently ignore the bit_size if we fail
+    //       to GetByteSize.
     if (std::optional<uint64_t> clang_type_size =
             member_type->GetByteSize(nullptr)) {
-      last_field_info.bit_size = *clang_type_size * character_width;
+      this_field_info.bit_size = *clang_type_size * character_width;
     }
 
-    last_field_info.SetIsBitfield(false);
+    if (this_field_info.GetFieldEnd() <= last_field_info.GetEffectiveFieldEnd())
+      this_field_info.SetEffectiveFieldEnd(
+          last_field_info.GetEffectiveFieldEnd());
+
+    last_field_info = this_field_info;
   }
 
   // Don't turn artificial members such as vtable pointers into real FieldDecls
@@ -3738,7 +3745,7 @@ void DWARFASTParserClang::AddUnnamedBitfieldToRecordTypeIfNeeded(
     const FieldInfo &current_field) {
   // TODO: get this value from target
   const uint64_t word_width = 32;
-  uint64_t last_field_end = previous_field.bit_offset + previous_field.bit_size;
+  uint64_t last_field_end = previous_field.GetEffectiveFieldEnd();
 
   if (!previous_field.IsBitfield()) {
     // The last field was not a bit-field...
