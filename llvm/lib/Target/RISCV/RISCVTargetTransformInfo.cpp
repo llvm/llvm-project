@@ -2031,7 +2031,7 @@ void RISCVTTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
 
 unsigned RISCVTTIImpl::getRegUsageForType(Type *Ty) {
   if (Ty->isVectorTy()) {
-    // f16 w/ zvfhmin and bf16 types will be promoted to f32
+    // f16 with only zvfhmin and bf16 will be promoted to f32
     Type *EltTy = cast<VectorType>(Ty)->getElementType();
     if ((EltTy->isHalfTy() && !ST->hasVInstructionsF16()) ||
         EltTy->isBFloatTy())
