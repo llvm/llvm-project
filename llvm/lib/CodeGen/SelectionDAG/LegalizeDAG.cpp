@@ -2326,15 +2326,7 @@ SelectionDAGLegalize::ExpandDivRemLibCall(SDNode *Node,
 
 /// Return true if sincos libcall is available.
 static bool isSinCosLibcallAvailable(SDNode *Node, const TargetLowering &TLI) {
-  RTLIB::Libcall LC;
-  switch (Node->getSimpleValueType(0).SimpleTy) {
-  default: llvm_unreachable("Unexpected request for libcall!");
-  case MVT::f32:     LC = RTLIB::SINCOS_F32; break;
-  case MVT::f64:     LC = RTLIB::SINCOS_F64; break;
-  case MVT::f80:     LC = RTLIB::SINCOS_F80; break;
-  case MVT::f128:    LC = RTLIB::SINCOS_F128; break;
-  case MVT::ppcf128: LC = RTLIB::SINCOS_PPCF128; break;
-  }
+  RTLIB::Libcall LC = RTLIB::getFSINCOS(Node->getSimpleValueType(0).SimpleTy);
   return TLI.getLibcallName(LC) != nullptr;
 }
 
@@ -2355,68 +2347,73 @@ static bool useSinCos(SDNode *Node) {
 }
 
 /// Issue libcalls to sincos to compute sin / cos pairs.
-void
-SelectionDAGLegalize::ExpandSinCosLibCall(SDNode *Node,
-                                          SmallVectorImpl<SDValue> &Results) {
-  RTLIB::Libcall LC;
-  switch (Node->getSimpleValueType(0).SimpleTy) {
-  default: llvm_unreachable("Unexpected request for libcall!");
-  case MVT::f32:     LC = RTLIB::SINCOS_F32; break;
-  case MVT::f64:     LC = RTLIB::SINCOS_F64; break;
-  case MVT::f80:     LC = RTLIB::SINCOS_F80; break;
-  case MVT::f128:    LC = RTLIB::SINCOS_F128; break;
-  case MVT::ppcf128: LC = RTLIB::SINCOS_PPCF128; break;
-  }
-
-  // The input chain to this libcall is the entry node of the function.
-  // Legalizing the call will automatically add the previous call to the
-  // dependence.
-  SDValue InChain = DAG.getEntryNode();
-
+void SelectionDAGLegalize::ExpandSinCosLibCall(
+    SDNode *Node, SmallVectorImpl<SDValue> &Results) {
   EVT RetVT = Node->getValueType(0);
   Type *RetTy = RetVT.getTypeForEVT(*DAG.getContext());
 
   TargetLowering::ArgListTy Args;
-  TargetLowering::ArgListEntry Entry;
+  TargetLowering::ArgListEntry Entry{};
+
+  // Find users of the node that store the results. The destination pointers
+  // can be used instead of creating stack allocations.
+  StoreSDNode *SinST = nullptr;
+  StoreSDNode *CosST = nullptr;
+  for (SDNode::use_iterator UI = Node->use_begin(), UE = Node->use_end();
+       UI != UE; ++UI) {
+    SDUse &Use = UI.getUse();
+    SDNode *User = Use.getUser();
+    if (!ISD::isNormalStore(User))
+      continue;
+    auto *ST = cast<StoreSDNode>(User);
+    if (Use.getResNo() == 0)
+      SinST = ST;
+    if (Use.getResNo() == 1)
+      CosST = ST;
+  }
 
   // Pass the argument.
   Entry.Node = Node->getOperand(0);
   Entry.Ty = RetTy;
-  Entry.IsSExt = false;
-  Entry.IsZExt = false;
   Args.push_back(Entry);
 
+  auto GetOrCreateOutPointer = [&](StoreSDNode *MaybeStore) {
+    if (MaybeStore)
+      return std::make_pair(MaybeStore->getBasePtr(),
+                            MaybeStore->getPointerInfo());
+    SDValue StackSlot = DAG.CreateStackTemporary(RetVT);
+    auto PtrInfo = MachinePointerInfo::getFixedStack(
+        DAG.getMachineFunction(),
+        cast<FrameIndexSDNode>(StackSlot)->getIndex());
+    return std::make_pair(StackSlot, PtrInfo);
+  };
+
   // Pass the return address of sin.
-  SDValue SinPtr = DAG.CreateStackTemporary(RetVT);
-  Entry.Node = SinPtr;
+  auto SinPtr = GetOrCreateOutPointer(SinST);
+  Entry.Node = SinPtr.first;
   Entry.Ty = PointerType::getUnqual(RetTy->getContext());
-  Entry.IsSExt = false;
-  Entry.IsZExt = false;
   Args.push_back(Entry);
 
   // Also pass the return address of the cos.
-  SDValue CosPtr = DAG.CreateStackTemporary(RetVT);
-  Entry.Node = CosPtr;
+  auto CosPtr = GetOrCreateOutPointer(CosST);
+  Entry.Node = CosPtr.first;
   Entry.Ty = PointerType::getUnqual(RetTy->getContext());
-  Entry.IsSExt = false;
-  Entry.IsZExt = false;
   Args.push_back(Entry);
 
-  SDValue Callee = DAG.getExternalSymbol(TLI.getLibcallName(LC),
-                                         TLI.getPointerTy(DAG.getDataLayout()));
+  RTLIB::Libcall LC = RTLIB::getFSINCOS(RetVT);
+  auto [Call, Chain] = ExpandLibCall(LC, Node, std::move(Args), false);
 
-  SDLoc dl(Node);
-  TargetLowering::CallLoweringInfo CLI(DAG);
-  CLI.setDebugLoc(dl).setChain(InChain).setLibCallee(
-      TLI.getLibcallCallingConv(LC), Type::getVoidTy(*DAG.getContext()), Callee,
-      std::move(Args));
+  // Replace explict stores with the library call.
+  for (StoreSDNode *ST : {SinST, CosST}) {
+    if (ST)
+      DAG.ReplaceAllUsesOfValueWith(SDValue(ST, 0), Chain);
+  }
 
-  std::pair<SDValue, SDValue> CallInfo = TLI.LowerCallTo(CLI);
-
-  Results.push_back(
-      DAG.getLoad(RetVT, dl, CallInfo.second, SinPtr, MachinePointerInfo()));
-  Results.push_back(
-      DAG.getLoad(RetVT, dl, CallInfo.second, CosPtr, MachinePointerInfo()));
+  SDLoc DL(Node);
+  for (auto [Ptr, PtrInfo] : {SinPtr, CosPtr}) {
+    SDValue LoadExp = DAG.getLoad(RetVT, DL, Chain, Ptr, PtrInfo);
+    Results.push_back(LoadExp);
+  }
 }
 
 SDValue SelectionDAGLegalize::expandLdexp(SDNode *Node) const {

@@ -24,22 +24,11 @@ entry:
 define void @sincos_f32_ptr_return(float %x, ptr %out_sin, ptr %out_cos) {
 ; CHECK-LABEL: sincos_f32_ptr_return:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    str x30, [sp, #-32]! // 8-byte Folded Spill
-; CHECK-NEXT:    stp x20, x19, [sp, #16] // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    .cfi_offset w19, -8
-; CHECK-NEXT:    .cfi_offset w20, -16
-; CHECK-NEXT:    .cfi_offset w30, -32
-; CHECK-NEXT:    mov x19, x1
-; CHECK-NEXT:    mov x20, x0
-; CHECK-NEXT:    add x0, sp, #12
-; CHECK-NEXT:    add x1, sp, #8
+; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    bl sincosf
-; CHECK-NEXT:    ldp s1, s0, [sp, #8]
-; CHECK-NEXT:    str s0, [x20]
-; CHECK-NEXT:    str s1, [x19]
-; CHECK-NEXT:    ldp x20, x19, [sp, #16] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x30, [sp], #32 // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
 entry:
   %sin = tail call float @llvm.sin.f32(float %x)
@@ -52,19 +41,13 @@ entry:
 define float @sincos_f32_mixed_return(float %x, ptr %out_sin) {
 ; CHECK-LABEL: sincos_f32_mixed_return:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sub sp, sp, #32
-; CHECK-NEXT:    stp x30, x19, [sp, #16] // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    .cfi_offset w19, -8
+; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    mov x19, x0
-; CHECK-NEXT:    add x0, sp, #12
-; CHECK-NEXT:    add x1, sp, #8
+; CHECK-NEXT:    add x1, sp, #12
 ; CHECK-NEXT:    bl sincosf
-; CHECK-NEXT:    ldp s0, s1, [sp, #8]
-; CHECK-NEXT:    str s1, [x19]
-; CHECK-NEXT:    ldp x30, x19, [sp, #16] // 16-byte Folded Reload
-; CHECK-NEXT:    add sp, sp, #32
+; CHECK-NEXT:    ldr s0, [sp, #12]
+; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
 entry:
   %sin = tail call float @llvm.sin.f32(float %x)
@@ -99,25 +82,11 @@ entry:
 define void @sincos_f64_ptr_return(double %x, ptr %out_sin, ptr %out_cos) {
 ; CHECK-LABEL: sincos_f64_ptr_return:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sub sp, sp, #48
-; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
-; CHECK-NEXT:    stp x20, x19, [sp, #32] // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-NEXT:    .cfi_offset w19, -8
-; CHECK-NEXT:    .cfi_offset w20, -16
-; CHECK-NEXT:    .cfi_offset w30, -32
-; CHECK-NEXT:    mov x19, x1
-; CHECK-NEXT:    mov x20, x0
-; CHECK-NEXT:    add x0, sp, #24
-; CHECK-NEXT:    add x1, sp, #8
+; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    bl sincos
-; CHECK-NEXT:    ldr d0, [sp, #24]
-; CHECK-NEXT:    ldr d1, [sp, #8]
-; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
-; CHECK-NEXT:    str d0, [x20]
-; CHECK-NEXT:    str d1, [x19]
-; CHECK-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
-; CHECK-NEXT:    add sp, sp, #48
+; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
 entry:
   %sin = tail call double @llvm.sin.f64(double %x)
@@ -130,19 +99,13 @@ entry:
 define double @sincos_f64_mixed_return(double %x, ptr %out_sin) {
 ; CHECK-LABEL: sincos_f64_mixed_return:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sub sp, sp, #32
-; CHECK-NEXT:    stp x30, x19, [sp, #16] // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    .cfi_offset w19, -8
+; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    mov x19, x0
-; CHECK-NEXT:    add x0, sp, #8
-; CHECK-NEXT:    mov x1, sp
+; CHECK-NEXT:    add x1, sp, #8
 ; CHECK-NEXT:    bl sincos
-; CHECK-NEXT:    ldp d0, d1, [sp]
-; CHECK-NEXT:    str d1, [x19]
-; CHECK-NEXT:    ldp x30, x19, [sp, #16] // 16-byte Folded Reload
-; CHECK-NEXT:    add sp, sp, #32
+; CHECK-NEXT:    ldr d0, [sp, #8]
+; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
 entry:
   %sin = tail call double @llvm.sin.f64(double %x)
