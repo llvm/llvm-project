@@ -11,13 +11,9 @@
 // Verify the codegen-data-use-path flag (with a default value) is passed to LLVM.
 // RUN: %clang -### -S --target=aarch64-linux-gnu -fcodegen-data-use %s 2>&1| FileCheck %s --check-prefix=USE
 // RUN: %clang -### -S --target=arm64-apple-darwin -fcodegen-data-use %s 2>&1| FileCheck %s --check-prefix=USE
-// RUN: mkdir -p %t.d/some/dir
-// RUN: %clang -### -S --target=aarch64-linux-gnu -fcodegen-data-use=%t.d/some/dir %s 2>&1 | FileCheck %s --check-prefix=USE-DIR
-// RUN: %clang -### -S --target=arm64-apple-darwin -fcodegen-data-use=%t.d/some/dir %s 2>&1 | FileCheck %s --check-prefix=USE-DIR
 // RUN: %clang -### -S --target=aarch64-linux-gnu -fcodegen-data-use=file %s 2>&1 | FileCheck %s --check-prefix=USE-FILE
 // RUN: %clang -### -S --target=arm64-apple-darwin -fcodegen-data-use=file %s 2>&1 | FileCheck %s --check-prefix=USE-FILE
 // USE: "-mllvm" "-codegen-data-use-path=default.cgdata"
-// USE-DIR: "-mllvm" "-codegen-data-use-path={{.*}}.d/some/dir{{/|\\\\}}default.cgdata"
 // USE-FILE: "-mllvm" "-codegen-data-use-path=file"
 
 // Verify the codegen-data-generate (boolean) flag with a LTO.

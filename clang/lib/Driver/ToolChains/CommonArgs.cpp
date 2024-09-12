@@ -2776,7 +2776,7 @@ void tools::addMachineOutlinerArgs(const Driver &D,
     SmallString<128> Path(CodeGenDataUseArg->getNumValues() == 0
                               ? ""
                               : CodeGenDataUseArg->getValue());
-    if (Path.empty() || llvm::sys::fs::is_directory(Path))
+    if (Path.empty())
       llvm::sys::path::append(Path, "default.cgdata");
     addArg(Twine("-codegen-data-use-path=" + Path.str()));
   }

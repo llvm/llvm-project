@@ -484,7 +484,7 @@ void darwin::Linker::AddLinkArgs(Compilation &C, const ArgList &Args,
       SmallString<128> Path(CodeGenDataGenArg->getNumValues() == 0
                                 ? ""
                                 : CodeGenDataGenArg->getValue());
-      if (Path.empty() || llvm::sys::fs::is_directory(Path))
+      if (Path.empty())
         llvm::sys::path::append(Path, "default.cgdata");
       CmdArgs.push_back(
           Args.MakeArgString(Twine("--codegen-data-generate-path=") + Path));
@@ -672,7 +672,7 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     SmallString<128> Path(CodeGenDataUseArg->getNumValues() == 0
                               ? ""
                               : CodeGenDataUseArg->getValue());
-    if (Path.empty() || llvm::sys::fs::is_directory(Path))
+    if (Path.empty())
       llvm::sys::path::append(Path, "default.cgdata");
     CmdArgs.push_back("-mllvm");
     CmdArgs.push_back(
