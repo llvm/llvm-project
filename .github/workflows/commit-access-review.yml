@@ -13,7 +13,6 @@ on:
 
 permissions:
   contents: read
-  metadata: read # For GitHub.Repository.get_collaborators()
 
 jobs:
   commit-access-review:
