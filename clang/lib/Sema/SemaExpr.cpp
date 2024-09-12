@@ -9207,8 +9207,9 @@ Sema::CheckAssignmentConstraints(QualType LHSType, ExprResult &RHS,
   };
 
   if (auto *CE = FindBuiltinCountedByRefExpr(RHS.get()))
-    Diag(RHS.get()->getExprLoc(),
-         diag::err_builtin_counted_by_ref_cannot_leak_reference);
+    Diag(CE->getExprLoc(),
+         diag::err_builtin_counted_by_ref_cannot_leak_reference)
+        << CE->getSourceRange();
 
   // Common case: no conversion required.
   if (LHSType == RHSType) {
