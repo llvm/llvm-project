@@ -378,6 +378,14 @@ RecurKind getMinMaxReductionRecurKind(Intrinsic::ID RdxID);
 /// Returns the comparison predicate used when expanding a min/max reduction.
 CmpInst::Predicate getMinMaxReductionPredicate(RecurKind RK);
 
+/// Given information about an @llvm.vector.reduce.* intrinsic, return
+/// the identity value for the reduction.
+Value *getReductionIdentity(Intrinsic::ID RdxID, Type *Ty, FastMathFlags FMF);
+
+/// Given information about an recurrence kind, return the identity
+/// for the @llvm.vector.reduce.* used to generate it.
+Value *getRecurrenceIdentity(RecurKind K, Type *Tp, FastMathFlags FMF);
+
 /// Returns a Min/Max operation corresponding to MinMaxRecurrenceKind.
 /// The Builder's fast-math-flags must be set to propagate the expected values.
 Value *createMinMaxOp(IRBuilderBase &Builder, RecurKind RK, Value *Left,

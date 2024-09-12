@@ -733,7 +733,7 @@ bool SemaRISCV::CheckBuiltinFunctionCall(const TargetInfo &TI,
     if (ElemSize == 64 && !TI.hasFeature("zvknhb"))
       return Diag(TheCall->getBeginLoc(),
                   diag::err_riscv_builtin_requires_extension)
-             << /* IsExtension */ true << TheCall->getSourceRange() << "zvknb";
+             << /* IsExtension */ true << TheCall->getSourceRange() << "zvknhb";
 
     return CheckInvalidVLENandLMUL(TI, TheCall, SemaRef, Op1Type,
                                    ElemSize * 4) ||

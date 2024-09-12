@@ -74,6 +74,10 @@ public:
 
     const Checksum &GetChecksum() const { return m_checksum; }
 
+    llvm::once_flag &GetChecksumWarningOnceFlag() {
+      return m_checksum_warning_once_flag;
+    }
+
   protected:
     /// Set file and update modification time.
     void SetSupportFile(lldb::SupportFileSP support_file_sp);
@@ -86,6 +90,9 @@ public:
 
     /// Keep track of the on-disk checksum.
     Checksum m_checksum;
+
+    /// Once flag for emitting a checksum mismatch warning.
+    llvm::once_flag m_checksum_warning_once_flag;
 
     // Keep the modification time that this file data is valid for
     llvm::sys::TimePoint<> m_mod_time;

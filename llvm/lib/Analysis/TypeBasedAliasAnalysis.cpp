@@ -613,12 +613,13 @@ static bool mayBeAccessToSubobjectOf(TBAAStructTagNode BaseTag,
     }
 
     if (BaseType.getNode() == SubobjectTag.getBaseType()) {
-      bool SameMemberAccess = OffsetInBase == SubobjectTag.getOffset();
+      MayAlias = OffsetInBase == SubobjectTag.getOffset() ||
+                 BaseType.getNode() == BaseTag.getAccessType() ||
+                 SubobjectTag.getBaseType() == SubobjectTag.getAccessType();
       if (GenericTag) {
-        *GenericTag = SameMemberAccess ? SubobjectTag.getNode() :
-                                         createAccessTag(CommonType);
+        *GenericTag =
+            MayAlias ? SubobjectTag.getNode() : createAccessTag(CommonType);
       }
-      MayAlias = SameMemberAccess;
       return true;
     }
 

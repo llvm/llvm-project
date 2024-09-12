@@ -20,11 +20,11 @@ using namespace llvm;
 
 namespace {
 class ClangOpcodesEmitter {
-  RecordKeeper &Records;
+  const RecordKeeper &Records;
   unsigned NumTypes;
 
 public:
-  ClangOpcodesEmitter(RecordKeeper &R)
+  ClangOpcodesEmitter(const RecordKeeper &R)
       : Records(R), NumTypes(Records.getAllDerivedDefinitions("Type").size()) {}
 
   void run(raw_ostream &OS);
@@ -404,6 +404,6 @@ void ClangOpcodesEmitter::PrintTypes(raw_ostream &OS,
   OS << ">";
 }
 
-void clang::EmitClangOpcodes(RecordKeeper &Records, raw_ostream &OS) {
+void clang::EmitClangOpcodes(const RecordKeeper &Records, raw_ostream &OS) {
   ClangOpcodesEmitter(Records).run(OS);
 }

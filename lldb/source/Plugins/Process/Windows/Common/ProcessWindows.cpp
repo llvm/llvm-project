@@ -821,7 +821,7 @@ void ProcessWindows::OnDebuggerError(const Status &error, uint32_t type) {
     // If we haven't actually launched the process yet, this was an error
     // launching the process.  Set the internal error and signal the initial
     // stop event so that the DoLaunch method wakes up and returns a failure.
-    m_session_data->m_launch_error = error;
+    m_session_data->m_launch_error = error.Clone();
     ::SetEvent(m_session_data->m_initial_stop_event);
     LLDB_LOG(
         log,

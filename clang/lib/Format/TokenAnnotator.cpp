@@ -2874,21 +2874,26 @@ private:
     if (Line.InPPDirective && AfterRParen->is(tok::minus))
       return false;
 
+    const auto *Prev = BeforeRParen;
+
+    // Look for a function pointer type, e.g. `(*)()`.
+    if (Prev->is(tok::r_paren)) {
+      if (Prev->is(TT_CastRParen))
+        return false;
+      Prev = Prev->MatchingParen;
+      if (!Prev)
+        return false;
+      Prev = Prev->Previous;
+      if (!Prev || Prev->isNot(tok::r_paren))
+        return false;
+      Prev = Prev->MatchingParen;
+      return Prev && Prev->is(TT_FunctionTypeLParen);
+    }
+
     // Search for unexpected tokens.
-    for (auto *Prev = BeforeRParen; Prev != LParen; Prev = Prev->Previous) {
-      if (Prev->is(tok::r_paren)) {
-        if (Prev->is(TT_CastRParen))
-          return false;
-        Prev = Prev->MatchingParen;
-        if (!Prev)
-          return false;
-        if (Prev->is(TT_FunctionTypeLParen))
-          break;
-        continue;
-      }
+    for (Prev = BeforeRParen; Prev != LParen; Prev = Prev->Previous)
       if (!Prev->isOneOf(tok::kw_const, tok::identifier, tok::coloncolon))
         return false;
-    }
 
     return true;
   }

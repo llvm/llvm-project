@@ -4853,7 +4853,8 @@ renderDebugOptions(const ToolChain &TC, const Driver &D, const llvm::Triple &T,
 
   // This controls whether or not we perform JustMyCode instrumentation.
   if (Args.hasFlag(options::OPT_fjmc, options::OPT_fno_jmc, false)) {
-    if (TC.getTriple().isOSBinFormatELF() || D.IsCLMode()) {
+    if (TC.getTriple().isOSBinFormatELF() ||
+        TC.getTriple().isWindowsMSVCEnvironment()) {
       if (DebugInfoKind >= llvm::codegenoptions::DebugInfoConstructor)
         CmdArgs.push_back("-fjmc");
       else if (D.IsCLMode())
@@ -6785,8 +6786,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("--offload-new-driver");
   }
 
-  SanitizeArgs.addArgs(TC, Args, CmdArgs, InputType);
-
   const XRayArgs &XRay = TC.getXRayArgs();
   XRay.addArgs(TC, Args, CmdArgs, InputType);
 
@@ -7675,6 +7674,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       A->render(Args, CmdArgs);
     }
   }
+
+  // This needs to run after -Xclang argument forwarding to pick up the target
+  // features enabled through -Xclang -target-feature flags.
+  SanitizeArgs.addArgs(TC, Args, CmdArgs, InputType);
 
   // With -save-temps, we want to save the unoptimized bitcode output from the
   // CompileJobAction, use -disable-llvm-passes to get pristine IR generated

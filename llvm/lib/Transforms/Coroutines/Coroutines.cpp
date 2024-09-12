@@ -145,6 +145,33 @@ void coro::replaceCoroFree(CoroIdInst *CoroId, bool Elide) {
   }
 }
 
+void coro::suppressCoroAllocs(CoroIdInst *CoroId) {
+  SmallVector<CoroAllocInst *, 4> CoroAllocs;
+  for (User *U : CoroId->users())
+    if (auto *CA = dyn_cast<CoroAllocInst>(U))
+      CoroAllocs.push_back(CA);
+
+  if (CoroAllocs.empty())
+    return;
+
+  coro::suppressCoroAllocs(CoroId->getContext(), CoroAllocs);
+}
+
+// Replacing llvm.coro.alloc with false will suppress dynamic
+// allocation as it is expected for the frontend to generate the code that
+// looks like:
+//   id = coro.id(...)
+//   mem = coro.alloc(id) ? malloc(coro.size()) : 0;
+//   coro.begin(id, mem)
+void coro::suppressCoroAllocs(LLVMContext &Context,
+                              ArrayRef<CoroAllocInst *> CoroAllocs) {
+  auto *False = ConstantInt::getFalse(Context);
+  for (auto *CA : CoroAllocs) {
+    CA->replaceAllUsesWith(False);
+    CA->eraseFromParent();
+  }
+}
+
 static void clear(coro::Shape &Shape) {
   Shape.CoroBegin = nullptr;
   Shape.CoroEnds.clear();

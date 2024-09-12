@@ -674,6 +674,18 @@ namespace llvm {
     CVTTP2UI,
     CVTTP2SI_SAE,
     CVTTP2UI_SAE,
+
+    // Saturation enabled Vector float/double to signed/unsigned
+    // integer with truncation.
+    CVTTP2SIS,
+    CVTTP2UIS,
+    CVTTP2SIS_SAE,
+    CVTTP2UIS_SAE,
+    // Masked versions of above. Used for v2f64 to v4i32.
+    // SRC, PASSTHRU, MASK
+    MCVTTP2SIS,
+    MCVTTP2UIS,
+
     // Scalar float/double to signed/unsigned integer with truncation.
     CVTTS2SI,
     CVTTS2UI,
@@ -683,6 +695,12 @@ namespace llvm {
     // Vector signed/unsigned integer to float/double.
     CVTSI2P,
     CVTUI2P,
+
+    // Scalar float/double to signed/unsigned integer with saturation.
+    CVTTS2SIS,
+    CVTTS2UIS,
+    CVTTS2SIS_SAE,
+    CVTTS2UIS_SAE,
 
     // Masked versions of above. Used for v2f64->v4f32.
     // SRC, PASSTHRU, MASK

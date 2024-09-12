@@ -46,9 +46,8 @@ add_llvm_tool(opt
   intrinsics_gen
   SUPPORT_PLUGINS
 
+  EXPORT_SYMBOLS
   )
 target_link_libraries(opt PRIVATE LLVMOptDriver)
 
 setup_host_tool(opt OPT opt_exe opt_target)
-
-export_executable_symbols_for_plugins(opt)

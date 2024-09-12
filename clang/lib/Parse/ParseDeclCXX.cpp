@@ -1076,7 +1076,7 @@ Decl *Parser::ParseStaticAssertDeclaration(SourceLocation &DeclEnd) {
     }
 
     bool ParseAsExpression = false;
-    if (getLangOpts().CPlusPlus26) {
+    if (getLangOpts().CPlusPlus11) {
       for (unsigned I = 0;; ++I) {
         const Token &T = GetLookAheadToken(I);
         if (T.is(tok::r_paren))
@@ -1088,9 +1088,13 @@ Decl *Parser::ParseStaticAssertDeclaration(SourceLocation &DeclEnd) {
       }
     }
 
-    if (ParseAsExpression)
+    if (ParseAsExpression) {
+      Diag(Tok,
+           getLangOpts().CPlusPlus26
+               ? diag::warn_cxx20_compat_static_assert_user_generated_message
+               : diag::ext_cxx_static_assert_user_generated_message);
       AssertMessage = ParseConstantExpressionInExprEvalContext();
-    else if (tokenIsLikeStringLiteral(Tok, getLangOpts()))
+    } else if (tokenIsLikeStringLiteral(Tok, getLangOpts()))
       AssertMessage = ParseUnevaluatedStringLiteralExpression();
     else {
       Diag(Tok, diag::err_expected_string_literal)

@@ -19,10 +19,12 @@
 //   Returns: extents().rev-prod-of-extents(i).
 
 #include <mdspan>
-#include <cassert>
 #include <array>
+#include <cassert>
 #include <cstdint>
 #include <cstdio>
+#include <span> // dynamic_extent
+
 #include "test_macros.h"
 
 template <class E, class... Args>

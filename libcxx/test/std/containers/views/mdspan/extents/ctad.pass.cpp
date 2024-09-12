@@ -18,6 +18,7 @@
 
 #include <mdspan>
 #include <cassert>
+#include <span> // dynamic_extent
 #include <type_traits>
 
 #include "../ConvertibleToIntegral.h"

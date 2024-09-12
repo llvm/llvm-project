@@ -156,8 +156,8 @@ void handleTargetOutcome(bool Success, ident_t *Loc) {
         for (auto &Image : PM->deviceImages()) {
           const char *Start = reinterpret_cast<const char *>(
               Image.getExecutableImage().ImageStart);
-          uint64_t Length = llvm::omp::target::getPtrDiff(
-              Start, Image.getExecutableImage().ImageEnd);
+          uint64_t Length =
+              utils::getPtrDiff(Start, Image.getExecutableImage().ImageEnd);
           llvm::MemoryBufferRef Buffer(llvm::StringRef(Start, Length),
                                        /*Identifier=*/"");
 

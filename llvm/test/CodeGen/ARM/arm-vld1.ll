@@ -68,7 +68,7 @@ declare %struct.uint8x16x4_t @llvm.arm.neon.vld1x4.v16i8.p0(ptr) nounwind readon
 
 define %struct.uint16x4x2_t @test_vld1_u16_x2(ptr %a) nounwind {
 ; CHECK-LABEL: test_vld1_u16_x2:
-; CHECK:         vld1.16 {d16, d17}, [r0:64]
+; CHECK:         vld1.16 {d16, d17}, [r0]
 ; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    vmov r2, r3, d17
 ; CHECK-NEXT:    bx lr
@@ -76,9 +76,39 @@ define %struct.uint16x4x2_t @test_vld1_u16_x2(ptr %a) nounwind {
   ret %struct.uint16x4x2_t %tmp
 }
 
+define %struct.uint16x4x2_t @test_vld1_u16_x2_align8(ptr %a) nounwind {
+; CHECK-LABEL: test_vld1_u16_x2_align8:
+; CHECK:         vld1.16 {d16, d17}, [r0:64]
+; CHECK-NEXT:    vmov r0, r1, d16
+; CHECK-NEXT:    vmov r2, r3, d17
+; CHECK-NEXT:    bx lr
+  %tmp = tail call %struct.uint16x4x2_t @llvm.arm.neon.vld1x2.v4i16.p0(ptr align 8 %a)
+  ret %struct.uint16x4x2_t %tmp
+}
+
+define %struct.uint16x4x2_t @test_vld1_u16_x2_align16(ptr %a) nounwind {
+; CHECK-LABEL: test_vld1_u16_x2_align16:
+; CHECK:         vld1.16 {d16, d17}, [r0:128]
+; CHECK-NEXT:    vmov r0, r1, d16
+; CHECK-NEXT:    vmov r2, r3, d17
+; CHECK-NEXT:    bx lr
+  %tmp = tail call %struct.uint16x4x2_t @llvm.arm.neon.vld1x2.v4i16.p0(ptr align 16 %a)
+  ret %struct.uint16x4x2_t %tmp
+}
+
+define %struct.uint16x4x2_t @test_vld1_u16_x2_align32(ptr %a) nounwind {
+; CHECK-LABEL: test_vld1_u16_x2_align32:
+; CHECK:         vld1.16 {d16, d17}, [r0:128]
+; CHECK-NEXT:    vmov r0, r1, d16
+; CHECK-NEXT:    vmov r2, r3, d17
+; CHECK-NEXT:    bx lr
+  %tmp = tail call %struct.uint16x4x2_t @llvm.arm.neon.vld1x2.v4i16.p0(ptr align 32 %a)
+  ret %struct.uint16x4x2_t %tmp
+}
+
 define %struct.uint16x4x3_t @test_vld1_u16_x3(ptr %a) nounwind {
 ; CHECK-LABEL: test_vld1_u16_x3:
-; CHECK:         vld1.16 {d16, d17, d18}, [r1:64]
+; CHECK:         vld1.16 {d16, d17, d18}, [r1]
 ; CHECK-NEXT:    vst1.16 {d16}, [r0:64]!
 ; CHECK-NEXT:    vst1.16 {d17}, [r0:64]!
 ; CHECK-NEXT:    vstr d18, [r0]
@@ -89,7 +119,7 @@ define %struct.uint16x4x3_t @test_vld1_u16_x3(ptr %a) nounwind {
 
 define %struct.uint16x4x4_t @test_vld1_u16_x4(ptr %a) nounwind {
 ; CHECK-LABEL: test_vld1_u16_x4:
-; CHECK:         vld1.16 {d16, d17, d18, d19}, [r1:256]
+; CHECK:         vld1.16 {d16, d17, d18, d19}, [r1]
 ; CHECK-NEXT:    vst1.16 {d16}, [r0:64]!
 ; CHECK-NEXT:    vst1.16 {d17}, [r0:64]!
 ; CHECK-NEXT:    vst1.16 {d18}, [r0:64]!
@@ -101,7 +131,7 @@ define %struct.uint16x4x4_t @test_vld1_u16_x4(ptr %a) nounwind {
 
 define %struct.uint32x2x2_t @test_vld1_u32_x2(ptr %a) nounwind {
 ; CHECK-LABEL: test_vld1_u32_x2:
-; CHECK:         vld1.32 {d16, d17}, [r0:64]
+; CHECK:         vld1.32 {d16, d17}, [r0]
 ; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    vmov r2, r3, d17
 ; CHECK-NEXT:    bx lr
@@ -111,7 +141,7 @@ define %struct.uint32x2x2_t @test_vld1_u32_x2(ptr %a) nounwind {
 
 define %struct.uint32x2x3_t @test_vld1_u32_x3(ptr %a) nounwind {
 ; CHECK-LABEL: test_vld1_u32_x3:
-; CHECK:         vld1.32 {d16, d17, d18}, [r1:64]
+; CHECK:         vld1.32 {d16, d17, d18}, [r1]
 ; CHECK-NEXT:    vst1.32 {d16}, [r0:64]!
 ; CHECK-NEXT:    vst1.32 {d17}, [r0:64]!
 ; CHECK-NEXT:    vstr d18, [r0]
@@ -122,7 +152,7 @@ define %struct.uint32x2x3_t @test_vld1_u32_x3(ptr %a) nounwind {
 
 define %struct.uint32x2x4_t @test_vld1_u32_x4(ptr %a) nounwind {
 ; CHECK-LABEL: test_vld1_u32_x4:
-; CHECK:         vld1.32 {d16, d17, d18, d19}, [r1:256]
+; CHECK:         vld1.32 {d16, d17, d18, d19}, [r1]
 ; CHECK-NEXT:    vst1.32 {d16}, [r0:64]!
 ; CHECK-NEXT:    vst1.32 {d17}, [r0:64]!
 ; CHECK-NEXT:    vst1.32 {d18}, [r0:64]!
@@ -134,7 +164,7 @@ define %struct.uint32x2x4_t @test_vld1_u32_x4(ptr %a) nounwind {
 
 define %struct.uint64x1x2_t @test_vld1_u64_x2(ptr %a) nounwind {
 ; CHECK-LABEL: test_vld1_u64_x2:
-; CHECK:         vld1.64 {d16, d17}, [r0:64]
+; CHECK:         vld1.64 {d16, d17}, [r0]
 ; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    vmov r2, r3, d17
 ; CHECK-NEXT:    bx lr
@@ -144,7 +174,7 @@ define %struct.uint64x1x2_t @test_vld1_u64_x2(ptr %a) nounwind {
 
 define %struct.uint64x1x3_t @test_vld1_u64_x3(ptr %a) nounwind {
 ; CHECK-LABEL: test_vld1_u64_x3:
-; CHECK:         vld1.64 {d16, d17, d18}, [r1:64]
+; CHECK:         vld1.64 {d16, d17, d18}, [r1]
 ; CHECK-NEXT:    vst1.64 {d16}, [r0:64]!
 ; CHECK-NEXT:    vst1.64 {d17}, [r0:64]!
 ; CHECK-NEXT:    vstr d18, [r0]
@@ -155,7 +185,7 @@ define %struct.uint64x1x3_t @test_vld1_u64_x3(ptr %a) nounwind {
 
 define %struct.uint64x1x4_t @test_vld1_u64_x4(ptr %a) nounwind {
 ; CHECK-LABEL: test_vld1_u64_x4:
-; CHECK:         vld1.64 {d16, d17, d18, d19}, [r1:256]
+; CHECK:         vld1.64 {d16, d17, d18, d19}, [r1]
 ; CHECK-NEXT:    vst1.64 {d16}, [r0:64]!
 ; CHECK-NEXT:    vst1.64 {d17}, [r0:64]!
 ; CHECK-NEXT:    vst1.64 {d18}, [r0:64]!
@@ -167,7 +197,7 @@ define %struct.uint64x1x4_t @test_vld1_u64_x4(ptr %a) nounwind {
 
 define %struct.uint8x8x2_t @test_vld1_u8_x2(ptr %a) nounwind {
 ; CHECK-LABEL: test_vld1_u8_x2:
-; CHECK:         vld1.8 {d16, d17}, [r0:64]
+; CHECK:         vld1.8 {d16, d17}, [r0]
 ; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    vmov r2, r3, d17
 ; CHECK-NEXT:    bx lr
@@ -177,7 +207,7 @@ define %struct.uint8x8x2_t @test_vld1_u8_x2(ptr %a) nounwind {
 
 define %struct.uint8x8x3_t @test_vld1_u8_x3(ptr %a) nounwind {
 ; CHECK-LABEL: test_vld1_u8_x3:
-; CHECK:         vld1.8 {d16, d17, d18}, [r1:64]
+; CHECK:         vld1.8 {d16, d17, d18}, [r1]
 ; CHECK-NEXT:    vst1.8 {d16}, [r0:64]!
 ; CHECK-NEXT:    vst1.8 {d17}, [r0:64]!
 ; CHECK-NEXT:    vstr d18, [r0]
@@ -188,7 +218,7 @@ define %struct.uint8x8x3_t @test_vld1_u8_x3(ptr %a) nounwind {
 
 define %struct.uint8x8x4_t @test_vld1_u8_x4(ptr %a) nounwind {
 ; CHECK-LABEL: test_vld1_u8_x4:
-; CHECK:         vld1.8 {d16, d17, d18, d19}, [r1:256]
+; CHECK:         vld1.8 {d16, d17, d18, d19}, [r1]
 ; CHECK-NEXT:    vst1.8 {d16}, [r0:64]!
 ; CHECK-NEXT:    vst1.8 {d17}, [r0:64]!
 ; CHECK-NEXT:    vst1.8 {d18}, [r0:64]!
@@ -200,7 +230,7 @@ define %struct.uint8x8x4_t @test_vld1_u8_x4(ptr %a) nounwind {
 
 define %struct.uint16x8x2_t @test_vld1q_u16_x2(ptr %a) nounwind {
 ; CHECK-LABEL: test_vld1q_u16_x2:
-; CHECK:         vld1.16 {d16, d17, d18, d19}, [r1:256]
+; CHECK:         vld1.16 {d16, d17, d18, d19}, [r1]
 ; CHECK-NEXT:    vst1.16 {d16, d17}, [r0]!
 ; CHECK-NEXT:    vst1.64 {d18, d19}, [r0]
 ; CHECK-NEXT:    bx lr
@@ -210,8 +240,8 @@ define %struct.uint16x8x2_t @test_vld1q_u16_x2(ptr %a) nounwind {
 
 define %struct.uint16x8x3_t @test_vld1q_u16_x3(ptr %a) nounwind {
 ; CHECK-LABEL: test_vld1q_u16_x3:
-; CHECK:         vld1.16 {d16, d17, d18}, [r1:64]!
-; CHECK-NEXT:    vld1.16 {d19, d20, d21}, [r1:64]
+; CHECK:         vld1.16 {d16, d17, d18}, [r1]!
+; CHECK-NEXT:    vld1.16 {d19, d20, d21}, [r1]
 ; CHECK-NEXT:    vst1.16 {d16, d17}, [r0]!
 ; CHECK-NEXT:    vst1.16 {d18, d19}, [r0]!
 ; CHECK-NEXT:    vst1.64 {d20, d21}, [r0]
@@ -222,8 +252,8 @@ define %struct.uint16x8x3_t @test_vld1q_u16_x3(ptr %a) nounwind {
 
 define %struct.uint16x8x4_t @test_vld1q_u16_x4(ptr %a) nounwind {
 ; CHECK-LABEL: test_vld1q_u16_x4:
-; CHECK:         vld1.16 {d16, d17, d18, d19}, [r1:256]!
-; CHECK-NEXT:    vld1.16 {d20, d21, d22, d23}, [r1:256]
+; CHECK:         vld1.16 {d16, d17, d18, d19}, [r1]!
+; CHECK-NEXT:    vld1.16 {d20, d21, d22, d23}, [r1]
 ; CHECK-NEXT:    vst1.16 {d16, d17}, [r0]!
 ; CHECK-NEXT:    vst1.16 {d18, d19}, [r0]!
 ; CHECK-NEXT:    vst1.16 {d20, d21}, [r0]!
@@ -235,7 +265,7 @@ define %struct.uint16x8x4_t @test_vld1q_u16_x4(ptr %a) nounwind {
 
 define %struct.uint32x4x2_t @test_vld1q_u32_x2(ptr %a) nounwind {
 ; CHECK-LABEL: test_vld1q_u32_x2:
-; CHECK:         vld1.32 {d16, d17, d18, d19}, [r1:256]
+; CHECK:         vld1.32 {d16, d17, d18, d19}, [r1]
 ; CHECK-NEXT:    vst1.32 {d16, d17}, [r0]!
 ; CHECK-NEXT:    vst1.64 {d18, d19}, [r0]
 ; CHECK-NEXT:    bx lr
@@ -245,8 +275,8 @@ define %struct.uint32x4x2_t @test_vld1q_u32_x2(ptr %a) nounwind {
 
 define %struct.uint32x4x3_t @test_vld1q_u32_x3(ptr %a) nounwind {
 ; CHECK-LABEL: test_vld1q_u32_x3:
-; CHECK:         vld1.32 {d16, d17, d18}, [r1:64]!
-; CHECK-NEXT:    vld1.32 {d19, d20, d21}, [r1:64]
+; CHECK:         vld1.32 {d16, d17, d18}, [r1]!
+; CHECK-NEXT:    vld1.32 {d19, d20, d21}, [r1]
 ; CHECK-NEXT:    vst1.32 {d16, d17}, [r0]!
 ; CHECK-NEXT:    vst1.32 {d18, d19}, [r0]!
 ; CHECK-NEXT:    vst1.64 {d20, d21}, [r0]
@@ -257,8 +287,8 @@ define %struct.uint32x4x3_t @test_vld1q_u32_x3(ptr %a) nounwind {
 
 define %struct.uint32x4x4_t @test_vld1q_u32_x4(ptr %a) nounwind {
 ; CHECK-LABEL: test_vld1q_u32_x4:
-; CHECK:         vld1.32 {d16, d17, d18, d19}, [r1:256]!
-; CHECK-NEXT:    vld1.32 {d20, d21, d22, d23}, [r1:256]
+; CHECK:         vld1.32 {d16, d17, d18, d19}, [r1]!
+; CHECK-NEXT:    vld1.32 {d20, d21, d22, d23}, [r1]
 ; CHECK-NEXT:    vst1.32 {d16, d17}, [r0]!
 ; CHECK-NEXT:    vst1.32 {d18, d19}, [r0]!
 ; CHECK-NEXT:    vst1.32 {d20, d21}, [r0]!
@@ -270,7 +300,7 @@ define %struct.uint32x4x4_t @test_vld1q_u32_x4(ptr %a) nounwind {
 
 define %struct.uint64x2x2_t @test_vld1q_u64_x2(ptr %a) nounwind {
 ; CHECK-LABEL: test_vld1q_u64_x2:
-; CHECK:         vld1.64 {d16, d17, d18, d19}, [r1:256]
+; CHECK:         vld1.64 {d16, d17, d18, d19}, [r1]
 ; CHECK-NEXT:    vst1.64 {d16, d17}, [r0]!
 ; CHECK-NEXT:    vst1.64 {d18, d19}, [r0]
 ; CHECK-NEXT:    bx lr
@@ -280,8 +310,8 @@ define %struct.uint64x2x2_t @test_vld1q_u64_x2(ptr %a) nounwind {
 
 define %struct.uint64x2x3_t @test_vld1q_u64_x3(ptr %a) nounwind {
 ; CHECK-LABEL: test_vld1q_u64_x3:
-; CHECK:         vld1.64 {d16, d17, d18}, [r1:64]!
-; CHECK-NEXT:    vld1.64 {d19, d20, d21}, [r1:64]
+; CHECK:         vld1.64 {d16, d17, d18}, [r1]!
+; CHECK-NEXT:    vld1.64 {d19, d20, d21}, [r1]
 ; CHECK-NEXT:    vst1.64 {d16, d17}, [r0]!
 ; CHECK-NEXT:    vst1.64 {d18, d19}, [r0]!
 ; CHECK-NEXT:    vst1.64 {d20, d21}, [r0]
@@ -292,8 +322,8 @@ define %struct.uint64x2x3_t @test_vld1q_u64_x3(ptr %a) nounwind {
 
 define %struct.uint64x2x4_t @test_vld1q_u64_x4(ptr %a) nounwind {
 ; CHECK-LABEL: test_vld1q_u64_x4:
-; CHECK:         vld1.64 {d16, d17, d18, d19}, [r1:256]!
-; CHECK-NEXT:    vld1.64 {d20, d21, d22, d23}, [r1:256]
+; CHECK:         vld1.64 {d16, d17, d18, d19}, [r1]!
+; CHECK-NEXT:    vld1.64 {d20, d21, d22, d23}, [r1]
 ; CHECK-NEXT:    vst1.64 {d16, d17}, [r0]!
 ; CHECK-NEXT:    vst1.64 {d18, d19}, [r0]!
 ; CHECK-NEXT:    vst1.64 {d20, d21}, [r0]!
@@ -305,7 +335,7 @@ define %struct.uint64x2x4_t @test_vld1q_u64_x4(ptr %a) nounwind {
 
 define %struct.uint8x16x2_t @test_vld1q_u8_x2(ptr %a) nounwind {
 ; CHECK-LABEL: test_vld1q_u8_x2:
-; CHECK:         vld1.8 {d16, d17, d18, d19}, [r1:256]
+; CHECK:         vld1.8 {d16, d17, d18, d19}, [r1]
 ; CHECK-NEXT:    vst1.8 {d16, d17}, [r0]!
 ; CHECK-NEXT:    vst1.64 {d18, d19}, [r0]
 ; CHECK-NEXT:    bx lr
@@ -315,8 +345,8 @@ define %struct.uint8x16x2_t @test_vld1q_u8_x2(ptr %a) nounwind {
 
 define %struct.uint8x16x3_t @test_vld1q_u8_x3(ptr %a) nounwind {
 ; CHECK-LABEL: test_vld1q_u8_x3:
-; CHECK:         vld1.8 {d16, d17, d18}, [r1:64]!
-; CHECK-NEXT:    vld1.8 {d19, d20, d21}, [r1:64]
+; CHECK:         vld1.8 {d16, d17, d18}, [r1]!
+; CHECK-NEXT:    vld1.8 {d19, d20, d21}, [r1]
 ; CHECK-NEXT:    vst1.8 {d16, d17}, [r0]!
 ; CHECK-NEXT:    vst1.8 {d18, d19}, [r0]!
 ; CHECK-NEXT:    vst1.64 {d20, d21}, [r0]
@@ -327,8 +357,8 @@ define %struct.uint8x16x3_t @test_vld1q_u8_x3(ptr %a) nounwind {
 
 define %struct.uint8x16x4_t @test_vld1q_u8_x4(ptr %a) nounwind {
 ; CHECK-LABEL: test_vld1q_u8_x4:
-; CHECK:         vld1.8 {d16, d17, d18, d19}, [r1:256]!
-; CHECK-NEXT:    vld1.8 {d20, d21, d22, d23}, [r1:256]
+; CHECK:         vld1.8 {d16, d17, d18, d19}, [r1]!
+; CHECK-NEXT:    vld1.8 {d20, d21, d22, d23}, [r1]
 ; CHECK-NEXT:    vst1.8 {d16, d17}, [r0]!
 ; CHECK-NEXT:    vst1.8 {d18, d19}, [r0]!
 ; CHECK-NEXT:    vst1.8 {d20, d21}, [r0]!
@@ -344,7 +374,7 @@ define %struct.uint16x4x2_t @test_vld1_u16_x2_post_imm(ptr %a, ptr %ptr) nounwin
 ; CHECK-LABEL: test_vld1_u16_x2_post_imm:
 ; CHECK:         .save {r11, lr}
 ; CHECK-NEXT:    push {r11, lr}
-; CHECK-NEXT:    vld1.16 {d16, d17}, [r0:64]!
+; CHECK-NEXT:    vld1.16 {d16, d17}, [r0]!
 ; CHECK-NEXT:    vmov lr, r12, d16
 ; CHECK-NEXT:    str r0, [r1]
 ; CHECK-NEXT:    vmov r2, r3, d17
@@ -362,7 +392,7 @@ define %struct.uint16x4x2_t @test_vld1_u16_x2_post_reg(ptr %a, ptr %ptr, i32 %in
 ; CHECK:         .save {r11, lr}
 ; CHECK-NEXT:    push {r11, lr}
 ; CHECK-NEXT:    lsl r2, r2, #1
-; CHECK-NEXT:    vld1.16 {d16, d17}, [r0:64], r2
+; CHECK-NEXT:    vld1.16 {d16, d17}, [r0], r2
 ; CHECK-NEXT:    vmov lr, r12, d16
 ; CHECK-NEXT:    str r0, [r1]
 ; CHECK-NEXT:    vmov r2, r3, d17
@@ -377,7 +407,7 @@ define %struct.uint16x4x2_t @test_vld1_u16_x2_post_reg(ptr %a, ptr %ptr, i32 %in
 
 define %struct.uint16x4x3_t @test_vld1_u16_x3_post_imm(ptr %a, ptr %ptr) nounwind {
 ; CHECK-LABEL: test_vld1_u16_x3_post_imm:
-; CHECK:         vld1.16 {d16, d17, d18}, [r1:64]!
+; CHECK:         vld1.16 {d16, d17, d18}, [r1]!
 ; CHECK-NEXT:    str r1, [r2]
 ; CHECK-NEXT:    vst1.16 {d16}, [r0:64]!
 ; CHECK-NEXT:    vst1.16 {d17}, [r0:64]!
@@ -392,7 +422,7 @@ define %struct.uint16x4x3_t @test_vld1_u16_x3_post_imm(ptr %a, ptr %ptr) nounwin
 define %struct.uint16x4x3_t @test_vld1_u16_x3_post_reg(ptr %a, ptr %ptr, i32 %inc) nounwind {
 ; CHECK-LABEL: test_vld1_u16_x3_post_reg:
 ; CHECK:         lsl r3, r3, #1
-; CHECK-NEXT:    vld1.16 {d16, d17, d18}, [r1:64], r3
+; CHECK-NEXT:    vld1.16 {d16, d17, d18}, [r1], r3
 ; CHECK-NEXT:    str r1, [r2]
 ; CHECK-NEXT:    vst1.16 {d16}, [r0:64]!
 ; CHECK-NEXT:    vst1.16 {d17}, [r0:64]!
@@ -406,7 +436,7 @@ define %struct.uint16x4x3_t @test_vld1_u16_x3_post_reg(ptr %a, ptr %ptr, i32 %in
 
 define %struct.uint16x4x4_t @test_vld1_u16_x4_post_imm(ptr %a, ptr %ptr) nounwind {
 ; CHECK-LABEL: test_vld1_u16_x4_post_imm:
-; CHECK:         vld1.16 {d16, d17, d18, d19}, [r1:256]!
+; CHECK:         vld1.16 {d16, d17, d18, d19}, [r1]!
 ; CHECK-NEXT:    str r1, [r2]
 ; CHECK-NEXT:    vst1.16 {d16}, [r0:64]!
 ; CHECK-NEXT:    vst1.16 {d17}, [r0:64]!
@@ -422,7 +452,7 @@ define %struct.uint16x4x4_t @test_vld1_u16_x4_post_imm(ptr %a, ptr %ptr) nounwin
 define %struct.uint16x4x4_t @test_vld1_u16_x4_post_reg(ptr %a, ptr %ptr, i32 %inc) nounwind {
 ; CHECK-LABEL: test_vld1_u16_x4_post_reg:
 ; CHECK:         lsl r3, r3, #1
-; CHECK-NEXT:    vld1.16 {d16, d17, d18, d19}, [r1:256], r3
+; CHECK-NEXT:    vld1.16 {d16, d17, d18, d19}, [r1], r3
 ; CHECK-NEXT:    str r1, [r2]
 ; CHECK-NEXT:    vst1.16 {d16}, [r0:64]!
 ; CHECK-NEXT:    vst1.16 {d17}, [r0:64]!
@@ -439,7 +469,7 @@ define %struct.uint32x2x2_t @test_vld1_u32_x2_post_imm(ptr %a, ptr %ptr) nounwin
 ; CHECK-LABEL: test_vld1_u32_x2_post_imm:
 ; CHECK:         .save {r11, lr}
 ; CHECK-NEXT:    push {r11, lr}
-; CHECK-NEXT:    vld1.32 {d16, d17}, [r0:64]!
+; CHECK-NEXT:    vld1.32 {d16, d17}, [r0]!
 ; CHECK-NEXT:    vmov lr, r12, d16
 ; CHECK-NEXT:    str r0, [r1]
 ; CHECK-NEXT:    vmov r2, r3, d17
@@ -457,7 +487,7 @@ define %struct.uint32x2x2_t @test_vld1_u32_x2_post_reg(ptr %a, ptr %ptr, i32 %in
 ; CHECK:         .save {r11, lr}
 ; CHECK-NEXT:    push {r11, lr}
 ; CHECK-NEXT:    lsl r2, r2, #2
-; CHECK-NEXT:    vld1.32 {d16, d17}, [r0:64], r2
+; CHECK-NEXT:    vld1.32 {d16, d17}, [r0], r2
 ; CHECK-NEXT:    vmov lr, r12, d16
 ; CHECK-NEXT:    str r0, [r1]
 ; CHECK-NEXT:    vmov r2, r3, d17
@@ -472,7 +502,7 @@ define %struct.uint32x2x2_t @test_vld1_u32_x2_post_reg(ptr %a, ptr %ptr, i32 %in
 
 define %struct.uint32x2x3_t @test_vld1_u32_x3_post_imm(ptr %a, ptr %ptr) nounwind {
 ; CHECK-LABEL: test_vld1_u32_x3_post_imm:
-; CHECK:         vld1.32 {d16, d17, d18}, [r1:64]!
+; CHECK:         vld1.32 {d16, d17, d18}, [r1]!
 ; CHECK-NEXT:    str r1, [r2]
 ; CHECK-NEXT:    vst1.32 {d16}, [r0:64]!
 ; CHECK-NEXT:    vst1.32 {d17}, [r0:64]!
@@ -487,7 +517,7 @@ define %struct.uint32x2x3_t @test_vld1_u32_x3_post_imm(ptr %a, ptr %ptr) nounwin
 define %struct.uint32x2x3_t @test_vld1_u32_x3_post_reg(ptr %a, ptr %ptr, i32 %inc) nounwind {
 ; CHECK-LABEL: test_vld1_u32_x3_post_reg:
 ; CHECK:         lsl r3, r3, #2
-; CHECK-NEXT:    vld1.32 {d16, d17, d18}, [r1:64], r3
+; CHECK-NEXT:    vld1.32 {d16, d17, d18}, [r1], r3
 ; CHECK-NEXT:    str r1, [r2]
 ; CHECK-NEXT:    vst1.32 {d16}, [r0:64]!
 ; CHECK-NEXT:    vst1.32 {d17}, [r0:64]!
@@ -501,7 +531,7 @@ define %struct.uint32x2x3_t @test_vld1_u32_x3_post_reg(ptr %a, ptr %ptr, i32 %in
 
 define %struct.uint32x2x4_t @test_vld1_u32_x4_post_imm(ptr %a, ptr %ptr) nounwind {
 ; CHECK-LABEL: test_vld1_u32_x4_post_imm:
-; CHECK:         vld1.32 {d16, d17, d18, d19}, [r1:256]!
+; CHECK:         vld1.32 {d16, d17, d18, d19}, [r1]!
 ; CHECK-NEXT:    str r1, [r2]
 ; CHECK-NEXT:    vst1.32 {d16}, [r0:64]!
 ; CHECK-NEXT:    vst1.32 {d17}, [r0:64]!
@@ -517,7 +547,7 @@ define %struct.uint32x2x4_t @test_vld1_u32_x4_post_imm(ptr %a, ptr %ptr) nounwin
 define %struct.uint32x2x4_t @test_vld1_u32_x4_post_reg(ptr %a, ptr %ptr, i32 %inc) nounwind {
 ; CHECK-LABEL: test_vld1_u32_x4_post_reg:
 ; CHECK:         lsl r3, r3, #2
-; CHECK-NEXT:    vld1.32 {d16, d17, d18, d19}, [r1:256], r3
+; CHECK-NEXT:    vld1.32 {d16, d17, d18, d19}, [r1], r3
 ; CHECK-NEXT:    str r1, [r2]
 ; CHECK-NEXT:    vst1.32 {d16}, [r0:64]!
 ; CHECK-NEXT:    vst1.32 {d17}, [r0:64]!
@@ -534,7 +564,7 @@ define %struct.uint64x1x2_t @test_vld1_u64_x2_post_imm(ptr %a, ptr %ptr) nounwin
 ; CHECK-LABEL: test_vld1_u64_x2_post_imm:
 ; CHECK:         .save {r11, lr}
 ; CHECK-NEXT:    push {r11, lr}
-; CHECK-NEXT:    vld1.64 {d16, d17}, [r0:64]!
+; CHECK-NEXT:    vld1.64 {d16, d17}, [r0]!
 ; CHECK-NEXT:    vmov lr, r12, d16
 ; CHECK-NEXT:    str r0, [r1]
 ; CHECK-NEXT:    vmov r2, r3, d17
@@ -552,7 +582,7 @@ define %struct.uint64x1x2_t @test_vld1_u64_x2_post_reg(ptr %a, ptr %ptr, i32 %in
 ; CHECK:         .save {r11, lr}
 ; CHECK-NEXT:    push {r11, lr}
 ; CHECK-NEXT:    lsl r2, r2, #3
-; CHECK-NEXT:    vld1.64 {d16, d17}, [r0:64], r2
+; CHECK-NEXT:    vld1.64 {d16, d17}, [r0], r2
 ; CHECK-NEXT:    vmov lr, r12, d16
 ; CHECK-NEXT:    str r0, [r1]
 ; CHECK-NEXT:    vmov r2, r3, d17
@@ -567,7 +597,7 @@ define %struct.uint64x1x2_t @test_vld1_u64_x2_post_reg(ptr %a, ptr %ptr, i32 %in
 
 define %struct.uint64x1x3_t @test_vld1_u64_x3_post_imm(ptr %a, ptr %ptr) nounwind {
 ; CHECK-LABEL: test_vld1_u64_x3_post_imm:
-; CHECK:         vld1.64 {d16, d17, d18}, [r1:64]!
+; CHECK:         vld1.64 {d16, d17, d18}, [r1]!
 ; CHECK-NEXT:    str r1, [r2]
 ; CHECK-NEXT:    vst1.64 {d16}, [r0:64]!
 ; CHECK-NEXT:    vst1.64 {d17}, [r0:64]!
@@ -582,7 +612,7 @@ define %struct.uint64x1x3_t @test_vld1_u64_x3_post_imm(ptr %a, ptr %ptr) nounwin
 define %struct.uint64x1x3_t @test_vld1_u64_x3_post_reg(ptr %a, ptr %ptr, i32 %inc) nounwind {
 ; CHECK-LABEL: test_vld1_u64_x3_post_reg:
 ; CHECK:         lsl r3, r3, #3
-; CHECK-NEXT:    vld1.64 {d16, d17, d18}, [r1:64], r3
+; CHECK-NEXT:    vld1.64 {d16, d17, d18}, [r1], r3
 ; CHECK-NEXT:    str r1, [r2]
 ; CHECK-NEXT:    vst1.64 {d16}, [r0:64]!
 ; CHECK-NEXT:    vst1.64 {d17}, [r0:64]!
@@ -596,7 +626,7 @@ define %struct.uint64x1x3_t @test_vld1_u64_x3_post_reg(ptr %a, ptr %ptr, i32 %in
 
 define %struct.uint64x1x4_t @test_vld1_u64_x4_post_imm(ptr %a, ptr %ptr) nounwind {
 ; CHECK-LABEL: test_vld1_u64_x4_post_imm:
-; CHECK:         vld1.64 {d16, d17, d18, d19}, [r1:256]!
+; CHECK:         vld1.64 {d16, d17, d18, d19}, [r1]!
 ; CHECK-NEXT:    str r1, [r2]
 ; CHECK-NEXT:    vst1.64 {d16}, [r0:64]!
 ; CHECK-NEXT:    vst1.64 {d17}, [r0:64]!
@@ -612,7 +642,7 @@ define %struct.uint64x1x4_t @test_vld1_u64_x4_post_imm(ptr %a, ptr %ptr) nounwin
 define %struct.uint64x1x4_t @test_vld1_u64_x4_post_reg(ptr %a, ptr %ptr, i32 %inc) nounwind {
 ; CHECK-LABEL: test_vld1_u64_x4_post_reg:
 ; CHECK:         lsl r3, r3, #3
-; CHECK-NEXT:    vld1.64 {d16, d17, d18, d19}, [r1:256], r3
+; CHECK-NEXT:    vld1.64 {d16, d17, d18, d19}, [r1], r3
 ; CHECK-NEXT:    str r1, [r2]
 ; CHECK-NEXT:    vst1.64 {d16}, [r0:64]!
 ; CHECK-NEXT:    vst1.64 {d17}, [r0:64]!
@@ -629,7 +659,7 @@ define %struct.uint8x8x2_t @test_vld1_u8_x2_post_imm(ptr %a, ptr %ptr) nounwind 
 ; CHECK-LABEL: test_vld1_u8_x2_post_imm:
 ; CHECK:         .save {r11, lr}
 ; CHECK-NEXT:    push {r11, lr}
-; CHECK-NEXT:    vld1.8 {d16, d17}, [r0:64]!
+; CHECK-NEXT:    vld1.8 {d16, d17}, [r0]!
 ; CHECK-NEXT:    vmov lr, r12, d16
 ; CHECK-NEXT:    str r0, [r1]
 ; CHECK-NEXT:    vmov r2, r3, d17
@@ -646,7 +676,7 @@ define %struct.uint8x8x2_t @test_vld1_u8_x2_post_reg(ptr %a, ptr %ptr, i32 %inc)
 ; CHECK-LABEL: test_vld1_u8_x2_post_reg:
 ; CHECK:         .save {r11, lr}
 ; CHECK-NEXT:    push {r11, lr}
-; CHECK-NEXT:    vld1.8 {d16, d17}, [r0:64], r2
+; CHECK-NEXT:    vld1.8 {d16, d17}, [r0], r2
 ; CHECK-NEXT:    vmov lr, r12, d16
 ; CHECK-NEXT:    str r0, [r1]
 ; CHECK-NEXT:    vmov r2, r3, d17
@@ -661,7 +691,7 @@ define %struct.uint8x8x2_t @test_vld1_u8_x2_post_reg(ptr %a, ptr %ptr, i32 %inc)
 
 define %struct.uint8x8x3_t @test_vld1_u8_x3_post_imm(ptr %a, ptr %ptr) nounwind {
 ; CHECK-LABEL: test_vld1_u8_x3_post_imm:
-; CHECK:         vld1.8 {d16, d17, d18}, [r1:64]!
+; CHECK:         vld1.8 {d16, d17, d18}, [r1]!
 ; CHECK-NEXT:    str r1, [r2]
 ; CHECK-NEXT:    vst1.8 {d16}, [r0:64]!
 ; CHECK-NEXT:    vst1.8 {d17}, [r0:64]!
@@ -675,7 +705,7 @@ define %struct.uint8x8x3_t @test_vld1_u8_x3_post_imm(ptr %a, ptr %ptr) nounwind 
 
 define %struct.uint8x8x3_t @test_vld1_u8_x3_post_reg(ptr %a, ptr %ptr, i32 %inc) nounwind {
 ; CHECK-LABEL: test_vld1_u8_x3_post_reg:
-; CHECK:         vld1.8 {d16, d17, d18}, [r1:64], r3
+; CHECK:         vld1.8 {d16, d17, d18}, [r1], r3
 ; CHECK-NEXT:    str r1, [r2]
 ; CHECK-NEXT:    vst1.8 {d16}, [r0:64]!
 ; CHECK-NEXT:    vst1.8 {d17}, [r0:64]!
@@ -689,7 +719,7 @@ define %struct.uint8x8x3_t @test_vld1_u8_x3_post_reg(ptr %a, ptr %ptr, i32 %inc)
 
 define %struct.uint8x8x4_t @test_vld1_u8_x4_post_imm(ptr %a, ptr %ptr) nounwind {
 ; CHECK-LABEL: test_vld1_u8_x4_post_imm:
-; CHECK:         vld1.8 {d16, d17, d18, d19}, [r1:256]!
+; CHECK:         vld1.8 {d16, d17, d18, d19}, [r1]!
 ; CHECK-NEXT:    str r1, [r2]
 ; CHECK-NEXT:    vst1.8 {d16}, [r0:64]!
 ; CHECK-NEXT:    vst1.8 {d17}, [r0:64]!
@@ -704,7 +734,7 @@ define %struct.uint8x8x4_t @test_vld1_u8_x4_post_imm(ptr %a, ptr %ptr) nounwind 
 
 define %struct.uint8x8x4_t @test_vld1_u8_x4_post_reg(ptr %a, ptr %ptr, i32 %inc) nounwind {
 ; CHECK-LABEL: test_vld1_u8_x4_post_reg:
-; CHECK:         vld1.8 {d16, d17, d18, d19}, [r1:256], r3
+; CHECK:         vld1.8 {d16, d17, d18, d19}, [r1], r3
 ; CHECK-NEXT:    str r1, [r2]
 ; CHECK-NEXT:    vst1.8 {d16}, [r0:64]!
 ; CHECK-NEXT:    vst1.8 {d17}, [r0:64]!
@@ -719,7 +749,7 @@ define %struct.uint8x8x4_t @test_vld1_u8_x4_post_reg(ptr %a, ptr %ptr, i32 %inc)
 
 define %struct.uint16x8x2_t @test_vld1q_u16_x2_post_imm(ptr %a, ptr %ptr) nounwind {
 ; CHECK-LABEL: test_vld1q_u16_x2_post_imm:
-; CHECK:         vld1.16 {d16, d17, d18, d19}, [r1:256]!
+; CHECK:         vld1.16 {d16, d17, d18, d19}, [r1]!
 ; CHECK-NEXT:    str r1, [r2]
 ; CHECK-NEXT:    vst1.16 {d16, d17}, [r0]!
 ; CHECK-NEXT:    vst1.64 {d18, d19}, [r0]
@@ -732,8 +762,8 @@ define %struct.uint16x8x2_t @test_vld1q_u16_x2_post_imm(ptr %a, ptr %ptr) nounwi
 
 define %struct.uint16x8x3_t @test_vld1q_u16_x3_post_imm(ptr %a, ptr %ptr) nounwind {
 ; CHECK-LABEL: test_vld1q_u16_x3_post_imm:
-; CHECK:         vld1.16 {d16, d17, d18}, [r1:64]!
-; CHECK-NEXT:    vld1.16 {d19, d20, d21}, [r1:64]!
+; CHECK:         vld1.16 {d16, d17, d18}, [r1]!
+; CHECK-NEXT:    vld1.16 {d19, d20, d21}, [r1]!
 ; CHECK-NEXT:    str r1, [r2]
 ; CHECK-NEXT:    vst1.16 {d16, d17}, [r0]!
 ; CHECK-NEXT:    vst1.16 {d18, d19}, [r0]!
@@ -747,8 +777,8 @@ define %struct.uint16x8x3_t @test_vld1q_u16_x3_post_imm(ptr %a, ptr %ptr) nounwi
 
 define %struct.uint16x8x4_t @test_vld1q_u16_x4_post_imm(ptr %a, ptr %ptr) nounwind {
 ; CHECK-LABEL: test_vld1q_u16_x4_post_imm:
-; CHECK:         vld1.16 {d16, d17, d18, d19}, [r1:256]!
-; CHECK-NEXT:    vld1.16 {d20, d21, d22, d23}, [r1:256]!
+; CHECK:         vld1.16 {d16, d17, d18, d19}, [r1]!
+; CHECK-NEXT:    vld1.16 {d20, d21, d22, d23}, [r1]!
 ; CHECK-NEXT:    str r1, [r2]
 ; CHECK-NEXT:    vst1.16 {d16, d17}, [r0]!
 ; CHECK-NEXT:    vst1.16 {d18, d19}, [r0]!
@@ -763,7 +793,7 @@ define %struct.uint16x8x4_t @test_vld1q_u16_x4_post_imm(ptr %a, ptr %ptr) nounwi
 
 define %struct.uint32x4x2_t @test_vld1q_u32_x2_post_imm(ptr %a, ptr %ptr) nounwind {
 ; CHECK-LABEL: test_vld1q_u32_x2_post_imm:
-; CHECK:         vld1.32 {d16, d17, d18, d19}, [r1:256]!
+; CHECK:         vld1.32 {d16, d17, d18, d19}, [r1]!
 ; CHECK-NEXT:    str r1, [r2]
 ; CHECK-NEXT:    vst1.32 {d16, d17}, [r0]!
 ; CHECK-NEXT:    vst1.64 {d18, d19}, [r0]
@@ -776,8 +806,8 @@ define %struct.uint32x4x2_t @test_vld1q_u32_x2_post_imm(ptr %a, ptr %ptr) nounwi
 
 define %struct.uint32x4x3_t @test_vld1q_u32_x3_post_imm(ptr %a, ptr %ptr) nounwind {
 ; CHECK-LABEL: test_vld1q_u32_x3_post_imm:
-; CHECK:         vld1.32 {d16, d17, d18}, [r1:64]!
-; CHECK-NEXT:    vld1.32 {d19, d20, d21}, [r1:64]!
+; CHECK:         vld1.32 {d16, d17, d18}, [r1]!
+; CHECK-NEXT:    vld1.32 {d19, d20, d21}, [r1]!
 ; CHECK-NEXT:    str r1, [r2]
 ; CHECK-NEXT:    vst1.32 {d16, d17}, [r0]!
 ; CHECK-NEXT:    vst1.32 {d18, d19}, [r0]!
@@ -791,8 +821,8 @@ define %struct.uint32x4x3_t @test_vld1q_u32_x3_post_imm(ptr %a, ptr %ptr) nounwi
 
 define %struct.uint32x4x4_t @test_vld1q_u32_x4_post_imm(ptr %a, ptr %ptr) nounwind {
 ; CHECK-LABEL: test_vld1q_u32_x4_post_imm:
-; CHECK:         vld1.32 {d16, d17, d18, d19}, [r1:256]!
-; CHECK-NEXT:    vld1.32 {d20, d21, d22, d23}, [r1:256]!
+; CHECK:         vld1.32 {d16, d17, d18, d19}, [r1]!
+; CHECK-NEXT:    vld1.32 {d20, d21, d22, d23}, [r1]!
 ; CHECK-NEXT:    str r1, [r2]
 ; CHECK-NEXT:    vst1.32 {d16, d17}, [r0]!
 ; CHECK-NEXT:    vst1.32 {d18, d19}, [r0]!
@@ -807,7 +837,7 @@ define %struct.uint32x4x4_t @test_vld1q_u32_x4_post_imm(ptr %a, ptr %ptr) nounwi
 
 define %struct.uint64x2x2_t @test_vld1q_u64_x2_post_imm(ptr %a, ptr %ptr) nounwind {
 ; CHECK-LABEL: test_vld1q_u64_x2_post_imm:
-; CHECK:         vld1.64 {d16, d17, d18, d19}, [r1:256]!
+; CHECK:         vld1.64 {d16, d17, d18, d19}, [r1]!
 ; CHECK-NEXT:    str r1, [r2]
 ; CHECK-NEXT:    vst1.64 {d16, d17}, [r0]!
 ; CHECK-NEXT:    vst1.64 {d18, d19}, [r0]
@@ -820,8 +850,8 @@ define %struct.uint64x2x2_t @test_vld1q_u64_x2_post_imm(ptr %a, ptr %ptr) nounwi
 
 define %struct.uint64x2x3_t @test_vld1q_u64_x3_post_imm(ptr %a, ptr %ptr) nounwind {
 ; CHECK-LABEL: test_vld1q_u64_x3_post_imm:
-; CHECK:         vld1.64 {d16, d17, d18}, [r1:64]!
-; CHECK-NEXT:    vld1.64 {d19, d20, d21}, [r1:64]!
+; CHECK:         vld1.64 {d16, d17, d18}, [r1]!
+; CHECK-NEXT:    vld1.64 {d19, d20, d21}, [r1]!
 ; CHECK-NEXT:    str r1, [r2]
 ; CHECK-NEXT:    vst1.64 {d16, d17}, [r0]!
 ; CHECK-NEXT:    vst1.64 {d18, d19}, [r0]!
@@ -835,8 +865,8 @@ define %struct.uint64x2x3_t @test_vld1q_u64_x3_post_imm(ptr %a, ptr %ptr) nounwi
 
 define %struct.uint64x2x4_t @test_vld1q_u64_x4_post_imm(ptr %a, ptr %ptr) nounwind {
 ; CHECK-LABEL: test_vld1q_u64_x4_post_imm:
-; CHECK:         vld1.64 {d16, d17, d18, d19}, [r1:256]!
-; CHECK-NEXT:    vld1.64 {d20, d21, d22, d23}, [r1:256]!
+; CHECK:         vld1.64 {d16, d17, d18, d19}, [r1]!
+; CHECK-NEXT:    vld1.64 {d20, d21, d22, d23}, [r1]!
 ; CHECK-NEXT:    str r1, [r2]
 ; CHECK-NEXT:    vst1.64 {d16, d17}, [r0]!
 ; CHECK-NEXT:    vst1.64 {d18, d19}, [r0]!
@@ -851,7 +881,7 @@ define %struct.uint64x2x4_t @test_vld1q_u64_x4_post_imm(ptr %a, ptr %ptr) nounwi
 
 define %struct.uint8x16x2_t @test_vld1q_u8_x2_post_imm(ptr %a, ptr %ptr) nounwind {
 ; CHECK-LABEL: test_vld1q_u8_x2_post_imm:
-; CHECK:         vld1.8 {d16, d17, d18, d19}, [r1:256]!
+; CHECK:         vld1.8 {d16, d17, d18, d19}, [r1]!
 ; CHECK-NEXT:    str r1, [r2]
 ; CHECK-NEXT:    vst1.8 {d16, d17}, [r0]!
 ; CHECK-NEXT:    vst1.64 {d18, d19}, [r0]
@@ -864,8 +894,8 @@ define %struct.uint8x16x2_t @test_vld1q_u8_x2_post_imm(ptr %a, ptr %ptr) nounwin
 
 define %struct.uint8x16x3_t @test_vld1q_u8_x3_post_imm(ptr %a, ptr %ptr) nounwind {
 ; CHECK-LABEL: test_vld1q_u8_x3_post_imm:
-; CHECK:         vld1.8 {d16, d17, d18}, [r1:64]!
-; CHECK-NEXT:    vld1.8 {d19, d20, d21}, [r1:64]!
+; CHECK:         vld1.8 {d16, d17, d18}, [r1]!
+; CHECK-NEXT:    vld1.8 {d19, d20, d21}, [r1]!
 ; CHECK-NEXT:    str r1, [r2]
 ; CHECK-NEXT:    vst1.8 {d16, d17}, [r0]!
 ; CHECK-NEXT:    vst1.8 {d18, d19}, [r0]!
@@ -879,8 +909,8 @@ define %struct.uint8x16x3_t @test_vld1q_u8_x3_post_imm(ptr %a, ptr %ptr) nounwin
 
 define %struct.uint8x16x4_t @test_vld1q_u8_x4_post_imm(ptr %a, ptr %ptr) nounwind {
 ; CHECK-LABEL: test_vld1q_u8_x4_post_imm:
-; CHECK:         vld1.8 {d16, d17, d18, d19}, [r1:256]!
-; CHECK-NEXT:    vld1.8 {d20, d21, d22, d23}, [r1:256]!
+; CHECK:         vld1.8 {d16, d17, d18, d19}, [r1]!
+; CHECK-NEXT:    vld1.8 {d20, d21, d22, d23}, [r1]!
 ; CHECK-NEXT:    str r1, [r2]
 ; CHECK-NEXT:    vst1.8 {d16, d17}, [r0]!
 ; CHECK-NEXT:    vst1.8 {d18, d19}, [r0]!
