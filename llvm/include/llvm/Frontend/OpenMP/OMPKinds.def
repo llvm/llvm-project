@@ -537,8 +537,6 @@ __OMP_RTL(__kmpc_syncwarp, false, Void, Int64)
 
 __OMP_RTL(__kmpc_is_generic_main_thread_id, false, Int8, Int32)
 
-__OMP_RTL(__kmpc_unsafeAtomicAdd, false, Float, FloatPtr, Float)
-
 __OMP_RTL(__kmpc_atomicCASLoopAdd_float, false, Void, FloatPtr, Float)
 
 __OMP_RTL(__kmpc_atomicCASLoopAdd_double, false, Void, DoublePtr, Double)
