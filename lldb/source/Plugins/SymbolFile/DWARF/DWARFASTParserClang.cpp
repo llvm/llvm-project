@@ -2942,8 +2942,8 @@ void DWARFASTParserClang::ParseSingleMember(
       this_field_info.bit_size = *clang_type_size * character_width;
     }
 
-    if (this_field_info.GetFieldEnd() < last_field_info.GetFieldEnd())
-      this_field_info.SetEffectiveFieldEnd(last_field_info.GetFieldEnd());
+    if (this_field_info.GetFieldEnd() <= last_field_info.GetEffectiveFieldEnd())
+      this_field_info.SetEffectiveFieldEnd(last_field_info.GetEffectiveFieldEnd());
 
     last_field_info = this_field_info;
   }
