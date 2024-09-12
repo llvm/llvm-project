@@ -431,9 +431,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       ISD::FCEIL, ISD::FFLOOR, ISD::FTRUNC, ISD::FRINT, ISD::FROUND,
       ISD::FROUNDEVEN};
 
-  if (Subtarget.hasStdExtZfhminOrZhinxmin())
-    setOperationAction(ISD::BITCAST, MVT::i16, Custom);
-
   static const unsigned ZfhminZfbfminPromoteOps[] = {
       ISD::FMINNUM,      ISD::FMAXNUM,       ISD::FMAXIMUMNUM,
       ISD::FMINIMUMNUM,  ISD::FADD,          ISD::FSUB,
@@ -483,6 +480,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction({ISD::FP_TO_SINT, ISD::FP_TO_UINT}, XLenVT, Custom);
       setOperationAction({ISD::SINT_TO_FP, ISD::UINT_TO_FP}, XLenVT, Custom);
     }
+
+    setOperationAction(ISD::BITCAST, MVT::i16, Custom);
 
     setOperationAction(ISD::STRICT_FP_ROUND, MVT::f16, Legal);
     setOperationAction(ISD::STRICT_FP_EXTEND, MVT::f32, Legal);
