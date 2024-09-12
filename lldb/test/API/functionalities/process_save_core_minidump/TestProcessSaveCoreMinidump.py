@@ -8,7 +8,6 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
-
 class ProcessSaveCoreMinidumpTestCase(TestBase):
     def verify_core_file(
         self,
@@ -495,16 +494,27 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             self.assertTrue(self.dbg.DeleteTarget(target))
 
     @skipUnlessPlatform(["linux"])
+<<<<<<< HEAD
     def minidump_deleted_on_save_failure(self):
         """Test that verifies the minidump file is deleted after an error"""
 
         self.build()
         exe = self.getBuildArtifact("a.out")
+=======
+    def test_save_minidump_breakpoint(self):
+        """Test that verifies a custom and unspecified save style fails for
+        containing no data to save"""
+
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+        custom_file = self.getBuildArtifact("core.custom.dmp")
+>>>>>>> 099f017208dd (Remove the static set and add test)
         try:
             target = self.dbg.CreateTarget(exe)
             process = target.LaunchSimple(
                 None, None, self.get_process_working_directory()
             )
+<<<<<<< HEAD
             self.assertState(process.GetState(), lldb.eStateStopped)
 
             custom_file = self.getBuildArtifact("core.should.be.deleted.custom.dmp")
@@ -565,3 +575,29 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
 
         finally:
             self.assertTrue(self.dbg.DeleteTarget(target))
+=======
+            breakpoint = target.BreakpointCreateByName("main")
+            self.assertState(process.GetState(), lldb.eStateStopped)
+
+            options = lldb.SBSaveCoreOptions()
+            options.SetOutputFile(lldb.SBFileSpec(custom_file))
+            options.SetPluginName("minidump")
+            options.SetStyle(lldb.eSaveCoreStackOnly)
+
+            error = process.SaveCore(options)
+            self.assertTrue(error.Success())
+            foundSigInt = False
+            for thread_idx in range(process.GetNumThreads()):
+                thread = process.GetThreadAtIndex(thread_idx)
+                stop = thread.stop_reason
+                if stop == 1:
+                    foundSigInt = True
+                    break
+            
+            self.assertTrue(foundSigInt, "Breakpoint not included in minidump.")
+
+        finally:
+            self.assertTrue(self.dbg.DeleteTarget(target))
+            if os.path.isfile(custom_file):
+                os.unlink(custom_file)
+>>>>>>> 099f017208dd (Remove the static set and add test)
