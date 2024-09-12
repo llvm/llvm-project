@@ -2509,8 +2509,9 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
 
       // P2718R0 - Lifetime extension in range-based for loops.
       if (getLangOpts().CPlusPlus23) {
-        auto &LastRecord = Actions.ExprEvalContexts.back();
+        auto &LastRecord = Actions.currentEvaluationContext();
         LastRecord.InLifetimeExtendingContext = true;
+        LastRecord.RebuildDefaultArgOrDefaultInit = true;
       }
 
       if (getLangOpts().OpenMP)
