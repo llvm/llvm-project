@@ -54,6 +54,7 @@ class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
                 line_number(source, "// breakpoint 5"),
                 line_number(source, "// breakpoint 6"),
                 line_number(source, "// breakpoint 7"),
+                line_number(source, "// breakpoint 8"),
             ],
         )
         self.continue_to_next_stop()
@@ -61,9 +62,12 @@ class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
         # Expressions at breakpoint 1, which is in main
         self.assertEvaluate("var1", "20")
         # Empty expression should equate to the previous expression.
-        self.assertEvaluate("", "20")
+        if context == "variable":
+          self.assertEvaluate("", "20")
         self.assertEvaluate("var2", "21")
-        self.assertEvaluate("", "21")
+        if context == "variable":
+          self.assertEvaluate("", "21")
+          self.assertEvaluate("", "21")
         self.assertEvaluate("static_int", "42")
         self.assertEvaluate("non_static_int", "43")
         self.assertEvaluate("struct1.foo", "15")
@@ -193,6 +197,14 @@ class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
         self.assertEvaluate("my_bool_vec", "size=1")
         self.continue_to_next_stop()
         self.assertEvaluate("my_bool_vec", "size=2")
+
+        # Test memory read, especially with 'empty' repeat commands.
+        if context == "repl":
+          self.continue_to_next_stop()
+          self.assertEvaluate("memory read &my_ints",
+                              ".*00 00 00 00 02 00 00 00 04 00 00 00 06 00 00 00.*\n.*08 00 00 00 0a 00 00 00 0c 00 00 00 0e 00 00 00.*\n")
+          self.assertEvaluate("",
+                              ".*10 00 00 00 12 00 00 00 14 00 00 00 16 00 00 00.*\n.*18 00 00 00 1a 00 00 00 1c 00 00 00.*\n")
 
     @skipIfWindows
     def test_generic_evaluate_expressions(self):

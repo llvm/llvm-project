@@ -1364,15 +1364,20 @@ void request_evaluate(const llvm::json::Object &request) {
   std::string expression = GetString(arguments, "expression").str();
   llvm::StringRef context = GetString(arguments, "context");
 
-  // Remember the last non-empty expression from the user, and use that if
-  // the current expression is empty (i.e. the user hit plain 'return').
-  if (!expression.empty())
-    g_dap.last_nonempty_expression = expression;
-  else
-    expression = g_dap.last_nonempty_expression;
-
-  if (context == "repl" && g_dap.DetectExpressionContext(frame, expression) ==
-                               ExpressionContext::Command) {
+  if (context == "repl" &&
+      ((!expression.empty() &&
+       g_dap.DetectExpressionContext(frame, expression) ==
+       ExpressionContext::Command) ||
+       (expression.empty() &&
+        g_dap.last_expression_context == ExpressionContext::Command))) {
+    // If the current expression is empty, and the last expression context was
+    // for a  command, pass the empty expression along to the
+    // CommandInterpreter, to repeat the previous command. Also set the
+    // expression context properly for the next (possibly empty) expression.
+    g_dap.last_expression_context = ExpressionContext::Command;
+    // Since the current expression context is not for a variable, clear the
+    // last_nonempty_var_expression field.
+    g_dap.last_nonempty_var_expression.clear();
     // If we're evaluating a command relative to the current frame, set the
     // focus_tid to the current frame for any thread related events.
     if (frame.IsValid()) {
@@ -1383,6 +1388,18 @@ void request_evaluate(const llvm::json::Object &request) {
     EmplaceSafeString(body, "result", result);
     body.try_emplace("variablesReference", (int64_t)0);
   } else {
+    if (context != "hover") {
+      // If the expression is empty and the last expression context was for a
+      // variable, set the expression to the previous expression (repeat the
+      // evaluation); otherwise save the current non-empty expression for the
+      // next (possibly empty) variable expression. Also set the expression
+      // context for the next (possibly empty) expression.
+      g_dap.last_expression_context = ExpressionContext::Variable;
+      if (expression.empty())
+        expression = g_dap.last_nonempty_var_expression;
+      else
+        g_dap.last_nonempty_var_expression = expression;
+    }
     // Always try to get the answer from the local variables if possible. If
     // this fails, then if the context is not "hover", actually evaluate an
     // expression using the expression parser.
