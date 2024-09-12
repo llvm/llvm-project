@@ -11,19 +11,19 @@
 // XFAIL: lsan,hwasan,ubsan
 
 #ifndef BUILD_SO
-#include <assert.h>
-#include <dlfcn.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <pthread.h>
+#  include <assert.h>
+#  include <dlfcn.h>
+#  include <pthread.h>
+#  include <stdio.h>
+#  include <stdlib.h>
 
 // CHECK-COUNT-2: __sanitizer_get_dtls_size:
 size_t __sanitizer_get_dtls_size(const void *ptr) {
   fprintf(stderr, "__sanitizer_get_dtls_size: %p\n", ptr);
-  return 0;  
+  return 0;
 }
 
-typedef long *(* get_t)();
+typedef long *(*get_t)();
 get_t GetTls;
 void *Thread(void *unused) { return GetTls(); }
 
@@ -33,7 +33,8 @@ int main(int argc, char *argv[]) {
   int i;
 
   void *handle = dlopen(path, RTLD_LAZY);
-  if (!handle) fprintf(stderr, "%s\n", dlerror());
+  if (!handle)
+    fprintf(stderr, "%s\n", dlerror());
   assert(handle != 0);
   GetTls = (get_t)dlsym(handle, "GetTls");
   assert(dlerror() == 0);
@@ -45,9 +46,7 @@ int main(int argc, char *argv[]) {
   pthread_join(t, 0);
   return 0;
 }
-#else  // BUILD_SO
+#else // BUILD_SO
 __thread long huge_thread_local_array[1 << 17];
-long *GetTls() {
-  return &huge_thread_local_array[0];
-}
+long *GetTls() { return &huge_thread_local_array[0]; }
 #endif
