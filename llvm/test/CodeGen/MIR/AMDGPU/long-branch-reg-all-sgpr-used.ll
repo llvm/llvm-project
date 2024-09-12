@@ -42,7 +42,6 @@
 ; CHECK-NEXT:   vgprForAGPRCopy: ''
 ; CHECK-NEXT:   sgprForEXECCopy: '$sgpr100_sgpr101'
 ; CHECK-NEXT:   longBranchReservedReg: ''
-; CHECK-NEXT:   hasInitWholeWave: false
 ; CHECK-NEXT: body:
   define amdgpu_kernel void @long_branch_used_all_sgprs(ptr addrspace(1) %arg, i32 %cnd) #0 {
   entry:
@@ -308,7 +307,6 @@
 ; CHECK-NEXT:   vgprForAGPRCopy: ''
 ; CHECK-NEXT:   sgprForEXECCopy: '$sgpr100_sgpr101'
 ; CHECK-NEXT:   longBranchReservedReg: ''
-; CHECK-NEXT:   hasInitWholeWave: false
 ; CHECK-NEXT: body:
   define amdgpu_kernel void @long_branch_high_num_sgprs_used(ptr addrspace(1) %arg, i32 %cnd) #0 {
   entry:
