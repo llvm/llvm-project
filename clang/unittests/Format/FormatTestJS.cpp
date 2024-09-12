@@ -2850,5 +2850,22 @@ TEST_F(FormatTestJS, DontBreakFieldsAsGoToLabels) {
                "};");
 }
 
+TEST_F(FormatTestJS, BreakAfterOpenBracket) {
+  auto Style = getGoogleStyle(FormatStyle::LK_JavaScript);
+  EXPECT_EQ(Style.AlignAfterOpenBracket, FormatStyle::BAS_AlwaysBreak);
+  verifyFormat("ctrl.onCopy(/** @type {!WizEvent}*/ (\n"
+               "    {event, targetElement: {el: () => selectedElement}}));",
+               Style);
+  verifyFormat("failedUserIds.push(...subscriptioxxxxxxxxxxxxnSubset.map(\n"
+               "    subscxxxxxxxxxxxxription => subscription.getUserId()));",
+               Style);
+  verifyFormat("failedUserIds.push(!subscriptioxxxxxxxxxxxxnSubset.map(\n"
+               "    subscxxxxxxxxxxxxription => subscription.getUserId()));",
+               Style);
+  verifyFormat("failedUserIds.push(await subscriptioxxxxxxxxxxxxnSubset.map(\n"
+               "    subscxxxxxxxxxxxxription => subscription.getUserId()));",
+               Style);
+}
+
 } // namespace format
 } // end namespace clang
