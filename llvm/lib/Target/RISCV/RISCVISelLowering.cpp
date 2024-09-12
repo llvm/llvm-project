@@ -14480,6 +14480,13 @@ struct NodeExtensionHelper {
     if (Source.getValueType() == NarrowVT)
       return Source;
 
+    // vfmadd_vl -> vfwmadd_vl can take bf16 operands
+    if (Source.getValueType().getVectorElementType() == MVT::bf16) {
+      assert(Root->getSimpleValueType(0).getVectorElementType() == MVT::f32 &&
+             Root->getOpcode() == RISCVISD::VFMADD_VL);
+      return Source;
+    }
+
     unsigned ExtOpc = getExtOpc(*SupportsExt);
 
     // If we need an extension, we should be changing the type.
@@ -15731,7 +15738,7 @@ static SDValue performVFMADD_VLCombine(SDNode *N,
     return V;
 
   if (N->getValueType(0).getVectorElementType() == MVT::f32 &&
-      !Subtarget.hasVInstructionsF16())
+      !Subtarget.hasVInstructionsF16() && !Subtarget.hasStdExtZvfbfwma())
     return SDValue();
 
   // FIXME: Ignore strict opcodes for now.
