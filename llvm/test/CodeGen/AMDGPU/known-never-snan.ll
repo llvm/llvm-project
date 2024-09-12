@@ -248,7 +248,6 @@ define float @v_select_possible_nan_lhs_input_fmed3_r_i_i_f32(float %a, float %b
 ; GCN-NEXT:    v_add_f32_e32 v1, 1.0, v1
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v2
 ; GCN-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
-; GCN-NEXT:    v_mul_f32_e32 v0, 1.0, v0
 ; GCN-NEXT:    v_med3_f32 v0, v0, 2.0, 4.0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %b.nnan.add = fadd nnan float %b, 1.0

@@ -2136,6 +2136,14 @@ public:
   /// positive or negative zero.
   bool isKnownNeverZeroFloat(SDValue Op) const;
 
+  /// Test whether the given floating point SDValue is known to never be
+  /// positive zero.
+  bool isKnownNeverPosZeroFloat(SDValue Op) const;
+
+  /// Test whether the given floating point SDValue is known to never be
+  /// negative zero.
+  bool isKnownNeverNegZeroFloat(SDValue Op) const;
+
   /// Test whether the given SDValue is known to contain non-zero value(s).
   bool isKnownNeverZero(SDValue Op, unsigned Depth = 0) const;
 

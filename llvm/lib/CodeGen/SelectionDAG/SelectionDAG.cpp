@@ -5435,7 +5435,12 @@ bool SelectionDAG::isBaseWithConstantOffset(SDValue Op) const {
 
 bool SelectionDAG::isKnownNeverNaN(SDValue Op, bool SNaN, unsigned Depth) const {
   // If we're told that NaNs won't happen, assume they won't.
-  if (getTarget().Options.NoNaNsFPMath || Op->getFlags().hasNoNaNs())
+  if (getTarget().Options.NoNaNsFPMath)
+    return true;
+  SDNodeFlags OpFlags = Op->getFlags();
+  if (SNaN && OpFlags.hasNoSNaNs())
+    return true;
+  if (OpFlags.hasNoSNaNs() && OpFlags.hasNoQNaNs())
     return true;
 
   if (Depth >= MaxRecursionDepth)
@@ -5569,9 +5574,37 @@ bool SelectionDAG::isKnownNeverZeroFloat(SDValue Op) const {
   assert(Op.getValueType().isFloatingPoint() &&
          "Floating point type expected");
 
+  SDNodeFlags OpFlags = Op->getFlags();
+  if (OpFlags.hasNoPosZeros() && OpFlags.hasNoNegZeros())
+    return true;
+
   // If the value is a constant, we can obviously see if it is a zero or not.
   return ISD::matchUnaryFpPredicate(
       Op, [](ConstantFPSDNode *C) { return !C->isZero(); });
+}
+
+bool SelectionDAG::isKnownNeverPosZeroFloat(SDValue Op) const {
+  assert(Op.getValueType().isFloatingPoint() && "Floating point type expected");
+
+  SDNodeFlags OpFlags = Op->getFlags();
+  if (OpFlags.hasNoPosZeros())
+    return true;
+
+  // If the value is a constant, we can obviously see if it is a zero or not.
+  return ISD::matchUnaryFpPredicate(
+      Op, [](ConstantFPSDNode *C) { return !C->isZero() || C->isNegative(); });
+}
+
+bool SelectionDAG::isKnownNeverNegZeroFloat(SDValue Op) const {
+  assert(Op.getValueType().isFloatingPoint() && "Floating point type expected");
+
+  SDNodeFlags OpFlags = Op->getFlags();
+  if (OpFlags.hasNoNegZeros())
+    return true;
+
+  // If the value is a constant, we can obviously see if it is a zero or not.
+  return ISD::matchUnaryFpPredicate(
+      Op, [](ConstantFPSDNode *C) { return !C->isZero() || !C->isNegative(); });
 }
 
 bool SelectionDAG::isKnownNeverZero(SDValue Op, unsigned Depth) const {
@@ -7490,6 +7523,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
          N2.getOpcode() != ISD::DELETED_NODE &&
          N3.getOpcode() != ISD::DELETED_NODE &&
          "Operand is DELETED_NODE!");
+  SDNodeFlags NewFlags = Flags;
   // Perform various simplifications.
   switch (Opcode) {
   case ISD::FMA:
@@ -7535,6 +7569,10 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     assert((!VT.isVector() || VT.getVectorElementCount() ==
                                   N1.getValueType().getVectorElementCount()) &&
            "SETCC vector element counts must match!");
+    if (N1->getFlags().hasNoNaNs() && N2->getFlags().hasNoNaNs()) {
+      NewFlags.setNoQNaNs(true);
+      NewFlags.setNoSNaNs(true);
+    }
     // Use FoldSetCC to simplify SETCC's.
     if (SDValue V = FoldSetCC(VT, N1, N2, cast<CondCodeSDNode>(N3)->get(), DL))
       return V;
@@ -7548,6 +7586,11 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   }
   case ISD::SELECT:
   case ISD::VSELECT:
+    if ((N1->getFlags().hasNoNaNs() && N2->getFlags().hasNoNaNs()) ||
+        N3->getFlags().hasNoNaNs()) {
+      NewFlags.setNoQNaNs(true);
+      NewFlags.setNoSNaNs(true);
+    }
     if (SDValue V = simplifySelect(N1, N2, N3))
       return V;
     break;
@@ -7654,12 +7697,12 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     AddNodeIDNode(ID, Opcode, VTs, Ops);
     void *IP = nullptr;
     if (SDNode *E = FindNodeOrInsertPos(ID, DL, IP)) {
-      E->intersectFlagsWith(Flags);
+      E->intersectFlagsWith(NewFlags);
       return SDValue(E, 0);
     }
 
     N = newSDNode<SDNode>(Opcode, DL.getIROrder(), DL.getDebugLoc(), VTs);
-    N->setFlags(Flags);
+    N->setFlags(NewFlags);
     createOperands(N, Ops);
     CSEMap.InsertNode(N, IP);
   } else {

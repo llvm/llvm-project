@@ -411,23 +411,16 @@ define float @test_fmaximum_combine_cmps(float %x, float %y) nounwind {
 ; SSE2-NEXT:    divss %xmm0, %xmm1
 ; SSE2-NEXT:    movd %xmm0, %eax
 ; SSE2-NEXT:    testl %eax, %eax
-; SSE2-NEXT:    movaps %xmm0, %xmm3
-; SSE2-NEXT:    js .LBB9_2
-; SSE2-NEXT:  # %bb.1:
-; SSE2-NEXT:    movaps %xmm1, %xmm3
-; SSE2-NEXT:  .LBB9_2:
-; SSE2-NEXT:    movaps %xmm3, %xmm2
-; SSE2-NEXT:    cmpunordss %xmm3, %xmm2
-; SSE2-NEXT:    movaps %xmm2, %xmm4
-; SSE2-NEXT:    andps %xmm3, %xmm4
-; SSE2-NEXT:    js .LBB9_4
-; SSE2-NEXT:  # %bb.3:
+; SSE2-NEXT:    js .LBB9_1
+; SSE2-NEXT:  # %bb.2:
+; SSE2-NEXT:    movaps %xmm0, %xmm2
+; SSE2-NEXT:    jmp .LBB9_3
+; SSE2-NEXT:  .LBB9_1:
+; SSE2-NEXT:    movaps %xmm1, %xmm2
 ; SSE2-NEXT:    movaps %xmm0, %xmm1
-; SSE2-NEXT:  .LBB9_4:
-; SSE2-NEXT:    maxss %xmm1, %xmm3
-; SSE2-NEXT:    andnps %xmm3, %xmm2
-; SSE2-NEXT:    orps %xmm4, %xmm2
-; SSE2-NEXT:    movaps %xmm2, %xmm0
+; SSE2-NEXT:  .LBB9_3:
+; SSE2-NEXT:    maxss %xmm2, %xmm1
+; SSE2-NEXT:    movaps %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; AVX1-LABEL: test_fmaximum_combine_cmps:
@@ -437,15 +430,11 @@ define float @test_fmaximum_combine_cmps(float %x, float %y) nounwind {
 ; AVX1-NEXT:    testl %eax, %eax
 ; AVX1-NEXT:    js .LBB9_1
 ; AVX1-NEXT:  # %bb.2:
-; AVX1-NEXT:    vmovaps %xmm0, %xmm2
-; AVX1-NEXT:    jmp .LBB9_3
+; AVX1-NEXT:    vmaxss %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    retq
 ; AVX1-NEXT:  .LBB9_1:
 ; AVX1-NEXT:    vmovaps %xmm1, %xmm2
-; AVX1-NEXT:    vmovaps %xmm0, %xmm1
-; AVX1-NEXT:  .LBB9_3:
-; AVX1-NEXT:    vmaxss %xmm2, %xmm1, %xmm0
-; AVX1-NEXT:    vcmpunordss %xmm1, %xmm1, %xmm2
-; AVX1-NEXT:    vblendvps %xmm2, %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vmaxss %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX512F-LABEL: test_fmaximum_combine_cmps:
@@ -459,8 +448,6 @@ define float @test_fmaximum_combine_cmps(float %x, float %y) nounwind {
 ; AVX512F-NEXT:    vmovss %xmm1, %xmm2, %xmm2 {%k1}
 ; AVX512F-NEXT:    vmovss %xmm0, %xmm1, %xmm1 {%k1}
 ; AVX512F-NEXT:    vmaxss %xmm2, %xmm1, %xmm0
-; AVX512F-NEXT:    vcmpunordss %xmm1, %xmm1, %k1
-; AVX512F-NEXT:    vmovss %xmm1, %xmm0, %xmm0 {%k1}
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512DQ-LABEL: test_fmaximum_combine_cmps:
@@ -490,9 +477,7 @@ define float @test_fmaximum_combine_cmps(float %x, float %y) nounwind {
 ; X86-NEXT:    vmovaps %xmm0, %xmm2
 ; X86-NEXT:    vmovaps %xmm1, %xmm0
 ; X86-NEXT:  .LBB9_3:
-; X86-NEXT:    vmaxss %xmm2, %xmm0, %xmm1
-; X86-NEXT:    vcmpunordss %xmm0, %xmm0, %xmm2
-; X86-NEXT:    vblendvps %xmm2, %xmm0, %xmm1, %xmm0
+; X86-NEXT:    vmaxss %xmm2, %xmm0, %xmm0
 ; X86-NEXT:    vmovss %xmm0, (%esp)
 ; X86-NEXT:    flds (%esp)
 ; X86-NEXT:    popl %eax

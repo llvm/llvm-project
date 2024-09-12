@@ -383,6 +383,7 @@ private:
   bool Exact : 1;
   bool Disjoint : 1;
   bool NonNeg : 1;
+  // deprecated: Use NoQNanS && NoSNaNs
   bool NoNaNs : 1;
   bool NoInfs : 1;
   bool NoSignedZeros : 1;
@@ -400,6 +401,11 @@ private:
   // Instructions with attached 'unpredictable' metadata on IR level.
   bool Unpredictable : 1;
 
+  bool NoQNaNs : 1;
+  bool NoSNaNs : 1;
+  bool NoPosZeros : 1;
+  bool NoNegZeros : 1;
+
 public:
   /// Default constructor turns off all optimization flags.
   SDNodeFlags()
@@ -407,12 +413,15 @@ public:
         Disjoint(false), NonNeg(false), NoNaNs(false), NoInfs(false),
         NoSignedZeros(false), AllowReciprocal(false), AllowContract(false),
         ApproximateFuncs(false), AllowReassociation(false), NoFPExcept(false),
-        Unpredictable(false) {}
+        Unpredictable(false), NoQNaNs(false), NoSNaNs(false), NoPosZeros(false),
+        NoNegZeros(false) {}
 
   /// Propagate the fast-math-flags from an IR FPMathOperator.
   void copyFMF(const FPMathOperator &FPMO) {
-    setNoNaNs(FPMO.hasNoNaNs());
+    setNoSNaNs(FPMO.hasNoNaNs());
+    setNoQNaNs(FPMO.hasNoNaNs());
     setNoInfs(FPMO.hasNoInfs());
+    setNoNegZeros(FPMO.hasNoSignedZeros());
     setNoSignedZeros(FPMO.hasNoSignedZeros());
     setAllowReciprocal(FPMO.hasAllowReciprocal());
     setAllowContract(FPMO.hasAllowContract());
@@ -426,8 +435,20 @@ public:
   void setExact(bool b) { Exact = b; }
   void setDisjoint(bool b) { Disjoint = b; }
   void setNonNeg(bool b) { NonNeg = b; }
-  void setNoNaNs(bool b) { NoNaNs = b; }
+  [[deprecated("Use SetSNaNs() and SetQNaNs()")]] void setNoNaNs(bool b) {
+    NoNaNs = NoQNaNs = NoSNaNs = b;
+  }
+  void setNoQNaNs(bool b) {
+    NoQNaNs = b;
+    NoNaNs = (NoQNaNs && NoSNaNs);
+  }
+  void setNoSNaNs(bool b) {
+    NoSNaNs = b;
+    NoNaNs = (NoQNaNs && NoSNaNs);
+  }
   void setNoInfs(bool b) { NoInfs = b; }
+  void setNoPosZeros(bool b) { NoPosZeros = b; }
+  void setNoNegZeros(bool b) { NoNegZeros = b; }
   void setNoSignedZeros(bool b) { NoSignedZeros = b; }
   void setAllowReciprocal(bool b) { AllowReciprocal = b; }
   void setAllowContract(bool b) { AllowContract = b; }
@@ -442,8 +463,12 @@ public:
   bool hasExact() const { return Exact; }
   bool hasDisjoint() const { return Disjoint; }
   bool hasNonNeg() const { return NonNeg; }
-  bool hasNoNaNs() const { return NoNaNs; }
+  bool hasNoNaNs() const { return (NoSNaNs && NoQNaNs); }
+  bool hasNoSNaNs() const { return NoSNaNs; }
+  bool hasNoQNaNs() const { return NoQNaNs; }
   bool hasNoInfs() const { return NoInfs; }
+  bool hasNoPosZeros() const { return NoPosZeros; }
+  bool hasNoNegZeros() const { return NoNegZeros; }
   bool hasNoSignedZeros() const { return NoSignedZeros; }
   bool hasAllowReciprocal() const { return AllowReciprocal; }
   bool hasAllowContract() const { return AllowContract; }

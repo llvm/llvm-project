@@ -3708,8 +3708,24 @@ void SelectionDAGBuilder::visitSelect(const User &I) {
   bool Negate = false;
 
   SDNodeFlags Flags;
-  if (auto *FPOp = dyn_cast<FPMathOperator>(&I))
+  SelectInst *NewI = dyn_cast<SelectInst>(cast<SelectInst>(I).clone());
+  if (auto *FPOp = dyn_cast<FPMathOperator>(&I)) {
     Flags.copyFMF(*FPOp);
+    if (Cond->getFlags().hasNoNaNs() ||
+        (LHSVal->getFlags().hasNoNaNs() && RHSVal->getFlags().hasNoNaNs())) {
+      FastMathFlags FMF = FPOp->getFastMathFlags();
+      FMF.setNoNaNs(true);
+      NewI->setFastMathFlags(FMF);
+      CmpInst *CmpCond = dyn_cast<CmpInst>(NewI->getCondition());
+      if (isa<FPMathOperator>(CmpCond)) {
+        FastMathFlags CondFMF = CmpCond->getFastMathFlags();
+        CondFMF.setNoNaNs(true);
+        CmpCond->setFastMathFlags(CondFMF);
+      }
+      Flags.setNoQNaNs(true);
+      Flags.setNoSNaNs(true);
+    }
+  }
 
   Flags.setUnpredictable(
       cast<SelectInst>(I).getMetadata(LLVMContext::MD_unpredictable));
@@ -3735,7 +3751,7 @@ void SelectionDAGBuilder::visitSelect(const User &I) {
     // so we can't lower to FMINIMUM/FMAXIMUM because those nodes specify that
     // -0.0 is less than +0.0.
     const Value *LHS, *RHS;
-    auto SPR = matchSelectPattern(&I, LHS, RHS);
+    auto SPR = matchSelectPattern(NewI, LHS, RHS);
     ISD::NodeType Opc = ISD::DELETED_NODE;
     switch (SPR.Flavor) {
     case SPF_UMAX:    Opc = ISD::UMAX; break;
@@ -3798,6 +3814,7 @@ void SelectionDAGBuilder::visitSelect(const User &I) {
       BaseOps.clear();
     }
   }
+  NewI->deleteValue();
 
   if (IsUnaryAbs) {
     for (unsigned i = 0; i != NumValues; ++i) {
@@ -11775,6 +11792,22 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
           AssertOp = ISD::AssertSext;
         else if (Arg.hasAttribute(Attribute::ZExt))
           AssertOp = ISD::AssertZext;
+        if (Arg.hasAttribute(Attribute::NoFPClass)) {
+          SDNodeFlags InValFlags = InVals[i]->getFlags();
+          bool NoSNaN = ((Arg.getNoFPClass() & llvm::fcSNan) == llvm::fcSNan);
+          bool NoQNaN = ((Arg.getNoFPClass() & llvm::fcQNan) == llvm::fcQNan);
+          InValFlags.setNoSNaNs(NoSNaN);
+          InValFlags.setNoQNaNs(NoQNaN);
+          bool NoPosZeros =
+              ((Arg.getNoFPClass() & llvm::fcPosZero) == llvm::fcPosZero);
+          bool NoNegZeros =
+              ((Arg.getNoFPClass() & llvm::fcNegZero) == llvm::fcNegZero);
+          InValFlags.setNoPosZeros(NoPosZeros);
+          InValFlags.setNoNegZeros(NoNegZeros);
+          InValFlags.setNoInfs((Arg.getNoFPClass() & llvm::fcInf) ==
+                               llvm::fcInf);
+          InVals[i]->setFlags(InValFlags);
+        }
 
         ArgValues.push_back(getCopyFromParts(DAG, dl, &InVals[i], NumParts,
                                              PartVT, VT, nullptr, NewRoot,
