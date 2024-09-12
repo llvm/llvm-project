@@ -23,10 +23,8 @@ As :program:`clang-tidy` shares C++ AST Matchers with Clang diagnostics,
 .. _LLVM Github: https://github.com/llvm/llvm-project
 .. _External Clang Examples: https://clang.llvm.org/docs/ExternalClangExamples.html
 
-https://clang.llvm.org/docs/ExternalClangExamples.html
-
 List of projects and tools
 ==========================
 
-`<https://github.com/coveooss/clang-tidy-plugin-examples/tree/main>`_
+`<https://github.com/coveooss/clang-tidy-plugin-examples>`_
     "This folder contains :program:`clang-tidy` plugins."
