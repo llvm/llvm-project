@@ -138,7 +138,7 @@ void DiagnosticsEngine::Reset(bool soft /*=false*/) {
 
     // Create a DiagState and DiagStatePoint representing diagnostic changes
     // through command-line.
-    DiagStates.emplace_back(*Diags);
+    DiagStates.emplace_back();
     DiagStatesByLoc.appendFirst(&DiagStates.back());
   }
 }
@@ -166,11 +166,8 @@ DiagnosticsEngine::DiagState::getOrAddMapping(diag::kind Diag) {
       DiagMap.insert(std::make_pair(Diag, DiagnosticMapping()));
 
   // Initialize the entry if we added it.
-  if (Result.second) {
-    Result.first->second = DiagIDs.getDefaultMapping(Diag);
-    if (DiagnosticIDs::IsCustomDiag(Diag))
-      DiagIDs.initCustomDiagMapping(Result.first->second, Diag);
-  }
+  if (Result.second)
+    Result.first->second = DiagnosticIDs::getDefaultMapping(Diag);
 
   return Result.first->second;
 }
@@ -312,8 +309,7 @@ void DiagnosticsEngine::DiagStateMap::dump(SourceManager &SrcMgr,
 
       for (auto &Mapping : *Transition.State) {
         StringRef Option =
-            SrcMgr.getDiagnostics().Diags->getWarningOptionForDiag(
-                Mapping.first);
+            DiagnosticIDs::getWarningOptionForDiag(Mapping.first);
         if (!DiagName.empty() && DiagName != Option)
           continue;
 
@@ -357,7 +353,9 @@ void DiagnosticsEngine::PushDiagStatePoint(DiagState *State,
 
 void DiagnosticsEngine::setSeverity(diag::kind Diag, diag::Severity Map,
                                     SourceLocation L) {
-  assert((Diags->isWarningOrExtension(Diag) ||
+  assert(Diag < diag::DIAG_UPPER_LIMIT &&
+         "Can only map builtin diagnostics");
+  assert((Diags->isBuiltinWarningOrExtension(Diag) ||
           (Map == diag::Severity::Fatal || Map == diag::Severity::Error)) &&
          "Cannot map errors into warnings!");
   assert((L.isInvalid() || SourceMgr) && "No SourceMgr for valid location");
@@ -409,8 +407,6 @@ bool DiagnosticsEngine::setSeverityForGroup(diag::Flavor Flavor,
   if (Diags->getDiagnosticsInGroup(Flavor, Group, GroupDiags))
     return true;
 
-  Diags->setGroupSeverity(Group, Map);
-
   // Set the mapping.
   for (diag::kind Diag : GroupDiags)
     setSeverity(Diag, Map, Loc);
@@ -433,7 +429,6 @@ bool DiagnosticsEngine::setDiagnosticGroupWarningAsError(StringRef Group,
   if (Enabled)
     return setSeverityForGroup(diag::Flavor::WarningOrError, Group,
                                diag::Severity::Error);
-  Diags->setGroupSeverity(Group, diag::Severity::Warning);
 
   // Otherwise, we want to set the diagnostic mapping's "no Werror" bit, and
   // potentially downgrade anything already mapped to be a warning.
@@ -465,7 +460,6 @@ bool DiagnosticsEngine::setDiagnosticGroupErrorAsFatal(StringRef Group,
   if (Enabled)
     return setSeverityForGroup(diag::Flavor::WarningOrError, Group,
                                diag::Severity::Fatal);
-  Diags->setGroupSeverity(Group, diag::Severity::Error);
 
   // Otherwise, we want to set the diagnostic mapping's "no Wfatal-errors" bit,
   // and potentially downgrade anything already mapped to be a fatal error.
@@ -498,7 +492,7 @@ void DiagnosticsEngine::setSeverityForAll(diag::Flavor Flavor,
 
   // Set the mapping.
   for (diag::kind Diag : AllDiags)
-    if (Diags->isWarningOrExtension(Diag))
+    if (Diags->isBuiltinWarningOrExtension(Diag))
       setSeverity(Diag, Map, Loc);
 }
 
