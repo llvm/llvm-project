@@ -16,6 +16,7 @@
 #include "clang/AST/Type.h"
 #include "clang/Interpreter/Interpreter.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_os_ostream.h"
 #include <cassert>
