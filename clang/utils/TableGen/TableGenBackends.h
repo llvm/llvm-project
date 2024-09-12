@@ -76,10 +76,11 @@ void EmitClangAttrDocTable(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitClangBuiltins(const llvm::RecordKeeper &Records,
                        llvm::raw_ostream &OS);
 
-void EmitClangDiagsDefs(llvm::RecordKeeper &Records, llvm::raw_ostream &OS,
-                        const std::string &Component);
-void EmitClangDiagGroups(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
-void EmitClangDiagsIndexName(llvm::RecordKeeper &Records,
+void EmitClangDiagsDefs(const llvm::RecordKeeper &Records,
+                        llvm::raw_ostream &OS, const std::string &Component);
+void EmitClangDiagGroups(const llvm::RecordKeeper &Records,
+                         llvm::raw_ostream &OS);
+void EmitClangDiagsIndexName(const llvm::RecordKeeper &Records,
                              llvm::raw_ostream &OS);
 
 void EmitClangSACheckers(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
@@ -142,7 +143,8 @@ void EmitCdeBuiltinCG(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitCdeBuiltinAliases(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 
 void EmitClangAttrDocs(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
-void EmitClangDiagDocs(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitClangDiagDocs(const llvm::RecordKeeper &Records,
+                       llvm::raw_ostream &OS);
 void EmitClangOptDocs(const llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 
 void EmitClangOpenCLBuiltins(const llvm::RecordKeeper &Records,
