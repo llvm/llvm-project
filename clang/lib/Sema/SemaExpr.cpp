@@ -15098,8 +15098,20 @@ static void DiagnosePrecisionLossInComplexDivision(Sema &S,
       const llvm::fltSemantics &HigherElementTypeSemantics =
           Ctx.getFloatTypeSemantics(HigherElementType);
       if (llvm::APFloat::semanticsMaxExponent(ElementTypeSemantics) * 2 + 1 >
-          llvm::APFloat::semanticsMaxExponent(HigherElementTypeSemantics))
-        S.Diag(OpLoc, diag::warn_next_larger_fp_type_same_size_than_fp);
+          llvm::APFloat::semanticsMaxExponent(HigherElementTypeSemantics)) {
+        // Retain the location of the first use of higher precision type.
+        if (!S.LocationOfExcessPrecisionNotSatisfied.isValid())
+          S.LocationOfExcessPrecisionNotSatisfied = OpLoc;
+        S.NumExcessPrecisionNotSatisfied++;
+        for (auto &[Loc, Type, Num] : S.ExcessPrecisionNotSatisfied) {
+          if (Type == HigherElementType) {
+            Num++;
+            return;
+          }
+        }
+        S.ExcessPrecisionNotSatisfied.push_back(std::make_tuple(
+            OpLoc, HigherElementType, S.NumExcessPrecisionNotSatisfied));
+      }
     }
   }
 }

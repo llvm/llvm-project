@@ -25,8 +25,7 @@ void a() {
   EVALF((2. + 3i) + (4. + 5i), 6. + 8i);
   EVALF((2. + 3i) - (4. + 5i), -2. - 2i);
   EVALF((2. + 3i) * (4. + 5i), -7. + 22i);
-  // div-precision-warning@+2 {{higher precision floating-point type requested by user size has the same sizethan floating-point type size; overflow may occur}}
-  // div-precision-warning@+1 {{higher precision floating-point type requested by user size has the same sizethan floating-point type size; overflow may occur}}
+  // div-precision-warning@+1 {{excess precision is requested but the target does not support excess precision which may result in observable differences in arithmetic behavior ,additional use of 'long double' were found but not diagnosed}}
   EVALF((2. + 3i) / (4. + 5i), .5609 + .0487i);
 }
 
@@ -53,8 +52,6 @@ void c() {
   EVALF((2. + 4i) + 3., 5. + 4i);
   EVALF((2. + 4i) - 3., -1. + 4i);
   EVALF((2. + 4i) * 3., 6. + 12i);
-  // div-precision-warning@+2 {{higher precision floating-point type requested by user size has the same sizethan floating-point type size; overflow may occur}}
-  // div-precision-warning@+1 {{higher precision floating-point type requested by user size has the same sizethan floating-point type size; overflow may occur}}
   EVALF((2. + 4i) / 2., 1. + 2i);
 
   EVALF(3. + (2. + 4i), 5. + 4i);
@@ -91,8 +88,6 @@ void e() {
   EVALF((2. + 4i) + 3, 5. + 4i);
   EVALF((2. + 4i) - 3, -1. + 4i);
   EVALF((2. + 4i) * 3, 6. + 12i);
-  // div-precision-warning@+2 {{higher precision floating-point type requested by user size has the same sizethan floating-point type size; overflow may occur}}
-  // div-precision-warning@+1 {{higher precision floating-point type requested by user size has the same sizethan floating-point type size; overflow may occur}}
   EVALF((2. + 4i) / 2, 1. + 2i);
 
   EVALF(3 + (2. + 4i), 5. + 4i);

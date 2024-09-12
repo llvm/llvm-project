@@ -626,6 +626,11 @@ public:
   const llvm::MapVector<FieldDecl *, DeleteLocs> &
   getMismatchingDeleteExpressions() const;
 
+  std::vector<std::tuple<SourceLocation, QualType, unsigned>>
+      ExcessPrecisionNotSatisfied;
+  unsigned NumExcessPrecisionNotSatisfied = 0;
+  SourceLocation LocationOfExcessPrecisionNotSatisfied;
+
   /// Cause the active diagnostic on the DiagosticsEngine to be
   /// emitted. This is closely coupled to the SemaDiagnosticBuilder class and
   /// should not be used elsewhere.
@@ -1962,6 +1967,8 @@ public:
   void PrintPragmaAttributeInstantiationPoint();
 
   void DiagnoseUnterminatedPragmaAttribute();
+
+  void DiagnoseExcessPrecision();
 
   /// Called on well formed \#pragma clang optimize.
   void ActOnPragmaOptimize(bool On, SourceLocation PragmaLoc);

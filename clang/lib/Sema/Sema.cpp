@@ -1213,6 +1213,7 @@ void Sema::ActOnEndOfTranslationUnit() {
   DiagnoseUnterminatedPragmaAlignPack();
   DiagnoseUnterminatedPragmaAttribute();
   OpenMP().DiagnoseUnterminatedOpenMPDeclareTarget();
+  DiagnoseExcessPrecision();
 
   // All delayed member exception specs should be checked or we end up accepting
   // incompatible declarations.

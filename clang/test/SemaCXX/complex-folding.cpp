@@ -90,7 +90,6 @@ static_assert(((1.0 + 1.0j) / (__builtin_inf() + 1.0j)) == (0.0 + 0.0j));
 static_assert(((1.0 + 1.0j) / (1.0 + InfC)) == (0.0 + 0.0j));
 static_assert(((1.0 + 1.0j) / (InfInf)) == (0.0 + 0.0j));
 static_assert(((1.0 + 1.0j) / __builtin_inf()) == (0.0 + 0.0j));
-
 static_assert(1.0j / 0.0 == 1); // expected-error {{static assertion}} \
                                 // expected-note {{division by zero}}
 static_assert(__builtin_isinf_sign(__real__((1.0 + 1.0j) / (0.0 + 0.0j))) == 1);

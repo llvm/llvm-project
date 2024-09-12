@@ -40,14 +40,12 @@ constexpr _Complex int IIMC = IIMA * IIMB;
 static_assert(__real(IIMC) == -30, "");
 static_assert(__imag(IIMC) == 40, "");
 
-static_assert(1.0j / 0.0 == 1); // both-error {{static assertion}}	\
+static_assert(1.0j / 0.0 == 1); // both-error {{static assertion}} \
                                 // both-note {{division by zero}}
-
 static_assert(__builtin_isinf_sign(__real__((1.0 + 1.0j) / (0.0 + 0.0j))) == 1);
 static_assert(__builtin_isinf_sign(__real__((1.0 + 1.0j) / 0.0)) == 1); // both-error {{static assertion}} \
                                                                         // both-note {{division by zero}}
 static_assert(__builtin_isinf_sign(__real__((__builtin_inf() + 1.0j) / (0.0 + 0.0j))) == 1);
-
 static_assert(__builtin_isinf_sign(__imag__((1.0 + InfC) / (0.0 + 0.0j))) == 1);
 static_assert(__builtin_isinf_sign(__imag__((InfInf) / (0.0 + 0.0j))) == 1);
 

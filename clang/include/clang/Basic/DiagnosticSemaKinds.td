@@ -6784,10 +6784,11 @@ def warn_arc_lifetime_result_type : Warning<
   "ARC %select{unused|__unsafe_unretained|__strong|__weak|__autoreleasing}0 "
   "lifetime qualifier on return type is ignored">,
   InGroup<IgnoredQualifiers>;
-def warn_next_larger_fp_type_same_size_than_fp : Warning<
-  "higher precision floating-point type requested by user size has the same size"
-  "than floating-point type size; overflow may occur">,
-  InGroup<DiagGroup<"higher-precision-fp">>;
+def warn_excess_precision_not_supported : Warning<
+  "excess precision is requested but the target does not support excess "
+  "precision %select{which may result in observable differences in arithmetic "
+  "behavior}0 %select{|,additional use of %1 were found but not diagnosed}2">,
+  InGroup<DiagGroup<"higher-precision">>;
 
 let CategoryName = "ARC Retain Cycle" in {
 
