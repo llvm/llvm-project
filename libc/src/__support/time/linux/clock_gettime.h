@@ -11,6 +11,8 @@
 
 #include "hdr/types/clockid_t.h"
 #include "hdr/types/struct_timespec.h"
+#include "src/__support/OSUtil/linux/vdso.h"
+#include "src/__support/OSUtil/linux/x86_64/vdso.h"
 #include "src/__support/OSUtil/syscall.h"
 #include "src/__support/common.h"
 #include "src/__support/error_or.h"
@@ -20,11 +22,18 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 LIBC_INLINE ErrorOr<int> clock_gettime(clockid_t clockid, timespec *ts) {
+  using namespace vdso;
 #if SYS_clock_gettime
+  TypedSymbol<VDSOSym::ClockGetTime> clock_gettime;
+  if (LIBC_LIKELY(clock_gettime))
+    return clock_gettime(clockid, ts);
   int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_clock_gettime,
                                               static_cast<long>(clockid),
                                               reinterpret_cast<long>(ts));
 #elif defined(SYS_clock_gettime64)
+  TypedSymbol<VDSOSym::ClockGetTime64> clock_gettime64;
+  if (LIBC_LIKELY(clock_gettime64))
+    return clock_gettime64(clockid, ts);
   static_assert(
       sizeof(time_t) == sizeof(int64_t),
       "SYS_clock_gettime64 requires struct timespec with 64-bit members.");
