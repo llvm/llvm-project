@@ -129,7 +129,7 @@ using MaybeNullptr = types::type_list<std::nullptr_t>;
 using MaybeNullptr = types::type_list<>;
 #endif
 using LibraryHashTypes = types::
-    concatenate_t<types::arithmetic_types, type::type_list<Enum, EnumClass, void*, void const*, Class*>, MaybeNullptr>;
+    concatenate_t<types::arithmetic_types, types::type_list<Enum, EnumClass, void*, void const*, Class*>, MaybeNullptr>;
 
 struct TestHashEnabled {
   template <class T>
