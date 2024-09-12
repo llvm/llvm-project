@@ -54,6 +54,13 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace llvm::minidump;
 
+// Set of all the stop reasons minidumps will collect.
+const std::unordered_set<lldb::StopReason> MinidumpFileBuilder::thread_stop_reasons {
+  lldb::StopReason::eStopReasonException,
+  lldb::StopReason::eStopReasonSignal,
+  lldb::StopReason::eStopReasonBreakpoint,
+};
+
 Status MinidumpFileBuilder::AddHeaderAndCalculateDirectories() {
   // First set the offset on the file, and on the bytes saved
   m_saved_data_size = HEADER_SIZE;
@@ -75,7 +82,7 @@ Status MinidumpFileBuilder::AddHeaderAndCalculateDirectories() {
     StopInfoSP stop_info_sp = thread_sp->GetStopInfo();
     if (stop_info_sp) {
       const StopReason &stop_reason = stop_info_sp->GetStopReason();
-      if (m_thread_stop_reasons.count(stop_reason) > 0)
+      if (thread_stop_reasons.count(stop_reason) > 0)
         m_expected_directories++;
     }
   }
@@ -685,7 +692,7 @@ Status MinidumpFileBuilder::AddExceptions() {
   for (const ThreadSP &thread_sp : thread_list) {
     StopInfoSP stop_info_sp = thread_sp->GetStopInfo();
     bool add_exception = false;
-    if (stop_info_sp && m_thread_stop_reasons.count(stop_info_sp->GetStopReason()) > 0) {
+    if (stop_info_sp && thread_stop_reasons.count(stop_info_sp->GetStopReason()) > 0) {
         add_exception = true;
     }
 
