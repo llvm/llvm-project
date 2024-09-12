@@ -1497,18 +1497,6 @@ bool CheckAllArgsHaveFloatRepresentation(Sema *S, CallExpr *TheCall) {
                                   checkAllFloatTypes);
 }
 
-bool CheckNotFloatAndInt(Sema *S, CallExpr *TheCall) {
-  auto checkFloat = [](clang::QualType PassedType) -> bool {
-    clang::QualType BaseType =
-        PassedType->isVectorType()
-            ? PassedType->getAs<clang::VectorType>()->getElementType()
-            : PassedType;
-    return !(BaseType->isFloat32Type() || BaseType->isIntegerType());
-  };
-
-  return CheckArgsTypesAreCorrect(S, TheCall, S->Context.FloatTy, checkFloat);
-}
-
 bool CheckFloatOrHalfRepresentations(Sema *S, CallExpr *TheCall) {
   auto checkFloatorHalf = [](clang::QualType PassedType) -> bool {
     clang::QualType BaseType =
@@ -1763,14 +1751,6 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   // generation. Normal handling of these builitns will occur elsewhere.
   case Builtin::BI__builtin_elementwise_bitreverse: {
     if (CheckUnsignedIntRepresentation(&SemaRef, TheCall))
-      return true;
-    break;
-  }
-  case Builtin::BI__builtin_hlsl_bit_cast_32: {
-    if (SemaRef.checkArgCount(TheCall, 1))
-      return true;
-
-    if (CheckNotFloatAndInt(&SemaRef, TheCall))
       return true;
     break;
   }

@@ -4763,12 +4763,6 @@ def HLSLSaturate : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "void(...)";
 }
 
-def HLSLBitCast32 : LangBuiltin<"HLSL_LANG"> {
-  let Spellings = ["__builtin_hlsl_bit_cast_32"];
-  let Attributes = [NoThrow, Const];
-  let Prototype = "void(...)";
-}
-
 def HLSLSelect : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_select"];
   let Attributes = [NoThrow, Const];

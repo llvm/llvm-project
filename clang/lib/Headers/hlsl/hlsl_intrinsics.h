@@ -9,6 +9,8 @@
 #ifndef _HLSL_HLSL_INTRINSICS_H_
 #define _HLSL_HLSL_INTRINSICS_H_
 
+#include "hlsl_detail.h"
+
 namespace hlsl {
 
 // Note: Functions in this file are sorted alphabetically, then grouped by base
@@ -395,32 +397,14 @@ float4 asin(float4);
 /// \brief Interprets the bit pattern of x as an unsigned integer.
 /// \param Val The input value.
 
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_bit_cast_32)
-uint asuint(int);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_bit_cast_32)
-uint2 asuint(int2);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_bit_cast_32)
-uint3 asuint(int3);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_bit_cast_32)
-uint4 asuint(int4);
+template <typename T, int N>
+_HLSL_INLINE vector<uint, N> asuint(vector<T, N> V) {
+  return __detail::bit_cast<uint, T, N>(V);
+}
 
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_bit_cast_32)
-uint asuint(uint);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_bit_cast_32)
-uint2 asuint(uint2);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_bit_cast_32)
-uint3 asuint(uint3);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_bit_cast_32)
-uint4 asuint(uint4);
-
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_bit_cast_32)
-uint asuint(float);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_bit_cast_32)
-uint2 asuint(float2);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_bit_cast_32)
-uint3 asuint(float3);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_bit_cast_32)
-uint4 asuint(float4);
+template <typename T> _HLSL_INLINE uint asuint(T F) {
+  return __detail::bit_cast<uint, T>(F);
+}
 
 //===----------------------------------------------------------------------===//
 // atan builtins

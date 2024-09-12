@@ -18870,25 +18870,6 @@ case Builtin::BI__builtin_hlsl_elementwise_isinf: {
     Intrinsic::ID ID = CGM.getHLSLRuntime().getWaveIsFirstLaneIntrinsic();
     return EmitRuntimeCall(Intrinsic::getDeclaration(&CGM.getModule(), ID));
   }
-  case Builtin::BI__builtin_hlsl_bit_cast_32: {
-    Value *Op = EmitScalarExpr(E->getArg(0));
-
-    llvm::Type *DestTy = ConvertType(E->getCallReturnType(getContext()));
-
-    if (DestTy->isVectorTy()) {
-      const VectorType *VecTy =
-          E->getCallReturnType(getContext())->getAs<VectorType>();
-      DestTy = ConvertType(VecTy->getElementType());
-    }
-
-    if (Op->getType()->isVectorTy()) {
-      const VectorType *VecTy = E->getArg(0)->getType()->getAs<VectorType>();
-      DestTy = llvm::VectorType::get(
-          DestTy, ElementCount::getFixed(VecTy->getNumElements()));
-    }
-
-    return Builder.CreateBitCast(Op, DestTy);
-  }
   case Builtin::BI__builtin_hlsl_elementwise_sign: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
     llvm::Type *Xty = Op0->getType();
