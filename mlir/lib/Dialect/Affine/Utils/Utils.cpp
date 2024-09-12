@@ -531,7 +531,7 @@ void mlir::affine::normalizeAffineParallel(AffineParallelOp op) {
                               /*symbolCount=*/lbMap.getNumSymbols(), expr);
 
     // Use an 'affine.apply' op that will be simplified later in subsequent
-    // canonicalization.
+    // canonicalizations.
     OperandRange lbOperands = op.getLowerBoundsOperands();
     OperandRange dimOperands = lbOperands.take_front(nDims);
     OperandRange symbolOperands = lbOperands.drop_front(nDims);

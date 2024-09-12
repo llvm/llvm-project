@@ -132,7 +132,7 @@ def DataLayoutSpecInterface : AttrInterface<"DataLayoutSpecInterface", [DLTIQuer
     InterfaceMethod<
       /*description=*/"Returns the endianness identifier.",
       /*retTy=*/"::mlir::StringAttr",
-      /*methodName=*/"getEndiannesssIdentifier",
+      /*methodName=*/"getEndiannessIdentifier",
       /*args=*/(ins "::mlir::MLIRContext *":$context)
     >,
     InterfaceMethod<
@@ -462,11 +462,11 @@ def DataLayoutOpInterface : OpInterface<"DataLayoutOpInterface"> {
                       "using the relevant entries. The data layout object "
                       "can be used for recursive queries.",
       /*retTy=*/"::mlir::Attribute",
-      /*methodName=*/"getEndiannesss",
+      /*methodName=*/"getEndianness",
       /*args=*/(ins "::mlir::DataLayoutEntryInterface":$entry),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return ::mlir::detail::getDefaultEndiannesss(entry);
+        return ::mlir::detail::getDefaultEndianness(entry);
       }]
     >,
     StaticInterfaceMethod<

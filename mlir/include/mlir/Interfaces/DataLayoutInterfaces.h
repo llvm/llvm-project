@@ -74,7 +74,7 @@ getDefaultIndexBitwidth(Type type, const DataLayout &dataLayout,
 
 /// Default handler for endianness request. Dispatches to the
 /// DataLayoutInterface if specified, otherwise returns the default.
-Attribute getDefaultEndiannesss(DataLayoutEntryInterface entry);
+Attribute getDefaultEndianness(DataLayoutEntryInterface entry);
 
 /// Default handler for alloca memory space request. Dispatches to the
 /// DataLayoutInterface if specified, otherwise returns the default.
@@ -227,7 +227,7 @@ public:
   std::optional<uint64_t> getTypeIndexBitwidth(Type t) const;
 
   /// Returns the specified endianness.
-  Attribute getEndiannesss() const;
+  Attribute getEndianness() const;
 
   /// Returns the memory space used for AllocaOps.
   Attribute getAllocaMemorySpace() const;

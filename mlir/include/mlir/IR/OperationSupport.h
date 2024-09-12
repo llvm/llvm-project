@@ -257,7 +257,7 @@ public:
   ///     success.  The caller will remove the operation and use those results
   ///     instead.
   ///
-  /// This allows expression of some simple in-place canonicalization (e.g.
+  /// This allows expression of some simple in-place canonicalizations (e.g.
   /// "x+0 -> x", "min(x,y,x,z) -> min(x,y,z)", "x+y-x -> y", etc), as well as
   /// generalized constant folding.
   LogicalResult foldHook(Operation *op, ArrayRef<Attribute> operands,

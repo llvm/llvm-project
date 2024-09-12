@@ -516,7 +516,7 @@ write, easy to verify and easy to maintain.
 declaratively. In turn this allows using local pattern rewrite rules in MLIR
 (i.e. [DRR](../DeclarativeRewrites.md)).
 - Allow creating customizable passes declaratively by simply selecting rewrite
-rules. This allows mixing transformations, canonicalization, constant folding
+rules. This allows mixing transformations, canonicalizations, constant folding
 and other enabling rewrites in a single pass. The result is a system where pass
 fusion is very simple to obtain and gives hope for solving certain
 [phase ordering issues](https://dl.acm.org/doi/10.1145/201059.201061).

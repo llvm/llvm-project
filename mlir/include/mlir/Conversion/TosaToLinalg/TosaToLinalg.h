@@ -32,7 +32,7 @@ std::unique_ptr<Pass> createTosaToLinalgNamed(
 /// Populates passes to convert from TOSA to Linalg on buffers. At the end of
 /// the pass, the function will only contain linalg ops or standard ops if the
 /// pipeline succeeds.  The option to disable decompositions is available for
-/// benchmarking performance improvements from the canonicalization.
+/// benchmarking performance improvements from the canonicalizations.
 void addTosaToLinalgPasses(
     OpPassManager &pm, const TosaToLinalgOptions &options,
     const TosaToLinalgNamedOptions &tosaToLinalgNamedOptions =

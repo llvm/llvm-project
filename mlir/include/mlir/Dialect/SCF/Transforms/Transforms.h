@@ -56,7 +56,7 @@ void naivelyFuseParallelOps(Region &region,
 /// `partialIteration`). This transformation is called "loop peeling".
 ///
 /// This transformation is beneficial for a wide range of transformations such
-/// as vectorization or loop tiling: It enables additional canonicalization
+/// as vectorization or loop tiling: It enables additional canonicalizations
 /// inside the peeled loop body such as rewriting masked loads into unmaked
 /// loads.
 ///

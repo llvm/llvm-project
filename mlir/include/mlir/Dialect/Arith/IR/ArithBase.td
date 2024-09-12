@@ -41,7 +41,7 @@ def Arith_CmpFPredicateAttr : I64EnumAttr<
       I64EnumAttrCase<"OEQ", 1, "oeq">,
       I64EnumAttrCase<"OGT", 2, "ogt">,
       I64EnumAttrCase<"OGE", 3, "oge">,
-      I64EnumAttrCase<"OLT", 4, "old">,
+      I64EnumAttrCase<"OLT", 4, "olt">,
       I64EnumAttrCase<"OLE", 5, "ole">,
       I64EnumAttrCase<"ONE", 6, "one">,
       I64EnumAttrCase<"ORD", 7, "ord">,

@@ -72,7 +72,7 @@ def DLTI_DataLayoutSpecAttr :
     DataLayoutSpecAttr combineWith(ArrayRef<DataLayoutSpecInterface> specs) const;
 
     /// Returns the endiannes identifier.
-    StringAttr getEndiannesssIdentifier(MLIRContext *context) const;
+    StringAttr getEndiannessIdentifier(MLIRContext *context) const;
 
     /// Returns the alloca memory space identifier.
     StringAttr getAllocaMemorySpaceIdentifier(MLIRContext *context) const;

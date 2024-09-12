@@ -19,7 +19,7 @@ include "mlir/Rewrite/PassUtil.td"
 def Canonicalizer : Pass<"canonicalize"> {
   let summary = "Canonicalize operations";
   let description = [{
-    This pass performs various types of canonicalization over a set of
+    This pass performs various types of canonicalizations over a set of
     operations by iteratively applying the canonicalization patterns of all
     loaded dialects until either a fixpoint is reached or the maximum number of
     iterations/rewrites is exhausted. Canonicalization is best-effort and does
@@ -106,7 +106,7 @@ def RemoveDeadValues : Pass<"remove-dead-values"> {
     (A) Removes function arguments that are not live,
     (B) Removes function return values that are not live across all callers of
     the function,
-    (C) Removes unnecessary operands, results, region arguments, and region
+    (C) Removes unneccesary operands, results, region arguments, and region
     terminator operands of region branch ops, and,
     (D) Removes simple and region branch ops that have all non-live results and
     don't affect memory in any way,
@@ -412,7 +412,7 @@ def SROA : Pass<"sroa"> {
   let summary = "Scalar Replacement of Aggregates";
   let description = [{
     Scalar Replacement of Aggregates. Replaces allocations of aggregates into
-    independent allocations of its elements.
+    independant allocations of its elements.
 
     Allocators must implement `DestructurableAllocationOpInterface` to provide
     the list of memory slots for which destructuring should be attempted.
