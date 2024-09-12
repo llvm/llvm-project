@@ -175,9 +175,10 @@
                     "type": "array",
                     "description": "Additional environment variables to set when launching the program. E.g. `[\"FOO=1\", \"BAR\"]`",
                     "items": {
-                      "type": "string"
+                      "type": "string",
+                      "pattern": "^((\\w+=.*)|^\\w+)$"
                     },
-                    "default": {}
+                    "default": []
                   }
                 ]
               },
