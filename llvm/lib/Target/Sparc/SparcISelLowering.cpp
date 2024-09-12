@@ -2819,18 +2819,16 @@ static SDValue LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG,
     regSpillArea = 96;
   }
 
-  // If we are allocating overaligned memory then the bias is already accounted
-  // for in AlignedPtr calculation, so:
-  // - We do not need to adjust the regSpillArea; but
-  // - We do need to decrement AlignedPtr by bias to obtain the new SP.
-  regSpillArea += IsOveraligned ? 0 : Bias;
+  // If we are allocating overaligned memory then the AlignedPtr calculation
+  // adds the bias into SP, so we need to restore biased SP by decrementing
+  // AlignedPtr back here.
   SDValue NewSP =
       DAG.getNode(ISD::SUB, dl, VT, AlignedPtr,
                   DAG.getConstant(IsOveraligned ? Bias : 0, dl, VT));
   Chain = DAG.getCopyToReg(SP.getValue(1), dl, SPReg, NewSP);
 
   SDValue NewVal = DAG.getNode(ISD::ADD, dl, VT, NewSP,
-                               DAG.getConstant(regSpillArea, dl, VT));
+                               DAG.getConstant(regSpillArea + Bias, dl, VT));
   SDValue Ops[2] = { NewVal, Chain };
   return DAG.getMergeValues(Ops, dl);
 }

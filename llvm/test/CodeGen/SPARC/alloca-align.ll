@@ -25,7 +25,7 @@ define void @variable_alloca_with_overalignment(i32 %num) nounwind {
 ; CHECK64-NEXT:    add %sp, 1967, %i1
 ; CHECK64-NEXT:    and %i1, -64, %i1
 ; CHECK64-NEXT:    add %i1, -2047, %sp
-; CHECK64-NEXT:    add %i1, -1919, %o0
+; CHECK64-NEXT:    add %i1, 128, %o0
 ; CHECK64-NEXT:    srl %i0, 0, %i0
 ; CHECK64-NEXT:    add %i0, 15, %i0
 ; CHECK64-NEXT:    sethi 4194303, %i1
@@ -82,7 +82,7 @@ define void @variable_alloca_with_overalignment_2(i32 %num) nounwind {
 ; CHECK64-NEXT:    add %i0, 1983, %i0
 ; CHECK64-NEXT:    and %i0, -64, %i0
 ; CHECK64-NEXT:    add %i0, -2047, %sp
-; CHECK64-NEXT:    add %i0, -1919, %o1
+; CHECK64-NEXT:    add %i0, 128, %o1
 ; CHECK64-NEXT:    add %sp, -48, %sp
 ; CHECK64-NEXT:    call foo
 ; CHECK64-NEXT:    mov %g0, %o0

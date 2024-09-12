@@ -27,7 +27,7 @@ define void @stack_realign(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %
 ; CHECK64-NEXT:    add %sp, 1967, %i0
 ; CHECK64-NEXT:    and %i0, -64, %i0
 ; CHECK64-NEXT:    add %i0, -2047, %sp
-; CHECK64-NEXT:    add %i0, -1919, %o1
+; CHECK64-NEXT:    add %i0, 128, %o1
 ; CHECK64-NEXT:    add %sp, -48, %sp
 ; CHECK64-NEXT:    call stack_realign_helper
 ; CHECK64-NEXT:    ld [%fp+2227], %o0
