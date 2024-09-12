@@ -90,3 +90,8 @@ Revert: breaks hipBlender*
 0e73bbd3450c   [AMDGPU][PromoteAlloca] Don't stop when an alloca is too big to promote (#93466) 
 contact: Pierre
 ---
+revert : breaks 532.exa_sph: 20x slower
+56a033462ed2
+[Attributor] Keep track of reached returns in AAPointerInfo (#107479) 
+RonL
+---
