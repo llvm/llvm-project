@@ -63,7 +63,7 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
     element-type ::= float-type | integer-type | index-type
     dim-list := (static-dim-list `x`)?
     static-dim-list ::= decimal-literal `x` decimal-literal
-    attr-list = (, memory_space = value)? (, arr_len = value)? (, boundary_check = value)? (, scattered = value)?
+    attr-list = (, memory_scope = value)? (, arr_len = value)? (, boundary_check = value)? (, scattered = value)? (, sg_map `<` wi_layout = value, wi_data = value `>`)?
     ```
 
     Examples:
@@ -76,13 +76,17 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
     xegpu.tensor_desc<8x16xf32>
 
     // A TensorDesc with 8x16 f32 elements for a memory region in shared memory space.
-    xegpu.tensor_desc<8x16xf32, #xegpu.tdesc_attr<memory_space = slm>>
+    xegpu.tensor_desc<8x16xf32, #xegpu.tdesc_attr<memory_scope = slm>>
+
+    // A TensorDesc with a sg_map
+    xegpu.tensor_desc<8x16xf32, #xegpu.sg_map<wi_layout = [1, 16], wi_data = [1, 1]>>
     ```
   }];
 
   let parameters = (ins ArrayRefParameter<"int64_t">: $shape,
                         "mlir::Type": $elementType,
-                        OptionalParameter<"mlir::Attribute">: $encoding);
+                        OptionalParameter<"mlir::Attribute">: $encoding,
+                        OptionalParameter<"mlir::Attribute">: $sg_map);
 
   let builders = [
     TypeBuilderWithInferredContext<(ins
@@ -91,11 +95,15 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
       CArg<"int", "1">: $array_length,
       CArg<"bool", "true">: $boundary_check,
       CArg<"xegpu::MemorySpace", "xegpu::MemorySpace::Global">:$memory_space)>,
+      CArg<"llvm::ArrayRef<uint32_t>", "{}">: $wi_layout,
+      CArg<"llvm::ArrayRef<uint32_t>", "{}">: $wi_data
     TypeBuilderWithInferredContext<(ins
       "llvm::ArrayRef<int64_t>": $shape,
       "mlir::Type": $elementType,
       CArg<"int", "1">: $chunk_size,
-      CArg<"xegpu::MemorySpace", "xegpu::MemorySpace::Global">:$memory_space)>
+      CArg<"xegpu::MemorySpace", "xegpu::MemorySpace::Global">:$memory_space)>,
+      CArg<"llvm::ArrayRef<uint32_t>", "{}">: $wi_layout,
+      CArg<"llvm::ArrayRef<uint32_t>", "{}">: $wi_data
   ];
 
   let extraClassDeclaration = [{
@@ -119,6 +127,10 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
 
     ScatterTensorDescAttr getEncodingAsScatterTensorDescAttr() const {
       return llvm::dyn_cast_if_present<ScatterTensorDescAttr>(getEncoding());
+    }
+
+    SGMapAttr getSGMapAttr() const {
+      return llvm::dyn_cast_if_present<SGMapAttr>(getSgMap());
     }
 
     xegpu::MemorySpace getMemorySpace() const {
