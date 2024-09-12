@@ -9,7 +9,7 @@ define zeroext i1 @fcmp_oeq(float %x, float %y) {
 ; SDAG:       ## %bb.0:
 ; SDAG-NEXT:    cmpeqss %xmm1, %xmm0
 ; SDAG-NEXT:    movd %xmm0, %eax
-; SDAG-NEXT:    andl $1, %eax
+; SDAG-NEXT:    andb $1, %al
 ; SDAG-NEXT:    ## kill: def $al killed $al killed $eax
 ; SDAG-NEXT:    retq
 ;
@@ -327,7 +327,7 @@ define zeroext i1 @fcmp_une(float %x, float %y) {
 ; SDAG:       ## %bb.0:
 ; SDAG-NEXT:    cmpneqss %xmm1, %xmm0
 ; SDAG-NEXT:    movd %xmm0, %eax
-; SDAG-NEXT:    andl $1, %eax
+; SDAG-NEXT:    andb $1, %al
 ; SDAG-NEXT:    ## kill: def $al killed $al killed $eax
 ; SDAG-NEXT:    retq
 ;
@@ -553,7 +553,7 @@ define zeroext i1 @fcmp_oeq3(float %x) {
 ; SDAG-NEXT:    xorps %xmm1, %xmm1
 ; SDAG-NEXT:    cmpeqss %xmm0, %xmm1
 ; SDAG-NEXT:    movd %xmm1, %eax
-; SDAG-NEXT:    andl $1, %eax
+; SDAG-NEXT:    andb $1, %al
 ; SDAG-NEXT:    ## kill: def $al killed $al killed $eax
 ; SDAG-NEXT:    retq
 ;
@@ -1165,7 +1165,7 @@ define zeroext i1 @fcmp_une3(float %x) {
 ; SDAG-NEXT:    xorps %xmm1, %xmm1
 ; SDAG-NEXT:    cmpneqss %xmm0, %xmm1
 ; SDAG-NEXT:    movd %xmm1, %eax
-; SDAG-NEXT:    andl $1, %eax
+; SDAG-NEXT:    andb $1, %al
 ; SDAG-NEXT:    ## kill: def $al killed $al killed $eax
 ; SDAG-NEXT:    retq
 ;

@@ -24,25 +24,25 @@ define void @_Z1nv() local_unnamed_addr {
 ; CHECK-LABEL: _Z1nv:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movq k@GOTPCREL(%rip), %rax
-; CHECK-NEXT:    movl 4(%rax), %edx
+; CHECK-NEXT:    movl 4(%rax), %ecx
 ; CHECK-NEXT:    movq c@GOTPCREL(%rip), %rax
-; CHECK-NEXT:    movswl (%rax), %ecx
+; CHECK-NEXT:    movswl (%rax), %esi
 ; CHECK-NEXT:    movq b@GOTPCREL(%rip), %rax
 ; CHECK-NEXT:    movswl (%rax), %edi
-; CHECK-NEXT:    movq a@GOTPCREL(%rip), %rsi
-; CHECK-NEXT:    movl (%rsi), %esi
+; CHECK-NEXT:    movq a@GOTPCREL(%rip), %rdx
+; CHECK-NEXT:    movl (%rdx), %edx
 ; CHECK-NEXT:    movq l@GOTPCREL(%rip), %r8
 ; CHECK-NEXT:    movl (%r8), %r8d
 ; CHECK-NEXT:    movl %r8d, %r9d
 ; CHECK-NEXT:    shll $7, %r9d
 ; CHECK-NEXT:    sarl $7, %r9d
 ; CHECK-NEXT:    negl %r9d
-; CHECK-NEXT:    testl %esi, %esi
-; CHECK-NEXT:    cmovel %esi, %r9d
-; CHECK-NEXT:    movzwl %dx, %r10d
-; CHECK-NEXT:    leal (%rcx,%r10,2), %ecx
-; CHECK-NEXT:    addl %edi, %ecx
-; CHECK-NEXT:    cmpl %r9d, %ecx
+; CHECK-NEXT:    testl %edx, %edx
+; CHECK-NEXT:    cmovel %edx, %r9d
+; CHECK-NEXT:    movzwl %cx, %r10d
+; CHECK-NEXT:    leal (%rsi,%r10,2), %esi
+; CHECK-NEXT:    addl %edi, %esi
+; CHECK-NEXT:    cmpl %r9d, %esi
 ; CHECK-NEXT:    sete %dil
 ; CHECK-NEXT:    testl $33554431, %r8d # imm = 0x1FFFFFF
 ; CHECK-NEXT:    sete %r8b
@@ -50,12 +50,12 @@ define void @_Z1nv() local_unnamed_addr {
 ; CHECK-NEXT:    movzbl %r8b, %edi
 ; CHECK-NEXT:    movq e@GOTPCREL(%rip), %r8
 ; CHECK-NEXT:    movw %di, (%r8)
-; CHECK-NEXT:    notl %ecx
-; CHECK-NEXT:    shrl $31, %ecx
-; CHECK-NEXT:    addl %edx, %ecx
+; CHECK-NEXT:    notl %esi
+; CHECK-NEXT:    shrl $31, %esi
+; CHECK-NEXT:    addb %sil, %cl
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
-; CHECK-NEXT:    sarl %cl, %esi
-; CHECK-NEXT:    movw %si, (%rax)
+; CHECK-NEXT:    sarl %cl, %edx
+; CHECK-NEXT:    movw %dx, (%rax)
 ; CHECK-NEXT:    retq
 entry:
   %bf.load = load i32, ptr getelementptr inbounds (%struct.m, ptr @k, i64 0, i32 0, i32 1), align 4

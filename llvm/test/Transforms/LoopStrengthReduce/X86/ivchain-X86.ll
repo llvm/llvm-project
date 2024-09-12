@@ -312,22 +312,18 @@ define void @foldedidx(ptr nocapture %a, ptr nocapture %b, ptr nocapture %c) nou
 ; X64-NEXT:    .p2align 4
 ; X64-NEXT:  .LBB3_1: # %for.body
 ; X64-NEXT:    # =>This Inner Loop Header: Depth=1
-; X64-NEXT:    movzbl -3(%rdi,%rax), %ecx
-; X64-NEXT:    movzbl -3(%rsi,%rax), %r8d
-; X64-NEXT:    addl %ecx, %r8d
-; X64-NEXT:    movb %r8b, -3(%rdx,%rax)
-; X64-NEXT:    movzbl -2(%rdi,%rax), %ecx
-; X64-NEXT:    movzbl -2(%rsi,%rax), %r8d
-; X64-NEXT:    addl %ecx, %r8d
-; X64-NEXT:    movb %r8b, -2(%rdx,%rax)
-; X64-NEXT:    movzbl -1(%rdi,%rax), %ecx
-; X64-NEXT:    movzbl -1(%rsi,%rax), %r8d
-; X64-NEXT:    addl %ecx, %r8d
-; X64-NEXT:    movb %r8b, -1(%rdx,%rax)
-; X64-NEXT:    movzbl (%rdi,%rax), %ecx
-; X64-NEXT:    movzbl (%rsi,%rax), %r8d
-; X64-NEXT:    addl %ecx, %r8d
-; X64-NEXT:    movb %r8b, (%rdx,%rax)
+; X64-NEXT:    movzbl -3(%rsi,%rax), %ecx
+; X64-NEXT:    addb -3(%rdi,%rax), %cl
+; X64-NEXT:    movb %cl, -3(%rdx,%rax)
+; X64-NEXT:    movzbl -2(%rsi,%rax), %ecx
+; X64-NEXT:    addb -2(%rdi,%rax), %cl
+; X64-NEXT:    movb %cl, -2(%rdx,%rax)
+; X64-NEXT:    movzbl -1(%rsi,%rax), %ecx
+; X64-NEXT:    addb -1(%rdi,%rax), %cl
+; X64-NEXT:    movb %cl, -1(%rdx,%rax)
+; X64-NEXT:    movzbl (%rsi,%rax), %ecx
+; X64-NEXT:    addb (%rdi,%rax), %cl
+; X64-NEXT:    movb %cl, (%rdx,%rax)
 ; X64-NEXT:    addq $4, %rax
 ; X64-NEXT:    cmpl $403, %eax # imm = 0x193
 ; X64-NEXT:    jne .LBB3_1
@@ -337,7 +333,6 @@ define void @foldedidx(ptr nocapture %a, ptr nocapture %b, ptr nocapture %c) nou
 ; X32-LABEL: foldedidx:
 ; X32:       # %bb.0: # %entry
 ; X32-NEXT:    pushl %ebx
-; X32-NEXT:    pushl %edi
 ; X32-NEXT:    pushl %esi
 ; X32-NEXT:    movl $3, %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -346,28 +341,23 @@ define void @foldedidx(ptr nocapture %a, ptr nocapture %b, ptr nocapture %c) nou
 ; X32-NEXT:    .p2align 4
 ; X32-NEXT:  .LBB3_1: # %for.body
 ; X32-NEXT:    # =>This Inner Loop Header: Depth=1
-; X32-NEXT:    movzbl -3(%esi,%eax), %edi
 ; X32-NEXT:    movzbl -3(%edx,%eax), %ebx
-; X32-NEXT:    addl %edi, %ebx
+; X32-NEXT:    addb -3(%esi,%eax), %bl
 ; X32-NEXT:    movb %bl, -3(%ecx,%eax)
-; X32-NEXT:    movzbl -2(%esi,%eax), %edi
 ; X32-NEXT:    movzbl -2(%edx,%eax), %ebx
-; X32-NEXT:    addl %edi, %ebx
+; X32-NEXT:    addb -2(%esi,%eax), %bl
 ; X32-NEXT:    movb %bl, -2(%ecx,%eax)
-; X32-NEXT:    movzbl -1(%esi,%eax), %edi
 ; X32-NEXT:    movzbl -1(%edx,%eax), %ebx
-; X32-NEXT:    addl %edi, %ebx
+; X32-NEXT:    addb -1(%esi,%eax), %bl
 ; X32-NEXT:    movb %bl, -1(%ecx,%eax)
-; X32-NEXT:    movzbl (%esi,%eax), %edi
 ; X32-NEXT:    movzbl (%edx,%eax), %ebx
-; X32-NEXT:    addl %edi, %ebx
+; X32-NEXT:    addb (%esi,%eax), %bl
 ; X32-NEXT:    movb %bl, (%ecx,%eax)
 ; X32-NEXT:    addl $4, %eax
 ; X32-NEXT:    cmpl $403, %eax # imm = 0x193
 ; X32-NEXT:    jne .LBB3_1
 ; X32-NEXT:  # %bb.2: # %for.end
 ; X32-NEXT:    popl %esi
-; X32-NEXT:    popl %edi
 ; X32-NEXT:    popl %ebx
 ; X32-NEXT:    retl
 entry:

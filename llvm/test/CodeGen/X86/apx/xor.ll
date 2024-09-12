@@ -6,14 +6,12 @@
 define i8 @xor8rr(i8 noundef %a, i8 noundef %b) {
 ; CHECK-LABEL: xor8rr:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xorl %esi, %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x31,0xf7]
-; CHECK-NEXT:    # kill: def $al killed $al killed $eax
+; CHECK-NEXT:    xorb %sil, %dil, %al # encoding: [0x62,0xf4,0x7c,0x18,0x30,0xf7]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
 ; NF-LABEL: xor8rr:
 ; NF:       # %bb.0: # %entry
-; NF-NEXT:    {nf} xorl %esi, %edi, %eax # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7c,0x1c,0x31,0xf7]
-; NF-NEXT:    # kill: def $al killed $al killed $eax
+; NF-NEXT:    {nf} xorb %sil, %dil, %al # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7c,0x1c,0x30,0xf7]
 ; NF-NEXT:    retq # encoding: [0xc3]
 entry:
     %xor = xor i8 %a, %b
@@ -429,8 +427,8 @@ entry:
 define i1 @xorflag8rr(i8 %a, i8 %b) {
 ; CHECK-LABEL: xorflag8rr:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %edi, %esi # EVEX TO LEGACY Compression encoding: [0x31,0xfe]
-; CHECK-NEXT:    xorb $-1, %sil, %cl # encoding: [0x62,0xf4,0x74,0x18,0x80,0xf6,0xff]
+; CHECK-NEXT:    xorb %dil, %sil, %al # encoding: [0x62,0xf4,0x7c,0x18,0x30,0xfe]
+; CHECK-NEXT:    xorb $-1, %al, %cl # encoding: [0x62,0xf4,0x74,0x18,0x80,0xf0,0xff]
 ; CHECK-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; CHECK-NEXT:    movb %cl, d64(%rip) # encoding: [0x88,0x0d,A,A,A,A]
 ; CHECK-NEXT:    # fixup A - offset: 2, value: d64-4, kind: reloc_riprel_4byte
@@ -438,8 +436,8 @@ define i1 @xorflag8rr(i8 %a, i8 %b) {
 ;
 ; NF-LABEL: xorflag8rr:
 ; NF:       # %bb.0:
-; NF-NEXT:    xorl %edi, %esi # EVEX TO LEGACY Compression encoding: [0x31,0xfe]
-; NF-NEXT:    xorb $-1, %sil, %cl # encoding: [0x62,0xf4,0x74,0x18,0x80,0xf6,0xff]
+; NF-NEXT:    {nf} xorb %dil, %sil, %al # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7c,0x1c,0x30,0xfe]
+; NF-NEXT:    xorb $-1, %al, %cl # encoding: [0x62,0xf4,0x74,0x18,0x80,0xf0,0xff]
 ; NF-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; NF-NEXT:    movb %cl, d64(%rip) # encoding: [0x88,0x0d,A,A,A,A]
 ; NF-NEXT:    # fixup A - offset: 2, value: d64-4, kind: reloc_riprel_4byte

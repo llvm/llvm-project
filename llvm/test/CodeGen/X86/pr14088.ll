@@ -29,10 +29,10 @@ define i32 @f(i1 %foo, ptr %tm_year2, ptr %bar, i16 %zed, i32 %zed2) {
 ; CHECK-NEXT:    movswq %ax, %rax
 ; CHECK-NEXT:    imulq $1717986919, %rax, %rax # imm = 0x66666667
 ; CHECK-NEXT:    movq %rax, %rcx
-; CHECK-NEXT:    shrq $63, %rcx
-; CHECK-NEXT:    shrq $34, %rax
-; CHECK-NEXT:    addl %ecx, %eax
-; CHECK-NEXT:    movb %al, (%rdx)
+; CHECK-NEXT:    shrq $34, %rcx
+; CHECK-NEXT:    shrq $63, %rax
+; CHECK-NEXT:    addb %al, %cl
+; CHECK-NEXT:    movb %cl, (%rdx)
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:  .LBB0_2: # %return
 ; CHECK-NEXT:    retq

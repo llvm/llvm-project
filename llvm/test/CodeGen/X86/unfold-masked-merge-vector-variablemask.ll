@@ -16,11 +16,10 @@
 define <1 x i8> @out_v1i8(<1 x i8> %x, <1 x i8> %y, <1 x i8> %mask) nounwind {
 ; CHECK-LABEL: out_v1i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edx, %eax
-; CHECK-NEXT:    andl %edx, %edi
-; CHECK-NEXT:    notb %al
-; CHECK-NEXT:    andb %sil, %al
-; CHECK-NEXT:    orb %dil, %al
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    xorb %sil, %al
+; CHECK-NEXT:    andb %dl, %al
+; CHECK-NEXT:    xorb %sil, %al
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
   %mx = and <1 x i8> %x, %mask
@@ -37,32 +36,28 @@ define <1 x i8> @out_v1i8(<1 x i8> %x, <1 x i8> %y, <1 x i8> %mask) nounwind {
 define <2 x i8> @out_v2i8(<2 x i8> %x, <2 x i8> %y, <2 x i8> %mask) nounwind {
 ; CHECK-BASELINE-LABEL: out_v2i8:
 ; CHECK-BASELINE:       # %bb.0:
-; CHECK-BASELINE-NEXT:    movl %r8d, %eax
-; CHECK-BASELINE-NEXT:    andl %r9d, %esi
-; CHECK-BASELINE-NEXT:    andl %r8d, %edi
-; CHECK-BASELINE-NEXT:    notb %al
-; CHECK-BASELINE-NEXT:    notb %r9b
-; CHECK-BASELINE-NEXT:    andb %cl, %r9b
-; CHECK-BASELINE-NEXT:    andb %dl, %al
-; CHECK-BASELINE-NEXT:    orb %dil, %al
-; CHECK-BASELINE-NEXT:    orb %sil, %r9b
+; CHECK-BASELINE-NEXT:    movl %edi, %eax
+; CHECK-BASELINE-NEXT:    xorb %dl, %al
+; CHECK-BASELINE-NEXT:    andb %r8b, %al
+; CHECK-BASELINE-NEXT:    xorb %dl, %al
+; CHECK-BASELINE-NEXT:    xorb %cl, %sil
+; CHECK-BASELINE-NEXT:    andb %r9b, %sil
+; CHECK-BASELINE-NEXT:    xorb %cl, %sil
 ; CHECK-BASELINE-NEXT:    # kill: def $al killed $al killed $eax
-; CHECK-BASELINE-NEXT:    movl %r9d, %edx
+; CHECK-BASELINE-NEXT:    movl %esi, %edx
 ; CHECK-BASELINE-NEXT:    retq
 ;
 ; CHECK-SSE1-LABEL: out_v2i8:
 ; CHECK-SSE1:       # %bb.0:
-; CHECK-SSE1-NEXT:    movl %r8d, %eax
-; CHECK-SSE1-NEXT:    andl %r9d, %esi
-; CHECK-SSE1-NEXT:    andl %r8d, %edi
-; CHECK-SSE1-NEXT:    notb %al
-; CHECK-SSE1-NEXT:    notb %r9b
-; CHECK-SSE1-NEXT:    andb %cl, %r9b
-; CHECK-SSE1-NEXT:    andb %dl, %al
-; CHECK-SSE1-NEXT:    orb %dil, %al
-; CHECK-SSE1-NEXT:    orb %sil, %r9b
+; CHECK-SSE1-NEXT:    movl %edi, %eax
+; CHECK-SSE1-NEXT:    xorb %dl, %al
+; CHECK-SSE1-NEXT:    andb %r8b, %al
+; CHECK-SSE1-NEXT:    xorb %dl, %al
+; CHECK-SSE1-NEXT:    xorb %cl, %sil
+; CHECK-SSE1-NEXT:    andb %r9b, %sil
+; CHECK-SSE1-NEXT:    xorb %cl, %sil
 ; CHECK-SSE1-NEXT:    # kill: def $al killed $al killed $eax
-; CHECK-SSE1-NEXT:    movl %r9d, %edx
+; CHECK-SSE1-NEXT:    movl %esi, %edx
 ; CHECK-SSE1-NEXT:    retq
 ;
 ; CHECK-SSE2-LABEL: out_v2i8:
@@ -111,7 +106,7 @@ define <4 x i8> @out_v4i8(<4 x i8> %x, <4 x i8> %y, <4 x i8> %mask) nounwind {
 ; CHECK-BASELINE-NEXT:    movzbl {{[0-9]+}}(%rsp), %edi
 ; CHECK-BASELINE-NEXT:    movzbl {{[0-9]+}}(%rsp), %r10d
 ; CHECK-BASELINE-NEXT:    movzbl {{[0-9]+}}(%rsp), %r11d
-; CHECK-BASELINE-NEXT:    xorl %r9d, %esi
+; CHECK-BASELINE-NEXT:    xorb %r9b, %sil
 ; CHECK-BASELINE-NEXT:    andb {{[0-9]+}}(%rsp), %sil
 ; CHECK-BASELINE-NEXT:    xorb %r9b, %sil
 ; CHECK-BASELINE-NEXT:    xorb %r11b, %dl
@@ -135,7 +130,7 @@ define <4 x i8> @out_v4i8(<4 x i8> %x, <4 x i8> %y, <4 x i8> %mask) nounwind {
 ; CHECK-SSE1-NEXT:    movzbl {{[0-9]+}}(%rsp), %edi
 ; CHECK-SSE1-NEXT:    movzbl {{[0-9]+}}(%rsp), %r10d
 ; CHECK-SSE1-NEXT:    movzbl {{[0-9]+}}(%rsp), %r11d
-; CHECK-SSE1-NEXT:    xorl %r9d, %esi
+; CHECK-SSE1-NEXT:    xorb %r9b, %sil
 ; CHECK-SSE1-NEXT:    andb {{[0-9]+}}(%rsp), %sil
 ; CHECK-SSE1-NEXT:    xorb %r9b, %sil
 ; CHECK-SSE1-NEXT:    xorb %r11b, %dl
@@ -178,7 +173,7 @@ define <4 x i8> @out_v4i8_undef(<4 x i8> %x, <4 x i8> %y, <4 x i8> %mask) nounwi
 ; CHECK-BASELINE-NEXT:    movzbl {{[0-9]+}}(%rsp), %edi
 ; CHECK-BASELINE-NEXT:    movzbl {{[0-9]+}}(%rsp), %r10d
 ; CHECK-BASELINE-NEXT:    andb {{[0-9]+}}(%rsp), %cl
-; CHECK-BASELINE-NEXT:    xorl %r9d, %esi
+; CHECK-BASELINE-NEXT:    xorb %r9b, %sil
 ; CHECK-BASELINE-NEXT:    andb {{[0-9]+}}(%rsp), %sil
 ; CHECK-BASELINE-NEXT:    xorb %r9b, %sil
 ; CHECK-BASELINE-NEXT:    xorb %r10b, %dl
@@ -199,7 +194,7 @@ define <4 x i8> @out_v4i8_undef(<4 x i8> %x, <4 x i8> %y, <4 x i8> %mask) nounwi
 ; CHECK-SSE1-NEXT:    movzbl {{[0-9]+}}(%rsp), %edi
 ; CHECK-SSE1-NEXT:    movzbl {{[0-9]+}}(%rsp), %r10d
 ; CHECK-SSE1-NEXT:    andb {{[0-9]+}}(%rsp), %cl
-; CHECK-SSE1-NEXT:    xorl %r9d, %esi
+; CHECK-SSE1-NEXT:    xorb %r9b, %sil
 ; CHECK-SSE1-NEXT:    andb {{[0-9]+}}(%rsp), %sil
 ; CHECK-SSE1-NEXT:    xorb %r9b, %sil
 ; CHECK-SSE1-NEXT:    xorb %r10b, %dl
@@ -2277,9 +2272,9 @@ define <1 x i8> @in_v1i8(<1 x i8> %x, <1 x i8> %y, <1 x i8> %mask) nounwind {
 ; CHECK-LABEL: in_v1i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    xorl %esi, %eax
-; CHECK-NEXT:    andl %edx, %eax
-; CHECK-NEXT:    xorl %esi, %eax
+; CHECK-NEXT:    xorb %sil, %al
+; CHECK-NEXT:    andb %dl, %al
+; CHECK-NEXT:    xorb %sil, %al
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
   %n0 = xor <1 x i8> %x, %y
@@ -2296,12 +2291,12 @@ define <2 x i8> @in_v2i8(<2 x i8> %x, <2 x i8> %y, <2 x i8> %mask) nounwind {
 ; CHECK-BASELINE-LABEL: in_v2i8:
 ; CHECK-BASELINE:       # %bb.0:
 ; CHECK-BASELINE-NEXT:    movl %edi, %eax
-; CHECK-BASELINE-NEXT:    xorl %edx, %eax
-; CHECK-BASELINE-NEXT:    xorl %ecx, %esi
-; CHECK-BASELINE-NEXT:    andl %r9d, %esi
-; CHECK-BASELINE-NEXT:    andl %r8d, %eax
-; CHECK-BASELINE-NEXT:    xorl %edx, %eax
-; CHECK-BASELINE-NEXT:    xorl %ecx, %esi
+; CHECK-BASELINE-NEXT:    xorb %dl, %al
+; CHECK-BASELINE-NEXT:    xorb %cl, %sil
+; CHECK-BASELINE-NEXT:    andb %r9b, %sil
+; CHECK-BASELINE-NEXT:    andb %r8b, %al
+; CHECK-BASELINE-NEXT:    xorb %dl, %al
+; CHECK-BASELINE-NEXT:    xorb %cl, %sil
 ; CHECK-BASELINE-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-BASELINE-NEXT:    movl %esi, %edx
 ; CHECK-BASELINE-NEXT:    retq
@@ -2309,12 +2304,12 @@ define <2 x i8> @in_v2i8(<2 x i8> %x, <2 x i8> %y, <2 x i8> %mask) nounwind {
 ; CHECK-SSE1-LABEL: in_v2i8:
 ; CHECK-SSE1:       # %bb.0:
 ; CHECK-SSE1-NEXT:    movl %edi, %eax
-; CHECK-SSE1-NEXT:    xorl %edx, %eax
-; CHECK-SSE1-NEXT:    xorl %ecx, %esi
-; CHECK-SSE1-NEXT:    andl %r9d, %esi
-; CHECK-SSE1-NEXT:    andl %r8d, %eax
-; CHECK-SSE1-NEXT:    xorl %edx, %eax
-; CHECK-SSE1-NEXT:    xorl %ecx, %esi
+; CHECK-SSE1-NEXT:    xorb %dl, %al
+; CHECK-SSE1-NEXT:    xorb %cl, %sil
+; CHECK-SSE1-NEXT:    andb %r9b, %sil
+; CHECK-SSE1-NEXT:    andb %r8b, %al
+; CHECK-SSE1-NEXT:    xorb %dl, %al
+; CHECK-SSE1-NEXT:    xorb %cl, %sil
 ; CHECK-SSE1-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-SSE1-NEXT:    movl %esi, %edx
 ; CHECK-SSE1-NEXT:    retq
@@ -2362,7 +2357,7 @@ define <4 x i8> @in_v4i8(<4 x i8> %x, <4 x i8> %y, <4 x i8> %mask) nounwind {
 ; CHECK-BASELINE-NEXT:    movzbl {{[0-9]+}}(%rsp), %edi
 ; CHECK-BASELINE-NEXT:    movzbl {{[0-9]+}}(%rsp), %r10d
 ; CHECK-BASELINE-NEXT:    movzbl {{[0-9]+}}(%rsp), %r11d
-; CHECK-BASELINE-NEXT:    xorl %r9d, %esi
+; CHECK-BASELINE-NEXT:    xorb %r9b, %sil
 ; CHECK-BASELINE-NEXT:    xorb %r11b, %dl
 ; CHECK-BASELINE-NEXT:    xorb %r10b, %cl
 ; CHECK-BASELINE-NEXT:    xorb %dil, %r8b
@@ -2386,7 +2381,7 @@ define <4 x i8> @in_v4i8(<4 x i8> %x, <4 x i8> %y, <4 x i8> %mask) nounwind {
 ; CHECK-SSE1-NEXT:    movzbl {{[0-9]+}}(%rsp), %edi
 ; CHECK-SSE1-NEXT:    movzbl {{[0-9]+}}(%rsp), %r10d
 ; CHECK-SSE1-NEXT:    movzbl {{[0-9]+}}(%rsp), %r11d
-; CHECK-SSE1-NEXT:    xorl %r9d, %esi
+; CHECK-SSE1-NEXT:    xorb %r9b, %sil
 ; CHECK-SSE1-NEXT:    xorb %r11b, %dl
 ; CHECK-SSE1-NEXT:    xorb %r10b, %cl
 ; CHECK-SSE1-NEXT:    xorb %dil, %r8b

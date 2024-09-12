@@ -597,7 +597,7 @@ define <4 x i32> @vec(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X64-NEXT:    subq $1, %rbp
 ; X64-NEXT:    sbbq $0, %r14
 ; X64-NEXT:    shrq $63, %rbx
-; X64-NEXT:    xorl %r15d, %ebx
+; X64-NEXT:    xorb %r15b, %bl
 ; X64-NEXT:    movq %r12, %rdi
 ; X64-NEXT:    movq %r13, %rsi
 ; X64-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
@@ -648,7 +648,7 @@ define <4 x i32> @vec(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X64-NEXT:    subq $1, %rbp
 ; X64-NEXT:    sbbq $0, %r14
 ; X64-NEXT:    shrq $63, %rbx
-; X64-NEXT:    xorl %r15d, %ebx
+; X64-NEXT:    xorb %r15b, %bl
 ; X64-NEXT:    movq %r12, %rdi
 ; X64-NEXT:    movq %r13, %rsi
 ; X64-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
@@ -710,7 +710,7 @@ define <4 x i32> @vec(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X64-NEXT:    subq $1, %rbp
 ; X64-NEXT:    sbbq $0, %r14
 ; X64-NEXT:    shrq $63, %rbx
-; X64-NEXT:    xorl %r15d, %ebx
+; X64-NEXT:    xorb %r15b, %bl
 ; X64-NEXT:    movq %r12, %rdi
 ; X64-NEXT:    movq %r13, %rsi
 ; X64-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
@@ -760,7 +760,7 @@ define <4 x i32> @vec(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X64-NEXT:    subq $1, %rbp
 ; X64-NEXT:    sbbq $0, %r14
 ; X64-NEXT:    shrq $63, %rbx
-; X64-NEXT:    xorl %r15d, %ebx
+; X64-NEXT:    xorb %r15b, %bl
 ; X64-NEXT:    movq %r12, %rdi
 ; X64-NEXT:    movq %r13, %rsi
 ; X64-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload

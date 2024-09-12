@@ -18,7 +18,7 @@ define zeroext i1 @_Z9test_log2v() {
 ; CHECK-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-NEXT:    cmpeqss (%esp), %xmm0
 ; CHECK-NEXT:    movd %xmm0, %eax
-; CHECK-NEXT:    andl $1, %eax
+; CHECK-NEXT:    andb $1, %al
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    popl %ecx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 4

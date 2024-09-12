@@ -27,7 +27,7 @@ define i1 @test_spill_slot_size(i1 %a1, i2 %a2, i7 %a7, i8 %a8, i9 %a9, i15 %a15
 ; CHECK-NEXT:    andb $3, %sil
 ; CHECK-NEXT:    movb %sil, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movl %ebx, %eax
-; CHECK-NEXT:    andl $1, %eax
+; CHECK-NEXT:    andb $1, %al
 ; CHECK-NEXT:    movb %al, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    andb $127, %dl
 ; CHECK-NEXT:    movb %dl, {{[0-9]+}}(%rsp)

@@ -1195,7 +1195,7 @@ define i1 @bool_reduction_v8i32(<8 x i32> %x, <8 x i32> %y) {
 ; SSE2-NEXT:    packssdw %xmm1, %xmm0
 ; SSE2-NEXT:    packsswb %xmm0, %xmm0
 ; SSE2-NEXT:    pmovmskb %xmm0, %eax
-; SSE2-NEXT:    xorb $-1, %al
+; SSE2-NEXT:    cmpb $-1, %al
 ; SSE2-NEXT:    setne %al
 ; SSE2-NEXT:    retq
 ;

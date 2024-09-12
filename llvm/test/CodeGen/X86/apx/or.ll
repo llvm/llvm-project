@@ -6,14 +6,12 @@
 define i8 @or8rr(i8 noundef %a, i8 noundef %b) {
 ; CHECK-LABEL: or8rr:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    orl %esi, %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x09,0xf7]
-; CHECK-NEXT:    # kill: def $al killed $al killed $eax
+; CHECK-NEXT:    orb %sil, %dil, %al # encoding: [0x62,0xf4,0x7c,0x18,0x08,0xf7]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
 ; NF-LABEL: or8rr:
 ; NF:       # %bb.0: # %entry
-; NF-NEXT:    {nf} orl %esi, %edi, %eax # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7c,0x1c,0x09,0xf7]
-; NF-NEXT:    # kill: def $al killed $al killed $eax
+; NF-NEXT:    {nf} orb %sil, %dil, %al # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7c,0x1c,0x08,0xf7]
 ; NF-NEXT:    retq # encoding: [0xc3]
 entry:
     %or = or i8 %a, %b

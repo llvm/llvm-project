@@ -2472,6 +2472,10 @@ define <32 x i1> @pr51133(<32 x i8> %x, <32 x i8> %y) {
 ; CHECK-AVX512VL-NEXT:    vpackuswb %ymm3, %ymm2, %ymm2
 ; CHECK-AVX512VL-NEXT:    vpminub {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm2, %ymm3
 ; CHECK-AVX512VL-NEXT:    vpcmpeqb %ymm3, %ymm2, %ymm2
+; CHECK-AVX512VL-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm0, %ymm0
+; CHECK-AVX512VL-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; CHECK-AVX512VL-NEXT:    vpcmpgtb %ymm3, %ymm0, %ymm0
+; CHECK-AVX512VL-NEXT:    vpcmpeqb %ymm3, %ymm1, %ymm1
 ; CHECK-AVX512VL-NEXT:    vmovdqa {{.*#+}} ymm3 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255]
 ; CHECK-AVX512VL-NEXT:    vpandn %ymm3, %ymm2, %ymm2
 ; CHECK-AVX512VL-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm0, %ymm0

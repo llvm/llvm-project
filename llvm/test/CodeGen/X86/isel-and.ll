@@ -30,7 +30,7 @@ define i1 @and_i1(i1 %a, i1 %b) {
 ; SDAG-X64-LABEL: and_i1:
 ; SDAG-X64:       # %bb.0:
 ; SDAG-X64-NEXT:    movl %edi, %eax
-; SDAG-X64-NEXT:    andl %esi, %eax
+; SDAG-X64-NEXT:    andb %sil, %al
 ; SDAG-X64-NEXT:    # kill: def $al killed $al killed $eax
 ; SDAG-X64-NEXT:    retq
 ;
@@ -74,7 +74,7 @@ define i8 @and_i8(i8 %a, i8 %b) {
 ; SDAG-X64-LABEL: and_i8:
 ; SDAG-X64:       # %bb.0:
 ; SDAG-X64-NEXT:    movl %edi, %eax
-; SDAG-X64-NEXT:    andl %esi, %eax
+; SDAG-X64-NEXT:    andb %sil, %al
 ; SDAG-X64-NEXT:    # kill: def $al killed $al killed $eax
 ; SDAG-X64-NEXT:    retq
 ;
