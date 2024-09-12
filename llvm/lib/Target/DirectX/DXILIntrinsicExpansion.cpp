@@ -452,7 +452,7 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
   case Intrinsic::dx_sdot:
   case Intrinsic::dx_udot:
     Result = expandIntegerDotIntrinsic(Orig, IntrinsicId);
-    break;  
+    break;
   case Intrinsic::dx_sign:
     Result = expandSignIntrinsic(Orig);
     break;

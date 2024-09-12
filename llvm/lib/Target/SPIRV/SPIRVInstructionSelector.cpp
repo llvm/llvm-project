@@ -1667,7 +1667,6 @@ bool SPIRVInstructionSelector::selectSaturate(Register ResVReg,
       .constrainAllUses(TII, TRI, RBI);
 }
 
-
 bool SPIRVInstructionSelector::selectSign(Register ResVReg,
                                           const SPIRVType *ResType,
                                           MachineInstr &I) const {
