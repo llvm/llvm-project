@@ -33,6 +33,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -1536,57 +1537,6 @@ static Value *matchCondition(BranchInst *BI, BasicBlock *LoopEntry,
   return nullptr;
 }
 
-/// getCandidateResInstr - If there is strlen calculated, return the Result
-/// instruction based on the \p OpWidth passed, else return nullptr
-static Instruction *getCandidateResInstr(Instruction *EndAddress,
-                                         Value *StartAddress,
-                                         unsigned OpWidth) {
-  using namespace llvm::PatternMatch;
-
-  assert(StartAddress && "Valid start address required.");
-
-  // lambda expression to check that the instruction has a single user
-  auto GetSingleUser = [](Instruction *I) -> User * {
-    if (I->hasOneUse())
-      return *I->user_begin();
-    return nullptr;
-  };
-
-  // The pointer to the end address should only have one use which is a pointer
-  // to int instruction.
-  auto *TmpUser = GetSingleUser(EndAddress);
-  if (!TmpUser)
-    return nullptr;
-
-  if (PtrToIntInst *PToI = dyn_cast<PtrToIntInst>(TmpUser)) {
-    // The only user of the PtrToIntInst should be the sub instruction that
-    // calculates the difference b/w the two pointer operands.
-    TmpUser = GetSingleUser(PToI);
-    if (!TmpUser)
-      return nullptr;
-    Instruction *Inst = dyn_cast<Instruction>(TmpUser);
-
-    if (!Inst || Inst->getOpcode() != Instruction::Sub ||
-        Inst->getOperand(0) != PToI)
-      return nullptr;
-    Value *MatchAddr;
-    if (match(Inst->getOperand(1), m_PtrToInt(m_Value(MatchAddr)))) {
-      if (MatchAddr != StartAddress)
-        return nullptr;
-
-      // We found the candidate sub instruction
-      switch (OpWidth) {
-      case 8:
-        return Inst;
-      default:
-        return nullptr;
-      }
-    }
-  }
-
-  return nullptr;
-}
-
 /// Recognizes a strlen idiom by checking for loops that increment
 /// a char pointer and then subtract with the base pointer.
 ///
@@ -1595,22 +1545,19 @@ static Instruction *getCandidateResInstr(Instruction *EndAddress,
 ///
 /// The core idiom we are trying to detect is:
 /// \code
-///     if (str == NULL)
-///       goto loop-exit // the precondition of the loop
 ///     start = str;
 ///     do {
 ///       str++;
-///     } while(*str!='\0');
-///     return (str - start);
-/// loop-exit:
+///     } while(*str != '\0');
 /// \endcode
 ///
 /// The transformed output is similar to below c-code:
 /// \code
-///     if (str == NULL)
-///       goto loop-exit // the precondition of the loop
-///     return strlen(str);
+///     str = start + strlen(start)
+///     len = str - start
 /// \endcode
+///
+/// Later the pointer subtraction will be folded by InstCombine
 bool LoopIdiomRecognize::recognizeAndInsertStrLen() {
   if (DisableLIRPStrlen)
     return false;
@@ -1620,30 +1567,20 @@ bool LoopIdiomRecognize::recognizeAndInsertStrLen() {
     return false;
 
   // It should have a preheader containing nothing but an unconditional branch.
-  auto *Pre = CurLoop->getLoopPreheader();
-  if (!Pre || &Pre->front() != Pre->getTerminator())
+  auto *Preheader = CurLoop->getLoopPreheader();
+  if (!Preheader || &Preheader->front() != Preheader->getTerminator())
     return false;
 
-  auto *EntryBI = dyn_cast<BranchInst>(Pre->getTerminator());
+  auto *EntryBI = dyn_cast<BranchInst>(Preheader->getTerminator());
   if (!EntryBI || EntryBI->isConditional())
-    return false;
-
-  // It should have a precondition block
-  auto *PreCondBB = Pre->getSinglePredecessor();
-  if (!PreCondBB)
-    return false;
-
-  // The precondition terminator instruction should skip the loop body based on
-  // an icmp with zero/null.
-  if (!matchCondition(dyn_cast<BranchInst>(PreCondBB->getTerminator()), Pre))
     return false;
 
   // The loop exit must be conditioned on an icmp with 0.
   // The icmp operand has to be a load on some SSA reg that increments
   // by 1 in the loop.
-  auto *LoopBody = *(CurLoop->block_begin());
-  auto *LoopTerm = dyn_cast<BranchInst>(LoopBody->getTerminator());
-  auto *LoopCond = matchCondition(LoopTerm, LoopBody);
+  BasicBlock *LoopBody = *CurLoop->block_begin();
+  BranchInst *LoopTerm = dyn_cast<BranchInst>(LoopBody->getTerminator());
+  Value *LoopCond = matchCondition(LoopTerm, LoopBody);
 
   if (!LoopCond)
     return false;
@@ -1660,6 +1597,7 @@ bool LoopIdiomRecognize::recognizeAndInsertStrLen() {
   // the loop, indicating strlen calculation.
   auto *IncPtr = LoopLoad->getPointerOperand();
   const SCEVAddRecExpr *LoadEv = dyn_cast<SCEVAddRecExpr>(SE->getSCEV(IncPtr));
+
   if (!LoadEv || LoadEv->getLoop() != CurLoop || !LoadEv->isAffine())
     return false;
 
@@ -1700,6 +1638,7 @@ bool LoopIdiomRecognize::recognizeAndInsertStrLen() {
   if (!LCSSAPhi || !SE->isSCEVable(LCSSAPhi->getType()))
     return false;
 
+  // This matched the pointer version of the idiom
   if (LCSSAPhi->getIncomingValueForBlock(LoopBody) !=
       LoopLoad->getPointerOperand())
     return false;
@@ -1712,33 +1651,32 @@ bool LoopIdiomRecognize::recognizeAndInsertStrLen() {
     return false;
 
   // We can now expand the base of the str
-  IRBuilder<> Builder(Pre->getTerminator());
+  IRBuilder<> Builder(Preheader->getTerminator());
 
-  PHINode *LoopPhi = &*LoopBody->phis().begin();
-  if (!LoopPhi || ++LoopBody->phis().begin() != LoopBody->phis().end())
+  auto LoopPhiRange = LoopBody->phis();
+  if (!hasNItems(LoopPhiRange, 1))
     return false;
-  Value *PreVal = LoopBody->phis().begin()->getIncomingValueForBlock(Pre);
+  auto *LoopPhi = &*LoopPhiRange.begin();
+  Value *PreVal = LoopPhi->getIncomingValueForBlock(Preheader);
   if (!PreVal)
     return false;
 
   Value *Expanded = nullptr;
+  Type *ExpandedType = nullptr;
   if (auto *GEP = dyn_cast<GetElementPtrInst>(LoopLoad->getPointerOperand())) {
     if (GEP->getPointerOperand() != LoopPhi)
       return false;
     GetElementPtrInst *NewGEP =
         GetElementPtrInst::Create(GEP->getSourceElementType(), PreVal,
                                   SmallVector<Value *, 4>(GEP->indices()),
-                                  "newgep", Pre->getTerminator());
+                                  "newgep", Preheader->getTerminator());
     Expanded = NewGEP;
-  } else if (LoopLoad->getPointerOperand() == LoopPhi)
+    ExpandedType = NewGEP->getSourceElementType();
+  } else if (LoopLoad->getPointerOperand() == LoopPhi) {
     Expanded = PreVal;
+    ExpandedType = LoopLoad->getType();
+  }
   if (!Expanded)
-    return false;
-
-  // Check that the LoopExitBB is calculating the string length and identify
-  // the instruction that has the string length calculation
-  Instruction *ResInst = getCandidateResInstr(LCSSAPhi, PreVal, OpWidth);
-  if (!ResInst)
     return false;
 
   // Ensure that the GEP has the correct index if the pointer was modified.
@@ -1786,11 +1724,12 @@ bool LoopIdiomRecognize::recognizeAndInsertStrLen() {
 
   assert(StrLenFunc && "Failed to emit strlen function.");
 
-  // Replace the subtraction instruction by the result of strlen
-  ResInst->replaceAllUsesWith(StrLenFunc);
-
-  // Remove the loop-exit branch and delete dead instructions
-  RecursivelyDeleteTriviallyDeadInstructions(ResInst, TLI);
+  // Replace LCSSA Phi use with new pointer to the null terminator
+  SmallVector<Value *, 4> NewBaseIndex{StrLenFunc};
+  GetElementPtrInst *NewEndPtr = GetElementPtrInst::Create(
+      ExpandedType, Expanded, NewBaseIndex, "end", Preheader->getTerminator());
+  LCSSAPhi->replaceAllUsesWith(NewEndPtr);
+  RecursivelyDeleteDeadPHINode(LCSSAPhi);
 
   ConstantInt *NewLoopCond = LoopTerm->getSuccessor(0) == LoopBody
                                  ? Builder.getFalse()
@@ -1805,7 +1744,7 @@ bool LoopIdiomRecognize::recognizeAndInsertStrLen() {
 
   ORE.emit([&]() {
     return OptimizationRemark(DEBUG_TYPE, "recognizeAndInsertStrLen",
-                              CurLoop->getStartLoc(), Pre)
+                              CurLoop->getStartLoc(), Preheader)
            << "Transformed pointer difference into a call to strlen() function";
   });
 
