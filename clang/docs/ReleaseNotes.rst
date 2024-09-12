@@ -301,8 +301,6 @@ Improvements to Clang's diagnostics
 
 - Clang now warns for u8 character literals used in C23 with ``-Wpre-c23-compat`` instead of ``-Wpre-c++17-compat``.
 
-- Clang now diagnoses cases where a dangling ``GSLOwner<GSLPointer>`` object is constructed, e.g. ``std::vector<string_view> v = {std::string()};`` (#GH100526).
-
 Improvements to Clang's time-trace
 ----------------------------------
 
