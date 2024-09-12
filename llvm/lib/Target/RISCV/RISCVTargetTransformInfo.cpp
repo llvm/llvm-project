@@ -618,10 +618,8 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
 
 static unsigned isM1OrSmaller(MVT VT) {
   RISCVII::VLMUL LMUL = RISCVTargetLowering::getLMUL(VT);
-  return (LMUL == RISCVII::VLMUL::LMUL_F8 ||
-          LMUL == RISCVII::VLMUL::LMUL_F4 ||
-          LMUL == RISCVII::VLMUL::LMUL_F2 ||
-          LMUL == RISCVII::VLMUL::LMUL_1);
+  return (LMUL == RISCVII::VLMUL::LMUL_F8 || LMUL == RISCVII::VLMUL::LMUL_F4 ||
+          LMUL == RISCVII::VLMUL::LMUL_F2 || LMUL == RISCVII::VLMUL::LMUL_1);
 }
 
 InstructionCost RISCVTTIImpl::getScalarizationOverhead(
@@ -634,9 +632,8 @@ InstructionCost RISCVTTIImpl::getScalarizationOverhead(
   // worse than one vslide1down.vx per element in the type.  We could
   // in theory do an explode_vector in the inverse manner, but our
   // lowering today does not have a first class node for this pattern.
-  InstructionCost Cost =
-      BaseT::getScalarizationOverhead(Ty, DemandedElts, Insert, Extract,
-                                      CostKind);
+  InstructionCost Cost = BaseT::getScalarizationOverhead(
+      Ty, DemandedElts, Insert, Extract, CostKind);
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
   if (Insert && !Extract && LT.first.isValid() && LT.second.isVector() &&
       Ty->getScalarSizeInBits() != 1) {
@@ -651,7 +648,6 @@ InstructionCost RISCVTTIImpl::getScalarizationOverhead(
   }
   return Cost;
 }
-
 
 InstructionCost
 RISCVTTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
