@@ -1,0 +1,54 @@
+//===- offload-tblgen/APIGen.cpp - Tablegen backend for Offload validation ===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This is a Tablegen backend that produces validation functions for the Offload
+// API entry point functions.
+//
+//===----------------------------------------------------------------------===//
+
+#include "llvm/Support/FormatVariadic.h"
+#include "llvm/TableGen/Record.h"
+
+#include "GenCommon.hpp"
+#include "RecordTypes.hpp"
+
+using namespace llvm;
+using namespace offload::tblgen;
+
+// Emit a list of just the API function names
+void EmitOffloadFuncNames(RecordKeeper &Records, raw_ostream &OS) {
+  OS << R"(
+#ifndef OFFLOAD_FUNC
+#error Please define the macro OFFLOAD_FUNC(Function)
+#endif
+
+)";
+  for (auto *R : Records.getAllDerivedDefinitions("Function")) {
+    FunctionRec FR{R};
+    OS << formatv("OFFLOAD_FUNC({0})", FR.getName()) << "\n";
+  }
+
+  OS << "\n#undef OFFLOAD_FUNC\n";
+}
+
+void EmitOffloadImplFuncDecls(RecordKeeper &Records, raw_ostream &OS) {
+  for (auto *R : Records.getAllDerivedDefinitions("Function")) {
+    FunctionRec F{R};
+    OS << formatv("{0}_result_t {1}_impl(", PrefixLower, F.getName());
+    auto Params = F.getParams();
+    for (auto &Param : Params) {
+      OS << Param.getType() << " " << Param.getName();
+      if (Param != Params.back()) {
+        OS << ", ";
+      } else {
+        OS << ");";
+      }
+    }
+    OS << "\n";
+  }
+}
