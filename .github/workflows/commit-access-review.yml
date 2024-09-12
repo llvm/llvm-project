@@ -28,7 +28,7 @@ jobs:
       
       - name: Run Script
         env:
-          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TASKS_USER_TOKEN }}
         run: |
           python3 .github/workflows/commit-access-review.py $GITHUB_TOKEN
 

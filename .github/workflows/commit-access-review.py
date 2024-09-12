@@ -194,6 +194,7 @@ def get_num_commits(user: str, start_date: datetime.datetime, token: str) -> int
      """
     count = 0
     data = run_graphql_query(query, variables, token)
+    print(data)
     for repo in data["organization"]["teams"]["nodes"][0]["repositories"]["nodes"]:
         count += int(repo["ref"]["target"]["history"]["totalCount"])
         if count >= User.THRESHOLD:
