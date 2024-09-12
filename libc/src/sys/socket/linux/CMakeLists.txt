@@ -19,7 +19,8 @@ add_entrypoint_object(
     ../bind.h
   DEPENDS
     libc.include.sys_syscall
-    libc.include.sys_socket
+    libc.hdr.types.struct_sockaddr
+    libc.hdr.types.socklen_t
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
 )
@@ -32,7 +33,8 @@ add_entrypoint_object(
     ../send.h
   DEPENDS
     libc.include.sys_syscall
-    libc.include.sys_socket
+    libc.hdr.types.struct_sockaddr
+    libc.hdr.types.socklen_t
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
 )
@@ -45,7 +47,8 @@ add_entrypoint_object(
     ../sendto.h
   DEPENDS
     libc.include.sys_syscall
-    libc.include.sys_socket
+    libc.hdr.types.struct_sockaddr
+    libc.hdr.types.socklen_t
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
 )
@@ -58,7 +61,7 @@ add_entrypoint_object(
     ../sendmsg.h
   DEPENDS
     libc.include.sys_syscall
-    libc.include.sys_socket
+    libc.hdr.types.struct_msghdr
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
 )
@@ -71,7 +74,8 @@ add_entrypoint_object(
     ../connect.h
   DEPENDS
     libc.include.sys_syscall
-    libc.include.sys_socket
+    libc.hdr.types.struct_sockaddr
+    libc.hdr.types.socklen_t
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
 )
@@ -84,7 +88,8 @@ add_entrypoint_object(
     ../recv.h
   DEPENDS
     libc.include.sys_syscall
-    libc.include.sys_socket
+    libc.hdr.types.struct_sockaddr
+    libc.hdr.types.socklen_t
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
 )
@@ -97,7 +102,8 @@ add_entrypoint_object(
     ../recvfrom.h
   DEPENDS
     libc.include.sys_syscall
-    libc.include.sys_socket
+    libc.hdr.types.struct_sockaddr
+    libc.hdr.types.socklen_t
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
 )
@@ -110,7 +116,7 @@ add_entrypoint_object(
     ../recvmsg.h
   DEPENDS
     libc.include.sys_syscall
-    libc.include.sys_socket
+    libc.hdr.types.struct_msghdr
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
 )
@@ -123,7 +129,8 @@ add_entrypoint_object(
     ../accept.h
   DEPENDS
     libc.include.sys_syscall
-    libc.include.sys_socket
+    libc.hdr.types.struct_sockaddr
+    libc.hdr.types.socklen_t
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
 )

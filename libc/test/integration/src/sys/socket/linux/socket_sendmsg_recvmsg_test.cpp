@@ -14,8 +14,8 @@
 #include "src/sys/socket/bind.h"
 #include "src/sys/socket/connect.h"
 #include "src/sys/socket/listen.h"
-#include "src/sys/socket/recv.h"
-#include "src/sys/socket/send.h"
+#include "src/sys/socket/recvmsg.h"
+#include "src/sys/socket/sendmsg.h"
 #include "src/sys/socket/socket.h"
 #include "src/unistd/close.h"
 #include "src/unistd/fork.h"
@@ -57,8 +57,21 @@ void run_client(const char *SOCK_PATH) {
   ASSERT_EQ(result, 0);
   ASSERT_ERRNO_SUCCESS();
 
-  ssize_t send_result =
-      LIBC_NAMESPACE::send(sock, TEST_MESSAGE, MESSAGE_LEN, 0);
+  iovec msg_text;
+  msg_text.iov_base =
+      reinterpret_cast<void *>(const_cast<char *>(TEST_MESSAGE));
+  msg_text.iov_len = MESSAGE_LEN;
+
+  msghdr message;
+  message.msg_name = nullptr;
+  message.msg_namelen = 0;
+  message.msg_iov = &msg_text;
+  message.msg_iovlen = 1;
+  message.msg_control = nullptr;
+  message.msg_controllen = 0;
+  message.msg_flags = 0;
+
+  ssize_t send_result = LIBC_NAMESPACE::sendmsg(sock, &message, 0);
 
   EXPECT_EQ(send_result, static_cast<ssize_t>(MESSAGE_LEN));
   ASSERT_ERRNO_SUCCESS();
@@ -101,8 +114,20 @@ void run_server(const char *SOCK_PATH) {
 
   char buffer[256];
 
-  ssize_t recv_result =
-      LIBC_NAMESPACE::recv(accepted_sock, buffer, sizeof(buffer), 0);
+  iovec msg_text;
+  msg_text.iov_base = reinterpret_cast<void *>(buffer);
+  msg_text.iov_len = sizeof(buffer);
+
+  msghdr message;
+  message.msg_name = nullptr;
+  message.msg_namelen = 0;
+  message.msg_iov = &msg_text;
+  message.msg_iovlen = 1;
+  message.msg_control = nullptr;
+  message.msg_controllen = 0;
+  message.msg_flags = 0;
+
+  ssize_t recv_result = LIBC_NAMESPACE::recvmsg(accepted_sock, &message, 0);
   ASSERT_EQ(recv_result, MESSAGE_LEN);
   ASSERT_ERRNO_SUCCESS();
 
@@ -115,7 +140,7 @@ void run_server(const char *SOCK_PATH) {
 
 TEST_MAIN(int argc, char **argv, char **envp) {
 
-  const char *FILENAME = "send_file.test";
+  const char *FILENAME = "sendmsg_file.test";
   // auto SOCK_PATH = libc_make_test_file_path(FILENAME);
   auto SOCK_PATH = FILENAME;
 
@@ -124,7 +149,7 @@ TEST_MAIN(int argc, char **argv, char **envp) {
   LIBC_NAMESPACE::remove(SOCK_PATH);
   LIBC_NAMESPACE::libc_errno = 0;
 
-  LIBC_NAMESPACE::puts("Send/Recv Test Start");
+  LIBC_NAMESPACE::puts("Sendmsg/Recvmsg Test Start");
 
   // split into client and server processes.
   pid_t pid = LIBC_NAMESPACE::fork();
@@ -132,13 +157,13 @@ TEST_MAIN(int argc, char **argv, char **envp) {
   ASSERT_ERRNO_SUCCESS();
 
   if (pid == 0) { // child
-    LIBC_NAMESPACE::puts("Send/Recv Child Start");
+    LIBC_NAMESPACE::puts("Sendmsg/Recvmsg Child Start");
     run_client(SOCK_PATH);
-    LIBC_NAMESPACE::puts("Send/Recv Child End");
+    LIBC_NAMESPACE::puts("Sendmsg/Recvmsg Child End");
   } else { // parent
-    LIBC_NAMESPACE::puts("Send/Recv Parent Start");
+    LIBC_NAMESPACE::puts("Sendmsg/Recvmsg Parent Start");
     run_server(SOCK_PATH);
-    LIBC_NAMESPACE::puts("Send/Recv Parent End");
+    LIBC_NAMESPACE::puts("Sendmsg/Recvmsg Parent End");
   }
   return 0;
 }

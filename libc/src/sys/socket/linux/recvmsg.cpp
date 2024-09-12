@@ -8,11 +8,12 @@
 
 #include "src/sys/socket/recvmsg.h"
 
+#include "hdr/types/ssize_t.h"
+#include "hdr/types/struct_msghdr.h"
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
 #include "src/errno/libc_errno.h"
 #include <linux/net.h>   // For SYS_SOCKET socketcall number.
-#include <sys/socket.h>  // For the types
 #include <sys/syscall.h> // For syscall numbers.
 
 namespace LIBC_NAMESPACE_DECL {

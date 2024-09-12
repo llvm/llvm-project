@@ -9,8 +9,9 @@
 #ifndef LLVM_LIBC_SRC_SYS_SOCKET_CONNECT_H
 #define LLVM_LIBC_SRC_SYS_SOCKET_CONNECT_H
 
+#include "hdr/types/socklen_t.h"
+#include "hdr/types/struct_sockaddr.h"
 #include "src/__support/macros/config.h"
-#include <sys/socket.h>
 
 namespace LIBC_NAMESPACE_DECL {
 

@@ -9,8 +9,11 @@
 #ifndef LLVM_LIBC_SRC_SYS_SOCKET_SENDTO_H
 #define LLVM_LIBC_SRC_SYS_SOCKET_SENDTO_H
 
+#include "hdr/types/socklen_t.h"
+#include "hdr/types/ssize_t.h"
+#include "hdr/types/struct_sockaddr.h"
 #include "src/__support/macros/config.h"
-#include <sys/socket.h>
+#include <stddef.h> // For size_t
 
 namespace LIBC_NAMESPACE_DECL {
 

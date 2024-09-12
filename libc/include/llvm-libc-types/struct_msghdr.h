@@ -9,9 +9,9 @@
 #ifndef __LLVM_LIBC_TYPES_STRUCT_MSGHDR_H__
 #define __LLVM_LIBC_TYPES_STRUCT_MSGHDR_H__
 
-#include <llvm-libc-types/size_t.h>
-#include <llvm-libc-types/socklen_t.h>
-#include <llvm-libc-types/struct_iovec.h>
+#include "llvm-libc-types/size_t.h"
+#include "llvm-libc-types/socklen_t.h"
+#include "llvm-libc-types/struct_iovec.h"
 
 struct msghdr {
   void *msg_name;        /* Optional address */

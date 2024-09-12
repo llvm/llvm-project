@@ -9,7 +9,7 @@
 #ifndef __LLVM_LIBC_TYPES_STRUCT_IOVEC_H__
 #define __LLVM_LIBC_TYPES_STRUCT_IOVEC_H__
 
-#include <llvm-libc-types/size_t.h>
+#include "llvm-libc-types/size_t.h"
 
 struct iovec {
   void *iov_base;

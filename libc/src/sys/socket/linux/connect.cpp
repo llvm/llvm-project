@@ -9,11 +9,12 @@
 
 #include "src/sys/socket/connect.h"
 
+#include "hdr/types/socklen_t.h"
+#include "hdr/types/struct_sockaddr.h"
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
 #include "src/errno/libc_errno.h"
 #include <linux/net.h>   // For SYS_SOCKET socketcall number.
-#include <sys/socket.h>  // For the types
 #include <sys/syscall.h> // For syscall numbers.
 
 namespace LIBC_NAMESPACE_DECL {
