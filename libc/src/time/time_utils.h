@@ -158,7 +158,7 @@ LIBC_INLINE struct tm *gmtime_internal(const time_t *timer, struct tm *result) {
 
 // TODO: localtime is not yet implemented and a temporary solution is to
 //       use gmtime, https://github.com/llvm/llvm-project/issues/107597
-LIBC_INLINE struct tm *localtime(const time_t *timer) {
+LIBC_INLINE struct tm *localtime(const time_t *t_ptr) {
   static struct tm result;
   return time_utils::gmtime_internal(t_ptr, &result);
 }
