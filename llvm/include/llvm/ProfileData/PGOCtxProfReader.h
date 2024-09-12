@@ -57,8 +57,31 @@ public:
 
   GlobalValue::GUID guid() const { return GUID; }
   const SmallVectorImpl<uint64_t> &counters() const { return Counters; }
+  SmallVectorImpl<uint64_t> &counters() { return Counters; }
+
+  uint64_t getEntrycount() const {
+    assert(!Counters.empty() &&
+           "Functions are expected to have at their entry BB instrumented, so "
+           "there should always be at least 1 counter.");
+    return Counters[0];
+  }
+
   const CallsiteMapTy &callsites() const { return Callsites; }
   CallsiteMapTy &callsites() { return Callsites; }
+
+  void ingestContext(uint32_t CSId, PGOCtxProfContext &&Other) {
+    auto [Iter, _] = callsites().try_emplace(CSId, CallTargetMapTy());
+    Iter->second.emplace(Other.guid(), std::move(Other));
+  }
+
+  void ingestAllContexts(uint32_t CSId, CallTargetMapTy &&Other) {
+    auto [_, Inserted] = callsites().try_emplace(CSId, std::move(Other));
+    (void)Inserted;
+    assert(Inserted &&
+           "CSId was expected to be newly created as result of e.g. inlining");
+  }
+
+  void resizeCounters(uint32_t Size) { Counters.resize(Size); }
 
   bool hasCallsite(uint32_t I) const {
     return Callsites.find(I) != Callsites.end();
@@ -68,6 +91,12 @@ public:
     assert(hasCallsite(I) && "Callsite not found");
     return Callsites.find(I)->second;
   }
+
+  CallTargetMapTy &callsite(uint32_t I) {
+    assert(hasCallsite(I) && "Callsite not found");
+    return Callsites.find(I)->second;
+  }
+
   void getContainedGuids(DenseSet<GlobalValue::GUID> &Guids) const;
 };
 

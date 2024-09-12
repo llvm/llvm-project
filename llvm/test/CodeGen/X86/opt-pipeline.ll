@@ -211,6 +211,7 @@
 ; CHECK-NEXT:       X86 Insert Cache Prefetches
 ; CHECK-NEXT:       X86 insert wait instruction
 ; CHECK-NEXT:       Contiguously Lay Out Funclets
+; CHECK-NEXT:       Remove Loads Into Fake Uses
 ; CHECK-NEXT:       StackMap Liveness Analysis
 ; CHECK-NEXT:       Live DEBUG_VALUE analysis
 ; CHECK-NEXT:       Machine Sanitizer Binary Metadata

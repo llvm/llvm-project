@@ -496,6 +496,23 @@ def SparsificationAndBufferization : Pass<"sparsification-and-bufferization", "M
                         "Emit (experimental) loops (with sparse.iterate)."),
              clEnumValN(mlir::SparseEmitStrategy::kDebugInterface, "debug-interface",
                         "Emit non-functional but easy-to-read interfaces to debug."))}]>,
+    Option<"parallelization", "parallelization-strategy", "mlir::SparseParallelizationStrategy",
+           "mlir::SparseParallelizationStrategy::kNone",
+           "Set the parallelization strategy", [{llvm::cl::values(
+             clEnumValN(mlir::SparseParallelizationStrategy::kNone, "none",
+                        "Turn off sparse parallelization."),
+             clEnumValN(mlir::SparseParallelizationStrategy::kDenseOuterLoop,
+                        "dense-outer-loop",
+                        "Enable dense outer loop sparse parallelization."),
+             clEnumValN(mlir::SparseParallelizationStrategy::kAnyStorageOuterLoop,
+                        "any-storage-outer-loop",
+                        "Enable sparse parallelization regardless of storage for the outer loop."),
+             clEnumValN(mlir::SparseParallelizationStrategy::kDenseAnyLoop,
+                        "dense-any-loop",
+                        "Enable dense parallelization for any loop."),
+             clEnumValN(mlir::SparseParallelizationStrategy::kAnyStorageAnyLoop,
+                        "any-storage-any-loop",
+                        "Enable sparse parallelization for any storage and loop."))}]>,
   ];
 }
 

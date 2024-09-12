@@ -85,6 +85,18 @@ unsigned mlirFloatTypeGetWidth(MlirType type) {
   return llvm::cast<FloatType>(unwrap(type)).getWidth();
 }
 
+MlirTypeID mlirFloat6E3M2FNTypeGetTypeID() {
+  return wrap(Float6E3M2FNType::getTypeID());
+}
+
+bool mlirTypeIsAFloat6E3M2FN(MlirType type) {
+  return unwrap(type).isFloat6E3M2FN();
+}
+
+MlirType mlirFloat6E3M2FNTypeGet(MlirContext ctx) {
+  return wrap(FloatType::getFloat6E3M2FN(unwrap(ctx)));
+}
+
 MlirTypeID mlirFloat8E5M2TypeGetTypeID() {
   return wrap(Float8E5M2Type::getTypeID());
 }

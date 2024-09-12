@@ -164,6 +164,10 @@ public:
     UAVFlags.HasCounter = HasCounter;
     UAVFlags.IsROV = IsROV;
   }
+  const UAVInfo &getUAV() const {
+    assert(isUAV() && "Not a UAV");
+    return UAVFlags;
+  }
   void setCBuffer(uint32_t Size) {
     assert(isCBuffer() && "Not a CBuffer");
     CBufferSize = Size;
@@ -179,6 +183,10 @@ public:
     Typed.ElementTy = ElementTy;
     Typed.ElementCount = ElementCount;
   }
+  const TypedInfo &getTyped() const {
+    assert(isTyped() && "Not typed");
+    return Typed;
+  }
   void setFeedback(dxil::SamplerFeedbackType Type) {
     assert(isFeedback() && "Not Feedback");
     Feedback.Type = Type;
@@ -187,8 +195,14 @@ public:
     assert(isMultiSample() && "Not MultiSampled");
     MultiSample.Count = Count;
   }
+  const MSInfo &getMultiSample() const {
+    assert(isMultiSample() && "Not MultiSampled");
+    return MultiSample;
+  }
 
+  StringRef getName() const { return Name; }
   dxil::ResourceClass getResourceClass() const { return RC; }
+  dxil::ResourceKind getResourceKind() const { return Kind; }
 
   bool operator==(const ResourceInfo &RHS) const;
   bool operator!=(const ResourceInfo &RHS) const { return !(*this == RHS); }
@@ -278,6 +292,46 @@ public:
     auto Pos = CallMap.find(Key);
     return Pos == CallMap.end() ? Resources.end()
                                 : (Resources.begin() + Pos->second);
+  }
+
+  iterator srv_begin() { return begin(); }
+  const_iterator srv_begin() const { return begin(); }
+  iterator srv_end() { return begin() + FirstUAV; }
+  const_iterator srv_end() const { return begin() + FirstUAV; }
+  iterator_range<iterator> srvs() { return make_range(srv_begin(), srv_end()); }
+  iterator_range<const_iterator> srvs() const {
+    return make_range(srv_begin(), srv_end());
+  }
+
+  iterator uav_begin() { return begin() + FirstUAV; }
+  const_iterator uav_begin() const { return begin() + FirstUAV; }
+  iterator uav_end() { return begin() + FirstCBuffer; }
+  const_iterator uav_end() const { return begin() + FirstCBuffer; }
+  iterator_range<iterator> uavs() { return make_range(uav_begin(), uav_end()); }
+  iterator_range<const_iterator> uavs() const {
+    return make_range(uav_begin(), uav_end());
+  }
+
+  iterator cbuffer_begin() { return begin() + FirstCBuffer; }
+  const_iterator cbuffer_begin() const { return begin() + FirstCBuffer; }
+  iterator cbuffer_end() { return begin() + FirstSampler; }
+  const_iterator cbuffer_end() const { return begin() + FirstSampler; }
+  iterator_range<iterator> cbuffers() {
+    return make_range(cbuffer_begin(), cbuffer_end());
+  }
+  iterator_range<const_iterator> cbuffers() const {
+    return make_range(cbuffer_begin(), cbuffer_end());
+  }
+
+  iterator sampler_begin() { return begin() + FirstSampler; }
+  const_iterator sampler_begin() const { return begin() + FirstSampler; }
+  iterator sampler_end() { return end(); }
+  const_iterator sampler_end() const { return end(); }
+  iterator_range<iterator> samplers() {
+    return make_range(sampler_begin(), sampler_end());
+  }
+  iterator_range<const_iterator> samplers() const {
+    return make_range(sampler_begin(), sampler_end());
   }
 
   void print(raw_ostream &OS) const;

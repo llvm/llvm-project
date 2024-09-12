@@ -105,13 +105,13 @@ static ReductionKind getReductionKindOfLinalgOp(LinalgOp op) {
 static MeshOp getMesh(Operation *op, ArrayRef<MeshSharding> operandShardings,
                       ArrayRef<MeshSharding> resultShardings,
                       SymbolTableCollection &symbolTable) {
-  for (MeshSharding sharding : operandShardings) {
+  for (const MeshSharding& sharding : operandShardings) {
     if (sharding) {
       return mesh::getMesh(op, sharding.getMeshAttr(), symbolTable);
     }
   }
 
-  for (MeshSharding sharding : resultShardings) {
+  for (const MeshSharding& sharding : resultShardings) {
     if (sharding) {
       return mesh::getMesh(op, sharding.getMeshAttr(), symbolTable);
     }

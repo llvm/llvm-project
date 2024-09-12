@@ -4255,6 +4255,8 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
     return lowerShlSat(MI);
   case G_ABS:
     return lowerAbsToAddXor(MI);
+  case G_FABS:
+    return lowerFAbs(MI);
   case G_SELECT:
     return lowerSelect(MI);
   case G_IS_FPCLASS:
@@ -8761,6 +8763,22 @@ LegalizerHelper::lowerAbsToCNeg(MachineInstr &MI) {
   return Legalized;
 }
 
+LegalizerHelper::LegalizeResult LegalizerHelper::lowerFAbs(MachineInstr &MI) {
+  Register SrcReg = MI.getOperand(1).getReg();
+  Register DstReg = MI.getOperand(0).getReg();
+
+  LLT Ty = MRI.getType(DstReg);
+
+  // Reset sign bit
+  MIRBuilder.buildAnd(
+      DstReg, SrcReg,
+      MIRBuilder.buildConstant(
+          Ty, APInt::getSignedMaxValue(Ty.getScalarSizeInBits())));
+
+  MI.eraseFromParent();
+  return Legalized;
+}
+
 LegalizerHelper::LegalizeResult
 LegalizerHelper::lowerVectorReduction(MachineInstr &MI) {
   Register SrcReg = MI.getOperand(1).getReg();
@@ -9136,8 +9154,8 @@ LegalizerHelper::lowerMemcpy(MachineInstr &MI, Register Dst, Register Src,
     // realignment.
     const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
     if (!TRI->hasStackRealignment(MF))
-      while (NewAlign > Alignment && DL.exceedsNaturalStackAlignment(NewAlign))
-        NewAlign = NewAlign.previous();
+      if (MaybeAlign StackAlign = DL.getStackAlignment())
+        NewAlign = std::min(NewAlign, *StackAlign);
 
     if (NewAlign > Alignment) {
       Alignment = NewAlign;
@@ -9244,8 +9262,8 @@ LegalizerHelper::lowerMemmove(MachineInstr &MI, Register Dst, Register Src,
     // realignment.
     const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
     if (!TRI->hasStackRealignment(MF))
-      while (NewAlign > Alignment && DL.exceedsNaturalStackAlignment(NewAlign))
-        NewAlign = NewAlign.previous();
+      if (MaybeAlign StackAlign = DL.getStackAlignment())
+        NewAlign = std::min(NewAlign, *StackAlign);
 
     if (NewAlign > Alignment) {
       Alignment = NewAlign;

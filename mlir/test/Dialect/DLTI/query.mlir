@@ -17,6 +17,60 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+// expected-remark @below {{i32 present in set : unit}}
+module attributes { test.dlti = #dlti.map<#dlti.dl_entry<i32, unit>>} {
+  func.func private @f()
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg: !transform.any_op) {
+    %funcs = transform.structured.match ops{["func.func"]} in %arg : (!transform.any_op) -> !transform.any_op
+    %module = transform.get_parent_op %funcs : (!transform.any_op) -> !transform.any_op
+    %param = transform.dlti.query [i32] at %module : (!transform.any_op) -> !transform.any_param
+    transform.debug.emit_param_as_remark %param, "i32 present in set :" at %module : !transform.any_param, !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// expected-remark @below {{associated attr 32 : i32}}
+module attributes { test.dlti = #dlti.map<#dlti.dl_entry<i32, #dlti.map<#dlti.dl_entry<"width_in_bits", 32 : i32>>>>} {
+  func.func private @f()
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg: !transform.any_op) {
+    %funcs = transform.structured.match ops{["func.func"]} in %arg : (!transform.any_op) -> !transform.any_op
+    %module = transform.get_parent_op %funcs : (!transform.any_op) -> !transform.any_op
+    %param = transform.dlti.query [i32,"width_in_bits"] at %module : (!transform.any_op) -> !transform.any_param
+    transform.debug.emit_param_as_remark %param, "associated attr" at %module : !transform.any_param, !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// expected-remark @below {{width in bits of i32 = 32 : i64}}
+// expected-remark @below {{width in bits of f64 = 64 : i64}}
+module attributes { test.dlti = #dlti.map<#dlti.dl_entry<"width_in_bits", #dlti.map<#dlti.dl_entry<i32, 32>, #dlti.dl_entry<f64, 64>>>>} {
+  func.func private @f()
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg: !transform.any_op) {
+    %funcs = transform.structured.match ops{["func.func"]} in %arg : (!transform.any_op) -> !transform.any_op
+    %module = transform.get_parent_op %funcs : (!transform.any_op) -> !transform.any_op
+    %i32bits = transform.dlti.query ["width_in_bits",i32] at %module : (!transform.any_op) -> !transform.any_param
+    %f64bits  = transform.dlti.query ["width_in_bits",f64] at %module : (!transform.any_op) -> !transform.any_param
+    transform.debug.emit_param_as_remark %i32bits, "width in bits of i32 =" at %module : !transform.any_param, !transform.any_op
+    transform.debug.emit_param_as_remark %f64bits, "width in bits of f64 =" at %module : !transform.any_param, !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
 // expected-remark @below {{associated attr 42 : i32}}
 module attributes { test.dlti = #dlti.dl_spec<#dlti.dl_entry<"test.id", 42 : i32>>} {
   func.func private @f()
@@ -336,6 +390,23 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+// expected-note @below {{got non-DLTI-queryable attribute upon looking up keys [i32]}}
+module attributes { test.dlti = #dlti.dl_spec<#dlti.dl_entry<i32, 32 : i32>>} {
+  // expected-error @below {{target op of failed DLTI query}}
+  func.func private @f()
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg: !transform.any_op) {
+    %func = transform.structured.match ops{["func.func"]} in %arg : (!transform.any_op) -> !transform.any_op
+    // expected-error @below {{'transform.dlti.query' op failed to apply}}
+    %param = transform.dlti.query [i32,"width_in_bits"] at %func : (!transform.any_op) -> !transform.any_param
+    transform.yield
+  }
+}
+
+// -----
+
 module {
   // expected-error @below {{target op of failed DLTI query}}
   // expected-note @below {{no DLTI-queryable attrs on target op or any of its ancestors}}
@@ -347,6 +418,55 @@ module attributes {transform.with_named_sequence} {
     %func = transform.structured.match ops{["func.func"]} in %arg : (!transform.any_op) -> !transform.any_op
     // expected-error @below {{'transform.dlti.query' op failed to apply}}
     %param = transform.dlti.query ["CPU","test.id"] at %func : (!transform.any_op) -> !transform.any_param
+    transform.yield
+  }
+}
+
+// -----
+
+// expected-note @below {{key i64 has no DLTI-mapping per attr: #dlti.map<#dlti.dl_entry<i32, 32 : i64>>}}
+module attributes { test.dlti = #dlti.map<#dlti.dl_entry<"width_in_bits", #dlti.map<#dlti.dl_entry<i32, 32>>>>} {
+  // expected-error @below {{target op of failed DLTI query}}
+  func.func private @f()
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg: !transform.any_op) {
+    %func = transform.structured.match ops{["func.func"]} in %arg : (!transform.any_op) -> !transform.any_op
+    // expected-error @below {{'transform.dlti.query' op failed to apply}}
+    %param = transform.dlti.query ["width_in_bits",i64] at %func : (!transform.any_op) -> !transform.any_param
+    transform.yield
+  }
+}
+
+// -----
+
+module attributes { test.dlti = #dlti.dl_spec<#dlti.dl_entry<"test.id", 42 : i32>>} {
+  func.func private @f()
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg: !transform.any_op) {
+    %funcs = transform.structured.match ops{["func.func"]} in %arg : (!transform.any_op) -> !transform.any_op
+    // expected-error @below {{'transform.dlti.query' keys of wrong type: only StringAttr and TypeAttr are allowed}}
+    %param = transform.dlti.query [1] at %funcs : (!transform.any_op) -> !transform.param<i64>
+    transform.yield
+  }
+}
+
+// -----
+
+module attributes { test.dlti = #dlti.map<#dlti.dl_entry<"test.id", 42 : i32>>} {
+  // expected-error @below {{target op of failed DLTI query}}
+  // expected-note @below {{no keys provided to attempt query with}}
+  func.func private @f()
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg: !transform.any_op) {
+    %func = transform.structured.match ops{["func.func"]} in %arg : (!transform.any_op) -> !transform.any_op
+    // expected-error @below {{'transform.dlti.query' op failed to apply}}
+    %param = transform.dlti.query [] at %func : (!transform.any_op) -> !transform.any_param
     transform.yield
   }
 }

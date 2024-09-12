@@ -87,8 +87,8 @@
 
 /// <default-triple>-gcc has lowest priority so <triple>-gcc
 /// on PATH beats default triple in program path
-// RUN: %t/clang --version | grep "Target:" | cut -d ' ' -f2 > %t/default-triple.txt
-// RUN: env DEFAULT_TRIPLE=%{readfile:%t/default-triple.txt} touch %t/%{env:DEFAULT_TRIPLE}-gcc && chmod +x %t/%{env:DEFAULT_TRIPLE}-gcc
+// RUN: DEFAULT_TRIPLE=`%t/clang --version | grep "Target:" | cut -d ' ' -f2`
+// RUN: touch %t/$DEFAULT_TRIPLE-gcc && chmod +x %t/$DEFAULT_TRIPLE-gcc
 // RUN: touch %t/%target_triple-gcc && chmod +x %t/%target_triple-gcc
 // RUN: env "PATH=%t/env/" %t/clang -### -target notreal-none-elf %s 2>&1 | \
 // RUN:   FileCheck --check-prefix=DEFAULT_TRIPLE_GCC %s

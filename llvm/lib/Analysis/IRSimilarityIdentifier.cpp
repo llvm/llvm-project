@@ -459,16 +459,14 @@ IRSimilarityCandidate::IRSimilarityCandidate(unsigned StartIdx, unsigned Len,
     // Map the operand values to an unsigned integer if it does not already
     // have an unsigned integer assigned to it.
     for (Value *Arg : ID->OperVals)
-      if (!ValueToNumber.contains(Arg)) {
-        ValueToNumber.try_emplace(Arg, LocalValNumber);
+      if (ValueToNumber.try_emplace(Arg, LocalValNumber).second) {
         NumberToValue.try_emplace(LocalValNumber, Arg);
         LocalValNumber++;
       }
 
     // Mapping the instructions to an unsigned integer if it is not already
     // exist in the mapping.
-    if (!ValueToNumber.contains(ID->Inst)) {
-      ValueToNumber.try_emplace(ID->Inst, LocalValNumber);
+    if (ValueToNumber.try_emplace(ID->Inst, LocalValNumber).second) {
       NumberToValue.try_emplace(LocalValNumber, ID->Inst);
       LocalValNumber++;
     }
@@ -484,12 +482,10 @@ IRSimilarityCandidate::IRSimilarityCandidate(unsigned StartIdx, unsigned Len,
   DenseSet<BasicBlock *> BBSet;
   getBasicBlocks(BBSet);
   for (BasicBlock *BB : BBSet) {
-    if (ValueToNumber.contains(BB))
-      continue;
-    
-    ValueToNumber.try_emplace(BB, LocalValNumber);
-    NumberToValue.try_emplace(LocalValNumber, BB);
-    LocalValNumber++;
+    if (ValueToNumber.try_emplace(BB, LocalValNumber).second) {
+      NumberToValue.try_emplace(LocalValNumber, BB);
+      LocalValNumber++;
+    }
   }
 }
 

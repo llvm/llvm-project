@@ -23,6 +23,7 @@
 using llvm::Clause;
 using llvm::ClauseVal;
 using llvm::raw_ostream;
+using llvm::Record;
 using llvm::RecordKeeper;
 
 // LLVM has multiple places (Clang, Flang, MLIR) where information about
@@ -49,13 +50,11 @@ static bool emitDecls(const RecordKeeper &recordKeeper, llvm::StringRef dialect,
                           "'--directives-dialect'");
   }
 
-  const auto &directiveLanguages =
+  const auto directiveLanguages =
       recordKeeper.getAllDerivedDefinitions("DirectiveLanguage");
   assert(!directiveLanguages.empty() && "DirectiveLanguage missing.");
 
-  const auto &clauses = recordKeeper.getAllDerivedDefinitions("Clause");
-
-  for (const auto &r : clauses) {
+  for (const Record *r : recordKeeper.getAllDerivedDefinitions("Clause")) {
     Clause c{r};
     const auto &clauseVals = c.getClauseVals();
     if (clauseVals.empty())

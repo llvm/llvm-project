@@ -9,7 +9,6 @@ set(LLVM_LINK_COMPONENTS
 
 add_llvm_unittest(InstrumentationTests
   PGOInstrumentationTest.cpp
-  MemProfilerTest.cpp
   )
 
 target_link_libraries(InstrumentationTests PRIVATE LLVMTestingSupport)

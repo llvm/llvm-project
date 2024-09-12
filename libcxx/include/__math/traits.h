@@ -16,7 +16,6 @@
 #include <__type_traits/is_integral.h>
 #include <__type_traits/is_signed.h>
 #include <__type_traits/promote.h>
-#include <limits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -28,29 +27,31 @@ namespace __math {
 
 // signbit
 
+// TODO(LLVM 22): Remove conditional once support for Clang 19 is dropped.
+#if defined(_LIBCPP_COMPILER_GCC) || __has_constexpr_builtin(__builtin_signbit)
+#  define _LIBCPP_SIGNBIT_CONSTEXPR _LIBCPP_CONSTEXPR_SINCE_CXX23
+#else
+#  define _LIBCPP_SIGNBIT_CONSTEXPR
+#endif
+
 template <class _A1, __enable_if_t<is_floating_point<_A1>::value, int> = 0>
-_LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI bool signbit(_A1 __x) _NOEXCEPT {
+_LIBCPP_NODISCARD inline _LIBCPP_SIGNBIT_CONSTEXPR _LIBCPP_HIDE_FROM_ABI bool signbit(_A1 __x) _NOEXCEPT {
   return __builtin_signbit(__x);
 }
 
 template <class _A1, __enable_if_t<is_integral<_A1>::value && is_signed<_A1>::value, int> = 0>
-_LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI bool signbit(_A1 __x) _NOEXCEPT {
+_LIBCPP_NODISCARD inline _LIBCPP_SIGNBIT_CONSTEXPR _LIBCPP_HIDE_FROM_ABI bool signbit(_A1 __x) _NOEXCEPT {
   return __x < 0;
 }
 
 template <class _A1, __enable_if_t<is_integral<_A1>::value && !is_signed<_A1>::value, int> = 0>
-_LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI bool signbit(_A1) _NOEXCEPT {
+_LIBCPP_NODISCARD inline _LIBCPP_SIGNBIT_CONSTEXPR _LIBCPP_HIDE_FROM_ABI bool signbit(_A1) _NOEXCEPT {
   return false;
 }
 
 // isfinite
 
-template <class _A1, __enable_if_t<is_arithmetic<_A1>::value && numeric_limits<_A1>::has_infinity, int> = 0>
-_LIBCPP_NODISCARD _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool isfinite(_A1 __x) _NOEXCEPT {
-  return __builtin_isfinite((typename __promote<_A1>::type)__x);
-}
-
-template <class _A1, __enable_if_t<is_arithmetic<_A1>::value && !numeric_limits<_A1>::has_infinity, int> = 0>
+template <class _A1, __enable_if_t<is_integral<_A1>::value, int> = 0>
 _LIBCPP_NODISCARD _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool isfinite(_A1) _NOEXCEPT {
   return true;
 }
@@ -69,12 +70,7 @@ _LIBCPP_NODISCARD inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI boo
 
 // isinf
 
-template <class _A1, __enable_if_t<is_arithmetic<_A1>::value && numeric_limits<_A1>::has_infinity, int> = 0>
-_LIBCPP_NODISCARD _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool isinf(_A1 __x) _NOEXCEPT {
-  return __builtin_isinf((typename __promote<_A1>::type)__x);
-}
-
-template <class _A1, __enable_if_t<is_arithmetic<_A1>::value && !numeric_limits<_A1>::has_infinity, int> = 0>
+template <class _A1, __enable_if_t<is_integral<_A1>::value, int> = 0>
 _LIBCPP_NODISCARD _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool isinf(_A1) _NOEXCEPT {
   return false;
 }
@@ -97,11 +93,6 @@ _LIBCPP_NODISCARD inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI boo
 }
 
 // isnan
-
-template <class _A1, __enable_if_t<is_floating_point<_A1>::value, int> = 0>
-_LIBCPP_NODISCARD _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool isnan(_A1 __x) _NOEXCEPT {
-  return __builtin_isnan(__x);
-}
 
 template <class _A1, __enable_if_t<is_integral<_A1>::value, int> = 0>
 _LIBCPP_NODISCARD _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool isnan(_A1) _NOEXCEPT {
@@ -127,14 +118,21 @@ _LIBCPP_NODISCARD inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI boo
 
 // isnormal
 
-template <class _A1, __enable_if_t<is_floating_point<_A1>::value, int> = 0>
-_LIBCPP_NODISCARD _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool isnormal(_A1 __x) _NOEXCEPT {
-  return __builtin_isnormal(__x);
-}
-
 template <class _A1, __enable_if_t<is_integral<_A1>::value, int> = 0>
 _LIBCPP_NODISCARD _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool isnormal(_A1 __x) _NOEXCEPT {
   return __x != 0;
+}
+
+_LIBCPP_NODISCARD inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool isnormal(float __x) _NOEXCEPT {
+  return __builtin_isnormal(__x);
+}
+
+_LIBCPP_NODISCARD inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool isnormal(double __x) _NOEXCEPT {
+  return __builtin_isnormal(__x);
+}
+
+_LIBCPP_NODISCARD inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool isnormal(long double __x) _NOEXCEPT {
+  return __builtin_isnormal(__x);
 }
 
 // isgreater

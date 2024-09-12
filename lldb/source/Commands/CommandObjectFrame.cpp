@@ -68,8 +68,8 @@ public:
         address.emplace();
         if (option_arg.getAsInteger(0, *address)) {
           address.reset();
-          error.SetErrorStringWithFormat("invalid address argument '%s'",
-                                         option_arg.str().c_str());
+          error = Status::FromErrorStringWithFormat(
+              "invalid address argument '%s'", option_arg.str().c_str());
         }
       } break;
 
@@ -77,8 +77,8 @@ public:
         offset.emplace();
         if (option_arg.getAsInteger(0, *offset)) {
           offset.reset();
-          error.SetErrorStringWithFormat("invalid offset argument '%s'",
-                                         option_arg.str().c_str());
+          error = Status::FromErrorStringWithFormat(
+              "invalid offset argument '%s'", option_arg.str().c_str());
         }
       } break;
 
@@ -168,8 +168,7 @@ protected:
     // We've already handled the case where the value object sp is null, so
     // this is just to make sure future changes don't skip that:
     assert(valobj_sp.get() && "Must have a valid ValueObject to print");
-    ValueObjectPrinter printer(*valobj_sp, &result.GetOutputStream(),
-                               options);
+    ValueObjectPrinter printer(*valobj_sp, &result.GetOutputStream(), options);
     if (llvm::Error error = printer.PrintValueObject())
       result.AppendError(toString(std::move(error)));
   }
@@ -224,8 +223,8 @@ public:
       case 'r': {
         int32_t offset = 0;
         if (option_arg.getAsInteger(0, offset) || offset == INT32_MIN) {
-          error.SetErrorStringWithFormat("invalid frame offset argument '%s'",
-                                         option_arg.str().c_str());
+          error = Status::FromErrorStringWithFormat(
+              "invalid frame offset argument '%s'", option_arg.str().c_str());
         } else
           relative_frame_offset = offset;
         break;
@@ -748,7 +747,7 @@ private:
         if (success) {
           m_first_instruction_only = value;
         } else {
-          error.SetErrorStringWithFormat(
+          error = Status::FromErrorStringWithFormat(
               "invalid boolean value '%s' passed for -f option",
               option_arg.str().c_str());
         }
@@ -899,13 +898,16 @@ void CommandObjectFrameRecognizerAdd::DoExecute(Args &command,
     auto func =
         RegularExpressionSP(new RegularExpression(m_options.m_symbols.front()));
     GetTarget().GetFrameRecognizerManager().AddRecognizer(
-        recognizer_sp, module, func, m_options.m_first_instruction_only);
+        recognizer_sp, module, func, Mangled::NamePreference::ePreferDemangled,
+        m_options.m_first_instruction_only);
   } else {
     auto module = ConstString(m_options.m_module);
     std::vector<ConstString> symbols(m_options.m_symbols.begin(),
                                      m_options.m_symbols.end());
     GetTarget().GetFrameRecognizerManager().AddRecognizer(
-        recognizer_sp, module, symbols, m_options.m_first_instruction_only);
+        recognizer_sp, module, symbols,
+        Mangled::NamePreference::ePreferDemangled,
+        m_options.m_first_instruction_only);
   }
 #endif
 
@@ -927,6 +929,34 @@ protected:
   }
 };
 
+static void
+PrintRecognizerDetails(Stream &strm, const std::string &name,
+                       const std::string &module,
+                       llvm::ArrayRef<lldb_private::ConstString> symbols,
+                       Mangled::NamePreference symbol_mangling, bool regexp) {
+  strm << name << ", ";
+
+  if (!module.empty())
+    strm << "module " << module << ", ";
+
+  switch (symbol_mangling) {
+  case Mangled::NamePreference ::ePreferMangled:
+    strm << "mangled symbol ";
+    break;
+  case Mangled::NamePreference ::ePreferDemangled:
+    strm << "demangled symbol ";
+    break;
+  case Mangled::NamePreference ::ePreferDemangledWithoutArguments:
+    strm << "demangled (no args) symbol ";
+    break;
+  }
+
+  if (regexp)
+    strm << "regex ";
+
+  llvm::interleaveComma(symbols, strm);
+}
+
 class CommandObjectFrameRecognizerDelete : public CommandObjectParsed {
 public:
   CommandObjectFrameRecognizerDelete(CommandInterpreter &interpreter)
@@ -947,19 +977,13 @@ public:
     GetTarget().GetFrameRecognizerManager().ForEach(
         [&request](uint32_t rid, std::string rname, std::string module,
                    llvm::ArrayRef<lldb_private::ConstString> symbols,
-                   bool regexp) {
+                   Mangled::NamePreference symbol_mangling, bool regexp) {
           StreamString strm;
           if (rname.empty())
             rname = "(internal)";
 
-          strm << rname;
-          if (!module.empty())
-            strm << ", module " << module;
-          if (!symbols.empty())
-            for (auto &symbol : symbols)
-              strm << ", symbol " << symbol;
-          if (regexp)
-            strm << " (regexp)";
+          PrintRecognizerDetails(strm, rname, module, symbols, symbol_mangling,
+                                 regexp);
 
           request.TryCompleteCurrentArg(std::to_string(rid), strm.GetString());
         });
@@ -1016,22 +1040,18 @@ protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
     bool any_printed = false;
     GetTarget().GetFrameRecognizerManager().ForEach(
-        [&result, &any_printed](
-            uint32_t recognizer_id, std::string name, std::string module,
-            llvm::ArrayRef<ConstString> symbols, bool regexp) {
+        [&result,
+         &any_printed](uint32_t recognizer_id, std::string name,
+                       std::string module, llvm::ArrayRef<ConstString> symbols,
+                       Mangled::NamePreference symbol_mangling, bool regexp) {
           Stream &stream = result.GetOutputStream();
 
           if (name.empty())
             name = "(internal)";
 
-          stream << std::to_string(recognizer_id) << ": " << name;
-          if (!module.empty())
-            stream << ", module " << module;
-          if (!symbols.empty())
-            for (auto &symbol : symbols)
-              stream << ", symbol " << symbol;
-          if (regexp)
-            stream << " (regexp)";
+          stream << std::to_string(recognizer_id) << ": ";
+          PrintRecognizerDetails(stream, name, module, symbols, symbol_mangling,
+                                 regexp);
 
           stream.EOL();
           stream.Flush();

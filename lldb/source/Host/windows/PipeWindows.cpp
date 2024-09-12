@@ -136,7 +136,7 @@ Status PipeWindows::CreateWithUniqueName(llvm::StringRef prefix,
     ::RpcStringFreeA(&unique_string);
     error = CreateNew(pipe_name, child_process_inherit);
   } else {
-    error.SetError(status, eErrorTypeWin32);
+    error = Status(status, eErrorTypeWin32);
   }
   if (error.Success())
     name = pipe_name;

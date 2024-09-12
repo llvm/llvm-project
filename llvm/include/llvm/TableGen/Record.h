@@ -1323,13 +1323,9 @@ public:
     return I->getKind() == IK_DefInit;
   }
 
-  static DefInit *get(Record*);
-
   Init *convertInitializerTo(RecTy *Ty) const override;
 
   Record *getDef() const { return Def; }
-
-  //virtual Init *convertInitializerBitRange(ArrayRef<unsigned> Bits);
 
   RecTy *getFieldType(StringInit *FieldName) const override;
 
@@ -1673,7 +1669,7 @@ private:
   RecordKeeper &TrackedRecords;
 
   // The DefInit corresponding to this record.
-  DefInit *CorrespondingDefInit = nullptr;
+  mutable DefInit *CorrespondingDefInit = nullptr;
 
   // Unique record ID.
   unsigned ID;
@@ -1737,10 +1733,10 @@ public:
   void updateClassLoc(SMLoc Loc);
 
   // Make the type that this record should have based on its superclasses.
-  RecordRecTy *getType();
+  RecordRecTy *getType() const;
 
   /// get the corresponding DefInit.
-  DefInit *getDefInit();
+  DefInit *getDefInit() const;
 
   bool isClass() const { return Kind == RK_Class; }
 
@@ -1757,7 +1753,7 @@ public:
   ArrayRef<AssertionInfo> getAssertions() const { return Assertions; }
   ArrayRef<DumpInfo> getDumps() const { return Dumps; }
 
-  ArrayRef<std::pair<Record *, SMRange>>  getSuperClasses() const {
+  ArrayRef<std::pair<Record *, SMRange>> getSuperClasses() const {
     return SuperClasses;
   }
 
@@ -2057,21 +2053,32 @@ public:
   //===--------------------------------------------------------------------===//
   // High-level helper methods, useful for tablegen backends.
 
+  // Non-const methods return std::vector<Record *> by value or reference.
+  // Const methods return std::vector<const Record *> by value or
+  // ArrayRef<const Record *>.
+
   /// Get all the concrete records that inherit from the one specified
   /// class. The class must be defined.
-  std::vector<Record *> getAllDerivedDefinitions(StringRef ClassName) const;
+  ArrayRef<const Record *> getAllDerivedDefinitions(StringRef ClassName) const;
+  const std::vector<Record *> &getAllDerivedDefinitions(StringRef ClassName);
 
   /// Get all the concrete records that inherit from all the specified
   /// classes. The classes must be defined.
-  std::vector<Record *> getAllDerivedDefinitions(
-      ArrayRef<StringRef> ClassNames) const;
+  std::vector<const Record *>
+  getAllDerivedDefinitions(ArrayRef<StringRef> ClassNames) const;
+  std::vector<Record *>
+  getAllDerivedDefinitions(ArrayRef<StringRef> ClassNames);
 
   /// Get all the concrete records that inherit from specified class, if the
   /// class is defined. Returns an empty vector if the class is not defined.
-  std::vector<Record *>
+  ArrayRef<const Record *>
   getAllDerivedDefinitionsIfDefined(StringRef ClassName) const;
+  const std::vector<Record *> &
+  getAllDerivedDefinitionsIfDefined(StringRef ClassName);
 
   void dump() const;
+
+  void dumpAllocationStats(raw_ostream &OS) const;
 
 private:
   RecordKeeper(RecordKeeper &&) = delete;
@@ -2079,9 +2086,24 @@ private:
   RecordKeeper &operator=(RecordKeeper &&) = delete;
   RecordKeeper &operator=(const RecordKeeper &) = delete;
 
+  // Helper template functions for backend accessors.
+  template <typename VecTy>
+  const VecTy &
+  getAllDerivedDefinitionsImpl(StringRef ClassName,
+                               std::map<std::string, VecTy> &Cache) const;
+
+  template <typename VecTy>
+  VecTy getAllDerivedDefinitionsImpl(ArrayRef<StringRef> ClassNames) const;
+
+  template <typename VecTy>
+  const VecTy &getAllDerivedDefinitionsIfDefinedImpl(
+      StringRef ClassName, std::map<std::string, VecTy> &Cache) const;
+
   std::string InputFilename;
   RecordMap Classes, Defs;
-  mutable StringMap<std::vector<Record *>> ClassRecordsMap;
+  mutable std::map<std::string, std::vector<const Record *>>
+      ClassRecordsMapConst;
+  mutable std::map<std::string, std::vector<Record *>> ClassRecordsMap;
   GlobalMap ExtraGlobals;
 
   // These members are for the phase timing feature. We need a timer group,
@@ -2328,8 +2350,8 @@ public:
   Init *resolve(Init *VarName) override;
 };
 
-void EmitDetailedRecords(RecordKeeper &RK, raw_ostream &OS);
-void EmitJSON(RecordKeeper &RK, raw_ostream &OS);
+void EmitDetailedRecords(const RecordKeeper &RK, raw_ostream &OS);
+void EmitJSON(const RecordKeeper &RK, raw_ostream &OS);
 
 } // end namespace llvm
 

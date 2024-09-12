@@ -118,7 +118,6 @@
 ! CHECK:                   %[[VAL_46:.*]] = hlfir.designate %[[VAL_5]]#0 (%[[VAL_45]])  : (!fir.box<!fir.array<?xf32>>, i64) -> !fir.ref<f32>
 ! CHECK:                   %[[VAL_47:.*]] = fir.load %[[VAL_46]] : !fir.ref<f32>
 ! CHECK:                   hlfir.assign %[[VAL_47]] to %[[VAL_37]]#0 : f32, !fir.ref<f32>
-! CHECK:                 } else {
 ! CHECK:                 }
 ! CHECK:                 omp.yield
 ! CHECK:               omp.terminator

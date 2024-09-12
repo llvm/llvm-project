@@ -59,7 +59,7 @@ public:
   serializeToObject(Attribute attribute, Operation *module,
                     const gpu::TargetOptions &options) const;
 
-  Attribute createObject(Attribute attribute,
+  Attribute createObject(Attribute attribute, Operation *module,
                          const SmallVector<char, 0> &object,
                          const gpu::TargetOptions &options) const;
 };
@@ -500,19 +500,21 @@ std::optional<SmallVector<char, 0>> ROCDLTargetAttrImpl::serializeToObject(
 }
 
 Attribute
-ROCDLTargetAttrImpl::createObject(Attribute attribute,
+ROCDLTargetAttrImpl::createObject(Attribute attribute, Operation *module,
                                   const SmallVector<char, 0> &object,
                                   const gpu::TargetOptions &options) const {
   gpu::CompilationTarget format = options.getCompilationTarget();
   // If format is `fatbin` transform it to binary as `fatbin` is not yet
   // supported.
-  if (format > gpu::CompilationTarget::Binary)
+  gpu::KernelTableAttr kernels;
+  if (format > gpu::CompilationTarget::Binary) {
     format = gpu::CompilationTarget::Binary;
-
+    kernels = ROCDL::getKernelMetadata(module, object);
+  }
   DictionaryAttr properties{};
   Builder builder(attribute.getContext());
-  return builder.getAttr<gpu::ObjectAttr>(
-      attribute, format,
-      builder.getStringAttr(StringRef(object.data(), object.size())),
-      properties);
+  StringAttr objectStr =
+      builder.getStringAttr(StringRef(object.data(), object.size()));
+  return builder.getAttr<gpu::ObjectAttr>(attribute, format, objectStr,
+                                          properties, kernels);
 }

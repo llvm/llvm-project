@@ -69,9 +69,8 @@ The following features are currently considered experimental and are only provid
 when ``-fexperimental-library`` is passed:
 
 * The parallel algorithms library (``<execution>`` and the associated algorithms)
-* ``std::stop_token``, ``std::stop_source`` and ``std::stop_callback``
-* ``std::jthread``
 * ``std::chrono::tzdb`` and related time zone functionality
+* ``<syncstream>``
 
 .. note::
   Experimental libraries are experimental.
@@ -163,6 +162,9 @@ C++17 Specific Configuration Macros
 
 C++20 Specific Configuration Macros
 -----------------------------------
+**_LIBCPP_ENABLE_CXX20_REMOVED_UNCAUGHT_EXCEPTION**:
+  This macro is used to re-enable `uncaught_exception`.
+
 **_LIBCPP_ENABLE_CXX20_REMOVED_SHARED_PTR_UNIQUE**:
   This macro is used to re-enable the function
   ``std::shared_ptr<...>::unique()``.

@@ -325,7 +325,8 @@ static bool importFunctions(const char *argv0, Module &DestModule) {
       ExitOnErr(llvm::getModuleSummaryIndexForFile(SummaryIndex));
 
   // Map of Module -> List of globals to import from the Module
-  FunctionImporter::ImportMapTy ImportList;
+  FunctionImporter::ImportIDTable ImportIDs;
+  FunctionImporter::ImportMapTy ImportList(ImportIDs);
 
   auto ModuleLoader = [&DestModule](const char *argv0,
                                     const std::string &Identifier) {

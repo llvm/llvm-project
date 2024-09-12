@@ -197,7 +197,7 @@ def executeShCmd(cmd, shenv, results, timeout=0):
     timeout
     """
     # Use the helper even when no timeout is required to make
-    # other code simpler (i.e. avoid bunch of ``!= None`` checks)
+    # other code simpler (i.e. avoid bunch of ``is not None`` checks)
     timeoutHelper = TimeoutHelper(timeout)
     if timeout > 0:
         timeoutHelper.startTimer()
@@ -356,7 +356,7 @@ def executeBuiltinPopd(cmd, shenv):
 def executeBuiltinExport(cmd, shenv):
     """executeBuiltinExport - Set an environment variable."""
     if len(cmd.args) != 2:
-        raise InternalShellError("'export' supports only one argument")
+        raise InternalShellError(cmd, "'export' supports only one argument")
     updateEnv(shenv, cmd.args)
     return ShellCommandResult(cmd, "", "", 0, False)
 
@@ -406,8 +406,7 @@ def executeBuiltinEcho(cmd, shenv):
             return arg
 
         arg = lit.util.to_bytes(arg)
-        codec = "string_escape" if sys.version_info < (3, 0) else "unicode_escape"
-        return arg.decode(codec)
+        return arg.decode("unicode_escape")
 
     if args:
         for arg in args[:-1]:
@@ -743,7 +742,16 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
                     cmd_shenv = ShellEnvironment(shenv.cwd, shenv.env)
                 args = updateEnv(cmd_shenv, args)
                 if not args:
-                    raise InternalShellError(j, "Error: 'env' requires a" " subcommand")
+                    # Return the environment variables if no argument is provided.
+                    env_str = "\n".join(
+                        f"{key}={value}" for key, value in sorted(cmd_shenv.env.items())
+                    )
+                    results.append(
+                        ShellCommandResult(
+                            j, env_str, "", 0, timeoutHelper.timeoutReached(), []
+                        )
+                    )
+                    return 0
             elif args[0] == "not":
                 not_args.append(args.pop(0))
                 not_count += 1
@@ -1009,6 +1017,20 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
     return exitCode
 
 
+def findColor(line, curr_color):
+    start = line.rfind("\33[")
+    if start == -1:
+        return curr_color
+    end = line.find("m", start + 2)
+    if end == -1:
+        return curr_color
+    match = line[start : end + 1]
+    # "\33[0m" means "reset all formatting". Sometimes the 0 is skipped.
+    if match == "\33[m" or match == "\33[0m":
+        return None
+    return match
+
+
 def formatOutput(title, data, limit=None):
     if not data.strip():
         return ""
@@ -1019,8 +1041,18 @@ def formatOutput(title, data, limit=None):
         msg = ""
     ndashes = 30
     # fmt: off
-    out =  f"# .---{title}{'-' * (ndashes - 4 - len(title))}\n"
-    out += f"# | " + "\n# | ".join(data.splitlines()) + "\n"
+    out = f"# .---{title}{'-' * (ndashes - 4 - len(title))}\n"
+    curr_color = None
+    for line in data.splitlines():
+        if curr_color:
+            out += "\33[0m"
+        out += "# | "
+        if curr_color:
+            out += curr_color
+        out += line + "\n"
+        curr_color = findColor(line, curr_color)
+    if curr_color:
+        out += "\33[0m"  # prevent unterminated formatting from leaking
     out += f"# `---{msg}{'-' * (ndashes - 4 - len(msg))}\n"
     # fmt: on
     return out
@@ -1173,7 +1205,7 @@ def executeScript(test, litConfig, tmpBase, commands, cwd):
     open_kwargs = {}
     if litConfig.isWindows and not isWin32CMDEXE:
         mode += "b"  # Avoid CRLFs when writing bash scripts.
-    elif sys.version_info > (3, 0):
+    else:
         open_kwargs["encoding"] = "utf-8"
     f = open(script, mode, **open_kwargs)
     if isWin32CMDEXE:
@@ -1237,7 +1269,7 @@ def executeScript(test, litConfig, tmpBase, commands, cwd):
         )
         f.write(bytes(env_str, "utf-8") if mode == "wb" else env_str)
         f.write(b"set -x;" if mode == "wb" else "set -x;")
-        if sys.version_info > (3, 0) and mode == "wb":
+        if mode == "wb":
             f.write(bytes("{ " + "; } &&\n{ ".join(commands) + "; }", "utf-8"))
         else:
             f.write("{ " + "; } &&\n{ ".join(commands) + "; }")

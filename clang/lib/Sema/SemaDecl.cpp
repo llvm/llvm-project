@@ -2863,6 +2863,10 @@ static bool mergeDeclAttribute(Sema &S, NamedDecl *D,
   else if (const auto *NT = dyn_cast<HLSLNumThreadsAttr>(Attr))
     NewAttr = S.HLSL().mergeNumThreadsAttr(D, *NT, NT->getX(), NT->getY(),
                                            NT->getZ());
+  else if (const auto *WS = dyn_cast<HLSLWaveSizeAttr>(Attr))
+    NewAttr = S.HLSL().mergeWaveSizeAttr(D, *WS, WS->getMin(), WS->getMax(),
+                                         WS->getPreferred(),
+                                         WS->getSpelledArgsCount());
   else if (const auto *SA = dyn_cast<HLSLShaderAttr>(Attr))
     NewAttr = S.HLSL().mergeShaderAttr(D, *SA, SA->getType());
   else if (isa<SuppressAttr>(Attr))
@@ -3243,26 +3247,6 @@ static void mergeParamDeclAttributes(ParmVarDecl *newDecl,
       FirstFD->getParamDecl(oldDecl->getFunctionScopeIndex());
     S.Diag(FirstVD->getLocation(),
            diag::note_carries_dependency_missing_first_decl) << 1/*Param*/;
-  }
-
-  // HLSL parameter declarations for inout and out must match between
-  // declarations. In HLSL inout and out are ambiguous at the call site, but
-  // have different calling behavior, so you cannot overload a method based on a
-  // difference between inout and out annotations.
-  if (S.getLangOpts().HLSL) {
-    const auto *NDAttr = newDecl->getAttr<HLSLParamModifierAttr>();
-    const auto *ODAttr = oldDecl->getAttr<HLSLParamModifierAttr>();
-    // We don't need to cover the case where one declaration doesn't have an
-    // attribute. The only possible case there is if one declaration has an `in`
-    // attribute and the other declaration has no attribute. This case is
-    // allowed since parameters are `in` by default.
-    if (NDAttr && ODAttr &&
-        NDAttr->getSpellingListIndex() != ODAttr->getSpellingListIndex()) {
-      S.Diag(newDecl->getLocation(), diag::err_hlsl_param_qualifier_mismatch)
-          << NDAttr << newDecl;
-      S.Diag(oldDecl->getLocation(), diag::note_previous_declaration_as)
-          << ODAttr;
-    }
   }
 
   if (!oldDecl->hasAttrs())
@@ -3882,6 +3866,10 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
         if (New->isCXXClassMember() && New->isOutOfLine())
           Diag(New->getLocation(), diag::err_member_def_does_not_match_ret_type)
               << New << New->getReturnTypeSourceRange();
+        else if (Old->isExternC() && New->isExternC() &&
+                 !Old->hasAttr<OverloadableAttr>() &&
+                 !New->hasAttr<OverloadableAttr>())
+          Diag(New->getLocation(), diag::err_conflicting_types) << New;
         else
           Diag(New->getLocation(), diag::err_ovl_diff_return_type)
               << New->getReturnTypeSourceRange();
@@ -4048,6 +4036,22 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
         Diag(OldLocation, PrevDiag);
         return true;
       }
+    }
+
+    // HLSL check parameters for matching ABI specifications.
+    if (getLangOpts().HLSL) {
+      if (HLSL().CheckCompatibleParameterABI(New, Old))
+        return true;
+
+      // If no errors are generated when checking parameter ABIs we can check if
+      // the two declarations have the same type ignoring the ABIs and if so,
+      // the declarations can be merged. This case for merging is only valid in
+      // HLSL because there are no valid cases of merging mismatched parameter
+      // ABIs except the HLSL implicit in and explicit in.
+      if (Context.hasSameFunctionTypeIgnoringParamABI(OldQTypeForComparison,
+                                                      NewQType))
+        return MergeCompatibleFunctionDecls(New, Old, S, MergeTypeWithOld);
+      // Fall through for conflicting redeclarations and redefinitions.
     }
 
     // If the function types are compatible, merge the declarations. Ignore the
@@ -9762,6 +9766,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
     // the function decl is created above).
     // FIXME: We need a better way to separate C++ standard and clang modules.
     bool ImplicitInlineCXX20 = !getLangOpts().CPlusPlusModules ||
+                               NewFD->isConstexpr() || NewFD->isConsteval() ||
                                !NewFD->getOwningModule() ||
                                NewFD->isFromExplicitGlobalModule() ||
                                NewFD->getOwningModule()->isHeaderLikeModule();
@@ -13319,8 +13324,7 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
   }
 
   // WebAssembly tables can't be used to initialise a variable.
-  if (Init && !Init->getType().isNull() &&
-      Init->getType()->isWebAssemblyTableType()) {
+  if (!Init->getType().isNull() && Init->getType()->isWebAssemblyTableType()) {
     Diag(Init->getExprLoc(), diag::err_wasm_table_art) << 0;
     VDecl->setInvalidDecl();
     return;
@@ -13463,7 +13467,7 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
   if (getLangOpts().DebuggerCastResultToId && DclT->isObjCObjectPointerType() &&
       Init->getType() == Context.UnknownAnyTy) {
     ExprResult Result = forceUnknownAnyToType(Init, Context.getObjCIdType());
-    if (Result.isInvalid()) {
+    if (!Result.isUsable()) {
       VDecl->setInvalidDecl();
       return;
     }
@@ -13491,7 +13495,7 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
             InitializationSequence Init(*this, Entity, Kind, MultiExprArg(E));
             return Init.Failed() ? ExprError() : E;
           });
-      if (Res.isInvalid()) {
+      if (!Res.isUsable()) {
         VDecl->setInvalidDecl();
       } else if (Res.get() != Args[Idx]) {
         Args[Idx] = Res.get();
@@ -13504,7 +13508,7 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
                                    /*TopLevelOfInitList=*/false,
                                    /*TreatUnavailableAsInvalid=*/false);
     ExprResult Result = InitSeq.Perform(*this, Entity, Kind, Args, &DclT);
-    if (Result.isInvalid()) {
+    if (!Result.isUsable()) {
       // If the provided initializer fails to initialize the var decl,
       // we attach a recovery expr for better recovery.
       auto RecoveryExpr =
@@ -13528,8 +13532,8 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
                       InitSeq.step_begin()->Kind ==
                           InitializationSequence::SK_ParenthesizedListInit;
     QualType VDeclType = VDecl->getType();
-    if (Init && !Init->getType().isNull() &&
-        !Init->getType()->isDependentType() && !VDeclType->isDependentType() &&
+    if (!Init->getType().isNull() && !Init->getType()->isDependentType() &&
+        !VDeclType->isDependentType() &&
         Context.getAsIncompleteArrayType(VDeclType) &&
         Context.getAsIncompleteArrayType(Init->getType())) {
       // Bail out if it is not possible to deduce array size from the
@@ -13592,7 +13596,7 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
   ExprResult Result =
       ActOnFinishFullExpr(Init, VDecl->getLocation(),
                           /*DiscardedValue*/ false, VDecl->isConstexpr());
-  if (Result.isInvalid()) {
+  if (!Result.isUsable()) {
     VDecl->setInvalidDecl();
     return;
   }
@@ -16608,27 +16612,9 @@ void Sema::AddKnownFunctionAttributes(FunctionDecl *FD) {
     default:
       break;
     }
-
-    // Add lifetime attribute to std::move, std::fowrard et al.
-    switch (BuiltinID) {
-    case Builtin::BIaddressof:
-    case Builtin::BI__addressof:
-    case Builtin::BI__builtin_addressof:
-    case Builtin::BIas_const:
-    case Builtin::BIforward:
-    case Builtin::BIforward_like:
-    case Builtin::BImove:
-    case Builtin::BImove_if_noexcept:
-      if (ParmVarDecl *P = FD->getParamDecl(0u);
-          !P->hasAttr<LifetimeBoundAttr>())
-        P->addAttr(
-            LifetimeBoundAttr::CreateImplicit(Context, FD->getLocation()));
-      break;
-    default:
-      break;
-    }
   }
 
+  inferLifetimeBoundAttribute(FD);
   AddKnownFunctionAttributesForReplaceableGlobalAllocationFunction(FD);
 
   // If C++ exceptions are enabled but we are told extern "C" functions cannot

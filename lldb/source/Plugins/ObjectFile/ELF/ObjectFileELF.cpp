@@ -1068,7 +1068,8 @@ ObjectFileELF::RefineModuleDetailsFromNote(lldb_private::DataExtractor &data,
       // Pull out the min version info.
       uint32_t version_info;
       if (data.GetU32(&offset, &version_info, 1) == nullptr) {
-        error.SetErrorString("failed to read FreeBSD ABI note payload");
+        error =
+            Status::FromErrorString("failed to read FreeBSD ABI note payload");
         return error;
       }
 
@@ -1099,7 +1100,8 @@ ObjectFileELF::RefineModuleDetailsFromNote(lldb_private::DataExtractor &data,
           uint32_t version_info[4];
           if (data.GetU32(&offset, &version_info[0], note.n_descsz / 4) ==
               nullptr) {
-            error.SetErrorString("failed to read GNU ABI note payload");
+            error =
+                Status::FromErrorString("failed to read GNU ABI note payload");
             return error;
           }
 
@@ -1160,7 +1162,8 @@ ObjectFileELF::RefineModuleDetailsFromNote(lldb_private::DataExtractor &data,
               // Save the build id as the UUID for the module.
               uuid = UUID(buf, note.n_descsz);
             } else {
-              error.SetErrorString("failed to read GNU_BUILD_ID note payload");
+              error = Status::FromErrorString(
+                  "failed to read GNU_BUILD_ID note payload");
               return error;
             }
           }
@@ -1180,7 +1183,8 @@ ObjectFileELF::RefineModuleDetailsFromNote(lldb_private::DataExtractor &data,
       // Pull out the version info.
       uint32_t version_info;
       if (data.GetU32(&offset, &version_info, 1) == nullptr) {
-        error.SetErrorString("failed to read NetBSD ABI note payload");
+        error =
+            Status::FromErrorString("failed to read NetBSD ABI note payload");
         return error;
       }
       // Convert the version info into a major/minor/patch number.
@@ -1251,10 +1255,11 @@ ObjectFileELF::RefineModuleDetailsFromNote(lldb_private::DataExtractor &data,
         for (size_t i = 0; i < count; ++i) {
           cstr = data.GetCStr(&offset);
           if (cstr == nullptr) {
-            error.SetErrorStringWithFormat("ObjectFileELF::%s trying to read "
-                                           "at an offset after the end "
-                                           "(GetCStr returned nullptr)",
-                                           __FUNCTION__);
+            error = Status::FromErrorStringWithFormat(
+                "ObjectFileELF::%s trying to read "
+                "at an offset after the end "
+                "(GetCStr returned nullptr)",
+                __FUNCTION__);
             return error;
           }
           llvm::StringRef path(cstr);
