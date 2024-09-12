@@ -1,0 +1,126 @@
+// RUN: cir-opt %s -cir-to-llvm -o %t.mlir
+// RUN: FileCheck --input-file=%t.mlir %s
+#true = #cir.bool<true> : !cir.bool
+!s32i = !cir.int<s, 32>
+
+
+module {
+
+  cir.func @testFor(%arg0 : !cir.bool) {
+    cir.for : cond {
+      cir.condition(%arg0)
+    } body {
+      cir.yield
+    } step {
+      cir.yield
+    }
+    cir.return
+  }
+
+// CHECK: @testFor
+// CHECK:    llvm.br ^bb[[#COND:]]
+// CHECK:  ^bb[[#COND]]:
+// CHECK:    llvm.cond_br %{{.+}}, ^bb[[#BODY:]], ^bb[[#EXIT:]]
+// CHECK:  ^bb[[#BODY]]:
+// CHECK:    llvm.br ^bb[[#STEP:]]
+// CHECK:  ^bb[[#STEP]]:
+// CHECK:    llvm.br ^bb[[#COND]]
+// CHECK:  ^bb[[#EXIT]]:
+
+
+
+  // Test while cir.loop operation lowering.
+  cir.func @testWhile(%arg0 : !cir.bool) {
+    cir.while {
+      cir.condition(%arg0)
+    } do {
+      cir.yield
+    }
+    cir.return
+  }
+
+// CHECK: @testWhile
+// CHECK:    llvm.br ^bb[[#COND:]]
+// CHECK:  ^bb[[#COND]]:
+// CHECK:    llvm.cond_br %{{.+}}, ^bb[[#BODY:]], ^bb[[#EXIT:]]
+// CHECK:  ^bb[[#BODY]]:
+// CHECK:    llvm.br ^bb[[#COND]]
+// CHECK:  ^bb[[#EXIT]]:
+
+
+
+  // Test do-while cir.loop operation lowering.
+  cir.func @testDoWhile(%arg0 : !cir.bool) {
+    cir.do {
+      cir.yield
+    } while {
+      cir.condition(%arg0)
+    }
+    cir.return
+  }
+
+// CHECK: @testDoWhile
+// CHECK:    llvm.br ^bb[[#BODY:]]
+// CHECK:  ^bb[[#COND:]]:
+// CHECK:    llvm.cond_br %{{.+}}, ^bb[[#BODY:]], ^bb[[#EXIT:]]
+// CHECK:  ^bb[[#BODY]]:
+// CHECK:    llvm.br ^bb[[#COND]]
+// CHECK:  ^bb[[#EXIT]]:
+
+
+
+  // test corner case 
+  // while (1) {
+  //     break;
+  // }
+  cir.func @testWhileWithBreakTerminatedBody(%arg0 : !cir.bool) {
+    cir.while {
+      cir.condition(%arg0)
+    } do {
+      cir.break
+    }
+    cir.return
+  }
+
+// CHECK: @testWhileWithBreakTerminatedBody
+// CHECK:    llvm.br ^bb[[#COND:]]
+// CHECK:  ^bb[[#COND]]:
+// CHECK:    llvm.cond_br %{{.+}}, ^bb[[#BODY:]], ^bb[[#EXIT:]]
+// CHECK:  ^bb[[#BODY]]:
+// CHECK:    llvm.br ^bb[[#EXIT]]
+// CHECK:  ^bb[[#EXIT]]:
+
+
+
+  // test C only corner case - no fails during the lowering
+  // for (;;) {
+  //     break;
+  // }
+  cir.func @forWithBreakTerminatedScopeInBody(%arg0 : !cir.bool) {
+      cir.for : cond {
+        cir.condition(%arg0)
+      } body {
+        cir.scope { // FIXME(cir): Redundant scope emitted during C codegen.
+          cir.break
+        }
+        cir.yield
+      } step {
+        cir.yield
+      }
+    cir.return
+  }
+
+// CHECK: @forWithBreakTerminatedScopeInBody
+// CHECK:    llvm.br ^bb[[#COND:]]
+// CHECK:  ^bb[[#COND:]]:
+// CHECK:    llvm.cond_br %{{.+}}, ^bb[[#BODY:]], ^bb[[#EXIT:]]
+// CHECK:  ^bb[[#BODY]]:
+// CHECK:    llvm.br ^bb[[#SCOPE_IN:]]
+// CHECK:  ^bb[[#SCOPE_IN]]:
+// CHECK:    llvm.br ^bb[[#EXIT]]
+// CHECK:  ^bb[[#SCOPE_EXIT:]]:
+// CHECK:    llvm.br ^bb[[#STEP:]]
+// CHECK:  ^bb[[#STEP]]:
+// CHECK:    llvm.br ^bb[[#COND]]
+// CHECK:  ^bb[[#EXIT]]:
+}

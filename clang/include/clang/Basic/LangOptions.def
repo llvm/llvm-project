@@ -426,6 +426,8 @@ LANGOPT(RetainCommentsFromSystemHeaders, 1, 0, "retain documentation comments fr
 LANGOPT(APINotes, 1, 0, "use external API notes")
 LANGOPT(APINotesModules, 1, 0, "use module-based external API notes")
 
+LANGOPT(CIRWarnings, 1, 0, "emit warnings with ClangIR")
+
 LANGOPT(SanitizeAddressFieldPadding, 2, 0, "controls how aggressive is ASan "
                                            "field padding (0: none, 1:least "
                                            "aggressive, 2: more aggressive)")

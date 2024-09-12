@@ -27,7 +27,14 @@ def CIR_Dialect : Dialect {
   let useDefaultAttributePrinterParser = 0;
   let useDefaultTypePrinterParser = 0;
 
+  let hasConstantMaterializer = 1;
+
   let extraClassDeclaration = [{
+
+    // Names of CIR parameter attributes.
+    static StringRef getSExtAttrName() { return "cir.signext"; }
+    static StringRef getZExtAttrName() { return "cir.zeroext"; }
+
     void registerAttributes();
     void registerTypes();
 

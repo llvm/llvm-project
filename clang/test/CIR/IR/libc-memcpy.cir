@@ -1,0 +1,9 @@
+// RUN: cir-opt %s
+
+!u32i = !cir.int<u, 32>
+module {
+  cir.func @shouldParseLibcMemcpyOp(%arg0 : !cir.ptr<!cir.void>, %arg1 : !u32i) {
+    cir.libc.memcpy %arg1 bytes from %arg0 to %arg0 : !u32i, !cir.ptr<!cir.void> -> !cir.ptr<!cir.void>
+    cir.return
+  }
+}

@@ -23,6 +23,7 @@ class Decl;
 class FunctionDecl;
 class QualType;
 class Sema;
+
 namespace sema {
   class FunctionScopeInfo;
 }

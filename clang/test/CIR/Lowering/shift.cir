@@ -1,0 +1,28 @@
+// RUN: cir-opt %s -cir-to-llvm -o %t.mlir
+// RUN: FileCheck --input-file=%t.mlir %s
+
+!s16i = !cir.int<s, 16>
+!s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
+!u16i = !cir.int<u, 16>
+module {
+  cir.func @testShiftWithDifferentValueAndAmountTypes(%arg0: !s16i, %arg1: !s32i, %arg2: !s64i, %arg3: !u16i) {
+  // CHECK: testShiftWithDifferentValueAndAmountTypes
+
+    // Should allow shift with larger amount type.
+    %1 = cir.shift(left, %arg1: !s32i, %arg2 : !s64i) -> !s32i
+    // CHECK: %[[#CAST:]] = llvm.trunc %{{.+}} : i64 to i32
+    // CHECK: llvm.shl %{{.+}}, %[[#CAST]]  : i32
+
+    // Should allow shift with signed smaller amount type.
+    %2 = cir.shift(left, %arg1 : !s32i, %arg0 : !s16i) -> !s32i
+    // CHECK: %[[#CAST:]] = llvm.sext %{{.+}} : i16 to i32
+    // CHECK: llvm.shl %{{.+}}, %[[#CAST]]  : i32
+
+    // Should allow shift with unsigned smaller amount type.
+    %14 = cir.shift(left, %arg1 : !s32i, %arg3 : !u16i) -> !s32i
+    // CHECK: %[[#CAST:]] = llvm.zext %{{.+}} : i16 to i32
+    // CHECK: llvm.shl %{{.+}}, %[[#CAST]]  : i32
+    cir.return
+  }
+}
