@@ -271,6 +271,11 @@ static bool isInStlNamespace(const Decl *D) {
   return DC->isStdNamespace();
 }
 
+static bool isPointerLikeType(QualType Type) {
+  return isRecordWithAttr<PointerAttr>(Type) || Type->isPointerType() ||
+         Type->isNullPtrType();
+}
+
 // Returns true if the given Record decl is a form of `GSLOwner<Pointer>`
 // type, e.g. std::vector<string_view>, std::optional<string_view>.
 static bool isContainerOfPointer(const RecordDecl *Container) {
@@ -280,9 +285,19 @@ static bool isContainerOfPointer(const RecordDecl *Container) {
       return false;
     const auto &TAs = CTSD->getTemplateArgs();
     return TAs.size() > 0 && TAs[0].getKind() == TemplateArgument::Type &&
-           (isRecordWithAttr<PointerAttr>(TAs[0].getAsType()) ||
-            TAs[0].getAsType()->isPointerType() ||
-            TAs[0].getAsType()->isNullPtrType());
+           isPointerLikeType(TAs[0].getAsType());
+  }
+  return false;
+}
+// Returns true if the given Record is `std::initializer_list<pointer>`.
+static bool isStdInitializerListOfPointer(const RecordDecl *RD) {
+  if (const auto *CTSD =
+          dyn_cast_if_present<ClassTemplateSpecializationDecl>(RD)) {
+    const auto &TAs = CTSD->getTemplateArgs();
+    return isInStlNamespace(RD) && RD->getIdentifier() &&
+           RD->getName() == "initializer_list" && TAs.size() > 0 &&
+           TAs[0].getKind() == TemplateArgument::Type &&
+           isPointerLikeType(TAs[0].getAsType());
   }
   return false;
 }
@@ -303,8 +318,7 @@ static bool shouldTrackImplicitObjectArg(const CXXMethodDecl *Callee) {
           Callee->getFunctionObjectParameterType()) &&
       !isGSLOwner(Callee->getFunctionObjectParameterType()))
     return false;
-  if (Callee->getReturnType()->isPointerType() ||
-      isRecordWithAttr<PointerAttr>(Callee->getReturnType())) {
+  if (isPointerLikeType(Callee->getReturnType())) {
     if (!Callee->getIdentifier())
       return false;
     return llvm::StringSwitch<bool>(Callee->getName())
@@ -350,6 +364,30 @@ static bool shouldTrackFirstArgument(const FunctionDecl *FD) {
         .Default(false);
   }
   return false;
+}
+
+// Returns true if we should perform the GSL analysis on the first argument for
+// the given constructor.
+static bool
+shouldTrackFirstArgumentForConstructor(const CXXConstructExpr *Ctor) {
+  const auto *ClassD = Ctor->getConstructor()->getParent();
+
+  auto FirstArgType = Ctor->getArg(0)->getType();
+  // Case 1, construct a GSL pointer, e.g. std::string_view
+  if (ClassD->hasAttr<PointerAttr>())
+    return true;
+
+  // case 2: construct a container of pointer (std::vector<std::string_view>)
+  // from an owner or a std::initilizer_list.
+  //
+  // std::initializer_list is a proxy object that provides access to the backing
+  // array. We perform analysis on it to determine if there are any dangling
+  // temporaries in the backing array.
+  if (Ctor->getConstructor()->getNumParams() != 1 ||
+      !isContainerOfPointer(ClassD))
+    return false;
+  return isGSLOwner(FirstArgType) ||
+         isStdInitializerListOfPointer(FirstArgType->getAsRecordDecl());
 }
 
 // Return true if this is an "normal" assignment operator.
@@ -497,14 +535,9 @@ static void visitFunctionCallArguments(IndirectLocalPath &Path, Expr *Call,
       // Perform GSL analysis for the first argument
       if (shouldTrackFirstArgument(Callee)) {
         VisitGSLPointerArg(Callee, Args[0]);
-      } else if (auto *Ctor = dyn_cast<CXXConstructExpr>(Call)) {
-        const auto *ClassD = Ctor->getConstructor()->getParent();
-        // Two cases:
-        //  a GSL pointer, e.g. std::string_view
-        //  a container of GSL pointer, e.g. std::vector<string_view>
-        if (ClassD->hasAttr<PointerAttr>() ||
-            (isContainerOfPointer(ClassD) && Callee->getNumParams() == 1))
-          VisitGSLPointerArg(Ctor->getConstructor(), Args[0]);
+      } else if (auto *Ctor = dyn_cast<CXXConstructExpr>(Call);
+                 Ctor && shouldTrackFirstArgumentForConstructor(Ctor)) {
+        VisitGSLPointerArg(Ctor->getConstructor(), Args[0]);
       }
     }
   }

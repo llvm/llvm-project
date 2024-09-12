@@ -667,4 +667,12 @@ std::optional<int*> test4(int a) {
   return std::make_optional(nullptr); // fine
 }
 
+template <typename T>
+struct [[gsl::Owner]] StatusOr {
+  const T &value() [[clang::lifetimebound]];
+};
+std::vector<int*> test5(StatusOr<std::vector<int*>> aa) {
+  return aa.value(); // fine
+}
+
 } // namespace GH100526
