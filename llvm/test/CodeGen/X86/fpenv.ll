@@ -185,8 +185,9 @@ define void @func_05(i32 %x) nounwind {
 ; X86-NOSSE-LABEL: func_05:
 ; X86-NOSSE:       # %bb.0:
 ; X86-NOSSE-NEXT:    pushl %eax
-; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NOSSE-NEXT:    leal 4(%eax,%eax), %ecx
+; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NOSSE-NEXT:    addl %ecx, %ecx
+; X86-NOSSE-NEXT:    addb $4, %cl
 ; X86-NOSSE-NEXT:    movl $201, %eax
 ; X86-NOSSE-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X86-NOSSE-NEXT:    shll %cl, %eax
@@ -203,8 +204,9 @@ define void @func_05(i32 %x) nounwind {
 ; X86-SSE-LABEL: func_05:
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    pushl %eax
-; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE-NEXT:    leal 4(%eax,%eax), %ecx
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-SSE-NEXT:    addl %ecx, %ecx
+; X86-SSE-NEXT:    addb $4, %cl
 ; X86-SSE-NEXT:    movl $201, %eax
 ; X86-SSE-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X86-SSE-NEXT:    shll %cl, %eax
@@ -227,7 +229,8 @@ define void @func_05(i32 %x) nounwind {
 ; X64-LABEL: func_05:
 ; X64:       # %bb.0:
 ; X64-NEXT:    # kill: def $edi killed $edi def $rdi
-; X64-NEXT:    leal 4(%rdi,%rdi), %ecx
+; X64-NEXT:    leal (%rdi,%rdi), %ecx
+; X64-NEXT:    addb $4, %cl
 ; X64-NEXT:    movl $201, %eax
 ; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X64-NEXT:    shll %cl, %eax

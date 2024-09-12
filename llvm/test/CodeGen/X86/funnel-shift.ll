@@ -182,8 +182,9 @@ define i37 @fshl_i37(i37 %x, i37 %y, i37 %z) nounwind {
 ; X64-AVX-NEXT:    movabsq $498560650640798693, %rdx # imm = 0x6EB3E45306EB3E5
 ; X64-AVX-NEXT:    mulq %rdx
 ; X64-AVX-NEXT:    leal (%rdx,%rdx,8), %eax
-; X64-AVX-NEXT:    leal (%rdx,%rax,4), %eax
-; X64-AVX-NEXT:    subl %eax, %ecx
+; X64-AVX-NEXT:    shll $2, %eax
+; X64-AVX-NEXT:    addb %dl, %al
+; X64-AVX-NEXT:    subb %al, %cl
 ; X64-AVX-NEXT:    shlq $27, %rsi
 ; X64-AVX-NEXT:    # kill: def $cl killed $cl killed $rcx
 ; X64-AVX-NEXT:    shldq %cl, %rsi, %rdi
@@ -349,9 +350,10 @@ define i37 @fshr_i37(i37 %x, i37 %y, i37 %z) nounwind {
 ; X64-AVX-NEXT:    movabsq $498560650640798693, %rdx # imm = 0x6EB3E45306EB3E5
 ; X64-AVX-NEXT:    mulq %rdx
 ; X64-AVX-NEXT:    leal (%rdx,%rdx,8), %eax
-; X64-AVX-NEXT:    leal (%rdx,%rax,4), %eax
-; X64-AVX-NEXT:    subl %eax, %ecx
-; X64-AVX-NEXT:    addl $27, %ecx
+; X64-AVX-NEXT:    shll $2, %eax
+; X64-AVX-NEXT:    addb %dl, %al
+; X64-AVX-NEXT:    subb %al, %cl
+; X64-AVX-NEXT:    addb $27, %cl
 ; X64-AVX-NEXT:    shlq $27, %rsi
 ; X64-AVX-NEXT:    # kill: def $cl killed $cl killed $rcx
 ; X64-AVX-NEXT:    shrdq %cl, %rdi, %rsi
@@ -437,16 +439,15 @@ define i32 @fshl_i32_undef0_msk(i32 %a0, i32 %a1) nounwind {
 ; X86-SSE2-LABEL: fshl_i32_undef0_msk:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-SSE2-NEXT:    andl $7, %ecx
-; X86-SSE2-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X86-SSE2-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-SSE2-NEXT:    andb $7, %cl
 ; X86-SSE2-NEXT:    shldl %cl, %eax, %eax
 ; X86-SSE2-NEXT:    retl
 ;
 ; X64-AVX-LABEL: fshl_i32_undef0_msk:
 ; X64-AVX:       # %bb.0:
 ; X64-AVX-NEXT:    movl %esi, %ecx
-; X64-AVX-NEXT:    andl $7, %ecx
+; X64-AVX-NEXT:    andb $7, %cl
 ; X64-AVX-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X64-AVX-NEXT:    shldl %cl, %edi, %eax
 ; X64-AVX-NEXT:    retq
@@ -694,16 +695,15 @@ define i32 @fshr_i32_undef1_msk(i32 %a0, i32 %a1) nounwind {
 ; X86-SSE2-LABEL: fshr_i32_undef1_msk:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-SSE2-NEXT:    andl $7, %ecx
-; X86-SSE2-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X86-SSE2-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-SSE2-NEXT:    andb $7, %cl
 ; X86-SSE2-NEXT:    shrdl %cl, %eax, %eax
 ; X86-SSE2-NEXT:    retl
 ;
 ; X64-AVX-LABEL: fshr_i32_undef1_msk:
 ; X64-AVX:       # %bb.0:
 ; X64-AVX-NEXT:    movl %esi, %ecx
-; X64-AVX-NEXT:    andl $7, %ecx
+; X64-AVX-NEXT:    andb $7, %cl
 ; X64-AVX-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X64-AVX-NEXT:    shrdl %cl, %edi, %eax
 ; X64-AVX-NEXT:    retq
