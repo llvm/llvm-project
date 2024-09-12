@@ -645,6 +645,33 @@ lldb::SBValue SBValue::CreateValueFromData(const char *name, SBData data,
   return sb_value;
 }
 
+lldb::SBValue SBValue::CreateBoolValue(const char *name, bool value) {
+  LLDB_INSTRUMENT_VA(this, name);
+
+  lldb::SBValue sb_value;
+  lldb::ValueObjectSP new_value_sp;
+  ValueLocker locker;
+  lldb::ValueObjectSP value_sp(GetSP(locker));
+  ProcessSP process_sp = m_opaque_sp->GetProcessSP();
+  lldb::SBTarget target = GetTarget();
+  if (!target.IsValid())
+    return sb_value;
+  lldb::SBType boolean_type = target.GetBasicType(lldb::eBasicTypeBool);
+  lldb::TypeImplSP type_impl_sp(boolean_type.GetSP());
+  if (value_sp && process_sp && type_impl_sp) {
+    int data_buf[1] = {value ? 1 : 0};
+    lldb::SBData data = lldb::SBData::CreateDataFromSInt32Array(
+        process_sp->GetByteOrder(), sizeof(data_buf[0]), data_buf,
+        sizeof(data_buf) / sizeof(data_buf[0]));
+    ExecutionContext exe_ctx(value_sp->GetExecutionContextRef());
+    new_value_sp = ValueObject::CreateValueObjectFromData(
+        name, **data, exe_ctx, type_impl_sp->GetCompilerType(true));
+    new_value_sp->SetAddressTypeOfChildren(eAddressTypeLoad);
+  }
+  sb_value.SetSP(new_value_sp);
+  return sb_value;
+}
+
 SBValue SBValue::GetChildAtIndex(uint32_t idx) {
   LLDB_INSTRUMENT_VA(this, idx);
 

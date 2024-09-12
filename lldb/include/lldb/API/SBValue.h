@@ -146,6 +146,8 @@ public:
   lldb::SBValue CreateValueFromData(const char *name, lldb::SBData data,
                                     lldb::SBType type);
 
+  lldb::SBValue CreateBoolValue(const char *name, bool value);
+
   /// Get a child value by index from a value.
   ///
   /// Structs, unions, classes, arrays and pointers have child
