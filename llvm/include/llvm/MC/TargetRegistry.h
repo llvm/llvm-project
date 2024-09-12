@@ -208,6 +208,10 @@ public:
   using AsmTargetStreamerCtorTy =
       MCTargetStreamer *(*)(MCStreamer &S, formatted_raw_ostream &OS,
                             MCInstPrinter *InstPrint);
+  using AsmStreamerCtorTy =
+      MCStreamer *(*)(MCContext &Ctx, std::unique_ptr<formatted_raw_ostream> OS,
+                      MCInstPrinter *IP, std::unique_ptr<MCCodeEmitter> CE,
+                      std::unique_ptr<MCAsmBackend> TAB);
   using ObjectTargetStreamerCtorTy = MCTargetStreamer *(*)(
       MCStreamer &S, const MCSubtargetInfo &STI);
   using MCRelocationInfoCtorTy = MCRelocationInfo *(*)(const Triple &TT,
@@ -315,6 +319,10 @@ private:
   /// Construction function for this target's asm TargetStreamer, if
   /// registered (default = nullptr).
   AsmTargetStreamerCtorTy AsmTargetStreamerCtorFn = nullptr;
+
+  /// Construction function for this target's AsmStreamer, if
+  /// registered (default = nullptr).
+  AsmStreamerCtorTy AsmStreamerCtorFn = nullptr;
 
   /// Construction function for this target's obj TargetStreamer, if
   /// registered (default = nullptr).
@@ -925,6 +933,10 @@ struct TargetRegistry {
   static void RegisterNullTargetStreamer(Target &T,
                                          Target::NullTargetStreamerCtorTy Fn) {
     T.NullTargetStreamerCtorFn = Fn;
+  }
+
+  static void RegisterAsmStreamer(Target &T, Target::AsmStreamerCtorTy Fn) {
+    T.AsmStreamerCtorFn = Fn;
   }
 
   static void RegisterAsmTargetStreamer(Target &T,
