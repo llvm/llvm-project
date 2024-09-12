@@ -387,6 +387,7 @@ libc_support_library(
     hdrs = ["src/__support/CPP/new.h"],
     deps = [
         ":__support_common",
+        ":__support_macros_properties_os",
     ],
 )
 
