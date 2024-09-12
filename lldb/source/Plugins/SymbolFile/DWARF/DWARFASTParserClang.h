@@ -258,7 +258,7 @@ protected:
 
 private:
   struct FieldInfo {
-    ///< Size in bits that this field occopies. Can but
+    ///< Size in bits that this field occupies. Can but
     ///< need not be the DW_AT_bit_size of the field.
     uint64_t bit_size = 0;
 
