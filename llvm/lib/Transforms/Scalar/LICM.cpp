@@ -2819,10 +2819,17 @@ static bool hoistBOAssociation(Instruction &I, Loop &L,
   if (!BO || !BO->isAssociative())
     return false;
 
-  // TODO: Only hoist ADDs and MULs for now.
+  // TODO: Only hoist ADDs, MULs, FADDs, and FMULs for now.
   Instruction::BinaryOps Opcode = BO->getOpcode();
-  if (Opcode != Instruction::Add && Opcode != Instruction::Mul)
+  switch (Opcode) {
+  case Instruction::Add:
+  case Instruction::Mul:
+  case Instruction::FAdd:
+  case Instruction::FMul:
+    break;
+  default:
     return false;
+  }
 
   bool LVInRHS = L.isLoopInvariant(BO->getOperand(0));
   auto *BO0 = dyn_cast<BinaryOperator>(BO->getOperand(LVInRHS));
@@ -2857,6 +2864,12 @@ static bool hoistBOAssociation(Instruction &I, Loop &L,
     if (auto *I = dyn_cast<Instruction>(Inv))
       I->setHasNoUnsignedWrap(true);
     NewBO->setHasNoUnsignedWrap(true);
+  } else if (Opcode == Instruction::FAdd || Opcode == Instruction::FMul) {
+    // Intersect FMF flags for FADD and FMUL.
+    FastMathFlags Intersect = BO->getFastMathFlags() & BO0->getFastMathFlags();
+    if (auto *I = dyn_cast<Instruction>(Inv))
+      I->setFastMathFlags(Intersect);
+    NewBO->setFastMathFlags(Intersect);
   }
 
   BO->replaceAllUsesWith(NewBO);
