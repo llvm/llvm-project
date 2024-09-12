@@ -1350,6 +1350,7 @@ public:
     }
     MinBWs.clear();
     ReductionBitWidth = 0;
+    BaseGraphSize = 1;
     CastMaxMinBWSizes.reset();
     ExtraBitWidthNodes.clear();
     InstrElementSize.clear();
@@ -1359,6 +1360,9 @@ public:
   }
 
   unsigned getTreeSize() const { return VectorizableTree.size(); }
+
+  /// Returns the base graph size, before any transformations.
+  unsigned getCanonicalGraphSize() const { return BaseGraphSize; }
 
   /// Perform LICM and CSE on the newly generated gather sequences.
   void optimizeGatherSequence();
@@ -2886,7 +2890,8 @@ private:
   /// Create a new vector from a list of scalar values.  Produces a sequence
   /// which exploits values reused across lanes, and arranges the inserts
   /// for ease of later optimization.
-  Value *createBuildVector(const TreeEntry *E, Type *ScalarTy);
+  Value *createBuildVector(const TreeEntry *E, Type *ScalarTy,
+                           bool PostponedPHIs);
 
   /// Returns the instruction in the bundle, which can be used as a base point
   /// for scheduling. Usually it is the last instruction in the bundle, except
@@ -4143,6 +4148,9 @@ private:
   /// input for the reduction and it was possible to narrow the size of the
   /// reduction.
   unsigned ReductionBitWidth = 0;
+
+  /// Canonical graph size before the transformations.
+  unsigned BaseGraphSize = 1;
 
   /// If the tree contains any zext/sext/trunc nodes, contains max-min pair of
   /// type sizes, used in the tree.
@@ -8446,47 +8454,147 @@ getGEPCosts(const TargetTransformInfo &TTI, ArrayRef<Value *> Ptrs,
 
 void BoUpSLP::transformNodes() {
   constexpr TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+  BaseGraphSize = VectorizableTree.size();
+  // Operands are profitable if all of them are:
+  // 1. Constants
+  // or
+  // 2. Splats
+  // or
+  // 3. Results in good vectorization opportunity, i.e. may generate vector
+  // nodes and reduce cost of the graph.
+  auto CheckOperandsProfitability = [this](Instruction *I1, Instruction *I2,
+                                           const InstructionsState &S) {
+    SmallVector<SmallVector<std::pair<Value *, Value *>>> Candidates;
+    for (unsigned Op : seq<unsigned>(S.MainOp->getNumOperands()))
+      Candidates.emplace_back().emplace_back(I1->getOperand(Op),
+                                             I2->getOperand(Op));
+    return all_of(Candidates, [this](
+                                  ArrayRef<std::pair<Value *, Value *>> Cand) {
+      return all_of(Cand,
+                    [](const std::pair<Value *, Value *> &P) {
+                      return isa<Constant>(P.first) ||
+                             isa<Constant>(P.second) || (P.first == P.second);
+                    }) ||
+             findBestRootPair(Cand, LookAheadHeuristics::ScoreSplatLoads);
+    });
+  };
   // The tree may grow here, so iterate over nodes, built before.
-  for (unsigned Idx : seq<unsigned>(VectorizableTree.size())) {
+  for (unsigned Idx : seq<unsigned>(BaseGraphSize)) {
     TreeEntry &E = *VectorizableTree[Idx];
     if (E.isGather()) {
       ArrayRef<Value *> VL = E.Scalars;
       const unsigned Sz = getVectorElementSize(VL.front());
       unsigned MinVF = getMinVF(2 * Sz);
+      // Do not try partial vectorization for small nodes (<= 2), nodes with the
+      // same opcode and same parent block or all constants.
       if (VL.size() <= 2 ||
-          (E.getOpcode() &&
-           (E.isAltShuffle() || E.getOpcode() != Instruction::Load)))
+          !(!E.getOpcode() || E.getOpcode() == Instruction::Load ||
+            E.isAltShuffle() || !allSameBlock(VL)) ||
+          allConstant(VL) || isSplat(VL))
         continue;
       // Try to find vectorizable sequences and transform them into a series of
       // insertvector instructions.
       unsigned StartIdx = 0;
       unsigned End = VL.size();
-      for (unsigned VF = VL.size() / 2; VF >= MinVF; VF /= 2) {
+      for (unsigned VF = VL.size() / 2; VF >= MinVF; VF = bit_ceil(VF) / 2) {
+        SmallVector<unsigned> Slices;
         for (unsigned Cnt = StartIdx; Cnt + VF <= End; Cnt += VF) {
           ArrayRef<Value *> Slice = VL.slice(Cnt, VF);
           // If any instruction is vectorized already - do not try again.
-          if (getTreeEntry(Slice.front()) || getTreeEntry(Slice.back()))
-            continue;
-          InstructionsState S = getSameOpcode(Slice, *TLI);
-          if (!S.getOpcode() || S.isAltShuffle() ||
-              (S.getOpcode() != Instruction::Load &&
-               any_of(Slice, [&](Value *V) {
-                 return !areAllUsersVectorized(cast<Instruction>(V),
-                                               UserIgnoreList);
-               })))
-            continue;
-          unsigned PrevSize = VectorizableTree.size();
-          buildTree_rec(Slice, 0, EdgeInfo(&E, UINT_MAX));
-          if (PrevSize + 1 == VectorizableTree.size() &&
-              VectorizableTree[PrevSize]->isGather()) {
-            VectorizableTree.pop_back();
-            continue;
+          // Reuse the existing node, if it fully matches the slice.
+          if (const TreeEntry *SE = getTreeEntry(Slice.front());
+              SE || getTreeEntry(Slice.back())) {
+            if (!SE)
+              continue;
+            if (VF != SE->getVectorFactor() || !SE->isSame(Slice))
+              continue;
           }
-          E.CombinedEntriesWithIndices.emplace_back(PrevSize, Cnt);
+          // Constant already handled effectively - skip.
+          if (allConstant(Slice))
+            continue;
+          // Do not try to vectorize small splats (less than vector register and
+          // only with the single non-undef element).
+          bool IsSplat = isSplat(Slice);
+          if (Slices.empty() || !IsSplat ||
+              (VF <= 2 && 2 * std::clamp(TTI->getNumberOfParts(getWidenedType(
+                                             Slice.front()->getType(), VF)),
+                                         1U, VF - 1) !=
+                              std::clamp(TTI->getNumberOfParts(getWidenedType(
+                                             Slice.front()->getType(), 2 * VF)),
+                                         1U, 2 * VF)) ||
+              count(Slice, Slice.front()) ==
+                  (isa<UndefValue>(Slice.front()) ? VF - 1 : 1)) {
+            if (IsSplat)
+              continue;
+            InstructionsState S = getSameOpcode(Slice, *TLI);
+            if (!S.getOpcode() || S.isAltShuffle() || !allSameBlock(Slice))
+              continue;
+            if (VF == 2) {
+              // Try to vectorize reduced values or if all users are vectorized.
+              // For expensive instructions extra extracts might be profitable.
+              if ((!UserIgnoreList || E.Idx != 0) &&
+                  TTI->getInstructionCost(cast<Instruction>(Slice.front()),
+                                          CostKind) < TTI::TCC_Expensive &&
+                  !all_of(Slice, [&](Value *V) {
+                    return areAllUsersVectorized(cast<Instruction>(V),
+                                                 UserIgnoreList);
+                  }))
+                continue;
+              if (S.getOpcode() == Instruction::Load) {
+                OrdersType Order;
+                SmallVector<Value *> PointerOps;
+                LoadsState Res =
+                    canVectorizeLoads(Slice, Slice.front(), Order, PointerOps);
+                // Do not vectorize gathers.
+                if (Res == LoadsState::ScatterVectorize ||
+                    Res == LoadsState::Gather)
+                  continue;
+              } else if (S.getOpcode() == Instruction::ExtractElement ||
+                         (TTI->getInstructionCost(
+                              cast<Instruction>(Slice.front()), CostKind) <
+                              TTI::TCC_Expensive &&
+                          !CheckOperandsProfitability(
+                              cast<Instruction>(Slice.front()),
+                              cast<Instruction>(Slice.back()), S))) {
+                // Do not vectorize extractelements (handled effectively
+                // alread). Do not vectorize non-profitable instructions (with
+                // low cost and non-vectorizable operands.)
+                continue;
+              }
+            }
+          }
+          Slices.emplace_back(Cnt);
+        }
+        auto AddCombinedNode = [&](unsigned Idx, unsigned Cnt) {
+          E.CombinedEntriesWithIndices.emplace_back(Idx, Cnt);
           if (StartIdx == Cnt)
             StartIdx = Cnt + VF;
           if (End == Cnt + VF)
             End = Cnt;
+        };
+        for (unsigned Cnt : Slices) {
+          ArrayRef<Value *> Slice = VL.slice(Cnt, VF);
+          // If any instruction is vectorized already - do not try again.
+          if (const TreeEntry *SE = getTreeEntry(Slice.front());
+              SE || getTreeEntry(Slice.back())) {
+            if (!SE)
+              continue;
+            if (VF != SE->getVectorFactor() || !SE->isSame(Slice))
+              continue;
+            AddCombinedNode(SE->Idx, Cnt);
+            continue;
+          }
+          unsigned PrevSize = VectorizableTree.size();
+          buildTree_rec(Slice, 0, EdgeInfo(&E, UINT_MAX));
+          if (PrevSize + 1 == VectorizableTree.size() &&
+              VectorizableTree[PrevSize]->isGather() &&
+              VectorizableTree[PrevSize]->getOpcode() !=
+                  Instruction::ExtractElement &&
+              !isSplat(Slice)) {
+            VectorizableTree.pop_back();
+            continue;
+          }
+          AddCombinedNode(PrevSize, Cnt);
         }
       }
     }
@@ -11690,6 +11798,13 @@ BoUpSLP::isGatherShuffledEntry(
          "Expected only single user of the gather node.");
   assert(VL.size() % NumParts == 0 &&
          "Number of scalars must be divisible by NumParts.");
+  if (TE->UserTreeIndices.front().UserTE->isGather() &&
+      TE->UserTreeIndices.front().EdgeIdx == UINT_MAX) {
+    assert((TE->getOpcode() == Instruction::ExtractElement ||
+            isSplat(TE->Scalars)) &&
+           "Expected splat or extractelements only node.");
+    return {};
+  }
   unsigned SliceSize = getPartNumElems(VL.size(), NumParts);
   SmallVector<std::optional<TTI::ShuffleKind>> Res;
   for (unsigned Part : seq<unsigned>(NumParts)) {
@@ -13197,9 +13312,10 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
   return Res;
 }
 
-Value *BoUpSLP::createBuildVector(const TreeEntry *E, Type *ScalarTy) {
+Value *BoUpSLP::createBuildVector(const TreeEntry *E, Type *ScalarTy,
+                                  bool PostponedPHIs) {
   for (auto [EIdx, _] : E->CombinedEntriesWithIndices)
-    (void)vectorizeTree(VectorizableTree[EIdx].get(), /*PostponedPHIs=*/false);
+    (void)vectorizeTree(VectorizableTree[EIdx].get(), PostponedPHIs);
   return processBuildVector<ShuffleInstructionBuilder, Value *>(E, ScalarTy,
                                                                 Builder, *this);
 }
@@ -13230,7 +13346,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
     // Set insert point for non-reduction initial nodes.
     if (E->getMainOp() && E->Idx == 0 && !UserIgnoreList)
       setInsertPointAfterBundle(E);
-    Value *Vec = createBuildVector(E, ScalarTy);
+    Value *Vec = createBuildVector(E, ScalarTy, PostponedPHIs);
     E->VectorizedValue = Vec;
     return Vec;
   }
@@ -16452,7 +16568,7 @@ SLPVectorizerPass::vectorizeStoreChain(ArrayRef<Value *> Chain, BoUpSLP &R,
     if (R.isGathered(Chain.front()) ||
         R.isNotScheduled(cast<StoreInst>(Chain.front())->getValueOperand()))
       return std::nullopt;
-    Size = R.getTreeSize();
+    Size = R.getCanonicalGraphSize();
     return false;
   }
   R.reorderTopToBottom();
@@ -16462,7 +16578,7 @@ SLPVectorizerPass::vectorizeStoreChain(ArrayRef<Value *> Chain, BoUpSLP &R,
 
   R.computeMinimumValueSizes();
 
-  Size = R.getTreeSize();
+  Size = R.getCanonicalGraphSize();
   if (S.getOpcode() == Instruction::Load)
     Size = 2; // cut off masked gather small trees
   InstructionCost Cost = R.getTreeCost();
