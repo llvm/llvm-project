@@ -28,10 +28,10 @@
 //
 // The Template class is container class outputs the Mustache template string
 // and is main class for users. It stores all the lambdas and the ASTNode Tree.
-// When the Template is instantiated it calls tokenize the Template String into 
-// the Token class and calls a basic recursive descent parser to construct the 
-// ASTNode Tree. The ASTNodes are all stored in an arena allocator which is 
-// freed once the template class goes out of scope
+// When the Template is instantiated it tokenize the Template String and creates 
+// a vector of Tokens. Then it calls a basic recursive descent parser to 
+// construct the ASTNode Tree. The ASTNodes are all stored in an arena
+// allocator which is freed once the template class goes out of scope
 //
 // Usage:
 // \code
@@ -121,15 +121,15 @@ public:
     InvertSection,
   };
 
-  ASTNode() : T(Type::Root), LocalContext(nullptr){};
+  ASTNode() : T(Type::Root), LocalContext(nullptr) {};
 
   ASTNode(StringRef Body, ASTNode *Parent)
-      : T(Type::Text), Body(Body), Parent(Parent), LocalContext(nullptr){};
+      : T(Type::Text), Body(Body), Parent(Parent), LocalContext(nullptr) {};
 
   // Constructor for Section/InvertSection/Variable/UnescapeVariable
   ASTNode(Type T, Accessor Accessor, ASTNode *Parent)
       : T(T), Parent(Parent), Children({}), Accessor(Accessor),
-        LocalContext(nullptr){};
+        LocalContext(nullptr) {};
 
   void addChild(ASTNode *Child) { Children.emplace_back(Child); };
 
