@@ -873,7 +873,7 @@ define i8 @v4i32_concat_undef(<4 x i32> %vec) {
 ; SSE2-SSSE3-NEXT:    pxor %xmm1, %xmm1
 ; SSE2-SSSE3-NEXT:    pcmpeqd %xmm0, %xmm1
 ; SSE2-SSSE3-NEXT:    movmskps %xmm1, %eax
-; SSE2-SSSE3-NEXT:    xorl $15, %eax
+; SSE2-SSSE3-NEXT:    xorb $15, %al
 ; SSE2-SSSE3-NEXT:    # kill: def $al killed $al killed $eax
 ; SSE2-SSSE3-NEXT:    retq
 ;
@@ -882,7 +882,7 @@ define i8 @v4i32_concat_undef(<4 x i32> %vec) {
 ; AVX12-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX12-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
 ; AVX12-NEXT:    vmovmskps %xmm0, %eax
-; AVX12-NEXT:    xorl $15, %eax
+; AVX12-NEXT:    xorb $15, %al
 ; AVX12-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX12-NEXT:    retq
 ;

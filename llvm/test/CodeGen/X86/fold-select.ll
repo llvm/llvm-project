@@ -19,8 +19,8 @@ define <8 x float> @select_and_v8i1(<8 x i1> %a, <8 x i1> %b, <8 x i1> %c, <8 x 
 define <8 x float> @select_and_v8i1_2(i8 %m1, i8 %m2, i8 %m3, <8 x float> %d) {
 ; CHECK-LABEL: select_and_v8i1_2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    orl %esi, %edi
-; CHECK-NEXT:    andl %edx, %edi
+; CHECK-NEXT:    orb %sil, %dil
+; CHECK-NEXT:    andb %dl, %dil
 ; CHECK-NEXT:    kmovd %edi, %k1
 ; CHECK-NEXT:    vbroadcastss {{.*#+}} ymm1 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; CHECK-NEXT:    vmovaps %ymm0, %ymm1 {%k1}

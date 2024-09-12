@@ -35425,6 +35425,8 @@ bool X86TargetLowering::isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
 bool X86TargetLowering::isNarrowingProfitable(SDNode *N, EVT SrcVT,
                                               EVT DestVT) const {
   // i16 instructions are longer (0x66 prefix) and potentially slower.
+  if (SrcVT.isVector() || DestVT.isVector())
+    return false;
   return !(SrcVT == MVT::i32 && DestVT == MVT::i16);
 }
 

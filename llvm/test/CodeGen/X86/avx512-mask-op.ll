@@ -1952,15 +1952,15 @@ declare void @f2(i32) #1
 define void @store_i16_i1(i16 %x, ptr%y) {
 ; CHECK-LABEL: store_i16_i1:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    andl $1, %edi
+; CHECK-NEXT:    andb $1, %dil
 ; CHECK-NEXT:    movb %dil, (%rsi)
 ; CHECK-NEXT:    retq
 ;
 ; X86-LABEL: store_i16_i1:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    andl $1, %ecx
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    andb $1, %cl
 ; X86-NEXT:    movb %cl, (%eax)
 ; X86-NEXT:    retl
   %c = trunc i16 %x to i1
@@ -1971,7 +1971,7 @@ define void @store_i16_i1(i16 %x, ptr%y) {
 define void @store_i8_i1(i8 %x, ptr%y) {
 ; CHECK-LABEL: store_i8_i1:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    andl $1, %edi
+; CHECK-NEXT:    andb $1, %dil
 ; CHECK-NEXT:    movb %dil, (%rsi)
 ; CHECK-NEXT:    retq
 ;
@@ -3936,7 +3936,7 @@ define i8 @test_v8i1_add(i8 %x, i8 %y) {
 ; CHECK-LABEL: test_v8i1_add:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    xorl %esi, %eax
+; CHECK-NEXT:    xorb %sil, %al
 ; CHECK-NEXT:    ## kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
 ;
@@ -3956,7 +3956,7 @@ define i8 @test_v8i1_sub(i8 %x, i8 %y) {
 ; CHECK-LABEL: test_v8i1_sub:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    xorl %esi, %eax
+; CHECK-NEXT:    xorb %sil, %al
 ; CHECK-NEXT:    ## kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
 ;
@@ -3976,7 +3976,7 @@ define i8 @test_v8i1_mul(i8 %x, i8 %y) {
 ; CHECK-LABEL: test_v8i1_mul:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    andl %esi, %eax
+; CHECK-NEXT:    andb %sil, %al
 ; CHECK-NEXT:    ## kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
 ;
@@ -5128,7 +5128,7 @@ define i1 @test_v1i1_add(i1 %x, i1 %y) {
 ; CHECK-LABEL: test_v1i1_add:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    xorl %esi, %eax
+; CHECK-NEXT:    xorb %sil, %al
 ; CHECK-NEXT:    ## kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
 ;
@@ -5148,7 +5148,7 @@ define i1 @test_v1i1_sub(i1 %x, i1 %y) {
 ; CHECK-LABEL: test_v1i1_sub:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    xorl %esi, %eax
+; CHECK-NEXT:    xorb %sil, %al
 ; CHECK-NEXT:    ## kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
 ;
@@ -5168,7 +5168,7 @@ define i1 @test_v1i1_mul(i1 %x, i1 %y) {
 ; CHECK-LABEL: test_v1i1_mul:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    andl %esi, %eax
+; CHECK-NEXT:    andb %sil, %al
 ; CHECK-NEXT:    ## kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
 ;
@@ -5188,15 +5188,14 @@ define <1 x i1> @uadd_sat_v1i1(<1 x i1> %x, <1 x i1> %y) nounwind {
 ; CHECK-LABEL: uadd_sat_v1i1:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    orl %esi, %eax
+; CHECK-NEXT:    orb %sil, %al
 ; CHECK-NEXT:    ## kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
 ;
 ; X86-LABEL: uadd_sat_v1i1:
 ; X86:       ## %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    orl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    ## kill: def $al killed $al killed $eax
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    orb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    retl
   %z = call <1 x i1> @llvm.uadd.sat.v1i1(<1 x i1> %x, <1 x i1> %y)
   ret <1 x i1> %z
@@ -5257,15 +5256,14 @@ define <1 x i1> @sadd_sat_v1i1(<1 x i1> %x, <1 x i1> %y) nounwind {
 ; CHECK-LABEL: sadd_sat_v1i1:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    orl %esi, %eax
+; CHECK-NEXT:    orb %sil, %al
 ; CHECK-NEXT:    ## kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
 ;
 ; X86-LABEL: sadd_sat_v1i1:
 ; X86:       ## %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    orl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    ## kill: def $al killed $al killed $eax
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    orb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    retl
   %z = call <1 x i1> @llvm.sadd.sat.v1i1(<1 x i1> %x, <1 x i1> %y)
   ret <1 x i1> %z
