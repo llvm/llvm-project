@@ -233,7 +233,7 @@ public:
   std::pair<const FlowBlock *, MatchMethod>
   matchBlock(BlendedBlockHash BlendedHash, uint64_t CallHash,
              const ArrayRef<yaml::bolt::PseudoProbeInfo> PseudoProbes,
-             const ArrayRef<yaml::bolt::InlineTreeInfo> InlineTree) {
+             const ArrayRef<yaml::bolt::InlineTreeNode> InlineTree) {
     const auto &[Block, ExactHash] = matchWithOpcodes(BlendedHash);
     if (Block && ExactHash)
       return {Block, MATCH_EXACT};
@@ -327,7 +327,7 @@ private:
   /// unambiguous.
   std::pair<const FlowBlock *, bool> matchWithPseudoProbes(
       const ArrayRef<yaml::bolt::PseudoProbeInfo> BlockPseudoProbes,
-      const ArrayRef<yaml::bolt::InlineTreeInfo> InlineTree) const {
+      const ArrayRef<yaml::bolt::InlineTreeNode> InlineTree) const {
     if (!opts::StaleMatchingWithPseudoProbes)
       return {nullptr, false};
 
@@ -353,11 +353,7 @@ private:
     };
 
     auto matchProbe = [&](const yaml::bolt::PseudoProbeInfo &Probe,
-                          uint32_t NodeId, bool IsBlock1) {
-      if (IsBlock1) {
-        ++FlowBlockMatchCount[match(NodeId, 1)];
-        return;
-      }
+                          uint32_t NodeId) {
       for (uint64_t Index = 0; Index < 64; ++Index)
         if (Probe.BlockMask & 1ull << Index)
           ++FlowBlockMatchCount[match(NodeId, Index + 1)];
@@ -368,13 +364,11 @@ private:
     };
 
     for (const yaml::bolt::PseudoProbeInfo &Probe : BlockPseudoProbes) {
-      bool IsBlock1 = Probe.BlockMask == 0 && Probe.BlockProbes.empty() &&
-                      Probe.IndCallProbes.empty() && Probe.CallProbes.empty();
       if (!Probe.InlineTreeNodes.empty())
         for (uint32_t Node : Probe.InlineTreeNodes)
-          matchProbe(Probe, Node, IsBlock1);
+          matchProbe(Probe, Node);
       else
-        matchProbe(Probe, Probe.InlineTreeIndex, IsBlock1);
+        matchProbe(Probe, Probe.InlineTreeIndex);
     }
     uint32_t BestMatchCount = 0;
     uint32_t TotalMatchCount = 0;
@@ -622,16 +616,16 @@ size_t matchWeightsByHashes(
     uint32_t ParentId = 0;
     uint32_t PrevGUIDIdx = 0;
     uint32_t Index = 0;
-    for (const yaml::bolt::InlineTreeInfo &InlineTreeNode : YamlBF.InlineTree) {
+    for (const yaml::bolt::InlineTreeNode &InlineTreeNode : YamlBF.InlineTree) {
       uint64_t GUIDIdx = InlineTreeNode.GUIDIndex;
-      if (GUIDIdx)
+      if (GUIDIdx != UINT32_MAX)
         PrevGUIDIdx = GUIDIdx;
       else
         GUIDIdx = PrevGUIDIdx;
-      assert(GUIDIdx - 1 < YamlPD.GUID.size());
-      assert(GUIDIdx - 1 < YamlPD.GUIDHash.size());
-      uint64_t GUID = YamlPD.GUID[GUIDIdx - 1];
-      uint32_t HashIdx = YamlPD.GUIDHash[GUIDIdx - 1];
+      assert(GUIDIdx < YamlPD.GUID.size());
+      assert(GUIDIdx < YamlPD.GUIDHashIdx.size());
+      uint64_t GUID = YamlPD.GUID[GUIDIdx];
+      uint32_t HashIdx = YamlPD.GUIDHashIdx[GUIDIdx];
       assert(HashIdx < YamlPD.Hash.size());
       uint64_t Hash = YamlPD.Hash[HashIdx];
       uint32_t InlineTreeNodeId = Index++;
