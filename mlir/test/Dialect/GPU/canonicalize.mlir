@@ -255,7 +255,7 @@ func.func @subgroup_reduce_cluster_size_1() {
   gpu.launch blocks(%arg0, %arg1, %arg2) in (%arg6 = %0#0, %arg7 = %0#1, %arg8 = %0#2)
     threads(%arg3, %arg4, %arg5) in (%arg9 = %0#3, %arg10 = %0#4, %arg11 = %0#5) {
     %1 = "test.test2"() : () -> i32
-    %2 = gpu.subgroup_reduce add %1 cluster_size(1) : (i32) -> (i32)
+    %2 = gpu.subgroup_reduce add %1 cluster(size=1) : (i32) -> (i32)
     "test.test3"(%2) : (i32) -> ()
     gpu.terminator
   }

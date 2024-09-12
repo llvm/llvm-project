@@ -1861,7 +1861,7 @@ CommandInterpreter::PreprocessToken(std::string &expr_str) {
   // But if for some reason we didn't get a value object at all, then we will
   // make up some helpful errors from the expression result.
   if (expr_result_valobj_sp)
-    error = expr_result_valobj_sp->GetError();
+    error = expr_result_valobj_sp->GetError().Clone();
 
   if (error.Success()) {
     std::string result = lldb_private::toString(expr_result) +

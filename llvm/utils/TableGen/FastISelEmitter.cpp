@@ -236,7 +236,7 @@ struct OperandsSignature {
           // not needed and just bloat the fast instruction selector.  For
           // example, X86 doesn't need to generate code to match ADD16ri8 since
           // ADD16ri will do just fine.
-          Record *Rec = PredFn.getOrigPatFragRecord()->getRecord();
+          const Record *Rec = PredFn.getOrigPatFragRecord()->getRecord();
           if (Rec->getValueAsBit("FastIselShouldIgnore"))
             return false;
 
@@ -417,7 +417,7 @@ private:
 };
 } // End anonymous namespace
 
-static std::string getOpcodeName(Record *Op, CodeGenDAGPatterns &CGP) {
+static std::string getOpcodeName(const Record *Op, CodeGenDAGPatterns &CGP) {
   return std::string(CGP.getSDNodeInfo(Op).getEnumName());
 }
 
@@ -461,7 +461,7 @@ void FastISelMap::collectPatterns(CodeGenDAGPatterns &CGP) {
     TreePatternNode &Dst = Pattern.getDstPattern();
     if (Dst.isLeaf())
       continue;
-    Record *Op = Dst.getOperator();
+    const Record *Op = Dst.getOperator();
     if (!Op->isSubClassOf("Instruction"))
       continue;
     CodeGenInstruction &II = CGP.getTargetInfo().getInstruction(Op);
@@ -494,7 +494,7 @@ void FastISelMap::collectPatterns(CodeGenDAGPatterns &CGP) {
     const CodeGenRegisterClass *DstRC = nullptr;
     std::string SubRegNo;
     if (Op->getName() != "EXTRACT_SUBREG") {
-      Record *Op0Rec = II.Operands[0].Rec;
+      const Record *Op0Rec = II.Operands[0].Rec;
       if (Op0Rec->isSubClassOf("RegisterOperand"))
         Op0Rec = Op0Rec->getValueAsDef("RegClass");
       if (!Op0Rec->isSubClassOf("RegisterClass"))
@@ -524,7 +524,7 @@ void FastISelMap::collectPatterns(CodeGenDAGPatterns &CGP) {
     if (InstPatNode.getNumTypes() > 1)
       continue;
 
-    Record *InstPatOp = InstPatNode.getOperator();
+    const Record *InstPatOp = InstPatNode.getOperator();
     std::string OpcodeName = getOpcodeName(InstPatOp, CGP);
     MVT::SimpleValueType RetVT = MVT::isVoid;
     if (InstPatNode.getNumTypes())

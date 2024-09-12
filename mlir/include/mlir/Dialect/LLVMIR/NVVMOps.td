@@ -2102,6 +2102,23 @@ def NVVM_WgmmaMmaAsyncOp : NVVM_Op<"wgmma.mma_async",
 }
 
 //===----------------------------------------------------------------------===//
+// NVVM breakpoint Op
+//===----------------------------------------------------------------------===//
+
+def NVVM_Breakpoint : NVVM_Op<"breakpoint"> {
+  let summary = "Breakpoint Op";
+  let description = [{
+    Breakpoint suspends execution of the program for debugging.
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#miscellaneous-instructions-brkpt)
+  }];
+  string llvmBuilder = [{
+    createIntrinsicCall(builder, llvm::Intrinsic::debugtrap);
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
+//===----------------------------------------------------------------------===//
 // NVVM target attribute.
 //===----------------------------------------------------------------------===//
 

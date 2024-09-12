@@ -983,7 +983,7 @@ public:
 };
 
 template <regex_constants::error_type _Ev>
-_LIBCPP_NORETURN inline _LIBCPP_HIDE_FROM_ABI void __throw_regex_error() {
+[[__noreturn__]] inline _LIBCPP_HIDE_FROM_ABI void __throw_regex_error() {
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
   throw regex_error(_Ev);
 #else

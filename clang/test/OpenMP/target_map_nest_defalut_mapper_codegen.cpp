@@ -45,7 +45,7 @@ void foo() {
 // CHECK-NEXT:    [[F:%.*]] = getelementptr inbounds nuw [[STRUCT_D]], ptr [[ARRAYIDX1]], i32 0, i32 1
 // CHECK-NEXT:    [[A:%.*]] = getelementptr inbounds nuw [[STRUCT_C:%.*]], ptr [[F]], i32 0, i32 0
 // CHECK-NEXT:    store i32 222, ptr [[A]], align 4
-// CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds [10 x %struct.D], ptr [[SA]], i64 0, i64 0
+// CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [10 x %struct.D], ptr [[SA]], i64 0, i64 0
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
 // CHECK-NEXT:    store ptr [[SA]], ptr [[TMP0]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0

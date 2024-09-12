@@ -125,6 +125,7 @@ public:
   // Convenience predicates.  This is only for floating point types,
   // derived types should use isa/dyn_cast.
   bool isIndex() const;
+  bool isFloat6E3M2FN() const;
   bool isFloat8E5M2() const;
   bool isFloat8E4M3() const;
   bool isFloat8E4M3FN() const;

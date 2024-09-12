@@ -388,7 +388,7 @@ public:
 class DefinedImportThunk : public Defined {
 public:
   DefinedImportThunk(COFFLinkerContext &ctx, StringRef name,
-                     DefinedImportData *s, uint16_t machine);
+                     DefinedImportData *s, ImportThunkChunk *chunk);
 
   static bool classof(const Symbol *s) {
     return s->kind() == DefinedImportThunkKind;

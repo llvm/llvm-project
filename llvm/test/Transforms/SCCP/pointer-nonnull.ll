@@ -247,6 +247,36 @@ define ptr @ret_maybe_null_pointer(ptr %p) {
   ret ptr %p
 }
 
+define internal void @ip_nonnull_arg_callee(ptr %p) {
+; CHECK-LABEL: define internal void @ip_nonnull_arg_callee(
+; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-NEXT:    ret void
+;
+  ret void
+}
+
+define internal void @ip_not_nonnull_arg_callee(ptr %p) {
+; CHECK-LABEL: define internal void @ip_not_nonnull_arg_callee(
+; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-NEXT:    ret void
+;
+  ret void
+}
+
+define void @ip_nonnull_arg_caller(ptr nonnull %p) {
+; CHECK-LABEL: define void @ip_nonnull_arg_caller(
+; CHECK-SAME: ptr nonnull [[P:%.*]]) {
+; CHECK-NEXT:    call void @ip_nonnull_arg_callee(ptr [[P]])
+; CHECK-NEXT:    call void @ip_not_nonnull_arg_callee(ptr [[P]])
+; CHECK-NEXT:    call void @ip_not_nonnull_arg_callee(ptr null)
+; CHECK-NEXT:    ret void
+;
+  call void @ip_nonnull_arg_callee(ptr %p)
+  call void @ip_not_nonnull_arg_callee(ptr %p)
+  call void @ip_not_nonnull_arg_callee(ptr null)
+  ret void
+}
+
 ;.
 ; SCCP: [[META0]] = !{}
 ;.
