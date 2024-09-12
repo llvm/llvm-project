@@ -10,6 +10,7 @@ is called unintended behaviour will occur.
 Consider the following code:
 
 .. code-block:: c++
+    
     #include <memory>
 
     // private inheritance
