@@ -909,9 +909,9 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
     //
     // Special cases where implicit register defs and uses exists, such as
     // M0, FLAT_SCR or VCC, but there is no way to load these registers from
-    // memory except VCC, and no VALU instructions implicetly useing VCC may
+    // memory except VCC, and no VALU instructions implicitly using VCC may
     // come to this place, so these do not need tracking. Memory instructions
-    // also do not implicetly define any of these registers.
+    // also do not implicitly define any of these registers.
     for (unsigned I = 0, E = Inst.getNumExplicitOperands(); I != E; ++I) {
       auto &Op = Inst.getOperand(I);
       if (!Op.isReg() || !Op.isDef())
