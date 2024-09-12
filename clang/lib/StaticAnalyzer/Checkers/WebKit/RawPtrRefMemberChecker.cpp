@@ -82,7 +82,7 @@ public:
         if (MemberCXXRD->hasDefinition()) {
           std::optional<bool> isRCAble = isPtrCompatible(MemberCXXRD);
           if (isRCAble && *isRCAble)
-              reportBug(Member, MemberType, MemberCXXRD, RD);
+            reportBug(Member, MemberType, MemberCXXRD, RD);
         }
       }
     }
