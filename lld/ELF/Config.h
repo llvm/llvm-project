@@ -317,6 +317,9 @@ struct Config {
   bool useAndroidRelrTags = false;
   bool warnBackrefs;
   llvm::SmallVector<llvm::GlobPattern, 0> warnBackrefsExclude;
+  bool warnMismatchSectionsInComdatGroups;
+  llvm::SmallVector<llvm::GlobPattern, 0>
+      warnMismatchSectionsInComdatGroupsExclude;
   bool warnCommon;
   bool warnMissingEntry;
   bool warnSymbolOrdering;
