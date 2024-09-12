@@ -255,7 +255,7 @@ void NVPTXInstPrinter::printLdStCode(const MCInst *MI, int OpNum,
             "Loads/Stores cannot be AcquireRelease or SequentiallyConsistent.",
             OrderingToString(Ordering)));
       }
-    } else if (!strcmp(Modifier, "sco")) {
+    } else if (!strcmp(Modifier, "scope")) {
       auto S = NVPTX::Scope(Imm);
       switch (S) {
       case NVPTX::Scope::Thread:
