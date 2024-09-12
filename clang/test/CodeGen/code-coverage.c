@@ -3,12 +3,18 @@
 /// 4.7 enables cfg_checksum.
 /// 4.8 (default, compatible with gcov 7) emits the exit block the second.
 // RUN: rm -rf %t && mkdir %t && cd %t
-// RUN: %clang_cc1 -emit-llvm -disable-red-zone -coverage-data-file=/dev/null -coverage-version='304*' %s -o - | \
-// RUN:   FileCheck --check-prefixes=CHECK,304 %s
-// RUN: %clang_cc1 -emit-llvm -disable-red-zone -coverage-data-file=/dev/null -coverage-version='407*' %s -o - | \
-// RUN:   FileCheck --check-prefixes=CHECK,407 %s
-// RUN: %clang_cc1 -emit-llvm -disable-red-zone -coverage-data-file=/dev/null %s -o - | \
-// RUN:   FileCheck --check-prefixes=CHECK,408 %s
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -emit-llvm -disable-red-zone -coverage-data-file=/dev/null -coverage-version='304*' %s -o - | \
+// RUN:   FileCheck --check-prefixes=CHECK,CHECK-ELF,304 %s
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -emit-llvm -disable-red-zone -coverage-data-file=/dev/null -coverage-version='407*' %s -o - | \
+// RUN:   FileCheck --check-prefixes=CHECK,CHECK-ELF,407 %s
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -emit-llvm -disable-red-zone -coverage-data-file=/dev/null %s -o - | \
+// RUN:   FileCheck --check-prefixes=CHECK,CHECK-ELF,408 %s
+// RUN: %clang_cc1 -triple powerpc64-ibm-aix -emit-llvm -disable-red-zone -coverage-data-file=/dev/null -coverage-version='304*' %s -o - | \
+// RUN:   FileCheck --check-prefixes=CHECK,CHECK-XCOFF,304 %s
+// RUN: %clang_cc1 -triple powerpc64-ibm-aix -emit-llvm -disable-red-zone -coverage-data-file=/dev/null -coverage-version='407*' %s -o - | \
+// RUN:   FileCheck --check-prefixes=CHECK,CHECK-XCOFF,407 %s
+// RUN: %clang_cc1 -triple powerpc64-ibm-aix -emit-llvm -disable-red-zone -coverage-data-file=/dev/null %s -o - | \
+// RUN:   FileCheck --check-prefixes=CHECK,CHECK-XCOFF,408 %s
 
 // RUN: %clang_cc1 -emit-llvm -disable-red-zone -coverage-notes-file=aaa.gcno -coverage-data-file=bbb.gcda -debug-info-kind=limited -dwarf-version=4 %s -o - | FileCheck %s --check-prefix GCOV_FILE_INFO
 
@@ -22,6 +28,9 @@
 // NEWPM-O3: Running pass: Annotation2MetadataPass
 // NEWPM-O3: Running pass: ForceFunctionAttrsPass
 // NEWPM-O3: Running pass: GCOVProfilerPass
+
+// Check for gcov initialization function pointers.
+// CHECK-XCOFF: @__llvm_covinit_functions = private constant { ptr, ptr } { ptr @__llvm_gcov_writeout, ptr @__llvm_gcov_reset }, section "__llvm_covinit"
 
 int test1(int a) {
   switch (a % 2) {
@@ -49,13 +58,10 @@ int test2(int b) {
 /// 0x3430382a '4' '0' '8' '*'
 // 408-SAME: i32 875575338
 
-// Check for gcov initialization function pointers.
-// CHECK: @__llvm_covinit_functions = private constant { ptr, ptr } { ptr @__llvm_gcov_writeout, ptr @__llvm_gcov_reset }, section "__llvm_covinit"
-
 // Check that the noredzone flag is set on the generated functions.
 
 // CHECK: void @__llvm_gcov_writeout() unnamed_addr [[NRZ:#[0-9]+]]
-// CHECK-NOT: void @__llvm_gcov_init() unnamed_addr [[NRZ]]
+// CHECK-ELF: void @__llvm_gcov_init() unnamed_addr [[NRZ]]
 
 // CHECK: attributes [[NRZ]] = { {{.*}}noredzone{{.*}} }
 

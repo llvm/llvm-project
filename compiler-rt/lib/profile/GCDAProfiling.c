@@ -624,6 +624,7 @@ void llvm_gcov_init(fn_ptr wfn, fn_ptr rfn) {
   }
 }
 
+#if defined(_AIX)
 COMPILER_RT_VISIBILITY __attribute__((constructor)) void
 __llvm_profile_gcov_initialize() {
   const __llvm_gcov_init_func_struct *InitFuncStart =
@@ -640,6 +641,7 @@ __llvm_profile_gcov_initialize() {
     llvm_gcov_init(wfn, rfn);
   }
 }
+#endif
 
 void __gcov_dump(void) {
   for (struct fn_node *f = writeout_fn_list.head; f; f = f->next)

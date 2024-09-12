@@ -122,6 +122,9 @@ private:
 
   Function *createInternalFunction(FunctionType *FTy, StringRef Name,
                                    StringRef MangledType = "");
+
+  void emitGlobalConstructor(
+      SmallVectorImpl<std::pair<GlobalVariable *, MDNode *>> &CountersBySP);
   void emitModuleInitFunctionPtrs(
       SmallVectorImpl<std::pair<GlobalVariable *, MDNode *>> &CountersBySP);
 
@@ -982,7 +985,11 @@ bool GCOVProfiler::emitProfileNotes(
     }
 
     if (EmitGCDA) {
-      emitModuleInitFunctionPtrs(CountersBySP);
+      const llvm::Triple &Triple = llvm::Triple(M->getTargetTriple());
+      if (Triple.getObjectFormat() == llvm::Triple::XCOFF)
+        emitModuleInitFunctionPtrs(CountersBySP);
+      else
+        emitGlobalConstructor(CountersBySP);
       EmitGCDA = false;
     }
   }
@@ -1001,6 +1008,34 @@ Function *GCOVProfiler::createInternalFunction(FunctionType *FTy,
   if (!MangledType.empty())
     setKCFIType(*M, *F, MangledType);
   return F;
+}
+
+void GCOVProfiler::emitGlobalConstructor(
+    SmallVectorImpl<std::pair<GlobalVariable *, MDNode *>> &CountersBySP) {
+  Function *WriteoutF = insertCounterWriteout(CountersBySP);
+  Function *ResetF = insertReset(CountersBySP);
+
+  // Create a small bit of code that registers the "__llvm_gcov_writeout" to
+  // be executed at exit and the "__llvm_gcov_reset" function to be executed
+  // when "__gcov_flush" is called.
+  FunctionType *FTy = FunctionType::get(Type::getVoidTy(*Ctx), false);
+  Function *F = createInternalFunction(FTy, "__llvm_gcov_init", "_ZTSFvvE");
+  F->addFnAttr(Attribute::NoInline);
+
+  BasicBlock *BB = BasicBlock::Create(*Ctx, "entry", F);
+  IRBuilder<> Builder(BB);
+
+  FTy = FunctionType::get(Type::getVoidTy(*Ctx), false);
+  auto *PFTy = PointerType::get(FTy, 0);
+  FTy = FunctionType::get(Builder.getVoidTy(), {PFTy, PFTy}, false);
+
+  // Initialize the environment and register the local writeout, flush and
+  // reset functions.
+  FunctionCallee GCOVInit = M->getOrInsertFunction("llvm_gcov_init", FTy);
+  Builder.CreateCall(GCOVInit, {WriteoutF, ResetF});
+  Builder.CreateRetVoid();
+
+  appendToGlobalCtors(*M, F, 0);
 }
 
 void GCOVProfiler::emitModuleInitFunctionPtrs(
