@@ -1588,10 +1588,8 @@ transform::GetParentOp::apply(transform::TransformRewriter &rewriter,
       }
     }
     if (getDeduplicate()) {
-      if (!resultSet.contains(parent)) {
+      if (resultSet.insert(parent).second)
         parents.push_back(parent);
-        resultSet.insert(parent);
-      }
     } else {
       parents.push_back(parent);
     }
