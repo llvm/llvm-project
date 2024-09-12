@@ -144,7 +144,7 @@ DTLS::DTV *DTLS_on_tls_get_addr(void *arg_void, void *res,
     VReport(2, "__tls_get_addr: static tls: %p\n", (void *)tls_beg);
     tls_size = 0;
   } else {
-    tls_size = __sanitizer_get_dtls_size(reinterpret_cast<const void*>(tls_beg));
+    tls_size = __sanitizer_get_dtls_size(reinterpret_cast<void *>(tls_beg));
     if (!tls_size) {
       VReport(2, "__tls_get_addr: Can't guess glibc version\n");
       // This may happen inside the DTOR of main thread, so just ignore it.
