@@ -96,7 +96,7 @@ public:
       std::shared_ptr<llvm::cas::ActionCache> Cache,
       IntrusiveRefCntPtr<llvm::cas::CachingOnDiskFileSystem> SharedFS,
       ScanningOptimizations OptimizeArgs = ScanningOptimizations::Default,
-      bool EagerLoadModules = false);
+      bool EagerLoadModules = false, bool TraceVFS = false);
 
   ScanningMode getMode() const { return Mode; }
 
@@ -105,6 +105,8 @@ public:
   ScanningOptimizations getOptimizeArgs() const { return OptimizeArgs; }
 
   bool shouldEagerLoadModules() const { return EagerLoadModules; }
+
+  bool shouldTraceVFS() const { return TraceVFS; }
 
   DependencyScanningFilesystemSharedCache &getSharedCache() {
     assert(!SharedFS && "Expected not to have a CASFS");
@@ -131,6 +133,8 @@ private:
   const ScanningOptimizations OptimizeArgs;
   /// Whether to set up command-lines to load PCM files eagerly.
   const bool EagerLoadModules;
+  /// Whether to trace VFS accesses.
+  const bool TraceVFS;
   /// Shared CachingOnDiskFileSystem. Set to nullptr to not use CAS dependency
   /// scanning.
   IntrusiveRefCntPtr<llvm::cas::CachingOnDiskFileSystem> SharedFS;

@@ -1264,6 +1264,13 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
       Format == ScanningOutputFormat::FullTree)
     FD.emplace(ModuleName.empty() ? Inputs.size() : 0);
 
+  std::atomic<size_t> NumStatusCalls = 0;
+  std::atomic<size_t> NumOpenFileForReadCalls = 0;
+  std::atomic<size_t> NumDirBeginCalls = 0;
+  std::atomic<size_t> NumGetRealPathCalls = 0;
+  std::atomic<size_t> NumExistsCalls = 0;
+  std::atomic<size_t> NumIsLocalCalls = 0;
+
   auto ScanningTask = [&](DependencyScanningService &Service) {
     std::unique_ptr<llvm::vfs::FileSystem> FS = llvm::vfs::createPhysicalFileSystem();
     if (CAS)
@@ -1362,10 +1369,22 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
           HadErrors = true;
       }
     }
+
+    WorkerTool.getWorkerVFS().visit([&](llvm::vfs::FileSystem &VFS) {
+      if (auto *T = dyn_cast_or_null<llvm::vfs::TracingFileSystem>(&VFS)) {
+        NumStatusCalls += T->NumStatusCalls;
+        NumOpenFileForReadCalls += T->NumOpenFileForReadCalls;
+        NumDirBeginCalls += T->NumDirBeginCalls;
+        NumGetRealPathCalls += T->NumGetRealPathCalls;
+        NumExistsCalls += T->NumExistsCalls;
+        NumIsLocalCalls += T->NumIsLocalCalls;
+      }
+    });
   };
 
   DependencyScanningService Service(ScanMode, Format, CASOpts, CAS, Cache, FS,
-                                  OptimizeArgs, EagerLoadModules);
+                                    OptimizeArgs, EagerLoadModules,
+                                    /*TraceVFS=*/Verbose);
 
   llvm::Timer T;
   T.startTimer();
@@ -1387,6 +1406,16 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
   }
 
   T.stopTimer();
+
+  if (Verbose)
+    llvm::errs() << "\n*** Virtual File System Stats:\n"
+                 << NumStatusCalls << " status() calls\n"
+                 << NumOpenFileForReadCalls << " openFileForRead() calls\n"
+                 << NumDirBeginCalls << " dir_begin() calls\n"
+                 << NumGetRealPathCalls << " getRealPath() calls\n"
+                 << NumExistsCalls << " exists() calls\n"
+                 << NumIsLocalCalls << " isLocal() calls\n";
+
   if (PrintTiming)
     llvm::errs() << llvm::format(
         "clang-scan-deps timing: %0.2fs wall, %0.2fs process\n",

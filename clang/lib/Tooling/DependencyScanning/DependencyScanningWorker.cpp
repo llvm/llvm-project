@@ -727,6 +727,9 @@ DependencyScanningWorker::DependencyScanningWorker(
   // The scanner itself writes only raw ast files.
   PCHContainerOps->registerWriter(std::make_unique<RawPCHContainerWriter>());
 
+  if (Service.shouldTraceVFS())
+    FS = llvm::makeIntrusiveRefCnt<llvm::vfs::TracingFileSystem>(std::move(FS));
+
   if (Service.useCASFS()) {
     CacheFS = Service.getSharedFS().createProxyFS();
     DepCASFS = new DependencyScanningCASFilesystem(CacheFS, *Service.getCache());
