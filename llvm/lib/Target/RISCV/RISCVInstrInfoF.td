@@ -402,7 +402,8 @@ def FMV_W_X : FPUnaryOp_r<0b1111000, 0b00000, 0b000, FPR32, GPR, "fmv.w.x">,
 
 let Predicates = [HasStdExtFOrZfinx] in {
 // The following csr instructions actually alias instructions from the base ISA.
-// However, it only makes sense to support them when the F extension is enabled.
+// However, it only makes sense to support them when the F or Zfinx extension is
+// enabled.
 // NOTE: "frcsr", "frrm", and "frflags" are more specialized version of "csrr".
 def : InstAlias<"frcsr $rd",      (CSRRS GPR:$rd, SysRegFCSR.Encoding, X0), 2>;
 def : InstAlias<"fscsr $rd, $rs", (CSRRW GPR:$rd, SysRegFCSR.Encoding, GPR:$rs)>;
