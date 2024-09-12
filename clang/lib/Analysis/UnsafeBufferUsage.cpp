@@ -668,7 +668,7 @@ AST_MATCHER(FunctionDecl, isPredefinedUnsafeLibcFunc) {
 
   auto *II = Node.getIdentifier();
 
- if (!II)
+  if (!II)
     return false;
 
   StringRef Name = LibcFunNamePrefixSuffixParser().matchName(
