@@ -269,7 +269,12 @@ public:
   /// getIntrinsicID() returns Intrinsic::not_intrinsic.
   bool isConstrainedFPIntrinsic() const;
 
-  static Intrinsic::ID lookupIntrinsicID(StringRef Name);
+  static std::pair<Intrinsic::ID, StringRef>
+  lookupIntrinsicIDAndSuffix(StringRef Name);
+
+  static Intrinsic::ID lookupIntrinsicID(StringRef Name) {
+    return lookupIntrinsicIDAndSuffix(Name).first;
+  }
 
   /// Update internal caches that depend on the function name (such as the
   /// intrinsic ID and libcall cache).

@@ -171,6 +171,10 @@ namespace llvm {
     std::map<unsigned, std::vector<std::pair<GlobalValue::GUID *, LocTy>>>
         ForwardRefTypeIds;
 
+    // Locations for all call instructions that call an overloaded intrinsic
+    // (for accurate error reporting).
+    std::map<CallBase *, LocTy> OverloadedIntrinsicCallLocs;
+
     // Map of module ID to path.
     std::map<unsigned, StringRef> ModuleIdMap;
 

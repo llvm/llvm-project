@@ -974,13 +974,14 @@ static ArrayRef<const char *> findTargetSubtable(StringRef Name) {
   return ArrayRef(&IntrinsicNameTable[1] + TI.Offset, TI.Count);
 }
 
-/// This does the actual lookup of an intrinsic ID which
-/// matches the given function name.
-Intrinsic::ID Function::lookupIntrinsicID(StringRef Name) {
+/// This does the actual lookup of an intrinsic ID which matches the given
+/// function name.
+std::pair<Intrinsic::ID, StringRef>
+Function::lookupIntrinsicIDAndSuffix(StringRef Name) {
   ArrayRef<const char *> NameTable = findTargetSubtable(Name);
   int Idx = Intrinsic::lookupLLVMIntrinsicByName(NameTable, Name);
   if (Idx == -1)
-    return Intrinsic::not_intrinsic;
+    return {Intrinsic::not_intrinsic, ""};
 
   // Intrinsic IDs correspond to the location in IntrinsicNameTable, but we have
   // an index into a sub-table.
@@ -992,8 +993,11 @@ Intrinsic::ID Function::lookupIntrinsicID(StringRef Name) {
   const auto MatchSize = strlen(NameTable[Idx]);
   assert(Name.size() >= MatchSize && "Expected either exact or prefix match");
   bool IsExactMatch = Name.size() == MatchSize;
-  return IsExactMatch || Intrinsic::isOverloaded(ID) ? ID
-                                                     : Intrinsic::not_intrinsic;
+  if (IsExactMatch)
+    return {ID, ""};
+  if (Intrinsic::isOverloaded(ID))
+    return {ID, Name.drop_front(MatchSize)};
+  return {Intrinsic::not_intrinsic, ""};
 }
 
 void Function::updateAfterNameChange() {

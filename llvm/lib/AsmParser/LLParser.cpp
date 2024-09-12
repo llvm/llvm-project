@@ -338,7 +338,7 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
 
   for (const auto &[Name, Info] : make_early_inc_range(ForwardRefVals)) {
     if (StringRef(Name).starts_with("llvm.")) {
-      Intrinsic::ID IID = Function::lookupIntrinsicID(Name);
+      auto [IID, Suffix] = Function::lookupIntrinsicIDAndSuffix(Name);
       if (IID == Intrinsic::not_intrinsic)
         // Don't do anything for unknown intrinsics.
         continue;
@@ -349,18 +349,37 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
       //
       // Additionally, automatically add the required mangling suffix to the
       // intrinsic name. This means that we may replace a single forward
-      // declaration with multiple functions here.
+      // declaration with multiple functions here. If there is a suffix left
+      // over after matching the intrinsic name, it should match the mangling
+      // suffix.
       for (Use &U : make_early_inc_range(Info.first->uses())) {
         auto *CB = dyn_cast<CallBase>(U.getUser());
         if (!CB || !CB->isCallee(&U))
           return error(Info.second, "intrinsic can only be used as callee");
 
+        // Location for error reporting.
+        LocTy Loc;
+        auto II = OverloadedIntrinsicCallLocs.find(CB);
+        if (II != OverloadedIntrinsicCallLocs.end()) {
+          Loc = II->second;
+          OverloadedIntrinsicCallLocs.erase(II);
+        } else {
+          Loc = Info.second;
+        }
+
         SmallVector<Type *> OverloadTys;
         if (!Intrinsic::getIntrinsicSignature(IID, CB->getFunctionType(),
                                               OverloadTys))
-          return error(Info.second, "invalid intrinsic signature");
-
-        U.set(Intrinsic::getDeclaration(M, IID, OverloadTys));
+          return error(Loc, "invalid intrinsic signature");
+        Function *Intrinsic = Intrinsic::getDeclaration(M, IID, OverloadTys);
+        // Note: Suffix will be empty for non-overloaded intrinsics, so this
+        // check will always pass. For overloaded intrinsics that do not use
+        // a mangling suffix as well, the suffix will be empty and they will
+        // always pass this error check.
+        if (!Intrinsic->getName().ends_with(Suffix))
+          return error(Loc, "invalid intrinsic name, expected @" +
+                                Intrinsic->getName());
+        U.set(Intrinsic);
       }
 
       Info.first->eraseFromParent();
@@ -8079,16 +8098,24 @@ bool LLParser::parseCall(Instruction *&Inst, PerFunctionState &PFS,
     CI->setFastMathFlags(FMF);
   }
 
-  if (CalleeID.Kind == ValID::t_GlobalName &&
-      isOldDbgFormatIntrinsic(CalleeID.StrVal)) {
-    if (SeenNewDbgInfoFormat) {
-      CI->deleteValue();
-      return error(CallLoc, "llvm.dbg intrinsic should not appear in a module "
-                            "using non-intrinsic debug info");
+  if (CalleeID.Kind == ValID::t_GlobalName) {
+    if (StringRef(CalleeID.StrVal).starts_with("llvm.")) {
+      // If this is a call to an intrinsic, remember its location for better
+      // error reporting when overloaded intrinsic resolution fails.
+      OverloadedIntrinsicCallLocs[CI] = CalleeID.Loc;
     }
-    if (!SeenOldDbgInfoFormat)
-      M->setNewDbgInfoFormatFlag(false);
-    SeenOldDbgInfoFormat = true;
+
+    if (isOldDbgFormatIntrinsic(CalleeID.StrVal)) {
+      if (SeenNewDbgInfoFormat) {
+        CI->deleteValue();
+        return error(CallLoc,
+                     "llvm.dbg intrinsic should not appear in a module "
+                     "using non-intrinsic debug info");
+      }
+      if (!SeenOldDbgInfoFormat)
+        M->setNewDbgInfoFormatFlag(false);
+      SeenOldDbgInfoFormat = true;
+    }
   }
   CI->setAttributes(PAL);
   ForwardRefAttrGroups[CI] = FwdRefAttrGrps;
