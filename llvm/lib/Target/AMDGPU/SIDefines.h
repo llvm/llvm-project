@@ -861,6 +861,9 @@ enum EncBits : unsigned {
   ROTATE_MODE_ENC = 0xC000,
   FFT_ROTATE_MODE_MASK = 0xF000,
 
+  ROTATE_MODE_LO = 0xC000,
+  FFT_MODE_LO = 0xE000,
+
   // QUAD_PERM encodings
 
   LANE_MASK = 0x3,

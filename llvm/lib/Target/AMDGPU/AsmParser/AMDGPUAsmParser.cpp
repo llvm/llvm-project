@@ -8146,6 +8146,11 @@ AMDGPUAsmParser::parseSwizzleBitmaskPerm(int64_t &Imm) {
 bool AMDGPUAsmParser::parseSwizzleFFT(int64_t &Imm) {
   using namespace llvm::AMDGPU::Swizzle;
 
+  if (!AMDGPU::isGFX9Plus(getSTI())) {
+    Error(getLoc(), "FFT mode swizzle not supported on this GPU");
+    return false;
+  }
+
   int64_t Swizzle;
   SMLoc Loc;
   if (!parseSwizzleOperand(Swizzle, 0, FFT_SWIZZLE_MAX,
@@ -8160,6 +8165,11 @@ bool AMDGPUAsmParser::parseSwizzleFFT(int64_t &Imm) {
 
 bool AMDGPUAsmParser::parseSwizzleRotate(int64_t &Imm) {
   using namespace llvm::AMDGPU::Swizzle;
+
+  if (!AMDGPU::isGFX9Plus(getSTI())) {
+    Error(getLoc(), "Rotate mode swizzle not supported on this GPU");
+    return false;
+  }
 
   SMLoc Loc;
   int64_t Direction;
