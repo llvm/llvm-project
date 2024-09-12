@@ -254,7 +254,7 @@ struct LandingPadInfo {
       : LandingPadBlock(MBB) {}
 };
 
-class LLVM_EXTERNAL_VISIBILITY MachineFunction {
+class LLVM_ABI MachineFunction {
   Function &F;
   const LLVMTargetMachine &Target;
   const TargetSubtargetInfo *STI;

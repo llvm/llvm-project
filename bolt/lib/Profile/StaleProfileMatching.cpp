@@ -256,28 +256,12 @@ public:
     return Hash1.InstrHash == Hash2.InstrHash;
   }
 
-  /// Returns matched InlineTree * for a given profile inline_tree_id.
-  const MCDecodedPseudoProbeInlineTree *
-  getInlineTreeNode(uint32_t ProfileInlineTreeNodeId) const {
-    auto It = InlineTreeNodeMap.find(ProfileInlineTreeNodeId);
-    if (It == InlineTreeNodeMap.end())
-      return nullptr;
-    return It->second;
-  }
-
-  void mapInlineTreeNode(uint32_t ProfileNode,
-                         const MCDecodedPseudoProbeInlineTree *BinaryNode) {
-    auto Res = InlineTreeNodeMap.try_emplace(ProfileNode, BinaryNode);
-    assert(Res.second &&
-           "Duplicate mapping from profile node index to binary inline tree");
-    (void)Res;
-  }
+  YAMLProfileReader::InlineTreeNodeMapTy InlineTreeNodeMap;
 
 private:
   using HashBlockPairType = std::pair<BlendedBlockHash, FlowBlock *>;
   std::unordered_map<uint16_t, std::vector<HashBlockPairType>> OpHashToBlocks;
   std::unordered_map<uint64_t, std::vector<HashBlockPairType>> CallHashToBlocks;
-  DenseMap<uint32_t, const MCDecodedPseudoProbeInlineTree *> InlineTreeNodeMap;
   DenseMap<const MCDecodedPseudoProbe *, FlowBlock *> BBPseudoProbeToBlock;
 
   // Uses OpcodeHash to find the most similar block for a given hash.
@@ -334,7 +318,8 @@ private:
     DenseMap<const FlowBlock *, uint32_t> FlowBlockMatchCount;
 
     auto match = [&](uint32_t NodeId, uint64_t ProbeId) -> const FlowBlock * {
-      const MCDecodedPseudoProbeInlineTree *Node = getInlineTreeNode(NodeId);
+      const MCDecodedPseudoProbeInlineTree *Node =
+          InlineTreeNodeMap.getInlineTreeNode(NodeId);
       if (!Node)
         return nullptr;
       const MCDecodedPseudoProbe *BinaryProbe = nullptr;
@@ -606,6 +591,13 @@ size_t matchWeightsByHashes(
            "If pseudo probes are in use, pseudo probe decoder should exist");
     const AddressProbesMap &ProbeMap = Decoder->getAddress2ProbesMap();
     const uint64_t FuncAddr = BF.getAddress();
+    auto GetTopLevelNodeByGUID =
+        [&](uint64_t GUID) -> const MCDecodedPseudoProbeInlineTree * {
+      auto It = TopLevelGUIDToInlineTree.find(GUID);
+      if (It != TopLevelGUIDToInlineTree.end())
+        return It->second;
+      return nullptr;
+    };
     for (const MCDecodedPseudoProbe &Probe :
          ProbeMap.find(FuncAddr, FuncAddr + BF.getSize()))
       if (const BinaryBasicBlock *BB =
@@ -613,43 +605,8 @@ size_t matchWeightsByHashes(
         Matcher.mapProbeToBB(&Probe, Blocks[BB->getIndex()]);
 
     // Match inline tree nodes by GUID, checksum, parent, and call site.
-    uint32_t ParentId = 0;
-    uint32_t PrevGUIDIdx = 0;
-    uint32_t Index = 0;
-    for (const yaml::bolt::InlineTreeNode &InlineTreeNode : YamlBF.InlineTree) {
-      uint64_t GUIDIdx = InlineTreeNode.GUIDIndex;
-      if (GUIDIdx != UINT32_MAX)
-        PrevGUIDIdx = GUIDIdx;
-      else
-        GUIDIdx = PrevGUIDIdx;
-      assert(GUIDIdx < YamlPD.GUID.size());
-      assert(GUIDIdx < YamlPD.GUIDHashIdx.size());
-      uint64_t GUID = YamlPD.GUID[GUIDIdx];
-      uint32_t HashIdx = YamlPD.GUIDHashIdx[GUIDIdx];
-      assert(HashIdx < YamlPD.Hash.size());
-      uint64_t Hash = YamlPD.Hash[HashIdx];
-      uint32_t InlineTreeNodeId = Index++;
-      ParentId += InlineTreeNode.ParentIndexDelta;
-      uint32_t CallSiteProbe = InlineTreeNode.CallSiteProbe;
-      const MCDecodedPseudoProbeInlineTree *Cur = nullptr;
-      if (!InlineTreeNodeId) {
-        auto It = TopLevelGUIDToInlineTree.find(GUID);
-        if (It != TopLevelGUIDToInlineTree.end())
-          Cur = It->second;
-      } else if (const MCDecodedPseudoProbeInlineTree *Parent =
-                     Matcher.getInlineTreeNode(ParentId)) {
-        for (const MCDecodedPseudoProbeInlineTree &Child :
-             Parent->getChildren()) {
-          if (Child.Guid == GUID) {
-            if (std::get<1>(Child.getInlineSite()) == CallSiteProbe)
-              Cur = &Child;
-            break;
-          }
-        }
-      }
-      if (Cur && Decoder->getFuncDescForGUID(GUID)->FuncHash == Hash)
-        Matcher.mapInlineTreeNode(InlineTreeNodeId, Cur);
-    }
+    Matcher.InlineTreeNodeMap.matchInlineTrees(
+        *Decoder, YamlPD, YamlBF.InlineTree, GetTopLevelNodeByGUID);
   }
   Matcher.init(Blocks, BlendedHashes, CallHashes);
 

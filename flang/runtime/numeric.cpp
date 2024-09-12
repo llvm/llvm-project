@@ -848,6 +848,26 @@ CppTypeFor<TypeCategory::Integer, 4> RTDEF(SelectedRealKindMasked)(
   return SelectedRealKind(p, r, d, mask);
 }
 
+#if HAS_FP16
+CppTypeFor<TypeCategory::Real, 2> RTDEF(Spacing2)(
+    CppTypeFor<TypeCategory::Real, 2> x) {
+  return Spacing<11>(x);
+}
+#endif
+CppTypeFor<TypeCategory::Real, 4> RTDEF(Spacing2By4)(
+    CppTypeFor<TypeCategory::Real, 4> x) {
+  return Spacing<11>(x);
+}
+#if HAS_BF16
+CppTypeFor<TypeCategory::Real, 3> RTDEF(Spacing3)(
+    CppTypeFor<TypeCategory::Real, 3> x) {
+  return Spacing<8>(x);
+}
+#endif
+CppTypeFor<TypeCategory::Real, 4> RTDEF(Spacing3By4)(
+    CppTypeFor<TypeCategory::Real, 4> x) {
+  return Spacing<8>(x);
+}
 CppTypeFor<TypeCategory::Real, 4> RTDEF(Spacing4)(
     CppTypeFor<TypeCategory::Real, 4> x) {
   return Spacing<24>(x);

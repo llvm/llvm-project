@@ -590,6 +590,51 @@ size_t YAMLProfileReader::matchWithCallGraph(BinaryContext &BC) {
   return MatchedWithCallGraph;
 }
 
+void YAMLProfileReader::InlineTreeNodeMapTy::matchInlineTrees(
+    const MCPseudoProbeDecoder &Decoder,
+    const yaml::bolt::PseudoProbeDesc &YamlPD,
+    const std::vector<yaml::bolt::InlineTreeNode> &YamlInlineTree,
+    llvm::function_ref<const MCDecodedPseudoProbeInlineTree *(uint64_t)>
+        GetRootCallback) {
+
+  // Match inline tree nodes by GUID, checksum, parent, and call site.
+  uint32_t ParentId = 0;
+  uint32_t PrevGUIDIdx = 0;
+  uint32_t Index = 0;
+  for (const yaml::bolt::InlineTreeNode &InlineTreeNode : YamlInlineTree) {
+    uint64_t GUIDIdx = InlineTreeNode.GUIDIndex;
+    if (GUIDIdx)
+      PrevGUIDIdx = GUIDIdx;
+    else
+      GUIDIdx = PrevGUIDIdx;
+    assert(GUIDIdx < YamlPD.GUID.size());
+    assert(GUIDIdx < YamlPD.GUIDHashIdx.size());
+    uint64_t GUID = YamlPD.GUID[GUIDIdx];
+    uint32_t HashIdx = YamlPD.GUIDHashIdx[GUIDIdx];
+    assert(HashIdx < YamlPD.Hash.size());
+    uint64_t Hash = YamlPD.Hash[HashIdx];
+    uint32_t InlineTreeNodeId = Index++;
+    ParentId += InlineTreeNode.ParentIndexDelta;
+    uint32_t CallSiteProbe = InlineTreeNode.CallSiteProbe;
+    const MCDecodedPseudoProbeInlineTree *Cur = nullptr;
+    if (!InlineTreeNodeId) {
+      Cur = GetRootCallback(GUID);
+    } else if (const MCDecodedPseudoProbeInlineTree *Parent =
+                   getInlineTreeNode(ParentId)) {
+      for (const MCDecodedPseudoProbeInlineTree &Child :
+           Parent->getChildren()) {
+        if (Child.Guid == GUID) {
+          if (std::get<1>(Child.getInlineSite()) == CallSiteProbe)
+            Cur = &Child;
+          break;
+        }
+      }
+    }
+    if (Cur && Decoder.getFuncDescForGUID(GUID)->FuncHash == Hash)
+      mapInlineTreeNode(InlineTreeNodeId, Cur);
+  }
+}
+
 size_t YAMLProfileReader::matchWithNameSimilarity(BinaryContext &BC) {
   if (opts::NameSimilarityFunctionMatchingThreshold == 0)
     return 0;

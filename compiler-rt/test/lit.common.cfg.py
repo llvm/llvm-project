@@ -312,6 +312,8 @@ config.available_features.add("host-byteorder-" + sys.byteorder + "-endian")
 
 if config.have_zlib:
     config.available_features.add("zlib")
+    config.substitutions.append(("%zlib_include_dir", config.zlib_include_dir))
+    config.substitutions.append(("%zlib_library", config.zlib_library))
 
 if config.have_internal_symbolizer:
     config.available_features.add("internal_symbolizer")

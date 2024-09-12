@@ -413,8 +413,6 @@ LogicalResult AllocaOp::verify() {
   return success();
 }
 
-Type AllocaOp::getResultPtrElementType() { return getElemType(); }
-
 //===----------------------------------------------------------------------===//
 // LLVM::BrOp
 //===----------------------------------------------------------------------===//
@@ -790,35 +788,6 @@ LogicalResult LLVM::GEPOp::verify() {
 
   return verifyStructIndices(getElemType(), getIndices(),
                              [&] { return emitOpError(); });
-}
-
-Type GEPOp::getResultPtrElementType() {
-  // Set the initial type currently being used for indexing. This will be
-  // updated as the indices get walked over.
-  Type selectedType = getElemType();
-
-  // Follow the indexed elements in the gep.
-  auto indices = getIndices();
-  for (GEPIndicesAdaptor<ValueRange>::value_type index :
-       llvm::drop_begin(indices)) {
-    // GEPs can only index into aggregates which can be structs or arrays.
-
-    // The resulting type if indexing into an array type is always the element
-    // type, regardless of index.
-    if (auto arrayType = dyn_cast<LLVMArrayType>(selectedType)) {
-      selectedType = arrayType.getElementType();
-      continue;
-    }
-
-    // The GEP verifier ensures that any index into structs are static and
-    // that they refer to a field within the struct.
-    selectedType = cast<DestructurableTypeInterface>(selectedType)
-                       .getTypeAtIndex(cast<IntegerAttr>(index));
-  }
-
-  // When there are no more indices, the type currently being used for indexing
-  // is the type of the value pointed at by the returned indexed pointer.
-  return selectedType;
 }
 
 //===----------------------------------------------------------------------===//

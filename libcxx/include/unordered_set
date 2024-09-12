@@ -548,7 +548,9 @@ template <class Value, class Hash, class Pred, class Alloc>
 #include <__ranges/concepts.h>
 #include <__ranges/container_compatible_range.h>
 #include <__ranges/from_range.h>
+#include <__type_traits/enable_if.h>
 #include <__type_traits/is_allocator.h>
+#include <__type_traits/is_integral.h>
 #include <__utility/forward.h>
 #include <version>
 

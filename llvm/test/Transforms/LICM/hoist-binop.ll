@@ -67,6 +67,108 @@ loop:
   br label %loop
 }
 
+; Hoist ADD and copy NUW if both ops have it.
+; Version where operands are commuted.
+define void @add_nuw_comm(i64 %c1, i64 %c2) {
+; CHECK-LABEL: @add_nuw_comm(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = add nuw i64 [[C1:%.*]], [[C2:%.*]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT_REASS:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = add nuw i64 [[C1]], [[INDEX]]
+; CHECK-NEXT:    call void @use(i64 [[STEP_ADD]])
+; CHECK-NEXT:    [[INDEX_NEXT_REASS]] = add nuw i64 [[INDEX]], [[INVARIANT_OP]]
+; CHECK-NEXT:    br label [[LOOP]]
+;
+entry:
+  br label %loop
+
+loop:
+  %index = phi i64 [ 0, %entry ], [ %index.next, %loop ]
+  %step.add = add nuw i64 %c1, %index
+  call void @use(i64 %step.add)
+  %index.next = add nuw i64 %step.add, %c2
+  br label %loop
+}
+
+; Hoist ADD and copy NUW if both ops have it.
+; Another version where operands are commuted.
+define void @add_nuw_comm2(i64 %c1, i64 %c2) {
+; CHECK-LABEL: @add_nuw_comm2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = add nuw i64 [[C1:%.*]], [[C2:%.*]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT_REASS:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = add nuw i64 [[INDEX]], [[C1]]
+; CHECK-NEXT:    call void @use(i64 [[STEP_ADD]])
+; CHECK-NEXT:    [[INDEX_NEXT_REASS]] = add nuw i64 [[INDEX]], [[INVARIANT_OP]]
+; CHECK-NEXT:    br label [[LOOP]]
+;
+entry:
+  br label %loop
+
+loop:
+  %index = phi i64 [ 0, %entry ], [ %index.next, %loop ]
+  %step.add = add nuw i64 %index, %c1
+  call void @use(i64 %step.add)
+  %index.next = add nuw i64 %c2, %step.add
+  br label %loop
+}
+
+; Hoist ADD and copy NUW if both ops have it.
+; Another version where operands are commuted.
+define void @add_nuw_comm3(i64 %c1, i64 %c2) {
+; CHECK-LABEL: @add_nuw_comm3(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = add nuw i64 [[C1:%.*]], [[C2:%.*]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT_REASS:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = add nuw i64 [[C1]], [[INDEX]]
+; CHECK-NEXT:    call void @use(i64 [[STEP_ADD]])
+; CHECK-NEXT:    [[INDEX_NEXT_REASS]] = add nuw i64 [[INDEX]], [[INVARIANT_OP]]
+; CHECK-NEXT:    br label [[LOOP]]
+;
+entry:
+  br label %loop
+
+loop:
+  %index = phi i64 [ 0, %entry ], [ %index.next, %loop ]
+  %step.add = add nuw i64 %c1, %index
+  call void @use(i64 %step.add)
+  %index.next = add nuw i64 %c2, %step.add
+  br label %loop
+}
+
+; Hoist ADD and copy NUW if both ops have it.
+; A version where the LHS and RHS of the outer BinOp are BinOps.
+define void @add_nuw_twobinops(i64 %c1, i64 %c2) {
+; CHECK-LABEL: @add_nuw_twobinops(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C2_PLUS_2:%.*]] = add nuw i64 [[C2:%.*]], 2
+; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = add nuw i64 [[C1:%.*]], [[C2_PLUS_2]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT_REASS:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = add nuw i64 [[C1]], [[INDEX]]
+; CHECK-NEXT:    call void @use(i64 [[STEP_ADD]])
+; CHECK-NEXT:    [[INDEX_NEXT_REASS]] = add nuw i64 [[INDEX]], [[INVARIANT_OP]]
+; CHECK-NEXT:    br label [[LOOP]]
+;
+entry:
+  br label %loop
+
+loop:
+  %index = phi i64 [ 0, %entry ], [ %index.next, %loop ]
+  %step.add = add nuw i64 %c1, %index
+  call void @use(i64 %step.add)
+  %c2.plus.2 = add nuw i64 %c2, 2
+  %index.next = add nuw i64 %step.add, %c2.plus.2
+  br label %loop
+}
+
 ; Hoist MUL and drop NUW even if both ops have it.
 define void @mul_nuw(i64 %c1, i64 %c2) {
 ; CHECK-LABEL: @mul_nuw(
@@ -88,6 +190,108 @@ loop:
   %step.add = mul nuw i64 %index, %c1
   call void @use(i64 %step.add)
   %index.next = mul nuw i64 %step.add, %c2
+  br label %loop
+}
+
+; Hoist MUL and drop NUW even if both ops have it.
+; Version where operands are commuted.
+define void @mul_nuw_comm(i64 %c1, i64 %c2) {
+; CHECK-LABEL: @mul_nuw_comm(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = mul i64 [[C1:%.*]], [[C2:%.*]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT_REASS:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = mul nuw i64 [[C1]], [[INDEX]]
+; CHECK-NEXT:    call void @use(i64 [[STEP_ADD]])
+; CHECK-NEXT:    [[INDEX_NEXT_REASS]] = mul i64 [[INDEX]], [[INVARIANT_OP]]
+; CHECK-NEXT:    br label [[LOOP]]
+;
+entry:
+  br label %loop
+
+loop:
+  %index = phi i64 [ 0, %entry ], [ %index.next, %loop ]
+  %step.add = mul nuw i64 %c1, %index
+  call void @use(i64 %step.add)
+  %index.next = mul nuw i64 %step.add, %c2
+  br label %loop
+}
+
+; Hoist MUL and drop NUW even if both ops have it.
+; Another version where operands are commuted.
+define void @mul_nuw_comm2(i64 %c1, i64 %c2) {
+; CHECK-LABEL: @mul_nuw_comm2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = mul i64 [[C1:%.*]], [[C2:%.*]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT_REASS:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = mul nuw i64 [[INDEX]], [[C1]]
+; CHECK-NEXT:    call void @use(i64 [[STEP_ADD]])
+; CHECK-NEXT:    [[INDEX_NEXT_REASS]] = mul i64 [[INDEX]], [[INVARIANT_OP]]
+; CHECK-NEXT:    br label [[LOOP]]
+;
+entry:
+  br label %loop
+
+loop:
+  %index = phi i64 [ 0, %entry ], [ %index.next, %loop ]
+  %step.add = mul nuw i64 %index, %c1
+  call void @use(i64 %step.add)
+  %index.next = mul nuw i64 %c2, %step.add
+  br label %loop
+}
+
+; Hoist MUL and drop NUW even if both ops have it.
+; Another version where operands are commuted.
+define void @mul_nuw_comm3(i64 %c1, i64 %c2) {
+; CHECK-LABEL: @mul_nuw_comm3(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = mul i64 [[C1:%.*]], [[C2:%.*]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT_REASS:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = mul nuw i64 [[C1]], [[INDEX]]
+; CHECK-NEXT:    call void @use(i64 [[STEP_ADD]])
+; CHECK-NEXT:    [[INDEX_NEXT_REASS]] = mul i64 [[INDEX]], [[INVARIANT_OP]]
+; CHECK-NEXT:    br label [[LOOP]]
+;
+entry:
+  br label %loop
+
+loop:
+  %index = phi i64 [ 0, %entry ], [ %index.next, %loop ]
+  %step.add = mul nuw i64 %c1, %index
+  call void @use(i64 %step.add)
+  %index.next = mul nuw i64 %c2, %step.add
+  br label %loop
+}
+
+; Hoist MUL and drop NUW even if both ops have it.
+; A version where the LHS and RHS of the outer BinOp are BinOps.
+define void @mul_nuw_twobinops(i64 %c1, i64 %c2) {
+; CHECK-LABEL: @mul_nuw_twobinops(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C2_PLUS_2:%.*]] = add nuw i64 [[C2:%.*]], 2
+; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = mul i64 [[C1:%.*]], [[C2_PLUS_2]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT_REASS:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = mul nuw i64 [[C1]], [[INDEX]]
+; CHECK-NEXT:    call void @use(i64 [[STEP_ADD]])
+; CHECK-NEXT:    [[INDEX_NEXT_REASS]] = mul i64 [[INDEX]], [[INVARIANT_OP]]
+; CHECK-NEXT:    br label [[LOOP]]
+;
+entry:
+  br label %loop
+
+loop:
+  %index = phi i64 [ 0, %entry ], [ %index.next, %loop ]
+  %step.add = mul nuw i64 %c1, %index
+  call void @use(i64 %step.add)
+  %c2.plus.2 = add nuw i64 %c2, 2
+  %index.next = mul nuw i64 %step.add, %c2.plus.2
   br label %loop
 }
 

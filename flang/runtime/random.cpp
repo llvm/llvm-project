@@ -42,7 +42,7 @@ void RTNAME(RandomInit)(bool repeatable, bool /*image_distinct*/) {
 #ifdef CLOCK_REALTIME
       timespec ts;
       clock_gettime(CLOCK_REALTIME, &ts);
-      generator.seed(ts.tv_sec & ts.tv_nsec);
+      generator.seed(ts.tv_sec ^ ts.tv_nsec);
 #else
       generator.seed(time(nullptr));
 #endif

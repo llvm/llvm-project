@@ -101,6 +101,42 @@ public:
         YamlBFAdjacencyMap;
   };
 
+  // A class for matching inline tree nodes between profile and binary.
+  class InlineTreeNodeMapTy {
+    DenseMap<uint32_t, const MCDecodedPseudoProbeInlineTree *> Map;
+
+    void mapInlineTreeNode(uint32_t ProfileNode,
+                           const MCDecodedPseudoProbeInlineTree *BinaryNode) {
+      auto Res = Map.try_emplace(ProfileNode, BinaryNode);
+      assert(Res.second &&
+             "Duplicate mapping from profile node index to binary inline tree");
+      (void)Res;
+    }
+
+  public:
+    /// Returns matched InlineTree * for a given profile inline_tree_id.
+    const MCDecodedPseudoProbeInlineTree *
+    getInlineTreeNode(uint32_t ProfileInlineTreeNodeId) const {
+      auto It = Map.find(ProfileInlineTreeNodeId);
+      if (It == Map.end())
+        return nullptr;
+      return It->second;
+    }
+
+    // Match up YAML inline tree with binary inline tree.
+    // \p GetRootCallback is invoked for matching up the first YAML inline tree
+    // node and has the following signature:
+    // const MCDecodedPseudoProbeInlineTree *GetRootCallback(uint64_t RootGUID)
+    void matchInlineTrees(
+        const MCPseudoProbeDecoder &Decoder,
+        const yaml::bolt::PseudoProbeDesc &YamlPD,
+        const std::vector<yaml::bolt::InlineTreeNode> &YamlInlineTree,
+        llvm::function_ref<const MCDecodedPseudoProbeInlineTree *(uint64_t)>
+            GetRootCallback);
+
+    size_t size() const { return Map.size(); }
+  };
+
 private:
   /// Adjustments for basic samples profiles (without LBR).
   bool NormalizeByInsnCount{false};

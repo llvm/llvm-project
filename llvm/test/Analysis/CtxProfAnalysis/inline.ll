@@ -31,6 +31,23 @@
 ; CHECK-NEXT:    %call2 = call i32 @a(i32 %x) #1
 ; CHECK-NEXT:    br label %exit
 
+; Make sure the postlink thinlto pipeline is aware of ctxprof
+; RUN: opt -passes='thinlto<O2>' -use-ctx-profile=%t/profile.ctxprofdata \
+; RUN:   %t/module.ll -S -o - | FileCheck %s --check-prefix=PIPELINE
+
+; PIPELINE-LABEL: define i32 @entrypoint
+; PIPELINE-SAME: !prof ![[ENTRYPOINT_COUNT:[0-9]+]]
+; PIPELINE-LABEL: loop.i:
+; PIPELINE:         br i1 %cond.i, label %loop.i, label %exit, !prof ![[LOOP_BW_INL:[0-9]+]]
+; PIPELINE-LABEL: define i32 @a
+; PIPELINE-LABEL: loop:
+; PIPELINE:         br i1 %cond, label %loop, label %exit, !prof ![[LOOP_BW_ORIG:[0-9]+]]
+
+; PIPELINE: ![[ENTRYPOINT_COUNT]] = !{!"function_entry_count", i64 10}
+; These are the weights of the inlined @a, where the counters were 2, 100 (2 for entry, 100 for loop)
+; PIPELINE: ![[LOOP_BW_INL]] = !{!"branch_weights", i32 98, i32 2}
+; These are the weights of the un-inlined @a, where the counters were 8, 500 (8 for entry, 500 for loop)
+; PIPELINE: ![[LOOP_BW_ORIG]] = !{!"branch_weights", i32 492, i32 8}
 
 ;--- module.ll
 define i32 @entrypoint(i32 %x) !guid !0 {

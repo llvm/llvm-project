@@ -51,8 +51,8 @@ public:
       : HeaderDefFile(DefFile), EntrypointNameList(EN), StdHeader(Header),
         ArgMap(Map) {}
 
-  void generate(llvm::raw_ostream &OS, llvm::RecordKeeper &Records);
-  void generateDecls(llvm::raw_ostream &OS, llvm::RecordKeeper &Records);
+  void generate(llvm::raw_ostream &OS, const llvm::RecordKeeper &Records);
+  void generateDecls(llvm::raw_ostream &OS, const llvm::RecordKeeper &Records);
 };
 
 } // namespace llvm_libc
