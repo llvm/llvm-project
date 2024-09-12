@@ -19,20 +19,20 @@ TEST(LlvmLibcCtime, Nullptr) {
 }
 
 TEST(LlvmLibcCtime, ValidUnixTimestamp0) {
-  struct time_t t = 0;
-  char *result = LIBC_NAMESPACE::ctime(t);
+  time_t t = 0;
+  char *result = LIBC_NAMESPACE::ctime(&t);
   ASSERT_STREQ("Thu Jan  1 00:00:00 1970\n", result);
 }
 
 TEST(LlvmLibcCtime, ValidUnixTimestamp32Int) {
-  struct time_t t = 2147483647;
-  char *result = LIBC_NAMESPACE::ctime(t);
+  time_t t = 2147483647;
+  char *result = LIBC_NAMESPACE::ctime(&t);
   ASSERT_STREQ("Tue Jan  19 03:14:07 2038\n", result);
 }
 
 TEST(LlvmLibcCtime, InvalidArgument) {
-  struct time_t t = 2147483648;
-  char *result = LIBC_NAMESPACE::ctime(t);
+  time_t t = 2147483648;
+  char *result = LIBC_NAMESPACE::ctime(&t);
   ASSERT_ERRNO_EQ(EINVAL);
   ASSERT_STREQ(nullptr, result);
 }

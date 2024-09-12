@@ -26,32 +26,33 @@ TEST(LlvmLibcCtimeR, Nullptr) {
   ASSERT_STREQ(nullptr, result);
 
   time_t t;
-  result = LIBC_NAMESPACE::ctime_r(&tm_data, nullptr);
+  result = LIBC_NAMESPACE::ctime_r(&t, nullptr);
   ASSERT_ERRNO_EQ(EINVAL);
   ASSERT_STREQ(nullptr, result);
 }
 
 TEST(LlvmLibcCtimeR, ValidUnixTimestamp0) {
   char buffer[TimeConstants::ASCTIME_BUFFER_SIZE];
-  struct time_t t = 0;
+  time_t t = 0;
   char *result;
   // 1970-01-01 00:00:00. Test with a valid buffer size.
-  result = LIBC_NAMESPACE::ctime_r(t, buffer);
+  result = LIBC_NAMESPACE::ctime_r(&t, buffer);
   ASSERT_STREQ("Thu Jan  1 00:00:00 1970\n", result);
 }
 
 TEST(LlvmLibcCtime, ValidUnixTimestamp32Int) {
   char buffer[TimeConstants::ASCTIME_BUFFER_SIZE];
-  struct time_t t = 2147483647;
+  time_t t = 2147483647;
   char *result;
   // 2038-01-19 03:14:07. Test with a valid buffer size.
-  char *result = LIBC_NAMESPACE::ctime_r(t, buffer);
+  result = LIBC_NAMESPACE::ctime_r(t, buffer);
   ASSERT_STREQ("Tue Jan  19 03:14:07 2038\n", result);
 }
 
 TEST(LlvmLibcCtimeR, InvalidArgument) {
-  struct time_t t = 2147483648;
-  char *result = call_ctime(&t);
+  char buffer[TimeConstants::ASCTIME_BUFFER_SIZE];
+  time_t t = 2147483648;
+  char *result = LIBC_NAMESPACE::ctime_r(&t, buffer);
   ASSERT_ERRNO_EQ(EINVAL);
   ASSERT_STREQ(nullptr, result);
 }
