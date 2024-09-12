@@ -62,8 +62,10 @@ void initialize_thunks(const sanitizer_thunk *begin,
 // startup that will replace sanitizer_export with local_function
 #ifdef __clang__
 #  define REGISTER_WEAK_OPTNONE __attribute__((optnone))
+#  define REGISTER_WEAK_FUNCTION_ADDRESS(fn) __builtin_function_start(fn)
 #else
 #  define REGISTER_WEAK_OPTNONE
+#  define REGISTER_WEAK_FUNCTION_ADDRESS(fn) &fn
 #endif
 
 #define REGISTER_WEAK_FUNCTION(local_function)                          \
@@ -71,8 +73,9 @@ void initialize_thunks(const sanitizer_thunk *begin,
   extern "C" void WEAK_EXPORT_NAME(local_function)();                   \
   WIN_WEAK_IMPORT_DEF(local_function)                                   \
   REGISTER_WEAK_OPTNONE static int register_weak_##local_function() {   \
-    if ((uintptr_t) & local_function != (uintptr_t) &                   \
-        WEAK_EXPORT_NAME(local_function)) {                             \
+    if ((uintptr_t)REGISTER_WEAK_FUNCTION_ADDRESS(local_function) !=    \
+        (uintptr_t)REGISTER_WEAK_FUNCTION_ADDRESS(                      \
+            WEAK_EXPORT_NAME(local_function))) {                        \
       return __sanitizer::register_weak(                                \
           SANITIZER_STRINGIFY(WEAK_EXPORT_NAME(local_function)),        \
           reinterpret_cast<__sanitizer::uptr>(local_function));         \
