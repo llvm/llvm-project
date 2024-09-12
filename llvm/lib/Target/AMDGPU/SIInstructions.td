@@ -570,16 +570,6 @@ def SI_INIT_EXEC_FROM_INPUT : SPseudoInstSI <
   let Defs = [EXEC];
 }
 
-// Sets EXEC to all lanes and returns the previous EXEC.
-def SI_INIT_WHOLE_WAVE : SPseudoInstSI <
-  (outs SReg_1:$dst), (ins),
-  [(set i1:$dst, (int_amdgcn_init_whole_wave))]> {
-  let Defs = [EXEC];
-  let Uses = [EXEC];
-
-  let isConvergent = 1;
-}
-
 // Return for returning shaders to a shader variant epilog.
 def SI_RETURN_TO_EPILOG : SPseudoInstSI <
   (outs), (ins variable_ops), [(AMDGPUreturn_to_epilog)]> {

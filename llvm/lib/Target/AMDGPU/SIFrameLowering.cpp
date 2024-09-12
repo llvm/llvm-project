@@ -1343,14 +1343,10 @@ void SIFrameLowering::processFunctionBeforeFrameFinalized(
 
   // Allocate spill slots for WWM reserved VGPRs.
   // For chain functions, we only need to do this if we have calls to
-  // llvm.amdgcn.cs.chain (otherwise there's no one to save them for, since
-  // chain functions do not return) and the function did not contain a call to
-  // llvm.amdgcn.init.whole.wave (since in that case there are no inactive lanes
-  // when entering the function).
-  bool IsChainWithoutRestores =
-      FuncInfo->isChainFunction() &&
-      (!MF.getFrameInfo().hasTailCall() || FuncInfo->hasInitWholeWave());
-  if (!FuncInfo->isEntryFunction() && !IsChainWithoutRestores) {
+  // llvm.amdgcn.cs.chain.
+  bool IsChainWithoutCalls =
+      FuncInfo->isChainFunction() && !MF.getFrameInfo().hasTailCall();
+  if (!FuncInfo->isEntryFunction() && !IsChainWithoutCalls) {
     for (Register Reg : FuncInfo->getWWMReservedRegs()) {
       const TargetRegisterClass *RC = TRI->getPhysRegBaseClass(Reg);
       FuncInfo->allocateWWMSpill(MF, Reg, TRI->getSpillSize(*RC),
