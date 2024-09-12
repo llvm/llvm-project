@@ -587,7 +587,7 @@ void CIRGenModule::buildGlobalFunctionDefinition(GlobalDecl GD,
   CurCGF = nullptr;
 
   setNonAliasAttributes(GD, Op);
-  // TODO: SetLLVMFunctionAttributesForDeclaration
+  setCIRFunctionAttributesForDefinition(D, Fn);
 
   if (const ConstructorAttr *CA = D->getAttr<ConstructorAttr>())
     AddGlobalCtor(Fn, CA->getPriority());
@@ -2264,7 +2264,9 @@ CIRGenModule::createCIRFunction(mlir::Location loc, StringRef name,
     mlir::SymbolTable::setSymbolVisibility(
         f, mlir::SymbolTable::Visibility::Private);
 
-    setExtraAttributesForFunc(f, FD);
+    // Initialize with empty dict of extra attributes.
+    f.setExtraAttrsAttr(mlir::cir::ExtraFuncAttributesAttr::get(
+        builder.getContext(), builder.getDictionaryAttr({})));
 
     if (!curCGF)
       theModule.push_back(f);
@@ -2333,16 +2335,16 @@ static bool hasUnwindExceptions(const LangOptions &LangOpts) {
   return true;
 }
 
-void CIRGenModule::setExtraAttributesForFunc(FuncOp f,
-                                             const clang::FunctionDecl *FD) {
-  mlir::NamedAttrList attrs;
+void CIRGenModule::setCIRFunctionAttributesForDefinition(const Decl *decl,
+                                                         FuncOp f) {
+  mlir::NamedAttrList attrs{f.getExtraAttrs().getElements().getValue()};
 
   if (!hasUnwindExceptions(getLangOpts())) {
     auto attr = mlir::cir::NoThrowAttr::get(builder.getContext());
     attrs.set(attr.getMnemonic(), attr);
   }
 
-  if (!FD) {
+  if (!decl) {
     // If we don't have a declaration to control inlining, the function isn't
     // explicitly marked as alwaysinline for semantic reasons, and inlining is
     // disabled, mark the function as noinline.
@@ -2351,12 +2353,12 @@ void CIRGenModule::setExtraAttributesForFunc(FuncOp f,
           builder.getContext(), mlir::cir::InlineKind::AlwaysInline);
       attrs.set(attr.getMnemonic(), attr);
     }
-  } else if (FD->hasAttr<NoInlineAttr>()) {
+  } else if (decl->hasAttr<NoInlineAttr>()) {
     // Add noinline if the function isn't always_inline.
     auto attr = mlir::cir::InlineAttr::get(builder.getContext(),
                                            mlir::cir::InlineKind::NoInline);
     attrs.set(attr.getMnemonic(), attr);
-  } else if (FD->hasAttr<AlwaysInlineAttr>()) {
+  } else if (decl->hasAttr<AlwaysInlineAttr>()) {
     // (noinline wins over always_inline, and we can't specify both in IR)
     auto attr = mlir::cir::InlineAttr::get(builder.getContext(),
                                            mlir::cir::InlineKind::AlwaysInline);
@@ -2371,18 +2373,18 @@ void CIRGenModule::setExtraAttributesForFunc(FuncOp f,
     // Otherwise, propagate the inline hint attribute and potentially use its
     // absence to mark things as noinline.
     // Search function and template pattern redeclarations for inline.
-    auto CheckForInline = [](const FunctionDecl *FD) {
+    auto CheckForInline = [](const FunctionDecl *decl) {
       auto CheckRedeclForInline = [](const FunctionDecl *Redecl) {
         return Redecl->isInlineSpecified();
       };
-      if (any_of(FD->redecls(), CheckRedeclForInline))
+      if (any_of(decl->redecls(), CheckRedeclForInline))
         return true;
-      const FunctionDecl *Pattern = FD->getTemplateInstantiationPattern();
+      const FunctionDecl *Pattern = decl->getTemplateInstantiationPattern();
       if (!Pattern)
         return false;
       return any_of(Pattern->redecls(), CheckRedeclForInline);
     };
-    if (CheckForInline(FD)) {
+    if (CheckForInline(cast<FunctionDecl>(decl))) {
       auto attr = mlir::cir::InlineAttr::get(builder.getContext(),
                                              mlir::cir::InlineKind::InlineHint);
       attrs.set(attr.getMnemonic(), attr);
@@ -2397,10 +2399,10 @@ void CIRGenModule::setExtraAttributesForFunc(FuncOp f,
   // starting with the default for this optimization level.
   bool ShouldAddOptNone =
       !codeGenOpts.DisableO0ImplyOptNone && codeGenOpts.OptimizationLevel == 0;
-  if (FD) {
-    ShouldAddOptNone &= !FD->hasAttr<MinSizeAttr>();
-    ShouldAddOptNone &= !FD->hasAttr<AlwaysInlineAttr>();
-    ShouldAddOptNone |= FD->hasAttr<OptimizeNoneAttr>();
+  if (decl) {
+    ShouldAddOptNone &= !decl->hasAttr<MinSizeAttr>();
+    ShouldAddOptNone &= !decl->hasAttr<AlwaysInlineAttr>();
+    ShouldAddOptNone |= decl->hasAttr<OptimizeNoneAttr>();
   }
 
   if (ShouldAddOptNone) {
