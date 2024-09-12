@@ -176,12 +176,12 @@ declare void @large_p2(ptr nocapture noundef initializes((0, 200)), ptr nocaptur
 ; Function Attrs: mustprogress nounwind uwtable
 define i16 @large_p1_caller() {
 ; CHECK-LABEL: @large_p1_caller(
-; CHECK-NEXT:    [[PTR:%.*]] = alloca i16, align 2
+; CHECK-NEXT:    [[PTR:%.*]] = alloca [200 x i8], align 1
 ; CHECK-NEXT:    call void @large_p1(ptr [[PTR]])
 ; CHECK-NEXT:    [[L:%.*]] = load i16, ptr [[PTR]], align 2
 ; CHECK-NEXT:    ret i16 [[L]]
 ;
-  %ptr = alloca i16
+  %ptr = alloca [200 x i8]
   call void @llvm.memset.p0.i64(ptr %ptr, i8 42, i64 100, i1 false)
   call void @large_p1(ptr %ptr)
   %l = load i16, ptr %ptr
@@ -191,14 +191,14 @@ define i16 @large_p1_caller() {
 ; Function Attrs: mustprogress nounwind uwtable
 define i16 @large_p2_nonalias_caller() {
 ; CHECK-LABEL: @large_p2_nonalias_caller(
-; CHECK-NEXT:    [[PTR1:%.*]] = alloca i16, align 2
-; CHECK-NEXT:    [[PTR2:%.*]] = alloca i16, align 2
+; CHECK-NEXT:    [[PTR1:%.*]] = alloca [200 x i8], align 1
+; CHECK-NEXT:    [[PTR2:%.*]] = alloca [100 x i8], align 1
 ; CHECK-NEXT:    call void @large_p2(ptr [[PTR1]], ptr [[PTR2]])
 ; CHECK-NEXT:    [[L:%.*]] = load i16, ptr [[PTR1]], align 2
 ; CHECK-NEXT:    ret i16 [[L]]
 ;
-  %ptr1 = alloca i16
-  %ptr2 = alloca i16
+  %ptr1 = alloca [200 x i8]
+  %ptr2 = alloca [100 x i8]
   call void @llvm.memset.p0.i64(ptr %ptr1, i8 42, i64 200, i1 false)
   call void @llvm.memset.p0.i64(ptr %ptr2, i8 42, i64 100, i1 false)
   call void @large_p2(ptr %ptr1, ptr %ptr2)
@@ -210,17 +210,47 @@ define i16 @large_p2_nonalias_caller() {
 ; Function Attrs: mustprogress nounwind uwtable
 define i16 @large_p2_must_alias_caller() {
 ; CHECK-LABEL: @large_p2_must_alias_caller(
-; CHECK-NEXT:    [[PTR:%.*]] = alloca i16, align 2
+; CHECK-NEXT:    [[PTR:%.*]] = alloca [300 x i8], align 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i64 100
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP1]], i8 42, i64 200, i1 false)
 ; CHECK-NEXT:    call void @large_p2(ptr [[PTR]], ptr [[PTR]])
 ; CHECK-NEXT:    [[L:%.*]] = load i16, ptr [[PTR]], align 2
 ; CHECK-NEXT:    ret i16 [[L]]
 ;
-  %ptr = alloca i16
+  %ptr = alloca [300 x i8]
   call void @llvm.memset.p0.i64(ptr %ptr, i8 42, i64 300, i1 false)
   call void @large_p2(ptr %ptr, ptr %ptr)
   %l = load i16, ptr %ptr
+  ret i16 %l
+}
+
+; Function Attrs: mustprogress nounwind uwtable
+define i16 @large_p2_may_or_partial_alias_caller1(ptr %base) {
+; CHECK-LABEL: @large_p2_may_or_partial_alias_caller1(
+; CHECK-NEXT:    [[BASEPLUS:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 100
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[BASE]], i8 42, i64 300, i1 false)
+; CHECK-NEXT:    call void @large_p2(ptr [[BASE]], ptr [[BASEPLUS]])
+; CHECK-NEXT:    [[L:%.*]] = load i16, ptr [[BASE]], align 2
+; CHECK-NEXT:    ret i16 [[L]]
+;
+  %baseplus = getelementptr i8, ptr %base, i64 100
+  call void @llvm.memset.p0.i64(ptr %base, i8 42, i64 300, i1 false)
+  call void @large_p2(ptr %base, ptr %baseplus)
+  %l = load i16, ptr %base
+  ret i16 %l
+}
+
+; Function Attrs: mustprogress nounwind uwtable
+define i16 @large_p2_may_or_partial_alias_caller2(ptr %base1, ptr %base2) {
+; CHECK-LABEL: @large_p2_may_or_partial_alias_caller2(
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[BASE1:%.*]], i8 42, i64 300, i1 false)
+; CHECK-NEXT:    call void @large_p2(ptr [[BASE1]], ptr [[BASE2:%.*]])
+; CHECK-NEXT:    [[L:%.*]] = load i16, ptr [[BASE1]], align 2
+; CHECK-NEXT:    ret i16 [[L]]
+;
+  call void @llvm.memset.p0.i64(ptr %base1, i8 42, i64 300, i1 false)
+  call void @large_p2(ptr %base1, ptr %base2)
+  %l = load i16, ptr %base1
   ret i16 %l
 }
 

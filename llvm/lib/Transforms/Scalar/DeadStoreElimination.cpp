@@ -916,7 +916,7 @@ getInitializesArgMemLoc(const Instruction *I, BatchAAResults &BatchAA) {
         FoundAliasing = true;
         AliasList.push_back(InitInfo);
       } else {
-        // For ParitialAlias and MayAlias, there is an offset or may be an
+        // For PartialAlias and MayAlias, there is an offset or may be an
         // unknown offset between the arguments and we insert an empty init
         // range to discard the entire initializes info while intersecting.
         FoundAliasing = true;
