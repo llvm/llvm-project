@@ -50,11 +50,11 @@ void AvoidEndlCheck::check(const MatchFinder::MatchResult &Result) {
         TokenRange, *Result.SourceManager, Result.Context->getLangOpts());
     if (SourceText.empty())
       SourceText = "std::endl";
-    auto Builder = diag(Expression->getBeginLoc(),
-                        "do not use '%0' with streams; use '\\n' instead");
+    auto Diag = diag(Expression->getBeginLoc(),
+                     "do not use '%0' with streams; use '\\n' instead")
+                << SourceText;
     if (TokenRange.isValid())
-      Builder << SourceText
-              << FixItHint::CreateReplacement(TokenRange, "'\\n'");
+      Diag << FixItHint::CreateReplacement(TokenRange, "'\\n'");
   } else {
     // Handle the less common function call 'std::endl(...)' case
     const auto *CallExpression = llvm::cast<CallExpr>(Expression);
