@@ -14,6 +14,7 @@
 #include "MCTargetDesc/NVPTXBaseInfo.h"
 #include "NVPTX.h"
 #include "NVPTXUtilities.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
@@ -225,11 +226,12 @@ void NVPTXInstPrinter::printCmpMode(const MCInst *MI, int OpNum, raw_ostream &O,
 }
 
 void NVPTXInstPrinter::printLdStCode(const MCInst *MI, int OpNum,
-                                     raw_ostream &O, const char *Modifier) {
-  if (Modifier) {
+                                     raw_ostream &O, const char *Modifier_) {
+  if (Modifier_) {
+    llvm::StringRef Modifier(Modifier_);
     const MCOperand &MO = MI->getOperand(OpNum);
     int Imm = (int) MO.getImm();
-    if (!strcmp(Modifier, "sem")) {
+    if (Modifier == "sem") {
       auto Ordering = NVPTX::Ordering(Imm);
       switch (Ordering) {
       case NVPTX::Ordering::NotAtomic:
@@ -255,7 +257,7 @@ void NVPTXInstPrinter::printLdStCode(const MCInst *MI, int OpNum,
             "Loads/Stores cannot be AcquireRelease or SequentiallyConsistent.",
             OrderingToString(Ordering)));
       }
-    } else if (!strcmp(Modifier, "scope")) {
+    } else if (Modifier == "scope") {
       auto S = NVPTX::Scope(Imm);
       switch (S) {
       case NVPTX::Scope::Thread:
@@ -276,7 +278,7 @@ void NVPTXInstPrinter::printLdStCode(const MCInst *MI, int OpNum,
       report_fatal_error(formatv(
           "NVPTX LdStCode Printer does not support \"{}\" sco modifier.",
           ScopeToString(S)));
-    } else if (!strcmp(Modifier, "addsp")) {
+    } else if (Modifier == "addsp") {
       switch (Imm) {
       case NVPTX::PTXLdStInstCode::GLOBAL:
         O << ".global";
@@ -298,7 +300,7 @@ void NVPTXInstPrinter::printLdStCode(const MCInst *MI, int OpNum,
       default:
         llvm_unreachable("Wrong Address Space");
       }
-    } else if (!strcmp(Modifier, "sign")) {
+    } else if (Modifier == "sign") {
       if (Imm == NVPTX::PTXLdStInstCode::Signed)
         O << "s";
       else if (Imm == NVPTX::PTXLdStInstCode::Unsigned)
@@ -309,13 +311,13 @@ void NVPTXInstPrinter::printLdStCode(const MCInst *MI, int OpNum,
         O << "f";
       else
         llvm_unreachable("Unknown register type");
-    } else if (!strcmp(Modifier, "vec")) {
+    } else if (Modifier == "vec") {
       if (Imm == NVPTX::PTXLdStInstCode::V2)
         O << ".v2";
       else if (Imm == NVPTX::PTXLdStInstCode::V4)
         O << ".v4";
     } else
-      llvm_unreachable("Unknown Modifier");
+      llvm_unreachable(formatv("Unknown Modifier: {}", Modifier).str().c_str());
   } else
     llvm_unreachable("Empty Modifier");
 }
