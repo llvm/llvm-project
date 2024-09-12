@@ -103,8 +103,10 @@ static unsigned log2LdstWidth(unsigned Opcode) {
   case RISCV::SB:
     return 0;
   case RISCV::LH:
+  case RISCV::LH_INX:
   case RISCV::LHU:
   case RISCV::SH:
+  case RISCV::SH_INX:
     return 1;
   case RISCV::LW:
   case RISCV::SW:
@@ -128,8 +130,10 @@ static unsigned offsetMask(unsigned Opcode) {
   case RISCV::SB:
     return maskTrailingOnes<unsigned>(2U);
   case RISCV::LH:
+  case RISCV::LH_INX:
   case RISCV::LHU:
   case RISCV::SH:
+  case RISCV::SH_INX:
     return maskTrailingOnes<unsigned>(1U);
   case RISCV::LW:
   case RISCV::SW:
@@ -186,6 +190,7 @@ static bool isCompressibleLoad(const MachineInstr &MI) {
     return false;
   case RISCV::LBU:
   case RISCV::LH:
+  case RISCV::LH_INX:
   case RISCV::LHU:
     return STI.hasStdExtZcb();
   case RISCV::LW:
@@ -207,6 +212,7 @@ static bool isCompressibleStore(const MachineInstr &MI) {
     return false;
   case RISCV::SB:
   case RISCV::SH:
+  case RISCV::SH_INX:
     return STI.hasStdExtZcb();
   case RISCV::SW:
   case RISCV::SD:
