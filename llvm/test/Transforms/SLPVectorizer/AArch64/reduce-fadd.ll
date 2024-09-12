@@ -12,6 +12,7 @@ define half @reduce_fast_half2(<2 x half> %vec2) {
 ; CHECK-NEXT:    [[ELT1:%.*]] = extractelement <2 x half> [[VEC2]], i64 1
 ; CHECK-NEXT:    [[ADD1:%.*]] = fadd fast half [[ELT1]], [[ELT0]]
 ; CHECK-NEXT:    ret half [[ADD1]]
+;
 entry:
   %elt0 = extractelement <2 x half> %vec2, i64 0
   %elt1 = extractelement <2 x half> %vec2, i64 1
@@ -27,6 +28,7 @@ define half @reduce_half2(<2 x half> %vec2) {
 ; CHECK-NEXT:    [[ELT1:%.*]] = extractelement <2 x half> [[VEC2]], i64 1
 ; CHECK-NEXT:    [[ADD1:%.*]] = fadd half [[ELT1]], [[ELT0]]
 ; CHECK-NEXT:    ret half [[ADD1]]
+;
 entry:
   %elt0 = extractelement <2 x half> %vec2, i64 0
   %elt1 = extractelement <2 x half> %vec2, i64 1
@@ -38,8 +40,9 @@ define half @reduce_fast_half4(<4 x half> %vec4) {
 ; CHECK-LABEL: define half @reduce_fast_half4(
 ; CHECK-SAME: <4 x half> [[VEC4:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = call fast half @llvm.vector.reduce.fadd.v4f16(half 0xH8000, <4 x half> [[VEC4]])
+; CHECK-NEXT:    [[TMP0:%.*]] = call fast half @llvm.vector.reduce.fadd.v4f16(half 0xH0000, <4 x half> [[VEC4]])
 ; CHECK-NEXT:    ret half [[TMP0]]
+;
 entry:
   %elt0 = extractelement <4 x half> %vec4, i64 0
   %elt1 = extractelement <4 x half> %vec4, i64 1
@@ -63,6 +66,7 @@ define half @reduce_half4(<4 x half> %vec4) {
 ; CHECK-NEXT:    [[ADD2:%.*]] = fadd half [[ELT2]], [[ADD1]]
 ; CHECK-NEXT:    [[ADD3:%.*]] = fadd half [[ELT3]], [[ADD2]]
 ; CHECK-NEXT:    ret half [[ADD3]]
+;
 entry:
   %elt0 = extractelement <4 x half> %vec4, i64 0
   %elt1 = extractelement <4 x half> %vec4, i64 1
@@ -83,12 +87,13 @@ define half @reduce_fast_half8(<8 x half> %vec8) {
 ; CHECK-NEXT:    [[ELT6:%.*]] = extractelement <8 x half> [[VEC8]], i64 6
 ; CHECK-NEXT:    [[ELT7:%.*]] = extractelement <8 x half> [[VEC8]], i64 7
 ; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <8 x half> [[VEC8]], <8 x half> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast half @llvm.vector.reduce.fadd.v4f16(half 0xH8000, <4 x half> [[TMP0]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast half @llvm.vector.reduce.fadd.v4f16(half 0xH0000, <4 x half> [[TMP0]])
 ; CHECK-NEXT:    [[OP_RDX:%.*]] = fadd fast half [[TMP1]], [[ELT4]]
 ; CHECK-NEXT:    [[OP_RDX1:%.*]] = fadd fast half [[ELT5]], [[ELT6]]
 ; CHECK-NEXT:    [[OP_RDX2:%.*]] = fadd fast half [[OP_RDX]], [[OP_RDX1]]
 ; CHECK-NEXT:    [[OP_RDX3:%.*]] = fadd fast half [[OP_RDX2]], [[ELT7]]
 ; CHECK-NEXT:    ret half [[OP_RDX3]]
+;
 entry:
   %elt0 = extractelement <8 x half> %vec8, i64 0
   %elt1 = extractelement <8 x half> %vec8, i64 1
@@ -128,6 +133,7 @@ define half @reduce_half8(<8 x half> %vec8) {
 ; CHECK-NEXT:    [[ADD6:%.*]] = fadd half [[ELT6]], [[ADD5]]
 ; CHECK-NEXT:    [[ADD7:%.*]] = fadd half [[ELT7]], [[ADD6]]
 ; CHECK-NEXT:    ret half [[ADD7]]
+;
 entry:
   %elt0 = extractelement <8 x half> %vec8, i64 0
   %elt1 = extractelement <8 x half> %vec8, i64 1
@@ -151,8 +157,9 @@ define half @reduce_fast_half16(<16 x half> %vec16) {
 ; NOFP16-LABEL: define half @reduce_fast_half16(
 ; NOFP16-SAME: <16 x half> [[VEC16:%.*]]) #[[ATTR0]] {
 ; NOFP16-NEXT:  [[ENTRY:.*:]]
-; NOFP16-NEXT:    [[TMP0:%.*]] = call fast half @llvm.vector.reduce.fadd.v16f16(half 0xH8000, <16 x half> [[VEC16]])
+; NOFP16-NEXT:    [[TMP0:%.*]] = call fast half @llvm.vector.reduce.fadd.v16f16(half 0xH0000, <16 x half> [[VEC16]])
 ; NOFP16-NEXT:    ret half [[TMP0]]
+;
 ; FP16-LABEL: define half @reduce_fast_half16(
 ; FP16-SAME: <16 x half> [[VEC16:%.*]]) #[[ATTR0]] {
 ; FP16-NEXT:  [[ENTRY:.*:]]
@@ -165,9 +172,9 @@ define half @reduce_fast_half16(<16 x half> %vec16) {
 ; FP16-NEXT:    [[ELT14:%.*]] = extractelement <16 x half> [[VEC16]], i64 14
 ; FP16-NEXT:    [[ELT15:%.*]] = extractelement <16 x half> [[VEC16]], i64 15
 ; FP16-NEXT:    [[TMP0:%.*]] = shufflevector <16 x half> [[VEC16]], <16 x half> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; FP16-NEXT:    [[TMP1:%.*]] = call fast half @llvm.vector.reduce.fadd.v4f16(half 0xH8000, <4 x half> [[TMP0]])
+; FP16-NEXT:    [[TMP1:%.*]] = call fast half @llvm.vector.reduce.fadd.v4f16(half 0xH0000, <4 x half> [[TMP0]])
 ; FP16-NEXT:    [[TMP2:%.*]] = shufflevector <16 x half> [[VEC16]], <16 x half> poison, <4 x i32> <i32 8, i32 9, i32 10, i32 11>
-; FP16-NEXT:    [[TMP3:%.*]] = call fast half @llvm.vector.reduce.fadd.v4f16(half 0xH8000, <4 x half> [[TMP2]])
+; FP16-NEXT:    [[TMP3:%.*]] = call fast half @llvm.vector.reduce.fadd.v4f16(half 0xH0000, <4 x half> [[TMP2]])
 ; FP16-NEXT:    [[OP_RDX:%.*]] = fadd fast half [[TMP1]], [[TMP3]]
 ; FP16-NEXT:    [[OP_RDX1:%.*]] = fadd fast half [[OP_RDX]], [[ELT4]]
 ; FP16-NEXT:    [[OP_RDX2:%.*]] = fadd fast half [[ELT5]], [[ELT6]]
@@ -178,6 +185,7 @@ define half @reduce_fast_half16(<16 x half> %vec16) {
 ; FP16-NEXT:    [[OP_RDX7:%.*]] = fadd fast half [[OP_RDX5]], [[OP_RDX6]]
 ; FP16-NEXT:    [[OP_RDX8:%.*]] = fadd fast half [[OP_RDX7]], [[ELT15]]
 ; FP16-NEXT:    ret half [[OP_RDX8]]
+;
 entry:
   %elt0 = extractelement <16 x half> %vec16, i64 0
   %elt1 = extractelement <16 x half> %vec16, i64 1
@@ -249,6 +257,7 @@ define half @reduce_half16(<16 x half> %vec16) {
 ; CHECK-NEXT:    [[ADD14:%.*]] = fadd half [[ELT14]], [[ADD13]]
 ; CHECK-NEXT:    [[ADD15:%.*]] = fadd half [[ELT15]], [[ADD14]]
 ; CHECK-NEXT:    ret half [[ADD15]]
+;
 entry:
   %elt0 = extractelement <16 x half> %vec16, i64 0
   %elt1 = extractelement <16 x half> %vec16, i64 1
@@ -292,6 +301,7 @@ define float @reduce_fast_float2(<2 x float> %vec2) {
 ; CHECK-NEXT:    [[ELT1:%.*]] = extractelement <2 x float> [[VEC2]], i64 1
 ; CHECK-NEXT:    [[ADD1:%.*]] = fadd fast float [[ELT1]], [[ELT0]]
 ; CHECK-NEXT:    ret float [[ADD1]]
+;
 entry:
   %elt0 = extractelement <2 x float> %vec2, i64 0
   %elt1 = extractelement <2 x float> %vec2, i64 1
@@ -307,6 +317,7 @@ define float @reduce_float2(<2 x float> %vec2) {
 ; CHECK-NEXT:    [[ELT1:%.*]] = extractelement <2 x float> [[VEC2]], i64 1
 ; CHECK-NEXT:    [[ADD1:%.*]] = fadd float [[ELT1]], [[ELT0]]
 ; CHECK-NEXT:    ret float [[ADD1]]
+;
 entry:
   %elt0 = extractelement <2 x float> %vec2, i64 0
   %elt1 = extractelement <2 x float> %vec2, i64 1
@@ -318,8 +329,9 @@ define float @reduce_fast_float4(<4 x float> %vec4) {
 ; CHECK-LABEL: define float @reduce_fast_float4(
 ; CHECK-SAME: <4 x float> [[VEC4:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[VEC4]])
+; CHECK-NEXT:    [[TMP0:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[VEC4]])
 ; CHECK-NEXT:    ret float [[TMP0]]
+;
 entry:
   %elt0 = extractelement <4 x float> %vec4, i64 0
   %elt1 = extractelement <4 x float> %vec4, i64 1
@@ -343,6 +355,7 @@ define float @reduce_float4(<4 x float> %vec4) {
 ; CHECK-NEXT:    [[ADD2:%.*]] = fadd float [[ELT2]], [[ADD1]]
 ; CHECK-NEXT:    [[ADD3:%.*]] = fadd float [[ELT3]], [[ADD2]]
 ; CHECK-NEXT:    ret float [[ADD3]]
+;
 entry:
   %elt0 = extractelement <4 x float> %vec4, i64 0
   %elt1 = extractelement <4 x float> %vec4, i64 1
@@ -358,8 +371,9 @@ define float @reduce_fast_float8(<8 x float> %vec8) {
 ; CHECK-LABEL: define float @reduce_fast_float8(
 ; CHECK-SAME: <8 x float> [[VEC8:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = call fast float @llvm.vector.reduce.fadd.v8f32(float -0.000000e+00, <8 x float> [[VEC8]])
+; CHECK-NEXT:    [[TMP0:%.*]] = call fast float @llvm.vector.reduce.fadd.v8f32(float 0.000000e+00, <8 x float> [[VEC8]])
 ; CHECK-NEXT:    ret float [[TMP0]]
+;
 entry:
   %elt0 = extractelement <8 x float> %vec8, i64 0
   %elt1 = extractelement <8 x float> %vec8, i64 1
@@ -399,6 +413,7 @@ define float @reduce_float8(<8 x float> %vec8) {
 ; CHECK-NEXT:    [[ADD6:%.*]] = fadd float [[ELT6]], [[ADD5]]
 ; CHECK-NEXT:    [[ADD7:%.*]] = fadd float [[ELT7]], [[ADD6]]
 ; CHECK-NEXT:    ret float [[ADD7]]
+;
 entry:
   %elt0 = extractelement <8 x float> %vec8, i64 0
   %elt1 = extractelement <8 x float> %vec8, i64 1
@@ -426,6 +441,7 @@ define double @reduce_fast_double2(<2 x double> %vec2) {
 ; CHECK-NEXT:    [[ELT1:%.*]] = extractelement <2 x double> [[VEC2]], i64 1
 ; CHECK-NEXT:    [[ADD1:%.*]] = fadd fast double [[ELT1]], [[ELT0]]
 ; CHECK-NEXT:    ret double [[ADD1]]
+;
 entry:
   %elt0 = extractelement <2 x double> %vec2, i64 0
   %elt1 = extractelement <2 x double> %vec2, i64 1
@@ -441,6 +457,7 @@ define double @reduce_double2(<2 x double> %vec2) {
 ; CHECK-NEXT:    [[ELT1:%.*]] = extractelement <2 x double> [[VEC2]], i64 1
 ; CHECK-NEXT:    [[ADD1:%.*]] = fadd double [[ELT1]], [[ELT0]]
 ; CHECK-NEXT:    ret double [[ADD1]]
+;
 entry:
   %elt0 = extractelement <2 x double> %vec2, i64 0
   %elt1 = extractelement <2 x double> %vec2, i64 1
@@ -452,8 +469,9 @@ define double @reduce_fast_double4(<4 x double> %vec4) {
 ; CHECK-LABEL: define double @reduce_fast_double4(
 ; CHECK-SAME: <4 x double> [[VEC4:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = call fast double @llvm.vector.reduce.fadd.v4f64(double -0.000000e+00, <4 x double> [[VEC4]])
+; CHECK-NEXT:    [[TMP0:%.*]] = call fast double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> [[VEC4]])
 ; CHECK-NEXT:    ret double [[TMP0]]
+;
 entry:
   %elt0 = extractelement <4 x double> %vec4, i64 0
   %elt1 = extractelement <4 x double> %vec4, i64 1
@@ -477,6 +495,7 @@ define double @reduce_double4(<4 x double> %vec4) {
 ; CHECK-NEXT:    [[ADD2:%.*]] = fadd double [[ELT2]], [[ADD1]]
 ; CHECK-NEXT:    [[ADD3:%.*]] = fadd double [[ELT3]], [[ADD2]]
 ; CHECK-NEXT:    ret double [[ADD3]]
+;
 entry:
   %elt0 = extractelement <4 x double> %vec4, i64 0
   %elt1 = extractelement <4 x double> %vec4, i64 1
@@ -507,6 +526,7 @@ define float @reduce_fast_float_case1(ptr %a) {
 ; CHECK-NEXT:    [[LOAD4:%.*]] = load float, ptr [[GEP4]], align 4
 ; CHECK-NEXT:    [[ADD4:%.*]] = fadd fast float [[LOAD4]], [[ADD3]]
 ; CHECK-NEXT:    ret float [[ADD4]]
+;
 entry:
   %load = load float, ptr %a
   %gep = getelementptr inbounds i8, ptr %a, i64 4
@@ -543,6 +563,7 @@ define float @reduce_float_case1(ptr %a) {
 ; CHECK-NEXT:    [[LOAD4:%.*]] = load float, ptr [[GEP4]], align 4
 ; CHECK-NEXT:    [[ADD4:%.*]] = fadd float [[LOAD4]], [[ADD3]]
 ; CHECK-NEXT:    ret float [[ADD4]]
+;
 entry:
   %load = load float, ptr %a
   %gep = getelementptr inbounds i8, ptr %a, i64 4
@@ -584,6 +605,7 @@ define float @reduce_fast_float_case2(ptr %a, ptr %b) {
 ; CHECK-NEXT:    [[RED2:%.*]] = fadd fast float [[ADD2]], [[RED1]]
 ; CHECK-NEXT:    [[RED3:%.*]] = fadd fast float [[ADD3]], [[RED2]]
 ; CHECK-NEXT:    ret float [[RED3]]
+;
 entry:
   %gepa1 = getelementptr inbounds float, ptr %a, i32 1
   %gepa2 = getelementptr inbounds float, ptr %a, i32 2
@@ -633,6 +655,7 @@ define float @reduce_float_case2(ptr %a, ptr %b) {
 ; CHECK-NEXT:    [[RED2:%.*]] = fadd float [[ADD2]], [[RED1]]
 ; CHECK-NEXT:    [[RED3:%.*]] = fadd float [[ADD3]], [[RED2]]
 ; CHECK-NEXT:    ret float [[RED3]]
+;
 entry:
   %gepa1 = getelementptr inbounds float, ptr %a, i32 1
   %gepa2 = getelementptr inbounds float, ptr %a, i32 2
@@ -694,6 +717,7 @@ define float @reduce_fast_float_case3(ptr %a) {
 ; CHECK-NEXT:    [[ADD6:%.*]] = fadd fast float [[ADD5]], [[LOG6]]
 ; CHECK-NEXT:    [[ADD7:%.*]] = fadd fast float [[ADD6]], [[LOG7]]
 ; CHECK-NEXT:    ret float [[ADD7]]
+;
 entry:
   %gep1 = getelementptr inbounds float, ptr %a, i32 1
   %gep2 = getelementptr inbounds float, ptr %a, i32 2
@@ -764,6 +788,7 @@ define float @reduce_float_case3(ptr %a) {
 ; CHECK-NEXT:    [[ADD6:%.*]] = fadd float [[ADD5]], [[LOG6]]
 ; CHECK-NEXT:    [[ADD7:%.*]] = fadd float [[ADD6]], [[LOG7]]
 ; CHECK-NEXT:    ret float [[ADD7]]
+;
 entry:
   %gep1 = getelementptr inbounds float, ptr %a, i32 1
   %gep2 = getelementptr inbounds float, ptr %a, i32 2
@@ -802,8 +827,9 @@ define half @reduce_unordered_fast_half4(<4 x half> %vec4) {
 ; CHECK-LABEL: define half @reduce_unordered_fast_half4(
 ; CHECK-SAME: <4 x half> [[VEC4:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = call fast half @llvm.vector.reduce.fadd.v4f16(half 0xH8000, <4 x half> [[VEC4]])
+; CHECK-NEXT:    [[TMP0:%.*]] = call fast half @llvm.vector.reduce.fadd.v4f16(half 0xH0000, <4 x half> [[VEC4]])
 ; CHECK-NEXT:    ret half [[TMP0]]
+;
 entry:
   %elt0 = extractelement <4 x half> %vec4, i64 0
   %elt1 = extractelement <4 x half> %vec4, i64 1
@@ -826,6 +852,7 @@ define half @reduce_unordered_half4(<4 x half> %vec4) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x half> [[TMP2]], i32 1
 ; CHECK-NEXT:    [[ADD3:%.*]] = fadd half [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    ret half [[ADD3]]
+;
 entry:
   %elt0 = extractelement <4 x half> %vec4, i64 0
   %elt1 = extractelement <4 x half> %vec4, i64 1
