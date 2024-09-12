@@ -43,21 +43,16 @@ using namespace llvm;
 /// See comments in Cloning.h.
 BasicBlock *llvm::CloneBasicBlock(const BasicBlock *BB, ValueToValueMapTy &VMap,
                                   const Twine &NameSuffix, Function *F,
-                                  ClonedCodeInfo *CodeInfo,
-                                  DebugInfoFinder *DIFinder) {
+                                  ClonedCodeInfo *CodeInfo) {
   BasicBlock *NewBB = BasicBlock::Create(BB->getContext(), "", F);
   NewBB->IsNewDbgInfoFormat = BB->IsNewDbgInfoFormat;
   if (BB->hasName())
     NewBB->setName(BB->getName() + NameSuffix);
 
   bool hasCalls = false, hasDynamicAllocas = false, hasMemProfMetadata = false;
-  Module *TheModule = F ? F->getParent() : nullptr;
 
   // Loop over all instructions, and copy them over.
   for (const Instruction &I : *BB) {
-    if (DIFinder && TheModule)
-      DIFinder->processInstruction(*TheModule, I);
-
     Instruction *NewInst = I.clone();
     if (I.hasName())
       NewInst->setName(I.getName() + NameSuffix);
@@ -221,10 +216,7 @@ void llvm::CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
   for (const BasicBlock &BB : *OldFunc) {
 
     // Create a new basic block and copy instructions into it!
-    // NOTE: don't pass DIFinder because instructions' debug info was processed
-    // in ProcessSubprogramAttachment. This will be cleaned up further.
-    BasicBlock *CBB =
-        CloneBasicBlock(&BB, VMap, NameSuffix, NewFunc, CodeInfo, nullptr);
+    BasicBlock *CBB = CloneBasicBlock(&BB, VMap, NameSuffix, NewFunc, CodeInfo);
 
     // Add basic block mapping.
     VMap[&BB] = CBB;
