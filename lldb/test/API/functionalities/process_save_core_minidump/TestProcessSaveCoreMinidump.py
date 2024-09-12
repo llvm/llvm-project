@@ -515,6 +515,7 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             # We set custom only and have no thread list and have no memory.
             error = process.SaveCore(options)
             self.assertTrue(error.Fail())
+            self.assertIn("no valid address ranges found for core style", error.GetCString())
             self.assertTrue(not os.path.isfile(custom_file))
 
         finally:
