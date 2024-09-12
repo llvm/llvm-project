@@ -1275,15 +1275,14 @@ struct DSEState {
       return Locations;
     }
 
+    if (auto Loc = getLocForWrite(I))
+      Locations.push_back(std::make_pair(*Loc, false));
+
     if (ConsiderInitializesAttr) {
       for (auto &MemLoc : getInitializesArgMemLoc(I, BatchAA)) {
         Locations.push_back(std::make_pair(MemLoc, true));
       }
-      return Locations;
     }
-
-    if (auto Loc = getLocForWrite(I))
-      Locations.push_back(std::make_pair(*Loc, false));
     return Locations;
   }
 
