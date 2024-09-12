@@ -138,6 +138,7 @@ __all__ = [
     "InsertionPoint",
     "IntegerAttr",
     "IntegerSet",
+    "IntegerSetAttr",
     "IntegerSetConstraint",
     "IntegerSetConstraintList",
     "IntegerType",
@@ -1904,6 +1905,21 @@ class IntegerSet:
     def n_inputs(self) -> int: ...
     @property
     def n_symbols(self) -> int: ...
+
+class IntegerSetAttr(Attribute):
+    static_typeid: ClassVar[TypeID]
+    @staticmethod
+    def get(integer_set) -> IntegerSetAttr:
+        """
+        Gets an attribute wrapping an IntegerSet.
+        """
+    @staticmethod
+    def isinstance(other: Attribute) -> bool: ...
+    def __init__(self, cast_from_attr: Attribute) -> None: ...
+    @property
+    def type(self) -> Type: ...
+    @property
+    def typeid(self) -> TypeID: ...
 
 class IntegerSetConstraint:
     def __init__(self, *args, **kwargs) -> None: ...

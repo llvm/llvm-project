@@ -8616,10 +8616,7 @@ SDValue TargetLowering::expandFMINIMUMNUM_FMAXIMUMNUM(SDNode *Node,
   // If MinMax is NaN, let's quiet it.
   if (!Flags.hasNoNaNs() && !DAG.isKnownNeverNaN(LHS) &&
       !DAG.isKnownNeverNaN(RHS)) {
-    SDValue MinMaxQuiet =
-        DAG.getNode(ISD::FCANONICALIZE, DL, VT, MinMax, Flags);
-    MinMax =
-        DAG.getSelectCC(DL, MinMax, MinMax, MinMaxQuiet, MinMax, ISD::SETUO);
+    MinMax = DAG.getNode(ISD::FCANONICALIZE, DL, VT, MinMax, Flags);
   }
 
   // Fixup signed zero behavior.

@@ -100,6 +100,10 @@ static bool isCoroutineIntrinsicName(StringRef Name) {
 }
 #endif
 
+bool coro::isSuspendBlock(BasicBlock *BB) {
+  return isa<AnyCoroSuspendInst>(BB->front());
+}
+
 bool coro::declaresAnyIntrinsic(const Module &M) {
   for (StringRef Name : CoroIntrinsics) {
     assert(isCoroutineIntrinsicName(Name) && "not a coroutine intrinsic");

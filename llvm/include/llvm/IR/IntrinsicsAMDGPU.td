@@ -1026,18 +1026,14 @@ defset list<AMDGPUImageDimIntrinsic> AMDGPUImageDimAtomicIntrinsics = {
         }
   }
 
-  multiclass AMDGPUImageDimAtomic<string opmod, LLVMType rettype = llvm_anyint_ty> {
-    defm ""
-        : AMDGPUImageDimAtomicX<opmod, [AMDGPUArg<LLVMMatchType<0>, "vdata">], rettype>;
-  }
+  multiclass AMDGPUImageDimAtomic<string opmod, LLVMType rettype = llvm_anyint_ty> :
+    AMDGPUImageDimAtomicX<opmod, [AMDGPUArg<LLVMMatchType<0>, "vdata">], rettype>;
 
-  multiclass AMDGPUImageDimFloatAtomic<string opmod> {
-    defm "" : AMDGPUImageDimAtomic<opmod, llvm_anyfloat_ty>;
-  }
+  multiclass AMDGPUImageDimFloatAtomic<string opmod> :
+    AMDGPUImageDimAtomic<opmod, llvm_anyfloat_ty>;
 
-  multiclass AMDGPUImageDimAnyAtomic<string opmod> {
-    defm "" : AMDGPUImageDimAtomic<opmod, llvm_any_ty>;
-  }
+  multiclass AMDGPUImageDimAnyAtomic<string opmod> :
+    AMDGPUImageDimAtomic<opmod, llvm_any_ty>;
 
   defm int_amdgcn_image_atomic_swap : AMDGPUImageDimAnyAtomic<"ATOMIC_SWAP">;
   defm int_amdgcn_image_atomic_add : AMDGPUImageDimAtomic<"ATOMIC_ADD">;
