@@ -750,8 +750,21 @@ void InitListChecker::FillInEmptyInitForField(unsigned Init, FieldDecl *Field,
     if (Field->hasInClassInitializer()) {
       if (VerifyOnly)
         return;
-
-      ExprResult DIE = SemaRef.BuildCXXDefaultInitExpr(Loc, Field);
+      ExprResult DIE;
+      {
+        // Enter a default initializer rebuild context, then we can support
+        // lifetime extension of temporary created by aggregate initialization
+        // using a default member initializer.
+        // CWG1815 (https://wg21.link/CWG1815).
+        EnterExpressionEvaluationContext RebuildDefaultInit(
+            SemaRef, Sema::ExpressionEvaluationContext::PotentiallyEvaluated);
+        SemaRef.currentEvaluationContext().RebuildDefaultArgOrDefaultInit =
+            true;
+        SemaRef.currentEvaluationContext().DelayedDefaultInitializationContext =
+            SemaRef.parentEvaluationContext()
+                .DelayedDefaultInitializationContext;
+        DIE = SemaRef.BuildCXXDefaultInitExpr(Loc, Field);
+      }
       if (DIE.isInvalid()) {
         hadError = true;
         return;
@@ -7521,10 +7534,8 @@ Sema::CreateMaterializeTemporaryExpr(QualType T, Expr *Temporary,
   // are done in both CreateMaterializeTemporaryExpr and MaybeBindToTemporary,
   // but there may be a chance to merge them.
   Cleanup.setExprNeedsCleanups(false);
-  if (isInLifetimeExtendingContext()) {
-    auto &Record = ExprEvalContexts.back();
-    Record.ForRangeLifetimeExtendTemps.push_back(MTE);
-  }
+  if (isInLifetimeExtendingContext())
+    currentEvaluationContext().ForRangeLifetimeExtendTemps.push_back(MTE);
   return MTE;
 }
 

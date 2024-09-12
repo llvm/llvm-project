@@ -1,10 +1,12 @@
 import os
+import pathlib
 import platform
 import subprocess
 import sys
 import itertools
 
 import lldbsuite.test.lldbtest as lldbtest
+import lldbsuite.test.lldbplatformutil as lldbplatformutil
 import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test import configuration
 from lldbsuite.test_event import build_exception
@@ -96,17 +98,101 @@ class Builder:
         """
         return ["ARCH=" + architecture] if architecture else []
 
-    def getCCSpec(self, compiler):
+    def getToolchainSpec(self, compiler):
         """
-        Helper function to return the key-value string to specify the compiler
+        Helper function to return the key-value strings to specify the toolchain
         used for the make system.
         """
         cc = compiler if compiler else None
         if not cc and configuration.compiler:
             cc = configuration.compiler
-        if cc:
-            return ['CC="%s"' % cc]
-        return []
+
+        if not cc:
+            return []
+
+        cc = cc.strip()
+        cc_path = pathlib.Path(cc)
+
+        # We can get CC compiler string in the following formats:
+        #  [<tool>] <compiler>    - such as 'xrun clang', 'xrun /usr/bin/clang' & etc
+        #
+        # Where <compiler> could contain the following parts:
+        #   <simple-name>[.<exe-ext>]                           - sucn as 'clang', 'clang.exe' ('clang-cl.exe'?)
+        #   <target-triple>-<simple-name>[.<exe-ext>]           - such as 'armv7-linux-gnueabi-gcc'
+        #   <path>/<simple-name>[.<exe-ext>]                    - such as '/usr/bin/clang', 'c:\path\to\compiler\clang,exe'
+        #   <path>/<target-triple>-<simple-name>[.<exe-ext>]    - such as '/usr/bin/clang', 'c:\path\to\compiler\clang,exe'
+
+        cc_ext = cc_path.suffix
+        # Compiler name without extension
+        cc_name = cc_path.stem.split(" ")[-1]
+
+        # A kind of compiler (canonical name): clang, gcc, cc & etc.
+        cc_type = cc_name
+        # A triple prefix of compiler name: <armv7-none-linux-gnu->gcc
+        cc_prefix = ""
+        if not "clang-cl" in cc_name and not "llvm-gcc" in cc_name:
+            cc_name_parts = cc_name.split("-")
+            cc_type = cc_name_parts[-1]
+            if len(cc_name_parts) > 1:
+                cc_prefix = "-".join(cc_name_parts[:-1]) + "-"
+
+        # A kind of C++ compiler.
+        cxx_types = {
+            "icc": "icpc",
+            "llvm-gcc": "llvm-g++",
+            "gcc": "g++",
+            "cc": "c++",
+            "clang": "clang++",
+        }
+        cxx_type = cxx_types.get(cc_type, cc_type)
+
+        cc_dir = cc_path.parent
+
+        def getToolchainUtil(util_name):
+            return cc_dir / (cc_prefix + util_name + cc_ext)
+
+        cxx = getToolchainUtil(cxx_type)
+
+        util_names = {
+            "OBJCOPY": "objcopy",
+            "STRIP": "strip",
+            "ARCHIVER": "ar",
+            "DWP": "dwp",
+        }
+        utils = []
+
+        if not lldbplatformutil.platformIsDarwin():
+            if cc_type in ["clang", "cc", "gcc"]:
+                util_paths = {}
+                # Assembly a toolchain side tool cmd based on passed CC.
+                for var, name in util_names.items():
+                    # Do not override explicity specified tool from the cmd line.
+                    if not os.getenv(var):
+                        util_paths[var] = getToolchainUtil(name)
+                    else:
+                        util_paths[var] = os.getenv(var)
+                utils.extend(["AR=%s" % util_paths["ARCHIVER"]])
+
+                # Look for llvm-dwp or gnu dwp
+                if not lldbutil.which(util_paths["DWP"]):
+                    util_paths["DWP"] = getToolchainUtil("llvm-dwp")
+                if not lldbutil.which(util_paths["DWP"]):
+                    util_paths["DWP"] = lldbutil.which("llvm-dwp")
+                if not util_paths["DWP"]:
+                    util_paths["DWP"] = lldbutil.which("dwp")
+                    if not util_paths["DWP"]:
+                        del util_paths["DWP"]
+
+                for var, path in util_paths.items():
+                    utils.append("%s=%s" % (var, path))
+        else:
+            utils.extend(["AR=%slibtool" % os.getenv("CROSS_COMPILE", "")])
+
+        return [
+            "CC=%s" % cc,
+            "CC_TYPE=%s" % cc_type,
+            "CXX=%s" % cxx,
+        ] + utils
 
     def getSDKRootSpec(self):
         """
@@ -178,7 +264,7 @@ class Builder:
             make_targets,
             self.getArchCFlags(architecture),
             self.getArchSpec(architecture),
-            self.getCCSpec(compiler),
+            self.getToolchainSpec(compiler),
             self.getExtraMakeArgs(),
             self.getSDKRootSpec(),
             self.getModuleCacheSpec(),

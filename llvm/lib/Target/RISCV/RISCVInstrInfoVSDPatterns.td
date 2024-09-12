@@ -1374,7 +1374,7 @@ foreach fvti = !listconcat(AllFloatVectors, AllBFloatVectors) in {
                    fvti.AVL, fvti.Log2SEW)>;
 
     def : Pat<(fvti.Vector (vselect (fvti.Mask V0),
-                                    (SplatFPOp (SelectFPImm (XLenVT GPR:$imm))),
+                                    (SplatFPOp (SelectScalarFPAsInt (XLenVT GPR:$imm))),
                                     fvti.RegClass:$rs2)),
               (!cast<Instruction>("PseudoVMERGE_VXM_"#fvti.LMul.MX)
                    (fvti.Vector (IMPLICIT_DEF)),

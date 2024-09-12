@@ -106,6 +106,9 @@ struct SCFTilingResult {
   /// Values to use as replacements for the untiled op. Is the same size as the
   /// number of results of the untiled op.
   SmallVector<Value> replacements;
+  /// Slices generated after tiling that can be used for fusing with the tiled
+  /// producer.
+  SmallVector<Operation *> generatedSlices;
 };
 
 /// Method to tile an op that implements the `TilingInterface` using
@@ -129,18 +132,22 @@ struct SCFTileAndFuseOptions {
   /// 2) the producer value that is to be fused
   /// 3) a boolean value set to `true` if the fusion is from
   ///    a destination operand.
-  /// It retuns two booleans
-  /// - returns `true` if the fusion should be done through the candidate slice
-  /// - returns `true` if a replacement for the fused producer needs to be
-  ///   yielded from within the tiled loop. Note that it is valid to return
-  ///   `true` only if the slice fused is disjoint across all iterations of the
-  ///   tiled loop. It is up to the caller to ensure that this is true for the
-  ///   fused producers.
-  using ControlFnTy = std::function<std::tuple<bool, bool>(
+  /// The control function returns an `std::optiona<ControlFnResult>`.
+  /// If the return value is `std::nullopt`, that implies no fusion
+  /// is to be performed along that slice.
+  struct ControlFnResult {
+    /// Set to true if the loop nest has to return a replacement value
+    /// for the fused producer.
+    bool yieldProducerReplacement = false;
+  };
+  using ControlFnTy = std::function<std::optional<ControlFnResult>(
       tensor::ExtractSliceOp candidateSliceOp, OpResult originalProducer,
       bool isDestinationOperand)>;
-  ControlFnTy fusionControlFn = [](tensor::ExtractSliceOp, OpResult, bool) {
-    return std::make_tuple(true, false);
+  /// The default control function implements greedy fusion without yielding
+  /// a replacement for any of the fused results.
+  ControlFnTy fusionControlFn = [](tensor::ExtractSliceOp, OpResult,
+                                   bool) -> std::optional<ControlFnResult> {
+    return ControlFnResult{};
   };
   SCFTileAndFuseOptions &setFusionControlFn(ControlFnTy controlFn) {
     fusionControlFn = controlFn;
@@ -156,6 +163,7 @@ struct SCFFuseProducerOfSliceResult {
   OpResult origProducer;       // Original untiled producer.
   Value tiledAndFusedProducer; // Tile and fused producer value.
   SmallVector<Operation *> tiledOps;
+  SmallVector<Operation *> generatedSlices;
 };
 std::optional<SCFFuseProducerOfSliceResult>
 tileAndFuseProducerOfSlice(RewriterBase &rewriter,
@@ -215,7 +223,10 @@ tileAndFuseProducerOfSlice(RewriterBase &rewriter,
 ///
 /// The @param `yieldResultNumber` decides which result would be yield. If not
 /// given, yield all `opResult` of fused producer.
-LogicalResult yieldReplacementForFusedProducer(
+///
+/// The method returns the list of new slices added during the process (which
+/// can be used to fuse along).
+FailureOr<SmallVector<Operation *>> yieldReplacementForFusedProducer(
     RewriterBase &rewriter, tensor::ExtractSliceOp sliceOp,
     scf::SCFFuseProducerOfSliceResult fusedProducerInfo,
     MutableArrayRef<LoopLikeOpInterface> loops,

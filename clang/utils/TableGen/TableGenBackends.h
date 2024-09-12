@@ -73,28 +73,30 @@ void EmitClangAttrNodeTraverse(llvm::RecordKeeper &Records,
                                llvm::raw_ostream &OS);
 void EmitClangAttrDocTable(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 
-void EmitClangBuiltins(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitClangBuiltins(const llvm::RecordKeeper &Records,
+                       llvm::raw_ostream &OS);
 
-void EmitClangDiagsDefs(llvm::RecordKeeper &Records, llvm::raw_ostream &OS,
-                        const std::string &Component);
-void EmitClangDiagGroups(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
-void EmitClangDiagsIndexName(llvm::RecordKeeper &Records,
+void EmitClangDiagsDefs(const llvm::RecordKeeper &Records,
+                        llvm::raw_ostream &OS, const std::string &Component);
+void EmitClangDiagGroups(const llvm::RecordKeeper &Records,
+                         llvm::raw_ostream &OS);
+void EmitClangDiagsIndexName(const llvm::RecordKeeper &Records,
                              llvm::raw_ostream &OS);
 
 void EmitClangSACheckers(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 
-void EmitClangCommentHTMLTags(llvm::RecordKeeper &Records,
+void EmitClangCommentHTMLTags(const llvm::RecordKeeper &Records,
                               llvm::raw_ostream &OS);
-void EmitClangCommentHTMLTagsProperties(llvm::RecordKeeper &Records,
+void EmitClangCommentHTMLTagsProperties(const llvm::RecordKeeper &Records,
                                         llvm::raw_ostream &OS);
-void EmitClangCommentHTMLNamedCharacterReferences(llvm::RecordKeeper &Records,
-                                                  llvm::raw_ostream &OS);
+void EmitClangCommentHTMLNamedCharacterReferences(
+    const llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 
-void EmitClangCommentCommandInfo(llvm::RecordKeeper &Records,
+void EmitClangCommentCommandInfo(const llvm::RecordKeeper &Records,
                                  llvm::raw_ostream &OS);
-void EmitClangCommentCommandList(llvm::RecordKeeper &Records,
+void EmitClangCommentCommandList(const llvm::RecordKeeper &Records,
                                  llvm::raw_ostream &OS);
-void EmitClangOpcodes(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitClangOpcodes(const llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 
 void EmitClangSyntaxNodeList(llvm::RecordKeeper &Records,
                              llvm::raw_ostream &OS);
@@ -108,6 +110,7 @@ void EmitNeonSema(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitVectorTypes(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitNeonTest(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 
+void EmitImmCheckTypes(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitSveHeader(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitSveBuiltins(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitSveBuiltinCG(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
@@ -140,17 +143,18 @@ void EmitCdeBuiltinCG(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitCdeBuiltinAliases(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 
 void EmitClangAttrDocs(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
-void EmitClangDiagDocs(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
-void EmitClangOptDocs(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitClangDiagDocs(const llvm::RecordKeeper &Records,
+                       llvm::raw_ostream &OS);
+void EmitClangOptDocs(const llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 
-void EmitClangOpenCLBuiltins(llvm::RecordKeeper &Records,
+void EmitClangOpenCLBuiltins(const llvm::RecordKeeper &Records,
                              llvm::raw_ostream &OS);
-void EmitClangOpenCLBuiltinHeader(llvm::RecordKeeper &Records,
+void EmitClangOpenCLBuiltinHeader(const llvm::RecordKeeper &Records,
                                   llvm::raw_ostream &OS);
-void EmitClangOpenCLBuiltinTests(llvm::RecordKeeper &Records,
+void EmitClangOpenCLBuiltinTests(const llvm::RecordKeeper &Records,
                                  llvm::raw_ostream &OS);
 
-void EmitClangDataCollectors(llvm::RecordKeeper &Records,
+void EmitClangDataCollectors(const llvm::RecordKeeper &Records,
                              llvm::raw_ostream &OS);
 
 void EmitTestPragmaAttributeSupportedAttributes(llvm::RecordKeeper &Records,

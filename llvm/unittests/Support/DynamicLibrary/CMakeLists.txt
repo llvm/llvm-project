@@ -17,9 +17,10 @@ set_output_directory(DynamicLibraryLib
 
 add_llvm_unittest(DynamicLibraryTests
   DynamicLibraryTest.cpp
+
+  EXPORT_SYMBOLS
   )
 target_link_libraries(DynamicLibraryTests PRIVATE DynamicLibraryLib)
-export_executable_symbols(DynamicLibraryTests)
 
 function(dynlib_add_module NAME)
   add_library(${NAME} MODULE

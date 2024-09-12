@@ -82,8 +82,11 @@ class OpLowerer {
 public:
   OpLowerer(Module &M, DXILResourceMap &DRM) : M(M), OpBuilder(M), DRM(DRM) {}
 
-  void replaceFunction(Function &F,
-                       llvm::function_ref<Error(CallInst *CI)> ReplaceCall) {
+  /// Replace every call to \c F using \c ReplaceCall, and then erase \c F. If
+  /// there is an error replacing a call, we emit a diagnostic and return true.
+  [[nodiscard]] bool
+  replaceFunction(Function &F,
+                  llvm::function_ref<Error(CallInst *CI)> ReplaceCall) {
     for (User *U : make_early_inc_range(F.users())) {
       CallInst *CI = dyn_cast<CallInst>(U);
       if (!CI)
@@ -94,16 +97,18 @@ public:
         DiagnosticInfoUnsupported Diag(*CI->getFunction(), Message,
                                        CI->getDebugLoc());
         M.getContext().diagnose(Diag);
-        continue;
+        return true;
       }
     }
     if (F.user_empty())
       F.eraseFromParent();
+    return false;
   }
 
-  void replaceFunctionWithOp(Function &F, dxil::OpCode DXILOp) {
+  [[nodiscard]]
+  bool replaceFunctionWithOp(Function &F, dxil::OpCode DXILOp) {
     bool IsVectorArgExpansion = isVectorArgExpansion(F);
-    replaceFunction(F, [&](CallInst *CI) -> Error {
+    return replaceFunction(F, [&](CallInst *CI) -> Error {
       SmallVector<Value *> Args;
       OpBuilder.getIRB().SetInsertPoint(CI);
       if (IsVectorArgExpansion) {
@@ -113,7 +118,7 @@ public:
         Args.append(CI->arg_begin(), CI->arg_end());
 
       Expected<CallInst *> OpCall =
-          OpBuilder.tryCreateOp(DXILOp, Args, F.getReturnType());
+          OpBuilder.tryCreateOp(DXILOp, Args, CI->getName(), F.getReturnType());
       if (Error E = OpCall.takeError())
         return E;
 
@@ -175,12 +180,12 @@ public:
     CleanupCasts.clear();
   }
 
-  void lowerToCreateHandle(Function &F) {
+  [[nodiscard]] bool lowerToCreateHandle(Function &F) {
     IRBuilder<> &IRB = OpBuilder.getIRB();
     Type *Int8Ty = IRB.getInt8Ty();
     Type *Int32Ty = IRB.getInt32Ty();
 
-    replaceFunction(F, [&](CallInst *CI) -> Error {
+    return replaceFunction(F, [&](CallInst *CI) -> Error {
       IRB.SetInsertPoint(CI);
 
       auto *It = DRM.find(CI);
@@ -193,7 +198,7 @@ public:
           ConstantInt::get(Int32Ty, Binding.RecordID), CI->getArgOperand(3),
           CI->getArgOperand(4)};
       Expected<CallInst *> OpCall =
-          OpBuilder.tryCreateOp(OpCode::CreateHandle, Args);
+          OpBuilder.tryCreateOp(OpCode::CreateHandle, Args, CI->getName());
       if (Error E = OpCall.takeError())
         return E;
 
@@ -205,10 +210,10 @@ public:
     });
   }
 
-  void lowerToBindAndAnnotateHandle(Function &F) {
+  [[nodiscard]] bool lowerToBindAndAnnotateHandle(Function &F) {
     IRBuilder<> &IRB = OpBuilder.getIRB();
 
-    replaceFunction(F, [&](CallInst *CI) -> Error {
+    return replaceFunction(F, [&](CallInst *CI) -> Error {
       IRB.SetInsertPoint(CI);
 
       auto *It = DRM.find(CI);
@@ -228,15 +233,16 @@ public:
           Binding.LowerBound, UpperBound, Binding.Space, RI.getResourceClass());
       std::array<Value *, 3> BindArgs{ResBind, CI->getArgOperand(3),
                                       CI->getArgOperand(4)};
-      Expected<CallInst *> OpBind =
-          OpBuilder.tryCreateOp(OpCode::CreateHandleFromBinding, BindArgs);
+      Expected<CallInst *> OpBind = OpBuilder.tryCreateOp(
+          OpCode::CreateHandleFromBinding, BindArgs, CI->getName());
       if (Error E = OpBind.takeError())
         return E;
 
       std::array<Value *, 2> AnnotateArgs{
           *OpBind, OpBuilder.getResProps(Props.first, Props.second)};
-      Expected<CallInst *> OpAnnotate =
-          OpBuilder.tryCreateOp(OpCode::AnnotateHandle, AnnotateArgs);
+      Expected<CallInst *> OpAnnotate = OpBuilder.tryCreateOp(
+          OpCode::AnnotateHandle, AnnotateArgs,
+          CI->hasName() ? CI->getName() + "_annot" : Twine());
       if (Error E = OpAnnotate.takeError())
         return E;
 
@@ -251,16 +257,213 @@ public:
 
   /// Lower `dx.handle.fromBinding` intrinsics depending on the shader model and
   /// taking into account binding information from DXILResourceAnalysis.
-  void lowerHandleFromBinding(Function &F) {
+  bool lowerHandleFromBinding(Function &F) {
     Triple TT(Triple(M.getTargetTriple()));
     if (TT.getDXILVersion() < VersionTuple(1, 6))
-      lowerToCreateHandle(F);
-    else
-      lowerToBindAndAnnotateHandle(F);
+      return lowerToCreateHandle(F);
+    return lowerToBindAndAnnotateHandle(F);
+  }
+
+  /// Replace uses of \c Intrin with the values in the `dx.ResRet` of \c Op.
+  /// Since we expect to be post-scalarization, make an effort to avoid vectors.
+  Error replaceResRetUses(CallInst *Intrin, CallInst *Op, bool HasCheckBit) {
+    IRBuilder<> &IRB = OpBuilder.getIRB();
+
+    Instruction *OldResult = Intrin;
+    Type *OldTy = Intrin->getType();
+
+    if (HasCheckBit) {
+      auto *ST = cast<StructType>(OldTy);
+
+      Value *CheckOp = nullptr;
+      Type *Int32Ty = IRB.getInt32Ty();
+      for (Use &U : make_early_inc_range(OldResult->uses())) {
+        if (auto *EVI = dyn_cast<ExtractValueInst>(U.getUser())) {
+          ArrayRef<unsigned> Indices = EVI->getIndices();
+          assert(Indices.size() == 1);
+          // We're only interested in uses of the check bit for now.
+          if (Indices[0] != 1)
+            continue;
+          if (!CheckOp) {
+            Value *NewEVI = IRB.CreateExtractValue(Op, 4);
+            Expected<CallInst *> OpCall = OpBuilder.tryCreateOp(
+                OpCode::CheckAccessFullyMapped, {NewEVI},
+                OldResult->hasName() ? OldResult->getName() + "_check"
+                                     : Twine(),
+                Int32Ty);
+            if (Error E = OpCall.takeError())
+              return E;
+            CheckOp = *OpCall;
+          }
+          EVI->replaceAllUsesWith(CheckOp);
+          EVI->eraseFromParent();
+        }
+      }
+
+      OldResult = cast<Instruction>(
+          IRB.CreateExtractValue(Op, 0, OldResult->getName()));
+      OldTy = ST->getElementType(0);
+    }
+
+    // For scalars, we just extract the first element.
+    if (!isa<FixedVectorType>(OldTy)) {
+      Value *EVI = IRB.CreateExtractValue(Op, 0);
+      OldResult->replaceAllUsesWith(EVI);
+      OldResult->eraseFromParent();
+      if (OldResult != Intrin) {
+        assert(Intrin->use_empty() && "Intrinsic still has uses?");
+        Intrin->eraseFromParent();
+      }
+      return Error::success();
+    }
+
+    std::array<Value *, 4> Extracts = {};
+    SmallVector<ExtractElementInst *> DynamicAccesses;
+
+    // The users of the operation should all be scalarized, so we attempt to
+    // replace the extractelements with extractvalues directly.
+    for (Use &U : make_early_inc_range(OldResult->uses())) {
+      if (auto *EEI = dyn_cast<ExtractElementInst>(U.getUser())) {
+        if (auto *IndexOp = dyn_cast<ConstantInt>(EEI->getIndexOperand())) {
+          size_t IndexVal = IndexOp->getZExtValue();
+          assert(IndexVal < 4 && "Index into buffer load out of range");
+          if (!Extracts[IndexVal])
+            Extracts[IndexVal] = IRB.CreateExtractValue(Op, IndexVal);
+          EEI->replaceAllUsesWith(Extracts[IndexVal]);
+          EEI->eraseFromParent();
+        } else {
+          DynamicAccesses.push_back(EEI);
+        }
+      }
+    }
+
+    const auto *VecTy = cast<FixedVectorType>(OldTy);
+    const unsigned N = VecTy->getNumElements();
+
+    // If there's a dynamic access we need to round trip through stack memory so
+    // that we don't leave vectors around.
+    if (!DynamicAccesses.empty()) {
+      Type *Int32Ty = IRB.getInt32Ty();
+      Constant *Zero = ConstantInt::get(Int32Ty, 0);
+
+      Type *ElTy = VecTy->getElementType();
+      Type *ArrayTy = ArrayType::get(ElTy, N);
+      Value *Alloca = IRB.CreateAlloca(ArrayTy);
+
+      for (int I = 0, E = N; I != E; ++I) {
+        if (!Extracts[I])
+          Extracts[I] = IRB.CreateExtractValue(Op, I);
+        Value *GEP = IRB.CreateInBoundsGEP(
+            ArrayTy, Alloca, {Zero, ConstantInt::get(Int32Ty, I)});
+        IRB.CreateStore(Extracts[I], GEP);
+      }
+
+      for (ExtractElementInst *EEI : DynamicAccesses) {
+        Value *GEP = IRB.CreateInBoundsGEP(ArrayTy, Alloca,
+                                           {Zero, EEI->getIndexOperand()});
+        Value *Load = IRB.CreateLoad(ElTy, GEP);
+        EEI->replaceAllUsesWith(Load);
+        EEI->eraseFromParent();
+      }
+    }
+
+    // If we still have uses, then we're not fully scalarized and need to
+    // recreate the vector. This should only happen for things like exported
+    // functions from libraries.
+    if (!OldResult->use_empty()) {
+      for (int I = 0, E = N; I != E; ++I)
+        if (!Extracts[I])
+          Extracts[I] = IRB.CreateExtractValue(Op, I);
+
+      Value *Vec = UndefValue::get(OldTy);
+      for (int I = 0, E = N; I != E; ++I)
+        Vec = IRB.CreateInsertElement(Vec, Extracts[I], I);
+      OldResult->replaceAllUsesWith(Vec);
+    }
+
+    OldResult->eraseFromParent();
+    if (OldResult != Intrin) {
+      assert(Intrin->use_empty() && "Intrinsic still has uses?");
+      Intrin->eraseFromParent();
+    }
+
+    return Error::success();
+  }
+
+  [[nodiscard]] bool lowerTypedBufferLoad(Function &F, bool HasCheckBit) {
+    IRBuilder<> &IRB = OpBuilder.getIRB();
+    Type *Int32Ty = IRB.getInt32Ty();
+
+    return replaceFunction(F, [&](CallInst *CI) -> Error {
+      IRB.SetInsertPoint(CI);
+
+      Value *Handle =
+          createTmpHandleCast(CI->getArgOperand(0), OpBuilder.getHandleType());
+      Value *Index0 = CI->getArgOperand(1);
+      Value *Index1 = UndefValue::get(Int32Ty);
+
+      Type *OldTy = CI->getType();
+      if (HasCheckBit)
+        OldTy = cast<StructType>(OldTy)->getElementType(0);
+      Type *NewRetTy = OpBuilder.getResRetType(OldTy->getScalarType());
+
+      std::array<Value *, 3> Args{Handle, Index0, Index1};
+      Expected<CallInst *> OpCall = OpBuilder.tryCreateOp(
+          OpCode::BufferLoad, Args, CI->getName(), NewRetTy);
+      if (Error E = OpCall.takeError())
+        return E;
+      if (Error E = replaceResRetUses(CI, *OpCall, HasCheckBit))
+        return E;
+
+      return Error::success();
+    });
+  }
+
+  [[nodiscard]] bool lowerTypedBufferStore(Function &F) {
+    IRBuilder<> &IRB = OpBuilder.getIRB();
+    Type *Int8Ty = IRB.getInt8Ty();
+    Type *Int32Ty = IRB.getInt32Ty();
+
+    return replaceFunction(F, [&](CallInst *CI) -> Error {
+      IRB.SetInsertPoint(CI);
+
+      Value *Handle =
+          createTmpHandleCast(CI->getArgOperand(0), OpBuilder.getHandleType());
+      Value *Index0 = CI->getArgOperand(1);
+      Value *Index1 = UndefValue::get(Int32Ty);
+      // For typed stores, the mask must always cover all four elements.
+      Constant *Mask = ConstantInt::get(Int8Ty, 0xF);
+
+      Value *Data = CI->getArgOperand(2);
+      auto *DataTy = dyn_cast<FixedVectorType>(Data->getType());
+      if (!DataTy || DataTy->getNumElements() != 4)
+        return make_error<StringError>(
+            "typedBufferStore data must be a vector of 4 elements",
+            inconvertibleErrorCode());
+      Value *Data0 =
+          IRB.CreateExtractElement(Data, ConstantInt::get(Int32Ty, 0));
+      Value *Data1 =
+          IRB.CreateExtractElement(Data, ConstantInt::get(Int32Ty, 1));
+      Value *Data2 =
+          IRB.CreateExtractElement(Data, ConstantInt::get(Int32Ty, 2));
+      Value *Data3 =
+          IRB.CreateExtractElement(Data, ConstantInt::get(Int32Ty, 3));
+
+      std::array<Value *, 8> Args{Handle, Index0, Index1, Data0,
+                                  Data1,  Data2,  Data3,  Mask};
+      Expected<CallInst *> OpCall =
+          OpBuilder.tryCreateOp(OpCode::BufferStore, Args, CI->getName());
+      if (Error E = OpCall.takeError())
+        return E;
+
+      CI->eraseFromParent();
+      return Error::success();
+    });
   }
 
   bool lowerIntrinsics() {
     bool Updated = false;
+    bool HasErrors = false;
 
     for (Function &F : make_early_inc_range(M.functions())) {
       if (!F.isDeclaration())
@@ -271,15 +474,25 @@ public:
         continue;
 #define DXIL_OP_INTRINSIC(OpCode, Intrin)                                      \
   case Intrin:                                                                 \
-    replaceFunctionWithOp(F, OpCode);                                          \
+    HasErrors |= replaceFunctionWithOp(F, OpCode);                             \
     break;
 #include "DXILOperation.inc"
       case Intrinsic::dx_handle_fromBinding:
-        lowerHandleFromBinding(F);
+        HasErrors |= lowerHandleFromBinding(F);
+        break;
+      case Intrinsic::dx_typedBufferLoad:
+        HasErrors |= lowerTypedBufferLoad(F, /*HasCheckBit=*/false);
+        break;
+      case Intrinsic::dx_typedBufferLoad_checkbit:
+        HasErrors |= lowerTypedBufferLoad(F, /*HasCheckBit=*/true);
+        break;
+      case Intrinsic::dx_typedBufferStore:
+        HasErrors |= lowerTypedBufferStore(F);
+        break;
       }
       Updated = true;
     }
-    if (Updated)
+    if (Updated && !HasErrors)
       cleanupHandleCasts();
 
     return Updated;

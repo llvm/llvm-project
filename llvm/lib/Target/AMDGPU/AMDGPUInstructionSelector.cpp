@@ -1772,6 +1772,14 @@ bool AMDGPUInstructionSelector::selectDSAppendConsume(MachineInstr &MI,
   return constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
 }
 
+bool AMDGPUInstructionSelector::selectInitWholeWave(MachineInstr &MI) const {
+  MachineFunction *MF = MI.getParent()->getParent();
+  SIMachineFunctionInfo *MFInfo = MF->getInfo<SIMachineFunctionInfo>();
+
+  MFInfo->setInitWholeWave();
+  return selectImpl(MI, *CoverageInfo);
+}
+
 bool AMDGPUInstructionSelector::selectSBarrier(MachineInstr &MI) const {
   if (TM.getOptLevel() > CodeGenOptLevel::None) {
     unsigned WGSize = STI.getFlatWorkGroupSizes(MF->getFunction()).second;
@@ -2099,6 +2107,8 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
     return selectDSAppendConsume(I, true);
   case Intrinsic::amdgcn_ds_consume:
     return selectDSAppendConsume(I, false);
+  case Intrinsic::amdgcn_init_whole_wave:
+    return selectInitWholeWave(I);
   case Intrinsic::amdgcn_s_barrier:
     return selectSBarrier(I);
   case Intrinsic::amdgcn_raw_buffer_load_lds:
@@ -5237,7 +5247,8 @@ getConstantZext32Val(Register Reg, const MachineRegisterInfo &MRI) {
 
 InstructionSelector::ComplexRendererFns
 AMDGPUInstructionSelector::selectSMRDBufferImm(MachineOperand &Root) const {
-  std::optional<uint64_t> OffsetVal = getConstantZext32Val(Root.getReg(), *MRI);
+  std::optional<uint64_t> OffsetVal =
+      Root.isImm() ? Root.getImm() : getConstantZext32Val(Root.getReg(), *MRI);
   if (!OffsetVal)
     return {};
 
@@ -5541,7 +5552,12 @@ void AMDGPUInstructionSelector::renderPopcntImm(MachineInstrBuilder &MIB,
 void AMDGPUInstructionSelector::renderTruncTImm(MachineInstrBuilder &MIB,
                                                 const MachineInstr &MI,
                                                 int OpIdx) const {
-  MIB.addImm(MI.getOperand(OpIdx).getImm());
+  const MachineOperand &Op = MI.getOperand(OpIdx);
+  int64_t Imm;
+  if (Op.isReg() && mi_match(Op.getReg(), *MRI, m_ICst(Imm)))
+    MIB.addImm(Imm);
+  else
+    MIB.addImm(Op.getImm());
 }
 
 void AMDGPUInstructionSelector::renderOpSelTImm(MachineInstrBuilder &MIB,

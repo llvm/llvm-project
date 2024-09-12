@@ -1327,25 +1327,24 @@ llvm::Function *CGOpenMPRuntime::emitTaskOutlinedFunction(
 
 void CGOpenMPRuntime::setLocThreadIdInsertPt(CodeGenFunction &CGF,
                                              bool AtCurrentPoint) {
-  auto &Elem = OpenMPLocThreadIDMap.FindAndConstruct(CGF.CurFn);
-  assert(!Elem.second.ServiceInsertPt && "Insert point is set already.");
+  auto &Elem = OpenMPLocThreadIDMap[CGF.CurFn];
+  assert(!Elem.ServiceInsertPt && "Insert point is set already.");
 
   llvm::Value *Undef = llvm::UndefValue::get(CGF.Int32Ty);
   if (AtCurrentPoint) {
-    Elem.second.ServiceInsertPt = new llvm::BitCastInst(
-        Undef, CGF.Int32Ty, "svcpt", CGF.Builder.GetInsertBlock());
+    Elem.ServiceInsertPt = new llvm::BitCastInst(Undef, CGF.Int32Ty, "svcpt",
+                                                 CGF.Builder.GetInsertBlock());
   } else {
-    Elem.second.ServiceInsertPt =
-        new llvm::BitCastInst(Undef, CGF.Int32Ty, "svcpt");
-    Elem.second.ServiceInsertPt->insertAfter(CGF.AllocaInsertPt);
+    Elem.ServiceInsertPt = new llvm::BitCastInst(Undef, CGF.Int32Ty, "svcpt");
+    Elem.ServiceInsertPt->insertAfter(CGF.AllocaInsertPt);
   }
 }
 
 void CGOpenMPRuntime::clearLocThreadIdInsertPt(CodeGenFunction &CGF) {
-  auto &Elem = OpenMPLocThreadIDMap.FindAndConstruct(CGF.CurFn);
-  if (Elem.second.ServiceInsertPt) {
-    llvm::Instruction *Ptr = Elem.second.ServiceInsertPt;
-    Elem.second.ServiceInsertPt = nullptr;
+  auto &Elem = OpenMPLocThreadIDMap[CGF.CurFn];
+  if (Elem.ServiceInsertPt) {
+    llvm::Instruction *Ptr = Elem.ServiceInsertPt;
+    Elem.ServiceInsertPt = nullptr;
     Ptr->eraseFromParent();
   }
 }
@@ -1441,18 +1440,18 @@ llvm::Value *CGOpenMPRuntime::getThreadID(CodeGenFunction &CGF,
   // kmpc_global_thread_num(ident_t *loc).
   // Generate thread id value and cache this value for use across the
   // function.
-  auto &Elem = OpenMPLocThreadIDMap.FindAndConstruct(CGF.CurFn);
-  if (!Elem.second.ServiceInsertPt)
+  auto &Elem = OpenMPLocThreadIDMap[CGF.CurFn];
+  if (!Elem.ServiceInsertPt)
     setLocThreadIdInsertPt(CGF);
   CGBuilderTy::InsertPointGuard IPG(CGF.Builder);
-  CGF.Builder.SetInsertPoint(Elem.second.ServiceInsertPt);
+  CGF.Builder.SetInsertPoint(Elem.ServiceInsertPt);
   auto DL = ApplyDebugLocation::CreateDefaultArtificial(CGF, Loc);
   llvm::CallInst *Call = CGF.Builder.CreateCall(
       OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(),
                                             OMPRTL___kmpc_global_thread_num),
       emitUpdateLocation(CGF, Loc));
   Call->setCallingConv(CGF.getRuntimeCC());
-  Elem.second.ThreadID = Call;
+  Elem.ThreadID = Call;
   return Call;
 }
 
@@ -11675,9 +11674,7 @@ CGOpenMPRuntime::LastprivateConditionalRAII::~LastprivateConditionalRAII() {
 Address CGOpenMPRuntime::emitLastprivateConditionalInit(CodeGenFunction &CGF,
                                                         const VarDecl *VD) {
   ASTContext &C = CGM.getContext();
-  auto I = LastprivateConditionalToTypes.find(CGF.CurFn);
-  if (I == LastprivateConditionalToTypes.end())
-    I = LastprivateConditionalToTypes.try_emplace(CGF.CurFn).first;
+  auto I = LastprivateConditionalToTypes.try_emplace(CGF.CurFn).first;
   QualType NewType;
   const FieldDecl *VDField;
   const FieldDecl *FiredField;

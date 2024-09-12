@@ -23,9 +23,7 @@ module;
 #if !defined(_LIBCPP_HAS_NO_ATOMIC_HEADER)
 #  include <atomic>
 #endif
-#if !defined(_LIBCPP_HAS_NO_THREADS)
-#  include <barrier>
-#endif
+#include <barrier>
 #include <bit>
 #include <bitset>
 #include <cassert>
@@ -76,9 +74,7 @@ module;
 #  include <fstream>
 #endif
 #include <functional>
-#if !defined(_LIBCPP_HAS_NO_THREADS)
-#  include <future>
-#endif
+#include <future>
 #include <initializer_list>
 #if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
 #  include <iomanip>
@@ -94,9 +90,7 @@ module;
 #  include <istream>
 #endif
 #include <iterator>
-#if !defined(_LIBCPP_HAS_NO_THREADS)
-#  include <latch>
-#endif
+#include <latch>
 #include <limits>
 #include <list>
 #if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
@@ -123,13 +117,9 @@ module;
 #  include <regex>
 #endif
 #include <scoped_allocator>
-#if !defined(_LIBCPP_HAS_NO_THREADS)
-#  include <semaphore>
-#endif
+#include <semaphore>
 #include <set>
-#if !defined(_LIBCPP_HAS_NO_THREADS)
-#  include <shared_mutex>
-#endif
+#include <shared_mutex>
 #include <source_location>
 #include <span>
 #if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
@@ -137,9 +127,7 @@ module;
 #endif
 #include <stack>
 #include <stdexcept>
-#if !defined(_LIBCPP_HAS_NO_THREADS)
-#  include <stop_token>
-#endif
+#include <stop_token>
 #if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
 #  include <streambuf>
 #endif
@@ -152,9 +140,7 @@ module;
 #  include <syncstream>
 #endif
 #include <system_error>
-#if !defined(_LIBCPP_HAS_NO_THREADS)
-#  include <thread>
-#endif
+#include <thread>
 #include <tuple>
 #include <type_traits>
 #include <typeindex>

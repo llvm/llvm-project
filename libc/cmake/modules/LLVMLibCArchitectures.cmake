@@ -206,5 +206,13 @@ if(explicit_target_triple AND
   endif()
 endif()
 
+
+# Windows does not support full mode build.
+if (LIBC_TARGET_OS_IS_WINDOWS AND LLVM_LIBC_FULL_BUILD)
+  message(FATAL_ERROR "Windows does not support full mode build.")
+endif ()
+
+
 message(STATUS
-        "Building libc for ${LIBC_TARGET_ARCHITECTURE} on ${LIBC_TARGET_OS}")
+        "Building libc for ${LIBC_TARGET_ARCHITECTURE} on ${LIBC_TARGET_OS} with
+        LIBC_COMPILE_OPTIONS_DEFAULT: ${LIBC_COMPILE_OPTIONS_DEFAULT}")
