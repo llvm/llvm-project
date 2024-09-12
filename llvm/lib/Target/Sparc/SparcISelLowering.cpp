@@ -2762,8 +2762,8 @@ static SDValue LowerVAARG(SDValue Op, SelectionDAG &DAG) {
 
 static SDValue LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG,
                                        const SparcSubtarget *Subtarget) {
-  SDValue Chain = Op.getOperand(0);  // Legalize the chain.
-  SDValue Size  = Op.getOperand(1);  // Legalize the size.
+  SDValue Chain = Op.getOperand(0);
+  SDValue Size = Op.getOperand(1);
   SDValue Alignment = Op.getOperand(2);
   MaybeAlign MaybeAlignment =
       cast<ConstantSDNode>(Alignment)->getMaybeAlignValue();
