@@ -444,31 +444,31 @@ void test_unaligned_start_read(void) {
   }
 }
 
-void no_crash_if_count_is_negative(long s, unsigned char *buffer) {
+void no_crash_if_count_is_negative(long l, long r, unsigned char *buffer) {
   FILE *fp = fopen("path", "r");
   if (fp) {
-    if (s * s == -1) {
-      fread(buffer, 1, s * s, fp); // no-crash
+    if (l * r == -1) {
+      fread(buffer, 1, l * r, fp); // no-crash
     }
     fclose(fp);
   }
 }
 
-void no_crash_if_size_is_negative(long s, unsigned char *buffer) {
+void no_crash_if_size_is_negative(long l, long r, unsigned char *buffer) {
   FILE *fp = fopen("path", "r");
   if (fp) {
-    if (s * s == -1) {
-      fread(buffer, s * s, 1, fp); // no-crash
+    if (l * r == -1) {
+      fread(buffer, l * r, 1, fp); // no-crash
     }
     fclose(fp);
   }
 }
 
-void no_crash_if_size_and_count_are_negative(long s, unsigned char *buffer) {
+void no_crash_if_size_and_count_are_negative(long l, long r, unsigned char *buffer) {
   FILE *fp = fopen("path", "r");
   if (fp) {
-    if (s * s == -1) {
-      fread(buffer, s * s, s * s, fp); // no-crash
+    if (l * r == -1) {
+      fread(buffer, l * r, l * r, fp); // no-crash
     }
     fclose(fp);
   }
