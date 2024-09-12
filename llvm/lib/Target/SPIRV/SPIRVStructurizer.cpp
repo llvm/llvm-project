@@ -125,7 +125,7 @@ class PartialOrderingVisitor {
     Visited.insert(BB);
 
     SmallVector<BasicBlock *, 2> OtherSuccessors;
-    BasicBlock *LoopSuccessor = nullptr;
+    SmallVector<BasicBlock *, 2> LoopSuccessors;
 
     for (BasicBlock *Successor : successors(BB)) {
       // Ignoring back-edges.
@@ -133,14 +133,13 @@ class PartialOrderingVisitor {
         continue;
 
       if (isLoopHeader && L->contains(Successor)) {
-        assert(LoopSuccessor == nullptr);
-        LoopSuccessor = Successor;
+        LoopSuccessors.push_back(Successor);
       } else
         OtherSuccessors.push_back(Successor);
     }
 
-    if (LoopSuccessor)
-      Rank = visit(LoopSuccessor, Rank + 1);
+    for (BasicBlock *BB : LoopSuccessors)
+      Rank = std::max(Rank, visit(BB, Rank + 1));
 
     size_t OutputRank = Rank;
     for (BasicBlock *Item : OtherSuccessors)
@@ -165,6 +164,10 @@ public:
 
     for (size_t i = 0; i < Order.size(); i++)
       B2R[Order[i].first] = i;
+  }
+
+  size_t getRank(BasicBlock *BB) {
+    return B2R[BB];
   }
 
   // Visit the function starting from the basic block |Start|, and calling |Op|
@@ -839,12 +842,14 @@ class SPIRVStructurizer : public FunctionPass {
 
     Instruction *InsertionPoint = *MergeInstructions.begin();
 
-    DomTreeBuilder::BBPostDomTree PDT;
-    PDT.recalculate(F);
+    PartialOrderingVisitor Visitor(F);
     std::sort(MergeInstructions.begin(), MergeInstructions.end(),
-              [&PDT](Instruction *Left, Instruction *Right) {
-                return PDT.dominates(getDesignatedMergeBlock(Right),
-                                     getDesignatedMergeBlock(Left));
+              [&Visitor](Instruction *Left, Instruction *Right) {
+                if (Left == Right)
+                  return true;
+                BasicBlock *RightMerge = getDesignatedMergeBlock(Right);
+                BasicBlock *LeftMerge = getDesignatedMergeBlock(Left);
+                return Visitor.getRank(RightMerge) >= Visitor.getRank(LeftMerge);
               });
 
     for (Instruction *I : MergeInstructions) {
