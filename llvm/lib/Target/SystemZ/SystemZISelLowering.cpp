@@ -34,6 +34,13 @@ using namespace llvm;
 
 #define DEBUG_TYPE "systemz-lower"
 
+// Temporarily let this be disabled by default until all known problems
+// related to argument extensions are fixed.
+static cl::opt<bool> EnableIntArgExtCheck(
+    "argext-abi-check", cl::init(false),
+    cl::desc("Verify that narrow int args are properly extended per the "
+             "SystemZ ABI."));
+
 namespace {
 // Represents information about a comparison.
 struct Comparison {
@@ -1918,11 +1925,11 @@ SystemZTargetLowering::LowerCall(CallLoweringInfo &CLI,
     IsTailCall = false;
 
   // Integer args <=32 bits should have an extension attribute.
-  bool HasLocalLinkage = false;
+  bool IsInternal = false;
   if (auto *G = dyn_cast<GlobalAddressSDNode>(Callee))
     if (const Function *Fn = dyn_cast<Function>(G->getGlobal()))
-      HasLocalLinkage = Fn->hasLocalLinkage();
-  verifyNarrowIntegerArgs(Outs, HasLocalLinkage);
+      IsInternal = isFullyInternal(Fn);
+  verifyNarrowIntegerArgs(Outs, IsInternal);
 
   // Analyze the operands of the call, assigning locations to each operand.
   SmallVector<CCValAssign, 16> ArgLocs;
@@ -2185,7 +2192,7 @@ SystemZTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   MachineFunction &MF = DAG.getMachineFunction();
 
   // Integer args <=32 bits should have an extension attribute.
-  verifyNarrowIntegerArgs(Outs, MF.getFunction().hasLocalLinkage());
+  verifyNarrowIntegerArgs(Outs, isFullyInternal(&MF.getFunction()));
 
   // Assign locations to each returned value.
   SmallVector<CCValAssign, 16> RetLocs;
@@ -9811,12 +9818,33 @@ SDValue SystemZTargetLowering::lowerVECREDUCE_ADD(SDValue Op,
       DAG.getConstant(OpVT.getVectorNumElements() - 1, DL, MVT::i32));
 }
 
+// Only consider a function fully internal as long as it has local linkage
+// and is not used in any other way than acting as the called function at
+// call sites.  TODO: Remove this when/if all internal functions adhere to
+// the ABI.
+bool SystemZTargetLowering::isFullyInternal(const Function *Fn) const {
+  if (!Fn->hasLocalLinkage())
+    return false;
+  for (const User *U : Fn->users()) {
+    if (auto *CB = dyn_cast<CallBase>(U)) {
+      if (CB->getCalledFunction() != Fn)
+        return false;
+    } else
+      return false;
+  }
+  return true;
+}
+
 // Verify that narrow integer arguments are extended as required by the ABI.
 void SystemZTargetLowering::
 verifyNarrowIntegerArgs(const SmallVectorImpl<ISD::OutputArg> &Outs,
-                        bool HasLocalLinkage) const {
-  if (!getTargetMachine().Options.VerifyArgABICompliance || HasLocalLinkage ||
-      !Subtarget.isTargetELF())
+                        bool IsInternal) const {
+  if (IsInternal || !Subtarget.isTargetELF())
+    return;
+
+  // Temporarily only do the check when explicitly requested.
+  if (/* !getTargetMachine().Options.VerifyArgABICompliance && */
+      !EnableIntArgExtCheck)
     return;
 
   for (unsigned i = 0; i < Outs.size(); ++i) {
