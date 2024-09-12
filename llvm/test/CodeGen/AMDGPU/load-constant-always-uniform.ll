@@ -2,17 +2,18 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 < %s | FileCheck %s -check-prefix=GFX11
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 < %s | FileCheck %s -check-prefix=GFX12
 
-define amdgpu_cs void @test_uniform_load_b96(i32 %arg) "amdgpu-flat-work-group-size"="1,1" {
+define amdgpu_cs void @test_uniform_load_b96(ptr addrspace(1) %ptr, i32 %arg) "amdgpu-flat-work-group-size"="1,1" {
 ; GFX11-LABEL: test_uniform_load_b96:
 ; GFX11:       ; %bb.0: ; %bb
-; GFX11-NEXT:    v_mov_b32_e32 v1, 0
+; GFX11-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_lshlrev_b64 v[0:1], 2, v[0:1]
-; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX11-NEXT:    v_lshlrev_b64 v[2:3], 2, v[2:3]
+; GFX11-NEXT:    v_add_co_u32 v2, vcc_lo, v0, v2
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, v1, v3, vcc_lo
+; GFX11-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX11-NEXT:    v_readfirstlane_b32 s1, v1
-; GFX11-NEXT:    v_mov_b32_e32 v0, 0
-; GFX11-NEXT:    v_mov_b32_e32 v1, 0
+; GFX11-NEXT:    v_readfirstlane_b32 s1, v3
 ; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    s_load_b64 s[2:3], s[0:1], 0x0
 ; GFX11-NEXT:    s_load_b32 s0, s[0:1], 0x8
@@ -27,14 +28,15 @@ define amdgpu_cs void @test_uniform_load_b96(i32 %arg) "amdgpu-flat-work-group-s
 ;
 ; GFX12-LABEL: test_uniform_load_b96:
 ; GFX12:       ; %bb.0: ; %bb
-; GFX12-NEXT:    v_mov_b32_e32 v1, 0
+; GFX12-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-NEXT:    v_lshlrev_b64_e32 v[0:1], 2, v[0:1]
-; GFX12-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX12-NEXT:    v_readfirstlane_b32 s1, v1
-; GFX12-NEXT:    v_mov_b32_e32 v0, 0
-; GFX12-NEXT:    v_mov_b32_e32 v1, 0
+; GFX12-NEXT:    v_lshlrev_b64_e32 v[2:3], 2, v[2:3]
+; GFX12-NEXT:    v_add_co_u32 v2, vcc_lo, v0, v2
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, v1, v3, vcc_lo
+; GFX12-NEXT:    v_readfirstlane_b32 s0, v2
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_2)
+; GFX12-NEXT:    v_readfirstlane_b32 s1, v3
 ; GFX12-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_mov_b32_e32 v2, s0
@@ -46,13 +48,13 @@ define amdgpu_cs void @test_uniform_load_b96(i32 %arg) "amdgpu-flat-work-group-s
 ; GFX12-NEXT:    s_endpgm
 bb:
   %i = zext i32 %arg to i64
-  %i1 = getelementptr i32, ptr addrspace(1) null, i64 %i
+  %i1 = getelementptr i32, ptr addrspace(1) %ptr, i64 %i
   %i2 = load <3 x i32>, ptr addrspace(1) %i1, align 4
   %i3 = extractelement <3 x i32> %i2, i32 0
   %i4 = extractelement <3 x i32> %i2, i32 1
   %i5 = extractelement <3 x i32> %i2, i32 2
   %i6 = or i32 %i3, %i4
   %i7 = or i32 %i5, %i6
-  store i32 %i7, ptr addrspace(1) null, align 4
+  store i32 %i7, ptr addrspace(1) %ptr, align 4
   ret void
 }
