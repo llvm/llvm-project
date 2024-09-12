@@ -93,8 +93,7 @@ void DataSharingProcessor::insertDeallocs() {
       fir::ExtendedValue symExV = converter.getSymbolExtendedValue(*sym);
       mlir::omp::PrivateClauseOp privatizer = symToPrivatizer.at(sym);
 
-      symTable->pushScope();
-
+      lower::SymMapScope scope(*symTable);
       mlir::OpBuilder::InsertionGuard guard(firOpBuilder);
 
       mlir::Region &deallocRegion = privatizer.getDeallocRegion();
@@ -108,8 +107,6 @@ void DataSharingProcessor::insertDeallocs() {
 
       converter.createHostAssociateVarCloneDealloc(*sym);
       firOpBuilder.create<mlir::omp::YieldOp>(hsb.getAddr().getLoc());
-
-      symTable->popScope();
     }
 }
 
@@ -488,8 +485,7 @@ void DataSharingProcessor::doPrivatize(const semantics::Symbol *sym,
         isFirstPrivate ? mlir::omp::DataSharingClauseType::FirstPrivate
                        : mlir::omp::DataSharingClauseType::Private);
     fir::ExtendedValue symExV = converter.getSymbolExtendedValue(*sym);
-
-    symTable->pushScope();
+    lower::SymMapScope outerScope(*symTable);
 
     // Populate the `alloc` region.
     {
@@ -507,7 +503,7 @@ void DataSharingProcessor::doPrivatize(const semantics::Symbol *sym,
               .first;
 
       symTable->addSymbol(*sym, localExV);
-      symTable->pushScope();
+      lower::SymMapScope innerScope(*symTable);
       cloneSymbol(sym);
       mlir::Value cloneAddr = symTable->shallowLookupSymbol(*sym).getAddr();
       mlir::Type cloneType = cloneAddr.getType();
@@ -523,7 +519,6 @@ void DataSharingProcessor::doPrivatize(const semantics::Symbol *sym,
 
       firOpBuilder.create<mlir::omp::YieldOp>(hsb.getAddr().getLoc(),
                                               yieldedValue);
-      symTable->popScope();
     }
 
     // Populate the `copy` region if this is a `firstprivate`.
@@ -548,7 +543,7 @@ void DataSharingProcessor::doPrivatize(const semantics::Symbol *sym,
       };
 
       addSymbol(0, true);
-      symTable->pushScope();
+      lower::SymMapScope innerScope(*symTable);
       addSymbol(1);
 
       auto ip = firOpBuilder.saveInsertionPoint();
@@ -557,10 +552,8 @@ void DataSharingProcessor::doPrivatize(const semantics::Symbol *sym,
       firOpBuilder.create<mlir::omp::YieldOp>(
           hsb.getAddr().getLoc(),
           symTable->shallowLookupSymbol(*sym).getAddr());
-      symTable->popScope();
     }
 
-    symTable->popScope();
     return result;
   }();
 

@@ -14,6 +14,7 @@
 #include "common.h"
 #include "compiler.h"
 #include "error.h"
+#include "jit_dispatch.h"
 #include "wrapper_function_utils.h"
 
 #include <algorithm>
@@ -352,10 +353,9 @@ ELFNixPlatformRuntimeState::lookupSymbolInJITDylib(void *DSOHandle,
                                                    std::string_view Sym) {
   Expected<ExecutorAddr> Result((ExecutorAddr()));
   if (auto Err = WrapperFunction<SPSExpected<SPSExecutorAddr>(
-          SPSExecutorAddr, SPSString)>::call(&__orc_rt_elfnix_symbol_lookup_tag,
-                                             Result,
-                                             ExecutorAddr::fromPtr(DSOHandle),
-                                             Sym))
+          SPSExecutorAddr,
+          SPSString)>::call(JITDispatch(&__orc_rt_elfnix_symbol_lookup_tag),
+                            Result, ExecutorAddr::fromPtr(DSOHandle), Sym))
     return std::move(Err);
   return Result;
 }
@@ -368,8 +368,9 @@ ELFNixPlatformRuntimeState::getJITDylibInitializersByName(
   std::string PathStr(Path.data(), Path.size());
   if (auto Err =
           WrapperFunction<SPSExpected<SPSELFNixJITDylibInitializerSequence>(
-              SPSString)>::call(&__orc_rt_elfnix_get_initializers_tag, Result,
-                                Path))
+              SPSString)>::
+              call(JITDispatch(&__orc_rt_elfnix_get_initializers_tag), Result,
+                   Path))
     return std::move(Err);
   return Result;
 }

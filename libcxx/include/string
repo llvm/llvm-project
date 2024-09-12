@@ -2230,11 +2230,11 @@ private:
     return std::__is_pointer_in_range(data(), data() + size() + 1, std::addressof(__v));
   }
 
-  _LIBCPP_NORETURN _LIBCPP_HIDE_FROM_ABI void __throw_length_error() const {
+  [[__noreturn__]] _LIBCPP_HIDE_FROM_ABI void __throw_length_error() const {
     std::__throw_length_error("basic_string");
   }
 
-  _LIBCPP_NORETURN _LIBCPP_HIDE_FROM_ABI void __throw_out_of_range() const {
+  [[__noreturn__]] _LIBCPP_HIDE_FROM_ABI void __throw_out_of_range() const {
     std::__throw_out_of_range("basic_string");
   }
 

@@ -298,6 +298,8 @@ createTargetCodeGenInfo(CodeGenModule &CGM) {
   case llvm::Triple::spirv32:
   case llvm::Triple::spirv64:
     return createSPIRVTargetCodeGenInfo(CGM);
+  case llvm::Triple::dxil:
+    return createDirectXTargetCodeGenInfo(CGM);
   case llvm::Triple::ve:
     return createVETargetCodeGenInfo(CGM);
   case llvm::Triple::csky: {

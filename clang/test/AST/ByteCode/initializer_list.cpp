@@ -1,8 +1,6 @@
 // RUN: %clang_cc1 -fexperimental-new-constant-interpreter -fms-extensions -std=c++20 -verify=expected,both %s
 // RUN: %clang_cc1 -std=c++20 -fms-extensions -verify=ref,both %s
 
-// both-no-diagnostics
-
 namespace std {
   typedef decltype(sizeof(int)) size_t;
   template <class _E>
@@ -53,3 +51,21 @@ constexpr int foo() {
 }
 
 static_assert(foo() == 0);
+
+
+namespace rdar13395022 {
+  struct MoveOnly { // both-note {{candidate}}
+    MoveOnly(MoveOnly&&); // both-note 2{{copy constructor is implicitly deleted because}} both-note {{candidate}}
+  };
+
+  void test(MoveOnly mo) {
+    auto &&list1 = {mo}; // both-error {{call to implicitly-deleted copy constructor}} both-note {{in initialization of temporary of type 'std::initializer_list}}
+    MoveOnly (&&list2)[1] = {mo}; // both-error {{call to implicitly-deleted copy constructor}} both-note {{in initialization of temporary of type 'MoveOnly[1]'}}
+    std::initializer_list<MoveOnly> &&list3 = {};
+    MoveOnly (&&list4)[1] = {}; // both-error {{no matching constructor}}
+    // both-note@-1 {{in implicit initialization of array element 0 with omitted initializer}}
+    // both-note@-2 {{in initialization of temporary of type 'MoveOnly[1]' created to list-initialize this reference}}
+  }
+}
+
+

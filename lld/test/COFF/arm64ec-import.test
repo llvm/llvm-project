@@ -2,17 +2,19 @@ REQUIRES: aarch64, x86
 RUN: split-file %s %t.dir && cd %t.dir
 
 RUN: llvm-mc -filetype=obj -triple=arm64ec-windows test.s -o test.obj
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows icall.s -o icall.obj
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows hybmp.s -o hybmp.obj
 RUN: llvm-mc -filetype=obj -triple=arm64ec-windows %S/Inputs/loadconfig-arm64ec.s -o loadconfig-arm64ec.obj
 RUN: llvm-lib -machine:arm64ec -def:test.def -out:test-arm64ec.lib
 RUN: llvm-lib -machine:arm64ec -def:test2.def -out:test2-arm64ec.lib
 RUN: llvm-lib -machine:x64 -def:test.def -out:test-x86_64.lib
 
 Link using ARM64EC import library:
-RUN: lld-link -machine:arm64ec -dll -noentry -out:out.dll loadconfig-arm64ec.obj \
+RUN: lld-link -machine:arm64ec -dll -noentry -out:out.dll loadconfig-arm64ec.obj icall.obj hybmp.obj \
 RUN:          test.obj test-arm64ec.lib test2-arm64ec.lib
 
 Link using x86_64 import library:
-RUN: lld-link -machine:arm64ec -dll -noentry -out:out2.dll loadconfig-arm64ec.obj \
+RUN: lld-link -machine:arm64ec -dll -noentry -out:out2.dll loadconfig-arm64ec.obj icall.obj hybmp.obj \
 RUN:          test.obj test-x86_64.lib test2-arm64ec.lib
 
 RUN: llvm-readobj --coff-imports out.dll | FileCheck --check-prefix=IMPORTS %s
@@ -20,7 +22,7 @@ RUN: llvm-readobj --coff-imports out2.dll | FileCheck --check-prefix=IMPORTS %s
 IMPORTS:      Import {
 IMPORTS-NEXT:   Name: test.dll
 IMPORTS-NEXT:   ImportLookupTableRVA:
-IMPORTS-NEXT:   ImportAddressTableRVA: 0x2000
+IMPORTS-NEXT:   ImportAddressTableRVA: 0x3000
 IMPORTS-NEXT:   Symbol: data (0)
 IMPORTS-NEXT:   Symbol: func (0)
 IMPORTS-NEXT:   Symbol: func2 (0)
@@ -28,24 +30,45 @@ IMPORTS-NEXT: }
 IMPORTS-NEXT: Import {
 IMPORTS-NEXT:   Name: test2.dll
 IMPORTS-NEXT:   ImportLookupTableRVA:
-IMPORTS-NEXT:   ImportAddressTableRVA: 0x2020
+IMPORTS-NEXT:   ImportAddressTableRVA: 0x3020
 IMPORTS-NEXT:   Symbol: t2func (0)
 IMPORTS-NEXT: }
 
 RUN: llvm-objdump -d out.dll | FileCheck --check-prefix=DISASM %s
 RUN: llvm-objdump -d out2.dll | FileCheck --check-prefix=DISASM %s
 
-DISASM:      0000000180001000 <.text>:
-DISASM-NEXT: 180001000: ff 25 02 10 00 00            jmpq    *0x1002(%rip)           # 0x180002008
+DISASM:      180001000: 52800000     mov     w0, #0x0                // =0
+DISASM-NEXT: 180001004: d65f03c0     ret
+DISASM-NEXT: 180001008: d000000b     adrp    x11, 0x180003000
+DISASM-NEXT: 18000100c: f940056b     ldr     x11, [x11, #0x8]
+DISASM-NEXT: 180001010: 9000000a     adrp    x10, 0x180001000 <.text>
+DISASM-NEXT: 180001014: 9101114a     add     x10, x10, #0x44
+DISASM-NEXT: 180001018: 17fffffa     b       0x180001000 <.text>
+DISASM-NEXT: 18000101c: d000000b     adrp    x11, 0x180003000
+DISASM-NEXT: 180001020: f940096b     ldr     x11, [x11, #0x10]
+DISASM-NEXT: 180001024: f0ffffea     adrp    x10, 0x180000000
+DISASM-NEXT: 180001028: 9100014a     add     x10, x10, #0x0
+DISASM-NEXT: 18000102c: 17fffff5     b       0x180001000 <.text>
+DISASM-NEXT: 180001030: d000000b     adrp    x11, 0x180003000
+DISASM-NEXT: 180001034: f940116b     ldr     x11, [x11, #0x20]
+DISASM-NEXT: 180001038: 9000000a     adrp    x10, 0x180001000 <.text>
+DISASM-NEXT: 18000103c: 9101314a     add     x10, x10, #0x4c
+DISASM-NEXT: 180001040: 17fffff0     b       0x180001000 <.text>
+DISASM-NEXT: 180001044: 52800020     mov     w0, #0x1                // =1
+DISASM-NEXT: 180001048: d65f03c0     ret
+DISASM-NEXT: 18000104c: 52800040     mov     w0, #0x2                // =2
+DISASM-NEXT: 180001050: d65f03c0     ret
+DISASM-NEXT:                 ...
+DISASM-NEXT: 180002000: ff 25 02 10 00 00            jmpq    *0x1002(%rip)           # 0x180003008
 
 RUN: llvm-readobj --hex-dump=.test out.dll | FileCheck --check-prefix=TESTSEC %s
 RUN: llvm-readobj --hex-dump=.test out2.dll | FileCheck --check-prefix=TESTSEC %s
-TESTSEC:      0x180005000 08200000 00200000 10200000 20200000
-TESTSEC-NEXT: 0x180005010 00100000
+TESTSEC:      0x180006000 08300000 00300000 10300000 20300000
+TESTSEC-NEXT: 0x180006010 08100000 1c100000          00200000
 
 RUN: llvm-readobj --headers out.dll | FileCheck -check-prefix=HEADERS %s
-HEADERS:  LoadConfigTableRVA: 0x3008
-HEADERS:  IATRVA: 0x2000
+HEADERS:  LoadConfigTableRVA: 0x4010
+HEADERS:  IATRVA: 0x3000
 HEADERS:  IATSize: 0x1000
 
 #--- test.s
@@ -57,7 +80,48 @@ arm64ec_data_sym:
     .rva __imp_data
     .rva __imp_func2
     .rva __imp_t2func
+    .rva __impchk_func
+    .rva __impchk_func2
     .rva func
+
+#--- icall.s
+    .text
+    .globl __icall_helper_arm64ec
+    .p2align 2, 0x0
+__icall_helper_arm64ec:
+    mov w0, #0
+    ret
+
+#--- hybmp.s
+    .section .hybmp$x, "yi"
+    // __imp_func exit thunk is ignored when func is defined as well
+    .symidx __imp_func
+    .symidx dead_exit_thunk
+    .word 4
+    .symidx func
+    .symidx func_exit_thunk
+    .word 4
+    .symidx __imp_t2func
+    .symidx t2func_exit_thunk
+    .word 4
+
+    .section .wowthk$aa,"xr",discard,func_exit_thunk
+    .globl func_exit_thunk
+func_exit_thunk:
+    mov w0, #1
+    ret
+
+    .section .wowthk$aa,"xr",discard,t2func_exit_thunk
+    .globl t2func_exit_thunk
+t2func_exit_thunk:
+    mov w0, #2
+    ret
+
+    .section .wowthk$aa,"xr",discard,dead_exit_thunk
+    .globl dead_exit_thunk
+dead_exit_thunk:
+    mov w0, #0xdead
+    ret
 
 #--- test.def
 NAME test.dll

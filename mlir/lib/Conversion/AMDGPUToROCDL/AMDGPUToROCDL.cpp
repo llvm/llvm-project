@@ -108,22 +108,23 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
       if (wantedVecType.getElementType().isBF16())
         llvmBufferValType = wantedVecType.clone(rewriter.getI16Type());
     if (atomicCmpData) {
-      if (isa<VectorType>(wantedDataType))
-        return gpuOp.emitOpError("vector compare-and-swap does not exist");
       if (auto floatType = dyn_cast<FloatType>(wantedDataType))
         llvmBufferValType = this->getTypeConverter()->convertType(
             rewriter.getIntegerType(floatType.getWidth()));
     }
     if (auto dataVector = dyn_cast<VectorType>(wantedDataType)) {
+      uint32_t vecLen = dataVector.getNumElements();
       uint32_t elemBits = dataVector.getElementTypeBitWidth();
-      uint32_t totalBits = elemBits * dataVector.getNumElements();
+      uint32_t totalBits = elemBits * vecLen;
+      bool usePackedFp16 =
+          isa_and_present<RawBufferAtomicFaddOp>(*gpuOp) && vecLen == 2;
       if (totalBits > maxVectorOpWidth)
         return gpuOp.emitOpError(
             "Total width of loads or stores must be no more than " +
             Twine(maxVectorOpWidth) + " bits, but we call for " +
             Twine(totalBits) +
             " bits. This should've been caught in validation");
-      if (elemBits < 32) {
+      if (!usePackedFp16 && elemBits < 32) {
         if (totalBits > 32) {
           if (totalBits % 32 != 0)
             return gpuOp.emitOpError("Load or store of more than 32-bits that "

@@ -2707,7 +2707,7 @@ bool X86AsmParser::parseIntelOperand(OperandVector &Operands, StringRef Name) {
   bool MaybeDirectBranchDest = true;
 
   if (Parser.isParsingMasm()) {
-    if (is64BitMode() && (PtrInOperand || SM.getElementSize() > 0)) {
+    if (is64BitMode() && SM.getElementSize() > 0) {
       DefaultBaseReg = X86::RIP;
     }
     if (IsUnconditionalBranch) {

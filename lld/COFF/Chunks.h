@@ -544,6 +544,14 @@ static const uint8_t importThunkARM64[] = {
     0x00, 0x02, 0x1f, 0xd6, // br   x16
 };
 
+static const uint8_t importThunkARM64EC[] = {
+    0x0b, 0x00, 0x00, 0x90, // adrp x11, 0x0
+    0x6b, 0x01, 0x40, 0xf9, // ldr  x11, [x11]
+    0x0a, 0x00, 0x00, 0x90, // adrp x10, 0x0
+    0x4a, 0x01, 0x00, 0x91, // add  x10, x10, #0x0
+    0x00, 0x00, 0x00, 0x14  // b    0x0
+};
+
 // Windows-specific.
 // A chunk for DLL import jump table entry. In a final output, its
 // contents will be a JMP instruction to some __imp_ symbol.
@@ -597,6 +605,22 @@ public:
   size_t getSize() const override { return sizeof(importThunkARM64); }
   void writeTo(uint8_t *buf) const override;
   MachineTypes getMachine() const override { return ARM64; }
+};
+
+// ARM64EC __impchk_* thunk implementation.
+// Performs an indirect call to an imported function pointer
+// using the __icall_helper_arm64ec helper function.
+class ImportThunkChunkARM64EC : public ImportThunkChunk {
+public:
+  explicit ImportThunkChunkARM64EC(ImportFile *file);
+  size_t getSize() const override { return sizeof(importThunkARM64EC); };
+  MachineTypes getMachine() const override { return ARM64EC; }
+  void writeTo(uint8_t *buf) const override;
+
+  Defined *exitThunk;
+
+private:
+  ImportFile *file;
 };
 
 class RangeExtensionThunkARM : public NonSectionCodeChunk {

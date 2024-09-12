@@ -54,7 +54,7 @@ local_tee_type_mismatch:
 
 global_get_missing_globaltype:
   .functype global_get_missing_globaltype () -> ()
-# CHECK: :[[@LINE+1]]:14: error: symbol foo missing .globaltype
+# CHECK: :[[@LINE+1]]:14: error: symbol foo: missing .globaltype
   global.get foo
   end_function
 
@@ -66,7 +66,7 @@ global_get_expected_expression_operand:
 
 global_set_missing_globaltype:
   .functype global_set_missing_globaltype () -> ()
-# CHECK: :[[@LINE+1]]:14: error: symbol foo missing .globaltype
+# CHECK: :[[@LINE+1]]:14: error: symbol foo: missing .globaltype
   global.set foo
   end_function
 
@@ -99,7 +99,7 @@ table_get_expected_expression_operand:
 
 table_get_missing_tabletype:
   .functype table_get_missing_tabletype () -> ()
-# CHECK: :[[@LINE+1]]:13: error: symbol foo missing .tabletype
+# CHECK: :[[@LINE+1]]:13: error: symbol foo: missing .tabletype
   table.get foo
   end_function
 
@@ -126,7 +126,7 @@ table_set_expected_expression_operand:
 
 table_set_missing_tabletype:
   .functype table_set_missing_tabletype () -> ()
-# CHECK: :[[@LINE+1]]:13: error: symbol foo missing .tabletype
+# CHECK: :[[@LINE+1]]:13: error: symbol foo: missing .tabletype
   table.set foo
   end_function
 
@@ -166,7 +166,7 @@ table_fill_expected_expression_operand:
 
 table_fill_missing_tabletype:
   .functype table_fill_missing_tabletype () -> ()
-# CHECK: :[[@LINE+1]]:14: error: symbol foo missing .tabletype
+# CHECK: :[[@LINE+1]]:14: error: symbol foo: missing .tabletype
   table.fill foo
   end_function
 
@@ -235,7 +235,7 @@ table_grow_non_exist_table:
   .functype table_grow_non_exist_table (externref, i32) -> (i32)
   local.get 0
   local.get 1
-# CHECK: [[@LINE+1]]:14: error: symbol invalid_table missing .tabletype
+# CHECK: [[@LINE+1]]:14: error: symbol invalid_table: missing .tabletype
   table.grow invalid_table
   end_function
 
@@ -554,7 +554,7 @@ call_superfluous_value_at_end:
 
 call_missing_functype:
   .functype call_missing_functype () -> ()
-# CHECK: :[[@LINE+1]]:8: error: symbol no_functype missing .functype
+# CHECK: :[[@LINE+1]]:8: error: symbol no_functype: missing .functype
   call no_functype
   end_function
 
@@ -579,7 +579,7 @@ return_call_type_mismatch:
 
 return_call_missing_functype:
   .functype return_call_missing_functype () -> ()
-# CHECK: :[[@LINE+1]]:15: error: symbol no_functype missing .functype
+# CHECK: :[[@LINE+1]]:15: error: symbol no_functype: missing .functype
   return_call no_functype
   end_function
 
@@ -594,7 +594,7 @@ catch_expected_expression_operand:
 catch_missing_tagtype:
   .functype catch_missing_tagtype () -> ()
   try
-# CHECK: :[[@LINE+1]]:9: error: symbol no_tagtype missing .tagtype
+# CHECK: :[[@LINE+1]]:9: error: symbol no_tagtype: missing .tagtype
   catch no_tagtype
   end_try
   end_function

@@ -613,7 +613,7 @@ static bool isKnownNonZeroFromAssume(const Value *V, const SimplifyQuery &Q) {
     CmpInst::Predicate Pred;
     auto m_V = m_CombineOr(m_Specific(V), m_PtrToInt(m_Specific(V)));
     if (!match(I->getArgOperand(0), m_c_ICmp(Pred, m_V, m_Value(RHS))))
-      return false;
+      continue;
 
     if (cmpExcludesZero(Pred, RHS) && isValidAssumeForContext(I, Q.CxtI, Q.DT))
       return true;
@@ -2207,6 +2207,22 @@ static bool isPowerOfTwoRecurrence(const PHINode *PN, bool OrZero,
   }
 }
 
+/// Return true if we can infer that \p V is known to be a power of 2 from
+/// dominating condition \p Cond (e.g., ctpop(V) == 1).
+static bool isImpliedToBeAPowerOfTwoFromCond(const Value *V, bool OrZero,
+                                             const Value *Cond) {
+  ICmpInst::Predicate Pred;
+  const APInt *RHSC;
+  if (!match(Cond, m_ICmp(Pred, m_Intrinsic<Intrinsic::ctpop>(m_Specific(V)),
+                          m_APInt(RHSC))))
+    return false;
+  // ctpop(V) u< 2
+  if (OrZero && Pred == ICmpInst::ICMP_ULT && *RHSC == 2)
+    return true;
+  // ctpop(V) == 1
+  return Pred == ICmpInst::ICMP_EQ && *RHSC == 1;
+}
+
 /// Return true if the given value is known to have exactly one
 /// bit set when defined. For vectors return true if every element is known to
 /// be a power of two when defined. Supports values with integer or pointer
@@ -2221,6 +2237,18 @@ bool isKnownToBeAPowerOfTwo(const Value *V, bool OrZero, unsigned Depth,
   // i1 is by definition a power of 2 or zero.
   if (OrZero && V->getType()->getScalarSizeInBits() == 1)
     return true;
+
+  // Try to infer from assumptions.
+  if (Q.AC && Q.CxtI) {
+    for (auto &AssumeVH : Q.AC->assumptionsFor(V)) {
+      if (!AssumeVH)
+        continue;
+      CallInst *I = cast<CallInst>(AssumeVH);
+      if (isImpliedToBeAPowerOfTwoFromCond(V, OrZero, I->getArgOperand(0)) &&
+          isValidAssumeForContext(I, Q.CxtI, Q.DT))
+        return true;
+    }
+  }
 
   auto *I = dyn_cast<Instruction>(V);
   if (!I)
@@ -9903,8 +9931,9 @@ void llvm::findValuesAffectedByCondition(
     } else if (match(V, m_ICmp(Pred, m_Value(A), m_Value(B)))) {
       AddCmpOperands(A, B);
 
+      bool HasRHSC = match(B, m_ConstantInt());
       if (ICmpInst::isEquality(Pred)) {
-        if (match(B, m_ConstantInt())) {
+        if (HasRHSC) {
           Value *Y;
           // (X & C) or (X | C) or (X ^ C).
           // (X << C) or (X >>_s C) or (X >>_u C).
@@ -9918,7 +9947,7 @@ void llvm::findValuesAffectedByCondition(
           }
         }
       } else {
-        if (match(B, m_ConstantInt())) {
+        if (HasRHSC) {
           // Handle (A + C1) u< C2, which is the canonical form of
           // A > C3 && A < C4.
           if (match(A, m_AddLike(m_Value(X), m_ConstantInt())))
@@ -9950,6 +9979,10 @@ void llvm::findValuesAffectedByCondition(
             InsertAffected(X);
         }
       }
+
+      if (IsAssume && HasRHSC &&
+          match(A, m_Intrinsic<Intrinsic::ctpop>(m_Value(X))))
+        AddAffected(X);
     } else if (match(Cond, m_FCmp(Pred, m_Value(A), m_Value(B)))) {
       AddCmpOperands(A, B);
 

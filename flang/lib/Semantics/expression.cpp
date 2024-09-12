@@ -210,7 +210,8 @@ private:
 // or procedure pointer reference in a ProcedureDesignator.
 MaybeExpr ExpressionAnalyzer::Designate(DataRef &&ref) {
   const Symbol &last{ref.GetLastSymbol()};
-  const Symbol &symbol{BypassGeneric(last).GetUltimate()};
+  const Symbol &specific{BypassGeneric(last)};
+  const Symbol &symbol{specific.GetUltimate()};
   if (semantics::IsProcedure(symbol)) {
     if (symbol.attrs().test(semantics::Attr::ABSTRACT)) {
       Say("Abstract procedure interface '%s' may not be used as a designator"_err_en_US,
@@ -226,6 +227,10 @@ MaybeExpr ExpressionAnalyzer::Designate(DataRef &&ref) {
     } else if (!symbol.attrs().test(semantics::Attr::INTRINSIC)) {
       if (symbol.has<semantics::GenericDetails>()) {
         Say("'%s' is not a specific procedure"_err_en_US, last.name());
+      } else if (IsProcedurePointer(specific)) {
+        // For procedure pointers, retain associations so that data accesses
+        // from client modules will work.
+        return Expr<SomeType>{ProcedureDesignator{specific}};
       } else {
         return Expr<SomeType>{ProcedureDesignator{symbol}};
       }
@@ -1956,7 +1961,7 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::ArrayConstructor &array) {
 
 // Check if implicit conversion of expr to the symbol type is legal (if needed),
 // and make it explicit if requested.
-static MaybeExpr implicitConvertTo(const semantics::Symbol &sym,
+static MaybeExpr ImplicitConvertTo(const semantics::Symbol &sym,
     Expr<SomeType> &&expr, bool keepConvertImplicit) {
   if (!keepConvertImplicit) {
     return ConvertToType(sym, std::move(expr));
@@ -2196,7 +2201,7 @@ MaybeExpr ExpressionAnalyzer::Analyze(
         // convert would cause a segfault. Lowering will deal with
         // conditionally converting and preserving the lower bounds in this
         // case.
-        if (MaybeExpr converted{implicitConvertTo(
+        if (MaybeExpr converted{ImplicitConvertTo(
                 *symbol, std::move(*value), IsAllocatable(*symbol))}) {
           if (auto componentShape{GetShape(GetFoldingContext(), *symbol)}) {
             if (auto valueShape{GetShape(GetFoldingContext(), *converted)}) {
@@ -2739,7 +2744,6 @@ std::pair<const Symbol *, bool> ExpressionAnalyzer::ResolveGeneric(
               (!procedure->IsElemental() && nonElemental)) {
             int d{ComputeCudaMatchingDistance(
                 context_.languageFeatures(), *procedure, localActuals)};
-            llvm::errs() << "matching distance: " << d << "\n";
             if (d != crtMatchingDistance) {
               if (d > crtMatchingDistance) {
                 continue;

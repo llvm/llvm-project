@@ -53,10 +53,4 @@ mov eax, [t8]
 ; CHECK-LABEL: t8:
 ; CHECK: mov eax, dword ptr [t8]
 
-t9:
-mov eax, dword ptr [bar]
-; CHECK-LABEL: t9:
-; CHECK-32: mov eax, dword ptr [bar]
-; CHECK-64: mov eax, dword ptr [rip + bar]
-
 END
