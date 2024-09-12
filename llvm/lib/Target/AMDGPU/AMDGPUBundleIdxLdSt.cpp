@@ -74,10 +74,6 @@ bool AMDGPUBundleIdxLdSt::bundleIdxLdSt(MachineInstr *MI) {
   // TODO-GFX13 Update TwoAddressInstructionPass to handle Bundles
   if (MI->isConvertibleTo3Addr() || MI->isRegSequence() || MI->isInsertSubreg())
     return false;
-  // TODO-GFX13 Temporarily disallow bundles without a CoreMI
-  if (MI->getOpcode() == AMDGPU::V_LOAD_IDX ||
-      MI->getOpcode() == AMDGPU::V_STORE_IDX)
-    return false;
   for (auto &Def : MI->defs()) {
     if (!Def.isReg())
       continue;
