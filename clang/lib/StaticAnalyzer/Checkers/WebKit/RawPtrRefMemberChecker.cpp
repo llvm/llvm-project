@@ -172,7 +172,7 @@ public:
   }
 
   const char* invariantName() const final {
-    return "member variables must be ref-counted";
+    return "member variables must be Ref, RefPtr, WeakRef, or WeakPtr";
   }
 };
 
@@ -195,7 +195,7 @@ public:
   }
 
   const char* invariantName() const final {
-    return "member variables must be a CheckedPtr or CheckedRef";
+    return "member variables must be a CheckedPtr, CheckedRef, WeakRef, or WeakPtr";
   }
 };
 
