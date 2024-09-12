@@ -14807,22 +14807,6 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_storesd128_mask:
     return EmitX86MaskedStore(*this, Ops, Align(1));
 
-  case X86::BI__builtin_ia32_vpopcntb_128:
-  case X86::BI__builtin_ia32_vpopcntd_128:
-  case X86::BI__builtin_ia32_vpopcntq_128:
-  case X86::BI__builtin_ia32_vpopcntw_128:
-  case X86::BI__builtin_ia32_vpopcntb_256:
-  case X86::BI__builtin_ia32_vpopcntd_256:
-  case X86::BI__builtin_ia32_vpopcntq_256:
-  case X86::BI__builtin_ia32_vpopcntw_256:
-  case X86::BI__builtin_ia32_vpopcntb_512:
-  case X86::BI__builtin_ia32_vpopcntd_512:
-  case X86::BI__builtin_ia32_vpopcntq_512:
-  case X86::BI__builtin_ia32_vpopcntw_512: {
-    llvm::Type *ResultType = ConvertType(E->getType());
-    llvm::Function *F = CGM.getIntrinsic(Intrinsic::ctpop, ResultType);
-    return Builder.CreateCall(F, Ops);
-  }
   case X86::BI__builtin_ia32_cvtmask2b128:
   case X86::BI__builtin_ia32_cvtmask2b256:
   case X86::BI__builtin_ia32_cvtmask2b512:
@@ -17624,15 +17608,6 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
     return Builder.CreateBitCast(
         Builder.CreateCall(CGM.getIntrinsic(ID), {Op0, Op1, Op2}), ResultType);
   }
-  case PPC::BI__builtin_altivec_vpopcntb:
-  case PPC::BI__builtin_altivec_vpopcnth:
-  case PPC::BI__builtin_altivec_vpopcntw:
-  case PPC::BI__builtin_altivec_vpopcntd: {
-    llvm::Type *ResultType = ConvertType(E->getType());
-    Value *X = EmitScalarExpr(E->getArg(0));
-    llvm::Function *F = CGM.getIntrinsic(Intrinsic::ctpop, ResultType);
-    return Builder.CreateCall(F, X);
-  }
   case PPC::BI__builtin_altivec_vadduqm:
   case PPC::BI__builtin_altivec_vsubuqm: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
@@ -19702,16 +19677,6 @@ Value *CodeGenFunction::EmitSystemZBuiltinExpr(unsigned BuiltinID,
   // be represented via standard LLVM IR, which is preferable to enable common
   // LLVM optimizations.
 
-  case SystemZ::BI__builtin_s390_vpopctb:
-  case SystemZ::BI__builtin_s390_vpopcth:
-  case SystemZ::BI__builtin_s390_vpopctf:
-  case SystemZ::BI__builtin_s390_vpopctg: {
-    llvm::Type *ResultType = ConvertType(E->getType());
-    Value *X = EmitScalarExpr(E->getArg(0));
-    Function *F = CGM.getIntrinsic(Intrinsic::ctpop, ResultType);
-    return Builder.CreateCall(F, X);
-  }
-
   case SystemZ::BI__builtin_s390_vclzb:
   case SystemZ::BI__builtin_s390_vclzh:
   case SystemZ::BI__builtin_s390_vclzf:
@@ -21612,12 +21577,6 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
     Value *RHS = EmitScalarExpr(E->getArg(1));
     Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_dot);
     return Builder.CreateCall(Callee, {LHS, RHS});
-  }
-  case WebAssembly::BI__builtin_wasm_popcnt_i8x16: {
-    Value *Vec = EmitScalarExpr(E->getArg(0));
-    Function *Callee =
-        CGM.getIntrinsic(Intrinsic::ctpop, ConvertType(E->getType()));
-    return Builder.CreateCall(Callee, {Vec});
   }
   case WebAssembly::BI__builtin_wasm_any_true_v128:
   case WebAssembly::BI__builtin_wasm_all_true_i8x16:
