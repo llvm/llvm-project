@@ -1790,8 +1790,8 @@ mlir::scf::tileAndFuseConsumerOfSlice(RewriterBase &rewriter,
             loc, newRegionArg, resultOffsets[index], resultSizes[index],
             SmallVector<OpFoldResult>(resultOffsets[index].size(),
                                       rewriter.getIndexAttr(1)));
-        // Make C++ 17 happy, otherwise it will throw error `captured structured
-        // bindings are a C++20 extension`.
+        // Make a copy of index to avoid a capturing structured binding, which
+        // is a C++20 extension.
         auto dstNumber = index;
         rewriter.modifyOpInPlace(tiledDestStyleOp, [&]() {
           tiledDestStyleOp.getDpsInitsMutable()[dstNumber].set(destSlice);
