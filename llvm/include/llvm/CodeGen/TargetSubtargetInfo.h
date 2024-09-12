@@ -332,8 +332,11 @@ public:
 
   /// Get the list of MacroFusion predicates.
   virtual std::vector<MacroFusionPredTy> getMacroFusions() const { return {}; };
-};
 
+  /// Whether the target has instructions where an early-clobber result
+  /// operand cannot overlap with an undef input operand.
+  virtual bool requiresDisjointEarlyClobberAndUndef() const { return false; }
+};
 } // end namespace llvm
 
 #endif // LLVM_CODEGEN_TARGETSUBTARGETINFO_H

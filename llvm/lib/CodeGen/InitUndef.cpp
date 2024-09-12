@@ -241,6 +241,12 @@ bool InitUndef::processBasicBlock(MachineFunction &MF, MachineBasicBlock &MBB,
 
 bool InitUndef::runOnMachineFunction(MachineFunction &MF) {
   ST = &MF.getSubtarget();
+
+  // The pass is only needed if early-clobber defs and undef ops cannot be
+  // allocated to the same register.
+  if (!ST->requiresDisjointEarlyClobberAndUndef())
+    return false;
+
   MRI = &MF.getRegInfo();
   TII = ST->getInstrInfo();
   TRI = MRI->getTargetRegisterInfo();
