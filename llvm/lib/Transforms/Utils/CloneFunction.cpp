@@ -200,6 +200,22 @@ bool llvm::BuildDebugInfoMDMap(DenseMap<const Metadata *, TrackingMDRef> &MD,
   return ModuleLevelChanges;
 }
 
+void llvm::CloneFunctionMetadataInto(Function *NewFunc, const Function *OldFunc,
+                                     ValueToValueMapTy &VMap,
+                                     RemapFlags RemapFlag,
+                                     ValueMapTypeRemapper *TypeMapper,
+                                     ValueMaterializer *Materializer) {
+  // Duplicate the metadata that is attached to the cloned function.
+  // Subprograms/CUs/types that were already mapped to themselves won't be
+  // duplicated.
+  SmallVector<std::pair<unsigned, MDNode *>, 1> MDs;
+  OldFunc->getAllMetadata(MDs);
+  for (auto MD : MDs) {
+    NewFunc->addMetadata(MD.first, *MapMetadata(MD.second, VMap, RemapFlag,
+                                                TypeMapper, Materializer));
+  }
+}
+
 // Clone OldFunc into NewFunc, transforming the old arguments into references to
 // VMap values.
 void llvm::CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
@@ -262,15 +278,9 @@ void llvm::CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
       BuildDebugInfoMDMap(VMap.MD(), Changes, DIFinder, SPClonedWithinModule);
 
   const auto RemapFlag = ModuleLevelChanges ? RF_None : RF_NoModuleLevelChanges;
-  // Duplicate the metadata that is attached to the cloned function.
-  // Subprograms/CUs/types that were already mapped to themselves won't be
-  // duplicated.
-  SmallVector<std::pair<unsigned, MDNode *>, 1> MDs;
-  OldFunc->getAllMetadata(MDs);
-  for (auto MD : MDs) {
-    NewFunc->addMetadata(MD.first, *MapMetadata(MD.second, VMap, RemapFlag,
-                                                TypeMapper, Materializer));
-  }
+
+  CloneFunctionMetadataInto(NewFunc, OldFunc, VMap, RemapFlag, TypeMapper,
+                            Materializer);
 
   // Loop over all of the basic blocks in the function, cloning them as
   // appropriate.  Note that we save BE this way in order to handle cloning of
