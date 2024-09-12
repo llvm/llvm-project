@@ -32,7 +32,10 @@
 #include <cassert>
 #include <functional>
 #include <memory>
+#include <numeric>
 #include <optional>
+#include <sstream>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -2589,19 +2592,26 @@ void IntegerRelation::mergeAndCompose(const IntegerRelation &other) {
 void IntegerRelation::print(raw_ostream &os) const {
   assert(hasConsistentState());
   printSpace(os);
+  PrintTableMetrics ptm = {0, 0, "-"};
+  for (unsigned i = 0, e = getNumEqualities(); i < e; ++i)
+    for (unsigned j = 0, f = getNumCols(); j < f; ++j)
+      updatePrintMetrics<DynamicAPInt>(atEq(i, j), ptm);
+  for (unsigned i = 0, e = getNumInequalities(); i < e; ++i)
+    for (unsigned j = 0, f = getNumCols(); j < f; ++j)
+      updatePrintMetrics<DynamicAPInt>(atIneq(i, j), ptm);
+  // Print using PrintMetrics.
+  unsigned MIN_SPACING = 1;
   for (unsigned i = 0, e = getNumEqualities(); i < e; ++i) {
-    os << " ";
     for (unsigned j = 0, f = getNumCols(); j < f; ++j) {
-      os << atEq(i, j) << "\t";
+      printWithPrintMetrics<DynamicAPInt>(os, atEq(i, j), MIN_SPACING, ptm);
     }
-    os << "= 0\n";
+    os << "  = 0\n";
   }
   for (unsigned i = 0, e = getNumInequalities(); i < e; ++i) {
-    os << " ";
     for (unsigned j = 0, f = getNumCols(); j < f; ++j) {
-      os << atIneq(i, j) << "\t";
+      printWithPrintMetrics<DynamicAPInt>(os, atIneq(i, j), MIN_SPACING, ptm);
     }
-    os << ">= 0\n";
+    os << " >= 0\n";
   }
   os << '\n';
 }
