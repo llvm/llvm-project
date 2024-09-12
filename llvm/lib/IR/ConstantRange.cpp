@@ -1952,7 +1952,7 @@ ConstantRange ConstantRange::ctlz(bool ZeroIsPoison) const {
   // Zero is either safe or not in the range. The output range is composed by
   // the result of countLeadingZero of the two extremes.
   return getNonEmpty(APInt(getBitWidth(), getUnsignedMax().countl_zero()),
-                     APInt(getBitWidth(), getUnsignedMin().countl_zero() + 1));
+                     APInt(getBitWidth(), getUnsignedMin().countl_zero()) + 1);
 }
 
 static ConstantRange getUnsignedCountTrailingZerosRange(const APInt &Lower,
@@ -2011,7 +2011,7 @@ ConstantRange ConstantRange::cttz(bool ZeroIsPoison) const {
   }
 
   if (isFullSet())
-    return getNonEmpty(Zero, APInt(BitWidth, BitWidth + 1));
+    return getNonEmpty(Zero, APInt(BitWidth, BitWidth) + 1);
   if (!isWrappedSet())
     return getUnsignedCountTrailingZerosRange(Lower, Upper);
   // The range is wrapped. We decompose it into two ranges, [0, Upper) and
@@ -2056,7 +2056,7 @@ ConstantRange ConstantRange::ctpop() const {
   unsigned BitWidth = getBitWidth();
   APInt Zero = APInt::getZero(BitWidth);
   if (isFullSet())
-    return getNonEmpty(Zero, APInt(BitWidth, BitWidth + 1));
+    return getNonEmpty(Zero, APInt(BitWidth, BitWidth) + 1);
   if (!isWrappedSet())
     return getUnsignedPopCountRange(Lower, Upper);
   // The range is wrapped. We decompose it into two ranges, [0, Upper) and

@@ -143,7 +143,7 @@ def HasFuseAES       : Predicate<"Subtarget->hasFuseAES()">,
                                  "fuse-aes">;
 def HasSVE           : Predicate<"Subtarget->isSVEAvailable()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSVE), "sve">;
-def HasSVEB16B16     : Predicate<"Subtarget->hasSVEB16B16()">,
+def HasSVEB16B16     : Predicate<"Subtarget->isSVEorStreamingSVEAvailable() && Subtarget->hasSVEB16B16()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSVEB16B16), "sve-b16b16">;
 def HasSVE2          : Predicate<"Subtarget->isSVEAvailable() && Subtarget->hasSVE2()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSVE2), "sve2">;
@@ -757,6 +757,8 @@ def AArch64mvni_shift : SDNode<"AArch64ISD::MVNIshift", SDT_AArch64MOVIshift>;
 def AArch64mvni_msl : SDNode<"AArch64ISD::MVNImsl", SDT_AArch64MOVIshift>;
 def AArch64movi : SDNode<"AArch64ISD::MOVI", SDT_AArch64MOVIedit>;
 def AArch64fmov : SDNode<"AArch64ISD::FMOV", SDT_AArch64MOVIedit>;
+
+def AArch64rev16_scalar : SDNode<"AArch64ISD::REV16", SDTIntUnaryOp>;
 
 def AArch64rev16 : SDNode<"AArch64ISD::REV16", SDT_AArch64UnaryVec>;
 def AArch64rev32 : SDNode<"AArch64ISD::REV32", SDT_AArch64UnaryVec>;
@@ -2839,6 +2841,9 @@ def : Pat<(bswap (rotr GPR64:$Rn, (i64 32))), (REV32Xr GPR64:$Rn)>;
 // Match (srl (bswap x), C) -> revC if the upper bswap bits are known zero.
 def : Pat<(srl (bswap top16Zero:$Rn), (i64 16)), (REV16Wr GPR32:$Rn)>;
 def : Pat<(srl (bswap top32Zero:$Rn), (i64 32)), (REV32Xr GPR64:$Rn)>;
+
+def : Pat<(AArch64rev16_scalar GPR32:$Rn), (REV16Wr GPR32:$Rn)>;
+def : Pat<(AArch64rev16_scalar GPR64:$Rn), (REV16Xr GPR64:$Rn)>;
 
 def : Pat<(or (and (srl GPR64:$Rn, (i64 8)), (i64 0x00ff00ff00ff00ff)),
               (and (shl GPR64:$Rn, (i64 8)), (i64 0xff00ff00ff00ff00))),
@@ -6616,6 +6621,46 @@ def : Pat<(v16i8 (int_aarch64_neon_tbx1 (v16i8 V128:$Rd),
 let Predicates = [HasLUT] in {
   defm LUT2 : BaseSIMDTableLookupIndexed2<"luti2">;
   defm LUT4 : BaseSIMDTableLookupIndexed4<"luti4">;
+  
+  multiclass Luti2_patterns<Instruction Instr, ValueType VT64, ValueType VT128>{
+    def : Pat<(VT128 (int_aarch64_neon_vluti2_lane VT64:$Rn, 
+                   v8i8:$Rm, i32:$idx)),
+              (Instr (INSERT_SUBREG (IMPLICIT_DEF), V64:$Rn, dsub), 
+              (INSERT_SUBREG (IMPLICIT_DEF), V64:$Rm, dsub),  VectorIndexS32b_timm:$idx)>;
+    def : Pat<(VT128 (int_aarch64_neon_vluti2_laneq VT64:$Rn,
+                   v16i8:$Rm, i32:$idx)),
+              (Instr (INSERT_SUBREG (IMPLICIT_DEF), V64:$Rn, dsub), 
+              V128:$Rm,  VectorIndexS32b_timm:$idx)>;
+    def : Pat<(VT128 (int_aarch64_neon_vluti2_lane VT128:$Rn, 
+                   v8i8:$Rm, i32:$idx)),
+              (Instr V128:$Rn, (INSERT_SUBREG (IMPLICIT_DEF), V64:$Rm, dsub),  
+              VectorIndexS32b_timm:$idx)>;
+    def : Pat<(VT128 (int_aarch64_neon_vluti2_laneq VT128:$Rn,
+                   v16i8:$Rm, i32:$idx)),
+              (Instr V128:$Rn, V128:$Rm,  VectorIndexS32b_timm:$idx)>;
+  }
+
+  defm : Luti2_patterns<LUT2_B, v8i8, v16i8>;
+  defm : Luti2_patterns<LUT2_H, v4i16, v8i16>;
+  defm : Luti2_patterns<LUT2_H, v4f16, v8f16>;
+  defm : Luti2_patterns<LUT2_H, v4bf16, v8bf16>;
+ 
+  def : Pat<(v16i8 (int_aarch64_neon_vluti4q_laneq v16i8:$Rn, 
+                    v16i8:$Rm, i32:$idx)),
+            (LUT4_B VecListOne16b:$Rn, V128:$Rm,  VectorIndexD32b_timm:$idx)>;
+  def : Pat<(v16i8 (int_aarch64_neon_vluti4q_lane v16i8:$Rn,
+                    v8i8:$Rm, i32:$idx)),
+            (LUT4_B VecListOne16b:$Rn, (INSERT_SUBREG (IMPLICIT_DEF), V64:$Rm, dsub),  VectorIndexD32b_timm:$idx)>;
+
+  foreach VT = [v8i16, v8f16, v8bf16] in {
+    def : Pat<(VT (int_aarch64_neon_vluti4q_laneq_x2 VT:$Rn1, 
+                   VT:$Rn2, v16i8:$Rm, i32:$idx)),
+              (LUT4_H (REG_SEQUENCE QQ, VecListOne8h:$Rn1, qsub0, VecListOne8h:$Rn2, qsub1), V128:$Rm,  VectorIndexS32b_timm:$idx)>;
+    def : Pat<(VT (int_aarch64_neon_vluti4q_lane_x2 VT:$Rn1,
+                   VT:$Rn2, v8i8:$Rm, i32:$idx)),
+              (LUT4_H (REG_SEQUENCE QQ, VecListOne8h:$Rn1, qsub0, VecListOne8h:$Rn2, qsub1),
+                      (INSERT_SUBREG (IMPLICIT_DEF), V64:$Rm, dsub),  VectorIndexS32b_timm:$idx)>;
+  }
 }
 
 //----------------------------------------------------------------------------
@@ -10094,13 +10139,15 @@ let Uses = [FPMR, FPCR], Predicates = [HasFP8] in {
 // fminimum(abs(a), abs(b)) -> famin(a, b)
 // fminnum[nnan](abs(a), abs(b)) -> famin(a, b)
 def AArch64famin : PatFrags<(ops node:$Rn, node:$Rm),
-                             [(fminimum (fabs node:$Rn), (fabs node:$Rm)),
+                             [(int_aarch64_neon_famin node:$Rn, node:$Rm),
+                              (fminimum (fabs node:$Rn), (fabs node:$Rm)),
                               (fminnum_nnan (fabs node:$Rn), (fabs node:$Rm))]>;
 
 // fmaximum(abs(a), abs(b)) -> famax(a, b)
 // fmaxnum[nnan](abs(a), abs(b)) -> famax(a, b)
 def AArch64famax : PatFrags<(ops node:$Rn, node:$Rm),
-                             [(fmaximum (fabs node:$Rn), (fabs node:$Rm)),
+                             [(int_aarch64_neon_famax node:$Rn, node:$Rm),
+                              (fmaximum (fabs node:$Rn), (fabs node:$Rm)),
                               (fmaxnum_nnan (fabs node:$Rn), (fabs node:$Rm))]>;
 
 let Predicates = [HasNEON, HasFAMINMAX] in {

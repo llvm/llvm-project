@@ -281,6 +281,13 @@ Supported
 ``Za128rs``, ``Za64rs``, ``Zama16b``, ``Zic64b``, ``Ziccamoa``, ``Ziccif``, ``Zicclsm``, ``Ziccrse``, ``Shcounterenvw``, ``Shgatpa``, ``Shtvala``, ``Shvsatpa``, ``Shvstvala``, ``Shvstvecd``, ``Ssccptr``, ``Sscounterenw``, ``Ssstateen``, ``Ssstrict``, ``Sstvala``, ``Sstvecd``, ``Ssu64xl``, ``Svade``, ``Svbare``
   These extensions are defined as part of the `RISC-V Profiles specification <https://github.com/riscv/riscv-profiles/releases/tag/v1.0>`__.  They do not introduce any new features themselves, but instead describe existing hardware features.
 
+Atomics ABIs
+============
+
+At the time of writing there are three atomics mappings (ABIs) `defined for RISC-V <https://github.com/riscv-non-isa/riscv-elf-psabi-doc/blob/master/riscv-elf.adoc#tag_riscv_atomic_abi-14-uleb128version>`__.  As of LLVM 19, LLVM defaults to "A6S", which is compatible with both the original "A6" and the future "A7" ABI. See `the psABI atomics document <https://github.com/riscv-non-isa/riscv-elf-psabi-doc/blob/master/riscv-atomic.adoc>`__ for more information on these mappings.
+
+Note that although the "A6S" mapping is used, the ELF attribute recording the mapping isn't currently emitted by default due to a bug causing a crash in older versions of binutils when processing files containing this attribute.
+
 Experimental Extensions
 =======================
 

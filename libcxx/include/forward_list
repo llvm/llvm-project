@@ -218,6 +218,7 @@ template <class T, class Allocator, class Predicate>
 #include <__ranges/container_compatible_range.h>
 #include <__ranges/from_range.h>
 #include <__type_traits/conditional.h>
+#include <__type_traits/enable_if.h>
 #include <__type_traits/is_allocator.h>
 #include <__type_traits/is_const.h>
 #include <__type_traits/is_nothrow_assignable.h>

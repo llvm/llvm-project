@@ -188,7 +188,7 @@ void initializeMachineBlockPlacementPass(PassRegistry &);
 void initializeMachineBlockPlacementStatsPass(PassRegistry &);
 void initializeMachineBranchProbabilityInfoWrapperPassPass(PassRegistry &);
 void initializeMachineCFGPrinterPass(PassRegistry &);
-void initializeMachineCSEPass(PassRegistry &);
+void initializeMachineCSELegacyPass(PassRegistry &);
 void initializeMachineCombinerPass(PassRegistry &);
 void initializeMachineCopyPropagationPass(PassRegistry &);
 void initializeMachineCycleInfoPrinterPassPass(PassRegistry &);
