@@ -840,13 +840,13 @@ Status MinidumpFileBuilder::AddMemoryList() {
   if (error.Fail())
     return error;
 
-  lldb_private::Progress progress_tracker("Saving Minidump File", "", all_core_memory_ranges.GetSize());
+  lldb_private::Progress progress_tracker("Saving Minidump File", "",
+                                          all_core_memory_ranges.GetSize());
   std::vector<CoreFileMemoryRange> all_core_memory_vec;
   // Extract all the data into just a vector of data. So we can mutate this in
   // place.
   for (const auto &core_range : all_core_memory_ranges)
     all_core_memory_vec.push_back(core_range.data);
-
 
   // Start by saving all of the stacks and ensuring they fit under the 32b
   // limit.
@@ -974,8 +974,9 @@ GetLargestRangeSize(const std::vector<CoreFileMemoryRange> &ranges) {
   return max_size;
 }
 
-Status MinidumpFileBuilder::AddMemoryList_32(
-    std::vector<CoreFileMemoryRange> &ranges, Progress &progressTracker) {
+Status
+MinidumpFileBuilder::AddMemoryList_32(std::vector<CoreFileMemoryRange> &ranges,
+                                      Progress &progressTracker) {
   std::vector<MemoryDescriptor> descriptors;
   Status error;
   if (ranges.size() == 0)
@@ -1053,8 +1054,9 @@ Status MinidumpFileBuilder::AddMemoryList_32(
   return error;
 }
 
-Status MinidumpFileBuilder::AddMemoryList_64(
-    std::vector<CoreFileMemoryRange> &ranges, Progress &progressTracker) {
+Status
+MinidumpFileBuilder::AddMemoryList_64(std::vector<CoreFileMemoryRange> &ranges,
+                                      Progress &progressTracker) {
   Status error;
   if (ranges.empty())
     return error;

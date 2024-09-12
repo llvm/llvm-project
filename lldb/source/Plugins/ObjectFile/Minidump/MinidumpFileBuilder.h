@@ -23,6 +23,7 @@
 #include <utility>
 #include <variant>
 
+#include "lldb/Core/Progress.h"
 #include "lldb/Symbol/SaveCoreOptions.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
@@ -30,7 +31,6 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-types.h"
-#include "lldb/Core/Progress.h"
 
 #include "llvm/BinaryFormat/Minidump.h"
 #include "llvm/Object/Minidump.h"
@@ -122,9 +122,11 @@ private:
   lldb_private::Status AddData(const void *data, uint64_t size);
   // Add MemoryList stream, containing dumps of important memory segments
   lldb_private::Status
-  AddMemoryList_64(std::vector<lldb_private::CoreFileMemoryRange> &ranges, lldb_private::Progress &progressTracker);
+  AddMemoryList_64(std::vector<lldb_private::CoreFileMemoryRange> &ranges,
+                   lldb_private::Progress &progressTracker);
   lldb_private::Status
-  AddMemoryList_32(std::vector<lldb_private::CoreFileMemoryRange> &ranges, lldb_private::Progress &progressTracker);
+  AddMemoryList_32(std::vector<lldb_private::CoreFileMemoryRange> &ranges,
+                   lldb_private::Progress &progressTracker);
   // Update the thread list on disk with the newly emitted stack RVAs.
   lldb_private::Status FixThreadStacks();
   lldb_private::Status FlushBufferToDisk();
