@@ -10,7 +10,7 @@ define void @add(ptr noalias nocapture readonly %src1, ptr noalias nocapture rea
 ; ZVFH-NEXT:  LV(REG): RegisterClass: RISCV::GPRRC, 1 registers
 ; ZVFHMIN:       LV(REG): Found max usage: 2 item
 ; ZVFHMIN-NEXT:  LV(REG): RegisterClass: RISCV::GPRRC, 2 registers
-; ZVFHMIN-NEXT:  LV(REG): RegisterClass: RISCV::VRRC, 2 registers
+; ZVFHMIN-NEXT:  LV(REG): RegisterClass: RISCV::VRRC, 4 registers
 ; ZVFHMIN-NEXT:  LV(REG): Found invariant usage: 1 item
 ; ZVFHMIN-NEXT:  LV(REG): RegisterClass: RISCV::GPRRC, 1 registers
 

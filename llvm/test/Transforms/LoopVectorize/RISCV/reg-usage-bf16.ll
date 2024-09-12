@@ -4,7 +4,7 @@ define void @add(ptr noalias nocapture readonly %src1, ptr noalias nocapture rea
 ; CHECK-LABEL: add
 ; CHECK:       LV(REG): Found max usage: 2 item
 ; CHECK-NEXT:  LV(REG): RegisterClass: RISCV::GPRRC, 2 registers
-; CHECK-NEXT:  LV(REG): RegisterClass: RISCV::VRRC, 2 registers
+; CHECK-NEXT:  LV(REG): RegisterClass: RISCV::VRRC, 4 registers
 ; CHECK-NEXT:  LV(REG): Found invariant usage: 1 item
 ; CHECK-NEXT:  LV(REG): RegisterClass: RISCV::GPRRC, 1 registers
 
