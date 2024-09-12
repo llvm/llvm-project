@@ -394,7 +394,7 @@ def LoopCoalescing : Pass<"affine-loop-coalescing", "func::FuncOp"> {
   let summary = "Coalesce nested loops with independent bounds into a single "
                 "loop";
   let constructor = "mlir::affine::createLoopCoalescingPass()";
-  let dependentDialects = ["arith::ArithDialect"];
+  let dependentDialects = ["affine::AffineDialect","arith::ArithDialect"];
 }
 
 def SimplifyAffineStructures : Pass<"affine-simplify-structures", "func::FuncOp"> {

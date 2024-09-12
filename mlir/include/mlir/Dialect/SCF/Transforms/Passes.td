@@ -56,6 +56,7 @@ def SCFParallelLoopFusion : Pass<"scf-parallel-loop-fusion"> {
 def TestSCFParallelLoopCollapsing : Pass<"test-scf-parallel-loop-collapsing"> {
   let summary = "Test parallel loops collapsing transformation";
   let constructor = "mlir::createTestSCFParallelLoopCollapsingPass()";
+  let dependentDialects = ["affine::AffineDialect"];
   let description = [{
       This pass is purely for testing the scf::collapseParallelLoops
       transformation. The transformation does not have opinions on how a
