@@ -83,7 +83,8 @@ public:
 #else // !BITMASKS
     unsigned char __size_ : 7;
     unsigned char __is_long_ : 1;
-#endif
+#endif // BITMASKS
+#endif // SUBCLASS_PADDING
   };
 
 #ifdef BITMASKS
