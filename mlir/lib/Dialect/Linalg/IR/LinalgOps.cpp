@@ -67,20 +67,20 @@ static OpFoldResult getDimValue(OpBuilder &builder, Location loc, Value v,
 
 /// Returns a memref.subview or a tensor.extract_slice based on the type of the
 /// `source`.
-static Value getSlice(OpBuilder &b, Location loc, Value source,
-                      ArrayRef<OpFoldResult> offsets,
-                      ArrayRef<OpFoldResult> sizes,
-                      ArrayRef<OpFoldResult> strides) {
-  return TypeSwitch<Type, Value>(source.getType())
-      .Case<RankedTensorType>([&](RankedTensorType t) -> Value {
+static Operation *getSlice(OpBuilder &b, Location loc, Value source,
+                           ArrayRef<OpFoldResult> offsets,
+                           ArrayRef<OpFoldResult> sizes,
+                           ArrayRef<OpFoldResult> strides) {
+  return TypeSwitch<Type, Operation *>(source.getType())
+      .Case<RankedTensorType>([&](RankedTensorType t) -> Operation * {
         return b.create<tensor::ExtractSliceOp>(loc, source, offsets, sizes,
                                                 strides);
       })
-      .Case<MemRefType>([&](MemRefType type) -> Value {
+      .Case<MemRefType>([&](MemRefType type) -> Operation * {
         return b.create<memref::SubViewOp>(loc, source, offsets, sizes,
                                            strides);
       })
-      .Default([&](Type t) { return nullptr; });
+      .Default([&](Type t) -> Operation * { return nullptr; });
 }
 
 //===----------------------------------------------------------------------===//
@@ -2634,10 +2634,18 @@ SoftmaxOp::getTiledImplementation(OpBuilder &builder,
   auto oneAttr = builder.getI64IntegerAttr(1);
   SmallVector<OpFoldResult> strides(rank, oneAttr);
   SmallVector<Value> tiledOperands;
-  tiledOperands.emplace_back(
-      getSlice(builder, getLoc(), getInput(), offsets, sizes, strides));
-  tiledOperands.emplace_back(
-      getSlice(builder, getLoc(), getOutput(), offsets, sizes, strides));
+  Operation *inputSlice =
+      getSlice(builder, getLoc(), getInput(), offsets, sizes, strides);
+  if (!inputSlice) {
+    return emitOpError("failed to compute input slice");
+  }
+  tiledOperands.emplace_back(inputSlice->getResult(0));
+  Operation *outputSlice =
+      getSlice(builder, getLoc(), getOutput(), offsets, sizes, strides);
+  if (!outputSlice) {
+    return emitOpError("failed to compute output slice");
+  }
+  tiledOperands.emplace_back(outputSlice->getResult(0));
 
   SmallVector<Type, 4> resultTypes;
   if (hasPureTensorSemantics())
@@ -2645,7 +2653,10 @@ SoftmaxOp::getTiledImplementation(OpBuilder &builder,
   Operation *tiledOp =
       mlir::clone(builder, getOperation(), resultTypes, tiledOperands);
 
-  return TilingResult{{tiledOp}, SmallVector<Value>(tiledOp->getResults())};
+  return TilingResult{
+      {tiledOp},
+      SmallVector<Value>(tiledOp->getResults()),
+      llvm::to_vector(ArrayRef<Operation *>{inputSlice, outputSlice})};
 }
 
 LogicalResult SoftmaxOp::getResultTilePosition(
@@ -2992,8 +3003,9 @@ FailureOr<TilingResult> WinogradFilterTransformOp::getTiledImplementation(
   int64_t filterRank = getFilterOperandRank();
   SmallVector<OpFoldResult> filterStrides(filterRank, oneAttr);
   Location loc = getLoc();
-  tiledOperands.emplace_back(builder.create<tensor::ExtractSliceOp>(
-      loc, getFilter(), sliceOffsets, sliceSizes, filterStrides));
+  auto filterSlice = builder.create<tensor::ExtractSliceOp>(
+      loc, getFilter(), sliceOffsets, sliceSizes, filterStrides);
+  tiledOperands.emplace_back(filterSlice);
 
   SmallVector<OpFoldResult> resultOffsets, resultSizes;
   if (failed(getResultTilePosition(builder, 1, offsets, sizes, resultOffsets,
@@ -3002,15 +3014,19 @@ FailureOr<TilingResult> WinogradFilterTransformOp::getTiledImplementation(
 
   int64_t outputRank = getOutputOperandRank();
   SmallVector<OpFoldResult> outputStrides(outputRank, oneAttr);
-  tiledOperands.emplace_back(builder.create<tensor::ExtractSliceOp>(
-      loc, getOutput(), resultOffsets, resultSizes, outputStrides));
+  auto outputSlice = builder.create<tensor::ExtractSliceOp>(
+      loc, getOutput(), resultOffsets, resultSizes, outputStrides);
+  tiledOperands.emplace_back(outputSlice);
 
   SmallVector<Type> resultTypes;
   resultTypes.push_back(tiledOperands[1].getType());
   Operation *tiledOp =
       mlir::clone(builder, getOperation(), resultTypes, tiledOperands);
 
-  return TilingResult{{tiledOp}, SmallVector<Value>(tiledOp->getResults())};
+  return TilingResult{
+      {tiledOp},
+      SmallVector<Value>(tiledOp->getResults()),
+      llvm::to_vector(ArrayRef<Operation *>{filterSlice, outputSlice})};
 }
 
 //===----------------------------------------------------------------------===//
@@ -3159,8 +3175,9 @@ WinogradInputTransformOp::getTiledImplementation(OpBuilder &builder,
       {sizes[getOutputNDim()], sizeH, sizeW, sizes[getOutputCDim()]});
   int64_t inputRank = getInputOperandRank();
   SmallVector<OpFoldResult> inputStrides(inputRank, oneAttr);
-  tiledOperands.emplace_back(builder.create<tensor::ExtractSliceOp>(
-      loc, getInput(), sliceOffsets, sliceSizes, inputStrides));
+  auto inputSlice = builder.create<tensor::ExtractSliceOp>(
+      loc, getInput(), sliceOffsets, sliceSizes, inputStrides);
+  tiledOperands.emplace_back(inputSlice);
 
   SmallVector<OpFoldResult> resultOffsets, resultSizes;
   if (failed(getResultTilePosition(builder, 1, offsets, sizes, resultOffsets,
@@ -3169,15 +3186,19 @@ WinogradInputTransformOp::getTiledImplementation(OpBuilder &builder,
 
   int64_t outputRank = getOutputOperandRank();
   SmallVector<OpFoldResult> outputStrides(outputRank, oneAttr);
-  tiledOperands.emplace_back(builder.create<tensor::ExtractSliceOp>(
-      loc, getOutput(), resultOffsets, resultSizes, outputStrides));
+  auto outputSlice = builder.create<tensor::ExtractSliceOp>(
+      loc, getOutput(), resultOffsets, resultSizes, outputStrides);
+  tiledOperands.emplace_back(outputSlice);
 
   SmallVector<Type> resultTypes;
   resultTypes.push_back(tiledOperands[1].getType());
   Operation *tiledOp =
       mlir::clone(builder, getOperation(), resultTypes, tiledOperands);
 
-  return TilingResult{{tiledOp}, SmallVector<Value>(tiledOp->getResults())};
+  return TilingResult{
+      {tiledOp},
+      SmallVector<Value>(tiledOp->getResults()),
+      llvm::to_vector(ArrayRef<Operation *>{inputSlice, outputSlice})};
 }
 
 //===----------------------------------------------------------------------===//
@@ -3321,8 +3342,9 @@ FailureOr<TilingResult> WinogradOutputTransformOp::getTiledImplementation(
                      sizes[getValueFDim()]});
   int64_t valueRank = getValueOperandRank();
   SmallVector<OpFoldResult> sliceStrides(valueRank, oneAttr);
-  tiledOperands.emplace_back(builder.create<tensor::ExtractSliceOp>(
-      loc, getValue(), sliceOffsets, sliceSizes, sliceStrides));
+  auto valueSlice = builder.create<tensor::ExtractSliceOp>(
+      loc, getValue(), sliceOffsets, sliceSizes, sliceStrides);
+  tiledOperands.emplace_back(valueSlice);
 
   SmallVector<OpFoldResult> resultOffsets, resultSizes;
   if (failed(getResultTilePosition(builder, 1, offsets, sizes, resultOffsets,
@@ -3331,15 +3353,19 @@ FailureOr<TilingResult> WinogradOutputTransformOp::getTiledImplementation(
 
   int64_t outputRank = getOutputOperandRank();
   SmallVector<OpFoldResult> strides(outputRank, oneAttr);
-  tiledOperands.emplace_back(builder.create<tensor::ExtractSliceOp>(
-      loc, getOutput(), resultOffsets, resultSizes, strides));
+  auto outputSlice = builder.create<tensor::ExtractSliceOp>(
+      loc, getOutput(), resultOffsets, resultSizes, strides);
+  tiledOperands.emplace_back(outputSlice);
 
   SmallVector<Type> resultTypes;
   resultTypes.push_back(tiledOperands[1].getType());
   Operation *tiledOp =
       mlir::clone(builder, getOperation(), resultTypes, tiledOperands);
 
-  return TilingResult{{tiledOp}, SmallVector<Value>(tiledOp->getResults())};
+  return TilingResult{
+      {tiledOp},
+      SmallVector<Value>(tiledOp->getResults()),
+      llvm::to_vector(ArrayRef<Operation *>{valueSlice, outputSlice})};
 }
 
 //===----------------------------------------------------------------------===//
