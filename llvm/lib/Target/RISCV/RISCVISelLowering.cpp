@@ -469,6 +469,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::IS_FPCLASS, MVT::f16, Custom);
       setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM}, MVT::f16,
                          Subtarget.hasStdExtZfa() ? Legal : Custom);
+      if (Subtarget.hasStdExtZfa())
+        setOperationAction(ISD::ConstantFP, MVT::f16, Custom);
     } else {
       setOperationAction(ZfhminZfbfminPromoteOps, MVT::f16, Promote);
       setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM}, MVT::f16, Promote);
@@ -533,6 +535,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FP16_TO_FP, MVT::f32, Custom);
 
     if (Subtarget.hasStdExtZfa()) {
+      setOperationAction(ISD::ConstantFP, MVT::f32, Custom);
       setOperationAction(ISD::FNEARBYINT, MVT::f32, Legal);
       setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM}, MVT::f32, Legal);
     } else {
@@ -550,6 +553,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::BITCAST, MVT::i64, Custom);
 
     if (Subtarget.hasStdExtZfa()) {
+      setOperationAction(ISD::ConstantFP, MVT::f64, Custom);
       setOperationAction(FPRndMode, MVT::f64, Legal);
       setOperationAction(ISD::FNEARBYINT, MVT::f64, Legal);
       setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM}, MVT::f64, Legal);
@@ -2238,17 +2242,11 @@ bool RISCVTargetLowering::isOffsetFoldingLegal(
   return false;
 }
 
-// Return one of the followings:
-// (1) `{0-31 value, false}` if FLI is available for Imm's type and FP value.
-// (2) `{0-31 value, true}` if Imm is negative and FLI is available for its
-// positive counterpart, which will be materialized from the first returned
-// element. The second returned element indicated that there should be a FNEG
-// followed.
-// (3) `{-1, _}` if there is no way FLI can be used to materialize Imm.
-std::pair<int, bool> RISCVTargetLowering::getLegalZfaFPImm(const APFloat &Imm,
-                                                           EVT VT) const {
+// Returns 0-31 if the fli instruction is available for the type and this is
+// legal FP immediate for the type. Returns -1 otherwise.
+int RISCVTargetLowering::getLegalZfaFPImm(const APFloat &Imm, EVT VT) const {
   if (!Subtarget.hasStdExtZfa())
-    return std::make_pair(-1, false);
+    return -1;
 
   bool IsSupportedVT = false;
   if (VT == MVT::f16) {
@@ -2261,14 +2259,9 @@ std::pair<int, bool> RISCVTargetLowering::getLegalZfaFPImm(const APFloat &Imm,
   }
 
   if (!IsSupportedVT)
-    return std::make_pair(-1, false);
+    return -1;
 
-  int Index = RISCVLoadFPImm::getLoadFPImm(Imm);
-  if (Index < 0 && Imm.isNegative())
-    // Try the combination of its positive counterpart + FNEG.
-    return std::make_pair(RISCVLoadFPImm::getLoadFPImm(-Imm), true);
-  else
-    return std::make_pair(Index, false);
+  return RISCVLoadFPImm::getLoadFPImm(Imm);
 }
 
 bool RISCVTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
@@ -2286,7 +2279,7 @@ bool RISCVTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
   if (!IsLegalVT)
     return false;
 
-  if (getLegalZfaFPImm(Imm, VT).first >= 0)
+  if (getLegalZfaFPImm(Imm, VT) >= 0)
     return true;
 
   // Cannot create a 64 bit floating-point immediate value for rv32.
@@ -5816,6 +5809,29 @@ static SDValue lowerConstant(SDValue Op, SelectionDAG &DAG,
   return SDValue();
 }
 
+SDValue RISCVTargetLowering::lowerConstantFP(SDValue Op,
+                                             SelectionDAG &DAG) const {
+  MVT VT = Op.getSimpleValueType();
+  const APFloat &Imm = cast<ConstantFPSDNode>(Op)->getValueAPF();
+
+  if (getLegalZfaFPImm(Imm, VT) >= 0)
+    return Op;
+
+  if (!Imm.isNegative())
+    return SDValue();
+
+  int Index = getLegalZfaFPImm(-Imm, VT);
+  if (Index < 0)
+    return SDValue();
+
+  // Emit an FLI+FNEG. We use a custom node to hide from constant folding.
+  SDLoc DL(Op);
+  SDValue Const =
+      DAG.getNode(RISCVISD::FLI, Op, VT,
+                  DAG.getTargetConstant(Index, DL, Subtarget.getXLenVT()));
+  return DAG.getNode(ISD::FNEG, Op, VT, Const);
+}
+
 static SDValue LowerATOMIC_FENCE(SDValue Op, SelectionDAG &DAG,
                                  const RISCVSubtarget &Subtarget) {
   SDLoc dl(Op);
@@ -6435,6 +6451,8 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return lowerGlobalTLSAddress(Op, DAG);
   case ISD::Constant:
     return lowerConstant(Op, DAG, Subtarget);
+  case ISD::ConstantFP:
+    return lowerConstantFP(Op, DAG);
   case ISD::SELECT:
     return lowerSELECT(Op, DAG);
   case ISD::BRCOND:
@@ -19978,6 +19996,7 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(FSGNJX)
   NODE_NAME_CASE(FMAX)
   NODE_NAME_CASE(FMIN)
+  NODE_NAME_CASE(FLI)
   NODE_NAME_CASE(READ_COUNTER_WIDE)
   NODE_NAME_CASE(BREV8)
   NODE_NAME_CASE(ORC_B)
