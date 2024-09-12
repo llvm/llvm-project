@@ -26164,9 +26164,8 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
           Subtarget.hasAVX10_2() && (CC == ISD::SETEQ || CC == ISD::SETNE);
 
       // AVX10.2 COMPARE supports only v2f64, v4f32 or v8f16
-      auto SVT = LHS.getSimpleValueType();
-      bool HasAVX10_2_COMX_Ty =
-          (SVT == MVT::v2f64) || (SVT == MVT::v4f32) || (SVT == MVT::v8f16);
+      // For BF type we need to fall back
+      bool HasAVX10_2_COMX_Ty = (LHS.getSimpleValueType() != MVT::v8bf16);
 
       auto ComiOpCode = IntrData->Opc0;
       auto isUnordered = (ComiOpCode == X86ISD::UCOMI);

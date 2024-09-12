@@ -1551,10 +1551,16 @@ multiclass avx10_com_ef_int<bits<8> Opc, X86VectorVTInfo _, SDNode OpNode,
                         [(set EFLAGS, (OpNode (_.VT _.RC:$src1), _.RC:$src2))]>,
                         EVEX, EVEX_V128, Sched<[sched]>, SIMD_EXC;
     let mayLoad = 1 in {
-        def rm_Int : AVX512<Opc, MRMSrcMem, (outs), (ins _.RC:$src1, _.ScalarMemOp:$src2),
-                            !strconcat(OpcodeStr, "\t{$src2, $src1|$src1, $src2}"),
-                            [(set EFLAGS, (OpNode (_.VT _.RC:$src1), (_.LdFrag addr:$src2)))]>,
-                            EVEX, EVEX_V128, Sched<[sched]>, SIMD_EXC;
+      def rm_Int : AVX512<Opc, MRMSrcMem, (outs), (ins _.RC:$src1, _.ScalarMemOp:$src2),
+                          !strconcat(OpcodeStr, "\t{$src2, $src1|$src1, $src2}"),
+                          [(set EFLAGS, (OpNode (_.VT _.RC:$src1), (_.LdFrag addr:$src2)))]>,
+                          EVEX, EVEX_V128, Sched<[sched]>, SIMD_EXC;
+    }
+    let Uses = [MXCSR], mayRaiseFPException = 0 in {
+      def rrb_Int : AVX512<Opc, MRMSrcReg, (outs), (ins _.RC:$src1, _.RC:$src2),
+                           !strconcat(OpcodeStr, "\t{{sae}, $src2, $src1|$src1, $src2, {sae}}"),
+                           []>,
+                           EVEX, EVEX_V128, EVEX_B, Sched<[sched]>, SIMD_EXC;
     }
   }
 }
