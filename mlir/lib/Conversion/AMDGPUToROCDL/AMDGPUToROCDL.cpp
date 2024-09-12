@@ -674,8 +674,7 @@ struct WMMAOpLowering : public ConvertOpToLLVMPattern<WMMAOp> {
     auto outType =
         typeConverter->convertType<VectorType>(op.getDestD().getType());
     if (!outType)
-      return rewriter.notifyMatchFailure(
-          op, "type conversion failed");
+      return rewriter.notifyMatchFailure(op, "type conversion failed");
 
     if (chipset.majorVersion != 11 && chipset.majorVersion != 12)
       return op->emitOpError("WMMA only supported on gfx11 and gfx12");
