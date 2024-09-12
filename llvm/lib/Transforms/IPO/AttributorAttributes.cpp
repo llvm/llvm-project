@@ -12562,7 +12562,7 @@ struct AAAddressSpaceImpl : public AAAddressSpace {
   AAAddressSpaceImpl(const IRPosition &IRP, Attributor &A)
       : AAAddressSpace(IRP, A) {}
 
-  int32_t getAddressSpace() const override {
+  uint32_t getAddressSpace() const override {
     assert(isValidState() && "the AA is invalid");
     return AssumedAddressSpace;
   }
@@ -12576,7 +12576,7 @@ struct AAAddressSpaceImpl : public AAAddressSpace {
   }
 
   ChangeStatus updateImpl(Attributor &A) override {
-    int32_t OldAddressSpace = AssumedAddressSpace;
+    uint32_t OldAddressSpace = AssumedAddressSpace;
     auto *AUO = A.getOrCreateAAFor<AAUnderlyingObjects>(getIRPosition(), this,
                                                         DepClassTy::REQUIRED);
     auto Pred = [&](Value &Obj) {
@@ -12597,16 +12597,13 @@ struct AAAddressSpaceImpl : public AAAddressSpace {
     Value *AssociatedValue = &getAssociatedValue();
     Value *OriginalValue = peelAddrspacecast(AssociatedValue);
     if (getAddressSpace() == NoAddressSpace ||
-        static_cast<uint32_t>(getAddressSpace()) ==
-            getAssociatedType()->getPointerAddressSpace())
+        getAddressSpace() == getAssociatedType()->getPointerAddressSpace())
       return ChangeStatus::UNCHANGED;
 
     PointerType *NewPtrTy =
-        PointerType::get(getAssociatedType()->getContext(),
-                         static_cast<uint32_t>(getAddressSpace()));
+        PointerType::get(getAssociatedType()->getContext(), getAddressSpace());
     bool UseOriginalValue =
-        OriginalValue->getType()->getPointerAddressSpace() ==
-        static_cast<uint32_t>(getAddressSpace());
+        OriginalValue->getType()->getPointerAddressSpace() == getAddressSpace();
 
     bool Changed = false;
 
@@ -12656,9 +12653,9 @@ struct AAAddressSpaceImpl : public AAAddressSpace {
   }
 
 private:
-  int32_t AssumedAddressSpace = NoAddressSpace;
+  uint32_t AssumedAddressSpace = NoAddressSpace;
 
-  bool takeAddressSpace(int32_t AS) {
+  bool takeAddressSpace(uint32_t AS) {
     if (AssumedAddressSpace == NoAddressSpace) {
       AssumedAddressSpace = AS;
       return true;
