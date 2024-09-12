@@ -222,7 +222,7 @@ TEST_F(MainLoopTest, PendingCallbackAfterLoopExited) {
     loop.AddPendingCallback([&](MainLoopBase &loop) {});
 }
 
-#ifdef LLVM_ON_UNIX
+#if defined(LLVM_ON_UNIX) && !defined(__AIX__)
 TEST_F(MainLoopTest, DetectsEOF) {
 
   PseudoTerminal term;
@@ -241,7 +241,9 @@ TEST_F(MainLoopTest, DetectsEOF) {
   ASSERT_TRUE(loop.Run().Success());
   ASSERT_EQ(1u, callback_count);
 }
+// #endif
 
+// #ifdef LLVM_ON_UNIX
 TEST_F(MainLoopTest, Signal) {
   MainLoop loop;
   Status error;
