@@ -6658,6 +6658,9 @@ def err_builtin_counted_by_ref_must_be_flex_array_member : Error<
 def err_builtin_counted_by_ref_cannot_leak_reference : Error<
   "value returned by '__builtin_counted_by_ref' cannot be assigned to a "
   "variable or used as a function argument">;
+def err_builtin_counted_by_ref_invalid_lhs_use : Error<
+  "value returned by '__builtin_counted_by_ref' cannot be used in "
+  "%select{array subscript|binary}0 expression">;
 
 def warn_builtin_counted_by_ref_has_side_effects : Warning<
   "'__builtin_counted_by_ref' argument has side-effects that will be discarded">,

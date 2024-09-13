@@ -23,6 +23,9 @@ void *test1(int size) {
   ref = (char *)(int *)(42 + &*__builtin_counted_by_ref(p->array)); // expected-error {{value returned by '__builtin_counted_by_ref' cannot be assigned to a variable or used as a function argument}}
   g(__builtin_counted_by_ref(p->array));              // expected-error {{value returned by '__builtin_counted_by_ref' cannot be assigned to a variable or used as a function argument}}
 
+  *(__builtin_counted_by_ref(p->array) + 4) = 37;     // expected-error {{value returned by '__builtin_counted_by_ref' cannot be used in binary expression}}
+  __builtin_counted_by_ref(p->array)[3] = 37;         // expected-error {{value returned by '__builtin_counted_by_ref' cannot be used in array subscript expression}}
+
   *__builtin_counted_by_ref(p->array) = size;         // ok
   *__builtin_counted_by_ref(&p->array[i]) = size;     // ok
 

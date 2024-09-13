@@ -9205,7 +9205,6 @@ Sema::CheckAssignmentConstraints(QualType LHSType, ExprResult &RHS,
     V.TraverseStmt(E);
     return V.TheCall;
   };
-
   if (auto *CE = FindBuiltinCountedByRefExpr(RHS.get()))
     Diag(CE->getExprLoc(),
          diag::err_builtin_counted_by_ref_cannot_leak_reference)
@@ -13758,6 +13757,42 @@ QualType Sema::CheckAssignmentOperands(Expr *LHSExpr, ExprResult &RHS,
     // Compound assignment "x += y"
     ConvTy = CheckAssignmentConstraints(Loc, LHSType, RHSType);
   }
+
+  // __builtin_counted_by_ref can't be used in a binary expression or array
+  // subscript on the LHS.
+  int DiagOption = -1;
+  auto FindBuiltinCountedByRefExpr = [&](Expr *E) {
+    struct BuiltinCountedByRefVisitor
+        : public RecursiveASTVisitor<BuiltinCountedByRefVisitor> {
+      CallExpr *TheCall = nullptr;
+      bool InvalidUse = false;
+      int Option = -1;
+
+      bool VisitCallExpr(CallExpr *E) {
+        if (FunctionDecl *FD = E->getDirectCallee();
+            FD && FD->getBuiltinID() == Builtin::BI__builtin_counted_by_ref)
+          TheCall = E;
+        return false;
+      }
+
+      bool VisitArraySubscriptExpr(ArraySubscriptExpr *E) {
+        InvalidUse = true;
+        Option = 0; // report 'array expression' in diagnostic.
+        return VisitStmt(E->getBase()) || VisitStmt(E->getIdx());
+      }
+      bool VisitBinaryOperator(BinaryOperator *E) {
+        InvalidUse = true;
+        Option = 1; // report 'binary expression' in diagnostic.
+        return VisitStmt(E->getLHS()) || VisitStmt(E->getRHS());
+      }
+    } V;
+    V.TraverseStmt(E);
+    DiagOption = V.Option;
+    return V.InvalidUse ? V.TheCall : nullptr;
+  };
+  if (auto *CE = FindBuiltinCountedByRefExpr(LHSExpr))
+    Diag(CE->getExprLoc(), diag::err_builtin_counted_by_ref_invalid_lhs_use)
+        << DiagOption << CE->getSourceRange();
 
   if (DiagnoseAssignmentResult(ConvTy, Loc, LHSType, RHSType, RHS.get(),
                                AssignmentAction::Assigning))
