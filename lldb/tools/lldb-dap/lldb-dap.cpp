@@ -1365,10 +1365,10 @@ void request_evaluate(const llvm::json::Object &request) {
   llvm::StringRef context = GetString(arguments, "context");
 
   if (context == "repl" &&
-      ((!expression.empty() &&
+      (expression.empty() ?
+       g_dap.last_nonempty_var_expression.empty() :
        g_dap.DetectExpressionContext(frame, expression) ==
-       ExpressionContext::Command) ||
-       (expression.empty() && g_dap.last_nonempty_var_expression.empty()))) {
+       ExpressionContext::Command)) {
     // Since the current expression is not for a variable, clear the
     // last_nonempty_var_expression field.
     g_dap.last_nonempty_var_expression.clear();
@@ -1382,7 +1382,7 @@ void request_evaluate(const llvm::json::Object &request) {
     EmplaceSafeString(body, "result", result);
     body.try_emplace("variablesReference", (int64_t)0);
   } else {
-    if (context != "hover") {
+    if (context == "repl") {
       // If the expression is empty and the last expression was for a
       // variable, set the expression to the previous expression (repeat the
       // evaluation); otherwise save the current non-empty expression for the
