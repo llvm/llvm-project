@@ -34,11 +34,29 @@
 #ifndef PTRACE_SETREGSET
 #define PTRACE_SETREGSET 0x4205
 #endif
+#ifndef PTRACE_GET_THREAD_AREA
+#define PTRACE_GET_THREAD_AREA  (PT_COMMAND_MAX+5)
+#endif
+#ifndef PTRACE_ARCH_PRCTL
+#define PTRACE_ARCH_PRCTL       (PT_COMMAND_MAX+6)
+#endif
+#ifndef ARCH_GET_FS
+#define ARCH_SET_GS 0x1001
+#define ARCH_SET_FS 0x1002
+#define ARCH_GET_FS 0x1003
+#define ARCH_GET_GS 0x1004
+#endif
+#ifndef PTRACE_PEEKMTETAGS
+#define PTRACE_PEEKMTETAGS      (PT_COMMAND_MAX+7)
+#endif
+#ifndef PTRACE_POKEMTETAGS
+#define PTRACE_POKEMTETAGS      (PT_COMMAND_MAX+8)
+#endif
 #ifndef PTRACE_GETVRREGS
-#define PTRACE_GETVRREGS        (PT_COMMAND_MAX+5)
+#define PTRACE_GETVRREGS        (PT_COMMAND_MAX+9)
 #endif
 #ifndef PTRACE_GETVSRREGS
-#define PTRACE_GETVSRREGS       (PT_COMMAND_MAX+6)
+#define PTRACE_GETVSRREGS       (PT_COMMAND_MAX+10)
 #endif
 
 #endif // liblldb_Host_aix_Ptrace_h_
