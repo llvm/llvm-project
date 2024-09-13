@@ -4187,8 +4187,8 @@ NVPTXScopes::NVPTXScopes(LLVMContext &C) : CTX(&C) {
 
 NVPTX::Scope NVPTXScopes::operator[](SyncScope::ID ID) const {
   if (Scopes.empty())
-    report_fatal_error("NVPTX Scopes must be initialized before calling "
-                       "NVPTXScopes::operator[]");
+    llvm_unreachable("NVPTX Scopes must be initialized before calling "
+                     "NVPTXScopes::operator[]");
 
   auto S = Scopes.find(ID);
   if (S == Scopes.end()) {
