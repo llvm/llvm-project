@@ -8,16 +8,15 @@ add_clang_library(clangDoc
   BitcodeReader.cpp
   BitcodeWriter.cpp
   ClangDoc.cpp
-  FileHelpersClangDoc.cpp
   Generators.cpp
   HTMLGenerator.cpp
-  HTMLMustacheGenerator.cpp      
   Mapper.cpp
   MDGenerator.cpp
   Representation.cpp
   Serialize.cpp
   YAMLGenerator.cpp
-        
+  HTMLMustacheGenerator.cpp
+
   DEPENDS
   omp_gen
   ClangDriverOptions
