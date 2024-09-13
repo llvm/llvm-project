@@ -49,6 +49,7 @@ public:
   void print(raw_ostream &OS) const override {
     OS << this->getName();
     OS << "(";
+    // TODO: This should call Pass->print(OS) because Pass may be a PM.
     interleave(Passes, OS, [&OS](auto *Pass) { OS << Pass->getName(); }, ",");
     OS << ")";
   }
@@ -57,6 +58,12 @@ public:
     dbgs() << "\n";
   }
 #endif
+  /// Similar to print() but prints one pass per line. Used for testing.
+  void printPipeline(raw_ostream &OS) const {
+    OS << this->getName() << "\n";
+    for (const auto &PassPtr : Passes)
+      PassPtr->printPipeline(OS);
+  }
 };
 
 class FunctionPassManager final
