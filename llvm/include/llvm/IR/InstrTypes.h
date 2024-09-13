@@ -58,19 +58,9 @@ class UnaryInstruction : public Instruction {
   constexpr static IntrusiveOperandsAllocMarker AllocMarker{1};
 
 protected:
-  UnaryInstruction(Type *Ty, unsigned iType, Value *V, BasicBlock::iterator IB)
-      : Instruction(Ty, iType, AllocMarker, IB) {
-    Op<0>() = V;
-  }
-  LLVM_DEPRECATED("Use BasicBlock::iterators for insertion instead",
-                  "BasicBlock::iterator")
   UnaryInstruction(Type *Ty, unsigned iType, Value *V,
-                   Instruction *IB = nullptr)
-      : Instruction(Ty, iType, AllocMarker, IB) {
-    Op<0>() = V;
-  }
-  UnaryInstruction(Type *Ty, unsigned iType, Value *V, BasicBlock *IAE)
-      : Instruction(Ty, iType, AllocMarker, IAE) {
+                   InsertPosition InsertBefore = nullptr)
+      : Instruction(Ty, iType, AllocMarker, InsertBefore) {
     Op<0>() = V;
   }
 
@@ -137,24 +127,10 @@ public:
     return Create(Instruction::OPC, V, Name);\
   }
 #include "llvm/IR/Instruction.def"
-#define HANDLE_UNARY_INST(N, OPC, CLASS) \
-  static UnaryOperator *Create##OPC(Value *V, const Twine &Name, \
-                                    BasicBlock *BB) {\
-    return Create(Instruction::OPC, V, Name, BB);\
-  }
-#include "llvm/IR/Instruction.def"
-#define HANDLE_UNARY_INST(N, OPC, CLASS) \
-  LLVM_DEPRECATED("Use BasicBlock::iterators for insertion instead", \
-    "BasicBlock::iterator") \
-  static UnaryOperator *Create##OPC(Value *V, const Twine &Name, \
-                                    Instruction *I) {\
-    return Create(Instruction::OPC, V, Name, I);\
-  }
-#include "llvm/IR/Instruction.def"
-#define HANDLE_UNARY_INST(N, OPC, CLASS) \
-  static UnaryOperator *Create##OPC(Value *V, const Twine &Name, \
-                                    BasicBlock::iterator It) {\
-    return Create(Instruction::OPC, V, Name, It);\
+#define HANDLE_UNARY_INST(N, OPC, CLASS)                                       \
+  static UnaryOperator *Create##OPC(Value *V, const Twine &Name,               \
+                                    InsertPosition InsertBefore = nullptr) {   \
+    return Create(Instruction::OPC, V, Name, InsertBefore);                    \
   }
 #include "llvm/IR/Instruction.def"
 
@@ -231,24 +207,10 @@ public:
     return Create(Instruction::OPC, V1, V2, Name);\
   }
 #include "llvm/IR/Instruction.def"
-#define HANDLE_BINARY_INST(N, OPC, CLASS) \
-  static BinaryOperator *Create##OPC(Value *V1, Value *V2, \
-                                     const Twine &Name, BasicBlock *BB) {\
-    return Create(Instruction::OPC, V1, V2, Name, BB);\
-  }
-#include "llvm/IR/Instruction.def"
-#define HANDLE_BINARY_INST(N, OPC, CLASS) \
-  LLVM_DEPRECATED("Use BasicBlock::iterators for insertion instead", \
-    "BasicBlock::iterator") \
-  static BinaryOperator *Create##OPC(Value *V1, Value *V2, \
-                                     const Twine &Name, Instruction *I) {\
-    return Create(Instruction::OPC, V1, V2, Name, I);\
-  }
-#include "llvm/IR/Instruction.def"
-#define HANDLE_BINARY_INST(N, OPC, CLASS) \
-  static BinaryOperator *Create##OPC(Value *V1, Value *V2, \
-                                     const Twine &Name, BasicBlock::iterator It) {\
-    return Create(Instruction::OPC, V1, V2, Name, It);\
+#define HANDLE_BINARY_INST(N, OPC, CLASS)                                      \
+  static BinaryOperator *Create##OPC(Value *V1, Value *V2, const Twine &Name,  \
+                                     InsertPosition InsertBefore) {  \
+    return Create(Instruction::OPC, V1, V2, Name, InsertBefore);               \
   }
 #include "llvm/IR/Instruction.def"
 
@@ -319,23 +281,11 @@ public:
     BO->setHasNoSignedWrap(true);
     return BO;
   }
+
   static BinaryOperator *CreateNSW(BinaryOps Opc, Value *V1, Value *V2,
-                                   const Twine &Name, BasicBlock *BB) {
-    BinaryOperator *BO = Create(Opc, V1, V2, Name, BB);
-    BO->setHasNoSignedWrap(true);
-    return BO;
-  }
-  LLVM_DEPRECATED("Use BasicBlock::iterators for insertion instead",
-                  "BasicBlock::iterator")
-  static BinaryOperator *CreateNSW(BinaryOps Opc, Value *V1, Value *V2,
-                                   const Twine &Name, Instruction *I) {
-    BinaryOperator *BO = Create(Opc, V1, V2, Name, I);
-    BO->setHasNoSignedWrap(true);
-    return BO;
-  }
-  static BinaryOperator *CreateNSW(BinaryOps Opc, Value *V1, Value *V2,
-                                   const Twine &Name, BasicBlock::iterator It) {
-    BinaryOperator *BO = Create(Opc, V1, V2, Name, It);
+                                   const Twine &Name,
+                                   InsertPosition InsertBefore) {
+    BinaryOperator *BO = Create(Opc, V1, V2, Name, InsertBefore);
     BO->setHasNoSignedWrap(true);
     return BO;
   }
@@ -346,23 +296,11 @@ public:
     BO->setHasNoUnsignedWrap(true);
     return BO;
   }
+
   static BinaryOperator *CreateNUW(BinaryOps Opc, Value *V1, Value *V2,
-                                   const Twine &Name, BasicBlock *BB) {
-    BinaryOperator *BO = Create(Opc, V1, V2, Name, BB);
-    BO->setHasNoUnsignedWrap(true);
-    return BO;
-  }
-  LLVM_DEPRECATED("Use BasicBlock::iterators for insertion instead",
-                  "BasicBlock::iterator")
-  static BinaryOperator *CreateNUW(BinaryOps Opc, Value *V1, Value *V2,
-                                   const Twine &Name, Instruction *I) {
-    BinaryOperator *BO = Create(Opc, V1, V2, Name, I);
-    BO->setHasNoUnsignedWrap(true);
-    return BO;
-  }
-  static BinaryOperator *CreateNUW(BinaryOps Opc, Value *V1, Value *V2,
-                                   const Twine &Name, BasicBlock::iterator It) {
-    BinaryOperator *BO = Create(Opc, V1, V2, Name, It);
+                                   const Twine &Name,
+                                   InsertPosition InsertBefore) {
+    BinaryOperator *BO = Create(Opc, V1, V2, Name, InsertBefore);
     BO->setHasNoUnsignedWrap(true);
     return BO;
   }
@@ -373,39 +311,20 @@ public:
     BO->setIsExact(true);
     return BO;
   }
-  static BinaryOperator *CreateExact(BinaryOps Opc, Value *V1, Value *V2,
-                                     const Twine &Name, BasicBlock *BB) {
-    BinaryOperator *BO = Create(Opc, V1, V2, Name, BB);
-    BO->setIsExact(true);
-    return BO;
-  }
-  LLVM_DEPRECATED("Use BasicBlock::iterators for insertion instead",
-                  "BasicBlock::iterator")
-  static BinaryOperator *CreateExact(BinaryOps Opc, Value *V1, Value *V2,
-                                     const Twine &Name, Instruction *I) {
-    BinaryOperator *BO = Create(Opc, V1, V2, Name, I);
-    BO->setIsExact(true);
-    return BO;
-  }
+
   static BinaryOperator *CreateExact(BinaryOps Opc, Value *V1, Value *V2,
                                      const Twine &Name,
-                                     BasicBlock::iterator It) {
-    BinaryOperator *BO = Create(Opc, V1, V2, Name, It);
+                                     InsertPosition InsertBefore) {
+    BinaryOperator *BO = Create(Opc, V1, V2, Name, InsertBefore);
     BO->setIsExact(true);
     return BO;
   }
 
   static inline BinaryOperator *
   CreateDisjoint(BinaryOps Opc, Value *V1, Value *V2, const Twine &Name = "");
-  static inline BinaryOperator *CreateDisjoint(BinaryOps Opc, Value *V1,
-                                               Value *V2, const Twine &Name,
-                                               BasicBlock *BB);
-  static inline BinaryOperator *CreateDisjoint(BinaryOps Opc, Value *V1,
-                                               Value *V2, const Twine &Name,
-                                               Instruction *I);
-  static inline BinaryOperator *CreateDisjoint(BinaryOps Opc, Value *V1,
-                                               Value *V2, const Twine &Name,
-                                               BasicBlock::iterator It);
+  static inline BinaryOperator *
+  CreateDisjoint(BinaryOps Opc, Value *V1, Value *V2, const Twine &Name,
+                 InsertPosition InsertBefore);
 
 #define DEFINE_HELPERS(OPC, NUWNSWEXACT)                                       \
   static BinaryOperator *Create##NUWNSWEXACT##OPC(Value *V1, Value *V2,        \
@@ -413,18 +332,9 @@ public:
     return Create##NUWNSWEXACT(Instruction::OPC, V1, V2, Name);                \
   }                                                                            \
   static BinaryOperator *Create##NUWNSWEXACT##OPC(                             \
-      Value *V1, Value *V2, const Twine &Name, BasicBlock *BB) {               \
-    return Create##NUWNSWEXACT(Instruction::OPC, V1, V2, Name, BB);            \
-  }                                                                            \
-  LLVM_DEPRECATED("Use BasicBlock::iterators for insertion instead",           \
-                  "BasicBlock::iterator")                                      \
-  static BinaryOperator *Create##NUWNSWEXACT##OPC(                             \
-      Value *V1, Value *V2, const Twine &Name, Instruction *I) {               \
-    return Create##NUWNSWEXACT(Instruction::OPC, V1, V2, Name, I);             \
-  }                                                                            \
-  static BinaryOperator *Create##NUWNSWEXACT##OPC(                             \
-      Value *V1, Value *V2, const Twine &Name, BasicBlock::iterator It) {      \
-    return Create##NUWNSWEXACT(Instruction::OPC, V1, V2, Name, It);            \
+      Value *V1, Value *V2, const Twine &Name,                                 \
+      InsertPosition InsertBefore = nullptr) {                                 \
+    return Create##NUWNSWEXACT(Instruction::OPC, V1, V2, Name, InsertBefore);  \
   }
 
   DEFINE_HELPERS(Add, NSW) // CreateNSWAdd
@@ -513,26 +423,11 @@ BinaryOperator *BinaryOperator::CreateDisjoint(BinaryOps Opc, Value *V1,
   cast<PossiblyDisjointInst>(BO)->setIsDisjoint(true);
   return BO;
 }
-BinaryOperator *BinaryOperator::CreateDisjoint(BinaryOps Opc, Value *V1,
-                                               Value *V2, const Twine &Name,
-                                               BasicBlock *BB) {
-  BinaryOperator *BO = Create(Opc, V1, V2, Name, BB);
-  cast<PossiblyDisjointInst>(BO)->setIsDisjoint(true);
-  return BO;
-}
-LLVM_DEPRECATED("Use BasicBlock::iterators for insertion instead",
-                "BasicBlock::iterator")
-BinaryOperator *BinaryOperator::CreateDisjoint(BinaryOps Opc, Value *V1,
-                                               Value *V2, const Twine &Name,
-                                               Instruction *I) {
-  BinaryOperator *BO = Create(Opc, V1, V2, Name, I);
-  cast<PossiblyDisjointInst>(BO)->setIsDisjoint(true);
-  return BO;
-}
-BinaryOperator *BinaryOperator::CreateDisjoint(BinaryOps Opc, Value *V1,
-                                               Value *V2, const Twine &Name,
-                                               BasicBlock::iterator It) {
-  BinaryOperator *BO = Create(Opc, V1, V2, Name, It);
+BinaryOperator *
+BinaryOperator::CreateDisjoint(BinaryOps Opc, Value *V1, Value *V2,
+                               const Twine &Name,
+                               InsertPosition InsertBefore) {
+  BinaryOperator *BO = Create(Opc, V1, V2, Name, InsertBefore);
   cast<PossiblyDisjointInst>(BO)->setIsDisjoint(true);
   return BO;
 }
