@@ -178,7 +178,8 @@ private:
   SMDiagnostic diagFromBlockStringDiag(const SMDiagnostic &Error,
                                        SMRange SourceRange);
 
-  void computeFunctionProperties(MachineFunction &MF);
+  void computeFunctionProperties(MachineFunction &MF,
+                                 const yaml::MachineFunction &YamlMF);
 
   void setupDebugValueTracking(MachineFunction &MF,
     PerFunctionMIParsingState &PFS, const yaml::MachineFunction &YamlMF);
@@ -373,7 +374,8 @@ static bool isSSA(const MachineFunction &MF) {
   return true;
 }
 
-void MIRParserImpl::computeFunctionProperties(MachineFunction &MF) {
+void MIRParserImpl::computeFunctionProperties(
+    MachineFunction &MF, const yaml::MachineFunction &YamlMF) {
   MachineFunctionProperties &Properties = MF.getProperties();
 
   bool HasPHI = false;
@@ -398,20 +400,25 @@ void MIRParserImpl::computeFunctionProperties(MachineFunction &MF) {
       }
     }
   }
-  if (!HasPHI)
+
+  // Don't overwrite NoPHIs if the input MIR explicitly set it to false
+  if (YamlMF.NoPHIs && !HasPHI)
     Properties.set(MachineFunctionProperties::Property::NoPHIs);
+
   MF.setHasInlineAsm(HasInlineAsm);
 
   if (HasTiedOps && AllTiedOpsRewritten)
     Properties.set(MachineFunctionProperties::Property::TiedOpsRewritten);
 
-  if (isSSA(MF))
+  // Don't overwrite IsSSA if the input MIR explicitly set it to false
+  if (YamlMF.IsSSA && isSSA(MF))
     Properties.set(MachineFunctionProperties::Property::IsSSA);
   else
     Properties.reset(MachineFunctionProperties::Property::IsSSA);
 
+  // Don't overwrite NoVRegs if the input MIR explicitly set it to false
   const MachineRegisterInfo &MRI = MF.getRegInfo();
-  if (MRI.getNumVirtRegs() == 0)
+  if (YamlMF.NoVRegs && MRI.getNumVirtRegs() == 0)
     Properties.set(MachineFunctionProperties::Property::NoVRegs);
 }
 
@@ -595,7 +602,7 @@ MIRParserImpl::initializeMachineFunction(const yaml::MachineFunction &YamlMF,
   MachineRegisterInfo &MRI = MF.getRegInfo();
   MRI.freezeReservedRegs();
 
-  computeFunctionProperties(MF);
+  computeFunctionProperties(MF, YamlMF);
 
   if (initializeCallSiteInfo(PFS, YamlMF))
     return false;

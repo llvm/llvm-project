@@ -1,0 +1,42 @@
+# RUN: llc -run-pass none -o - %s | FileCheck %s
+# Test that we can disable certain properties that are normally computed
+
+---
+# CHECK-LABEL: name: TestNoPhis
+# CHECK: noPhis: true
+# CHECK: ...
+name:            TestNoPhis
+...
+---
+# CHECK-LABEL: name: TestNoPhisOverride
+# CHECK: noPhis: false
+# CHECK: ...
+name:            TestNoPhisOverride
+noPhis: false
+...
+---
+# CHECK-LABEL: name: TestIsSSA
+# CHECK: isSSA: true
+# CHECK: ...
+name:            TestIsSSA
+...
+---
+# CHECK-LABEL: name: TestIsSSAOverride
+# CHECK: isSSA: false
+# CHECK: ...
+name:            TestIsSSAOverride
+isSSA: false
+...
+---
+# CHECK-LABEL: name: TestNoVRegs
+# CHECK: noVRegs: true
+# CHECK: ...
+name:            TestNoVRegs
+...
+---
+# CHECK-LABEL: name: TestNoVRegsOverride
+# CHECK: noVRegs: false
+# CHECK: ...
+name:            TestNoVRegsOverride
+noVRegs: false
+...

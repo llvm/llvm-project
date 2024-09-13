@@ -730,6 +730,11 @@ struct MachineFunction {
   bool TracksRegLiveness = false;
   bool HasWinCFI = false;
 
+  // Computed properties that should be overridable
+  bool NoPHIs = false;
+  bool IsSSA = false;
+  bool NoVRegs = false;
+
   bool CallsEHReturn = false;
   bool CallsUnwindInit = false;
   bool HasEHCatchret = false;
@@ -769,6 +774,12 @@ template <> struct MappingTraits<MachineFunction> {
     YamlIO.mapOptional("failedISel", MF.FailedISel, false);
     YamlIO.mapOptional("tracksRegLiveness", MF.TracksRegLiveness, false);
     YamlIO.mapOptional("hasWinCFI", MF.HasWinCFI, false);
+
+    // PHIs must be not be capitalized, since it will clash with the MIR opcode
+    // leading to false-positive FileCheck hits with CHECK-NOT
+    YamlIO.mapOptional("noPhis", MF.NoPHIs, true);
+    YamlIO.mapOptional("isSSA", MF.IsSSA, true);
+    YamlIO.mapOptional("noVRegs", MF.NoVRegs, true);
 
     YamlIO.mapOptional("callsEHReturn", MF.CallsEHReturn, false);
     YamlIO.mapOptional("callsUnwindInit", MF.CallsUnwindInit, false);
