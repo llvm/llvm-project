@@ -253,6 +253,15 @@ public:
                       mlir::ValueRange lenParams = {},
                       llvm::ArrayRef<mlir::NamedAttribute> attrs = {});
 
+  /// Create an LLVM stack save intrinsic op. Returns the saved stack pointer.
+  /// The stack address space is fetched from the data layout of the current
+  /// module.
+  mlir::Value genStackSave(mlir::Location loc);
+
+  /// Create an LLVM stack restore intrinsic op. stackPointer should be a value
+  /// previously returned from genStackSave.
+  void genStackRestore(mlir::Location loc, mlir::Value stackPointer);
+
   /// Create a global value.
   fir::GlobalOp createGlobal(mlir::Location loc, mlir::Type type,
                              llvm::StringRef name,
@@ -728,6 +737,9 @@ elideExtentsAlreadyInType(mlir::Type type, mlir::ValueRange shape);
 
 llvm::SmallVector<mlir::Value>
 elideLengthsAlreadyInType(mlir::Type type, mlir::ValueRange lenParams);
+
+/// Get the address space which should be used for allocas
+uint64_t getAllocaAddressSpace(mlir::DataLayout *dataLayout);
 
 } // namespace fir::factory
 
