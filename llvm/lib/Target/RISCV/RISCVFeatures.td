@@ -7,6 +7,132 @@
 //===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
+// LLVM specific features and extensions
+//===----------------------------------------------------------------------===//
+
+// Feature32Bit exists to mark CPUs that support RV32 to distinquish them from
+// tuning CPU names.
+def Feature32Bit
+    : SubtargetFeature<"32bit", "IsRV32", "true", "Implements RV32">;
+def Feature64Bit
+    : SubtargetFeature<"64bit", "IsRV64", "true", "Implements RV64">;
+def IsRV64 : Predicate<"Subtarget->is64Bit()">,
+             AssemblerPredicate<(all_of Feature64Bit),
+                                "RV64I Base Instruction Set">;
+def IsRV32 : Predicate<"!Subtarget->is64Bit()">,
+             AssemblerPredicate<(all_of (not Feature64Bit)),
+                                "RV32I Base Instruction Set">;
+
+defvar RV32 = DefaultMode;
+def RV64           : HwMode<"+64bit", [IsRV64]>;
+
+def FeatureRelax
+    : SubtargetFeature<"relax", "EnableLinkerRelax", "true",
+                       "Enable Linker relaxation.">;
+
+foreach i = {1-31} in
+  def FeatureReserveX#i :
+      SubtargetFeature<"reserve-x"#i, "UserReservedRegister[RISCV::X"#i#"]",
+                       "true", "Reserve X"#i>;
+
+def FeatureSaveRestore : SubtargetFeature<"save-restore", "EnableSaveRestore",
+                                          "true", "Enable save/restore.">;
+
+def FeatureNoTrailingSeqCstFence : SubtargetFeature<"no-trailing-seq-cst-fence",
+                                          "EnableTrailingSeqCstFence",
+                                          "false",
+                                          "Disable trailing fence for seq-cst store.">;
+
+def FeatureUnalignedScalarMem
+   : SubtargetFeature<"unaligned-scalar-mem", "EnableUnalignedScalarMem",
+                      "true", "Has reasonably performant unaligned scalar "
+                      "loads and stores">;
+
+def FeatureUnalignedVectorMem
+   : SubtargetFeature<"unaligned-vector-mem", "EnableUnalignedVectorMem",
+                      "true", "Has reasonably performant unaligned vector "
+                      "loads and stores">;
+
+def FeaturePostRAScheduler : SubtargetFeature<"use-postra-scheduler",
+    "UsePostRAScheduler", "true", "Schedule again after register allocation">;
+
+def FeaturePredictableSelectIsExpensive
+    : SubtargetFeature<"predictable-select-expensive", "PredictableSelectIsExpensive", "true",
+                       "Prefer likely predicted branches over selects">;
+
+def TuneOptimizedZeroStrideLoad
+   : SubtargetFeature<"optimized-zero-stride-load", "HasOptimizedZeroStrideLoad",
+                      "true", "Optimized (perform fewer memory operations)"
+                      "zero-stride vector load">;
+
+def Experimental
+   : SubtargetFeature<"experimental", "HasExperimental",
+                      "true", "Experimental intrinsics">;
+
+// Some vector hardware implementations do not process all VLEN bits in parallel
+// and instead split over multiple cycles. DLEN refers to the datapath width
+// that can be done in parallel.
+def TuneDLenFactor2
+   : SubtargetFeature<"dlen-factor-2", "DLenFactor2", "true",
+                      "Vector unit DLEN(data path width) is half of VLEN">;
+
+def TuneNoDefaultUnroll
+    : SubtargetFeature<"no-default-unroll", "EnableDefaultUnroll", "false",
+                       "Disable default unroll preference.">;
+
+// SiFive 7 is able to fuse integer ALU operations with a preceding branch
+// instruction.
+def TuneShortForwardBranchOpt
+    : SubtargetFeature<"short-forward-branch-opt", "HasShortForwardBranchOpt",
+                       "true", "Enable short forward branch optimization">;
+def HasShortForwardBranchOpt : Predicate<"Subtarget->hasShortForwardBranchOpt()">;
+def NoShortForwardBranchOpt : Predicate<"!Subtarget->hasShortForwardBranchOpt()">;
+
+// Some subtargets require a S2V transfer buffer to move scalars into vectors.
+// FIXME: Forming .vx/.vf/.wx/.wf can reduce register pressure.
+def TuneNoSinkSplatOperands
+    : SubtargetFeature<"no-sink-splat-operands", "SinkSplatOperands",
+                       "false", "Disable sink splat operands to enable .vx, .vf,"
+                       ".wx, and .wf instructions">;
+
+def TunePreferWInst
+    : SubtargetFeature<"prefer-w-inst", "PreferWInst", "true",
+                       "Prefer instructions with W suffix">;
+
+def TuneConditionalCompressedMoveFusion
+    : SubtargetFeature<"conditional-cmv-fusion", "HasConditionalCompressedMoveFusion",
+                       "true", "Enable branch+c.mv fusion">;
+def HasConditionalMoveFusion : Predicate<"Subtarget->hasConditionalMoveFusion()">;
+def NoConditionalMoveFusion  : Predicate<"!Subtarget->hasConditionalMoveFusion()">;
+
+def TuneSiFive7 : SubtargetFeature<"sifive7", "RISCVProcFamily", "SiFive7",
+                                   "SiFive 7-Series processors">;
+
+def TuneVentanaVeyron : SubtargetFeature<"ventana-veyron", "RISCVProcFamily", "VentanaVeyron",
+                                         "Ventana Veyron-Series processors">;
+
+// Assume that lock-free native-width atomics are available, even if the target
+// and operating system combination would not usually provide them. The user
+// is responsible for providing any necessary __sync implementations. Code
+// built with this feature is not ABI-compatible with code built without this
+// feature, if atomic variables are exposed across the ABI boundary.
+def FeatureForcedAtomics : SubtargetFeature<
+    "forced-atomics", "HasForcedAtomics", "true",
+    "Assume that lock-free native-width atomics are available">;
+def HasAtomicLdSt
+    : Predicate<"Subtarget->hasStdExtA() || Subtarget->hasForcedAtomics()">;
+
+def FeatureTaggedGlobals : SubtargetFeature<"tagged-globals",
+    "AllowTaggedGlobals",
+    "true", "Use an instruction sequence for taking the address of a global "
+    "that allows a memory tag in the upper address bits">;
+
+def FeatureForcedSWShadowStack : SubtargetFeature<
+    "forced-sw-shadow-stack", "HasForcedSWShadowStack", "true",
+    "Implement shadow stack with software.">;
+def HasForcedSWShadowStack : Predicate<"Subtarget->hasForcedSWShadowStack()">;
+
+//===----------------------------------------------------------------------===//
 // RISC-V subtarget features and instruction predicates.
 //===----------------------------------------------------------------------===//
 
@@ -104,7 +230,8 @@ def FeatureStdExtZiccif
 
 def FeatureStdExtZicclsm
     : RISCVExtension<"zicclsm", 1, 0,
-                     "'Zicclsm' (Main Memory Supports Misaligned Loads/Stores)">;
+                     "'Zicclsm' (Main Memory Supports Misaligned Loads/Stores)",
+                     [FeatureUnalignedScalarMem, FeatureUnalignedVectorMem]>;
 
 def FeatureStdExtZiccrse
     : RISCVExtension<"ziccrse", 1, 0,
@@ -1299,129 +1426,3 @@ def HasVendorXwchc
     : Predicate<"Subtarget->hasVendorXwchc()">,
       AssemblerPredicate<(all_of FeatureVendorXwchc),
                          "'Xwchc' (WCH/QingKe additional compressed opcodes)">;
-
-//===----------------------------------------------------------------------===//
-// LLVM specific features and extensions
-//===----------------------------------------------------------------------===//
-
-// Feature32Bit exists to mark CPUs that support RV32 to distinquish them from
-// tuning CPU names.
-def Feature32Bit
-    : SubtargetFeature<"32bit", "IsRV32", "true", "Implements RV32">;
-def Feature64Bit
-    : SubtargetFeature<"64bit", "IsRV64", "true", "Implements RV64">;
-def IsRV64 : Predicate<"Subtarget->is64Bit()">,
-             AssemblerPredicate<(all_of Feature64Bit),
-                                "RV64I Base Instruction Set">;
-def IsRV32 : Predicate<"!Subtarget->is64Bit()">,
-             AssemblerPredicate<(all_of (not Feature64Bit)),
-                                "RV32I Base Instruction Set">;
-
-defvar RV32 = DefaultMode;
-def RV64           : HwMode<"+64bit", [IsRV64]>;
-
-def FeatureRelax
-    : SubtargetFeature<"relax", "EnableLinkerRelax", "true",
-                       "Enable Linker relaxation.">;
-
-foreach i = {1-31} in
-  def FeatureReserveX#i :
-      SubtargetFeature<"reserve-x"#i, "UserReservedRegister[RISCV::X"#i#"]",
-                       "true", "Reserve X"#i>;
-
-def FeatureSaveRestore : SubtargetFeature<"save-restore", "EnableSaveRestore",
-                                          "true", "Enable save/restore.">;
-
-def FeatureNoTrailingSeqCstFence : SubtargetFeature<"no-trailing-seq-cst-fence",
-                                          "EnableTrailingSeqCstFence",
-                                          "false",
-                                          "Disable trailing fence for seq-cst store.">;
-
-def FeatureUnalignedScalarMem
-   : SubtargetFeature<"unaligned-scalar-mem", "EnableUnalignedScalarMem",
-                      "true", "Has reasonably performant unaligned scalar "
-                      "loads and stores">;
-
-def FeatureUnalignedVectorMem
-   : SubtargetFeature<"unaligned-vector-mem", "EnableUnalignedVectorMem",
-                      "true", "Has reasonably performant unaligned vector "
-                      "loads and stores">;
-
-def FeaturePostRAScheduler : SubtargetFeature<"use-postra-scheduler",
-    "UsePostRAScheduler", "true", "Schedule again after register allocation">;
-
-def FeaturePredictableSelectIsExpensive
-    : SubtargetFeature<"predictable-select-expensive", "PredictableSelectIsExpensive", "true",
-                       "Prefer likely predicted branches over selects">;
-
-def TuneOptimizedZeroStrideLoad
-   : SubtargetFeature<"optimized-zero-stride-load", "HasOptimizedZeroStrideLoad",
-                      "true", "Optimized (perform fewer memory operations)"
-                      "zero-stride vector load">;
-
-def Experimental
-   : SubtargetFeature<"experimental", "HasExperimental",
-                      "true", "Experimental intrinsics">;
-
-// Some vector hardware implementations do not process all VLEN bits in parallel
-// and instead split over multiple cycles. DLEN refers to the datapath width
-// that can be done in parallel.
-def TuneDLenFactor2
-   : SubtargetFeature<"dlen-factor-2", "DLenFactor2", "true",
-                      "Vector unit DLEN(data path width) is half of VLEN">;
-
-def TuneNoDefaultUnroll
-    : SubtargetFeature<"no-default-unroll", "EnableDefaultUnroll", "false",
-                       "Disable default unroll preference.">;
-
-// SiFive 7 is able to fuse integer ALU operations with a preceding branch
-// instruction.
-def TuneShortForwardBranchOpt
-    : SubtargetFeature<"short-forward-branch-opt", "HasShortForwardBranchOpt",
-                       "true", "Enable short forward branch optimization">;
-def HasShortForwardBranchOpt : Predicate<"Subtarget->hasShortForwardBranchOpt()">;
-def NoShortForwardBranchOpt : Predicate<"!Subtarget->hasShortForwardBranchOpt()">;
-
-// Some subtargets require a S2V transfer buffer to move scalars into vectors.
-// FIXME: Forming .vx/.vf/.wx/.wf can reduce register pressure.
-def TuneNoSinkSplatOperands
-    : SubtargetFeature<"no-sink-splat-operands", "SinkSplatOperands",
-                       "false", "Disable sink splat operands to enable .vx, .vf,"
-                       ".wx, and .wf instructions">;
-
-def TunePreferWInst
-    : SubtargetFeature<"prefer-w-inst", "PreferWInst", "true",
-                       "Prefer instructions with W suffix">;
-
-def TuneConditionalCompressedMoveFusion
-    : SubtargetFeature<"conditional-cmv-fusion", "HasConditionalCompressedMoveFusion",
-                       "true", "Enable branch+c.mv fusion">;
-def HasConditionalMoveFusion : Predicate<"Subtarget->hasConditionalMoveFusion()">;
-def NoConditionalMoveFusion  : Predicate<"!Subtarget->hasConditionalMoveFusion()">;
-
-def TuneSiFive7 : SubtargetFeature<"sifive7", "RISCVProcFamily", "SiFive7",
-                                   "SiFive 7-Series processors">;
-
-def TuneVentanaVeyron : SubtargetFeature<"ventana-veyron", "RISCVProcFamily", "VentanaVeyron",
-                                         "Ventana Veyron-Series processors">;
-
-// Assume that lock-free native-width atomics are available, even if the target
-// and operating system combination would not usually provide them. The user
-// is responsible for providing any necessary __sync implementations. Code
-// built with this feature is not ABI-compatible with code built without this
-// feature, if atomic variables are exposed across the ABI boundary.
-def FeatureForcedAtomics : SubtargetFeature<
-    "forced-atomics", "HasForcedAtomics", "true",
-    "Assume that lock-free native-width atomics are available">;
-def HasAtomicLdSt
-    : Predicate<"Subtarget->hasStdExtA() || Subtarget->hasForcedAtomics()">;
-
-def FeatureTaggedGlobals : SubtargetFeature<"tagged-globals",
-    "AllowTaggedGlobals",
-    "true", "Use an instruction sequence for taking the address of a global "
-    "that allows a memory tag in the upper address bits">;
-
-def FeatureForcedSWShadowStack : SubtargetFeature<
-    "forced-sw-shadow-stack", "HasForcedSWShadowStack", "true",
-    "Implement shadow stack with software.">;
-def HasForcedSWShadowStack : Predicate<"Subtarget->hasForcedSWShadowStack()">;
