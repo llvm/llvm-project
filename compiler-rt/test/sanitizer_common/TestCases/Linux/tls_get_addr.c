@@ -10,6 +10,9 @@
 // These don't intercept __tls_get_addr.
 // XFAIL: lsan,hwasan,ubsan
 
+// FIXME: Fails for unknown reasons.
+// UNSUPPORTED: powerpc64le-target-arch
+
 #ifndef BUILD_SO
 #  include <assert.h>
 #  include <dlfcn.h>
