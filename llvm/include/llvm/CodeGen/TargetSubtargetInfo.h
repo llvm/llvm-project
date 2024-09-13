@@ -338,6 +338,11 @@ public:
   /// the pass, with architecture specific overrides providing the information
   /// where they are implemented.
   virtual bool supportsInitUndef() const { return false; }
+
+  /// For \p F, call \p Body with the name and value of each launch bound.
+  virtual void forEachLaunchBound(
+      const Function &F,
+      std::function<void(StringRef Name, unsigned Value)> Body) const {}
 };
 
 } // end namespace llvm

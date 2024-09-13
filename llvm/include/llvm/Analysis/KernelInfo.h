@@ -18,9 +18,15 @@
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {
+
+class TargetMachine;
+
 class KernelInfoPrinter : public PassInfoMixin<KernelInfoPrinter> {
+private:
+  TargetMachine *TM;
+
 public:
-  explicit KernelInfoPrinter() {}
+  explicit KernelInfoPrinter(TargetMachine *TM) : TM(TM) {}
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 

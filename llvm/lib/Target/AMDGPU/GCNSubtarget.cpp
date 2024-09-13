@@ -711,6 +711,22 @@ unsigned GCNSubtarget::getNSAThreshold(const MachineFunction &MF) const {
   return NSAThreshold;
 }
 
+void GCNSubtarget::forEachLaunchBound(
+    const Function &F,
+    std::function<void(StringRef Name, unsigned Value)> Body) const {
+  auto AmdgpuMaxNumWorkgroups = getMaxNumWorkGroups(F);
+  Body("AmdgpuMaxNumWorkgroupsX", AmdgpuMaxNumWorkgroups[0]);
+  Body("AmdgpuMaxNumWorkgroupsY", AmdgpuMaxNumWorkgroups[1]);
+  Body("AmdgpuMaxNumWorkgroupsZ", AmdgpuMaxNumWorkgroups[2]);
+  auto AmdgpuFlatWorkGroupSize = getFlatWorkGroupSizes(F);
+  Body("AmdgpuFlatWorkGroupSizeMin", AmdgpuFlatWorkGroupSize.first);
+  Body("AmdgpuFlatWorkGroupSizeMax", AmdgpuFlatWorkGroupSize.second);
+  auto AmdgpuWavesPerEU = getWavesPerEU(F);
+  Body("AmdgpuWavesPerEUMin", AmdgpuWavesPerEU.first);
+  Body("AmdgpuWavesPerEUMax", AmdgpuWavesPerEU.second);
+  // TODO: Any others we should add?
+}
+
 GCNUserSGPRUsageInfo::GCNUserSGPRUsageInfo(const Function &F,
                                            const GCNSubtarget &ST)
     : ST(ST) {

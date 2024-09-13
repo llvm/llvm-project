@@ -1587,6 +1587,10 @@ public:
     // the nop.
     return true;
   }
+
+  virtual void forEachLaunchBound(
+      const Function &F,
+      std::function<void(StringRef Name, unsigned Value)> Body) const override;
 };
 
 class GCNUserSGPRUsageInfo {

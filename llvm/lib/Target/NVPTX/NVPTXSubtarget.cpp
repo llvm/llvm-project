@@ -12,6 +12,7 @@
 
 #include "NVPTXSubtarget.h"
 #include "NVPTXTargetMachine.h"
+#include "NVPTXUtilities.h"
 
 using namespace llvm;
 
@@ -68,4 +69,19 @@ bool NVPTXSubtarget::hasImageHandles() const {
 
 bool NVPTXSubtarget::allowFP16Math() const {
   return hasFP16Math() && NoF16Math == false;
+}
+
+void NVPTXSubtarget::forEachLaunchBound(
+    const Function &F,
+    std::function<void(StringRef Name, unsigned Value)> Body) const {
+  unsigned Val;
+  if (getMaxClusterRank(F, Val))
+    Body("Maxclusterrank", Val);
+  if (auto Val = getMaxNTIDx(F))
+    Body("Maxntidx", *Val);
+  if (auto Val = getMaxNTIDy(F))
+    Body("Maxntidy", *Val);
+  if (auto Val = getMaxNTIDz(F))
+    Body("Maxntidz", *Val);
+  // TODO: Any others we should add?
 }
