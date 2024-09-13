@@ -442,7 +442,7 @@ TEST(Error, StringError) {
   raw_string_ostream S(Msg);
   logAllUnhandledErrors(
       make_error<StringError>("foo" + Twine(42), inconvertibleErrorCode()), S);
-  EXPECT_EQ(S.str(), "foo42\n") << "Unexpected StringError log result";
+  EXPECT_EQ(Msg, "foo42\n") << "Unexpected StringError log result";
 
   auto EC =
     errorToErrorCode(make_error<StringError>("", errc::invalid_argument));
@@ -457,14 +457,14 @@ TEST(Error, createStringError) {
   raw_string_ostream S(Msg);
   logAllUnhandledErrors(createStringError(EC, "foo%s%d0x%" PRIx8, Bar, 1, 0xff),
                         S);
-  EXPECT_EQ(S.str(), "foobar10xff\n")
-    << "Unexpected createStringError() log result";
+  EXPECT_EQ(Msg, "foobar10xff\n")
+      << "Unexpected createStringError() log result";
 
   S.flush();
   Msg.clear();
   logAllUnhandledErrors(createStringError(EC, Bar), S);
-  EXPECT_EQ(S.str(), "bar\n")
-    << "Unexpected createStringError() (overloaded) log result";
+  EXPECT_EQ(Msg, "bar\n")
+      << "Unexpected createStringError() (overloaded) log result";
 
   S.flush();
   Msg.clear();
@@ -769,7 +769,7 @@ TEST(Error, Stream) {
     std::string Buf;
     llvm::raw_string_ostream S(Buf);
     S << OK;
-    EXPECT_EQ("success", S.str());
+    EXPECT_EQ("success", Buf);
     consumeError(std::move(OK));
   }
   {
@@ -777,7 +777,7 @@ TEST(Error, Stream) {
     std::string Buf;
     llvm::raw_string_ostream S(Buf);
     S << E1;
-    EXPECT_EQ("CustomError {0}", S.str());
+    EXPECT_EQ("CustomError {0}", Buf);
     consumeError(std::move(E1));
   }
 }
