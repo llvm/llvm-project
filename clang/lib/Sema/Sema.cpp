@@ -22,6 +22,7 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/PrettyDeclStackTrace.h"
 #include "clang/AST/StmtCXX.h"
+#include "clang/AST/TypeOrdering.h"
 #include "clang/Basic/DarwinSDKInfo.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/PartialDiagnostic.h"
@@ -2864,6 +2865,7 @@ bool FunctionEffectDiff::shouldDiagnoseConversion(
       // matching is better.
       return true;
     }
+    llvm_unreachable("Unhandled FunctionEffectDiff::Kind enum");
   case FunctionEffect::Kind::Blocking:
   case FunctionEffect::Kind::Allocating:
     return false;
@@ -2889,6 +2891,7 @@ bool FunctionEffectDiff::shouldDiagnoseRedeclaration(
       // All these forms of mismatches are diagnosed.
       return true;
     }
+    llvm_unreachable("Unhandled FunctionEffectDiff::Kind enum");
   case FunctionEffect::Kind::Blocking:
   case FunctionEffect::Kind::Allocating:
     return false;
@@ -2920,6 +2923,7 @@ FunctionEffectDiff::shouldDiagnoseMethodOverride(
     case Kind::ConditionMismatch:
       return OverrideResult::Warn;
     }
+    llvm_unreachable("Unhandled FunctionEffectDiff::Kind enum");
 
   case FunctionEffect::Kind::Blocking:
   case FunctionEffect::Kind::Allocating:

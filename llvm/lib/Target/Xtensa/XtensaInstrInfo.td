@@ -138,7 +138,8 @@ let Defs = [SAR] in {
 }
 
 def EXTUI : RRR_Inst<0x00, 0x04, 0x00, (outs AR:$r), (ins AR:$t, uimm5:$imm1, imm1_16:$imm2),
-                    "extui\t$r, $t, $imm1, $imm2", []> {
+                    "extui\t$r, $t, $imm1, $imm2",
+                    [(set AR:$r, (Xtensa_extui AR:$t, uimm5:$imm1, imm1_16:$imm2))]> {
   bits<5> imm1;
   bits<4> imm2;
 

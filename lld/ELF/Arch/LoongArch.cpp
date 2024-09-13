@@ -349,7 +349,8 @@ void LoongArch::writePltHeader(uint8_t *buf) const {
   write32le(buf + 0, insn(PCADDU12I, R_T2, hi20(offset), 0));
   write32le(buf + 4, insn(sub, R_T1, R_T1, R_T3));
   write32le(buf + 8, insn(ld, R_T3, R_T2, lo12(offset)));
-  write32le(buf + 12, insn(addi, R_T1, R_T1, lo12(-target->pltHeaderSize - 12)));
+  write32le(buf + 12,
+            insn(addi, R_T1, R_T1, lo12(-ctx.target->pltHeaderSize - 12)));
   write32le(buf + 16, insn(addi, R_T0, R_T2, lo12(offset)));
   write32le(buf + 20, insn(srli, R_T1, R_T1, config->is64 ? 1 : 2));
   write32le(buf + 24, insn(ld, R_T0, R_T0, config->wordsize));
@@ -374,8 +375,8 @@ void LoongArch::writePlt(uint8_t *buf, const Symbol &sym,
 }
 
 RelType LoongArch::getDynRel(RelType type) const {
-  return type == target->symbolicRel ? type
-                                     : static_cast<RelType>(R_LARCH_NONE);
+  return type == ctx.target->symbolicRel ? type
+                                         : static_cast<RelType>(R_LARCH_NONE);
 }
 
 RelExpr LoongArch::getRelExpr(const RelType type, const Symbol &s,

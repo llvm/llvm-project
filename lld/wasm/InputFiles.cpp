@@ -392,7 +392,7 @@ void ObjFile::parseLazy() {
                     << wasmObj.get() << "\n");
   for (const SymbolRef &sym : wasmObj->symbols()) {
     const WasmSymbol &wasmSym = wasmObj->getWasmSymbol(sym.getRawDataRefImpl());
-    if (!wasmSym.isDefined())
+    if (wasmSym.isUndefined() || wasmSym.isBindingLocal())
       continue;
     symtab->addLazy(wasmSym.Info.Name, this);
     // addLazy() may trigger this->extract() if an existing symbol is an

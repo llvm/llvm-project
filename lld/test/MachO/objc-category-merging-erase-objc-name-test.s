@@ -5,7 +5,7 @@
 ; delete the 'MyTestProtocol' name
 
 ; RUN: llvm-mc -filetype=obj -triple=arm64-apple-macos -o %T/erase-objc-name.o %s
-; RUN: %lld -arch arm64 -dylib -o %T/erase-objc-name.dylib %T/erase-objc-name.o -objc_category_merging
+; RUN: %lld -no_objc_relative_method_lists -arch arm64 -dylib -o %T/erase-objc-name.dylib %T/erase-objc-name.o -objc_category_merging
 ; RUN: llvm-objdump --objc-meta-data --macho %T/erase-objc-name.dylib | FileCheck %s --check-prefixes=MERGE_CATS
 
 ; === Check merge categories enabled ===

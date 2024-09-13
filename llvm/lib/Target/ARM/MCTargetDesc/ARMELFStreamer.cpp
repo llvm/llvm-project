@@ -992,6 +992,10 @@ void ARMTargetELFStreamer::emitFPUDefaultAttributes() {
   // uses the FP_ARMV8_D16 build attribute.
   case ARM::FK_FPV5_SP_D16:
   case ARM::FK_FPV5_D16:
+  // FPv5 and FP-ARMv8 have the same instructions, so are modeled as one
+  // FPU, but there are two different names for it depending on the CPU.
+  case ARM::FK_FP_ARMV8_FULLFP16_SP_D16:
+  case ARM::FK_FP_ARMV8_FULLFP16_D16:
     S.setAttributeItem(ARMBuildAttrs::FP_arch, ARMBuildAttrs::AllowFPARMv8B,
                        /* OverwriteExisting= */ false);
     break;

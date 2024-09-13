@@ -62,6 +62,9 @@ enum NodeType : unsigned {
   BFI,
   PRMT,
   DYNAMIC_STACKALLOC,
+  BrxStart,
+  BrxItem,
+  BrxEnd,
   Dummy,
 
   LoadV2 = ISD::FIRST_TARGET_MEMORY_OPCODE,
@@ -580,6 +583,11 @@ public:
     return true;
   }
 
+  // The default is the same as pointer type, but brx.idx only accepts i32
+  MVT getJumpTableRegTy(const DataLayout &) const override { return MVT::i32; }
+
+  unsigned getJumpTableEncoding() const override;
+
   bool enableAggressiveFMAFusion(EVT VT) const override { return true; }
 
   // The default is to transform llvm.ctlz(x, false) (where false indicates that
@@ -636,6 +644,8 @@ private:
   SDValue LowerShiftLeftParts(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerSelect(SDValue Op, SelectionDAG &DAG) const;
+
+  SDValue LowerBR_JT(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerVAARG(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVASTART(SDValue Op, SelectionDAG &DAG) const;

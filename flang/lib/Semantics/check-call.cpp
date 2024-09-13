@@ -56,6 +56,10 @@ static void CheckImplicitInterfaceArg(evaluate::ActualArgument &arg,
         "%VAL argument must be a scalar numeric or logical expression"_err_en_US);
   }
   if (const auto *expr{arg.UnwrapExpr()}) {
+    if (const Symbol * base{GetFirstSymbol(*expr)};
+        base && IsFunctionResult(*base)) {
+      context.NoteDefinedSymbol(*base);
+    }
     if (IsBOZLiteral(*expr)) {
       messages.Say("BOZ argument requires an explicit interface"_err_en_US);
     } else if (evaluate::IsNullPointer(*expr)) {
@@ -78,10 +82,6 @@ static void CheckImplicitInterfaceArg(evaluate::ActualArgument &arg,
       if (symbol.attrs().test(Attr::VOLATILE)) {
         messages.Say(
             "VOLATILE argument requires an explicit interface"_err_en_US);
-      }
-      if (const Symbol & base{named->GetFirstSymbol()};
-          IsFunctionResult(base)) {
-        context.NoteDefinedSymbol(base);
       }
     } else if (auto argChars{characteristics::DummyArgument::FromActual(
                    "actual argument", *expr, context.foldingContext(),
@@ -1645,7 +1645,8 @@ static void CheckPresent(evaluate::ActualArguments &arguments,
       } else {
         symbol = arg->GetAssumedTypeDummy();
       }
-      if (!symbol || !symbol->attrs().test(semantics::Attr::OPTIONAL)) {
+      if (!symbol ||
+          !symbol->GetUltimate().attrs().test(semantics::Attr::OPTIONAL)) {
         messages.Say(arg ? arg->sourceLocation() : messages.at(),
             "Argument of PRESENT() must be the name of a whole OPTIONAL dummy argument"_err_en_US);
       }

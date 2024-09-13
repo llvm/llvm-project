@@ -310,8 +310,9 @@ bool llvm::isKnownNonEqual(const Value *V1, const Value *V2,
                            const DataLayout &DL, AssumptionCache *AC,
                            const Instruction *CxtI, const DominatorTree *DT,
                            bool UseInstrInfo) {
-  assert(V1->getType() == V2->getType() &&
-         "Testing equality of non-equal types!");
+  // We don't support looking through casts.
+  if (V1 == V2 || V1->getType() != V2->getType())
+    return false;
   auto *FVTy = dyn_cast<FixedVectorType>(V1->getType());
   APInt DemandedElts =
       FVTy ? APInt::getAllOnes(FVTy->getNumElements()) : APInt(1, 1);
@@ -612,7 +613,7 @@ static bool isKnownNonZeroFromAssume(const Value *V, const SimplifyQuery &Q) {
     CmpInst::Predicate Pred;
     auto m_V = m_CombineOr(m_Specific(V), m_PtrToInt(m_Specific(V)));
     if (!match(I->getArgOperand(0), m_c_ICmp(Pred, m_V, m_Value(RHS))))
-      return false;
+      continue;
 
     if (cmpExcludesZero(Pred, RHS) && isValidAssumeForContext(I, Q.CxtI, Q.DT))
       return true;
@@ -1399,13 +1400,11 @@ static void computeKnownBitsFromOperator(const Operator *I,
 
       // Note that inbounds does *not* guarantee nsw for the addition, as only
       // the offset is signed, while the base address is unsigned.
-      Known = KnownBits::computeForAddSub(
-          /*Add=*/true, /*NSW=*/false, /* NUW=*/false, Known, IndexBits);
+      Known = KnownBits::add(Known, IndexBits);
     }
     if (!Known.isUnknown() && !AccConstIndices.isZero()) {
       KnownBits Index = KnownBits::makeConstant(AccConstIndices);
-      Known = KnownBits::computeForAddSub(
-          /*Add=*/true, /*NSW=*/false, /* NUW=*/false, Known, Index);
+      Known = KnownBits::add(Known, Index);
     }
     break;
   }
@@ -1802,9 +1801,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
         Known = computeKnownBitsForHorizontalOperation(
             I, DemandedElts, Depth, Q,
             [](const KnownBits &KnownLHS, const KnownBits &KnownRHS) {
-              return KnownBits::computeForAddSub(/*Add=*/true, /*NSW=*/false,
-                                                 /*NUW=*/false, KnownLHS,
-                                                 KnownRHS);
+              return KnownBits::add(KnownLHS, KnownRHS);
             });
         break;
       }
@@ -1821,9 +1818,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
         Known = computeKnownBitsForHorizontalOperation(
             I, DemandedElts, Depth, Q,
             [](const KnownBits &KnownLHS, const KnownBits &KnownRHS) {
-              return KnownBits::computeForAddSub(/*Add=*/false, /*NSW=*/false,
-                                                 /*NUW=*/false, KnownLHS,
-                                                 KnownRHS);
+              return KnownBits::sub(KnownLHS, KnownRHS);
             });
         break;
       }
@@ -2212,6 +2207,22 @@ static bool isPowerOfTwoRecurrence(const PHINode *PN, bool OrZero,
   }
 }
 
+/// Return true if we can infer that \p V is known to be a power of 2 from
+/// dominating condition \p Cond (e.g., ctpop(V) == 1).
+static bool isImpliedToBeAPowerOfTwoFromCond(const Value *V, bool OrZero,
+                                             const Value *Cond) {
+  ICmpInst::Predicate Pred;
+  const APInt *RHSC;
+  if (!match(Cond, m_ICmp(Pred, m_Intrinsic<Intrinsic::ctpop>(m_Specific(V)),
+                          m_APInt(RHSC))))
+    return false;
+  // ctpop(V) u< 2
+  if (OrZero && Pred == ICmpInst::ICMP_ULT && *RHSC == 2)
+    return true;
+  // ctpop(V) == 1
+  return Pred == ICmpInst::ICMP_EQ && *RHSC == 1;
+}
+
 /// Return true if the given value is known to have exactly one
 /// bit set when defined. For vectors return true if every element is known to
 /// be a power of two when defined. Supports values with integer or pointer
@@ -2226,6 +2237,18 @@ bool isKnownToBeAPowerOfTwo(const Value *V, bool OrZero, unsigned Depth,
   // i1 is by definition a power of 2 or zero.
   if (OrZero && V->getType()->getScalarSizeInBits() == 1)
     return true;
+
+  // Try to infer from assumptions.
+  if (Q.AC && Q.CxtI) {
+    for (auto &AssumeVH : Q.AC->assumptionsFor(V)) {
+      if (!AssumeVH)
+        continue;
+      CallInst *I = cast<CallInst>(AssumeVH);
+      if (isImpliedToBeAPowerOfTwoFromCond(V, OrZero, I->getArgOperand(0)) &&
+          isValidAssumeForContext(I, Q.CxtI, Q.DT))
+        return true;
+    }
+  }
 
   auto *I = dyn_cast<Instruction>(V);
   if (!I)
@@ -2642,8 +2665,7 @@ static bool isNonZeroAdd(const APInt &DemandedElts, unsigned Depth,
       isKnownToBeAPowerOfTwo(X, /*OrZero*/ false, Depth, Q))
     return true;
 
-  return KnownBits::computeForAddSub(/*Add=*/true, NSW, NUW, XKnown, YKnown)
-      .isNonZero();
+  return KnownBits::add(XKnown, YKnown, NSW, NUW).isNonZero();
 }
 
 static bool isNonZeroSub(const APInt &DemandedElts, unsigned Depth,
@@ -4138,6 +4160,30 @@ Intrinsic::ID llvm::getIntrinsicForCallSite(const CallBase &CB,
   case LibFunc_tanf:
   case LibFunc_tanl:
     return Intrinsic::tan;
+  case LibFunc_asin:
+  case LibFunc_asinf:
+  case LibFunc_asinl:
+    return Intrinsic::asin;
+  case LibFunc_acos:
+  case LibFunc_acosf:
+  case LibFunc_acosl:
+    return Intrinsic::acos;
+  case LibFunc_atan:
+  case LibFunc_atanf:
+  case LibFunc_atanl:
+    return Intrinsic::atan;
+  case LibFunc_sinh:
+  case LibFunc_sinhf:
+  case LibFunc_sinhl:
+    return Intrinsic::sinh;
+  case LibFunc_cosh:
+  case LibFunc_coshf:
+  case LibFunc_coshl:
+    return Intrinsic::cosh;
+  case LibFunc_tanh:
+  case LibFunc_tanhf:
+  case LibFunc_tanhl:
+    return Intrinsic::tanh;
   case LibFunc_exp:
   case LibFunc_expf:
   case LibFunc_expl:
@@ -5927,6 +5973,61 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
 
     break;
   }
+  case Instruction::BitCast: {
+    const Value *Src;
+    if (!match(Op, m_ElementWiseBitCast(m_Value(Src))) ||
+        !Src->getType()->isIntOrIntVectorTy())
+      break;
+
+    const Type *Ty = Op->getType()->getScalarType();
+    KnownBits Bits(Ty->getScalarSizeInBits());
+    computeKnownBits(Src, DemandedElts, Bits, Depth + 1, Q);
+
+    // Transfer information from the sign bit.
+    if (Bits.isNonNegative())
+      Known.signBitMustBeZero();
+    else if (Bits.isNegative())
+      Known.signBitMustBeOne();
+
+    if (Ty->isIEEE()) {
+      // IEEE floats are NaN when all bits of the exponent plus at least one of
+      // the fraction bits are 1. This means:
+      //   - If we assume unknown bits are 0 and the value is NaN, it will
+      //     always be NaN
+      //   - If we assume unknown bits are 1 and the value is not NaN, it can
+      //     never be NaN
+      if (APFloat(Ty->getFltSemantics(), Bits.One).isNaN())
+        Known.KnownFPClasses = fcNan;
+      else if (!APFloat(Ty->getFltSemantics(), ~Bits.Zero).isNaN())
+        Known.knownNot(fcNan);
+
+      // Build KnownBits representing Inf and check if it must be equal or
+      // unequal to this value.
+      auto InfKB = KnownBits::makeConstant(
+          APFloat::getInf(Ty->getFltSemantics()).bitcastToAPInt());
+      InfKB.Zero.clearSignBit();
+      if (const auto InfResult = KnownBits::eq(Bits, InfKB)) {
+        assert(!InfResult.value());
+        Known.knownNot(fcInf);
+      } else if (Bits == InfKB) {
+        Known.KnownFPClasses = fcInf;
+      }
+
+      // Build KnownBits representing Zero and check if it must be equal or
+      // unequal to this value.
+      auto ZeroKB = KnownBits::makeConstant(
+          APFloat::getZero(Ty->getFltSemantics()).bitcastToAPInt());
+      ZeroKB.Zero.clearSignBit();
+      if (const auto ZeroResult = KnownBits::eq(Bits, ZeroKB)) {
+        assert(!ZeroResult.value());
+        Known.knownNot(fcZero);
+      } else if (Bits == ZeroKB) {
+        Known.KnownFPClasses = fcZero;
+      }
+    }
+
+    break;
+  }
   default:
     break;
   }
@@ -6042,8 +6143,8 @@ Value *llvm::isBytewiseValue(Value *V, const DataLayout &DL) {
 
   if (isa<ConstantAggregate>(C)) {
     Value *Val = UndefInt8;
-    for (unsigned I = 0, E = C->getNumOperands(); I != E; ++I)
-      if (!(Val = Merge(Val, isBytewiseValue(C->getOperand(I), DL))))
+    for (Value *Op : C->operands())
+      if (!(Val = Merge(Val, isBytewiseValue(Op, DL))))
         return nullptr;
     return Val;
   }
@@ -9523,7 +9624,7 @@ static ConstantRange getRangeForIntrinsic(const IntrinsicInst &II) {
   case Intrinsic::cttz:
     // Maximum of set/clear bits is the bit width.
     return ConstantRange::getNonEmpty(APInt::getZero(Width),
-                                      APInt(Width, Width + 1));
+                                      APInt(Width, Width) + 1);
   case Intrinsic::uadd_sat:
     // uadd.sat(x, C) produces [C, UINT_MAX].
     if (match(II.getOperand(0), m_APInt(C)) ||
@@ -9678,7 +9779,7 @@ static void setLimitForFPToI(const Instruction *I, APInt &Lower, APInt &Upper) {
   if (!I->getOperand(0)->getType()->getScalarType()->isHalfTy())
     return;
   if (isa<FPToSIInst>(I) && BitWidth >= 17) {
-    Lower = APInt(BitWidth, -65504);
+    Lower = APInt(BitWidth, -65504, true);
     Upper = APInt(BitWidth, 65505);
   }
 
@@ -9830,8 +9931,9 @@ void llvm::findValuesAffectedByCondition(
     } else if (match(V, m_ICmp(Pred, m_Value(A), m_Value(B)))) {
       AddCmpOperands(A, B);
 
+      bool HasRHSC = match(B, m_ConstantInt());
       if (ICmpInst::isEquality(Pred)) {
-        if (match(B, m_ConstantInt())) {
+        if (HasRHSC) {
           Value *Y;
           // (X & C) or (X | C) or (X ^ C).
           // (X << C) or (X >>_s C) or (X >>_u C).
@@ -9845,7 +9947,7 @@ void llvm::findValuesAffectedByCondition(
           }
         }
       } else {
-        if (match(B, m_ConstantInt())) {
+        if (HasRHSC) {
           // Handle (A + C1) u< C2, which is the canonical form of
           // A > C3 && A < C4.
           if (match(A, m_AddLike(m_Value(X), m_ConstantInt())))
@@ -9877,6 +9979,10 @@ void llvm::findValuesAffectedByCondition(
             InsertAffected(X);
         }
       }
+
+      if (IsAssume && HasRHSC &&
+          match(A, m_Intrinsic<Intrinsic::ctpop>(m_Value(X))))
+        AddAffected(X);
     } else if (match(Cond, m_FCmp(Pred, m_Value(A), m_Value(B)))) {
       AddCmpOperands(A, B);
 

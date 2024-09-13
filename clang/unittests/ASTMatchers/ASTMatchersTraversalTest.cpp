@@ -1745,6 +1745,18 @@ TEST(MatchBinaryOperator, HasOperands) {
   EXPECT_TRUE(notMatches("void x() { 0 + 1; }", HasOperands));
 }
 
+TEST(MatchBinaryOperator, HasOperandsEnsureOrdering) {
+  StatementMatcher HasOperandsWithBindings = binaryOperator(hasOperands(
+      cStyleCastExpr(has(declRefExpr(hasDeclaration(valueDecl().bind("d"))))),
+      declRefExpr(hasDeclaration(valueDecl(equalsBoundNode("d"))))));
+  EXPECT_TRUE(matches(
+      "int a; int b = ((int) a) + a;",
+      traverse(TK_IgnoreUnlessSpelledInSource, HasOperandsWithBindings)));
+  EXPECT_TRUE(matches(
+      "int a; int b = a + ((int) a);",
+      traverse(TK_IgnoreUnlessSpelledInSource, HasOperandsWithBindings)));
+}
+
 TEST(Matcher, BinaryOperatorTypes) {
   // Integration test that verifies the AST provides all binary operators in
   // a way we expect.

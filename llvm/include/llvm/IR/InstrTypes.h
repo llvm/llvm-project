@@ -55,26 +55,28 @@ typedef unsigned ID;
 //===----------------------------------------------------------------------===//
 
 class UnaryInstruction : public Instruction {
+  constexpr static IntrusiveOperandsAllocMarker AllocMarker{1};
+
 protected:
   UnaryInstruction(Type *Ty, unsigned iType, Value *V, BasicBlock::iterator IB)
-      : Instruction(Ty, iType, &Op<0>(), 1, IB) {
+      : Instruction(Ty, iType, AllocMarker, IB) {
     Op<0>() = V;
   }
   LLVM_DEPRECATED("Use BasicBlock::iterators for insertion instead",
                   "BasicBlock::iterator")
   UnaryInstruction(Type *Ty, unsigned iType, Value *V,
                    Instruction *IB = nullptr)
-    : Instruction(Ty, iType, &Op<0>(), 1, IB) {
+      : Instruction(Ty, iType, AllocMarker, IB) {
     Op<0>() = V;
   }
   UnaryInstruction(Type *Ty, unsigned iType, Value *V, BasicBlock *IAE)
-    : Instruction(Ty, iType, &Op<0>(), 1, IAE) {
+      : Instruction(Ty, iType, AllocMarker, IAE) {
     Op<0>() = V;
   }
 
 public:
   // allocate space for exactly one operand
-  void *operator new(size_t S) { return User::operator new(S, 1); }
+  void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
   void operator delete(void *Ptr) { User::operator delete(Ptr); }
 
   /// Transparently provide more efficient getOperand methods.
@@ -82,11 +84,11 @@ public:
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Instruction *I) {
-    return I->isUnaryOp() ||
-           I->getOpcode() == Instruction::Alloca ||
+    return I->isUnaryOp() || I->getOpcode() == Instruction::Alloca ||
            I->getOpcode() == Instruction::Load ||
            I->getOpcode() == Instruction::VAArg ||
            I->getOpcode() == Instruction::ExtractValue ||
+           I->getOpcode() == Instruction::Freeze ||
            (I->getOpcode() >= CastOpsBegin && I->getOpcode() < CastOpsEnd);
   }
   static bool classof(const Value *V) {
@@ -190,6 +192,8 @@ public:
 //===----------------------------------------------------------------------===//
 
 class BinaryOperator : public Instruction {
+  constexpr static IntrusiveOperandsAllocMarker AllocMarker{2};
+
   void AssertOK();
 
 protected:
@@ -203,7 +207,7 @@ protected:
 
 public:
   // allocate space for exactly two operands
-  void *operator new(size_t S) { return User::operator new(S, 2); }
+  void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
   void operator delete(void *Ptr) { User::operator delete(Ptr); }
 
   /// Transparently provide more efficient getOperand methods.
@@ -761,6 +765,8 @@ public:
 /// This class is the base class for the comparison instructions.
 /// Abstract base class of comparison instructions.
 class CmpInst : public Instruction {
+  constexpr static IntrusiveOperandsAllocMarker AllocMarker{2};
+
 public:
   /// This enumeration lists the possible predicates for CmpInst subclasses.
   /// Values in the range 0-31 are reserved for FCmpInst, while values in the
@@ -830,7 +836,7 @@ protected:
 
 public:
   // allocate space for exactly two operands
-  void *operator new(size_t S) { return User::operator new(S, 2); }
+  void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
   void operator delete(void *Ptr) { User::operator delete(Ptr); }
 
   /// Construct a compare instruction, given the opcode, the predicate and
@@ -2423,7 +2429,7 @@ private:
 };
 
 template <>
-struct OperandTraits<CallBase> : public VariadicOperandTraits<CallBase, 1> {};
+struct OperandTraits<CallBase> : public VariadicOperandTraits<CallBase> {};
 
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(CallBase, Value)
 
@@ -2432,10 +2438,10 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(CallBase, Value)
 //===----------------------------------------------------------------------===//
 class FuncletPadInst : public Instruction {
 private:
-  FuncletPadInst(const FuncletPadInst &CPI);
+  FuncletPadInst(const FuncletPadInst &CPI, AllocInfo AllocInfo);
 
   explicit FuncletPadInst(Instruction::FuncletPadOps Op, Value *ParentPad,
-                          ArrayRef<Value *> Args, unsigned Values,
+                          ArrayRef<Value *> Args, AllocInfo AllocInfo,
                           const Twine &NameStr, InsertPosition InsertBefore);
 
   void init(Value *ParentPad, ArrayRef<Value *> Args, const Twine &NameStr);
@@ -2490,7 +2496,7 @@ public:
 
 template <>
 struct OperandTraits<FuncletPadInst>
-    : public VariadicOperandTraits<FuncletPadInst, /*MINARITY=*/1> {};
+    : public VariadicOperandTraits<FuncletPadInst> {};
 
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(FuncletPadInst, Value)
 

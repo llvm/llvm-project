@@ -1354,7 +1354,7 @@ ComponentIterator<componentKind>::const_iterator::BuildResultDesignatorName()
     const {
   std::string designator;
   for (const auto &node : componentPath_) {
-    designator += "%" + DEREF(node.component()).name().ToString();
+    designator += "%"s + DEREF(node.component()).name().ToString();
   }
   return designator;
 }
@@ -1558,8 +1558,9 @@ bool IsAutomaticallyDestroyed(const Symbol &symbol) {
   return symbol.has<ObjectEntityDetails>() &&
       (symbol.owner().kind() == Scope::Kind::Subprogram ||
           symbol.owner().kind() == Scope::Kind::BlockConstruct) &&
-      (!IsDummy(symbol) || IsIntentOut(symbol)) && !IsPointer(symbol) &&
-      !IsSaved(symbol) && !FindCommonBlockContaining(symbol);
+      !IsNamedConstant(symbol) && (!IsDummy(symbol) || IsIntentOut(symbol)) &&
+      !IsPointer(symbol) && !IsSaved(symbol) &&
+      !FindCommonBlockContaining(symbol);
 }
 
 const std::optional<parser::Name> &MaybeGetNodeName(

@@ -280,8 +280,9 @@ public:
     return isRegOrImmWithInputMods(AMDGPU::VS_32RegClassID, MVT::i16);
   }
 
-  bool isRegOrImmWithIntT16InputMods() const {
-    return isRegOrImmWithInputMods(AMDGPU::VS_16RegClassID, MVT::i16);
+  template <bool IsFake16> bool isRegOrImmWithIntT16InputMods() const {
+    return isRegOrImmWithInputMods(
+        IsFake16 ? AMDGPU::VS_32RegClassID : AMDGPU::VS_16RegClassID, MVT::i16);
   }
 
   bool isRegOrImmWithInt32InputMods() const {
@@ -290,6 +291,11 @@ public:
 
   bool isRegOrInlineImmWithInt16InputMods() const {
     return isRegOrInline(AMDGPU::VS_32RegClassID, MVT::i16);
+  }
+
+  template <bool IsFake16> bool isRegOrInlineImmWithIntT16InputMods() const {
+    return isRegOrInline(
+        IsFake16 ? AMDGPU::VS_32RegClassID : AMDGPU::VS_16RegClassID, MVT::i16);
   }
 
   bool isRegOrInlineImmWithInt32InputMods() const {
@@ -304,8 +310,9 @@ public:
     return isRegOrImmWithInputMods(AMDGPU::VS_32RegClassID, MVT::f16);
   }
 
-  bool isRegOrImmWithFPT16InputMods() const {
-    return isRegOrImmWithInputMods(AMDGPU::VS_16RegClassID, MVT::f16);
+  template <bool IsFake16> bool isRegOrImmWithFPT16InputMods() const {
+    return isRegOrImmWithInputMods(
+        IsFake16 ? AMDGPU::VS_32RegClassID : AMDGPU::VS_16RegClassID, MVT::f16);
   }
 
   bool isRegOrImmWithFP32InputMods() const {
@@ -354,6 +361,7 @@ public:
   }
 
   bool isVRegWithInputMods() const;
+  template <bool IsFake16> bool isT16_Lo128VRegWithInputMods() const;
   template <bool IsFake16> bool isT16VRegWithInputMods() const;
 
   bool isSDWAOperand(MVT type) const;
@@ -515,7 +523,7 @@ public:
     return isRegOrInlineNoMods(AMDGPU::VS_64RegClassID, MVT::i64);
   }
 
-  bool isVCSrcTB16() const {
+  bool isVCSrcT_b16() const {
     return isRegOrInlineNoMods(AMDGPU::VS_16RegClassID, MVT::i16);
   }
 
@@ -545,7 +553,11 @@ public:
     return isRegOrInlineNoMods(AMDGPU::VS_16RegClassID, MVT::bf16);
   }
 
-  bool isVCSrcTF16() const {
+  bool isVCSrcT_f16() const {
+    return isRegOrInlineNoMods(AMDGPU::VS_16RegClassID, MVT::f16);
+  }
+
+  bool isVCSrcT_bf16() const {
     return isRegOrInlineNoMods(AMDGPU::VS_16RegClassID, MVT::f16);
   }
 
@@ -583,7 +595,7 @@ public:
 
   bool isVSrc_b64() const { return isVCSrcF64() || isLiteralImm(MVT::i64); }
 
-  bool isVSrcT_b16() const { return isVCSrcTB16() || isLiteralImm(MVT::i16); }
+  bool isVSrcT_b16() const { return isVCSrcT_b16() || isLiteralImm(MVT::i16); }
 
   bool isVSrcT_b16_Lo128() const {
     return isVCSrcTB16_Lo128() || isLiteralImm(MVT::i16);
@@ -617,7 +629,7 @@ public:
 
   bool isVSrcT_bf16() const { return isVCSrcTBF16() || isLiteralImm(MVT::bf16); }
 
-  bool isVSrcT_f16() const { return isVCSrcTF16() || isLiteralImm(MVT::f16); }
+  bool isVSrcT_f16() const { return isVCSrcT_f16() || isLiteralImm(MVT::f16); }
 
   bool isVSrcT_bf16_Lo128() const {
     return isVCSrcTBF16_Lo128() || isLiteralImm(MVT::bf16);
@@ -1777,7 +1789,6 @@ private:
                              const SMLoc &IDLoc);
   bool validateTHAndScopeBits(const MCInst &Inst, const OperandVector &Operands,
                               const unsigned CPol);
-  bool validateExeczVcczOperands(const OperandVector &Operands);
   bool validateTFE(const MCInst &Inst, const OperandVector &Operands);
   std::optional<StringRef> validateLdsDirect(const MCInst &Inst);
   unsigned getConstantBusLimit(unsigned Opcode) const;
@@ -2163,9 +2174,15 @@ bool AMDGPUOperand::isVRegWithInputMods() const {
           AsmParser->getFeatureBits()[AMDGPU::FeatureDPALU_DPP]);
 }
 
-template <bool IsFake16> bool AMDGPUOperand::isT16VRegWithInputMods() const {
+template <bool IsFake16>
+bool AMDGPUOperand::isT16_Lo128VRegWithInputMods() const {
   return isRegClass(IsFake16 ? AMDGPU::VGPR_32_Lo128RegClassID
                              : AMDGPU::VGPR_16_Lo128RegClassID);
+}
+
+template <bool IsFake16> bool AMDGPUOperand::isT16VRegWithInputMods() const {
+  return isRegClass(IsFake16 ? AMDGPU::VGPR_32RegClassID
+                             : AMDGPU::VGPR_16RegClassID);
 }
 
 bool AMDGPUOperand::isSDWAOperand(MVT type) const {
@@ -2937,10 +2954,6 @@ unsigned AMDGPUAsmParser::ParseRegularReg(RegisterKind &RegKind,
   StringRef RegSuffix = RegName.substr(RI->Name.size());
   unsigned SubReg = NoSubRegister;
   if (!RegSuffix.empty()) {
-    // We don't know the opcode till we are done parsing, so we don't know if
-    // registers should be 16 or 32 bit. It is therefore mandatory to put .l or
-    // .h to correctly specify 16 bit registers. We also can't determine class
-    // VGPR_16_Lo128 or VGPR_16, so always parse them as VGPR_16.
     if (RegSuffix.consume_back(".l"))
       SubReg = AMDGPU::lo16;
     else if (RegSuffix.consume_back(".h"))
@@ -3039,7 +3052,8 @@ bool AMDGPUAsmParser::ParseAMDGPURegister(RegisterKind &RegKind, unsigned &Reg,
     if (Reg == AMDGPU::SGPR_NULL) {
       Error(Loc, "'null' operand is not supported on this GPU");
     } else {
-      Error(Loc, "register not available on this GPU");
+      Error(Loc, Twine(AMDGPUInstPrinter::getRegisterName(Reg)) +
+                     " register not available on this GPU");
     }
     return false;
   }
@@ -3819,7 +3833,7 @@ bool AMDGPUAsmParser::validateVOPDRegBankConstraints(
     const MCOperand &Opr = Inst.getOperand(OperandIdx);
     return (Opr.isReg() && !isSGPR(mc2PseudoReg(Opr.getReg()), TRI))
                ? Opr.getReg()
-               : MCRegister::NoRegister;
+               : MCRegister();
   };
 
   // On GFX12 if both OpX and OpY are V_MOV_B32 then OPY uses SRC2 source-cache.
@@ -4757,7 +4771,7 @@ static int IsAGPROperand(const MCInst &Inst, uint16_t NameIdx,
   if (!Op.isReg())
     return -1;
 
-  unsigned Sub = MRI->getSubReg(Op.getReg(), AMDGPU::sub0);
+  MCRegister Sub = MRI->getSubReg(Op.getReg(), AMDGPU::sub0);
   auto Reg = Sub ? Sub : Op.getReg();
   const MCRegisterClass &AGPR32 = MRI->getRegClass(AMDGPU::AGPR_32RegClassID);
   return AGPR32.contains(Reg) ? 1 : 0;
@@ -5052,22 +5066,6 @@ bool AMDGPUAsmParser::validateTHAndScopeBits(const MCInst &Inst,
   return true;
 }
 
-bool AMDGPUAsmParser::validateExeczVcczOperands(const OperandVector &Operands) {
-  if (!isGFX11Plus())
-    return true;
-  for (auto &Operand : Operands) {
-    if (!Operand->isReg())
-      continue;
-    unsigned Reg = Operand->getReg();
-    if (Reg == SRC_EXECZ || Reg == SRC_VCCZ) {
-      Error(getRegLoc(Reg, Operands),
-            "execz and vccz are not supported on this GPU");
-      return false;
-    }
-  }
-  return true;
-}
-
 bool AMDGPUAsmParser::validateTFE(const MCInst &Inst,
                                   const OperandVector &Operands) {
   const MCInstrDesc &Desc = MII.get(Inst.getOpcode());
@@ -5201,9 +5199,6 @@ bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
     return false;
   }
   if (!validateWaitCnt(Inst, Operands)) {
-    return false;
-  }
-  if (!validateExeczVcczOperands(Operands)) {
     return false;
   }
   if (!validateTFE(Inst, Operands)) {
@@ -6247,39 +6242,41 @@ bool AMDGPUAsmParser::ParseDirective(AsmToken DirectiveID) {
 
 bool AMDGPUAsmParser::subtargetHasRegister(const MCRegisterInfo &MRI,
                                            unsigned RegNo) {
-
-  if (MRI.regsOverlap(AMDGPU::TTMP12_TTMP13_TTMP14_TTMP15, RegNo))
+  if (MRI.regsOverlap(TTMP12_TTMP13_TTMP14_TTMP15, RegNo))
     return isGFX9Plus();
 
   // GFX10+ has 2 more SGPRs 104 and 105.
-  if (MRI.regsOverlap(AMDGPU::SGPR104_SGPR105, RegNo))
+  if (MRI.regsOverlap(SGPR104_SGPR105, RegNo))
     return hasSGPR104_SGPR105();
 
   switch (RegNo) {
-  case AMDGPU::SRC_SHARED_BASE_LO:
-  case AMDGPU::SRC_SHARED_BASE:
-  case AMDGPU::SRC_SHARED_LIMIT_LO:
-  case AMDGPU::SRC_SHARED_LIMIT:
-  case AMDGPU::SRC_PRIVATE_BASE_LO:
-  case AMDGPU::SRC_PRIVATE_BASE:
-  case AMDGPU::SRC_PRIVATE_LIMIT_LO:
-  case AMDGPU::SRC_PRIVATE_LIMIT:
+  case SRC_SHARED_BASE_LO:
+  case SRC_SHARED_BASE:
+  case SRC_SHARED_LIMIT_LO:
+  case SRC_SHARED_LIMIT:
+  case SRC_PRIVATE_BASE_LO:
+  case SRC_PRIVATE_BASE:
+  case SRC_PRIVATE_LIMIT_LO:
+  case SRC_PRIVATE_LIMIT:
     return isGFX9Plus();
-  case AMDGPU::SRC_POPS_EXITING_WAVE_ID:
+  case SRC_POPS_EXITING_WAVE_ID:
     return isGFX9Plus() && !isGFX11Plus();
-  case AMDGPU::TBA:
-  case AMDGPU::TBA_LO:
-  case AMDGPU::TBA_HI:
-  case AMDGPU::TMA:
-  case AMDGPU::TMA_LO:
-  case AMDGPU::TMA_HI:
+  case TBA:
+  case TBA_LO:
+  case TBA_HI:
+  case TMA:
+  case TMA_LO:
+  case TMA_HI:
     return !isGFX9Plus();
-  case AMDGPU::XNACK_MASK:
-  case AMDGPU::XNACK_MASK_LO:
-  case AMDGPU::XNACK_MASK_HI:
+  case XNACK_MASK:
+  case XNACK_MASK_LO:
+  case XNACK_MASK_HI:
     return (isVI() || isGFX9()) && getTargetStreamer().getTargetID()->isXnackSupported();
-  case AMDGPU::SGPR_NULL:
+  case SGPR_NULL:
     return isGFX10Plus();
+  case SRC_EXECZ:
+  case SRC_VCCZ:
+    return !isGFX11Plus();
   default:
     break;
   }
@@ -6292,9 +6289,9 @@ bool AMDGPUAsmParser::subtargetHasRegister(const MCRegisterInfo &MRI,
     // On GFX10Plus flat scratch is not a valid register operand and can only be
     // accessed with s_setreg/s_getreg.
     switch (RegNo) {
-    case AMDGPU::FLAT_SCR:
-    case AMDGPU::FLAT_SCR_LO:
-    case AMDGPU::FLAT_SCR_HI:
+    case FLAT_SCR:
+    case FLAT_SCR_LO:
+    case FLAT_SCR_HI:
       return false;
     default:
       return true;
@@ -6303,7 +6300,7 @@ bool AMDGPUAsmParser::subtargetHasRegister(const MCRegisterInfo &MRI,
 
   // VI only has 102 SGPRs, so make sure we aren't trying to use the 2 more that
   // SI/CI have.
-  if (MRI.regsOverlap(AMDGPU::SGPR102_SGPR103, RegNo))
+  if (MRI.regsOverlap(SGPR102_SGPR103, RegNo))
     return hasSGPR102_SGPR103();
 
   return true;
@@ -8567,7 +8564,7 @@ static void cvtVOP3DstOpSelOnly(MCInst &Inst, const MCRegisterInfo &MRI) {
   uint32_t ModVal = Inst.getOperand(ModIdx).getImm();
   if (DstOp.isReg() &&
       MRI.getRegClass(AMDGPU::VGPR_16RegClassID).contains(DstOp.getReg())) {
-    if (AMDGPU::isHi(DstOp.getReg(), MRI))
+    if (AMDGPU::isHi16Reg(DstOp.getReg(), MRI))
       ModVal |= SISrcMods::DST_OP_SEL;
   } else {
     if ((OpSel & (1 << SrcNum)) != 0)
@@ -8847,7 +8844,7 @@ void AMDGPUAsmParser::cvtVOP3P(MCInst &Inst, const OperandVector &Operands,
     if (SrcOp.isReg() && getMRI()
                              ->getRegClass(AMDGPU::VGPR_16RegClassID)
                              .contains(SrcOp.getReg())) {
-      bool VGPRSuffixIsHi = AMDGPU::isHi(SrcOp.getReg(), *getMRI());
+      bool VGPRSuffixIsHi = AMDGPU::isHi16Reg(SrcOp.getReg(), *getMRI());
       if (VGPRSuffixIsHi)
         ModVal |= SISrcMods::OP_SEL_0;
     } else {

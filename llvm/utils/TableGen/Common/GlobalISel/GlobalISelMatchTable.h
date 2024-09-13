@@ -13,8 +13,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_UTILS_TABLEGEN_GLOBALISELMATCHTABLE_H
-#define LLVM_UTILS_TABLEGEN_GLOBALISELMATCHTABLE_H
+#ifndef LLVM_UTILS_TABLEGEN_COMMON_GLOBALISEL_GLOBALISELMATCHTABLE_H
+#define LLVM_UTILS_TABLEGEN_COMMON_GLOBALISEL_GLOBALISELMATCHTABLE_H
 
 #include "Common/CodeGenDAGPatterns.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -523,7 +523,7 @@ protected:
 
   ArrayRef<SMLoc> SrcLoc;
 
-  typedef std::tuple<Record *, unsigned, unsigned>
+  typedef std::tuple<const Record *, unsigned, unsigned>
       DefinedComplexPatternSubOperand;
   typedef StringMap<DefinedComplexPatternSubOperand>
       DefinedComplexPatternSubOperandMap;
@@ -649,7 +649,8 @@ public:
 
   void definePhysRegOperand(Record *Reg, OperandMatcher &OM);
 
-  Error defineComplexSubOperand(StringRef SymbolicName, Record *ComplexPattern,
+  Error defineComplexSubOperand(StringRef SymbolicName,
+                                const Record *ComplexPattern,
                                 unsigned RendererID, unsigned SubOperandID,
                                 StringRef ParentSymbolicName);
 
@@ -2504,4 +2505,4 @@ public:
 } // namespace gi
 } // namespace llvm
 
-#endif
+#endif // LLVM_UTILS_TABLEGEN_COMMON_GLOBALISEL_GLOBALISELMATCHTABLE_H

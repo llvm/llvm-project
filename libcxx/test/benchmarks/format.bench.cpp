@@ -25,13 +25,7 @@ static void BM_format_string(benchmark::State& state) {
 
   state.SetBytesProcessed(state.iterations() * size * sizeof(CharT));
 }
-BENCHMARK_TEMPLATE(BM_format_string, char)->RangeMultiplier(2)->Range(1, 1 << 20);
-BENCHMARK_TEMPLATE(BM_format_string, wchar_t)->RangeMultiplier(2)->Range(1, 1 << 20);
+BENCHMARK(BM_format_string<char>)->RangeMultiplier(2)->Range(1, 1 << 20);
+BENCHMARK(BM_format_string<wchar_t>)->RangeMultiplier(2)->Range(1, 1 << 20);
 
-int main(int argc, char** argv) {
-  benchmark::Initialize(&argc, argv);
-  if (benchmark::ReportUnrecognizedArguments(argc, argv))
-    return 1;
-
-  benchmark::RunSpecifiedBenchmarks();
-}
+BENCHMARK_MAIN();

@@ -883,10 +883,8 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
         // can be used as the actual source after export patching, so
         // we need to treat them like sources and set the EXP_CNT
         // score.
-        for (unsigned I = 0, E = Inst.getNumOperands(); I != E; ++I) {
-          MachineOperand &DefMO = Inst.getOperand(I);
-          if (DefMO.isReg() && DefMO.isDef() &&
-              TRI->isVGPR(*MRI, DefMO.getReg())) {
+        for (MachineOperand &DefMO : Inst.all_defs()) {
+          if (TRI->isVGPR(*MRI, DefMO.getReg())) {
             setRegScore(
                 TRI->getEncodingValue(AMDGPU::getMCReg(DefMO.getReg(), *ST)),
                 EXP_CNT, CurrScore);
@@ -1778,11 +1776,12 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
           if (IsVGPR) {
             // RAW always needs an s_waitcnt. WAW needs an s_waitcnt unless the
             // previous write and this write are the same type of VMEM
-            // instruction, in which case they're guaranteed to write their
-            // results in order anyway.
+            // instruction, in which case they are (in some architectures)
+            // guaranteed to write their results in order anyway.
             if (Op.isUse() || !updateVMCntOnly(MI) ||
                 ScoreBrackets.hasOtherPendingVmemTypes(RegNo,
-                                                       getVmemType(MI))) {
+                                                       getVmemType(MI)) ||
+                !ST->hasVmemWriteVgprInOrder()) {
               ScoreBrackets.determineWait(LOAD_CNT, RegNo, Wait);
               ScoreBrackets.determineWait(SAMPLE_CNT, RegNo, Wait);
               ScoreBrackets.determineWait(BVH_CNT, RegNo, Wait);
@@ -2389,7 +2388,7 @@ bool SIInsertWaitcnts::shouldFlushVmCnt(MachineLoop *ML,
   }
   if (!ST->hasVscnt() && HasVMemStore && !HasVMemLoad && UsesVgprLoadedOutside)
     return true;
-  return HasVMemLoad && UsesVgprLoadedOutside;
+  return HasVMemLoad && UsesVgprLoadedOutside && ST->hasVmemWriteVgprInOrder();
 }
 
 bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {

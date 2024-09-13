@@ -683,6 +683,17 @@ void WebAssemblyAsmPrinter::emitInstruction(const MachineInstr *MI) {
     // This is a compiler barrier that prevents instruction reordering during
     // backend compilation, and should not be emitted.
     break;
+  case WebAssembly::CATCH:
+  case WebAssembly::CATCH_S:
+  case WebAssembly::CATCH_REF:
+  case WebAssembly::CATCH_REF_S:
+  case WebAssembly::CATCH_ALL:
+  case WebAssembly::CATCH_ALL_S:
+  case WebAssembly::CATCH_ALL_REF:
+  case WebAssembly::CATCH_ALL_REF_S:
+    // These are pseudo instructions to represent catch clauses in try_table
+    // instruction to simulate block return values.
+    break;
   default: {
     WebAssemblyMCInstLower MCInstLowering(OutContext, *this);
     MCInst TmpInst;

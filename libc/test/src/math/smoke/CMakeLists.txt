@@ -150,9 +150,42 @@ add_fp_unittest(
   HDRS
     AddTest.h
   DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
     libc.src.math.fadd
-    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.properties.os
+)
 
+add_fp_unittest(
+  faddl_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    faddl_test.cpp
+  HDRS
+    AddTest.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+    libc.src.math.faddl
+    libc.src.__support.macros.properties.os
+)
+
+add_fp_unittest(
+  faddf128_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    faddf128_test.cpp
+  HDRS
+    AddTest.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+    libc.src.math.faddf128
+    libc.src.__support.macros.properties.os
 )
 
 add_fp_unittest(
@@ -394,6 +427,7 @@ add_fp_unittest(
     libc.src.errno.errno
     libc.hdr.fenv_macros
     libc.src.math.dsubl
+    libc.src.__support.macros.properties.os
 )
 
 add_fp_unittest(
@@ -408,6 +442,7 @@ add_fp_unittest(
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
     libc.src.math.dsubf128
+    libc.src.__support.macros.properties.os
 )
 
 add_fp_unittest(
@@ -2865,9 +2900,10 @@ add_fp_unittest(
   SRCS
     nanf_test.cpp
   DEPENDS
-    libc.include.signal
+    libc.hdr.signal_macros
     libc.src.math.nanf
     libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.macros.sanitizer
   # FIXME: The nan tests currently have death tests, which aren't supported for
   # hermetic tests.
   UNIT_TEST_ONLY
@@ -2880,9 +2916,10 @@ add_fp_unittest(
   SRCS
     nan_test.cpp
   DEPENDS
-    libc.include.signal
+    libc.hdr.signal_macros
     libc.src.math.nan
     libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.macros.sanitizer
   # FIXME: The nan tests currently have death tests, which aren't supported for
   # hermetic tests.
   UNIT_TEST_ONLY
@@ -2895,9 +2932,10 @@ add_fp_unittest(
   SRCS
     nanl_test.cpp
   DEPENDS
-    libc.include.signal
+    libc.hdr.signal_macros
     libc.src.math.nanl
     libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.macros.sanitizer
   # FIXME: The nan tests currently have death tests, which aren't supported for
   # hermetic tests.
   UNIT_TEST_ONLY
@@ -2910,7 +2948,7 @@ add_fp_unittest(
   SRCS
     nanf16_test.cpp
   DEPENDS
-    libc.include.signal
+    libc.hdr.signal_macros
     libc.src.math.nanf16
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.macros.sanitizer
@@ -2926,9 +2964,10 @@ add_fp_unittest(
   SRCS
     nanf128_test.cpp
   DEPENDS
-    libc.include.signal
+    libc.hdr.signal_macros
     libc.src.math.nanf128
     libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.macros.sanitizer
   # FIXME: The nan tests currently have death tests, which aren't supported for
   # hermetic tests.
   UNIT_TEST_ONLY
@@ -3295,6 +3334,18 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  expm1_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    expm1_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.math.expm1
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   expm1f_test
   SUITE
     libc-math-smoke-tests
@@ -3307,15 +3358,16 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
-  expm1_test
+  expm1f16_test
   SUITE
     libc-math-smoke-tests
   SRCS
-    expm1_test.cpp
+    expm1f16_test.cpp
   DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
     libc.src.errno.errno
-    libc.src.math.expm1
-    libc.src.__support.FPUtil.fp_bits
+    libc.src.math.expm1f16
 )
 
 add_fp_unittest(
@@ -3838,6 +3890,18 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  totalorderl_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    totalorderl_test.cpp
+  HDRS
+    TotalOrderTest.h
+  DEPENDS
+    libc.src.math.totalorderl
+)
+
+add_fp_unittest(
   totalorderf16_test
   SUITE
     libc-math-smoke-tests
@@ -4113,8 +4177,8 @@ add_fp_unittest(
   DEPENDS
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
-    libc.src.__support.FPUtil.basic_operations
     libc.src.math.f16add
+    libc.src.__support.macros.properties.os
 )
 
 add_fp_unittest(
@@ -4128,8 +4192,8 @@ add_fp_unittest(
   DEPENDS
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
-    libc.src.__support.FPUtil.basic_operations
     libc.src.math.f16addf
+    libc.src.__support.macros.properties.os
 )
 
 add_fp_unittest(
@@ -4143,8 +4207,8 @@ add_fp_unittest(
   DEPENDS
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
-    libc.src.__support.FPUtil.basic_operations
     libc.src.math.f16addl
+    libc.src.__support.macros.properties.os
 )
 
 add_fp_unittest(
@@ -4158,8 +4222,8 @@ add_fp_unittest(
   DEPENDS
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
-    libc.src.__support.FPUtil.basic_operations
     libc.src.math.f16addf128
+    libc.src.__support.macros.properties.os
 )
 
 add_fp_unittest(
@@ -4174,6 +4238,7 @@ add_fp_unittest(
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
     libc.src.math.f16sub
+    libc.src.__support.macros.properties.os
 )
 
 add_fp_unittest(
@@ -4188,6 +4253,7 @@ add_fp_unittest(
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
     libc.src.math.f16subf
+    libc.src.__support.macros.properties.os
 )
 
 add_fp_unittest(
@@ -4202,6 +4268,7 @@ add_fp_unittest(
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
     libc.src.math.f16subl
+    libc.src.__support.macros.properties.os
 )
 
 add_fp_unittest(
@@ -4216,6 +4283,7 @@ add_fp_unittest(
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
     libc.src.math.f16subf128
+    libc.src.__support.macros.properties.os
 )
 
 add_fp_unittest(
@@ -4497,6 +4565,7 @@ add_fp_unittest(
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
     libc.src.math.fsub
+    libc.src.__support.macros.properties.os
 )
 
 add_fp_unittest(
@@ -4511,6 +4580,7 @@ add_fp_unittest(
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
     libc.src.math.fsubl
+    libc.src.__support.macros.properties.os
 )
 
 add_fp_unittest(
@@ -4525,6 +4595,7 @@ add_fp_unittest(
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
     libc.src.math.fsubf128
+    libc.src.__support.macros.properties.os
 )
 
 add_fp_unittest(
@@ -4695,7 +4766,10 @@ add_fp_unittest(
   HDRS
     AddTest.h
   DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
     libc.src.math.daddl
+    libc.src.__support.macros.properties.os
 )
 
 add_fp_unittest(
@@ -4707,7 +4781,10 @@ add_fp_unittest(
   HDRS
     AddTest.h
   DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
     libc.src.math.daddf128
+    libc.src.__support.macros.properties.os
 )
 
 add_fp_unittest(

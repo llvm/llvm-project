@@ -88,7 +88,7 @@ MaxSamples("max-samples",
   cl::cat(AggregatorCategory));
 
 extern cl::opt<opts::ProfileFormatKind> ProfileFormat;
-extern cl::opt<bool> ProfileUsePseudoProbes;
+extern cl::opt<bool> ProfileWritePseudoProbes;
 extern cl::opt<std::string> SaveProfile;
 
 cl::opt<bool> ReadPreAggregated(
@@ -2300,7 +2300,7 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
   yaml::bolt::BinaryProfile BP;
 
   const MCPseudoProbeDecoder *PseudoProbeDecoder =
-      opts::ProfileUsePseudoProbes ? BC.getPseudoProbeDecoder() : nullptr;
+      opts::ProfileWritePseudoProbes ? BC.getPseudoProbeDecoder() : nullptr;
 
   // Fill out the header info.
   BP.Header.Version = 1;
@@ -2415,25 +2415,27 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
         Fragments.insert(BF);
         for (const BinaryFunction *F : Fragments) {
           const uint64_t FuncAddr = F->getAddress();
-          const auto &FragmentProbes =
-              llvm::make_range(ProbeMap.lower_bound(FuncAddr),
-                               ProbeMap.lower_bound(FuncAddr + F->getSize()));
-          for (const auto &[OutputAddress, Probes] : FragmentProbes) {
+          for (const MCDecodedPseudoProbe &Probe :
+               ProbeMap.find(FuncAddr, FuncAddr + F->getSize())) {
+            const uint32_t OutputAddress = Probe.getAddress();
             const uint32_t InputOffset = BAT->translate(
                 FuncAddr, OutputAddress - FuncAddr, /*IsBranchSrc=*/true);
             const unsigned BlockIndex = getBlock(InputOffset).second;
-            for (const MCDecodedPseudoProbe &Probe : Probes)
-              YamlBF.Blocks[BlockIndex].PseudoProbes.emplace_back(
-                  yaml::bolt::PseudoProbeInfo{Probe.getGuid(), Probe.getIndex(),
-                                              Probe.getType()});
+            YamlBF.Blocks[BlockIndex].PseudoProbes.emplace_back(
+                yaml::bolt::PseudoProbeInfo{Probe.getGuid(), Probe.getIndex(),
+                                            Probe.getType()});
           }
         }
       }
-      // Drop blocks without a hash, won't be useful for stale matching.
-      llvm::erase_if(YamlBF.Blocks,
-                     [](const yaml::bolt::BinaryBasicBlockProfile &YamlBB) {
-                       return YamlBB.Hash == (yaml::Hex64)0;
-                     });
+      // Skip printing if there's no profile data
+      llvm::erase_if(
+          YamlBF.Blocks, [](const yaml::bolt::BinaryBasicBlockProfile &YamlBB) {
+            auto HasCount = [](const auto &SI) { return SI.Count; };
+            bool HasAnyCount = YamlBB.ExecCount ||
+                               llvm::any_of(YamlBB.Successors, HasCount) ||
+                               llvm::any_of(YamlBB.CallSites, HasCount);
+            return !HasAnyCount;
+          });
       BP.Functions.emplace_back(YamlBF);
     }
   }

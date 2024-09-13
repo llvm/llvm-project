@@ -57,7 +57,8 @@ def ROCDL_Dialect : Dialect {
      "::mlir::DenseI32ArrayAttr":$reqd_work_group_size,
      "::mlir::StringAttr":$flat_work_group_size,
      "::mlir::IntegerAttr":$max_flat_work_group_size,
-     "::mlir::IntegerAttr":$waves_per_eu
+     "::mlir::IntegerAttr":$waves_per_eu,
+     "::mlir::BoolAttr":$unsafe_fp_atomics
   );
 
   let useDefaultAttributePrinterParser = 1;
@@ -165,7 +166,7 @@ def ROCDL_BallotOp :
   let summary = "Vote across thread group";
 
   let description = [{
-      Ballot provides a bit mask containing the 1-bit predicate value from each lane. 
+      Ballot provides a bit mask containing the 1-bit predicate value from each lane.
       The nth bit of the result contains the 1 bit contributed by the nth warp lane.
   }];
 
@@ -328,13 +329,16 @@ class ROCDL_Wmma_IntrOp<string mnemonic, list<int> overloadedOperands,
     "$args attr-dict `:` functional-type($args, $res)";
 }
 
-// Available on RDNA3
+// Available from gfx11
 def ROCDL_wmma_f32_16x16x16_f16 : ROCDL_Wmma_IntrOp<"wmma.f32.16x16x16.f16", [0]>;
 def ROCDL_wmma_f32_16x16x16_bf16 : ROCDL_Wmma_IntrOp<"wmma.f32.16x16x16.bf16", [0]>;
 def ROCDL_wmma_f16_16x16x16_f16 : ROCDL_Wmma_IntrOp<"wmma.f16.16x16x16.f16", [0]>;
 def ROCDL_wmma_bf16_16x16x16_bf16 : ROCDL_Wmma_IntrOp<"wmma.bf16.16x16x16.bf16", [0]>;
 def ROCDL_wmma_i32_16x16x16_iu8 : ROCDL_Wmma_IntrOp<"wmma.i32.16x16x16.iu8", [1]>;
 def ROCDL_wmma_i32_16x16x16_iu4 : ROCDL_Wmma_IntrOp<"wmma.i32.16x16x16.iu4", [1]>;
+// Available from gfx12
+def ROCDL_wmma_f32_16x16x16_fp8 : ROCDL_Wmma_IntrOp<"wmma.f32.16x16x16.fp8_fp8", [1]>;
+def ROCDL_wmma_f32_16x16x16_bf8 : ROCDL_Wmma_IntrOp<"wmma.f32.16x16x16.bf8_bf8", [1]>;
 
 //===---------------------------------------------------------------------===//
 // Operations on raw buffer resources (stride of 0, bounds checks either off or in
@@ -552,6 +556,45 @@ def ROCDL_RawBufferAtomicUMinOp :
             $offset, $soffset, $aux}, {vdataType});
   }];
   let hasCustomAssemblyFormat = 1;
+}
+
+// DPP Update intrinsic
+def ROCDL_DPPUpdateOp : ROCDL_IntrOp<"update.dpp", [], [0],
+    [AllTypesMatch<["res", "src", "old"]>], 1>,
+  Arguments<(ins LLVM_Type:$old, LLVM_Type:$src, I32Attr:$dppCtrl, I32Attr:$rowMask,
+      I32Attr:$bankMask, I1Attr:$boundCtrl)> {
+  let results = (outs LLVM_Type:$res);
+  let assemblyFormat = [{
+    attr-dict $old `,` $src `with` $dppCtrl `,` $rowMask `,` $bankMask `,` $boundCtrl `:` type($src)
+  }];
+  string llvmBuilder = [{
+      auto vdataType = moduleTranslation.convertType(op.getSrc().getType());
+      llvm::Value *args[] = {
+        moduleTranslation.lookupValue(op.getOld()),
+        moduleTranslation.lookupValue(op.getSrc()),
+          builder.getInt32(op.getDppCtrl()),
+          builder.getInt32(op.getRowMask()),
+          builder.getInt32(op.getBankMask()),
+          builder.getInt1(op.getBoundCtrl())
+      };
+      $res = createIntrinsicCall(builder,
+        llvm::Intrinsic::amdgcn_update_dpp, args, {vdataType});
+  }];
+}
+
+//===---------------------------------------------------------------------===//
+// 16-bit float intrinsics
+//===---------------------------------------------------------------------===//
+def ROCDL_CvtPkRtz:
+    ROCDL_IntrOp<"cvt.pkrtz", [], [], [Pure], 1>,
+    Arguments<(ins F32:$srcA, F32:$srcB)> {
+  let summary = "Convert two f32 input into a vector<2xf16>";
+  let description = [{
+    Convert two f32 values into a packed vector<2xf16>.
+  }];
+  let assemblyFormat = [{
+    attr-dict $srcA `,` $srcB `:` type($res)
+  }];
 }
 
 //===---------------------------------------------------------------------===//

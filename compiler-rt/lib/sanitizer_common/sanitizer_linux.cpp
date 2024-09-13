@@ -2312,11 +2312,11 @@ static const char *RegNumToRegName(int reg) {
   return NULL;
 }
 
-#  if SANITIZER_LINUX && SANITIZER_GLIBC && \
+#  if ((SANITIZER_LINUX && SANITIZER_GLIBC) || SANITIZER_NETBSD) && \
       (defined(__arm__) || defined(__aarch64__))
 static uptr GetArmRegister(ucontext_t *ctx, int RegNum) {
   switch (RegNum) {
-#    if defined(__arm__)
+#    if defined(__arm__) && !SANITIZER_NETBSD
 #      ifdef MAKE_CASE
 #        undef MAKE_CASE
 #      endif
@@ -2345,10 +2345,15 @@ static uptr GetArmRegister(ucontext_t *ctx, int RegNum) {
     case REG_R15:
       return ctx->uc_mcontext.arm_pc;
 #    elif defined(__aarch64__)
+#      if SANITIZER_LINUX
     case 0 ... 30:
       return ctx->uc_mcontext.regs[RegNum];
     case 31:
       return ctx->uc_mcontext.sp;
+#      elif SANITIZER_NETBSD
+    case 0 ... 31:
+      return ctx->uc_mcontext.__gregs[RegNum];
+#      endif
 #    endif
     default:
       return 0;
@@ -2456,7 +2461,7 @@ void SignalContext::DumpAllRegisters(void *context) {
   DumpSingleReg(ucontext, REG_R14);
   DumpSingleReg(ucontext, REG_R15);
   Printf("\n");
-#    elif defined(__aarch64__) && !SANITIZER_NETBSD
+#    elif defined(__aarch64__)
   Report("Register values:\n");
   for (int i = 0; i <= 31; ++i) {
     DumpSingleReg(ucontext, i);

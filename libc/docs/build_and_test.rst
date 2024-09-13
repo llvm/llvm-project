@@ -38,13 +38,6 @@ The libc can be built and tested in two different modes:
 
         $> ninja libc-integration-tests
 
-   #. API verification test - See :ref:`api_test` for more information about
-      the API test. It can be run by the command:
-
-      .. code-block:: sh
-
-        $> ninja libc-api-test
-
 Building with VSCode
 ====================
 

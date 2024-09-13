@@ -402,6 +402,21 @@
 // MCPU-SIFIVE-P670-SAME: "-target-feature" "+zvkt"
 // MCPU-SIFIVE-P670-SAME: "-target-abi" "lp64d"
 
+// RUN: %clang -target riscv32 -### -c %s 2>&1 -mcpu=rp2350-hazard3 | FileCheck -check-prefix=MCPU-HAZARD3 %s
+// MCPU-HAZARD3: "-target-cpu" "rp2350-hazard3"
+// MCPU-HAZARD3-SAME: "-target-feature" "+m"
+// MCPU-HAZARD3-SAME: "-target-feature" "+a"
+// MCPU-HAZARD3-SAME: "-target-feature" "+c"
+// MCPU-HAZARD3-SAME: "-target-feature" "+zicsr"
+// MCPU-HAZARD3-SAME: "-target-feature" "+zifencei"
+// MCPU-HAZARD3-SAME: "-target-feature" "+zcb"
+// MCPU-HAZARD3-SAME: "-target-feature" "+zcmp"
+// MCPU-HAZARD3-SAME: "-target-feature" "+zba"
+// MCPU-HAZARD3-SAME: "-target-feature" "+zbb"
+// MCPU-HAZARD3-SAME: "-target-feature" "+zbkb"
+// MCPU-HAZARD3-SAME: "-target-feature" "+zbs"
+// MCPU-HAZARD3-SAME: "-target-abi" "ilp32"
+
 // Check failed cases
 
 // RUN: not %clang --target=riscv32 -### -c %s 2>&1 -mcpu=generic-rv321 | FileCheck -check-prefix=FAIL-MCPU-NAME %s
@@ -459,3 +474,31 @@
 
 // RUN: %clang --target=riscv64 -### -c %s 2>&1 -mtune=syntacore-scr4-rv64 | FileCheck -check-prefix=MTUNE-SYNTACORE-SCR4-RV64 %s
 // MTUNE-SYNTACORE-SCR4-RV64: "-tune-cpu" "syntacore-scr4-rv64"
+
+// RUN: %clang --target=riscv32 -### -c %s 2>&1 -mcpu=syntacore-scr5-rv32 | FileCheck -check-prefix=MCPU-SYNTACORE-SCR5-RV32 %s
+// MCPU-SYNTACORE-SCR5-RV32: "-target-cpu" "syntacore-scr5-rv32"
+// MCPU-SYNTACORE-SCR5-RV32-SAME: "-target-feature" "+m"
+// MCPU-SYNTACORE-SCR5-RV32-SAME: "-target-feature" "+a"
+// MCPU-SYNTACORE-SCR5-RV32-SAME: "-target-feature" "+f"
+// MCPU-SYNTACORE-SCR5-RV32-SAME: "-target-feature" "+d"
+// MCPU-SYNTACORE-SCR5-RV32-SAME: "-target-feature" "+c"
+// MCPU-SYNTACORE-SCR5-RV32-SAME: "-target-feature" "+zicsr"
+// MCPU-SYNTACORE-SCR5-RV32-SAME: "-target-feature" "+zifencei"
+// MCPU-SYNTACORE-SCR5-RV32-SAME: "-target-abi" "ilp32d"
+
+// RUN: %clang --target=riscv32 -### -c %s 2>&1 -mtune=syntacore-scr5-rv32 | FileCheck -check-prefix=MTUNE-SYNTACORE-SCR5-RV32 %s
+// MTUNE-SYNTACORE-SCR5-RV32: "-tune-cpu" "syntacore-scr5-rv32"
+
+// RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=syntacore-scr5-rv64 | FileCheck -check-prefix=MCPU-SYNTACORE-SCR5-RV64 %s
+// MCPU-SYNTACORE-SCR5-RV64: "-target-cpu" "syntacore-scr5-rv64"
+// MCPU-SYNTACORE-SCR5-RV64-SAME: "-target-feature" "+m"
+// MCPU-SYNTACORE-SCR5-RV64-SAME: "-target-feature" "+a"
+// MCPU-SYNTACORE-SCR5-RV64-SAME: "-target-feature" "+f"
+// MCPU-SYNTACORE-SCR5-RV64-SAME: "-target-feature" "+d"
+// MCPU-SYNTACORE-SCR5-RV64-SAME: "-target-feature" "+c"
+// MCPU-SYNTACORE-SCR5-RV64-SAME: "-target-feature" "+zicsr"
+// MCPU-SYNTACORE-SCR5-RV64-SAME: "-target-feature" "+zifencei"
+// MCPU-SYNTACORE-SCR5-RV64-SAME: "-target-abi" "lp64d"
+
+// RUN: %clang --target=riscv64 -### -c %s 2>&1 -mtune=syntacore-scr5-rv64 | FileCheck -check-prefix=MTUNE-SYNTACORE-SCR5-RV64 %s
+// MTUNE-SYNTACORE-SCR5-RV64: "-tune-cpu" "syntacore-scr5-rv64"

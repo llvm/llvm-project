@@ -144,6 +144,7 @@ namespace std
     // Relationships between types:
     template <class T, class U> struct is_same;
     template <class Base, class Derived> struct is_base_of;
+    template <class Base, class Derived> struct is_virtual_base_of;     // C++26
 
     template <class From, class To> struct is_convertible;
     template <typename From, typename To> struct is_nothrow_convertible;                  // C++20
@@ -391,6 +392,8 @@ namespace std
         = is_same<T, U>::value;                                          // C++17
       template <class Base, class Derived> inline constexpr bool is_base_of_v
         = is_base_of<Base, Derived>::value;                              // C++17
+      template <class Base, class Derived> inline constexpr bool is_virtual_base_of_v
+        = is_virtual_base_of<Base, Derived>::value;                      // C++26
       template <class From, class To> inline constexpr bool is_convertible_v
         = is_convertible<From, To>::value;                               // C++17
       template <class Fn, class... ArgTypes> inline constexpr bool is_invocable_v

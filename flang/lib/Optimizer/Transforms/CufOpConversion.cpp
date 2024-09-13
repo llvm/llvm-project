@@ -33,17 +33,25 @@ using namespace Fortran::runtime::cuda;
 namespace {
 
 template <typename OpTy>
-static bool isBoxGlobal(OpTy op) {
+static bool needDoubleDescriptor(OpTy op) {
   if (auto declareOp =
           mlir::dyn_cast_or_null<fir::DeclareOp>(op.getBox().getDefiningOp())) {
     if (mlir::isa_and_nonnull<fir::AddrOfOp>(
-            declareOp.getMemref().getDefiningOp()))
+            declareOp.getMemref().getDefiningOp())) {
+      if (declareOp.getDataAttr() &&
+          *declareOp.getDataAttr() == cuf::DataAttribute::Pinned)
+        return false;
       return true;
+    }
   } else if (auto declareOp = mlir::dyn_cast_or_null<hlfir::DeclareOp>(
                  op.getBox().getDefiningOp())) {
     if (mlir::isa_and_nonnull<fir::AddrOfOp>(
-            declareOp.getMemref().getDefiningOp()))
+            declareOp.getMemref().getDefiningOp())) {
+      if (declareOp.getDataAttr() &&
+          *declareOp.getDataAttr() == cuf::DataAttribute::Pinned)
+        return false;
       return true;
+    }
   }
   return false;
 }
@@ -100,7 +108,7 @@ struct CufAllocateOpConversion
 
     // TODO: Allocation of module variable will need more work as the descriptor
     // will be duplicated and needs to be synced after allocation.
-    if (isBoxGlobal(op))
+    if (needDoubleDescriptor(op))
       return mlir::failure();
 
     // Allocation for local descriptor falls back on the standard runtime
@@ -125,7 +133,7 @@ struct CufDeallocateOpConversion
                   mlir::PatternRewriter &rewriter) const override {
     // TODO: Allocation of module variable will need more work as the descriptor
     // will be duplicated and needs to be synced after allocation.
-    if (isBoxGlobal(op))
+    if (needDoubleDescriptor(op))
       return mlir::failure();
 
     // Deallocation for local descriptor falls back on the standard runtime
@@ -140,6 +148,20 @@ struct CufDeallocateOpConversion
     return convertOpToCall<cuf::DeallocateOp>(op, rewriter, func);
   }
 };
+
+static bool inDeviceContext(mlir::Operation *op) {
+  if (op->getParentOfType<cuf::KernelOp>())
+    return true;
+  if (auto funcOp = op->getParentOfType<mlir::func::FuncOp>()) {
+    if (auto cudaProcAttr =
+            funcOp.getOperation()->getAttrOfType<cuf::ProcAttributeAttr>(
+                cuf::getProcAttrName())) {
+      return cudaProcAttr.getValue() != cuf::ProcAttribute::Host &&
+             cudaProcAttr.getValue() != cuf::ProcAttribute::HostDevice;
+    }
+  }
+  return false;
+}
 
 struct CufAllocOpConversion : public mlir::OpRewritePattern<cuf::AllocOp> {
   using OpRewritePattern::OpRewritePattern;
@@ -156,6 +178,16 @@ struct CufAllocOpConversion : public mlir::OpRewritePattern<cuf::AllocOp> {
     // Only convert cuf.alloc that allocates a descriptor.
     if (!boxTy)
       return failure();
+
+    if (inDeviceContext(op.getOperation())) {
+      // In device context just replace the cuf.alloc operation with a fir.alloc
+      // the cuf.free will be removed.
+      rewriter.replaceOpWithNewOp<fir::AllocaOp>(
+          op, op.getInType(), op.getUniqName() ? *op.getUniqName() : "",
+          op.getBindcName() ? *op.getBindcName() : "", op.getTypeparams(),
+          op.getShape());
+      return mlir::success();
+    }
 
     auto mod = op->getParentOfType<mlir::ModuleOp>();
     fir::FirOpBuilder builder(rewriter, mod);
@@ -199,6 +231,11 @@ struct CufFreeOpConversion : public mlir::OpRewritePattern<cuf::FreeOp> {
     auto refTy = mlir::dyn_cast<fir::ReferenceType>(op.getDevptr().getType());
     if (!mlir::isa<fir::BaseBoxType>(refTy.getEleTy()))
       return failure();
+
+    if (inDeviceContext(op.getOperation())) {
+      rewriter.eraseOp(op);
+      return mlir::success();
+    }
 
     auto mod = op->getParentOfType<mlir::ModuleOp>();
     fir::FirOpBuilder builder(rewriter, mod);
@@ -245,9 +282,10 @@ public:
       return true;
     });
     target.addDynamicallyLegalOp<cuf::AllocateOp>(
-        [](::cuf::AllocateOp op) { return isBoxGlobal(op); });
+        [](::cuf::AllocateOp op) { return needDoubleDescriptor(op); });
     target.addDynamicallyLegalOp<cuf::DeallocateOp>(
-        [](::cuf::DeallocateOp op) { return isBoxGlobal(op); });
+        [](::cuf::DeallocateOp op) { return needDoubleDescriptor(op); });
+    target.addLegalDialect<fir::FIROpsDialect>();
     patterns.insert<CufAllocOpConversion>(ctx, &*dl, &typeConverter);
     patterns.insert<CufAllocateOpConversion, CufDeallocateOpConversion,
                     CufFreeOpConversion>(ctx);

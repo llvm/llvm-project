@@ -286,7 +286,7 @@ def Vector_MultiDimReductionOp :
     Arguments<(ins Vector_CombiningKindAttr:$kind,
                    AnyVector:$source,
                    AnyType:$acc,
-                   I64ArrayAttr:$reduction_dims)>,
+                   DenseI64ArrayAttr:$reduction_dims)>,
     Results<(outs AnyType:$dest)> {
   let summary = "Multi-dimensional reduction operation";
   let description = [{
@@ -325,8 +325,8 @@ def Vector_MultiDimReductionOp :
 
     SmallVector<bool> getReductionMask() {
       SmallVector<bool> res(getSourceVectorType().getRank(), false);
-      for (auto ia : getReductionDims().getAsRange<IntegerAttr>())
-        res[ia.getInt()] = true;
+      for (int64_t dim : getReductionDims())
+        res[dim] = true;
       return res;
     }
     static SmallVector<bool> getReductionMask(
@@ -2364,6 +2364,11 @@ def Vector_ConstantMaskOp :
     ```
   }];
 
+  let builders = [
+    // Build with mixed static/dynamic operands.
+    OpBuilder<(ins "VectorType":$type, "ConstantMaskKind":$kind)>
+  ];
+
   let extraClassDeclaration = [{
     /// Return the result type of this op.
     VectorType getVectorType() {
@@ -2683,13 +2688,13 @@ def Vector_MatmulOp : Vector_Op<"matrix_multiply", [Pure,
                     TCresVTEtIsSameAsOpBase<0, 1>>]>,
       Arguments<(
         // TODO: tighten vector element types that make sense.
-        ins VectorOfRankAndType<[1],
+        ins FixedVectorOfRankAndType<[1],
               [AnySignlessInteger, AnySignedInteger, Index, AnyFloat]>:$lhs,
-            VectorOfRankAndType<[1],
+            FixedVectorOfRankAndType<[1],
               [AnySignlessInteger, AnySignedInteger, Index, AnyFloat]>:$rhs,
             I32Attr:$lhs_rows, I32Attr:$lhs_columns, I32Attr:$rhs_columns)>,
       Results<(
-        outs VectorOfRankAndType<[1],
+        outs FixedVectorOfRankAndType<[1],
                [AnySignlessInteger, AnySignedInteger, Index, AnyFloat]>:$res)>
 {
   let summary = "Vector matrix multiplication op that operates on flattened 1-D"
@@ -2707,7 +2712,9 @@ def Vector_MatmulOp : Vector_Op<"matrix_multiply", [Pure,
     <rhs_columns> and multiplies them. The result matrix is returned embedded in
     the result vector.
 
-    Also see:
+    Note, the corresponding LLVM intrinsic, `@llvm.matrix.multiply.*`, does not
+    support scalable vectors. Hence, this Op is only available for fixed-width
+    vectors. Also see:
 
     http://llvm.org/docs/LangRef.html#llvm-matrix-multiply-intrinsic
 

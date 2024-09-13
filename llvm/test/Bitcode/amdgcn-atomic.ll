@@ -300,4 +300,58 @@ define float @upgrade_amdgcn_ds_fmax_f32_no_suffix(ptr addrspace(3) %ptr, float 
   ret float %result0
 }
 
+declare <2 x i16> @llvm.amdgcn.flat.atomic.fadd.v2bf16.p0(ptr, <2 x i16>)
+
+define <2 x i16> @upgrade_amdgcn_flat_atomic_fadd_v2bf16_p0(ptr %ptr, <2 x i16> %data) {
+  ; CHECK: [[BC0:%.+]] = bitcast <2 x i16> %data to <2 x bfloat>
+  ; CHECK-NEXT: [[ATOMIC:%.+]] = atomicrmw fadd ptr %ptr, <2 x bfloat> [[BC0]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
+  ; CHECK-NEXT: [[BC1:%.+]] = bitcast <2 x bfloat> [[ATOMIC]] to <2 x i16>
+  ; CHECK-NEXT: ret <2 x i16> [[BC1]]
+  %result = call <2 x i16> @llvm.amdgcn.flat.atomic.fadd.v2bf16.p0(ptr %ptr, <2 x i16> %data)
+  ret <2 x i16> %result
+}
+
+declare <2 x i16> @llvm.amdgcn.global.atomic.fadd.v2bf16.p1(ptr addrspace(1), <2 x i16>)
+
+define <2 x i16> @upgrade_amdgcn_global_atomic_fadd_v2bf16_p1(ptr addrspace(1) %ptr, <2 x i16> %data) {
+  ; CHECK: [[BC0:%.+]] = bitcast <2 x i16> %data to <2 x bfloat>
+  ; CHECK-NEXT: [[ATOMIC:%.+]] = atomicrmw fadd ptr addrspace(1) %ptr, <2 x bfloat> [[BC0]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
+  ; CHECK-NEXT: [[BC1:%.+]] = bitcast <2 x bfloat> [[ATOMIC]] to <2 x i16>
+  ; CHECK-NEXT: ret <2 x i16> [[BC1]]
+  %result = call <2 x i16> @llvm.amdgcn.global.atomic.fadd.v2bf16.p1(ptr addrspace(1) %ptr, <2 x i16> %data)
+  ret <2 x i16> %result
+}
+
+declare <2 x half> @llvm.amdgcn.flat.atomic.fadd.v2f16.p0.v2f16(ptr nocapture, <2 x half>) #0
+
+define <2 x half> @upgrade_amdgcn_flat_atomic_fadd_v2f16_p0_v2f16(ptr %ptr, <2 x half> %data) {
+  ; CHECK: %{{.+}} = atomicrmw fadd ptr %ptr, <2 x half> %data syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
+  %result = call <2 x half> @llvm.amdgcn.flat.atomic.fadd.v2f16.p0.v2f16(ptr %ptr, <2 x half> %data)
+  ret <2 x half> %result
+}
+
+declare <2 x half> @llvm.amdgcn.global.atomic.fadd.v2f16.p1.v2f16(ptr addrspace(1) nocapture, <2 x half>) #0
+
+define <2 x half> @upgrade_amdgcn_global_atomic_fadd_v2f16_p1_v2f16(ptr addrspace(1) %ptr, <2 x half> %data) {
+  ; CHECK: %{{.+}} = atomicrmw fadd ptr addrspace(1) %ptr, <2 x half> %data syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
+  %result = call <2 x half> @llvm.amdgcn.global.atomic.fadd.v2f16.p1.v2f16(ptr addrspace(1) %ptr, <2 x half> %data)
+  ret <2 x half> %result
+}
+
+declare float @llvm.amdgcn.flat.atomic.fadd.f32.p0.f32(ptr nocapture, float) #0
+
+define float @upgrade_amdgcn_flat_atomic_fadd_f32_p0_f32(ptr %ptr, float %data) {
+  ; CHECK: %{{.+}} = atomicrmw fadd ptr %ptr, float %data syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !{{[0-9]+}}, !amdgpu.ignore.denormal.mode !{{[0-9]+$}}
+  %result = call float @llvm.amdgcn.flat.atomic.fadd.f32.p0.f32(ptr %ptr, float %data)
+  ret float %result
+}
+
+declare float @llvm.amdgcn.global.atomic.fadd.f32.p1.f32(ptr addrspace(1) nocapture, float) #0
+
+define float @upgrade_amdgcn_global_atomic_fadd_f32_p1_f32(ptr addrspace(1) %ptr, float %data) {
+  ; CHECK: %{{.+}} = atomicrmw fadd ptr addrspace(1) %ptr, float %data syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !{{[0-9]+}}, !amdgpu.ignore.denormal.mode !{{[0-9]+$}}
+  %result = call float @llvm.amdgcn.global.atomic.fadd.f32.p1.f32(ptr addrspace(1) %ptr, float %data)
+  ret float %result
+}
+
 attributes #0 = { argmemonly nounwind willreturn }

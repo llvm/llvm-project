@@ -120,9 +120,8 @@ Status IRExecutionUnit::DisassembleFunction(Stream &stream,
   }
 
   if (func_local_addr == LLDB_INVALID_ADDRESS) {
-    ret.SetErrorToGenericError();
-    ret.SetErrorStringWithFormat("Couldn't find function %s for disassembly",
-                                 m_name.AsCString());
+    ret = Status::FromErrorStringWithFormat(
+        "Couldn't find function %s for disassembly", m_name.AsCString());
     return ret;
   }
 
@@ -136,9 +135,8 @@ Status IRExecutionUnit::DisassembleFunction(Stream &stream,
   func_range = GetRemoteRangeForLocal(func_local_addr);
 
   if (func_range.first == 0 && func_range.second == 0) {
-    ret.SetErrorToGenericError();
-    ret.SetErrorStringWithFormat("Couldn't find code range for function %s",
-                                 m_name.AsCString());
+    ret = Status::FromErrorStringWithFormat(
+        "Couldn't find code range for function %s", m_name.AsCString());
     return ret;
   }
 
@@ -147,8 +145,7 @@ Status IRExecutionUnit::DisassembleFunction(Stream &stream,
 
   Target *target = exe_ctx.GetTargetPtr();
   if (!target) {
-    ret.SetErrorToGenericError();
-    ret.SetErrorString("Couldn't find the target");
+    ret = Status::FromErrorString("Couldn't find the target");
     return ret;
   }
 
@@ -161,9 +158,8 @@ Status IRExecutionUnit::DisassembleFunction(Stream &stream,
                       buffer_sp->GetByteSize(), err);
 
   if (!err.Success()) {
-    ret.SetErrorToGenericError();
-    ret.SetErrorStringWithFormat("Couldn't read from process: %s",
-                                 err.AsCString("unknown error"));
+    ret = Status::FromErrorStringWithFormat("Couldn't read from process: %s",
+                                            err.AsCString("unknown error"));
     return ret;
   }
 
@@ -175,16 +171,14 @@ Status IRExecutionUnit::DisassembleFunction(Stream &stream,
       Disassembler::FindPlugin(arch, flavor_string, plugin_name);
 
   if (!disassembler_sp) {
-    ret.SetErrorToGenericError();
-    ret.SetErrorStringWithFormat(
+    ret = Status::FromErrorStringWithFormat(
         "Unable to find disassembler plug-in for %s architecture.",
         arch.GetArchitectureName());
     return ret;
   }
 
   if (!process) {
-    ret.SetErrorToGenericError();
-    ret.SetErrorString("Couldn't find the process");
+    ret = Status::FromErrorString("Couldn't find the process");
     return ret;
   }
 
@@ -215,8 +209,7 @@ struct IRExecDiagnosticHandler : public llvm::DiagnosticHandler {
     if (DI.getSeverity() == llvm::DS_Error) {
       const auto &DISM = llvm::cast<llvm::DiagnosticInfoSrcMgr>(DI);
       if (err && err->Success()) {
-        err->SetErrorToGenericError();
-        err->SetErrorStringWithFormat(
+        *err = Status::FromErrorStringWithFormat(
             "IRExecution error: %s",
             DISM.getSMDiag().getMessage().str().c_str());
       }
@@ -241,9 +234,9 @@ void IRExecutionUnit::GetRunnableInfo(Status &error, lldb::addr_t &func_addr,
   func_end = LLDB_INVALID_ADDRESS;
 
   if (!process_sp) {
-    error.SetErrorToGenericError();
-    error.SetErrorString("Couldn't write the JIT compiled code into the "
-                         "process because the process is invalid");
+    error =
+        Status::FromErrorString("Couldn't write the JIT compiled code into the "
+                                "process because the process is invalid");
     return;
   }
 
@@ -299,9 +292,8 @@ void IRExecutionUnit::GetRunnableInfo(Status &error, lldb::addr_t &func_addr,
   m_execution_engine_up.reset(builder.create(target_machine));
 
   if (!m_execution_engine_up) {
-    error.SetErrorToGenericError();
-    error.SetErrorStringWithFormat("Couldn't JIT the function: %s",
-                                   error_string.c_str());
+    error = Status::FromErrorStringWithFormat("Couldn't JIT the function: %s",
+                                              error_string.c_str());
     return;
   }
 
@@ -364,8 +356,7 @@ void IRExecutionUnit::GetRunnableInfo(Status &error, lldb::addr_t &func_addr,
     }
 
     if (!fun_ptr) {
-      error.SetErrorToGenericError();
-      error.SetErrorStringWithFormat(
+      error = Status::FromErrorStringWithFormat(
           "'%s' was in the JITted module but wasn't lowered",
           function.getName().str().c_str());
       return;
@@ -434,7 +425,7 @@ void IRExecutionUnit::GetRunnableInfo(Status &error, lldb::addr_t &func_addr,
     ss.PutCString(
         "\nHint: The expression tried to call a function that is not present "
         "in the target, perhaps because it was optimized out by the compiler.");
-    error.SetErrorString(ss.GetString());
+    error = Status(ss.GetString().str());
 
     return;
   }

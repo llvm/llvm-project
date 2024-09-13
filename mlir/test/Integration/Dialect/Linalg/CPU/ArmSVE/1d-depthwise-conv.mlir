@@ -4,7 +4,7 @@
 // DEFINE:    -convert-vector-to-llvm="enable-arm-sve" -test-lower-to-llvm -o %t
 // DEFINE: %{entry_point} = conv
 // DEFINE: %{run} = %mcr_aarch64_cmd %t -e %{entry_point} -entry-point-result=void --march=aarch64 --mattr="+sve"\
-// DEFINE:    -shared-libs=%mlir_runner_utils,%mlir_c_runner_utils
+// DEFINE:    -shared-libs=%native_mlir_runner_utils,%native_mlir_c_runner_utils
 
 // RUN: rm -f %t && %{compile} && %{run} | FileCheck %s
 

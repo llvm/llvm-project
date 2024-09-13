@@ -980,12 +980,7 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
   while (!srcUseList.empty()) {
     User *U = srcUseList.pop_back_val();
 
-    if (isa<BitCastInst>(U) || isa<AddrSpaceCastInst>(U)) {
-      append_range(srcUseList, U->users());
-      continue;
-    }
-    if (const auto *G = dyn_cast<GetElementPtrInst>(U);
-        G && G->hasAllZeroIndices()) {
+    if (isa<AddrSpaceCastInst>(U)) {
       append_range(srcUseList, U->users());
       continue;
     }
@@ -1197,6 +1192,10 @@ bool MemCpyOptPass::processMemCpyMemCpyDependence(MemCpyInst *M,
     if (CopySourceAlign)
       CopySourceAlign = commonAlignment(*CopySourceAlign, MForwardOffset);
   }
+
+  // Avoid infinite loops
+  if (BAA.isMustAlias(M->getSource(), CopySource))
+    return false;
 
   // Verify that the copied-from memory doesn't change in between the two
   // transfers.  For example, in:
@@ -1951,7 +1950,7 @@ bool MemCpyOptPass::processByValArgument(CallBase &CB, unsigned ArgNo) {
 /// during call. Try to use memcpy source directly if all of the following
 /// conditions are satisfied.
 /// 1. The memcpy dst is neither modified during the call nor captured by the
-/// call. (if readonly, noalias, nocapture attributes on call-site.)
+/// call.
 /// 2. The memcpy dst is an alloca with known alignment & size.
 ///     2-1. The memcpy length == the alloca size which ensures that the new
 ///     pointer is dereferenceable for the required range
@@ -1962,12 +1961,22 @@ bool MemCpyOptPass::processByValArgument(CallBase &CB, unsigned ArgNo) {
 /// 4. The memcpy src is not modified during the call. (ModRef check shows no
 /// Mod.)
 bool MemCpyOptPass::processImmutArgument(CallBase &CB, unsigned ArgNo) {
-  // 1. Ensure passed argument is immutable during call.
-  if (!(CB.paramHasAttr(ArgNo, Attribute::NoAlias) &&
-        CB.paramHasAttr(ArgNo, Attribute::NoCapture)))
-    return false;
-  const DataLayout &DL = CB.getDataLayout();
+  BatchAAResults BAA(*AA);
   Value *ImmutArg = CB.getArgOperand(ArgNo);
+
+  // 1. Ensure passed argument is immutable during call.
+  if (!CB.paramHasAttr(ArgNo, Attribute::NoCapture))
+    return false;
+
+  // We know that the argument is readonly at this point, but the function
+  // might still modify the same memory through a different pointer. Exclude
+  // this either via noalias, or alias analysis.
+  if (!CB.paramHasAttr(ArgNo, Attribute::NoAlias) &&
+      isModSet(
+          BAA.getModRefInfo(&CB, MemoryLocation::getBeforeOrAfter(ImmutArg))))
+    return false;
+
+  const DataLayout &DL = CB.getDataLayout();
 
   // 2. Check that arg is alloca
   // TODO: Even if the arg gets back to branches, we can remove memcpy if all
@@ -1987,7 +1996,6 @@ bool MemCpyOptPass::processImmutArgument(CallBase &CB, unsigned ArgNo) {
     return false;
 
   MemCpyInst *MDep = nullptr;
-  BatchAAResults BAA(*AA);
   MemoryAccess *Clobber = MSSA->getWalker()->getClobberingMemoryAccess(
       CallAccess->getDefiningAccess(), Loc, BAA);
   if (auto *MD = dyn_cast<MemoryDef>(Clobber))

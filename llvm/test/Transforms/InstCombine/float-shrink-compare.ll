@@ -215,7 +215,7 @@ define i1 @test7_intrin(float %x, float %y) {
 define i1 @test8(float %x, float %y) {
 ; CHECK-LABEL: @test8(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.ceil.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[TMP1]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[Y:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %x.ext = fpext float %x to double
@@ -228,7 +228,7 @@ define i1 @test8(float %x, float %y) {
 define i1 @test8_intrin(float %x, float %y) {
 ; CHECK-LABEL: @test8_intrin(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.ceil.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[TMP1]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[Y:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %x.ext = fpext float %x to double
@@ -241,7 +241,7 @@ define i1 @test8_intrin(float %x, float %y) {
 define i1 @test9(float %x, float %y) {
 ; CHECK-LABEL: @test9(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.fabs.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[TMP1]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[Y:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %x.ext = fpext float %x to double
@@ -254,7 +254,7 @@ define i1 @test9(float %x, float %y) {
 define i1 @test9_intrin(float %x, float %y) {
 ; CHECK-LABEL: @test9_intrin(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.fabs.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[TMP1]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[Y:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %x.ext = fpext float %x to double
@@ -319,7 +319,7 @@ define i1 @test11_intrin(float %x, float %y) {
 define i1 @test12(float %x, float %y) {
 ; CHECK-LABEL: @test12(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.rint.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[TMP1]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[Y:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %x.ext = fpext float %x to double
@@ -332,7 +332,7 @@ define i1 @test12(float %x, float %y) {
 define i1 @test13(float %x, float %y) {
 ; CHECK-LABEL: @test13(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.round.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[TMP1]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[Y:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %x.ext = fpext float %x to double
@@ -345,7 +345,7 @@ define i1 @test13(float %x, float %y) {
 define i1 @test13_intrin(float %x, float %y) {
 ; CHECK-LABEL: @test13_intrin(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.round.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[TMP1]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[Y:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %x.ext = fpext float %x to double
@@ -358,7 +358,7 @@ define i1 @test13_intrin(float %x, float %y) {
 define i1 @test13a(float %x, float %y) {
 ; CHECK-LABEL: @test13a(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.roundeven.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[TMP1]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[Y:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %x.ext = fpext float %x to double
@@ -371,7 +371,7 @@ define i1 @test13a(float %x, float %y) {
 define i1 @test13a_intrin(float %x, float %y) {
 ; CHECK-LABEL: @test13a_intrin(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.roundeven.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[TMP1]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[Y:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %x.ext = fpext float %x to double
@@ -384,7 +384,7 @@ define i1 @test13a_intrin(float %x, float %y) {
 define i1 @test14(float %x, float %y) {
 ; CHECK-LABEL: @test14(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.trunc.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[TMP1]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[Y:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %x.ext = fpext float %x to double
@@ -397,7 +397,7 @@ define i1 @test14(float %x, float %y) {
 define i1 @test14_intrin(float %x, float %y) {
 ; CHECK-LABEL: @test14_intrin(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.trunc.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[TMP1]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[Y:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %x.ext = fpext float %x to double
@@ -424,7 +424,7 @@ define i1 @test15(float %x, float %y, float %z) {
 define i1 @test16(float %x, float %y, float %z) {
 ; CHECK-LABEL: @test16(
 ; CHECK-NEXT:    [[FMINF:%.*]] = call nsz float @llvm.minnum.f32(float [[X:%.*]], float [[Y:%.*]])
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp oeq float [[FMINF]], [[Z:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp oeq float [[Z:%.*]], [[FMINF]]
 ; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
   %1 = fpext float %z to double
@@ -452,7 +452,7 @@ define i1 @test17(float %x, float %y, float %z) {
 define i1 @test18(float %x, float %y, float %z) {
 ; CHECK-LABEL: @test18(
 ; CHECK-NEXT:    [[FMAXF:%.*]] = call nsz float @llvm.maxnum.f32(float [[X:%.*]], float [[Y:%.*]])
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp oeq float [[FMAXF]], [[Z:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp oeq float [[Z:%.*]], [[FMAXF]]
 ; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
   %1 = fpext float %z to double
@@ -480,7 +480,7 @@ define i1 @test19(float %x, float %y, float %z) {
 define i1 @test20(float %x, float %y) {
 ; CHECK-LABEL: @test20(
 ; CHECK-NEXT:    [[FMINF:%.*]] = call nsz float @llvm.minnum.f32(float [[X:%.*]], float 1.000000e+00)
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp oeq float [[FMINF]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp oeq float [[Y:%.*]], [[FMINF]]
 ; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
   %1 = fpext float %y to double

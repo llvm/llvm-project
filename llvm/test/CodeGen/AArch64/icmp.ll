@@ -1228,18 +1228,18 @@ define <3 x i32> @v3i32_i32(<3 x i32> %a, <3 x i32> %b, <3 x i32> %d, <3 x i32> 
 ; CHECK-GI-LABEL: v3i32_i32:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    mov w8, #31 // =0x1f
+; CHECK-GI-NEXT:    mov w9, #-1 // =0xffffffff
 ; CHECK-GI-NEXT:    cmgt v0.4s, v1.4s, v0.4s
-; CHECK-GI-NEXT:    fmov s4, w8
+; CHECK-GI-NEXT:    mov v4.s[0], w8
+; CHECK-GI-NEXT:    mov v5.s[0], w9
 ; CHECK-GI-NEXT:    mov v4.s[1], w8
+; CHECK-GI-NEXT:    mov v5.s[1], w9
 ; CHECK-GI-NEXT:    mov v4.s[2], w8
-; CHECK-GI-NEXT:    mov w8, #-1 // =0xffffffff
-; CHECK-GI-NEXT:    fmov s1, w8
-; CHECK-GI-NEXT:    mov v1.s[1], w8
+; CHECK-GI-NEXT:    mov v5.s[2], w9
 ; CHECK-GI-NEXT:    ushl v0.4s, v0.4s, v4.4s
-; CHECK-GI-NEXT:    neg v4.4s, v4.4s
-; CHECK-GI-NEXT:    sshl v0.4s, v0.4s, v4.4s
-; CHECK-GI-NEXT:    mov v1.s[2], w8
-; CHECK-GI-NEXT:    eor v1.16b, v0.16b, v1.16b
+; CHECK-GI-NEXT:    neg v1.4s, v4.4s
+; CHECK-GI-NEXT:    sshl v0.4s, v0.4s, v1.4s
+; CHECK-GI-NEXT:    eor v1.16b, v0.16b, v5.16b
 ; CHECK-GI-NEXT:    and v0.16b, v2.16b, v0.16b
 ; CHECK-GI-NEXT:    and v1.16b, v3.16b, v1.16b
 ; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v1.16b

@@ -587,7 +587,7 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
     {"izext", {{"i", AnyInt}}, TypePattern{IntType, KindCode::exactKind, 2}},
     {"jzext", {{"i", AnyInt}}, DefaultInt},
     {"kind",
-        {{"x", AnyIntrinsic, Rank::elemental, Optionality::required,
+        {{"x", AnyIntrinsic, Rank::anyOrAssumedRank, Optionality::required,
             common::Intent::In, {ArgFlag::canBeMoldNull}}},
         DefaultInt, Rank::elemental, IntrinsicClass::inquiryFunction},
     {"lbound",
@@ -2628,10 +2628,7 @@ bool IntrinsicProcTable::Implementation::IsDualIntrinsic(
   static const std::string dualIntrinsic[]{
       {"etime"s}, {"getcwd"s}, {"rename"s}, {"second"s}};
 
-  return std::find_if(std::begin(dualIntrinsic), std::end(dualIntrinsic),
-             [&name](const std::string &dualName) {
-               return dualName == name;
-             }) != std::end(dualIntrinsic);
+  return llvm::is_contained(dualIntrinsic, name);
 }
 
 IntrinsicClass IntrinsicProcTable::Implementation::GetIntrinsicClass(
@@ -2814,8 +2811,10 @@ IntrinsicProcTable::Implementation::HandleC_F_Pointer(
       if (auto type{expr->GetType()}) {
         if (type->category() != TypeCategory::Derived ||
             type->IsPolymorphic() ||
-            type->GetDerivedTypeSpec().typeSymbol().name() !=
-                "__builtin_c_ptr") {
+            (type->GetDerivedTypeSpec().typeSymbol().name() !=
+                    "__builtin_c_ptr" &&
+                type->GetDerivedTypeSpec().typeSymbol().name() !=
+                    "__builtin_c_devptr")) {
           context.messages().Say(arguments[0]->sourceLocation(),
               "CPTR= argument to C_F_POINTER() must be a C_PTR"_err_en_US);
         }

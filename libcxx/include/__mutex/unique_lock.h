@@ -84,16 +84,16 @@ public:
     return *this;
   }
 
-  void lock();
-  bool try_lock();
+  _LIBCPP_HIDE_FROM_ABI void lock();
+  _LIBCPP_HIDE_FROM_ABI bool try_lock();
 
   template <class _Rep, class _Period>
-  bool try_lock_for(const chrono::duration<_Rep, _Period>& __d);
+  _LIBCPP_HIDE_FROM_ABI bool try_lock_for(const chrono::duration<_Rep, _Period>& __d);
 
   template <class _Clock, class _Duration>
-  bool try_lock_until(const chrono::time_point<_Clock, _Duration>& __t);
+  _LIBCPP_HIDE_FROM_ABI bool try_lock_until(const chrono::time_point<_Clock, _Duration>& __t);
 
-  void unlock();
+  _LIBCPP_HIDE_FROM_ABI void unlock();
 
   _LIBCPP_HIDE_FROM_ABI void swap(unique_lock& __u) _NOEXCEPT {
     std::swap(__m_, __u.__m_);
@@ -114,7 +114,7 @@ public:
 _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(unique_lock);
 
 template <class _Mutex>
-void unique_lock<_Mutex>::lock() {
+_LIBCPP_HIDE_FROM_ABI void unique_lock<_Mutex>::lock() {
   if (__m_ == nullptr)
     __throw_system_error(EPERM, "unique_lock::lock: references null mutex");
   if (__owns_)
@@ -124,7 +124,7 @@ void unique_lock<_Mutex>::lock() {
 }
 
 template <class _Mutex>
-bool unique_lock<_Mutex>::try_lock() {
+_LIBCPP_HIDE_FROM_ABI bool unique_lock<_Mutex>::try_lock() {
   if (__m_ == nullptr)
     __throw_system_error(EPERM, "unique_lock::try_lock: references null mutex");
   if (__owns_)
@@ -135,7 +135,7 @@ bool unique_lock<_Mutex>::try_lock() {
 
 template <class _Mutex>
 template <class _Rep, class _Period>
-bool unique_lock<_Mutex>::try_lock_for(const chrono::duration<_Rep, _Period>& __d) {
+_LIBCPP_HIDE_FROM_ABI bool unique_lock<_Mutex>::try_lock_for(const chrono::duration<_Rep, _Period>& __d) {
   if (__m_ == nullptr)
     __throw_system_error(EPERM, "unique_lock::try_lock_for: references null mutex");
   if (__owns_)
@@ -146,7 +146,7 @@ bool unique_lock<_Mutex>::try_lock_for(const chrono::duration<_Rep, _Period>& __
 
 template <class _Mutex>
 template <class _Clock, class _Duration>
-bool unique_lock<_Mutex>::try_lock_until(const chrono::time_point<_Clock, _Duration>& __t) {
+_LIBCPP_HIDE_FROM_ABI bool unique_lock<_Mutex>::try_lock_until(const chrono::time_point<_Clock, _Duration>& __t) {
   if (__m_ == nullptr)
     __throw_system_error(EPERM, "unique_lock::try_lock_until: references null mutex");
   if (__owns_)
@@ -156,7 +156,7 @@ bool unique_lock<_Mutex>::try_lock_until(const chrono::time_point<_Clock, _Durat
 }
 
 template <class _Mutex>
-void unique_lock<_Mutex>::unlock() {
+_LIBCPP_HIDE_FROM_ABI void unique_lock<_Mutex>::unlock() {
   if (!__owns_)
     __throw_system_error(EPERM, "unique_lock::unlock: not locked");
   __m_->unlock();

@@ -831,3 +831,42 @@
 # CHECK: ctestt	{dfv=}	r15, r9
 # CHECK: encoding: [0x62,0x54,0x84,0x0a,0x85,0xcf]
          {evex} test	r15, r9
+
+## Condition Code Aliases
+
+# CHECK: ctestb {dfv=of} edx, ecx
+# CHECK: encoding: [0x62,0xf4,0x44,0x02,0x85,0xca]
+         ctestc {dfv=of} edx, ecx
+# CHECK: ctestb {dfv=of} edx, ecx
+# CHECK: encoding: [0x62,0xf4,0x44,0x02,0x85,0xca]
+         ctestnae {dfv=of} edx, ecx
+# CHECK: ctestae {dfv=of} edx, ecx
+# CHECK: encoding: [0x62,0xf4,0x44,0x03,0x85,0xca]
+         ctestnb {dfv=of} edx, ecx
+# CHECK: ctestae {dfv=of} edx, ecx
+# CHECK: encoding: [0x62,0xf4,0x44,0x03,0x85,0xca]
+         ctestnc {dfv=of} edx, ecx
+# CHECK: cteste {dfv=of} edx, ecx
+# CHECK: encoding: [0x62,0xf4,0x44,0x04,0x85,0xca]
+         ctestz {dfv=of} edx, ecx
+# CHECK: ctestne {dfv=of} edx, ecx
+# CHECK: encoding: [0x62,0xf4,0x44,0x05,0x85,0xca]
+         ctestnz {dfv=of} edx, ecx
+# CHECK: ctesta {dfv=of} edx, ecx
+# CHECK: encoding: [0x62,0xf4,0x44,0x07,0x85,0xca]
+         ctestnbe {dfv=of} edx, ecx
+# CHECK: ctestl {dfv=of} edx, ecx
+# CHECK: encoding: [0x62,0xf4,0x44,0x0c,0x85,0xca]
+         ctestnge {dfv=of} edx, ecx
+# CHECK: ctestge {dfv=of} edx, ecx
+# CHECK: encoding: [0x62,0xf4,0x44,0x0d,0x85,0xca]
+         ctestnl {dfv=of} edx, ecx
+# CHECK: ctestle {dfv=of} edx, ecx
+# CHECK: encoding: [0x62,0xf4,0x44,0x0e,0x85,0xca]
+         ctestng {dfv=of} edx, ecx
+# CHECK: ctestg {dfv=of} edx, ecx
+# CHECK: encoding: [0x62,0xf4,0x44,0x0f,0x85,0xca]
+         ctestnle {dfv=of} edx, ecx
+# CHECK: ctestbe {dfv=of} edx, ecx
+# CHECK: encoding: [0x62,0xf4,0x44,0x06,0x85,0xca]
+         ctestna {dfv=of} edx, ecx

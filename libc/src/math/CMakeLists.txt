@@ -55,6 +55,7 @@ add_math_entrypoint_object(atanf)
 
 add_math_entrypoint_object(atan2)
 add_math_entrypoint_object(atan2f)
+add_math_entrypoint_object(atan2l)
 
 add_math_entrypoint_object(atanh)
 add_math_entrypoint_object(atanhf)
@@ -121,6 +122,7 @@ add_math_entrypoint_object(exp10f16)
 
 add_math_entrypoint_object(expm1)
 add_math_entrypoint_object(expm1f)
+add_math_entrypoint_object(expm1f16)
 
 add_math_entrypoint_object(f16add)
 add_math_entrypoint_object(f16addf)
@@ -161,7 +163,10 @@ add_math_entrypoint_object(fabsf)
 add_math_entrypoint_object(fabsl)
 add_math_entrypoint_object(fabsf16)
 add_math_entrypoint_object(fabsf128)
+
 add_math_entrypoint_object(fadd)
+add_math_entrypoint_object(faddl)
+add_math_entrypoint_object(faddf128)
 
 add_math_entrypoint_object(fdim)
 add_math_entrypoint_object(fdimf)
@@ -479,6 +484,7 @@ add_math_entrypoint_object(lgamma_r)
 
 add_math_entrypoint_object(totalorder)
 add_math_entrypoint_object(totalorderf)
+add_math_entrypoint_object(totalorderl)
 add_math_entrypoint_object(totalorderf16)
 add_math_entrypoint_object(totalorderf128)
 

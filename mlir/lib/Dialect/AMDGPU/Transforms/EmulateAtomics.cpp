@@ -9,12 +9,12 @@
 #include "mlir/Dialect/AMDGPU/Transforms/Passes.h"
 
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUDialect.h"
+#include "mlir/Dialect/AMDGPU/Utils/Chipset.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlow.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 namespace mlir::amdgpu {
 #define GEN_PASS_DEF_AMDGPUEMULATEATOMICSPASS
@@ -146,13 +146,12 @@ LogicalResult RawBufferAtomicByCasPattern<AtomicOp, ArithOp>::matchAndRewrite(
 void mlir::amdgpu::populateAmdgpuEmulateAtomicsPatterns(
     ConversionTarget &target, RewritePatternSet &patterns, Chipset chipset) {
   // gfx10 has no atomic adds.
-  if (chipset.majorVersion == 10 || chipset.majorVersion < 9 ||
-      (chipset.majorVersion == 9 && chipset.minorVersion < 0x08)) {
+  if (chipset >= Chipset(10, 0, 0) || chipset < Chipset(9, 0, 8)) {
     target.addIllegalOp<RawBufferAtomicFaddOp>();
   }
   // gfx9 has no to a very limited support for floating-point min and max.
   if (chipset.majorVersion == 9) {
-    if (chipset.minorVersion >= 0x0a && chipset.minorVersion != 0x41) {
+    if (chipset >= Chipset(9, 0, 0xa) && chipset != Chipset(9, 4, 1)) {
       // gfx90a supports f64 max (and min, but we don't have a min wrapper right
       // now) but all other types need to be emulated.
       target.addDynamicallyLegalOp<RawBufferAtomicFmaxOp>(
@@ -162,7 +161,7 @@ void mlir::amdgpu::populateAmdgpuEmulateAtomicsPatterns(
     } else {
       target.addIllegalOp<RawBufferAtomicFmaxOp>();
     }
-    if (chipset.minorVersion == 0x41) {
+    if (chipset == Chipset(9, 4, 1)) {
       // gfx941 requires non-CAS atomics to be implemented with CAS loops.
       // The workaround here mirrors HIP and OpenMP.
       target.addIllegalOp<RawBufferAtomicFaddOp, RawBufferAtomicFmaxOp,

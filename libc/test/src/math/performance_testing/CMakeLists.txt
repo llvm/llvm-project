@@ -476,3 +476,25 @@ add_perf_binary(
   COMPILE_OPTIONS
     -fno-builtin
 )
+
+add_perf_binary(
+  fmul_perf
+  SRCS
+    fmul_perf.cpp
+  DEPENDS
+    .binary_op_single_output_diff
+    libc.src.math.fmul
+  COMPILE_OPTIONS
+    -fno-builtin
+)
+
+add_perf_binary(
+  fmull_perf
+  SRCS
+    fmull_perf.cpp
+  DEPENDS
+    .binary_op_single_output_diff
+    libc.src.math.fmull
+  COMPILE_OPTIONS
+    -fno-builtin
+)

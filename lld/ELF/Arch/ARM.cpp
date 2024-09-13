@@ -1386,9 +1386,9 @@ void ArmCmseSGSection::writeTo(uint8_t *buf) {
     write16(p + 2, 0xe97f);
     write16(p + 4, 0xf000); // B.W S
     write16(p + 6, 0xb000);
-    target->relocateNoSym(p + 4, R_ARM_THM_JUMP24,
-                          s->acleSeSym->getVA() -
-                              (getVA() + s->offset + s->size));
+    ctx.target->relocateNoSym(p + 4, R_ARM_THM_JUMP24,
+                              s->acleSeSym->getVA() -
+                                  (getVA() + s->offset + s->size));
   }
 }
 

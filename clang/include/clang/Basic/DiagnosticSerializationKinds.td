@@ -134,6 +134,12 @@ def warn_module_system_bit_conflict : Warning<
   "as a non-system module; any difference in diagnostic options will be ignored">,
   InGroup<ModuleConflict>;
 
+def warn_decls_in_multiple_modules : Warning<
+  "declaration %0 is detected to be defined in multiple module units, first is from '%1' and second is from '%2'; "
+  "the compiler may not be good at merging the definitions. ">,
+  InGroup<DiagGroup<"decls-in-multiple-modules">>,
+  DefaultIgnore;
+
 def err_failed_to_find_module_file : Error<
   "failed to find module file for module '%0'">;
 } // let CategoryName

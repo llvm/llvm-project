@@ -6,12 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <cmath>
-#include <memory>
-#include <string>
-
-#include "Assembler.h"
 #include "BenchmarkRunner.h"
+#include "Assembler.h"
 #include "Error.h"
 #include "MCInstrDescView.h"
 #include "MmapUtils.h"
@@ -22,6 +18,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX
 #include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
@@ -29,6 +26,9 @@
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/SystemZ/zOSSupport.h"
+#include <cmath>
+#include <memory>
+#include <string>
 
 #ifdef __linux__
 #ifdef HAVE_LIBPFM
@@ -379,7 +379,7 @@ private:
 
     if (ChildSignalInfo.si_signo == SIGSEGV)
       return make_error<SnippetSegmentationFault>(
-          reinterpret_cast<intptr_t>(ChildSignalInfo.si_addr));
+          reinterpret_cast<uintptr_t>(ChildSignalInfo.si_addr));
 
     return make_error<SnippetSignal>(ChildSignalInfo.si_signo);
   }
@@ -477,9 +477,10 @@ private:
     if (__rseq_size < 32)
       RseqStructSize = 32;
 
-    long RseqDisableOutput =
-        syscall(SYS_rseq, (intptr_t)__builtin_thread_pointer() + __rseq_offset,
-                RseqStructSize, RSEQ_FLAG_UNREGISTER, RSEQ_SIG);
+    long RseqDisableOutput = syscall(
+        SYS_rseq,
+        reinterpret_cast<uintptr_t>(__builtin_thread_pointer()) + __rseq_offset,
+        RseqStructSize, RSEQ_FLAG_UNREGISTER, RSEQ_SIG);
     if (RseqDisableOutput != 0)
       exit(ChildProcessExitCodeE::RSeqDisableFailed);
 #endif // GLIBC_INITS_RSEQ
@@ -502,7 +503,7 @@ private:
     char *FunctionDataCopy =
         (char *)mmap(MapAddress, FunctionDataCopySize, PROT_READ | PROT_WRITE,
                      MapFlags, 0, 0);
-    if ((intptr_t)FunctionDataCopy == -1)
+    if (reinterpret_cast<intptr_t>(FunctionDataCopy) == -1)
       exit(ChildProcessExitCodeE::FunctionDataMappingFailed);
 
     memcpy(FunctionDataCopy, this->Function.FunctionBytes.data(),
@@ -515,8 +516,8 @@ private:
     if (!AuxMemFDOrError)
       exit(ChildProcessExitCodeE::AuxiliaryMemorySetupFailed);
 
-    ((void (*)(size_t, int))(intptr_t)FunctionDataCopy)(FunctionDataCopySize,
-                                                        *AuxMemFDOrError);
+    ((void (*)(size_t, int))(uintptr_t)FunctionDataCopy)(FunctionDataCopySize,
+                                                         *AuxMemFDOrError);
 
     exit(0);
   }

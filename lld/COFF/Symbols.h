@@ -341,6 +341,9 @@ public:
   // symbol by searching the chain of fallback symbols. Returns the symbol if
   // successful, otherwise returns null.
   Defined *getWeakAlias();
+
+  // If this symbol is external weak, replace this object with aliased symbol.
+  bool resolveWeakAlias();
 };
 
 // Windows-specific classes.
@@ -385,7 +388,7 @@ public:
 class DefinedImportThunk : public Defined {
 public:
   DefinedImportThunk(COFFLinkerContext &ctx, StringRef name,
-                     DefinedImportData *s, uint16_t machine);
+                     DefinedImportData *s, ImportThunkChunk *chunk);
 
   static bool classof(const Symbol *s) {
     return s->kind() == DefinedImportThunkKind;

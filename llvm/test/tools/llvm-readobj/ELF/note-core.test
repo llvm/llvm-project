@@ -260,6 +260,11 @@
 # RUN: llvm-readelf --notes %t_nt_arm_zt.o | FileCheck %s --check-prefix=CHECK-GNU  -DDESC="NT_ARM_ZT (AArch64 SME ZT registers)"
 # RUN: llvm-readobj --notes %t_nt_arm_zt.o | FileCheck %s --check-prefix=CHECK-LLVM -DDESC="NT_ARM_ZT (AArch64 SME ZT registers)"
 
+## Check ELF::NT_ARM_FPMR
+# RUN: yaml2obj %s -DTYPE=0x40e -o %t_nt_arm_fpmr.o
+# RUN: llvm-readelf --notes %t_nt_arm_fpmr.o | FileCheck %s --check-prefix=CHECK-GNU  -DDESC="NT_ARM_FPMR (AArch64 Floating Point Mode Register)"
+# RUN: llvm-readobj --notes %t_nt_arm_fpmr.o | FileCheck %s --check-prefix=CHECK-LLVM -DDESC="NT_ARM_FPMR (AArch64 Floating Point Mode Register)"
+
 ## Check ELF::NT_FILE.
 # RUN: yaml2obj %s -DTYPE=0x46494c45 -o %t_nt_file.o
 # RUN: llvm-readelf --notes %t_nt_file.o | FileCheck %s --check-prefix=CHECK-GNU  -DDESC="NT_FILE (mapped files)"

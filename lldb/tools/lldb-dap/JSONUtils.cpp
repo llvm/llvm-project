@@ -763,6 +763,95 @@ llvm::json::Value CreateStackFrame(lldb::SBFrame &frame) {
     object.try_emplace("instructionPointerReference", formatted_addr);
   }
 
+  if (frame.IsArtificial() || frame.IsHidden())
+    object.try_emplace("presentationHint", "subtle");
+
+  return llvm::json::Value(std::move(object));
+}
+
+llvm::json::Value CreateExtendedStackFrameLabel(lldb::SBThread &thread) {
+  std::string name;
+  lldb::SBStream stream;
+  if (g_dap.thread_format &&
+      thread.GetDescriptionWithFormat(g_dap.thread_format, stream).Success()) {
+    name = stream.GetData();
+  } else {
+    const uint32_t thread_idx = thread.GetExtendedBacktraceOriginatingIndexID();
+    const char *queue_name = thread.GetQueueName();
+    if (queue_name != nullptr) {
+      name = llvm::formatv("Enqueued from {0} (Thread {1})", queue_name,
+                           thread_idx);
+    } else {
+      name = llvm::formatv("Thread {0}", thread_idx);
+    }
+  }
+
+  return llvm::json::Value(llvm::json::Object{{"id", thread.GetThreadID() + 1},
+                                              {"name", name},
+                                              {"presentationHint", "label"}});
+}
+
+// Response to `setInstructionBreakpoints` request.
+// "Breakpoint": {
+//   "type": "object",
+//   "description": "Response to `setInstructionBreakpoints` request.",
+//   "properties": {
+//     "id": {
+//       "type": "number",
+//       "description": "The identifier for the breakpoint. It is needed if
+//       breakpoint events are used to update or remove breakpoints."
+//     },
+//     "verified": {
+//       "type": "boolean",
+//       "description": "If true, the breakpoint could be set (but not
+//       necessarily at the desired location."
+//     },
+//     "message": {
+//       "type": "string",
+//       "description": "A message about the state of the breakpoint.
+//       This is shown to the user and can be used to explain why a breakpoint
+//       could not be verified."
+//     },
+//     "source": {
+//       "type": "Source",
+//       "description": "The source where the breakpoint is located."
+//     },
+//     "line": {
+//       "type": "number",
+//       "description": "The start line of the actual range covered by the
+//       breakpoint."
+//     },
+//     "column": {
+//       "type": "number",
+//       "description": "The start column of the actual range covered by the
+//       breakpoint."
+//     },
+//     "endLine": {
+//       "type": "number",
+//       "description": "The end line of the actual range covered by the
+//       breakpoint."
+//     },
+//     "endColumn": {
+//       "type": "number",
+//       "description": "The end column of the actual range covered by the
+//       breakpoint. If no end line is given, then the end column is assumed to
+//       be in the start line."
+//     },
+//     "instructionReference": {
+//       "type": "string",
+//       "description": "A memory reference to where the breakpoint is set."
+//     },
+//     "offset": {
+//       "type": "number",
+//       "description": "The offset from the instruction reference.
+//       This can be negative."
+//     },
+//   },
+//   "required": [ "id", "verified", "line"]
+// }
+llvm::json::Value CreateInstructionBreakpoint(BreakpointBase *ibp) {
+  llvm::json::Object object;
+  ibp->CreateJsonObject(object);
   return llvm::json::Value(std::move(object));
 }
 
@@ -890,7 +979,13 @@ llvm::json::Value CreateThreadStopped(lldb::SBThread &thread,
       body.try_emplace("reason", "exception");
       EmplaceSafeString(body, "description", exc_bp->label);
     } else {
-      body.try_emplace("reason", "breakpoint");
+      InstructionBreakpoint *inst_bp =
+          g_dap.GetInstructionBPFromStopReason(thread);
+      if (inst_bp) {
+        body.try_emplace("reason", "instruction breakpoint");
+      } else {
+        body.try_emplace("reason", "breakpoint");
+      }
       lldb::break_id_t bp_id = thread.GetStopReasonDataAtIndex(0);
       lldb::break_id_t bp_loc_id = thread.GetStopReasonDataAtIndex(1);
       std::string desc_str =

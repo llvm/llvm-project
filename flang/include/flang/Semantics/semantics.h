@@ -257,6 +257,8 @@ public:
   void NoteDefinedSymbol(const Symbol &);
   bool IsSymbolDefined(const Symbol &) const;
 
+  void DumpSymbols(llvm::raw_ostream &);
+
 private:
   struct ScopeIndexComparator {
     bool operator()(parser::CharBlock, parser::CharBlock) const;

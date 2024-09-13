@@ -38,7 +38,9 @@ What's New in Libc++ 20.0.0?
 Implemented Papers
 ------------------
 
-- TODO
+- P2747R2: ``constexpr`` placement new (`Github <https://github.com/llvm/llvm-project/issues/105427>`__)
+- P2609R3: Relaxing Ranges Just A Smidge (`Github <https://github.com/llvm/llvm-project/issues/105253>`__)
+- P2985R0: A type trait for detecting virtual base classes (`Github <https://github.com/llvm/llvm-project/issues/105432>`__)
 
 
 Improvements and New Features
@@ -46,6 +48,8 @@ Improvements and New Features
 
 - The ``lexicographical_compare`` and ``ranges::lexicographical_compare`` algorithms have been optimized for trivially
   equality comparable types, resulting in a performance improvement of up to 40x.
+
+- The ``_LIBCPP_ENABLE_CXX20_REMOVED_UNCAUGHT_EXCEPTION`` macro has been added to make ``std::uncaught_exception`` available in C++20 and later modes.
 
 
 Deprecations and Removals
@@ -62,7 +66,7 @@ Deprecations and Removals
   ``_LIBCPP_ENABLE_REMOVED_WEEKDAY_RELATIONAL_OPERATORS`` macro that was used to re-enable this extension will be
   ignored in LLVM 20.
 
-- TODO: The ``_LIBCPP_ENABLE_REMOVED_ALLOCATOR_CONST`` macro will no longer have an effect.
+- The ``_LIBCPP_ENABLE_REMOVED_ALLOCATOR_CONST`` macro no longer has any effect. ``std::allocator<const T>`` is not supported as an extension anymore, please migrate any code that uses e.g. ``std::vector<const T>`` to be standards conforming.
 
 Upcoming Deprecations and Removals
 ----------------------------------
