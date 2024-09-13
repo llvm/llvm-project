@@ -2205,7 +2205,7 @@ def TLSModel : I32EnumAttr<
     [TLS_GeneralDynamic, TLS_LocalDynamic, TLS_InitialExec, TLS_LocalExec]> {
   let cppNamespace = "::mlir::cir";
 }
-  
+
 def GlobalOp : CIR_Op<"global",
                       [DeclareOpInterfaceMethods<RegionBranchOpInterface>,
                        DeclareOpInterfaceMethods<CIRGlobalValueInterface>,
@@ -2255,7 +2255,8 @@ def GlobalOp : CIR_Op<"global",
                        UnitAttr:$dsolocal,
                        OptionalAttr<I64Attr>:$alignment,
                        OptionalAttr<ASTVarDeclInterface>:$ast,
-                       OptionalAttr<StrAttr>:$section);
+                       OptionalAttr<StrAttr>:$section,
+                       OptionalAttr<ArrayAttr>:$annotations);
   let regions = (region AnyRegion:$ctorRegion, AnyRegion:$dtorRegion);
   let assemblyFormat = [{
        ($sym_visibility^)?
@@ -2268,6 +2269,7 @@ def GlobalOp : CIR_Op<"global",
        (`addrspace` `(` custom<GlobalOpAddrSpace>($addr_space)^ `)`)?
        $sym_name
        custom<GlobalOpTypeAndInitialValue>($sym_type, $initial_value, $ctorRegion, $dtorRegion)
+       ($annotations^)?
        attr-dict
   }];
 
@@ -3100,6 +3102,7 @@ def FuncOp : CIR_Op<"func", [
                        OptionalAttr<FlatSymbolRefAttr>:$aliasee,
                        OptionalAttr<GlobalCtorAttr>:$global_ctor,
                        OptionalAttr<GlobalDtorAttr>:$global_dtor,
+                       OptionalAttr<ArrayAttr>:$annotations,
                        OptionalAttr<AnyASTFunctionDeclAttr>:$ast);
   let regions = (region AnyRegion:$body);
   let skipDefaultBuilders = 1;

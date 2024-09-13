@@ -545,6 +545,46 @@ void MethodAttr::print(AsmPrinter &printer) const {
 }
 
 //===----------------------------------------------------------------------===//
+// GlobalAnnotationValuesAttr definitions
+//===----------------------------------------------------------------------===//
+
+LogicalResult GlobalAnnotationValuesAttr::verify(
+    function_ref<::mlir::InFlightDiagnostic()> emitError,
+    mlir::ArrayAttr annotations) {
+  if (annotations.empty()) {
+    emitError()
+        << "GlobalAnnotationValuesAttr should at least have one annotation";
+    return failure();
+  }
+  for (auto &entry : annotations) {
+    auto annoEntry = ::mlir::dyn_cast<mlir::ArrayAttr>(entry);
+    if (!annoEntry) {
+      emitError() << "Element of GlobalAnnotationValuesAttr annotations array"
+                     " must be an array";
+      return failure();
+    } else if (annoEntry.size() != 2) {
+      emitError() << "Element of GlobalAnnotationValuesAttr annotations array"
+                  << " must be a 2-element array and you have "
+                  << annoEntry.size();
+      return failure();
+    } else if (!::mlir::isa<mlir::StringAttr>(annoEntry[0])) {
+      emitError() << "Element of GlobalAnnotationValuesAttr annotations"
+                     "array must start with a string, which is the name of "
+                     "global op or func it annotates";
+      return failure();
+    }
+    auto annoPart = ::mlir::dyn_cast<mlir::cir::AnnotationAttr>(annoEntry[1]);
+    if (!annoPart) {
+      emitError() << "The second element of GlobalAnnotationValuesAttr"
+                     "annotations array element must be of "
+                     "type AnnotationValueAttr";
+      return failure();
+    }
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // DynamicCastInfoAtttr definitions
 //===----------------------------------------------------------------------===//
 
