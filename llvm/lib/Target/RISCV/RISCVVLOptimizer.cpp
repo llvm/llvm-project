@@ -39,7 +39,7 @@ class RISCVVLOptimizer : public MachineFunctionPass {
 public:
   static char ID;
 
-  RISCVVLOptimizer() : MachineFunctionPass(ID) { }
+  RISCVVLOptimizer() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
