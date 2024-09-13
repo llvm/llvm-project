@@ -122,9 +122,9 @@ public:
   /// These methods just forward to Create, and are useful when you
   /// statically know what type of instruction you're going to create.  These
   /// helpers just save some typing.
-#define HANDLE_UNARY_INST(N, OPC, CLASS) \
-  static UnaryOperator *Create##OPC(Value *V, const Twine &Name = "") {\
-    return Create(Instruction::OPC, V, Name);\
+#define HANDLE_UNARY_INST(N, OPC, CLASS)                                       \
+  static UnaryOperator *Create##OPC(Value *V, const Twine &Name = "") {        \
+    return Create(Instruction::OPC, V, Name);                                  \
   }
 #include "llvm/IR/Instruction.def"
 #define HANDLE_UNARY_INST(N, OPC, CLASS)                                       \
@@ -201,15 +201,15 @@ public:
   /// These methods just forward to Create, and are useful when you
   /// statically know what type of instruction you're going to create.  These
   /// helpers just save some typing.
-#define HANDLE_BINARY_INST(N, OPC, CLASS) \
-  static BinaryOperator *Create##OPC(Value *V1, Value *V2, \
-                                     const Twine &Name = "") {\
-    return Create(Instruction::OPC, V1, V2, Name);\
+#define HANDLE_BINARY_INST(N, OPC, CLASS)                                      \
+  static BinaryOperator *Create##OPC(Value *V1, Value *V2,                     \
+                                     const Twine &Name = "") {                 \
+    return Create(Instruction::OPC, V1, V2, Name);                             \
   }
 #include "llvm/IR/Instruction.def"
 #define HANDLE_BINARY_INST(N, OPC, CLASS)                                      \
   static BinaryOperator *Create##OPC(Value *V1, Value *V2, const Twine &Name,  \
-                                     InsertPosition InsertBefore) {  \
+                                     InsertPosition InsertBefore) {            \
     return Create(Instruction::OPC, V1, V2, Name, InsertBefore);               \
   }
 #include "llvm/IR/Instruction.def"
@@ -322,9 +322,9 @@ public:
 
   static inline BinaryOperator *
   CreateDisjoint(BinaryOps Opc, Value *V1, Value *V2, const Twine &Name = "");
-  static inline BinaryOperator *
-  CreateDisjoint(BinaryOps Opc, Value *V1, Value *V2, const Twine &Name,
-                 InsertPosition InsertBefore);
+  static inline BinaryOperator *CreateDisjoint(BinaryOps Opc, Value *V1,
+                                               Value *V2, const Twine &Name,
+                                               InsertPosition InsertBefore);
 
 #define DEFINE_HELPERS(OPC, NUWNSWEXACT)                                       \
   static BinaryOperator *Create##NUWNSWEXACT##OPC(Value *V1, Value *V2,        \
@@ -423,10 +423,9 @@ BinaryOperator *BinaryOperator::CreateDisjoint(BinaryOps Opc, Value *V1,
   cast<PossiblyDisjointInst>(BO)->setIsDisjoint(true);
   return BO;
 }
-BinaryOperator *
-BinaryOperator::CreateDisjoint(BinaryOps Opc, Value *V1, Value *V2,
-                               const Twine &Name,
-                               InsertPosition InsertBefore) {
+BinaryOperator *BinaryOperator::CreateDisjoint(BinaryOps Opc, Value *V1,
+                                               Value *V2, const Twine &Name,
+                                               InsertPosition InsertBefore) {
   BinaryOperator *BO = Create(Opc, V1, V2, Name, InsertBefore);
   cast<PossiblyDisjointInst>(BO)->setIsDisjoint(true);
   return BO;
