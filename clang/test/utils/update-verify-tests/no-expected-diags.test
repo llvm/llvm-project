@@ -1,0 +1,4 @@
+# RUN: cp %S/Inputs/no-expected-diags.c %t.c && not %clang_cc1 -verify %t.c 2>&1 | %update-verify-tests
+# RUN: diff -u %S/Inputs/no-expected-diags.c.expected %t.c
+# RUN: %clang_cc1 -verify %t.c
+

@@ -152,7 +152,7 @@
 "`P1855R0 <https://wg21.link/P1855R0>`__","Make ``<compare>``\  freestanding","2019-11 (Belfast)","","",""
 "`P1862R1 <https://wg21.link/P1862R1>`__","Ranges adaptors for non-copyable iterators","2019-11 (Belfast)","|Complete|","16.0",""
 "`P1865R1 <https://wg21.link/P1865R1>`__","Add max() to latch and barrier","2019-11 (Belfast)","|Complete|","11.0",""
-"`P1869R1 <https://wg21.link/P1869R1>`__","Rename 'condition_variable_any' interruptible wait methods","2019-11 (Belfast)","","",""
+"`P1869R1 <https://wg21.link/P1869R1>`__","Rename 'condition_variable_any' interruptible wait methods","2019-11 (Belfast)","|Complete|","18.0",""
 "`P1870R1 <https://wg21.link/P1870R1>`__","forwarding-range is too subtle","2019-11 (Belfast)","|Complete|","15.0",""
 "`P1871R1 <https://wg21.link/P1871R1>`__","Concept traits should be named after concepts","2019-11 (Belfast)","|Complete|","14.0",""
 "`P1872R0 <https://wg21.link/P1872R0>`__","span should have size_type, not index_type","2019-11 (Belfast)","|Complete|","10.0",""

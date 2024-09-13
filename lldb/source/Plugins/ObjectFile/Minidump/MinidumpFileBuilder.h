@@ -115,6 +115,9 @@ public:
   // Run cleanup and write all remaining bytes to file
   lldb_private::Status DumpFile();
 
+  // Delete the file if it exists
+  void DeleteFile() noexcept;
+
 private:
   // Add data to the end of the buffer, if the buffer exceeds the flush level,
   // trigger a flush.

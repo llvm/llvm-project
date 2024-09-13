@@ -8598,9 +8598,9 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
     if (auto Plan = tryToBuildVPlanWithVPRecipes(SubRange)) {
       // Now optimize the initial VPlan.
       if (!Plan->hasVF(ElementCount::getFixed(1)))
-        VPlanTransforms::truncateToMinimalBitwidths(
-            *Plan, CM.getMinimalBitwidths(), PSE.getSE()->getContext());
-      VPlanTransforms::optimize(*Plan, *PSE.getSE());
+        VPlanTransforms::truncateToMinimalBitwidths(*Plan,
+                                                    CM.getMinimalBitwidths());
+      VPlanTransforms::optimize(*Plan);
       // TODO: try to put it close to addActiveLaneMask().
       // Discard the plan if it is not EVL-compatible
       if (CM.foldTailWithEVL() &&
@@ -8747,16 +8747,7 @@ static void addLiveOutsForFirstOrderRecurrences(
   }
 
   VPBuilder ScalarPHBuilder(ScalarPHVPBB);
-  VPBuilder MiddleBuilder(MiddleVPBB);
-  // Reset insert point so new recipes are inserted before terminator and
-  // condition, if there is either the former or both.
-  // TODO: set MiddleBuilder to MiddleVPBB->getFirstNonPhi().
-  if (auto *Terminator = MiddleVPBB->getTerminator()) {
-    auto *Condition = dyn_cast<VPInstruction>(Terminator->getOperand(0));
-    assert((!Condition || Condition->getParent() == MiddleVPBB) &&
-           "Condition expected in MiddleVPBB");
-    MiddleBuilder.setInsertPoint(Condition ? Condition : Terminator);
-  }
+  VPBuilder MiddleBuilder(MiddleVPBB, MiddleVPBB->getFirstNonPhi());
   VPValue *OneVPV = Plan.getOrAddLiveIn(
       ConstantInt::get(Plan.getCanonicalIV()->getScalarType(), 1));
   VPValue *TwoVPV = Plan.getOrAddLiveIn(
