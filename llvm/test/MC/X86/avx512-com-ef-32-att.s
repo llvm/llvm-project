@@ -1,4 +1,3 @@
-// REQUIRES: intel_feature_isa_avx512_com_ef
 // RUN: llvm-mc -triple i386 --show-encoding %s | FileCheck %s
 
 // CHECK: vcomxsd %xmm3, %xmm2

@@ -1,4 +1,3 @@
-// REQUIRES: intel_feature_isa_avx512_com_ef
 // RUN: llvm-mc -triple x86_64 -x86-asm-syntax=intel -output-asm-variant=1 --show-encoding %s | FileCheck %s
 
 // CHECK: vcomxsd xmm22, xmm23

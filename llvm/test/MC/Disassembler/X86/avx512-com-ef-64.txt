@@ -1,4 +1,3 @@
-# REQUIRES: intel_feature_isa_avx512_com_ef
 # RUN: llvm-mc --disassemble %s -triple=x86_64 | FileCheck %s --check-prefixes=ATT
 # RUN: llvm-mc --disassemble %s -triple=x86_64 --output-asm-variant=1 | FileCheck %s --check-prefixes=INTEL
 
