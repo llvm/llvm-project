@@ -7164,11 +7164,11 @@ let Predicates = [HasAVXNECONVERT, NoVLX] in
 
 let ExeDomain = SSEPackedSingle in {
 let isCommutable = 1 in
-def VPERM2F128rr : AVXAIi8<0x06, MRMSrcReg, (outs VR256:$dst),
+def VPERM2F128rri : AVXAIi8<0x06, MRMSrcReg, (outs VR256:$dst),
           (ins VR256:$src1, VR256:$src2, u8imm:$src3),
           "vperm2f128\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}", []>,
           VEX, VVVV, VEX_L, Sched<[WriteFShuffle256]>;
-def VPERM2F128rm : AVXAIi8<0x06, MRMSrcMem, (outs VR256:$dst),
+def VPERM2F128rmi : AVXAIi8<0x06, MRMSrcMem, (outs VR256:$dst),
           (ins VR256:$src1, f256mem:$src2, u8imm:$src3),
           "vperm2f128\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}", []>,
           VEX, VVVV, VEX_L, Sched<[WriteFShuffle256.Folded, WriteFShuffle256.ReadAfterFold]>;
@@ -7181,12 +7181,12 @@ def Perm2XCommuteImm : SDNodeXForm<timm, [{
 
 multiclass vperm2x128_lowering<string InstrStr, ValueType VT, PatFrag memop_frag> {
   def : Pat<(VT (X86VPerm2x128 VR256:$src1, VR256:$src2, (i8 timm:$imm))),
-            (!cast<Instruction>(InstrStr#rr) VR256:$src1, VR256:$src2, timm:$imm)>;
+            (!cast<Instruction>(InstrStr#rri) VR256:$src1, VR256:$src2, timm:$imm)>;
   def : Pat<(VT (X86VPerm2x128 VR256:$src1, (memop_frag addr:$src2), (i8 timm:$imm))),
-            (!cast<Instruction>(InstrStr#rm) VR256:$src1, addr:$src2, timm:$imm)>;
+            (!cast<Instruction>(InstrStr#rmi) VR256:$src1, addr:$src2, timm:$imm)>;
   // Pattern with load in other operand.
   def : Pat<(VT (X86VPerm2x128 (memop_frag addr:$src2), VR256:$src1, (i8 timm:$imm))),
-            (!cast<Instruction>(InstrStr#rm) VR256:$src1, addr:$src2,
+            (!cast<Instruction>(InstrStr#rmi) VR256:$src1, addr:$src2,
                                              (Perm2XCommuteImm timm:$imm))>;
 }
 
@@ -7207,12 +7207,12 @@ let Predicates = [HasAVX1Only] in {
 // VINSERTF128 - Insert packed floating-point values
 //
 let hasSideEffects = 0, ExeDomain = SSEPackedSingle in {
-def VINSERTF128rr : AVXAIi8<0x18, MRMSrcReg, (outs VR256:$dst),
+def VINSERTF128rri : AVXAIi8<0x18, MRMSrcReg, (outs VR256:$dst),
           (ins VR256:$src1, VR128:$src2, u8imm:$src3),
           "vinsertf128\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}",
           []>, Sched<[WriteFShuffle256]>, VEX, VVVV, VEX_L;
 let mayLoad = 1 in
-def VINSERTF128rm : AVXAIi8<0x18, MRMSrcMem, (outs VR256:$dst),
+def VINSERTF128rmi : AVXAIi8<0x18, MRMSrcMem, (outs VR256:$dst),
           (ins VR256:$src1, f128mem:$src2, u8imm:$src3),
           "vinsertf128\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}",
           []>, Sched<[WriteFShuffle256.Folded, WriteFShuffle256.ReadAfterFold]>, VEX, VVVV, VEX_L;
@@ -7230,18 +7230,18 @@ multiclass vinsert_lowering<string InstrStr, string PermStr,
                             PatFrag frommemop_frag, PatFrag tomemop_frag> {
   def : Pat<(vinsert128_insert:$ins (To VR256:$src1), (From VR128:$src2),
                                    (iPTR imm)),
-            (!cast<Instruction>(InstrStr#rr) VR256:$src1, VR128:$src2,
+            (!cast<Instruction>(InstrStr#rri) VR256:$src1, VR128:$src2,
                                        (INSERT_get_vinsert128_imm VR256:$ins))>;
   def : Pat<(vinsert128_insert:$ins (To VR256:$src1),
                                     (From (frommemop_frag addr:$src2)),
                                     (iPTR imm)),
-            (!cast<Instruction>(InstrStr#rm) VR256:$src1, addr:$src2,
+            (!cast<Instruction>(InstrStr#rmi) VR256:$src1, addr:$src2,
                                        (INSERT_get_vinsert128_imm VR256:$ins))>;
   // Folding "To" vector - convert to perm2x128 and commute inputs.
   def : Pat<(vinsert128_insert:$ins (To (tomemop_frag addr:$src1)),
                                     (From VR128:$src2),
                                     (iPTR imm)),
-            (!cast<Instruction>(PermStr#rm)
+            (!cast<Instruction>(PermStr#rmi)
               (INSERT_SUBREG (To (IMPLICIT_DEF)), VR128:$src2, sub_xmm),
               addr:$src1, (INSERT_get_vperm2x128_commutedimm VR256:$ins))>;
 }
@@ -7264,12 +7264,12 @@ let Predicates = [HasAVX1Only] in {
 // VEXTRACTF128 - Extract packed floating-point values
 //
 let hasSideEffects = 0, ExeDomain = SSEPackedSingle in {
-def VEXTRACTF128rr : AVXAIi8<0x19, MRMDestReg, (outs VR128:$dst),
+def VEXTRACTF128rri : AVXAIi8<0x19, MRMDestReg, (outs VR128:$dst),
           (ins VR256:$src1, u8imm:$src2),
           "vextractf128\t{$src2, $src1, $dst|$dst, $src1, $src2}",
           []>, Sched<[WriteFShuffle256]>, VEX, VEX_L;
 let mayStore = 1 in
-def VEXTRACTF128mr : AVXAIi8<0x19, MRMDestMem, (outs),
+def VEXTRACTF128mri : AVXAIi8<0x19, MRMDestMem, (outs),
           (ins f128mem:$dst, VR256:$src1, u8imm:$src2),
           "vextractf128\t{$src2, $src1, $dst|$dst, $src1, $src2}",
           []>, Sched<[WriteFStoreX]>, VEX, VEX_L;
@@ -7277,12 +7277,12 @@ def VEXTRACTF128mr : AVXAIi8<0x19, MRMDestMem, (outs),
 
 multiclass vextract_lowering<string InstrStr, ValueType From, ValueType To> {
   def : Pat<(vextract128_extract:$ext VR256:$src1, (iPTR imm)),
-            (To (!cast<Instruction>(InstrStr#rr)
+            (To (!cast<Instruction>(InstrStr#rri)
                                     (From VR256:$src1),
                                     (EXTRACT_get_vextract128_imm VR128:$ext)))>;
   def : Pat<(store (To (vextract128_extract:$ext (From VR256:$src1),
                                                  (iPTR imm))), addr:$dst),
-            (!cast<Instruction>(InstrStr#mr) addr:$dst, VR256:$src1,
+            (!cast<Instruction>(InstrStr#mri) addr:$dst, VR256:$src1,
              (EXTRACT_get_vextract128_imm VR128:$ext))>;
 }
 
@@ -7766,30 +7766,30 @@ let Predicates = [HasAVX1Only] in {
   def : Pat<(v4f32 (X86VBroadcast FR32:$src)),
             (VPERMILPSri (v4f32 (COPY_TO_REGCLASS FR32:$src, VR128)), 0)>;
   def : Pat<(v8f32 (X86VBroadcast FR32:$src)),
-            (VINSERTF128rr (INSERT_SUBREG (v8f32 (IMPLICIT_DEF)),
+            (VINSERTF128rri (INSERT_SUBREG (v8f32 (IMPLICIT_DEF)),
               (v4f32 (VPERMILPSri (v4f32 (COPY_TO_REGCLASS FR32:$src, VR128)), 0)), sub_xmm),
               (v4f32 (VPERMILPSri (v4f32 (COPY_TO_REGCLASS FR32:$src, VR128)), 0)), 1)>;
   def : Pat<(v8f32 (X86VBroadcast v4f32:$src)),
-            (VINSERTF128rr (INSERT_SUBREG (v8f32 (IMPLICIT_DEF)),
+            (VINSERTF128rri (INSERT_SUBREG (v8f32 (IMPLICIT_DEF)),
               (v4f32 (VPERMILPSri VR128:$src, 0)), sub_xmm),
               (v4f32 (VPERMILPSri VR128:$src, 0)), 1)>;
   def : Pat<(v4f64 (X86VBroadcast FR64:$src)),
-            (VINSERTF128rr (INSERT_SUBREG (v4f64 (IMPLICIT_DEF)),
+            (VINSERTF128rri (INSERT_SUBREG (v4f64 (IMPLICIT_DEF)),
               (v2f64 (VMOVDDUPrr (v2f64 (COPY_TO_REGCLASS FR64:$src, VR128)))), sub_xmm),
               (v2f64 (VMOVDDUPrr (v2f64 (COPY_TO_REGCLASS FR64:$src, VR128)))), 1)>;
   def : Pat<(v4f64 (X86VBroadcast v2f64:$src)),
-            (VINSERTF128rr (INSERT_SUBREG (v4f64 (IMPLICIT_DEF)),
+            (VINSERTF128rri (INSERT_SUBREG (v4f64 (IMPLICIT_DEF)),
               (v2f64 (VMOVDDUPrr VR128:$src)), sub_xmm),
               (v2f64 (VMOVDDUPrr VR128:$src)), 1)>;
 
   def : Pat<(v4i32 (X86VBroadcast GR32:$src)),
             (VPSHUFDri (VMOVDI2PDIrr GR32:$src), 0)>;
   def : Pat<(v8i32 (X86VBroadcast GR32:$src)),
-            (VINSERTF128rr (INSERT_SUBREG (v8i32 (IMPLICIT_DEF)),
+            (VINSERTF128rri (INSERT_SUBREG (v8i32 (IMPLICIT_DEF)),
               (v4i32 (VPSHUFDri (VMOVDI2PDIrr GR32:$src), 0)), sub_xmm),
               (v4i32 (VPSHUFDri (VMOVDI2PDIrr GR32:$src), 0)), 1)>;
   def : Pat<(v4i64 (X86VBroadcast GR64:$src)),
-            (VINSERTF128rr (INSERT_SUBREG (v4i64 (IMPLICIT_DEF)),
+            (VINSERTF128rri (INSERT_SUBREG (v4i64 (IMPLICIT_DEF)),
               (v4i32 (VPSHUFDri (VMOV64toPQIrr GR64:$src), 0x44)), sub_xmm),
               (v4i32 (VPSHUFDri (VMOV64toPQIrr GR64:$src), 0x44)), 1)>;
 
@@ -7799,7 +7799,7 @@ let Predicates = [HasAVX1Only] in {
             (VMOVDDUPrm addr:$src)>;
 
   def : Pat<(v4i64 (X86VBroadcast v2i64:$src)),
-            (VINSERTF128rr (INSERT_SUBREG (v4i64 (IMPLICIT_DEF)),
+            (VINSERTF128rri (INSERT_SUBREG (v4i64 (IMPLICIT_DEF)),
               (v2i64 (VPSHUFDri VR128:$src, 0x44)), sub_xmm),
               (v2i64 (VPSHUFDri VR128:$src, 0x44)), 1)>;
 }
@@ -7866,11 +7866,11 @@ defm VPERMPD : avx2_perm_imm<0x01, "vpermpd", loadv4f64, v4f64,
 // VPERM2I128 - Permute Integer vector Values in 128-bit chunks
 //
 let isCommutable = 1 in
-def VPERM2I128rr : AVX2AIi8<0x46, MRMSrcReg, (outs VR256:$dst),
+def VPERM2I128rri : AVX2AIi8<0x46, MRMSrcReg, (outs VR256:$dst),
           (ins VR256:$src1, VR256:$src2, u8imm:$src3),
           "vperm2i128\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}", []>,
           Sched<[WriteShuffle256]>, VEX, VVVV, VEX_L;
-def VPERM2I128rm : AVX2AIi8<0x46, MRMSrcMem, (outs VR256:$dst),
+def VPERM2I128rmi : AVX2AIi8<0x46, MRMSrcMem, (outs VR256:$dst),
           (ins VR256:$src1, f256mem:$src2, u8imm:$src3),
           "vperm2i128\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}", []>,
           Sched<[WriteShuffle256.Folded, WriteShuffle256.ReadAfterFold]>, VEX, VVVV, VEX_L;
@@ -7888,12 +7888,12 @@ let Predicates = [HasAVX2] in {
 // VINSERTI128 - Insert packed integer values
 //
 let hasSideEffects = 0 in {
-def VINSERTI128rr : AVX2AIi8<0x38, MRMSrcReg, (outs VR256:$dst),
+def VINSERTI128rri : AVX2AIi8<0x38, MRMSrcReg, (outs VR256:$dst),
           (ins VR256:$src1, VR128:$src2, u8imm:$src3),
           "vinserti128\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}",
           []>, Sched<[WriteShuffle256]>, VEX, VVVV, VEX_L;
 let mayLoad = 1 in
-def VINSERTI128rm : AVX2AIi8<0x38, MRMSrcMem, (outs VR256:$dst),
+def VINSERTI128rmi : AVX2AIi8<0x38, MRMSrcMem, (outs VR256:$dst),
           (ins VR256:$src1, i128mem:$src2, u8imm:$src3),
           "vinserti128\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}",
           []>, Sched<[WriteShuffle256.Folded, WriteShuffle256.ReadAfterFold]>, VEX, VVVV, VEX_L;
@@ -7914,12 +7914,12 @@ let Predicates = [HasAVXNECONVERT, NoVLX] in
 //===----------------------------------------------------------------------===//
 // VEXTRACTI128 - Extract packed integer values
 //
-def VEXTRACTI128rr : AVX2AIi8<0x39, MRMDestReg, (outs VR128:$dst),
+def VEXTRACTI128rri : AVX2AIi8<0x39, MRMDestReg, (outs VR128:$dst),
           (ins VR256:$src1, u8imm:$src2),
           "vextracti128\t{$src2, $src1, $dst|$dst, $src1, $src2}", []>,
           Sched<[WriteShuffle256]>, VEX, VEX_L;
 let hasSideEffects = 0, mayStore = 1 in
-def VEXTRACTI128mr : AVX2AIi8<0x39, MRMDestMem, (outs),
+def VEXTRACTI128mri : AVX2AIi8<0x39, MRMDestMem, (outs),
           (ins i128mem:$dst, VR256:$src1, u8imm:$src2),
           "vextracti128\t{$src2, $src1, $dst|$dst, $src1, $src2}", []>,
           Sched<[SchedWriteVecMoveLS.XMM.MR]>, VEX, VEX_L;

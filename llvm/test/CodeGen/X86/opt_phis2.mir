@@ -49,17 +49,17 @@ body:             |
 
   bb.4:
     %3:vr256 = COPY %8
-    %17:vr128 = VEXTRACTF128rr %8, 1
+    %17:vr128 = VEXTRACTF128rri %8, 1
     VPEXTRDmr %9, 1, $noreg, 12, $noreg, killed %17, 2
 
   bb.5:
     %4:vr256 = PHI %0, %bb.1, %3, %bb.4
-    %18:vr128 = VEXTRACTF128rr %4, 1
+    %18:vr128 = VEXTRACTF128rri %4, 1
     VPEXTRDmr %9, 1, $noreg, 8, $noreg, killed %18, 1
 
   bb.6:
     %5:vr256 = PHI %1, %bb.2, %4, %bb.5
-    %19:vr128 = VEXTRACTF128rr %5, 1
+    %19:vr128 = VEXTRACTF128rri %5, 1
     VMOVPDI2DImr %9, 1, $noreg, 4, $noreg, killed %19
 
   bb.7:

@@ -1158,13 +1158,13 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
     DestName = getRegName(MI->getOperand(0).getReg());
     break;
 
-  case X86::VPERM2F128rr:
-  case X86::VPERM2I128rr:
+  case X86::VPERM2F128rri:
+  case X86::VPERM2I128rri:
     Src2Name = getRegName(MI->getOperand(2).getReg());
     [[fallthrough]];
 
-  case X86::VPERM2F128rm:
-  case X86::VPERM2I128rm:
+  case X86::VPERM2F128rmi:
+  case X86::VPERM2I128rmi:
     // For instruction comments purpose, assume the 256-bit vector is v4i64.
     if (MI->getOperand(NumOperands - 1).isImm())
       DecodeVPERM2X128Mask(4, MI->getOperand(NumOperands - 1).getImm(),
