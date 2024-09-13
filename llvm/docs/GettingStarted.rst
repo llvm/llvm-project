@@ -1160,6 +1160,14 @@ following options with cmake:
    information is in a separate DWARF object file (with the extension ``.dwo``).
    This only applies to host platforms using ELF, such as Linux.
 
+ * ``-DBUILD_SHARED_LIBS``
+
+   Setting this to ``ON`` will build shared libraries instead of static
+   libraries. This will ease memory pressure on the linker. However, this should
+   only be used when developing llvm. See
+   :ref:`BUILD_SHARED_LIBS <LLVM-related variables BUILD_SHARED_LIBS>`
+   for more information.
+
 .. _links:
 
 Links

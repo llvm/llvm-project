@@ -309,6 +309,8 @@ These variables provide fine control over the build of LLVM and
 enabled sub-projects. Nearly all of these variable names begin with
 ``LLVM_``.
 
+.. _LLVM-related variables BUILD_SHARED_LIBS:
+
 **BUILD_SHARED_LIBS**:BOOL
   Flag indicating if each LLVM component (e.g. Support) is built as a shared
   library (ON) or as a static library (OFF). Its default value is OFF. On
