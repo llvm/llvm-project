@@ -808,9 +808,9 @@ CIRGenFunction::getEHDispatchBlock(EHScopeStack::stable_iterator si,
   return dispatchBlock;
 }
 
-mlir::Operation *CIRGenFunction::getInvokeDestImpl() {
-  assert(EHStack.requiresLandingPad());
-  assert(!EHStack.empty());
+bool CIRGenFunction::isInvokeDest() {
+  if (!EHStack.requiresLandingPad())
+    return false;
 
   // If exceptions are disabled/ignored and SEH is not in use, then there is no
   // invoke destination. SEH "works" even if exceptions are off. In practice,
@@ -819,13 +819,23 @@ mlir::Operation *CIRGenFunction::getInvokeDestImpl() {
   const LangOptions &LO = CGM.getLangOpts();
   if (!LO.Exceptions || LO.IgnoreExceptions) {
     if (!LO.Borland && !LO.MicrosoftExt)
-      return nullptr;
+      return false;
     if (!currentFunctionUsesSEHTry())
-      return nullptr;
+      return false;
   }
 
   // CUDA device code doesn't have exceptions.
   if (LO.CUDA && LO.CUDAIsDevice)
+    return false;
+
+  return true;
+}
+
+mlir::Operation *CIRGenFunction::getInvokeDestImpl() {
+  assert(EHStack.requiresLandingPad());
+  assert(!EHStack.empty());
+
+  if (!isInvokeDest())
     return nullptr;
 
   // Check the innermost scope for a cached landing pad.  If this is
