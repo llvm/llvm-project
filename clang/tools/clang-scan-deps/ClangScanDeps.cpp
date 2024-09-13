@@ -815,6 +815,8 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
 
   Compilations = inferTargetAndDriverMode(std::move(Compilations));
 
+  Compilations = inferToolLocation(std::move(Compilations));
+
   // The command options are rewritten to run Clang in preprocessor only mode.
   auto AdjustingCompilations =
       std::make_unique<tooling::ArgumentsAdjustingCompilations>(
