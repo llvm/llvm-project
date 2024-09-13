@@ -1,49 +1,26 @@
+//===-- Implementation of ftw function ------------------------------------===//
 //
-// https://man7.org/linux/man-pages/man3/ftw.3.html
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
 
-/*
- * -----
- * Build
- * -----
- * cd ..../google3/experimental/users/rtenneti/llvm_libc/
- * make
- *
- * ------------
- * How to Test:
- * ------------
- * make test
- */
+#include "src/ftw/ftw.h"
 
-#include "nftw.h"
+#include "src/__support/common.h"
+#include "src/__support/CPP/string.h"
+#include "src/errno/libc_errno.h"
 
-#include <dirent.h>
-#include <errno.h>
-#include <fcntl.h>
-#include <limits.h>
-#include <pthread.h>
-#include <stddef.h>  // size_t
-#include <stdint.h>  // int8_t, int16_t and int32_t
-#include <stdio.h>
-#include <string.h>
-#include <sys/socket.h>
+#include <stddef.h>
 #include <sys/stat.h>
-#include <sys/un.h>
-#include <unistd.h>
 
-#include <cstdio>
-#include <cstring>
-#include <filesystem>  // NOLINT
-#include <filesystem>
-#include <fstream>
-#include <iostream>
-#include <optional>
-#include <string_view>
 
-namespace {
+namespace LIBC_NAMESPACE_DECL {
 class Func {
  public:
   virtual int call(const char*, const struct stat*, int, struct FTW*) = 0;
+  virtual ~Func() = 0;
 };
 
 using nftwFn = int (*)(const char* filePath, const struct stat* statBuf,
@@ -59,6 +36,7 @@ class NftwFunc : public Func {
                    struct FTW* ftwBuf) override {
     return fn(dirPath, statBuf, tFlag, ftwBuf);
   }
+  virtual ~NftwFunc() {}
 
  private:
   const nftwFn fn;
@@ -71,12 +49,13 @@ class FtwFunc : public Func {
                    struct FTW*) override {
     return fn(dirPath, statBuf, tFlag);
   }
+  virtual ~FtwFunc() {}
 
  private:
   const ftwFn fn;
 };
 
-int doMergedFtw(const std::string& dirPath, Func& fn, int fdLimit, int flags,
+int doMergedFtw(const cpp::string& dirPath, Func& fn, int fdLimit, int flags,
                 int level) {
   // fdLimit specifies the maximum number of directories that ftw()
   // will hold open simultaneously. When a directory is opened, fdLimit is
@@ -125,8 +104,8 @@ int doMergedFtw(const std::string& dirPath, Func& fn, int fdLimit, int flags,
 
   struct FTW ftwBuf;
   // Find the base by finding the last slash.
-  std::size_t slash_found = dirPath.rfind("/");
-  if (slash_found != std::string::npos) {
+  size_t slash_found = dirPath.rfind("/");
+  if (slash_found != cpp::string::npos) {
     ftwBuf.base = slash_found + 1;
   }
 
@@ -175,19 +154,22 @@ int doMergedFtw(const std::string& dirPath, Func& fn, int fdLimit, int flags,
   }
   return 0;
 }
-} // namespace
 
-int llvm_libc_nftw(const std::string& dirPath,
-                   int (*fn)(const char* filePath, const struct stat* statBuf,
-                             int tFlag, struct FTW* ftwbuf),
-                   int fdLimit, int flags) {
+LLVM_LIBC_FUNCTION(int, nftw, (const char *dirPath,
+                   int (*fn)(const char *filePath, const struct stat *statBuf,
+                             int tFlag, struct FTW *ftwbuf),
+                   int fdLimit, int flags)) {
   NftwFunc wrappedFn{fn};
   return doMergedFtw(dirPath, wrappedFn, fdLimit, flags, 0);
 }
 
-int llvm_libc_ftw(const std::string &dirPath,
+LLVM_LIBC_FUNCTION(int, ftw, (const char *dirPath,
                   int (*fn)(const char *filePath, const struct stat *statBuf,
                             int tFlag),
-                  int fdLimit) {
-  return llvm_libc_nftw(dirPath, (int (*)())fn, fdLimit, FTW_PHYS, 0);
+                  int fdLimit)) {
+  FtwFunc wrappedFn{fn};
+  return doMergedFtw(dirPath, wrappedFn, fdLimit, FTW_PHYS, 0);
 }
+
+} // namespace LIBC_NAMESPACE_DECL
+
