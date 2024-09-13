@@ -17,8 +17,9 @@ namespace LIBC_NAMESPACE_DECL {
 using LIBC_NAMESPACE::time_utils::TimeConstants;
 
 LLVM_LIBC_FUNCTION(char *, ctime_r, (const time_t *t_ptr, char *buffer)) {
-  if (t_ptr == NULL || buffer == NULL || *t_ptr > cpp::numeric_limits<int32_t>::max()) {
-    return NULL;
+  if (t_ptr == nullptr || buffer == nullptr ||
+      *t_ptr > cpp::numeric_limits<int32_t>::max()) {
+    return nullptr;
   }
 
   return time_utils::asctime(time_utils::localtime(t_ptr), buffer,

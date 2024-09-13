@@ -14,18 +14,18 @@
 
 using LIBC_NAMESPACE::time_utils::TimeConstants;
 
-TEST(LlvmLibcCtimeR, NULL) {
+TEST(LlvmLibcCtimeR, Nullptr) {
   char *result;
-  result = LIBC_NAMESPACE::ctime_r(NULL, NULL);
-  ASSERT_STREQ(NULL, result);
+  result = LIBC_NAMESPACE::ctime_r(nullptr, nullptr);
+  ASSERT_STREQ(nullptr, result);
 
   char buffer[TimeConstants::ASCTIME_BUFFER_SIZE];
-  result = LIBC_NAMESPACE::ctime_r(NULL, buffer);
-  ASSERT_STREQ(NULL, result);
+  result = LIBC_NAMESPACE::ctime_r(nullptr, buffer);
+  ASSERT_STREQ(nullptr, result);
 
   time_t t;
-  result = LIBC_NAMESPACE::ctime_r(&t, NULL);
-  ASSERT_STREQ(NULL, result);
+  result = LIBC_NAMESPACE::ctime_r(&t, nullptr);
+  ASSERT_STREQ(nullptr, result);
 }
 
 TEST(LlvmLibcCtimeR, ValidUnixTimestamp0) {
@@ -54,5 +54,5 @@ TEST(LlvmLibcCtimeR, InvalidArgument) {
   char *result;
   t = 2147483648;
   result = LIBC_NAMESPACE::ctime_r(&t, buffer);
-  ASSERT_STREQ(NULL, result);
+  ASSERT_STREQ(nullptr, result);
 }
