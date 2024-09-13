@@ -535,7 +535,11 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             )
             self.assertState(process.GetState(), lldb.eStateStopped)
 
-            core_styles = [lldb.eSaveCoreStackOnly, lldb.eSaveCoreDirtyOnly, lldb.eSaveCoreFull]
+            core_styles = [
+                lldb.eSaveCoreStackOnly,
+                lldb.eSaveCoreDirtyOnly,
+                lldb.eSaveCoreFull,
+            ]
             for style in core_styles:
                 spec_one = lldb.SBFileSpec(self.getBuildArtifact("core.one.dmp"))
                 spec_two = lldb.SBFileSpec(self.getBuildArtifact("core.two.dmp"))
@@ -551,9 +555,9 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
 
                 file_one = None
                 file_two = None
-                with open(spec_one.GetFileName(), mode='rb') as file: # b is important -> binary
+                with open(spec_one.GetFileName(), mode="rb") as file:
                     file_one = file.read()
-                with open(spec_two.GetFileName(), mode='rb') as file:
+                with open(spec_two.GetFileName(), mode="rb") as file:
                     file_two = file.read()
                 self.assertEqual(file_one, file_two)
                 self.assertTrue(os.unlink(spec_one.GetFileName()))
