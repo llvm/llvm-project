@@ -84,13 +84,22 @@ public:
     E = E->IgnoreParenCasts();
     if (auto *TempE = dyn_cast<CXXBindTemporaryExpr>(E))
       E = TempE->getSubExpr();
+    E = E->IgnoreParenCasts();
+    if (auto *Ref = dyn_cast<DeclRefExpr>(E)) {
+      if (auto *Decl = Ref->getDecl()) {
+        if (auto *VD = dyn_cast<VarDecl>(Decl))
+          return VisitLabmdaArgument(VD->getInit());
+      }
+      return false;
+    }
+    if (auto *Lambda = dyn_cast<LambdaExpr>(E)) {
+      if (VisitBody(Lambda->getBody()))
+        return true;
+    }
     if (auto *ConstructE = dyn_cast<CXXConstructExpr>(E)) {
       for (unsigned i = 0; i < ConstructE->getNumArgs(); ++i) {
-        auto *Arg = ConstructE->getArg(i);
-        if (auto *Lambda = dyn_cast<LambdaExpr>(Arg)) {
-          if (VisitBody(Lambda->getBody()))
-            return true;
-        }
+        if (VisitLabmdaArgument(ConstructE->getArg(i)))
+          return true;
       }
     }
     return false;
