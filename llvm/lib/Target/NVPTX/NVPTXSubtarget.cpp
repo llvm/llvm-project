@@ -72,7 +72,8 @@ bool NVPTXSubtarget::allowFP16Math() const {
   return hasFP16Math() && NoF16Math == false;
 }
 
-void NVPTXSubtarget::requireClusters(std::string const &FailureMessage) const {
+void NVPTXSubtarget::failIfClustersUnsupported(
+    std::string const &FailureMessage) const {
   if (hasClusters())
     return;
 

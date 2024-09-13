@@ -120,7 +120,7 @@ public:
   NVPTXSubtarget &initializeSubtargetDependencies(StringRef CPU, StringRef FS);
   void ParseSubtargetFeatures(StringRef CPU, StringRef TuneCPU, StringRef FS);
 
-  void requireClusters(std::string const &FailureMessage) const;
+  void failIfClustersUnsupported(std::string const &FailureMessage) const;
 };
 
 } // End llvm namespace

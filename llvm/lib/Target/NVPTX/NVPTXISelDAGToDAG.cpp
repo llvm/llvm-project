@@ -952,7 +952,7 @@ NVPTX::Scope NVPTXDAGToDAGISel::getOperationScope(MemSDNode *N,
 
     // If scope is cluster, clusters must be supported.
     if (S == NVPTX::Scope::Cluster)
-      Subtarget->requireClusters("cluster scope");
+      Subtarget->failIfClustersUnsupported("cluster scope");
 
     // If operation is volatile, then its scope is system.
     if (N->isVolatile())
@@ -1007,7 +1007,7 @@ static bool canLowerToLDG(MemSDNode *N, const NVPTXSubtarget &Subtarget,
 static unsigned int getFenceOp(NVPTX::Ordering O, NVPTX::Scope S,
                                NVPTXSubtarget const *T) {
   if (S == NVPTX::Scope::Cluster)
-    T->requireClusters(".cluster scope fence");
+    T->failIfClustersUnsupported(".cluster scope fence");
 
   switch (O) {
   case NVPTX::Ordering::Acquire:
