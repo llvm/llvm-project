@@ -174,7 +174,7 @@ class MipsAsmParser : public MCTargetAsmParser {
                                  const OperandVector &Operands) override;
   unsigned checkTargetMatchPredicate(MCInst &Inst) override;
 
-  bool MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
+  bool matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                OperandVector &Operands, MCStreamer &Out,
                                uint64_t &ErrorInfo,
                                bool MatchingInlineAsm) override;
@@ -190,10 +190,10 @@ class MipsAsmParser : public MCTargetAsmParser {
 
   bool mnemonicIsValid(StringRef Mnemonic, unsigned VariantID);
 
-  bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
+  bool parseInstruction(ParseInstructionInfo &Info, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override;
 
-  bool ParseDirective(AsmToken DirectiveID) override;
+  bool parseDirectives(AsmToken DirectiveID) override;
 
   ParseStatus parseMemOperand(OperandVector &Operands);
   ParseStatus matchAnyRegisterNameWithoutDollar(OperandVector &Operands,
@@ -5992,7 +5992,7 @@ static SMLoc RefineErrorLoc(const SMLoc Loc, const OperandVector &Operands,
   return Loc;
 }
 
-bool MipsAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
+bool MipsAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                             OperandVector &Operands,
                                             MCStreamer &Out,
                                             uint64_t &ErrorInfo,
@@ -6997,10 +6997,10 @@ bool MipsAsmParser::areEqualRegs(const MCParsedAsmOperand &Op1,
   return Op1.getReg() == Op2.getReg();
 }
 
-bool MipsAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
+bool MipsAsmParser::parseInstruction(ParseInstructionInfo &Info, StringRef Name,
                                      SMLoc NameLoc, OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
-  LLVM_DEBUG(dbgs() << "ParseInstruction\n");
+  LLVM_DEBUG(dbgs() << "parseInstruction\n");
 
   // We have reached first instruction, module directive are now forbidden.
   getTargetStreamer().forbidModuleDirective();
@@ -8630,7 +8630,7 @@ bool MipsAsmParser::parseFpABIValue(MipsABIFlagsSection::FpABIKind &FpABI,
   return false;
 }
 
-bool MipsAsmParser::ParseDirective(AsmToken DirectiveID) {
+bool MipsAsmParser::parseDirectives(AsmToken DirectiveID) {
   // This returns false if this function recognizes the directive
   // regardless of whether it is successfully handles or reports an
   // error. Otherwise it returns true to give the generic parser a

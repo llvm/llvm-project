@@ -231,7 +231,7 @@ private:
   bool validateInstruction(MCInst &Inst, SMLoc &IDLoc,
                            SmallVectorImpl<SMLoc> &Loc);
   unsigned getNumRegsForRegKind(RegKind K);
-  bool MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
+  bool matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                OperandVector &Operands, MCStreamer &Out,
                                uint64_t &ErrorInfo,
                                bool MatchingInlineAsm) override;
@@ -321,12 +321,12 @@ public:
 
   bool areEqualRegs(const MCParsedAsmOperand &Op1,
                     const MCParsedAsmOperand &Op2) const override;
-  bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
+  bool parseInstruction(ParseInstructionInfo &Info, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override;
   bool parseRegister(MCRegister &Reg, SMLoc &StartLoc, SMLoc &EndLoc) override;
   ParseStatus tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
                                SMLoc &EndLoc) override;
-  bool ParseDirective(AsmToken DirectiveID) override;
+  bool parseDirectives(AsmToken DirectiveID) override;
   unsigned validateTargetOperandClass(MCParsedAsmOperand &Op,
                                       unsigned Kind) override;
 
@@ -5086,9 +5086,9 @@ bool AArch64AsmParser::areEqualRegs(const MCParsedAsmOperand &Op1,
   return false;
 }
 
-/// ParseInstruction - Parse an AArch64 instruction mnemonic followed by its
+/// parseInstruction - Parse an AArch64 instruction mnemonic followed by its
 /// operands.
-bool AArch64AsmParser::ParseInstruction(ParseInstructionInfo &Info,
+bool AArch64AsmParser::parseInstruction(ParseInstructionInfo &Info,
                                         StringRef Name, SMLoc NameLoc,
                                         OperandVector &Operands) {
   Name = StringSwitch<StringRef>(Name.lower())
@@ -6205,7 +6205,7 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
 
 static const char *getSubtargetFeatureName(uint64_t Val);
 
-bool AArch64AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
+bool AArch64AsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                                OperandVector &Operands,
                                                MCStreamer &Out,
                                                uint64_t &ErrorInfo,
@@ -6798,8 +6798,8 @@ bool AArch64AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   llvm_unreachable("Implement any new match types added!");
 }
 
-/// ParseDirective parses the arm specific directives
-bool AArch64AsmParser::ParseDirective(AsmToken DirectiveID) {
+/// parseDirectives parses the arm specific directives
+bool AArch64AsmParser::parseDirectives(AsmToken DirectiveID) {
   const MCContext::Environment Format = getContext().getObjectFileType();
   bool IsMachO = Format == MCContext::IsMachO;
   bool IsCOFF = Format == MCContext::IsCOFF;

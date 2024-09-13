@@ -439,14 +439,14 @@ public:
   /// \param Operands [out] - The list of parsed operands, this returns
   ///        ownership of them to the caller.
   /// \return True on failure.
-  virtual bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
+  virtual bool parseInstruction(ParseInstructionInfo &Info, StringRef Name,
                                 SMLoc NameLoc, OperandVector &Operands) = 0;
-  virtual bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
+  virtual bool parseInstruction(ParseInstructionInfo &Info, StringRef Name,
                                 AsmToken Token, OperandVector &Operands) {
-    return ParseInstruction(Info, Name, Token.getLoc(), Operands);
+    return parseInstruction(Info, Name, Token.getLoc(), Operands);
   }
 
-  /// ParseDirective - Parse a target specific assembler directive
+  /// parseDirectives - Parse a target specific assembler directive
   /// This method is deprecated, use 'parseDirective' instead.
   ///
   /// The parser is positioned following the directive name.  The target
@@ -457,7 +457,7 @@ public:
   /// end-of-statement token and false is returned.
   ///
   /// \param DirectiveID - the identifier token of the directive.
-  virtual bool ParseDirective(AsmToken DirectiveID) { return true; }
+  virtual bool parseDirectives(AsmToken DirectiveID) { return true; }
 
   /// Parses a target-specific assembler directive.
   ///
@@ -477,13 +477,13 @@ public:
   ///
   /// On failure, the target parser is responsible for emitting a diagnostic
   /// explaining the match failure.
-  virtual bool MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
+  virtual bool matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                        OperandVector &Operands, MCStreamer &Out,
                                        uint64_t &ErrorInfo,
                                        bool MatchingInlineAsm) = 0;
 
   /// Allows targets to let registers opt out of clobber lists.
-  virtual bool OmitRegisterFromClobberLists(unsigned RegNo) { return false; }
+  virtual bool omitRegisterFromClobberLists(unsigned RegNo) { return false; }
 
   /// Allow a target to add special case operand matching for things that
   /// tblgen doesn't/can't handle effectively. For example, literal

@@ -134,7 +134,7 @@ class HexagonAsmParser : public MCTargetAsmParser {
                            OperandVector &InstOperands, uint64_t &ErrorInfo,
                            bool MatchingInlineAsm);
   void eatToEndOfPacket();
-  bool MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
+  bool matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                OperandVector &Operands, MCStreamer &Out,
                                uint64_t &ErrorInfo,
                                bool MatchingInlineAsm) override;
@@ -180,15 +180,15 @@ public:
   bool parseExpressionOrOperand(OperandVector &Operands);
   bool parseExpression(MCExpr const *&Expr);
 
-  bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
+  bool parseInstruction(ParseInstructionInfo &Info, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override {
     llvm_unreachable("Unimplemented");
   }
 
-  bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name, AsmToken ID,
+  bool parseInstruction(ParseInstructionInfo &Info, StringRef Name, AsmToken ID,
                         OperandVector &Operands) override;
 
-  bool ParseDirective(AsmToken DirectiveID) override;
+  bool parseDirectives(AsmToken DirectiveID) override;
 };
 
 /// HexagonOperand - Instances of this class represent a parsed Hexagon machine
@@ -614,7 +614,7 @@ void HexagonAsmParser::eatToEndOfPacket() {
   InBrackets = false;
 }
 
-bool HexagonAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
+bool HexagonAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                                OperandVector &Operands,
                                                MCStreamer &Out,
                                                uint64_t &ErrorInfo,
@@ -710,8 +710,8 @@ bool HexagonAsmParser::parseDirectiveAttribute(SMLoc L) {
   return false;
 }
 
-/// ParseDirective parses the Hexagon specific directives
-bool HexagonAsmParser::ParseDirective(AsmToken DirectiveID) {
+/// parseDirectives parses the Hexagon specific directives
+bool HexagonAsmParser::parseDirectives(AsmToken DirectiveID) {
   StringRef IDVal = DirectiveID.getIdentifier();
   if (IDVal.lower() == ".falign")
     return ParseDirectiveFalign(256, DirectiveID.getLoc());
@@ -1278,7 +1278,7 @@ bool HexagonAsmParser::parseInstruction(OperandVector &Operands) {
   }
 }
 
-bool HexagonAsmParser::ParseInstruction(ParseInstructionInfo &Info,
+bool HexagonAsmParser::parseInstruction(ParseInstructionInfo &Info,
                                         StringRef Name, AsmToken ID,
                                         OperandVector &Operands) {
   getLexer().UnLex(ID);
