@@ -209,10 +209,6 @@ public:
     return &InstrInfo->getRegisterInfo();
   }
 
-  /// Instructions like vhcadd cannot use the same register for input and
-  /// output.
-  bool requiresDisjointEarlyClobberAndUndef() const override { return true; }
-
   const CallLowering *getCallLowering() const override;
   InstructionSelector *getInstructionSelector() const override;
   const LegalizerInfo *getLegalizerInfo() const override;

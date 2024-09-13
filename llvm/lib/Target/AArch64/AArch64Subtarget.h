@@ -435,9 +435,6 @@ public:
     return AddressCheckPSV.get();
   }
 
-  /// Instructions like stxp cannot use the same register for input and output.
-  bool requiresDisjointEarlyClobberAndUndef() const override { return true; }
-
 private:
   /// Pseudo value representing memory load performed to check an address.
   ///

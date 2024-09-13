@@ -335,7 +335,10 @@ public:
 
   /// Whether the target has instructions where an early-clobber result
   /// operand cannot overlap with an undef input operand.
-  virtual bool requiresDisjointEarlyClobberAndUndef() const { return false; }
+  virtual bool requiresDisjointEarlyClobberAndUndef() const {
+    // Conservatively assume such instructions exist by default.
+    return true;
+  }
 };
 } // end namespace llvm
 
