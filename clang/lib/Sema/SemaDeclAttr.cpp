@@ -3161,6 +3161,55 @@ bool Sema::checkTargetClonesAttrString(
           HasNotDefault = true;
         }
       }
+    } else if (TInfo.getTriple().isRISCV()) {
+      // Suppress warn_target_clone_mixed_values
+      HasCommas = false;
+
+      // Cur is split's parts of Str. RISC-V uses Str directly,
+      // so skip when encountered more than once.
+      if (!Str.starts_with(Cur))
+        continue;
+
+      llvm::SmallVector<StringRef, 8> AttrStrs;
+      Str.split(AttrStrs, ";");
+
+      bool IsPriority = false;
+      bool IsDefault = false;
+      for (auto &AttrStr : AttrStrs) {
+        // Only support arch=+ext,... syntax.
+        if (AttrStr.starts_with("arch=+")) {
+          ParsedTargetAttr TargetAttr =
+              Context.getTargetInfo().parseTargetAttr(AttrStr);
+
+          if (TargetAttr.Features.empty() ||
+              llvm::any_of(TargetAttr.Features, [&](const StringRef Ext) {
+                return !RISCV().isValidFMVExtension(Ext);
+              }))
+            return Diag(CurLoc, diag::warn_unsupported_target_attribute)
+                   << Unsupported << None << Str << TargetClones;
+        } else if (AttrStr.starts_with("default")) {
+          IsDefault = true;
+          DefaultIsDupe = HasDefault;
+          HasDefault = true;
+        } else if (AttrStr.consume_front("priority=")) {
+          IsPriority = true;
+          int Digit;
+          if (AttrStr.getAsInteger(0, Digit))
+            return Diag(CurLoc, diag::warn_unsupported_target_attribute)
+                   << Unsupported << None << Str << TargetClones;
+        } else {
+          return Diag(CurLoc, diag::warn_unsupported_target_attribute)
+                 << Unsupported << None << Str << TargetClones;
+        }
+      }
+
+      if (IsPriority && IsDefault)
+        return Diag(CurLoc, diag::warn_unsupported_target_attribute)
+               << Unsupported << None << Str << TargetClones;
+
+      if (llvm::is_contained(StringsBuffer, Str) || DefaultIsDupe)
+        Diag(CurLoc, diag::warn_target_clone_duplicate_options);
+      StringsBuffer.push_back(Str);
     } else {
       // Other targets ( currently X86 )
       if (Cur.starts_with("arch=")) {
