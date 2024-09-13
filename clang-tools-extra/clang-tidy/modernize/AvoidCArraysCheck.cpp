@@ -81,18 +81,20 @@ void AvoidCArraysCheck::registerMatchers(MatchFinder *Finder) {
 
 void AvoidCArraysCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *ArrayType = Result.Nodes.getNodeAs<TypeLoc>("typeloc");
-  bool const IsInParam =
+  const bool IsInParam =
       Result.Nodes.getNodeAs<ParmVarDecl>("param_decl") != nullptr;
   const bool IsVLA = ArrayType->getTypePtr()->isVariableArrayType();
-  // in function parameter, we also don't know the size of IncompleteArrayType.
-  const bool IsUnknownSize =
-      IsVLA || (ArrayType->getTypePtr()->isIncompleteArrayType() && IsInParam);
   enum class RecommendType { Array, Vector, Span };
-  const RecommendType RecommendType =
-      (IsInParam && Result.Context->getLangOpts().CPlusPlus20)
-          ? RecommendType::Span
-      : IsUnknownSize ? RecommendType::Vector
-                      : RecommendType::Array;
+  RecommendType RecommendType = RecommendType::Array;
+  if (IsVLA) {
+    RecommendType = RecommendType::Vector;
+  } else if (ArrayType->getTypePtr()->isIncompleteArrayType() && IsInParam) {
+    // in function parameter, we also don't know the size of
+    // IncompleteArrayType.
+    RecommendType = Result.Context->getLangOpts().CPlusPlus20
+                        ? RecommendType::Span
+                        : RecommendType::Vector;
+  }
   diag(ArrayType->getBeginLoc(),
        "do not declare %select{C-style|C VLA}0 arrays, use "
        "%select{std::array<>|std::vector<>|std::span<>}1 instead")
