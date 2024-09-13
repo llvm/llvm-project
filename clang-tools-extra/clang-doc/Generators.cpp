@@ -100,12 +100,14 @@ void Generator::addInfoToIndex(Index &Idx, const doc::Info *Info) {
 extern volatile int YAMLGeneratorAnchorSource;
 extern volatile int MDGeneratorAnchorSource;
 extern volatile int HTMLGeneratorAnchorSource;
+extern volatile int MHTMLGeneratorAnchorSource;
 static int LLVM_ATTRIBUTE_UNUSED YAMLGeneratorAnchorDest =
     YAMLGeneratorAnchorSource;
 static int LLVM_ATTRIBUTE_UNUSED MDGeneratorAnchorDest =
     MDGeneratorAnchorSource;
 static int LLVM_ATTRIBUTE_UNUSED HTMLGeneratorAnchorDest =
     HTMLGeneratorAnchorSource;
-
+static int LLVM_ATTRIBUTE_UNUSED MHTMLGeneratorAnchorDest =
+    MHTMLGeneratorAnchorSource;
 } // namespace doc
 } // namespace clang
