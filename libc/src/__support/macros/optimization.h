@@ -10,7 +10,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MACROS_OPTIMIZATION_H
 #define LLVM_LIBC_SRC___SUPPORT_MACROS_OPTIMIZATION_H
 
-#include "src/__support/macros/attributes.h" // LIBC_INLINE
+#include "src/__support/macros/attributes.h"          // LIBC_INLINE
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/compiler.h" // LIBC_COMPILER_IS_CLANG
 
@@ -24,10 +24,9 @@ LIBC_INLINE constexpr bool expects_bool_condition(T value, T expected) {
 }
 } // namespace details
 } // namespace LIBC_NAMESPACE_DECL
-#define LIBC_LIKELY(x)                                                         \
-  LIBC_NAMESPACE::details::expects_bool_condition(!!(x), true)
+#define LIBC_LIKELY(x) LIBC_NAMESPACE::details::expects_bool_condition(x, true)
 #define LIBC_UNLIKELY(x)                                                       \
-  LIBC_NAMESPACE::details::expects_bool_condition(!!(x), false)
+  LIBC_NAMESPACE::details::expects_bool_condition(x, false)
 
 #if defined(LIBC_COMPILER_IS_CLANG)
 #define LIBC_LOOP_NOUNROLL _Pragma("nounroll")
