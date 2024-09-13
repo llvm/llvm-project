@@ -557,9 +557,12 @@ static const uint8_t importThunkARM64EC[] = {
 // contents will be a JMP instruction to some __imp_ symbol.
 class ImportThunkChunk : public NonSectionCodeChunk {
 public:
-  ImportThunkChunk(COFFLinkerContext &ctx, Defined *s)
-      : NonSectionCodeChunk(ImportThunkKind), impSymbol(s), ctx(ctx) {}
+  ImportThunkChunk(COFFLinkerContext &ctx, Defined *s);
   static bool classof(const Chunk *c) { return c->kind() == ImportThunkKind; }
+
+  // We track the usage of the thunk symbol separately from the import file
+  // to avoid generating unnecessary thunks.
+  bool live;
 
 protected:
   Defined *impSymbol;

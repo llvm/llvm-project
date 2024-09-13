@@ -1258,7 +1258,7 @@ void Writer::appendImportThunks() {
     if (!isa<DefinedImportThunk>(file->thunkSym))
       fatal(toString(ctx, *file->thunkSym) + " was replaced");
     DefinedImportThunk *thunk = cast<DefinedImportThunk>(file->thunkSym);
-    if (file->thunkLive)
+    if (thunk->getChunk()->live)
       textSec->addChunk(thunk->getChunk());
     if (file->impchkThunk)
       textSec->addChunk(file->impchkThunk);
