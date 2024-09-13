@@ -2,10 +2,6 @@
 ; RUN: llc -global-isel=1 -mtriple=riscv32 -o - %s | FileCheck %s --check-prefix=RV32
 ; RUN: llc -global-isel=1 -mtriple=riscv64 -o - %s | FileCheck %s --check-prefix=RV64
 
-declare void @use_addr(ptr)
-declare ptr @llvm.stacksave.p0()
-declare void @llvm.stackrestore.p0(ptr)
-
 define void @test_scoped_alloca(i64 %n) {
 ; RV32-LABEL: test_scoped_alloca:
 ; RV32:       # %bb.0:
