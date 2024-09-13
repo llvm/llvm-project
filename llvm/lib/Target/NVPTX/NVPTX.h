@@ -128,11 +128,11 @@ enum Ordering : OrderingUnderlyingType {
 using ScopeUnderlyingType = unsigned int;
 enum Scope : ScopeUnderlyingType {
   Thread = 0,
-  System = 1,
-  Block = 2,
-  Cluster = 3,
-  Device = 4,
-  LASTSCOPE = Device
+  Block = 1,
+  Cluster = 2,
+  Device = 3,
+  System = 4,
+  LASTSCOPE = System
 };
 
 using AddressSpaceUnderlyingType = unsigned int;
