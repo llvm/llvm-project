@@ -281,3 +281,22 @@ void test_s_prefetch_data(int *fp, global float *gp, constant char *cp, unsigned
   __builtin_amdgcn_s_prefetch_data(gp, len);
   __builtin_amdgcn_s_prefetch_data(cp, 31);
 }
+
+// CHECK-LABEL: @test_s_buffer_prefetch_data(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[RSRC_ADDR:%.*]] = alloca ptr addrspace(8), align 16, addrspace(5)
+// CHECK-NEXT:    [[LEN_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    store ptr addrspace(8) [[RSRC:%.*]], ptr addrspace(5) [[RSRC_ADDR]], align 16
+// CHECK-NEXT:    store i32 [[LEN:%.*]], ptr addrspace(5) [[LEN_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr addrspace(8), ptr addrspace(5) [[RSRC_ADDR]], align 16
+// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[LEN_ADDR]], align 4
+// CHECK-NEXT:    call void @llvm.amdgcn.s.buffer.prefetch.data(ptr addrspace(8) [[TMP0]], i32 128, i32 [[TMP1]])
+// CHECK-NEXT:    [[TMP2:%.*]] = load ptr addrspace(8), ptr addrspace(5) [[RSRC_ADDR]], align 16
+// CHECK-NEXT:    call void @llvm.amdgcn.s.buffer.prefetch.data(ptr addrspace(8) [[TMP2]], i32 0, i32 31)
+// CHECK-NEXT:    ret void
+//
+void test_s_buffer_prefetch_data(__amdgpu_buffer_rsrc_t rsrc, unsigned int len)
+{
+  __builtin_amdgcn_s_buffer_prefetch_data(rsrc, 128, len);
+  __builtin_amdgcn_s_buffer_prefetch_data(rsrc, 0, 31);
+}

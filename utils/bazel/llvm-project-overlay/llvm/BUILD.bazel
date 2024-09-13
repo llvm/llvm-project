@@ -1358,11 +1358,9 @@ gentbl(
     tblgen = ":llvm-tblgen",
     td_file = "lib/Target/AMDGPU/InstCombineTables.td",
     td_srcs = glob([
-        "include/llvm/CodeGen/*.td",
-        "include/llvm/IR/Intrinsics*.td",
+        "lib/Target/AMDGPU/*.td",
     ]) + [
-        "lib/Target/AMDGPU/InstCombineTables.td",
-        "include/llvm/TableGen/SearchableTable.td",
+        ":common_target_td_sources",
     ],
 )
 
@@ -1420,6 +1418,7 @@ cc_library(
         ":Demangle",
         ":MC",
         ":ProfileData",
+        ":Scalar",
         ":Support",
         ":Target",
         ":TargetParser",
@@ -1452,8 +1451,8 @@ cc_library(
         "lib/SandboxIR/*.cpp",
     ]),
     hdrs = glob(["include/llvm/SandboxIR/*.h"]),
-    textual_hdrs = ["include/llvm/SandboxIR/SandboxIRValues.def"],
     copts = llvm_copts,
+    textual_hdrs = ["include/llvm/SandboxIR/SandboxIRValues.def"],
     deps = [
         ":Core",
         ":Support",
@@ -1492,7 +1491,7 @@ cc_library(
     ]),
     hdrs = glob([
         "include/llvm/Transforms/Vectorize/*.h",
-        "include/llvm/Transforms/Vectorize/SandboxVectorizer/SandboxVectorizer.h"
+        "include/llvm/Transforms/Vectorize/SandboxVectorizer/SandboxVectorizer.h",
     ]),
     copts = llvm_copts,
     deps = [
@@ -1873,6 +1872,25 @@ cc_library(
 )
 
 cc_library(
+    name = "CGData",
+    srcs = glob(["lib/CGData/**/*.cpp"]),
+    hdrs = glob([
+        "include/llvm/CGData/**/*.h",
+        "include/llvm/CGData/**/*.inc",
+    ]),
+    copts = llvm_copts,
+    deps = [
+        ":BitReader",
+        ":BitWriter",
+        ":Core",
+        ":Object",
+        ":ObjectYAML",
+        ":Support",
+        ":TargetParser",
+    ],
+)
+
+cc_library(
     name = "CodeGen",
     srcs = glob(
         [
@@ -1901,6 +1919,7 @@ cc_library(
         ":BitReader",
         ":BitWriter",
         ":CFGuard",
+        ":CGData",
         ":CodeGenTypes",
         ":Core",
         ":DebugInfoCodeView",
@@ -3489,6 +3508,39 @@ cc_binary(
     ],
 )
 
+gentbl(
+    name = "CGDataOptsTableGen",
+    strip_include_prefix = "tools/llvm-cgdata",
+    tbl_outs = [(
+        "-gen-opt-parser-defs",
+        "tools/llvm-cgdata/Opts.inc",
+    )],
+    tblgen = ":llvm-tblgen",
+    td_file = "tools/llvm-cgdata/Opts.td",
+    td_srcs = ["include/llvm/Option/OptParser.td"],
+)
+
+cc_library(
+    name = "llvm-cgdata-lib",
+    srcs = glob(["tools/llvm-cgdata/*.cpp"]),
+    copts = llvm_copts,
+    deps = [
+        ":CGData",
+        ":CGDataOptsTableGen",
+        ":CodeGen",
+        ":Core",
+        ":Object",
+        ":Option",
+        ":Support",
+    ],
+)
+
+llvm_driver_cc_binary(
+    name = "llvm-cgdata",
+    stamp = 0,
+    deps = [":llvm-cgdata-lib"],
+)
+
 cc_binary(
     name = "llvm-cfi-verify",
     srcs = glob([
@@ -3638,20 +3690,39 @@ cc_binary(
     ],
 )
 
-cc_binary(
-    name = "llvm-debuginfod-find",
+gentbl(
+    name = "DebugInfodFindOptsTableGen",
+    strip_include_prefix = "tools/llvm-debuginfod-find",
+    tbl_outs = [(
+        "-gen-opt-parser-defs",
+        "tools/llvm-debuginfod-find/Opts.inc",
+    )],
+    tblgen = ":llvm-tblgen",
+    td_file = "tools/llvm-debuginfod-find/Opts.td",
+    td_srcs = ["include/llvm/Option/OptParser.td"],
+)
+
+cc_library(
+    name = "llvm-debuginfod-find-lib",
     srcs = glob([
         "tools/llvm-debuginfod-find/*.cpp",
     ]),
     copts = llvm_copts,
-    stamp = 0,
     deps = [
         ":BitReader",
         ":Core",
+        ":DebugInfodFindOptsTableGen",
         ":Debuginfod",
+        ":Option",
         ":Support",
         ":Symbolize",
     ],
+)
+
+llvm_driver_cc_binary(
+    name = "llvm-debuginfod-find",
+    stamp = 0,
+    deps = [":llvm-debuginfod-find-lib"],
 )
 
 cc_binary(
@@ -4450,6 +4521,7 @@ cc_library(
     copts = llvm_copts,
     deps = [
         ":Core",
+        ":Debuginfod",
         ":Object",
         ":ProfileData",
         ":Support",

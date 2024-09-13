@@ -29,21 +29,9 @@ void BufferedStackTrace::UnwindImpl(uptr pc, uptr bp, void *context,
 }
 } // namespace __sanitizer
 
-static void SetGlobalStackTraceFormat() {
-  SetCommonFlagsDefaults();
-  CommonFlags cf;
-  cf.CopyFrom(*common_flags());
-  cf.stack_trace_format = "DEFAULT";
-  cf.external_symbolizer_path = GetEnv("RTSAN_SYMBOLIZER_PATH");
-  OverrideCommonFlags(cf);
-}
-
 void __rtsan::PrintStackTrace(uptr pc, uptr bp) {
-
   BufferedStackTrace stack{};
 
   stack.Unwind(pc, bp, nullptr, common_flags()->fast_unwind_on_fatal);
-
-  SetGlobalStackTraceFormat();
   stack.Print();
 }

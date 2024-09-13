@@ -62,7 +62,10 @@ llvm.func @nvvm_special_regs() -> i32 {
   %29 = nvvm.read.ptx.sreg.clock : i32
   // CHECK: call i64 @llvm.nvvm.read.ptx.sreg.clock64
   %30 = nvvm.read.ptx.sreg.clock64 : i64
-  
+
+  // CHECK: %31 = call range(i32 0, 64) i32 @llvm.nvvm.read.ptx.sreg.tid.x()
+  %31 = nvvm.read.ptx.sreg.tid.x range <i32, 0, 64> : i32
+
   llvm.return %1 : i32
 }
 
@@ -609,5 +612,13 @@ llvm.func @nvvm_fence_proxy_tensormap_generic_acquire(%addr : !llvm.ptr) {
 
   // CHECK: call void @llvm.nvvm.fence.proxy.tensormap_generic.acquire.sys(ptr {{%[0-9]+}}, i32 128)
   nvvm.fence.proxy.acquire #nvvm.mem_scope<sys> %addr, %c128
+  llvm.return
+}
+
+// -----
+// CHECK-LABEL: @nvvm_breakpoint
+llvm.func @nvvm_breakpoint() {
+  // CHECK: call void @llvm.debugtrap()
+  nvvm.breakpoint
   llvm.return
 }

@@ -131,6 +131,11 @@ def irpgo_profile_sort_eq: Joined<["--"], "irpgo-profile-sort=">,
     Alias<!cast<Separate>(irpgo_profile_sort)>, MetaVarName<"<profile>">,
     HelpText<"Read the IRPGO profile at <profile> to order sections to improve startup time">,
     Group<grp_lld>;
+def compression_sort_startup_functions: Flag<["--"], "compression-sort-startup-functions">,
+    HelpText<"Order startup functions to improve compressed size in addition to startup time">,
+    Group<grp_lld>;
+def no_compression_sort_startup_functions: Flag<["--"], "no-compression-sort-startup-functions">,
+    HelpText<"Do not order startup function for compression">, Group<grp_lld>;
 def compression_sort: Joined<["--"], "compression-sort=">,
     MetaVarName<"[none,function,data,both]">,
     HelpText<"Order sections to improve compressed size">, Group<grp_lld>;

@@ -187,7 +187,11 @@ static StringRef getOverloadKindStr(const Record *R) {
       .Case("Int8Ty", "OverloadKind::I8")
       .Case("Int16Ty", "OverloadKind::I16")
       .Case("Int32Ty", "OverloadKind::I32")
-      .Case("Int64Ty", "OverloadKind::I64");
+      .Case("Int64Ty", "OverloadKind::I64")
+      .Case("ResRetHalfTy", "OverloadKind::HALF")
+      .Case("ResRetFloatTy", "OverloadKind::FLOAT")
+      .Case("ResRetInt16Ty", "OverloadKind::I16")
+      .Case("ResRetInt32Ty", "OverloadKind::I32");
 }
 
 /// Return a string representation of valid overload information denoted
@@ -402,10 +406,8 @@ static void emitDXILOperationTable(std::vector<DXILOperationDesc> &Ops,
   for (auto &Op : Ops) {
     OpStrings.add(Op.OpName);
 
-    if (ClassSet.contains(Op.OpClass))
-      continue;
-    ClassSet.insert(Op.OpClass);
-    OpClassStrings.add(Op.OpClass.data());
+    if (ClassSet.insert(Op.OpClass).second)
+      OpClassStrings.add(Op.OpClass.data());
   }
 
   // Layout names.

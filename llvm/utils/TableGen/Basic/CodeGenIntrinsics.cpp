@@ -43,7 +43,7 @@ CodeGenIntrinsicContext::CodeGenIntrinsicContext(const RecordKeeper &RC) {
 CodeGenIntrinsicTable::CodeGenIntrinsicTable(const RecordKeeper &RC) {
   CodeGenIntrinsicContext Ctx(RC);
 
-  std::vector<Record *> Defs = RC.getAllDerivedDefinitions("Intrinsic");
+  ArrayRef<const Record *> Defs = RC.getAllDerivedDefinitions("Intrinsic");
   Intrinsics.reserve(Defs.size());
 
   for (const Record *Def : Defs)

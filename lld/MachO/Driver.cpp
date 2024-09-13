@@ -1778,6 +1778,13 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     config->irpgoProfileSortProfilePath = arg->getValue();
     IncompatWithCGSort(arg->getSpelling());
   }
+  config->compressionSortStartupFunctions =
+      args.hasFlag(OPT_compression_sort_startup_functions,
+                   OPT_no_compression_sort_startup_functions, false);
+  if (config->irpgoProfileSortProfilePath.empty() &&
+      config->compressionSortStartupFunctions)
+    error("--compression-sort-startup-functions must be used with "
+          "--irpgo-profile-sort");
   if (const Arg *arg = args.getLastArg(OPT_compression_sort)) {
     StringRef compressionSortStr = arg->getValue();
     if (compressionSortStr == "function") {
