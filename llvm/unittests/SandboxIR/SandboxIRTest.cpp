@@ -729,6 +729,72 @@ define void @foo() {
   EXPECT_EQ(UndefStruct->getNumElements(), 2u);
 }
 
+TEST_F(SandboxIRTest, GlobalValue) {
+  parseIR(C, R"IR(
+declare external void @bar()
+define void @foo() {
+  call void @bar()
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  auto *LLVMBB = &*LLVMF.begin();
+  auto LLVMIt = LLVMBB->begin();
+  auto *LLVMCall = cast<llvm::CallInst>(&*LLVMIt++);
+  auto *LLVMGV = cast<llvm::GlobalValue>(LLVMCall->getCalledOperand());
+  sandboxir::Context Ctx(C);
+
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto *BB = &*F.begin();
+  auto It = BB->begin();
+  auto *Call = cast<sandboxir::CallInst>(&*It++);
+  [[maybe_unused]] auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
+
+  // Check classof(), creation, getFunction(), getBasicBlock().
+  auto *GV = cast<sandboxir::GlobalValue>(Call->getCalledOperand());
+  // Check getAddressSpace().
+  EXPECT_EQ(GV->getAddressSpace(), LLVMGV->getAddressSpace());
+  // Check hasGlobalUnnamedAddr().
+  EXPECT_EQ(GV->hasGlobalUnnamedAddr(), LLVMGV->hasGlobalUnnamedAddr());
+  // Check hasAtLeastLocalUnnamedAddr().
+  EXPECT_EQ(GV->hasAtLeastLocalUnnamedAddr(),
+            LLVMGV->hasAtLeastLocalUnnamedAddr());
+  // Check getUnnamedAddr().
+  EXPECT_EQ(GV->getUnnamedAddr(), LLVMGV->getUnnamedAddr());
+  // Check setUnnamedAddr().
+  auto OrigUnnamedAddr = GV->getUnnamedAddr();
+  auto NewUnnamedAddr = sandboxir::GlobalValue::UnnamedAddr::Global;
+  EXPECT_NE(NewUnnamedAddr, OrigUnnamedAddr);
+  GV->setUnnamedAddr(NewUnnamedAddr);
+  EXPECT_EQ(GV->getUnnamedAddr(), NewUnnamedAddr);
+  GV->setUnnamedAddr(OrigUnnamedAddr);
+  EXPECT_EQ(GV->getUnnamedAddr(), OrigUnnamedAddr);
+  // Check getMinUnnamedAddr().
+  EXPECT_EQ(
+      sandboxir::GlobalValue::getMinUnnamedAddr(OrigUnnamedAddr,
+                                                NewUnnamedAddr),
+      llvm::GlobalValue::getMinUnnamedAddr(OrigUnnamedAddr, NewUnnamedAddr));
+  // Check hasComdat().
+  EXPECT_EQ(GV->hasComdat(), LLVMGV->hasComdat());
+  // Check getVisibility().
+  EXPECT_EQ(GV->getVisibility(), LLVMGV->getVisibility());
+  // Check hasDefaultVisibility().
+  EXPECT_EQ(GV->hasDefaultVisibility(), LLVMGV->hasDefaultVisibility());
+  // Check hasHiddenVisibility().
+  EXPECT_EQ(GV->hasHiddenVisibility(), LLVMGV->hasHiddenVisibility());
+  // Check hasProtectedVisibility().
+  EXPECT_EQ(GV->hasProtectedVisibility(), LLVMGV->hasProtectedVisibility());
+  // Check setVisibility().
+  auto OrigVisibility = GV->getVisibility();
+  auto NewVisibility =
+      sandboxir::GlobalValue::VisibilityTypes::ProtectedVisibility;
+  EXPECT_NE(NewVisibility, OrigVisibility);
+  GV->setVisibility(NewVisibility);
+  EXPECT_EQ(GV->getVisibility(), NewVisibility);
+  GV->setVisibility(OrigVisibility);
+  EXPECT_EQ(GV->getVisibility(), OrigVisibility);
+}
+
 TEST_F(SandboxIRTest, BlockAddress) {
   parseIR(C, R"IR(
 define void @foo(ptr %ptr) {

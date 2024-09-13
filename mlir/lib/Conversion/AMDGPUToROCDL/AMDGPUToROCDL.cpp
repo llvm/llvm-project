@@ -671,10 +671,19 @@ struct WMMAOpLowering : public ConvertOpToLLVMPattern<WMMAOp> {
   matchAndRewrite(WMMAOp op, WMMAOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Location loc = op.getLoc();
-    Type outType = typeConverter->convertType(op.getDestD().getType());
+    auto outType =
+        typeConverter->convertType<VectorType>(op.getDestD().getType());
+    if (!outType)
+      return rewriter.notifyMatchFailure(op, "type conversion failed");
 
     if (chipset.majorVersion != 11 && chipset.majorVersion != 12)
       return op->emitOpError("WMMA only supported on gfx11 and gfx12");
+
+    // The WMMA operations represent vectors of bf16s as vectors of i16s, so we
+    // need to bitcast bfloats to i16 and then bitcast them back.
+    VectorType rawOutType = outType;
+    if (outType.getElementType().isBF16())
+      rawOutType = outType.clone(rewriter.getI16Type());
 
     std::optional<StringRef> maybeIntrinsic = wmmaOpToIntrinsic(op, chipset);
 
@@ -682,7 +691,7 @@ struct WMMAOpLowering : public ConvertOpToLLVMPattern<WMMAOp> {
       return op.emitOpError("no intrinsic matching WMMA on the given chipset");
 
     OperationState loweredOp(loc, *maybeIntrinsic);
-    loweredOp.addTypes(outType);
+    loweredOp.addTypes(rawOutType);
 
     SmallVector<Value, 4> operands;
     wmmaPushInputOperand(rewriter, loc, typeConverter, op.getUnsignedA(),
@@ -694,7 +703,12 @@ struct WMMAOpLowering : public ConvertOpToLLVMPattern<WMMAOp> {
 
     loweredOp.addOperands(operands);
     Operation *lowered = rewriter.create(loweredOp);
-    rewriter.replaceOp(op, lowered->getResults());
+
+    Operation *maybeCastBack = lowered;
+    if (rawOutType != outType)
+      maybeCastBack =
+          rewriter.create<LLVM::BitcastOp>(loc, outType, lowered->getResult(0));
+    rewriter.replaceOp(op, maybeCastBack->getResults());
 
     return success();
   }
@@ -1033,15 +1047,6 @@ struct ConvertAMDGPUToROCDLPass
 void mlir::populateAMDGPUToROCDLConversionPatterns(LLVMTypeConverter &converter,
                                                    RewritePatternSet &patterns,
                                                    Chipset chipset) {
-  converter.addConversion([](BFloat16Type t) -> Type {
-    return IntegerType::get(t.getContext(), 16);
-  });
-  converter.addConversion([&converter](VectorType t) -> std::optional<Type> {
-    if (!t.getElementType().isBF16())
-      return std::nullopt;
-    return converter.convertType(t.clone(IntegerType::get(t.getContext(), 16)));
-  });
-
   patterns
       .add<RawBufferOpLowering<RawBufferLoadOp, ROCDL::RawPtrBufferLoadOp>,
            RawBufferOpLowering<RawBufferStoreOp, ROCDL::RawPtrBufferStoreOp>,
