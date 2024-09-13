@@ -378,8 +378,4 @@ def warn_missing_symbol_graph_dir : Warning<
 def err_ast_action_on_llvm_ir : Error<
   "cannot apply AST actions to LLVM IR file '%0'">,
   DefaultFatal;
-
-def warn_unsupported_attribute_ignored : Warning<
-  "ignoring the '%0' attribute because %1 does not support it">,
-  InGroup<IgnoredAttributes>;
 }

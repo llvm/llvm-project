@@ -2506,11 +2506,8 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
   ShouldAddOptNone &= !D->hasAttr<AlwaysInlineAttr>();
 
   // Non-entry HLSL functions must always be inlined.
-  if (getLangOpts().HLSL && !F->hasFnAttribute(llvm::Attribute::NoInline)) {
-    if (D->hasAttr<NoInlineAttr>())
-      getDiags().Report(D->getLocation(),
-                        diag::warn_unsupported_attribute_ignored)
-          << "noinline" << "HLSL";
+  if (getLangOpts().HLSL && !F->hasFnAttribute(llvm::Attribute::NoInline) &&
+      !D->hasAttr<NoInlineAttr>()) {
     B.addAttribute(llvm::Attribute::AlwaysInline);
   } else if ((ShouldAddOptNone || D->hasAttr<OptimizeNoneAttr>()) &&
              !F->hasFnAttribute(llvm::Attribute::AlwaysInline)) {
