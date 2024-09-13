@@ -3,6 +3,7 @@ function(add_linalg_ods_yaml_gen yaml_ast_file output_file)
   set(YAML_AST_SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/${yaml_ast_file})
   set(GEN_ODS_FILE ${CMAKE_CURRENT_BINARY_DIR}/${output_file}.yamlgen.td)
   set(GEN_CPP_FILE ${CMAKE_CURRENT_BINARY_DIR}/${output_file}.yamlgen.cpp.inc)
+  set(DUMMY_FILE ${CMAKE_CURRENT_BINARY_DIR}/dummy)
   set_source_files_properties(
     ${GEN_ODS_FILE}
     PROPERTIES GENERATED TRUE)
@@ -17,14 +18,20 @@ function(add_linalg_ods_yaml_gen yaml_ast_file output_file)
     DEPENDS
     ${MLIR_LINALG_ODS_YAML_GEN_EXE}
     ${MLIR_LINALG_ODS_YAML_GEN_TARGET})
+  add_custom_command(
+    OUTPUT ${DUMMY_FILE}
+    COMMAND ${CMAKE_COMMAND} -E touch ${DUMMY_FILE}
+    DEPENDS
+    ${GEN_ODS_FILE} ${GEN_CPP_FILE}
+  )
   add_custom_target(
     MLIR${output_file}YamlIncGen
     DEPENDS
     ${MLIR_LINALG_ODS_YAML_GEN_EXE}
     ${MLIR_LINALG_ODS_YAML_GEN_TARGET}
-    ${GEN_ODS_FILE} ${GEN_CPP_FILE})
+    ${GEN_ODS_FILE} ${GEN_CPP_FILE} ${DUMMY_FILE})
   set_target_properties(MLIR${output_file}YamlIncGen PROPERTIES FOLDER "MLIR/Tablegenning")
-  list(APPEND LLVM_TARGET_DEPENDS ${GEN_ODS_FILE})
+  list(APPEND LLVM_TARGET_DEPENDS ${GEN_ODS_FILE} ${DUMMY_FILE})
   set(LLVM_TARGET_DEPENDS ${LLVM_TARGET_DEPENDS} PARENT_SCOPE)
 endfunction()
 
