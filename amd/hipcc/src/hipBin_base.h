@@ -472,6 +472,7 @@ bool HipBinBase::canRunCompiler(string exeName, string& cmdOut) {
   bool executable = false;
   if (system(const_cast<char*>(compilerName.c_str()))) {
     executable = false;
+    cout << "Failed to run cmd:" << compilerName << "with errno:"<< strerror(errno) <<endl;
   } else {
     string myline;
     ifstream fp;
@@ -480,9 +481,12 @@ bool HipBinBase::canRunCompiler(string exeName, string& cmdOut) {
       while (std::getline(fp, myline)) {
         cmdOut += myline;
       }
+      fp.close();
+      executable = true;
+    } else {
+      cout << "Error opening tmp file:" << tmpFileName << endl;
+      executable = false;
     }
-    fp.close();
-    executable = true;
   }
   return executable;
 }
