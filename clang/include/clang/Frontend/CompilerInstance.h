@@ -800,7 +800,7 @@ public:
       ArrayRef<std::shared_ptr<DependencyCollector>> DependencyCollectors,
       void *DeserializationListener, bool OwnDeserializationListener,
       bool Preamble, bool UseGlobalModuleIndex,
-      cas::ObjectStore &CAS, cas::ActionCache &Cache,
+      cas::ObjectStore &CAS, cas::ActionCache &Cache, bool ignoreCAS,
       std::unique_ptr<llvm::MemoryBuffer> PCHBuffer = nullptr);
 
   /// Create a code completion consumer using the invocation; note that this

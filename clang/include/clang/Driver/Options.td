@@ -8386,6 +8386,11 @@ def fcas_include_tree : Separate<["-"], "fcas-include-tree">,
     HelpText<"Configure the frontend to use a CAS include tree.">,
     MarshallingInfoString<FrontendOpts<"CASIncludeTreeID">>;
 
+defm module_load_ignore_cas : BoolFOption<"module-load-ignore-cas",
+    FrontendOpts<"ModuleLoadIgnoreCAS">, DefaultFalse,
+    PosFlag<SetTrue, [], [ClangOption], "Ignore CAS info when loading modules or PCHs">,
+    NegFlag<SetFalse>>;
+
 // FIXME: Add to driver under -fexperimental-cache=compile-job.
 defm cache_compile_job : BoolFOption<"cache-compile-job",
     FrontendOpts<"CacheCompileJob">, DefaultFalse,

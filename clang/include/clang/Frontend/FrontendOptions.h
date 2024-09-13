@@ -552,6 +552,9 @@ public:
   /// Use the provided CAS include tree.
   std::string CASIncludeTreeID;
 
+  /// If ignore all the CAS info from serialized AST like modules and PCHs.
+  bool ModuleLoadIgnoreCAS = false;
+
   /// When the input is a module map, the original module map file from which
   /// that map was inferred, if any (for umbrella modules).
   std::string OriginalModuleMap;
