@@ -1,0 +1,23 @@
+{{! 
+    Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+    See https://llvm.org/LICENSE.txt for license information.
+    SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+    
+    This file defines the template
+}}
+<!DOCTYPE html>
+<html lang="en-US">
+    <head>
+        <meta charset="utf-8"/>
+        <title>{{NamespaceTitle}}</title>
+    </head>
+    {{#NamespaceComments}}
+    <p>Namespace Comment Present!</p>
+    {{/NamespaceComments}}
+    {{#Namespace}}
+    <p>Namespace Present!</p>
+    {{/Namespace}}
+    {{#Record}}
+    <p>Record Present!</p>
+    {{/Record}}
+</html>
