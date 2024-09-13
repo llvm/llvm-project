@@ -579,17 +579,7 @@ std::vector<Diag> StoreDiags::take(const clang::tidy::ClangTidyContext *Tidy) {
   for (auto &Diag : Output) {
     if (const char *ClangDiag = getDiagnosticCode(Diag.ID)) {
       // Warnings controlled by -Wfoo are better recognized by that name.
-      const StringRef Warning = [&] {
-        if (OrigSrcMgr) {
-          return OrigSrcMgr->getDiagnostics()
-              .getDiagnosticIDs()
-              ->getWarningOptionForDiag(Diag.ID);
-        }
-        if (!DiagnosticIDs::IsCustomDiag(Diag.ID))
-          return DiagnosticIDs{}.getWarningOptionForDiag(Diag.ID);
-        return StringRef{};
-      }();
-
+      StringRef Warning = DiagnosticIDs::getWarningOptionForDiag(Diag.ID);
       if (!Warning.empty()) {
         Diag.Name = ("-W" + Warning).str();
       } else {
@@ -906,23 +896,20 @@ void StoreDiags::flushLastDiag() {
   Output.push_back(std::move(*LastDiag));
 }
 
-bool isDiagnosticSuppressed(const clang::Diagnostic &Diag,
-                            const llvm::StringSet<> &Suppress,
-                            const LangOptions &LangOpts) {
+bool isBuiltinDiagnosticSuppressed(unsigned ID,
+                                   const llvm::StringSet<> &Suppress,
+                                   const LangOptions &LangOpts) {
   // Don't complain about header-only stuff in mainfiles if it's a header.
   // FIXME: would be cleaner to suppress in clang, once we decide whether the
   //        behavior should be to silently-ignore or respect the pragma.
-  if (Diag.getID() == diag::pp_pragma_sysheader_in_main_file &&
-      LangOpts.IsHeaderFile)
+  if (ID == diag::pp_pragma_sysheader_in_main_file && LangOpts.IsHeaderFile)
     return true;
 
-  if (const char *CodePtr = getDiagnosticCode(Diag.getID())) {
+  if (const char *CodePtr = getDiagnosticCode(ID)) {
     if (Suppress.contains(normalizeSuppressedCode(CodePtr)))
       return true;
   }
-  StringRef Warning =
-      Diag.getDiags()->getDiagnosticIDs()->getWarningOptionForDiag(
-          Diag.getID());
+  StringRef Warning = DiagnosticIDs::getWarningOptionForDiag(ID);
   if (!Warning.empty() && Suppress.contains(Warning))
     return true;
   return false;

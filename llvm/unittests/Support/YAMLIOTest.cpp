@@ -1239,7 +1239,8 @@ TEST(YAMLIO, TestReadWriteBlockScalarDocuments) {
 
     // Verify that the block scalar header was written out on the same line
     // as the document marker.
-    EXPECT_NE(llvm::StringRef::npos, llvm::StringRef(ostr.str()).find("--- |"));
+    EXPECT_NE(llvm::StringRef::npos,
+              llvm::StringRef(intermediate).find("--- |"));
   }
   {
     Input yin(intermediate);
@@ -2763,7 +2764,7 @@ TEST(YAMLIO, TestEmptyMapWrite) {
   llvm::raw_string_ostream OS(str);
   Output yout(OS);
   yout << cont;
-  EXPECT_EQ(OS.str(), "---\nfbm:             {}\n...\n");
+  EXPECT_EQ(str, "---\nfbm:             {}\n...\n");
 }
 
 TEST(YAMLIO, TestEmptySequenceWrite) {
@@ -2773,7 +2774,7 @@ TEST(YAMLIO, TestEmptySequenceWrite) {
     llvm::raw_string_ostream OS(str);
     Output yout(OS);
     yout << cont;
-    EXPECT_EQ(OS.str(), "---\nfbs:             []\n...\n");
+    EXPECT_EQ(str, "---\nfbs:             []\n...\n");
   }
 
   {
@@ -2782,7 +2783,7 @@ TEST(YAMLIO, TestEmptySequenceWrite) {
     llvm::raw_string_ostream OS(str);
     Output yout(OS);
     yout << seq;
-    EXPECT_EQ(OS.str(), "---\n[]\n...\n");
+    EXPECT_EQ(str, "---\n[]\n...\n");
   }
 }
 
