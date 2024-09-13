@@ -656,7 +656,6 @@ lldb::SBValue SBValue::CreateBoolValue(const char *name, bool value) {
   if (value_sp && target_sp) {
     new_value_sp =
         ValueObject::CreateValueObjectFromBool(target_sp, value, name);
-    new_value_sp->SetAddressTypeOfChildren(eAddressTypeLoad);
   }
   sb_value.SetSP(new_value_sp);
   return sb_value;
