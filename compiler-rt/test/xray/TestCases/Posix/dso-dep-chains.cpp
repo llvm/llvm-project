@@ -5,15 +5,15 @@
 // RUN: split-file %s %t
 //
 // Build shared libs with dependencies b->c and e->f
-// RUN: %clangxx_xray -g -fPIC -fxray-instrument -fxray-enable-shared -shared -std=c++11 %t/testliba.cpp -o %t/testliba.so
-// RUN: %clangxx_xray -g -fPIC -fxray-instrument -fxray-enable-shared -shared -std=c++11 %t/testlibc.cpp -o %t/testlibc.so
-// RUN: %clangxx_xray -g -fPIC -fxray-instrument -fxray-enable-shared -shared -std=c++11 %t/testlibb.cpp %t/testlibc.so -o %t/testlibb.so
-// RUN: %clangxx_xray -g -fPIC -fxray-instrument -fxray-enable-shared -shared -std=c++11 %t/testlibd.cpp -o %t/testlibd.so
-// RUN: %clangxx_xray -g -fPIC -fxray-instrument -fxray-enable-shared -shared -std=c++11 %t/testlibf.cpp -o %t/testlibf.so
-// RUN: %clangxx_xray -g -fPIC -fxray-instrument -fxray-enable-shared -shared -std=c++11 %t/testlibe.cpp %t/testlibf.so -o %t/testlibe.so
+// RUN: %clangxx_xray -g -fPIC -fxray-instrument -fxray-shared -shared -std=c++11 %t/testliba.cpp -o %t/testliba.so
+// RUN: %clangxx_xray -g -fPIC -fxray-instrument -fxray-shared -shared -std=c++11 %t/testlibc.cpp -o %t/testlibc.so
+// RUN: %clangxx_xray -g -fPIC -fxray-instrument -fxray-shared -shared -std=c++11 %t/testlibb.cpp %t/testlibc.so -o %t/testlibb.so
+// RUN: %clangxx_xray -g -fPIC -fxray-instrument -fxray-shared -shared -std=c++11 %t/testlibd.cpp -o %t/testlibd.so
+// RUN: %clangxx_xray -g -fPIC -fxray-instrument -fxray-shared -shared -std=c++11 %t/testlibf.cpp -o %t/testlibf.so
+// RUN: %clangxx_xray -g -fPIC -fxray-instrument -fxray-shared -shared -std=c++11 %t/testlibe.cpp %t/testlibf.so -o %t/testlibe.so
 //
 // Executable links with a and b explicitly and loads d and e at runtime.
-// RUN: %clangxx_xray -g -fPIC -rdynamic -fxray-instrument -fxray-enable-shared -std=c++11 %t/main.cpp %t/testliba.so %t/testlibb.so -o %t/main.o
+// RUN: %clangxx_xray -g -fPIC -rdynamic -fxray-instrument -fxray-shared -std=c++11 %t/main.cpp %t/testliba.so %t/testlibb.so -o %t/main.o
 //
 // RUN:  XRAY_OPTIONS="patch_premain=true" %run %t/main.o %t/testlibd.so %t/testlibe.so 2>&1 | FileCheck %s
 

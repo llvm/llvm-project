@@ -27,7 +27,7 @@ class XRayArgs {
   XRayInstrSet InstrumentationBundle;
   llvm::opt::Arg *XRayInstrument = nullptr;
   bool XRayRT = true;
-  bool XRayEnableShared = false;
+  bool XRayShared = false;
 
 public:
   /// Parses the XRay arguments from an argument list.
@@ -37,7 +37,7 @@ public:
 
   bool needsXRayRt() const { return XRayInstrument && XRayRT; }
   bool needsXRayDSORt() const {
-    return XRayInstrument && XRayRT && XRayEnableShared;
+    return XRayInstrument && XRayRT && XRayShared;
   }
   llvm::ArrayRef<std::string> modeList() const { return Modes; }
   XRayInstrSet instrumentationBundle() const { return InstrumentationBundle; }

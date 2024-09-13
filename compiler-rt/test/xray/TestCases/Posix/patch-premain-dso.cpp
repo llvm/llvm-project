@@ -1,8 +1,8 @@
 // Checking that DSOs are automatically patched upon load, if patch_premain is passed.
 
 // RUN: split-file %s %t
-// RUN: %clangxx_xray -g -fPIC -fxray-instrument -fxray-enable-shared -shared -std=c++11 %t/testlib.cpp -o %t/testlib.so
-// RUN: %clangxx_xray -g -fPIC -fxray-instrument -fxray-enable-shared -std=c++11 %t/main.cpp %t/testlib.so -Wl,-rpath,%t -o %t/main.o
+// RUN: %clangxx_xray -g -fPIC -fxray-instrument -fxray-shared -shared -std=c++11 %t/testlib.cpp -o %t/testlib.so
+// RUN: %clangxx_xray -g -fPIC -fxray-instrument -fxray-shared -std=c++11 %t/main.cpp %t/testlib.so -Wl,-rpath,%t -o %t/main.o
 
 // RUN: XRAY_OPTIONS="patch_premain=true,verbosity=1" %run %t/main.o 2>&1 | FileCheck %s
 

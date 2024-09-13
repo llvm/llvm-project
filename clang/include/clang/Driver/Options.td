@@ -2922,8 +2922,8 @@ def fxray_selected_function_group :
   HelpText<"When using -fxray-function-groups, select which group of functions to instrument. Valid range is 0 to fxray-function-groups - 1">,
   MarshallingInfoInt<CodeGenOpts<"XRaySelectedFunctionGroup">, "0">;
 
-defm xray_enable_shared : BoolFOption<"xray-enable-shared",
-  CodeGenOpts<"XRayEnableShared">, DefaultFalse,
+defm xray_shared : BoolFOption<"xray-shared",
+  CodeGenOpts<"XRayShared">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
           "Enable shared library instrumentation with XRay">,
   NegFlag<SetFalse>>;
