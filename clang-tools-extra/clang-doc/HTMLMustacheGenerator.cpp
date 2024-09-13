@@ -54,6 +54,7 @@ public:
     std::unique_ptr<llvm::MemoryBuffer> Buffer = std::move(BufferOrError.get());
     llvm::StringRef FileContent = Buffer->getBuffer();
     registerPartial(Name, FileContent);
+    return llvm::Error::success();
   }
 
   MustacheTemplateFile(StringRef TemplateStr) : Template(TemplateStr) {}
@@ -72,6 +73,7 @@ setupTemplateFiles(const clang::doc::ClangDocContext &CDCtx) {
     return llvm::createFileError("cannot open file", EC);
   }
   NamespaceTemplate = std::move(Template.get());
+  return llvm::Error::success();
 }
 
 llvm::Error 
@@ -118,6 +120,7 @@ MustacheHTMLGenerator::generateDocs(llvm::StringRef RootDir,
       }
     }
   }
+  return llvm::Error::success();
 }
 
 Value extractValue(const Location &L, 
@@ -130,6 +133,8 @@ Value extractValue(const Location &L,
   SmallString<128> FileURL(*RepositoryUrl);
   llvm::sys::path::append(FileURL, llvm::sys::path::Style::posix, L.Filename);
   Obj.insert({"FileURL", FileURL});
+  
+  return Obj;
 }
 
 Value extractValue(const Reference &I, StringRef CurrentDirectory) {
@@ -280,29 +285,39 @@ Value extractValue(const NamespaceInfo &I, const ClangDocContext &CDCtx) {
   Value ArrNamespace = Array();
   for (const Reference& Child : I.Children.Namespaces)
     ArrNamespace.getAsArray()->emplace_back(extractValue(Child, BasePath));
-  NamespaceValue.insert({"Namespace", ArrNamespace});
+  
+  if (!ArrNamespace.getAsArray()->empty())
+    NamespaceValue.insert({"Namespace", Object{{"Links", ArrNamespace}}});
   
   Value ArrRecord = Array();
   for (const Reference& Child : I.Children.Records)
     ArrRecord.getAsArray()->emplace_back(extractValue(Child, BasePath));
-  NamespaceValue.insert({"Record", ArrRecord});
+  
+  if (!ArrRecord.getAsArray()->empty())
+    NamespaceValue.insert({"Record", Object{{"Links", ArrRecord}}});
   
   Value ArrFunction = Array();
   for (const FunctionInfo& Child : I.Children.Functions)
     ArrFunction.getAsArray()->emplace_back(extractValue(Child, BasePath,
                                                         CDCtx));
-  NamespaceValue.insert({"Function", ArrRecord});
+  if (!ArrFunction.getAsArray()->empty())
+    NamespaceValue.insert({"Function", Object{{"Obj", ArrFunction}}});
   
   Value ArrEnum = Array();
   for (const EnumInfo& Child : I.Children.Enums)
     ArrEnum.getAsArray()->emplace_back(extractValue(Child, CDCtx));
-  NamespaceValue.insert({"Enums", ArrEnum });
+  
+  if (!ArrEnum.getAsArray()->empty())
+    NamespaceValue.insert({"Enums", Object{{"Obj", ArrEnum }}});
   
   Value ArrTypedefs = Array();
   for (const TypedefInfo& Child : I.Children.Typedefs) 
     ArrTypedefs.getAsArray()->emplace_back(extractValue(Child));
-  NamespaceValue.insert({"Typedefs", ArrTypedefs });
   
+  if (!ArrTypedefs.getAsArray()->empty())
+    NamespaceValue.insert({"Typedefs", Object{{"Obj", ArrTypedefs }}});
+  
+  return NamespaceValue;
 }
 
 
@@ -313,6 +328,7 @@ MustacheHTMLGenerator::generateDocForInfo(Info *I, llvm::raw_ostream &OS,
   switch (I->IT) {
   case InfoType::IT_namespace: {
     Value V = extractValue(*static_cast<clang::doc::NamespaceInfo *>(I), CDCtx);
+    llvm::outs() << V << "\n";
     OS << NamespaceTemplate->render(V);
     break;
   }
@@ -332,10 +348,10 @@ MustacheHTMLGenerator::generateDocForInfo(Info *I, llvm::raw_ostream &OS,
 }
 
 llvm::Error MustacheHTMLGenerator::createResources(ClangDocContext &CDCtx) {
-  
+  return llvm::Error::success();
 }
 
-const char *MustacheHTMLGenerator::Format = "mustache";
+const char *MustacheHTMLGenerator::Format = "mhtml";
 
 
 static GeneratorRegistry::Add<MustacheHTMLGenerator> MHTML(MustacheHTMLGenerator::Format,
@@ -343,7 +359,7 @@ static GeneratorRegistry::Add<MustacheHTMLGenerator> MHTML(MustacheHTMLGenerator
 
 // This anchor is used to force the linker to link in the generated object
 // file and thus register the generator.
-volatile int HTMLGeneratorAnchorSource = 0;
+volatile int MHTMLGeneratorAnchorSource = 0;
 
 } // namespace doc
 } // namespace clang

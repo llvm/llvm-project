@@ -103,6 +103,7 @@ enum OutputFormatTy {
   md,
   yaml,
   html,
+  mhtml
 };
 
 static llvm::cl::opt<OutputFormatTy>
@@ -112,7 +113,9 @@ static llvm::cl::opt<OutputFormatTy>
                                 clEnumValN(OutputFormatTy::md, "md",
                                            "Documentation in MD format."),
                                 clEnumValN(OutputFormatTy::html, "html",
-                                           "Documentation in HTML format.")),
+                                           "Documentation in HTML format."),
+                                clEnumValN(OutputFormatTy::mhtml, "mhtml",
+                                           "Documentation in mHTML format")),
                llvm::cl::init(OutputFormatTy::yaml),
                llvm::cl::cat(ClangDocCategory));
 
@@ -124,6 +127,8 @@ std::string getFormatString() {
     return "md";
   case OutputFormatTy::html:
     return "html";
+  case OutputFormatTy::mhtml:
+    return "mhtml";
   }
   llvm_unreachable("Unknown OutputFormatTy");
 }
@@ -227,6 +232,8 @@ llvm::Error getMustacheHtmlFiles(const char *Argv0,
   llvm::sys::path::native(AssetsPath, MustacheTemplate);
   llvm::sys::path::append(MustacheTemplate, "template.mustache");
   CDCtx.MustacheTemplates.insert({"template", MustacheTemplate.c_str()});
+  
+  return llvm::Error::success();
 }
 
 /// Make the output of clang-doc deterministic by sorting the children of
