@@ -517,25 +517,31 @@ static bool isUnpackedVectorVT(EVT VecVT) {
 static InstructionCost getHistogramCost(const IntrinsicCostAttributes &ICA) {
   Type *BucketPtrsTy = ICA.getArgTypes()[0]; // Type of vector of pointers
   Type *EltTy = ICA.getArgTypes()[1];        // Type of bucket elements
+  unsigned TotalHistCnts = 1;
 
-  // Only allow (32b and 64b) integers or pointers for now...
+  // Only allow (up to 64b) integers or pointers
   if ((!EltTy->isIntegerTy() && !EltTy->isPointerTy()) ||
-      (EltTy->getScalarSizeInBits() != 32 &&
-       EltTy->getScalarSizeInBits() != 64))
+      EltTy->getScalarSizeInBits() > 64)
     return InstructionCost::getInvalid();
 
-  // FIXME: Hacky check for legal vector types. We can promote smaller types
-  //        but we cannot legalize vectors via splitting for histcnt.
   // FIXME: We should be able to generate histcnt for fixed-length vectors
   //        using ptrue with a specific VL.
-  if (VectorType *VTy = dyn_cast<VectorType>(BucketPtrsTy))
-    if ((VTy->getElementCount().getKnownMinValue() != 2 &&
-         VTy->getElementCount().getKnownMinValue() != 4) ||
-        VTy->getPrimitiveSizeInBits().getKnownMinValue() > 128 ||
-        !VTy->isScalableTy())
+  if (VectorType *VTy = dyn_cast<VectorType>(BucketPtrsTy)) {
+    unsigned EC = VTy->getElementCount().getKnownMinValue();
+    if (!isPowerOf2_64(EC) || !VTy->isScalableTy())
       return InstructionCost::getInvalid();
 
-  return InstructionCost(BaseHistCntCost);
+    bool Element64b = EltTy->isIntegerTy(64);
+
+    if (EC == 2 || (!Element64b && EC == 4))
+      return InstructionCost(BaseHistCntCost);
+
+    unsigned NaturalVectorWidth = Element64b ? AArch64::SVEBitsPerBlock / 64
+                                             : AArch64::SVEBitsPerBlock / 32;
+    TotalHistCnts = EC / NaturalVectorWidth;
+  }
+
+  return InstructionCost(BaseHistCntCost * TotalHistCnts);
 }
 
 InstructionCost
