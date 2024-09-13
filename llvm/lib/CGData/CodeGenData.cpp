@@ -17,6 +17,7 @@
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/WithColor.h"
 
 #define DEBUG_TYPE "cg-data"
@@ -30,6 +31,14 @@ cl::opt<bool>
 cl::opt<std::string>
     CodeGenDataUsePath("codegen-data-use-path", cl::init(""), cl::Hidden,
                        cl::desc("File path to where .cgdata file is read"));
+cl::opt<bool> CodeGenDataThinLTOTwoRounds(
+    "codegen-data-thinlto-two-rounds", cl::init(false), cl::Hidden,
+    cl::desc("Enable two-round ThinLTO code generation. The first round "
+             "emits codegen data, while the second round uses the emitted "
+             "codegen data for further optimizations."));
+
+// Path to where the optimized bitcodes are saved and restored for ThinLTO.
+static SmallString<128> CodeGenDataThinLTOTwoRoundsPath;
 
 static std::string getCGDataErrString(cgdata_error Err,
                                       const std::string &ErrMsg = "") {
@@ -139,7 +148,7 @@ CodeGenData &CodeGenData::getInstance() {
   std::call_once(CodeGenData::OnceFlag, []() {
     Instance = std::unique_ptr<CodeGenData>(new CodeGenData());
 
-    if (CodeGenDataGenerate)
+    if (CodeGenDataGenerate || CodeGenDataThinLTOTwoRounds)
       Instance->EmitCGData = true;
     else if (!CodeGenDataUsePath.empty()) {
       // Initialize the global CGData if the input file name is given.
@@ -213,6 +222,76 @@ void warn(Error E, StringRef Whence) {
       warn(IPE.message(), Whence.str(), "");
     });
   }
+}
+
+static std::string getPath(StringRef Dir, unsigned Task) {
+  return (Dir + "/" + llvm::Twine(Task) + ".saved_copy.bc").str();
+}
+
+void initializeTwoCodegenRounds() {
+  assert(CodeGenDataThinLTOTwoRounds);
+  if (auto EC = llvm::sys::fs::createUniqueDirectory(
+          "cgdata", CodeGenDataThinLTOTwoRoundsPath))
+    report_fatal_error(Twine("Failed to create directory: ") + EC.message());
+}
+
+void saveModuleForTwoRounds(const Module &TheModule, unsigned Task) {
+  assert(sys::fs::is_directory(CodeGenDataThinLTOTwoRoundsPath));
+  std::string Path = getPath(CodeGenDataThinLTOTwoRoundsPath, Task);
+  std::error_code EC;
+  raw_fd_ostream OS(Path, EC, sys::fs::OpenFlags::OF_None);
+  if (EC)
+    report_fatal_error(Twine("Failed to open ") + Path +
+                       " to save optimized bitcode: " + EC.message());
+  WriteBitcodeToFile(TheModule, OS, /* ShouldPreserveUseListOrder */ true);
+}
+
+std::unique_ptr<Module> loadModuleForTwoRounds(BitcodeModule &OrigModule,
+                                               unsigned Task,
+                                               LLVMContext &Context) {
+  assert(sys::fs::is_directory(CodeGenDataThinLTOTwoRoundsPath));
+  std::string Path = getPath(CodeGenDataThinLTOTwoRoundsPath, Task);
+  auto FileOrError = MemoryBuffer::getFile(Path);
+  if (auto EC = FileOrError.getError())
+    report_fatal_error(Twine("Failed to open ") + Path +
+                       " to load optimized bitcode: " + EC.message());
+
+  std::unique_ptr<MemoryBuffer> FileBuffer = std::move(*FileOrError);
+  auto RestoredModule = llvm::parseBitcodeFile(*FileBuffer, Context);
+  if (!RestoredModule)
+    report_fatal_error(Twine("Failed to parse optimized bitcode loaded from ") +
+                       Path + "\n");
+
+  // Restore the original module identifier.
+  (*RestoredModule)->setModuleIdentifier(OrigModule.getModuleIdentifier());
+  return std::move(*RestoredModule);
+}
+
+Error mergeCodeGenData(
+    const std::unique_ptr<std::vector<llvm::SmallString<0>>> InputFiles) {
+
+  OutlinedHashTreeRecord GlobalOutlineRecord;
+  for (auto &InputFile : *(InputFiles)) {
+    if (InputFile.empty())
+      continue;
+    StringRef File = StringRef(InputFile.data(), InputFile.size());
+    std::unique_ptr<MemoryBuffer> Buffer = MemoryBuffer::getMemBuffer(
+        File, "in-memory object file", /*RequiresNullTerminator=*/false);
+    Expected<std::unique_ptr<object::ObjectFile>> BinOrErr =
+        object::ObjectFile::createObjectFile(Buffer->getMemBufferRef());
+    if (!BinOrErr)
+      return BinOrErr.takeError();
+
+    std::unique_ptr<object::ObjectFile> &Obj = BinOrErr.get();
+    if (auto E = CodeGenDataReader::mergeFromObjectFile(Obj.get(),
+                                                        GlobalOutlineRecord))
+      return E;
+  }
+
+  if (!GlobalOutlineRecord.empty())
+    cgdata::publishOutlinedHashTree(std::move(GlobalOutlineRecord.HashTree));
+
+  return Error::success();
 }
 
 } // end namespace cgdata

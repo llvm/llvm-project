@@ -21,6 +21,7 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
+#include "llvm/CGData/CodeGenData.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/AutoUpgrade.h"
@@ -69,6 +70,8 @@ extern cl::opt<bool> UseNewDbgInfoFormat;
 static cl::opt<bool>
     DumpThinCGSCCs("dump-thin-cg-sccs", cl::init(false), cl::Hidden,
                    cl::desc("Dump the SCCs in the ThinLTO index's callgraph"));
+
+extern cl::opt<bool> CodeGenDataThinLTOTwoRounds;
 
 namespace llvm {
 /// Enable global value internalization in LTO.
@@ -1458,7 +1461,7 @@ public:
           GlobalValue::getGUID(GlobalValue::dropLLVMManglingEscape(Name)));
   }
 
-  Error runThinLTOBackendThread(
+  virtual Error runThinLTOBackendThread(
       AddStreamFn AddStream, FileCache Cache, unsigned Task, BitcodeModule BM,
       ModuleSummaryIndex &CombinedIndex,
       const FunctionImporter::ImportMapTy &ImportList,
@@ -1557,6 +1560,60 @@ public:
 
   unsigned getThreadCount() override {
     return BackendThreadPool.getMaxConcurrency();
+  }
+};
+
+/// This Backend will run ThinBackend process but throw away all the output from
+/// the codegen. This class facilitates the first codegen round.
+class NoOutputThinBackend : public InProcessThinBackend {
+public:
+  NoOutputThinBackend(
+      const Config &Conf, ModuleSummaryIndex &CombinedIndex,
+      ThreadPoolStrategy ThinLTOParallelism,
+      const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
+      std::unique_ptr<std::vector<llvm::SmallString<0>>> Scratch)
+      : InProcessThinBackend(
+            Conf, CombinedIndex, ThinLTOParallelism, ModuleToDefinedGVSummaries,
+            // Allocate a scratch buffer for each task to write output to.
+            [Allocation = &*Scratch](unsigned Task, const Twine &ModuleName) {
+              return std::make_unique<CachedFileStream>(
+                  std::make_unique<raw_svector_ostream>((*Allocation)[Task]));
+            },
+            FileCache(), nullptr, false, false),
+        Scratch(std::move(Scratch)) {}
+
+  /// Scratch space for writing output during the codegen.
+  std::unique_ptr<std::vector<llvm::SmallString<0>>> Scratch;
+};
+
+/// This Backend performs codegen on bitcode that was previously saved after
+/// going through optimization. This class facilitates the second codegen round.
+class OptimizedBitcodeThinBackend : public InProcessThinBackend {
+public:
+  OptimizedBitcodeThinBackend(
+      const Config &Conf, ModuleSummaryIndex &CombinedIndex,
+      ThreadPoolStrategy ThinLTOParallelism,
+      const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
+      AddStreamFn AddStream)
+      : InProcessThinBackend(Conf, CombinedIndex, ThinLTOParallelism,
+                             ModuleToDefinedGVSummaries, AddStream, FileCache(),
+                             nullptr, false, false) {}
+
+  virtual Error runThinLTOBackendThread(
+      AddStreamFn AddStream, FileCache Cache, unsigned Task, BitcodeModule BM,
+      ModuleSummaryIndex &CombinedIndex,
+      const FunctionImporter::ImportMapTy &ImportList,
+      const FunctionImporter::ExportSetTy &ExportList,
+      const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes> &ResolvedODR,
+      const GVSummaryMapTy &DefinedGlobals,
+      MapVector<StringRef, BitcodeModule> &ModuleMap) override {
+    LTOLLVMContext BackendContext(Conf);
+    std::unique_ptr<Module> LoadedModule =
+        cgdata::loadModuleForTwoRounds(BM, Task, BackendContext);
+
+    return thinBackend(Conf, Task, AddStream, *LoadedModule, CombinedIndex,
+                       ImportList, DefinedGlobals, &ModuleMap,
+                       /*CodeGenOnly=*/true);
   }
 };
 } // end anonymous namespace
@@ -1879,10 +1936,46 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
     return BackendProcess->wait();
   };
 
-  std::unique_ptr<ThinBackendProc> BackendProc =
-      ThinLTO.Backend(Conf, ThinLTO.CombinedIndex, ModuleToDefinedGVSummaries,
-                      AddStream, Cache);
-  return RunBackends(BackendProc.get());
+  if (!CodeGenDataThinLTOTwoRounds) {
+    std::unique_ptr<ThinBackendProc> BackendProc =
+        ThinLTO.Backend(Conf, ThinLTO.CombinedIndex, ModuleToDefinedGVSummaries,
+                        AddStream, Cache);
+    return RunBackends(BackendProc.get());
+  }
+
+  // Perform two rounds of code generation for ThinLTO:
+  // 1. First round: Run optimization and code generation with a scratch output.
+  // 2. Merge codegen data extracted from the scratch output.
+  // 3. Second round: Run code generation again using the merged data.
+  LLVM_DEBUG(dbgs() << "Running ThinLTO two-codegen rounds\n");
+
+  // Initialize a temporary path to store and retrieve optimized IRs for
+  // two-round code generation.
+  cgdata::initializeTwoCodegenRounds();
+
+  // Create a scratch output to hold intermediate results.
+  auto Outputs =
+      std::make_unique<std::vector<llvm::SmallString<0>>>(getMaxTasks());
+  auto FirstRoundLTO = std::make_unique<NoOutputThinBackend>(
+      Conf, ThinLTO.CombinedIndex, llvm::heavyweight_hardware_concurrency(),
+      ModuleToDefinedGVSummaries, std::move(Outputs));
+  // First round: Run optimization and code generation with a scratch output.
+  // Before code generation, serialize modules.
+  if (Error E = RunBackends(FirstRoundLTO.get()))
+    return E;
+
+  // Merge codegen data extracted from the scratch output.
+  if (Error E = cgdata::mergeCodeGenData(std::move(FirstRoundLTO->Scratch)))
+    return E;
+
+  // Second round: Run code generation by reading IRs.
+  std::unique_ptr<ThinBackendProc> SecondRoundLTO =
+      std::make_unique<OptimizedBitcodeThinBackend>(
+          Conf, ThinLTO.CombinedIndex, llvm::heavyweight_hardware_concurrency(),
+          ModuleToDefinedGVSummaries, AddStream);
+  Error E = RunBackends(SecondRoundLTO.get());
+
+  return E;
 }
 
 Expected<std::unique_ptr<ToolOutputFile>> lto::setupLLVMOptimizationRemarks(
