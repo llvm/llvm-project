@@ -22359,24 +22359,21 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
     ID = Intrinsic::riscv_cv_alu_clipu;
     break;
   case RISCV::BI__builtin_riscv_cv_alu_extbs:
-    ID = Intrinsic::riscv_cv_alu_extbs;
-    break;
+    return Builder.CreateSExt(Builder.CreateTrunc(Ops[0], Int8Ty), Int32Ty,
+                              "extbs");
   case RISCV::BI__builtin_riscv_cv_alu_extbz:
-    ID = Intrinsic::riscv_cv_alu_extbz;
-    break;
-  case RISCV::BI__builtin_riscv_cv_alu_exths: {
+    return Builder.CreateZExt(Builder.CreateTrunc(Ops[0], Int8Ty), Int32Ty,
+                              "extbz");
+  case RISCV::BI__builtin_riscv_cv_alu_exths:
     return Builder.CreateSExt(Builder.CreateTrunc(Ops[0], Int16Ty), Int32Ty,
                               "exths");
-  }
   case RISCV::BI__builtin_riscv_cv_alu_exthz:
     return Builder.CreateZExt(Builder.CreateTrunc(Ops[0], Int16Ty), Int32Ty,
                               "exthz");
   case RISCV::BI__builtin_riscv_cv_alu_slet:
-    ID = Intrinsic::riscv_cv_alu_slet;
-    break;
+    return Builder.CreateICmpSLE(Ops[0], Ops[1], "sle");
   case RISCV::BI__builtin_riscv_cv_alu_sletu:
-    ID = Intrinsic::riscv_cv_alu_sletu;
-    break;
+    return Builder.CreateICmpULE(Ops[0], Ops[1], "sleu");
   case RISCV::BI__builtin_riscv_cv_alu_subN:
     ID = Intrinsic::riscv_cv_alu_subN;
     break;

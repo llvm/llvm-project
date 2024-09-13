@@ -792,11 +792,7 @@ let Predicates = [HasVendorXCValu, IsRV32], AddedComplexity = 1 in {
   def : Pat<(sext_inreg (XLenVT GPR:$rs1), i16), (CV_EXTHS GPR:$rs1)>;
   def : Pat<(sext_inreg (XLenVT GPR:$rs1), i8), (CV_EXTBS GPR:$rs1)>;
   def : Pat<(and (XLenVT GPR:$rs1), 0xffff), (CV_EXTHZ GPR:$rs1)>;
-
-  def : PatCoreVAluGprGpr<"slet", "SLET">;
-  def : PatCoreVAluGprGpr<"sletu", "SLETU">;
-  def : PatCoreVAluGpr<"extbs", "EXTBS">;
-  def : PatCoreVAluGpr<"extbz", "EXTBZ">;
+  def : Pat<(and (XLenVT GPR:$rs1), 0xff), (CV_EXTBZ GPR:$rs1)>;
 
   defm CLIP   : PatCoreVAluGprImm<int_riscv_cv_alu_clip>;
   defm CLIPU  : PatCoreVAluGprImm<int_riscv_cv_alu_clipu>;

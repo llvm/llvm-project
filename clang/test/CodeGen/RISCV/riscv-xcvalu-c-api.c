@@ -19,8 +19,9 @@
 // CHECK-NEXT:    store i32 [[TMP1]], ptr [[B_ADDR_I]], align 4
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A_ADDR_I]], align 4
 // CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[B_ADDR_I]], align 4
-// CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.riscv.cv.alu.slet(i32 [[TMP2]], i32 [[TMP3]])
-// CHECK-NEXT:    ret i32 [[TMP4]]
+// CHECK-NEXT:    [[SLE_I:%.*]] = icmp sle i32 [[TMP2]], [[TMP3]]
+// CHECK-NEXT:    [[CONV_I:%.*]] = sext i1 [[SLE_I]] to i32
+// CHECK-NEXT:    ret i32 [[CONV_I]]
 //
 int test_alu_slet(int32_t a, int32_t b) {
   return __riscv_cv_alu_slet(a, b);
@@ -40,8 +41,9 @@ int test_alu_slet(int32_t a, int32_t b) {
 // CHECK-NEXT:    store i32 [[TMP1]], ptr [[B_ADDR_I]], align 4
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A_ADDR_I]], align 4
 // CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[B_ADDR_I]], align 4
-// CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.riscv.cv.alu.sletu(i32 [[TMP2]], i32 [[TMP3]])
-// CHECK-NEXT:    ret i32 [[TMP4]]
+// CHECK-NEXT:    [[SLEU_I:%.*]] = icmp ule i32 [[TMP2]], [[TMP3]]
+// CHECK-NEXT:    [[CONV_I:%.*]] = sext i1 [[SLEU_I]] to i32
+// CHECK-NEXT:    ret i32 [[CONV_I]]
 //
 int test_alu_sletu(uint32_t a, uint32_t b) {
   return __riscv_cv_alu_sletu(a, b);
@@ -156,8 +158,8 @@ int test_alu_exths(int16_t a) {
 // CHECK-NEXT:    store i16 [[TMP0]], ptr [[A_ADDR_I]], align 2
 // CHECK-NEXT:    [[TMP1:%.*]] = load i16, ptr [[A_ADDR_I]], align 2
 // CHECK-NEXT:    [[CONV_I:%.*]] = zext i16 [[TMP1]] to i32
-// CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.cv.alu.exthz(i32 [[CONV_I]])
-// CHECK-NEXT:    ret i32 [[TMP2]]
+// CHECK-NEXT:    [[EXTHZ_I:%.*]] = zext i16 [[TMP1]] to i32
+// CHECK-NEXT:    ret i32 [[EXTHZ_I]]
 //
 int test_alu_exthz(uint16_t a) {
   return __riscv_cv_alu_exthz(a);
@@ -172,8 +174,8 @@ int test_alu_exthz(uint16_t a) {
 // CHECK-NEXT:    store i8 [[TMP0]], ptr [[A_ADDR_I]], align 1
 // CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[A_ADDR_I]], align 1
 // CHECK-NEXT:    [[CONV_I:%.*]] = sext i8 [[TMP1]] to i32
-// CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.cv.alu.extbs(i32 [[CONV_I]])
-// CHECK-NEXT:    ret i32 [[TMP2]]
+// CHECK-NEXT:    [[EXTBS_I:%.*]] = sext i8 [[TMP1]] to i32
+// CHECK-NEXT:    ret i32 [[EXTBS_I]]
 //
 int test_alu_extbs(int8_t a) {
   return __riscv_cv_alu_extbs(a);
@@ -188,8 +190,8 @@ int test_alu_extbs(int8_t a) {
 // CHECK-NEXT:    store i8 [[TMP0]], ptr [[A_ADDR_I]], align 1
 // CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[A_ADDR_I]], align 1
 // CHECK-NEXT:    [[CONV_I:%.*]] = zext i8 [[TMP1]] to i32
-// CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.cv.alu.extbz(i32 [[CONV_I]])
-// CHECK-NEXT:    ret i32 [[TMP2]]
+// CHECK-NEXT:    [[EXTBZ_I:%.*]] = zext i8 [[TMP1]] to i32
+// CHECK-NEXT:    ret i32 [[EXTBZ_I]]
 //
 int test_alu_extbz(uint8_t a) {
   return __riscv_cv_alu_extbz(a);

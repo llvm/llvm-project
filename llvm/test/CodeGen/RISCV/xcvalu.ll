@@ -91,47 +91,23 @@ define i32 @exthz(i16 %a) {
   ret i32 %1
 }
 
-declare i32 @llvm.riscv.cv.alu.slet(i32, i32)
-
-define i32 @test.cv.alu.slet(i32 %a, i32 %b) {
-; CHECK-LABEL: test.cv.alu.slet:
+define i32 @extbs(i8 %a) {
+; CHECK-LABEL: extbs:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    cv.slet a0, a0, a1
-; CHECK-NEXT:    ret
-  %1 = call i32 @llvm.riscv.cv.alu.slet(i32 %a, i32 %b)
-  ret i32 %1
-}
-
-declare i32 @llvm.riscv.cv.alu.sletu(i32, i32)
-
-define i32 @test.cv.alu.sletu(i32 %a, i32 %b) {
-; CHECK-LABEL: test.cv.alu.sletu:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    cv.sletu a0, a0, a1
-; CHECK-NEXT:    ret
-  %1 = call i32 @llvm.riscv.cv.alu.sletu(i32 %a, i32 %b)
-  ret i32 %1
-}
-
-declare i32 @llvm.riscv.cv.alu.extbs(i32)
-
-define i32 @test.cv.alu.extbs(i32 %a) {
-; CHECK-LABEL: test.cv.alu.extbs:
-; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $x11 killed $x10
 ; CHECK-NEXT:    cv.extbs a0, a0
 ; CHECK-NEXT:    ret
-  %1 = call i32 @llvm.riscv.cv.alu.extbs(i32 %a)
+  %1 = sext i8 %a to i32
   ret i32 %1
 }
 
-declare i32 @llvm.riscv.cv.alu.extbz(i32)
-
-define i32 @test.cv.alu.extbz(i32 %a) {
-; CHECK-LABEL: test.cv.alu.extbz:
+define i32 @extbz(i8 %a) {
+; CHECK-LABEL: extbz:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $x11 killed $x10
 ; CHECK-NEXT:    cv.extbz a0, a0
 ; CHECK-NEXT:    ret
-  %1 = call i32 @llvm.riscv.cv.alu.extbz(i32 %a)
+  %1 = zext i8 %a to i32
   ret i32 %1
 }
 
