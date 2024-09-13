@@ -302,11 +302,6 @@ static bool isStdInitializerListOfPointer(const RecordDecl *RD) {
   return false;
 }
 
-static bool isGSLOwner(QualType T) {
-  return isRecordWithAttr<OwnerAttr>(T) &&
-         !isContainerOfPointer(T->getAsRecordDecl());
-}
-
 static bool shouldTrackImplicitObjectArg(const CXXMethodDecl *Callee) {
   if (auto *Conv = dyn_cast_or_null<CXXConversionDecl>(Callee))
     if (isRecordWithAttr<PointerAttr>(Conv->getConversionType()) &&
@@ -316,7 +311,7 @@ static bool shouldTrackImplicitObjectArg(const CXXMethodDecl *Callee) {
     return false;
   if (!isRecordWithAttr<PointerAttr>(
           Callee->getFunctionObjectParameterType()) &&
-      !isGSLOwner(Callee->getFunctionObjectParameterType()))
+      !isRecordWithAttr<OwnerAttr>(Callee->getFunctionObjectParameterType()))
     return false;
   if (isPointerLikeType(Callee->getReturnType())) {
     if (!Callee->getIdentifier())
@@ -372,22 +367,29 @@ static bool
 shouldTrackFirstArgumentForConstructor(const CXXConstructExpr *Ctor) {
   const auto *ClassD = Ctor->getConstructor()->getParent();
 
-  auto FirstArgType = Ctor->getArg(0)->getType();
   // Case 1, construct a GSL pointer, e.g. std::string_view
   if (ClassD->hasAttr<PointerAttr>())
     return true;
 
-  // case 2: construct a container of pointer (std::vector<std::string_view>)
-  // from an owner or a std::initilizer_list.
-  //
-  // std::initializer_list is a proxy object that provides access to the backing
-  // array. We perform analysis on it to determine if there are any dangling
-  // temporaries in the backing array.
+  auto FirstArgType = Ctor->getArg(0)->getType();
+  // Case 2, construct a container of pointer (std::vector<std::string_view>)
+  // from a std::initilizer_list or an GSL owner
   if (Ctor->getConstructor()->getNumParams() != 1 ||
       !isContainerOfPointer(ClassD))
     return false;
-  return isGSLOwner(FirstArgType) ||
-         isStdInitializerListOfPointer(FirstArgType->getAsRecordDecl());
+
+  // For the typical case: `std::vector<std::string_view> abc = {std::string()};`
+  // std::initializer_list is a proxy object that provides access to the backing
+  // array. We perform analysis on it to determine if there are any dangling
+  // temporaries in the backing array.
+  if (isStdInitializerListOfPointer(FirstArgType->getAsRecordDecl()))
+    return true;
+  // For the case: `std::optional<std::string_view> abc = std::string();`
+  // When constructing from a container of pointers, it's less likely to result
+  // in a dangling pointer. Therefore, we try to be conservative to not track
+  // the argument futher to avoid false positives.
+  return isRecordWithAttr<OwnerAttr>(FirstArgType) &&
+         !isContainerOfPointer(FirstArgType->getAsRecordDecl());
 }
 
 // Return true if this is an "normal" assignment operator.
@@ -477,7 +479,7 @@ static void visitFunctionCallArguments(IndirectLocalPath &Path, Expr *Call,
     // Once we initialized a value with a non gsl-owner reference, it can no
     // longer dangle.
     if (ReturnType->isReferenceType() &&
-        !isGSLOwner(ReturnType->getPointeeType())) {
+        !isRecordWithAttr<OwnerAttr>(ReturnType->getPointeeType())) {
       for (const IndirectLocalPathEntry &PE : llvm::reverse(Path)) {
         if (PE.Kind == IndirectLocalPathEntry::GslReferenceInit ||
             PE.Kind == IndirectLocalPathEntry::LifetimeBoundCall)
@@ -1049,12 +1051,13 @@ static void checkExprLifetimeImpl(Sema &SemaRef,
         //   int &p = *localUniquePtr;
         //   someContainer.add(std::move(localUniquePtr));
         //   return p;
-        IsLocalGslOwner = isGSLOwner(L->getType());
+        IsLocalGslOwner = isRecordWithAttr<OwnerAttr>(L->getType());
         if (pathContainsInit(Path) || !IsLocalGslOwner)
           return false;
       } else {
         IsGslPtrValueFromGslTempOwner =
-            MTE && !MTE->getExtendingDecl() && isGSLOwner(MTE->getType());
+            MTE && !MTE->getExtendingDecl() &&
+            isRecordWithAttr<OwnerAttr>(MTE->getType());
         // Skipping a chain of initializing gsl::Pointer annotated objects.
         // We are looking only for the final source to find out if it was
         // a local or temporary owner or the address of a local variable/param.
