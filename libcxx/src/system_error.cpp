@@ -35,65 +35,58 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace {
 std::optional<errc> __win_err_to_errc(int err) {
-  constexpr struct {
-    int win;
-    errc errc;
-  } win_error_mapping[] = {
-      {ERROR_ACCESS_DENIED, errc::permission_denied},
-      {ERROR_ALREADY_EXISTS, errc::file_exists},
-      {ERROR_BAD_NETPATH, errc::no_such_file_or_directory},
-      {ERROR_BAD_PATHNAME, errc::no_such_file_or_directory},
-      {ERROR_BAD_UNIT, errc::no_such_device},
-      {ERROR_BROKEN_PIPE, errc::broken_pipe},
-      {ERROR_BUFFER_OVERFLOW, errc::filename_too_long},
-      {ERROR_BUSY, errc::device_or_resource_busy},
-      {ERROR_BUSY_DRIVE, errc::device_or_resource_busy},
-      {ERROR_CANNOT_MAKE, errc::permission_denied},
-      {ERROR_CANTOPEN, errc::io_error},
-      {ERROR_CANTREAD, errc::io_error},
-      {ERROR_CANTWRITE, errc::io_error},
-      {ERROR_CURRENT_DIRECTORY, errc::permission_denied},
-      {ERROR_DEV_NOT_EXIST, errc::no_such_device},
-      {ERROR_DEVICE_IN_USE, errc::device_or_resource_busy},
-      {ERROR_DIR_NOT_EMPTY, errc::directory_not_empty},
-      {ERROR_DIRECTORY, errc::invalid_argument},
-      {ERROR_DISK_FULL, errc::no_space_on_device},
-      {ERROR_FILE_EXISTS, errc::file_exists},
-      {ERROR_FILE_NOT_FOUND, errc::no_such_file_or_directory},
-      {ERROR_HANDLE_DISK_FULL, errc::no_space_on_device},
-      {ERROR_INVALID_ACCESS, errc::permission_denied},
-      {ERROR_INVALID_DRIVE, errc::no_such_device},
-      {ERROR_INVALID_FUNCTION, errc::function_not_supported},
-      {ERROR_INVALID_HANDLE, errc::invalid_argument},
-      {ERROR_INVALID_NAME, errc::no_such_file_or_directory},
-      {ERROR_INVALID_PARAMETER, errc::invalid_argument},
-      {ERROR_LOCK_VIOLATION, errc::no_lock_available},
-      {ERROR_LOCKED, errc::no_lock_available},
-      {ERROR_NEGATIVE_SEEK, errc::invalid_argument},
-      {ERROR_NOACCESS, errc::permission_denied},
-      {ERROR_NOT_ENOUGH_MEMORY, errc::not_enough_memory},
-      {ERROR_NOT_READY, errc::resource_unavailable_try_again},
-      {ERROR_NOT_SAME_DEVICE, errc::cross_device_link},
-      {ERROR_NOT_SUPPORTED, errc::not_supported},
-      {ERROR_OPEN_FAILED, errc::io_error},
-      {ERROR_OPEN_FILES, errc::device_or_resource_busy},
-      {ERROR_OPERATION_ABORTED, errc::operation_canceled},
-      {ERROR_OUTOFMEMORY, errc::not_enough_memory},
-      {ERROR_PATH_NOT_FOUND, errc::no_such_file_or_directory},
-      {ERROR_READ_FAULT, errc::io_error},
-      {ERROR_REPARSE_TAG_INVALID, errc::invalid_argument},
-      {ERROR_RETRY, errc::resource_unavailable_try_again},
-      {ERROR_SEEK, errc::io_error},
-      {ERROR_SHARING_VIOLATION, errc::permission_denied},
-      {ERROR_TOO_MANY_OPEN_FILES, errc::too_many_files_open},
-      {ERROR_WRITE_FAULT, errc::io_error},
-      {ERROR_WRITE_PROTECT, errc::permission_denied},
-  };
-
-  for (const auto& pair : win_error_mapping)
-    if (pair.win == err)
-      return pair.errc;
-  return {};
+  switch (err) {
+  case ERROR_ACCESS_DENIED: return errc::permission_denied;
+  case ERROR_ALREADY_EXISTS: return errc::file_exists;
+  case ERROR_BAD_NETPATH: return errc::no_such_file_or_directory;
+  case ERROR_BAD_PATHNAME: return errc::no_such_file_or_directory;
+  case ERROR_BAD_UNIT: return errc::no_such_device;
+  case ERROR_BROKEN_PIPE: return errc::broken_pipe;
+  case ERROR_BUFFER_OVERFLOW: return errc::filename_too_long;
+  case ERROR_BUSY: return errc::device_or_resource_busy;
+  case ERROR_BUSY_DRIVE: return errc::device_or_resource_busy;
+  case ERROR_CANNOT_MAKE: return errc::permission_denied;
+  case ERROR_CANTOPEN: return errc::io_error;
+  case ERROR_CANTREAD: return errc::io_error;
+  case ERROR_CANTWRITE: return errc::io_error;
+  case ERROR_CURRENT_DIRECTORY: return errc::permission_denied;
+  case ERROR_DEV_NOT_EXIST: return errc::no_such_device;
+  case ERROR_DEVICE_IN_USE: return errc::device_or_resource_busy;
+  case ERROR_DIR_NOT_EMPTY: return errc::directory_not_empty;
+  case ERROR_DIRECTORY: return errc::invalid_argument;
+  case ERROR_DISK_FULL: return errc::no_space_on_device;
+  case ERROR_FILE_EXISTS: return errc::file_exists;
+  case ERROR_FILE_NOT_FOUND: return errc::no_such_file_or_directory;
+  case ERROR_HANDLE_DISK_FULL: return errc::no_space_on_device;
+  case ERROR_INVALID_ACCESS: return errc::permission_denied;
+  case ERROR_INVALID_DRIVE: return errc::no_such_device;
+  case ERROR_INVALID_FUNCTION: return errc::function_not_supported;
+  case ERROR_INVALID_HANDLE: return errc::invalid_argument;
+  case ERROR_INVALID_NAME: return errc::no_such_file_or_directory;
+  case ERROR_INVALID_PARAMETER: return errc::invalid_argument;
+  case ERROR_LOCK_VIOLATION: return errc::no_lock_available;
+  case ERROR_LOCKED: return errc::no_lock_available;
+  case ERROR_NEGATIVE_SEEK: return errc::invalid_argument;
+  case ERROR_NOACCESS: return errc::permission_denied;
+  case ERROR_NOT_ENOUGH_MEMORY: return errc::not_enough_memory;
+  case ERROR_NOT_READY: return errc::resource_unavailable_try_again;
+  case ERROR_NOT_SAME_DEVICE: return errc::cross_device_link;
+  case ERROR_NOT_SUPPORTED: return errc::not_supported;
+  case ERROR_OPEN_FAILED: return errc::io_error;
+  case ERROR_OPEN_FILES: return errc::device_or_resource_busy;
+  case ERROR_OPERATION_ABORTED: return errc::operation_canceled;
+  case ERROR_OUTOFMEMORY: return errc::not_enough_memory;
+  case ERROR_PATH_NOT_FOUND: return errc::no_such_file_or_directory;
+  case ERROR_READ_FAULT: return errc::io_error;
+  case ERROR_REPARSE_TAG_INVALID: return errc::invalid_argument;
+  case ERROR_RETRY: return errc::resource_unavailable_try_again;
+  case ERROR_SEEK: return errc::io_error;
+  case ERROR_SHARING_VIOLATION: return errc::permission_denied;
+  case ERROR_TOO_MANY_OPEN_FILES: return errc::too_many_files_open;
+  case ERROR_WRITE_FAULT: return errc::io_error;
+  case ERROR_WRITE_PROTECT: return errc::permission_denied;
+  default: return {};
+  }
 }
 } // namespace
 #endif
@@ -232,7 +225,7 @@ string __system_error_category::message(int ev) const {
 #ifdef _LIBCPP_WIN32API
   std::string result;
   char* str               = nullptr;
-  unsigned long num_chars = FormatMessageA(
+  unsigned long num_chars = ::FormatMessageA(
       FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
       nullptr,
       ev,
@@ -266,7 +259,7 @@ error_condition __system_error_category::default_error_condition(int ev) const n
   if (ev == 0)
     return error_condition(0, generic_category());
   if (auto maybe_errc = __win_err_to_errc(ev))
-    return error_condition(static_cast<int>(maybe_errc.value()), generic_category());
+    return error_condition(static_cast<int>(*maybe_errc), generic_category());
   return error_condition(ev, system_category());
 #else
 #  ifdef _LIBCPP_ELAST
