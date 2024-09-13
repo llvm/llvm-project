@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/SandboxIR/Pass.h"
+#include "llvm/SandboxIR/PassManager.h"
 #include "llvm/Support/Debug.h"
 
 using namespace llvm::sandboxir;

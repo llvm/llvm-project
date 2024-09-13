@@ -4,6 +4,7 @@ target triple = "dxil-pc-shadermodel6.6-compute"
 
 declare void @scalar_user(float)
 declare void @vector_user(<4 x float>)
+declare void @check_user(i1)
 
 define void @loadv4f32() {
   ; CHECK: [[BIND:%.*]] = call %dx.types.Handle @dx.op.createHandleFromBinding
@@ -124,6 +125,27 @@ define void @loadv2f32() {
   ; CHECK: [[DATA0:%.*]] = call %dx.types.ResRet.f32 @dx.op.bufferLoad.f32(i32 68, %dx.types.Handle [[HANDLE]], i32 0, i32 undef)
   %data0 = call <2 x float> @llvm.dx.typedBufferLoad(
       target("dx.TypedBuffer", <2 x float>, 0, 0, 0) %buffer, i32 0)
+
+  ret void
+}
+
+define void @loadv4f32_checkbit() {
+  ; CHECK: [[BIND:%.*]] = call %dx.types.Handle @dx.op.createHandleFromBinding
+  ; CHECK: [[HANDLE:%.*]] = call %dx.types.Handle @dx.op.annotateHandle(i32 217, %dx.types.Handle [[BIND]]
+  %buffer = call target("dx.TypedBuffer", <4 x float>, 0, 0, 0)
+      @llvm.dx.handle.fromBinding.tdx.TypedBuffer_v4f32_0_0_0(
+          i32 0, i32 0, i32 1, i32 0, i1 false)
+
+  ; CHECK: [[DATA0:%.*]] = call %dx.types.ResRet.f32 @dx.op.bufferLoad.f32(i32 68, %dx.types.Handle [[HANDLE]], i32 0, i32 undef)
+  %data0 = call {<4 x float>, i1} @llvm.dx.typedBufferLoad.checkbit.f32(
+      target("dx.TypedBuffer", <4 x float>, 0, 0, 0) %buffer, i32 0)
+
+  ; CHECK: [[STATUS:%.*]] = extractvalue %dx.types.ResRet.f32 [[DATA0]], 4
+  ; CHECK: [[MAPPED:%.*]] = call i1 @dx.op.checkAccessFullyMapped.i32(i32 71, i32 [[STATUS]]
+  %check = extractvalue {<4 x float>, i1} %data0, 1
+
+  ; CHECK: call void @check_user(i1 [[MAPPED]])
+  call void @check_user(i1 %check)
 
   ret void
 }

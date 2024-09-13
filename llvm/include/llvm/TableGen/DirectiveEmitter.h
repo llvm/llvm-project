@@ -90,11 +90,20 @@ private:
   }
 };
 
+// Note: In all the classes below, allow implicit construction from Record *,
+// to allow writing code like:
+//  for (const Directive D : getDirectives()) {
+//
+//  instead of:
+//
+//  for (const Record *R : getDirectives()) {
+//    Directive D(R);
+
 // Base record class used for Directive and Clause class defined in
 // DirectiveBase.td.
 class BaseRecord {
 public:
-  explicit BaseRecord(const Record *Def) : Def(Def) {}
+  BaseRecord(const Record *Def) : Def(Def) {}
 
   StringRef getName() const { return Def->getValueAsString("name"); }
 
@@ -104,7 +113,7 @@ public:
 
   // Returns the name of the directive formatted for output. Whitespace are
   // replaced with underscores.
-  std::string getFormattedName() {
+  std::string getFormattedName() const {
     StringRef Name = Def->getValueAsString("name");
     std::string N = Name.str();
     std::replace(N.begin(), N.end(), ' ', '_');
@@ -124,7 +133,7 @@ protected:
 // DirectiveBase.td and provides helper methods for accessing it.
 class Directive : public BaseRecord {
 public:
-  explicit Directive(const Record *Def) : BaseRecord(Def) {}
+  Directive(const Record *Def) : BaseRecord(Def) {}
 
   std::vector<Record *> getAllowedClauses() const {
     return Def->getValueAsListOfDefs("allowedClauses");
@@ -155,7 +164,7 @@ public:
 // and provides helper methods for accessing it.
 class Clause : public BaseRecord {
 public:
-  explicit Clause(const Record *Def) : BaseRecord(Def) {}
+  Clause(const Record *Def) : BaseRecord(Def) {}
 
   // Optional field.
   StringRef getClangClass() const {
@@ -172,7 +181,7 @@ public:
   // captitalized and the underscores are removed.
   // ex: async -> Async
   //     num_threads -> NumThreads
-  std::string getFormattedParserClassName() {
+  std::string getFormattedParserClassName() const {
     StringRef Name = Def->getValueAsString("name");
     std::string N = Name.str();
     bool Cap = true;
@@ -223,10 +232,10 @@ public:
 // DirectiveBase.td and provides helper methods for accessing it.
 class VersionedClause {
 public:
-  explicit VersionedClause(const Record *Def) : Def(Def) {}
+  VersionedClause(const Record *Def) : Def(Def) {}
 
   // Return the specific clause record wrapped in the Clause class.
-  Clause getClause() const { return Clause{Def->getValueAsDef("clause")}; }
+  Clause getClause() const { return Clause(Def->getValueAsDef("clause")); }
 
   int64_t getMinVersion() const { return Def->getValueAsInt("minVersion"); }
 

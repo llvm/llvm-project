@@ -41,11 +41,12 @@ using llvm::formatv;
 // stable and useful way, where abstract Node subclasses correspond to ranges.
 class Hierarchy {
 public:
-  Hierarchy(llvm::RecordKeeper &Records) {
-    for (llvm::Record *T : Records.getAllDerivedDefinitions("NodeType"))
+  Hierarchy(const llvm::RecordKeeper &Records) {
+    for (const llvm::Record *T : Records.getAllDerivedDefinitions("NodeType"))
       add(T);
-    for (llvm::Record *Derived : Records.getAllDerivedDefinitions("NodeType"))
-      if (llvm::Record *Base = Derived->getValueAsOptionalDef("base"))
+    for (const llvm::Record *Derived :
+         Records.getAllDerivedDefinitions("NodeType"))
+      if (const llvm::Record *Base = Derived->getValueAsOptionalDef("base"))
         link(Derived, Base);
     for (NodeType &N : AllTypes) {
       llvm::sort(N.Derived, [](const NodeType *L, const NodeType *R) {
@@ -127,7 +128,7 @@ struct SyntaxConstraint {
 
 } // namespace
 
-void clang::EmitClangSyntaxNodeList(llvm::RecordKeeper &Records,
+void clang::EmitClangSyntaxNodeList(const llvm::RecordKeeper &Records,
                                     llvm::raw_ostream &OS) {
   llvm::emitSourceFileHeader("Syntax tree node list", OS, Records);
   Hierarchy H(Records);
@@ -186,7 +187,7 @@ static void printDoc(llvm::StringRef Doc, llvm::raw_ostream &OS) {
   }
 }
 
-void clang::EmitClangSyntaxNodeClasses(llvm::RecordKeeper &Records,
+void clang::EmitClangSyntaxNodeClasses(const llvm::RecordKeeper &Records,
                                        llvm::raw_ostream &OS) {
   llvm::emitSourceFileHeader("Syntax tree node list", OS, Records);
   Hierarchy H(Records);

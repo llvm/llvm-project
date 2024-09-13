@@ -442,11 +442,22 @@ jobs:
         name: ${{ needs.prepare.outputs.release-binary-filename }}-attestation
         path: ${{ needs.prepare.outputs.release-binary-filename }}.jsonl
 
+    - name: Checkout Release Scripts
+      uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+      with:
+        sparse-checkout: |
+          llvm/utils/release/github-upload-release.py
+          llvm/utils/git/requirements.txt
+        sparse-checkout-cone-mode: false
+
+    - name: Install Python Requirements
+      run: |
+        pip install --require-hashes -r ./llvm/utils/git/requirements.txt
+
     - name: Upload Release
       shell: bash
       run: |
-        sudo apt install python3-github
-        ./llvm-project/llvm/utils/release/github-upload-release.py \
+        ./llvm/utils/release/github-upload-release.py \
         --token ${{ github.token }} \
         --release ${{ needs.prepare.outputs.release-version }} \
         upload \

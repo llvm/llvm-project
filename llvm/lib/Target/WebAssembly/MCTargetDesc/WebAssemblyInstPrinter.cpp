@@ -367,3 +367,44 @@ void WebAssemblyInstPrinter::printWebAssemblySignatureOperand(const MCInst *MI,
     }
   }
 }
+
+void WebAssemblyInstPrinter::printCatchList(const MCInst *MI, unsigned OpNo,
+                                            raw_ostream &O) {
+  unsigned OpIdx = OpNo;
+  const MCOperand &Op = MI->getOperand(OpIdx++);
+  unsigned NumCatches = Op.getImm();
+
+  auto PrintTagOp = [&](const MCOperand &Op) {
+    const MCSymbolRefExpr *TagExpr = nullptr;
+    const MCSymbolWasm *TagSym = nullptr;
+    assert(Op.isExpr());
+    TagExpr = dyn_cast<MCSymbolRefExpr>(Op.getExpr());
+    TagSym = cast<MCSymbolWasm>(&TagExpr->getSymbol());
+    O << TagSym->getName() << " ";
+  };
+
+  for (unsigned I = 0; I < NumCatches; I++) {
+    const MCOperand &Op = MI->getOperand(OpIdx++);
+    O << "(";
+    switch (Op.getImm()) {
+    case wasm::WASM_OPCODE_CATCH:
+      O << "catch ";
+      PrintTagOp(MI->getOperand(OpIdx++));
+      break;
+    case wasm::WASM_OPCODE_CATCH_REF:
+      O << "catch_ref ";
+      PrintTagOp(MI->getOperand(OpIdx++));
+      break;
+    case wasm::WASM_OPCODE_CATCH_ALL:
+      O << "catch_all ";
+      break;
+    case wasm::WASM_OPCODE_CATCH_ALL_REF:
+      O << "catch_all_ref ";
+      break;
+    }
+    O << MI->getOperand(OpIdx++).getImm(); // destination
+    O << ")";
+    if (I < NumCatches - 1)
+      O << " ";
+  }
+}
