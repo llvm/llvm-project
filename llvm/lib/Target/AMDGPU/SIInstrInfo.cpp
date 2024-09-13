@@ -6231,10 +6231,11 @@ void SIInstrInfo::legalizeGenericOperand(MachineBasicBlock &InsertMBB,
     return;
 
   Register DstReg = MRI.createVirtualRegister(DstRC);
+  Op.setSubReg(0);
   auto Copy = BuildMI(InsertMBB, I, DL, get(AMDGPU::COPY), DstReg).add(Op);
 
   Op.setReg(DstReg);
-  Op.setSubReg(0);
+  Op.setSubReg(OpSubReg);
 
   MachineInstr *Def = MRI.getVRegDef(OpReg);
   if (!Def)
