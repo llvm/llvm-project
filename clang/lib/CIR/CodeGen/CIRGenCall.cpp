@@ -446,18 +446,19 @@ static mlir::cir::CIRCallOpInterface
 buildCallLikeOp(CIRGenFunction &CGF, mlir::Location callLoc,
                 mlir::cir::FuncType indirectFuncTy, mlir::Value indirectFuncVal,
                 mlir::cir::FuncOp directFuncOp,
-                SmallVectorImpl<mlir::Value> &CIRCallArgs,
-                mlir::Operation *InvokeDest, mlir::cir::CallingConv callingConv,
+                SmallVectorImpl<mlir::Value> &CIRCallArgs, bool isInvoke,
+                mlir::cir::CallingConv callingConv,
                 mlir::cir::ExtraFuncAttributesAttr extraFnAttrs) {
   auto &builder = CGF.getBuilder();
 
-  if (InvokeDest) {
+  if (isInvoke) {
     // This call can throw, few options:
     //  - If this call does not have an associated cir.try, use the
     //    one provided by InvokeDest,
     //  - User written try/catch clauses require calls to handle
     //    exceptions under cir.try.
-    auto tryOp = dyn_cast_if_present<mlir::cir::TryOp>(InvokeDest);
+    auto *invokeDest = CGF.getInvokeDest();
+    auto tryOp = dyn_cast_if_present<mlir::cir::TryOp>(invokeDest);
     mlir::OpBuilder::InsertPoint ip = builder.saveInsertionPoint();
     bool changeInsertion = tryOp && tryOp.getSynthetic();
     if (changeInsertion) {
@@ -730,7 +731,8 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
               noThrowAttr.getMnemonic()))
         CannotThrow = true;
   }
-  auto InvokeDest = CannotThrow ? nullptr : getInvokeDest();
+  // mlir::Operation *InvokeDest = CannotThrow ? nullptr : getInvokeDest();
+  bool isInvoke = CannotThrow ? false : isInvokeDest();
 
   // TODO: UnusedReturnSizePtr
   if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(CurFuncDecl))
@@ -772,7 +774,7 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
 
     mlir::cir::CIRCallOpInterface callLikeOp = buildCallLikeOp(
         *this, callLoc, indirectFuncTy, indirectFuncVal, directFuncOp,
-        CIRCallArgs, InvokeDest, callingConv, extraFnAttrs);
+        CIRCallArgs, isInvoke, callingConv, extraFnAttrs);
 
     if (E)
       callLikeOp->setAttr(
