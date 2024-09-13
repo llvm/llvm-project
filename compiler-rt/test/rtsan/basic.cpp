@@ -17,6 +17,7 @@ void violation() [[clang::nonblocking]] {
 int main() {
   violation();
   return 0;
-  // CHECK: Real-time violation: intercepted call to real-time unsafe function `malloc` in real-time context! Stack trace:
+  // CHECK: ==ERROR: RealtimeSanitizer: unsafe-library-call
+  // CHECK-NEXT: Intercepted call to real-time unsafe function `malloc` in real-time context!
   // CHECK-NEXT: {{.*malloc*}}
 }

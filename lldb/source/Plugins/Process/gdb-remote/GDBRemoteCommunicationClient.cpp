@@ -38,6 +38,7 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_ENABLE_ZLIB
 #include "llvm/Support/JSON.h"
 
 #if defined(HAVE_LIBCOMPRESSION)

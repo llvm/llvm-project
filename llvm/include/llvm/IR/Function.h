@@ -72,6 +72,8 @@ public:
   using const_arg_iterator = const Argument *;
 
 private:
+  constexpr static HungOffOperandsAllocMarker AllocMarker{};
+
   // Important things that make up a function!
   BasicBlockListType BasicBlocks;         ///< The basic blocks
 
@@ -171,13 +173,14 @@ public:
   static Function *Create(FunctionType *Ty, LinkageTypes Linkage,
                           unsigned AddrSpace, const Twine &N = "",
                           Module *M = nullptr) {
-    return new Function(Ty, Linkage, AddrSpace, N, M);
+    return new (AllocMarker) Function(Ty, Linkage, AddrSpace, N, M);
   }
 
   // TODO: remove this once all users have been updated to pass an AddrSpace
   static Function *Create(FunctionType *Ty, LinkageTypes Linkage,
                           const Twine &N = "", Module *M = nullptr) {
-    return new Function(Ty, Linkage, static_cast<unsigned>(-1), N, M);
+    return new (AllocMarker)
+        Function(Ty, Linkage, static_cast<unsigned>(-1), N, M);
   }
 
   /// Creates a new function and attaches it to a module.

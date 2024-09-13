@@ -885,6 +885,8 @@ static uint64_t getAttrKindEncoding(Attribute::AttrKind Kind) {
     return bitc::ATTR_KIND_WRITABLE;
   case Attribute::CoroDestroyOnlyWhenComplete:
     return bitc::ATTR_KIND_CORO_ONLY_DESTROY_WHEN_COMPLETE;
+  case Attribute::CoroElideSafe:
+    return bitc::ATTR_KIND_CORO_ELIDE_SAFE;
   case Attribute::DeadOnUnwind:
     return bitc::ATTR_KIND_DEAD_ON_UNWIND;
   case Attribute::Range:

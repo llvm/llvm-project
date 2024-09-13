@@ -322,6 +322,25 @@ llvm::json::Value CreateSource(llvm::StringRef source_path);
 ///     definition outlined by Microsoft.
 llvm::json::Value CreateStackFrame(lldb::SBFrame &frame);
 
+/// Create a "StackFrame" label object for a LLDB thread.
+///
+/// This function will fill in the following keys in the returned
+/// object:
+///   "id" - the thread ID as an integer
+///   "name" - the thread name as a string which combines the LLDB
+///            thread index ID along with the string name of the thread
+///            from the OS if it has a name.
+///   "presentationHint" - "label"
+///
+/// \param[in] thread
+///     The LLDB thread to use when populating out the "Thread"
+///     object.
+///
+/// \return
+///     A "StackFrame" JSON object with that follows the formal JSON
+///     definition outlined by Microsoft.
+llvm::json::Value CreateExtendedStackFrameLabel(lldb::SBThread &thread);
+
 /// Create a "instruction" object for a LLDB disassemble object as described in
 /// the Visual Studio Code debug adaptor definition.
 ///

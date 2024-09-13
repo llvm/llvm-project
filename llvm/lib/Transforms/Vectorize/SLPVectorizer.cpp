@@ -4819,12 +4819,6 @@ BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
   // representation is better than just gather.
   auto CheckForShuffledLoads = [&, &TTI = *TTI](Align CommonAlignment,
                                                 bool ProfitableGatherPointers) {
-    // FIXME: The following code has not been updated for non-power-of-2
-    // vectors.  The splitting logic here does not cover the original
-    // vector if the vector factor is not a power of two.  FIXME
-    if (!has_single_bit(VL.size()))
-      return false;
-
     // Compare masked gather cost and loads + insert subvector costs.
     TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
     auto [ScalarGEPCost, VectorGEPCost] =
@@ -4874,6 +4868,13 @@ BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
     constexpr unsigned ListLimit = 4;
     if (!TryRecursiveCheck || VL.size() < ListLimit)
       return MaskedGatherCost - GatherCost >= -SLPCostThreshold;
+
+    // FIXME: The following code has not been updated for non-power-of-2
+    // vectors.  The splitting logic here does not cover the original
+    // vector if the vector factor is not a power of two.  FIXME
+    if (!has_single_bit(VL.size()))
+      return false;
+
     unsigned Sz = DL->getTypeSizeInBits(ScalarTy);
     unsigned MinVF = getMinVF(2 * Sz);
     DemandedElts.clearAllBits();
@@ -8464,6 +8465,9 @@ void BoUpSLP::transformNodes() {
       for (unsigned VF = VL.size() / 2; VF >= MinVF; VF /= 2) {
         for (unsigned Cnt = StartIdx; Cnt + VF <= End; Cnt += VF) {
           ArrayRef<Value *> Slice = VL.slice(Cnt, VF);
+          // If any instruction is vectorized already - do not try again.
+          if (getTreeEntry(Slice.front()) || getTreeEntry(Slice.back()))
+            continue;
           InstructionsState S = getSameOpcode(Slice, *TLI);
           if (!S.getOpcode() || S.isAltShuffle() ||
               (S.getOpcode() != Instruction::Load &&
@@ -8472,20 +8476,18 @@ void BoUpSLP::transformNodes() {
                                                UserIgnoreList);
                })))
             continue;
-          if (!getTreeEntry(Slice.front()) && !getTreeEntry(Slice.back())) {
-            unsigned PrevSize = VectorizableTree.size();
-            buildTree_rec(Slice, 0, EdgeInfo(&E, UINT_MAX));
-            if (PrevSize + 1 == VectorizableTree.size() &&
-                VectorizableTree[PrevSize]->isGather()) {
-              VectorizableTree.pop_back();
-              continue;
-            }
-            E.CombinedEntriesWithIndices.emplace_back(PrevSize, Cnt);
-            if (StartIdx == Cnt)
-              StartIdx = Cnt + VF;
-            if (End == Cnt + VF)
-              End = Cnt;
+          unsigned PrevSize = VectorizableTree.size();
+          buildTree_rec(Slice, 0, EdgeInfo(&E, UINT_MAX));
+          if (PrevSize + 1 == VectorizableTree.size() &&
+              VectorizableTree[PrevSize]->isGather()) {
+            VectorizableTree.pop_back();
+            continue;
           }
+          E.CombinedEntriesWithIndices.emplace_back(PrevSize, Cnt);
+          if (StartIdx == Cnt)
+            StartIdx = Cnt + VF;
+          if (End == Cnt + VF)
+            End = Cnt;
         }
       }
     }
@@ -12484,11 +12486,12 @@ public:
           V = createShuffle(InVectors.front(), nullptr, CommonMask);
           transformMaskAfterShuffle(CommonMask, CommonMask);
         }
+        unsigned VF = std::max(CommonMask.size(), Mask.size());
         for (unsigned Idx = 0, Sz = CommonMask.size(); Idx < Sz; ++Idx)
           if (CommonMask[Idx] == PoisonMaskElem && Mask[Idx] != PoisonMaskElem)
             CommonMask[Idx] =
                 V->getType() != V1->getType()
-                    ? Idx + Sz
+                    ? Idx + VF
                     : Mask[Idx] + cast<FixedVectorType>(V1->getType())
                                       ->getNumElements();
         if (V->getType() != V1->getType())

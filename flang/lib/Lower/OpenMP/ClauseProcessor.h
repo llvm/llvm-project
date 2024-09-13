@@ -55,7 +55,7 @@ public:
   // 'Unique' clauses: They can appear at most once in the clause list.
   bool
   processCollapse(mlir::Location currentLocation, lower::pft::Evaluation &eval,
-                  mlir::omp::LoopRelatedOps &result,
+                  mlir::omp::LoopRelatedClauseOps &result,
                   llvm::SmallVectorImpl<const semantics::Symbol *> &iv) const;
   bool processDevice(lower::StatementContext &stmtCtx,
                      mlir::omp::DeviceClauseOps &result) const;
@@ -121,6 +121,7 @@ public:
       llvm::SmallVectorImpl<const semantics::Symbol *> *mapSyms = nullptr,
       llvm::SmallVectorImpl<mlir::Location> *mapSymLocs = nullptr,
       llvm::SmallVectorImpl<mlir::Type> *mapSymTypes = nullptr) const;
+  bool processNontemporal(mlir::omp::NontemporalClauseOps &result) const;
   bool processReduction(
       mlir::Location currentLocation, mlir::omp::ReductionClauseOps &result,
       llvm::SmallVectorImpl<mlir::Type> *reductionTypes = nullptr,

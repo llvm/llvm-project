@@ -883,7 +883,7 @@ bool CheckDummy(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
     return diagnoseUnknownDecl(S, OpPC, D);
 
   assert(AK == AK_Assign);
-  if (S.getLangOpts().CPlusPlus11) {
+  if (S.getLangOpts().CPlusPlus14) {
     const SourceInfo &E = S.Current->getSource(OpPC);
     S.FFDiag(E, diag::note_constexpr_modify_global);
   }
@@ -1177,16 +1177,16 @@ bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
   return true;
 }
 
-bool CallBI(InterpState &S, CodePtr &PC, const Function *Func,
+bool CallBI(InterpState &S, CodePtr OpPC, const Function *Func,
             const CallExpr *CE, uint32_t BuiltinID) {
   if (S.checkingPotentialConstantExpression())
     return false;
-  auto NewFrame = std::make_unique<InterpFrame>(S, Func, PC);
+  auto NewFrame = std::make_unique<InterpFrame>(S, Func, OpPC);
 
   InterpFrame *FrameBefore = S.Current;
   S.Current = NewFrame.get();
 
-  if (InterpretBuiltin(S, PC, Func, CE, BuiltinID)) {
+  if (InterpretBuiltin(S, OpPC, Func, CE, BuiltinID)) {
     NewFrame.release();
     return true;
   }

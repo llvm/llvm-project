@@ -1475,6 +1475,7 @@ CallExpr::CallExpr(StmtClass SC, Expr *Fn, ArrayRef<Expr *> PreArgs,
   this->computeDependence();
 
   CallExprBits.HasFPFeatures = FPFeatures.requiresTrailingStorage();
+  CallExprBits.IsCoroElideSafe = false;
   if (hasStoredFPFeatures())
     setStoredFPFeatures(FPFeatures);
 }
@@ -1490,6 +1491,7 @@ CallExpr::CallExpr(StmtClass SC, unsigned NumPreArgs, unsigned NumArgs,
   assert((CallExprBits.OffsetToTrailingObjects == OffsetToTrailingObjects) &&
          "OffsetToTrailingObjects overflow!");
   CallExprBits.HasFPFeatures = HasFPFeatures;
+  CallExprBits.IsCoroElideSafe = false;
 }
 
 CallExpr *CallExpr::Create(const ASTContext &Ctx, Expr *Fn,
@@ -1922,7 +1924,6 @@ bool CastExpr::CastConsistency() const {
   case CK_FixedPointToIntegral:
   case CK_IntegralToFixedPoint:
   case CK_MatrixCast:
-  case CK_HLSLVectorTruncation:
     assert(!getType()->isBooleanType() && "unheralded conversion to bool");
     goto CheckNoBasePath;
 
@@ -1943,6 +1944,7 @@ bool CastExpr::CastConsistency() const {
   case CK_BuiltinFnToFnPtr:
   case CK_FixedPointToBoolean:
   case CK_HLSLArrayRValue:
+  case CK_HLSLVectorTruncation:
   CheckNoBasePath:
     assert(path_empty() && "Cast kind should not have a base path!");
     break;

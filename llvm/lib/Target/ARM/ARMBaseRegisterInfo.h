@@ -241,19 +241,6 @@ public:
 
   int getSEHRegNum(unsigned i) const { return getEncodingValue(i); }
 
-  const TargetRegisterClass *
-  getLargestSuperClass(const TargetRegisterClass *RC) const override {
-    if (ARM::MQPRRegClass.hasSubClassEq(RC))
-      return &ARM::MQPRRegClass;
-    if (ARM::SPRRegClass.hasSubClassEq(RC))
-      return &ARM::SPRRegClass;
-    if (ARM::DPR_VFP2RegClass.hasSubClassEq(RC))
-      return &ARM::DPR_VFP2RegClass;
-    if (ARM::GPRRegClass.hasSubClassEq(RC))
-      return &ARM::GPRRegClass;
-    return RC;
-  }
-
   bool doesRegClassHavePseudoInitUndef(
       const TargetRegisterClass *RC) const override {
     (void)RC;

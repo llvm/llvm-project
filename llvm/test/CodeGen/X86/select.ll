@@ -106,18 +106,16 @@ define i32 @test2() nounwind {
 ; MCU-LABEL: test2:
 ; MCU:       # %bb.0: # %entry
 ; MCU-NEXT:    calll return_false@PLT
-; MCU-NEXT:    xorl %ecx, %ecx
-; MCU-NEXT:    testb $1, %al
-; MCU-NEXT:    jne .LBB1_2
-; MCU-NEXT:  # %bb.1: # %entry
-; MCU-NEXT:    movl $-3840, %ecx # imm = 0xF100
-; MCU-NEXT:  .LBB1_2: # %entry
-; MCU-NEXT:    cmpl $32768, %ecx # imm = 0x8000
-; MCU-NEXT:    jge .LBB1_3
-; MCU-NEXT:  # %bb.4: # %bb91
+; MCU-NEXT:    movzbl %al, %eax
+; MCU-NEXT:    andl $1, %eax
+; MCU-NEXT:    decl %eax
+; MCU-NEXT:    andl $-3840, %eax # imm = 0xF100
+; MCU-NEXT:    cmpl $32768, %eax # imm = 0x8000
+; MCU-NEXT:    jge .LBB1_1
+; MCU-NEXT:  # %bb.2: # %bb91
 ; MCU-NEXT:    xorl %eax, %eax
 ; MCU-NEXT:    retl
-; MCU-NEXT:  .LBB1_3: # %bb90
+; MCU-NEXT:  .LBB1_1: # %bb90
 entry:
   %tmp73 = tail call i1 @return_false()
   %g.0 = select i1 %tmp73, i16 0, i16 -480
