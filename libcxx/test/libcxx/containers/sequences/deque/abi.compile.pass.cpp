@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <cstdint>
 #include <deque>
 
 #include "min_allocator.h"

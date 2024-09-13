@@ -2,15 +2,8 @@
 // RUN: clang-import-test -dump-ast -import %S/Inputs/S.cpp -expression %s -Xcc -DPACK | FileCheck --check-prefix=CHECK-PACK %s
 // RUN: clang-import-test -dump-ast -import %S/Inputs/S.cpp -expression %s -Xcc -DPACK -Xcc -DSEQ | FileCheck --check-prefixes=CHECK-SEQ,CHECK-PACK %s
 
-// CHECK-SEQ: BuiltinTemplateDecl
-// CHECK-SEQ-SAME: <invalid sloc>
-// CHECK-SEQ-SAME: implicit
-// CHECK-SEQ-SAME: __make_integer_seq
-
-// CHECK-PACK: BuiltinTemplateDecl
-// CHECK-PACK-SAME: <invalid sloc>
-// CHECK-PACK-SAME: implicit
-// CHECK-PACK-SAME: __type_pack_element
+// CHECK-SEQ:  BuiltinTemplateDecl {{.+}} <<invalid sloc>> <invalid sloc> implicit __make_integer_seq{{$}}
+// CHECK-PACK: BuiltinTemplateDecl {{.+}} <<invalid sloc>> <invalid sloc> implicit __type_pack_element{{$}}
 
 void expr() {
 #ifdef SEQ

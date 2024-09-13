@@ -12,6 +12,7 @@ declare fp128 @llvm.nearbyint.f128(fp128)
 declare fp128 @llvm.pow.f128(fp128, fp128)
 declare fp128 @llvm.powi.f128.i32(fp128, i32)
 
+declare double @llvm.tan.f64(double)
 declare double @llvm.cos.f64(double)
 declare double @llvm.log10.f64(double)
 declare double @llvm.pow.f64(double, double)
@@ -240,42 +241,44 @@ define double @f64libcalls(double %x, double %y, i32 %z) {
 ; CHECK:         .functype f64libcalls (f64, f64, i32) -> (f64)
 ; CHECK-NEXT:    .local i32
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    global.get $push11=, __stack_pointer
-; CHECK-NEXT:    i32.const $push12=, 16
-; CHECK-NEXT:    i32.sub $push18=, $pop11, $pop12
-; CHECK-NEXT:    local.tee $push17=, 3, $pop18
-; CHECK-NEXT:    global.set __stack_pointer, $pop17
-; CHECK-NEXT:    local.get $push22=, 0
-; CHECK-NEXT:    local.get $push19=, 0
-; CHECK-NEXT:    call $push0=, cos, $pop19
-; CHECK-NEXT:    call $push1=, log10, $pop0
-; CHECK-NEXT:    local.get $push20=, 1
-; CHECK-NEXT:    call $push2=, pow, $pop1, $pop20
-; CHECK-NEXT:    local.get $push21=, 2
-; CHECK-NEXT:    call $push3=, __powidf2, $pop2, $pop21
-; CHECK-NEXT:    call $push4=, log, $pop3
-; CHECK-NEXT:    call $push5=, exp, $pop4
-; CHECK-NEXT:    call $push6=, exp10, $pop5
-; CHECK-NEXT:    call $push7=, cbrt, $pop6
-; CHECK-NEXT:    call $push8=, lround, $pop7
-; CHECK-NEXT:    call $push9=, ldexp, $pop22, $pop8
-; CHECK-NEXT:    local.get $push23=, 3
-; CHECK-NEXT:    i32.const $push15=, 12
-; CHECK-NEXT:    i32.add $push16=, $pop23, $pop15
-; CHECK-NEXT:    call $push24=, frexp, $pop9, $pop16
-; CHECK-NEXT:    local.set 0, $pop24
-; CHECK-NEXT:    local.get $push25=, 3
-; CHECK-NEXT:    i32.load $push10=, 12($pop25)
-; CHECK-NEXT:    call escape_value, $pop10
-; CHECK-NEXT:    local.get $push26=, 3
+; CHECK-NEXT:    global.get $push12=, __stack_pointer
 ; CHECK-NEXT:    i32.const $push13=, 16
-; CHECK-NEXT:    i32.add $push14=, $pop26, $pop13
-; CHECK-NEXT:    global.set __stack_pointer, $pop14
-; CHECK-NEXT:    local.get $push27=, 0
-; CHECK-NEXT:    return $pop27
+; CHECK-NEXT:    i32.sub  $push19=, $pop12, $pop13
+; CHECK-NEXT:    local.tee $push18=, 3, $pop19
+; CHECK-NEXT:    global.set __stack_pointer, $pop18
+; CHECK-NEXT:    local.get $push23=, 0
+; CHECK-NEXT:    local.get $push20=, 0
+; CHECK-NEXT:    call $push0=, tan, $pop20
+; CHECK-NEXT:    call $push1=, cos, $pop0
+; CHECK-NEXT:    call $push2=, log10, $pop1
+; CHECK-NEXT:    local.get $push21=, 1
+; CHECK-NEXT:    call $push3=, pow, $pop2, $pop21
+; CHECK-NEXT:    local.get $push22=, 2
+; CHECK-NEXT:    call $push4=, __powidf2, $pop3, $pop22
+; CHECK-NEXT:    call $push5=, log, $pop4
+; CHECK-NEXT:    call $push6=, exp, $pop5
+; CHECK-NEXT:    call $push7=, exp10, $pop6
+; CHECK-NEXT:    call $push8=, cbrt, $pop7
+; CHECK-NEXT:    call $push9=, lround, $pop8
+; CHECK-NEXT:    call $push10=, ldexp, $pop23, $pop9
+; CHECK-NEXT:    local.get $push24=, 3
+; CHECK-NEXT:    i32.const $push16=, 12
+; CHECK-NEXT:    i32.add  $push17=, $pop24, $pop16
+; CHECK-NEXT:    call $push25=, frexp, $pop10, $pop17
+; CHECK-NEXT:    local.set 0, $pop25
+; CHECK-NEXT:    local.get $push26=, 3
+; CHECK-NEXT:    i32.load $push11=, 12($pop26)
+; CHECK-NEXT:    call escape_value, $pop11
+; CHECK-NEXT:    local.get $push27=, 3
+; CHECK-NEXT:    i32.const $push14=, 16
+; CHECK-NEXT:    i32.add  $push15=, $pop27, $pop14
+; CHECK-NEXT:    global.set __stack_pointer, $pop15
+; CHECK-NEXT:    local.get $push28=, 0
+; CHECK-NEXT:    return $pop28
 
 
- %a = call double @llvm.cos.f64(double %x)
+ %k = call double @llvm.tan.f64(double %x)
+ %a = call double @llvm.cos.f64(double %k)
  %b = call double @llvm.log10.f64(double %a)
  %c = call double @llvm.pow.f64(double %b, double %y)
  %d = call double @llvm.powi.f64.i32(double %c, i32 %z)

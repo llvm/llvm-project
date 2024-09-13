@@ -194,7 +194,7 @@ double varargs_vec_3s(int fixed, ...) {
 // APCS-GNU: [[VAR:%.*]] = alloca <3 x i16>, align 8
 // APCS-GNU: [[AP:%.*]] = load ptr,
 // APCS-GNU: [[AP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[AP]], i32 8
-// APCS-GNU: [[VEC:%.*]] = load <3 x i16>, ptr [[AP]], align 4
+// APCS-GNU: [[VEC:%.*]] = load <4 x i16>, ptr [[AP]], align 4
 // ANDROID: varargs_vec_3s
 // ANDROID: alloca <3 x i16>, align 8
 // ANDROID: [[AP_ALIGN:%.*]] = call ptr @llvm.ptrmask.p0.i32(ptr {{%.*}}, i32 -8)

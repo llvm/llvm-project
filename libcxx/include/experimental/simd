@@ -75,9 +75,10 @@ inline namespace parallelism_v2 {
 #  pragma GCC system_header
 #endif
 
-#include <experimental/__config>
+#include <__config>
 #include <experimental/__simd/aligned_tag.h>
 #include <experimental/__simd/declaration.h>
+#include <experimental/__simd/reference.h>
 #include <experimental/__simd/scalar.h>
 #include <experimental/__simd/simd.h>
 #include <experimental/__simd/simd_mask.h>

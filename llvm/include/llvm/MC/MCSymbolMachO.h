@@ -10,6 +10,7 @@
 
 #include "llvm/ADT/Twine.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/MC/MCSymbolTableEntry.h"
 
 namespace llvm {
 class MCSymbolMachO : public MCSymbol {
@@ -42,8 +43,11 @@ class MCSymbolMachO : public MCSymbol {
   };
 
 public:
-  MCSymbolMachO(const StringMapEntry<bool> *Name, bool isTemporary)
+  MCSymbolMachO(const MCSymbolTableEntry *Name, bool isTemporary)
       : MCSymbol(SymbolKindMachO, Name, isTemporary) {}
+
+  bool isPrivateExtern() const { return IsPrivateExtern; }
+  void setPrivateExtern(bool Value) { IsPrivateExtern = Value; }
 
   // Reference type methods.
 
@@ -106,6 +110,18 @@ public:
     assert(Value == (Value & SF_DescFlagsMask) &&
            "Invalid .desc value!");
     setFlags(Value & SF_DescFlagsMask);
+  }
+
+  // Check whether a particular symbol is visible to the linker and is required
+  // in the symbol table, or whether it can be discarded by the assembler. This
+  // also effects whether the assembler treats the label as potentially defining
+  // a separate atom.
+  bool isSymbolLinkerVisible() const {
+    // Non-temporary labels should always be visible to the linker.
+    if (!isTemporary())
+      return true;
+
+    return isUsedInReloc();
   }
 
   /// Get the encoded value of the flags as they will be emitted in to

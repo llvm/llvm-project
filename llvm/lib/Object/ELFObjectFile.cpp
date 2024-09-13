@@ -441,6 +441,8 @@ std::optional<StringRef> ELFObjectFileBase::tryGetCPUName() const {
   case ELF::EM_PPC:
   case ELF::EM_PPC64:
     return StringRef("future");
+  case ELF::EM_BPF:
+    return StringRef("v4");
   default:
     return std::nullopt;
   }
@@ -586,6 +588,8 @@ StringRef ELFObjectFileBase::getAMDGPUCPUName() const {
     return "gfx1150";
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1151:
     return "gfx1151";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1152:
+    return "gfx1152";
 
   // AMDGCN GFX12.
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1200:
@@ -602,6 +606,8 @@ StringRef ELFObjectFileBase::getAMDGPUCPUName() const {
     return "gfx10-3-generic";
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX11_GENERIC:
     return "gfx11-generic";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX12_GENERIC:
+    return "gfx12-generic";
   default:
     llvm_unreachable("Unknown EF_AMDGPU_MACH value");
   }
@@ -1008,4 +1014,15 @@ Expected<std::vector<BBAddrMap>> ELFObjectFileBase::readBBAddrMap(
     return readBBAddrMapImpl(Obj->getELFFile(), TextSectionIndex, PGOAnalyses);
   return readBBAddrMapImpl(cast<ELF64BEObjectFile>(this)->getELFFile(),
                            TextSectionIndex, PGOAnalyses);
+}
+
+StringRef ELFObjectFileBase::getCrelDecodeProblem(SectionRef Sec) const {
+  auto Data = Sec.getRawDataRefImpl();
+  if (const auto *Obj = dyn_cast<ELF32LEObjectFile>(this))
+    return Obj->getCrelDecodeProblem(Data);
+  if (const auto *Obj = dyn_cast<ELF32BEObjectFile>(this))
+    return Obj->getCrelDecodeProblem(Data);
+  if (const auto *Obj = dyn_cast<ELF64LEObjectFile>(this))
+    return Obj->getCrelDecodeProblem(Data);
+  return cast<ELF64BEObjectFile>(this)->getCrelDecodeProblem(Data);
 }

@@ -1,11 +1,6 @@
 # As of rocm-3.7, hsa is installed with cmake packages and kmt is found via hsa
 find_package(hsa-runtime64 QUIET 1.2.0 HINTS ${CMAKE_INSTALL_PREFIX} PATHS /opt/rocm)
 
-if(NOT (CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64)|(ppc64le)|(aarch64)$" AND CMAKE_SYSTEM_NAME MATCHES "Linux"))
-  message(STATUS "Not building AMDGPU NextGen plugin: only support AMDGPU in Linux x86_64, ppc64le, or aarch64 hosts")
-  return()
-endif()
-
 # Create the library and add the default arguments.
 add_target_library(omptarget.rtl.amdgpu AMDGPU)
 
@@ -15,11 +10,12 @@ target_include_directories(omptarget.rtl.amdgpu PRIVATE
 
 if(hsa-runtime64_FOUND AND NOT "amdgpu" IN_LIST LIBOMPTARGET_DLOPEN_PLUGINS)
   message(STATUS "Building AMDGPU plugin linked against libhsa")
-  target_link_libraries(omptarget.rtl.amdgpu PRIVATE hsa-runtime64::hsa-runtime64)
+  target_link_libraries(omptarget.rtl.amdgpu PRIVATE hsa-runtime64::hsa-runtime64 LLVMFrontendOffloading)
 else()
   message(STATUS "Building AMDGPU plugin for dlopened libhsa")
   target_include_directories(omptarget.rtl.amdgpu PRIVATE dynamic_hsa)
   target_sources(omptarget.rtl.amdgpu PRIVATE dynamic_hsa/hsa.cpp)
+  target_link_libraries(omptarget.rtl.amdgpu PRIVATE LLVMFrontendOffloading)
 endif()
 
 # Configure testing for the AMDGPU plugin. We will build tests if we could a

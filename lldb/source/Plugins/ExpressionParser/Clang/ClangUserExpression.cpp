@@ -161,7 +161,7 @@ void ClangUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
                                       "generic context";
 
         if (!variable_list_sp) {
-          err.SetErrorString(thisErrorString);
+          err = Status::FromErrorString(thisErrorString);
           return;
         }
 
@@ -170,7 +170,7 @@ void ClangUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
 
         if (!this_var_sp || !this_var_sp->IsInScope(frame) ||
             !this_var_sp->LocationIsValidForFrame(frame)) {
-          err.SetErrorString(thisErrorString);
+          err = Status::FromErrorString(thisErrorString);
           return;
         }
       }
@@ -191,7 +191,7 @@ void ClangUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
                                       "are in a generic context";
 
         if (!variable_list_sp) {
-          err.SetErrorString(selfErrorString);
+          err = Status::FromErrorString(selfErrorString);
           return;
         }
 
@@ -200,7 +200,7 @@ void ClangUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
 
         if (!self_variable_sp || !self_variable_sp->IsInScope(frame) ||
             !self_variable_sp->LocationIsValidForFrame(frame)) {
-          err.SetErrorString(selfErrorString);
+          err = Status::FromErrorString(selfErrorString);
           return;
         }
       }
@@ -219,9 +219,10 @@ void ClangUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
     // whatever runtime the debug info says the object pointer belongs to.  Do
     // that here.
 
-    ClangASTMetadata *metadata =
-        TypeSystemClang::DeclContextGetMetaData(decl_context, function_decl);
-    if (metadata && metadata->HasObjectPtr()) {
+    if (std::optional<ClangASTMetadata> metadata =
+            TypeSystemClang::DeclContextGetMetaData(decl_context,
+                                                    function_decl);
+        metadata && metadata->HasObjectPtr()) {
       lldb::LanguageType language = metadata->GetObjectPtrLanguage();
       if (language == lldb::eLanguageTypeC_plus_plus) {
         if (m_enforce_valid_object) {
@@ -234,7 +235,7 @@ void ClangUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
                                         "are in a generic context";
 
           if (!variable_list_sp) {
-            err.SetErrorString(thisErrorString);
+            err = Status::FromErrorString(thisErrorString);
             return;
           }
 
@@ -243,7 +244,7 @@ void ClangUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
 
           if (!this_var_sp || !this_var_sp->IsInScope(frame) ||
               !this_var_sp->LocationIsValidForFrame(frame)) {
-            err.SetErrorString(thisErrorString);
+            err = Status::FromErrorString(thisErrorString);
             return;
           }
         }
@@ -261,7 +262,7 @@ void ClangUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
               "generic context";
 
           if (!variable_list_sp) {
-            err.SetErrorString(selfErrorString);
+            err = Status::FromErrorString(selfErrorString);
             return;
           }
 
@@ -270,21 +271,21 @@ void ClangUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
 
           if (!self_variable_sp || !self_variable_sp->IsInScope(frame) ||
               !self_variable_sp->LocationIsValidForFrame(frame)) {
-            err.SetErrorString(selfErrorString);
+            err = Status::FromErrorString(selfErrorString);
             return;
           }
 
           Type *self_type = self_variable_sp->GetType();
 
           if (!self_type) {
-            err.SetErrorString(selfErrorString);
+            err = Status::FromErrorString(selfErrorString);
             return;
           }
 
           CompilerType self_clang_type = self_type->GetForwardCompilerType();
 
           if (!self_clang_type) {
-            err.SetErrorString(selfErrorString);
+            err = Status::FromErrorString(selfErrorString);
             return;
           }
 
@@ -295,7 +296,7 @@ void ClangUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
             m_in_objectivec_method = true;
             m_needs_object_ptr = true;
           } else {
-            err.SetErrorString(selfErrorString);
+            err = Status::FromErrorString(selfErrorString);
             return;
           }
         } else {
@@ -698,21 +699,6 @@ bool ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager,
   if (!parse_success)
     return false;
 
-  if (exe_ctx.GetProcessPtr() && execution_policy == eExecutionPolicyTopLevel) {
-    Status static_init_error =
-        m_parser->RunStaticInitializers(m_execution_unit_sp, exe_ctx);
-
-    if (!static_init_error.Success()) {
-      const char *error_cstr = static_init_error.AsCString();
-      if (error_cstr && error_cstr[0])
-        diagnostic_manager.Printf(lldb::eSeverityError, "%s\n", error_cstr);
-      else
-        diagnostic_manager.PutString(lldb::eSeverityError,
-                                     "couldn't run static initializers\n");
-      return false;
-    }
-  }
-
   if (m_execution_unit_sp) {
     bool register_execution_unit = false;
 
@@ -875,7 +861,7 @@ lldb::addr_t ClangUserExpression::GetCppObjectPointer(
   lldb::addr_t ret = valobj_sp->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
 
   if (ret == LLDB_INVALID_ADDRESS) {
-    err.SetErrorStringWithFormatv(
+    err = Status::FromErrorStringWithFormatv(
         "Couldn't load '{0}' because its value couldn't be evaluated",
         object_name);
     return LLDB_INVALID_ADDRESS;
@@ -915,8 +901,8 @@ bool ClangUserExpression::AddArguments(ExecutionContext &exe_ctx,
       object_ptr = m_ctx_obj->GetAddressOf(false, &address_type);
       if (object_ptr == LLDB_INVALID_ADDRESS ||
           address_type != eAddressTypeLoad)
-        object_ptr_error.SetErrorString("Can't get context object's "
-                                        "debuggee address");
+        object_ptr_error = Status::FromErrorString("Can't get context object's "
+                                                   "debuggee address");
     } else {
       if (m_in_cplusplus_method) {
         object_ptr =

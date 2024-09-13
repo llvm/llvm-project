@@ -9,13 +9,14 @@
 #include "pthread_condattr_setclock.h"
 
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 
 #include <errno.h>     // EINVAL
 #include <pthread.h>   // pthread_condattr_t
 #include <sys/types.h> // clockid_t
 #include <time.h>      // CLOCK_MONOTONIC, CLOCK_REALTIME
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, pthread_condattr_setclock,
                    (pthread_condattr_t * attr, clockid_t clock)) {
@@ -27,4 +28,4 @@ LLVM_LIBC_FUNCTION(int, pthread_condattr_setclock,
   return 0;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

@@ -15,7 +15,7 @@ template<typename T> requires Bar2<T> struct S2 { };
 // expected-note@-1{{template is declared here}}
 template<typename T> requires Bar2<T> && true struct S2<T> { };
 // expected-error@-1{{class template partial specialization is not more specialized than the primary template}}
-// expected-note@-2{{while calculating associated constraint of template 'S2' here}}
+// expected-note@-2{{while calculating associated constraint of template 'S2<T>' here}}
 
 namespace type_pack {
   template<typename... Args>

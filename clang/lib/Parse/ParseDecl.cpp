@@ -146,6 +146,86 @@ void Parser::ParseAttributes(unsigned WhichAttrKinds, ParsedAttributes &Attrs,
   } while (MoreToParse);
 }
 
+/// ParseSingleGNUAttribute - Parse a single GNU attribute.
+///
+/// [GNU]  attrib:
+///          empty
+///          attrib-name
+///          attrib-name '(' identifier ')'
+///          attrib-name '(' identifier ',' nonempty-expr-list ')'
+///          attrib-name '(' argument-expression-list [C99 6.5.2] ')'
+///
+/// [GNU]  attrib-name:
+///          identifier
+///          typespec
+///          typequal
+///          storageclass
+bool Parser::ParseSingleGNUAttribute(ParsedAttributes &Attrs,
+                                     SourceLocation &EndLoc,
+                                     LateParsedAttrList *LateAttrs,
+                                     Declarator *D) {
+  IdentifierInfo *AttrName = Tok.getIdentifierInfo();
+  if (!AttrName)
+    return true;
+
+  SourceLocation AttrNameLoc = ConsumeToken();
+
+  if (Tok.isNot(tok::l_paren)) {
+    Attrs.addNew(AttrName, AttrNameLoc, nullptr, AttrNameLoc, nullptr, 0,
+                 ParsedAttr::Form::GNU());
+    return false;
+  }
+
+  bool LateParse = false;
+  if (!LateAttrs)
+    LateParse = false;
+  else if (LateAttrs->lateAttrParseExperimentalExtOnly()) {
+    // The caller requested that this attribute **only** be late
+    // parsed for `LateAttrParseExperimentalExt` attributes. This will
+    // only be late parsed if the experimental language option is enabled.
+    LateParse = getLangOpts().ExperimentalLateParseAttributes &&
+                IsAttributeLateParsedExperimentalExt(*AttrName);
+  } else {
+    // The caller did not restrict late parsing to only
+    // `LateAttrParseExperimentalExt` attributes so late parse
+    // both `LateAttrParseStandard` and `LateAttrParseExperimentalExt`
+    // attributes.
+    LateParse = IsAttributeLateParsedExperimentalExt(*AttrName) ||
+                IsAttributeLateParsedStandard(*AttrName);
+  }
+
+  // Handle "parameterized" attributes
+  if (!LateParse) {
+    ParseGNUAttributeArgs(AttrName, AttrNameLoc, Attrs, &EndLoc, nullptr,
+                          SourceLocation(), ParsedAttr::Form::GNU(), D);
+    return false;
+  }
+
+  // Handle attributes with arguments that require late parsing.
+  LateParsedAttribute *LA =
+      new LateParsedAttribute(this, *AttrName, AttrNameLoc);
+  LateAttrs->push_back(LA);
+
+  // Attributes in a class are parsed at the end of the class, along
+  // with other late-parsed declarations.
+  if (!ClassStack.empty() && !LateAttrs->parseSoon())
+    getCurrentClass().LateParsedDeclarations.push_back(LA);
+
+  // Be sure ConsumeAndStoreUntil doesn't see the start l_paren, since it
+  // recursively consumes balanced parens.
+  LA->Toks.push_back(Tok);
+  ConsumeParen();
+  // Consume everything up to and including the matching right parens.
+  ConsumeAndStoreUntil(tok::r_paren, LA->Toks, /*StopAtSemi=*/true);
+
+  Token Eof;
+  Eof.startToken();
+  Eof.setLocation(Tok.getLocation());
+  LA->Toks.push_back(Eof);
+
+  return false;
+}
+
 /// ParseGNUAttributes - Parse a non-empty attributes list.
 ///
 /// [GNU] attributes:
@@ -223,64 +303,9 @@ void Parser::ParseGNUAttributes(ParsedAttributes &Attrs,
             AttributeCommonInfo::Syntax::AS_GNU);
         break;
       }
-      IdentifierInfo *AttrName = Tok.getIdentifierInfo();
-      if (!AttrName)
+
+      if (ParseSingleGNUAttribute(Attrs, EndLoc, LateAttrs, D))
         break;
-
-      SourceLocation AttrNameLoc = ConsumeToken();
-
-      if (Tok.isNot(tok::l_paren)) {
-        Attrs.addNew(AttrName, AttrNameLoc, nullptr, AttrNameLoc, nullptr, 0,
-                     ParsedAttr::Form::GNU());
-        continue;
-      }
-
-      bool LateParse = false;
-      if (!LateAttrs)
-        LateParse = false;
-      else if (LateAttrs->lateAttrParseExperimentalExtOnly()) {
-        // The caller requested that this attribute **only** be late
-        // parsed for `LateAttrParseExperimentalExt` attributes. This will
-        // only be late parsed if the experimental language option is enabled.
-        LateParse = getLangOpts().ExperimentalLateParseAttributes &&
-                    IsAttributeLateParsedExperimentalExt(*AttrName);
-      } else {
-        // The caller did not restrict late parsing to only
-        // `LateAttrParseExperimentalExt` attributes so late parse
-        // both `LateAttrParseStandard` and `LateAttrParseExperimentalExt`
-        // attributes.
-        LateParse = IsAttributeLateParsedExperimentalExt(*AttrName) ||
-                    IsAttributeLateParsedStandard(*AttrName);
-      }
-
-      // Handle "parameterized" attributes
-      if (!LateParse) {
-        ParseGNUAttributeArgs(AttrName, AttrNameLoc, Attrs, &EndLoc, nullptr,
-                              SourceLocation(), ParsedAttr::Form::GNU(), D);
-        continue;
-      }
-
-      // Handle attributes with arguments that require late parsing.
-      LateParsedAttribute *LA =
-          new LateParsedAttribute(this, *AttrName, AttrNameLoc);
-      LateAttrs->push_back(LA);
-
-      // Attributes in a class are parsed at the end of the class, along
-      // with other late-parsed declarations.
-      if (!ClassStack.empty() && !LateAttrs->parseSoon())
-        getCurrentClass().LateParsedDeclarations.push_back(LA);
-
-      // Be sure ConsumeAndStoreUntil doesn't see the start l_paren, since it
-      // recursively consumes balanced parens.
-      LA->Toks.push_back(Tok);
-      ConsumeParen();
-      // Consume everything up to and including the matching right parens.
-      ConsumeAndStoreUntil(tok::r_paren, LA->Toks, /*StopAtSemi=*/true);
-
-      Token Eof;
-      Eof.startToken();
-      Eof.setLocation(Tok.getLocation());
-      LA->Toks.push_back(Eof);
     } while (Tok.is(tok::comma));
 
     if (ExpectAndConsume(tok::r_paren))
@@ -314,17 +339,22 @@ void Parser::ParseGNUAttributes(ParsedAttributes &Attrs,
 }
 
 /// Determine whether the given attribute has an identifier argument.
-static bool attributeHasIdentifierArg(const IdentifierInfo &II) {
+static bool attributeHasIdentifierArg(const llvm::Triple &T,
+                                      const IdentifierInfo &II,
+                                      ParsedAttr::Syntax Syntax,
+                                      IdentifierInfo *ScopeName) {
 #define CLANG_ATTR_IDENTIFIER_ARG_LIST
   return llvm::StringSwitch<bool>(normalizeAttrName(II.getName()))
 #include "clang/Parse/AttrParserStringSwitches.inc"
-           .Default(false);
+      .Default(false);
 #undef CLANG_ATTR_IDENTIFIER_ARG_LIST
 }
 
-/// Determine whether the given attribute has an identifier argument.
+/// Determine whether the given attribute has string arguments.
 static ParsedAttributeArgumentsProperties
-attributeStringLiteralListArg(const llvm::Triple &T, const IdentifierInfo &II) {
+attributeStringLiteralListArg(const llvm::Triple &T, const IdentifierInfo &II,
+                              ParsedAttr::Syntax Syntax,
+                              IdentifierInfo *ScopeName) {
 #define CLANG_ATTR_STRING_LITERAL_ARG_LIST
   return llvm::StringSwitch<uint32_t>(normalizeAttrName(II.getName()))
 #include "clang/Parse/AttrParserStringSwitches.inc"
@@ -333,25 +363,31 @@ attributeStringLiteralListArg(const llvm::Triple &T, const IdentifierInfo &II) {
 }
 
 /// Determine whether the given attribute has a variadic identifier argument.
-static bool attributeHasVariadicIdentifierArg(const IdentifierInfo &II) {
+static bool attributeHasVariadicIdentifierArg(const IdentifierInfo &II,
+                                              ParsedAttr::Syntax Syntax,
+                                              IdentifierInfo *ScopeName) {
 #define CLANG_ATTR_VARIADIC_IDENTIFIER_ARG_LIST
   return llvm::StringSwitch<bool>(normalizeAttrName(II.getName()))
 #include "clang/Parse/AttrParserStringSwitches.inc"
-           .Default(false);
+      .Default(false);
 #undef CLANG_ATTR_VARIADIC_IDENTIFIER_ARG_LIST
 }
 
 /// Determine whether the given attribute treats kw_this as an identifier.
-static bool attributeTreatsKeywordThisAsIdentifier(const IdentifierInfo &II) {
+static bool attributeTreatsKeywordThisAsIdentifier(const IdentifierInfo &II,
+                                                   ParsedAttr::Syntax Syntax,
+                                                   IdentifierInfo *ScopeName) {
 #define CLANG_ATTR_THIS_ISA_IDENTIFIER_ARG_LIST
   return llvm::StringSwitch<bool>(normalizeAttrName(II.getName()))
 #include "clang/Parse/AttrParserStringSwitches.inc"
-           .Default(false);
+      .Default(false);
 #undef CLANG_ATTR_THIS_ISA_IDENTIFIER_ARG_LIST
 }
 
 /// Determine if an attribute accepts parameter packs.
-static bool attributeAcceptsExprPack(const IdentifierInfo &II) {
+static bool attributeAcceptsExprPack(const IdentifierInfo &II,
+                                     ParsedAttr::Syntax Syntax,
+                                     IdentifierInfo *ScopeName) {
 #define CLANG_ATTR_ACCEPTS_EXPR_PACK
   return llvm::StringSwitch<bool>(normalizeAttrName(II.getName()))
 #include "clang/Parse/AttrParserStringSwitches.inc"
@@ -360,21 +396,36 @@ static bool attributeAcceptsExprPack(const IdentifierInfo &II) {
 }
 
 /// Determine whether the given attribute parses a type argument.
-static bool attributeIsTypeArgAttr(const IdentifierInfo &II) {
+static bool attributeIsTypeArgAttr(const IdentifierInfo &II,
+                                   ParsedAttr::Syntax Syntax,
+                                   IdentifierInfo *ScopeName) {
 #define CLANG_ATTR_TYPE_ARG_LIST
   return llvm::StringSwitch<bool>(normalizeAttrName(II.getName()))
 #include "clang/Parse/AttrParserStringSwitches.inc"
-           .Default(false);
+      .Default(false);
 #undef CLANG_ATTR_TYPE_ARG_LIST
+}
+
+/// Determine whether the given attribute takes a strict identifier argument.
+static bool attributeHasStrictIdentifierArgs(const IdentifierInfo &II,
+                                             ParsedAttr::Syntax Syntax,
+                                             IdentifierInfo *ScopeName) {
+#define CLANG_ATTR_STRICT_IDENTIFIER_ARG_LIST
+  return llvm::StringSwitch<bool>(normalizeAttrName(II.getName()))
+#include "clang/Parse/AttrParserStringSwitches.inc"
+      .Default(false);
+#undef CLANG_ATTR_STRICT_IDENTIFIER_ARG_LIST
 }
 
 /// Determine whether the given attribute requires parsing its arguments
 /// in an unevaluated context or not.
-static bool attributeParsedArgsUnevaluated(const IdentifierInfo &II) {
+static bool attributeParsedArgsUnevaluated(const IdentifierInfo &II,
+                                           ParsedAttr::Syntax Syntax,
+                                           IdentifierInfo *ScopeName) {
 #define CLANG_ATTR_ARG_CONTEXT_LIST
   return llvm::StringSwitch<bool>(normalizeAttrName(II.getName()))
 #include "clang/Parse/AttrParserStringSwitches.inc"
-           .Default(false);
+      .Default(false);
 #undef CLANG_ATTR_ARG_CONTEXT_LIST
 }
 
@@ -467,6 +518,11 @@ bool Parser::ParseAttributeArgumentList(
       break;
     }
 
+    if (Actions.DiagnoseUnexpandedParameterPack(Expr.get())) {
+      SawError = true;
+      break;
+    }
+
     Exprs.push_back(Expr.get());
 
     if (Tok.isNot(tok::comma))
@@ -497,10 +553,12 @@ unsigned Parser::ParseAttributeArgsCommon(
   // Ignore the left paren location for now.
   ConsumeParen();
 
-  bool ChangeKWThisToIdent = attributeTreatsKeywordThisAsIdentifier(*AttrName);
-  bool AttributeIsTypeArgAttr = attributeIsTypeArgAttr(*AttrName);
+  bool ChangeKWThisToIdent = attributeTreatsKeywordThisAsIdentifier(
+      *AttrName, Form.getSyntax(), ScopeName);
+  bool AttributeIsTypeArgAttr =
+      attributeIsTypeArgAttr(*AttrName, Form.getSyntax(), ScopeName);
   bool AttributeHasVariadicIdentifierArg =
-      attributeHasVariadicIdentifierArg(*AttrName);
+      attributeHasVariadicIdentifierArg(*AttrName, Form.getSyntax(), ScopeName);
 
   // Interpret "kw_this" as an identifier if the attributed requests it.
   if (ChangeKWThisToIdent && Tok.is(tok::kw_this))
@@ -509,8 +567,10 @@ unsigned Parser::ParseAttributeArgsCommon(
   ArgsVector ArgExprs;
   if (Tok.is(tok::identifier)) {
     // If this attribute wants an 'identifier' argument, make it so.
-    bool IsIdentifierArg = AttributeHasVariadicIdentifierArg ||
-                           attributeHasIdentifierArg(*AttrName);
+    bool IsIdentifierArg =
+        AttributeHasVariadicIdentifierArg ||
+        attributeHasIdentifierArg(getTargetInfo().getTriple(), *AttrName,
+                                  Form.getSyntax(), ScopeName);
     ParsedAttr::Kind AttrKind =
         ParsedAttr::getParsedKind(AttrName, ScopeName, Form.getSyntax());
 
@@ -541,7 +601,9 @@ unsigned Parser::ParseAttributeArgsCommon(
       }
       if (T.isUsable())
         TheParsedType = T.get();
-    } else if (AttributeHasVariadicIdentifierArg) {
+    } else if (AttributeHasVariadicIdentifierArg ||
+               attributeHasStrictIdentifierArgs(*AttrName, Form.getSyntax(),
+                                                ScopeName)) {
       // Parse variadic identifier arg. This can either consume identifiers or
       // expressions. Variadic identifier args do not support parameter packs
       // because those are typically used for attributes with enumeration
@@ -556,11 +618,14 @@ unsigned Parser::ParseAttributeArgsCommon(
         if (Tok.is(tok::identifier)) {
           ArgExprs.push_back(ParseIdentifierLoc());
         } else {
-          bool Uneval = attributeParsedArgsUnevaluated(*AttrName);
+          bool Uneval = attributeParsedArgsUnevaluated(
+              *AttrName, Form.getSyntax(), ScopeName);
           EnterExpressionEvaluationContext Unevaluated(
               Actions,
               Uneval ? Sema::ExpressionEvaluationContext::Unevaluated
-                     : Sema::ExpressionEvaluationContext::ConstantEvaluated);
+                     : Sema::ExpressionEvaluationContext::ConstantEvaluated,
+              nullptr,
+              Sema::ExpressionEvaluationContextRecord::EK_AttrArgument);
 
           ExprResult ArgExpr(
               Actions.CorrectDelayedTyposInExpr(ParseAssignmentExpression()));
@@ -575,15 +640,20 @@ unsigned Parser::ParseAttributeArgsCommon(
       } while (TryConsumeToken(tok::comma));
     } else {
       // General case. Parse all available expressions.
-      bool Uneval = attributeParsedArgsUnevaluated(*AttrName);
+      bool Uneval = attributeParsedArgsUnevaluated(*AttrName, Form.getSyntax(),
+                                                   ScopeName);
       EnterExpressionEvaluationContext Unevaluated(
-          Actions, Uneval
-                       ? Sema::ExpressionEvaluationContext::Unevaluated
-                       : Sema::ExpressionEvaluationContext::ConstantEvaluated);
+          Actions,
+          Uneval ? Sema::ExpressionEvaluationContext::Unevaluated
+                 : Sema::ExpressionEvaluationContext::ConstantEvaluated,
+          nullptr,
+          Sema::ExpressionEvaluationContextRecord::ExpressionKind::
+              EK_AttrArgument);
 
       ExprVector ParsedExprs;
       ParsedAttributeArgumentsProperties ArgProperties =
-          attributeStringLiteralListArg(getTargetInfo().getTriple(), *AttrName);
+          attributeStringLiteralListArg(getTargetInfo().getTriple(), *AttrName,
+                                        Form.getSyntax(), ScopeName);
       if (ParseAttributeArgumentList(*AttrName, ParsedExprs, ArgProperties)) {
         SkipUntil(tok::r_paren, StopAtSemi);
         return 0;
@@ -594,7 +664,7 @@ unsigned Parser::ParseAttributeArgsCommon(
         if (!isa<PackExpansionExpr>(ParsedExprs[I]))
           continue;
 
-        if (!attributeAcceptsExprPack(*AttrName)) {
+        if (!attributeAcceptsExprPack(*AttrName, Form.getSyntax(), ScopeName)) {
           Diag(Tok.getLocation(),
                diag::err_attribute_argument_parm_pack_not_supported)
               << AttrName;
@@ -658,11 +728,14 @@ void Parser::ParseGNUAttributeArgs(
     ParseTypeTagForDatatypeAttribute(*AttrName, AttrNameLoc, Attrs, EndLoc,
                                      ScopeName, ScopeLoc, Form);
     return;
-  } else if (attributeIsTypeArgAttr(*AttrName)) {
+  } else if (attributeIsTypeArgAttr(*AttrName, Form.getSyntax(), ScopeName)) {
     ParseAttributeWithTypeArg(*AttrName, AttrNameLoc, Attrs, ScopeName,
                               ScopeLoc, Form);
     return;
-  } else if (AttrKind == ParsedAttr::AT_CountedBy) {
+  } else if (AttrKind == ParsedAttr::AT_CountedBy ||
+             AttrKind == ParsedAttr::AT_CountedByOrNull ||
+             AttrKind == ParsedAttr::AT_SizedBy ||
+             AttrKind == ParsedAttr::AT_SizedByOrNull) {
     ParseBoundsAttribute(*AttrName, AttrNameLoc, Attrs, ScopeName, ScopeLoc,
                          Form);
     return;
@@ -2278,7 +2351,8 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
   }
 
   if (getLangOpts().HLSL)
-    MaybeParseHLSLAnnotations(D);
+    while (MaybeParseHLSLAnnotations(D))
+      ;
 
   if (Tok.is(tok::kw_requires))
     ParseTrailingRequiresClause(D);
@@ -2435,8 +2509,9 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
 
       // P2718R0 - Lifetime extension in range-based for loops.
       if (getLangOpts().CPlusPlus23) {
-        auto &LastRecord = Actions.ExprEvalContexts.back();
+        auto &LastRecord = Actions.currentEvaluationContext();
         LastRecord.InLifetimeExtendingContext = true;
+        LastRecord.RebuildDefaultArgOrDefaultInit = true;
       }
 
       if (getLangOpts().OpenMP)
@@ -3312,6 +3387,19 @@ void Parser::ParseAlignmentSpecifier(ParsedAttributes &Attrs,
   }
 }
 
+void Parser::DistributeCLateParsedAttrs(Decl *Dcl,
+                                        LateParsedAttrList *LateAttrs) {
+  if (!LateAttrs)
+    return;
+
+  if (Dcl) {
+    for (auto *LateAttr : *LateAttrs) {
+      if (LateAttr->Decls.empty())
+        LateAttr->addDecl(Dcl);
+    }
+  }
+}
+
 /// Bounds attributes (e.g., counted_by):
 ///   AttrName '(' expression ')'
 void Parser::ParseBoundsAttribute(IdentifierInfo &AttrName,
@@ -3337,7 +3425,7 @@ void Parser::ParseBoundsAttribute(IdentifierInfo &AttrName,
       Sema::ExpressionEvaluationContextRecord::ExpressionKind;
   EnterExpressionEvaluationContext EC(
       Actions, Sema::ExpressionEvaluationContext::PotentiallyEvaluated, nullptr,
-      ExpressionKind::EK_BoundsAttrArgument);
+      ExpressionKind::EK_AttrArgument);
 
   ExprResult ArgExpr(
       Actions.CorrectDelayedTyposInExpr(ParseAssignmentExpression()));
@@ -4739,6 +4827,13 @@ void Parser::ParseDeclarationSpecifiers(
       ParseHLSLQualifiers(DS.getAttributes());
       continue;
 
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId)                            \
+  case tok::kw_##Name:                                                         \
+    isInvalid = DS.SetTypeSpecType(DeclSpec::TST_##Name, Loc, PrevSpec,        \
+                                   DiagID, Policy);                            \
+    break;
+#include "clang/Basic/HLSLIntangibleTypes.def"
+
     case tok::less:
       // GCC ObjC supports types like "<SomeProtocol>" as a synonym for
       // "id<SomeProtocol>".  This is hopelessly old fashioned and dangerous,
@@ -4815,9 +4910,8 @@ static void DiagnoseCountAttributedTypeInUnnamedAnon(ParsingDeclSpec &DS,
 
     for (const auto &DD : CAT->dependent_decls()) {
       if (!RD->containsDecl(DD.getDecl())) {
-        P.Diag(VD->getBeginLoc(),
-               diag::err_flexible_array_count_not_in_same_struct)
-            << DD.getDecl();
+        P.Diag(VD->getBeginLoc(), diag::err_count_attr_param_not_in_same_struct)
+            << DD.getDecl() << CAT->getKind() << CAT->isArrayType();
         P.Diag(DD.getDecl()->getBeginLoc(),
                diag::note_flexible_array_counted_by_attr_field)
             << DD.getDecl();
@@ -4849,13 +4943,14 @@ static void DiagnoseCountAttributedTypeInUnnamedAnon(ParsingDeclSpec &DS,
 ///
 void Parser::ParseStructDeclaration(
     ParsingDeclSpec &DS,
-    llvm::function_ref<void(ParsingFieldDeclarator &)> FieldsCallback) {
+    llvm::function_ref<Decl *(ParsingFieldDeclarator &)> FieldsCallback,
+    LateParsedAttrList *LateFieldAttrs) {
 
   if (Tok.is(tok::kw___extension__)) {
     // __extension__ silences extension warnings in the subexpression.
     ExtensionRAIIObject O(Diags);  // Use RAII to do this.
     ConsumeToken();
-    return ParseStructDeclaration(DS, FieldsCallback);
+    return ParseStructDeclaration(DS, FieldsCallback, LateFieldAttrs);
   }
 
   // Parse leading attributes.
@@ -4920,10 +5015,12 @@ void Parser::ParseStructDeclaration(
     }
 
     // If attributes exist after the declarator, parse them.
-    MaybeParseGNUAttributes(DeclaratorInfo.D);
+    MaybeParseGNUAttributes(DeclaratorInfo.D, LateFieldAttrs);
 
     // We're done with this declarator;  invoke the callback.
-    FieldsCallback(DeclaratorInfo);
+    Decl *Field = FieldsCallback(DeclaratorInfo);
+    if (Field)
+      DistributeCLateParsedAttrs(Field, LateFieldAttrs);
 
     // If we don't have a comma, it is either the end of the list (a ';')
     // or an error, bail out.
@@ -4931,6 +5028,73 @@ void Parser::ParseStructDeclaration(
       return;
 
     FirstDeclarator = false;
+  }
+}
+
+// TODO: All callers of this function should be moved to
+// `Parser::ParseLexedAttributeList`.
+void Parser::ParseLexedCAttributeList(LateParsedAttrList &LAs, bool EnterScope,
+                                      ParsedAttributes *OutAttrs) {
+  assert(LAs.parseSoon() &&
+         "Attribute list should be marked for immediate parsing.");
+  for (auto *LA : LAs) {
+    ParseLexedCAttribute(*LA, EnterScope, OutAttrs);
+    delete LA;
+  }
+  LAs.clear();
+}
+
+/// Finish parsing an attribute for which parsing was delayed.
+/// This will be called at the end of parsing a class declaration
+/// for each LateParsedAttribute. We consume the saved tokens and
+/// create an attribute with the arguments filled in. We add this
+/// to the Attribute list for the decl.
+void Parser::ParseLexedCAttribute(LateParsedAttribute &LA, bool EnterScope,
+                                  ParsedAttributes *OutAttrs) {
+  // Create a fake EOF so that attribute parsing won't go off the end of the
+  // attribute.
+  Token AttrEnd;
+  AttrEnd.startToken();
+  AttrEnd.setKind(tok::eof);
+  AttrEnd.setLocation(Tok.getLocation());
+  AttrEnd.setEofData(LA.Toks.data());
+  LA.Toks.push_back(AttrEnd);
+
+  // Append the current token at the end of the new token stream so that it
+  // doesn't get lost.
+  LA.Toks.push_back(Tok);
+  PP.EnterTokenStream(LA.Toks, /*DisableMacroExpansion=*/true,
+                      /*IsReinject=*/true);
+  // Drop the current token and bring the first cached one. It's the same token
+  // as when we entered this function.
+  ConsumeAnyToken(/*ConsumeCodeCompletionTok=*/true);
+
+  // TODO: Use `EnterScope`
+  (void)EnterScope;
+
+  ParsedAttributes Attrs(AttrFactory);
+
+  assert(LA.Decls.size() <= 1 &&
+         "late field attribute expects to have at most one declaration.");
+
+  // Dispatch based on the attribute and parse it
+  ParseGNUAttributeArgs(&LA.AttrName, LA.AttrNameLoc, Attrs, nullptr, nullptr,
+                        SourceLocation(), ParsedAttr::Form::GNU(), nullptr);
+
+  for (auto *D : LA.Decls)
+    Actions.ActOnFinishDelayedAttribute(getCurScope(), D, Attrs);
+
+  // Due to a parsing error, we either went over the cached tokens or
+  // there are still cached tokens left, so we skip the leftover tokens.
+  while (Tok.isNot(tok::eof))
+    ConsumeAnyToken();
+
+  // Consume the fake EOF token if it's there
+  if (Tok.is(tok::eof) && Tok.getEofData() == AttrEnd.getEofData())
+    ConsumeAnyToken();
+
+  if (OutAttrs) {
+    OutAttrs->takeAllFrom(Attrs);
   }
 }
 
@@ -4956,6 +5120,11 @@ void Parser::ParseStructUnionBody(SourceLocation RecordLoc,
 
   ParseScope StructScope(this, Scope::ClassScope|Scope::DeclScope);
   Actions.ActOnTagStartDefinition(getCurScope(), TagDecl);
+
+  // `LateAttrParseExperimentalExtOnly=true` requests that only attributes
+  // marked with `LateAttrParseExperimentalExt` are late parsed.
+  LateParsedAttrList LateFieldAttrs(/*PSoon=*/true,
+                                    /*LateAttrParseExperimentalExtOnly=*/true);
 
   // While we still have something to read, read the declarations in the struct.
   while (!tryParseMisplacedModuleImport() && Tok.isNot(tok::r_brace) &&
@@ -5007,18 +5176,19 @@ void Parser::ParseStructUnionBody(SourceLocation RecordLoc,
     }
 
     if (!Tok.is(tok::at)) {
-      auto CFieldCallback = [&](ParsingFieldDeclarator &FD) {
+      auto CFieldCallback = [&](ParsingFieldDeclarator &FD) -> Decl * {
         // Install the declarator into the current TagDecl.
         Decl *Field =
             Actions.ActOnField(getCurScope(), TagDecl,
                                FD.D.getDeclSpec().getSourceRange().getBegin(),
                                FD.D, FD.BitfieldSize);
         FD.complete(Field);
+        return Field;
       };
 
       // Parse all the comma separated declarators.
       ParsingDeclSpec DS(*this);
-      ParseStructDeclaration(DS, CFieldCallback);
+      ParseStructDeclaration(DS, CFieldCallback, &LateFieldAttrs);
     } else { // Handle @defs
       ConsumeToken();
       if (!Tok.isObjCAtKeyword(tok::objc_defs)) {
@@ -5059,7 +5229,10 @@ void Parser::ParseStructUnionBody(SourceLocation RecordLoc,
 
   ParsedAttributes attrs(AttrFactory);
   // If attributes exist after struct contents, parse them.
-  MaybeParseGNUAttributes(attrs);
+  MaybeParseGNUAttributes(attrs, &LateFieldAttrs);
+
+  // Late parse field attributes if necessary.
+  ParseLexedCAttributeList(LateFieldAttrs, /*EnterScope=*/false);
 
   SmallVector<Decl *, 32> FieldDecls(TagDecl->fields());
 
@@ -5671,6 +5844,8 @@ bool Parser::isKnownToBeTypeSpecifier(const Token &Tok) const {
   case tok::kw___vector:
 #define GENERIC_IMAGE_TYPE(ImgType, Id) case tok::kw_##ImgType##_t:
 #include "clang/Basic/OpenCLImageTypes.def"
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case tok::kw_##Name:
+#include "clang/Basic/HLSLIntangibleTypes.def"
 
     // struct-or-union-specifier (C99) or class-specifier (C++)
   case tok::kw_class:
@@ -5755,6 +5930,8 @@ bool Parser::isTypeSpecifierQualifier() {
   case tok::kw___vector:
 #define GENERIC_IMAGE_TYPE(ImgType, Id) case tok::kw_##ImgType##_t:
 #include "clang/Basic/OpenCLImageTypes.def"
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case tok::kw_##Name:
+#include "clang/Basic/HLSLIntangibleTypes.def"
 
     // struct-or-union-specifier (C99) or class-specifier (C++)
   case tok::kw_class:
@@ -6099,6 +6276,8 @@ bool Parser::isDeclarationSpecifier(
   case tok::kw___write_only:
 #define GENERIC_IMAGE_TYPE(ImgType, Id) case tok::kw_##ImgType##_t:
 #include "clang/Basic/OpenCLImageTypes.def"
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case tok::kw_##Name:
+#include "clang/Basic/HLSLIntangibleTypes.def"
 
   case tok::kw___funcref:
   case tok::kw_groupshared:
@@ -6518,48 +6697,66 @@ void Parser::ParseDeclaratorInternal(Declarator &D,
        (Tok.is(tok::identifier) &&
         (NextToken().is(tok::coloncolon) || NextToken().is(tok::less))) ||
        Tok.is(tok::annot_cxxscope))) {
+    TentativeParsingAction TPA(*this, /*Unannotated=*/true);
     bool EnteringContext = D.getContext() == DeclaratorContext::File ||
                            D.getContext() == DeclaratorContext::Member;
     CXXScopeSpec SS;
     SS.setTemplateParamLists(D.getTemplateParameterLists());
-    ParseOptionalCXXScopeSpecifier(SS, /*ObjectType=*/nullptr,
-                                   /*ObjectHasErrors=*/false, EnteringContext);
 
-    if (SS.isNotEmpty()) {
-      if (Tok.isNot(tok::star)) {
-        // The scope spec really belongs to the direct-declarator.
-        if (D.mayHaveIdentifier())
-          D.getCXXScopeSpec() = SS;
-        else
-          AnnotateScopeToken(SS, true);
+    if (ParseOptionalCXXScopeSpecifier(SS, /*ObjectType=*/nullptr,
+                                       /*ObjectHasErrors=*/false,
+                                       /*EnteringContext=*/false,
+                                       /*MayBePseudoDestructor=*/nullptr,
+                                       /*IsTypename=*/false, /*LastII=*/nullptr,
+                                       /*OnlyNamespace=*/false,
+                                       /*InUsingDeclaration=*/false,
+                                       /*Disambiguation=*/EnteringContext) ||
 
-        if (DirectDeclParser)
-          (this->*DirectDeclParser)(D);
+        SS.isEmpty() || SS.isInvalid() || !EnteringContext ||
+        Tok.is(tok::star)) {
+      TPA.Commit();
+      if (SS.isNotEmpty() && Tok.is(tok::star)) {
+        if (SS.isValid()) {
+          checkCompoundToken(SS.getEndLoc(), tok::coloncolon,
+                             CompoundToken::MemberPtr);
+        }
+
+        SourceLocation StarLoc = ConsumeToken();
+        D.SetRangeEnd(StarLoc);
+        DeclSpec DS(AttrFactory);
+        ParseTypeQualifierListOpt(DS);
+        D.ExtendWithDeclSpec(DS);
+
+        // Recurse to parse whatever is left.
+        Actions.runWithSufficientStackSpace(D.getBeginLoc(), [&] {
+          ParseDeclaratorInternal(D, DirectDeclParser);
+        });
+
+        // Sema will have to catch (syntactically invalid) pointers into global
+        // scope. It has to catch pointers into namespace scope anyway.
+        D.AddTypeInfo(DeclaratorChunk::getMemberPointer(
+                          SS, DS.getTypeQualifiers(), StarLoc, DS.getEndLoc()),
+                      std::move(DS.getAttributes()),
+                      /*EndLoc=*/SourceLocation());
         return;
       }
+    } else {
+      TPA.Revert();
+      SS.clear();
+      ParseOptionalCXXScopeSpecifier(SS, /*ObjectType=*/nullptr,
+                                     /*ObjectHasErrors=*/false,
+                                     /*EnteringContext=*/true);
+    }
 
-      if (SS.isValid()) {
-        checkCompoundToken(SS.getEndLoc(), tok::coloncolon,
-                           CompoundToken::MemberPtr);
-      }
+    if (SS.isNotEmpty()) {
+      // The scope spec really belongs to the direct-declarator.
+      if (D.mayHaveIdentifier())
+        D.getCXXScopeSpec() = SS;
+      else
+        AnnotateScopeToken(SS, true);
 
-      SourceLocation StarLoc = ConsumeToken();
-      D.SetRangeEnd(StarLoc);
-      DeclSpec DS(AttrFactory);
-      ParseTypeQualifierListOpt(DS);
-      D.ExtendWithDeclSpec(DS);
-
-      // Recurse to parse whatever is left.
-      Actions.runWithSufficientStackSpace(D.getBeginLoc(), [&] {
-        ParseDeclaratorInternal(D, DirectDeclParser);
-      });
-
-      // Sema will have to catch (syntactically invalid) pointers into global
-      // scope. It has to catch pointers into namespace scope anyway.
-      D.AddTypeInfo(DeclaratorChunk::getMemberPointer(
-                        SS, DS.getTypeQualifiers(), StarLoc, DS.getEndLoc()),
-                    std::move(DS.getAttributes()),
-                    /* Don't replace range end. */ SourceLocation());
+      if (DirectDeclParser)
+        (this->*DirectDeclParser)(D);
       return;
     }
   }
@@ -7855,6 +8052,17 @@ void Parser::ParseParameterDeclarationClause(
         // Consume the keyword.
         ConsumeToken();
       }
+
+      // We can only store so many parameters
+      // Skip until the the end of the parameter list, ignoring
+      // parameters that would overflow.
+      if (ParamInfo.size() == Type::FunctionTypeNumParamsLimit) {
+        Diag(ParmDeclarator.getBeginLoc(),
+             diag::err_function_parameter_limit_exceeded);
+        SkipUntil(tok::r_paren, SkipUntilFlags::StopBeforeMatch);
+        break;
+      }
+
       // Inform the actions module about the parameter declarator, so it gets
       // added to the current scope.
       Decl *Param =

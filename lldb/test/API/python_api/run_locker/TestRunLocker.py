@@ -85,6 +85,13 @@ class TestRunLocker(TestBase):
         # you aren't supposed to do while running, and that we get some
         # actual error:
         val = target.EvaluateExpression("SomethingToCall()")
+        # There was a bug [#93313] in the printing that would cause repr to crash, so I'm
+        # testing that separately.
+        self.assertIn(
+            "can't evaluate expressions when the process is running",
+            repr(val),
+            "repr works"
+        )
         error = val.GetError()
         self.assertTrue(error.Fail(), "Failed to run expression")
         self.assertIn(

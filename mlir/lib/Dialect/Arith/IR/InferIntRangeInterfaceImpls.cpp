@@ -295,18 +295,24 @@ void arith::CmpIOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
 // SelectOp
 //===----------------------------------------------------------------------===//
 
-void arith::SelectOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
-                                        SetIntRangeFn setResultRange) {
-  std::optional<APInt> mbCondVal = argRanges[0].getConstantValue();
+void arith::SelectOp::inferResultRangesFromOptional(
+    ArrayRef<IntegerValueRange> argRanges, SetIntLatticeFn setResultRange) {
+  std::optional<APInt> mbCondVal =
+      argRanges[0].isUninitialized()
+          ? std::nullopt
+          : argRanges[0].getValue().getConstantValue();
+
+  const IntegerValueRange &trueCase = argRanges[1];
+  const IntegerValueRange &falseCase = argRanges[2];
 
   if (mbCondVal) {
     if (mbCondVal->isZero())
-      setResultRange(getResult(), argRanges[2]);
+      setResultRange(getResult(), falseCase);
     else
-      setResultRange(getResult(), argRanges[1]);
+      setResultRange(getResult(), trueCase);
     return;
   }
-  setResultRange(getResult(), argRanges[1].rangeUnion(argRanges[2]));
+  setResultRange(getResult(), IntegerValueRange::join(trueCase, falseCase));
 }
 
 //===----------------------------------------------------------------------===//

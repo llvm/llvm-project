@@ -200,9 +200,9 @@ int64_t RISCV::getImplicitAddend(const uint8_t *buf, RelType type) const {
 
 void RISCV::writeGotHeader(uint8_t *buf) const {
   if (config->is64)
-    write64le(buf, mainPart->dynamic->getVA());
+    write64le(buf, ctx.mainPart->dynamic->getVA());
   else
-    write32le(buf, mainPart->dynamic->getVA());
+    write32le(buf, ctx.mainPart->dynamic->getVA());
 }
 
 void RISCV::writeGotPlt(uint8_t *buf, const Symbol &s) const {
@@ -235,7 +235,7 @@ void RISCV::writePltHeader(uint8_t *buf) const {
   write32le(buf + 0, utype(AUIPC, X_T2, hi20(offset)));
   write32le(buf + 4, rtype(SUB, X_T1, X_T1, X_T3));
   write32le(buf + 8, itype(load, X_T3, X_T2, lo12(offset)));
-  write32le(buf + 12, itype(ADDI, X_T1, X_T1, -target->pltHeaderSize - 12));
+  write32le(buf + 12, itype(ADDI, X_T1, X_T1, -ctx.target->pltHeaderSize - 12));
   write32le(buf + 16, itype(ADDI, X_T0, X_T2, lo12(offset)));
   write32le(buf + 20, itype(SRLI, X_T1, X_T1, config->is64 ? 1 : 2));
   write32le(buf + 24, itype(load, X_T0, X_T0, config->wordsize));
@@ -256,8 +256,8 @@ void RISCV::writePlt(uint8_t *buf, const Symbol &sym,
 }
 
 RelType RISCV::getDynRel(RelType type) const {
-  return type == target->symbolicRel ? type
-                                     : static_cast<RelType>(R_RISCV_NONE);
+  return type == ctx.target->symbolicRel ? type
+                                         : static_cast<RelType>(R_RISCV_NONE);
 }
 
 RelExpr RISCV::getRelExpr(const RelType type, const Symbol &s,
@@ -466,7 +466,7 @@ void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
 
   case INTERNAL_R_RISCV_GPREL_I:
   case INTERNAL_R_RISCV_GPREL_S: {
-    Defined *gp = ElfSym::riscvGlobalPointer;
+    Defined *gp = ctx.sym.riscvGlobalPointer;
     int64_t displace = SignExtend64(val - gp->getVA(), bits);
     checkInt(loc, displace, 12, rel);
     uint32_t insn = (read32le(loc) & ~(31 << 15)) | (X_GP << 15);
@@ -631,8 +631,8 @@ void RISCV::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
       continue;
     case R_RELAX_TLS_GD_TO_LE:
       // See the comment in handleTlsRelocation. For TLSDESC=>IE,
-      // R_RISCV_TLSDESC_{LOAD_LO12,ADD_LO12,CALL} also reach here. If isToIe is
-      // true, this is actually TLSDESC=>IE optimization.
+      // R_RISCV_TLSDESC_{LOAD_LO12,ADD_LO12,CALL} also reach here. If isToLe is
+      // false, this is actually TLSDESC=>IE optimization.
       if (rel.type == R_RISCV_TLSDESC_HI20) {
         tlsdescVal = val;
         isToLe = true;
@@ -680,7 +680,7 @@ void RISCV::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
 
 void elf::initSymbolAnchors() {
   SmallVector<InputSection *, 0> storage;
-  for (OutputSection *osec : outputSections) {
+  for (OutputSection *osec : ctx.outputSections) {
     if (!(osec->flags & SHF_EXECINSTR))
       continue;
     for (InputSection *sec : getInputSections(*osec, storage)) {
@@ -719,7 +719,7 @@ void elf::initSymbolAnchors() {
   // efficiently. For a zero size symbol, ensure that its start anchor precedes
   // its end anchor. For two symbols with anchors at the same offset, their
   // order does not matter.
-  for (OutputSection *osec : outputSections) {
+  for (OutputSection *osec : ctx.outputSections) {
     if (!(osec->flags & SHF_EXECINSTR))
       continue;
     for (InputSection *sec : getInputSections(*osec, storage)) {
@@ -789,7 +789,7 @@ static void relaxTlsLe(const InputSection &sec, size_t i, uint64_t loc,
 
 static void relaxHi20Lo12(const InputSection &sec, size_t i, uint64_t loc,
                           Relocation &r, uint32_t &remove) {
-  const Defined *gp = ElfSym::riscvGlobalPointer;
+  const Defined *gp = ctx.sym.riscvGlobalPointer;
   if (!gp)
     return;
 
@@ -922,7 +922,7 @@ bool RISCV::relaxOnce(int pass) const {
 
   SmallVector<InputSection *, 0> storage;
   bool changed = false;
-  for (OutputSection *osec : outputSections) {
+  for (OutputSection *osec : ctx.outputSections) {
     if (!(osec->flags & SHF_EXECINSTR))
       continue;
     for (InputSection *sec : getInputSections(*osec, storage))
@@ -935,7 +935,7 @@ void RISCV::finalizeRelax(int passes) const {
   llvm::TimeTraceScope timeScope("Finalize RISC-V relaxation");
   log("relaxation passes: " + Twine(passes));
   SmallVector<InputSection *, 0> storage;
-  for (OutputSection *osec : outputSections) {
+  for (OutputSection *osec : ctx.outputSections) {
     if (!(osec->flags & SHF_EXECINSTR))
       continue;
     for (InputSection *sec : getInputSections(*osec, storage)) {
@@ -1084,10 +1084,97 @@ static void mergeArch(RISCVISAUtils::OrderedExtensionMap &mergedExts,
   }
 }
 
+static void mergeAtomic(DenseMap<unsigned, unsigned>::iterator it,
+                        const InputSectionBase *oldSection,
+                        const InputSectionBase *newSection,
+                        RISCVAttrs::RISCVAtomicAbiTag oldTag,
+                        RISCVAttrs::RISCVAtomicAbiTag newTag) {
+  using RISCVAttrs::RISCVAtomicAbiTag;
+  // Same tags stay the same, and UNKNOWN is compatible with anything
+  if (oldTag == newTag || newTag == RISCVAtomicAbiTag::UNKNOWN)
+    return;
+
+  auto reportAbiError = [&]() {
+    errorOrWarn("atomic abi mismatch for " + oldSection->name + "\n>>> " +
+                toString(oldSection) +
+                ": atomic_abi=" + Twine(static_cast<unsigned>(oldTag)) +
+                "\n>>> " + toString(newSection) +
+                ": atomic_abi=" + Twine(static_cast<unsigned>(newTag)));
+  };
+
+  auto reportUnknownAbiError = [](const InputSectionBase *section,
+                                  RISCVAtomicAbiTag tag) {
+    switch (tag) {
+    case RISCVAtomicAbiTag::UNKNOWN:
+    case RISCVAtomicAbiTag::A6C:
+    case RISCVAtomicAbiTag::A6S:
+    case RISCVAtomicAbiTag::A7:
+      return;
+    };
+    errorOrWarn("unknown atomic abi for " + section->name + "\n>>> " +
+                toString(section) +
+                ": atomic_abi=" + Twine(static_cast<unsigned>(tag)));
+  };
+  switch (oldTag) {
+  case RISCVAtomicAbiTag::UNKNOWN:
+    it->getSecond() = static_cast<unsigned>(newTag);
+    return;
+  case RISCVAtomicAbiTag::A6C:
+    switch (newTag) {
+    case RISCVAtomicAbiTag::A6S:
+      it->getSecond() = static_cast<unsigned>(RISCVAtomicAbiTag::A6C);
+      return;
+    case RISCVAtomicAbiTag::A7:
+      reportAbiError();
+      return;
+    case RISCVAttrs::RISCVAtomicAbiTag::UNKNOWN:
+    case RISCVAttrs::RISCVAtomicAbiTag::A6C:
+      return;
+    };
+    break;
+
+  case RISCVAtomicAbiTag::A6S:
+    switch (newTag) {
+    case RISCVAtomicAbiTag::A6C:
+      it->getSecond() = static_cast<unsigned>(RISCVAtomicAbiTag::A6C);
+      return;
+    case RISCVAtomicAbiTag::A7:
+      it->getSecond() = static_cast<unsigned>(RISCVAtomicAbiTag::A7);
+      return;
+    case RISCVAttrs::RISCVAtomicAbiTag::UNKNOWN:
+    case RISCVAttrs::RISCVAtomicAbiTag::A6S:
+      return;
+    };
+    break;
+
+  case RISCVAtomicAbiTag::A7:
+    switch (newTag) {
+    case RISCVAtomicAbiTag::A6S:
+      it->getSecond() = static_cast<unsigned>(RISCVAtomicAbiTag::A7);
+      return;
+    case RISCVAtomicAbiTag::A6C:
+      reportAbiError();
+      return;
+    case RISCVAttrs::RISCVAtomicAbiTag::UNKNOWN:
+    case RISCVAttrs::RISCVAtomicAbiTag::A7:
+      return;
+    };
+    break;
+  };
+
+  // If we get here, then we have an invalid tag, so report it.
+  // Putting these checks at the end allows us to only do these checks when we
+  // need to, since this is expected to be a rare occurrence.
+  reportUnknownAbiError(oldSection, oldTag);
+  reportUnknownAbiError(newSection, newTag);
+}
+
 static RISCVAttributesSection *
 mergeAttributesSection(const SmallVector<InputSectionBase *, 0> &sections) {
+  using RISCVAttrs::RISCVAtomicAbiTag;
   RISCVISAUtils::OrderedExtensionMap exts;
   const InputSectionBase *firstStackAlign = nullptr;
+  const InputSectionBase *firstAtomicAbi = nullptr;
   unsigned firstStackAlignValue = 0, xlen = 0;
   bool hasArch = false;
 
@@ -1134,6 +1221,18 @@ mergeAttributesSection(const SmallVector<InputSectionBase *, 0> &sections) {
       case RISCVAttrs::PRIV_SPEC_MINOR:
       case RISCVAttrs::PRIV_SPEC_REVISION:
         break;
+
+      case RISCVAttrs::AttrType::ATOMIC_ABI:
+        if (auto i = parser.getAttributeValue(tag.attr)) {
+          auto r = merged.intAttr.try_emplace(tag.attr, *i);
+          if (r.second)
+            firstAtomicAbi = sec;
+          else
+            mergeAtomic(r.first, firstAtomicAbi, sec,
+                        static_cast<RISCVAtomicAbiTag>(r.first->getSecond()),
+                        static_cast<RISCVAtomicAbiTag>(*i));
+        }
+        continue;
       }
 
       // Fallback for deprecated priv_spec* and other unknown attributes: retain
@@ -1155,9 +1254,8 @@ mergeAttributesSection(const SmallVector<InputSectionBase *, 0> &sections) {
     }
   }
 
-  if (hasArch) {
-    if (auto result = RISCVISAInfo::postProcessAndChecking(
-            std::make_unique<RISCVISAInfo>(xlen, exts))) {
+  if (hasArch && xlen != 0) {
+    if (auto result = RISCVISAInfo::createFromExtMap(xlen, exts)) {
       merged.strAttr.try_emplace(RISCVAttrs::ARCH,
                                  saver().save((*result)->toString()));
     } else {

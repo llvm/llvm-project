@@ -42,7 +42,7 @@ TEST(Reductions, DimMaskProductInt4) {
       shape, std::vector<std::int32_t>{1, 2, 3, 4, 5, 6})};
   auto mask{MakeArray<TypeCategory::Logical, 1>(
       shape, std::vector<bool>{true, false, false, true, true, true})};
-  StaticDescriptor<1, true> statDesc;
+  StaticDescriptor<maxRank, true> statDesc;
   Descriptor &prod{statDesc.descriptor()};
   RTNAME(ProductDim)(prod, *array, 1, __FILE__, __LINE__, &*mask);
   EXPECT_EQ(prod.rank(), 1);
@@ -152,7 +152,7 @@ TEST(Reductions, DoubleMaxMinNorm2) {
   // A scalar result occurs when you have a rank 1 array and dim == 1.
   std::vector<int> shape1{24};
   auto array1{MakeArray<TypeCategory::Real, 8>(shape1, rawData)};
-  StaticDescriptor<1, true> statDesc0[1];
+  StaticDescriptor<2, true> statDesc0[1];
   Descriptor &scalarResult{statDesc0[0].descriptor()};
   RTNAME(MaxlocDim)
   (scalarResult, *array1, /*KIND=*/2, /*DIM=*/1, __FILE__, __LINE__,
@@ -647,23 +647,24 @@ static std::int32_t IMultiply(const std::int32_t *x, const std::int32_t *y) {
 TEST(Reductions, ReduceInt4) {
   auto intVector{MakeArray<TypeCategory::Integer, 4>(
       std::vector<int>{4}, std::vector<std::int32_t>{1, 2, 3, 4})};
-  EXPECT_EQ(RTNAME(ReduceInteger4)(*intVector, IAdd, __FILE__, __LINE__), 10);
   EXPECT_EQ(
-      RTNAME(ReduceInteger4)(*intVector, IMultiply, __FILE__, __LINE__), 24);
+      RTNAME(ReduceInteger4Ref)(*intVector, IAdd, __FILE__, __LINE__), 10);
+  EXPECT_EQ(
+      RTNAME(ReduceInteger4Ref)(*intVector, IMultiply, __FILE__, __LINE__), 24);
 }
 TEST(Reductions, ReduceInt4Dim) {
   auto intMatrix{MakeArray<TypeCategory::Integer, 4>(
       std::vector<int>{2, 2}, std::vector<std::int32_t>{1, 2, 3, 4})};
-  StaticDescriptor<1, true> statDesc;
+  StaticDescriptor<2, true> statDesc;
   Descriptor &sums{statDesc.descriptor()};
-  RTNAME(ReduceInteger4Dim)(sums, *intMatrix, IAdd, __FILE__, __LINE__, 1);
+  RTNAME(ReduceInteger4DimRef)(sums, *intMatrix, IAdd, __FILE__, __LINE__, 1);
   EXPECT_EQ(sums.rank(), 1);
   EXPECT_EQ(sums.GetDimension(0).LowerBound(), 1);
   EXPECT_EQ(sums.GetDimension(0).Extent(), 2);
   EXPECT_EQ(*sums.ZeroBasedIndexedElement<std::int32_t>(0), 3);
   EXPECT_EQ(*sums.ZeroBasedIndexedElement<std::int32_t>(1), 7);
   sums.Destroy();
-  RTNAME(ReduceInteger4Dim)(sums, *intMatrix, IAdd, __FILE__, __LINE__, 2);
+  RTNAME(ReduceInteger4DimRef)(sums, *intMatrix, IAdd, __FILE__, __LINE__, 2);
   EXPECT_EQ(sums.rank(), 1);
   EXPECT_EQ(sums.GetDimension(0).LowerBound(), 1);
   EXPECT_EQ(sums.GetDimension(0).Extent(), 2);

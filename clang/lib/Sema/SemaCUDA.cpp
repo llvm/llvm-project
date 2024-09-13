@@ -835,7 +835,7 @@ SemaBase::SemaDiagnosticBuilder SemaCUDA::DiagIfDeviceCode(SourceLocation Loc,
       if (!getLangOpts().CUDAIsDevice)
         return SemaDiagnosticBuilder::K_Nop;
       if (SemaRef.IsLastErrorImmediate &&
-          getDiagnostics().getDiagnosticIDs()->isBuiltinNote(DiagID))
+          getDiagnostics().getDiagnosticIDs()->isNote(DiagID))
         return SemaDiagnosticBuilder::K_Immediate;
       return (SemaRef.getEmissionStatus(CurFunContext) ==
               Sema::FunctionEmissionStatus::Emitted)
@@ -866,7 +866,7 @@ Sema::SemaDiagnosticBuilder SemaCUDA::DiagIfHostCode(SourceLocation Loc,
       if (getLangOpts().CUDAIsDevice)
         return SemaDiagnosticBuilder::K_Nop;
       if (SemaRef.IsLastErrorImmediate &&
-          getDiagnostics().getDiagnosticIDs()->isBuiltinNote(DiagID))
+          getDiagnostics().getDiagnosticIDs()->isNote(DiagID))
         return SemaDiagnosticBuilder::K_Immediate;
       return (SemaRef.getEmissionStatus(CurFunContext) ==
               Sema::FunctionEmissionStatus::Emitted)
@@ -1018,24 +1018,33 @@ void SemaCUDA::checkTargetOverload(FunctionDecl *NewFD,
     // HD/global functions "exist" in some sense on both the host and device, so
     // should have the same implementation on both sides.
     if (NewTarget != OldTarget &&
-        ((NewTarget == CUDAFunctionTarget::HostDevice &&
-          !(getLangOpts().OffloadImplicitHostDeviceTemplates &&
-            isImplicitHostDeviceFunction(NewFD) &&
-            OldTarget == CUDAFunctionTarget::Device)) ||
-         (OldTarget == CUDAFunctionTarget::HostDevice &&
-          !(getLangOpts().OffloadImplicitHostDeviceTemplates &&
-            isImplicitHostDeviceFunction(OldFD) &&
-            NewTarget == CUDAFunctionTarget::Device)) ||
-         (NewTarget == CUDAFunctionTarget::Global) ||
-         (OldTarget == CUDAFunctionTarget::Global)) &&
         !SemaRef.IsOverload(NewFD, OldFD, /* UseMemberUsingDeclRules = */ false,
                             /* ConsiderCudaAttrs = */ false)) {
-      Diag(NewFD->getLocation(), diag::err_cuda_ovl_target)
-          << llvm::to_underlying(NewTarget) << NewFD->getDeclName()
-          << llvm::to_underlying(OldTarget) << OldFD;
-      Diag(OldFD->getLocation(), diag::note_previous_declaration);
-      NewFD->setInvalidDecl();
-      break;
+      if ((NewTarget == CUDAFunctionTarget::HostDevice &&
+           !(getLangOpts().OffloadImplicitHostDeviceTemplates &&
+             isImplicitHostDeviceFunction(NewFD) &&
+             OldTarget == CUDAFunctionTarget::Device)) ||
+          (OldTarget == CUDAFunctionTarget::HostDevice &&
+           !(getLangOpts().OffloadImplicitHostDeviceTemplates &&
+             isImplicitHostDeviceFunction(OldFD) &&
+             NewTarget == CUDAFunctionTarget::Device)) ||
+          (NewTarget == CUDAFunctionTarget::Global) ||
+          (OldTarget == CUDAFunctionTarget::Global)) {
+        Diag(NewFD->getLocation(), diag::err_cuda_ovl_target)
+            << llvm::to_underlying(NewTarget) << NewFD->getDeclName()
+            << llvm::to_underlying(OldTarget) << OldFD;
+        Diag(OldFD->getLocation(), diag::note_previous_declaration);
+        NewFD->setInvalidDecl();
+        break;
+      }
+      if ((NewTarget == CUDAFunctionTarget::Host &&
+           OldTarget == CUDAFunctionTarget::Device) ||
+          (NewTarget == CUDAFunctionTarget::Device &&
+           OldTarget == CUDAFunctionTarget::Host)) {
+        Diag(NewFD->getLocation(), diag::warn_offload_incompatible_redeclare)
+            << llvm::to_underlying(NewTarget) << llvm::to_underlying(OldTarget);
+        Diag(OldFD->getLocation(), diag::note_previous_declaration);
+      }
     }
   }
 }
@@ -1059,6 +1068,9 @@ void SemaCUDA::inheritTargetAttrs(FunctionDecl *FD,
 }
 
 std::string SemaCUDA::getConfigureFuncName() const {
+  if (getLangOpts().OffloadViaLLVM)
+    return "__llvmPushCallConfiguration";
+
   if (getLangOpts().HIP)
     return getLangOpts().HIPUseNewLaunchAPI ? "__hipPushCallConfiguration"
                                             : "hipConfigureCall";

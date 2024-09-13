@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/Availability.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/StmtVisitor.h"
@@ -2134,7 +2135,7 @@ ExprResult SemaObjC::HandleExprPropertyRefExpr(
         }
     } else {
       SemaRef.diagnoseTypo(Corrected,
-                           SemaRef.PDiag(diag::err_property_not_found_suggest)
+                           PDiag(diag::err_property_not_found_suggest)
                                << MemberName << QualType(OPT, 0));
       return HandleExprPropertyRefExpr(OPT, BaseExpr, OpLoc,
                                        TypoResult, MemberLoc,
@@ -2369,15 +2370,15 @@ SemaObjC::getObjCMessageKind(Scope *S, IdentifierInfo *Name,
     if (Corrected.isKeyword()) {
       // If we've found the keyword "super" (the only keyword that would be
       // returned by CorrectTypo), this is a send to super.
-      SemaRef.diagnoseTypo(
-          Corrected, SemaRef.PDiag(diag::err_unknown_receiver_suggest) << Name);
+      SemaRef.diagnoseTypo(Corrected, PDiag(diag::err_unknown_receiver_suggest)
+                                          << Name);
       return ObjCSuperMessage;
     } else if (ObjCInterfaceDecl *Class =
                    Corrected.getCorrectionDeclAs<ObjCInterfaceDecl>()) {
       // If we found a declaration, correct when it refers to an Objective-C
       // class.
-      SemaRef.diagnoseTypo(
-          Corrected, SemaRef.PDiag(diag::err_unknown_receiver_suggest) << Name);
+      SemaRef.diagnoseTypo(Corrected, PDiag(diag::err_unknown_receiver_suggest)
+                                          << Name);
       QualType T = Context.getObjCInterfaceType(Class);
       TypeSourceInfo *TSInfo = Context.getTrivialTypeSourceInfo(T, NameLoc);
       ReceiverType = SemaRef.CreateParsedType(T, TSInfo);
@@ -2564,7 +2565,7 @@ DiagnoseCStringFormatDirectiveInObjCAPI(Sema &S,
   }
   else if (Method) {
     for (const auto *I : Method->specific_attrs<FormatAttr>()) {
-      if (S.GetFormatNSStringIdx(I, Idx)) {
+      if (S.ObjC().GetFormatNSStringIdx(I, Idx)) {
         Format = true;
         break;
       }
@@ -3206,9 +3207,10 @@ ExprResult SemaObjC::BuildInstanceMessage(
     }
     if (!isDesignatedInitChain) {
       const ObjCMethodDecl *InitMethod = nullptr;
+      auto *CurMD = SemaRef.getCurMethodDecl();
+      assert(CurMD && "Current method declaration should not be null");
       bool isDesignated =
-          SemaRef.getCurMethodDecl()->isDesignatedInitializerForTheInterface(
-              &InitMethod);
+          CurMD->isDesignatedInitializerForTheInterface(&InitMethod);
       assert(isDesignated && InitMethod);
       (void)isDesignated;
       Diag(SelLoc, SuperLoc.isValid() ?

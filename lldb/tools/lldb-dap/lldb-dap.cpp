@@ -16,6 +16,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <optional>
 #include <sys/stat.h>
 #include <sys/types.h>
 #if defined(_WIN32)
@@ -110,6 +111,9 @@ public:
 typedef void (*RequestCallback)(const llvm::json::Object &command);
 
 enum LaunchMethod { Launch, Attach, AttachForSuspendedLaunch };
+
+/// Page size used for reporting addtional frames in the 'stackTrace' request.
+constexpr int StackPageSize = 20;
 
 /// Prints a welcome message on the editor if the preprocessor variable
 /// LLDB_DAP_WELCOME_MESSAGE is defined.
@@ -227,13 +231,12 @@ void SendContinuedEvent() {
 // debugged.
 void SendTerminatedEvent() {
   // Prevent races if the process exits while we're being asked to disconnect.
-  static std::mutex mutex;
-  std::lock_guard<std::mutex> locker(mutex);
-
-  g_dap.RunTerminateCommands();
-  // Send a "terminated" event
-  llvm::json::Object event(CreateTerminatedEventObject());
-  g_dap.SendJSON(llvm::json::Value(std::move(event)));
+  llvm::call_once(g_dap.terminated_event_flag, [&] {
+    g_dap.RunTerminateCommands();
+    // Send a "terminated" event
+    llvm::json::Object event(CreateTerminatedEventObject());
+    g_dap.SendJSON(llvm::json::Value(std::move(event)));
+  });
 }
 
 // Send a thread stopped event for all threads as long as the process
@@ -399,7 +402,7 @@ void SendProcessEvent(LaunchMethod launch_method) {
 // Grab any STDOUT and STDERR from the process and send it up to VS Code
 // via an "output" event to the "stdout" and "stderr" categories.
 void SendStdOutStdErr(lldb::SBProcess &process) {
-  char buffer[1024];
+  char buffer[OutputBufferSize];
   size_t count;
   while ((count = process.GetSTDOUT(buffer, sizeof(buffer))) > 0)
     g_dap.SendOutput(OutputType::Stdout, llvm::StringRef(buffer, count));
@@ -638,6 +641,79 @@ void SetSourceMapFromArguments(const llvm::json::Object &arguments) {
   }
 }
 
+// Fill in the stack frames of the thread.
+//
+// Threads stacks may contain runtime specific extended backtraces, when
+// constructing a stack trace first report the full thread stack trace then
+// perform a breadth first traversal of any extended backtrace frames.
+//
+// For example:
+//
+// Thread (id=th0) stack=[s0, s1, s2, s3]
+//   \ Extended backtrace "libdispatch" Thread (id=th1) stack=[s0, s1]
+//     \ Extended backtrace "libdispatch" Thread (id=th2) stack=[s0, s1]
+//   \ Extended backtrace "Application Specific Backtrace" Thread (id=th3)
+//   stack=[s0, s1, s2]
+//
+// Which will flatten into:
+//
+//  0. th0->s0
+//  1. th0->s1
+//  2. th0->s2
+//  3. th0->s3
+//  4. label - Enqueued from th1, sf=-1, i=-4
+//  5. th1->s0
+//  6. th1->s1
+//  7. label - Enqueued from th2
+//  8. th2->s0
+//  9. th2->s1
+// 10. label - Application Specific Backtrace
+// 11. th3->s0
+// 12. th3->s1
+// 13. th3->s2
+//
+// s=3,l=3 = [th0->s3, label1, th1->s0]
+bool FillStackFrames(lldb::SBThread &thread, llvm::json::Array &stack_frames,
+                     int64_t &offset, const int64_t start_frame,
+                     const int64_t levels) {
+  bool reached_end_of_stack = false;
+  for (int64_t i = start_frame;
+       static_cast<int64_t>(stack_frames.size()) < levels; i++) {
+    if (i == -1) {
+      stack_frames.emplace_back(CreateExtendedStackFrameLabel(thread));
+      continue;
+    }
+
+    lldb::SBFrame frame = thread.GetFrameAtIndex(i);
+    if (!frame.IsValid()) {
+      offset += thread.GetNumFrames() + 1 /* label between threads */;
+      reached_end_of_stack = true;
+      break;
+    }
+
+    stack_frames.emplace_back(CreateStackFrame(frame));
+  }
+
+  if (g_dap.enable_display_extended_backtrace && reached_end_of_stack) {
+    // Check for any extended backtraces.
+    for (uint32_t bt = 0;
+         bt < thread.GetProcess().GetNumExtendedBacktraceTypes(); bt++) {
+      lldb::SBThread backtrace = thread.GetExtendedBacktraceThread(
+          thread.GetProcess().GetExtendedBacktraceTypeAtIndex(bt));
+      if (!backtrace.IsValid())
+        continue;
+
+      reached_end_of_stack = FillStackFrames(
+          backtrace, stack_frames, offset,
+          (start_frame - offset) > 0 ? start_frame - offset : -1, levels);
+      if (static_cast<int64_t>(stack_frames.size()) >= levels)
+        break;
+    }
+  }
+
+  return reached_end_of_stack;
+}
+
 // "AttachRequest": {
 //   "allOf": [ { "$ref": "#/definitions/Request" }, {
 //     "type": "object",
@@ -673,9 +749,14 @@ void request_attach(const llvm::json::Object &request) {
   lldb::SBError error;
   FillResponse(request, response);
   lldb::SBAttachInfo attach_info;
+  const int invalid_port = 0;
   auto arguments = request.getObject("arguments");
   const lldb::pid_t pid =
       GetUnsigned(arguments, "pid", LLDB_INVALID_PROCESS_ID);
+  const auto gdb_remote_port =
+      GetUnsigned(arguments, "gdb-remote-port", invalid_port);
+  const auto gdb_remote_hostname =
+      GetString(arguments, "gdb-remote-hostname", "localhost");
   if (pid != LLDB_INVALID_PROCESS_ID)
     attach_info.SetProcessID(pid);
   const auto wait_for = GetBoolean(arguments, "waitFor", false);
@@ -696,6 +777,8 @@ void request_attach(const llvm::json::Object &request) {
       GetBoolean(arguments, "enableAutoVariableSummaries", false);
   g_dap.enable_synthetic_child_debugging =
       GetBoolean(arguments, "enableSyntheticChildDebugging", false);
+  g_dap.enable_display_extended_backtrace =
+      GetBoolean(arguments, "enableDisplayExtendedBacktrace", false);
   g_dap.command_escape_prefix =
       GetString(arguments, "commandEscapePrefix", "`");
   g_dap.SetFrameFormat(GetString(arguments, "customFrameFormat"));
@@ -737,7 +820,8 @@ void request_attach(const llvm::json::Object &request) {
     return;
   }
 
-  if (pid == LLDB_INVALID_PROCESS_ID && wait_for) {
+  if ((pid == LLDB_INVALID_PROCESS_ID || gdb_remote_port == invalid_port) &&
+      wait_for) {
     char attach_msg[256];
     auto attach_msg_len = snprintf(attach_msg, sizeof(attach_msg),
                                    "Waiting to attach to \"%s\"...",
@@ -750,9 +834,27 @@ void request_attach(const llvm::json::Object &request) {
     // Disable async events so the attach will be successful when we return from
     // the launch call and the launch will happen synchronously
     g_dap.debugger.SetAsync(false);
-    if (core_file.empty())
-      g_dap.target.Attach(attach_info, error);
-    else
+    if (core_file.empty()) {
+      if ((pid != LLDB_INVALID_PROCESS_ID) &&
+          (gdb_remote_port != invalid_port)) {
+        // If both pid and port numbers are specified.
+        error.SetErrorString("The user can't specify both pid and port");
+      } else if (gdb_remote_port != invalid_port) {
+        // If port is specified and pid is not.
+        lldb::SBListener listener = g_dap.debugger.GetListener();
+
+        // If the user hasn't provided the hostname property, default localhost
+        // being used.
+        std::string connect_url =
+            llvm::formatv("connect://{0}:", gdb_remote_hostname);
+        connect_url += std::to_string(gdb_remote_port);
+        g_dap.target.ConnectRemote(listener, connect_url.c_str(), "gdb-remote",
+                                   error);
+      } else {
+        // Attach by process name or id.
+        g_dap.target.Attach(attach_info, error);
+      }
+    } else
       g_dap.target.LoadCore(core_file.data(), error);
     // Reenable async events
     g_dap.debugger.SetAsync(true);
@@ -994,6 +1096,103 @@ void request_disconnect(const llvm::json::Object &request) {
   g_dap.disconnecting = true;
 }
 
+// "ExceptionInfoRequest": {
+//   "allOf": [ { "$ref": "#/definitions/Request" }, {
+//     "type": "object",
+//     "description": "Retrieves the details of the exception that
+//     caused this event to be raised. Clients should only call this request if
+//     the corresponding capability `supportsExceptionInfoRequest` is true.",
+//     "properties": {
+//       "command": {
+//         "type": "string",
+//         "enum": [ "exceptionInfo" ]
+//       },
+//       "arguments": {
+//         "$ref": "#/definitions/ExceptionInfoArguments"
+//       }
+//     },
+//     "required": [ "command", "arguments"  ]
+//   }]
+// },
+// "ExceptionInfoArguments": {
+//   "type": "object",
+//   "description": "Arguments for `exceptionInfo` request.",
+//   "properties": {
+//     "threadId": {
+//       "type": "integer",
+//       "description": "Thread for which exception information should be
+//       retrieved."
+//     }
+//   },
+//   "required": [ "threadId" ]
+// },
+// "ExceptionInfoResponse": {
+//   "allOf": [ { "$ref": "#/definitions/Response" }, {
+//     "type": "object",
+//     "description": "Response to `exceptionInfo` request.",
+//     "properties": {
+//       "body": {
+//         "type": "object",
+//         "properties": {
+//           "exceptionId": {
+//             "type": "string",
+//             "description": "ID of the exception that was thrown."
+//           },
+//           "description": {
+//             "type": "string",
+//             "description": "Descriptive text for the exception."
+//           },
+//           "breakMode": {
+//          "$ref": "#/definitions/ExceptionBreakMode",
+//            "description": "Mode that caused the exception notification to
+//            be raised."
+//           },
+//           "details": {
+//             "$ref": "#/definitions/ExceptionDetails",
+//            "description": "Detailed information about the exception."
+//           }
+//         },
+//         "required": [ "exceptionId", "breakMode" ]
+//       }
+//     },
+//     "required": [ "body" ]
+//   }]
+// }
+// "ExceptionDetails": {
+//   "type": "object",
+//   "description": "Detailed information about an exception that has
+//   occurred.", "properties": {
+//     "message": {
+//       "type": "string",
+//       "description": "Message contained in the exception."
+//     },
+//     "typeName": {
+//       "type": "string",
+//       "description": "Short type name of the exception object."
+//     },
+//     "fullTypeName": {
+//       "type": "string",
+//       "description": "Fully-qualified type name of the exception object."
+//     },
+//     "evaluateName": {
+//       "type": "string",
+//       "description": "An expression that can be evaluated in the current
+//       scope to obtain the exception object."
+//     },
+//     "stackTrace": {
+//       "type": "string",
+//       "description": "Stack trace at the time the exception was thrown."
+//     },
+//     "innerException": {
+//       "type": "array",
+//       "items": {
+//         "$ref": "#/definitions/ExceptionDetails"
+//       },
+//       "description": "Details of the exception contained by this exception,
+//       if any."
+//     }
+//   }
+// },
 void request_exceptionInfo(const llvm::json::Object &request) {
   llvm::json::Object response;
   FillResponse(request, response);
@@ -1022,6 +1221,27 @@ void request_exceptionInfo(const llvm::json::Object &request) {
       }
     }
     body.try_emplace("breakMode", "always");
+    auto exception = thread.GetCurrentException();
+    if (exception.IsValid()) {
+      llvm::json::Object details;
+      lldb::SBStream stream;
+      if (exception.GetDescription(stream)) {
+        EmplaceSafeString(details, "message", stream.GetData());
+      }
+
+      auto exceptionBacktrace = thread.GetCurrentExceptionBacktrace();
+      if (exceptionBacktrace.IsValid()) {
+        lldb::SBStream stream;
+        exceptionBacktrace.GetDescription(stream);
+        for (uint32_t i = 0; i < exceptionBacktrace.GetNumFrames(); i++) {
+          lldb::SBFrame frame = exceptionBacktrace.GetFrameAtIndex(i);
+          frame.GetDescription(stream);
+        }
+        EmplaceSafeString(details, "stackTrace", stream.GetData());
+      }
+
+      body.try_emplace("details", std::move(details));
+    }
     // auto excInfoCount = thread.GetStopReasonDataCount();
     // for (auto i=0; i<excInfoCount; ++i) {
     //   uint64_t exc_data = thread.GetStopReasonDataAtIndex(i);
@@ -1576,6 +1796,10 @@ void request_modules(const llvm::json::Object &request) {
 //   }]
 // }
 void request_initialize(const llvm::json::Object &request) {
+  llvm::json::Object response;
+  FillResponse(request, response);
+  llvm::json::Object body;
+
   auto log_cb = [](const char *buf, void *baton) -> void {
     g_dap.SendOutput(OutputType::Console, llvm::StringRef{buf});
   };
@@ -1587,16 +1811,24 @@ void request_initialize(const llvm::json::Object &request) {
   bool source_init_file = GetBoolean(arguments, "sourceInitFile", true);
 
   g_dap.debugger = lldb::SBDebugger::Create(source_init_file, log_cb, nullptr);
+  if (llvm::Error err = g_dap.RunPreInitCommands()) {
+    response["success"] = false;
+    EmplaceSafeString(response, "message", llvm::toString(std::move(err)));
+    g_dap.SendJSON(llvm::json::Value(std::move(response)));
+    return;
+  }
+
+  g_dap.PopulateExceptionBreakpoints();
   auto cmd = g_dap.debugger.GetCommandInterpreter().AddMultiwordCommand(
       "lldb-dap", "Commands for managing lldb-dap.");
   if (GetBoolean(arguments, "supportsStartDebuggingRequest", false)) {
     cmd.AddCommand(
-        "startDebugging", &g_dap.start_debugging_request_handler,
+        "startDebugging", new StartDebuggingRequestHandler(),
         "Sends a startDebugging request from the debug adapter to the client "
         "to start a child debug session of the same type as the caller.");
   }
   cmd.AddCommand(
-      "repl-mode", &g_dap.repl_mode_request_handler,
+      "repl-mode", new ReplModeRequestHandler(),
       "Get or set the repl behavior of lldb-dap evaluation requests.");
 
   g_dap.progress_event_thread = std::thread(ProgressEventThreadFunction);
@@ -1605,9 +1837,6 @@ void request_initialize(const llvm::json::Object &request) {
   // process and more.
   g_dap.event_thread = std::thread(EventThreadFunction);
 
-  llvm::json::Object response;
-  FillResponse(request, response);
-  llvm::json::Object body;
   // The debug adapter supports the configurationDoneRequest.
   body.try_emplace("supportsConfigurationDoneRequest", true);
   // The debug adapter supports function breakpoints.
@@ -1622,7 +1851,7 @@ void request_initialize(const llvm::json::Object &request) {
   body.try_emplace("supportsEvaluateForHovers", true);
   // Available filters or options for the setExceptionBreakpoints request.
   llvm::json::Array filters;
-  for (const auto &exc_bp : g_dap.exception_breakpoints) {
+  for (const auto &exc_bp : *g_dap.exception_breakpoints) {
     filters.emplace_back(CreateExceptionBreakpointFilter(exc_bp));
   }
   body.try_emplace("exceptionBreakpointFilters", std::move(filters));
@@ -1644,6 +1873,9 @@ void request_initialize(const llvm::json::Object &request) {
   body.try_emplace("supportsCompletionsRequest", true);
   // The debug adapter supports the disassembly request.
   body.try_emplace("supportsDisassembleRequest", true);
+  // The debug adapter supports stepping granularities (argument `granularity`)
+  // for the stepping requests.
+  body.try_emplace("supportsSteppingGranularity", true);
 
   llvm::json::Array completion_characters;
   completion_characters.emplace_back(".");
@@ -1685,6 +1917,13 @@ void request_initialize(const llvm::json::Object &request) {
   body.try_emplace("supportsLogPoints", true);
   // The debug adapter supports data watchpoints.
   body.try_emplace("supportsDataBreakpoints", true);
+  // The debug adapter support for instruction breakpoint.
+  body.try_emplace("supportsInstructionBreakpoints", true);
+
+  // Put in non-DAP specification lldb specific information.
+  llvm::json::Object lldb_json;
+  lldb_json.try_emplace("version", g_dap.debugger.GetVersionString());
+  body.try_emplace("__lldb", std::move(lldb_json));
 
   response.try_emplace("body", std::move(body));
   g_dap.SendJSON(llvm::json::Value(std::move(response)));
@@ -1884,6 +2123,8 @@ void request_launch(const llvm::json::Object &request) {
       GetBoolean(arguments, "enableAutoVariableSummaries", false);
   g_dap.enable_synthetic_child_debugging =
       GetBoolean(arguments, "enableSyntheticChildDebugging", false);
+  g_dap.enable_display_extended_backtrace =
+      GetBoolean(arguments, "enableDisplayExtendedBacktrace", false);
   g_dap.command_escape_prefix =
       GetString(arguments, "commandEscapePrefix", "`");
   g_dap.SetFrameFormat(GetString(arguments, "customFrameFormat"));
@@ -1947,6 +2188,14 @@ void request_launch(const llvm::json::Object &request) {
   g_dap.SendJSON(CreateEventObject("initialized"));
 }
 
+// Check if the step-granularity is `instruction`
+static bool hasInstructionGranularity(const llvm::json::Object &requestArgs) {
+  if (std::optional<llvm::StringRef> value =
+          requestArgs.getString("granularity"))
+    return value == "instruction";
+  return false;
+}
+
 // "NextRequest": {
 //   "allOf": [ { "$ref": "#/definitions/Request" }, {
 //     "type": "object",
@@ -1974,6 +2223,11 @@ void request_launch(const llvm::json::Object &request) {
 //     "threadId": {
 //       "type": "integer",
 //       "description": "Execute 'next' for this thread."
+//     },
+//     "granularity": {
+//       "$ref": "#/definitions/SteppingGranularity",
+//       "description": "Stepping granularity. If no granularity is specified, a
+//                       granularity of `statement` is assumed."
 //     }
 //   },
 //   "required": [ "threadId" ]
@@ -1994,7 +2248,11 @@ void request_next(const llvm::json::Object &request) {
     // Remember the thread ID that caused the resume so we can set the
     // "threadCausedFocus" boolean value in the "stopped" events.
     g_dap.focus_tid = thread.GetThreadID();
-    thread.StepOver();
+    if (hasInstructionGranularity(*arguments)) {
+      thread.StepInstruction(/*step_over=*/true);
+    } else {
+      thread.StepOver();
+    }
   } else {
     response["success"] = llvm::json::Value(false);
   }
@@ -2477,7 +2735,7 @@ void request_setExceptionBreakpoints(const llvm::json::Object &request) {
   // Keep a list of any exception breakpoint filter names that weren't set
   // so we can clear any exception breakpoints if needed.
   std::set<std::string> unset_filters;
-  for (const auto &bp : g_dap.exception_breakpoints)
+  for (const auto &bp : *g_dap.exception_breakpoints)
     unset_filters.insert(bp.filter);
 
   for (const auto &value : *filters) {
@@ -3002,7 +3260,9 @@ void request_source(const llvm::json::Object &request) {
 //     },
 //     "format": {
 //       "$ref": "#/definitions/StackFrameFormat",
-//       "description": "Specifies details on how to format the stack frames."
+//       "description": "Specifies details on how to format the stack frames.
+//       The attribute is only honored by a debug adapter if the corresponding
+//       capability `supportsValueFormattingOptions` is true."
 //     }
 //  },
 //   "required": [ "threadId" ]
@@ -3010,7 +3270,7 @@ void request_source(const llvm::json::Object &request) {
 // "StackTraceResponse": {
 //   "allOf": [ { "$ref": "#/definitions/Response" }, {
 //     "type": "object",
-//     "description": "Response to 'stackTrace' request.",
+//     "description": "Response to `stackTrace` request.",
 //     "properties": {
 //       "body": {
 //         "type": "object",
@@ -3026,7 +3286,13 @@ void request_source(const llvm::json::Object &request) {
 //           },
 //           "totalFrames": {
 //             "type": "integer",
-//             "description": "The total number of frames available."
+//             "description": "The total number of frames available in the
+//             stack. If omitted or if `totalFrames` is larger than the
+//             available frames, a client is expected to request frames until
+//             a request returns less frames than requested (which indicates
+//             the end of the stack). Returning monotonically increasing
+//             `totalFrames` values for subsequent requests can be used to
+//             enforce paging in the client."
 //           }
 //         },
 //         "required": [ "stackFrames" ]
@@ -3041,82 +3307,22 @@ void request_stackTrace(const llvm::json::Object &request) {
   lldb::SBError error;
   auto arguments = request.getObject("arguments");
   lldb::SBThread thread = g_dap.GetLLDBThread(*arguments);
-  llvm::json::Array stackFrames;
+  llvm::json::Array stack_frames;
   llvm::json::Object body;
 
   if (thread.IsValid()) {
-    const auto startFrame = GetUnsigned(arguments, "startFrame", 0);
+    const auto start_frame = GetUnsigned(arguments, "startFrame", 0);
     const auto levels = GetUnsigned(arguments, "levels", 0);
-    const auto endFrame = (levels == 0) ? INT64_MAX : (startFrame + levels);
-    auto totalFrames = thread.GetNumFrames();
-
-    // This will always return an invalid thread when
-    // libBacktraceRecording.dylib is not loaded or if there is no extended
-    // backtrace.
-    lldb::SBThread queue_backtrace_thread =
-        thread.GetExtendedBacktraceThread("libdispatch");
-    if (queue_backtrace_thread.IsValid()) {
-      // One extra frame as a label to mark the enqueued thread.
-      totalFrames += queue_backtrace_thread.GetNumFrames() + 1;
-    }
-
-    // This will always return an invalid thread when there is no exception in
-    // the current thread.
-    lldb::SBThread exception_backtrace_thread =
-        thread.GetCurrentExceptionBacktrace();
-    if (exception_backtrace_thread.IsValid()) {
-      // One extra frame as a label to mark the exception thread.
-      totalFrames += exception_backtrace_thread.GetNumFrames() + 1;
-    }
-
-    for (uint32_t i = startFrame; i < endFrame; ++i) {
-      lldb::SBFrame frame;
-      std::string prefix;
-      if (i < thread.GetNumFrames()) {
-        frame = thread.GetFrameAtIndex(i);
-      } else if (queue_backtrace_thread.IsValid() &&
-                 i < (thread.GetNumFrames() +
-                      queue_backtrace_thread.GetNumFrames() + 1)) {
-        if (i == thread.GetNumFrames()) {
-          const uint32_t thread_idx =
-              queue_backtrace_thread.GetExtendedBacktraceOriginatingIndexID();
-          const char *queue_name = queue_backtrace_thread.GetQueueName();
-          auto name = llvm::formatv("Enqueued from {0} (Thread {1})",
-                                    queue_name, thread_idx);
-          stackFrames.emplace_back(
-              llvm::json::Object{{"id", thread.GetThreadID() + 1},
-                                 {"name", name},
-                                 {"presentationHint", "label"}});
-          continue;
-        }
-        frame = queue_backtrace_thread.GetFrameAtIndex(
-            i - thread.GetNumFrames() - 1);
-      } else if (exception_backtrace_thread.IsValid()) {
-        if (i == thread.GetNumFrames() +
-                     (queue_backtrace_thread.IsValid()
-                          ? queue_backtrace_thread.GetNumFrames() + 1
-                          : 0)) {
-          stackFrames.emplace_back(
-              llvm::json::Object{{"id", thread.GetThreadID() + 2},
-                                 {"name", "Original Exception Backtrace"},
-                                 {"presentationHint", "label"}});
-          continue;
-        }
-
-        frame = exception_backtrace_thread.GetFrameAtIndex(
-            i - thread.GetNumFrames() -
-            (queue_backtrace_thread.IsValid()
-                 ? queue_backtrace_thread.GetNumFrames() + 1
-                 : 0));
-      }
-      if (!frame.IsValid())
-        break;
-      stackFrames.emplace_back(CreateStackFrame(frame));
-    }
-
-    body.try_emplace("totalFrames", totalFrames);
+    int64_t offset = 0;
+    bool reached_end_of_stack =
+        FillStackFrames(thread, stack_frames, offset, start_frame,
+                        levels == 0 ? INT64_MAX : levels);
+    body.try_emplace("totalFrames",
+                     start_frame + stack_frames.size() +
+                         (reached_end_of_stack ? 0 : StackPageSize));
   }
-  body.try_emplace("stackFrames", std::move(stackFrames));
+
+  body.try_emplace("stackFrames", std::move(stack_frames));
   response.try_emplace("body", std::move(body));
   g_dap.SendJSON(llvm::json::Value(std::move(response)));
 }
@@ -3155,6 +3361,11 @@ void request_stackTrace(const llvm::json::Object &request) {
 //     "targetId": {
 //       "type": "integer",
 //       "description": "Optional id of the target to step into."
+//     },
+//     "granularity": {
+//       "$ref": "#/definitions/SteppingGranularity",
+//       "description": "Stepping granularity. If no granularity is specified, a
+//                       granularity of `statement` is assumed."
 //     }
 //   },
 //   "required": [ "threadId" ]
@@ -3185,7 +3396,11 @@ void request_stepIn(const llvm::json::Object &request) {
     // Remember the thread ID that caused the resume so we can set the
     // "threadCausedFocus" boolean value in the "stopped" events.
     g_dap.focus_tid = thread.GetThreadID();
-    thread.StepInto(step_in_target.c_str(), run_mode);
+    if (hasInstructionGranularity(*arguments)) {
+      thread.StepInstruction(/*step_over=*/false);
+    } else {
+      thread.StepInto(step_in_target.c_str(), run_mode);
+    }
   } else {
     response["success"] = llvm::json::Value(false);
   }
@@ -3411,7 +3626,6 @@ void request_stepOut(const llvm::json::Object &request) {
 //   }]
 // }
 void request_threads(const llvm::json::Object &request) {
-
   lldb::SBProcess process = g_dap.target.GetProcess();
   llvm::json::Object response;
   FillResponse(request, response);
@@ -4008,6 +4222,254 @@ void request__testGetTargetBreakpoints(const llvm::json::Object &request) {
   g_dap.SendJSON(llvm::json::Value(std::move(response)));
 }
 
+// "SetInstructionBreakpointsRequest" : {
+//   "allOf" : [
+//     {"$ref" : "#/definitions/Request"}, {
+//       "type" : "object",
+//       "description" :
+//           "Replaces all existing instruction breakpoints. Typically, "
+//           "instruction breakpoints would be set from a disassembly window. "
+//           "\nTo clear all instruction breakpoints, specify an empty "
+//           "array.\nWhen an instruction breakpoint is hit, a `stopped` event "
+//           "(with reason `instruction breakpoint`) is generated.\nClients "
+//           "should only call this request if the corresponding capability "
+//           "`supportsInstructionBreakpoints` is true.",
+//       "properties" : {
+//         "command" : {"type" : "string", "enum" :
+//         ["setInstructionBreakpoints"]}, "arguments" :
+//             {"$ref" : "#/definitions/SetInstructionBreakpointsArguments"}
+//       },
+//       "required" : [ "command", "arguments" ]
+//     }
+//   ]
+// },
+//                                      "SetInstructionBreakpointsArguments"
+//     : {
+//       "type" : "object",
+//       "description" : "Arguments for `setInstructionBreakpoints` request",
+//       "properties" : {
+//         "breakpoints" : {
+//           "type" : "array",
+//           "items" : {"$ref" : "#/definitions/InstructionBreakpoint"},
+//           "description" : "The instruction references of the breakpoints"
+//         }
+//       },
+//       "required" : ["breakpoints"]
+//     },
+//       "SetInstructionBreakpointsResponse"
+//     : {
+//       "allOf" : [
+//         {"$ref" : "#/definitions/Response"}, {
+//           "type" : "object",
+//           "description" : "Response to `setInstructionBreakpoints` request",
+//           "properties" : {
+//             "body" : {
+//               "type" : "object",
+//               "properties" : {
+//                 "breakpoints" : {
+//                   "type" : "array",
+//                   "items" : {"$ref" : "#/definitions/Breakpoint"},
+//                   "description" :
+//                       "Information about the breakpoints. The array elements
+//                       " "correspond to the elements of the `breakpoints`
+//                       array."
+//                 }
+//               },
+//               "required" : ["breakpoints"]
+//             }
+//           },
+//           "required" : ["body"]
+//         }
+//       ]
+//     },
+// "InstructionBreakpoint" : {
+//   "type" : "object",
+//   "description" : "Properties of a breakpoint passed to the "
+//                   "`setInstructionBreakpoints` request",
+//   "properties" : {
+//     "instructionReference" : {
+//       "type" : "string",
+//       "description" :
+//           "The instruction reference of the breakpoint.\nThis should be a "
+//           "memory or instruction pointer reference from an
+//           `EvaluateResponse`, "
+//           "`Variable`, `StackFrame`, `GotoTarget`, or `Breakpoint`."
+//     },
+//     "offset" : {
+//       "type" : "integer",
+//       "description" : "The offset from the instruction reference in "
+//                       "bytes.\nThis can be negative."
+//     },
+//     "condition" : {
+//       "type" : "string",
+//       "description" : "An expression for conditional breakpoints.\nIt is only
+//       "
+//                       "honored by a debug adapter if the corresponding "
+//                       "capability `supportsConditionalBreakpoints` is true."
+//     },
+//     "hitCondition" : {
+//       "type" : "string",
+//       "description" : "An expression that controls how many hits of the "
+//                       "breakpoint are ignored.\nThe debug adapter is expected
+//                       " "to interpret the expression as needed.\nThe
+//                       attribute " "is only honored by a debug adapter if the
+//                       corresponding " "capability
+//                       `supportsHitConditionalBreakpoints` is true."
+//     },
+//     "mode" : {
+//       "type" : "string",
+//       "description" : "The mode of this breakpoint. If defined, this must be
+//       "
+//                       "one of the `breakpointModes` the debug adapter "
+//                       "advertised in its `Capabilities`."
+//     }
+//   },
+//   "required" : ["instructionReference"]
+// },
+// "Breakpoint"
+//     : {
+//       "type" : "object",
+//       "description" :
+//           "Information about a breakpoint created in `setBreakpoints`, "
+//           "`setFunctionBreakpoints`, `setInstructionBreakpoints`, or "
+//           "`setDataBreakpoints` requests.",
+//       "properties" : {
+//         "id" : {
+//           "type" : "integer",
+//           "description" :
+//               "The identifier for the breakpoint. It is needed if breakpoint
+//               " "events are used to update or remove breakpoints."
+//         },
+//         "verified" : {
+//           "type" : "boolean",
+//           "description" : "If true, the breakpoint could be set (but not "
+//                           "necessarily at the desired location)."
+//         },
+//         "message" : {
+//           "type" : "string",
+//           "description" : "A message about the state of the breakpoint.\nThis
+//           "
+//                           "is shown to the user and can be used to explain
+//                           why " "a breakpoint could not be verified."
+//         },
+//         "source" : {
+//           "$ref" : "#/definitions/Source",
+//           "description" : "The source where the breakpoint is located."
+//         },
+//         "line" : {
+//           "type" : "integer",
+//           "description" :
+//               "The start line of the actual range covered by the breakpoint."
+//         },
+//         "column" : {
+//           "type" : "integer",
+//           "description" :
+//               "Start position of the source range covered by the breakpoint.
+//               " "It is measured in UTF-16 code units and the client
+//               capability "
+//               "`columnsStartAt1` determines whether it is 0- or 1-based."
+//         },
+//         "endLine" : {
+//           "type" : "integer",
+//           "description" :
+//               "The end line of the actual range covered by the breakpoint."
+//         },
+//         "endColumn" : {
+//           "type" : "integer",
+//           "description" :
+//               "End position of the source range covered by the breakpoint. It
+//               " "is measured in UTF-16 code units and the client capability "
+//               "`columnsStartAt1` determines whether it is 0- or 1-based.\nIf
+//               " "no end line is given, then the end column is assumed to be
+//               in " "the start line."
+//         },
+//         "instructionReference" : {
+//           "type" : "string",
+//           "description" : "A memory reference to where the breakpoint is
+//           set."
+//         },
+//         "offset" : {
+//           "type" : "integer",
+//           "description" : "The offset from the instruction reference.\nThis "
+//                           "can be negative."
+//         },
+//         "reason" : {
+//           "type" : "string",
+//           "description" :
+//               "A machine-readable explanation of why a breakpoint may not be
+//               " "verified. If a breakpoint is verified or a specific reason
+//               is " "not known, the adapter should omit this property.
+//               Possible " "values include:\n\n- `pending`: Indicates a
+//               breakpoint might be " "verified in the future, but the adapter
+//               cannot verify it in the " "current state.\n - `failed`:
+//               Indicates a breakpoint was not " "able to be verified, and the
+//               adapter does not believe it can be " "verified without
+//               intervention.",
+//           "enum" : [ "pending", "failed" ]
+//         }
+//       },
+//       "required" : ["verified"]
+//     },
+
+void request_setInstructionBreakpoints(const llvm::json::Object &request) {
+  llvm::json::Object response;
+  llvm::json::Array response_breakpoints;
+  llvm::json::Object body;
+  FillResponse(request, response);
+
+  auto arguments = request.getObject("arguments");
+  auto breakpoints = arguments->getArray("breakpoints");
+
+  // It holds active instruction breakpoint list received from DAP.
+  InstructionBreakpointMap request_ibp;
+  if (breakpoints) {
+    for (const auto &bp : *breakpoints) {
+      auto bp_obj = bp.getAsObject();
+      if (bp_obj) {
+        // Read instruction breakpoint request.
+        InstructionBreakpoint inst_bp(*bp_obj);
+        // Store them into map for reference.
+        request_ibp[inst_bp.instructionAddressReference] = std::move(inst_bp);
+      }
+    }
+
+    // Iterate previous active instruction breakpoint list.
+    for (auto &prev_ibp : g_dap.instruction_breakpoints) {
+      // Find previous instruction breakpoint reference address in newly
+      // received instruction breakpoint list.
+      auto inst_reference = request_ibp.find(prev_ibp.first);
+      // Request for remove and delete the breakpoint, if the prev instruction
+      // breakpoint ID is not available in active instrcation breakpoint list.
+      // Means delete removed breakpoint instance.
+      if (inst_reference == request_ibp.end()) {
+        g_dap.target.BreakpointDelete(prev_ibp.second.id);
+        // Update Prev instruction breakpoint list.
+        g_dap.instruction_breakpoints.erase(prev_ibp.first);
+      } else {
+        // Instead of recreating breakpoint instance, update the breakpoint if
+        // there are any conditional changes.
+        prev_ibp.second.UpdateBreakpoint(inst_reference->second);
+        request_ibp.erase(inst_reference);
+        response_breakpoints.emplace_back(
+            CreateInstructionBreakpoint(&prev_ibp.second));
+      }
+    }
+
+    for (auto &req_bpi : request_ibp) {
+      // Add this breakpoint info to the response
+      g_dap.instruction_breakpoints[req_bpi.first] = std::move(req_bpi.second);
+      InstructionBreakpoint &new_bp =
+          g_dap.instruction_breakpoints[req_bpi.first];
+      new_bp.SetInstructionBreakpoint();
+      response_breakpoints.emplace_back(CreateInstructionBreakpoint(&new_bp));
+    }
+  }
+
+  body.try_emplace("breakpoints", std::move(response_breakpoints));
+  response.try_emplace("body", std::move(body));
+  g_dap.SendJSON(llvm::json::Value(std::move(response)));
+}
+
 void RegisterRequestCallbacks() {
   g_dap.RegisterRequestCallback("attach", request_attach);
   g_dap.RegisterRequestCallback("completions", request_completions);
@@ -4040,6 +4502,9 @@ void RegisterRequestCallbacks() {
   g_dap.RegisterRequestCallback("threads", request_threads);
   g_dap.RegisterRequestCallback("variables", request_variables);
   g_dap.RegisterRequestCallback("disassemble", request_disassemble);
+  // Instruction breakpoint request
+  g_dap.RegisterRequestCallback("setInstructionBreakpoints",
+                                request_setInstructionBreakpoints);
   // Custom requests
   g_dap.RegisterRequestCallback("compileUnits", request_compileUnits);
   g_dap.RegisterRequestCallback("modules", request_modules);
@@ -4291,6 +4756,11 @@ int main(int argc, char *argv[]) {
   } else {
     g_dap.input.descriptor = StreamDescriptor::from_file(fileno(stdin), false);
     g_dap.output.descriptor = StreamDescriptor::from_file(new_stdout_fd, false);
+  }
+
+  for (const std::string &arg :
+       input_args.getAllArgValues(OPT_pre_init_command)) {
+    g_dap.pre_init_commands.push_back(arg);
   }
 
   bool CleanExit = true;

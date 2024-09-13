@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC___SUPPORT_FPUTIL_X86_64_FENVIMPL_H
 
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/architectures.h"
 
 #if !defined(LIBC_TARGET_ARCH_IS_X86)
@@ -21,7 +22,7 @@
 #include "hdr/types/fenv_t.h"
 #include "src/__support/macros/sanitizer.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
 
 namespace internal {
@@ -248,7 +249,7 @@ LIBC_INLINE int raise_except(int excepts) {
   // of the "Intel 64 and IA-32 Architectures Software Developer's
   // Manual, Vol 1".
 
-  // FPU status word is read for each exception seperately as the
+  // FPU status word is read for each exception separately as the
   // exception handler can potentially write to it (typically to clear
   // the corresponding exception flag). By reading it separately, we
   // ensure that the writes by the exception handler are maintained
@@ -642,6 +643,6 @@ LIBC_INLINE int set_env(const fenv_t *envp) {
 #endif
 
 } // namespace fputil
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_X86_64_FENVIMPL_H

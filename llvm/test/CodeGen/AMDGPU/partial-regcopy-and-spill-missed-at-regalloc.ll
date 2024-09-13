@@ -111,4 +111,4 @@ define amdgpu_kernel void @partial_copy(<4 x i32> %arg) #0 {
 
 declare <4 x i32> @llvm.amdgcn.mfma.i32.4x4x4i8(i32, i32, <4 x i32>, i32, i32, i32)
 
-attributes #0 = { nounwind "amdgpu-num-vgpr"="5" }
+attributes #0 = { nounwind "amdgpu-num-vgpr"="5" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }

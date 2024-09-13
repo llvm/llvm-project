@@ -22,7 +22,11 @@ function(get_object_files_for_test result skipped_entrypoints_list)
   foreach(dep IN LISTS unchecked_list)
     if (NOT TARGET ${dep})
       # Skip tests with undefined dependencies.
-      list(APPEND skipped_list ${dep})
+      # Compiler-RT targets are added only if they are enabled. However, such targets may not be defined
+      # at the time of the libc build. We should skip checking such targets.
+      if (NOT ${dep} MATCHES "^RTScudo.*|^RTGwp.*")
+        list(APPEND skipped_list ${dep})
+      endif()
       continue()
     endif()
     get_target_property(aliased_target ${dep} "ALIASED_TARGET")
@@ -188,6 +192,7 @@ function(create_libc_unittest fq_target_name)
   target_include_directories(${fq_build_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
   target_include_directories(${fq_build_target_name} PRIVATE ${LIBC_SOURCE_DIR})
   target_compile_options(${fq_build_target_name} PRIVATE ${compile_options})
+  target_link_options(${fq_build_target_name} PRIVATE ${compile_options})
 
   if(NOT LIBC_UNITTEST_CXX_STANDARD)
     set(LIBC_UNITTEST_CXX_STANDARD ${CMAKE_CXX_STANDARD})
@@ -344,7 +349,7 @@ function(add_libc_fuzzer target_name)
 endfunction(add_libc_fuzzer)
 
 # Get libgcc_s to be used in hermetic and integration tests.
-if(NOT LIBC_CC_SUPPORTS_NOSTDLIBPP)
+if(NOT MSVC AND NOT LIBC_CC_SUPPORTS_NOSTDLIBPP)
   execute_process(COMMAND ${CMAKE_CXX_COMPILER} -print-file-name=libgcc_s.so.1
                   OUTPUT_VARIABLE LIBGCC_S_LOCATION)
   string(STRIP ${LIBGCC_S_LOCATION} LIBGCC_S_LOCATION)
@@ -453,8 +458,6 @@ function(add_integration_test test_name)
   add_executable(
     ${fq_build_target_name}
     EXCLUDE_FROM_ALL
-    # The NVIDIA 'nvlink' linker does not currently support static libraries.
-    $<$<BOOL:${LIBC_TARGET_ARCHITECTURE_IS_NVPTX}>:${link_object_files}>
     ${INTEGRATION_TEST_SRCS}
     ${INTEGRATION_TEST_HDRS}
   )
@@ -463,8 +466,9 @@ function(add_integration_test test_name)
   target_include_directories(${fq_build_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
   target_include_directories(${fq_build_target_name} PRIVATE ${LIBC_SOURCE_DIR})
 
-  _get_hermetic_test_compile_options(compile_options "${INTEGRATION_TEST_COMPILE_OPTIONS}")
-  target_compile_options(${fq_build_target_name} PRIVATE ${compile_options})
+  _get_hermetic_test_compile_options(compile_options "")
+  target_compile_options(${fq_build_target_name} PRIVATE
+                         ${compile_options} ${INTEGRATION_TEST_COMPILE_OPTIONS})
 
   if(LIBC_TARGET_ARCHITECTURE_IS_AMDGPU)
     target_link_options(${fq_build_target_name} PRIVATE
@@ -473,11 +477,11 @@ function(add_integration_test test_name)
       "-Wl,-mllvm,-amdgpu-lower-global-ctor-dtor=0" -nostdlib -static
       "-Wl,-mllvm,-amdhsa-code-object-version=${LIBC_GPU_CODE_OBJECT_VERSION}")
   elseif(LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
-    # We need to use the internal object versions for NVPTX.
-    set(internal_suffix ".__internal__")
     target_link_options(${fq_build_target_name} PRIVATE
       ${LIBC_COMPILE_OPTIONS_DEFAULT} -Wno-multi-gpu
       "-Wl,--suppress-stack-size-warning"
+      "-Wl,-mllvm,-nvptx-lower-global-ctor-dtor=1"
+      "-Wl,-mllvm,-nvptx-emit-init-fini-kernel"
       -march=${LIBC_GPU_TARGET_ARCHITECTURE} -nostdlib -static
       "--cuda-path=${LIBC_CUDA_ROOT}")
   elseif(LIBC_CC_SUPPORTS_NOSTDLIBPP)
@@ -490,10 +494,9 @@ function(add_integration_test test_name)
   endif()
   target_link_libraries(
     ${fq_build_target_name}
-    # The NVIDIA 'nvlink' linker does not currently support static libraries.
-    $<$<NOT:$<BOOL:${LIBC_TARGET_ARCHITECTURE_IS_NVPTX}>>:${fq_target_name}.__libc__>
-    libc.startup.${LIBC_TARGET_OS}.crt1${internal_suffix}
-    libc.test.IntegrationTest.test${internal_suffix}
+    ${fq_target_name}.__libc__
+    libc.startup.${LIBC_TARGET_OS}.crt1
+    libc.test.IntegrationTest.test
   )
   add_dependencies(${fq_build_target_name}
                    libc.test.IntegrationTest.test
@@ -526,12 +529,15 @@ function(add_integration_test test_name)
   add_dependencies(${INTEGRATION_TEST_SUITE} ${fq_target_name})
 endfunction(add_integration_test)
 
-# Rule to add a hermetic test. A hermetic test is one whose executable is fully
+# Rule to add a hermetic program. A hermetic program is one whose executable is fully
 # statically linked and consists of pieces drawn only from LLVM's libc. Nothing,
 # including the startup objects, come from the system libc.
 #
+# For the GPU, these can be either tests or benchmarks, depending on the value
+# of the LINK_LIBRARIES arg.
+#
 # Usage:
-#   add_libc_hermetic_test(
+#   add_libc_hermetic(
 #     <target name>
 #     SUITE <the suite to which the test should belong>
 #     SRCS <src1.cpp> [src2.cpp ...]
@@ -543,14 +549,14 @@ endfunction(add_integration_test)
 #     LINK_LIBRARIES <list of linking libraries for this target>
 #     LOADER_ARGS <list of special args to loaders (like the GPU loader)>
 #   )
-function(add_libc_hermetic_test test_name)
+function(add_libc_hermetic test_name)
   if(NOT TARGET libc.startup.${LIBC_TARGET_OS}.crt1)
     message(VERBOSE "Skipping ${fq_target_name} as it is not available on ${LIBC_TARGET_OS}.")
     return()
   endif()
   cmake_parse_arguments(
     "HERMETIC_TEST"
-    "" # No optional arguments
+    "IS_GPU_BENCHMARK" # Optional arguments
     "SUITE" # Single value arguments
     "SRCS;HDRS;DEPENDS;ARGS;ENV;COMPILE_OPTIONS;LINK_LIBRARIES;LOADER_ARGS" # Multi-value arguments
     ${ARGN}
@@ -625,8 +631,6 @@ function(add_libc_hermetic_test test_name)
   add_executable(
     ${fq_build_target_name}
     EXCLUDE_FROM_ALL
-    # The NVIDIA 'nvlink' linker does not currently support static libraries.
-    $<$<BOOL:${LIBC_TARGET_ARCHITECTURE_IS_NVPTX}>:${link_object_files}>
     ${HERMETIC_TEST_SRCS}
     ${HERMETIC_TEST_HDRS}
   )
@@ -636,11 +640,12 @@ function(add_libc_hermetic_test test_name)
       #OUTPUT_NAME ${fq_target_name}
   )
 
-  _get_hermetic_test_compile_options(compile_options "${HERMETIC_TEST_COMPILE_OPTIONS}")
   target_include_directories(${fq_build_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
   target_include_directories(${fq_build_target_name} PRIVATE ${LIBC_SOURCE_DIR})
-  _get_hermetic_test_compile_options(compile_options "${HERMETIC_TEST_COMPILE_OPTIONS}")
-  target_compile_options(${fq_build_target_name} PRIVATE ${compile_options})
+  _get_hermetic_test_compile_options(compile_options "")
+  target_compile_options(${fq_build_target_name} PRIVATE
+                         ${compile_options}
+                         ${HERMETIC_TEST_COMPILE_OPTIONS})
 
   set(link_libraries "")
   foreach(lib IN LISTS HERMETIC_TEST_LINK_LIBRARIES)
@@ -653,16 +658,16 @@ function(add_libc_hermetic_test test_name)
 
   if(LIBC_TARGET_ARCHITECTURE_IS_AMDGPU)
     target_link_options(${fq_build_target_name} PRIVATE
-      ${LIBC_COMPILE_OPTIONS_DEFAULT}
-      -mcpu=${LIBC_GPU_TARGET_ARCHITECTURE} -flto -Wno-multi-gpu
+      ${LIBC_COMPILE_OPTIONS_DEFAULT} -Wno-multi-gpu
+      -mcpu=${LIBC_GPU_TARGET_ARCHITECTURE} -flto
       "-Wl,-mllvm,-amdgpu-lower-global-ctor-dtor=0" -nostdlib -static
       "-Wl,-mllvm,-amdhsa-code-object-version=${LIBC_GPU_CODE_OBJECT_VERSION}")
   elseif(LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
-    # We need to use the internal object versions for NVPTX.
-    set(internal_suffix ".__internal__")
     target_link_options(${fq_build_target_name} PRIVATE
       ${LIBC_COMPILE_OPTIONS_DEFAULT} -Wno-multi-gpu
       "-Wl,--suppress-stack-size-warning"
+      "-Wl,-mllvm,-nvptx-lower-global-ctor-dtor=1"
+      "-Wl,-mllvm,-nvptx-emit-init-fini-kernel"
       -march=${LIBC_GPU_TARGET_ARCHITECTURE} -nostdlib -static
       "--cuda-path=${LIBC_CUDA_ROOT}")
   elseif(LIBC_CC_SUPPORTS_NOSTDLIBPP)
@@ -676,16 +681,23 @@ function(add_libc_hermetic_test test_name)
   target_link_libraries(
     ${fq_build_target_name}
     PRIVATE
-      libc.startup.${LIBC_TARGET_OS}.crt1${internal_suffix}
+      libc.startup.${LIBC_TARGET_OS}.crt1
       ${link_libraries}
-      LibcTest.hermetic
       LibcHermeticTestSupport.hermetic
-      # The NVIDIA 'nvlink' linker does not currently support static libraries.
-      $<$<NOT:$<BOOL:${LIBC_TARGET_ARCHITECTURE_IS_NVPTX}>>:${fq_target_name}.__libc__>)
+      ${fq_target_name}.__libc__)
   add_dependencies(${fq_build_target_name}
                    LibcTest.hermetic
                    libc.test.UnitTest.ErrnoSetterMatcher
                    ${fq_deps_list})
+  # TODO: currently the dependency chain is broken such that getauxval cannot properly
+  # propagate to hermetic tests. This is a temporary workaround.
+  if (LIBC_TARGET_ARCHITECTURE_IS_AARCH64)
+    target_link_libraries(
+      ${fq_build_target_name}
+      PRIVATE
+        libc.src.sys.auxv.getauxval
+    )
+  endif()
 
   # Tests on the GPU require an external loader utility to launch the kernel.
   if(TARGET libc.utils.gpu.loader)
@@ -698,15 +710,29 @@ function(add_libc_hermetic_test test_name)
       $<TARGET_FILE:${fq_build_target_name}> ${HERMETIC_TEST_ARGS})
   add_custom_target(
     ${fq_target_name}
+    DEPENDS ${fq_target_name}-cmd
+  )
+
+  add_custom_command(
+    OUTPUT ${fq_target_name}-cmd
     COMMAND ${test_cmd}
     COMMAND_EXPAND_LISTS
     COMMENT "Running hermetic test ${fq_target_name}"
     ${LIBC_HERMETIC_TEST_JOB_POOL}
   )
 
+  set_source_files_properties(${fq_target_name}-cmd
+    PROPERTIES
+      SYMBOLIC "TRUE"
+  )
+
   add_dependencies(${HERMETIC_TEST_SUITE} ${fq_target_name})
-  add_dependencies(libc-hermetic-tests ${fq_target_name})
-endfunction(add_libc_hermetic_test)
+  if(NOT ${HERMETIC_TEST_IS_GPU_BENCHMARK})
+    # If it is a benchmark, it will already have been added to the
+    # gpu-benchmark target
+    add_dependencies(libc-hermetic-tests ${fq_target_name})
+  endif()
+endfunction(add_libc_hermetic)
 
 # A convenience function to add both a unit test as well as a hermetic test.
 function(add_libc_test test_name)
@@ -721,7 +747,12 @@ function(add_libc_test test_name)
     add_libc_unittest(${test_name}.__unit__ ${LIBC_TEST_UNPARSED_ARGUMENTS})
   endif()
   if(LIBC_ENABLE_HERMETIC_TESTS AND NOT LIBC_TEST_UNIT_TEST_ONLY)
-    add_libc_hermetic_test(${test_name}.__hermetic__ ${LIBC_TEST_UNPARSED_ARGUMENTS})
+    add_libc_hermetic(
+      ${test_name}.__hermetic__
+      LINK_LIBRARIES
+        LibcTest.hermetic
+      ${LIBC_TEST_UNPARSED_ARGUMENTS}
+    )
     get_fq_target_name(${test_name} fq_test_name)
     if(TARGET ${fq_test_name}.__hermetic__ AND TARGET ${fq_test_name}.__unit__)
       # Tests like the file tests perform file operations on disk file. If we

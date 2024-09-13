@@ -2,10 +2,13 @@
 # to build offload with CMake.
 
 cmake_minimum_required(VERSION 3.20.0)
+set(LLVM_SUBPROJECT_TITLE "liboffload")
 
 if ("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_SOURCE_DIR}")
   set(OPENMP_STANDALONE_BUILD TRUE)
   project(offload C CXX ASM)
+else()
+  set(OPENMP_STANDALONE_BUILD FALSE)
 endif()
 
 # Check that the library can actually be built.
@@ -143,6 +146,25 @@ set(LIBOMPTARGET_PLUGINS_TO_BUILD "all" CACHE STRING
 if(LIBOMPTARGET_PLUGINS_TO_BUILD STREQUAL "all")
   set(LIBOMPTARGET_PLUGINS_TO_BUILD ${LIBOMPTARGET_ALL_PLUGIN_TARGETS})
 endif()
+
+if(NOT CMAKE_SYSTEM_NAME MATCHES "Linux" AND
+   "host" IN_LIST LIBOMPTARGET_PLUGINS_TO_BUILD)
+  message(STATUS "Not building host plugin: only Linux systems are supported")
+  list(REMOVE_ITEM LIBOMPTARGET_PLUGINS_TO_BUILD "host")
+endif()
+if(NOT (CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64)|(ppc64le)|(aarch64)$"
+        AND CMAKE_SYSTEM_NAME MATCHES "Linux"))
+  if("amdgpu" IN_LIST LIBOMPTARGET_PLUGINS_TO_BUILD)
+    message(STATUS "Not building AMDGPU plugin: only support AMDGPU in "
+                   "Linux x86_64, ppc64le, or aarch64 hosts")
+    list(REMOVE_ITEM LIBOMPTARGET_PLUGINS_TO_BUILD "amdgpu")
+  endif()
+  if("cuda" IN_LIST LIBOMPTARGET_PLUGINS_TO_BUILD)
+    message(STATUS "Not building CUDA plugin: only support CUDA in "
+                   "Linux x86_64, ppc64le, or aarch64 hosts")
+    list(REMOVE_ITEM LIBOMPTARGET_PLUGINS_TO_BUILD "cuda")
+  endif()
+endif()
 message(STATUS "Building the offload library with support for "
                "the \"${LIBOMPTARGET_PLUGINS_TO_BUILD}\" plugins")
 
@@ -170,8 +192,8 @@ set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} powerpc64le-ibm-linux
 set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} powerpc64le-ibm-linux-gnu-LTO")
 set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} powerpc64-ibm-linux-gnu")
 set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} powerpc64-ibm-linux-gnu-LTO")
-set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} x86_64-pc-linux-gnu")
-set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} x86_64-pc-linux-gnu-LTO")
+set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} x86_64-unknown-linux-gnu")
+set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} x86_64-unknown-linux-gnu-LTO")
 set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} nvptx64-nvidia-cuda")
 set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} nvptx64-nvidia-cuda-LTO")
 set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} nvptx64-nvidia-cuda-JIT-LTO")
@@ -260,15 +282,15 @@ if(OPENMP_STANDALONE_BUILD)
       ${LLVM_LIBRARY_DIRS}
     REQUIRED
   )
-
-  macro(pythonize_bool var)
-  if (${var})
-    set(${var} True)
-  else()
-    set(${var} False)
-  endif()
-  endmacro()
 endif()
+
+macro(pythonize_bool var)
+if (${var})
+  set(${var} True)
+else()
+  set(${var} False)
+endif()
+endmacro()
 
 if(OPENMP_STANDALONE_BUILD OR TARGET omp)
   # Check LIBOMP_HAVE_VERSION_SCRIPT_FLAG

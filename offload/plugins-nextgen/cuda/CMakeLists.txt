@@ -1,10 +1,3 @@
-if (NOT (CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64)|(ppc64le)|(aarch64)$" AND CMAKE_SYSTEM_NAME MATCHES "Linux"))
-  message(STATUS "Not building CUDA NextGen offloading plugin: only support CUDA in Linux x86_64, ppc64le, or aarch64 hosts.")
-  return()
-endif()
-
-message(STATUS "Building CUDA NextGen offloading plugin.")
-
 # Create the library and add the default arguments.
 add_target_library(omptarget.rtl.cuda CUDA)
 

@@ -269,3 +269,14 @@ _CLC_DEF _CLC_OVERLOAD float fma(float a, float b, float c) {
                   ((uint)st_fma.mantissa.lo & 0x7fffff));
 }
 _CLC_TERNARY_VECTORIZE(_CLC_DEF _CLC_OVERLOAD, float, fma, float, float, float)
+
+#ifdef cl_khr_fp16
+
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+
+_CLC_DEF _CLC_OVERLOAD half fma(half a, half b, half c) {
+  return (half)mad((float)a, (float)b, (float)c);
+}
+_CLC_TERNARY_VECTORIZE(_CLC_DEF _CLC_OVERLOAD, half, fma, half, half, half)
+
+#endif

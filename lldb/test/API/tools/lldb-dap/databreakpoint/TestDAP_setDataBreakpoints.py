@@ -13,7 +13,6 @@ class TestDAP_setDataBreakpoints(lldbdap_testcase.DAPTestCaseBase):
         self.accessTypes = ["read", "write", "readWrite"]
 
     @skipIfWindows
-    @skipIfRemote
     def test_duplicate_start_addresses(self):
         """Test setDataBreakpoints with multiple watchpoints starting at the same addresses."""
         program = self.getBuildArtifact("a.out")
@@ -58,7 +57,6 @@ class TestDAP_setDataBreakpoints(lldbdap_testcase.DAPTestCaseBase):
         self.assertEqual(i_val, "2")
 
     @skipIfWindows
-    @skipIfRemote
     def test_expression(self):
         """Tests setting data breakpoints on expression."""
         program = self.getBuildArtifact("a.out")
@@ -99,7 +97,6 @@ class TestDAP_setDataBreakpoints(lldbdap_testcase.DAPTestCaseBase):
         self.assertEqual(i_val, "2")
 
     @skipIfWindows
-    @skipIfRemote
     def test_functionality(self):
         """Tests setting data breakpoints on variable."""
         program = self.getBuildArtifact("a.out")

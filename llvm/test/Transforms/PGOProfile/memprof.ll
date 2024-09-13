@@ -5,6 +5,8 @@
 ; REQUIRES: zlib
 ;; Avoid failures on big-endian systems that can't read the profile properly
 ; REQUIRES: x86_64-linux
+;; -stats requires asserts
+; REQUIRES: asserts
 
 ;; TODO: Use text profile inputs once that is available for memprof.
 ;; # To update the Inputs below, run Inputs/update_memprof_inputs.sh.
@@ -25,7 +27,7 @@
 ; ALL-NOT: no profile data available for function
 
 ;; Using a memprof-only profile for memprof-use should only give memprof metadata
-; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdata>' -pgo-warn-missing-function -S 2>&1 | FileCheck %s --check-prefixes=MEMPROF,ALL,MEMPROFONLY
+; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdata>' -pgo-warn-missing-function -S -memprof-print-match-info -stats 2>&1 | FileCheck %s --check-prefixes=MEMPROF,ALL,MEMPROFONLY,MEMPROFMATCHINFO,MEMPROFSTATS
 ; There should not be any PGO metadata
 ; MEMPROFONLY-NOT: !prof
 
@@ -61,13 +63,25 @@
 ;; give both memprof and pgo metadata.
 ; RUN: opt < %s -passes='pgo-instr-use,memprof-use<profile-filename=%t.pgomemprofdata>' -pgo-test-profile-file=%t.pgomemprofdata -pgo-warn-missing-function -S 2>&1 | FileCheck %s --check-prefixes=MEMPROF,ALL,PGO
 
+;; Check that the total sizes are reported if requested.
+; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdata>' -pgo-warn-missing-function -S -memprof-report-hinted-sizes 2>&1 | FileCheck %s --check-prefixes=TOTALSIZES
+
+; MEMPROFMATCHINFO: MemProf notcold context with id 1093248920606587996 has total profiled size 10 is matched
+; MEMPROFMATCHINFO: MemProf notcold context with id 5725971306423925017 has total profiled size 10 is matched
+; MEMPROFMATCHINFO: MemProf notcold context with id 6792096022461663180 has total profiled size 10 is matched
+; MEMPROFMATCHINFO: MemProf cold context with id 8525406123785421946 has total profiled size 10 is matched
+; MEMPROFMATCHINFO: MemProf cold context with id 11714230664165068698 has total profiled size 10 is matched
+; MEMPROFMATCHINFO: MemProf cold context with id 15737101490731057601 has total profiled size 10 is matched
+; MEMPROFMATCHINFO: MemProf cold context with id 16342802530253093571 has total profiled size 10 is matched
+; MEMPROFMATCHINFO: MemProf cold context with id 18254812774972004394 has total profiled size 10 is matched
+
 ; ModuleID = 'memprof.cc'
 source_filename = "memprof.cc"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
 ; Function Attrs: mustprogress noinline optnone uwtable
-; ALL-LABEL: define dso_local noundef ptr @_Z3foov()
+; ALL-LABEL: define dso_local noundef{{.*}}ptr @_Z3foov()
 ; There should be some PGO metadata
 ; PGO: !prof
 define dso_local noundef ptr @_Z3foov() #0 !dbg !10 {
@@ -82,7 +96,7 @@ entry:
 declare noundef nonnull ptr @_Znam(i64 noundef) #1
 
 ; Function Attrs: mustprogress noinline optnone uwtable
-; ALL-LABEL: define dso_local noundef ptr @_Z4foo2v()
+; ALL-LABEL: define dso_local noundef{{.*}}ptr @_Z4foo2v()
 define dso_local noundef ptr @_Z4foo2v() #0 !dbg !15 {
 entry:
   ; MEMPROF: call {{.*}} @_Z3foov{{.*}} !callsite ![[C2:[0-9]+]]
@@ -320,6 +334,18 @@ for.end:                                          ; preds = %for.cond
 ; MEMPROF: ![[C10]] = !{i64 2061451396820446691}
 ; MEMPROF: ![[C11]] = !{i64 1544787832369987002}
 
+;; For non-context sensitive allocations that get attributes we emit a message
+;; with the allocation hash, type, and size in bytes.
+; TOTALSIZES: Total size for allocation with location hash 6792096022461663180 and single alloc type notcold: 10
+; TOTALSIZES: Total size for allocation with location hash 15737101490731057601 and single alloc type cold: 10
+;; For context sensitive allocations the size in bytes is included on the MIB
+;; metadata.
+; TOTALSIZES: !"cold", i64 10}
+; TOTALSIZES: !"cold", i64 10}
+; TOTALSIZES: !"notcold", i64 10}
+; TOTALSIZES: !"cold", i64 20}
+; TOTALSIZES: !"notcold", i64 10}
+
 
 ; MEMPROFNOCOLINFO: #[[A1]] = { builtin allocsize(0) "memprof"="notcold" }
 ; MEMPROFNOCOLINFO: #[[A2]] = { builtin allocsize(0) "memprof"="cold" }
@@ -345,6 +371,14 @@ for.end:                                          ; preds = %for.cond
 ; MEMPROFNOCOLINFO: ![[C9]] = !{i64 -962804290746547393}
 ; MEMPROFNOCOLINFO: ![[C10]] = !{i64 -4535090212904553409}
 ; MEMPROFNOCOLINFO: ![[C11]] = !{i64 3577763375057267810}
+
+; MEMPROFSTATS:  8 memprof - Number of alloc contexts in memory profile.
+; MEMPROFSTATS: 10 memprof - Number of callsites in memory profile.
+; MEMPROFSTATS:  6 memprof - Number of functions having valid memory profile.
+; MEMPROFSTATS:  8 memprof - Number of matched memory profile alloc contexts.
+; MEMPROFSTATS:  3 memprof - Number of matched memory profile allocs.
+; MEMPROFSTATS: 10 memprof - Number of matched memory profile callsites.
+
 
 ; Function Attrs: argmemonly nofree nounwind willreturn writeonly
 declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1 immarg) #3

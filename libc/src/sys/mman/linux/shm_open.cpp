@@ -8,10 +8,11 @@
 
 #include "src/sys/mman/shm_open.h"
 #include "llvm-libc-macros/fcntl-macros.h"
+#include "src/__support/macros/config.h"
 #include "src/fcntl/open.h"
 #include "src/sys/mman/linux/shm_common.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 static constexpr int DEFAULT_OFLAGS = O_NOFOLLOW | O_CLOEXEC | O_NONBLOCK;
 
@@ -22,4 +23,4 @@ LLVM_LIBC_FUNCTION(int, shm_open, (const char *name, int oflags, mode_t mode)) {
   return -1;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

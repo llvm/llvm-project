@@ -19,6 +19,7 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/MemoryModelRelaxationAnnotations.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/ModuleSlotTracker.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCSymbol.h"
@@ -222,9 +223,8 @@ TEST(MachineInstrPrintingTest, DebugLocPrinting) {
   raw_string_ostream OS(str);
   MI->print(OS, /*IsStandalone*/true, /*SkipOpers*/false, /*SkipDebugLoc*/false,
             /*AddNewLine*/false);
-  ASSERT_TRUE(
-      StringRef(OS.str()).starts_with("$noreg = UNKNOWN debug-location "));
-  ASSERT_TRUE(StringRef(OS.str()).ends_with("filename:1:5"));
+  ASSERT_TRUE(StringRef(str).starts_with("$noreg = UNKNOWN debug-location "));
+  ASSERT_TRUE(StringRef(str).ends_with("filename:1:5"));
 }
 
 TEST(MachineInstrSpan, DistanceBegin) {

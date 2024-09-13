@@ -82,6 +82,65 @@ bool SPIRVTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   return false;
 }
 
+std::pair<unsigned, const TargetRegisterClass *>
+SPIRVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
+                                                  StringRef Constraint,
+                                                  MVT VT) const {
+  const TargetRegisterClass *RC = nullptr;
+  if (Constraint.starts_with("{"))
+    return std::make_pair(0u, RC);
+
+  if (VT.isFloatingPoint())
+    RC = VT.isVector() ? &SPIRV::vfIDRegClass : &SPIRV::fIDRegClass;
+  else if (VT.isInteger())
+    RC = VT.isVector() ? &SPIRV::vIDRegClass : &SPIRV::iIDRegClass;
+  else
+    RC = &SPIRV::iIDRegClass;
+
+  return std::make_pair(0u, RC);
+}
+
+inline Register getTypeReg(MachineRegisterInfo *MRI, Register OpReg) {
+  SPIRVType *TypeInst = MRI->getVRegDef(OpReg);
+  return TypeInst && TypeInst->getOpcode() == SPIRV::OpFunctionParameter
+             ? TypeInst->getOperand(1).getReg()
+             : OpReg;
+}
+
+static void doInsertBitcast(const SPIRVSubtarget &STI, MachineRegisterInfo *MRI,
+                            SPIRVGlobalRegistry &GR, MachineInstr &I,
+                            Register OpReg, unsigned OpIdx,
+                            SPIRVType *NewPtrType) {
+  Register NewReg = MRI->createGenericVirtualRegister(LLT::scalar(64));
+  MachineIRBuilder MIB(I);
+  bool Res = MIB.buildInstr(SPIRV::OpBitcast)
+                 .addDef(NewReg)
+                 .addUse(GR.getSPIRVTypeID(NewPtrType))
+                 .addUse(OpReg)
+                 .constrainAllUses(*STI.getInstrInfo(), *STI.getRegisterInfo(),
+                                   *STI.getRegBankInfo());
+  if (!Res)
+    report_fatal_error("insert validation bitcast: cannot constrain all uses");
+  MRI->setRegClass(NewReg, &SPIRV::iIDRegClass);
+  GR.assignSPIRVTypeToVReg(NewPtrType, NewReg, MIB.getMF());
+  I.getOperand(OpIdx).setReg(NewReg);
+}
+
+static SPIRVType *createNewPtrType(SPIRVGlobalRegistry &GR, MachineInstr &I,
+                                   SPIRVType *OpType, bool ReuseType,
+                                   bool EmitIR, SPIRVType *ResType,
+                                   const Type *ResTy) {
+  SPIRV::StorageClass::StorageClass SC =
+      static_cast<SPIRV::StorageClass::StorageClass>(
+          OpType->getOperand(1).getImm());
+  MachineIRBuilder MIB(I);
+  SPIRVType *NewBaseType =
+      ReuseType ? ResType
+                : GR.getOrCreateSPIRVType(
+                      ResTy, MIB, SPIRV::AccessQualifier::ReadWrite, EmitIR);
+  return GR.getOrCreateSPIRVPointerType(NewBaseType, MIB, SC);
+}
+
 // Insert a bitcast before the instruction to keep SPIR-V code valid
 // when there is a type mismatch between results and operand types.
 static void validatePtrTypes(const SPIRVSubtarget &STI,
@@ -91,11 +150,7 @@ static void validatePtrTypes(const SPIRVSubtarget &STI,
   // Get operand type
   MachineFunction *MF = I.getParent()->getParent();
   Register OpReg = I.getOperand(OpIdx).getReg();
-  SPIRVType *TypeInst = MRI->getVRegDef(OpReg);
-  Register OpTypeReg =
-      TypeInst && TypeInst->getOpcode() == SPIRV::OpFunctionParameter
-          ? TypeInst->getOperand(1).getReg()
-          : OpReg;
+  Register OpTypeReg = getTypeReg(MRI, OpReg);
   SPIRVType *OpType = GR.getSPIRVTypeForVReg(OpTypeReg, MF);
   if (!ResType || !OpType || OpType->getOpcode() != SPIRV::OpTypePointer)
     return;
@@ -112,30 +167,93 @@ static void validatePtrTypes(const SPIRVSubtarget &STI,
     return;
   // There is a type mismatch between results and operand types
   // and we insert a bitcast before the instruction to keep SPIR-V code valid
+  SPIRVType *NewPtrType =
+      createNewPtrType(GR, I, OpType, IsSameMF, false, ResType, ResTy);
+  if (!GR.isBitcastCompatible(NewPtrType, OpType))
+    report_fatal_error(
+        "insert validation bitcast: incompatible result and operand types");
+  doInsertBitcast(STI, MRI, GR, I, OpReg, OpIdx, NewPtrType);
+}
+
+// Insert a bitcast before OpGroupWaitEvents if the last argument is a pointer
+// that doesn't point to OpTypeEvent.
+static void validateGroupWaitEventsPtr(const SPIRVSubtarget &STI,
+                                       MachineRegisterInfo *MRI,
+                                       SPIRVGlobalRegistry &GR,
+                                       MachineInstr &I) {
+  constexpr unsigned OpIdx = 2;
+  MachineFunction *MF = I.getParent()->getParent();
+  Register OpReg = I.getOperand(OpIdx).getReg();
+  Register OpTypeReg = getTypeReg(MRI, OpReg);
+  SPIRVType *OpType = GR.getSPIRVTypeForVReg(OpTypeReg, MF);
+  if (!OpType || OpType->getOpcode() != SPIRV::OpTypePointer)
+    return;
+  SPIRVType *ElemType = GR.getSPIRVTypeForVReg(OpType->getOperand(2).getReg());
+  if (!ElemType || ElemType->getOpcode() == SPIRV::OpTypeEvent)
+    return;
+  // Insert a bitcast before the instruction to keep SPIR-V code valid.
+  LLVMContext &Context = MF->getFunction().getContext();
+  SPIRVType *NewPtrType =
+      createNewPtrType(GR, I, OpType, false, true, nullptr,
+                       TargetExtType::get(Context, "spirv.Event"));
+  doInsertBitcast(STI, MRI, GR, I, OpReg, OpIdx, NewPtrType);
+}
+
+static void validateLifetimeStart(const SPIRVSubtarget &STI,
+                                  MachineRegisterInfo *MRI,
+                                  SPIRVGlobalRegistry &GR, MachineInstr &I) {
+  Register PtrReg = I.getOperand(0).getReg();
+  MachineFunction *MF = I.getParent()->getParent();
+  Register PtrTypeReg = getTypeReg(MRI, PtrReg);
+  SPIRVType *PtrType = GR.getSPIRVTypeForVReg(PtrTypeReg, MF);
+  SPIRVType *PonteeElemType = PtrType ? GR.getPointeeType(PtrType) : nullptr;
+  if (!PonteeElemType || PonteeElemType->getOpcode() == SPIRV::OpTypeVoid ||
+      (PonteeElemType->getOpcode() == SPIRV::OpTypeInt &&
+       PonteeElemType->getOperand(1).getImm() == 8))
+    return;
+  // To keep the code valid a bitcast must be inserted
+  SPIRV::StorageClass::StorageClass SC =
+      static_cast<SPIRV::StorageClass::StorageClass>(
+          PtrType->getOperand(1).getImm());
+  MachineIRBuilder MIB(I);
+  LLVMContext &Context = MF->getFunction().getContext();
+  SPIRVType *ElemType =
+      GR.getOrCreateSPIRVType(IntegerType::getInt8Ty(Context), MIB);
+  SPIRVType *NewPtrType = GR.getOrCreateSPIRVPointerType(ElemType, MIB, SC);
+  doInsertBitcast(STI, MRI, GR, I, PtrReg, 0, NewPtrType);
+}
+
+static void validateGroupAsyncCopyPtr(const SPIRVSubtarget &STI,
+                                      MachineRegisterInfo *MRI,
+                                      SPIRVGlobalRegistry &GR, MachineInstr &I,
+                                      unsigned OpIdx) {
+  MachineFunction *MF = I.getParent()->getParent();
+  Register OpReg = I.getOperand(OpIdx).getReg();
+  Register OpTypeReg = getTypeReg(MRI, OpReg);
+  SPIRVType *OpType = GR.getSPIRVTypeForVReg(OpTypeReg, MF);
+  if (!OpType || OpType->getOpcode() != SPIRV::OpTypePointer)
+    return;
+  SPIRVType *ElemType = GR.getSPIRVTypeForVReg(OpType->getOperand(2).getReg());
+  if (!ElemType || ElemType->getOpcode() != SPIRV::OpTypeStruct ||
+      ElemType->getNumOperands() != 2)
+    return;
+  // It's a structure-wrapper around another type with a single member field.
+  SPIRVType *MemberType =
+      GR.getSPIRVTypeForVReg(ElemType->getOperand(1).getReg());
+  if (!MemberType)
+    return;
+  unsigned MemberTypeOp = MemberType->getOpcode();
+  if (MemberTypeOp != SPIRV::OpTypeVector && MemberTypeOp != SPIRV::OpTypeInt &&
+      MemberTypeOp != SPIRV::OpTypeFloat && MemberTypeOp != SPIRV::OpTypeBool)
+    return;
+  // It's a structure-wrapper around a valid type. Insert a bitcast before the
+  // instruction to keep SPIR-V code valid.
   SPIRV::StorageClass::StorageClass SC =
       static_cast<SPIRV::StorageClass::StorageClass>(
           OpType->getOperand(1).getImm());
   MachineIRBuilder MIB(I);
-  SPIRVType *NewBaseType =
-      IsSameMF ? ResType
-               : GR.getOrCreateSPIRVType(
-                     ResTy, MIB, SPIRV::AccessQualifier::ReadWrite, false);
-  SPIRVType *NewPtrType = GR.getOrCreateSPIRVPointerType(NewBaseType, MIB, SC);
-  if (!GR.isBitcastCompatible(NewPtrType, OpType))
-    report_fatal_error(
-        "insert validation bitcast: incompatible result and operand types");
-  Register NewReg = MRI->createGenericVirtualRegister(LLT::scalar(32));
-  bool Res = MIB.buildInstr(SPIRV::OpBitcast)
-                 .addDef(NewReg)
-                 .addUse(GR.getSPIRVTypeID(NewPtrType))
-                 .addUse(OpReg)
-                 .constrainAllUses(*STI.getInstrInfo(), *STI.getRegisterInfo(),
-                                   *STI.getRegBankInfo());
-  if (!Res)
-    report_fatal_error("insert validation bitcast: cannot constrain all uses");
-  MRI->setRegClass(NewReg, &SPIRV::IDRegClass);
-  GR.assignSPIRVTypeToVReg(NewPtrType, NewReg, MIB.getMF());
-  I.getOperand(OpIdx).setReg(NewReg);
+  SPIRVType *NewPtrType = GR.getOrCreateSPIRVPointerType(MemberType, MIB, SC);
+  doInsertBitcast(STI, MRI, GR, I, OpReg, OpIdx, NewPtrType);
 }
 
 // Insert a bitcast before the function call instruction to keep SPIR-V code
@@ -235,6 +353,7 @@ void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
   GR.setCurrentFunc(MF);
   for (MachineFunction::iterator I = MF.begin(), E = MF.end(); I != E; ++I) {
     MachineBasicBlock *MBB = &*I;
+    SmallPtrSet<MachineInstr *, 8> ToMove;
     for (MachineBasicBlock::iterator MBBI = MBB->begin(), MBBE = MBB->end();
          MBBI != MBBE;) {
       MachineInstr &MI = *MBBI++;
@@ -274,6 +393,7 @@ void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
                          GR.getSPIRVTypeForVReg(MI.getOperand(1).getReg()));
         break;
       case SPIRV::OpPtrCastToGeneric:
+      case SPIRV::OpGenericCastToPtr:
         validateAccessChain(STI, MRI, GR, MI);
         break;
       case SPIRV::OpInBoundsPtrAccessChain:
@@ -314,6 +434,19 @@ void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
                                       SPIRV::OpTypeBool))
           MI.setDesc(STI.getInstrInfo()->get(SPIRV::OpLogicalNotEqual));
         break;
+      case SPIRV::OpLifetimeStart:
+      case SPIRV::OpLifetimeStop:
+        if (MI.getOperand(1).getImm() > 0)
+          validateLifetimeStart(STI, MRI, GR, MI);
+        break;
+      case SPIRV::OpGroupAsyncCopy:
+        validateGroupAsyncCopyPtr(STI, MRI, GR, MI, 3);
+        validateGroupAsyncCopyPtr(STI, MRI, GR, MI, 4);
+        break;
+      case SPIRV::OpGroupWaitEvents:
+        // OpGroupWaitEvents ..., ..., <pointer to OpTypeEvent>
+        validateGroupWaitEventsPtr(STI, MRI, GR, MI);
+        break;
       case SPIRV::OpConstantI: {
         SPIRVType *Type = GR.getSPIRVTypeForVReg(MI.getOperand(1).getReg());
         if (Type->getOpcode() != SPIRV::OpTypeInt && MI.getOperand(2).isImm() &&
@@ -324,7 +457,22 @@ void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
             MI.removeOperand(i);
         }
       } break;
+      case SPIRV::OpPhi: {
+        // Phi refers to a type definition that goes after the Phi
+        // instruction, so that the virtual register definition of the type
+        // doesn't dominate all uses. Let's place the type definition
+        // instruction at the end of the predecessor.
+        MachineBasicBlock *Curr = MI.getParent();
+        SPIRVType *Type = GR.getSPIRVTypeForVReg(MI.getOperand(1).getReg());
+        if (Type->getParent() == Curr && !Curr->pred_empty())
+          ToMove.insert(const_cast<MachineInstr *>(Type));
+      } break;
       }
+    }
+    for (MachineInstr *MI : ToMove) {
+      MachineBasicBlock *Curr = MI->getParent();
+      MachineBasicBlock *Pred = *Curr->pred_begin();
+      Pred->insert(Pred->getFirstTerminator(), Curr->remove_instr(MI));
     }
   }
   ProcessedMF.insert(&MF);

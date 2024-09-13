@@ -536,9 +536,8 @@ class MetadataLoader::MetadataLoaderImpl {
     DenseSet<DILocalScope *> Visited;
     while (S && !isa<DISubprogram>(S)) {
       S = dyn_cast_or_null<DILocalScope>(S->getScope());
-      if (Visited.contains(S))
+      if (!Visited.insert(S).second)
         break;
-      Visited.insert(S);
     }
     ParentSubprogram[InitialScope] = llvm::dyn_cast_or_null<DISubprogram>(S);
 
@@ -549,8 +548,8 @@ class MetadataLoader::MetadataLoaderImpl {
   /// DISubprogram's retainedNodes.
   void upgradeCULocals() {
     if (NamedMDNode *CUNodes = TheModule.getNamedMetadata("llvm.dbg.cu")) {
-      for (unsigned I = 0, E = CUNodes->getNumOperands(); I != E; ++I) {
-        auto *CU = dyn_cast<DICompileUnit>(CUNodes->getOperand(I));
+      for (MDNode *N : CUNodes->operands()) {
+        auto *CU = dyn_cast<DICompileUnit>(N);
         if (!CU)
           continue;
 

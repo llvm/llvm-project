@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "X86ISelDAGToDAG.h"
 #include "X86.h"
 #include "X86MachineFunctionInfo.h"
 #include "X86RegisterInfo.h"
@@ -25,6 +26,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsX86.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -169,12 +171,10 @@ namespace {
     bool IndirectTlsSegRefs;
 
   public:
-    static char ID;
-
     X86DAGToDAGISel() = delete;
 
     explicit X86DAGToDAGISel(X86TargetMachine &tm, CodeGenOptLevel OptLevel)
-        : SelectionDAGISel(ID, tm, OptLevel), Subtarget(nullptr),
+        : SelectionDAGISel(tm, OptLevel), Subtarget(nullptr),
           OptForMinSize(false), IndirectTlsSegRefs(false) {}
 
     bool runOnMachineFunction(MachineFunction &MF) override {
@@ -187,9 +187,7 @@ namespace {
       OptForMinSize = MF.getFunction().hasMinSize();
       assert((!OptForMinSize || MF.getFunction().hasOptSize()) &&
              "OptForMinSize implies OptForSize");
-
-      SelectionDAGISel::runOnMachineFunction(MF);
-      return true;
+      return SelectionDAGISel::runOnMachineFunction(MF);
     }
 
     void emitFunctionEntryCode() override;
@@ -316,7 +314,8 @@ namespace {
         Disp = CurDAG->getTargetBlockAddress(AM.BlockAddr, MVT::i32, AM.Disp,
                                              AM.SymbolFlags);
       else
-        Disp = CurDAG->getTargetConstant(AM.Disp, DL, MVT::i32);
+        Disp =
+            CurDAG->getSignedConstant(AM.Disp, DL, MVT::i32, /*isTarget=*/true);
 
       if (AM.Segment.getNode())
         Segment = AM.Segment;
@@ -577,11 +576,20 @@ namespace {
     bool hasNoSignFlagUses(SDValue Flags) const;
     bool hasNoCarryFlagUses(SDValue Flags) const;
   };
+
+  class X86DAGToDAGISelLegacy : public SelectionDAGISelLegacy {
+  public:
+    static char ID;
+    explicit X86DAGToDAGISelLegacy(X86TargetMachine &tm,
+                                   CodeGenOptLevel OptLevel)
+        : SelectionDAGISelLegacy(
+              ID, std::make_unique<X86DAGToDAGISel>(tm, OptLevel)) {}
+  };
 }
 
-char X86DAGToDAGISel::ID = 0;
+char X86DAGToDAGISelLegacy::ID = 0;
 
-INITIALIZE_PASS(X86DAGToDAGISel, DEBUG_TYPE, PASS_NAME, false, false)
+INITIALIZE_PASS(X86DAGToDAGISelLegacy, DEBUG_TYPE, PASS_NAME, false, false)
 
 // Returns true if this masked compare can be implemented legally with this
 // type.
@@ -915,7 +923,8 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
       if (Imm == EndbrImm || isEndbrImm64(Imm)) {
         // Check that the cf-protection-branch is enabled.
         Metadata *CFProtectionBranch =
-          MF->getMMI().getModule()->getModuleFlag("cf-protection-branch");
+            MF->getFunction().getParent()->getModuleFlag(
+                "cf-protection-branch");
         if (CFProtectionBranch || IndirectBranchTracking) {
           SDLoc dl(N);
           SDValue Complement = CurDAG->getConstant(~Imm, dl, VT, false, true);
@@ -1553,11 +1562,16 @@ void X86DAGToDAGISel::PostprocessISelDAG() {
     switch (Opc) {
     default:
       continue;
-    // TESTrr+ANDrr/rm -> TESTrr/TESTmr
+    // ANDrr/rm + TESTrr+ -> TESTrr/TESTmr
     case X86::TEST8rr:
     case X86::TEST16rr:
     case X86::TEST32rr:
-    case X86::TEST64rr: {
+    case X86::TEST64rr:
+    // ANDrr/rm + CTESTrr -> CTESTrr/CTESTmr
+    case X86::CTEST8rr:
+    case X86::CTEST16rr:
+    case X86::CTEST32rr:
+    case X86::CTEST64rr: {
       auto &Op0 = N->getOperand(0);
       if (Op0 != N->getOperand(1) || !Op0->hasNUsesOfValue(2, Op0.getResNo()) ||
           !Op0.isMachineOpcode())
@@ -1575,8 +1589,11 @@ void X86DAGToDAGISel::PostprocessISelDAG() {
         CASE_ND(AND64rr) {
           if (And->hasAnyUseOfValue(1))
             continue;
-          MachineSDNode *Test = CurDAG->getMachineNode(
-              Opc, SDLoc(N), MVT::i32, And.getOperand(0), And.getOperand(1));
+          SmallVector<SDValue> Ops(N->op_values());
+          Ops[0] = And.getOperand(0);
+          Ops[1] = And.getOperand(1);
+          MachineSDNode *Test =
+              CurDAG->getMachineNode(Opc, SDLoc(N), MVT::i32, Ops);
           ReplaceUses(N, Test);
           MadeChange = true;
           continue;
@@ -1588,8 +1605,9 @@ void X86DAGToDAGISel::PostprocessISelDAG() {
           if (And->hasAnyUseOfValue(1))
             continue;
           unsigned NewOpc;
+          bool IsCTESTCC = X86::isCTESTCC(Opc);
 #define FROM_TO(A, B)                                                          \
-  CASE_ND(A) NewOpc = X86::B;                                                  \
+  CASE_ND(A) NewOpc = IsCTESTCC ? X86::C##B : X86::B;                          \
   break;
           switch (And.getMachineOpcode()) {
             FROM_TO(AND8rm, TEST8mr);
@@ -1600,10 +1618,20 @@ void X86DAGToDAGISel::PostprocessISelDAG() {
 #undef FROM_TO
 #undef CASE_ND
           // Need to swap the memory and register operand.
-          SDValue Ops[] = {And.getOperand(1), And.getOperand(2),
-                           And.getOperand(3), And.getOperand(4),
-                           And.getOperand(5), And.getOperand(0),
-                           And.getOperand(6) /* Chain */};
+          SmallVector<SDValue> Ops = {And.getOperand(1), And.getOperand(2),
+                                      And.getOperand(3), And.getOperand(4),
+                                      And.getOperand(5), And.getOperand(0)};
+          // CC, Cflags.
+          if (IsCTESTCC) {
+            Ops.push_back(N->getOperand(2));
+            Ops.push_back(N->getOperand(3));
+          }
+          // Chain of memory load
+          Ops.push_back(And.getOperand(6));
+          // Glue
+          if (IsCTESTCC)
+            Ops.push_back(N->getOperand(4));
+
           MachineSDNode *Test = CurDAG->getMachineNode(
               NewOpc, SDLoc(N), MVT::i32, MVT::Other, Ops);
           CurDAG->setNodeMemRefs(
@@ -2103,7 +2131,7 @@ static bool foldMaskedShiftToScaledMask(SelectionDAG &DAG, SDValue N,
     X = NewX;
   }
 
-  SDValue NewMask = DAG.getConstant(Mask >> ShiftAmt, DL, VT);
+  SDValue NewMask = DAG.getSignedConstant(Mask >> ShiftAmt, DL, VT);
   SDValue NewAnd = DAG.getNode(ISD::AND, DL, VT, X, NewMask);
   SDValue NewShift = DAG.getNode(ISD::SHL, DL, VT, NewAnd, Shift.getOperand(1));
 
@@ -2719,7 +2747,7 @@ bool X86DAGToDAGISel::matchAddressRecursively(SDValue N, X86ISelAddressMode &AM,
         Src = Src.getOperand(0);
       }
 
-    if (Src.getOpcode() == ISD::SHL && Src.hasOneUse()) {
+    if (Src.getOpcode() == ISD::SHL && Src.hasOneUse() && N->hasOneUse()) {
       // Give up if the shift is not a valid scale factor [1,2,3].
       SDValue ShlSrc = Src.getOperand(0);
       SDValue ShlAmt = Src.getOperand(1);
@@ -3706,7 +3734,8 @@ bool X86DAGToDAGISel::foldLoadStoreIntoMemOperand(SDNode *Node) {
       }
 
       if (MemVT != MVT::i64 || isInt<32>(OperandV)) {
-        Operand = CurDAG->getTargetConstant(OperandV, SDLoc(Node), MemVT);
+        Operand = CurDAG->getSignedConstant(OperandV, SDLoc(Node), MemVT,
+                                            /*isTarget=*/true);
         NewOpc = SelectImmOpcode(Opc);
       }
     }
@@ -4480,7 +4509,7 @@ bool X86DAGToDAGISel::tryShrinkShlLogicImm(SDNode *N) {
     X = NewX;
   }
 
-  SDValue NewCst = CurDAG->getConstant(ShiftedVal, dl, NVT);
+  SDValue NewCst = CurDAG->getSignedConstant(ShiftedVal, dl, NVT);
   insertDAGNode(*CurDAG, SDValue(N, 0), NewCst);
   SDValue NewBinOp = CurDAG->getNode(Opcode, dl, NVT, X, NewCst);
   insertDAGNode(*CurDAG, SDValue(N, 0), NewBinOp);
@@ -5095,6 +5124,9 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     case Intrinsic::x86_tileloaddt164_internal: {
       if (!Subtarget->hasAMXTILE())
         break;
+      auto *MFI =
+          CurDAG->getMachineFunction().getInfo<X86MachineFunctionInfo>();
+      MFI->setAMXProgModel(AMXProgModelEnum::ManagedRA);
       unsigned Opc = IntNo == Intrinsic::x86_tileloadd64_internal
                          ? X86::PTILELOADDV
                          : X86::PTILELOADDT1V;
@@ -5176,6 +5208,9 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
       break;
     }
     case Intrinsic::x86_tilestored64_internal: {
+      auto *MFI =
+          CurDAG->getMachineFunction().getInfo<X86MachineFunctionInfo>();
+      MFI->setAMXProgModel(AMXProgModelEnum::ManagedRA);
       unsigned Opc = X86::PTILESTOREDV;
       // _tile_stored_internal(row, col, buf, STRIDE, c)
       SDValue Base = Node->getOperand(4);
@@ -5203,6 +5238,9 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     case Intrinsic::x86_tilestored64: {
       if (!Subtarget->hasAMXTILE())
         break;
+      auto *MFI =
+          CurDAG->getMachineFunction().getInfo<X86MachineFunctionInfo>();
+      MFI->setAMXProgModel(AMXProgModelEnum::DirectReg);
       unsigned Opc;
       switch (IntNo) {
       default: llvm_unreachable("Unexpected intrinsic!");
@@ -6574,9 +6612,13 @@ bool X86DAGToDAGISel::SelectInlineAsmMemoryOperand(
   return false;
 }
 
+X86ISelDAGToDAGPass::X86ISelDAGToDAGPass(X86TargetMachine &TM)
+    : SelectionDAGISelPass(
+          std::make_unique<X86DAGToDAGISel>(TM, TM.getOptLevel())) {}
+
 /// This pass converts a legalized DAG into a X86-specific DAG,
 /// ready for instruction scheduling.
 FunctionPass *llvm::createX86ISelDag(X86TargetMachine &TM,
                                      CodeGenOptLevel OptLevel) {
-  return new X86DAGToDAGISel(TM, OptLevel);
+  return new X86DAGToDAGISelLegacy(TM, OptLevel);
 }

@@ -34,6 +34,12 @@ llvm::cl::opt<bool> enableDelayedPrivatization(
     "openmp-enable-delayed-privatization",
     llvm::cl::desc(
         "Emit `[first]private` variables as clauses on the MLIR ops."),
+    llvm::cl::init(true));
+
+llvm::cl::opt<bool> enableDelayedPrivatizationStaging(
+    "openmp-enable-delayed-privatization-staging",
+    llvm::cl::desc("For partially supported constructs, emit `[first]private` "
+                   "variables as clauses on the MLIR ops."),
     llvm::cl::init(false));
 
 namespace Fortran {
@@ -55,7 +61,7 @@ void genObjectList(const ObjectList &objects,
                    lower::AbstractConverter &converter,
                    llvm::SmallVectorImpl<mlir::Value> &operands) {
   for (const Object &object : objects) {
-    const semantics::Symbol *sym = object.id();
+    const semantics::Symbol *sym = object.sym();
     assert(sym && "Expected Symbol");
     if (mlir::Value variable = converter.getSymbolAddress(*sym)) {
       operands.push_back(variable);
@@ -107,7 +113,7 @@ void gatherFuncAndVarSyms(
     const ObjectList &objects, mlir::omp::DeclareTargetCaptureClause clause,
     llvm::SmallVectorImpl<DeclareTargetCapturePair> &symbolAndClause) {
   for (const Object &object : objects)
-    symbolAndClause.emplace_back(clause, *object.id());
+    symbolAndClause.emplace_back(clause, *object.sym());
 }
 
 mlir::omp::MapInfoOp
@@ -125,6 +131,13 @@ createMapInfoOp(fir::FirOpBuilder &builder, mlir::Location loc,
 
   mlir::TypeAttr varType = mlir::TypeAttr::get(
       llvm::cast<mlir::omp::PointerLikeType>(retTy).getElementType());
+
+  // For types with unknown extents such as <2x?xi32> we discard the incomplete
+  // type info and only retain the base type. The correct dimensions are later
+  // recovered through the bounds info.
+  if (auto seqType = llvm::dyn_cast<fir::SequenceType>(varType.getValue()))
+    if (seqType.hasDynamicExtents())
+      varType = mlir::TypeAttr::get(seqType.getEleTy());
 
   mlir::omp::MapInfoOp op = builder.create<mlir::omp::MapInfoOp>(
       loc, retTy, baseAddr, varType, varPtrPtr, members, membersIndex, bounds,
@@ -175,7 +188,7 @@ generateMemberPlacementIndices(const Object &object,
                                semantics::SemanticsContext &semaCtx) {
   auto compObj = getComponentObject(object, semaCtx);
   while (compObj) {
-    indices.push_back(getComponentPlacementInParent(compObj->id()));
+    indices.push_back(getComponentPlacementInParent(compObj->sym()));
     compObj =
         getComponentObject(getBaseObject(compObj.value(), semaCtx), semaCtx);
   }
@@ -188,7 +201,7 @@ void addChildIndexAndMapToParent(
     std::map<const semantics::Symbol *,
              llvm::SmallVector<OmpMapMemberIndicesData>> &parentMemberIndices,
     mlir::omp::MapInfoOp &mapOp, semantics::SemanticsContext &semaCtx) {
-  std::optional<evaluate::DataRef> dataRef = ExtractDataRef(object.designator);
+  std::optional<evaluate::DataRef> dataRef = ExtractDataRef(object.ref());
   assert(dataRef.has_value() &&
          "DataRef could not be extracted during mapping of derived type "
          "cannot proceed");
@@ -319,7 +332,7 @@ void insertChildMapInfoIntoParent(
 
 semantics::Symbol *getOmpObjectSymbol(const parser::OmpObject &ompObject) {
   semantics::Symbol *sym = nullptr;
-  std::visit(
+  Fortran::common::visit(
       common::visitors{
           [&](const parser::Designator &designator) {
             if (auto *arrayEle =

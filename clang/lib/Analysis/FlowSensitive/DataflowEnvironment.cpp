@@ -15,6 +15,7 @@
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/Type.h"
@@ -297,7 +298,7 @@ namespace {
 // Visitor that builds a map from record prvalues to result objects.
 // For each result object that it encounters, it propagates the storage location
 // of the result object to all record prvalues that can initialize it.
-class ResultObjectVisitor : public RecursiveASTVisitor<ResultObjectVisitor> {
+class ResultObjectVisitor : public AnalysisASTVisitor<ResultObjectVisitor> {
 public:
   // `ResultObjectMap` will be filled with a map from record prvalues to result
   // object. If this visitor will traverse a function that returns a record by
@@ -309,10 +310,6 @@ public:
       DataflowAnalysisContext &DACtx)
       : ResultObjectMap(ResultObjectMap),
         LocForRecordReturnVal(LocForRecordReturnVal), DACtx(DACtx) {}
-
-  bool shouldVisitImplicitCode() { return true; }
-
-  bool shouldVisitLambdaBody() const { return false; }
 
   // Traverse all member and base initializers of `Ctor`. This function is not
   // called by `RecursiveASTVisitor`; it should be called manually if we are
@@ -340,37 +337,6 @@ public:
       if (auto *DefaultInit = dyn_cast<CXXDefaultInitExpr>(InitExpr))
         TraverseStmt(DefaultInit->getExpr());
     }
-  }
-
-  bool TraverseDecl(Decl *D) {
-    // Don't traverse nested record or function declarations.
-    // - We won't be analyzing code contained in these anyway
-    // - We don't model fields that are used only in these nested declaration,
-    //   so trying to propagate a result object to initializers of such fields
-    //   would cause an error.
-    if (isa_and_nonnull<RecordDecl>(D) || isa_and_nonnull<FunctionDecl>(D))
-      return true;
-
-    return RecursiveASTVisitor<ResultObjectVisitor>::TraverseDecl(D);
-  }
-
-  // Don't traverse expressions in unevaluated contexts, as we don't model
-  // fields that are only used in these.
-  // Note: The operand of the `noexcept` operator is an unevaluated operand, but
-  // nevertheless it appears in the Clang CFG, so we don't exclude it here.
-  bool TraverseDecltypeTypeLoc(DecltypeTypeLoc) { return true; }
-  bool TraverseTypeOfExprTypeLoc(TypeOfExprTypeLoc) { return true; }
-  bool TraverseCXXTypeidExpr(CXXTypeidExpr *) { return true; }
-  bool TraverseUnaryExprOrTypeTraitExpr(UnaryExprOrTypeTraitExpr *) {
-    return true;
-  }
-
-  bool TraverseBindingDecl(BindingDecl *BD) {
-    // `RecursiveASTVisitor` doesn't traverse holding variables for
-    // `BindingDecl`s by itself, so we need to tell it to.
-    if (VarDecl *HoldingVar = BD->getHoldingVar())
-      TraverseDecl(HoldingVar);
-    return RecursiveASTVisitor<ResultObjectVisitor>::TraverseBindingDecl(BD);
   }
 
   bool VisitVarDecl(VarDecl *VD) {
@@ -449,8 +415,8 @@ public:
     // lowest-level AST node that initializes a given object, and nothing
     // below them can initialize the same object (or part of it).
     if (isa<CXXConstructExpr>(E) || isa<CallExpr>(E) || isa<LambdaExpr>(E) ||
-        isa<CXXDefaultArgExpr>(E) || isa<CXXDefaultInitExpr>(E) ||
-        isa<CXXStdInitializerListExpr>(E) ||
+        isa<CXXDefaultArgExpr>(E) || isa<CXXStdInitializerListExpr>(E) ||
+        isa<AtomicExpr>(E) || isa<CXXInheritedCtorInitExpr>(E) ||
         // We treat `BuiltinBitCastExpr` as an "original initializer" too as
         // it may not even be casting from a record type -- and even if it is,
         // the two objects are in general of unrelated type.
@@ -495,6 +461,11 @@ public:
 
     if (auto *SE = dyn_cast<StmtExpr>(E)) {
       PropagateResultObject(cast<Expr>(SE->getSubStmt()->body_back()), Loc);
+      return;
+    }
+
+    if (auto *DIE = dyn_cast<CXXDefaultInitExpr>(E)) {
+      PropagateResultObject(DIE->getExpr(), Loc);
       return;
     }
 
@@ -553,12 +524,21 @@ void Environment::initialize() {
           assert(VarDecl != nullptr);
           setStorageLocation(*VarDecl, createObject(*VarDecl, nullptr));
         } else if (Capture.capturesThis()) {
-          const auto *SurroundingMethodDecl =
-              cast<CXXMethodDecl>(InitialTargetFunc->getNonClosureAncestor());
-          QualType ThisPointeeType =
-              SurroundingMethodDecl->getFunctionObjectParameterType();
-          setThisPointeeStorageLocation(
-              cast<RecordStorageLocation>(createObject(ThisPointeeType)));
+          if (auto *Ancestor = InitialTargetFunc->getNonClosureAncestor()) {
+            const auto *SurroundingMethodDecl = cast<CXXMethodDecl>(Ancestor);
+            QualType ThisPointeeType =
+                SurroundingMethodDecl->getFunctionObjectParameterType();
+            setThisPointeeStorageLocation(
+                cast<RecordStorageLocation>(createObject(ThisPointeeType)));
+          } else if (auto *FieldBeingInitialized =
+                         dyn_cast<FieldDecl>(Parent->getLambdaContextDecl())) {
+            // This is in a field initializer, rather than a method.
+            setThisPointeeStorageLocation(
+                cast<RecordStorageLocation>(createObject(QualType(
+                    FieldBeingInitialized->getParent()->getTypeForDecl(), 0))));
+          } else {
+            assert(false && "Unexpected this-capturing lambda context.");
+          }
         }
       }
     } else if (MethodDecl->isImplicitObjectMemberFunction()) {

@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 
 using namespace llvm;
@@ -88,7 +89,7 @@ bool KCFI::emitCheck(MachineBasicBlock &MBB,
 }
 
 bool KCFI::runOnMachineFunction(MachineFunction &MF) {
-  const Module *M = MF.getMMI().getModule();
+  const Module *M = MF.getFunction().getParent();
   if (!M->getModuleFlag("kcfi"))
     return false;
 

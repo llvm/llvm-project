@@ -157,9 +157,12 @@ def err_duplicate_default_assoc : Error<
   "duplicate default generic association">;
 def note_previous_default_assoc : Note<
   "previous default generic association is here">;
-def ext_generic_with_type_arg : Extension<
-  "passing a type argument as the first operand to '_Generic' is a Clang "
-  "extension">, InGroup<DiagGroup<"generic-type-extension">>;
+def ext_c2y_generic_with_type_arg : Extension<
+  "passing a type argument as the first operand to '_Generic' is a C2y "
+  "extension">, InGroup<C2y>;
+def warn_c2y_compat_generic_with_type_arg : Warning<
+  "passing a type argument as the first operand to '_Generic' is incompatible "
+  "with C standards before C2y">, InGroup<CPre2yCompat>, DefaultIgnore;
 
 def ext_c99_feature : Extension<
   "'%0' is a C99 extension">, InGroup<C99>;
@@ -467,6 +470,12 @@ def warn_c17_compat_static_assert_no_message : Warning<
   "'_Static_assert' with no message is incompatible with C standards before "
   "C23">,
   DefaultIgnore, InGroup<CPre23Compat>;
+def ext_cxx_static_assert_user_generated_message : ExtWarn<
+  "'static_assert' with a user-generated message is a C++26 extension">,
+  InGroup<CXX26>;
+def warn_cxx20_compat_static_assert_user_generated_message : Warning<
+  "'static_assert' with a user-generated message is incompatible with "
+  "C++ standards before C++26">, DefaultIgnore, InGroup<CXXPre26Compat>;
 def err_function_definition_not_allowed : Error<
   "function definition is not allowed here">;
 def err_expected_end_of_enumerator : Error<
@@ -477,6 +486,9 @@ def err_expected_coloncolon_after_super : Error<
 def ext_decomp_decl_empty : ExtWarn<
   "ISO C++17 does not allow a decomposition group to be empty">,
   InGroup<DiagGroup<"empty-decomposition">>;
+
+def err_function_parameter_limit_exceeded : Error<
+  "too many function parameters; subsequent parameters will be ignored">;
 
 // C++26 structured bindings
 def ext_decl_attrs_on_binding : ExtWarn<
@@ -887,6 +899,10 @@ def err_requires_expr_in_simple_requirement : Error<
   "requires expression in requirement body; did "
   "you intend to place it in a nested requirement? (add another 'requires' "
   "before the expression)">;
+def missing_template_arg_list_after_template_kw : Extension<
+  "a template argument list is expected after a name prefixed by the template "
+  "keyword">, InGroup<DiagGroup<"missing-template-arg-list-after-template-kw">>,
+  DefaultError;
 
 def err_missing_dependent_template_keyword : Error<
   "use 'template' keyword to treat '%0' as a dependent template name">;
@@ -957,6 +973,15 @@ def ext_delete_with_message : ExtWarn<
 def warn_cxx23_delete_with_message : Warning<
   "'= delete' with a message is incompatible with C++ standards before C++2c">,
   DefaultIgnore, InGroup<CXXPre26Compat>;
+
+def ext_variadic_friends : ExtWarn<
+  "variadic 'friend' declarations are a C++2c extension">, InGroup<CXX26>;
+def warn_cxx23_variadic_friends : Warning<
+  "variadic 'friend' declarations are incompatible with C++ standards before C++2c">,
+  DefaultIgnore, InGroup<CXXPre26Compat>;
+
+def err_friend_concept : Error<
+  "friend declaration cannot be a concept">;
 
 // C++11 default member initialization
 def ext_nonstatic_member_init : ExtWarn<
@@ -1117,7 +1142,7 @@ def err_availability_expected_environment : Error<
 
 // objc_bridge_related attribute
 def err_objcbridge_related_expected_related_class : Error<
-  "expected a related ObjectiveC class name, e.g., 'NSColor'">;
+  "expected a related Objective-C class name, e.g., 'NSColor'">;
 def err_objcbridge_related_selector_name : Error<
   "expected a class method selector with single argument, e.g., 'colorWithCGColor:'">;
 
@@ -1504,6 +1529,8 @@ def err_omp_unexpected_append_op : Error<
   "unexpected operation specified in 'append_args' clause, expected 'interop'">;
 def err_omp_unexpected_execution_modifier : Error<
   "unexpected 'execution' modifier in non-executable context">;
+def err_omp_unknown_adjust_args_op : Error<
+  "incorrect adjust_args type, expected 'need_device_ptr' or 'nothing'">;
 def err_omp_declare_variant_wrong_clause : Error<
   "expected %select{'match'|'match', 'adjust_args', or 'append_args'}0 clause "
   "on 'omp declare variant' directive">;

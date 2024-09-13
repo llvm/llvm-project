@@ -294,11 +294,13 @@ public:
 #include "AArch64GenAsmMatcher.inc"
   };
   bool IsILP32;
+  bool IsWindowsArm64EC;
 
   AArch64AsmParser(const MCSubtargetInfo &STI, MCAsmParser &Parser,
                    const MCInstrInfo &MII, const MCTargetOptions &Options)
     : MCTargetAsmParser(Options, STI, MII) {
     IsILP32 = STI.getTargetTriple().getEnvironment() == Triple::GNUILP32;
+    IsWindowsArm64EC = STI.getTargetTriple().isWindowsArm64EC();
     MCAsmParserExtension::Initialize(Parser);
     MCStreamer &S = getParser().getStreamer();
     if (S.getTargetStreamer() == nullptr)
@@ -3672,13 +3674,13 @@ static const struct Extension {
     {"rcpc", {AArch64::FeatureRCPC}},
     {"rng", {AArch64::FeatureRandGen}},
     {"sve", {AArch64::FeatureSVE}},
+    {"sve-b16b16", {AArch64::FeatureSVEB16B16}},
     {"sve2", {AArch64::FeatureSVE2}},
     {"sve2-aes", {AArch64::FeatureSVE2AES}},
     {"sve2-sm4", {AArch64::FeatureSVE2SM4}},
     {"sve2-sha3", {AArch64::FeatureSVE2SHA3}},
     {"sve2-bitperm", {AArch64::FeatureSVE2BitPerm}},
     {"sve2p1", {AArch64::FeatureSVE2p1}},
-    {"b16b16", {AArch64::FeatureB16B16}},
     {"ls64", {AArch64::FeatureLS64}},
     {"xs", {AArch64::FeatureXS}},
     {"pauth", {AArch64::FeaturePAuth}},
@@ -3690,6 +3692,7 @@ static const struct Extension {
     {"sme-i16i64", {AArch64::FeatureSMEI16I64}},
     {"sme2", {AArch64::FeatureSME2}},
     {"sme2p1", {AArch64::FeatureSME2p1}},
+    {"sme-b16b16", {AArch64::FeatureSMEB16B16}},
     {"hbc", {AArch64::FeatureHBC}},
     {"mops", {AArch64::FeatureMOPS}},
     {"mec", {AArch64::FeatureMEC}},
@@ -4180,7 +4183,7 @@ ParseStatus AArch64AsmParser::tryParseVectorRegister(MCRegister &Reg,
 
   if (RegNum) {
     if (Next != StringRef::npos) {
-      Kind = Name.slice(Next, StringRef::npos);
+      Kind = Name.substr(Next);
       if (!isValidVectorKind(Kind, MatchKind))
         return TokError("invalid vector kind qualifier");
     }
@@ -5312,6 +5315,31 @@ bool AArch64AsmParser::validateInstruction(MCInst &Inst, SMLoc &IDLoc,
       if ((MCID.TSFlags & AArch64::ElementSizeMask) != Prefix.getElementSize())
         return Error(IDLoc, "instruction is unpredictable when following a"
                      " predicated movprfx with a different element size");
+    }
+  }
+
+  // On ARM64EC, only valid registers may be used. Warn against using
+  // explicitly disallowed registers.
+  if (IsWindowsArm64EC) {
+    for (unsigned i = 0; i < Inst.getNumOperands(); ++i) {
+      if (Inst.getOperand(i).isReg()) {
+        unsigned Reg = Inst.getOperand(i).getReg();
+        // At this point, vector registers are matched to their
+        // appropriately sized alias.
+        if ((Reg == AArch64::W13 || Reg == AArch64::X13) ||
+            (Reg == AArch64::W14 || Reg == AArch64::X14) ||
+            (Reg == AArch64::W23 || Reg == AArch64::X23) ||
+            (Reg == AArch64::W24 || Reg == AArch64::X24) ||
+            (Reg == AArch64::W28 || Reg == AArch64::X28) ||
+            (Reg >= AArch64::Q16 && Reg <= AArch64::Q31) ||
+            (Reg >= AArch64::D16 && Reg <= AArch64::D31) ||
+            (Reg >= AArch64::S16 && Reg <= AArch64::S31) ||
+            (Reg >= AArch64::H16 && Reg <= AArch64::H31) ||
+            (Reg >= AArch64::B16 && Reg <= AArch64::B31)) {
+          Warning(IDLoc, "register " + Twine(RI->getName(Reg)) +
+                             " is disallowed on ARM64EC.");
+        }
+      }
     }
   }
 
@@ -6919,10 +6947,14 @@ static void ExpandCryptoAEK(const AArch64::ArchInfo &ArchInfo,
   }
 }
 
+static SMLoc incrementLoc(SMLoc L, int Offset) {
+  return SMLoc::getFromPointer(L.getPointer() + Offset);
+}
+
 /// parseDirectiveArch
 ///   ::= .arch token
 bool AArch64AsmParser::parseDirectiveArch(SMLoc L) {
-  SMLoc ArchLoc = getLoc();
+  SMLoc CurLoc = getLoc();
 
   StringRef Arch, ExtensionString;
   std::tie(Arch, ExtensionString) =
@@ -6930,7 +6962,7 @@ bool AArch64AsmParser::parseDirectiveArch(SMLoc L) {
 
   const AArch64::ArchInfo *ArchInfo = AArch64::parseArch(Arch);
   if (!ArchInfo)
-    return Error(ArchLoc, "unknown arch name");
+    return Error(CurLoc, "unknown arch name");
 
   if (parseToken(AsmToken::EndOfStatement))
     return true;
@@ -6950,27 +6982,29 @@ bool AArch64AsmParser::parseDirectiveArch(SMLoc L) {
     ExtensionString.split(RequestedExtensions, '+');
 
   ExpandCryptoAEK(*ArchInfo, RequestedExtensions);
+  CurLoc = incrementLoc(CurLoc, Arch.size());
 
-  FeatureBitset Features = STI.getFeatureBits();
-  setAvailableFeatures(ComputeAvailableFeatures(Features));
   for (auto Name : RequestedExtensions) {
+    // Advance source location past '+'.
+    CurLoc = incrementLoc(CurLoc, 1);
+
     bool EnableFeature = !Name.consume_front_insensitive("no");
 
-    for (const auto &Extension : ExtensionMap) {
-      if (Extension.Name != Name)
-        continue;
+    auto It = llvm::find_if(ExtensionMap, [&Name](const auto &Extension) {
+      return Extension.Name == Name;
+    });
 
-      if (Extension.Features.none())
-        report_fatal_error("unsupported architectural extension: " + Name);
+    if (It == std::end(ExtensionMap))
+      return Error(CurLoc, "unsupported architectural extension: " + Name);
 
-      FeatureBitset ToggleFeatures =
-          EnableFeature
-              ? STI.SetFeatureBitsTransitively(~Features & Extension.Features)
-              : STI.ToggleFeature(Features & Extension.Features);
-      setAvailableFeatures(ComputeAvailableFeatures(ToggleFeatures));
-      break;
-    }
+    if (EnableFeature)
+      STI.SetFeatureBitsTransitively(It->Features);
+    else
+      STI.ClearFeatureBitsTransitively(It->Features);
+    CurLoc = incrementLoc(CurLoc, Name.size());
   }
+  FeatureBitset Features = ComputeAvailableFeatures(STI.getFeatureBits());
+  setAvailableFeatures(Features);
   return false;
 }
 
@@ -6990,28 +7024,21 @@ bool AArch64AsmParser::parseDirectiveArchExtension(SMLoc L) {
     Name = Name.substr(2);
   }
 
+  auto It = llvm::find_if(ExtensionMap, [&Name](const auto &Extension) {
+    return Extension.Name == Name;
+  });
+
+  if (It == std::end(ExtensionMap))
+    return Error(ExtLoc, "unsupported architectural extension: " + Name);
+
   MCSubtargetInfo &STI = copySTI();
-  FeatureBitset Features = STI.getFeatureBits();
-  for (const auto &Extension : ExtensionMap) {
-    if (Extension.Name != Name)
-      continue;
-
-    if (Extension.Features.none())
-      return Error(ExtLoc, "unsupported architectural extension: " + Name);
-
-    FeatureBitset ToggleFeatures =
-        EnableFeature
-            ? STI.SetFeatureBitsTransitively(~Features & Extension.Features)
-            : STI.ToggleFeature(Features & Extension.Features);
-    setAvailableFeatures(ComputeAvailableFeatures(ToggleFeatures));
-    return false;
-  }
-
-  return Error(ExtLoc, "unknown architectural extension: " + Name);
-}
-
-static SMLoc incrementLoc(SMLoc L, int Offset) {
-  return SMLoc::getFromPointer(L.getPointer() + Offset);
+  if (EnableFeature)
+    STI.SetFeatureBitsTransitively(It->Features);
+  else
+    STI.ClearFeatureBitsTransitively(It->Features);
+  FeatureBitset Features = ComputeAvailableFeatures(STI.getFeatureBits());
+  setAvailableFeatures(Features);
+  return false;
 }
 
 /// parseDirectiveCPU
@@ -7047,30 +7074,21 @@ bool AArch64AsmParser::parseDirectiveCPU(SMLoc L) {
 
     bool EnableFeature = !Name.consume_front_insensitive("no");
 
-    bool FoundExtension = false;
-    for (const auto &Extension : ExtensionMap) {
-      if (Extension.Name != Name)
-        continue;
+    auto It = llvm::find_if(ExtensionMap, [&Name](const auto &Extension) {
+      return Extension.Name == Name;
+    });
 
-      if (Extension.Features.none())
-        report_fatal_error("unsupported architectural extension: " + Name);
+    if (It == std::end(ExtensionMap))
+      return Error(CurLoc, "unsupported architectural extension: " + Name);
 
-      FeatureBitset Features = STI.getFeatureBits();
-      FeatureBitset ToggleFeatures =
-          EnableFeature
-              ? STI.SetFeatureBitsTransitively(~Features & Extension.Features)
-              : STI.ToggleFeature(Features & Extension.Features);
-      setAvailableFeatures(ComputeAvailableFeatures(ToggleFeatures));
-      FoundExtension = true;
-
-      break;
-    }
-
-    if (!FoundExtension)
-      Error(CurLoc, "unsupported architectural extension");
-
+    if (EnableFeature)
+      STI.SetFeatureBitsTransitively(It->Features);
+    else
+      STI.ClearFeatureBitsTransitively(It->Features);
     CurLoc = incrementLoc(CurLoc, Name.size());
   }
+  FeatureBitset Features = ComputeAvailableFeatures(STI.getFeatureBits());
+  setAvailableFeatures(Features);
   return false;
 }
 
@@ -8067,8 +8085,8 @@ ParseStatus AArch64AsmParser::tryParseImmRange(OperandVector &Operands) {
   if (getParser().parseExpression(ImmL))
     return ParseStatus::NoMatch;
 
-  unsigned ImmFVal = dyn_cast<MCConstantExpr>(ImmF)->getValue();
-  unsigned ImmLVal = dyn_cast<MCConstantExpr>(ImmL)->getValue();
+  unsigned ImmFVal = cast<MCConstantExpr>(ImmF)->getValue();
+  unsigned ImmLVal = cast<MCConstantExpr>(ImmL)->getValue();
 
   Operands.push_back(
       AArch64Operand::CreateImmRange(ImmFVal, ImmLVal, S, E, getContext()));

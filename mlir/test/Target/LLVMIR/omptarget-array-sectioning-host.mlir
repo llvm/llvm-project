@@ -7,7 +7,7 @@
 // array bounds to lower to the full size of the array and the sectioned
 // array to be the size of 3*3*1*element-byte-size (36 bytes in this case).
 
-module attributes {omp.is_target_device = false} {
+module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-amd-amdhsa"]} {
   llvm.func @_3d_target_array_section() {
     %0 = llvm.mlir.addressof @_QFEinarray : !llvm.ptr
     %1 = llvm.mlir.addressof @_QFEoutarray : !llvm.ptr
@@ -42,7 +42,7 @@ module attributes {omp.is_target_device = false} {
 
 // CHECK: @.offload_sizes = private unnamed_addr constant [2 x i64] [i64 36, i64 108]
 // CHECK: @.offload_maptypes = private unnamed_addr constant [2 x i64] [i64 35, i64 35]
-// CHECKL: @.offload_mapnames = private constant [2 x ptr] [ptr @0, ptr @1]
+// CHECK: @.offload_mapnames = private constant [2 x ptr] [ptr @0, ptr @1]
 
 // CHECK: define void @_3d_target_array_section()
 

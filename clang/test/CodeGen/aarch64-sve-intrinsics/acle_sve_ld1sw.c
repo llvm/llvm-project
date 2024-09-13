@@ -5,7 +5,15 @@
 // RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64 -target-feature +sve -disable-O0-optnone -Werror -emit-llvm -o - %s | opt -S -passes=mem2reg,instcombine,tailcallelim | FileCheck %s
 // RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64 -target-feature +sve -disable-O0-optnone -Werror -emit-llvm -o - -x c++ %s | opt -S -passes=mem2reg,instcombine,tailcallelim | FileCheck %s -check-prefix=CPP-CHECK
 // RUN: %clang_cc1 -triple aarch64 -target-feature +sve -S -disable-O0-optnone -Werror -o /dev/null %s
+// RUN: %clang_cc1 -triple aarch64 -target-feature +sme -S -disable-O0-optnone -Werror -o /dev/null %s
+
 #include <arm_sve.h>
+
+#if defined __ARM_FEATURE_SME
+#define MODE_ATTR __arm_streaming
+#else
+#define MODE_ATTR
+#endif
 
 #ifdef SVE_OVERLOADED_FORMS
 // A simple used,unused... macro, long enough to represent any SVE builtin.
@@ -28,7 +36,7 @@
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = sext <vscale x 2 x i32> [[TMP1]] to <vscale x 2 x i64>
 // CPP-CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP2]]
 //
-svint64_t test_svld1sw_s64(svbool_t pg, const int32_t *base)
+svint64_t test_svld1sw_s64(svbool_t pg, const int32_t *base) MODE_ATTR
 {
   return svld1sw_s64(pg, base);
 }
@@ -47,7 +55,7 @@ svint64_t test_svld1sw_s64(svbool_t pg, const int32_t *base)
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = sext <vscale x 2 x i32> [[TMP1]] to <vscale x 2 x i64>
 // CPP-CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP2]]
 //
-svuint64_t test_svld1sw_u64(svbool_t pg, const int32_t *base)
+svuint64_t test_svld1sw_u64(svbool_t pg, const int32_t *base) MODE_ATTR
 {
   return svld1sw_u64(pg, base);
 }
@@ -57,7 +65,7 @@ svuint64_t test_svld1sw_u64(svbool_t pg, const int32_t *base)
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG:%.*]])
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call i64 @llvm.vscale.i64()
 // CHECK-NEXT:    [[TMP2:%.*]] = shl nuw nsw i64 [[TMP1]], 3
-// CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP2]], [[VNUM:%.*]]
+// CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[VNUM:%.*]], [[TMP2]]
 // CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
 // CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 2 x i32> @llvm.masked.load.nxv2i32.p0(ptr [[TMP3]], i32 1, <vscale x 2 x i1> [[TMP0]], <vscale x 2 x i32> zeroinitializer)
 // CHECK-NEXT:    [[TMP5:%.*]] = sext <vscale x 2 x i32> [[TMP4]] to <vscale x 2 x i64>
@@ -68,13 +76,13 @@ svuint64_t test_svld1sw_u64(svbool_t pg, const int32_t *base)
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG:%.*]])
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call i64 @llvm.vscale.i64()
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = shl nuw nsw i64 [[TMP1]], 3
-// CPP-CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP2]], [[VNUM:%.*]]
+// CPP-CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[VNUM:%.*]], [[TMP2]]
 // CPP-CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
 // CPP-CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 2 x i32> @llvm.masked.load.nxv2i32.p0(ptr [[TMP3]], i32 1, <vscale x 2 x i1> [[TMP0]], <vscale x 2 x i32> zeroinitializer)
 // CPP-CHECK-NEXT:    [[TMP5:%.*]] = sext <vscale x 2 x i32> [[TMP4]] to <vscale x 2 x i64>
 // CPP-CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP5]]
 //
-svint64_t test_svld1sw_vnum_s64(svbool_t pg, const int32_t *base, int64_t vnum)
+svint64_t test_svld1sw_vnum_s64(svbool_t pg, const int32_t *base, int64_t vnum) MODE_ATTR
 {
   return svld1sw_vnum_s64(pg, base, vnum);
 }
@@ -84,7 +92,7 @@ svint64_t test_svld1sw_vnum_s64(svbool_t pg, const int32_t *base, int64_t vnum)
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG:%.*]])
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call i64 @llvm.vscale.i64()
 // CHECK-NEXT:    [[TMP2:%.*]] = shl nuw nsw i64 [[TMP1]], 3
-// CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP2]], [[VNUM:%.*]]
+// CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[VNUM:%.*]], [[TMP2]]
 // CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
 // CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 2 x i32> @llvm.masked.load.nxv2i32.p0(ptr [[TMP3]], i32 1, <vscale x 2 x i1> [[TMP0]], <vscale x 2 x i32> zeroinitializer)
 // CHECK-NEXT:    [[TMP5:%.*]] = sext <vscale x 2 x i32> [[TMP4]] to <vscale x 2 x i64>
@@ -95,16 +103,18 @@ svint64_t test_svld1sw_vnum_s64(svbool_t pg, const int32_t *base, int64_t vnum)
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG:%.*]])
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call i64 @llvm.vscale.i64()
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = shl nuw nsw i64 [[TMP1]], 3
-// CPP-CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP2]], [[VNUM:%.*]]
+// CPP-CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[VNUM:%.*]], [[TMP2]]
 // CPP-CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
 // CPP-CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 2 x i32> @llvm.masked.load.nxv2i32.p0(ptr [[TMP3]], i32 1, <vscale x 2 x i1> [[TMP0]], <vscale x 2 x i32> zeroinitializer)
 // CPP-CHECK-NEXT:    [[TMP5:%.*]] = sext <vscale x 2 x i32> [[TMP4]] to <vscale x 2 x i64>
 // CPP-CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP5]]
 //
-svuint64_t test_svld1sw_vnum_u64(svbool_t pg, const int32_t *base, int64_t vnum)
+svuint64_t test_svld1sw_vnum_u64(svbool_t pg, const int32_t *base, int64_t vnum) MODE_ATTR
 {
   return svld1sw_vnum_u64(pg, base, vnum);
 }
+
+#ifndef __ARM_FEATURE_SME
 
 // CHECK-LABEL: @test_svld1sw_gather_u64base_s64(
 // CHECK-NEXT:  entry:
@@ -361,3 +371,5 @@ svint64_t test_svld1sw_gather_u64base_index_s64(svbool_t pg, svuint64_t bases, i
 svuint64_t test_svld1sw_gather_u64base_index_u64(svbool_t pg, svuint64_t bases, int64_t index) {
   return SVE_ACLE_FUNC(svld1sw_gather, _u64base, _index_u64, )(pg, bases, index);
 }
+
+#endif

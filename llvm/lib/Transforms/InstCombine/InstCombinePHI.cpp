@@ -143,6 +143,10 @@ bool InstCombinerImpl::foldIntegerTypedPHI(PHINode &PN) {
     BasicBlock *BB = std::get<0>(Incoming);
     Value *Arg = std::get<1>(Incoming);
 
+    // Arg could be a constant, constant expr, etc., which we don't cover here.
+    if (!isa<Instruction>(Arg) && !isa<Argument>(Arg))
+      return false;
+
     // First look backward:
     if (auto *PI = dyn_cast<PtrToIntInst>(Arg)) {
       AvailablePtrVals.emplace_back(PI->getOperand(0));
@@ -513,7 +517,7 @@ Instruction *InstCombinerImpl::foldPHIArgGEPIntoPHI(PHINode &PN) {
   // especially bad when the PHIs are in the header of a loop.
   bool NeededPhi = false;
 
-  bool AllInBounds = true;
+  GEPNoWrapFlags NW = GEPNoWrapFlags::all();
 
   // Scan to see if all operands are the same opcode, and all have one user.
   for (Value *V : drop_begin(PN.incoming_values())) {
@@ -523,7 +527,7 @@ Instruction *InstCombinerImpl::foldPHIArgGEPIntoPHI(PHINode &PN) {
         GEP->getNumOperands() != FirstInst->getNumOperands())
       return nullptr;
 
-    AllInBounds &= GEP->isInBounds();
+    NW &= GEP->getNoWrapFlags();
 
     // Keep track of whether or not all GEPs are of alloca pointers.
     if (AllBasePointersAreAllocas &&
@@ -605,8 +609,7 @@ Instruction *InstCombinerImpl::foldPHIArgGEPIntoPHI(PHINode &PN) {
   Value *Base = FixedOperands[0];
   GetElementPtrInst *NewGEP =
       GetElementPtrInst::Create(FirstInst->getSourceElementType(), Base,
-                                ArrayRef(FixedOperands).slice(1));
-  if (AllInBounds) NewGEP->setIsInBounds();
+                                ArrayRef(FixedOperands).slice(1), NW);
   PHIArgMergedDebugLoc(NewGEP, PN);
   return NewGEP;
 }
@@ -1422,7 +1425,7 @@ static Value *foldDependentIVs(PHINode &PN, IRBuilderBase &Builder) {
   if (!BO) {
     auto *GEP = cast<GEPOperator>(IvNext);
     return Builder.CreateGEP(GEP->getSourceElementType(), Start, Iv2, "",
-                             cast<GEPOperator>(IvNext)->isInBounds());
+                             cast<GEPOperator>(IvNext)->getNoWrapFlags());
   }
 
   assert(BO->isCommutative() && "Must be commutative");

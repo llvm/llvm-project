@@ -27,4 +27,20 @@
 #define LIBC_HAS_FEATURE(f) 0
 #endif
 
+#ifdef __clang__
+// Declare a LIBC_NAMESPACE with hidden visibility. `namespace
+// LIBC_NAMESPACE_DECL {` should be used around all declarations and definitions
+// for libc internals as opposed to just `namespace LIBC_NAMESPACE {`. This
+// ensures that all declarations within this namespace have hidden
+// visibility, which optimizes codegen for uses of symbols defined in other
+// translation units in ways that can be necessary for correctness by avoiding
+// dynamic relocations. This does not affect the public C symbols which are
+// controlled independently via `LLVM_LIBC_FUNCTION_ATTR`.
+#define LIBC_NAMESPACE_DECL [[gnu::visibility("hidden")]] LIBC_NAMESPACE
+#else
+// TODO(#98548): GCC emits a warning when using the visibility attribute which
+// needs to be diagnosed and addressed.
+#define LIBC_NAMESPACE_DECL LIBC_NAMESPACE
+#endif
+
 #endif // LLVM_LIBC_SRC___SUPPORT_MACROS_CONFIG_H

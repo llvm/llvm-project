@@ -31,6 +31,14 @@ TEST(Numeric, Floor) {
   EXPECT_EQ(RTNAME(Floor4_1)(Real<4>{0}), 0);
 }
 
+TEST(Numeric, Erfc_scaled) {
+  EXPECT_NEAR(RTNAME(ErfcScaled4)(Real<4>{20.0}), 0.02817434874, 1.0e-8);
+  EXPECT_NEAR(RTNAME(ErfcScaled8)(Real<8>{20.0}), 0.02817434874, 1.0e-11);
+#if LDBL_MANT_DIG == 64
+  EXPECT_NEAR(RTNAME(ErfcScaled10)(Real<10>{20.0}), 0.02817434874, 1.0e-8);
+#endif
+}
+
 TEST(Numeric, Exponent) {
   EXPECT_EQ(RTNAME(Exponent4_4)(Real<4>{0}), 0);
   EXPECT_EQ(RTNAME(Exponent4_8)(Real<4>{1.0}), 1);
@@ -251,6 +259,11 @@ TEST(Numeric, Spacing) {
       std::isnan(RTNAME(Spacing4)(std::numeric_limits<Real<4>>::infinity())));
   EXPECT_TRUE(
       std::isnan(RTNAME(Spacing8)(std::numeric_limits<Real<8>>::quiet_NaN())));
+  EXPECT_EQ(RTNAME(Spacing2By4)(Real<4>{3.0}), std::ldexp(Real<4>{1.0}, -9));
+  EXPECT_EQ(RTNAME(Spacing2By4)(Real<4>{0.0}), Real<4>{0.00006103515625E-04});
+  EXPECT_EQ(RTNAME(Spacing3By4)(Real<4>{3.0}), std::ldexp(Real<4>{1.0}, -6));
+  EXPECT_EQ(
+      RTNAME(Spacing3By4)(Real<4>{0.0}), std::numeric_limits<Real<4>>::min());
 }
 
 TEST(Numeric, FPowI) {

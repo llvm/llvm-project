@@ -208,3 +208,67 @@ exit:
   store i32 10, ptr inttoptr (i32 2044 to ptr)
   ret void
 }
+
+; Check that we use a common base for immediates needed by a store if the
+; constants require more than 1 instruction.
+define void @test20(ptr %p1, ptr %p2) {
+; CHECK-LABEL: test20
+; CHECK: %const = bitcast i32 15111111 to i32
+; CHECK: store i32 %const, ptr %p1, align 4
+; CHECK: %const_mat = add i32 %const, 1
+; CHECK: store i32 %const_mat, ptr %p2, align 4
+  store i32 15111111, ptr %p1, align 4
+  store i32 15111112, ptr %p2, align 4
+  ret void
+}
+
+define void @test21(ptr %p1, ptr %p2) {
+; CHECK-LABEL: define void @test21(
+; CHECK-SAME: ptr [[P1:%.*]], ptr [[P2:%.*]]) {
+; CHECK-NEXT:    store i32 15111111, ptr [[P1]], align 1
+; CHECK-NEXT:    store i32 15111112, ptr [[P2]], align 1
+; CHECK-NEXT:    ret void
+;
+  store i32 15111111, ptr %p1, align 1
+  store i32 15111112, ptr %p2, align 1
+  ret void
+}
+
+; 0 immediates shouldn't be hoisted.
+define void @test22(ptr %p1, ptr %p2) {
+; CHECK-LABEL: define void @test22(
+; CHECK-SAME: ptr [[P1:%.*]], ptr [[P2:%.*]]) {
+; CHECK-NEXT:    store i64 0, ptr [[P1]], align 8
+; CHECK-NEXT:    store i64 -1, ptr [[P2]], align 8
+; CHECK-NEXT:    ret void
+;
+  store i64 0, ptr %p1, align 8
+  store i64 -1, ptr %p2, align 8
+  ret void
+}
+
+; 0 immediates shouldn't be hoisted.
+define void @test23(ptr %p1, ptr %p2) {
+; CHECK-LABEL: define void @test23(
+; CHECK-SAME: ptr [[P1:%.*]], ptr [[P2:%.*]]) {
+; CHECK-NEXT:    store i127 0, ptr [[P1]], align 8
+; CHECK-NEXT:    store i127 -1, ptr [[P2]], align 8
+; CHECK-NEXT:    ret void
+;
+  store i127 0, ptr %p1, align 8
+  store i127 -1, ptr %p2, align 8
+  ret void
+}
+
+; Hoisting doesn't happen for types that aren't legal.
+define void @test24(ptr %p1, ptr %p2) {
+; CHECK-LABEL: define void @test24(
+; CHECK-SAME: ptr [[P1:%.*]], ptr [[P2:%.*]]) {
+; CHECK-NEXT:    store i128 15111111, ptr [[P1]], align 4
+; CHECK-NEXT:    store i128 15111112, ptr [[P2]], align 4
+; CHECK-NEXT:    ret void
+;
+  store i128 15111111, ptr %p1, align 4
+  store i128 15111112, ptr %p2, align 4
+  ret void
+}

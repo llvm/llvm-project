@@ -7,11 +7,8 @@
 //===----------------------------------------------------------------------===//
 //
 // UNSUPPORTED: no-threads
-// UNSUPPORTED: c++03
+// UNSUPPORTED: c++03, c++11, c++14, c++17
 // XFAIL: !has-1024-bit-atomics
-
-// Until we drop support for the synchronization library in C++11/14/17
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
 
 // XFAIL: availability-synchronization_library-missing
 

@@ -52,6 +52,9 @@ public:
   }
   ~basic_ostream() override;
 
+  basic_ostream(const basic_ostream& __rhs)            = delete;
+  basic_ostream& operator=(const basic_ostream& __rhs) = delete;
+
 protected:
   inline _LIBCPP_HIDE_FROM_ABI basic_ostream(basic_ostream&& __rhs);
 
@@ -61,9 +64,6 @@ protected:
   inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 void swap(basic_ostream& __rhs) {
     basic_ios<char_type, traits_type>::swap(__rhs);
   }
-
-  basic_ostream(const basic_ostream& __rhs)            = delete;
-  basic_ostream& operator=(const basic_ostream& __rhs) = delete;
 
 public:
   // 27.7.2.4 Prefix/suffix:
@@ -152,7 +152,7 @@ basic_ostream<_CharT, _Traits>::sentry::sentry(basic_ostream<_CharT, _Traits>& _
 
 template <class _CharT, class _Traits>
 basic_ostream<_CharT, _Traits>::sentry::~sentry() {
-  if (__os_.rdbuf() && __os_.good() && (__os_.flags() & ios_base::unitbuf) && !uncaught_exception()) {
+  if (__os_.rdbuf() && __os_.good() && (__os_.flags() & ios_base::unitbuf) && uncaught_exceptions() == 0) {
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     try {
 #endif // _LIBCPP_HAS_NO_EXCEPTIONS

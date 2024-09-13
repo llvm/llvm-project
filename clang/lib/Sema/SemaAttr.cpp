@@ -117,7 +117,7 @@ void Sema::inferGslPointerAttribute(NamedDecl *ND,
   if (!Parent)
     return;
 
-  static llvm::StringSet<> Containers{
+  static const llvm::StringSet<> Containers{
       "array",
       "basic_string",
       "deque",
@@ -137,9 +137,9 @@ void Sema::inferGslPointerAttribute(NamedDecl *ND,
       "unordered_multimap",
   };
 
-  static llvm::StringSet<> Iterators{"iterator", "const_iterator",
-                                     "reverse_iterator",
-                                     "const_reverse_iterator"};
+  static const llvm::StringSet<> Iterators{"iterator", "const_iterator",
+                                           "reverse_iterator",
+                                           "const_reverse_iterator"};
 
   if (Parent->isInStdNamespace() && Iterators.count(ND->getName()) &&
       Containers.count(Parent->getName()))
@@ -165,7 +165,7 @@ void Sema::inferGslPointerAttribute(TypedefNameDecl *TD) {
 }
 
 void Sema::inferGslOwnerPointerAttribute(CXXRecordDecl *Record) {
-  static llvm::StringSet<> StdOwners{
+  static const llvm::StringSet<> StdOwners{
       "any",
       "array",
       "basic_regex",
@@ -189,10 +189,11 @@ void Sema::inferGslOwnerPointerAttribute(CXXRecordDecl *Record) {
       "unordered_multimap",
       "variant",
   };
-  static llvm::StringSet<> StdPointers{
+  static const llvm::StringSet<> StdPointers{
       "basic_string_view",
       "reference_wrapper",
       "regex_iterator",
+      "span",
   };
 
   if (!Record->getIdentifier())
@@ -215,8 +216,61 @@ void Sema::inferGslOwnerPointerAttribute(CXXRecordDecl *Record) {
   inferGslPointerAttribute(Record, Record);
 }
 
+void Sema::inferLifetimeBoundAttribute(FunctionDecl *FD) {
+  if (FD->getNumParams() == 0)
+    return;
+
+  if (unsigned BuiltinID = FD->getBuiltinID()) {
+    // Add lifetime attribute to std::move, std::fowrard et al.
+    switch (BuiltinID) {
+    case Builtin::BIaddressof:
+    case Builtin::BI__addressof:
+    case Builtin::BI__builtin_addressof:
+    case Builtin::BIas_const:
+    case Builtin::BIforward:
+    case Builtin::BIforward_like:
+    case Builtin::BImove:
+    case Builtin::BImove_if_noexcept:
+      if (ParmVarDecl *P = FD->getParamDecl(0u);
+          !P->hasAttr<LifetimeBoundAttr>())
+        P->addAttr(
+            LifetimeBoundAttr::CreateImplicit(Context, FD->getLocation()));
+      break;
+    default:
+      break;
+    }
+    return;
+  }
+  if (auto *CMD = dyn_cast<CXXMethodDecl>(FD)) {
+    const auto *CRD = CMD->getParent();
+    if (!CRD->isInStdNamespace() || !CRD->getIdentifier())
+      return;
+
+    if (isa<CXXConstructorDecl>(CMD)) {
+      auto *Param = CMD->getParamDecl(0);
+      if (Param->hasAttr<LifetimeBoundAttr>())
+        return;
+      if (CRD->getName() == "basic_string_view" &&
+          Param->getType()->isPointerType()) {
+        // construct from a char array pointed by a pointer.
+        //   basic_string_view(const CharT* s);
+        //   basic_string_view(const CharT* s, size_type count);
+        Param->addAttr(
+            LifetimeBoundAttr::CreateImplicit(Context, FD->getLocation()));
+      } else if (CRD->getName() == "span") {
+        // construct from a reference of array.
+        //   span(std::type_identity_t<element_type> (&arr)[N]);
+        const auto *LRT = Param->getType()->getAs<LValueReferenceType>();
+        if (LRT && LRT->getPointeeType().IgnoreParens()->isArrayType())
+          Param->addAttr(
+              LifetimeBoundAttr::CreateImplicit(Context, FD->getLocation()));
+      }
+    }
+  }
+}
+
 void Sema::inferNullableClassAttribute(CXXRecordDecl *CRD) {
-  static llvm::StringSet<> Nullable{
+  static const llvm::StringSet<> Nullable{
       "auto_ptr",         "shared_ptr", "unique_ptr",         "exception_ptr",
       "coroutine_handle", "function",   "move_only_function",
   };
@@ -1231,7 +1285,6 @@ void Sema::AddPushedVisibilityAttribute(Decl *D) {
   D->addAttr(VisibilityAttr::CreateImplicit(Context, type, loc));
 }
 
-/// FreeVisContext - Deallocate and null out VisContext.
 void Sema::FreeVisContext() {
   delete static_cast<VisStack*>(VisContext);
   VisContext = nullptr;
@@ -1269,13 +1322,12 @@ void Sema::ActOnPragmaFPContract(SourceLocation Loc,
     NewFPFeatures.setAllowFPContractWithinStatement();
     break;
   case LangOptions::FPM_Fast:
+  case LangOptions::FPM_FastHonorPragmas:
     NewFPFeatures.setAllowFPContractAcrossStatement();
     break;
   case LangOptions::FPM_Off:
     NewFPFeatures.setDisallowFPContract();
     break;
-  case LangOptions::FPM_FastHonorPragmas:
-    llvm_unreachable("Should not happen");
   }
   FpPragmaStack.Act(Loc, Sema::PSK_Set, StringRef(), NewFPFeatures);
   CurFPFeatures = NewFPFeatures.applyOverrides(getLangOpts());

@@ -2,6 +2,7 @@ import("//llvm/lib/DebugInfo/PDB/enable_dia.gni")
 import("//llvm/triples.gni")
 import("//llvm/utils/gn/build/libs/xml/enable.gni")
 import("//llvm/utils/gn/build/libs/zlib/enable.gni")
+import("//llvm/utils/gn/build/libs/zstd/enable.gni")
 import("//llvm/utils/gn/build/write_cmake_config.gni")
 import("//llvm/utils/llvm-lit/lit_path_function.gni")
 import("lld_lit_site_cfg_files.gni")
@@ -51,7 +52,6 @@ write_lit_cfg("lit_site_cfg") {
 
     "LLD_DEFAULT_LD_LLD_IS_MINGW=0",
     "LLVM_BUILD_EXAMPLES=0",
-    "LLVM_ENABLE_ZSTD=0",
     "LLVM_BYE_LINK_INTO_TOOLS=0",
   ]
 
@@ -94,6 +94,12 @@ write_lit_cfg("lit_site_cfg") {
     extra_values += [ "LLVM_ENABLE_ZLIB=0" ]  # Must be 0.
   }
 
+  if (llvm_enable_zstd) {
+    extra_values += [ "LLVM_ENABLE_ZSTD=1" ]
+  } else {
+    extra_values += [ "LLVM_ENABLE_ZSTD=0" ]  # Must be 0.
+  }
+
   if (current_cpu == "x64" || current_cpu == "arm64" ||
       current_cpu == "ppc64") {
     extra_values += [ "CMAKE_SIZEOF_VOID_P=8" ]
@@ -134,6 +140,7 @@ group("test") {
     "//llvm/tools/llvm-pdbutil",
     "//llvm/tools/llvm-profdata",
     "//llvm/tools/llvm-readobj:symlinks",
+    "//llvm/tools/llvm-strings:symlinks",
     "//llvm/tools/llvm-symbolizer:symlinks",
     "//llvm/tools/obj2yaml",
     "//llvm/tools/opt",

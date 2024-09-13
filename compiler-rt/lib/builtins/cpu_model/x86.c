@@ -23,6 +23,10 @@
 
 #include <assert.h>
 
+#if (defined(__GNUC__) || defined(__clang__)) && !defined(_MSC_VER)
+#include <cpuid.h>
+#endif
+
 #ifdef _MSC_VER
 #include <intrin.h>
 #endif
@@ -59,6 +63,7 @@ enum ProcessorTypes {
   INTEL_SIERRAFOREST,
   INTEL_GRANDRIDGE,
   INTEL_CLEARWATERFOREST,
+  AMDFAM1AH,
   CPU_TYPE_MAX
 };
 
@@ -97,6 +102,7 @@ enum ProcessorSubtypes {
   INTEL_COREI7_ARROWLAKE,
   INTEL_COREI7_ARROWLAKE_S,
   INTEL_COREI7_PANTHERLAKE,
+  AMDFAM1AH_ZNVER5,
   CPU_SUBTYPE_MAX
 };
 
@@ -141,7 +147,7 @@ enum ProcessorFeatures {
   FEATURE_AVX512VP2INTERSECT,
   // FIXME: Below Features has some missings comparing to gcc, it's because gcc
   // has some not one-to-one mapped in llvm.
-  FEATURE_3DNOW,
+  // FEATURE_3DNOW,
   // FEATURE_3DNOWP,
   FEATURE_ADX = 40,
   // FEATURE_ABM,
@@ -221,40 +227,10 @@ enum ProcessorFeatures {
   FEATURE_USERMSR,
   FEATURE_AVX10_1_256,
   FEATURE_AVX10_1_512,
+  FEATURE_AVX10_2_256,
+  FEATURE_AVX10_2_512,
   CPU_FEATURE_MAX
 };
-
-// The check below for i386 was copied from clang's cpuid.h (__get_cpuid_max).
-// Check motivated by bug reports for OpenSSL crashing on CPUs without CPUID
-// support. Consequently, for i386, the presence of CPUID is checked first
-// via the corresponding eflags bit.
-static bool isCpuIdSupported(void) {
-#if defined(__GNUC__) || defined(__clang__)
-#if defined(__i386__)
-  int __cpuid_supported;
-  __asm__("  pushfl\n"
-          "  popl   %%eax\n"
-          "  movl   %%eax,%%ecx\n"
-          "  xorl   $0x00200000,%%eax\n"
-          "  pushl  %%eax\n"
-          "  popfl\n"
-          "  pushfl\n"
-          "  popl   %%eax\n"
-          "  movl   $0,%0\n"
-          "  cmpl   %%eax,%%ecx\n"
-          "  je     1f\n"
-          "  movl   $1,%0\n"
-          "1:"
-          : "=r"(__cpuid_supported)
-          :
-          : "eax", "ecx");
-  if (!__cpuid_supported)
-    return false;
-#endif
-  return true;
-#endif
-  return true;
-}
 
 // This code is copied from lib/Support/Host.cpp.
 // Changes to either file should be mirrored in the other.
@@ -263,26 +239,8 @@ static bool isCpuIdSupported(void) {
 /// the specified arguments.  If we can't run cpuid on the host, return true.
 static bool getX86CpuIDAndInfo(unsigned value, unsigned *rEAX, unsigned *rEBX,
                                unsigned *rECX, unsigned *rEDX) {
-#if defined(__GNUC__) || defined(__clang__)
-#if defined(__x86_64__)
-  // gcc doesn't know cpuid would clobber ebx/rbx. Preserve it manually.
-  // FIXME: should we save this for Clang?
-  __asm__("movq\t%%rbx, %%rsi\n\t"
-          "cpuid\n\t"
-          "xchgq\t%%rbx, %%rsi\n\t"
-          : "=a"(*rEAX), "=S"(*rEBX), "=c"(*rECX), "=d"(*rEDX)
-          : "a"(value));
-  return false;
-#elif defined(__i386__)
-  __asm__("movl\t%%ebx, %%esi\n\t"
-          "cpuid\n\t"
-          "xchgl\t%%ebx, %%esi\n\t"
-          : "=a"(*rEAX), "=S"(*rEBX), "=c"(*rECX), "=d"(*rEDX)
-          : "a"(value));
-  return false;
-#else
-  return true;
-#endif
+#if (defined(__GNUC__) || defined(__clang__)) && !defined(_MSC_VER)
+  return !__get_cpuid(value, rEAX, rEBX, rECX, rEDX);
 #elif defined(_MSC_VER)
   // The MSVC intrinsic is portable across x86 and x64.
   int registers[4];
@@ -303,26 +261,12 @@ static bool getX86CpuIDAndInfo(unsigned value, unsigned *rEAX, unsigned *rEBX,
 static bool getX86CpuIDAndInfoEx(unsigned value, unsigned subleaf,
                                  unsigned *rEAX, unsigned *rEBX, unsigned *rECX,
                                  unsigned *rEDX) {
-#if defined(__GNUC__) || defined(__clang__)
-#if defined(__x86_64__)
-  // gcc doesn't know cpuid would clobber ebx/rbx. Preserve it manually.
-  // FIXME: should we save this for Clang?
-  __asm__("movq\t%%rbx, %%rsi\n\t"
-          "cpuid\n\t"
-          "xchgq\t%%rbx, %%rsi\n\t"
-          : "=a"(*rEAX), "=S"(*rEBX), "=c"(*rECX), "=d"(*rEDX)
-          : "a"(value), "c"(subleaf));
-  return false;
-#elif defined(__i386__)
-  __asm__("movl\t%%ebx, %%esi\n\t"
-          "cpuid\n\t"
-          "xchgl\t%%ebx, %%esi\n\t"
-          : "=a"(*rEAX), "=S"(*rEBX), "=c"(*rECX), "=d"(*rEDX)
-          : "a"(value), "c"(subleaf));
-  return false;
-#else
-  return true;
-#endif
+  // TODO(boomanaiden154): When the minimum toolchain versions for gcc and clang
+  // are such that __cpuidex is defined within cpuid.h for both, we can remove
+  // the __get_cpuid_count function and share the MSVC implementation between
+  // all three.
+#if (defined(__GNUC__) || defined(__clang__)) && !defined(_MSC_VER)
+  return !__get_cpuid_count(value, subleaf, rEAX, rEBX, rECX, rEDX);
 #elif defined(_MSC_VER)
   int registers[4];
   __cpuidex(registers, value, subleaf);
@@ -338,6 +282,9 @@ static bool getX86CpuIDAndInfoEx(unsigned value, unsigned subleaf,
 
 // Read control register 0 (XCR0). Used to detect features such as AVX.
 static bool getX86XCR0(unsigned *rEAX, unsigned *rEDX) {
+  // TODO(boomanaiden154): When the minimum toolchain versions for gcc and clang
+  // are such that _xgetbv is supported by both, we can unify the implementation
+  // with MSVC and remove all inline assembly.
 #if defined(__GNUC__) || defined(__clang__)
   // Check xgetbv; this uses a .byte sequence instead of the instruction
   // directly because older assemblers do not include support for xgetbv and
@@ -367,13 +314,13 @@ static void detectX86FamilyModel(unsigned EAX, unsigned *Family,
   }
 }
 
+#define testFeature(F) (Features[F / 32] & (1 << (F % 32))) != 0
+
 static const char *getIntelProcessorTypeAndSubtype(unsigned Family,
                                                    unsigned Model,
                                                    const unsigned *Features,
                                                    unsigned *Type,
                                                    unsigned *Subtype) {
-#define testFeature(F) (Features[F / 32] & (1 << (F % 32))) != 0
-
   // We select CPU strings to match the code in Host.cpp, but we don't use them
   // in compiler-rt.
   const char *CPU = 0;
@@ -662,14 +609,48 @@ static const char *getAMDProcessorTypeAndSubtype(unsigned Family,
                                                  const unsigned *Features,
                                                  unsigned *Type,
                                                  unsigned *Subtype) {
-  // We select CPU strings to match the code in Host.cpp, but we don't use them
-  // in compiler-rt.
   const char *CPU = 0;
 
   switch (Family) {
+  case 4:
+    CPU = "i486";
+    break;
+  case 5:
+    CPU = "pentium";
+    switch (Model) {
+    case 6:
+    case 7:
+      CPU = "k6";
+      break;
+    case 8:
+      CPU = "k6-2";
+      break;
+    case 9:
+    case 13:
+      CPU = "k6-3";
+      break;
+    case 10:
+      CPU = "geode";
+      break;
+    }
+    break;
+  case 6:
+    if (testFeature(FEATURE_SSE)) {
+      CPU = "athlon-xp";
+      break;
+    }
+    CPU = "athlon";
+    break;
+  case 15:
+    if (testFeature(FEATURE_SSE3)) {
+      CPU = "k8-sse3";
+      break;
+    }
+    CPU = "k8";
+    break;
   case 16:
     CPU = "amdfam10";
-    *Type = AMDFAM10H;
+    *Type = AMDFAM10H; // "amdfam10"
     switch (Model) {
     case 2:
       *Subtype = AMDFAM10H_BARCELONA;
@@ -745,7 +726,7 @@ static const char *getAMDProcessorTypeAndSubtype(unsigned Family,
   case 25:
     CPU = "znver3";
     *Type = AMDFAM19H;
-    if ((Model <= 0x0f) || (Model >= 0x20 && Model <= 0x2f) ||
+    if (Model <= 0x0f || (Model >= 0x20 && Model <= 0x2f) ||
         (Model >= 0x30 && Model <= 0x3f) || (Model >= 0x40 && Model <= 0x4f) ||
         (Model >= 0x50 && Model <= 0x5f)) {
       // Family 19h Models 00h-0Fh (Genesis, Chagall) Zen 3
@@ -769,12 +750,32 @@ static const char *getAMDProcessorTypeAndSubtype(unsigned Family,
       break; //  "znver4"
     }
     break; // family 19h
+  case 26:
+    CPU = "znver5";
+    *Type = AMDFAM1AH;
+    if (Model <= 0x77) {
+      // Models 00h-0Fh (Breithorn).
+      // Models 10h-1Fh (Breithorn-Dense).
+      // Models 20h-2Fh (Strix 1).
+      // Models 30h-37h (Strix 2).
+      // Models 38h-3Fh (Strix 3).
+      // Models 40h-4Fh (Granite Ridge).
+      // Models 50h-5Fh (Weisshorn).
+      // Models 60h-6Fh (Krackan1).
+      // Models 70h-77h (Sarlak).
+      CPU = "znver5";
+      *Subtype = AMDFAM1AH_ZNVER5;
+      break; //  "znver5"
+    }
+    break;
   default:
     break; // Unknown AMD CPU.
   }
 
   return CPU;
 }
+
+#undef testFeature
 
 static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
                                  unsigned *Features) {
@@ -981,12 +982,10 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
     setFeature(FEATURE_PREFETCHI);
   if (HasLeaf7Subleaf1 && ((EDX >> 15) & 1))
     setFeature(FEATURE_USERMSR);
-  if (HasLeaf7Subleaf1 && ((EDX >> 19) & 1))
-    setFeature(FEATURE_AVX10_1_256);
   if (HasLeaf7Subleaf1 && ((EDX >> 21) & 1))
     setFeature(FEATURE_APXF);
 
-  unsigned MaxLevel;
+  unsigned MaxLevel = 0;
   getX86CpuIDAndInfo(0, &MaxLevel, &EBX, &ECX, &EDX);
   bool HasLeafD = MaxLevel >= 0xd &&
                   !getX86CpuIDAndInfoEx(0xd, 0x1, &EAX, &EBX, &ECX, &EDX);
@@ -999,10 +998,22 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
 
   bool HasLeaf24 =
       MaxLevel >= 0x24 && !getX86CpuIDAndInfo(0x24, &EAX, &EBX, &ECX, &EDX);
-  if (HasLeaf7Subleaf1 && ((EDX >> 19) & 1) && HasLeaf24 && ((EBX >> 18) & 1))
-    setFeature(FEATURE_AVX10_1_512);
+  if (HasLeaf7Subleaf1 && ((EDX >> 19) & 1) && HasLeaf24) {
+    bool Has512Len = (EBX >> 18) & 1;
+    int AVX10Ver = EBX & 0xff;
+    if (AVX10Ver >= 2) {
+      setFeature(FEATURE_AVX10_2_256);
+      if (Has512Len)
+        setFeature(FEATURE_AVX10_2_512);
+    }
+    if (AVX10Ver >= 1) {
+      setFeature(FEATURE_AVX10_1_256);
+      if (Has512Len)
+        setFeature(FEATURE_AVX10_1_512);
+    }
+  }
 
-  unsigned MaxExtLevel;
+  unsigned MaxExtLevel = 0;
   getX86CpuIDAndInfo(0x80000000, &MaxExtLevel, &EBX, &ECX, &EDX);
 
   bool HasExtLeaf1 = MaxExtLevel >= 0x80000001 &&
@@ -1096,7 +1107,7 @@ unsigned __cpu_features2[(CPU_FEATURE_MAX - 1) / 32];
 // needs to be called explicitly there.
 
 int CONSTRUCTOR_ATTRIBUTE __cpu_indicator_init(void) {
-  unsigned EAX, EBX, ECX, EDX;
+  unsigned EAX = 0, EBX = 0, ECX = 0, EDX = 0;
   unsigned MaxLeaf = 5;
   unsigned Vendor;
   unsigned Model, Family;
@@ -1108,8 +1119,7 @@ int CONSTRUCTOR_ATTRIBUTE __cpu_indicator_init(void) {
   if (__cpu_model.__cpu_vendor)
     return 0;
 
-  if (!isCpuIdSupported() ||
-      getX86CpuIDAndInfo(0, &MaxLeaf, &Vendor, &ECX, &EDX) || MaxLeaf < 1) {
+  if (getX86CpuIDAndInfo(0, &MaxLeaf, &Vendor, &ECX, &EDX) || MaxLeaf < 1) {
     __cpu_model.__cpu_vendor = VENDOR_OTHER;
     return -1;
   }

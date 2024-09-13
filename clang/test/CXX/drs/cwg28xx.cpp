@@ -1,12 +1,36 @@
-// RUN: %clang_cc1 -std=c++98 -verify=expected %s
-// RUN: %clang_cc1 -std=c++11 -verify=expected %s
-// RUN: %clang_cc1 -std=c++14 -verify=expected %s
-// RUN: %clang_cc1 -std=c++17 -verify=expected %s
-// RUN: %clang_cc1 -std=c++20 -verify=expected,since-cxx20 %s
-// RUN: %clang_cc1 -std=c++23 -verify=expected,since-cxx20,since-cxx23 %s
-// RUN: %clang_cc1 -std=c++2c -verify=expected,since-cxx20,since-cxx23,since-cxx26 %s
+// RUN: %clang_cc1 -std=c++98 -pedantic-errors -verify=expected,cxx98 %s
+// RUN: %clang_cc1 -std=c++11 -pedantic-errors -verify=expected %s
+// RUN: %clang_cc1 -std=c++14 -pedantic-errors -verify=expected %s
+// RUN: %clang_cc1 -std=c++17 -pedantic-errors -verify=expected %s
+// RUN: %clang_cc1 -std=c++20 -pedantic-errors -verify=expected,since-cxx20 %s
+// RUN: %clang_cc1 -std=c++23 -pedantic-errors -verify=expected,since-cxx20,since-cxx23 %s
+// RUN: %clang_cc1 -std=c++2c -pedantic-errors -verify=expected,since-cxx20,since-cxx23,since-cxx26 %s
 
-namespace cwg2819 { // cwg2819: 19 tentatively ready 2023-12-01
+
+int main() {} // required for cwg2811
+
+namespace cwg2811 { // cwg2811: 3.5
+#if __cplusplus >= 201103L
+void f() {
+  (void)[&] {
+    using T = decltype(main);
+    // expected-error@-1 {{referring to 'main' within an expression is a Clang extension}}
+  };
+  using T2 = decltype(main);
+  // expected-error@-1 {{referring to 'main' within an expression is a Clang extension}}
+}
+
+using T = decltype(main);
+// expected-error@-1 {{referring to 'main' within an expression is a Clang extension}}
+
+int main();
+
+using U = decltype(main);
+using U2 = decltype(&main);
+#endif
+} // namespace cwg2811
+
+namespace cwg2819 { // cwg2819: 19
 #if __cpp_constexpr >= 202306L
   constexpr void* p = nullptr;
   constexpr int* q = static_cast<int*>(p);
@@ -87,7 +111,7 @@ struct D : N::B {
 #endif
 } // namespace cwg2857
 
-namespace cwg2858 { // cwg2858: 19 tentatively ready 2024-04-05
+namespace cwg2858 { // cwg2858: 19
 
 #if __cplusplus > 202302L
 
@@ -110,7 +134,23 @@ struct A {
 
 } // namespace cwg2858
 
-namespace cwg2881 { // cwg2881: 19 tentatively ready 2024-04-19
+namespace cwg2877 { // cwg2877: 19
+#if __cplusplus >= 202002L
+enum E { x };
+void f() {
+  int E;
+  using enum E;   // OK
+}
+using F = E;
+using enum F;     // OK
+template<class T> using EE = T;
+void g() {
+  using enum EE<E>;  // OK
+}
+#endif
+} // namespace cwg2877
+
+namespace cwg2881 { // cwg2881: 19
 
 #if __cplusplus >= 202302L
 
@@ -176,7 +216,118 @@ void f() {
   o.decltype(L2)::operator()();
 }
 
+void f2() {
+  int x = 0;
+  auto lambda = [x] (this auto self) { return x; };
+  using Lambda = decltype(lambda);
+  struct D : private Lambda { // expected-note {{declared private here}}
+    D(Lambda l) : Lambda(l) {}
+    using Lambda::operator();
+    friend Lambda;
+  } d(lambda);
+  d(); // expected-error {{must derive publicly from the lambda}}
+}
+
+template <typename L>
+struct Private : private L {
+  using L::operator();
+  Private(L l) : L(l) {}
+};
+
+template<typename T>
+struct Indirect : T {
+  using T::operator();
+};
+
+template<typename T>
+struct Ambiguous : Indirect<T>, T { // expected-warning {{is inaccessible due to ambiguity}}
+  using Indirect<T>::operator();
+};
+
+template <typename L>
+constexpr auto f3(L l) -> decltype(Private<L>{l}()) { return l(); }
+// expected-note@-1 {{must derive publicly from the lambda}}
+
+template <typename L>
+constexpr auto f4(L l) -> decltype(Ambiguous<L>{{l}, l}()) { return l(); }
+// expected-note@-1 {{is inaccessible due to ambiguity}}
+// expected-note@-2 {{in instantiation of template class}}
+
+template<typename T>
+concept is_callable = requires(T t) { { t() }; };
+
+void g() {
+  int x = 0;
+  auto lambda = [x](this auto self) {};
+  f3(lambda); // expected-error {{no matching function for call to 'f3'}}
+  f4(lambda); // expected-error {{no matching function for call to 'f4'}}
+  // expected-note@-1 {{while substituting deduced template arguments into function template 'f4'}}
+  static_assert(!is_callable<Private<decltype(lambda)>>);
+  static_assert(!is_callable<Ambiguous<decltype(lambda)>>);
+}
+
 #endif
 
 } // namespace cwg2881
 
+namespace cwg2882 { // cwg2882: 2.7
+struct C {
+  operator void() = delete;
+  // expected-warning@-1 {{conversion function converting 'cwg2882::C' to 'void' will never be used}}
+  // cxx98-error@-2 {{deleted function definitions are a C++11 extension}}
+};
+
+void f(C c) {
+  (void)c;
+}
+} // namespace cwg2882
+
+namespace cwg2883 { // cwg2883: no
+#if __cplusplus >= 201103L
+void f() {
+  int x;
+  (void)[&] {
+    return x;
+  };
+}
+#endif
+#if __cplusplus >= 202002L
+struct A {
+  A() = default;
+  A(const A &) = delete; // #cwg2883-A-copy-ctor
+  constexpr operator int() { return 42; }
+};
+void g() {
+  constexpr A a;
+  // FIXME: OK, not odr-usable from a default template argument, and not odr-used
+  (void)[=]<typename T, int = a> {};
+  // since-cxx20-error@-1 {{call to deleted constructor of 'const A'}}
+  //   since-cxx20-note@#cwg2883-A-copy-ctor {{'A' has been explicitly marked deleted here}}
+}
+#endif
+} // namespace cwg2883
+
+namespace cwg2885 { // cwg2885: 16 review 2024-05-31
+#if __cplusplus >= 202002L
+template <class T>
+struct A {
+  A() requires (false) = default;
+  A() : t(42) {}
+  T t;
+};
+
+struct B : A<int> {};
+static_assert(!__is_trivially_constructible(B));
+#endif
+} // namespace cwg2885
+
+namespace cwg2886 { // cwg2886: 9
+#if __cplusplus >= 201103L
+struct C {
+  C() = default;
+  ~C() noexcept(false) = default;
+};
+
+static_assert(noexcept(C()), "");
+#endif
+} // namespace cwg2886

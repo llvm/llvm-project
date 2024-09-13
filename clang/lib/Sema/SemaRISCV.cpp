@@ -17,12 +17,15 @@
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Sema/Attr.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
+#include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/RISCVIntrinsicManager.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Support/RISCVVIntrinsicUtils.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/TargetParser/RISCVTargetParser.h"
 #include <optional>
 #include <string>
@@ -220,6 +223,7 @@ void RISCVIntrinsicManagerImpl::ConstructRVVIntrinsics(
       {"zvksh", RVV_REQ_Zvksh},
       {"zvfbfwma", RVV_REQ_Zvfbfwma},
       {"zvfbfmin", RVV_REQ_Zvfbfmin},
+      {"zvfh", RVV_REQ_Zvfh},
       {"experimental", RVV_REQ_Experimental}};
 
   // Construction of RVVIntrinsicRecords need to sync with createRVVIntrinsics
@@ -278,6 +282,11 @@ void RISCVIntrinsicManagerImpl::ConstructRVVIntrinsics(
       if ((BaseTypeI & Record.TypeRangeMask) != BaseTypeI)
         continue;
 
+      // TODO: Remove the check below and use RequiredFeatures in
+      // riscv_vector.td to check the intrinsics instead, the type check should
+      // be done in checkRVVTypeSupport. This check also not able to work on the
+      // intrinsics that have Float16 but the BaseType is not Float16 such as
+      // `vfcvt_f_x_v`.
       if (BaseType == BasicType::Float16) {
         if ((Record.RequiredExtensions & RVV_REQ_Zvfhmin) == RVV_REQ_Zvfhmin) {
           if (!TI.hasFeature("zvfhmin"))
@@ -725,7 +734,7 @@ bool SemaRISCV::CheckBuiltinFunctionCall(const TargetInfo &TI,
     if (ElemSize == 64 && !TI.hasFeature("zvknhb"))
       return Diag(TheCall->getBeginLoc(),
                   diag::err_riscv_builtin_requires_extension)
-             << /* IsExtension */ true << TheCall->getSourceRange() << "zvknb";
+             << /* IsExtension */ true << TheCall->getSourceRange() << "zvknhb";
 
     return CheckInvalidVLENandLMUL(TI, TheCall, SemaRef, Op1Type,
                                    ElemSize * 4) ||
@@ -1389,8 +1398,7 @@ void SemaRISCV::checkRVVTypeSupport(QualType Ty, SourceLocation Loc, Decl *D,
            !FeatureMap.lookup("zvfhmin"))
     Diag(Loc, diag::err_riscv_type_requires_extension, D)
         << Ty << "zvfh or zvfhmin";
-  else if (Info.ElementType->isBFloat16Type() &&
-           !FeatureMap.lookup("experimental-zvfbfmin"))
+  else if (Info.ElementType->isBFloat16Type() && !FeatureMap.lookup("zvfbfmin"))
     Diag(Loc, diag::err_riscv_type_requires_extension, D) << Ty << "zvfbfmin";
   else if (Info.ElementType->isSpecificBuiltinType(BuiltinType::Float) &&
            !FeatureMap.lookup("zve32f"))
@@ -1420,6 +1428,79 @@ bool SemaRISCV::isValidRVVBitcast(QualType srcTy, QualType destTy) {
 
   return ValidScalableConversion(srcTy, destTy) ||
          ValidScalableConversion(destTy, srcTy);
+}
+
+void SemaRISCV::handleInterruptAttr(Decl *D, const ParsedAttr &AL) {
+  // Warn about repeated attributes.
+  if (const auto *A = D->getAttr<RISCVInterruptAttr>()) {
+    Diag(AL.getRange().getBegin(),
+         diag::warn_riscv_repeated_interrupt_attribute);
+    Diag(A->getLocation(), diag::note_riscv_repeated_interrupt_attribute);
+    return;
+  }
+
+  // Check the attribute argument. Argument is optional.
+  if (!AL.checkAtMostNumArgs(SemaRef, 1))
+    return;
+
+  StringRef Str;
+  SourceLocation ArgLoc;
+
+  // 'machine'is the default interrupt mode.
+  if (AL.getNumArgs() == 0)
+    Str = "machine";
+  else if (!SemaRef.checkStringLiteralArgumentAttr(AL, 0, Str, &ArgLoc))
+    return;
+
+  // Semantic checks for a function with the 'interrupt' attribute:
+  // - Must be a function.
+  // - Must have no parameters.
+  // - Must have the 'void' return type.
+  // - The attribute itself must either have no argument or one of the
+  //   valid interrupt types, see [RISCVInterruptDocs].
+
+  if (D->getFunctionType() == nullptr) {
+    Diag(D->getLocation(), diag::warn_attribute_wrong_decl_type)
+        << AL << AL.isRegularKeywordAttribute() << ExpectedFunction;
+    return;
+  }
+
+  if (hasFunctionProto(D) && getFunctionOrMethodNumParams(D) != 0) {
+    Diag(D->getLocation(), diag::warn_interrupt_attribute_invalid)
+        << /*RISC-V*/ 2 << 0;
+    return;
+  }
+
+  if (!getFunctionOrMethodResultType(D)->isVoidType()) {
+    Diag(D->getLocation(), diag::warn_interrupt_attribute_invalid)
+        << /*RISC-V*/ 2 << 1;
+    return;
+  }
+
+  RISCVInterruptAttr::InterruptType Kind;
+  if (!RISCVInterruptAttr::ConvertStrToInterruptType(Str, Kind)) {
+    Diag(AL.getLoc(), diag::warn_attribute_type_not_supported)
+        << AL << Str << ArgLoc;
+    return;
+  }
+
+  D->addAttr(::new (getASTContext())
+                 RISCVInterruptAttr(getASTContext(), AL, Kind));
+}
+
+bool SemaRISCV::isAliasValid(unsigned BuiltinID, StringRef AliasName) {
+  return BuiltinID >= RISCV::FirstRVVBuiltin &&
+         BuiltinID <= RISCV::LastRVVBuiltin;
+}
+
+bool SemaRISCV::isValidFMVExtension(StringRef Ext) {
+  if (Ext.empty())
+    return false;
+
+  if (!Ext.consume_front("+"))
+    return false;
+
+  return -1 != RISCVISAInfo::getRISCVFeaturesBitsInfo(Ext).second;
 }
 
 SemaRISCV::SemaRISCV(Sema &S) : SemaBase(S) {}

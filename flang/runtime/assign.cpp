@@ -591,29 +591,27 @@ void RTDEF(AssignTemporary)(Descriptor &to, const Descriptor &from,
     }
   }
 
-  Assign(to, from, terminator, PolymorphicLHS);
+  Assign(to, from, terminator, MaybeReallocate | PolymorphicLHS);
 }
 
-void RTDEF(CopyOutAssign)(Descriptor &to, const Descriptor &from,
-    bool skipToInit, const char *sourceFile, int sourceLine) {
+void RTDEF(CopyInAssign)(Descriptor &temp, const Descriptor &var,
+    const char *sourceFile, int sourceLine) {
   Terminator terminator{sourceFile, sourceLine};
-  // Initialize the "to" if it is of derived type that needs initialization.
-  if (!skipToInit) {
-    if (const DescriptorAddendum * addendum{to.Addendum()}) {
-      if (const auto *derived{addendum->derivedType()}) {
-        if (!derived->noInitializationNeeded()) {
-          if (ReturnError(terminator, Initialize(to, *derived, terminator)) !=
-              StatOk) {
-            return;
-          }
-        }
-      }
-    }
-  }
+  temp = var;
+  temp.set_base_addr(nullptr);
+  temp.raw().attribute = CFI_attribute_allocatable;
+  RTNAME(AssignTemporary)(temp, var, sourceFile, sourceLine);
+}
+
+void RTDEF(CopyOutAssign)(
+    Descriptor *var, Descriptor &temp, const char *sourceFile, int sourceLine) {
+  Terminator terminator{sourceFile, sourceLine};
 
   // Copyout from the temporary must not cause any finalizations
-  // for LHS.
-  Assign(to, from, terminator, NoAssignFlags);
+  // for LHS. The variable must be properly initialized already.
+  if (var)
+    Assign(*var, temp, terminator, NoAssignFlags);
+  temp.Destroy(/*finalize=*/false, /*destroyPointers=*/false, &terminator);
 }
 
 void RTDEF(AssignExplicitLengthCharacter)(Descriptor &to,

@@ -111,7 +111,7 @@ int explicit_maps_with_inner_lambda(int a){
 // CK25: define {{.+}}[[CALL00]](ptr noundef [[VAL:%.+]])
 // CK25: store ptr [[VAL]], ptr [[VALADDR:%[^,]+]],
 // CK25: [[VAL1:%.+]] = load ptr, ptr [[VALADDR]],
-// CK25: [[VALADDR1:%.+]] = getelementptr inbounds [[CA00]], ptr [[CA:%[^,]+]], i32 0, i32 0
+// CK25: [[VALADDR1:%.+]] = getelementptr inbounds nuw [[CA00]], ptr [[CA:%[^,]+]], i32 0, i32 0
 // CK25: store ptr [[VAL1]], ptr [[VALADDR1]],
 // CK25: call void {{.*}}[[LAMBDA:@.+]]{{.*}}(ptr {{[^,]*}} [[CA]])
 
@@ -120,7 +120,7 @@ int explicit_maps_with_inner_lambda(int a){
 // CK25: define {{.+}}[[CALL01]](ptr {{.*}}[[VAL:%.+]])
 // CK25: store ptr [[VAL]], ptr [[VALADDR:%[^,]+]],
 // CK25: [[VAL1:%.+]] = load ptr, ptr [[VALADDR]],
-// CK25: [[VALADDR1:%.+]] = getelementptr inbounds [[CA01]], ptr [[CA:%[^,]+]], i32 0, i32 0
+// CK25: [[VALADDR1:%.+]] = getelementptr inbounds nuw [[CA01]], ptr [[CA:%[^,]+]], i32 0, i32 0
 // CK25: store ptr [[VAL1]], ptr [[VALADDR1]],
 // CK25: call void {{.*}}[[LAMBDA2:@.+]]{{.*}}(ptr {{[^,]*}} [[CA]])
 

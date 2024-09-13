@@ -7,8 +7,9 @@ define void @test(ptr noalias %arg, ptr noalias %arg1, ptr %arg2) {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[TMP_I_I:%.*]] = getelementptr i8, ptr [[ARG1]], i64 24
 ; CHECK-NEXT:    [[TMP_I_I4:%.*]] = getelementptr i8, ptr [[ARG]], i64 24
+; CHECK-NEXT:    [[TMP_I_I13:%.*]] = getelementptr i8, ptr [[ARG1]], i64 28
+; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[TMP_I_I13]], align 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[TMP_I_I]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[TMP0]], i32 1
 ; CHECK-NEXT:    store float [[TMP1]], ptr [[ARG2]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = fcmp olt <4 x float> [[TMP0]], zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> poison, <4 x i32> <i32 2, i32 3, i32 2, i32 3>

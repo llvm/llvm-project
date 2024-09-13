@@ -357,19 +357,19 @@ bool IndVarSimplify::handleFloatingPointIV(Loop *L, PHINode *PN) {
   // Insert new integer induction variable.
   PHINode *NewPHI =
       PHINode::Create(Int32Ty, 2, PN->getName() + ".int", PN->getIterator());
-  NewPHI->addIncoming(ConstantInt::get(Int32Ty, InitValue),
+  NewPHI->addIncoming(ConstantInt::getSigned(Int32Ty, InitValue),
                       PN->getIncomingBlock(IncomingEdge));
   NewPHI->setDebugLoc(PN->getDebugLoc());
 
-  Instruction *NewAdd =
-      BinaryOperator::CreateAdd(NewPHI, ConstantInt::get(Int32Ty, IncValue),
-                                Incr->getName() + ".int", Incr->getIterator());
+  Instruction *NewAdd = BinaryOperator::CreateAdd(
+      NewPHI, ConstantInt::getSigned(Int32Ty, IncValue),
+      Incr->getName() + ".int", Incr->getIterator());
   NewAdd->setDebugLoc(Incr->getDebugLoc());
   NewPHI->addIncoming(NewAdd, PN->getIncomingBlock(BackEdge));
 
-  ICmpInst *NewCompare =
-      new ICmpInst(TheBr->getIterator(), NewPred, NewAdd,
-                   ConstantInt::get(Int32Ty, ExitValue), Compare->getName());
+  ICmpInst *NewCompare = new ICmpInst(
+      TheBr->getIterator(), NewPred, NewAdd,
+      ConstantInt::getSigned(Int32Ty, ExitValue), Compare->getName());
   NewCompare->setDebugLoc(Compare->getDebugLoc());
 
   // In the following deletions, PN may become dead and may be deleted.
@@ -518,7 +518,7 @@ static void visitIVCast(CastInst *Cast, WideIVInfo &WI,
 
   Type *Ty = Cast->getType();
   uint64_t Width = SE->getTypeSizeInBits(Ty);
-  if (!Cast->getModule()->getDataLayout().isLegalInteger(Width))
+  if (!Cast->getDataLayout().isLegalInteger(Width))
     return;
 
   // Check that `Cast` actually extends the induction variable (we rely on this
@@ -845,7 +845,7 @@ static PHINode *FindLoopCounter(Loop *L, BasicBlock *ExitingBB,
   const SCEV *BestInit = nullptr;
   BasicBlock *LatchBlock = L->getLoopLatch();
   assert(LatchBlock && "Must be in simplified form");
-  const DataLayout &DL = L->getHeader()->getModule()->getDataLayout();
+  const DataLayout &DL = L->getHeader()->getDataLayout();
 
   for (BasicBlock::iterator I = L->getHeader()->begin(); isa<PHINode>(I); ++I) {
     PHINode *Phi = cast<PHINode>(I);
@@ -1232,7 +1232,7 @@ static void replaceLoopPHINodesWithPreheaderValues(
     if (!L->contains(I))
       continue;
 
-    Value *Res = simplifyInstruction(I, I->getModule()->getDataLayout());
+    Value *Res = simplifyInstruction(I, I->getDataLayout());
     if (Res && LI->replacementPreservesLCSSAForm(I, Res)) {
       for (User *U : I->users())
         Worklist.push_back(cast<Instruction>(U));
@@ -1287,7 +1287,7 @@ createReplacement(ICmpInst *ICmp, const Loop *L, BasicBlock *ExitingBB,
     MaxIter = SE->getZeroExtendExpr(MaxIter, ARTy);
   else if (SE->getTypeSizeInBits(ARTy) < SE->getTypeSizeInBits(MaxIterTy)) {
     const SCEV *MinusOne = SE->getMinusOne(ARTy);
-    auto *MaxAllowedIter = SE->getZeroExtendExpr(MinusOne, MaxIterTy);
+    const SCEV *MaxAllowedIter = SE->getZeroExtendExpr(MinusOne, MaxIterTy);
     if (SE->isKnownPredicateAt(ICmpInst::ICMP_ULE, MaxIter, MaxAllowedIter, BI))
       MaxIter = SE->getTruncateExpr(MaxIter, ARTy);
   }
@@ -1299,7 +1299,7 @@ createReplacement(ICmpInst *ICmp, const Loop *L, BasicBlock *ExitingBB,
     // So we manually construct umin(a - 1, b - 1).
     SmallVector<const SCEV *, 4> Elements;
     if (auto *UMin = dyn_cast<SCEVUMinExpr>(MaxIter)) {
-      for (auto *Op : UMin->operands())
+      for (const SCEV *Op : UMin->operands())
         Elements.push_back(SE->getMinusSCEV(Op, SE->getOne(Op->getType())));
       MaxIter = SE->getUMinFromMismatchedTypes(Elements);
     } else
@@ -1376,15 +1376,15 @@ static bool optimizeLoopExitWithUnknownExitCount(
     for (auto *ICmp : LeafConditions) {
       auto EL = SE->computeExitLimitFromCond(L, ICmp, Inverted,
                                              /*ControlsExit*/ false);
-      auto *ExitMax = EL.SymbolicMaxNotTaken;
+      const SCEV *ExitMax = EL.SymbolicMaxNotTaken;
       if (isa<SCEVCouldNotCompute>(ExitMax))
         continue;
       // They could be of different types (specifically this happens after
       // IV widening).
       auto *WiderType =
           SE->getWiderType(ExitMax->getType(), MaxIter->getType());
-      auto *WideExitMax = SE->getNoopOrZeroExtend(ExitMax, WiderType);
-      auto *WideMaxIter = SE->getNoopOrZeroExtend(MaxIter, WiderType);
+      const SCEV *WideExitMax = SE->getNoopOrZeroExtend(ExitMax, WiderType);
+      const SCEV *WideMaxIter = SE->getNoopOrZeroExtend(MaxIter, WiderType);
       if (WideExitMax == WideMaxIter)
         ICmpsFailingOnLastIter.insert(ICmp);
     }
@@ -1463,7 +1463,7 @@ bool IndVarSimplify::canonicalizeExitCondition(Loop *L) {
     if (!match(LHS, m_ZExt(m_Value(LHSOp))) || !ICmp->isSigned())
       continue;
 
-    const DataLayout &DL = ExitingBB->getModule()->getDataLayout();
+    const DataLayout &DL = ExitingBB->getDataLayout();
     const unsigned InnerBitWidth = DL.getTypeSizeInBits(LHSOp->getType());
     const unsigned OuterBitWidth = DL.getTypeSizeInBits(RHS->getType());
     auto FullCR = ConstantRange::getFull(InnerBitWidth);
@@ -1538,7 +1538,7 @@ bool IndVarSimplify::canonicalizeExitCondition(Loop *L) {
     };
 
 
-    const DataLayout &DL = ExitingBB->getModule()->getDataLayout();
+    const DataLayout &DL = ExitingBB->getDataLayout();
     const unsigned InnerBitWidth = DL.getTypeSizeInBits(LHSOp->getType());
     const unsigned OuterBitWidth = DL.getTypeSizeInBits(RHS->getType());
     auto FullCR = ConstantRange::getFull(InnerBitWidth);
@@ -2062,7 +2062,7 @@ PreservedAnalyses IndVarSimplifyPass::run(Loop &L, LoopAnalysisManager &AM,
                                           LoopStandardAnalysisResults &AR,
                                           LPMUpdater &) {
   Function *F = L.getHeader()->getParent();
-  const DataLayout &DL = F->getParent()->getDataLayout();
+  const DataLayout &DL = F->getDataLayout();
 
   IndVarSimplify IVS(&AR.LI, &AR.SE, &AR.DT, DL, &AR.TLI, &AR.TTI, AR.MSSA,
                      WidenIndVars && AllowIVWidening);

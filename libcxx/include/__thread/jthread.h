@@ -10,7 +10,6 @@
 #ifndef _LIBCPP___THREAD_JTHREAD_H
 #define _LIBCPP___THREAD_JTHREAD_H
 
-#include <__availability>
 #include <__config>
 #include <__functional/invoke.h>
 #include <__stop_token/stop_source.h>
@@ -31,7 +30,7 @@
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
-#if _LIBCPP_STD_VER >= 20 && !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_STOP_TOKEN)
+#if _LIBCPP_STD_VER >= 20
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -128,7 +127,7 @@ private:
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP_STD_VER >= 20 && !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_STOP_TOKEN)
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_POP_MACROS
 

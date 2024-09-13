@@ -100,19 +100,25 @@ struct SIArgument {
   SIArgument() : IsRegister(false), StackOffset(0) {}
   SIArgument(const SIArgument &Other) {
     IsRegister = Other.IsRegister;
-    if (IsRegister) {
-      ::new ((void *)std::addressof(RegisterName))
-          StringValue(Other.RegisterName);
-    } else
+    if (IsRegister)
+      new (&RegisterName) StringValue(Other.RegisterName);
+    else
       StackOffset = Other.StackOffset;
     Mask = Other.Mask;
   }
   SIArgument &operator=(const SIArgument &Other) {
+    // Default-construct or destruct the old RegisterName in case of switching
+    // union members
+    if (IsRegister != Other.IsRegister) {
+      if (Other.IsRegister)
+        new (&RegisterName) StringValue();
+      else
+        RegisterName.~StringValue();
+    }
     IsRegister = Other.IsRegister;
-    if (IsRegister) {
-      ::new ((void *)std::addressof(RegisterName))
-          StringValue(Other.RegisterName);
-    } else
+    if (IsRegister)
+      RegisterName = Other.RegisterName;
+    else
       StackOffset = Other.StackOffset;
     Mask = Other.Mask;
     return *this;
@@ -289,6 +295,8 @@ struct SIMachineFunctionInfo final : public yaml::MachineFunctionInfo {
   StringValue SGPRForEXECCopy;
   StringValue LongBranchReservedReg;
 
+  bool HasInitWholeWave = false;
+
   SIMachineFunctionInfo() = default;
   SIMachineFunctionInfo(const llvm::SIMachineFunctionInfo &,
                         const TargetRegisterInfo &TRI,
@@ -336,6 +344,7 @@ template <> struct MappingTraits<SIMachineFunctionInfo> {
                        StringValue()); // Don't print out when it's empty.
     YamlIO.mapOptional("longBranchReservedReg", MFI.LongBranchReservedReg,
                        StringValue());
+    YamlIO.mapOptional("hasInitWholeWave", MFI.HasInitWholeWave, false);
   }
 };
 
@@ -597,10 +606,7 @@ public:
   const ReservedRegSet &getWWMReservedRegs() const { return WWMReservedRegs; }
 
   ArrayRef<PrologEpilogSGPRSpill> getPrologEpilogSGPRSpills() const {
-    assert(
-        is_sorted(PrologEpilogSGPRSpills, [](const auto &LHS, const auto &RHS) {
-          return LHS.first < RHS.first;
-        }));
+    assert(is_sorted(PrologEpilogSGPRSpills, llvm::less_first()));
     return PrologEpilogSGPRSpills;
   }
 
@@ -755,6 +761,7 @@ public:
   Register addKernargSegmentPtr(const SIRegisterInfo &TRI);
   Register addDispatchID(const SIRegisterInfo &TRI);
   Register addFlatScratchInit(const SIRegisterInfo &TRI);
+  Register addPrivateSegmentSize(const SIRegisterInfo &TRI);
   Register addImplicitBufferPtr(const SIRegisterInfo &TRI);
   Register addLDSKernelId();
   SmallVectorImpl<MCRegister> *

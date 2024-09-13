@@ -88,6 +88,9 @@ static_assert(test(std::ranges::find_first_of, a, a));
 static_assert(test(std::ranges::find_if, a, odd));
 static_assert(test(std::ranges::find_if_not, a, odd));
 #if TEST_STD_VER >= 23
+static_assert(test(std::ranges::find_last, a, 42));
+static_assert(test(std::ranges::find_last_if, a, odd));
+static_assert(test(std::ranges::find_last_if_not, a, odd));
 static_assert(test(std::ranges::fold_left, a, 0, std::plus()));
 static_assert(test(std::ranges::fold_left_with_iter, a, 0, std::plus()));
 #endif
