@@ -819,8 +819,7 @@ void HipBinAmd::executeHipCCCmd(vector<string> argv) {
         HIPCXXFLAGS += GPU_ARCH_ARG;
       }
     }  // end of val != "gfx000"
-  }  // end of targets for loop
-  string HCC_EXTRA_LIBRARIES;
+  }    // end of targets for loop
   if (hsacoVersion.size() > 0) {
     if (compileOnly == 0) {
       HIPLDFLAGS += " -mcode-object-version=" + hsacoVersion;
@@ -835,7 +834,6 @@ void HipBinAmd::executeHipCCCmd(vector<string> argv) {
     std::cerr <<  "No valid AMD GPU target was either specified or found."
               << "Please specify a valid target using --offload-arch=<target>.\n";
   }
-  HCC_EXTRA_LIBRARIES ="\n";  // TODO(agunashe) write to env
 
   if (buildDeps) {
     HIPCXXFLAGS += " --cuda-host-only";
