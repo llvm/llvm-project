@@ -5360,6 +5360,9 @@ public:
   void
   EmitAArch64MultiVersionResolver(llvm::Function *Resolver,
                                   ArrayRef<MultiVersionResolverOption> Options);
+  void
+  EmitRISCVMultiVersionResolver(llvm::Function *Resolver,
+                                ArrayRef<MultiVersionResolverOption> Options);
 
 private:
   QualType getVarArgType(const Expr *Arg);
