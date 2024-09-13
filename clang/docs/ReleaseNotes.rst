@@ -179,6 +179,8 @@ C2y Feature Support
 C23 Feature Support
 ^^^^^^^^^^^^^^^^^^^
 
+- Clang now supports `N3029 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3029.htm>`_ Improved Normal Enumerations.
+
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 
@@ -382,6 +384,9 @@ Bug Fixes to C++ Support
 - Fix a crash when using ``source_location`` in the trailing return type of a lambda expression. (#GH67134)
 - A follow-up fix was added for (#GH61460), as the previous fix was not entirely correct. (#GH86361)
 - Fixed a crash in the typo correction of an invalid CTAD guide. (#GH107887)
+- Fixed a crash when clang tries to subtitute parameter pack while retaining the parameter
+  pack. #GH63819, #GH107560
+
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

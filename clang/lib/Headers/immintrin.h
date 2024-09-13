@@ -653,6 +653,7 @@ _storebe_i64(void * __P, long long __D) {
 #include <avx10_2convertintrin.h>
 #include <avx10_2minmaxintrin.h>
 #include <avx10_2niintrin.h>
+#include <avx10_2satcvtdsintrin.h>
 #include <avx10_2satcvtintrin.h>
 #endif
 
@@ -661,6 +662,7 @@ _storebe_i64(void * __P, long long __D) {
 #include <avx10_2_512convertintrin.h>
 #include <avx10_2_512minmaxintrin.h>
 #include <avx10_2_512niintrin.h>
+#include <avx10_2_512satcvtdsintrin.h>
 #include <avx10_2_512satcvtintrin.h>
 #endif
 

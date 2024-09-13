@@ -644,6 +644,31 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
     return true;
   }
 
+  case CK_HLSLVectorTruncation: {
+    assert(SubExpr->getType()->isVectorType());
+    if (std::optional<PrimType> ResultT = classify(CE)) {
+      assert(!DiscardResult);
+      // Result must be either a float or integer. Take the first element.
+      if (!this->visit(SubExpr))
+        return false;
+      return this->emitArrayElemPop(*ResultT, 0, CE);
+    }
+    // Otherwise, this truncates from one vector type to another.
+    assert(CE->getType()->isVectorType());
+
+    if (!Initializing) {
+      unsigned LocalIndex = allocateTemporary(CE);
+      if (!this->emitGetPtrLocal(LocalIndex, CE))
+        return false;
+    }
+    unsigned ToSize = CE->getType()->getAs<VectorType>()->getNumElements();
+    assert(SubExpr->getType()->getAs<VectorType>()->getNumElements() > ToSize);
+    if (!this->visit(SubExpr))
+      return false;
+    return this->emitCopyArray(classifyVectorElementType(CE->getType()), 0, 0,
+                               ToSize, CE);
+  };
+
   case CK_ToVoid:
     return discard(SubExpr);
 
@@ -3335,7 +3360,11 @@ bool Compiler<Emitter>::VisitObjCBoxedExpr(const ObjCBoxedExpr *E) {
   if (!E->isExpressibleAsConstantInitializer())
     return this->discard(SubExpr) && this->emitInvalid(E);
 
-  return this->delegate(SubExpr);
+  assert(classifyPrim(E) == PT_Ptr);
+  if (std::optional<unsigned> I = P.getOrCreateDummy(E))
+    return this->emitGetPtrGlobal(*I, E);
+
+  return false;
 }
 
 template <class Emitter>
@@ -4118,7 +4147,7 @@ bool Compiler<Emitter>::VisitBuiltinCallExpr(const CallExpr *E,
       BuiltinID == Builtin::BI__builtin___NSStringMakeConstantString ||
       BuiltinID == Builtin::BI__builtin_ptrauth_sign_constant ||
       BuiltinID == Builtin::BI__builtin_function_start) {
-    if (std::optional<unsigned> GlobalOffset = P.createGlobal(E)) {
+    if (std::optional<unsigned> GlobalOffset = P.getOrCreateDummy(E)) {
       if (!this->emitGetPtrGlobal(*GlobalOffset, E))
         return false;
 

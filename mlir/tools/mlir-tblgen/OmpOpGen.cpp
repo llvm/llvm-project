@@ -112,13 +112,17 @@ static bool verifyArgument(DagInit *arguments, StringRef argName,
       });
 }
 
-/// Check that the given string record value, identified by its name \c value,
+/// Check that the given string record value, identified by its \c opValueName,
 /// is either undefined or empty in both the given operation and clause record
 /// or its contents for the clause record are contained in the operation record.
-static bool verifyStringValue(StringRef value, const Record *op,
-                              const Record *clause) {
-  auto opValue = op->getValueAsOptionalString(value);
-  auto clauseValue = clause->getValueAsOptionalString(value);
+/// Passing a non-empty \c clauseValueName enables checking values named
+/// differently in the operation and clause records.
+static bool verifyStringValue(const Record *op, const Record *clause,
+                              StringRef opValueName,
+                              StringRef clauseValueName = {}) {
+  auto opValue = op->getValueAsOptionalString(opValueName);
+  auto clauseValue = clause->getValueAsOptionalString(
+      clauseValueName.empty() ? opValueName : clauseValueName);
 
   bool opHasValue = opValue && !opValue->trim().empty();
   bool clauseHasValue = clauseValue && !clauseValue->trim().empty();
@@ -154,16 +158,25 @@ static void verifyClause(const Record *op, const Record *clause) {
   }
 
   if (!clause->getValueAsBit("ignoreAsmFormat") &&
-      !verifyStringValue("assemblyFormat", op, clause))
+      !verifyStringValue(op, clause, "assemblyFormat", "reqAssemblyFormat"))
     PrintWarning(
         op->getLoc(),
         "'" + clauseClassName +
-            "' clause-defined `assemblyFormat` not present in operation. "
-            "Consider concatenating `clausesAssemblyFormat` or explicitly "
-            "skipping this field.");
+            "' clause-defined `reqAssemblyFormat` not present in operation. "
+            "Consider concatenating `clauses[{Req,Opt}]AssemblyFormat` or "
+            "explicitly skipping this field.");
+
+  if (!clause->getValueAsBit("ignoreAsmFormat") &&
+      !verifyStringValue(op, clause, "assemblyFormat", "optAssemblyFormat"))
+    PrintWarning(
+        op->getLoc(),
+        "'" + clauseClassName +
+            "' clause-defined `optAssemblyFormat` not present in operation. "
+            "Consider concatenating `clauses[{Req,Opt}]AssemblyFormat` or "
+            "explicitly skipping this field.");
 
   if (!clause->getValueAsBit("ignoreDesc") &&
-      !verifyStringValue("description", op, clause))
+      !verifyStringValue(op, clause, "description"))
     PrintError(op->getLoc(),
                "'" + clauseClassName +
                    "' clause-defined `description` not present in operation. "
@@ -171,7 +184,7 @@ static void verifyClause(const Record *op, const Record *clause) {
                    "skipping this field.");
 
   if (!clause->getValueAsBit("ignoreExtraDecl") &&
-      !verifyStringValue("extraClassDeclaration", op, clause))
+      !verifyStringValue(op, clause, "extraClassDeclaration"))
     PrintWarning(
         op->getLoc(),
         "'" + clauseClassName +
