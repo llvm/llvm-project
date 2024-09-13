@@ -91,7 +91,7 @@ void convertToDenseElementsAttrImpl(mlir::cir::ConstArrayAttr attr,
 
     auto nestTy = localArrayTy.getEltType();
     if (!mlir::isa<mlir::cir::ArrayType>(nestTy))
-      values.insert(values.end(), localArrayTy.getSize() - numTrailingZeros,
+      values.insert(values.end(), numTrailingZeros,
                     getZeroInitFromType<StorageTy>(nestTy));
   }
 }
