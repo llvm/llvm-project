@@ -32,8 +32,6 @@ public:
 
   Status LaunchProcess() override;
 
-  void SetPortOffset(uint16_t port_offset);
-
   void SetInferiorArguments(const lldb_private::Args &args);
 
   Status LaunchGDBServer(const lldb_private::Args &args, lldb::pid_t &pid,
@@ -47,7 +45,6 @@ protected:
   static std::set<lldb::pid_t> g_spawned_pids;
 
   uint16_t m_gdbserver_port;
-  uint16_t m_port_offset;
   std::optional<std::string> m_pending_gdb_server_socket_name;
 
   PacketResult Handle_qLaunchGDBServer(StringExtractorGDBRemote &packet);

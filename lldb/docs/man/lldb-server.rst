@@ -150,12 +150,6 @@ GDB-SERVER CONNECTIONS
  Define a port to be used for gdb-server connections. This port is used for
  multiple connections.
 
-.. option:: --port-offset <offset>
-
- Add the specified offset to port numbers returned by server. This is useful
- if the server is running behind a firewall, and a range of ports is redirected
- to it with an offset.
-
 EXAMPLES
 --------
 

@@ -92,9 +92,9 @@ public:
   static llvm::Error Initialize();
   static void Terminate();
 
-  static std::unique_ptr<Socket> Create(const SocketProtocol protocol,
-                                        bool child_processes_inherit,
-                                        Status &error);
+  static std::unique_ptr<Socket>
+  Create(const SocketProtocol protocol, bool child_processes_inherit,
+         Status &error, NativeSocket sockfd = kInvalidSocketValue);
 
   virtual Status Connect(llvm::StringRef name) = 0;
   virtual Status Listen(llvm::StringRef name, int backlog) = 0;
@@ -154,7 +154,7 @@ public:
 
 protected:
   Socket(SocketProtocol protocol, bool should_close,
-         bool m_child_process_inherit);
+         bool child_processes_inherit);
 
   virtual size_t Send(const void *buf, const size_t num_bytes);
 

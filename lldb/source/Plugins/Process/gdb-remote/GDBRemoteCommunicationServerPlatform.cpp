@@ -51,7 +51,7 @@ std::set<lldb::pid_t> GDBRemoteCommunicationServerPlatform::g_spawned_pids;
 GDBRemoteCommunicationServerPlatform::GDBRemoteCommunicationServerPlatform(
     const Socket::SocketProtocol socket_protocol, uint16_t gdbserver_port)
     : GDBRemoteCommunicationServerCommon(), m_socket_protocol(socket_protocol),
-      m_gdbserver_port(gdbserver_port), m_port_offset(0) {
+      m_gdbserver_port(gdbserver_port) {
 
   RegisterMemberFunctionHandler(
       StringExtractorGDBRemote::eServerPacketType_qC,
@@ -185,8 +185,7 @@ GDBRemoteCommunicationServerPlatform::Handle_qLaunchGDBServer(
 
   StreamGDBRemote response;
   uint16_t gdbserver_port = socket_name.empty() ? m_gdbserver_port : 0;
-  response.Printf("pid:%" PRIu64 ";port:%u;", debugserver_pid,
-                  gdbserver_port + m_port_offset);
+  response.Printf("pid:%" PRIu64 ";port:%u;", debugserver_pid, gdbserver_port);
   if (!socket_name.empty()) {
     response.PutCString("socket_name:");
     response.PutStringAsRawHex8(socket_name);
@@ -492,10 +491,6 @@ GDBRemoteCommunicationServerPlatform::GetDomainSocketPath(const char *prefix) {
   llvm::sys::fs::createUniqueFile(socket_path_spec.GetPath().c_str(),
                                   socket_path);
   return FileSpec(socket_path.c_str());
-}
-
-void GDBRemoteCommunicationServerPlatform::SetPortOffset(uint16_t port_offset) {
-  m_port_offset = port_offset;
 }
 
 void GDBRemoteCommunicationServerPlatform::SetPendingGdbServer(
