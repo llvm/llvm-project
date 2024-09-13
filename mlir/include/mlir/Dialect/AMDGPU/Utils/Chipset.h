@@ -49,10 +49,10 @@ struct Chipset {
 #undef DEFINE_COMP_OPERATOR
 
   bool isGfx940() const {
-    return majorVersion == 9 && minorVersion >= 0x40 && minorVersion < 0x50;
+    return majorVersion == 9 && minorVersion >= 4 && minorVersion < 5;
   }
   bool hasOcpFp8() const {
-    return (majorVersion == 9 && minorVersion >= 0x50) || majorVersion >= 12;
+    return (majorVersion == 9 && minorVersion >= 5) || majorVersion >= 12;
   }
 };
 
