@@ -1823,6 +1823,9 @@ Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN) {
     // If the only use of phi is comparing it with a constant then we can
     // put this comparison in the incoming BB directly after a ucmp/scmp call
     // because we know that it will simplify to a single icmp.
+    // NOTE: the single-use check here is not only to ensure that the
+    // optimization is profitable, but also to avoid creating a potentially
+    // invalid phi node when we have a multi-edge in the CFG.
     const APInt *Ignored;
     if (isa<CmpIntrinsic>(InVal) && InVal->hasOneUse() &&
         match(&I, m_ICmp(m_Specific(PN), m_APInt(Ignored)))) {
