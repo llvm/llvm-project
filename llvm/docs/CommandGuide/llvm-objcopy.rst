@@ -350,11 +350,6 @@ them.
 
  Extract the named partition from the output.
 
-.. option:: --set-max-section-offset <value>
-
- Emit an error if input section has a file offset greater than the specified
- ``<value>``.
-
 .. option:: --gap-fill <value>
 
  For binary outputs, fill the gaps between sections with ``<value>`` instead
@@ -427,6 +422,11 @@ them.
  represents a single symbol, with leading and trailing whitespace ignored, as is
  anything following a '#'. Can be specified multiple times to read names from
  multiple files.
+
+.. option:: --max-section-offset <value>
+
+ Emit an error if input section has a file offset greater than the specified
+ ``<value>``.
 
 .. option:: --new-symbol-visibility <visibility>
 

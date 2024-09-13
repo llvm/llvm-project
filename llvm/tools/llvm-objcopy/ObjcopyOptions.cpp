@@ -1055,9 +1055,8 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
       InputArgs.hasArg(OBJCOPY_extract_main_partition);
   ELFConfig.LocalizeHidden = InputArgs.hasArg(OBJCOPY_localize_hidden);
 
-  if (auto *Arg = InputArgs.getLastArg(OBJCOPY_set_max_section_offset)) {
+  if (auto *Arg = InputArgs.getLastArg(OBJCOPY_max_section_offset))
     ELFConfig.MaxSectionOffset = std::stoull(Arg->getValue());
-  }
 
   Config.Weaken = InputArgs.hasArg(OBJCOPY_weaken);
   if (auto *Arg =

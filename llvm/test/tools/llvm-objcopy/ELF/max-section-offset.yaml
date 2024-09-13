@@ -1,6 +1,6 @@
 # RUN: yaml2obj %s --docnum=1 -o %t
-# RUN: not llvm-objcopy -O binary %t %t2 --set-max-section-offset=15 2>&1 | FileCheck -DFILE=%t %s --check-prefix=INVALID-COPY
-# RUN: llvm-objcopy -O binary %t %t2 --set-max-section-offset=16
+# RUN: not llvm-objcopy -O binary %t %t2 --max-section-offset=15 2>&1 | FileCheck -DFILE=%t %s --check-prefix=INVALID-COPY
+# RUN: llvm-objcopy -O binary %t %t2 --max-section-offset=16
 
 # INVALID-COPY: error: '[[FILE]]': writing section .high_addr at offset 0x10 greater than max offset 0xf specified by --set-max-section-offset
 
