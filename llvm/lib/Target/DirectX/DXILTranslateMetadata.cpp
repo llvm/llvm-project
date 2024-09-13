@@ -330,6 +330,13 @@ static void translateMetadata(Module &M, const DXILResourceMap &DRM,
     uint64_t EntryShaderFlags =
         (MMDI.ShaderProfile == Triple::EnvironmentType::Library) ? 0
                                                                  : ShaderFlags;
+    if (MMDI.ShaderProfile != Triple::EnvironmentType::Library) {
+      if (EntryProp.ShaderStage != MMDI.ShaderProfile) {
+        M.getContext().diagnose(DiagnosticInfoModuleFormat(
+            M, "Non-library shader: Stage of Shader entry different from "
+               "target profile"));
+      }
+    }
     EntryFnMDNodes.emplace_back(emitEntryMD(EntryProp, Signatures, ResourceMD,
                                             EntryShaderFlags,
                                             MMDI.ShaderProfile));
