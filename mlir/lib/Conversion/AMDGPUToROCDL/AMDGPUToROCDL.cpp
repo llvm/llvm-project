@@ -771,7 +771,7 @@ LogicalResult ExtPackedFp8OpLowering::matchAndRewrite(
     ExtPackedFp8Op op, ExtPackedFp8OpAdaptor adaptor,
     ConversionPatternRewriter &rewriter) const {
   Location loc = op.getLoc();
-  if (chipset.majorVersion != 9 || chipset < kGfx940)
+  if (!(chipset.isGfx940() || chipset.hasOcpFp8()))
     return rewriter.notifyMatchFailure(
         loc, "Fp8 conversion instructions are not available on target "
              "architecture and their emulation is not implemented");
@@ -815,7 +815,7 @@ LogicalResult PackedTrunc2xFp8OpLowering::matchAndRewrite(
     PackedTrunc2xFp8Op op, PackedTrunc2xFp8OpAdaptor adaptor,
     ConversionPatternRewriter &rewriter) const {
   Location loc = op.getLoc();
-  if (chipset.majorVersion != 9 || chipset < kGfx940)
+  if (!(chipset.isGfx940() || chipset.hasOcpFp8()))
     return rewriter.notifyMatchFailure(
         loc, "Fp8 conversion instructions are not available on target "
              "architecture and their emulation is not implemented");
@@ -852,7 +852,7 @@ LogicalResult PackedStochRoundFp8OpLowering::matchAndRewrite(
     PackedStochRoundFp8Op op, PackedStochRoundFp8OpAdaptor adaptor,
     ConversionPatternRewriter &rewriter) const {
   Location loc = op.getLoc();
-  if (chipset.majorVersion != 9 || chipset < kGfx940)
+  if (!(chipset.isGfx940() || chipset.hasOcpFp8()))
     return rewriter.notifyMatchFailure(
         loc, "Fp8 conversion instructions are not available on target "
              "architecture and their emulation is not implemented");
