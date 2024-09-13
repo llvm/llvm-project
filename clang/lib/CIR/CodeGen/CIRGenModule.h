@@ -127,6 +127,22 @@ private:
   /// for the same decl.
   llvm::DenseSet<clang::GlobalDecl> DiagnosedConflictingDefinitions;
 
+  /// -------
+  /// Annotations
+  /// -------
+
+  /// We do not store global annotations in the module here, instead, we store
+  /// each annotation as attribute of GlobalOp and FuncOp.
+  /// We defer creation of global annotation variable to LoweringPrepare
+  /// as CIR passes do not need to have a global view of all annotations.
+
+  /// Used for uniquing of annotation arguments.
+  llvm::DenseMap<unsigned, mlir::ArrayAttr> annotationArgs;
+
+  /// Store deferred function annotations so they can be emitted at the end with
+  /// most up to date ValueDecl that will have all the inherited annotations.
+  llvm::DenseMap<StringRef, const ValueDecl *> deferredAnnotations;
+
 public:
   mlir::ModuleOp getModule() const { return theModule; }
   CIRGenBuilderTy &getBuilder() { return builder; }
@@ -761,6 +777,24 @@ private:
   void setNonAliasAttributes(GlobalDecl GD, mlir::Operation *GV);
   /// Map source language used to a CIR attribute.
   mlir::cir::SourceLanguage getCIRSourceLanguage();
+
+  /// Emit all the global annotations.
+  /// This actually only emits annotations for deffered declarations of
+  /// functions, because global variables need no deffred emission.
+  void buildGlobalAnnotations();
+
+  /// Emit additional args of the annotation.
+  mlir::ArrayAttr buildAnnotationArgs(clang::AnnotateAttr *attr);
+
+  /// Create cir::AnnotationAttr which contains the annotation
+  /// information for a given GlobalValue. Notice that a GlobalValue could
+  /// have multiple annotations, and this function creates attribute for
+  /// one of them.
+  mlir::cir::AnnotationAttr buildAnnotateAttr(clang::AnnotateAttr *aa);
+
+  /// Add global annotations for a global value.
+  /// Those annotations are emitted during lowering to the LLVM code.
+  void addGlobalAnnotations(const ValueDecl *d, mlir::Operation *gv);
 };
 } // namespace cir
 

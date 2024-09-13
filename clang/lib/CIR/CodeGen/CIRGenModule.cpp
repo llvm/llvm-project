@@ -484,6 +484,13 @@ void CIRGenModule::buildGlobal(GlobalDecl GD) {
 
   // Ignore declarations, they will be emitted on their first use.
   if (const auto *FD = dyn_cast<FunctionDecl>(Global)) {
+    // Update deferred annotations with the latest declaration if the function
+    // was already used or defined.
+    if (FD->hasAttr<AnnotateAttr>()) {
+      StringRef MangledName = getMangledName(GD);
+      if (getGlobalValue(MangledName))
+        deferredAnnotations[MangledName] = FD;
+    }
     // Forward declarations are emitted lazily on first use.
     if (!FD->doesThisDeclarationHaveABody()) {
       if (!FD->doesDeclarationForceExternallyVisibleDefinition())
@@ -595,7 +602,8 @@ void CIRGenModule::buildGlobalFunctionDefinition(GlobalDecl GD,
   if (const DestructorAttr *DA = D->getAttr<DestructorAttr>())
     AddGlobalDtor(Fn, DA->getPriority(), true);
 
-  assert(!D->getAttr<AnnotateAttr>() && "NYI");
+  if (D->getAttr<AnnotateAttr>())
+    deferredAnnotations[getMangledName(GD)] = cast<ValueDecl>(D);
 }
 
 /// Track functions to be called before main() runs.
@@ -1232,7 +1240,7 @@ void CIRGenModule::buildGlobalVarDefinition(const clang::VarDecl *D,
   maybeHandleStaticInExternC(D, GV);
 
   if (D->hasAttr<AnnotateAttr>())
-    assert(0 && "not implemented");
+    addGlobalAnnotations(D, GV);
 
   // Set CIR's linkage type as appropriate.
   mlir::cir::GlobalLinkageKind Linkage =
@@ -2834,7 +2842,7 @@ void CIRGenModule::Release() {
   // TODO: PGOReader
   // TODO: buildCtorList(GlobalCtors);
   // TODO: builtCtorList(GlobalDtors);
-  // TODO: buildGlobalAnnotations();
+  buildGlobalAnnotations();
   // TODO: buildDeferredUnusedCoverageMappings();
   // TODO: CIRGenPGO
   // TODO: CoverageMapping
@@ -3187,4 +3195,69 @@ LangAS CIRGenModule::getGlobalVarAddressSpace(const VarDecl *D) {
     llvm_unreachable("NYI");
 
   return getTargetCIRGenInfo().getGlobalVarAddressSpace(*this, D);
+}
+
+mlir::ArrayAttr CIRGenModule::buildAnnotationArgs(AnnotateAttr *attr) {
+  ArrayRef<Expr *> exprs = {attr->args_begin(), attr->args_size()};
+  if (exprs.empty()) {
+    return mlir::ArrayAttr::get(builder.getContext(), {});
+  }
+  llvm::FoldingSetNodeID id;
+  for (Expr *e : exprs) {
+    id.Add(cast<clang::ConstantExpr>(e)->getAPValueResult());
+  }
+  mlir::ArrayAttr &lookup = annotationArgs[id.ComputeHash()];
+  if (lookup)
+    return lookup;
+
+  llvm::SmallVector<mlir::Attribute, 4> args;
+  args.reserve(exprs.size());
+  for (Expr *e : exprs) {
+    if (auto *const strE =
+            ::clang::dyn_cast<clang::StringLiteral>(e->IgnoreParenCasts())) {
+      // Add trailing null character as StringLiteral->getString() does not
+      args.push_back(builder.getStringAttr(strE->getString()));
+    } else if (auto *const intE = ::clang::dyn_cast<clang::IntegerLiteral>(
+                   e->IgnoreParenCasts())) {
+      args.push_back(mlir::IntegerAttr::get(
+          mlir::IntegerType::get(builder.getContext(),
+                                 intE->getValue().getBitWidth()),
+          intE->getValue()));
+    } else {
+      llvm_unreachable("NYI");
+    }
+  }
+
+  lookup = builder.getArrayAttr(args);
+  return lookup;
+}
+
+mlir::cir::AnnotationAttr
+CIRGenModule::buildAnnotateAttr(clang::AnnotateAttr *aa) {
+  mlir::StringAttr annoGV = builder.getStringAttr(aa->getAnnotation());
+  mlir::ArrayAttr args = buildAnnotationArgs(aa);
+  return mlir::cir::AnnotationAttr::get(builder.getContext(), annoGV, args);
+}
+
+void CIRGenModule::addGlobalAnnotations(const ValueDecl *d,
+                                        mlir::Operation *gv) {
+  assert(d->hasAttr<AnnotateAttr>() && "no annotate attribute");
+  assert((isa<GlobalOp>(gv) || isa<FuncOp>(gv)) &&
+         "annotation only on globals");
+  llvm::SmallVector<mlir::Attribute, 4> annotations;
+  for (auto *i : d->specific_attrs<AnnotateAttr>())
+    annotations.push_back(buildAnnotateAttr(i));
+  if (auto global = dyn_cast<mlir::cir::GlobalOp>(gv))
+    global.setAnnotationsAttr(builder.getArrayAttr(annotations));
+  else if (auto func = dyn_cast<mlir::cir::FuncOp>(gv))
+    func.setAnnotationsAttr(builder.getArrayAttr(annotations));
+}
+
+void CIRGenModule::buildGlobalAnnotations() {
+  for (const auto &[mangledName, vd] : deferredAnnotations) {
+    mlir::Operation *gv = getGlobalValue(mangledName);
+    if (gv)
+      addGlobalAnnotations(vd, gv);
+  }
+  deferredAnnotations.clear();
 }
