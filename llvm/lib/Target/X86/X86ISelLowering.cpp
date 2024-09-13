@@ -26190,7 +26190,7 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
         SetCC = getSETCC(X86::COND_NE, Comi, dl, DAG);
         if (HasAVX10_2_COMX & HasAVX10_2_COMX_Ty) // ZF == 0
           break;
-        // (ZF = 1 or PF = 0)
+        // (ZF = 0 or PF = 1)
         SDValue SetP = getSETCC(X86::COND_P, Comi, dl, DAG);
         SetCC = DAG.getNode(ISD::OR, dl, MVT::i8, SetCC, SetP);
         break;
