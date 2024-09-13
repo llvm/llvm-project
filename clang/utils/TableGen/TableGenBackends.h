@@ -113,12 +113,12 @@ void EmitClangSyntaxNodeList(llvm::RecordKeeper &Records,
 void EmitClangSyntaxNodeClasses(llvm::RecordKeeper &Records,
                                 llvm::raw_ostream &OS);
 
-void EmitNeon(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
-void EmitFP16(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
-void EmitBF16(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
-void EmitNeonSema(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
-void EmitVectorTypes(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
-void EmitNeonTest(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitNeon(const llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitFP16(const llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitBF16(const llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitNeonSema(const llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitVectorTypes(const llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitNeonTest(const llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 
 void EmitImmCheckTypes(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitSveHeader(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
