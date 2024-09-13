@@ -2495,6 +2495,20 @@ PoisonValue *PoisonValue::getElementValue(unsigned Idx) const {
       cast<llvm::PoisonValue>(Val)->getElementValue(Idx)));
 }
 
+void GlobalValue::setUnnamedAddr(UnnamedAddr V) {
+  Ctx.getTracker()
+      .emplaceIfTracking<GenericSetter<&GlobalValue::getUnnamedAddr,
+                                       &GlobalValue::setUnnamedAddr>>(this);
+  cast<llvm::GlobalValue>(Val)->setUnnamedAddr(V);
+}
+
+void GlobalValue::setVisibility(VisibilityTypes V) {
+  Ctx.getTracker()
+      .emplaceIfTracking<GenericSetter<&GlobalValue::getVisibility,
+                                       &GlobalValue::setVisibility>>(this);
+  cast<llvm::GlobalValue>(Val)->setVisibility(V);
+}
+
 BlockAddress *BlockAddress::get(Function *F, BasicBlock *BB) {
   auto *LLVMC = llvm::BlockAddress::get(cast<llvm::Function>(F->Val),
                                         cast<llvm::BasicBlock>(BB->Val));
