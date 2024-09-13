@@ -2650,38 +2650,29 @@ static void unswitchNontrivialInvariants(
     ++NumSwitches;
 }
 
-/// Recursively compute the cost of a dominator subtree based on the per-block
-/// cost map provided.
-///
-/// The recursive computation is memozied into the provided DT-indexed cost map
-/// to allow querying it for most nodes in the domtree without it becoming
-/// quadratic.
-static InstructionCost computeDomSubtreeCost(
-    DomTreeNode &N,
-    const SmallDenseMap<BasicBlock *, InstructionCost, 4> &BBCostMap,
-    SmallDenseMap<DomTreeNode *, InstructionCost, 4> &DTCostMap) {
-  // Don't accumulate cost (or recurse through) blocks not in our block cost
-  // map and thus not part of the duplication cost being considered.
-  auto BBCostIt = BBCostMap.find(N.getBlock());
-  if (BBCostIt == BBCostMap.end())
-    return 0;
+// Determine which loop blocks are reachable after deletion of all successor
+// edges of BB except the ones enumerated into Succs list.
+static void findDuplicatedBlocks(
+    SmallDenseMap<BasicBlock *, unsigned, 4> &NumDuplicationsMap,
+    BasicBlock *BB, ArrayRef<BasicBlock *> Succs, const Loop &L) {
+  SmallVector<BasicBlock *, 4> Worklist({L.getHeader()});
+  SmallPtrSet<BasicBlock *, 4> Visited;
 
-  // Lookup this node to see if we already computed its cost.
-  auto DTCostIt = DTCostMap.find(&N);
-  if (DTCostIt != DTCostMap.end())
-    return DTCostIt->second;
-
-  // If not, we have to compute it. We can't use insert above and update
-  // because computing the cost may insert more things into the map.
-  InstructionCost Cost = std::accumulate(
-      N.begin(), N.end(), BBCostIt->second,
-      [&](InstructionCost Sum, DomTreeNode *ChildN) -> InstructionCost {
-        return Sum + computeDomSubtreeCost(*ChildN, BBCostMap, DTCostMap);
-      });
-  bool Inserted = DTCostMap.insert({&N, Cost}).second;
-  (void)Inserted;
-  assert(Inserted && "Should not insert a node while visiting children!");
-  return Cost;
+  while (!Worklist.empty()) {
+    auto *CurBB = Worklist.pop_back_val();
+    if (Visited.contains(CurBB))
+      continue;
+    ++NumDuplicationsMap[CurBB];
+    Visited.insert(CurBB);
+    auto AddLoopBlocks = [&](auto Blocks) {
+      copy_if(Blocks, std::back_inserter(Worklist),
+              [&](auto *Block) { return L.contains(Block); });
+    };
+    if (CurBB == BB)
+      AddLoopBlocks(Succs);
+    else
+      AddLoopBlocks(successors(CurBB));
+  }
 }
 
 /// Turns a select instruction into implicit control flow branch,
@@ -3359,10 +3350,8 @@ static NonTrivialUnswitchCandidate findBestNonTrivialUnswitchCandidate(
   // We prioritize reducing fanout of unswitch candidates provided the cost
   // remains below the threshold because this has a multiplicative effect.
   //
-  // This requires memoizing each dominator subtree to avoid redundant work.
-  //
   // FIXME: Need to actually do the number of candidates part above.
-  SmallDenseMap<DomTreeNode *, InstructionCost, 4> DTCostMap;
+
   // Given a terminator which might be unswitched, computes the non-duplicated
   // cost for that terminator.
   auto ComputeUnswitchedCost = [&](Instruction &TI,
@@ -3371,59 +3360,51 @@ static NonTrivialUnswitchCandidate findBestNonTrivialUnswitchCandidate(
     if (isa<SelectInst>(TI))
       return LoopCost;
 
-    BasicBlock &BB = *TI.getParent();
-    SmallPtrSet<BasicBlock *, 4> Visited;
+    BasicBlock *BB = TI.getParent();
+    SmallDenseMap<BasicBlock *, unsigned, 4> NumDuplicationsMap;
 
-    InstructionCost Cost = 0;
-    for (BasicBlock *SuccBB : successors(&BB)) {
-      // Don't count successors more than once.
-      if (!Visited.insert(SuccBB).second)
-        continue;
-
-      // If this is a partial unswitch candidate, then it must be a conditional
-      // branch with a condition of either `or`, `and`, their corresponding
-      // select forms or partially invariant instructions. In that case, one of
-      // the successors is necessarily duplicated, so don't even try to remove
-      // its cost.
-      if (!FullUnswitch) {
-        auto &BI = cast<BranchInst>(TI);
-        Value *Cond = skipTrivialSelect(BI.getCondition());
-        if (match(Cond, m_LogicalAnd())) {
-          if (SuccBB == BI.getSuccessor(1))
-            continue;
-        } else if (match(Cond, m_LogicalOr())) {
-          if (SuccBB == BI.getSuccessor(0))
-            continue;
-        } else if ((PartialIVInfo.KnownValue->isOneValue() &&
-                    SuccBB == BI.getSuccessor(0)) ||
-                   (!PartialIVInfo.KnownValue->isOneValue() &&
-                    SuccBB == BI.getSuccessor(1)))
-          continue;
-      }
-
-      // This successor's domtree will not need to be duplicated after
-      // unswitching if the edge to the successor dominates it (and thus the
-      // entire tree). This essentially means there is no other path into this
-      // subtree and so it will end up live in only one clone of the loop.
-      if (SuccBB->getUniquePredecessor() ||
-          llvm::all_of(predecessors(SuccBB), [&](BasicBlock *PredBB) {
-            return PredBB == &BB || DT.dominates(SuccBB, PredBB);
-          })) {
-        Cost += computeDomSubtreeCost(*DT[SuccBB], BBCostMap, DTCostMap);
-        assert(Cost <= LoopCost &&
-               "Non-duplicated cost should never exceed total loop cost!");
-      }
+    // If this is a partial unswitch candidate, then it must be a conditional
+    // branch with a condition of either `or`, `and`, their corresponding
+    // select forms or partially invariant instructions. In that case, one of
+    // the successors is necessarily duplicated; remember it so it will be
+    // presented in every unswitched copy of the loop.
+    BasicBlock *AlwaysDuplicated = nullptr;
+    if (!FullUnswitch) {
+      auto &BI = cast<BranchInst>(TI);
+      Value *Cond = skipTrivialSelect(BI.getCondition());
+      if (match(Cond, m_LogicalAnd()))
+        AlwaysDuplicated = BI.getSuccessor(1);
+      else if (match(Cond, m_LogicalOr()))
+        AlwaysDuplicated = BI.getSuccessor(0);
+      else
+        AlwaysDuplicated =
+            BI.getSuccessor(PartialIVInfo.KnownValue->isOneValue() ? 0 : 1);
     }
 
-    // Now scale the cost by the number of unique successors minus one. We
-    // subtract one because there is already at least one copy of the entire
-    // loop. This is computing the new cost of unswitching a condition.
-    // Note that guards always have 2 unique successors that are implicit and
-    // will be materialized if we decide to unswitch it.
-    int SuccessorsCount = isGuard(&TI) ? 2 : Visited.size();
-    assert(SuccessorsCount > 1 &&
-           "Cannot unswitch a condition without multiple distinct successors!");
-    return (LoopCost - Cost) * (SuccessorsCount - 1);
+    SmallPtrSet<BasicBlock *, 4> VisitedSuccs;
+    for (BasicBlock *SuccBB : successors(BB)) {
+      // Don't count successors more than once.
+      if (!VisitedSuccs.insert(SuccBB).second)
+        continue;
+      SmallVector<BasicBlock *, 2> Succs;
+      Succs.push_back(SuccBB);
+      if (AlwaysDuplicated && AlwaysDuplicated != SuccBB)
+        Succs.push_back(AlwaysDuplicated);
+
+      findDuplicatedBlocks(NumDuplicationsMap, BB, Succs, L);
+    }
+
+    // Accumulate the cost of each basic block scaled by the number of its
+    // duplications minus one. We subtract one because there is already at least
+    // one copy of the entire loop. This is computing the new cost of
+    // unswitching a condition. Note that guards always have 2 unique successors
+    // that are implicit and will be materialized if we decide to unswitch it.
+    return std::accumulate(NumDuplicationsMap.begin(), NumDuplicationsMap.end(),
+                           InstructionCost(),
+                           [&](InstructionCost Cost, auto Val) {
+                             auto [BB, Num] = Val;
+                             return Cost + BBCostMap[BB] * (Num - 1);
+                           });
   };
 
   std::optional<NonTrivialUnswitchCandidate> Best;
