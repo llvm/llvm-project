@@ -1167,7 +1167,7 @@ static const char *getAMDProcessorTypeAndSubtype(unsigned Family,
       CPU = "znver5";
       *Subtype = X86::AMDFAM1AH_ZNVER5;
       break; //  "znver5"
-    } 
+    }
     break;
 
   default:
