@@ -4336,6 +4336,7 @@ Node *AbstractManglingParser<Derived, Alloc>::parseType() {
     // parse them, take the second production.
 
     if (TryToParseTemplateArgs && look() == 'I') {
+      Subs.push_back(Result);
       Node *TA = getDerived().parseTemplateArgs();
       if (TA == nullptr)
         return nullptr;
