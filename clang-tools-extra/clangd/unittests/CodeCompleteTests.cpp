@@ -3156,6 +3156,25 @@ TEST(CompletionTest, NoAllScopesCompletionWhenQualified) {
                   AllOf(qualifier(""), scope("na::"), named("ClangdA"))));
 }
 
+// https://github.com/clangd/clangd/issues/1361
+TEST(CompletionTest, ScopedEnumUsingDecl) {
+  clangd::CodeCompleteOptions Opts = {};
+  Opts.AllScopes = true;
+
+  auto Results = completions(
+      R"cpp(
+    namespace ns { enum class Scoped { FooBar }; }
+    using ns::Scoped;
+    void f() { 
+        Foo^ 
+    }
+  )cpp",
+      {enmConstant("ns::Scoped::FooBar")}, Opts);
+  EXPECT_THAT(Results.Completions, UnorderedElementsAre(AllOf(
+                                       qualifier("Scoped::"), named("FooBar"),
+                                       kind(CompletionItemKind::EnumMember))));
+}
+
 TEST(CompletionTest, AllScopesCompletion) {
   clangd::CodeCompleteOptions Opts = {};
   Opts.AllScopes = true;
