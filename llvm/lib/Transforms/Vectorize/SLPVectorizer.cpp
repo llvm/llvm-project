@@ -12486,11 +12486,12 @@ public:
           V = createShuffle(InVectors.front(), nullptr, CommonMask);
           transformMaskAfterShuffle(CommonMask, CommonMask);
         }
+        unsigned VF = std::max(CommonMask.size(), Mask.size());
         for (unsigned Idx = 0, Sz = CommonMask.size(); Idx < Sz; ++Idx)
           if (CommonMask[Idx] == PoisonMaskElem && Mask[Idx] != PoisonMaskElem)
             CommonMask[Idx] =
                 V->getType() != V1->getType()
-                    ? Idx + Sz
+                    ? Idx + VF
                     : Mask[Idx] + cast<FixedVectorType>(V1->getType())
                                       ->getNumElements();
         if (V->getType() != V1->getType())
@@ -13341,7 +13342,8 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
 
       assert(NewPhi->getNumIncomingValues() == PH->getNumIncomingValues() &&
              "Invalid number of incoming values");
-      return NewPhi;
+      assert(E->VectorizedValue && "Expected vectorized value.");
+      return E->VectorizedValue;
     }
 
     case Instruction::ExtractElement: {

@@ -729,6 +729,136 @@ define void @foo() {
   EXPECT_EQ(UndefStruct->getNumElements(), 2u);
 }
 
+TEST_F(SandboxIRTest, GlobalValue) {
+  parseIR(C, R"IR(
+declare external void @bar()
+define void @foo() {
+  call void @bar()
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  auto *LLVMBB = &*LLVMF.begin();
+  auto LLVMIt = LLVMBB->begin();
+  auto *LLVMCall = cast<llvm::CallInst>(&*LLVMIt++);
+  auto *LLVMGV = cast<llvm::GlobalValue>(LLVMCall->getCalledOperand());
+  sandboxir::Context Ctx(C);
+
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto *BB = &*F.begin();
+  auto It = BB->begin();
+  auto *Call = cast<sandboxir::CallInst>(&*It++);
+  [[maybe_unused]] auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
+
+  // Check classof(), creation, getFunction(), getBasicBlock().
+  auto *GV = cast<sandboxir::GlobalValue>(Call->getCalledOperand());
+  // Check getAddressSpace().
+  EXPECT_EQ(GV->getAddressSpace(), LLVMGV->getAddressSpace());
+  // Check hasGlobalUnnamedAddr().
+  EXPECT_EQ(GV->hasGlobalUnnamedAddr(), LLVMGV->hasGlobalUnnamedAddr());
+  // Check hasAtLeastLocalUnnamedAddr().
+  EXPECT_EQ(GV->hasAtLeastLocalUnnamedAddr(),
+            LLVMGV->hasAtLeastLocalUnnamedAddr());
+  // Check getUnnamedAddr().
+  EXPECT_EQ(GV->getUnnamedAddr(), LLVMGV->getUnnamedAddr());
+  // Check setUnnamedAddr().
+  auto OrigUnnamedAddr = GV->getUnnamedAddr();
+  auto NewUnnamedAddr = sandboxir::GlobalValue::UnnamedAddr::Global;
+  EXPECT_NE(NewUnnamedAddr, OrigUnnamedAddr);
+  GV->setUnnamedAddr(NewUnnamedAddr);
+  EXPECT_EQ(GV->getUnnamedAddr(), NewUnnamedAddr);
+  GV->setUnnamedAddr(OrigUnnamedAddr);
+  EXPECT_EQ(GV->getUnnamedAddr(), OrigUnnamedAddr);
+  // Check getMinUnnamedAddr().
+  EXPECT_EQ(
+      sandboxir::GlobalValue::getMinUnnamedAddr(OrigUnnamedAddr,
+                                                NewUnnamedAddr),
+      llvm::GlobalValue::getMinUnnamedAddr(OrigUnnamedAddr, NewUnnamedAddr));
+  // Check hasComdat().
+  EXPECT_EQ(GV->hasComdat(), LLVMGV->hasComdat());
+  // Check getVisibility().
+  EXPECT_EQ(GV->getVisibility(), LLVMGV->getVisibility());
+  // Check hasDefaultVisibility().
+  EXPECT_EQ(GV->hasDefaultVisibility(), LLVMGV->hasDefaultVisibility());
+  // Check hasHiddenVisibility().
+  EXPECT_EQ(GV->hasHiddenVisibility(), LLVMGV->hasHiddenVisibility());
+  // Check hasProtectedVisibility().
+  EXPECT_EQ(GV->hasProtectedVisibility(), LLVMGV->hasProtectedVisibility());
+  // Check setVisibility().
+  auto OrigVisibility = GV->getVisibility();
+  auto NewVisibility =
+      sandboxir::GlobalValue::VisibilityTypes::ProtectedVisibility;
+  EXPECT_NE(NewVisibility, OrigVisibility);
+  GV->setVisibility(NewVisibility);
+  EXPECT_EQ(GV->getVisibility(), NewVisibility);
+  GV->setVisibility(OrigVisibility);
+  EXPECT_EQ(GV->getVisibility(), OrigVisibility);
+}
+
+TEST_F(SandboxIRTest, GlobalObject) {
+  parseIR(C, R"IR(
+declare external void @bar()
+define void @foo() {
+  call void @bar()
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  auto *LLVMBB = &*LLVMF.begin();
+  auto LLVMIt = LLVMBB->begin();
+  auto *LLVMCall = cast<llvm::CallInst>(&*LLVMIt++);
+  auto *LLVMGO = cast<llvm::GlobalObject>(LLVMCall->getCalledOperand());
+  sandboxir::Context Ctx(C);
+
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto *BB = &*F.begin();
+  auto It = BB->begin();
+  auto *Call = cast<sandboxir::CallInst>(&*It++);
+  // Check classof(), creation.
+  auto *GO = cast<sandboxir::GlobalObject>(Call->getCalledOperand());
+  // Check getAlignment().
+  EXPECT_EQ(GO->getAlignment(), LLVMGO->getAlignment());
+  // Check getAlign().
+  EXPECT_EQ(GO->getAlign(), LLVMGO->getAlign());
+  // Check setAlignment().
+  auto OrigMaybeAlign = GO->getAlign();
+  auto NewMaybeAlign = MaybeAlign(128);
+  EXPECT_NE(NewMaybeAlign, OrigMaybeAlign);
+  GO->setAlignment(NewMaybeAlign);
+  EXPECT_EQ(GO->getAlign(), NewMaybeAlign);
+  GO->setAlignment(OrigMaybeAlign);
+  EXPECT_EQ(GO->getAlign(), OrigMaybeAlign);
+  // Check getGlobalObjectSubClassData().
+  EXPECT_EQ(GO->getGlobalObjectSubClassData(),
+            LLVMGO->getGlobalObjectSubClassData());
+  // Check setGlobalObjectSubClassData().
+  auto OrigGOSCD = GO->getGlobalObjectSubClassData();
+  auto NewGOSCD = 1u;
+  EXPECT_NE(NewGOSCD, OrigGOSCD);
+  GO->setGlobalObjectSubClassData(NewGOSCD);
+  EXPECT_EQ(GO->getGlobalObjectSubClassData(), NewGOSCD);
+  GO->setGlobalObjectSubClassData(OrigGOSCD);
+  EXPECT_EQ(GO->getGlobalObjectSubClassData(), OrigGOSCD);
+  // Check hasSection().
+  EXPECT_EQ(GO->hasSection(), LLVMGO->hasSection());
+  // Check getSection().
+  EXPECT_EQ(GO->getSection(), LLVMGO->getSection());
+  // Check setSection().
+  auto OrigSection = GO->getSection();
+  auto NewSection = ".some_section";
+  EXPECT_NE(NewSection, OrigSection);
+  GO->setSection(NewSection);
+  EXPECT_EQ(GO->getSection(), NewSection);
+  GO->setSection(OrigSection);
+  EXPECT_EQ(GO->getSection(), OrigSection);
+  // Check hasComdat().
+  EXPECT_EQ(GO->hasComdat(), LLVMGO->hasComdat());
+  // Check getVCallVisibility().
+  EXPECT_EQ(GO->getVCallVisibility(), LLVMGO->getVCallVisibility());
+  // Check canIncreaseAlignment().
+  EXPECT_EQ(GO->canIncreaseAlignment(), LLVMGO->canIncreaseAlignment());
+}
+
 TEST_F(SandboxIRTest, BlockAddress) {
   parseIR(C, R"IR(
 define void @foo(ptr %ptr) {
@@ -775,6 +905,30 @@ bb2:
   EXPECT_EQ(LookupBB1Addr, BB1Addr);
   auto *LookupBB2Addr = sandboxir::BlockAddress::lookup(BB2);
   EXPECT_EQ(LookupBB2Addr, nullptr);
+}
+
+TEST_F(SandboxIRTest, DSOLocalEquivalent) {
+  parseIR(C, R"IR(
+declare void @bar()
+define void @foo() {
+  call void dso_local_equivalent @bar()
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto *BB = &*F.begin();
+  auto It = BB->begin();
+  auto *CI = cast<sandboxir::CallInst>(&*It++);
+  // Check classof().
+  auto *DSOLE = cast<sandboxir::DSOLocalEquivalent>(CI->getCalledOperand());
+  // Check getGlobalValue().
+  auto *GV = DSOLE->getGlobalValue();
+  // Check get().
+  auto *NewDSOLE = sandboxir::DSOLocalEquivalent::get(GV);
+  EXPECT_EQ(NewDSOLE, DSOLE);
 }
 
 TEST_F(SandboxIRTest, ConstantTokenNone) {

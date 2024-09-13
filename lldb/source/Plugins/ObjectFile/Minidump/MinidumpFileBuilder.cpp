@@ -1218,3 +1218,15 @@ Status MinidumpFileBuilder::DumpFile() {
 
   return error;
 }
+
+void MinidumpFileBuilder::DeleteFile() noexcept {
+  Log *log = GetLog(LLDBLog::Object);
+
+  if (m_core_file) {
+    Status error = m_core_file->Close();
+    if (error.Fail())
+      LLDB_LOGF(log, "Failed to close minidump file: %s", error.AsCString());
+
+    m_core_file.reset();
+  }
+}
