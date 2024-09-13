@@ -166,6 +166,7 @@ define void @reverse_load_store_masked(i64 %startval, ptr noalias %ptr, ptr noal
 ; IF-EVL-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP4]]
 ; IF-EVL-NEXT:    [[TMP27:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; IF-EVL-NEXT:    br i1 [[TMP27]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+
 ; IF-EVL:       middle.block:
 ; IF-EVL-NEXT:    br i1 true, label [[LOOPEND:%.*]], label [[SCALAR_PH]]
 ; IF-EVL:       scalar.ph:
