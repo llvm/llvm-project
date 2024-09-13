@@ -1117,6 +1117,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         setOperationAction({ISD::VP_MERGE, ISD::VP_SELECT, ISD::SELECT}, VT,
                            Custom);
         setOperationAction(ISD::SELECT_CC, VT, Expand);
+        setOperationAction({ISD::SINT_TO_FP, ISD::UINT_TO_FP,
+                            ISD::VP_SINT_TO_FP, ISD::VP_UINT_TO_FP},
+                           VT, Custom);
         setOperationAction({ISD::CONCAT_VECTORS, ISD::INSERT_SUBVECTOR,
                             ISD::EXTRACT_SUBVECTOR, ISD::VECTOR_INTERLEAVE,
                             ISD::VECTOR_DEINTERLEAVE},
@@ -6677,17 +6680,19 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::SINT_TO_FP:
   case ISD::UINT_TO_FP:
     if (Op.getValueType().isVector() &&
-        Op.getValueType().getScalarType() == MVT::f16 &&
-        (Subtarget.hasVInstructionsF16Minimal() &&
-         !Subtarget.hasVInstructionsF16())) {
-      if (Op.getValueType() == MVT::nxv32f16)
+        ((Op.getValueType().getScalarType() == MVT::f16 &&
+          (Subtarget.hasVInstructionsF16Minimal() &&
+           !Subtarget.hasVInstructionsF16())) ||
+         Op.getValueType().getScalarType() == MVT::bf16)) {
+      if (Op.getValueType() == MVT::nxv32f16 ||
+          Op.getValueType() == MVT::nxv32bf16)
         return SplitVectorOp(Op, DAG);
       // int -> f32
       SDLoc DL(Op);
       MVT NVT =
           MVT::getVectorVT(MVT::f32, Op.getValueType().getVectorElementCount());
       SDValue NC = DAG.getNode(Op.getOpcode(), DL, NVT, Op->ops());
-      // f32 -> f16
+      // f32 -> [b]f16
       return DAG.getNode(ISD::FP_ROUND, DL, Op.getValueType(), NC,
                          DAG.getIntPtrConstant(0, DL, /*isTarget=*/true));
     }
@@ -6696,12 +6701,14 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::FP_TO_UINT:
     if (SDValue Op1 = Op.getOperand(0);
         Op1.getValueType().isVector() &&
-        Op1.getValueType().getScalarType() == MVT::f16 &&
-        (Subtarget.hasVInstructionsF16Minimal() &&
-         !Subtarget.hasVInstructionsF16())) {
-      if (Op1.getValueType() == MVT::nxv32f16)
+        ((Op1.getValueType().getScalarType() == MVT::f16 &&
+          (Subtarget.hasVInstructionsF16Minimal() &&
+           !Subtarget.hasVInstructionsF16())) ||
+         Op1.getValueType().getScalarType() == MVT::bf16)) {
+      if (Op1.getValueType() == MVT::nxv32f16 ||
+          Op1.getValueType() == MVT::nxv32bf16)
         return SplitVectorOp(Op, DAG);
-      // f16 -> f32
+      // [b]f16 -> f32
       SDLoc DL(Op);
       MVT NVT = MVT::getVectorVT(MVT::f32,
                                  Op1.getValueType().getVectorElementCount());
@@ -7412,17 +7419,19 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::VP_SINT_TO_FP:
   case ISD::VP_UINT_TO_FP:
     if (Op.getValueType().isVector() &&
-        Op.getValueType().getScalarType() == MVT::f16 &&
-        (Subtarget.hasVInstructionsF16Minimal() &&
-         !Subtarget.hasVInstructionsF16())) {
-      if (Op.getValueType() == MVT::nxv32f16)
-        return SplitVPOp(Op, DAG);
+        ((Op.getValueType().getScalarType() == MVT::f16 &&
+          (Subtarget.hasVInstructionsF16Minimal() &&
+           !Subtarget.hasVInstructionsF16())) ||
+         Op.getValueType().getScalarType() == MVT::bf16)) {
+      if (Op.getValueType() == MVT::nxv32f16 ||
+          Op.getValueType() == MVT::nxv32bf16)
+        return SplitVectorOp(Op, DAG);
       // int -> f32
       SDLoc DL(Op);
       MVT NVT =
           MVT::getVectorVT(MVT::f32, Op.getValueType().getVectorElementCount());
       auto NC = DAG.getNode(Op.getOpcode(), DL, NVT, Op->ops());
-      // f32 -> f16
+      // f32 -> [b]f16
       return DAG.getNode(ISD::FP_ROUND, DL, Op.getValueType(), NC,
                          DAG.getIntPtrConstant(0, DL, /*isTarget=*/true));
     }
@@ -7431,12 +7440,14 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::VP_FP_TO_UINT:
     if (SDValue Op1 = Op.getOperand(0);
         Op1.getValueType().isVector() &&
-        Op1.getValueType().getScalarType() == MVT::f16 &&
-        (Subtarget.hasVInstructionsF16Minimal() &&
-         !Subtarget.hasVInstructionsF16())) {
-      if (Op1.getValueType() == MVT::nxv32f16)
-        return SplitVPOp(Op, DAG);
-      // f16 -> f32
+        ((Op1.getValueType().getScalarType() == MVT::f16 &&
+          (Subtarget.hasVInstructionsF16Minimal() &&
+           !Subtarget.hasVInstructionsF16())) ||
+         Op1.getValueType().getScalarType() == MVT::bf16)) {
+      if (Op1.getValueType() == MVT::nxv32f16 ||
+          Op1.getValueType() == MVT::nxv32bf16)
+        return SplitVectorOp(Op, DAG);
+      // [b]f16 -> f32
       SDLoc DL(Op);
       MVT NVT = MVT::getVectorVT(MVT::f32,
                                  Op1.getValueType().getVectorElementCount());
