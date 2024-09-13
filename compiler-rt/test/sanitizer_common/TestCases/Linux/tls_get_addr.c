@@ -18,7 +18,8 @@
 #  include <stdlib.h>
 
 // CHECK-COUNT-2: __sanitizer_get_dtls_size:
-size_t __sanitizer_get_dtls_size(const void *ptr) {
+size_t __sanitizer_get_dtls_size(const void *ptr)
+    __attribute__((disable_sanitizer_instrumentation)) {
   fprintf(stderr, "__sanitizer_get_dtls_size: %p\n", ptr);
   return 0;
 }
