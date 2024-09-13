@@ -6786,9 +6786,10 @@ def warn_arc_lifetime_result_type : Warning<
   InGroup<IgnoredQualifiers>;
 def warn_excess_precision_not_supported : Warning<
   "excess precision is requested but the target does not support excess "
-  "precision %select{which may result in observable differences in arithmetic "
-  "behavior}0 %select{|,additional use of %1 were found but not diagnosed}2">,
-  InGroup<DiagGroup<"higher-precision">>;
+  "precision which may result in observable differences in complex division "
+  "behavior%select{|,additional uses where the requested higher precision "
+  "cannot be honored were found but not diagnosed}0">,
+  InGroup<DiagGroup<"higher-precision-for-complex-division">>;
 
 let CategoryName = "ARC Retain Cycle" in {
 

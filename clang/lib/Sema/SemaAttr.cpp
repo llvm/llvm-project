@@ -1180,11 +1180,13 @@ void Sema::PrintPragmaAttributeInstantiationPoint() {
                diag::note_pragma_attribute_applied_decl_here);
 }
 
-void Sema::DiagnoseExcessPrecision() {
-  if (NumExcessPrecisionNotSatisfied > 0) {
-    for (auto &[Loc, Type, Num] : ExcessPrecisionNotSatisfied)
-      Diag(Loc, diag::warn_excess_precision_not_supported)
-          << 0 << Type << static_cast<bool>(Num);
+void Sema::DiagnosePrecisionLossInComplexDivision() {
+  for (auto &[Type, Num] : ExcessPrecisionNotSatisfied) {
+    assert(LocationOfExcessPrecisionNotSatisfied.isValid() &&
+           "expected a valid source location");
+    Diag(LocationOfExcessPrecisionNotSatisfied,
+         diag::warn_excess_precision_not_supported)
+        << static_cast<bool>(Num);
   }
 }
 

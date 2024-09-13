@@ -15083,9 +15083,8 @@ static void DiagnoseBinOpPrecedence(Sema &Self, BinaryOperatorKind Opc,
     DiagnoseShiftCompare(Self, OpLoc, LHSExpr, RHSExpr);
 }
 
-static void DiagnosePrecisionLossInComplexDivision(Sema &S,
-                                                   SourceLocation OpLoc,
-                                                   Expr *Operand) {
+static void DetectPrecisionLossInComplexDivision(Sema &S, SourceLocation OpLoc,
+                                                 Expr *Operand) {
   if (auto *CT = Operand->getType()->getAs<ComplexType>()) {
     QualType ElementType = CT->getElementType();
     bool IsComplexRangePromoted = S.getLangOpts().getComplexRange() ==
@@ -15103,14 +15102,14 @@ static void DiagnosePrecisionLossInComplexDivision(Sema &S,
         if (!S.LocationOfExcessPrecisionNotSatisfied.isValid())
           S.LocationOfExcessPrecisionNotSatisfied = OpLoc;
         S.NumExcessPrecisionNotSatisfied++;
-        for (auto &[Loc, Type, Num] : S.ExcessPrecisionNotSatisfied) {
+        for (auto &[Type, Num] : S.ExcessPrecisionNotSatisfied) {
           if (Type == HigherElementType) {
             Num++;
             return;
           }
         }
-        S.ExcessPrecisionNotSatisfied.push_back(std::make_tuple(
-            OpLoc, HigherElementType, S.NumExcessPrecisionNotSatisfied));
+        S.ExcessPrecisionNotSatisfied.push_back(std::make_pair(
+            HigherElementType, S.NumExcessPrecisionNotSatisfied));
       }
     }
   }
@@ -15129,7 +15128,7 @@ ExprResult Sema::ActOnBinOp(Scope *S, SourceLocation TokLoc,
   // Emit warnings if the requested higher precision type equal to the current
   // type precision.
   if (Kind == tok::TokenKind::slash)
-    DiagnosePrecisionLossInComplexDivision(*this, TokLoc, LHSExpr);
+    DetectPrecisionLossInComplexDivision(*this, TokLoc, LHSExpr);
 
   return BuildBinOp(S, TokLoc, Opc, LHSExpr, RHSExpr);
 }

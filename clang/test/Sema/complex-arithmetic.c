@@ -25,7 +25,7 @@ void a() {
   EVALF((2. + 3i) + (4. + 5i), 6. + 8i);
   EVALF((2. + 3i) - (4. + 5i), -2. - 2i);
   EVALF((2. + 3i) * (4. + 5i), -7. + 22i);
-  // div-precision-warning@+1 {{excess precision is requested but the target does not support excess precision which may result in observable differences in arithmetic behavior ,additional use of 'long double' were found but not diagnosed}}
+  // div-precision-warning@+1 {{excess precision is requested but the target does not support excess precision which may result in observable differences in complex division behavior,additional uses where the requested higher precision cannot be honored were found but not diagnosed}}
   EVALF((2. + 3i) / (4. + 5i), .5609 + .0487i);
 }
 
