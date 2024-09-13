@@ -689,7 +689,7 @@ Range emitNormalizedLoopBoundsForIndexType(RewriterBase &rewriter, Location loc,
 Range mlir::emitNormalizedLoopBounds(RewriterBase &rewriter, Location loc,
                                      OpFoldResult lb, OpFoldResult ub,
                                      OpFoldResult step) {
-  if (getType(lb) == rewriter.getIndexType()) {
+  if (getType(lb).isIndex()) {
     return emitNormalizedLoopBoundsForIndexType(rewriter, loc, lb, ub, step);
   }
   // For non-index types, generate `arith` instructions
@@ -748,7 +748,7 @@ static void denormalizeInductionVariableForIndexType(RewriterBase &rewriter,
   SmallPtrSet<Operation *, 1> preservedUses;
   // If an `affine.apply` operation is generated for denormalization, the use
   // of `origLb` in those ops must not be replaced. These arent not generated
-  // when `orig_lb == 0` and `orig_step == 1`.
+  // when `origLb == 0` and `origStep == 1`.
   if (!isConstantIntValue(origLb, 0) || !isConstantIntValue(origStep, 1)) {
     if (Operation *preservedUse = denormalizedIvVal.getDefiningOp()) {
       preservedUses.insert(preservedUse);
@@ -760,7 +760,7 @@ static void denormalizeInductionVariableForIndexType(RewriterBase &rewriter,
 void mlir::denormalizeInductionVariable(RewriterBase &rewriter, Location loc,
                                         Value normalizedIv, OpFoldResult origLb,
                                         OpFoldResult origStep) {
-  if (getType(origLb) == rewriter.getIndexType()) {
+  if (getType(origLb).isIndex()) {
     return denormalizeInductionVariableForIndexType(rewriter, loc, normalizedIv,
                                                     origLb, origStep);
   }
@@ -804,7 +804,7 @@ static OpFoldResult getProductOfIndexes(RewriterBase &rewriter, Location loc,
 static Value getProductOfIntsOrIndexes(RewriterBase &rewriter, Location loc,
                                        ArrayRef<Value> values) {
   assert(!values.empty() && "unexpected empty list");
-  if (getType(values.front()) == rewriter.getIndexType()) {
+  if (getType(values.front()).isIndex()) {
     SmallVector<OpFoldResult> ofrs = getAsOpFoldResult(values);
     OpFoldResult product = getProductOfIndexes(rewriter, loc, ofrs);
     return getValueOrCreateConstantIndexOp(rewriter, loc, product);
@@ -841,7 +841,7 @@ static std::pair<SmallVector<Value>, SmallPtrSet<Operation *, 2>>
 delinearizeInductionVariable(RewriterBase &rewriter, Location loc,
                              Value linearizedIv, ArrayRef<Value> ubs) {
 
-  if (linearizedIv.getType() == rewriter.getIndexType()) {
+  if (linearizedIv.getType().isIndex()) {
     Operation *delinearizedOp =
         rewriter.create<affine::AffineDelinearizeIndexOp>(loc, linearizedIv,
                                                           ubs);

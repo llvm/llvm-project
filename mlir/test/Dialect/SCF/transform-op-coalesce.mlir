@@ -313,6 +313,9 @@ module attributes {transform.with_named_sequence} {
     %0 = transform.structured.match ops{["scf.for"]} attributes {coalesce} in %arg1 : (!transform.any_op) -> !transform.any_op
     %1 = transform.cast %0 : !transform.any_op to !transform.op<"scf.for">
     %2 = transform.loop.coalesce %1 : (!transform.op<"scf.for">) -> (!transform.op<"scf.for">)
+    transform.apply_patterns to %2 {
+      transform.apply_patterns.canonicalization
+    } : !transform.op<"scf.for">
     transform.yield
   }
 }
@@ -323,8 +326,8 @@ module attributes {transform.with_named_sequence} {
 //   CHECK-DAG:   %[[C1:.+]] = arith.constant 1 : index
 //       CHECK:   %[[UB:.+]] = affine.apply affine_map<()[s0, s1] -> (s0 * s1)>()[%[[ARG1]], %[[ARG2]]]
 //       CHECK:   scf.for %[[IV:.+]] = %[[C0]] to %[[UB]] step %[[C1]]
-//       CHECK:     %[[DELINEARIZE:.+]]:2 = affine.delinearize_index %[[IV]](%[[ARG1]], %[[ARG2]])
-//       CHECK:     "some_use"(%{{[a-zA-Z0-9]+}}, %[[C0]], %[[C0]], %[[IV2]], %[[C0]], %[[IV1]])
+//       CHECK:     %[[DELINEARIZE:.+]]:2 = affine.delinearize_index %[[IV]] into (%[[ARG1]], %[[ARG2]])
+//       CHECK:     "some_use"(%{{[a-zA-Z0-9]+}}, %[[C0]], %[[C0]], %[[DELINEARIZE]]#0, %[[C0]], %[[DELINEARIZE]]#1)
 
 // -----
 
@@ -350,6 +353,9 @@ module attributes {transform.with_named_sequence} {
     %0 = transform.structured.match ops{["scf.for"]} attributes {coalesce} in %arg1 : (!transform.any_op) -> !transform.any_op
     %1 = transform.cast %0 : !transform.any_op to !transform.op<"scf.for">
     %2 = transform.loop.coalesce %1 : (!transform.op<"scf.for">) -> (!transform.op<"scf.for">)
+    transform.apply_patterns to %2 {
+      transform.apply_patterns.canonicalization
+    } : !transform.op<"scf.for">
     transform.yield
   }
 }
