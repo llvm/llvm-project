@@ -942,7 +942,7 @@ public:
 
 struct HLSLAttributedResourceLocInfo {
   SourceRange Range;
-  TypeSourceInfo *ContainedTyTSI;
+  TypeSourceInfo *ContainedTyInfo;
 };
 
 /// Type source information for HLSL attributed resource type.
@@ -954,10 +954,10 @@ public:
   TypeLoc getWrappedLoc() const { return getInnerTypeLoc(); }
 
   TypeSourceInfo *getContainedTypeSourceInfo() const {
-    return getLocalData()->ContainedTyTSI;
+    return getLocalData()->ContainedTyInfo;
   }
   void setContainedTypeSourceInfo(TypeSourceInfo *TSI) const {
-    getLocalData()->ContainedTyTSI = TSI;
+    getLocalData()->ContainedTyInfo = TSI;
   }
 
   void setSourceRange(const SourceRange &R) { getLocalData()->Range = R; }

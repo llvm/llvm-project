@@ -569,13 +569,13 @@ void SemaHLSL::handleShaderAttr(Decl *D, const ParsedAttr &AL) {
 
 bool clang::CreateHLSLAttributedResourceType(
     Sema &S, QualType Wrapped, ArrayRef<const Attr *> AttrList,
-    QualType &ResType, HLSLAttributedResourceLocInfo *LocInfo /*= nullptr*/) {
+    QualType &ResType, HLSLAttributedResourceLocInfo *LocInfo) {
   assert(AttrList.size() && "expected list of resource attributes");
 
   QualType ContainedTy = QualType();
-  TypeSourceInfo *ContainedTyTSI;
+  TypeSourceInfo *ContainedTyInfo;
   SourceLocation LocBegin = AttrList[0]->getRange().getBegin();
-  SourceLocation LocEnd = SourceLocation();
+  SourceLocation LocEnd = AttrList[0]->getRange().getEnd();
 
   HLSLAttributedResourceType::Attributes ResAttrs = {};
 
@@ -617,7 +617,7 @@ bool clang::CreateHLSLAttributedResourceType(
         return false;
       }
       ContainedTy = Ty;
-      ContainedTyTSI = CTAttr->getTypeLoc();
+      ContainedTyInfo = CTAttr->getTypeLoc();
       break;
     }
     default:
@@ -636,7 +636,7 @@ bool clang::CreateHLSLAttributedResourceType(
 
   if (LocInfo) {
     LocInfo->Range = SourceRange(LocBegin, LocEnd);
-    LocInfo->ContainedTyTSI = ContainedTyTSI;
+    LocInfo->ContainedTyInfo = ContainedTyInfo;
   }
   return true;
 }

@@ -116,7 +116,7 @@ struct BuiltinTypeDeclBuilder {
     if (Record->isCompleteDefinition())
       return *this;
 
-    TypeSourceInfo *ElementTypeTSI = nullptr;
+    TypeSourceInfo *ElementTypeInfo = nullptr;
 
     QualType Ty = Record->getASTContext().VoidPtrTy;
     if (Template) {
@@ -125,7 +125,7 @@ struct BuiltinTypeDeclBuilder {
         Ty = Record->getASTContext().getPointerType(
             QualType(TTD->getTypeForDecl(), 0));
         QualType ElemType = QualType(TTD->getTypeForDecl(), 0);
-        ElementTypeTSI = S.getASTContext().getTrivialTypeSourceInfo(
+        ElementTypeInfo = S.getASTContext().getTrivialTypeSourceInfo(
             ElemType, SourceLocation());
       }
     }
@@ -135,9 +135,9 @@ struct BuiltinTypeDeclBuilder {
     SmallVector<const Attr *> Attrs = {
         HLSLResourceClassAttr::CreateImplicit(Record->getASTContext(), RC),
         IsROV ? HLSLROVAttr::CreateImplicit(Record->getASTContext()) : nullptr,
-        ElementTypeTSI ? HLSLContainedTypeAttr::CreateImplicit(
-                             Record->getASTContext(), ElementTypeTSI)
-                       : nullptr,
+        ElementTypeInfo ? HLSLContainedTypeAttr::CreateImplicit(
+                              Record->getASTContext(), ElementTypeInfo)
+                        : nullptr,
     };
     Attr *ResourceAttr =
         HLSLResourceAttr::CreateImplicit(Record->getASTContext(), RK);
