@@ -431,3 +431,26 @@ line.  This currently applies to the following extensions:
 * ``Zvksg``
 * ``Zvksh``
 * ``Zvkt``
+
+Global Pointer (GP) Relaxation and the Small Data Limit
+=======================================================
+
+Some of the RISC-V psABIs reserve ``gp`` (``x3``) for use as a "Global Pointer", to make generating data addresses more efficient.
+
+To use this functionality, you need to:
+* not be using the ``gp`` register for any other uses -- some platforms use it for other things;
+* compile your objects with Clang's ``-mrelax`` option, to enable relaxation annotations on relocatable objects; and
+* be compiling for an executable (not a shared library); and
+* use LLD's ``--relax-gp`` option.
+
+LLD will relax (rewrite) any code sequences that materialize an address within 2048 bytes of this ``__global_pointer$`` (which will be defined if it does not already exist) to instead generate the address using ``gp`` and the correct (signed) 12-bit immediate. This usually saves at least one instruction compared to materialising a full 32-bit address value.
+
+There can only be one ``__global_pointer$`` in a process (as ``gp`` is not changed when calling into a function in a shared library), so this optimisation is only done for executables, and not for shared libraries. Startup code is expected to put the value of ``__global_pointer$`` (from the executable) into ``gp`` before any user code is run.
+
+Arguably, the most efficient use for this addressing mode is for smaller global variables, as larger global variables are likely to need many more loads or stores when they are being accessed anyway.
+
+Therefore the compiler can do so, by placing smaller global variables into sections with with names starting ``.sdata`` or ``.sbss`` (matching sections with names starting ``.data`` and ``.bss`` respectively). LLD knows these sections should be laid out closer to the ``__global_pointer$`` symbol and adjacent to the ``.data`` section.
+
+Clang's ``-msmall-data-limit=`` option controls what the threshold size is (in bytes) for a global variable to be considered small. ``-msmall-data-limit=0`` disables the use of sections starting ``.sdata`` and ``.sbss``. The ``-msmall-data-limit=`` option will not move global variables that have an explicit data section, and will keep globals separate if using ``-fdata-sections``.
+
+Data suggests that these options can produce significant improvements across a range of benchmarks.
