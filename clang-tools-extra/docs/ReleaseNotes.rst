@@ -95,6 +95,9 @@ The improvements are...
 Improvements to clang-tidy
 --------------------------
 
+- Improved :program:`run-clang-tidy.py` script. Fixed minor shutdown noise
+  happening on certain platforms when interrupting the script.
+
 New checks
 ^^^^^^^^^^
 
@@ -124,7 +127,7 @@ Changes in existing checks
   <clang-tidy/checks/performance/avoid-endl>` check to use ``std::endl`` as
   placeholder when lexer cannot get source text.
 
-- Improved :doc:`readablility-implicit-bool-conversion
+- Improved :doc:`readability-implicit-bool-conversion
   <clang-tidy/checks/readability/implicit-bool-conversion>` check
   by adding the option `UseUpperCaseLiteralSuffix` to select the
   case of the literal suffix in fixes.

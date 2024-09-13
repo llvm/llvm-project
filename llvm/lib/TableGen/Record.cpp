@@ -2802,10 +2802,10 @@ RecordRecTy *Record::getType() const {
   return RecordRecTy::get(TrackedRecords, DirectSCs);
 }
 
-DefInit *Record::getDefInit() {
+DefInit *Record::getDefInit() const {
   if (!CorrespondingDefInit) {
-    CorrespondingDefInit =
-        new (TrackedRecords.getImpl().Allocator) DefInit(this);
+    CorrespondingDefInit = new (TrackedRecords.getImpl().Allocator)
+        DefInit(const_cast<Record *>(this));
   }
   return CorrespondingDefInit;
 }

@@ -75,6 +75,10 @@ function(_get_compile_options_from_config output_var)
     list(APPEND config_options "-DLIBC_TYPES_TIME_T_IS_32_BIT")
   endif()
 
+  if(LIBC_ADD_NULL_CHECKS)
+    list(APPEND config_options "-DLIBC_ADD_NULL_CHECKS")
+  endif()
+
   set(${output_var} ${config_options} PARENT_SCOPE)
 endfunction(_get_compile_options_from_config)
 

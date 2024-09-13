@@ -208,6 +208,16 @@ def int_amdgcn_init_exec_from_input : Intrinsic<[],
   [IntrConvergent, IntrHasSideEffects, IntrNoMem, IntrNoCallback,
    IntrNoFree, IntrWillReturn, ImmArg<ArgIndex<1>>]>;
 
+// Sets the function into whole-wave-mode and returns whether the lane was
+// active when entering the function. A branch depending on this return will
+// revert the EXEC mask to what it was when entering the function, thus
+// resulting in a no-op. This pattern is used to optimize branches when function
+// tails need to be run in whole-wave-mode. It may also have other consequences
+// (mostly related to WWM CSR handling) that differentiate it from using
+// a plain `amdgcn.init.exec -1`.
+def int_amdgcn_init_whole_wave : Intrinsic<[llvm_i1_ty], [], [
+    IntrHasSideEffects, IntrNoMem, IntrConvergent]>;
+
 def int_amdgcn_wavefrontsize :
   ClangBuiltin<"__builtin_amdgcn_wavefrontsize">,
   DefaultAttrsIntrinsic<[llvm_i32_ty], [], [NoUndef<RetIndex>, IntrNoMem, IntrSpeculatable]>;
@@ -799,16 +809,11 @@ class AMDGPUDimNoSampleProfile<string opmod,
 
 class AMDGPUDimAtomicProfile<string opmod,
                              AMDGPUDimProps dim,
-                             list<AMDGPUArg> dataargs> : AMDGPUDimProfile<opmod, dim> {
-  let RetTypes = [llvm_anyint_ty];
+                             list<AMDGPUArg> dataargs,
+                             LLVMType rettype> : AMDGPUDimProfile<opmod, dim> {
+  let RetTypes = [rettype];
   let DataArgs = dataargs;
   let IsAtomic = true;
-}
-
-class AMDGPUDimAtomicFloatProfile<string opmod, AMDGPUDimProps dim,
-                                  list<AMDGPUArg> dataargs>
-    : AMDGPUDimAtomicProfile<opmod, dim, dataargs> {
-  let RetTypes = [llvm_anyfloat_ty];
 }
 
 class AMDGPUDimGetResInfoProfile<AMDGPUDimProps dim>
@@ -1023,26 +1028,24 @@ defset list<AMDGPUImageDimIntrinsic> AMDGPUImageDimIntrinsics = {
 //////////////////////////////////////////////////////////////////////////
 defset list<AMDGPUImageDimIntrinsic> AMDGPUImageDimAtomicIntrinsics = {
   multiclass AMDGPUImageDimAtomicX<string opmod, list<AMDGPUArg> dataargs,
-                                   int isFloat = 0> {
+                                   LLVMType rettype = llvm_anyint_ty> {
         foreach dim = AMDGPUDims.All in {
-          def !strconcat(NAME, "_", dim.Name): AMDGPUImageDimIntrinsic<
-              !if (isFloat, AMDGPUDimAtomicFloatProfile<opmod, dim, dataargs>,
-                   AMDGPUDimAtomicProfile<opmod, dim, dataargs>),
-              [], [SDNPMemOperand]>;
+          def !strconcat(NAME, "_", dim.Name):
+            AMDGPUImageDimIntrinsic<AMDGPUDimAtomicProfile<opmod, dim, dataargs, rettype>,
+            [], [SDNPMemOperand]>;
         }
   }
 
-  multiclass AMDGPUImageDimAtomic<string opmod, int isFloat = 0> {
-    defm ""
-        : AMDGPUImageDimAtomicX<opmod, [AMDGPUArg<LLVMMatchType<0>, "vdata">],
-                                isFloat>;
-  }
+  multiclass AMDGPUImageDimAtomic<string opmod, LLVMType rettype = llvm_anyint_ty> :
+    AMDGPUImageDimAtomicX<opmod, [AMDGPUArg<LLVMMatchType<0>, "vdata">], rettype>;
 
-  multiclass AMDGPUImageDimFloatAtomic<string opmod> {
-    defm "" : AMDGPUImageDimAtomic<opmod, 1 /*isFloat*/>;
-  }
+  multiclass AMDGPUImageDimFloatAtomic<string opmod> :
+    AMDGPUImageDimAtomic<opmod, llvm_anyfloat_ty>;
 
-  defm int_amdgcn_image_atomic_swap : AMDGPUImageDimAtomic<"ATOMIC_SWAP">;
+  multiclass AMDGPUImageDimAnyAtomic<string opmod> :
+    AMDGPUImageDimAtomic<opmod, llvm_any_ty>;
+
+  defm int_amdgcn_image_atomic_swap : AMDGPUImageDimAnyAtomic<"ATOMIC_SWAP">;
   defm int_amdgcn_image_atomic_add : AMDGPUImageDimAtomic<"ATOMIC_ADD">;
   defm int_amdgcn_image_atomic_sub : AMDGPUImageDimAtomic<"ATOMIC_SUB">;
   defm int_amdgcn_image_atomic_smin : AMDGPUImageDimAtomic<"ATOMIC_SMIN">;

@@ -1669,7 +1669,7 @@ private:
   RecordKeeper &TrackedRecords;
 
   // The DefInit corresponding to this record.
-  DefInit *CorrespondingDefInit = nullptr;
+  mutable DefInit *CorrespondingDefInit = nullptr;
 
   // Unique record ID.
   unsigned ID;
@@ -1736,7 +1736,7 @@ public:
   RecordRecTy *getType() const;
 
   /// get the corresponding DefInit.
-  DefInit *getDefInit();
+  DefInit *getDefInit() const;
 
   bool isClass() const { return Kind == RK_Class; }
 

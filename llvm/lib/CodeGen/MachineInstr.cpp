@@ -1323,6 +1323,28 @@ bool MachineInstr::isSafeToMove(bool &SawStore) const {
   return true;
 }
 
+bool MachineInstr::wouldBeTriviallyDead() const {
+  // Don't delete frame allocation labels.
+  // FIXME: Why is LOCAL_ESCAPE not considered in MachineInstr::isLabel?
+  if (getOpcode() == TargetOpcode::LOCAL_ESCAPE)
+    return false;
+
+  // Don't delete FAKE_USE.
+  // FIXME: Why is FAKE_USE not considered in MachineInstr::isPosition?
+  if (isFakeUse())
+    return false;
+
+  // LIFETIME markers should be preserved.
+  // FIXME: Why are LIFETIME markers not considered in MachineInstr::isPosition?
+  if (isLifetimeMarker())
+    return false;
+
+  // If we can move an instruction, we can remove it.  Otherwise, it has
+  // a side-effect of some sort.
+  bool SawStore = false;
+  return isPHI() || isSafeToMove(SawStore);
+}
+
 static bool MemOperandsHaveAlias(const MachineFrameInfo &MFI, AAResults *AA,
                                  bool UseTBAA, const MachineMemOperand *MMOa,
                                  const MachineMemOperand *MMOb) {
