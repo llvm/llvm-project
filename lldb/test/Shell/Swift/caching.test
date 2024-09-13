@@ -1,0 +1,30 @@
+# REQUIRES: swift
+# REQUIRES: system-darwin
+
+# RUN: rm -rf %t && mkdir %t
+# RUN: split-file %s %t
+# RUN: %target-swiftc -g -Onone -save-temps \
+# RUN:          -module-cache-path %t/cache %t/main.swift \
+# RUN:          -cache-compile-job -cas-path %t/cas -explicit-module-build \
+# RUN:          -module-name main -o %t/main
+
+# RUN: %lldb %t/main -s %t/lldb.script 2>&1 | FileCheck %s
+# CHECK:         LogConfiguration() --   Extra clang arguments
+# CHECK-COUNT-1: LogConfiguration() --     -triple
+# CHECK:         (Int) ${{.*}} = 1
+
+//--- main.swift
+func test() {
+  print("break here")
+}
+test()
+
+//--- lldb.script
+# Force loading from interface to simulate no binary module available.
+settings set symbols.swift-module-loading-mode prefer-interface
+log enable lldb types
+b test
+run
+# Create a SwiftASTContext
+expr 1
+quit
