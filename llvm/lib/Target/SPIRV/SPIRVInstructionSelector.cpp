@@ -36,19 +36,22 @@
 namespace {
 
 struct SyncScopeIDs {
-  llvm::SyncScope::ID Work_ItemSSID;
+  // Init SubGroupSSID with the reserved (invalid for SubGroupSSID) value to be
+  // able to reason about valid/non-initialized states of the structure.
+  llvm::SyncScope::ID SubGroupSSID = SyncScope::SingleThread;
   llvm::SyncScope::ID WorkGroupSSID;
   llvm::SyncScope::ID DeviceSSID;
-  llvm::SyncScope::ID AllSVMDevicesSSID;
-  llvm::SyncScope::ID SubGroupSSID;
 
   SyncScopeIDs() {}
   SyncScopeIDs(llvm::LLVMContext &Context) {
-    Work_ItemSSID = Context.getOrInsertSyncScopeID("work_item");
+    // Named by
+    // https://registry.khronos.org/SPIR-V/specs/unified1/SPIRV.html#_scope_id
+    // We don't need aliases for Invocation and CrossDevice, as we already have
+    // them covered by "singlethread" and "" strings respectively (see
+    // implementation of LLVMContext::LLVMContext()).
+    SubGroupSSID = Context.getOrInsertSyncScopeID("subgroup");
     WorkGroupSSID = Context.getOrInsertSyncScopeID("workgroup");
     DeviceSSID = Context.getOrInsertSyncScopeID("device");
-    AllSVMDevicesSSID = Context.getOrInsertSyncScopeID("all_svm_devices");
-    SubGroupSSID = Context.getOrInsertSyncScopeID("sub_group");
   }
 };
 
@@ -305,7 +308,9 @@ void SPIRVInstructionSelector::setupMF(MachineFunction &MF, GISelKnownBits *KB,
                                        CodeGenCoverage *CoverageInfo,
                                        ProfileSummaryInfo *PSI,
                                        BlockFrequencyInfo *BFI) {
-  SSIDs = SyncScopeIDs(MF.getFunction().getContext());
+  // Init SPIR-V specific SyncScopeID's if needed.
+  if (SSIDs.SubGroupSSID == SyncScope::SingleThread)
+    SSIDs = SyncScopeIDs(MF.getFunction().getContext());
   MRI = &MF.getRegInfo();
   GR.setCurrentFunc(MF);
   InstructionSelector::setupMF(MF, KB, CoverageInfo, PSI, BFI);
@@ -847,25 +852,18 @@ bool SPIRVInstructionSelector::selectBitcast(Register ResVReg,
 
 static SPIRV::Scope::Scope getScope(SyncScope::ID Ord,
                                     const SyncScopeIDs &SSIDs) {
-  if (Ord == SyncScope::SingleThread || Ord == SSIDs.Work_ItemSSID)
+  if (Ord == SyncScope::SingleThread)
     return SPIRV::Scope::Invocation;
-  else if (Ord == SyncScope::System || Ord == SSIDs.DeviceSSID)
-    return SPIRV::Scope::Device;
-  else if (Ord == SSIDs.WorkGroupSSID)
-    return SPIRV::Scope::Workgroup;
-  else if (Ord == SSIDs.AllSVMDevicesSSID)
-    return SPIRV::Scope::CrossDevice;
-  else if (Ord == SSIDs.SubGroupSSID)
+  if (Ord == SSIDs.SubGroupSSID)
     return SPIRV::Scope::Subgroup;
-  else
-    // OpenCL approach is: "The functions that do not have memory_scope argument
-    // have the same semantics as the corresponding functions with the
-    // memory_scope argument set to memory_scope_device." See ref.: //
-    // https://registry.khronos.org/OpenCL/specs/3.0-unified/html/OpenCL_C.html#atomic-functions
-    // In our case if the scope is unknown, assuming that SPIR-V code is to be
-    // consumed in an OpenCL environment, we use the same approach and set the
-    // scope to memory_scope_device.
+  if (Ord == SSIDs.WorkGroupSSID)
+    return SPIRV::Scope::Workgroup;
+  if (Ord == SSIDs.DeviceSSID)
     return SPIRV::Scope::Device;
+  if (Ord == SyncScope::System)
+    return SPIRV::Scope::CrossDevice;
+  // Use the most conservative/safe choice as the default.
+  return SPIRV::Scope::CrossDevice;
 }
 
 static void addMemoryOperands(MachineMemOperand *MemOp,
