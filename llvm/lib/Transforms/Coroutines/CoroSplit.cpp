@@ -887,12 +887,12 @@ Value *CoroCloner::deriveNewFramePointer() {
   llvm_unreachable("bad ABI");
 }
 
-// Adjust the scope line of the funclet to the first line number after the
-// suspend point. This avoids a jump in the line table from the function
-// declaration (where prologue instructions are attributed to) to the suspend
-// point.
-// Only adjust the scope line when the files are the same.
-// If no candidate line number is found, fallback to the line of ActiveSuspend.
+/// Adjust the scope line of the funclet to the first line number after the
+/// suspend point. This avoids a jump in the line table from the function
+/// declaration (where prologue instructions are attributed to) to the suspend
+/// point.
+/// Only adjust the scope line when the files are the same.
+/// If no candidate line number is found, fallback to the line of ActiveSuspend.
 static void updateScopeLine(Instruction *ActiveSuspend,
                             DISubprogram &SPToUpdate) {
   if (!ActiveSuspend)
