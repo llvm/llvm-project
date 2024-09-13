@@ -20,13 +20,6 @@ eh_legacy_test:
     rethrow 0
   end_try
 
-  # try-catch with a return value
-  try i32
-    i32.const 0
-  catch       __cpp_exception
-  end_try
-  drop
-
   # Nested try-catch with a rethrow
   try
     call  foo
@@ -36,6 +29,13 @@ eh_legacy_test:
       rethrow 1
     end_try
   end_try
+
+  # try-catch with a single return value
+  try i32
+    i32.const 0
+  catch       __cpp_exception
+  end_try
+  drop
   end_function
 
 # CHECK-LABEL: eh_legacy_test:
@@ -49,11 +49,7 @@ eh_legacy_test:
 # CHECK-NEXT:    catch_all
 # CHECK-NEXT:    rethrow         0
 # CHECK-NEXT:    end_try
-# CHECK:         try             i32
-# CHECK-NEXT:    i32.const       0
-# CHECK-NEXT:    catch           __cpp_exception
-# CHECK-NEXT:    end_try
-# CHECK-NEXT:    drop
+
 # CHECK:         try
 # CHECK-NEXT:    call    foo
 # CHECK-NEXT:    catch_all
@@ -62,4 +58,10 @@ eh_legacy_test:
 # CHECK-NEXT:    rethrow         1
 # CHECK-NEXT:    end_try
 # CHECK-NEXT:    end_try
+
+# CHECK:         try             i32
+# CHECK-NEXT:    i32.const       0
+# CHECK-NEXT:    catch           __cpp_exception
+# CHECK-NEXT:    end_try
+# CHECK-NEXT:    drop
 # CHECK-NEXT:    end_function
