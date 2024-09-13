@@ -217,6 +217,7 @@ on support follow.
      ``Zvfbfmin``      Supported
      ``Zvfbfwma``      Supported
      ``Zvfh``          Supported
+     ``Zvfhmin``       Supported
      ``Zvkb``          Suppported
      ``Zvkg``          Supported (`See note <#iscv-vector-crypto-note>`__)
      ``Zvkn``          Supported (`See note <#iscv-vector-crypto-note>`__)
