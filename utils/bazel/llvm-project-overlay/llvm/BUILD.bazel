@@ -1488,10 +1488,12 @@ cc_library(
         "lib/Transforms/Vectorize/*.cpp",
         "lib/Transforms/Vectorize/*.h",
         "lib/Transforms/Vectorize/SandboxVectorizer/*.cpp",
+        "lib/Transforms/Vectorize/SandboxVectorizer/Passes/*.cpp",
     ]),
     hdrs = glob([
         "include/llvm/Transforms/Vectorize/*.h",
-        "include/llvm/Transforms/Vectorize/SandboxVectorizer/SandboxVectorizer.h",
+        "include/llvm/Transforms/Vectorize/SandboxVectorizer/*.h",
+        "include/llvm/Transforms/Vectorize/SandboxVectorizer/Passes/*.h"
     ]),
     copts = llvm_copts,
     deps = [
