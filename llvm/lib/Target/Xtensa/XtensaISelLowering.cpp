@@ -601,7 +601,7 @@ SDValue XtensaTargetLowering::LowerRETURNADDR(SDValue Op,
   // An index of zero corresponds to the current function's return address.
   // An index of one to the parent's return address, and so on.
   // Depths > 0 not supported yet!
-  if (Op.getConstantOperandVal(0) > 0)
+  if (Op.getConstantOperandVal(0) != 0)
     return SDValue();
 
   MachineFunction &MF = DAG.getMachineFunction();
@@ -750,11 +750,11 @@ SDValue XtensaTargetLowering::LowerFRAMEADDR(SDValue Op,
   // An index of zero corresponds to the current function's frame address.
   // An index of one to the parent's frame address, and so on.
   // Depths > 0 not supported yet!
-  if (Op.getConstantOperandVal(0) > 0)
+  if (Op.getConstantOperandVal(0) != 0)
     return SDValue();
 
   MachineFunction &MF = DAG.getMachineFunction();
-  MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
   MFI.setFrameAddressIsTaken(true);
   EVT VT = Op.getValueType();
   SDLoc DL(Op);
