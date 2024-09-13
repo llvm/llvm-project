@@ -1059,12 +1059,12 @@ static unsigned int getFenceOp(NVPTX::Ordering O, NVPTX::Scope S,
   }
 }
 
+// Returns Memory Order and Scope of a memory instruction, and
+// inserts any fence before the instruction that's required to
+// implement its memory ordering.
 std::pair<NVPTX::Ordering, NVPTX::Scope>
 NVPTXDAGToDAGISel::insertMemoryInstructionFence(SDLoc DL, SDValue &Chain,
                                                 MemSDNode *N) {
-  // Some memory instructions - loads, stores, atomics - need an extra fence
-  // instruction. Get the memory order of the instruction, and that of its
-  // fence, if any.
   auto [InstructionOrdering, FenceOrdering] =
       getOperationOrderings(N, Subtarget);
   auto Scope = getOperationScope(N, InstructionOrdering);
