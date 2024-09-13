@@ -123,7 +123,7 @@ public:
   const char* what() const _NOEXCEPT override;
 };
 
-_LIBCPP_NORETURN inline _LIBCPP_HIDE_FROM_ABI void __throw_bad_weak_ptr() {
+[[__noreturn__]] inline _LIBCPP_HIDE_FROM_ABI void __throw_bad_weak_ptr() {
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
   throw bad_weak_ptr();
 #else

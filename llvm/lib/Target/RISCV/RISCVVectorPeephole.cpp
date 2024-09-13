@@ -145,6 +145,24 @@ bool RISCVVectorPeephole::tryToReduceVL(MachineInstr &MI) const {
   case RISCV::VMERGE_VVM:
     SrcIdx = 3; // TODO: We can also handle the false operand.
     break;
+  case RISCV::VREDSUM_VS:
+  case RISCV::VREDMAXU_VS:
+  case RISCV::VREDMAX_VS:
+  case RISCV::VREDMINU_VS:
+  case RISCV::VREDMIN_VS:
+  case RISCV::VREDAND_VS:
+  case RISCV::VREDOR_VS:
+  case RISCV::VREDXOR_VS:
+  case RISCV::VWREDSUM_VS:
+  case RISCV::VWREDSUMU_VS:
+  case RISCV::VFREDUSUM_VS:
+  case RISCV::VFREDOSUM_VS:
+  case RISCV::VFREDMAX_VS:
+  case RISCV::VFREDMIN_VS:
+  case RISCV::VFWREDUSUM_VS:
+  case RISCV::VFWREDOSUM_VS:
+    SrcIdx = 2;
+    break;
   }
 
   MachineOperand &VL = MI.getOperand(RISCVII::getVLOpNum(MI.getDesc()));

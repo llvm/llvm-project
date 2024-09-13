@@ -587,7 +587,7 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
     {"izext", {{"i", AnyInt}}, TypePattern{IntType, KindCode::exactKind, 2}},
     {"jzext", {{"i", AnyInt}}, DefaultInt},
     {"kind",
-        {{"x", AnyIntrinsic, Rank::elemental, Optionality::required,
+        {{"x", AnyIntrinsic, Rank::anyOrAssumedRank, Optionality::required,
             common::Intent::In, {ArgFlag::canBeMoldNull}}},
         DefaultInt, Rank::elemental, IntrinsicClass::inquiryFunction},
     {"lbound",
@@ -2264,7 +2264,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
         messages.Say("'kind=' argument must be a constant scalar integer "
                      "whose value is a supported kind for the "
                      "intrinsic result type"_err_en_US);
-        return std::nullopt;
+        // use default kind below for error recovery
       } else if (kindDummyArg->flags.test(ArgFlag::defaultsToSameKind)) {
         CHECK(sameArg);
         resultType = *sameArg->GetType();
@@ -2274,6 +2274,8 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
             DynamicType{TypeCategory::Integer, defaults.sizeIntegerKind()};
       } else {
         CHECK(kindDummyArg->flags.test(ArgFlag::defaultsToDefaultForResult));
+      }
+      if (!resultType) {
         int kind{defaults.GetDefaultKind(*category)};
         if (*category == TypeCategory::Character) { // ACHAR & CHAR
           resultType = DynamicType{kind, 1};
