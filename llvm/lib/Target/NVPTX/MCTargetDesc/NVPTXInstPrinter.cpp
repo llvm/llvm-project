@@ -226,100 +226,100 @@ void NVPTXInstPrinter::printCmpMode(const MCInst *MI, int OpNum, raw_ostream &O,
 }
 
 void NVPTXInstPrinter::printLdStCode(const MCInst *MI, int OpNum,
-                                     raw_ostream &O, const char *Modifier_) {
-  if (Modifier_) {
-    llvm::StringRef Modifier(Modifier_);
-    const MCOperand &MO = MI->getOperand(OpNum);
-    int Imm = (int) MO.getImm();
-    if (Modifier == "sem") {
-      auto Ordering = NVPTX::Ordering(Imm);
-      switch (Ordering) {
-      case NVPTX::Ordering::NotAtomic:
-        return;
-      case NVPTX::Ordering::Relaxed:
-        O << ".relaxed";
-        return;
-      case NVPTX::Ordering::Acquire:
-        O << ".acquire";
-        return;
-      case NVPTX::Ordering::Release:
-        O << ".release";
-        return;
-      case NVPTX::Ordering::Volatile:
-        O << ".volatile";
-        return;
-      case NVPTX::Ordering::RelaxedMMIO:
-        O << ".mmio.relaxed";
-        return;
-      default:
-        report_fatal_error(formatv(
-            "NVPTX LdStCode Printer does not support \"{}\" sem modifier. "
-            "Loads/Stores cannot be AcquireRelease or SequentiallyConsistent.",
-            OrderingToString(Ordering)));
-      }
-    } else if (Modifier == "scope") {
-      auto S = NVPTX::Scope(Imm);
-      switch (S) {
-      case NVPTX::Scope::Thread:
-        return;
-      case NVPTX::Scope::System:
-        O << ".sys";
-        return;
-      case NVPTX::Scope::Block:
-        O << ".cta";
-        return;
-      case NVPTX::Scope::Cluster:
-        O << ".cluster";
-        return;
-      case NVPTX::Scope::Device:
-        O << ".gpu";
-        return;
-      }
-      report_fatal_error(formatv(
-          "NVPTX LdStCode Printer does not support \"{}\" sco modifier.",
-          ScopeToString(S)));
-    } else if (Modifier == "addsp") {
-      switch (Imm) {
-      case NVPTX::PTXLdStInstCode::GLOBAL:
-        O << ".global";
-        return;
-      case NVPTX::PTXLdStInstCode::SHARED:
-        O << ".shared";
-        return;
-      case NVPTX::PTXLdStInstCode::LOCAL:
-        O << ".local";
-        return;
-      case NVPTX::PTXLdStInstCode::PARAM:
-        O << ".param";
-        return;
-      case NVPTX::PTXLdStInstCode::CONSTANT:
-        O << ".const";
-        return;
-      case NVPTX::PTXLdStInstCode::GENERIC:
-        return;
-      default:
-        llvm_unreachable("Wrong Address Space");
-      }
-    } else if (Modifier == "sign") {
-      if (Imm == NVPTX::PTXLdStInstCode::Signed)
-        O << "s";
-      else if (Imm == NVPTX::PTXLdStInstCode::Unsigned)
-        O << "u";
-      else if (Imm == NVPTX::PTXLdStInstCode::Untyped)
-        O << "b";
-      else if (Imm == NVPTX::PTXLdStInstCode::Float)
-        O << "f";
-      else
-        llvm_unreachable("Unknown register type");
-    } else if (Modifier == "vec") {
-      if (Imm == NVPTX::PTXLdStInstCode::V2)
-        O << ".v2";
-      else if (Imm == NVPTX::PTXLdStInstCode::V4)
-        O << ".v4";
-    } else
-      llvm_unreachable(formatv("Unknown Modifier: {}", Modifier).str().c_str());
-  } else
+                                     raw_ostream &O, const char *M) {
+  if (!M)
     llvm_unreachable("Empty Modifier");
+
+  llvm::StringRef Modifier(M);
+  const MCOperand &MO = MI->getOperand(OpNum);
+  int Imm = (int)MO.getImm();
+  if (Modifier == "sem") {
+    auto Ordering = NVPTX::Ordering(Imm);
+    switch (Ordering) {
+    case NVPTX::Ordering::NotAtomic:
+      return;
+    case NVPTX::Ordering::Relaxed:
+      O << ".relaxed";
+      return;
+    case NVPTX::Ordering::Acquire:
+      O << ".acquire";
+      return;
+    case NVPTX::Ordering::Release:
+      O << ".release";
+      return;
+    case NVPTX::Ordering::Volatile:
+      O << ".volatile";
+      return;
+    case NVPTX::Ordering::RelaxedMMIO:
+      O << ".mmio.relaxed";
+      return;
+    default:
+      report_fatal_error(formatv(
+          "NVPTX LdStCode Printer does not support \"{}\" sem modifier. "
+          "Loads/Stores cannot be AcquireRelease or SequentiallyConsistent.",
+          OrderingToString(Ordering)));
+    }
+  } else if (Modifier == "scope") {
+    auto S = NVPTX::Scope(Imm);
+    switch (S) {
+    case NVPTX::Scope::Thread:
+      return;
+    case NVPTX::Scope::System:
+      O << ".sys";
+      return;
+    case NVPTX::Scope::Block:
+      O << ".cta";
+      return;
+    case NVPTX::Scope::Cluster:
+      O << ".cluster";
+      return;
+    case NVPTX::Scope::Device:
+      O << ".gpu";
+      return;
+    }
+    report_fatal_error(
+        formatv("NVPTX LdStCode Printer does not support \"{}\" sco modifier.",
+                ScopeToString(S)));
+  } else if (Modifier == "addsp") {
+    switch (Imm) {
+    case NVPTX::PTXLdStInstCode::GLOBAL:
+      O << ".global";
+      return;
+    case NVPTX::PTXLdStInstCode::SHARED:
+      O << ".shared";
+      return;
+    case NVPTX::PTXLdStInstCode::LOCAL:
+      O << ".local";
+      return;
+    case NVPTX::PTXLdStInstCode::PARAM:
+      O << ".param";
+      return;
+    case NVPTX::PTXLdStInstCode::CONSTANT:
+      O << ".const";
+      return;
+    case NVPTX::PTXLdStInstCode::GENERIC:
+      return;
+    default:
+      llvm_unreachable("Wrong Address Space");
+    }
+  } else if (Modifier == "sign") {
+    if (Imm == NVPTX::PTXLdStInstCode::Signed)
+      O << "s";
+    else if (Imm == NVPTX::PTXLdStInstCode::Unsigned)
+      O << "u";
+    else if (Imm == NVPTX::PTXLdStInstCode::Untyped)
+      O << "b";
+    else if (Imm == NVPTX::PTXLdStInstCode::Float)
+      O << "f";
+    else
+      llvm_unreachable("Unknown register type");
+  } else if (Modifier == "vec") {
+    if (Imm == NVPTX::PTXLdStInstCode::V2)
+      O << ".v2";
+    else if (Imm == NVPTX::PTXLdStInstCode::V4)
+      O << ".v4";
+  } else
+    llvm_unreachable(formatv("Unknown Modifier: {}", Modifier).str().c_str());
 }
 
 void NVPTXInstPrinter::printMmaCode(const MCInst *MI, int OpNum, raw_ostream &O,
