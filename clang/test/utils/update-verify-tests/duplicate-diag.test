@@ -1,4 +1,0 @@
-# RUN: cp %S/Inputs/duplicate-diag.c %t.c && not %clang_cc1 -verify %t.c 2>&1 | %update-verify-tests
-# RUN: diff -u %S/Inputs/duplicate-diag.c.expected %t.c
-# RUN: %clang_cc1 -verify %t.c
-
