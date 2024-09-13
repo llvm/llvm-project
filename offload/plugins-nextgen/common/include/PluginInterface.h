@@ -132,7 +132,6 @@ public:
     uint64_t Level;
   };
 
-
 private:
   std::deque<InfoQueueEntryTy> Queue;
 
@@ -156,9 +155,7 @@ public:
       Queue.push_back({Key, Value, Units, L});
   }
 
-  const std::deque<InfoQueueEntryTy> &getQueue() const {
-    return Queue;
-  }
+  const std::deque<InfoQueueEntryTy> &getQueue() const { return Queue; }
 
   /// Print all info entries added to the queue.
   void print() const {

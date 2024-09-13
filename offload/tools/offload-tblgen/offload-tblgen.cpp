@@ -29,7 +29,8 @@ enum ActionType {
   GenFuncNames,
   GenImplFuncDecls,
   GenEntryPoints,
-  GenPrintHeader
+  GenPrintHeader,
+  GenExports
 };
 
 namespace {
@@ -49,7 +50,9 @@ cl::opt<ActionType> Action(
         clEnumValN(GenEntryPoints, "gen-entry-points",
                    "Generate Offload API wrapper function definitions"),
         clEnumValN(GenPrintHeader, "gen-print-header",
-                   "Generate Offload API print header")));
+                   "Generate Offload API print header"),
+        clEnumValN(GenExports, "gen-exports",
+                   "Generate export file for the Offload library")));
 }
 
 static bool OffloadTableGenMain(raw_ostream &OS, RecordKeeper &Records) {
@@ -74,6 +77,9 @@ static bool OffloadTableGenMain(raw_ostream &OS, RecordKeeper &Records) {
     break;
   case GenPrintHeader:
     EmitOffloadPrintHeader(Records, OS);
+    break;
+  case GenExports:
+    EmitOffloadExports(Records, OS);
     break;
   }
 

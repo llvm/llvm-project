@@ -16,3 +16,4 @@ void EmitOffloadImplFuncDecls(llvm::RecordKeeper &Records,
                               llvm::raw_ostream &OS);
 void EmitOffloadEntryPoints(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitOffloadPrintHeader(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitOffloadExports(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);

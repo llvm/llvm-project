@@ -55,4 +55,3 @@ MakeParamComment(const llvm::offload::tblgen::ParamRec &Param) {
                        (Param.isOut() ? "[out]" : ""),
                        (Param.isOpt() ? "[optional]" : ""), Param.getDesc());
 }
-
