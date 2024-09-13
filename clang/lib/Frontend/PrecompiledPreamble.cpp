@@ -203,7 +203,7 @@ public:
     // FIXME: This is a hack so that we can override the preamble file during
     // crash-recovery testing, which is the only case where the preamble files
     // are not necessarily cleaned up.
-    if (const char *TmpFile = ::getenv("CINDEXTEST_PREAMBLE_FILE"))
+    if (const char *TmpFile = std::getenv("CINDEXTEST_PREAMBLE_FILE"))
       return std::unique_ptr<TempPCHFile>(new TempPCHFile(TmpFile));
 
     llvm::SmallString<128> File;

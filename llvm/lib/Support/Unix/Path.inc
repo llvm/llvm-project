@@ -369,7 +369,7 @@ ErrorOr<space_info> disk_space(const Twine &Path) {
 std::error_code current_path(SmallVectorImpl<char> &result) {
   result.clear();
 
-  const char *pwd = ::getenv("PWD");
+  const char *pwd = std::getenv("PWD");
   llvm::sys::fs::file_status PWDStatus, DotStatus;
   if (pwd && llvm::sys::path::is_absolute(pwd) &&
       !llvm::sys::fs::status(pwd, PWDStatus) &&

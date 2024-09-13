@@ -43,7 +43,7 @@ class Logger : public RefCountedBase<Logger> {
   llvm::raw_svector_ostream LogOS;
 public:
   static const char *getEnvVar() {
-    static const char *sCachedVar = ::getenv("LIBCLANG_LOGGING");
+    static const char *sCachedVar = std::getenv("LIBCLANG_LOGGING");
     return sCachedVar;
   }
   static bool isLoggingEnabled() { return getEnvVar() != nullptr; }

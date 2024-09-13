@@ -459,7 +459,7 @@ class WithEnv {
 
 public:
   WithEnv(const char *Var, const char *Value) : Var(Var) {
-    if (const char *V = ::getenv(Var))
+    if (const char *V = std::getenv(Var))
       OriginalValue.emplace(V);
     if (Value)
       ::setenv(Var, Value, 1);
@@ -480,7 +480,7 @@ TEST(Support, HomeDirectory) {
 #ifdef _WIN32
   expected = getEnvWin(L"USERPROFILE");
 #else
-  if (char const *path = ::getenv("HOME"))
+  if (char const *path = std::getenv("HOME"))
     expected = path;
 #endif
   // Do not try to test it if we don't know what to expect.
