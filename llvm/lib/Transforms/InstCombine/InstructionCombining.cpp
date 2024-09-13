@@ -2327,8 +2327,16 @@ Instruction *InstCombinerImpl::narrowMathIfNoOverflow(BinaryOperator &BO) {
   return CastInst::Create(CastOpc, NarrowBO, BO.getType());
 }
 
-static bool isMergedGEPInBounds(GEPOperator &GEP1, GEPOperator &GEP2) {
-  return GEP1.isInBounds() && GEP2.isInBounds();
+/// Determine nowrap flags for (gep (gep p, x), y) to (gep p, (x + y))
+/// transform.
+static GEPNoWrapFlags getMergedGEPNoWrapFlags(GEPOperator &GEP1,
+                                              GEPOperator &GEP2) {
+  GEPNoWrapFlags NW = GEP1.getNoWrapFlags() & GEP2.getNoWrapFlags();
+  // Without inbounds, we could only preserve nusw if we know that x + y does
+  // not wrap.
+  if (!NW.isInBounds())
+    NW = NW.withoutNoUnsignedSignedWrap();
+  return NW;
 }
 
 /// Thread a GEP operation with constant indices through the constant true/false
@@ -2448,7 +2456,7 @@ Instruction *InstCombinerImpl::visitGEPOfGEP(GetElementPtrInst &GEP,
     if (!Offset.isZero() || (!IsFirstType && !ConstIndices[0].isZero()))
       return nullptr;
 
-    bool IsInBounds = isMergedGEPInBounds(*Src, *cast<GEPOperator>(&GEP));
+    GEPNoWrapFlags NW = getMergedGEPNoWrapFlags(*Src, *cast<GEPOperator>(&GEP));
     SmallVector<Value *> Indices;
     append_range(Indices, drop_end(Src->indices(),
                                    Src->getNumIndices() - NumVarIndices));
@@ -2458,12 +2466,15 @@ Instruction *InstCombinerImpl::visitGEPOfGEP(GetElementPtrInst &GEP,
       // by first performing a larger negative offset, and then a smaller
       // positive one. The large negative offset might go out of bounds. Only
       // preserve inbounds if all signs are the same.
-      IsInBounds &= Idx.isNonNegative() == ConstIndices[0].isNonNegative();
+      if (Idx.isNonNegative() != ConstIndices[0].isNonNegative())
+        NW = NW.withoutNoUnsignedSignedWrap();
+      if (!Idx.isNonNegative())
+        NW = NW.withoutNoUnsignedWrap();
     }
 
     return replaceInstUsesWith(
         GEP, Builder.CreateGEP(Src->getSourceElementType(), Src->getOperand(0),
-                               Indices, "", IsInBounds));
+                               Indices, "", NW));
   }
 
   if (Src->getResultElementType() != GEP.getSourceElementType())
@@ -2513,7 +2524,7 @@ Instruction *InstCombinerImpl::visitGEPOfGEP(GetElementPtrInst &GEP,
     return replaceInstUsesWith(
         GEP, Builder.CreateGEP(
                  Src->getSourceElementType(), Src->getOperand(0), Indices, "",
-                 isMergedGEPInBounds(*Src, *cast<GEPOperator>(&GEP))));
+                 getMergedGEPNoWrapFlags(*Src, *cast<GEPOperator>(&GEP))));
 
   return nullptr;
 }

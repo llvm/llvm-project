@@ -1917,5 +1917,107 @@ define ptr @gep_merge_not_nuw(ptr %p, i64 %idx) {
   ret ptr %gep
 }
 
+define ptr @gep_merge_nuw(ptr %p, i64 %x, i64 %y) {
+; CHECK-LABEL: @gep_merge_nuw(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr nuw i8, ptr [[P:%.*]], i64 [[Y:%.*]]
+; CHECK-NEXT:    ret ptr [[GEP]]
+;
+  %sub = sub i64 %y, %x
+  %gep1 = getelementptr nuw i8, ptr %p, i64 %x
+  %gep = getelementptr nuw i8, ptr %gep1, i64 %sub
+  ret ptr %gep
+}
+
+define ptr @gep_merge_nuw_only_one1(ptr %p, i64 %x, i64 %y) {
+; CHECK-LABEL: @gep_merge_nuw_only_one1(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 [[Y:%.*]]
+; CHECK-NEXT:    ret ptr [[GEP]]
+;
+  %sub = sub i64 %y, %x
+  %gep1 = getelementptr i8, ptr %p, i64 %x
+  %gep = getelementptr nuw i8, ptr %gep1, i64 %sub
+  ret ptr %gep
+}
+
+define ptr @gep_merge_nuw_only_one2(ptr %p, i64 %x, i64 %y) {
+; CHECK-LABEL: @gep_merge_nuw_only_one2(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 [[Y:%.*]]
+; CHECK-NEXT:    ret ptr [[GEP]]
+;
+  %sub = sub i64 %y, %x
+  %gep1 = getelementptr nuw i8, ptr %p, i64 %x
+  %gep = getelementptr i8, ptr %gep1, i64 %sub
+  ret ptr %gep
+}
+
+; Cannot preserve nusw, unless we know that the addition x + (y-x)
+; does not overflow.
+define ptr @gep_merge_nusw(ptr %p, i64 %x, i64 %y) {
+; CHECK-LABEL: @gep_merge_nusw(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 [[Y:%.*]]
+; CHECK-NEXT:    ret ptr [[GEP]]
+;
+  %sub = sub i64 %y, %x
+  %gep1 = getelementptr nusw i8, ptr %p, i64 %x
+  %gep = getelementptr nusw i8, ptr %gep1, i64 %sub
+  ret ptr %gep
+}
+
+define ptr @gep_merge_nuw_add_zero(ptr %p, i64 %idx, i64 %idx2) {
+; CHECK-LABEL: @gep_merge_nuw_add_zero(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr nuw [2 x i32], ptr [[P:%.*]], i64 [[IDX:%.*]], i64 [[IDX2:%.*]]
+; CHECK-NEXT:    ret ptr [[GEP]]
+;
+  %gep1 = getelementptr nuw [2 x i32], ptr %p, i64 %idx
+  %gep = getelementptr nuw [2 x i32], ptr %gep1, i64 0, i64 %idx2
+  ret ptr %gep
+}
+
+; Cannot preserve nusw, even if the merge only involves an add with a zero
+; index. This is because the whole offset calculation is required to be nsw
+; after the merge.
+define ptr @gep_merge_nusw_add_zero(ptr %p, i64 %idx, i64 %idx2) {
+; CHECK-LABEL: @gep_merge_nusw_add_zero(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [2 x i32], ptr [[P:%.*]], i64 [[IDX:%.*]], i64 [[IDX2:%.*]]
+; CHECK-NEXT:    ret ptr [[GEP]]
+;
+  %gep1 = getelementptr nusw [2 x i32], ptr %p, i64 %idx
+  %gep = getelementptr nusw [2 x i32], ptr %gep1, i64 0, i64 %idx2
+  ret ptr %gep
+}
+
+define ptr @gep_merge_nuw_const(ptr %p, i64 %idx, i64 %idx2) {
+; CHECK-LABEL: @gep_merge_nuw_const(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr nuw [2 x i32], ptr [[P:%.*]], i64 [[IDX:%.*]], i64 1
+; CHECK-NEXT:    ret ptr [[GEP]]
+;
+  %gep1 = getelementptr nuw [2 x i32], ptr %p, i64 %idx
+  %gep = getelementptr nuw i8, ptr %gep1, i64 4
+  ret ptr %gep
+}
+
+define ptr @gep_merge_nuw_const_neg(ptr %p, i64 %idx, i64 %idx2) {
+; CHECK-LABEL: @gep_merge_nuw_const_neg(
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr nuw [2 x i32], ptr [[P:%.*]], i64 [[IDX:%.*]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr nuw i8, ptr [[GEP1]], i64 -4
+; CHECK-NEXT:    ret ptr [[GEP]]
+;
+  %gep1 = getelementptr nuw [2 x i32], ptr %p, i64 %idx
+  %gep = getelementptr nuw i8, ptr %gep1, i64 -4
+  ret ptr %gep
+}
+
+; Cannot preserve nusw, because we don't know that the new offset calculation
+; does not overflow.
+define ptr @gep_merge_nusw_const(ptr %p, i64 %idx, i64 %idx2) {
+; CHECK-LABEL: @gep_merge_nusw_const(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [2 x i32], ptr [[P:%.*]], i64 [[IDX:%.*]], i64 1
+; CHECK-NEXT:    ret ptr [[GEP]]
+;
+  %gep1 = getelementptr nusw [2 x i32], ptr %p, i64 %idx
+  %gep = getelementptr nusw i8, ptr %gep1, i64 4
+  ret ptr %gep
+}
+
 
 !0 = !{!"branch_weights", i32 2, i32 10}
