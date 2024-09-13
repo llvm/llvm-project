@@ -1,4 +1,4 @@
-//===- offload-tblgen/APIGen.cpp - Tablegen backend for Offload validation ===//
+//===- offload-tblgen/APIGen.cpp - Tablegen backend for Offload functions -===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This is a Tablegen backend that produces validation functions for the Offload
-// API entry point functions.
+// This is a Tablegen backend that handles generation of various small files
+// pertaining to the API functions.
 //
 //===----------------------------------------------------------------------===//
 
@@ -36,6 +36,19 @@ void EmitOffloadFuncNames(RecordKeeper &Records, raw_ostream &OS) {
   OS << "\n#undef OFFLOAD_FUNC\n";
 }
 
+void EmitOffloadExports(RecordKeeper &Records, raw_ostream &OS) {
+  OS << "VERS1.0 {\n";
+  OS << TAB_1 "global:\n";
+
+  for (auto *R : Records.getAllDerivedDefinitions("Function")) {
+    OS << formatv(TAB_2 "{0};\n", FunctionRec(R).getName());
+  }
+  OS << TAB_1 "local:\n";
+  OS << TAB_2 "*;\n";
+  OS << "};\n";
+}
+
+// Emit declarations for every implementation function
 void EmitOffloadImplFuncDecls(RecordKeeper &Records, raw_ostream &OS) {
   for (auto *R : Records.getAllDerivedDefinitions("Function")) {
     FunctionRec F{R};

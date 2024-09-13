@@ -16,7 +16,6 @@
 
 #include <cstring>
 
-
 template <typename T, typename Assign>
 offload_result_t getInfoImpl(size_t ParamValueSize, void *ParamValue,
                              size_t *ParamValueSizeRet, T Value,
