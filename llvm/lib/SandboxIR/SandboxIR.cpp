@@ -2519,6 +2519,39 @@ void GlobalObject::setSection(StringRef S) {
   cast<llvm::GlobalObject>(Val)->setSection(S);
 }
 
+template <typename GlobalT, typename LLVMGlobalT, typename ParentT,
+          typename LLVMParentT>
+GlobalT &GlobalWithNodeAPI<GlobalT, LLVMGlobalT, ParentT, LLVMParentT>::
+    LLVMGVToGV::operator()(LLVMGlobalT &LLVMGV) const {
+  return cast<GlobalT>(*Ctx.getValue(&LLVMGV));
+}
+
+namespace llvm::sandboxir {
+// Explicit instantiations.
+template class GlobalWithNodeAPI<GlobalIFunc, llvm::GlobalIFunc, GlobalObject,
+                                 llvm::GlobalObject>;
+template class GlobalWithNodeAPI<Function, llvm::Function, GlobalObject,
+                                 llvm::GlobalObject>;
+} // namespace llvm::sandboxir
+
+void GlobalIFunc::setResolver(Constant *Resolver) {
+  Ctx.getTracker()
+      .emplaceIfTracking<
+          GenericSetter<&GlobalIFunc::getResolver, &GlobalIFunc::setResolver>>(
+          this);
+  cast<llvm::GlobalIFunc>(Val)->setResolver(
+      cast<llvm::Constant>(Resolver->Val));
+}
+
+Constant *GlobalIFunc::getResolver() const {
+  return Ctx.getOrCreateConstant(cast<llvm::GlobalIFunc>(Val)->getResolver());
+}
+
+Function *GlobalIFunc::getResolverFunction() {
+  return cast<Function>(Ctx.getOrCreateConstant(
+      cast<llvm::GlobalIFunc>(Val)->getResolverFunction()));
+}
+
 void GlobalValue::setUnnamedAddr(UnnamedAddr V) {
   Ctx.getTracker()
       .emplaceIfTracking<GenericSetter<&GlobalValue::getUnnamedAddr,
@@ -2726,6 +2759,10 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
     case llvm::Value::FunctionVal:
       It->second = std::unique_ptr<Function>(
           new Function(cast<llvm::Function>(C), *this));
+      break;
+    case llvm::Value::GlobalIFuncVal:
+      It->second = std::unique_ptr<GlobalIFunc>(
+          new GlobalIFunc(cast<llvm::GlobalIFunc>(C), *this));
       break;
     default:
       It->second = std::unique_ptr<Constant>(new Constant(C, *this));

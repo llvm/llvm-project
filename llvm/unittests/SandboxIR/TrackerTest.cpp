@@ -1558,6 +1558,38 @@ define void @foo() {
   EXPECT_EQ(GV->getVisibility(), OrigVisibility);
 }
 
+TEST_F(TrackerTest, GlobalIFuncSetters) {
+  parseIR(C, R"IR(
+declare external void @bar()
+@ifunc = ifunc void(), ptr @foo
+define void @foo() {
+  call void @ifunc()
+  call void @bar()
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto *BB = &*F.begin();
+  auto It = BB->begin();
+  auto *Call0 = cast<sandboxir::CallInst>(&*It++);
+  auto *Call1 = cast<sandboxir::CallInst>(&*It++);
+  // Check classof(), creation.
+  auto *IFunc = cast<sandboxir::GlobalIFunc>(Call0->getCalledOperand());
+  auto *Bar = cast<sandboxir::Function>(Call1->getCalledOperand());
+  // Check setResolver().
+  auto *OrigResolver = IFunc->getResolver();
+  auto *NewResolver = Bar;
+  EXPECT_NE(NewResolver, OrigResolver);
+  Ctx.save();
+  IFunc->setResolver(NewResolver);
+  EXPECT_EQ(IFunc->getResolver(), NewResolver);
+  Ctx.revert();
+  EXPECT_EQ(IFunc->getResolver(), OrigResolver);
+}
+
 TEST_F(TrackerTest, SetVolatile) {
   parseIR(C, R"IR(
 define void @foo(ptr %arg0, i8 %val) {
