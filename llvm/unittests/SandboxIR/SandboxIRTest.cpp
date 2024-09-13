@@ -859,6 +859,84 @@ define void @foo() {
   EXPECT_EQ(GO->canIncreaseAlignment(), LLVMGO->canIncreaseAlignment());
 }
 
+TEST_F(SandboxIRTest, GlobalIFunc) {
+  parseIR(C, R"IR(
+declare external void @bar()
+@ifunc0 = ifunc void(), ptr @foo
+@ifunc1 = ifunc void(), ptr @foo
+define void @foo() {
+  call void @ifunc0()
+  call void @ifunc1()
+  call void @bar()
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  auto *LLVMBB = &*LLVMF.begin();
+  auto LLVMIt = LLVMBB->begin();
+  auto *LLVMCall0 = cast<llvm::CallInst>(&*LLVMIt++);
+  auto *LLVMIFunc0 = cast<llvm::GlobalIFunc>(LLVMCall0->getCalledOperand());
+
+  sandboxir::Context Ctx(C);
+
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto *BB = &*F.begin();
+  auto It = BB->begin();
+  auto *Call0 = cast<sandboxir::CallInst>(&*It++);
+  auto *Call1 = cast<sandboxir::CallInst>(&*It++);
+  auto *CallBar = cast<sandboxir::CallInst>(&*It++);
+  // Check classof(), creation.
+  auto *IFunc0 = cast<sandboxir::GlobalIFunc>(Call0->getCalledOperand());
+  auto *IFunc1 = cast<sandboxir::GlobalIFunc>(Call1->getCalledOperand());
+  auto *Bar = cast<sandboxir::Function>(CallBar->getCalledOperand());
+
+  // Check getIterator().
+  {
+    auto It0 = IFunc0->getIterator();
+    auto It1 = IFunc1->getIterator();
+    EXPECT_EQ(&*It0, IFunc0);
+    EXPECT_EQ(&*It1, IFunc1);
+    EXPECT_EQ(std::next(It0), It1);
+    EXPECT_EQ(std::prev(It1), It0);
+    EXPECT_EQ(&*std::next(It0), IFunc1);
+    EXPECT_EQ(&*std::prev(It1), IFunc0);
+  }
+  // Check getReverseIterator().
+  {
+    auto RevIt0 = IFunc0->getReverseIterator();
+    auto RevIt1 = IFunc1->getReverseIterator();
+    EXPECT_EQ(&*RevIt0, IFunc0);
+    EXPECT_EQ(&*RevIt1, IFunc1);
+    EXPECT_EQ(std::prev(RevIt0), RevIt1);
+    EXPECT_EQ(std::next(RevIt1), RevIt0);
+    EXPECT_EQ(&*std::prev(RevIt0), IFunc1);
+    EXPECT_EQ(&*std::next(RevIt1), IFunc0);
+  }
+
+  // Check setResolver(), getResolver().
+  EXPECT_EQ(IFunc0->getResolver(), Ctx.getValue(LLVMIFunc0->getResolver()));
+  auto *OrigResolver = IFunc0->getResolver();
+  auto *NewResolver = Bar;
+  EXPECT_NE(NewResolver, OrigResolver);
+  IFunc0->setResolver(NewResolver);
+  EXPECT_EQ(IFunc0->getResolver(), NewResolver);
+  IFunc0->setResolver(OrigResolver);
+  EXPECT_EQ(IFunc0->getResolver(), OrigResolver);
+  // Check getResolverFunction().
+  EXPECT_EQ(IFunc0->getResolverFunction(),
+            Ctx.getValue(LLVMIFunc0->getResolverFunction()));
+  // Check isValidLinkage().
+  for (auto L :
+       {GlobalValue::ExternalLinkage, GlobalValue::AvailableExternallyLinkage,
+        GlobalValue::LinkOnceAnyLinkage, GlobalValue::LinkOnceODRLinkage,
+        GlobalValue::WeakAnyLinkage, GlobalValue::WeakODRLinkage,
+        GlobalValue::AppendingLinkage, GlobalValue::InternalLinkage,
+        GlobalValue::PrivateLinkage, GlobalValue::ExternalWeakLinkage,
+        GlobalValue::CommonLinkage}) {
+    EXPECT_EQ(IFunc0->isValidLinkage(L), LLVMIFunc0->isValidLinkage(L));
+  }
+}
+
 TEST_F(SandboxIRTest, BlockAddress) {
   parseIR(C, R"IR(
 define void @foo(ptr %ptr) {
@@ -1200,29 +1278,58 @@ define void @foo(i8 %v) {
 
 TEST_F(SandboxIRTest, Function) {
   parseIR(C, R"IR(
-define void @foo(i32 %arg0, i32 %arg1) {
+define void @foo0(i32 %arg0, i32 %arg1) {
 bb0:
   br label %bb1
 bb1:
   ret void
 }
+define void @foo1() {
+  ret void
+}
+
 )IR");
-  llvm::Function *LLVMF = &*M->getFunction("foo");
-  llvm::Argument *LLVMArg0 = LLVMF->getArg(0);
-  llvm::Argument *LLVMArg1 = LLVMF->getArg(1);
+  llvm::Function *LLVMF0 = &*M->getFunction("foo0");
+  llvm::Function *LLVMF1 = &*M->getFunction("foo1");
+  llvm::Argument *LLVMArg0 = LLVMF0->getArg(0);
+  llvm::Argument *LLVMArg1 = LLVMF0->getArg(1);
 
   sandboxir::Context Ctx(C);
-  sandboxir::Function *F = Ctx.createFunction(LLVMF);
+  sandboxir::Function *F0 = Ctx.createFunction(LLVMF0);
+  sandboxir::Function *F1 = Ctx.createFunction(LLVMF1);
+
+  // Check getIterator().
+  {
+    auto It0 = F0->getIterator();
+    auto It1 = F1->getIterator();
+    EXPECT_EQ(&*It0, F0);
+    EXPECT_EQ(&*It1, F1);
+    EXPECT_EQ(std::next(It0), It1);
+    EXPECT_EQ(std::prev(It1), It0);
+    EXPECT_EQ(&*std::next(It0), F1);
+    EXPECT_EQ(&*std::prev(It1), F0);
+  }
+  // Check getReverseIterator().
+  {
+    auto RevIt0 = F0->getReverseIterator();
+    auto RevIt1 = F1->getReverseIterator();
+    EXPECT_EQ(&*RevIt0, F0);
+    EXPECT_EQ(&*RevIt1, F1);
+    EXPECT_EQ(std::prev(RevIt0), RevIt1);
+    EXPECT_EQ(std::next(RevIt1), RevIt0);
+    EXPECT_EQ(&*std::prev(RevIt0), F1);
+    EXPECT_EQ(&*std::next(RevIt1), F0);
+  }
 
   // Check F arguments
-  EXPECT_EQ(F->arg_size(), 2u);
-  EXPECT_FALSE(F->arg_empty());
-  EXPECT_EQ(F->getArg(0), Ctx.getValue(LLVMArg0));
-  EXPECT_EQ(F->getArg(1), Ctx.getValue(LLVMArg1));
+  EXPECT_EQ(F0->arg_size(), 2u);
+  EXPECT_FALSE(F0->arg_empty());
+  EXPECT_EQ(F0->getArg(0), Ctx.getValue(LLVMArg0));
+  EXPECT_EQ(F0->getArg(1), Ctx.getValue(LLVMArg1));
 
   // Check F.begin(), F.end(), Function::iterator
-  llvm::BasicBlock *LLVMBB = &*LLVMF->begin();
-  for (sandboxir::BasicBlock &BB : *F) {
+  llvm::BasicBlock *LLVMBB = &*LLVMF0->begin();
+  for (sandboxir::BasicBlock &BB : *F0) {
     EXPECT_EQ(&BB, Ctx.getValue(LLVMBB));
     LLVMBB = LLVMBB->getNextNode();
   }
@@ -1232,17 +1339,17 @@ bb1:
     // Check F.dumpNameAndArgs()
     std::string Buff;
     raw_string_ostream BS(Buff);
-    F->dumpNameAndArgs(BS);
-    EXPECT_EQ(Buff, "void @foo(i32 %arg0, i32 %arg1)");
+    F0->dumpNameAndArgs(BS);
+    EXPECT_EQ(Buff, "void @foo0(i32 %arg0, i32 %arg1)");
   }
   {
     // Check F.dump()
     std::string Buff;
     raw_string_ostream BS(Buff);
     BS << "\n";
-    F->dumpOS(BS);
+    F0->dumpOS(BS);
     EXPECT_EQ(Buff, R"IR(
-void @foo(i32 %arg0, i32 %arg1) {
+void @foo0(i32 %arg0, i32 %arg1) {
 bb0:
   br label %bb1 ; SB4. (Br)
 
