@@ -754,7 +754,7 @@ public:
 #    ifdef _LIBCPP_HAS_OBJC_ARC
       : __f_(__f)
 #    else
-      : __f_(reinterpret_cast<__block_type>(__f ? _Block_copy(__f) : nullptr))
+      : __f_(reinterpret_cast<__block_type>(__f ? std::__function::_Block_copy(__f) : nullptr))
 #    endif
   {
   }
@@ -765,7 +765,7 @@ public:
 #    ifdef _LIBCPP_HAS_OBJC_ARC
       : __f_(__f)
 #    else
-      : __f_(reinterpret_cast<__block_type>(__f ? _Block_copy(__f) : nullptr))
+      : __f_(reinterpret_cast<__block_type>(__f ? std::__function::_Block_copy(__f) : nullptr))
 #    endif
   {
   }
@@ -786,7 +786,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void destroy() _NOEXCEPT {
 #    ifndef _LIBCPP_HAS_OBJC_ARC
     if (__f_)
-      _Block_release(__f_);
+      std::__function::_Block_release(__f_);
 #    endif
     __f_ = 0;
   }

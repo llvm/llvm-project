@@ -175,7 +175,7 @@ inline _LIBCPP_HIDE_FROM_ABI __libcpp_thread_id __libcpp_thread_get_id(const __l
 }
 
 inline _LIBCPP_HIDE_FROM_ABI bool __libcpp_thread_isnull(const __libcpp_thread_t* __t) {
-  return __libcpp_thread_get_id(__t) == 0;
+  return __libcpp_thread_get_id(__t) == nullptr;
 }
 
 inline _LIBCPP_HIDE_FROM_ABI int __libcpp_thread_create(__libcpp_thread_t* __t, void* (*__func)(void*), void* __arg) {
