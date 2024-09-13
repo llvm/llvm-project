@@ -1018,7 +1018,7 @@ ImportThunkChunk *ImportFile::makeImportThunk() {
   case I386:
     return make<ImportThunkChunkX86>(ctx, impSym);
   case ARM64:
-    return make<ImportThunkChunkARM64>(ctx, impSym);
+    return make<ImportThunkChunkARM64>(ctx, impSym, ARM64);
   case ARMNT:
     return make<ImportThunkChunkARM>(ctx, impSym);
   }
@@ -1109,7 +1109,14 @@ void ImportFile::parse() {
     } else {
       thunkSym = ctx.symtab.addImportThunk(
           name, impSym, make<ImportThunkChunkX64>(ctx, impSym));
-      // FIXME: Add aux IAT symbols.
+
+      if (std::optional<std::string> mangledName =
+              getArm64ECMangledFunctionName(name)) {
+        StringRef auxThunkName = saver().save(*mangledName);
+        auxThunkSym = ctx.symtab.addImportThunk(
+            auxThunkName, impECSym,
+            make<ImportThunkChunkARM64>(ctx, impECSym, ARM64EC));
+      }
 
       StringRef impChkName = saver().save("__impchk_" + name);
       impchkThunk = make<ImportThunkChunkARM64EC>(this);
