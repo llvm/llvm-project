@@ -10,6 +10,7 @@
   define amdgpu_cs_chain void @preserve_inactive_wwm() {ret void}
   define amdgpu_cs_chain void @preserve_inactive_detected_wwm() {ret void}
   define amdgpu_cs_chain void @dont_preserve_wwm_if_no_chain_calls() {ret void}
+  define amdgpu_cs_chain void @dont_preserve_wwm_if_init_whole_wave() {ret void}
   define amdgpu_cs_chain void @dont_preserve_non_wwm() {ret void}
   define amdgpu_cs_chain void @dont_preserve_v0_v7() {ret void}
   define amdgpu_cs_chain void @dont_preserve_sgpr() {ret void}
@@ -357,6 +358,142 @@ body:             |
     $sgpr35 = SI_RESTORE_S32_FROM_VGPR $vgpr8, 0
     renamable $vgpr8 = V_MOV_B32_e32 10, implicit $exec
     S_ENDPGM 0
+...
+
+---
+name:            dont_preserve_wwm_if_init_whole_wave
+tracksRegLiveness: true
+frameInfo:
+  hasTailCall: true
+machineFunctionInfo:
+  stackPtrOffsetReg: '$sgpr32'
+  returnsVoid: true
+  wwmReservedRegs:
+    - '$vgpr8'
+    - '$vgpr9'
+  hasInitWholeWave: true
+body:             |
+  bb.0:
+    liveins: $sgpr0, $sgpr35, $vgpr8, $vgpr9
+
+    ; GCN-LABEL: name: dont_preserve_wwm_if_init_whole_wave
+    ; GCN: liveins: $sgpr0, $sgpr35, $vgpr8, $vgpr9
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr0_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr1_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr2_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr3_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr4_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr5_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr6_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr7_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr8_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr9_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr10_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr11_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr12_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr13_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr14_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr15_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr16_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr17_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr18_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr19_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr20_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr21_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr22_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr23_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr24_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr25_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr26_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr27_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr28_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr29_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr30_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr31_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr32_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr33_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr34_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr35_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr36_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr37_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr38_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr39_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr40_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr41_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr42_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr43_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr44_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr45_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr46_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr47_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr48_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr49_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr50_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr51_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr52_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr53_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr54_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr55_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr56_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr57_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr58_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr59_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr60_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr61_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr62_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr63_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr64_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr65_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr66_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr67_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr68_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr69_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr70_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr71_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr72_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr73_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr74_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr75_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr76_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr77_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr78_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr79_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr80_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr81_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr82_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr83_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr84_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr85_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr86_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr87_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr88_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr89_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr90_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr91_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr92_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr93_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr94_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr95_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr96_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr97_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr98_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr99_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr100_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr101_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr102_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr103_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr104_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr105_lo16
+    ; GCN-NEXT: renamable $sgpr4_sgpr5 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @callee + 4, target-flags(amdgpu-gotprel32-hi) @callee + 12, implicit-def dead $scc
+    ; GCN-NEXT: renamable $sgpr4_sgpr5 = S_LOAD_DWORDX2_IMM killed renamable $sgpr4_sgpr5, 0, 0 :: (dereferenceable invariant load (p0) from got, addrspace 4)
+    ; GCN-NEXT: SI_CS_CHAIN_TC_W32 killed renamable $sgpr4_sgpr5, @callee, 0, -1, amdgpu_allvgprs, implicit $sgpr0, implicit $vgpr8
+    renamable $sgpr4_sgpr5 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @callee + 4, target-flags(amdgpu-gotprel32-hi) @callee + 12, implicit-def dead $scc
+    renamable $sgpr4_sgpr5 = S_LOAD_DWORDX2_IMM killed renamable $sgpr4_sgpr5, 0, 0 :: (dereferenceable invariant load (p0) from got, addrspace 4)
+    SI_CS_CHAIN_TC_W32 killed renamable $sgpr4_sgpr5, @callee, 0, -1, amdgpu_allvgprs, implicit $sgpr0, implicit $vgpr8
+
 ...
 
 ---

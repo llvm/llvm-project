@@ -1039,7 +1039,6 @@ def err_opencl_invalid_param : Error<
   "declaring function parameter of type %0 is not allowed%select{; did you forget * ?|}1">;
 def err_opencl_invalid_return : Error<
   "declaring function return value of type %0 is not allowed %select{; did you forget * ?|}1">;
-def warn_enum_value_overflow : Warning<"overflow in enumeration value">;
 def warn_pragma_options_align_reset_failed : Warning<
   "#pragma options align=reset failed: %0">,
   InGroup<IgnoredPragmas>;
@@ -2927,9 +2926,15 @@ def ext_constexpr_function_never_constant_expr : ExtWarn<
   "constant expression">, InGroup<DiagGroup<"invalid-constexpr">>, DefaultError;
 def err_attr_cond_never_constant_expr : Error<
   "%0 attribute expression never produces a constant expression">;
+def err_diagnose_if_unknown_warning : Error<"unknown warning group '%0'">;
 def err_diagnose_if_invalid_diagnostic_type : Error<
   "invalid diagnostic type for 'diagnose_if'; use \"error\" or \"warning\" "
   "instead">;
+def err_diagnose_if_unknown_option : Error<"unknown diagnostic option">;
+def err_diagnose_if_expected_equals : Error<
+  "expected '=' after diagnostic option">;
+def err_diagnose_if_unexpected_value : Error<
+  "unexpected value; use 'true' or 'false'">;
 def err_constexpr_body_no_return : Error<
   "no return statement in %select{constexpr|consteval}0 function">;
 def err_constexpr_return_missing_expr : Error<
@@ -6197,9 +6202,13 @@ def err_misplaced_ivar : Error<
 def warn_ivars_in_interface : Warning<
   "declaration of instance variables in the interface is deprecated">,
   InGroup<DiagGroup<"objc-interface-ivars">>, DefaultIgnore;
-def ext_enum_value_not_int : Extension<
-  "ISO C restricts enumerator values to range of 'int' (%0 is too "
-  "%select{small|large}1)">;
+def ext_c23_enum_value_not_int : Extension<
+  "%select{|incremented }0enumerator value which exceeds the range of 'int' is "
+  "a C23 extension (%1 is too %select{small|large}2)">, InGroup<C23>;
+def warn_c17_compat_enum_value_not_int : Warning<
+  "%select{|incremented }0enumerator value which exceeds the range of 'int' is "
+  "incompatible with C standards before C23 (%1 is too %select{small|large}2)">,
+  DefaultIgnore, InGroup<CPre23Compat>;
 def ext_enum_too_large : ExtWarn<
   "enumeration values exceed range of largest integer">, InGroup<EnumTooLarge>;
 def ext_enumerator_increment_too_large : ExtWarn<

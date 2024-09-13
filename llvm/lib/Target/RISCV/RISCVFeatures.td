@@ -513,9 +513,6 @@ def FeatureStdExtB
     : RISCVExtension<"b", 1, 0,
                      "'B' (the collection of the Zba, Zbb, Zbs extensions)",
                      [FeatureStdExtZba, FeatureStdExtZbb, FeatureStdExtZbs]>;
-def HasStdExtB : Predicate<"Subtarget->hasStdExtB()">,
-                           AssemblerPredicate<(all_of FeatureStdExtB),
-                           "'B' (the collection of the Zba, Zbb, Zbs extensions)">;
 
 def FeatureStdExtZbkb
     : RISCVExtension<"zbkb", 1, 0,
