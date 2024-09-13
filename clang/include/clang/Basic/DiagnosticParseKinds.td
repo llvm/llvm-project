@@ -1073,7 +1073,10 @@ def err_expected_lambda_body : Error<"expected body of lambda expression">;
 def warn_cxx98_compat_lambda : Warning<
   "lambda expressions are incompatible with C++98">,
   InGroup<CXX98Compat>, DefaultIgnore;
-def ext_lambda : ExtWarn<"lambdas are a C++11 extension">, InGroup<CXX11>;
+def ext_lambda : ExtWarn<"lambdas are a %select{C++11|clang HLSL}0 extension">,
+  InGroup<CXX11>;
+def ext_hlsl_lambda : ExtWarn<ext_lambda.Summary>,
+  InGroup<HLSLExtension>;
 def err_lambda_decl_specifier_repeated : Error<
   "%select{'mutable'|'static'|'constexpr'|'consteval'}0 cannot "
   "appear multiple times in a lambda declarator">;
@@ -1790,7 +1793,5 @@ def ext_hlsl_access_specifiers : ExtWarn<
   InGroup<HLSLExtension>;
 def err_hlsl_unsupported_component : Error<"invalid component '%0' used; expected 'x', 'y', 'z', or 'w'">;
 def err_hlsl_packoffset_invalid_reg : Error<"invalid resource class specifier '%0' for packoffset, expected 'c'">;
-def ext_hlsl_lambda : ExtWarn<"lambdas are a clang HLSL extension">,
-  InGroup<HLSLExtension>;
 
 } // end of Parser diagnostics
