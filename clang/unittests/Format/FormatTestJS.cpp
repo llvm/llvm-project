@@ -2865,6 +2865,11 @@ TEST_F(FormatTestJS, BreakAfterOpenBracket) {
   verifyFormat("failedUserIds.push(await subscriptioxxxxxxxxxxxxnSubset.map(\n"
                "    subscxxxxxxxxxxxxription => subscription.getUserId()));",
                Style);
+  verifyFormat("for await (const packageId of ops.api.iterateEmbeddedFiles(\n"
+               "    this.getFileId().getDriveFile(),\n"
+               "    )) {\n"
+               "}",
+               Style);
 }
 
 } // namespace format
