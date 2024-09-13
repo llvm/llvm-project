@@ -63,7 +63,7 @@ class ProfileAnnotator final {
     // Return std::nullopt if there were no edges to sum. The user can decide
     // how to interpret that.
     std::optional<uint64_t> getEdgeSum(const SmallVector<EdgeInfo *> &Edges,
-                        bool AssumeAllKnown) const {
+                                       bool AssumeAllKnown) const {
       std::optional<uint64_t> Sum;
       for (const auto *E : Edges)
         if (E) {
