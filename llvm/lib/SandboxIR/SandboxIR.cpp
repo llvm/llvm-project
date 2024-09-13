@@ -2535,6 +2535,16 @@ BasicBlock *BlockAddress::getBasicBlock() const {
       Ctx.getValue(cast<llvm::BlockAddress>(Val)->getBasicBlock()));
 }
 
+DSOLocalEquivalent *DSOLocalEquivalent::get(GlobalValue *GV) {
+  auto *LLVMC = llvm::DSOLocalEquivalent::get(cast<llvm::GlobalValue>(GV->Val));
+  return cast<DSOLocalEquivalent>(GV->getContext().getValue(LLVMC));
+}
+
+GlobalValue *DSOLocalEquivalent::getGlobalValue() const {
+  return cast<GlobalValue>(
+      Ctx.getValue(cast<llvm::DSOLocalEquivalent>(Val)->getGlobalValue()));
+}
+
 ConstantTokenNone *ConstantTokenNone::get(Context &Ctx) {
   auto *LLVMC = llvm::ConstantTokenNone::get(Ctx.LLVMCtx);
   return cast<ConstantTokenNone>(Ctx.getOrCreateConstant(LLVMC));
@@ -2669,6 +2679,14 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
       It->second = std::unique_ptr<UndefValue>(
           new UndefValue(cast<llvm::UndefValue>(C), *this));
       return It->second.get();
+    case llvm::Value::DSOLocalEquivalentVal: {
+      auto *DSOLE = cast<llvm::DSOLocalEquivalent>(C);
+      It->second = std::unique_ptr<DSOLocalEquivalent>(
+          new DSOLocalEquivalent(DSOLE, *this));
+      auto *Ret = It->second.get();
+      getOrCreateValueInternal(DSOLE->getGlobalValue(), DSOLE);
+      return Ret;
+    }
     case llvm::Value::ConstantArrayVal:
       It->second = std::unique_ptr<ConstantArray>(
           new ConstantArray(cast<llvm::ConstantArray>(C), *this));
