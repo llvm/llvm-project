@@ -887,7 +887,7 @@ define i16 @bitcast_undef_to_vector() {
 ; CHECK:       unreachable:
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    ret i16 0
+; CHECK-NEXT:    ret i16 undef
 ;
 entry:
   br label %end
