@@ -1537,6 +1537,8 @@ public:
   /// Returns true if epilogue vectorization is considered profitable, and
   /// false otherwise.
   /// \p VF is the vectorization factor chosen for the original loop.
+  /// \p Multiplier is an aditional scaling factor applied to VF before
+  /// comparing to EpilogueVectorizationMinVF.
   bool isEpilogueVectorizationProfitable(const ElementCount VF,
                                          const unsigned Multiplier) const;
 
