@@ -1279,6 +1279,8 @@ private:
 
     // opcode:
     serialiseOpcode(OpCodePHI);
+    // ty_idx:
+    OutStreamer.emitSizeT(typeIndex(I->getType()));
     // num_incoming:
     size_t NumIncoming = I->getNumIncomingValues();
     OutStreamer.emitSizeT(NumIncoming);
