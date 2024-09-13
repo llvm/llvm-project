@@ -2508,13 +2508,6 @@ Instruction *InstCombinerImpl::visitGEPOfGEP(GetElementPtrInst &GEP,
     if (Sum == nullptr)
       return nullptr;
 
-    // Update the GEP in place if possible.
-    if (Src->getNumOperands() == 2) {
-      GEP.setIsInBounds(isMergedGEPInBounds(*Src, *cast<GEPOperator>(&GEP)));
-      replaceOperand(GEP, 0, Src->getOperand(0));
-      replaceOperand(GEP, 1, Sum);
-      return &GEP;
-    }
     Indices.append(Src->op_begin()+1, Src->op_end()-1);
     Indices.push_back(Sum);
     Indices.append(GEP.op_begin()+2, GEP.op_end());
