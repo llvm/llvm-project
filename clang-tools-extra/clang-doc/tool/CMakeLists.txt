@@ -21,6 +21,7 @@ target_link_libraries(clang-doc
 
 set(assets
   index.js
+  template.mustache
   clang-doc-default-stylesheet.css
 )
 
