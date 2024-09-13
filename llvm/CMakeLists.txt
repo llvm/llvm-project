@@ -947,7 +947,7 @@ set(LLVM_PROFDATA_FILE "" CACHE FILEPATH
 
 if(LLVM_INCLUDE_TESTS)
   # All LLVM Python files should be compatible down to this minimum version.
-  set(LLVM_MINIMUM_PYTHON_VERSION 3.8)
+  set(LLVM_MINIMUM_PYTHON_VERSION 3.6)
 else()
   # FIXME: it is unknown if this is the actual minimum bound
   set(LLVM_MINIMUM_PYTHON_VERSION 3.0)
