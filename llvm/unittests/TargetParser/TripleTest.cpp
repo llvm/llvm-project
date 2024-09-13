@@ -2274,6 +2274,7 @@ TEST(TripleTest, FileFormat) {
 
   EXPECT_EQ(Triple::ELF, Triple("amdgcn-apple-macosx").getObjectFormat());
   EXPECT_EQ(Triple::ELF, Triple("r600-apple-macosx").getObjectFormat());
+  EXPECT_EQ(Triple::ELF, Triple("rl78").getObjectFormat());
   EXPECT_EQ(Triple::SPIRV, Triple("spirv-apple-macosx").getObjectFormat());
   EXPECT_EQ(Triple::SPIRV, Triple("spirv32-apple-macosx").getObjectFormat());
   EXPECT_EQ(Triple::SPIRV, Triple("spirv64-apple-macosx").getObjectFormat());
