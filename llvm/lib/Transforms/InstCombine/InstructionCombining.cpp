@@ -2442,21 +2442,11 @@ Instruction *InstCombinerImpl::visitGEPOfGEP(GetElementPtrInst &GEP,
     if (!GEP.accumulateConstantOffset(DL, Offset))
       return nullptr;
 
-    APInt OffsetOld = Offset;
     // Convert the total offset back into indices.
     SmallVector<APInt> ConstIndices =
         DL.getGEPIndicesForOffset(BaseType, Offset);
-    if (!Offset.isZero() || (!IsFirstType && !ConstIndices[0].isZero())) {
-      // If both GEP are constant-indexed, and cannot be merged in either way,
-      // convert them to a GEP of i8.
-      if (Src->hasAllConstantIndices())
-        return replaceInstUsesWith(
-            GEP, Builder.CreateGEP(
-                     Builder.getInt8Ty(), Src->getOperand(0),
-                     Builder.getInt(OffsetOld), "",
-                     isMergedGEPInBounds(*Src, *cast<GEPOperator>(&GEP))));
+    if (!Offset.isZero() || (!IsFirstType && !ConstIndices[0].isZero()))
       return nullptr;
-    }
 
     bool IsInBounds = isMergedGEPInBounds(*Src, *cast<GEPOperator>(&GEP));
     SmallVector<Value *> Indices;
@@ -2508,13 +2498,6 @@ Instruction *InstCombinerImpl::visitGEPOfGEP(GetElementPtrInst &GEP,
     if (Sum == nullptr)
       return nullptr;
 
-    // Update the GEP in place if possible.
-    if (Src->getNumOperands() == 2) {
-      GEP.setIsInBounds(isMergedGEPInBounds(*Src, *cast<GEPOperator>(&GEP)));
-      replaceOperand(GEP, 0, Src->getOperand(0));
-      replaceOperand(GEP, 1, Sum);
-      return &GEP;
-    }
     Indices.append(Src->op_begin()+1, Src->op_end()-1);
     Indices.push_back(Sum);
     Indices.append(GEP.op_begin()+2, GEP.op_end());

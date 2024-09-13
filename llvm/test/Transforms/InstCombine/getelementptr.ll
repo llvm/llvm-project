@@ -1905,5 +1905,17 @@ define ptr @gep_of_ashr_fail_not_divisible(ptr %p, i64 %x) {
   ret ptr %r
 }
 
+define ptr @gep_merge_not_nuw(ptr %p, i64 %idx) {
+; CHECK-LABEL: @gep_merge_not_nuw(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 -1
+; CHECK-NEXT:    ret ptr [[GEP]]
+;
+  %idx.neg = sub i64 0, %idx
+  %add = add i64 %idx, -1
+  %gep1 = getelementptr inbounds i8, ptr %p, i64 %idx.neg
+  %gep = getelementptr inbounds nuw i8, ptr %gep1, i64 %add
+  ret ptr %gep
+}
+
 
 !0 = !{!"branch_weights", i32 2, i32 10}
