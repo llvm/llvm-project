@@ -22,18 +22,23 @@ Example:
     virtual ~Base();
     int i;
   };
+
   struct Derived : public Base {};
+
   void foo(Base* b) {
     b += 1;
     // warning: pointer arithmetic on class that declares a virtual function can
     // result in undefined behavior if the dynamic type differs from the
     // pointer type
   }
+
   int bar(const Derived d[]) {
     return d[1].i; // warning due to pointer arithmetic on polymorphic object
   }
+
   // Making Derived final suppresses the warning
   struct FinalDerived final : public Base {};
+
   int baz(const FinalDerived d[]) {
     return d[1].i; // no warning as FinalDerived is final
   }
