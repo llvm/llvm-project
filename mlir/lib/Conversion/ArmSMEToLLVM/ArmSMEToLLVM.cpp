@@ -45,6 +45,8 @@ static Operation *createLoadTileSliceIntrinsic(
     IntegerAttr tileId, Value tileSliceI32) {
   if (layout == arm_sme::TileSliceLayout::Horizontal) {
     switch (type) {
+    default:
+      llvm_unreachable("unknown ArmSMETileType!");
     case arm_sme::ArmSMETileType::ZAB:
       return rewriter.create<arm_sme::aarch64_sme_ld1b_horiz>(
           loc, maskOp, ptr, tileId, tileSliceI32);
@@ -63,6 +65,8 @@ static Operation *createLoadTileSliceIntrinsic(
     }
   } else {
     switch (type) {
+    default:
+      llvm_unreachable("unknown ArmSMETileType!");
     case arm_sme::ArmSMETileType::ZAB:
       return rewriter.create<arm_sme::aarch64_sme_ld1b_vert>(
           loc, maskOp, ptr, tileId, tileSliceI32);
@@ -90,6 +94,8 @@ static Operation *createStoreTileSliceIntrinsic(
     IntegerAttr tileId, Value tileSliceI32) {
   if (layout == arm_sme::TileSliceLayout::Horizontal) {
     switch (type) {
+    default:
+      llvm_unreachable("unknown ArmSMETileType!");
     case arm_sme::ArmSMETileType::ZAB:
       return rewriter.create<arm_sme::aarch64_sme_st1b_horiz>(
           loc, maskOp, ptr, tileId, tileSliceI32);
@@ -108,6 +114,8 @@ static Operation *createStoreTileSliceIntrinsic(
     }
   } else {
     switch (type) {
+    default:
+      llvm_unreachable("unknown ArmSMETileType!");
     case arm_sme::ArmSMETileType::ZAB:
       return rewriter.create<arm_sme::aarch64_sme_st1b_vert>(
           loc, maskOp, ptr, tileId, tileSliceI32);
@@ -433,6 +441,8 @@ struct ZeroOpConversion : public ConvertArmSMEOpToLLVMPattern<arm_sme::ZeroOp> {
         *arm_sme::getSMETileType(zero.getTileType());
     auto baseMaskForSize = [&] {
       switch (tileType) {
+      default:
+        llvm_unreachable("unknown ArmSMETileType!");
       case arm_sme::ArmSMETileType::ZAB:
         // Zeroing the 8-bit ZA0.B tile is equivalent to zeroing all eight
         // 64-bit element tiles named ZA0.D to ZA7.D.
@@ -451,8 +461,6 @@ struct ZeroOpConversion : public ConvertArmSMEOpToLLVMPattern<arm_sme::ZeroOp> {
         // Zeroing one of the a 64-bit tiles ZA0.D to ZA7.D just requires
         // setting the bit for that tile.
         return 0b0000'0001;
-      default:
-        llvm_unreachable("bad element size");
       }
     }();
 
@@ -607,6 +615,8 @@ struct InsertTileSliceConversion
 
     // Create 'arm_sme.intr.write.(horiz|vert)' to write vector to tile slice.
     switch (insertTileSliceOp.getLayout()) {
+    default:
+      llvm_unreachable("unknown TileSliceLayout!");
     case arm_sme::TileSliceLayout::Horizontal:
       rewriter.create<arm_sme::aarch64_sme_write_horiz>(
           loc, tileId, tileSliceI32, allActiveMask,
@@ -658,6 +668,8 @@ struct ExtractTileSliceConversion
 
     // Create 'arm_sme.intr.read.(horiz|vert)' to extract the tile slice.
     switch (extractTileSlice.getLayout()) {
+    default:
+      llvm_unreachable("unknown TileSliceLayout!");
     case arm_sme::TileSliceLayout::Horizontal:
       rewriter.replaceOpWithNewOp<arm_sme::aarch64_sme_read_horiz>(
           extractTileSlice, sliceType, zeroVector, allTruePredicate, tileId,
@@ -841,6 +853,8 @@ struct StreamingVLOpConversion
     auto i64Type = rewriter.getI64Type();
     auto *intrOp = [&]() -> Operation * {
       switch (streamingVlOp.getTypeSize()) {
+      default:
+        llvm_unreachable("unknown TypeSize!");
       case arm_sme::TypeSize::Byte:
         return rewriter.create<arm_sme::aarch64_sme_cntsb>(loc, i64Type);
       case arm_sme::TypeSize::Half:
