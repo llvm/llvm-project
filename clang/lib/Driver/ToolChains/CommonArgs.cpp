@@ -2770,14 +2770,8 @@ void tools::addMachineOutlinerArgs(const Driver &D,
     addArg(Twine("-codegen-data-generate"));
 
   // For codegen data use, the input file is passed to the LLVM backend.
-  if (CodeGenDataUseArg) {
-    SmallString<128> Path(CodeGenDataUseArg->getNumValues() == 0
-                              ? ""
-                              : CodeGenDataUseArg->getValue());
-    if (Path.empty())
-      llvm::sys::path::append(Path, "default.cgdata");
-    addArg(Twine("-codegen-data-use-path=" + Path.str()));
-  }
+  if (CodeGenDataUseArg)
+    addArg(Twine("-codegen-data-use-path=") + CodeGenDataUseArg->getValue());
 }
 
 void tools::addOpenMPDeviceRTL(const Driver &D,

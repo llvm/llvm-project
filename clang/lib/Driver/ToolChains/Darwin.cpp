@@ -479,15 +479,10 @@ void darwin::Linker::AddLinkArgs(Compilation &C, const ArgList &Args,
 
     auto *CodeGenDataGenArg =
         Args.getLastArg(options::OPT_fcodegen_data_generate_EQ);
-    if (CodeGenDataGenArg) {
-      SmallString<128> Path(CodeGenDataGenArg->getNumValues() == 0
-                                ? ""
-                                : CodeGenDataGenArg->getValue());
-      if (Path.empty())
-        llvm::sys::path::append(Path, "default.cgdata");
+    if (CodeGenDataGenArg)
       CmdArgs.push_back(
-          Args.MakeArgString(Twine("--codegen-data-generate-path=") + Path));
-    }
+          Args.MakeArgString(Twine("--codegen-data-generate-path=") +
+                             CodeGenDataGenArg->getValue()));
   }
 }
 
@@ -666,14 +661,9 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   // For codegen data use, the input file is passed to the LLVM backend.
   if (CodeGenDataUseArg) {
-    SmallString<128> Path(CodeGenDataUseArg->getNumValues() == 0
-                              ? ""
-                              : CodeGenDataUseArg->getValue());
-    if (Path.empty())
-      llvm::sys::path::append(Path, "default.cgdata");
     CmdArgs.push_back("-mllvm");
-    CmdArgs.push_back(
-        Args.MakeArgString("-codegen-data-use-path=" + Path.str()));
+    CmdArgs.push_back(Args.MakeArgString(Twine("-codegen-data-use-path=") +
+                                         CodeGenDataUseArg->getValue()));
   }
 
   // Setup statistics file output.
