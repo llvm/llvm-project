@@ -3059,7 +3059,7 @@ bool Sema::checkTargetVersionAttr(SourceLocation LiteralLoc, Decl *D,
   if (Context.getTargetInfo().getTriple().isRISCV()) {
 
     llvm::SmallVector<StringRef, 8> AttrStrs;
-    AttrStr.split(AttrStrs, ";");
+    AttrStr.split(AttrStrs, ';');
 
     bool IsPriority = false;
     bool IsDefault = false;
