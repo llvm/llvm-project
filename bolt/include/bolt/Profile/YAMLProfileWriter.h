@@ -47,7 +47,7 @@ public:
   convertBFInlineTree(const MCPseudoProbeDecoder &Decoder,
                       const InlineTreeDesc &InlineTree, uint64_t GUID);
 
-  static std::tuple<yaml::bolt::PseudoProbeDesc, InlineTreeDesc>
+  static std::tuple<yaml::bolt::ProfilePseudoProbeDesc, InlineTreeDesc>
   convertPseudoProbeDesc(const MCPseudoProbeDecoder &PseudoProbeDecoder);
 
   static yaml::bolt::BinaryFunctionProfile
