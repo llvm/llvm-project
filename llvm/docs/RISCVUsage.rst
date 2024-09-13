@@ -208,7 +208,7 @@ on support follow.
      ``Zmmul``         Supported
      ``Ztso``          Supported
      ``Zvbb``          Assembly Support
-     ``Zvbc``          Assembly Support
+     ``Zvbc``          Supported (`See note <#iscv-vector-crypto-note>`__)
      ``Zve32x``        (`Partially <#riscv-vlen-32-note>`__) Supported
      ``Zve32f``        (`Partially <#riscv-vlen-32-note>`__) Supported
      ``Zve64x``        Supported
@@ -268,7 +268,7 @@ Supported
 
 .. _riscv-vector-crypto-note:
 
-``Zvkg``, ``Zvkn``, ``Zvknc``, ``Zvkned``, ``Zvkng``, ``Zvknha``, ``Zvknhb``, ``Zvks``, ``Zvks``, ``Zvks``, ``Zvksc``, ``Zvksed``, ``Zvksg``, ``Zvksh``.
+``Zvbc``, ``Zvkg``, ``Zvkn``, ``Zvknc``, ``Zvkned``, ``Zvkng``, ``Zvknha``, ``Zvknhb``, ``Zvks``, ``Zvks``, ``Zvks``, ``Zvksc``, ``Zvksed``, ``Zvksg``, ``Zvksh``.
   No pattern matching exists. As a result, these instructions can only be used from assembler or via intrinsic calls.
 
 .. _riscv-vlen-32-note:
