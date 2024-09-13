@@ -41,6 +41,8 @@ static int StrCmpOptionName(const char *A, const char *B) {
 
 // Returns true if A is ordered before B.
 bool CompareOptionRecords(const Record *A, const Record *B) {
+  if (A == B)
+    return false;
   // Sentinel options precede all others and are only ordered by precedence.
   bool ASent = A->getValueAsDef("Kind")->getValueAsBit("Sentinel");
   bool BSent = B->getValueAsDef("Kind")->getValueAsBit("Sentinel");
