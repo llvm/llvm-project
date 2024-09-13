@@ -1375,9 +1375,9 @@ ParseStatus PPCAsmParser::tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
 /// variant, return the corresponding PPCMCExpr::VariantKind,
 /// and a modified expression using the default symbol variant.
 /// Otherwise, return NULL.
-const MCExpr *PPCAsmParser::
-extractModifierFromExpr(const MCExpr *E,
-                        PPCMCExpr::VariantKind &Variant) {
+const MCExpr *
+PPCAsmParser::extractModifierFromExpr(const MCExpr *E,
+                                      PPCMCExpr::VariantKind &Variant) {
   MCContext &Context = getParser().getContext();
   Variant = PPCMCExpr::VK_PPC_None;
 
@@ -1464,8 +1464,7 @@ extractModifierFromExpr(const MCExpr *E,
 /// them by VK_PPC_TLSGD/VK_PPC_TLSLD.  This is necessary to avoid having
 /// _GLOBAL_OFFSET_TABLE_ created via ELFObjectWriter::RelocNeedsGOT.
 /// FIXME: This is a hack.
-const MCExpr *PPCAsmParser::
-fixupVariantKind(const MCExpr *E) {
+const MCExpr *PPCAsmParser::fixupVariantKind(const MCExpr *E) {
   MCContext &Context = getParser().getContext();
 
   switch (E->getKind()) {
@@ -1513,8 +1512,7 @@ fixupVariantKind(const MCExpr *E) {
 
 /// parseExpression.  This differs from the default "parseExpression" in that
 /// it handles modifiers.
-bool PPCAsmParser::
-parseExpression(const MCExpr *&EVal) {
+bool PPCAsmParser::parseExpression(const MCExpr *&EVal) {
   // (ELF Platforms)
   // Handle \code @l/@ha \endcode
   if (getParser().parseExpression(EVal))

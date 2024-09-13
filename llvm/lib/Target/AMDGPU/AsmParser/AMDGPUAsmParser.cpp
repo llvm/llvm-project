@@ -6394,8 +6394,8 @@ static void applyMnemonicAliases(StringRef &Mnemonic,
                                  unsigned VariantID);
 
 bool AMDGPUAsmParser::parseInstruction(ParseInstructionInfo &Info,
-                                       StringRef Name,
-                                       SMLoc NameLoc, OperandVector &Operands) {
+                                       StringRef Name, SMLoc NameLoc,
+                                       OperandVector &Operands) {
   // Add the instruction mnemonic
   Name = parseMnemonicSuffix(Name);
 
