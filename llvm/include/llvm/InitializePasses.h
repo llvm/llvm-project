@@ -98,7 +98,7 @@ void initializeDominatorTreeWrapperPassPass(PassRegistry &);
 void initializeDwarfEHPrepareLegacyPassPass(PassRegistry &);
 void initializeEarlyCSELegacyPassPass(PassRegistry &);
 void initializeEarlyCSEMemSSALegacyPassPass(PassRegistry &);
-void initializeEarlyIfConverterPass(PassRegistry &);
+void initializeEarlyIfConverterLegacyPass(PassRegistry &);
 void initializeEarlyIfPredicatorPass(PassRegistry &);
 void initializeEarlyMachineLICMPass(PassRegistry &);
 void initializeEarlyTailDuplicatePass(PassRegistry &);
