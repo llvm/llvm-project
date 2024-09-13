@@ -510,6 +510,7 @@
 // MCPU-SYNTACORE-SCR7-SAME: "-target-feature" "+f"
 // MCPU-SYNTACORE-SCR7-SAME: "-target-feature" "+d"
 // MCPU-SYNTACORE-SCR7-SAME: "-target-feature" "+c"
+// MCPU-SYNTACORE-SCR7-SAME: "-target-feature" "+v"
 // MCPU-SYNTACORE-SCR7-SAME: "-target-feature" "+zicsr"
 // MCPU-SYNTACORE-SCR7-SAME: "-target-feature" "+zifencei"
 // MCPU-SYNTACORE-SCR7-SAME: "-target-feature" "+zba"
