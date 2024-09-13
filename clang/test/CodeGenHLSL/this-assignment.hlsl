@@ -56,7 +56,6 @@ void main() {
 
 // CHECK-LABEL:     define {{.*}}DoSilly
 // CHECK-NEXT:entry:
-
 // CHECK-NEXT: [[ResPtr:%.*]] = alloca ptr
 // CHECK-NEXT: [[ThisPtrAddr:%.*]] = alloca ptr
 // CHECK-NEXT: store ptr [[AggRes:%.*]], ptr [[ResPtr]]
