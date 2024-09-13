@@ -126,6 +126,17 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
     RecipeNumbering[&R] = Cnt++;
 
   for (const VPRecipeBase &R : *VPBB) {
+    if (auto *IRI = dyn_cast<VPIRInstruction>(&R)) {
+      if (!isa<VPIRBasicBlock>(IRI->getParent())) {
+        errs() << "VPIRInstructions ";
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+        IRI->dump();
+        errs() << " ";
+#endif
+        errs() << "not in a VPIRBasicBlock!\n";
+        return false;
+      }
+    }
     for (const VPValue *V : R.definedValues()) {
       for (const VPUser *U : V->users()) {
         auto *UI = dyn_cast<VPRecipeBase>(U);

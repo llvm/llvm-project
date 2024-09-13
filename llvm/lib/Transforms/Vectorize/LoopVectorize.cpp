@@ -8638,10 +8638,11 @@ static void addCanonicalIVRecipes(VPlan &Plan, Type *IdxTy, bool HasNUW,
                        {CanonicalIVIncrement, &Plan.getVectorTripCount()}, DL);
 }
 
-// Collect (ExitPhi, ExitingValue) pairs phis in the original exit block that
-// are modeled in VPlan. Some exiting values are not modeled explicitly yet and
-// won't be included. Those are un-truncated VPWidenIntOrFpInductionRecipe,
-// VPWidenPointerInductionRecipe and induction increments.
+// Collect (VPIRInstruction, ExitingValue) pairs for phis in the original exit
+// block that are modeled in VPlan. Some exiting values are not modeled
+// explicitly yet and won't be included. Those are un-truncated
+// VPWidenIntOrFpInductionRecipe, VPWidenPointerInductionRecipe and induction
+// increments.
 static MapVector<VPIRInstruction *, VPValue *> collectUsersInExitBlock(
     Loop *OrigLoop, VPRecipeBuilder &Builder, VPlan &Plan,
     const MapVector<PHINode *, InductionDescriptor> &Inductions) {
@@ -8656,10 +8657,10 @@ static MapVector<VPIRInstruction *, VPValue *> collectUsersInExitBlock(
   VPBasicBlock *ExitVPBB = cast<VPIRBasicBlock>(MiddleVPBB->getSuccessors()[0]);
   BasicBlock *ExitingBB = OrigLoop->getExitingBlock();
   for (VPRecipeBase &R : *ExitVPBB) {
-    auto *IR = dyn_cast<VPIRInstruction>(&R);
-    if (!IR)
+    auto *ExitIRI = dyn_cast<VPIRInstruction>(&R);
+    if (!ExitIRI)
       continue;
-    auto *ExitPhi = dyn_cast<PHINode>(&IR->getInstruction());
+    auto *ExitPhi = dyn_cast<PHINode>(&ExitIRI->getInstruction());
     if (!ExitPhi)
       break;
     Value *IncomingValue = ExitPhi->getIncomingValueForBlock(ExitingBB);
@@ -8678,7 +8679,7 @@ static MapVector<VPIRInstruction *, VPValue *> collectUsersInExitBlock(
            return P && Inductions.contains(P);
          })))
       continue;
-    ExitingValuesToFix.insert({IR, V});
+    ExitingValuesToFix.insert({ExitIRI, V});
   }
   return ExitingValuesToFix;
 }
@@ -8697,10 +8698,10 @@ static void addUsersInExitBlock(
   VPBuilder B(MiddleVPBB, MiddleVPBB->getFirstNonPhi());
 
   // Introduce VPUsers modeling the exit values.
-  for (const auto &[IR, V] : ExitingValuesToFix) {
+  for (const auto &[ExitIRI, V] : ExitingValuesToFix) {
     // Pass live-in values used by exit phis directly through to the live-out.
     if (V->isLiveIn()) {
-      IR->addOperand(V);
+      ExitIRI->addOperand(V);
       continue;
     }
 
@@ -8708,7 +8709,7 @@ static void addUsersInExitBlock(
         VPInstruction::ExtractFromEnd,
         {V, Plan.getOrAddLiveIn(ConstantInt::get(
                 IntegerType::get(ExitBB->getContext(), 32), 1))});
-    IR->addOperand(Ext);
+    ExitIRI->addOperand(Ext);
   }
 }
 
@@ -8846,14 +8847,14 @@ static void addLiveOutsForFirstOrderRecurrences(
     // No edge from the middle block to the unique exit block has been inserted
     // and there is nothing to fix from vector loop; phis should have incoming
     // from scalar loop only.
-    for (const auto &[IR, V] : ExitingValuesToFix) {
+    for (const auto &[ExitIRI, V] : ExitingValuesToFix) {
       if (V != FOR)
         continue;
       VPValue *Ext = MiddleBuilder.createNaryOp(
           VPInstruction::ExtractFromEnd, {FOR->getBackedgeValue(), TwoVPV}, {},
           "vector.recur.extract.for.phi");
-      IR->addOperand(Ext);
-      ExitingValuesToFix.erase(IR);
+      ExitIRI->addOperand(Ext);
+      ExitingValuesToFix.erase(ExitIRI);
     }
   }
 }

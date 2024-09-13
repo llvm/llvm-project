@@ -227,7 +227,7 @@ define i32 @sink_replicate_region_3_reduction(i32 %x, i8 %y, ptr %ptr) optsize {
 ; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<exit>
-; CHECK-NEXT:   IR %res = phi i32 [ %and.red.next, %loop ]
+; CHECK-NEXT:   IR %res = phi i32 [ %and.red.next, %loop ] (extra operand: vp<[[RED_EX]]>)
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph

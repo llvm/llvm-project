@@ -868,9 +868,6 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
 #endif
 
 void VPIRInstruction::execute(VPTransformState &State) {
-  assert(isa<VPIRBasicBlock>(getParent()) &&
-         "VPIRInstructions can only be placed in VPIRBasicBlocks");
-
   assert((isa<PHINode>(&I) || getNumOperands() == 0) &&
          "Only PHINodes can have extra operands");
   if (getNumOperands() == 1) {
@@ -888,6 +885,8 @@ void VPIRInstruction::execute(VPTransformState &State) {
     Phi->addIncoming(V, PredBB);
   }
 
+  // Advance the insert point after the wrapped IR instruction. This allows
+  // interleaving VPIRInstructions and other recipes.
   State.Builder.SetInsertPoint(I.getParent(), std::next(I.getIterator()));
 }
 
@@ -897,7 +896,8 @@ void VPIRInstruction::print(raw_ostream &O, const Twine &Indent,
   O << Indent << "IR " << I;
 
   if (getNumOperands() != 0) {
-    O << " (extra operands: ";
+    assert(getNumOperands() == 1 && "can have at most 1 operand");
+    O << " (extra operand: ";
     printOperands(O, SlotTracker);
     O << ")";
   }
