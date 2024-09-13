@@ -1752,6 +1752,9 @@ static void applyOverrideOptions(std::vector<std::string> &args,
 
 void SwiftASTContext::AddExtraClangArgs(
     const std::vector<std::string> &ExtraArgs, StringRef overrideOpts) {
+  if (ExtraArgs.empty())
+    return;
+
   swift::ClangImporterOptions &importer_options = GetClangImporterOptions();
 
   // Detect cc1 flags.  When DirectClangCC1ModuleBuild is on then the
@@ -1759,17 +1762,22 @@ void SwiftASTContext::AddExtraClangArgs(
   // which are very specific to one compiler version and cannot
   // be merged with driver options.
   bool fresh_invocation = importer_options.ExtraArgs.empty();
-  if (fresh_invocation && !ExtraArgs.empty() && ExtraArgs.front() == "-cc1")
-    importer_options.DirectClangCC1ModuleBuild = true;
-  if (!importer_options.DirectClangCC1ModuleBuild && !ExtraArgs.empty() &&
-      ExtraArgs.front() == "-cc1")
+  bool invocation_direct_cc1 = ExtraArgs.front() == "-cc1";
+
+  // If it is not a fresh invocation, make sure the cc1 option matches.
+  if (!fresh_invocation &&
+      (importer_options.DirectClangCC1ModuleBuild != invocation_direct_cc1))
     AddDiagnostic(
         eSeverityWarning,
         "Mixing and matching of driver and cc1 Clang options detected");
 
+  importer_options.DirectClangCC1ModuleBuild = invocation_direct_cc1;
+
   // If using direct cc1 flags, compute the arguments and return.
-  // Since this is cc1 flags, no driver overwrite can be applied.
+  // Since this is cc1 flags, override options are driver flags and don't apply.
   if (importer_options.DirectClangCC1ModuleBuild) {
+    if (!fresh_invocation)
+      importer_options.ExtraArgs.clear();
     AddExtraClangCC1Args(ExtraArgs, importer_options.ExtraArgs);
     return;
   }
@@ -1821,12 +1829,17 @@ void SwiftASTContext::AddExtraClangCC1Args(
   invocation.getFrontendOpts().ModuleCacheKeys.clear();
   invocation.getCASOpts() = clang::CASOptions();
 
+  // Ignore CAS info inside modules when loading.
+  invocation.getFrontendOpts().ModuleLoadIgnoreCAS = true;
+
   // Remove non-existing modules in a systematic way.
   bool module_missing = false;
   auto CheckFileExists = [&](const char *file) {
     if (!llvm::sys::fs::exists(file)) {
-      std::string m_description;
-      HEALTH_LOG_PRINTF("Nonexistent explicit module file %s", file);
+      std::string warn;
+      llvm::raw_string_ostream(warn)
+          << "Nonexistent explicit module file " << file;
+      AddDiagnostic(eSeverityWarning, warn);
       module_missing = true;
     }
   };
@@ -1835,8 +1848,8 @@ void SwiftASTContext::AddExtraClangCC1Args(
   llvm::for_each(invocation.getFrontendOpts().ModuleFiles,
                  [&](const auto &mod) { CheckFileExists(mod.c_str()); });
 
-  // If missing, clear all the prebuilt module options and use implicit module
-  // build.
+  // If missing, clear all the prebuilt module options and switch to implicit
+  // modules build.
   if (module_missing) {
     invocation.getHeaderSearchOpts().PrebuiltModuleFiles.clear();
     invocation.getFrontendOpts().ModuleFiles.clear();
@@ -1944,6 +1957,10 @@ void SwiftASTContext::RemapClangImporterOptions(
 
 void SwiftASTContext::FilterClangImporterOptions(
     std::vector<std::string> &extra_args, SwiftASTContext *ctx) {
+  // The direct cc1 mode do not need any extra audit.
+  if (ctx && ctx->GetClangImporterOptions().DirectClangCC1ModuleBuild)
+    return;
+
   std::string ivfs_arg;
   // Copy back a filtered version of ExtraArgs.
   std::vector<std::string> orig_args(std::move(extra_args));
@@ -1952,11 +1969,6 @@ void SwiftASTContext::FilterClangImporterOptions(
     // LLDB wants to control implicit/explicit modules build flags.
     if (arg_sr == "-fno-implicit-modules" ||
         arg_sr == "-fno-implicit-module-maps")
-      continue;
-
-    // This is not a cc1 option.
-    if (arg_sr.starts_with("--target=") && ctx &&
-        ctx->GetClangImporterOptions().DirectClangCC1ModuleBuild)
       continue;
 
     // The VFS options turn into fatal errors when the referenced file
@@ -2245,6 +2257,11 @@ ProcessModule(Module &module, std::string m_description,
   for (auto path : opts.getFrameworkSearchPaths())
     framework_search_paths.push_back({path.Path, path.IsSystem});
   auto &clang_opts = invocation.getClangImporterOptions().ExtraArgs;
+  // If the args embedded are cc1 args, they are not compatible with existing
+  // setting. Clear the previous args.
+  if (!clang_opts.empty() && clang_opts.front() == "-cc1")
+    extra_clang_args.clear();
+
   for (const std::string &arg : clang_opts) {
     extra_clang_args.push_back(arg);
     LOG_VERBOSE_PRINTF(GetLog(LLDBLog::Types), "adding Clang argument \"%s\".",
