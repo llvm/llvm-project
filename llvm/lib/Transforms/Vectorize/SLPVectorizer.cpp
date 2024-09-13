@@ -13342,7 +13342,8 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
 
       assert(NewPhi->getNumIncomingValues() == PH->getNumIncomingValues() &&
              "Invalid number of incoming values");
-      return NewPhi;
+      assert(E->VectorizedValue && "Expected vectorized value.");
+      return E->VectorizedValue;
     }
 
     case Instruction::ExtractElement: {
