@@ -755,29 +755,6 @@ DependencyScanningWorker::getOrCreateFileManager() const {
   return new FileManager(FileSystemOptions(), BaseFS);
 }
 
-llvm::Error DependencyScanningWorker::computeDependencies(
-    StringRef WorkingDirectory, const std::vector<std::string> &CommandLine,
-    DependencyConsumer &Consumer, DependencyActionController &Controller,
-    std::optional<StringRef> ModuleName) {
-  std::vector<const char *> CLI;
-  for (const std::string &Arg : CommandLine)
-    CLI.push_back(Arg.c_str());
-  auto DiagOpts = CreateAndPopulateDiagOpts(CLI);
-  sanitizeDiagOpts(*DiagOpts);
-
-  // Capture the emitted diagnostics and report them to the client
-  // in the case of a failure.
-  std::string DiagnosticOutput;
-  llvm::raw_string_ostream DiagnosticsOS(DiagnosticOutput);
-  TextDiagnosticPrinter DiagPrinter(DiagnosticsOS, DiagOpts.release());
-
-  if (computeDependencies(WorkingDirectory, CommandLine, Consumer, Controller,
-                          DiagPrinter, ModuleName))
-    return llvm::Error::success();
-  return llvm::make_error<llvm::StringError>(DiagnosticsOS.str(),
-                                             llvm::inconvertibleErrorCode());
-}
-
 static bool forEachDriverJob(
     ArrayRef<std::string> ArgStrs, DiagnosticsEngine &Diags, FileManager &FM,
     llvm::function_ref<bool(const driver::Command &Cmd)> Callback) {

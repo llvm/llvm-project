@@ -72,21 +72,6 @@ static CXOutputKind wrap(ModuleOutputKind MOK) {
   llvm::report_fatal_error("unhandled ModuleOutputKind");
 }
 
-void clang_experimental_ModuleDependencySet_dispose(
-    CXModuleDependencySet *MDS) {
-  for (int I = 0; I < MDS->Count; ++I) {
-    CXModuleDependency &MD = MDS->Modules[I];
-    clang_disposeString(MD.Name);
-    clang_disposeString(MD.ContextHash);
-    clang_disposeString(MD.ModuleMapPath);
-    clang_disposeStringSet(MD.FileDeps);
-    clang_disposeStringSet(MD.ModuleDeps);
-    clang_disposeStringSet(MD.BuildArguments);
-  }
-  delete[] MDS->Modules;
-  delete MDS;
-}
-
 CXDependencyScannerServiceOptions
 clang_experimental_DependencyScannerServiceOptions_create() {
   return wrap(new DependencyScannerServiceOptions);
@@ -179,27 +164,6 @@ void clang_experimental_DependencyScannerService_dispose_v0(
   delete unwrap(Service);
 }
 
-void clang_experimental_FileDependencies_dispose(CXFileDependencies *ID) {
-  clang_disposeString(ID->ContextHash);
-  clang_disposeStringSet(ID->FileDeps);
-  clang_disposeStringSet(ID->ModuleDeps);
-  clang_disposeStringSet(ID->BuildArguments);
-  delete ID;
-}
-
-void clang_experimental_FileDependenciesList_dispose(
-    CXFileDependenciesList *FD) {
-  for (size_t I = 0; I < FD->NumCommands; ++I) {
-    clang_disposeString(FD->Commands[I].ContextHash);
-    clang_disposeStringSet(FD->Commands[I].FileDeps);
-    clang_disposeStringSet(FD->Commands[I].ModuleDeps);
-    clang_disposeString(FD->Commands[I].Executable);
-    clang_disposeStringSet(FD->Commands[I].BuildArguments);
-  }
-  delete[] FD->Commands;
-  delete FD;
-}
-
 CXDependencyScannerWorker clang_experimental_DependencyScannerWorker_create_v0(
     CXDependencyScannerService Service) {
   ScanningOutputFormat Format = unwrap(Service)->getFormat();
@@ -219,95 +183,6 @@ void clang_experimental_DependencyScannerWorker_dispose_v0(
   delete unwrap(Worker);
 }
 
-using HandleTUDepsCallback = llvm::function_ref<void(TranslationUnitDeps)>;
-
-static CXErrorCode getFullDependencies(DependencyScanningWorker *Worker,
-                                       ArrayRef<std::string> Compilation,
-                                       const char *WorkingDirectory,
-                                       CXModuleDiscoveredCallback *MDC,
-                                       void *Context, CXString *Error,
-                                       DiagnosticConsumer *DiagConsumer,
-                                       LookupModuleOutputCallback LookupOutput,
-                                       std::optional<StringRef> ModuleName,
-                                       HandleTUDepsCallback HandleTUDeps) {
-  llvm::DenseSet<ModuleID> AlreadySeen;
-  FullDependencyConsumer DepConsumer(AlreadySeen);
-  auto Controller = DependencyScanningTool::createActionController(
-      *Worker, std::move(LookupOutput));
-
-#ifndef NDEBUG
-  bool HasDiagConsumer = DiagConsumer;
-  bool HasError = Error;
-  assert(HasDiagConsumer ^ HasError && "Both DiagConsumer and Error provided");
-#endif
-
-  if (DiagConsumer) {
-    bool Result =
-        Worker->computeDependencies(WorkingDirectory, Compilation, DepConsumer,
-                                    *Controller, *DiagConsumer, ModuleName);
-    if (!Result)
-      return CXError_Failure;
-  } else if (Error) {
-    auto Result = Worker->computeDependencies(
-        WorkingDirectory, Compilation, DepConsumer, *Controller, ModuleName);
-    if (Result) {
-      *Error = cxstring::createDup(llvm::toString(std::move(Result)));
-      return CXError_Failure;
-    }
-  }
-
-  TranslationUnitDeps TU = DepConsumer.takeTranslationUnitDeps();
-
-  if (MDC && !TU.ModuleGraph.empty()) {
-    CXModuleDependencySet *MDS = new CXModuleDependencySet;
-    MDS->Count = TU.ModuleGraph.size();
-    MDS->Modules = new CXModuleDependency[MDS->Count];
-    for (int I = 0; I < MDS->Count; ++I) {
-      CXModuleDependency &M = MDS->Modules[I];
-      ModuleDeps &MD = TU.ModuleGraph[I];
-      M.Name = cxstring::createDup(MD.ID.ModuleName);
-      M.ContextHash = cxstring::createDup(MD.ID.ContextHash);
-      M.ModuleMapPath = cxstring::createDup(MD.ClangModuleMapFile);
-      M.FileDeps = cxstring::createSet(MD.FileDeps);
-      std::vector<std::string> Modules;
-      for (ModuleID &MID : MD.ClangModuleDeps)
-        Modules.push_back(MID.ModuleName + ":" + MID.ContextHash);
-      M.ModuleDeps = cxstring::createSet(Modules);
-      M.BuildArguments = cxstring::createSet(MD.getBuildArguments());
-    }
-    MDC(Context, MDS);
-  }
-
-  HandleTUDeps(std::move(TU));
-  return CXError_Success;
-}
-
-static CXErrorCode getFileDependencies(CXDependencyScannerWorker W, int argc,
-                                       const char *const *argv,
-                                       const char *WorkingDirectory,
-                                       CXModuleDiscoveredCallback *MDC,
-                                       void *Context, CXString *Error,
-                                       DiagnosticConsumer *DiagConsumer,
-                                       LookupModuleOutputCallback LookupOutput,
-                                       std::optional<StringRef> ModuleName,
-                                       HandleTUDepsCallback HandleTUDeps) {
-  if (!W || argc < 2 || !argv)
-    return CXError_InvalidArguments;
-
-  DependencyScanningWorker *Worker = unwrap(W);
-
-  if (Worker->getScanningFormat() != ScanningOutputFormat::Full &&
-      Worker->getScanningFormat() != ScanningOutputFormat::FullTree &&
-      Worker->getScanningFormat() != ScanningOutputFormat::FullIncludeTree)
-    return CXError_InvalidArguments;
-
-  std::vector<std::string> Compilation{argv, argv + argc};
-
-  return getFullDependencies(Worker, Compilation, WorkingDirectory, MDC,
-                             Context, Error, DiagConsumer, LookupOutput,
-                             ModuleName, HandleTUDeps);
-}
-
 namespace {
 class OutputLookup {
 public:
@@ -320,80 +195,6 @@ private:
   void *MLOContext;
   CXModuleLookupOutputCallback *MLO;
 };
-} // end anonymous namespace
-
-CXFileDependencies *
-clang_experimental_DependencyScannerWorker_getFileDependencies_v3(
-    CXDependencyScannerWorker W, int argc, const char *const *argv,
-    const char *ModuleName, const char *WorkingDirectory, void *MDCContext,
-    CXModuleDiscoveredCallback *MDC, void *MLOContext,
-    CXModuleLookupOutputCallback *MLO, unsigned, CXString *Error) {
-  OutputLookup OL(MLOContext, MLO);
-  auto LookupOutputs = [&](const ModuleID &ID, ModuleOutputKind MOK) {
-    return OL.lookupModuleOutput(ID, MOK);
-  };
-  CXFileDependencies *FDeps = nullptr;
-  CXErrorCode Result = getFileDependencies(
-      W, argc, argv, WorkingDirectory, MDC, MDCContext, Error, nullptr,
-      LookupOutputs,
-      ModuleName ? std::optional<StringRef>(ModuleName) : std::nullopt,
-      [&](TranslationUnitDeps TU) {
-        assert(!TU.DriverCommandLine.empty());
-        std::vector<std::string> Modules;
-        for (const ModuleID &MID : TU.ClangModuleDeps)
-          Modules.push_back(MID.ModuleName + ":" + MID.ContextHash);
-        FDeps = new CXFileDependencies;
-        FDeps->ContextHash = cxstring::createDup(TU.ID.ContextHash);
-        FDeps->FileDeps = cxstring::createSet(TU.FileDeps);
-        FDeps->ModuleDeps = cxstring::createSet(Modules);
-        FDeps->BuildArguments = cxstring::createSet(TU.DriverCommandLine);
-      });
-  assert(Result != CXError_Success || FDeps);
-  (void)Result;
-  return FDeps;
-}
-
-CXErrorCode clang_experimental_DependencyScannerWorker_getFileDependencies_v4(
-    CXDependencyScannerWorker W, int argc, const char *const *argv,
-    const char *ModuleName, const char *WorkingDirectory, void *MDCContext,
-    CXModuleDiscoveredCallback *MDC, void *MLOContext,
-    CXModuleLookupOutputCallback *MLO, unsigned, CXFileDependenciesList **Out,
-    CXString *Error) {
-  OutputLookup OL(MLOContext, MLO);
-  auto LookupOutputs = [&](const ModuleID &ID, ModuleOutputKind MOK) {
-    return OL.lookupModuleOutput(ID, MOK);
-  };
-
-  if (!Out)
-    return CXError_InvalidArguments;
-  *Out = nullptr;
-
-  CXErrorCode Result = getFileDependencies(
-      W, argc, argv, WorkingDirectory, MDC, MDCContext, Error, nullptr,
-      LookupOutputs,
-      ModuleName ? std::optional<StringRef>(ModuleName) : std::nullopt,
-      [&](TranslationUnitDeps TU) {
-        assert(TU.DriverCommandLine.empty());
-        std::vector<std::string> Modules;
-        for (const ModuleID &MID : TU.ClangModuleDeps)
-          Modules.push_back(MID.ModuleName + ":" + MID.ContextHash);
-        auto *Commands = new CXTranslationUnitCommand[TU.Commands.size()];
-        for (size_t I = 0, E = TU.Commands.size(); I < E; ++I) {
-          Commands[I].ContextHash = cxstring::createDup(TU.ID.ContextHash);
-          Commands[I].FileDeps = cxstring::createSet(TU.FileDeps);
-          Commands[I].ModuleDeps = cxstring::createSet(Modules);
-          Commands[I].Executable =
-              cxstring::createDup(TU.Commands[I].Executable);
-          Commands[I].BuildArguments =
-              cxstring::createSet(TU.Commands[I].Arguments);
-        }
-        *Out = new CXFileDependenciesList{TU.Commands.size(), Commands};
-      });
-
-  return Result;
-}
-
-namespace {
 
 struct DependencyScannerWorkerScanSettings {
   int argc;
@@ -514,6 +315,7 @@ enum CXErrorCode clang_experimental_DependencyScannerWorker_getDepGraph(
   *Out = nullptr;
 
   DependencyGraph *DepGraph = new DependencyGraph();
+  *Out = wrap(DepGraph);
 
   // We capture diagnostics as a serialized diagnostics buffer, so that we don't
   // need to keep a valid SourceManager in order to access diagnostic locations.
@@ -524,14 +326,31 @@ enum CXErrorCode clang_experimental_DependencyScannerWorker_getDepGraph(
       serialized_diags::create("<diagnostics>", DiagOpts.get(),
                                /*MergeChildRecords=*/false, std::move(DiagOS));
 
-  CXErrorCode Result = getFileDependencies(
-      W, argc, argv, WorkingDirectory, /*MDC=*/nullptr, /*MDCContext=*/nullptr,
-      /*Error=*/nullptr, SerialDiagConsumer.get(), LookupOutputs,
-      ModuleName ? std::optional<StringRef>(ModuleName) : std::nullopt,
-      [&](TranslationUnitDeps TU) { DepGraph->TUDeps = std::move(TU); });
+  if (!W || argc < 2 || !argv)
+    return CXError_InvalidArguments;
 
-  *Out = wrap(DepGraph);
-  return Result;
+  DependencyScanningWorker *Worker = unwrap(W);
+
+  if (Worker->getScanningFormat() != ScanningOutputFormat::Full &&
+      Worker->getScanningFormat() != ScanningOutputFormat::FullTree &&
+      Worker->getScanningFormat() != ScanningOutputFormat::FullIncludeTree)
+    return CXError_InvalidArguments;
+
+  std::vector<std::string> Compilation{argv, argv + argc};
+
+  llvm::DenseSet<ModuleID> AlreadySeen;
+  FullDependencyConsumer DepConsumer(AlreadySeen);
+  auto Controller = DependencyScanningTool::createActionController(
+      *Worker, std::move(LookupOutputs));
+
+  bool Result =
+      Worker->computeDependencies(WorkingDirectory, Compilation, DepConsumer,
+                                  *Controller, *SerialDiagConsumer, ModuleName);
+  if (!Result)
+    return CXError_Failure;
+
+  DepGraph->TUDeps = DepConsumer.takeTranslationUnitDeps();
+  return CXError_Success;
 }
 
 void clang_experimental_DepGraph_dispose(CXDepGraph Graph) {

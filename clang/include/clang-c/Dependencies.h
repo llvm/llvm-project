@@ -37,90 +37,6 @@ extern "C" {
  * @{
  */
 
-typedef struct {
-  CXString Name;
-  /**
-   * The context hash of a module represents the set of compiler options that
-   * may make one version of a module incompatible from another. This includes
-   * things like language mode, predefined macros, header search paths, etc...
-   *
-   * Modules with the same name but a different \c ContextHash should be treated
-   * as separate modules for the purpose of a build.
-   */
-  CXString ContextHash;
-
-  /**
-   * The path to the modulemap file which defines this module.
-   *
-   * This can be used to explicitly build this module. This file will
-   * additionally appear in \c FileDeps as a dependency.
-   */
-  CXString ModuleMapPath;
-
-  /**
-   * The list of files which this module directly depends on.
-   *
-   * If any of these change then the module needs to be rebuilt.
-   */
-  CXStringSet *FileDeps;
-
-  /**
-   * The list of modules which this module direct depends on.
-   *
-   * This does include the context hash. The format is
-   * `<module-name>:<context-hash>`
-   */
-  CXStringSet *ModuleDeps;
-
-  /**
-   * The canonical command line to build this module.
-   *
-   * If getFileDependencies_v3 or later was used to get this dependency, it is
-   * a complete command line. When using getFileDependencies_v2, it excludes
-   * arguments containing modules-related paths:
-   * "-fmodule-file=", "-o", "-fmodule-map-file=".
-   */
-  CXStringSet *BuildArguments;
-} CXModuleDependency;
-
-typedef struct {
-  int Count;
-  CXModuleDependency *Modules;
-} CXModuleDependencySet;
-
-/**
- * See \c CXModuleDependency for the meaning of these fields, with the addition
- * that they represent only the direct dependencies for \c CXDependencyMode_Full
- * mode.
- */
-typedef struct {
-  CXString ContextHash;
-  CXStringSet *FileDeps;
-  CXStringSet *ModuleDeps;
-  CXStringSet *BuildArguments;
-} CXFileDependencies;
-
-/**
- * An individual command-line invocation that is part of an overall compilation
- * \c CXFileDependenciesList.
- *
- * See \c CXModuleDependency for the meaning of these fields, with the addition
- * that they represent only the direct dependencies for \c CXDependencyMode_Full
- * mode.
- */
-typedef struct {
-  CXString ContextHash;
-  CXStringSet *FileDeps;
-  CXStringSet *ModuleDeps;
-  CXString Executable;
-  CXStringSet *BuildArguments;
-} CXTranslationUnitCommand;
-
-typedef struct {
-  size_t NumCommands;
-  CXTranslationUnitCommand *Commands;
-} CXFileDependenciesList;
-
 /**
  * An output file kind needed by module dependencies.
  */
@@ -130,15 +46,6 @@ typedef enum {
   CXOutputKind_DependenciesTarget = 2,
   CXOutputKind_SerializedDiagnostics = 3,
 } CXOutputKind;
-
-CINDEX_LINKAGE void
-clang_experimental_ModuleDependencySet_dispose(CXModuleDependencySet *MD);
-
-CINDEX_LINKAGE void
-clang_experimental_FileDependencies_dispose(CXFileDependencies *ID);
-
-CINDEX_LINKAGE void
-clang_experimental_FileDependenciesList_dispose(CXFileDependenciesList *Deps);
 
 /**
  * Object encapsulating instance of a dependency scanner service.
@@ -241,14 +148,9 @@ clang_experimental_DependencyScannerServiceOptions_setActionCache(
     CXDependencyScannerServiceOptions Opts, CXCASActionCache Cache);
 
 /**
- * See \c clang_experimental_DependencyScannerService_create_v1.
- */
-CINDEX_LINKAGE CXDependencyScannerService
-clang_experimental_DependencyScannerService_create_v0(CXDependencyMode Format);
-
-/**
  * Create a \c CXDependencyScannerService object.
- * Must be disposed with \c clang_DependencyScannerService_dispose().
+ * Must be disposed with \c
+ * clang_experimental_DependencyScannerService_dispose_v0().
  */
 CINDEX_LINKAGE CXDependencyScannerService
 clang_experimental_DependencyScannerService_create_v1(
@@ -287,27 +189,15 @@ CINDEX_LINKAGE void clang_experimental_DependencyScannerWorker_dispose_v0(
     CXDependencyScannerWorker);
 
 /**
- * A callback that is called whenever a module is discovered when in
- * \c CXDependencyMode_Full mode.
- *
- * \param Context the context that was passed to
- *         \c clang_experimental_DependencyScannerWorker_getFileDependencies_vX.
- * \param MDS the list of discovered modules. Must be freed by calling
- *            \c clang_experimental_ModuleDependencySet_dispose.
- */
-typedef void CXModuleDiscoveredCallback(void *Context,
-                                        CXModuleDependencySet *MDS);
-
-/**
  * A callback that is called to determine the paths of output files for each
  * module dependency. The ModuleFile (pcm) path mapping is mandatory.
  *
  * \param Context the MLOContext that was passed to
- *         \c clang_experimental_DependencyScannerWorker_getFileDependencies_vX.
+ *         \c clang_experimental_DependencyScannerWorkerScanSettings_create().
  * \param ModuleName the name of the dependent module.
  * \param ContextHash the context hash of the dependent module.
- *                    See \c CXModuleDependency::ContextHash.
- & \param OutputKind the kind of module output to lookup.
+ *                    See \c clang_experimental_DepGraphModule_getContextHash().
+ * \param OutputKind the kind of module output to lookup.
  * \param[out] Output the output path(s) or name, whose total size must be <=
  *                    \p MaxLen. In the case of multiple outputs of the same
  *                    kind, this can be a null-separated list.
@@ -321,63 +211,6 @@ typedef size_t CXModuleLookupOutputCallback(void *Context,
                                             const char *ContextHash,
                                             CXOutputKind OutputKind,
                                             char *Output, size_t MaxLen);
-
-/**
- * Deprecated, use \c clang_experimental_DependencyScannerWorker_getDepGraph.
- *
- * See \c clang_experimental_DependencyScannerWorker_getFileDependencies_v4.
- */
-CINDEX_LINKAGE CXFileDependencies *
-clang_experimental_DependencyScannerWorker_getFileDependencies_v3(
-    CXDependencyScannerWorker Worker, int argc, const char *const *argv,
-    const char *ModuleName, const char *WorkingDirectory, void *MDCContext,
-    CXModuleDiscoveredCallback *MDC, void *MLOContext,
-    CXModuleLookupOutputCallback *MLO, unsigned Options, CXString *error);
-
-/**
- * Deprecated, use \c clang_experimental_DependencyScannerWorker_getDepGraph.
- *
- * Calculates the list of file dependencies for a particular compiler
- * invocation.
- *
- * \param argc the number of compiler invocation arguments (including argv[0]).
- * \param argv the compiler driver invocation arguments (including argv[0]).
- * \param ModuleName If non-null, the dependencies of the named module are
- *                   returned. Otherwise, the dependencies of the whole
- *                   translation unit are returned.
- * \param WorkingDirectory the directory in which the invocation runs.
- * \param MDCContext the context that will be passed to \c MDC each time it is
- *                   called.
- * \param MDC a callback that is called whenever a new module is discovered.
- *            This may receive the same module on different workers. This should
- *            be NULL if
- *            \c clang_experimental_DependencyScannerService_create_v0 was
- *            called with \c CXDependencyMode_Flat. This callback will be called
- *            on the same thread that called this function.
- * \param MLOContext the context that will be passed to \c MLO each time it is
- *                   called.
- * \param MLO a callback that is called to determine the paths of output files
- *            for each module dependency. This may receive the same module on
- *            different workers. This should be NULL if
- *            \c clang_experimental_DependencyScannerService_create_v0 was
- *            called with \c CXDependencyMode_Flat. This callback will be called
- *            on the same thread that called this function.
- * \param Options reserved for future use, always pass 0.
- * \param [out] Out A non-NULL pointer to store the resulting dependencies. The
- *                  output must be freed by calling
- *                  \c clang_experimental_FileDependenciesList_dispose.
- * \param [out] error the error string to pass back to client (if any).
- *
- * \returns \c CXError_Success on success; otherwise a non-zero \c CXErrorCode
- * indicating the kind of error.
- */
-CINDEX_LINKAGE enum CXErrorCode
-clang_experimental_DependencyScannerWorker_getFileDependencies_v4(
-    CXDependencyScannerWorker Worker, int argc, const char *const *argv,
-    const char *ModuleName, const char *WorkingDirectory, void *MDCContext,
-    CXModuleDiscoveredCallback *MDC, void *MLOContext,
-    CXModuleLookupOutputCallback *MLO, unsigned Options,
-    CXFileDependenciesList **Out, CXString *error);
 
 /**
  * Output of \c clang_experimental_DependencyScannerWorker_getDepGraph.

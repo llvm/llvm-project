@@ -136,12 +136,6 @@ public:
                            DependencyActionController &Controller,
                            DiagnosticConsumer &DiagConsumer,
                            std::optional<StringRef> ModuleName = std::nullopt);
-  /// \returns A \c StringError with the diagnostic output if clang errors
-  /// occurred, success otherwise.
-  llvm::Error computeDependencies(
-      StringRef WorkingDirectory, const std::vector<std::string> &CommandLine,
-      DependencyConsumer &Consumer, DependencyActionController &Controller,
-      std::optional<StringRef> ModuleName = std::nullopt);
 
   /// Scan from a compiler invocation.
   /// If \p DiagGenerationAsCompilation is true it will generate error
