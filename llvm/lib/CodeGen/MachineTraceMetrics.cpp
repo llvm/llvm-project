@@ -39,41 +39,68 @@ using namespace llvm;
 
 #define DEBUG_TYPE "machine-trace-metrics"
 
-char MachineTraceMetrics::ID = 0;
+AnalysisKey MachineTraceMetricsAnalysis::Key;
 
-char &llvm::MachineTraceMetricsID = MachineTraceMetrics::ID;
-
-INITIALIZE_PASS_BEGIN(MachineTraceMetrics, DEBUG_TYPE, "Machine Trace Metrics",
-                      false, true)
-INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
-INITIALIZE_PASS_END(MachineTraceMetrics, DEBUG_TYPE,
-                    "Machine Trace Metrics", false, true)
-
-MachineTraceMetrics::MachineTraceMetrics() : MachineFunctionPass(ID) {
-  std::fill(std::begin(Ensembles), std::end(Ensembles), nullptr);
+MachineTraceMetricsAnalysis::Result
+MachineTraceMetricsAnalysis::run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &MFAM) {
+  return Result(MF, MFAM.getResult<MachineLoopAnalysis>(MF));
 }
 
-void MachineTraceMetrics::getAnalysisUsage(AnalysisUsage &AU) const {
+PreservedAnalyses
+MachineTraceMetricsVerifierPass::run(MachineFunction &MF,
+                                     MachineFunctionAnalysisManager &MFAM) {
+  MFAM.getResult<MachineTraceMetricsAnalysis>(MF).verifyAnalysis();
+  return PreservedAnalyses::all();
+}
+
+char MachineTraceMetricsWrapperPass::ID = 0;
+
+char &llvm::MachineTraceMetricsID = MachineTraceMetricsWrapperPass::ID;
+
+INITIALIZE_PASS_BEGIN(MachineTraceMetricsWrapperPass, DEBUG_TYPE,
+                      "Machine Trace Metrics", false, true)
+INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
+INITIALIZE_PASS_END(MachineTraceMetricsWrapperPass, DEBUG_TYPE,
+                    "Machine Trace Metrics", false, true)
+
+MachineTraceMetricsWrapperPass::MachineTraceMetricsWrapperPass()
+    : MachineFunctionPass(ID) {}
+
+void MachineTraceMetricsWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
   AU.addRequired<MachineLoopInfoWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-bool MachineTraceMetrics::runOnMachineFunction(MachineFunction &Func) {
+void MachineTraceMetrics::init(MachineFunction &Func,
+                               const MachineLoopInfo &LI) {
   MF = &Func;
   const TargetSubtargetInfo &ST = MF->getSubtarget();
   TII = ST.getInstrInfo();
   TRI = ST.getRegisterInfo();
   MRI = &MF->getRegInfo();
-  Loops = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
+  Loops = &LI;
   SchedModel.init(&ST);
   BlockInfo.resize(MF->getNumBlockIDs());
   ProcReleaseAtCycles.resize(MF->getNumBlockIDs() *
                             SchedModel.getNumProcResourceKinds());
+}
+
+bool MachineTraceMetricsWrapperPass::runOnMachineFunction(MachineFunction &MF) {
+  MTM.init(MF, getAnalysis<MachineLoopInfoWrapperPass>().getLI());
   return false;
 }
 
-void MachineTraceMetrics::releaseMemory() {
+MachineTraceMetrics::MachineTraceMetrics(MachineFunction &MF,
+                                         const MachineLoopInfo &LI) {
+  std::fill(std::begin(Ensembles), std::end(Ensembles), nullptr);
+  init(MF, LI);
+}
+
+MachineTraceMetrics::~MachineTraceMetrics() { clear(); }
+
+void MachineTraceMetrics::clear() {
   MF = nullptr;
   BlockInfo.clear();
   for (Ensemble *&E : Ensembles) {
@@ -416,6 +443,17 @@ void MachineTraceMetrics::invalidate(const MachineBasicBlock *MBB) {
   for (Ensemble *E : Ensembles)
     if (E)
       E->invalidate(MBB);
+}
+
+bool MachineTraceMetrics::invalidate(
+    MachineFunction &, const PreservedAnalyses &PA,
+    MachineFunctionAnalysisManager::Invalidator &) {
+  // Check whether the analysis, all analyses on machine functions, or the
+  // machine function's CFG have been preserved.
+  auto PAC = PA.getChecker<MachineTraceMetricsAnalysis>();
+  return !PAC.preserved() &&
+         !PAC.preservedSet<AllAnalysesOn<MachineFunction>>() &&
+         !PAC.preservedSet<CFGAnalyses>();
 }
 
 void MachineTraceMetrics::verifyAnalysis() const {
