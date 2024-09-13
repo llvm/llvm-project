@@ -1,0 +1,22 @@
+// RUN: cir-translate -cir-to-llvmir %s -o %t.ll
+// RUN: FileCheck --input-file=%t.ll %s --check-prefix=LLVM
+
+!s32i = !cir.int<s, 32>
+!fnptr = !cir.ptr<!cir.func<!s32i (!s32i)>>
+
+module {
+  cir.func private @my_add(%a: !s32i, %b: !s32i) -> !s32i cc(spir_function)
+
+  cir.func @ind(%fnptr: !fnptr, %a : !s32i) {
+    %1 = cir.call %fnptr(%a) : (!fnptr, !s32i) -> !s32i cc(spir_kernel)
+    // LLVM: %{{[0-9]+}} = call spir_kernel i32 %{{[0-9]+}}(i32 %{{[0-9]+}})
+
+    %2 = cir.call %fnptr(%a) : (!fnptr, !s32i) -> !s32i cc(spir_function)
+    // LLVM: %{{[0-9]+}} = call spir_func i32 %{{[0-9]+}}(i32 %{{[0-9]+}})
+
+    %3 = cir.call @my_add(%1, %2) : (!s32i, !s32i) -> !s32i cc(spir_function)
+    // LLVM: %{{[0-9]+}} = call spir_func i32 @my_add(i32 %{{[0-9]+}}, i32 %{{[0-9]+}})
+
+    cir.return
+  }
+}

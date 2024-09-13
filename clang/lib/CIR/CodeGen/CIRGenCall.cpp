@@ -447,7 +447,7 @@ buildCallLikeOp(CIRGenFunction &CGF, mlir::Location callLoc,
                 mlir::cir::FuncType indirectFuncTy, mlir::Value indirectFuncVal,
                 mlir::cir::FuncOp directFuncOp,
                 SmallVectorImpl<mlir::Value> &CIRCallArgs,
-                mlir::Operation *InvokeDest,
+                mlir::Operation *InvokeDest, mlir::cir::CallingConv callingConv,
                 mlir::cir::ExtraFuncAttributesAttr extraFnAttrs) {
   auto &builder = CGF.getBuilder();
 
@@ -468,6 +468,8 @@ buildCallLikeOp(CIRGenFunction &CGF, mlir::Location callLoc,
     }
 
     mlir::cir::CallOp tryCallOp;
+    // TODO(cir): Set calling convention for `cir.try_call`.
+    assert(callingConv == mlir::cir::CallingConv::C && "NYI");
     if (indirectFuncTy) {
       tryCallOp = builder.createIndirectTryCallOp(callLoc, indirectFuncVal,
                                                   indirectFuncTy, CIRCallArgs);
@@ -484,12 +486,15 @@ buildCallLikeOp(CIRGenFunction &CGF, mlir::Location callLoc,
   }
 
   assert(builder.getInsertionBlock() && "expected valid basic block");
-  if (indirectFuncTy)
+  if (indirectFuncTy) {
+    // TODO(cir): Set calling convention for indirect calls.
+    assert(callingConv == mlir::cir::CallingConv::C && "NYI");
     return builder.createIndirectCallOp(
         callLoc, indirectFuncVal, indirectFuncTy, CIRCallArgs,
         mlir::cir::CallingConv::C, extraFnAttrs);
-  return builder.createCallOp(callLoc, directFuncOp, CIRCallArgs,
-                              mlir::cir::CallingConv::C, extraFnAttrs);
+  }
+  return builder.createCallOp(callLoc, directFuncOp, CIRCallArgs, callingConv,
+                              extraFnAttrs);
 }
 
 RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
@@ -765,9 +770,9 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
     auto extraFnAttrs = mlir::cir::ExtraFuncAttributesAttr::get(
         builder.getContext(), Attrs.getDictionary(builder.getContext()));
 
-    mlir::cir::CIRCallOpInterface callLikeOp =
-        buildCallLikeOp(*this, callLoc, indirectFuncTy, indirectFuncVal,
-                        directFuncOp, CIRCallArgs, InvokeDest, extraFnAttrs);
+    mlir::cir::CIRCallOpInterface callLikeOp = buildCallLikeOp(
+        *this, callLoc, indirectFuncTy, indirectFuncVal, directFuncOp,
+        CIRCallArgs, InvokeDest, callingConv, extraFnAttrs);
 
     if (E)
       callLikeOp->setAttr(

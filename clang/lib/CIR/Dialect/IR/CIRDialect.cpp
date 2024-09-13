@@ -2704,6 +2704,12 @@ verifyCallCommInSymbolUses(Operation *op, SymbolTableCollection &symbolTable) {
                << op->getOperand(i).getType() << " for operand number " << i;
   }
 
+  // Calling convention must match.
+  if (callIf.getCallingConv() != fn.getCallingConv())
+    return op->emitOpError("calling convention mismatch: expected ")
+           << stringifyCallingConv(fn.getCallingConv()) << ", but provided "
+           << stringifyCallingConv(callIf.getCallingConv());
+
   // Void function must not return any results.
   if (fnType.isVoid() && op->getNumResults() != 0)
     return op->emitOpError("callee returns void but call has results");

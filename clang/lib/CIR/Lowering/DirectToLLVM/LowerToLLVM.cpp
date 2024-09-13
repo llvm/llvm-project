@@ -875,18 +875,24 @@ rewriteToCallOrInvoke(mlir::Operation *op, mlir::ValueRange callOperands,
                       mlir::Block *landingPadBlock = nullptr) {
   llvm::SmallVector<mlir::Type, 8> llvmResults;
   auto cirResults = op->getResultTypes();
+  auto callIf = cast<mlir::cir::CIRCallOpInterface>(op);
 
   if (converter->convertTypes(cirResults, llvmResults).failed())
     return mlir::failure();
 
+  auto cconv = convertCallingConv(callIf.getCallingConv());
+
   if (calleeAttr) { // direct call
-    if (landingPadBlock)
-      rewriter.replaceOpWithNewOp<mlir::LLVM::InvokeOp>(
+    if (landingPadBlock) {
+      auto newOp = rewriter.replaceOpWithNewOp<mlir::LLVM::InvokeOp>(
           op, llvmResults, calleeAttr, callOperands, continueBlock,
           mlir::ValueRange{}, landingPadBlock, mlir::ValueRange{});
-    else
-      rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(op, llvmResults,
-                                                      calleeAttr, callOperands);
+      newOp.setCConv(cconv);
+    } else {
+      auto newOp = rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(
+          op, llvmResults, calleeAttr, callOperands);
+      newOp.setCConv(cconv);
+    }
   } else { // indirect call
     assert(op->getOperands().size() &&
            "operands list must no be empty for the indirect call");
@@ -899,14 +905,17 @@ rewriteToCallOrInvoke(mlir::Operation *op, mlir::ValueRange callOperands,
     if (landingPadBlock) {
       auto llvmFnTy =
           dyn_cast<mlir::LLVM::LLVMFunctionType>(converter->convertType(ftyp));
-      rewriter.replaceOpWithNewOp<mlir::LLVM::InvokeOp>(
+      auto newOp = rewriter.replaceOpWithNewOp<mlir::LLVM::InvokeOp>(
           op, llvmFnTy, mlir::FlatSymbolRefAttr{}, callOperands, continueBlock,
           mlir::ValueRange{}, landingPadBlock, mlir::ValueRange{});
-    } else
-      rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(
+      newOp.setCConv(cconv);
+    } else {
+      auto newOp = rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(
           op,
           dyn_cast<mlir::LLVM::LLVMFunctionType>(converter->convertType(ftyp)),
           callOperands);
+      newOp.setCConv(cconv);
+    }
   }
   return mlir::success();
 }
@@ -932,6 +941,10 @@ public:
   mlir::LogicalResult
   matchAndRewrite(mlir::cir::TryCallOp op, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
+    if (op.getCallingConv() != mlir::cir::CallingConv::C) {
+      return op.emitError(
+          "non-C calling convention is not implemented for try_call");
+    }
     return rewriteToCallOrInvoke(
         op.getOperation(), adaptor.getOperands(), rewriter, getTypeConverter(),
         op.getCalleeAttr(), op.getCont(), op.getLandingPad());

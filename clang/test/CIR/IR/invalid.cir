@@ -1304,7 +1304,22 @@ module {
 !s32i = !cir.int<s, 32>
 
 module {
+  cir.func @subroutine() cc(spir_function) {
+    cir.return
+  }
 
+  cir.func @call_conv_match() {
+    // expected-error@+1 {{'cir.call' op calling convention mismatch: expected spir_function, but provided spir_kernel}}
+    cir.call @subroutine(): () -> !cir.void cc(spir_kernel)
+    cir.return
+  }
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+module {
   cir.func @test_bitcast_addrspace() {
     %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["tmp"] {alignment = 4 : i64}
     // expected-error@+1 {{'cir.cast' op result type address space does not match the address space of the operand}}
