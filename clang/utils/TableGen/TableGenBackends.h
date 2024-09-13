@@ -135,22 +135,28 @@ void EmitSmeRangeChecks(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitSmeStreamingAttrs(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitSmeBuiltinZAState(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 
-void EmitMveHeader(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
-void EmitMveBuiltinDef(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
-void EmitMveBuiltinSema(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
-void EmitMveBuiltinCG(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
-void EmitMveBuiltinAliases(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitMveHeader(const llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitMveBuiltinDef(const llvm::RecordKeeper &Records,
+                       llvm::raw_ostream &OS);
+void EmitMveBuiltinSema(const llvm::RecordKeeper &Records,
+                        llvm::raw_ostream &OS);
+void EmitMveBuiltinCG(const llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitMveBuiltinAliases(const llvm::RecordKeeper &Records,
+                           llvm::raw_ostream &OS);
 
 void EmitRVVHeader(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitRVVBuiltins(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitRVVBuiltinCG(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitRVVBuiltinSema(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 
-void EmitCdeHeader(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
-void EmitCdeBuiltinDef(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
-void EmitCdeBuiltinSema(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
-void EmitCdeBuiltinCG(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
-void EmitCdeBuiltinAliases(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitCdeHeader(const llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitCdeBuiltinDef(const llvm::RecordKeeper &Records,
+                       llvm::raw_ostream &OS);
+void EmitCdeBuiltinSema(const llvm::RecordKeeper &Records,
+                        llvm::raw_ostream &OS);
+void EmitCdeBuiltinCG(const llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitCdeBuiltinAliases(const llvm::RecordKeeper &Records,
+                           llvm::raw_ostream &OS);
 
 void EmitClangAttrDocs(const llvm::RecordKeeper &Records,
                        llvm::raw_ostream &OS);
