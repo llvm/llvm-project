@@ -45,3 +45,45 @@ body: |
     $vgpr1 = V_ADDC_U32_e32 0, $vgpr0, implicit-def $vcc, implicit $vcc, implicit $exec
     S_ENDPGM 0
 ...
+
+# Make sure that while ignoring implicit operands we will not ignore implicit $flat_src on FLAT
+
+---
+name: load_flat_scr_lo_flat_load_wait
+
+body: |
+  bb.0:
+    liveins: $sgpr10_sgpr11, $vgpr0_vgpr1
+
+    ; GCN-LABEL: name: load_flat_scr_lo_flat_load_wait
+    ; GCN: liveins: $sgpr10_sgpr11, $vgpr0_vgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: S_WAITCNT 0
+    ; GCN-NEXT: $flat_scr_lo = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
+    ; GCN-NEXT: S_WAITCNT 49279
+    ; GCN-NEXT: $vgpr2 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
+    ; GCN-NEXT: S_ENDPGM 0
+    $flat_scr_lo = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
+    $vgpr2 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
+    S_ENDPGM 0
+...
+
+---
+name: load_flat_scr_lo_scratch_store_wait
+
+body: |
+  bb.0:
+    liveins: $sgpr10_sgpr11, $vgpr0, $sgpr32
+
+    ; GCN-LABEL: name: load_flat_scr_lo_scratch_store_wait
+    ; GCN: liveins: $sgpr10_sgpr11, $vgpr0, $sgpr32
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: S_WAITCNT 0
+    ; GCN-NEXT: $flat_scr_hi = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
+    ; GCN-NEXT: S_WAITCNT 49279
+    ; GCN-NEXT: SCRATCH_STORE_DWORD_SADDR $vgpr0, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr
+    ; GCN-NEXT: S_ENDPGM 0
+    $flat_scr_hi = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
+    SCRATCH_STORE_DWORD_SADDR $vgpr0, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr
+    S_ENDPGM 0
+...
