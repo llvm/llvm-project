@@ -74,7 +74,7 @@ public:
 
     const Checksum &GetChecksum() const { return m_checksum; }
 
-    llvm::once_flag &GetChecksumWarningOnceFlag() {
+    std::once_flag &GetChecksumWarningOnceFlag() {
       return m_checksum_warning_once_flag;
     }
 
@@ -92,7 +92,7 @@ public:
     Checksum m_checksum;
 
     /// Once flag for emitting a checksum mismatch warning.
-    llvm::once_flag m_checksum_warning_once_flag;
+    std::once_flag m_checksum_warning_once_flag;
 
     // Keep the modification time that this file data is valid for
     llvm::sys::TimePoint<> m_mod_time;

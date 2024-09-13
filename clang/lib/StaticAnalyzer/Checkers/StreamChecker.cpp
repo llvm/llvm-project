@@ -1129,7 +1129,7 @@ tryToInvalidateFReadBufferByElements(ProgramStateRef State, CheckerContext &C,
   if (!ElemTy.isNull() && CountVal && Size && StartIndexVal) {
     int64_t NumBytesRead = Size.value() * CountVal.value();
     int64_t ElemSizeInChars = Ctx.getTypeSizeInChars(ElemTy).getQuantity();
-    if (ElemSizeInChars == 0)
+    if (ElemSizeInChars == 0 || NumBytesRead < 0)
       return nullptr;
 
     bool IncompleteLastElement = (NumBytesRead % ElemSizeInChars) != 0;

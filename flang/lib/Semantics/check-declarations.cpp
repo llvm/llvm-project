@@ -1587,8 +1587,11 @@ void CheckHelper::CheckExternal(const Symbol &symbol) {
             } else if (!globalChars->CanBeCalledViaImplicitInterface() &&
                 context_.ShouldWarn(
                     common::UsageWarning::ExternalInterfaceMismatch)) {
-              msg = messages_.Say(
-                  "The global subprogram '%s' may not be referenced via the implicit interface '%s'"_err_en_US,
+              // TODO: This should be a hard error if the procedure has
+              // actually been called (as opposed to just being used as a
+              // procedure pointer target or passed as an actual argument).
+              msg = WarnIfNotInModuleFile(
+                  "The global subprogram '%s' should not be referenced via the implicit interface '%s'"_warn_en_US,
                   global->name(), symbol.name());
             }
           }

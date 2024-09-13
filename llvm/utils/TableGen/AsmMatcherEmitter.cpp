@@ -2849,18 +2849,29 @@ static bool emitMnemonicAliases(raw_ostream &OS, const AsmMatcherInfo &Info,
 
   OS << "static void applyMnemonicAliases(StringRef &Mnemonic, "
         "const FeatureBitset &Features, unsigned VariantID) {\n";
-  OS << "  switch (VariantID) {\n";
   unsigned VariantCount = Target.getAsmParserVariantCount();
   for (unsigned VC = 0; VC != VariantCount; ++VC) {
     Record *AsmVariant = Target.getAsmParserVariant(VC);
     int AsmParserVariantNo = AsmVariant->getValueAsInt("Variant");
     StringRef AsmParserVariantName = AsmVariant->getValueAsString("Name");
+
+    // If the variant doesn't have a name, defer to the emitMnemonicAliasVariant
+    // call after the loop.
+    if (AsmParserVariantName.empty()) {
+      assert(VariantCount == 1 && "Multiple variants should each be named");
+      continue;
+    }
+
+    if (VC == 0)
+      OS << "  switch (VariantID) {\n";
     OS << "  case " << AsmParserVariantNo << ":\n";
     emitMnemonicAliasVariant(OS, Info, Aliases, /*Indent=*/2,
                              AsmParserVariantName);
     OS << "    break;\n";
+
+    if (VC == VariantCount - 1)
+      OS << "  }\n";
   }
-  OS << "  }\n";
 
   // Emit aliases that apply to all variants.
   emitMnemonicAliasVariant(OS, Info, Aliases);
