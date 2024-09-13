@@ -121,8 +121,8 @@ Changes in existing checks
   member function calls too.
 
 - Improved :doc:`performance-avoid-endl
-  <clang-tidy/checks/performance/avoid-endl>` check by fixing incorrect
-  message.
+  <clang-tidy/checks/performance/avoid-endl>` check to use ``std::endl`` as
+  placeholder when lexer cannot get source text.
 
 - Improved :doc:`readablility-implicit-bool-conversion
   <clang-tidy/checks/readability/implicit-bool-conversion>` check
