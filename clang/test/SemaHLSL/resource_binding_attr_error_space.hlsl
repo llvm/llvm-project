@@ -7,6 +7,8 @@ cbuffer cbuf {
 
 cbuffer cbuf2 {
     struct x {
+        // this test validates that no diagnostic is emitted on the space parameter, because
+        // this register annotation is not in the global scope.
         // expected-error@+1 {{'register' attribute only applies to cbuffer/tbuffer and external global variables}}
         RWBuffer<int> E : register(u2, space3);
     };
@@ -18,6 +20,16 @@ struct MyStruct {
 
 cbuffer cbuf3 {
   MyStruct E : register(u2, space3);
+}
+
+// expected-error@+1 {{register space cannot be specified on global constants}}
+MyStruct F : register(u3, space4);
+
+cbuffer cbuf4 {
+  // this test validates that no diagnostic is emitted on the space parameter, because
+  // this register annotation is not in the global scope.
+  // expected-error@+1 {{binding type 'u' only applies to UAV resources}}
+  float a : register(u2, space3); 
 }
 
 // expected-error@+1 {{invalid space specifier 's2' used; expected 'space' followed by an integer, like space1}}
