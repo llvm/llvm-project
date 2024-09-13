@@ -60,25 +60,27 @@ void AvoidEndlCheck::check(const MatchFinder::MatchResult &Result) {
     const auto *CallExpression = llvm::cast<CallExpr>(Expression);
     assert(CallExpression->getNumArgs() == 1);
 
-    const StringRef SourceText = Lexer::getSourceText(
+    StringRef SourceText = Lexer::getSourceText(
         CharSourceRange::getTokenRange(
             CallExpression->getCallee()->getSourceRange()),
         *Result.SourceManager, Result.Context->getLangOpts());
+    if (SourceText.empty())
+      SourceText = "std::endl";
+    auto Diag = diag(CallExpression->getBeginLoc(),
+                     "do not use '%0' with streams; use '\\n' instead")
+                << SourceText;
 
     const CharSourceRange ArgTokenRange = CharSourceRange::getTokenRange(
         CallExpression->getArg(0)->getSourceRange());
     const StringRef ArgSourceText = Lexer::getSourceText(
         ArgTokenRange, *Result.SourceManager, Result.Context->getLangOpts());
-
-    const std::string ReplacementString =
-        std::string(ArgSourceText) + " << '\\n'";
-
-    diag(CallExpression->getBeginLoc(),
-         "do not use '%0' with streams; use '\\n' instead")
-        << SourceText
-        << FixItHint::CreateReplacement(
-               CharSourceRange::getTokenRange(CallExpression->getSourceRange()),
-               ReplacementString);
+    const CharSourceRange ReplacementRange =
+        CharSourceRange::getTokenRange(CallExpression->getSourceRange());
+    if (!ArgSourceText.empty() && ReplacementRange.isValid()) {
+      const std::string ReplacementString =
+          std::string(ArgSourceText) + " << '\\n'";
+      Diag << FixItHint::CreateReplacement(ReplacementRange, ReplacementString);
+    }
   }
 }
 
