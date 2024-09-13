@@ -251,7 +251,7 @@ define void @no_counters() {
   ret void
 }
 
-; Ensure "calls" to inline asm don't get instrumented.
+; Ensure "calls" to inline asm don't get callsite-instrumented.
 define void @inlineasm() {
 ; INSTRUMENT-LABEL: define void @inlineasm() {
 ; INSTRUMENT-NEXT:    call void @llvm.instrprof.increment(ptr @inlineasm, i64 742261418966908927, i32 1, i32 0)
