@@ -19367,7 +19367,7 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
       break;
     }
 
-    SmallVector<Value *, 4> Args;
+    SmallVector<Value *, 5> Args;
     for (int i = 0, e = E->getNumArgs(); i != e; ++i)
       Args.push_back(EmitScalarExpr(E->getArg(i)));
     llvm::Function *F = CGM.getIntrinsic(IID, {});
