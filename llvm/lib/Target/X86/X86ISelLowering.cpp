@@ -26159,12 +26159,12 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       if (CC == ISD::SETLT || CC == ISD::SETLE)
         std::swap(LHS, RHS);
 
-      // For AVX10.2, Support EQ and NE
+      // For AVX10.2, Support EQ and NE.
       bool HasAVX10_2_COMX =
           Subtarget.hasAVX10_2() && (CC == ISD::SETEQ || CC == ISD::SETNE);
 
-      // AVX10.2 COMPARE supports only v2f64, v4f32 or v8f16
-      // For BF type we need to fall back
+      // AVX10.2 COMPARE supports only v2f64, v4f32 or v8f16.
+      // For BF type we need to fall back.
       bool HasAVX10_2_COMX_Ty = (LHS.getSimpleValueType() != MVT::v8bf16);
 
       auto ComiOpCode = IntrData->Opc0;

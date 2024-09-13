@@ -87,7 +87,7 @@ namespace llvm {
     COMI,
     UCOMI,
 
-    // X86 compare with Intrinsics similar to COMI
+    // X86 compare with Intrinsics similar to COMI.
     COMX,
     UCOMX,
 
