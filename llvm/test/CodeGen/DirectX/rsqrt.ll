@@ -1,28 +1,42 @@
-; RUN: opt -S -dxil-op-lower -mtriple=dxil-pc-shadermodel6.3-library %s | FileCheck %s
+; RUN: opt -S -scalarizer -dxil-op-lower -mtriple=dxil-pc-shadermodel6.3-library %s | FileCheck %s
 
 ; Make sure dxil operation function calls for rsqrt are generated for float and half.
 
 ; CHECK-LABEL: rsqrt_float
-; CHECK: call float @dx.op.unary.f32(i32 25, float %{{.*}})
 define noundef float @rsqrt_float(float noundef %a) {
 entry:
-  %a.addr = alloca float, align 4
-  store float %a, ptr %a.addr, align 4
-  %0 = load float, ptr %a.addr, align 4
-  %dx.rsqrt = call float @llvm.dx.rsqrt.f32(float %0)
+; CHECK: call float @dx.op.unary.f32(i32 25, float %{{.*}})
+  %dx.rsqrt = call float @llvm.dx.rsqrt.f32(float %a)
   ret float %dx.rsqrt
 }
 
 ; CHECK-LABEL: rsqrt_half
-; CHECK: call half @dx.op.unary.f16(i32 25, half %{{.*}})
 define noundef half @rsqrt_half(half noundef %a) {
 entry:
-  %a.addr = alloca half, align 2
-  store half %a, ptr %a.addr, align 2
-  %0 = load half, ptr %a.addr, align 2
-  %dx.rsqrt = call half @llvm.dx.rsqrt.f16(half %0)
+; CHECK: call half @dx.op.unary.f16(i32 25, half %{{.*}})
+  %dx.rsqrt = call half @llvm.dx.rsqrt.f16(half %a)
   ret half %dx.rsqrt
 }
 
+define noundef <4 x float> @rsqrt_float4(<4 x float> noundef %a) #0 {
+entry:
+  ; CHECK: [[ee0:%.*]] = extractelement <4 x float> %a, i64 0
+  ; CHECK: [[ie0:%.*]] = call float @dx.op.unary.f32(i32 25, float [[ee0]])
+  ; CHECK: [[ee1:%.*]] = extractelement <4 x float> %a, i64 1
+  ; CHECK: [[ie1:%.*]] = call float @dx.op.unary.f32(i32 25, float [[ee1]])
+  ; CHECK: [[ee2:%.*]] = extractelement <4 x float> %a, i64 2
+  ; CHECK: [[ie2:%.*]] = call float @dx.op.unary.f32(i32 25, float [[ee2]])
+  ; CHECK: [[ee3:%.*]] = extractelement <4 x float> %a, i64 3
+  ; CHECK: [[ie3:%.*]] = call float @dx.op.unary.f32(i32 25, float [[ee3]])
+  ; CHECK: insertelement <4 x float> poison, float [[ie0]], i64 0
+  ; CHECK: insertelement <4 x float> %{{.*}}, float [[ie1]], i64 1
+  ; CHECK: insertelement <4 x float> %{{.*}}, float [[ie2]], i64 2
+  ; CHECK: insertelement <4 x float> %{{.*}}, float [[ie3]], i64 3
+  %2 = call <4 x float> @llvm.dx.rsqrt.v4f32(<4 x float> %a) 
+  ret <4 x float> %2
+}
+
+
 declare half @llvm.dx.rsqrt.f16(half)
 declare float @llvm.dx.rsqrt.f32(float)
+declare <4 x float> @llvm.dx.rsqrt.v4f32(<4 x float>)
