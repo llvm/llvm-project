@@ -1473,6 +1473,10 @@ define void @foo(i8 %v1) {
   EXPECT_EQ(I0->getNextNode(), I1);
   EXPECT_EQ(I1->getPrevNode(), I0);
 
+  // Check comesBefore(I).
+  EXPECT_TRUE(I0->comesBefore(I1));
+  EXPECT_FALSE(I1->comesBefore(I0));
+
   // Check moveBefore(BB, It).
   I1->moveBefore(*BB, BB->begin());
   EXPECT_EQ(I1->getPrevNode(), nullptr);
