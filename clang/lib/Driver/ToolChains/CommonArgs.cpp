@@ -674,7 +674,7 @@ std::string tools::getCPUName(const Driver &D, const ArgList &Args,
     return getLanaiTargetCPU(Args);
 
   case llvm::Triple::systemz:
-    return systemz::getSystemZTargetCPU(Args);
+    return systemz::getSystemZTargetCPU(Args, T);
 
   case llvm::Triple::r600:
   case llvm::Triple::amdgcn:
@@ -2902,11 +2902,16 @@ void tools::addMCModel(const Driver &D, const llvm::opt::ArgList &Args,
     } else if (Triple.isPPC64() || Triple.isOSAIX()) {
       Ok = CM == "small" || CM == "medium" || CM == "large";
     } else if (Triple.isRISCV()) {
+      // Large code model is disallowed to be used with PIC code model.
+      if (CM == "large" && RelocationModel != llvm::Reloc::Static)
+        D.Diag(diag::err_drv_argument_not_allowed_with)
+            << A->getAsString(Args) << "-fpic";
       if (CM == "medlow")
         CM = "small";
       else if (CM == "medany")
         CM = "medium";
-      Ok = CM == "small" || CM == "medium";
+      Ok = CM == "small" || CM == "medium" ||
+           (CM == "large" && Triple.isRISCV64());
     } else if (Triple.getArch() == llvm::Triple::x86_64) {
       Ok = llvm::is_contained({"small", "kernel", "medium", "large", "tiny"},
                               CM);

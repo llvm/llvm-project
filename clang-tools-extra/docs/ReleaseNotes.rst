@@ -95,6 +95,9 @@ The improvements are...
 Improvements to clang-tidy
 --------------------------
 
+- Improved :program:`run-clang-tidy.py` script. Fixed minor shutdown noise
+  happening on certain platforms when interrupting the script.
+
 New checks
 ^^^^^^^^^^
 
@@ -112,11 +115,15 @@ Changes in existing checks
   <clang-tidy/checks/modernize/use-std-format>` check to support replacing
   member function calls too.
 
+- Improved :doc:`misc-unconventional-assign-operator
+  <clang-tidy/checks/misc/unconventional-assign-operator>` check to avoid
+  false positive for C++23 deducing this.
+
 - Improved :doc:`modernize-use-std-print
   <clang-tidy/checks/modernize/use-std-print>` check to support replacing
   member function calls too.
 
-- Improved :doc:`readablility-implicit-bool-conversion
+- Improved :doc:`readability-implicit-bool-conversion
   <clang-tidy/checks/readability/implicit-bool-conversion>` check
   by adding the option `UseUpperCaseLiteralSuffix` to select the
   case of the literal suffix in fixes.

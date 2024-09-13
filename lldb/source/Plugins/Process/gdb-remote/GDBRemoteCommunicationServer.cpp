@@ -123,7 +123,7 @@ GDBRemoteCommunicationServer::SendErrorResponse(llvm::Error error) {
       [&](std::unique_ptr<llvm::ErrorInfoBase> E) { EIB = std::move(E); });
 
   if (EIB)
-    return SendErrorResponse(Status(llvm::Error(std::move(EIB))));
+    return SendErrorResponse(Status::FromError(llvm::Error(std::move(EIB))));
   return SendUnimplementedResponse("");
 }
 

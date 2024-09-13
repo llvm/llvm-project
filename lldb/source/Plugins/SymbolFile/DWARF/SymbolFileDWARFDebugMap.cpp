@@ -1574,7 +1574,7 @@ Status SymbolFileDWARFDebugMap::CalculateFrameVariableError(StackFrame &frame) {
             // we weren't able to open the .o file. Display an appropriate
             // error
             if (comp_unit_info->oso_load_error.Fail())
-              return comp_unit_info->oso_load_error;
+              return comp_unit_info->oso_load_error.Clone();
             else
               return Status::FromErrorStringWithFormat(
                   "unable to load debug map object file \"%s\" "

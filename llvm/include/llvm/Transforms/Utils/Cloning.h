@@ -20,7 +20,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/AssumptionCache.h"
-#include "llvm/Analysis/CtxProfAnalysis.h"
 #include "llvm/Analysis/InlineCost.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/ValueHandle.h"
@@ -42,6 +41,7 @@ class Instruction;
 class Loop;
 class LoopInfo;
 class Module;
+class PGOContextualProfile;
 class ProfileSummaryInfo;
 class ReturnInst;
 class DomTreeUpdater;
@@ -276,7 +276,7 @@ InlineResult InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
 /// to the behavior of the non-contextual profile updating variant above. This
 /// makes it easy to drop-in replace uses of the non-contextual overload.
 InlineResult InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
-                            CtxProfAnalysis::Result &CtxProf,
+                            PGOContextualProfile &CtxProf,
                             bool MergeAttributes = false,
                             AAResults *CalleeAAR = nullptr,
                             bool InsertLifetime = true,
