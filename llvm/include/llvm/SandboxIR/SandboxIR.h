@@ -124,6 +124,7 @@ class ConstantAggregateZero;
 class ConstantPointerNull;
 class PoisonValue;
 class BlockAddress;
+class DSOLocalEquivalent;
 class ConstantTokenNone;
 class GlobalValue;
 class Context;
@@ -328,6 +329,7 @@ protected:
   friend class PoisonValue;           // For `Val`.
   friend class BlockAddress;          // For `Val`.
   friend class GlobalValue;           // For `Val`.
+  friend class DSOLocalEquivalent;    // For `Val`.
 
   /// All values point to the context.
   Context &Ctx;
@@ -1216,6 +1218,38 @@ public:
   static bool classof(const sandboxir::Value *From) {
     return From->getSubclassID() == ClassID::BlockAddress;
   }
+};
+
+class DSOLocalEquivalent final : public Constant {
+  DSOLocalEquivalent(llvm::DSOLocalEquivalent *C, Context &Ctx)
+      : Constant(ClassID::DSOLocalEquivalent, C, Ctx) {}
+  friend class Context; // For constructor.
+
+public:
+  /// Return a DSOLocalEquivalent for the specified global value.
+  static DSOLocalEquivalent *get(GlobalValue *GV);
+
+  GlobalValue *getGlobalValue() const;
+
+  /// For isa/dyn_cast.
+  static bool classof(const sandboxir::Value *From) {
+    return From->getSubclassID() == ClassID::DSOLocalEquivalent;
+  }
+
+  unsigned getUseOperandNo(const Use &Use) const final {
+    llvm_unreachable("DSOLocalEquivalent has no operands!");
+  }
+
+#ifndef NDEBUG
+  void verify() const override {
+    assert(isa<llvm::DSOLocalEquivalent>(Val) &&
+           "Expected a DSOLocalEquivalent!");
+  }
+  void dumpOS(raw_ostream &OS) const override {
+    dumpCommonPrefix(OS);
+    dumpCommonSuffix(OS);
+  }
+#endif
 };
 
 // TODO: This should inherit from ConstantData.
