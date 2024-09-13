@@ -84,4 +84,44 @@ program sample
     !$omp atomic write
     !ERROR: Expected scalar variable on the LHS of atomic assignment statement
         a = x
+
+    !$omp atomic capture
+        v = x
+        x = x + 1
+    !$omp end atomic
+
+    !$omp atomic release capture
+        v = x
+    !ERROR: Atomic update statement should be of form `x = x operator expr` OR `x = expr operator x`
+        x = b + (x*1)
+    !$omp end atomic
+
+    !$omp atomic capture hint(0)
+        v = x
+        x = 1
+    !$omp end atomic
+
+    !$omp atomic capture
+    !ERROR: Captured variable x expected to be assigned in statement 2 of atomic capture construct
+        v = x
+        b = b + 1
+    !$omp end atomic
+
+    !$omp atomic capture
+    !ERROR: Captured variable x expected to be assigned in statement 2 of atomic capture construct
+        v = x
+        b = 10
+    !$omp end atomic
+
+    !$omp atomic capture
+    !ERROR: Updated variable x expected to be captured in statement 2 of atomic capture construct
+        x = x + 10
+        v = b
+    !$omp end atomic
+
+    !$omp atomic capture
+    !ERROR: Invalid atomic capture construct statements. Expected one of [update-stmt, capture-stmt], [capture-stmt, update-stmt], or [capture-stmt, write-stmt]
+        v = 1
+        x = 4
+    !$omp end atomic
 end program
