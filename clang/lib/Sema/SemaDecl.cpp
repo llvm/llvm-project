@@ -3227,10 +3227,44 @@ void Sema::mergeDeclAttributes(NamedDecl *New, Decl *Old,
   if (!foundAny) New->dropAttrs();
 }
 
+template <class T>
+static unsigned propagateAttribute(ParmVarDecl *toDecl,
+                                   const ParmVarDecl *fromDecl, Sema &S) {
+  unsigned found = 0;
+  for (const auto *I : fromDecl->specific_attrs<T>()) {
+    if (!DeclHasAttr(toDecl, I)) {
+      T *newAttr = cast<T>(I->clone(S.Context));
+      newAttr->setInherited(true);
+      toDecl->addAttr(newAttr);
+      ++found;
+    }
+  }
+  return found;
+}
+
+template <class F>
+static void propagateAttributes(ParmVarDecl *toDecl,
+                                const ParmVarDecl *fromDecl, F &&propagator) {
+  if (!fromDecl->hasAttrs()) {
+    return;
+  }
+
+  bool foundAny = toDecl->hasAttrs();
+
+  // Ensure that any moving of objects within the allocated map is
+  // done before we process them.
+  if (!foundAny)
+    toDecl->setAttrs(AttrVec());
+
+  foundAny |= std::forward<F>(propagator)(toDecl, fromDecl) != 0;
+
+  if (!foundAny)
+    toDecl->dropAttrs();
+}
+
 /// mergeParamDeclAttributes - Copy attributes from the old parameter
 /// to the new one.
-static void mergeParamDeclAttributes(ParmVarDecl *newDecl,
-                                     const ParmVarDecl *oldDecl,
+static void mergeParamDeclAttributes(ParmVarDecl *newDecl, ParmVarDecl *oldDecl,
                                      Sema &S) {
   // C++11 [dcl.attr.depend]p2:
   //   The first declaration of a function shall specify the
@@ -3250,26 +3284,25 @@ static void mergeParamDeclAttributes(ParmVarDecl *newDecl,
            diag::note_carries_dependency_missing_first_decl) << 1/*Param*/;
   }
 
-  if (!oldDecl->hasAttrs())
-    return;
+  // Forward propagation (from old parameter to new)
+  propagateAttributes(
+      newDecl, oldDecl, [&S](ParmVarDecl *toDecl, const ParmVarDecl *fromDecl) {
+        unsigned found = 0;
+        found += propagateAttribute<InheritableParamAttr>(toDecl, fromDecl, S);
+        return found;
+      });
 
-  bool foundAny = newDecl->hasAttrs();
-
-  // Ensure that any moving of objects within the allocated map is
-  // done before we process them.
-  if (!foundAny) newDecl->setAttrs(AttrVec());
-
-  for (const auto *I : oldDecl->specific_attrs<InheritableParamAttr>()) {
-    if (!DeclHasAttr(newDecl, I)) {
-      InheritableAttr *newAttr =
-        cast<InheritableParamAttr>(I->clone(S.Context));
-      newAttr->setInherited(true);
-      newDecl->addAttr(newAttr);
-      foundAny = true;
-    }
-  }
-
-  if (!foundAny) newDecl->dropAttrs();
+  // Backward propagation (from new parameter to old)
+  propagateAttributes(
+      oldDecl, newDecl, [&S](ParmVarDecl *toDecl, const ParmVarDecl *fromDecl) {
+        unsigned found = 0;
+        // Propagate the lifetimebound attribute from parameters to the
+        // canonical declaration. Note that this doesn't include the implicit
+        // 'this' parameter, as the attribute is applied to the function type in
+        // that case.
+        found += propagateAttribute<LifetimeBoundAttr>(toDecl, fromDecl, S);
+        return found;
+      });
 }
 
 static bool EquivalentArrayTypes(QualType Old, QualType New,
@@ -4323,8 +4356,8 @@ void Sema::mergeObjCMethodDecls(ObjCMethodDecl *newMethod,
   mergeDeclAttributes(newMethod, oldMethod, MergeKind);
 
   // Merge attributes from the parameters.
-  ObjCMethodDecl::param_const_iterator oi = oldMethod->param_begin(),
-                                       oe = oldMethod->param_end();
+  ObjCMethodDecl::param_iterator oi = oldMethod->param_begin(),
+                                 oe = oldMethod->param_end();
   for (ObjCMethodDecl::param_iterator
          ni = newMethod->param_begin(), ne = newMethod->param_end();
        ni != ne && oi != oe; ++ni, ++oi)
