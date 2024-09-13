@@ -645,6 +645,7 @@ unsigned const DfmtNfmt2UFmtGFX11[] = {
 
 namespace Swizzle {
 
+// clang-format off
 // This must be in sync with llvm::AMDGPU::Swizzle::Id enum members, see SIDefines.h.
 const char *const IdSymbolic[] = {
   "QUAD_PERM",
@@ -655,6 +656,7 @@ const char *const IdSymbolic[] = {
   "FFT",
   "ROTATE",
 };
+// clang-format on
 
 } // namespace Swizzle
 

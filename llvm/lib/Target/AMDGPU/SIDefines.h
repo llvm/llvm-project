@@ -846,6 +846,7 @@ enum Id : unsigned { // id of symbolic names
   ID_ROTATE
 };
 
+// clang-format off
 enum EncBits : unsigned {
 
   // swizzle mode encodings
@@ -893,6 +894,7 @@ enum EncBits : unsigned {
   ROTATE_SIZE_SHIFT     = 5, // bit position of rotate size
   ROTATE_SIZE_MASK      = ROTATE_MAX_SIZE,
 };
+// clang-format on
 
 } // namespace Swizzle
 

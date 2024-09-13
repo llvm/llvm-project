@@ -1826,10 +1826,8 @@ public:
   ParseStatus parseSOPPBrTarget(OperandVector &Operands);
   ParseStatus parseBoolReg(OperandVector &Operands);
 
-  bool parseSwizzleOperand(int64_t &Op,
-                           const unsigned MinVal,
-                           const unsigned MaxVal,
-                           const Twine ErrMsg,
+  bool parseSwizzleOperand(int64_t &Op, const unsigned MinVal,
+                           const unsigned MaxVal, const Twine &ErrMsg,
                            SMLoc &Loc);
   bool parseSwizzleOperands(const unsigned OpNum, int64_t* Op,
                             const unsigned MinVal,
@@ -7973,12 +7971,9 @@ encodeBitmaskPerm(const unsigned AndMask,
          (XorMask << BITMASK_XOR_SHIFT);
 }
 
-bool
-AMDGPUAsmParser::parseSwizzleOperand(int64_t &Op,
-                                     const unsigned MinVal,
-                                     const unsigned MaxVal,
-                                     const Twine ErrMsg,
-                                     SMLoc &Loc) {
+bool AMDGPUAsmParser::parseSwizzleOperand(int64_t &Op, const unsigned MinVal,
+                                          const unsigned MaxVal,
+                                          const Twine &ErrMsg, SMLoc &Loc) {
   if (!skipToken(AsmToken::Comma, "expected a comma")) {
     return false;
   }
