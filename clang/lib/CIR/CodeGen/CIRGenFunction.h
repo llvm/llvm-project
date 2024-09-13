@@ -1767,6 +1767,7 @@ public:
     // any other relevant information.
     return getInvokeDestImpl();
   }
+  bool isInvokeDest();
 
   /// Takes the old cleanup stack size and emits the cleanup blocks
   /// that have been added.
