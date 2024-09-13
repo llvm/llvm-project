@@ -5,15 +5,15 @@
 # RUN: llvm-readelf -S -s -x .data %t.so | FileCheck %s
 
 # CHECK: Section Headers:
-# CHECK: .plt PROGBITS 0000000000001290
-# CHECK: .got PROGBITS 0000000000002390
+# CHECK: .plt PROGBITS 00000000000012b0
+# CHECK: .got PROGBITS 00000000000023b0
 
 # CHECK: Symbol table '.symtab'
-# CHECK: 0000000000001288 {{.*}}  bar
+# CHECK: 00000000000012a8 {{.*}}  bar
 
 ## Note: foo is the first (and only) PLT entry, which resides at .plt + 32
-## PLTOFF (foo) is (.plt + 32) - .got == 0x12b0 - 0x2390 == 0xffffef20
-## GOTOFF (bar) is bar - .got == 0x1288 - 0x2390 == 0xffffeef8
+## PLTOFF (foo) is (.plt + 32) - .got == 0x12d0 - 0x23b0 == 0xffffef20
+## GOTOFF (bar) is bar - .got == 0x12a8 - 0x23b0 == 0xffffeef8
 # CHECK: Hex dump of section '.data':
 # CHECK-NEXT: eef8ef20 ffffeef8 ffffef20 ffffffff
 # CHECK-NEXT: ffffeef8 ffffffff ffffef20

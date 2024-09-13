@@ -8,20 +8,20 @@
 # RUN: llvm-objdump -d --no-show-raw-insn %t.so | FileCheck %s --check-prefix=DISASM
 
 # CHECK: Section Headers:
-# CHECK: .got PROGBITS 0000000000002458
-# CHECK: .got.plt PROGBITS 0000000000002480
+# CHECK: .got PROGBITS 0000000000002478
+# CHECK: .got.plt PROGBITS 00000000000024a0
 
 ## Note: _GLOBAL_OFFSET_TABLE is at .got
-## GOT (foo) is at .got + 24 == 0x2470
-## GOT (bar) is at .got + 32 == 0x2478
-## GOTPLT (foo) is at .got.plt + 0 == .got + 40 == 0x2480
-## GOTPLT (bar) is at .got.plt + 8 == .got + 48 == 0x2488
+## GOT (foo) is at .got + 24 == 0x2490
+## GOT (bar) is at .got + 32 == 0x2498
+## GOTPLT (foo) is at .got.plt + 0 == .got + 40 == 0x24a0
+## GOTPLT (bar) is at .got.plt + 8 == .got + 48 == 0x24a8
 
-# DISASM:      larl %r12, 0x2458
-# DISASM-NEXT: larl %r1, 0x2470
-# DISASM-NEXT: larl %r1, 0x2478
-# DISASM-NEXT: larl %r1, 0x2480
-# DISASM-NEXT: larl %r1, 0x2488
+# DISASM:      larl %r12, 0x2478
+# DISASM-NEXT: larl %r1, 0x2490
+# DISASM-NEXT: larl %r1, 0x2498
+# DISASM-NEXT: larl %r1, 0x24a0
+# DISASM-NEXT: larl %r1, 0x24a8
 
 # DISASM-NEXT: l %r1, 24(%r12)
 # DISASM-NEXT: l %r1, 32(%r12)

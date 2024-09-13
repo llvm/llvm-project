@@ -21,25 +21,25 @@
 # RUN: llvm-objdump --section .got --full-contents %t.pie | FileCheck --check-prefix=PIE-GOT %s
 
 # IE-REL: Relocation section '.rela.dyn' at offset {{.*}} contains 4 entries:
-# IE-REL: 0000000000003478 000000000000000c R_390_RELATIVE 2460
-# IE-REL: 0000000000002460 0000000100000038 R_390_TLS_TPOFF 0000000000000008 a + 0
-# IE-REL: 0000000000002468 0000000200000038 R_390_TLS_TPOFF 000000000000000c b + 0
-# IE-REL: 0000000000002470 0000000300000038 R_390_TLS_TPOFF 0000000000000010 c + 0
+# IE-REL: 00000000000034a0 000000000000000c R_390_RELATIVE 2488
+# IE-REL: 0000000000002488 0000000100000038 R_390_TLS_TPOFF 0000000000000008 a + 0
+# IE-REL: 0000000000002490 0000000200000038 R_390_TLS_TPOFF 000000000000000c b + 0
+# IE-REL: 0000000000002498 0000000300000038 R_390_TLS_TPOFF 0000000000000010 c + 0
 
-## TP offset for a is at 0x2460
-# IE:      lgrl    %r1, 0x2460
+## TP offset for a is at 0x2488
+# IE:      lgrl    %r1, 0x2488
 # IE-NEXT: lgf     %r1, 0(%r1,%r7)
 
-## TP offset for b is at 0x2468
-# IE-NEXT: lgrl    %r1, 0x2468
+## TP offset for b is at 0x2490
+# IE-NEXT: lgrl    %r1, 0x2490
 # IE-NEXT: lgf     %r1, 0(%r1,%r7)
 
-## TP offset for c is at 0x2470
-# IE-NEXT: lgrl    %r1, 0x2470
+## TP offset for c is at 0x2498
+# IE-NEXT: lgrl    %r1, 0x2498
 # IE-NEXT: lgf     %r1, 0(%r1,%r7)
 
-## Data element: TP offset for a is at 0x2460 (relocated via R_390_RELATIVE above)
-# IE-DATA: 3478 00000000 00000000
+## Data element: TP offset for a is at 0x2488 (relocated via R_390_RELATIVE above)
+# IE-DATA: 34a0 00000000 00000000
 
 # NOREL: no relocations
 
@@ -67,30 +67,30 @@
 # LE-GOT: 1002258 ffffffff fffffffc 00000000 00000000
 
 # PIE-REL: Relocation section '.rela.dyn' at offset {{.*}} contains 1 entries:
-# PIE-REL: 00000000000033d0 000000000000000c R_390_RELATIVE 23b8
+# PIE-REL: 00000000000033e8 000000000000000c R_390_RELATIVE 23d0
 
-## TP offset for a is at 0x23b8
-# PIE:      lgrl    %r1, 0x23b8
+## TP offset for a is at 0x23d0
+# PIE:      lgrl    %r1, 0x23d0
 # PIE-NEXT: lgf     %r1, 0(%r1,%r7)
 
-## TP offset for b is at 0x23c0
-# PIE-NEXT: lgrl    %r1, 0x23c0
+## TP offset for b is at 0x23d8
+# PIE-NEXT: lgrl    %r1, 0x23d8
 # PIE-NEXT: lgf     %r1, 0(%r1,%r7)
 
-## TP offset for c is at 0x23c8
-# PIE-NEXT: lgrl    %r1, 0x23c8
+## TP offset for c is at 0x23e0
+# PIE-NEXT: lgrl    %r1, 0x23e0
 # PIE-NEXT: lgf     %r1, 0(%r1,%r7)
 
-## Data element: TP offset for a is at 0x23b8 (relocated via R_390_RELATIVE above)
-# PIE-DATA: 33d0 00000000 00000000
+## Data element: TP offset for a is at 0x23d0 (relocated via R_390_RELATIVE above)
+# PIE-DATA: 33e8 00000000 00000000
 
 ## TP offsets in GOT:
 # a: -8
 # b: -4
 # c: 0
-# PIE-GOT: 23a0 00000000 000022d0 00000000 00000000
-# PIE-GOT: 23b0 00000000 00000000 ffffffff fffffff8
-# PIE-GOT: 23c0 ffffffff fffffffc 00000000 00000000
+# PIE-GOT: 23b8 00000000 000022e8 00000000 00000000
+# PIE-GOT: 23c8 00000000 00000000 ffffffff fffffff8
+# PIE-GOT: 23d8 ffffffff fffffffc 00000000 00000000
 
 ear     %r7,%a0
 sllg    %r7,%r1,32
