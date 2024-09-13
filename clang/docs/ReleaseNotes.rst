@@ -386,6 +386,7 @@ Bug Fixes to C++ Support
 - Fixed a crash in the typo correction of an invalid CTAD guide. (#GH107887)
 - Fixed a crash when clang tries to subtitute parameter pack while retaining the parameter
   pack. #GH63819, #GH107560
+- Fixed an assertion failure by adjusting integral to boolean vector conversions (#GH108326)
 
 
 Bug Fixes to AST Handling
