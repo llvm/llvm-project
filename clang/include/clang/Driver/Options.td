@@ -8488,6 +8488,11 @@ def fcas_input_file_id : Separate<["-"], "fcas-input-file-casid">,
     Group<f_Group>, MetaVarName<"<ID>">,
     MarshallingInfoString<FrontendOpts<"CASInputFileCASID">>;
 
+defm module_load_ignore_cas : BoolFOption<"module-load-ignore-cas",
+    FrontendOpts<"ModuleLoadIgnoreCAS">, DefaultFalse,
+    PosFlag<SetTrue, [], [ClangOption], "Ignore CAS info when loading modules or PCHs">,
+    NegFlag<SetFalse>>;
+
 // FIXME: Add to driver under -fexperimental-cache=compile-job.
 defm cache_compile_job : BoolFOption<"cache-compile-job",
     FrontendOpts<"CacheCompileJob">, DefaultFalse,
