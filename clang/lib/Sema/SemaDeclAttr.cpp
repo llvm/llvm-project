@@ -852,38 +852,22 @@ static void handleDiagnoseIfAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (!checkFunctionConditionAttr(S, D, AL, Cond, Msg))
     return;
 
-  StringRef DefaultSevStr;
-  if (!S.checkStringLiteralArgumentAttr(AL, 2, DefaultSevStr))
+  StringRef DiagTypeStr;
+  if (!S.checkStringLiteralArgumentAttr(AL, 2, DiagTypeStr))
     return;
 
-  DiagnoseIfAttr::DefaultSeverity DefaultSev;
-  if (!DiagnoseIfAttr::ConvertStrToDefaultSeverity(DefaultSevStr, DefaultSev)) {
+  DiagnoseIfAttr::DiagnosticType DiagType;
+  if (!DiagnoseIfAttr::ConvertStrToDiagnosticType(DiagTypeStr, DiagType)) {
     S.Diag(AL.getArgAsExpr(2)->getBeginLoc(),
            diag::err_diagnose_if_invalid_diagnostic_type);
     return;
-  }
-
-  StringRef WarningGroup;
-  SmallVector<StringRef, 2> Options;
-  if (AL.getNumArgs() > 3) {
-    if (!S.checkStringLiteralArgumentAttr(AL, 3, WarningGroup))
-      return;
-    if (WarningGroup.empty() ||
-        !S.getDiagnostics().getDiagnosticIDs()->getGroupForWarningOption(
-            WarningGroup)) {
-      S.Diag(AL.getArgAsExpr(3)->getBeginLoc(),
-             diag::err_diagnose_if_unknown_warning)
-          << WarningGroup;
-      return;
-    }
   }
 
   bool ArgDependent = false;
   if (const auto *FD = dyn_cast<FunctionDecl>(D))
     ArgDependent = ArgumentDependenceChecker(FD).referencesArgs(Cond);
   D->addAttr(::new (S.Context) DiagnoseIfAttr(
-      S.Context, AL, Cond, Msg, DefaultSev, WarningGroup, ArgDependent,
-      cast<NamedDecl>(D)));
+      S.Context, AL, Cond, Msg, DiagType, ArgDependent, cast<NamedDecl>(D)));
 }
 
 static void handleNoBuiltinAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
