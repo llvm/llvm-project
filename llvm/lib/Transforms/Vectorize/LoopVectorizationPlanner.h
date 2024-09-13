@@ -203,7 +203,12 @@ public:
   /// and \p B.
   /// TODO: add createFCmp when needed.
   VPValue *createICmp(CmpInst::Predicate Pred, VPValue *A, VPValue *B,
-                      DebugLoc DL = {}, const Twine &Name = "");
+                      DebugLoc DL = {}, const Twine &Name = "") {
+    assert(Pred >= CmpInst::FIRST_ICMP_PREDICATE &&
+           Pred <= CmpInst::LAST_ICMP_PREDICATE && "invalid predicate");
+    return tryInsertInstruction(
+        new VPInstruction(Instruction::ICmp, Pred, A, B, DL, Name));
+  }
 
   //===--------------------------------------------------------------------===//
   // RAII helpers.
