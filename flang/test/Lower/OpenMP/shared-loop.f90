@@ -3,7 +3,7 @@
 
 ! --- Check that with shared(i) the variable outside the parallel section
 ! --- is updated. 
-! CHECK:  func.func @_QPomploop()
+! CHECK-LABEL:  func.func @_QPomploop()
 ! CHECK:    %[[ALLOC_I:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFomploopEi"}
 ! CHECK:    %[[DECL_I:.*]]:2 = hlfir.declare %[[ALLOC_I]] {uniq_name = "_QFomploopEi"} :
 ! CHECK:    omp.parallel {
@@ -39,7 +39,7 @@ end subroutine
 
 ! --- Check that with default(shared) the variable outside the parallel section
 ! --- is NOT updated (i is private to the omp.parallel code)
-! CHECK:  func.func @_QPomploop2()
+! CHECK-LABEL:  func.func @_QPomploop2()
 ! CHECK:    %[[ALLOC_I:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFomploop2Ei"}
 ! CHECK:    %[[DECL_I:.*]]:2 = hlfir.declare %[[ALLOC_I]] {uniq_name = "_QFomploop2Ei"} :
 ! CHECK:    omp.parallel {
@@ -79,7 +79,7 @@ end subroutine
 
 ! --- Check that with no data-sharing the variable outside the parallel section
 ! --- is NOT updated (i is private to the omp.parallel code)
-! CHECK:  func.func @_QPomploop3()
+! CHECK-LABEL:  func.func @_QPomploop3()
 ! CHECK:    %[[ALLOC_I:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFomploop3Ei"}
 ! CHECK:    %[[DECL_I:.*]]:2 = hlfir.declare %[[ALLOC_I]] {uniq_name = "_QFomploop3Ei"} :
 ! CHECK:    omp.parallel {
