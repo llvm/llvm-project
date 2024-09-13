@@ -3236,20 +3236,32 @@ public:
 };
 
 /// VPRegionBlock represents a collection of VPBasicBlocks and VPRegionBlocks
-/// which form a Single-Entry-Single-Exiting subgraph of the output IR CFG.
+/// which form a Single-Entry-Single-Exiting or Single-Entry-Multiple-Exiting
+/// subgraph of the output IR CFG. For the multiple-exiting case only a total
+/// of two exits are currently supported and the early exit is tracked
+/// separately. The first successor should always correspond to the normal
+/// exiting block, i.e. vector latch -> middle.block. An optional second
+/// successor corresponds to the early exit.
 /// A VPRegionBlock may indicate that its contents are to be replicated several
 /// times. This is designed to support predicated scalarization, in which a
 /// scalar if-then code structure needs to be generated VF * UF times. Having
 /// this replication indicator helps to keep a single model for multiple
 /// candidate VF's. The actual replication takes place only once the desired VF
 /// and UF have been determined.
+/// TODO: The SEME case is a work in progress and any attempt to execute a
+/// VPlan containing a region with multiple exits will assert.
 class VPRegionBlock : public VPBlockBase {
-  /// Hold the Single Entry of the SESE region modelled by the VPRegionBlock.
+  /// Hold the Single Entry of the SESE/SEME region modelled by the
+  /// VPRegionBlock.
   VPBlockBase *Entry;
 
-  /// Hold the Single Exiting block of the SESE region modelled by the
+  /// Hold the normal Exiting block of the SESE/SEME region modelled by the
   /// VPRegionBlock.
   VPBlockBase *Exiting;
+
+  /// Hold the Early Exiting block of the SEME region. If this is a SESE region
+  /// this value should be nullptr.
+  VPBlockBase *EarlyExiting;
 
   /// An indicator whether this region is to generate multiple replicated
   /// instances of output IR corresponding to its VPBlockBases.
@@ -3259,7 +3271,7 @@ public:
   VPRegionBlock(VPBlockBase *Entry, VPBlockBase *Exiting,
                 const std::string &Name = "", bool IsReplicator = false)
       : VPBlockBase(VPRegionBlockSC, Name), Entry(Entry), Exiting(Exiting),
-        IsReplicator(IsReplicator) {
+        EarlyExiting(nullptr), IsReplicator(IsReplicator) {
     assert(Entry->getPredecessors().empty() && "Entry block has predecessors.");
     assert(Exiting->getSuccessors().empty() && "Exit block has successors.");
     Entry->setParent(this);
@@ -3267,7 +3279,7 @@ public:
   }
   VPRegionBlock(const std::string &Name = "", bool IsReplicator = false)
       : VPBlockBase(VPRegionBlockSC, Name), Entry(nullptr), Exiting(nullptr),
-        IsReplicator(IsReplicator) {}
+        EarlyExiting(nullptr), IsReplicator(IsReplicator) {}
 
   ~VPRegionBlock() override {
     if (Entry) {
@@ -3297,14 +3309,32 @@ public:
   const VPBlockBase *getExiting() const { return Exiting; }
   VPBlockBase *getExiting() { return Exiting; }
 
-  /// Set \p ExitingBlock as the exiting VPBlockBase of this VPRegionBlock. \p
-  /// ExitingBlock must have no successors.
+  /// Set \p ExitingBlock as the normal exiting VPBlockBase of this
+  /// VPRegionBlock. \p ExitingBlock must have no successors.
   void setExiting(VPBlockBase *ExitingBlock) {
     assert(ExitingBlock->getSuccessors().empty() &&
            "Exit block cannot have successors.");
     Exiting = ExitingBlock;
     ExitingBlock->setParent(this);
   }
+
+  /// Set \p EarlyExitingBlock as the early exiting VPBlockBase of this
+  /// VPRegionBlock. \p EarlyExitingBlock must have a successor, since
+  /// it cannot be the latch.
+  void setEarlyExiting(VPBlockBase *EarlyExitingBlock) {
+    assert(EarlyExitingBlock->getNumSuccessors() == 1 &&
+           "Early exit block must have a successor.");
+    assert(EarlyExitingBlock->getParent() == this &&
+           "Early exit block should already be in loop region");
+    EarlyExiting = EarlyExitingBlock;
+  }
+
+  const VPBlockBase *getEarlyExiting() const { return EarlyExiting; }
+  VPBlockBase *getEarlyExiting() { return EarlyExiting; }
+
+  /// Return the number of exiting blocks from this region. It should match
+  /// the number of successors.
+  unsigned getNumExitingBlocks() const { return EarlyExiting ? 2 : 1; }
 
   /// Returns the pre-header VPBasicBlock of the loop region.
   VPBasicBlock *getPreheaderVPBB() {
