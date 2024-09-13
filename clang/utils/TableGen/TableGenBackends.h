@@ -141,10 +141,11 @@ void EmitMveBuiltinSema(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitMveBuiltinCG(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitMveBuiltinAliases(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 
-void EmitRVVHeader(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
-void EmitRVVBuiltins(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
-void EmitRVVBuiltinCG(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
-void EmitRVVBuiltinSema(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitRVVHeader(const llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitRVVBuiltins(const llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitRVVBuiltinCG(const llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitRVVBuiltinSema(const llvm::RecordKeeper &Records,
+                        llvm::raw_ostream &OS);
 
 void EmitCdeHeader(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitCdeBuiltinDef(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
