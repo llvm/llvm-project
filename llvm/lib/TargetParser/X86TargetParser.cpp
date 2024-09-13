@@ -240,7 +240,7 @@ static constexpr FeatureBitset FeaturesZNVER4 =
 
 static constexpr FeatureBitset FeaturesZNVER5 =
     FeaturesZNVER4 | FeatureAVXVNNI | FeatureMOVDIRI | FeatureMOVDIR64B |
-    FeatureAVX512VP2INTERSECT | FeaturePREFETCHI | FeatureAVXVNNI ;
+    FeatureAVX512VP2INTERSECT | FeaturePREFETCHI | FeatureAVXVNNI;
 
 // D151696 tranplanted Mangling and OnlyForCPUDispatchSpecific from
 // X86TargetParser.def to here. They are assigned by following ways:
