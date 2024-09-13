@@ -104,6 +104,7 @@ Register RISCVInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
     MemBytes = 1;
     break;
   case RISCV::LH:
+  case RISCV::LH_INX:
   case RISCV::LHU:
   case RISCV::FLH:
     MemBytes = 2;
@@ -144,6 +145,7 @@ Register RISCVInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
     MemBytes = 1;
     break;
   case RISCV::SH:
+  case RISCV::SH_INX:
   case RISCV::FSH:
     MemBytes = 2;
     break;
@@ -2576,6 +2578,7 @@ bool RISCVInstrInfo::canFoldIntoAddrMode(const MachineInstr &MemI, Register Reg,
   case RISCV::LB:
   case RISCV::LBU:
   case RISCV::LH:
+  case RISCV::LH_INX:
   case RISCV::LHU:
   case RISCV::LW:
   case RISCV::LWU:
@@ -2585,6 +2588,7 @@ bool RISCVInstrInfo::canFoldIntoAddrMode(const MachineInstr &MemI, Register Reg,
   case RISCV::FLD:
   case RISCV::SB:
   case RISCV::SH:
+  case RISCV::SH_INX:
   case RISCV::SW:
   case RISCV::SD:
   case RISCV::FSH:
@@ -2648,9 +2652,11 @@ bool RISCVInstrInfo::getMemOperandsWithOffsetWidth(
   case RISCV::LBU:
   case RISCV::SB:
   case RISCV::LH:
+  case RISCV::LH_INX:
   case RISCV::LHU:
   case RISCV::FLH:
   case RISCV::SH:
+  case RISCV::SH_INX:
   case RISCV::FSH:
   case RISCV::LW:
   case RISCV::LWU:
