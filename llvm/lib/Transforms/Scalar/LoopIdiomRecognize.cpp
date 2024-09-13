@@ -136,6 +136,14 @@ static cl::opt<bool, true>
                       cl::location(DisableLIRP::Strlen), cl::init(false),
                       cl::ReallyHidden);
 
+bool DisableLIRP::Wcslen;
+static cl::opt<bool, true>
+    DisableLIRPWcslen("disable-" DEBUG_TYPE "-wcslen",
+                      cl::desc("Proceed with loop idiom recognize pass, but do "
+                               "not convert loop(s) to wcslen."),
+                      cl::location(DisableLIRP::Wcslen), cl::init(false),
+                      cl::ReallyHidden);
+
 static cl::opt<bool> UseLIRCodeSizeHeurs(
     "use-lir-code-size-heurs",
     cl::desc("Use loop idiom recognition code size heuristics when compiling"
@@ -1606,15 +1614,19 @@ bool LoopIdiomRecognize::recognizeAndInsertStrLen() {
   if (!Step)
     return false;
 
-  unsigned int ConstIntValue = 0;
+  unsigned int StepSize = 0;
   if (ConstantInt *CI = dyn_cast<ConstantInt>(Step->getValue()))
-    ConstIntValue = CI->getZExtValue();
+    StepSize = CI->getZExtValue();
 
   unsigned OpWidth = OperandType->getIntegerBitWidth();
-  if (OpWidth != ConstIntValue * 8)
+  unsigned WcharSize = TLI->getWCharSize(*LoopLoad->getModule());
+  if (OpWidth != StepSize * 8)
     return false;
-  if (OpWidth != 8)
+  if (OpWidth != 8 && OpWidth != 16 && OpWidth != 32)
     return false;
+  if (OpWidth >= 16)
+    if (OpWidth != WcharSize * 8 || DisableLIRPWcslen)
+      return false;
 
   // Scan every instruction in the loop to ensure there are no side effects.
   for (auto &I : *LoopBody)
@@ -1666,12 +1678,11 @@ bool LoopIdiomRecognize::recognizeAndInsertStrLen() {
   if (auto *GEP = dyn_cast<GetElementPtrInst>(LoopLoad->getPointerOperand())) {
     if (GEP->getPointerOperand() != LoopPhi)
       return false;
-    GetElementPtrInst *NewGEP =
-        GetElementPtrInst::Create(GEP->getSourceElementType(), PreVal,
-                                  SmallVector<Value *, 4>(GEP->indices()),
-                                  "newgep", Preheader->getTerminator());
+    GetElementPtrInst *NewGEP = GetElementPtrInst::Create(
+        LoopLoad->getType(), PreVal, SmallVector<Value *, 4>(GEP->indices()),
+        "newgep", Preheader->getTerminator());
     Expanded = NewGEP;
-    ExpandedType = NewGEP->getSourceElementType();
+    ExpandedType = LoopLoad->getType();
   } else if (LoopLoad->getPointerOperand() == LoopPhi) {
     Expanded = PreVal;
     ExpandedType = LoopLoad->getType();
@@ -1718,8 +1729,15 @@ bool LoopIdiomRecognize::recognizeAndInsertStrLen() {
   Value *StrLenFunc = nullptr;
   switch (OpWidth) {
   case 8:
+    if (!TLI->has(LibFunc_strlen))
+      return false;
     StrLenFunc = emitStrLen(Expanded, Builder, *DL, TLI);
     break;
+  case 16:
+  case 32:
+    if (!TLI->has(LibFunc_wcslen))
+      return false;
+    StrLenFunc = emitWcsLen(Expanded, Builder, *DL, TLI);
   }
 
   assert(StrLenFunc && "Failed to emit strlen function.");
