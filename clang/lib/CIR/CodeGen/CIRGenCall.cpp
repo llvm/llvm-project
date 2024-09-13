@@ -450,6 +450,31 @@ buildCallLikeOp(CIRGenFunction &CGF, mlir::Location callLoc,
                 mlir::cir::CallingConv callingConv,
                 mlir::cir::ExtraFuncAttributesAttr extraFnAttrs) {
   auto &builder = CGF.getBuilder();
+  auto getOrCreateSurroundingTryOp = [&]() {
+    // In OG, we build the landing pad for this scope. In CIR, we emit a
+    // synthetic cir.try because this didn't come from codegenerating from a
+    // try/catch in C++.
+    auto op = CGF.currLexScope->getClosestTryParent();
+    if (op)
+      return op;
+
+    op = builder.create<mlir::cir::TryOp>(
+        *CGF.currSrcLoc, /*scopeBuilder=*/
+        [&](mlir::OpBuilder &b, mlir::Location loc) {},
+        // Don't emit the code right away for catch clauses, for
+        // now create the regions and consume the try scope result.
+        // Note that clauses are later populated in
+        // CIRGenFunction::buildLandingPad.
+        [&](mlir::OpBuilder &b, mlir::Location loc,
+            mlir::OperationState &result) {
+          // Since this didn't come from an explicit try, we only need one
+          // handler: unwind.
+          auto *r = result.addRegion();
+          builder.createBlock(r);
+        });
+    op.setSynthetic(true);
+    return op;
+  };
 
   if (isInvoke) {
     // This call can throw, few options:
@@ -457,33 +482,37 @@ buildCallLikeOp(CIRGenFunction &CGF, mlir::Location callLoc,
     //    one provided by InvokeDest,
     //  - User written try/catch clauses require calls to handle
     //    exceptions under cir.try.
-    auto *invokeDest = CGF.getInvokeDest();
-    auto tryOp = dyn_cast_if_present<mlir::cir::TryOp>(invokeDest);
+    auto tryOp = getOrCreateSurroundingTryOp();
+    assert(tryOp && "expected");
+
     mlir::OpBuilder::InsertPoint ip = builder.saveInsertionPoint();
-    bool changeInsertion = tryOp && tryOp.getSynthetic();
-    if (changeInsertion) {
+    if (tryOp.getSynthetic()) {
       mlir::Block *lastBlock = &tryOp.getTryRegion().back();
       builder.setInsertionPointToStart(lastBlock);
     } else {
       assert(builder.getInsertionBlock() && "expected valid basic block");
     }
 
-    mlir::cir::CallOp tryCallOp;
+    mlir::cir::CallOp callOpWithExceptions;
     // TODO(cir): Set calling convention for `cir.try_call`.
     assert(callingConv == mlir::cir::CallingConv::C && "NYI");
     if (indirectFuncTy) {
-      tryCallOp = builder.createIndirectTryCallOp(callLoc, indirectFuncVal,
-                                                  indirectFuncTy, CIRCallArgs);
+      callOpWithExceptions = builder.createIndirectTryCallOp(
+          callLoc, indirectFuncVal, indirectFuncTy, CIRCallArgs);
     } else {
-      tryCallOp = builder.createTryCallOp(callLoc, directFuncOp, CIRCallArgs);
+      callOpWithExceptions =
+          builder.createTryCallOp(callLoc, directFuncOp, CIRCallArgs);
     }
-    tryCallOp->setAttr("extra_attrs", extraFnAttrs);
+    callOpWithExceptions->setAttr("extra_attrs", extraFnAttrs);
 
-    if (changeInsertion) {
+    auto *invokeDest = CGF.getInvokeDest(tryOp);
+    (void)invokeDest;
+
+    if (tryOp.getSynthetic()) {
       builder.create<mlir::cir::YieldOp>(tryOp.getLoc());
       builder.restoreInsertionPoint(ip);
     }
-    return tryCallOp;
+    return callOpWithExceptions;
   }
 
   assert(builder.getInsertionBlock() && "expected valid basic block");
@@ -731,7 +760,6 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
               noThrowAttr.getMnemonic()))
         CannotThrow = true;
   }
-  // mlir::Operation *InvokeDest = CannotThrow ? nullptr : getInvokeDest();
   bool isInvoke = CannotThrow ? false : isInvokeDest();
 
   // TODO: UnusedReturnSizePtr

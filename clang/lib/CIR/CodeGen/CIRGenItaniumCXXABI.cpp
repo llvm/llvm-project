@@ -2227,7 +2227,7 @@ void CIRGenItaniumCXXABI::buildThrow(CIRGenFunction &CGF,
 
   // FIXME: When adding support for invoking, we should wrap the throw op
   // below into a try, and let CFG flatten pass to generate a cir.try_call.
-  assert(!CGF.getInvokeDest() && "landing pad like logic NYI");
+  assert(!CGF.isInvokeDest() && "landing pad like logic NYI");
 
   // Now throw the exception.
   mlir::Location loc = CGF.getLoc(E->getSourceRange());

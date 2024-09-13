@@ -248,7 +248,7 @@ void CIRGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough) {
   if (!RequiresNormalCleanup) {
     // Mark CPP scope end for passed-by-value Arg temp
     //   per Windows ABI which is "normally" Cleanup in callee
-    if (IsEHa && getInvokeDest()) {
+    if (IsEHa && isInvokeDest()) {
       // If we are deactivating a normal cleanup then we don't have a
       // fallthrough. Restore original IP to emit CPP scope ends in the correct
       // block.
@@ -319,7 +319,7 @@ void CIRGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough) {
     if (!Personality.isMSVCPersonality()) {
       EHStack.pushTerminate();
       PushedTerminate = true;
-    } else if (IsEHa && getInvokeDest()) {
+    } else if (IsEHa && isInvokeDest()) {
       llvm_unreachable("NYI");
     }
 
