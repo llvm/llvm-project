@@ -217,7 +217,8 @@ on support follow.
      ``Zvfbfmin``      Supported
      ``Zvfbfwma``      Supported
      ``Zvfh``          Supported
-     ``Zvkb``          Suppported
+     ``Zvfhmin``       Supported
+     ``Zvkb``          Supported
      ``Zvkg``          Assembly Support
      ``Zvkn``          Assembly Support
      ``Zvknc``         Assembly Support
