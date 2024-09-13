@@ -955,10 +955,7 @@ NVPTX::Scope NVPTXDAGToDAGISel::getOperationScope(MemSDNode *N,
       Subtarget->failIfClustersUnsupported("cluster scope");
 
     // If operation is volatile, then its scope is system.
-    if (N->isVolatile())
-      S = NVPTX::Scope::System;
-
-    return S;
+    return N->isVolatile() ? NVPTX::Scope::System : S;
   }
 }
 
@@ -1083,7 +1080,7 @@ NVPTXDAGToDAGISel::insertMemoryInstructionFence(SDLoc DL, SDValue &Chain,
         formatv("Unexpected fence ordering: \"{}\".",
                 OrderingToString(NVPTX::Ordering(FenceOrdering))));
   }
-  return std::make_pair(InstructionOrdering, Scope);
+  return {InstructionOrdering, Scope};
 }
 
 bool NVPTXDAGToDAGISel::tryIntrinsicNoChain(SDNode *N) {
