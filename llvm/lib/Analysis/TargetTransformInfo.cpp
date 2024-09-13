@@ -1381,6 +1381,9 @@ bool TargetTransformInfo::isProfitableToSinkOperands(
 
 bool TargetTransformInfo::isVectorShiftByScalarCheap(Type *Ty) const {
   return TTIImpl->isVectorShiftByScalarCheap(Ty);
+
+bool TargetTransformInfo::useWidenGlobalStrings() const {
+  return TTIImpl->useWidenGlobalStrings();
 }
 
 TargetTransformInfo::Concept::~Concept() = default;

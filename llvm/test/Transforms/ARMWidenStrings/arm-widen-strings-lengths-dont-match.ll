@@ -1,4 +1,4 @@
-; RUN: opt < %s -mtriple=arm-arm-none-eabi -passes=arm-widen-strings -S | FileCheck %s
+; RUN: opt < %s -mtriple=arm-arm-none-eabi -passes=globalopt -S | FileCheck %s
 target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
 target triple = "thumbv6m-arm-none-eabi"
 

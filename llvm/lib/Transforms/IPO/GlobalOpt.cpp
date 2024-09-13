@@ -92,6 +92,8 @@ STATISTIC(NumInternalFunc, "Number of internal functions");
 STATISTIC(NumColdCC, "Number of functions marked coldcc");
 STATISTIC(NumIFuncsResolved, "Number of statically resolved IFuncs");
 STATISTIC(NumIFuncsDeleted, "Number of IFuncs removed");
+STATISTIC(NumGlobalStringsPadded,
+          "Number of global strings padded to alignment boundary");
 
 static cl::opt<bool>
     EnableColdCCStressTest("enable-coldcc-stress-test",
@@ -2029,6 +2031,145 @@ OptimizeFunctions(Module &M,
   return Changed;
 }
 
+static bool IsCharArray(Type *t) {
+  const unsigned int CHAR_BIT_SIZE = 8;
+  return t && t->isArrayTy() && t->getArrayElementType()->isIntegerTy() &&
+         t->getArrayElementType()->getIntegerBitWidth() == CHAR_BIT_SIZE;
+}
+
+static bool
+tryWidenGlobalStrings(Function &F,
+                      function_ref<TargetTransformInfo &(Function &)> GetTTI) {
+  bool changed = false;
+
+  for (Function::iterator b = F.begin(); b != F.end(); ++b) {
+    for (BasicBlock::iterator i = b->begin(); i != b->end(); ++i) {
+      CallInst *CI = dyn_cast<CallInst>(i);
+      if (!CI) {
+        continue;
+      }
+
+      TargetTransformInfo &TTI = GetTTI(F);
+
+      Function *CallMemcpy = CI->getCalledFunction();
+      // find out if the current call instruction is a call to llvm memcpy
+      // intrinsics
+      if (CallMemcpy == NULL || !CallMemcpy->isIntrinsic() ||
+          CallMemcpy->getIntrinsicID() != Intrinsic::memcpy) {
+        continue;
+      }
+
+      auto *Alloca = dyn_cast<AllocaInst>(CI->getArgOperand(0));
+      auto *SourceVar = dyn_cast<GlobalVariable>(CI->getArgOperand(1));
+      auto *BytesToCopy = dyn_cast<ConstantInt>(CI->getArgOperand(2));
+      auto *IsVolatile = dyn_cast<ConstantInt>(CI->getArgOperand(3));
+
+      if (!BytesToCopy) {
+        continue;
+      }
+
+      uint64_t NumBytesToCopy = BytesToCopy->getZExtValue();
+
+      if (!Alloca) {
+        continue;
+      }
+
+      // Source isn't a global constant variable
+      if (!SourceVar) {
+        continue;
+      }
+
+      if (!IsVolatile || IsVolatile->isOne()) {
+        continue;
+      }
+
+      if (NumBytesToCopy % 4 == 0) {
+        continue;
+      }
+
+      if (!SourceVar->hasInitializer() || !SourceVar->isConstant() ||
+          !SourceVar->hasLocalLinkage() || !SourceVar->hasGlobalUnnamedAddr()) {
+        continue;
+      }
+
+      ConstantDataArray *SourceDataArray =
+          dyn_cast<ConstantDataArray>(SourceVar->getInitializer());
+      if (!SourceDataArray || !IsCharArray(SourceDataArray->getType())) {
+        continue;
+      }
+
+      if (!Alloca->isStaticAlloca()) {
+        continue;
+      }
+
+      // Make sure destination is definitley a char array.
+      if (!IsCharArray(Alloca->getAllocatedType())) {
+        continue;
+      }
+
+      uint64_t DZSize = Alloca->getAllocatedType()->getArrayNumElements();
+      uint64_t SZSize = SourceDataArray->getType()->getNumElements();
+
+      // For safety purposes lets add a constraint and only padd when
+      // num bytes to copy == destination array size == source string
+      // which is a constant
+      if (NumBytesToCopy != DZSize || DZSize != SZSize) {
+        continue;
+      }
+      unsigned int NumBytesToPad = 4 - (NumBytesToCopy % 4);
+      unsigned int TotalBytes = NumBytesToCopy + NumBytesToPad;
+
+      /*
+      Max number of bytes that memcpy allows for lowering to load/stores before
+      it uses library function (__aeabi_memcpy).
+      */
+      unsigned MaxMemIntrinsicSize =
+          TTI.getMaxMemIntrinsicInlineSizeThreshold();
+      if (TotalBytes > MaxMemIntrinsicSize) {
+        continue;
+      }
+
+      // update destination char array to be word aligned (memcpy(X,...,...))
+      IRBuilder<> BuildAlloca(Alloca);
+      AllocaInst *NewAlloca = cast<AllocaInst>(BuildAlloca.CreateAlloca(
+          ArrayType::get(Alloca->getAllocatedType()->getArrayElementType(),
+                         NumBytesToCopy + NumBytesToPad)));
+      NewAlloca->takeName(Alloca);
+      NewAlloca->setAlignment(Alloca->getAlign());
+      Alloca->replaceAllUsesWith(NewAlloca);
+
+      // update source to be word aligned (memcpy(...,X,...))
+      // create replacement string with padded null bytes.
+      StringRef Data = SourceDataArray->getRawDataValues();
+      std::vector<uint8_t> StrData(Data.begin(), Data.end());
+      for (unsigned int p = 0; p < NumBytesToPad; p++)
+        StrData.push_back('\0');
+      auto Arr = ArrayRef(StrData.data(), TotalBytes);
+
+      // create new padded version of global variable string.
+      Constant *SourceReplace = ConstantDataArray::get(F.getContext(), Arr);
+      GlobalVariable *NewGV = new GlobalVariable(
+          *F.getParent(), SourceReplace->getType(), true,
+          SourceVar->getLinkage(), SourceReplace, SourceReplace->getName());
+
+      // copy any other attributes from original global variable string
+      // e.g. unamed_addr
+      NewGV->copyAttributesFrom(SourceVar);
+      NewGV->takeName(SourceVar);
+
+      // replace intrinsic source.
+      CI->setArgOperand(1, NewGV);
+
+      // Update number of bytes to copy (memcpy(...,...,X))
+      CI->setArgOperand(2,
+                        ConstantInt::get(BytesToCopy->getType(), TotalBytes));
+      NumGlobalStringsPadded++;
+      changed |= true;
+    }
+  }
+  return changed;
+}
+
 static bool
 OptimizeGlobalVars(Module &M,
                    function_ref<TargetTransformInfo &(Function &)> GetTTI,
@@ -2056,6 +2197,14 @@ OptimizeGlobalVars(Module &M,
     if (deleteIfDead(GV, NotDiscardableComdats)) {
       Changed = true;
       continue;
+    }
+
+    // Pad global strings if allowed
+    for (Function &F : llvm::make_early_inc_range(M)) {
+      TargetTransformInfo &TTI = GetTTI(F);
+      if (TTI.useWidenGlobalStrings()) {
+        Changed |= tryWidenGlobalStrings(F, GetTTI);
+      }
     }
 
     Changed |= processGlobal(GV, GetTTI, GetTLI, LookupDomTree);

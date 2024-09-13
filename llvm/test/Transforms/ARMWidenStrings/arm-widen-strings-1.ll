@@ -1,4 +1,4 @@
-; RUN: opt < %s -mtriple=arm-arm-none-eabi -passes="default<O2>,arm-widen-strings" -S | FileCheck %s
+; RUN: opt < %s -mtriple=arm-arm-none-eabi -passes="default<O2>,globalopt" -S | FileCheck %s
 ; RUN: opt < %s -mtriple=arm-arm-none-eabi -passes="default<O0>" -S | FileCheck %s --check-prefix=TURNED-OFF
 target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
 

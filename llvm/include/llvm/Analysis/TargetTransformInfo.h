@@ -1819,6 +1819,9 @@ public:
   /// \return The maximum number of function arguments the target supports.
   unsigned getMaxNumArgs() const;
 
+  /// \return true if global strings should be padded to an alignment boundary
+  bool useWidenGlobalStrings() const;
+
   /// @}
 
 private:
@@ -2225,6 +2228,7 @@ public:
   getVPLegalizationStrategy(const VPIntrinsic &PI) const = 0;
   virtual bool hasArmWideBranch(bool Thumb) const = 0;
   virtual unsigned getMaxNumArgs() const = 0;
+  virtual bool useWidenGlobalStrings() const = 0;
 };
 
 template <typename T>
@@ -3025,6 +3029,10 @@ public:
 
   unsigned getMaxNumArgs() const override {
     return Impl.getMaxNumArgs();
+  }
+
+  bool useWidenGlobalStrings() const override {
+    return Impl.useWidenGlobalStrings();
   }
 };
 
