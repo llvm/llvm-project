@@ -207,7 +207,7 @@ on support follow.
      ``Zkt``           Supported
      ``Zmmul``         Supported
      ``Ztso``          Supported
-     ``Zvbb``          Assembly Support
+     ``Zvbb``          Supported
      ``Zvbc``          Supported (`See note <#iscv-vector-crypto-note>`__)
      ``Zve32x``        (`Partially <#riscv-vlen-32-note>`__) Supported
      ``Zve32f``        (`Partially <#riscv-vlen-32-note>`__) Supported
@@ -217,7 +217,7 @@ on support follow.
      ``Zvfbfmin``      Supported
      ``Zvfbfwma``      Supported
      ``Zvfh``          Supported
-     ``Zvkb``          Supported (`See note <#iscv-vector-crypto-note>`__)
+     ``Zvkb``          Suppported
      ``Zvkg``          Supported (`See note <#iscv-vector-crypto-note>`__)
      ``Zvkn``          Supported (`See note <#iscv-vector-crypto-note>`__)
      ``Zvknc``         Supported (`See note <#iscv-vector-crypto-note>`__)
