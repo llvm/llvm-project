@@ -1527,13 +1527,18 @@ bool SIWholeQuadMode::lowerCopyInstrs() {
   for (MachineInstr *MI : LowerToCopyInstrs) {
     LLVM_DEBUG(dbgs() << "simplify: " << *MI);
 
-    Register RecomputeReg = 0;
     if (MI->getOpcode() == AMDGPU::V_SET_INACTIVE_B32 ||
         MI->getOpcode() == AMDGPU::V_SET_INACTIVE_B64) {
       assert(MI->getNumExplicitOperands() == 3);
+
+      LiveInterval *RecomputeLI = nullptr;
       if (MI->getOperand(2).isReg())
-        RecomputeReg = MI->getOperand(2).getReg();
+        RecomputeLI = &LIS->getInterval(MI->getOperand(2).getReg());
+
       MI->removeOperand(2);
+
+      if (RecomputeLI)
+        LIS->shrinkToUses(RecomputeLI);
     } else {
       assert(MI->getNumExplicitOperands() == 2);
     }
@@ -1550,11 +1555,6 @@ bool SIWholeQuadMode::lowerCopyInstrs() {
 
     MI->setDesc(TII->get(CopyOp));
     LLVM_DEBUG(dbgs() << " -> " << *MI);
-
-    if (RecomputeReg) {
-      LIS->removeInterval(RecomputeReg);
-      LIS->createAndComputeVirtRegInterval(RecomputeReg);
-    }
   }
   return !LowerToCopyInstrs.empty() || !LowerToMovInstrs.empty();
 }

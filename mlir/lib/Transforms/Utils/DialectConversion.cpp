@@ -2486,9 +2486,8 @@ static void eraseDeadUnrealizedCasts(
 
     // Do not visit ops multiple times. If we find a circle, no live user was
     // found on the current path.
-    if (visited.contains(op))
+    if (!visited.insert(op).second)
       return false;
-    visited.insert(op);
 
     // Visit all users.
     for (Operation *user : op->getUsers()) {
