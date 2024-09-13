@@ -15,10 +15,9 @@
 
 ; --------------------------------------------
 
-; SPLIT3-CHECK0: define internal void @HelperA()
+; SPLIT3-CHECK0: define amdgpu_kernel void @B()
 ; SPLIT3-CHECK0: define internal void @HelperB()
 ; SPLIT3-CHECK0: define internal void @HelperC()
-; SPLIT3-CHECK0: define amdgpu_kernel void @AB()
 ; SPLIT3-CHECK0: define amdgpu_kernel void @BC()
 
 ; SPLIT3-CHECK1: define amdgpu_kernel void @A()
@@ -27,25 +26,22 @@
 ; SPLIT3-CHECK1: define internal void @HelperC()
 
 ; SPLIT3-CHECK2: define internal void @HelperA()
-; SPLIT3-CHECK2: define amdgpu_kernel void @B()
 ; SPLIT3-CHECK2: define internal void @HelperB()
 ; SPLIT3-CHECK2: define internal void @HelperC()
+; SPLIT3-CHECK2: define amdgpu_kernel void @AB()
 ; SPLIT3-CHECK2: define amdgpu_kernel void @ABC()
 
 ; --------------------------------------------
 
 ; SPLIT5-CHECK0: define amdgpu_kernel void @A()
 ; SPLIT5-CHECK0: define internal void @HelperA()
-; SPLIT5-CHECK0: define amdgpu_kernel void @B()
-; SPLIT5-CHECK0: define internal void @HelperB()
 
+; SPLIT5-CHECK1: define amdgpu_kernel void @B()
 ; SPLIT5-CHECK1: define internal void @HelperB()
-; SPLIT5-CHECK1: define internal void @HelperC()
-; SPLIT5-CHECK1: define amdgpu_kernel void @BC
 
-; SPLIT5-CHECK2: define internal void @HelperA()
 ; SPLIT5-CHECK2: define internal void @HelperB()
-; SPLIT5-CHECK2: define amdgpu_kernel void @AB()
+; SPLIT5-CHECK2: define internal void @HelperC()
+; SPLIT5-CHECK2: define amdgpu_kernel void @BC()
 
 ; SPLIT5-CHECK3: define amdgpu_kernel void @C()
 ; SPLIT5-CHECK3: define internal void @HelperC()
@@ -53,6 +49,7 @@
 ; SPLIT5-CHECK4: define internal void @HelperA()
 ; SPLIT5-CHECK4: define internal void @HelperB()
 ; SPLIT5-CHECK4: define internal void @HelperC()
+; SPLIT5-CHECK4: define amdgpu_kernel void @AB()
 ; SPLIT5-CHECK4: define amdgpu_kernel void @ABC()
 
 define amdgpu_kernel void @A() {

@@ -2304,6 +2304,20 @@ public:
     }
   }
 
+  void handleUnsafeLibcCall(const CallExpr *Call, unsigned PrintfInfo,
+                            ASTContext &Ctx,
+                            const Expr *UnsafeArg = nullptr) override {
+    S.Diag(Call->getBeginLoc(), diag::warn_unsafe_buffer_libc_call)
+        << Call->getDirectCallee() // We've checked there is a direct callee
+        << Call->getSourceRange();
+    if (PrintfInfo > 0) {
+      SourceRange R =
+          UnsafeArg ? UnsafeArg->getSourceRange() : Call->getSourceRange();
+      S.Diag(R.getBegin(), diag::note_unsafe_buffer_printf_call)
+          << PrintfInfo << R;
+    }
+  }
+
   void handleUnsafeOperationInContainer(const Stmt *Operation,
                                         bool IsRelatedToDecl,
                                         ASTContext &Ctx) override {
@@ -2380,6 +2394,10 @@ public:
 
   bool ignoreUnsafeBufferInContainer(const SourceLocation &Loc) const override {
     return S.Diags.isIgnored(diag::warn_unsafe_buffer_usage_in_container, Loc);
+  }
+
+  bool ignoreUnsafeBufferInLibcCall(const SourceLocation &Loc) const override {
+    return S.Diags.isIgnored(diag::warn_unsafe_buffer_libc_call, Loc);
   }
 
   // Returns the text representation of clang::unsafe_buffer_usage attribute.
@@ -2548,6 +2566,8 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
         !Diags.isIgnored(diag::warn_unsafe_buffer_variable,
                          Node->getBeginLoc()) ||
         !Diags.isIgnored(diag::warn_unsafe_buffer_usage_in_container,
+                         Node->getBeginLoc()) ||
+        !Diags.isIgnored(diag::warn_unsafe_buffer_libc_call,
                          Node->getBeginLoc())) {
       clang::checkUnsafeBufferUsage(Node, R,
                                     UnsafeBufferUsageShouldEmitSuggestions);
@@ -2560,7 +2580,8 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
   if (!Diags.isIgnored(diag::warn_unsafe_buffer_operation, SourceLocation()) ||
       !Diags.isIgnored(diag::warn_unsafe_buffer_variable, SourceLocation()) ||
       !Diags.isIgnored(diag::warn_unsafe_buffer_usage_in_container,
-                       SourceLocation())) {
+                       SourceLocation()) ||
+      !Diags.isIgnored(diag::warn_unsafe_buffer_libc_call, SourceLocation())) {
     CallableVisitor(CallAnalyzers).TraverseTranslationUnitDecl(TU);
   }
 }

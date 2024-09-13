@@ -2424,8 +2424,7 @@ bool PPCFrameLowering::spillCalleeSavedRegisters(
   // or two GPRs, so we need table to record information for later save/restore.
   for (const CalleeSavedInfo &Info : CSI) {
     if (Info.isSpilledToReg()) {
-      auto &SpilledVSR =
-          VSRContainingGPRs.FindAndConstruct(Info.getDstReg()).second;
+      auto &SpilledVSR = VSRContainingGPRs[Info.getDstReg()];
       assert(SpilledVSR.second == 0 &&
              "Can't spill more than two GPRs into VSR!");
       if (SpilledVSR.first == 0)

@@ -117,7 +117,8 @@ public:
   bool shouldOmitFromOutput() const { return !live || isCoalescedWeak(); }
   void writeTo(uint8_t *buf);
 
-  void foldIdentical(ConcatInputSection *redundant);
+  void foldIdentical(ConcatInputSection *redundant,
+                     Symbol::ICFFoldKind foldKind = Symbol::ICFFoldKind::Body);
   ConcatInputSection *canonical() override {
     return replacement ? replacement : this;
   }

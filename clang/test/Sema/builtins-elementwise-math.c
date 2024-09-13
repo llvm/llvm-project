@@ -275,8 +275,8 @@ void test_builtin_elementwise_min(int i, short s, double d, float4 v, int3 iv, u
 
 void test_builtin_elementwise_bitreverse(int i, float f, double d, float4 v, int3 iv, unsigned u, unsigned4 uv) {
 
-  struct Foo s = __builtin_elementwise_ceil(f);
-  // expected-error@-1 {{initializing 'struct Foo' with an expression of incompatible type 'float'}}
+  struct Foo s = __builtin_elementwise_bitreverse(i);
+  // expected-error@-1 {{initializing 'struct Foo' with an expression of incompatible type 'int'}}
 
   i = __builtin_elementwise_bitreverse();
   // expected-error@-1 {{too few arguments to function call, expected 1, have 0}}

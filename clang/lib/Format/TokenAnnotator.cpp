@@ -137,9 +137,8 @@ public:
 private:
   ScopeType getScopeType(const FormatToken &Token) const {
     switch (Token.getType()) {
-    case TT_FunctionLBrace:
     case TT_LambdaLBrace:
-      return ST_Function;
+      return ST_ChildBlock;
     case TT_ClassLBrace:
     case TT_StructLBrace:
     case TT_UnionLBrace:
@@ -400,7 +399,8 @@ private:
                OpeningParen.Previous->MatchingParen->isOneOf(
                    TT_ObjCBlockLParen, TT_FunctionTypeLParen)) {
       Contexts.back().IsExpression = false;
-    } else if (!Line.MustBeDeclaration && !Line.InPPDirective) {
+    } else if (!Line.MustBeDeclaration &&
+               (!Line.InPPDirective || (Line.InMacroBody && !Scopes.empty()))) {
       bool IsForOrCatch =
           OpeningParen.Previous &&
           OpeningParen.Previous->isOneOf(tok::kw_for, tok::kw_catch);
@@ -2874,21 +2874,26 @@ private:
     if (Line.InPPDirective && AfterRParen->is(tok::minus))
       return false;
 
+    const auto *Prev = BeforeRParen;
+
+    // Look for a function pointer type, e.g. `(*)()`.
+    if (Prev->is(tok::r_paren)) {
+      if (Prev->is(TT_CastRParen))
+        return false;
+      Prev = Prev->MatchingParen;
+      if (!Prev)
+        return false;
+      Prev = Prev->Previous;
+      if (!Prev || Prev->isNot(tok::r_paren))
+        return false;
+      Prev = Prev->MatchingParen;
+      return Prev && Prev->is(TT_FunctionTypeLParen);
+    }
+
     // Search for unexpected tokens.
-    for (auto *Prev = BeforeRParen; Prev != LParen; Prev = Prev->Previous) {
-      if (Prev->is(tok::r_paren)) {
-        if (Prev->is(TT_CastRParen))
-          return false;
-        Prev = Prev->MatchingParen;
-        if (!Prev)
-          return false;
-        if (Prev->is(TT_FunctionTypeLParen))
-          break;
-        continue;
-      }
+    for (Prev = BeforeRParen; Prev != LParen; Prev = Prev->Previous)
       if (!Prev->isOneOf(tok::kw_const, tok::identifier, tok::coloncolon))
         return false;
-    }
 
     return true;
   }
@@ -3588,8 +3593,7 @@ static FormatToken *getFunctionName(const AnnotatedLine &Line,
 
     // Make sure the name is followed by a pair of parentheses.
     if (Name) {
-      if (Tok->is(tok::l_paren) && Tok->isNot(TT_FunctionTypeLParen) &&
-          Tok->MatchingParen) {
+      if (Tok->is(tok::l_paren) && Tok->is(TT_Unknown) && Tok->MatchingParen) {
         OpeningParen = Tok;
         return Name;
       }
@@ -3650,11 +3654,21 @@ static bool isCtorOrDtorName(const FormatToken *Tok) {
 }
 
 void TokenAnnotator::annotate(AnnotatedLine &Line) {
-  AnnotatingParser Parser(Style, Line, Keywords, Scopes);
+  if (!Line.InMacroBody)
+    MacroBodyScopes.clear();
+
+  auto &ScopeStack = Line.InMacroBody ? MacroBodyScopes : Scopes;
+  AnnotatingParser Parser(Style, Line, Keywords, ScopeStack);
   Line.Type = Parser.parseLine();
 
-  for (auto &Child : Line.Children)
-    annotate(*Child);
+  if (!Line.Children.empty()) {
+    ScopeStack.push_back(ST_ChildBlock);
+    for (auto &Child : Line.Children)
+      annotate(*Child);
+    // ScopeStack can become empty if Child has an unmatched `}`.
+    if (!ScopeStack.empty())
+      ScopeStack.pop_back();
+  }
 
   // With very deep nesting, ExpressionParser uses lots of stack and the
   // formatting algorithm is very slow. We're not going to do a good job here
@@ -3672,7 +3686,7 @@ void TokenAnnotator::annotate(AnnotatedLine &Line) {
   if (IsCpp) {
     FormatToken *OpeningParen = nullptr;
     auto *Tok = getFunctionName(Line, OpeningParen);
-    if (Tok && ((!Scopes.empty() && Scopes.back() == ST_Class) ||
+    if (Tok && ((!ScopeStack.empty() && ScopeStack.back() == ST_Class) ||
                 Line.endsWith(TT_FunctionLBrace) || isCtorOrDtorName(Tok))) {
       Tok->setFinalizedType(TT_CtorDtorDeclName);
       assert(OpeningParen);

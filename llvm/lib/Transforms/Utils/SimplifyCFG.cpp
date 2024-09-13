@@ -1000,20 +1000,20 @@ bool SimplifyCFGOpt::simplifyEqualityComparisonWithOnlyPredecessor(
   // which value (or set of values) this is.
   ConstantInt *TIV = nullptr;
   BasicBlock *TIBB = TI->getParent();
-  for (unsigned i = 0, e = PredCases.size(); i != e; ++i)
-    if (PredCases[i].Dest == TIBB) {
+  for (const auto &[Value, Dest] : PredCases)
+    if (Dest == TIBB) {
       if (TIV)
         return false; // Cannot handle multiple values coming to this block.
-      TIV = PredCases[i].Value;
+      TIV = Value;
     }
   assert(TIV && "No edge from pred to succ?");
 
   // Okay, we found the one constant that our value can be if we get into TI's
   // BB.  Find out which successor will unconditionally be branched to.
   BasicBlock *TheRealDest = nullptr;
-  for (unsigned i = 0, e = ThisCases.size(); i != e; ++i)
-    if (ThisCases[i].Value == TIV) {
-      TheRealDest = ThisCases[i].Dest;
+  for (const auto &[Value, Dest] : ThisCases)
+    if (Value == TIV) {
+      TheRealDest = Dest;
       break;
     }
 

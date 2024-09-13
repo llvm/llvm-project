@@ -2043,6 +2043,9 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
   case ISD::EXPERIMENTAL_VP_SPLICE:
     Res = PromoteIntOp_VP_SPLICE(N, OpNo);
     break;
+  case ISD::EXPERIMENTAL_VECTOR_HISTOGRAM:
+    Res = PromoteIntOp_VECTOR_HISTOGRAM(N, OpNo);
+    break;
   }
 
   // If the result is null, the sub-method took care of registering results etc.
@@ -2752,6 +2755,14 @@ SDValue DAGTypeLegalizer::PromoteIntOp_VP_SPLICE(SDNode *N, unsigned OpNo) {
   assert((OpNo == 4 || OpNo == 5) && "Unexpected operand for promotion");
 
   NewOps[OpNo] = ZExtPromotedInteger(N->getOperand(OpNo));
+  return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
+}
+
+SDValue DAGTypeLegalizer::PromoteIntOp_VECTOR_HISTOGRAM(SDNode *N,
+                                                        unsigned OpNo) {
+  assert(OpNo == 1 && "Unexpected operand for promotion");
+  SmallVector<SDValue, 7> NewOps(N->ops());
+  NewOps[1] = GetPromotedInteger(N->getOperand(1));
   return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
 }
 
@@ -3485,7 +3496,6 @@ void DAGTypeLegalizer::ExpandIntRes_ADDSUB(SDNode *N,
 
   if (N->getOpcode() == ISD::ADD) {
     Lo = DAG.getNode(ISD::ADD, dl, NVT, LoOps);
-    Hi = DAG.getNode(ISD::ADD, dl, NVT, ArrayRef(HiOps, 2));
     SDValue Cmp;
     // Special case: X+1 has a carry out if X+1==0. This may reduce the live
     // range of X. We assume comparing with 0 is cheap.
@@ -3510,10 +3520,12 @@ void DAGTypeLegalizer::ExpandIntRes_ADDSUB(SDNode *N,
       Carry = DAG.getSelect(dl, NVT, Cmp, DAG.getConstant(1, dl, NVT),
                              DAG.getConstant(0, dl, NVT));
 
-    if (isAllOnesConstant(LoOps[1]) && isAllOnesConstant(HiOps[1]))
+    if (isAllOnesConstant(LoOps[1]) && isAllOnesConstant(HiOps[1])) {
       Hi = DAG.getNode(ISD::SUB, dl, NVT, HiOps[0], Carry);
-    else
+    } else {
+      Hi = DAG.getNode(ISD::ADD, dl, NVT, ArrayRef(HiOps, 2));
       Hi = DAG.getNode(ISD::ADD, dl, NVT, Hi, Carry);
+    }
   } else {
     Lo = DAG.getNode(ISD::SUB, dl, NVT, LoOps);
     Hi = DAG.getNode(ISD::SUB, dl, NVT, ArrayRef(HiOps, 2));
@@ -3940,19 +3952,9 @@ void DAGTypeLegalizer::ExpandIntRes_FP_TO_XINT(SDNode *N, SDValue &Lo,
   if (getTypeAction(Op.getValueType()) == TargetLowering::TypePromoteFloat)
     Op = GetPromotedFloat(Op);
 
-  if (getTypeAction(Op.getValueType()) == TargetLowering::TypeSoftPromoteHalf) {
-    EVT OFPVT = Op.getValueType();
-    EVT NFPVT = TLI.getTypeToTransformTo(*DAG.getContext(), OFPVT);
-    Op = GetSoftPromotedHalf(Op);
-    Op = DAG.getNode(OFPVT == MVT::f16 ? ISD::FP16_TO_FP : ISD::BF16_TO_FP, dl,
-                     NFPVT, Op);
-    Op = DAG.getNode(IsSigned ? ISD::FP_TO_SINT : ISD::FP_TO_UINT, dl, VT, Op);
-    SplitInteger(Op, Lo, Hi);
-    return;
-  }
-
-  if (Op.getValueType() == MVT::bf16) {
-    // Extend to f32 as there is no bf16 libcall.
+  // If the input is bf16 or needs to be soft promoted, extend to f32.
+  if (getTypeAction(Op.getValueType()) == TargetLowering::TypeSoftPromoteHalf ||
+      Op.getValueType() == MVT::bf16) {
     Op = fpExtendHelper(Op, Chain, IsStrict, MVT::f32, dl, DAG);
   }
 

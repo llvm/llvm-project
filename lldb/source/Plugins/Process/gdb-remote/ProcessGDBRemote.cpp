@@ -3447,7 +3447,7 @@ Status ProcessGDBRemote::LaunchAndConnectToDebugserver(
     }
 #endif
 
-    int communication_fd = -1;
+    shared_fd_t communication_fd = SharedSocket::kInvalidFD;
 #ifdef USE_SOCKETPAIR_FOR_LOCAL_CONNECTION
     // Use a socketpair on non-Windows systems for security and performance
     // reasons.

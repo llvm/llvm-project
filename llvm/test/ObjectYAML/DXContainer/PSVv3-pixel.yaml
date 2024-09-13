@@ -32,13 +32,15 @@ Parts:
           LowerBound:      3
           UpperBound:      4
           Kind:            TextureCube
-          Flags:           0
+          Flags:
+            UsedByAtomic64:  false
         - Type:            Invalid
           Space:           32768
           LowerBound:      8388608
           UpperBound:      2147483648
           Kind:            Invalid
-          Flags:           0
+          Flags:
+            UsedByAtomic64:  false
       SigInputElements: []
       SigOutputElements: []
       SigPatchOrPrimElements: []
@@ -81,13 +83,15 @@ Parts:
 # CHECK-NEXT: LowerBound:      3
 # CHECK-NEXT: UpperBound:      4
 # CHECK-NEXT: Kind:            TextureCube
-# CHECK-NEXT: Flags:           0
+# CHECK-NEXT: Flags:
+# CHECK-NEXT: UsedByAtomic64:  false
 # CHECK-NEXT: - Type:            Invalid
 # CHECK-NEXT: Space:           32768
 # CHECK-NEXT: LowerBound:      8388608
 # CHECK-NEXT: UpperBound:      2147483648
 # CHECK-NEXT: Kind:            Invalid
-# CHECK-NEXT: Flags:           0
+# CHECK-NEXT: Flags:
+# CHECK-NEXT: UsedByAtomic64:  false
 # CHECK-NEXT: SigInputElements: []
 # CHECK-NEXT: SigOutputElements: []
 # CHECK-NEXT: SigPatchOrPrimElements: []
