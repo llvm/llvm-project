@@ -76,7 +76,7 @@ __chpe_metadata:
         .rva __os_arm64x_check_icall
         .rva __os_arm64x_check_icall_cfg
         .word 0 // __arm64x_native_entrypoint
-        .word 0 // __hybrid_auxiliary_iat
+        .rva __hybrid_auxiliary_iat
         .word __x64_code_ranges_to_entry_points_count
         .word __arm64x_redirection_metadata_count
         .rva __os_arm64x_get_x64_information

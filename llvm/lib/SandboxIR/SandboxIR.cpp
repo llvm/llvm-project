@@ -2495,6 +2495,20 @@ PoisonValue *PoisonValue::getElementValue(unsigned Idx) const {
       cast<llvm::PoisonValue>(Val)->getElementValue(Idx)));
 }
 
+void GlobalValue::setUnnamedAddr(UnnamedAddr V) {
+  Ctx.getTracker()
+      .emplaceIfTracking<GenericSetter<&GlobalValue::getUnnamedAddr,
+                                       &GlobalValue::setUnnamedAddr>>(this);
+  cast<llvm::GlobalValue>(Val)->setUnnamedAddr(V);
+}
+
+void GlobalValue::setVisibility(VisibilityTypes V) {
+  Ctx.getTracker()
+      .emplaceIfTracking<GenericSetter<&GlobalValue::getVisibility,
+                                       &GlobalValue::setVisibility>>(this);
+  cast<llvm::GlobalValue>(Val)->setVisibility(V);
+}
+
 BlockAddress *BlockAddress::get(Function *F, BasicBlock *BB) {
   auto *LLVMC = llvm::BlockAddress::get(cast<llvm::Function>(F->Val),
                                         cast<llvm::BasicBlock>(BB->Val));
@@ -2519,6 +2533,11 @@ Function *BlockAddress::getFunction() const {
 BasicBlock *BlockAddress::getBasicBlock() const {
   return cast<BasicBlock>(
       Ctx.getValue(cast<llvm::BlockAddress>(Val)->getBasicBlock()));
+}
+
+ConstantTokenNone *ConstantTokenNone::get(Context &Ctx) {
+  auto *LLVMC = llvm::ConstantTokenNone::get(Ctx.LLVMCtx);
+  return cast<ConstantTokenNone>(Ctx.getOrCreateConstant(LLVMC));
 }
 
 FunctionType *Function::getFunctionType() const {
@@ -2620,6 +2639,10 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
     case llvm::Value::BlockAddressVal:
       It->second = std::unique_ptr<BlockAddress>(
           new BlockAddress(cast<llvm::BlockAddress>(C), *this));
+      return It->second.get();
+    case llvm::Value::ConstantTokenNoneVal:
+      It->second = std::unique_ptr<ConstantTokenNone>(
+          new ConstantTokenNone(cast<llvm::ConstantTokenNone>(C), *this));
       return It->second.get();
     case llvm::Value::ConstantAggregateZeroVal: {
       auto *CAZ = cast<llvm::ConstantAggregateZero>(C);

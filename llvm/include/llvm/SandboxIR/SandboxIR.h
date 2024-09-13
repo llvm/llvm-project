@@ -124,6 +124,8 @@ class ConstantAggregateZero;
 class ConstantPointerNull;
 class PoisonValue;
 class BlockAddress;
+class ConstantTokenNone;
+class GlobalValue;
 class Context;
 class Function;
 class Instruction;
@@ -325,6 +327,7 @@ protected:
   friend class UndefValue;            // For `Val`.
   friend class PoisonValue;           // For `Val`.
   friend class BlockAddress;          // For `Val`.
+  friend class GlobalValue;           // For `Val`.
 
   /// All values point to the context.
   Context &Ctx;
@@ -1114,6 +1117,80 @@ public:
 #endif
 };
 
+class GlobalValue : public Constant {
+protected:
+  GlobalValue(ClassID ID, llvm::GlobalValue *C, Context &Ctx)
+      : Constant(ID, C, Ctx) {}
+  friend class Context; // For constructor.
+  Use getOperandUseInternal(unsigned OpIdx, bool Verify) const override {
+    return getOperandUseDefault(OpIdx, Verify);
+  }
+
+public:
+  unsigned getUseOperandNo(const Use &Use) const override {
+    return getUseOperandNoDefault(Use);
+  }
+  /// For isa/dyn_cast.
+  static bool classof(const sandboxir::Value *From) {
+    switch (From->getSubclassID()) {
+    case ClassID::Function:
+    case ClassID::GlobalVariable:
+    case ClassID::GlobalAlias:
+    case ClassID::GlobalIFunc:
+      return true;
+    default:
+      return false;
+    }
+  }
+
+  unsigned getAddressSpace() const {
+    return cast<llvm::GlobalValue>(Val)->getAddressSpace();
+  }
+  bool hasGlobalUnnamedAddr() const {
+    return cast<llvm::GlobalValue>(Val)->hasGlobalUnnamedAddr();
+  }
+
+  /// Returns true if this value's address is not significant in this module.
+  /// This attribute is intended to be used only by the code generator and LTO
+  /// to allow the linker to decide whether the global needs to be in the symbol
+  /// table. It should probably not be used in optimizations, as the value may
+  /// have uses outside the module; use hasGlobalUnnamedAddr() instead.
+  bool hasAtLeastLocalUnnamedAddr() const {
+    return cast<llvm::GlobalValue>(Val)->hasAtLeastLocalUnnamedAddr();
+  }
+
+  using UnnamedAddr = llvm::GlobalValue::UnnamedAddr;
+
+  UnnamedAddr getUnnamedAddr() const {
+    return cast<llvm::GlobalValue>(Val)->getUnnamedAddr();
+  }
+  void setUnnamedAddr(UnnamedAddr V);
+
+  static UnnamedAddr getMinUnnamedAddr(UnnamedAddr A, UnnamedAddr B) {
+    return llvm::GlobalValue::getMinUnnamedAddr(A, B);
+  }
+
+  bool hasComdat() const { return cast<llvm::GlobalValue>(Val)->hasComdat(); }
+
+  // TODO: We need a SandboxIR Comdat if we want to implement getComdat().
+  using VisibilityTypes = llvm::GlobalValue::VisibilityTypes;
+  VisibilityTypes getVisibility() const {
+    return cast<llvm::GlobalValue>(Val)->getVisibility();
+  }
+  bool hasDefaultVisibility() const {
+    return cast<llvm::GlobalValue>(Val)->hasDefaultVisibility();
+  }
+  bool hasHiddenVisibility() const {
+    return cast<llvm::GlobalValue>(Val)->hasHiddenVisibility();
+  }
+  bool hasProtectedVisibility() const {
+    return cast<llvm::GlobalValue>(Val)->hasProtectedVisibility();
+  }
+  void setVisibility(VisibilityTypes V);
+
+  // TODO: Add missing functions.
+};
+
 class BlockAddress final : public Constant {
   BlockAddress(llvm::BlockAddress *C, Context &Ctx)
       : Constant(ClassID::BlockAddress, C, Ctx) {}
@@ -1139,6 +1216,37 @@ public:
   static bool classof(const sandboxir::Value *From) {
     return From->getSubclassID() == ClassID::BlockAddress;
   }
+};
+
+// TODO: This should inherit from ConstantData.
+class ConstantTokenNone final : public Constant {
+  ConstantTokenNone(llvm::ConstantTokenNone *C, Context &Ctx)
+      : Constant(ClassID::ConstantTokenNone, C, Ctx) {}
+  friend class Context; // For constructor.
+
+public:
+  /// Return the ConstantTokenNone.
+  static ConstantTokenNone *get(Context &Ctx);
+
+  /// For isa/dyn_cast.
+  static bool classof(const sandboxir::Value *From) {
+    return From->getSubclassID() == ClassID::ConstantTokenNone;
+  }
+
+  unsigned getUseOperandNo(const Use &Use) const final {
+    llvm_unreachable("ConstantTokenNone has no operands!");
+  }
+
+#ifndef NDEBUG
+  void verify() const override {
+    assert(isa<llvm::ConstantTokenNone>(Val) &&
+           "Expected a ConstantTokenNone!");
+  }
+  void dumpOS(raw_ostream &OS) const override {
+    dumpCommonPrefix(OS);
+    dumpCommonSuffix(OS);
+  }
+#endif
 };
 
 /// Iterator for `Instruction`s in a `BasicBlock.
@@ -3813,8 +3921,9 @@ protected:
   friend class PointerType; // For LLVMCtx.
   friend class CmpInst; // For LLVMCtx. TODO: cleanup when sandboxir::VectorType
                         // is complete
-  friend class IntegerType; // For LLVMCtx.
-  friend class StructType;  // For LLVMCtx.
+  friend class IntegerType;   // For LLVMCtx.
+  friend class StructType;    // For LLVMCtx.
+  friend class TargetExtType; // For LLVMCtx.
   Tracker IRTracker;
 
   /// Maps LLVM Value to the corresponding sandboxir::Value. Owns all
