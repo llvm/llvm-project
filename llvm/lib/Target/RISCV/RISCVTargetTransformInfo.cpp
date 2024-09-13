@@ -2123,7 +2123,8 @@ RISCVTTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
   Options.MaxNumLoads = TLI->getMaxExpandSizeMemcmp(OptSize);
   Options.NumLoadsPerBlock = Options.MaxNumLoads;
   if (ST->is64Bit())
-    Options.LoadSizes.push_back(8);
-  llvm::append_range(Options.LoadSizes, ArrayRef({4, 2, 1}));
+    Options.LoadSizes = {8, 4, 2, 1};
+  else
+    Options.LoadSizes = {4, 2, 1};
   return Options;
 }
