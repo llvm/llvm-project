@@ -4638,8 +4638,8 @@ llvm::Constant *CodeGenModule::GetOrCreateLLVMFunction(
   // Lookup the entry, lazily creating it if necessary.
   llvm::GlobalValue *Entry = GetGlobalValue(MangledName);
   if (Entry) {
-    const FunctionDecl *FD = cast_or_null<FunctionDecl>(D);
     if (WeakRefReferences.erase(Entry)) {
+      const FunctionDecl *FD = cast_or_null<FunctionDecl>(D);
       if (FD && !FD->hasAttr<WeakAttr>())
         Entry->setLinkage(llvm::Function::ExternalLinkage);
     }
@@ -4652,35 +4652,20 @@ llvm::Constant *CodeGenModule::GetOrCreateLLVMFunction(
 
     // If there are two attempts to define the same mangled name, issue an
     // error.
-    GlobalDecl OtherGD;
-    // Check that GD is not yet in DiagnosedConflictingDefinitions is required
-    // to make sure that we issue an error only once.
-    if (GD && lookupRepresentativeDecl(MangledName, OtherGD) &&
-        (GD.getCanonicalDecl().getDecl() !=
-         OtherGD.getCanonicalDecl().getDecl()) &&
-        DiagnosedConflictingDefinitions.insert(GD).second) {
-      if (IsForDefinition && !Entry->isDeclaration()) {
+    auto *MD = dyn_cast_or_null<CXXMethodDecl>(D);
+    bool IsLambda = MD && MD->getParent()->isLambda();
+    if (IsForDefinition && (!Entry->isDeclaration() || IsLambda)) {
+      GlobalDecl OtherGD;
+      // Check that GD is not yet in DiagnosedConflictingDefinitions is required
+      // to make sure that we issue an error only once.
+      if (lookupRepresentativeDecl(MangledName, OtherGD) &&
+          (GD.getCanonicalDecl().getDecl() !=
+           OtherGD.getCanonicalDecl().getDecl()) &&
+          DiagnosedConflictingDefinitions.insert(GD).second) {
         getDiags().Report(D->getLocation(), diag::err_duplicate_mangled_name)
             << MangledName;
         getDiags().Report(OtherGD.getDecl()->getLocation(),
                           diag::note_previous_definition);
-      } else {
-        // For lambdas, it's possible to create the same mangled name from
-        // different function prototypes. For example, two FPTs may have
-        // identical types but incompatible function attributes which we should
-        // not allow.
-        auto *MD = dyn_cast<CXXMethodDecl>(D);
-        if (MD && MD->getParent()->isLambda()) {
-          const FunctionDecl *OtherFD =
-              cast_or_null<FunctionDecl>(OtherGD.getDecl());
-          if (FD && FD->hasPrototype() && OtherFD && OtherFD->hasPrototype()) {
-            if (FD->getType()->getAs<FunctionProtoType>() !=
-                OtherFD->getType()->getAs<FunctionProtoType>())
-              getDiags().Report(D->getLocation(),
-                                diag::err_duplicate_mangled_name)
-                  << MangledName;
-          }
-        }
       }
     }
 
