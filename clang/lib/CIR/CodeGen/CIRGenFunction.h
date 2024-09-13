@@ -1759,13 +1759,13 @@ public:
   /// parameters.
   EHScopeStack::stable_iterator PrologueCleanupDepth;
 
-  mlir::Operation *getInvokeDestImpl();
-  mlir::Operation *getInvokeDest() {
+  mlir::Operation *getInvokeDestImpl(mlir::cir::TryOp tryOp);
+  mlir::Operation *getInvokeDest(mlir::cir::TryOp tryOp) {
     if (!EHStack.requiresLandingPad())
       return nullptr;
     // Return the respective cir.try, this can be used to compute
     // any other relevant information.
-    return getInvokeDestImpl();
+    return getInvokeDestImpl(tryOp);
   }
   bool isInvokeDest();
 

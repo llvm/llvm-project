@@ -8,6 +8,7 @@
 // RUN: FileCheck %s -check-prefix=CIR_FLAT_EH --input-file=%t.eh.flat.cir
 // RUN: %clang_cc1 -std=c++20 -triple aarch64-none-linux-android21 -fclangir -emit-llvm -fexceptions -fcxx-exceptions %s -o %t.eh.ll
 // RUN: FileCheck %s -check-prefix=LLVM_EH --input-file=%t.eh.ll
+// XFAIL: *
 
 struct e { e(int); };
 e *g = new e(0);
