@@ -722,8 +722,8 @@ static void ValidateMultipleRegisterAnnotations(Sema &S, Decl *TheDecl,
 }
 
 static void DiagnoseHLSLRegisterAttribute(Sema &S, SourceLocation &ArgLoc,
-                                          Decl *TheDecl, RegisterType regType,
-                                          const ParsedAttr &AL) {
+                                          Decl *TheDecl, RegisterType RegType,
+                                          const bool SpecifiedSpace) {
 
   // Samplers, UAVs, and SRVs are VarDecl types
   VarDecl *TheVarDecl = dyn_cast<VarDecl>(TheDecl);
@@ -741,16 +741,23 @@ static void DiagnoseHLSLRegisterAttribute(Sema &S, SourceLocation &ArgLoc,
              1 &&
          "only one resource analysis result should be expected");
 
-  int regTypeNum = static_cast<int>(regType);
+  int RegTypeNum = static_cast<int>(RegType);
 
   // first, if "other" is set, emit an error
   if (Flags.Other) {
-    S.Diag(ArgLoc, diag::err_hlsl_binding_type_mismatch) << regTypeNum;
+    S.Diag(ArgLoc, diag::err_hlsl_binding_type_mismatch) << RegTypeNum;
+    return;
+  }
+
+  // Space argument cannot be specified for global constants
+  if ((Flags.DefaultGlobals || Flags.UDT) &&
+      !isDeclaredWithinCOrTBuffer(TheDecl) && SpecifiedSpace) {
+    S.Diag(ArgLoc, diag::err_hlsl_space_on_global_constant);
     return;
   }
 
   // next, if multiple register annotations exist, check that none conflict.
-  ValidateMultipleRegisterAnnotations(S, TheDecl, regType);
+  ValidateMultipleRegisterAnnotations(S, TheDecl, RegType);
 
   // next, if resource is set, make sure the register type in the register
   // annotation is compatible with the variable's resource type.
@@ -782,9 +789,9 @@ static void DiagnoseHLSLRegisterAttribute(Sema &S, SourceLocation &ArgLoc,
 
     RegisterType ExpectedRegisterType =
         ExpectedRegisterTypesForResourceClass[(int)DeclResourceClass];
-    if (regType != ExpectedRegisterType) {
+    if (RegType != ExpectedRegisterType) {
       S.Diag(TheDecl->getLocation(), diag::err_hlsl_binding_type_mismatch)
-          << regTypeNum;
+          << RegTypeNum;
     }
     return;
   }
@@ -792,20 +799,17 @@ static void DiagnoseHLSLRegisterAttribute(Sema &S, SourceLocation &ArgLoc,
   // next, handle diagnostics for when the "basic" flag is set
   if (Flags.Basic) {
     if (Flags.DefaultGlobals) {
-      if (regType == RegisterType::CBuffer)
+      if (RegType == RegisterType::CBuffer)
         S.Diag(ArgLoc, diag::warn_hlsl_deprecated_register_type_b);
-      else if (regType != RegisterType::C)
-        S.Diag(ArgLoc, diag::err_hlsl_binding_type_mismatch) << regTypeNum;
-      // Space argument cannot be specified for global constants
-      if (AL.getNumArgs() == 2)
-        S.Diag(ArgLoc, diag::err_hlsl_space_on_global_constant);
+      else if (RegType != RegisterType::C)
+        S.Diag(ArgLoc, diag::err_hlsl_binding_type_mismatch) << RegTypeNum;
       return;
     }
 
-    if (regType == RegisterType::C)
+    if (RegType == RegisterType::C)
       S.Diag(ArgLoc, diag::warn_hlsl_register_type_c_packoffset);
     else
-      S.Diag(ArgLoc, diag::err_hlsl_binding_type_mismatch) << regTypeNum;
+      S.Diag(ArgLoc, diag::err_hlsl_binding_type_mismatch) << RegTypeNum;
 
     return;
   }
@@ -814,19 +818,13 @@ static void DiagnoseHLSLRegisterAttribute(Sema &S, SourceLocation &ArgLoc,
   if (Flags.UDT) {
     const bool ExpectedRegisterTypesForUDT[] = {
         Flags.SRV, Flags.UAV, Flags.CBV, Flags.Sampler, Flags.ContainsNumeric};
-    assert((size_t)regTypeNum < std::size(ExpectedRegisterTypesForUDT) &&
+    assert((size_t)RegTypeNum < std::size(ExpectedRegisterTypesForUDT) &&
            "regType has unexpected value");
 
-    if (!ExpectedRegisterTypesForUDT[regTypeNum])
+    if (!ExpectedRegisterTypesForUDT[RegTypeNum])
       S.Diag(TheDecl->getLocation(),
              diag::warn_hlsl_user_defined_type_missing_member)
-          << regTypeNum;
-    // Space argument cannot be specified for global constants
-    if (!isDeclaredWithinCOrTBuffer(TheDecl)) {
-      if (AL.getNumArgs() == 2)
-        S.Diag(ArgLoc, diag::err_hlsl_space_on_global_constant);
-      return;
-    }
+          << RegTypeNum;
   }
 }
 
@@ -851,7 +849,9 @@ void SemaHLSL::handleResourceBindingAttr(Decl *TheDecl, const ParsedAttr &AL) {
   SourceLocation ArgLoc = Loc->Loc;
 
   SourceLocation SpaceArgLoc;
+  bool SpecifiedSpace = false;
   if (AL.getNumArgs() == 2) {
+    SpecifiedSpace = true;
     Slot = Str;
     if (!AL.isArgIdent(1)) {
       Diag(AL.getLoc(), diag::err_attribute_argument_type)
@@ -899,7 +899,8 @@ void SemaHLSL::handleResourceBindingAttr(Decl *TheDecl, const ParsedAttr &AL) {
     return;
   }
 
-  DiagnoseHLSLRegisterAttribute(SemaRef, ArgLoc, TheDecl, regType, AL);
+  DiagnoseHLSLRegisterAttribute(SemaRef, ArgLoc, TheDecl, regType,
+                                SpecifiedSpace);
 
   HLSLResourceBindingAttr *NewAttr =
       HLSLResourceBindingAttr::Create(getASTContext(), Slot, Space, AL);

@@ -1,5 +1,24 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -x hlsl -o - -fsyntax-only %s -verify
 
+// valid
+cbuffer cbuf {
+    RWBuffer<int> r : register(u0, space0);
+}
+
+cbuffer cbuf2 {
+    struct x {
+        // expected-error@+1 {{'register' attribute only applies to cbuffer/tbuffer and external global variables}}
+        RWBuffer<int> E : register(u2, space3);
+    };
+}
+
+struct MyStruct {
+    RWBuffer<int> E;
+};
+
+cbuffer cbuf3 {
+  MyStruct E : register(u2, space3);
+}
 
 // expected-error@+1 {{invalid space specifier 's2' used; expected 'space' followed by an integer, like space1}}
 cbuffer a : register(b0, s2) {
