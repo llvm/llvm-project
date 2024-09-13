@@ -634,7 +634,7 @@ class TreePatternNode : public RefCountedBase<TreePatternNode> {
   /// OperatorOrVal - The Record for the operator if this is an interior node
   /// (not a leaf) or the init value (e.g. the "GPRC" record, or "7") for a
   /// leaf.
-  PointerUnion<Record *, Init *> OperatorOrVal;
+  PointerUnion<const Record *, Init *> OperatorOrVal;
 
   /// Name - The name given to this node with the :$foo notation.
   ///
@@ -657,7 +657,7 @@ class TreePatternNode : public RefCountedBase<TreePatternNode> {
   const Record *GISelFlags = nullptr;
 
 public:
-  TreePatternNode(Record *Op, std::vector<TreePatternNodePtr> Ch,
+  TreePatternNode(const Record *Op, std::vector<TreePatternNodePtr> Ch,
                   unsigned NumResults)
       : OperatorOrVal(Op), TransformFn(nullptr), Children(std::move(Ch)) {
     Types.resize(NumResults);
@@ -717,9 +717,9 @@ public:
     assert(isLeaf());
     return cast<Init *>(OperatorOrVal);
   }
-  Record *getOperator() const {
+  const Record *getOperator() const {
     assert(!isLeaf());
-    return cast<Record *>(OperatorOrVal);
+    return cast<const Record *>(OperatorOrVal);
   }
 
   unsigned getNumChildren() const { return Children.size(); }
@@ -878,7 +878,7 @@ class TreePattern {
 
   /// TheRecord - The actual TableGen record corresponding to this pattern.
   ///
-  Record *TheRecord;
+  const Record *TheRecord;
 
   /// Args - This is a list of all of the arguments to this pattern (for
   /// PatFrag patterns), which are the 'node' markers in this pattern.
@@ -908,11 +908,11 @@ class TreePattern {
 public:
   /// TreePattern constructor - Parse the specified DagInits into the
   /// current record.
-  TreePattern(Record *TheRec, ListInit *RawPat, bool isInput,
+  TreePattern(const Record *TheRec, ListInit *RawPat, bool isInput,
               CodeGenDAGPatterns &ise);
-  TreePattern(Record *TheRec, DagInit *Pat, bool isInput,
+  TreePattern(const Record *TheRec, DagInit *Pat, bool isInput,
               CodeGenDAGPatterns &ise);
-  TreePattern(Record *TheRec, TreePatternNodePtr Pat, bool isInput,
+  TreePattern(const Record *TheRec, TreePatternNodePtr Pat, bool isInput,
               CodeGenDAGPatterns &ise);
 
   /// getTrees - Return the tree patterns which corresponds to this pattern.
@@ -935,7 +935,7 @@ public:
   /// getRecord - Return the actual TableGen record corresponding to this
   /// pattern.
   ///
-  Record *getRecord() const { return TheRecord; }
+  const Record *getRecord() const { return TheRecord; }
 
   unsigned getNumArgs() const { return Args.size(); }
   const std::string &getArgName(unsigned i) const {
@@ -1054,7 +1054,7 @@ public:
 /// PatternToMatch - Used by CodeGenDAGPatterns to keep tab of patterns
 /// processed to produce isel.
 class PatternToMatch {
-  Record *SrcRecord;             // Originating Record for the pattern.
+  const Record *SrcRecord;       // Originating Record for the pattern.
   ListInit *Predicates;          // Top level predicate conditions to match.
   TreePatternNodePtr SrcPattern; // Source pattern to match.
   TreePatternNodePtr DstPattern; // Resulting pattern.
@@ -1065,16 +1065,16 @@ class PatternToMatch {
   unsigned ID;            // Unique ID for the record.
 
 public:
-  PatternToMatch(Record *srcrecord, ListInit *preds, TreePatternNodePtr src,
-                 TreePatternNodePtr dst, std::vector<Record *> dstregs,
-                 int complexity, unsigned uid, bool ignore,
-                 const Twine &hwmodefeatures = "")
+  PatternToMatch(const Record *srcrecord, ListInit *preds,
+                 TreePatternNodePtr src, TreePatternNodePtr dst,
+                 std::vector<Record *> dstregs, int complexity, unsigned uid,
+                 bool ignore, const Twine &hwmodefeatures = "")
       : SrcRecord(srcrecord), Predicates(preds), SrcPattern(src),
         DstPattern(dst), Dstregs(std::move(dstregs)),
         HwModeFeatures(hwmodefeatures.str()), AddedComplexity(complexity),
         GISelShouldIgnore(ignore), ID(uid) {}
 
-  Record *getSrcRecord() const { return SrcRecord; }
+  const Record *getSrcRecord() const { return SrcRecord; }
   ListInit *getPredicates() const { return Predicates; }
   TreePatternNode &getSrcPattern() const { return *SrcPattern; }
   TreePatternNodePtr getSrcPatternShared() const { return SrcPattern; }
@@ -1099,14 +1099,14 @@ class CodeGenDAGPatterns {
   CodeGenTarget Target;
   CodeGenIntrinsicTable Intrinsics;
 
-  std::map<Record *, SDNodeInfo, LessRecordByID> SDNodes;
-  std::map<Record *, std::pair<Record *, std::string>, LessRecordByID>
+  std::map<const Record *, SDNodeInfo, LessRecordByID> SDNodes;
+  std::map<const Record *, std::pair<Record *, std::string>, LessRecordByID>
       SDNodeXForms;
-  std::map<Record *, ComplexPattern, LessRecordByID> ComplexPatterns;
-  std::map<Record *, std::unique_ptr<TreePattern>, LessRecordByID>
+  std::map<const Record *, ComplexPattern, LessRecordByID> ComplexPatterns;
+  std::map<const Record *, std::unique_ptr<TreePattern>, LessRecordByID>
       PatternFragments;
   std::map<const Record *, DAGDefaultOperand, LessRecordByID> DefaultOperands;
-  std::map<Record *, DAGInstruction, LessRecordByID> Instructions;
+  std::map<const Record *, DAGInstruction, LessRecordByID> Instructions;
 
   // Specific SDNode definitions:
   Record *intrinsic_void_sdnode;
@@ -1134,7 +1134,7 @@ public:
 
   Record *getSDNodeNamed(StringRef Name) const;
 
-  const SDNodeInfo &getSDNodeInfo(Record *R) const {
+  const SDNodeInfo &getSDNodeInfo(const Record *R) const {
     auto F = SDNodes.find(R);
     assert(F != SDNodes.end() && "Unknown node!");
     return F->second;
@@ -1142,19 +1142,19 @@ public:
 
   // Node transformation lookups.
   typedef std::pair<Record *, std::string> NodeXForm;
-  const NodeXForm &getSDNodeTransform(Record *R) const {
+  const NodeXForm &getSDNodeTransform(const Record *R) const {
     auto F = SDNodeXForms.find(R);
     assert(F != SDNodeXForms.end() && "Invalid transform!");
     return F->second;
   }
 
-  const ComplexPattern &getComplexPattern(Record *R) const {
+  const ComplexPattern &getComplexPattern(const Record *R) const {
     auto F = ComplexPatterns.find(R);
     assert(F != ComplexPatterns.end() && "Unknown addressing mode!");
     return F->second;
   }
 
-  const CodeGenIntrinsic &getIntrinsic(Record *R) const {
+  const CodeGenIntrinsic &getIntrinsic(const Record *R) const {
     for (unsigned i = 0, e = Intrinsics.size(); i != e; ++i)
       if (Intrinsics[i].TheDef == R)
         return Intrinsics[i];
@@ -1181,20 +1181,19 @@ public:
   }
 
   // Pattern Fragment information.
-  TreePattern *getPatternFragment(Record *R) const {
+  TreePattern *getPatternFragment(const Record *R) const {
     auto F = PatternFragments.find(R);
     assert(F != PatternFragments.end() && "Invalid pattern fragment request!");
     return F->second.get();
   }
-  TreePattern *getPatternFragmentIfRead(Record *R) const {
+  TreePattern *getPatternFragmentIfRead(const Record *R) const {
     auto F = PatternFragments.find(R);
     if (F == PatternFragments.end())
       return nullptr;
     return F->second.get();
   }
 
-  typedef std::map<Record *, std::unique_ptr<TreePattern>,
-                   LessRecordByID>::const_iterator pf_iterator;
+  using pf_iterator = decltype(PatternFragments)::const_iterator;
   pf_iterator pf_begin() const { return PatternFragments.begin(); }
   pf_iterator pf_end() const { return PatternFragments.end(); }
   iterator_range<pf_iterator> ptfs() const { return PatternFragments; }
@@ -1206,11 +1205,11 @@ public:
   iterator_range<ptm_iterator> ptms() const { return PatternsToMatch; }
 
   /// Parse the Pattern for an instruction, and insert the result in DAGInsts.
-  typedef std::map<Record *, DAGInstruction, LessRecordByID> DAGInstMap;
+  typedef std::map<const Record *, DAGInstruction, LessRecordByID> DAGInstMap;
   void parseInstructionPattern(CodeGenInstruction &CGI, ListInit *Pattern,
                                DAGInstMap &DAGInsts);
 
-  const DAGInstruction &getInstruction(Record *R) const {
+  const DAGInstruction &getInstruction(const Record *R) const {
     auto F = Instructions.find(R);
     assert(F != Instructions.end() && "Unknown instruction!");
     return F->second;
@@ -1244,7 +1243,7 @@ private:
   void GenerateVariants();
   void VerifyInstructionFlags();
 
-  void ParseOnePattern(Record *TheDef, TreePattern &Pattern,
+  void ParseOnePattern(const Record *TheDef, TreePattern &Pattern,
                        TreePattern &Result,
                        const std::vector<Record *> &InstImpResults,
                        bool ShouldIgnore = false);
