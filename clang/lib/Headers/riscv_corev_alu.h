@@ -34,21 +34,21 @@ __riscv_cv_alu_sletu(unsigned long a, unsigned long b) {
 }
 
 static __inline__ long __DEFAULT_FN_ATTRS __riscv_cv_alu_min(long a, long b) {
-  return min(a, b);
+  return __builtin_elementwise_min(a, b);
 }
 
 static __inline__ unsigned long __DEFAULT_FN_ATTRS
 __riscv_cv_alu_minu(unsigned long a, unsigned long b) {
-  return __builtin_riscv_cv_alu_minu(a, b);
+  return __builtin_elementwise_min(a, b);
 }
 
 static __inline__ long __DEFAULT_FN_ATTRS __riscv_cv_alu_max(long a, long b) {
-  return max(a, b);
+  return __builtin_elementwise_max(a, b);
 }
 
 static __inline__ unsigned long __DEFAULT_FN_ATTRS
 __riscv_cv_alu_maxu(unsigned long a, unsigned long b) {
-  return __builtin_riscv_cv_alu_maxu(a, b);
+  return __builtin_elementwise_max(a, b);
 }
 
 static __inline__ long __DEFAULT_FN_ATTRS __riscv_cv_alu_exths(int16_t a) {

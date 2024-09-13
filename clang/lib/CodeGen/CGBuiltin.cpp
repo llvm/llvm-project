@@ -22364,18 +22364,13 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
   case RISCV::BI__builtin_riscv_cv_alu_extbz:
     ID = Intrinsic::riscv_cv_alu_extbz;
     break;
-  case RISCV::BI__builtin_riscv_cv_alu_exths:
-    ID = Intrinsic::riscv_cv_alu_exths;
-    break;
+  case RISCV::BI__builtin_riscv_cv_alu_exths: {
+    return Builder.CreateSExt(Builder.CreateTrunc(Ops[0], Int16Ty), Int32Ty,
+                              "exths");
+  }
   case RISCV::BI__builtin_riscv_cv_alu_exthz:
-    ID = Intrinsic::riscv_cv_alu_exthz;
-    break;
-  case RISCV::BI__builtin_riscv_cv_alu_maxu:
-    ID = Intrinsic::riscv_cv_alu_maxu;
-    break;
-  case RISCV::BI__builtin_riscv_cv_alu_minu:
-    ID = Intrinsic::riscv_cv_alu_minu;
-    break;
+    return Builder.CreateZExt(Builder.CreateTrunc(Ops[0], Int16Ty), Int32Ty,
+                              "exthz");
   case RISCV::BI__builtin_riscv_cv_alu_slet:
     ID = Intrinsic::riscv_cv_alu_slet;
     break;
@@ -22397,7 +22392,8 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
 
     // Vector builtins are handled from here.
 #include "clang/Basic/riscv_vector_builtin_cg.inc"
-  // SiFive Vector builtins are handled from here.
+
+    // SiFive Vector builtins are handled from here.
 #include "clang/Basic/riscv_sifive_vector_builtin_cg.inc"
   }
 

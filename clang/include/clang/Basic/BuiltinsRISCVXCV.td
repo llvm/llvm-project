@@ -23,8 +23,6 @@ let Attributes = [NoThrow, Const] in {
 //===----------------------------------------------------------------------===//
 def alu_slet  : RISCXCVBuiltin<"int(int, int)", "xcvalu">;
 def alu_sletu : RISCXCVBuiltin<"int(unsigned int, unsigned int)", "xcvalu">;
-def alu_minu  : RISCXCVBuiltin<"unsigned int(unsigned int, unsigned int)", "xcvalu">;
-def alu_maxu  : RISCXCVBuiltin<"unsigned int(unsigned int, unsigned int)", "xcvalu">;
 def alu_exths : RISCXCVBuiltin<"int(int)", "xcvalu">;
 def alu_exthz : RISCXCVBuiltin<"unsigned int(unsigned int)", "xcvalu">;
 def alu_extbs : RISCXCVBuiltin<"int(int)", "xcvalu">;

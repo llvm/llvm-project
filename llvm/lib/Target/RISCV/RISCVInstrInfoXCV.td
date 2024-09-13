@@ -795,12 +795,6 @@ let Predicates = [HasVendorXCValu, IsRV32], AddedComplexity = 1 in {
 
   def : PatCoreVAluGprGpr<"slet", "SLET">;
   def : PatCoreVAluGprGpr<"sletu", "SLETU">;
-  def : PatCoreVAluGprGpr<"min", "MIN">;
-  def : PatCoreVAluGprGpr<"minu", "MINU">;
-  def : PatCoreVAluGprGpr<"max", "MAX">;
-  def : PatCoreVAluGprGpr<"maxu", "MAXU">;
-  def : PatCoreVAluGpr<"exths", "EXTHS">;
-  def : PatCoreVAluGpr<"exthz", "EXTHZ">;
   def : PatCoreVAluGpr<"extbs", "EXTBS">;
   def : PatCoreVAluGpr<"extbz", "EXTBZ">;
 
