@@ -2815,8 +2815,11 @@ static ::mlir::ParseResult parseCallCommon(::mlir::OpAsmParser &parser,
   llvm::SMLoc landingPadOperandsLoc;
   llvm::SmallVector<mlir::Type, 1> landingPadTypes;
 
-  if (::mlir::succeeded(parser.parseOptionalKeyword("exception")))
+  bool hasExceptions = false;
+  if (::mlir::succeeded(parser.parseOptionalKeyword("exception"))) {
     result.addAttribute("exception", parser.getBuilder().getUnitAttr());
+    hasExceptions = true;
+  }
 
   // If we cannot parse a string callee, it means this is an indirect call.
   if (!parser.parseOptionalAttribute(calleeAttr, "callee", result.attributes)
@@ -2903,6 +2906,18 @@ static ::mlir::ParseResult parseCallCommon(::mlir::OpAsmParser &parser,
                                             builder.getContext(), callingConv));
   }
 
+  // If exception is present and there are cleanups, this should be latest thing
+  // present (after all attributes, etc).
+  mlir::Region *cleanupRegion = nullptr;
+  if (!hasDestinationBlocks) // Regular cir.call
+    cleanupRegion = result.addRegion();
+  if (hasExceptions) {
+    if (parser.parseOptionalKeyword("cleanup").succeeded()) {
+      if (parser.parseRegion(*cleanupRegion, /*arguments=*/{}, /*argTypes=*/{}))
+        return failure();
+    }
+  }
+
   return ::mlir::success();
 }
 
@@ -2981,6 +2996,17 @@ void printCallCommon(Operation *op, mlir::Value indirectCallee,
     state << " extra(";
     state.printAttributeWithoutType(extraAttrs);
     state << ")";
+  }
+
+  // If exception is present and there are cleanups, this should be latest thing
+  // present (after all attributes, etc).
+  if (exception) {
+    auto call = dyn_cast<mlir::cir::CallOp>(op);
+    assert(call && "expected regular call");
+    if (!call.getCleanup().empty()) {
+      state << "cleanup ";
+      state.printRegion(call.getCleanup());
+    }
   }
 }
 
