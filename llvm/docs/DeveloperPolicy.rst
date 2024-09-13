@@ -202,7 +202,10 @@ met for that project. This role is like any other maintainer role,
 except the responsibilities span the project rather than a limited area
 within the project. If you cannot reach a maintainer or don't know which
 maintainer to reach out to, a lead maintainer is always a good choice
-to reach out to.
+to reach out to. If a project has no active lead maintainers, it may be a
+reasonable candidate for removal from the monorepo. A discussion should be
+started on Discourse to find a new, active lead maintainer or whether the
+project should be discontinued.
 
 All contributors with commit access to the LLVM Project are eligible to be a
 maintainer. However, we are looking for people who can commit to:
@@ -231,10 +234,14 @@ your name entirely; no PR review is necessary. Additionally, any maintainer who
 has not been actively performing their responsibilities over an extended period
 of time can be moved to the "inactive maintainers" section by another active
 maintainer within that project with agreement from one other active maintainer
-within that project. However, please discuss the situation with the inactive
-maintainer before such removal to avoid accidental miscommunications. Stepping
-down or being removed as a maintainer is normal and does not prevent someone
-from resuming their activities as a maintainer in the future.
+within that project. If there is only one active maintainer for a project,
+please post on Discourse to solicit wider community feedback about the removal
+and future direction for the project. However, please discuss the situation
+with the inactive maintainer before such removal to avoid accidental
+miscommunications. If the inactive maintainer is unreachable, no discussion
+with them is required. Stepping down or being removed as a maintainer is normal
+and does not prevent someone from resuming their activities as a maintainer in
+the future.
 
 *To resume activities as a maintainer*, you can post a PR moving your name from
 the "inactive maintainers" section of the ``Maintainers.rst`` file to the
