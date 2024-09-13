@@ -3,11 +3,22 @@
 !s32i = !cir.int<s, 32>
 !fnptr = !cir.ptr<!cir.func<!s32i (!cir.ptr<!s32i>)>>
 
+#fn_attr = #cir<extra({inline = #cir.inline<no>, optnone = #cir.optnone})>
+#fn_attr1 = #cir<extra({nothrow = #cir.nothrow})>
+
 module {
+  // Excerpt of std::array<int, 8192ul>::operator[](unsigned long)
+  cir.func linkonce_odr @_ZNSt5arrayIiLm8192EEixEm(%arg0: !s32i) -> !s32i extra(#fn_attr) {
+    cir.return %arg0 : !s32i
+  }
+
   cir.func @ind(%fnptr: !fnptr, %a : !s32i) {
     %r = cir.call %fnptr(%a) : (!fnptr, !s32i) -> !s32i
+    // Check parse->pretty-print round-trip on extra() attribute
+    %7 = cir.call @_ZNSt5arrayIiLm8192EEixEm(%a) : (!s32i) -> !s32i extra(#fn_attr1)
     cir.return
   }
 }
 
 // CHECK: %0 = cir.call %arg0(%arg1) : (!cir.ptr<!cir.func<!s32i (!cir.ptr<!s32i>)>>, !s32i) -> !s32i
+// CHECK: %1 = cir.call @_ZNSt5arrayIiLm8192EEixEm(%arg1) : (!s32i) -> !s32i extra(#fn_attr1)

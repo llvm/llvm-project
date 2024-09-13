@@ -2827,6 +2827,18 @@ static ::mlir::ParseResult parseCallCommon(::mlir::OpAsmParser &parser,
             .failed())
       return ::mlir::failure();
 
+  if (parser.parseOptionalAttrDict(result.attributes))
+    return ::mlir::failure();
+  if (parser.parseColon())
+    return ::mlir::failure();
+
+  ::mlir::FunctionType opsFnTy;
+  if (parser.parseType(opsFnTy))
+    return ::mlir::failure();
+  operandsTypes = opsFnTy.getInputs();
+  allResultTypes = opsFnTy.getResults();
+  result.addTypes(allResultTypes);
+
   auto &builder = parser.getBuilder();
   Attribute extraAttrs;
   if (::mlir::succeeded(parser.parseOptionalKeyword("extra"))) {
@@ -2842,18 +2854,6 @@ static ::mlir::ParseResult parseCallCommon(::mlir::OpAsmParser &parser,
         builder.getContext(), empty.getDictionary(builder.getContext()));
   }
   result.addAttribute(extraAttrsAttrName, extraAttrs);
-
-  if (parser.parseOptionalAttrDict(result.attributes))
-    return ::mlir::failure();
-  if (parser.parseColon())
-    return ::mlir::failure();
-
-  ::mlir::FunctionType opsFnTy;
-  if (parser.parseType(opsFnTy))
-    return ::mlir::failure();
-  operandsTypes = opsFnTy.getInputs();
-  allResultTypes = opsFnTy.getResults();
-  result.addTypes(allResultTypes);
 
   if (parser.resolveOperands(ops, operandsTypes, opsLoc, result.operands))
     return ::mlir::failure();
