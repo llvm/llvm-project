@@ -463,19 +463,9 @@ void RISCVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   }
 
   if (RISCV::GPRF16RegClass.contains(DstReg, SrcReg)) {
-    if (STI.hasStdExtZhinx()) {
-      BuildMI(MBB, MBBI, DL, get(RISCV::FSGNJ_H_INX), DstReg)
-          .addReg(SrcReg, getKillRegState(KillSrc))
-          .addReg(SrcReg, getKillRegState(KillSrc));
-      return;
-    }
-    DstReg =
-        TRI->getMatchingSuperReg(DstReg, RISCV::sub_16, &RISCV::GPRRegClass);
-    SrcReg =
-        TRI->getMatchingSuperReg(SrcReg, RISCV::sub_16, &RISCV::GPRRegClass);
-    BuildMI(MBB, MBBI, DL, get(RISCV::ADDI), DstReg)
-        .addReg(SrcReg, getKillRegState(KillSrc))
-        .addImm(0);
+    BuildMI(MBB, MBBI, DL, get(RISCV::PseudoMV_FPR16INX), DstReg)
+        .addReg(SrcReg,
+                getKillRegState(KillSrc) | getRenamableRegState(RenamableSrc));
     return;
   }
 
@@ -1528,6 +1518,9 @@ unsigned RISCVInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   }
 
   switch (Opcode) {
+  case RISCV::PseudoMV_FPR16INX:
+    // MV is always compressible.
+    return STI.hasStdExtCOrZca() ? 2 : 4;
   case TargetOpcode::STACKMAP:
     // The upper bound for a stackmap intrinsic is the full length of its shadow
     return StackMapOpers(&MI).getNumPatchBytes();

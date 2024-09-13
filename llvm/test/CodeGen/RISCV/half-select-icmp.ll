@@ -29,9 +29,9 @@ define half @select_icmp_eq(i32 signext %a, i32 signext %b, half %c, half %d) {
 ; CHECKIZHINX:       # %bb.0:
 ; CHECKIZHINX-NEXT:    beq a0, a1, .LBB0_2
 ; CHECKIZHINX-NEXT:  # %bb.1:
-; CHECKIZHINX-NEXT:    fmv.h a2, a3
+; CHECKIZHINX-NEXT:    mv a2, a3
 ; CHECKIZHINX-NEXT:  .LBB0_2:
-; CHECKIZHINX-NEXT:    fmv.h a0, a2
+; CHECKIZHINX-NEXT:    mv a0, a2
 ; CHECKIZHINX-NEXT:    ret
 ;
 ; CHECKIZFHMIN-LABEL: select_icmp_eq:
@@ -68,9 +68,9 @@ define half @select_icmp_ne(i32 signext %a, i32 signext %b, half %c, half %d) {
 ; CHECKIZHINX:       # %bb.0:
 ; CHECKIZHINX-NEXT:    bne a0, a1, .LBB1_2
 ; CHECKIZHINX-NEXT:  # %bb.1:
-; CHECKIZHINX-NEXT:    fmv.h a2, a3
+; CHECKIZHINX-NEXT:    mv a2, a3
 ; CHECKIZHINX-NEXT:  .LBB1_2:
-; CHECKIZHINX-NEXT:    fmv.h a0, a2
+; CHECKIZHINX-NEXT:    mv a0, a2
 ; CHECKIZHINX-NEXT:    ret
 ;
 ; CHECKIZFHMIN-LABEL: select_icmp_ne:
@@ -107,9 +107,9 @@ define half @select_icmp_ugt(i32 signext %a, i32 signext %b, half %c, half %d) {
 ; CHECKIZHINX:       # %bb.0:
 ; CHECKIZHINX-NEXT:    bltu a1, a0, .LBB2_2
 ; CHECKIZHINX-NEXT:  # %bb.1:
-; CHECKIZHINX-NEXT:    fmv.h a2, a3
+; CHECKIZHINX-NEXT:    mv a2, a3
 ; CHECKIZHINX-NEXT:  .LBB2_2:
-; CHECKIZHINX-NEXT:    fmv.h a0, a2
+; CHECKIZHINX-NEXT:    mv a0, a2
 ; CHECKIZHINX-NEXT:    ret
 ;
 ; CHECKIZFHMIN-LABEL: select_icmp_ugt:
@@ -146,9 +146,9 @@ define half @select_icmp_uge(i32 signext %a, i32 signext %b, half %c, half %d) {
 ; CHECKIZHINX:       # %bb.0:
 ; CHECKIZHINX-NEXT:    bgeu a0, a1, .LBB3_2
 ; CHECKIZHINX-NEXT:  # %bb.1:
-; CHECKIZHINX-NEXT:    fmv.h a2, a3
+; CHECKIZHINX-NEXT:    mv a2, a3
 ; CHECKIZHINX-NEXT:  .LBB3_2:
-; CHECKIZHINX-NEXT:    fmv.h a0, a2
+; CHECKIZHINX-NEXT:    mv a0, a2
 ; CHECKIZHINX-NEXT:    ret
 ;
 ; CHECKIZFHMIN-LABEL: select_icmp_uge:
@@ -185,9 +185,9 @@ define half @select_icmp_ult(i32 signext %a, i32 signext %b, half %c, half %d) {
 ; CHECKIZHINX:       # %bb.0:
 ; CHECKIZHINX-NEXT:    bltu a0, a1, .LBB4_2
 ; CHECKIZHINX-NEXT:  # %bb.1:
-; CHECKIZHINX-NEXT:    fmv.h a2, a3
+; CHECKIZHINX-NEXT:    mv a2, a3
 ; CHECKIZHINX-NEXT:  .LBB4_2:
-; CHECKIZHINX-NEXT:    fmv.h a0, a2
+; CHECKIZHINX-NEXT:    mv a0, a2
 ; CHECKIZHINX-NEXT:    ret
 ;
 ; CHECKIZFHMIN-LABEL: select_icmp_ult:
@@ -224,9 +224,9 @@ define half @select_icmp_ule(i32 signext %a, i32 signext %b, half %c, half %d) {
 ; CHECKIZHINX:       # %bb.0:
 ; CHECKIZHINX-NEXT:    bgeu a1, a0, .LBB5_2
 ; CHECKIZHINX-NEXT:  # %bb.1:
-; CHECKIZHINX-NEXT:    fmv.h a2, a3
+; CHECKIZHINX-NEXT:    mv a2, a3
 ; CHECKIZHINX-NEXT:  .LBB5_2:
-; CHECKIZHINX-NEXT:    fmv.h a0, a2
+; CHECKIZHINX-NEXT:    mv a0, a2
 ; CHECKIZHINX-NEXT:    ret
 ;
 ; CHECKIZFHMIN-LABEL: select_icmp_ule:
@@ -263,9 +263,9 @@ define half @select_icmp_sgt(i32 signext %a, i32 signext %b, half %c, half %d) {
 ; CHECKIZHINX:       # %bb.0:
 ; CHECKIZHINX-NEXT:    blt a1, a0, .LBB6_2
 ; CHECKIZHINX-NEXT:  # %bb.1:
-; CHECKIZHINX-NEXT:    fmv.h a2, a3
+; CHECKIZHINX-NEXT:    mv a2, a3
 ; CHECKIZHINX-NEXT:  .LBB6_2:
-; CHECKIZHINX-NEXT:    fmv.h a0, a2
+; CHECKIZHINX-NEXT:    mv a0, a2
 ; CHECKIZHINX-NEXT:    ret
 ;
 ; CHECKIZFHMIN-LABEL: select_icmp_sgt:
@@ -302,9 +302,9 @@ define half @select_icmp_sge(i32 signext %a, i32 signext %b, half %c, half %d) {
 ; CHECKIZHINX:       # %bb.0:
 ; CHECKIZHINX-NEXT:    bge a0, a1, .LBB7_2
 ; CHECKIZHINX-NEXT:  # %bb.1:
-; CHECKIZHINX-NEXT:    fmv.h a2, a3
+; CHECKIZHINX-NEXT:    mv a2, a3
 ; CHECKIZHINX-NEXT:  .LBB7_2:
-; CHECKIZHINX-NEXT:    fmv.h a0, a2
+; CHECKIZHINX-NEXT:    mv a0, a2
 ; CHECKIZHINX-NEXT:    ret
 ;
 ; CHECKIZFHMIN-LABEL: select_icmp_sge:
@@ -341,9 +341,9 @@ define half @select_icmp_slt(i32 signext %a, i32 signext %b, half %c, half %d) {
 ; CHECKIZHINX:       # %bb.0:
 ; CHECKIZHINX-NEXT:    blt a0, a1, .LBB8_2
 ; CHECKIZHINX-NEXT:  # %bb.1:
-; CHECKIZHINX-NEXT:    fmv.h a2, a3
+; CHECKIZHINX-NEXT:    mv a2, a3
 ; CHECKIZHINX-NEXT:  .LBB8_2:
-; CHECKIZHINX-NEXT:    fmv.h a0, a2
+; CHECKIZHINX-NEXT:    mv a0, a2
 ; CHECKIZHINX-NEXT:    ret
 ;
 ; CHECKIZFHMIN-LABEL: select_icmp_slt:
@@ -380,9 +380,9 @@ define half @select_icmp_sle(i32 signext %a, i32 signext %b, half %c, half %d) {
 ; CHECKIZHINX:       # %bb.0:
 ; CHECKIZHINX-NEXT:    bge a1, a0, .LBB9_2
 ; CHECKIZHINX-NEXT:  # %bb.1:
-; CHECKIZHINX-NEXT:    fmv.h a2, a3
+; CHECKIZHINX-NEXT:    mv a2, a3
 ; CHECKIZHINX-NEXT:  .LBB9_2:
-; CHECKIZHINX-NEXT:    fmv.h a0, a2
+; CHECKIZHINX-NEXT:    mv a0, a2
 ; CHECKIZHINX-NEXT:    ret
 ;
 ; CHECKIZFHMIN-LABEL: select_icmp_sle:

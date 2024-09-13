@@ -24,7 +24,7 @@ define half @select_fcmp_false(half %a, half %b) nounwind {
 ;
 ; CHECKIZHINX-LABEL: select_fcmp_false:
 ; CHECKIZHINX:       # %bb.0:
-; CHECKIZHINX-NEXT:    fmv.h a0, a1
+; CHECKIZHINX-NEXT:    mv a0, a1
 ; CHECKIZHINX-NEXT:    ret
 ;
 ; CHECKIZFHMIN-LABEL: select_fcmp_false:
@@ -56,7 +56,7 @@ define half @select_fcmp_oeq(half %a, half %b) nounwind {
 ; CHECKIZHINX-NEXT:    feq.h a2, a0, a1
 ; CHECKIZHINX-NEXT:    bnez a2, .LBB1_2
 ; CHECKIZHINX-NEXT:  # %bb.1:
-; CHECKIZHINX-NEXT:    fmv.h a0, a1
+; CHECKIZHINX-NEXT:    mv a0, a1
 ; CHECKIZHINX-NEXT:  .LBB1_2:
 ; CHECKIZHINX-NEXT:    ret
 ;
@@ -101,7 +101,7 @@ define half @select_fcmp_ogt(half %a, half %b) nounwind {
 ; CHECKIZHINX-NEXT:    flt.h a2, a1, a0
 ; CHECKIZHINX-NEXT:    bnez a2, .LBB2_2
 ; CHECKIZHINX-NEXT:  # %bb.1:
-; CHECKIZHINX-NEXT:    fmv.h a0, a1
+; CHECKIZHINX-NEXT:    mv a0, a1
 ; CHECKIZHINX-NEXT:  .LBB2_2:
 ; CHECKIZHINX-NEXT:    ret
 ;
@@ -146,7 +146,7 @@ define half @select_fcmp_oge(half %a, half %b) nounwind {
 ; CHECKIZHINX-NEXT:    fle.h a2, a1, a0
 ; CHECKIZHINX-NEXT:    bnez a2, .LBB3_2
 ; CHECKIZHINX-NEXT:  # %bb.1:
-; CHECKIZHINX-NEXT:    fmv.h a0, a1
+; CHECKIZHINX-NEXT:    mv a0, a1
 ; CHECKIZHINX-NEXT:  .LBB3_2:
 ; CHECKIZHINX-NEXT:    ret
 ;
@@ -191,7 +191,7 @@ define half @select_fcmp_olt(half %a, half %b) nounwind {
 ; CHECKIZHINX-NEXT:    flt.h a2, a0, a1
 ; CHECKIZHINX-NEXT:    bnez a2, .LBB4_2
 ; CHECKIZHINX-NEXT:  # %bb.1:
-; CHECKIZHINX-NEXT:    fmv.h a0, a1
+; CHECKIZHINX-NEXT:    mv a0, a1
 ; CHECKIZHINX-NEXT:  .LBB4_2:
 ; CHECKIZHINX-NEXT:    ret
 ;
@@ -236,7 +236,7 @@ define half @select_fcmp_ole(half %a, half %b) nounwind {
 ; CHECKIZHINX-NEXT:    fle.h a2, a0, a1
 ; CHECKIZHINX-NEXT:    bnez a2, .LBB5_2
 ; CHECKIZHINX-NEXT:  # %bb.1:
-; CHECKIZHINX-NEXT:    fmv.h a0, a1
+; CHECKIZHINX-NEXT:    mv a0, a1
 ; CHECKIZHINX-NEXT:  .LBB5_2:
 ; CHECKIZHINX-NEXT:    ret
 ;
@@ -285,7 +285,7 @@ define half @select_fcmp_one(half %a, half %b) nounwind {
 ; CHECKIZHINX-NEXT:    or a2, a3, a2
 ; CHECKIZHINX-NEXT:    bnez a2, .LBB6_2
 ; CHECKIZHINX-NEXT:  # %bb.1:
-; CHECKIZHINX-NEXT:    fmv.h a0, a1
+; CHECKIZHINX-NEXT:    mv a0, a1
 ; CHECKIZHINX-NEXT:  .LBB6_2:
 ; CHECKIZHINX-NEXT:    ret
 ;
@@ -338,7 +338,7 @@ define half @select_fcmp_ord(half %a, half %b) nounwind {
 ; CHECKIZHINX-NEXT:    and a2, a3, a2
 ; CHECKIZHINX-NEXT:    bnez a2, .LBB7_2
 ; CHECKIZHINX-NEXT:  # %bb.1:
-; CHECKIZHINX-NEXT:    fmv.h a0, a1
+; CHECKIZHINX-NEXT:    mv a0, a1
 ; CHECKIZHINX-NEXT:  .LBB7_2:
 ; CHECKIZHINX-NEXT:    ret
 ;
@@ -391,7 +391,7 @@ define half @select_fcmp_ueq(half %a, half %b) nounwind {
 ; CHECKIZHINX-NEXT:    or a2, a3, a2
 ; CHECKIZHINX-NEXT:    beqz a2, .LBB8_2
 ; CHECKIZHINX-NEXT:  # %bb.1:
-; CHECKIZHINX-NEXT:    fmv.h a0, a1
+; CHECKIZHINX-NEXT:    mv a0, a1
 ; CHECKIZHINX-NEXT:  .LBB8_2:
 ; CHECKIZHINX-NEXT:    ret
 ;
@@ -440,7 +440,7 @@ define half @select_fcmp_ugt(half %a, half %b) nounwind {
 ; CHECKIZHINX-NEXT:    fle.h a2, a0, a1
 ; CHECKIZHINX-NEXT:    beqz a2, .LBB9_2
 ; CHECKIZHINX-NEXT:  # %bb.1:
-; CHECKIZHINX-NEXT:    fmv.h a0, a1
+; CHECKIZHINX-NEXT:    mv a0, a1
 ; CHECKIZHINX-NEXT:  .LBB9_2:
 ; CHECKIZHINX-NEXT:    ret
 ;
@@ -485,7 +485,7 @@ define half @select_fcmp_uge(half %a, half %b) nounwind {
 ; CHECKIZHINX-NEXT:    flt.h a2, a0, a1
 ; CHECKIZHINX-NEXT:    beqz a2, .LBB10_2
 ; CHECKIZHINX-NEXT:  # %bb.1:
-; CHECKIZHINX-NEXT:    fmv.h a0, a1
+; CHECKIZHINX-NEXT:    mv a0, a1
 ; CHECKIZHINX-NEXT:  .LBB10_2:
 ; CHECKIZHINX-NEXT:    ret
 ;
@@ -530,7 +530,7 @@ define half @select_fcmp_ult(half %a, half %b) nounwind {
 ; CHECKIZHINX-NEXT:    fle.h a2, a1, a0
 ; CHECKIZHINX-NEXT:    beqz a2, .LBB11_2
 ; CHECKIZHINX-NEXT:  # %bb.1:
-; CHECKIZHINX-NEXT:    fmv.h a0, a1
+; CHECKIZHINX-NEXT:    mv a0, a1
 ; CHECKIZHINX-NEXT:  .LBB11_2:
 ; CHECKIZHINX-NEXT:    ret
 ;
@@ -575,7 +575,7 @@ define half @select_fcmp_ule(half %a, half %b) nounwind {
 ; CHECKIZHINX-NEXT:    flt.h a2, a1, a0
 ; CHECKIZHINX-NEXT:    beqz a2, .LBB12_2
 ; CHECKIZHINX-NEXT:  # %bb.1:
-; CHECKIZHINX-NEXT:    fmv.h a0, a1
+; CHECKIZHINX-NEXT:    mv a0, a1
 ; CHECKIZHINX-NEXT:  .LBB12_2:
 ; CHECKIZHINX-NEXT:    ret
 ;
@@ -620,7 +620,7 @@ define half @select_fcmp_une(half %a, half %b) nounwind {
 ; CHECKIZHINX-NEXT:    feq.h a2, a0, a1
 ; CHECKIZHINX-NEXT:    beqz a2, .LBB13_2
 ; CHECKIZHINX-NEXT:  # %bb.1:
-; CHECKIZHINX-NEXT:    fmv.h a0, a1
+; CHECKIZHINX-NEXT:    mv a0, a1
 ; CHECKIZHINX-NEXT:  .LBB13_2:
 ; CHECKIZHINX-NEXT:    ret
 ;
@@ -669,7 +669,7 @@ define half @select_fcmp_uno(half %a, half %b) nounwind {
 ; CHECKIZHINX-NEXT:    and a2, a3, a2
 ; CHECKIZHINX-NEXT:    beqz a2, .LBB14_2
 ; CHECKIZHINX-NEXT:  # %bb.1:
-; CHECKIZHINX-NEXT:    fmv.h a0, a1
+; CHECKIZHINX-NEXT:    mv a0, a1
 ; CHECKIZHINX-NEXT:  .LBB14_2:
 ; CHECKIZHINX-NEXT:    ret
 ;

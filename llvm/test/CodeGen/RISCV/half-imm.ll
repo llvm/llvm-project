@@ -114,12 +114,12 @@ define half @half_positive_zero(ptr %pf) nounwind {
 ;
 ; RV32IZHINX-LABEL: half_positive_zero:
 ; RV32IZHINX:       # %bb.0:
-; RV32IZHINX-NEXT:    fmv.h a0, zero
+; RV32IZHINX-NEXT:    li a0, 0
 ; RV32IZHINX-NEXT:    ret
 ;
 ; RV64IZHINX-LABEL: half_positive_zero:
 ; RV64IZHINX:       # %bb.0:
-; RV64IZHINX-NEXT:    fmv.h a0, zero
+; RV64IZHINX-NEXT:    li a0, 0
 ; RV64IZHINX-NEXT:    ret
 ;
 ; CHECKIZFHMIN-LABEL: half_positive_zero:

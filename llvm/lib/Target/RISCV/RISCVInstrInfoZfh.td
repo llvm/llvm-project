@@ -93,6 +93,13 @@ let Predicates = [HasStdExtZhinxmin], isCodeGenOnly = 1 in {
 def LH_INX : Load_ri<0b001, "lh", GPRF16>, Sched<[WriteLDH, ReadMemBase]>;
 def SH_INX : Store_rri<0b001, "sh", GPRF16>,
              Sched<[WriteSTH, ReadStoreData, ReadMemBase]>;
+
+// ADDI with GPRF16 register class to use for copy. This should not be used as
+// general ADDI, so the immediate should always be zero.
+let isReMaterializable = 1, isAsCheapAsAMove = 1, isMoveReg = 1,
+    hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+def PseudoMV_FPR16INX : Pseudo<(outs GPRF16:$rd), (ins GPRF16:$rs), []>,
+                        Sched<[WriteIALU, ReadIALU]>;
 }
 
 foreach Ext = ZfhExts in {

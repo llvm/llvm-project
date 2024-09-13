@@ -292,7 +292,7 @@ define half @flh_stack(half %a) nounwind {
 ; RV32IZHINX-NEXT:    addi sp, sp, -16
 ; RV32IZHINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IZHINX-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
-; RV32IZHINX-NEXT:    fmv.h s0, a0
+; RV32IZHINX-NEXT:    mv s0, a0
 ; RV32IZHINX-NEXT:    addi a0, sp, 4
 ; RV32IZHINX-NEXT:    call notdead
 ; RV32IZHINX-NEXT:    lh a0, 4(sp)
@@ -307,7 +307,7 @@ define half @flh_stack(half %a) nounwind {
 ; RV64IZHINX-NEXT:    addi sp, sp, -32
 ; RV64IZHINX-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
 ; RV64IZHINX-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; RV64IZHINX-NEXT:    fmv.h s0, a0
+; RV64IZHINX-NEXT:    mv s0, a0
 ; RV64IZHINX-NEXT:    addi a0, sp, 12
 ; RV64IZHINX-NEXT:    call notdead
 ; RV64IZHINX-NEXT:    lh a0, 12(sp)
