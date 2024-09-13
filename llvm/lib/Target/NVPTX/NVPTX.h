@@ -135,15 +135,19 @@ enum Scope : ScopeUnderlyingType {
   LASTSCOPE = Device
 };
 
-namespace PTXLdStInstCode {
-enum AddressSpace {
-  GENERIC = 0,
-  GLOBAL = 1,
-  CONSTANT = 2,
-  SHARED = 3,
-  PARAM = 4,
-  LOCAL = 5
+using AddressSpaceUnderlyingType = unsigned int;
+enum AddressSpace : AddressSpaceUnderlyingType {
+  Generic = 0,
+  Global = 1,
+  Shared = 3,
+  Const = 4,
+  Local = 5,
+
+  // NVPTX Backend Private:
+  Param = 101
 };
+
+namespace PTXLdStInstCode {
 enum FromType {
   Unsigned = 0,
   Signed,

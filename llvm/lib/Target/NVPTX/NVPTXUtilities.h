@@ -137,6 +137,30 @@ inline raw_ostream &operator<<(raw_ostream &O, Scope S) {
   return O;
 }
 
+inline std::string AddressSpaceToString(AddressSpace A) {
+  switch (A) {
+  case AddressSpace::Generic:
+    return "generic";
+  case AddressSpace::Global:
+    return "global";
+  case AddressSpace::Const:
+    return "const";
+  case AddressSpace::Shared:
+    return "shared";
+  case AddressSpace::Param:
+    return "param";
+  case AddressSpace::Local:
+    return "local";
+  }
+  report_fatal_error(formatv("Unknown NVPTX::AddressSpace \"{}\".",
+                             static_cast<AddressSpaceUnderlyingType>(A)));
+}
+
+inline raw_ostream &operator<<(raw_ostream &O, AddressSpace A) {
+  O << AddressSpaceToString(A);
+  return O;
+}
+
 } // namespace NVPTX
 } // namespace llvm
 

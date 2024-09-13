@@ -282,27 +282,21 @@ void NVPTXInstPrinter::printLdStCode(const MCInst *MI, int OpNum,
         formatv("NVPTX LdStCode Printer does not support \"{}\" sco modifier.",
                 ScopeToString(S)));
   } else if (Modifier == "addsp") {
-    switch (Imm) {
-    case NVPTX::PTXLdStInstCode::GLOBAL:
-      O << ".global";
+    auto A = NVPTX::AddressSpace(Imm);
+    switch (A) {
+    case NVPTX::AddressSpace::Generic:
       return;
-    case NVPTX::PTXLdStInstCode::SHARED:
-      O << ".shared";
+    case NVPTX::AddressSpace::Global:
+    case NVPTX::AddressSpace::Const:
+    case NVPTX::AddressSpace::Shared:
+    case NVPTX::AddressSpace::Param:
+    case NVPTX::AddressSpace::Local:
+      O << "." << A;
       return;
-    case NVPTX::PTXLdStInstCode::LOCAL:
-      O << ".local";
-      return;
-    case NVPTX::PTXLdStInstCode::PARAM:
-      O << ".param";
-      return;
-    case NVPTX::PTXLdStInstCode::CONSTANT:
-      O << ".const";
-      return;
-    case NVPTX::PTXLdStInstCode::GENERIC:
-      return;
-    default:
-      llvm_unreachable("Wrong Address Space");
     }
+    report_fatal_error(formatv(
+        "NVPTX LdStCode Printer does not support \"{}\" addsp modifier.",
+        AddressSpaceToString(A)));
   } else if (Modifier == "sign") {
     switch (Imm) {
     case NVPTX::PTXLdStInstCode::Signed:

@@ -704,20 +704,26 @@ static unsigned int getCodeAddrSpace(MemSDNode *N) {
   const Value *Src = N->getMemOperand()->getValue();
 
   if (!Src)
-    return NVPTX::PTXLdStInstCode::GENERIC;
+    return NVPTX::AddressSpace::Generic;
 
   if (auto *PT = dyn_cast<PointerType>(Src->getType())) {
     switch (PT->getAddressSpace()) {
-    case llvm::ADDRESS_SPACE_LOCAL: return NVPTX::PTXLdStInstCode::LOCAL;
-    case llvm::ADDRESS_SPACE_GLOBAL: return NVPTX::PTXLdStInstCode::GLOBAL;
-    case llvm::ADDRESS_SPACE_SHARED: return NVPTX::PTXLdStInstCode::SHARED;
-    case llvm::ADDRESS_SPACE_GENERIC: return NVPTX::PTXLdStInstCode::GENERIC;
-    case llvm::ADDRESS_SPACE_PARAM: return NVPTX::PTXLdStInstCode::PARAM;
-    case llvm::ADDRESS_SPACE_CONST: return NVPTX::PTXLdStInstCode::CONSTANT;
+    case llvm::ADDRESS_SPACE_LOCAL:
+      return NVPTX::AddressSpace::Local;
+    case llvm::ADDRESS_SPACE_GLOBAL:
+      return NVPTX::AddressSpace::Global;
+    case llvm::ADDRESS_SPACE_SHARED:
+      return NVPTX::AddressSpace::Shared;
+    case llvm::ADDRESS_SPACE_GENERIC:
+      return NVPTX::AddressSpace::Generic;
+    case llvm::ADDRESS_SPACE_PARAM:
+      return NVPTX::AddressSpace::Param;
+    case llvm::ADDRESS_SPACE_CONST:
+      return NVPTX::AddressSpace::Const;
     default: break;
     }
   }
-  return NVPTX::PTXLdStInstCode::GENERIC;
+  return NVPTX::AddressSpace::Generic;
 }
 
 namespace {
@@ -820,9 +826,9 @@ getOperationOrderings(MemSDNode *N, const NVPTXSubtarget *Subtarget) {
   //        - the "weak" memory instruction we are currently lowering to, and
   //        - some other instruction that preserves the side-effect, e.g.,
   //          a dead dummy volatile load.
-  if (CodeAddrSpace == NVPTX::PTXLdStInstCode::LOCAL ||
-      CodeAddrSpace == NVPTX::PTXLdStInstCode::CONSTANT ||
-      CodeAddrSpace == NVPTX::PTXLdStInstCode::PARAM) {
+  if (CodeAddrSpace == NVPTX::AddressSpace::Local ||
+      CodeAddrSpace == NVPTX::AddressSpace::Const ||
+      CodeAddrSpace == NVPTX::AddressSpace::Param) {
     return NVPTX::Ordering::NotAtomic;
   }
 
@@ -847,14 +853,14 @@ getOperationOrderings(MemSDNode *N, const NVPTXSubtarget *Subtarget) {
   // atomics is undefined if the generic address does not refer to a .global or
   // .shared memory location.
   bool AddrGenericOrGlobalOrShared =
-      (CodeAddrSpace == NVPTX::PTXLdStInstCode::GENERIC ||
-       CodeAddrSpace == NVPTX::PTXLdStInstCode::GLOBAL ||
-       CodeAddrSpace == NVPTX::PTXLdStInstCode::SHARED);
+      (CodeAddrSpace == NVPTX::AddressSpace::Generic ||
+       CodeAddrSpace == NVPTX::AddressSpace::Global ||
+       CodeAddrSpace == NVPTX::AddressSpace::Shared);
   if (!AddrGenericOrGlobalOrShared)
     return NVPTX::Ordering::NotAtomic;
 
   bool UseRelaxedMMIO =
-      HasRelaxedMMIO && CodeAddrSpace == NVPTX::PTXLdStInstCode::GLOBAL;
+      HasRelaxedMMIO && CodeAddrSpace == NVPTX::AddressSpace::Global;
 
   switch (Ordering) {
   case AtomicOrdering::NotAtomic:
@@ -975,7 +981,7 @@ static bool canLowerToLDG(MemSDNode *N, const NVPTXSubtarget &Subtarget,
   // TODO: Infer invariance only at -O2.  We still want to use ldg at -O0 for
   // explicitly invariant loads because these are how clang tells us to use ldg
   // when the user uses a builtin.
-  if (!Subtarget.hasLDG() || CodeAddrSpace != NVPTX::PTXLdStInstCode::GLOBAL)
+  if (!Subtarget.hasLDG() || CodeAddrSpace != NVPTX::AddressSpace::Global)
     return false;
 
   if (N->isInvariant())
@@ -2090,7 +2096,7 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
 
   // Address Space Setting
   unsigned CodeAddrSpace = getCodeAddrSpace(MemSD);
-  if (CodeAddrSpace == NVPTX::PTXLdStInstCode::CONSTANT) {
+  if (CodeAddrSpace == NVPTX::AddressSpace::Const) {
     report_fatal_error("Cannot store to pointer that points to constant "
                        "memory space");
   }
