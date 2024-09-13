@@ -18,6 +18,7 @@
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/ErrorHandling.h"
 #include <optional>
 #include <vector>
 
@@ -310,6 +311,7 @@ public:
         return {diag::Severity::Fatal, std::string(Message), CLASS_ERROR,
                 /*ShowInSystemHeader*/ true};
       }
+      llvm_unreachable("Fully covered switch above!");
     }());
   }
 
