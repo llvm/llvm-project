@@ -18,8 +18,8 @@ from tools import sparsifier
 
 
 def boilerplate():
-  """Returns boilerplate main method."""
-  return """
+    """Returns boilerplate main method."""
+    return """
 #Dense = #sparse_tensor.encoding<{
   map = (i, j) -> (i: dense, j: dense)
 }>
@@ -56,41 +56,39 @@ func.func @add(%st_0 : tensor<3x4xf64, #Dense>,
 
 
 def main():
-  support_lib = os.getenv("SUPPORT_LIB")
-  assert support_lib is not None, "SUPPORT_LIB is undefined"
-  if not os.path.exists(support_lib):
-    raise FileNotFoundError(
-        errno.ENOENT, os.strerror(errno.ENOENT), support_lib
-    )
+    support_lib = os.getenv("SUPPORT_LIB")
+    assert support_lib is not None, "SUPPORT_LIB is undefined"
+    if not os.path.exists(support_lib):
+        raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), support_lib)
 
-  # CHECK-LABEL: TEST: all dense
-  # CHECK: ---- Sparse Tensor ----
-  # CHECK: nse = 12
-  # CHECK: dim = ( 3, 4 )
-  # CHECK: lvl = ( 3, 4 )
-  # CHECK: values : ( 1, 1, 0, 1, 0, 6, 2, 3, 0, 0, 0, 2 )
-  # CHECK: ----
-  print("\nTEST: all dense")
-  with ir.Context() as ctx, ir.Location.unknown():
-    compiler = sparsifier.Sparsifier(
-        extras="sparse-assembler,",
-        options="enable-runtime-library=false",
-        opt_level=2,
-        shared_libs=[support_lib],
-    )
-    module = ir.Module.parse(boilerplate())
-    engine = compiler.compile_and_jit(module)
-    print(module)
+    # CHECK-LABEL: TEST: all dense
+    # CHECK: ---- Sparse Tensor ----
+    # CHECK: nse = 12
+    # CHECK: dim = ( 3, 4 )
+    # CHECK: lvl = ( 3, 4 )
+    # CHECK: values : ( 1, 1, 0, 1, 0, 6, 2, 3, 0, 0, 0, 2 )
+    # CHECK: ----
+    print("\nTEST: all dense")
+    with ir.Context() as ctx, ir.Location.unknown():
+        compiler = sparsifier.Sparsifier(
+            extras="sparse-assembler,",
+            options="enable-runtime-library=false",
+            opt_level=2,
+            shared_libs=[support_lib],
+        )
+        module = ir.Module.parse(boilerplate())
+        engine = compiler.compile_and_jit(module)
+        print(module)
 
-    a = np.array([1, 0, 0, 1, 0, 2, 2, 0, 0, 0, 0, 1], dtype=np.float64)
-    b = np.array([0, 1, 0, 0, 0, 4, 0, 3, 0, 0, 0, 1], dtype=np.float64)
-    mem_a = ctypes.pointer(ctypes.pointer(rt.get_ranked_memref_descriptor(a)))
-    mem_b = ctypes.pointer(ctypes.pointer(rt.get_ranked_memref_descriptor(b)))
+        a = np.array([1, 0, 0, 1, 0, 2, 2, 0, 0, 0, 0, 1], dtype=np.float64)
+        b = np.array([0, 1, 0, 0, 0, 4, 0, 3, 0, 0, 0, 1], dtype=np.float64)
+        mem_a = ctypes.pointer(ctypes.pointer(rt.get_ranked_memref_descriptor(a)))
+        mem_b = ctypes.pointer(ctypes.pointer(rt.get_ranked_memref_descriptor(b)))
 
-    # Invoke the kernel and get numpy output.
-    # Built-in bufferization uses in-out buffers.
-    engine.invoke("add", mem_a, mem_b)
+        # Invoke the kernel and get numpy output.
+        # Built-in bufferization uses in-out buffers.
+        engine.invoke("add", mem_a, mem_b)
 
 
 if __name__ == "__main__":
-  main()
+    main()
