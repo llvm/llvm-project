@@ -300,6 +300,10 @@ GCNTTIImpl::GCNTTIImpl(const AMDGPUTargetMachine *TM, const Function &F)
   HasFP32Denormals = Mode.FP32Denormals != DenormalMode::getPreserveSign();
   HasFP64FP16Denormals =
       Mode.FP64FP16Denormals != DenormalMode::getPreserveSign();
+  // Don't bother running InferAddressSpaces pass on graphics shaders which
+  // don't use flat addressing.
+  if (!IsGraphics)
+    FlatAddressSpace = TM->getFlatAddressSpace();
 }
 
 bool GCNTTIImpl::hasBranchDivergence(const Function *F) const {

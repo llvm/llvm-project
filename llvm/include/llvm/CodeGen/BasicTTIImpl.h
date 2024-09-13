@@ -292,10 +292,7 @@ public:
     return true;
   }
 
-  unsigned getFlatAddressSpace() {
-    // Return an invalid address space.
-    return -1;
-  }
+  unsigned getFlatAddressSpace() { return ~0U; }
 
   bool collectFlatAddressOperands(SmallVectorImpl<int> &OpIndexes,
                                   Intrinsic::ID IID) const {

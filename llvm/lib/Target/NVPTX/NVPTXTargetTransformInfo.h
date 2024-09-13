@@ -32,6 +32,7 @@ class NVPTXTTIImpl : public BasicTTIImplBase<NVPTXTTIImpl> {
 
   const NVPTXSubtarget *ST;
   const NVPTXTargetLowering *TLI;
+  unsigned FlatAddressSpace = ~0U;
 
   const NVPTXSubtarget *getST() const { return ST; };
   const NVPTXTargetLowering *getTLI() const { return TLI; };
@@ -39,15 +40,14 @@ class NVPTXTTIImpl : public BasicTTIImplBase<NVPTXTTIImpl> {
 public:
   explicit NVPTXTTIImpl(const NVPTXTargetMachine *TM, const Function &F)
       : BaseT(TM, F.getDataLayout()), ST(TM->getSubtargetImpl()),
-        TLI(ST->getTargetLowering()) {}
+        TLI(ST->getTargetLowering()),
+        FlatAddressSpace(TM->getFlatAddressSpace()) {}
 
   bool hasBranchDivergence(const Function *F = nullptr) { return true; }
 
   bool isSourceOfDivergence(const Value *V);
 
-  unsigned getFlatAddressSpace() const {
-    return AddressSpace::ADDRESS_SPACE_GENERIC;
-  }
+  unsigned getFlatAddressSpace() const { return FlatAddressSpace; }
 
   bool canHaveNonUndefGlobalInitializerInAddressSpace(unsigned AS) const {
     return AS != AddressSpace::ADDRESS_SPACE_SHARED &&

@@ -115,7 +115,7 @@ public:
     return true;
   }
 
-  unsigned getFlatAddressSpace() const { return -1; }
+  unsigned getFlatAddressSpace() const { return ~0U; }
 
   bool collectFlatAddressOperands(SmallVectorImpl<int> &OpIndexes,
                                   Intrinsic::ID IID) const {

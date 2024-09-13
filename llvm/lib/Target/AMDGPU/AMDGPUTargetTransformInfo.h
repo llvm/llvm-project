@@ -71,6 +71,7 @@ class GCNTTIImpl final : public BasicTTIImplBase<GCNTTIImpl> {
   bool IsGraphics;
   bool HasFP32Denormals;
   bool HasFP64FP16Denormals;
+  unsigned FlatAddressSpace = ~0U;
   static constexpr bool InlinerVectorBonusPercent = 0;
 
   static const FeatureBitset InlineFeatureIgnoreList;
@@ -200,13 +201,7 @@ public:
     return AMDGPU::addrspacesMayAlias(AS0, AS1);
   }
 
-  unsigned getFlatAddressSpace() const {
-    // Don't bother running InferAddressSpaces pass on graphics shaders which
-    // don't use flat addressing.
-    if (IsGraphics)
-      return -1;
-    return AMDGPUAS::FLAT_ADDRESS;
-  }
+  unsigned getFlatAddressSpace() const { return FlatAddressSpace; }
 
   bool collectFlatAddressOperands(SmallVectorImpl<int> &OpIndexes,
                                   Intrinsic::ID IID) const;

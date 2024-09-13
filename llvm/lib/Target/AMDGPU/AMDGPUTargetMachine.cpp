@@ -887,6 +887,10 @@ bool AMDGPUTargetMachine::splitModule(
   return true;
 }
 
+unsigned AMDGPUTargetMachine::getFlatAddressSpace() const {
+  return AMDGPUAS::FLAT_ADDRESS;
+}
+
 //===----------------------------------------------------------------------===//
 // GCN Target Machine (SI+)
 //===----------------------------------------------------------------------===//

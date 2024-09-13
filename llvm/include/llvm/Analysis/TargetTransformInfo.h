@@ -452,21 +452,12 @@ public:
   bool addrspacesMayAlias(unsigned AS0, unsigned AS1) const;
 
   /// Returns the address space ID for a target's 'flat' address space. Note
-  /// this is not necessarily the same as addrspace(0), which LLVM sometimes
-  /// refers to as the generic address space. The flat address space is a
-  /// generic address space that can be used access multiple segments of memory
-  /// with different address spaces. Access of a memory location through a
-  /// pointer with this address space is expected to be legal but slower
-  /// compared to the same memory location accessed through a pointer with a
-  /// different address space.
-  //
-  /// This is for targets with different pointer representations which can
-  /// be converted with the addrspacecast instruction. If a pointer is converted
-  /// to this address space, optimizations should attempt to replace the access
-  /// with the source address space.
-  ///
-  /// \returns ~0u if the target does not have such a flat address space to
-  /// optimize away.
+  /// that this is almost same as \p TargetMachine::getFlatAddressSpace. The
+  /// only difference is, it can still return ~0U even if the target has a flat
+  /// address, but the associated function doesn't really have it. For example,
+  /// for AMDGPU, functions with certain calling conventions don't have flat
+  /// address space. This provides fine-grained control for cases like whether
+  /// we want to run InferAddressSpacePass for the associated function.
   unsigned getFlatAddressSpace() const;
 
   /// Return any intrinsic address operand indexes which may be rewritten if

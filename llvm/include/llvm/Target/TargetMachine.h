@@ -434,6 +434,24 @@ public:
       function_ref<void(std::unique_ptr<Module> MPart)> ModuleCallback) {
     return false;
   }
+
+  /// Returns the address space ID for a target's 'flat' address space. Note
+  /// this is not necessarily the same as addrspace(0), which LLVM sometimes
+  /// refers to as the generic address space. The flat address space is a
+  /// generic address space that can be used access multiple segments of memory
+  /// with different address spaces. Access of a memory location through a
+  /// pointer with this address space is expected to be legal but slower
+  /// compared to the same memory location accessed through a pointer with a
+  /// different address space.
+  //
+  /// This is for targets with different pointer representations which can
+  /// be converted with the addrspacecast instruction. If a pointer is converted
+  /// to this address space, optimizations should attempt to replace the access
+  /// with the source address space.
+  ///
+  /// \returns ~0U if the target does not have such a flat address space to
+  /// optimize away.
+  virtual unsigned getFlatAddressSpace() const { return ~0U; }
 };
 
 /// This class describes a target machine that is implemented with the LLVM

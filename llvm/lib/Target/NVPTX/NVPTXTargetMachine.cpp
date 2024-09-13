@@ -265,6 +265,10 @@ NVPTXTargetMachine::getPredicatedAddrSpace(const Value *V) const {
   return std::make_pair(nullptr, -1);
 }
 
+unsigned NVPTXTargetMachine::getFlatAddressSpace() const {
+  return AddressSpace::ADDRESS_SPACE_GENERIC;
+}
+
 void NVPTXPassConfig::addEarlyCSEOrGVNPass() {
   if (getOptLevel() == CodeGenOptLevel::Aggressive)
     addPass(createGVNPass());
