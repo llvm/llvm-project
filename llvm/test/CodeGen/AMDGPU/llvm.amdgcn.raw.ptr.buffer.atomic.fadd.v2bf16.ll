@@ -86,17 +86,17 @@ define <2 x bfloat> @raw_ptr_buffer_atomic_add_v2bf16_rtn__vgpr_val__vgpr_rsrc__
 ; GFX12-NEXT:    s_and_b32 s0, vcc_lo, s0
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_and_b32 s0, s0, s1
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_3) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_and_saveexec_b32 s0, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    buffer_atomic_pk_add_bf16 v0, v5, s[4:7], s3 offen offset:128 th:TH_ATOMIC_RETURN
+; GFX12-NEXT:    s_xor_b32 s0, exec_lo, s0
 ; GFX12-NEXT:    ; implicit-def: $vgpr1_vgpr2_vgpr3_vgpr4
 ; GFX12-NEXT:    ; implicit-def: $vgpr6
 ; GFX12-NEXT:    ; implicit-def: $vgpr5
-; GFX12-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
-; GFX12-NEXT:    s_cbranch_execnz .LBB4_1
+; GFX12-NEXT:    s_cselect_b32 exec_lo, s0, s2
+; GFX12-NEXT:    s_cbranch_scc1 .LBB4_1
 ; GFX12-NEXT:  ; %bb.2:
-; GFX12-NEXT:    s_mov_b32 exec_lo, s2
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %voffset.add = add i32 %voffset, 128

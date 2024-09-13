@@ -217,6 +217,42 @@ bool SIOptimizeExecMasking::removeTerminatorBit(MachineInstr &MI) const {
     MI.setDesc(TII->get(RegSrc ? AMDGPU::COPY : AMDGPU::S_MOV_B32));
     return true;
   }
+  case AMDGPU::S_CMOV_B64_term: {
+    // This is only a terminator to get the correct spill code placement during
+    // register allocation.
+    MI.setDesc(TII->get(AMDGPU::S_CMOV_B64));
+    return true;
+  }
+  case AMDGPU::S_CMP_LG_U64_term: {
+    // This is only a terminator to get the correct spill code placement during
+    // register allocation.
+    MI.setDesc(TII->get(AMDGPU::S_CMP_LG_U64));
+    return true;
+  }
+  case AMDGPU::S_CMOV_B32_term: {
+    // This is only a terminator to get the correct spill code placement during
+    // register allocation.
+    MI.setDesc(TII->get(AMDGPU::S_CMOV_B32));
+    return true;
+  }
+  case AMDGPU::S_CMP_LG_U32_term: {
+    // This is only a terminator to get the correct spill code placement during
+    // register allocation.
+    MI.setDesc(TII->get(AMDGPU::S_CMP_LG_U32));
+    return true;
+  }
+  case AMDGPU::S_CSELECT_B32_term: {
+    // This is only a terminator to get the correct spill code placement during
+    // register allocation.
+    MI.setDesc(TII->get(AMDGPU::S_CSELECT_B32));
+    return true;
+  }
+  case AMDGPU::S_CSELECT_B64_term: {
+    // This is only a terminator to get the correct spill code placement during
+    // register allocation.
+    MI.setDesc(TII->get(AMDGPU::S_CSELECT_B64));
+    return true;
+  }
   case AMDGPU::S_MOV_B64_term: {
     bool RegSrc = MI.getOperand(1).isReg();
     MI.setDesc(TII->get(RegSrc ? AMDGPU::COPY : AMDGPU::S_MOV_B64));

@@ -55,17 +55,17 @@ define <2 x bfloat> @struct_ptr_buffer_atomic_add_v2bf16_rtn__vgpr_val__vgpr_rsr
 ; GFX1200-NEXT:    s_and_b32 s0, vcc_lo, s0
 ; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX1200-NEXT:    s_and_b32 s0, s0, s1
-; GFX1200-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1200-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_3) | instid1(SALU_CYCLE_1)
 ; GFX1200-NEXT:    s_and_saveexec_b32 s0, s0
 ; GFX1200-NEXT:    s_wait_loadcnt 0x0
 ; GFX1200-NEXT:    buffer_atomic_pk_add_bf16 v0, v[5:6], s[4:7], s3 idxen offen th:TH_ATOMIC_RETURN
+; GFX1200-NEXT:    s_xor_b32 s0, exec_lo, s0
 ; GFX1200-NEXT:    ; implicit-def: $vgpr1_vgpr2_vgpr3_vgpr4
 ; GFX1200-NEXT:    ; implicit-def: $vgpr7
 ; GFX1200-NEXT:    ; implicit-def: $vgpr5_vgpr6
-; GFX1200-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
-; GFX1200-NEXT:    s_cbranch_execnz .LBB2_1
+; GFX1200-NEXT:    s_cselect_b32 exec_lo, s0, s2
+; GFX1200-NEXT:    s_cbranch_scc1 .LBB2_1
 ; GFX1200-NEXT:  ; %bb.2:
-; GFX1200-NEXT:    s_mov_b32 exec_lo, s2
 ; GFX1200-NEXT:    s_wait_loadcnt 0x0
 ; GFX1200-NEXT:    s_setpc_b64 s[30:31]
   %ret = call <2 x bfloat> @llvm.amdgcn.struct.ptr.buffer.atomic.fadd.v2bf16(<2 x bfloat> %val, ptr addrspace(8) %rsrc, i32 %vindex, i32 %voffset, i32 %soffset, i32 0)
@@ -95,17 +95,17 @@ define void @struct_ptr_buffer_atomic_add_v2bf16_noret__vgpr_val__vgpr_rsrc__vgp
 ; GFX1200-NEXT:    s_and_b32 s0, vcc_lo, s0
 ; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX1200-NEXT:    s_and_b32 s0, s0, s1
-; GFX1200-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1200-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
 ; GFX1200-NEXT:    s_and_saveexec_b32 s0, s0
 ; GFX1200-NEXT:    buffer_atomic_pk_add_bf16 v0, v[5:6], s[4:7], s3 idxen offen
+; GFX1200-NEXT:    s_xor_b32 s0, exec_lo, s0
 ; GFX1200-NEXT:    ; implicit-def: $vgpr1_vgpr2_vgpr3_vgpr4
 ; GFX1200-NEXT:    ; implicit-def: $vgpr7
 ; GFX1200-NEXT:    ; implicit-def: $vgpr0
 ; GFX1200-NEXT:    ; implicit-def: $vgpr5_vgpr6
-; GFX1200-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
-; GFX1200-NEXT:    s_cbranch_execnz .LBB3_1
+; GFX1200-NEXT:    s_cselect_b32 exec_lo, s0, s2
+; GFX1200-NEXT:    s_cbranch_scc1 .LBB3_1
 ; GFX1200-NEXT:  ; %bb.2:
-; GFX1200-NEXT:    s_mov_b32 exec_lo, s2
 ; GFX1200-NEXT:    s_setpc_b64 s[30:31]
   %ret = call <2 x bfloat> @llvm.amdgcn.struct.ptr.buffer.atomic.fadd.v2bf16(<2 x bfloat> %val, ptr addrspace(8) %rsrc, i32 %vindex, i32 %voffset, i32 %soffset, i32 0)
   ret void

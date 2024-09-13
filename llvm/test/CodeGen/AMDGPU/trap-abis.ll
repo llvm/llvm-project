@@ -371,11 +371,11 @@ define amdgpu_kernel void @trap_with_use_after(ptr addrspace(1) %arg0, ptr addrs
 ; HSA-TRAP-GFX1100-O0-NEXT:    s_or_saveexec_b32 s6, -1
 ; HSA-TRAP-GFX1100-O0-NEXT:    scratch_load_b32 v0, off, off offset:4 ; 4-byte Folded Reload
 ; HSA-TRAP-GFX1100-O0-NEXT:    s_mov_b32 exec_lo, s6
-; HSA-TRAP-GFX1100-O0-NEXT:    s_waitcnt vmcnt(0)
-; HSA-TRAP-GFX1100-O0-NEXT:    v_readlane_b32 s0, v0, 0
-; HSA-TRAP-GFX1100-O0-NEXT:    v_readlane_b32 s1, v0, 1
 ; HSA-TRAP-GFX1100-O0-NEXT:    scratch_load_b32 v1, off, off offset:8 ; 4-byte Folded Reload
 ; HSA-TRAP-GFX1100-O0-NEXT:    scratch_load_b32 v2, off, off ; 4-byte Folded Reload
+; HSA-TRAP-GFX1100-O0-NEXT:    s_waitcnt vmcnt(2)
+; HSA-TRAP-GFX1100-O0-NEXT:    v_readlane_b32 s0, v0, 0
+; HSA-TRAP-GFX1100-O0-NEXT:    v_readlane_b32 s1, v0, 1
 ; HSA-TRAP-GFX1100-O0-NEXT:    s_waitcnt vmcnt(0)
 ; HSA-TRAP-GFX1100-O0-NEXT:    global_store_b32 v1, v2, s[0:1] dlc
 ; HSA-TRAP-GFX1100-O0-NEXT:    s_waitcnt_vscnt null, 0x0

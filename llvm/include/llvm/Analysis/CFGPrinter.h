@@ -272,9 +272,11 @@ struct DOTGraphTraits<DOTFuncInfo *> : public DefaultDOTGraphTraits {
     unsigned OpNo = I.getSuccessorIndex();
     const Instruction *TI = Node->getTerminator();
     BasicBlock *SuccBB = TI->getSuccessor(OpNo);
-    auto BranchProb = CFGInfo->getBPI()->getEdgeProbability(Node, SuccBB);
-    double WeightPercent = ((double)BranchProb.getNumerator()) /
-                           ((double)BranchProb.getDenominator());
+    // auto BranchProb = CFGInfo->getBPI()->getEdgeProbability(Node, SuccBB);
+    // double WeightPercent = ((double)BranchProb.getNumerator()) /
+    //                        ((double)BranchProb.getDenominator());
+    double WeightPercent = 0.5;
+
     std::string TTAttr =
         formatv("tooltip=\"{0} -> {1}\\nProbability {2:P}\" ", getBBName(Node),
                 getBBName(SuccBB), WeightPercent);

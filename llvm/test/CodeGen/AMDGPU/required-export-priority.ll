@@ -132,9 +132,10 @@ define amdgpu_ps void @test_if_export_f32(i32 %flag, float %x, float %y, float %
 ; GCN-LABEL: test_if_export_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_setprio 2
-; GCN-NEXT:    s_mov_b32 s0, exec_lo
-; GCN-NEXT:    v_cmpx_ne_u32_e32 0, v0
-; GCN-NEXT:    s_cbranch_execz .LBB9_2
+; GCN-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v0
+; GCN-NEXT:    s_cmp_lg_u32 vcc_lo, 0
+; GCN-NEXT:    s_cmov_b32 exec_lo, vcc_lo
+; GCN-NEXT:    s_cbranch_scc0 .LBB9_2
 ; GCN-NEXT:  ; %bb.1: ; %exp
 ; GCN-NEXT:    exp mrt0 v1, v2, v3, v4
 ; GCN-NEXT:    s_setprio 0
@@ -159,9 +160,10 @@ define amdgpu_ps void @test_if_export_vm_f32(i32 %flag, float %x, float %y, floa
 ; GCN-LABEL: test_if_export_vm_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_setprio 2
-; GCN-NEXT:    s_mov_b32 s0, exec_lo
-; GCN-NEXT:    v_cmpx_ne_u32_e32 0, v0
-; GCN-NEXT:    s_cbranch_execz .LBB10_2
+; GCN-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v0
+; GCN-NEXT:    s_cmp_lg_u32 vcc_lo, 0
+; GCN-NEXT:    s_cmov_b32 exec_lo, vcc_lo
+; GCN-NEXT:    s_cbranch_scc0 .LBB10_2
 ; GCN-NEXT:  ; %bb.1: ; %exp
 ; GCN-NEXT:    exp mrt0 v1, v2, v3, v4
 ; GCN-NEXT:    s_setprio 0
@@ -186,9 +188,10 @@ define amdgpu_ps void @test_if_export_done_f32(i32 %flag, float %x, float %y, fl
 ; GCN-LABEL: test_if_export_done_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_setprio 2
-; GCN-NEXT:    s_mov_b32 s0, exec_lo
-; GCN-NEXT:    v_cmpx_ne_u32_e32 0, v0
-; GCN-NEXT:    s_cbranch_execz .LBB11_2
+; GCN-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v0
+; GCN-NEXT:    s_cmp_lg_u32 vcc_lo, 0
+; GCN-NEXT:    s_cmov_b32 exec_lo, vcc_lo
+; GCN-NEXT:    s_cbranch_scc0 .LBB11_2
 ; GCN-NEXT:  ; %bb.1: ; %exp
 ; GCN-NEXT:    exp mrt0 v1, v2, v3, v4 done
 ; GCN-NEXT:    s_setprio 0
@@ -213,9 +216,10 @@ define amdgpu_ps void @test_if_export_vm_done_f32(i32 %flag, float %x, float %y,
 ; GCN-LABEL: test_if_export_vm_done_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_setprio 2
-; GCN-NEXT:    s_mov_b32 s0, exec_lo
-; GCN-NEXT:    v_cmpx_ne_u32_e32 0, v0
-; GCN-NEXT:    s_cbranch_execz .LBB12_2
+; GCN-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v0
+; GCN-NEXT:    s_cmp_lg_u32 vcc_lo, 0
+; GCN-NEXT:    s_cmov_b32 exec_lo, vcc_lo
+; GCN-NEXT:    s_cbranch_scc0 .LBB12_2
 ; GCN-NEXT:  ; %bb.1: ; %exp
 ; GCN-NEXT:    exp mrt0 v1, v2, v3, v4 done
 ; GCN-NEXT:    s_setprio 0

@@ -17,9 +17,10 @@ define amdgpu_kernel void @struct_ptr_atomic_buffer_load_i32(ptr addrspace(8) %p
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc_lo, v2, v0
 ; CHECK-NEXT:    s_or_b32 s4, vcc_lo, s4
-; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; CHECK-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s4
-; CHECK-NEXT:    s_cbranch_execnz .LBB0_1
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; CHECK-NEXT:    s_and_not1_b32 s5, exec_lo, s4
+; CHECK-NEXT:    s_cselect_b32 exec_lo, s5, s4
+; CHECK-NEXT:    s_cbranch_scc1 .LBB0_1
 ; CHECK-NEXT:  ; %bb.2: ; %bb2
 ; CHECK-NEXT:    s_endpgm
 bb:
@@ -46,9 +47,10 @@ define amdgpu_kernel void @struct_ptr_atomic_buffer_load_i32_const_idx(ptr addrs
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc_lo, v2, v0
 ; CHECK-NEXT:    s_or_b32 s4, vcc_lo, s4
-; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; CHECK-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s4
-; CHECK-NEXT:    s_cbranch_execnz .LBB1_1
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; CHECK-NEXT:    s_and_not1_b32 s5, exec_lo, s4
+; CHECK-NEXT:    s_cselect_b32 exec_lo, s5, s4
+; CHECK-NEXT:    s_cbranch_scc1 .LBB1_1
 ; CHECK-NEXT:  ; %bb.2: ; %bb2
 ; CHECK-NEXT:    s_endpgm
 bb:
@@ -77,9 +79,10 @@ define amdgpu_kernel void @struct_ptr_atomic_buffer_load_i32_off(ptr addrspace(8
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc_lo, v2, v0
 ; CHECK-NEXT:    s_or_b32 s4, vcc_lo, s4
-; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; CHECK-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s4
-; CHECK-NEXT:    s_cbranch_execnz .LBB2_1
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; CHECK-NEXT:    s_and_not1_b32 s5, exec_lo, s4
+; CHECK-NEXT:    s_cselect_b32 exec_lo, s5, s4
+; CHECK-NEXT:    s_cbranch_scc1 .LBB2_1
 ; CHECK-NEXT:  ; %bb.2: ; %bb2
 ; CHECK-NEXT:    s_endpgm
 bb:
@@ -108,9 +111,10 @@ define amdgpu_kernel void @struct_ptr_atomic_buffer_load_i32_soff(ptr addrspace(
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc_lo, v2, v0
 ; CHECK-NEXT:    s_or_b32 s4, vcc_lo, s4
-; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; CHECK-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s4
-; CHECK-NEXT:    s_cbranch_execnz .LBB3_1
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; CHECK-NEXT:    s_and_not1_b32 s5, exec_lo, s4
+; CHECK-NEXT:    s_cselect_b32 exec_lo, s5, s4
+; CHECK-NEXT:    s_cbranch_scc1 .LBB3_1
 ; CHECK-NEXT:  ; %bb.2: ; %bb2
 ; CHECK-NEXT:    s_endpgm
 bb:
@@ -138,9 +142,10 @@ define amdgpu_kernel void @struct_ptr_atomic_buffer_load_i32_dlc(ptr addrspace(8
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc_lo, v2, v0
 ; CHECK-NEXT:    s_or_b32 s4, vcc_lo, s4
-; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; CHECK-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s4
-; CHECK-NEXT:    s_cbranch_execnz .LBB4_1
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; CHECK-NEXT:    s_and_not1_b32 s5, exec_lo, s4
+; CHECK-NEXT:    s_cselect_b32 exec_lo, s5, s4
+; CHECK-NEXT:    s_cbranch_scc1 .LBB4_1
 ; CHECK-NEXT:  ; %bb.2: ; %bb2
 ; CHECK-NEXT:    s_endpgm
 bb:
@@ -171,8 +176,10 @@ define amdgpu_kernel void @struct_ptr_nonatomic_buffer_load_i32(ptr addrspace(8)
 ; CHECK-NEXT:    s_and_b32 s1, exec_lo, vcc_lo
 ; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; CHECK-NEXT:    s_or_b32 s0, s1, s0
-; CHECK-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
-; CHECK-NEXT:    s_cbranch_execnz .LBB5_1
+; CHECK-NEXT:    s_and_not1_b32 s1, exec_lo, s0
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; CHECK-NEXT:    s_cselect_b32 exec_lo, s1, s0
+; CHECK-NEXT:    s_cbranch_scc1 .LBB5_1
 ; CHECK-NEXT:  ; %bb.2: ; %bb2
 ; CHECK-NEXT:    s_endpgm
 bb:
@@ -202,9 +209,10 @@ define amdgpu_kernel void @struct_ptr_atomic_buffer_load_i64(ptr addrspace(8) %p
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_cmp_ne_u64_e32 vcc_lo, v[3:4], v[0:1]
 ; CHECK-NEXT:    s_or_b32 s4, vcc_lo, s4
-; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; CHECK-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s4
-; CHECK-NEXT:    s_cbranch_execnz .LBB6_1
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; CHECK-NEXT:    s_and_not1_b32 s5, exec_lo, s4
+; CHECK-NEXT:    s_cselect_b32 exec_lo, s5, s4
+; CHECK-NEXT:    s_cbranch_scc1 .LBB6_1
 ; CHECK-NEXT:  ; %bb.2: ; %bb2
 ; CHECK-NEXT:    s_endpgm
 bb:
@@ -234,9 +242,10 @@ define amdgpu_kernel void @struct_ptr_atomic_buffer_load_v2i16(ptr addrspace(8) 
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc_lo, v2, v0
 ; CHECK-NEXT:    s_or_b32 s4, vcc_lo, s4
-; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; CHECK-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s4
-; CHECK-NEXT:    s_cbranch_execnz .LBB7_1
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; CHECK-NEXT:    s_and_not1_b32 s5, exec_lo, s4
+; CHECK-NEXT:    s_cselect_b32 exec_lo, s5, s4
+; CHECK-NEXT:    s_cbranch_scc1 .LBB7_1
 ; CHECK-NEXT:  ; %bb.2: ; %bb2
 ; CHECK-NEXT:    s_endpgm
 bb:
@@ -269,9 +278,10 @@ define amdgpu_kernel void @struct_ptr_atomic_buffer_load_v4i16(ptr addrspace(8) 
 ; CHECK-NEXT:    v_lshl_or_b32 v2, v3, 16, v2
 ; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc_lo, v2, v0
 ; CHECK-NEXT:    s_or_b32 s4, vcc_lo, s4
-; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; CHECK-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s4
-; CHECK-NEXT:    s_cbranch_execnz .LBB8_1
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; CHECK-NEXT:    s_and_not1_b32 s5, exec_lo, s4
+; CHECK-NEXT:    s_cselect_b32 exec_lo, s5, s4
+; CHECK-NEXT:    s_cbranch_scc1 .LBB8_1
 ; CHECK-NEXT:  ; %bb.2: ; %bb2
 ; CHECK-NEXT:    s_endpgm
 bb:
@@ -302,9 +312,10 @@ define amdgpu_kernel void @struct_ptr_atomic_buffer_load_v4i32(ptr addrspace(8) 
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc_lo, v5, v0
 ; CHECK-NEXT:    s_or_b32 s4, vcc_lo, s4
-; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; CHECK-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s4
-; CHECK-NEXT:    s_cbranch_execnz .LBB9_1
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; CHECK-NEXT:    s_and_not1_b32 s5, exec_lo, s4
+; CHECK-NEXT:    s_cselect_b32 exec_lo, s5, s4
+; CHECK-NEXT:    s_cbranch_scc1 .LBB9_1
 ; CHECK-NEXT:  ; %bb.2: ; %bb2
 ; CHECK-NEXT:    s_endpgm
 bb:
@@ -336,9 +347,10 @@ define amdgpu_kernel void @struct_ptr_atomic_buffer_load_ptr(ptr addrspace(8) %p
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc_lo, v2, v0
 ; CHECK-NEXT:    s_or_b32 s4, vcc_lo, s4
-; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; CHECK-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s4
-; CHECK-NEXT:    s_cbranch_execnz .LBB10_1
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; CHECK-NEXT:    s_and_not1_b32 s5, exec_lo, s4
+; CHECK-NEXT:    s_cselect_b32 exec_lo, s5, s4
+; CHECK-NEXT:    s_cbranch_scc1 .LBB10_1
 ; CHECK-NEXT:  ; %bb.2: ; %bb2
 ; CHECK-NEXT:    s_endpgm
 bb:

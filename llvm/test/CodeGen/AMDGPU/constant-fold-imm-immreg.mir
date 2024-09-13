@@ -414,10 +414,10 @@ body:             |
     %6:sreg_64 = S_MOV_B64 0
     %7:sreg_64 = S_AND_B64 $exec, killed %6, implicit-def dead $scc
     $vcc = COPY %7
+    SI_WAVE_RECONVERGE %0, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
 
   bb.3:
     liveins: $vcc
-    SI_END_CF %0, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_ENDPGM 0, implicit $vcc
 
 ...

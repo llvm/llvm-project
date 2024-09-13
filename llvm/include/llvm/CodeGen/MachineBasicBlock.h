@@ -879,8 +879,7 @@ public:
   /// debug.  This is the correct point to insert copies at the beginning of a
   /// basic block. \p Reg is the register being used by a spill or defined for a
   /// restore/split during register allocation.
-  iterator SkipPHIsLabelsAndDebug(iterator I, Register Reg = Register(),
-                                  bool SkipPseudoOp = true);
+  iterator SkipPHIsLabelsAndDebug(iterator I, bool SkipPseudoOp = true);
 
   /// Returns an iterator to the first terminator instruction of this basic
   /// block. If a terminator does not exist, it returns end().

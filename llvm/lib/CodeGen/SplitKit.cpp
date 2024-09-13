@@ -806,10 +806,8 @@ SlotIndex SplitEditor::leaveIntvAtTop(MachineBasicBlock &MBB) {
     return Start;
   }
 
-  unsigned RegIdx = 0;
-  Register Reg = LIS.getInterval(Edit->get(RegIdx)).reg();
-  VNInfo *VNI = defFromParent(RegIdx, ParentVNI, Start, MBB,
-                              MBB.SkipPHIsLabelsAndDebug(MBB.begin(), Reg));
+  VNInfo *VNI = defFromParent(0, ParentVNI, Start, MBB,
+                              MBB.SkipPHIsLabelsAndDebug(MBB.begin()));
   RegAssign.insert(Start, VNI->def, OpenIdx);
   LLVM_DEBUG(dump());
   return VNI->def;

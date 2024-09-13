@@ -8,15 +8,11 @@ define amdgpu_cs void @memmove_p1i8(ptr addrspace(1) %dst, ptr addrspace(1) %src
 ; LOOP-LABEL: memmove_p1i8:
 ; LOOP:       ; %bb.0:
 ; LOOP-NEXT:    v_cmp_ge_u64_e32 vcc, v[2:3], v[0:1]
-; LOOP-NEXT:    s_and_saveexec_b64 s[0:1], vcc
-; LOOP-NEXT:    s_xor_b64 s[0:1], exec, s[0:1]
-; LOOP-NEXT:    s_cbranch_execnz .LBB0_3
-; LOOP-NEXT:  ; %bb.1: ; %Flow
-; LOOP-NEXT:    s_andn2_saveexec_b64 s[0:1], s[0:1]
-; LOOP-NEXT:    s_cbranch_execnz .LBB0_4
-; LOOP-NEXT:  .LBB0_2: ; %memmove_done
-; LOOP-NEXT:    s_endpgm
-; LOOP-NEXT:  .LBB0_3:
+; LOOP-NEXT:    s_xor_b64 s[0:1], vcc, exec
+; LOOP-NEXT:    s_and_b64 s[2:3], vcc, -1
+; LOOP-NEXT:    s_cmov_b64 exec, vcc
+; LOOP-NEXT:    s_cbranch_scc0 .LBB0_2
+; LOOP-NEXT:  ; %bb.1:
 ; LOOP-NEXT:    s_mov_b32 s6, 0
 ; LOOP-NEXT:    s_mov_b32 s7, 0xf000
 ; LOOP-NEXT:    s_mov_b64 s[4:5], 0
@@ -44,9 +40,13 @@ define amdgpu_cs void @memmove_p1i8(ptr addrspace(1) %dst, ptr addrspace(1) %src
 ; LOOP-NEXT:    buffer_store_byte v2, v[0:1], s[4:7], 0 addr64 offset:3
 ; LOOP-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; LOOP-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; LOOP-NEXT:    s_andn2_saveexec_b64 s[0:1], s[0:1]
-; LOOP-NEXT:    s_cbranch_execz .LBB0_2
-; LOOP-NEXT:  .LBB0_4: ; %memmove_bwd_residual
+; LOOP-NEXT:    s_or_b64 exec, exec, s[0:1]
+; LOOP-NEXT:  .LBB0_2: ; %Flow
+; LOOP-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; LOOP-NEXT:    s_and_b64 s[2:3], s[0:1], -1
+; LOOP-NEXT:    s_cmov_b64 exec, s[0:1]
+; LOOP-NEXT:    s_cbranch_scc0 .LBB0_4
+; LOOP-NEXT:  ; %bb.3: ; %memmove_bwd_residual
 ; LOOP-NEXT:    s_mov_b32 s2, 0
 ; LOOP-NEXT:    s_mov_b32 s3, 0xf000
 ; LOOP-NEXT:    s_mov_b64 s[0:1], 0
@@ -74,6 +74,7 @@ define amdgpu_cs void @memmove_p1i8(ptr addrspace(1) %dst, ptr addrspace(1) %src
 ; LOOP-NEXT:    buffer_store_byte v4, v[0:1], s[0:3], 0 addr64 offset:1
 ; LOOP-NEXT:    buffer_store_byte v3, v[0:1], s[0:3], 0 addr64 offset:2
 ; LOOP-NEXT:    buffer_store_byte v2, v[0:1], s[0:3], 0 addr64 offset:3
+; LOOP-NEXT:  .LBB0_4: ; %memmove_done
 ; LOOP-NEXT:    s_endpgm
 ;
 ; UNROLL-LABEL: memmove_p1i8:

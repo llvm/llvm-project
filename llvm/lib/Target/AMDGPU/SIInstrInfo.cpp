@@ -2110,10 +2110,28 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     MI.setDesc(get(AMDGPU::S_MOV_B64));
     break;
 
+  case AMDGPU::S_CMOV_B64_term:
+    MI.setDesc(get(AMDGPU::S_CMOV_B64));
+    break;
+  case AMDGPU::S_CMP_LG_U64_term:
+    MI.setDesc(get(AMDGPU::S_CMP_LG_U64));
+    break;
   case AMDGPU::S_MOV_B32_term:
     // This is only a terminator to get the correct spill code placement during
     // register allocation.
     MI.setDesc(get(AMDGPU::S_MOV_B32));
+    break;
+  case AMDGPU::S_CMOV_B32_term:
+    MI.setDesc(get(AMDGPU::S_CMOV_B32));
+    break;
+  case AMDGPU::S_CMP_LG_U32_term:
+    MI.setDesc(get(AMDGPU::S_CMP_LG_U32));
+    break;
+  case AMDGPU::S_CSELECT_B32_term:
+    MI.setDesc(get(AMDGPU::S_CSELECT_B32));
+    break;
+  case AMDGPU::S_CSELECT_B64_term:
+    MI.setDesc(get(AMDGPU::S_CSELECT_B64));
     break;
 
   case AMDGPU::S_XOR_B64_term:
@@ -3082,20 +3100,27 @@ bool SIInstrInfo::analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
   while (I != E && !I->isBranch() && !I->isReturn()) {
     switch (I->getOpcode()) {
     case AMDGPU::S_MOV_B64_term:
+    case AMDGPU::S_CMOV_B64_term:
+    case AMDGPU::S_CMP_LG_U64_term:
     case AMDGPU::S_XOR_B64_term:
     case AMDGPU::S_OR_B64_term:
     case AMDGPU::S_ANDN2_B64_term:
     case AMDGPU::S_AND_B64_term:
     case AMDGPU::S_AND_SAVEEXEC_B64_term:
+    case AMDGPU::S_CSELECT_B64_term:
     case AMDGPU::S_MOV_B32_term:
+    case AMDGPU::S_CMOV_B32_term:
+    case AMDGPU::S_CMP_LG_U32_term:
     case AMDGPU::S_XOR_B32_term:
     case AMDGPU::S_OR_B32_term:
     case AMDGPU::S_ANDN2_B32_term:
     case AMDGPU::S_AND_B32_term:
     case AMDGPU::S_AND_SAVEEXEC_B32_term:
+    case AMDGPU::S_CSELECT_B32_term:
       break;
     case AMDGPU::SI_IF:
     case AMDGPU::SI_ELSE:
+    case AMDGPU::SI_WAVE_RECONVERGE:
     case AMDGPU::SI_KILL_I1_TERMINATOR:
     case AMDGPU::SI_KILL_F32_COND_IMM_TERMINATOR:
       // FIXME: It's messy that these need to be considered here at all.
@@ -6268,6 +6293,9 @@ static void emitLoadScalarOpsFromVGPRLoop(
       ST.isWave32() ? AMDGPU::S_XOR_B32_term : AMDGPU::S_XOR_B64_term;
   unsigned AndOpc =
       ST.isWave32() ? AMDGPU::S_AND_B32 : AMDGPU::S_AND_B64;
+#ifndef NDEBUG
+  unsigned MovExecOpc = ST.isWave32() ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
+#endif
   const auto *BoolXExecRC = TRI->getRegClass(AMDGPU::SReg_1_XEXECRegClassID);
 
   MachineBasicBlock::iterator I = LoopBB.begin();
@@ -6376,6 +6404,7 @@ static void emitLoadScalarOpsFromVGPRLoop(
   }
 
   Register SaveExec = MRI.createVirtualRegister(BoolXExecRC);
+  Register LoopMask = MRI.createVirtualRegister(BoolXExecRC);
   MRI.setSimpleHint(SaveExec, CondReg);
 
   // Update EXEC to matching lanes, saving original to SaveExec.
@@ -6386,11 +6415,17 @@ static void emitLoadScalarOpsFromVGPRLoop(
   I = BodyBB.end();
 
   // Update EXEC, switch all done bits to 0 and all todo bits to 1.
-  BuildMI(BodyBB, I, DL, TII.get(XorTermOpc), Exec)
+  BuildMI(BodyBB, I, DL, TII.get(XorTermOpc), LoopMask)
       .addReg(Exec)
       .addReg(SaveExec);
 
-  BuildMI(BodyBB, I, DL, TII.get(AMDGPU::SI_WATERFALL_LOOP)).addMBB(&LoopBB);
+  MachineInstr *ExitExecDef = &*OrigBB.getLastNonDebugInstr(false);
+  assert(ExitExecDef != OrigBB.end() && ExitExecDef->getOpcode() == MovExecOpc);
+  Register ExitExec = ExitExecDef->getOperand(0).getReg();
+  BuildMI(BodyBB, I, DL, TII.get(AMDGPU::SI_WATERFALL_LOOP))
+      .addReg(LoopMask)
+      .addReg(ExitExec)
+      .addMBB(&LoopBB);
 }
 
 // Build a waterfall loop around \p MI, replacing the VGPR \p ScalarOp register
@@ -6497,8 +6532,6 @@ loadMBUFScalarOperandsFromVGPR(const SIInstrInfo &TII, MachineInstr &MI,
         .addImm(0);
   }
 
-  // Restore the EXEC mask
-  BuildMI(*RemainderBB, First, DL, TII.get(MovExecOpc), Exec).addReg(SaveExec);
   return BodyBB;
 }
 
@@ -8840,26 +8873,10 @@ unsigned SIInstrInfo::getLiveRangeSplitOpcode(Register SrcReg,
   return AMDGPU::COPY;
 }
 
-bool SIInstrInfo::isBasicBlockPrologue(const MachineInstr &MI,
-                                       Register Reg) const {
-  // We need to handle instructions which may be inserted during register
-  // allocation to handle the prolog. The initial prolog instruction may have
-  // been separated from the start of the block by spills and copies inserted
-  // needed by the prolog. However, the insertions for scalar registers can
-  // always be placed at the BB top as they are independent of the exec mask
-  // value.
-  bool IsNullOrVectorRegister = true;
-  if (Reg) {
-    const MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
-    IsNullOrVectorRegister = !RI.isSGPRClass(RI.getRegClassForReg(MRI, Reg));
-  }
+bool SIInstrInfo::isBasicBlockPrologue(const MachineInstr &MI) const {
 
-  uint16_t Opcode = MI.getOpcode();
-  // FIXME: Copies inserted in the block prolog for live-range split should also
-  // be included.
-  return IsNullOrVectorRegister &&
-         (isSpill(Opcode) || (!MI.isTerminator() && Opcode != AMDGPU::COPY &&
-                              MI.modifiesRegister(AMDGPU::EXEC, &RI)));
+  return !MI.isTerminator() && MI.getOpcode() != AMDGPU::COPY &&
+         MI.modifiesRegister(AMDGPU::EXEC, &RI);
 }
 
 MachineInstrBuilder

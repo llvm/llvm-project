@@ -1334,8 +1334,7 @@ public:
   unsigned getLiveRangeSplitOpcode(Register Reg,
                                    const MachineFunction &MF) const override;
 
-  bool isBasicBlockPrologue(const MachineInstr &MI,
-                            Register Reg = Register()) const override;
+  bool isBasicBlockPrologue(const MachineInstr &MI) const override;
 
   MachineInstr *createPHIDestinationCopy(MachineBasicBlock &MBB,
                                          MachineBasicBlock::iterator InsPt,

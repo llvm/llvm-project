@@ -27,6 +27,7 @@ define amdgpu_kernel void @infinite_loop(ptr addrspace(1) %out) {
 ; IR-NEXT:    br i1 true, label [[LOOP]], label [[DUMMYRETURNBLOCK:%.*]]
 ; IR:       DummyReturnBlock:
 ; IR-NEXT:    ret void
+;
 entry:
   br label %loop
 
@@ -66,6 +67,7 @@ define amdgpu_kernel void @infinite_loop_ret(ptr addrspace(1) %out) {
 ; IR-NEXT:    br i1 true, label [[LOOP]], label [[UNIFIEDRETURNBLOCK]]
 ; IR:       UnifiedReturnBlock:
 ; IR-NEXT:    ret void
+;
 entry:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
   %cond = icmp eq i32 %tmp, 1
@@ -129,6 +131,7 @@ define amdgpu_kernel void @infinite_loops(ptr addrspace(1) %out) {
 ; IR-NEXT:    br i1 true, label [[LOOP2]], label [[DUMMYRETURNBLOCK]]
 ; IR:       DummyReturnBlock:
 ; IR-NEXT:    ret void
+;
 entry:
   br i1 undef, label %loop1, label %loop2
 
@@ -189,6 +192,7 @@ define amdgpu_kernel void @infinite_loop_nest_ret(ptr addrspace(1) %out) {
 ; IR-NEXT:    br i1 [[COND3]], label [[INNER_LOOP]], label [[OUTER_LOOP]]
 ; IR:       UnifiedReturnBlock:
 ; IR-NEXT:    ret void
+;
 entry:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
   %cond1 = icmp ne i32 %tmp, 1  ; avoid following BB optimizing away through the domination

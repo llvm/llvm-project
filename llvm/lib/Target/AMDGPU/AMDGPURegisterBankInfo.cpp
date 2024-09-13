@@ -785,8 +785,6 @@ bool AMDGPURegisterBankInfo::executeInWaterfallLoop(
   const TargetRegisterClass *WaveRC = TRI->getWaveMaskRegClass();
   const unsigned MovExecOpc =
       Subtarget.isWave32() ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
-  const unsigned MovExecTermOpc =
-      Subtarget.isWave32() ? AMDGPU::S_MOV_B32_term : AMDGPU::S_MOV_B64_term;
 
   const unsigned XorTermOpc = Subtarget.isWave32() ?
     AMDGPU::S_XOR_B32_term : AMDGPU::S_XOR_B64_term;
@@ -949,27 +947,27 @@ bool AMDGPURegisterBankInfo::executeInWaterfallLoop(
 
   B.setInsertPt(*BodyBB, BodyBB->end());
 
+  Register LoopMask = MRI.createVirtualRegister(
+      TRI->getRegClass(AMDGPU::SReg_1_XEXECRegClassID));
   // Update EXEC, switch all done bits to 0 and all todo bits to 1.
   B.buildInstr(XorTermOpc)
-    .addDef(ExecReg)
-    .addReg(ExecReg)
-    .addReg(NewExec);
+    .addDef(LoopMask)
+	.addReg(ExecReg)
+	.addReg(NewExec);
 
   // XXX - s_xor_b64 sets scc to 1 if the result is nonzero, so can we use
   // s_cbranch_scc0?
 
   // Loop back to V_READFIRSTLANE_B32 if there are still variants to cover.
-  B.buildInstr(AMDGPU::SI_WATERFALL_LOOP).addMBB(LoopBB);
+  B.buildInstr(AMDGPU::SI_WATERFALL_LOOP)
+      .addReg(LoopMask)
+      .addReg(NewExec)
+      .addMBB(LoopBB);
 
   // Save the EXEC mask before the loop.
   BuildMI(MBB, MBB.end(), DL, TII->get(MovExecOpc), SaveExecReg)
     .addReg(ExecReg);
 
-  // Restore the EXEC mask after the loop.
-  B.setMBB(*RestoreExecBB);
-  B.buildInstr(MovExecTermOpc)
-    .addDef(ExecReg)
-    .addReg(SaveExecReg);
 
   // Set the insert point after the original instruction, so any new
   // instructions will be in the remainder.
@@ -4967,7 +4965,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       OpdsMapping[1] = AMDGPU::getValueMapping(Bank, 32);
       break;
     }
-    case Intrinsic::amdgcn_end_cf: {
+    case Intrinsic::amdgcn_wave_reconverge: {
       unsigned Size = getSizeInBits(MI.getOperand(1).getReg(), MRI, *TRI);
       OpdsMapping[1] = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, Size);
       break;

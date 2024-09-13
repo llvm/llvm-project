@@ -2579,8 +2579,9 @@ define amdgpu_kernel void @negativeoffsetnullptr(ptr %buffer) {
 ; GFX8-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX8-NEXT:    s_and_b64 s[2:3], exec, vcc
 ; GFX8-NEXT:    s_or_b64 s[0:1], s[2:3], s[0:1]
-; GFX8-NEXT:    s_andn2_b64 exec, exec, s[0:1]
-; GFX8-NEXT:    s_cbranch_execnz .LBB8_1
+; GFX8-NEXT:    s_andn2_b64 s[2:3], exec, s[0:1]
+; GFX8-NEXT:    s_cselect_b64 exec, s[2:3], s[0:1]
+; GFX8-NEXT:    s_cbranch_scc1 .LBB8_1
 ; GFX8-NEXT:  ; %bb.2: ; %end
 ; GFX8-NEXT:    s_endpgm
 ;
@@ -2598,8 +2599,9 @@ define amdgpu_kernel void @negativeoffsetnullptr(ptr %buffer) {
 ; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX9-NEXT:    s_and_b64 s[2:3], exec, vcc
 ; GFX9-NEXT:    s_or_b64 s[0:1], s[2:3], s[0:1]
-; GFX9-NEXT:    s_andn2_b64 exec, exec, s[0:1]
-; GFX9-NEXT:    s_cbranch_execnz .LBB8_1
+; GFX9-NEXT:    s_andn2_b64 s[2:3], exec, s[0:1]
+; GFX9-NEXT:    s_cselect_b64 exec, s[2:3], s[0:1]
+; GFX9-NEXT:    s_cbranch_scc1 .LBB8_1
 ; GFX9-NEXT:  ; %bb.2: ; %end
 ; GFX9-NEXT:    s_endpgm
 ;
@@ -2618,8 +2620,9 @@ define amdgpu_kernel void @negativeoffsetnullptr(ptr %buffer) {
 ; GFX10-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX10-NEXT:    s_and_b32 s1, exec_lo, vcc_lo
 ; GFX10-NEXT:    s_or_b32 s0, s1, s0
-; GFX10-NEXT:    s_andn2_b32 exec_lo, exec_lo, s0
-; GFX10-NEXT:    s_cbranch_execnz .LBB8_1
+; GFX10-NEXT:    s_andn2_b32 s1, exec_lo, s0
+; GFX10-NEXT:    s_cselect_b32 exec_lo, s1, s0
+; GFX10-NEXT:    s_cbranch_scc1 .LBB8_1
 ; GFX10-NEXT:  ; %bb.2: ; %end
 ; GFX10-NEXT:    s_endpgm
 ;
@@ -2638,8 +2641,10 @@ define amdgpu_kernel void @negativeoffsetnullptr(ptr %buffer) {
 ; GFX11-NEXT:    s_and_b32 s1, exec_lo, vcc_lo
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_or_b32 s0, s1, s0
-; GFX11-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
-; GFX11-NEXT:    s_cbranch_execnz .LBB8_1
+; GFX11-NEXT:    s_and_not1_b32 s1, exec_lo, s0
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_cselect_b32 exec_lo, s1, s0
+; GFX11-NEXT:    s_cbranch_scc1 .LBB8_1
 ; GFX11-NEXT:  ; %bb.2: ; %end
 ; GFX11-NEXT:    s_endpgm
 entry:

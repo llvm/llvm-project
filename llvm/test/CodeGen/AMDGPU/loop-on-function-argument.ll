@@ -27,12 +27,12 @@ define void @loop_on_argument(i1 %arg) {
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    s_and_b64 s[6:7], exec, vcc
 ; CHECK-NEXT:    s_or_b64 s[4:5], s[6:7], s[4:5]
+; CHECK-NEXT:    s_andn2_b64 s[6:7], exec, s[4:5]
 ; CHECK-NEXT:    global_store_dword v[0:1], v0, off
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    s_andn2_b64 exec, exec, s[4:5]
-; CHECK-NEXT:    s_cbranch_execnz .LBB0_1
+; CHECK-NEXT:    s_cselect_b64 exec, s[6:7], s[4:5]
+; CHECK-NEXT:    s_cbranch_scc1 .LBB0_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
-; CHECK-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   br label %loop

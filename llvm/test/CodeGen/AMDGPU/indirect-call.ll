@@ -171,10 +171,10 @@ define void @test_indirect_call_vgpr_ptr(ptr %fptr) {
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; GCN-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GCN-NEXT:    ; implicit-def: $vgpr31
-; GCN-NEXT:    s_xor_b64 exec, exec, s[48:49]
-; GCN-NEXT:    s_cbranch_execnz .LBB2_1
+; GCN-NEXT:    s_xor_b64 s[4:5], exec, s[48:49]
+; GCN-NEXT:    s_cselect_b64 exec, s[4:5], s[46:47]
+; GCN-NEXT:    s_cbranch_scc1 .LBB2_1
 ; GCN-NEXT:  ; %bb.2:
-; GCN-NEXT:    s_mov_b64 exec, s[46:47]
 ; GCN-NEXT:    v_readlane_b32 s49, v40, 17
 ; GCN-NEXT:    v_readlane_b32 s48, v40, 16
 ; GCN-NEXT:    v_readlane_b32 s47, v40, 15
@@ -210,7 +210,7 @@ define void @test_indirect_call_vgpr_ptr(ptr %fptr) {
 ; GISEL-NEXT:    s_or_saveexec_b64 s[18:19], -1
 ; GISEL-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
 ; GISEL-NEXT:    s_mov_b64 exec, s[18:19]
-; GISEL-NEXT:    v_writelane_b32 v40, s16, 18
+; GISEL-NEXT:    v_writelane_b32 v40, s16, 16
 ; GISEL-NEXT:    s_addk_i32 s32, 0x400
 ; GISEL-NEXT:    v_writelane_b32 v40, s30, 0
 ; GISEL-NEXT:    v_writelane_b32 v40, s31, 1
@@ -228,8 +228,6 @@ define void @test_indirect_call_vgpr_ptr(ptr %fptr) {
 ; GISEL-NEXT:    v_writelane_b32 v40, s45, 13
 ; GISEL-NEXT:    v_writelane_b32 v40, s46, 14
 ; GISEL-NEXT:    v_writelane_b32 v40, s47, 15
-; GISEL-NEXT:    v_writelane_b32 v40, s48, 16
-; GISEL-NEXT:    v_writelane_b32 v40, s49, 17
 ; GISEL-NEXT:    s_mov_b32 s42, s15
 ; GISEL-NEXT:    s_mov_b32 s43, s14
 ; GISEL-NEXT:    s_mov_b32 s44, s13
@@ -238,12 +236,11 @@ define void @test_indirect_call_vgpr_ptr(ptr %fptr) {
 ; GISEL-NEXT:    s_mov_b64 s[36:37], s[8:9]
 ; GISEL-NEXT:    s_mov_b64 s[38:39], s[6:7]
 ; GISEL-NEXT:    s_mov_b64 s[40:41], s[4:5]
-; GISEL-NEXT:    s_mov_b64 s[46:47], exec
 ; GISEL-NEXT:  .LBB2_1: ; =>This Inner Loop Header: Depth=1
 ; GISEL-NEXT:    v_readfirstlane_b32 s16, v0
 ; GISEL-NEXT:    v_readfirstlane_b32 s17, v1
 ; GISEL-NEXT:    v_cmp_eq_u64_e32 vcc, s[16:17], v[0:1]
-; GISEL-NEXT:    s_and_saveexec_b64 s[48:49], vcc
+; GISEL-NEXT:    s_and_saveexec_b64 s[46:47], vcc
 ; GISEL-NEXT:    s_mov_b64 s[4:5], s[40:41]
 ; GISEL-NEXT:    s_mov_b64 s[6:7], s[38:39]
 ; GISEL-NEXT:    s_mov_b64 s[8:9], s[36:37]
@@ -255,12 +252,10 @@ define void @test_indirect_call_vgpr_ptr(ptr %fptr) {
 ; GISEL-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; GISEL-NEXT:    ; implicit-def: $vgpr0
 ; GISEL-NEXT:    ; implicit-def: $vgpr31
-; GISEL-NEXT:    s_xor_b64 exec, exec, s[48:49]
-; GISEL-NEXT:    s_cbranch_execnz .LBB2_1
+; GISEL-NEXT:    s_xor_b64 s[4:5], exec, s[46:47]
+; GISEL-NEXT:    s_cselect_b64 exec, s[4:5], s[46:47]
+; GISEL-NEXT:    s_cbranch_scc1 .LBB2_1
 ; GISEL-NEXT:  ; %bb.2:
-; GISEL-NEXT:    s_mov_b64 exec, s[46:47]
-; GISEL-NEXT:    v_readlane_b32 s49, v40, 17
-; GISEL-NEXT:    v_readlane_b32 s48, v40, 16
 ; GISEL-NEXT:    v_readlane_b32 s47, v40, 15
 ; GISEL-NEXT:    v_readlane_b32 s46, v40, 14
 ; GISEL-NEXT:    v_readlane_b32 s45, v40, 13
@@ -277,7 +272,7 @@ define void @test_indirect_call_vgpr_ptr(ptr %fptr) {
 ; GISEL-NEXT:    v_readlane_b32 s34, v40, 2
 ; GISEL-NEXT:    v_readlane_b32 s31, v40, 1
 ; GISEL-NEXT:    v_readlane_b32 s30, v40, 0
-; GISEL-NEXT:    v_readlane_b32 s4, v40, 18
+; GISEL-NEXT:    v_readlane_b32 s4, v40, 16
 ; GISEL-NEXT:    s_or_saveexec_b64 s[6:7], -1
 ; GISEL-NEXT:    buffer_load_dword v40, off, s[0:3], s33 ; 4-byte Folded Reload
 ; GISEL-NEXT:    s_mov_b64 exec, s[6:7]
@@ -346,10 +341,10 @@ define void @test_indirect_call_vgpr_ptr_arg(ptr %fptr) {
 ; GCN-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GCN-NEXT:    ; implicit-def: $vgpr31
 ; GCN-NEXT:    ; implicit-def: $vgpr2
-; GCN-NEXT:    s_xor_b64 exec, exec, s[48:49]
-; GCN-NEXT:    s_cbranch_execnz .LBB3_1
+; GCN-NEXT:    s_xor_b64 s[4:5], exec, s[48:49]
+; GCN-NEXT:    s_cselect_b64 exec, s[4:5], s[46:47]
+; GCN-NEXT:    s_cbranch_scc1 .LBB3_1
 ; GCN-NEXT:  ; %bb.2:
-; GCN-NEXT:    s_mov_b64 exec, s[46:47]
 ; GCN-NEXT:    v_readlane_b32 s49, v40, 17
 ; GCN-NEXT:    v_readlane_b32 s48, v40, 16
 ; GCN-NEXT:    v_readlane_b32 s47, v40, 15
@@ -385,7 +380,7 @@ define void @test_indirect_call_vgpr_ptr_arg(ptr %fptr) {
 ; GISEL-NEXT:    s_or_saveexec_b64 s[18:19], -1
 ; GISEL-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
 ; GISEL-NEXT:    s_mov_b64 exec, s[18:19]
-; GISEL-NEXT:    v_writelane_b32 v40, s16, 18
+; GISEL-NEXT:    v_writelane_b32 v40, s16, 16
 ; GISEL-NEXT:    s_addk_i32 s32, 0x400
 ; GISEL-NEXT:    v_writelane_b32 v40, s30, 0
 ; GISEL-NEXT:    v_writelane_b32 v40, s31, 1
@@ -403,8 +398,6 @@ define void @test_indirect_call_vgpr_ptr_arg(ptr %fptr) {
 ; GISEL-NEXT:    v_writelane_b32 v40, s45, 13
 ; GISEL-NEXT:    v_writelane_b32 v40, s46, 14
 ; GISEL-NEXT:    v_writelane_b32 v40, s47, 15
-; GISEL-NEXT:    v_writelane_b32 v40, s48, 16
-; GISEL-NEXT:    v_writelane_b32 v40, s49, 17
 ; GISEL-NEXT:    s_mov_b32 s42, s15
 ; GISEL-NEXT:    s_mov_b32 s43, s14
 ; GISEL-NEXT:    s_mov_b32 s44, s13
@@ -413,12 +406,11 @@ define void @test_indirect_call_vgpr_ptr_arg(ptr %fptr) {
 ; GISEL-NEXT:    s_mov_b64 s[36:37], s[8:9]
 ; GISEL-NEXT:    s_mov_b64 s[38:39], s[6:7]
 ; GISEL-NEXT:    s_mov_b64 s[40:41], s[4:5]
-; GISEL-NEXT:    s_mov_b64 s[46:47], exec
 ; GISEL-NEXT:  .LBB3_1: ; =>This Inner Loop Header: Depth=1
 ; GISEL-NEXT:    v_readfirstlane_b32 s16, v0
 ; GISEL-NEXT:    v_readfirstlane_b32 s17, v1
 ; GISEL-NEXT:    v_cmp_eq_u64_e32 vcc, s[16:17], v[0:1]
-; GISEL-NEXT:    s_and_saveexec_b64 s[48:49], vcc
+; GISEL-NEXT:    s_and_saveexec_b64 s[46:47], vcc
 ; GISEL-NEXT:    v_mov_b32_e32 v0, 0x7b
 ; GISEL-NEXT:    s_mov_b64 s[4:5], s[40:41]
 ; GISEL-NEXT:    s_mov_b64 s[6:7], s[38:39]
@@ -431,12 +423,10 @@ define void @test_indirect_call_vgpr_ptr_arg(ptr %fptr) {
 ; GISEL-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; GISEL-NEXT:    ; implicit-def: $vgpr0
 ; GISEL-NEXT:    ; implicit-def: $vgpr31
-; GISEL-NEXT:    s_xor_b64 exec, exec, s[48:49]
-; GISEL-NEXT:    s_cbranch_execnz .LBB3_1
+; GISEL-NEXT:    s_xor_b64 s[4:5], exec, s[46:47]
+; GISEL-NEXT:    s_cselect_b64 exec, s[4:5], s[46:47]
+; GISEL-NEXT:    s_cbranch_scc1 .LBB3_1
 ; GISEL-NEXT:  ; %bb.2:
-; GISEL-NEXT:    s_mov_b64 exec, s[46:47]
-; GISEL-NEXT:    v_readlane_b32 s49, v40, 17
-; GISEL-NEXT:    v_readlane_b32 s48, v40, 16
 ; GISEL-NEXT:    v_readlane_b32 s47, v40, 15
 ; GISEL-NEXT:    v_readlane_b32 s46, v40, 14
 ; GISEL-NEXT:    v_readlane_b32 s45, v40, 13
@@ -453,7 +443,7 @@ define void @test_indirect_call_vgpr_ptr_arg(ptr %fptr) {
 ; GISEL-NEXT:    v_readlane_b32 s34, v40, 2
 ; GISEL-NEXT:    v_readlane_b32 s31, v40, 1
 ; GISEL-NEXT:    v_readlane_b32 s30, v40, 0
-; GISEL-NEXT:    v_readlane_b32 s4, v40, 18
+; GISEL-NEXT:    v_readlane_b32 s4, v40, 16
 ; GISEL-NEXT:    s_or_saveexec_b64 s[6:7], -1
 ; GISEL-NEXT:    buffer_load_dword v40, off, s[0:3], s33 ; 4-byte Folded Reload
 ; GISEL-NEXT:    s_mov_b64 exec, s[6:7]
@@ -520,10 +510,10 @@ define i32 @test_indirect_call_vgpr_ptr_ret(ptr %fptr) {
 ; GCN-NEXT:    v_mov_b32_e32 v2, v0
 ; GCN-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GCN-NEXT:    ; implicit-def: $vgpr31
-; GCN-NEXT:    s_xor_b64 exec, exec, s[48:49]
-; GCN-NEXT:    s_cbranch_execnz .LBB4_1
+; GCN-NEXT:    s_xor_b64 s[4:5], exec, s[48:49]
+; GCN-NEXT:    s_cselect_b64 exec, s[4:5], s[46:47]
+; GCN-NEXT:    s_cbranch_scc1 .LBB4_1
 ; GCN-NEXT:  ; %bb.2:
-; GCN-NEXT:    s_mov_b64 exec, s[46:47]
 ; GCN-NEXT:    v_add_i32_e32 v0, vcc, 1, v2
 ; GCN-NEXT:    v_readlane_b32 s49, v40, 17
 ; GCN-NEXT:    v_readlane_b32 s48, v40, 16
@@ -560,7 +550,7 @@ define i32 @test_indirect_call_vgpr_ptr_ret(ptr %fptr) {
 ; GISEL-NEXT:    s_or_saveexec_b64 s[18:19], -1
 ; GISEL-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
 ; GISEL-NEXT:    s_mov_b64 exec, s[18:19]
-; GISEL-NEXT:    v_writelane_b32 v40, s16, 18
+; GISEL-NEXT:    v_writelane_b32 v40, s16, 16
 ; GISEL-NEXT:    s_addk_i32 s32, 0x400
 ; GISEL-NEXT:    v_writelane_b32 v40, s30, 0
 ; GISEL-NEXT:    v_writelane_b32 v40, s31, 1
@@ -578,8 +568,6 @@ define i32 @test_indirect_call_vgpr_ptr_ret(ptr %fptr) {
 ; GISEL-NEXT:    v_writelane_b32 v40, s45, 13
 ; GISEL-NEXT:    v_writelane_b32 v40, s46, 14
 ; GISEL-NEXT:    v_writelane_b32 v40, s47, 15
-; GISEL-NEXT:    v_writelane_b32 v40, s48, 16
-; GISEL-NEXT:    v_writelane_b32 v40, s49, 17
 ; GISEL-NEXT:    s_mov_b32 s42, s15
 ; GISEL-NEXT:    s_mov_b32 s43, s14
 ; GISEL-NEXT:    s_mov_b32 s44, s13
@@ -588,12 +576,11 @@ define i32 @test_indirect_call_vgpr_ptr_ret(ptr %fptr) {
 ; GISEL-NEXT:    s_mov_b64 s[36:37], s[8:9]
 ; GISEL-NEXT:    s_mov_b64 s[38:39], s[6:7]
 ; GISEL-NEXT:    s_mov_b64 s[40:41], s[4:5]
-; GISEL-NEXT:    s_mov_b64 s[46:47], exec
 ; GISEL-NEXT:  .LBB4_1: ; =>This Inner Loop Header: Depth=1
 ; GISEL-NEXT:    v_readfirstlane_b32 s16, v0
 ; GISEL-NEXT:    v_readfirstlane_b32 s17, v1
 ; GISEL-NEXT:    v_cmp_eq_u64_e32 vcc, s[16:17], v[0:1]
-; GISEL-NEXT:    s_and_saveexec_b64 s[48:49], vcc
+; GISEL-NEXT:    s_and_saveexec_b64 s[46:47], vcc
 ; GISEL-NEXT:    s_mov_b64 s[4:5], s[40:41]
 ; GISEL-NEXT:    s_mov_b64 s[6:7], s[38:39]
 ; GISEL-NEXT:    s_mov_b64 s[8:9], s[36:37]
@@ -606,13 +593,11 @@ define i32 @test_indirect_call_vgpr_ptr_ret(ptr %fptr) {
 ; GISEL-NEXT:    v_mov_b32_e32 v1, v0
 ; GISEL-NEXT:    ; implicit-def: $vgpr0
 ; GISEL-NEXT:    ; implicit-def: $vgpr31
-; GISEL-NEXT:    s_xor_b64 exec, exec, s[48:49]
-; GISEL-NEXT:    s_cbranch_execnz .LBB4_1
+; GISEL-NEXT:    s_xor_b64 s[4:5], exec, s[46:47]
+; GISEL-NEXT:    s_cselect_b64 exec, s[4:5], s[46:47]
+; GISEL-NEXT:    s_cbranch_scc1 .LBB4_1
 ; GISEL-NEXT:  ; %bb.2:
-; GISEL-NEXT:    s_mov_b64 exec, s[46:47]
 ; GISEL-NEXT:    v_add_i32_e32 v0, vcc, 1, v1
-; GISEL-NEXT:    v_readlane_b32 s49, v40, 17
-; GISEL-NEXT:    v_readlane_b32 s48, v40, 16
 ; GISEL-NEXT:    v_readlane_b32 s47, v40, 15
 ; GISEL-NEXT:    v_readlane_b32 s46, v40, 14
 ; GISEL-NEXT:    v_readlane_b32 s45, v40, 13
@@ -629,7 +614,7 @@ define i32 @test_indirect_call_vgpr_ptr_ret(ptr %fptr) {
 ; GISEL-NEXT:    v_readlane_b32 s34, v40, 2
 ; GISEL-NEXT:    v_readlane_b32 s31, v40, 1
 ; GISEL-NEXT:    v_readlane_b32 s30, v40, 0
-; GISEL-NEXT:    v_readlane_b32 s4, v40, 18
+; GISEL-NEXT:    v_readlane_b32 s4, v40, 16
 ; GISEL-NEXT:    s_or_saveexec_b64 s[6:7], -1
 ; GISEL-NEXT:    buffer_load_dword v40, off, s[0:3], s33 ; 4-byte Folded Reload
 ; GISEL-NEXT:    s_mov_b64 exec, s[6:7]
@@ -683,8 +668,10 @@ define void @test_indirect_call_vgpr_ptr_in_branch(ptr %fptr, i1 %cond) {
 ; GCN-NEXT:    s_mov_b64 s[40:41], s[4:5]
 ; GCN-NEXT:    v_and_b32_e32 v2, 1, v2
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v2
-; GCN-NEXT:    s_and_saveexec_b64 s[46:47], vcc
-; GCN-NEXT:    s_cbranch_execz .LBB5_4
+; GCN-NEXT:    s_and_b64 s[4:5], vcc, -1
+; GCN-NEXT:    s_mov_b64 s[46:47], exec
+; GCN-NEXT:    s_cmov_b64 exec, vcc
+; GCN-NEXT:    s_cbranch_scc0 .LBB5_4
 ; GCN-NEXT:  ; %bb.1: ; %bb1
 ; GCN-NEXT:    s_mov_b64 s[48:49], exec
 ; GCN-NEXT:  .LBB5_2: ; =>This Inner Loop Header: Depth=1
@@ -703,12 +690,12 @@ define void @test_indirect_call_vgpr_ptr_in_branch(ptr %fptr, i1 %cond) {
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; GCN-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GCN-NEXT:    ; implicit-def: $vgpr31
-; GCN-NEXT:    s_xor_b64 exec, exec, s[50:51]
-; GCN-NEXT:    s_cbranch_execnz .LBB5_2
+; GCN-NEXT:    s_xor_b64 s[4:5], exec, s[50:51]
+; GCN-NEXT:    s_cselect_b64 exec, s[4:5], s[48:49]
+; GCN-NEXT:    s_cbranch_scc1 .LBB5_2
 ; GCN-NEXT:  ; %bb.3:
-; GCN-NEXT:    s_mov_b64 exec, s[48:49]
-; GCN-NEXT:  .LBB5_4: ; %bb2
 ; GCN-NEXT:    s_or_b64 exec, exec, s[46:47]
+; GCN-NEXT:  .LBB5_4: ; %bb2
 ; GCN-NEXT:    v_readlane_b32 s51, v40, 19
 ; GCN-NEXT:    v_readlane_b32 s50, v40, 18
 ; GCN-NEXT:    v_readlane_b32 s49, v40, 17
@@ -746,7 +733,7 @@ define void @test_indirect_call_vgpr_ptr_in_branch(ptr %fptr, i1 %cond) {
 ; GISEL-NEXT:    s_or_saveexec_b64 s[18:19], -1
 ; GISEL-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
 ; GISEL-NEXT:    s_mov_b64 exec, s[18:19]
-; GISEL-NEXT:    v_writelane_b32 v40, s16, 20
+; GISEL-NEXT:    v_writelane_b32 v40, s16, 18
 ; GISEL-NEXT:    s_addk_i32 s32, 0x400
 ; GISEL-NEXT:    v_writelane_b32 v40, s30, 0
 ; GISEL-NEXT:    v_writelane_b32 v40, s31, 1
@@ -766,8 +753,6 @@ define void @test_indirect_call_vgpr_ptr_in_branch(ptr %fptr, i1 %cond) {
 ; GISEL-NEXT:    v_writelane_b32 v40, s47, 15
 ; GISEL-NEXT:    v_writelane_b32 v40, s48, 16
 ; GISEL-NEXT:    v_writelane_b32 v40, s49, 17
-; GISEL-NEXT:    v_writelane_b32 v40, s50, 18
-; GISEL-NEXT:    v_writelane_b32 v40, s51, 19
 ; GISEL-NEXT:    s_mov_b32 s42, s15
 ; GISEL-NEXT:    s_mov_b32 s43, s14
 ; GISEL-NEXT:    s_mov_b32 s44, s13
@@ -778,15 +763,15 @@ define void @test_indirect_call_vgpr_ptr_in_branch(ptr %fptr, i1 %cond) {
 ; GISEL-NEXT:    s_mov_b64 s[40:41], s[4:5]
 ; GISEL-NEXT:    v_and_b32_e32 v2, 1, v2
 ; GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v2
-; GISEL-NEXT:    s_and_saveexec_b64 s[46:47], vcc
-; GISEL-NEXT:    s_cbranch_execz .LBB5_4
-; GISEL-NEXT:  ; %bb.1: ; %bb1
-; GISEL-NEXT:    s_mov_b64 s[48:49], exec
-; GISEL-NEXT:  .LBB5_2: ; =>This Inner Loop Header: Depth=1
+; GISEL-NEXT:    s_and_b64 s[4:5], vcc, -1
+; GISEL-NEXT:    s_mov_b64 s[46:47], exec
+; GISEL-NEXT:    s_cmov_b64 exec, vcc
+; GISEL-NEXT:    s_cbranch_scc0 .LBB5_3
+; GISEL-NEXT:  .LBB5_1: ; =>This Inner Loop Header: Depth=1
 ; GISEL-NEXT:    v_readfirstlane_b32 s16, v0
 ; GISEL-NEXT:    v_readfirstlane_b32 s17, v1
 ; GISEL-NEXT:    v_cmp_eq_u64_e32 vcc, s[16:17], v[0:1]
-; GISEL-NEXT:    s_and_saveexec_b64 s[50:51], vcc
+; GISEL-NEXT:    s_and_saveexec_b64 s[48:49], vcc
 ; GISEL-NEXT:    s_mov_b64 s[4:5], s[40:41]
 ; GISEL-NEXT:    s_mov_b64 s[6:7], s[38:39]
 ; GISEL-NEXT:    s_mov_b64 s[8:9], s[36:37]
@@ -798,14 +783,12 @@ define void @test_indirect_call_vgpr_ptr_in_branch(ptr %fptr, i1 %cond) {
 ; GISEL-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; GISEL-NEXT:    ; implicit-def: $vgpr0
 ; GISEL-NEXT:    ; implicit-def: $vgpr31
-; GISEL-NEXT:    s_xor_b64 exec, exec, s[50:51]
-; GISEL-NEXT:    s_cbranch_execnz .LBB5_2
-; GISEL-NEXT:  ; %bb.3:
-; GISEL-NEXT:    s_mov_b64 exec, s[48:49]
-; GISEL-NEXT:  .LBB5_4: ; %bb2
+; GISEL-NEXT:    s_xor_b64 s[4:5], exec, s[48:49]
+; GISEL-NEXT:    s_cselect_b64 exec, s[4:5], s[48:49]
+; GISEL-NEXT:    s_cbranch_scc1 .LBB5_1
+; GISEL-NEXT:  ; %bb.2:
 ; GISEL-NEXT:    s_or_b64 exec, exec, s[46:47]
-; GISEL-NEXT:    v_readlane_b32 s51, v40, 19
-; GISEL-NEXT:    v_readlane_b32 s50, v40, 18
+; GISEL-NEXT:  .LBB5_3: ; %bb2
 ; GISEL-NEXT:    v_readlane_b32 s49, v40, 17
 ; GISEL-NEXT:    v_readlane_b32 s48, v40, 16
 ; GISEL-NEXT:    v_readlane_b32 s47, v40, 15
@@ -824,7 +807,7 @@ define void @test_indirect_call_vgpr_ptr_in_branch(ptr %fptr, i1 %cond) {
 ; GISEL-NEXT:    v_readlane_b32 s34, v40, 2
 ; GISEL-NEXT:    v_readlane_b32 s31, v40, 1
 ; GISEL-NEXT:    v_readlane_b32 s30, v40, 0
-; GISEL-NEXT:    v_readlane_b32 s4, v40, 20
+; GISEL-NEXT:    v_readlane_b32 s4, v40, 18
 ; GISEL-NEXT:    s_or_saveexec_b64 s[6:7], -1
 ; GISEL-NEXT:    buffer_load_dword v40, off, s[0:3], s33 ; 4-byte Folded Reload
 ; GISEL-NEXT:    s_mov_b64 exec, s[6:7]
@@ -847,11 +830,11 @@ define void @test_indirect_call_vgpr_ptr_inreg_arg(ptr %fptr) {
 ; GCN-LABEL: test_indirect_call_vgpr_ptr_inreg_arg:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    s_mov_b32 s5, s33
+; GCN-NEXT:    s_mov_b32 s12, s33
 ; GCN-NEXT:    s_mov_b32 s33, s32
-; GCN-NEXT:    s_or_saveexec_b64 s[6:7], -1
+; GCN-NEXT:    s_or_saveexec_b64 s[4:5], -1
 ; GCN-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
-; GCN-NEXT:    s_mov_b64 exec, s[6:7]
+; GCN-NEXT:    s_mov_b64 exec, s[4:5]
 ; GCN-NEXT:    s_addk_i32 s32, 0x400
 ; GCN-NEXT:    v_writelane_b32 v40, s30, 0
 ; GCN-NEXT:    v_writelane_b32 v40, s31, 1
@@ -894,10 +877,10 @@ define void @test_indirect_call_vgpr_ptr_inreg_arg(ptr %fptr) {
 ; GCN-NEXT:    s_movk_i32 s4, 0x7b
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[8:9]
 ; GCN-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GCN-NEXT:    s_xor_b64 exec, exec, s[10:11]
-; GCN-NEXT:    s_cbranch_execnz .LBB6_1
+; GCN-NEXT:    s_xor_b64 s[4:5], exec, s[10:11]
+; GCN-NEXT:    s_cselect_b64 exec, s[4:5], s[6:7]
+; GCN-NEXT:    s_cbranch_scc1 .LBB6_1
 ; GCN-NEXT:  ; %bb.2:
-; GCN-NEXT:    s_mov_b64 exec, s[6:7]
 ; GCN-NEXT:    v_readlane_b32 s63, v40, 31
 ; GCN-NEXT:    v_readlane_b32 s62, v40, 30
 ; GCN-NEXT:    v_readlane_b32 s61, v40, 29
@@ -930,22 +913,22 @@ define void @test_indirect_call_vgpr_ptr_inreg_arg(ptr %fptr) {
 ; GCN-NEXT:    v_readlane_b32 s34, v40, 2
 ; GCN-NEXT:    v_readlane_b32 s31, v40, 1
 ; GCN-NEXT:    v_readlane_b32 s30, v40, 0
-; GCN-NEXT:    s_or_saveexec_b64 s[6:7], -1
+; GCN-NEXT:    s_or_saveexec_b64 s[4:5], -1
 ; GCN-NEXT:    buffer_load_dword v40, off, s[0:3], s33 ; 4-byte Folded Reload
-; GCN-NEXT:    s_mov_b64 exec, s[6:7]
+; GCN-NEXT:    s_mov_b64 exec, s[4:5]
 ; GCN-NEXT:    s_addk_i32 s32, 0xfc00
-; GCN-NEXT:    s_mov_b32 s33, s5
+; GCN-NEXT:    s_mov_b32 s33, s12
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-LABEL: test_indirect_call_vgpr_ptr_inreg_arg:
 ; GISEL:       ; %bb.0:
 ; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-NEXT:    s_mov_b32 s5, s33
+; GISEL-NEXT:    s_mov_b32 s10, s33
 ; GISEL-NEXT:    s_mov_b32 s33, s32
-; GISEL-NEXT:    s_or_saveexec_b64 s[6:7], -1
+; GISEL-NEXT:    s_or_saveexec_b64 s[4:5], -1
 ; GISEL-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
-; GISEL-NEXT:    s_mov_b64 exec, s[6:7]
+; GISEL-NEXT:    s_mov_b64 exec, s[4:5]
 ; GISEL-NEXT:    s_addk_i32 s32, 0x400
 ; GISEL-NEXT:    v_writelane_b32 v40, s30, 0
 ; GISEL-NEXT:    v_writelane_b32 v40, s31, 1
@@ -979,19 +962,18 @@ define void @test_indirect_call_vgpr_ptr_inreg_arg(ptr %fptr) {
 ; GISEL-NEXT:    v_writelane_b32 v40, s61, 29
 ; GISEL-NEXT:    v_writelane_b32 v40, s62, 30
 ; GISEL-NEXT:    v_writelane_b32 v40, s63, 31
-; GISEL-NEXT:    s_mov_b64 s[6:7], exec
 ; GISEL-NEXT:  .LBB6_1: ; =>This Inner Loop Header: Depth=1
-; GISEL-NEXT:    v_readfirstlane_b32 s8, v0
-; GISEL-NEXT:    v_readfirstlane_b32 s9, v1
-; GISEL-NEXT:    v_cmp_eq_u64_e32 vcc, s[8:9], v[0:1]
-; GISEL-NEXT:    s_and_saveexec_b64 s[10:11], vcc
+; GISEL-NEXT:    v_readfirstlane_b32 s6, v0
+; GISEL-NEXT:    v_readfirstlane_b32 s7, v1
+; GISEL-NEXT:    v_cmp_eq_u64_e32 vcc, s[6:7], v[0:1]
+; GISEL-NEXT:    s_and_saveexec_b64 s[8:9], vcc
 ; GISEL-NEXT:    s_movk_i32 s4, 0x7b
-; GISEL-NEXT:    s_swappc_b64 s[30:31], s[8:9]
+; GISEL-NEXT:    s_swappc_b64 s[30:31], s[6:7]
 ; GISEL-NEXT:    ; implicit-def: $vgpr0
-; GISEL-NEXT:    s_xor_b64 exec, exec, s[10:11]
-; GISEL-NEXT:    s_cbranch_execnz .LBB6_1
+; GISEL-NEXT:    s_xor_b64 s[4:5], exec, s[8:9]
+; GISEL-NEXT:    s_cselect_b64 exec, s[4:5], s[8:9]
+; GISEL-NEXT:    s_cbranch_scc1 .LBB6_1
 ; GISEL-NEXT:  ; %bb.2:
-; GISEL-NEXT:    s_mov_b64 exec, s[6:7]
 ; GISEL-NEXT:    v_readlane_b32 s63, v40, 31
 ; GISEL-NEXT:    v_readlane_b32 s62, v40, 30
 ; GISEL-NEXT:    v_readlane_b32 s61, v40, 29
@@ -1024,11 +1006,11 @@ define void @test_indirect_call_vgpr_ptr_inreg_arg(ptr %fptr) {
 ; GISEL-NEXT:    v_readlane_b32 s34, v40, 2
 ; GISEL-NEXT:    v_readlane_b32 s31, v40, 1
 ; GISEL-NEXT:    v_readlane_b32 s30, v40, 0
-; GISEL-NEXT:    s_or_saveexec_b64 s[6:7], -1
+; GISEL-NEXT:    s_or_saveexec_b64 s[4:5], -1
 ; GISEL-NEXT:    buffer_load_dword v40, off, s[0:3], s33 ; 4-byte Folded Reload
-; GISEL-NEXT:    s_mov_b64 exec, s[6:7]
+; GISEL-NEXT:    s_mov_b64 exec, s[4:5]
 ; GISEL-NEXT:    s_addk_i32 s32, 0xfc00
-; GISEL-NEXT:    s_mov_b32 s33, s5
+; GISEL-NEXT:    s_mov_b32 s33, s10
 ; GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
   call amdgpu_gfx void %fptr(i32 inreg 123)
@@ -1088,10 +1070,10 @@ define i32 @test_indirect_call_vgpr_ptr_arg_and_reuse(i32 %i, ptr %fptr) {
 ; GCN-NEXT:    v_mov_b32_e32 v0, v40
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[6:7]
 ; GCN-NEXT:    ; implicit-def: $vgpr1_vgpr2
-; GCN-NEXT:    s_xor_b64 exec, exec, s[8:9]
-; GCN-NEXT:    s_cbranch_execnz .LBB7_1
+; GCN-NEXT:    s_xor_b64 s[6:7], exec, s[8:9]
+; GCN-NEXT:    s_cselect_b64 exec, s[6:7], s[4:5]
+; GCN-NEXT:    s_cbranch_scc1 .LBB7_1
 ; GCN-NEXT:  ; %bb.2:
-; GCN-NEXT:    s_mov_b64 exec, s[4:5]
 ; GCN-NEXT:    v_mov_b32_e32 v0, v40
 ; GCN-NEXT:    v_readlane_b32 s63, v41, 31
 ; GCN-NEXT:    v_readlane_b32 s62, v41, 30
@@ -1137,7 +1119,7 @@ define i32 @test_indirect_call_vgpr_ptr_arg_and_reuse(i32 %i, ptr %fptr) {
 ; GISEL-LABEL: test_indirect_call_vgpr_ptr_arg_and_reuse:
 ; GISEL:       ; %bb.0:
 ; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-NEXT:    s_mov_b32 s10, s33
+; GISEL-NEXT:    s_mov_b32 s8, s33
 ; GISEL-NEXT:    s_mov_b32 s33, s32
 ; GISEL-NEXT:    s_or_saveexec_b64 s[4:5], -1
 ; GISEL-NEXT:    buffer_store_dword v41, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
@@ -1177,19 +1159,18 @@ define i32 @test_indirect_call_vgpr_ptr_arg_and_reuse(i32 %i, ptr %fptr) {
 ; GISEL-NEXT:    v_writelane_b32 v41, s62, 30
 ; GISEL-NEXT:    v_writelane_b32 v41, s63, 31
 ; GISEL-NEXT:    v_mov_b32_e32 v40, v0
-; GISEL-NEXT:    s_mov_b64 s[4:5], exec
 ; GISEL-NEXT:  .LBB7_1: ; =>This Inner Loop Header: Depth=1
-; GISEL-NEXT:    v_readfirstlane_b32 s6, v1
-; GISEL-NEXT:    v_readfirstlane_b32 s7, v2
-; GISEL-NEXT:    v_cmp_eq_u64_e32 vcc, s[6:7], v[1:2]
-; GISEL-NEXT:    s_and_saveexec_b64 s[8:9], vcc
+; GISEL-NEXT:    v_readfirstlane_b32 s4, v1
+; GISEL-NEXT:    v_readfirstlane_b32 s5, v2
+; GISEL-NEXT:    v_cmp_eq_u64_e32 vcc, s[4:5], v[1:2]
+; GISEL-NEXT:    s_and_saveexec_b64 s[6:7], vcc
 ; GISEL-NEXT:    v_mov_b32_e32 v0, v40
-; GISEL-NEXT:    s_swappc_b64 s[30:31], s[6:7]
+; GISEL-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; GISEL-NEXT:    ; implicit-def: $vgpr1
-; GISEL-NEXT:    s_xor_b64 exec, exec, s[8:9]
-; GISEL-NEXT:    s_cbranch_execnz .LBB7_1
+; GISEL-NEXT:    s_xor_b64 s[4:5], exec, s[6:7]
+; GISEL-NEXT:    s_cselect_b64 exec, s[4:5], s[6:7]
+; GISEL-NEXT:    s_cbranch_scc1 .LBB7_1
 ; GISEL-NEXT:  ; %bb.2:
-; GISEL-NEXT:    s_mov_b64 exec, s[4:5]
 ; GISEL-NEXT:    v_mov_b32_e32 v0, v40
 ; GISEL-NEXT:    v_readlane_b32 s63, v41, 31
 ; GISEL-NEXT:    v_readlane_b32 s62, v41, 30
@@ -1228,7 +1209,7 @@ define i32 @test_indirect_call_vgpr_ptr_arg_and_reuse(i32 %i, ptr %fptr) {
 ; GISEL-NEXT:    buffer_load_dword v41, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
 ; GISEL-NEXT:    s_mov_b64 exec, s[4:5]
 ; GISEL-NEXT:    s_addk_i32 s32, 0xfc00
-; GISEL-NEXT:    s_mov_b32 s33, s10
+; GISEL-NEXT:    s_mov_b32 s33, s8
 ; GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
   call amdgpu_gfx void %fptr(i32 %i)
@@ -1291,10 +1272,10 @@ define i32 @test_indirect_call_vgpr_ptr_arg_and_return(i32 %i, ptr %fptr) {
 ; GCN-NEXT:    v_mov_b32_e32 v3, v0
 ; GCN-NEXT:    ; implicit-def: $vgpr1_vgpr2
 ; GCN-NEXT:    ; implicit-def: $vgpr0
-; GCN-NEXT:    s_xor_b64 exec, exec, s[6:7]
-; GCN-NEXT:    s_cbranch_execnz .LBB8_1
+; GCN-NEXT:    s_xor_b64 s[6:7], exec, s[6:7]
+; GCN-NEXT:    s_cselect_b64 exec, s[6:7], s[4:5]
+; GCN-NEXT:    s_cbranch_scc1 .LBB8_1
 ; GCN-NEXT:  ; %bb.2:
-; GCN-NEXT:    s_mov_b64 exec, s[4:5]
 ; GCN-NEXT:    v_mov_b32_e32 v0, v3
 ; GCN-NEXT:    v_readlane_b32 s63, v40, 31
 ; GCN-NEXT:    v_readlane_b32 s62, v40, 30
@@ -1339,7 +1320,7 @@ define i32 @test_indirect_call_vgpr_ptr_arg_and_return(i32 %i, ptr %fptr) {
 ; GISEL-LABEL: test_indirect_call_vgpr_ptr_arg_and_return:
 ; GISEL:       ; %bb.0:
 ; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-NEXT:    s_mov_b32 s10, s33
+; GISEL-NEXT:    s_mov_b32 s8, s33
 ; GISEL-NEXT:    s_mov_b32 s33, s32
 ; GISEL-NEXT:    s_or_saveexec_b64 s[4:5], -1
 ; GISEL-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
@@ -1377,20 +1358,19 @@ define i32 @test_indirect_call_vgpr_ptr_arg_and_return(i32 %i, ptr %fptr) {
 ; GISEL-NEXT:    v_writelane_b32 v40, s61, 29
 ; GISEL-NEXT:    v_writelane_b32 v40, s62, 30
 ; GISEL-NEXT:    v_writelane_b32 v40, s63, 31
-; GISEL-NEXT:    s_mov_b64 s[4:5], exec
 ; GISEL-NEXT:  .LBB8_1: ; =>This Inner Loop Header: Depth=1
-; GISEL-NEXT:    v_readfirstlane_b32 s8, v1
-; GISEL-NEXT:    v_readfirstlane_b32 s9, v2
-; GISEL-NEXT:    v_cmp_eq_u64_e32 vcc, s[8:9], v[1:2]
-; GISEL-NEXT:    s_and_saveexec_b64 s[6:7], vcc
-; GISEL-NEXT:    s_swappc_b64 s[30:31], s[8:9]
+; GISEL-NEXT:    v_readfirstlane_b32 s6, v1
+; GISEL-NEXT:    v_readfirstlane_b32 s7, v2
+; GISEL-NEXT:    v_cmp_eq_u64_e32 vcc, s[6:7], v[1:2]
+; GISEL-NEXT:    s_and_saveexec_b64 s[4:5], vcc
+; GISEL-NEXT:    s_swappc_b64 s[30:31], s[6:7]
 ; GISEL-NEXT:    v_mov_b32_e32 v2, v0
 ; GISEL-NEXT:    ; implicit-def: $vgpr1
 ; GISEL-NEXT:    ; implicit-def: $vgpr0
-; GISEL-NEXT:    s_xor_b64 exec, exec, s[6:7]
-; GISEL-NEXT:    s_cbranch_execnz .LBB8_1
+; GISEL-NEXT:    s_xor_b64 s[6:7], exec, s[4:5]
+; GISEL-NEXT:    s_cselect_b64 exec, s[6:7], s[4:5]
+; GISEL-NEXT:    s_cbranch_scc1 .LBB8_1
 ; GISEL-NEXT:  ; %bb.2:
-; GISEL-NEXT:    s_mov_b64 exec, s[4:5]
 ; GISEL-NEXT:    v_mov_b32_e32 v0, v2
 ; GISEL-NEXT:    v_readlane_b32 s63, v40, 31
 ; GISEL-NEXT:    v_readlane_b32 s62, v40, 30
@@ -1428,7 +1408,7 @@ define i32 @test_indirect_call_vgpr_ptr_arg_and_return(i32 %i, ptr %fptr) {
 ; GISEL-NEXT:    buffer_load_dword v40, off, s[0:3], s33 ; 4-byte Folded Reload
 ; GISEL-NEXT:    s_mov_b64 exec, s[4:5]
 ; GISEL-NEXT:    s_addk_i32 s32, 0xfc00
-; GISEL-NEXT:    s_mov_b32 s33, s10
+; GISEL-NEXT:    s_mov_b32 s33, s8
 ; GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
   %ret = call amdgpu_gfx i32 %fptr(i32 %i)
@@ -1486,10 +1466,10 @@ define void @test_indirect_tail_call_vgpr_ptr(ptr %fptr) {
 ; GCN-NEXT:    s_and_saveexec_b64 s[8:9], vcc
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[6:7]
 ; GCN-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GCN-NEXT:    s_xor_b64 exec, exec, s[8:9]
-; GCN-NEXT:    s_cbranch_execnz .LBB9_1
+; GCN-NEXT:    s_xor_b64 s[6:7], exec, s[8:9]
+; GCN-NEXT:    s_cselect_b64 exec, s[6:7], s[4:5]
+; GCN-NEXT:    s_cbranch_scc1 .LBB9_1
 ; GCN-NEXT:  ; %bb.2:
-; GCN-NEXT:    s_mov_b64 exec, s[4:5]
 ; GCN-NEXT:    v_readlane_b32 s63, v40, 31
 ; GCN-NEXT:    v_readlane_b32 s62, v40, 30
 ; GCN-NEXT:    v_readlane_b32 s61, v40, 29
@@ -1533,7 +1513,7 @@ define void @test_indirect_tail_call_vgpr_ptr(ptr %fptr) {
 ; GISEL-LABEL: test_indirect_tail_call_vgpr_ptr:
 ; GISEL:       ; %bb.0:
 ; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-NEXT:    s_mov_b32 s10, s33
+; GISEL-NEXT:    s_mov_b32 s8, s33
 ; GISEL-NEXT:    s_mov_b32 s33, s32
 ; GISEL-NEXT:    s_or_saveexec_b64 s[4:5], -1
 ; GISEL-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
@@ -1571,18 +1551,17 @@ define void @test_indirect_tail_call_vgpr_ptr(ptr %fptr) {
 ; GISEL-NEXT:    v_writelane_b32 v40, s61, 29
 ; GISEL-NEXT:    v_writelane_b32 v40, s62, 30
 ; GISEL-NEXT:    v_writelane_b32 v40, s63, 31
-; GISEL-NEXT:    s_mov_b64 s[4:5], exec
 ; GISEL-NEXT:  .LBB9_1: ; =>This Inner Loop Header: Depth=1
-; GISEL-NEXT:    v_readfirstlane_b32 s6, v0
-; GISEL-NEXT:    v_readfirstlane_b32 s7, v1
-; GISEL-NEXT:    v_cmp_eq_u64_e32 vcc, s[6:7], v[0:1]
-; GISEL-NEXT:    s_and_saveexec_b64 s[8:9], vcc
-; GISEL-NEXT:    s_swappc_b64 s[30:31], s[6:7]
+; GISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GISEL-NEXT:    v_cmp_eq_u64_e32 vcc, s[4:5], v[0:1]
+; GISEL-NEXT:    s_and_saveexec_b64 s[6:7], vcc
+; GISEL-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; GISEL-NEXT:    ; implicit-def: $vgpr0
-; GISEL-NEXT:    s_xor_b64 exec, exec, s[8:9]
-; GISEL-NEXT:    s_cbranch_execnz .LBB9_1
+; GISEL-NEXT:    s_xor_b64 s[4:5], exec, s[6:7]
+; GISEL-NEXT:    s_cselect_b64 exec, s[4:5], s[6:7]
+; GISEL-NEXT:    s_cbranch_scc1 .LBB9_1
 ; GISEL-NEXT:  ; %bb.2:
-; GISEL-NEXT:    s_mov_b64 exec, s[4:5]
 ; GISEL-NEXT:    v_readlane_b32 s63, v40, 31
 ; GISEL-NEXT:    v_readlane_b32 s62, v40, 30
 ; GISEL-NEXT:    v_readlane_b32 s61, v40, 29
@@ -1619,7 +1598,7 @@ define void @test_indirect_tail_call_vgpr_ptr(ptr %fptr) {
 ; GISEL-NEXT:    buffer_load_dword v40, off, s[0:3], s33 ; 4-byte Folded Reload
 ; GISEL-NEXT:    s_mov_b64 exec, s[4:5]
 ; GISEL-NEXT:    s_addk_i32 s32, 0xfc00
-; GISEL-NEXT:    s_mov_b32 s33, s10
+; GISEL-NEXT:    s_mov_b32 s33, s8
 ; GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
   tail call amdgpu_gfx void %fptr()

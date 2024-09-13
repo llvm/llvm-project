@@ -30,7 +30,6 @@ body: |
   ; CHECK-NEXT:   S_BRANCH %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
-  ; CHECK-NEXT:   SI_END_CF [[SI_IF_BREAK]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; CHECK-NEXT:   FLAT_STORE_DWORD [[COPY1]], [[V_ADD_U32_e64_]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32))
   ; CHECK-NEXT:   SI_RETURN
   bb.0:
@@ -57,7 +56,6 @@ body: |
     S_BRANCH %bb.2
 
   bb.2:
-    SI_END_CF %6, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     FLAT_STORE_DWORD %3, %9, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32))
     SI_RETURN
 ...
@@ -93,7 +91,6 @@ body: |
   ; CHECK-NEXT:   S_BRANCH %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
-  ; CHECK-NEXT:   SI_END_CF [[SI_IF_BREAK]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; CHECK-NEXT:   FLAT_STORE_DWORD [[COPY1]], [[V_ADD_U32_e64_]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32))
   ; CHECK-NEXT:   SI_RETURN
   bb.0:
@@ -122,7 +119,6 @@ body: |
     S_BRANCH %bb.2
 
   bb.2:
-    SI_END_CF %6, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     FLAT_STORE_DWORD %3, %11, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32))
     SI_RETURN
 ...

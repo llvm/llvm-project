@@ -679,7 +679,7 @@ bool SIOptimizeVGPRLiveRange::runOnMachineFunction(MachineFunction &MF) {
         for (auto Reg : CandidateRegs)
           optimizeLiveRange(Reg, &MBB, IfTarget, Endif, ElseBlocks);
       } else if (MI.getOpcode() == AMDGPU::SI_WATERFALL_LOOP) {
-        auto *LoopHeader = MI.getOperand(0).getMBB();
+        auto *LoopHeader = MI.getOperand(2).getMBB();
         auto *LoopEnd = &MBB;
 
         LLVM_DEBUG(dbgs() << "Checking Waterfall loop: "

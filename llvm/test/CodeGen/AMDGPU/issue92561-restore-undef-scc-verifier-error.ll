@@ -40,15 +40,15 @@ define void @issue92561(ptr addrspace(1) %arg) {
 ; SDAG-NEXT:    s_and_b32 s0, s0, s1
 ; SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; SDAG-NEXT:    s_and_b32 s0, s0, s2
-; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
 ; SDAG-NEXT:    s_and_saveexec_b32 s0, s0
 ; SDAG-NEXT:    image_sample_c_lz v9, [v8, v8, v8, v8], s[4:11], s[12:15] dmask:0x1 dim:SQ_RSRC_IMG_2D_ARRAY
+; SDAG-NEXT:    s_xor_b32 s0, exec_lo, s0
 ; SDAG-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
 ; SDAG-NEXT:    ; implicit-def: $vgpr8
-; SDAG-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
-; SDAG-NEXT:    s_cbranch_execnz .LBB0_1
+; SDAG-NEXT:    s_cselect_b32 exec_lo, s0, s3
+; SDAG-NEXT:    s_cbranch_scc1 .LBB0_1
 ; SDAG-NEXT:  ; %bb.2:
-; SDAG-NEXT:    s_mov_b32 exec_lo, s3
 ; SDAG-NEXT:    v_dual_mov_b32 v0, 0x7fc00000 :: v_dual_mov_b32 v1, 0
 ; SDAG-NEXT:    v_mov_b32_e32 v2, 1.0
 ; SDAG-NEXT:    s_mov_b32 s0, s12
@@ -84,7 +84,7 @@ define void @issue92561(ptr addrspace(1) %arg) {
 ; GISEL-NEXT:    global_load_b128 v[6:9], v[0:1], off offset:16
 ; GISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GISEL-NEXT:    s_mov_b32 s20, 0
-; GISEL-NEXT:    s_mov_b32 s3, exec_lo
+; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GISEL-NEXT:    s_mov_b32 s21, s20
 ; GISEL-NEXT:    s_mov_b32 s22, s20
 ; GISEL-NEXT:    s_mov_b32 s23, s20
@@ -116,15 +116,15 @@ define void @issue92561(ptr addrspace(1) %arg) {
 ; GISEL-NEXT:    s_and_b32 s0, s0, s1
 ; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GISEL-NEXT:    s_and_b32 s0, s0, s2
-; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
 ; GISEL-NEXT:    s_and_saveexec_b32 s0, s0
 ; GISEL-NEXT:    image_sample_c_lz v1, [v0, v0, v0, v0], s[12:19], s[20:23] dmask:0x1 dim:SQ_RSRC_IMG_2D_ARRAY
+; GISEL-NEXT:    s_xor_b32 s1, exec_lo, s0
 ; GISEL-NEXT:    ; implicit-def: $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9
 ; GISEL-NEXT:    ; implicit-def: $vgpr0
-; GISEL-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
-; GISEL-NEXT:    s_cbranch_execnz .LBB0_1
+; GISEL-NEXT:    s_cselect_b32 exec_lo, s1, s0
+; GISEL-NEXT:    s_cbranch_scc1 .LBB0_1
 ; GISEL-NEXT:  ; %bb.2:
-; GISEL-NEXT:    s_mov_b32 exec_lo, s3
 ; GISEL-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v3, 1.0
 ; GISEL-NEXT:    v_mov_b32_e32 v0, 0x7fc00000
 ; GISEL-NEXT:    s_clause 0x2

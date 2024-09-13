@@ -59,8 +59,6 @@ define amdgpu_ps double @global_atomic_fadd_f64_rtn_atomicrmw(ptr addrspace(1) %
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT: bb.2.atomicrmw.end:
   ; GFX90A-NEXT:   [[PHI2:%[0-9]+]]:vreg_64_align2 = PHI [[GLOBAL_ATOMIC_CMPSWAP_X2_RTN]], %bb.1
-  ; GFX90A-NEXT:   [[PHI3:%[0-9]+]]:sreg_64 = PHI [[SI_IF_BREAK]], %bb.1
-  ; GFX90A-NEXT:   SI_END_CF [[PHI3]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GFX90A-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY [[PHI2]].sub0
   ; GFX90A-NEXT:   [[COPY13:%[0-9]+]]:vgpr_32 = COPY [[PHI2]].sub1
   ; GFX90A-NEXT:   $sgpr0 = COPY [[COPY12]]

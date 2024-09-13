@@ -26,13 +26,13 @@ define void @vgpr_descriptor_waterfall_loop_idom_update(ptr %arg) #0 {
 ; GCN-NEXT:    v_cmp_eq_u64_e64 s4, s[10:11], v[4:5]
 ; GCN-NEXT:    s_and_b32 s4, vcc_lo, s4
 ; GCN-NEXT:    s_and_saveexec_b32 s4, s4
+; GCN-NEXT:    s_xor_b32 s4, exec_lo, s4
 ; GCN-NEXT:    buffer_store_dword v0, v0, s[8:11], 0 offen
 ; GCN-NEXT:    ; implicit-def: $vgpr2_vgpr3_vgpr4_vgpr5
 ; GCN-NEXT:    s_waitcnt_depctr 0xffe3
-; GCN-NEXT:    s_xor_b32 exec_lo, exec_lo, s4
-; GCN-NEXT:    s_cbranch_execnz .LBB0_2
+; GCN-NEXT:    s_cselect_b32 exec_lo, s4, s5
+; GCN-NEXT:    s_cbranch_scc1 .LBB0_2
 ; GCN-NEXT:  ; %bb.3: ; in Loop: Header=BB0_1 Depth=1
-; GCN-NEXT:    s_mov_b32 exec_lo, s5
 ; GCN-NEXT:    s_mov_b32 vcc_lo, exec_lo
 ; GCN-NEXT:    s_cbranch_vccnz .LBB0_1
 ; GCN-NEXT:  ; %bb.4: ; %DummyReturnBlock
@@ -60,13 +60,13 @@ define void @vgpr_descriptor_waterfall_loop_idom_update(ptr %arg) #0 {
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_b32 s0, vcc_lo, s0
 ; GFX11-NEXT:    s_and_saveexec_b32 s0, s0
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_xor_b32 s0, exec_lo, s0
 ; GFX11-NEXT:    buffer_store_b32 v0, v0, s[4:7], 0 offen
 ; GFX11-NEXT:    ; implicit-def: $vgpr2_vgpr3_vgpr4_vgpr5
-; GFX11-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
-; GFX11-NEXT:    s_cbranch_execnz .LBB0_2
+; GFX11-NEXT:    s_cselect_b32 exec_lo, s0, s1
+; GFX11-NEXT:    s_cbranch_scc1 .LBB0_2
 ; GFX11-NEXT:  ; %bb.3: ; in Loop: Header=BB0_1 Depth=1
-; GFX11-NEXT:    s_mov_b32 exec_lo, s1
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_mov_b32 vcc_lo, exec_lo
 ; GFX11-NEXT:    s_cbranch_vccnz .LBB0_1
 ; GFX11-NEXT:  ; %bb.4: ; %DummyReturnBlock

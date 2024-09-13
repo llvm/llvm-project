@@ -2058,8 +2058,7 @@ public:
   /// other instructions shall be inserted before it. This can be implemented
   /// to prevent register allocator to insert spills for \p Reg before such
   /// instructions.
-  virtual bool isBasicBlockPrologue(const MachineInstr &MI,
-                                    Register Reg = Register()) const {
+  virtual bool isBasicBlockPrologue(const MachineInstr &MI) const {
     return false;
   }
 

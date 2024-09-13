@@ -383,9 +383,9 @@ body: |
 
   bb.1:
     successors: %bb.2
+    SI_WAVE_RECONVERGE %8, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
 
   bb.2:
-    SI_END_CF %8, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
 ...
 
 # GCN-LABEL: name: old_in_diff_bb
