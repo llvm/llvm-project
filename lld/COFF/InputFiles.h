@@ -371,11 +371,8 @@ public:
   // are actually in use.
   //
   // If the Live bit is turned off by MarkLive, Writer will ignore dllimported
-  // symbols provided by this import library member. We also track whether the
-  // imported symbol is used separately from whether the thunk is used in order
-  // to avoid creating unnecessary thunks.
+  // symbols provided by this import library member.
   bool live;
-  bool thunkLive;
 };
 
 // Used for LTO.
