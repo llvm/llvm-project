@@ -22,7 +22,7 @@
 #endif
 #if REVISION <= 4
 // Pre-TODO layout.
-#define UB_PADDING
+#define NON_STANDARD_PADDING
 #endif
 // REVISION == 5: current layout
 
@@ -38,7 +38,7 @@
 namespace std {
 namespace __lldb {
 
-#ifdef UB_PADDING
+#ifdef NON_STANDARD_PADDING
 #if defined(ALTERNATE_LAYOUT) && defined(SUBCLASS_PADDING)
 template <class _CharT, size_t = sizeof(_CharT)> struct __padding {
   unsigned char __xx[sizeof(_CharT) - 1];
@@ -46,7 +46,7 @@ template <class _CharT, size_t = sizeof(_CharT)> struct __padding {
 
 template <class _CharT> struct __padding<_CharT, 1> {};
 #endif
-#else // !UB_PADDING
+#else // !NON_STANDARD_PADDING
 template <size_t _PaddingSize> struct __padding {
   char __padding_[_PaddingSize];
 };
@@ -89,7 +89,7 @@ public:
     };
 #else // !SUBCLASS_PADDING
 
-#ifdef UB_PADDING
+#ifdef NON_STANDARD_PADDING
     unsigned char __padding[sizeof(value_type) - 1];
 #else
     [[no_unique_address]] __padding<sizeof(value_type) - 1> __padding_;
@@ -159,11 +159,11 @@ public:
     unsigned char __is_long_ : 1;
     unsigned char __size_ : 7;
     END_PACKED_ANON_STRUCT
-#ifdef UB_PADDING
+#ifdef NON_STANDARD_PADDING
     unsigned char __padding[sizeof(value_type) - 1];
-#else  // !UB_PADDING
+#else  // !NON_STANDARD_PADDING
     [[no_unique_address]] __padding<sizeof(value_type) - 1> __padding_;
-#endif // UB_PADDING
+#endif // NON_STANDARD_PADDING
 
 #endif // SHORT_UNION
     value_type __data_[__min_cap];
