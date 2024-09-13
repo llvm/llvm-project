@@ -1754,7 +1754,8 @@ static bool willLeaveFunctionImmediatelyAfter(BasicBlock *BB,
   if (depth == 0) return false;
 
   // If this is a suspend block, we're about to exit the resumption function.
-  if (isSuspendBlock(BB)) return true;
+  if (isSuspendBlock(BB))
+    return true;
 
   // Recurse into the successors.
   for (auto *Succ : successors(BB)) {
@@ -2288,9 +2289,8 @@ static void doRematerializations(
   rewriteMaterializableInstructions(AllRemats);
 }
 
-void coro::buildCoroutineFrame(
-    Function &F, Shape &Shape, TargetTransformInfo &TTI,
-    const std::function<bool(Instruction &)> &MaterializableCallback) {
+void coro::normalizeCoroutine(Function &F, coro::Shape &Shape,
+                              TargetTransformInfo &TTI) {
   // Don't eliminate swifterror in async functions that won't be split.
   if (Shape.ABI != coro::ABI::Async || !Shape.CoroSuspends.empty())
     eliminateSwiftError(F, Shape);
@@ -2337,10 +2337,12 @@ void coro::buildCoroutineFrame(
   // Transforms multi-edge PHI Nodes, so that any value feeding into a PHI will
   // never have its definition separated from the PHI by the suspend point.
   rewritePHIs(F);
+}
 
-  // Build suspend crossing info.
+void coro::buildCoroutineFrame(
+    Function &F, Shape &Shape,
+    const std::function<bool(Instruction &)> &MaterializableCallback) {
   SuspendCrossingInfo Checker(F, Shape.CoroSuspends, Shape.CoroEnds);
-
   doRematerializations(F, Checker, MaterializableCallback);
 
   const DominatorTree DT(F);

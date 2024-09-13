@@ -273,6 +273,16 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_macros_null_check",
+    hdrs = ["src/__support/macros/null_check.h"],
+    deps = [
+        ":__support_macros_config",
+        ":__support_macros_optimization",
+        ":__support_macros_sanitizer",
+    ],
+)
+
+libc_support_library(
     name = "__support_common",
     hdrs = [
         "src/__support/common.h",
@@ -665,6 +675,7 @@ libc_support_library(
         ":__support_ctype_utils",
         ":__support_fputil_fp_bits",
         ":__support_fputil_rounding_mode",
+        ":__support_macros_null_check",
         ":__support_str_to_integer",
         ":__support_str_to_num_result",
         ":__support_uint128",

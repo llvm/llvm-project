@@ -397,6 +397,7 @@ public:
       return true;
 
     if (Name == "WTFCrashWithInfo" || Name == "WTFBreakpointTrap" ||
+        Name == "WTFReportBacktrace" ||
         Name == "WTFCrashWithSecurityImplication" || Name == "WTFCrash" ||
         Name == "WTFReportAssertionFailure" || Name == "isMainThread" ||
         Name == "isMainThreadOrGCThread" || Name == "isMainRunLoop" ||

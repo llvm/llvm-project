@@ -189,7 +189,7 @@ defm LOAD_V128_A64 :
 }
 
 // Def load patterns from WebAssemblyInstrMemory.td for vector types
-foreach vec = StdVecs in {
+foreach vec = AllVecs in {
 defm : LoadPat<vec.vt, load, "LOAD_V128">;
 }
 
@@ -390,7 +390,7 @@ defm STORE_V128_A64 :
 }
 
 // Def store patterns from WebAssemblyInstrMemory.td for vector types
-foreach vec = StdVecs in {
+foreach vec = AllVecs in {
 defm : StorePat<vec.vt, store, "STORE_V128">;
 }
 
