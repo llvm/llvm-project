@@ -926,7 +926,8 @@ getOperationOrderings(MemSDNode *N, const NVPTXSubtarget *Subtarget) {
 
 } // namespace
 
-NVPTX::Scope NVPTXDAGToDAGISel::getOperationScope(MemSDNode *N, NVPTX::Ordering O) const {
+NVPTX::Scope NVPTXDAGToDAGISel::getOperationScope(MemSDNode *N,
+                                                  NVPTX::Ordering O) const {
   switch (O) {
   case NVPTX::Ordering::NotAtomic:
   case NVPTX::Ordering::Volatile: // Non-atomic volatile operations
