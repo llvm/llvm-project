@@ -93,7 +93,8 @@ void EmitClangDiagGroups(const llvm::RecordKeeper &Records,
 void EmitClangDiagsIndexName(const llvm::RecordKeeper &Records,
                              llvm::raw_ostream &OS);
 
-void EmitClangSACheckers(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitClangSACheckers(const llvm::RecordKeeper &Records,
+                         llvm::raw_ostream &OS);
 
 void EmitClangCommentHTMLTags(const llvm::RecordKeeper &Records,
                               llvm::raw_ostream &OS);
