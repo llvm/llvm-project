@@ -420,9 +420,9 @@ public:
   /// debugging info.
   int getDwarfRegNum(MCRegister RegNum, bool isEH) const;
 
-  /// Map a dwarf register back to a target register. Returns std::nullopt is
+  /// Map a dwarf register back to a target register. Returns std::nullopt if
   /// there is no mapping.
-  std::optional<unsigned> getLLVMRegNum(unsigned RegNum, bool isEH) const;
+  std::optional<MCRegister> getLLVMRegNum(unsigned RegNum, bool isEH) const;
 
   /// Map a target EH register number to an equivalent DWARF register
   /// number.

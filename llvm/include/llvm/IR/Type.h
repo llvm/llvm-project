@@ -262,6 +262,9 @@ public:
     return getTypeID() == ScalableVectorTyID || getTypeID() == FixedVectorTyID;
   }
 
+  // True if this is an instance of TargetExtType of RISC-V vector tuple.
+  bool isRISCVVectorTupleTy() const;
+
   /// Return true if this type could be converted with a lossless BitCast to
   /// type 'Ty'. For example, i8* to i32*. BitCasts are valid for types of the
   /// same size only where no re-interpretation of the bits is done.

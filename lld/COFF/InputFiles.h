@@ -55,6 +55,8 @@ class Defined;
 class DefinedImportData;
 class DefinedImportThunk;
 class DefinedRegular;
+class ImportThunkChunk;
+class ImportThunkChunkARM64EC;
 class SectionChunk;
 class Symbol;
 class Undefined;
@@ -346,17 +348,23 @@ public:
   static bool classof(const InputFile *f) { return f->kind() == ImportKind; }
   MachineTypes getMachineType() const override;
 
-  Symbol *impSym = nullptr;
+  DefinedImportData *impSym = nullptr;
   Symbol *thunkSym = nullptr;
+  ImportThunkChunkARM64EC *impchkThunk = nullptr;
   std::string dllName;
 
 private:
   void parse() override;
+  ImportThunkChunk *makeImportThunk();
 
 public:
   StringRef externalName;
   const coff_import_header *hdr;
   Chunk *location = nullptr;
+
+  // Auxiliary IAT symbol and chunk on ARM64EC.
+  DefinedImportData *impECSym = nullptr;
+  Chunk *auxLocation = nullptr;
 
   // We want to eliminate dllimported symbols if no one actually refers to them.
   // These "Live" bits are used to keep track of which import library members

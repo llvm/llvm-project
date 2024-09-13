@@ -99,10 +99,11 @@ func.func @omp_parallel(%data_var : memref<i32>, %if_cond : i1, %num_threads : i
     omp.terminator
   }) {operandSegmentSizes = array<i32: 1,1,0,0,0,0>} : (memref<i32>, memref<i32>) -> ()
 
-  // CHECK: omp.distribute
-  omp.distribute {
-    // CHECK-NEXT: omp.parallel
-    omp.parallel {
+  // CHECK: omp.parallel
+  omp.parallel {
+    // CHECK-NOT: omp.terminator
+    // CHECK: omp.distribute
+    omp.distribute {
       // CHECK-NEXT: omp.wsloop
       omp.wsloop {
         // CHECK-NEXT: omp.loop_nest
@@ -116,14 +117,15 @@ func.func @omp_parallel(%data_var : memref<i32>, %if_cond : i1, %num_threads : i
     omp.terminator
   } {omp.composite}
 
-  // CHECK: omp.distribute
-  omp.distribute {
-    // CHECK-NEXT: omp.parallel
-    omp.parallel {
+  // CHECK: omp.parallel
+  omp.parallel {
+    // CHECK-NOT: omp.terminator
+    // CHECK: omp.distribute
+    omp.distribute {
       // CHECK-NEXT: omp.wsloop
       omp.wsloop {
         // CHECK-NEXT: omp.simd
-        omp.simd{
+        omp.simd {
           // CHECK-NEXT: omp.loop_nest
           omp.loop_nest (%iv) : index = (%idx) to (%idx) step (%idx) {
             omp.yield

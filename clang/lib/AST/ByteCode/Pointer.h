@@ -46,6 +46,7 @@ struct IntPointer {
   uint64_t Value;
 
   IntPointer atOffset(const ASTContext &ASTCtx, unsigned Offset) const;
+  IntPointer baseCast(const ASTContext &ASTCtx, unsigned BaseOffset) const;
 };
 
 enum class Storage { Block, Int, Fn };
@@ -241,9 +242,8 @@ public:
     if (asBlockPointer().Base != Offset)
       return *this;
 
-    // If at base, point to an array of base types.
     if (isRoot())
-      return Pointer(Pointee, RootPtrMark, 0);
+      return Pointer(Pointee, asBlockPointer().Base, asBlockPointer().Base);
 
     // Step into the containing array, if inside one.
     unsigned Next = asBlockPointer().Base - getInlineDesc()->Offset;
@@ -491,6 +491,14 @@ public:
     }
     return false;
   }
+  /// Checks if the storage has been dynamically allocated.
+  bool isDynamic() const {
+    if (isBlockPointer()) {
+      assert(asBlockPointer().Pointee);
+      return asBlockPointer().Pointee->isDynamic();
+    }
+    return false;
+  }
   /// Checks if the storage is a static temporary.
   bool isStaticTemporary() const { return isStatic() && isTemporary(); }
 
@@ -684,6 +692,10 @@ public:
   /// Checks if both given pointers point to the same block.
   static bool pointToSameBlock(const Pointer &A, const Pointer &B);
 
+  /// Whether this points to a block that's been created for a "literal lvalue",
+  /// i.e. a non-MaterializeTemporaryExpr Expr.
+  bool pointsToLiteral() const;
+
   /// Prints the pointer.
   void print(llvm::raw_ostream &OS) const;
 
@@ -699,8 +711,10 @@ private:
 
   /// Returns the embedded descriptor preceding a field.
   InlineDescriptor *getInlineDesc() const {
+    assert(isBlockPointer());
     assert(asBlockPointer().Base != sizeof(GlobalInlineDescriptor));
     assert(asBlockPointer().Base <= asBlockPointer().Pointee->getSize());
+    assert(asBlockPointer().Base >= sizeof(InlineDescriptor));
     return getDescriptor(asBlockPointer().Base);
   }
 

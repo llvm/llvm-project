@@ -39,7 +39,6 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
         if continueToExit:
             self.continue_to_exit()
 
-    @skipIfWindows
     @skipIfNetBSD  # Hangs on NetBSD as well
     def test_by_pid(self):
         """
@@ -56,7 +55,6 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
         self.attach(pid=self.process.pid)
         self.set_and_hit_breakpoint(continueToExit=True)
 
-    @skipIfWindows
     @skipIfNetBSD  # Hangs on NetBSD as well
     def test_by_name(self):
         """
@@ -116,7 +114,6 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
         self.attach(program=program, waitFor=True)
         self.set_and_hit_breakpoint(continueToExit=True)
 
-    @skipIfWindows
     @skipIfDarwin
     @skipIfNetBSD  # Hangs on NetBSD as well
     @skipIf(
@@ -207,7 +204,6 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
         self.verify_commands("exitCommands", output, exitCommands)
         self.verify_commands("terminateCommands", output, terminateCommands)
 
-    @skipIfWindows
     @skipIfDarwin
     @skipIfNetBSD  # Hangs on NetBSD as well
     @skipIf(

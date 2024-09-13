@@ -70,7 +70,7 @@ bool ObjectFileMinidump::SaveCore(const lldb::ProcessSP &process_sp,
       options.GetOutputFile().value(),
       File::eOpenOptionWriteOnly | File::eOpenOptionCanCreate);
   if (!maybe_core_file) {
-    error = maybe_core_file.takeError();
+    error = Status::FromError(maybe_core_file.takeError());
     return false;
   }
   MinidumpFileBuilder builder(std::move(maybe_core_file.get()), process_sp,

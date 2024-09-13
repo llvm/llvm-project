@@ -126,3 +126,21 @@ void caller_for_nested_leaking() {
   int *ptr = 0;
   caller_mid_for_nested_leaking(&ptr);
 }
+
+// This used to crash StackAddrEscapeChecker because
+// it features a symbol conj_$1{struct c *, LC1, S763, #1}
+// that has no origin region.
+struct a {
+  int member;
+};
+
+struct c {
+  struct a *nested_ptr;
+};
+void opaque(struct c*);
+struct c* get_c(void);
+void no_crash_for_symbol_without_origin_region(void) {
+  struct c *ptr = get_c();
+  opaque(ptr);
+  ptr->nested_ptr->member++;
+} // No crash at the end of the function

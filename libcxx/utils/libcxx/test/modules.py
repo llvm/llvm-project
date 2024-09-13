@@ -99,6 +99,10 @@ ExtraHeader["ranges"] = "v1/__fwd/subrange.h$"
 # same definition.
 ExtraHeader["functional"] = "v1/__compare/compare_three_way.h$"
 
+# Some C compatibility headers define std::size_t, which is in <__cstddef/size_t.h>
+for header in ("cstdio", "cstdlib", "cstring", "ctime", "cuchar", "cwchar"):
+    ExtraHeader[header] = "v1/__cstddef/size_t.h$"
+
 
 # newline needs to be escaped for the module partition output.
 nl = "\\\\n"
