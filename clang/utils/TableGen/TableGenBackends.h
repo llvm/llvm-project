@@ -39,7 +39,8 @@ void EmitClangBasicReader(const llvm::RecordKeeper &Records,
                           llvm::raw_ostream &OS);
 void EmitClangBasicWriter(const llvm::RecordKeeper &Records,
                           llvm::raw_ostream &OS);
-void EmitClangTypeNodes(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitClangTypeNodes(const llvm::RecordKeeper &Records,
+                        llvm::raw_ostream &OS);
 void EmitClangTypeReader(const llvm::RecordKeeper &Records,
                          llvm::raw_ostream &OS);
 void EmitClangTypeWriter(const llvm::RecordKeeper &Records,
