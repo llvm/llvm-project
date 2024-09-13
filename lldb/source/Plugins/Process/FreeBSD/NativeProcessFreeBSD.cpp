@@ -319,12 +319,9 @@ void NativeProcessFreeBSD::MonitorSIGTRAP(lldb::pid_t pid) {
                info.pl_siginfo.si_addr);
 
       if (thread) {
-        auto &regctx = static_cast<NativeRegisterContextFreeBSD &>(
-            thread->GetRegisterContext());
         auto thread_info =
             m_threads_stepping_with_breakpoint.find(thread->GetID());
-        if (thread_info != m_threads_stepping_with_breakpoint.end() &&
-            threads_info->second == regctx.GetPC()) {
+        if (thread_info != m_threads_stepping_with_breakpoint.end()) {
           thread->SetStoppedByTrace();
           Status brkpt_error = RemoveBreakpoint(thread_info->second);
           if (brkpt_error.Fail())
