@@ -440,9 +440,20 @@ public:
     return fastIssueInstruction(Desc, Pipes);
   }
 
+  // Selects pipeline resources consumed by an instruction.
+  // This method works under the assumption that used group resources don't
+  // partially overlap. The logic is guaranteed to find a valid resource unit
+  // schedule, no matter in which order individual uses are processed. For that
+  // reason, the vector of resource uses is simply (and quickly) processed in
+  // sequence. The resulting schedule is eventually stored into vector `Pipes`.
   void fastIssueInstruction(const InstrDesc &Desc,
                             SmallVectorImpl<ResourceWithCycles> &Pipes);
 
+  // Selects pipeline resources consumed by an instruction.
+  // This method works under the assumption that used resource groups may
+  // partially overlap. This complicates the selection process, because the
+  // order in which uses are processed matters. The logic internally prioritizes
+  // groups which are more constrained than others.
   void issueInstructionImpl(const InstrDesc &Desc,
                             SmallVectorImpl<ResourceWithCycles> &Pipes);
 

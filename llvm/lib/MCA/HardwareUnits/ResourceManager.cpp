@@ -393,15 +393,15 @@ void ResourceManager::issueInstructionImpl(
   // consume more than two or three resource groups.
 
   while (!Worklist.empty()) {
-    sort(Worklist, [&](const ResourceWithUsage &lhs,
-                       const ResourceWithUsage &rhs) {
-      const ResourceState &lhsRS = *Resources[getResourceStateIndex(lhs.first)];
-      const ResourceState &rhsRS = *Resources[getResourceStateIndex(rhs.first)];
-      uint64_t lhsReadyUnits = lhsRS.getNumReadyUnits();
-      uint64_t rhsReadyUnits = rhsRS.getNumReadyUnits();
-      if (lhsReadyUnits == rhsReadyUnits)
-        return lhs.first < rhs.first;
-      return lhsReadyUnits < rhsReadyUnits;
+    sort(Worklist, [&](const ResourceWithUsage &Lhs,
+                       const ResourceWithUsage &Rhs) {
+      const ResourceState &LhsRS = *Resources[getResourceStateIndex(Lhs.first)];
+      const ResourceState &RhsRS = *Resources[getResourceStateIndex(Rhs.first)];
+      uint64_t LhsReadyUnits = LhsRS.getNumReadyUnits();
+      uint64_t RhsReadyUnits = RhsRS.getNumReadyUnits();
+      if (LhsReadyUnits == RhsReadyUnits)
+        return Lhs.first < Rhs.first;
+      return LhsReadyUnits < RhsReadyUnits;
     });
 
     SmallVector<ResourceWithUsage, 4> NewWorklist;

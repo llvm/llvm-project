@@ -15,12 +15,12 @@ vpxord zmm1, zmm1, zmm1
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      300
-# CHECK-NEXT: Total Cycles:      278
+# CHECK-NEXT: Total Cycles:      209
 # CHECK-NEXT: Total uOps:        600
 
 # CHECK:      Dispatch Width:    6
-# CHECK-NEXT: uOps Per Cycle:    2.16
-# CHECK-NEXT: IPC:               1.08
+# CHECK-NEXT: uOps Per Cycle:    2.87
+# CHECK-NEXT: IPC:               1.44
 # CHECK-NEXT: Block RThroughput: 1.5
 
 # CHECK:      Instruction Info:
@@ -34,7 +34,7 @@ vpxord zmm1, zmm1, zmm1
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
 # CHECK-NEXT:  4      6     1.50                        vpconflictd	zmm0, zmm3
 # CHECK-NEXT:  1      1     0.50                        kxnorw	k1, k1, k1
-# CHECK-NEXT:  1      1     0.50                        vpxord	zmm1, zmm1, zmm1
+# CHECK-NEXT:  1      0     0.17                        vpxord	zmm1, zmm1, zmm1
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - Zn4AGU0
@@ -63,20 +63,20 @@ vpxord zmm1, zmm1, zmm1
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     2.22   2.24   2.26   2.28    -      -      -      -      -      -      -      -      -      -      -
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.76   1.76   1.73   1.75    -      -      -      -      -      -      -      -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1] Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.84   1.64   1.60   1.92    -      -      -      -      -      -      -      -      -      -      -     vpconflictd	zmm0, zmm3
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.64   0.36    -      -      -      -      -      -      -      -      -      -      -     kxnorw	k1, k1, k1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.38   0.60   0.02    -      -      -      -      -      -      -      -      -      -      -      -     vpxord	zmm1, zmm1, zmm1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.76   1.76   0.74   1.74    -      -      -      -      -      -      -      -      -      -      -     vpconflictd	zmm0, zmm3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.99   0.01    -      -      -      -      -      -      -      -      -      -      -     kxnorw	k1, k1, k1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpxord	zmm1, zmm1, zmm1
 
 # CHECK:      Timeline view:
 # CHECK-NEXT: Index     012345678
 
 # CHECK:      [0,0]     DeeeeeeER   vpconflictd	zmm0, zmm3
 # CHECK-NEXT: [0,1]     D==eE---R   kxnorw	k1, k1, k1
-# CHECK-NEXT: [0,2]     DeE-----R   vpxord	zmm1, zmm1, zmm1
+# CHECK-NEXT: [0,2]     D-------R   vpxord	zmm1, zmm1, zmm1
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -87,5 +87,5 @@ vpxord zmm1, zmm1, zmm1
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       vpconflictd	zmm0, zmm3
 # CHECK-NEXT: 1.     1     3.0    3.0    3.0       kxnorw	k1, k1, k1
-# CHECK-NEXT: 2.     1     1.0    1.0    5.0       vpxord	zmm1, zmm1, zmm1
-# CHECK-NEXT:        1     1.7    1.7    2.7       <total>
+# CHECK-NEXT: 2.     1     0.0    0.0    7.0       vpxord	zmm1, zmm1, zmm1
+# CHECK-NEXT:        1     1.3    1.3    3.3       <total>
