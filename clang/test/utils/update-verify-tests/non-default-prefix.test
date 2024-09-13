@@ -1,4 +1,0 @@
-# RUN: cp %S/Inputs/non-default-prefix.c %t.c && not %clang_cc1 -verify=check %t.c 2>&1 | %update-verify-tests --prefix check
-# RUN: diff -u %S/Inputs/non-default-prefix.c.expected %t.c
-# RUN: %clang_cc1 -verify=check %t.c
-

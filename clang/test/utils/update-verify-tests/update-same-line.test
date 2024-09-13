@@ -1,4 +1,0 @@
-# RUN: cp %S/Inputs/update-same-line.c %t.c && not %clang_cc1 -verify %t.c 2>&1 | %update-verify-tests
-# RUN: diff -u %S/Inputs/update-same-line.c.expected %t.c
-# RUN: %clang_cc1 -verify %t.c
-
