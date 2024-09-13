@@ -23,13 +23,12 @@ entry:
   br i1 %t, label %yes, label %no
 
 no:
-  call void @llvm.instrprof.increment(ptr @f1, i64 42, i32 42, i32 1)
   %t2 = icmp eq i32 %cond, 2
   br i1 %t2, label %no1, label %no2
 no1:
   unreachable
 no2:
-  call void @llvm.instrprof.increment(ptr @f1, i64 42, i32 42, i32 2)
+  call void @llvm.instrprof.increment(ptr @f1, i64 42, i32 42, i32 1)
   unreachable
 yes:
   %t3 = icmp eq i32 %cond, 3
@@ -37,13 +36,13 @@ yes:
 yes1:
   br label %exit
 yes2:
-  call void @llvm.instrprof.increment(ptr @f1, i64 42, i32 42, i32 3)
+  call void @llvm.instrprof.increment(ptr @f1, i64 42, i32 42, i32 2)
   %t4 = icmp eq i32 %cond, 4
   br i1 %t4, label %yes3, label %yes4
 yes3:
   br label %exit
 yes4:
-  call void @llvm.instrprof.increment(ptr @f1, i64 42, i32 42, i32 4)
+  call void @llvm.instrprof.increment(ptr @f1, i64 42, i32 42, i32 3)
   unreachable
 exit:
   ret void
@@ -52,4 +51,4 @@ exit:
 !0 = !{i64 1234}
 
 ;--- profile.json
-[{"Guid":1234, "Counters":[6,0,0,0,0]}]
+[{"Guid":1234, "Counters":[6,0,0,0]}]

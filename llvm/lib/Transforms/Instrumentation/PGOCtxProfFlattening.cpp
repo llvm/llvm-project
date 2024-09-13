@@ -26,6 +26,7 @@
 #include "llvm/IR/Analysis.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
@@ -59,22 +60,28 @@ class ProfileAnnotator final {
 
     // Pass AssumeAllKnown when we try to propagate counts from edges to BBs -
     // because all the edge counters must be known.
-    uint64_t getEdgeSum(const SmallVector<EdgeInfo *> &Edges,
+    // Return std::nullopt if there were no edges to sum. The user can decide
+    // how to interpret that.
+    std::optional<uint64_t> getEdgeSum(const SmallVector<EdgeInfo *> &Edges,
                         bool AssumeAllKnown) const {
-      uint64_t Sum = 0;
+      std::optional<uint64_t> Sum;
       for (const auto *E : Edges)
-        if (E)
-          Sum += AssumeAllKnown ? *E->Count : E->Count.value_or(0U);
+        if (E) {
+          if (!Sum.has_value())
+            Sum = 0;
+          *Sum += (AssumeAllKnown ? *E->Count : E->Count.value_or(0U));
+        }
       return Sum;
     }
 
-    void computeCountFrom(const SmallVector<EdgeInfo *> &Edges) {
+    bool computeCountFrom(const SmallVector<EdgeInfo *> &Edges) {
       assert(!Count.has_value());
       Count = getEdgeSum(Edges, true);
+      return Count.has_value();
     }
 
     void setSingleUnknownEdgeCount(SmallVector<EdgeInfo *> &Edges) {
-      uint64_t KnownSum = getEdgeSum(Edges, false);
+      uint64_t KnownSum = getEdgeSum(Edges, false).value_or(0U);
       uint64_t EdgeVal = *Count > KnownSum ? *Count - KnownSum : 0U;
       EdgeInfo *E = nullptr;
       for (auto *I : Edges)
@@ -112,16 +119,14 @@ class ProfileAnnotator final {
 
     bool tryTakeCountFromKnownOutEdges(const BasicBlock &BB) {
       if (!UnknownCountOutEdges) {
-        computeCountFrom(OutEdges);
-        return true;
+        return computeCountFrom(OutEdges);
       }
       return false;
     }
 
     bool tryTakeCountFromKnownInEdges(const BasicBlock &BB) {
       if (!UnknownCountInEdges) {
-        computeCountFrom(InEdges);
-        return true;
+        return computeCountFrom(InEdges);
       }
       return false;
     }
@@ -179,7 +184,7 @@ class ProfileAnnotator final {
     bool KeepGoing = true;
     while (KeepGoing) {
       KeepGoing = false;
-      for (const auto &BB : reverse(F)) {
+      for (const auto &BB : F) {
         auto &Info = getBBInfo(BB);
         if (!Info.hasCount())
           KeepGoing |= Info.tryTakeCountFromKnownOutEdges(BB) ||
@@ -261,6 +266,9 @@ public:
                "profile is managed by IPO transforms");
         (void)Index;
         Count = Counters[Ins->getIndex()->getZExtValue()];
+      } else if (isa<UnreachableInst>(BB.getTerminator())) {
+        // The program presumably didn't crash.
+        Count = 0;
       }
       auto [It, Ins] =
           BBInfos.insert({&BB, {pred_size(&BB), succ_size(&BB), Count}});
