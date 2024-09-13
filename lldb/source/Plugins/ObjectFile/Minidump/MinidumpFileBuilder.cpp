@@ -999,6 +999,7 @@ MinidumpFileBuilder::AddMemoryList_32(std::vector<CoreFileMemoryRange> &ranges,
               region_index, ranges.size(), size, addr, addr + size);
     ++region_index;
 
+    progress.Increment(1, "Adding Memory Range " + core_range.Dump());
     const size_t bytes_read =
         m_process_sp->ReadMemory(addr, data_up->GetBytes(), size, error);
     if (error.Fail() || bytes_read == 0) {
@@ -1027,8 +1028,6 @@ MinidumpFileBuilder::AddMemoryList_32(std::vector<CoreFileMemoryRange> &ranges,
     error = AddData(data_up->GetBytes(), bytes_read);
     if (error.Fail())
       return error;
-
-    progress.Increment();
   }
 
   // Add a directory that references this list
@@ -1117,6 +1116,7 @@ MinidumpFileBuilder::AddMemoryList_64(std::vector<CoreFileMemoryRange> &ranges,
               region_index, ranges.size(), size, addr, addr + size);
     ++region_index;
 
+    progress.Increment(1, "Adding Memory Range " + core_range.Dump());
     const size_t bytes_read =
         m_process_sp->ReadMemory(addr, data_up->GetBytes(), size, error);
     if (error.Fail()) {
@@ -1138,8 +1138,6 @@ MinidumpFileBuilder::AddMemoryList_64(std::vector<CoreFileMemoryRange> &ranges,
     error = AddData(data_up->GetBytes(), bytes_read);
     if (error.Fail())
       return error;
-
-    progress.Increment();
   }
 
   // Early return if there is no cleanup needed.
