@@ -10,8 +10,7 @@ define void @test() {
 ; CHECK:       [[CONT608]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x i1> [ poison, %[[CONT221_THREAD781]] ], [ zeroinitializer, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i1> [[TMP0]], <2 x i1> poison, <4 x i32> <i32 0, i32 0, i32 0, i32 1>
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i1> [[TMP0]], <2 x i1> poison, <4 x i32> <i32 0, i32 0, i32 0, i32 3>
-; CHECK-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[TMP2]], <4 x i1> zeroinitializer, <4 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[TMP1]], <4 x i1> zeroinitializer, <4 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = call <8 x i1> @llvm.vector.insert.v8i1.v4i1(<8 x i1> <i1 poison, i1 poison, i1 poison, i1 poison, i1 false, i1 false, i1 false, i1 false>, <4 x i1> [[TMP3]], i64 0)
 ; CHECK-NEXT:    [[TMP5:%.*]] = select <8 x i1> [[TMP4]], <8 x i64> zeroinitializer, <8 x i64> zeroinitializer
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.vector.reduce.or.v8i64(<8 x i64> [[TMP5]])
