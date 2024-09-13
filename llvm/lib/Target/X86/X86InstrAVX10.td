@@ -1545,7 +1545,7 @@ multiclass avx10_com_ef_int<bits<8> Opc, X86VectorVTInfo _, SDNode OpNode,
                              string OpcodeStr,
                              Domain d,
                              X86FoldableSchedWrite sched = WriteFComX> {
-  let ExeDomain = d in {
+  let ExeDomain = d, mayRaiseFPException = 1 in {
     def rr_Int : AVX512<Opc, MRMSrcReg, (outs), (ins _.RC:$src1, _.RC:$src2),
                         !strconcat(OpcodeStr, "\t{$src2, $src1|$src1, $src2}"),
                         [(set EFLAGS, (OpNode (_.VT _.RC:$src1), _.RC:$src2))]>,
@@ -1556,16 +1556,14 @@ multiclass avx10_com_ef_int<bits<8> Opc, X86VectorVTInfo _, SDNode OpNode,
                           [(set EFLAGS, (OpNode (_.VT _.RC:$src1), (_.LdFrag addr:$src2)))]>,
                           EVEX, EVEX_V128, Sched<[sched]>, SIMD_EXC;
     }
-    let Uses = [MXCSR], mayRaiseFPException = 0 in {
-      def rrb_Int : AVX512<Opc, MRMSrcReg, (outs), (ins _.RC:$src1, _.RC:$src2),
-                           !strconcat(OpcodeStr, "\t{{sae}, $src2, $src1|$src1, $src2, {sae}}"),
-                           []>,
-                           EVEX, EVEX_V128, EVEX_B, Sched<[sched]>, SIMD_EXC;
-    }
+    def rrb_Int : AVX512<Opc, MRMSrcReg, (outs), (ins _.RC:$src1, _.RC:$src2),
+                        !strconcat(OpcodeStr, "\t{{sae}, $src2, $src1|$src1, $src2, {sae}}"),
+                        []>,
+                        EVEX, EVEX_V128, EVEX_B, Sched<[sched]>, SIMD_EXC;
   }
 }
 
-let Defs = [EFLAGS], Predicates = [HasAVX10_2] in {
+let Defs = [EFLAGS], Uses = [MXCSR], Predicates = [HasAVX10_2] in {
   defm VCOMXSDZ   :  avx10_com_ef_int<0x2f, v2f64x_info, X86comi512,
                                       "vcomxsd", SSEPackedDouble>,
                                       TB, XS, VEX_LIG, REX_W, EVEX_CD8<64, CD8VT1>;
