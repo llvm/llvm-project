@@ -9219,7 +9219,7 @@ def dxc_hlsl_version : Option<["/", "-"], "HV", KIND_JOINED_OR_SEPARATE>,
                      Group<dxc_Group>,
                      Visibility<[DXCOption]>,
                      HelpText<"HLSL Version">,
-                     Values<"2016, 2017, 2018, 2021, 202x">;
+                     Values<"2016, 2017, 2018, 2021, 202x, 202y">;
 
 def fsuppress_conflicting_types: Flag<["-"], "fsuppress-conflicting-types">, Group<f_Group>,
   MarshallingInfoFlag<LangOpts<"IgnoreConflictingTypes">>,
