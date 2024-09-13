@@ -8747,16 +8747,7 @@ static void addLiveOutsForFirstOrderRecurrences(
   }
 
   VPBuilder ScalarPHBuilder(ScalarPHVPBB);
-  VPBuilder MiddleBuilder(MiddleVPBB);
-  // Reset insert point so new recipes are inserted before terminator and
-  // condition, if there is either the former or both.
-  // TODO: set MiddleBuilder to MiddleVPBB->getFirstNonPhi().
-  if (auto *Terminator = MiddleVPBB->getTerminator()) {
-    auto *Condition = dyn_cast<VPInstruction>(Terminator->getOperand(0));
-    assert((!Condition || Condition->getParent() == MiddleVPBB) &&
-           "Condition expected in MiddleVPBB");
-    MiddleBuilder.setInsertPoint(Condition ? Condition : Terminator);
-  }
+  VPBuilder MiddleBuilder(MiddleVPBB, MiddleVPBB->getFirstNonPhi());
   VPValue *OneVPV = Plan.getOrAddLiveIn(
       ConstantInt::get(Plan.getCanonicalIV()->getScalarType(), 1));
   VPValue *TwoVPV = Plan.getOrAddLiveIn(
