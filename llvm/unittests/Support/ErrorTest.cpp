@@ -460,13 +460,11 @@ TEST(Error, createStringError) {
   EXPECT_EQ(Msg, "foobar10xff\n")
       << "Unexpected createStringError() log result";
 
-  S.flush();
   Msg.clear();
   logAllUnhandledErrors(createStringError(EC, Bar), S);
   EXPECT_EQ(Msg, "bar\n")
       << "Unexpected createStringError() (overloaded) log result";
 
-  S.flush();
   Msg.clear();
   auto Res = errorToErrorCode(createStringError(EC, "foo%s", Bar));
   EXPECT_EQ(Res, EC)
