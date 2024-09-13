@@ -32,7 +32,10 @@ struct offload_platform_handle_t_ {
   std::vector<offload_device_handle_t_> Devices;
 };
 
-static std::vector<offload_platform_handle_t_> Platforms;
+std::vector<offload_platform_handle_t_> &Platforms() {
+  static std::vector<offload_platform_handle_t_> Platforms;
+  return Platforms;
+}
 
 // Every plugin exports this method to create an instance of the plugin type.
 #define PLUGIN_TARGET(Name) extern "C" GenericPluginTy *createPlugin_##Name();
@@ -42,14 +45,14 @@ void initPlugins() {
   // Attempt to create an instance of each supported plugin.
 #define PLUGIN_TARGET(Name)                                                    \
   do {                                                                         \
-    Platforms.emplace_back(offload_platform_handle_t_{                         \
+    Platforms().emplace_back(offload_platform_handle_t_{                       \
         std::unique_ptr<GenericPluginTy>(createPlugin_##Name()), {}});         \
   } while (false);
 #include "Shared/Targets.def"
 
   // Preemptively initialize all devices in the plugin so we can just return
   // them from deviceGet
-  for (auto &Platform : Platforms) {
+  for (auto &Platform : Platforms()) {
     auto Err = Platform.Plugin->init();
     [[maybe_unused]] std::string InfoMsg = toString(std::move(Err));
     for (auto DevNum = 0; DevNum < Platform.Plugin->number_of_devices();
@@ -71,19 +74,19 @@ offload_result_t offloadPlatformGet_impl(uint32_t NumEntries,
   static std::once_flag InitFlag;
   std::call_once(InitFlag, initPlugins);
 
-  if (NumEntries > Platforms.size()) {
+  if (NumEntries > Platforms().size()) {
     return OFFLOAD_RESULT_ERROR_INVALID_SIZE;
   }
 
   if (phPlatforms) {
     for (uint32_t PlatformIndex = 0; PlatformIndex < NumEntries;
          PlatformIndex++) {
-      phPlatforms[PlatformIndex] = &Platforms[PlatformIndex];
+      phPlatforms[PlatformIndex] = &(Platforms())[PlatformIndex];
     }
   }
 
   if (pNumPlatforms) {
-    *pNumPlatforms = Platforms.size();
+    *pNumPlatforms = Platforms().size();
   }
 
   return OFFLOAD_RESULT_SUCCESS;
