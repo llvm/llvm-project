@@ -936,8 +936,9 @@ public:
     case VPRecipeBase::VPReductionPHISC:
     case VPRecipeBase::VPScalarCastSC:
       return true;
-    case VPRecipeBase::VPInterleaveSC:
     case VPRecipeBase::VPBranchOnMaskSC:
+    case VPRecipeBase::VPInterleaveSC:
+    case VPRecipeBase::VPIRInstructionSC:
     case VPRecipeBase::VPWidenLoadEVLSC:
     case VPRecipeBase::VPWidenLoadSC:
     case VPRecipeBase::VPWidenStoreEVLSC:
@@ -1403,6 +1404,45 @@ public:
   /// Returns true if this VPInstruction's operands are single scalars and the
   /// result is also a single scalar.
   bool isSingleScalar() const;
+};
+
+/// A recipe to wrap on original IR instruction not to be modified during
+/// execution, execept for PHIs. For PHIs, a single VPValue operand is allowed,
+/// and it is used to add a new incoming value for the single predecessor VPBB.
+/// Expect PHIs, VPIRInstructions cannot have any operands.
+class VPIRInstruction : public VPRecipeBase {
+  Instruction &I;
+
+public:
+  VPIRInstruction(Instruction &I)
+      : VPRecipeBase(VPDef::VPIRInstructionSC, ArrayRef<VPValue *>()), I(I) {}
+
+  ~VPIRInstruction() override = default;
+
+  VP_CLASSOF_IMPL(VPDef::VPIRInstructionSC)
+
+  VPIRInstruction *clone() override {
+    auto *R = new VPIRInstruction(I);
+    for (auto *Op : operands())
+      R->addOperand(Op);
+    return R;
+  }
+
+  void execute(VPTransformState &State) override;
+
+  Instruction &getInstruction() { return I; }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
+#endif
+
+  bool usesScalars(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    return true;
+  }
 };
 
 /// VPWidenRecipe is a recipe for producing a widened instruction using the
