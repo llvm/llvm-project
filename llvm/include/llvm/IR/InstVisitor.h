@@ -208,6 +208,7 @@ public:
   RetTy visitDbgInfoIntrinsic(DbgInfoIntrinsic &I){ DELEGATE(IntrinsicInst); }
   RetTy visitMemSetInst(MemSetInst &I)            { DELEGATE(MemIntrinsic); }
   RetTy visitMemSetInlineInst(MemSetInlineInst &I){ DELEGATE(MemSetInst); }
+  RetTy visitMemSetPatternInst(MemSetPatternInst &I) { DELEGATE(MemSetInst); }
   RetTy visitMemCpyInst(MemCpyInst &I)            { DELEGATE(MemTransferInst); }
   RetTy visitMemCpyInlineInst(MemCpyInlineInst &I){ DELEGATE(MemCpyInst); }
   RetTy visitMemMoveInst(MemMoveInst &I)          { DELEGATE(MemTransferInst); }
@@ -295,6 +296,8 @@ private:
       case Intrinsic::memset:      DELEGATE(MemSetInst);
       case Intrinsic::memset_inline:
         DELEGATE(MemSetInlineInst);
+      case Intrinsic::memset_pattern:
+        DELEGATE(MemSetPatternInst);
       case Intrinsic::vastart:     DELEGATE(VAStartInst);
       case Intrinsic::vaend:       DELEGATE(VAEndInst);
       case Intrinsic::vacopy:      DELEGATE(VACopyInst);

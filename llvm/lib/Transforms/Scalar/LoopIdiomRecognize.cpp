@@ -132,6 +132,11 @@ static cl::opt<bool> UseLIRCodeSizeHeurs(
              "with -Os/-Oz"),
     cl::init(true), cl::Hidden);
 
+static cl::opt<bool> EnableMemsetPatternIntrinsic(
+    "loop-idiom-enable-memset-pattern-intrinsic",
+    cl::desc("Enable use of the memset_pattern intrinsic."), cl::init(false),
+    cl::Hidden);
+
 namespace {
 
 class LoopIdiomRecognize {
@@ -306,7 +311,8 @@ bool LoopIdiomRecognize::runOnLoop(Loop *L) {
   HasMemsetPattern = TLI->has(LibFunc_memset_pattern16);
   HasMemcpy = TLI->has(LibFunc_memcpy);
 
-  if (HasMemset || HasMemsetPattern || HasMemcpy)
+  if (HasMemset || HasMemsetPattern || EnableMemsetPatternIntrinsic ||
+      HasMemcpy)
     if (SE->hasLoopInvariantBackedgeTakenCount(L))
       return runOnCountableLoop();
 
@@ -463,7 +469,8 @@ LoopIdiomRecognize::isLegalStore(StoreInst *SI) {
     // It looks like we can use SplatValue.
     return LegalStoreKind::Memset;
   }
-  if (!UnorderedAtomic && HasMemsetPattern && !DisableLIRP::Memset &&
+  if (!UnorderedAtomic && (HasMemsetPattern || EnableMemsetPatternIntrinsic) &&
+      !DisableLIRP::Memset &&
       // Don't create memset_pattern16s with address spaces.
       StorePtr->getType()->getPointerAddressSpace() == 0 &&
       getMemSetPatternValue(StoredVal, DL)) {
@@ -999,6 +1006,46 @@ static const SCEV *getNumBytes(const SCEV *BECount, Type *IntPtr,
                         SCEV::FlagNUW);
 }
 
+ConstantInt *memSetPatternValueToI128ConstantInt(LLVMContext &Context,
+                                                 Value *MemSetPatternValue) {
+  if (auto CIMemSetPatternValue = dyn_cast<ConstantInt>(MemSetPatternValue)) {
+    return CIMemSetPatternValue;
+  }
+
+  if (auto Array = dyn_cast<ConstantDataArray>(MemSetPatternValue)) {
+    Type *ElementType = Array->getElementType();
+    unsigned ElementSize = Array->getElementByteSize() * 8;
+
+    APInt Result(128, 0);
+    unsigned totalBits = 0;
+
+    for (unsigned i = 0; i < Array->getNumElements(); ++i) {
+      if (totalBits + ElementSize > 128) {
+        report_fatal_error("Pattern value unexpectedly greater than 128 bits");
+      }
+
+      APInt ElementBits;
+      if (ElementType->isIntegerTy()) {
+        ElementBits = Array->getElementAsAPInt(i);
+      } else if (ElementType->isFloatingPointTy()) {
+        APFloat APF = Array->getElementAsAPFloat(i);
+        ElementBits = APF.bitcastToAPInt();
+      } else {
+        llvm_unreachable("Unexpected element type");
+      }
+
+      // Shift the existing result left by the element's size and OR in the new
+      // value
+      Result = (Result << ElementSize) | ElementBits.zextOrTrunc(128);
+      totalBits += ElementSize;
+    }
+
+    // Create and return a ConstantInt with the resulting value
+    return ConstantInt::get(Context, Result);
+  }
+  report_fatal_error("Encountered unrecognised type");
+}
+
 /// processLoopStridedStore - We see a strided store of some value.  If we can
 /// transform this into a memset or memset_pattern in the loop preheader, do so.
 bool LoopIdiomRecognize::processLoopStridedStore(
@@ -1076,7 +1123,8 @@ bool LoopIdiomRecognize::processLoopStridedStore(
   Value *NumBytes =
       Expander.expandCodeFor(NumBytesS, IntIdxTy, Preheader->getTerminator());
 
-  if (!SplatValue && !isLibFuncEmittable(M, TLI, LibFunc_memset_pattern16))
+  if (!SplatValue && !(isLibFuncEmittable(M, TLI, LibFunc_memset_pattern16) ||
+                       EnableMemsetPatternIntrinsic))
     return Changed;
 
   AAMDNodes AATags = TheStore->getAAMetadata();
@@ -1093,24 +1141,44 @@ bool LoopIdiomRecognize::processLoopStridedStore(
         BasePtr, SplatValue, NumBytes, MaybeAlign(StoreAlignment),
         /*isVolatile=*/false, AATags.TBAA, AATags.Scope, AATags.NoAlias);
   } else {
-    assert (isLibFuncEmittable(M, TLI, LibFunc_memset_pattern16));
-    // Everything is emitted in default address space
-    Type *Int8PtrTy = DestInt8PtrTy;
+    assert(isLibFuncEmittable(M, TLI, LibFunc_memset_pattern16) ||
+           EnableMemsetPatternIntrinsic);
+    if (EnableMemsetPatternIntrinsic) {
+      // Everything is emitted in default address space
 
-    StringRef FuncName = "memset_pattern16";
-    FunctionCallee MSP = getOrInsertLibFunc(M, *TLI, LibFunc_memset_pattern16,
-                            Builder.getVoidTy(), Int8PtrTy, Int8PtrTy, IntIdxTy);
-    inferNonMandatoryLibFuncAttrs(M, FuncName, *TLI);
+      // Get or insert the intrinsic declaration
+      Function *MemsetPatternIntrinsic = Intrinsic::getDeclaration(
+          M, Intrinsic::memset_pattern,
+          {DestInt8PtrTy, Builder.getInt128Ty(), Builder.getInt64Ty()});
 
-    // Otherwise we should form a memset_pattern16.  PatternValue is known to be
-    // an constant array of 16-bytes.  Plop the value into a mergable global.
-    GlobalVariable *GV = new GlobalVariable(*M, PatternValue->getType(), true,
-                                            GlobalValue::PrivateLinkage,
-                                            PatternValue, ".memset_pattern");
-    GV->setUnnamedAddr(GlobalValue::UnnamedAddr::Global); // Ok to merge these.
-    GV->setAlignment(Align(16));
-    Value *PatternPtr = GV;
-    NewCall = Builder.CreateCall(MSP, {BasePtr, PatternPtr, NumBytes});
+      // Create the call to the intrinsic
+      NewCall = Builder.CreateCall(
+          MemsetPatternIntrinsic,
+          {BasePtr,
+           memSetPatternValueToI128ConstantInt(M->getContext(), PatternValue),
+           NumBytes, ConstantInt::getFalse(M->getContext())});
+    } else {
+      // Everything is emitted in default address space
+      Type *Int8PtrTy = DestInt8PtrTy;
+
+      StringRef FuncName = "memset_pattern16";
+      FunctionCallee MSP = getOrInsertLibFunc(M, *TLI, LibFunc_memset_pattern16,
+                                              Builder.getVoidTy(), Int8PtrTy,
+                                              Int8PtrTy, IntIdxTy);
+      inferNonMandatoryLibFuncAttrs(M, FuncName, *TLI);
+
+      // Otherwise we should form a memset_pattern16.  PatternValue is known to
+      // be an constant array of 16-bytes.  Plop the value into a mergable
+      // global.
+      GlobalVariable *GV = new GlobalVariable(*M, PatternValue->getType(), true,
+                                              GlobalValue::PrivateLinkage,
+                                              PatternValue, ".memset_pattern");
+      GV->setUnnamedAddr(
+          GlobalValue::UnnamedAddr::Global); // Ok to merge these.
+      GV->setAlignment(Align(16));
+      Value *PatternPtr = GV;
+      NewCall = Builder.CreateCall(MSP, {BasePtr, PatternPtr, NumBytes});
+    }
 
     // Set the TBAA info if present.
     if (AATags.TBAA)
