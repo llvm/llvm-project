@@ -18,19 +18,19 @@
 #include "llvm/Support/VirtualFileSystem.h"
 
 namespace clang {
-
+struct PartialTranslationUnit;
 class IncrementalCUDADeviceParser : public IncrementalParser {
+  const std::list<PartialTranslationUnit> &PTUs;
+
 public:
   IncrementalCUDADeviceParser(
-      Interpreter &Interp, std::unique_ptr<CompilerInstance> Instance,
-      IncrementalParser &HostParser, llvm::LLVMContext &LLVMCtx,
+      std::unique_ptr<CompilerInstance> Instance, IncrementalParser &HostParser,
       llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> VFS,
-      llvm::Error &Err);
+      llvm::Error &Err, const std::list<PartialTranslationUnit> &PTUs);
 
-  llvm::Expected<PartialTranslationUnit &>
-  Parse(llvm::StringRef Input) override;
+  llvm::Expected<TranslationUnitDecl *> Parse(llvm::StringRef Input) override;
 
-  // Generate PTX for the last PTU
+  // Generate PTX for the last PTU.
   llvm::Expected<llvm::StringRef> GeneratePTX();
 
   // Generate fatbinary contents in memory

@@ -32,8 +32,9 @@ class ThreadSafeContext;
 
 namespace clang {
 
-struct PartialTranslationUnit;
 class TargetInfo;
+
+struct PartialTranslationUnit;
 
 class IncrementalExecutor {
   using CtorDtorIterator = llvm::orc::CtorDtorIterator;
@@ -65,7 +66,6 @@ public:
   static llvm::Expected<std::unique_ptr<llvm::orc::LLJITBuilder>>
   createDefaultJITBuilder(llvm::orc::JITTargetMachineBuilder JTMB);
 };
-
 } // end namespace clang
 
 #endif // LLVM_CLANG_LIB_INTERPRETER_INCREMENTALEXECUTOR_H

@@ -201,7 +201,6 @@ int main(int argc, const char **argv) {
     DeviceCI->LoadRequestedPlugins();
 
   std::unique_ptr<clang::Interpreter> Interp;
-
   if (CudaEnabled) {
     Interp = ExitOnErr(
         clang::Interpreter::createWithCUDA(std::move(CI), std::move(DeviceCI)));
@@ -232,8 +231,8 @@ int main(int argc, const char **argv) {
       llvm::StringRef L = *Line;
       L = L.trim();
       if (L.ends_with("\\")) {
-        // FIXME: Support #ifdef X \ ...
         Input += L.drop_back(1);
+        Input += "\n";
         LE.setPrompt("clang-repl...   ");
         continue;
       }
