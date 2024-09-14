@@ -420,6 +420,13 @@ bool WebAssemblyAsmTypeCheck::typeCheck(SMLoc ErrorLoc, const MCInst &Inst,
     if (popRefType(ErrorLoc))
       return true;
     Stack.push_back(wasm::ValType::I32);
+  } else if (Name == "throw") {
+    const wasm::WasmSignature *Sig = nullptr;
+    if (getSignature(Operands[1]->getStartLoc(), Inst.getOperand(0),
+                     wasm::WASM_SYMBOL_TYPE_TAG, Sig))
+      return true;
+    if (checkSig(ErrorLoc, *Sig))
+      return true;
   } else {
     // The current instruction is a stack instruction which doesn't have
     // explicit operands that indicate push/pop types, so we get those from
