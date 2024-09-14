@@ -1,0 +1,5 @@
+// expected-no-diagnostics
+void foo() {
+    int a = 2;
+}
+
