@@ -774,6 +774,10 @@ void StringChunk::writeTo(uint8_t *buf) const {
   buf[str.size()] = '\0';
 }
 
+ImportThunkChunk::ImportThunkChunk(COFFLinkerContext &ctx, Defined *s)
+    : NonSectionCodeChunk(ImportThunkKind), live(!ctx.config.doGC),
+      impSymbol(s), ctx(ctx) {}
+
 ImportThunkChunkX64::ImportThunkChunkX64(COFFLinkerContext &ctx, Defined *s)
     : ImportThunkChunk(ctx, s) {
   // Intel Optimization Manual says that all branch targets

@@ -19090,20 +19090,18 @@ static SDValue convertLocVTToValVT(SelectionDAG &DAG, SDValue Val,
   if (VA.needsCustom()) {
     if (VA.getLocVT().isInteger() &&
         (VA.getValVT() == MVT::f16 || VA.getValVT() == MVT::bf16))
-      Val = DAG.getNode(RISCVISD::FMV_H_X, DL, VA.getValVT(), Val);
-    else if (VA.getLocVT() == MVT::i64 && VA.getValVT() == MVT::f32)
-      Val = DAG.getNode(RISCVISD::FMV_W_X_RV64, DL, MVT::f32, Val);
-    else
-      llvm_unreachable("Unexpected Custom handling.");
-    return Val;
+      return DAG.getNode(RISCVISD::FMV_H_X, DL, VA.getValVT(), Val);
+    if (VA.getLocVT() == MVT::i64 && VA.getValVT() == MVT::f32)
+      return DAG.getNode(RISCVISD::FMV_W_X_RV64, DL, MVT::f32, Val);
+    if (VA.getValVT().isFixedLengthVector() && VA.getLocVT().isScalableVector())
+      return convertFromScalableVector(VA.getValVT(), Val, DAG, Subtarget);
+    llvm_unreachable("Unexpected Custom handling.");
   }
 
   switch (VA.getLocInfo()) {
   default:
     llvm_unreachable("Unexpected CCValAssign::LocInfo");
   case CCValAssign::Full:
-    if (VA.getValVT().isFixedLengthVector() && VA.getLocVT().isScalableVector())
-      Val = convertFromScalableVector(VA.getValVT(), Val, DAG, Subtarget);
     break;
   case CCValAssign::BCvt:
     Val = DAG.getNode(ISD::BITCAST, DL, VA.getValVT(), Val);
@@ -19155,20 +19153,18 @@ static SDValue convertValVTToLocVT(SelectionDAG &DAG, SDValue Val,
   if (VA.needsCustom()) {
     if (LocVT.isInteger() &&
         (VA.getValVT() == MVT::f16 || VA.getValVT() == MVT::bf16))
-      Val = DAG.getNode(RISCVISD::FMV_X_ANYEXTH, DL, LocVT, Val);
-    else if (LocVT == MVT::i64 && VA.getValVT() == MVT::f32)
-      Val = DAG.getNode(RISCVISD::FMV_X_ANYEXTW_RV64, DL, MVT::i64, Val);
-    else
-      llvm_unreachable("Unexpected Custom handling.");
-    return Val;
+      return DAG.getNode(RISCVISD::FMV_X_ANYEXTH, DL, LocVT, Val);
+    if (LocVT == MVT::i64 && VA.getValVT() == MVT::f32)
+      return DAG.getNode(RISCVISD::FMV_X_ANYEXTW_RV64, DL, MVT::i64, Val);
+    if (VA.getValVT().isFixedLengthVector() && LocVT.isScalableVector())
+      return convertToScalableVector(LocVT, Val, DAG, Subtarget);
+    llvm_unreachable("Unexpected Custom handling.");
   }
 
   switch (VA.getLocInfo()) {
   default:
     llvm_unreachable("Unexpected CCValAssign::LocInfo");
   case CCValAssign::Full:
-    if (VA.getValVT().isFixedLengthVector() && LocVT.isScalableVector())
-      Val = convertToScalableVector(LocVT, Val, DAG, Subtarget);
     break;
   case CCValAssign::BCvt:
     Val = DAG.getNode(ISD::BITCAST, DL, LocVT, Val);
