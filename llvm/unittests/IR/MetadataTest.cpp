@@ -299,7 +299,6 @@ TEST_F(MDNodeTest, Print) {
     std::string Actual_;                                                       \
     raw_string_ostream OS(Actual_);                                            \
     PRINT;                                                                     \
-    OS.flush();                                                                \
     std::string Expected_(EXPECTED);                                           \
     EXPECT_EQ(Expected_, Actual_);                                             \
   } while (false)

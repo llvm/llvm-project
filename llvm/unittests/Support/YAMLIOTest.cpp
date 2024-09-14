@@ -1378,7 +1378,6 @@ TEST(YAMLIO, TestReadWriteMyFlowSequence) {
     yout << map;
 
     // Verify sequences were written in flow style
-    ostr.flush();
     llvm::StringRef flowOut(intermediate);
     EXPECT_NE(llvm::StringRef::npos, flowOut.find("one, two"));
     EXPECT_NE(llvm::StringRef::npos, flowOut.find("10, -30, 1024"));
@@ -1424,7 +1423,6 @@ TEST(YAMLIO, TestReadWriteSequenceOfMyFlowSequence) {
 
     // Verify sequences were written in flow style
     // and that the parent sequence used '-'.
-    ostr.flush();
     llvm::StringRef flowOut(intermediate);
     EXPECT_NE(llvm::StringRef::npos, flowOut.find("- [ 0 ]"));
     EXPECT_NE(llvm::StringRef::npos, flowOut.find("- [ 12, 1, -512 ]"));
@@ -1935,7 +1933,6 @@ TEST(YAMLIO, TestReadWriteMyFlowMapping) {
     yout << doc;
 
     // Verify that mappings were written in flow style
-    ostr.flush();
     llvm::StringRef flowOut(intermediate);
     EXPECT_NE(llvm::StringRef::npos, flowOut.find("{ foo: 42, bar: 907 }"));
     EXPECT_NE(llvm::StringRef::npos, flowOut.find("- { foo: 1, bar: 2 }"));
@@ -2538,7 +2535,6 @@ TEST(YAMLIO, TestWrapFlow) {
     Output yout(ostr, nullptr, 15);
 
     yout << Map;
-    ostr.flush();
     EXPECT_EQ(out,
               "---\n"
               "{ str1: This is str1, \n"
@@ -2548,7 +2544,6 @@ TEST(YAMLIO, TestWrapFlow) {
     out.clear();
 
     yout << Seq;
-    ostr.flush();
     EXPECT_EQ(out,
               "---\n"
               "[ This is str1, \n"
@@ -2562,7 +2557,6 @@ TEST(YAMLIO, TestWrapFlow) {
     Output yout(ostr, nullptr, 25);
 
     yout << Map;
-    ostr.flush();
     EXPECT_EQ(out,
               "---\n"
               "{ str1: This is str1, str2: This is str2, \n"
@@ -2571,7 +2565,6 @@ TEST(YAMLIO, TestWrapFlow) {
     out.clear();
 
     yout << Seq;
-    ostr.flush();
     EXPECT_EQ(out,
               "---\n"
               "[ This is str1, This is str2, \n"
@@ -2584,7 +2577,6 @@ TEST(YAMLIO, TestWrapFlow) {
     Output yout(ostr, nullptr, 0);
 
     yout << Map;
-    ostr.flush();
     EXPECT_EQ(out,
               "---\n"
               "{ str1: This is str1, str2: This is str2, str3: This is str3 }\n"
@@ -2592,7 +2584,6 @@ TEST(YAMLIO, TestWrapFlow) {
     out.clear();
 
     yout << Seq;
-    ostr.flush();
     EXPECT_EQ(out,
               "---\n"
               "[ This is str1, This is str2, This is str3 ]\n"
@@ -2646,7 +2637,6 @@ TEST(YAMLIO, TestMapWithContext) {
   Output yout(ostr, nullptr, 15);
 
   yout << Nested;
-  ostr.flush();
   EXPECT_EQ(1, Context.A);
   EXPECT_EQ("---\n"
             "Simple:\n"
@@ -2661,7 +2651,6 @@ TEST(YAMLIO, TestMapWithContext) {
   Nested.Simple.B = 2;
   Nested.Simple.C = 3;
   yout << Nested;
-  ostr.flush();
   EXPECT_EQ(2, Context.A);
   EXPECT_EQ("---\n"
             "Simple:\n"
@@ -2683,7 +2672,6 @@ TEST(YAMLIO, TestCustomMapping) {
   Output xout(ostr, nullptr, 0);
 
   xout << x;
-  ostr.flush();
   EXPECT_EQ("---\n"
             "{}\n"
             "...\n",
@@ -2694,7 +2682,6 @@ TEST(YAMLIO, TestCustomMapping) {
 
   out.clear();
   xout << x;
-  ostr.flush();
   EXPECT_EQ("---\n"
             "bar:             2\n"
             "foo:             1\n"
@@ -2723,7 +2710,6 @@ TEST(YAMLIO, TestCustomMappingStruct) {
   Output xout(ostr, nullptr, 0);
 
   xout << x;
-  ostr.flush();
   EXPECT_EQ("---\n"
             "bar:\n"
             "  foo:             3\n"
@@ -2794,8 +2780,6 @@ static void TestEscaped(llvm::StringRef Input, llvm::StringRef Expected) {
 
   llvm::yaml::EmptyContext Ctx;
   yamlize(xout, Input, true, Ctx);
-
-  ostr.flush();
 
   // Make a separate StringRef so we get nice byte-by-byte output.
   llvm::StringRef Got(out);
