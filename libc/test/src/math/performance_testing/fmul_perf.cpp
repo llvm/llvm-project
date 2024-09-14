@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "BinaryOpSingleOutputPerf.h"
-#include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/generic/mul.h"
 #include "src/math/fmul.h"
 
