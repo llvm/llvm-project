@@ -66,10 +66,11 @@ public:
 
   void test_range_errors(MulFunc func) {
     using namespace LIBC_NAMESPACE::fputil::testing;
-
+    
     if (ForceRoundingMode r(RoundingMode::Nearest); r.success) {
       EXPECT_FP_EQ_WITH_EXCEPTION(inf, func(max_normal, max_normal),
                                   FE_OVERFLOW | FE_INEXACT);
+      
       EXPECT_MATH_ERRNO(ERANGE);
       EXPECT_FP_EQ_WITH_EXCEPTION(neg_inf, func(neg_max_normal, max_normal),
                                   FE_OVERFLOW | FE_INEXACT);
@@ -82,8 +83,9 @@ public:
                                   func(in.neg_min_denormal, in.min_denormal),
                                   FE_UNDERFLOW | FE_INEXACT);
       EXPECT_MATH_ERRNO(ERANGE);
+      
     }
-
+    
     if (ForceRoundingMode r(RoundingMode::TowardZero); r.success) {
       EXPECT_FP_EQ_WITH_EXCEPTION(max_normal, func(max_normal, max_normal),
                                   FE_OVERFLOW | FE_INEXACT);
@@ -98,9 +100,10 @@ public:
                                   func(in.neg_min_denormal, in.min_denormal),
                                   FE_UNDERFLOW | FE_INEXACT);
       EXPECT_MATH_ERRNO(ERANGE);
-    }
+      }
 
     if (ForceRoundingMode r(RoundingMode::Downward); r.success) {
+      
       EXPECT_FP_EQ_WITH_EXCEPTION(max_normal, func(max_normal, max_normal),
                                   FE_OVERFLOW | FE_INEXACT);
       EXPECT_FP_EQ_WITH_EXCEPTION(neg_inf, func(neg_max_normal, max_normal),
@@ -110,12 +113,13 @@ public:
       EXPECT_FP_EQ_WITH_EXCEPTION(zero, func(in.min_denormal, in.min_denormal),
                                   FE_UNDERFLOW | FE_INEXACT);
       EXPECT_MATH_ERRNO(ERANGE);
+      
       EXPECT_FP_EQ_WITH_EXCEPTION(neg_min_denormal,
                                   func(in.neg_min_denormal, in.min_denormal),
                                   FE_UNDERFLOW | FE_INEXACT);
       EXPECT_MATH_ERRNO(ERANGE);
     }
-
+    
     if (ForceRoundingMode r(RoundingMode::Upward); r.success) {
       EXPECT_FP_EQ_WITH_EXCEPTION(inf, func(max_normal, max_normal),
                                   FE_OVERFLOW | FE_INEXACT);
@@ -132,8 +136,8 @@ public:
                                   func(in.neg_min_denormal, in.min_denormal),
                                   FE_UNDERFLOW | FE_INEXACT);
       EXPECT_MATH_ERRNO(ERANGE);
+      }
     }
-  }
 
   void test_inexact_results(MulFunc func) {
     InFPBits x_bits = InFPBits::one();
