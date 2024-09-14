@@ -378,7 +378,6 @@ void BuiltinNameEmitter::ExtractEnumTypes(ArrayRef<const Record *> Types,
       TypesSeen.insert(std::make_pair(T->getValueAsString("Name"), true));
     }
   }
-  SS.flush();
 }
 
 void BuiltinNameEmitter::EmitDeclarations() {
@@ -731,7 +730,6 @@ void BuiltinNameEmitter::EmitStringMatcher() {
       raw_string_ostream SS(RetStmt);
       SS << "return std::make_pair(" << CumulativeIndex << ", " << Ovl.size()
          << ");";
-      SS.flush();
       ValidBuiltins.push_back(
           StringMatcher::StringPair(std::string(FctName), RetStmt));
     }
