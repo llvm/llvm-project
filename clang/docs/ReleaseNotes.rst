@@ -387,8 +387,8 @@ Bug Fixes to C++ Support
 - A follow-up fix was added for (#GH61460), as the previous fix was not entirely correct. (#GH86361)
 - Fixed a crash in the typo correction of an invalid CTAD guide. (#GH107887)
 - Fixed a crash when clang tries to subtitute parameter pack while retaining the parameter
-  pack. #GH63819, #GH107560
-
+  pack. (#GH63819), (#GH107560)
+- Avoided a redundant friend declaration instantiation under the certain ``consteval`` contexts. (#GH107175)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
