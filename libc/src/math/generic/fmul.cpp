@@ -116,6 +116,9 @@ LLVM_LIBC_FUNCTION(float, fmul, (double x, double y)) {
     fputil::set_errno_if_required(ERANGE);
     fputil::raise_except_if_required(FE_UNDERFLOW);
     return result_f;
+
+    #endif
+    
 }
 }
 // namespace LIBC_NAMESPACE_DECL

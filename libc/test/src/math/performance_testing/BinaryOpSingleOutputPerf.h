@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/CPP/algorithm.h"
-#include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/macros/config.h"
 #include "test/src/math/performance_testing/Timer.h"
 
