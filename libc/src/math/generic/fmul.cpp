@@ -20,7 +20,7 @@ LLVM_LIBC_FUNCTION(float, fmul, (double x, double y)) {
   // Without FMA instructions, fputil::exact_mult is not
   // correctly rounded for all rounding modes, so we fall
   // back to the generic `fmul` implementation
-   
+
 #ifndef LIBC_TARGET_CPU_HAS_FMA
   return fputil::generic::mul<float>(x, y);
 #else
