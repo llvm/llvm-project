@@ -689,7 +689,7 @@ public:
   }
 
   template <typename RangeTy> void append_range(RangeTy &&R) {
-    this->append(R.begin(), R.end());
+    this->append(adl_begin(R), adl_end(R));
   }
 
   /// Append \p NumInputs copies of \p Elt to the end.
