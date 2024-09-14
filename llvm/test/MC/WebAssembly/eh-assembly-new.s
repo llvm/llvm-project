@@ -19,9 +19,10 @@ eh_test:
         drop
       end_block
       drop
-      drop
+      throw_ref
     end_block
   end_block
+  throw_ref
   drop
 
   # You can use the same kind of catch clause more than once
@@ -92,10 +93,10 @@ eh_test:
 # CHECK-NEXT:    drop
 # CHECK-NEXT:    end_block
 # CHECK-NEXT:    drop
-# CHECK-NEXT:    drop
+# CHECK-NEXT:    throw_ref
 # CHECK-NEXT:    end_block
 # CHECK-NEXT:    end_block
-# CHECK-NEXT:    drop
+# CHECK-NEXT:    throw_ref
 
 # CHECK:         block
 # CHECK-NEXT:    block           exnref
