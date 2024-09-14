@@ -207,8 +207,8 @@ on support follow.
      ``Zkt``           Supported
      ``Zmmul``         Supported
      ``Ztso``          Supported
-     ``Zvbb``          Assembly Support
-     ``Zvbc``          Assembly Support
+     ``Zvbb``          Supported
+     ``Zvbc``          Supported (`See note <#iscv-vector-crypto-note>`__)
      ``Zve32x``        (`Partially <#riscv-vlen-32-note>`__) Supported
      ``Zve32f``        (`Partially <#riscv-vlen-32-note>`__) Supported
      ``Zve64x``        Supported
@@ -217,20 +217,21 @@ on support follow.
      ``Zvfbfmin``      Supported
      ``Zvfbfwma``      Supported
      ``Zvfh``          Supported
-     ``Zvkb``          Assembly Support
-     ``Zvkg``          Assembly Support
-     ``Zvkn``          Assembly Support
-     ``Zvknc``         Assembly Support
-     ``Zvkned``        Assembly Support
-     ``Zvkng``         Assembly Support
-     ``Zvknha``        Assembly Support
-     ``Zvknhb``        Assembly Support
-     ``Zvks``          Assembly Support
-     ``Zvksc``         Assembly Support
-     ``Zvksed``        Assembly Support
-     ``Zvksg``         Assembly Support
-     ``Zvksh``         Assembly Support
-     ``Zvkt``          Assembly Support
+     ``Zvfhmin``       Supported
+     ``Zvkb``          Supported
+     ``Zvkg``          Supported (`See note <#iscv-vector-crypto-note>`__)
+     ``Zvkn``          Supported (`See note <#iscv-vector-crypto-note>`__)
+     ``Zvknc``         Supported (`See note <#iscv-vector-crypto-note>`__)
+     ``Zvkned``        Supported (`See note <#iscv-vector-crypto-note>`__)
+     ``Zvkng``         Supported (`See note <#iscv-vector-crypto-note>`__)
+     ``Zvknha``        Supported (`See note <#iscv-vector-crypto-note>`__)
+     ``Zvknhb``        Supported (`See note <#iscv-vector-crypto-note>`__)
+     ``Zvks``          Supported (`See note <#iscv-vector-crypto-note>`__)
+     ``Zvksc``         Supported (`See note <#iscv-vector-crypto-note>`__)
+     ``Zvksed``        Supported (`See note <#iscv-vector-crypto-note>`__)
+     ``Zvksg``         Supported (`See note <#iscv-vector-crypto-note>`__)
+     ``Zvksh``         Supported (`See note <#iscv-vector-crypto-note>`__)
+     ``Zvkt``          Supported
      ``Zvl32b``        (`Partially <#riscv-vlen-32-note>`__) Supported
      ``Zvl64b``        Supported
      ``Zvl128b``       Supported
@@ -266,6 +267,11 @@ Supported
 ``Zknd``, ``Zkne``, ``Zknh``, ``Zksed``, ``Zksh``
   No pattern matching exists.  As a result, these instructions can only be used from assembler or via intrinsic calls.
 
+.. _riscv-vector-crypto-note:
+
+``Zvbc``, ``Zvkg``, ``Zvkn``, ``Zvknc``, ``Zvkned``, ``Zvkng``, ``Zvknha``, ``Zvknhb``, ``Zvks``, ``Zvks``, ``Zvks``, ``Zvksc``, ``Zvksed``, ``Zvksg``, ``Zvksh``.
+  No pattern matching exists. As a result, these instructions can only be used from assembler or via intrinsic calls.
+
 .. _riscv-vlen-32-note:
 
 ``Zve32x``, ``Zve32f``, ``Zvl32b``
@@ -280,6 +286,13 @@ Supported
 
 ``Za128rs``, ``Za64rs``, ``Zama16b``, ``Zic64b``, ``Ziccamoa``, ``Ziccif``, ``Zicclsm``, ``Ziccrse``, ``Shcounterenvw``, ``Shgatpa``, ``Shtvala``, ``Shvsatpa``, ``Shvstvala``, ``Shvstvecd``, ``Ssccptr``, ``Sscounterenw``, ``Ssstateen``, ``Ssstrict``, ``Sstvala``, ``Sstvecd``, ``Ssu64xl``, ``Svade``, ``Svbare``
   These extensions are defined as part of the `RISC-V Profiles specification <https://github.com/riscv/riscv-profiles/releases/tag/v1.0>`__.  They do not introduce any new features themselves, but instead describe existing hardware features.
+
+Atomics ABIs
+============
+
+At the time of writing there are three atomics mappings (ABIs) `defined for RISC-V <https://github.com/riscv-non-isa/riscv-elf-psabi-doc/blob/master/riscv-elf.adoc#tag_riscv_atomic_abi-14-uleb128version>`__.  As of LLVM 19, LLVM defaults to "A6S", which is compatible with both the original "A6" and the future "A7" ABI. See `the psABI atomics document <https://github.com/riscv-non-isa/riscv-elf-psabi-doc/blob/master/riscv-atomic.adoc>`__ for more information on these mappings.
+
+Note that although the "A6S" mapping is used, the ELF attribute recording the mapping isn't currently emitted by default due to a bug causing a crash in older versions of binutils when processing files containing this attribute.
 
 Experimental Extensions
 =======================

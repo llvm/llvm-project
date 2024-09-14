@@ -1,9 +1,7 @@
 ; RUN: llvm-mc -triple avr -mattr=sram -show-encoding < %s | FileCheck %s
 ; RUN: llvm-mc -filetype=obj -triple avr -mattr=sram < %s | llvm-objdump --no-print-imm-hex -dr --mattr=sram - | FileCheck -check-prefix=CHECK-INST %s
 
-
 foo:
-
   sts 3,        r5
   sts 255,      r7
   sts SYMBOL+1, r25

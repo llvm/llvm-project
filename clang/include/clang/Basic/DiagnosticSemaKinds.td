@@ -267,7 +267,10 @@ def err_invalid_width_spec : Error<
 def err_invalid_complex_spec : Error<"'_Complex %0' is invalid">;
 
 def ext_auto_type_specifier : ExtWarn<
-  "'auto' type specifier is a C++11 extension">, InGroup<CXX11>;
+  "'auto' type specifier is a %select{C++11|HLSL 202y}0 extension">,
+  InGroup<CXX11>;
+def ext_hlsl_auto_type_specifier : ExtWarn<
+  ext_auto_type_specifier.Summary>, InGroup<HLSL202y>;
 def warn_auto_storage_class : Warning<
   "'auto' storage class specifier is redundant and incompatible with C++11">,
   InGroup<CXX11Compat>, DefaultIgnore;
@@ -439,6 +442,10 @@ def warn_deprecated_literal_operator_id: Warning<
   "is deprecated">, InGroup<DeprecatedLiteralOperator>, DefaultIgnore;
 def warn_reserved_module_name : Warning<
   "%0 is a reserved name for a module">, InGroup<ReservedModuleIdentifier>;
+def warn_import_implementation_partition_unit_in_interface_unit : Warning<
+  "importing an implementation partition unit in a module interface is not recommended. "
+  "Names from %0 may not be reachable">,
+  InGroup<DiagGroup<"import-implementation-partition-unit-in-interface-unit">>;
 
 def warn_parameter_size: Warning<
   "%0 is a large (%1 bytes) pass-by-value argument; "
@@ -1039,7 +1046,6 @@ def err_opencl_invalid_param : Error<
   "declaring function parameter of type %0 is not allowed%select{; did you forget * ?|}1">;
 def err_opencl_invalid_return : Error<
   "declaring function return value of type %0 is not allowed %select{; did you forget * ?|}1">;
-def warn_enum_value_overflow : Warning<"overflow in enumeration value">;
 def warn_pragma_options_align_reset_failed : Warning<
   "#pragma options align=reset failed: %0">,
   InGroup<IgnoredPragmas>;
@@ -5603,7 +5609,7 @@ def note_checking_constraints_for_function_here : Note<
 def note_constraint_substitution_here : Note<
   "while substituting template arguments into constraint expression here">;
 def note_constraint_normalization_here : Note<
-  "while calculating associated constraint of template '%0' here">;
+  "while calculating associated constraint of template %0 here">;
 def note_parameter_mapping_substitution_here : Note<
   "while substituting into concept arguments here; substitution failures not "
   "allowed in concept arguments">;
@@ -6194,9 +6200,13 @@ def err_misplaced_ivar : Error<
 def warn_ivars_in_interface : Warning<
   "declaration of instance variables in the interface is deprecated">,
   InGroup<DiagGroup<"objc-interface-ivars">>, DefaultIgnore;
-def ext_enum_value_not_int : Extension<
-  "ISO C restricts enumerator values to range of 'int' (%0 is too "
-  "%select{small|large}1)">;
+def ext_c23_enum_value_not_int : Extension<
+  "%select{|incremented }0enumerator value which exceeds the range of 'int' is "
+  "a C23 extension (%1 is too %select{small|large}2)">, InGroup<C23>;
+def warn_c17_compat_enum_value_not_int : Warning<
+  "%select{|incremented }0enumerator value which exceeds the range of 'int' is "
+  "incompatible with C standards before C23 (%1 is too %select{small|large}2)">,
+  DefaultIgnore, InGroup<CPre23Compat>;
 def ext_enum_too_large : ExtWarn<
   "enumeration values exceed range of largest integer">, InGroup<EnumTooLarge>;
 def ext_enumerator_increment_too_large : ExtWarn<
@@ -9206,6 +9216,9 @@ def err_typecheck_expect_scalar_operand : Error<
   "operand of type %0 where arithmetic or pointer type is required">;
 def err_typecheck_cond_incompatible_operands : Error<
   "incompatible operand types%diff{ ($ and $)|}0,1">;
+def err_typecheck_expect_scalar_or_vector : Error<
+  "invalid operand of type %0 where %1 or "
+  "a vector of such type is required">;
 def err_typecheck_expect_flt_or_vector : Error<
   "invalid operand of type %0 where floating, complex or "
   "a vector of such types is required">;
@@ -10158,13 +10171,6 @@ def warn_dangling_pointer_assignment : Warning<
    "object backing the pointer %0 "
    "will be destroyed at the end of the full-expression">,
    InGroup<DanglingAssignment>;
-
-def warn_unsupported_lifetime_extension : Warning<
-  "lifetime extension of "
-  "%select{temporary|backing array of initializer list}0 created "
-  "by aggregate initialization using a default member initializer "
-  "is not yet supported; lifetime of %select{temporary|backing array}0 "
-  "will end at the end of the full-expression">, InGroup<Dangling>;
 
 // For non-floating point, expressions of the form x == x or x != x
 // should result in a warning, since these always evaluate to a constant.
@@ -12186,6 +12192,10 @@ def err_builtin_launder_invalid_arg : Error<
   "%select{non-pointer|function pointer|void pointer}0 argument to "
   "'__builtin_launder' is not allowed">;
 
+def err_builtin_is_within_lifetime_invalid_arg : Error<
+  "%select{non-|function }0pointer argument to '__builtin_is_within_lifetime' "
+  "is not allowed">;
+
 def err_builtin_invalid_arg_type: Error <
   "%ordinal0 argument must be "
   "%select{a vector, integer or floating point type|a matrix|"
@@ -12364,6 +12374,7 @@ def err_hlsl_packoffset_cross_reg_boundary : Error<"packoffset cannot cross regi
 def err_hlsl_packoffset_alignment_mismatch : Error<"packoffset at 'y' not match alignment %0 required by %1">;
 def err_hlsl_pointers_unsupported : Error<
   "%select{pointers|references}0 are unsupported in HLSL">;
+def err_hlsl_missing_resource_class : Error<"HLSL resource needs to have [[hlsl::resource_class()]] attribute">;
 
 def err_hlsl_operator_unsupported : Error<
   "the '%select{&|*|->}0' operator is unsupported in HLSL">;
@@ -12412,6 +12423,13 @@ def warn_unsafe_buffer_operation : Warning<
   "unsafe buffer access|function introduces unsafe buffer manipulation|unsafe invocation of span::data|"
   "field %1 prone to unsafe buffer manipulation}0">,
   InGroup<UnsafeBufferUsage>, DefaultIgnore;
+def warn_unsafe_buffer_libc_call : Warning<
+  "function %0 is unsafe">,
+  InGroup<UnsafeBufferUsageInLibcCall>, DefaultIgnore;
+def note_unsafe_buffer_printf_call : Note<
+  "%select{|change to 'snprintf' for explicit bounds checking | buffer pointer and size may not match"
+          "|string argument is not guaranteed to be null-terminated"
+          "|'va_list' is unsafe}0">;
 def note_unsafe_buffer_operation : Note<
   "used%select{| in pointer arithmetic| in buffer access}0 here">;
 def note_unsafe_buffer_variable_fixit_group : Note<

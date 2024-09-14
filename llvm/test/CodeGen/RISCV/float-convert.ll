@@ -682,8 +682,8 @@ define i64 @fcvt_l_s_sat(float %a) nounwind {
 ; RV32IZFINX-NEXT:  # %bb.1: # %start
 ; RV32IZFINX-NEXT:    mv a2, a1
 ; RV32IZFINX-NEXT:  .LBB12_2: # %start
-; RV32IZFINX-NEXT:    lui a1, %hi(.LCPI12_0)
-; RV32IZFINX-NEXT:    lw a1, %lo(.LCPI12_0)(a1)
+; RV32IZFINX-NEXT:    lui a1, 389120
+; RV32IZFINX-NEXT:    addi a1, a1, -1
 ; RV32IZFINX-NEXT:    flt.s a3, a1, s0
 ; RV32IZFINX-NEXT:    beqz a3, .LBB12_4
 ; RV32IZFINX-NEXT:  # %bb.3:
@@ -910,9 +910,9 @@ define i64 @fcvt_lu_s_sat(float %a) nounwind {
 ; RV32IZFINX-NEXT:    neg s1, a0
 ; RV32IZFINX-NEXT:    mv a0, s0
 ; RV32IZFINX-NEXT:    call __fixunssfdi
-; RV32IZFINX-NEXT:    lui a2, %hi(.LCPI14_0)
-; RV32IZFINX-NEXT:    lw a2, %lo(.LCPI14_0)(a2)
 ; RV32IZFINX-NEXT:    and a0, s1, a0
+; RV32IZFINX-NEXT:    lui a2, 391168
+; RV32IZFINX-NEXT:    addi a2, a2, -1
 ; RV32IZFINX-NEXT:    flt.s a2, a2, s0
 ; RV32IZFINX-NEXT:    neg a2, a2
 ; RV32IZFINX-NEXT:    or a0, a2, a0
@@ -1445,11 +1445,11 @@ define signext i16 @fcvt_w_s_sat_i16(float %a) nounwind {
 ; RV32IZFINX-LABEL: fcvt_w_s_sat_i16:
 ; RV32IZFINX:       # %bb.0: # %start
 ; RV32IZFINX-NEXT:    feq.s a1, a0, a0
-; RV32IZFINX-NEXT:    lui a2, %hi(.LCPI24_0)
-; RV32IZFINX-NEXT:    lw a2, %lo(.LCPI24_0)(a2)
 ; RV32IZFINX-NEXT:    neg a1, a1
-; RV32IZFINX-NEXT:    lui a3, 815104
-; RV32IZFINX-NEXT:    fmax.s a0, a0, a3
+; RV32IZFINX-NEXT:    lui a2, 815104
+; RV32IZFINX-NEXT:    fmax.s a0, a0, a2
+; RV32IZFINX-NEXT:    lui a2, 290816
+; RV32IZFINX-NEXT:    addi a2, a2, -512
 ; RV32IZFINX-NEXT:    fmin.s a0, a0, a2
 ; RV32IZFINX-NEXT:    fcvt.w.s a0, a0, rtz
 ; RV32IZFINX-NEXT:    and a0, a1, a0
@@ -1458,11 +1458,11 @@ define signext i16 @fcvt_w_s_sat_i16(float %a) nounwind {
 ; RV64IZFINX-LABEL: fcvt_w_s_sat_i16:
 ; RV64IZFINX:       # %bb.0: # %start
 ; RV64IZFINX-NEXT:    feq.s a1, a0, a0
-; RV64IZFINX-NEXT:    lui a2, %hi(.LCPI24_0)
-; RV64IZFINX-NEXT:    lw a2, %lo(.LCPI24_0)(a2)
 ; RV64IZFINX-NEXT:    neg a1, a1
-; RV64IZFINX-NEXT:    lui a3, 815104
-; RV64IZFINX-NEXT:    fmax.s a0, a0, a3
+; RV64IZFINX-NEXT:    lui a2, 815104
+; RV64IZFINX-NEXT:    fmax.s a0, a0, a2
+; RV64IZFINX-NEXT:    lui a2, 290816
+; RV64IZFINX-NEXT:    addiw a2, a2, -512
 ; RV64IZFINX-NEXT:    fmin.s a0, a0, a2
 ; RV64IZFINX-NEXT:    fcvt.l.s a0, a0, rtz
 ; RV64IZFINX-NEXT:    and a0, a1, a0
@@ -1622,18 +1622,18 @@ define zeroext i16 @fcvt_wu_s_sat_i16(float %a) nounwind {
 ;
 ; RV32IZFINX-LABEL: fcvt_wu_s_sat_i16:
 ; RV32IZFINX:       # %bb.0: # %start
-; RV32IZFINX-NEXT:    lui a1, %hi(.LCPI26_0)
-; RV32IZFINX-NEXT:    lw a1, %lo(.LCPI26_0)(a1)
 ; RV32IZFINX-NEXT:    fmax.s a0, a0, zero
+; RV32IZFINX-NEXT:    lui a1, 292864
+; RV32IZFINX-NEXT:    addi a1, a1, -256
 ; RV32IZFINX-NEXT:    fmin.s a0, a0, a1
 ; RV32IZFINX-NEXT:    fcvt.wu.s a0, a0, rtz
 ; RV32IZFINX-NEXT:    ret
 ;
 ; RV64IZFINX-LABEL: fcvt_wu_s_sat_i16:
 ; RV64IZFINX:       # %bb.0: # %start
-; RV64IZFINX-NEXT:    lui a1, %hi(.LCPI26_0)
-; RV64IZFINX-NEXT:    lw a1, %lo(.LCPI26_0)(a1)
 ; RV64IZFINX-NEXT:    fmax.s a0, a0, zero
+; RV64IZFINX-NEXT:    lui a1, 292864
+; RV64IZFINX-NEXT:    addiw a1, a1, -256
 ; RV64IZFINX-NEXT:    fmin.s a0, a0, a1
 ; RV64IZFINX-NEXT:    fcvt.lu.s a0, a0, rtz
 ; RV64IZFINX-NEXT:    ret

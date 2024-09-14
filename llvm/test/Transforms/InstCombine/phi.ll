@@ -2721,11 +2721,11 @@ define void @phi_op_in_loop(i1 %c, i32 %x) {
 ; CHECK:       loop:
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[LOOP_LATCH:%.*]]
 ; CHECK:       if:
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 1
 ; CHECK-NEXT:    br label [[LOOP_LATCH]]
 ; CHECK:       loop.latch:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[X:%.*]], [[IF]] ], [ 0, [[LOOP]] ]
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[PHI]], 1
-; CHECK-NEXT:    call void @use(i32 [[AND]])
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[TMP1]], [[IF]] ], [ 0, [[LOOP]] ]
+; CHECK-NEXT:    call void @use(i32 [[PHI]])
 ; CHECK-NEXT:    br label [[LOOP]]
 ;
   br label %loop

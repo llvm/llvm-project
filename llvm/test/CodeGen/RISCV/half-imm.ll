@@ -70,15 +70,15 @@ define half @half_imm_op(half %a) nounwind {
 ;
 ; RV32IZHINX-LABEL: half_imm_op:
 ; RV32IZHINX:       # %bb.0:
-; RV32IZHINX-NEXT:    lui a1, %hi(.LCPI1_0)
-; RV32IZHINX-NEXT:    lh a1, %lo(.LCPI1_0)(a1)
+; RV32IZHINX-NEXT:    li a1, 15
+; RV32IZHINX-NEXT:    slli a1, a1, 10
 ; RV32IZHINX-NEXT:    fadd.h a0, a0, a1
 ; RV32IZHINX-NEXT:    ret
 ;
 ; RV64IZHINX-LABEL: half_imm_op:
 ; RV64IZHINX:       # %bb.0:
-; RV64IZHINX-NEXT:    lui a1, %hi(.LCPI1_0)
-; RV64IZHINX-NEXT:    lh a1, %lo(.LCPI1_0)(a1)
+; RV64IZHINX-NEXT:    li a1, 15
+; RV64IZHINX-NEXT:    slli a1, a1, 10
 ; RV64IZHINX-NEXT:    fadd.h a0, a0, a1
 ; RV64IZHINX-NEXT:    ret
 ;

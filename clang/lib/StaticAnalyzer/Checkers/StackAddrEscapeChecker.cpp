@@ -420,6 +420,8 @@ void StackAddrEscapeChecker::checkEndFunction(const ReturnStmt *RS,
         return true;
       }
       if (isa<StackArgumentsSpaceRegion>(ReferrerMemSpace) &&
+          // Not a simple ptr (int*) but something deeper, e.g. int**
+          isa<SymbolicRegion>(Referrer->getBaseRegion()) &&
           ReferrerStackSpace->getStackFrame() == PoppedFrame && TopFrame) {
         // Output parameter of a top-level function
         V.emplace_back(Referrer, Referred);

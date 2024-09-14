@@ -243,8 +243,7 @@ static void expectDIEPrintResult(const DIExpression *Expr, StringRef Expected) {
   std::string Output;
   raw_string_ostream OS(Output);
   Expr->print(OS);
-  OS.flush();
-  EXPECT_EQ(OS.str(), Expected);
+  EXPECT_EQ(Output, Expected);
 }
 
 TEST_P(RISCVInstrInfoTest, DescribeLoadedValue) {
@@ -314,6 +313,27 @@ TEST_P(RISCVInstrInfoTest, DescribeLoadedValue) {
       "!DIExpression(DW_OP_constu, 128, DW_OP_minus, DW_OP_deref_size, 1)");
 
   MF->deleteMachineBasicBlock(MBB);
+}
+
+TEST_P(RISCVInstrInfoTest, GetDestEEW) {
+  const RISCVInstrInfo *TII = ST->getInstrInfo();
+  EXPECT_EQ(RISCV::getDestLog2EEW(TII->get(RISCV::VADD_VV), 3), 3u);
+  EXPECT_EQ(RISCV::getDestLog2EEW(TII->get(RISCV::VWADD_VV), 3), 4u);
+  EXPECT_EQ(RISCV::getDestLog2EEW(TII->get(RISCV::VLE32_V), 5), 5u);
+  EXPECT_EQ(RISCV::getDestLog2EEW(TII->get(RISCV::VLSE32_V), 5), 5u);
+  EXPECT_EQ(RISCV::getDestLog2EEW(TII->get(RISCV::VREDSUM_VS), 4), 4u);
+  EXPECT_EQ(RISCV::getDestLog2EEW(TII->get(RISCV::VWREDSUM_VS), 4), 5u);
+  EXPECT_EQ(RISCV::getDestLog2EEW(TII->get(RISCV::VFWREDOSUM_VS), 5), 6u);
+  EXPECT_EQ(RISCV::getDestLog2EEW(TII->get(RISCV::VFCVT_RTZ_XU_F_V), 4), 4u);
+  EXPECT_EQ(RISCV::getDestLog2EEW(TII->get(RISCV::VFWCVT_RTZ_XU_F_V), 4), 5u);
+  EXPECT_EQ(RISCV::getDestLog2EEW(TII->get(RISCV::VSLL_VI), 4), 4u);
+  EXPECT_EQ(RISCV::getDestLog2EEW(TII->get(RISCV::VWSLL_VI), 4), 5u);
+  EXPECT_EQ(RISCV::getDestLog2EEW(TII->get(RISCV::VMSEQ_VV), 4), 0u);
+  EXPECT_EQ(RISCV::getDestLog2EEW(TII->get(RISCV::VMAND_MM), 0), 0u);
+  EXPECT_EQ(RISCV::getDestLog2EEW(TII->get(RISCV::VIOTA_M), 3), 3u);
+  EXPECT_EQ(RISCV::getDestLog2EEW(TII->get(RISCV::VQMACCU_2x8x2), 3), 5u);
+  EXPECT_EQ(RISCV::getDestLog2EEW(TII->get(RISCV::VFWMACC_4x4x4), 4), 5u);
+  EXPECT_EQ(RISCV::getDestLog2EEW(TII->get(RISCV::THVdotVMAQA_VV), 5), 5u);
 }
 
 } // namespace

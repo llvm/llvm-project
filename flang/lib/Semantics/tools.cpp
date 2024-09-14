@@ -1354,7 +1354,7 @@ ComponentIterator<componentKind>::const_iterator::BuildResultDesignatorName()
     const {
   std::string designator;
   for (const auto &node : componentPath_) {
-    designator += "%" + DEREF(node.component()).name().ToString();
+    designator += "%"s + DEREF(node.component()).name().ToString();
   }
   return designator;
 }

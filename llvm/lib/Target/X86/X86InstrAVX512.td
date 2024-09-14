@@ -2495,8 +2495,8 @@ multiclass avx512_scalar_fpclass<bits<8> opc, string OpcodeStr,
 //                                  fpclass(reg_vec, broadcast(eltVt), imm)
 multiclass avx512_vector_fpclass<bits<8> opc, string OpcodeStr,
                                  X86FoldableSchedWrite sched, X86VectorVTInfo _,
-                                 string mem>{
-  let ExeDomain = _.ExeDomain, Uses = [MXCSR] in {
+                                 string mem, list<Register> _Uses = [MXCSR]>{
+  let ExeDomain = _.ExeDomain, Uses = _Uses in {
   def rr : AVX512<opc, MRMSrcReg, (outs _.KRC:$dst),
                       (ins _.RC:$src1, i32u8imm:$src2),
                       OpcodeStr#_.Suffix#"\t{$src2, $src1, $dst|$dst, $src1, $src2}",
@@ -10546,6 +10546,12 @@ multiclass compress_by_vec_width_lowering<X86VectorVTInfo _, string Name> {
   def : Pat<(X86compress (_.VT _.RC:$src), _.ImmAllZerosV, _.KRCWM:$mask),
             (!cast<Instruction>(Name#_.ZSuffix#rrkz)
                             _.KRCWM:$mask, _.RC:$src)>;
+  def : Pat<(_.VT (vector_compress _.RC:$src, _.KRCWM:$mask, undef)),
+            (!cast<Instruction>(Name#_.ZSuffix#rrkz)
+                            _.KRCWM:$mask, _.RC:$src)>;
+  def : Pat<(_.VT (vector_compress _.RC:$src, _.KRCWM:$mask, _.RC:$passthru)),
+              (!cast<Instruction>(Name#_.ZSuffix#rrk)
+                            _.RC:$passthru, _.KRCWM:$mask, _.RC:$src)>;
 }
 
 multiclass compress_by_elt_width<bits<8> opc, string OpcodeStr,

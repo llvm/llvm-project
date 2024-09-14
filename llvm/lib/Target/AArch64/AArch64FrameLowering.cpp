@@ -3020,6 +3020,7 @@ static void computeCalleeSaveRegisterPairs(
       ByteOffset += StackFillDir * StackHazardSize;
     LastReg = RPI.Reg1;
 
+    int Scale = RPI.getScale();
     // Add the next reg to the pair if it is in the same register class.
     if (unsigned(i + RegInc) < Count && !AFI->hasStackHazardSlotIndex()) {
       Register NextReg = CSI[i + RegInc].getReg();
@@ -3045,9 +3046,14 @@ static void computeCalleeSaveRegisterPairs(
       case RegPairInfo::PPR:
         break;
       case RegPairInfo::ZPR:
-        if (AFI->getPredicateRegForFillSpill() != 0)
-          if (((RPI.Reg1 - AArch64::Z0) & 1) == 0 && (NextReg == RPI.Reg1 + 1))
+        if (AFI->getPredicateRegForFillSpill() != 0 &&
+            ((RPI.Reg1 - AArch64::Z0) & 1) == 0 && (NextReg == RPI.Reg1 + 1)) {
+          // Calculate offset of register pair to see if pair instruction can be
+          // used.
+          int Offset = (ScalableByteOffset + StackFillDir * 2 * Scale) / Scale;
+          if ((-16 <= Offset && Offset <= 14) && (Offset % 2 == 0))
             RPI.Reg2 = NextReg;
+        }
         break;
       case RegPairInfo::VG:
         break;
@@ -3087,7 +3093,6 @@ static void computeCalleeSaveRegisterPairs(
     if (NeedsWinCFI &&
         RPI.isPaired()) // RPI.FrameIdx must be the lower index of the pair
       RPI.FrameIdx = CSI[i + RegInc].getFrameIdx();
-    int Scale = RPI.getScale();
 
     int OffsetPre = RPI.isScalable() ? ScalableByteOffset : ByteOffset;
     assert(OffsetPre % Scale == 0);
@@ -3356,8 +3361,8 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
           MachineMemOperand::MOStore, Size, Alignment));
       MIB.addReg(PnReg);
       MIB.addReg(AArch64::SP)
-          .addImm(RPI.Offset) // [sp, #offset*scale],
-                              // where factor*scale is implicit
+          .addImm(RPI.Offset / 2) // [sp, #imm*2*vscale],
+                                  // where 2*vscale is implicit
           .setMIFlag(MachineInstr::FrameSetup);
       MIB.addMemOperand(MF.getMachineMemOperand(
           MachinePointerInfo::getFixedStack(MF, FrameIdxReg1),
@@ -3378,8 +3383,8 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
       }
       MIB.addReg(Reg1, getPrologueDeath(MF, Reg1))
           .addReg(AArch64::SP)
-          .addImm(RPI.Offset) // [sp, #offset*scale],
-                              // where factor*scale is implicit
+          .addImm(RPI.Offset) // [sp, #offset*vscale],
+                              // where factor*vscale is implicit
           .setMIFlag(MachineInstr::FrameSetup);
       MIB.addMemOperand(MF.getMachineMemOperand(
           MachinePointerInfo::getFixedStack(MF, FrameIdxReg1),
@@ -3523,8 +3528,8 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
           MachineMemOperand::MOLoad, Size, Alignment));
       MIB.addReg(PnReg);
       MIB.addReg(AArch64::SP)
-          .addImm(RPI.Offset) // [sp, #offset*scale]
-                              // where factor*scale is implicit
+          .addImm(RPI.Offset / 2) // [sp, #imm*2*vscale]
+                                  // where 2*vscale is implicit
           .setMIFlag(MachineInstr::FrameDestroy);
       MIB.addMemOperand(MF.getMachineMemOperand(
           MachinePointerInfo::getFixedStack(MF, FrameIdxReg1),
@@ -3541,8 +3546,8 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
       }
       MIB.addReg(Reg1, getDefRegState(true));
       MIB.addReg(AArch64::SP)
-          .addImm(RPI.Offset) // [sp, #offset*scale]
-                              // where factor*scale is implicit
+          .addImm(RPI.Offset) // [sp, #offset*vscale]
+                              // where factor*vscale is implicit
           .setMIFlag(MachineInstr::FrameDestroy);
       MIB.addMemOperand(MF.getMachineMemOperand(
           MachinePointerInfo::getFixedStack(MF, FrameIdxReg1),

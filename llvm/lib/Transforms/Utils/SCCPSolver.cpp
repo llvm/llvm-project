@@ -54,18 +54,6 @@ bool SCCPSolver::isOverdefined(const ValueLatticeElement &LV) {
   return !LV.isUnknownOrUndef() && !SCCPSolver::isConstant(LV);
 }
 
-static bool canRemoveInstruction(Instruction *I) {
-  if (wouldInstructionBeTriviallyDead(I))
-    return true;
-
-  // Some instructions can be handled but are rejected above. Catch
-  // those cases by falling through to here.
-  // TODO: Mark globals as being constant earlier, so
-  // TODO: wouldInstructionBeTriviallyDead() knows that atomic loads
-  // TODO: are safe to remove.
-  return isa<LoadInst>(I);
-}
-
 bool SCCPSolver::tryToReplaceWithConstant(Value *V) {
   Constant *Const = getConstantOrNull(V);
   if (!Const)
@@ -75,8 +63,7 @@ bool SCCPSolver::tryToReplaceWithConstant(Value *V) {
   // Calls with "clang.arc.attachedcall" implicitly use the return value and
   // those uses cannot be updated with a constant.
   CallBase *CB = dyn_cast<CallBase>(V);
-  if (CB && ((CB->isMustTailCall() &&
-              !canRemoveInstruction(CB)) ||
+  if (CB && ((CB->isMustTailCall() && !wouldInstructionBeTriviallyDead(CB)) ||
              CB->getOperandBundle(LLVMContext::OB_clang_arc_attachedcall))) {
     Function *F = CB->getCalledFunction();
 
@@ -244,7 +231,7 @@ bool SCCPSolver::simplifyInstsInBlock(BasicBlock &BB,
     if (Inst.getType()->isVoidTy())
       continue;
     if (tryToReplaceWithConstant(&Inst)) {
-      if (canRemoveInstruction(&Inst))
+      if (wouldInstructionBeTriviallyDead(&Inst))
         Inst.eraseFromParent();
 
       MadeChanges = true;
@@ -352,6 +339,34 @@ bool SCCPSolver::removeNonFeasibleEdges(BasicBlock *BB, DomTreeUpdater &DTU,
     llvm_unreachable("Must have at least one feasible successor");
   }
   return true;
+}
+
+void SCCPSolver::inferReturnAttributes() const {
+  for (const auto &[F, ReturnValue] : getTrackedRetVals()) {
+
+    // If there is a known constant range for the return value, add range
+    // attribute to the return value.
+    if (ReturnValue.isConstantRange() &&
+        !ReturnValue.getConstantRange().isSingleElement()) {
+      // Do not add range metadata if the return value may include undef.
+      if (ReturnValue.isConstantRangeIncludingUndef())
+        continue;
+
+      // Take the intersection of the existing attribute and the inferred range.
+      ConstantRange CR = ReturnValue.getConstantRange();
+      if (F->hasRetAttribute(Attribute::Range))
+        CR = CR.intersectWith(F->getRetAttribute(Attribute::Range).getRange());
+      F->addRangeRetAttr(CR);
+      continue;
+    }
+    // Infer nonnull return attribute.
+    if (F->getReturnType()->isPointerTy() && ReturnValue.isNotConstant() &&
+        ReturnValue.getNotConstant()->isNullValue() &&
+        !F->hasRetAttribute(Attribute::NonNull)) {
+      F->addRetAttr(Attribute::NonNull);
+      continue;
+    }
+  }
 }
 
 /// Helper class for SCCPSolver. This implements the instruction visitor and
@@ -1627,6 +1642,8 @@ void SCCPInstVisitor::visitGetElementPtrInst(GetElementPtrInst &I) {
 
   if (Constant *C = ConstantFoldInstOperands(&I, Operands, DL))
     markConstant(&I, C);
+  else
+    markOverdefined(&I);
 }
 
 void SCCPInstVisitor::visitAllocaInst(AllocaInst &I) {
@@ -2168,7 +2185,7 @@ const ValueLatticeElement &SCCPSolver::getLatticeValueFor(Value *V) const {
 }
 
 const MapVector<Function *, ValueLatticeElement> &
-SCCPSolver::getTrackedRetVals() {
+SCCPSolver::getTrackedRetVals() const {
   return Visitor->getTrackedRetVals();
 }
 

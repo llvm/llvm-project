@@ -38,13 +38,14 @@ EvalEmitter::~EvalEmitter() {
 void EvalEmitter::cleanup() { S.cleanup(); }
 
 EvaluationResult EvalEmitter::interpretExpr(const Expr *E,
-                                            bool ConvertResultToRValue) {
+                                            bool ConvertResultToRValue,
+                                            bool DestroyToplevelScope) {
   S.setEvalLocation(E->getExprLoc());
   this->ConvertResultToRValue = ConvertResultToRValue && !isa<ConstantExpr>(E);
   this->CheckFullyInitialized = isa<ConstantExpr>(E);
   EvalResult.setSource(E);
 
-  if (!this->visitExpr(E)) {
+  if (!this->visitExpr(E, DestroyToplevelScope)) {
     // EvalResult may already have a result set, but something failed
     // after that (e.g. evaluating destructors).
     EvalResult.setInvalid();

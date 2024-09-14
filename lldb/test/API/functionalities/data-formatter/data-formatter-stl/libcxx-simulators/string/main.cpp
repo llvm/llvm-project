@@ -71,19 +71,20 @@ public:
 
   struct __short {
     value_type __data_[__min_cap];
-#ifdef BITMASKS
 #ifdef SUBCLASS_PADDING
     struct : __padding<value_type> {
       unsigned char __size_;
     };
-#else
+#else // !SUBCLASS_PADDING
+
     unsigned char __padding[sizeof(value_type) - 1];
+#ifdef BITMASKS
     unsigned char __size_;
-#endif
 #else // !BITMASKS
     unsigned char __size_ : 7;
     unsigned char __is_long_ : 1;
-#endif
+#endif // BITMASKS
+#endif // SUBCLASS_PADDING
   };
 
 #ifdef BITMASKS

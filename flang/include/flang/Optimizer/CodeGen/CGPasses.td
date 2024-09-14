@@ -68,7 +68,7 @@ def TargetRewritePass : Pass<"target-rewrite", "mlir::ModuleOp"> {
       representations that may differ based on the target machine.
   }];
   let dependentDialects = [ "fir::FIROpsDialect", "mlir::func::FuncDialect",
-                            "mlir::DLTIDialect" ];
+                            "mlir::DLTIDialect", "mlir::LLVM::LLVMDialect" ];
   let options = [
     Option<"forcedTargetTriple", "target", "std::string", /*default=*/"",
            "Override module's target triple.">,

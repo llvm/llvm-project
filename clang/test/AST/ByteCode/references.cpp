@@ -71,20 +71,16 @@ static_assert(testGetValue() == 30, "");
 
 constexpr const int &MCE = 20;
 static_assert(MCE == 20, "");
-static_assert(MCE == 30, ""); // expected-error {{static assertion failed}} \
-                              // expected-note {{evaluates to '20 == 30'}} \
-                              // ref-error {{static assertion failed}} \
-                              // ref-note {{evaluates to '20 == 30'}}
+static_assert(MCE == 30, ""); // both-error {{static assertion failed}} \
+                              // both-note {{evaluates to '20 == 30'}}
 
 constexpr int LocalMCE() {
   const int &m = 100;
   return m;
 }
 static_assert(LocalMCE() == 100, "");
-static_assert(LocalMCE() == 200, ""); // expected-error {{static assertion failed}} \
-                                      // expected-note {{evaluates to '100 == 200'}} \
-                                      // ref-error {{static assertion failed}} \
-                                      // ref-note {{evaluates to '100 == 200'}}
+static_assert(LocalMCE() == 200, ""); // both-error {{static assertion failed}} \
+                                      // both-note {{evaluates to '100 == 200'}}
 
 struct S {
   int i, j;
