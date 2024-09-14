@@ -505,8 +505,10 @@ buildCallLikeOp(CIRGenFunction &CGF, mlir::Location callLoc,
     }
     callOpWithExceptions->setAttr("extra_attrs", extraFnAttrs);
 
+    CGF.callWithExceptionCtx = callOpWithExceptions;
     auto *invokeDest = CGF.getInvokeDest(tryOp);
     (void)invokeDest;
+    CGF.callWithExceptionCtx = nullptr;
 
     if (tryOp.getSynthetic()) {
       builder.create<mlir::cir::YieldOp>(tryOp.getLoc());

@@ -1748,6 +1748,7 @@ public:
   };
 
   /// Emits try/catch information for the current EH stack.
+  mlir::cir::CallOp callWithExceptionCtx = nullptr;
   mlir::Operation *buildLandingPad(mlir::cir::TryOp tryOp);
   mlir::Block *getEHResumeBlock(bool isCleanup, mlir::cir::TryOp tryOp);
   mlir::Block *getEHDispatchBlock(EHScopeStack::stable_iterator scope,
