@@ -8630,12 +8630,8 @@ static void addCanonicalIVRecipes(VPlan &Plan, Type *IdxTy, bool HasNUW,
                        {CanonicalIVIncrement, &Plan.getVectorTripCount()}, DL);
 }
 
-// Collect (VPIRInstruction, ExitingValue) pairs for phis in the original exit
-// block that are modeled in VPlan. Some exiting values are not modeled
-// explicitly yet and won't be included. Those are un-truncated
-// VPWidenIntOrFpInductionRecipe, VPWidenPointerInductionRecipe and induction
-// increments.
-static MapVector<VPIRInstruction *, VPValue *> collectUsersInExitBlock(
+// Collect VPIRInstructions for phis in the original exit block that are modeled in VPlan and add the exiting VPValue as operand. Some exiting values are not modeled explicitly yet and won't be included. Those are un-truncated VPWidenIntOrFpInductionRecipe, VPWidenPointerInductionRecipe and induction increments.
+static SetVector<VPIRInstruction *> collectUsersInExitBlock(
     Loop *OrigLoop, VPRecipeBuilder &Builder, VPlan &Plan,
     const MapVector<PHINode *, InductionDescriptor> &Inductions) {
   auto *MiddleVPBB =
@@ -8645,7 +8641,7 @@ static MapVector<VPIRInstruction *, VPValue *> collectUsersInExitBlock(
   // from scalar loop only.
   if (MiddleVPBB->getNumSuccessors() != 2)
     return {};
-  MapVector<VPIRInstruction *, VPValue *> ExitingValuesToFix;
+  SetVector<VPIRInstruction *> ExitUsersToFix;
   VPBasicBlock *ExitVPBB = cast<VPIRBasicBlock>(MiddleVPBB->getSuccessors()[0]);
   BasicBlock *ExitingBB = OrigLoop->getExitingBlock();
   for (VPRecipeBase &R : *ExitVPBB) {
@@ -8671,16 +8667,16 @@ static MapVector<VPIRInstruction *, VPValue *> collectUsersInExitBlock(
            return P && Inductions.contains(P);
          })))
       continue;
-    ExitingValuesToFix.insert({ExitIRI, V});
+    ExitUsersToFix.insert(ExitIRI);
+    ExitIRI->addOperand(V);
   }
-  return ExitingValuesToFix;
+  return ExitUsersToFix;
 }
 
-// Add exit values to \p Plan. Extracts and VPLiveOuts are added for each entry
-// in \p ExitingValuesToFix.
+// Add exit values to \p Plan. Extracts are added for each entry in \p ExitUsersToFix if needed and their operands are updated.
 static void addUsersInExitBlock(
-    VPlan &Plan, MapVector<VPIRInstruction *, VPValue *> &ExitingValuesToFix) {
-  if (ExitingValuesToFix.empty())
+    VPlan &Plan, const SetVector<VPIRInstruction *> &ExitUsersToFix) {
+  if (ExitUsersToFix.empty())
     return;
 
   auto *MiddleVPBB =
@@ -8689,19 +8685,18 @@ static void addUsersInExitBlock(
       cast<VPIRBasicBlock>(MiddleVPBB->getSuccessors()[0])->getIRBasicBlock();
   VPBuilder B(MiddleVPBB, MiddleVPBB->getFirstNonPhi());
 
-  // Introduce VPUsers modeling the exit values.
-  for (const auto &[ExitIRI, V] : ExitingValuesToFix) {
+  // Introduce extract for exiting values and update the VPIRInstructions modeling the corresponding LCSSA phis.
+  for (VPIRInstruction *ExitIRI : ExitUsersToFix) {
+    VPValue *V = ExitIRI->getOperand(0);
     // Pass live-in values used by exit phis directly through to the live-out.
-    if (V->isLiveIn()) {
-      ExitIRI->addOperand(V);
+    if (V->isLiveIn())
       continue;
-    }
 
     VPValue *Ext = B.createNaryOp(
         VPInstruction::ExtractFromEnd,
         {V, Plan.getOrAddLiveIn(ConstantInt::get(
                 IntegerType::get(ExitBB->getContext(), 32), 1))});
-    ExitIRI->addOperand(Ext);
+    ExitIRI->setOperand(0, Ext);
   }
 }
 
@@ -8714,7 +8709,7 @@ static void addUsersInExitBlock(
 /// 2. Feed the penultimate value of recurrences to their LCSSA phi users in
 ///    the original exit block using a VPLiveOut.
 static void addLiveOutsForFirstOrderRecurrences(
-    VPlan &Plan, MapVector<VPIRInstruction *, VPValue *> &ExitingValuesToFix) {
+    VPlan &Plan, SetVector<VPIRInstruction *> &ExitUsersToFix) {
   VPRegionBlock *VectorRegion = Plan.getVectorLoopRegion();
 
   // Start by finding out if middle block branches to scalar preheader, which is
@@ -8731,14 +8726,14 @@ static void addLiveOutsForFirstOrderRecurrences(
     ExitBB =
         cast<VPIRBasicBlock>(MiddleVPBB->getSuccessors()[0])->getIRBasicBlock();
     ScalarPHVPBB = cast<VPBasicBlock>(MiddleVPBB->getSuccessors()[1]);
-  } else if (ExitingValuesToFix.empty()) {
+  } else if (ExitUsersToFix.empty()) {
     ScalarPHVPBB = cast<VPBasicBlock>(MiddleVPBB->getSingleSuccessor());
   } else {
     ExitBB = cast<VPIRBasicBlock>(MiddleVPBB->getSingleSuccessor())
                  ->getIRBasicBlock();
   }
   if (!ScalarPHVPBB) {
-    assert(ExitingValuesToFix.empty() &&
+    assert(ExitUsersToFix.empty() &&
            "missed inserting extracts for exiting values");
     return;
   }
@@ -8832,21 +8827,16 @@ static void addLiveOutsForFirstOrderRecurrences(
     auto *FORPhi = cast<PHINode>(FOR->getUnderlyingInstr());
     Plan.addLiveOut(FORPhi, ResumePhiRecipe);
 
-    // Now create VPLiveOuts for users in the exit block.
-    // Extract the penultimate value of the recurrence and add VPLiveOut
-    // users of the recurrence splice.
-
-    // No edge from the middle block to the unique exit block has been inserted
-    // and there is nothing to fix from vector loop; phis should have incoming
-    // from scalar loop only.
-    for (const auto &[ExitIRI, V] : ExitingValuesToFix) {
-      if (V != FOR)
+    // Now update VPIRInstructions modeling LCSSA phis in the exit block.
+    // Extract the penultimate value of the recurrence and use it as operand for the VPIRInstruction modeling the phi.
+    for (VPIRInstruction *ExitIRI : ExitUsersToFix) {
+      if (ExitIRI->getOperand(0) != FOR)
         continue;
       VPValue *Ext = MiddleBuilder.createNaryOp(
           VPInstruction::ExtractFromEnd, {FOR->getBackedgeValue(), TwoVPV}, {},
           "vector.recur.extract.for.phi");
-      ExitIRI->addOperand(Ext);
-      ExitingValuesToFix.erase(ExitIRI);
+      ExitIRI->setOperand(0, Ext);
+      ExitUsersToFix.remove(ExitIRI);
     }
   }
 }
@@ -9008,12 +8998,11 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
          "VPBasicBlock");
   RecipeBuilder.fixHeaderPhis();
 
-  MapVector<VPIRInstruction *, VPValue *> ExitingValuesToFix =
+  SetVector<VPIRInstruction *> ExitUsersToFix =
       collectUsersInExitBlock(OrigLoop, RecipeBuilder, *Plan,
                               Legal->getInductionVars());
-
-  addLiveOutsForFirstOrderRecurrences(*Plan, ExitingValuesToFix);
-  addUsersInExitBlock(*Plan, ExitingValuesToFix);
+  addLiveOutsForFirstOrderRecurrences(*Plan, ExitUsersToFix);
+  addUsersInExitBlock(*Plan, ExitUsersToFix);
 
   // ---------------------------------------------------------------------------
   // Transform initial VPlan: Apply previously taken decisions, in order, to
