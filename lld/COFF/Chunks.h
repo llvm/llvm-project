@@ -601,13 +601,17 @@ public:
 
 class ImportThunkChunkARM64 : public ImportThunkChunk {
 public:
-  explicit ImportThunkChunkARM64(COFFLinkerContext &ctx, Defined *s)
-      : ImportThunkChunk(ctx, s) {
+  explicit ImportThunkChunkARM64(COFFLinkerContext &ctx, Defined *s,
+                                 MachineTypes machine)
+      : ImportThunkChunk(ctx, s), machine(machine) {
     setAlignment(4);
   }
   size_t getSize() const override { return sizeof(importThunkARM64); }
   void writeTo(uint8_t *buf) const override;
-  MachineTypes getMachine() const override { return ARM64; }
+  MachineTypes getMachine() const override { return machine; }
+
+private:
+  MachineTypes machine;
 };
 
 // ARM64EC __impchk_* thunk implementation.

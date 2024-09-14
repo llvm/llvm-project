@@ -9927,11 +9927,11 @@ static SDValue getMaskNode(SDValue Mask, MVT MaskVT,
                            const SDLoc &dl);
 
 // X86 has dedicated shuffle that can be lowered to VEXPAND
-static SDValue lowerShuffleToEXPAND(const SDLoc &DL, MVT VT,
-                                    const APInt &Zeroable,
-                                    ArrayRef<int> Mask, SDValue &V1,
-                                    SDValue &V2, SelectionDAG &DAG,
-                                    const X86Subtarget &Subtarget) {
+static SDValue lowerShuffleWithEXPAND(const SDLoc &DL, MVT VT, SDValue V1,
+                                      SDValue V2, ArrayRef<int> Mask,
+                                      const APInt &Zeroable,
+                                      const X86Subtarget &Subtarget,
+                                      SelectionDAG &DAG) {
   bool IsLeftZeroSide = true;
   if (!isNonZeroElementsInOrder(Zeroable, Mask, V1.getValueType(),
                                 IsLeftZeroSide))
@@ -15966,8 +15966,8 @@ static SDValue lowerV4F64Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
 
   // If we have VLX support, we can use VEXPAND.
   if (Subtarget.hasVLX())
-    if (SDValue V = lowerShuffleToEXPAND(DL, MVT::v4f64, Zeroable, Mask, V1, V2,
-                                         DAG, Subtarget))
+    if (SDValue V = lowerShuffleWithEXPAND(DL, MVT::v4f64, V1, V2, Mask,
+                                           Zeroable, Subtarget, DAG))
       return V;
 
   // If we have AVX2 then we always want to lower with a blend because an v4 we
@@ -16046,8 +16046,8 @@ static SDValue lowerV4I64Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
                                               Zeroable, Subtarget, DAG))
       return Rotate;
 
-    if (SDValue V = lowerShuffleToEXPAND(DL, MVT::v4i64, Zeroable, Mask, V1, V2,
-                                         DAG, Subtarget))
+    if (SDValue V = lowerShuffleWithEXPAND(DL, MVT::v4i64, V1, V2, Mask,
+                                           Zeroable, Subtarget, DAG))
       return V;
   }
 
@@ -16184,8 +16184,8 @@ static SDValue lowerV8F32Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
 
   // If we have VLX support, we can use VEXPAND.
   if (Subtarget.hasVLX())
-    if (SDValue V = lowerShuffleToEXPAND(DL, MVT::v8f32, Zeroable, Mask, V1, V2,
-                                         DAG, Subtarget))
+    if (SDValue V = lowerShuffleWithEXPAND(DL, MVT::v8f32, V1, V2, Mask,
+                                           Zeroable, Subtarget, DAG))
       return V;
 
   // Try to match an interleave of two v8f32s and lower them as unpck and
@@ -16308,8 +16308,8 @@ static SDValue lowerV8I32Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
                                               Zeroable, Subtarget, DAG))
       return Rotate;
 
-    if (SDValue V = lowerShuffleToEXPAND(DL, MVT::v8i32, Zeroable, Mask, V1, V2,
-                                         DAG, Subtarget))
+    if (SDValue V = lowerShuffleWithEXPAND(DL, MVT::v8i32, V1, V2, Mask,
+                                           Zeroable, Subtarget, DAG))
       return V;
   }
 
@@ -16827,8 +16827,8 @@ static SDValue lowerV8F64Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
                                           Zeroable, Subtarget, DAG))
     return Op;
 
-  if (SDValue V = lowerShuffleToEXPAND(DL, MVT::v8f64, Zeroable, Mask, V1, V2,
-                                       DAG, Subtarget))
+  if (SDValue V = lowerShuffleWithEXPAND(DL, MVT::v8f64, V1, V2, Mask, Zeroable,
+                                         Subtarget, DAG))
     return V;
 
   if (SDValue Blend = lowerShuffleAsBlend(DL, MVT::v8f64, V1, V2, Mask,
@@ -16898,8 +16898,8 @@ static SDValue lowerV16F32Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
   }
 
   // If we have AVX512F support, we can use VEXPAND.
-  if (SDValue V = lowerShuffleToEXPAND(DL, MVT::v16f32, Zeroable, Mask,
-                                             V1, V2, DAG, Subtarget))
+  if (SDValue V = lowerShuffleWithEXPAND(DL, MVT::v16f32, V1, V2, Mask,
+                                         Zeroable, Subtarget, DAG))
     return V;
 
   return lowerShuffleWithPERMV(DL, MVT::v16f32, Mask, V1, V2, Subtarget, DAG);
@@ -16967,8 +16967,8 @@ static SDValue lowerV8I64Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
     return Unpck;
 
   // If we have AVX512F support, we can use VEXPAND.
-  if (SDValue V = lowerShuffleToEXPAND(DL, MVT::v8i64, Zeroable, Mask, V1, V2,
-                                       DAG, Subtarget))
+  if (SDValue V = lowerShuffleWithEXPAND(DL, MVT::v8i64, V1, V2, Mask, Zeroable,
+                                         Subtarget, DAG))
     return V;
 
   if (SDValue Blend = lowerShuffleAsBlend(DL, MVT::v8i64, V1, V2, Mask,
@@ -17064,8 +17064,8 @@ static SDValue lowerV16I32Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
     return V;
 
   // If we have AVX512F support, we can use VEXPAND.
-  if (SDValue V = lowerShuffleToEXPAND(DL, MVT::v16i32, Zeroable, Mask, V1, V2,
-                                       DAG, Subtarget))
+  if (SDValue V = lowerShuffleWithEXPAND(DL, MVT::v16i32, V1, V2, Mask,
+                                         Zeroable, Subtarget, DAG))
     return V;
 
   if (SDValue Blend = lowerShuffleAsBlend(DL, MVT::v16i32, V1, V2, Mask,
