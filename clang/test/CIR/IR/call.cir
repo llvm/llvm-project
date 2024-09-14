@@ -1,7 +1,7 @@
 // RUN: cir-opt %s | FileCheck %s
 
 !s32i = !cir.int<s, 32>
-!fnptr = !cir.ptr<!cir.func<!s32i (!cir.ptr<!s32i>)>>
+!fnptr = !cir.ptr<!cir.func<!s32i (!s32i)>>
 
 #fn_attr = #cir<extra({inline = #cir.inline<no>, optnone = #cir.optnone})>
 #fn_attr1 = #cir<extra({nothrow = #cir.nothrow})>
@@ -20,5 +20,5 @@ module {
   }
 }
 
-// CHECK: %0 = cir.call %arg0(%arg1) : (!cir.ptr<!cir.func<!s32i (!cir.ptr<!s32i>)>>, !s32i) -> !s32i
+// CHECK: %0 = cir.call %arg0(%arg1) : (!cir.ptr<!cir.func<!s32i (!s32i)>>, !s32i) -> !s32i
 // CHECK: %1 = cir.call @_ZNSt5arrayIiLm8192EEixEm(%arg1) : (!s32i) -> !s32i extra(#fn_attr1)
