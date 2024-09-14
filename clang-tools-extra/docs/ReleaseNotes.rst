@@ -111,6 +111,9 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/casting-through-void>` check to suggest replacing
   the offending code with ``reinterpret_cast``, to more clearly express intent.
 
+- Improved :doc:`cert-flp30-c<clang-tidy/checks/cert/flp30-c>` check to 
+  fix false positive that floating point variable only used in increment expr.
+
 - Improved :doc:`modernize-use-std-format
   <clang-tidy/checks/modernize/use-std-format>` check to support replacing
   member function calls too.
