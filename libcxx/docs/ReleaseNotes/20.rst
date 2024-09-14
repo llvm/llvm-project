@@ -50,14 +50,15 @@ Improvements and New Features
 - The ``lexicographical_compare`` and ``ranges::lexicographical_compare`` algorithms have been optimized for trivially
   equality comparable types, resulting in a performance improvement of up to 40x.
 
-- The ``_LIBCPP_ENABLE_CXX20_REMOVED_UNCAUGHT_EXCEPTION`` macro has been added to make ``std::uncaught_exception`` available in C++20 and later modes.
+- The ``_LIBCPP_ENABLE_CXX20_REMOVED_UNCAUGHT_EXCEPTION`` macro has been added to make ``std::uncaught_exception``
+  available in C++20 and later modes.
 
 
 Deprecations and Removals
 -------------------------
 
-- TODO: The ``LIBCXX_ENABLE_ASSERTIONS`` CMake variable and the ``_LIBCPP_ENABLE_ASSERTIONS`` macro that were used to enable
-  the safe mode will be removed in LLVM 20.
+- TODO: The ``LIBCXX_ENABLE_ASSERTIONS`` CMake variable and the ``_LIBCPP_ENABLE_ASSERTIONS`` macro that were used to
+  enable the safe mode will be removed in LLVM 20.
 
 - Support for the C++20 synchronization library (``<barrier>``, ``<latch>``, ``atomic::wait``, etc.) has been
   removed in language modes prior to C++20. If you are using these features prior to C++20, you will need to
@@ -67,7 +68,9 @@ Deprecations and Removals
   ``_LIBCPP_ENABLE_REMOVED_WEEKDAY_RELATIONAL_OPERATORS`` macro that was used to re-enable this extension will be
   ignored in LLVM 20.
 
-- The ``_LIBCPP_ENABLE_REMOVED_ALLOCATOR_CONST`` macro no longer has any effect. ``std::allocator<const T>`` is not supported as an extension anymore, please migrate any code that uses e.g. ``std::vector<const T>`` to be standards conforming.
+- The ``_LIBCPP_ENABLE_REMOVED_ALLOCATOR_CONST`` macro no longer has any effect. ``std::allocator<const T>`` is not
+  supported as an extension anymore, please migrate any code that uses e.g. ``std::vector<const T>`` to be
+  standards conforming.
 
 Upcoming Deprecations and Removals
 ----------------------------------
@@ -81,12 +84,14 @@ LLVM 20
 LLVM 21
 ~~~~~~~
 
-- The status of the C++03 implementation will be frozen after the LLVM 21 release. This means that starting in LLVM 22, non-critical bug fixes may not be back-ported
-  to C++03, including LWG issues. C++03 is a legacy platform, where most projects are no longer actively maintained. To
-  reduce the amount of fixes required to keep such legacy projects compiling with up-to-date toolchains, libc++ will aim to freeze the status of the headers in C++03 mode to avoid unintended breaking changes.
-  See https://discourse.llvm.org/t/rfc-freezing-c-03-headers-in-libc for more details.
+- The status of the C++03 implementation will be frozen after the LLVM 21 release. This means that starting in LLVM 22,
+  non-critical bug fixes may not be back-ported to C++03, including LWG issues. C++03 is a legacy platform, where most
+  projects are no longer actively maintained. To reduce the amount of fixes required to keep such legacy projects
+  compiling with up-to-date toolchains, libc++ will aim to freeze the status of the headers in C++03 mode to avoid
+  unintended breaking changes. See https://discourse.llvm.org/t/rfc-freezing-c-03-headers-in-libc for more details.
 
-  If you are using C++03 in your project, you should consider moving to a newer version of the Standard to get the most out of libc++.
+  If you are using C++03 in your project, you should consider moving to a newer version of the Standard to get the most
+  out of libc++.
 
 
 ABI Affecting Changes

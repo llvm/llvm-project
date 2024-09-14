@@ -49,6 +49,7 @@ public:
   void print(raw_ostream &OS) const override {
     OS << this->getName();
     OS << "(";
+    // TODO: This should call Pass->print(OS) because Pass may be a PM.
     interleave(Passes, OS, [&OS](auto *Pass) { OS << Pass->getName(); }, ",");
     OS << ")";
   }
@@ -57,6 +58,12 @@ public:
     dbgs() << "\n";
   }
 #endif
+  /// Similar to print() but prints one pass per line. Used for testing.
+  void printPipeline(raw_ostream &OS) const {
+    OS << this->getName() << "\n";
+    for (const auto &PassPtr : Passes)
+      PassPtr->printPipeline(OS);
+  }
 };
 
 class FunctionPassManager final
@@ -72,6 +79,7 @@ class PassRegistry {
   DenseMap<StringRef, Pass *> NameToPassMap;
 
 public:
+  static constexpr const char PassDelimToken = ',';
   PassRegistry() = default;
   /// Registers \p PassPtr and takes ownership.
   Pass &registerPass(std::unique_ptr<Pass> &&PassPtr) {
@@ -85,6 +93,9 @@ public:
     auto It = NameToPassMap.find(Name);
     return It != NameToPassMap.end() ? It->second : nullptr;
   }
+  /// Creates a pass pipeline and returns the first pass manager.
+  FunctionPassManager &parseAndCreatePassPipeline(StringRef Pipeline);
+
 #ifndef NDEBUG
   void print(raw_ostream &OS) const {
     for (const auto &PassPtr : Passes)
