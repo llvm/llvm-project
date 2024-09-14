@@ -10,6 +10,7 @@
 eh_legacy_test:
   # try-catch with catch, catch_all, throw, and rethrow
   try
+    i32.const 3
     throw     __cpp_exception
   catch       __cpp_exception
     drop
@@ -40,6 +41,7 @@ eh_legacy_test:
 
 # CHECK-LABEL: eh_legacy_test:
 # CHECK-NEXT:    try
+# CHECK-NEXT:    i32.const       3
 # CHECK-NEXT:    throw           __cpp_exception
 # CHECK-NEXT:    catch           __cpp_exception
 # CHECK-NEXT:    drop
