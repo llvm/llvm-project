@@ -910,9 +910,11 @@ getInitializesArgMemLoc(const Instruction *I, BatchAAResults &BatchAA) {
     Value *CurArg = CB->getArgOperand(Idx);
     bool FoundAliasing = false;
     for (auto &[Arg, AliasList] : Arguments) {
-      if (BatchAA.isNoAlias(Arg, CurArg)) {
+      auto AAR = BatchAA.alias(MemoryLocation::getBeforeOrAfter(Arg),
+                               MemoryLocation::getBeforeOrAfter(CurArg));
+      if (AAR == AliasResult::NoAlias) {
         continue;
-      } else if (BatchAA.isMustAlias(Arg, CurArg)) {
+      } else if (AAR == AliasResult::MustAlias) {
         FoundAliasing = true;
         AliasList.push_back(InitInfo);
       } else {
