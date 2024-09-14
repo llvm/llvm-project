@@ -1188,7 +1188,7 @@ uint64_t ARMAsmBackendDarwin::generateCompactUnwindEncoding(
   MCRegister CFARegister = ARM::SP;
   int CFARegisterOffset = 0;
   // Mark savable registers as initially unsaved
-  DenseMap<unsigned, int> RegOffsets;
+  DenseMap<MCRegister, int> RegOffsets;
   int FloatRegCount = 0;
   // Process each .cfi directive and build up compact unwind info.
   for (const MCCFIInstruction &Inst : Instrs) {
@@ -1332,7 +1332,7 @@ uint64_t ARMAsmBackendDarwin::generateCompactUnwindEncoding(
   // Floating point registers must either be saved sequentially, or we defer to
   // DWARF. No gaps allowed here so check that each saved d-register is
   // precisely where it should be.
-  static unsigned FPRCSRegs[] = { ARM::D8, ARM::D10, ARM::D12, ARM::D14 };
+  static MCPhysReg FPRCSRegs[] = {ARM::D8, ARM::D10, ARM::D12, ARM::D14};
   for (int Idx = FloatRegCount - 1; Idx >= 0; --Idx) {
     auto Offset = RegOffsets.find(FPRCSRegs[Idx]);
     if (Offset == RegOffsets.end()) {
