@@ -11,6 +11,7 @@
 
 - (void)execute;
 - (RefPtr<RefCountable>)_protectedRefCountable;
+- (Ref<RefCountable>)_protectedRefCountable2;
 @end
 
 @implementation Foo
@@ -23,4 +24,25 @@
   return _countable;
 }
 
+- (Ref<RefCountable>)_protectedRefCountable2 {
+  return *_countable;
+}
+
 @end
+
+class RefCountedObject {
+public:
+  void ref() const;
+  void deref() const;
+  Ref<RefCountedObject> copy() const;
+};
+
+@interface WrapperObj : NSObject
+
+- (Ref<RefCountedObject>)_protectedWebExtensionControllerConfiguration;
+
+@end
+
+static void foo(WrapperObj *configuration) {
+  configuration._protectedWebExtensionControllerConfiguration->copy();
+}
