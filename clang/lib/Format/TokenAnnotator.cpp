@@ -189,7 +189,8 @@ private:
       next();
     }
 
-    for (bool SeenTernaryOperator = false; CurrentToken;) {
+    for (bool SeenTernaryOperator = false, SeenFatArrow = false;
+         CurrentToken;) {
       const bool InExpr = Contexts[Contexts.size() - 2].IsExpression;
       if (CurrentToken->is(tok::greater)) {
         const auto *Next = CurrentToken->Next;
@@ -243,7 +244,7 @@ private:
       // operator that was misinterpreted because we are parsing template
       // parameters.
       // FIXME: This is getting out of hand, write a decent parser.
-      if (InExpr && !Line.startsWith(tok::kw_template) &&
+      if (InExpr && !SeenFatArrow && !Line.startsWith(tok::kw_template) &&
           Prev.is(TT_BinaryOperator)) {
         const auto Precedence = Prev.getPrecedence();
         if (Precedence > prec::Conditional && Precedence < prec::Relational)
@@ -251,6 +252,8 @@ private:
       }
       if (Prev.isOneOf(tok::question, tok::colon) && !Style.isProto())
         SeenTernaryOperator = true;
+      else if (Prev.is(TT_FatArrow))
+        SeenFatArrow = true;
       updateParameterCount(Left, CurrentToken);
       if (Style.Language == FormatStyle::LK_Proto) {
         if (FormatToken *Previous = CurrentToken->getPreviousNonComment()) {
@@ -260,8 +263,7 @@ private:
             Previous->setType(TT_SelectorName);
           }
         }
-      }
-      if (Style.isTableGen()) {
+      } else if (Style.isTableGen()) {
         if (CurrentToken->isOneOf(tok::comma, tok::equal)) {
           // They appear as separators. Unless they are not in class definition.
           next();
