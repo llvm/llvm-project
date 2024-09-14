@@ -642,7 +642,7 @@ void GetThreadStackAndTls(bool main, uptr *stk_addr, uptr *stk_size,
   if (!main) {
     // If stack and tls intersect, make them non-intersecting.
     if (*tls_addr > *stk_addr && *tls_addr < *stk_addr + *stk_size) {
-      if (*stk_addr + *stk_size < *tls_addr + *tls_size)
+      if (*stk_addr + *stk_size > *tls_addr + *tls_size)
         *tls_size = *stk_addr + *stk_size - *tls_addr;
       *stk_size = *tls_addr - *stk_addr;
     }
