@@ -657,7 +657,7 @@ getCallbacks(ObjectFile &Obj, const Twine &Filename) {
     Callbacks.GetNameForDWARFReg =
         [MCRegInfo = MCRegInfo.get()](uint64_t DwarfRegNum,
                                       bool IsEH) -> StringRef {
-      if (std::optional<unsigned> LLVMRegNum =
+      if (std::optional<MCRegister> LLVMRegNum =
               MCRegInfo->getLLVMRegNum(DwarfRegNum, IsEH))
         if (const char *RegName = MCRegInfo->getName(*LLVMRegNum))
           return StringRef(RegName);
