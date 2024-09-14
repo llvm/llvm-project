@@ -39,13 +39,6 @@ AST_MATCHER(clang::ParmVarDecl, isArgvOfMain) {
   return FD ? FD->isMain() : false;
 }
 
-AST_MATCHER_P(clang::TypeLoc, alwaysTrue,
-              clang::ast_matchers::internal::Matcher<clang::TypeLoc>,
-              InnerMatcher) {
-  InnerMatcher.matches(Node, Finder, Builder);
-  return true;
-}
-
 } // namespace
 
 AvoidCArraysCheck::AvoidCArraysCheck(StringRef Name, ClangTidyContext *Context)
@@ -68,7 +61,7 @@ void AvoidCArraysCheck::registerMatchers(MatchFinder *Finder) {
 
   Finder->addMatcher(
       typeLoc(hasValidBeginLoc(), hasType(arrayType()),
-              alwaysTrue(hasParent(parmVarDecl().bind("param_decl"))),
+              optionally(hasParent(parmVarDecl().bind("param_decl"))),
               unless(anyOf(hasParent(parmVarDecl(isArgvOfMain())),
                            hasParent(varDecl(isExternC())),
                            hasParent(fieldDecl(
@@ -85,20 +78,25 @@ void AvoidCArraysCheck::check(const MatchFinder::MatchResult &Result) {
       Result.Nodes.getNodeAs<ParmVarDecl>("param_decl") != nullptr;
   const bool IsVLA = ArrayType->getTypePtr()->isVariableArrayType();
   enum class RecommendType { Array, Vector, Span };
-  RecommendType RecommendType = RecommendType::Array;
+  llvm::SmallVector<const char *> RecommendTypes{};
   if (IsVLA) {
-    RecommendType = RecommendType::Vector;
+    RecommendTypes.push_back("std::vector<>");
   } else if (ArrayType->getTypePtr()->isIncompleteArrayType() && IsInParam) {
     // in function parameter, we also don't know the size of
     // IncompleteArrayType.
-    RecommendType = Result.Context->getLangOpts().CPlusPlus20
-                        ? RecommendType::Span
-                        : RecommendType::Vector;
+    if (Result.Context->getLangOpts().CPlusPlus20)
+      RecommendTypes.push_back("std::span<>");
+    else {
+      RecommendTypes.push_back("std::array<>");
+      RecommendTypes.push_back("std::vector<>");
+    }
+  } else {
+    RecommendTypes.push_back("std::array<>");
   }
+  llvm::errs() << llvm::join(RecommendTypes, " or ") << "\n";
   diag(ArrayType->getBeginLoc(),
-       "do not declare %select{C-style|C VLA}0 arrays, use "
-       "%select{std::array<>|std::vector<>|std::span<>}1 instead")
-      << IsVLA << static_cast<int>(RecommendType);
+       "do not declare %select{C-style|C VLA}0 arrays, use %1 instead")
+      << IsVLA << llvm::join(RecommendTypes, " or ");
 }
 
 } // namespace clang::tidy::modernize

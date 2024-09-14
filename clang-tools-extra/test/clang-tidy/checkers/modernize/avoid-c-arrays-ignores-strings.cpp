@@ -6,4 +6,4 @@ const char array[] = {'n', 'a', 'm', 'e', '\0'};
 // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: do not declare C-style arrays, use std::array<> instead [modernize-avoid-c-arrays]
 
 void takeCharArray(const char name[]);
-// CHECK-MESSAGES: :[[@LINE-1]]:26: warning: do not declare C-style arrays, use std::vector<> instead [modernize-avoid-c-arrays]
+// CHECK-MESSAGES: :[[@LINE-1]]:26: warning: do not declare C-style arrays, use std::array<> or std::vector<> instead [modernize-avoid-c-arrays]

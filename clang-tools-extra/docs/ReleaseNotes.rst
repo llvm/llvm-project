@@ -112,8 +112,9 @@ Changes in existing checks
   the offending code with ``reinterpret_cast``, to more clearly express intent.
 
 - Improved :doc:`modernize-avoid-c-arrays
-  <clang-tidy/checks/modernize/avoid-c-arrays>` check to suggest use std::span
-  as replacement of c array in C++20.
+  <clang-tidy/checks/modernize/avoid-c-arrays>` check to suggest using 
+  ``std::span`` as replacement of incomplete C array in C++20 and ``std::vector`` 
+  in the versions before C++20.
 
 - Improved :doc:`modernize-use-std-format
   <clang-tidy/checks/modernize/use-std-format>` check to support replacing
