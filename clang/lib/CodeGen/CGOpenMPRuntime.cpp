@@ -8864,7 +8864,6 @@ emitMappingInformation(CodeGenFunction &CGF, llvm::OpenMPIRBuilder &OMPBuilder,
     PrintingPolicy P(CGF.getContext().getLangOpts());
     llvm::raw_string_ostream OS(ExprName);
     MapExprs.getMapExpr()->printPretty(OS, nullptr, P);
-    OS.flush();
   } else {
     ExprName = MapExprs.getMapDecl()->getNameAsString();
   }
