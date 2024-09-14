@@ -417,7 +417,7 @@ static void buildCatchDispatchBlock(CIRGenFunction &CGF,
   // that catch-all as the dispatch block.
   if (catchScope.getNumHandlers() == 1 &&
       catchScope.getHandler(0).isCatchAll()) {
-    assert(dispatchBlock == catchScope.getHandler(0).Block);
+    // assert(dispatchBlock == catchScope.getHandler(0).Block);
     return;
   }
 
@@ -721,8 +721,7 @@ mlir::Operation *CIRGenFunction::buildLandingPad(mlir::cir::TryOp tryOp) {
 
       // Otherwise, signal that we at least have cleanups.
     } else if (hasCleanup) {
-      if (!tryOp.isCleanupActive())
-        builder.createBlock(&tryOp.getCleanupRegion());
+      tryOp.setCleanup(true);
     }
 
     assert((clauses.size() > 0 || hasCleanup) && "no catch clauses!");
@@ -739,9 +738,7 @@ mlir::Operation *CIRGenFunction::buildLandingPad(mlir::cir::TryOp tryOp) {
         mlir::ArrayAttr::get(builder.getContext(), clauses));
 
     // In traditional LLVM codegen. this tells the backend how to generate the
-    // landing pad by generating a branch to the dispatch block. In CIR the same
-    // function is called to gather some state, but this block info it's not
-    // useful per-se.
+    // landing pad by generating a branch to the dispatch block.
     mlir::Block *dispatch =
         getEHDispatchBlock(EHStack.getInnermostEHScope(), tryOp);
     (void)dispatch;
@@ -772,28 +769,25 @@ CIRGenFunction::getEHDispatchBlock(EHScopeStack::stable_iterator si,
   if (!dispatchBlock) {
     switch (scope.getKind()) {
     case EHScope::Catch: {
-      // Apply a special case to a single catch-all.
-      EHCatchScope &catchScope = cast<EHCatchScope>(scope);
-      if (catchScope.getNumHandlers() == 1 &&
-          catchScope.getHandler(0).isCatchAll()) {
-        dispatchBlock = catchScope.getHandler(0).Block;
-
-        // Otherwise, make a dispatch block.
-      } else {
-        // As said in the function comment, just signal back we
-        // have something - even though the block value doesn't
-        // have any real meaning.
-        dispatchBlock = catchScope.getHandler(0).Block;
-        assert(dispatchBlock && "find another approach to signal");
+      // LLVM does some optimization with branches here, CIR just keep track of
+      // the corresponding calls.
+      assert(callWithExceptionCtx && "expected call information");
+      {
+        mlir::OpBuilder::InsertionGuard guard(getBuilder());
+        assert(callWithExceptionCtx.getCleanup().empty() &&
+               "one per call: expected empty region at this point");
+        dispatchBlock = builder.createBlock(&callWithExceptionCtx.getCleanup());
+        builder.createYield(callWithExceptionCtx.getLoc());
       }
       break;
     }
 
     case EHScope::Cleanup: {
-      assert(tryOp && "expected cir.try available");
       assert(callWithExceptionCtx && "expected call information");
       {
         mlir::OpBuilder::InsertionGuard guard(getBuilder());
+        assert(callWithExceptionCtx.getCleanup().empty() &&
+               "one per call: expected empty region at this point");
         dispatchBlock = builder.createBlock(&callWithExceptionCtx.getCleanup());
         builder.createYield(callWithExceptionCtx.getLoc());
       }
