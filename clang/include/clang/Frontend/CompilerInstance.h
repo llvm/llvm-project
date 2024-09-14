@@ -86,6 +86,9 @@ class CompilerInstance : public ModuleLoader {
   /// The target being compiled for.
   IntrusiveRefCntPtr<TargetInfo> Target;
 
+  /// Options for the auxiliary target.
+  std::unique_ptr<TargetOptions> AuxTargetOpts;
+
   /// Auxiliary Target info.
   IntrusiveRefCntPtr<TargetInfo> AuxTarget;
 
