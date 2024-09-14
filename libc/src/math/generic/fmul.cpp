@@ -18,24 +18,22 @@ namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(float, fmul, (double x, double y)) {
 
+  /* Without FMA instructions, fputil::exact_mult is not
+  correctly rounded for all rounding modes, so we fall
+  back to the generic `fmul` implementation
+  */ 
 #ifndef LIBC_TARGET_CPU_HAS_FMA
   return fputil::generic::mul<float>(x, y);
 #else
   fputil::DoubleDouble prod = fputil::exact_mult(x, y);
-  float prod_hif = static_cast<float>(prod.hi);
-  fputil::FPBits<float> hif_bits(prod_hif);
-  using OutFPBits = fputil::FPBits<float>;
-  using OutStorageType = typename OutFPBits::StorageType;
-  using InFPBits = fputil::FPBits<double>;
-  using InStorageType = typename InFPBits::StorageType;
-
-  InFPBits x_bits(x);
-  InFPBits y_bits(y);
+  using DoubleBits = fputil::FPBits<double>;
+  using DoubleStorageType = typename DoubleBits::StorageType;
+  using FloatBits = fputil::FPBits<float>;
+  using FloatStorageType = typename FloatBits::StorageType;
+  DoubleBits x_bits(x);
+  DoubleBits y_bits(y);
 
   Sign result_sign = x_bits.sign() == y_bits.sign() ? Sign::POS : Sign::NEG;
-
-  using DoubleBits = fputil::FPBits<double>;
-  using FloatBits = fputil::FPBits<float>;
   double result = prod.hi;
   DoubleBits hi_bits(prod.hi), lo_bits(prod.lo);
   // Check for cases where we need to propagate the sticky bits:
@@ -65,22 +63,22 @@ LLVM_LIBC_FUNCTION(float, fmul, (double x, double y)) {
       fputil::raise_except_if_required(FE_INVALID);
 
     if (x_bits.is_quiet_nan()) {
-      InStorageType x_payload = x_bits.get_mantissa();
-      x_payload >>= InFPBits::FRACTION_LEN - OutFPBits::FRACTION_LEN;
-      return OutFPBits::quiet_nan(x_bits.sign(),
-                                  static_cast<OutStorageType>(x_payload))
+      DoubleStorageType x_payload = x_bits.get_mantissa();
+      x_payload >>= DoubleBits::FRACTION_LEN - FloatBits::FRACTION_LEN;
+      return FloatBits::quiet_nan(x_bits.sign(),
+                                  static_cast<FloatStorageType>(x_payload))
           .get_val();
     }
 
     if (y_bits.is_quiet_nan()) {
-      InStorageType y_payload = y_bits.get_mantissa();
-      y_payload >>= InFPBits::FRACTION_LEN - OutFPBits::FRACTION_LEN;
-      return OutFPBits::quiet_nan(y_bits.sign(),
-                                  static_cast<OutStorageType>(y_payload))
+      DoubleStorageType y_payload = y_bits.get_mantissa();
+      y_payload >>= DoubleBits::FRACTION_LEN - FloatBits::FRACTION_LEN;
+      return FloatBits::quiet_nan(y_bits.sign(),
+                                  static_cast<FloatStorageType>(y_payload))
           .get_val();
     }
 
-    return OutFPBits::quiet_nan().get_val();
+    return FloatBits::quiet_nan().get_val();
   }
 
   if (x_bits.is_inf()) {
@@ -88,26 +86,26 @@ LLVM_LIBC_FUNCTION(float, fmul, (double x, double y)) {
       fputil::set_errno_if_required(EDOM);
       fputil::raise_except_if_required(FE_INVALID);
 
-      return OutFPBits::quiet_nan().get_val();
+      return FloatBits::quiet_nan().get_val();
     }
 
-    return OutFPBits::inf(result_sign).get_val();
+    return FloatBits::inf(result_sign).get_val();
   }
 
   if (y_bits.is_inf()) {
     if (x_bits.is_zero()) {
       fputil::set_errno_if_required(EDOM);
       fputil::raise_except_if_required(FE_INVALID);
-      return OutFPBits::quiet_nan().get_val();
+      return FloatBits::quiet_nan().get_val();
     }
 
-    return OutFPBits::inf(result_sign).get_val();
+    return FloatBits::inf(result_sign).get_val();
   }
 
   // Now either x or y is zero, and the other one is finite.
-  if (hif_bits.is_inf()) {
+  if (rf_bits.is_inf()) {
     fputil::set_errno_if_required(ERANGE);
-    return OutFPBits::inf(result_sign).get_val();
+    return FloatBits::inf(result_sign).get_val();
   }
 
   if (x_bits.is_zero() || y_bits.is_zero())
@@ -120,4 +118,3 @@ LLVM_LIBC_FUNCTION(float, fmul, (double x, double y)) {
 #endif
 }
 } // namespace LIBC_NAMESPACE_DECL
-// namespace LIBC_NAMESPACE_DECL
