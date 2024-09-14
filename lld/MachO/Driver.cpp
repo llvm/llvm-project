@@ -1327,10 +1327,10 @@ static void codegenDataGenerate() {
   TimeTraceScope timeScope("Generating codegen data");
 
   OutlinedHashTreeRecord globalOutlineRecord;
-  for (ConcatInputSection *isec : inputSections) {
+  for (ConcatInputSection *isec : inputSections)
     if (isec->getSegName() == segment_names::data &&
         isec->getName() == section_names::outlinedHashTree) {
-      // Read outlined hash tree from each section
+      // Read outlined hash tree from each section.
       OutlinedHashTreeRecord localOutlineRecord;
       auto *data = isec->data.data();
       localOutlineRecord.deserialize(data);
@@ -1338,7 +1338,6 @@ static void codegenDataGenerate() {
       // Merge it to the global hash tree.
       globalOutlineRecord.merge(localOutlineRecord);
     }
-  }
 
   CodeGenDataWriter Writer;
   if (!globalOutlineRecord.empty())
