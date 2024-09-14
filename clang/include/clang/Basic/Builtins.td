@@ -1250,6 +1250,12 @@ def ElementwiseATan : Builtin {
   let Prototype = "void(...)";
 }
 
+def ElementwiseATan2 : Builtin {
+  let Spellings = ["__builtin_elementwise_atan2"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
 def ElementwiseBitreverse : Builtin {
   let Spellings = ["__builtin_elementwise_bitreverse"];
   let Attributes = [NoThrow, Const, CustomTypeChecking];
