@@ -58,13 +58,20 @@ struct DlsymAlloc : public DlSymAllocator<DlsymAlloc> {
 } // namespace
 
 // Filesystem
+static bool open_reads_va_args(int oflag) {
+#ifdef O_TMPFILE
+  return (oflag & (O_CREAT | O_TMPFILE)) != 0;
+#else
+  return (oflag & O_CREAT) != 0;
+#endif
+}
 
 INTERCEPTOR(int, open, const char *path, int oflag, ...) {
   // TODO Establish whether we should intercept here if the flag contains
   // O_NONBLOCK
   __rtsan_notify_intercepted_call("open");
 
-  if (oflag & O_CREAT) {
+  if (open_reads_va_args(oflag)) {
     va_list args;
     va_start(args, oflag);
     const mode_t mode = va_arg(args, int);
@@ -99,7 +106,7 @@ INTERCEPTOR(int, openat, int fd, const char *path, int oflag, ...) {
   // O_NONBLOCK
   __rtsan_notify_intercepted_call("openat");
 
-  if (oflag & O_CREAT) {
+  if (open_reads_va_args(oflag)) {
     va_list args;
     va_start(args, oflag);
     const mode_t mode = va_arg(args, int);
