@@ -1246,12 +1246,12 @@ uint64_t ARMAsmBackendDarwin::generateCompactUnwindEncoding(
   }
   int StackAdjust = CFARegisterOffset - 8;
   if (RegOffsets.lookup(ARM::LR) != (-4 - StackAdjust)) {
-    DEBUG_WITH_TYPE("compact-unwind",
-                    llvm::dbgs()
-                        << "LR not saved as standard frame, StackAdjust="
-                        << StackAdjust
-                        << ", CFARegisterOffset=" << CFARegisterOffset
-                        << ", lr save at offset=" << RegOffsets[14] << "\n");
+    DEBUG_WITH_TYPE(
+        "compact-unwind",
+        llvm::dbgs() << "LR not saved as standard frame, StackAdjust="
+                     << StackAdjust
+                     << ", CFARegisterOffset=" << CFARegisterOffset
+                     << ", lr save at offset=" << RegOffsets[ARM::LR] << "\n");
     return CU::UNWIND_ARM_MODE_DWARF;
   }
   if (RegOffsets.lookup(ARM::R7) != (-8 - StackAdjust)) {
