@@ -388,7 +388,7 @@ Bug Fixes to C++ Support
 - Fixed a crash in the typo correction of an invalid CTAD guide. (#GH107887)
 - Fixed a crash when clang tries to subtitute parameter pack while retaining the parameter
   pack. #GH63819, #GH107560
-
+- Fix a crash when a static assert declaration has an invalid close location. (#GH108687)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
