@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "../config.h"
+#include "../Config.h"
 #include "ASTSignals.h"
 #include "Annotations.h"
 #include "ClangdServer.h"
