@@ -523,17 +523,16 @@ bool DiagnosticsEngine::EmitDiagnostic(const DiagnosticBuilder &DB,
 }
 
 DiagnosticBuilder::DiagnosticBuilder(DiagnosticsEngine *DiagObj,
-                                     SourceLocation CurDiagLoc,
-                                     unsigned CurDiagID)
+                                     SourceLocation DiagLoc, unsigned DiagID)
     : StreamingDiagnostic(DiagObj->DiagAllocator), DiagObj(DiagObj),
-      CurDiagLoc(CurDiagLoc), CurDiagID(CurDiagID), IsActive(true) {
+      DiagLoc(DiagLoc), DiagID(DiagID), IsActive(true) {
   assert(DiagObj && "DiagnosticBuilder requires a valid DiagnosticsEngine!");
 }
 
 DiagnosticBuilder::DiagnosticBuilder(const DiagnosticBuilder &D)
     : StreamingDiagnostic() {
-  CurDiagLoc = D.CurDiagLoc;
-  CurDiagID = D.CurDiagID;
+  DiagLoc = D.DiagLoc;
+  DiagID = D.DiagID;
   FlagValue = D.FlagValue;
   DiagObj = D.DiagObj;
   DiagStorage = D.DiagStorage;
@@ -546,14 +545,14 @@ DiagnosticBuilder::DiagnosticBuilder(const DiagnosticBuilder &D)
 
 Diagnostic::Diagnostic(const DiagnosticsEngine *DO,
                        const DiagnosticBuilder &DiagBuilder)
-    : DiagObj(DO), CurDiagLoc(DiagBuilder.CurDiagLoc),
-      CurDiagID(DiagBuilder.CurDiagID), FlagValue(DiagBuilder.FlagValue),
+    : DiagObj(DO), DiagLoc(DiagBuilder.DiagLoc),
+      DiagID(DiagBuilder.DiagID), FlagValue(DiagBuilder.FlagValue),
       DiagStorage(*DiagBuilder.getStorage()) {}
 
-Diagnostic::Diagnostic(const DiagnosticsEngine *DO, SourceLocation CurDiagLoc,
-                       unsigned CurDiagID, const DiagnosticStorage &DiagStorage,
+Diagnostic::Diagnostic(const DiagnosticsEngine *DO, SourceLocation DiagLoc,
+                       unsigned DiagID, const DiagnosticStorage &DiagStorage,
                        StringRef StoredDiagMessage)
-    : DiagObj(DO), CurDiagLoc(CurDiagLoc), CurDiagID(CurDiagID),
+    : DiagObj(DO), DiagLoc(DiagLoc), DiagID(DiagID),
       DiagStorage(DiagStorage), StoredDiagMessage(StoredDiagMessage) {}
 
 DiagnosticConsumer::~DiagnosticConsumer() = default;

@@ -964,8 +964,7 @@ private:
   // in DiagnosticBuilder in order to keep DiagnosticBuilder a small lightweight
   // object.  This implementation choice means that we can only have a few
   // diagnostics "in flight" at a time, but this seems to be a reasonable
-  // tradeoff to keep these objects small.  Assertions verify that only one
-  // diagnostic is in flight at a time.
+  // tradeoff to keep these objects small.
   friend class Diagnostic;
   friend class DiagnosticBuilder;
   friend class DiagnosticErrorTrap;
@@ -1196,14 +1195,8 @@ class DiagnosticBuilder : public StreamingDiagnostic {
 
   mutable DiagnosticsEngine *DiagObj = nullptr;
 
-  /// The location of the current diagnostic that is in flight.
-  SourceLocation CurDiagLoc;
-
-  /// The ID of the current diagnostic that is in flight.
-  ///
-  /// This is set to std::numeric_limits<unsigned>::max() when there is no
-  /// diagnostic in flight.
-  unsigned CurDiagID;
+  SourceLocation DiagLoc;
+  unsigned DiagID;
 
   /// Optional flag value.
   ///
@@ -1225,8 +1218,8 @@ class DiagnosticBuilder : public StreamingDiagnostic {
 
   DiagnosticBuilder() = default;
 
-  DiagnosticBuilder(DiagnosticsEngine *DiagObj, SourceLocation CurDiagLoc,
-                    unsigned CurDiagID);
+  DiagnosticBuilder(DiagnosticsEngine *DiagObj, SourceLocation DiagLoc,
+                    unsigned DiagID);
 
 protected:
   /// Clear out the current diagnostic.
@@ -1485,25 +1478,25 @@ inline DiagnosticBuilder DiagnosticsEngine::Report(unsigned DiagID) {
 //===----------------------------------------------------------------------===//
 
 /// A little helper class (which is basically a smart pointer that forwards
-/// info from DiagnosticsEngine) that allows clients to enquire about the
-/// currently in-flight diagnostic.
+/// info from DiagnosticsEngine and DiagnosticStorage) that allows clients to
+/// enquire about the diagnostic.
 class Diagnostic {
   const DiagnosticsEngine *DiagObj;
-  SourceLocation CurDiagLoc;
-  unsigned CurDiagID;
+  SourceLocation DiagLoc;
+  unsigned DiagID;
   std::string FlagValue;
   const DiagnosticStorage &DiagStorage;
   std::optional<StringRef> StoredDiagMessage;
 
 public:
   Diagnostic(const DiagnosticsEngine *DO, const DiagnosticBuilder &DiagBuilder);
-  Diagnostic(const DiagnosticsEngine *DO, SourceLocation CurDiagLoc,
-             unsigned CurDiagID, const DiagnosticStorage &DiagStorage,
+  Diagnostic(const DiagnosticsEngine *DO, SourceLocation DiagLoc,
+             unsigned DiagID, const DiagnosticStorage &DiagStorage,
              StringRef StoredDiagMessage);
 
   const DiagnosticsEngine *getDiags() const { return DiagObj; }
-  unsigned getID() const { return CurDiagID; }
-  const SourceLocation &getLocation() const { return CurDiagLoc; }
+  unsigned getID() const { return DiagID; }
+  const SourceLocation &getLocation() const { return DiagLoc; }
   bool hasSourceManager() const { return DiagObj->hasSourceManager(); }
   SourceManager &getSourceManager() const { return DiagObj->getSourceManager();}
 
