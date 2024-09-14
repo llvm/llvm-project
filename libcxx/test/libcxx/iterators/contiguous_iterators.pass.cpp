@@ -181,20 +181,35 @@ int main(int, char**)
     static_assert((!std::__libcpp_is_contiguous_iterator<std::reverse_iterator<my_contiguous_iterator> >::value), "");
 #endif
 
-    static_assert(( std::__libcpp_is_contiguous_iterator<std::__wrap_iter<char *> >::value), "");
-    static_assert(( std::__libcpp_is_contiguous_iterator<std::__wrap_iter<const char *> >::value), "");
-    static_assert(( std::__libcpp_is_contiguous_iterator<std::__wrap_iter<int *> >::value), "");
+    static_assert((std::__libcpp_is_contiguous_iterator<std::__wrap_mut_iter<char*, const char*> >::value), "");
+    static_assert((std::__libcpp_is_contiguous_iterator<std::__wrap_const_iter<char*, const char*> >::value), "");
+    static_assert((std::__libcpp_is_contiguous_iterator<std::__wrap_mut_iter<int*, const int*> >::value), "");
 
-    static_assert(( std::__libcpp_is_contiguous_iterator<std::__wrap_iter<T *> >::value), "");
-    static_assert(( std::__libcpp_is_contiguous_iterator<std::__wrap_iter<std::__wrap_iter<T *> > >::value), "");
+    static_assert((std::__libcpp_is_contiguous_iterator<std::__wrap_mut_iter<T*, const T*> >::value), "");
+    static_assert(
+        (std::__libcpp_is_contiguous_iterator<
+            std::__wrap_mut_iter<std::__wrap_mut_iter<T*, const T*>, std::__wrap_mut_iter<T*, const T*> > >::value),
+        "");
 
     // Here my_random_access_iterator is standing in for some user's fancy pointer type, written pre-C++20.
-    static_assert(( std::__libcpp_is_contiguous_iterator<std::__wrap_iter<my_random_access_iterator> >::value), "");
-    static_assert(( std::__libcpp_is_contiguous_iterator<std::__wrap_iter<std::__wrap_iter<my_random_access_iterator> > >::value), "");
+    static_assert((std::__libcpp_is_contiguous_iterator<
+                      std::__wrap_mut_iter<my_random_access_iterator, my_random_access_iterator> >::value),
+                  "");
+    static_assert(
+        (std::__libcpp_is_contiguous_iterator<
+            std::__wrap_mut_iter<std::__wrap_mut_iter<my_random_access_iterator, my_random_access_iterator>,
+                                 std::__wrap_mut_iter<my_random_access_iterator, my_random_access_iterator> > >::value),
+        "");
 
 #if TEST_STD_VER >= 20
-    static_assert(( std::__libcpp_is_contiguous_iterator<std::__wrap_iter<my_contiguous_iterator> >::value), "");
-    static_assert(( std::__libcpp_is_contiguous_iterator<std::__wrap_iter<std::__wrap_iter<my_contiguous_iterator> > >::value), "");
+    static_assert((std::__libcpp_is_contiguous_iterator<
+                      std::__wrap_mut_iter<my_contiguous_iterator, my_contiguous_iterator> >::value),
+                  "");
+    static_assert(
+        (std::__libcpp_is_contiguous_iterator<
+            std::__wrap_mut_iter<std::__wrap_mut_iter<my_contiguous_iterator, my_contiguous_iterator>,
+                                 std::__wrap_mut_iter<my_contiguous_iterator, my_contiguous_iterator> > >::value),
+        "");
 #endif
 
 //  iterators in the libc++ test suite
@@ -218,9 +233,11 @@ int main(int, char**)
     static_assert(( std::__libcpp_is_contiguous_iterator<std::vector<int>::const_iterator>             ::value), "");
     static_assert((!std::__libcpp_is_contiguous_iterator<std::vector<int>::reverse_iterator>           ::value), "");
     static_assert((!std::__libcpp_is_contiguous_iterator<std::vector<int>::const_reverse_iterator>     ::value), "");
-    static_assert(( std::__libcpp_is_contiguous_iterator<std::__wrap_iter<std::vector<int>::iterator> >::value), "");
+    static_assert((std::__libcpp_is_contiguous_iterator<
+                      std::__wrap_mut_iter<std::vector<int>::iterator, std::vector<int>::const_iterator> >::value),
+                  "");
 
-//  string
+    //  string
     static_assert(( std::__libcpp_is_contiguous_iterator<std::string::iterator>              ::value), "");
     static_assert(( std::__libcpp_is_contiguous_iterator<std::string::const_iterator>        ::value), "");
     static_assert((!std::__libcpp_is_contiguous_iterator<std::string::reverse_iterator>      ::value), "");

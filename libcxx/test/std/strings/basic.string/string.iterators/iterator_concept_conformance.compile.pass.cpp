@@ -14,64 +14,77 @@
 
 #include <iterator>
 
-using iterator               = std::string::iterator;
-using const_iterator         = std::string::const_iterator;
-using reverse_iterator       = std::string::reverse_iterator;
-using const_reverse_iterator = std::string::const_reverse_iterator;
-using value_type             = char;
+#include "nasty_string.h"
 
-static_assert(std::contiguous_iterator<iterator>);
-static_assert(std::indirectly_writable<iterator, value_type>);
-static_assert(std::sentinel_for<iterator, iterator>);
-static_assert(std::sentinel_for<iterator, const_iterator>);
-static_assert(!std::sentinel_for<iterator, reverse_iterator>);
-static_assert(!std::sentinel_for<iterator, const_reverse_iterator>);
-static_assert(std::sized_sentinel_for<iterator, iterator>);
-static_assert(std::sized_sentinel_for<iterator, const_iterator>);
-static_assert(!std::sized_sentinel_for<iterator, reverse_iterator>);
-static_assert(!std::sized_sentinel_for<iterator, const_reverse_iterator>);
-static_assert(std::indirectly_movable<iterator, iterator>);
-static_assert(std::indirectly_movable_storable<iterator, iterator>);
-static_assert(!std::indirectly_movable<iterator, const_iterator>);
-static_assert(!std::indirectly_movable_storable<iterator, const_iterator>);
-static_assert(std::indirectly_movable<iterator, reverse_iterator>);
-static_assert(std::indirectly_movable_storable<iterator, reverse_iterator>);
-static_assert(!std::indirectly_movable<iterator, const_reverse_iterator>);
-static_assert(!std::indirectly_movable_storable<iterator, const_reverse_iterator>);
-static_assert(std::indirectly_copyable<iterator, iterator>);
-static_assert(std::indirectly_copyable_storable<iterator, iterator>);
-static_assert(!std::indirectly_copyable<iterator, const_iterator>);
-static_assert(!std::indirectly_copyable_storable<iterator, const_iterator>);
-static_assert(std::indirectly_copyable<iterator, reverse_iterator>);
-static_assert(std::indirectly_copyable_storable<iterator, reverse_iterator>);
-static_assert(!std::indirectly_copyable<iterator, const_reverse_iterator>);
-static_assert(!std::indirectly_copyable_storable<iterator, const_reverse_iterator>);
-static_assert(std::indirectly_swappable<iterator, iterator>);
+template <class String>
+void test() {
+  using iterator               = typename String::iterator;
+  using const_iterator         = typename String::const_iterator;
+  using reverse_iterator       = typename String::reverse_iterator;
+  using const_reverse_iterator = typename String::const_reverse_iterator;
+  using value_type             = typename String::value_type;
 
-static_assert(std::contiguous_iterator<const_iterator>);
-static_assert(!std::indirectly_writable<const_iterator, value_type>);
-static_assert(std::sentinel_for<const_iterator, iterator>);
-static_assert(std::sentinel_for<const_iterator, const_iterator>);
-static_assert(!std::sentinel_for<const_iterator, reverse_iterator>);
-static_assert(!std::sentinel_for<const_iterator, const_reverse_iterator>);
-static_assert(std::sized_sentinel_for<const_iterator, iterator>);
-static_assert(std::sized_sentinel_for<const_iterator, const_iterator>);
-static_assert(!std::sized_sentinel_for<const_iterator, reverse_iterator>);
-static_assert(!std::sized_sentinel_for<const_iterator, const_reverse_iterator>);
-static_assert(std::indirectly_movable<const_iterator, iterator>);
-static_assert(std::indirectly_movable_storable<const_iterator, iterator>);
-static_assert(!std::indirectly_movable<const_iterator, const_iterator>);
-static_assert(!std::indirectly_movable_storable<const_iterator, const_iterator>);
-static_assert(std::indirectly_movable<const_iterator, reverse_iterator>);
-static_assert(std::indirectly_movable_storable<const_iterator, reverse_iterator>);
-static_assert(!std::indirectly_movable<const_iterator, const_reverse_iterator>);
-static_assert(!std::indirectly_movable_storable<const_iterator, const_reverse_iterator>);
-static_assert(std::indirectly_copyable<const_iterator, iterator>);
-static_assert(std::indirectly_copyable_storable<const_iterator, iterator>);
-static_assert(!std::indirectly_copyable<const_iterator, const_iterator>);
-static_assert(!std::indirectly_copyable_storable<const_iterator, const_iterator>);
-static_assert(std::indirectly_copyable<const_iterator, reverse_iterator>);
-static_assert(std::indirectly_copyable_storable<const_iterator, reverse_iterator>);
-static_assert(!std::indirectly_copyable<const_iterator, const_reverse_iterator>);
-static_assert(!std::indirectly_copyable_storable<const_iterator, const_reverse_iterator>);
-static_assert(!std::indirectly_swappable<const_iterator, const_iterator>);
+  static_assert(std::contiguous_iterator<iterator>);
+  static_assert(std::indirectly_writable<iterator, value_type>);
+  static_assert(std::sentinel_for<iterator, iterator>);
+  static_assert(std::sentinel_for<iterator, const_iterator>);
+  static_assert(!std::sentinel_for<iterator, reverse_iterator>);
+  static_assert(!std::sentinel_for<iterator, const_reverse_iterator>);
+  static_assert(std::sized_sentinel_for<iterator, iterator>);
+  static_assert(std::sized_sentinel_for<iterator, const_iterator>);
+  static_assert(!std::sized_sentinel_for<iterator, reverse_iterator>);
+  static_assert(!std::sized_sentinel_for<iterator, const_reverse_iterator>);
+  static_assert(std::indirectly_movable<iterator, iterator>);
+  static_assert(std::indirectly_movable_storable<iterator, iterator>);
+  static_assert(!std::indirectly_movable<iterator, const_iterator>);
+  static_assert(!std::indirectly_movable_storable<iterator, const_iterator>);
+  static_assert(std::indirectly_movable<iterator, reverse_iterator>);
+  static_assert(std::indirectly_movable_storable<iterator, reverse_iterator>);
+  static_assert(!std::indirectly_movable<iterator, const_reverse_iterator>);
+  static_assert(!std::indirectly_movable_storable<iterator, const_reverse_iterator>);
+  static_assert(std::indirectly_copyable<iterator, iterator>);
+  static_assert(std::indirectly_copyable_storable<iterator, iterator>);
+  static_assert(!std::indirectly_copyable<iterator, const_iterator>);
+  static_assert(!std::indirectly_copyable_storable<iterator, const_iterator>);
+  static_assert(std::indirectly_copyable<iterator, reverse_iterator>);
+  static_assert(std::indirectly_copyable_storable<iterator, reverse_iterator>);
+  static_assert(!std::indirectly_copyable<iterator, const_reverse_iterator>);
+  static_assert(!std::indirectly_copyable_storable<iterator, const_reverse_iterator>);
+  static_assert(std::indirectly_swappable<iterator, iterator>);
+
+  static_assert(std::contiguous_iterator<const_iterator>);
+  static_assert(!std::indirectly_writable<const_iterator, value_type>);
+  static_assert(std::sentinel_for<const_iterator, iterator>);
+  static_assert(std::sentinel_for<const_iterator, const_iterator>);
+  static_assert(!std::sentinel_for<const_iterator, reverse_iterator>);
+  static_assert(!std::sentinel_for<const_iterator, const_reverse_iterator>);
+  static_assert(std::sized_sentinel_for<const_iterator, iterator>);
+  static_assert(std::sized_sentinel_for<const_iterator, const_iterator>);
+  static_assert(!std::sized_sentinel_for<const_iterator, reverse_iterator>);
+  static_assert(!std::sized_sentinel_for<const_iterator, const_reverse_iterator>);
+  static_assert(std::indirectly_movable<const_iterator, iterator>);
+  static_assert(std::indirectly_movable_storable<const_iterator, iterator>);
+  static_assert(!std::indirectly_movable<const_iterator, const_iterator>);
+  static_assert(!std::indirectly_movable_storable<const_iterator, const_iterator>);
+  static_assert(std::indirectly_movable<const_iterator, reverse_iterator>);
+  static_assert(std::indirectly_movable_storable<const_iterator, reverse_iterator>);
+  static_assert(!std::indirectly_movable<const_iterator, const_reverse_iterator>);
+  static_assert(!std::indirectly_movable_storable<const_iterator, const_reverse_iterator>);
+  static_assert(std::indirectly_copyable<const_iterator, iterator>);
+  static_assert(std::indirectly_copyable_storable<const_iterator, iterator>);
+  static_assert(!std::indirectly_copyable<const_iterator, const_iterator>);
+  static_assert(!std::indirectly_copyable_storable<const_iterator, const_iterator>);
+  static_assert(std::indirectly_copyable<const_iterator, reverse_iterator>);
+  static_assert(std::indirectly_copyable_storable<const_iterator, reverse_iterator>);
+  static_assert(!std::indirectly_copyable<const_iterator, const_reverse_iterator>);
+  static_assert(!std::indirectly_copyable_storable<const_iterator, const_reverse_iterator>);
+  static_assert(!std::indirectly_swappable<const_iterator, const_iterator>);
+}
+
+void tests() {
+  test<std::string>();
+  test<std::wstring>();
+#if !defined(TEST_HAS_NO_NASTY_STRING)
+  test<nasty_string>();
+#endif
+}

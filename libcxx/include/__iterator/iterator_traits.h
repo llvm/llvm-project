@@ -453,6 +453,14 @@ template <class _Tp>
 struct __libcpp_is_contiguous_iterator
     : _Or< __has_iterator_category_convertible_to<_Tp, contiguous_iterator_tag>,
            __has_iterator_concept_convertible_to<_Tp, contiguous_iterator_tag> > {};
+#elif defined(_LIBCPP_ABI_WRAP_ITER_ADL_PROOF)
+template <class _It, class = void>
+struct __is_contiguous_wrap_iter : false_type {};
+template <class _It>
+struct __is_contiguous_wrap_iter<_It, __void_t<typename _Tp::__is_wrap_iter> > : true_type {};
+
+template <class _Tp>
+struct __libcpp_is_contiguous_iterator : __is_contiguous_wrap_iter<_Tp> {};
 #else
 template <class _Tp>
 struct __libcpp_is_contiguous_iterator : false_type {};
@@ -462,8 +470,10 @@ struct __libcpp_is_contiguous_iterator : false_type {};
 template <class _Up>
 struct __libcpp_is_contiguous_iterator<_Up*> : true_type {};
 
+#ifndef _LIBCPP_ABI_WRAP_ITER_ADL_PROOF
 template <class _Iter>
 class __wrap_iter;
+#endif
 
 template <class _Tp>
 using __has_exactly_input_iterator_category =

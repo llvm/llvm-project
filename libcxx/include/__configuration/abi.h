@@ -98,6 +98,14 @@
 // and WCHAR_MAX. This ABI setting determines whether we should instead track whether the fill
 // value has been initialized using a separate boolean, which changes the ABI.
 #  define _LIBCPP_ABI_IOS_ALLOW_ARBITRARY_FILL_VALUE
+// Change std::__wrap_iter<T> to not associate the namespaces associated with
+// T when unqualified lookup (e.g., with operators) is done. Also make it so
+// only std::__wrap_iter<pointer> and std::__wrap_iter<const_pointer> can
+// be used together (for comparison, conversion, etc.) instead of with any
+// wrapped iterator. So comprison between std::__wrap_iter<fancy_pointer<T>>
+// and std::__wrap_iter<T*> will no longer compile even if fancy_pointer<T>
+// is comparable with T*.
+#  define _LIBCPP_ABI_WRAP_ITER_ADL_PROOF
 #elif _LIBCPP_ABI_VERSION == 1
 #  if !(defined(_LIBCPP_OBJECT_FORMAT_COFF) || defined(_LIBCPP_OBJECT_FORMAT_XCOFF))
 // Enable compiling copies of now inline methods into the dylib to support

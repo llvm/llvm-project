@@ -40,8 +40,15 @@
 #ifndef TEST_HAS_NO_NASTY_STRING
 // Make sure the char-like operations in strings do not depend on the char-like type.
 struct nasty_char {
+#  if defined(_LIBCPP_VERSION) && !defined(_LIBCPP_ABI_WRAP_ITER_ADL_PROOF)
+  // T, T would win overload resolution when comparing two wrap_iters, so
+  // make sure this is less specific
+  template <typename T, typename U>
+  friend auto operator<=>(T, U) = delete;
+#  else
   template <typename T>
   friend auto operator<=>(T, T) = delete;
+#  endif
 
   template <typename T>
   friend void operator+(T&&) = delete;

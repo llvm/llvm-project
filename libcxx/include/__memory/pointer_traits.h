@@ -43,6 +43,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 _LIBCPP_CLASS_TRAITS_HAS_XXX(__has_pointer, pointer);
 _LIBCPP_CLASS_TRAITS_HAS_XXX(__has_element_type, element_type);
+_LIBCPP_CLASS_TRAITS_HAS_XXX(__is_wrap_iter, __is_wrap_iter);
 
 template <class _Ptr, bool = __has_element_type<_Ptr>::value>
 struct __pointer_traits_element_type {};
@@ -115,11 +116,21 @@ struct __pointer_traits_rebind<_Sp<_Tp, _Args...>, _Up, false> {
   typedef _Sp<_Up, _Args...> type;
 };
 
+#ifdef _LIBCPP_ABI_WRAP_ITER_ADL_PROOF
+template <class _Ptr, bool, class = void>
+struct __pointer_traits_impl {};
+
+template <class _Ptr>
+struct __pointer_traits_impl<_Ptr,
+                             false,
+#else
 template <class _Ptr, class = void>
 struct __pointer_traits_impl {};
 
 template <class _Ptr>
-struct __pointer_traits_impl<_Ptr, __void_t<typename __pointer_traits_element_type<_Ptr>::type> > {
+struct __pointer_traits_impl<_Ptr,
+#endif
+                             __void_t<typename __pointer_traits_element_type<_Ptr>::type> > {
   typedef _Ptr pointer;
   typedef typename __pointer_traits_element_type<pointer>::type element_type;
   typedef typename __pointer_traits_difference_type<pointer>::type difference_type;
@@ -144,8 +155,25 @@ public:
   }
 };
 
+#ifdef _LIBCPP_ABI_WRAP_ITER_ADL_PROOF
+template <class _Ptr>
+struct _LIBCPP_TEMPLATE_VIS pointer_traits;
+
+template <class _WrapIt>
+struct __pointer_traits_impl<_WrapIt, true, void> {
+  using pointer         = _WrapIt;
+  using element_type    = typename pointer_traits<typename _WrapIt::iterator_type>::element_type;
+  using difference_type = typename pointer_traits<typename _WrapIt::iterator_type>::difference_type;
+
+  inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR static element_type* to_address(pointer __w) _NOEXCEPT;
+};
+
+template <class _Ptr>
+struct _LIBCPP_TEMPLATE_VIS pointer_traits : __pointer_traits_impl<_Ptr, __is_wrap_iter<_Ptr>::value> {};
+#else
 template <class _Ptr>
 struct _LIBCPP_TEMPLATE_VIS pointer_traits : __pointer_traits_impl<_Ptr> {};
+#endif
 
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS pointer_traits<_Tp*> {
@@ -236,6 +264,14 @@ struct __to_address_helper<_Pointer,
     return pointer_traits<_Pointer>::to_address(__p);
   }
 };
+
+#ifdef _LIBCPP_ABI_WRAP_ITER_ADL_PROOF
+template <class _WrapIt>
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR typename __pointer_traits_impl<_WrapIt, true, void>::element_type*
+__pointer_traits_impl<_WrapIt, true, void>::to_address(pointer __w) _NOEXCEPT {
+  return std::__to_address(__w);
+}
+#endif
 
 #if _LIBCPP_STD_VER >= 20
 template <class _Tp>

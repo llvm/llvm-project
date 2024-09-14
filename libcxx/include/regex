@@ -2632,6 +2632,16 @@ private:
                            const basic_regex<_Cp, _Tp>& __e,
                            regex_constants::match_flag_type __flags);
 
+#ifdef _LIBCPP_ABI_WRAP_ITER_ADL_PROOF
+  template <class _WrapIter, class _Ap, class _Cp, class _Tp, typename _WrapIter::__is_wrap_iter*>
+  friend bool
+  regex_search(_WrapIter __first,
+               _WrapIter __last,
+               match_results<_WrapIter, _Ap>& __m,
+               const basic_regex<_Cp, _Tp>& __e,
+               regex_constants::match_flag_type __flags);
+
+#else
   template <class _Iter, class _Ap, class _Cp, class _Tp>
   friend bool
   regex_search(__wrap_iter<_Iter> __first,
@@ -2639,6 +2649,7 @@ private:
                match_results<__wrap_iter<_Iter>, _Ap>& __m,
                const basic_regex<_Cp, _Tp>& __e,
                regex_constants::match_flag_type __flags);
+#endif
 
   template <class, class>
   friend class __lookahead;
@@ -5149,6 +5160,15 @@ regex_search(_BidirectionalIterator __first,
   return __r;
 }
 
+#ifdef _LIBCPP_ABI_WRAP_ITER_ADL_PROOF
+template <class _WrapIter, class _Allocator, class _CharT, class _Traits, typename _WrapIter::__is_wrap_iter* = nullptr>
+inline _LIBCPP_HIDE_FROM_ABI bool
+regex_search(_WrapIter __first,
+             _WrapIter __last,
+             match_results<_WrapIter, _Allocator>& __m,
+             const basic_regex<_CharT, _Traits>& __e,
+             regex_constants::match_flag_type __flags = regex_constants::match_default) {
+#else
 template <class _Iter, class _Allocator, class _CharT, class _Traits>
 inline _LIBCPP_HIDE_FROM_ABI bool
 regex_search(__wrap_iter<_Iter> __first,
@@ -5156,6 +5176,7 @@ regex_search(__wrap_iter<_Iter> __first,
              match_results<__wrap_iter<_Iter>, _Allocator>& __m,
              const basic_regex<_CharT, _Traits>& __e,
              regex_constants::match_flag_type __flags = regex_constants::match_default) {
+#endif
   match_results<const _CharT*> __mc;
   bool __r = __e.__search(__first.base(), __last.base(), __mc, __flags);
   __m.__assign(__first, __last, __mc, __flags & regex_constants::__no_update_pos);

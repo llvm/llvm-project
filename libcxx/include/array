@@ -177,8 +177,8 @@ struct _LIBCPP_TEMPLATE_VIS array {
   using pointer         = value_type*;
   using const_pointer   = const value_type*;
 #if defined(_LIBCPP_ABI_USE_WRAP_ITER_IN_STD_ARRAY)
-  using iterator       = __wrap_iter<pointer>;
-  using const_iterator = __wrap_iter<const_pointer>;
+  using iterator       = __wrap_mut_iter<pointer, const_pointer>;
+  using const_iterator = __wrap_const_iter<pointer, const_pointer>;
 #else
   using iterator       = pointer;
   using const_iterator = const_pointer;
@@ -277,8 +277,8 @@ struct _LIBCPP_TEMPLATE_VIS array<_Tp, 0> {
   using pointer         = value_type*;
   using const_pointer   = const value_type*;
 #if defined(_LIBCPP_ABI_USE_WRAP_ITER_IN_STD_ARRAY)
-  using iterator       = __wrap_iter<pointer>;
-  using const_iterator = __wrap_iter<const_pointer>;
+  using iterator       = __wrap_mut_iter<pointer, const_pointer>;
+  using const_iterator = __wrap_const_iter<pointer, const_pointer>;
 #else
   using iterator       = pointer;
   using const_iterator = const_pointer;
