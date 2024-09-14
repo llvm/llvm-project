@@ -18,9 +18,9 @@ namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(float, fmul, (double x, double y)) {
 
-  #ifndef LIBC_TARGET_CPU_HAS_FMA
+#ifndef LIBC_TARGET_CPU_HAS_FMA
   return fputil::generic::mul<float>(x, y);
-  #else
+#else
   fputil::DoubleDouble prod = fputil::exact_mult(x, y);
   float prod_hif = static_cast<float>(prod.hi);
   fputil::FPBits<float> hif_bits(prod_hif);
