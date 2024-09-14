@@ -887,6 +887,45 @@ Value *CoroCloner::deriveNewFramePointer() {
   llvm_unreachable("bad ABI");
 }
 
+/// Adjust the scope line of the funclet to the first line number after the
+/// suspend point. This avoids a jump in the line table from the function
+/// declaration (where prologue instructions are attributed to) to the suspend
+/// point.
+/// Only adjust the scope line when the files are the same.
+/// If no candidate line number is found, fallback to the line of ActiveSuspend.
+static void updateScopeLine(Instruction *ActiveSuspend,
+                            DISubprogram &SPToUpdate) {
+  if (!ActiveSuspend)
+    return;
+
+  auto *Successor = ActiveSuspend->getNextNonDebugInstruction();
+  // Corosplit splits the BB around ActiveSuspend, so the meaningful
+  // instructions are not in the same BB.
+  if (auto *Branch = dyn_cast_or_null<BranchInst>(Successor);
+      Branch && Branch->isUnconditional())
+    Successor = Branch->getSuccessor(0)->getFirstNonPHIOrDbg();
+
+  // Find the first successor of ActiveSuspend with a non-zero line location.
+  // If that matches the file of ActiveSuspend, use it.
+  for (; Successor; Successor = Successor->getNextNonDebugInstruction()) {
+    auto DL = Successor->getDebugLoc();
+    if (!DL || DL.getLine() == 0)
+      continue;
+
+    if (SPToUpdate.getFile() == DL->getFile()) {
+      SPToUpdate.setScopeLine(DL.getLine());
+      return;
+    }
+
+    break;
+  }
+
+  // If the search above failed, fallback to the location of ActiveSuspend.
+  if (auto DL = ActiveSuspend->getDebugLoc())
+    if (SPToUpdate.getFile() == DL->getFile())
+      SPToUpdate.setScopeLine(DL->getLine());
+}
+
 static void addFramePointerAttrs(AttributeList &Attrs, LLVMContext &Context,
                                  unsigned ParamIndex, uint64_t Size,
                                  Align Alignment, bool NoAlias) {
@@ -955,18 +994,10 @@ void CoroCloner::create() {
 
   auto &Context = NewF->getContext();
 
-  // For async functions / continuations, adjust the scope line of the
-  // clone to the line number of the suspend point. However, only
-  // adjust the scope line when the files are the same. This ensures
-  // line number and file name belong together. The scope line is
-  // associated with all pre-prologue instructions. This avoids a jump
-  // in the linetable from the function declaration to the suspend point.
   if (DISubprogram *SP = NewF->getSubprogram()) {
     assert(SP != OrigF.getSubprogram() && SP->isDistinct());
-    if (ActiveSuspend)
-      if (auto DL = ActiveSuspend->getDebugLoc())
-        if (SP->getFile() == DL->getFile())
-          SP->setScopeLine(DL->getLine());
+    updateScopeLine(ActiveSuspend, *SP);
+
     // Update the linkage name to reflect the modified symbol name. It
     // is necessary to update the linkage name in Swift, since the
     // mangling changes for resume functions. It might also be the
