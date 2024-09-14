@@ -2121,11 +2121,14 @@ void OmpAttributeVisitor::CreateImplicitSymbols(
       }
       return lastDeclSymbol;
     };
-    auto makeSharedSymbol = [&]() {
+    auto makeSharedSymbol = [&](std::optional<Symbol::Flag> flag = {}) {
       const Symbol *hostSymbol =
           lastDeclSymbol ? lastDeclSymbol : &symbol->GetUltimate();
-      MakeAssocSymbol(symbol->name(), *hostSymbol,
+      Symbol &assocSymbol = MakeAssocSymbol(symbol->name(), *hostSymbol,
           context_.FindScope(dirContext.directiveSource));
+      if (flag) {
+        assocSymbol.set(*flag);
+      }
     };
     auto useLastDeclSymbol = [&]() {
       if (lastDeclSymbol) {
@@ -2140,8 +2143,9 @@ void OmpAttributeVisitor::CreateImplicitSymbols(
 
     if (dsa.has_value()) {
       if (dsa.value() == Symbol::Flag::OmpShared &&
-          (parallelDir || taskGenDir || teamsDir))
-        makeSharedSymbol();
+          (parallelDir || taskGenDir || teamsDir)) {
+        makeSharedSymbol(Symbol::Flag::OmpShared);
+      }
       // Private symbols will have been declared already.
       prevDSA = dsa;
       continue;
@@ -2155,10 +2159,11 @@ void OmpAttributeVisitor::CreateImplicitSymbols(
       if (!parallelDir && !taskGenDir && !teamsDir) {
         return;
       }
-      if (dirContext.defaultDSA != Symbol::Flag::OmpShared)
+      if (dirContext.defaultDSA != Symbol::Flag::OmpShared) {
         makePrivateSymbol(dirContext.defaultDSA);
-      else
+      } else {
         makeSharedSymbol();
+      }
       dsa = dirContext.defaultDSA;
     } else if (parallelDir) {
       // 2) parallel -> shared

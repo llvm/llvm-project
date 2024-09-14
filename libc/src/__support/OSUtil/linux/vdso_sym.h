@@ -44,8 +44,8 @@ template <VDSOSym sym> LIBC_INLINE constexpr auto dispatcher() {
   else if constexpr (sym == VDSOSym::ClockGetTime64)
     return static_cast<int (*)(clockid_t, __kernel_timespec *)>(nullptr);
   else if constexpr (sym == VDSOSym::GetTimeOfDay)
-    return static_cast<int (*)(timeval *__restrict, timezone *__restrict)>(
-        nullptr);
+    return static_cast<int (*)(timeval *__restrict,
+                               struct timezone *__restrict)>(nullptr);
   else if constexpr (sym == VDSOSym::GetCpu)
     return static_cast<int (*)(unsigned *, unsigned *, getcpu_cache *)>(
         nullptr);

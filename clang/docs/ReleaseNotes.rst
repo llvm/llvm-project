@@ -179,6 +179,8 @@ C2y Feature Support
 C23 Feature Support
 ^^^^^^^^^^^^^^^^^^^
 
+- Clang now supports `N3029 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3029.htm>`_ Improved Normal Enumerations.
+
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 

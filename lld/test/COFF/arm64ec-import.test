@@ -39,25 +39,31 @@ RUN: llvm-objdump -d out2.dll | FileCheck --check-prefix=DISASM %s
 
 DISASM:      180001000: 52800000     mov     w0, #0x0                // =0
 DISASM-NEXT: 180001004: d65f03c0     ret
-DISASM-NEXT: 180001008: d000000b     adrp    x11, 0x180003000
-DISASM-NEXT: 18000100c: f940056b     ldr     x11, [x11, #0x8]
-DISASM-NEXT: 180001010: 9000000a     adrp    x10, 0x180001000 <.text>
-DISASM-NEXT: 180001014: 9101114a     add     x10, x10, #0x44
-DISASM-NEXT: 180001018: 17fffffa     b       0x180001000 <.text>
-DISASM-NEXT: 18000101c: d000000b     adrp    x11, 0x180003000
-DISASM-NEXT: 180001020: f940096b     ldr     x11, [x11, #0x10]
-DISASM-NEXT: 180001024: f0ffffea     adrp    x10, 0x180000000
-DISASM-NEXT: 180001028: 9100014a     add     x10, x10, #0x0
-DISASM-NEXT: 18000102c: 17fffff5     b       0x180001000 <.text>
-DISASM-NEXT: 180001030: d000000b     adrp    x11, 0x180003000
-DISASM-NEXT: 180001034: f940116b     ldr     x11, [x11, #0x20]
-DISASM-NEXT: 180001038: 9000000a     adrp    x10, 0x180001000 <.text>
-DISASM-NEXT: 18000103c: 9101314a     add     x10, x10, #0x4c
-DISASM-NEXT: 180001040: 17fffff0     b       0x180001000 <.text>
-DISASM-NEXT: 180001044: 52800020     mov     w0, #0x1                // =1
-DISASM-NEXT: 180001048: d65f03c0     ret
-DISASM-NEXT: 18000104c: 52800040     mov     w0, #0x2                // =2
-DISASM-NEXT: 180001050: d65f03c0     ret
+DISASM-NEXT: 180001008: 90000030     adrp    x16, 0x180005000
+DISASM-NEXT: 18000100c: f9400610     ldr     x16, [x16, #0x8]
+DISASM-NEXT: 180001010: d61f0200     br      x16
+DISASM-NEXT: 180001014: d000000b     adrp    x11, 0x180003000
+DISASM-NEXT: 180001018: f940056b     ldr     x11, [x11, #0x8]
+DISASM-NEXT: 18000101c: 9000000a     adrp    x10, 0x180001000 <.text>
+DISASM-NEXT: 180001020: 9101714a     add     x10, x10, #0x5c
+DISASM-NEXT: 180001024: 17fffff7     b       0x180001000 <.text>
+DISASM-NEXT: 180001028: d000000b     adrp    x11, 0x180003000
+DISASM-NEXT: 18000102c: f940096b     ldr     x11, [x11, #0x10]
+DISASM-NEXT: 180001030: f0ffffea     adrp    x10, 0x180000000
+DISASM-NEXT: 180001034: 9100014a     add     x10, x10, #0x0
+DISASM-NEXT: 180001038: 17fffff2     b       0x180001000 <.text>
+DISASM-NEXT: 18000103c: 90000030     adrp    x16, 0x180005000
+DISASM-NEXT: 180001040: f9401210     ldr     x16, [x16, #0x20]
+DISASM-NEXT: 180001044: d61f0200     br      x16
+DISASM-NEXT: 180001048: d000000b     adrp    x11, 0x180003000
+DISASM-NEXT: 18000104c: f940116b     ldr     x11, [x11, #0x20]
+DISASM-NEXT: 180001050: 9000000a     adrp    x10, 0x180001000 <.text>
+DISASM-NEXT: 180001054: 9101914a     add     x10, x10, #0x64
+DISASM-NEXT: 180001058: 17ffffea     b       0x180001000 <.text>
+DISASM-NEXT: 18000105c: 52800020     mov     w0, #0x1                // =1
+DISASM-NEXT: 180001060: d65f03c0     ret
+DISASM-NEXT: 180001064: 52800040     mov     w0, #0x2                // =2
+DISASM-NEXT: 180001068: d65f03c0     ret
 DISASM-NEXT:                 ...
 DISASM-NEXT: 180002000: ff 25 02 10 00 00            jmpq    *0x1002(%rip)           # 0x180003008
 
@@ -65,7 +71,8 @@ RUN: llvm-readobj --hex-dump=.test out.dll | FileCheck --check-prefix=TESTSEC %s
 RUN: llvm-readobj --hex-dump=.test out2.dll | FileCheck --check-prefix=TESTSEC %s
 TESTSEC:      0x180007000 08500000 00300000 10500000 20500000
 TESTSEC-NEXT: 0x180007010 08300000 00500000 10300000 20300000
-TESTSEC-NEXT: 0x180007020 08100000 1c100000 00200000
+TESTSEC-NEXT: 0x180007020 14100000 28100000 00200000 08100000
+TESTSEC-NEXT: 0x180007030 3c100000
 
 RUN: llvm-readobj --headers out.dll | FileCheck -check-prefix=HEADERS %s
 HEADERS:  LoadConfigTableRVA: 0x4010
@@ -76,9 +83,9 @@ RUN: llvm-readobj --coff-load-config out.dll | FileCheck -check-prefix=LOADCONFI
 LOADCONFIG: AuxiliaryIAT: 0x5000
 
 RUN: llvm-readobj --hex-dump=.rdata out.dll | FileCheck -check-prefix=RDATA %s
-RDATA:      0x180005000 00000000 00000000 08100080 01000000
-RDATA-NEXT: 0x180005010 1c100080 01000000 00000000 00000000
-RDATA-NEXT: 0x180005020 30100080 01000000 00000000 00000000
+RDATA:      0x180005000 00000000 00000000 14100080 01000000
+RDATA-NEXT: 0x180005010 28100080 01000000 00000000 00000000
+RDATA-NEXT: 0x180005020 48100080 01000000 00000000 00000000
 
 RUN: llvm-readobj --coff-basereloc out.dll | FileCheck -check-prefix=BASERELOC %s
 BASERELOC:      BaseReloc [
@@ -110,6 +117,8 @@ arm64ec_data_sym:
     .rva __impchk_func
     .rva __impchk_func2
     .rva func
+    .rva "#func"
+    .rva "#t2func"
 
 #--- icall.s
     .text

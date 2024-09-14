@@ -2651,15 +2651,9 @@ bool VectorCombine::shrinkType(llvm::Instruction &I) {
   if (ShrinkCost > CurrentCost)
     return false;
 
-  Value *Op0 = ZExted;
-  if (auto *OI = dyn_cast<Instruction>(OtherOperand)) {
-    if (isa<PHINode>(OI))
-      Builder.SetInsertPoint(OI->getParent()->getFirstInsertionPt());
-    else
-      Builder.SetInsertPoint(OI->getNextNode());
-  }
-  Value *Op1 = Builder.CreateTrunc(OtherOperand, SmallTy);
   Builder.SetInsertPoint(&I);
+  Value *Op0 = ZExted;
+  Value *Op1 = Builder.CreateTrunc(OtherOperand, SmallTy);
   // Keep the order of operands the same
   if (I.getOperand(0) == OtherOperand)
     std::swap(Op0, Op1);
