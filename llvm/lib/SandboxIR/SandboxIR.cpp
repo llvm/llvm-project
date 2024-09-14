@@ -2495,6 +2495,77 @@ PoisonValue *PoisonValue::getElementValue(unsigned Idx) const {
       cast<llvm::PoisonValue>(Val)->getElementValue(Idx)));
 }
 
+void GlobalObject::setAlignment(MaybeAlign Align) {
+  Ctx.getTracker()
+      .emplaceIfTracking<
+          GenericSetter<&GlobalObject::getAlign, &GlobalObject::setAlignment>>(
+          this);
+  cast<llvm::GlobalObject>(Val)->setAlignment(Align);
+}
+
+void GlobalObject::setGlobalObjectSubClassData(unsigned V) {
+  Ctx.getTracker()
+      .emplaceIfTracking<
+          GenericSetter<&GlobalObject::getGlobalObjectSubClassData,
+                        &GlobalObject::setGlobalObjectSubClassData>>(this);
+  cast<llvm::GlobalObject>(Val)->setGlobalObjectSubClassData(V);
+}
+
+void GlobalObject::setSection(StringRef S) {
+  Ctx.getTracker()
+      .emplaceIfTracking<
+          GenericSetter<&GlobalObject::getSection, &GlobalObject::setSection>>(
+          this);
+  cast<llvm::GlobalObject>(Val)->setSection(S);
+}
+
+template <typename GlobalT, typename LLVMGlobalT, typename ParentT,
+          typename LLVMParentT>
+GlobalT &GlobalWithNodeAPI<GlobalT, LLVMGlobalT, ParentT, LLVMParentT>::
+    LLVMGVToGV::operator()(LLVMGlobalT &LLVMGV) const {
+  return cast<GlobalT>(*Ctx.getValue(&LLVMGV));
+}
+
+namespace llvm::sandboxir {
+// Explicit instantiations.
+template class GlobalWithNodeAPI<GlobalIFunc, llvm::GlobalIFunc, GlobalObject,
+                                 llvm::GlobalObject>;
+template class GlobalWithNodeAPI<Function, llvm::Function, GlobalObject,
+                                 llvm::GlobalObject>;
+} // namespace llvm::sandboxir
+
+void GlobalIFunc::setResolver(Constant *Resolver) {
+  Ctx.getTracker()
+      .emplaceIfTracking<
+          GenericSetter<&GlobalIFunc::getResolver, &GlobalIFunc::setResolver>>(
+          this);
+  cast<llvm::GlobalIFunc>(Val)->setResolver(
+      cast<llvm::Constant>(Resolver->Val));
+}
+
+Constant *GlobalIFunc::getResolver() const {
+  return Ctx.getOrCreateConstant(cast<llvm::GlobalIFunc>(Val)->getResolver());
+}
+
+Function *GlobalIFunc::getResolverFunction() {
+  return cast<Function>(Ctx.getOrCreateConstant(
+      cast<llvm::GlobalIFunc>(Val)->getResolverFunction()));
+}
+
+void GlobalValue::setUnnamedAddr(UnnamedAddr V) {
+  Ctx.getTracker()
+      .emplaceIfTracking<GenericSetter<&GlobalValue::getUnnamedAddr,
+                                       &GlobalValue::setUnnamedAddr>>(this);
+  cast<llvm::GlobalValue>(Val)->setUnnamedAddr(V);
+}
+
+void GlobalValue::setVisibility(VisibilityTypes V) {
+  Ctx.getTracker()
+      .emplaceIfTracking<GenericSetter<&GlobalValue::getVisibility,
+                                       &GlobalValue::setVisibility>>(this);
+  cast<llvm::GlobalValue>(Val)->setVisibility(V);
+}
+
 BlockAddress *BlockAddress::get(Function *F, BasicBlock *BB) {
   auto *LLVMC = llvm::BlockAddress::get(cast<llvm::Function>(F->Val),
                                         cast<llvm::BasicBlock>(BB->Val));
@@ -2519,6 +2590,16 @@ Function *BlockAddress::getFunction() const {
 BasicBlock *BlockAddress::getBasicBlock() const {
   return cast<BasicBlock>(
       Ctx.getValue(cast<llvm::BlockAddress>(Val)->getBasicBlock()));
+}
+
+DSOLocalEquivalent *DSOLocalEquivalent::get(GlobalValue *GV) {
+  auto *LLVMC = llvm::DSOLocalEquivalent::get(cast<llvm::GlobalValue>(GV->Val));
+  return cast<DSOLocalEquivalent>(GV->getContext().getValue(LLVMC));
+}
+
+GlobalValue *DSOLocalEquivalent::getGlobalValue() const {
+  return cast<GlobalValue>(
+      Ctx.getValue(cast<llvm::DSOLocalEquivalent>(Val)->getGlobalValue()));
 }
 
 ConstantTokenNone *ConstantTokenNone::get(Context &Ctx) {
@@ -2655,6 +2736,14 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
       It->second = std::unique_ptr<UndefValue>(
           new UndefValue(cast<llvm::UndefValue>(C), *this));
       return It->second.get();
+    case llvm::Value::DSOLocalEquivalentVal: {
+      auto *DSOLE = cast<llvm::DSOLocalEquivalent>(C);
+      It->second = std::unique_ptr<DSOLocalEquivalent>(
+          new DSOLocalEquivalent(DSOLE, *this));
+      auto *Ret = It->second.get();
+      getOrCreateValueInternal(DSOLE->getGlobalValue(), DSOLE);
+      return Ret;
+    }
     case llvm::Value::ConstantArrayVal:
       It->second = std::unique_ptr<ConstantArray>(
           new ConstantArray(cast<llvm::ConstantArray>(C), *this));
@@ -2670,6 +2759,10 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
     case llvm::Value::FunctionVal:
       It->second = std::unique_ptr<Function>(
           new Function(cast<llvm::Function>(C), *this));
+      break;
+    case llvm::Value::GlobalIFuncVal:
+      It->second = std::unique_ptr<GlobalIFunc>(
+          new GlobalIFunc(cast<llvm::GlobalIFunc>(C), *this));
       break;
     default:
       It->second = std::unique_ptr<Constant>(new Constant(C, *this));

@@ -1073,7 +1073,10 @@ def err_expected_lambda_body : Error<"expected body of lambda expression">;
 def warn_cxx98_compat_lambda : Warning<
   "lambda expressions are incompatible with C++98">,
   InGroup<CXX98Compat>, DefaultIgnore;
-def ext_lambda : ExtWarn<"lambdas are a C++11 extension">, InGroup<CXX11>;
+def ext_lambda : ExtWarn<"lambdas are a %select{C++11|clang HLSL}0 extension">,
+  InGroup<CXX11>;
+def ext_hlsl_lambda : ExtWarn<ext_lambda.Summary>,
+  InGroup<HLSLExtension>;
 def err_lambda_decl_specifier_repeated : Error<
   "%select{'mutable'|'static'|'constexpr'|'consteval'}0 cannot "
   "appear multiple times in a lambda declarator">;
