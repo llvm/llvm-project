@@ -504,10 +504,10 @@ struct FragmentCompiler {
       auto Fast = isFastTidyCheck(Str);
       if (!Fast.has_value()) {
         diag(Warning,
-             llvm::formatv(
-                 "Latency of clang-tidy check '{0}' is not known. "
-                 "It will only run if ClangTidy.FastCheckFilter is Loose or None",
-                 Str)
+             llvm::formatv("Latency of clang-tidy check '{0}' is not known. "
+                           "It will only run if ClangTidy.FastCheckFilter is "
+                           "Loose or None",
+                           Str)
                  .str(),
              Arg.Range);
       } else if (!*Fast) {
@@ -621,6 +621,31 @@ struct FragmentCompiler {
           [AllScopes(**F.AllScopes)](const Params &, Config &C) {
             C.Completion.AllScopes = AllScopes;
           });
+    }
+    if (F.ArgumentLists) {
+      if (**F.ArgumentLists == "None") {
+        Out.Apply.push_back(
+            [ArgumentLists(**F.ArgumentLists)](const Params &, Config &C) {
+              C.Completion.ArgumentLists = Config::ArgumentListsOption::None;
+            });
+      } else if (**F.ArgumentLists == "OpenDelimiter") {
+        Out.Apply.push_back(
+            [ArgumentLists(**F.ArgumentLists)](const Params &, Config &C) {
+              C.Completion.ArgumentLists =
+                  Config::ArgumentListsOption::OpenDelimiter;
+            });
+      } else if (**F.ArgumentLists == "Delimiters") {
+        Out.Apply.push_back([ArgumentLists(**F.ArgumentLists)](const Params &,
+                                                               Config &C) {
+          C.Completion.ArgumentLists = Config::ArgumentListsOption::Delimiters;
+        });
+      } else if (**F.ArgumentLists == "FullPlaceholders") {
+        Out.Apply.push_back(
+            [ArgumentLists(**F.ArgumentLists)](const Params &, Config &C) {
+              C.Completion.ArgumentLists =
+                  Config::ArgumentListsOption::FullPlaceholders;
+            });
+      }
     }
   }
 

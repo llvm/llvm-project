@@ -32,6 +32,7 @@
 #include "Quality.h"
 #include "SourceCode.h"
 #include "URI.h"
+#include "config.h"
 #include "index/Index.h"
 #include "index/Symbol.h"
 #include "index/SymbolOrigin.h"
@@ -350,7 +351,7 @@ struct CodeCompletionBuilder {
                         CodeCompletionContext::Kind ContextKind,
                         const CodeCompleteOptions &Opts,
                         bool IsUsingDeclaration, tok::TokenKind NextTokenKind)
-      : ASTCtx(ASTCtx), PlaceholderType(Opts.PlaceholderType),
+      : ASTCtx(ASTCtx), ArgumentLists(Opts.ArgumentLists),
         IsUsingDeclaration(IsUsingDeclaration), NextTokenKind(NextTokenKind) {
     Completion.Deprecated = true; // cleared by any non-deprecated overload.
     add(C, SemaCCS, ContextKind);
@@ -560,12 +561,22 @@ private:
   }
 
   std::string summarizeSnippet() const {
-    /// localize PlaceholderType for better readability
-    const bool None = PlaceholderType == CodeCompleteOptions::None;
-    const bool Open = PlaceholderType == CodeCompleteOptions::OpenDelimiter;
-    const bool Delim = PlaceholderType == CodeCompleteOptions::Delimiters;
+
+    /// localize a ArgList depending on the config. If the config is unset we
+    /// will use our local (this) version, else use the one of the config
+    const Config::ArgumentListsOption ArgList =
+        Config::current().Completion.ArgumentLists !=
+                Config::ArgumentListsOption::UnsetDefault
+            ? Config::current().Completion.ArgumentLists
+            : ArgumentLists;
+
+    /// localize ArgList value, tests for better readability
+    const bool None = ArgList == Config::ArgumentListsOption::None;
+    const bool Open = ArgList == Config::ArgumentListsOption::OpenDelimiter;
+    const bool Delim = ArgList == Config::ArgumentListsOption::Delimiters;
     const bool Full =
-        PlaceholderType == CodeCompleteOptions::FullPlaceholders ||
+        ArgList == Config::ArgumentListsOption::FullPlaceholders ||
+        ArgList == Config::ArgumentListsOption::UnsetDefault ||
         (!None && !Open && !Delim); // <-- failsafe
 
     if (IsUsingDeclaration)
@@ -631,7 +642,7 @@ private:
       if (Snippet->front() == '<')
         return None ? "" : (Open ? "<" : (EmptyArgs ? "<$1>()$0" : "<$1>($0)"));
       if (Snippet->front() == '(')
-        return None ? "" : (Open ? "(" : (EmptyArgs ? "()$0" : "($0)"));
+        return None ? "" : (Open ? "(" : (EmptyArgs ? "()" : "($0)"));
       return *Snippet; // Not an arg snippet?
     }
     // 'CompletionItemKind::Interface' matches template type aliases.
@@ -661,7 +672,8 @@ private:
   ASTContext *ASTCtx;
   CodeCompletion Completion;
   llvm::SmallVector<BundledEntry, 1> Bundled;
-  CodeCompleteOptions::PlaceholderOption PlaceholderType;
+  /// the way argument lists are handled.
+  Config::ArgumentListsOption ArgumentLists;
   // No snippets will be generated for using declarations and when the function
   // arguments are already present.
   bool IsUsingDeclaration;

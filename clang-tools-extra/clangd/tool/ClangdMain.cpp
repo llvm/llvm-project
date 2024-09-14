@@ -242,30 +242,15 @@ opt<std::string> FallbackStyle{
     init(clang::format::DefaultFallbackStyle),
 };
 
-opt<CodeCompleteOptions::PlaceholderOption> PlaceholderOption{
+opt<Config::ArgumentListsOption> PlaceholderOption{
     "function-arg-placeholders", cat(Features),
     desc("Set the way placeholders and delimiters are implemented."),
-    init(CodeCompleteOptions().PlaceholderType),
-    values(
-        clEnumValN(CodeCompleteOptions::PlaceholderOption::None, "None",
-                   "insert nothing, not even the delimiters \"()\" or "
-                   "\"<>\": void foo"),
-        clEnumValN(CodeCompleteOptions::PlaceholderOption::OpenDelimiter,
-                   "OpenDelimiter",
-                   "Only insert opening delimiter \"(\" or \"<\", no "
-                   "placeholders: void foo("),
-        clEnumValN(CodeCompleteOptions::PlaceholderOption::Delimiters,
-                   "Delimiters",
-                   "Only insert delimiters \"()\" and \"<>\", no placeholders: "
-                   "void foo()"),
-        clEnumValN(
-            CodeCompleteOptions::PlaceholderOption::FullPlaceholders,
-            "FullPlaceholders",
-            "[default] Use full type names and value names: void foo(int x)"),
-        clEnumValN(CodeCompleteOptions::PlaceholderOption::Delimiters, "0",
-                   "[deprecated] use: Delimiters instead"),
-        clEnumValN(CodeCompleteOptions::PlaceholderOption::FullPlaceholders,
-                   "1", "[deprecated] use: FullPlaceholders instead"))
+    init(CodeCompleteOptions().ArgumentLists),
+    values(clEnumValN(Config::ArgumentListsOption::Delimiters, "0",
+                      "Empty pair of delimiters inserted"),
+           clEnumValN(
+               Config::ArgumentListsOption::FullPlaceholders, "1",
+               "[default] Delimiters and placeholder arguments are inserted."))
 
 };
 
@@ -668,6 +653,7 @@ public:
     std::optional<Config::CDBSearchSpec> CDBSearch;
     std::optional<Config::ExternalIndexSpec> IndexSpec;
     std::optional<Config::BackgroundPolicy> BGPolicy;
+    std::optional<Config::ArgumentListsOption> ArgumentLists;
 
     // If --compile-commands-dir arg was invoked, check value and override
     // default path.
@@ -712,6 +698,10 @@ public:
       BGPolicy = Config::BackgroundPolicy::Skip;
     }
 
+    if (PlaceholderOption == Config::ArgumentListsOption::Delimiters) {
+      ArgumentLists = PlaceholderOption;
+    }
+
     Frag = [=](const config::Params &, Config &C) {
       if (CDBSearch)
         C.CompileFlags.CDBSearch = *CDBSearch;
@@ -719,6 +709,9 @@ public:
         C.Index.External = *IndexSpec;
       if (BGPolicy)
         C.Index.Background = *BGPolicy;
+      if (ArgumentLists && C.Completion.ArgumentLists ==
+                               Config::ArgumentListsOption::UnsetDefault)
+        C.Completion.ArgumentLists = *ArgumentLists;
       if (AllScopesCompletion.getNumOccurrences())
         C.Completion.AllScopes = AllScopesCompletion;
 
@@ -934,7 +927,6 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
     Opts.CodeComplete.IncludeIndicator.Insert.clear();
     Opts.CodeComplete.IncludeIndicator.NoInsert.clear();
   }
-  Opts.CodeComplete.PlaceholderType = PlaceholderOption;
   Opts.CodeComplete.RunParser = CodeCompletionParse;
   Opts.CodeComplete.RankingModel = RankingModel;
 

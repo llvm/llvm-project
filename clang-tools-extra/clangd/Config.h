@@ -126,11 +126,29 @@ struct Config {
     std::vector<std::string> FullyQualifiedNamespaces;
   } Style;
 
+  /// controls the completion options for argument lists.
+  enum class ArgumentListsOption {
+    /// the default value. This will imply FullPlaceholders unless overridden by
+    /// --function-arg-placeholders=0, in which case Delimiters is used.
+    /// any other use-case of --function-arg-placeholders is ignored
+    UnsetDefault = 0,
+    /// nothing, no argument list and also NO Delimiters "()" or "<>"
+    None,
+    /// open, only opening delimiter "(" or "<"
+    OpenDelimiter,
+    /// empty pair of delimiters "()" or "<>" (or [legacy] alias 0)
+    Delimiters,
+    /// full name of both type and variable (or [legacy] alias 1)
+    FullPlaceholders,
+  };
+
   /// Configures code completion feature.
   struct {
     /// Whether code completion includes results that are not visible in current
     /// scopes.
     bool AllScopes = true;
+    /// controls the completion options for argument lists.
+    ArgumentListsOption ArgumentLists = ArgumentListsOption::UnsetDefault;
   } Completion;
 
   /// Configures hover feature.
@@ -150,6 +168,7 @@ struct Config {
     bool BlockEnd = false;
     // Limit the length of type names in inlay hints. (0 means no limit)
     uint32_t TypeNameLimit = 32;
+
   } InlayHints;
 
   struct {
