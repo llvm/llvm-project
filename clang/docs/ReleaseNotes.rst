@@ -108,6 +108,9 @@ C++ Language Changes
 - Allow single element access of GCC vector/ext_vector_type object to be
   constant expression. Supports the `V.xyzw` syntax and other tidbits
   as seen in OpenCL. Selecting multiple elements is left as a future work.
+- Implement `CWG1815 <https://wg21.link/CWG1815>`_. Support lifetime extension 
+  of temporary created by aggregate initialization using a default member
+  initializer.
 
 - Accept C++26 user-defined ``static_assert`` messages in C++11 as an extension.
 
@@ -175,6 +178,8 @@ C2y Feature Support
 
 C23 Feature Support
 ^^^^^^^^^^^^^^^^^^^
+
+- Clang now supports `N3029 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3029.htm>`_ Improved Normal Enumerations.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
@@ -298,7 +303,7 @@ Improvements to Clang's diagnostics
 
 - Clang now warns for u8 character literals used in C23 with ``-Wpre-c23-compat`` instead of ``-Wpre-c++17-compat``.
 
-- Clang now diagnoses cases where a dangling ``GSLOwner<GSLPointer>`` object is constructed, e.g. ``std::vector<string_view> v = {std::string()};`` (#GH100526).
+- Clang now diagnose when importing module implementation partition units in module interface units.
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -380,6 +385,10 @@ Bug Fixes to C++ Support
 - Fixed a bug where defaulted comparison operators would remove ``const`` from base classes. (#GH102588)
 - Fix a crash when using ``source_location`` in the trailing return type of a lambda expression. (#GH67134)
 - A follow-up fix was added for (#GH61460), as the previous fix was not entirely correct. (#GH86361)
+- Fixed a crash in the typo correction of an invalid CTAD guide. (#GH107887)
+- Fixed a crash when clang tries to subtitute parameter pack while retaining the parameter
+  pack. #GH63819, #GH107560
+
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -457,6 +466,8 @@ LoongArch Support
 RISC-V Support
 ^^^^^^^^^^^^^^
 
+- The option ``-mcmodel=large`` for the large code model is supported.
+
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -490,7 +501,7 @@ AST Matchers
 - Fixed an issue with the `hasName` and `hasAnyName` matcher when matching
   inline namespaces with an enclosing namespace of the same name.
 
-- Fixed an ordering issue with the `hasOperands` matcher occuring when setting a
+- Fixed an ordering issue with the `hasOperands` matcher occurring when setting a
   binding in the first matcher and using it in the second matcher.
 
 clang-format

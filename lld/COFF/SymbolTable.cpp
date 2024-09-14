@@ -584,7 +584,7 @@ void SymbolTable::initializeECThunks() {
 
     Symbol *sym = exitThunks.lookup(file->thunkSym);
     if (!sym)
-      sym = exitThunks.lookup(file->impSym);
+      sym = exitThunks.lookup(file->impECSym);
     file->impchkThunk->exitThunk = dyn_cast_or_null<Defined>(sym);
   }
 }
@@ -785,11 +785,12 @@ Symbol *SymbolTable::addCommon(InputFile *f, StringRef n, uint64_t size,
   return s;
 }
 
-DefinedImportData *SymbolTable::addImportData(StringRef n, ImportFile *f) {
+DefinedImportData *SymbolTable::addImportData(StringRef n, ImportFile *f,
+                                              Chunk *&location) {
   auto [s, wasInserted] = insert(n, nullptr);
   s->isUsedInRegularObj = true;
   if (wasInserted || isa<Undefined>(s) || s->isLazy()) {
-    replaceSymbol<DefinedImportData>(s, n, f);
+    replaceSymbol<DefinedImportData>(s, n, f, location);
     return cast<DefinedImportData>(s);
   }
 

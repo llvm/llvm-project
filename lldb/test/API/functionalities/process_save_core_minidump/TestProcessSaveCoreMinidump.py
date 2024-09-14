@@ -493,3 +493,32 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
 
         finally:
             self.assertTrue(self.dbg.DeleteTarget(target))
+
+    @skipUnlessPlatform(["linux"])
+    def minidump_deleted_on_save_failure(self):
+        """Test that verifies the minidump file is deleted after an error"""
+
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+        try:
+            target = self.dbg.CreateTarget(exe)
+            process = target.LaunchSimple(
+                None, None, self.get_process_working_directory()
+            )
+            self.assertState(process.GetState(), lldb.eStateStopped)
+
+            custom_file = self.getBuildArtifact("core.should.be.deleted.custom.dmp")
+            options = lldb.SBSaveCoreOptions()
+            options.SetOutputFile(lldb.SBFileSpec(custom_file))
+            options.SetPluginName("minidump")
+            options.SetStyle(lldb.eSaveCoreCustomOnly)
+            # We set custom only and have no thread list and have no memory.
+            error = process.SaveCore(options)
+            self.assertTrue(error.Fail())
+            self.assertIn(
+                "no valid address ranges found for core style", error.GetCString()
+            )
+            self.assertTrue(not os.path.isfile(custom_file))
+
+        finally:
+            self.assertTrue(self.dbg.DeleteTarget(target))
