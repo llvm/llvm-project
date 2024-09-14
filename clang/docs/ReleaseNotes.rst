@@ -303,6 +303,8 @@ Improvements to Clang's diagnostics
 
 - Clang now warns for u8 character literals used in C23 with ``-Wpre-c23-compat`` instead of ``-Wpre-c++17-compat``.
 
+- Clang now diagnose when importing module implementation partition units in module interface units.
+
 Improvements to Clang's time-trace
 ----------------------------------
 

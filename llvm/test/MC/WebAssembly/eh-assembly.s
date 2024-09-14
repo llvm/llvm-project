@@ -10,6 +10,7 @@
 eh_legacy_test:
   # try-catch with catch, catch_all, throw, and rethrow
   try
+    i32.const 3
     throw     __cpp_exception
   catch       __cpp_exception
     drop
@@ -36,10 +37,26 @@ eh_legacy_test:
   catch       __cpp_exception
   end_try
   drop
+
+  # try-catch with a mulvivalue return
+  try () -> (i32, f32)
+    i32.const 0
+    f32.const 0.0
+  catch       __cpp_exception
+    f32.const 1.0
+  end_try
+  drop
+  drop
+
+  # Catch-less try
+  try
+    call  foo
+  end_try
   end_function
 
 # CHECK-LABEL: eh_legacy_test:
 # CHECK-NEXT:    try
+# CHECK-NEXT:    i32.const       3
 # CHECK-NEXT:    throw           __cpp_exception
 # CHECK-NEXT:    catch           __cpp_exception
 # CHECK-NEXT:    drop
@@ -64,4 +81,18 @@ eh_legacy_test:
 # CHECK-NEXT:    catch           __cpp_exception
 # CHECK-NEXT:    end_try
 # CHECK-NEXT:    drop
+
+# CHECK:         try             () -> (i32, f32)
+# CHECK-NEXT:    i32.const       0
+# CHECK-NEXT:    f32.const       0x0p0
+# CHECK-NEXT:    catch           __cpp_exception
+# CHECK-NEXT:    f32.const       0x1p0
+# CHECK-NEXT:    end_try
+# CHECK-NEXT:    drop
+# CHECK-NEXT:    drop
+
+# CHECK:         try
+# CHECK-NEXT:    call    foo
+# CHECK-NEXT:    end_try
 # CHECK-NEXT:    end_function
+
