@@ -208,7 +208,7 @@ on support follow.
      ``Zmmul``         Supported
      ``Ztso``          Supported
      ``Zvbb``          Supported
-     ``Zvbc``          Supported (`See note <#iscv-vector-crypto-note>`__)
+     ``Zvbc``          Supported (`See note <#riscv-vector-crypto-note>`__)
      ``Zve32x``        (`Partially <#riscv-vlen-32-note>`__) Supported
      ``Zve32f``        (`Partially <#riscv-vlen-32-note>`__) Supported
      ``Zve64x``        Supported
@@ -219,18 +219,18 @@ on support follow.
      ``Zvfh``          Supported
      ``Zvfhmin``       Supported
      ``Zvkb``          Supported
-     ``Zvkg``          Supported (`See note <#iscv-vector-crypto-note>`__)
-     ``Zvkn``          Supported (`See note <#iscv-vector-crypto-note>`__)
-     ``Zvknc``         Supported (`See note <#iscv-vector-crypto-note>`__)
-     ``Zvkned``        Supported (`See note <#iscv-vector-crypto-note>`__)
-     ``Zvkng``         Supported (`See note <#iscv-vector-crypto-note>`__)
-     ``Zvknha``        Supported (`See note <#iscv-vector-crypto-note>`__)
-     ``Zvknhb``        Supported (`See note <#iscv-vector-crypto-note>`__)
-     ``Zvks``          Supported (`See note <#iscv-vector-crypto-note>`__)
-     ``Zvksc``         Supported (`See note <#iscv-vector-crypto-note>`__)
-     ``Zvksed``        Supported (`See note <#iscv-vector-crypto-note>`__)
-     ``Zvksg``         Supported (`See note <#iscv-vector-crypto-note>`__)
-     ``Zvksh``         Supported (`See note <#iscv-vector-crypto-note>`__)
+     ``Zvkg``          Supported (`See note <#riscv-vector-crypto-note>`__)
+     ``Zvkn``          Supported (`See note <#riscv-vector-crypto-note>`__)
+     ``Zvknc``         Supported (`See note <#riscv-vector-crypto-note>`__)
+     ``Zvkned``        Supported (`See note <#riscv-vector-crypto-note>`__)
+     ``Zvkng``         Supported (`See note <#riscv-vector-crypto-note>`__)
+     ``Zvknha``        Supported (`See note <#riscv-vector-crypto-note>`__)
+     ``Zvknhb``        Supported (`See note <#riscv-vector-crypto-note>`__)
+     ``Zvks``          Supported (`See note <#riscv-vector-crypto-note>`__)
+     ``Zvksc``         Supported (`See note <#riscv-vector-crypto-note>`__)
+     ``Zvksed``        Supported (`See note <#riscv-vector-crypto-note>`__)
+     ``Zvksg``         Supported (`See note <#riscv-vector-crypto-note>`__)
+     ``Zvksh``         Supported (`See note <#riscv-vector-crypto-note>`__)
      ``Zvkt``          Supported
      ``Zvl32b``        (`Partially <#riscv-vlen-32-note>`__) Supported
      ``Zvl64b``        Supported
