@@ -976,13 +976,15 @@ void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
 }
 
 /// Replace \p VPBB with a VPIRBasicBlock wrapping \p IRBB. All recipes from \p
-/// VPBB are moved to the newly created VPIRBasicBlock.  VPBB must have a single
-/// predecessor, which is rewired to the new VPIRBasicBlock. All successors of
-/// VPBB, if any, are rewired to the new VPIRBasicBlock.
+/// VPBB are moved to the end of the newly created VPIRBasicBlock. VPBB must
+/// have a single predecessor, which is rewired to the new VPIRBasicBlock. All
+/// successors of VPBB, if any, are rewired to the new VPIRBasicBlock.
 static void replaceVPBBWithIRVPBB(VPBasicBlock *VPBB, BasicBlock *IRBB) {
   VPIRBasicBlock *IRMiddleVPBB = createVPIRBasicBlockFor(IRBB);
-  for (auto &R : make_early_inc_range(*VPBB))
+  for (auto &R : make_early_inc_range(*VPBB)) {
+    assert(!R.isPhi() && "Tried to move phi recipe to end of block");
     R.moveBefore(*IRMiddleVPBB, IRMiddleVPBB->end());
+  }
   VPBlockBase *PredVPBB = VPBB->getSinglePredecessor();
   VPBlockUtils::disconnectBlocks(PredVPBB, VPBB);
   VPBlockUtils::connectBlocks(PredVPBB, IRMiddleVPBB);
