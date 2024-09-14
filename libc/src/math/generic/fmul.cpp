@@ -55,70 +55,69 @@ LLVM_LIBC_FUNCTION(float, fmul, (double x, double y)) {
   float result_f = static_cast<float>(result);
   FloatBits rf_bits(result_f);
   uint32_t rf_exp = rf_bits.get_biased_exponent();
-  if (LIBC_LIKELY(rf_exp > 0 && rf_exp < 2*FloatBits::EXP_BIAS + 1)) {
+  if (LIBC_LIKELY(rf_exp > 0 && rf_exp < 2 * FloatBits::EXP_BIAS + 1)) {
     return result_f;
   }
 
   // Now result_f is either inf/nan/zero/denormal.
   if (x_bits.is_nan() || y_bits.is_nan()) {
-      if (x_bits.is_signaling_nan() || y_bits.is_signaling_nan())
-	fputil::raise_except_if_required(FE_INVALID);
+    if (x_bits.is_signaling_nan() || y_bits.is_signaling_nan())
+      fputil::raise_except_if_required(FE_INVALID);
 
-      if (x_bits.is_quiet_nan()) {
-        InStorageType x_payload = x_bits.get_mantissa();
-        x_payload >>= InFPBits::FRACTION_LEN - OutFPBits::FRACTION_LEN;
-        return OutFPBits::quiet_nan(x_bits.sign(),
-                                    static_cast<OutStorageType>(x_payload))
-            .get_val();
-      }
+    if (x_bits.is_quiet_nan()) {
+      InStorageType x_payload = x_bits.get_mantissa();
+      x_payload >>= InFPBits::FRACTION_LEN - OutFPBits::FRACTION_LEN;
+      return OutFPBits::quiet_nan(x_bits.sign(),
+                                  static_cast<OutStorageType>(x_payload))
+          .get_val();
+    }
 
-      if (y_bits.is_quiet_nan()) {
-        InStorageType y_payload = y_bits.get_mantissa();
-        y_payload >>= InFPBits::FRACTION_LEN - OutFPBits::FRACTION_LEN;
-        return OutFPBits::quiet_nan(y_bits.sign(),
-                                    static_cast<OutStorageType>(y_payload))
-            .get_val();
-      }
+    if (y_bits.is_quiet_nan()) {
+      InStorageType y_payload = y_bits.get_mantissa();
+      y_payload >>= InFPBits::FRACTION_LEN - OutFPBits::FRACTION_LEN;
+      return OutFPBits::quiet_nan(y_bits.sign(),
+                                  static_cast<OutStorageType>(y_payload))
+          .get_val();
+    }
+
+    return OutFPBits::quiet_nan().get_val();
+  }
+
+  if (x_bits.is_inf()) {
+    if (y_bits.is_zero()) {
+      fputil::set_errno_if_required(EDOM);
+      fputil::raise_except_if_required(FE_INVALID);
 
       return OutFPBits::quiet_nan().get_val();
     }
 
-    if (x_bits.is_inf()) {
-      if (y_bits.is_zero()) {
-	fputil::set_errno_if_required(EDOM);
-	fputil::raise_except_if_required(FE_INVALID);
-	
-        return OutFPBits::quiet_nan().get_val();
-      }
+    return OutFPBits::inf(result_sign).get_val();
+  }
 
-      return OutFPBits::inf(result_sign).get_val();
+  if (y_bits.is_inf()) {
+    if (x_bits.is_zero()) {
+      fputil::set_errno_if_required(EDOM);
+      fputil::raise_except_if_required(FE_INVALID);
+      return OutFPBits::quiet_nan().get_val();
     }
 
-    if (y_bits.is_inf()) {
-      if (x_bits.is_zero()) {
-	fputil::set_errno_if_required(EDOM);
-	fputil::raise_except_if_required(FE_INVALID);
-        return OutFPBits::quiet_nan().get_val();
-      }
+    return OutFPBits::inf(result_sign).get_val();
+  }
 
-      return OutFPBits::inf(result_sign).get_val();
-    }
-
-    // Now either x or y is zero, and the other one is finite.
-    if (hif_bits.is_inf()) {
-      fputil::set_errno_if_required(ERANGE);
-      return OutFPBits::inf(result_sign).get_val();
-    }
-
-    if (x_bits.is_zero() || y_bits.is_zero())
-      return FloatBits::zero(result_sign).get_val();
-
+  // Now either x or y is zero, and the other one is finite.
+  if (hif_bits.is_inf()) {
     fputil::set_errno_if_required(ERANGE);
-    fputil::raise_except_if_required(FE_UNDERFLOW);
-    return result_f;
+    return OutFPBits::inf(result_sign).get_val();
+  }
 
-    #endif
-    
+  if (x_bits.is_zero() || y_bits.is_zero())
+    return FloatBits::zero(result_sign).get_val();
+
+  fputil::set_errno_if_required(ERANGE);
+  fputil::raise_except_if_required(FE_UNDERFLOW);
+  return result_f;
+
+#endif
 }
-}
+} // namespace LIBC_NAMESPACE_DECL
 // namespace LIBC_NAMESPACE_DECL

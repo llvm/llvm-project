@@ -28,9 +28,9 @@ TEST_F(LlvmLibcMulTest, SpecialInputs) {
     for (int j = 0; j < 180; ++j) {
       a *= 0.5;
       mpfr::BinaryInput<double> input{a, INPUTS[i][1]};
-      ASSERT_MPFR_MATCH_ALL_ROUNDING(
-          mpfr::Operation::Mul, input,
-          LIBC_NAMESPACE::fmul(a, INPUTS[i][1]), 0.5);
+      ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Mul, input,
+                                     LIBC_NAMESPACE::fmul(a, INPUTS[i][1]),
+                                     0.5);
     }
   }
 }
