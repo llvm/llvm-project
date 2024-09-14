@@ -2155,9 +2155,7 @@ void NeonEmitter::genOverloadTypeCheckCode(raw_ostream &OS,
     }
 
     if (Mask) {
-      std::string Name = Def->getMangledName();
-      OverloadMap.insert(std::make_pair(Name, OverloadInfo()));
-      OverloadInfo &OI = OverloadMap[Name];
+      OverloadInfo &OI = OverloadMap[Def->getMangledName()];
       OI.Mask |= Mask;
       OI.PtrArgNum |= PtrArgNum;
       OI.HasConstPtr = HasConstPtr;
