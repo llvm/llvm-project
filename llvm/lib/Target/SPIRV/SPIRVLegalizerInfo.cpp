@@ -320,6 +320,7 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
                                G_FACOS,
                                G_FASIN,
                                G_FATAN,
+                               G_FATAN2,
                                G_FCOSH,
                                G_FSINH,
                                G_FTANH,
