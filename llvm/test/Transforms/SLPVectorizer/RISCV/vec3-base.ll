@@ -793,6 +793,25 @@ entry:
   ret double %add
 }
 
+define float @reduce_fadd_after_fmul_of_buildvec(float %a, float %b, float %c) {
+; CHECK-LABEL: @reduce_fadd_after_fmul_of_buildvec(
+; CHECK-NEXT:    [[MUL_0:%.*]] = fmul fast float [[A:%.*]], 1.000000e+01
+; CHECK-NEXT:    [[MUL_1:%.*]] = fmul fast float [[B:%.*]], 1.000000e+01
+; CHECK-NEXT:    [[MUL_2:%.*]] = fmul fast float [[C:%.*]], 1.000000e+01
+; CHECK-NEXT:    [[ADD_0:%.*]] = fadd fast float [[MUL_0]], [[MUL_1]]
+; CHECK-NEXT:    [[ADD_1:%.*]] = fadd fast float [[ADD_0]], [[MUL_2]]
+; CHECK-NEXT:    ret float [[ADD_1]]
+;
+  %mul.0 = fmul fast float %a, 10.0
+  %mul.1 = fmul fast float %b, 10.0
+  %mul.2 = fmul fast float %c, 10.0
+
+  %add.0 = fadd fast float %mul.0, %mul.1
+  %add.1 = fadd fast float %add.0, %mul.2
+  ret float %add.1
+}
+
+
 declare float @llvm.fmuladd.f32(float, float, float)
 
 declare double @llvm.fmuladd.f64(double, double, double)
