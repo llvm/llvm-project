@@ -11,7 +11,6 @@
 
 - (void)execute;
 - (RefPtr<RefCountable>)_protectedRefCountable;
-- (Ref<RefCountable>)_protectedRefCountable2;
 @end
 
 @implementation Foo
@@ -22,10 +21,6 @@
 
 - (RefPtr<RefCountable>)_protectedRefCountable {
   return _countable;
-}
-
-- (Ref<RefCountable>)_protectedRefCountable2 {
-  return *_countable;
 }
 
 @end
