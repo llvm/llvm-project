@@ -742,7 +742,9 @@ mlir::Operation *CIRGenFunction::buildLandingPad(mlir::cir::TryOp tryOp) {
     // landing pad by generating a branch to the dispatch block. In CIR the same
     // function is called to gather some state, but this block info it's not
     // useful per-se.
-    (void)getEHDispatchBlock(EHStack.getInnermostEHScope(), tryOp);
+    mlir::Block *dispatch =
+        getEHDispatchBlock(EHStack.getInnermostEHScope(), tryOp);
+    (void)dispatch;
   }
 
   return tryOp;
@@ -789,9 +791,12 @@ CIRGenFunction::getEHDispatchBlock(EHScopeStack::stable_iterator si,
 
     case EHScope::Cleanup: {
       assert(tryOp && "expected cir.try available");
-      llvm::MutableArrayRef<mlir::Region> regions = tryOp.getCatchRegions();
-      assert(regions.size() == 1 && "expected only one region");
-      dispatchBlock = &regions[0].getBlocks().back();
+      assert(callWithExceptionCtx && "expected call information");
+      {
+        mlir::OpBuilder::InsertionGuard guard(getBuilder());
+        dispatchBlock = builder.createBlock(&callWithExceptionCtx.getCleanup());
+        builder.createYield(callWithExceptionCtx.getLoc());
+      }
       break;
     }
 
