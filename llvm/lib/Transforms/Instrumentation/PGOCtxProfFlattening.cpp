@@ -220,6 +220,8 @@ class ProfileAnnotator final {
     return true;
   }
 
+  /// Check that all paths from the entry basic block that use edges with
+  /// non-zero counts arrive at a basic block with no successors (i.e. "exit")
   bool allTakenPathsExit() const {
     std::deque<const BasicBlock *> Worklist;
     DenseSet<const BasicBlock *> Visited;

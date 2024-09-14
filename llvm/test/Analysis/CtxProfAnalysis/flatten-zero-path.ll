@@ -1,3 +1,4 @@
+; Check that flattened profile lowering handles cold subgraphs that end in "unreachable"
 ; RUN: split-file %s %t
 ; RUN: llvm-ctxprof-util fromJSON --input=%t/profile.json --output=%t/profile.ctxprofdata
 ; RUN: opt -passes=ctx-prof-flatten %t/example.ll -use-ctx-profile=%t/profile.ctxprofdata -S -o - | FileCheck %s
