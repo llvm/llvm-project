@@ -9336,6 +9336,9 @@ TEST_F(FormatTest, AlignsAfterOpenBracket) {
                "    ccccccc(aaaaaaaaaaaaaaaaa,         //\n"
                "        b));",
                Style);
+  verifyFormat("aaaaaaa<bbbbbbbb> const aaaaaaaaaa{\n"
+               "    aaaaaaaaaaaaa(aaaaaaaaaaa, aaaaaaaaaaaaaaaa)};",
+               Style);
 
   Style.ColumnLimit = 30;
   verifyFormat("for (int foo = 0; foo < FOO;\n"
@@ -9395,6 +9398,9 @@ TEST_F(FormatTest, AlignsAfterOpenBracket) {
       "fooooooooooo(new FOO::BARRRR(\n"
       "    XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXZZZZZZZZZZZZZZZZZZZZZZZZZ()));",
       Style);
+  verifyFormat("aaaaaaa<bbbbbbbb> const aaaaaaaaaa{\n"
+               "    aaaaaaaaaaaaa(aaaaaaaaaaa, aaaaaaaaaaaaaaaa)};",
+               Style);
 
   Style.AlignAfterOpenBracket = FormatStyle::BAS_BlockIndent;
   Style.BinPackArguments = false;
@@ -9441,6 +9447,11 @@ TEST_F(FormatTest, AlignsAfterOpenBracket) {
       "    aaaaaaaaaaaaaaaa\n"
       ");",
       Style);
+  verifyFormat("aaaaaaa<bbbbbbbb> const aaaaaaaaaa{\n"
+               "    aaaaaaaaaaaaa(aaaaaaaaaaa, aaaaaaaaaaaaaaaa)\n"
+               "};",
+               Style);
+
   verifyFormat("bool aaaaaaaaaaaaaaaaaaaaaaaaaaa(\n"
                "    const bool &aaaaaaaaa, const void *aaaaaaaaaa\n"
                ") const {\n"
