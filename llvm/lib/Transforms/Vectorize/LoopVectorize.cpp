@@ -8726,18 +8726,12 @@ static void addLiveOutsForFirstOrderRecurrences(
   // Plan->getScalarLoopRegion()->getSinglePredecessor() in the future once the
   // scalar region is modeled as well.
   auto *MiddleVPBB = cast<VPBasicBlock>(VectorRegion->getSingleSuccessor());
-  BasicBlock *ExitBB = nullptr;
   VPBasicBlock *ScalarPHVPBB = nullptr;
   if (MiddleVPBB->getNumSuccessors() == 2) {
     // Order is strict: first is the exit block, second is the scalar preheader.
-    ExitBB =
-        cast<VPIRBasicBlock>(MiddleVPBB->getSuccessors()[0])->getIRBasicBlock();
     ScalarPHVPBB = cast<VPBasicBlock>(MiddleVPBB->getSuccessors()[1]);
   } else if (ExitUsersToFix.empty()) {
     ScalarPHVPBB = cast<VPBasicBlock>(MiddleVPBB->getSingleSuccessor());
-  } else {
-    ExitBB = cast<VPIRBasicBlock>(MiddleVPBB->getSingleSuccessor())
-                 ->getIRBasicBlock();
   }
   if (!ScalarPHVPBB) {
     assert(ExitUsersToFix.empty() &&
