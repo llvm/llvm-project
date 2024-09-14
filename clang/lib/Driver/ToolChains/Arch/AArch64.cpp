@@ -103,7 +103,7 @@ static bool DecodeAArch64Mcpu(const Driver &D, StringRef Mcpu, StringRef &CPU,
   if (!CpuInfo)
     return false;
 
-  Extensions.addCPUDefaults(*CpuInfo);
+  Extensions.addCPUFeatures(*CpuInfo);
 
   if (Split.second.size() &&
       !DecodeAArch64Features(D, Split.second, Extensions))
@@ -126,7 +126,7 @@ getAArch64ArchFeaturesFromMarch(const Driver &D, StringRef March,
   if (!ArchInfo)
     return false;
 
-  Extensions.addArchDefaults(*ArchInfo);
+  Extensions.addArchDefaultFeatures(*ArchInfo);
 
   if ((Split.second.size() &&
        !DecodeAArch64Features(D, Split.second, Extensions)))
