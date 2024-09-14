@@ -6939,14 +6939,6 @@ void LoopVectorizationCostModel::collectInLoopReductions() {
   }
 }
 
-VPValue *VPBuilder::createICmp(CmpInst::Predicate Pred, VPValue *A, VPValue *B,
-                               DebugLoc DL, const Twine &Name) {
-  assert(Pred >= CmpInst::FIRST_ICMP_PREDICATE &&
-         Pred <= CmpInst::LAST_ICMP_PREDICATE && "invalid predicate");
-  return tryInsertInstruction(
-      new VPInstruction(Instruction::ICmp, Pred, A, B, DL, Name));
-}
-
 // This function will select a scalable VF if the target supports scalable
 // vectors and a fixed one otherwise.
 // TODO: we could return a pair of values that specify the max VF and

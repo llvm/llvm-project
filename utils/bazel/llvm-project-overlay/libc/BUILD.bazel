@@ -163,6 +163,11 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "types_clock_t",
+    hdrs = ["hdr/types/clock_t.h"],
+)
+
+libc_support_library(
     name = "types_fenv_t",
     hdrs = ["hdr/types/fenv_t.h"],
 )
@@ -190,6 +195,11 @@ libc_support_library(
 libc_support_library(
     name = "types_time_t",
     hdrs = ["hdr/types/time_t.h"],
+)
+
+libc_support_library(
+    name = "types_struct_timeval",
+    hdrs = ["hdr/types/struct_timeval.h"],
 )
 
 libc_support_library(
@@ -1071,6 +1081,32 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_osutil_vdso",
+    hdrs = [
+        "src/__support/OSUtil/linux/vdso.h",
+        "src/__support/OSUtil/linux/vdso_sym.h"
+    ],
+    textual_hdrs = [
+        "src/__support/OSUtil/linux/riscv/vdso.h",
+        "src/__support/OSUtil/linux/arm/vdso.h",
+        "src/__support/OSUtil/linux/x86_64/vdso.h",
+        "src/__support/OSUtil/linux/aarch64/vdso.h",
+    ],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_cpp_array",
+        ":__support_cpp_optional",
+        ":__support_cpp_string_view",
+        ":__support_threads_callonce",
+        ":types_clock_t",
+        ":types_struct_timeval"
+    ],
+)
+
+libc_support_library(
     name = "__support_osutil_io",
     hdrs = ["src/__support/OSUtil/io.h"],
     textual_hdrs = select({
@@ -1212,6 +1248,25 @@ libc_support_library(
     ],
 )
 
+
+libc_support_library(
+    name = "__support_threads_callonce",
+    hdrs = [
+        "src/__support/threads/callonce.h",
+    ],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    textual_hdrs = [
+        "src/__support/threads/linux/callonce.h",
+    ],
+    deps = [
+        ":__support_macros_config",
+        ":__support_macros_optimization"
+    ],
+)
+
 libc_support_library(
     name = "__support_time",
     hdrs = glob(["src/__support/time/*.h"]),
@@ -1234,6 +1289,7 @@ libc_support_library(
         ":__support_cpp_expected",
         ":__support_error_or",
         ":__support_libc_assert",
+        ":__support_osutil_vdso",
         ":__support_time",
         ":hdr_time_macros",
         ":types_clockid_t",
