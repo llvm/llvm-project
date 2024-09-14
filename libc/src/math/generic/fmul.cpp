@@ -20,14 +20,15 @@ return fputil::generic::mul<float>(x, y);
 }
 */
 LLVM_LIBC_FUNCTION(float, fmul, (double x, double y)) {
-  fputil::DoubleDouble prod = fputil::exact_mult(x, y);
-  fputil::FPBits<double> hi_bits(prod.hi), lo_bits(prod.lo);
+  //fputil::DoubleDouble prod = fputil::exact_mult(x, y);
+  //fputil::FPBits<double> hi_bits(prod.hi), lo_bits(prod.lo);
 
+  fputil::DoubleDouble prod = fputil::exact_mult(x, y);
   float prod_hif = static_cast<float>(prod.hi);
   fputil::FPBits<float> hif_bits(prod_hif);
   using OutFPBits = fputil::FPBits<float>;
   using OutStorageType = typename OutFPBits::StorageType;
-  using InFPBits = FPBits<double>;
+  using InFPBits = fputil::FPBits<double>;
   using InStorageType = typename InFPBits::StorageType;
 
   InFPBits x_bits(x);
@@ -35,11 +36,38 @@ LLVM_LIBC_FUNCTION(float, fmul, (double x, double y)) {
 
   Sign result_sign = x_bits.sign() == y_bits.sign() ? Sign::POS : Sign::NEG;
 
+    using DoubleBits = fputil::FPBits<double>;
+  using FloatBits = fputil::FPBits<float>;
+  double result = prod.hi;
+  DoubleBits hi_bits(prod.hi), lo_bits(prod.lo);
+  // Check for cases where we need to propagate the sticky bits:
+  constexpr uint64_t STICKY_MASK = 0xFFF'FFF; // Lower (52 - 23 - 1 = 28 bits)
+  uint64_t sticky_bits = (hif_bits.uintval() & STICKY_MASK);
+  if (LIBC_UNLIKELY(sticky_bits == 0)) {
+    // Might need to propagate sticky bits:
+    if (!(lo_bits.is_inf_or_nan() || lo_bits.is_zero())) {
+      // Now prod.lo is nonzero and finite, we need to propagate sticky bits.
+      if (lo_bits.sign() != hi_bits.sign())
+        result = DoubleBits(hi_bits.uintval() - 1).get_val();
+      else
+        result = DoubleBits(hi_bits.uintval() | 1).get_val();
+    }
+  }
+
+  float result_f = static_cast<float>(result);
+  FloatBits rf_bits(result_f);
+  uint32_t rf_exp = rf_bits.get_biased_exponent();
+  
+  if (LIBC_LIKELY(rf_exp > 0 && rf_exp < 2*FloatBits::EXP_BIAS + 1))
+    return result_f;
+
+  // Now result_f is either inf/nan/zero/denormal.
+  // Perform all exceptional checks.
   if (LIBC_UNLIKELY(x_bits.is_inf_or_nan() || y_bits.is_inf_or_nan() ||
                     x_bits.is_zero() || y_bits.is_zero())) {
-    if (x_bits.is_nan() || y_bits.is_nan()) {
+  if (x_bits.is_nan() || y_bits.is_nan()) {
       if (x_bits.is_signaling_nan() || y_bits.is_signaling_nan())
-        raise_except_if_required(FE_INVALID);
+	fputil::raise_except_if_required(FE_INVALID);
 
       if (x_bits.is_quiet_nan()) {
         InStorageType x_payload = x_bits.get_mantissa();
@@ -62,8 +90,8 @@ LLVM_LIBC_FUNCTION(float, fmul, (double x, double y)) {
 
     if (x_bits.is_inf()) {
       if (y_bits.is_zero()) {
-        set_errno_if_required(EDOM);
-        raise_except_if_required(FE_INVALID);
+	fputil::set_errno_if_required(EDOM);
+	fputil::raise_except_if_required(FE_INVALID);
         return OutFPBits::quiet_nan().get_val();
       }
 
@@ -72,34 +100,28 @@ LLVM_LIBC_FUNCTION(float, fmul, (double x, double y)) {
 
     if (y_bits.is_inf()) {
       if (x_bits.is_zero()) {
-        set_errno_if_required(EDOM);
-        raise_except_if_required(FE_INVALID);
+	fputil::set_errno_if_required(EDOM);
+	fputil::raise_except_if_required(FE_INVALID);
         return OutFPBits::quiet_nan().get_val();
       }
 
       return OutFPBits::inf(result_sign).get_val();
     }
+  }
 
     // Now either x or y is zero, and the other one is finite.
+    if (hif_bits.is_inf()) {
+      fputil::set_errno_if_required(ERANGE);
+      return OutFPBits::zero(result_sign).get_val();
+    }
+
+    if (hif_bits.get_biased_exponent() == 0.0) {
+      fputil::set_errno_if_required(ERANGE);
+      fputil::raise_except_if_required(FE_UNDERFLOW);
+      return OutFPBits::zero(result_sign).get_val();
+    }
+
     return OutFPBits::zero(result_sign).get_val();
-  }
 
-  if (prod.lo == 0.0)
-    return static_cast<float>(prod.hi);
-
-  if (lo_bits.sign() != hi_bits.sign()) {
-    // Check if sticky bit of hi are all 0
-    constexpr uint64_t STICKY_MASK =
-        0xFFF'FFFF; // Lower (52 - 23 - 1 = 28 bits)
-    uint64_t sticky_bits = (hi_bits.uintval() & STICKY_MASK);
-    uint64_t result_bits =
-        (sticky_bits == 0) ? (hi_bits.uintval() - 1) : hi_bits.uintval();
-    double result = fputil::FPBits<double>(result_bits).get_val();
-    return static_cast<float>(result);
-  }
-
-  double result = fputil::FPBits<double>(hi_bits.uintval() | 1).get_val();
-  return static_cast<float>(result);
 }
-
-} // namespace LIBC_NAMESPACE_DECL
+}// namespace LIBC_NAMESPACE_DECL
