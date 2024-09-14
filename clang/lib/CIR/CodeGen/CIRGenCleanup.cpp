@@ -158,9 +158,9 @@ void CIRGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough) {
 
   // Check whether we need an EH cleanup. This is only true if we've
   // generated a lazy EH cleanup block.
-  auto *EHEntry = Scope.getCachedEHDispatchBlock();
-  assert(Scope.hasEHBranches() == (EHEntry != nullptr));
-  bool RequiresEHCleanup = (EHEntry != nullptr);
+  auto *ehEntry = Scope.getCachedEHDispatchBlock();
+  assert(Scope.hasEHBranches() == (ehEntry != nullptr));
+  bool RequiresEHCleanup = (ehEntry != nullptr);
   EHScopeStack::stable_iterator EHParent = Scope.getEnclosingEHScope();
 
   // Check the three conditions which might require a normal cleanup:
@@ -300,8 +300,8 @@ void CIRGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough) {
     }
 
     assert(tryOp && "expected available cir.try");
-    auto *NextAction = getEHDispatchBlock(EHParent, tryOp);
-    (void)NextAction;
+    auto *nextAction = getEHDispatchBlock(EHParent, tryOp);
+    (void)nextAction;
 
     // Push a terminate scope or cleanupendpad scope around the potentially
     // throwing cleanups. For funclet EH personalities, the cleanupendpad models
@@ -328,23 +328,34 @@ void CIRGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough) {
     if (EHActiveFlag.isValid() || IsActive) {
       cleanupFlags.setIsForEHCleanup();
       mlir::OpBuilder::InsertionGuard guard(builder);
-      if (!tryOp.isCleanupActive())
-        builder.createBlock(&tryOp.getCleanupRegion());
-      mlir::Block *cleanup = &tryOp.getCleanupRegion().back();
-      if (cleanup->empty()) {
-        builder.setInsertionPointToEnd(cleanup);
-        builder.createYield(tryOp.getLoc());
-      }
 
-      auto yield = cast<YieldOp>(cleanup->getTerminator());
+      auto yield = cast<YieldOp>(ehEntry->getTerminator());
       builder.setInsertionPoint(yield);
       buildCleanup(*this, Fn, cleanupFlags, EHActiveFlag);
     }
 
-    // In LLVM traditional codegen, here's where it branches off to
-    // NextAction.
     if (CPI)
       llvm_unreachable("NYI");
+    else {
+      // In LLVM traditional codegen, here's where it branches off to
+      // nextAction. CIR does not have a flat layout at this point, so
+      // instead patch all the landing pads that need to run this cleanup
+      // as well.
+      mlir::Block *currBlock = ehEntry;
+      while (currBlock && cleanupsToPatch.contains(currBlock)) {
+        mlir::OpBuilder::InsertionGuard guard(builder);
+        mlir::Block *blockToPatch = cleanupsToPatch[currBlock];
+        auto currYield = cast<YieldOp>(blockToPatch->getTerminator());
+        builder.setInsertionPoint(currYield);
+        buildCleanup(*this, Fn, cleanupFlags, EHActiveFlag);
+        currBlock = blockToPatch;
+      }
+
+      // The nextAction is yet to be populated, register that this
+      // cleanup should also incorporate any cleanup from nextAction
+      // when available.
+      cleanupsToPatch[nextAction] = ehEntry;
+    }
 
     // Leave the terminate scope.
     if (PushedTerminate)

@@ -27,11 +27,11 @@ e *g = new e(0);
 // CIR_AFTER:  {{%.*}} = cir.const #cir.int<1> : !u64i
 // CIR_AFTER:  {{%.*}} = cir.call @_Znwm(%1) : (!u64i) -> !cir.ptr<!void>
 
-// CIR_EH: cir.try synthetic {
-// CIR_EH:   cir.call exception @_ZN1eC1Ei
-// CIR_EH:   cir.yield
-// CIR_EH: } cleanup {
-// CIR_EH:   cir.call @_ZdlPvm
+// CIR_EH: cir.try synthetic cleanup {
+// CIR_EH:   cir.call exception @_ZN1eC1Ei{{.*}} cleanup {
+// CIR_EH:     cir.call @_ZdlPvm
+// CIR_EH:     cir.yield
+// CIR_EH:   }
 // CIR_EH:   cir.yield
 // CIR_EH: } catch [#cir.unwind {
 // CIR_EH:   cir.resume

@@ -43,15 +43,15 @@ void make1() {
 // CIR_EH:  cir.scope {
 // CIR_EH:    %1 = cir.alloca ![[S1]], !cir.ptr<![[S1]]>, ["agg.tmp.ensured"]
 // CIR_EH:    %2 = cir.get_member %1[0] {name = "v"} : !cir.ptr<![[S1]]> -> !cir.ptr<![[VecType]]>
-// CIR_EH:    cir.try synthetic {
+// CIR_EH:    cir.try synthetic cleanup {
 
 // Call v move ctor
-// CIR_EH:      cir.call exception @_ZN3VecC1EOS_(%2, %[[VEC]]) : (!cir.ptr<![[VecType]]>, !cir.ptr<![[VecType]]>) -> ()
-// CIR_EH:      cir.yield
-// CIR_EH:    } cleanup {
+// CIR_EH:      cir.call exception @_ZN3VecC1EOS_{{.*}} cleanup {
 
 // Destroy v after v move ctor throws
-// CIR_EH:      cir.call @_ZN3VecD1Ev(%[[VEC]]) : (!cir.ptr<![[VecType]]>) -> ()
+// CIR_EH:        cir.call @_ZN3VecD1Ev(%[[VEC]])
+// CIR_EH:        cir.yield
+// CIR_EH:      }
 // CIR_EH:      cir.yield
 // CIR_EH:    } catch [#cir.unwind {
 // CIR_EH:      cir.resume

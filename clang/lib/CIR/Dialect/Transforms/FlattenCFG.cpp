@@ -294,10 +294,10 @@ public:
     return mlir::ArrayAttr::get(caseAttrList.getContext(), symbolList);
   }
 
-  mlir::Block *buildCatchers(mlir::cir::TryOp tryOp,
-                             mlir::PatternRewriter &rewriter,
-                             mlir::Block *afterBody,
-                             mlir::Block *afterTry) const {
+  mlir::Block *
+  buildCatchers(mlir::cir::TryOp tryOp, mlir::PatternRewriter &rewriter,
+                mlir::Block *afterBody, mlir::Block *afterTry,
+                SmallVectorImpl<mlir::cir::CallOp> &callsToRewrite) const {
     auto loc = tryOp.getLoc();
     // Replace the tryOp return with a branch that jumps out of the body.
     rewriter.setInsertionPointToEnd(afterBody);
@@ -317,22 +317,22 @@ public:
     mlir::ArrayAttr symlist = collectTypeSymbols(tryOp);
     auto inflightEh = rewriter.create<mlir::cir::EhInflightOp>(
         loc, exceptionPtrType, typeIdType,
-        tryOp.isCleanupActive() ? mlir::UnitAttr::get(tryOp.getContext())
-                                : nullptr,
+        tryOp.getCleanup() ? mlir::UnitAttr::get(tryOp.getContext()) : nullptr,
         symlist);
     auto selector = inflightEh.getTypeId();
     auto exceptionPtr = inflightEh.getExceptionPtr();
 
     // Time to emit cleanup's.
-    if (tryOp.isCleanupActive()) {
-      assert(tryOp.getCleanupRegion().getBlocks().size() == 1 &&
+    if (tryOp.getCleanup()) {
+      assert(callsToRewrite.size() == 1 &&
              "NYI: if this isn't enough, move region instead");
       // TODO(cir): this might need to be duplicated instead of consumed since
       // for user-written try/catch we want these cleanups to also run when the
       // regular try scope adjurns (in case no exception is triggered).
       assert(tryOp.getSynthetic() &&
              "not implemented for user written try/catch");
-      mlir::Block *cleanupBlock = &tryOp.getCleanupRegion().getBlocks().back();
+      mlir::Block *cleanupBlock =
+          &callsToRewrite[0].getCleanup().getBlocks().back();
       auto cleanupYield =
           cast<mlir::cir::YieldOp>(cleanupBlock->getTerminator());
       cleanupYield->erase();
@@ -465,7 +465,7 @@ public:
 
     // Build catchers.
     mlir::Block *landingPad =
-        buildCatchers(tryOp, rewriter, afterBody, afterTry);
+        buildCatchers(tryOp, rewriter, afterBody, afterTry, callsToRewrite);
     rewriter.eraseOp(tryOp);
 
     // Rewrite calls.

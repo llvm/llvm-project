@@ -27,7 +27,6 @@ void yo() {
 // CIR:     cir.call exception @_ZN3VecC1Ev(%[[VADDR]]) : (!cir.ptr<![[VecTy]]>) -> ()
 // CIR:     cir.call @_ZN3VecD1Ev(%[[VADDR]]) : (!cir.ptr<![[VecTy]]>) -> ()
 // CIR:     cir.yield
-// CIR:   } cleanup {
 // CIR:   } catch [type #cir.all {
 // CIR:     cir.catch_param -> !cir.ptr<!void>
 // CIR:   }]
@@ -75,6 +74,16 @@ void yo2() {
     r++;
   }
 }
+
+void yo3(bool x) {
+  int r = 1;
+  try {
+    Vec v1, v2, v3, v4;
+  } catch (...) {
+    r++;
+  }
+}
+
 #endif
 
 // CIR: cir.func  @_Z3yo2v()
@@ -84,12 +93,11 @@ void yo2() {
 // CIR:       cir.call exception @_ZN3VecC1Ev
 // CIR:       cir.scope {
 // CIR:         cir.alloca ![[S1:.*]], !cir.ptr<![[S1:.*]]>, ["agg.tmp.ensured"]
-// CIR:         cir.call exception @_ZN3VecC1EOS_
+// CIR:         cir.call exception @_ZN3VecC1EOS_{{.*}} cleanup {
+// CIR:           cir.call @_ZN3VecD1Ev
+// CIR:           cir.yield
 // CIR:         cir.call @_ZN2S1D2Ev
 // CIR:       }
-// CIR:       cir.call @_ZN3VecD1Ev
-// CIR:       cir.yield
-// CIR:     } cleanup {
 // CIR:       cir.call @_ZN3VecD1Ev
 // CIR:       cir.yield
 // CIR:     } catch [type #cir.all {
@@ -99,3 +107,35 @@ void yo2() {
 // CIR:   }
 // CIR:   cir.return
 // CIR: }
+
+// CIR: cir.scope {
+// CIR:   %[[V1:.*]] = cir.alloca ![[VecTy]], !cir.ptr<![[VecTy]]>, ["v1"
+// CIR:   %[[V2:.*]] = cir.alloca ![[VecTy]], !cir.ptr<![[VecTy]]>, ["v2"
+// CIR:   %[[V3:.*]] = cir.alloca ![[VecTy]], !cir.ptr<![[VecTy]]>, ["v3"
+// CIR:   %[[V4:.*]] = cir.alloca ![[VecTy]], !cir.ptr<![[VecTy]]>, ["v4"
+// CIR:   cir.try {
+// CIR:     cir.call exception @_ZN3VecC1Ev(%[[V1]]) : (!cir.ptr<![[VecTy]]>) -> ()
+// CIR:     cir.call exception @_ZN3VecC1Ev(%[[V2]]) : (!cir.ptr<![[VecTy]]>) -> () cleanup {
+// CIR:       cir.call @_ZN3VecD1Ev(%[[V1]]) : (!cir.ptr<![[VecTy]]>) -> ()
+// CIR:       cir.yield
+// CIR:     }
+// CIR:     cir.call exception @_ZN3VecC1Ev(%[[V3]]) : (!cir.ptr<![[VecTy]]>) -> () cleanup {
+// CIR:       cir.call @_ZN3VecD1Ev(%[[V2]]) : (!cir.ptr<![[VecTy]]>) -> ()
+// CIR:       cir.call @_ZN3VecD1Ev(%[[V1]]) : (!cir.ptr<![[VecTy]]>) -> ()
+// CIR:       cir.yield
+// CIR:     }
+// CIR:     cir.call exception @_ZN3VecC1Ev(%[[V4]]) : (!cir.ptr<![[VecTy]]>) -> () cleanup {
+// CIR:       cir.call @_ZN3VecD1Ev(%[[V3]]) : (!cir.ptr<![[VecTy]]>) -> ()
+// CIR:       cir.call @_ZN3VecD1Ev(%[[V2]]) : (!cir.ptr<![[VecTy]]>) -> ()
+// CIR:       cir.call @_ZN3VecD1Ev(%[[V1]]) : (!cir.ptr<![[VecTy]]>) -> ()
+// CIR:       cir.yield
+// CIR:     }
+// CIR:     cir.call @_ZN3VecD1Ev(%[[V4]]) : (!cir.ptr<![[VecTy]]>) -> ()
+// CIR:     cir.call @_ZN3VecD1Ev(%[[V3]]) : (!cir.ptr<![[VecTy]]>) -> ()
+// CIR:     cir.call @_ZN3VecD1Ev(%[[V2]]) : (!cir.ptr<![[VecTy]]>) -> ()
+// CIR:     cir.call @_ZN3VecD1Ev(%[[V1]]) : (!cir.ptr<![[VecTy]]>) -> ()
+// CIR:     cir.yield
+// CIR:   } catch [type #cir.all {
+// CIR:   }]
+// CIR: }
+// CIR: cir.return

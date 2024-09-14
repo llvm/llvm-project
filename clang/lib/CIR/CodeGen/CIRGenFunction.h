@@ -1755,6 +1755,7 @@ public:
                                   mlir::cir::TryOp tryOp);
   /// Unified block containing a call to cir.resume
   mlir::Block *ehResumeBlock = nullptr;
+  llvm::DenseMap<mlir::Block *, mlir::Block *> cleanupsToPatch;
 
   /// The cleanup depth enclosing all the cleanups associated with the
   /// parameters.

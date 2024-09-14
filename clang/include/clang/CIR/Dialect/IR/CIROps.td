@@ -3515,25 +3515,24 @@ def TryOp : CIR_Op<"try",
     `synthetic`: use `cir.try` to represent try/catches not originally
     present in the source code (e.g. `g = new Class` under `-fexceptions`).
 
+    `cleanup`: signal to targets (LLVM for now) that this try/catch, needs
+    to specially tag their landing pads as needing "cleanup".
+
     Example: TBD
     ```
   }];
 
-  let arguments = (ins UnitAttr:$synthetic,
+  let arguments = (ins UnitAttr:$synthetic, UnitAttr:$cleanup,
                        OptionalAttr<ArrayAttr>:$catch_types);
   let regions = (region AnyRegion:$try_region,
-                        AnyRegion:$cleanup_region,
                         VariadicRegion<AnyRegion>:$catch_regions);
 
   let assemblyFormat = [{
-    (`synthetic` $synthetic^)? $try_region
-    `cleanup` $cleanup_region
+    (`synthetic` $synthetic^)?
+    (`cleanup` $cleanup^)?
+    $try_region
     custom<CatchRegions>($catch_regions, $catch_types)
     attr-dict
-  }];
-
-  let extraClassDeclaration = [{
-    bool isCleanupActive() { return !getCleanupRegion().empty(); }
   }];
 
   // Everything already covered elsewhere.
