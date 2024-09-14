@@ -12,16 +12,15 @@
 #include "src/__support/FPUtil/generic/mul.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
-#include <iostream>
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(float, fmul, (double x, double y)) {
 
-  /* Without FMA instructions, fputil::exact_mult is not
-  correctly rounded for all rounding modes, so we fall
-  back to the generic `fmul` implementation
-  */
+  // Without FMA instructions, fputil::exact_mult is not
+  // correctly rounded for all rounding modes, so we fall
+  // back to the generic `fmul` implementation
+   
 #ifndef LIBC_TARGET_CPU_HAS_FMA
   return fputil::generic::mul<float>(x, y);
 #else
