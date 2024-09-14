@@ -8630,7 +8630,11 @@ static void addCanonicalIVRecipes(VPlan &Plan, Type *IdxTy, bool HasNUW,
                        {CanonicalIVIncrement, &Plan.getVectorTripCount()}, DL);
 }
 
-// Collect VPIRInstructions for phis in the original exit block that are modeled in VPlan and add the exiting VPValue as operand. Some exiting values are not modeled explicitly yet and won't be included. Those are un-truncated VPWidenIntOrFpInductionRecipe, VPWidenPointerInductionRecipe and induction increments.
+// Collect VPIRInstructions for phis in the original exit block that are modeled
+// in VPlan and add the exiting VPValue as operand. Some exiting values are not
+// modeled explicitly yet and won't be included. Those are un-truncated
+// VPWidenIntOrFpInductionRecipe, VPWidenPointerInductionRecipe and induction
+// increments.
 static SetVector<VPIRInstruction *> collectUsersInExitBlock(
     Loop *OrigLoop, VPRecipeBuilder &Builder, VPlan &Plan,
     const MapVector<PHINode *, InductionDescriptor> &Inductions) {
@@ -8673,9 +8677,11 @@ static SetVector<VPIRInstruction *> collectUsersInExitBlock(
   return ExitUsersToFix;
 }
 
-// Add exit values to \p Plan. Extracts are added for each entry in \p ExitUsersToFix if needed and their operands are updated.
-static void addUsersInExitBlock(
-    VPlan &Plan, const SetVector<VPIRInstruction *> &ExitUsersToFix) {
+// Add exit values to \p Plan. Extracts are added for each entry in \p
+// ExitUsersToFix if needed and their operands are updated.
+static void
+addUsersInExitBlock(VPlan &Plan,
+                    const SetVector<VPIRInstruction *> &ExitUsersToFix) {
   if (ExitUsersToFix.empty())
     return;
 
@@ -8685,7 +8691,8 @@ static void addUsersInExitBlock(
       cast<VPIRBasicBlock>(MiddleVPBB->getSuccessors()[0])->getIRBasicBlock();
   VPBuilder B(MiddleVPBB, MiddleVPBB->getFirstNonPhi());
 
-  // Introduce extract for exiting values and update the VPIRInstructions modeling the corresponding LCSSA phis.
+  // Introduce extract for exiting values and update the VPIRInstructions
+  // modeling the corresponding LCSSA phis.
   for (VPIRInstruction *ExitIRI : ExitUsersToFix) {
     VPValue *V = ExitIRI->getOperand(0);
     // Pass live-in values used by exit phis directly through to the live-out.
@@ -8828,7 +8835,8 @@ static void addLiveOutsForFirstOrderRecurrences(
     Plan.addLiveOut(FORPhi, ResumePhiRecipe);
 
     // Now update VPIRInstructions modeling LCSSA phis in the exit block.
-    // Extract the penultimate value of the recurrence and use it as operand for the VPIRInstruction modeling the phi.
+    // Extract the penultimate value of the recurrence and use it as operand for
+    // the VPIRInstruction modeling the phi.
     for (VPIRInstruction *ExitIRI : ExitUsersToFix) {
       if (ExitIRI->getOperand(0) != FOR)
         continue;
@@ -8998,9 +9006,8 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
          "VPBasicBlock");
   RecipeBuilder.fixHeaderPhis();
 
-  SetVector<VPIRInstruction *> ExitUsersToFix =
-      collectUsersInExitBlock(OrigLoop, RecipeBuilder, *Plan,
-                              Legal->getInductionVars());
+  SetVector<VPIRInstruction *> ExitUsersToFix = collectUsersInExitBlock(
+      OrigLoop, RecipeBuilder, *Plan, Legal->getInductionVars());
   addLiveOutsForFirstOrderRecurrences(*Plan, ExitUsersToFix);
   addUsersInExitBlock(*Plan, ExitUsersToFix);
 
