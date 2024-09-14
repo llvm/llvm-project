@@ -867,6 +867,43 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
+void VPIRInstruction::execute(VPTransformState &State) {
+  assert((isa<PHINode>(&I) || getNumOperands() == 0) &&
+         "Only PHINodes can have extra operands");
+  if (getNumOperands() == 1) {
+    VPValue *ExitValue = getOperand(0);
+    auto Lane = vputils::isUniformAfterVectorization(ExitValue)
+                    ? VPLane::getFirstLane()
+                    : VPLane::getLastLaneForVF(State.VF);
+    auto *PredVPBB = cast<VPBasicBlock>(getParent()->getSinglePredecessor());
+    BasicBlock *PredBB = State.CFG.VPBB2IRBB[PredVPBB];
+    // Set insertion point in PredBB in case an extract needs to be generated.
+    // TODO: Model extracts explicitly.
+    State.Builder.SetInsertPoint(PredBB, PredBB->getFirstNonPHIIt());
+    Value *V = State.get(ExitValue, VPIteration(State.UF - 1, Lane));
+    auto *Phi = cast<PHINode>(&I);
+    Phi->addIncoming(V, PredBB);
+  }
+
+  // Advance the insert point after the wrapped IR instruction. This allows
+  // interleaving VPIRInstructions and other recipes.
+  State.Builder.SetInsertPoint(I.getParent(), std::next(I.getIterator()));
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void VPIRInstruction::print(raw_ostream &O, const Twine &Indent,
+                            VPSlotTracker &SlotTracker) const {
+  O << Indent << "IR " << I;
+
+  if (getNumOperands() != 0) {
+    assert(getNumOperands() == 1 && "can have at most 1 operand");
+    O << " (extra operand: ";
+    printOperands(O, SlotTracker);
+    O << ")";
+  }
+}
+#endif
+
 void VPWidenCallRecipe::execute(VPTransformState &State) {
   assert(State.VF.isVector() && "not widening");
   Function *CalledScalarFn = getCalledScalarFunction();
