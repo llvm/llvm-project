@@ -7324,6 +7324,7 @@ static bool diagnoseDiagnoseIfAttrsWith(Sema &S, const NamedDecl *ND,
     case DiagnoseIfAttr::DS_error:
       return diag::Severity::Error;
     }
+    llvm_unreachable("Fully covered switch above!");
   };
 
   for (const auto *DIA : llvm::make_range(WarningBegin, Attrs.end()))
