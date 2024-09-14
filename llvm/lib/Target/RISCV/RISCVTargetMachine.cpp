@@ -358,6 +358,7 @@ public:
   bool addPreISel() override;
   void addCodeGenPrepare() override;
   bool addInstSelector() override;
+  bool addILPOpts() override;
   bool addIRTranslator() override;
   void addPreLegalizeMachineIR() override;
   bool addLegalizeMachineIR() override;
@@ -459,6 +460,13 @@ bool RISCVPassConfig::addInstSelector() {
   addPass(createRISCVISelDag(getRISCVTargetMachine(), getOptLevel()));
 
   return false;
+}
+
+bool RISCVPassConfig::addILPOpts() {
+  if (getOptLevel() != CodeGenOptLevel::None) {
+    addPass(&EarlyIfConverterID);
+  }
+  return true;
 }
 
 bool RISCVPassConfig::addIRTranslator() {
