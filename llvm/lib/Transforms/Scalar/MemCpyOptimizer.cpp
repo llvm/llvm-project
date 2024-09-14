@@ -656,7 +656,7 @@ bool MemCpyOptPass::processStoreOfLoad(StoreInst *SI, LoadInst *LI,
     BatchAAResults BAA(*AA);
     auto *Clobber =
         cast<MemoryUseOrDef>(MSSA->getWalker()->getClobberingMemoryAccess(
-            StoreAccess, LoadLoc, BAA));
+            StoreAccess->getDefiningAccess(), LoadLoc, BAA));
     Instruction *P =
         MSSA->dominates(LoadAccess, Clobber) ? Clobber->getMemoryInst() : SI;
 
