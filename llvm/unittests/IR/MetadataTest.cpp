@@ -159,7 +159,7 @@ TEST_F(MDStringTest, PrintingSimple) {
   std::string Str;
   raw_string_ostream oss(Str);
   s->print(oss);
-  EXPECT_STREQ("!\"testing 1 2 3\"", oss.str().c_str());
+  EXPECT_STREQ("!\"testing 1 2 3\"", Str.c_str());
 }
 
 // Test printing of MDString with non-printable characters.
@@ -169,7 +169,7 @@ TEST_F(MDStringTest, PrintingComplex) {
   std::string Str;
   raw_string_ostream oss(Str);
   s->print(oss);
-  EXPECT_STREQ("!\"\\00\\0A\\22\\\\\\FF\"", oss.str().c_str());
+  EXPECT_STREQ("!\"\\00\\0A\\22\\\\\\FF\"", Str.c_str());
 }
 
 typedef MetadataTest MDNodeTest;
@@ -301,7 +301,6 @@ TEST_F(MDNodeTest, Print) {
     std::string Actual_;                                                       \
     raw_string_ostream OS(Actual_);                                            \
     PRINT;                                                                     \
-    OS.flush();                                                                \
     std::string Expected_(EXPECTED);                                           \
     EXPECT_EQ(Expected_, Actual_);                                             \
   } while (false)
@@ -4711,8 +4710,7 @@ TEST(NamedMDNodeTest, Search) {
   std::string Str;
   raw_string_ostream oss(Str);
   NMD->print(oss);
-  EXPECT_STREQ("!llvm.NMD1 = !{!0, !1}\n",
-               oss.str().c_str());
+  EXPECT_STREQ("!llvm.NMD1 = !{!0, !1}\n", Str.c_str());
 }
 
 typedef MetadataTest FunctionAttachmentTest;

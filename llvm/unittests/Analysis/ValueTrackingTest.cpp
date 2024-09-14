@@ -52,7 +52,7 @@ protected:
     std::string errMsg;
     raw_string_ostream os(errMsg);
     Error.print("", os);
-    EXPECT_TRUE(M) << os.str();
+    EXPECT_TRUE(M) << errMsg;
 
     return M;
   }
@@ -3003,7 +3003,7 @@ TEST_P(IsBytewiseValueTest, IsBytewiseValue) {
   raw_string_ostream S(Buff);
   if (Actual)
     S << *Actual;
-  EXPECT_EQ(GetParam().first, S.str());
+  EXPECT_EQ(GetParam().first, Buff);
 }
 
 TEST_F(ValueTrackingTest, ComputeConstantRange) {
