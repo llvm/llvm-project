@@ -570,6 +570,26 @@ class TestCursor(unittest.TestCase):
         self.assertEqual(ham.kind, CursorKind.ENUM_CONSTANT_DECL)
         self.assertEqual(ham.enum_value, 0x10000000000)
 
+    def test_enum_values_on_elaborated_type(self):
+        tu = get_tu(
+            "using myUType = unsigned char; enum TEST : myUType { SPAM = 1, HAM = 0xff; }",
+            lang="cpp",
+        )
+        enum = get_cursor(tu, "TEST")
+        self.assertIsNotNone(enum)
+
+        self.assertEqual(enum.kind, CursorKind.ENUM_DECL)
+
+        enum_constants = list(enum.get_children())
+        self.assertEqual(len(enum_constants), 2)
+
+        spam, ham = enum_constants
+
+        self.assertEqual(spam.kind, CursorKind.ENUM_CONSTANT_DECL)
+        self.assertEqual(spam.enum_value, 1)
+        self.assertEqual(ham.kind, CursorKind.ENUM_CONSTANT_DECL)
+        self.assertEqual(ham.enum_value, 255)
+
     def test_annotation_attribute(self):
         tu = get_tu(
             'int foo (void) __attribute__ ((annotate("here be annotation attribute")));'
