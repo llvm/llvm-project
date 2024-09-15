@@ -44,9 +44,7 @@ int main(int, char**) {
 
     // The original flat_map is moved-from.
     assert(std::is_sorted(mo.begin(), mo.end(), mo.value_comp()));
-#if 0
     assert(mo.empty());
-#endif
     assert(mo.key_comp() == C(5));
     assert(mo.keys().get_allocator() == A(7));
     assert(mo.values().get_allocator() == A(7));

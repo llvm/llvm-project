@@ -64,6 +64,7 @@ int main(int, char**) {
     test_not_found(cm, "zzz", 5);
   }
 #if 0
+// do we really want to support this weird comparator that gives different answer for Key and Kp?
   {
     using M  = std::flat_map<std::string, int, StartsWith::Less>;
     using R  = std::pair<M::iterator, M::iterator>;
