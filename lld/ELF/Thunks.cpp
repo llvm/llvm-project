@@ -1088,7 +1088,7 @@ void PPC32PltCallStub::addSymbols(ThunkSection &isec) {
   else
     os << ".plt_pic32.";
   os << destination.getName();
-  addSymbol(saver().save(os.str()), STT_FUNC, 0, isec);
+  addSymbol(saver().save(buf), STT_FUNC, 0, isec);
 }
 
 bool PPC32PltCallStub::isCompatibleWith(const InputSection &isec,
