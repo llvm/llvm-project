@@ -415,6 +415,3 @@ static_assert(
       // expected-note@-1 {{read of dereferenced one-past-the-end pointer is not allowed in a constant expression}}
 );
 }
-
-static_assert(true, "" // expected-note {{to match this '('}}
-                       // expected-error {{expected ')'}}
