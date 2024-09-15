@@ -15,14 +15,15 @@ eh_test:
             i32.const 0
             throw     __cpp_exception
           end_try_table
+          return
         end_block
         drop
+        return
       end_block
-      drop
       throw_ref
+      drop
     end_block
   end_block
-  throw_ref
   drop
 
   # You can use the same kind of catch clause more than once
@@ -33,6 +34,7 @@ eh_test:
           call  foo
         end_try_table
       end_block
+      return
     end_block
     drop
   end_block
@@ -89,14 +91,16 @@ eh_test:
 # CHECK:         i32.const       0
 # CHECK-NEXT:    throw           __cpp_exception
 # CHECK-NEXT:    end_try_table
+# CHECK-NEXT:    return
 # CHECK-NEXT:    end_block
 # CHECK-NEXT:    drop
+# CHECK-NEXT:    return
+# CHECK-NEXT:    end_block
+# CHECK-NEXT:    throw_ref
+# CHECK-NEXT:    drop
+# CHECK-NEXT:    end_block
 # CHECK-NEXT:    end_block
 # CHECK-NEXT:    drop
-# CHECK-NEXT:    throw_ref
-# CHECK-NEXT:    end_block
-# CHECK-NEXT:    end_block
-# CHECK-NEXT:    throw_ref
 
 # CHECK:         block
 # CHECK-NEXT:    block           exnref
@@ -105,6 +109,7 @@ eh_test:
 # CHECK:         call    foo
 # CHECK-NEXT:    end_try_table
 # CHECK-NEXT:    end_block
+# CHECK-NEXT:    return
 # CHECK-NEXT:    end_block
 # CHECK-NEXT:    drop
 # CHECK-NEXT:    end_block
