@@ -368,7 +368,7 @@ multiclass vinsert_for_size_split<int Opcode, X86VectorVTInfo From,
                                   SDPatternOperator vinsert_for_mask,
                                   X86FoldableSchedWrite sched> {
   let hasSideEffects = 0, ExeDomain = To.ExeDomain in {
-    defm rr : AVX512_maskable_split<Opcode, MRMSrcReg, To, (outs To.RC:$dst),
+    defm rri : AVX512_maskable_split<Opcode, MRMSrcReg, To, (outs To.RC:$dst),
                    (ins To.RC:$src1, From.RC:$src2, u8imm:$src3),
                    "vinsert" # From.EltTypeName # "x" # From.NumElts,
                    "$src3, $src2, $src1", "$src1, $src2, $src3",
@@ -380,7 +380,7 @@ multiclass vinsert_for_size_split<int Opcode, X86VectorVTInfo From,
                                            (iPTR imm))>,
                    AVX512AIi8Base, EVEX, VVVV, Sched<[sched]>;
     let mayLoad = 1 in
-    defm rm : AVX512_maskable_split<Opcode, MRMSrcMem, To, (outs To.RC:$dst),
+    defm rmi : AVX512_maskable_split<Opcode, MRMSrcMem, To, (outs To.RC:$dst),
                    (ins To.RC:$src1, From.MemOp:$src2, u8imm:$src3),
                    "vinsert" # From.EltTypeName # "x" # From.NumElts,
                    "$src3, $src2, $src1", "$src1, $src2, $src3",
@@ -408,7 +408,7 @@ multiclass vinsert_for_size_lowering<string InstrStr, X86VectorVTInfo From,
   let Predicates = p in {
     def : Pat<(vinsert_insert:$ins
                      (To.VT To.RC:$src1), (From.VT From.RC:$src2), (iPTR imm)),
-              (To.VT (!cast<Instruction>(InstrStr#"rr")
+              (To.VT (!cast<Instruction>(InstrStr#"rri")
                      To.RC:$src1, From.RC:$src2,
                      (INSERT_get_vinsert_imm To.RC:$ins)))>;
 
@@ -416,7 +416,7 @@ multiclass vinsert_for_size_lowering<string InstrStr, X86VectorVTInfo From,
                   (To.VT To.RC:$src1),
                   (From.VT (From.LdFrag addr:$src2)),
                   (iPTR imm)),
-              (To.VT (!cast<Instruction>(InstrStr#"rm")
+              (To.VT (!cast<Instruction>(InstrStr#"rmi")
                   To.RC:$src1, addr:$src2,
                   (INSERT_get_vinsert_imm To.RC:$ins)))>;
   }
@@ -529,7 +529,7 @@ let Predicates = p in {
                                                  (From.VT From.RC:$src2),
                                                  (iPTR imm))),
                            Cast.RC:$src0)),
-            (!cast<Instruction>(InstrStr#"rrk")
+            (!cast<Instruction>(InstrStr#"rrik")
              Cast.RC:$src0, Cast.KRCWM:$mask, To.RC:$src1, From.RC:$src2,
              (INSERT_get_vinsert_imm To.RC:$ins))>;
   def : Pat<(Cast.VT
@@ -541,7 +541,7 @@ let Predicates = p in {
                                                    (From.LdFrag addr:$src2))),
                                                  (iPTR imm))),
                            Cast.RC:$src0)),
-            (!cast<Instruction>(InstrStr#"rmk")
+            (!cast<Instruction>(InstrStr#"rmik")
              Cast.RC:$src0, Cast.KRCWM:$mask, To.RC:$src1, addr:$src2,
              (INSERT_get_vinsert_imm To.RC:$ins))>;
 
@@ -552,7 +552,7 @@ let Predicates = p in {
                                                  (From.VT From.RC:$src2),
                                                  (iPTR imm))),
                            Cast.ImmAllZerosV)),
-            (!cast<Instruction>(InstrStr#"rrkz")
+            (!cast<Instruction>(InstrStr#"rrikz")
              Cast.KRCWM:$mask, To.RC:$src1, From.RC:$src2,
              (INSERT_get_vinsert_imm To.RC:$ins))>;
   def : Pat<(Cast.VT
@@ -562,7 +562,7 @@ let Predicates = p in {
                                                  (From.VT (From.LdFrag addr:$src2)),
                                                  (iPTR imm))),
                            Cast.ImmAllZerosV)),
-            (!cast<Instruction>(InstrStr#"rmkz")
+            (!cast<Instruction>(InstrStr#"rmikz")
              Cast.KRCWM:$mask, To.RC:$src1, addr:$src2,
              (INSERT_get_vinsert_imm To.RC:$ins))>;
 }
@@ -677,7 +677,7 @@ multiclass vextract_for_size_split<int Opcode,
                                    SchedWrite SchedRR, SchedWrite SchedMR> {
 
   let hasSideEffects = 0, ExeDomain = To.ExeDomain in {
-    defm rr : AVX512_maskable_split<Opcode, MRMDestReg, To, (outs To.RC:$dst),
+    defm rri : AVX512_maskable_split<Opcode, MRMDestReg, To, (outs To.RC:$dst),
                 (ins From.RC:$src1, u8imm:$idx),
                 "vextract" # To.EltTypeName # "x" # To.NumElts,
                 "$idx, $src1", "$src1, $idx",
@@ -685,7 +685,7 @@ multiclass vextract_for_size_split<int Opcode,
                 (vextract_for_mask:$idx (From.VT From.RC:$src1), (iPTR imm))>,
                 AVX512AIi8Base, EVEX, Sched<[SchedRR]>;
 
-    def mr  : AVX512AIi8<Opcode, MRMDestMem, (outs),
+    def mri  : AVX512AIi8<Opcode, MRMDestMem, (outs),
                     (ins To.MemOp:$dst, From.RC:$src1, u8imm:$idx),
                     "vextract" # To.EltTypeName # "x" # To.NumElts #
                         "\t{$idx, $src1, $dst|$dst, $src1, $idx}",
@@ -695,7 +695,7 @@ multiclass vextract_for_size_split<int Opcode,
                     Sched<[SchedMR]>;
 
     let mayStore = 1, hasSideEffects = 0 in
-    def mrk : AVX512AIi8<Opcode, MRMDestMem, (outs),
+    def mrik : AVX512AIi8<Opcode, MRMDestMem, (outs),
                     (ins To.MemOp:$dst, To.KRCWM:$mask,
                                         From.RC:$src1, u8imm:$idx),
                      "vextract" # To.EltTypeName # "x" # To.NumElts #
@@ -718,12 +718,12 @@ multiclass vextract_for_size_lowering<string InstrStr, X86VectorVTInfo From,
                 SDNodeXForm EXTRACT_get_vextract_imm, list<Predicate> p> {
   let Predicates = p in {
      def : Pat<(vextract_extract:$ext (From.VT From.RC:$src1), (iPTR imm)),
-               (To.VT (!cast<Instruction>(InstrStr#"rr")
+               (To.VT (!cast<Instruction>(InstrStr#"rri")
                           From.RC:$src1,
                           (EXTRACT_get_vextract_imm To.RC:$ext)))>;
      def : Pat<(store (To.VT (vextract_extract:$ext (From.VT From.RC:$src1),
                               (iPTR imm))), addr:$dst),
-               (!cast<Instruction>(InstrStr#"mr") addr:$dst, From.RC:$src1,
+               (!cast<Instruction>(InstrStr#"mri") addr:$dst, From.RC:$src1,
                 (EXTRACT_get_vextract_imm To.RC:$ext))>;
   }
 }
@@ -828,31 +828,31 @@ defm : vextract_for_size_lowering<"VEXTRACTF64x4Z", v32bf16_info, v16bf16x_info,
 // smaller extract to enable EVEX->VEX.
 let Predicates = [NoVLX, HasEVEX512] in {
 def : Pat<(v2i64 (extract_subvector (v8i64 VR512:$src), (iPTR 2))),
-          (v2i64 (VEXTRACTI128rr
+          (v2i64 (VEXTRACTI128rri
                   (v4i64 (EXTRACT_SUBREG (v8i64 VR512:$src), sub_ymm)),
                   (iPTR 1)))>;
 def : Pat<(v2f64 (extract_subvector (v8f64 VR512:$src), (iPTR 2))),
-          (v2f64 (VEXTRACTF128rr
+          (v2f64 (VEXTRACTF128rri
                   (v4f64 (EXTRACT_SUBREG (v8f64 VR512:$src), sub_ymm)),
                   (iPTR 1)))>;
 def : Pat<(v4i32 (extract_subvector (v16i32 VR512:$src), (iPTR 4))),
-          (v4i32 (VEXTRACTI128rr
+          (v4i32 (VEXTRACTI128rri
                   (v8i32 (EXTRACT_SUBREG (v16i32 VR512:$src), sub_ymm)),
                   (iPTR 1)))>;
 def : Pat<(v4f32 (extract_subvector (v16f32 VR512:$src), (iPTR 4))),
-          (v4f32 (VEXTRACTF128rr
+          (v4f32 (VEXTRACTF128rri
                   (v8f32 (EXTRACT_SUBREG (v16f32 VR512:$src), sub_ymm)),
                   (iPTR 1)))>;
 def : Pat<(v8i16 (extract_subvector (v32i16 VR512:$src), (iPTR 8))),
-          (v8i16 (VEXTRACTI128rr
+          (v8i16 (VEXTRACTI128rri
                   (v16i16 (EXTRACT_SUBREG (v32i16 VR512:$src), sub_ymm)),
                   (iPTR 1)))>;
 def : Pat<(v8f16 (extract_subvector (v32f16 VR512:$src), (iPTR 8))),
-          (v8f16 (VEXTRACTF128rr
+          (v8f16 (VEXTRACTF128rri
                   (v16f16 (EXTRACT_SUBREG (v32f16 VR512:$src), sub_ymm)),
                   (iPTR 1)))>;
 def : Pat<(v16i8 (extract_subvector (v64i8 VR512:$src), (iPTR 16))),
-          (v16i8 (VEXTRACTI128rr
+          (v16i8 (VEXTRACTI128rri
                   (v32i8 (EXTRACT_SUBREG (v64i8 VR512:$src), sub_ymm)),
                   (iPTR 1)))>;
 }
@@ -861,31 +861,31 @@ def : Pat<(v16i8 (extract_subvector (v64i8 VR512:$src), (iPTR 16))),
 // smaller extract to enable EVEX->VEX.
 let Predicates = [HasVLX] in {
 def : Pat<(v2i64 (extract_subvector (v8i64 VR512:$src), (iPTR 2))),
-          (v2i64 (VEXTRACTI32x4Z256rr
+          (v2i64 (VEXTRACTI32x4Z256rri
                   (v4i64 (EXTRACT_SUBREG (v8i64 VR512:$src), sub_ymm)),
                   (iPTR 1)))>;
 def : Pat<(v2f64 (extract_subvector (v8f64 VR512:$src), (iPTR 2))),
-          (v2f64 (VEXTRACTF32x4Z256rr
+          (v2f64 (VEXTRACTF32x4Z256rri
                   (v4f64 (EXTRACT_SUBREG (v8f64 VR512:$src), sub_ymm)),
                   (iPTR 1)))>;
 def : Pat<(v4i32 (extract_subvector (v16i32 VR512:$src), (iPTR 4))),
-          (v4i32 (VEXTRACTI32x4Z256rr
+          (v4i32 (VEXTRACTI32x4Z256rri
                   (v8i32 (EXTRACT_SUBREG (v16i32 VR512:$src), sub_ymm)),
                   (iPTR 1)))>;
 def : Pat<(v4f32 (extract_subvector (v16f32 VR512:$src), (iPTR 4))),
-          (v4f32 (VEXTRACTF32x4Z256rr
+          (v4f32 (VEXTRACTF32x4Z256rri
                   (v8f32 (EXTRACT_SUBREG (v16f32 VR512:$src), sub_ymm)),
                   (iPTR 1)))>;
 def : Pat<(v8i16 (extract_subvector (v32i16 VR512:$src), (iPTR 8))),
-          (v8i16 (VEXTRACTI32x4Z256rr
+          (v8i16 (VEXTRACTI32x4Z256rri
                   (v16i16 (EXTRACT_SUBREG (v32i16 VR512:$src), sub_ymm)),
                   (iPTR 1)))>;
 def : Pat<(v8f16 (extract_subvector (v32f16 VR512:$src), (iPTR 8))),
-          (v8f16 (VEXTRACTF32x4Z256rr
+          (v8f16 (VEXTRACTF32x4Z256rri
                   (v16f16 (EXTRACT_SUBREG (v32f16 VR512:$src), sub_ymm)),
                   (iPTR 1)))>;
 def : Pat<(v16i8 (extract_subvector (v64i8 VR512:$src), (iPTR 16))),
-          (v16i8 (VEXTRACTI32x4Z256rr
+          (v16i8 (VEXTRACTI32x4Z256rri
                   (v32i8 (EXTRACT_SUBREG (v64i8 VR512:$src), sub_ymm)),
                   (iPTR 1)))>;
 }
@@ -904,7 +904,7 @@ let Predicates = p in {
                                     (To.VT (vextract_extract:$ext
                                             (From.VT From.RC:$src), (iPTR imm)))),
                                    To.RC:$src0)),
-            (Cast.VT (!cast<Instruction>(InstrStr#"rrk")
+            (Cast.VT (!cast<Instruction>(InstrStr#"rrik")
                       Cast.RC:$src0, Cast.KRCWM:$mask, From.RC:$src,
                       (EXTRACT_get_vextract_imm To.RC:$ext)))>;
 
@@ -913,7 +913,7 @@ let Predicates = p in {
                                     (To.VT (vextract_extract:$ext
                                             (From.VT From.RC:$src), (iPTR imm)))),
                                    Cast.ImmAllZerosV)),
-            (Cast.VT (!cast<Instruction>(InstrStr#"rrkz")
+            (Cast.VT (!cast<Instruction>(InstrStr#"rrikz")
                       Cast.KRCWM:$mask, From.RC:$src,
                       (EXTRACT_get_vextract_imm To.RC:$ext)))>;
 }
