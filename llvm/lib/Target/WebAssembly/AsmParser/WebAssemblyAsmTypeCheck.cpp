@@ -143,9 +143,10 @@ bool WebAssemblyAsmTypeCheck::checkBr(SMLoc ErrorLoc, size_t Level) {
       BrStack[BrStack.size() - Level - 1];
   if (Expected.size() > Stack.size())
     return typeError(ErrorLoc, "br: insufficient values on the type stack");
-  auto IsStackTopInvalid = checkStackTop(Expected, Stack);
-  if (IsStackTopInvalid)
-    return typeError(ErrorLoc, "br " + IsStackTopInvalid.value());
+  for (auto VT : llvm::reverse(Expected)) {
+    if (popType(ErrorLoc, VT))
+      return true;
+  }
   return false;
 }
 

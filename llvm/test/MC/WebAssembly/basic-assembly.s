@@ -82,11 +82,13 @@ test0:
     i32.const   3
     end_block            # "switch" exit.
     if                   # void
+    i32.const   0
     if          i32
-    end_if
-    else
+    i32.const   5
     end_if
     drop
+    else
+    end_if
     block       void
     i32.const   2
     return
