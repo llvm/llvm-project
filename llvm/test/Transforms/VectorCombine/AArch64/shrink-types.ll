@@ -100,4 +100,18 @@ vector.body:
   ret i32 %2
 }
 
+define <2 x i32> @pr108698(<2 x i64> %x, <2 x i32> %y) {
+; CHECK-LABEL: @pr108698(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i64> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc <2 x i32> [[Y:%.*]] to <2 x i1>
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr <2 x i1> [[CMP]], [[TMP1]]
+; CHECK-NEXT:    [[LSHR:%.*]] = zext <2 x i1> [[TMP2]] to <2 x i32>
+; CHECK-NEXT:    ret <2 x i32> [[LSHR]]
+;
+  %cmp = icmp eq <2 x i64> %x, zeroinitializer
+  %ext = zext <2 x i1> %cmp to <2 x i32>
+  %lshr = lshr <2 x i32> %ext, %y
+  ret <2 x i32> %lshr
+}
+
 declare i32 @llvm.vector.reduce.add.v16i32(<16 x i32>)
