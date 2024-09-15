@@ -362,10 +362,16 @@ void MangleContext::mangleObjCMethodName(const ObjCMethodDecl *MD,
   }
 
   // \01+[ContainerName(CategoryName) SelectorName]
+  // Note: If we are mangling for an objc_direct method with external visibility
+  //       then the standard mangling scheme will not work. We must replace the
+  //       square braces with angle braces so in the case of visible direct objc
+  //       methods it results in: +<ContainerName(CategoryName) SelectorName>
+  //       This will include a prefix _ on Darwin.
   if (includePrefixByte) {
     OS << '\01';
   }
-  OS << (MD->isInstanceMethod() ? '-' : '+') << '[';
+  OS << (MD->isInstanceMethod() ? '-' : '+');
+  OS << (MD->hasMethodVisibilityDefault() ? '<' : '[');
   if (const auto *CID = MD->getCategory()) {
     OS << CID->getClassInterface()->getName();
     if (includeCategoryNamespace) {
@@ -379,7 +385,7 @@ void MangleContext::mangleObjCMethodName(const ObjCMethodDecl *MD,
   }
   OS << ' ';
   MD->getSelector().print(OS);
-  OS << ']';
+  OS << (MD->hasMethodVisibilityDefault() ? '>' : ']');
 }
 
 void MangleContext::mangleObjCMethodNameAsSourceName(const ObjCMethodDecl *MD,
