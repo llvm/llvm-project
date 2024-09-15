@@ -238,20 +238,20 @@ private:
 /// ComplexPattern - ComplexPattern info, corresponding to the ComplexPattern
 /// tablegen class in TargetSelectionDAG.td
 class ComplexPattern {
-  Record *Ty;
+  const Record *Ty;
   unsigned NumOperands;
   std::string SelectFunc;
-  std::vector<Record *> RootNodes;
+  std::vector<const Record *> RootNodes;
   unsigned Properties; // Node properties
   unsigned Complexity;
 
 public:
-  ComplexPattern(Record *R);
+  ComplexPattern(const Record *R);
 
-  Record *getValueType() const { return Ty; }
+  const Record *getValueType() const { return Ty; }
   unsigned getNumOperands() const { return NumOperands; }
   const std::string &getSelectFunc() const { return SelectFunc; }
-  const std::vector<Record *> &getRootNodes() const { return RootNodes; }
+  const ArrayRef<const Record *> getRootNodes() const { return RootNodes; }
   bool hasProperty(enum SDNP Prop) const { return Properties & (1 << Prop); }
   unsigned getComplexity() const { return Complexity; }
 };

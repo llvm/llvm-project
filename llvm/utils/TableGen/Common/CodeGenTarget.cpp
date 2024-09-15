@@ -402,11 +402,11 @@ bool CodeGenTarget::guessInstructionProperties() const {
 //===----------------------------------------------------------------------===//
 // ComplexPattern implementation
 //
-ComplexPattern::ComplexPattern(Record *R) {
+ComplexPattern::ComplexPattern(const Record *R) {
   Ty = R->getValueAsDef("Ty");
   NumOperands = R->getValueAsInt("NumOperands");
   SelectFunc = std::string(R->getValueAsString("SelectFunc"));
-  RootNodes = R->getValueAsListOfDefs("RootNodes");
+  RootNodes = R->getValueAsListOfConstDefs("RootNodes");
 
   // FIXME: This is a hack to statically increase the priority of patterns which
   // maps a sub-dag to a complex pattern. e.g. favors LEA over ADD. To get best
