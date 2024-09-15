@@ -3528,11 +3528,13 @@ bool IRTranslator::translate(const Constant &C, Register Reg) {
     Register AddrDisc = getOrCreateVReg(*CPA->getAddrDiscriminator());
     EntryBuilder->buildConstantPtrAuth(Reg, CPA, Addr, AddrDisc);
   } else if (auto CAZ = dyn_cast<ConstantAggregateZero>(&C)) {
-    if (!isa<FixedVectorType>(CAZ->getType()))
-      return false;
+    Constant &Elt = *CAZ->getElementValue(0u);
+    if (isa<ScalableVectorType>(CAZ->getType())) {
+      EntryBuilder->buildSplatVector(Reg, getOrCreateVReg(Elt));
+      return true;
+    }
     // Return the scalar if it is a <1 x Ty> vector.
     unsigned NumElts = CAZ->getElementCount().getFixedValue();
-    Constant &Elt = *CAZ->getElementValue(0u);
     if (NumElts == 1)
       return translateCopy(C, Elt, *EntryBuilder);
     // All elements are zero so we can just use the first one.
