@@ -1,0 +1,31 @@
+# This workflow publishes the extension to the Coc marketplace when the version changes.
+name: Publish to Coc Marketplace
+on:
+  # Run whenever a new commit is pushed to the main branch.
+  push:
+    branches: [ main ]
+    paths: [ 'package.json' ]
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: detect version
+      uses: EndBug/version-check@v2.0.1
+      id: check
+      if: github.event_name != 'workflow_dispatch'
+      with:
+        # Search the diff content for version changes.
+        diff-search: true
+
+    - name: publish
+      # if: steps.check.outputs.changed == 'true'
+      # The token will be expired in on 08/03/2022.
+      run: |
+        npm install
+        npm publish
+      env:
+        NODE_AUTH_TOKEN: ${{secrets.NODE_AUTH_TOKEN}}
