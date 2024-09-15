@@ -420,10 +420,10 @@ til::SExpr *SExprBuilder::translateCallExpr(const CallExpr *CE,
                                             CallingContext *Ctx,
                                             const Expr *SelfE) {
   if (CapabilityExprMode) {
-    // Handle LOCK_RETURNED
+    // Handle CAPABILITY_RETURNED
     if (const FunctionDecl *FD = CE->getDirectCallee()) {
       FD = FD->getMostRecentDecl();
-      if (LockReturnedAttr *At = FD->getAttr<LockReturnedAttr>()) {
+      if (CapabilityReturnedAttr *At = FD->getAttr<CapabilityReturnedAttr>()) {
         CallingContext LRCallCtx(Ctx);
         LRCallCtx.AttrDecl = CE->getDirectCallee();
         LRCallCtx.SelfArg = SelfE;

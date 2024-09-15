@@ -801,7 +801,7 @@ implementation.
     THREAD_ANNOTATION_ATTRIBUTE__(capability(x))
 
   #define SCOPED_CAPABILITY \
-    THREAD_ANNOTATION_ATTRIBUTE__(scoped_lockable)
+    THREAD_ANNOTATION_ATTRIBUTE__(scoped_capability)
 
   #define GUARDED_BY(x) \
     THREAD_ANNOTATION_ATTRIBUTE__(guarded_by(x))
@@ -843,7 +843,7 @@ implementation.
     THREAD_ANNOTATION_ATTRIBUTE__(try_acquire_shared_capability(__VA_ARGS__))
 
   #define EXCLUDES(...) \
-    THREAD_ANNOTATION_ATTRIBUTE__(locks_excluded(__VA_ARGS__))
+    THREAD_ANNOTATION_ATTRIBUTE__(capabilities_excluded(__VA_ARGS__))
 
   #define ASSERT_CAPABILITY(x) \
     THREAD_ANNOTATION_ATTRIBUTE__(assert_capability(x))
@@ -852,7 +852,7 @@ implementation.
     THREAD_ANNOTATION_ATTRIBUTE__(assert_shared_capability(x))
 
   #define RETURN_CAPABILITY(x) \
-    THREAD_ANNOTATION_ATTRIBUTE__(lock_returned(x))
+    THREAD_ANNOTATION_ATTRIBUTE__(capability_returned(x))
 
   #define NO_THREAD_SAFETY_ANALYSIS \
     THREAD_ANNOTATION_ATTRIBUTE__(no_thread_safety_analysis)

@@ -52,6 +52,10 @@ void foo(int i) {
   } catch (...) {
   }
 
+  [[capability_returned]] try { // expected-warning {{unknown attribute 'capability_returned' ignored}}
+  } catch (...) {
+  }
+
   [[weakref]] return; // expected-warning {{unknown attribute 'weakref' ignored}}
 
   [[carries_dependency]] ; // expected-error {{'carries_dependency' attribute cannot be applied to a statement}}

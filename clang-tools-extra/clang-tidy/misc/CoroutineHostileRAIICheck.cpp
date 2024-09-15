@@ -77,15 +77,15 @@ CoroutineHostileRAIICheck::CoroutineHostileRAIICheck(StringRef Name,
 
 void CoroutineHostileRAIICheck::registerMatchers(MatchFinder *Finder) {
   // A suspension happens with co_await or co_yield.
-  auto ScopedLockable = varDecl(hasType(hasCanonicalType(hasDeclaration(
-                                    hasAttr(attr::Kind::ScopedLockable)))))
-                            .bind("scoped-lockable");
+  auto ScopedCapability = varDecl(hasType(hasCanonicalType(hasDeclaration(
+                                      hasAttr(attr::Kind::ScopedCapability)))))
+                              .bind("scoped-lockable");
   auto OtherRAII = varDecl(typeWithNameIn(RAIITypesList)).bind("raii");
   auto AllowedSuspend = awaitable(typeWithNameIn(AllowedAwaitablesList));
   Finder->addMatcher(
       expr(anyOf(coawaitExpr(unless(AllowedSuspend)), coyieldExpr()),
            forEachPrevStmt(
-               declStmt(forEach(varDecl(anyOf(ScopedLockable, OtherRAII))))))
+               declStmt(forEach(varDecl(anyOf(ScopedCapability, OtherRAII))))))
           .bind("suspension"),
       this);
 }

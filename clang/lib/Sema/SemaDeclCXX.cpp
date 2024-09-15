@@ -18871,9 +18871,9 @@ bool Sema::checkThisInStaticMemberFunctionAttributes(CXXMethodDecl *Method) {
     } else if (const auto *STLF = dyn_cast<SharedTrylockFunctionAttr>(A)) {
       Arg = STLF->getSuccessValue();
       Args = llvm::ArrayRef(STLF->args_begin(), STLF->args_size());
-    } else if (const auto *LR = dyn_cast<LockReturnedAttr>(A))
+    } else if (const auto *LR = dyn_cast<CapabilityReturnedAttr>(A))
       Arg = LR->getArg();
-    else if (const auto *LE = dyn_cast<LocksExcludedAttr>(A))
+    else if (const auto *LE = dyn_cast<CapabilitiesExcludedAttr>(A))
       Args = llvm::ArrayRef(LE->args_begin(), LE->args_size());
     else if (const auto *RC = dyn_cast<RequiresCapabilityAttr>(A))
       Args = llvm::ArrayRef(RC->args_begin(), RC->args_size());
