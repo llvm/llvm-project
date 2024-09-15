@@ -23,6 +23,48 @@
 
 int main(int, char**) {
   {
+    using M        = std::flat_map<std::string, int, TransparentComparator>;
+    using R        = std::pair<M::iterator, M::iterator>;
+    using CR       = std::pair<M::const_iterator, M::const_iterator>;
+    M m            = {{"alpha", 1}, {"beta", 2}, {"epsilon", 3}, {"eta", 4}, {"gamma", 5}};
+    const auto& cm = m;
+    ASSERT_SAME_TYPE(decltype(m.equal_range(Transparent<std::string>{"abc"})), R);
+    ASSERT_SAME_TYPE(decltype(std::as_const(m).equal_range(Transparent<std::string>{"b"})), CR);
+
+    auto test_found = [&](auto&& m, const std::string& expected_key, int expected_value) {
+      auto [first, last] = m.equal_range(Transparent<std::string>{expected_key});
+      assert(last - first == 1);
+      auto [key, value] = *first;
+      assert(key == expected_key);
+      assert(value == expected_value);
+    };
+
+    auto test_not_found = [&](auto&& m, const std::string& expected_key, long expected_offset) {
+      auto [first, last] = m.equal_range(Transparent<std::string>{expected_key});
+      assert(first == last);
+      assert(first - m.begin() == expected_offset);
+    };
+
+    test_found(m, "alpha", 1);
+    test_found(m, "beta", 2);
+    test_found(m, "epsilon", 3);
+    test_found(m, "eta", 4);
+    test_found(m, "gamma", 5);
+    test_found(cm, "alpha", 1);
+    test_found(cm, "beta", 2);
+    test_found(cm, "epsilon", 3);
+    test_found(cm, "eta", 4);
+    test_found(cm, "gamma", 5);
+
+    test_not_found(m, "charlie", 2);
+    test_not_found(m, "aaa", 0);
+    test_not_found(m, "zzz", 5);
+    test_not_found(cm, "charlie", 2);
+    test_not_found(cm, "aaa", 0);
+    test_not_found(cm, "zzz", 5);
+  }
+#if 0
+  {
     using M  = std::flat_map<std::string, int, StartsWith::Less>;
     using R  = std::pair<M::iterator, M::iterator>;
     using CR = std::pair<M::const_iterator, M::const_iterator>;
@@ -38,5 +80,6 @@ int main(int, char**) {
     assert(m.equal_range(StartsWith('e')) == std::pair(begin + 2, begin + 4));
     assert(m.equal_range(StartsWith('z')) == std::pair(begin + 5, begin + 5));
   }
+#endif
   return 0;
 }

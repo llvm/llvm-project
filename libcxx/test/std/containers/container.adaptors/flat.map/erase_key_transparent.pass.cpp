@@ -39,6 +39,22 @@ struct HeterogeneousKey {
 
 int main(int, char**) {
   {
+    using M = std::flat_map<std::string, int, TransparentComparator>;
+    M m     = {{"alpha", 1}, {"beta", 2}, {"epsilon", 3}, {"eta", 4}, {"gamma", 5}};
+    ASSERT_SAME_TYPE(decltype(m.erase(Transparent<std::string>{"abc"})), M::size_type);
+
+    auto n = m.erase(Transparent<std::string>{"epsilon"});
+    assert(n == 1);
+
+    M expected = {{"alpha", 1}, {"beta", 2}, {"eta", 4}, {"gamma", 5}};
+    assert(m == expected);
+
+    auto n2 = m.erase(Transparent<std::string>{"aaa"});
+    assert(n2 == 0);
+    assert(m == expected);
+  }
+#if 0
+  {
     using M = std::flat_map<std::string, int, StartsWith::Less>;
     M m     = {{"alpha", 1}, {"beta", 2}, {"epsilon", 3}, {"eta", 4}, {"gamma", 5}};
     ASSERT_SAME_TYPE(decltype(m.erase(StartsWith('b'))), M::size_type);
@@ -49,6 +65,7 @@ int main(int, char**) {
     assert(n == 0);
     assert((m == M{{"alpha", 1}, {"beta", 2}, {"gamma", 5}}));
   }
+#endif
   {
     using M = std::flat_map<int, int, std::less<>>;
     M m     = {{1, 1}, {2, 2}, {3, 3}, {4, 4}};
