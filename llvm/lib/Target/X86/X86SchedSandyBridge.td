@@ -892,7 +892,7 @@ def SBWriteResGroup58 : SchedWriteRes<[SBPort23,SBPort05]> {
   let NumMicroOps = 2;
   let ReleaseAtCycles = [1,1];
 }
-def: InstRW<[SBWriteResGroup58], (instrs VINSERTF128rm)>;
+def: InstRW<[SBWriteResGroup58], (instrs VINSERTF128rmi)>;
 
 def SBWriteResGroup59 : SchedWriteRes<[SBPort23,SBPort15]> {
   let Latency = 7;
