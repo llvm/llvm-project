@@ -15,7 +15,7 @@
 
 using namespace llvm;
 
-// A floating point format must supports NaN, Inf and -0.
+// A floating point format must support NaN, Inf and -0.
 bool ConstantFPRange::isSupportedSemantics(const fltSemantics &Sem) {
   switch (APFloat::SemanticsToEnum(Sem)) {
   default:
@@ -65,9 +65,9 @@ ConstantFPRange::ConstantFPRange(const APFloat &Value)
 
   if (Value.isNaN()) {
     makeEmpty();
-    bool isSNaN = Value.isSignaling();
-    MayBeQNaN = !isSNaN;
-    MayBeSNaN = isSNaN;
+    bool IsSNaN = Value.isSignaling();
+    MayBeQNaN = !IsSNaN;
+    MayBeSNaN = IsSNaN;
   } else {
     Lower = Upper = Value;
     MayBeQNaN = MayBeSNaN = false;
@@ -87,7 +87,7 @@ static APFloat::cmpResult strictCompare(const APFloat &LHS,
 }
 
 ConstantFPRange::ConstantFPRange(APFloat LowerVal, APFloat UpperVal,
-                                 bool MayBeQNaN, bool MaybeSNaN)
+                                 bool MayBeQNaN, bool MayBeSNaN)
     : Lower(std::move(LowerVal)), Upper(std::move(UpperVal)) {
   assert(isSupportedSemantics(getSemantics()) && "Unsupported fp format");
 
@@ -97,6 +97,12 @@ ConstantFPRange::ConstantFPRange(APFloat LowerVal, APFloat UpperVal,
     makeEmpty();
   this->MayBeQNaN = MayBeQNaN;
   this->MayBeSNaN = MayBeSNaN;
+}
+
+ConstantFPRange ConstantFPRange::getFinite(const fltSemantics &Sem) {
+  return ConstantFPRange(APFloat::getLargest(Sem, /*Negative=*/true),
+                         APFloat::getLargest(Sem, /*Negative=*/false),
+                         /*MayBeQNaN=*/false, /*MayBeSNaN=*/false);
 }
 
 ConstantFPRange
@@ -207,10 +213,12 @@ void ConstantFPRange::print(raw_ostream &OS) const {
     bool NaNOnly = isNaNOnly();
     if (!NaNOnly) {
       OS << '[';
-      Lower.print(OS);
-      OS << ", ";
-      Upper.print(OS);
-      OS << ']';
+      SmallVector<char, 16> Buffer;
+      Lower.toString(Buffer);
+      OS << Buffer << ", ";
+      Buffer.clear();
+      Upper.toString(Buffer);
+      OS << Buffer << ']';
     }
 
     if (MayBeSNaN || MayBeQNaN) {

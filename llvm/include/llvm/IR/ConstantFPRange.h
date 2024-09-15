@@ -61,7 +61,7 @@ public:
 
   /// Initialize a range of values explicitly.
   ConstantFPRange(APFloat LowerVal, APFloat UpperVal, bool MayBeQNaN = true,
-                  bool MaybeSNaN = true);
+                  bool MayBeSNaN = true);
 
   /// Create empty constant range with the given semantics.
   static ConstantFPRange getEmpty(const fltSemantics &Sem) {
@@ -71,6 +71,15 @@ public:
   /// Create full constant range with the given semantics.
   static ConstantFPRange getFull(const fltSemantics &Sem) {
     return ConstantFPRange(Sem, /*IsFullSet=*/true);
+  }
+
+  /// Helper for (-inf, inf) to represent all finite values.
+  static ConstantFPRange getFinite(const fltSemantics &Sem);
+
+  /// Create a range which doesn't contain NaNs.
+  static ConstantFPRange getNonNaN(APFloat LowerVal, APFloat UpperVal) {
+    return ConstantFPRange(std::move(LowerVal), std::move(UpperVal),
+                           /*MayBeQNaN=*/false, /*MayBeSNaN=*/false);
   }
 
   /// Produce the smallest range such that all values that may satisfy the given
@@ -167,9 +176,6 @@ public:
   /// with another range.  The resultant range is guaranteed to include the
   /// elements of both sets, but may contain more.
   ConstantFPRange unionWith(const ConstantFPRange &CR) const;
-
-  /// Return a new range that is the logical not of the current set.
-  ConstantFPRange inverse() const;
 };
 
 inline raw_ostream &operator<<(raw_ostream &OS, const ConstantFPRange &CR) {
