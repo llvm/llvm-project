@@ -38,12 +38,33 @@ struct CopyOnlyVector : std::vector<T> {
   using std::vector<T>::vector;
 
   CopyOnlyVector(const CopyOnlyVector&) = default;
-  CopyOnlyVector(CopyOnlyVector&& other) : CopyOnlyVector(other){}
-  CopyOnlyVector(CopyOnlyVector&& other, std::vector<T>::allocator_type alloc) : CopyOnlyVector(other, alloc){}
+  CopyOnlyVector(CopyOnlyVector&& other) : CopyOnlyVector(other) {}
+  CopyOnlyVector(CopyOnlyVector&& other, std::vector<T>::allocator_type alloc) : CopyOnlyVector(other, alloc) {}
 
   CopyOnlyVector& operator=(const CopyOnlyVector&) = default;
-  CopyOnlyVector& operator=(CopyOnlyVector& other) {
-    return this->operator=(other);
+  CopyOnlyVector& operator=(CopyOnlyVector& other) { return this->operator=(other); }
+};
+
+template <class T>
+struct Transparent {
+  T t;
+};
+
+struct TransparentComparator {
+   using is_transparent = void;
+  template <class T>
+  bool operator()(const T& t, const Transparent<T>& transparent) const {
+    return t < transparent.t;
+  }
+
+  template <class T>
+  bool operator()(const Transparent<T>& transparent, const T& t) const {
+    return transparent.t < t;
+  }
+
+  template <class T>
+  bool operator()(const T& t1, const T& t2) const {
+    return t1 < t2;
   }
 };
 

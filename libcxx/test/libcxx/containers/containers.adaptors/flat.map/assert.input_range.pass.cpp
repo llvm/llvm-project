@@ -26,17 +26,17 @@ int main(int, char**) {
   using M = std::flat_map<int, int>;
 
   TEST_LIBCPP_ASSERT_FAILURE(
-      ([] { M m{{1, 2, 3}, {4}}; }()), "flat_map keys and mapped containers have different size");
+      ([] { M m({1, 2, 3}, {4}); }()), "flat_map keys and mapped containers have different size");
 
   TEST_LIBCPP_ASSERT_FAILURE(
-      ([] { M m{{1, 2, 3}, {4}, std::less<int>{}}; }()), "flat_map keys and mapped containers have different size");
+      ([] { M m({1, 2, 3}, {4}, std::less<int>{}); }()), "flat_map keys and mapped containers have different size");
 
   TEST_LIBCPP_ASSERT_FAILURE(
       ([] {
         const std::vector keys{1, 2, 3};
         const std::vector values{4};
         const std::allocator<int> alloc{};
-        M m{keys, values, alloc};
+        M m(keys, values, alloc);
       }()),
       "flat_map keys and mapped containers have different size");
 
@@ -46,7 +46,7 @@ int main(int, char**) {
         const std::vector values{4};
         const std::less<int> key_compare{};
         const std::allocator<int> alloc{};
-        M m{keys, values, key_compare, alloc};
+        M m(keys, values, key_compare, alloc);
       }()),
       "flat_map keys and mapped containers have different size");
 

@@ -24,6 +24,8 @@
 #include <random>
 #include <ranges>
 #include <map>
+#include <vector>
+#include <utility>
 
 #include "test_macros.h"
 
@@ -48,6 +50,14 @@ int main(int, char**) {
     m.insert(pairs + 200, pairs + 400);
     assert(fm.size() == m.size());
     LIBCPP_ASSERT(std::ranges::equal(fm, m));
+  }
+
+  {
+    std::vector<std::pair<int, int>> v{{1, 2}, {1, 3}};
+    std::flat_map<int, int> m;
+    m.insert_range(v);
+    assert(m.size() == 1);
+    LIBCPP_ASSERT(m[1] == 2);
   }
   return 0;
 }

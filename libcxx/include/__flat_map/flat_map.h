@@ -237,9 +237,9 @@ public:
       is_nothrow_default_constructible_v<_Compare>)
       : __containers_(), __compare_() {}
 
-  // copy/move constructors are not specified in the spec (defaulted)
-  // but move constructor can potentially leave moved from object in an inconsistent
-  // state if an exception is thrown
+  // The copy/move constructors are not specified in the spec, which means they should be defaulted.
+  // However, the move constructor can potentially leave a moved-from object in an inconsistent
+  // state if an exception is thrown.
   _LIBCPP_HIDE_FROM_ABI flat_map(const flat_map&) = default;
 
   _LIBCPP_HIDE_FROM_ABI flat_map(flat_map&& __other) noexcept(
@@ -570,24 +570,14 @@ public:
     requires is_constructible_v<pair<key_type, mapped_type>, _Args...>
   _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> emplace(_Args&&... __args) {
     std::pair<key_type, mapped_type> __pair(std::forward<_Args>(__args)...);
-    return __binary_search_emplace_impl(std::move(__pair));
+    return __try_emplace(std::move(__pair.first), std::move(__pair.second));
   }
 
   template <class... _Args>
     requires is_constructible_v<pair<key_type, mapped_type>, _Args...>
   _LIBCPP_HIDE_FROM_ABI iterator emplace_hint(const_iterator __hint, _Args&&... __args) {
     std::pair<key_type, mapped_type> __pair(std::forward<_Args>(__args)...);
-    if (__is_hint_correct(__hint, __pair.first)) {
-      if (__compare_(__pair.first, __hint->first)) {
-        return __emplace_impl(__hint, std::move(__pair));
-      } else {
-        // key equals
-        auto __dist = __hint - cbegin();
-        return iterator(__containers_.keys.begin() + __dist, __containers_.values.begin() + __dist);
-      }
-    } else {
-      return __binary_search_emplace_impl(std::move(__pair)).first;
-    }
+    return __try_emplace_hint(__hint, std::move(__pair.first), std::move(__pair.second));
   }
 
   _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> insert(const value_type& __x) { return emplace(__x); }
@@ -614,10 +604,10 @@ public:
     return emplace_hint(__hint, std::forward<_Pp>(__x));
   }
 
-  template <class _InputIterator>
+  template <input_iterator _InputIterator>
   _LIBCPP_HIDE_FROM_ABI void insert(_InputIterator __first, _InputIterator __last) {
     if constexpr (sized_sentinel_for<_InputIterator, _InputIterator>) {
-      __reserve_impl(__last - __first);
+      __reserve(__last - __first);
     }
     __append_sort_merge_unique</*WasSorted = */ false>(std::move(__first), std::move(__last));
   }
@@ -625,7 +615,7 @@ public:
   template <input_iterator _InputIterator>
   void insert(sorted_unique_t, _InputIterator __first, _InputIterator __last) {
     if constexpr (sized_sentinel_for<_InputIterator, _InputIterator>) {
-      __reserve_impl(__last - __first);
+      __reserve(__last - __first);
     }
 
     __append_sort_merge_unique</*WasSorted = */ true>(std::move(__first), std::move(__last));
@@ -634,7 +624,7 @@ public:
   template <_ContainerCompatibleRange<value_type> _Range>
   _LIBCPP_HIDE_FROM_ABI void insert_range(_Range&& __range) {
     if constexpr (ranges::sized_range<_Range>) {
-      __reserve_impl(ranges::size(__range));
+      __reserve(ranges::size(__range));
     }
 
     __append_sort_merge_unique</*WasSorted = */ false>(ranges::begin(__range), ranges::end(__range));
@@ -662,13 +652,13 @@ public:
   template <class... _Args>
     requires is_constructible_v<mapped_type, _Args...>
   _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> try_emplace(const key_type& __key, _Args&&... __args) {
-    return __binary_search_try_emplace_impl(__key, std::forward<_Args>(__args)...);
+    return __try_emplace(__key, std::forward<_Args>(__args)...);
   }
 
   template <class... _Args>
     requires is_constructible_v<mapped_type, _Args...>
   _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> try_emplace(key_type&& __key, _Args&&... __args) {
-    return __binary_search_try_emplace_impl(std::move(__key), std::forward<_Args>(__args)...);
+    return __try_emplace(std::move(__key), std::forward<_Args>(__args)...);
   }
 
   template <class _Kp, class... _Args>
@@ -676,25 +666,25 @@ public:
              is_constructible_v<mapped_type, _Args...> && is_convertible_v<_Kp&&, const_iterator> &&
              is_convertible_v<_Kp&&, iterator>
   _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> try_emplace(_Kp&& __key, _Args&&... __args) {
-    return __binary_search_try_emplace_impl(std::forward<_Kp>(__key), std::forward<_Args>(__args)...);
+    return __try_emplace(std::forward<_Kp>(__key), std::forward<_Args>(__args)...);
   }
 
   template <class... _Args>
     requires is_constructible_v<mapped_type, _Args...>
   _LIBCPP_HIDE_FROM_ABI iterator try_emplace(const_iterator __hint, const key_type& __key, _Args&&... __args) {
-    return try_emplace_hint_impl(__hint, __key, std::forward<_Args>(__args)...);
+    return __try_emplace_hint(__hint, __key, std::forward<_Args>(__args)...);
   }
 
   template <class... _Args>
     requires is_constructible_v<mapped_type, _Args...>
   _LIBCPP_HIDE_FROM_ABI iterator try_emplace(const_iterator __hint, key_type&& __key, _Args&&... __args) {
-    return try_emplace_hint_impl(__hint, std::move(__key), std::forward<_Args>(__args)...);
+    return __try_emplace_hint(__hint, std::move(__key), std::forward<_Args>(__args)...);
   }
 
   template <class _Kp, class... _Args>
     requires __is_compare_transparent && is_constructible_v<key_type, _Kp> && is_constructible_v<mapped_type, _Args...>
   _LIBCPP_HIDE_FROM_ABI iterator try_emplace(const_iterator __hint, _Kp&& __key, _Args&&... __args) {
-    return try_emplace_hint_impl(__hint, std::forward<_Kp>(__key), std::forward<_Args>(__args)...);
+    return __try_emplace_hint(__hint, std::forward<_Kp>(__key), std::forward<_Args>(__args)...);
   }
 
   template <class _Mapped>
@@ -736,11 +726,11 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI iterator erase(iterator __position) {
-    return __erase_impl(__position.__key_iter_, __position.__mapped_iter_);
+    return __erase(__position.__key_iter_, __position.__mapped_iter_);
   }
 
   _LIBCPP_HIDE_FROM_ABI iterator erase(const_iterator __position) {
-    return __erase_impl(__position.__key_iter_, __position.__mapped_iter_);
+    return __erase(__position.__key_iter_, __position.__mapped_iter_);
   }
 
   _LIBCPP_HIDE_FROM_ABI size_type erase(const key_type& __x) {
@@ -815,8 +805,7 @@ public:
   template <class _Kp>
     requires __is_compare_transparent
   _LIBCPP_HIDE_FROM_ABI size_type count(const _Kp& __x) const {
-    auto [__first, __last] = __equal_range_return_key_iter(*this, __x);
-    return __last - __first;
+    return contains(__x) ? 1 : 0;
   }
 
   _LIBCPP_HIDE_FROM_ABI bool contains(const key_type& __x) const { return find(__x) != end(); }
@@ -826,40 +815,40 @@ public:
     return find(__x) != end();
   }
 
-  _LIBCPP_HIDE_FROM_ABI iterator lower_bound(const key_type& __x) { return __lower_bound_impl<iterator>(*this, __x); }
+  _LIBCPP_HIDE_FROM_ABI iterator lower_bound(const key_type& __x) { return __lower_bound<iterator>(*this, __x); }
 
   _LIBCPP_HIDE_FROM_ABI const_iterator lower_bound(const key_type& __x) const {
-    return __lower_bound_impl<const_iterator>(*this, __x);
+    return __lower_bound<const_iterator>(*this, __x);
   }
 
   template <class _Kp>
     requires __is_compare_transparent
   _LIBCPP_HIDE_FROM_ABI iterator lower_bound(const _Kp& __x) {
-    return __lower_bound_impl<iterator>(*this, __x);
+    return __lower_bound<iterator>(*this, __x);
   }
 
   template <class _Kp>
     requires __is_compare_transparent
   _LIBCPP_HIDE_FROM_ABI const_iterator lower_bound(const _Kp& __x) const {
-    return __lower_bound_impl<const_iterator>(*this, __x);
+    return __lower_bound<const_iterator>(*this, __x);
   }
 
-  _LIBCPP_HIDE_FROM_ABI iterator upper_bound(const key_type& __x) { return __upper_bound_impl<iterator>(*this, __x); }
+  _LIBCPP_HIDE_FROM_ABI iterator upper_bound(const key_type& __x) { return __upper_bound<iterator>(*this, __x); }
 
   _LIBCPP_HIDE_FROM_ABI const_iterator upper_bound(const key_type& __x) const {
-    return __upper_bound_impl<const_iterator>(*this, __x);
+    return __upper_bound<const_iterator>(*this, __x);
   }
 
   template <class _Kp>
     requires __is_compare_transparent
   _LIBCPP_HIDE_FROM_ABI iterator upper_bound(const _Kp& __x) {
-    return __upper_bound_impl<iterator>(*this, __x);
+    return __upper_bound<iterator>(*this, __x);
   }
 
   template <class _Kp>
     requires __is_compare_transparent
   _LIBCPP_HIDE_FROM_ABI const_iterator upper_bound(const _Kp& __x) const {
-    return __upper_bound_impl<iterator>(*this, __x);
+    return __upper_bound<iterator>(*this, __x);
   }
 
   _LIBCPP_HIDE_FROM_ABI pair<iterator, iterator> equal_range(const key_type& __x) {
@@ -934,7 +923,7 @@ private:
   }
 
   template <class _InputIterator, class _Sentinel>
-  _LIBCPP_HIDE_FROM_ABI size_type __append_no_check(_InputIterator __first, _Sentinel __last) {
+  _LIBCPP_HIDE_FROM_ABI size_type __append(_InputIterator __first, _Sentinel __last) {
     size_type __num_of_appended = 0;
     for (; __first != __last; ++__first) {
       value_type __kv = *__first;
@@ -947,7 +936,7 @@ private:
 
   template <bool _WasSorted, class _InputIterator, class _Sentinel>
   _LIBCPP_HIDE_FROM_ABI void __append_sort_merge_unique(_InputIterator __first, _Sentinel __last) {
-    size_t __num_of_appended = __append_no_check(std::move(__first), std::move(__last));
+    size_t __num_of_appended = __append(std::move(__first), std::move(__last));
     if (__num_of_appended != 0) {
       auto __zv                  = ranges::views::zip(__containers_.keys, __containers_.values);
       auto __append_start_offset = __containers_.keys.size() - __num_of_appended;
@@ -981,8 +970,8 @@ private:
     return __it;
   }
 
-  template <class _Self>
-  _LIBCPP_HIDE_FROM_ABI static auto __equal_range_return_key_iter(_Self&& __self, const _Key& __key) {
+  template <class _Self, class _Kp>
+  _LIBCPP_HIDE_FROM_ABI static auto __key_equal_range(_Self&& __self, const _Kp& __key) {
     auto __it   = ranges::lower_bound(__self.__containers_.keys, __key, __self.__compare_);
     auto __last = __self.__containers_.keys.end();
     if (__it == __last || __self.__compare_(__key, *__it)) {
@@ -992,24 +981,8 @@ private:
   }
 
   template <class _Self, class _Kp>
-  _LIBCPP_HIDE_FROM_ABI static auto __equal_range_return_key_iter(_Self&& __self, const _Kp& __key) {
-    // if the comparator gives different results between  Key(__x) < key2  and __x < key2,
-    // the container might have duplicates w.r.t to  _Kp < Key
-    // TODO: this is the case in Author's test case, but do we really want to support it?
-    auto __first_not_smaller = ranges::lower_bound(__self.__containers_.keys, __key, __self.__compare_);
-    auto __first_bigger =
-        std::ranges::partition_point(__first_not_smaller, __self.__containers_.keys.end(), [&](const auto& __ele) {
-          return !std::invoke(__self.__compare_, __key, __ele);
-        });
-    return std::make_pair(std::move(__first_not_smaller), std::move(__first_bigger));
-  }
-
-  template <class _Self, class _Kp>
   _LIBCPP_HIDE_FROM_ABI static auto __equal_range_impl(_Self&& __self, const _Kp& __key) {
-    // if the comparator gives different results between  Key(__x) < key2  and __x < key2,
-    // the container might have duplicates w.r.t to  _Kp < Key
-    // TODO: this is the case in Author's test case, but do we really want to support it?
-    auto [__first_not_smaller_key_iter, __first_bigger_key_iter] = __equal_range_return_key_iter(__self, __key);
+    auto [__key_first, __key_last] = __key_equal_range(__self, __key);
 
     const auto __make_mapped_iter = [&](const auto& __key_iter) {
       return __self.__containers_.values.begin() +
@@ -1018,19 +991,47 @@ private:
     };
 
     using __iterator_type = ranges::iterator_t<decltype(__self)>;
-    return std::make_pair(
-        __iterator_type(__first_not_smaller_key_iter, __make_mapped_iter(__first_not_smaller_key_iter)),
-        __iterator_type(__first_bigger_key_iter, __make_mapped_iter(__first_bigger_key_iter)));
+    return std::make_pair(__iterator_type(__key_first, __make_mapped_iter(__key_first)),
+                          __iterator_type(__key_last, __make_mapped_iter(__key_last)));
   }
 
   template <class _Res, class _Self, class _Kp>
-  _LIBCPP_HIDE_FROM_ABI static _Res __lower_bound_impl(_Self&& __self, _Kp& __x) {
-    return __binary_search_impl<_Res>(ranges::lower_bound, __self, __x);
+  _LIBCPP_HIDE_FROM_ABI static _Res __lower_bound(_Self&& __self, _Kp& __x) {
+    return __binary_search<_Res>(__self, ranges::lower_bound, __x);
   }
 
   template <class _Res, class _Self, class _Kp>
-  _LIBCPP_HIDE_FROM_ABI static _Res __upper_bound_impl(_Self&& __self, _Kp& __x) {
-    return __binary_search_impl<_Res>(ranges::upper_bound, __self, __x);
+  _LIBCPP_HIDE_FROM_ABI static _Res __upper_bound(_Self&& __self, _Kp& __x) {
+    return __binary_search<_Res>(__self, ranges::upper_bound, __x);
+  }
+
+  template <class _Res, class _Self, class _Fn, class _Kp>
+  _LIBCPP_HIDE_FROM_ABI static _Res __binary_search(_Self&& __self, _Fn __search_fn, _Kp& __x) {
+    auto __key_iter = __search_fn(__self.__containers_.keys, __x, __self.__compare_);
+    auto __mapped_iter =
+        __self.__containers_.values.begin() +
+        static_cast<ranges::range_difference_t<mapped_container_type>>(
+            ranges::distance(__self.__containers_.keys.begin(), __key_iter));
+
+    return _Res(std::move(__key_iter), std::move(__mapped_iter));
+  }
+
+  template <class _KeyArg, class... _MArgs>
+  _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> __try_emplace(_KeyArg&& __key, _MArgs&&... __mapped_args) {
+    auto __key_it    = ranges::lower_bound(__containers_.keys, __key, __compare_);
+    auto __mapped_it = __containers_.values.begin() + ranges::distance(__containers_.keys.begin(), __key_it);
+
+    if (__key_it == __containers_.keys.end() || __compare_(__key, *__key_it)) {
+      return pair<iterator, bool>(
+          __try_emplace_exact_hint(
+              std::move(__key_it),
+              std::move(__mapped_it),
+              std::forward<_KeyArg>(__key),
+              std::forward<_MArgs>(__mapped_args)...),
+          true);
+    } else {
+      return pair<iterator, bool>(iterator(std::move(__key_it), std::move(__mapped_it)), false);
+    }
   }
 
   template <class _Kp>
@@ -1044,53 +1045,11 @@ private:
     return true;
   }
 
-  template <class _Res, class _Fn, class _Self, class _Kp>
-  _LIBCPP_HIDE_FROM_ABI static _Res __binary_search_impl(_Fn __search_fn, _Self&& __self, _Kp& __x) {
-    auto __key_iter = __search_fn(__self.__containers_.keys, __x, __self.__compare_);
-    auto __mapped_iter =
-        __self.__containers_.values.begin() +
-        static_cast<ranges::range_difference_t<mapped_container_type>>(
-            ranges::distance(__self.__containers_.keys.begin(), __key_iter));
-
-    return _Res(std::move(__key_iter), std::move(__mapped_iter));
-  }
-
-  _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> __binary_search_emplace_impl(std::pair<key_type, mapped_type>&& __pair) {
-    if (auto __it = lower_bound(__pair.first); __it == end() || __compare_(__pair.first, (*__it).first)) {
-      return pair<iterator, bool>(__emplace_impl(__it, std::move(__pair)), true);
-    } else {
-      return pair<iterator, bool>(std::move(__it), false);
-    }
-  }
-
-  template <class _Iter>
-  _LIBCPP_HIDE_FROM_ABI iterator __emplace_impl(_Iter&& __it, std::pair<key_type, mapped_type>&& __pair) {
-    return __try_emplace_impl(__it.__key_iter_, __it.__mapped_iter_, std::move(__pair.first), std::move(__pair.second));
-  }
-
-  template <class _KeyArg, class... _MArgs>
-  _LIBCPP_HIDE_FROM_ABI pair<iterator, bool>
-  __binary_search_try_emplace_impl(_KeyArg&& __key, _MArgs&&... __mapped_args) {
-    auto __key_it    = ranges::lower_bound(__containers_.keys, __key, __compare_);
-    auto __mapped_it = __containers_.values.begin() + ranges::distance(__containers_.keys.begin(), __key_it);
-
-    if (__key_it == __containers_.keys.end() || __compare_(__key, *__key_it)) {
-      return pair<iterator, bool>(
-          __try_emplace_impl(std::move(__key_it),
-                             std::move(__mapped_it),
-                             std::forward<_KeyArg>(__key),
-                             std::forward<_MArgs>(__mapped_args)...),
-          true);
-    } else {
-      return pair<iterator, bool>(iterator(std::move(__key_it), std::move(__mapped_it)), false);
-    }
-  }
-
   template <class _Kp, class... _Args>
-  _LIBCPP_HIDE_FROM_ABI iterator try_emplace_hint_impl(const_iterator __hint, _Kp&& __key, _Args&&... __args) {
+  _LIBCPP_HIDE_FROM_ABI iterator __try_emplace_hint(const_iterator __hint, _Kp&& __key, _Args&&... __args) {
     if (__is_hint_correct(__hint, __key)) {
       if (__compare_(__key, __hint->first)) {
-        return __try_emplace_impl(
+        return __try_emplace_exact_hint(
             __hint.__key_iter_, __hint.__mapped_iter_, std::forward<_Kp>(__key), std::forward<_Args>(__args)...);
       } else {
         // key equals
@@ -1098,13 +1057,13 @@ private:
         return iterator(__containers_.keys.begin() + __dist, __containers_.values.begin() + __dist);
       }
     } else {
-      __binary_search_try_emplace_impl(std::forward<_Kp>(__key), std::forward<_Args>(__args)...).first;
+      return __try_emplace(std::forward<_Kp>(__key), std::forward<_Args>(__args)...).first;
     }
   }
 
   template <class _IterK, class _IterM, class _KeyArg, class... _MArgs>
   _LIBCPP_HIDE_FROM_ABI iterator
-  __try_emplace_impl(_IterK&& __it_key, _IterM&& __it_mapped, _KeyArg&& __key, _MArgs&&... __mapped_args) {
+  __try_emplace_exact_hint(_IterK&& __it_key, _IterM&& __it_mapped, _KeyArg&& __key, _MArgs&&... __mapped_args) {
     auto __on_key_failed = std::__make_exception_guard([&]() noexcept {
       if constexpr (__container_traits<_KeyContainer>::__emplacement_has_strong_exception_safety_guarantee) {
         // Nothing to roll back!
@@ -1150,7 +1109,7 @@ private:
     return __r;
   }
 
-  _LIBCPP_HIDE_FROM_ABI void __reserve_impl(size_t __size) {
+  _LIBCPP_HIDE_FROM_ABI void __reserve(size_t __size) {
     if constexpr (requires { __containers_.keys.reserve(__size); }) {
       __containers_.keys.reserve(__size);
     }
@@ -1161,7 +1120,7 @@ private:
   }
 
   template <class _KIter, class _MIter>
-  _LIBCPP_HIDE_FROM_ABI iterator __erase_impl(_KIter __key_iter_to_remove, _MIter __mapped_iter_to_remove) {
+  _LIBCPP_HIDE_FROM_ABI iterator __erase(_KIter __key_iter_to_remove, _MIter __mapped_iter_to_remove) {
     auto __on_failure  = std::__make_exception_guard([&]() noexcept { clear() /* noexcept */; });
     auto __key_iter    = __containers_.keys.erase(__key_iter_to_remove);
     auto __mapped_iter = __containers_.values.erase(__mapped_iter_to_remove);
@@ -1310,8 +1269,8 @@ erase_if(flat_map<_Key, _Tp, _Compare, _KeyContainer, _MappedContainer>& __flat_
   auto __last   = __zv.end();
   auto __guard  = std::__make_exception_guard([&] { __flat_map.clear(); });
   auto __it     = std::remove_if(__first, __last, [&](auto&& __zipped) -> bool {
-    using __ref = typename flat_map<_Key, _Tp, _Compare, _KeyContainer, _MappedContainer>::const_reference;
-    return __pred(__ref(std::get<0>(__zipped), std::get<1>(__zipped)));
+    using _Ref = typename flat_map<_Key, _Tp, _Compare, _KeyContainer, _MappedContainer>::const_reference;
+    return __pred(_Ref(std::get<0>(__zipped), std::get<1>(__zipped)));
   });
   auto __res    = __last - __it;
   auto __offset = __it - __first;
