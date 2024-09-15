@@ -46,6 +46,7 @@
 #include <__type_traits/invoke.h>
 #include <__type_traits/is_allocator.h>
 #include <__type_traits/is_nothrow_constructible.h>
+#include <__type_traits/is_same.h>
 #include <__type_traits/maybe_const.h>
 #include <__utility/pair.h>
 #include <initializer_list>
@@ -93,6 +94,11 @@ public:
   using const_reverse_iterator = std::reverse_iterator<const_iterator>;
   using key_container_type     = _KeyContainer;
   using mapped_container_type  = _MappedContainer;
+
+  static_assert(__cpp17_random_access_iterator<typename _KeyContainer::iterator>);
+  static_assert(__cpp17_random_access_iterator<typename _MappedContainer::iterator>);
+  static_assert(is_same_v<_Key, typename _KeyContainer::value_type>);
+  static_assert(is_same_v<_Tp, typename _MappedContainer::value_type>);
 
   class value_compare {
   private:
