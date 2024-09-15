@@ -5,6 +5,7 @@
 ; CHECK-Osz-NEXT: Running analysis: InlineAdvisorAnalysis
 ; CHECK-Osz-NEXT: Running analysis: InnerAnalysisManagerProxy
 ; CHECK-Osz-NEXT: Running analysis: LazyCallGraphAnalysis
+; CHECK-Osz-NEXT: Running analysis: DebugInfoCacheAnalysis
 ; CHECK-Osz-NEXT: Running analysis: FunctionAnalysisManagerCGSCCProxy on (foo)
 ; CHECK-Osz-NEXT: Running analysis: OuterAnalysisManagerProxy
 ; CHECK-Osz-NEXT: Running pass: InlinerPass on (foo)

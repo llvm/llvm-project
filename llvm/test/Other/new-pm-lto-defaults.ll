@@ -43,6 +43,7 @@
 ; CHECK-O23SZ-NEXT: Running analysis: OptimizationRemarkEmitterAnalysis
 ; CHECK-O23SZ-NEXT: Running analysis: InnerAnalysisManagerProxy<{{.*}}SCC
 ; CHECK-O23SZ-NEXT: Running analysis: LazyCallGraphAnalysis
+; CHECK-O23SZ-NEXT: Running analysis: DebugInfoCacheAnalysis
 ; CHECK-O23SZ-NEXT: Running analysis: FunctionAnalysisManagerCGSCCProxy
 ; CHECK-O23SZ-NEXT: Running analysis: OuterAnalysisManagerProxy<{{.*}}LazyCallGraph{{.*}}>
 ; CHECK-O23SZ-NEXT: Running pass: PostOrderFunctionAttrsPass
