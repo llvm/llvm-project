@@ -8052,10 +8052,10 @@ inlined call.
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The ``noalias.addrspace`` metadata is used to identify memory
-operations which cannot access a range of address spaces. It is
-attached to memory instructions, including :ref:`atomicrmw
-<i_atomicrmw>`, :ref:`cmpxchg <i_cmpxchg>`, and :ref:`call <i_call>`
-instructions.
+operations which cannot access objects allocated in a range of address
+spaces. It is attached to memory instructions, including
+:ref:`atomicrmw <i_atomicrmw>`, :ref:`cmpxchg <i_cmpxchg>`, and
+:ref:`call <i_call>` instructions.
 
 This follows the same form as :ref:`range metadata <range-metadata>`,
 except the field entries must be of type `i32`. The interpretation is
