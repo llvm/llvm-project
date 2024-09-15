@@ -1051,6 +1051,17 @@ DWARFUnit::getLastChildEntry(const DWARFDebugInfoEntry *Die) const {
   return nullptr;
 }
 
+const DWARFAbbreviationDeclaration *DWARFUnit::tryExtractCUAbbrevFast() const {
+  Expected<const DWARFAbbreviationDeclaration *> AbbrevOrError =
+      Abbrev->tryExtractCUAbbrevFast(getAbbreviationsOffset());
+  if (!AbbrevOrError) {
+    // FIXME: We should propagate this error upwards.
+    consumeError(AbbrevOrError.takeError());
+    return nullptr;
+  }
+  return *AbbrevOrError;
+}
+
 const DWARFAbbreviationDeclarationSet *DWARFUnit::getAbbreviations() const {
   if (!Abbrevs) {
     Expected<const DWARFAbbreviationDeclarationSet *> AbbrevsOrError =

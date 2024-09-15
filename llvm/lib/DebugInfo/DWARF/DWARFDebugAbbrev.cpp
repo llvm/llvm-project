@@ -168,3 +168,21 @@ DWARFDebugAbbrev::getAbbreviationDeclarationSet(uint64_t CUAbbrOffset) const {
           .first;
   return &PrevAbbrOffsetPos->second;
 }
+
+Expected<const DWARFAbbreviationDeclaration *>
+DWARFDebugAbbrev::tryExtractCUAbbrevFast(uint64_t CUAbbrOffset) const {
+  if (auto AbbrevDecl = CUAbbrevs.find(CUAbbrOffset);
+      AbbrevDecl != CUAbbrevs.end())
+    return &AbbrevDecl->second;
+
+  DWARFAbbreviationDeclaration Decl;
+  uint64_t Offset = CUAbbrOffset;
+  Expected<DWARFAbbreviationDeclaration::ExtractState> ES =
+      Decl.extract(*Data, &Offset);
+  if (!ES)
+    return ES.takeError();
+  if (Decl.getCode() != 1)
+    return nullptr;
+
+  return &(CUAbbrevs[CUAbbrOffset] = std::move(Decl));
+}
