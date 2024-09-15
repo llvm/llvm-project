@@ -59,7 +59,7 @@ class TargetInstrInfo;
 
     /// Virt2SplitMap - This is virtual register to splitted virtual register
     /// mapping.
-    IndexedMap<unsigned, VirtReg2IndexFunctor> Virt2SplitMap;
+    IndexedMap<Register, VirtReg2IndexFunctor> Virt2SplitMap;
 
     /// Virt2ShapeMap - For X86 AMX register whose register is bound shape
     /// information.
@@ -73,7 +73,7 @@ class TargetInstrInfo;
 
     VirtRegMap()
         : MachineFunctionPass(ID), Virt2PhysMap(NO_PHYS_REG),
-          Virt2StackSlotMap(NO_STACK_SLOT), Virt2SplitMap(0) {}
+          Virt2StackSlotMap(NO_STACK_SLOT) {}
     VirtRegMap(const VirtRegMap &) = delete;
     VirtRegMap &operator=(const VirtRegMap &) = delete;
 
