@@ -1580,6 +1580,12 @@ define i32 @ptr_induction_ult_2(ptr %a, ptr %b) {
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (((-1 * (ptrtoint ptr %a to i64)) + (ptrtoint ptr %b to i64)) /u 4)
+; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:      Equal predicate: (zext i2 ((trunc i64 (ptrtoint ptr %b to i64) to i2) + (-1 * (trunc i64 (ptrtoint ptr %a to i64) to i2))) to i64) == 0
+; CHECK-NEXT:  Loop %loop: Predicated symbolic max backedge-taken count is (((-1 * (ptrtoint ptr %a to i64)) + (ptrtoint ptr %b to i64)) /u 4)
+; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:      Equal predicate: (zext i2 ((trunc i64 (ptrtoint ptr %b to i64) to i2) + (-1 * (trunc i64 (ptrtoint ptr %a to i64) to i2))) to i64) == 0
 ;
 entry:
   %cmp.6 = icmp ult ptr %a, %b
@@ -1652,10 +1658,9 @@ exit:
   ret void
 }
 
-; TODO: It feels like we should be able to calculate the symbolic max
-; exit count for the loop.inc block here, in the same way as
-; ptr_induction_eq_1. The problem seems to be in howFarToZero when the
-; ControlsOnlyExit is set to false.
+; %a and %b may not have the same alignment, so the loop may only via the early
+; exit when %ptr.iv > %b. The predicated exit count for the latch can be
+; computed by adding a predicate.
 define void @ptr_induction_early_exit_eq_1(ptr %a, ptr %b, ptr %c) {
 ; CHECK-LABEL: 'ptr_induction_early_exit_eq_1'
 ; CHECK-NEXT:  Classifying expressions for: @ptr_induction_early_exit_eq_1
@@ -1669,10 +1674,21 @@ define void @ptr_induction_early_exit_eq_1(ptr %a, ptr %b, ptr %c) {
 ; CHECK-NEXT:  Loop %loop: <multiple exits> Unpredictable backedge-taken count.
 ; CHECK-NEXT:    exit count for loop: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:    exit count for loop.inc: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:    predicated exit count for loop.inc: ((-8 + (-1 * (ptrtoint ptr %a to i64)) + (ptrtoint ptr %b to i64)) /u 8)
+; CHECK-NEXT:     Predicates:
+; CHECK-NEXT:      Equal predicate: (zext i3 ((trunc i64 (ptrtoint ptr %b to i64) to i3) + (-1 * (trunc i64 (ptrtoint ptr %a to i64) to i3))) to i64) == 0
+; CHECK-EMPTY:
 ; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
 ; CHECK-NEXT:    symbolic max exit count for loop: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:    symbolic max exit count for loop.inc: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:    predicated symbolic max exit count for loop.inc: ((-8 + (-1 * (ptrtoint ptr %a to i64)) + (ptrtoint ptr %b to i64)) /u 8)
+; CHECK-NEXT:     Predicates:
+; CHECK-NEXT:      Equal predicate: (zext i3 ((trunc i64 (ptrtoint ptr %b to i64) to i3) + (-1 * (trunc i64 (ptrtoint ptr %a to i64) to i3))) to i64) == 0
+; CHECK-EMPTY:
+; CHECK-NEXT:  Loop %loop: Predicated symbolic max backedge-taken count is ((-8 + (-1 * (ptrtoint ptr %a to i64)) + (ptrtoint ptr %b to i64)) /u 8)
+; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:      Equal predicate: (zext i3 ((trunc i64 (ptrtoint ptr %b to i64) to i3) + (-1 * (trunc i64 (ptrtoint ptr %a to i64) to i3))) to i64) == 0
 ;
 entry:
   %cmp = icmp eq ptr %a, %b

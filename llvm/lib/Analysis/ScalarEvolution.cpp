@@ -10120,8 +10120,11 @@ const SCEV *ScalarEvolution::stripInjectiveFunctions(const SCEV *S) const {
 /// A and B isn't important.
 ///
 /// If the equation does not have a solution, SCEVCouldNotCompute is returned.
-static const SCEV *SolveLinEquationWithOverflow(const APInt &A, const SCEV *B,
-                                               ScalarEvolution &SE) {
+static const SCEV *
+SolveLinEquationWithOverflow(const APInt &A, const SCEV *B,
+                             SmallPtrSetImpl<const SCEVPredicate *> *Predicates,
+
+                             ScalarEvolution &SE) {
   uint32_t BW = A.getBitWidth();
   assert(BW == SE.getTypeSizeInBits(B->getType()));
   assert(A != 0 && "A must be non-zero.");
@@ -10137,8 +10140,17 @@ static const SCEV *SolveLinEquationWithOverflow(const APInt &A, const SCEV *B,
   //
   // B is divisible by D if and only if the multiplicity of prime factor 2 for B
   // is not less than multiplicity of this prime factor for D.
-  if (SE.getMinTrailingZeros(B) < Mult2)
-    return SE.getCouldNotCompute();
+  if (SE.getMinTrailingZeros(B) < Mult2) {
+    if (!Predicates)
+      return SE.getCouldNotCompute();
+    // Try to add a predicate ensuring B is a multiple of A.
+    const SCEV *URem = SE.getURemExpr(B, SE.getConstant(A));
+    const SCEV *Zero = SE.getZero(B->getType());
+    // Avoid adding a predicate that is known to be false.
+    if (SE.isKnownPredicate(CmpInst::ICMP_NE, URem, Zero))
+      return SE.getCouldNotCompute();
+    Predicates->insert(SE.getEqualPredicate(URem, Zero));
+  }
 
   // 3. Compute I: the multiplicative inverse of (A / D) in arithmetic
   // modulo (N / D).
@@ -10568,8 +10580,9 @@ ScalarEvolution::ExitLimit ScalarEvolution::howFarToZero(const SCEV *V,
   // Solve the general equation.
   if (!StepC || StepC->getValue()->isZero())
     return getCouldNotCompute();
-  const SCEV *E = SolveLinEquationWithOverflow(StepC->getAPInt(),
-                                               getNegativeSCEV(Start), *this);
+  const SCEV *E = SolveLinEquationWithOverflow(
+      StepC->getAPInt(), getNegativeSCEV(Start),
+      AllowPredicates ? &Predicates : nullptr, *this);
 
   const SCEV *M = E;
   if (E != getCouldNotCompute()) {
