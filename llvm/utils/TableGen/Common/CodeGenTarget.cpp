@@ -85,9 +85,9 @@ std::string llvm::getQualifiedName(const Record *R) {
 
 /// getTarget - Return the current instance of the Target class.
 ///
-CodeGenTarget::CodeGenTarget(RecordKeeper &records)
+CodeGenTarget::CodeGenTarget(const RecordKeeper &records)
     : Records(records), CGH(records), Intrinsics(records) {
-  std::vector<Record *> Targets = Records.getAllDerivedDefinitions("Target");
+  ArrayRef<const Record *> Targets = Records.getAllDerivedDefinitions("Target");
   if (Targets.size() == 0)
     PrintFatalError("No 'Target' subclasses defined!");
   if (Targets.size() != 1)
@@ -223,11 +223,6 @@ std::optional<CodeGenRegisterClass *> CodeGenTarget::getSuperRegForSubReg(
   return Candidates[0];
 }
 
-void CodeGenTarget::ReadRegAltNameIndices() const {
-  RegAltNameIndices = Records.getAllDerivedDefinitions("RegAltNameIndex");
-  llvm::sort(RegAltNameIndices, LessRecord());
-}
-
 /// getRegisterByName - If there is a register with the specific AsmName,
 /// return it.
 const CodeGenRegister *CodeGenTarget::getRegisterByName(StringRef Name) const {
@@ -271,12 +266,13 @@ CodeGenSchedModels &CodeGenTarget::getSchedModels() const {
 }
 
 void CodeGenTarget::ReadInstructions() const {
-  std::vector<Record *> Insts = Records.getAllDerivedDefinitions("Instruction");
+  ArrayRef<const Record *> Insts =
+      Records.getAllDerivedDefinitions("Instruction");
   if (Insts.size() <= 2)
     PrintFatalError("No 'Instruction' subclasses defined!");
 
   // Parse the instructions defined in the .td file.
-  for (Record *R : Insts) {
+  for (const Record *R : Insts) {
     Instructions[R] = std::make_unique<CodeGenInstruction>(R);
     if (Instructions[R]->isVariableLengthEncoding())
       HasVariableLengthEncodings = true;
@@ -286,7 +282,7 @@ void CodeGenTarget::ReadInstructions() const {
 static const CodeGenInstruction *GetInstByName(
     const char *Name,
     const DenseMap<const Record *, std::unique_ptr<CodeGenInstruction>> &Insts,
-    RecordKeeper &Records) {
+    const RecordKeeper &Records) {
   const Record *Rec = Records.getDef(Name);
 
   const auto I = Insts.find(Rec);
@@ -358,9 +354,8 @@ void CodeGenTarget::reverseBitsForLittleEndianEncoding() {
   if (!isLittleEndianEncoding())
     return;
 
-  std::vector<Record *> Insts =
-      Records.getAllDerivedDefinitions("InstructionEncoding");
-  for (Record *R : Insts) {
+  for (const Record *R :
+       Records.getAllDerivedDefinitions("InstructionEncoding")) {
     if (R->getValueAsString("Namespace") == "TargetOpcode" ||
         R->getValueAsBit("isPseudo"))
       continue;
@@ -383,11 +378,15 @@ void CodeGenTarget::reverseBitsForLittleEndianEncoding() {
       NewBits[middle] = BI->getBit(middle);
     }
 
-    BitsInit *NewBI = BitsInit::get(Records, NewBits);
+    RecordKeeper &MutableRC = const_cast<RecordKeeper &>(Records);
+    BitsInit *NewBI = BitsInit::get(MutableRC, NewBits);
 
-    // Update the bits in reversed order so that emitInstrOpBits will get the
-    // correct endianness.
-    R->getValue("Inst")->setValue(NewBI);
+    // Update the bits in reversed order so that emitters will get the correct
+    // endianness.
+    // FIXME: Eliminate mutation of TG records by creating a helper function
+    // to reverse bits and maintain a cache instead of mutating records.
+    Record *MutableR = const_cast<Record *>(R);
+    MutableR->getValue("Inst")->setValue(NewBI);
   }
 }
 
