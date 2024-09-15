@@ -886,14 +886,14 @@ def ADLPWriteResGroup50 : SchedWriteRes<[ADLPPort04_09, ADLPPort05, ADLPPort07_0
   let Latency = 12;
   let NumMicroOps = 3;
 }
-def : InstRW<[ADLPWriteResGroup50], (instregex "^(V?)EXTRACTPSmr$")>;
+def : InstRW<[ADLPWriteResGroup50], (instregex "^(V?)EXTRACTPSmri$")>;
 def : InstRW<[ADLPWriteResGroup50], (instrs SMSW16m)>;
 
 def ADLPWriteResGroup51 : SchedWriteRes<[ADLPPort00, ADLPPort05]> {
   let Latency = 4;
   let NumMicroOps = 2;
 }
-def : InstRW<[ADLPWriteResGroup51], (instregex "^(V?)EXTRACTPSrr$")>;
+def : InstRW<[ADLPWriteResGroup51], (instregex "^(V?)EXTRACTPSrri$")>;
 def : InstRW<[ADLPWriteResGroup51], (instrs MMX_PEXTRWrr)>;
 
 def ADLPWriteResGroup52 : SchedWriteRes<[ADLPPort00_01_05_06, ADLPPort02_03, ADLPPort02_03_07, ADLPPort04, ADLPPort06]> {
