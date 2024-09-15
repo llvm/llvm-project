@@ -1004,18 +1004,18 @@ def SPRWriteResGroup54 : SchedWriteRes<[SPRPort04_09, SPRPort05, SPRPort07_08]> 
   let Latency = 12;
   let NumMicroOps = 3;
 }
-def : InstRW<[SPRWriteResGroup54], (instregex "^(V?)EXTRACTPSmr$",
+def : InstRW<[SPRWriteResGroup54], (instregex "^(V?)EXTRACTPSmri$",
                                               "^VPMOVQDZ((256)?)mr$")>;
 def : InstRW<[SPRWriteResGroup54], (instrs SMSW16m,
-                                           VEXTRACTPSZmr)>;
+                                           VEXTRACTPSZmri)>;
 
 def SPRWriteResGroup55 : SchedWriteRes<[SPRPort00, SPRPort05]> {
   let Latency = 4;
   let NumMicroOps = 2;
 }
-def : InstRW<[SPRWriteResGroup55], (instregex "^(V?)EXTRACTPSrr$")>;
+def : InstRW<[SPRWriteResGroup55], (instregex "^(V?)EXTRACTPSrri$")>;
 def : InstRW<[SPRWriteResGroup55], (instrs MMX_PEXTRWrr,
-                                           VEXTRACTPSZrr,
+                                           VEXTRACTPSZrri,
                                            VPERMWZrr)>;
 
 def SPRWriteResGroup56 : SchedWriteRes<[SPRPort02_03, SPRPort02_03_11, SPRPort04, SPRPort04_09, SPRPort06]> {
