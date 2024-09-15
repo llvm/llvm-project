@@ -84,12 +84,12 @@ void VirtRegMap::grow() {
 
 void VirtRegMap::assignVirt2Phys(Register virtReg, MCPhysReg physReg) {
   assert(virtReg.isVirtual() && Register::isPhysicalRegister(physReg));
-  assert(Virt2PhysMap[virtReg.id()] == NO_PHYS_REG &&
+  assert(Virt2PhysMap[virtReg] == NO_PHYS_REG &&
          "attempt to assign physical register to already mapped "
          "virtual register");
   assert(!getRegInfo().isReserved(physReg) &&
          "Attempt to map virtReg to a reserved physReg");
-  Virt2PhysMap[virtReg.id()] = physReg;
+  Virt2PhysMap[virtReg] = physReg;
 }
 
 unsigned VirtRegMap::createSpillSlot(const TargetRegisterClass *RC) {
@@ -126,20 +126,20 @@ bool VirtRegMap::hasKnownPreference(Register VirtReg) const {
 
 int VirtRegMap::assignVirt2StackSlot(Register virtReg) {
   assert(virtReg.isVirtual());
-  assert(Virt2StackSlotMap[virtReg.id()] == NO_STACK_SLOT &&
+  assert(Virt2StackSlotMap[virtReg] == NO_STACK_SLOT &&
          "attempt to assign stack slot to already spilled register");
   const TargetRegisterClass* RC = MF->getRegInfo().getRegClass(virtReg);
-  return Virt2StackSlotMap[virtReg.id()] = createSpillSlot(RC);
+  return Virt2StackSlotMap[virtReg] = createSpillSlot(RC);
 }
 
 void VirtRegMap::assignVirt2StackSlot(Register virtReg, int SS) {
   assert(virtReg.isVirtual());
-  assert(Virt2StackSlotMap[virtReg.id()] == NO_STACK_SLOT &&
+  assert(Virt2StackSlotMap[virtReg] == NO_STACK_SLOT &&
          "attempt to assign stack slot to already spilled register");
   assert((SS >= 0 ||
           (SS >= MF->getFrameInfo().getObjectIndexBegin())) &&
          "illegal fixed frame index");
-  Virt2StackSlotMap[virtReg.id()] = SS;
+  Virt2StackSlotMap[virtReg] = SS;
 }
 
 void VirtRegMap::print(raw_ostream &OS, const Module*) const {

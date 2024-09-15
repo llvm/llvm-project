@@ -690,8 +690,10 @@ static RValue emitLibraryCall(CodeGenFunction &CGF, const FunctionDecl *FD,
                               const CallExpr *E, llvm::Constant *calleeValue) {
   CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, E);
   CGCallee callee = CGCallee::forDirect(calleeValue, GlobalDecl(FD));
+  llvm::CallBase *callOrInvoke = nullptr;
   RValue Call =
-      CGF.EmitCall(E->getCallee()->getType(), callee, E, ReturnValueSlot());
+      CGF.EmitCall(E->getCallee()->getType(), callee, E, ReturnValueSlot(),
+                   /*Chain=*/nullptr, &callOrInvoke);
 
   if (unsigned BuiltinID = FD->getBuiltinID()) {
     // Check whether a FP math builtin function, such as BI__builtin_expf
@@ -705,8 +707,7 @@ static RValue emitLibraryCall(CodeGenFunction &CGF, const FunctionDecl *FD,
       // Emit "int" TBAA metadata on FP math libcalls.
       clang::QualType IntTy = Context.IntTy;
       TBAAAccessInfo TBAAInfo = CGF.CGM.getTBAAAccessInfo(IntTy);
-      Instruction *Inst = cast<llvm::Instruction>(Call.getScalarVal());
-      CGF.CGM.DecorateInstructionWithTBAA(Inst, TBAAInfo);
+      CGF.CGM.DecorateInstructionWithTBAA(callOrInvoke, TBAAInfo);
     }
   }
   return Call;
