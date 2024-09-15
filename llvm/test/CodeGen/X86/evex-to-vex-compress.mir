@@ -877,21 +877,21 @@ body: |
   $ymm0 = VRNDSCALEPSZ256rmi                   $rip, 1, $noreg, 0, $noreg, 15, implicit $mxcsr
   ; CHECK: $ymm0 = VROUNDPSYri                 $ymm0, 15, implicit $mxcsr
   $ymm0 = VRNDSCALEPSZ256rri                   $ymm0, 15, implicit $mxcsr
-  ; CHECK: $ymm0 = VPERM2F128rm                $ymm0, $rip, 1, $noreg, 0, $noreg, 32
+  ; CHECK: $ymm0 = VPERM2F128rmi               $ymm0, $rip, 1, $noreg, 0, $noreg, 32
   $ymm0 = VSHUFF32X4Z256rmi                    $ymm0, $rip, 1, $noreg, 0, $noreg, 228
-  ; CHECK: $ymm0 = VPERM2F128rr                $ymm0, $ymm1, 32
+  ; CHECK: $ymm0 = VPERM2F128rri               $ymm0, $ymm1, 32
   $ymm0 = VSHUFF32X4Z256rri                    $ymm0, $ymm1, 228
-  ; CHECK: $ymm0 = VPERM2F128rm                $ymm0, $rip, 1, $noreg, 0, $noreg, 32
+  ; CHECK: $ymm0 = VPERM2F128rmi               $ymm0, $rip, 1, $noreg, 0, $noreg, 32
   $ymm0 = VSHUFF64X2Z256rmi                    $ymm0, $rip, 1, $noreg, 0, $noreg, 228
-  ; CHECK: $ymm0 = VPERM2F128rr                $ymm0, $ymm1, 32
+  ; CHECK: $ymm0 = VPERM2F128rri               $ymm0, $ymm1, 32
   $ymm0 = VSHUFF64X2Z256rri                    $ymm0, $ymm1, 228
-  ; CHECK: $ymm0 = VPERM2I128rm                $ymm0, $rip, 1, $noreg, 0, $noreg, 32
+  ; CHECK: $ymm0 = VPERM2I128rmi               $ymm0, $rip, 1, $noreg, 0, $noreg, 32
   $ymm0 = VSHUFI32X4Z256rmi                    $ymm0, $rip, 1, $noreg, 0, $noreg, 228
-  ; CHECK: $ymm0 = VPERM2I128rr                $ymm0, $ymm1, 32
+  ; CHECK: $ymm0 = VPERM2I128rri               $ymm0, $ymm1, 32
   $ymm0 = VSHUFI32X4Z256rri                    $ymm0, $ymm1, 228
-  ; CHECK: $ymm0 = VPERM2I128rm                $ymm0, $rip, 1, $noreg, 0, $noreg, 32
+  ; CHECK: $ymm0 = VPERM2I128rmi               $ymm0, $rip, 1, $noreg, 0, $noreg, 32
   $ymm0 = VSHUFI64X2Z256rmi                    $ymm0, $rip, 1, $noreg, 0, $noreg, 228
-  ; CHECK: $ymm0 = VPERM2I128rr                $ymm0, $ymm1, 32
+  ; CHECK: $ymm0 = VPERM2I128rri               $ymm0, $ymm1, 32
   $ymm0 = VSHUFI64X2Z256rri                    $ymm0, $ymm1, 228
 
   RET64

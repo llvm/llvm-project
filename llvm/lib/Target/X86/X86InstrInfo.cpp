@@ -2597,8 +2597,8 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
         .setImm(X86::getSwappedVCMPImm(
             MI.getOperand(MI.getNumExplicitOperands() - 1).getImm() & 0x1f));
     break;
-  case X86::VPERM2F128rr:
-  case X86::VPERM2I128rr:
+  case X86::VPERM2F128rri:
+  case X86::VPERM2I128rri:
     // Flip permute source immediate.
     // Imm & 0x02: lo = if set, select Op1.lo/hi else Op0.lo/hi.
     // Imm & 0x20: hi = if set, select Op1.lo/hi else Op0.lo/hi.
@@ -6258,16 +6258,16 @@ bool X86InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
                            get(X86::VBROADCASTF64X4rm), X86::sub_ymm);
   case X86::VMOVAPSZ128mr_NOVLX:
     return expandNOVLXStore(MIB, &getRegisterInfo(), get(X86::VMOVAPSmr),
-                            get(X86::VEXTRACTF32x4Zmr), X86::sub_xmm);
+                            get(X86::VEXTRACTF32x4Zmri), X86::sub_xmm);
   case X86::VMOVUPSZ128mr_NOVLX:
     return expandNOVLXStore(MIB, &getRegisterInfo(), get(X86::VMOVUPSmr),
-                            get(X86::VEXTRACTF32x4Zmr), X86::sub_xmm);
+                            get(X86::VEXTRACTF32x4Zmri), X86::sub_xmm);
   case X86::VMOVAPSZ256mr_NOVLX:
     return expandNOVLXStore(MIB, &getRegisterInfo(), get(X86::VMOVAPSYmr),
-                            get(X86::VEXTRACTF64x4Zmr), X86::sub_ymm);
+                            get(X86::VEXTRACTF64x4Zmri), X86::sub_ymm);
   case X86::VMOVUPSZ256mr_NOVLX:
     return expandNOVLXStore(MIB, &getRegisterInfo(), get(X86::VMOVUPSYmr),
-                            get(X86::VEXTRACTF64x4Zmr), X86::sub_ymm);
+                            get(X86::VEXTRACTF64x4Zmri), X86::sub_ymm);
   case X86::MOV32ri64: {
     Register Reg = MIB.getReg(0);
     Register Reg32 = RI.getSubReg(Reg, X86::sub_32bit);
@@ -6775,8 +6775,8 @@ static bool hasUndefRegUpdate(unsigned Opcode, unsigned OpNum,
   case X86::VPACKUSWBZ128rr:
   case X86::VPACKSSDWZ128rr:
   case X86::VPACKUSDWZ128rr:
-  case X86::VPERM2F128rr:
-  case X86::VPERM2I128rr:
+  case X86::VPERM2F128rri:
+  case X86::VPERM2I128rri:
   case X86::VSHUFF32X4Z256rri:
   case X86::VSHUFF32X4Zrri:
   case X86::VSHUFF64X2Z256rri:
