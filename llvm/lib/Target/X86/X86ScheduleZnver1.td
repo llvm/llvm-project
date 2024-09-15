@@ -1017,7 +1017,7 @@ def ZnWriteEXTRACTPSr : SchedWriteRes<[ZnFPU12, ZnFPU2]> {
   let NumMicroOps = 2;
   let ReleaseAtCycles = [1, 2];
 }
-def : InstRW<[ZnWriteEXTRACTPSr], (instregex "(V?)EXTRACTPSrr")>;
+def : InstRW<[ZnWriteEXTRACTPSr], (instregex "(V?)EXTRACTPSrri")>;
 
 def ZnWriteEXTRACTPSm : SchedWriteRes<[ZnAGU,ZnFPU12, ZnFPU2]> {
   let Latency = 5;
@@ -1025,7 +1025,7 @@ def ZnWriteEXTRACTPSm : SchedWriteRes<[ZnAGU,ZnFPU12, ZnFPU2]> {
   let ReleaseAtCycles = [5, 1, 2];
 }
 // m32,x,i.
-def : InstRW<[ZnWriteEXTRACTPSm], (instregex "(V?)EXTRACTPSmr")>;
+def : InstRW<[ZnWriteEXTRACTPSm], (instregex "(V?)EXTRACTPSmri")>;
 
 // VEXTRACTF128 / VEXTRACTI128.
 // x,y,i.
