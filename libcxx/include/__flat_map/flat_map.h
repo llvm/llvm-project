@@ -403,6 +403,7 @@ public:
   }
 
   template <_ContainerCompatibleRange<value_type> _Range, class _Allocator>
+    requires __allocator_ctor_constraint<_Allocator>
   _LIBCPP_HIDE_FROM_ABI flat_map(from_range_t, _Range&& __rg, const key_compare& __comp, const _Allocator& __alloc)
       : flat_map(__ctor_uses_allocator_empty_tag{}, __alloc, __comp) {
     insert_range(std::forward<_Range>(__rg));
