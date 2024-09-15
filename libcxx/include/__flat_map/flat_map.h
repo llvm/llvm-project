@@ -95,8 +95,6 @@ public:
   using key_container_type     = _KeyContainer;
   using mapped_container_type  = _MappedContainer;
 
-  static_assert(__cpp17_random_access_iterator<typename _KeyContainer::iterator>);
-  static_assert(__cpp17_random_access_iterator<typename _MappedContainer::iterator>);
   static_assert(is_same_v<_Key, typename _KeyContainer::value_type>);
   static_assert(is_same_v<_Tp, typename _MappedContainer::value_type>);
 
