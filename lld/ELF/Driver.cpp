@@ -101,6 +101,7 @@ void Ctx::reset() {
   tlsPhdr = nullptr;
   out = OutSections{};
   outputSections.clear();
+  partitions.clear();
 
   sym = ElfSym{};
 
@@ -148,12 +149,10 @@ bool link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
   ctx->e.initialize(stdoutOS, stderrOS, exitEarly, disableOutput);
   ctx->e.cleanupCallback = []() {
     elf::ctx.reset();
+    elf::ctx.partitions.emplace_back();
     symtab = SymbolTable();
 
     in.reset();
-
-    partitions.clear();
-    partitions.emplace_back();
 
     SharedFile::vernauxNum = 0;
   };
@@ -167,8 +166,8 @@ bool link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
   elf::ctx.script = &script;
   elf::ctx.symAux.emplace_back();
 
-  partitions.clear();
-  partitions.emplace_back();
+  elf::ctx.partitions.clear();
+  elf::ctx.partitions.emplace_back();
 
   config->progName = args[0];
 
@@ -2448,7 +2447,7 @@ static void readSymbolPartitionSection(InputSectionBase *s) {
     return;
 
   StringRef partName = reinterpret_cast<const char *>(s->content().data());
-  for (Partition &part : partitions) {
+  for (Partition &part : ctx.partitions) {
     if (part.name == partName) {
       sym->partition = part.getNumber();
       return;
@@ -2473,11 +2472,11 @@ static void readSymbolPartitionSection(InputSectionBase *s) {
   // Impose a limit of no more than 254 partitions. This limit comes from the
   // sizes of the Partition fields in InputSectionBase and Symbol, as well as
   // the amount of space devoted to the partition number in RankFlags.
-  if (partitions.size() == 254)
+  if (ctx.partitions.size() == 254)
     fatal("may not have more than 254 partitions");
 
-  partitions.emplace_back();
-  Partition &newPart = partitions.back();
+  ctx.partitions.emplace_back();
+  Partition &newPart = ctx.partitions.back();
   newPart.name = partName;
   sym->partition = newPart.getNumber();
 }
@@ -3097,7 +3096,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
 
   // Now that the number of partitions is fixed, save a pointer to the main
   // partition.
-  ctx.mainPart = &partitions[0];
+  ctx.mainPart = &ctx.partitions[0];
 
   // Read .note.gnu.property sections from input object files which
   // contain a hint to tweak linker's and loader's behaviors.
