@@ -3034,7 +3034,10 @@ class OffloadingActionBuilder final {
           else if (UseCUID == CUID_Hash) {
             llvm::MD5 Hasher;
             llvm::MD5::MD5Result Hash;
-            Hasher.update(IA->getInputArg().getValue());
+            SmallString<256> RealPath;
+            llvm::sys::fs::real_path(IA->getInputArg().getValue(), RealPath,
+                                     /*expand_tilde=*/true);
+            Hasher.update(RealPath);
             for (auto *A : Args) {
               if (A->getOption().matches(options::OPT_INPUT))
                 continue;
