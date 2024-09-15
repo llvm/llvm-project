@@ -198,14 +198,20 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 ; Like the test for @foo1, but check that the inserted dbg.value does not
 ; affect codegen. The CHECK items below should always be identical to @foo1,
 ; minus the DEBUG_VALUE line and changes in labels..
+; We produce a scope-line source location for the entry block, and then
+; explicitly terminate it in the second block, as there are no other source
+; locations in the function.
 define double @foo1_g(float %p1, double %p2, double %p3) nounwind !dbg !4 {
 ; CHECK-LABEL: foo1_g:
+; CHECK:       .file   1 "." "test.c"
+; CHECK-NEXT:  .loc    1 3 0
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xorps %xmm3, %xmm3
 ; CHECK-NEXT:    ucomiss %xmm3, %xmm0
 ; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [1.25E+0,0.0E+0]
 ; CHECK-NEXT:    jae .LBB6_1
 ; CHECK-NEXT:  # %bb.2: # %entry
+; CHECK-NEXT:  .loc    1 0 0 is_stmt 0
 ; CHECK-NEXT:    addsd %xmm2, %xmm0
 ; CHECK-NEXT:    jmp .LBB6_3
 ; CHECK-NEXT:  .LBB6_1:

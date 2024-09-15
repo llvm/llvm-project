@@ -20,6 +20,7 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
+#include "llvm/Analysis/CtxProfAnalysis.h"
 #include "llvm/Analysis/InlineAdvisor.h"
 #include "llvm/Analysis/InlineCost.h"
 #include "llvm/Analysis/InlineOrder.h"
@@ -112,6 +113,8 @@ PreservedAnalyses ModuleInlinerPass::run(Module &M,
         "mode and/or options");
     return PreservedAnalyses::all();
   }
+
+  auto &CtxProf = MAM.getResult<CtxProfAnalysis>(M);
 
   bool Changed = false;
 
@@ -213,7 +216,7 @@ PreservedAnalyses ModuleInlinerPass::run(Module &M,
         &FAM.getResult<BlockFrequencyAnalysis>(Callee));
 
     InlineResult IR =
-        InlineFunction(*CB, IFI, /*MergeAttributes=*/true,
+        InlineFunction(*CB, IFI, CtxProf, /*MergeAttributes=*/true,
                        &FAM.getResult<AAManager>(*CB->getCaller()));
     if (!IR.isSuccess()) {
       Advice->recordUnsuccessfulInlining(IR);
@@ -238,8 +241,10 @@ PreservedAnalyses ModuleInlinerPass::run(Module &M,
           // the post-inline cleanup and the next DevirtSCCRepeatedPass
           // iteration because the next iteration may not happen and we may
           // miss inlining it.
-          if (tryPromoteCall(*ICB))
-            NewCallee = ICB->getCalledFunction();
+          // FIXME: enable for ctxprof.
+          if (!CtxProf)
+            if (tryPromoteCall(*ICB))
+              NewCallee = ICB->getCalledFunction();
         }
         if (NewCallee)
           if (!NewCallee->isDeclaration())

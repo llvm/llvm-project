@@ -141,7 +141,6 @@ end
 ! CHECK:              @_FortranAioBeginExternalListOutput
 ! CHECK:              %[[LOAD:.*]] = fir.load %[[OMP_LOOP_J_DECL]]#0 : !fir.ref<i32>
 ! CHECK:              @_FortranAioOutputInteger32(%{{.*}}, %[[LOAD]])
-! CHECK:             } else {
 ! CHECK:             }
 ! CHECK-NEXT:        omp.yield
 ! CHECK-NEXT:      }

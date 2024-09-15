@@ -973,9 +973,8 @@ define i64 @ld_sd_constant(i64 %a) nounwind {
 ; LA64NOPIC-LABEL: ld_sd_constant:
 ; LA64NOPIC:       # %bb.0:
 ; LA64NOPIC-NEXT:    lu12i.w $a1, -136485
-; LA64NOPIC-NEXT:    ori $a1, $a1, 3823
-; LA64NOPIC-NEXT:    lu32i.d $a1, -147729
-; LA64NOPIC-NEXT:    lu52i.d $a2, $a1, -534
+; LA64NOPIC-NEXT:    ori $a2, $a1, 3823
+; LA64NOPIC-NEXT:    bstrins.d $a2, $a2, 61, 32
 ; LA64NOPIC-NEXT:    ld.d $a1, $a2, 0
 ; LA64NOPIC-NEXT:    st.d $a0, $a2, 0
 ; LA64NOPIC-NEXT:    move $a0, $a1
@@ -984,9 +983,8 @@ define i64 @ld_sd_constant(i64 %a) nounwind {
 ; LA64PIC-LABEL: ld_sd_constant:
 ; LA64PIC:       # %bb.0:
 ; LA64PIC-NEXT:    lu12i.w $a1, -136485
-; LA64PIC-NEXT:    ori $a1, $a1, 3823
-; LA64PIC-NEXT:    lu32i.d $a1, -147729
-; LA64PIC-NEXT:    lu52i.d $a2, $a1, -534
+; LA64PIC-NEXT:    ori $a2, $a1, 3823
+; LA64PIC-NEXT:    bstrins.d $a2, $a2, 61, 32
 ; LA64PIC-NEXT:    ld.d $a1, $a2, 0
 ; LA64PIC-NEXT:    st.d $a0, $a2, 0
 ; LA64PIC-NEXT:    move $a0, $a1

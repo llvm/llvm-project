@@ -275,6 +275,34 @@ int &danglingRawPtrFromLocal3() {
   return *o; // expected-warning {{reference to stack memory associated with local variable 'o' returned}}
 }
 
+// GH100384
+std::string_view containerWithAnnotatedElements() {
+  std::string_view c1 = std::vector<std::string>().at(0); // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}}
+  c1 = std::vector<std::string>().at(0); // expected-warning {{object backing the pointer}}
+
+  // no warning on constructing from gsl-pointer
+  std::string_view c2 = std::vector<std::string_view>().at(0);
+
+  std::vector<std::string> local;
+  return local.at(0); // expected-warning {{address of stack memory associated with local variable}}
+}
+
+std::string_view localUniquePtr(int i) {
+  std::unique_ptr<std::string> c1;
+  if (i)
+    return *c1; // expected-warning {{address of stack memory associated with local variable}}
+  std::unique_ptr<std::string_view> c2;
+  return *c2; // expect no-warning.
+}
+
+std::string_view localOptional(int i) {
+  std::optional<std::string> o;
+  if (i)
+    return o.value(); // expected-warning {{address of stack memory associated with local variable}}
+  std::optional<std::string_view> abc;
+  return abc.value(); // expect no warning
+}
+
 const char *danglingRawPtrFromTemp() {
   return std::basic_string<char>().c_str(); // expected-warning {{returning address of local temporary object}}
 }
@@ -498,4 +526,30 @@ std::string_view test2(int i, std::optional<std::string_view> a) {
     return std::move(*a);
   return std::move(a.value());
 }
+
+struct Foo;
+struct FooView {
+  FooView(const Foo& foo [[clang::lifetimebound]]);
+};
+FooView test3(int i, std::optional<Foo> a) {
+  if (i)
+    return *a; // expected-warning {{address of stack memory}}
+  return a.value(); // expected-warning {{address of stack memory}}
 }
+} // namespace GH93386
+
+namespace GH100549 {
+struct UrlAnalyzed {
+  UrlAnalyzed(std::string_view url [[clang::lifetimebound]]);
+};
+std::string StrCat(std::string_view, std::string_view);
+void test1() {
+  UrlAnalyzed url(StrCat("abc", "bcd")); // expected-warning {{object backing the pointer will be destroyed}}
+}
+
+std::string_view ReturnStringView(std::string_view abc [[clang::lifetimebound]]);
+
+void test() {
+  std::string_view svjkk1 = ReturnStringView(StrCat("bar", "x")); // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}}
+}
+} // namespace GH100549

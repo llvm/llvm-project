@@ -22,6 +22,8 @@ class AssumptionCache;
 class StringRef;
 class Value;
 class CallInst;
+class DominatorTree;
+class DomConditionCache;
 class DataLayout;
 class Instruction;
 class IRBuilderBase;
@@ -103,6 +105,8 @@ private:
   FortifiedLibCallSimplifier FortifiedSimplifier;
   const DataLayout &DL;
   const TargetLibraryInfo *TLI;
+  DominatorTree *DT;
+  DomConditionCache *DC;
   AssumptionCache *AC;
   OptimizationRemarkEmitter &ORE;
   BlockFrequencyInfo *BFI;
@@ -136,7 +140,8 @@ private:
 
 public:
   LibCallSimplifier(
-      const DataLayout &DL, const TargetLibraryInfo *TLI, AssumptionCache *AC,
+      const DataLayout &DL, const TargetLibraryInfo *TLI, DominatorTree *DT,
+      DomConditionCache *DC, AssumptionCache *AC,
       OptimizationRemarkEmitter &ORE, BlockFrequencyInfo *BFI,
       ProfileSummaryInfo *PSI,
       function_ref<void(Instruction *, Value *)> Replacer =

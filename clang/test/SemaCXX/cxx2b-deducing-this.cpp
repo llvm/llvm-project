@@ -1012,6 +1012,49 @@ static_assert(__is_same(X<B{0}>, X<B{0}>));
 static_assert(!__is_same(X<B{0}>, X<B{1}>));
 } // namespace defaulted_compare
 
+namespace static_overloaded_operator {
+struct A {
+  template<auto N>
+  static void operator()(const char (&)[N]);
+  void operator()(this auto &&, auto &&);
+
+  void implicit_this() {
+    operator()("123");
+  }
+};
+
+struct B {
+  template<auto N>
+  void operator()(this auto &&, const char (&)[N]);
+  static void operator()(auto &&);
+
+  void implicit_this() {
+    operator()("123");
+  }
+};
+
+struct C {
+  template<auto N>
+  static void operator[](const char (&)[N]);
+  void operator[](this auto &&, auto &&);
+
+  void implicit_this() {
+    operator[]("123");
+  }
+};
+
+struct D {
+  template<auto N>
+  void operator[](this auto &&, const char (&)[N]);
+  static void operator[](auto &&);
+
+  void implicit_this() {
+    operator[]("123");
+  }
+};
+
+} // namespace static_overloaded_operator
+
 namespace GH102025 {
 struct Foo {
   template <class T>

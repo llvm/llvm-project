@@ -200,7 +200,14 @@ void __sanitizer::BufferedStackTrace::UnwindImpl(uptr pc, uptr bp,
                                                  bool request_fast,
                                                  u32 max_depth) {
   using namespace __nsan;
-  return Unwind(max_depth, pc, bp, context, 0, 0, false);
+  NsanThread *t = GetCurrentThread();
+  if (!t || !StackTrace::WillUseFastUnwind(request_fast))
+    return Unwind(max_depth, pc, bp, context, t ? t->stack_top() : 0,
+                  t ? t->stack_bottom() : 0, false);
+  if (StackTrace::WillUseFastUnwind(request_fast))
+    Unwind(max_depth, pc, bp, nullptr, t->stack_top(), t->stack_bottom(), true);
+  else
+    Unwind(max_depth, pc, 0, context, 0, 0, false);
 }
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __nsan_print_accumulated_stats() {

@@ -436,6 +436,15 @@ namespace Incomplete {
   constexpr int C = *F.a; // both-error {{must be initialized by a constant expression}} \
                           // both-note {{array-to-pointer decay of array member without known bound}}
 
+  struct X {
+    int a;
+    int b[];
+  };
+  extern X x;
+  constexpr int *xb = x.b; // both-error {{must be initialized by a constant expression}} \
+                           // both-note {{array-to-pointer decay of array member without known bound}}
+
+
   /// These are from test/SemaCXX/constant-expression-cxx11.cpp
   extern int arr[];
   constexpr int *c = &arr[1]; // both-error  {{must be initialized by a constant expression}} \
