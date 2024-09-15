@@ -6,26 +6,24 @@ define void @variable_alloca_with_overalignment(i32 %num) nounwind {
 ; CHECK32-LABEL: variable_alloca_with_overalignment:
 ; CHECK32:       ! %bb.0:
 ; CHECK32-NEXT:    save %sp, -96, %sp
-; CHECK32-NEXT:    add %sp, -72, %i1
-; CHECK32-NEXT:    and %i1, -64, %i1
-; CHECK32-NEXT:    add %i1, 96, %o0
-; CHECK32-NEXT:    mov %i1, %sp
+; CHECK32-NEXT:    add %sp, 80, %i1
+; CHECK32-NEXT:    and %i1, -64, %o0
+; CHECK32-NEXT:    add %o0, -96, %sp
 ; CHECK32-NEXT:    add %i0, 7, %i0
 ; CHECK32-NEXT:    and %i0, -8, %i0
 ; CHECK32-NEXT:    sub %sp, %i0, %i0
-; CHECK32-NEXT:    add %i0, 96, %o1
+; CHECK32-NEXT:    add %i0, -8, %sp
 ; CHECK32-NEXT:    call foo
-; CHECK32-NEXT:    mov %i0, %sp
+; CHECK32-NEXT:    add %i0, 88, %o1
 ; CHECK32-NEXT:    ret
 ; CHECK32-NEXT:    restore
 ;
 ; CHECK64-LABEL: variable_alloca_with_overalignment:
 ; CHECK64:       ! %bb.0:
 ; CHECK64-NEXT:    save %sp, -128, %sp
-; CHECK64-NEXT:    add %sp, 1967, %i1
-; CHECK64-NEXT:    and %i1, -64, %i1
-; CHECK64-NEXT:    add %i1, -2047, %sp
-; CHECK64-NEXT:    add %i1, 128, %o0
+; CHECK64-NEXT:    add %sp, 2159, %i1
+; CHECK64-NEXT:    and %i1, -64, %o0
+; CHECK64-NEXT:    add %o0, -2175, %sp
 ; CHECK64-NEXT:    srl %i0, 0, %i0
 ; CHECK64-NEXT:    add %i0, 15, %i0
 ; CHECK64-NEXT:    sethi 4194303, %i1
@@ -57,10 +55,9 @@ define void @variable_alloca_with_overalignment_2(i32 %num) nounwind {
 ; CHECK32-NEXT:    add %i0, 7, %i0
 ; CHECK32-NEXT:    and %i0, -8, %i0
 ; CHECK32-NEXT:    sub %sp, %i0, %i0
-; CHECK32-NEXT:    add %i0, -64, %i0
-; CHECK32-NEXT:    and %i0, -64, %i0
-; CHECK32-NEXT:    add %i0, 96, %o1
-; CHECK32-NEXT:    mov %i0, %sp
+; CHECK32-NEXT:    add %i0, 88, %i0
+; CHECK32-NEXT:    and %i0, -64, %o1
+; CHECK32-NEXT:    add %o1, -96, %sp
 ; CHECK32-NEXT:    call foo
 ; CHECK32-NEXT:    mov %g0, %o0
 ; CHECK32-NEXT:    ret
@@ -79,10 +76,9 @@ define void @variable_alloca_with_overalignment_2(i32 %num) nounwind {
 ; CHECK64-NEXT:    or %i2, %i1, %i1
 ; CHECK64-NEXT:    and %i0, %i1, %i0
 ; CHECK64-NEXT:    sub %sp, %i0, %i0
-; CHECK64-NEXT:    add %i0, 1983, %i0
-; CHECK64-NEXT:    and %i0, -64, %i0
-; CHECK64-NEXT:    add %i0, -2047, %sp
-; CHECK64-NEXT:    add %i0, 128, %o1
+; CHECK64-NEXT:    add %i0, 2175, %i0
+; CHECK64-NEXT:    and %i0, -64, %o1
+; CHECK64-NEXT:    add %o1, -2175, %sp
 ; CHECK64-NEXT:    add %sp, -48, %sp
 ; CHECK64-NEXT:    call foo
 ; CHECK64-NEXT:    mov %g0, %o0

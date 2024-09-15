@@ -2770,22 +2770,8 @@ static SDValue LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG,
   EVT VT = Size->getValueType(0);
   SDLoc dl(Op);
 
-  int64_t Bias = Subtarget->getStackPointerBias();
   unsigned SPReg = SP::O6;
   SDValue SP = DAG.getCopyFromReg(Chain, dl, SPReg, VT);
-  SDValue AllocatedPtr = DAG.getNode(ISD::SUB, dl, VT, SP, Size);
-
-  bool IsOveraligned = MaybeAlignment.has_value();
-  SDValue AlignedPtr =
-      IsOveraligned
-          ? DAG.getNode(ISD::AND, dl, VT,
-                        DAG.getNode(ISD::SUB, dl, VT,
-                                    DAG.getNode(ISD::ADD, dl, VT, AllocatedPtr,
-                                                DAG.getConstant(Bias, dl, VT)),
-                                    Alignment),
-                        DAG.getNode(ISD::SUB, dl, VT,
-                                    DAG.getConstant(0, dl, VT), Alignment))
-          : AllocatedPtr;
 
   // The resultant pointer needs to be above the register spill area
   // at the bottom of the stack.
@@ -2819,17 +2805,30 @@ static SDValue LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG,
     regSpillArea = 96;
   }
 
-  // If we are allocating overaligned memory then the AlignedPtr calculation
-  // adds the bias into SP, so we need to restore biased SP by decrementing
-  // AlignedPtr back here.
-  SDValue NewSP =
-      DAG.getNode(ISD::SUB, dl, VT, AlignedPtr,
-                  DAG.getConstant(IsOveraligned ? Bias : 0, dl, VT));
-  Chain = DAG.getCopyToReg(SP.getValue(1), dl, SPReg, NewSP);
+  int64_t Bias = Subtarget->getStackPointerBias();
 
-  SDValue NewVal = DAG.getNode(ISD::ADD, dl, VT, NewSP,
-                               DAG.getConstant(regSpillArea + Bias, dl, VT));
-  SDValue Ops[2] = { NewVal, Chain };
+  // Debias and increment SP past the reserved spill area.
+  // We need the SP to point to the first usable region before calculating
+  // anything to prevent any of the pointers from becoming out of alignment when
+  // we rebias the SP later on.
+  SDValue StartOfUsableStack = DAG.getNode(
+      ISD::ADD, dl, VT, SP, DAG.getConstant(regSpillArea + Bias, dl, VT));
+  SDValue AllocatedPtr =
+      DAG.getNode(ISD::SUB, dl, VT, StartOfUsableStack, Size);
+
+  bool IsOveraligned = MaybeAlignment.has_value();
+  SDValue AlignedPtr =
+      IsOveraligned
+          ? DAG.getNode(ISD::AND, dl, VT, AllocatedPtr,
+                        DAG.getNode(ISD::SUB, dl, VT,
+                                    DAG.getConstant(0, dl, VT), Alignment))
+          : AllocatedPtr;
+
+  // Now that we are done, restore the bias and reserved spill area.
+  SDValue NewSP = DAG.getNode(ISD::SUB, dl, VT, AlignedPtr,
+                              DAG.getConstant(regSpillArea + Bias, dl, VT));
+  Chain = DAG.getCopyToReg(SP.getValue(1), dl, SPReg, NewSP);
+  SDValue Ops[2] = {AlignedPtr, Chain};
   return DAG.getMergeValues(Ops, dl);
 }
 
