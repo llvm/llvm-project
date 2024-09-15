@@ -116,6 +116,7 @@ struct VPlanTransforms {
       VPRecipeBuilder &RecipeBuilder, bool ScalarEpilogueAllowed);
 
   static void unrollByUF(VPlan &Plan, unsigned UF, LLVMContext &Ctx);
+  static void cleanupRedundantRecipesAfterUnroll(VPlan &Plan);
 };
 
 } // namespace llvm

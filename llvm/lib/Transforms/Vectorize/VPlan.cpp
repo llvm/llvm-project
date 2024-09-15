@@ -588,11 +588,11 @@ template <typename T> static T *getEnclosingLoopRegionForRegion(T *P) {
   return P;
 }
 
-const VPRegionBlock *VPBasicBlock::getEnclosingLoopRegion() const {
+VPRegionBlock *VPBasicBlock::getEnclosingLoopRegion() {
   return getEnclosingLoopRegionForRegion(getParent());
 }
 
-VPRegionBlock *VPBasicBlock::getEnclosingLoopRegion() {
+const VPRegionBlock *VPBasicBlock::getEnclosingLoopRegion() const {
   return getEnclosingLoopRegionForRegion(getParent());
 }
 
@@ -1075,10 +1075,9 @@ void VPlan::execute(VPTransformState *State) {
       Instruction *Inc = cast<Instruction>(Phi->getIncomingValue(1));
       Inc->moveBefore(VectorLatchBB->getTerminator()->getPrevNode());
 
-      // When the VPlan has been unrolled, chain together the steps of the
-      // unrolled parts together.
+      // Use the steps for the last part as backedge value for the induction.
       if (auto *IV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&R))
-        Inc->setOperand(0, State->get(IV->getUnrolledPart(), 0));
+        Inc->setOperand(0, State->get(IV->getLastUnrolledPart(), 0));
       continue;
     }
 

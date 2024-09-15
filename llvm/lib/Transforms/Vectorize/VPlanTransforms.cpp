@@ -1886,7 +1886,9 @@ void UnrollState::unrollRecipe(VPRecipeBase &R) {
     // Add operand indicating the part to generate code for to recipes still
     // requiring it.
     if (isa<VPScalarIVStepsRecipe, VPWidenCanonicalIVRecipe,
-            VPVectorPointerRecipe>(Copy))
+            VPVectorPointerRecipe>(Copy) ||
+        match(Copy, m_VPInstruction<VPInstruction::CanonicalIVIncrementForPart>(
+                        m_VPValue())))
       Copy->addOperand(getConstantVPV(Part));
 
     if (isa<VPVectorPointerRecipe>(R))
@@ -1944,8 +1946,9 @@ void UnrollState::unrollBlock(VPBlockBase *VPB) {
 void VPlanTransforms::unrollByUF(VPlan &Plan, unsigned UF, LLVMContext &Ctx) {
   assert(UF > 0 && "Unroll factor must be positive");
   Plan.setUF(UF);
-  if (UF == 1)
+  if (UF == 1) {
     return;
+  }
 
   UnrollState Unroller(Plan, UF, Ctx);
 
@@ -1985,5 +1988,21 @@ void VPlanTransforms::unrollByUF(VPlan &Plan, unsigned UF, LLVMContext &Ctx) {
   for (const auto &[_, LO] : Plan.getLiveOuts()) {
     VPValue *In = Unroller.getValueForPart(LO->getOperand(0), UF - 1);
     LO->setOperand(0, In);
+  }
+}
+
+void VPlanTransforms::cleanupRedundantRecipesAfterUnroll(VPlan &Plan) {
+  // Remove recipes that are redundant after unrolling.
+  auto Iter = vp_depth_first_deep(Plan.getEntry());
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(Iter)) {
+    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
+      auto *VPI = dyn_cast<VPInstruction>(&R);
+      if (VPI &&
+          VPI->getOpcode() == VPInstruction::CanonicalIVIncrementForPart &&
+          VPI->getNumOperands() == 1) {
+        VPI->replaceAllUsesWith(VPI->getOperand(0));
+        VPI->eraseFromParent();
+      }
+    }
   }
 }

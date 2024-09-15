@@ -728,7 +728,7 @@ public:
 
   PHINode *getPhi() const { return Phi; }
 
-  /// Live-outs are marked as only using the first part during the transtition
+  /// Live-outs are marked as only using the first part during the transition
   /// to unrolling directly on VPlan.
   /// TODO: Remove after unroller transition.
   bool onlyFirstPartUsed(const VPValue *Op) const override { return true; }
@@ -1312,6 +1312,9 @@ private:
   bool isFPMathOp() const;
 #endif
 
+  /// Return the unroll part for this VPInstruction.
+  unsigned getUnrollPart() const;
+
 public:
   VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands, DebugLoc DL,
                 const Twine &Name = "")
@@ -1758,7 +1761,7 @@ public:
   bool onlyFirstPartUsed(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
-    assert(getNumOperands() <= 2 && "must have a single operand");
+    assert(getNumOperands() <= 2 && "must have at most two operands");
     return true;
   }
 
@@ -1940,9 +1943,10 @@ public:
     return Trunc ? Trunc->getType() : IV->getType();
   }
 
-  /// Returns the optional VPValue representing the value of this induction at
-  /// the last unrolled part, if it exists. If it does not exist.
-  VPValue *getUnrolledPart() {
+  /// Returns the VPValue representing the value of this induction at
+  /// the last unrolled part, if it exists. Returns itself if unrolling did not
+  /// take place.
+  VPValue *getLastUnrolledPart() {
     return getNumOperands() == 4 ? getOperand(3) : this;
   }
 };
@@ -1984,7 +1988,7 @@ public:
   /// Returns the induction descriptor for the recipe.
   const InductionDescriptor &getInductionDescriptor() const { return IndDesc; }
 
-  /// Return the unroll part for this reduction phi.
+  /// Return the unroll part for this induction phi.
   unsigned getUnrollPart() const;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -3538,8 +3542,9 @@ public:
   bool hasScalarVFOnly() const { return VFs.size() == 1 && VFs[0].isScalar(); }
 
   bool hasUF(unsigned UF) const { return UFs.empty() || UFs.contains(UF); }
+
   unsigned getUF() const {
-    assert(UFs.size() == 1);
+    assert(UFs.size() == 1 && "Expected a single UF");
     return UFs[0];
   }
 
@@ -3936,7 +3941,6 @@ public:
   /// Return true if all visited instruction can be combined.
   bool isCompletelySLP() const { return CompletelySLP; }
 };
-
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_VECTORIZE_VPLAN_H

@@ -332,6 +332,12 @@ FastMathFlags VPRecipeWithIRFlags::getFastMathFlags() const {
   return Res;
 }
 
+unsigned VPInstruction::getUnrollPart() const {
+  assert(getOpcode() == VPInstruction::CanonicalIVIncrementForPart &&
+         getNumOperands() == 2 && "Called for unsupported recipe");
+  return cast<ConstantInt>(getOperand(1)->getLiveInIRValue())->getZExtValue();
+}
+
 VPInstruction::VPInstruction(unsigned Opcode, CmpInst::Predicate Pred,
                              VPValue *A, VPValue *B, DebugLoc DL,
                              const Twine &Name)
@@ -492,13 +498,12 @@ Value *VPInstruction::generatePerPart(VPTransformState &State, unsigned Part) {
     return EVL;
   }
   case VPInstruction::CanonicalIVIncrementForPart: {
-    unsigned UF = getParent()->getPlan()->getUF();
+    unsigned Part = getUnrollPart();
     auto *IV = State.get(getOperand(0), VPIteration(0, 0));
-    if (UF == 1)
-      return IV;
+    assert(Part != 0 && "Must have  a part");
     // The canonical IV is incremented by the vectorization factor (num of
     // SIMD elements) times the unroll part.
-    Value *Step = createStepForVF(Builder, IV->getType(), State.VF, UF);
+    Value *Step = createStepForVF(Builder, IV->getType(), State.VF, Part);
     return Builder.CreateAdd(IV, Step, Name, hasNoUnsignedWrap(),
                              hasNoSignedWrap());
   }
