@@ -63,7 +63,7 @@ class TargetInstrInfo;
 
     /// Virt2ShapeMap - For X86 AMX register whose register is bound shape
     /// information.
-    DenseMap<unsigned, ShapeT> Virt2ShapeMap;
+    DenseMap<Register, ShapeT> Virt2ShapeMap;
 
     /// createSpillSlot - Allocate a spill slot for RC from MFI.
     unsigned createSpillSlot(const TargetRegisterClass *RC);
@@ -123,7 +123,7 @@ class TargetInstrInfo;
     }
 
     void assignVirt2Shape(Register virtReg, ShapeT shape) {
-      Virt2ShapeMap[virtReg.id()] = shape;
+      Virt2ShapeMap[virtReg] = shape;
     }
 
     /// clears the specified virtual register's, physical
@@ -153,7 +153,7 @@ class TargetInstrInfo;
     void setIsSplitFromReg(Register virtReg, Register SReg) {
       Virt2SplitMap[virtReg.id()] = SReg;
       if (hasShape(SReg)) {
-        Virt2ShapeMap[virtReg.id()] = getShape(SReg);
+        Virt2ShapeMap[virtReg] = getShape(SReg);
       }
     }
 
