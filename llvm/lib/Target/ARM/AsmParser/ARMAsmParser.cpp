@@ -808,7 +808,7 @@ class ARMOperand : public MCParsedAsmOperand {
   } Kind;
 
   SMLoc StartLoc, EndLoc, AlignmentLoc;
-  SmallVector<unsigned, 8> Registers;
+  SmallVector<MCRegister, 8> Registers;
 
   ARMAsmParser *Parser;
 
@@ -1005,7 +1005,7 @@ public:
     return Reg.RegNum;
   }
 
-  const SmallVectorImpl<unsigned> &getRegList() const {
+  const SmallVectorImpl<MCRegister> &getRegList() const {
     assert((Kind == k_RegisterList || Kind == k_RegisterListWithAPSR ||
             Kind == k_DPRRegisterList || Kind == k_SPRRegisterList ||
             Kind == k_FPSRegisterListWithVPR ||
@@ -2630,15 +2630,15 @@ public:
 
   void addRegListOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
-    const SmallVectorImpl<unsigned> &RegList = getRegList();
-    for (unsigned Reg : RegList)
+    const SmallVectorImpl<MCRegister> &RegList = getRegList();
+    for (MCRegister Reg : RegList)
       Inst.addOperand(MCOperand::createReg(Reg));
   }
 
   void addRegListWithAPSROperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
-    const SmallVectorImpl<unsigned> &RegList = getRegList();
-    for (unsigned Reg : RegList)
+    const SmallVectorImpl<MCRegister> &RegList = getRegList();
+    for (MCRegister Reg : RegList)
       Inst.addOperand(MCOperand::createReg(Reg));
   }
 
@@ -4103,7 +4103,7 @@ void ARMOperand::print(raw_ostream &OS) const {
   case k_FPDRegisterListWithVPR: {
     OS << "<register_list ";
 
-    const SmallVectorImpl<unsigned> &RegList = getRegList();
+    const SmallVectorImpl<MCRegister> &RegList = getRegList();
     for (auto I = RegList.begin(), E = RegList.end(); I != E;) {
       OS << RegName(*I);
       if (++I < E) OS << ", ";
@@ -12519,7 +12519,7 @@ bool ARMAsmParser::parseDirectiveSEHSaveRegs(SMLoc L, bool Wide) {
   ARMOperand &Op = (ARMOperand &)*Operands[0];
   if (!Op.isRegList())
     return Error(L, ".seh_save_regs{_w} expects GPR registers");
-  const SmallVectorImpl<unsigned> &RegList = Op.getRegList();
+  const SmallVectorImpl<MCRegister> &RegList = Op.getRegList();
   uint32_t Mask = 0;
   for (size_t i = 0; i < RegList.size(); ++i) {
     unsigned Reg = MRI->getEncodingValue(RegList[i]);
@@ -12561,7 +12561,7 @@ bool ARMAsmParser::parseDirectiveSEHSaveFRegs(SMLoc L) {
   ARMOperand &Op = (ARMOperand &)*Operands[0];
   if (!Op.isDPRRegList())
     return Error(L, ".seh_save_fregs expects DPR registers");
-  const SmallVectorImpl<unsigned> &RegList = Op.getRegList();
+  const SmallVectorImpl<MCRegister> &RegList = Op.getRegList();
   uint32_t Mask = 0;
   for (size_t i = 0; i < RegList.size(); ++i) {
     unsigned Reg = MRI->getEncodingValue(RegList[i]);
