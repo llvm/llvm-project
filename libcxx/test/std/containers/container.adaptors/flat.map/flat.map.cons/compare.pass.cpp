@@ -27,6 +27,22 @@
 
 int main(int, char**) {
   {
+    // The constructors in  this subclause shall not participate in overload
+    // resolution unless uses_allocator_v<key_container_type, Alloc> is true
+    // and uses_allocator_v<mapped_container_type, Alloc> is true.
+
+    using C  = test_less<int>;
+    using A1 = test_allocator<int>;
+    using A2 = other_allocator<int>;
+    using M1 = std::flat_map<int, int, C, std::vector<int, A1>, std::vector<int, A1>>;
+    using M2 = std::flat_map<int, int, C, std::vector<int, A1>, std::vector<int, A2>>;
+    using M3 = std::flat_map<int, int, C, std::vector<int, A2>, std::vector<int, A1>>;
+    static_assert(std::is_constructible_v<M1, const C&, const A1&>);
+    static_assert(!std::is_constructible_v<M1, const C&, const A2&>);
+    static_assert(!std::is_constructible_v<M2, const C&, const A2&>);
+    static_assert(!std::is_constructible_v<M3, const C&, const A2&>);
+  }
+  {
     using C = test_less<int>;
     auto m  = std::flat_map<int, char*, C>(C(3));
     assert(m.empty());
@@ -54,10 +70,11 @@ int main(int, char**) {
     assert(m.values().get_allocator() == A2(5));
   }
   {
+    // explicit(false)
     using C                                                                    = test_less<int>;
     using A1                                                                   = test_allocator<int>;
     using A2                                                                   = test_allocator<short>;
-    std::flat_map<int, short, C, std::deque<int, A1>, std::deque<short, A2>> m = {C(4), A1(5)}; // implicit ctor
+    std::flat_map<int, short, C, std::deque<int, A1>, std::deque<short, A2>> m = {C(4), A1(5)};
     assert(m.empty());
     assert(m.begin() == m.end());
     assert(m.key_comp() == C(4));

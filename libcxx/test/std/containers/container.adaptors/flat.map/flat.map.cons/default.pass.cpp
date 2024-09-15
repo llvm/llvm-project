@@ -35,6 +35,7 @@ int main(int, char**) {
     assert(m.empty());
   }
   {
+    // explicit(false)
     std::flat_map<int, char*> m = {};
     assert(m.empty());
   }
