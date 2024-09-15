@@ -24,6 +24,7 @@ eh_test:
       throw_ref
       drop
     end_block
+    return
   end_block
   drop
 
@@ -100,6 +101,7 @@ eh_test:
 # CHECK-NEXT:    throw_ref
 # CHECK-NEXT:    drop
 # CHECK-NEXT:    end_block
+# CHECK-NEXT:    return
 # CHECK-NEXT:    end_block
 # CHECK-NEXT:    drop
 
