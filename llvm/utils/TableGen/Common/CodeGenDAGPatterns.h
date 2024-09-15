@@ -354,7 +354,7 @@ typedef StringSet<> MultipleUseVarSet;
 /// SDTypeConstraint - This is a discriminated union of constraints,
 /// corresponding to the SDTypeConstraint tablegen class in Target.td.
 struct SDTypeConstraint {
-  SDTypeConstraint(Record *R, const CodeGenHwModes &CGH);
+  SDTypeConstraint(const Record *R, const CodeGenHwModes &CGH);
 
   unsigned OperandNo; // The operand # this constraint applies to.
   enum {
@@ -435,7 +435,7 @@ public:
 /// the target .td file.  This represents the various dag nodes we will be
 /// processing.
 class SDNodeInfo {
-  Record *Def;
+  const Record *Def;
   StringRef EnumName;
   StringRef SDClassName;
   unsigned Properties;
@@ -445,14 +445,14 @@ class SDNodeInfo {
 
 public:
   // Parse the specified record.
-  SDNodeInfo(Record *R, const CodeGenHwModes &CGH);
+  SDNodeInfo(const Record *R, const CodeGenHwModes &CGH);
 
   unsigned getNumResults() const { return NumResults; }
 
   /// getNumOperands - This is the number of operands required or -1 if
   /// variadic.
   int getNumOperands() const { return NumOperands; }
-  Record *getRecord() const { return Def; }
+  const Record *getRecord() const { return Def; }
   StringRef getEnumName() const { return EnumName; }
   StringRef getSDClassName() const { return SDClassName; }
 
@@ -1095,13 +1095,17 @@ public:
 };
 
 class CodeGenDAGPatterns {
-  RecordKeeper &Records;
+public:
+  using NodeXForm = std::pair<const Record *, std::string>;
+
+private:
+  const RecordKeeper &Records;
   CodeGenTarget Target;
   CodeGenIntrinsicTable Intrinsics;
 
   std::map<const Record *, SDNodeInfo, LessRecordByID> SDNodes;
-  std::map<const Record *, std::pair<Record *, std::string>, LessRecordByID>
-      SDNodeXForms;
+
+  std::map<const Record *, NodeXForm, LessRecordByID> SDNodeXForms;
   std::map<const Record *, ComplexPattern, LessRecordByID> ComplexPatterns;
   std::map<const Record *, std::unique_ptr<TreePattern>, LessRecordByID>
       PatternFragments;
@@ -1125,7 +1129,7 @@ class CodeGenDAGPatterns {
   unsigned NumScopes = 0;
 
 public:
-  CodeGenDAGPatterns(RecordKeeper &R,
+  CodeGenDAGPatterns(const RecordKeeper &R,
                      PatternRewriterFn PatternRewriter = nullptr);
 
   CodeGenTarget &getTargetInfo() { return Target; }
@@ -1141,7 +1145,6 @@ public:
   }
 
   // Node transformation lookups.
-  typedef std::pair<Record *, std::string> NodeXForm;
   const NodeXForm &getSDNodeTransform(const Record *R) const {
     auto F = SDNodeXForms.find(R);
     assert(F != SDNodeXForms.end() && "Invalid transform!");
@@ -1254,6 +1257,7 @@ private:
       MapVector<std::string, TreePatternNodePtr,
                 std::map<std::string, unsigned>> &InstResults,
       std::vector<Record *> &InstImpResults);
+  unsigned getNewUID();
 };
 
 inline bool SDNodeInfo::ApplyTypeConstraints(TreePatternNode &N,
