@@ -4438,26 +4438,26 @@ PartitionIndexSection::PartitionIndexSection()
     : SyntheticSection(SHF_ALLOC, SHT_PROGBITS, 4, ".rodata") {}
 
 size_t PartitionIndexSection::getSize() const {
-  return 12 * (partitions.size() - 1);
+  return 12 * (ctx.partitions.size() - 1);
 }
 
 void PartitionIndexSection::finalizeContents() {
-  for (size_t i = 1; i != partitions.size(); ++i)
-    partitions[i].nameStrTab =
-        ctx.mainPart->dynStrTab->addString(partitions[i].name);
+  for (size_t i = 1; i != ctx.partitions.size(); ++i)
+    ctx.partitions[i].nameStrTab =
+        ctx.mainPart->dynStrTab->addString(ctx.partitions[i].name);
 }
 
 void PartitionIndexSection::writeTo(uint8_t *buf) {
   uint64_t va = getVA();
-  for (size_t i = 1; i != partitions.size(); ++i) {
-    write32(buf,
-            ctx.mainPart->dynStrTab->getVA() + partitions[i].nameStrTab - va);
-    write32(buf + 4, partitions[i].elfHeader->getVA() - (va + 4));
+  for (size_t i = 1; i != ctx.partitions.size(); ++i) {
+    write32(buf, ctx.mainPart->dynStrTab->getVA() +
+                     ctx.partitions[i].nameStrTab - va);
+    write32(buf + 4, ctx.partitions[i].elfHeader->getVA() - (va + 4));
 
-    SyntheticSection *next = i == partitions.size() - 1
+    SyntheticSection *next = i == ctx.partitions.size() - 1
                                  ? in.partEnd.get()
-                                 : partitions[i + 1].elfHeader.get();
-    write32(buf + 8, next->getVA() - partitions[i].elfHeader->getVA());
+                                 : ctx.partitions[i + 1].elfHeader.get();
+    write32(buf + 8, next->getVA() - ctx.partitions[i].elfHeader->getVA());
 
     va += 12;
     buf += 12;
@@ -4657,7 +4657,7 @@ template <class ELFT> void elf::createSyntheticSections() {
   // The removeUnusedSyntheticSections() function relies on the
   // SyntheticSections coming last.
   if (needsInterpSection()) {
-    for (size_t i = 1; i <= partitions.size(); ++i) {
+    for (size_t i = 1; i <= ctx.partitions.size(); ++i) {
       InputSection *sec = createInterpSection();
       sec->partition = i;
       ctx.inputSections.push_back(sec);
@@ -4707,7 +4707,7 @@ template <class ELFT> void elf::createSyntheticSections() {
   StringRef relaDynName = config->isRela ? ".rela.dyn" : ".rel.dyn";
 
   const unsigned threadCount = config->threadCount;
-  for (Partition &part : partitions) {
+  for (Partition &part : ctx.partitions) {
     auto add = [&](SyntheticSection &sec) {
       sec.partition = part.getNumber();
       ctx.inputSections.push_back(&sec);
@@ -4811,7 +4811,7 @@ template <class ELFT> void elf::createSyntheticSections() {
     }
   }
 
-  if (partitions.size() != 1) {
+  if (ctx.partitions.size() != 1) {
     // Create the partition end marker. This needs to be in partition number 255
     // so that it is sorted after all other partitions. It also has other
     // special handling (see createPhdrs() and combineEhSections()).
@@ -4927,8 +4927,6 @@ template <class ELFT> void elf::createSyntheticSections() {
 }
 
 InStruct elf::in;
-
-std::vector<Partition> elf::partitions;
 
 template void elf::splitSections<ELF32LE>();
 template void elf::splitSections<ELF32BE>();
