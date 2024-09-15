@@ -203,12 +203,11 @@ static ParsedAttrMap getParsedAttrList(const RecordKeeper &Records,
 
         // If this attribute has already been handled, it does not need to be
         // handled again.
-        if (Seen.find(AN) != Seen.end()) {
+        if (!Seen.insert(AN).second) {
           if (Dupes)
             Dupes->push_back(std::make_pair(AN, Attr));
           continue;
         }
-        Seen.insert(AN);
       } else
         AN = NormalizeAttrName(Attr->getName()).str();
 
@@ -1824,10 +1823,9 @@ CreateSemanticSpellings(const std::vector<FlattenedSpelling> &Spellings,
     // reserved namespace, we may have inadvertently created duplicate
     // enumerant names. These duplicates are not considered part of the
     // semantic spelling, and can be elided.
-    if (Uniques.find(EnumName) != Uniques.end())
+    if (!Uniques.insert(EnumName).second)
       continue;
 
-    Uniques.insert(EnumName);
     if (I != Spellings.begin())
       Ret += ",\n";
     // Duplicate spellings are not considered part of the semantic spelling
