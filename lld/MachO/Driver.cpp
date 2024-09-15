@@ -36,7 +36,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/BinaryFormat/Magic.h"
-#include "llvm/CGData/CodeGenDataWriter.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Object/Archive.h"
@@ -1323,37 +1322,6 @@ static void gatherInputSections() {
   }
 }
 
-static void codegenDataGenerate() {
-  TimeTraceScope timeScope("Generating codegen data");
-
-  OutlinedHashTreeRecord globalOutlineRecord;
-  for (ConcatInputSection *isec : inputSections)
-    if (isec->getSegName() == segment_names::data &&
-        isec->getName() == section_names::outlinedHashTree) {
-      // Read outlined hash tree from each section.
-      OutlinedHashTreeRecord localOutlineRecord;
-      auto *data = isec->data.data();
-      localOutlineRecord.deserialize(data);
-
-      // Merge it to the global hash tree.
-      globalOutlineRecord.merge(localOutlineRecord);
-    }
-
-  CodeGenDataWriter Writer;
-  if (!globalOutlineRecord.empty())
-    Writer.addRecord(globalOutlineRecord);
-
-  std::error_code EC;
-  auto fileName = config->codegenDataGeneratePath;
-  assert(!fileName.empty());
-  raw_fd_ostream Output(fileName, EC, sys::fs::OF_None);
-  if (EC)
-    error("fail to create " + fileName + ": " + EC.message());
-
-  if (auto E = Writer.write(Output))
-    error("fail to write CGData: " + toString(std::move(E)));
-}
-
 static void foldIdenticalLiterals() {
   TimeTraceScope timeScope("Fold identical literals");
   // We always create a cStringSection, regardless of whether dedupLiterals is
@@ -1791,8 +1759,6 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     config->ignoreAutoLinkOptions.insert(arg->getValue());
   config->strictAutoLink = args.hasArg(OPT_strict_auto_link);
   config->ltoDebugPassManager = args.hasArg(OPT_lto_debug_pass_manager);
-  config->codegenDataGeneratePath =
-      args.getLastArgValue(OPT_codegen_data_generate_path);
   config->csProfileGenerate = args.hasArg(OPT_cs_profile_generate);
   config->csProfilePath = args.getLastArgValue(OPT_cs_profile_path);
   config->pgoWarnMismatch =
@@ -2137,10 +2103,6 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     }
 
     gatherInputSections();
-
-    if (!config->codegenDataGeneratePath.empty())
-      codegenDataGenerate();
-
     if (config->callGraphProfileSort)
       priorityBuilder.extractCallGraphProfile();
 

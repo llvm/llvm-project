@@ -48,7 +48,6 @@ if (NOT LLD_BUILT_STANDALONE)
     llvm-ar
     llvm-as
     llvm-bcanalyzer
-    llvm-cgdata
     llvm-config
     llvm-cvtres
     llvm-dis
