@@ -2074,38 +2074,38 @@ body: |
   $xmm0 = VFNMSUB231SSZr                       $xmm0, $xmm1, $xmm2, implicit $mxcsr
   ; CHECK: $xmm0 = VFNMSUB231SSr_Int           $xmm0, $xmm1, $xmm2, implicit $mxcsr
   $xmm0 = VFNMSUB231SSZr_Int                   $xmm0, $xmm1, $xmm2, implicit $mxcsr
-  ; CHECK: VPEXTRBmr                           $rdi, 1, $noreg, 0, $noreg, $xmm0, 3
-  VPEXTRBZmr                                   $rdi, 1, $noreg, 0, $noreg, $xmm0, 3
-  ; CHECK: $eax = VPEXTRBrr                    $xmm0, 1
-  $eax = VPEXTRBZrr                            $xmm0, 1
-  ; CHECK: VPEXTRDmr                           $rdi, 1, $noreg, 0, $noreg, $xmm0, 3
-  VPEXTRDZmr                                   $rdi, 1, $noreg, 0, $noreg, $xmm0, 3
-  ; CHECK: $eax = VPEXTRDrr                    $xmm0, 1
-  $eax = VPEXTRDZrr                            $xmm0, 1
-  ; CHECK: VPEXTRQmr                           $rdi, 1, $noreg, 0, $noreg, $xmm0, 3
-  VPEXTRQZmr                                   $rdi, 1, $noreg, 0, $noreg, $xmm0, 3
-  ; CHECK: $rax = VPEXTRQrr                    $xmm0, 1
-  $rax = VPEXTRQZrr                            $xmm0, 1
-  ; CHECK: VPEXTRWmr                           $rdi, 1, $noreg, 0, $noreg,  $xmm0, 3
-  VPEXTRWZmr                                   $rdi, 1, $noreg, 0, $noreg,  $xmm0, 3
-  ; CHECK: $eax = VPEXTRWrr                    $xmm0, 1
-  $eax = VPEXTRWZrr                            $xmm0, 1
-  ; CHECK: $xmm0 = VPINSRBrm                   $xmm0, $rsi, 1, $noreg, 0, $noreg, 3
-  $xmm0 = VPINSRBZrm                           $xmm0, $rsi, 1, $noreg, 0, $noreg, 3
-  ; CHECK: $xmm0 = VPINSRBrr                   $xmm0, $edi, 5
-  $xmm0 = VPINSRBZrr                           $xmm0, $edi, 5
-  ; CHECK: $xmm0 = VPINSRDrm                   $xmm0, $rsi, 1, $noreg, 0, $noreg, 3
-  $xmm0 = VPINSRDZrm                           $xmm0, $rsi, 1, $noreg, 0, $noreg, 3
-  ; CHECK: $xmm0 = VPINSRDrr                   $xmm0, $edi, 5
-  $xmm0 = VPINSRDZrr                           $xmm0, $edi, 5
-  ; CHECK: $xmm0 = VPINSRQrm                   $xmm0, $rsi, 1, $noreg, 0, $noreg, 3
-  $xmm0 = VPINSRQZrm                           $xmm0, $rsi, 1, $noreg, 0, $noreg, 3
-  ; CHECK: $xmm0 = VPINSRQrr                   $xmm0, $rdi, 5
-  $xmm0 = VPINSRQZrr                           $xmm0, $rdi, 5
-  ; CHECK: $xmm0 = VPINSRWrm                   $xmm0, $rsi, 1, $noreg, 0, $noreg, 3
-  $xmm0 = VPINSRWZrm                           $xmm0, $rsi, 1, $noreg, 0, $noreg, 3
-  ; CHECK: $xmm0 = VPINSRWrr                   $xmm0, $edi, 5
-  $xmm0 = VPINSRWZrr                           $xmm0, $edi, 5
+  ; CHECK: VPEXTRBmri                          $rdi, 1, $noreg, 0, $noreg, $xmm0, 3
+  VPEXTRBZmri                                  $rdi, 1, $noreg, 0, $noreg, $xmm0, 3
+  ; CHECK: $eax = VPEXTRBrri                   $xmm0, 1
+  $eax = VPEXTRBZrri                           $xmm0, 1
+  ; CHECK: VPEXTRDmri                          $rdi, 1, $noreg, 0, $noreg, $xmm0, 3
+  VPEXTRDZmri                                  $rdi, 1, $noreg, 0, $noreg, $xmm0, 3
+  ; CHECK: $eax = VPEXTRDrri                   $xmm0, 1
+  $eax = VPEXTRDZrri                           $xmm0, 1
+  ; CHECK: VPEXTRQmri                          $rdi, 1, $noreg, 0, $noreg, $xmm0, 3
+  VPEXTRQZmri                                  $rdi, 1, $noreg, 0, $noreg, $xmm0, 3
+  ; CHECK: $rax = VPEXTRQrri                   $xmm0, 1
+  $rax = VPEXTRQZrri                           $xmm0, 1
+  ; CHECK: VPEXTRWmri                          $rdi, 1, $noreg, 0, $noreg,  $xmm0, 3
+  VPEXTRWZmri                                  $rdi, 1, $noreg, 0, $noreg,  $xmm0, 3
+  ; CHECK: $eax = VPEXTRWrri                   $xmm0, 1
+  $eax = VPEXTRWZrri                           $xmm0, 1
+  ; CHECK: $xmm0 = VPINSRBrmi                  $xmm0, $rsi, 1, $noreg, 0, $noreg, 3
+  $xmm0 = VPINSRBZrmi                          $xmm0, $rsi, 1, $noreg, 0, $noreg, 3
+  ; CHECK: $xmm0 = VPINSRBrri                  $xmm0, $edi, 5
+  $xmm0 = VPINSRBZrri                          $xmm0, $edi, 5
+  ; CHECK: $xmm0 = VPINSRDrmi                  $xmm0, $rsi, 1, $noreg, 0, $noreg, 3
+  $xmm0 = VPINSRDZrmi                          $xmm0, $rsi, 1, $noreg, 0, $noreg, 3
+  ; CHECK: $xmm0 = VPINSRDrri                  $xmm0, $edi, 5
+  $xmm0 = VPINSRDZrri                          $xmm0, $edi, 5
+  ; CHECK: $xmm0 = VPINSRQrmi                  $xmm0, $rsi, 1, $noreg, 0, $noreg, 3
+  $xmm0 = VPINSRQZrmi                          $xmm0, $rsi, 1, $noreg, 0, $noreg, 3
+  ; CHECK: $xmm0 = VPINSRQrri                  $xmm0, $rdi, 5
+  $xmm0 = VPINSRQZrri                          $xmm0, $rdi, 5
+  ; CHECK: $xmm0 = VPINSRWrmi                  $xmm0, $rsi, 1, $noreg, 0, $noreg, 3
+  $xmm0 = VPINSRWZrmi                          $xmm0, $rsi, 1, $noreg, 0, $noreg, 3
+  ; CHECK: $xmm0 = VPINSRWrri                  $xmm0, $edi, 5
+  $xmm0 = VPINSRWZrri                          $xmm0, $edi, 5
   ; CHECK: $xmm0 = VSQRTSDm                    $xmm0, $rdi, 1, $noreg, 0, $noreg, implicit $mxcsr
   $xmm0 = VSQRTSDZm                            $xmm0, $rdi, 1, $noreg, 0, $noreg, implicit $mxcsr
   ; CHECK: $xmm0 = VSQRTSDm_Int                $xmm0, $rdi, 1, $noreg, 0, $noreg, implicit $mxcsr
@@ -4406,38 +4406,38 @@ body: |
   $xmm16 = VFNMSUB231SSZr                      $xmm16, $xmm1, $xmm2, implicit $mxcsr
   ; CHECK: $xmm16 = VFNMSUB231SSZr_Int         $xmm16, $xmm1, $xmm2, implicit $mxcsr
   $xmm16 = VFNMSUB231SSZr_Int                  $xmm16, $xmm1, $xmm2, implicit $mxcsr
-  ; CHECK: VPEXTRBZmr                          $rdi, 1, $noreg, 0, $noreg, $xmm16, 3
-  VPEXTRBZmr                                   $rdi, 1, $noreg, 0, $noreg, $xmm16, 3
-  ; CHECK: $eax = VPEXTRBZrr                   $xmm16, 1
-  $eax = VPEXTRBZrr                            $xmm16, 1
-  ; CHECK: VPEXTRDZmr                          $rdi, 1, $noreg, 0, $noreg, $xmm16, 3
-  VPEXTRDZmr                                   $rdi, 1, $noreg, 0, $noreg, $xmm16, 3
-  ; CHECK: $eax = VPEXTRDZrr                   $xmm16, 1
-  $eax = VPEXTRDZrr                            $xmm16, 1
-  ; CHECK: VPEXTRQZmr                          $rdi, 1, $noreg, 0, $noreg, $xmm16, 3
-  VPEXTRQZmr                                   $rdi, 1, $noreg, 0, $noreg, $xmm16, 3
-  ; CHECK: $rax = VPEXTRQZrr                   $xmm16, 1
-  $rax = VPEXTRQZrr                            $xmm16, 1
-  ; CHECK: VPEXTRWZmr                          $rdi, 1, $noreg, 0, $noreg,  $xmm16, 3
-  VPEXTRWZmr                                   $rdi, 1, $noreg, 0, $noreg,  $xmm16, 3
-  ; CHECK: $eax = VPEXTRWZrr                   $xmm16, 1
-  $eax = VPEXTRWZrr                            $xmm16, 1
-  ; CHECK: $xmm16 = VPINSRBZrm                 $xmm16, $rsi, 1, $noreg, 0, $noreg, 3
-  $xmm16 = VPINSRBZrm                          $xmm16, $rsi, 1, $noreg, 0, $noreg, 3
-  ; CHECK: $xmm16 = VPINSRBZrr                 $xmm16, $edi, 5
-  $xmm16 = VPINSRBZrr                          $xmm16, $edi, 5
-  ; CHECK: $xmm16 = VPINSRDZrm                 $xmm16, $rsi, 1, $noreg, 0, $noreg, 3
-  $xmm16 = VPINSRDZrm                          $xmm16, $rsi, 1, $noreg, 0, $noreg, 3
-  ; CHECK: $xmm16 = VPINSRDZrr                 $xmm16, $edi, 5
-  $xmm16 = VPINSRDZrr                          $xmm16, $edi, 5
-  ; CHECK: $xmm16 = VPINSRQZrm                 $xmm16, $rsi, 1, $noreg, 0, $noreg, 3
-  $xmm16 = VPINSRQZrm                          $xmm16, $rsi, 1, $noreg, 0, $noreg, 3
-  ; CHECK: $xmm16 = VPINSRQZrr                 $xmm16, $rdi, 5
-  $xmm16 = VPINSRQZrr                          $xmm16, $rdi, 5
-  ; CHECK: $xmm16 = VPINSRWZrm                 $xmm16, $rsi, 1, $noreg, 0, $noreg, 3
-  $xmm16 = VPINSRWZrm                          $xmm16, $rsi, 1, $noreg, 0, $noreg, 3
-  ; CHECK: $xmm16 = VPINSRWZrr                 $xmm16, $edi, 5
-  $xmm16 = VPINSRWZrr                          $xmm16, $edi, 5
+  ; CHECK: VPEXTRBZmri                         $rdi, 1, $noreg, 0, $noreg, $xmm16, 3
+  VPEXTRBZmri                                  $rdi, 1, $noreg, 0, $noreg, $xmm16, 3
+  ; CHECK: $eax = VPEXTRBZrri                  $xmm16, 1
+  $eax = VPEXTRBZrri                           $xmm16, 1
+  ; CHECK: VPEXTRDZmri                         $rdi, 1, $noreg, 0, $noreg, $xmm16, 3
+  VPEXTRDZmri                                  $rdi, 1, $noreg, 0, $noreg, $xmm16, 3
+  ; CHECK: $eax = VPEXTRDZrri                  $xmm16, 1
+  $eax = VPEXTRDZrri                           $xmm16, 1
+  ; CHECK: VPEXTRQZmri                         $rdi, 1, $noreg, 0, $noreg, $xmm16, 3
+  VPEXTRQZmri                                  $rdi, 1, $noreg, 0, $noreg, $xmm16, 3
+  ; CHECK: $rax = VPEXTRQZrri                  $xmm16, 1
+  $rax = VPEXTRQZrri                           $xmm16, 1
+  ; CHECK: VPEXTRWZmri                         $rdi, 1, $noreg, 0, $noreg,  $xmm16, 3
+  VPEXTRWZmri                                  $rdi, 1, $noreg, 0, $noreg,  $xmm16, 3
+  ; CHECK: $eax = VPEXTRWZrri                  $xmm16, 1
+  $eax = VPEXTRWZrri                           $xmm16, 1
+  ; CHECK: $xmm16 = VPINSRBZrmi                $xmm16, $rsi, 1, $noreg, 0, $noreg, 3
+  $xmm16 = VPINSRBZrmi                         $xmm16, $rsi, 1, $noreg, 0, $noreg, 3
+  ; CHECK: $xmm16 = VPINSRBZrri                $xmm16, $edi, 5
+  $xmm16 = VPINSRBZrri                         $xmm16, $edi, 5
+  ; CHECK: $xmm16 = VPINSRDZrmi                $xmm16, $rsi, 1, $noreg, 0, $noreg, 3
+  $xmm16 = VPINSRDZrmi                         $xmm16, $rsi, 1, $noreg, 0, $noreg, 3
+  ; CHECK: $xmm16 = VPINSRDZrri                $xmm16, $edi, 5
+  $xmm16 = VPINSRDZrri                         $xmm16, $edi, 5
+  ; CHECK: $xmm16 = VPINSRQZrmi                $xmm16, $rsi, 1, $noreg, 0, $noreg, 3
+  $xmm16 = VPINSRQZrmi                         $xmm16, $rsi, 1, $noreg, 0, $noreg, 3
+  ; CHECK: $xmm16 = VPINSRQZrri                $xmm16, $rdi, 5
+  $xmm16 = VPINSRQZrri                         $xmm16, $rdi, 5
+  ; CHECK: $xmm16 = VPINSRWZrmi                $xmm16, $rsi, 1, $noreg, 0, $noreg, 3
+  $xmm16 = VPINSRWZrmi                         $xmm16, $rsi, 1, $noreg, 0, $noreg, 3
+  ; CHECK: $xmm16 = VPINSRWZrri                $xmm16, $edi, 5
+  $xmm16 = VPINSRWZrri                         $xmm16, $edi, 5
   ; CHECK: $xmm16 = VSQRTSDZm                  $xmm16, $rdi, 1, $noreg, 0, $noreg, implicit $mxcsr
   $xmm16 = VSQRTSDZm                           $xmm16, $rdi, 1, $noreg, 0, $noreg, implicit $mxcsr
   ; CHECK: $xmm16 = VSQRTSDZm_Int              $xmm16, $rdi, 1, $noreg, 0, $noreg, implicit $mxcsr
