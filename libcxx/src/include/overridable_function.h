@@ -63,7 +63,7 @@
 // want to be defining special sections inside user's executables which use our headers.
 //
 
-#if defined(_LIBCPP_OBJECT_FORMAT_MACHO)
+#if defined(_LIBCPP_OBJECT_FORMAT_MACHO) && !defined(_LIBCPP_HAS_NO_OVERRIDDEN_FUNCTION_DETECTION)
 
 #  define _LIBCPP_CAN_DETECT_OVERRIDDEN_FUNCTION 1
 #  define _LIBCPP_MAKE_OVERRIDABLE_FUNCTION_DETECTABLE                                                                 \
@@ -97,7 +97,7 @@ _LIBCPP_HIDE_FROM_ABI bool __is_function_overridden(_Ret (*__fptr)(_Args...)) no
 _LIBCPP_END_NAMESPACE_STD
 
 // The NVPTX linker cannot create '__start/__stop' sections.
-#elif defined(_LIBCPP_OBJECT_FORMAT_ELF) && !defined(__NVPTX__)
+#elif defined(_LIBCPP_OBJECT_FORMAT_ELF) && !defined(__NVPTX__) && !defined(_LIBCPP_HAS_NO_OVERRIDDEN_FUNCTION_DETECTION)
 
 #  define _LIBCPP_CAN_DETECT_OVERRIDDEN_FUNCTION 1
 #  define _LIBCPP_MAKE_OVERRIDABLE_FUNCTION_DETECTABLE __attribute__((__section__("__lcxx_override")))
