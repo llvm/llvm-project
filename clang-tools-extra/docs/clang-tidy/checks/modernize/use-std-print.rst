@@ -109,7 +109,7 @@ Options
 
   .. code-block:: c++
 
-    std::print("{} {}\n", static_cast<unsigned int>(i), static_cast<int>(u));
+    std::print("{} {}\n", static_cast<int>(u), static_cast<unsigned int>(i));
 
   to ensure that the output will continue to be the unsigned representation
   of `-42` and the signed representation of `0xffffffff` (often
