@@ -541,7 +541,9 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
 
   // FIXME: We can do custom inline expansion like SelectionDAG.
   // FIXME: Legal with Zfa.
-  getActionDefinitionsBuilder({G_FCEIL, G_FFLOOR})
+  getActionDefinitionsBuilder({G_FCEIL, G_FFLOOR, G_FRINT, G_FNEARBYINT,
+                               G_INTRINSIC_TRUNC, G_INTRINSIC_ROUND,
+                               G_INTRINSIC_ROUNDEVEN})
       .libcallFor({s32, s64});
 
   getActionDefinitionsBuilder(G_VASTART).customFor({p0});
