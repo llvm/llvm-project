@@ -21,6 +21,7 @@
 MODULE_ANALYSIS("callgraph", CallGraphAnalysis())
 MODULE_ANALYSIS("collector-metadata", CollectorMetadataAnalysis())
 MODULE_ANALYSIS("ctx-prof-analysis", CtxProfAnalysis())
+MODULE_ANALYSIS("debug-info-cache", DebugInfoCacheAnalysis())
 MODULE_ANALYSIS("dxil-metadata", DXILMetadataAnalysis())
 MODULE_ANALYSIS("dxil-resource", DXILResourceAnalysis())
 MODULE_ANALYSIS("inline-advisor", InlineAdvisorAnalysis())

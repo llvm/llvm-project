@@ -120,11 +120,13 @@ public:
   /// Process subprogram.
   void processSubprogram(DISubprogram *SP);
 
+  /// Process a compile unit.
+  void processCompileUnit(DICompileUnit *CU);
+
   /// Clear all lists.
   void reset();
 
 private:
-  void processCompileUnit(DICompileUnit *CU);
   void processScope(DIScope *Scope);
   void processType(DIType *DT);
   bool addCompileUnit(DICompileUnit *CU);
