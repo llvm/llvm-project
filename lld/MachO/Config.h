@@ -210,7 +210,6 @@ struct Configuration {
   std::vector<SectionAlign> sectionAlignments;
   std::vector<SegmentProtection> segmentProtections;
   bool ltoDebugPassManager = false;
-  llvm::StringRef codegenDataGeneratePath;
   bool csProfileGenerate = false;
   llvm::StringRef csProfilePath;
   bool pgoWarnMismatch;

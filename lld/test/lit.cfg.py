@@ -40,7 +40,6 @@ llvm_config.use_lld()
 tool_patterns = [
     "llc",
     "llvm-as",
-    "llvm-cgdata",
     "llvm-mc",
     "llvm-nm",
     "llvm-objdump",
