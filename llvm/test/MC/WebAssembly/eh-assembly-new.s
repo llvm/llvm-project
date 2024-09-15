@@ -84,7 +84,7 @@ eh_test:
   end_function
 
 # CHECK-LABEL: eh_test:
-# CHECK-NEXT:    block           exnref
+# CHECK:         block           exnref
 # CHECK-NEXT:    block
 # CHECK-NEXT:    block           () -> (i32, exnref)
 # CHECK-NEXT:    block           i32
