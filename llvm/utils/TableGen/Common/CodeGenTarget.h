@@ -56,19 +56,18 @@ std::string getQualifiedName(const Record *R);
 /// CodeGenTarget - This class corresponds to the Target class in the .td files.
 ///
 class CodeGenTarget {
-  RecordKeeper &Records;
-  Record *TargetRec;
+  const RecordKeeper &Records;
+  const Record *TargetRec;
 
   mutable DenseMap<const Record *, std::unique_ptr<CodeGenInstruction>>
       Instructions;
   mutable std::unique_ptr<CodeGenRegBank> RegBank;
-  mutable std::vector<Record *> RegAltNameIndices;
+  mutable ArrayRef<const Record *> RegAltNameIndices;
   mutable SmallVector<ValueTypeByHwMode, 8> LegalValueTypes;
   CodeGenHwModes CGH;
-  std::vector<Record *> MacroFusions;
+  ArrayRef<const Record *> MacroFusions;
   mutable bool HasVariableLengthEncodings = false;
 
-  void ReadRegAltNameIndices() const;
   void ReadInstructions() const;
   void ReadLegalValueTypes() const;
 
@@ -81,10 +80,10 @@ class CodeGenTarget {
   mutable unsigned NumPseudoInstructions = 0;
 
 public:
-  CodeGenTarget(RecordKeeper &Records);
+  CodeGenTarget(const RecordKeeper &Records);
   ~CodeGenTarget();
 
-  Record *getTargetRecord() const { return TargetRec; }
+  const Record *getTargetRecord() const { return TargetRec; }
   StringRef getName() const;
 
   /// getInstNamespace - Return the target-specific instruction namespace.
@@ -135,9 +134,9 @@ public:
   /// return it.
   const CodeGenRegister *getRegisterByName(StringRef Name) const;
 
-  const std::vector<Record *> &getRegAltNameIndices() const {
+  ArrayRef<const Record *> getRegAltNameIndices() const {
     if (RegAltNameIndices.empty())
-      ReadRegAltNameIndices();
+      RegAltNameIndices = Records.getAllDerivedDefinitions("RegAltNameIndex");
     return RegAltNameIndices;
   }
 
@@ -159,7 +158,7 @@ public:
 
   bool hasMacroFusion() const { return !MacroFusions.empty(); }
 
-  const std::vector<Record *> getMacroFusions() const { return MacroFusions; }
+  ArrayRef<const Record *> getMacroFusions() const { return MacroFusions; }
 
 private:
   DenseMap<const Record *, std::unique_ptr<CodeGenInstruction>> &

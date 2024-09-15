@@ -636,7 +636,7 @@ void AsmWriterEmitter::EmitGetRegisterName(raw_ostream &O) {
   Record *AsmWriter = Target.getAsmWriter();
   StringRef ClassName = AsmWriter->getValueAsString("AsmWriterClassName");
   const auto &Registers = Target.getRegBank().getRegisters();
-  const std::vector<Record *> &AltNameIndices = Target.getRegAltNameIndices();
+  ArrayRef<const Record *> AltNameIndices = Target.getRegAltNameIndices();
   bool hasAltNames = AltNameIndices.size() > 1;
   StringRef Namespace = Registers.front().TheDef->getValueAsString("Namespace");
 
