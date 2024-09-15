@@ -33,7 +33,6 @@ class TargetInstrInfo;
   class VirtRegMap : public MachineFunctionPass {
   public:
     enum {
-      NO_PHYS_REG = 0,
       NO_STACK_SLOT = (1L << 30)-1,
       MAX_STACK_SLOT = (1L << 18)-1
     };
@@ -49,7 +48,7 @@ class TargetInstrInfo;
     /// it; even spilled virtual registers (the register mapped to a
     /// spilled register is the temporary used to load it from the
     /// stack).
-    IndexedMap<Register, VirtReg2IndexFunctor> Virt2PhysMap;
+    IndexedMap<MCRegister, VirtReg2IndexFunctor> Virt2PhysMap;
 
     /// Virt2StackSlotMap - This is virtual register to stack slot
     /// mapping. Each spilled virtual register has an entry in it
@@ -71,9 +70,7 @@ class TargetInstrInfo;
   public:
     static char ID;
 
-    VirtRegMap()
-        : MachineFunctionPass(ID), Virt2PhysMap(NO_PHYS_REG),
-          Virt2StackSlotMap(NO_STACK_SLOT) {}
+    VirtRegMap() : MachineFunctionPass(ID), Virt2StackSlotMap(NO_STACK_SLOT) {}
     VirtRegMap(const VirtRegMap &) = delete;
     VirtRegMap &operator=(const VirtRegMap &) = delete;
 
@@ -96,15 +93,13 @@ class TargetInstrInfo;
 
     /// returns true if the specified virtual register is
     /// mapped to a physical register
-    bool hasPhys(Register virtReg) const {
-      return getPhys(virtReg) != NO_PHYS_REG;
-    }
+    bool hasPhys(Register virtReg) const { return getPhys(virtReg).isValid(); }
 
     /// returns the physical register mapped to the specified
     /// virtual register
     MCRegister getPhys(Register virtReg) const {
       assert(virtReg.isVirtual());
-      return MCRegister::from(Virt2PhysMap[virtReg]);
+      return Virt2PhysMap[virtReg];
     }
 
     /// creates a mapping for the specified virtual register to
@@ -130,9 +125,9 @@ class TargetInstrInfo;
     /// register mapping
     void clearVirt(Register virtReg) {
       assert(virtReg.isVirtual());
-      assert(Virt2PhysMap[virtReg] != NO_PHYS_REG &&
+      assert(Virt2PhysMap[virtReg] &&
              "attempt to clear a not assigned virtual register");
-      Virt2PhysMap[virtReg] = NO_PHYS_REG;
+      Virt2PhysMap[virtReg] = MCRegister();
     }
 
     /// clears all virtual to physical register mappings
@@ -178,8 +173,7 @@ class TargetInstrInfo;
         return true;
       // Split register can be assigned a physical register as well as a
       // stack slot or remat id.
-      return (Virt2SplitMap[virtReg] &&
-              Virt2PhysMap[virtReg] != NO_PHYS_REG);
+      return (Virt2SplitMap[virtReg] && Virt2PhysMap[virtReg]);
     }
 
     /// returns the stack slot mapped to the specified virtual
