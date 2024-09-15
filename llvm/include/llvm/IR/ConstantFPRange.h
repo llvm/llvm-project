@@ -12,8 +12,11 @@
 //
 // Range = [Lower, Upper] U (MayBeQNaN ? QNaN : {}) U (MayBeSNaN ? SNaN : {})
 // Specifically, [inf, -inf] represents an empty set.
-// Note: -0 is considered to be less than 0. That is, range [0, 0] doesn't
-// contain -0.
+// Note:
+// 1. Bounds are inclusive.
+// 2. -0 is considered to be less than 0. That is, range [0, 0] doesn't contain
+// -0.
+// 3. Currently wrapping ranges are not supported.
 //
 //===----------------------------------------------------------------------===//
 
@@ -50,9 +53,6 @@ class [[nodiscard]] ConstantFPRange {
   bool isNaNOnly() const;
 
 public:
-  /// Return true if the floating point format is supported.
-  static bool isSupportedSemantics(const fltSemantics &Sem);
-
   /// Initialize a full or empty set for the specified semantics.
   explicit ConstantFPRange(const fltSemantics &Sem, bool IsFullSet);
 

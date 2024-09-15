@@ -15,20 +15,6 @@
 
 using namespace llvm;
 
-// A floating point format must support NaN, Inf and -0.
-bool ConstantFPRange::isSupportedSemantics(const fltSemantics &Sem) {
-  switch (APFloat::SemanticsToEnum(Sem)) {
-  default:
-    return false;
-  case APFloat::S_IEEEhalf:
-  case APFloat::S_BFloat:
-  case APFloat::S_IEEEsingle:
-  case APFloat::S_IEEEdouble:
-  case APFloat::S_IEEEquad:
-    return true;
-  }
-}
-
 void ConstantFPRange::makeEmpty() {
   auto &Sem = Lower.getSemantics();
   Lower = APFloat::getInf(Sem, /*Negative=*/false);
@@ -51,7 +37,6 @@ bool ConstantFPRange::isNaNOnly() const {
 
 ConstantFPRange::ConstantFPRange(const fltSemantics &Sem, bool IsFullSet)
     : Lower(Sem, APFloat::uninitialized), Upper(Sem, APFloat::uninitialized) {
-  assert(isSupportedSemantics(Sem) && "Unsupported fp format");
   Lower = APFloat::getInf(Sem, /*Negative=*/IsFullSet);
   Upper = APFloat::getInf(Sem, /*Negative=*/!IsFullSet);
   MayBeQNaN = IsFullSet;
@@ -61,8 +46,6 @@ ConstantFPRange::ConstantFPRange(const fltSemantics &Sem, bool IsFullSet)
 ConstantFPRange::ConstantFPRange(const APFloat &Value)
     : Lower(Value.getSemantics(), APFloat::uninitialized),
       Upper(Value.getSemantics(), APFloat::uninitialized) {
-  assert(isSupportedSemantics(getSemantics()) && "Unsupported fp format");
-
   if (Value.isNaN()) {
     makeEmpty();
     bool IsSNaN = Value.isSignaling();
@@ -89,8 +72,6 @@ static APFloat::cmpResult strictCompare(const APFloat &LHS,
 ConstantFPRange::ConstantFPRange(APFloat LowerVal, APFloat UpperVal,
                                  bool MayBeQNaN, bool MayBeSNaN)
     : Lower(std::move(LowerVal)), Upper(std::move(UpperVal)) {
-  assert(isSupportedSemantics(getSemantics()) && "Unsupported fp format");
-
   // Canonicalize empty set into [Inf, -Inf].
   if (strictCompare(Lower, Upper) == APFloat::cmpGreaterThan &&
       !(Lower.isInfinity() && Upper.isInfinity()))
