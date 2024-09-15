@@ -19,7 +19,6 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
 #include "llvm/TargetParser/TargetParser.h"
-#include <queue>
 
 using namespace llvm;
 
@@ -532,18 +531,24 @@ static int getWaitStatesSinceImpl(
   // Build worklist of predecessors.
   // Note: use queue so search is breadth first, which reduces search space
   // when a hazard is found.
-  std::queue<const MachineBasicBlock *> Worklist;
+  SmallVector<const MachineBasicBlock *> Worklist;
   for (MachineBasicBlock *Pred : InitialMBB->predecessors()) {
     Visited[Pred] = InitialWaitStates;
-    Worklist.push(Pred);
+    Worklist.push_back(Pred);
   }
 
   // Find minimum wait states to hazard or determine that all paths expire.
   int MinWaitStates = std::numeric_limits<int>::max();
-  while (!Worklist.empty()) {
-    const MachineBasicBlock *MBB = Worklist.front();
+  unsigned Idx = 0;
+  while (Idx < Worklist.size()) {
+    const MachineBasicBlock *MBB = Worklist[Idx++];
     int WaitStates = Visited[MBB];
-    Worklist.pop();
+
+    // Make sure that worklist capacity is reused in large CFGs.
+    if (Idx >= 1024) {
+      Worklist.erase(Worklist.begin(), Worklist.begin() + (Idx - 1));
+      Idx = 0;
+    }
 
     // No reason to search blocks when wait states exceed established minimum.
     if (WaitStates >= MinWaitStates)
@@ -561,7 +566,7 @@ static int getWaitStatesSinceImpl(
         if (!Visited.contains(Pred) || WaitStates < Visited[Pred]) {
           // Store lowest wait states required to visit this block.
           Visited[Pred] = WaitStates;
-          Worklist.push(Pred);
+          Worklist.push_back(Pred);
         }
       }
     }
@@ -583,11 +588,11 @@ static int getWaitStatesSince(
                                          IsExpired, GetNumWaitStates);
   if (InitSearch == HazardFound)
     return WaitStates;
-  else if (InitSearch == HazardExpired)
+  if (InitSearch == HazardExpired)
     return std::numeric_limits<int>::max();
-  else
-    return getWaitStatesSinceImpl(IsHazard, MBB, WaitStates, IsExpired,
-                                  GetNumWaitStates);
+
+  return getWaitStatesSinceImpl(IsHazard, MBB, WaitStates, IsExpired,
+                                GetNumWaitStates);
 }
 
 static int getWaitStatesSince(GCNHazardRecognizer::IsHazardFn IsHazard,
