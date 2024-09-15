@@ -104,7 +104,7 @@ class TargetInstrInfo;
     /// virtual register
     MCRegister getPhys(Register virtReg) const {
       assert(virtReg.isVirtual());
-      return MCRegister::from(Virt2PhysMap[virtReg.id()]);
+      return MCRegister::from(Virt2PhysMap[virtReg]);
     }
 
     /// creates a mapping for the specified virtual register to
@@ -130,9 +130,9 @@ class TargetInstrInfo;
     /// register mapping
     void clearVirt(Register virtReg) {
       assert(virtReg.isVirtual());
-      assert(Virt2PhysMap[virtReg.id()] != NO_PHYS_REG &&
+      assert(Virt2PhysMap[virtReg] != NO_PHYS_REG &&
              "attempt to clear a not assigned virtual register");
-      Virt2PhysMap[virtReg.id()] = NO_PHYS_REG;
+      Virt2PhysMap[virtReg] = NO_PHYS_REG;
     }
 
     /// clears all virtual to physical register mappings
@@ -151,7 +151,7 @@ class TargetInstrInfo;
 
     /// records virtReg is a split live interval from SReg.
     void setIsSplitFromReg(Register virtReg, Register SReg) {
-      Virt2SplitMap[virtReg.id()] = SReg;
+      Virt2SplitMap[virtReg] = SReg;
       if (hasShape(SReg)) {
         Virt2ShapeMap[virtReg] = getShape(SReg);
       }
@@ -159,7 +159,7 @@ class TargetInstrInfo;
 
     /// returns the live interval virtReg is split from.
     Register getPreSplitReg(Register virtReg) const {
-      return Virt2SplitMap[virtReg.id()];
+      return Virt2SplitMap[virtReg];
     }
 
     /// getOriginal - Return the original virtual register that VirtReg descends
@@ -178,15 +178,15 @@ class TargetInstrInfo;
         return true;
       // Split register can be assigned a physical register as well as a
       // stack slot or remat id.
-      return (Virt2SplitMap[virtReg.id()] &&
-              Virt2PhysMap[virtReg.id()] != NO_PHYS_REG);
+      return (Virt2SplitMap[virtReg] &&
+              Virt2PhysMap[virtReg] != NO_PHYS_REG);
     }
 
     /// returns the stack slot mapped to the specified virtual
     /// register
     int getStackSlot(Register virtReg) const {
       assert(virtReg.isVirtual());
-      return Virt2StackSlotMap[virtReg.id()];
+      return Virt2StackSlotMap[virtReg];
     }
 
     /// create a mapping for the specifed virtual register to
