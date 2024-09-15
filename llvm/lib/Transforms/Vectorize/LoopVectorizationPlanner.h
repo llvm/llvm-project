@@ -232,6 +232,11 @@ public:
     return tryInsertInstruction(new VPScalarCastRecipe(Opcode, Op, ResultTy));
   }
 
+  VPWidenCastRecipe *createWidenCast(Instruction::CastOps Opcode, VPValue *Op,
+                                     Type *ResultTy) {
+    return tryInsertInstruction(new VPWidenCastRecipe(Opcode, Op, ResultTy));
+  }
+
   VPScalarIVStepsRecipe *
   createScalarIVSteps(Instruction::BinaryOps InductionOpcode,
                       FPMathOperator *FPBinOp, VPValue *IV, VPValue *Step) {

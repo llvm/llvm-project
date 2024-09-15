@@ -74,8 +74,7 @@ bool vputils::isUniformAcrossVFsAndUFs(VPValue *V) {
     return true;
 
   return TypeSwitch<const VPRecipeBase *, bool>(R)
-      .Case<VPCanonicalIVPHIRecipe, VPDerivedIVRecipe>(
-          [](const auto *R) { return true; })
+      .Case<VPDerivedIVRecipe>([](const auto *R) { return true; })
       .Case<VPReplicateRecipe>([](const auto *R) {
         // Loads and stores that are uniform across VF lanes are handled by
         // VPReplicateRecipe.IsUniform. They are also uniform across UF parts if
