@@ -2,10 +2,11 @@
 
   .tagtype  __cpp_exception i32
   .tagtype  __c_longjmp i32
-  .functype  eh_test () -> ()
   .functype  foo () -> ()
 
 eh_test:
+  .functype  eh_test () -> ()
+
   # try_table with all four kinds of catch clauses
   block exnref
     block
