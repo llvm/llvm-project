@@ -585,7 +585,6 @@ TEST(FormatVariadicTest, BigTest) {
   for (auto &Item : Ts) {
     Stream << std::apply(format_tuple(Line), Item) << "\n";
   }
-  Stream.flush();
   const char *Expected =
       R"foo(There are {14} items in the tuple, and {2} tuple(s) in the array.
   Char|  HexInt|   Str    |   Ref    |  std::str   | double|  float|   pointer|comma  |       exp|          bigint|          bigint2| limit|byte

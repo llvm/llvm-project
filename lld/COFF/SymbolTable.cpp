@@ -275,7 +275,7 @@ static void reportUndefinedSymbol(const COFFLinkerContext &ctx,
   }
   if (numDisplayedRefs < numRefs)
     os << "\n>>> referenced " << numRefs - numDisplayedRefs << " more times";
-  errorOrWarn(os.str(), ctx.config.forceUnresolved);
+  errorOrWarn(out, ctx.config.forceUnresolved);
 }
 
 void SymbolTable::loadMinGWSymbols() {
@@ -584,7 +584,7 @@ void SymbolTable::initializeECThunks() {
 
     Symbol *sym = exitThunks.lookup(file->thunkSym);
     if (!sym)
-      sym = exitThunks.lookup(file->impSym);
+      sym = exitThunks.lookup(file->impECSym);
     file->impchkThunk->exitThunk = dyn_cast_or_null<Defined>(sym);
   }
 }
@@ -667,7 +667,7 @@ static std::string getSourceLocationObj(ObjFile *file, SectionChunk *sc,
   if (fileLine)
     os << fileLine->first << ":" << fileLine->second << "\n>>>            ";
   os << toString(file);
-  return os.str();
+  return res;
 }
 
 static std::string getSourceLocation(InputFile *file, SectionChunk *sc,
@@ -706,9 +706,9 @@ void SymbolTable::reportDuplicate(Symbol *existing, InputFile *newFile,
                           existing->getName());
 
   if (ctx.config.forceMultiple)
-    warn(os.str());
+    warn(msg);
   else
-    error(os.str());
+    error(msg);
 }
 
 Symbol *SymbolTable::addAbsolute(StringRef n, COFFSymbolRef sym) {
@@ -785,11 +785,12 @@ Symbol *SymbolTable::addCommon(InputFile *f, StringRef n, uint64_t size,
   return s;
 }
 
-DefinedImportData *SymbolTable::addImportData(StringRef n, ImportFile *f) {
+DefinedImportData *SymbolTable::addImportData(StringRef n, ImportFile *f,
+                                              Chunk *&location) {
   auto [s, wasInserted] = insert(n, nullptr);
   s->isUsedInRegularObj = true;
   if (wasInserted || isa<Undefined>(s) || s->isLazy()) {
-    replaceSymbol<DefinedImportData>(s, n, f);
+    replaceSymbol<DefinedImportData>(s, n, f, location);
     return cast<DefinedImportData>(s);
   }
 

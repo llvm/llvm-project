@@ -1117,6 +1117,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         setOperationAction({ISD::VP_MERGE, ISD::VP_SELECT, ISD::SELECT}, VT,
                            Custom);
         setOperationAction(ISD::SELECT_CC, VT, Expand);
+        setOperationAction({ISD::SINT_TO_FP, ISD::UINT_TO_FP,
+                            ISD::VP_SINT_TO_FP, ISD::VP_UINT_TO_FP},
+                           VT, Custom);
         setOperationAction({ISD::CONCAT_VECTORS, ISD::INSERT_SUBVECTOR,
                             ISD::EXTRACT_SUBVECTOR, ISD::VECTOR_INTERLEAVE,
                             ISD::VECTOR_DEINTERLEAVE},
@@ -3676,7 +3679,6 @@ static SDValue lowerBuildVectorViaDominantValues(SDValue Op, SelectionDAG &DAG,
     if (V.isUndef())
       continue;
 
-    ValueCounts.insert(std::make_pair(V, 0));
     unsigned &Count = ValueCounts[V];
     if (0 == Count)
       if (auto *CFP = dyn_cast<ConstantFPSDNode>(V))
@@ -6677,17 +6679,19 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::SINT_TO_FP:
   case ISD::UINT_TO_FP:
     if (Op.getValueType().isVector() &&
-        Op.getValueType().getScalarType() == MVT::f16 &&
-        (Subtarget.hasVInstructionsF16Minimal() &&
-         !Subtarget.hasVInstructionsF16())) {
-      if (Op.getValueType() == MVT::nxv32f16)
+        ((Op.getValueType().getScalarType() == MVT::f16 &&
+          (Subtarget.hasVInstructionsF16Minimal() &&
+           !Subtarget.hasVInstructionsF16())) ||
+         Op.getValueType().getScalarType() == MVT::bf16)) {
+      if (Op.getValueType() == MVT::nxv32f16 ||
+          Op.getValueType() == MVT::nxv32bf16)
         return SplitVectorOp(Op, DAG);
       // int -> f32
       SDLoc DL(Op);
       MVT NVT =
           MVT::getVectorVT(MVT::f32, Op.getValueType().getVectorElementCount());
       SDValue NC = DAG.getNode(Op.getOpcode(), DL, NVT, Op->ops());
-      // f32 -> f16
+      // f32 -> [b]f16
       return DAG.getNode(ISD::FP_ROUND, DL, Op.getValueType(), NC,
                          DAG.getIntPtrConstant(0, DL, /*isTarget=*/true));
     }
@@ -6696,12 +6700,14 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::FP_TO_UINT:
     if (SDValue Op1 = Op.getOperand(0);
         Op1.getValueType().isVector() &&
-        Op1.getValueType().getScalarType() == MVT::f16 &&
-        (Subtarget.hasVInstructionsF16Minimal() &&
-         !Subtarget.hasVInstructionsF16())) {
-      if (Op1.getValueType() == MVT::nxv32f16)
+        ((Op1.getValueType().getScalarType() == MVT::f16 &&
+          (Subtarget.hasVInstructionsF16Minimal() &&
+           !Subtarget.hasVInstructionsF16())) ||
+         Op1.getValueType().getScalarType() == MVT::bf16)) {
+      if (Op1.getValueType() == MVT::nxv32f16 ||
+          Op1.getValueType() == MVT::nxv32bf16)
         return SplitVectorOp(Op, DAG);
-      // f16 -> f32
+      // [b]f16 -> f32
       SDLoc DL(Op);
       MVT NVT = MVT::getVectorVT(MVT::f32,
                                  Op1.getValueType().getVectorElementCount());
@@ -7412,17 +7418,19 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::VP_SINT_TO_FP:
   case ISD::VP_UINT_TO_FP:
     if (Op.getValueType().isVector() &&
-        Op.getValueType().getScalarType() == MVT::f16 &&
-        (Subtarget.hasVInstructionsF16Minimal() &&
-         !Subtarget.hasVInstructionsF16())) {
-      if (Op.getValueType() == MVT::nxv32f16)
-        return SplitVPOp(Op, DAG);
+        ((Op.getValueType().getScalarType() == MVT::f16 &&
+          (Subtarget.hasVInstructionsF16Minimal() &&
+           !Subtarget.hasVInstructionsF16())) ||
+         Op.getValueType().getScalarType() == MVT::bf16)) {
+      if (Op.getValueType() == MVT::nxv32f16 ||
+          Op.getValueType() == MVT::nxv32bf16)
+        return SplitVectorOp(Op, DAG);
       // int -> f32
       SDLoc DL(Op);
       MVT NVT =
           MVT::getVectorVT(MVT::f32, Op.getValueType().getVectorElementCount());
       auto NC = DAG.getNode(Op.getOpcode(), DL, NVT, Op->ops());
-      // f32 -> f16
+      // f32 -> [b]f16
       return DAG.getNode(ISD::FP_ROUND, DL, Op.getValueType(), NC,
                          DAG.getIntPtrConstant(0, DL, /*isTarget=*/true));
     }
@@ -7431,12 +7439,14 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::VP_FP_TO_UINT:
     if (SDValue Op1 = Op.getOperand(0);
         Op1.getValueType().isVector() &&
-        Op1.getValueType().getScalarType() == MVT::f16 &&
-        (Subtarget.hasVInstructionsF16Minimal() &&
-         !Subtarget.hasVInstructionsF16())) {
-      if (Op1.getValueType() == MVT::nxv32f16)
-        return SplitVPOp(Op, DAG);
-      // f16 -> f32
+        ((Op1.getValueType().getScalarType() == MVT::f16 &&
+          (Subtarget.hasVInstructionsF16Minimal() &&
+           !Subtarget.hasVInstructionsF16())) ||
+         Op1.getValueType().getScalarType() == MVT::bf16)) {
+      if (Op1.getValueType() == MVT::nxv32f16 ||
+          Op1.getValueType() == MVT::nxv32bf16)
+        return SplitVectorOp(Op, DAG);
+      // [b]f16 -> f32
       SDLoc DL(Op);
       MVT NVT = MVT::getVectorVT(MVT::f32,
                                  Op1.getValueType().getVectorElementCount());
@@ -19079,20 +19089,18 @@ static SDValue convertLocVTToValVT(SelectionDAG &DAG, SDValue Val,
   if (VA.needsCustom()) {
     if (VA.getLocVT().isInteger() &&
         (VA.getValVT() == MVT::f16 || VA.getValVT() == MVT::bf16))
-      Val = DAG.getNode(RISCVISD::FMV_H_X, DL, VA.getValVT(), Val);
-    else if (VA.getLocVT() == MVT::i64 && VA.getValVT() == MVT::f32)
-      Val = DAG.getNode(RISCVISD::FMV_W_X_RV64, DL, MVT::f32, Val);
-    else
-      llvm_unreachable("Unexpected Custom handling.");
-    return Val;
+      return DAG.getNode(RISCVISD::FMV_H_X, DL, VA.getValVT(), Val);
+    if (VA.getLocVT() == MVT::i64 && VA.getValVT() == MVT::f32)
+      return DAG.getNode(RISCVISD::FMV_W_X_RV64, DL, MVT::f32, Val);
+    if (VA.getValVT().isFixedLengthVector() && VA.getLocVT().isScalableVector())
+      return convertFromScalableVector(VA.getValVT(), Val, DAG, Subtarget);
+    llvm_unreachable("Unexpected Custom handling.");
   }
 
   switch (VA.getLocInfo()) {
   default:
     llvm_unreachable("Unexpected CCValAssign::LocInfo");
   case CCValAssign::Full:
-    if (VA.getValVT().isFixedLengthVector() && VA.getLocVT().isScalableVector())
-      Val = convertFromScalableVector(VA.getValVT(), Val, DAG, Subtarget);
     break;
   case CCValAssign::BCvt:
     Val = DAG.getNode(ISD::BITCAST, DL, VA.getValVT(), Val);
@@ -19144,20 +19152,18 @@ static SDValue convertValVTToLocVT(SelectionDAG &DAG, SDValue Val,
   if (VA.needsCustom()) {
     if (LocVT.isInteger() &&
         (VA.getValVT() == MVT::f16 || VA.getValVT() == MVT::bf16))
-      Val = DAG.getNode(RISCVISD::FMV_X_ANYEXTH, DL, LocVT, Val);
-    else if (LocVT == MVT::i64 && VA.getValVT() == MVT::f32)
-      Val = DAG.getNode(RISCVISD::FMV_X_ANYEXTW_RV64, DL, MVT::i64, Val);
-    else
-      llvm_unreachable("Unexpected Custom handling.");
-    return Val;
+      return DAG.getNode(RISCVISD::FMV_X_ANYEXTH, DL, LocVT, Val);
+    if (LocVT == MVT::i64 && VA.getValVT() == MVT::f32)
+      return DAG.getNode(RISCVISD::FMV_X_ANYEXTW_RV64, DL, MVT::i64, Val);
+    if (VA.getValVT().isFixedLengthVector() && LocVT.isScalableVector())
+      return convertToScalableVector(LocVT, Val, DAG, Subtarget);
+    llvm_unreachable("Unexpected Custom handling.");
   }
 
   switch (VA.getLocInfo()) {
   default:
     llvm_unreachable("Unexpected CCValAssign::LocInfo");
   case CCValAssign::Full:
-    if (VA.getValVT().isFixedLengthVector() && LocVT.isScalableVector())
-      Val = convertToScalableVector(LocVT, Val, DAG, Subtarget);
     break;
   case CCValAssign::BCvt:
     Val = DAG.getNode(ISD::BITCAST, DL, LocVT, Val);

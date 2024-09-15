@@ -58,7 +58,7 @@ struct VPlanTransforms {
   /// Apply VPlan-to-VPlan optimizations to \p Plan, including induction recipe
   /// optimizations, dead recipe removal, replicate region optimizations and
   /// block merging.
-  static void optimize(VPlan &Plan, ScalarEvolution &SE);
+  static void optimize(VPlan &Plan);
 
   /// Wrap predicated VPReplicateRecipes with a mask operand in an if-then
   /// region block and remove the mask operand. Optimize the created regions by
@@ -82,8 +82,7 @@ struct VPlanTransforms {
   /// will be folded later.
   static void
   truncateToMinimalBitwidths(VPlan &Plan,
-                             const MapVector<Instruction *, uint64_t> &MinBWs,
-                             LLVMContext &Ctx);
+                             const MapVector<Instruction *, uint64_t> &MinBWs);
 
   /// Drop poison flags from recipes that may generate a poison value that is
   /// used after vectorization, even when their operands are not poison. Those
