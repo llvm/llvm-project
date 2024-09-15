@@ -2304,10 +2304,10 @@ body: |
   VEXTRACTPSZmr                                $rdi, 1, $noreg, 0, $noreg, $xmm0, 1
   ; CHECK: $eax = VEXTRACTPSrr                 $xmm0, 1
   $eax = VEXTRACTPSZrr                         $xmm0, 1
-  ; CHECK: $xmm0 = VINSERTPSrm                 $xmm0, $rdi, 1, $noreg, 0, $noreg, 1
-  $xmm0 = VINSERTPSZrm                         $xmm0, $rdi, 1, $noreg, 0, $noreg, 1
-  ; CHECK: $xmm0 = VINSERTPSrr                 $xmm0, $xmm0, 1
-  $xmm0 = VINSERTPSZrr                         $xmm0, $xmm0, 1
+  ; CHECK: $xmm0 = VINSERTPSrmi                $xmm0, $rdi, 1, $noreg, 0, $noreg, 1
+  $xmm0 = VINSERTPSZrmi                        $xmm0, $rdi, 1, $noreg, 0, $noreg, 1
+  ; CHECK: $xmm0 = VINSERTPSrri                $xmm0, $xmm0, 1
+  $xmm0 = VINSERTPSZrri                        $xmm0, $xmm0, 1
   ; CHECK: $xmm0 = VROUNDSDmi                  $xmm0, $rip, 1, $noreg, 0, $noreg, 15, implicit $mxcsr
   $xmm0 = VRNDSCALESDZm                        $xmm0, $rip, 1, $noreg, 0, $noreg, 15, implicit $mxcsr
   ; CHECK: $xmm0 = VROUNDSDri                  $xmm0, $xmm1, 15, implicit $mxcsr
@@ -4072,10 +4072,10 @@ body: |
   VEXTRACTPSZmr                                $rdi, 1, $noreg, 0, $noreg, $xmm16, 1
   ; CHECK: $eax = VEXTRACTPSZrr                $xmm16, 1
   $eax = VEXTRACTPSZrr                         $xmm16, 1
-  ; CHECK: $xmm16 = VINSERTPSZrm               $xmm16, $rdi, 1, $noreg, 0, $noreg, 1
-  $xmm16 = VINSERTPSZrm                        $xmm16, $rdi, 1, $noreg, 0, $noreg, 1
-  ; CHECK: $xmm16 = VINSERTPSZrr               $xmm16, $xmm16, 1
-  $xmm16 = VINSERTPSZrr                        $xmm16, $xmm16, 1
+  ; CHECK: $xmm16 = VINSERTPSZrmi              $xmm16, $rdi, 1, $noreg, 0, $noreg, 1
+  $xmm16 = VINSERTPSZrmi                       $xmm16, $rdi, 1, $noreg, 0, $noreg, 1
+  ; CHECK: $xmm16 = VINSERTPSZrri              $xmm16, $xmm16, 1
+  $xmm16 = VINSERTPSZrri                       $xmm16, $xmm16, 1
   ; CHECK: $xmm16 = VRNDSCALEPDZ128rmi         $rip, 1, $noreg, 0, $noreg, 15, implicit $mxcsr
   $xmm16 = VRNDSCALEPDZ128rmi                  $rip, 1, $noreg, 0, $noreg, 15, implicit $mxcsr
   ; CHECK: $xmm16 = VRNDSCALEPDZ128rri         $xmm16, 15, implicit $mxcsr

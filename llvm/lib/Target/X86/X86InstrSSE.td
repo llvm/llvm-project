@@ -5447,7 +5447,7 @@ let Constraints = "$src1 = $dst" in
 // in the target vector.
 multiclass SS41I_insertf32<bits<8> opc, string asm, bit Is2Addr = 1> {
   let isCommutable = 1 in
-  def rr : SS4AIi8<opc, MRMSrcReg, (outs VR128:$dst),
+  def rri : SS4AIi8<opc, MRMSrcReg, (outs VR128:$dst),
       (ins VR128:$src1, VR128:$src2, u8imm:$src3),
       !if(Is2Addr,
         !strconcat(asm, "\t{$src3, $src2, $dst|$dst, $src2, $src3}"),
@@ -5456,7 +5456,7 @@ multiclass SS41I_insertf32<bits<8> opc, string asm, bit Is2Addr = 1> {
       [(set VR128:$dst,
         (X86insertps VR128:$src1, VR128:$src2, timm:$src3))]>,
       Sched<[SchedWriteFShuffle.XMM]>;
-  def rm : SS4AIi8<opc, MRMSrcMem, (outs VR128:$dst),
+  def rmi : SS4AIi8<opc, MRMSrcMem, (outs VR128:$dst),
       (ins VR128:$src1, f32mem:$src2, u8imm:$src3),
       !if(Is2Addr,
         !strconcat(asm, "\t{$src3, $src2, $dst|$dst, $src2, $src3}"),
