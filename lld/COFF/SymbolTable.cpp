@@ -275,7 +275,7 @@ static void reportUndefinedSymbol(const COFFLinkerContext &ctx,
   }
   if (numDisplayedRefs < numRefs)
     os << "\n>>> referenced " << numRefs - numDisplayedRefs << " more times";
-  errorOrWarn(os.str(), ctx.config.forceUnresolved);
+  errorOrWarn(out, ctx.config.forceUnresolved);
 }
 
 void SymbolTable::loadMinGWSymbols() {
@@ -667,7 +667,7 @@ static std::string getSourceLocationObj(ObjFile *file, SectionChunk *sc,
   if (fileLine)
     os << fileLine->first << ":" << fileLine->second << "\n>>>            ";
   os << toString(file);
-  return os.str();
+  return res;
 }
 
 static std::string getSourceLocation(InputFile *file, SectionChunk *sc,
@@ -706,9 +706,9 @@ void SymbolTable::reportDuplicate(Symbol *existing, InputFile *newFile,
                           existing->getName());
 
   if (ctx.config.forceMultiple)
-    warn(os.str());
+    warn(msg);
   else
-    error(os.str());
+    error(msg);
 }
 
 Symbol *SymbolTable::addAbsolute(StringRef n, COFFSymbolRef sym) {
