@@ -175,6 +175,10 @@ DWARFDebugAbbrev::tryExtractCUAbbrevFast(uint64_t CUAbbrOffset) const {
       AbbrevDecl != CUAbbrevs.end())
     return &AbbrevDecl->second;
 
+  if (!Data || CUAbbrOffset >= Data->getData().size())
+    return make_error<llvm::object::GenericBinaryError>(
+        "the abbreviation offset into the .debug_abbrev section is not valid");
+
   DWARFAbbreviationDeclaration Decl;
   uint64_t Offset = CUAbbrOffset;
   Expected<DWARFAbbreviationDeclaration::ExtractState> ES =
