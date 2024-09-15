@@ -936,6 +936,7 @@ private:
 
   template <bool _WasSorted, class _InputIterator, class _Sentinel>
   _LIBCPP_HIDE_FROM_ABI void __append_sort_merge_unique(_InputIterator __first, _Sentinel __last) {
+    auto __on_failure        = std::__make_exception_guard([&]() noexcept { clear() /* noexcept */; });
     size_t __num_of_appended = __append(std::move(__first), std::move(__last));
     if (__num_of_appended != 0) {
       auto __zv                  = ranges::views::zip(__containers_.keys, __containers_.values);
@@ -958,6 +959,7 @@ private:
       __containers_.keys.erase(__containers_.keys.begin() + __dist, __containers_.keys.end());
       __containers_.values.erase(__containers_.values.begin() + __dist, __containers_.values.end());
     }
+    __on_failure.__complete();
   }
 
   template <class _Self, class _Kp>

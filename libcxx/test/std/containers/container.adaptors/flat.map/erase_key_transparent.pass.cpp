@@ -54,6 +54,7 @@ int main(int, char**) {
     assert(m == expected);
   }
 #if 0
+// do we really want to support this weird comparator that gives different answer for Key and Kp?
   {
     using M = std::flat_map<std::string, int, StartsWith::Less>;
     M m     = {{"alpha", 1}, {"beta", 2}, {"epsilon", 3}, {"eta", 4}, {"gamma", 5}};
