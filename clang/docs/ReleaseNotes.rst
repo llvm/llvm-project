@@ -388,6 +388,7 @@ Bug Fixes to C++ Support
 - Fixed a crash in the typo correction of an invalid CTAD guide. (#GH107887)
 - Fixed a crash when clang tries to subtitute parameter pack while retaining the parameter
   pack. #GH63819, #GH107560
+- Implicit user-defined conversions to ``_Complex`` extension types now work in constant expressions. (#GH108750)
 
 
 Bug Fixes to AST Handling

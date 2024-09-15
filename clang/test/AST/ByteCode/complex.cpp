@@ -420,3 +420,15 @@ namespace ComplexConstexpr {
   static_assert(__imag test6 == 6, "");
   static_assert(&__imag test6 == &__real test6 + 1, "");
 }
+
+namespace Casts {
+  struct UserDefinedConversion {
+    double val[2];
+    constexpr operator _Complex double() const { return { val[0], val[1] }; };
+  };
+
+  constexpr _Complex double zero = UserDefinedConversion{};
+  static_assert(zero == 0.0 + 0.0j, "");
+  constexpr _Complex double three_four = UserDefinedConversion{3, 4};
+  static_assert(three_four == 3.0 + 4.0j, "");
+}
