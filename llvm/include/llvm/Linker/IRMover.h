@@ -12,6 +12,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/FunctionExtras.h"
+#include "llvm/IR/ValueMap.h"
 #include <functional>
 
 namespace llvm {
@@ -40,9 +41,6 @@ class IRMover {
     static bool isEqual(const KeyTy &LHS, const StructType *RHS);
     static bool isEqual(const StructType *LHS, const StructType *RHS);
   };
-
-  /// Type of the Metadata map in \a ValueToValueMapTy.
-  typedef DenseMap<const Metadata *, TrackingMDRef> MDMapT;
 
 public:
   class IdentifiedStructTypeSet {

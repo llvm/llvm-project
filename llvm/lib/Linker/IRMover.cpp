@@ -373,9 +373,6 @@ public:
   Value *materialize(Value *V) override;
 };
 
-/// Type of the Metadata map in \a ValueToValueMapTy.
-typedef DenseMap<const Metadata *, TrackingMDRef> MDMapT;
-
 /// This is responsible for keeping track of the state used for moving data
 /// from SrcM to DstM.
 class IRLinker {
