@@ -2250,7 +2250,7 @@ def ADLPWriteResGroup255 : SchedWriteRes<[ADLPPort00_01_05, ADLPPort02_03_11]> {
   let Latency = 9;
   let NumMicroOps = 2;
 }
-def : InstRW<[ADLPWriteResGroup255, ReadAfterVecYLd], (instregex "^VINSERT(F|I)128rm$",
+def : InstRW<[ADLPWriteResGroup255, ReadAfterVecYLd], (instregex "^VINSERT(F|I)128rmi$",
                                                                  "^VP(ADD|SUB)(B|D|Q|W)Yrm$")>;
 
 def ADLPWriteResGroup256 : SchedWriteRes<[ADLPPort00, ADLPPort00_06, ADLPPort02_03_11]> {
