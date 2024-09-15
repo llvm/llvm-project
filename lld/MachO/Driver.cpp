@@ -949,7 +949,6 @@ static void parseClangOption(StringRef opt, const Twine &msg) {
   const char *argv[] = {"lld", opt.data()};
   if (cl::ParseCommandLineOptions(2, argv, "", &os))
     return;
-  os.flush();
   error(msg + ": " + StringRef(err).trim());
 }
 
