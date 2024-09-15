@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/CGSCCPassManager.h"
+#include "llvm/Analysis/DebugInfoCache.h"
 #include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/AsmParser/Parser.h"
@@ -16,8 +17,8 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
-#include "llvm/IR/PassManager.h"
 #include "llvm/IR/PassInstrumentation.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Transforms/Utils/CallGraphUpdater.h"
@@ -255,6 +256,7 @@ public:
             "}\n")) {
     FAM.registerPass([&] { return TargetLibraryAnalysis(); });
     MAM.registerPass([&] { return LazyCallGraphAnalysis(); });
+    MAM.registerPass([&] { return DebugInfoCacheAnalysis(); });
     MAM.registerPass([&] { return FunctionAnalysisManagerModuleProxy(FAM); });
 
     // Register required pass instrumentation analysis.

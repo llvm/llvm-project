@@ -15,6 +15,7 @@
 #ifndef LLVM_TRANSFORMS_COROUTINES_ABI_H
 #define LLVM_TRANSFORMS_COROUTINES_ABI_H
 
+#include "llvm/Analysis/DebugInfoCache.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Transforms/Coroutines/CoroShape.h"
 #include "llvm/Transforms/Coroutines/MaterializationUtils.h"
@@ -53,7 +54,8 @@ public:
   // Perform the function splitting according to the ABI.
   virtual void splitCoroutine(Function &F, coro::Shape &Shape,
                               SmallVectorImpl<Function *> &Clones,
-                              TargetTransformInfo &TTI) = 0;
+                              TargetTransformInfo &TTI,
+                              const DebugInfoCache *DICache) = 0;
 
   Function &F;
   coro::Shape &Shape;
@@ -73,7 +75,8 @@ public:
 
   void splitCoroutine(Function &F, coro::Shape &Shape,
                       SmallVectorImpl<Function *> &Clones,
-                      TargetTransformInfo &TTI) override;
+                      TargetTransformInfo &TTI,
+                      const DebugInfoCache *DICache) override;
 };
 
 class AsyncABI : public BaseABI {
@@ -86,7 +89,8 @@ public:
 
   void splitCoroutine(Function &F, coro::Shape &Shape,
                       SmallVectorImpl<Function *> &Clones,
-                      TargetTransformInfo &TTI) override;
+                      TargetTransformInfo &TTI,
+                      const DebugInfoCache *DICache) override;
 };
 
 class AnyRetconABI : public BaseABI {
@@ -99,7 +103,8 @@ public:
 
   void splitCoroutine(Function &F, coro::Shape &Shape,
                       SmallVectorImpl<Function *> &Clones,
-                      TargetTransformInfo &TTI) override;
+                      TargetTransformInfo &TTI,
+                      const DebugInfoCache *DICache) override;
 };
 
 } // end namespace coro
