@@ -313,10 +313,6 @@ bool llvm::TargetTransformInfo::addrspacesMayAlias(unsigned FromAS,
   return TTIImpl->addrspacesMayAlias(FromAS, ToAS);
 }
 
-unsigned TargetTransformInfo::getFlatAddressSpace() const {
-  return TTIImpl->getFlatAddressSpace();
-}
-
 bool TargetTransformInfo::collectFlatAddressOperands(
     SmallVectorImpl<int> &OpIndexes, Intrinsic::ID IID) const {
   return TTIImpl->collectFlatAddressOperands(OpIndexes, IID);

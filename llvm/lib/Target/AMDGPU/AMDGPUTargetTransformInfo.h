@@ -199,14 +199,6 @@ public:
     return AMDGPU::addrspacesMayAlias(AS0, AS1);
   }
 
-  unsigned getFlatAddressSpace() const {
-    // Don't bother running InferAddressSpaces pass on graphics shaders which
-    // don't use flat addressing.
-    if (IsGraphics)
-      return -1;
-    return AMDGPUAS::FLAT_ADDRESS;
-  }
-
   bool collectFlatAddressOperands(SmallVectorImpl<int> &OpIndexes,
                                   Intrinsic::ID IID) const;
 

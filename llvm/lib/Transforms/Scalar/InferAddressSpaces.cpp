@@ -870,9 +870,10 @@ bool InferAddressSpacesImpl::run(Function &CurFn) {
     FlatAddrSpace = 0;
 
   if (FlatAddrSpace == UninitializedAddressSpace) {
-    FlatAddrSpace = TTI->getFlatAddressSpace();
-    if (FlatAddrSpace == UninitializedAddressSpace)
+    if (!DL->getFlatAddressSpace().has_value())
       return false;
+    FlatAddrSpace = DL->getFlatAddressSpace().value();
+    assert(FlatAddrSpace != UninitializedAddressSpace);
   }
 
   // Collects all flat address expressions in postorder.

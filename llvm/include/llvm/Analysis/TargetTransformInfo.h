@@ -454,24 +454,6 @@ public:
   /// Return false if a \p AS0 address cannot possibly alias a \p AS1 address.
   bool addrspacesMayAlias(unsigned AS0, unsigned AS1) const;
 
-  /// Returns the address space ID for a target's 'flat' address space. Note
-  /// this is not necessarily the same as addrspace(0), which LLVM sometimes
-  /// refers to as the generic address space. The flat address space is a
-  /// generic address space that can be used access multiple segments of memory
-  /// with different address spaces. Access of a memory location through a
-  /// pointer with this address space is expected to be legal but slower
-  /// compared to the same memory location accessed through a pointer with a
-  /// different address space.
-  //
-  /// This is for targets with different pointer representations which can
-  /// be converted with the addrspacecast instruction. If a pointer is converted
-  /// to this address space, optimizations should attempt to replace the access
-  /// with the source address space.
-  ///
-  /// \returns ~0u if the target does not have such a flat address space to
-  /// optimize away.
-  unsigned getFlatAddressSpace() const;
-
   /// Return any intrinsic address operand indexes which may be rewritten if
   /// they use a flat address space pointer.
   ///
@@ -1870,7 +1852,6 @@ public:
   virtual bool isAlwaysUniform(const Value *V) = 0;
   virtual bool isValidAddrSpaceCast(unsigned FromAS, unsigned ToAS) const = 0;
   virtual bool addrspacesMayAlias(unsigned AS0, unsigned AS1) const = 0;
-  virtual unsigned getFlatAddressSpace() = 0;
   virtual bool collectFlatAddressOperands(SmallVectorImpl<int> &OpIndexes,
                                           Intrinsic::ID IID) const = 0;
   virtual bool isNoopAddrSpaceCast(unsigned FromAS, unsigned ToAS) const = 0;
@@ -2311,8 +2292,6 @@ public:
   bool addrspacesMayAlias(unsigned AS0, unsigned AS1) const override {
     return Impl.addrspacesMayAlias(AS0, AS1);
   }
-
-  unsigned getFlatAddressSpace() override { return Impl.getFlatAddressSpace(); }
 
   bool collectFlatAddressOperands(SmallVectorImpl<int> &OpIndexes,
                                   Intrinsic::ID IID) const override {
