@@ -159,7 +159,7 @@ def XeGPU_SGMapAttr : XeGPUAttr<"SGMap", "sg_map"> {
     each accessing 1 element as specified by wi_data=[1, 1].
 
     `wi_data[0] * wi_data[1]` can be greater than 1, meaning that each work item operates on multiple elements,
-    which is eventually lowered to "SIMT-flavor" vector, like SPIR-V vector or llvm vector.
+    which is eventually lowered to "SIMT-flavor" vector, like SPIR-V vector or llvm vector, or packed to a storage data type.
     The multiple elements indicated by `wi_data` can only be from one dimension and must be contiguous in the memory along either dimension.
   }];
   let parameters = (ins
