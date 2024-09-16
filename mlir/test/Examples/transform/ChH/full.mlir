@@ -1,8 +1,6 @@
 // RUN: mlir-opt %s --transform-interpreter="debug-payload-root-tag=payload" \
-// RUN:             --test-transform-dialect-erase-schedule \
-// RUN:             --math-uplift-to-fma \
-// RUN:             --convert-bufferization-to-memref \
-// RUN:             --test-lower-to-llvm |\
+// RUN:             --test-transform-dialect-erase-schedule |\
+// RUN: mlir-opt -pass-pipeline='builtin.module(builtin.module(math-uplift-to-fma,convert-bufferization-to-memref,test-lower-to-llvm))' - |\
 // RUN: FileCheck %s
 
 // Fixed-size tensor types to be used in convolution.
