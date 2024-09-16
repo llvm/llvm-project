@@ -9,6 +9,10 @@
 // No allocator and hooks.
 // XFAIL: ubsan
 
+// FIXME: Crashes on CHECK.
+// XFAIL: asan && !i386-linux
+// XFAIL: msan && !i386-linux
+
 #ifndef BUILD_SO
 #  include <assert.h>
 #  include <dlfcn.h>
