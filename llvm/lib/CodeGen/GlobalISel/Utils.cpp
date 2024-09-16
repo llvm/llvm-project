@@ -1968,3 +1968,43 @@ Type *llvm::getTypeForLLT(LLT Ty, LLVMContext &C) {
                            Ty.getElementCount());
   return IntegerType::get(C, Ty.getSizeInBits());
 }
+
+APInt llvm::GIConstant::getScalarValue() const {
+  assert(Kind == GIConstantKind::Scalar && "Expected scalar constant");
+
+  return Value;
+}
+
+std::optional<GIConstant>
+llvm::GIConstant::getConstant(Register Const, const MachineRegisterInfo &MRI) {
+  MachineInstr *Constant = getDefIgnoringCopies(Const, MRI);
+
+  if (GSplatVector *Splat = dyn_cast<GSplatVector>(Constant)) {
+    std::optional<ValueAndVReg> MayBeConstant =
+        getIConstantVRegValWithLookThrough(Splat->getScalarReg(), MRI);
+    if (!MayBeConstant)
+      return std::nullopt;
+    return GIConstant(MayBeConstant->Value, GIConstantKind::ScalableVector);
+  }
+
+  if (GBuildVector *Build = dyn_cast<GBuildVector>(Constant)) {
+    SmallVector<APInt> Values;
+    unsigned NumSources = Build->getNumSources();
+    for (unsigned I = 0; I < NumSources; ++I) {
+      Register SrcReg = Build->getSourceReg(I);
+      std::optional<ValueAndVReg> MayBeConstant =
+          getIConstantVRegValWithLookThrough(SrcReg, MRI);
+      if (!MayBeConstant)
+        return std::nullopt;
+      Values.push_back(MayBeConstant->Value);
+    }
+    return GIConstant(Values);
+  }
+
+  std::optional<ValueAndVReg> MayBeConstant =
+      getIConstantVRegValWithLookThrough(Const, MRI);
+  if (!MayBeConstant)
+    return std::nullopt;
+
+  return GIConstant(MayBeConstant->Value, GIConstantKind::Scalar);
+}
