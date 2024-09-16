@@ -26,7 +26,7 @@ SemaBase::ImmediateDiagBuilder::~ImmediateDiagBuilder() {
   Clear();
 
   // Dispatch to Sema to emit the diagnostic.
-  SemaRef.EmitDiagnostic(DiagID, *this);
+  SemaRef.EmitCurrentDiagnostic(DiagID);
 }
 
 PartialDiagnostic SemaBase::PDiag(unsigned DiagID) {
