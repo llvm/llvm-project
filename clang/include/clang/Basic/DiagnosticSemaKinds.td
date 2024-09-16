@@ -442,6 +442,10 @@ def warn_deprecated_literal_operator_id: Warning<
   "is deprecated">, InGroup<DeprecatedLiteralOperator>, DefaultIgnore;
 def warn_reserved_module_name : Warning<
   "%0 is a reserved name for a module">, InGroup<ReservedModuleIdentifier>;
+def warn_import_implementation_partition_unit_in_interface_unit : Warning<
+  "importing an implementation partition unit in a module interface is not recommended. "
+  "Names from %0 may not be reachable">,
+  InGroup<DiagGroup<"import-implementation-partition-unit-in-interface-unit">>;
 
 def warn_parameter_size: Warning<
   "%0 is a large (%1 bytes) pass-by-value argument; "
@@ -2929,9 +2933,15 @@ def ext_constexpr_function_never_constant_expr : ExtWarn<
   "constant expression">, InGroup<DiagGroup<"invalid-constexpr">>, DefaultError;
 def err_attr_cond_never_constant_expr : Error<
   "%0 attribute expression never produces a constant expression">;
+def err_diagnose_if_unknown_warning : Error<"unknown warning group '%0'">;
 def err_diagnose_if_invalid_diagnostic_type : Error<
   "invalid diagnostic type for 'diagnose_if'; use \"error\" or \"warning\" "
   "instead">;
+def err_diagnose_if_unknown_option : Error<"unknown diagnostic option">;
+def err_diagnose_if_expected_equals : Error<
+  "expected '=' after diagnostic option">;
+def err_diagnose_if_unexpected_value : Error<
+  "unexpected value; use 'true' or 'false'">;
 def err_constexpr_body_no_return : Error<
   "no return statement in %select{constexpr|consteval}0 function">;
 def err_constexpr_return_missing_expr : Error<
