@@ -17,6 +17,9 @@ using namespace llvm;
 using namespace clang;
 
 void clang::DiagnosticsTestHelper(DiagnosticsEngine &diag) {
+  unsigned delayedDiagID = 0U;
+
+  EXPECT_EQ(diag.DelayedDiagID, delayedDiagID);
   EXPECT_FALSE(diag.DiagStates.empty());
   EXPECT_TRUE(diag.DiagStatesByLoc.empty());
   EXPECT_TRUE(diag.DiagStateOnPushStack.empty());
@@ -80,21 +83,6 @@ TEST(DiagnosticTest, fatalsAsError) {
   }
 }
 
-TEST(DiagnosticTest, tooManyErrorsIsAlwaysFatal) {
-  DiagnosticsEngine Diags(new DiagnosticIDs(), new DiagnosticOptions,
-                          new IgnoringDiagConsumer());
-  Diags.setFatalsAsError(true);
-
-  // Report a fatal_too_many_errors diagnostic to ensure that still
-  // acts as a fatal error despite downgrading fatal errors to errors.
-  Diags.Report(diag::fatal_too_many_errors);
-  EXPECT_TRUE(Diags.hasFatalErrorOccurred());
-
-  // Ensure that the severity of that diagnostic is really "fatal".
-  EXPECT_EQ(Diags.getDiagnosticLevel(diag::fatal_too_many_errors, {}),
-            DiagnosticsEngine::Level::Fatal);
-}
-
 // Check that soft RESET works as intended
 TEST(DiagnosticTest, softReset) {
   DiagnosticsEngine Diags(new DiagnosticIDs(), new DiagnosticOptions,
@@ -116,6 +104,7 @@ TEST(DiagnosticTest, softReset) {
   // Check for private variables of DiagnosticsEngine differentiating soft reset
   DiagnosticsTestHelper(Diags);
 
+  EXPECT_FALSE(Diags.isDiagnosticInFlight());
   EXPECT_TRUE(Diags.isLastDiagnosticIgnored());
 }
 
