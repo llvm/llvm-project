@@ -38,6 +38,8 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
+#if !defined(_LIBCPP_HAS_NO_THREADS)
+
 template <class _Tp>
 class __thread_specific_ptr;
 class _LIBCPP_EXPORTED_FROM_ABI __thread_struct;
@@ -118,7 +120,7 @@ struct _LIBCPP_TEMPLATE_VIS hash<__thread_id> : public __unary_function<__thread
   }
 };
 
-#ifndef _LIBCPP_HAS_NO_LOCALIZATION
+#  ifndef _LIBCPP_HAS_NO_LOCALIZATION
 template <class _CharT, class _Traits>
 _LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
 operator<<(basic_ostream<_CharT, _Traits>& __os, __thread_id __id) {
@@ -143,7 +145,7 @@ operator<<(basic_ostream<_CharT, _Traits>& __os, __thread_id __id) {
   __sstr << __id.__id_;
   return __os << __sstr.str();
 }
-#endif // _LIBCPP_HAS_NO_LOCALIZATION
+#  endif // _LIBCPP_HAS_NO_LOCALIZATION
 
 class _LIBCPP_EXPORTED_FROM_ABI thread {
   __libcpp_thread_t __t_;
@@ -156,13 +158,13 @@ public:
   typedef __libcpp_thread_t native_handle_type;
 
   _LIBCPP_HIDE_FROM_ABI thread() _NOEXCEPT : __t_(_LIBCPP_NULL_THREAD) {}
-#ifndef _LIBCPP_CXX03_LANG
+#  ifndef _LIBCPP_CXX03_LANG
   template <class _Fp, class... _Args, __enable_if_t<!is_same<__remove_cvref_t<_Fp>, thread>::value, int> = 0>
   _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS explicit thread(_Fp&& __f, _Args&&... __args);
-#else // _LIBCPP_CXX03_LANG
+#  else // _LIBCPP_CXX03_LANG
   template <class _Fp>
   _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS explicit thread(_Fp __f);
-#endif
+#  endif
   ~thread();
 
   _LIBCPP_HIDE_FROM_ABI thread(thread&& __t) _NOEXCEPT : __t_(__t.__t_) { __t.__t_ = _LIBCPP_NULL_THREAD; }
@@ -186,7 +188,7 @@ public:
   static unsigned hardware_concurrency() _NOEXCEPT;
 };
 
-#ifndef _LIBCPP_CXX03_LANG
+#  ifndef _LIBCPP_CXX03_LANG
 
 template <class _TSp, class _Fp, class... _Args, size_t... _Indices>
 inline _LIBCPP_HIDE_FROM_ABI void __thread_execute(tuple<_TSp, _Fp, _Args...>& __t, __tuple_indices<_Indices...>) {
@@ -216,7 +218,7 @@ thread::thread(_Fp&& __f, _Args&&... __args) {
     __throw_system_error(__ec, "thread constructor failed");
 }
 
-#else // _LIBCPP_CXX03_LANG
+#  else // _LIBCPP_CXX03_LANG
 
 template <class _Fp>
 struct __thread_invoke_pair {
@@ -248,9 +250,11 @@ thread::thread(_Fp __f) {
     __throw_system_error(__ec, "thread constructor failed");
 }
 
-#endif // _LIBCPP_CXX03_LANG
+#  endif // _LIBCPP_CXX03_LANG
 
 inline _LIBCPP_HIDE_FROM_ABI void swap(thread& __x, thread& __y) _NOEXCEPT { __x.swap(__y); }
+
+#endif // !defined(_LIBCPP_HAS_NO_THREADS)
 
 _LIBCPP_END_NAMESPACE_STD
 
