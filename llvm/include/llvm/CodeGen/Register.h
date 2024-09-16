@@ -51,7 +51,7 @@ public:
   /// Compute the frame index from a register value representing a stack slot.
   static int stackSlot2Index(Register Reg) {
     assert(Reg.isStack() && "Not a stack slot");
-    return int(Reg - MCRegister::FirstStackSlot);
+    return int(Reg.id() - MCRegister::FirstStackSlot);
   }
 
   /// Convert a non-negative frame index to a stack slot register value.
@@ -76,7 +76,7 @@ public:
   /// The first virtual register in a function will get the index 0.
   static unsigned virtReg2Index(Register Reg) {
     assert(Reg.isVirtual() && "Not a virtual register");
-    return Reg & ~MCRegister::VirtualRegFlag;
+    return Reg.id() & ~MCRegister::VirtualRegFlag;
   }
 
   /// Convert a 0-based index to a virtual register number.
