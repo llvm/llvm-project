@@ -118,14 +118,10 @@ public:
   static FunctionParmMutationAnalyzer *
   getFunctionParmMutationAnalyzer(const FunctionDecl &Func, ASTContext &Context,
                                   ExprMutationAnalyzer::Memoized &Memorized) {
-    auto it = Memorized.FuncParmAnalyzer.find(&Func);
-    if (it == Memorized.FuncParmAnalyzer.end())
-      it =
-          Memorized.FuncParmAnalyzer
-              .try_emplace(&Func, std::unique_ptr<FunctionParmMutationAnalyzer>(
-                                      new FunctionParmMutationAnalyzer(
-                                          Func, Context, Memorized)))
-              .first;
+    auto [it, Inserted] = Memorized.FuncParmAnalyzer.try_emplace(&Func);
+    if (Inserted)
+      it->second = std::unique_ptr<FunctionParmMutationAnalyzer>(
+          new FunctionParmMutationAnalyzer(Func, Context, Memorized));
     return it->getSecond().get();
   }
 
