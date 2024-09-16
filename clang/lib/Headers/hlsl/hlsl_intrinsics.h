@@ -370,11 +370,11 @@ bool any(double4);
 /// \param Val The input value.
 
 template <typename T, int N>
-_HLSL_INLINE vector<float, N> asfloat(vector<T, N> V) {
+constexpr vector<float, N> asfloat(vector<T, N> V) {
   return __detail::bit_cast<float, T, N>(V);
 }
 
-template <typename T> _HLSL_INLINE float asfloat(T F) {
+template <typename T> constexpr float asfloat(T F) {
   return __detail::bit_cast<float, T>(F);
 }
 
@@ -415,11 +415,11 @@ float4 asin(float4);
 /// \param Val The input value.
 
 template <typename T, int N>
-_HLSL_INLINE vector<uint, N> asuint(vector<T, N> V) {
+constexpr vector<uint, N> asuint(vector<T, N> V) {
   return __detail::bit_cast<uint, T, N>(V);
 }
 
-template <typename T> _HLSL_INLINE uint asuint(T F) {
+template <typename T> constexpr uint asuint(T F) {
   return __detail::bit_cast<uint, T>(F);
 }
 
