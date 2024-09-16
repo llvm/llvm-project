@@ -444,7 +444,9 @@ mlir::Value fir::FirOpBuilder::convertWithSemantics(
       // argument in characters and use it as the length of the string
       auto refType = getRefType(boxType.getEleTy());
       mlir::Value charBase = createConvert(loc, refType, val);
-      mlir::Value unknownLen = create<fir::UndefOp>(loc, getIndexType());
+      // Do not use fir.undef since llvm optimizer is too harsh when it
+      // sees such values (may just delete code).
+      mlir::Value unknownLen = createIntegerConstant(loc, getIndexType(), 0);
       fir::factory::CharacterExprHelper charHelper{*this, loc};
       return charHelper.createEmboxChar(charBase, unknownLen);
     }
