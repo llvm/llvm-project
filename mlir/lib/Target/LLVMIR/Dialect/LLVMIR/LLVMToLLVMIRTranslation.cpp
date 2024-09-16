@@ -62,7 +62,7 @@ static std::string diagStr(const llvm::Type *type) {
   std::string str;
   llvm::raw_string_ostream os(str);
   type->print(os);
-  return str;
+  return os.str();
 }
 
 /// Get the declaration of an overloaded llvm intrinsic. First we get the
