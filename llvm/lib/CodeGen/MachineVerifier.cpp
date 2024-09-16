@@ -1779,7 +1779,7 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     }
 
     if (IndexOp.getImm() % DstTy.getElementCount().getKnownMinValue() != 0) {
-      report("Index must be a multiple of the destinations vector's minimum "
+      report("Index must be a multiple of the destination vector's minimum "
              "vector length",
              MI);
       break;
