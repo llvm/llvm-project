@@ -13,7 +13,7 @@
 // AARCH64_LE-NEXT: #define __AARCH64_CMODEL_SMALL__ 1
 // AARCH64-NEXT: #define __ARM_64BIT_STATE 1
 // AARCH64-NEXT: #define __ARM_ACLE 202420
-// AARCH64-NEXT: #define __ARM_ACLE_VERSION(year,quarter,patch) 100 * (year) + 10 * (quarter) + (patch)
+// AARCH64-NEXT: #define __ARM_ACLE_VERSION(year,quarter,patch) (100 * (year) + 10 * (quarter) + (patch))
 // AARCH64-NEXT: #define __ARM_ALIGN_MAX_STACK_PWR 4
 // AARCH64-NEXT: #define __ARM_ARCH 8
 // AARCH64-NEXT: #define __ARM_ARCH_ISA_A64 1
@@ -396,7 +396,7 @@
 // AARCH64-DARWIN-NOT: #define __AARCH_BIG_ENDIAN 1
 // AARCH64-DARWIN: #define __ARM_64BIT_STATE 1
 // AARCH64-DARWIN: #define __ARM_ACLE 202420
-// AARCH64-DARWIN: #define __ARM_ACLE_VERSION(year,quarter,patch) 100 * (year) + 10 * (quarter) + (patch)
+// AARCH64-DARWIN: #define __ARM_ACLE_VERSION(year,quarter,patch) (100 * (year) + 10 * (quarter) + (patch))
 // AARCH64-DARWIN: #define __ARM_ARCH 8
 // AARCH64-DARWIN: #define __ARM_ARCH_ISA_A64 1
 // AARCH64-DARWIN-NOT: #define __ARM_BIG_ENDIAN 1
@@ -594,7 +594,7 @@
 // AARCH64-MSVC: #define __AARCH64EL__ 1
 // AARCH64-MSVC: #define __ARM_64BIT_STATE 1
 // AARCH64-MSVC: #define __ARM_ACLE 202420
-// AARCH64-MSVC: #define __ARM_ACLE_VERSION(year,quarter,patch) 100 * (year) + 10 * (quarter) + (patch)
+// AARCH64-MSVC: #define __ARM_ACLE_VERSION(year,quarter,patch) (100 * (year) + 10 * (quarter) + (patch))
 // AARCH64-MSVC: #define __ARM_ALIGN_MAX_STACK_PWR 4
 // AARCH64-MSVC: #define __ARM_ARCH 8
 // AARCH64-MSVC: #define __ARM_ARCH_ISA_A64 1
@@ -758,7 +758,7 @@
 // ARM64EC-MSVC: #define __AARCH64_CMODEL_SMALL__ 1
 // ARM64EC-MSVC: #define __ARM_64BIT_STATE 1
 // ARM64EC-MSVC: #define __ARM_ACLE 202420
-// ARM64EC-MSVC: #define __ARM_ACLE_VERSION(year,quarter,patch) 100 * (year) + 10 * (quarter) + (patch)
+// ARM64EC-MSVC: #define __ARM_ACLE_VERSION(year,quarter,patch) (100 * (year) + 10 * (quarter) + (patch))
 // ARM64EC-MSVC: #define __ARM_ALIGN_MAX_STACK_PWR 4
 // ARM64EC-MSVC: #define __ARM_ARCH 8
 // ARM64EC-MSVC: #define __ARM_ARCH_ISA_A64 1
