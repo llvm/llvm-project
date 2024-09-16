@@ -1778,7 +1778,7 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
       break;
     }
 
-    uint64_t Idx = IndexOp.getImm();
+    int64_t Idx = IndexOp.getImm();
     uint64_t DstMinLen = DstTy.getElementCount().getKnownMinValue();
     if (Idx % DstMinLen != 0) {
       report("Index must be a multiple of the destination vector's minimum "
@@ -1788,7 +1788,7 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     }
 
     uint64_t SrcMinLen = SrcTy.getElementCount().getKnownMinValue();
-    if (SrcTy.isScalable() && DstTy.isScalable() &&
+    if (SrcTy.isScalable() == DstTy.isScalable() &&
         (Idx >= SrcMinLen || Idx + DstMinLen > SrcMinLen)) {
       report("Source type and index must not cause extract to overrun to the "
              "destination type",

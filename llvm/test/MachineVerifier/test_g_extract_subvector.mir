@@ -40,4 +40,13 @@ body:             |
 
     ; CHECK: Source type and index must not cause extract to overrun to the destination type
     %13:_(<vscale x 3 x s32>) = G_EXTRACT_SUBVECTOR  %12, 3
+
+    %14:_(<2 x s32>) = G_IMPLICIT_DEF
+    %15:_(<4 x s32>) = G_IMPLICIT_DEF
+
+    ; CHECK: Source type and index must not cause extract to overrun to the destination type
+    %16:_(<2 x s32>) = G_EXTRACT_SUBVECTOR  %14, 4
+
+    ; CHECK: Source type and index must not cause extract to overrun to the destination type
+    %17:_(<3 x s32>) = G_EXTRACT_SUBVECTOR  %15, 3
 ...
