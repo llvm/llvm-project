@@ -3040,7 +3040,7 @@ static bool isSafeCheapLoadStore(const Instruction *I,
 ///     %sub = sub %x, %y
 ///     br label BB2
 ///   EndBB:
-///     %phi = phi [ %sub, %ThenBB ], [ 0, %EndBB ]
+///     %phi = phi [ %sub, %ThenBB ], [ 0, %BB ]
 ///     ...
 /// \endcode
 ///
@@ -3335,10 +3335,10 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
     assert(!getLoadStoreType(I)->isVectorTy() && "not implemented");
     auto *Op0 = I->getOperand(0);
     Instruction *MaskedLoadStore = nullptr;
-    PHINode *PN = nullptr;
     if (auto *LI = dyn_cast<LoadInst>(I)) {
       // Handle Load.
       auto *Ty = I->getType();
+      PHINode *PN = nullptr;
       Value *PassThru = nullptr;
       if (I->hasOneUse())
         if ((PN = dyn_cast<PHINode>(I->use_begin()->getUser())))
@@ -3346,10 +3346,10 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
                                            FixedVectorType::get(Ty, 1));
       MaskedLoadStore = Builder.CreateMaskedLoad(
           FixedVectorType::get(Ty, 1), Op0, LI->getAlign(), Mask, PassThru);
+      Value *NewLoadStore = Builder.CreateBitCast(MaskedLoadStore, Ty);
       if (PN)
-        PN->replaceAllUsesWith(Builder.CreateBitCast(MaskedLoadStore, Ty));
-      else
-        I->replaceAllUsesWith(Builder.CreateBitCast(MaskedLoadStore, Ty));
+        PN->setIncomingValue(PN->getBasicBlockIndex(BB), NewLoadStore);
+      I->replaceAllUsesWith(NewLoadStore);
     } else {
       // Handle Store.
       auto *StoredVal =
@@ -3374,8 +3374,6 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
       return Node->getMetadataID() == Metadata::DIAssignIDKind;
     });
     MaskedLoadStore->copyMetadata(*I);
-    if (PN)
-      PN->eraseFromParent();
     I->eraseFromParent();
   }
 

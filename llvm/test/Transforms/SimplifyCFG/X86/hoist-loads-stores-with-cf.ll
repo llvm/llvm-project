@@ -672,6 +672,36 @@ if.false:
   ret void
 }
 
+define i32 @str_transcode0(i1 %cond1, ptr %p, i1 %cond2) {
+; CHECK-LABEL: @str_transcode0(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND1:%.*]], label [[BB3:%.*]], label [[BB1:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i1 [[COND2:%.*]] to <1 x i1>
+; CHECK-NEXT:    [[TMP1:%.*]] = call <1 x i64> @llvm.masked.load.v1i64.p0(ptr [[P:%.*]], i32 8, <1 x i1> [[TMP0]], <1 x i64> zeroinitializer)
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <1 x i64> [[TMP1]] to i64
+; CHECK-NEXT:    br label [[BB3]]
+; CHECK:       bb3:
+; CHECK-NEXT:    [[Y:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[TMP2]], [[BB1]] ]
+; CHECK-NEXT:    store i64 [[Y]], ptr [[P]], align 8
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  br i1 %cond1, label %bb3, label %bb1
+
+bb1:                                                ; preds = %entry
+  br i1 %cond2, label %bb2, label %bb3
+
+bb2:                                                ; preds = %bb1
+  %x = load i64, ptr %p, align 8
+  br label %bb3
+
+bb3:                                                ; preds = %bb2, %bb1, %entry
+  %y = phi i64 [ %x, %bb2 ], [ 0, %bb1 ], [ 0, %entry ]
+  store i64 %y, ptr %p, align 8
+  ret i32 0
+}
+
 declare i32 @read_memory_only() readonly nounwind willreturn speculatable
 
 !llvm.dbg.cu = !{!0}
