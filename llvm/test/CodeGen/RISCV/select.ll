@@ -1862,22 +1862,22 @@ define i32 @select_cst5_invert(i1 zeroext %cond) {
 define i32 @select_cst_diff2(i1 zeroext %cond) {
 ; RV32IM-LABEL: select_cst_diff2:
 ; RV32IM:       # %bb.0:
-; RV32IM-NEXT:    mv a1, a0
-; RV32IM-NEXT:    li a0, 120
-; RV32IM-NEXT:    bnez a1, .LBB49_2
+; RV32IM-NEXT:    bnez a0, .LBB49_2
 ; RV32IM-NEXT:  # %bb.1:
 ; RV32IM-NEXT:    li a0, 122
+; RV32IM-NEXT:    ret
 ; RV32IM-NEXT:  .LBB49_2:
+; RV32IM-NEXT:    li a0, 120
 ; RV32IM-NEXT:    ret
 ;
 ; RV64IM-LABEL: select_cst_diff2:
 ; RV64IM:       # %bb.0:
-; RV64IM-NEXT:    mv a1, a0
-; RV64IM-NEXT:    li a0, 120
-; RV64IM-NEXT:    bnez a1, .LBB49_2
+; RV64IM-NEXT:    bnez a0, .LBB49_2
 ; RV64IM-NEXT:  # %bb.1:
 ; RV64IM-NEXT:    li a0, 122
+; RV64IM-NEXT:    ret
 ; RV64IM-NEXT:  .LBB49_2:
+; RV64IM-NEXT:    li a0, 120
 ; RV64IM-NEXT:    ret
 ;
 ; RV64IMXVTCONDOPS-LABEL: select_cst_diff2:
@@ -1900,22 +1900,22 @@ define i32 @select_cst_diff2(i1 zeroext %cond) {
 define i32 @select_cst_diff2_invert(i1 zeroext %cond) {
 ; RV32IM-LABEL: select_cst_diff2_invert:
 ; RV32IM:       # %bb.0:
-; RV32IM-NEXT:    mv a1, a0
-; RV32IM-NEXT:    li a0, 122
-; RV32IM-NEXT:    bnez a1, .LBB50_2
+; RV32IM-NEXT:    bnez a0, .LBB50_2
 ; RV32IM-NEXT:  # %bb.1:
 ; RV32IM-NEXT:    li a0, 120
+; RV32IM-NEXT:    ret
 ; RV32IM-NEXT:  .LBB50_2:
+; RV32IM-NEXT:    li a0, 122
 ; RV32IM-NEXT:    ret
 ;
 ; RV64IM-LABEL: select_cst_diff2_invert:
 ; RV64IM:       # %bb.0:
-; RV64IM-NEXT:    mv a1, a0
-; RV64IM-NEXT:    li a0, 122
-; RV64IM-NEXT:    bnez a1, .LBB50_2
+; RV64IM-NEXT:    bnez a0, .LBB50_2
 ; RV64IM-NEXT:  # %bb.1:
 ; RV64IM-NEXT:    li a0, 120
+; RV64IM-NEXT:    ret
 ; RV64IM-NEXT:  .LBB50_2:
+; RV64IM-NEXT:    li a0, 122
 ; RV64IM-NEXT:    ret
 ;
 ; RV64IMXVTCONDOPS-LABEL: select_cst_diff2_invert:
@@ -1938,22 +1938,22 @@ define i32 @select_cst_diff2_invert(i1 zeroext %cond) {
 define i32 @select_cst_diff4(i1 zeroext %cond) {
 ; RV32IM-LABEL: select_cst_diff4:
 ; RV32IM:       # %bb.0:
-; RV32IM-NEXT:    mv a1, a0
-; RV32IM-NEXT:    li a0, 10
-; RV32IM-NEXT:    bnez a1, .LBB51_2
+; RV32IM-NEXT:    bnez a0, .LBB51_2
 ; RV32IM-NEXT:  # %bb.1:
 ; RV32IM-NEXT:    li a0, 6
+; RV32IM-NEXT:    ret
 ; RV32IM-NEXT:  .LBB51_2:
+; RV32IM-NEXT:    li a0, 10
 ; RV32IM-NEXT:    ret
 ;
 ; RV64IM-LABEL: select_cst_diff4:
 ; RV64IM:       # %bb.0:
-; RV64IM-NEXT:    mv a1, a0
-; RV64IM-NEXT:    li a0, 10
-; RV64IM-NEXT:    bnez a1, .LBB51_2
+; RV64IM-NEXT:    bnez a0, .LBB51_2
 ; RV64IM-NEXT:  # %bb.1:
 ; RV64IM-NEXT:    li a0, 6
+; RV64IM-NEXT:    ret
 ; RV64IM-NEXT:  .LBB51_2:
+; RV64IM-NEXT:    li a0, 10
 ; RV64IM-NEXT:    ret
 ;
 ; RV64IMXVTCONDOPS-LABEL: select_cst_diff4:
@@ -1976,22 +1976,22 @@ define i32 @select_cst_diff4(i1 zeroext %cond) {
 define i32 @select_cst_diff4_invert(i1 zeroext %cond) {
 ; RV32IM-LABEL: select_cst_diff4_invert:
 ; RV32IM:       # %bb.0:
-; RV32IM-NEXT:    mv a1, a0
-; RV32IM-NEXT:    li a0, 6
-; RV32IM-NEXT:    bnez a1, .LBB52_2
+; RV32IM-NEXT:    bnez a0, .LBB52_2
 ; RV32IM-NEXT:  # %bb.1:
 ; RV32IM-NEXT:    li a0, 10
+; RV32IM-NEXT:    ret
 ; RV32IM-NEXT:  .LBB52_2:
+; RV32IM-NEXT:    li a0, 6
 ; RV32IM-NEXT:    ret
 ;
 ; RV64IM-LABEL: select_cst_diff4_invert:
 ; RV64IM:       # %bb.0:
-; RV64IM-NEXT:    mv a1, a0
-; RV64IM-NEXT:    li a0, 6
-; RV64IM-NEXT:    bnez a1, .LBB52_2
+; RV64IM-NEXT:    bnez a0, .LBB52_2
 ; RV64IM-NEXT:  # %bb.1:
 ; RV64IM-NEXT:    li a0, 10
+; RV64IM-NEXT:    ret
 ; RV64IM-NEXT:  .LBB52_2:
+; RV64IM-NEXT:    li a0, 6
 ; RV64IM-NEXT:    ret
 ;
 ; RV64IMXVTCONDOPS-LABEL: select_cst_diff4_invert:
@@ -2014,22 +2014,22 @@ define i32 @select_cst_diff4_invert(i1 zeroext %cond) {
 define i32 @select_cst_diff8(i1 zeroext %cond) {
 ; RV32IM-LABEL: select_cst_diff8:
 ; RV32IM:       # %bb.0:
-; RV32IM-NEXT:    mv a1, a0
-; RV32IM-NEXT:    li a0, 14
-; RV32IM-NEXT:    bnez a1, .LBB53_2
+; RV32IM-NEXT:    bnez a0, .LBB53_2
 ; RV32IM-NEXT:  # %bb.1:
 ; RV32IM-NEXT:    li a0, 6
+; RV32IM-NEXT:    ret
 ; RV32IM-NEXT:  .LBB53_2:
+; RV32IM-NEXT:    li a0, 14
 ; RV32IM-NEXT:    ret
 ;
 ; RV64IM-LABEL: select_cst_diff8:
 ; RV64IM:       # %bb.0:
-; RV64IM-NEXT:    mv a1, a0
-; RV64IM-NEXT:    li a0, 14
-; RV64IM-NEXT:    bnez a1, .LBB53_2
+; RV64IM-NEXT:    bnez a0, .LBB53_2
 ; RV64IM-NEXT:  # %bb.1:
 ; RV64IM-NEXT:    li a0, 6
+; RV64IM-NEXT:    ret
 ; RV64IM-NEXT:  .LBB53_2:
+; RV64IM-NEXT:    li a0, 14
 ; RV64IM-NEXT:    ret
 ;
 ; RV64IMXVTCONDOPS-LABEL: select_cst_diff8:
@@ -2052,22 +2052,22 @@ define i32 @select_cst_diff8(i1 zeroext %cond) {
 define i32 @select_cst_diff8_invert(i1 zeroext %cond) {
 ; RV32IM-LABEL: select_cst_diff8_invert:
 ; RV32IM:       # %bb.0:
-; RV32IM-NEXT:    mv a1, a0
-; RV32IM-NEXT:    li a0, 6
-; RV32IM-NEXT:    bnez a1, .LBB54_2
+; RV32IM-NEXT:    bnez a0, .LBB54_2
 ; RV32IM-NEXT:  # %bb.1:
 ; RV32IM-NEXT:    li a0, 14
+; RV32IM-NEXT:    ret
 ; RV32IM-NEXT:  .LBB54_2:
+; RV32IM-NEXT:    li a0, 6
 ; RV32IM-NEXT:    ret
 ;
 ; RV64IM-LABEL: select_cst_diff8_invert:
 ; RV64IM:       # %bb.0:
-; RV64IM-NEXT:    mv a1, a0
-; RV64IM-NEXT:    li a0, 6
-; RV64IM-NEXT:    bnez a1, .LBB54_2
+; RV64IM-NEXT:    bnez a0, .LBB54_2
 ; RV64IM-NEXT:  # %bb.1:
 ; RV64IM-NEXT:    li a0, 14
+; RV64IM-NEXT:    ret
 ; RV64IM-NEXT:  .LBB54_2:
+; RV64IM-NEXT:    li a0, 6
 ; RV64IM-NEXT:    ret
 ;
 ; RV64IMXVTCONDOPS-LABEL: select_cst_diff8_invert:
@@ -2091,22 +2091,22 @@ define i32 @select_cst_diff8_invert(i1 zeroext %cond) {
 define i32 @select_cst_diff1024(i1 zeroext %cond) {
 ; RV32IM-LABEL: select_cst_diff1024:
 ; RV32IM:       # %bb.0:
-; RV32IM-NEXT:    mv a1, a0
-; RV32IM-NEXT:    li a0, 1030
-; RV32IM-NEXT:    bnez a1, .LBB55_2
+; RV32IM-NEXT:    bnez a0, .LBB55_2
 ; RV32IM-NEXT:  # %bb.1:
 ; RV32IM-NEXT:    li a0, 6
+; RV32IM-NEXT:    ret
 ; RV32IM-NEXT:  .LBB55_2:
+; RV32IM-NEXT:    li a0, 1030
 ; RV32IM-NEXT:    ret
 ;
 ; RV64IM-LABEL: select_cst_diff1024:
 ; RV64IM:       # %bb.0:
-; RV64IM-NEXT:    mv a1, a0
-; RV64IM-NEXT:    li a0, 1030
-; RV64IM-NEXT:    bnez a1, .LBB55_2
+; RV64IM-NEXT:    bnez a0, .LBB55_2
 ; RV64IM-NEXT:  # %bb.1:
 ; RV64IM-NEXT:    li a0, 6
+; RV64IM-NEXT:    ret
 ; RV64IM-NEXT:  .LBB55_2:
+; RV64IM-NEXT:    li a0, 1030
 ; RV64IM-NEXT:    ret
 ;
 ; RV64IMXVTCONDOPS-LABEL: select_cst_diff1024:
@@ -2129,22 +2129,22 @@ define i32 @select_cst_diff1024(i1 zeroext %cond) {
 define i32 @select_cst_diff1024_invert(i1 zeroext %cond) {
 ; RV32IM-LABEL: select_cst_diff1024_invert:
 ; RV32IM:       # %bb.0:
-; RV32IM-NEXT:    mv a1, a0
-; RV32IM-NEXT:    li a0, 6
-; RV32IM-NEXT:    bnez a1, .LBB56_2
+; RV32IM-NEXT:    bnez a0, .LBB56_2
 ; RV32IM-NEXT:  # %bb.1:
 ; RV32IM-NEXT:    li a0, 1030
+; RV32IM-NEXT:    ret
 ; RV32IM-NEXT:  .LBB56_2:
+; RV32IM-NEXT:    li a0, 6
 ; RV32IM-NEXT:    ret
 ;
 ; RV64IM-LABEL: select_cst_diff1024_invert:
 ; RV64IM:       # %bb.0:
-; RV64IM-NEXT:    mv a1, a0
-; RV64IM-NEXT:    li a0, 6
-; RV64IM-NEXT:    bnez a1, .LBB56_2
+; RV64IM-NEXT:    bnez a0, .LBB56_2
 ; RV64IM-NEXT:  # %bb.1:
 ; RV64IM-NEXT:    li a0, 1030
+; RV64IM-NEXT:    ret
 ; RV64IM-NEXT:  .LBB56_2:
+; RV64IM-NEXT:    li a0, 6
 ; RV64IM-NEXT:    ret
 ;
 ; RV64IMXVTCONDOPS-LABEL: select_cst_diff1024_invert:
