@@ -21,6 +21,7 @@
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Interpreter/OptionGroupBoolean.h"
+#include "lldb/Target/DynamicLoader.h"
 #include "lldb/Target/JITLoaderList.h"
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/SectionLoadList.h"
@@ -35,6 +36,7 @@
 #include "llvm/Support/Threading.h"
 
 #include "Plugins/ObjectFile/Placeholder/ObjectFilePlaceholder.h"
+#include "Plugins/DynamicLoader/POSIX-DYLD/DynamicLoaderPOSIXDYLD.h"
 #include "Plugins/Process/Utility/StopInfoMachException.h"
 
 #include <memory>
@@ -331,6 +333,19 @@ ArchSpec ProcessMinidump::GetArchitecture() {
   triple.setArch(llvm::Triple::ArchType::x86);
   triple.setOS(llvm::Triple::OSType::Win32);
   return ArchSpec(triple);
+}
+
+DynamicLoader* ProcessMinidump::GetDynamicLoader() {
+  if (m_dyld_up && m_dyld_up.get())
+    return m_dyld_up.get();
+
+  ArchSpec arch = GetArchitecture();
+  if (arch.GetTriple().getOS() == llvm::Triple::Linux) {
+    m_dyld_up.reset(DynamicLoader::FindPlugin(
+        this, DynamicLoaderPOSIXDYLD::GetPluginNameStatic()));
+  }
+
+  return m_dyld_up.get();
 }
 
 void ProcessMinidump::BuildMemoryRegions() {

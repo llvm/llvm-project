@@ -50,10 +50,11 @@ public:
                 bool plugin_specified_by_name) override;
 
   CommandObject *GetPluginCommandObject() override;
+  
 
   Status DoLoadCore() override;
 
-  DynamicLoader *GetDynamicLoader() override { return nullptr; }
+  DynamicLoader *GetDynamicLoader() override;
 
   llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 

@@ -2166,6 +2166,8 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     // pushes it on the stack.
     case DW_OP_form_tls_address:
     case DW_OP_GNU_push_tls_address: {
+      bool debug = true;
+      while (debug) {}
       if (stack.size() < 1) {
         if (op == DW_OP_form_tls_address)
           return llvm::createStringError(
