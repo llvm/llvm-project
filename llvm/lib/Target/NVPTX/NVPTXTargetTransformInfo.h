@@ -124,6 +124,9 @@ public:
       return true;
     }
   }
+  void forEachLaunchBound(
+      const Function &F,
+      llvm::function_ref<void(StringRef Name, int64_t Value)> Body) const;
 };
 
 } // end namespace llvm

@@ -1788,6 +1788,11 @@ public:
 
   /// @}
 
+  /// For \p F, call \p Body with the name and value of each launch bound.
+  void forEachLaunchBound(
+      const Function &F,
+      llvm::function_ref<void(StringRef Name, int64_t Value)> Body) const;
+
 private:
   /// The abstract base class used to type erase specific TTI
   /// implementations.
@@ -2179,6 +2184,9 @@ public:
   getVPLegalizationStrategy(const VPIntrinsic &PI) const = 0;
   virtual bool hasArmWideBranch(bool Thumb) const = 0;
   virtual unsigned getMaxNumArgs() const = 0;
+  virtual void forEachLaunchBound(
+      const Function &F,
+      llvm::function_ref<void(StringRef Name, int64_t Value)> Body) const = 0;
 };
 
 template <typename T>
@@ -2951,6 +2959,13 @@ public:
 
   unsigned getMaxNumArgs() const override {
     return Impl.getMaxNumArgs();
+  }
+
+  void
+  forEachLaunchBound(const Function &F,
+                     llvm::function_ref<void(StringRef Name, int64_t Value)>
+                         Body) const override {
+    return Impl.forEachLaunchBound(F, Body);
   }
 };
 

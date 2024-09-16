@@ -15,7 +15,6 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
-#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
@@ -294,7 +293,8 @@ static std::optional<int64_t> parseFnAttrAsInteger(Function &F,
 void KernelInfo::emitKernelInfo(Function &F, FunctionAnalysisManager &FAM,
                                 TargetMachine *TM) {
   KernelInfo KI;
-  KI.FlatAddrspace = FAM.getResult<TargetIRAnalysis>(F).getFlatAddressSpace();
+  TargetTransformInfo &TheTTI = FAM.getResult<TargetIRAnalysis>(F);
+  KI.FlatAddrspace = TheTTI.getFlatAddressSpace();
 
   // Record function properties.
   KI.ExternalNotKernel = F.hasExternalLinkage() && !isKernelFunction(F);
@@ -312,16 +312,9 @@ void KernelInfo::emitKernelInfo(Function &F, FunctionAnalysisManager &FAM,
   REMARK_PROPERTY(ExternalNotKernel);
   REMARK_PROPERTY(OmpTargetNumTeams);
   REMARK_PROPERTY(OmpTargetThreadLimit);
-  // TM might be nullptr if support for the target was not built.  For example,
-  // we currently have some KernelInfo tests where the choice of target isn't
-  // important, so they arbitrarily choose a target triple.  Those tests are
-  // expected to run successfully even if support for that target was not built.
-  if (TM) {
-    TM->getSubtargetImpl(F)->forEachLaunchBound(
-        F, [&](StringRef Name, unsigned Value) {
-          remarkProperty(ORE, F, Name, Value);
-        });
-  }
+  TheTTI.forEachLaunchBound(F, [&](StringRef Name, unsigned Value) {
+    remarkProperty(ORE, F, Name, Value);
+  });
   REMARK_PROPERTY(Allocas);
   REMARK_PROPERTY(AllocasStaticSizeSum);
   REMARK_PROPERTY(AllocasDyn);

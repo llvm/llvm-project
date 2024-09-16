@@ -339,11 +339,6 @@ public:
     // Conservatively assume such instructions exist by default.
     return true;
   }
-
-  /// For \p F, call \p Body with the name and value of each launch bound.
-  virtual void forEachLaunchBound(
-      const Function &F,
-      llvm::function_ref<void(StringRef Name, int64_t Value)> Body) const {}
 };
 } // end namespace llvm
 

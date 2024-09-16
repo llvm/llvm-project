@@ -973,6 +973,10 @@ public:
 
   unsigned getMaxNumArgs() const { return UINT_MAX; }
 
+  void forEachLaunchBound(
+      const Function &F,
+      llvm::function_ref<void(StringRef Name, int64_t Value)> Body) const {}
+
 protected:
   // Obtain the minimum required size to hold the value (without the sign)
   // In case of a vector it returns the min required size for one element.

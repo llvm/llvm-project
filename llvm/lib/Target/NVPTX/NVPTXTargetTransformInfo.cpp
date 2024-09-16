@@ -442,3 +442,18 @@ void NVPTXTTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
                                          TTI::PeelingPreferences &PP) {
   BaseT::getPeelingPreferences(L, SE, PP);
 }
+
+void NVPTXTTIImpl::forEachLaunchBound(
+    const Function &F,
+    llvm::function_ref<void(StringRef Name, int64_t Value)> Body) const {
+  unsigned Val;
+  if (getMaxClusterRank(F, Val))
+    Body("Maxclusterrank", Val);
+  if (auto Val = getMaxNTIDx(F))
+    Body("Maxntidx", *Val);
+  if (auto Val = getMaxNTIDy(F))
+    Body("Maxntidy", *Val);
+  if (auto Val = getMaxNTIDz(F))
+    Body("Maxntidz", *Val);
+  // TODO: Any others we should add?
+}
