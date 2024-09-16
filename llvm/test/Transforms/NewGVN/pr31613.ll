@@ -13,15 +13,18 @@ define void @foo() {
 ; CHECK-NEXT:    [[TMP:%.*]] = phi i32 [ 0, [[BB:%.*]] ], [ 1, [[BB18:%.*]] ]
 ; CHECK-NEXT:    br label [[BB2:%.*]]
 ; CHECK:       bb2:
+; CHECK-NEXT:    [[TMP3:%.*]] = phi i32 [ [[TMP]], [[BB1]] ], [ [[TMP8:%.*]], [[BB9:%.*]] ]
 ; CHECK-NEXT:    br label [[BB4:%.*]]
 ; CHECK:       bb4:
+; CHECK-NEXT:    [[TMP5:%.*]] = phi i32 [ [[TMP3]], [[BB2]] ], [ [[TMP8]], [[BB14:%.*]] ]
 ; CHECK-NEXT:    br i1 undef, label [[BB18]], label [[BB7:%.*]]
 ; CHECK:       bb7:
-; CHECK-NEXT:    br label [[BB9:%.*]]
+; CHECK-NEXT:    [[TMP8]] = phi i32 [ [[TMP8]], [[BB16:%.*]] ], [ [[TMP5]], [[BB4]] ]
+; CHECK-NEXT:    br label [[BB9]]
 ; CHECK:       bb9:
 ; CHECK-NEXT:    br i1 undef, label [[BB2]], label [[BB11:%.*]]
 ; CHECK:       bb11:
-; CHECK-NEXT:    br i1 undef, label [[BB16:%.*]], label [[BB14:%.*]]
+; CHECK-NEXT:    br i1 undef, label [[BB16]], label [[BB14]]
 ; CHECK:       bb14:
 ; CHECK-NEXT:    br label [[BB4]]
 ; CHECK:       bb16:
