@@ -660,7 +660,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       }
 
       Value *Src = nullptr;
-      if (match(Arg, m_OneUse(m_FPExt(m_Value(Src))))) {
+      if (match(Arg, m_FPExt(m_Value(Src)))) {
         if (Src->getType()->isHalfTy())
           return Src;
       }

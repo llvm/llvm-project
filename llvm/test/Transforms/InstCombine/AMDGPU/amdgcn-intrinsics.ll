@@ -1181,6 +1181,20 @@ define <2 x half> @const_fpext_cvt_pkrtz(half %y) {
   ret <2 x half> %cvt
 }
 
+define <2 x half> @const_fpext_multi_cvt_pkrtz(half %y) {
+; CHECK-LABEL: @const_fpext_multi_cvt_pkrtz(
+; CHECK-NEXT:    [[CVT1:%.*]] = insertelement <2 x half> <half 0xH4500, half poison>, half [[Y:%.*]], i64 1
+; CHECK-NEXT:    [[CVT2:%.*]] = insertelement <2 x half> <half 0xH4200, half poison>, half [[Y]], i64 1
+; CHECK-NEXT:    [[ADD:%.*]] = fadd <2 x half> [[CVT1]], [[CVT2]]
+; CHECK-NEXT:    ret <2 x half> [[ADD]]
+;
+  %ext = fpext half %y to float
+  %cvt1 = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float 5.0, float %ext)
+  %cvt2 = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float 3.0, float %ext)
+  %add = fadd <2 x half> %cvt1, %cvt2
+  ret <2 x half> %add
+}
+
 define <2 x half> @fpext_fpext_cvt_pkrtz(half %x, half %y) {
 ; CHECK-LABEL: @fpext_fpext_cvt_pkrtz(
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x half> poison, half [[X:%.*]], i64 0
@@ -1193,6 +1207,19 @@ define <2 x half> @fpext_fpext_cvt_pkrtz(half %x, half %y) {
   ret <2 x half> %cvt
 }
 
+define <2 x half> @fpext_fpext_bf16_cvt_pkrtz(bfloat %x, bfloat %y) {
+; CHECK-LABEL: @fpext_fpext_bf16_cvt_pkrtz(
+; CHECK-NEXT:    [[EXTX:%.*]] = fpext bfloat [[X:%.*]] to float
+; CHECK-NEXT:    [[EXTY:%.*]] = fpext bfloat [[Y:%.*]] to float
+; CHECK-NEXT:    [[CVT:%.*]] = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float [[EXTX]], float [[EXTY]])
+; CHECK-NEXT:    ret <2 x half> [[CVT]]
+;
+  %extx = fpext bfloat %x to float
+  %exty = fpext bfloat %y to float
+  %cvt = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float %extx, float %exty)
+  ret <2 x half> %cvt
+}
+
 define <2 x half> @poison_fpext_cvt_pkrtz(half %y) {
 ; CHECK-LABEL: @poison_fpext_cvt_pkrtz(
 ; CHECK-NEXT:    [[CVT:%.*]] = insertelement <2 x half> poison, half [[Y:%.*]], i64 1
@@ -1200,6 +1227,16 @@ define <2 x half> @poison_fpext_cvt_pkrtz(half %y) {
 ;
   %ext = fpext half %y to float
   %cvt = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float poison, float %ext)
+  ret <2 x half> %cvt
+}
+
+define <2 x half> @fpext_poison_cvt_pkrtz(half %x) {
+; CHECK-LABEL: @fpext_poison_cvt_pkrtz(
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x half> poison, half [[X:%.*]], i64 0
+; CHECK-NEXT:    ret <2 x half> [[TMP1]]
+;
+  %ext = fpext half %x to float
+  %cvt = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float %ext, float poison)
   ret <2 x half> %cvt
 }
 
