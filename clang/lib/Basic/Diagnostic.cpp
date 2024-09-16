@@ -551,15 +551,15 @@ DiagnosticBuilder::DiagnosticBuilder(const DiagnosticBuilder &D)
 
 Diagnostic::Diagnostic(const DiagnosticsEngine *DO,
                        const DiagnosticBuilder &DiagBuilder)
-    : DiagObj(DO), DiagLoc(DiagBuilder.DiagLoc),
-      DiagID(DiagBuilder.DiagID), FlagValue(DiagBuilder.FlagValue),
-      DiagStorage(*DiagBuilder.getStorage()) {}
+    : DiagObj(DO), DiagLoc(DiagBuilder.DiagLoc), DiagID(DiagBuilder.DiagID),
+      FlagValue(DiagBuilder.FlagValue), DiagStorage(*DiagBuilder.getStorage()) {
+}
 
 Diagnostic::Diagnostic(const DiagnosticsEngine *DO, SourceLocation DiagLoc,
                        unsigned DiagID, const DiagnosticStorage &DiagStorage,
                        StringRef StoredDiagMessage)
-    : DiagObj(DO), DiagLoc(DiagLoc), DiagID(DiagID),
-      DiagStorage(DiagStorage), StoredDiagMessage(StoredDiagMessage) {}
+    : DiagObj(DO), DiagLoc(DiagLoc), DiagID(DiagID), DiagStorage(DiagStorage),
+      StoredDiagMessage(StoredDiagMessage) {}
 
 DiagnosticConsumer::~DiagnosticConsumer() = default;
 
