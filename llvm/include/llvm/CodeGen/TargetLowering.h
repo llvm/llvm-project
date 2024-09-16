@@ -3409,7 +3409,7 @@ public:
 
   /// Should we expand [US]CMP nodes using two selects and two compares, or by
   /// doing arithmetic on boolean types
-  virtual bool shouldExpandCmpUsingSelects() const { return false; }
+  virtual bool shouldExpandCmpUsingSelects(EVT VT) const { return false; }
 
   /// Does this target support complex deinterleaving
   virtual bool isComplexDeinterleavingSupported() const { return false; }
