@@ -9816,8 +9816,10 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   }
 
   if (LVL.hasSpeculativeEarlyExit()) {
-    LLVM_DEBUG(dbgs() << "LV: Not vectorizing: Auto-vectorization of early "
-                      << "exit loops is not yet supported.\n");
+    reportVectorizationFailure(
+        "Auto-vectorization of early exit loops is not yet supported.",
+        "Auto-vectorization of early exit loops is not yet supported.",
+        "EarlyExitLoopsUnsupported", ORE, L);
     return false;
   }
 

@@ -470,7 +470,7 @@ private:
   /// we read and write from memory. This method checks if it is
   /// legal to vectorize the code, considering only memory constrains.
   /// Returns true if the loop is vectorizable
-  bool canVectorizeMemory(bool IsEarlyExitLoop);
+  bool canVectorizeMemory();
 
   /// Return true if we can vectorize this loop using the IF-conversion
   /// transformation.
@@ -481,6 +481,21 @@ private:
   bool canVectorizeOuterLoop();
 
   /// Returns true if this is an early exit loop that can be vectorized.
+  /// Currently, a loop with an uncountable early exit is considered
+  /// vectorizable if:
+  ///   1. There are no writes to memory in the loop.
+  ///   2. The loop has only one early uncountable exit
+  ///   3. The early exit block dominates the latch block.
+  ///   4. The latch block has an exact exit count.
+  ///   5. There are no loads after the early exit block.
+  ///   6. The loop does not contain reductions or recurrences.
+  ///   7. We can prove at compile-time that loops will not contain faulting
+  ///   loads.
+  ///   8. It is safe to speculatively execute instructions such as divide or
+  ///   call instructions.
+  /// The list above is not based on theoretical limitations of vectorization,
+  /// but simply a statement that more work is needed to support these
+  /// additional cases safely.
   bool isVectorizableEarlyExitLoop();
 
   /// Return true if all of the instructions in the block can be speculatively

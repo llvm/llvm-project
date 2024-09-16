@@ -1648,9 +1648,7 @@ loop.end:
 ; requesting the small constant max trip count.
 define i32 @diff_exit_block_needs_scev_check(i32 %end) {
 ; DEBUG-LABEL: LV: Checking a loop in 'diff_exit_block_needs_scev_check'
-; DEBUG:       LV: Found an early exit. Retrying with speculative exit count.
-; DEBUG-NEXT:  LV: Found speculative backedge taken count: (-1 + (1 umax (zext i10 (trunc i32 %end to i10) to i32)))<nsw>
-; DEBUG-NEXT:  LV: Not vectorizing: Loop may fault.
+; DEBUG:       LV: Not vectorizing: Loop may fault.
 ; CHECK-LABEL: define i32 @diff_exit_block_needs_scev_check(
 ; CHECK-SAME: i32 [[END:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
@@ -1962,7 +1960,7 @@ loop.end:
 
 
 
-declare i32 @foo(i32)
+declare i32 @foo(i32) readonly
 declare <vscale x 4 x i32> @foo_vec(<vscale x 4 x i32>)
 
 attributes #0 = { "vector-function-abi-variant"="_ZGVsNxv_foo(foo_vec)" }
