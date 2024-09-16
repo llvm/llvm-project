@@ -13,6 +13,7 @@
 #include <cassert>
 #include <climits>
 #include <cstdarg>
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -39,6 +40,7 @@
 #include <sys/prctl.h>
 #endif
 
+#include "lldb/lldb-types.h"
 #include <algorithm>
 #include <array>
 #include <chrono>
@@ -61,6 +63,7 @@
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/OptTable.h"
 #include "llvm/Option/Option.h"
+#include "llvm/Support/Base64.h"
 #include "llvm/Support/Errno.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
@@ -1918,6 +1921,10 @@ void request_initialize(const llvm::json::Object &request) {
   body.try_emplace("supportsDataBreakpoints", true);
   // The debug adapter support for instruction breakpoint.
   body.try_emplace("supportsInstructionBreakpoints", true);
+  // The debug adapter support for read.
+  body.try_emplace("supportsReadMemoryRequest", true);
+  // The debug adapter support for write.
+  body.try_emplace("supportsWriteMemoryRequest", true);
 
   // Put in non-DAP specification lldb specific information.
   llvm::json::Object lldb_json;
@@ -4467,6 +4474,232 @@ void request_setInstructionBreakpoints(const llvm::json::Object &request) {
   g_dap.SendJSON(llvm::json::Value(std::move(response)));
 }
 
+// "ReadMemoryRequest": {
+//   "allOf": [ { "$ref": "#/definitions/Request" }, {
+//     "type": "object",
+//     "description": "Reads bytes from memory at the provided location.\n
+//     Clients should only call this request if the corresponding capability
+//     `supportsReadMemoryRequest` is true.",
+//     "properties": {
+//       "command": {
+//         "type": "string",
+//         "enum": [ "readMemory" ]
+//       },
+//       "arguments": {
+//         "$ref": "#/definitions/ReadMemoryArguments"
+//       }
+//     },
+//     "required": [ "command", "arguments" ]
+//   }]
+// },
+// "ReadMemoryArguments": {
+//   "type": "object",
+//   "description": "Arguments for `readMemory` request.",
+//   "properties": {
+//     "memoryReference": {
+//       "type": "string",
+//       "description": "Memory reference to the base location from which data
+//       should be read."
+//     },
+//     "offset": {
+//       "type": "integer",
+//       "description": "Offset (in bytes) to be applied to the reference
+//       location before reading data. Can be negative."
+//     },
+//     "count": {
+//       "type": "integer",
+//       "description": "Number of bytes to read at the specified location and
+//       offset."
+//     }
+//   },
+//   "required": [ "memoryReference", "count" ]
+// },
+// "ReadMemoryResponse": {
+//   "allOf": [ { "$ref": "#/definitions/Response" }, {
+//     "type": "object",
+//     "description": "Response to `readMemory` request.",
+//     "properties": {
+//       "body": {
+//         "type": "object",
+//         "properties": {
+//           "address": {
+//             "type": "string",
+//             "description": "The address of the first byte of data returned.
+//             \nTreated as a hex value if prefixed with `0x`, or as a decimal
+//             value otherwise."
+//           },
+//           "unreadableBytes": {
+//             "type": "integer",
+//             "description": "The number of unreadable bytes encountered after
+//             the last successfully read byte.\nThis can be used to determine
+//             the number of bytes that should be skipped before a subsequent
+//             `readMemory` request succeeds."
+//           },
+//           "data": {
+//             "type": "string",
+//             "description": "The bytes read from memory, encoded using
+//             base64. If the decoded length of `data` is less than the
+//             requested `count` in the original `readMemory` request, and
+//             `unreadableBytes` is zero or omitted, then the client should
+//             assume it's reached the end of readable memory."
+//           }
+//         },
+//         "required": [ "address" ]
+//       }
+//     }
+//   }]
+// },
+void request_readMemory(const llvm::json::Object &request) {
+  llvm::json::Object response;
+  llvm::json::Array response_readMemory;
+  llvm::json::Object body;
+  lldb::SBError error;
+  FillResponse(request, response);
+
+  auto arguments = request.getObject("arguments");
+  llvm::StringRef memoryReference = GetString(arguments, "memoryReference");
+  const size_t count = GetUnsigned(arguments, "count", 0);
+  const auto offset = GetSigned(arguments, "offset", 0);
+
+  lldb::addr_t address;
+  memoryReference.getAsInteger(0, address);
+  lldb::addr_t address_offset = address + offset;
+  // address as string
+  std::string address_offset_str(std::to_string(address_offset));
+
+  // make storage for the memory to read
+  //  need to use a vector because VC++ 2019 errors out on char buffer[count]
+  std::vector<char> buffer(count);
+
+  // read the memory add to storage
+  lldb::SBProcess process = g_dap.target.GetProcess();
+  size_t countRead =
+      process.ReadMemory(address_offset, buffer.data(), count, error);
+  const llvm::StringRef inputBytes = {buffer.data(), countRead};
+  // return the read memory in base64
+  std::string data = llvm::encodeBase64(inputBytes);
+
+  // body: address, data? in spec formats
+  body.try_emplace("address", std::move(address_offset_str));
+  body.try_emplace("data", std::move(data));
+
+  response.try_emplace("body", std::move(body));
+  g_dap.SendJSON(llvm::json::Value(std::move(response)));
+}
+
+// "WriteMemoryRequest": {
+//       "allOf": [ { "$ref": "#/definitions/Request" }, {
+//         "type": "object",
+//         "description": "Writes bytes to memory at the provided location.\n
+//         Clients should only call this request if the corresponding
+//         capability `supportsWriteMemoryRequest` is true.",
+//         "properties": {
+//           "command": {
+//             "type": "string",
+//             "enum": [ "writeMemory" ]
+//           },
+//           "arguments": {
+//             "$ref": "#/definitions/WriteMemoryArguments"
+//           }
+//         },
+//         "required": [ "command", "arguments" ]
+//       }]
+//     },
+//     "WriteMemoryArguments": {
+//       "type": "object",
+//       "description": "Arguments for `writeMemory` request.",
+//       "properties": {
+//         "memoryReference": {
+//           "type": "string",
+//           "description": "Memory reference to the base location to which
+//           data should be written."
+//         },
+//         "offset": {
+//           "type": "integer",
+//           "description": "Offset (in bytes) to be applied to the reference
+//           location before writing data. Can be negative."
+//         },
+//         "allowPartial": {
+//           "type": "boolean",
+//           "description": "Property to control partial writes. If true, the
+//           debug adapter should attempt to write memory even if the entire
+//           memory region is not writable. In such a case the debug adapter
+//           should stop after hitting the first byte of memory that cannot be
+//           written and return the number of bytes written in the response
+//           via the `offset` and `bytesWritten` properties.\nIf false or
+//           missing, a debug adapter should attempt to verify the region is
+//           writable before writing, and fail the response if it is not."
+//         },
+//         "data": {
+//           "type": "string",
+//           "description": "Bytes to write, encoded using base64."
+//         }
+//       },
+//       "required": [ "memoryReference", "data" ]
+//     },
+//     "WriteMemoryResponse": {
+//       "allOf": [ { "$ref": "#/definitions/Response" }, {
+//         "type": "object",
+//         "description": "Response to `writeMemory` request.",
+//         "properties": {
+//           "body": {
+//             "type": "object",
+//             "properties": {
+//               "offset": {
+//                 "type": "integer",
+//                 "description": "Property that should be returned when
+//                 `allowPartial` is true to indicate the offset of the first
+//                 byte of data successfully written. Can be negative."
+//               },
+//               "bytesWritten": {
+//                 "type": "integer",
+//                 "description": "Property that should be returned when
+//                 `allowPartial` is true to indicate the number of bytes
+//                 starting from address that were successfully written."
+//               }
+//             }
+//           }
+//         }
+//       }]
+//     },
+
+void request_writeMemory(const llvm::json::Object &request) {
+  llvm::json::Object response;
+  llvm::json::Array response_writeMemory;
+  llvm::json::Object body;
+  FillResponse(request, response);
+
+  auto arguments = request.getObject("arguments");
+  llvm::StringRef memoryReference = GetString(arguments, "memoryReference");
+  const auto offset = GetSigned(arguments, "offset", 0);
+  llvm::StringRef data64 = GetString(arguments, "data");
+
+  lldb::addr_t address;
+  memoryReference.getAsInteger(0, address);
+  lldb::addr_t address_offset = address + offset;
+
+  std::vector<char> output;
+  lldb::SBError writeError;
+  int64_t countWrite = 0;
+
+  llvm::Error decodeError = llvm::decodeBase64(data64, output);
+
+  int64_t dataLen = output.size();
+
+  // write the memory
+  if (decodeError.success()) {
+    lldb::SBProcess process = g_dap.target.GetProcess();
+    countWrite =
+        process.WriteMemory(address_offset, static_cast<void *>(output.data()),
+                            dataLen, writeError);
+  }
+
+  body.try_emplace("bytesWritten", std::move(countWrite));
+
+  response.try_emplace("body", std::move(body));
+  g_dap.SendJSON(llvm::json::Value(std::move(response)));
+}
+
 void RegisterRequestCallbacks() {
   g_dap.RegisterRequestCallback("attach", request_attach);
   g_dap.RegisterRequestCallback("completions", request_completions);
@@ -4502,6 +4735,10 @@ void RegisterRequestCallbacks() {
   // Instruction breakpoint request
   g_dap.RegisterRequestCallback("setInstructionBreakpoints",
                                 request_setInstructionBreakpoints);
+  // ReadMemory request
+  g_dap.RegisterRequestCallback("readMemory", request_readMemory);
+  // WriteMemory request
+  g_dap.RegisterRequestCallback("writeMemory", request_writeMemory);
   // Custom requests
   g_dap.RegisterRequestCallback("compileUnits", request_compileUnits);
   g_dap.RegisterRequestCallback("modules", request_modules);
