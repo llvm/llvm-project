@@ -2,7 +2,7 @@ version: '3.7'
 
 x-versions: &compiler_versions
   GCC_LATEST_VERSION: 14
-  LLVM_HEAD_VERSION: 19
+  LLVM_HEAD_VERSION: 20
 
 services:
   buildkite-builder:

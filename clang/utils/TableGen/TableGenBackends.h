@@ -115,27 +115,33 @@ void EmitClangSyntaxNodeList(const llvm::RecordKeeper &Records,
 void EmitClangSyntaxNodeClasses(const llvm::RecordKeeper &Records,
                                 llvm::raw_ostream &OS);
 
-void EmitNeon(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
-void EmitFP16(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
-void EmitBF16(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
-void EmitNeonSema(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
-void EmitVectorTypes(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
-void EmitNeonTest(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitNeon(const llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitFP16(const llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitBF16(const llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitNeonSema(const llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitVectorTypes(const llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitNeonTest(const llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 
-void EmitImmCheckTypes(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
-void EmitSveHeader(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
-void EmitSveBuiltins(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
-void EmitSveBuiltinCG(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
-void EmitSveTypeFlags(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
-void EmitSveRangeChecks(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
-void EmitSveStreamingAttrs(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitImmCheckTypes(const llvm::RecordKeeper &Records,
+                       llvm::raw_ostream &OS);
+void EmitSveHeader(const llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitSveBuiltins(const llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitSveBuiltinCG(const llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitSveTypeFlags(const llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitSveRangeChecks(const llvm::RecordKeeper &Records,
+                        llvm::raw_ostream &OS);
+void EmitSveStreamingAttrs(const llvm::RecordKeeper &Records,
+                           llvm::raw_ostream &OS);
 
-void EmitSmeHeader(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
-void EmitSmeBuiltins(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
-void EmitSmeBuiltinCG(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
-void EmitSmeRangeChecks(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
-void EmitSmeStreamingAttrs(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
-void EmitSmeBuiltinZAState(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitSmeHeader(const llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitSmeBuiltins(const llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitSmeBuiltinCG(const llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitSmeRangeChecks(const llvm::RecordKeeper &Records,
+                        llvm::raw_ostream &OS);
+void EmitSmeStreamingAttrs(const llvm::RecordKeeper &Records,
+                           llvm::raw_ostream &OS);
+void EmitSmeBuiltinZAState(const llvm::RecordKeeper &Records,
+                           llvm::raw_ostream &OS);
 
 void EmitMveHeader(const llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitMveBuiltinDef(const llvm::RecordKeeper &Records,
@@ -146,10 +152,11 @@ void EmitMveBuiltinCG(const llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitMveBuiltinAliases(const llvm::RecordKeeper &Records,
                            llvm::raw_ostream &OS);
 
-void EmitRVVHeader(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
-void EmitRVVBuiltins(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
-void EmitRVVBuiltinCG(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
-void EmitRVVBuiltinSema(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitRVVHeader(const llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitRVVBuiltins(const llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitRVVBuiltinCG(const llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitRVVBuiltinSema(const llvm::RecordKeeper &Records,
+                        llvm::raw_ostream &OS);
 
 void EmitCdeHeader(const llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitCdeBuiltinDef(const llvm::RecordKeeper &Records,

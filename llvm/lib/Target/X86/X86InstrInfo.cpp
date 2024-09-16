@@ -2424,9 +2424,9 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
     WorkingMI->getOperand(3).setImm(Mask ^ Imm);
     break;
   }
-  case X86::INSERTPSrr:
-  case X86::VINSERTPSrr:
-  case X86::VINSERTPSZrr: {
+  case X86::INSERTPSrri:
+  case X86::VINSERTPSrri:
+  case X86::VINSERTPSZrri: {
     unsigned Imm = MI.getOperand(MI.getNumOperands() - 1).getImm();
     unsigned ZMask = Imm & 15;
     unsigned DstIdx = (Imm >> 4) & 3;
@@ -2597,8 +2597,8 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
         .setImm(X86::getSwappedVCMPImm(
             MI.getOperand(MI.getNumExplicitOperands() - 1).getImm() & 0x1f));
     break;
-  case X86::VPERM2F128rr:
-  case X86::VPERM2I128rr:
+  case X86::VPERM2F128rri:
+  case X86::VPERM2I128rri:
     // Flip permute source immediate.
     // Imm & 0x02: lo = if set, select Op1.lo/hi else Op0.lo/hi.
     // Imm & 0x20: hi = if set, select Op1.lo/hi else Op0.lo/hi.
@@ -6258,16 +6258,16 @@ bool X86InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
                            get(X86::VBROADCASTF64X4rm), X86::sub_ymm);
   case X86::VMOVAPSZ128mr_NOVLX:
     return expandNOVLXStore(MIB, &getRegisterInfo(), get(X86::VMOVAPSmr),
-                            get(X86::VEXTRACTF32x4Zmr), X86::sub_xmm);
+                            get(X86::VEXTRACTF32x4Zmri), X86::sub_xmm);
   case X86::VMOVUPSZ128mr_NOVLX:
     return expandNOVLXStore(MIB, &getRegisterInfo(), get(X86::VMOVUPSmr),
-                            get(X86::VEXTRACTF32x4Zmr), X86::sub_xmm);
+                            get(X86::VEXTRACTF32x4Zmri), X86::sub_xmm);
   case X86::VMOVAPSZ256mr_NOVLX:
     return expandNOVLXStore(MIB, &getRegisterInfo(), get(X86::VMOVAPSYmr),
-                            get(X86::VEXTRACTF64x4Zmr), X86::sub_ymm);
+                            get(X86::VEXTRACTF64x4Zmri), X86::sub_ymm);
   case X86::VMOVUPSZ256mr_NOVLX:
     return expandNOVLXStore(MIB, &getRegisterInfo(), get(X86::VMOVUPSYmr),
-                            get(X86::VEXTRACTF64x4Zmr), X86::sub_ymm);
+                            get(X86::VEXTRACTF64x4Zmri), X86::sub_ymm);
   case X86::MOV32ri64: {
     Register Reg = MIB.getReg(0);
     Register Reg32 = RI.getSubReg(Reg, X86::sub_32bit);
@@ -6775,8 +6775,8 @@ static bool hasUndefRegUpdate(unsigned Opcode, unsigned OpNum,
   case X86::VPACKUSWBZ128rr:
   case X86::VPACKSSDWZ128rr:
   case X86::VPACKUSDWZ128rr:
-  case X86::VPERM2F128rr:
-  case X86::VPERM2I128rr:
+  case X86::VPERM2F128rri:
+  case X86::VPERM2I128rri:
   case X86::VSHUFF32X4Z256rri:
   case X86::VSHUFF32X4Zrri:
   case X86::VSHUFF64X2Z256rri:
@@ -7274,9 +7274,9 @@ MachineInstr *X86InstrInfo::foldMemoryOperandCustom(
     ArrayRef<MachineOperand> MOs, MachineBasicBlock::iterator InsertPt,
     unsigned Size, Align Alignment) const {
   switch (MI.getOpcode()) {
-  case X86::INSERTPSrr:
-  case X86::VINSERTPSrr:
-  case X86::VINSERTPSZrr:
+  case X86::INSERTPSrri:
+  case X86::VINSERTPSrri:
+  case X86::VINSERTPSZrri:
     // Attempt to convert the load of inserted vector into a fold load
     // of a single float.
     if (OpNum == 2) {
@@ -7289,13 +7289,13 @@ MachineInstr *X86InstrInfo::foldMemoryOperandCustom(
       const TargetRegisterClass *RC = getRegClass(MI.getDesc(), OpNum, &RI, MF);
       unsigned RCSize = TRI.getRegSizeInBits(*RC) / 8;
       if ((Size == 0 || Size >= 16) && RCSize >= 16 &&
-          (MI.getOpcode() != X86::INSERTPSrr || Alignment >= Align(4))) {
+          (MI.getOpcode() != X86::INSERTPSrri || Alignment >= Align(4))) {
         int PtrOffset = SrcIdx * 4;
         unsigned NewImm = (DstIdx << 4) | ZMask;
         unsigned NewOpCode =
-            (MI.getOpcode() == X86::VINSERTPSZrr)  ? X86::VINSERTPSZrm
-            : (MI.getOpcode() == X86::VINSERTPSrr) ? X86::VINSERTPSrm
-                                                   : X86::INSERTPSrm;
+            (MI.getOpcode() == X86::VINSERTPSZrri)  ? X86::VINSERTPSZrmi
+            : (MI.getOpcode() == X86::VINSERTPSrri) ? X86::VINSERTPSrmi
+                                                    : X86::INSERTPSrmi;
         MachineInstr *NewMI =
             fuseInst(MF, NewOpCode, OpNum, MOs, InsertPt, MI, *this, PtrOffset);
         NewMI->getOperand(NewMI->getNumOperands() - 1).setImm(NewImm);
