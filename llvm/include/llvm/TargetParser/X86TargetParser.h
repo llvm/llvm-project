@@ -147,6 +147,7 @@ enum CPUKind {
   CK_x86_64_v3,
   CK_x86_64_v4,
   CK_Geode,
+  CK_ZNVER5,
 };
 
 /// Parse \p CPU string into a CPUKind. Will only accept 64-bit capable CPUs if
