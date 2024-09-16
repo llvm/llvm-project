@@ -884,7 +884,7 @@ def ICXWriteResGroup36 : SchedWriteRes<[ICXPort0,ICXPort5]> {
   let NumMicroOps = 2;
   let ReleaseAtCycles = [1,1];
 }
-def: InstRW<[ICXWriteResGroup36], (instregex "(V?)EXTRACTPS(Z?)rr")>;
+def: InstRW<[ICXWriteResGroup36], (instregex "(V?)EXTRACTPS(Z?)rri")>;
 
 def ICXWriteResGroup37 : SchedWriteRes<[ICXPort0,ICXPort5]> {
   let Latency = 3;
@@ -1034,7 +1034,7 @@ def ICXWriteResGroup53 : SchedWriteRes<[ICXPort49,ICXPort5,ICXPort78]> {
   let NumMicroOps = 3;
   let ReleaseAtCycles = [1,1,1];
 }
-def: InstRW<[ICXWriteResGroup53], (instregex "(V?)EXTRACTPS(Z?)mr")>;
+def: InstRW<[ICXWriteResGroup53], (instregex "(V?)EXTRACTPS(Z?)mri")>;
 
 def ICXWriteResGroup54 : SchedWriteRes<[ICXPort49,ICXPort5,ICXPort78]> {
   let Latency = 4;
