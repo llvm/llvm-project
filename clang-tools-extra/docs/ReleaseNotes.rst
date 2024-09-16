@@ -123,6 +123,7 @@ Changes in existing checks
   <clang-tidy/checks/cppcoreguidelines/prefer-member-initializer>` check to avoid
   false positive when member initialization depends on a structured binging
   variable.
+
 - Improved :doc:`modernize-use-std-format
   <clang-tidy/checks/modernize/use-std-format>` check to support replacing
   member function calls too.
