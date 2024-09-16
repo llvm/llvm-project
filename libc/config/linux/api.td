@@ -19,6 +19,9 @@ def FCntlAPI : PublicAPI<"fcntl.h"> {
   ];
 }
 
+def FTWAPI : PublicAPI<"ftw.h"> {
+}
+
 def IntTypesAPI : PublicAPI<"inttypes.h"> {
   let Types = ["imaxdiv_t"];
 }

@@ -291,6 +291,37 @@ def POSIX : StandardSpec<"POSIX"> {
     ]
   >;
 
+  HeaderSpec FTW = HeaderSpec<
+    "ftw.h",
+    [], // Macros
+    [], // Types
+    [
+      EnumeratedNameValue<"FTW_CHDIR">,
+      EnumeratedNameValue<"FTW_DEPTH">,
+      EnumeratedNameValue<"FTW_MOUNT">,
+      EnumeratedNameValue<"FTW_PHYS">,
+      EnumeratedNameValue<"FTW_F">,
+      EnumeratedNameValue<"FTW_D">,
+      EnumeratedNameValue<"FTW_DP">,
+      EnumeratedNameValue<"FTW_SL">,
+      EnumeratedNameValue<"FTW_SLN">,
+      EnumeratedNameValue<"FTW_DNR">,
+      EnumeratedNameValue<"FTW_SLN">
+    ], // Enumerations
+    [
+      FunctionSpec<
+        "ftw",
+        RetValSpec<IntType>,
+        [ArgSpec<ConstCharPtr>]
+      >,
+      FunctionSpec<
+        "nftw",
+        RetValSpec<IntType>,
+        [ArgSpec<ConstCharPtr>]
+      >
+    ]
+  >;
+
   HeaderSpec SysMMan = HeaderSpec<
       "sys/mman.h",
       [
@@ -1771,6 +1802,7 @@ def POSIX : StandardSpec<"POSIX"> {
     DlFcn,
     Errno,
     FCntl,
+    FTW,
     PThread,
     Sched,
     Signal,
