@@ -53,6 +53,11 @@ class ProfileAnnotator final {
 
   class BBInfo {
     std::optional<uint64_t> Count;
+    // OutEdges is dimensioned to match the number of terminator operands.
+    // Entries in the vector match the index in the terminator operand list. In
+    // some cases - see `shouldExcludeEdge` and its implementation - an entry
+    // will be nullptr.
+    // InEdges doesn't have the above constraint.
     SmallVector<EdgeInfo *> OutEdges;
     SmallVector<EdgeInfo *> InEdges;
     size_t UnknownCountOutEdges = 0;
@@ -65,12 +70,14 @@ class ProfileAnnotator final {
     std::optional<uint64_t> getEdgeSum(const SmallVector<EdgeInfo *> &Edges,
                                        bool AssumeAllKnown) const {
       std::optional<uint64_t> Sum;
-      for (const auto *E : Edges)
+      for (const auto *E : Edges) {
+        // `Edges` may be `OutEdges`, case in which `E` could be nullptr.
         if (E) {
           if (!Sum.has_value())
             Sum = 0;
           *Sum += (AssumeAllKnown ? *E->Count : E->Count.value_or(0U));
         }
+      }
       return Sum;
     }
 
