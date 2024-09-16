@@ -3340,10 +3340,12 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
       auto *Ty = I->getType();
       PHINode *PN = nullptr;
       Value *PassThru = nullptr;
-      if (I->hasOneUse())
-        if ((PN = dyn_cast<PHINode>(I->use_begin()->getUser())))
+      for (User *U : I->users())
+        if ((PN = dyn_cast<PHINode>(U))) {
           PassThru = Builder.CreateBitCast(PN->getIncomingValueForBlock(BB),
                                            FixedVectorType::get(Ty, 1));
+          break;
+        }
       MaskedLoadStore = Builder.CreateMaskedLoad(
           FixedVectorType::get(Ty, 1), Op0, LI->getAlign(), Mask, PassThru);
       Value *NewLoadStore = Builder.CreateBitCast(MaskedLoadStore, Ty);

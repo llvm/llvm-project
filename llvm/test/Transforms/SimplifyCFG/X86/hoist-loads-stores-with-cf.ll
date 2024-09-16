@@ -702,6 +702,32 @@ bb3:                                                ; preds = %bb2, %bb1, %entry
   ret i32 0
 }
 
+define i32 @succ1to0_phi2(ptr %p, ptr %p2) {
+; CHECK-LABEL: @succ1to0_phi2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq ptr [[P:%.*]], null
+; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[COND]], true
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i1 [[TMP0]] to <1 x i1>
+; CHECK-NEXT:    [[TMP2:%.*]] = call <1 x i32> @llvm.masked.load.v1i32.p0(ptr [[P]], i32 4, <1 x i1> [[TMP1]], <1 x i32> zeroinitializer)
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <1 x i32> [[TMP2]] to i32
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i32 [[TMP3]] to <1 x i32>
+; CHECK-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> [[TMP4]], ptr [[P2:%.*]], i32 4, <1 x i1> [[TMP1]])
+; CHECK-NEXT:    ret i32 [[TMP3]]
+;
+entry:
+  %cond = icmp eq ptr %p, null
+  br i1 %cond, label %if.true, label %if.false
+
+if.false:
+  %0 = load i32, ptr %p
+  store i32 %0, ptr %p2
+  br label %if.true
+
+if.true:
+  %res = phi i32 [ %0, %if.false ], [ 0, %entry ]
+  ret i32 %res
+}
+
 declare i32 @read_memory_only() readonly nounwind willreturn speculatable
 
 !llvm.dbg.cu = !{!0}
