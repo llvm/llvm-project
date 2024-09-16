@@ -721,8 +721,10 @@ static void CopyContainerLastGranuleAnnotation(uptr src_storage_end,
 // the function handles this by going byte by byte, slowing down performance.
 // The old buffer annotations are not removed. If necessary,
 // user can unpoison old buffer with __asan_unpoison_memory_region.
-void __sanitizer_copy_contiguous_container_annotations(
-    const void *src_begin_p, const void *src_end_p, const void *dst_begin_p) {
+void __sanitizer_copy_contiguous_container_annotations(const void *src_begin_p,
+                                                       const void *src_end_p,
+                                                       const void *dst_begin_p,
+                                                       const void *dst_end_p) {
   if (!flags()->detect_container_overflow)
     return;
 
@@ -732,12 +734,13 @@ void __sanitizer_copy_contiguous_container_annotations(
   uptr src_storage_begin = reinterpret_cast<uptr>(src_begin_p);
   uptr src_storage_end = reinterpret_cast<uptr>(src_end_p);
   uptr dst_storage_begin = reinterpret_cast<uptr>(dst_begin_p);
-  uptr dst_storage_end =
-      dst_storage_begin + (src_storage_end - src_storage_begin);
+  uptr dst_storage_end = reinterpret_cast<uptr>(dst_end_p);
 
   constexpr uptr granularity = ASAN_SHADOW_GRANULARITY;
 
-  if (src_storage_begin > src_storage_end) {
+  if (src_storage_begin > src_storage_end ||
+      dst_storage_end !=
+          (dst_storage_begin + (src_storage_end - src_storage_begin))) {
     GET_STACK_TRACE_FATAL_HERE;
     ReportBadParamsToCopyContiguousContainerAnnotations(
         src_storage_begin, src_storage_end, dst_storage_begin, dst_storage_end,
