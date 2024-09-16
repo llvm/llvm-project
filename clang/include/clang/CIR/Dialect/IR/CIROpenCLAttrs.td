@@ -153,7 +153,7 @@ def OpenCLKernelArgMetadataAttr
 
 def OpenCLVersionAttr : CIR_Attr<"OpenCLVersion", "cl.version"> {
   let summary = "OpenCL version";
-  let parameters = (ins "int32_t":$major, "int32_t":$minor);
+  let parameters = (ins "int32_t":$major_version, "int32_t":$minor_version);
   let description = [{
     Represents the version of OpenCL.
 
@@ -165,7 +165,7 @@ def OpenCLVersionAttr : CIR_Attr<"OpenCLVersion", "cl.version"> {
     module attributes {cir.cl.version = cir.cl.version<3, 0>} {}
     ```
   }];
-  let assemblyFormat = "`<` $major `,` $minor `>`";
+  let assemblyFormat = "`<` $major_version `,` $minor_version `>`";
 }
 
 #endif // MLIR_CIR_DIALECT_CIR_OPENCL_ATTRS
