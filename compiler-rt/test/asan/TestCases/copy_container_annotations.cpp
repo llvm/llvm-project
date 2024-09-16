@@ -4,8 +4,8 @@
 
 #include <algorithm>
 #include <deque>
-#include <numeric>
 #include <memory>
+#include <numeric>
 
 #include <assert.h>
 #include <sanitizer/asan_interface.h>
@@ -68,8 +68,10 @@ void TestNonOverlappingContainers(size_t capacity, size_t off_old,
   size_t new_buffer_size = capacity + off_new + kGranularity * 2;
 
   // Use unique_ptr with a custom deleter to manage the buffers
-  std::unique_ptr<char[]> old_buffer = std::make_unique<char[]>(old_buffer_size);
-  std::unique_ptr<char[]> new_buffer = std::make_unique<char[]>(new_buffer_size);
+  std::unique_ptr<char[]> old_buffer =
+      std::make_unique<char[]>(old_buffer_size);
+  std::unique_ptr<char[]> new_buffer =
+      std::make_unique<char[]>(new_buffer_size);
 
   char *old_buffer_end = old_buffer.get() + old_buffer_size;
   char *new_buffer_end = new_buffer.get() + new_buffer_size;
@@ -88,8 +90,8 @@ void TestNonOverlappingContainers(size_t capacity, size_t off_old,
 
     RandomPoison(old_beg, old_end);
     std::deque<int> poison_states = GetPoisonedState(old_beg, old_end);
-    __sanitizer_copy_contiguous_container_annotations(old_beg, old_end,
-                                                      new_beg);
+    __sanitizer_copy_contiguous_container_annotations(old_beg, old_end, new_beg,
+                                                      new_end);
 
     // If old_buffer were poisoned, expected state of memory before old_beg
     // is undetermined.
@@ -149,7 +151,6 @@ void TestNonOverlappingContainers(size_t capacity, size_t off_old,
   __asan_unpoison_memory_region(new_buffer.get(), new_buffer_size);
 }
 
-
 void TestOverlappingContainers(size_t capacity, size_t off_old, size_t off_new,
                                int poison_buffers) {
   size_t buffer_size = capacity + off_old + off_new + kGranularity * 3;
@@ -173,8 +174,8 @@ void TestOverlappingContainers(size_t capacity, size_t off_old, size_t off_new,
 
     RandomPoison(old_beg, old_end);
     std::deque<int> poison_states = GetPoisonedState(old_beg, old_end);
-    __sanitizer_copy_contiguous_container_annotations(old_beg, old_end,
-                                                      new_beg);
+    __sanitizer_copy_contiguous_container_annotations(old_beg, old_end, new_beg,
+                                                      new_end);
     // This variable is used only when buffer ends in the middle of a granule.
     bool can_modify_last_granule = __asan_address_is_poisoned(new_end);
 
