@@ -28,6 +28,10 @@ public:
 
   uint64_t getStackSizeWithRVVPadding(const MachineFunction &MF) const;
 
+  SmallVector<CalleeSavedInfo, 8>
+  getUnmanagedCSI(const MachineFunction &MF,
+                  const std::vector<CalleeSavedInfo> &CSI) const;
+
   StackOffset getFrameIndexReference(const MachineFunction &MF, int FI,
                                      Register &FrameReg) const override;
 

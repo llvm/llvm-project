@@ -189,8 +189,8 @@ define i64 @test_max_number_reminder(ptr %arg, i32 signext %arg1) {
 ; CHECK-NEXT:    cmplwi r4, 0
 ; CHECK-NEXT:    beq cr0, .LBB2_4
 ; CHECK-NEXT:  # %bb.1: # %bb3.preheader
-; CHECK-NEXT:    std r25, -56(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    std r26, -48(r1) # 8-byte Folded Spill
+; CHECK-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
+; CHECK-NEXT:    std r29, -24(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    addi r10, r3, 4002
 ; CHECK-NEXT:    li r3, 0
 ; CHECK-NEXT:    li r5, -1
@@ -198,10 +198,10 @@ define i64 @test_max_number_reminder(ptr %arg, i32 signext %arg1) {
 ; CHECK-NEXT:    li r7, 3
 ; CHECK-NEXT:    li r8, 5
 ; CHECK-NEXT:    li r9, 9
-; CHECK-NEXT:    std r27, -40(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std r28, -32(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    std r29, -24(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
+; CHECK-NEXT:    std r27, -40(r1) # 8-byte Folded Spill
+; CHECK-NEXT:    std r26, -48(r1) # 8-byte Folded Spill
+; CHECK-NEXT:    std r25, -56(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    mtctr r4
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB2_2: # %bb3
@@ -226,13 +226,13 @@ define i64 @test_max_number_reminder(ptr %arg, i32 signext %arg1) {
 ; CHECK-NEXT:    maddld r3, r11, r25, r3
 ; CHECK-NEXT:    bdnz .LBB2_2
 ; CHECK-NEXT:  # %bb.3:
-; CHECK-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
-; CHECK-NEXT:    ld r29, -24(r1) # 8-byte Folded Reload
-; CHECK-NEXT:    ld r28, -32(r1) # 8-byte Folded Reload
-; CHECK-NEXT:    ld r27, -40(r1) # 8-byte Folded Reload
-; CHECK-NEXT:    add r3, r3, r4
-; CHECK-NEXT:    ld r26, -48(r1) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld r25, -56(r1) # 8-byte Folded Reload
+; CHECK-NEXT:    ld r26, -48(r1) # 8-byte Folded Reload
+; CHECK-NEXT:    ld r27, -40(r1) # 8-byte Folded Reload
+; CHECK-NEXT:    ld r28, -32(r1) # 8-byte Folded Reload
+; CHECK-NEXT:    add r3, r3, r4
+; CHECK-NEXT:    ld r29, -24(r1) # 8-byte Folded Reload
+; CHECK-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
 ; CHECK-NEXT:    blr
 ; CHECK-NEXT:  .LBB2_4:
 ; CHECK-NEXT:    addi r3, r4, 0
@@ -583,10 +583,10 @@ define i64 @test_ds_cross_basic_blocks(ptr %arg, i32 signext %arg1) {
 ; CHECK-NEXT:    beq cr0, .LBB6_9
 ; CHECK-NEXT:  # %bb.1: # %bb3
 ; CHECK-NEXT:    addis r5, r2, .LC0@toc@ha
-; CHECK-NEXT:    std r28, -32(r1) # 8-byte Folded Spill
+; CHECK-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std r29, -24(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    ld r5, .LC0@toc@l(r5)
-; CHECK-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
+; CHECK-NEXT:    std r28, -32(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    addi r6, r3, 4009
 ; CHECK-NEXT:    li r3, 0
 ; CHECK-NEXT:    li r7, -7
@@ -649,9 +649,9 @@ define i64 @test_ds_cross_basic_blocks(ptr %arg, i32 signext %arg1) {
 ; CHECK-NEXT:    add r4, r30, r4
 ; CHECK-NEXT:    b .LBB6_3
 ; CHECK-NEXT:  .LBB6_8:
-; CHECK-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
-; CHECK-NEXT:    ld r29, -24(r1) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld r28, -32(r1) # 8-byte Folded Reload
+; CHECK-NEXT:    ld r29, -24(r1) # 8-byte Folded Reload
+; CHECK-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
 ; CHECK-NEXT:    blr
 ; CHECK-NEXT:  .LBB6_9:
 ; CHECK-NEXT:    li r3, 0

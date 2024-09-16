@@ -93,7 +93,6 @@ define void @foo(ptr %.m, ptr %.n, ptr %.a, ptr %.x, ptr %.l, ptr %.vy01, ptr %.
 ; CHECK-NEXT:    std 17, 424(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    ld 23, 784(1)
 ; CHECK-NEXT:    ld 20, 776(1)
-; CHECK-NEXT:    std 24, 480(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std 25, 488(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    ld 25, 800(1)
 ; CHECK-NEXT:    ld 24, 792(1)
@@ -267,6 +266,7 @@ define void @foo(ptr %.m, ptr %.n, ptr %.a, ptr %.x, ptr %.l, ptr %.vy01, ptr %.
 ; CHECK-NEXT:    cmpld 28, 4
 ; CHECK-NEXT:    ble 0, .LBB0_3
 ; CHECK-NEXT:  # %bb.6: # %_loop_1_loopHeader_._return_bb_crit_edge.loopexit
+<<<<<<< HEAD
 ; CHECK-NEXT:    ld 3, 48(1) # 8-byte Folded Reload
 ; CHECK-NEXT:    lxv 63, 384(1) # 16-byte Folded Reload
 ; CHECK-NEXT:    stxv 1, 0(3)
@@ -283,18 +283,28 @@ define void @foo(ptr %.m, ptr %.n, ptr %.a, ptr %.x, ptr %.l, ptr %.vy01, ptr %.
 ; CHECK-NEXT:    lxv 53, 224(1) # 16-byte Folded Reload
 ; CHECK-NEXT:    lxv 52, 208(1) # 16-byte Folded Reload
 ; CHECK-NEXT:    stxv 0, 0(3)
+=======
+; CHECK-NEXT:    ld 3, 56(1) # 8-byte Folded Reload
+; CHECK-NEXT:    ld 14, 400(1) # 8-byte Folded Reload
+; CHECK-NEXT:    stxv 39, 0(3)
+; CHECK-NEXT:    ld 3, 64(1) # 8-byte Folded Reload
+; CHECK-NEXT:    ld 15, 408(1) # 8-byte Folded Reload
+; CHECK-NEXT:    ld 16, 416(1) # 8-byte Folded Reload
+; CHECK-NEXT:    ld 17, 424(1) # 8-byte Folded Reload
+; CHECK-NEXT:    ld 18, 432(1) # 8-byte Folded Reload
+; CHECK-NEXT:    ld 19, 440(1) # 8-byte Folded Reload
+; CHECK-NEXT:    ld 20, 448(1) # 8-byte Folded Reload
+; CHECK-NEXT:    ld 21, 456(1) # 8-byte Folded Reload
+; CHECK-NEXT:    ld 22, 464(1) # 8-byte Folded Reload
+; CHECK-NEXT:    ld 23, 472(1) # 8-byte Folded Reload
+; CHECK-NEXT:    ld 24, 480(1) # 8-byte Folded Reload
+; CHECK-NEXT:    ld 25, 488(1) # 8-byte Folded Reload
+; CHECK-NEXT:    stxv 38, 0(3)
+>>>>>>> a1ce745b0c3d ([llvm] support multiple save/restore points in prolog-epilog)
 ; CHECK-NEXT:    ld 3, 72(1) # 8-byte Folded Reload
-; CHECK-NEXT:    lfd 31, 584(1) # 8-byte Folded Reload
-; CHECK-NEXT:    lfd 30, 576(1) # 8-byte Folded Reload
-; CHECK-NEXT:    lfd 29, 568(1) # 8-byte Folded Reload
-; CHECK-NEXT:    lfd 28, 560(1) # 8-byte Folded Reload
-; CHECK-NEXT:    lfd 27, 552(1) # 8-byte Folded Reload
-; CHECK-NEXT:    lfd 26, 544(1) # 8-byte Folded Reload
-; CHECK-NEXT:    ld 31, 536(1) # 8-byte Folded Reload
-; CHECK-NEXT:    ld 30, 528(1) # 8-byte Folded Reload
-; CHECK-NEXT:    ld 29, 520(1) # 8-byte Folded Reload
-; CHECK-NEXT:    ld 28, 512(1) # 8-byte Folded Reload
+; CHECK-NEXT:    ld 26, 496(1) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld 27, 504(1) # 8-byte Folded Reload
+<<<<<<< HEAD
 ; CHECK-NEXT:    stxv 5, 0(3)
 ; CHECK-NEXT:    ld 3, 32(1) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld 26, 496(1) # 8-byte Folded Reload
@@ -312,6 +322,55 @@ define void @foo(ptr %.m, ptr %.n, ptr %.a, ptr %.x, ptr %.l, ptr %.vy01, ptr %.
 ; CHECK-NEXT:    ld 3, 40(1) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld 15, 408(1) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld 14, 400(1) # 8-byte Folded Reload
+=======
+; CHECK-NEXT:    ld 28, 512(1) # 8-byte Folded Reload
+; CHECK-NEXT:    ld 29, 520(1) # 8-byte Folded Reload
+; CHECK-NEXT:    ld 30, 528(1) # 8-byte Folded Reload
+; CHECK-NEXT:    ld 31, 536(1) # 8-byte Folded Reload
+; CHECK-NEXT:    lfd 26, 544(1) # 8-byte Folded Reload
+; CHECK-NEXT:    lfd 27, 552(1) # 8-byte Folded Reload
+; CHECK-NEXT:    lfd 28, 560(1) # 8-byte Folded Reload
+; CHECK-NEXT:    lfd 29, 568(1) # 8-byte Folded Reload
+; CHECK-NEXT:    lfd 30, 576(1) # 8-byte Folded Reload
+; CHECK-NEXT:    stxv 33, 0(3)
+; CHECK-NEXT:    ld 3, 40(1) # 8-byte Folded Reload
+; CHECK-NEXT:    lfd 31, 584(1) # 8-byte Folded Reload
+; CHECK-NEXT:    lxv 52, 208(1) # 16-byte Folded Reload
+; CHECK-NEXT:    lxv 53, 224(1) # 16-byte Folded Reload
+; CHECK-NEXT:    lxv 54, 240(1) # 16-byte Folded Reload
+; CHECK-NEXT:    lxv 55, 256(1) # 16-byte Folded Reload
+; CHECK-NEXT:    lxv 56, 272(1) # 16-byte Folded Reload
+; CHECK-NEXT:    lxv 57, 288(1) # 16-byte Folded Reload
+; CHECK-NEXT:    lxv 58, 304(1) # 16-byte Folded Reload
+; CHECK-NEXT:    lxv 59, 320(1) # 16-byte Folded Reload
+; CHECK-NEXT:    lxv 60, 336(1) # 16-byte Folded Reload
+; CHECK-NEXT:    lxv 61, 352(1) # 16-byte Folded Reload
+; CHECK-NEXT:    stxv 32, 0(3)
+; CHECK-NEXT:    ld 3, 48(1) # 8-byte Folded Reload
+; CHECK-NEXT:    stxv 37, 0(10)
+; CHECK-NEXT:    stxv 36, 0(9)
+; CHECK-NEXT:    stxv 13, 0(8)
+; CHECK-NEXT:    lxv 62, 368(1) # 16-byte Folded Reload
+; CHECK-NEXT:    lxv 63, 384(1) # 16-byte Folded Reload
+; CHECK-NEXT:    stxv 12, 0(3)
+; CHECK-NEXT:    ld 3, 80(1) # 8-byte Folded Reload
+; CHECK-NEXT:    stxv 11, 0(3)
+; CHECK-NEXT:    ld 3, 88(1) # 8-byte Folded Reload
+; CHECK-NEXT:    stxv 10, 0(3)
+; CHECK-NEXT:    ld 3, 96(1) # 8-byte Folded Reload
+; CHECK-NEXT:    stxv 9, 0(3)
+; CHECK-NEXT:    ld 3, 104(1) # 8-byte Folded Reload
+; CHECK-NEXT:    stxv 8, 0(3)
+; CHECK-NEXT:    ld 3, 112(1) # 8-byte Folded Reload
+; CHECK-NEXT:    stxv 7, 0(3)
+; CHECK-NEXT:    ld 3, 120(1) # 8-byte Folded Reload
+; CHECK-NEXT:    stxv 6, 0(3)
+; CHECK-NEXT:    ld 3, 128(1) # 8-byte Folded Reload
+; CHECK-NEXT:    stxv 5, 0(3)
+; CHECK-NEXT:    ld 3, 136(1) # 8-byte Folded Reload
+; CHECK-NEXT:    stxv 4, 0(3)
+; CHECK-NEXT:    ld 3, 144(1) # 8-byte Folded Reload
+>>>>>>> a1ce745b0c3d ([llvm] support multiple save/restore points in prolog-epilog)
 ; CHECK-NEXT:    stxv 3, 0(3)
 ; CHECK-NEXT:    ld 3, 56(1) # 8-byte Folded Reload
 ; CHECK-NEXT:    stxv 2, 0(8)

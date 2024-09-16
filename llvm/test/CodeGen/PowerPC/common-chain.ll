@@ -426,11 +426,11 @@ define i64 @not_same_offset_fail(ptr %p, i64 %offset, i64 %base1, i64 %n) {
 ; CHECK-NEXT:    cmpdi r6, 0
 ; CHECK-NEXT:    ble cr0, .LBB4_4
 ; CHECK-NEXT:  # %bb.1: # %for.body.preheader
-; CHECK-NEXT:    std r28, -32(r1) # 8-byte Folded Spill
+; CHECK-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std r29, -24(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    add r5, r3, r5
 ; CHECK-NEXT:    li r3, 0
-; CHECK-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
+; CHECK-NEXT:    std r28, -32(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    mtctr r6
 ; CHECK-NEXT:    mulli r11, r4, 10
 ; CHECK-NEXT:    sldi r8, r4, 2
@@ -455,9 +455,9 @@ define i64 @not_same_offset_fail(ptr %p, i64 %offset, i64 %base1, i64 %n) {
 ; CHECK-NEXT:    maddld r3, r6, r28, r3
 ; CHECK-NEXT:    bdnz .LBB4_2
 ; CHECK-NEXT:  # %bb.3:
-; CHECK-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
-; CHECK-NEXT:    ld r29, -24(r1) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld r28, -32(r1) # 8-byte Folded Reload
+; CHECK-NEXT:    ld r29, -24(r1) # 8-byte Folded Reload
+; CHECK-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
 ; CHECK-NEXT:    blr
 ; CHECK-NEXT:  .LBB4_4:
 ; CHECK-NEXT:    li r3, 0

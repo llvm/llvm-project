@@ -32,14 +32,20 @@ liveins:
 # CHECK: frameInfo:
 # CHECK:      savePoint:
 # CHECK-NEXT:   - point:           '%bb.2'
+# CHECK-NEXT:     registers:       []
 # CHECK:      restorePoint:
 # CHECK-NEXT:   - point:           '%bb.2'
+# CHECK-NEXT:     registers:       []
 # CHECK: stack
 frameInfo:
   maxAlignment:  4
   hasCalls:      true
-  savePoint:     '%bb.2'
-  restorePoint:  '%bb.2'
+  savePoint:
+    - point:           '%bb.2'
+      registers:       []
+  restorePoint:
+    - point:           '%bb.2'
+      registers:       []
 stack:
   - { id: 0, name: tmp, offset: 0, size: 4, alignment: 4 }
 body: |

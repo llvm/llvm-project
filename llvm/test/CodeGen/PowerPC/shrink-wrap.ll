@@ -10,26 +10,26 @@ define signext i32 @shrinkwrapme(i32 signext %a, i32 signext %lim) {
 ; POWERPC64-NEXT:    ble 0, .LBB0_4
 ; POWERPC64-NEXT:  # %bb.1: # %for.body.preheader
 ; POWERPC64-NEXT:    addi 4, 4, -1
-; POWERPC64-NEXT:    std 14, -144(1) # 8-byte Folded Spill
-; POWERPC64-NEXT:    std 15, -136(1) # 8-byte Folded Spill
-; POWERPC64-NEXT:    std 16, -128(1) # 8-byte Folded Spill
-; POWERPC64-NEXT:    std 17, -120(1) # 8-byte Folded Spill
-; POWERPC64-NEXT:    std 18, -112(1) # 8-byte Folded Spill
-; POWERPC64-NEXT:    std 19, -104(1) # 8-byte Folded Spill
-; POWERPC64-NEXT:    std 20, -96(1) # 8-byte Folded Spill
-; POWERPC64-NEXT:    std 21, -88(1) # 8-byte Folded Spill
-; POWERPC64-NEXT:    std 22, -80(1) # 8-byte Folded Spill
-; POWERPC64-NEXT:    std 23, -72(1) # 8-byte Folded Spill
-; POWERPC64-NEXT:    std 24, -64(1) # 8-byte Folded Spill
-; POWERPC64-NEXT:    std 25, -56(1) # 8-byte Folded Spill
-; POWERPC64-NEXT:    std 26, -48(1) # 8-byte Folded Spill
-; POWERPC64-NEXT:    std 27, -40(1) # 8-byte Folded Spill
+; POWERPC64-NEXT:    std 31, -8(1) # 8-byte Folded Spill
+; POWERPC64-NEXT:    std 30, -16(1) # 8-byte Folded Spill
+; POWERPC64-NEXT:    std 29, -24(1) # 8-byte Folded Spill
 ; POWERPC64-NEXT:    std 28, -32(1) # 8-byte Folded Spill
+; POWERPC64-NEXT:    std 27, -40(1) # 8-byte Folded Spill
+; POWERPC64-NEXT:    std 26, -48(1) # 8-byte Folded Spill
+; POWERPC64-NEXT:    std 25, -56(1) # 8-byte Folded Spill
+; POWERPC64-NEXT:    std 24, -64(1) # 8-byte Folded Spill
+; POWERPC64-NEXT:    std 23, -72(1) # 8-byte Folded Spill
+; POWERPC64-NEXT:    std 22, -80(1) # 8-byte Folded Spill
+; POWERPC64-NEXT:    std 21, -88(1) # 8-byte Folded Spill
+; POWERPC64-NEXT:    std 20, -96(1) # 8-byte Folded Spill
+; POWERPC64-NEXT:    std 19, -104(1) # 8-byte Folded Spill
+; POWERPC64-NEXT:    std 18, -112(1) # 8-byte Folded Spill
+; POWERPC64-NEXT:    std 17, -120(1) # 8-byte Folded Spill
 ; POWERPC64-NEXT:    clrldi 4, 4, 32
 ; POWERPC64-NEXT:    addi 4, 4, 1
-; POWERPC64-NEXT:    std 29, -24(1) # 8-byte Folded Spill
-; POWERPC64-NEXT:    std 30, -16(1) # 8-byte Folded Spill
-; POWERPC64-NEXT:    std 31, -8(1) # 8-byte Folded Spill
+; POWERPC64-NEXT:    std 16, -128(1) # 8-byte Folded Spill
+; POWERPC64-NEXT:    std 15, -136(1) # 8-byte Folded Spill
+; POWERPC64-NEXT:    std 14, -144(1) # 8-byte Folded Spill
 ; POWERPC64-NEXT:    mtctr 4
 ; POWERPC64-NEXT:    li 4, 0
 ; POWERPC64-NEXT:    .p2align 4
@@ -40,25 +40,25 @@ define signext i32 @shrinkwrapme(i32 signext %a, i32 signext %lim) {
 ; POWERPC64-NEXT:    #NO_APP
 ; POWERPC64-NEXT:    bdnz .LBB0_2
 ; POWERPC64-NEXT:  # %bb.3:
-; POWERPC64-NEXT:    ld 31, -8(1) # 8-byte Folded Reload
-; POWERPC64-NEXT:    ld 30, -16(1) # 8-byte Folded Reload
-; POWERPC64-NEXT:    ld 29, -24(1) # 8-byte Folded Reload
-; POWERPC64-NEXT:    ld 28, -32(1) # 8-byte Folded Reload
-; POWERPC64-NEXT:    extsw 3, 4
-; POWERPC64-NEXT:    ld 27, -40(1) # 8-byte Folded Reload
-; POWERPC64-NEXT:    ld 26, -48(1) # 8-byte Folded Reload
-; POWERPC64-NEXT:    ld 25, -56(1) # 8-byte Folded Reload
-; POWERPC64-NEXT:    ld 24, -64(1) # 8-byte Folded Reload
-; POWERPC64-NEXT:    ld 23, -72(1) # 8-byte Folded Reload
-; POWERPC64-NEXT:    ld 22, -80(1) # 8-byte Folded Reload
-; POWERPC64-NEXT:    ld 21, -88(1) # 8-byte Folded Reload
-; POWERPC64-NEXT:    ld 20, -96(1) # 8-byte Folded Reload
-; POWERPC64-NEXT:    ld 19, -104(1) # 8-byte Folded Reload
-; POWERPC64-NEXT:    ld 18, -112(1) # 8-byte Folded Reload
-; POWERPC64-NEXT:    ld 17, -120(1) # 8-byte Folded Reload
-; POWERPC64-NEXT:    ld 16, -128(1) # 8-byte Folded Reload
-; POWERPC64-NEXT:    ld 15, -136(1) # 8-byte Folded Reload
 ; POWERPC64-NEXT:    ld 14, -144(1) # 8-byte Folded Reload
+; POWERPC64-NEXT:    ld 15, -136(1) # 8-byte Folded Reload
+; POWERPC64-NEXT:    ld 16, -128(1) # 8-byte Folded Reload
+; POWERPC64-NEXT:    ld 17, -120(1) # 8-byte Folded Reload
+; POWERPC64-NEXT:    extsw 3, 4
+; POWERPC64-NEXT:    ld 18, -112(1) # 8-byte Folded Reload
+; POWERPC64-NEXT:    ld 19, -104(1) # 8-byte Folded Reload
+; POWERPC64-NEXT:    ld 20, -96(1) # 8-byte Folded Reload
+; POWERPC64-NEXT:    ld 21, -88(1) # 8-byte Folded Reload
+; POWERPC64-NEXT:    ld 22, -80(1) # 8-byte Folded Reload
+; POWERPC64-NEXT:    ld 23, -72(1) # 8-byte Folded Reload
+; POWERPC64-NEXT:    ld 24, -64(1) # 8-byte Folded Reload
+; POWERPC64-NEXT:    ld 25, -56(1) # 8-byte Folded Reload
+; POWERPC64-NEXT:    ld 26, -48(1) # 8-byte Folded Reload
+; POWERPC64-NEXT:    ld 27, -40(1) # 8-byte Folded Reload
+; POWERPC64-NEXT:    ld 28, -32(1) # 8-byte Folded Reload
+; POWERPC64-NEXT:    ld 29, -24(1) # 8-byte Folded Reload
+; POWERPC64-NEXT:    ld 30, -16(1) # 8-byte Folded Reload
+; POWERPC64-NEXT:    ld 31, -8(1) # 8-byte Folded Reload
 ; POWERPC64-NEXT:    blr
 ; POWERPC64-NEXT:  .LBB0_4:
 ; POWERPC64-NEXT:    li 4, 0
@@ -70,24 +70,24 @@ define signext i32 @shrinkwrapme(i32 signext %a, i32 signext %lim) {
 ; POWERPC32-AIX-NEXT:    cmpwi 4, 0
 ; POWERPC32-AIX-NEXT:    ble 0, L..BB0_4
 ; POWERPC32-AIX-NEXT:  # %bb.1: # %for.body.preheader
-; POWERPC32-AIX-NEXT:    stw 14, -72(1) # 4-byte Folded Spill
-; POWERPC32-AIX-NEXT:    stw 15, -68(1) # 4-byte Folded Spill
-; POWERPC32-AIX-NEXT:    stw 16, -64(1) # 4-byte Folded Spill
-; POWERPC32-AIX-NEXT:    stw 17, -60(1) # 4-byte Folded Spill
-; POWERPC32-AIX-NEXT:    stw 18, -56(1) # 4-byte Folded Spill
-; POWERPC32-AIX-NEXT:    stw 19, -52(1) # 4-byte Folded Spill
-; POWERPC32-AIX-NEXT:    stw 20, -48(1) # 4-byte Folded Spill
-; POWERPC32-AIX-NEXT:    stw 21, -44(1) # 4-byte Folded Spill
-; POWERPC32-AIX-NEXT:    stw 22, -40(1) # 4-byte Folded Spill
-; POWERPC32-AIX-NEXT:    stw 23, -36(1) # 4-byte Folded Spill
-; POWERPC32-AIX-NEXT:    stw 24, -32(1) # 4-byte Folded Spill
-; POWERPC32-AIX-NEXT:    stw 25, -28(1) # 4-byte Folded Spill
-; POWERPC32-AIX-NEXT:    stw 26, -24(1) # 4-byte Folded Spill
-; POWERPC32-AIX-NEXT:    stw 27, -20(1) # 4-byte Folded Spill
-; POWERPC32-AIX-NEXT:    stw 28, -16(1) # 4-byte Folded Spill
-; POWERPC32-AIX-NEXT:    stw 29, -12(1) # 4-byte Folded Spill
-; POWERPC32-AIX-NEXT:    stw 30, -8(1) # 4-byte Folded Spill
 ; POWERPC32-AIX-NEXT:    stw 31, -4(1) # 4-byte Folded Spill
+; POWERPC32-AIX-NEXT:    stw 30, -8(1) # 4-byte Folded Spill
+; POWERPC32-AIX-NEXT:    stw 29, -12(1) # 4-byte Folded Spill
+; POWERPC32-AIX-NEXT:    stw 28, -16(1) # 4-byte Folded Spill
+; POWERPC32-AIX-NEXT:    stw 27, -20(1) # 4-byte Folded Spill
+; POWERPC32-AIX-NEXT:    stw 26, -24(1) # 4-byte Folded Spill
+; POWERPC32-AIX-NEXT:    stw 25, -28(1) # 4-byte Folded Spill
+; POWERPC32-AIX-NEXT:    stw 24, -32(1) # 4-byte Folded Spill
+; POWERPC32-AIX-NEXT:    stw 23, -36(1) # 4-byte Folded Spill
+; POWERPC32-AIX-NEXT:    stw 22, -40(1) # 4-byte Folded Spill
+; POWERPC32-AIX-NEXT:    stw 21, -44(1) # 4-byte Folded Spill
+; POWERPC32-AIX-NEXT:    stw 20, -48(1) # 4-byte Folded Spill
+; POWERPC32-AIX-NEXT:    stw 19, -52(1) # 4-byte Folded Spill
+; POWERPC32-AIX-NEXT:    stw 18, -56(1) # 4-byte Folded Spill
+; POWERPC32-AIX-NEXT:    stw 17, -60(1) # 4-byte Folded Spill
+; POWERPC32-AIX-NEXT:    stw 16, -64(1) # 4-byte Folded Spill
+; POWERPC32-AIX-NEXT:    stw 15, -68(1) # 4-byte Folded Spill
+; POWERPC32-AIX-NEXT:    stw 14, -72(1) # 4-byte Folded Spill
 ; POWERPC32-AIX-NEXT:    mtctr 4
 ; POWERPC32-AIX-NEXT:    li 4, 0
 ; POWERPC32-AIX-NEXT:    .align 4
@@ -98,25 +98,25 @@ define signext i32 @shrinkwrapme(i32 signext %a, i32 signext %lim) {
 ; POWERPC32-AIX-NEXT:    #NO_APP
 ; POWERPC32-AIX-NEXT:    bdnz L..BB0_2
 ; POWERPC32-AIX-NEXT:  # %bb.3:
-; POWERPC32-AIX-NEXT:    lwz 31, -4(1) # 4-byte Folded Reload
-; POWERPC32-AIX-NEXT:    lwz 30, -8(1) # 4-byte Folded Reload
-; POWERPC32-AIX-NEXT:    lwz 29, -12(1) # 4-byte Folded Reload
-; POWERPC32-AIX-NEXT:    lwz 28, -16(1) # 4-byte Folded Reload
-; POWERPC32-AIX-NEXT:    mr 3, 4
-; POWERPC32-AIX-NEXT:    lwz 27, -20(1) # 4-byte Folded Reload
-; POWERPC32-AIX-NEXT:    lwz 26, -24(1) # 4-byte Folded Reload
-; POWERPC32-AIX-NEXT:    lwz 25, -28(1) # 4-byte Folded Reload
-; POWERPC32-AIX-NEXT:    lwz 24, -32(1) # 4-byte Folded Reload
-; POWERPC32-AIX-NEXT:    lwz 23, -36(1) # 4-byte Folded Reload
-; POWERPC32-AIX-NEXT:    lwz 22, -40(1) # 4-byte Folded Reload
-; POWERPC32-AIX-NEXT:    lwz 21, -44(1) # 4-byte Folded Reload
-; POWERPC32-AIX-NEXT:    lwz 20, -48(1) # 4-byte Folded Reload
-; POWERPC32-AIX-NEXT:    lwz 19, -52(1) # 4-byte Folded Reload
-; POWERPC32-AIX-NEXT:    lwz 18, -56(1) # 4-byte Folded Reload
-; POWERPC32-AIX-NEXT:    lwz 17, -60(1) # 4-byte Folded Reload
-; POWERPC32-AIX-NEXT:    lwz 16, -64(1) # 4-byte Folded Reload
-; POWERPC32-AIX-NEXT:    lwz 15, -68(1) # 4-byte Folded Reload
 ; POWERPC32-AIX-NEXT:    lwz 14, -72(1) # 4-byte Folded Reload
+; POWERPC32-AIX-NEXT:    lwz 15, -68(1) # 4-byte Folded Reload
+; POWERPC32-AIX-NEXT:    lwz 16, -64(1) # 4-byte Folded Reload
+; POWERPC32-AIX-NEXT:    lwz 17, -60(1) # 4-byte Folded Reload
+; POWERPC32-AIX-NEXT:    mr 3, 4
+; POWERPC32-AIX-NEXT:    lwz 18, -56(1) # 4-byte Folded Reload
+; POWERPC32-AIX-NEXT:    lwz 19, -52(1) # 4-byte Folded Reload
+; POWERPC32-AIX-NEXT:    lwz 20, -48(1) # 4-byte Folded Reload
+; POWERPC32-AIX-NEXT:    lwz 21, -44(1) # 4-byte Folded Reload
+; POWERPC32-AIX-NEXT:    lwz 22, -40(1) # 4-byte Folded Reload
+; POWERPC32-AIX-NEXT:    lwz 23, -36(1) # 4-byte Folded Reload
+; POWERPC32-AIX-NEXT:    lwz 24, -32(1) # 4-byte Folded Reload
+; POWERPC32-AIX-NEXT:    lwz 25, -28(1) # 4-byte Folded Reload
+; POWERPC32-AIX-NEXT:    lwz 26, -24(1) # 4-byte Folded Reload
+; POWERPC32-AIX-NEXT:    lwz 27, -20(1) # 4-byte Folded Reload
+; POWERPC32-AIX-NEXT:    lwz 28, -16(1) # 4-byte Folded Reload
+; POWERPC32-AIX-NEXT:    lwz 29, -12(1) # 4-byte Folded Reload
+; POWERPC32-AIX-NEXT:    lwz 30, -8(1) # 4-byte Folded Reload
+; POWERPC32-AIX-NEXT:    lwz 31, -4(1) # 4-byte Folded Reload
 ; POWERPC32-AIX-NEXT:    blr
 ; POWERPC32-AIX-NEXT:  L..BB0_4:
 ; POWERPC32-AIX-NEXT:    li 3, 0
@@ -128,26 +128,26 @@ define signext i32 @shrinkwrapme(i32 signext %a, i32 signext %lim) {
 ; POWERPC64-AIX-NEXT:    blt 0, L..BB0_4
 ; POWERPC64-AIX-NEXT:  # %bb.1: # %for.body.preheader
 ; POWERPC64-AIX-NEXT:    addi 4, 4, -1
-; POWERPC64-AIX-NEXT:    std 14, -144(1) # 8-byte Folded Spill
-; POWERPC64-AIX-NEXT:    std 15, -136(1) # 8-byte Folded Spill
-; POWERPC64-AIX-NEXT:    std 16, -128(1) # 8-byte Folded Spill
-; POWERPC64-AIX-NEXT:    std 17, -120(1) # 8-byte Folded Spill
-; POWERPC64-AIX-NEXT:    std 18, -112(1) # 8-byte Folded Spill
-; POWERPC64-AIX-NEXT:    std 19, -104(1) # 8-byte Folded Spill
-; POWERPC64-AIX-NEXT:    std 20, -96(1) # 8-byte Folded Spill
-; POWERPC64-AIX-NEXT:    std 21, -88(1) # 8-byte Folded Spill
-; POWERPC64-AIX-NEXT:    std 22, -80(1) # 8-byte Folded Spill
-; POWERPC64-AIX-NEXT:    std 23, -72(1) # 8-byte Folded Spill
-; POWERPC64-AIX-NEXT:    std 24, -64(1) # 8-byte Folded Spill
-; POWERPC64-AIX-NEXT:    std 25, -56(1) # 8-byte Folded Spill
-; POWERPC64-AIX-NEXT:    std 26, -48(1) # 8-byte Folded Spill
-; POWERPC64-AIX-NEXT:    std 27, -40(1) # 8-byte Folded Spill
+; POWERPC64-AIX-NEXT:    std 31, -8(1) # 8-byte Folded Spill
+; POWERPC64-AIX-NEXT:    std 30, -16(1) # 8-byte Folded Spill
+; POWERPC64-AIX-NEXT:    std 29, -24(1) # 8-byte Folded Spill
 ; POWERPC64-AIX-NEXT:    std 28, -32(1) # 8-byte Folded Spill
+; POWERPC64-AIX-NEXT:    std 27, -40(1) # 8-byte Folded Spill
+; POWERPC64-AIX-NEXT:    std 26, -48(1) # 8-byte Folded Spill
+; POWERPC64-AIX-NEXT:    std 25, -56(1) # 8-byte Folded Spill
+; POWERPC64-AIX-NEXT:    std 24, -64(1) # 8-byte Folded Spill
+; POWERPC64-AIX-NEXT:    std 23, -72(1) # 8-byte Folded Spill
+; POWERPC64-AIX-NEXT:    std 22, -80(1) # 8-byte Folded Spill
+; POWERPC64-AIX-NEXT:    std 21, -88(1) # 8-byte Folded Spill
+; POWERPC64-AIX-NEXT:    std 20, -96(1) # 8-byte Folded Spill
+; POWERPC64-AIX-NEXT:    std 19, -104(1) # 8-byte Folded Spill
+; POWERPC64-AIX-NEXT:    std 18, -112(1) # 8-byte Folded Spill
+; POWERPC64-AIX-NEXT:    std 17, -120(1) # 8-byte Folded Spill
 ; POWERPC64-AIX-NEXT:    clrldi 4, 4, 32
 ; POWERPC64-AIX-NEXT:    addi 4, 4, 1
-; POWERPC64-AIX-NEXT:    std 29, -24(1) # 8-byte Folded Spill
-; POWERPC64-AIX-NEXT:    std 30, -16(1) # 8-byte Folded Spill
-; POWERPC64-AIX-NEXT:    std 31, -8(1) # 8-byte Folded Spill
+; POWERPC64-AIX-NEXT:    std 16, -128(1) # 8-byte Folded Spill
+; POWERPC64-AIX-NEXT:    std 15, -136(1) # 8-byte Folded Spill
+; POWERPC64-AIX-NEXT:    std 14, -144(1) # 8-byte Folded Spill
 ; POWERPC64-AIX-NEXT:    mtctr 4
 ; POWERPC64-AIX-NEXT:    li 4, 0
 ; POWERPC64-AIX-NEXT:    .align 4
@@ -158,25 +158,25 @@ define signext i32 @shrinkwrapme(i32 signext %a, i32 signext %lim) {
 ; POWERPC64-AIX-NEXT:    #NO_APP
 ; POWERPC64-AIX-NEXT:    bdnz L..BB0_2
 ; POWERPC64-AIX-NEXT:  # %bb.3:
-; POWERPC64-AIX-NEXT:    ld 31, -8(1) # 8-byte Folded Reload
-; POWERPC64-AIX-NEXT:    ld 30, -16(1) # 8-byte Folded Reload
-; POWERPC64-AIX-NEXT:    ld 29, -24(1) # 8-byte Folded Reload
-; POWERPC64-AIX-NEXT:    ld 28, -32(1) # 8-byte Folded Reload
-; POWERPC64-AIX-NEXT:    extsw 3, 4
-; POWERPC64-AIX-NEXT:    ld 27, -40(1) # 8-byte Folded Reload
-; POWERPC64-AIX-NEXT:    ld 26, -48(1) # 8-byte Folded Reload
-; POWERPC64-AIX-NEXT:    ld 25, -56(1) # 8-byte Folded Reload
-; POWERPC64-AIX-NEXT:    ld 24, -64(1) # 8-byte Folded Reload
-; POWERPC64-AIX-NEXT:    ld 23, -72(1) # 8-byte Folded Reload
-; POWERPC64-AIX-NEXT:    ld 22, -80(1) # 8-byte Folded Reload
-; POWERPC64-AIX-NEXT:    ld 21, -88(1) # 8-byte Folded Reload
-; POWERPC64-AIX-NEXT:    ld 20, -96(1) # 8-byte Folded Reload
-; POWERPC64-AIX-NEXT:    ld 19, -104(1) # 8-byte Folded Reload
-; POWERPC64-AIX-NEXT:    ld 18, -112(1) # 8-byte Folded Reload
-; POWERPC64-AIX-NEXT:    ld 17, -120(1) # 8-byte Folded Reload
-; POWERPC64-AIX-NEXT:    ld 16, -128(1) # 8-byte Folded Reload
-; POWERPC64-AIX-NEXT:    ld 15, -136(1) # 8-byte Folded Reload
 ; POWERPC64-AIX-NEXT:    ld 14, -144(1) # 8-byte Folded Reload
+; POWERPC64-AIX-NEXT:    ld 15, -136(1) # 8-byte Folded Reload
+; POWERPC64-AIX-NEXT:    ld 16, -128(1) # 8-byte Folded Reload
+; POWERPC64-AIX-NEXT:    ld 17, -120(1) # 8-byte Folded Reload
+; POWERPC64-AIX-NEXT:    extsw 3, 4
+; POWERPC64-AIX-NEXT:    ld 18, -112(1) # 8-byte Folded Reload
+; POWERPC64-AIX-NEXT:    ld 19, -104(1) # 8-byte Folded Reload
+; POWERPC64-AIX-NEXT:    ld 20, -96(1) # 8-byte Folded Reload
+; POWERPC64-AIX-NEXT:    ld 21, -88(1) # 8-byte Folded Reload
+; POWERPC64-AIX-NEXT:    ld 22, -80(1) # 8-byte Folded Reload
+; POWERPC64-AIX-NEXT:    ld 23, -72(1) # 8-byte Folded Reload
+; POWERPC64-AIX-NEXT:    ld 24, -64(1) # 8-byte Folded Reload
+; POWERPC64-AIX-NEXT:    ld 25, -56(1) # 8-byte Folded Reload
+; POWERPC64-AIX-NEXT:    ld 26, -48(1) # 8-byte Folded Reload
+; POWERPC64-AIX-NEXT:    ld 27, -40(1) # 8-byte Folded Reload
+; POWERPC64-AIX-NEXT:    ld 28, -32(1) # 8-byte Folded Reload
+; POWERPC64-AIX-NEXT:    ld 29, -24(1) # 8-byte Folded Reload
+; POWERPC64-AIX-NEXT:    ld 30, -16(1) # 8-byte Folded Reload
+; POWERPC64-AIX-NEXT:    ld 31, -8(1) # 8-byte Folded Reload
 ; POWERPC64-AIX-NEXT:    blr
 ; POWERPC64-AIX-NEXT:  L..BB0_4:
 ; POWERPC64-AIX-NEXT:    li 4, 0

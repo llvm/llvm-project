@@ -638,9 +638,10 @@ namespace yaml {
 // list
 struct SaveRestorePointEntry {
   StringValue Point;
+  std::vector<StringValue> Registers;
 
   bool operator==(const SaveRestorePointEntry &Other) const {
-    return Point == Other.Point;
+    return Point == Other.Point && Registers == Other.Registers;
   }
 };
 
@@ -680,6 +681,7 @@ template <> struct PolymorphicTraits<SaveRestorePoints> {
 template <> struct MappingTraits<SaveRestorePointEntry> {
   static void mapping(IO &YamlIO, SaveRestorePointEntry &Entry) {
     YamlIO.mapRequired("point", Entry.Point);
+    YamlIO.mapRequired("registers", Entry.Registers);
   }
 };
 
