@@ -544,6 +544,7 @@ struct InStruct {
 };
 
 struct Ctx {
+  Config &arg;
   LinkerDriver driver;
   LinkerScript *script;
   TargetInfo *target;
