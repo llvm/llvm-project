@@ -3975,18 +3975,9 @@ void ItaniumRTTIBuilder::BuildVTablePointer(const Type *Ty) {
 
   if (const auto &Schema =
           CGM.getCodeGenOpts().PointerAuth.CXXTypeInfoVTablePointer) {
-    llvm::PointerType *PtrTy = llvm::PointerType::get(
-        CGM.getLLVMContext(),
-        CGM.getModule().getDataLayout().getProgramAddressSpace());
-    llvm::Constant *StorageAddress =
-        (Schema.isAddressDiscriminated()
-             ? llvm::ConstantExpr::getIntToPtr(
-                   llvm::ConstantInt::get(
-                       CGM.IntPtrTy,
-                       llvm::ConstantPtrAuth::
-                           AddrDiscriminator_CXXTypeInfoVTablePointer),
-                   PtrTy)
-             : nullptr);
+    // If address discrimination is enabled, we'll re-write that to actual
+    // storage address later in ItaniumRTTIBuilder::BuildTypeInfo.
+    llvm::Constant *StorageAddress = nullptr;
     VTable = CGM.getConstantSignedPointer(VTable, Schema, StorageAddress,
                                           GlobalDecl(), QualType(Ty, 0));
   }
@@ -4107,6 +4098,7 @@ llvm::Constant *ItaniumRTTIBuilder::BuildTypeInfo(
       llvm::GlobalValue::DLLStorageClassTypes DLLStorageClass) {
   // Add the vtable pointer.
   BuildVTablePointer(cast<Type>(Ty));
+  size_t VTablePointerIdx = Fields.size() - 1;
 
   // And the name.
   llvm::GlobalVariable *TypeName = GetAddrOfTypeName(Ty, Linkage);
@@ -4222,7 +4214,6 @@ llvm::Constant *ItaniumRTTIBuilder::BuildTypeInfo(
   }
 
   llvm::Constant *Init = llvm::ConstantStruct::getAnon(Fields);
-
   SmallString<256> Name;
   llvm::raw_svector_ostream Out(Name);
   CGM.getCXXABI().getMangleContext().mangleCXXRTTI(Ty, Out);
@@ -4231,6 +4222,32 @@ llvm::Constant *ItaniumRTTIBuilder::BuildTypeInfo(
   llvm::GlobalVariable *GV =
       new llvm::GlobalVariable(M, Init->getType(),
                                /*isConstant=*/true, Linkage, Init, Name);
+  if (const auto &Schema =
+          CGM.getCodeGenOpts().PointerAuth.CXXTypeInfoVTablePointer) {
+    if (Schema.isAddressDiscriminated()) {
+      // If type info vtable pointer is signed with address discrimination
+      // enabled, we need to place actual storage address (which was unknown
+      // during construction in ItaniumRTTIBuilder::BuildVTablePointer) in the
+      // corresponding field.
+      ConstantInitBuilder Builder(CGM);
+      auto InitBuilder = Builder.beginStruct();
+      for (size_t I = 0; I < Fields.size(); ++I) {
+        if (I != VTablePointerIdx) {
+          InitBuilder.add(Fields[I]);
+          continue;
+        }
+        auto *SignedVTablePointer = cast<llvm::ConstantPtrAuth>(Fields[I]);
+        llvm::Constant *UnsignedVtablePointer =
+            SignedVTablePointer->getPointer();
+        llvm::Constant *StorageAddress =
+            InitBuilder.getAddrOfCurrentPosition(CGM.UnqualPtrTy);
+        InitBuilder.add(CGM.getConstantSignedPointer(
+            UnsignedVtablePointer, Schema, StorageAddress, GlobalDecl(),
+            QualType(cast<Type>(Ty), 0)));
+      }
+      InitBuilder.finishAndSetAsInitializer(GV);
+    }
+  }
 
   // Export the typeinfo in the same circumstances as the vtable is exported.
   auto GVDLLStorageClass = DLLStorageClass;
