@@ -27,6 +27,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/TableGen/AArch64ImmCheck.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include <array>
@@ -49,23 +50,6 @@ enum class ACLEKind { SVE, SME };
 using TypeSpec = std::string;
 
 namespace {
-
-class ImmCheck {
-  unsigned Arg;
-  unsigned Kind;
-  unsigned ElementSizeInBits;
-
-public:
-  ImmCheck(unsigned Arg, unsigned Kind, unsigned ElementSizeInBits = 0)
-      : Arg(Arg), Kind(Kind), ElementSizeInBits(ElementSizeInBits) {}
-  ImmCheck(const ImmCheck &Other) = default;
-  ~ImmCheck() = default;
-
-  unsigned getArg() const { return Arg; }
-  unsigned getKind() const { return Kind; }
-  unsigned getElementSizeInBits() const { return ElementSizeInBits; }
-};
-
 class SVEType {
   bool Float, Signed, Immediate, Void, Constant, Pointer, BFloat;
   bool DefaultType, IsScalable, Predicate, PredicatePattern, PrefetchOp,
@@ -296,7 +280,7 @@ private:
 
   static const std::array<ReinterpretTypeInfo, 12> Reinterprets;
 
-  RecordKeeper &Records;
+  const RecordKeeper &Records;
   llvm::StringMap<uint64_t> EltTypes;
   llvm::StringMap<uint64_t> MemEltTypes;
   llvm::StringMap<uint64_t> FlagTypes;
@@ -304,7 +288,7 @@ private:
   llvm::StringMap<uint64_t> ImmCheckTypes;
 
 public:
-  SVEEmitter(RecordKeeper &R) : Records(R) {
+  SVEEmitter(const RecordKeeper &R) : Records(R) {
     for (auto *RV : Records.getAllDerivedDefinitions("EltType"))
       EltTypes[RV->getNameInitAsString()] = RV->getValueAsInt("Value");
     for (auto *RV : Records.getAllDerivedDefinitions("MemEltType"))
@@ -388,6 +372,9 @@ public:
   /// Emit all the range checks for the immediates.
   void createRangeChecks(raw_ostream &o);
 
+  // Emit all the ImmCheckTypes to arm_immcheck_types.inc
+  void createImmCheckTypes(raw_ostream &OS);
+
   /// Create the SVETypeFlags used in CGBuiltins
   void createTypeFlags(raw_ostream &o);
 
@@ -410,7 +397,7 @@ public:
   void createBuiltinZAState(raw_ostream &OS);
 
   /// Create intrinsic and add it to \p Out
-  void createIntrinsic(Record *R,
+  void createIntrinsic(const Record *R,
                        SmallVectorImpl<std::unique_ptr<Intrinsic>> &Out);
 };
 
@@ -429,7 +416,6 @@ const std::array<SVEEmitter::ReinterpretTypeInfo, 12> SVEEmitter::Reinterprets =
       {SVEType("d", 'd'), "f64"}}};
 
 } // end anonymous namespace
-
 
 //===----------------------------------------------------------------------===//
 // Type implementation
@@ -1165,7 +1151,7 @@ uint64_t SVEEmitter::encodeTypeFlags(const SVEType &T) {
 }
 
 void SVEEmitter::createIntrinsic(
-    Record *R, SmallVectorImpl<std::unique_ptr<Intrinsic>> &Out) {
+    const Record *R, SmallVectorImpl<std::unique_ptr<Intrinsic>> &Out) {
   StringRef Name = R->getValueAsString("Name");
   StringRef Proto = R->getValueAsString("Prototype");
   StringRef Types = R->getValueAsString("Types");
@@ -1210,18 +1196,17 @@ void SVEEmitter::createIntrinsic(
     // Collate a list of range/option checks for the immediates.
     SmallVector<ImmCheck, 2> ImmChecks;
     for (auto *R : ImmCheckList) {
-      int64_t Arg = R->getValueAsInt("Arg");
-      int64_t EltSizeArg = R->getValueAsInt("EltSizeArg");
+      int64_t ArgIdx = R->getValueAsInt("ImmArgIdx");
+      int64_t EltSizeArgIdx = R->getValueAsInt("TypeContextArgIdx");
       int64_t Kind = R->getValueAsDef("Kind")->getValueAsInt("Value");
-      assert(Arg >= 0 && Kind >= 0 && "Arg and Kind must be nonnegative");
+      assert(ArgIdx >= 0 && Kind >= 0 &&
+             "ImmArgIdx and Kind must be nonnegative");
 
       unsigned ElementSizeInBits = 0;
-      char Mod;
-      unsigned NumVectors;
-      std::tie(Mod, NumVectors) = getProtoModifier(Proto, EltSizeArg + 1);
-      if (EltSizeArg >= 0)
+      auto [Mod, NumVectors] = getProtoModifier(Proto, EltSizeArgIdx + 1);
+      if (EltSizeArgIdx >= 0)
         ElementSizeInBits = SVEType(TS, Mod, NumVectors).getElementSizeInBits();
-      ImmChecks.push_back(ImmCheck(Arg, Kind, ElementSizeInBits));
+      ImmChecks.push_back(ImmCheck(ArgIdx, Kind, ElementSizeInBits));
     }
 
     Out.push_back(std::make_unique<Intrinsic>(
@@ -1240,7 +1225,7 @@ void SVEEmitter::createCoreHeaderIntrinsics(raw_ostream &OS,
                                             SVEEmitter &Emitter,
                                             ACLEKind Kind) {
   SmallVector<std::unique_ptr<Intrinsic>, 128> Defs;
-  std::vector<Record *> RV = Records.getAllDerivedDefinitions("Inst");
+  std::vector<const Record *> RV = Records.getAllDerivedDefinitions("Inst");
   for (auto *R : RV)
     createIntrinsic(R, Defs);
 
@@ -1442,7 +1427,7 @@ void SVEEmitter::createHeader(raw_ostream &OS) {
 }
 
 void SVEEmitter::createBuiltins(raw_ostream &OS) {
-  std::vector<Record *> RV = Records.getAllDerivedDefinitions("Inst");
+  std::vector<const Record *> RV = Records.getAllDerivedDefinitions("Inst");
   SmallVector<std::unique_ptr<Intrinsic>, 128> Defs;
   for (auto *R : RV)
     createIntrinsic(R, Defs);
@@ -1484,7 +1469,7 @@ void SVEEmitter::createBuiltins(raw_ostream &OS) {
 }
 
 void SVEEmitter::createCodeGenMap(raw_ostream &OS) {
-  std::vector<Record *> RV = Records.getAllDerivedDefinitions("Inst");
+  std::vector<const Record *> RV = Records.getAllDerivedDefinitions("Inst");
   SmallVector<std::unique_ptr<Intrinsic>, 128> Defs;
   for (auto *R : RV)
     createIntrinsic(R, Defs);
@@ -1517,7 +1502,7 @@ void SVEEmitter::createCodeGenMap(raw_ostream &OS) {
 }
 
 void SVEEmitter::createRangeChecks(raw_ostream &OS) {
-  std::vector<Record *> RV = Records.getAllDerivedDefinitions("Inst");
+  std::vector<const Record *> RV = Records.getAllDerivedDefinitions("Inst");
   SmallVector<std::unique_ptr<Intrinsic>, 128> Defs;
   for (auto *R : RV)
     createIntrinsic(R, Defs);
@@ -1541,8 +1526,8 @@ void SVEEmitter::createRangeChecks(raw_ostream &OS) {
 
     OS << "case SVE::BI__builtin_sve_" << Def->getMangledName() << ":\n";
     for (auto &Check : Def->getImmChecks())
-      OS << "ImmChecks.push_back(std::make_tuple(" << Check.getArg() << ", "
-         << Check.getKind() << ", " << Check.getElementSizeInBits() << "));\n";
+      OS << "ImmChecks.emplace_back(" << Check.getImmArgIdx() << ", "
+         << Check.getKind() << ", " << Check.getElementSizeInBits() << ");\n";
     OS << "  break;\n";
 
     Emitted.insert(Def->getMangledName());
@@ -1572,8 +1557,10 @@ void SVEEmitter::createTypeFlags(raw_ostream &OS) {
   for (auto &KV : MergeTypes)
     OS << "  " << KV.getKey() << " = " << KV.getValue() << ",\n";
   OS << "#endif\n\n";
+}
 
-  OS << "#ifdef LLVM_GET_SVE_IMMCHECKTYPES\n";
+void SVEEmitter::createImmCheckTypes(raw_ostream &OS) {
+  OS << "#ifdef LLVM_GET_ARM_INTRIN_IMMCHECKTYPES\n";
   for (auto &KV : ImmCheckTypes)
     OS << "  " << KV.getKey() << " = " << KV.getValue() << ",\n";
   OS << "#endif\n\n";
@@ -1647,7 +1634,7 @@ void SVEEmitter::createSMEHeader(raw_ostream &OS) {
 }
 
 void SVEEmitter::createSMEBuiltins(raw_ostream &OS) {
-  std::vector<Record *> RV = Records.getAllDerivedDefinitions("Inst");
+  std::vector<const Record *> RV = Records.getAllDerivedDefinitions("Inst");
   SmallVector<std::unique_ptr<Intrinsic>, 128> Defs;
   for (auto *R : RV) {
     createIntrinsic(R, Defs);
@@ -1675,7 +1662,7 @@ void SVEEmitter::createSMEBuiltins(raw_ostream &OS) {
 }
 
 void SVEEmitter::createSMECodeGenMap(raw_ostream &OS) {
-  std::vector<Record *> RV = Records.getAllDerivedDefinitions("Inst");
+  std::vector<const Record *> RV = Records.getAllDerivedDefinitions("Inst");
   SmallVector<std::unique_ptr<Intrinsic>, 128> Defs;
   for (auto *R : RV) {
     createIntrinsic(R, Defs);
@@ -1709,7 +1696,7 @@ void SVEEmitter::createSMECodeGenMap(raw_ostream &OS) {
 }
 
 void SVEEmitter::createSMERangeChecks(raw_ostream &OS) {
-  std::vector<Record *> RV = Records.getAllDerivedDefinitions("Inst");
+  std::vector<const Record *> RV = Records.getAllDerivedDefinitions("Inst");
   SmallVector<std::unique_ptr<Intrinsic>, 128> Defs;
   for (auto *R : RV) {
     createIntrinsic(R, Defs);
@@ -1734,8 +1721,9 @@ void SVEEmitter::createSMERangeChecks(raw_ostream &OS) {
 
     OS << "case SME::BI__builtin_sme_" << Def->getMangledName() << ":\n";
     for (auto &Check : Def->getImmChecks())
-      OS << "ImmChecks.push_back(std::make_tuple(" << Check.getArg() << ", "
-         << Check.getKind() << ", " << Check.getElementSizeInBits() << "));\n";
+      OS << "ImmChecks.push_back(std::make_tuple(" << Check.getImmArgIdx()
+         << ", " << Check.getKind() << ", " << Check.getElementSizeInBits()
+         << "));\n";
     OS << "  break;\n";
 
     Emitted.insert(Def->getMangledName());
@@ -1745,7 +1733,7 @@ void SVEEmitter::createSMERangeChecks(raw_ostream &OS) {
 }
 
 void SVEEmitter::createBuiltinZAState(raw_ostream &OS) {
-  std::vector<Record *> RV = Records.getAllDerivedDefinitions("Inst");
+  std::vector<const Record *> RV = Records.getAllDerivedDefinitions("Inst");
   SmallVector<std::unique_ptr<Intrinsic>, 128> Defs;
   for (auto *R : RV)
     createIntrinsic(R, Defs);
@@ -1785,7 +1773,7 @@ void SVEEmitter::createBuiltinZAState(raw_ostream &OS) {
 }
 
 void SVEEmitter::createStreamingAttrs(raw_ostream &OS, ACLEKind Kind) {
-  std::vector<Record *> RV = Records.getAllDerivedDefinitions("Inst");
+  std::vector<const Record *> RV = Records.getAllDerivedDefinitions("Inst");
   SmallVector<std::unique_ptr<Intrinsic>, 128> Defs;
   for (auto *R : RV)
     createIntrinsic(R, Defs);
@@ -1838,51 +1826,55 @@ void SVEEmitter::createStreamingAttrs(raw_ostream &OS, ACLEKind Kind) {
 }
 
 namespace clang {
-void EmitSveHeader(RecordKeeper &Records, raw_ostream &OS) {
+void EmitSveHeader(const RecordKeeper &Records, raw_ostream &OS) {
   SVEEmitter(Records).createHeader(OS);
 }
 
-void EmitSveBuiltins(RecordKeeper &Records, raw_ostream &OS) {
+void EmitSveBuiltins(const RecordKeeper &Records, raw_ostream &OS) {
   SVEEmitter(Records).createBuiltins(OS);
 }
 
-void EmitSveBuiltinCG(RecordKeeper &Records, raw_ostream &OS) {
+void EmitSveBuiltinCG(const RecordKeeper &Records, raw_ostream &OS) {
   SVEEmitter(Records).createCodeGenMap(OS);
 }
 
-void EmitSveRangeChecks(RecordKeeper &Records, raw_ostream &OS) {
+void EmitSveRangeChecks(const RecordKeeper &Records, raw_ostream &OS) {
   SVEEmitter(Records).createRangeChecks(OS);
 }
 
-void EmitSveTypeFlags(RecordKeeper &Records, raw_ostream &OS) {
+void EmitSveTypeFlags(const RecordKeeper &Records, raw_ostream &OS) {
   SVEEmitter(Records).createTypeFlags(OS);
 }
 
-void EmitSveStreamingAttrs(RecordKeeper &Records, raw_ostream &OS) {
+void EmitImmCheckTypes(const RecordKeeper &Records, raw_ostream &OS) {
+  SVEEmitter(Records).createImmCheckTypes(OS);
+}
+
+void EmitSveStreamingAttrs(const RecordKeeper &Records, raw_ostream &OS) {
   SVEEmitter(Records).createStreamingAttrs(OS, ACLEKind::SVE);
 }
 
-void EmitSmeHeader(RecordKeeper &Records, raw_ostream &OS) {
+void EmitSmeHeader(const RecordKeeper &Records, raw_ostream &OS) {
   SVEEmitter(Records).createSMEHeader(OS);
 }
 
-void EmitSmeBuiltins(RecordKeeper &Records, raw_ostream &OS) {
+void EmitSmeBuiltins(const RecordKeeper &Records, raw_ostream &OS) {
   SVEEmitter(Records).createSMEBuiltins(OS);
 }
 
-void EmitSmeBuiltinCG(RecordKeeper &Records, raw_ostream &OS) {
+void EmitSmeBuiltinCG(const RecordKeeper &Records, raw_ostream &OS) {
   SVEEmitter(Records).createSMECodeGenMap(OS);
 }
 
-void EmitSmeRangeChecks(RecordKeeper &Records, raw_ostream &OS) {
+void EmitSmeRangeChecks(const RecordKeeper &Records, raw_ostream &OS) {
   SVEEmitter(Records).createSMERangeChecks(OS);
 }
 
-void EmitSmeStreamingAttrs(RecordKeeper &Records, raw_ostream &OS) {
+void EmitSmeStreamingAttrs(const RecordKeeper &Records, raw_ostream &OS) {
   SVEEmitter(Records).createStreamingAttrs(OS, ACLEKind::SME);
 }
 
-void EmitSmeBuiltinZAState(RecordKeeper &Records, raw_ostream &OS) {
+void EmitSmeBuiltinZAState(const RecordKeeper &Records, raw_ostream &OS) {
   SVEEmitter(Records).createBuiltinZAState(OS);
 }
 } // End namespace clang

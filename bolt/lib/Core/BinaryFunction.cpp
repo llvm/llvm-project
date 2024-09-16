@@ -1339,22 +1339,10 @@ Error BinaryFunction::disassemble() {
                   BC.getBinaryFunctionContainingAddress(TargetAddress))
             TargetFunc->setIgnored();
 
-        if (IsCall && containsAddress(TargetAddress)) {
-          if (TargetAddress == getAddress()) {
-            // Recursive call.
-            TargetSymbol = getSymbol();
-          } else {
-            if (BC.isX86()) {
-              // Dangerous old-style x86 PIC code. We may need to freeze this
-              // function, so preserve the function as is for now.
-              PreserveNops = true;
-            } else {
-              BC.errs() << "BOLT-WARNING: internal call detected at 0x"
-                        << Twine::utohexstr(AbsoluteInstrAddr)
-                        << " in function " << *this << ". Skipping.\n";
-              IsSimple = false;
-            }
-          }
+        if (IsCall && TargetAddress == getAddress()) {
+          // A recursive call. Calls to internal blocks are handled by
+          // ValidateInternalCalls pass.
+          TargetSymbol = getSymbol();
         }
 
         if (!TargetSymbol) {

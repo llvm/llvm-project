@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple %itanium_abi_triple -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple %itanium_abi_triple -emit-llvm %s -o - -fexperimental-new-constant-interpreter | FileCheck %s
 
 // Check that the following construct, which is similar to one which occurs
 // in Firefox, is folded correctly.

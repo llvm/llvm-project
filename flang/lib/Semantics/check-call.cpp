@@ -56,6 +56,10 @@ static void CheckImplicitInterfaceArg(evaluate::ActualArgument &arg,
         "%VAL argument must be a scalar numeric or logical expression"_err_en_US);
   }
   if (const auto *expr{arg.UnwrapExpr()}) {
+    if (const Symbol * base{GetFirstSymbol(*expr)};
+        base && IsFunctionResult(*base)) {
+      context.NoteDefinedSymbol(*base);
+    }
     if (IsBOZLiteral(*expr)) {
       messages.Say("BOZ argument requires an explicit interface"_err_en_US);
     } else if (evaluate::IsNullPointer(*expr)) {
@@ -78,10 +82,6 @@ static void CheckImplicitInterfaceArg(evaluate::ActualArgument &arg,
       if (symbol.attrs().test(Attr::VOLATILE)) {
         messages.Say(
             "VOLATILE argument requires an explicit interface"_err_en_US);
-      }
-      if (const Symbol & base{named->GetFirstSymbol()};
-          IsFunctionResult(base)) {
-        context.NoteDefinedSymbol(base);
       }
     } else if (auto argChars{characteristics::DummyArgument::FromActual(
                    "actual argument", *expr, context.foldingContext(),
@@ -1363,6 +1363,14 @@ static bool CheckElementalConformance(parser::ContextualMessages &messages,
     const auto &dummy{proc.dummyArguments.at(index++)};
     if (arg) {
       if (const auto *expr{arg->UnwrapExpr()}) {
+        if (const auto *wholeSymbol{evaluate::UnwrapWholeSymbolDataRef(arg)}) {
+          wholeSymbol = &ResolveAssociations(*wholeSymbol);
+          if (IsAssumedSizeArray(*wholeSymbol)) {
+            evaluate::SayWithDeclaration(messages, *wholeSymbol,
+                "Whole assumed-size array '%s' may not be used as an argument to an elemental procedure"_err_en_US,
+                wholeSymbol->name());
+          }
+        }
         if (auto argShape{evaluate::GetShape(context, *expr)}) {
           if (GetRank(*argShape) > 0) {
             std::string argName{"actual argument ("s + expr->AsFortran() +

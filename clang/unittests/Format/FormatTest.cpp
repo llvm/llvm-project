@@ -11749,6 +11749,7 @@ TEST_F(FormatTest, UnderstandsNewAndDelete) {
                "};",
                AfterPlacementOperator);
   verifyFormat("void operator new(void *foo) ATTRIB;", AfterPlacementOperator);
+  verifyFormat("delete (int *)p;", AfterPlacementOperator);
 
   AfterPlacementOperator.SpaceBeforeParensOptions.AfterPlacementOperator =
       false;
@@ -11764,6 +11765,7 @@ TEST_F(FormatTest, UnderstandsNewAndDelete) {
                "};",
                AfterPlacementOperator);
   verifyFormat("void operator new(void *foo) ATTRIB;", AfterPlacementOperator);
+  verifyFormat("delete (int *)p;", AfterPlacementOperator);
 }
 
 TEST_F(FormatTest, UnderstandsUsesOfStarAndAmp) {
@@ -19313,6 +19315,24 @@ TEST_F(FormatTest, AlignConsecutiveAssignments) {
   verifyFormat("SomeName = Foo;\n"
                "X        = func<Type, Type>(looooooooooooooooooooooooong,\n"
                "                            arrrrrrrrrrg);",
+               Alignment);
+
+  Alignment.ColumnLimit = 80;
+  Alignment.SpacesInAngles = FormatStyle::SIAS_Always;
+  verifyFormat("void **ptr = reinterpret_cast< void ** >(unkn);\n"
+               "ptr        = reinterpret_cast< void ** >(ptr[0]);",
+               Alignment);
+  verifyFormat("quint32 *dstimg  = reinterpret_cast< quint32 * >(out(i));\n"
+               "quint32 *dstmask = reinterpret_cast< quint32 * >(outmask(i));",
+               Alignment);
+
+  Alignment.SpacesInParens = FormatStyle::SIPO_Custom;
+  Alignment.SpacesInParensOptions.InCStyleCasts = true;
+  verifyFormat("void **ptr = ( void ** )unkn;\n"
+               "ptr        = ( void ** )ptr[0];",
+               Alignment);
+  verifyFormat("quint32 *dstimg  = ( quint32 * )out.scanLine(i);\n"
+               "quint32 *dstmask = ( quint32 * )outmask.scanLine(i);",
                Alignment);
 }
 

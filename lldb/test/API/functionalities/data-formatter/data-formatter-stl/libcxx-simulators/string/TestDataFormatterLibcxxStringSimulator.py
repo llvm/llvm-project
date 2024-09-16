@@ -22,6 +22,9 @@ class LibcxxStringDataFormatterSimulatorTestCase(TestBase):
         self.expect_var_path("shortstring", summary='"short"')
         self.expect_var_path("longstring", summary='"I am a very long string"')
 
+        self.expect_expr("shortstring", result_summary='"short"')
+        self.expect_expr("longstring", result_summary='"I am a very long string"')
+
 
 for v in [None, "ALTERNATE_LAYOUT"]:
     for r in range(5):

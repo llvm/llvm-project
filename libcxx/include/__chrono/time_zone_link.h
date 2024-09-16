@@ -68,7 +68,7 @@ operator<=>(const time_zone_link& __x, const time_zone_link& __y) noexcept {
 
 } // namespace chrono
 
-#  endif //_LIBCPP_STD_VER >= 20
+#  endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

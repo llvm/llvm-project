@@ -39,6 +39,7 @@
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaCUDA.h"
+#include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaLambda.h"
 #include "clang/Sema/SemaObjC.h"
@@ -1539,9 +1540,6 @@ Sema::BuildCXXTypeConstructExpr(TypeSourceInfo *TInfo,
                                 bool ListInitialization) {
   QualType Ty = TInfo->getType();
   SourceLocation TyBeginLoc = TInfo->getTypeLoc().getBeginLoc();
-
-  assert((!ListInitialization || Exprs.size() == 1) &&
-         "List initialization must have exactly one expression.");
   SourceRange FullRange = SourceRange(TyBeginLoc, RParenOrBraceLoc);
 
   InitializedEntity Entity =
@@ -2198,8 +2196,8 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
     if (getLangOpts().CPlusPlus14) {
       assert(Context.getTargetInfo().getIntWidth() && "Builtin type of size 0?");
 
-      ConvertedSize = PerformImplicitConversion(*ArraySize, Context.getSizeType(),
-                                                AA_Converting);
+      ConvertedSize = PerformImplicitConversion(
+          *ArraySize, Context.getSizeType(), AssignmentAction::Converting);
 
       if (!ConvertedSize.isInvalid() &&
           (*ArraySize)->getType()->getAs<RecordType>())
@@ -3850,7 +3848,8 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
             Context.getQualifiedType(Pointee.getUnqualifiedType(), Qs));
         Ex = ImpCastExprToType(Ex.get(), Unqual, CK_NoOp);
       }
-      Ex = PerformImplicitConversion(Ex.get(), ParamType, AA_Passing);
+      Ex = PerformImplicitConversion(Ex.get(), ParamType,
+                                     AssignmentAction::Passing);
       if (Ex.isInvalid())
         return ExprError();
     }
@@ -4255,10 +4254,9 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
       }
       // Watch out for ellipsis conversion.
       if (!ICS.UserDefined.EllipsisConversion) {
-        ExprResult Res =
-          PerformImplicitConversion(From, BeforeToType,
-                                    ICS.UserDefined.Before, AA_Converting,
-                                    CCK);
+        ExprResult Res = PerformImplicitConversion(
+            From, BeforeToType, ICS.UserDefined.Before,
+            AssignmentAction::Converting, CCK);
         if (Res.isInvalid())
           return ExprError();
         From = Res.get();
@@ -4281,7 +4279,7 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
         return From;
 
       return PerformImplicitConversion(From, ToType, ICS.UserDefined.After,
-                                       AA_Converting, CCK);
+                                       AssignmentAction::Converting, CCK);
   }
 
   case ImplicitConversionSequence::AmbiguousConversion:
@@ -4312,8 +4310,10 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
 // from type to the elements of the to type without resizing the vector.
 static QualType adjustVectorType(ASTContext &Context, QualType FromTy,
                                  QualType ToType, QualType *ElTy = nullptr) {
-  auto *ToVec = ToType->castAs<VectorType>();
-  QualType ElType = ToVec->getElementType();
+  QualType ElType = ToType;
+  if (auto *ToVec = ToType->getAs<VectorType>())
+    ElType = ToVec->getElementType();
+
   if (ElTy)
     *ElTy = ElType;
   if (!FromTy->isVectorType())
@@ -4450,19 +4450,19 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
     //   target entity shall allow at least the exceptions allowed by the
     //   source value in the assignment or initialization.
     switch (Action) {
-    case AA_Assigning:
-    case AA_Initializing:
+    case AssignmentAction::Assigning:
+    case AssignmentAction::Initializing:
       // Note, function argument passing and returning are initialization.
-    case AA_Passing:
-    case AA_Returning:
-    case AA_Sending:
-    case AA_Passing_CFAudited:
+    case AssignmentAction::Passing:
+    case AssignmentAction::Returning:
+    case AssignmentAction::Sending:
+    case AssignmentAction::Passing_CFAudited:
       if (CheckExceptionSpecCompatibility(From, ToType))
         return ExprError();
       break;
 
-    case AA_Casting:
-    case AA_Converting:
+    case AssignmentAction::Casting:
+    case AssignmentAction::Converting:
       // Casts and implicit conversions are not initialization, so are not
       // checked for exception specification mismatches.
       break;
@@ -4474,7 +4474,7 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
   case ICK_Integral_Conversion: {
     QualType ElTy = ToType;
     QualType StepTy = ToType;
-    if (ToType->isVectorType())
+    if (FromType->isVectorType() || ToType->isVectorType())
       StepTy = adjustVectorType(Context, FromType, ToType, &ElTy);
     if (ElTy->isBooleanType()) {
       assert(FromType->castAs<EnumType>()->getDecl()->isFixed() &&
@@ -4494,7 +4494,7 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
   case ICK_Floating_Promotion:
   case ICK_Floating_Conversion: {
     QualType StepTy = ToType;
-    if (ToType->isVectorType())
+    if (FromType->isVectorType() || ToType->isVectorType())
       StepTy = adjustVectorType(Context, FromType, ToType);
     From = ImpCastExprToType(From, StepTy, CK_FloatingCast, VK_PRValue,
                              /*BasePath=*/nullptr, CCK)
@@ -4526,7 +4526,7 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
   case ICK_Floating_Integral: {
     QualType ElTy = ToType;
     QualType StepTy = ToType;
-    if (ToType->isVectorType())
+    if (FromType->isVectorType() || ToType->isVectorType())
       StepTy = adjustVectorType(Context, FromType, ToType, &ElTy);
     if (ElTy->isRealFloatingType())
       From = ImpCastExprToType(From, StepTy, CK_IntegralToFloating, VK_PRValue,
@@ -4576,9 +4576,10 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
 
   case ICK_Writeback_Conversion:
   case ICK_Pointer_Conversion: {
-    if (SCS.IncompatibleObjC && Action != AA_Casting) {
+    if (SCS.IncompatibleObjC && Action != AssignmentAction::Casting) {
       // Diagnose incompatible Objective-C conversions
-      if (Action == AA_Initializing || Action == AA_Assigning)
+      if (Action == AssignmentAction::Initializing ||
+          Action == AssignmentAction::Assigning)
         Diag(From->getBeginLoc(),
              diag::ext_typecheck_convert_incompatible_pointer)
             << ToType << From->getType() << Action << From->getSourceRange()
@@ -4595,12 +4596,12 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
     } else if (getLangOpts().allowsNonTrivialObjCLifetimeQualifiers() &&
                !ObjC().CheckObjCARCUnavailableWeakConversion(ToType,
                                                              From->getType())) {
-      if (Action == AA_Initializing)
+      if (Action == AssignmentAction::Initializing)
         Diag(From->getBeginLoc(), diag::err_arc_weak_unavailable_assign);
       else
         Diag(From->getBeginLoc(), diag::err_arc_convesion_of_weak_unavailable)
-            << (Action == AA_Casting) << From->getType() << ToType
-            << From->getSourceRange();
+            << (Action == AssignmentAction::Casting) << From->getType()
+            << ToType << From->getSourceRange();
     }
 
     // Defer address space conversion to the third conversion.
@@ -4667,11 +4668,11 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
     }
     QualType ElTy = FromType;
     QualType StepTy = ToType;
-    if (FromType->isVectorType()) {
-      if (getLangOpts().HLSL)
-        StepTy = adjustVectorType(Context, FromType, ToType);
+    if (FromType->isVectorType())
       ElTy = FromType->castAs<VectorType>()->getElementType();
-    }
+    if (getLangOpts().HLSL &&
+        (FromType->isVectorType() || ToType->isVectorType()))
+      StepTy = adjustVectorType(Context, FromType, ToType);
 
     From = ImpCastExprToType(From, StepTy, ScalarTypeToBooleanCastKind(ElTy),
                              VK_PRValue,
@@ -4826,8 +4827,8 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
     // TODO: Support HLSL matrices.
     assert((!From->getType()->isMatrixType() && !ToType->isMatrixType()) &&
            "Dimension conversion for matrix types is not implemented yet.");
-    assert(ToType->isVectorType() &&
-           "Dimension conversion is only supported for vector types.");
+    assert((ToType->isVectorType() || ToType->isBuiltinType()) &&
+           "Dimension conversion output must be vector or scalar type.");
     switch (SCS.Dimension) {
     case ICK_HLSL_Vector_Splat: {
       // Vector splat from any arithmetic type to a vector.
@@ -4839,18 +4840,18 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
     }
     case ICK_HLSL_Vector_Truncation: {
       // Note: HLSL built-in vectors are ExtVectors. Since this truncates a
-      // vector to a smaller vector, this can only operate on arguments where
-      // the source and destination types are ExtVectors.
-      assert(From->getType()->isExtVectorType() && ToType->isExtVectorType() &&
-             "HLSL vector truncation should only apply to ExtVectors");
+      // vector to a smaller vector or to a scalar, this can only operate on
+      // arguments where the source type is an ExtVector and the destination
+      // type is destination type is either an ExtVectorType or a builtin scalar
+      // type.
       auto *FromVec = From->getType()->castAs<VectorType>();
-      auto *ToVec = ToType->castAs<VectorType>();
-      QualType ElType = FromVec->getElementType();
-      QualType TruncTy =
-          Context.getExtVectorType(ElType, ToVec->getNumElements());
+      QualType TruncTy = FromVec->getElementType();
+      if (auto *ToVec = ToType->getAs<VectorType>())
+        TruncTy = Context.getExtVectorType(TruncTy, ToVec->getNumElements());
       From = ImpCastExprToType(From, TruncTy, CK_HLSLVectorTruncation,
                                From->getValueKind())
                  .get();
+
       break;
     }
     case ICK_Identity:
@@ -5109,6 +5110,7 @@ static bool CheckUnaryTypeTraitTypeCompleteness(Sema &S, TypeTrait UTT,
   case UTT_IsDestructible:
   case UTT_IsNothrowDestructible:
   case UTT_IsTriviallyDestructible:
+  case UTT_IsIntangibleType:
     if (ArgTy->isIncompleteArrayType() || ArgTy->isVoidType())
       return true;
 
@@ -5168,7 +5170,8 @@ static bool HasNonDeletedDefaultedEqualityComparison(Sema &S,
 
     // const ClassT& obj;
     OpaqueValueExpr Operand(
-        {}, Decl->getTypeForDecl()->getCanonicalTypeUnqualified().withConst(),
+        KeyLoc,
+        Decl->getTypeForDecl()->getCanonicalTypeUnqualified().withConst(),
         ExprValueKind::VK_LValue);
     UnresolvedSet<16> Functions;
     // obj == obj;
@@ -5694,6 +5697,16 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
         return true;
     return false;
   }
+  case UTT_IsIntangibleType:
+    assert(Self.getLangOpts().HLSL && "intangible types are HLSL-only feature");
+    if (!T->isVoidType() && !T->isIncompleteArrayType())
+      if (Self.RequireCompleteType(TInfo->getTypeLoc().getBeginLoc(), T,
+                                   diag::err_incomplete_type))
+        return false;
+    if (DiagnoseVLAInCXXTypeTrait(Self, TInfo,
+                                  tok::kw___builtin_hlsl_is_intangible))
+      return false;
+    return Self.HLSL().IsIntangibleType(T);
   }
 }
 
@@ -6248,6 +6261,23 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT, const TypeSourceI
                TSTToBeDeduced->getTemplateName().getAsTemplateDecl(), RhsT,
                Info) == TemplateDeductionResult::Success;
   }
+  case BTT_IsScalarizedLayoutCompatible: {
+    if (!LhsT->isVoidType() && !LhsT->isIncompleteArrayType() &&
+        Self.RequireCompleteType(Lhs->getTypeLoc().getBeginLoc(), LhsT,
+                                 diag::err_incomplete_type))
+      return true;
+    if (!RhsT->isVoidType() && !RhsT->isIncompleteArrayType() &&
+        Self.RequireCompleteType(Rhs->getTypeLoc().getBeginLoc(), RhsT,
+                                 diag::err_incomplete_type))
+      return true;
+
+    DiagnoseVLAInCXXTypeTrait(
+        Self, Lhs, tok::kw___builtin_hlsl_is_scalarized_layout_compatible);
+    DiagnoseVLAInCXXTypeTrait(
+        Self, Rhs, tok::kw___builtin_hlsl_is_scalarized_layout_compatible);
+
+    return Self.HLSL().IsScalarizedLayoutCompatible(LhsT, RhsT);
+  }
   default:
     llvm_unreachable("not a BTT");
   }
@@ -6648,14 +6678,14 @@ static bool FindConditionalOverload(Sema &Self, ExprResult &LHS, ExprResult &RHS
       // We found a match. Perform the conversions on the arguments and move on.
       ExprResult LHSRes = Self.PerformImplicitConversion(
           LHS.get(), Best->BuiltinParamTypes[0], Best->Conversions[0],
-          Sema::AA_Converting);
+          AssignmentAction::Converting);
       if (LHSRes.isInvalid())
         break;
       LHS = LHSRes;
 
       ExprResult RHSRes = Self.PerformImplicitConversion(
           RHS.get(), Best->BuiltinParamTypes[1], Best->Conversions[1],
-          Sema::AA_Converting);
+          AssignmentAction::Converting);
       if (RHSRes.isInvalid())
         break;
       RHS = RHSRes;

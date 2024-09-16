@@ -24,7 +24,7 @@
 ; RUN:  -r %t/m2.bc,f1 \
 ; RUN:  -r %t/m2.bc,f3 \
 ; RUN:  -r %t/m2.bc,entrypoint,plx
-; RUN: opt --passes='function-import,require<ctx-prof-analysis>,print<ctx-prof-analysis>' \
+; RUN: opt --passes='function-import,require<ctx-prof-analysis>,print<ctx-prof-analysis>' -ctx-profile-printer-level=everything \
 ; RUN:  -summary-file=%t/m2.bc.thinlto.bc -use-ctx-profile=%t/profile.ctxprofdata %t/m2.bc \
 ; RUN:  -S -o %t/m2.post.ll 2> %t/profile.txt
 ; RUN: diff %t/expected.txt %t/profile.txt
@@ -116,10 +116,10 @@ define void @entrypoint() {
 ]
 ;--- expected.txt
 Function Info:
-10507721908651011566 : entrypoint. MaxCounterID: 1. MaxCallsiteID: 2
+2072045998141807037 : f1. MaxCounterID: 1. MaxCallsiteID: 1
 3087265239403591524 : f2.llvm.0. MaxCounterID: 1. MaxCallsiteID: 0
 4197650231481825559 : f3. MaxCounterID: 1. MaxCallsiteID: 1
-2072045998141807037 : f1. MaxCounterID: 1. MaxCallsiteID: 1
+10507721908651011566 : entrypoint. MaxCounterID: 1. MaxCallsiteID: 2
 
 Current Profile:
 [
@@ -172,7 +172,7 @@ Current Profile:
 ]
 
 Flat Profile:
-10507721908651011566 : 1 
+2072045998141807037 : 7 
 3087265239403591524 : 11 9 
 4197650231481825559 : 2 
-2072045998141807037 : 7 
+10507721908651011566 : 1 

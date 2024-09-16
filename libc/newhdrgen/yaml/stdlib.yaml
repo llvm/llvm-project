@@ -273,3 +273,63 @@ functions:
       - type: const char *__restrict
       - type: char **__restrict
       - type: int
+  - name: strtod_l
+    standards:
+      - stdc
+    return_type: double
+    arguments:
+      - type: const char *__restrict
+      - type: char **__restrict
+      - type: locale_t
+  - name: strtof_l
+    standards:
+      - stdc
+    return_type: float
+    arguments:
+      - type: const char *__restrict
+      - type: char **__restrict
+      - type: locale_t
+  - name: strtol_l
+    standards:
+      - stdc
+    return_type: long
+    arguments:
+      - type: const char *__restrict
+      - type: char **__restrict
+      - type: int
+      - type: locale_t
+  - name: strtold_l
+    standards:
+      - stdc
+    return_type: long double
+    arguments:
+      - type: const char *__restrict
+      - type: char **__restrict
+      - type: locale_t
+  - name: strtoll_l
+    standards:
+      - stdc
+    return_type: long long
+    arguments:
+      - type: const char *__restrict
+      - type: char **__restrict
+      - type: int
+      - type: locale_t
+  - name: strtoul_l
+    standards:
+      - stdc
+    return_type: unsigned long
+    arguments:
+      - type: const char *__restrict
+      - type: char **__restrict
+      - type: int
+      - type: locale_t
+  - name: strtoull_l
+    standards:
+      - stdc
+    return_type: unsigned long long
+    arguments:
+      - type: const char *__restrict
+      - type: char **__restrict
+      - type: int
+      - type: locale_t

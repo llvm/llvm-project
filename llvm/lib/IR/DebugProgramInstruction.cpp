@@ -473,11 +473,12 @@ DbgLabelRecord::createDebugIntrinsic(Module *M,
 
 Value *DbgVariableRecord::getAddress() const {
   auto *MD = getRawAddress();
-  if (auto *V = dyn_cast<ValueAsMetadata>(MD))
+  if (auto *V = dyn_cast_or_null<ValueAsMetadata>(MD))
     return V->getValue();
 
   // When the value goes to null, it gets replaced by an empty MDNode.
-  assert(!cast<MDNode>(MD)->getNumOperands() && "Expected an empty MDNode");
+  assert((!MD || !cast<MDNode>(MD)->getNumOperands()) &&
+         "Expected an empty MDNode");
   return nullptr;
 }
 

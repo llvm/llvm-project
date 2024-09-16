@@ -178,6 +178,14 @@ functions:
       - type: FILE *__restrict
       - type: const char *__restrict
       - type: '...'
+  - name: vfscanf
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: FILE *__restrict
+      - type: const char *__restrict
+      - type: va_list
   - name: fseek
     standards:
       - stdc
@@ -284,6 +292,13 @@ functions:
     arguments:
       - type: const char *__restrict
       - type: '...'
+  - name: vscanf
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: const char *__restrict
+      - type: va_list
   - name: setbuf
     standards:
       - stdc

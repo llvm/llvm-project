@@ -54,6 +54,7 @@
 #include "ExceptionBreakpoint.h"
 #include "FunctionBreakpoint.h"
 #include "IOStream.h"
+#include "InstructionBreakpoint.h"
 #include "ProgressEvent.h"
 #include "RunInTerminal.h"
 #include "SourceBreakpoint.h"
@@ -68,6 +69,8 @@ namespace lldb_dap {
 
 typedef llvm::DenseMap<uint32_t, SourceBreakpoint> SourceBreakpointMap;
 typedef llvm::StringMap<FunctionBreakpoint> FunctionBreakpointMap;
+typedef llvm::DenseMap<lldb::addr_t, InstructionBreakpoint>
+    InstructionBreakpointMap;
 
 enum class OutputType { Console, Stdout, Stderr, Telemetry };
 
@@ -160,6 +163,7 @@ struct DAP {
   std::unique_ptr<std::ofstream> log;
   llvm::StringMap<SourceBreakpointMap> source_breakpoints;
   FunctionBreakpointMap function_breakpoints;
+  InstructionBreakpointMap instruction_breakpoints;
   std::optional<std::vector<ExceptionBreakpoint>> exception_breakpoints;
   llvm::once_flag init_exception_breakpoints_flag;
   std::vector<std::string> pre_init_commands;
@@ -333,6 +337,10 @@ struct DAP {
   void SetFrameFormat(llvm::StringRef format);
 
   void SetThreadFormat(llvm::StringRef format);
+
+  InstructionBreakpoint *GetInstructionBreakpoint(const lldb::break_id_t bp_id);
+
+  InstructionBreakpoint *GetInstructionBPFromStopReason(lldb::SBThread &thread);
 
 private:
   // Send the JSON in "json_str" to the "out" stream. Correctly send the

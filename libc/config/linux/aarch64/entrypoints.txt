@@ -211,10 +211,12 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdio.fileno
     libc.src.stdio.fprintf
     libc.src.stdio.fscanf
+    libc.src.stdio.vfscanf
     libc.src.stdio.printf
     libc.src.stdio.remove
     libc.src.stdio.rename
     libc.src.stdio.scanf
+    libc.src.stdio.vscanf
     libc.src.stdio.snprintf
     libc.src.stdio.sprintf
     libc.src.stdio.asprintf

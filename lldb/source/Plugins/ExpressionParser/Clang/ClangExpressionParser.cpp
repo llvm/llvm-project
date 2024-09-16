@@ -1229,8 +1229,6 @@ ClangExpressionParser::ParseInternal(DiagnosticManager &diagnostic_manager,
       auto *module_wrapper =
           new ExternalASTSourceWrapper(ast_context.getExternalSource());
 
-      auto *ast_source_wrapper = new ExternalASTSourceWrapper(ast_source);
-
       auto *multiplexer =
           new SemaSourceWithPriorities(module_wrapper, ast_source_wrapper);
 
@@ -1393,8 +1391,7 @@ lldb_private::Status ClangExpressionParser::DoPrepareForExecution(
       m_code_generator->ReleaseModule());
 
   if (!llvm_module_up) {
-    err.SetErrorToGenericError();
-    err.SetErrorString("IR doesn't contain a module");
+    err = Status::FromErrorString("IR doesn't contain a module");
     return err;
   }
 
@@ -1405,9 +1402,8 @@ lldb_private::Status ClangExpressionParser::DoPrepareForExecution(
 
     if (!FindFunctionInModule(function_name, llvm_module_up.get(),
                               m_expr.FunctionName())) {
-      err.SetErrorToGenericError();
-      err.SetErrorStringWithFormat("Couldn't find %s() in the module",
-                                   m_expr.FunctionName());
+      err = Status::FromErrorStringWithFormat(
+          "Couldn't find %s() in the module", m_expr.FunctionName());
       return err;
     } else {
       LLDB_LOGF(log, "Found function %s for %s", function_name.AsCString(),
@@ -1463,7 +1459,7 @@ lldb_private::Status ClangExpressionParser::DoPrepareForExecution(
                               function_name.AsCString());
 
     if (!ir_for_target.runOnModule(*execution_unit_sp->GetModule())) {
-      err.SetErrorString(error_stream.GetString());
+      err = Status(error_stream.GetString().str());
       return err;
     }
 
@@ -1480,7 +1476,7 @@ lldb_private::Status ClangExpressionParser::DoPrepareForExecution(
           interpret_error, interpret_function_calls);
 
       if (!can_interpret && execution_policy == eExecutionPolicyNever) {
-        err.SetErrorStringWithFormat(
+        err = Status::FromErrorStringWithFormat(
             "Can't evaluate the expression without a running target due to: %s",
             interpret_error.AsCString());
         return err;
@@ -1488,14 +1484,16 @@ lldb_private::Status ClangExpressionParser::DoPrepareForExecution(
     }
 
     if (!process && execution_policy == eExecutionPolicyAlways) {
-      err.SetErrorString("Expression needed to run in the target, but the "
-                         "target can't be run");
+      err = Status::FromErrorString(
+          "Expression needed to run in the target, but the "
+          "target can't be run");
       return err;
     }
 
     if (!process && execution_policy == eExecutionPolicyTopLevel) {
-      err.SetErrorString("Top-level code needs to be inserted into a runnable "
-                         "target, but the target can't be run");
+      err = Status::FromErrorString(
+          "Top-level code needs to be inserted into a runnable "
+          "target, but the target can't be run");
       return err;
     }
 
@@ -1511,7 +1509,7 @@ lldb_private::Status ClangExpressionParser::DoPrepareForExecution(
             std::string ErrMsg = "couldn't install checkers: " + toString(std::move(Err));
             if (install_diags.Diagnostics().size())
               ErrMsg = ErrMsg + "\n" + install_diags.GetString().c_str();
-            err.SetErrorString(ErrMsg);
+            err = Status(ErrMsg);
             return err;
           }
 
@@ -1528,8 +1526,8 @@ lldb_private::Status ClangExpressionParser::DoPrepareForExecution(
 
           llvm::Module *module = execution_unit_sp->GetModule();
           if (!module || !ir_dynamic_checks.runOnModule(*module)) {
-            err.SetErrorToGenericError();
-            err.SetErrorString("Couldn't add dynamic checks to the expression");
+            err = Status::FromErrorString(
+                "Couldn't add dynamic checks to the expression");
             return err;
           }
 

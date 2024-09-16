@@ -1662,7 +1662,7 @@ template <class ELFT> void elf::scanRelocations() {
 
   tg.spawn([] {
     RelocationScanner scanner;
-    for (Partition &part : partitions) {
+    for (Partition &part : ctx.partitions) {
       for (EhInputSection *sec : part.ehFrame->sections)
         scanner.template scanSection<ELFT>(*sec, /*isEH=*/true);
       if (part.armExidx && part.armExidx->isLive())

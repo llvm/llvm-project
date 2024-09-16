@@ -298,7 +298,7 @@ ObjectFile *Module::GetMemoryObjectFile(const lldb::ProcessSP &process_sp,
                                         lldb::addr_t header_addr, Status &error,
                                         size_t size_to_read) {
   if (m_objfile_sp) {
-    error.SetErrorString("object file already exists");
+    error = Status::FromErrorString("object file already exists");
   } else {
     std::lock_guard<std::recursive_mutex> guard(m_mutex);
     if (process_sp) {
@@ -330,14 +330,15 @@ ObjectFile *Module::GetMemoryObjectFile(const lldb::ProcessSP &process_sp,
 
           m_unwind_table.ModuleWasUpdated();
         } else {
-          error.SetErrorString("unable to find suitable object file plug-in");
+          error = Status::FromErrorString(
+              "unable to find suitable object file plug-in");
         }
       } else {
-        error.SetErrorStringWithFormat("unable to read header from memory: %s",
-                                       readmem_error.AsCString());
+        error = Status::FromErrorStringWithFormat(
+            "unable to read header from memory: %s", readmem_error.AsCString());
       }
     } else {
-      error.SetErrorString("invalid process");
+      error = Status::FromErrorString("invalid process");
     }
   }
   return m_objfile_sp.get();
@@ -1427,7 +1428,7 @@ bool Module::IsLoadedInTarget(Target *target) {
 bool Module::LoadScriptingResourceInTarget(Target *target, Status &error,
                                            Stream &feedback_stream) {
   if (!target) {
-    error.SetErrorString("invalid destination Target");
+    error = Status::FromErrorString("invalid destination Target");
     return false;
   }
 
@@ -1444,7 +1445,7 @@ bool Module::LoadScriptingResourceInTarget(Target *target, Status &error,
     PlatformSP platform_sp(target->GetPlatform());
 
     if (!platform_sp) {
-      error.SetErrorString("invalid Platform");
+      error = Status::FromErrorString("invalid Platform");
       return false;
     }
 
@@ -1482,7 +1483,7 @@ bool Module::LoadScriptingResourceInTarget(Target *target, Status &error,
           }
         }
       } else {
-        error.SetErrorString("invalid ScriptInterpreter");
+        error = Status::FromErrorString("invalid ScriptInterpreter");
         return false;
       }
     }

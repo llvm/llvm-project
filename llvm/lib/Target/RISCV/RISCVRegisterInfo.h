@@ -130,19 +130,6 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
                              const MachineFunction &MF, const VirtRegMap *VRM,
                              const LiveRegMatrix *Matrix) const override;
 
-  const TargetRegisterClass *
-  getLargestSuperClass(const TargetRegisterClass *RC) const override {
-    if (RISCV::VRM8RegClass.hasSubClassEq(RC))
-      return &RISCV::VRM8RegClass;
-    if (RISCV::VRM4RegClass.hasSubClassEq(RC))
-      return &RISCV::VRM4RegClass;
-    if (RISCV::VRM2RegClass.hasSubClassEq(RC))
-      return &RISCV::VRM2RegClass;
-    if (RISCV::VRRegClass.hasSubClassEq(RC))
-      return &RISCV::VRRegClass;
-    return RC;
-  }
-
   bool doesRegClassHavePseudoInitUndef(
       const TargetRegisterClass *RC) const override {
     return isVRRegClass(RC);
