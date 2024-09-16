@@ -108,6 +108,8 @@ private:
           llvmFunc->addFnAttr(llvm::Attribute::OptimizeNone);
         } else if (mlir::dyn_cast<mlir::cir::NoThrowAttr>(attr.getValue())) {
           llvmFunc->addFnAttr(llvm::Attribute::NoUnwind);
+        } else if (mlir::dyn_cast<mlir::cir::ConvergentAttr>(attr.getValue())) {
+          llvmFunc->addFnAttr(llvm::Attribute::Convergent);
         } else if (auto clKernelMetadata =
                        mlir::dyn_cast<mlir::cir::OpenCLKernelMetadataAttr>(
                            attr.getValue())) {

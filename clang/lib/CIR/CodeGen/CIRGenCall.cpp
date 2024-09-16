@@ -440,6 +440,9 @@ void CIRGenModule::constructAttributeList(StringRef Name,
     if (TargetDecl->hasAttr<ArmLocallyStreamingAttr>())
       ;
   }
+
+  getDefaultFunctionAttributes(Name, HasOptnone, AttrOnCallSite, funcAttrs);
+
 }
 
 static mlir::cir::CIRCallOpInterface
@@ -1558,4 +1561,41 @@ mlir::Value CIRGenFunction::buildVAArg(VAArgExpr *VE, Address &VAListAddr) {
   auto type = ConvertType(VE->getType());
   auto vaList = buildVAListRef(VE->getSubExpr()).getPointer();
   return builder.create<mlir::cir::VAArgOp>(loc, type, vaList);
+}
+
+static void getTrivialDefaultFunctionAttributes(
+    StringRef name, bool hasOptnone, const CodeGenOptions &codeGenOpts,
+    const LangOptions &langOpts, bool attrOnCallSite, CIRGenModule &CGM,
+    mlir::NamedAttrList &funcAttrs) {
+
+  if (langOpts.assumeFunctionsAreConvergent()) {
+    // Conservatively, mark all functions and calls in CUDA and OpenCL as
+    // convergent (meaning, they may call an intrinsically convergent op, such
+    // as __syncthreads() / barrier(), and so can't have certain optimizations
+    // applied around them).  LLVM will remove this attribute where it safely
+    // can.
+
+    auto convgt = mlir::cir::ConvergentAttr::get(CGM.getBuilder().getContext());
+    funcAttrs.set(convgt.getMnemonic(), convgt);
+  }
+}
+
+void CIRGenModule::getTrivialDefaultFunctionAttributes(
+    StringRef name, bool hasOptnone, bool attrOnCallSite,
+    mlir::NamedAttrList &funcAttrs) {
+  ::getTrivialDefaultFunctionAttributes(name, hasOptnone, getCodeGenOpts(),
+                                        getLangOpts(), attrOnCallSite, *this,
+                                        funcAttrs);
+}
+
+void CIRGenModule::getDefaultFunctionAttributes(StringRef name, bool hasOptnone,
+                                                bool attrOnCallSite,
+                                                mlir::NamedAttrList &funcAttrs) {
+  getTrivialDefaultFunctionAttributes(name, hasOptnone, attrOnCallSite,
+                                      funcAttrs);
+  // If we're just getting the default, get the default values for mergeable
+  // attributes.
+  if (!attrOnCallSite) {
+    // TODO(cir): addMergableDefaultFunctionAttributes(codeGenOpts, funcAttrs);
+  }
 }

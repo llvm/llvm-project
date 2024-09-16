@@ -1042,6 +1042,10 @@ def NoThrowAttr : CIRUnitAttr<"NoThrow", "nothrow"> {
   let storageType = [{ NoThrowAttr }];
 }
 
+def ConvergentAttr : CIRUnitAttr<"Convergent", "convergent"> {
+  let storageType = [{ ConvergentAttr }];
+}
+
 class CIR_GlobalCtorDtor<string name, string attrMnemonic,
                          string sum, string desc>
     : CIR_Attr<"Global" # name, "global_" # attrMnemonic> {
