@@ -1,11 +1,10 @@
-// RUN: %clang_cc1 -verify -triple x86_64-unknown-linux-gnu -fsyntax-only --embed-dir=%S/Inputs -std=c23 %s -pedantic -Wall
+// RUN: %clang_cc1 -verify -triple x86_64-unknown-linux-gnu -fsyntax-only -std=c23 %s -pedantic -Wall
 
 #include <limits.h>
 
 enum us : unsigned short {
   us_max = USHRT_MAX,
   us_violation,  // expected-error {{enumerator value 65536 is not representable in the underlying type 'unsigned short'}}
-                 // expected-warning@-1 {{overflow}}
   us_violation_2 = us_max + 1, // expected-error {{enumerator value is not representable in the underlying type 'unsigned short'}}
   us_wrap_around_to_zero = (unsigned short)(USHRT_MAX + 1) /* Okay: conversion
                             done in constant expression before conversion to
@@ -15,7 +14,6 @@ enum us : unsigned short {
 enum ui : unsigned int {
   ui_max = UINT_MAX,
   ui_violation,  // expected-error {{enumerator value 4294967296 is not representable in the underlying type 'unsigned int'}}
-                 // expected-warning@-1 {{overflow}}
   ui_no_violation = ui_max + 1,
   ui_wrap_around_to_zero = (unsigned int)(UINT_MAX + 1)
 };

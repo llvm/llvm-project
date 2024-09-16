@@ -5450,7 +5450,7 @@ void Parser::ParseEnumSpecifier(SourceLocation StartLoc, DeclSpec &DS,
           Diag(ColonLoc, diag::ext_ms_c_enum_fixed_underlying_type)
               << BaseRange;
         else
-          Diag(ColonLoc, (getLangOpts().C23)
+          Diag(ColonLoc, getLangOpts().C23
                              ? diag::warn_c17_compat_enum_fixed_underlying_type
                              : diag::ext_c23_enum_fixed_underlying_type)
               << BaseRange;
