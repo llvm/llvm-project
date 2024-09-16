@@ -382,7 +382,7 @@ class DwarfDebug : public DebugHandlerBase {
                               SmallPtrSet<const MDNode *, 2>>;
   DenseMap<const DILocalScope *, MDNodeSet> LocalDeclsPerLS;
 
-  SmallDenseSet<const MachineBasicBlock *> MBBsStartingWithIsStmt;
+  SmallDenseSet<const MachineInstr *> ForceIsStmtInstrs;
 
   /// If nonnull, stores the current machine function we're processing.
   const MachineFunction *CurFn = nullptr;
