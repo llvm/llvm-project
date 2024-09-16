@@ -53,7 +53,13 @@ namespace llvm {
     Registry() = delete;
 
     friend class node;
-    static node *Head, *Tail;
+    // These must be must two separate declarations to workaround a 20 year
+    // old MSVC bug with dllexport and multiple static fields in the same
+    // declaration causing error C2487 "member of dll interface class may not
+    // be declared with dll interface".
+    // https://developercommunity.visualstudio.com/t/c2487-in-dllexport-class-with-static-members/69878
+    static node *Head;
+    static node *Tail;
 
   public:
     /// Node in linked list of entries.
