@@ -419,7 +419,7 @@ bool RISCVMakeCompressibleOpt::runOnMachineFunction(MachineFunction &Fn) {
         BuildMI(MBB, MI, MI.getDebugLoc(), TII.get(RISCV::ADDI), NewReg)
             .addReg(RegImm.Reg)
             .addImm(RegImm.Imm);
-      } else if (RISCV::GPRRegClass.contains(RegImm.Reg)) {
+      } else if (RISCV::GPRF16RegClass.contains(RegImm.Reg)) {
         assert(RegImm.Imm == 0);
         BuildMI(MBB, MI, MI.getDebugLoc(), TII.get(RISCV::PseudoMV_FPR16INX), NewReg)
             .addReg(RegImm.Reg);
