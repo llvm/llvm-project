@@ -229,6 +229,7 @@ template <class T, class Allocator, class Predicate>
 #include <__type_traits/type_identity.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
+#include <__utility/swap.h>
 #include <limits>
 #include <new> // __launder
 #include <version>
@@ -491,27 +492,27 @@ protected:
   typedef __rebind_alloc<allocator_traits<allocator_type>, __begin_node> __begin_node_allocator;
   typedef typename allocator_traits<__begin_node_allocator>::pointer __begin_node_pointer;
 
-  __compressed_pair<__begin_node, __node_allocator> __before_begin_;
+  _LIBCPP_COMPRESSED_PAIR(__begin_node, __before_begin_, __node_allocator, __alloc_);
 
   _LIBCPP_HIDE_FROM_ABI __begin_node_pointer __before_begin() _NOEXCEPT {
-    return pointer_traits<__begin_node_pointer>::pointer_to(__before_begin_.first());
+    return pointer_traits<__begin_node_pointer>::pointer_to(__before_begin_);
   }
   _LIBCPP_HIDE_FROM_ABI __begin_node_pointer __before_begin() const _NOEXCEPT {
-    return pointer_traits<__begin_node_pointer>::pointer_to(const_cast<__begin_node&>(__before_begin_.first()));
+    return pointer_traits<__begin_node_pointer>::pointer_to(const_cast<__begin_node&>(__before_begin_));
   }
 
-  _LIBCPP_HIDE_FROM_ABI __node_allocator& __alloc() _NOEXCEPT { return __before_begin_.second(); }
-  _LIBCPP_HIDE_FROM_ABI const __node_allocator& __alloc() const _NOEXCEPT { return __before_begin_.second(); }
+  _LIBCPP_HIDE_FROM_ABI __node_allocator& __alloc() _NOEXCEPT { return __alloc_; }
+  _LIBCPP_HIDE_FROM_ABI const __node_allocator& __alloc() const _NOEXCEPT { return __alloc_; }
 
   typedef __forward_list_iterator<__node_pointer> iterator;
   typedef __forward_list_const_iterator<__node_pointer> const_iterator;
 
   _LIBCPP_HIDE_FROM_ABI __forward_list_base() _NOEXCEPT_(is_nothrow_default_constructible<__node_allocator>::value)
-      : __before_begin_(__begin_node(), __default_init_tag()) {}
+      : __before_begin_(__begin_node()) {}
   _LIBCPP_HIDE_FROM_ABI explicit __forward_list_base(const allocator_type& __a)
-      : __before_begin_(__begin_node(), __node_allocator(__a)) {}
+      : __before_begin_(__begin_node()), __alloc_(__node_allocator(__a)) {}
   _LIBCPP_HIDE_FROM_ABI explicit __forward_list_base(const __node_allocator& __a)
-      : __before_begin_(__begin_node(), __a) {}
+      : __before_begin_(__begin_node()), __alloc_(__a) {}
 
 public:
 #ifndef _LIBCPP_CXX03_LANG
@@ -593,13 +594,13 @@ private:
 template <class _Tp, class _Alloc>
 inline __forward_list_base<_Tp, _Alloc>::__forward_list_base(__forward_list_base&& __x) noexcept(
     is_nothrow_move_constructible<__node_allocator>::value)
-    : __before_begin_(std::move(__x.__before_begin_)) {
+    : __before_begin_(std::move(__x.__before_begin_)), __alloc_(std::move(__x.__alloc_)) {
   __x.__before_begin()->__next_ = nullptr;
 }
 
 template <class _Tp, class _Alloc>
 inline __forward_list_base<_Tp, _Alloc>::__forward_list_base(__forward_list_base&& __x, const allocator_type& __a)
-    : __before_begin_(__begin_node(), __node_allocator(__a)) {
+    : __before_begin_(__begin_node()), __alloc_(__node_allocator(__a)) {
   if (__alloc() == __x.__alloc()) {
     __before_begin()->__next_     = __x.__before_begin()->__next_;
     __x.__before_begin()->__next_ = nullptr;

@@ -43,7 +43,6 @@ Implemented Papers
 - P2985R0: A type trait for detecting virtual base classes (`Github <https://github.com/llvm/llvm-project/issues/105432>`__)
 - ``std::jthread`` and ``<stop_token>`` are not guarded behind ``-fexperimental-library`` anymore
 
-
 Improvements and New Features
 -----------------------------
 
@@ -53,6 +52,9 @@ Improvements and New Features
 - The ``_LIBCPP_ENABLE_CXX20_REMOVED_UNCAUGHT_EXCEPTION`` macro has been added to make ``std::uncaught_exception``
   available in C++20 and later modes.
 
+- The internal structure ``__compressed_pair`` has been replaced with ``[[no_unique_address]]``, resulting in reduced
+  compile times and smaller debug information as well as better code generation if optimizations are disabled.
+  The Chromium project measured a 5% reduction in object file and debug information size.
 
 Deprecations and Removals
 -------------------------
@@ -97,8 +99,16 @@ LLVM 21
 ABI Affecting Changes
 ---------------------
 
-- TODO
+- The internal structure ``__compressed_pair`` has been replaced with ``[[no_unique_address]]``. The ABI impact is:
 
+  - When using the Itanium ABI (most non-MSVC platforms), empty types are now placed at the beginning of the enclosing
+    object instead of where the beginning of the ``__compressed_pair`` subobject was. This is only observable by
+    checking the address of the empty allocator, equality comparator or hasher.
+  - Additionally, using an overaligned empty type as an allocator, comparator or hasher in the associative containers
+    (and only those containers) may result in the container's object object size and data layout changing beyond only
+    the address of the empty member.
+  - When using the MSVC ABI, this change results in some classes having a completely different memory layout, so this is
+    a genuine ABI break. However, the library does not currently guarantee ABI stability on MSVC platforms.
 
 Build System Changes
 --------------------
