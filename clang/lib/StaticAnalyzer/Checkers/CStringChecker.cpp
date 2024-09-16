@@ -542,7 +542,7 @@ ProgramStateRef CStringChecker::checkInit(CheckerContext &C,
     printIdxWithOrdinalSuffix(OS, Buffer.ArgumentIndex + 1);
     OS << " argument is undefined";
     emitUninitializedReadBug(C, State, Buffer.Expression,
-                             FirstElementVal->getAsRegion(), OS.str());
+                             LastElementVal.getAsRegion(), OS.str());
     return nullptr;
   }
   return State;

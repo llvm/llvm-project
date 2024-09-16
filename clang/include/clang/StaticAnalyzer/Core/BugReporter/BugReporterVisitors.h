@@ -782,7 +782,7 @@ private:
                              const ExplodedNode *N) final;
 
   /// Consume the information on the no-store stack frame in order to
-  /// either emit a note or suppress the report enirely.
+  /// either emit a note or suppress the report entirely.
   /// \return Diagnostics piece for region not modified in the current function,
   /// if it decides to emit one.
   PathDiagnosticPieceRef
