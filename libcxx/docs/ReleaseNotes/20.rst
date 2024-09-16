@@ -49,6 +49,9 @@ Improvements and New Features
 - The ``lexicographical_compare`` and ``ranges::lexicographical_compare`` algorithms have been optimized for trivially
   equality comparable types, resulting in a performance improvement of up to 40x.
 
+- The ``_LIBCPP_ENABLE_CXX20_REMOVED_TEMPORARY_BUFFER`` macro has been added to make ``std::get_temporary_buffer`` and
+  ``std::return_temporary_buffer`` available.
+
 - The ``_LIBCPP_ENABLE_CXX20_REMOVED_UNCAUGHT_EXCEPTION`` macro has been added to make ``std::uncaught_exception``
   available in C++20 and later modes.
 
@@ -98,6 +101,12 @@ LLVM 21
 
 ABI Affecting Changes
 ---------------------
+
+- The ABI breaks for removing undefined behaviour in ``std::forward_list``, ``std::list``, ``std::map``, ``std::set``,
+  ``std::multimap``, ``std::multiset``, ``std::unordered_map``, ``std::unordered_set``, ``std::unordered_multimap`` and
+  ``std::unordered_multiset`` are now applied unconditionally. This only affects fancy pointers which have a different
+  value representation when pointing at the base of an internal node type instead of the type itself. A size or
+  alignment difference is diagnosed, but more subtle ABI breaks may result in unexpected behaviour.
 
 - The internal structure ``__compressed_pair`` has been replaced with ``[[no_unique_address]]``. The ABI impact is:
 
