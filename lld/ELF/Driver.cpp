@@ -2438,11 +2438,18 @@ static void readSymbolPartitionSection(InputSectionBase *s) {
   // Read the relocation that refers to the partition's entry point symbol.
   Symbol *sym;
   const RelsOrRelas<ELFT> rels = s->template relsOrRelas<ELFT>();
-  if (rels.areRelocsRel())
-    sym = &s->file->getRelocTargetSym(rels.rels[0]);
+  auto readEntry = [](InputFile *file, const auto &rels) -> Symbol * {
+    for (const auto &rel : rels)
+      return &file->getRelocTargetSym(rel);
+    return nullptr;
+  };
+  if (rels.areRelocsCrel())
+    sym = readEntry(s->file, rels.crels);
+  else if (rels.areRelocsRel())
+    sym = readEntry(s->file, rels.rels);
   else
-    sym = &s->file->getRelocTargetSym(rels.relas[0]);
-  if (!isa<Defined>(sym) || !sym->includeInDynsym())
+    sym = readEntry(s->file, rels.relas);
+  if (!isa_and_nonnull<Defined>(sym) || !sym->includeInDynsym())
     return;
 
   StringRef partName = reinterpret_cast<const char *>(s->content().data());
