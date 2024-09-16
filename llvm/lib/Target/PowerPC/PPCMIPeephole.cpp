@@ -177,6 +177,11 @@ public:
     if (skipFunction(MF.getFunction()))
       return false;
     bool Changed = simplifyCode();
+#ifdef EXPENSIVE_CHECKS
+    if (Changed)
+      MF.verify(this, "Error in PowerPC MI Peephole optimization, compile with "
+                      "-mllvm -disable-ppc-peephole");
+#endif
     return Changed;
   }
 };
