@@ -18,9 +18,7 @@ sandboxir::Region::Region(sandboxir::Context &Ctx, sandboxir::BasicBlock &SBBB)
 
 sandboxir::Region::~Region() {}
 
-void sandboxir::Region::add(sandboxir::Instruction *SBI) {
-  Insts.insert(SBI);
-}
+void sandboxir::Region::add(sandboxir::Instruction *SBI) { Insts.insert(SBI); }
 
 void sandboxir::Region::remove(sandboxir::Instruction *SBI) {
   Insts.remove(SBI);
@@ -30,8 +28,7 @@ void sandboxir::Region::remove(sandboxir::Instruction *SBI) {
 bool sandboxir::Region::operator==(const sandboxir::Region &Other) const {
   if (Insts.size() != Other.Insts.size())
     return false;
-  if (!std::is_permutation(Insts.begin(), Insts.end(),
-                           Other.Insts.begin()))
+  if (!std::is_permutation(Insts.begin(), Insts.end(), Other.Insts.begin()))
     return false;
   return true;
 }
@@ -49,4 +46,3 @@ void sandboxir::Region::dump() const {
 }
 
 #endif // NDEBUG
-
