@@ -7481,7 +7481,16 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
                 PrevMaxBW),
             std::min<unsigned>(DL->getTypeSizeInBits(VL0->getType()),
                                PrevMinBW));
-        ExtraBitWidthNodes.insert(VectorizableTree.size() + 1);
+      }
+      TreeEntry *TE = newTreeEntry(VL, Bundle /*vectorized*/, S, UserTreeIdx,
+                                   ReuseShuffleIndices);
+      LLVM_DEBUG(dbgs() << "SLP: added a vector of casts.\n");
+
+      TE->setOperandsInOrder();
+      for (unsigned I : seq<unsigned>(0, VL0->getNumOperands()))
+        buildTree_rec(TE->getOperand(I), Depth + 1, {TE, I});
+      if (ShuffleOrOp == Instruction::Trunc) {
+        ExtraBitWidthNodes.insert(getOperandEntry(TE, 0)->Idx);
       } else if (ShuffleOrOp == Instruction::SIToFP ||
                  ShuffleOrOp == Instruction::UIToFP) {
         unsigned NumSignBits =
@@ -7492,15 +7501,8 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
         }
         if (NumSignBits * 2 >=
             DL->getTypeSizeInBits(VL0->getOperand(0)->getType()))
-          ExtraBitWidthNodes.insert(VectorizableTree.size() + 1);
+          ExtraBitWidthNodes.insert(getOperandEntry(TE, 0)->Idx);
       }
-      TreeEntry *TE = newTreeEntry(VL, Bundle /*vectorized*/, S, UserTreeIdx,
-                                   ReuseShuffleIndices);
-      LLVM_DEBUG(dbgs() << "SLP: added a vector of casts.\n");
-
-      TE->setOperandsInOrder();
-      for (unsigned I : seq<unsigned>(0, VL0->getNumOperands()))
-        buildTree_rec(TE->getOperand(I), Depth + 1, {TE, I});
       return;
     }
     case Instruction::ICmp:

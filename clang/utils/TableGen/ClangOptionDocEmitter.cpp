@@ -136,7 +136,7 @@ Documentation extractDocumentation(const RecordKeeper &Records,
 
   auto DocumentationForOption = [&](const Record *R) -> DocumentedOption {
     auto &A = Aliases[R];
-    llvm::sort(A, CompareByName);
+    sort(A, CompareByName);
     return {R, std::move(A)};
   };
 
@@ -145,7 +145,7 @@ Documentation extractDocumentation(const RecordKeeper &Records,
     Documentation D;
 
     auto &Groups = GroupsInGroup[R];
-    llvm::sort(Groups, CompareByLocation);
+    sort(Groups, CompareByLocation);
     for (const Record *G : Groups) {
       D.Groups.emplace_back();
       D.Groups.back().Group = G;
@@ -156,7 +156,7 @@ Documentation extractDocumentation(const RecordKeeper &Records,
     }
 
     auto &Options = OptionsInGroup[R];
-    llvm::sort(Options, CompareByName);
+    sort(Options, CompareByName);
     for (const Record *O : Options)
       if (isOptionVisible(O, DocInfo))
         D.Options.push_back(DocumentationForOption(O));
