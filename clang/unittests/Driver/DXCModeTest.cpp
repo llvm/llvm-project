@@ -51,6 +51,7 @@ static void validateTargetProfile(
   EXPECT_TRUE(C);
   EXPECT_EQ(Diags.getNumErrors(), NumOfErrors);
   EXPECT_STREQ(DiagConsumer->Errors.back().c_str(), ExpectError.data());
+  Diags.Clear();
   DiagConsumer->clear();
 }
 
@@ -159,6 +160,7 @@ TEST(DxcModeTest, ValidatorVersionValidation) {
       DiagConsumer->Errors.back().c_str(),
       "invalid validator version : 0.1; if validator major version is 0, "
       "minor version must also be 0");
+  Diags.Clear();
   DiagConsumer->clear();
 
   Args = TheDriver.ParseArgStrings({"-validator-version", "1"}, false,
@@ -174,6 +176,7 @@ TEST(DxcModeTest, ValidatorVersionValidation) {
   EXPECT_STREQ(DiagConsumer->Errors.back().c_str(),
                "invalid validator version : 1; format of validator version is "
                "\"<major>.<minor>\" (ex:\"1.4\")");
+  Diags.Clear();
   DiagConsumer->clear();
 
   Args = TheDriver.ParseArgStrings({"-validator-version", "-Tlib_6_7"}, false,
@@ -190,6 +193,7 @@ TEST(DxcModeTest, ValidatorVersionValidation) {
       DiagConsumer->Errors.back().c_str(),
       "invalid validator version : -Tlib_6_7; format of validator version is "
       "\"<major>.<minor>\" (ex:\"1.4\")");
+  Diags.Clear();
   DiagConsumer->clear();
 
   Args = TheDriver.ParseArgStrings({"-validator-version", "foo"}, false,
@@ -206,6 +210,7 @@ TEST(DxcModeTest, ValidatorVersionValidation) {
       DiagConsumer->Errors.back().c_str(),
       "invalid validator version : foo; format of validator version is "
       "\"<major>.<minor>\" (ex:\"1.4\")");
+  Diags.Clear();
   DiagConsumer->clear();
 }
 
