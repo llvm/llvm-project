@@ -1210,6 +1210,10 @@ ExprResult SemaOpenACC::CheckReductionVar(Expr *VarExpr) {
 
 void SemaOpenACC::ActOnConstruct(OpenACCDirectiveKind K,
                                  SourceLocation DirLoc) {
+  // Start an evaluation context to parse the clause arguments on.
+  SemaRef.PushExpressionEvaluationContext(
+      Sema::ExpressionEvaluationContext::PotentiallyEvaluated);
+
   switch (K) {
   case OpenACCDirectiveKind::Invalid:
     // Nothing to do here, an invalid kind has nothing we can check here.  We
@@ -1626,6 +1630,8 @@ ExprResult SemaOpenACC::ActOnArraySectionExpr(Expr *Base, SourceLocation LBLoc,
 
 bool SemaOpenACC::ActOnStartStmtDirective(OpenACCDirectiveKind K,
                                           SourceLocation StartLoc) {
+  SemaRef.DiscardCleanupsInEvaluationContext();
+  SemaRef.PopExpressionEvaluationContext();
   return diagnoseConstructAppertainment(*this, K, StartLoc, /*IsStmt=*/true);
 }
 
@@ -1649,6 +1655,7 @@ StmtResult SemaOpenACC::ActOnEndStmtDirective(OpenACCDirectiveKind K,
         ParentlessLoopConstructs);
 
     ParentlessLoopConstructs.clear();
+
     return ComputeConstruct;
   }
   case OpenACCDirectiveKind::Loop: {
@@ -1704,6 +1711,11 @@ StmtResult SemaOpenACC::ActOnAssociatedStmt(SourceLocation DirectiveLoc,
 
 bool SemaOpenACC::ActOnStartDeclDirective(OpenACCDirectiveKind K,
                                           SourceLocation StartLoc) {
+  // OpenCC3.3 2.1 (line 889)
+  // A program must not depend on the order of evaluation of expressions in
+  // clause arguments or on any side effects of the evaluations.
+  SemaRef.DiscardCleanupsInEvaluationContext();
+  SemaRef.PopExpressionEvaluationContext();
   return diagnoseConstructAppertainment(*this, K, StartLoc, /*IsStmt=*/false);
 }
 

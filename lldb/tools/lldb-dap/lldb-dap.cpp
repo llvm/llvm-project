@@ -9,6 +9,7 @@
 #include "DAP.h"
 #include "Watchpoint.h"
 #include "lldb/API/SBMemoryRegionInfo.h"
+#include "llvm/Support/Base64.h"
 
 #include <cassert>
 #include <climits>
@@ -111,6 +112,9 @@ public:
 typedef void (*RequestCallback)(const llvm::json::Object &command);
 
 enum LaunchMethod { Launch, Attach, AttachForSuspendedLaunch };
+
+/// Page size used for reporting addtional frames in the 'stackTrace' request.
+constexpr int StackPageSize = 20;
 
 /// Prints a welcome message on the editor if the preprocessor variable
 /// LLDB_DAP_WELCOME_MESSAGE is defined.
@@ -632,10 +636,82 @@ void SetSourceMapFromArguments(const llvm::json::Object &arguments) {
     // Do any source remapping needed before we create our targets
     strm << "\".\" \"" << sourcePath << "\"";
   }
-  strm.flush();
   if (!sourceMapCommand.empty()) {
     g_dap.RunLLDBCommands("Setting source map:", {sourceMapCommand});
   }
+}
+
+// Fill in the stack frames of the thread.
+//
+// Threads stacks may contain runtime specific extended backtraces, when
+// constructing a stack trace first report the full thread stack trace then
+// perform a breadth first traversal of any extended backtrace frames.
+//
+// For example:
+//
+// Thread (id=th0) stack=[s0, s1, s2, s3]
+//   \ Extended backtrace "libdispatch" Thread (id=th1) stack=[s0, s1]
+//     \ Extended backtrace "libdispatch" Thread (id=th2) stack=[s0, s1]
+//   \ Extended backtrace "Application Specific Backtrace" Thread (id=th3)
+//   stack=[s0, s1, s2]
+//
+// Which will flatten into:
+//
+//  0. th0->s0
+//  1. th0->s1
+//  2. th0->s2
+//  3. th0->s3
+//  4. label - Enqueued from th1, sf=-1, i=-4
+//  5. th1->s0
+//  6. th1->s1
+//  7. label - Enqueued from th2
+//  8. th2->s0
+//  9. th2->s1
+// 10. label - Application Specific Backtrace
+// 11. th3->s0
+// 12. th3->s1
+// 13. th3->s2
+//
+// s=3,l=3 = [th0->s3, label1, th1->s0]
+bool FillStackFrames(lldb::SBThread &thread, llvm::json::Array &stack_frames,
+                     int64_t &offset, const int64_t start_frame,
+                     const int64_t levels) {
+  bool reached_end_of_stack = false;
+  for (int64_t i = start_frame;
+       static_cast<int64_t>(stack_frames.size()) < levels; i++) {
+    if (i == -1) {
+      stack_frames.emplace_back(CreateExtendedStackFrameLabel(thread));
+      continue;
+    }
+
+    lldb::SBFrame frame = thread.GetFrameAtIndex(i);
+    if (!frame.IsValid()) {
+      offset += thread.GetNumFrames() + 1 /* label between threads */;
+      reached_end_of_stack = true;
+      break;
+    }
+
+    stack_frames.emplace_back(CreateStackFrame(frame));
+  }
+
+  if (g_dap.enable_display_extended_backtrace && reached_end_of_stack) {
+    // Check for any extended backtraces.
+    for (uint32_t bt = 0;
+         bt < thread.GetProcess().GetNumExtendedBacktraceTypes(); bt++) {
+      lldb::SBThread backtrace = thread.GetExtendedBacktraceThread(
+          thread.GetProcess().GetExtendedBacktraceTypeAtIndex(bt));
+      if (!backtrace.IsValid())
+        continue;
+
+      reached_end_of_stack = FillStackFrames(
+          backtrace, stack_frames, offset,
+          (start_frame - offset) > 0 ? start_frame - offset : -1, levels);
+      if (static_cast<int64_t>(stack_frames.size()) >= levels)
+        break;
+    }
+  }
+
+  return reached_end_of_stack;
 }
 
 // "AttachRequest": {
@@ -1020,6 +1096,103 @@ void request_disconnect(const llvm::json::Object &request) {
   g_dap.disconnecting = true;
 }
 
+// "ExceptionInfoRequest": {
+//   "allOf": [ { "$ref": "#/definitions/Request" }, {
+//     "type": "object",
+//     "description": "Retrieves the details of the exception that
+//     caused this event to be raised. Clients should only call this request if
+//     the corresponding capability `supportsExceptionInfoRequest` is true.",
+//     "properties": {
+//       "command": {
+//         "type": "string",
+//         "enum": [ "exceptionInfo" ]
+//       },
+//       "arguments": {
+//         "$ref": "#/definitions/ExceptionInfoArguments"
+//       }
+//     },
+//     "required": [ "command", "arguments"  ]
+//   }]
+// },
+// "ExceptionInfoArguments": {
+//   "type": "object",
+//   "description": "Arguments for `exceptionInfo` request.",
+//   "properties": {
+//     "threadId": {
+//       "type": "integer",
+//       "description": "Thread for which exception information should be
+//       retrieved."
+//     }
+//   },
+//   "required": [ "threadId" ]
+// },
+// "ExceptionInfoResponse": {
+//   "allOf": [ { "$ref": "#/definitions/Response" }, {
+//     "type": "object",
+//     "description": "Response to `exceptionInfo` request.",
+//     "properties": {
+//       "body": {
+//         "type": "object",
+//         "properties": {
+//           "exceptionId": {
+//             "type": "string",
+//             "description": "ID of the exception that was thrown."
+//           },
+//           "description": {
+//             "type": "string",
+//             "description": "Descriptive text for the exception."
+//           },
+//           "breakMode": {
+//          "$ref": "#/definitions/ExceptionBreakMode",
+//            "description": "Mode that caused the exception notification to
+//            be raised."
+//           },
+//           "details": {
+//             "$ref": "#/definitions/ExceptionDetails",
+//            "description": "Detailed information about the exception."
+//           }
+//         },
+//         "required": [ "exceptionId", "breakMode" ]
+//       }
+//     },
+//     "required": [ "body" ]
+//   }]
+// }
+// "ExceptionDetails": {
+//   "type": "object",
+//   "description": "Detailed information about an exception that has
+//   occurred.", "properties": {
+//     "message": {
+//       "type": "string",
+//       "description": "Message contained in the exception."
+//     },
+//     "typeName": {
+//       "type": "string",
+//       "description": "Short type name of the exception object."
+//     },
+//     "fullTypeName": {
+//       "type": "string",
+//       "description": "Fully-qualified type name of the exception object."
+//     },
+//     "evaluateName": {
+//       "type": "string",
+//       "description": "An expression that can be evaluated in the current
+//       scope to obtain the exception object."
+//     },
+//     "stackTrace": {
+//       "type": "string",
+//       "description": "Stack trace at the time the exception was thrown."
+//     },
+//     "innerException": {
+//       "type": "array",
+//       "items": {
+//         "$ref": "#/definitions/ExceptionDetails"
+//       },
+//       "description": "Details of the exception contained by this exception,
+//       if any."
+//     }
+//   }
+// },
 void request_exceptionInfo(const llvm::json::Object &request) {
   llvm::json::Object response;
   FillResponse(request, response);
@@ -1048,6 +1221,27 @@ void request_exceptionInfo(const llvm::json::Object &request) {
       }
     }
     body.try_emplace("breakMode", "always");
+    auto exception = thread.GetCurrentException();
+    if (exception.IsValid()) {
+      llvm::json::Object details;
+      lldb::SBStream stream;
+      if (exception.GetDescription(stream)) {
+        EmplaceSafeString(details, "message", stream.GetData());
+      }
+
+      auto exceptionBacktrace = thread.GetCurrentExceptionBacktrace();
+      if (exceptionBacktrace.IsValid()) {
+        lldb::SBStream stream;
+        exceptionBacktrace.GetDescription(stream);
+        for (uint32_t i = 0; i < exceptionBacktrace.GetNumFrames(); i++) {
+          lldb::SBFrame frame = exceptionBacktrace.GetFrameAtIndex(i);
+          frame.GetDescription(stream);
+        }
+        EmplaceSafeString(details, "stackTrace", stream.GetData());
+      }
+
+      body.try_emplace("details", std::move(details));
+    }
     // auto excInfoCount = thread.GetStopReasonDataCount();
     // for (auto i=0; i<excInfoCount; ++i) {
     //   uint64_t exc_data = thread.GetStopReasonDataAtIndex(i);
@@ -1348,6 +1542,16 @@ void request_completions(const llvm::json::Object &request) {
 //                              present the variables in a paged UI and fetch
 //                              them in chunks."
 //            }
+//            "memoryReference": {
+//               "type": "string",
+//                "description": "A memory reference to a location appropriate
+//                                for this result. For pointer type eval
+//                                results, this is generally a reference to the
+//                                memory address contained in the pointer. This
+//                                attribute may be returned by a debug adapter
+//                                if corresponding capability
+//                                `supportsMemoryReferences` is true."
+//             },
 //          },
 //          "required": [ "result", "variablesReference" ]
 //        }
@@ -1413,6 +1617,9 @@ void request_evaluate(const llvm::json::Object &request) {
       } else {
         body.try_emplace("variablesReference", (int64_t)0);
       }
+      if (lldb::addr_t addr = value.GetLoadAddress();
+          addr != LLDB_INVALID_ADDRESS)
+        body.try_emplace("memoryReference", EncodeMemoryReference(addr));
     }
   }
   response.try_emplace("body", std::move(body));
@@ -1682,6 +1889,8 @@ void request_initialize(const llvm::json::Object &request) {
   // The debug adapter supports stepping granularities (argument `granularity`)
   // for the stepping requests.
   body.try_emplace("supportsSteppingGranularity", true);
+  // The debug adapter support for instruction breakpoint.
+  body.try_emplace("supportsInstructionBreakpoints", true);
 
   llvm::json::Array completion_characters;
   completion_characters.emplace_back(".");
@@ -1723,8 +1932,8 @@ void request_initialize(const llvm::json::Object &request) {
   body.try_emplace("supportsLogPoints", true);
   // The debug adapter supports data watchpoints.
   body.try_emplace("supportsDataBreakpoints", true);
-  // The debug adapter support for instruction breakpoint.
-  body.try_emplace("supportsInstructionBreakpoints", true);
+  // The debug adapter supports the `readMemory` request.
+  body.try_emplace("supportsReadMemoryRequest", true);
 
   // Put in non-DAP specification lldb specific information.
   llvm::json::Object lldb_json;
@@ -3066,7 +3275,9 @@ void request_source(const llvm::json::Object &request) {
 //     },
 //     "format": {
 //       "$ref": "#/definitions/StackFrameFormat",
-//       "description": "Specifies details on how to format the stack frames."
+//       "description": "Specifies details on how to format the stack frames.
+//       The attribute is only honored by a debug adapter if the corresponding
+//       capability `supportsValueFormattingOptions` is true."
 //     }
 //  },
 //   "required": [ "threadId" ]
@@ -3074,7 +3285,7 @@ void request_source(const llvm::json::Object &request) {
 // "StackTraceResponse": {
 //   "allOf": [ { "$ref": "#/definitions/Response" }, {
 //     "type": "object",
-//     "description": "Response to 'stackTrace' request.",
+//     "description": "Response to `stackTrace` request.",
 //     "properties": {
 //       "body": {
 //         "type": "object",
@@ -3090,7 +3301,13 @@ void request_source(const llvm::json::Object &request) {
 //           },
 //           "totalFrames": {
 //             "type": "integer",
-//             "description": "The total number of frames available."
+//             "description": "The total number of frames available in the
+//             stack. If omitted or if `totalFrames` is larger than the
+//             available frames, a client is expected to request frames until
+//             a request returns less frames than requested (which indicates
+//             the end of the stack). Returning monotonically increasing
+//             `totalFrames` values for subsequent requests can be used to
+//             enforce paging in the client."
 //           }
 //         },
 //         "required": [ "stackFrames" ]
@@ -3105,85 +3322,22 @@ void request_stackTrace(const llvm::json::Object &request) {
   lldb::SBError error;
   auto arguments = request.getObject("arguments");
   lldb::SBThread thread = g_dap.GetLLDBThread(*arguments);
-  llvm::json::Array stackFrames;
+  llvm::json::Array stack_frames;
   llvm::json::Object body;
 
   if (thread.IsValid()) {
-    const auto startFrame = GetUnsigned(arguments, "startFrame", 0);
+    const auto start_frame = GetUnsigned(arguments, "startFrame", 0);
     const auto levels = GetUnsigned(arguments, "levels", 0);
-    const auto endFrame = (levels == 0) ? INT64_MAX : (startFrame + levels);
-    auto totalFrames = thread.GetNumFrames();
-
-    // This will always return an invalid thread when
-    // libBacktraceRecording.dylib is not loaded or if there is no extended
-    // backtrace.
-    lldb::SBThread queue_backtrace_thread;
-    if (g_dap.enable_display_extended_backtrace)
-      queue_backtrace_thread = thread.GetExtendedBacktraceThread("libdispatch");
-    if (queue_backtrace_thread.IsValid()) {
-      // One extra frame as a label to mark the enqueued thread.
-      totalFrames += queue_backtrace_thread.GetNumFrames() + 1;
-    }
-
-    // This will always return an invalid thread when there is no exception in
-    // the current thread.
-    lldb::SBThread exception_backtrace_thread;
-    if (g_dap.enable_display_extended_backtrace)
-      exception_backtrace_thread = thread.GetCurrentExceptionBacktrace();
-
-    if (exception_backtrace_thread.IsValid()) {
-      // One extra frame as a label to mark the exception thread.
-      totalFrames += exception_backtrace_thread.GetNumFrames() + 1;
-    }
-
-    for (uint32_t i = startFrame; i < endFrame; ++i) {
-      lldb::SBFrame frame;
-      std::string prefix;
-      if (i < thread.GetNumFrames()) {
-        frame = thread.GetFrameAtIndex(i);
-      } else if (queue_backtrace_thread.IsValid() &&
-                 i < (thread.GetNumFrames() +
-                      queue_backtrace_thread.GetNumFrames() + 1)) {
-        if (i == thread.GetNumFrames()) {
-          const uint32_t thread_idx =
-              queue_backtrace_thread.GetExtendedBacktraceOriginatingIndexID();
-          const char *queue_name = queue_backtrace_thread.GetQueueName();
-          auto name = llvm::formatv("Enqueued from {0} (Thread {1})",
-                                    queue_name, thread_idx);
-          stackFrames.emplace_back(
-              llvm::json::Object{{"id", thread.GetThreadID() + 1},
-                                 {"name", name},
-                                 {"presentationHint", "label"}});
-          continue;
-        }
-        frame = queue_backtrace_thread.GetFrameAtIndex(
-            i - thread.GetNumFrames() - 1);
-      } else if (exception_backtrace_thread.IsValid()) {
-        if (i == thread.GetNumFrames() +
-                     (queue_backtrace_thread.IsValid()
-                          ? queue_backtrace_thread.GetNumFrames() + 1
-                          : 0)) {
-          stackFrames.emplace_back(
-              llvm::json::Object{{"id", thread.GetThreadID() + 2},
-                                 {"name", "Original Exception Backtrace"},
-                                 {"presentationHint", "label"}});
-          continue;
-        }
-
-        frame = exception_backtrace_thread.GetFrameAtIndex(
-            i - thread.GetNumFrames() -
-            (queue_backtrace_thread.IsValid()
-                 ? queue_backtrace_thread.GetNumFrames() + 1
-                 : 0));
-      }
-      if (!frame.IsValid())
-        break;
-      stackFrames.emplace_back(CreateStackFrame(frame));
-    }
-
-    body.try_emplace("totalFrames", totalFrames);
+    int64_t offset = 0;
+    bool reached_end_of_stack =
+        FillStackFrames(thread, stack_frames, offset, start_frame,
+                        levels == 0 ? INT64_MAX : levels);
+    body.try_emplace("totalFrames",
+                     start_frame + stack_frames.size() +
+                         (reached_end_of_stack ? 0 : StackPageSize));
   }
-  body.try_emplace("stackFrames", std::move(stackFrames));
+
+  body.try_emplace("stackFrames", std::move(stack_frames));
   response.try_emplace("body", std::move(body));
   g_dap.SendJSON(llvm::json::Value(std::move(response)));
 }
@@ -3487,7 +3641,6 @@ void request_stepOut(const llvm::json::Object &request) {
 //   }]
 // }
 void request_threads(const llvm::json::Object &request) {
-
   lldb::SBProcess process = g_dap.target.GetProcess();
   llvm::json::Object response;
   FillResponse(request, response);
@@ -3638,8 +3791,11 @@ void request_setVariable(const llvm::json::Object &request) {
       if (variable.MightHaveChildren())
         newVariablesReference = g_dap.variables.InsertExpandableVariable(
             variable, /*is_permanent=*/false);
-
       body.try_emplace("variablesReference", newVariablesReference);
+
+      if (lldb::addr_t addr = variable.GetLoadAddress();
+          addr != LLDB_INVALID_ADDRESS)
+        body.try_emplace("memoryReference", EncodeMemoryReference(addr));
     } else {
       EmplaceSafeString(body, "message", std::string(error.GetCString()));
     }
@@ -3936,17 +4092,18 @@ void request_variables(const llvm::json::Object &request) {
 void request_disassemble(const llvm::json::Object &request) {
   llvm::json::Object response;
   FillResponse(request, response);
-  auto arguments = request.getObject("arguments");
+  auto *arguments = request.getObject("arguments");
 
-  auto memoryReference = GetString(arguments, "memoryReference");
-  lldb::addr_t addr_ptr;
-  if (memoryReference.consumeInteger(0, addr_ptr)) {
+  llvm::StringRef memoryReference = GetString(arguments, "memoryReference");
+  auto addr_opt = DecodeMemoryReference(memoryReference);
+  if (!addr_opt.has_value()) {
     response["success"] = false;
     response["message"] =
         "Malformed memory reference: " + memoryReference.str();
     g_dap.SendJSON(llvm::json::Value(std::move(response)));
     return;
   }
+  lldb::addr_t addr_ptr = *addr_opt;
 
   addr_ptr += GetSigned(arguments, "instructionOffset", 0);
   lldb::SBAddress addr(addr_ptr, g_dap.target);
@@ -3989,7 +4146,6 @@ void request_disassemble(const llvm::json::Object &request) {
         sb << llvm::format("%2.2x ", b);
       }
     }
-    sb.flush();
 
     llvm::json::Object disassembled_inst{
         {"address", "0x" + llvm::utohexstr(inst_addr)},
@@ -4020,7 +4176,6 @@ void request_disassemble(const llvm::json::Object &request) {
     if (c && c[0]) {
       si << " ; " << c;
     }
-    si.flush();
 
     disassembled_inst.try_emplace("instruction", instruction);
 
@@ -4066,6 +4221,161 @@ void request_disassemble(const llvm::json::Object &request) {
   response.try_emplace("body", std::move(body));
   g_dap.SendJSON(llvm::json::Value(std::move(response)));
 }
+
+// "ReadMemoryRequest": {
+//   "allOf": [ { "$ref": "#/definitions/Request" }, {
+//     "type": "object",
+//     "description": "Reads bytes from memory at the provided location. Clients
+//                     should only call this request if the corresponding
+//                     capability `supportsReadMemoryRequest` is true.",
+//     "properties": {
+//       "command": {
+//         "type": "string",
+//         "enum": [ "readMemory" ]
+//       },
+//       "arguments": {
+//         "$ref": "#/definitions/ReadMemoryArguments"
+//       }
+//     },
+//     "required": [ "command", "arguments" ]
+//   }]
+// },
+// "ReadMemoryArguments": {
+//   "type": "object",
+//   "description": "Arguments for `readMemory` request.",
+//   "properties": {
+//     "memoryReference": {
+//       "type": "string",
+//       "description": "Memory reference to the base location from which data
+//                       should be read."
+//     },
+//     "offset": {
+//       "type": "integer",
+//       "description": "Offset (in bytes) to be applied to the reference
+//                       location before reading data. Can be negative."
+//     },
+//     "count": {
+//       "type": "integer",
+//       "description": "Number of bytes to read at the specified location and
+//                       offset."
+//     }
+//   },
+//   "required": [ "memoryReference", "count" ]
+// },
+// "ReadMemoryResponse": {
+//   "allOf": [ { "$ref": "#/definitions/Response" }, {
+//     "type": "object",
+//     "description": "Response to `readMemory` request.",
+//     "properties": {
+//       "body": {
+//         "type": "object",
+//         "properties": {
+//           "address": {
+//             "type": "string",
+//             "description": "The address of the first byte of data returned.
+//                             Treated as a hex value if prefixed with `0x`, or
+//                             as a decimal value otherwise."
+//           },
+//           "unreadableBytes": {
+//             "type": "integer",
+//             "description": "The number of unreadable bytes encountered after
+//                             the last successfully read byte.\nThis can be
+//                             used to determine the number of bytes that should
+//                             be skipped before a subsequent
+//             `readMemory` request succeeds."
+//           },
+//           "data": {
+//             "type": "string",
+//             "description": "The bytes read from memory, encoded using base64.
+//                             If the decoded length of `data` is less than the
+//                             requested `count` in the original `readMemory`
+//                             request, and `unreadableBytes` is zero or
+//                             omitted, then the client should assume it's
+//                             reached the end of readable memory."
+//           }
+//         },
+//         "required": [ "address" ]
+//       }
+//     }
+//   }]
+// },
+void request_readMemory(const llvm::json::Object &request) {
+  llvm::json::Object response;
+  FillResponse(request, response);
+  auto *arguments = request.getObject("arguments");
+
+  lldb::SBProcess process = g_dap.target.GetProcess();
+  if (!process.IsValid()) {
+    response["success"] = false;
+    response["message"] = "No process running";
+    g_dap.SendJSON(llvm::json::Value(std::move(response)));
+    return;
+  }
+
+  llvm::StringRef memoryReference = GetString(arguments, "memoryReference");
+  auto addr_opt = DecodeMemoryReference(memoryReference);
+  if (!addr_opt.has_value()) {
+    response["success"] = false;
+    response["message"] =
+        "Malformed memory reference: " + memoryReference.str();
+    g_dap.SendJSON(llvm::json::Value(std::move(response)));
+    return;
+  }
+  lldb::addr_t addr = *addr_opt;
+
+  addr += GetSigned(arguments, "offset", 0);
+  const uint64_t requested_count = GetUnsigned(arguments, "count", 0);
+  lldb::SBMemoryRegionInfo region_info;
+  lldb::SBError memreg_error = process.GetMemoryRegionInfo(addr, region_info);
+  if (memreg_error.Fail()) {
+    response["success"] = false;
+    EmplaceSafeString(response, "message",
+                      "Unable to find memory region: " +
+                          std::string(memreg_error.GetCString()));
+    g_dap.SendJSON(llvm::json::Value(std::move(response)));
+    return;
+  }
+  if (!region_info.IsReadable()) {
+    response["success"] = false;
+    response.try_emplace("message", "Memory region is not readable");
+    g_dap.SendJSON(llvm::json::Value(std::move(response)));
+    return;
+  }
+  const uint64_t available_count =
+      std::min(requested_count, region_info.GetRegionEnd() - addr);
+  const uint64_t unavailable_count = requested_count - available_count;
+
+  std::vector<uint8_t> buf;
+  buf.resize(available_count);
+  if (available_count > 0) {
+    lldb::SBError memread_error;
+    uint64_t bytes_read =
+        process.ReadMemory(addr, buf.data(), available_count, memread_error);
+    if (memread_error.Fail()) {
+      response["success"] = false;
+      EmplaceSafeString(response, "message",
+                        "Unable to read memory: " +
+                            std::string(memread_error.GetCString()));
+      g_dap.SendJSON(llvm::json::Value(std::move(response)));
+      return;
+    }
+    if (bytes_read != available_count) {
+      response["success"] = false;
+      EmplaceSafeString(response, "message", "Unexpected, short read");
+      g_dap.SendJSON(llvm::json::Value(std::move(response)));
+      return;
+    }
+  }
+
+  llvm::json::Object body;
+  std::string formatted_addr = "0x" + llvm::utohexstr(addr);
+  body.try_emplace("address", formatted_addr);
+  body.try_emplace("data", llvm::encodeBase64(buf));
+  body.try_emplace("unreadableBytes", unavailable_count);
+  response.try_emplace("body", std::move(body));
+  g_dap.SendJSON(llvm::json::Value(std::move(response)));
+}
+
 // A request used in testing to get the details on all breakpoints that are
 // currently set in the target. This helps us to test "setBreakpoints" and
 // "setFunctionBreakpoints" requests to verify we have the correct set of
@@ -4364,7 +4674,7 @@ void RegisterRequestCallbacks() {
   g_dap.RegisterRequestCallback("threads", request_threads);
   g_dap.RegisterRequestCallback("variables", request_variables);
   g_dap.RegisterRequestCallback("disassemble", request_disassemble);
-  // Instruction breakpoint request
+  g_dap.RegisterRequestCallback("readMemory", request_readMemory);
   g_dap.RegisterRequestCallback("setInstructionBreakpoints",
                                 request_setInstructionBreakpoints);
   // Custom requests

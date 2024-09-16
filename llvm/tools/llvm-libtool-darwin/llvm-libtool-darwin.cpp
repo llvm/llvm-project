@@ -183,7 +183,7 @@ static Error validateArchitectureName(StringRef ArchitectureName) {
     return createStringError(
         std::errc::invalid_argument,
         "invalid architecture '%s': valid architecture names are %s",
-        ArchitectureName.str().c_str(), OS.str().c_str());
+        ArchitectureName.str().c_str(), Buf.c_str());
   }
   return Error::success();
 }

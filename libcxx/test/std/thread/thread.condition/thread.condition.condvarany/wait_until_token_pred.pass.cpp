@@ -19,6 +19,7 @@
 //   bool wait_until(Lock& lock, stop_token stoken,
 //                   const chrono::time_point<Clock, Duration>& abs_time, Predicate pred);
 
+#include <atomic>
 #include <cassert>
 #include <chrono>
 #include <concepts>
