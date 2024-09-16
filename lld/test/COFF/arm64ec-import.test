@@ -4,6 +4,7 @@ RUN: split-file %s %t.dir && cd %t.dir
 RUN: llvm-mc -filetype=obj -triple=arm64ec-windows test.s -o test.obj
 RUN: llvm-mc -filetype=obj -triple=arm64ec-windows icall.s -o icall.obj
 RUN: llvm-mc -filetype=obj -triple=arm64ec-windows hybmp.s -o hybmp.obj
+RUN: llvm-mc -filetype=obj -triple=x86_64-windows test.s -o test-x86_64.obj
 RUN: llvm-mc -filetype=obj -triple=arm64ec-windows %S/Inputs/loadconfig-arm64ec.s -o loadconfig-arm64ec.obj
 RUN: llvm-lib -machine:arm64ec -def:test.def -out:test-arm64ec.lib
 RUN: llvm-lib -machine:arm64ec -def:test2.def -out:test2-arm64ec.lib
@@ -17,8 +18,13 @@ Link using x86_64 import library:
 RUN: lld-link -machine:arm64ec -dll -noentry -out:out2.dll loadconfig-arm64ec.obj icall.obj hybmp.obj \
 RUN:          test.obj test-x86_64.lib test2-arm64ec.lib
 
+Link using x86_64 object file:
+RUN: lld-link -machine:arm64ec -dll -noentry -out:out3.dll loadconfig-arm64ec.obj icall.obj hybmp.obj \
+RUN:          test-x86_64.obj test-arm64ec.lib test2-arm64ec.lib
+
 RUN: llvm-readobj --coff-imports out.dll | FileCheck --check-prefix=IMPORTS %s
 RUN: llvm-readobj --coff-imports out2.dll | FileCheck --check-prefix=IMPORTS %s
+RUN: llvm-readobj --coff-imports out3.dll | FileCheck -check-prefix=IMPORTS %s
 IMPORTS:      Import {
 IMPORTS-NEXT:   Name: test.dll
 IMPORTS-NEXT:   ImportLookupTableRVA:
@@ -36,6 +42,7 @@ IMPORTS-NEXT: }
 
 RUN: llvm-objdump -d out.dll | FileCheck --check-prefix=DISASM %s
 RUN: llvm-objdump -d out2.dll | FileCheck --check-prefix=DISASM %s
+RUN: llvm-objdump -d out3.dll | FileCheck -check-prefix=DISASM %s
 
 DISASM:      180001000: 52800000     mov     w0, #0x0                // =0
 DISASM-NEXT: 180001004: d65f03c0     ret
@@ -74,20 +81,33 @@ TESTSEC-NEXT: 0x180007010 08300000 00500000 10300000 20300000
 TESTSEC-NEXT: 0x180007020 14100000 28100000 00200000 08100000
 TESTSEC-NEXT: 0x180007030 3c100000
 
+RUN: llvm-readobj --hex-dump=.test out3.dll | FileCheck -check-prefix=TESTSEC-X64 %s
+TESTSEC-X64:      0x180007000 08300000 00300000 10300000 20300000
+TESTSEC-X64-NEXT: 0x180007010 08300000 00500000 10300000 20300000
+TESTSEC-X64-NEXT: 0x180007020 14100000 28100000 00200000 08100000
+
 RUN: llvm-readobj --headers out.dll | FileCheck -check-prefix=HEADERS %s
+RUN: llvm-readobj --headers out2.dll | FileCheck -check-prefix=HEADERS %s
+RUN: llvm-readobj --headers out3.dll | FileCheck -check-prefix=HEADERS %s
 HEADERS:  LoadConfigTableRVA: 0x4010
 HEADERS:  IATRVA: 0x3000
 HEADERS:  IATSize: 0x1000
 
 RUN: llvm-readobj --coff-load-config out.dll | FileCheck -check-prefix=LOADCONFIG %s
+RUN: llvm-readobj --coff-load-config out2.dll | FileCheck -check-prefix=LOADCONFIG %s
+RUN: llvm-readobj --coff-load-config out3.dll | FileCheck -check-prefix=LOADCONFIG %s
 LOADCONFIG: AuxiliaryIAT: 0x5000
 
 RUN: llvm-readobj --hex-dump=.rdata out.dll | FileCheck -check-prefix=RDATA %s
+RUN: llvm-readobj --hex-dump=.rdata out2.dll | FileCheck -check-prefix=RDATA %s
+RUN: llvm-readobj --hex-dump=.rdata out3.dll | FileCheck -check-prefix=RDATA %s
 RDATA:      0x180005000 00000000 00000000 14100080 01000000
 RDATA-NEXT: 0x180005010 28100080 01000000 00000000 00000000
 RDATA-NEXT: 0x180005020 48100080 01000000 00000000 00000000
 
 RUN: llvm-readobj --coff-basereloc out.dll | FileCheck -check-prefix=BASERELOC %s
+RUN: llvm-readobj --coff-basereloc out2.dll | FileCheck -check-prefix=BASERELOC %s
+RUN: llvm-readobj --coff-basereloc out3.dll | FileCheck -check-prefix=BASERELOC %s
 BASERELOC:      BaseReloc [
 BASERELOC-NOT:      Address: 0x5000
 BASERELOC:          Address: 0x5008
