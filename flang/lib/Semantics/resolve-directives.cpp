@@ -19,6 +19,7 @@
 #include "flang/Parser/parse-tree.h"
 #include "flang/Parser/tools.h"
 #include "flang/Semantics/expression.h"
+#include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
 #include <list>
 #include <map>
@@ -2726,6 +2727,12 @@ void OmpAttributeVisitor::CheckObjectInNamelist(
   if (ultimateSymbol.test(Symbol::Flag::InNamelist)) {
     context_.Say(name.source,
         "Variable '%s' in NAMELIST cannot be in a %s clause"_err_en_US,
+        name.ToString(), clauseName.str());
+  }
+
+  if (ultimateSymbol.has<AssocEntityDetails>()) {
+    context_.Say(name.source,
+        "Variable '%s' in ASSOCIATE cannot be in a %s clause"_err_en_US,
         name.ToString(), clauseName.str());
   }
 }
