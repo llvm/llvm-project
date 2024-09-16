@@ -49,4 +49,12 @@ body:             |
 
     ; CHECK: Source type and index must not cause extract to overrun to the destination type
     %17:_(<3 x s32>) = G_EXTRACT_SUBVECTOR  %15, 3
+
+    ; CHECK: Vector types must both be fixed or both be scalable
+    %18:_(<vscale x 2 x s32>) = G_EXTRACT_SUBVECTOR %15, 0
+
+    ; CHECK: Vector types must both be fixed or both be scalable
+    %19:_(<2 x s32>) = G_EXTRACT_SUBVECTOR %12, 0
+
+
 ...
