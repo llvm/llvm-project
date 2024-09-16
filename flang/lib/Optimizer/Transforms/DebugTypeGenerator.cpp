@@ -13,7 +13,7 @@
 #define DEBUG_TYPE "flang-debug-type-generator"
 
 #include "DebugTypeGenerator.h"
-#include "flang/Optimizer/CodeGen/DescriptorModel.h"
+#include "flang/Optimizer/CodeGen/DescriptorOffsets.h"
 #include "flang/Optimizer/CodeGen/TypeConverter.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "mlir/Pass/Pass.h"
@@ -59,11 +59,11 @@ DebugTypeGenerator::DebugTypeGenerator(mlir::ModuleOp m,
   mlir::Type llvmPtrType = getDescFieldTypeModel<kAddrPosInBox>()(context);
   mlir::Type llvmLenType = getDescFieldTypeModel<kElemLenPosInBox>()(context);
   dimsOffset =
-      getComponentOffset<kDimsPosInBox>(*dataLayout, context, llvmDimsType);
+      getDescComponentOffset<kDimsPosInBox>(*dataLayout, context, llvmDimsType);
   dimsSize = dataLayout->getTypeSize(llvmDimsType);
   ptrSize = dataLayout->getTypeSize(llvmPtrType);
-  lenOffset =
-      getComponentOffset<kElemLenPosInBox>(*dataLayout, context, llvmLenType);
+  lenOffset = getDescComponentOffset<kElemLenPosInBox>(*dataLayout, context,
+                                                       llvmLenType);
 }
 
 static mlir::LLVM::DITypeAttr genBasicType(mlir::MLIRContext *context,
@@ -163,7 +163,24 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertBoxedSequenceType(
 mlir::LLVM::DITypeAttr DebugTypeGenerator::convertRecordType(
     fir::RecordType Ty, mlir::LLVM::DIFileAttr fileAttr,
     mlir::LLVM::DIScopeAttr scope, fir::cg::XDeclareOp declOp) {
+  // Check if this type has already been converted.
+  auto iter = typeCache.find(Ty);
+  if (iter != typeCache.end())
+    return iter->second;
+
+  llvm::SmallVector<mlir::LLVM::DINodeAttr> elements;
   mlir::MLIRContext *context = module.getContext();
+  auto recId = mlir::DistinctAttr::create(mlir::UnitAttr::get(context));
+  // Generate a place holder TypeAttr which will be used if a member
+  // references the parent type.
+  auto comAttr = mlir::LLVM::DICompositeTypeAttr::get(
+      context, recId, /*isRecSelf=*/true, llvm::dwarf::DW_TAG_structure_type,
+      mlir::StringAttr::get(context, ""), fileAttr, /*line=*/0, scope,
+      /*baseType=*/nullptr, mlir::LLVM::DIFlags::Zero, /*sizeInBits=*/0,
+      /*alignInBits=*/0, elements, /*dataLocation=*/nullptr, /*rank=*/nullptr,
+      /*allocated=*/nullptr, /*associated=*/nullptr);
+  typeCache[Ty] = comAttr;
+
   auto result = fir::NameUniquer::deconstruct(Ty.getName());
   if (result.first != fir::NameUniquer::NameKind::DERIVED_TYPE)
     return genPlaceholderType(context);
@@ -171,7 +188,6 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertRecordType(
   fir::TypeInfoOp tiOp = symbolTable->lookup<fir::TypeInfoOp>(Ty.getName());
   unsigned line = (tiOp) ? getLineFromLoc(tiOp.getLoc()) : 1;
 
-  llvm::SmallVector<mlir::LLVM::DINodeAttr> elements;
   std::uint64_t offset = 0;
   for (auto [fieldName, fieldTy] : Ty.getTypeList()) {
     auto result = fir::getTypeSizeAndAlignment(module.getLoc(), fieldTy,
@@ -195,12 +211,14 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertRecordType(
     offset += llvm::alignTo(byteSize, byteAlign);
   }
 
-  return mlir::LLVM::DICompositeTypeAttr::get(
-      context, llvm::dwarf::DW_TAG_structure_type,
+  auto finalAttr = mlir::LLVM::DICompositeTypeAttr::get(
+      context, recId, /*isRecSelf=*/false, llvm::dwarf::DW_TAG_structure_type,
       mlir::StringAttr::get(context, result.second.name), fileAttr, line, scope,
       /*baseType=*/nullptr, mlir::LLVM::DIFlags::Zero, offset * 8,
       /*alignInBits=*/0, elements, /*dataLocation=*/nullptr, /*rank=*/nullptr,
       /*allocated=*/nullptr, /*associated=*/nullptr);
+  typeCache[Ty] = finalAttr;
+  return finalAttr;
 }
 
 mlir::LLVM::DITypeAttr DebugTypeGenerator::convertSequenceType(

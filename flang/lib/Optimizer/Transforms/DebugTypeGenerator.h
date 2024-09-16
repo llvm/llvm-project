@@ -72,6 +72,7 @@ private:
   std::uint64_t dimsOffset;
   std::uint64_t ptrSize;
   std::uint64_t lenOffset;
+  llvm::DenseMap<mlir::Type, mlir::LLVM::DITypeAttr> typeCache;
 };
 
 } // namespace fir
