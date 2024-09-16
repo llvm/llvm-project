@@ -634,11 +634,10 @@ void GetThreadStackAndTls(bool main, uptr *stk_addr, uptr *stk_size,
   *stk_size = stack_top - stack_bottom;
 
   if (!main) {
-    // If stack and tls intersect, make them non-intersecting.
-    if (*tls_addr > *stk_addr && *tls_addr < *stk_addr + *stk_size) {
-      CHECK_EQ(*stk_addr + *stk_size, *tls_addr + *tls_size);
-      *stk_size = *tls_addr - *stk_addr;
-    }
+    // TLS must be a subset of the stack, make them non-intersecting.
+    CHECK_GT(*tls_addr, *stk_addr);
+    CHECK_EQ(*stk_addr + *stk_size, *tls_addr + *tls_size);
+    *stk_size = *tls_addr - *stk_addr;
   }
 #  endif
 }
