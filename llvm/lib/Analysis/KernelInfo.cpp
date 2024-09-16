@@ -286,17 +286,9 @@ static void remarkProperty(OptimizationRemarkEmitter &ORE, const Function &F,
 
 static std::optional<int64_t> parseFnAttrAsInteger(Function &F,
                                                    StringRef Name) {
-  Attribute A = F.getFnAttribute(Name);
-  if (!A.isStringAttribute())
+  if (!F.hasFnAttribute(Name))
     return std::nullopt;
-  StringRef Field = A.getValueAsString();
-  int64_t Val;
-  if (Field.getAsInteger(0, Val)) {
-    F.getContext().emitError("cannot parse integer in attribute '" + Name +
-                             "': " + Field);
-    return std::nullopt;
-  }
-  return Val;
+  return F.getFnAttributeAsParsedInteger(Name);
 }
 
 void KernelInfo::emitKernelInfo(Function &F, FunctionAnalysisManager &FAM,
