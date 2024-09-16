@@ -1832,7 +1832,7 @@ bool DwarfDebug::buildLocationList(SmallVectorImpl<DebugLocEntry> &DebugLoc,
       return false;
     // CurEntry should end the current section and NextEntry should start
     // the next section and the Values must match for these two ranges to be
-    // merged.  Don't match the section label end if it is the entry block
+    // merged.  Do not match the section label end if it is the entry block
     // section.  This is because the end label for the Debug Loc and the
     // Function end label could be different.
     if ((RangeIt->second.EndLabel !=  Asm->getFunctionEnd()
