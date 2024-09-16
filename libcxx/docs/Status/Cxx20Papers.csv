@@ -34,7 +34,7 @@
 "`P0528R3 <https://wg21.link/P0528R3>`__","The Curious Case of Padding Bits, Featuring Atomic Compare-and-Exchange","2018-06 (Rapperswil)","","",""
 "`P0542R5 <https://wg21.link/P0542R5>`__","Support for contract based programming in C++","2018-06 (Rapperswil)","|Nothing To Do|","n/a","Pulled at the 2019-07 meeting in Cologne"
 "`P0556R3 <https://wg21.link/P0556R3>`__","Integral power-of-2 operations","2018-06 (Rapperswil)","|Complete|","9.0",""
-"`P0619R4 <https://wg21.link/P0619R4>`__","Reviewing Deprecated Facilities of C++17 for C++20","2018-06 (Rapperswil)","|Partial|","","Only sections D.7, D.8, D.9, D.10, D.11 and D.13 are implemented. Sections D.4 and D.12 remain undone."
+"`P0619R4 <https://wg21.link/P0619R4>`__","Reviewing Deprecated Facilities of C++17 for C++20","2018-06 (Rapperswil)","|Partial|","","Only sections D.7, D.8, D.9, D.10, D.11, D.12, and D.13 are implemented. Section D.4 remains undone."
 "`P0646R1 <https://wg21.link/P0646R1>`__","Improving the Return Value of Erase-Like Algorithms","2018-06 (Rapperswil)","|Complete|","10.0",""
 "`P0722R3 <https://wg21.link/P0722R3>`__","Efficient sized delete for variable sized classes","2018-06 (Rapperswil)","|Complete|","9.0",""
 "`P0758R1 <https://wg21.link/P0758R1>`__","Implicit conversion traits and utility functions","2018-06 (Rapperswil)","|Complete|","",""
