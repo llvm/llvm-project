@@ -4,10 +4,11 @@
 
   .tagtype  __cpp_exception i32
   .tagtype  __c_longjmp i32
-  .functype  eh_legacy_test () -> ()
   .functype  foo () -> ()
 
 eh_legacy_test:
+  .functype  eh_legacy_test () -> ()
+
   # try-catch with catch, catch_all, throw, and rethrow
   try
     i32.const 3
@@ -55,7 +56,7 @@ eh_legacy_test:
   end_function
 
 # CHECK-LABEL: eh_legacy_test:
-# CHECK-NEXT:    try
+# CHECK:         try
 # CHECK-NEXT:    i32.const       3
 # CHECK-NEXT:    throw           __cpp_exception
 # CHECK-NEXT:    catch           __cpp_exception
