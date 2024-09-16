@@ -931,13 +931,6 @@ static void DiagnoseHLSLRegisterAttribute(Sema &S, SourceLocation &ArgLoc,
     return;
   }
 
-  // Space argument cannot be specified for global constants
-  if ((Flags.DefaultGlobals || Flags.UDT) &&
-      !isDeclaredWithinCOrTBuffer(TheDecl) && SpecifiedSpace) {
-    S.Diag(ArgLoc, diag::err_hlsl_space_on_global_constant);
-    return;
-  }
-
   // next, if multiple register annotations exist, check that none conflict.
   ValidateMultipleRegisterAnnotations(S, TheDecl, RegType);
 
@@ -949,11 +942,15 @@ static void DiagnoseHLSLRegisterAttribute(Sema &S, SourceLocation &ArgLoc,
       S.Diag(TheDecl->getLocation(), diag::err_hlsl_binding_type_mismatch)
           << RegTypeNum;
     }
+
     return;
   }
 
   // next, handle diagnostics for when the "basic" flag is set
   if (Flags.Basic) {
+    if (SpecifiedSpace && !isDeclaredWithinCOrTBuffer(TheDecl))
+      S.Diag(ArgLoc, diag::err_hlsl_space_on_global_constant);
+
     if (Flags.DefaultGlobals) {
       if (RegType == RegisterType::CBuffer)
         S.Diag(ArgLoc, diag::warn_hlsl_deprecated_register_type_b);

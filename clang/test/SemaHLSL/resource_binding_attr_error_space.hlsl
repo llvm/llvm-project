@@ -19,10 +19,11 @@ struct MyStruct {
 };
 
 cbuffer cbuf3 {
+  // valid
   MyStruct E : register(u2, space3);
 }
 
-// expected-error@+1 {{register space cannot be specified on global constants}}
+// valid
 MyStruct F : register(u3, space4);
 
 cbuffer cbuf4 {
@@ -63,6 +64,3 @@ RWBuffer<int> h : register(u2, space0);
 struct S {
     RWBuffer<int> a;
 };
-
-// expected-error@+1 {{register space cannot be specified on global constants}}
-S thing : register(u2, space2);
