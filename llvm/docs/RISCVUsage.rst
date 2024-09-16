@@ -421,22 +421,7 @@ extension are still experimental.  To use C intrinsics for such an extension
 from `clang`, you must add `-menable-experimental-extensions` to the command
 line.  This currently applies to the following extensions:
 
-* ``Zvbb``
-* ``Zvbc``
-* ``Zvkb``
-* ``Zvkg``
-* ``Zvkn``
-* ``Zvknc``
-* ``Zvkned``
-* ``Zvkng``
-* ``Zvknha``
-* ``Zvknhb``
-* ``Zvks``
-* ``Zvksc``
-* ``Zvksed``
-* ``Zvksg``
-* ``Zvksh``
-* ``Zvkt``
+No extensions have experimental intrinsics.
 
 Global Pointer (GP) Relaxation and the Small Data Limit
 =======================================================
