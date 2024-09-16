@@ -117,7 +117,7 @@ Changes in existing checks
   false positive for C++23 deducing this.
 
 - Improved :doc:`modernize-min-max-use-initializer-list
-  <clang-tidy/checks/modernize/min-max-use-initializer-list>` check by removing
+  <clang-tidy/checks/modernize/min-max-use-initializer-list>` check by fixing
   a false positive when only an implicit conversion happened inside an
   initializer list.
 
