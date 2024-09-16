@@ -78,6 +78,10 @@ public:
 
   bool isReallyTriviallyReMaterializable(const MachineInstr &MI) const override;
 
+  bool shouldBreakCriticalEdgeToSink(MachineInstr &MI) const override {
+    return MI.getOpcode() == RISCV::ADDI;
+  }
+
   void copyPhysRegVector(MachineBasicBlock &MBB,
                          MachineBasicBlock::iterator MBBI, const DebugLoc &DL,
                          MCRegister DstReg, MCRegister SrcReg, bool KillSrc,
