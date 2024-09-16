@@ -376,7 +376,13 @@ Register insertAssignInstr(Register Reg, Type *Ty, SPIRVType *SpvType,
       .addUse(NewReg)
       .addUse(GR->getSPIRVTypeID(SpvType))
       .setMIFlags(Flags);
-  Def->getOperand(0).setReg(NewReg);
+  for (unsigned I = 0, E = Def->getNumExplicitDefs(); I != E; ++I) {
+    MachineOperand &MO = Def->getOperand(I);
+    if (MO.isReg() && MO.isDef() && MO.getReg() == Reg) {
+      MO.setReg(NewReg);
+      break;
+    }
+  }
   return NewReg;
 }
 

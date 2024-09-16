@@ -478,6 +478,24 @@ bool SPIRVPrepareFunctions::substituteIntrinsicCalls(Function *F) {
 // noted in 'spv.cloned_funcs' metadata for later restoration.
 Function *
 SPIRVPrepareFunctions::removeAggregateTypesFromSignature(Function *F) {
+  if (F->isIntrinsic())
+    // Allow intrinsics with aggregate return type to reach GlobalISel
+    switch (F->getIntrinsicID()) {
+    // Standard C/C++ Library Intrinsics
+    case Intrinsic::frexp:
+      // Vector Reduction Intrinsics
+    case Intrinsic::vector_interleave2:
+    case Intrinsic::vector_deinterleave2:
+    // Arithmetic with Overflow Intrinsics
+    case Intrinsic::smul_with_overflow:
+    case Intrinsic::umul_with_overflow:
+    case Intrinsic::sadd_with_overflow:
+    case Intrinsic::uadd_with_overflow:
+    case Intrinsic::ssub_with_overflow:
+    case Intrinsic::usub_with_overflow:
+      return F;
+    }
+
   IRBuilder<> B(F->getContext());
 
   bool IsRetAggr = F->getReturnType()->isAggregateType();
@@ -563,6 +581,7 @@ bool SPIRVPrepareFunctions::runOnModule(Module &M) {
       Changed = true;
     }
   }
+
   return Changed;
 }
 

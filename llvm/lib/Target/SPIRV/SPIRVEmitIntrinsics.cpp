@@ -188,6 +188,40 @@ bool isConvergenceIntrinsic(const Instruction *I) {
          II->getIntrinsicID() == Intrinsic::experimental_convergence_loop ||
          II->getIntrinsicID() == Intrinsic::experimental_convergence_anchor;
 }
+
+bool isInternalNonVoidIntrinsic(const Value *I) {
+  if (const auto *II = dyn_cast<IntrinsicInst>(I))
+    switch (II->getIntrinsicID()) {
+    case Intrinsic::spv_cmpxchg:
+    case Intrinsic::spv_const_composite:
+    case Intrinsic::spv_track_constant:
+    case Intrinsic::spv_load:
+    case Intrinsic::spv_extractv:
+    case Intrinsic::spv_insertv:
+    case Intrinsic::spv_extractelt:
+    case Intrinsic::spv_insertelt:
+    case Intrinsic::spv_bitcast:
+    case Intrinsic::spv_ptrcast:
+    case Intrinsic::spv_alloca:
+    case Intrinsic::spv_alloca_array:
+    case Intrinsic::spv_undef:
+      return true;
+    }
+  return false;
+}
+
+bool allowEmitFakeUse(const Value *Arg) {
+  if (isInternalNonVoidIntrinsic(Arg))
+    return false;
+  if (dyn_cast<AtomicCmpXchgInst>(Arg) || dyn_cast<InsertValueInst>(Arg) ||
+      dyn_cast<UndefValue>(Arg))
+    return false;
+  if (const auto *LI = dyn_cast<LoadInst>(Arg))
+    if (LI->getType()->isAggregateType())
+      return false;
+  return true;
+}
+
 } // namespace
 
 char SPIRVEmitIntrinsics::ID = 0;
@@ -283,8 +317,16 @@ static inline Type *reconstructType(SPIRVGlobalRegistry *GR, Value *Op) {
 void SPIRVEmitIntrinsics::buildAssignType(IRBuilder<> &B, Type *Ty,
                                           Value *Arg) {
   Value *OfType = PoisonValue::get(Ty);
-  CallInst *AssignCI = buildIntrWithMD(Intrinsic::spv_assign_type,
-                                       {Arg->getType()}, OfType, Arg, {}, B);
+  CallInst *AssignCI = nullptr;
+  if (Ty->isAggregateType() && allowEmitFakeUse(Arg)) {
+    AssignCI = B.CreateIntrinsic(Intrinsic::fake_use, {}, {Arg});
+    AssignCI->setMetadata(
+        "spirv.__BE.assign_type",
+        MDNode::get(Arg->getContext(), ValueAsMetadata::getConstant(OfType)));
+  } else {
+    AssignCI = buildIntrWithMD(Intrinsic::spv_assign_type, {Arg->getType()},
+                               OfType, Arg, {}, B);
+  }
   GR->addAssignPtrTypeInstr(Arg, AssignCI);
 }
 
@@ -1268,6 +1310,8 @@ Instruction *SPIRVEmitIntrinsics::visitInsertValueInst(InsertValueInst &I) {
 }
 
 Instruction *SPIRVEmitIntrinsics::visitExtractValueInst(ExtractValueInst &I) {
+  if (I.getAggregateOperand()->getType()->isAggregateType())
+    return &I;
   IRBuilder<> B(I.getParent());
   B.SetInsertPoint(&I);
   SmallVector<Value *> Args;
