@@ -296,6 +296,19 @@ public:
                               mlir::cir::CallingConv &callingConv,
                               bool AttrOnCallSite, bool IsThunk);
 
+  /// Helper function for getDefaultFunctionAttributes. Builds a set of function
+  /// attributes which can be simply added to a function.
+  void getTrivialDefaultFunctionAttributes(StringRef name, bool hasOptnone,
+                                           bool attrOnCallSite,
+                                           mlir::NamedAttrList &funcAttrs);
+
+  /// Helper function for constructAttributeList and
+  /// addDefaultFunctionDefinitionAttributes.  Builds a set of function
+  /// attributes to add to a function with the given properties.
+  void getDefaultFunctionAttributes(StringRef name, bool hasOptnone,
+                                    bool attrOnCallSite,
+                                    mlir::NamedAttrList &funcAttrs);
+
   /// Will return a global variable of the given type. If a variable with a
   /// different type already exists then a new variable with the right type
   /// will be created and all uses of the old variable will be replaced with a
