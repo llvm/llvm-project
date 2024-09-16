@@ -1662,11 +1662,9 @@ static bool shouldConvertToIndirectCall(const CallBase *CB,
                                         const GlobalAddressSDNode *Func) {
   if (!Func)
     return false;
-  auto *CalleeFunc = dyn_cast<Function>(Func->getGlobal());
-  if (!CalleeFunc)
-    return false;
-
-  return CB->getFunctionType() != CalleeFunc->getFunctionType();
+  if (auto *CalleeFunc = dyn_cast<Function>(Func->getGlobal()))
+    return CB->getFunctionType() != CalleeFunc->getFunctionType();
+  return false;
 }
 
 SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
