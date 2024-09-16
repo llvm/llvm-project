@@ -18,6 +18,7 @@
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
+#include "flang/Optimizer/Support/DataLayout.h"
 #include "flang/Optimizer/Support/FatalError.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Support/Utils.h"
@@ -326,6 +327,17 @@ mlir::Value fir::FirOpBuilder::createHeapTemporary(
   assert(!mlir::isa<fir::ReferenceType>(type) && "cannot be a reference");
   return create<fir::AllocMemOp>(loc, type, /*unique_name=*/llvm::StringRef{},
                                  name, dynamicLength, dynamicShape, attrs);
+}
+
+mlir::Value fir::FirOpBuilder::genStackSave(mlir::Location loc) {
+  mlir::Type voidPtr = mlir::LLVM::LLVMPointerType::get(
+      getContext(), fir::factory::getAllocaAddressSpace(&getDataLayout()));
+  return create<mlir::LLVM::StackSaveOp>(loc, voidPtr);
+}
+
+void fir::FirOpBuilder::genStackRestore(mlir::Location loc,
+                                        mlir::Value stackPointer) {
+  create<mlir::LLVM::StackRestoreOp>(loc, stackPointer);
 }
 
 /// Create a global variable in the (read-only) data section. A global variable
@@ -789,6 +801,15 @@ void fir::FirOpBuilder::setFastMathFlags(
     arithFMF = arithFMF | mlir::arith::FastMathFlags::arcp;
   }
   setFastMathFlags(arithFMF);
+}
+
+// Construction of an mlir::DataLayout is expensive so only do it on demand and
+// memoise it in the builder instance
+mlir::DataLayout &fir::FirOpBuilder::getDataLayout() {
+  if (dataLayout)
+    return *dataLayout;
+  dataLayout = std::make_unique<mlir::DataLayout>(getModule());
+  return *dataLayout;
 }
 
 //===--------------------------------------------------------------------===//
@@ -1663,4 +1684,11 @@ void fir::factory::setInternalLinkage(mlir::func::FuncOp func) {
   auto linkage =
       mlir::LLVM::LinkageAttr::get(func->getContext(), internalLinkage);
   func->setAttr("llvm.linkage", linkage);
+}
+
+uint64_t fir::factory::getAllocaAddressSpace(mlir::DataLayout *dataLayout) {
+  if (dataLayout)
+    if (mlir::Attribute addrSpace = dataLayout->getAllocaMemorySpace())
+      return mlir::cast<mlir::IntegerAttr>(addrSpace).getUInt();
+  return 0;
 }
