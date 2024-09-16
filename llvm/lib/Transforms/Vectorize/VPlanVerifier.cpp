@@ -18,6 +18,7 @@
 #include "VPlanDominatorTree.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/CommandLine.h"
 
 #define DEBUG_TYPE "loop-vectorize"
@@ -34,6 +35,11 @@ class VPlanVerifier {
   // other recipes in between. Also check that only header blocks contain
   // VPHeaderPHIRecipes.
   bool verifyPhiRecipes(const VPBasicBlock *VPBB);
+
+  /// Verify that \p EVL is used correctly. The user must be either in
+  /// EVL-based recipes as a last operand or VPInstruction::Add which is
+  /// incoming value into EVL's recipe.
+  bool verifyEVLRecipe(const VPInstruction &EVL) const;
 
   bool verifyVPBasicBlock(const VPBasicBlock *VPBB);
 
@@ -114,6 +120,67 @@ bool VPlanVerifier::verifyPhiRecipes(const VPBasicBlock *VPBB) {
   return true;
 }
 
+bool VPlanVerifier::verifyEVLRecipe(const VPInstruction &EVL) const {
+  if (EVL.getOpcode() != VPInstruction::ExplicitVectorLength) {
+    errs() << "verifyEVLRecipe should only be called on "
+              "VPInstruction::ExplicitVectorLength\n";
+    return false;
+  }
+  auto VerifyEVLUse = [&](const VPRecipeBase &R,
+                          const unsigned ExpectedIdx) -> bool {
+    SmallVector<const VPValue *> Ops(R.operands());
+    unsigned UseCount = count(Ops, &EVL);
+    if (UseCount != 1 || Ops[ExpectedIdx] != &EVL) {
+      errs() << "EVL is used as non-last operand in EVL-based recipe\n";
+      return false;
+    }
+    return true;
+  };
+  for (const VPUser *U : EVL.users()) {
+    if (!TypeSwitch<const VPUser *, bool>(U)
+             .Case<VPWidenStoreEVLRecipe>([&](const VPWidenStoreEVLRecipe *S) {
+               return VerifyEVLUse(*S, 2);
+             })
+             .Case<VPWidenLoadEVLRecipe>([&](const VPWidenLoadEVLRecipe *L) {
+               return VerifyEVLUse(*L, 1);
+             })
+             .Case<VPWidenEVLRecipe>([&](const VPWidenEVLRecipe *W) {
+               return VerifyEVLUse(
+                   *W, Instruction::isUnaryOp(W->getOpcode()) ? 1 : 2);
+             })
+             .Case<VPReductionEVLRecipe>([&](const VPReductionEVLRecipe *R) {
+               return VerifyEVLUse(*R, 2);
+             })
+             .Case<VPScalarCastRecipe>(
+                 [&](const VPScalarCastRecipe *S) { return true; })
+             .Case<VPInstruction>([&](const VPInstruction *I) {
+               if (I->getOpcode() != Instruction::Add) {
+                 errs()
+                     << "EVL is used as an operand in non-VPInstruction::Add\n";
+                 return false;
+               }
+               if (I->getNumUsers() != 1) {
+                 errs() << "EVL is used in VPInstruction:Add with multiple "
+                           "users\n";
+                 return false;
+               }
+               if (!isa<VPEVLBasedIVPHIRecipe>(*I->users().begin())) {
+                 errs() << "Result of VPInstruction::Add with EVL operand is "
+                           "not used by VPEVLBasedIVPHIRecipe\n";
+                 return false;
+               }
+               return true;
+             })
+             .Default([&](const VPUser *U) {
+               errs() << "EVL has unexpected user\n";
+               return false;
+             })) {
+      return false;
+    }
+  }
+  return true;
+}
+
 bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
   if (!verifyPhiRecipes(VPBB))
     return false;
@@ -157,6 +224,13 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
           errs() << "Use before def!\n";
           return false;
         }
+      }
+    }
+    if (const auto *EVL = dyn_cast<VPInstruction>(&R)) {
+      if (EVL->getOpcode() == VPInstruction::ExplicitVectorLength &&
+          !verifyEVLRecipe(*EVL)) {
+        errs() << "EVL VPValue is not used correctly\n";
+        return false;
       }
     }
   }
