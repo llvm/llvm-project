@@ -232,7 +232,7 @@ define i1 @ip_test_nonnull_caller(ptr %p) {
 }
 
 define ptr @ret_nonnull_pointer(ptr nonnull %p) {
-; CHECK-LABEL: define ptr @ret_nonnull_pointer(
+; CHECK-LABEL: define nonnull ptr @ret_nonnull_pointer(
 ; CHECK-SAME: ptr nonnull [[P:%.*]]) {
 ; CHECK-NEXT:    ret ptr [[P]]
 ;
@@ -245,6 +245,40 @@ define ptr @ret_maybe_null_pointer(ptr %p) {
 ; CHECK-NEXT:    ret ptr [[P]]
 ;
   ret ptr %p
+}
+
+define internal void @ip_nonnull_arg_callee(ptr %p) {
+; SCCP-LABEL: define internal void @ip_nonnull_arg_callee(
+; SCCP-SAME: ptr [[P:%.*]]) {
+; SCCP-NEXT:    ret void
+;
+; IPSCCP-LABEL: define internal void @ip_nonnull_arg_callee(
+; IPSCCP-SAME: ptr nonnull [[P:%.*]]) {
+; IPSCCP-NEXT:    ret void
+;
+  ret void
+}
+
+define internal void @ip_not_nonnull_arg_callee(ptr %p) {
+; CHECK-LABEL: define internal void @ip_not_nonnull_arg_callee(
+; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-NEXT:    ret void
+;
+  ret void
+}
+
+define void @ip_nonnull_arg_caller(ptr nonnull %p) {
+; CHECK-LABEL: define void @ip_nonnull_arg_caller(
+; CHECK-SAME: ptr nonnull [[P:%.*]]) {
+; CHECK-NEXT:    call void @ip_nonnull_arg_callee(ptr [[P]])
+; CHECK-NEXT:    call void @ip_not_nonnull_arg_callee(ptr [[P]])
+; CHECK-NEXT:    call void @ip_not_nonnull_arg_callee(ptr null)
+; CHECK-NEXT:    ret void
+;
+  call void @ip_nonnull_arg_callee(ptr %p)
+  call void @ip_not_nonnull_arg_callee(ptr %p)
+  call void @ip_not_nonnull_arg_callee(ptr null)
+  ret void
 }
 
 ;.

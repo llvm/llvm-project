@@ -907,6 +907,22 @@ struct TestPassthroughInvalidOp : public ConversionPattern {
     return success();
   }
 };
+/// Replace with valid op, but simply drop the operands. This is used in a
+/// regression where we used to generate circular unrealized_conversion_cast
+/// ops.
+struct TestDropAndReplaceInvalidOp : public ConversionPattern {
+  TestDropAndReplaceInvalidOp(MLIRContext *ctx, const TypeConverter &converter)
+      : ConversionPattern(converter,
+                          "test.drop_operands_and_replace_with_valid", 1, ctx) {
+  }
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const final {
+    rewriter.replaceOpWithNewOp<TestValidOp>(op, std::nullopt, ValueRange(),
+                                             std::nullopt);
+    return success();
+  }
+};
 /// This pattern handles the case of a split return value.
 struct TestSplitReturnType : public ConversionPattern {
   TestSplitReturnType(MLIRContext *ctx)
@@ -1070,6 +1086,19 @@ struct TestCreateUnregisteredOp : public OpRewritePattern<ILLegalOpG> {
     return success();
   };
 };
+
+class TestEraseOp : public ConversionPattern {
+public:
+  TestEraseOp(MLIRContext *ctx) : ConversionPattern("test.erase_op", 1, ctx) {}
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const final {
+    // Erase op without replacements.
+    rewriter.eraseOp(op);
+    return success();
+  }
+};
+
 } // namespace
 
 namespace {
@@ -1148,8 +1177,9 @@ struct TestLegalizePatternDriver
         TestUpdateConsumerType, TestNonRootReplacement,
         TestBoundedRecursiveRewrite, TestNestedOpCreationUndoRewrite,
         TestReplaceEraseOp, TestCreateUnregisteredOp, TestUndoMoveOpBefore,
-        TestUndoPropertiesModification>(&getContext());
-    patterns.add<TestDropOpSignatureConversion>(&getContext(), converter);
+        TestUndoPropertiesModification, TestEraseOp>(&getContext());
+    patterns.add<TestDropOpSignatureConversion, TestDropAndReplaceInvalidOp>(
+        &getContext(), converter);
     mlir::populateAnyFunctionOpInterfaceTypeConversionPattern(patterns,
                                                               converter);
     mlir::populateCallOpTypeConversionPattern(patterns, converter);

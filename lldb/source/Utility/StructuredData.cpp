@@ -46,7 +46,7 @@ StructuredData::ParseJSONFromFile(const FileSpec &input_spec, Status &error) {
       json::parse(buffer_or_error.get()->getBuffer().str());
   if (value)
     return ParseJSONValue(*value);
-  error = Status(value.takeError());
+  error = Status::FromError(value.takeError());
   return StructuredData::ObjectSP();
 }
 

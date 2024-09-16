@@ -249,7 +249,7 @@ public:
     return __rhs.__count_ <=> __lhs.__count_;
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr iter_rvalue_reference_t<_Iter>
+  _LIBCPP_HIDE_FROM_ABI friend constexpr decltype(auto)
   iter_move(const counted_iterator& __i) noexcept(noexcept(ranges::iter_move(__i.__current_)))
     requires input_iterator<_Iter>
   {

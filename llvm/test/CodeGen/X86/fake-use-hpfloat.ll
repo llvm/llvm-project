@@ -1,6 +1,6 @@
 ; assert in DAGlegalizer with fake use of half precision float.
 ; Changes to half float promotion.
-; RUN: llc -stop-after=finalize-isel -o - %s | FileCheck %s
+; RUN: llc -stop-after=finalize-isel -mtriple=x86_64-unknown-linux -o - %s | FileCheck %s
 ;
 ; CHECK:      bb.0.entry:
 ; CHECK-NEXT: %0:fr16 = FsFLD0SH

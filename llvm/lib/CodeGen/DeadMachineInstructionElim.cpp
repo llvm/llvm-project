@@ -80,23 +80,9 @@ INITIALIZE_PASS(DeadMachineInstructionElim, DEBUG_TYPE,
                 "Remove dead machine instructions", false, false)
 
 bool DeadMachineInstructionElimImpl::isDead(const MachineInstr *MI) const {
-  // Technically speaking inline asm without side effects and no defs can still
-  // be deleted. But there is so much bad inline asm code out there, we should
-  // let them be.
-  if (MI->isInlineAsm())
-    return false;
-
-  // Don't delete frame allocation labels.
-  if (MI->getOpcode() == TargetOpcode::LOCAL_ESCAPE ||
-      MI->getOpcode() == TargetOpcode::FAKE_USE)
-    return false;
-
-  // Don't delete instructions with side effects.
-  bool SawStore = false;
-  if (!MI->isSafeToMove(SawStore) && !MI->isPHI())
-    return false;
-
-  // Examine each operand.
+  // Instructions without side-effects are dead iff they only define dead regs.
+  // This function is hot and this loop returns early in the common case,
+  // so only perform additional checks before this if absolutely necessary.
   for (const MachineOperand &MO : MI->all_defs()) {
     Register Reg = MO.getReg();
     if (Reg.isPhysical()) {
@@ -120,8 +106,18 @@ bool DeadMachineInstructionElimImpl::isDead(const MachineInstr *MI) const {
     }
   }
 
-  // If there are no defs with uses, the instruction is dead.
-  return true;
+  // Technically speaking inline asm without side effects and no defs can still
+  // be deleted. But there is so much bad inline asm code out there, we should
+  // let them be.
+  if (MI->isInlineAsm())
+    return false;
+
+  // FIXME: See issue #105950 for why LIFETIME markers are considered dead here.
+  if (MI->isLifetimeMarker())
+    return true;
+
+  // If there are no defs with uses, the instruction might be dead.
+  return MI->wouldBeTriviallyDead();
 }
 
 bool DeadMachineInstructionElimImpl::runImpl(MachineFunction &MF) {

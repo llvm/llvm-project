@@ -1,4 +1,4 @@
-; RUN: llc < %s -stop-after=finalize-isel - | FileCheck %s --implicit-check-not FAKE_USE
+; RUN: llc < %s -stop-after=finalize-isel -mtriple=x86_64-unknown-linux - | FileCheck %s --implicit-check-not FAKE_USE
 ; Fake uses following tail calls should be pulled in front
 ; of the TCRETURN instruction. Fake uses using something defined by
 ; the tail call or after it should be suppressed.

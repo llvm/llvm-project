@@ -128,28 +128,28 @@ namespace ns {
   struct Foo {
     static const bool value = true;
   };
-  
+
   template <bool b>
   struct Bar {};
-  
+
   const bool value = false;
-  
+
   Bar<bool(ns::Foo<int>::value)> x;
 }
 
 // PR5349
 namespace ns {
   enum E { k };
-  
+
   template <E e>
   struct Baz  {};
-  
+
   Baz<k> f1;  // This works.
   Baz<E(0)> f2;  // This too.
   Baz<static_cast<E>(0)> f3;  // And this.
-  
+
   Baz<ns::E(0)> b1;  // This doesn't work.
-  Baz<static_cast<ns::E>(0)> b2;  // This neither.  
+  Baz<static_cast<ns::E>(0)> b2;  // This neither.
 }
 
 // PR5597
@@ -193,7 +193,7 @@ namespace EntityReferenced {
 
   template<typename T>
   struct Y {
-    static void f(T x) { 
+    static void f(T x) {
       x = 1; // expected-error{{incompatible integer to pointer conversion assigning to 'int *' from 'int'}}
     }
   };
@@ -208,7 +208,7 @@ namespace PR6964 {
   // expected-note {{template parameter is declared here}}
   struct as_nview { };
 
-  template <typename Sequence, int I0> 
+  template <typename Sequence, int I0>
   struct as_nview<Sequence, I0>  // expected-note{{while checking a default template argument used here}}
   { };
 }
@@ -235,7 +235,7 @@ namespace test8 {
     char y;
     double z;
   };
-  
+
   template <C* cp> struct B {
     C* p;
     B() : p(cp) {}

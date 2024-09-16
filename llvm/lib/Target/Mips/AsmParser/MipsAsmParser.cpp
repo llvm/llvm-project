@@ -6410,7 +6410,12 @@ bool MipsAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic) {
 
   // Check if the current operand has a custom associated parser, if so, try to
   // custom parse the operand, or fallback to the general approach.
-  ParseStatus Res = MatchOperandParserImpl(Operands, Mnemonic);
+  // Setting the third parameter to true tells the parser to keep parsing even
+  // if the operands are not supported with the current feature set. In this
+  // case, the instruction matcher will output a "instruction requires a CPU
+  // feature not currently enabled" error. If this were false, the parser would
+  // stop here and output a less useful "invalid operand" error.
+  ParseStatus Res = MatchOperandParserImpl(Operands, Mnemonic, true);
   if (Res.isSuccess())
     return false;
   // If there wasn't a custom match, try the generic matcher below. Otherwise,

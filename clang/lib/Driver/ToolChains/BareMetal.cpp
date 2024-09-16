@@ -58,7 +58,7 @@ static bool findRISCVMultilibs(const Driver &D,
 
     Result.Multilibs =
         MultilibSetBuilder().Either(Imac, Imafdc).makeMultilibSet();
-    return Result.Multilibs.select(Flags, Result.SelectedMultilibs);
+    return Result.Multilibs.select(D, Flags, Result.SelectedMultilibs);
   }
   if (TargetTriple.isRISCV32()) {
     MultilibBuilder Imac =
@@ -92,7 +92,7 @@ static bool findRISCVMultilibs(const Driver &D,
 
     Result.Multilibs =
         MultilibSetBuilder().Either(I, Im, Iac, Imac, Imafc).makeMultilibSet();
-    return Result.Multilibs.select(Flags, Result.SelectedMultilibs);
+    return Result.Multilibs.select(D, Flags, Result.SelectedMultilibs);
   }
   return false;
 }
@@ -182,12 +182,13 @@ static void findMultilibsFromYAML(const ToolChain &TC, const Driver &D,
   if (ErrorOrMultilibSet.getError())
     return;
   Result.Multilibs = ErrorOrMultilibSet.get();
-  if (Result.Multilibs.select(Flags, Result.SelectedMultilibs))
+  if (Result.Multilibs.select(D, Flags, Result.SelectedMultilibs))
     return;
   D.Diag(clang::diag::warn_drv_missing_multilib) << llvm::join(Flags, " ");
   std::stringstream ss;
   for (const Multilib &Multilib : Result.Multilibs)
-    ss << "\n" << llvm::join(Multilib.flags(), " ");
+    if (!Multilib.isFatalError())
+      ss << "\n" << llvm::join(Multilib.flags(), " ");
   D.Diag(clang::diag::note_drv_available_multilibs) << ss.str();
 }
 

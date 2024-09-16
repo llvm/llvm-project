@@ -1,5 +1,5 @@
 # Prevent the machine scheduler from moving instructions past FAKE_USE.
-# RUN: llc -run-pass machine-scheduler -debug-only=machine-scheduler 2>&1 -o - %s | FileCheck %s
+# RUN: llc -run-pass machine-scheduler -mtriple=x86_64-unknown-linux -debug-only=machine-scheduler 2>&1 -o - %s | FileCheck %s
 # REQUIRES: asserts
 #
 # We make sure that, beginning with the first FAKE_USE instruction,

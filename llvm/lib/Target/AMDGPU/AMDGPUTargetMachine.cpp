@@ -36,8 +36,11 @@
 #include "R600TargetMachine.h"
 #include "SIFixSGPRCopies.h"
 #include "SIFoldOperands.h"
+#include "SILoadStoreOptimizer.h"
 #include "SIMachineFunctionInfo.h"
 #include "SIMachineScheduler.h"
+#include "SIPeepholeSDWA.h"
+#include "SIShrinkInstructions.h"
 #include "TargetInfo/AMDGPUTargetInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
@@ -413,11 +416,11 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeSIFixSGPRCopiesLegacyPass(*PR);
   initializeSIFixVGPRCopiesPass(*PR);
   initializeSIFoldOperandsLegacyPass(*PR);
-  initializeSIPeepholeSDWAPass(*PR);
-  initializeSIShrinkInstructionsPass(*PR);
+  initializeSIPeepholeSDWALegacyPass(*PR);
+  initializeSIShrinkInstructionsLegacyPass(*PR);
   initializeSIOptimizeExecMaskingPreRAPass(*PR);
   initializeSIOptimizeVGPRLiveRangePass(*PR);
-  initializeSILoadStoreOptimizerPass(*PR);
+  initializeSILoadStoreOptimizerLegacyPass(*PR);
   initializeAMDGPUCtorDtorLoweringLegacyPass(*PR);
   initializeAMDGPUAlwaysInlinePass(*PR);
   initializeAMDGPUSwLowerLDSLegacyPass(*PR);
@@ -771,12 +774,8 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
           PM.addPass(AMDGPUSwLowerLDSPass(*this));
         if (EnableLowerModuleLDS)
           PM.addPass(AMDGPULowerModuleLDSPass(*this));
-
-        if (EnableAMDGPUAttributor && Level != OptimizationLevel::O0) {
-          AMDGPUAttributorOptions Opts;
-          Opts.IsClosedWorld = true;
-          PM.addPass(AMDGPUAttributorPass(*this, Opts));
-        }
+        if (EnableAMDGPUAttributor && Level != OptimizationLevel::O0)
+          PM.addPass(AMDGPUAttributorPass(*this));
       });
 
   PB.registerRegClassFilterParsingCallback(
@@ -1275,15 +1274,15 @@ void GCNPassConfig::addMachineSSAOptimization() {
   addPass(&SIFoldOperandsLegacyID);
   if (EnableDPPCombine)
     addPass(&GCNDPPCombineLegacyID);
-  addPass(&SILoadStoreOptimizerID);
+  addPass(&SILoadStoreOptimizerLegacyID);
   if (isPassEnabled(EnableSDWAPeephole)) {
-    addPass(&SIPeepholeSDWAID);
+    addPass(&SIPeepholeSDWALegacyID);
     addPass(&EarlyMachineLICMID);
-    addPass(&MachineCSEID);
+    addPass(&MachineCSELegacyID);
     addPass(&SIFoldOperandsLegacyID);
   }
   addPass(&DeadMachineInstructionElimID);
-  addPass(createSIShrinkInstructionsPass());
+  addPass(createSIShrinkInstructionsLegacyPass());
 }
 
 bool GCNPassConfig::addILPOpts() {
@@ -1487,7 +1486,7 @@ void GCNPassConfig::addPostRegAlloc() {
 
 void GCNPassConfig::addPreSched2() {
   if (TM->getOptLevel() > CodeGenOptLevel::None)
-    addPass(createSIShrinkInstructionsPass());
+    addPass(createSIShrinkInstructionsLegacyPass());
   addPass(&SIPostRABundlerID);
 }
 
@@ -1740,6 +1739,9 @@ bool GCNTargetMachine::parseMachineFunctionInfo(
   MFI->Mode.FP64FP16Denormals.Output = YamlMFI.Mode.FP64FP16OutputDenormals
                                            ? DenormalMode::IEEE
                                            : DenormalMode::PreserveSign;
+
+  if (YamlMFI.HasInitWholeWave)
+    MFI->setInitWholeWave();
 
   return false;
 }

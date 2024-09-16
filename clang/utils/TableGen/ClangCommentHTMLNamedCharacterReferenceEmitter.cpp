@@ -46,21 +46,17 @@ static bool translateCodePointToUTF8(unsigned CodePoint,
   return true;
 }
 
-void clang::EmitClangCommentHTMLNamedCharacterReferences(RecordKeeper &Records,
-                                                         raw_ostream &OS) {
-  std::vector<Record *> Tags = Records.getAllDerivedDefinitions("NCR");
+void clang::EmitClangCommentHTMLNamedCharacterReferences(
+    const RecordKeeper &Records, raw_ostream &OS) {
   std::vector<StringMatcher::StringPair> NameToUTF8;
   SmallString<32> CLiteral;
-  for (std::vector<Record *>::iterator I = Tags.begin(), E = Tags.end();
-       I != E; ++I) {
-    Record &Tag = **I;
-    std::string Spelling = std::string(Tag.getValueAsString("Spelling"));
-    uint64_t CodePoint = Tag.getValueAsInt("CodePoint");
+  for (const Record *Tag : Records.getAllDerivedDefinitions("NCR")) {
+    std::string Spelling = std::string(Tag->getValueAsString("Spelling"));
+    uint64_t CodePoint = Tag->getValueAsInt("CodePoint");
     CLiteral.clear();
     CLiteral.append("return ");
     if (!translateCodePointToUTF8(CodePoint, CLiteral)) {
-      SrcMgr.PrintMessage(Tag.getLoc().front(),
-                          SourceMgr::DK_Error,
+      SrcMgr.PrintMessage(Tag->getLoc().front(), SourceMgr::DK_Error,
                           Twine("invalid code point"));
       continue;
     }

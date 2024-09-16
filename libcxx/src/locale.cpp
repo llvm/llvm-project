@@ -34,7 +34,7 @@
 #  define _CTYPE_DISABLE_MACROS
 #endif
 
-#if !defined(_LIBCPP_MSVCRT) && !defined(__MINGW32__) && !defined(__BIONIC__) && !defined(__NuttX__)
+#if __has_include("<langinfo.h>")
 #  include <langinfo.h>
 #endif
 
