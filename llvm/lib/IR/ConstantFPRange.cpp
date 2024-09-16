@@ -84,6 +84,8 @@ static void canonicalizeRange(APFloat &Lower, APFloat &Upper) {
 ConstantFPRange::ConstantFPRange(APFloat LowerVal, APFloat UpperVal,
                                  bool MayBeQNaN, bool MayBeSNaN)
     : Lower(std::move(LowerVal)), Upper(std::move(UpperVal)) {
+  assert(&Lower.getSemantics() == &Upper.getSemantics() &&
+         "Should only use the same semantics");
   assert(!isNonCanonicalEmptySet(Lower, Upper) && "Non-canonical form");
   this->MayBeQNaN = MayBeQNaN;
   this->MayBeSNaN = MayBeSNaN;
@@ -208,15 +210,8 @@ void ConstantFPRange::print(raw_ostream &OS) const {
     OS << "empty-set";
   else {
     bool NaNOnly = isNaNOnly();
-    if (!NaNOnly) {
-      OS << '[';
-      SmallVector<char, 16> Buffer;
-      Lower.toString(Buffer);
-      OS << Buffer << ", ";
-      Buffer.clear();
-      Upper.toString(Buffer);
-      OS << Buffer << ']';
-    }
+    if (!NaNOnly)
+      OS << '[' << Lower << ", " << Upper << ']';
 
     if (MayBeSNaN || MayBeQNaN) {
       if (!NaNOnly)
@@ -237,6 +232,8 @@ LLVM_DUMP_METHOD void ConstantFPRange::dump() const { print(dbgs()); }
 
 ConstantFPRange
 ConstantFPRange::intersectWith(const ConstantFPRange &CR) const {
+  assert(&getSemantics() == &CR.getSemantics() &&
+         "Should only use the same semantics");
   APFloat NewLower = maxnum(Lower, CR.Lower);
   APFloat NewUpper = minnum(Upper, CR.Upper);
   canonicalizeRange(NewLower, NewUpper);
@@ -245,6 +242,8 @@ ConstantFPRange::intersectWith(const ConstantFPRange &CR) const {
 }
 
 ConstantFPRange ConstantFPRange::unionWith(const ConstantFPRange &CR) const {
+  assert(&getSemantics() == &CR.getSemantics() &&
+         "Should only use the same semantics");
   return ConstantFPRange(minnum(Lower, CR.Lower), maxnum(Upper, CR.Upper),
                          MayBeQNaN | CR.MayBeQNaN, MayBeSNaN | CR.MayBeSNaN);
 }

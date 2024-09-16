@@ -136,6 +136,10 @@ public:
   /// Return the upper value for this range.
   const APFloat &getUpper() const { return Upper; }
 
+  bool containsNaN() const { return MayBeQNaN || MayBeSNaN; }
+  bool containsQNaN() const { return MayBeQNaN; }
+  bool containsSNaN() const { return MayBeSNaN; }
+
   /// Get the semantics of this ConstantFPRange.
   const fltSemantics &getSemantics() const { return Lower.getSemantics(); }
 
