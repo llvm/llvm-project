@@ -1763,6 +1763,12 @@ public:
   // STATUS, STATE_PRIV, EXCP_FLAG_PRIV, or EXCP_FLAG_USER.
   bool requiresWaitIdleBeforeGetReg() const { return GFX1210Insts; }
 
+  bool requiresDisjointEarlyClobberAndUndef() const override {
+    // AMDGPU doesn't care if early-clobber and undef operands are allocated
+    // to the same register.
+    return false;
+  }
+
   bool isDynamicVGPREnabled() const { return DynamicVGPR; }
 };
 
