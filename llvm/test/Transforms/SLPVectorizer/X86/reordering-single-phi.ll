@@ -15,6 +15,7 @@ define void @test() {
 ; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds [32000 x float], ptr @a, i64 0, i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = add nuw nsw i64 [[INDVARS_IV]], 4
 ; CHECK-NEXT:    [[ARRAYIDX31:%.*]] = getelementptr inbounds [32000 x float], ptr @a, i64 0, i64 [[TMP5]]
+; CHECK-NEXT:    [[TMP6:%.*]] = load float, ptr [[ARRAYIDX31]], align 4
 ; CHECK-NEXT:    [[TMP14:%.*]] = load <4 x float>, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x float> [[TMP14]], <4 x float> poison, <4 x i32> <i32 poison, i32 0, i32 1, i32 2>
 ; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x float> [[TMP4]], float [[TMP0]], i32 0
@@ -23,7 +24,6 @@ define void @test() {
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 5
 ; CHECK-NEXT:    [[ARRAYIDX41:%.*]] = getelementptr inbounds [32000 x float], ptr @a, i64 0, i64 [[INDVARS_IV_NEXT]]
 ; CHECK-NEXT:    [[TMP16]] = load float, ptr [[ARRAYIDX41]], align 4
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x float> [[TMP14]], i32 3
 ; CHECK-NEXT:    [[MUL45:%.*]] = fmul fast float [[TMP16]], [[TMP6]]
 ; CHECK-NEXT:    store float [[MUL45]], ptr [[ARRAYIDX31]], align 4
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i64 [[INDVARS_IV]], 31990

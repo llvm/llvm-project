@@ -708,15 +708,16 @@ void test_isinf()
     static_assert((std::is_same<decltype(std::isinf((float)0)), bool>::value), "");
 
     typedef decltype(std::isinf((double)0)) DoubleRetType;
-#if !defined(__linux__) || defined(__clang__)
-    static_assert((std::is_same<DoubleRetType, bool>::value), "");
-#else
+#if defined(__GLIBC__) && TEST_STD_VER == 03 && defined(TEST_COMPILER_CLANG)
     // GLIBC < 2.23 defines 'isinf(double)' with a return type of 'int' in
     // all C++ dialects. The test should tolerate this when libc++ can't work
-    // around it.
+    // around it via `_LIBCPP_PREFERRED_OVERLOAD`, which is only available
+    // in modern versions of Clang, and not elsewhere.
     // See: https://sourceware.org/bugzilla/show_bug.cgi?id=19439
     static_assert((std::is_same<DoubleRetType, bool>::value
                 || std::is_same<DoubleRetType, int>::value), "");
+#else
+    static_assert((std::is_same<DoubleRetType, bool>::value), "");
 #endif
 
     static_assert((std::is_same<decltype(std::isinf(0)), bool>::value), "");
@@ -794,15 +795,16 @@ void test_isnan()
     static_assert((std::is_same<decltype(std::isnan((float)0)), bool>::value), "");
 
     typedef decltype(std::isnan((double)0)) DoubleRetType;
-#if !defined(__linux__) || defined(__clang__)
-    static_assert((std::is_same<DoubleRetType, bool>::value), "");
-#else
-    // GLIBC < 2.23 defines 'isinf(double)' with a return type of 'int' in
+#if defined(__GLIBC__) && TEST_STD_VER == 03 && defined(TEST_COMPILER_CLANG)
+    // GLIBC < 2.23 defines 'isnan(double)' with a return type of 'int' in
     // all C++ dialects. The test should tolerate this when libc++ can't work
-    // around it.
+    // around it via `_LIBCPP_PREFERRED_OVERLOAD`, which is only available
+    // in modern versions of Clang, and not elsewhere.
     // See: https://sourceware.org/bugzilla/show_bug.cgi?id=19439
     static_assert((std::is_same<DoubleRetType, bool>::value
                 || std::is_same<DoubleRetType, int>::value), "");
+#else
+    static_assert((std::is_same<DoubleRetType, bool>::value), "");
 #endif
 
     static_assert((std::is_same<decltype(std::isnan(0)), bool>::value), "");

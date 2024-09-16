@@ -158,7 +158,7 @@ static void writeMapFile(raw_fd_ostream &os) {
      << "     Size Align Out     In      Symbol\n";
 
   OutputSection *osec = nullptr;
-  for (SectionCommand *cmd : script->sectionCommands) {
+  for (SectionCommand *cmd : ctx.script->sectionCommands) {
     if (auto *assign = dyn_cast<SymbolAssignment>(cmd)) {
       if (assign->provide && !assign->sym)
         continue;

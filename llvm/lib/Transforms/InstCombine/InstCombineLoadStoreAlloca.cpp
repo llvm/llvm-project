@@ -12,6 +12,7 @@
 
 #include "InstCombineInternal.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
@@ -287,10 +288,7 @@ bool PointerReplacer::collectUsers() {
   // Ensure that all outstanding (indirect) users of I
   // are inserted into the Worklist. Return false
   // otherwise.
-  for (auto *Inst : ValuesToRevisit)
-    if (!Worklist.contains(Inst))
-      return false;
-  return true;
+  return llvm::set_is_subset(ValuesToRevisit, Worklist);
 }
 
 bool PointerReplacer::collectUsersRecursive(Instruction &I) {

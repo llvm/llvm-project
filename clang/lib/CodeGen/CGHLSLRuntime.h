@@ -77,8 +77,16 @@ public:
   GENERATE_HLSL_INTRINSIC_FUNCTION(Frac, frac)
   GENERATE_HLSL_INTRINSIC_FUNCTION(Length, length)
   GENERATE_HLSL_INTRINSIC_FUNCTION(Lerp, lerp)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(Normalize, normalize)
   GENERATE_HLSL_INTRINSIC_FUNCTION(Rsqrt, rsqrt)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(Saturate, saturate)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(Sign, sign)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(Step, step)
   GENERATE_HLSL_INTRINSIC_FUNCTION(ThreadId, thread_id)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(FDot, fdot)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(SDot, sdot)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(UDot, udot)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(WaveIsFirstLane, wave_is_first_lane)
 
   //===----------------------------------------------------------------------===//
   // End of reserved area for HLSL intrinsic getters.
@@ -124,7 +132,7 @@ public:
   void setHLSLEntryAttributes(const FunctionDecl *FD, llvm::Function *Fn);
 
   void emitEntryFunction(const FunctionDecl *FD, llvm::Function *Fn);
-  void setHLSLFunctionAttributes(llvm::Function *, const FunctionDecl *);
+  void setHLSLFunctionAttributes(const FunctionDecl *FD, llvm::Function *Fn);
 
 private:
   void addBufferResourceAnnotation(llvm::GlobalVariable *GV,

@@ -14,9 +14,11 @@
 #include "flang/Optimizer/Builder/Runtime/Assign.h"
 #include "flang/Optimizer/Builder/Runtime/Derived.h"
 #include "flang/Optimizer/Builder/Todo.h"
+#include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
+#include "flang/Optimizer/Support/DataLayout.h"
 #include "flang/Optimizer/Support/FatalError.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Support/Utils.h"
@@ -270,25 +272,30 @@ mlir::Block *fir::FirOpBuilder::getAllocaBlock() {
 mlir::Value fir::FirOpBuilder::createTemporaryAlloc(
     mlir::Location loc, mlir::Type type, llvm::StringRef name,
     mlir::ValueRange lenParams, mlir::ValueRange shape,
-    llvm::ArrayRef<mlir::NamedAttribute> attrs) {
+    llvm::ArrayRef<mlir::NamedAttribute> attrs,
+    std::optional<Fortran::common::CUDADataAttr> cudaAttr) {
   assert(!mlir::isa<fir::ReferenceType>(type) && "cannot be a reference");
   // If the alloca is inside an OpenMP Op which will be outlined then pin
   // the alloca here.
   const bool pinned =
       getRegion().getParentOfType<mlir::omp::OutlineableOpenMPOpInterface>();
-  mlir::Value temp =
-      create<fir::AllocaOp>(loc, type, /*unique_name=*/llvm::StringRef{}, name,
-                            pinned, lenParams, shape, attrs);
-  return temp;
+  if (cudaAttr) {
+    cuf::DataAttributeAttr attr = cuf::getDataAttribute(getContext(), cudaAttr);
+    return create<cuf::AllocOp>(loc, type, /*unique_name=*/llvm::StringRef{},
+                                name, attr, lenParams, shape, attrs);
+  } else {
+    return create<fir::AllocaOp>(loc, type, /*unique_name=*/llvm::StringRef{},
+                                 name, pinned, lenParams, shape, attrs);
+  }
 }
 
 /// Create a temporary variable on the stack. Anonymous temporaries have no
 /// `name` value. Temporaries do not require a uniqued name.
-mlir::Value
-fir::FirOpBuilder::createTemporary(mlir::Location loc, mlir::Type type,
-                                   llvm::StringRef name, mlir::ValueRange shape,
-                                   mlir::ValueRange lenParams,
-                                   llvm::ArrayRef<mlir::NamedAttribute> attrs) {
+mlir::Value fir::FirOpBuilder::createTemporary(
+    mlir::Location loc, mlir::Type type, llvm::StringRef name,
+    mlir::ValueRange shape, mlir::ValueRange lenParams,
+    llvm::ArrayRef<mlir::NamedAttribute> attrs,
+    std::optional<Fortran::common::CUDADataAttr> cudaAttr) {
   llvm::SmallVector<mlir::Value> dynamicShape =
       fir::factory::elideExtentsAlreadyInType(type, shape);
   llvm::SmallVector<mlir::Value> dynamicLength =
@@ -300,8 +307,8 @@ fir::FirOpBuilder::createTemporary(mlir::Location loc, mlir::Type type,
     setInsertionPointToStart(getAllocaBlock());
   }
 
-  mlir::Value ae =
-      createTemporaryAlloc(loc, type, name, dynamicLength, dynamicShape, attrs);
+  mlir::Value ae = createTemporaryAlloc(loc, type, name, dynamicLength,
+                                        dynamicShape, attrs, cudaAttr);
 
   if (hoistAlloc)
     restoreInsertionPoint(insPt);
@@ -320,6 +327,17 @@ mlir::Value fir::FirOpBuilder::createHeapTemporary(
   assert(!mlir::isa<fir::ReferenceType>(type) && "cannot be a reference");
   return create<fir::AllocMemOp>(loc, type, /*unique_name=*/llvm::StringRef{},
                                  name, dynamicLength, dynamicShape, attrs);
+}
+
+mlir::Value fir::FirOpBuilder::genStackSave(mlir::Location loc) {
+  mlir::Type voidPtr = mlir::LLVM::LLVMPointerType::get(
+      getContext(), fir::factory::getAllocaAddressSpace(&getDataLayout()));
+  return create<mlir::LLVM::StackSaveOp>(loc, voidPtr);
+}
+
+void fir::FirOpBuilder::genStackRestore(mlir::Location loc,
+                                        mlir::Value stackPointer) {
+  create<mlir::LLVM::StackRestoreOp>(loc, stackPointer);
 }
 
 /// Create a global variable in the (read-only) data section. A global variable
@@ -426,7 +444,9 @@ mlir::Value fir::FirOpBuilder::convertWithSemantics(
       // argument in characters and use it as the length of the string
       auto refType = getRefType(boxType.getEleTy());
       mlir::Value charBase = createConvert(loc, refType, val);
-      mlir::Value unknownLen = create<fir::UndefOp>(loc, getIndexType());
+      // Do not use fir.undef since llvm optimizer is too harsh when it
+      // sees such values (may just delete code).
+      mlir::Value unknownLen = createIntegerConstant(loc, getIndexType(), 0);
       fir::factory::CharacterExprHelper charHelper{*this, loc};
       return charHelper.createEmboxChar(charBase, unknownLen);
     }
@@ -783,6 +803,15 @@ void fir::FirOpBuilder::setFastMathFlags(
     arithFMF = arithFMF | mlir::arith::FastMathFlags::arcp;
   }
   setFastMathFlags(arithFMF);
+}
+
+// Construction of an mlir::DataLayout is expensive so only do it on demand and
+// memoise it in the builder instance
+mlir::DataLayout &fir::FirOpBuilder::getDataLayout() {
+  if (dataLayout)
+    return *dataLayout;
+  dataLayout = std::make_unique<mlir::DataLayout>(getModule());
+  return *dataLayout;
 }
 
 //===--------------------------------------------------------------------===//
@@ -1574,6 +1603,23 @@ mlir::Value fir::factory::genCPtrOrCFunptrValue(fir::FirOpBuilder &builder,
                                                 mlir::Location loc,
                                                 mlir::Value cPtr) {
   mlir::Type cPtrTy = fir::unwrapRefType(cPtr.getType());
+  if (fir::isa_builtin_cdevptr_type(cPtrTy)) {
+    // Unwrap c_ptr from c_devptr.
+    auto [addrFieldIndex, addrFieldTy] =
+        genCPtrOrCFunptrFieldIndex(builder, loc, cPtrTy);
+    mlir::Value cPtrCoor;
+    if (fir::isa_ref_type(cPtr.getType())) {
+      cPtrCoor = builder.create<fir::CoordinateOp>(
+          loc, builder.getRefType(addrFieldTy), cPtr, addrFieldIndex);
+    } else {
+      auto arrayAttr = builder.getArrayAttr(
+          {builder.getIntegerAttr(builder.getIndexType(), 0)});
+      cPtrCoor = builder.create<fir::ExtractValueOp>(loc, addrFieldTy, cPtr,
+                                                     arrayAttr);
+    }
+    return genCPtrOrCFunptrValue(builder, loc, cPtrCoor);
+  }
+
   if (fir::isa_ref_type(cPtr.getType())) {
     mlir::Value cPtrAddr =
         fir::factory::genCPtrOrCFunptrAddr(builder, loc, cPtr, cPtrTy);
@@ -1640,4 +1686,11 @@ void fir::factory::setInternalLinkage(mlir::func::FuncOp func) {
   auto linkage =
       mlir::LLVM::LinkageAttr::get(func->getContext(), internalLinkage);
   func->setAttr("llvm.linkage", linkage);
+}
+
+uint64_t fir::factory::getAllocaAddressSpace(mlir::DataLayout *dataLayout) {
+  if (dataLayout)
+    if (mlir::Attribute addrSpace = dataLayout->getAllocaMemorySpace())
+      return mlir::cast<mlir::IntegerAttr>(addrSpace).getUInt();
+  return 0;
 }

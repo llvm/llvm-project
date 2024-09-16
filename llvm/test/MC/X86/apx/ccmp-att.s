@@ -1,7 +1,7 @@
 # RUN: llvm-mc -triple x86_64 -show-encoding %s | FileCheck %s
 # RUN: not llvm-mc -triple i386 -show-encoding %s 2>&1 | FileCheck %s --check-prefix=ERROR
 
-# ERROR-COUNT-428: error:
+# ERROR-COUNT-466: error:
 # ERROR-NOT: error:
 ## Condition flags
 
@@ -899,6 +899,84 @@
 # CHECK: ccmpneq {dfv=of} %r9, %r15
 # CHECK: encoding: [0x62,0x54,0xc4,0x05,0x39,0xcf]
          ccmpneq {dfv=of} %r9, %r15
+# CHECK: ccmpbeb {dfv=of} $123, 123(%r8,%rax,4)
+# CHECK: encoding: [0x62,0xd4,0x44,0x06,0x80,0x7c,0x80,0x7b,0x7b]
+         ccmpbeb {dfv=of} $123, 123(%r8,%rax,4)
+# CHECK: ccmpbew {dfv=of} $123, 123(%r8,%rax,4)
+# CHECK: encoding: [0x62,0xd4,0x45,0x06,0x83,0x7c,0x80,0x7b,0x7b]
+         ccmpbew {dfv=of} $123, 123(%r8,%rax,4)
+# CHECK: ccmpbew {dfv=of} $1234, 123(%r8,%rax,4)
+# CHECK: encoding: [0x62,0xd4,0x45,0x06,0x81,0x7c,0x80,0x7b,0xd2,0x04]
+         ccmpbew {dfv=of} $1234, 123(%r8,%rax,4)
+# CHECK: ccmpbel {dfv=of} $123, 123(%r8,%rax,4)
+# CHECK: encoding: [0x62,0xd4,0x44,0x06,0x83,0x7c,0x80,0x7b,0x7b]
+         ccmpbel {dfv=of} $123, 123(%r8,%rax,4)
+# CHECK: ccmpbel {dfv=of} $123456, 123(%r8,%rax,4)
+# CHECK: encoding: [0x62,0xd4,0x44,0x06,0x81,0x7c,0x80,0x7b,0x40,0xe2,0x01,0x00]
+         ccmpbel {dfv=of} $123456, 123(%r8,%rax,4)
+# CHECK: ccmpbeq {dfv=of} $123, 123(%r8,%rax,4)
+# CHECK: encoding: [0x62,0xd4,0xc4,0x06,0x83,0x7c,0x80,0x7b,0x7b]
+         ccmpbeq {dfv=of} $123, 123(%r8,%rax,4)
+# CHECK: ccmpbeq {dfv=of} $123456, 123(%r8,%rax,4)
+# CHECK: encoding: [0x62,0xd4,0xc4,0x06,0x81,0x7c,0x80,0x7b,0x40,0xe2,0x01,0x00]
+         ccmpbeq {dfv=of} $123456, 123(%r8,%rax,4)
+# CHECK: ccmpbeb {dfv=of} %bl, 123(%r8,%rax,4)
+# CHECK: encoding: [0x62,0xd4,0x44,0x06,0x38,0x5c,0x80,0x7b]
+         ccmpbeb {dfv=of} %bl, 123(%r8,%rax,4)
+# CHECK: ccmpbew {dfv=of} %dx, 123(%r8,%rax,4)
+# CHECK: encoding: [0x62,0xd4,0x45,0x06,0x39,0x54,0x80,0x7b]
+         ccmpbew {dfv=of} %dx, 123(%r8,%rax,4)
+# CHECK: ccmpbel {dfv=of} %ecx, 123(%r8,%rax,4)
+# CHECK: encoding: [0x62,0xd4,0x44,0x06,0x39,0x4c,0x80,0x7b]
+         ccmpbel {dfv=of} %ecx, 123(%r8,%rax,4)
+# CHECK: ccmpbeq {dfv=of} %r9, 123(%r8,%rax,4)
+# CHECK: encoding: [0x62,0x54,0xc4,0x06,0x39,0x4c,0x80,0x7b]
+         ccmpbeq {dfv=of} %r9, 123(%r8,%rax,4)
+# CHECK: ccmpbeb {dfv=of} 123(%r8,%rax,4), %bl
+# CHECK: encoding: [0x62,0xd4,0x44,0x06,0x3a,0x5c,0x80,0x7b]
+         ccmpbeb {dfv=of} 123(%r8,%rax,4), %bl
+# CHECK: ccmpbew {dfv=of} 123(%r8,%rax,4), %dx
+# CHECK: encoding: [0x62,0xd4,0x45,0x06,0x3b,0x54,0x80,0x7b]
+         ccmpbew {dfv=of} 123(%r8,%rax,4), %dx
+# CHECK: ccmpbel {dfv=of} 123(%r8,%rax,4), %ecx
+# CHECK: encoding: [0x62,0xd4,0x44,0x06,0x3b,0x4c,0x80,0x7b]
+         ccmpbel {dfv=of} 123(%r8,%rax,4), %ecx
+# CHECK: ccmpbeq {dfv=of} 123(%r8,%rax,4), %r9
+# CHECK: encoding: [0x62,0x54,0xc4,0x06,0x3b,0x4c,0x80,0x7b]
+         ccmpbeq {dfv=of} 123(%r8,%rax,4), %r9
+# CHECK: ccmpbeb {dfv=of} $123, %bl
+# CHECK: encoding: [0x62,0xf4,0x44,0x06,0x80,0xfb,0x7b]
+         ccmpbeb {dfv=of} $123, %bl
+# CHECK: ccmpbew {dfv=of} $123, %dx
+# CHECK: encoding: [0x62,0xf4,0x45,0x06,0x83,0xfa,0x7b]
+         ccmpbew {dfv=of} $123, %dx
+# CHECK: ccmpbel {dfv=of} $123, %ecx
+# CHECK: encoding: [0x62,0xf4,0x44,0x06,0x83,0xf9,0x7b]
+         ccmpbel {dfv=of} $123, %ecx
+# CHECK: ccmpbeq {dfv=of} $123, %r9
+# CHECK: encoding: [0x62,0xd4,0xc4,0x06,0x83,0xf9,0x7b]
+         ccmpbeq {dfv=of} $123, %r9
+# CHECK: ccmpbew {dfv=of} $1234, %dx
+# CHECK: encoding: [0x62,0xf4,0x45,0x06,0x81,0xfa,0xd2,0x04]
+         ccmpbew {dfv=of} $1234, %dx
+# CHECK: ccmpbel {dfv=of} $123456, %ecx
+# CHECK: encoding: [0x62,0xf4,0x44,0x06,0x81,0xf9,0x40,0xe2,0x01,0x00]
+         ccmpbel {dfv=of} $123456, %ecx
+# CHECK: ccmpbeq {dfv=of} $123456, %r9
+# CHECK: encoding: [0x62,0xd4,0xc4,0x06,0x81,0xf9,0x40,0xe2,0x01,0x00]
+         ccmpbeq {dfv=of} $123456, %r9
+# CHECK: ccmpbeb {dfv=of} %bl, %dl
+# CHECK: encoding: [0x62,0xf4,0x44,0x06,0x38,0xda]
+         ccmpbeb {dfv=of} %bl, %dl
+# CHECK: ccmpbew {dfv=of} %dx, %ax
+# CHECK: encoding: [0x62,0xf4,0x45,0x06,0x39,0xd0]
+         ccmpbew {dfv=of} %dx, %ax
+# CHECK: ccmpbel {dfv=of} %ecx, %edx
+# CHECK: encoding: [0x62,0xf4,0x44,0x06,0x39,0xca]
+         ccmpbel {dfv=of} %ecx, %edx
+# CHECK: ccmpbeq {dfv=of} %r9, %r15
+# CHECK: encoding: [0x62,0x54,0xc4,0x06,0x39,0xcf]
+         ccmpbeq {dfv=of} %r9, %r15
 # CHECK: ccmpob {dfv=of} $123, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x44,0x00,0x80,0x7c,0x80,0x7b,0x7b]
          ccmpob {dfv=of} $123, 123(%r8,%rax,4)
@@ -1298,3 +1376,42 @@
 # CHECK: ccmptq	{dfv=}	%r9, %r15
 # CHECK: encoding: [0x62,0x54,0x84,0x0a,0x39,0xcf]
          {evex} cmpq	%r9, %r15
+
+## Condition Code Aliases
+
+# CHECK: ccmpbl {dfv=of} %ecx, %edx
+# CHECK: encoding: [0x62,0xf4,0x44,0x02,0x39,0xca]
+         ccmpcl {dfv=of} %ecx, %edx
+# CHECK: ccmpbl {dfv=of} %ecx, %edx
+# CHECK: encoding: [0x62,0xf4,0x44,0x02,0x39,0xca]
+         ccmpnael {dfv=of} %ecx, %edx
+# CHECK: ccmpael {dfv=of} %ecx, %edx
+# CHECK: encoding: [0x62,0xf4,0x44,0x03,0x39,0xca]
+         ccmpnbl {dfv=of} %ecx, %edx
+# CHECK: ccmpael {dfv=of} %ecx, %edx
+# CHECK: encoding: [0x62,0xf4,0x44,0x03,0x39,0xca]
+         ccmpncl {dfv=of} %ecx, %edx
+# CHECK: ccmpel {dfv=of} %ecx, %edx
+# CHECK: encoding: [0x62,0xf4,0x44,0x04,0x39,0xca]
+         ccmpzl {dfv=of} %ecx, %edx
+# CHECK: ccmpnel {dfv=of} %ecx, %edx
+# CHECK: encoding: [0x62,0xf4,0x44,0x05,0x39,0xca]
+         ccmpnzl {dfv=of} %ecx, %edx
+# CHECK: ccmpal {dfv=of} %ecx, %edx
+# CHECK: encoding: [0x62,0xf4,0x44,0x07,0x39,0xca]
+         ccmpnbel {dfv=of} %ecx, %edx
+# CHECK: ccmpll {dfv=of} %ecx, %edx
+# CHECK: encoding: [0x62,0xf4,0x44,0x0c,0x39,0xca]
+         ccmpngel {dfv=of} %ecx, %edx
+# CHECK: ccmpgel {dfv=of} %ecx, %edx
+# CHECK: encoding: [0x62,0xf4,0x44,0x0d,0x39,0xca]
+         ccmpnll {dfv=of} %ecx, %edx
+# CHECK: ccmplel {dfv=of} %ecx, %edx
+# CHECK: encoding: [0x62,0xf4,0x44,0x0e,0x39,0xca]
+         ccmpngl {dfv=of} %ecx, %edx
+# CHECK: ccmpgl {dfv=of} %ecx, %edx
+# CHECK: encoding: [0x62,0xf4,0x44,0x0f,0x39,0xca]
+         ccmpnlel {dfv=of} %ecx, %edx
+# CHECK: ccmpbel {dfv=of} %ecx, %edx
+# CHECK: encoding: [0x62,0xf4,0x44,0x06,0x39,0xca]
+         ccmpnal {dfv=of} %ecx, %edx

@@ -93,12 +93,17 @@ void elf::errorOrWarn(const Twine &msg) {
 
 void Ctx::reset() {
   driver = LinkerDriver();
+  script = nullptr;
+  target = nullptr;
 
   bufferStart = nullptr;
+  mainPart = nullptr;
   tlsPhdr = nullptr;
   out = OutSections{};
   outputSections.clear();
+  partitions.clear();
 
+  ctx.in.reset();
   sym = ElfSym{};
 
   memoryBuffers.clear();
@@ -123,6 +128,7 @@ void Ctx::reset() {
   needsTlsLd.store(false, std::memory_order_relaxed);
   scriptSymOrderCounter = 1;
   scriptSymOrder.clear();
+  ppc64noTocRelax.clear();
   ltoAllVtablesHaveTypeInfos = false;
 }
 
@@ -144,12 +150,8 @@ bool link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
   ctx->e.initialize(stdoutOS, stderrOS, exitEarly, disableOutput);
   ctx->e.cleanupCallback = []() {
     elf::ctx.reset();
+    elf::ctx.partitions.emplace_back();
     symtab = SymbolTable();
-
-    in.reset();
-
-    partitions.clear();
-    partitions.emplace_back();
 
     SharedFile::vernauxNum = 0;
   };
@@ -158,12 +160,13 @@ bool link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
                                  "--error-limit=0 to see all errors)";
 
   config = ConfigWrapper();
-  script = ScriptWrapper();
 
+  LinkerScript script;
+  elf::ctx.script = &script;
   elf::ctx.symAux.emplace_back();
 
-  partitions.clear();
-  partitions.emplace_back();
+  elf::ctx.partitions.clear();
+  elf::ctx.partitions.emplace_back();
 
   config->progName = args[0];
 
@@ -461,7 +464,7 @@ static void checkOptions() {
     if (config->emachine != EM_AARCH64)
       error("--execute-only is only supported on AArch64 targets");
 
-    if (config->singleRoRx && !script->hasSectionsCommand)
+    if (config->singleRoRx && !ctx.script->hasSectionsCommand)
       error("--execute-only and --no-rosegment cannot be used together");
   }
 
@@ -1003,6 +1006,15 @@ processCallGraphRelocations(SmallVector<uint32_t, 32> &symbolIndices,
   for (size_t i = 0, e = objSections.size(); i < e; ++i) {
     const Elf_Shdr_Impl<ELFT> &sec = objSections[i];
     if (sec.sh_info == inputObj->cgProfileSectionIndex) {
+      if (sec.sh_type == SHT_CREL) {
+        auto crels =
+            CHECK(obj.crels(sec), "could not retrieve cg profile rela section");
+        for (const auto &rel : crels.first)
+          symbolIndices.push_back(rel.getSymbol(false));
+        for (const auto &rel : crels.second)
+          symbolIndices.push_back(rel.getSymbol(false));
+        break;
+      }
       if (sec.sh_type == SHT_RELA) {
         ArrayRef<typename ELFT::Rela> relas =
             CHECK(obj.relas(sec), "could not retrieve cg profile rela section");
@@ -1202,7 +1214,6 @@ static void parseClangOption(StringRef opt, const Twine &msg) {
   const char *argv[] = {config->progName.data(), opt.data()};
   if (cl::ParseCommandLineOptions(2, argv, "", &os))
     return;
-  os.flush();
   error(msg + ": " + StringRef(err).trim());
 }
 
@@ -2052,13 +2063,13 @@ void LinkerDriver::inferMachineType() {
 // each target.
 static uint64_t getMaxPageSize(opt::InputArgList &args) {
   uint64_t val = args::getZOptionValue(args, OPT_z, "max-page-size",
-                                       target->defaultMaxPageSize);
+                                       ctx.target->defaultMaxPageSize);
   if (!isPowerOf2_64(val)) {
     error("max-page-size: value isn't a power of 2");
-    return target->defaultMaxPageSize;
+    return ctx.target->defaultMaxPageSize;
   }
   if (config->nmagic || config->omagic) {
-    if (val != target->defaultMaxPageSize)
+    if (val != ctx.target->defaultMaxPageSize)
       warn("-z max-page-size set, but paging disabled by omagic or nmagic");
     return 1;
   }
@@ -2069,13 +2080,13 @@ static uint64_t getMaxPageSize(opt::InputArgList &args) {
 // each target.
 static uint64_t getCommonPageSize(opt::InputArgList &args) {
   uint64_t val = args::getZOptionValue(args, OPT_z, "common-page-size",
-                                       target->defaultCommonPageSize);
+                                       ctx.target->defaultCommonPageSize);
   if (!isPowerOf2_64(val)) {
     error("common-page-size: value isn't a power of 2");
-    return target->defaultCommonPageSize;
+    return ctx.target->defaultCommonPageSize;
   }
   if (config->nmagic || config->omagic) {
-    if (val != target->defaultCommonPageSize)
+    if (val != ctx.target->defaultCommonPageSize)
       warn("-z common-page-size set, but paging disabled by omagic or nmagic");
     return 1;
   }
@@ -2435,7 +2446,7 @@ static void readSymbolPartitionSection(InputSectionBase *s) {
     return;
 
   StringRef partName = reinterpret_cast<const char *>(s->content().data());
-  for (Partition &part : partitions) {
+  for (Partition &part : ctx.partitions) {
     if (part.name == partName) {
       sym->partition = part.getNumber();
       return;
@@ -2445,10 +2456,10 @@ static void readSymbolPartitionSection(InputSectionBase *s) {
   // Forbid partitions from being used on incompatible targets, and forbid them
   // from being used together with various linker features that assume a single
   // set of output sections.
-  if (script->hasSectionsCommand)
+  if (ctx.script->hasSectionsCommand)
     error(toString(s->file) +
           ": partitions cannot be used with the SECTIONS command");
-  if (script->hasPhdrsCommands())
+  if (ctx.script->hasPhdrsCommands())
     error(toString(s->file) +
           ": partitions cannot be used with the PHDRS command");
   if (!config->sectionStartMap.empty())
@@ -2460,11 +2471,11 @@ static void readSymbolPartitionSection(InputSectionBase *s) {
   // Impose a limit of no more than 254 partitions. This limit comes from the
   // sizes of the Partition fields in InputSectionBase and Symbol, as well as
   // the amount of space devoted to the partition number in RankFlags.
-  if (partitions.size() == 254)
+  if (ctx.partitions.size() == 254)
     fatal("may not have more than 254 partitions");
 
-  partitions.emplace_back();
-  Partition &newPart = partitions.back();
+  ctx.partitions.emplace_back();
+  Partition &newPart = ctx.partitions.back();
   newPart.name = partName;
   sym->partition = newPart.getNumber();
 }
@@ -2862,7 +2873,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // After potential archive member extraction involving ENTRY and
   // -u/--undefined-glob, check whether PROVIDE symbols should be defined (the
   // RHS may refer to definitions in just extracted object files).
-  script->addScriptReferencedSymbolsToSymTable();
+  ctx.script->addScriptReferencedSymbolsToSymTable();
 
   // Prevent LTO from removing any definition referenced by -u.
   for (StringRef name : config->undefined)
@@ -2928,7 +2939,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // We want to declare linker script's symbols early,
   // so that we can version them.
   // They also might be exported if referenced by DSOs.
-  script->declareSymbols();
+  ctx.script->declareSymbols();
 
   // Handle --exclude-libs. This is before scanVersionScript() due to a
   // workaround for Android ndk: for a defined versioned symbol in an archive
@@ -3084,7 +3095,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
 
   // Now that the number of partitions is fixed, save a pointer to the main
   // partition.
-  mainPart = &partitions[0];
+  ctx.mainPart = &ctx.partitions[0];
 
   // Read .note.gnu.property sections from input object files which
   // contain a hint to tweak linker's and loader's behaviors.
@@ -3093,9 +3104,9 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // The Target instance handles target-specific stuff, such as applying
   // relocations or writing a PLT section. It also contains target-dependent
   // values such as a default image base address.
-  target = getTarget();
+  ctx.target = getTarget();
 
-  config->eflags = target->calcEFlags();
+  config->eflags = ctx.target->calcEFlags();
   // maxPageSize (sometimes called abi page size) is the maximum page size that
   // the output can be run on. For example if the OS can use 4k or 64k page
   // sizes then maxPageSize must be 64k for the output to be useable on both.
@@ -3147,13 +3158,13 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
     llvm::TimeTraceScope timeScope("Assign sections");
 
     // Create output sections described by SECTIONS commands.
-    script->processSectionCommands();
+    ctx.script->processSectionCommands();
 
     // Linker scripts control how input sections are assigned to output
     // sections. Input sections that were not handled by scripts are called
     // "orphans", and they are assigned to output sections by the default rule.
     // Process that.
-    script->addOrphanSections();
+    ctx.script->addOrphanSections();
   }
 
   {
@@ -3163,9 +3174,9 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
     // merging MergeInputSections into a single MergeSyntheticSection. From this
     // point onwards InputSectionDescription::sections should be used instead of
     // sectionBases.
-    for (SectionCommand *cmd : script->sectionCommands)
+    for (SectionCommand *cmd : ctx.script->sectionCommands)
       if (auto *osd = dyn_cast<OutputDesc>(cmd))
-        osd->osec.finalizeInputSections(&script.s);
+        osd->osec.finalizeInputSections(ctx.script);
   }
 
   // Two input sections with different output sections should not be folded.

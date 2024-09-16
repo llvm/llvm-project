@@ -475,6 +475,10 @@ public:
   /// debug info.
   virtual DwarfFrameBase getDwarfFrameBase(const MachineFunction &MF) const;
 
+  /// If frame pointer or base pointer is clobbered by an instruction, we should
+  /// spill/restore it around that instruction.
+  virtual void spillFPBP(MachineFunction &MF) const {}
+
   /// This method is called at the end of prolog/epilog code insertion, so
   /// targets can emit remarks based on the final frame layout.
   virtual void emitRemarks(const MachineFunction &MF,

@@ -34,15 +34,15 @@ void template_mangling() {
   // BEFORE: call {{.*}} @"??0?$AutoParmTemplate@$I?f@V@@QEAAXXZA@A@@@QEAA@XZ"
 
   AutoFunc<&S::f>();
-  // AFTER: call {{.*}} @"??$AutoFunc@$MP8S@@EAAXXZ1?f@1@QEAAXXZ@@YA?A?<auto>@@XZ"
+  // AFTER: call {{.*}} @"??$AutoFunc@$MP8S@@EAAXXZ1?f@1@QEAAXXZ@@YA?A_PXZ"
   // BEFORE: call {{.*}} @"??$AutoFunc@$1?f@S@@QEAAXXZ@@YA?A?<auto>@@XZ"
 
   AutoFunc<&M::f>();
-  // AFTER: call {{.*}} @"??$AutoFunc@$MP8M@@EAAXXZH?f@1@QEAAXXZA@@@YA?A?<auto>@@XZ"
+  // AFTER: call {{.*}} @"??$AutoFunc@$MP8M@@EAAXXZH?f@1@QEAAXXZA@@@YA?A_PXZ"
   // BEFORE: call {{.*}} @"??$AutoFunc@$H?f@M@@QEAAXXZA@@@YA?A?<auto>@@XZ"
 
   AutoFunc<&V::f>();
-  // AFTER: call {{.*}} @"??$AutoFunc@$MP8V@@EAAXXZI?f@1@QEAAXXZA@A@@@YA?A?<auto>@@XZ"
+  // AFTER: call {{.*}} @"??$AutoFunc@$MP8V@@EAAXXZI?f@1@QEAAXXZA@A@@@YA?A_PXZ"
   // BEFORE: call {{.*}} @"??$AutoFunc@$I?f@V@@QEAAXXZA@A@@@YA?A?<auto>@@XZ"
 
   AutoParmTemplate<&S::a> auto_data_single_inheritance;
@@ -58,14 +58,14 @@ void template_mangling() {
   // BEFORE: call {{.*}} @"??0?$AutoParmTemplate@$FBA@A@@@QEAA@XZ"
 
   AutoFunc<&S::a>();
-  // AFTER: call {{.*}} @"??$AutoFunc@$MPEQS@@H07@@YA?A?<auto>@@XZ"
+  // AFTER: call {{.*}} @"??$AutoFunc@$MPEQS@@H07@@YA?A_PXZ"
   // BEFORE: call {{.*}} @"??$AutoFunc@$07@@YA?A?<auto>@@XZ"
 
   AutoFunc<&M::a>();
-  // AFTER: call {{.*}} @"??$AutoFunc@$MPEQM@@H0M@@@YA?A?<auto>@@XZ"
+  // AFTER: call {{.*}} @"??$AutoFunc@$MPEQM@@H0M@@@YA?A_PXZ"
   // BEFORE: call {{.*}} @"??$AutoFunc@$0M@@@YA?A?<auto>@@XZ"
 
   AutoFunc<&V::a>();
-  // AFTER: call {{.*}} @"??$AutoFunc@$MPEQV@@HFBA@A@@@YA?A?<auto>@@XZ"
+  // AFTER: call {{.*}} @"??$AutoFunc@$MPEQV@@HFBA@A@@@YA?A_PXZ"
   // BEFORE: call {{.*}} @"??$AutoFunc@$FBA@A@@@YA?A?<auto>@@XZ"
 }

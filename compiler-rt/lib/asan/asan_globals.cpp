@@ -520,6 +520,43 @@ void __asan_before_dynamic_init(const char *module_name) {
   current_dynamic_init_module_name = module_name;
 }
 
+// Maybe SANITIZER_CAN_USE_PREINIT_ARRAY is to conservative for `.init_array`,
+// however we should not make mistake here. If `UnpoisonBeforeMain` was not
+// executed at all we will have false reports on globals.
+#if SANITIZER_CAN_USE_PREINIT_ARRAY
+// This optimization aims to reduce the overhead of `__asan_after_dynamic_init`
+// calls by leveraging incremental unpoisoning/poisoning in
+// `__asan_before_dynamic_init`. We expect most `__asan_after_dynamic_init
+// calls` to be no-ops. However, to ensure all globals are unpoisoned before the
+// `main`, we force `UnpoisonBeforeMain` to fully execute
+// `__asan_after_dynamic_init`.
+
+// With lld, `UnpoisonBeforeMain` runs after standard `.init_array`, making it
+// the final `__asan_after_dynamic_init` call for the static runtime. In
+// contrast, GNU ld executes it earlier, causing subsequent
+// `__asan_after_dynamic_init` calls to perform full unpoisoning, losing the
+// optimization.
+bool allow_after_dynamic_init SANITIZER_GUARDED_BY(mu_for_globals) = false;
+
+static void UnpoisonBeforeMain(void) {
+  {
+    Lock lock(&mu_for_globals);
+    if (allow_after_dynamic_init)
+      return;
+    allow_after_dynamic_init = true;
+  }
+  if (flags()->report_globals >= 3)
+    Printf("UnpoisonBeforeMain\n");
+  __asan_after_dynamic_init();
+}
+
+__attribute__((section(".init_array.65537"), used)) static void (
+    *asan_after_init_array)(void) = UnpoisonBeforeMain;
+#else
+// Incremental poisoning is disabled, unpoison globals immediately.
+static constexpr bool allow_after_dynamic_init = true;
+#endif  // SANITIZER_CAN_USE_PREINIT_ARRAY
+
 // This method runs immediately after dynamic initialization in each TU, when
 // all dynamically initialized globals except for those defined in the current
 // TU are poisoned.  It simply unpoisons all dynamically initialized globals.
@@ -528,6 +565,8 @@ void __asan_after_dynamic_init() {
     return;
   CHECK(AsanInited());
   Lock lock(&mu_for_globals);
+  if (!allow_after_dynamic_init)
+    return;
   if (!current_dynamic_init_module_name)
     return;
 

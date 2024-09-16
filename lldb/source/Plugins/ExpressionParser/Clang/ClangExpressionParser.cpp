@@ -11,6 +11,7 @@
 #include "clang/AST/ExternalASTSource.h"
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/Basic/Builtins.h"
+#include "clang/Basic/DarwinSDKInfo.h"
 #include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/TargetInfo.h"
@@ -39,6 +40,7 @@
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/TargetSelect.h"
 
@@ -91,6 +93,8 @@
 #include "lldb/Utility/StringList.h"
 
 #include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
+#include "Plugins/Platform/MacOSX/PlatformDarwin.h"
+#include "lldb/Utility/XcodeSDK.h"
 
 #include <cctype>
 #include <memory>
@@ -278,6 +282,49 @@ private:
   /// Output string filled by m_os.
   std::string m_output;
 };
+
+/// Returns true if the SDK for the specified triple supports
+/// builtin modules in system headers. This is used to decide
+/// whether to pass -fbuiltin-headers-in-system-modules to
+/// the compiler instance when compiling the `std` module.
+static llvm::Expected<bool>
+sdkSupportsBuiltinModules(lldb_private::Target &target) {
+  auto arch_spec = target.GetArchitecture();
+  auto const &triple = arch_spec.GetTriple();
+  auto module_sp = target.GetExecutableModule();
+  if (!module_sp)
+    return llvm::createStringError("Executable module not found.");
+
+  // Get SDK path that the target was compiled against.
+  auto platform_sp = target.GetPlatform();
+  if (!platform_sp)
+    return llvm::createStringError("No Platform plugin found on target.");
+
+  auto sdk_or_err = platform_sp->GetSDKPathFromDebugInfo(*module_sp);
+  if (!sdk_or_err)
+    return sdk_or_err.takeError();
+
+  // Use the SDK path from debug-info to find a local matching SDK directory.
+  auto sdk_path_or_err =
+      HostInfo::GetSDKRoot(HostInfo::SDKOptions{std::move(sdk_or_err->first)});
+  if (!sdk_path_or_err)
+    return sdk_path_or_err.takeError();
+
+  auto VFS = FileSystem::Instance().GetVirtualFileSystem();
+  if (!VFS)
+    return llvm::createStringError("No virtual filesystem available.");
+
+  // Extract SDK version from the /path/to/some.sdk/SDKSettings.json
+  auto parsed_or_err = clang::parseDarwinSDKInfo(*VFS, *sdk_path_or_err);
+  if (!parsed_or_err)
+    return parsed_or_err.takeError();
+
+  auto maybe_sdk = *parsed_or_err;
+  if (!maybe_sdk)
+    return llvm::createStringError("Couldn't find Darwin SDK info.");
+
+  return XcodeSDK::SDKSupportsBuiltinModules(triple, maybe_sdk->getVersion());
+}
 
 static void SetupModuleHeaderPaths(CompilerInstance *compiler,
                                    std::vector<std::string> include_directories,
@@ -561,7 +608,9 @@ static void SetupLangOpts(CompilerInstance &compiler,
   lang_opts.NoBuiltin = true;
 }
 
-static void SetupImportStdModuleLangOpts(CompilerInstance &compiler) {
+static void SetupImportStdModuleLangOpts(CompilerInstance &compiler,
+                                         lldb_private::Target &target) {
+  Log *log = GetLog(LLDBLog::Expressions);
   LangOptions &lang_opts = compiler.getLangOpts();
   lang_opts.Modules = true;
   // We want to implicitly build modules.
@@ -578,7 +627,13 @@ static void SetupImportStdModuleLangOpts(CompilerInstance &compiler) {
   lang_opts.GNUMode = true;
   lang_opts.GNUKeywords = true;
   lang_opts.CPlusPlus11 = true;
-  lang_opts.BuiltinHeadersInSystemModules = true;
+
+  if (auto supported_or_err = sdkSupportsBuiltinModules(target))
+    lang_opts.BuiltinHeadersInSystemModules = !*supported_or_err;
+  else
+    LLDB_LOG_ERROR(log, supported_or_err.takeError(),
+                   "Failed to determine BuiltinHeadersInSystemModules when "
+                   "setting up import-std-module: {0}");
 
   // The Darwin libc expects this macro to be set.
   lang_opts.GNUCVersion = 40201;
@@ -625,10 +680,6 @@ ClangExpressionParser::ClangExpressionParser(
   // Make sure clang uses the same VFS as LLDB.
   m_compiler->createFileManager(FileSystem::Instance().GetVirtualFileSystem());
 
-  std::string abi;
-  ArchSpec target_arch;
-  target_arch = target_sp->GetArchitecture();
-
   // 2. Configure the compiler with a set of default options that are
   // appropriate for most situations.
   SetupTargetOpts(*m_compiler, *target_sp);
@@ -663,7 +714,7 @@ ClangExpressionParser::ClangExpressionParser(
   if (auto *clang_expr = dyn_cast<ClangUserExpression>(&m_expr);
       clang_expr && clang_expr->DidImportCxxModules()) {
     LLDB_LOG(log, "Adding lang options for importing C++ modules");
-    SetupImportStdModuleLangOpts(*m_compiler);
+    SetupImportStdModuleLangOpts(*m_compiler, *target_sp);
     SetupModuleHeaderPaths(m_compiler.get(), m_include_directories, target_sp);
   }
 
@@ -933,7 +984,6 @@ private:
           ToInsert += "(";
         raw_string_ostream OS(Description);
         F->print(OS, m_desc_policy, false);
-        OS.flush();
       } else if (const VarDecl *V = dyn_cast<VarDecl>(D)) {
         Description = V->getType().getAsString(m_desc_policy);
       } else if (const FieldDecl *F = dyn_cast<FieldDecl>(D)) {
@@ -1172,19 +1222,20 @@ ClangExpressionParser::ParseInternal(DiagnosticManager &diagnostic_manager,
 
     clang::ExternalASTSource *ast_source = decl_map->CreateProxy();
 
+    auto *ast_source_wrapper = new ExternalASTSourceWrapper(ast_source);
+
     if (ast_context.getExternalSource()) {
-      auto module_wrapper =
+      auto *module_wrapper =
           new ExternalASTSourceWrapper(ast_context.getExternalSource());
 
-      auto ast_source_wrapper = new ExternalASTSourceWrapper(ast_source);
+      auto *multiplexer =
+          new SemaSourceWithPriorities(module_wrapper, ast_source_wrapper);
 
-      auto multiplexer =
-          new SemaSourceWithPriorities(*module_wrapper, *ast_source_wrapper);
-      IntrusiveRefCntPtr<ExternalASTSource> Source(multiplexer);
-      ast_context.setExternalSource(Source);
+      ast_context.setExternalSource(multiplexer);
     } else {
       ast_context.setExternalSource(ast_source);
     }
+    m_compiler->getSema().addExternalSource(ast_source_wrapper);
     decl_map->InstallASTContext(*m_ast_context);
   }
 
@@ -1306,7 +1357,6 @@ bool ClangExpressionParser::RewriteExpression(
   llvm::raw_string_ostream out_stream(fixed_expression);
 
   main_file_buffer.write(out_stream);
-  out_stream.flush();
   diagnostic_manager.SetFixedExpression(fixed_expression);
 
   return true;
@@ -1339,8 +1389,7 @@ lldb_private::Status ClangExpressionParser::DoPrepareForExecution(
       m_code_generator->ReleaseModule());
 
   if (!llvm_module_up) {
-    err.SetErrorToGenericError();
-    err.SetErrorString("IR doesn't contain a module");
+    err = Status::FromErrorString("IR doesn't contain a module");
     return err;
   }
 
@@ -1351,9 +1400,8 @@ lldb_private::Status ClangExpressionParser::DoPrepareForExecution(
 
     if (!FindFunctionInModule(function_name, llvm_module_up.get(),
                               m_expr.FunctionName())) {
-      err.SetErrorToGenericError();
-      err.SetErrorStringWithFormat("Couldn't find %s() in the module",
-                                   m_expr.FunctionName());
+      err = Status::FromErrorStringWithFormat(
+          "Couldn't find %s() in the module", m_expr.FunctionName());
       return err;
     } else {
       LLDB_LOGF(log, "Found function %s for %s", function_name.AsCString(),
@@ -1409,7 +1457,7 @@ lldb_private::Status ClangExpressionParser::DoPrepareForExecution(
                               function_name.AsCString());
 
     if (!ir_for_target.runOnModule(*execution_unit_sp->GetModule())) {
-      err.SetErrorString(error_stream.GetString());
+      err = Status(error_stream.GetString().str());
       return err;
     }
 
@@ -1426,7 +1474,7 @@ lldb_private::Status ClangExpressionParser::DoPrepareForExecution(
           interpret_error, interpret_function_calls);
 
       if (!can_interpret && execution_policy == eExecutionPolicyNever) {
-        err.SetErrorStringWithFormat(
+        err = Status::FromErrorStringWithFormat(
             "Can't evaluate the expression without a running target due to: %s",
             interpret_error.AsCString());
         return err;
@@ -1434,14 +1482,16 @@ lldb_private::Status ClangExpressionParser::DoPrepareForExecution(
     }
 
     if (!process && execution_policy == eExecutionPolicyAlways) {
-      err.SetErrorString("Expression needed to run in the target, but the "
-                         "target can't be run");
+      err = Status::FromErrorString(
+          "Expression needed to run in the target, but the "
+          "target can't be run");
       return err;
     }
 
     if (!process && execution_policy == eExecutionPolicyTopLevel) {
-      err.SetErrorString("Top-level code needs to be inserted into a runnable "
-                         "target, but the target can't be run");
+      err = Status::FromErrorString(
+          "Top-level code needs to be inserted into a runnable "
+          "target, but the target can't be run");
       return err;
     }
 
@@ -1457,7 +1507,7 @@ lldb_private::Status ClangExpressionParser::DoPrepareForExecution(
             std::string ErrMsg = "couldn't install checkers: " + toString(std::move(Err));
             if (install_diags.Diagnostics().size())
               ErrMsg = ErrMsg + "\n" + install_diags.GetString().c_str();
-            err.SetErrorString(ErrMsg);
+            err = Status(ErrMsg);
             return err;
           }
 
@@ -1474,8 +1524,8 @@ lldb_private::Status ClangExpressionParser::DoPrepareForExecution(
 
           llvm::Module *module = execution_unit_sp->GetModule();
           if (!module || !ir_dynamic_checks.runOnModule(*module)) {
-            err.SetErrorToGenericError();
-            err.SetErrorString("Couldn't add dynamic checks to the expression");
+            err = Status::FromErrorString(
+                "Couldn't add dynamic checks to the expression");
             return err;
           }
 

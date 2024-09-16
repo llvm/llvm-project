@@ -13,26 +13,26 @@
 #ifndef LLVM_CLANG_SEMA_SEMACODECOMPLETION_H
 #define LLVM_CLANG_SEMA_SEMACODECOMPLETION_H
 
-#include "clang/AST/Decl.h"
-#include "clang/AST/DeclCXX.h"
-#include "clang/AST/Expr.h"
+#include "clang/AST/ASTFwd.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/AttributeCommonInfo.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
-#include "clang/Lex/MacroInfo.h"
 #include "clang/Lex/ModuleLoader.h"
 #include "clang/Sema/CodeCompleteConsumer.h"
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/Designator.h"
 #include "clang/Sema/Ownership.h"
-#include "clang/Sema/Scope.h"
 #include "clang/Sema/SemaBase.h"
 #include "llvm/ADT/StringRef.h"
 #include <optional>
 
 namespace clang {
+class DeclGroupRef;
+class MacroInfo;
+class Scope;
+class TemplateName;
 
 class SemaCodeCompletion : public SemaBase {
 public:

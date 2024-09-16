@@ -668,7 +668,7 @@ mlgo:
   - llvm/lib/CodeGen/ML*
   - llvm/unittests/CodeGen/ML*
   - llvm/test/CodeGen/MLRegAlloc/**
-  - llvm/utils/mlgo-utils/*
+  - llvm/utils/mlgo-utils/**
 
 tools:llvm-exegesis:
   - llvm/tools/llvm-exegesis/**
@@ -989,6 +989,13 @@ clang:openmp:
   - llvm/include/llvm/Transforms/IPO/OpenMPOpt.h
   - llvm/unittests/Frontend/OpenMP*
   - llvm/test/Transforms/OpenMP/**
+
+clang:as-a-library:
+  - clang/tools/libclang/**
+  - clang/bindings/**
+  - clang/include/clang-c/**
+  - clang/test/LibClang/**
+  - clang/unittest/libclang/**
 
 openmp:libomp:
   - any: ['openmp/**', '!openmp/libomptarget/**']

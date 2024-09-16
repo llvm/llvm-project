@@ -97,7 +97,8 @@ struct GraphTraits {
 
 namespace detail {
 template <typename T>
-using has_number_t = decltype(GraphTraits<T>::getNumber(std::declval<T>()));
+using has_number_t = decltype(GraphTraits<T>::getNumber(
+    std::declval<typename GraphTraits<T>::NodeRef>()));
 } // namespace detail
 
 /// Indicate whether a GraphTraits<NodeT>::getNumber() is supported.

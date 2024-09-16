@@ -19,7 +19,10 @@ namespace lldb_private {
 // ResumeWithTimeout() during DoWillResume().
 class TimeoutResumeAll {
 public:
-  TimeoutResumeAll(Thread &thread) : m_thread(thread) {}
+  TimeoutResumeAll(Thread &thread)
+      : m_thread(thread),
+        m_timeout_info(
+            std::make_shared<ThreadPlanSingleThreadTimeout::TimeoutInfo>()) {}
 
   void PushNewTimeout() {
     ThreadPlanSingleThreadTimeout::PushNewWithTimeout(m_thread, m_timeout_info);
@@ -32,7 +35,7 @@ public:
 
 private:
   Thread &m_thread;
-  ThreadPlanSingleThreadTimeout::TimeoutInfo m_timeout_info;
+  ThreadPlanSingleThreadTimeout::TimeoutInfoSP m_timeout_info;
 };
 
 } // namespace lldb_private

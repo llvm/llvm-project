@@ -1394,6 +1394,18 @@ bool requiresGetVGCall(MachineFunction &MF) {
          !MF.getSubtarget<AArch64Subtarget>().hasSVE();
 }
 
+static bool requiresSaveVG(MachineFunction &MF) {
+  AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
+  // For Darwin platforms we don't save VG for non-SVE functions, even if SME
+  // is enabled with streaming mode changes.
+  if (!AFI->hasStreamingModeChanges())
+    return false;
+  auto &ST = MF.getSubtarget<AArch64Subtarget>();
+  if (ST.isTargetDarwin())
+    return ST.hasSVE();
+  return true;
+}
+
 bool isVGInstruction(MachineBasicBlock::iterator MBBI) {
   unsigned Opc = MBBI->getOpcode();
   if (Opc == AArch64::CNTD_XPiI || Opc == AArch64::RDSVLI_XI ||
@@ -1430,8 +1442,7 @@ static MachineBasicBlock::iterator convertCalleeSaveRestoreToSPPrePostIncDec(
   // functions, we need to do this for both the streaming and non-streaming
   // vector length. Move past these instructions if necessary.
   MachineFunction &MF = *MBB.getParent();
-  AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
-  if (AFI->hasStreamingModeChanges())
+  if (requiresSaveVG(MF))
     while (isVGInstruction(MBBI))
       ++MBBI;
 
@@ -1938,7 +1949,7 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
   while (MBBI != End && MBBI->getFlag(MachineInstr::FrameSetup) &&
          !IsSVECalleeSave(MBBI)) {
     // Move past instructions generated to calculate VG
-    if (AFI->hasStreamingModeChanges())
+    if (requiresSaveVG(MF))
       while (isVGInstruction(MBBI))
         ++MBBI;
 
@@ -2846,10 +2857,12 @@ static unsigned getPrologueDeath(MachineFunction &MF, unsigned Reg) {
 static bool produceCompactUnwindFrame(MachineFunction &MF) {
   const AArch64Subtarget &Subtarget = MF.getSubtarget<AArch64Subtarget>();
   AttributeList Attrs = MF.getFunction().getAttributes();
+  AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
   return Subtarget.isTargetMachO() &&
          !(Subtarget.getTargetLowering()->supportSwiftError() &&
            Attrs.hasAttrSomewhere(Attribute::SwiftError)) &&
-         MF.getFunction().getCallingConv() != CallingConv::SwiftTail;
+         MF.getFunction().getCallingConv() != CallingConv::SwiftTail &&
+         !requiresSaveVG(MF) && AFI->getSVECalleeSavedStackSize() == 0;
 }
 
 static bool invalidateWindowsRegisterPairing(unsigned Reg1, unsigned Reg2,
@@ -3007,6 +3020,7 @@ static void computeCalleeSaveRegisterPairs(
       ByteOffset += StackFillDir * StackHazardSize;
     LastReg = RPI.Reg1;
 
+    int Scale = RPI.getScale();
     // Add the next reg to the pair if it is in the same register class.
     if (unsigned(i + RegInc) < Count && !AFI->hasStackHazardSlotIndex()) {
       Register NextReg = CSI[i + RegInc].getReg();
@@ -3032,9 +3046,14 @@ static void computeCalleeSaveRegisterPairs(
       case RegPairInfo::PPR:
         break;
       case RegPairInfo::ZPR:
-        if (AFI->getPredicateRegForFillSpill() != 0)
-          if (((RPI.Reg1 - AArch64::Z0) & 1) == 0 && (NextReg == RPI.Reg1 + 1))
+        if (AFI->getPredicateRegForFillSpill() != 0 &&
+            ((RPI.Reg1 - AArch64::Z0) & 1) == 0 && (NextReg == RPI.Reg1 + 1)) {
+          // Calculate offset of register pair to see if pair instruction can be
+          // used.
+          int Offset = (ScalableByteOffset + StackFillDir * 2 * Scale) / Scale;
+          if ((-16 <= Offset && Offset <= 14) && (Offset % 2 == 0))
             RPI.Reg2 = NextReg;
+        }
         break;
       case RegPairInfo::VG:
         break;
@@ -3074,7 +3093,6 @@ static void computeCalleeSaveRegisterPairs(
     if (NeedsWinCFI &&
         RPI.isPaired()) // RPI.FrameIdx must be the lower index of the pair
       RPI.FrameIdx = CSI[i + RegInc].getFrameIdx();
-    int Scale = RPI.getScale();
 
     int OffsetPre = RPI.isScalable() ? ScalableByteOffset : ByteOffset;
     assert(OffsetPre % Scale == 0);
@@ -3343,8 +3361,8 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
           MachineMemOperand::MOStore, Size, Alignment));
       MIB.addReg(PnReg);
       MIB.addReg(AArch64::SP)
-          .addImm(RPI.Offset) // [sp, #offset*scale],
-                              // where factor*scale is implicit
+          .addImm(RPI.Offset / 2) // [sp, #imm*2*vscale],
+                                  // where 2*vscale is implicit
           .setMIFlag(MachineInstr::FrameSetup);
       MIB.addMemOperand(MF.getMachineMemOperand(
           MachinePointerInfo::getFixedStack(MF, FrameIdxReg1),
@@ -3365,8 +3383,8 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
       }
       MIB.addReg(Reg1, getPrologueDeath(MF, Reg1))
           .addReg(AArch64::SP)
-          .addImm(RPI.Offset) // [sp, #offset*scale],
-                              // where factor*scale is implicit
+          .addImm(RPI.Offset) // [sp, #offset*vscale],
+                              // where factor*vscale is implicit
           .setMIFlag(MachineInstr::FrameSetup);
       MIB.addMemOperand(MF.getMachineMemOperand(
           MachinePointerInfo::getFixedStack(MF, FrameIdxReg1),
@@ -3510,8 +3528,8 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
           MachineMemOperand::MOLoad, Size, Alignment));
       MIB.addReg(PnReg);
       MIB.addReg(AArch64::SP)
-          .addImm(RPI.Offset) // [sp, #offset*scale]
-                              // where factor*scale is implicit
+          .addImm(RPI.Offset / 2) // [sp, #imm*2*vscale]
+                                  // where 2*vscale is implicit
           .setMIFlag(MachineInstr::FrameDestroy);
       MIB.addMemOperand(MF.getMachineMemOperand(
           MachinePointerInfo::getFixedStack(MF, FrameIdxReg1),
@@ -3528,8 +3546,8 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
       }
       MIB.addReg(Reg1, getDefRegState(true));
       MIB.addReg(AArch64::SP)
-          .addImm(RPI.Offset) // [sp, #offset*scale]
-                              // where factor*scale is implicit
+          .addImm(RPI.Offset) // [sp, #offset*vscale]
+                              // where factor*vscale is implicit
           .setMIFlag(MachineInstr::FrameDestroy);
       MIB.addMemOperand(MF.getMachineMemOperand(
           MachinePointerInfo::getFixedStack(MF, FrameIdxReg1),
@@ -3754,7 +3772,7 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
   // non-streaming VG value.
   const Function &F = MF.getFunction();
   SMEAttrs Attrs(F);
-  if (AFI->hasStreamingModeChanges()) {
+  if (requiresSaveVG(MF)) {
     if (Attrs.hasStreamingBody() && !Attrs.hasStreamingInterface())
       CSStackSize += 16;
     else
@@ -3907,7 +3925,7 @@ bool AArch64FrameLowering::assignCalleeSavedSpillSlots(
   }
 
   // Insert VG into the list of CSRs, immediately before LR if saved.
-  if (AFI->hasStreamingModeChanges()) {
+  if (requiresSaveVG(MF)) {
     std::vector<CalleeSavedInfo> VGSaves;
     SMEAttrs Attrs(MF.getFunction());
 
@@ -4636,10 +4654,9 @@ MachineBasicBlock::iterator emitVGSaveRestore(MachineBasicBlock::iterator II,
 
 void AArch64FrameLowering::processFunctionBeforeFrameIndicesReplaced(
     MachineFunction &MF, RegScavenger *RS = nullptr) const {
-  AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
   for (auto &BB : MF)
     for (MachineBasicBlock::iterator II = BB.begin(); II != BB.end();) {
-      if (AFI->hasStreamingModeChanges())
+      if (requiresSaveVG(MF))
         II = emitVGSaveRestore(II, this);
       if (StackTaggingMergeSetTag)
         II = tryMergeAdjacentSTG(II, this, RS);

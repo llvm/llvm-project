@@ -296,14 +296,14 @@ TEST_F(TestTypeSystemClang, TestOwningModule) {
   CompilerType record_type = ast.CreateRecordType(
       nullptr, OptionalClangModuleID(200), lldb::eAccessPublic, "FooRecord",
       llvm::to_underlying(clang::TagTypeKind::Struct),
-      lldb::eLanguageTypeC_plus_plus, nullptr);
+      lldb::eLanguageTypeC_plus_plus, std::nullopt);
   auto *rd = TypeSystemClang::GetAsRecordDecl(record_type);
   EXPECT_FALSE(!rd);
   EXPECT_EQ(rd->getOwningModuleID(), 200u);
 
   CompilerType class_type =
       ast.CreateObjCClass("objc_class", ast.GetTranslationUnitDecl(),
-                          OptionalClangModuleID(300), false, false);
+                          OptionalClangModuleID(300), false);
   auto *cd = TypeSystemClang::GetAsObjCInterfaceDecl(class_type);
   EXPECT_FALSE(!cd);
   EXPECT_EQ(cd->getOwningModuleID(), 300u);
@@ -317,7 +317,7 @@ TEST_F(TestTypeSystemClang, TestIsClangType) {
   CompilerType record_type = m_ast->CreateRecordType(
       nullptr, OptionalClangModuleID(100), lldb::eAccessPublic, "FooRecord",
       llvm::to_underlying(clang::TagTypeKind::Struct),
-      lldb::eLanguageTypeC_plus_plus, nullptr);
+      lldb::eLanguageTypeC_plus_plus, std::nullopt);
   // Clang builtin type and record type should pass
   EXPECT_TRUE(ClangUtil::IsClangType(bool_type));
   EXPECT_TRUE(ClangUtil::IsClangType(record_type));
@@ -330,7 +330,7 @@ TEST_F(TestTypeSystemClang, TestRemoveFastQualifiers) {
   CompilerType record_type = m_ast->CreateRecordType(
       nullptr, OptionalClangModuleID(), lldb::eAccessPublic, "FooRecord",
       llvm::to_underlying(clang::TagTypeKind::Struct),
-      lldb::eLanguageTypeC_plus_plus, nullptr);
+      lldb::eLanguageTypeC_plus_plus, std::nullopt);
   QualType qt;
 
   qt = ClangUtil::GetQualType(record_type);
@@ -403,7 +403,7 @@ TEST_F(TestTypeSystemClang, TestRecordHasFields) {
   CompilerType empty_base = m_ast->CreateRecordType(
       nullptr, OptionalClangModuleID(), lldb::eAccessPublic, "EmptyBase",
       llvm::to_underlying(clang::TagTypeKind::Struct),
-      lldb::eLanguageTypeC_plus_plus, nullptr);
+      lldb::eLanguageTypeC_plus_plus, std::nullopt);
   TypeSystemClang::StartTagDeclarationDefinition(empty_base);
   TypeSystemClang::CompleteTagDeclarationDefinition(empty_base);
 
@@ -415,7 +415,7 @@ TEST_F(TestTypeSystemClang, TestRecordHasFields) {
   CompilerType non_empty_base = m_ast->CreateRecordType(
       nullptr, OptionalClangModuleID(), lldb::eAccessPublic, "NonEmptyBase",
       llvm::to_underlying(clang::TagTypeKind::Struct),
-      lldb::eLanguageTypeC_plus_plus, nullptr);
+      lldb::eLanguageTypeC_plus_plus, std::nullopt);
   TypeSystemClang::StartTagDeclarationDefinition(non_empty_base);
   FieldDecl *non_empty_base_field_decl = m_ast->AddFieldToRecordType(
       non_empty_base, "MyField", int_type, eAccessPublic, 0);
@@ -432,7 +432,7 @@ TEST_F(TestTypeSystemClang, TestRecordHasFields) {
   CompilerType empty_derived = m_ast->CreateRecordType(
       nullptr, OptionalClangModuleID(), lldb::eAccessPublic, "EmptyDerived",
       llvm::to_underlying(clang::TagTypeKind::Struct),
-      lldb::eLanguageTypeC_plus_plus, nullptr);
+      lldb::eLanguageTypeC_plus_plus, std::nullopt);
   TypeSystemClang::StartTagDeclarationDefinition(empty_derived);
   std::unique_ptr<clang::CXXBaseSpecifier> non_empty_base_spec =
       m_ast->CreateBaseClassSpecifier(non_empty_base.GetOpaqueQualType(),
@@ -455,7 +455,7 @@ TEST_F(TestTypeSystemClang, TestRecordHasFields) {
   CompilerType empty_derived2 = m_ast->CreateRecordType(
       nullptr, OptionalClangModuleID(), lldb::eAccessPublic, "EmptyDerived2",
       llvm::to_underlying(clang::TagTypeKind::Struct),
-      lldb::eLanguageTypeC_plus_plus, nullptr);
+      lldb::eLanguageTypeC_plus_plus, std::nullopt);
   TypeSystemClang::StartTagDeclarationDefinition(empty_derived2);
   std::unique_ptr<CXXBaseSpecifier> non_empty_vbase_spec =
       m_ast->CreateBaseClassSpecifier(non_empty_base.GetOpaqueQualType(),
@@ -925,7 +925,6 @@ TEST_F(TestTypeSystemClang, AddMethodToObjCObjectType) {
   // Create an interface decl and mark it as having external storage.
   CompilerType c = m_ast->CreateObjCClass("A", m_ast->GetTranslationUnitDecl(),
                                           OptionalClangModuleID(),
-                                          /*IsForwardDecl*/ false,
                                           /*IsInternal*/ false);
   ObjCInterfaceDecl *interface = m_ast->GetAsObjCInterfaceDecl(c);
   m_ast->SetHasExternalStorage(c.GetOpaqueQualType(), true);

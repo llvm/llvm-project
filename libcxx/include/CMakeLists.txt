@@ -324,6 +324,11 @@ set(files
   __coroutine/coroutine_traits.h
   __coroutine/noop_coroutine_handle.h
   __coroutine/trivial_awaitables.h
+  __cstddef/byte.h
+  __cstddef/max_align_t.h
+  __cstddef/nullptr_t.h
+  __cstddef/ptrdiff_t.h
+  __cstddef/size_t.h
   __debug_utils/randomize_range.h
   __debug_utils/sanitizers.h
   __debug_utils/strict_weak_ordering_check.h
@@ -413,11 +418,13 @@ set(files
   __functional/weak_result_type.h
   __fwd/array.h
   __fwd/bit_reference.h
+  __fwd/byte.h
   __fwd/complex.h
   __fwd/deque.h
   __fwd/format.h
   __fwd/fstream.h
   __fwd/functional.h
+  __fwd/get.h
   __fwd/ios.h
   __fwd/istream.h
   __fwd/mdspan.h
@@ -434,6 +441,7 @@ set(files
   __fwd/string_view.h
   __fwd/subrange.h
   __fwd/tuple.h
+  __fwd/variant.h
   __fwd/vector.h
   __hash_table
   __ios/fpos.h
@@ -536,6 +544,7 @@ set(files
   __memory/construct_at.h
   __memory/destruct_n.h
   __memory/inout_ptr.h
+  __memory/noexcept_move_assign_container.h
   __memory/out_ptr.h
   __memory/pointer_traits.h
   __memory/ranges_construct_at.h
@@ -547,6 +556,7 @@ set(files
   __memory/temporary_buffer.h
   __memory/uninitialized_algorithms.h
   __memory/unique_ptr.h
+  __memory/unique_temporary_buffer.h
   __memory/uses_allocator.h
   __memory/uses_allocator_construction.h
   __memory/voidify.h
@@ -824,7 +834,6 @@ set(files
   __type_traits/maybe_const.h
   __type_traits/nat.h
   __type_traits/negation.h
-  __type_traits/noexcept_move_assign_container.h
   __type_traits/promote.h
   __type_traits/rank.h
   __type_traits/remove_all_extents.h
@@ -919,7 +928,6 @@ set(files
   exception
   execution
   expected
-  experimental/__config
   experimental/__simd/aligned_tag.h
   experimental/__simd/declaration.h
   experimental/__simd/reference.h

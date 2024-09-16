@@ -418,7 +418,7 @@ Status ObjCLanguageRuntime::ObjCExceptionPrecondition::ConfigurePrecondition(
     Args &args) {
   Status error;
   if (args.GetArgumentCount() > 0)
-    error.SetErrorString(
+    error = Status::FromErrorString(
         "The ObjC Exception breakpoint doesn't support extra options.");
   return error;
 }

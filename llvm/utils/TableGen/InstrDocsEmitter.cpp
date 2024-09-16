@@ -73,7 +73,7 @@ static void EmitInstrDocs(RecordKeeper &RK, raw_ostream &OS) {
   OS << "\n";
 
   for (const CodeGenInstruction *II : Target.getInstructionsByEnumValue()) {
-    Record *Inst = II->TheDef;
+    const Record *Inst = II->TheDef;
 
     // Don't print the target-independent instructions.
     if (II->Namespace == "TargetOpcode")

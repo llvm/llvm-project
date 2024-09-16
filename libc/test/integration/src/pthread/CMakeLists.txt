@@ -24,9 +24,9 @@ add_integration_test(
   SRCS
     pthread_rwlock_test.cpp
   DEPENDS
+    libc.hdr.time_macros
+    libc.hdr.errno_macros
     libc.include.pthread
-    libc.include.time
-    libc.include.errno
     libc.src.pthread.pthread_rwlock_destroy
     libc.src.pthread.pthread_rwlock_init
     libc.src.pthread.pthread_rwlock_rdlock
@@ -57,6 +57,24 @@ add_integration_test(
     libc.src.__support.CPP.atomic
     libc.src.__support.CPP.new
     libc.src.__support.threads.sleep
+)
+
+add_integration_test(
+  pthread_spinlock_test
+  SUITE
+    libc-pthread-integration-tests
+  SRCS
+    pthread_spinlock_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.include.pthread
+    libc.src.pthread.pthread_spin_init
+    libc.src.pthread.pthread_spin_destroy
+    libc.src.pthread.pthread_spin_lock
+    libc.src.pthread.pthread_spin_trylock
+    libc.src.pthread.pthread_spin_unlock
+    libc.src.pthread.pthread_create
+    libc.src.pthread.pthread_join
 )
 
 add_integration_test(
