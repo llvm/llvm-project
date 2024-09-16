@@ -1,4 +1,14 @@
-; RUN: opt -S -dxil-op-lower %s | FileCheck %s
+; RUN: opt -S -passes=dxil-op-lower,dxil-translate-metadata %s | FileCheck %s
+; RUN: opt -S -passes=dxil-pretty-printer %s 2>&1 >/dev/null | FileCheck --check-prefix=CHECK-PRETTY %s
+
+; CHECK-PRETTY:       Type  Format         Dim      ID      HLSL Bind     Count
+; CHECK-PRETTY: ---------- ------- ----------- ------- -------------- ---------
+; CHECK-PRETTY:        SRV     f32         buf      T0      t0        unbounded
+; CHECK-PRETTY:        SRV    byte         r/o      T1      t8,space1         1
+; CHECK-PRETTY:        SRV  struct         r/o      T2      t2,space4         1
+; CHECK-PRETTY:        SRV     u32         buf      T3      t3,space5        24
+; CHECK-PRETTY:        UAV     i32         buf      U0      u7,space2         1
+; CHECK-PRETTY:        UAV     f32         buf      U1      u5,space3         1
 
 target triple = "dxil-pc-shadermodel6.0-compute"
 
@@ -49,5 +59,13 @@ define void @test_buffers() {
 
   ret void
 }
+
+; Just check that we have the right types and number of metadata nodes, the
+; contents of the metadata are tested elsewhere.
+;
+; CHECK: !dx.resources = !{[[RESMD:![0-9]+]]}
+; CHECK: [[RESMD]] = !{[[SRVMD:![0-9]+]], [[UAVMD:![0-9]+]], null, null}
+; CHECK-DAG: [[SRVMD]] = !{!{{[0-9]+}}, !{{[0-9]+}}, !{{[0-9]+}}, !{{[0-9]+}}}
+; CHECK-DAG: [[UAVMD]] = !{!{{[0-9]+}}, !{{[0-9]+}}}
 
 attributes #0 = { nocallback nofree nosync nounwind willreturn memory(none) }

@@ -707,6 +707,17 @@ class DebugCommunication(object):
         }
         return self.send_recv(command_dict)
 
+    def request_exceptionInfo(self, threadId=None):
+        if threadId is None:
+            threadId = self.get_thread_id()
+        args_dict = {"threadId": threadId}
+        command_dict = {
+            "command": "exceptionInfo",
+            "type": "request",
+            "arguments": args_dict,
+        }
+        return self.send_recv(command_dict)
+
     def request_initialize(self, sourceInitFile):
         command_dict = {
             "command": "initialize",
@@ -754,6 +765,7 @@ class DebugCommunication(object):
         runInTerminal=False,
         postRunCommands=None,
         enableAutoVariableSummaries=False,
+        enableDisplayExtendedBacktrace=False,
         enableSyntheticChildDebugging=False,
         commandEscapePrefix=None,
         customFrameFormat=None,
@@ -806,6 +818,7 @@ class DebugCommunication(object):
 
         args_dict["enableAutoVariableSummaries"] = enableAutoVariableSummaries
         args_dict["enableSyntheticChildDebugging"] = enableSyntheticChildDebugging
+        args_dict["enableDisplayExtendedBacktrace"] = enableDisplayExtendedBacktrace
         args_dict["commandEscapePrefix"] = commandEscapePrefix
         command_dict = {"command": "launch", "type": "request", "arguments": args_dict}
         response = self.send_recv(command_dict)
@@ -1099,6 +1112,20 @@ class DebugCommunication(object):
         self.send.close()
         # self.recv.close()
 
+    def request_setInstructionBreakpoints(self, memory_reference=[]):
+        breakpoints = []
+        for i in memory_reference:
+            args_dict = {
+                "instructionReference": i,
+            }
+            breakpoints.append(args_dict)
+        args_dict = {"breakpoints": breakpoints}
+        command_dict = {
+            "command": "setInstructionBreakpoints",
+            "type": "request",
+            "arguments": args_dict,
+        }
+        return self.send_recv(command_dict)
 
 class DebugAdaptorServer(DebugCommunication):
     def __init__(

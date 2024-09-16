@@ -350,6 +350,7 @@ void SourceManager::clearIDTables() {
   LastLineNoContentCache = nullptr;
   LastFileIDLookup = FileID();
 
+  IncludedLocMap.clear();
   if (LineTable)
     LineTable->clear();
 

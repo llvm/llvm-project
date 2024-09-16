@@ -57,7 +57,7 @@ computeDestructuringInfo(DestructurableMemorySlot &slot,
 
   auto scheduleAsBlockingUse = [&](OpOperand &use) {
     SmallPtrSetImpl<OpOperand *> &blockingUses =
-        info.userToBlockingUses.getOrInsertDefault(use.getOwner());
+        info.userToBlockingUses[use.getOwner()];
     blockingUses.insert(&use);
   };
 
@@ -122,7 +122,7 @@ computeDestructuringInfo(DestructurableMemorySlot &slot,
       assert(llvm::is_contained(user->getResults(), blockingUse->get()));
 
       SmallPtrSetImpl<OpOperand *> &newUserBlockingUseSet =
-          info.userToBlockingUses.getOrInsertDefault(blockingUse->getOwner());
+          info.userToBlockingUses[blockingUse->getOwner()];
       newUserBlockingUseSet.insert(blockingUse);
     }
   }

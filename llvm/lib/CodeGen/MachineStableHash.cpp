@@ -84,25 +84,33 @@ stable_hash llvm::stableHashValue(const MachineOperand &MO) {
   }
 
   case MachineOperand::MO_MachineBasicBlock:
-    StableHashBailingMachineBasicBlock++;
+    ++StableHashBailingMachineBasicBlock;
     return 0;
   case MachineOperand::MO_ConstantPoolIndex:
-    StableHashBailingConstantPoolIndex++;
+    ++StableHashBailingConstantPoolIndex;
     return 0;
   case MachineOperand::MO_BlockAddress:
-    StableHashBailingBlockAddress++;
+    ++StableHashBailingBlockAddress;
     return 0;
   case MachineOperand::MO_Metadata:
-    StableHashBailingMetadataUnsupported++;
+    ++StableHashBailingMetadataUnsupported;
     return 0;
-  case MachineOperand::MO_GlobalAddress:
-    StableHashBailingGlobalAddress++;
-    return 0;
+  case MachineOperand::MO_GlobalAddress: {
+    const GlobalValue *GV = MO.getGlobal();
+    if (!GV->hasName()) {
+      ++StableHashBailingGlobalAddress;
+      return 0;
+    }
+    auto Name = GV->getName();
+    return stable_hash_combine(MO.getType(), MO.getTargetFlags(),
+                               stable_hash_name(Name), MO.getOffset());
+  }
+
   case MachineOperand::MO_TargetIndex: {
     if (const char *Name = MO.getTargetIndexName())
       return stable_hash_combine(MO.getType(), MO.getTargetFlags(),
-                                 xxh3_64bits(Name), MO.getOffset());
-    StableHashBailingTargetIndexNoName++;
+                                 stable_hash_name(Name), MO.getOffset());
+    ++StableHashBailingTargetIndexNoName;
     return 0;
   }
 
@@ -113,7 +121,8 @@ stable_hash llvm::stableHashValue(const MachineOperand &MO) {
 
   case MachineOperand::MO_ExternalSymbol:
     return stable_hash_combine(MO.getType(), MO.getTargetFlags(),
-                               MO.getOffset(), xxh3_64bits(MO.getSymbolName()));
+                               MO.getOffset(),
+                               stable_hash_name(MO.getSymbolName()));
 
   case MachineOperand::MO_RegisterMask:
   case MachineOperand::MO_RegisterLiveOut: {
@@ -149,7 +158,7 @@ stable_hash llvm::stableHashValue(const MachineOperand &MO) {
   case MachineOperand::MO_MCSymbol: {
     auto SymbolName = MO.getMCSymbol()->getName();
     return stable_hash_combine(MO.getType(), MO.getTargetFlags(),
-                               xxh3_64bits(SymbolName));
+                               stable_hash_name(SymbolName));
   }
   case MachineOperand::MO_CFIIndex:
     return stable_hash_combine(MO.getType(), MO.getTargetFlags(),

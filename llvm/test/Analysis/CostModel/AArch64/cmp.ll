@@ -121,3 +121,55 @@ define void @andcmp() {
   %c64sle = icmp sle i64 %a64, 0
   ret void
 }
+
+define void @uscmp() {
+; CHECK-THROUGHPUT-LABEL: 'uscmp'
+; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %u8 = call i8 @llvm.ucmp.i8.i8(i8 undef, i8 undef)
+; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %u16 = call i16 @llvm.ucmp.i16.i16(i16 undef, i16 undef)
+; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %u32 = call i32 @llvm.ucmp.i32.i32(i32 undef, i32 undef)
+; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %u64 = call i64 @llvm.ucmp.i64.i64(i64 undef, i64 undef)
+; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 98 for instruction: %uv16i8 = call <16 x i8> @llvm.ucmp.v16i8.v16i8(<16 x i8> undef, <16 x i8> undef)
+; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 50 for instruction: %uv8i16 = call <8 x i16> @llvm.ucmp.v8i16.v8i16(<8 x i16> undef, <8 x i16> undef)
+; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 26 for instruction: %uv4i32 = call <4 x i32> @llvm.ucmp.v4i32.v4i32(<4 x i32> undef, <4 x i32> undef)
+; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %s8 = call i8 @llvm.scmp.i8.i8(i8 undef, i8 undef)
+; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %s16 = call i16 @llvm.scmp.i16.i16(i16 undef, i16 undef)
+; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %s32 = call i32 @llvm.scmp.i32.i32(i32 undef, i32 undef)
+; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %s64 = call i64 @llvm.scmp.i64.i64(i64 undef, i64 undef)
+; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 98 for instruction: %sv16i8 = call <16 x i8> @llvm.scmp.v16i8.v16i8(<16 x i8> undef, <16 x i8> undef)
+; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 50 for instruction: %sv8i16 = call <8 x i16> @llvm.scmp.v8i16.v8i16(<8 x i16> undef, <8 x i16> undef)
+; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 26 for instruction: %sv4i32 = call <4 x i32> @llvm.scmp.v4i32.v4i32(<4 x i32> undef, <4 x i32> undef)
+; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; CHECK-SIZE-LABEL: 'uscmp'
+; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %u8 = call i8 @llvm.ucmp.i8.i8(i8 undef, i8 undef)
+; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %u16 = call i16 @llvm.ucmp.i16.i16(i16 undef, i16 undef)
+; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %u32 = call i32 @llvm.ucmp.i32.i32(i32 undef, i32 undef)
+; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %u64 = call i64 @llvm.ucmp.i64.i64(i64 undef, i64 undef)
+; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %uv16i8 = call <16 x i8> @llvm.ucmp.v16i8.v16i8(<16 x i8> undef, <16 x i8> undef)
+; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %uv8i16 = call <8 x i16> @llvm.ucmp.v8i16.v8i16(<8 x i16> undef, <8 x i16> undef)
+; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %uv4i32 = call <4 x i32> @llvm.ucmp.v4i32.v4i32(<4 x i32> undef, <4 x i32> undef)
+; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %s8 = call i8 @llvm.scmp.i8.i8(i8 undef, i8 undef)
+; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %s16 = call i16 @llvm.scmp.i16.i16(i16 undef, i16 undef)
+; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %s32 = call i32 @llvm.scmp.i32.i32(i32 undef, i32 undef)
+; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %s64 = call i64 @llvm.scmp.i64.i64(i64 undef, i64 undef)
+; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %sv16i8 = call <16 x i8> @llvm.scmp.v16i8.v16i8(<16 x i8> undef, <16 x i8> undef)
+; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %sv8i16 = call <8 x i16> @llvm.scmp.v8i16.v8i16(<8 x i16> undef, <8 x i16> undef)
+; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %sv4i32 = call <4 x i32> @llvm.scmp.v4i32.v4i32(<4 x i32> undef, <4 x i32> undef)
+; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+  %u8 = call i8 @llvm.ucmp(i8 undef, i8 undef)
+  %u16 = call i16 @llvm.ucmp(i16 undef, i16 undef)
+  %u32 = call i32 @llvm.ucmp(i32 undef, i32 undef)
+  %u64 = call i64 @llvm.ucmp(i64 undef, i64 undef)
+  %uv16i8 = call <16 x i8> @llvm.ucmp(<16 x i8> undef, <16 x i8> undef)
+  %uv8i16 = call <8 x i16> @llvm.ucmp(<8 x i16> undef, <8 x i16> undef)
+  %uv4i32 = call <4 x i32> @llvm.ucmp(<4 x i32> undef, <4 x i32> undef)
+  %s8 = call i8 @llvm.scmp(i8 undef, i8 undef)
+  %s16 = call i16 @llvm.scmp(i16 undef, i16 undef)
+  %s32 = call i32 @llvm.scmp(i32 undef, i32 undef)
+  %s64 = call i64 @llvm.scmp(i64 undef, i64 undef)
+  %sv16i8 = call <16 x i8> @llvm.scmp(<16 x i8> undef, <16 x i8> undef)
+  %sv8i16 = call <8 x i16> @llvm.scmp(<8 x i16> undef, <8 x i16> undef)
+  %sv4i32 = call <4 x i32> @llvm.scmp(<4 x i32> undef, <4 x i32> undef)
+  ret void
+}

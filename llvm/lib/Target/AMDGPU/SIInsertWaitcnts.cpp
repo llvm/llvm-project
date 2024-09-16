@@ -883,10 +883,8 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
         // can be used as the actual source after export patching, so
         // we need to treat them like sources and set the EXP_CNT
         // score.
-        for (unsigned I = 0, E = Inst.getNumOperands(); I != E; ++I) {
-          MachineOperand &DefMO = Inst.getOperand(I);
-          if (DefMO.isReg() && DefMO.isDef() &&
-              TRI->isVGPR(*MRI, DefMO.getReg())) {
+        for (MachineOperand &DefMO : Inst.all_defs()) {
+          if (TRI->isVGPR(*MRI, DefMO.getReg())) {
             setRegScore(
                 TRI->getEncodingValue(AMDGPU::getMCReg(DefMO.getReg(), *ST)),
                 EXP_CNT, CurrScore);
@@ -903,7 +901,16 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
     }
   } else /* LGKM_CNT || EXP_CNT || VS_CNT || NUM_INST_CNTS */ {
     // Match the score to the destination registers.
-    for (unsigned I = 0, E = Inst.getNumOperands(); I != E; ++I) {
+    //
+    // Check only explicit operands. Stores, especially spill stores, include
+    // implicit uses and defs of their super registers which would create an
+    // artificial dependency, while these are there only for register liveness
+    // accounting purposes.
+    //
+    // Special cases where implicit register defs and uses exists, such as
+    // M0, FLAT_SCR or VCC, but the wait will be generated earlier in the
+    // generateWaitcntInstBefore() if that was loaded from memory.
+    for (unsigned I = 0, E = Inst.getNumExplicitOperands(); I != E; ++I) {
       auto &Op = Inst.getOperand(I);
       if (!Op.isReg() || !Op.isDef())
         continue;

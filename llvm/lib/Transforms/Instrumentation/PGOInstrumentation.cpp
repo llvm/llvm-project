@@ -107,10 +107,10 @@
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
-#include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Instrumentation/BlockCoverageInference.h"
 #include "llvm/Transforms/Instrumentation/CFGMST.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/Instrumentation.h"
 #include "llvm/Transforms/Utils/MisExpect.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <algorithm>
@@ -945,23 +945,21 @@ void FunctionInstrumenter::instrument() {
       for (auto &BB : F)
         for (auto &Instr : BB)
           if (auto *CS = dyn_cast<CallBase>(&Instr)) {
-            if ((CS->getCalledFunction() &&
-                 CS->getCalledFunction()->isIntrinsic()) ||
-                dyn_cast<InlineAsm>(CS->getCalledOperand()))
+            if (!InstrProfCallsite::canInstrumentCallsite(*CS))
               continue;
             Visitor(CS);
           }
     };
     // First, count callsites.
-    uint32_t TotalNrCallsites = 0;
-    Visit([&TotalNrCallsites](auto *) { ++TotalNrCallsites; });
+    uint32_t TotalNumCallsites = 0;
+    Visit([&TotalNumCallsites](auto *) { ++TotalNumCallsites; });
 
     // Now instrument.
     uint32_t CallsiteIndex = 0;
     Visit([&](auto *CB) {
       IRBuilder<> Builder(CB);
       Builder.CreateCall(CSIntrinsic,
-                         {Name, CFGHash, Builder.getInt32(TotalNrCallsites),
+                         {Name, CFGHash, Builder.getInt32(TotalNumCallsites),
                           Builder.getInt32(CallsiteIndex++),
                           CB->getCalledOperand()});
     });
@@ -1658,11 +1656,17 @@ void PGOUseFunc::setBranchWeights() {
       continue;
 
     // We have a non-zero Branch BB.
-    unsigned Size = BBCountInfo.OutEdges.size();
-    SmallVector<uint64_t, 2> EdgeCounts(Size, 0);
+
+    // SuccessorCount can be greater than OutEdgesCount, because
+    // removed edges don't appear in OutEdges.
+    unsigned OutEdgesCount = BBCountInfo.OutEdges.size();
+    unsigned SuccessorCount = BB.getTerminator()->getNumSuccessors();
+    assert(OutEdgesCount <= SuccessorCount);
+
+    SmallVector<uint64_t, 2> EdgeCounts(SuccessorCount, 0);
     uint64_t MaxCount = 0;
-    for (unsigned s = 0; s < Size; s++) {
-      const PGOUseEdge *E = BBCountInfo.OutEdges[s];
+    for (unsigned It = 0; It < OutEdgesCount; It++) {
+      const PGOUseEdge *E = BBCountInfo.OutEdges[It];
       const BasicBlock *SrcBB = E->SrcBB;
       const BasicBlock *DestBB = E->DestBB;
       if (DestBB == nullptr)

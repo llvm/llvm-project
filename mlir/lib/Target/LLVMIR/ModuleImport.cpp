@@ -55,7 +55,7 @@ static std::string diag(const llvm::Value &value) {
   std::string str;
   llvm::raw_string_ostream os(str);
   os << value;
-  return os.str();
+  return str;
 }
 
 // Utility to print an LLVM metadata node as a string for passing
@@ -66,7 +66,7 @@ static std::string diagMD(const llvm::Metadata *node,
   std::string str;
   llvm::raw_string_ostream os(str);
   node->print(os, module, /*IsForDebug=*/true);
-  return os.str();
+  return str;
 }
 
 /// Returns the name of the global_ctors global variables.
@@ -1021,9 +1021,8 @@ ModuleImport::getConstantsToConvert(llvm::Constant *constant) {
     llvm::Constant *current = workList.back();
     // Collect all dependencies of the current constant and add them to the
     // adjacency list if none has been computed before.
-    auto adjacencyIt = adjacencyLists.find(current);
-    if (adjacencyIt == adjacencyLists.end()) {
-      adjacencyIt = adjacencyLists.try_emplace(current).first;
+    auto [adjacencyIt, inserted] = adjacencyLists.try_emplace(current);
+    if (inserted) {
       // Add all constant operands to the adjacency list and skip any other
       // values such as basic block addresses.
       for (llvm::Value *operand : current->operands())

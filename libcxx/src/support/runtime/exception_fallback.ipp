@@ -21,7 +21,7 @@ unexpected_handler set_unexpected(unexpected_handler func) noexcept {
 
 unexpected_handler get_unexpected() noexcept { return __libcpp_atomic_load(&__unexpected_handler); }
 
-_LIBCPP_NORETURN void unexpected() {
+[[noreturn]] void unexpected() {
   (*get_unexpected())();
   // unexpected handler should not return
   terminate();
@@ -33,7 +33,7 @@ terminate_handler set_terminate(terminate_handler func) noexcept {
 
 terminate_handler get_terminate() noexcept { return __libcpp_atomic_load(&__terminate_handler); }
 
-_LIBCPP_NORETURN void terminate() noexcept {
+[[noreturn]] void terminate() noexcept {
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
   try {
 #endif // _LIBCPP_HAS_NO_EXCEPTIONS

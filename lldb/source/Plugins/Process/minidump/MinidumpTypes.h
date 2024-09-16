@@ -48,15 +48,12 @@ enum class MinidumpMiscInfoFlags : uint32_t {
 
 template <typename T>
 Status consumeObject(llvm::ArrayRef<uint8_t> &Buffer, const T *&Object) {
-  Status error;
-  if (Buffer.size() < sizeof(T)) {
-    error.SetErrorString("Insufficient buffer!");
-    return error;
-  }
+  if (Buffer.size() < sizeof(T))
+    return Status::FromErrorString("Insufficient buffer!");
 
   Object = reinterpret_cast<const T *>(Buffer.data());
   Buffer = Buffer.drop_front(sizeof(T));
-  return error;
+  return Status();
 }
 
 struct MinidumpMemoryDescriptor64 {

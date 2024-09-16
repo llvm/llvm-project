@@ -206,7 +206,7 @@ public:
   /// At an entry point, the underlying value of a value is itself.
   void setToEntryState(UnderlyingValueLattice *lattice) override {
     propagateIfChanged(lattice,
-                       lattice->join(UnderlyingValue{lattice->getPoint()}));
+                       lattice->join(UnderlyingValue{lattice->getAnchor()}));
   }
 
   /// Look for the most underlying value of a value.

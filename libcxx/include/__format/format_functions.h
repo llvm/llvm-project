@@ -360,7 +360,7 @@ _LIBCPP_HIDE_FROM_ABI inline __runtime_format_string<wchar_t> runtime_format(wst
   return __fmt;
 }
 #    endif
-#  endif //_LIBCPP_STD_VER >= 26
+#  endif // _LIBCPP_STD_VER >= 26
 
 template <class _CharT, class... _Args>
 struct _LIBCPP_TEMPLATE_VIS basic_format_string {
@@ -671,7 +671,7 @@ formatted_size(locale __loc, wformat_string<_Args...> __fmt, _Args&&... __args) 
 
 #  endif // _LIBCPP_HAS_NO_LOCALIZATION
 
-#endif //_LIBCPP_STD_VER >= 20
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

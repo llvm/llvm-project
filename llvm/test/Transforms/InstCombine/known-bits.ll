@@ -1664,11 +1664,9 @@ define i64 @pr92084(double %x) {
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp uno double [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN1:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then1:
-; CHECK-NEXT:    br i1 [[CMP]], label [[IF_ELSE]], label [[IF_THEN2:%.*]]
+; CHECK-NEXT:    br i1 true, label [[IF_ELSE]], label [[IF_THEN2:%.*]]
 ; CHECK:       if.then2:
-; CHECK-NEXT:    [[CAST:%.*]] = bitcast double [[X]] to i64
-; CHECK-NEXT:    [[AND:%.*]] = and i64 [[CAST]], 1
-; CHECK-NEXT:    ret i64 [[AND]]
+; CHECK-NEXT:    ret i64 poison
 ; CHECK:       if.else:
 ; CHECK-NEXT:    ret i64 0
 ;

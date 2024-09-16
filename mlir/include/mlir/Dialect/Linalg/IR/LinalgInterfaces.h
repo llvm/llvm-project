@@ -110,8 +110,12 @@ struct ConvolutionDimensions {
 FailureOr<ConvolutionDimensions> inferConvolutionDims(LinalgOp linalgOp);
 
 /// Checks whether `linalgOp` conforms to ConvolutionOpInterface.
+/// By default, we require the `linalgOp` to have non-empty convolved dims
+/// (implicitly non-empty `output_image` and `filter_loop`).
+/// Users can loosen the constraint by setting `allowEmptyConvolvedDims` to true
 // TODO: embed within `isa<ConvolutionOpInterface>` if possible / natural.
-bool isaConvolutionOpInterface(LinalgOp linalgOp);
+bool isaConvolutionOpInterface(LinalgOp linalgOp,
+                               bool allowEmptyConvolvedDims = false);
 
 /// Checks whether `linalgOp` is semantically equivalent to a `linalg.copyOp`.
 bool isaCopyOpInterface(LinalgOp linalgOp);
@@ -175,9 +179,12 @@ enum class MatchConvolutionResult;
 /// Checks whether `op` conforms to ConvolutionOpInterface and populates
 /// `dimensions` with indexes of the different kinds of dimensions when
 /// present.
+/// If `allowEmptyConvolvedDims` is not set, we further checks whether the `op`
+/// contains convolved dims.
 MatchConvolutionResult
 isConvolutionInterfaceImpl(Operation *op,
-                           ConvolutionDimensions *dimensions = nullptr);
+                           ConvolutionDimensions *dimensions = nullptr,
+                           bool allowEmptyConvolvedDims = false);
 
 /// Returns the error message corresponding to the convolution checking return
 /// code.

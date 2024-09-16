@@ -436,7 +436,7 @@ __format_bool(bool __value, _FormatContext& __ctx, __format_spec::__parsed_speci
 
 } // namespace __formatter
 
-#endif //_LIBCPP_STD_VER >= 20
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

@@ -11,7 +11,7 @@ if(LLVM_LINK_LLVM_DYLIB AND LLVM_DYLIB_EXPORTED_SYMBOL_FILE)
 endif()
 
 if(LLVM_BUILD_LLVM_DYLIB)
-  if(MSVC)
+  if(MSVC AND NOT LLVM_BUILD_LLVM_DYLIB_VIS)
     message(FATAL_ERROR "Generating libLLVM is not supported on MSVC")
   endif()
   if(ZOS)
@@ -49,18 +49,25 @@ if(LLVM_BUILD_LLVM_DYLIB)
     ${CMAKE_CURRENT_SOURCE_DIR}/simple_version_script.map.in
     ${LLVM_LIBRARY_DIR}/tools/llvm-shlib/simple_version_script.map)
 
-    # GNU ld doesn't resolve symbols in the version script.
-    set(LIB_NAMES -Wl,--whole-archive ${LIB_NAMES} -Wl,--no-whole-archive)
-    if (NOT LLVM_LINKER_IS_SOLARISLD AND NOT MINGW)
-      # Solaris ld does not accept global: *; so there is no way to version *all* global symbols
-      set(LIB_NAMES -Wl,--version-script,${LLVM_LIBRARY_DIR}/tools/llvm-shlib/simple_version_script.map ${LIB_NAMES})
-    endif()
-    if (NOT MINGW AND NOT LLVM_LINKER_IS_SOLARISLD_ILLUMOS)
-      # Optimize function calls for default visibility definitions to avoid PLT and
-      # reduce dynamic relocations.
-      # Note: for -fno-pic default, the address of a function may be different from
-      # inside and outside libLLVM.so.
-      target_link_options(LLVM PRIVATE LINKER:-Bsymbolic-functions)
+    if(MSVC)
+      target_link_directories(LLVM PRIVATE ${LLVM_LIBRARY_DIR})
+      foreach(library ${LIB_NAMES})
+        target_link_options(LLVM PRIVATE /WHOLEARCHIVE:${library}.lib)
+      endforeach()
+    else()
+      # GNU ld doesn't resolve symbols in the version script.
+      set(LIB_NAMES -Wl,--whole-archive ${LIB_NAMES} -Wl,--no-whole-archive)
+      if (NOT LLVM_LINKER_IS_SOLARISLD AND NOT MINGW)
+        # Solaris ld does not accept global: *; so there is no way to version *all* global symbols
+        set(LIB_NAMES -Wl,--version-script,${LLVM_LIBRARY_DIR}/tools/llvm-shlib/simple_version_script.map ${LIB_NAMES})
+      endif()
+      if (NOT MINGW AND NOT LLVM_LINKER_IS_SOLARISLD_ILLUMOS)
+        # Optimize function calls for default visibility definitions to avoid PLT and
+        # reduce dynamic relocations.
+        # Note: for -fno-pic default, the address of a function may be different from
+        # inside and outside libLLVM.so.
+        target_link_options(LLVM PRIVATE LINKER:-Bsymbolic-functions)
+      endif()
     endif()
   endif()
 

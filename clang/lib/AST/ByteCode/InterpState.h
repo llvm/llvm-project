@@ -59,7 +59,7 @@ public:
   Expr::EvalStatus &getEvalStatus() const override {
     return Parent.getEvalStatus();
   }
-  ASTContext &getCtx() const override { return Parent.getCtx(); }
+  ASTContext &getASTContext() const override { return Parent.getASTContext(); }
 
   // Forward status checks and updates to the walker.
   bool checkingForUndefinedBehavior() const override {
@@ -67,6 +67,9 @@ public:
   }
   bool keepEvaluatingAfterFailure() const override {
     return Parent.keepEvaluatingAfterFailure();
+  }
+  bool keepEvaluatingAfterSideEffect() const override {
+    return Parent.keepEvaluatingAfterSideEffect();
   }
   bool checkingPotentialConstantExpression() const override {
     return Parent.checkingPotentialConstantExpression();
@@ -83,6 +86,7 @@ public:
     Parent.setFoldFailureDiagnostic(Flag);
   }
   bool hasPriorDiagnostic() override { return Parent.hasPriorDiagnostic(); }
+  bool noteSideEffect() override { return Parent.noteSideEffect(); }
 
   /// Reports overflow and return true if evaluation should continue.
   bool reportOverflow(const Expr *E, const llvm::APSInt &Value);
