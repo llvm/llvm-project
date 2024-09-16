@@ -649,7 +649,7 @@ LinkerScript::computeInputSections(const InputSectionDescription *cmd,
 }
 
 void LinkerScript::discard(InputSectionBase &s) {
-  if (&s == in.shStrTab.get())
+  if (&s == ctx.in.shStrTab.get())
     error("discarding " + s.name + " section is not allowed");
 
   s.markDead();
@@ -1038,7 +1038,7 @@ void LinkerScript::diagnoseOrphanHandling() const {
   for (const InputSectionBase *sec : orphanSections) {
     // .relro_padding is inserted before DATA_SEGMENT_RELRO_END, if present,
     // automatically. The section is not supposed to be specified by scripts.
-    if (sec == in.relroPadding.get())
+    if (sec == ctx.in.relroPadding.get())
       continue;
     // Input SHT_REL[A] retained by --emit-relocs are ignored by
     // computeInputSections(). Don't warn/error.
@@ -1055,7 +1055,7 @@ void LinkerScript::diagnoseOrphanHandling() const {
 }
 
 void LinkerScript::diagnoseMissingSGSectionAddress() const {
-  if (!config->cmseImplib || !in.armCmseSGSection->isNeeded())
+  if (!config->cmseImplib || !ctx.in.armCmseSGSection->isNeeded())
     return;
 
   OutputSection *sec = findByName(sectionCommands, ".gnu.sgstubs");
@@ -1237,7 +1237,7 @@ bool LinkerScript::assignOffsets(OutputSection *sec) {
 
   // If .relro_padding is present, round up the end to a common-page-size
   // boundary to protect the last page.
-  if (in.relroPadding && sec == in.relroPadding->getParent())
+  if (ctx.in.relroPadding && sec == ctx.in.relroPadding->getParent())
     expandOutputSection(alignToPowerOf2(dot, config->commonPageSize) - dot);
 
   // Non-SHF_ALLOC sections do not affect the addresses of other OutputSections
@@ -1361,7 +1361,8 @@ void LinkerScript::adjustOutputSections() {
     // Discard .relro_padding if we have not seen one RELRO section. Note: when
     // .tbss is the only RELRO section, there is no associated PT_LOAD segment
     // (needsPtLoad), so we don't append .relro_padding in the case.
-    if (in.relroPadding && in.relroPadding->getParent() == sec && !seenRelro)
+    if (ctx.in.relroPadding && ctx.in.relroPadding->getParent() == sec &&
+        !seenRelro)
       discardable = true;
     if (discardable) {
       sec->markDead();
