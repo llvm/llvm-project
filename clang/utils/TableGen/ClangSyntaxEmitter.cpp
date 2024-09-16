@@ -50,20 +50,20 @@ public:
         link(Derived, Base);
     for (NodeType &N : AllTypes) {
       sort(N.Derived, [](const NodeType *L, const NodeType *R) {
-        return L->Record->getName() < R->Record->getName();
+        return L->Rec->getName() < R->Rec->getName();
       });
       // Alternatives nodes must have subclasses, External nodes may do.
-      assert(N.Record->isSubClassOf("Alternatives") ||
-             N.Record->isSubClassOf("External") || N.Derived.empty());
-      assert(!N.Record->isSubClassOf("Alternatives") || !N.Derived.empty());
+      assert(N.Rec->isSubClassOf("Alternatives") ||
+             N.Rec->isSubClassOf("External") || N.Derived.empty());
+      assert(!N.Rec->isSubClassOf("Alternatives") || !N.Derived.empty());
     }
   }
 
   struct NodeType {
-    const Record *Record = nullptr;
+    const Record *Rec = nullptr;
     const NodeType *Base = nullptr;
     std::vector<const NodeType *> Derived;
-    StringRef name() const { return Record->getName(); }
+    StringRef name() const { return Rec->getName(); }
   };
 
   NodeType &get(StringRef Name = "Node") {
@@ -85,7 +85,7 @@ public:
 private:
   void add(const Record *R) {
     AllTypes.emplace_back();
-    AllTypes.back().Record = R;
+    AllTypes.back().Rec = R;
     bool Inserted = ByName.try_emplace(R->getName(), &AllTypes.back()).second;
     assert(Inserted && "Duplicate node name");
     (void)Inserted;
@@ -200,9 +200,9 @@ void clang::EmitClangSyntaxNodeClasses(const RecordKeeper &Records,
 
   OS << "\n// Node definitions\n\n";
   H.visit([&](const Hierarchy::NodeType &N) {
-    if (N.Record->isSubClassOf("External"))
+    if (N.Rec->isSubClassOf("External"))
       return;
-    printDoc(N.Record->getValueAsString("documentation"), OS);
+    printDoc(N.Rec->getValueAsString("documentation"), OS);
     OS << formatv("class {0}{1} : public {2} {{\n", N.name(),
                   N.Derived.empty() ? " final" : "", N.Base->name());
 
@@ -214,9 +214,9 @@ void clang::EmitClangSyntaxNodeClasses(const RecordKeeper &Records,
       OS << formatv("protected:\n  {0}(NodeKind K) : {1}(K) {{}\npublic:\n",
                     N.name(), N.Base->name());
 
-    if (N.Record->isSubClassOf("Sequence")) {
+    if (N.Rec->isSubClassOf("Sequence")) {
       // Getters for sequence elements.
-      for (const auto &C : N.Record->getValueAsListOfDefs("children")) {
+      for (const auto &C : N.Rec->getValueAsListOfDefs("children")) {
         assert(C->isSubClassOf("Role"));
         StringRef Role = C->getValueAsString("role");
         SyntaxConstraint Constraint(*C->getValueAsDef("syntax"));
