@@ -17,6 +17,27 @@ void func_cpp_inc();
 // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: function 'func_cpp_inc'
 // CHECK-FIXES: static void func_cpp_inc();
 
+int* func_cpp_inc_return_ptr();
+// CHECK-MESSAGES: :[[@LINE-1]]:6: warning: function 'func_cpp_inc_return_ptr'
+// CHECK-FIXES: static int* func_cpp_inc_return_ptr();
+
+const int* func_cpp_inc_return_const_ptr();
+// CHECK-MESSAGES: :[[@LINE-1]]:12: warning: function 'func_cpp_inc_return_const_ptr'
+// CHECK-FIXES: static const int* func_cpp_inc_return_const_ptr();
+
+int const* func_cpp_inc_return_ptr_const();
+// CHECK-MESSAGES: :[[@LINE-1]]:12: warning: function 'func_cpp_inc_return_ptr_const'
+// CHECK-FIXES: static int const* func_cpp_inc_return_ptr_const();
+
+int * const func_cpp_inc_return_const();
+// CHECK-MESSAGES: :[[@LINE-1]]:13: warning: function 'func_cpp_inc_return_const'
+// CHECK-FIXES: static int * const func_cpp_inc_return_const();
+
+volatile const int* func_cpp_inc_return_volatile_const_ptr();
+// CHECK-MESSAGES: :[[@LINE-1]]:21: warning: function 'func_cpp_inc_return_volatile_const_ptr'
+// CHECK-FIXES: static volatile const int* func_cpp_inc_return_volatile_const_ptr();
+
+
 #include "func_cpp.inc"
 
 void func_h_inc();

@@ -128,6 +128,10 @@ Changes in existing checks
   <clang-tidy/checks/misc/unconventional-assign-operator>` check to avoid
   false positive for C++23 deducing this.
 
+- Improved :doc:`misc-use-internal-linkage
+  <clang-tidy/checks/misc/use-internal-linkage>` check to insert ``static`` keyword
+  before type qualifier such as ``const``, ``volatile``.
+
 - Improved :doc:`modernize-use-std-print
   <clang-tidy/checks/modernize/use-std-print>` check to support replacing
   member function calls too.
