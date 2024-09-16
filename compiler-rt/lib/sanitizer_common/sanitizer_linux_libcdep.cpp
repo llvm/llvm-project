@@ -232,7 +232,7 @@ void InitTlsSize() {
 
 #    if defined(__aarch64__) || defined(__x86_64__) || \
         defined(__powerpc64__) || defined(__loongarch__)
-  void *get_tls_static_info = dlsym(RTLD_NEXT, "_dl_get_tls_static_info");
+  void *get_tls_static_info = dlsym(RTLD_DEFAULT, "_dl_get_tls_static_info");
   size_t tls_align;
   ((void (*)(size_t *, size_t *))get_tls_static_info)(&g_tls_size, &tls_align);
 #    endif
