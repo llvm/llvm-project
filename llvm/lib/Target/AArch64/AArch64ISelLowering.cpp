@@ -21831,12 +21831,9 @@ SDValue tryLowerPartialReductionToDot(SDNode *N,
   auto ExtA = MulOp->getOperand(0);
   auto ExtB = MulOp->getOperand(1);
 
-  bool AIsSExt = ExtA->getOpcode() == ISD::SIGN_EXTEND;
-  bool AIsZExt = ExtA->getOpcode() == ISD::ZERO_EXTEND;
-  bool BIsSExt = ExtB->getOpcode() == ISD::SIGN_EXTEND;
-  bool BIsZExt = ExtB->getOpcode() == ISD::ZERO_EXTEND;
-  if (!(AIsSExt || AIsZExt) || !(BIsSExt || BIsZExt))
-    return SDValue();
+  if (!ISD::isExtOpcode(ExtA->getOpcode()) || !ISD::isExtOpcode(ExtB->getOpcode())) return SDValue();
+  bool AIsSigned = ExtA->getOpcode() == ISD::SIGN_EXTEND;
+  bool BIsSigned = ExtB->getOpcode() == ISD::SIGN_EXTEND;
 
   auto A = ExtA->getOperand(0);
   auto B = ExtB->getOperand(0);
@@ -21856,7 +21853,7 @@ SDValue tryLowerPartialReductionToDot(SDNode *N,
 
   // If the extensions are mixed, we should lower it to a usdot instead
   unsigned Opcode = 0;
-  if (AIsZExt != BIsZExt) {
+  if (AIsSigned != BIsSigned) {
     if (!Subtarget->hasMatMulInt8())
       return SDValue();
 
@@ -21867,11 +21864,11 @@ SDValue tryLowerPartialReductionToDot(SDNode *N,
 
     Opcode = AArch64ISD::USDOT;
     // USDOT expects the signed operand to be last
-    if (BIsZExt)
+    if (!BIsSigned)
       std::swap(A, B);
-  } else if (AIsSExt)
+  } else if (AIsSigned)
     Opcode = AArch64ISD::SDOT;
-  else if (AIsZExt)
+  else if (!AIsSigned)
     Opcode = AArch64ISD::UDOT;
 
   assert(Opcode != 0 && "Unexpected dot product case encountered.");
