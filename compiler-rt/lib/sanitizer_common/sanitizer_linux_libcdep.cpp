@@ -196,27 +196,6 @@ bool SetEnv(const char *name, const char *value) {
 }
 #  endif
 
-__attribute__((unused)) static bool GetLibcVersion(int *major, int *minor,
-                                                   int *patch) {
-#  ifdef _CS_GNU_LIBC_VERSION
-  char buf[64];
-  uptr len = confstr(_CS_GNU_LIBC_VERSION, buf, sizeof(buf));
-  if (len >= sizeof(buf))
-    return false;
-  buf[len] = 0;
-  static const char kGLibC[] = "glibc ";
-  if (internal_strncmp(buf, kGLibC, sizeof(kGLibC) - 1) != 0)
-    return false;
-  const char *p = buf + sizeof(kGLibC) - 1;
-  *major = internal_simple_strtoll(p, &p, 10);
-  *minor = (*p == '.') ? internal_simple_strtoll(p + 1, &p, 10) : 0;
-  *patch = (*p == '.') ? internal_simple_strtoll(p + 1, &p, 10) : 0;
-  return true;
-#  else
-  return false;
-#  endif
-}
-
 // True if we can use dlpi_tls_data. glibc before 2.25 may leave NULL (BZ
 // #19826) so dlpi_tls_data cannot be used.
 //
@@ -226,23 +205,39 @@ __attribute__((unused)) static bool GetLibcVersion(int *major, int *minor,
 __attribute__((unused)) static int g_use_dlpi_tls_data;
 
 #  if SANITIZER_GLIBC && !SANITIZER_GO
+
+static void GetLibcVersion(int *major, int *minor, int *patch) {
+  const char *p = gnu_get_libc_version();
+  *major = internal_simple_strtoll(p, &p, 10);
+  // Caller does not expect anything else.
+  CHECK_EQ(*major, 2);
+  *minor = (*p == '.') ? internal_simple_strtoll(p + 1, &p, 10) : 0;
+  *patch = (*p == '.') ? internal_simple_strtoll(p + 1, &p, 10) : 0;
+}
+
 __attribute__((unused)) static size_t g_tls_size;
+
 void InitTlsSize() {
   int major, minor, patch;
-  g_use_dlpi_tls_data =
-      GetLibcVersion(&major, &minor, &patch) && major == 2 && minor >= 25;
+  GetLibcVersion(&major, &minor, &patch);
+  g_use_dlpi_tls_data = major == 2 && minor >= 25;
 
 #    if defined(__aarch64__) || defined(__x86_64__) || \
         defined(__powerpc64__) || defined(__loongarch__)
-  void *get_tls_static_info = dlsym(RTLD_NEXT, "_dl_get_tls_static_info");
+  void *get_tls_static_info = dlsym(RTLD_DEFAULT, "_dl_get_tls_static_info");
   size_t tls_align;
   ((void (*)(size_t *, size_t *))get_tls_static_info)(&g_tls_size, &tls_align);
 #    endif
 }
+#  else
+void InitTlsSize() {}
+#  endif  // SANITIZER_GLIBC && !SANITIZER_GO
 
 // On glibc x86_64, ThreadDescriptorSize() needs to be precise due to the usage
 // of g_tls_size. On other targets, ThreadDescriptorSize() is only used by lsan
 // to get the pointer to thread-specific data keys in the thread control block.
+#  if (SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_SOLARIS) && \
+      !SANITIZER_ANDROID && !SANITIZER_GO
 // sizeof(struct pthread) from glibc.
 static atomic_uintptr_t thread_descriptor_size;
 
@@ -252,7 +247,8 @@ static uptr ThreadDescriptorSizeFallback() {
   int major;
   int minor;
   int patch;
-  if (GetLibcVersion(&major, &minor, &patch) && major == 2) {
+  GetLibcVersion(&major, &minor, &patch);
+  if (major == 2) {
     /* sizeof(struct pthread) values from various glibc versions.  */
     if (SANITIZER_X32)
       val = 1728;  // Assume only one particular version for x32.
@@ -294,7 +290,8 @@ static uptr ThreadDescriptorSizeFallback() {
   int major;
   int minor;
   int patch;
-  if (GetLibcVersion(&major, &minor, &patch) && major == 2) {
+  GetLibcVersion(&major, &minor, &patch);
+  if (major == 2) {
     // TODO: consider adding an optional runtime check for an unknown (untested)
     // glibc version
     if (minor <= 28)  // WARNING: the highest tested version is 2.29
@@ -460,9 +457,8 @@ __attribute__((unused)) static void GetStaticTlsBoundary(uptr *addr, uptr *size,
   *addr = ranges[l].begin;
   *size = ranges[r - 1].end - ranges[l].begin;
 }
-#  else
-void InitTlsSize() {}
-#  endif  // SANITIZER_GLIBC && !SANITIZER_GO
+#  endif  // (x86_64 || i386 || mips || ...) && (SANITIZER_FREEBSD ||
+          // SANITIZER_LINUX) && !SANITIZER_ANDROID && !SANITIZER_GO
 
 #  if SANITIZER_NETBSD
 static struct tls_tcb *ThreadSelfTlsTcb() {
@@ -622,25 +618,32 @@ uptr GetTlsSize() {
 }
 #  endif
 
-void GetThreadStackAndTls(bool main, uptr *stk_addr, uptr *stk_size,
-                          uptr *tls_addr, uptr *tls_size) {
+void GetThreadStackAndTls(bool main, uptr *stk_begin, uptr *stk_end,
+                          uptr *tls_begin, uptr *tls_end) {
 #  if SANITIZER_GO
   // Stub implementation for Go.
-  *stk_addr = *stk_size = *tls_addr = *tls_size = 0;
+  *stk_begin = 0;
+  *stk_end = 0;
+  *tls_begin = 0;
+  *tls_end = 0;
 #  else
-  GetTls(tls_addr, tls_size);
+  uptr tls_addr = 0;
+  uptr tls_size = 0;
+  GetTls(&tls_addr, &tls_size);
+  *tls_begin = tls_addr;
+  *tls_end = tls_addr + tls_size;
 
   uptr stack_top, stack_bottom;
   GetThreadStackTopAndBottom(main, &stack_top, &stack_bottom);
-  *stk_addr = stack_bottom;
-  *stk_size = stack_top - stack_bottom;
+  *stk_begin = stack_bottom;
+  *stk_end = stack_top;
 
   if (!main) {
     // If stack and tls intersect, make them non-intersecting.
-    if (*tls_addr > *stk_addr && *tls_addr < *stk_addr + *stk_size) {
-      if (*stk_addr + *stk_size < *tls_addr + *tls_size)
-        *tls_size = *stk_addr + *stk_size - *tls_addr;
-      *stk_size = *tls_addr - *stk_addr;
+    if (*tls_begin > *stk_begin && *tls_begin < *stk_end) {
+      if (*stk_end < *tls_end)
+        *tls_end = *stk_end;
+      *stk_end = *tls_begin;
     }
   }
 #  endif

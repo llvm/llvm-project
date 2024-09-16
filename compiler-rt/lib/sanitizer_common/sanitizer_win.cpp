@@ -876,21 +876,18 @@ uptr GetTlsSize() {
 void InitTlsSize() {
 }
 
-void GetThreadStackAndTls(bool main, uptr *stk_addr, uptr *stk_size,
-                          uptr *tls_addr, uptr *tls_size) {
-#if SANITIZER_GO
-  *stk_addr = 0;
-  *stk_size = 0;
-  *tls_addr = 0;
-  *tls_size = 0;
-#else
-  uptr stack_top, stack_bottom;
-  GetThreadStackTopAndBottom(main, &stack_top, &stack_bottom);
-  *stk_addr = stack_bottom;
-  *stk_size = stack_top - stack_bottom;
-  *tls_addr = 0;
-  *tls_size = 0;
-#endif
+void GetThreadStackAndTls(bool main, uptr *stk_begin, uptr *stk_end,
+                          uptr *tls_begin, uptr *tls_end) {
+#  if SANITIZER_GO
+  *stk_begin = 0;
+  *stk_end = 0;
+  *tls_begin = 0;
+  *tls_end = 0;
+#  else
+  GetThreadStackTopAndBottom(main, stk_begin, stk_end);
+  *tls_begin = 0;
+  *tls_end = 0;
+#  endif
 }
 
 void ReportFile::Write(const char *buffer, uptr length) {
