@@ -196,27 +196,6 @@ bool SetEnv(const char *name, const char *value) {
 }
 #  endif
 
-__attribute__((unused)) static bool GetLibcVersion(int *major, int *minor,
-                                                   int *patch) {
-#  ifdef _CS_GNU_LIBC_VERSION
-  char buf[64];
-  uptr len = confstr(_CS_GNU_LIBC_VERSION, buf, sizeof(buf));
-  if (len >= sizeof(buf))
-    return false;
-  buf[len] = 0;
-  static const char kGLibC[] = "glibc ";
-  if (internal_strncmp(buf, kGLibC, sizeof(kGLibC) - 1) != 0)
-    return false;
-  const char *p = buf + sizeof(kGLibC) - 1;
-  *major = internal_simple_strtoll(p, &p, 10);
-  *minor = (*p == '.') ? internal_simple_strtoll(p + 1, &p, 10) : 0;
-  *patch = (*p == '.') ? internal_simple_strtoll(p + 1, &p, 10) : 0;
-  return true;
-#  else
-  return false;
-#  endif
-}
-
 // True if we can use dlpi_tls_data. glibc before 2.25 may leave NULL (BZ
 // #19826) so dlpi_tls_data cannot be used.
 //
@@ -226,11 +205,22 @@ __attribute__((unused)) static bool GetLibcVersion(int *major, int *minor,
 __attribute__((unused)) static int g_use_dlpi_tls_data;
 
 #  if SANITIZER_GLIBC && !SANITIZER_GO
+
+static void GetLibcVersion(int *major, int *minor, int *patch) {
+  const char *p = gnu_get_libc_version();
+  *major = internal_simple_strtoll(p, &p, 10);
+  // Caller does not expect anything else.
+  CHECK_EQ(*major, 2);
+  *minor = (*p == '.') ? internal_simple_strtoll(p + 1, &p, 10) : 0;
+  *patch = (*p == '.') ? internal_simple_strtoll(p + 1, &p, 10) : 0;
+}
+
 __attribute__((unused)) static size_t g_tls_size;
+
 void InitTlsSize() {
   int major, minor, patch;
-  g_use_dlpi_tls_data =
-      GetLibcVersion(&major, &minor, &patch) && major == 2 && minor >= 25;
+  GetLibcVersion(&major, &minor, &patch);
+  g_use_dlpi_tls_data = major == 2 && minor >= 25;
 
 #    if defined(__aarch64__) || defined(__x86_64__) || \
         defined(__powerpc64__) || defined(__loongarch__)
@@ -257,7 +247,8 @@ static uptr ThreadDescriptorSizeFallback() {
   int major;
   int minor;
   int patch;
-  if (GetLibcVersion(&major, &minor, &patch) && major == 2) {
+  GetLibcVersion(&major, &minor, &patch);
+  if (major == 2) {
     /* sizeof(struct pthread) values from various glibc versions.  */
     if (SANITIZER_X32)
       val = 1728;  // Assume only one particular version for x32.
@@ -299,7 +290,8 @@ static uptr ThreadDescriptorSizeFallback() {
   int major;
   int minor;
   int patch;
-  if (GetLibcVersion(&major, &minor, &patch) && major == 2) {
+  GetLibcVersion(&major, &minor, &patch);
+  if (major == 2) {
     // TODO: consider adding an optional runtime check for an unknown (untested)
     // glibc version
     if (minor <= 28)  // WARNING: the highest tested version is 2.29
