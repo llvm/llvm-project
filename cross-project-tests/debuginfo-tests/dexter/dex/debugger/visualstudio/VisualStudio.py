@@ -256,7 +256,7 @@ class VisualStudio(
         for bp in self._debugger.Breakpoints:
             # We're looking at the user-set breakpoints so there should be no
             # Parent.
-            assert bp.Parent == None
+            assert bp.Parent is None
             this_vsbp = VSBreakpoint(
                 PurePath(bp.File), bp.FileLine, bp.FileColumn, bp.Condition
             )

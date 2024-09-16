@@ -98,7 +98,7 @@ def _build_command(
 
     def label_to_line(label_name: str) -> int:
         line = labels.get(label_name, None)
-        if line != None:
+        if line is not None:
             return line
         raise format_unresolved_label_err(label_name, raw_text, path.base, lineno)
 
