@@ -256,6 +256,10 @@ LANGSTANDARD(hlsl202x, "hlsl202x",
              HLSL, "High Level Shader Language 202x",
              LineComment | HLSL | CPlusPlus | CPlusPlus11)
 
+LANGSTANDARD(hlsl202y, "hlsl202y",
+             HLSL, "High Level Shader Language 202y",
+             LineComment | HLSL | CPlusPlus | CPlusPlus11)
+
 
 #undef LANGSTANDARD
 #undef LANGSTANDARD_ALIAS

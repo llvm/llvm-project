@@ -95,11 +95,11 @@ public:
 
 class RVVEmitter {
 private:
-  RecordKeeper &Records;
+  const RecordKeeper &Records;
   RVVTypeCache TypeCache;
 
 public:
-  RVVEmitter(RecordKeeper &R) : Records(R) {}
+  RVVEmitter(const RecordKeeper &R) : Records(R) {}
 
   /// Emit riscv_vector.h
   void createHeader(raw_ostream &o);
@@ -554,8 +554,7 @@ void RVVEmitter::createCodeGen(raw_ostream &OS) {
 void RVVEmitter::createRVVIntrinsics(
     std::vector<std::unique_ptr<RVVIntrinsic>> &Out,
     std::vector<SemaRecord> *SemaRecords) {
-  std::vector<Record *> RV = Records.getAllDerivedDefinitions("RVVBuiltin");
-  for (auto *R : RV) {
+  for (const Record *R : Records.getAllDerivedDefinitions("RVVBuiltin")) {
     StringRef Name = R->getValueAsString("Name");
     StringRef SuffixProto = R->getValueAsString("Suffix");
     StringRef OverloadedName = R->getValueAsString("OverloadedName");
@@ -565,10 +564,10 @@ void RVVEmitter::createRVVIntrinsics(
     bool HasMasked = R->getValueAsBit("HasMasked");
     bool HasMaskedOffOperand = R->getValueAsBit("HasMaskedOffOperand");
     bool HasVL = R->getValueAsBit("HasVL");
-    Record *MPSRecord = R->getValueAsDef("MaskedPolicyScheme");
+    const Record *MPSRecord = R->getValueAsDef("MaskedPolicyScheme");
     auto MaskedPolicyScheme =
         static_cast<PolicyScheme>(MPSRecord->getValueAsInt("Value"));
-    Record *UMPSRecord = R->getValueAsDef("UnMaskedPolicyScheme");
+    const Record *UMPSRecord = R->getValueAsDef("UnMaskedPolicyScheme");
     auto UnMaskedPolicyScheme =
         static_cast<PolicyScheme>(UMPSRecord->getValueAsInt("Value"));
     std::vector<int64_t> Log2LMULList = R->getValueAsListOfInts("Log2LMUL");
@@ -752,9 +751,7 @@ void RVVEmitter::createRVVIntrinsics(
 }
 
 void RVVEmitter::printHeaderCode(raw_ostream &OS) {
-  std::vector<Record *> RVVHeaders =
-      Records.getAllDerivedDefinitions("RVVHeader");
-  for (auto *R : RVVHeaders) {
+  for (const Record *R : Records.getAllDerivedDefinitions("RVVHeader")) {
     StringRef HeaderCodeStr = R->getValueAsString("HeaderCode");
     OS << HeaderCodeStr.str();
   }
@@ -822,19 +819,19 @@ void RVVEmitter::createSema(raw_ostream &OS) {
 }
 
 namespace clang {
-void EmitRVVHeader(RecordKeeper &Records, raw_ostream &OS) {
+void EmitRVVHeader(const RecordKeeper &Records, raw_ostream &OS) {
   RVVEmitter(Records).createHeader(OS);
 }
 
-void EmitRVVBuiltins(RecordKeeper &Records, raw_ostream &OS) {
+void EmitRVVBuiltins(const RecordKeeper &Records, raw_ostream &OS) {
   RVVEmitter(Records).createBuiltins(OS);
 }
 
-void EmitRVVBuiltinCG(RecordKeeper &Records, raw_ostream &OS) {
+void EmitRVVBuiltinCG(const RecordKeeper &Records, raw_ostream &OS) {
   RVVEmitter(Records).createCodeGen(OS);
 }
 
-void EmitRVVBuiltinSema(RecordKeeper &Records, raw_ostream &OS) {
+void EmitRVVBuiltinSema(const RecordKeeper &Records, raw_ostream &OS) {
   RVVEmitter(Records).createSema(OS);
 }
 

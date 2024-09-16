@@ -964,6 +964,32 @@ define void @foo(i32 %cond0, i32 %cond1) {
   EXPECT_EQ(Switch->findCaseDest(BB1), One);
 }
 
+TEST_F(TrackerTest, SelectInst) {
+  parseIR(C, R"IR(
+define void @foo(i1 %c0, i8 %v0, i8 %v1) {
+  %sel = select i1 %c0, i8 %v0, i8 %v1
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  sandboxir::Function *F = Ctx.createFunction(LLVMF);
+  auto *V0 = F->getArg(1);
+  auto *V1 = F->getArg(2);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *Select = cast<sandboxir::SelectInst>(&*It++);
+
+  // Check tracking for swapValues.
+  Ctx.save();
+  Select->swapValues();
+  EXPECT_EQ(Select->getTrueValue(), V1);
+  EXPECT_EQ(Select->getFalseValue(), V0);
+  Ctx.revert();
+  EXPECT_EQ(Select->getTrueValue(), V0);
+  EXPECT_EQ(Select->getFalseValue(), V1);
+}
+
 TEST_F(TrackerTest, ShuffleVectorInst) {
   parseIR(C, R"IR(
 define void @foo(<2 x i8> %v1, <2 x i8> %v2) {
@@ -1493,6 +1519,75 @@ define void @foo(i64 %i0, i64 %i1, float %f0, float %f1) {
   checkCmpInst(Ctx, FCmp);
   auto *ICmp = cast<sandboxir::CmpInst>(&*It++);
   checkCmpInst(Ctx, ICmp);
+}
+
+TEST_F(TrackerTest, GlobalValueSetters) {
+  parseIR(C, R"IR(
+define void @foo() {
+  call void @foo()
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto *BB = &*F.begin();
+  auto *Call = cast<sandboxir::CallInst>(&*BB->begin());
+
+  auto *GV = cast<sandboxir::GlobalValue>(Call->getCalledOperand());
+  // Check setUnnamedAddr().
+  auto OrigUnnamedAddr = GV->getUnnamedAddr();
+  auto NewUnnamedAddr = sandboxir::GlobalValue::UnnamedAddr::Global;
+  EXPECT_NE(NewUnnamedAddr, OrigUnnamedAddr);
+  Ctx.save();
+  GV->setUnnamedAddr(NewUnnamedAddr);
+  EXPECT_EQ(GV->getUnnamedAddr(), NewUnnamedAddr);
+  Ctx.revert();
+  EXPECT_EQ(GV->getUnnamedAddr(), OrigUnnamedAddr);
+
+  // Check setVisibility().
+  auto OrigVisibility = GV->getVisibility();
+  auto NewVisibility =
+      sandboxir::GlobalValue::VisibilityTypes::ProtectedVisibility;
+  EXPECT_NE(NewVisibility, OrigVisibility);
+  Ctx.save();
+  GV->setVisibility(NewVisibility);
+  EXPECT_EQ(GV->getVisibility(), NewVisibility);
+  Ctx.revert();
+  EXPECT_EQ(GV->getVisibility(), OrigVisibility);
+}
+
+TEST_F(TrackerTest, GlobalIFuncSetters) {
+  parseIR(C, R"IR(
+declare external void @bar()
+@ifunc = ifunc void(), ptr @foo
+define void @foo() {
+  call void @ifunc()
+  call void @bar()
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto *BB = &*F.begin();
+  auto It = BB->begin();
+  auto *Call0 = cast<sandboxir::CallInst>(&*It++);
+  auto *Call1 = cast<sandboxir::CallInst>(&*It++);
+  // Check classof(), creation.
+  auto *IFunc = cast<sandboxir::GlobalIFunc>(Call0->getCalledOperand());
+  auto *Bar = cast<sandboxir::Function>(Call1->getCalledOperand());
+  // Check setResolver().
+  auto *OrigResolver = IFunc->getResolver();
+  auto *NewResolver = Bar;
+  EXPECT_NE(NewResolver, OrigResolver);
+  Ctx.save();
+  IFunc->setResolver(NewResolver);
+  EXPECT_EQ(IFunc->getResolver(), NewResolver);
+  Ctx.revert();
+  EXPECT_EQ(IFunc->getResolver(), OrigResolver);
 }
 
 TEST_F(TrackerTest, SetVolatile) {

@@ -282,6 +282,7 @@ void initializeSafepointIRVerifierPass(PassRegistry &);
 void initializeSelectOptimizePass(PassRegistry &);
 void initializeScalarEvolutionWrapperPassPass(PassRegistry &);
 void initializeScalarizeMaskedMemIntrinLegacyPassPass(PassRegistry &);
+void initializeScalarizerLegacyPassPass(PassRegistry &);
 void initializeScavengerTestPass(PassRegistry &);
 void initializeScopedNoAliasAAWrapperPassPass(PassRegistry &);
 void initializeSeparateConstOffsetFromGEPLegacyPassPass(PassRegistry &);

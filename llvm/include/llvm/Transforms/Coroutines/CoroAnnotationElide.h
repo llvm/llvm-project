@@ -17,18 +17,14 @@
 #ifndef LLVM_TRANSFORMS_COROUTINES_COROANNOTATIONELIDE_H
 #define LLVM_TRANSFORMS_COROUTINES_COROANNOTATIONELIDE_H
 
-#include "llvm/Analysis/CGSCCPassManager.h"
-#include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {
 
+class Function;
+
 struct CoroAnnotationElidePass : PassInfoMixin<CoroAnnotationElidePass> {
-  CoroAnnotationElidePass() {}
-
-  PreservedAnalyses run(LazyCallGraph::SCC &C, CGSCCAnalysisManager &AM,
-                        LazyCallGraph &CG, CGSCCUpdateResult &UR);
-
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
   static bool isRequired() { return false; }
 };
 } // end namespace llvm
