@@ -51,26 +51,6 @@ class TargetInfo;
 struct Partition;
 struct PhdrEntry;
 
-class BssSection;
-class GdbIndexSection;
-class GotPltSection;
-class GotSection;
-class IBTPltSection;
-class IgotPltSection;
-class InputSection;
-class IpltSection;
-class MipsGotSection;
-class MipsRldMapSection;
-class PPC32Got2Section;
-class PPC64LongBranchTargetSection;
-class PltSection;
-class RelocationBaseSection;
-class RelroPaddingSection;
-class StringTableSection;
-class SymbolTableBaseSection;
-class SymtabShndxSection;
-class SyntheticSection;
-
 enum ELFKind : uint8_t {
   ELFNoneKind,
   ELF32LEKind,
@@ -503,42 +483,6 @@ struct DuplicateSymbol {
   uint64_t value;
 };
 
-// Linker generated sections which can be used as inputs and are not specific to
-// a partition.
-struct InStruct {
-  std::unique_ptr<InputSection> attributes;
-  std::unique_ptr<SyntheticSection> riscvAttributes;
-  std::unique_ptr<BssSection> bss;
-  std::unique_ptr<BssSection> bssRelRo;
-  std::unique_ptr<GotSection> got;
-  std::unique_ptr<GotPltSection> gotPlt;
-  std::unique_ptr<IgotPltSection> igotPlt;
-  std::unique_ptr<RelroPaddingSection> relroPadding;
-  std::unique_ptr<SyntheticSection> armCmseSGSection;
-  std::unique_ptr<PPC64LongBranchTargetSection> ppc64LongBranchTarget;
-  std::unique_ptr<SyntheticSection> mipsAbiFlags;
-  std::unique_ptr<MipsGotSection> mipsGot;
-  std::unique_ptr<SyntheticSection> mipsOptions;
-  std::unique_ptr<SyntheticSection> mipsReginfo;
-  std::unique_ptr<MipsRldMapSection> mipsRldMap;
-  std::unique_ptr<SyntheticSection> partEnd;
-  std::unique_ptr<SyntheticSection> partIndex;
-  std::unique_ptr<PltSection> plt;
-  std::unique_ptr<IpltSection> iplt;
-  std::unique_ptr<PPC32Got2Section> ppc32Got2;
-  std::unique_ptr<IBTPltSection> ibtPlt;
-  std::unique_ptr<RelocationBaseSection> relaPlt;
-  // Non-SHF_ALLOC sections
-  std::unique_ptr<SyntheticSection> debugNames;
-  std::unique_ptr<GdbIndexSection> gdbIndex;
-  std::unique_ptr<StringTableSection> shStrTab;
-  std::unique_ptr<StringTableSection> strTab;
-  std::unique_ptr<SymbolTableBaseSection> symTab;
-  std::unique_ptr<SymtabShndxSection> symTabShndx;
-
-  void reset();
-};
-
 struct Ctx {
   LinkerDriver driver;
   LinkerScript *script;
@@ -559,8 +503,6 @@ struct Ctx {
   OutSections out;
   SmallVector<OutputSection *, 0> outputSections;
   std::vector<Partition> partitions;
-
-  InStruct sec;
 
   // Some linker-generated symbols need to be created as
   // Defined symbols.
