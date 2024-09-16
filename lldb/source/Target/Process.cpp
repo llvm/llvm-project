@@ -6494,14 +6494,14 @@ static bool AddDirtyPages(const MemoryRegionInfo &region,
       } else {
         // Add previous contiguous range and init the new range with the
         // current dirty page.
-        ranges.Append(range.start(), range.end(), {range, lldb_permissions});
+        ranges.Append(range.start(), range.size(), {range, lldb_permissions});
         range = llvm::AddressRange(page_addr, page_addr + page_size);
       }
     }
   }
   // The last range
   if (!range.empty())
-    ranges.Append(range.start(), range.end(), {range, lldb_permissions});
+    ranges.Append(range.start(), range.size(), {range, lldb_permissions});
   return true;
 }
 
@@ -6644,10 +6644,11 @@ static void GetUserSpecifiedCoreFileSaveRanges(Process &process,
 
   for (const auto &range : regions) {
     auto entry = option_ranges.FindEntryThatContains(range.GetRange());
-    if (entry)
+    if (entry) {
       ranges.Append(range.GetRange().GetRangeBase(),
                     range.GetRange().GetByteSize(),
                     CreateCoreFileMemoryRange(range));
+    }
   }
 }
 
@@ -6697,7 +6698,7 @@ Status Process::CalculateCoreFileSaveRanges(const SaveCoreOptions &options,
     return err;
 
   if (ranges.IsEmpty())
-    return Status::FromErrorString(
+    return Status::FromErrorStringWithFormat(
         "no valid address ranges found for core style");
 
   return ranges.FinalizeCoreFileSaveRanges();

@@ -449,6 +449,7 @@ TARGET_BUILTIN(__builtin_amdgcn_s_wakeup_barrier, "vi", "n", "gfx12-insts")
 TARGET_BUILTIN(__builtin_amdgcn_s_barrier_leave, "b", "n", "gfx12-insts")
 TARGET_BUILTIN(__builtin_amdgcn_s_get_barrier_state, "Uii", "n", "gfx12-insts")
 TARGET_BUILTIN(__builtin_amdgcn_s_prefetch_data, "vvC*Ui", "nc", "gfx12-insts")
+TARGET_BUILTIN(__builtin_amdgcn_s_buffer_prefetch_data, "vQbIiUi", "nc", "gfx12-insts")
 
 TARGET_BUILTIN(__builtin_amdgcn_global_load_tr_b64_v2i32, "V2iV2i*1", "nc", "gfx12-insts,wavefrontsize32")
 TARGET_BUILTIN(__builtin_amdgcn_global_load_tr_b128_v8i16, "V8sV8s*1", "nc", "gfx12-insts,wavefrontsize32")

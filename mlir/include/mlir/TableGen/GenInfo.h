@@ -21,8 +21,8 @@ class RecordKeeper;
 namespace mlir {
 
 /// Generator function to invoke.
-using GenFunction =
-    std::function<bool(llvm::RecordKeeper &recordKeeper, raw_ostream &os)>;
+using GenFunction = std::function<bool(const llvm::RecordKeeper &recordKeeper,
+                                       raw_ostream &os)>;
 
 /// Structure to group information about a generator (argument to invoke via
 /// mlir-tblgen, description, and generator function).
@@ -34,7 +34,7 @@ public:
       : arg(arg), description(description), generator(std::move(generator)) {}
 
   /// Invokes the generator and returns whether the generator failed.
-  bool invoke(llvm::RecordKeeper &recordKeeper, raw_ostream &os) const {
+  bool invoke(const llvm::RecordKeeper &recordKeeper, raw_ostream &os) const {
     assert(generator && "Cannot call generator with null generator");
     return generator(recordKeeper, os);
   }

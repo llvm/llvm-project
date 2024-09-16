@@ -55,6 +55,8 @@ class Defined;
 class DefinedImportData;
 class DefinedImportThunk;
 class DefinedRegular;
+class ImportThunkChunk;
+class ImportThunkChunkARM64EC;
 class SectionChunk;
 class Symbol;
 class Undefined;
@@ -348,26 +350,30 @@ public:
 
   DefinedImportData *impSym = nullptr;
   Symbol *thunkSym = nullptr;
+  ImportThunkChunkARM64EC *impchkThunk = nullptr;
   std::string dllName;
 
 private:
   void parse() override;
+  ImportThunkChunk *makeImportThunk();
 
 public:
   StringRef externalName;
   const coff_import_header *hdr;
   Chunk *location = nullptr;
 
+  // Auxiliary IAT symbol and chunk on ARM64EC.
+  DefinedImportData *impECSym = nullptr;
+  Chunk *auxLocation = nullptr;
+  Symbol *auxThunkSym = nullptr;
+
   // We want to eliminate dllimported symbols if no one actually refers to them.
   // These "Live" bits are used to keep track of which import library members
   // are actually in use.
   //
   // If the Live bit is turned off by MarkLive, Writer will ignore dllimported
-  // symbols provided by this import library member. We also track whether the
-  // imported symbol is used separately from whether the thunk is used in order
-  // to avoid creating unnecessary thunks.
+  // symbols provided by this import library member.
   bool live;
-  bool thunkLive;
 };
 
 // Used for LTO.

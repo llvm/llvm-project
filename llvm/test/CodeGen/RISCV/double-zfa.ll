@@ -330,3 +330,44 @@ define double @fmvp_d_x(i64 %a) {
   %or = bitcast i64 %a to double
   ret double %or
 }
+
+define double @fadd_neg_0p5(double %x) {
+; CHECK-LABEL: fadd_neg_0p5:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fli.d fa5, 0.5
+; CHECK-NEXT:    fsub.d fa0, fa0, fa5
+; CHECK-NEXT:    ret
+  %a = fadd double %x, -0.5
+  ret double %a
+}
+
+define double @fma_neg_addend(double %x, double %y) nounwind {
+; CHECK-LABEL: fma_neg_addend:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fli.d fa5, 0.5
+; CHECK-NEXT:    fmsub.d fa0, fa0, fa1, fa5
+; CHECK-NEXT:    ret
+  %a = call double @llvm.fma.f32(double %x, double %y, double -0.5)
+  ret double %a
+}
+
+define double @fma_neg_multiplicand(double %x, double %y) nounwind {
+; CHECK-LABEL: fma_neg_multiplicand:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fli.d fa5, 0.125
+; CHECK-NEXT:    fnmsub.d fa0, fa5, fa0, fa1
+; CHECK-NEXT:    ret
+  %a = call double @llvm.fma.f32(double %x, double -0.125, double %y)
+  ret double %a
+}
+
+define double @fma_neg_addend_multiplicand(double %x) nounwind {
+; CHECK-LABEL: fma_neg_addend_multiplicand:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fli.d fa5, 0.25
+; CHECK-NEXT:    fli.d fa4, 0.5
+; CHECK-NEXT:    fnmadd.d fa0, fa4, fa0, fa5
+; CHECK-NEXT:    ret
+  %a = call double @llvm.fma.f32(double %x, double -0.5, double -0.25)
+  ret double %a
+}

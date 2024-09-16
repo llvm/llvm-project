@@ -6849,7 +6849,7 @@ def UnsafeBufferUsageDocs : Documentation {
 The attribute ``[[clang::unsafe_buffer_usage]]`` should be placed on functions
 that need to be avoided as they are prone to buffer overflows or unsafe buffer
 struct fields. It is designed to work together with the off-by-default compiler
-warning ``-Wunsafe-buffer-usage``to help codebases transition away from raw pointer
+warning ``-Wunsafe-buffer-usage`` to help codebases transition away from raw pointer
 based buffer management, in favor of safer abstractions such as C++20 ``std::span``.
 The attribute causes ``-Wunsafe-buffer-usage`` to warn on every use of the function or
 the field it is attached to, and it may also lead to emission of automatic fix-it
@@ -8255,6 +8255,38 @@ but do not pass them to the underlying coroutine or pass them by value.
 }];
 }
 
+def CoroAwaitElidableDoc : Documentation {
+  let Category = DocCatDecl;
+  let Content = [{
+The ``[[clang::coro_await_elidable]]`` is a class attribute which can be applied
+to a coroutine return type.
+
+When a coroutine function that returns such a type calls another coroutine function,
+the compiler performs heap allocation elision when the call to the coroutine function
+is immediately co_awaited as a prvalue. In this case, the coroutine frame for the
+callee will be a local variable within the enclosing braces in the caller's stack
+frame. And the local variable, like other variables in coroutines, may be collected
+into the coroutine frame, which may be allocated on the heap.
+
+Example:
+
+.. code-block:: c++
+
+  class [[clang::coro_await_elidable]] Task { ... };
+
+  Task foo();
+  Task bar() {
+    co_await foo(); // foo()'s coroutine frame on this line is elidable
+    auto t = foo(); // foo()'s coroutine frame on this line is NOT elidable
+    co_await t;
+  }
+
+The behavior is undefined if the caller coroutine is destroyed earlier than the
+callee coroutine.
+
+}];
+}
+
 def CountedByDocs : Documentation {
   let Category = DocCatField;
   let Content = [{
@@ -8414,4 +8446,3 @@ Declares that a function potentially allocates heap memory, and prevents any pot
 of ``nonallocating`` by the compiler.
   }];
 }
-

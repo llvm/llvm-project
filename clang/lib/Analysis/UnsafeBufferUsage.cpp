@@ -14,6 +14,7 @@
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtVisitor.h"
+#include "clang/AST/Type.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Basic/SourceLocation.h"
@@ -763,32 +764,27 @@ AST_MATCHER(FunctionDecl, isNormalPrintfFunc) {
 AST_MATCHER_P(CallExpr, hasUnsafePrintfStringArg,
               clang::ast_matchers::internal::Matcher<Expr>,
               UnsafeStringArgMatcher) {
-  // Determine what printf it is:
-  const Expr *FirstArg = Node.getArg(0);
+  // Determine what printf it is by examining formal parameters:
+  const FunctionDecl *FD = Node.getDirectCallee();
+
+  assert(FD && "It should have been checked that FD is non-null.");
+
+  unsigned NumParms = FD->getNumParams();
+
+  if (NumParms < 1)
+    return false; // possibly some user-defined printf function
+
   ASTContext &Ctx = Finder->getASTContext();
+  QualType FristParmTy = FD->getParamDecl(0)->getType();
 
-  if (isa<StringLiteral>(FirstArg->IgnoreParenImpCasts())) {
-    // It is a printf/kprintf. And, the format is a string literal:
-    bool isKprintf = false;
-    const Expr *UnsafeArg;
+  if (!FristParmTy->isPointerType())
+    return false; // possibly some user-defined printf function
 
-    if (auto *Callee = Node.getDirectCallee())
-      if (auto *II = Callee->getIdentifier())
-        isKprintf = II->getName() == "kprintf";
-    if (hasUnsafeFormatOrSArg(&Node, UnsafeArg, 0, Ctx, isKprintf))
-      return UnsafeStringArgMatcher.matches(*UnsafeArg, Finder, Builder);
-    return false;
-  }
+  QualType FirstPteTy = (cast<PointerType>(FristParmTy))->getPointeeType();
 
-  QualType PtrTy = FirstArg->getType();
-
-  assert(PtrTy->isPointerType());
-
-  QualType PteTy = (cast<PointerType>(PtrTy))->getPointeeType();
-
-  if (!Ctx.getFILEType().isNull() /* If `FILE *` is not ever in the ASTContext,
-                                     there can't be any file pointer then */
-      && PteTy.getCanonicalType() == Ctx.getFILEType().getCanonicalType()) {
+  if (!Ctx.getFILEType()
+           .isNull() && //`FILE *` must be in the context if it is fprintf
+      FirstPteTy.getCanonicalType() == Ctx.getFILEType().getCanonicalType()) {
     // It is a fprintf:
     const Expr *UnsafeArg;
 
@@ -797,17 +793,32 @@ AST_MATCHER_P(CallExpr, hasUnsafePrintfStringArg,
     return false;
   }
 
-  const Expr *SecondArg = Node.getArg(1);
-
-  if (SecondArg->getType()->isIntegerType()) {
-    // It is a snprintf:
+  if (FirstPteTy.isConstQualified()) {
+    // If the first parameter is a `const char *`, it is a printf/kprintf:
+    bool isKprintf = false;
     const Expr *UnsafeArg;
 
-    if (hasUnsafeFormatOrSArg(&Node, UnsafeArg, 2, Ctx, false))
+    if (auto *II = FD->getIdentifier())
+      isKprintf = II->getName() == "kprintf";
+    if (hasUnsafeFormatOrSArg(&Node, UnsafeArg, 0, Ctx, isKprintf))
       return UnsafeStringArgMatcher.matches(*UnsafeArg, Finder, Builder);
     return false;
   }
-  // It is printf but the format string is passed by pointer. The only thing we
+
+  if (NumParms > 2) {
+    QualType SecondParmTy = FD->getParamDecl(1)->getType();
+
+    if (!FirstPteTy.isConstQualified() && SecondParmTy->isIntegerType()) {
+      // If the first parameter type is non-const qualified `char *` and the
+      // second is an integer, it is a snprintf:
+      const Expr *UnsafeArg;
+
+      if (hasUnsafeFormatOrSArg(&Node, UnsafeArg, 2, Ctx, false))
+        return UnsafeStringArgMatcher.matches(*UnsafeArg, Finder, Builder);
+      return false;
+    }
+  }
+  // We don't really recognize this "normal" printf, the only thing we
   // can do is to require all pointers to be null-terminated:
   for (auto Arg : Node.arguments())
     if (Arg->getType()->isPointerType() && !isNullTermPointer(Arg))
@@ -822,18 +833,37 @@ AST_MATCHER_P(CallExpr, hasUnsafePrintfStringArg,
 //
 // For the first two arguments: `ptr` and `size`, they are safe if in the
 // following patterns:
+//
+// Pattern 1:
 //    ptr := DRE.data();
 //    size:= DRE.size()/DRE.size_bytes()
 // And DRE is a hardened container or view.
+//
+// Pattern 2:
+//    ptr := Constant-Array-DRE;
+//    size:= any expression that has compile-time constant value equivalent to
+//           sizeof (Constant-Array-DRE)
 AST_MATCHER(CallExpr, hasUnsafeSnprintfBuffer) {
-  if (Node.getNumArgs() < 3)
-    return false; // not an snprintf call
+  const FunctionDecl *FD = Node.getDirectCallee();
 
+  assert(FD && "It should have been checked that FD is non-null.");
+
+  if (FD->getNumParams() < 3)
+    return false; // Not an snprint
+
+  QualType FirstParmTy = FD->getParamDecl(0)->getType();
+
+  if (!FirstParmTy->isPointerType())
+    return false; // Not an snprint
+
+  QualType FirstPteTy = cast<PointerType>(FirstParmTy)->getPointeeType();
   const Expr *Buf = Node.getArg(0), *Size = Node.getArg(1);
 
-  if (!Buf->getType()->isPointerType() || !Size->getType()->isIntegerType())
+  if (FirstPteTy.isConstQualified() || !Buf->getType()->isPointerType() ||
+      !Size->getType()->isIntegerType())
     return false; // not an snprintf call
 
+  // Pattern 1:
   static StringRef SizedObjs[] = {"span", "array", "vector",
                                   "basic_string_view", "basic_string"};
   Buf = Buf->IgnoreParenImpCasts();
@@ -864,6 +894,23 @@ AST_MATCHER(CallExpr, hasUnsafeSnprintfBuffer) {
                   SizedObj)
             return false; // It is in fact safe
     }
+
+  // Pattern 2:
+  if (auto *DRE = dyn_cast<DeclRefExpr>(Buf->IgnoreParenImpCasts())) {
+    ASTContext &Ctx = Finder->getASTContext();
+
+    if (auto *CAT = Ctx.getAsConstantArrayType(DRE->getType())) {
+      Expr::EvalResult ER;
+      // The array element type must be compatible with `char` otherwise an
+      // explicit cast will be needed, which will make this check unreachable.
+      // Therefore, the array extent is same as its' bytewise size.
+      if (Size->EvaluateAsConstantExpr(ER, Ctx)) {
+        APSInt EVal = ER.Val.getInt(); // Size must have integer type
+
+        return APSInt::compareValues(EVal, APSInt(CAT->getSize(), true)) != 0;
+      }
+    }
+  }
   return true; // ptr and size are not in safe pattern
 }
 } // namespace libc_func_matchers

@@ -20,6 +20,7 @@ int snwprintf_s( char* buffer, unsigned buf_size, const char* format, ... );
 int vsnprintf( char* buffer, unsigned buf_size, const char* format, ... );
 int sscanf_s(const char * buffer, const char * format, ...);
 int sscanf(const char * buffer, const char * format, ... );
+int __asan_printf();
 
 namespace std {
   template< class InputIt, class OutputIt >
@@ -64,7 +65,6 @@ void f(char * p, char * q, std::span<char> s, std::span<char> s2) {
   strcpy_s();                 // expected-warning{{function 'strcpy_s' is unsafe}}
   wcscpy_s();                 // expected-warning{{function 'wcscpy_s' is unsafe}}
 
-
   /* Test printfs */
   fprintf((FILE*)p, "%s%d", p, *p);  // expected-warning{{function 'fprintf' is unsafe}} expected-note{{string argument is not guaranteed to be null-terminated}}
   printf("%s%d", // expected-warning{{function 'printf' is unsafe}}
@@ -83,6 +83,12 @@ void f(char * p, char * q, std::span<char> s, std::span<char> s2) {
   sscanf(p, "%s%d", "hello", *p);    // expected-warning{{function 'sscanf' is unsafe}}
   sscanf_s(p, "%s%d", "hello", *p);  // expected-warning{{function 'sscanf_s' is unsafe}}
   fprintf((FILE*)p, "%P%d%p%i hello world %32s", *p, *p, p, *p, p); // expected-warning{{function 'fprintf' is unsafe}} expected-note{{string argument is not guaranteed to be null-terminated}}
+
+  char a[10], b[11];
+  int c[10];
+
+  snprintf(a, sizeof(b), "%s", __PRETTY_FUNCTION__);         // expected-warning{{function 'snprintf' is unsafe}} expected-note{{buffer pointer and size may not match}}
+  snprintf((char*)c, sizeof(c), "%s", __PRETTY_FUNCTION__);  // expected-warning{{function 'snprintf' is unsafe}} expected-note{{buffer pointer and size may not match}}
   fprintf((FILE*)p, "%P%d%p%i hello world %32s", *p, *p, p, *p, "hello"); // no warn
   printf("%s%d", "hello", *p); // no warn
   snprintf(s.data(), s.size_bytes(), "%s%d", "hello", *p); // no warn
@@ -90,15 +96,22 @@ void f(char * p, char * q, std::span<char> s, std::span<char> s2) {
   snwprintf(s.data(), s.size_bytes(), "%s%d", __PRETTY_FUNCTION__, *p); // no warn
   snwprintf_s(s.data(), s.size_bytes(), "%s%d", __PRETTY_FUNCTION__, *p); // no warn
   strlen("hello");// no warn
+  __asan_printf();// a printf but no argument, so no warn
 }
 
-void v(std::string s1, int *p) {
+void safe_examples(std::string s1, int *p) {
   snprintf(s1.data(), s1.size_bytes(), "%s%d%s%p%s", __PRETTY_FUNCTION__, *p, "hello", p, s1.c_str()); // no warn
   snprintf(s1.data(), s1.size_bytes(), s1.c_str(), __PRETTY_FUNCTION__, *p, "hello", s1.c_str());      // no warn
   printf("%s%d%s%p%s", __PRETTY_FUNCTION__, *p, "hello", p, s1.c_str());              // no warn
   printf(s1.c_str(), __PRETTY_FUNCTION__, *p, "hello", s1.c_str());                   // no warn
   fprintf((FILE*)0, "%s%d%s%p%s", __PRETTY_FUNCTION__, *p, "hello", p, s1.c_str());   // no warn
   fprintf((FILE*)0, s1.c_str(), __PRETTY_FUNCTION__, *p, "hello", s1.c_str());        // no warn
+
+  char a[10];
+
+  snprintf(a, sizeof a, "%s%d%s%p%s", __PRETTY_FUNCTION__, *p, "hello", s1.c_str());         // no warn
+  snprintf(a, sizeof(decltype(a)), "%s%d%s%p%s", __PRETTY_FUNCTION__, *p, "hello", s1.c_str());          // no warn
+  snprintf(a, 10, "%s%d%s%p%s", __PRETTY_FUNCTION__, *p, "hello", s1.c_str());                // no warn
 }
 
 
