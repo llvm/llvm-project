@@ -128,7 +128,7 @@ class TestSwiftAsyncBacktraceLocals(lldbtest.TestBase):
         last_result = None
         while True:
             thread = lldbutil.continue_to_breakpoint(process, self.compute_bkpt)
-            if len(thread) == 0:
+            if thread is None:
                 self.assertEqual(last_result, 55, "Computed the right final value")
                 break
 
