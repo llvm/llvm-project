@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <deque>
 #include <numeric>
+#include <memory>
 
 #include <assert.h>
 #include <sanitizer/asan_interface.h>
@@ -65,22 +66,25 @@ void TestNonOverlappingContainers(size_t capacity, size_t off_old,
                                   size_t off_new, int poison_buffers) {
   size_t old_buffer_size = capacity + off_old + kGranularity * 2;
   size_t new_buffer_size = capacity + off_new + kGranularity * 2;
-  char *old_buffer = new char[old_buffer_size];
-  char *new_buffer = new char[new_buffer_size];
-  char *old_buffer_end = old_buffer + old_buffer_size;
-  char *new_buffer_end = new_buffer + new_buffer_size;
+
+  // Use unique_ptr with a custom deleter to manage the buffers
+  std::unique_ptr<char[]> old_buffer = std::make_unique<char[]>(old_buffer_size);
+  std::unique_ptr<char[]> new_buffer = std::make_unique<char[]>(new_buffer_size);
+
+  char *old_buffer_end = old_buffer.get() + old_buffer_size;
+  char *new_buffer_end = new_buffer.get() + new_buffer_size;
   bool poison_old = poison_buffers % 2 == 1;
   bool poison_new = poison_buffers / 2 == 1;
-  char *old_beg = old_buffer + off_old;
-  char *new_beg = new_buffer + off_new;
+  char *old_beg = old_buffer.get() + off_old;
+  char *new_beg = new_buffer.get() + off_new;
   char *old_end = old_beg + capacity;
   char *new_end = new_beg + capacity;
 
   for (int i = 0; i < 35; i++) {
     if (poison_old)
-      __asan_poison_memory_region(old_buffer, old_buffer_size);
+      __asan_poison_memory_region(old_buffer.get(), old_buffer_size);
     if (poison_new)
-      __asan_poison_memory_region(new_buffer, new_buffer_size);
+      __asan_poison_memory_region(new_buffer.get(), new_buffer_size);
 
     RandomPoison(old_beg, old_end);
     std::deque<int> poison_states = GetPoisonedState(old_beg, old_end);
@@ -92,7 +96,7 @@ void TestNonOverlappingContainers(size_t capacity, size_t off_old,
     // If old buffer were not poisoned, that memory should still be unpoisoned.
     char *cur;
     if (!poison_old) {
-      for (cur = old_buffer; cur < old_beg; ++cur) {
+      for (cur = old_buffer.get(); cur < old_beg; ++cur) {
         assert(!__asan_address_is_poisoned(cur));
       }
     }
@@ -107,7 +111,7 @@ void TestNonOverlappingContainers(size_t capacity, size_t off_old,
     // If new_buffer were not poisoned, memory before new_beg should never
     // be poisoned. Otherwise, its state is undetermined.
     if (!poison_new) {
-      for (cur = new_buffer; cur < new_beg; ++cur) {
+      for (cur = new_buffer.get(); cur < new_beg; ++cur) {
         assert(!__asan_address_is_poisoned(cur));
       }
     }
@@ -141,27 +145,29 @@ void TestNonOverlappingContainers(size_t capacity, size_t off_old,
     }
   }
 
-  __asan_unpoison_memory_region(old_buffer, old_buffer_size);
-  __asan_unpoison_memory_region(new_buffer, new_buffer_size);
-  delete[] old_buffer;
-  delete[] new_buffer;
+  __asan_unpoison_memory_region(old_buffer.get(), old_buffer_size);
+  __asan_unpoison_memory_region(new_buffer.get(), new_buffer_size);
 }
+
 
 void TestOverlappingContainers(size_t capacity, size_t off_old, size_t off_new,
                                int poison_buffers) {
   size_t buffer_size = capacity + off_old + off_new + kGranularity * 3;
-  char *buffer = new char[buffer_size];
-  char *buffer_end = buffer + buffer_size;
+
+  // Use unique_ptr with a custom deleter to manage the buffer
+  std::unique_ptr<char[]> buffer = std::make_unique<char[]>(buffer_size);
+
+  char *buffer_end = buffer.get() + buffer_size;
   bool poison_whole = poison_buffers % 2 == 1;
   bool poison_new = poison_buffers / 2 == 1;
-  char *old_beg = buffer + kGranularity + off_old;
-  char *new_beg = buffer + kGranularity + off_new;
+  char *old_beg = buffer.get() + kGranularity + off_old;
+  char *new_beg = buffer.get() + kGranularity + off_new;
   char *old_end = old_beg + capacity;
   char *new_end = new_beg + capacity;
 
   for (int i = 0; i < 35; i++) {
     if (poison_whole)
-      __asan_poison_memory_region(buffer, buffer_size);
+      __asan_poison_memory_region(buffer.get(), buffer_size);
     if (poison_new)
       __asan_poison_memory_region(new_beg, new_end - new_beg);
 
@@ -177,7 +183,7 @@ void TestOverlappingContainers(size_t capacity, size_t off_old, size_t off_new,
     // If old buffer were not poisoned, that memory should still be unpoisoned.
     char *cur;
     if (!poison_whole) {
-      for (cur = buffer; cur < old_beg && cur < new_beg; ++cur) {
+      for (cur = buffer.get(); cur < old_beg && cur < new_beg; ++cur) {
         assert(!__asan_address_is_poisoned(cur));
       }
     }
@@ -213,8 +219,7 @@ void TestOverlappingContainers(size_t capacity, size_t off_old, size_t off_new,
     }
   }
 
-  __asan_unpoison_memory_region(buffer, buffer_size);
-  delete[] buffer;
+  __asan_unpoison_memory_region(buffer.get(), buffer_size);
 }
 
 int main(int argc, char **argv) {
