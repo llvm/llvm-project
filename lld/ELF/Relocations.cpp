@@ -382,7 +382,7 @@ template <class ELFT> static void addCopyRelSymbol(SharedSymbol &ss) {
   bool isRO = isReadOnly<ELFT>(ss);
   BssSection *sec =
       make<BssSection>(isRO ? ".bss.rel.ro" : ".bss", symSize, ss.alignment);
-  OutputSection *osec = (isRO ? in.bssRelRo : in.bss)->getParent();
+  OutputSection *osec = (isRO ? ctx.in.bssRelRo : ctx.in.bss)->getParent();
 
   // At this point, sectionBases has been migrated to sections. Append sec to
   // sections.
@@ -922,12 +922,12 @@ static void addPltEntry(PltSection &plt, GotPltSection &gotPlt,
 }
 
 void elf::addGotEntry(Symbol &sym) {
-  in.got->addEntry(sym);
+  ctx.in.got->addEntry(sym);
   uint64_t off = sym.getGotOffset();
 
   // If preemptible, emit a GLOB_DAT relocation.
   if (sym.isPreemptible) {
-    ctx.mainPart->relaDyn->addReloc({ctx.target->gotRel, in.got.get(), off,
+    ctx.mainPart->relaDyn->addReloc({ctx.target->gotRel, ctx.in.got.get(), off,
                                      DynamicReloc::AgainstSymbol, sym, 0,
                                      R_ABS});
     return;
@@ -936,20 +936,20 @@ void elf::addGotEntry(Symbol &sym) {
   // Otherwise, the value is either a link-time constant or the load base
   // plus a constant.
   if (!config->isPic || isAbsolute(sym))
-    in.got->addConstant({R_ABS, ctx.target->symbolicRel, off, 0, &sym});
+    ctx.in.got->addConstant({R_ABS, ctx.target->symbolicRel, off, 0, &sym});
   else
-    addRelativeReloc(*in.got, off, sym, 0, R_ABS, ctx.target->symbolicRel);
+    addRelativeReloc(*ctx.in.got, off, sym, 0, R_ABS, ctx.target->symbolicRel);
 }
 
 static void addTpOffsetGotEntry(Symbol &sym) {
-  in.got->addEntry(sym);
+  ctx.in.got->addEntry(sym);
   uint64_t off = sym.getGotOffset();
   if (!sym.isPreemptible && !config->shared) {
-    in.got->addConstant({R_TPREL, ctx.target->symbolicRel, off, 0, &sym});
+    ctx.in.got->addConstant({R_TPREL, ctx.target->symbolicRel, off, 0, &sym});
     return;
   }
   ctx.mainPart->relaDyn->addAddendOnlyRelocIfNonPreemptible(
-      ctx.target->tlsGotRel, *in.got, off, sym, ctx.target->symbolicRel);
+      ctx.target->tlsGotRel, *ctx.in.got, off, sym, ctx.target->symbolicRel);
 }
 
 // Return true if we can define a symbol in the executable that
@@ -1077,7 +1077,7 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
       // If the target adjusted the expression to R_RELAX_GOT_PC, we may end up
       // needing the GOT if we can't relax everything.
       if (expr == R_RELAX_GOT_PC)
-        in.got->hasGotOffRel.store(true, std::memory_order_relaxed);
+        ctx.in.got->hasGotOffRel.store(true, std::memory_order_relaxed);
     }
   }
 
@@ -1100,7 +1100,7 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
       // See "Global Offset Table" in Chapter 5 in the following document
       // for detailed description:
       // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
-      in.mipsGot->addEntry(*sec->file, sym, addend, expr);
+      ctx.in.mipsGot->addEntry(*sec->file, sym, addend, expr);
     } else if (!sym.isTls() || config->emachine != EM_LOONGARCH) {
       // Many LoongArch TLS relocs reuse the R_LOONGARCH_GOT type, in which
       // case the NEEDS_GOT flag shouldn't get set.
@@ -1190,7 +1190,7 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
       // a dynamic relocation.
       // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf p.4-19
       if (config->emachine == EM_MIPS)
-        in.mipsGot->addEntry(*sec->file, sym, addend, expr);
+        ctx.in.mipsGot->addEntry(*sec->file, sym, addend, expr);
       return;
     }
   }
@@ -1275,12 +1275,12 @@ static unsigned handleMipsTlsRelocation(RelType type, Symbol &sym,
                                         InputSectionBase &c, uint64_t offset,
                                         int64_t addend, RelExpr expr) {
   if (expr == R_MIPS_TLSLD) {
-    in.mipsGot->addTlsIndex(*c.file);
+    ctx.in.mipsGot->addTlsIndex(*c.file);
     c.addReloc({expr, type, offset, addend, &sym});
     return 1;
   }
   if (expr == R_MIPS_TLSGD) {
-    in.mipsGot->addDynTlsEntry(*c.file, sym);
+    ctx.in.mipsGot->addDynTlsEntry(*c.file, sym);
     c.addReloc({expr, type, offset, addend, &sym});
     return 1;
   }
@@ -1526,10 +1526,10 @@ void RelocationScanner::scanOne(typename Relocs<RelTy>::const_iterator &i) {
   // The 5 types that relative GOTPLT are all x86 and x86-64 specific.
   if (oneof<R_GOTPLTONLY_PC, R_GOTPLTREL, R_GOTPLT, R_PLT_GOTPLT,
             R_TLSDESC_GOTPLT, R_TLSGD_GOTPLT>(expr)) {
-    in.gotPlt->hasGotPltOffRel.store(true, std::memory_order_relaxed);
+    ctx.in.gotPlt->hasGotPltOffRel.store(true, std::memory_order_relaxed);
   } else if (oneof<R_GOTONLY_PC, R_GOTREL, R_PPC32_PLTREL, R_PPC64_TOCBASE,
                    R_PPC64_RELAX_TOC>(expr)) {
-    in.got->hasGotOffRel.store(true, std::memory_order_relaxed);
+    ctx.in.got->hasGotOffRel.store(true, std::memory_order_relaxed);
   }
 
   // Process TLS relocations, including TLS optimizations. Note that
@@ -1732,15 +1732,16 @@ static bool handleNonPreemptibleIfunc(Symbol &sym, uint16_t flags) {
   auto *directSym = makeDefined(cast<Defined>(sym));
   directSym->allocateAux();
   auto &dyn =
-      config->androidPackDynRelocs ? *in.relaPlt : *ctx.mainPart->relaDyn;
-  addPltEntry(*in.iplt, *in.igotPlt, dyn, ctx.target->iRelativeRel, *directSym);
+      config->androidPackDynRelocs ? *ctx.in.relaPlt : *ctx.mainPart->relaDyn;
+  addPltEntry(*ctx.in.iplt, *ctx.in.igotPlt, dyn, ctx.target->iRelativeRel,
+              *directSym);
   sym.allocateAux();
   ctx.symAux.back().pltIdx = ctx.symAux[directSym->auxIdx].pltIdx;
 
   if (flags & HAS_DIRECT_RELOC) {
     // Change the value to the IPLT and redirect all references to it.
     auto &d = cast<Defined>(sym);
-    d.section = in.iplt.get();
+    d.section = ctx.in.iplt.get();
     d.value = d.getPltIdx() * ctx.target->ipltEntrySize;
     d.size = 0;
     // It's important to set the symbol type here so that dynamic loaders
@@ -1772,7 +1773,8 @@ void elf::postScanRelocations() {
     if (flags & NEEDS_GOT)
       addGotEntry(sym);
     if (flags & NEEDS_PLT)
-      addPltEntry(*in.plt, *in.gotPlt, *in.relaPlt, ctx.target->pltRel, sym);
+      addPltEntry(*ctx.in.plt, *ctx.in.gotPlt, *ctx.in.relaPlt,
+                  ctx.target->pltRel, sym);
     if (flags & NEEDS_COPY) {
       if (sym.isObject()) {
         invokeELFT(addCopyRelSymbol, cast<SharedSymbol>(sym));
@@ -1782,16 +1784,16 @@ void elf::postScanRelocations() {
       } else {
         assert(sym.isFunc() && sym.hasFlag(NEEDS_PLT));
         if (!sym.isDefined()) {
-          replaceWithDefined(sym, *in.plt,
+          replaceWithDefined(sym, *ctx.in.plt,
                              ctx.target->pltHeaderSize +
                                  ctx.target->pltEntrySize * sym.getPltIdx(),
                              0);
           sym.setFlags(NEEDS_COPY);
           if (config->emachine == EM_PPC) {
             // PPC32 canonical PLT entries are at the beginning of .glink
-            cast<Defined>(sym).value = in.plt->headerSize;
-            in.plt->headerSize += 16;
-            cast<PPC32GlinkSection>(*in.plt).canonical_plts.push_back(&sym);
+            cast<Defined>(sym).value = ctx.in.plt->headerSize;
+            ctx.in.plt->headerSize += 16;
+            cast<PPC32GlinkSection>(*ctx.in.plt).canonical_plts.push_back(&sym);
           }
         }
       }
@@ -1800,7 +1802,7 @@ void elf::postScanRelocations() {
     if (!sym.isTls())
       return;
     bool isLocalInExecutable = !sym.isPreemptible && !config->shared;
-    GotSection *got = in.got.get();
+    GotSection *got = ctx.in.got.get();
 
     if (flags & NEEDS_TLSDESC) {
       got->addTlsDescEntry(sym);
@@ -1842,7 +1844,7 @@ void elf::postScanRelocations() {
       addTpOffsetGotEntry(sym);
   };
 
-  GotSection *got = in.got.get();
+  GotSection *got = ctx.in.got.get();
   if (ctx.needsTlsLd.load(std::memory_order_relaxed) && got->addTlsIndex()) {
     static Undefined dummy(ctx.internalFile, "", STB_LOCAL, 0, 0);
     if (config->shared)
@@ -2379,7 +2381,7 @@ void elf::hexagonTLSSymbolUpdate(ArrayRef<OutputSection *> outputSections) {
             if (rel.sym->type == llvm::ELF::STT_TLS && rel.expr == R_PLT_PC) {
               if (needEntry) {
                 sym->allocateAux();
-                addPltEntry(*in.plt, *in.gotPlt, *in.relaPlt,
+                addPltEntry(*ctx.in.plt, *ctx.in.gotPlt, *ctx.in.relaPlt,
                             ctx.target->pltRel, *sym);
                 needEntry = false;
               }
