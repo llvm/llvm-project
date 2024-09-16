@@ -3624,6 +3624,8 @@ defm GLOBAL_LOAD_DWORD                : VGLOBAL_Real_AllAddr_gfx13<0x0c, "global
 defm GLOBAL_LOAD_DWORDX2              : VGLOBAL_Real_AllAddr_gfx13<0x0d, "global_load_b64">;
 defm GLOBAL_LOAD_DWORDX4              : VGLOBAL_Real_AllAddr_gfx13<0x0e, "global_load_b128">;
 defm GLOBAL_LOAD_DWORDX3              : VGLOBAL_Real_AllAddr_gfx13<0x0f, "global_load_b96">;
+defm GLOBAL_LOAD_DWORD_ADDTID         : VGLOBAL_Real_AllAddr_gfx13<0x16, "global_load_addtid_b32">;
+defm GLOBAL_STORE_DWORD_ADDTID        : VGLOBAL_Real_AllAddr_gfx13<0x17, "global_store_addtid_b32">;
 defm GLOBAL_STORE_BYTE                : VGLOBAL_Real_AllAddr_gfx13<0x18, "global_store_b8">;
 defm GLOBAL_STORE_BYTE_D16_HI         : VGLOBAL_Real_AllAddr_gfx13<0x19, "global_store_d16_hi_b8">;
 defm GLOBAL_STORE_SHORT               : VGLOBAL_Real_AllAddr_gfx13<0x1a, "global_store_b16">;
@@ -3638,8 +3640,6 @@ defm GLOBAL_LOAD_SBYTE_D16            : VGLOBAL_Real_AllAddr_gfx13<0x22, "global
 defm GLOBAL_LOAD_SBYTE_D16_HI         : VGLOBAL_Real_AllAddr_gfx13<0x23, "global_load_d16_hi_i8">;
 defm GLOBAL_LOAD_SHORT_D16            : VGLOBAL_Real_AllAddr_gfx13<0x24, "global_load_d16_b16">;
 defm GLOBAL_LOAD_SHORT_D16_HI         : VGLOBAL_Real_AllAddr_gfx13<0x25, "global_load_d16_hi_b16">;
-defm GLOBAL_LOAD_DWORD_ADDTID         : VGLOBAL_Real_AllAddr_gfx13<0x28, "global_load_addtid_b32">;
-defm GLOBAL_STORE_DWORD_ADDTID        : VGLOBAL_Real_AllAddr_gfx13<0x29, "global_store_addtid_b32">;
 defm GLOBAL_INV                       : VFLAT_Real_Base_gfx13<0x2b>;
 defm GLOBAL_WB                        : VFLAT_Real_Base_gfx13<0x2c>;
 defm GLOBAL_WBINV                     : VFLAT_Real_Base_gfx13<0x2e>;
