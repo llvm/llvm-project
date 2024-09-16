@@ -55,13 +55,13 @@ typedef struct {
 
 // CHECK: !ty_D = !cir.struct<struct "D" {!u16i, !s32i}>
 // CHECK: !ty_T = !cir.struct<struct "T" {!u8i, !u32i} #cir.record.decl.ast>
-// CHECK: !ty_anon2E1_ = !cir.struct<struct "anon.1" {!u32i} #cir.record.decl.ast>
+// CHECK: !ty_anon2E0_ = !cir.struct<struct "anon.0" {!u32i} #cir.record.decl.ast>
 // CHECK: !ty_anon_struct = !cir.struct<struct  {!u8i, !u8i, !s32i}>
 // CHECK: #bfi_a = #cir.bitfield_info<name = "a", storage_type = !u8i, size = 3, offset = 0, is_signed = true>
 // CHECK: #bfi_e = #cir.bitfield_info<name = "e", storage_type = !u16i, size = 15, offset = 0, is_signed = true>
 // CHECK: !ty_S = !cir.struct<struct "S" {!u32i, !cir.array<!u8i x 3>, !u16i, !u32i}>
 // CHECK: !ty_U = !cir.struct<struct "U" {!s8i, !s8i, !s8i, !cir.array<!u8i x 9>}>
-// CHECK: !ty___long = !cir.struct<struct "__long" {!ty_anon2E1_, !u32i, !cir.ptr<!u32i>}>
+// CHECK: !ty___long = !cir.struct<struct "__long" {!ty_anon2E0_, !u32i, !cir.ptr<!u32i>}>
 // CHECK: #bfi_d = #cir.bitfield_info<name = "d", storage_type = !cir.array<!u8i x 3>, size = 2, offset = 17, is_signed = true>
 
 // CHECK: cir.func {{.*@store_field}}

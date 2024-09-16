@@ -25,6 +25,8 @@ void baz(void) {
 // CHECK-DAG: !ty_Node = !cir.struct<struct "Node" {!cir.ptr<!cir.struct<struct "Node">>} #cir.record.decl.ast>
 // CHECK-DAG: !ty_Bar = !cir.struct<struct "Bar" {!s32i, !s8i}>
 // CHECK-DAG: !ty_Foo = !cir.struct<struct "Foo" {!s32i, !s8i, !ty_Bar}>
+// CHECK-DAG: !ty_SLocal = !cir.struct<struct "SLocal" {!s32i}>
+// CHECK-DAG: !ty_SLocal2E0_ = !cir.struct<struct "SLocal.0" {!cir.float}>
 //  CHECK-DAG: module {{.*}} {
      // CHECK:   cir.func @baz()
 // CHECK-NEXT:     %0 = cir.alloca !ty_Bar, !cir.ptr<!ty_Bar>, ["b"] {alignment = 4 : i64}
@@ -98,4 +100,16 @@ void local_decl(void) {
 // CHECK-DAG: cir.get_member {{%.}}[0] {name = "next"} : !cir.ptr<!ty_Node> -> !cir.ptr<!cir.ptr<!ty_Node>>
 void useRecursiveType(NodeStru* a) {
   a->next = 0;
+}
+
+// CHECK-DAG: cir.alloca !ty_SLocal, !cir.ptr<!ty_SLocal>, ["loc", init] {alignment = 4 : i64}
+// CHECK-DAG: cir.scope {
+// CHECK-DAG:   cir.alloca !ty_SLocal2E0_, !cir.ptr<!ty_SLocal2E0_>, ["loc", init] {alignment = 4 : i64}
+void local_structs(int a, float b) {
+  struct SLocal { int x; };
+  struct SLocal loc = {a};
+  {
+    struct SLocal { float y; };
+    struct SLocal loc = {b};
+  }   
 }

@@ -37,8 +37,8 @@ int foo() {
 
 // CIR:  cir.func no_proto @foo() -> !s32i
 // CIR:    [[RET_MEM:%.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"] {alignment = 4 : i64}
-// CIR:    [[COMPLITERAL_MEM:%.*]] = cir.alloca !ty_anon2E1_, !cir.ptr<!ty_anon2E1_>, [".compoundliteral"] {alignment = 4 : i64}
-// CIR:    [[FIELD:%.*]] = cir.get_member [[COMPLITERAL_MEM]][0] {name = "i"} : !cir.ptr<!ty_anon2E1_> -> !cir.ptr<!s32i>
+// CIR:    [[COMPLITERAL_MEM:%.*]] = cir.alloca !ty_anon2E0_, !cir.ptr<!ty_anon2E0_>, [".compoundliteral"] {alignment = 4 : i64}
+// CIR:    [[FIELD:%.*]] = cir.get_member [[COMPLITERAL_MEM]][0] {name = "i"} : !cir.ptr<!ty_anon2E0_> -> !cir.ptr<!s32i>
 // CIR:    [[ONE:%.*]] = cir.const #cir.int<1> : !s32i
 // CIR:    cir.store [[ONE]], [[FIELD]] : !s32i, !cir.ptr<!s32i>
 // CIR:    [[ONE:%.*]] = cir.const #cir.int<1> : !s32i

@@ -53,16 +53,26 @@ class CIRGenBuilderTy : public CIRBaseBuilderTy {
   llvm::RoundingMode DefaultConstrainedRounding = llvm::RoundingMode::Dynamic;
 
   llvm::StringMap<unsigned> GlobalsVersioning;
-  llvm::StringSet<> anonRecordNames;
+  llvm::StringMap<unsigned> RecordNames;
 
 public:
   CIRGenBuilderTy(mlir::MLIRContext &C, const CIRGenTypeCache &tc)
-      : CIRBaseBuilderTy(C), typeCache(tc) {}
+      : CIRBaseBuilderTy(C), typeCache(tc) {
+    RecordNames["anon"] = 0; // in order to start from the name "anon.0"
+  }
 
   std::string getUniqueAnonRecordName() {
-    std::string name = "anon." + std::to_string(anonRecordNames.size());
-    anonRecordNames.insert(name);
-    return name;
+    return getUniqueRecordName("anon");
+  }
+
+  std::string getUniqueRecordName(const std::string& baseName) {
+    auto it = RecordNames.find(baseName);
+    if (it == RecordNames.end()) {
+      RecordNames[baseName] = 0;
+      return baseName;
+    }
+
+    return baseName + "." + std::to_string(RecordNames[baseName]++);
   }
 
   //
