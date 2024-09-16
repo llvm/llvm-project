@@ -20,6 +20,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
+#include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGenTypes/LowLevelType.h"
 #include "llvm/IR/InstrTypes.h"
@@ -909,6 +910,8 @@ public:
   bool matchCastOfBuildVector(const MachineInstr &CastMI,
                               const MachineInstr &BVMI, BuildFnTy &MatchInfo);
 
+  bool matchCanonicalizeICmp(const MachineInstr &MI, BuildFnTy &MatchInfo);
+
 private:
   /// Checks for legality of an indexed variant of \p LdSt.
   bool isIndexedLoadStoreLegal(GLoadStore &LdSt) const;
@@ -1023,6 +1026,9 @@ private:
   bool tryFoldLogicOfFCmps(GLogicalBinOp *Logic, BuildFnTy &MatchInfo);
 
   bool isCastFree(unsigned Opcode, LLT ToTy, LLT FromTy) const;
+
+  bool constantFoldICmp(const GICmp &ICmp, const GIConstant &LHSCst,
+                        const GIConstant &RHSCst, BuildFnTy &MatchInfo);
 };
 } // namespace llvm
 

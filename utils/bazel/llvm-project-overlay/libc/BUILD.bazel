@@ -2174,7 +2174,12 @@ libc_math_function(
     ],
 )
 
-libc_math_function(name = "fmul")
+libc_math_function(
+    name = "fmul",
+    additional_deps = [
+        ":__support_fputil_double_double",
+    ],
+)
 
 libc_math_function(name = "fmull")
 
