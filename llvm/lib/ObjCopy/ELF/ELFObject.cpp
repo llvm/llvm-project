@@ -2751,7 +2751,7 @@ Error BinaryWriter::finalize() {
             "writing section " + Sec.Name + " at offset 0x" +
                 Twine::utohexstr(Sec.Offset) + " greater than max offset 0x" +
                 Twine::utohexstr(*MaxSectionOffset) +
-                " specified by --set-max-section-offset");
+                " specified by --max-section-offset");
       }
     }
 
