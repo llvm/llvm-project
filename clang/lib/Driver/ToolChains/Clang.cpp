@@ -21,7 +21,6 @@
 #include "Arch/VE.h"
 #include "Arch/X86.h"
 #include "CommonArgs.h"
-#include "CommonUtils.h"
 #include "Hexagon.h"
 #include "MSP430.h"
 #include "PS4CPU.h"

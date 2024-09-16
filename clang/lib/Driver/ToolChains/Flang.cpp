@@ -9,7 +9,6 @@
 #include "Flang.h"
 #include "Arch/RISCV.h"
 #include "CommonArgs.h"
-#include "CommonUtils.h"
 
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Driver/Options.h"
