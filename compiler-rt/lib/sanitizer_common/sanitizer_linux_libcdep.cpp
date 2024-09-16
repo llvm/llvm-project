@@ -237,10 +237,15 @@ void InitTlsSize() {
   ((void (*)(size_t *, size_t *))get_tls_static_info)(&g_tls_size, &tls_align);
 #    endif
 }
+#  else
+void InitTlsSize() {}
+#  endif  // SANITIZER_GLIBC && !SANITIZER_GO
 
 // On glibc x86_64, ThreadDescriptorSize() needs to be precise due to the usage
 // of g_tls_size. On other targets, ThreadDescriptorSize() is only used by lsan
 // to get the pointer to thread-specific data keys in the thread control block.
+#  if (SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_SOLARIS) && \
+      !SANITIZER_ANDROID && !SANITIZER_GO
 // sizeof(struct pthread) from glibc.
 static atomic_uintptr_t thread_descriptor_size;
 
@@ -458,9 +463,8 @@ __attribute__((unused)) static void GetStaticTlsBoundary(uptr *addr, uptr *size,
   *addr = ranges[l].begin;
   *size = ranges[r - 1].end - ranges[l].begin;
 }
-#  else
-void InitTlsSize() {}
-#  endif  // SANITIZER_GLIBC && !SANITIZER_GO
+#  endif  // (x86_64 || i386 || mips || ...) && (SANITIZER_FREEBSD ||
+          // SANITIZER_LINUX) && !SANITIZER_ANDROID && !SANITIZER_GO
 
 #  if SANITIZER_NETBSD
 static struct tls_tcb *ThreadSelfTlsTcb() {
