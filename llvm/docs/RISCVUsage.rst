@@ -437,3 +437,29 @@ line.  This currently applies to the following extensions:
 * ``Zvksg``
 * ``Zvksh``
 * ``Zvkt``
+
+Global Pointer (GP) Relaxation and the Small Data Limit
+=======================================================
+
+Some of the RISC-V psABI variants reserve ``gp`` (``x3``) for use as a "Global Pointer", to make generating data addresses more efficient.
+
+To use this functionality, you need to be doing all of the following:
+* Use the ``medlow`` (aka ``small``) code model;
+* Not use the ``gp`` register for any other uses (some platforms use it for the shadow stack and others as a temporary -- as denoted by the ``Tag_RISCV_x3_reg_usage`` build attribute);
+* Compile your objects with Clang's ``-mrelax`` option, to enable relaxation annotations on relocatable objects;
+* Compile for a position-dependent static executable (not a shared library, and ``-fno-PIC`` / ``-fno-pic`` / ``-fno-pie``); and
+* Use LLD's ``--relax-gp`` option.
+
+LLD will relax (rewrite) any code sequences that materialize an address within 2048 bytes of ``__global_pointer$`` (which will be defined if it is used and does not already exist) to instead generate the address using ``gp`` and the correct (signed) 12-bit immediate. This usually saves at least one instruction compared to materialising a full 32-bit address value.
+
+There can only be one ``gp`` value in a process (as ``gp`` is not changed when calling into a function in a shared library), so the symbol is is only defined and this relaxation is only done for executables, and not for shared libraries. The linker expects executable startup code to put the value of ``__global_pointer$`` (from the executable) into ``gp`` before any user code is run.
+
+Arguably, the most efficient use for this addressing mode is for smaller global variables, as larger global variables likely need many more loads or stores when they are being accessed anyway, so the cost of materializing the upper bits can be shared.
+
+Therefore the compiler can place smaller global variables into sections with names starting with ``.sdata`` or ``.sbss`` (matching sections with names starting with ``.data`` and ``.bss`` respectively). LLD knows to define the ``global_pointer$`` symbol close to these sections, and to lay these sections out adjacent to the ``.data`` section.
+
+Clang's ``-msmall-data-limit=`` option controls what the threshold size is (in bytes) for a global variable to be considered small. ``-msmall-data-limit=0`` disables the use of sections starting ``.sdata`` and ``.sbss``. The ``-msmall-data-limit=`` option will not move global variables that have an explicit data section, and will keep globals in separate sections if you are using ``-fdata-sections``.
+
+The small data limit threshold is also used to separate small constants into sections with names starting with ``.srodata``. LLD does not place these with the ``.sdata`` and ``.sbss`` sections as ``.srodata`` sections are read only and the other two are writable. Instead the ``.srodata`` sections are placed adjacent to ``.rodata``.
+
+Data suggests that these options can produce significant improvements across a range of benchmarks.
