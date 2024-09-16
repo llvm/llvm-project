@@ -555,7 +555,7 @@ bool MatcherGen::EmitMatcherCode(unsigned Variant) {
   // check.
   if (const ComplexPattern *CP =
           Pattern.getSrcPattern().getComplexPatternInfo(CGP)) {
-    const std::vector<Record *> &OpNodes = CP->getRootNodes();
+    ArrayRef<const Record *> OpNodes = CP->getRootNodes();
     assert(!OpNodes.empty() &&
            "Complex Pattern must specify what it can match");
     if (Variant >= OpNodes.size())
