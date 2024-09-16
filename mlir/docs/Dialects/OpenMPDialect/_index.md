@@ -237,3 +237,59 @@ corresponding operation, except if it is explicitly skipped as described
 [above](#overriding-clause-inherited-properties). This way, in case of a later
 tablegen failure while processing OpenMP dialect operations, earlier messages
 triggered by that pass can point to a likely solution.
+
+## Loop-Associated Directives
+
+Loop-associated OpenMP constructs are represented in the dialect as loop wrapper
+operations. These implement the `LoopWrapperInterface`, which enforces a series
+of restrictions upon the operation:
+  - It contains a single region with a single block; and
+  - Its block contains exactly two operations: another loop wrapper or
+`omp.loop_nest` operation and a terminator.
+
+This approach splits the representation for a loop nest and the loop-associated
+constructs that specify how its iterations are executed, possibly across various
+SIMD lanes (`omp.simd`), threads (`omp.wsloop`), teams of threads
+(`omp.distribute`) or tasks (`omp.taskloop`). The ability to directly nest
+multiple loop wrappers to impact the execution of a single loop nest is used to
+represent composite constructs in a modular way.
+
+The `omp.loop_nest` operation represents a collapsed rectangular loop nest that
+must always be wrapped by at least one loop wrapper, which defines how it is
+intended to be executed. It serves as a simpler and more restrictive
+representation of OpenMP loops while a more general approach to support
+non-rectangular loop nests, loop transformations and non-perfectly nested loops
+based on a new `omp.canonical_loop` definition is developed.
+
+The following example shows how a `parallel {do,for}` construct would be
+represented:
+```mlir
+omp.parallel ... {
+  ...
+  omp.wsloop ... {
+    omp.loop_nest (%i) : index = (%lb) to (%ub) step (%step) {
+      %a = load %a[%i] : memref<?xf32>
+      %b = load %b[%i] : memref<?xf32>
+      %sum = arith.addf %a, %b : f32
+      store %sum, %c[%i] : memref<?xf32>
+      omp.yield
+    }
+    omp.terminator
+  }
+  ...
+  omp.terminator
+}
+```
+
+### Loop Transformations
+
+In addition to the worksharing loop-associated constructs described above, the
+OpenMP specification also defines a set of loop transformation constructs. They
+replace the associated loop(s) before worksharing constructs are executed on the
+generated loop(s). Some examples of such constructs are `tile` and `unroll`.
+
+A general approach for representing these types of OpenMP constructs has not yet
+been implemented, but it is closely linked to the `omp.canonical_loop` work.
+Nevertheless, loop transformation that the `collapse` clause for loop-associated
+worksharing constructs defines can be represented by introducing multiple
+bounds, step and induction variables to the `omp.loop_nest` operation.
