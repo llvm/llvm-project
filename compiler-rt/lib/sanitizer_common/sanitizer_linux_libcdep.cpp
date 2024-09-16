@@ -626,25 +626,32 @@ uptr GetTlsSize() {
 }
 #  endif
 
-void GetThreadStackAndTls(bool main, uptr *stk_addr, uptr *stk_size,
-                          uptr *tls_addr, uptr *tls_size) {
+void GetThreadStackAndTls(bool main, uptr *stk_begin, uptr *stk_end,
+                          uptr *tls_begin, uptr *tls_end) {
 #  if SANITIZER_GO
   // Stub implementation for Go.
-  *stk_addr = *stk_size = *tls_addr = *tls_size = 0;
+  *stk_begin = 0;
+  *stk_end = 0;
+  *tls_begin = 0;
+  *tls_end = 0;
 #  else
-  GetTls(tls_addr, tls_size);
+  uptr tls_addr = 0;
+  uptr tls_size = 0;
+  GetTls(&tls_addr, &tls_size);
+  *tls_begin = tls_addr;
+  *tls_end = tls_addr + tls_size;
 
   uptr stack_top, stack_bottom;
   GetThreadStackTopAndBottom(main, &stack_top, &stack_bottom);
-  *stk_addr = stack_bottom;
-  *stk_size = stack_top - stack_bottom;
+  *stk_begin = stack_bottom;
+  *stk_end = stack_top;
 
   if (!main) {
     // If stack and tls intersect, make them non-intersecting.
-    if (*tls_addr > *stk_addr && *tls_addr < *stk_addr + *stk_size) {
-      if (*stk_addr + *stk_size < *tls_addr + *tls_size)
-        *tls_size = *stk_addr + *stk_size - *tls_addr;
-      *stk_size = *tls_addr - *stk_addr;
+    if (*tls_begin > *stk_begin && *tls_begin < *stk_end) {
+      if (*stk_end < *tls_end)
+        *tls_end = *stk_end;
+      *stk_end = *tls_begin;
     }
   }
 #  endif
