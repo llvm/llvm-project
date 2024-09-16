@@ -258,9 +258,9 @@ std::string StaticVerifierFunctionEmitter::getUniqueName(StringRef kind,
 void StaticVerifierFunctionEmitter::collectConstraint(ConstraintMap &map,
                                                       StringRef kind,
                                                       Constraint constraint) {
-  auto *it = map.find(constraint);
-  if (it == map.end())
-    map.insert({constraint, getUniqueName(kind, map.size())});
+  auto [it, inserted] = map.try_emplace(constraint);
+  if (inserted)
+    it->second = getUniqueName(kind, map.size());
 }
 
 void StaticVerifierFunctionEmitter::collectOpConstraints(
@@ -315,5 +315,5 @@ std::string mlir::tblgen::escapeString(StringRef value) {
   std::string ret;
   llvm::raw_string_ostream os(ret);
   os.write_escaped(value);
-  return os.str();
+  return ret;
 }

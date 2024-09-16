@@ -147,8 +147,8 @@ uint64_t Symbol::getVA(int64_t addend) const {
 
 uint64_t Symbol::getGotVA() const {
   if (gotInIgot)
-    return in.igotPlt->getVA() + getGotPltOffset();
-  return in.got->getVA() + getGotOffset();
+    return ctx.in.igotPlt->getVA() + getGotPltOffset();
+  return ctx.in.got->getVA() + getGotOffset();
 }
 
 uint64_t Symbol::getGotOffset() const {
@@ -157,8 +157,8 @@ uint64_t Symbol::getGotOffset() const {
 
 uint64_t Symbol::getGotPltVA() const {
   if (isInIplt)
-    return in.igotPlt->getVA() + getGotPltOffset();
-  return in.gotPlt->getVA() + getGotPltOffset();
+    return ctx.in.igotPlt->getVA() + getGotPltOffset();
+  return ctx.in.gotPlt->getVA() + getGotPltOffset();
 }
 
 uint64_t Symbol::getGotPltOffset() const {
@@ -170,8 +170,8 @@ uint64_t Symbol::getGotPltOffset() const {
 
 uint64_t Symbol::getPltVA() const {
   uint64_t outVA =
-      isInIplt ? in.iplt->getVA() + getPltIdx() * ctx.target->ipltEntrySize
-               : in.plt->getVA() + in.plt->headerSize +
+      isInIplt ? ctx.in.iplt->getVA() + getPltIdx() * ctx.target->ipltEntrySize
+               : ctx.in.plt->getVA() + ctx.in.plt->headerSize +
                      getPltIdx() * ctx.target->pltEntrySize;
 
   // While linking microMIPS code PLT code are always microMIPS

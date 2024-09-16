@@ -23,6 +23,7 @@
 #include <utility>
 #include <variant>
 
+#include "lldb/Symbol/SaveCoreOptions.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataBufferHeap.h"
@@ -114,15 +115,18 @@ public:
   // Run cleanup and write all remaining bytes to file
   lldb_private::Status DumpFile();
 
+  // Delete the file if it exists
+  void DeleteFile() noexcept;
+
 private:
   // Add data to the end of the buffer, if the buffer exceeds the flush level,
   // trigger a flush.
   lldb_private::Status AddData(const void *data, uint64_t size);
   // Add MemoryList stream, containing dumps of important memory segments
   lldb_private::Status
-  AddMemoryList_64(lldb_private::Process::CoreFileMemoryRanges &ranges);
+  AddMemoryList_64(std::vector<lldb_private::CoreFileMemoryRange> &ranges);
   lldb_private::Status
-  AddMemoryList_32(lldb_private::Process::CoreFileMemoryRanges &ranges);
+  AddMemoryList_32(std::vector<lldb_private::CoreFileMemoryRange> &ranges);
   // Update the thread list on disk with the newly emitted stack RVAs.
   lldb_private::Status FixThreadStacks();
   lldb_private::Status FlushBufferToDisk();

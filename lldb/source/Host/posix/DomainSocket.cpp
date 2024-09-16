@@ -7,11 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Host/posix/DomainSocket.h"
+#include "lldb/Utility/LLDBLog.h"
 
 #include "llvm/Support/Errno.h"
 #include "llvm/Support/FileSystem.h"
 
 #include <cstddef>
+#include <memory>
 #include <sys/socket.h>
 #include <sys/un.h>
 
@@ -57,7 +59,14 @@ static bool SetSockAddr(llvm::StringRef name, const size_t name_offset,
 }
 
 DomainSocket::DomainSocket(bool should_close, bool child_processes_inherit)
-    : Socket(ProtocolUnixDomain, should_close, child_processes_inherit) {}
+    : DomainSocket(kInvalidSocketValue, should_close, child_processes_inherit) {
+}
+
+DomainSocket::DomainSocket(NativeSocket socket, bool should_close,
+                           bool child_processes_inherit)
+    : Socket(ProtocolUnixDomain, should_close, child_processes_inherit) {
+  m_socket = socket;
+}
 
 DomainSocket::DomainSocket(SocketProtocol protocol,
                            bool child_processes_inherit)
@@ -108,14 +117,31 @@ Status DomainSocket::Listen(llvm::StringRef name, int backlog) {
   return error;
 }
 
-Status DomainSocket::Accept(Socket *&socket) {
-  Status error;
-  auto conn_fd = AcceptSocket(GetNativeSocket(), nullptr, nullptr,
-                              m_child_processes_inherit, error);
-  if (error.Success())
-    socket = new DomainSocket(conn_fd, *this);
+llvm::Expected<std::vector<MainLoopBase::ReadHandleUP>> DomainSocket::Accept(
+    MainLoopBase &loop,
+    std::function<void(std::unique_ptr<Socket> socket)> sock_cb) {
+  // TODO: Refactor MainLoop to avoid the shared_ptr requirement.
+  auto io_sp = std::make_shared<DomainSocket>(GetNativeSocket(), false,
+                                              m_child_processes_inherit);
+  auto cb = [this, sock_cb](MainLoopBase &loop) {
+    Log *log = GetLog(LLDBLog::Host);
+    Status error;
+    auto conn_fd = AcceptSocket(GetNativeSocket(), nullptr, nullptr,
+                                m_child_processes_inherit, error);
+    if (error.Fail()) {
+      LLDB_LOG(log, "AcceptSocket({0}): {1}", GetNativeSocket(), error);
+      return;
+    }
+    std::unique_ptr<DomainSocket> sock_up(new DomainSocket(conn_fd, *this));
+    sock_cb(std::move(sock_up));
+  };
 
-  return error;
+  Status error;
+  std::vector<MainLoopBase::ReadHandleUP> handles;
+  handles.emplace_back(loop.RegisterReadObject(io_sp, cb, error));
+  if (error.Fail())
+    return error.ToError();
+  return handles;
 }
 
 size_t DomainSocket::GetNameOffset() const { return 0; }

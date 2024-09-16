@@ -134,7 +134,7 @@ RT_API_ATTRS void Component::EstablishDescriptor(Descriptor &descriptor,
   }
 }
 
-RT_API_ATTRS void Component::CreateTargetDescriptor(Descriptor &descriptor,
+RT_API_ATTRS void Component::CreatePointerDescriptor(Descriptor &descriptor,
     const Descriptor &container, Terminator &terminator,
     const SubscriptValue *subscripts) const {
   RUNTIME_CHECK(terminator, genre_ == Genre::Data);
@@ -144,6 +144,7 @@ RT_API_ATTRS void Component::CreateTargetDescriptor(Descriptor &descriptor,
   } else {
     descriptor.set_base_addr(container.OffsetElement<char>() + offset_);
   }
+  descriptor.raw().attribute = CFI_attribute_pointer;
 }
 
 RT_API_ATTRS const DerivedType *DerivedType::GetParentType() const {
@@ -295,12 +296,6 @@ FILE *SpecialBinding::Dump(FILE *f) const {
   switch (which_) {
   case Which::ScalarAssignment:
     std::fputs("    ScalarAssignment", f);
-    break;
-  case Which::ScalarAllocatableAssignment:
-    std::fputs("    ScalarAllocatableAssignment", f);
-    break;
-  case Which::ScalarPointerAssignment:
-    std::fputs("    ScalarPointerAssignment", f);
     break;
   case Which::ElementalAssignment:
     std::fputs("    ElementalAssignment", f);
