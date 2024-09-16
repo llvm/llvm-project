@@ -593,10 +593,17 @@ bool isGuaranteedNotToBeUndef(Register Reg, const MachineRegisterInfo &MRI,
 /// estimate of the type.
 Type *getTypeForLLT(LLT Ty, LLVMContext &C);
 
-enum class GIConstantKind { Scalar, FixedVector, ScalableVector };
-
 /// An integer-like constant.
+///
+/// It abstracts over scalar, fixed-length vectors, and scalable vectors.
+/// In the common case, it provides a common API and feels like an APInt,
+/// while still providing low-level access.
+/// It can be used for constant-folding.
 class GIConstant {
+public:
+  enum class GIConstantKind { Scalar, FixedVector, ScalableVector };
+
+private:
   GIConstantKind Kind;
   SmallVector<APInt> Values;
   APInt Value;
@@ -607,8 +614,10 @@ public:
   GIConstant(const APInt &Value, GIConstantKind Kind)
       : Kind(Kind), Value(Value) {};
 
+  /// Returns the kind of of this constant, e.g, Scalar.
   GIConstantKind getKind() const { return Kind; }
 
+  /// Returns the value, if this constant is a scalar.
   APInt getScalarValue() const;
 
   static std::optional<GIConstant> getConstant(Register Const,

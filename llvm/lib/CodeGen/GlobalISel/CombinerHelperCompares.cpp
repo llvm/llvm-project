@@ -33,7 +33,7 @@ bool CombinerHelper::constantFoldICmp(const GICmp &ICmp,
                                       const GIConstant &LHSCst,
                                       const GIConstant &RHSCst,
                                       BuildFnTy &MatchInfo) {
-  if (LHSCst.getKind() != GIConstantKind::Scalar)
+  if (LHSCst.getKind() != GIConstant::GIConstantKind::Scalar)
     return false;
 
   Register Dst = ICmp.getReg(0);

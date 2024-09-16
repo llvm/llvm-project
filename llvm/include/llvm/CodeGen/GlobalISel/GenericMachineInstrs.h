@@ -953,7 +953,7 @@ public:
 /// Represents a splat vector.
 class GSplatVector : public GenericMachineInstr {
 public:
-  Register getValueReg() const { return getOperand(1).getReg(); }
+  Register getScalarReg() const { return getOperand(1).getReg(); }
 
   static bool classof(const MachineInstr *MI) {
     return MI->getOpcode() == TargetOpcode::G_SPLAT_VECTOR;

@@ -1981,7 +1981,7 @@ llvm::GIConstant::getConstant(Register Const, const MachineRegisterInfo &MRI) {
 
   if (GSplatVector *Splat = dyn_cast<GSplatVector>(Constant)) {
     std::optional<ValueAndVReg> MayBeConstant =
-        getIConstantVRegValWithLookThrough(Splat->getValueReg(), MRI);
+        getIConstantVRegValWithLookThrough(Splat->getScalarReg(), MRI);
     if (!MayBeConstant)
       return std::nullopt;
     return GIConstant(MayBeConstant->Value, GIConstantKind::ScalableVector);
