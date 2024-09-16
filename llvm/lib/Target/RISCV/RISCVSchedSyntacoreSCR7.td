@@ -13,6 +13,7 @@
 // Overview: https://syntacore.com/products/scr7
 
 // SCR7 is an out-of-order superscalar dual-issue core.
+// FIXME: add V and Zkn extensions scheduling model
 def SyntacoreSCR7Model : SchedMachineModel {
   let MicroOpBufferSize = 36;
   let IssueWidth = 2;
@@ -20,7 +21,7 @@ def SyntacoreSCR7Model : SchedMachineModel {
   let LoadLatency = 3;
   let CompleteModel = 0;
   let UnsupportedFeatures = [HasStdExtZksed, HasStdExtZksh, HasStdExtZkr,
-                             HasVInstructions];
+                             HasStdExtZcmt, HasVInstructions];
 }
 
 // Branching
