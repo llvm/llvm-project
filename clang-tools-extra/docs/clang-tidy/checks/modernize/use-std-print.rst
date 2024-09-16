@@ -103,13 +103,13 @@ Options
 
     int i = -42;
     unsigned int u = 0xffffffff;
-    printf("%d %u\n", i, u);
+    printf("%u %d\n", i, u);
 
   would be converted to:
 
   .. code-block:: c++
 
-    std::print("{} {}\n", static_cast<int>(u), static_cast<unsigned int>(i));
+    std::print("{} {}\n", static_cast<unsigned int>(i), static_cast<int>(u));
 
   to ensure that the output will continue to be the unsigned representation
   of `-42` and the signed representation of `0xffffffff` (often
