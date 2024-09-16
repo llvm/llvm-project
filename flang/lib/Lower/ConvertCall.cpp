@@ -1193,10 +1193,26 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
   // is set (descriptors must be created with the actual type in this case, and
   // copy-in/copy-out should be driven by the contiguity with regard to the
   // actual type).
-  if (ignoreTKRtype)
-    dummyTypeWithActualRank = fir::changeElementType(
-        dummyTypeWithActualRank, actual.getFortranElementType(),
-        actual.isPolymorphic());
+  if (ignoreTKRtype) {
+    if (auto boxCharType =
+            mlir::dyn_cast<fir::BoxCharType>(dummyTypeWithActualRank)) {
+      auto maybeActualCharType =
+          mlir::dyn_cast<fir::CharacterType>(actual.getFortranElementType());
+      if (!maybeActualCharType ||
+          maybeActualCharType.getFKind() != boxCharType.getKind()) {
+        // When passing to a fir.boxchar with ignore(tk), prepare the argument
+        // as if only the raw address must be passed.
+        dummyTypeWithActualRank =
+            fir::ReferenceType::get(actual.getElementOrSequenceType());
+      }
+      // Otherwise, the actual is already a character with the same kind as the
+      // dummy and can be passed normally.
+    } else {
+      dummyTypeWithActualRank = fir::changeElementType(
+          dummyTypeWithActualRank, actual.getFortranElementType(),
+          actual.isPolymorphic());
+    }
+  }
 
   PreparedDummyArgument preparedDummy;
 
