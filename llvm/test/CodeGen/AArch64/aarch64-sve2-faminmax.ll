@@ -568,14 +568,14 @@ define <vscale x 2 x double> @famax_maxnm_noflag_nx2f64(<vscale x 2 x double> %a
     ret <vscale x 2 x double> %r
 }
 
-define <vscale x 2 x double> @famin_nx2f64(<vscale x 2 x double> %a, <vscale x 2 x double> %b) {
-; CHECK-LABEL: famin_nx2f64:
+define <vscale x 2 x double> @famin_min_nx2f64(<vscale x 2 x double> %a, <vscale x 2 x double> %b) {
+; CHECK-LABEL: famin_min_nx2f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    famin z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    ret
 ;
-; CHECK-NO-FAMINMAX-LABEL: famin_nx2f64:
+; CHECK-NO-FAMINMAX-LABEL: famin_min_nx2f64:
 ; CHECK-NO-FAMINMAX:       // %bb.0:
 ; CHECK-NO-FAMINMAX-NEXT:    ptrue p0.d
 ; CHECK-NO-FAMINMAX-NEXT:    fabs z0.d, p0/m, z0.d
