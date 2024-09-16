@@ -148,8 +148,9 @@ private:
     std::string docStr;
     {
       llvm::raw_string_ostream docOS(docStr);
+      std::string tmpDocStr = doc.str();
       raw_indented_ostream(docOS).printReindented(
-          StringRef(docStr).rtrim(" \t"));
+          StringRef(tmpDocStr).rtrim(" \t"));
     }
     return docStr;
   }
