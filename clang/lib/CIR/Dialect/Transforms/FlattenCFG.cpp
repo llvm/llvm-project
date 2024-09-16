@@ -36,13 +36,13 @@ void lowerTerminator(mlir::Operation *op, mlir::Block *dest,
 /// Walks a region while skipping operations of type `Ops`. This ensures the
 /// callback is not applied to said operations and its children.
 template <typename... Ops>
-void walkRegionSkipping(mlir::Region &region,
-                        mlir::function_ref<void(mlir::Operation *)> callback) {
+void walkRegionSkipping(
+    mlir::Region &region,
+    mlir::function_ref<mlir::WalkResult(mlir::Operation *)> callback) {
   region.walk<mlir::WalkOrder::PreOrder>([&](mlir::Operation *op) {
     if (isa<Ops...>(op))
       return mlir::WalkResult::skip();
-    callback(op);
-    return mlir::WalkResult::advance();
+    return callback(op);
   });
 }
 
@@ -541,15 +541,21 @@ public:
     // Lower continue statements.
     mlir::Block *dest = (step ? step : cond);
     op.walkBodySkippingNestedLoops([&](mlir::Operation *op) {
-      if (isa<mlir::cir::ContinueOp>(op))
-        lowerTerminator(op, dest, rewriter);
+      if (!isa<mlir::cir::ContinueOp>(op))
+        return mlir::WalkResult::advance();
+
+      lowerTerminator(op, dest, rewriter);
+      return mlir::WalkResult::skip();
     });
 
     // Lower break statements.
     walkRegionSkipping<mlir::cir::LoopOpInterface, mlir::cir::SwitchOp>(
         op.getBody(), [&](mlir::Operation *op) {
-          if (isa<mlir::cir::BreakOp>(op))
-            lowerTerminator(op, exit, rewriter);
+          if (!isa<mlir::cir::BreakOp>(op))
+            return mlir::WalkResult::advance();
+
+          lowerTerminator(op, exit, rewriter);
+          return mlir::WalkResult::skip();
         });
 
     // Lower optional body region yield.
@@ -705,8 +711,11 @@ public:
       // Handle break statements.
       walkRegionSkipping<mlir::cir::LoopOpInterface, mlir::cir::SwitchOp>(
           region, [&](mlir::Operation *op) {
-            if (isa<mlir::cir::BreakOp>(op))
-              lowerTerminator(op, exitBlock, rewriter);
+            if (!isa<mlir::cir::BreakOp>(op))
+              return mlir::WalkResult::advance();
+
+            lowerTerminator(op, exitBlock, rewriter);
+            return mlir::WalkResult::skip();
           });
 
       // Extract region contents before erasing the switch op.
