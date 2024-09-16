@@ -168,7 +168,7 @@ template <class ELFT> void MipsOptionsSection<ELFT>::writeTo(uint8_t *buf) {
   options->size = getSize();
 
   if (!config->relocatable)
-    reginfo.ri_gp_value = in.mipsGot->getGp();
+    reginfo.ri_gp_value = ctx.in.mipsGot->getGp();
   memcpy(buf + sizeof(Elf_Mips_Options), &reginfo, sizeof(reginfo));
 }
 
@@ -225,7 +225,7 @@ MipsReginfoSection<ELFT>::MipsReginfoSection(Elf_Mips_RegInfo reginfo)
 
 template <class ELFT> void MipsReginfoSection<ELFT>::writeTo(uint8_t *buf) {
   if (!config->relocatable)
-    reginfo.ri_gp_value = in.mipsGot->getGp();
+    reginfo.ri_gp_value = ctx.in.mipsGot->getGp();
   memcpy(buf, &reginfo, sizeof(reginfo));
 }
 
@@ -273,8 +273,8 @@ Defined *elf::addSyntheticLocal(StringRef name, uint8_t type, uint64_t value,
                                 uint64_t size, InputSectionBase &section) {
   Defined *s = makeDefined(section.file, name, STB_LOCAL, STV_DEFAULT, type,
                            value, size, &section);
-  if (in.symTab)
-    in.symTab->addSymbol(s);
+  if (ctx.in.symTab)
+    ctx.in.symTab->addSymbol(s);
 
   if (config->emachine == EM_ARM && !config->isLE && config->armBe8 &&
       (section.flags & SHF_EXECINSTR))
@@ -1295,14 +1295,14 @@ DynamicSection<ELFT>::DynamicSection()
 // The output section .rela.dyn may include these synthetic sections:
 //
 // - part.relaDyn
-// - in.relaPlt: this is included if a linker script places .rela.plt inside
+// - ctx.in.relaPlt: this is included if a linker script places .rela.plt inside
 //   .rela.dyn
 //
 // DT_RELASZ is the total size of the included sections.
 static uint64_t addRelaSz(const RelocationBaseSection &relaDyn) {
   size_t size = relaDyn.getSize();
-  if (in.relaPlt->getParent() == relaDyn.getParent())
-    size += in.relaPlt->getSize();
+  if (ctx.in.relaPlt->getParent() == relaDyn.getParent())
+    size += ctx.in.relaPlt->getSize();
   return size;
 }
 
@@ -1310,7 +1310,7 @@ static uint64_t addRelaSz(const RelocationBaseSection &relaDyn) {
 // output section. When this occurs we cannot just use the OutputSection
 // Size. Moreover the [DT_JMPREL, DT_JMPREL + DT_PLTRELSZ) is permitted to
 // overlap with the [DT_RELA, DT_RELA + DT_RELASZ).
-static uint64_t addPltRelSz() { return in.relaPlt->getSize(); }
+static uint64_t addPltRelSz() { return ctx.in.relaPlt->getSize(); }
 
 // Add remaining entries to complete .dynamic contents.
 template <class ELFT>
@@ -1430,36 +1430,36 @@ DynamicSection<ELFT>::computeContents() {
     addInt(DT_AARCH64_AUTH_RELRSZ, part.relrAuthDyn->getParent()->size);
     addInt(DT_AARCH64_AUTH_RELRENT, sizeof(Elf_Relr));
   }
-  if (isMain && in.relaPlt->isNeeded()) {
-    addInSec(DT_JMPREL, *in.relaPlt);
+  if (isMain && ctx.in.relaPlt->isNeeded()) {
+    addInSec(DT_JMPREL, *ctx.in.relaPlt);
     entries.emplace_back(DT_PLTRELSZ, addPltRelSz());
     switch (config->emachine) {
     case EM_MIPS:
-      addInSec(DT_MIPS_PLTGOT, *in.gotPlt);
+      addInSec(DT_MIPS_PLTGOT, *ctx.in.gotPlt);
       break;
     case EM_S390:
-      addInSec(DT_PLTGOT, *in.got);
+      addInSec(DT_PLTGOT, *ctx.in.got);
       break;
     case EM_SPARCV9:
-      addInSec(DT_PLTGOT, *in.plt);
+      addInSec(DT_PLTGOT, *ctx.in.plt);
       break;
     case EM_AARCH64:
-      if (llvm::find_if(in.relaPlt->relocs, [](const DynamicReloc &r) {
+      if (llvm::find_if(ctx.in.relaPlt->relocs, [](const DynamicReloc &r) {
             return r.type == ctx.target->pltRel &&
                    r.sym->stOther & STO_AARCH64_VARIANT_PCS;
-          }) != in.relaPlt->relocs.end())
+          }) != ctx.in.relaPlt->relocs.end())
         addInt(DT_AARCH64_VARIANT_PCS, 0);
-      addInSec(DT_PLTGOT, *in.gotPlt);
+      addInSec(DT_PLTGOT, *ctx.in.gotPlt);
       break;
     case EM_RISCV:
-      if (llvm::any_of(in.relaPlt->relocs, [](const DynamicReloc &r) {
+      if (llvm::any_of(ctx.in.relaPlt->relocs, [](const DynamicReloc &r) {
             return r.type == ctx.target->pltRel &&
                    (r.sym->stOther & STO_RISCV_VARIANT_CC);
           }))
         addInt(DT_RISCV_VARIANT_CC, 0);
       [[fallthrough]];
     default:
-      addInSec(DT_PLTGOT, *in.gotPlt);
+      addInSec(DT_PLTGOT, *ctx.in.gotPlt);
       break;
     }
     addInt(DT_PLTREL, config->isRela ? DT_RELA : DT_REL);
@@ -1537,33 +1537,34 @@ DynamicSection<ELFT>::computeContents() {
     addInt(DT_MIPS_FLAGS, RHF_NOTPOT);
     addInt(DT_MIPS_BASE_ADDRESS, ctx.target->getImageBase());
     addInt(DT_MIPS_SYMTABNO, part.dynSymTab->getNumSymbols());
-    addInt(DT_MIPS_LOCAL_GOTNO, in.mipsGot->getLocalEntriesNum());
+    addInt(DT_MIPS_LOCAL_GOTNO, ctx.in.mipsGot->getLocalEntriesNum());
 
-    if (const Symbol *b = in.mipsGot->getFirstGlobalEntry())
+    if (const Symbol *b = ctx.in.mipsGot->getFirstGlobalEntry())
       addInt(DT_MIPS_GOTSYM, b->dynsymIndex);
     else
       addInt(DT_MIPS_GOTSYM, part.dynSymTab->getNumSymbols());
-    addInSec(DT_PLTGOT, *in.mipsGot);
-    if (in.mipsRldMap) {
+    addInSec(DT_PLTGOT, *ctx.in.mipsGot);
+    if (ctx.in.mipsRldMap) {
       if (!config->pie)
-        addInSec(DT_MIPS_RLD_MAP, *in.mipsRldMap);
+        addInSec(DT_MIPS_RLD_MAP, *ctx.in.mipsRldMap);
       // Store the offset to the .rld_map section
       // relative to the address of the tag.
       addInt(DT_MIPS_RLD_MAP_REL,
-             in.mipsRldMap->getVA() - (getVA() + entries.size() * entsize));
+             ctx.in.mipsRldMap->getVA() - (getVA() + entries.size() * entsize));
     }
   }
 
   // DT_PPC_GOT indicates to glibc Secure PLT is used. If DT_PPC_GOT is absent,
   // glibc assumes the old-style BSS PLT layout which we don't support.
   if (config->emachine == EM_PPC)
-    addInSec(DT_PPC_GOT, *in.got);
+    addInSec(DT_PPC_GOT, *ctx.in.got);
 
   // Glink dynamic tag is required by the V2 abi if the plt section isn't empty.
-  if (config->emachine == EM_PPC64 && in.plt->isNeeded()) {
+  if (config->emachine == EM_PPC64 && ctx.in.plt->isNeeded()) {
     // The Glink tag points to 32 bytes before the first lazy symbol resolution
     // stub, which starts directly after the header.
-    addInt(DT_PPC64_GLINK, in.plt->getVA() + ctx.target->pltHeaderSize - 32);
+    addInt(DT_PPC64_GLINK,
+           ctx.in.plt->getVA() + ctx.target->pltHeaderSize - 32);
   }
 
   if (config->emachine == EM_PPC64)
@@ -1685,9 +1686,9 @@ void RelocationBaseSection::finalizeContents() {
   else
     getParent()->link = 0;
 
-  if (in.relaPlt.get() == this && in.gotPlt->getParent()) {
+  if (ctx.in.relaPlt.get() == this && ctx.in.gotPlt->getParent()) {
     getParent()->flags |= ELF::SHF_INFO_LINK;
-    getParent()->info = in.gotPlt->getParent()->sectionIndex;
+    getParent()->info = ctx.in.gotPlt->getParent()->sectionIndex;
   }
 }
 
@@ -2331,7 +2332,7 @@ void SymtabShndxSection::writeTo(uint8_t *buf) {
   // with an entry in .symtab. If the corresponding entry contains SHN_XINDEX,
   // we need to write actual index, otherwise, we must write SHN_UNDEF(0).
   buf += 4; // Ignore .symtab[0] entry.
-  for (const SymbolTableEntry &entry : in.symTab->getSymbols()) {
+  for (const SymbolTableEntry &entry : ctx.in.symTab->getSymbols()) {
     if (!getCommonSec(entry.sym) && getSymSectionIndex(entry.sym) == SHN_XINDEX)
       write32(buf, entry.sym->getOutputSection()->sectionIndex);
     buf += 4;
@@ -2352,11 +2353,11 @@ bool SymtabShndxSection::isNeeded() const {
 }
 
 void SymtabShndxSection::finalizeContents() {
-  getParent()->link = in.symTab->getParent()->sectionIndex;
+  getParent()->link = ctx.in.symTab->getParent()->sectionIndex;
 }
 
 size_t SymtabShndxSection::getSize() const {
-  return in.symTab->getNumSymbols() * 4;
+  return ctx.in.symTab->getNumSymbols() * 4;
 }
 
 // .hash and .gnu.hash sections contain on-disk hash tables that map
@@ -2583,7 +2584,7 @@ size_t PltSection::getSize() const {
 
 bool PltSection::isNeeded() const {
   // For -z retpolineplt, .iplt needs the .plt header.
-  return !entries.empty() || (config->zRetpolineplt && in.iplt->isNeeded());
+  return !entries.empty() || (config->zRetpolineplt && ctx.in.iplt->isNeeded());
 }
 
 // Used by ARM to add mapping symbols in the PLT section, which aid
@@ -2708,15 +2709,15 @@ IBTPltSection::IBTPltSection()
     : SyntheticSection(SHF_ALLOC | SHF_EXECINSTR, SHT_PROGBITS, 16, ".plt") {}
 
 void IBTPltSection::writeTo(uint8_t *buf) {
-  ctx.target->writeIBTPlt(buf, in.plt->getNumEntries());
+  ctx.target->writeIBTPlt(buf, ctx.in.plt->getNumEntries());
 }
 
 size_t IBTPltSection::getSize() const {
   // 16 is the header size of .plt.
-  return 16 + in.plt->getNumEntries() * ctx.target->pltEntrySize;
+  return 16 + ctx.in.plt->getNumEntries() * ctx.target->pltEntrySize;
 }
 
-bool IBTPltSection::isNeeded() const { return in.plt->getNumEntries() > 0; }
+bool IBTPltSection::isNeeded() const { return ctx.in.plt->getNumEntries() > 0; }
 
 RelroPaddingSection::RelroPaddingSection()
     : SyntheticSection(SHF_ALLOC | SHF_WRITE, SHT_NOBITS, 1, ".relro_padding") {
@@ -4455,7 +4456,7 @@ void PartitionIndexSection::writeTo(uint8_t *buf) {
     write32(buf + 4, ctx.partitions[i].elfHeader->getVA() - (va + 4));
 
     SyntheticSection *next = i == ctx.partitions.size() - 1
-                                 ? in.partEnd.get()
+                                 ? ctx.in.partEnd.get()
                                  : ctx.partitions[i + 1].elfHeader.get();
     write32(buf + 8, next->getVA() - ctx.partitions[i].elfHeader->getVA());
 
@@ -4667,41 +4668,41 @@ template <class ELFT> void elf::createSyntheticSections() {
   auto add = [](SyntheticSection &sec) { ctx.inputSections.push_back(&sec); };
 
   if (config->zSectionHeader)
-    in.shStrTab = std::make_unique<StringTableSection>(".shstrtab", false);
+    ctx.in.shStrTab = std::make_unique<StringTableSection>(".shstrtab", false);
 
   ctx.out.programHeaders = make<OutputSection>("", 0, SHF_ALLOC);
   ctx.out.programHeaders->addralign = config->wordsize;
 
   if (config->strip != StripPolicy::All) {
-    in.strTab = std::make_unique<StringTableSection>(".strtab", false);
-    in.symTab = std::make_unique<SymbolTableSection<ELFT>>(*in.strTab);
-    in.symTabShndx = std::make_unique<SymtabShndxSection>();
+    ctx.in.strTab = std::make_unique<StringTableSection>(".strtab", false);
+    ctx.in.symTab = std::make_unique<SymbolTableSection<ELFT>>(*ctx.in.strTab);
+    ctx.in.symTabShndx = std::make_unique<SymtabShndxSection>();
   }
 
-  in.bss = std::make_unique<BssSection>(".bss", 0, 1);
-  add(*in.bss);
+  ctx.in.bss = std::make_unique<BssSection>(".bss", 0, 1);
+  add(*ctx.in.bss);
 
   // If there is a SECTIONS command and a .data.rel.ro section name use name
   // .data.rel.ro.bss so that we match in the .data.rel.ro output section.
   // This makes sure our relro is contiguous.
   bool hasDataRelRo =
       ctx.script->hasSectionsCommand && findSection(".data.rel.ro");
-  in.bssRelRo = std::make_unique<BssSection>(
+  ctx.in.bssRelRo = std::make_unique<BssSection>(
       hasDataRelRo ? ".data.rel.ro.bss" : ".bss.rel.ro", 0, 1);
-  add(*in.bssRelRo);
+  add(*ctx.in.bssRelRo);
 
   // Add MIPS-specific sections.
   if (config->emachine == EM_MIPS) {
     if (!config->shared && config->hasDynSymTab) {
-      in.mipsRldMap = std::make_unique<MipsRldMapSection>();
-      add(*in.mipsRldMap);
+      ctx.in.mipsRldMap = std::make_unique<MipsRldMapSection>();
+      add(*ctx.in.mipsRldMap);
     }
-    if ((in.mipsAbiFlags = MipsAbiFlagsSection<ELFT>::create()))
-      add(*in.mipsAbiFlags);
-    if ((in.mipsOptions = MipsOptionsSection<ELFT>::create()))
-      add(*in.mipsOptions);
-    if ((in.mipsReginfo = MipsReginfoSection<ELFT>::create()))
-      add(*in.mipsReginfo);
+    if ((ctx.in.mipsAbiFlags = MipsAbiFlagsSection<ELFT>::create()))
+      add(*ctx.in.mipsAbiFlags);
+    if ((ctx.in.mipsOptions = MipsOptionsSection<ELFT>::create()))
+      add(*ctx.in.mipsOptions);
+    if ((ctx.in.mipsReginfo = MipsReginfoSection<ELFT>::create()))
+      add(*ctx.in.mipsReginfo);
   }
 
   StringRef relaDynName = config->isRela ? ".rela.dyn" : ".rel.dyn";
@@ -4815,97 +4816,98 @@ template <class ELFT> void elf::createSyntheticSections() {
     // Create the partition end marker. This needs to be in partition number 255
     // so that it is sorted after all other partitions. It also has other
     // special handling (see createPhdrs() and combineEhSections()).
-    in.partEnd =
+    ctx.in.partEnd =
         std::make_unique<BssSection>(".part.end", config->maxPageSize, 1);
-    in.partEnd->partition = 255;
-    add(*in.partEnd);
+    ctx.in.partEnd->partition = 255;
+    add(*ctx.in.partEnd);
 
-    in.partIndex = std::make_unique<PartitionIndexSection>();
-    addOptionalRegular("__part_index_begin", in.partIndex.get(), 0);
-    addOptionalRegular("__part_index_end", in.partIndex.get(),
-                       in.partIndex->getSize());
-    add(*in.partIndex);
+    ctx.in.partIndex = std::make_unique<PartitionIndexSection>();
+    addOptionalRegular("__part_index_begin", ctx.in.partIndex.get(), 0);
+    addOptionalRegular("__part_index_end", ctx.in.partIndex.get(),
+                       ctx.in.partIndex->getSize());
+    add(*ctx.in.partIndex);
   }
 
   // Add .got. MIPS' .got is so different from the other archs,
   // it has its own class.
   if (config->emachine == EM_MIPS) {
-    in.mipsGot = std::make_unique<MipsGotSection>();
-    add(*in.mipsGot);
+    ctx.in.mipsGot = std::make_unique<MipsGotSection>();
+    add(*ctx.in.mipsGot);
   } else {
-    in.got = std::make_unique<GotSection>();
-    add(*in.got);
+    ctx.in.got = std::make_unique<GotSection>();
+    add(*ctx.in.got);
   }
 
   if (config->emachine == EM_PPC) {
-    in.ppc32Got2 = std::make_unique<PPC32Got2Section>();
-    add(*in.ppc32Got2);
+    ctx.in.ppc32Got2 = std::make_unique<PPC32Got2Section>();
+    add(*ctx.in.ppc32Got2);
   }
 
   if (config->emachine == EM_PPC64) {
-    in.ppc64LongBranchTarget = std::make_unique<PPC64LongBranchTargetSection>();
-    add(*in.ppc64LongBranchTarget);
+    ctx.in.ppc64LongBranchTarget =
+        std::make_unique<PPC64LongBranchTargetSection>();
+    add(*ctx.in.ppc64LongBranchTarget);
   }
 
-  in.gotPlt = std::make_unique<GotPltSection>();
-  add(*in.gotPlt);
-  in.igotPlt = std::make_unique<IgotPltSection>();
-  add(*in.igotPlt);
+  ctx.in.gotPlt = std::make_unique<GotPltSection>();
+  add(*ctx.in.gotPlt);
+  ctx.in.igotPlt = std::make_unique<IgotPltSection>();
+  add(*ctx.in.igotPlt);
   // Add .relro_padding if DATA_SEGMENT_RELRO_END is used; otherwise, add the
   // section in the absence of PHDRS/SECTIONS commands.
   if (config->zRelro &&
       ((ctx.script->phdrsCommands.empty() && !ctx.script->hasSectionsCommand) ||
        ctx.script->seenRelroEnd)) {
-    in.relroPadding = std::make_unique<RelroPaddingSection>();
-    add(*in.relroPadding);
+    ctx.in.relroPadding = std::make_unique<RelroPaddingSection>();
+    add(*ctx.in.relroPadding);
   }
 
   if (config->emachine == EM_ARM) {
-    in.armCmseSGSection = std::make_unique<ArmCmseSGSection>();
-    add(*in.armCmseSGSection);
+    ctx.in.armCmseSGSection = std::make_unique<ArmCmseSGSection>();
+    add(*ctx.in.armCmseSGSection);
   }
 
   // _GLOBAL_OFFSET_TABLE_ is defined relative to either .got.plt or .got. Treat
   // it as a relocation and ensure the referenced section is created.
   if (ctx.sym.globalOffsetTable && config->emachine != EM_MIPS) {
     if (ctx.target->gotBaseSymInGotPlt)
-      in.gotPlt->hasGotPltOffRel = true;
+      ctx.in.gotPlt->hasGotPltOffRel = true;
     else
-      in.got->hasGotOffRel = true;
+      ctx.in.got->hasGotOffRel = true;
   }
 
   // We always need to add rel[a].plt to output if it has entries.
   // Even for static linking it can contain R_[*]_IRELATIVE relocations.
-  in.relaPlt = std::make_unique<RelocationSection<ELFT>>(
+  ctx.in.relaPlt = std::make_unique<RelocationSection<ELFT>>(
       config->isRela ? ".rela.plt" : ".rel.plt", /*sort=*/false,
       /*threadCount=*/1);
-  add(*in.relaPlt);
+  add(*ctx.in.relaPlt);
 
   if ((config->emachine == EM_386 || config->emachine == EM_X86_64) &&
       (config->andFeatures & GNU_PROPERTY_X86_FEATURE_1_IBT)) {
-    in.ibtPlt = std::make_unique<IBTPltSection>();
-    add(*in.ibtPlt);
+    ctx.in.ibtPlt = std::make_unique<IBTPltSection>();
+    add(*ctx.in.ibtPlt);
   }
 
   if (config->emachine == EM_PPC)
-    in.plt = std::make_unique<PPC32GlinkSection>();
+    ctx.in.plt = std::make_unique<PPC32GlinkSection>();
   else
-    in.plt = std::make_unique<PltSection>();
-  add(*in.plt);
-  in.iplt = std::make_unique<IpltSection>();
-  add(*in.iplt);
+    ctx.in.plt = std::make_unique<PltSection>();
+  add(*ctx.in.plt);
+  ctx.in.iplt = std::make_unique<IpltSection>();
+  add(*ctx.in.iplt);
 
   if (config->andFeatures || !ctx.aarch64PauthAbiCoreInfo.empty())
     add(*make<GnuPropertySection>());
 
   if (config->debugNames) {
-    in.debugNames = std::make_unique<DebugNamesSection<ELFT>>();
-    add(*in.debugNames);
+    ctx.in.debugNames = std::make_unique<DebugNamesSection<ELFT>>();
+    add(*ctx.in.debugNames);
   }
 
   if (config->gdbIndex) {
-    in.gdbIndex = GdbIndexSection::create<ELFT>();
-    add(*in.gdbIndex);
+    ctx.in.gdbIndex = GdbIndexSection::create<ELFT>();
+    add(*ctx.in.gdbIndex);
   }
 
   // .note.GNU-stack is always added when we are creating a re-linkable
@@ -4916,17 +4918,15 @@ template <class ELFT> void elf::createSyntheticSections() {
   if (config->relocatable)
     add(*make<GnuStackSection>());
 
-  if (in.symTab)
-    add(*in.symTab);
-  if (in.symTabShndx)
-    add(*in.symTabShndx);
-  if (in.shStrTab)
-    add(*in.shStrTab);
-  if (in.strTab)
-    add(*in.strTab);
+  if (ctx.in.symTab)
+    add(*ctx.in.symTab);
+  if (ctx.in.symTabShndx)
+    add(*ctx.in.symTabShndx);
+  if (ctx.in.shStrTab)
+    add(*ctx.in.shStrTab);
+  if (ctx.in.strTab)
+    add(*ctx.in.strTab);
 }
-
-InStruct elf::in;
 
 template void elf::splitSections<ELF32LE>();
 template void elf::splitSections<ELF32BE>();
