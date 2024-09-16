@@ -1195,17 +1195,6 @@ std::string VariableDescription::GetResult(llvm::StringRef context) {
   return description.trim().str();
 }
 
-std::optional<lldb::addr_t> GetMemoryReference(lldb::SBValue v) {
-  if (!v.GetType().IsPointerType())
-    return std::nullopt;
-
-  lldb::SBValue deref = v.Dereference();
-  lldb::addr_t load_addr = deref.GetLoadAddress();
-  if (load_addr != LLDB_INVALID_ADDRESS)
-    return load_addr;
-  return std::nullopt;
-}
-
 // "Variable": {
 //   "type": "object",
 //   "description": "A Variable is a name/value pair. Optionally a variable
@@ -1382,8 +1371,8 @@ llvm::json::Value CreateVariable(lldb::SBValue v, int64_t variablesReference,
   else
     object.try_emplace("variablesReference", (int64_t)0);
 
-  if (std::optional<lldb::addr_t> addr = GetMemoryReference(v))
-    object.try_emplace("memoryReference", EncodeMemoryReference(*addr));
+  if (lldb::addr_t addr = v.GetLoadAddress(); addr != LLDB_INVALID_ADDRESS)
+    object.try_emplace("memoryReference", EncodeMemoryReference(addr));
 
   object.try_emplace("$__lldb_extensions", desc.GetVariableExtensionsJSON());
   return llvm::json::Value(std::move(object));

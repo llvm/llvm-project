@@ -1617,8 +1617,8 @@ void request_evaluate(const llvm::json::Object &request) {
       } else {
         body.try_emplace("variablesReference", (int64_t)0);
       }
-      if (std::optional<lldb::addr_t> addr = GetMemoryReference(value))
-        body.try_emplace("memoryReference", EncodeMemoryReference(*addr));
+      if (lldb::addr_t addr = value.GetLoadAddress(); addr != LLDB_INVALID_ADDRESS)
+        body.try_emplace("memoryReference", EncodeMemoryReference(addr));
     }
   }
   response.try_emplace("body", std::move(body));
@@ -3792,8 +3792,8 @@ void request_setVariable(const llvm::json::Object &request) {
             variable, /*is_permanent=*/false);
       body.try_emplace("variablesReference", newVariablesReference);
 
-      if (std::optional<lldb::addr_t> addr = GetMemoryReference(variable))
-        body.try_emplace("memoryReference", EncodeMemoryReference(*addr));
+      if (lldb::addr_t addr = variable.GetLoadAddress(); addr != LLDB_INVALID_ADDRESS)
+        body.try_emplace("memoryReference", EncodeMemoryReference(addr));
     } else {
       EmplaceSafeString(body, "message", std::string(error.GetCString()));
     }

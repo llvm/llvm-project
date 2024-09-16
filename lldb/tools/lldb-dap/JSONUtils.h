@@ -448,12 +448,6 @@ struct VariableDescription {
   std::string GetResult(llvm::StringRef context);
 };
 
-/// Get the corresponding `memoryReference` for a value.
-///
-/// According to the DAP documentation, the `memoryReference` should
-/// refer to the pointee, not to the address of the pointer itself.
-std::optional<lldb::addr_t> GetMemoryReference(lldb::SBValue v);
-
 /// Create a "Variable" object for a LLDB thread object.
 ///
 /// This function will fill in the following keys in the returned
