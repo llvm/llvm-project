@@ -691,23 +691,37 @@ static RValue emitLibraryCall(CodeGenFunction &CGF, const FunctionDecl *FD,
                               const CallExpr *E, llvm::Constant *calleeValue) {
   CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, E);
   CGCallee callee = CGCallee::forDirect(calleeValue, GlobalDecl(FD));
+  llvm::CallBase *callOrInvoke = nullptr;
+  CGFunctionInfo const *FnInfo = nullptr;
   RValue Call =
-      CGF.EmitCall(E->getCallee()->getType(), callee, E, ReturnValueSlot());
+      CGF.EmitCall(E->getCallee()->getType(), callee, E, ReturnValueSlot(),
+                   /*Chain=*/nullptr, &callOrInvoke, &FnInfo);
 
   if (unsigned BuiltinID = FD->getBuiltinID()) {
     // Check whether a FP math builtin function, such as BI__builtin_expf
     ASTContext &Context = CGF.getContext();
     bool ConstWithoutErrnoAndExceptions =
         Context.BuiltinInfo.isConstWithoutErrnoAndExceptions(BuiltinID);
+
+    // Before annotating this libcall with "int" TBAA metadata check all
+    // arguments are passed directly. On some targets, types such as "long
+    // double" are passed indirectly via a pointer, and annotating the call with
+    // "int" TBAA metadata will lead to set up for those arguments being
+    // incorrectly optimized out.
+    bool AllArgumentsPassedDirectly =
+        llvm::all_of(FnInfo->arguments(), [&](auto const &ArgInfo) {
+          return ArgInfo.info.isDirect() || ArgInfo.info.isExtend();
+        });
+
     // Restrict to target with errno, for example, MacOS doesn't set errno.
     // TODO: Support builtin function with complex type returned, eg: cacosh
-    if (ConstWithoutErrnoAndExceptions && CGF.CGM.getLangOpts().MathErrno &&
-        !CGF.Builder.getIsFPConstrained() && Call.isScalar()) {
+    if (AllArgumentsPassedDirectly && ConstWithoutErrnoAndExceptions &&
+        CGF.CGM.getLangOpts().MathErrno && !CGF.Builder.getIsFPConstrained() &&
+        Call.isScalar()) {
       // Emit "int" TBAA metadata on FP math libcalls.
       clang::QualType IntTy = Context.IntTy;
       TBAAAccessInfo TBAAInfo = CGF.CGM.getTBAAAccessInfo(IntTy);
-      Instruction *Inst = cast<llvm::Instruction>(Call.getScalarVal());
-      CGF.CGM.DecorateInstructionWithTBAA(Inst, TBAAInfo);
+      CGF.CGM.DecorateInstructionWithTBAA(callOrInvoke, TBAAInfo);
     }
   }
   return Call;

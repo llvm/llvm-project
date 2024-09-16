@@ -19,7 +19,7 @@ long double powl(long double a, long double b);
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 16, ptr nonnull [[BYVAL_TEMP1]]) #[[ATTR3]]
 // CHECK-NEXT:    store x86_fp80 0xK40008000000000000000, ptr [[BYVAL_TEMP1]], align 16, !tbaa [[TBAA3]]
 // CHECK-NEXT:    call void @powl(ptr dead_on_unwind nonnull writable sret(x86_fp80) align 16 [[TMP]], ptr noundef nonnull [[BYVAL_TEMP]], ptr noundef nonnull [[BYVAL_TEMP1]]) #[[ATTR3]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load x86_fp80, ptr [[TMP]], align 16, !tbaa [[TBAA7:![0-9]+]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load x86_fp80, ptr [[TMP]], align 16, !tbaa [[TBAA3]]
 // CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 16, ptr nonnull [[BYVAL_TEMP]]) #[[ATTR3]]
 // CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 16, ptr nonnull [[BYVAL_TEMP1]]) #[[ATTR3]]
 // CHECK-NEXT:    store x86_fp80 [[TMP0]], ptr [[AGG_RESULT]], align 16, !tbaa [[TBAA3]]
@@ -33,6 +33,4 @@ long double test_powl() {
 // CHECK: [[META4]] = !{!"long double", [[META5:![0-9]+]], i64 0}
 // CHECK: [[META5]] = !{!"omnipotent char", [[META6:![0-9]+]], i64 0}
 // CHECK: [[META6]] = !{!"Simple C/C++ TBAA"}
-// CHECK: [[TBAA7]] = !{[[META8:![0-9]+]], [[META8]], i64 0}
-// CHECK: [[META8]] = !{!"int", [[META5]], i64 0}
 //.
