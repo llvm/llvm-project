@@ -76,12 +76,9 @@ define <2 x i64> @v2i64_37(<4 x i32> %a, <4 x i32> %b) {
 define <4 x i64> @v2i64_i16_04812(<16 x i16> %a) {
 ; CHECK-LABEL: v2i64_i16_04812:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI6_0
-; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
-; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI6_0]
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
-; CHECK-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
-; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-NEXT:    movi v2.2d, #0x00ffff0000ffff
+; CHECK-NEXT:    uzp1 v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-NEXT:    ushll2 v1.2d, v0.4s, #0
 ; CHECK-NEXT:    ushll v0.2d, v0.2s, #0
 ; CHECK-NEXT:    ret
@@ -93,14 +90,11 @@ define <4 x i64> @v2i64_i16_04812(<16 x i16> %a) {
 define <4 x i64> @v2i64_i16_15913(<16 x i16> %a) {
 ; CHECK-LABEL: v2i64_i16_15913:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI7_0
-; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
-; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI7_0]
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
-; CHECK-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
-; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-NEXT:    ushll2 v1.2d, v0.4s, #0
-; CHECK-NEXT:    ushll v0.2d, v0.2s, #0
+; CHECK-NEXT:    movi v2.2d, #0x0000000000ffff
+; CHECK-NEXT:    ushr v0.2d, v0.2d, #16
+; CHECK-NEXT:    ushr v1.2d, v1.2d, #16
+; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    and v1.16b, v1.16b, v2.16b
 ; CHECK-NEXT:    ret
   %s1 = shufflevector <16 x i16> %a, <16 x i16> undef, <4 x i32> <i32 1, i32 5, i32 9, i32 13>
   %z1 = zext <4 x i16> %s1 to <4 x i64>
@@ -110,12 +104,9 @@ define <4 x i64> @v2i64_i16_15913(<16 x i16> %a) {
 define <4 x i64> @v2i64_i16_261014(<16 x i16> %a) {
 ; CHECK-LABEL: v2i64_i16_261014:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI8_0
-; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
-; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI8_0]
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
-; CHECK-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
-; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-NEXT:    movi v2.2d, #0x00ffff0000ffff
+; CHECK-NEXT:    uzp2 v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-NEXT:    ushll2 v1.2d, v0.4s, #0
 ; CHECK-NEXT:    ushll v0.2d, v0.2s, #0
 ; CHECK-NEXT:    ret
@@ -127,14 +118,8 @@ define <4 x i64> @v2i64_i16_261014(<16 x i16> %a) {
 define <4 x i64> @v2i64_i16_371115(<16 x i16> %a) {
 ; CHECK-LABEL: v2i64_i16_371115:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI9_0
-; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
-; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI9_0]
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
-; CHECK-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
-; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-NEXT:    ushll2 v1.2d, v0.4s, #0
-; CHECK-NEXT:    ushll v0.2d, v0.2s, #0
+; CHECK-NEXT:    ushr v0.2d, v0.2d, #48
+; CHECK-NEXT:    ushr v1.2d, v1.2d, #48
 ; CHECK-NEXT:    ret
   %s1 = shufflevector <16 x i16> %a, <16 x i16> undef, <4 x i32> <i32 3, i32 7, i32 11, i32 15>
   %z1 = zext <4 x i16> %s1 to <4 x i64>
@@ -156,8 +141,7 @@ define <4 x i32> @v4i32_0246(<8 x i16> %a, <8 x i16> %b) {
 define <4 x i32> @v4i32_1357(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: v4i32_1357:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uzp2 v0.8h, v0.8h, v0.8h
-; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-NEXT:    ushr v0.4s, v0.4s, #16
 ; CHECK-NEXT:    ret
   %c = shufflevector <8 x i16> %a, <8 x i16> %b, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
   %d = zext <4 x i16> %c to <4 x i32>
@@ -167,12 +151,9 @@ define <4 x i32> @v4i32_1357(<8 x i16> %a, <8 x i16> %b) {
 define <4 x i32> @v4i32_04812(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: v4i32_04812:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI12_0
-; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
-; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI12_0]
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
-; CHECK-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
-; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-NEXT:    movi v2.2d, #0x00ffff0000ffff
+; CHECK-NEXT:    uzp1 v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-NEXT:    ret
   %c = shufflevector <8 x i16> %a, <8 x i16> %b, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
   %d = zext <4 x i16> %c to <4 x i32>
@@ -182,12 +163,8 @@ define <4 x i32> @v4i32_04812(<8 x i16> %a, <8 x i16> %b) {
 define <4 x i32> @v4i32_15913(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: v4i32_15913:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI13_0
-; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
-; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI13_0]
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
-; CHECK-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
-; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-NEXT:    uzp1 v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    ushr v0.4s, v0.4s, #16
 ; CHECK-NEXT:    ret
   %c = shufflevector <8 x i16> %a, <8 x i16> %b, <4 x i32> <i32 1, i32 5, i32 9, i32 13>
   %d = zext <4 x i16> %c to <4 x i32>
@@ -197,12 +174,9 @@ define <4 x i32> @v4i32_15913(<8 x i16> %a, <8 x i16> %b) {
 define <4 x i32> @v4i32_261014(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: v4i32_261014:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI14_0
-; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
-; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI14_0]
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
-; CHECK-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
-; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-NEXT:    movi v2.2d, #0x00ffff0000ffff
+; CHECK-NEXT:    uzp2 v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-NEXT:    ret
   %c = shufflevector <8 x i16> %a, <8 x i16> %b, <4 x i32> <i32 2, i32 6, i32 10, i32 14>
   %d = zext <4 x i16> %c to <4 x i32>
@@ -212,12 +186,8 @@ define <4 x i32> @v4i32_261014(<8 x i16> %a, <8 x i16> %b) {
 define <4 x i32> @v4i32_371115(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: v4i32_371115:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI15_0
-; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
-; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI15_0]
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
-; CHECK-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
-; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-NEXT:    uzp2 v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    ushr v0.4s, v0.4s, #16
 ; CHECK-NEXT:    ret
   %c = shufflevector <8 x i16> %a, <8 x i16> %b, <4 x i32> <i32 3, i32 7, i32 11, i32 15>
   %d = zext <4 x i16> %c to <4 x i32>
@@ -238,8 +208,7 @@ define <8 x i16> @v8i16_0246(<16 x i8> %a, <16 x i8> %b) {
 define <8 x i16> @v8i16_1357(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: v8i16_1357:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uzp2 v0.16b, v0.16b, v0.16b
-; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-NEXT:    ushr v0.8h, v0.8h, #8
 ; CHECK-NEXT:    ret
   %c = shufflevector <16 x i8> %a, <16 x i8> %b, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
   %d = zext <8 x i8> %c to <8 x i16>
@@ -249,12 +218,8 @@ define <8 x i16> @v8i16_1357(<16 x i8> %a, <16 x i8> %b) {
 define <8 x i16> @v8i16_04812(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: v8i16_04812:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI18_0
-; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
-; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI18_0]
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
-; CHECK-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
-; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    bic v0.8h, #255, lsl #8
 ; CHECK-NEXT:    ret
   %c = shufflevector <16 x i8> %a, <16 x i8> %b, <8 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28>
   %d = zext <8 x i8> %c to <8 x i16>
@@ -264,12 +229,8 @@ define <8 x i16> @v8i16_04812(<16 x i8> %a, <16 x i8> %b) {
 define <8 x i16> @v8i16_15913(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: v8i16_15913:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI19_0
-; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
-; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI19_0]
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
-; CHECK-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
-; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    ushr v0.8h, v0.8h, #8
 ; CHECK-NEXT:    ret
   %c = shufflevector <16 x i8> %a, <16 x i8> %b, <8 x i32> <i32 1, i32 5, i32 9, i32 13, i32 17, i32 21, i32 25, i32 29>
   %d = zext <8 x i8> %c to <8 x i16>
@@ -279,12 +240,8 @@ define <8 x i16> @v8i16_15913(<16 x i8> %a, <16 x i8> %b) {
 define <8 x i16> @v8i16_261014(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: v8i16_261014:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI20_0
-; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
-; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI20_0]
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
-; CHECK-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
-; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-NEXT:    uzp2 v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    bic v0.8h, #255, lsl #8
 ; CHECK-NEXT:    ret
   %c = shufflevector <16 x i8> %a, <16 x i8> %b, <8 x i32> <i32 2, i32 6, i32 10, i32 14, i32 18, i32 22, i32 26, i32 30>
   %d = zext <8 x i8> %c to <8 x i16>
@@ -294,12 +251,8 @@ define <8 x i16> @v8i16_261014(<16 x i8> %a, <16 x i8> %b) {
 define <8 x i16> @v8i16_371115(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: v8i16_371115:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI21_0
-; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
-; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI21_0]
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
-; CHECK-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
-; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-NEXT:    uzp2 v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    ushr v0.8h, v0.8h, #8
 ; CHECK-NEXT:    ret
   %c = shufflevector <16 x i8> %a, <16 x i8> %b, <8 x i32> <i32 3, i32 7, i32 11, i32 15, i32 19, i32 23, i32 27, i32 31>
   %d = zext <8 x i8> %c to <8 x i16>
@@ -307,45 +260,101 @@ define <8 x i16> @v8i16_371115(<16 x i8> %a, <16 x i8> %b) {
 }
 
 
+define <8 x i32> @v8i32_0246(<16 x i8> %a, <16 x i8> %b) {
+; CHECK-LABEL: v8i32_0246:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bic v0.8h, #255, lsl #8
+; CHECK-NEXT:    ushll2 v1.4s, v0.8h, #0
+; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-NEXT:    ret
+  %c = shufflevector <16 x i8> %a, <16 x i8> %b, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
+  %d = zext <8 x i8> %c to <8 x i32>
+  ret <8 x i32> %d
+}
+
+define <8 x i32> @v8i32_1357(<16 x i8> %a, <16 x i8> %b) {
+; CHECK-LABEL: v8i32_1357:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ushr v0.8h, v0.8h, #8
+; CHECK-NEXT:    ushll2 v1.4s, v0.8h, #0
+; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-NEXT:    ret
+  %c = shufflevector <16 x i8> %a, <16 x i8> %b, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
+  %d = zext <8 x i8> %c to <8 x i32>
+  ret <8 x i32> %d
+}
+
+define <8 x i32> @v8i32_04812(<16 x i8> %a, <16 x i8> %b) {
+; CHECK-LABEL: v8i32_04812:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v2.2d, #0x0000ff000000ff
+; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    and v1.16b, v1.16b, v2.16b
+; CHECK-NEXT:    ret
+  %c = shufflevector <16 x i8> %a, <16 x i8> %b, <8 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28>
+  %d = zext <8 x i8> %c to <8 x i32>
+  ret <8 x i32> %d
+}
+
+define <8 x i32> @v8i32_15913(<16 x i8> %a, <16 x i8> %b) {
+; CHECK-LABEL: v8i32_15913:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v2.2d, #0x0000ff000000ff
+; CHECK-NEXT:    ushr v0.4s, v0.4s, #8
+; CHECK-NEXT:    ushr v1.4s, v1.4s, #8
+; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    and v1.16b, v1.16b, v2.16b
+; CHECK-NEXT:    ret
+  %c = shufflevector <16 x i8> %a, <16 x i8> %b, <8 x i32> <i32 1, i32 5, i32 9, i32 13, i32 17, i32 21, i32 25, i32 29>
+  %d = zext <8 x i8> %c to <8 x i32>
+  ret <8 x i32> %d
+}
+
+define <8 x i32> @v8i32_261014(<16 x i8> %a, <16 x i8> %b) {
+; CHECK-LABEL: v8i32_261014:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ushr v0.4s, v0.4s, #16
+; CHECK-NEXT:    ushr v1.4s, v1.4s, #16
+; CHECK-NEXT:    bic v0.4s, #255, lsl #8
+; CHECK-NEXT:    bic v1.4s, #255, lsl #8
+; CHECK-NEXT:    ret
+  %c = shufflevector <16 x i8> %a, <16 x i8> %b, <8 x i32> <i32 2, i32 6, i32 10, i32 14, i32 18, i32 22, i32 26, i32 30>
+  %d = zext <8 x i8> %c to <8 x i32>
+  ret <8 x i32> %d
+}
+
+define <8 x i32> @v8i32_371115(<16 x i8> %a, <16 x i8> %b) {
+; CHECK-LABEL: v8i32_371115:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ushr v0.4s, v0.4s, #24
+; CHECK-NEXT:    ushr v1.4s, v1.4s, #24
+; CHECK-NEXT:    ret
+  %c = shufflevector <16 x i8> %a, <16 x i8> %b, <8 x i32> <i32 3, i32 7, i32 11, i32 15, i32 19, i32 23, i32 27, i32 31>
+  %d = zext <8 x i8> %c to <8 x i32>
+  ret <8 x i32> %d
+}
+
+
 define <8 x i64> @zext_add(<32 x i16> %l) {
 ; CHECK-LABEL: zext_add:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI22_0
-; CHECK-NEXT:    adrp x9, .LCPI22_3
-; CHECK-NEXT:    // kill: def $q3 killed $q3 killed $q2_q3 def $q2_q3
-; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
-; CHECK-NEXT:    ldr q4, [x8, :lo12:.LCPI22_0]
-; CHECK-NEXT:    adrp x8, .LCPI22_1
-; CHECK-NEXT:    ldr q7, [x9, :lo12:.LCPI22_3]
-; CHECK-NEXT:    ldr q5, [x8, :lo12:.LCPI22_1]
-; CHECK-NEXT:    adrp x8, .LCPI22_2
-; CHECK-NEXT:    adrp x9, .LCPI22_7
-; CHECK-NEXT:    ldr q6, [x8, :lo12:.LCPI22_2]
-; CHECK-NEXT:    adrp x8, .LCPI22_4
-; CHECK-NEXT:    ldr q18, [x9, :lo12:.LCPI22_7]
-; CHECK-NEXT:    ldr q16, [x8, :lo12:.LCPI22_4]
-; CHECK-NEXT:    adrp x8, .LCPI22_5
-; CHECK-NEXT:    // kill: def $q2 killed $q2 killed $q2_q3 def $q2_q3
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
-; CHECK-NEXT:    tbl v5.16b, { v0.16b, v1.16b }, v5.16b
-; CHECK-NEXT:    ldr q17, [x8, :lo12:.LCPI22_5]
-; CHECK-NEXT:    adrp x8, .LCPI22_6
-; CHECK-NEXT:    tbl v7.16b, { v0.16b, v1.16b }, v7.16b
-; CHECK-NEXT:    ldr q19, [x8, :lo12:.LCPI22_6]
-; CHECK-NEXT:    tbl v17.16b, { v0.16b, v1.16b }, v17.16b
-; CHECK-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v18.16b
-; CHECK-NEXT:    tbl v1.16b, { v2.16b, v3.16b }, v4.16b
-; CHECK-NEXT:    tbl v4.16b, { v2.16b, v3.16b }, v6.16b
-; CHECK-NEXT:    tbl v6.16b, { v2.16b, v3.16b }, v16.16b
-; CHECK-NEXT:    tbl v2.16b, { v2.16b, v3.16b }, v19.16b
-; CHECK-NEXT:    uaddl v5.4s, v5.4h, v7.4h
-; CHECK-NEXT:    uaddl v7.4s, v17.4h, v0.4h
-; CHECK-NEXT:    uaddl2 v4.4s, v1.8h, v4.8h
-; CHECK-NEXT:    uaddl2 v2.4s, v6.8h, v2.8h
-; CHECK-NEXT:    uaddl v0.2d, v5.2s, v7.2s
-; CHECK-NEXT:    uaddl2 v1.2d, v5.4s, v7.4s
-; CHECK-NEXT:    uaddl2 v3.2d, v4.4s, v2.4s
-; CHECK-NEXT:    uaddl v2.2d, v4.2s, v2.2s
+; CHECK-NEXT:    movi v4.2d, #0x00ffff0000ffff
+; CHECK-NEXT:    uzp1 v5.4s, v0.4s, v1.4s
+; CHECK-NEXT:    uzp2 v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    uzp1 v1.4s, v2.4s, v3.4s
+; CHECK-NEXT:    uzp2 v2.4s, v2.4s, v3.4s
+; CHECK-NEXT:    and v3.16b, v5.16b, v4.16b
+; CHECK-NEXT:    and v6.16b, v0.16b, v4.16b
+; CHECK-NEXT:    and v7.16b, v1.16b, v4.16b
+; CHECK-NEXT:    and v4.16b, v2.16b, v4.16b
+; CHECK-NEXT:    usra v3.4s, v5.4s, #16
+; CHECK-NEXT:    usra v6.4s, v0.4s, #16
+; CHECK-NEXT:    usra v7.4s, v1.4s, #16
+; CHECK-NEXT:    usra v4.4s, v2.4s, #16
+; CHECK-NEXT:    uaddl v0.2d, v3.2s, v6.2s
+; CHECK-NEXT:    uaddl2 v1.2d, v3.4s, v6.4s
+; CHECK-NEXT:    uaddl2 v3.2d, v7.4s, v4.4s
+; CHECK-NEXT:    uaddl v2.2d, v7.2s, v4.2s
 ; CHECK-NEXT:    ret
     %s1 = shufflevector <32 x i16> %l, <32 x i16> undef, <8 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28>
     %z1 = zext <8 x i16> %s1 to <8 x i64>
@@ -392,86 +401,59 @@ define <8 x i64> @zext_load_add(ptr %p) {
 define <8 x double> @uitofp_fadd(<32 x i16> %l) {
 ; CHECK-LABEL: uitofp_fadd:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI24_0
-; CHECK-NEXT:    adrp x9, .LCPI24_1
-; CHECK-NEXT:    // kill: def $q3 killed $q3 killed $q2_q3 def $q2_q3
-; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
-; CHECK-NEXT:    adrp x10, .LCPI24_6
-; CHECK-NEXT:    ldr q4, [x8, :lo12:.LCPI24_0]
-; CHECK-NEXT:    ldr q5, [x9, :lo12:.LCPI24_1]
-; CHECK-NEXT:    adrp x8, .LCPI24_2
-; CHECK-NEXT:    adrp x9, .LCPI24_3
-; CHECK-NEXT:    ldr q6, [x8, :lo12:.LCPI24_2]
-; CHECK-NEXT:    adrp x8, .LCPI24_4
-; CHECK-NEXT:    // kill: def $q2 killed $q2 killed $q2_q3 def $q2_q3
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
-; CHECK-NEXT:    tbl v4.16b, { v0.16b, v1.16b }, v4.16b
-; CHECK-NEXT:    tbl v5.16b, { v2.16b, v3.16b }, v5.16b
-; CHECK-NEXT:    ldr q7, [x9, :lo12:.LCPI24_3]
-; CHECK-NEXT:    adrp x9, .LCPI24_5
-; CHECK-NEXT:    ldr q16, [x8, :lo12:.LCPI24_4]
-; CHECK-NEXT:    adrp x8, .LCPI24_7
-; CHECK-NEXT:    ldr q17, [x9, :lo12:.LCPI24_5]
-; CHECK-NEXT:    ldr q18, [x10, :lo12:.LCPI24_6]
-; CHECK-NEXT:    ldr q19, [x8, :lo12:.LCPI24_7]
-; CHECK-NEXT:    tbl v6.16b, { v0.16b, v1.16b }, v6.16b
-; CHECK-NEXT:    tbl v7.16b, { v2.16b, v3.16b }, v7.16b
-; CHECK-NEXT:    tbl v16.16b, { v0.16b, v1.16b }, v16.16b
-; CHECK-NEXT:    tbl v17.16b, { v2.16b, v3.16b }, v17.16b
-; CHECK-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v18.16b
-; CHECK-NEXT:    tbl v1.16b, { v2.16b, v3.16b }, v19.16b
-; CHECK-NEXT:    ushll2 v5.4s, v5.8h, #0
-; CHECK-NEXT:    ushll v4.4s, v4.4h, #0
-; CHECK-NEXT:    ushll2 v7.4s, v7.8h, #0
-; CHECK-NEXT:    ushll v6.4s, v6.4h, #0
-; CHECK-NEXT:    ushll v16.4s, v16.4h, #0
-; CHECK-NEXT:    ushll2 v20.2d, v5.4s, #0
-; CHECK-NEXT:    ushll2 v21.2d, v4.4s, #0
-; CHECK-NEXT:    ushll2 v17.4s, v17.8h, #0
-; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-NEXT:    ushll2 v1.4s, v1.8h, #0
-; CHECK-NEXT:    ushll v2.2d, v5.2s, #0
-; CHECK-NEXT:    ushll v3.2d, v4.2s, #0
-; CHECK-NEXT:    ushll2 v4.2d, v7.4s, #0
-; CHECK-NEXT:    ushll2 v5.2d, v6.4s, #0
-; CHECK-NEXT:    ushll v7.2d, v7.2s, #0
-; CHECK-NEXT:    ucvtf v18.2d, v20.2d
-; CHECK-NEXT:    ucvtf v19.2d, v21.2d
-; CHECK-NEXT:    ushll v6.2d, v6.2s, #0
-; CHECK-NEXT:    ushll2 v20.2d, v17.4s, #0
-; CHECK-NEXT:    ushll2 v21.2d, v16.4s, #0
-; CHECK-NEXT:    ushll v17.2d, v17.2s, #0
-; CHECK-NEXT:    ushll v16.2d, v16.2s, #0
-; CHECK-NEXT:    ushll v22.2d, v0.2s, #0
-; CHECK-NEXT:    ushll2 v23.2d, v1.4s, #0
-; CHECK-NEXT:    ushll2 v0.2d, v0.4s, #0
-; CHECK-NEXT:    ushll v1.2d, v1.2s, #0
-; CHECK-NEXT:    ucvtf v2.2d, v2.2d
-; CHECK-NEXT:    ucvtf v3.2d, v3.2d
-; CHECK-NEXT:    ucvtf v4.2d, v4.2d
-; CHECK-NEXT:    ucvtf v5.2d, v5.2d
-; CHECK-NEXT:    ucvtf v7.2d, v7.2d
-; CHECK-NEXT:    ucvtf v6.2d, v6.2d
-; CHECK-NEXT:    ucvtf v20.2d, v20.2d
-; CHECK-NEXT:    ucvtf v21.2d, v21.2d
-; CHECK-NEXT:    ucvtf v17.2d, v17.2d
+; CHECK-NEXT:    movi v4.2d, #0x0000000000ffff
+; CHECK-NEXT:    ushr v5.2d, v0.2d, #16
+; CHECK-NEXT:    ushr v6.2d, v1.2d, #16
+; CHECK-NEXT:    ushr v7.2d, v2.2d, #16
+; CHECK-NEXT:    ushr v17.2d, v3.2d, #16
+; CHECK-NEXT:    ushr v20.2d, v0.2d, #32
+; CHECK-NEXT:    ushr v22.2d, v1.2d, #32
+; CHECK-NEXT:    ushr v23.2d, v2.2d, #32
+; CHECK-NEXT:    ushr v24.2d, v3.2d, #32
+; CHECK-NEXT:    and v16.16b, v0.16b, v4.16b
+; CHECK-NEXT:    and v18.16b, v1.16b, v4.16b
+; CHECK-NEXT:    and v19.16b, v2.16b, v4.16b
+; CHECK-NEXT:    and v21.16b, v3.16b, v4.16b
+; CHECK-NEXT:    and v5.16b, v5.16b, v4.16b
+; CHECK-NEXT:    and v6.16b, v6.16b, v4.16b
+; CHECK-NEXT:    and v7.16b, v7.16b, v4.16b
+; CHECK-NEXT:    and v17.16b, v17.16b, v4.16b
+; CHECK-NEXT:    and v20.16b, v20.16b, v4.16b
+; CHECK-NEXT:    and v22.16b, v22.16b, v4.16b
+; CHECK-NEXT:    and v23.16b, v23.16b, v4.16b
+; CHECK-NEXT:    and v4.16b, v24.16b, v4.16b
+; CHECK-NEXT:    ushr v0.2d, v0.2d, #48
+; CHECK-NEXT:    ushr v1.2d, v1.2d, #48
+; CHECK-NEXT:    ushr v2.2d, v2.2d, #48
+; CHECK-NEXT:    ushr v3.2d, v3.2d, #48
 ; CHECK-NEXT:    ucvtf v16.2d, v16.2d
+; CHECK-NEXT:    ucvtf v18.2d, v18.2d
+; CHECK-NEXT:    ucvtf v19.2d, v19.2d
+; CHECK-NEXT:    ucvtf v21.2d, v21.2d
+; CHECK-NEXT:    ucvtf v5.2d, v5.2d
+; CHECK-NEXT:    ucvtf v6.2d, v6.2d
+; CHECK-NEXT:    ucvtf v7.2d, v7.2d
+; CHECK-NEXT:    ucvtf v17.2d, v17.2d
+; CHECK-NEXT:    ucvtf v20.2d, v20.2d
 ; CHECK-NEXT:    ucvtf v22.2d, v22.2d
 ; CHECK-NEXT:    ucvtf v23.2d, v23.2d
+; CHECK-NEXT:    ucvtf v4.2d, v4.2d
 ; CHECK-NEXT:    ucvtf v0.2d, v0.2d
 ; CHECK-NEXT:    ucvtf v1.2d, v1.2d
-; CHECK-NEXT:    fadd v4.2d, v18.2d, v4.2d
-; CHECK-NEXT:    fadd v3.2d, v3.2d, v6.2d
-; CHECK-NEXT:    fadd v2.2d, v2.2d, v7.2d
-; CHECK-NEXT:    fadd v5.2d, v19.2d, v5.2d
-; CHECK-NEXT:    fadd v6.2d, v16.2d, v22.2d
-; CHECK-NEXT:    fadd v16.2d, v20.2d, v23.2d
-; CHECK-NEXT:    fadd v7.2d, v17.2d, v1.2d
-; CHECK-NEXT:    fadd v1.2d, v21.2d, v0.2d
-; CHECK-NEXT:    fadd v0.2d, v3.2d, v6.2d
-; CHECK-NEXT:    fadd v3.2d, v4.2d, v16.2d
-; CHECK-NEXT:    fadd v1.2d, v5.2d, v1.2d
-; CHECK-NEXT:    fadd v2.2d, v2.2d, v7.2d
+; CHECK-NEXT:    ucvtf v2.2d, v2.2d
+; CHECK-NEXT:    ucvtf v3.2d, v3.2d
+; CHECK-NEXT:    fadd v5.2d, v16.2d, v5.2d
+; CHECK-NEXT:    fadd v17.2d, v21.2d, v17.2d
+; CHECK-NEXT:    fadd v7.2d, v19.2d, v7.2d
+; CHECK-NEXT:    fadd v6.2d, v18.2d, v6.2d
+; CHECK-NEXT:    fadd v0.2d, v20.2d, v0.2d
+; CHECK-NEXT:    fadd v1.2d, v22.2d, v1.2d
+; CHECK-NEXT:    fadd v3.2d, v4.2d, v3.2d
+; CHECK-NEXT:    fadd v2.2d, v23.2d, v2.2d
+; CHECK-NEXT:    fadd v0.2d, v5.2d, v0.2d
+; CHECK-NEXT:    fadd v1.2d, v6.2d, v1.2d
+; CHECK-NEXT:    fadd v2.2d, v7.2d, v2.2d
+; CHECK-NEXT:    fadd v3.2d, v17.2d, v3.2d
 ; CHECK-NEXT:    ret
     %s1 = shufflevector <32 x i16> %l, <32 x i16> undef, <8 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28>
     %z1 = uitofp <8 x i16> %s1 to <8 x double>
@@ -490,59 +472,61 @@ define <8 x double> @uitofp_fadd(<32 x i16> %l) {
 define <8 x double> @uitofp_load_fadd(ptr %p) {
 ; CHECK-LABEL: uitofp_load_fadd:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ld4 { v0.8h, v1.8h, v2.8h, v3.8h }, [x0]
-; CHECK-NEXT:    ushll2 v4.4s, v0.8h, #0
-; CHECK-NEXT:    ushll v5.4s, v0.4h, #0
-; CHECK-NEXT:    ushll2 v6.4s, v1.8h, #0
-; CHECK-NEXT:    ushll v7.4s, v1.4h, #0
-; CHECK-NEXT:    ushll2 v16.4s, v2.8h, #0
-; CHECK-NEXT:    ushll v17.4s, v2.4h, #0
-; CHECK-NEXT:    ushll2 v18.4s, v3.8h, #0
-; CHECK-NEXT:    ushll v0.4s, v3.4h, #0
-; CHECK-NEXT:    ushll2 v1.2d, v4.4s, #0
-; CHECK-NEXT:    ushll2 v2.2d, v5.4s, #0
-; CHECK-NEXT:    ushll v3.2d, v4.2s, #0
-; CHECK-NEXT:    ushll v4.2d, v5.2s, #0
-; CHECK-NEXT:    ushll2 v5.2d, v6.4s, #0
-; CHECK-NEXT:    ushll2 v19.2d, v7.4s, #0
-; CHECK-NEXT:    ushll v6.2d, v6.2s, #0
-; CHECK-NEXT:    ushll v7.2d, v7.2s, #0
-; CHECK-NEXT:    ushll2 v20.2d, v16.4s, #0
-; CHECK-NEXT:    ushll2 v21.2d, v17.4s, #0
-; CHECK-NEXT:    ushll v16.2d, v16.2s, #0
-; CHECK-NEXT:    ushll v17.2d, v17.2s, #0
-; CHECK-NEXT:    ushll v22.2d, v0.2s, #0
-; CHECK-NEXT:    ushll2 v23.2d, v18.4s, #0
-; CHECK-NEXT:    ushll2 v0.2d, v0.4s, #0
-; CHECK-NEXT:    ushll v18.2d, v18.2s, #0
+; CHECK-NEXT:    ldp q1, q2, [x0]
+; CHECK-NEXT:    movi v0.2d, #0x0000000000ffff
+; CHECK-NEXT:    ldp q3, q4, [x0, #32]
+; CHECK-NEXT:    ushr v5.2d, v1.2d, #16
+; CHECK-NEXT:    ushr v6.2d, v2.2d, #16
+; CHECK-NEXT:    ushr v20.2d, v1.2d, #32
+; CHECK-NEXT:    ushr v7.2d, v3.2d, #16
+; CHECK-NEXT:    ushr v17.2d, v4.2d, #16
+; CHECK-NEXT:    ushr v22.2d, v2.2d, #32
+; CHECK-NEXT:    ushr v23.2d, v3.2d, #32
+; CHECK-NEXT:    ushr v24.2d, v4.2d, #32
+; CHECK-NEXT:    and v16.16b, v1.16b, v0.16b
+; CHECK-NEXT:    and v18.16b, v2.16b, v0.16b
+; CHECK-NEXT:    and v19.16b, v3.16b, v0.16b
+; CHECK-NEXT:    and v21.16b, v4.16b, v0.16b
+; CHECK-NEXT:    and v5.16b, v5.16b, v0.16b
+; CHECK-NEXT:    and v6.16b, v6.16b, v0.16b
+; CHECK-NEXT:    and v7.16b, v7.16b, v0.16b
+; CHECK-NEXT:    and v17.16b, v17.16b, v0.16b
+; CHECK-NEXT:    and v20.16b, v20.16b, v0.16b
+; CHECK-NEXT:    and v22.16b, v22.16b, v0.16b
+; CHECK-NEXT:    and v23.16b, v23.16b, v0.16b
+; CHECK-NEXT:    and v0.16b, v24.16b, v0.16b
+; CHECK-NEXT:    ushr v1.2d, v1.2d, #48
+; CHECK-NEXT:    ushr v2.2d, v2.2d, #48
+; CHECK-NEXT:    ushr v3.2d, v3.2d, #48
+; CHECK-NEXT:    ushr v4.2d, v4.2d, #48
+; CHECK-NEXT:    ucvtf v16.2d, v16.2d
+; CHECK-NEXT:    ucvtf v18.2d, v18.2d
+; CHECK-NEXT:    ucvtf v19.2d, v19.2d
+; CHECK-NEXT:    ucvtf v21.2d, v21.2d
+; CHECK-NEXT:    ucvtf v5.2d, v5.2d
+; CHECK-NEXT:    ucvtf v6.2d, v6.2d
+; CHECK-NEXT:    ucvtf v7.2d, v7.2d
+; CHECK-NEXT:    ucvtf v17.2d, v17.2d
+; CHECK-NEXT:    ucvtf v20.2d, v20.2d
+; CHECK-NEXT:    ucvtf v22.2d, v22.2d
+; CHECK-NEXT:    ucvtf v23.2d, v23.2d
+; CHECK-NEXT:    ucvtf v0.2d, v0.2d
 ; CHECK-NEXT:    ucvtf v1.2d, v1.2d
 ; CHECK-NEXT:    ucvtf v2.2d, v2.2d
 ; CHECK-NEXT:    ucvtf v3.2d, v3.2d
 ; CHECK-NEXT:    ucvtf v4.2d, v4.2d
-; CHECK-NEXT:    ucvtf v5.2d, v5.2d
-; CHECK-NEXT:    ucvtf v19.2d, v19.2d
-; CHECK-NEXT:    ucvtf v6.2d, v6.2d
-; CHECK-NEXT:    ucvtf v7.2d, v7.2d
-; CHECK-NEXT:    ucvtf v20.2d, v20.2d
-; CHECK-NEXT:    ucvtf v21.2d, v21.2d
-; CHECK-NEXT:    ucvtf v16.2d, v16.2d
-; CHECK-NEXT:    ucvtf v17.2d, v17.2d
-; CHECK-NEXT:    ucvtf v22.2d, v22.2d
-; CHECK-NEXT:    ucvtf v23.2d, v23.2d
-; CHECK-NEXT:    ucvtf v0.2d, v0.2d
-; CHECK-NEXT:    ucvtf v18.2d, v18.2d
-; CHECK-NEXT:    fadd v1.2d, v1.2d, v5.2d
-; CHECK-NEXT:    fadd v4.2d, v4.2d, v7.2d
-; CHECK-NEXT:    fadd v6.2d, v3.2d, v6.2d
-; CHECK-NEXT:    fadd v2.2d, v2.2d, v19.2d
-; CHECK-NEXT:    fadd v3.2d, v17.2d, v22.2d
-; CHECK-NEXT:    fadd v5.2d, v16.2d, v18.2d
-; CHECK-NEXT:    fadd v7.2d, v21.2d, v0.2d
-; CHECK-NEXT:    fadd v16.2d, v20.2d, v23.2d
-; CHECK-NEXT:    fadd v0.2d, v4.2d, v3.2d
-; CHECK-NEXT:    fadd v3.2d, v1.2d, v16.2d
-; CHECK-NEXT:    fadd v1.2d, v2.2d, v7.2d
-; CHECK-NEXT:    fadd v2.2d, v6.2d, v5.2d
+; CHECK-NEXT:    fadd v6.2d, v18.2d, v6.2d
+; CHECK-NEXT:    fadd v5.2d, v16.2d, v5.2d
+; CHECK-NEXT:    fadd v17.2d, v21.2d, v17.2d
+; CHECK-NEXT:    fadd v7.2d, v19.2d, v7.2d
+; CHECK-NEXT:    fadd v1.2d, v20.2d, v1.2d
+; CHECK-NEXT:    fadd v3.2d, v23.2d, v3.2d
+; CHECK-NEXT:    fadd v2.2d, v22.2d, v2.2d
+; CHECK-NEXT:    fadd v4.2d, v0.2d, v4.2d
+; CHECK-NEXT:    fadd v0.2d, v5.2d, v1.2d
+; CHECK-NEXT:    fadd v1.2d, v6.2d, v2.2d
+; CHECK-NEXT:    fadd v2.2d, v7.2d, v3.2d
+; CHECK-NEXT:    fadd v3.2d, v17.2d, v4.2d
 ; CHECK-NEXT:    ret
     %l = load <32 x i16>, ptr %p
     %s1 = shufflevector <32 x i16> %l, <32 x i16> undef, <8 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28>

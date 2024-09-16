@@ -139,20 +139,15 @@ private:
                              "'; expected: bit, bits, string, or code");
   }
 
-  bool isIntrinsic(Init *I) {
-    if (DefInit *DI = dyn_cast<DefInit>(I))
+  bool isIntrinsic(const Init *I) {
+    if (const DefInit *DI = dyn_cast<DefInit>(I))
       return DI->getDef()->isSubClassOf("Intrinsic");
     return false;
   }
 
-  CodeGenIntrinsic &getIntrinsic(Init *I) {
+  const CodeGenIntrinsic &getIntrinsic(const Init *I) {
     const Record *Def = cast<DefInit>(I)->getDef();
-    // Build the Intrinsics map on demand. If we instantiate one in the
-    // constructor, we may get errors if the TableGen file being processed does
-    // not include Intrinsics.td and does not do anything with intrinsics.
-    if (!Intrinsics)
-      Intrinsics = std::make_unique<CodeGenIntrinsicMap>(Records);
-    return (*Intrinsics)[Def];
+    return Target->getIntrinsic(Def);
   }
 
   bool compareBy(Record *LHS, Record *RHS, const SearchIndex &Index);
@@ -249,8 +244,8 @@ bool SearchableTableEmitter::compareBy(Record *LHS, Record *RHS,
       if (LHSi > RHSi)
         return false;
     } else if (Field.IsIntrinsic) {
-      CodeGenIntrinsic &LHSi = getIntrinsic(LHSI);
-      CodeGenIntrinsic &RHSi = getIntrinsic(RHSI);
+      const CodeGenIntrinsic &LHSi = getIntrinsic(LHSI);
+      const CodeGenIntrinsic &RHSi = getIntrinsic(RHSI);
       if (std::tie(LHSi.TargetPrefix, LHSi.Name) <
           std::tie(RHSi.TargetPrefix, RHSi.Name))
         return true;
@@ -716,7 +711,10 @@ void SearchableTableEmitter::run(raw_ostream &OS) {
   // Emit tables in a deterministic order to avoid needless rebuilds.
   SmallVector<std::unique_ptr<GenericTable>, 4> Tables;
   DenseMap<Record *, GenericTable *> TableMap;
-  if (!Records.getAllDerivedDefinitionsIfDefined("Instruction").empty())
+  bool NeedsTarget =
+      !Records.getAllDerivedDefinitionsIfDefined("Instruction").empty() ||
+      !Records.getAllDerivedDefinitionsIfDefined("Intrinsic").empty();
+  if (NeedsTarget)
     Target = std::make_unique<CodeGenTarget>(Records);
 
   // Collect all definitions first.

@@ -3801,3 +3801,6 @@ def int_aarch64_sve_famax_u : AdvSIMD_Pred2VectorArg_Intrinsic;
 
 def int_aarch64_sve_famin   : AdvSIMD_Pred2VectorArg_Intrinsic;
 def int_aarch64_sve_famin_u : AdvSIMD_Pred2VectorArg_Intrinsic;
+// Neon absolute maximum and minimum
+def int_aarch64_neon_famax :  AdvSIMD_2VectorArg_Intrinsic;
+def int_aarch64_neon_famin :  AdvSIMD_2VectorArg_Intrinsic;

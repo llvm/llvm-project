@@ -233,7 +233,7 @@ ConnectionStatus ConnectionFileDescriptor::Disconnect(Status *error_ptr) {
   if (error.Fail())
     status = eConnectionStatusError;
   if (error_ptr)
-    *error_ptr = error;
+    *error_ptr = std::move(error);
 
   // Close any pipes we were using for async interrupts
   m_pipe.Close();
@@ -295,7 +295,7 @@ size_t ConnectionFileDescriptor::Read(void *dst, size_t dst_len,
   }
 
   if (error_ptr)
-    *error_ptr = error;
+    *error_ptr = error.Clone();
 
   if (error.Fail()) {
     uint32_t error_value = error.GetError();
@@ -393,7 +393,7 @@ size_t ConnectionFileDescriptor::Write(const void *src, size_t src_len,
   }
 
   if (error_ptr)
-    *error_ptr = error;
+    *error_ptr = error.Clone();
 
   if (error.Fail()) {
     switch (error.GetError()) {
@@ -476,7 +476,7 @@ ConnectionFileDescriptor::BytesAvailable(const Timeout<std::micro> &timeout,
       Status error = select_helper.Select();
 
       if (error_ptr)
-        *error_ptr = error;
+        *error_ptr = error.Clone();
 
       if (error.Fail()) {
         switch (error.GetError()) {
@@ -557,7 +557,7 @@ lldb::ConnectionStatus ConnectionFileDescriptor::AcceptSocket(
   }
 
   if (error_ptr)
-    *error_ptr = error;
+    *error_ptr = error.Clone();
   return eConnectionStatusError;
 }
 
@@ -579,7 +579,7 @@ ConnectionFileDescriptor::ConnectSocket(Socket::SocketProtocol socket_protocol,
   }
 
   if (error_ptr)
-    *error_ptr = error;
+    *error_ptr = error.Clone();
   return eConnectionStatusError;
 }
 
@@ -652,7 +652,7 @@ ConnectionFileDescriptor::ConnectUDP(llvm::StringRef s,
       Socket::UdpConnect(s, m_child_processes_inherit);
   if (!socket) {
     if (error_ptr)
-      *error_ptr = socket.takeError();
+      *error_ptr = Status::FromError(socket.takeError());
     else
       LLDB_LOG_ERROR(GetLog(LLDBLog::Connection), socket.takeError(),
                      "tcp connect failed: {0}");
@@ -769,7 +769,7 @@ ConnectionStatus ConnectionFileDescriptor::ConnectSerialPort(
       SerialPort::OptionsFromURL(qs);
   if (!serial_options) {
     if (error_ptr)
-      *error_ptr = serial_options.takeError();
+      *error_ptr = Status::FromError(serial_options.takeError());
     else
       llvm::consumeError(serial_options.takeError());
     return eConnectionStatusError;
@@ -786,7 +786,7 @@ ConnectionStatus ConnectionFileDescriptor::ConnectSerialPort(
       fd, File::eOpenOptionReadWrite, serial_options.get(), true);
   if (!serial_sp) {
     if (error_ptr)
-      *error_ptr = serial_sp.takeError();
+      *error_ptr = Status::FromError(serial_sp.takeError());
     else
       llvm::consumeError(serial_sp.takeError());
     return eConnectionStatusError;

@@ -8178,6 +8178,75 @@ static Instruction *foldFCmpFSubIntoFCmp(FCmpInst &I, Instruction *LHSI,
   return nullptr;
 }
 
+static Instruction *foldFCmpWithFloorAndCeil(FCmpInst &I,
+                                             InstCombinerImpl &IC) {
+  Value *LHS = I.getOperand(0), *RHS = I.getOperand(1);
+  Type *OpType = LHS->getType();
+  CmpInst::Predicate Pred = I.getPredicate();
+
+  bool FloorX = match(LHS, m_Intrinsic<Intrinsic::floor>(m_Specific(RHS)));
+  bool CeilX = match(LHS, m_Intrinsic<Intrinsic::ceil>(m_Specific(RHS)));
+
+  if (!FloorX && !CeilX) {
+    if ((FloorX = match(RHS, m_Intrinsic<Intrinsic::floor>(m_Specific(LHS)))) ||
+        (CeilX = match(RHS, m_Intrinsic<Intrinsic::ceil>(m_Specific(LHS))))) {
+      std::swap(LHS, RHS);
+      Pred = I.getSwappedPredicate();
+    }
+  }
+
+  switch (Pred) {
+  case FCmpInst::FCMP_OLE:
+    // fcmp ole floor(x), x => fcmp ord x, 0
+    if (FloorX)
+      return new FCmpInst(FCmpInst::FCMP_ORD, RHS, ConstantFP::getZero(OpType),
+                          "", &I);
+    break;
+  case FCmpInst::FCMP_OGT:
+    // fcmp ogt floor(x), x => false
+    if (FloorX)
+      return IC.replaceInstUsesWith(I, ConstantInt::getFalse(I.getType()));
+    break;
+  case FCmpInst::FCMP_OGE:
+    // fcmp oge ceil(x), x => fcmp ord x, 0
+    if (CeilX)
+      return new FCmpInst(FCmpInst::FCMP_ORD, RHS, ConstantFP::getZero(OpType),
+                          "", &I);
+    break;
+  case FCmpInst::FCMP_OLT:
+    // fcmp olt ceil(x), x => false
+    if (CeilX)
+      return IC.replaceInstUsesWith(I, ConstantInt::getFalse(I.getType()));
+    break;
+  case FCmpInst::FCMP_ULE:
+    // fcmp ule floor(x), x => true
+    if (FloorX)
+      return IC.replaceInstUsesWith(I, ConstantInt::getTrue(I.getType()));
+    break;
+  case FCmpInst::FCMP_UGT:
+    // fcmp ugt floor(x), x => fcmp uno x, 0
+    if (FloorX)
+      return new FCmpInst(FCmpInst::FCMP_UNO, RHS, ConstantFP::getZero(OpType),
+                          "", &I);
+    break;
+  case FCmpInst::FCMP_UGE:
+    // fcmp uge ceil(x), x => true
+    if (CeilX)
+      return IC.replaceInstUsesWith(I, ConstantInt::getTrue(I.getType()));
+    break;
+  case FCmpInst::FCMP_ULT:
+    // fcmp ult ceil(x), x => fcmp uno x, 0
+    if (CeilX)
+      return new FCmpInst(FCmpInst::FCMP_UNO, RHS, ConstantFP::getZero(OpType),
+                          "", &I);
+    break;
+  default:
+    break;
+  }
+
+  return nullptr;
+}
+
 Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
   bool Changed = false;
 
@@ -8380,6 +8449,9 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
     return R;
 
   if (Instruction *R = foldSqrtWithFcmpZero(I, *this))
+    return R;
+
+  if (Instruction *R = foldFCmpWithFloorAndCeil(I, *this))
     return R;
 
   if (match(Op0, m_FNeg(m_Value(X)))) {

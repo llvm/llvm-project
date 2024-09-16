@@ -21,6 +21,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+include "arm_immcheck_incl.td"
+
 // The base Operation class. All operations must subclass this.
 class Operation<list<dag> ops=[]> {
   list<dag> Ops = ops;
@@ -260,7 +262,7 @@ def OP_UNAVAILABLE : Operation {
 
 
 // Every intrinsic subclasses Inst.
-class Inst <string n, string p, string t, Operation o> {
+class Inst <string n, string p, string t, Operation o, list<ImmCheck> ch = []>{
   string Name = n;
   string Prototype = p;
   string Types = t;
@@ -272,12 +274,7 @@ class Inst <string n, string p, string t, Operation o> {
   bit isShift = 0;
   bit isScalarShift = 0;
   bit isScalarNarrowShift = 0;
-  bit isVCVT_N = 0;
-  bit isVXAR = 0;
-  // For immediate checks: the immediate will be assumed to specify the lane of
-  // a Q register. Only used for intrinsics which end up calling polymorphic
-  // builtins.
-  bit isLaneQ = 0;
+  list<ImmCheck> ImmChecks = ch;
 
   // Certain intrinsics have different names than their representative
   // instructions. This field allows us to handle this correctly when we
@@ -300,9 +297,9 @@ class Inst <string n, string p, string t, Operation o> {
 // SInst: Instruction with signed/unsigned suffix (e.g., "s8", "u8", "p8")
 // IInst: Instruction with generic integer suffix (e.g., "i8")
 // WInst: Instruction with only bit size suffix (e.g., "8")
-class SInst<string n, string p, string t> : Inst<n, p, t, OP_NONE> {}
-class IInst<string n, string p, string t> : Inst<n, p, t, OP_NONE> {}
-class WInst<string n, string p, string t> : Inst<n, p, t, OP_NONE> {}
+class SInst<string n, string p, string t, list<ImmCheck> ch = []> : Inst<n, p, t, OP_NONE, ch> {}
+class IInst<string n, string p, string t, list<ImmCheck> ch = []> : Inst<n, p, t, OP_NONE, ch> {}
+class WInst<string n, string p, string t, list<ImmCheck> ch = []> : Inst<n, p, t, OP_NONE, ch> {}
 
 // The following instruction classes are implemented via operators
 // instead of builtins. As such these declarations are only used for

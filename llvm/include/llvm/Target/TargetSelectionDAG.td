@@ -569,6 +569,8 @@ def fp_to_sint : SDNode<"ISD::FP_TO_SINT" , SDTFPToIntOp>;
 def fp_to_uint : SDNode<"ISD::FP_TO_UINT" , SDTFPToIntOp>;
 def fp_to_sint_sat : SDNode<"ISD::FP_TO_SINT_SAT" , SDTFPToIntSatOp>;
 def fp_to_uint_sat : SDNode<"ISD::FP_TO_UINT_SAT" , SDTFPToIntSatOp>;
+def fp_to_sint_sat_gi : SDNode<"ISD::FP_TO_SINT_SAT" , SDTFPToIntOp>;
+def fp_to_uint_sat_gi : SDNode<"ISD::FP_TO_UINT_SAT" , SDTFPToIntOp>;
 def f16_to_fp  : SDNode<"ISD::FP16_TO_FP" , SDTIntToFPOp>;
 def fp_to_f16  : SDNode<"ISD::FP_TO_FP16" , SDTFPToIntOp>;
 def bf16_to_fp  : SDNode<"ISD::BF16_TO_FP" , SDTIntToFPOp>;
@@ -757,6 +759,10 @@ def atomic_load_fmin : SDNode<"ISD::ATOMIC_LOAD_FMIN", SDTFPAtomic2,
 def atomic_load_uinc_wrap : SDNode<"ISD::ATOMIC_LOAD_UINC_WRAP", SDTAtomic2,
                     [SDNPHasChain, SDNPMayStore, SDNPMayLoad, SDNPMemOperand]>;
 def atomic_load_udec_wrap : SDNode<"ISD::ATOMIC_LOAD_UDEC_WRAP", SDTAtomic2,
+                    [SDNPHasChain, SDNPMayStore, SDNPMayLoad, SDNPMemOperand]>;
+def atomic_load_usub_cond : SDNode<"ISD::ATOMIC_LOAD_USUB_COND", SDTAtomic2,
+                    [SDNPHasChain, SDNPMayStore, SDNPMayLoad, SDNPMemOperand]>;
+def atomic_load_usub_sat : SDNode<"ISD::ATOMIC_LOAD_USUB_SAT", SDTAtomic2,
                     [SDNPHasChain, SDNPMayStore, SDNPMayLoad, SDNPMemOperand]>;
 
 def atomic_load      : SDNode<"ISD::ATOMIC_LOAD", SDTAtomicLoad,

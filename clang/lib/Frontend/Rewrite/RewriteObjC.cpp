@@ -4111,9 +4111,8 @@ void RewriteObjC::RewriteBlockPointerDecl(NamedDecl *ND) {
 std::string RewriteObjC::SynthesizeByrefCopyDestroyHelper(VarDecl *VD,
                                                           int flag) {
   std::string S;
-  if (CopyDestroyCache.count(flag))
+  if (!CopyDestroyCache.insert(flag).second)
     return S;
-  CopyDestroyCache.insert(flag);
   S = "static void __Block_byref_id_object_copy_";
   S += utostr(flag);
   S += "(void *dst, void *src) {\n";
