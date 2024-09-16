@@ -36,12 +36,12 @@ void test__movsb(unsigned char *Dest, unsigned char *Src, size_t Count) {
   return __movsb(Dest, Src, Count);
 }
 // CHECK-I386-LABEL: define{{.*}} void @test__movsb
-// CHECK-I386:   tail call { ptr, ptr, i32 } asm sideeffect "xchg $(%esi, $1$|$1, esi$)\0Arep movsb\0Axchg $(%esi, $1$|$1, esi$)", "={di},=r,={cx},0,1,2,~{memory},~{dirflag},~{fpsr},~{flags}"(ptr %Dest, ptr %Src, i32 %Count)
+// CHECK-I386:   tail call { ptr, ptr, i32 } asm sideeffect "xchg $(%esi, $1$|$1, esi$)\0Arep movsb\0Axchg $(%esi, $1$|$1, esi$)", "={di},=r,={cx},{di},1,{cx},~{memory},~{dirflag},~{fpsr},~{flags}"(ptr %Dest, ptr %Src, i32 %Count)
 // CHECK-I386:   ret void
 // CHECK-I386: }
 
 // CHECK-X64-LABEL: define{{.*}} void @test__movsb
-// CHECK-X64:   call { ptr, ptr, i64 } asm sideeffect "rep movsb", "={di},={si},={cx},0,1,2,~{memory},~{dirflag},~{fpsr},~{flags}"(ptr %Dest, ptr %Src, i64 %Count)
+// CHECK-X64:   call { ptr, ptr, i64 } asm sideeffect "rep movsb", "={di},={si},={cx},{di},{si},{cx},~{memory},~{dirflag},~{fpsr},~{flags}"(ptr %Dest, ptr %Src, i64 %Count)
 // CHECK-X64:   ret void
 // CHECK-X64: }
 
@@ -49,12 +49,12 @@ void test__stosw(unsigned short *Dest, unsigned short Data, size_t Count) {
   return __stosw(Dest, Data, Count);
 }
 // CHECK-I386-LABEL: define{{.*}} void @test__stosw
-// CHECK-I386:   call { ptr, i32 } asm sideeffect "rep stosw", "={di},={cx},{ax},0,1,~{memory},~{dirflag},~{fpsr},~{flags}"(i16 %Data, ptr %Dest, i32 %Count)
+// CHECK-I386:   call { ptr, i32 } asm sideeffect "rep stosw", "={di},={cx},{ax},{di},{cx},~{memory},~{dirflag},~{fpsr},~{flags}"(i16 %Data, ptr %Dest, i32 %Count)
 // CHECK-I386:   ret void
 // CHECK-I386: }
 
 // CHECK-X64-LABEL: define{{.*}} void @test__stosw
-// CHECK-X64:   call { ptr, i64 } asm sideeffect "rep stosw", "={di},={cx},{ax},0,1,~{memory},~{dirflag},~{fpsr},~{flags}"(i16 %Data, ptr %Dest, i64 %Count)
+// CHECK-X64:   call { ptr, i64 } asm sideeffect "rep stosw", "={di},={cx},{ax},{di},{cx},~{memory},~{dirflag},~{fpsr},~{flags}"(i16 %Data, ptr %Dest, i64 %Count)
 // CHECK-X64:   ret void
 // CHECK-X64: }
 
@@ -62,12 +62,12 @@ void test__movsw(unsigned short *Dest, unsigned short *Src, size_t Count) {
   return __movsw(Dest, Src, Count);
 }
 // CHECK-I386-LABEL: define{{.*}} void @test__movsw
-// CHECK-I386:   tail call { ptr, ptr, i32 } asm sideeffect "xchg $(%esi, $1$|$1, esi$)\0Arep movsw\0Axchg $(%esi, $1$|$1, esi$)", "={di},=r,={cx},0,1,2,~{memory},~{dirflag},~{fpsr},~{flags}"(ptr %Dest, ptr %Src, i32 %Count)
+// CHECK-I386:   tail call { ptr, ptr, i32 } asm sideeffect "xchg $(%esi, $1$|$1, esi$)\0Arep movsw\0Axchg $(%esi, $1$|$1, esi$)", "={di},=r,={cx},{di},1,{cx},~{memory},~{dirflag},~{fpsr},~{flags}"(ptr %Dest, ptr %Src, i32 %Count)
 // CHECK-I386:   ret void
 // CHECK-I386: }
 
 // CHECK-X64-LABEL: define{{.*}} void @test__movsw
-// CHECK-X64:   call { ptr, ptr, i64 } asm sideeffect "rep movsw", "={di},={si},={cx},0,1,2,~{memory},~{dirflag},~{fpsr},~{flags}"(ptr %Dest, ptr %Src, i64 %Count)
+// CHECK-X64:   call { ptr, ptr, i64 } asm sideeffect "rep movsw", "={di},={si},={cx},{di},{si},{cx},~{memory},~{dirflag},~{fpsr},~{flags}"(ptr %Dest, ptr %Src, i64 %Count)
 // CHECK-X64:   ret void
 // CHECK-X64: }
 
@@ -75,12 +75,12 @@ void test__stosd(unsigned long *Dest, unsigned long Data, size_t Count) {
   return __stosd(Dest, Data, Count);
 }
 // CHECK-I386-LABEL: define{{.*}} void @test__stosd
-// CHECK-I386:   call { ptr, i32 } asm sideeffect "rep stos$(l$|d$)", "={di},={cx},{ax},0,1,~{memory},~{dirflag},~{fpsr},~{flags}"(i32 %Data, ptr %Dest, i32 %Count)
+// CHECK-I386:   call { ptr, i32 } asm sideeffect "rep stos$(l$|d$)", "={di},={cx},{ax},{di},{cx},~{memory},~{dirflag},~{fpsr},~{flags}"(i32 %Data, ptr %Dest, i32 %Count)
 // CHECK-I386:   ret void
 // CHECK-I386: }
 
 // CHECK-X64-LABEL: define{{.*}} void @test__stosd
-// CHECK-X64:   call { ptr, i64 } asm sideeffect "rep stos$(l$|d$)", "={di},={cx},{ax},0,1,~{memory},~{dirflag},~{fpsr},~{flags}"(i32 %Data, ptr %Dest, i64 %Count)
+// CHECK-X64:   call { ptr, i64 } asm sideeffect "rep stos$(l$|d$)", "={di},={cx},{ax},{di},{cx},~{memory},~{dirflag},~{fpsr},~{flags}"(i32 %Data, ptr %Dest, i64 %Count)
 // CHECK-X64:   ret void
 // CHECK-X64: }
 
@@ -88,12 +88,12 @@ void test__movsd(unsigned long *Dest, unsigned long *Src, size_t Count) {
   return __movsd(Dest, Src, Count);
 }
 // CHECK-I386-LABEL: define{{.*}} void @test__movsd
-// CHECK-I386:   tail call { ptr, ptr, i32 } asm sideeffect "xchg $(%esi, $1$|$1, esi$)\0Arep movs$(l$|d$)\0Axchg $(%esi, $1$|$1, esi$)", "={di},=r,={cx},0,1,2,~{memory},~{dirflag},~{fpsr},~{flags}"(ptr %Dest, ptr %Src, i32 %Count)
+// CHECK-I386:   tail call { ptr, ptr, i32 } asm sideeffect "xchg $(%esi, $1$|$1, esi$)\0Arep movs$(l$|d$)\0Axchg $(%esi, $1$|$1, esi$)", "={di},=r,={cx},{di},1,{cx},~{memory},~{dirflag},~{fpsr},~{flags}"(ptr %Dest, ptr %Src, i32 %Count)
 // CHECK-I386:   ret void
 // CHECK-I386: }
 
 // CHECK-X64-LABEL: define{{.*}} void @test__movsd
-// CHECK-X64:   call { ptr, ptr, i64 } asm sideeffect "rep movs$(l$|d$)", "={di},={si},={cx},0,1,2,~{memory},~{dirflag},~{fpsr},~{flags}"(ptr %Dest, ptr %Src, i64 %Count)
+// CHECK-X64:   call { ptr, ptr, i64 } asm sideeffect "rep movs$(l$|d$)", "={di},={si},={cx},{di},{si},{cx},~{memory},~{dirflag},~{fpsr},~{flags}"(ptr %Dest, ptr %Src, i64 %Count)
 // CHECK-X64:   ret void
 // CHECK-X64: }
 
@@ -102,7 +102,7 @@ void test__stosq(unsigned __int64 *Dest, unsigned __int64 Data, size_t Count) {
   return __stosq(Dest, Data, Count);
 }
 // CHECK-X64-LABEL: define{{.*}} void @test__stosq
-// CHECK-X64:   call { ptr, i64 } asm sideeffect "rep stosq", "={di},={cx},{ax},0,1,~{memory},~{dirflag},~{fpsr},~{flags}"(i64 %Data, ptr %Dest, i64 %Count)
+// CHECK-X64:   call { ptr, i64 } asm sideeffect "rep stosq", "={di},={cx},{ax},{di},{cx},~{memory},~{dirflag},~{fpsr},~{flags}"(i64 %Data, ptr %Dest, i64 %Count)
 // CHECK-X64:   ret void
 // CHECK-X64: }
 
@@ -110,7 +110,7 @@ void test__movsq(unsigned __int64 *Dest, unsigned __int64 *Src, size_t Count) {
   return __movsq(Dest, Src, Count);
 }
 // CHECK-X64-LABEL: define{{.*}} void @test__movsq
-// CHECK-X64:   call { ptr, ptr, i64 } asm sideeffect "rep movsq", "={di},={si},={cx},0,1,2,~{memory},~{dirflag},~{fpsr},~{flags}"(ptr %Dest, ptr %Src, i64 %Count)
+// CHECK-X64:   call { ptr, ptr, i64 } asm sideeffect "rep movsq", "={di},={si},={cx},{di},{si},{cx},~{memory},~{dirflag},~{fpsr},~{flags}"(ptr %Dest, ptr %Src, i64 %Count)
 // CHECK-X64:   ret void
 // CHECK-X64: }
 #endif
@@ -632,13 +632,13 @@ long test_InterlockedExchange_HLERelease(long volatile *Target, long Value) {
 long test_InterlockedCompareExchange_HLEAcquire(long volatile *Destination,
                                                 long Exchange, long Comparand) {
 // CHECK-INTEL: define{{.*}} i32 @test_InterlockedCompareExchange_HLEAcquire(ptr{{[a-z_ ]*}}%Destination, i32{{[a-z_ ]*}}%Exchange, i32{{[a-z_ ]*}}%Comparand)
-// CHECK-INTEL: call i32 asm sideeffect ".byte 0xf2 ; lock ; cmpxchg $($2, $1$|$1, $2$)", "={ax},=*m,r,0,*m,~{memory},~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i32) %Destination, i32 %Exchange, i32 %Comparand, ptr elementtype(i32) %Destination)
+// CHECK-INTEL: call i32 asm sideeffect ".byte 0xf2 ; lock ; cmpxchg $($2, $1$|$1, $2$)", "={ax},=*m,r,{ax},*m,~{memory},~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i32) %Destination, i32 %Exchange, i32 %Comparand, ptr elementtype(i32) %Destination)
   return _InterlockedCompareExchange_HLEAcquire(Destination, Exchange, Comparand);
 }
 long test_InterlockedCompareExchange_HLERelease(long volatile *Destination,
                                             long Exchange, long Comparand) {
 // CHECK-INTEL: define{{.*}} i32 @test_InterlockedCompareExchange_HLERelease(ptr{{[a-z_ ]*}}%Destination, i32{{[a-z_ ]*}}%Exchange, i32{{[a-z_ ]*}}%Comparand)
-// CHECK-INTEL: call i32 asm sideeffect ".byte 0xf3 ; lock ; cmpxchg $($2, $1$|$1, $2$)", "={ax},=*m,r,0,*m,~{memory},~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i32) %Destination, i32 %Exchange, i32 %Comparand, ptr elementtype(i32) %Destination)
+// CHECK-INTEL: call i32 asm sideeffect ".byte 0xf3 ; lock ; cmpxchg $($2, $1$|$1, $2$)", "={ax},=*m,r,{ax},*m,~{memory},~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i32) %Destination, i32 %Exchange, i32 %Comparand, ptr elementtype(i32) %Destination)
   return _InterlockedCompareExchange_HLERelease(Destination, Exchange, Comparand);
 }
 #endif
@@ -656,13 +656,13 @@ __int64 test_InterlockedExchange64_HLERelease(__int64 volatile *Target, __int64 
 __int64 test_InterlockedCompareExchange64_HLEAcquire(__int64 volatile *Destination,
                                                      __int64 Exchange, __int64 Comparand) {
 // CHECK-X64: define{{.*}} i64 @test_InterlockedCompareExchange64_HLEAcquire(ptr{{[a-z_ ]*}}%Destination, i64{{[a-z_ ]*}}%Exchange, i64{{[a-z_ ]*}}%Comparand)
-// CHECK-X64: call i64 asm sideeffect ".byte 0xf2 ; lock ; cmpxchg $($2, $1$|$1, $2$)", "={ax},=*m,r,0,*m,~{memory},~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i64) %Destination, i64 %Exchange, i64 %Comparand, ptr elementtype(i64) %Destination)
+// CHECK-X64: call i64 asm sideeffect ".byte 0xf2 ; lock ; cmpxchg $($2, $1$|$1, $2$)", "={ax},=*m,r,{ax},*m,~{memory},~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i64) %Destination, i64 %Exchange, i64 %Comparand, ptr elementtype(i64) %Destination)
   return _InterlockedCompareExchange64_HLEAcquire(Destination, Exchange, Comparand);
 }
 __int64 test_InterlockedCompareExchange64_HLERelease(__int64 volatile *Destination,
                                                      __int64 Exchange, __int64 Comparand) {
 // CHECK-X64: define{{.*}} i64 @test_InterlockedCompareExchange64_HLERelease(ptr{{[a-z_ ]*}}%Destination, i64{{[a-z_ ]*}}%Exchange, i64{{[a-z_ ]*}}%Comparand)
-// CHECK-X64: call i64 asm sideeffect ".byte 0xf3 ; lock ; cmpxchg $($2, $1$|$1, $2$)", "={ax},=*m,r,0,*m,~{memory},~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i64) %Destination, i64 %Exchange, i64 %Comparand, ptr elementtype(i64) %Destination)
+// CHECK-X64: call i64 asm sideeffect ".byte 0xf3 ; lock ; cmpxchg $($2, $1$|$1, $2$)", "={ax},=*m,r,{ax},*m,~{memory},~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i64) %Destination, i64 %Exchange, i64 %Comparand, ptr elementtype(i64) %Destination)
   return _InterlockedCompareExchange64_HLERelease(Destination, Exchange, Comparand);
 }
 #endif

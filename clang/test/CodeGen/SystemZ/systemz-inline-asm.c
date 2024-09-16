@@ -134,12 +134,25 @@ long double test_f128(long double f, long double g) {
 int test_physregs(void) {
   // CHECK-LABEL: define{{.*}} signext i32 @test_physregs()
   register int l __asm__("r7") = 0;
+  int m = 0;
 
   // CHECK: call i32 asm "lr $0, $1", "={r7},{r7}"
-  __asm__("lr %0, %1" : "+r"(l));
+  __asm__("lr %0, %1"
+          : "+r"(l));
 
   // CHECK: call i32 asm "$0 $1 $2", "={r7},{r7},{r7}"
-  __asm__("%0 %1 %2" : "+r"(l) : "r"(l));
+  __asm__("%0 %1 %2"
+          : "+r"(l)
+          : "r"(l));
 
-  return l;
+  // CHECK: call i32 asm "lr $0, $1", "={r6},{r6}"
+  __asm__("lr %0, %1"
+          : "+{r6}"(m));
+
+  // CHECK: call i32 asm "$0 $1 $2", "={r6},{r6},{r6}"
+  __asm__("%0 %1 %2"
+          : "+{r6}"(m)
+          : "{r6}"(m));
+
+  return l + m;
 }

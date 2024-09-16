@@ -187,11 +187,6 @@ public:
                              std::string &SuggestedModifier) const override;
   std::string_view getClobbers() const override;
 
-  StringRef getConstraintRegister(StringRef Constraint,
-                                  StringRef Expression) const override {
-    return Expression;
-  }
-
   int getEHDataRegisterNumber(unsigned RegNo) const override;
 
   bool validatePointerAuthKey(const llvm::APSInt &value) const override;

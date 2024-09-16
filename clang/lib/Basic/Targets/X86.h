@@ -306,7 +306,7 @@ public:
       return "di";
     // In case the constraint is 'r' we need to return Expression
     case 'r':
-      return Expression;
+      return TargetInfo::getConstraintRegister(Constraint, Expression);
     // Double letters Y<x> constraints
     case 'Y':
       if ((++I != E) && ((*I == '0') || (*I == 'z')))
