@@ -880,11 +880,16 @@ VPlanPtr VPlan::createInitialVPlan(Type *InductionTy,
   auto Plan = std::make_unique<VPlan>(Entry, VecPreheader);
 
   // Create SCEV and VPValue for the trip count.
-  const SCEV *BackedgeTakenCount = PSE.getBackedgeTakenCount();
-  assert(!isa<SCEVCouldNotCompute>(BackedgeTakenCount) && "Invalid loop count");
+
+  // Using getSymbolicMaxBackedgeTakenCount instead of getBackedgeTakenCount,
+  // since they should be identical as we currently only vectorize loops when
+  // all exits are countable.
+  const SCEV *BackedgeTakenCountSCEV = PSE.getSymbolicMaxBackedgeTakenCount();
+  assert(!isa<SCEVCouldNotCompute>(BackedgeTakenCountSCEV) &&
+         "Invalid loop count");
   ScalarEvolution &SE = *PSE.getSE();
-  const SCEV *TripCount =
-      SE.getTripCountFromExitCount(BackedgeTakenCount, InductionTy, TheLoop);
+  const SCEV *TripCount = SE.getTripCountFromExitCount(BackedgeTakenCountSCEV,
+                                                       InductionTy, TheLoop);
   Plan->TripCount =
       vputils::getOrCreateVPValueForSCEVExpr(*Plan, TripCount, SE);
 
