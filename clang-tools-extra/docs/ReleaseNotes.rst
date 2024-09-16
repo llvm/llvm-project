@@ -115,6 +115,11 @@ Changes in existing checks
   fix false positive that floating point variable is only used in increment
   expression.
 
+- Improved :doc:`cppcoreguidelines-prefer-member-initializer
+  <clang-tidy/checks/cppcoreguidelines/prefer-member-initializer>` check to avoid
+  false positive when member initialization depends on a structured binging
+  variable.
+
 - Improved :doc:`modernize-use-std-format
   <clang-tidy/checks/modernize/use-std-format>` check to support replacing
   member function calls too.

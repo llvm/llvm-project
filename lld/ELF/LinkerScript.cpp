@@ -659,7 +659,7 @@ void LinkerScript::discard(InputSectionBase &s) {
 }
 
 void LinkerScript::discardSynthetic(OutputSection &outCmd) {
-  for (Partition &part : partitions) {
+  for (Partition &part : ctx.partitions) {
     if (!part.armExidx || !part.armExidx->isLive())
       continue;
     SmallVector<InputSectionBase *, 0> secs(
