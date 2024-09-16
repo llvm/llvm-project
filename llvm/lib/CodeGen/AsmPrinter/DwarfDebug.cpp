@@ -33,8 +33,8 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
 #include "llvm/DebugInfo/DWARF/DWARFExpression.h"
-#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Module.h"
@@ -1835,8 +1835,8 @@ bool DwarfDebug::buildLocationList(SmallVectorImpl<DebugLocEntry> &DebugLoc,
     // merged.  Do not match the section label end if it is the entry block
     // section.  This is because the end label for the Debug Loc and the
     // Function end label could be different.
-    if ((RangeIt->second.EndLabel !=  Asm->getFunctionEnd()
-         &&  CurEntry->getEndSym() != RangeIt->second.EndLabel) ||
+    if ((RangeIt->second.EndLabel != Asm->getFunctionEnd() &&
+         CurEntry->getEndSym() != RangeIt->second.EndLabel) ||
         NextEntry->getBeginSym() != NextRangeIt->second.BeginLabel ||
         CurEntry->getValues() != NextEntry->getValues())
       return false;
