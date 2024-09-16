@@ -915,7 +915,7 @@ uint32_t Serializer::prepareConstantInt(Location loc, IntegerAttr intAttr,
     value.print(rss, /*isSigned=*/false);
 
     emitError(loc, "cannot serialize ")
-        << bitwidth << "-bit integer literal: " << valueStr;
+        << bitwidth << "-bit integer literal: " << rss.str();
     return 0;
   }
   }
@@ -968,7 +968,7 @@ uint32_t Serializer::prepareConstantFp(Location loc, FloatAttr floatAttr,
     value.print(rss);
 
     emitError(loc, "cannot serialize ")
-        << floatAttr.getType() << "-typed float literal: " << valueStr;
+        << floatAttr.getType() << "-typed float literal: " << rss.str();
     return 0;
   }
 

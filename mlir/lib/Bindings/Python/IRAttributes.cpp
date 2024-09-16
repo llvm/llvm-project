@@ -708,7 +708,7 @@ public:
         llvm::raw_string_ostream os(message);
         os << "Expected a static ShapedType for the shaped_type parameter: "
            << py::repr(py::cast(*explicitType));
-        throw py::value_error(message);
+        throw py::value_error(os.str());
       }
       shapedType = *explicitType;
     } else {
@@ -732,7 +732,7 @@ public:
         os << "All attributes must be of the same type and match "
            << "the type parameter: expected=" << py::repr(py::cast(shapedType))
            << ", but got=" << py::repr(py::cast(attrType));
-        throw py::value_error(message);
+        throw py::value_error(os.str());
       }
     }
 
