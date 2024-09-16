@@ -989,10 +989,10 @@ static bool isDeadPHIWeb(PHINode *PN) {
     if (Visited.size() == 16)
       return false;
     for (User *Use : Phi->users()) {
-      PHINode *PhiUse = dyn_cast<PHINode>(Use);
-      if (!PhiUse)
+      if (PHINode *PhiUse = dyn_cast<PHINode>(Use))
+        Stack.push_back(PhiUse);
+      else
         return false;
-      Stack.push_back(PhiUse);
     }
   }
   return true;
