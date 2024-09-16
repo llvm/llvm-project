@@ -278,18 +278,20 @@ struct __forward_node_traits {
   typedef __rebind_pointer_t<_NodePtr, __begin_node> __begin_node_pointer;
   typedef __rebind_pointer_t<_NodePtr, void> __void_pointer;
 
-#if defined(_LIBCPP_ABI_FORWARD_LIST_REMOVE_NODE_POINTER_UB)
-  typedef __begin_node_pointer __iter_node_pointer;
-#else
-  typedef __conditional_t<is_pointer<__void_pointer>::value, __begin_node_pointer, __node_pointer> __iter_node_pointer;
+// TODO(LLVM 22): Remove this check
+#ifndef _LIBCPP_ABI_FORWARD_LIST_REMOVE_NODE_POINTER_UB
+  static_assert(sizeof(__begin_node_pointer) == sizeof(__node_pointer) && _LIBCPP_ALIGNOF(__begin_node_pointer) ==
+                    _LIBCPP_ALIGNOF(__node_pointer),
+                "It looks like you are using std::forward_list with a fancy pointer type that thas a different "
+                "representation depending on whether it points to a forward_list base pointer or a forward_list node "
+                "pointer (both of which are implementation details of the standard library). This means that your ABI "
+                "is being broken between LLVM 19 and LLVM 20. If you don't care about your ABI being broken, define "
+                "the _LIBCPP_ABI_FORWARD_LIST_REMOVE_NODE_POINTER_UB macro to silence this diagnostic.");
 #endif
 
-  typedef __conditional_t<is_same<__iter_node_pointer, __node_pointer>::value, __begin_node_pointer, __node_pointer>
-      __non_iter_node_pointer;
-
-  _LIBCPP_HIDE_FROM_ABI static __iter_node_pointer __as_iter_node(__iter_node_pointer __p) { return __p; }
-  _LIBCPP_HIDE_FROM_ABI static __iter_node_pointer __as_iter_node(__non_iter_node_pointer __p) {
-    return static_cast<__iter_node_pointer>(static_cast<__void_pointer>(__p));
+  _LIBCPP_HIDE_FROM_ABI static __begin_node_pointer __as_iter_node(__begin_node_pointer __p) { return __p; }
+  _LIBCPP_HIDE_FROM_ABI static __begin_node_pointer __as_iter_node(__node_pointer __p) {
+    return static_cast<__begin_node_pointer>(static_cast<__void_pointer>(__p));
   }
 };
 
@@ -351,10 +353,9 @@ class _LIBCPP_TEMPLATE_VIS __forward_list_iterator {
   typedef __forward_node_traits<_NodePtr> __traits;
   typedef typename __traits::__node_pointer __node_pointer;
   typedef typename __traits::__begin_node_pointer __begin_node_pointer;
-  typedef typename __traits::__iter_node_pointer __iter_node_pointer;
   typedef typename __traits::__void_pointer __void_pointer;
 
-  __iter_node_pointer __ptr_;
+  __begin_node_pointer __ptr_;
 
   _LIBCPP_HIDE_FROM_ABI __begin_node_pointer __get_begin() const {
     return static_cast<__begin_node_pointer>(static_cast<__void_pointer>(__ptr_));
@@ -417,10 +418,9 @@ class _LIBCPP_TEMPLATE_VIS __forward_list_const_iterator {
   typedef typename __traits::__node_type __node_type;
   typedef typename __traits::__node_pointer __node_pointer;
   typedef typename __traits::__begin_node_pointer __begin_node_pointer;
-  typedef typename __traits::__iter_node_pointer __iter_node_pointer;
   typedef typename __traits::__void_pointer __void_pointer;
 
-  __iter_node_pointer __ptr_;
+  __begin_node_pointer __ptr_;
 
   _LIBCPP_HIDE_FROM_ABI __begin_node_pointer __get_begin() const {
     return static_cast<__begin_node_pointer>(static_cast<__void_pointer>(__ptr_));
