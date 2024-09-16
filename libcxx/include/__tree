@@ -566,11 +566,18 @@ struct __tree_node_base_types {
 
   typedef __tree_end_node<__node_base_pointer> __end_node_type;
   typedef __rebind_pointer_t<_VoidPtr, __end_node_type> __end_node_pointer;
-#if defined(_LIBCPP_ABI_TREE_REMOVE_NODE_POINTER_UB)
   typedef __end_node_pointer __parent_pointer;
-#else
-  typedef __conditional_t< is_pointer<__end_node_pointer>::value, __end_node_pointer, __node_base_pointer>
-      __parent_pointer;
+
+// TODO(LLVM 22): Remove this check
+#ifndef _LIBCPP_ABI_TREE_REMOVE_NODE_POINTER_UB
+  static_assert(sizeof(__node_base_pointer) == sizeof(__end_node_pointer) && _LIBCPP_ALIGNOF(__node_base_pointer) ==
+                    _LIBCPP_ALIGNOF(__end_node_pointer),
+                "It looks like you are using std::__tree (an implementation detail for (multi)map/set) with a fancy "
+                "pointer type that thas a different representation depending on whether it points to a __tree base "
+                "pointer or a __tree node pointer (both of which are implementation details of the standard library). "
+                "This means that your ABI is being broken between LLVM 19 and LLVM 20. If you don't care about your "
+                "ABI being broken, define the _LIBCPP_ABI_TREE_REMOVE_NODE_POINTER_UB macro to silence this "
+                "diagnostic.");
 #endif
 
 private:
@@ -605,12 +612,7 @@ public:
   typedef _Tp __node_value_type;
   typedef __rebind_pointer_t<_VoidPtr, __node_value_type> __node_value_type_pointer;
   typedef __rebind_pointer_t<_VoidPtr, const __node_value_type> __const_node_value_type_pointer;
-#if defined(_LIBCPP_ABI_TREE_REMOVE_NODE_POINTER_UB)
   typedef typename __base::__end_node_pointer __iter_pointer;
-#else
-  typedef __conditional_t< is_pointer<__node_pointer>::value, typename __base::__end_node_pointer, __node_pointer>
-      __iter_pointer;
-#endif
 
 private:
   static_assert(!is_const<__node_type>::value, "_NodePtr should never be a pointer to const");
