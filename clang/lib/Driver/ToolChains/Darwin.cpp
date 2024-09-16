@@ -3598,9 +3598,6 @@ SanitizerMask Darwin::getSupportedSanitizers() const {
     Res |= SanitizerKind::Thread;
   }
 
-  if (IsX86_64)
-    Res |= SanitizerKind::NumericalStability;
-
   return Res;
 }
 
