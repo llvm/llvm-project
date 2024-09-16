@@ -686,15 +686,15 @@ static Value *EmitSignBit(CodeGenFunction &CGF, Value *V) {
   return CGF.Builder.CreateICmpSLT(V, Zero);
 }
 
-static bool hasPointerArgsOrPointerReturnType(const Value *V) {
-  if (const CallBase *CB = dyn_cast<CallBase>(V)) {
-    for (const Value *A : CB->args()) {
-      if (A->getType()->isPointerTy()) {
-        return true;
+static bool hasPointerArgsOrPointerReturnType(Value *V) {
+  if (V) {
+    if (const CallBase *CB = dyn_cast<CallBase>(V)) {
+      for (const Value *A : CB->args()) {
+        if (A->getType()->isPointerTy())
+          return true;
       }
-    }
-    if (CB->getFunctionType()->getReturnType()->isPointerTy()) {
-      return true;
+      if (CB->getFunctionType()->getReturnType()->isPointerTy())
+        return true;
     }
   }
   return false;
@@ -713,17 +713,17 @@ static RValue emitLibraryCall(CodeGenFunction &CGF, const FunctionDecl *FD,
     bool ConstWithoutErrnoAndExceptions =
         Context.BuiltinInfo.isConstWithoutErrnoAndExceptions(BuiltinID);
     // Restrict to target with errno, for example, MacOS doesn't set errno.
-    bool CallWithPointerArgsOrPointerReturnType =
-        Call.isScalar() && Call.getScalarVal() &&
-        hasPointerArgsOrPointerReturnType(Call.getScalarVal());
-    if (ConstWithoutErrnoAndExceptions && CGF.CGM.getLangOpts().MathErrno &&
-        !CGF.Builder.getIsFPConstrained() && Call.isScalar() &&
-        !CallWithPointerArgsOrPointerReturnType) {
-      // Emit "int" TBAA metadata on FP math libcalls.
-      clang::QualType IntTy = Context.IntTy;
-      TBAAAccessInfo TBAAInfo = CGF.CGM.getTBAAAccessInfo(IntTy);
-      Instruction *Inst = cast<llvm::Instruction>(Call.getScalarVal());
-      CGF.CGM.DecorateInstructionWithTBAA(Inst, TBAAInfo);
+    if (Call.isScalar()) {
+      Value *Val = Call.getScalarVal();
+      if (ConstWithoutErrnoAndExceptions && CGF.CGM.getLangOpts().MathErrno &&
+          !CGF.Builder.getIsFPConstrained() &&
+          !hasPointerArgsOrPointerReturnType(Val)) {
+        // Emit "int" TBAA metadata on FP math libcalls.
+        clang::QualType IntTy = Context.IntTy;
+        TBAAAccessInfo TBAAInfo = CGF.CGM.getTBAAAccessInfo(IntTy);
+        Instruction *Inst = cast<llvm::Instruction>(Val);
+        CGF.CGM.DecorateInstructionWithTBAA(Inst, TBAAInfo);
+      }
     }
   }
   return Call;
