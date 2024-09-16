@@ -130,6 +130,7 @@
 #include "sanitizer_common/sanitizer_platform.h"
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+#include <psapi.h>
 
 namespace __interception {
 
@@ -385,7 +386,29 @@ void TestOnlyReleaseTrampolineRegions() {
   }
 }
 
-static uptr AllocateMemoryForTrampoline(uptr image_address, size_t size) {
+static uptr AllocateMemoryForTrampoline(uptr func_address, size_t size) {
+  uptr image_address = func_address;
+
+#if SANITIZER_WINDOWS64
+  // Since we may copy code to the trampoline which could reference data
+  // inside the original module, we really want the trampoline to be within
+  // 2 GB of not just the original function, but within 2 GB of that function's
+  // whole module. Since the allocated trampoline's address is always greater
+  // than image_address, we achieve this by setting image_address to the base
+  // address of the module, if we can find it (which is not the case if
+  // func_address is in mmap'ed memory for example).
+  HMODULE module;
+  if (::GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
+                           GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                           (LPCWSTR)func_address, &module)) {
+    MODULEINFO module_info;
+    if (::GetModuleInformation(::GetCurrentProcess(), module,
+                                &module_info, sizeof(module_info))) {
+      image_address = (uptr)module_info.lpBaseOfDll;
+    }
+  }
+#endif
+
   // Find a region within 2G with enough space to allocate |size| bytes.
   TrampolineMemoryRegion *region = nullptr;
   for (size_t bucket = 0; bucket < kMaxTrampolineRegion; ++bucket) {
