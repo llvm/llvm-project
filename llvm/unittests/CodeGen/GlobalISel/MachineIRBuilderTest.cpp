@@ -480,3 +480,27 @@ TEST_F(AArch64GISelMITest, BuildFPEnv) {
 
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
+
+TEST_F(AArch64GISelMITest, BuildExtractSubvector) {
+  setUp();
+  if (!TM)
+    GTEST_SKIP();
+
+  LLT VecTy = LLT::fixed_vector(4, 32);
+  LLT SubVecTy = LLT::fixed_vector(2, 32);
+  auto Vec = B.buildUndef(VecTy);
+  B.buildExtractSubvector(SubVecTy, Vec, 0);
+
+  VecTy = LLT::scalable_vector(4, 32);
+  Vec = B.buildUndef(VecTy);
+  B.buildExtractSubvector(VecTy, Vec, 0);
+
+  auto CheckStr = R"(
+  ; CHECK: [[DEF:%[0-9]+]]:_(<4 x s32>) = G_IMPLICIT_DEF
+  ; CHECK-NEXT: [[EXTRACT_SUBVECTOR:%[0-9]+]]:_(<2 x s32>) = G_EXTRACT_SUBVECTOR [[DEF]](<4 x s32>), 0
+  ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(<vscale x 4 x s32>) = G_IMPLICIT_DEF
+  ; CHECK-NEXT: [[EXTRACT_SUBVECTOR1:%[0-9]+]]:_(<vscale x 4 x s32>) = G_EXTRACT_SUBVECTOR [[DEF1]](<vscale x 4 x s32>), 0
+  )";
+
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
+}
