@@ -72,6 +72,10 @@ static FindArgsResult findArgs(const CallExpr *Call) {
   return Result;
 }
 
+// Returns `true` as `first` only if a nested call to `std::min` or
+// `std::max` was found. Checking if `FixItHint`s were generated is not enough,
+// as the explicit casts that the check introduces may be generated without a
+// nested `std::min` or `std::max` call.
 static std::pair<bool, SmallVector<FixItHint>>
 generateReplacements(const MatchFinder::MatchResult &Match,
                      const CallExpr *TopCall, const FindArgsResult &Result,
