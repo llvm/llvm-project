@@ -330,9 +330,8 @@ mlir::Value fir::FirOpBuilder::createHeapTemporary(
 }
 
 mlir::Value fir::FirOpBuilder::genStackSave(mlir::Location loc) {
-  mlir::DataLayout dataLayout(getModule());
   mlir::Type voidPtr = mlir::LLVM::LLVMPointerType::get(
-      getContext(), fir::factory::getAllocaAddressSpace(&dataLayout));
+      getContext(), fir::factory::getAllocaAddressSpace(&getDataLayout()));
   return create<mlir::LLVM::StackSaveOp>(loc, voidPtr);
 }
 
@@ -802,6 +801,15 @@ void fir::FirOpBuilder::setFastMathFlags(
     arithFMF = arithFMF | mlir::arith::FastMathFlags::arcp;
   }
   setFastMathFlags(arithFMF);
+}
+
+// Construction of an mlir::DataLayout is expensive so only do it on demand and
+// memoise it in the builder instance
+mlir::DataLayout &fir::FirOpBuilder::getDataLayout() {
+  if (dataLayout)
+    return *dataLayout;
+  dataLayout = std::make_unique<mlir::DataLayout>(getModule());
+  return *dataLayout;
 }
 
 //===--------------------------------------------------------------------===//

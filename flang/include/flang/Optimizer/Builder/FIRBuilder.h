@@ -29,6 +29,7 @@
 #include <utility>
 
 namespace mlir {
+class DataLayout;
 class SymbolTable;
 }
 
@@ -532,6 +533,9 @@ public:
     setCommonAttributes(op);
   }
 
+  /// Construct a data layout on demand and return it
+  mlir::DataLayout &getDataLayout();
+
 private:
   /// Set attributes (e.g. FastMathAttr) to \p op operation
   /// based on the current attributes setting.
@@ -546,6 +550,11 @@ private:
   /// fir::GlobalOp and func::FuncOp symbol table to speed-up
   /// lookups.
   mlir::SymbolTable *symbolTable = nullptr;
+
+  /// DataLayout constructed on demand. Access via getDataLayout().
+  /// Stored via a unique_ptr rather than an optional so as not to bloat this
+  /// class when most instances won't ever need a data layout.
+  std::unique_ptr<mlir::DataLayout> dataLayout = nullptr;
 };
 
 } // namespace fir
