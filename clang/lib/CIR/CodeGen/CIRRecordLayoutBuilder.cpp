@@ -689,8 +689,8 @@ CIRGenTypes::computeRecordLayout(const RecordDecl *D,
   // Fill in the struct *after* computing the base type.  Filling in the body
   // signifies that the type is no longer opaque and record layout is complete,
   // but we may need to recursively layout D while laying D out as a base type.
-  *Ty = Builder.getCompleteStructTy(
-      builder.fieldTypes, getRecordTypeName(D, ""), builder.isPacked, D);
+  auto astAttr = mlir::cir::ASTRecordDeclAttr::get(Ty->getContext(), D);
+  Ty->complete(builder.fieldTypes, builder.isPacked, astAttr);
 
   auto RL = std::make_unique<CIRGenRecordLayout>(
       Ty ? *Ty : mlir::cir::StructType{},

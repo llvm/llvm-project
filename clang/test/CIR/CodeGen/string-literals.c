@@ -17,7 +17,7 @@ struct {
 // CIR:  }> 
 
 // LLVM-LABEL: @literals
-// LLVM:  global %struct.anon.1 {
+// LLVM:  global %struct.anon.0 {
 // LLVM:    [10 x i8] c"1\00\00\00\00\00\00\00\00\00",
 // LLVM:    [10 x i8] zeroinitializer,
 // LLVM:    [10 x i8] zeroinitializer

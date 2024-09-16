@@ -28,9 +28,9 @@ typedef struct {
   unsigned b;
 } T;
 // CHECK: !ty_T = !cir.struct<struct "T" {!cir.int<u, 8>, !cir.int<u, 32>} #cir.record.decl.ast>
-// CHECK: !ty_anon2E1_ = !cir.struct<struct "anon.1" {!cir.int<u, 32>} #cir.record.decl.ast>
+// CHECK: !ty_anon2E0_ = !cir.struct<struct "anon.0" {!cir.int<u, 32>} #cir.record.decl.ast>
 // CHECK: !ty_S = !cir.struct<struct "S" {!cir.int<u, 32>, !cir.array<!cir.int<u, 8> x 3>, !cir.int<u, 16>, !cir.int<u, 32>}>
-// CHECK: !ty___long = !cir.struct<struct "__long" {!cir.struct<struct "anon.1" {!cir.int<u, 32>} #cir.record.decl.ast>, !cir.int<u, 32>, !cir.ptr<!cir.int<u, 32>>}>
+// CHECK: !ty___long = !cir.struct<struct "__long" {!cir.struct<struct "anon.0" {!cir.int<u, 32>} #cir.record.decl.ast>, !cir.int<u, 32>, !cir.ptr<!cir.int<u, 32>>}>
 
 // CHECK: cir.func @_Z11store_field
 // CHECK:   [[TMP0:%.*]] = cir.alloca !ty_S, !cir.ptr<!ty_S>

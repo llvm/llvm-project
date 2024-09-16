@@ -91,7 +91,7 @@ std::string CIRGenTypes::getRecordTypeName(const clang::RecordDecl *recordDecl,
   if (!suffix.empty())
     outStream << suffix;
 
-  return std::string(typeName);
+  return Builder.getUniqueRecordName(std::string(typeName));
 }
 
 /// Return true if the specified type is already completely laid out.

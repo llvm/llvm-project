@@ -356,10 +356,10 @@ folly::coro::Task<int> go4() {
 // CHECK: }
 
 // CHECK: %12 = cir.scope {
-// CHECK:   %17 = cir.alloca !ty_anon2E5_, !cir.ptr<!ty_anon2E5_>, ["ref.tmp1"] {alignment = 1 : i64}
+// CHECK:   %17 = cir.alloca !ty_anon2E2_, !cir.ptr<!ty_anon2E2_>, ["ref.tmp1"] {alignment = 1 : i64}
 
 // Get the lambda invoker ptr via `lambda operator folly::coro::Task<int> (*)(int const&)()`
-// CHECK:   %18 = cir.call @_ZZ3go4vENK3$_0cvPFN5folly4coro4TaskIiEERKiEEv(%17) : (!cir.ptr<!ty_anon2E5_>) -> !cir.ptr<!cir.func<![[IntTask]] (!cir.ptr<!s32i>)>>
+// CHECK:   %18 = cir.call @_ZZ3go4vENK3$_0cvPFN5folly4coro4TaskIiEERKiEEv(%17) : (!cir.ptr<!ty_anon2E2_>) -> !cir.ptr<!cir.func<![[IntTask]] (!cir.ptr<!s32i>)>>
 // CHECK:   %19 = cir.unary(plus, %18) : !cir.ptr<!cir.func<![[IntTask]] (!cir.ptr<!s32i>)>>, !cir.ptr<!cir.func<![[IntTask]] (!cir.ptr<!s32i>)>>
 // CHECK:   cir.yield %19 : !cir.ptr<!cir.func<![[IntTask]] (!cir.ptr<!s32i>)>>
 // CHECK: }

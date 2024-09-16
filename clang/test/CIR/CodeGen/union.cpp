@@ -7,14 +7,14 @@ typedef union { yolo y; struct { int *lifecnt; int genpad; }; } yolm2;
 typedef union { yolo y; struct { bool life; int genpad; }; } yolm3;
 
 // CHECK-DAG: !ty_U23A3ADummy = !cir.struct<struct "U2::Dummy" {!cir.int<s, 16>, !cir.float} #cir.record.decl.ast>
-// CHECK-DAG: !ty_anon2E5_ = !cir.struct<struct "anon.5" {!cir.bool, !cir.int<s, 32>} #cir.record.decl.ast>
-// CHECK-DAG: !ty_anon2E1_ = !cir.struct<struct "anon.1" {!cir.int<s, 32>} #cir.record.decl.ast>
+// CHECK-DAG: !ty_anon2E0_ = !cir.struct<struct "anon.0" {!cir.int<s, 32>} #cir.record.decl.ast>
+// CHECK-DAG: !ty_anon2E2_ = !cir.struct<struct "anon.2" {!cir.bool, !cir.int<s, 32>} #cir.record.decl.ast>
 // CHECK-DAG: !ty_yolo = !cir.struct<struct "yolo" {!cir.int<s, 32>} #cir.record.decl.ast>
-// CHECK-DAG: !ty_anon2E3_ = !cir.struct<struct "anon.3" {!cir.ptr<!cir.int<s, 32>>, !cir.int<s, 32>} #cir.record.decl.ast>
+// CHECK-DAG: !ty_anon2E1_ = !cir.struct<struct "anon.1" {!cir.ptr<!cir.int<s, 32>>, !cir.int<s, 32>} #cir.record.decl.ast>
 
-// CHECK-DAG: !ty_yolm = !cir.struct<union "yolm" {!cir.struct<struct "yolo" {!cir.int<s, 32>} #cir.record.decl.ast>, !cir.struct<struct "anon.1" {!cir.int<s, 32>} #cir.record.decl.ast>}>
-// CHECK-DAG: !ty_yolm3_ = !cir.struct<union "yolm3" {!cir.struct<struct "yolo" {!cir.int<s, 32>} #cir.record.decl.ast>, !cir.struct<struct "anon.5" {!cir.bool, !cir.int<s, 32>} #cir.record.decl.ast>}>
-// CHECK-DAG: !ty_yolm2_ = !cir.struct<union "yolm2" {!cir.struct<struct "yolo" {!cir.int<s, 32>} #cir.record.decl.ast>, !cir.struct<struct "anon.3" {!cir.ptr<!cir.int<s, 32>>, !cir.int<s, 32>} #cir.record.decl.ast>}>
+// CHECK-DAG: !ty_yolm = !cir.struct<union "yolm" {!cir.struct<struct "yolo" {!cir.int<s, 32>} #cir.record.decl.ast>, !cir.struct<struct "anon.0" {!cir.int<s, 32>} #cir.record.decl.ast>}>
+// CHECK-DAG: !ty_yolm3_ = !cir.struct<union "yolm3" {!cir.struct<struct "yolo" {!cir.int<s, 32>} #cir.record.decl.ast>, !cir.struct<struct "anon.2" {!cir.bool, !cir.int<s, 32>} #cir.record.decl.ast>}>
+// CHECK-DAG: !ty_yolm2_ = !cir.struct<union "yolm2" {!cir.struct<struct "yolo" {!cir.int<s, 32>} #cir.record.decl.ast>, !cir.struct<struct "anon.1" {!cir.ptr<!cir.int<s, 32>>, !cir.int<s, 32>} #cir.record.decl.ast>}>
 
 // Should generate a union type with all members preserved.
 union U {

@@ -57,25 +57,25 @@ const int i = 12;
 int i2 = i;
 struct { int i; } i3 = {i};
 // CHECK: cir.global external @i2 = #cir.int<12> : !s32i
-// CHECK: cir.global external @i3 = #cir.const_struct<{#cir.int<12> : !s32i}> : !ty_anon2E7_
+// CHECK: cir.global external @i3 = #cir.const_struct<{#cir.int<12> : !s32i}> : !ty_anon2E3_
 
 int a[10][10][10];
 int *a2 = &a[3][0][8];
 struct { int *p; } a3 = {&a[3][0][8]};
 // CHECK: cir.global external @a2 = #cir.global_view<@a, [3 : i32, 0 : i32, 8 : i32]> : !cir.ptr<!s32i>
-// CHECK: cir.global external @a3 = #cir.const_struct<{#cir.global_view<@a, [3 : i32, 0 : i32, 8 : i32]> : !cir.ptr<!s32i>}> : !ty_anon2E9_
+// CHECK: cir.global external @a3 = #cir.const_struct<{#cir.global_view<@a, [3 : i32, 0 : i32, 8 : i32]> : !cir.ptr<!s32i>}> : !ty_anon2E4_
 
 int p[10];
 int *p1 = &p[0];
 struct { int *x; } p2 = {&p[0]};
 // CHECK: cir.global external @p1 = #cir.global_view<@p> : !cir.ptr<!s32i>
-// CHECK: cir.global external @p2 = #cir.const_struct<{#cir.global_view<@p> : !cir.ptr<!s32i>}> : !ty_anon2E11_
+// CHECK: cir.global external @p2 = #cir.const_struct<{#cir.global_view<@p> : !cir.ptr<!s32i>}> : !ty_anon2E5_
 
 int q[10];
 int *q1 = q;
 struct { int *x; } q2 = {q};
 // CHECK: cir.global external @q1 = #cir.global_view<@q> : !cir.ptr<!s32i>
-// CHECK: cir.global external @q2 = #cir.const_struct<{#cir.global_view<@q> : !cir.ptr<!s32i>}> : !ty_anon2E13_
+// CHECK: cir.global external @q2 = #cir.const_struct<{#cir.global_view<@q> : !cir.ptr<!s32i>}> : !ty_anon2E6_
 
 int foo() {
     extern int optind;

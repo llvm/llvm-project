@@ -55,13 +55,13 @@ typedef struct {
 
 // CHECK: !ty_D = !cir.struct<struct "D" {!cir.int<u, 16>, !cir.int<s, 32>}>
 // CHECK: !ty_T = !cir.struct<struct "T" {!cir.int<u, 8>, !cir.int<u, 32>} #cir.record.decl.ast>
-// CHECK: !ty_anon2E1_ = !cir.struct<struct "anon.1" {!cir.int<u, 32>} #cir.record.decl.ast>
+// CHECK: !ty_anon2E0_ = !cir.struct<struct "anon.0" {!cir.int<u, 32>} #cir.record.decl.ast>
 // CHECK: !ty_anon_struct = !cir.struct<struct  {!cir.int<u, 8>, !cir.int<u, 8>, !cir.int<s, 32>}>
 // CHECK: #bfi_a = #cir.bitfield_info<name = "a", storage_type = !u8i, size = 3, offset = 0, is_signed = true>
 // CHECK: #bfi_e = #cir.bitfield_info<name = "e", storage_type = !u16i, size = 15, offset = 0, is_signed = true>
 // CHECK: !ty_S = !cir.struct<struct "S" {!cir.int<u, 32>, !cir.array<!cir.int<u, 8> x 3>, !cir.int<u, 16>, !cir.int<u, 32>}>
 // CHECK: !ty_U = !cir.struct<struct "U" {!cir.int<s, 8>, !cir.int<s, 8>, !cir.int<s, 8>, !cir.array<!cir.int<u, 8> x 9>}>
-// CHECK: !ty___long = !cir.struct<struct "__long" {!cir.struct<struct "anon.1" {!cir.int<u, 32>} #cir.record.decl.ast>, !cir.int<u, 32>, !cir.ptr<!cir.int<u, 32>>}>
+// CHECK: !ty___long = !cir.struct<struct "__long" {!cir.struct<struct "anon.0" {!cir.int<u, 32>} #cir.record.decl.ast>, !cir.int<u, 32>, !cir.ptr<!cir.int<u, 32>>}>
 // CHECK: #bfi_d = #cir.bitfield_info<name = "d", storage_type = !cir.array<!u8i x 3>, size = 2, offset = 17, is_signed = true>
 
 // CHECK: cir.func {{.*@store_field}}
