@@ -691,6 +691,19 @@ class DebugCommunication(object):
         for inst in instructions:
             self.disassembled_instructions[inst["address"]] = inst
 
+    def request_readMemory(self, memoryReference, offset, count):
+        args_dict = {
+            "memoryReference": memoryReference,
+            "offset": offset,
+            "count": count,
+        }
+        command_dict = {
+            "command": "readMemory",
+            "type": "request",
+            "arguments": args_dict,
+        }
+        return self.send_recv(command_dict)
+
     def request_evaluate(self, expression, frameIndex=0, threadId=None, context=None):
         stackFrame = self.get_stackFrame(frameIndex=frameIndex, threadId=threadId)
         if stackFrame is None:

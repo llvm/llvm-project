@@ -131,6 +131,13 @@ int64_t GetSigned(const llvm::json::Object *obj, llvm::StringRef key,
 ///     \b True if the key exists in the \a obj, \b False otherwise.
 bool ObjectContainsKey(const llvm::json::Object &obj, llvm::StringRef key);
 
+/// Encodes a memory reference
+std::string EncodeMemoryReference(lldb::addr_t addr);
+
+/// Decodes a memory reference
+std::optional<lldb::addr_t>
+DecodeMemoryReference(llvm::StringRef memoryReference);
+
 /// Extract an array of strings for the specified key from an object.
 ///
 /// String values in the array will be extracted without any quotes
