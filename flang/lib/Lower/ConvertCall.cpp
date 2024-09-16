@@ -368,22 +368,9 @@ std::pair<fir::ExtendedValue, bool> Fortran::lower::genCallOpAndResult(
 
     if (!extents.empty() || !lengths.empty()) {
       auto *bldr = &converter.getFirOpBuilder();
-      auto stackSaveFn = fir::factory::getLlvmStackSave(builder);
-      auto stackSaveSymbol = bldr->getSymbolRefAttr(stackSaveFn.getName());
-      mlir::Value sp;
-      fir::CallOp call = bldr->create<fir::CallOp>(
-          loc, stackSaveSymbol, stackSaveFn.getFunctionType().getResults(),
-          mlir::ValueRange{});
-      if (call.getNumResults() != 0)
-        sp = call.getResult(0);
-      stmtCtx.attachCleanup([bldr, loc, sp]() {
-        auto stackRestoreFn = fir::factory::getLlvmStackRestore(*bldr);
-        auto stackRestoreSymbol =
-            bldr->getSymbolRefAttr(stackRestoreFn.getName());
-        bldr->create<fir::CallOp>(loc, stackRestoreSymbol,
-                                  stackRestoreFn.getFunctionType().getResults(),
-                                  mlir::ValueRange{sp});
-      });
+      mlir::Value sp = bldr->genStackSave(loc);
+      stmtCtx.attachCleanup(
+          [bldr, loc, sp]() { bldr->genStackRestore(loc, sp); });
     }
     mlir::Value temp =
         builder.createTemporary(loc, type, ".result", extents, resultLengths);

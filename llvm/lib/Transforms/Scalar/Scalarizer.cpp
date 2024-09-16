@@ -36,6 +36,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -340,7 +341,32 @@ private:
   const unsigned ScalarizeMinBits;
 };
 
+class ScalarizerLegacyPass : public FunctionPass {
+public:
+  static char ID;
+  ScalarizerPassOptions Options;
+  ScalarizerLegacyPass() : FunctionPass(ID), Options() {}
+  ScalarizerLegacyPass(const ScalarizerPassOptions &Options);
+  bool runOnFunction(Function &F) override;
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
+};
+
 } // end anonymous namespace
+
+ScalarizerLegacyPass::ScalarizerLegacyPass(const ScalarizerPassOptions &Options)
+    : FunctionPass(ID), Options(Options) {}
+
+void ScalarizerLegacyPass::getAnalysisUsage(AnalysisUsage &AU) const {
+  AU.addRequired<DominatorTreeWrapperPass>();
+  AU.addPreserved<DominatorTreeWrapperPass>();
+}
+
+char ScalarizerLegacyPass::ID = 0;
+INITIALIZE_PASS_BEGIN(ScalarizerLegacyPass, "scalarizer",
+                      "Scalarize vector operations", false, false)
+INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
+INITIALIZE_PASS_END(ScalarizerLegacyPass, "scalarizer",
+                    "Scalarize vector operations", false, false)
 
 Scatterer::Scatterer(BasicBlock *bb, BasicBlock::iterator bbi, Value *v,
                      const VectorSplit &VS, ValueVector *cachePtr)
@@ -412,6 +438,19 @@ Value *Scatterer::operator[](unsigned Frag) {
   }
 
   return CV[Frag];
+}
+
+bool ScalarizerLegacyPass::runOnFunction(Function &F) {
+  if (skipFunction(F))
+    return false;
+
+  DominatorTree *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+  ScalarizerVisitor Impl(DT, Options);
+  return Impl.visit(F);
+}
+
+FunctionPass *llvm::createScalarizerPass(const ScalarizerPassOptions &Options) {
+  return new ScalarizerLegacyPass(Options);
 }
 
 bool ScalarizerVisitor::visit(Function &F) {

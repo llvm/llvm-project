@@ -1750,6 +1750,9 @@ bool GCNTargetMachine::parseMachineFunctionInfo(
                                            ? DenormalMode::IEEE
                                            : DenormalMode::PreserveSign;
 
+  if (YamlMFI.HasInitWholeWave)
+    MFI->setInitWholeWave();
+
   return false;
 }
 

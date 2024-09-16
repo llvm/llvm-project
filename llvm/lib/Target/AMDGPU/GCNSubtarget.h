@@ -1588,6 +1588,12 @@ public:
     return true;
   }
 
+  bool requiresDisjointEarlyClobberAndUndef() const override {
+    // AMDGPU doesn't care if early-clobber and undef operands are allocated
+    // to the same register.
+    return false;
+  }
+
   virtual void forEachLaunchBound(
       const Function &F,
       std::function<void(StringRef Name, unsigned Value)> Body) const override;

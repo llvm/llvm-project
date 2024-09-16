@@ -50,7 +50,7 @@ gpu.module @test_module_0 {
     %gDimZ = gpu.grid_dim z
 
 
-    // CHECK: = nvvm.read.ptx.sreg.laneid : i32
+    // CHECK: = nvvm.read.ptx.sreg.laneid range <i32, 0, 32> : i32
     // CHECK: = llvm.sext %{{.*}} : i32 to i64
     %laneId = gpu.lane_id
 
@@ -699,9 +699,21 @@ gpu.module @test_module_32 {
 }
 
 gpu.module @test_module_33 {
-// CHECK-LABEL: func @kernel_with_block_size()
-// CHECK: attributes {gpu.kernel, gpu.known_block_size = array<i32: 128, 1, 1>, nvvm.kernel, nvvm.maxntid = array<i32: 128, 1, 1>}
-  gpu.func @kernel_with_block_size() kernel attributes {known_block_size = array<i32: 128, 1, 1>} {
+// CHECK-LABEL: func @kernel_with_block_size(
+// CHECK: attributes {gpu.kernel, gpu.known_block_size = array<i32: 32, 4, 2>, nvvm.kernel, nvvm.maxntid = array<i32: 32, 4, 2>}
+  gpu.func @kernel_with_block_size(%arg0: !llvm.ptr) kernel attributes {known_block_size = array<i32: 32, 4, 2>} {
+    // CHECK: = nvvm.read.ptx.sreg.tid.x range <i32, 0, 32> : i32
+    %0 = gpu.thread_id x
+    // CHECK: = nvvm.read.ptx.sreg.tid.y range <i32, 0, 4> : i32
+    %1 = gpu.thread_id y
+    // CHECK: = nvvm.read.ptx.sreg.tid.z range <i32, 0, 2> : i32
+    %2 = gpu.thread_id z
+
+    // Fake usage to prevent dead code elimination
+    %3 = arith.addi %0, %1 : index
+    %4 = arith.addi %3, %2 : index
+    %5 = arith.index_cast %4 : index to i64
+    llvm.store %5, %arg0 : i64, !llvm.ptr
     gpu.return
   }
 }
@@ -914,6 +926,20 @@ gpu.module @test_module_48 {
     %result32Fast = math.exp %arg_f32 fastmath<ninf> : f32
     // CHECK: llvm.call @__nv_expf(%{{.*}}) : (f32) -> f32
     func.return %result32, %result64, %result32Fast : f32, f64, f32
+  }
+}
+
+gpu.module @test_module_49 {
+// CHECK-LABEL: func @explicit_id_bounds()
+  func.func @explicit_id_bounds() -> (index, index, index) {
+    // CHECK: = nvvm.read.ptx.sreg.tid.x range <i32, 0, 32> : i32
+    %0 = gpu.thread_id x upper_bound 32
+    // CHECK: = nvvm.read.ptx.sreg.ntid.x range <i32, 1, 33> : i32
+    %1 = gpu.block_dim x upper_bound 32
+    // CHECK: = nvvm.read.ptx.sreg.laneid range <i32, 0, 16> : i32
+    %2 = gpu.lane_id upper_bound 16
+
+    return %0, %1, %2 : index, index, index
   }
 }
 
