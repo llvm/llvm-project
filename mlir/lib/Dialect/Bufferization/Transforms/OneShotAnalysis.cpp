@@ -1299,7 +1299,7 @@ static void annotateOpsWithAliasSets(Operation *op,
       std::string buffer;
       llvm::raw_string_ostream stream(buffer);
       alias.printAsOperand(stream, asmState);
-      aliases.push_back(b.getStringAttr(stream.str()));
+      aliases.push_back(b.getStringAttr(buffer));
     });
     return b.getArrayAttr(aliases);
   };
