@@ -1397,8 +1397,6 @@ def err_modifier_expected_colon : Error<"missing ':' after %0 modifier">;
 // OpenCL errors.
 def err_opencl_taking_function_address_parser : Error<
   "taking address of function is not allowed">;
-def err_opencl_logical_exclusive_or : Error<
-  "^^ is a reserved operator in OpenCL">;
 
 // C++ for OpenCL.
 def err_openclcxx_virtual_function : Error<
