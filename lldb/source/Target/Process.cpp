@@ -6539,6 +6539,63 @@ static void AddRegion(const MemoryRegionInfo &region, bool try_dirty_pages,
                 CreateCoreFileMemoryRange(region));
 }
 
+static void AddRegisterSections(Process &process, ThreadSP &thread_sp, CoreFileMemoryRanges &ranges, lldb::addr_t range_end) {
+  lldb::RegisterContextSP reg_ctx = thread_sp->GetRegisterContext();
+  if (!reg_ctx)
+    return;
+
+  const RegisterInfo *reg_info = reg_ctx->GetRegisterInfo(lldb::RegisterKind::eRegisterKindGeneric, LLDB_REGNUM_GENERIC_TP);
+  if (!reg_info)
+    return;
+
+  lldb_private::RegisterValue reg_value;
+  bool success = reg_ctx->ReadRegister(reg_info, reg_value);
+  if (!success)
+    return;
+
+  const uint64_t fail_value = UINT64_MAX;
+  bool readSuccess = true;
+  const lldb::addr_t reg_value_addr = reg_value.GetAsUInt64(fail_value, &readSuccess);
+  if (!readSuccess || reg_value_addr == fail_value)
+    return;
+  
+  MemoryRegionInfo register_region;
+  Status err = process.GetMemoryRegionInfo(reg_value_addr, register_region);
+  if (err.Fail())
+    return;
+
+  // We already saved off this truncated stack range.
+  if (register_region.GetRange().GetRangeEnd() == range_end)
+    return;
+
+  // We don't need to worry about duplication because the CoreFileMemoryRanges
+  // will unique them
+  AddRegion(register_region, true, ranges);
+}
+
+static void AddModuleThreadLocalSections(Process &process, ThreadSP &thread_sp, CoreFileMemoryRanges &ranges, lldb::addr_t range_end) {
+  ModuleList &module_list = process.GetTarget().GetImages();
+  for (size_t idx = 0; idx < module_list.GetSize(); idx++) {
+    ModuleSP module_sp = module_list.GetModuleAtIndex(idx);
+    if (!module_sp)
+      continue;
+    // We want the entire section, so the offset is 0.
+    const lldb::addr_t tls_storage_addr = thread_sp->GetThreadLocalData(module_sp, 0);
+    if (tls_storage_addr == LLDB_INVALID_ADDRESS)
+      continue;
+    MemoryRegionInfo tls_storage_region;
+    Status err = process.GetMemoryRegionInfo(tls_storage_addr, tls_storage_region);
+    if (err.Fail())
+      continue;
+
+    // We already saved off this truncated stack range.
+    if (tls_storage_region.GetRange().GetRangeEnd() == range_end)
+      continue;
+
+    AddRegion(tls_storage_region, true, ranges);
+  }
+}
+
 static void SaveOffRegionsWithStackPointers(Process &process,
                                             const SaveCoreOptions &core_options,
                                             const MemoryRegionInfos &regions,
@@ -6570,11 +6627,17 @@ static void SaveOffRegionsWithStackPointers(Process &process,
       // off in other calls
       sp_region.GetRange().SetRangeBase(stack_head);
       sp_region.GetRange().SetByteSize(stack_size);
-      stack_ends.insert(sp_region.GetRange().GetRangeEnd());
+      const addr_t range_end = sp_region.GetRange().GetRangeEnd();
+      stack_ends.insert(range_end);
       // This will return true if the threadlist the user specified is empty,
       // or contains the thread id from thread_sp.
-      if (core_options.ShouldThreadBeSaved(thread_sp->GetID()))
+      if (core_options.ShouldThreadBeSaved(thread_sp->GetID())) {
         AddRegion(sp_region, try_dirty_pages, ranges);
+        // Add the register section if x86_64 and add the module tls data
+        // only if the range isn't the same as this truncated stack range.
+        AddRegisterSections(process, thread_sp, ranges, range_end);
+        AddModuleThreadLocalSections(process, thread_sp, ranges, range_end);
+      }
     }
   }
 }

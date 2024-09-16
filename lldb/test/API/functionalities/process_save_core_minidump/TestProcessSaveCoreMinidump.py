@@ -523,8 +523,10 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
         finally:
             self.assertTrue(self.dbg.DeleteTarget(target))
 
-    def minidump_deterministic_difference(self):
-        """Test that verifies that two minidumps produced are identical."""
+    @skipUnlessPlatform(["linux"])
+    @skipUnlessArch("x86_64")
+    def minidump_saves_fs_base_region(self):
+        """Test that verifies the minidump file saves region for fs_base"""
 
         self.build()
         exe = self.getBuildArtifact("a.out")
@@ -534,6 +536,37 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
                 None, None, self.get_process_working_directory()
             )
             self.assertState(process.GetState(), lldb.eStateStopped)
+            thread = process.GetThreadAtIndex(0)
+            custom_file = self.getBuildArtifact("core.reg_region.dmp")
+            options = lldb.SBSaveCoreOptions()
+            options.SetOutputFile(lldb.SBFileSpec(custom_file))
+            options.SetPluginName("minidump")
+            options.SetStyle(lldb.eSaveCoreCustomOnly)
+            options.AddThread(thread)
+            error = process.SaveCore(options)
+            self.assertTrue(error.Success())
+
+            registers = thread.GetFrameAtIndex(0).GetRegisters()
+            fs_base = registers.GetFirstValueByName("fs_base").GetValueAsUnsigned()
+            core_target = self.dbg.CreateTarget(None)
+            core_proc = core_target.LoadCore(one_region_file)
+            core_region_list = core_proc.GetMemoryRegions()
+            live_region_list = process.GetMemoryRegions()
+            live_region = lldb.SBMemoryRegionInfo()
+            live_region_list.GetMemoryRegionForAddress(fs_base, live_region)
+            core_region = lldb.SBMemoryRegionInfo()
+            error = core_region_list.GetMemoryRegionForAddress(fs_base, core_region)
+            self.assertTrue(error.Success())    
+            self.assertEqual(live_region, core_region)
+            
+        finally:
+            self.assertTrue(self.dbg.DeleteTarget(target))
+            self.assertTrue(self.dbg.DeleteTarget(core_target))
+            if os.path.isfile(custom_file):
+                os.unlink(custom_file)
+
+    def minidump_deterministic_difference(self):
+            """Test that verifies that two minidumps produced are identical."""
 
             core_styles = [
                 lldb.eSaveCoreStackOnly,
