@@ -347,7 +347,7 @@ static void print_persistent_callback_failure_check(int indent,
 		printf(fmt, 0);
 		printf(", '%s') and ", callback_name.c_str());
 		printf(fmt, 0);
-		printf(".%s['exc_info'] != None:\n", callback_name.c_str());
+		printf(".%s['exc_info'] is not None:\n", callback_name.c_str());
 		print_indent(indent, "    exc_info = ");
 		printf(fmt, 0);
 		printf(".%s['exc_info'][0]\n", callback_name.c_str());
