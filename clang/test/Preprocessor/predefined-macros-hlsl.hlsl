@@ -50,4 +50,7 @@
 // STD2021: #define __HLSL_VERSION 2021
 
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library %s -E -dM -o - -x hlsl -std=hlsl202x | FileCheck -match-full-lines %s --check-prefixes=STD202x
-// STD202x: #define __HLSL_VERSION 2029
+// STD202x: #define __HLSL_VERSION 2028
+
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library %s -E -dM -o - -x hlsl -std=hlsl202y | FileCheck -match-full-lines %s --check-prefixes=STD202y
+// STD202y: #define __HLSL_VERSION 2029
