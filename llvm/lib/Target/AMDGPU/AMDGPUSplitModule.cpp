@@ -488,7 +488,7 @@ void SplitGraph::Node::visitAllDependencies(
 /// \returns true if there was metadata and it was parsed correctly. false if
 /// there was no MD or if it contained unknown entries.
 static bool handleCalleesMD(const Instruction &I,
-                            SmallVector<Function *> &Callees) {
+                            SmallVectorImpl<Function *> &Callees) {
   auto *MD = I.getMetadata(LLVMContext::MD_callees);
   if (!MD)
     return false;
@@ -541,29 +541,32 @@ void SplitGraph::buildGraph(CallGraph &CG) {
                  dbgs() << " - analyzing function\n");
 
       SmallVector<Function *> KnownCallees;
-
-      bool HasIndirectCall = false;
+      bool HasUnknownIndirectCall = false;
       for (const auto &Inst : instructions(Fn)) {
         // look at all calls without a direct callee.
-        if (const auto *CB = dyn_cast<CallBase>(&Inst);
-            CB && !CB->getCalledFunction()) {
-          // inline assembly can be ignored, unless InlineAsmIsIndirectCall is
-          // true.
-          if (CB->isInlineAsm()) {
-            LLVM_DEBUG(dbgs() << "    found inline assembly\n");
-            continue;
-          }
+        const auto *CB = dyn_cast<CallBase>(&Inst);
+        if (!CB || CB->getCalledFunction())
+          continue;
 
-          if (handleCalleesMD(Inst, KnownCallees))
-            continue;
-
-          // everything else is handled conservatively.
-          HasIndirectCall = true;
-          break;
+        // inline assembly can be ignored, unless InlineAsmIsIndirectCall is
+        // true.
+        if (CB->isInlineAsm()) {
+          if (InlineAsmIsIndirectCall)
+            HasUnknownIndirectCall = true;
+          LLVM_DEBUG(dbgs() << "    found inline assembly\n");
+          continue;
         }
+
+        if (handleCalleesMD(Inst, KnownCallees))
+          continue;
+
+        // Everything else is handled conservatively. If we fall into the
+        // conservative case don't bother analyzing further.
+        HasUnknownIndirectCall = true;
+        break;
       }
 
-      if (HasIndirectCall) {
+      if (HasUnknownIndirectCall) {
         LLVM_DEBUG(dbgs() << "    indirect call found\n");
         FnsWithIndirectCalls.push_back(&Fn);
       } else if (!KnownCallees.empty())
