@@ -1594,9 +1594,10 @@ public:
     return false;
   }
 
-  virtual void forEachLaunchBound(
-      const Function &F,
-      std::function<void(StringRef Name, unsigned Value)> Body) const override;
+  virtual void
+  forEachLaunchBound(const Function &F,
+                     llvm::function_ref<void(StringRef Name, int64_t Value)>
+                         Body) const override;
 };
 
 class GCNUserSGPRUsageInfo {

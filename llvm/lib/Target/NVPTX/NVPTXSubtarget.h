@@ -120,9 +120,10 @@ public:
   NVPTXSubtarget &initializeSubtargetDependencies(StringRef CPU, StringRef FS);
   void ParseSubtargetFeatures(StringRef CPU, StringRef TuneCPU, StringRef FS);
 
-  virtual void forEachLaunchBound(
-      const Function &F,
-      std::function<void(StringRef Name, unsigned Value)> Body) const override;
+  virtual void
+  forEachLaunchBound(const Function &F,
+                     llvm::function_ref<void(StringRef Name, int64_t Value)>
+                         Body) const override;
 };
 
 } // End llvm namespace

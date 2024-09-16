@@ -713,7 +713,7 @@ unsigned GCNSubtarget::getNSAThreshold(const MachineFunction &MF) const {
 
 void GCNSubtarget::forEachLaunchBound(
     const Function &F,
-    std::function<void(StringRef Name, unsigned Value)> Body) const {
+    llvm::function_ref<void(StringRef Name, int64_t Value)> Body) const {
   auto AmdgpuMaxNumWorkgroups = getMaxNumWorkGroups(F);
   Body("AmdgpuMaxNumWorkgroupsX", AmdgpuMaxNumWorkgroups[0]);
   Body("AmdgpuMaxNumWorkgroupsY", AmdgpuMaxNumWorkgroups[1]);

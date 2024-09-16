@@ -73,7 +73,7 @@ bool NVPTXSubtarget::allowFP16Math() const {
 
 void NVPTXSubtarget::forEachLaunchBound(
     const Function &F,
-    std::function<void(StringRef Name, unsigned Value)> Body) const {
+    llvm::function_ref<void(StringRef Name, int64_t Value)> Body) const {
   unsigned Val;
   if (getMaxClusterRank(F, Val))
     Body("Maxclusterrank", Val);
