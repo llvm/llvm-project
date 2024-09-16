@@ -681,7 +681,7 @@ bool SemaHLSL::handleResourceTypeAttr(const ParsedAttr &AL) {
     A = HLSLResourceClassAttr::Create(getASTContext(), RC, AL.getLoc());
     break;
   }
-  
+
   case ParsedAttr::AT_HLSLROV:
     A = HLSLROVAttr::Create(getASTContext(), AL.getLoc());
     break;
@@ -695,7 +695,7 @@ bool SemaHLSL::handleResourceTypeAttr(const ParsedAttr &AL) {
       Diag(AL.getLoc(), diag::err_attribute_wrong_number_arguments) << AL << 1;
       return false;
     }
-    
+
     TypeSourceInfo *TSI = nullptr;
     QualType QT = SemaRef.GetTypeFromParser(AL.getTypeArg(), &TSI);
     assert(TSI && "no type source info for attribute argument");

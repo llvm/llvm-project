@@ -136,12 +136,11 @@ struct BuiltinTypeDeclBuilder {
     SmallVector<const Attr *> Attrs = {
         HLSLResourceClassAttr::CreateImplicit(Record->getASTContext(), RC),
         IsROV ? HLSLROVAttr::CreateImplicit(Record->getASTContext()) : nullptr,
-        RawBuffer ? HLSLRawBufferAttr::CreateImplicit(Record->getASTContext()) 
+        RawBuffer ? HLSLRawBufferAttr::CreateImplicit(Record->getASTContext())
                   : nullptr,
         ElementTypeInfo ? HLSLContainedTypeAttr::CreateImplicit(
                               Record->getASTContext(), ElementTypeInfo)
-                        : nullptr
-    };
+                        : nullptr};
     Attr *ResourceAttr =
         HLSLResourceAttr::CreateImplicit(Record->getASTContext(), RK);
     if (CreateHLSLAttributedResourceType(S, Ty, Attrs, AttributedResTy))
