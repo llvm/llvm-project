@@ -976,24 +976,26 @@ Instruction *InstCombinerImpl::foldPHIArgOpIntoPHI(PHINode &PN) {
   return NewCI;
 }
 
-/// Return true if this PHI node is only used by a PHI node cycle that is dead.
-static bool isDeadPHICycle(PHINode *PN,
-                           SmallPtrSetImpl<PHINode *> &PotentiallyDeadPHIs) {
-  if (PN->use_empty()) return true;
-  if (!PN->hasOneUse()) return false;
-
-  // Remember this node, and if we find the cycle, return.
-  if (!PotentiallyDeadPHIs.insert(PN).second)
-    return true;
-
-  // Don't scan crazily complex things.
-  if (PotentiallyDeadPHIs.size() == 16)
-    return false;
-
-  if (PHINode *PU = dyn_cast<PHINode>(PN->user_back()))
-    return isDeadPHICycle(PU, PotentiallyDeadPHIs);
-
-  return false;
+/// Return true if this PHI node is only used by a PHI node web that is dead.
+static bool isDeadPHIWeb(PHINode *PN) {
+  SmallVector<PHINode *, 16> Stack;
+  SmallPtrSet<PHINode *, 16> Visited;
+  Stack.push_back(PN);
+  while (!Stack.empty()) {
+    PHINode *Phi = Stack.pop_back_val();
+    if (!Visited.insert(Phi).second)
+      continue;
+    // Early stop if the set of PHIs is large
+    if (Visited.size() == 16)
+      return false;
+    for (User *Use : Phi->users()) {
+      PHINode *PhiUse = dyn_cast<PHINode>(Use);
+      if (!PhiUse)
+        return false;
+      Stack.push_back(PhiUse);
+    }
+  }
+  return true;
 }
 
 /// Return true if this phi node is always equal to NonPhiInVal.
@@ -1474,20 +1476,16 @@ Instruction *InstCombinerImpl::visitPHINode(PHINode &PN) {
     }
   }
 
-  // If this is a trivial cycle in the PHI node graph, remove it.  Basically, if
-  // this PHI only has a single use (a PHI), and if that PHI only has one use (a
-  // PHI)... break the cycle.
+  // If the phi is within a phi web, which is formed by the def-use chain
+  // of phis and all the phis in the web are only used in the other phis. In
+  // this case, these phis are dead. We can break the web by removing PN.
+  if (isDeadPHIWeb(&PN))
+    return replaceInstUsesWith(PN, PoisonValue::get(PN.getType()));
+
+  // Optimization when the phi only has one use
   if (PN.hasOneUse()) {
     if (foldIntegerTypedPHI(PN))
       return nullptr;
-
-    Instruction *PHIUser = cast<Instruction>(PN.user_back());
-    if (PHINode *PU = dyn_cast<PHINode>(PHIUser)) {
-      SmallPtrSet<PHINode*, 16> PotentiallyDeadPHIs;
-      PotentiallyDeadPHIs.insert(&PN);
-      if (isDeadPHICycle(PU, PotentiallyDeadPHIs))
-        return replaceInstUsesWith(PN, PoisonValue::get(PN.getType()));
-    }
 
     // If this phi has a single use, and if that use just computes a value for
     // the next iteration of a loop, delete the phi.  This occurs with unused
@@ -1495,6 +1493,7 @@ Instruction *InstCombinerImpl::visitPHINode(PHINode &PN) {
     // common case here is good because the only other things that catch this
     // are induction variable analysis (sometimes) and ADCE, which is only run
     // late.
+    Instruction *PHIUser = cast<Instruction>(PN.user_back());
     if (PHIUser->hasOneUse() &&
         (isa<BinaryOperator>(PHIUser) || isa<UnaryOperator>(PHIUser) ||
          isa<GetElementPtrInst>(PHIUser)) &&
