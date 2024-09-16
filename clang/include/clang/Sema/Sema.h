@@ -6403,6 +6403,9 @@ public:
     /// example, in a for-range initializer).
     bool InLifetimeExtendingContext = false;
 
+    /// Whether we should rebuild CXXDefaultArgExpr and CXXDefaultInitExpr.
+    bool RebuildDefaultArgOrDefaultInit = false;
+
     // When evaluating immediate functions in the initializer of a default
     // argument or default member initializer, this is the declaration whose
     // default initializer is being evaluated and the location of the call
@@ -7810,9 +7813,11 @@ public:
   }
 
   bool isInLifetimeExtendingContext() const {
-    assert(!ExprEvalContexts.empty() &&
-           "Must be in an expression evaluation context");
-    return ExprEvalContexts.back().InLifetimeExtendingContext;
+    return currentEvaluationContext().InLifetimeExtendingContext;
+  }
+
+  bool needsRebuildOfDefaultArgOrInit() const {
+    return currentEvaluationContext().RebuildDefaultArgOrDefaultInit;
   }
 
   bool isCheckingDefaultArgumentOrInitializer() const {
@@ -7852,18 +7857,6 @@ public:
       Res = Ctx.DelayedDefaultInitializationContext;
     }
     return Res;
-  }
-
-  /// keepInLifetimeExtendingContext - Pull down InLifetimeExtendingContext
-  /// flag from previous context.
-  void keepInLifetimeExtendingContext() {
-    if (ExprEvalContexts.size() > 2 &&
-        parentEvaluationContext().InLifetimeExtendingContext) {
-      auto &LastRecord = ExprEvalContexts.back();
-      auto &PrevRecord = parentEvaluationContext();
-      LastRecord.InLifetimeExtendingContext =
-          PrevRecord.InLifetimeExtendingContext;
-    }
   }
 
   DefaultedComparisonKind getDefaultedComparisonKind(const FunctionDecl *FD) {

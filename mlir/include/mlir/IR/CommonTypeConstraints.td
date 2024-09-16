@@ -198,7 +198,10 @@ class AllOfType<list<Type> allowedTypeList, string summary = "",
 class ConfinedType<Type type, list<Pred> predicates, string summary = "",
                    string cppType = type.cppType> : Type<
     And<!listconcat([type.predicate], !foreach(pred, predicates, pred))>,
-    summary, cppType>;
+    summary, cppType> {
+    Type baseType = type;
+    list<Pred> predicateList = predicates;
+}
 
 // Integer types.
 

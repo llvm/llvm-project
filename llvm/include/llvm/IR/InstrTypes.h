@@ -55,24 +55,26 @@ typedef unsigned ID;
 //===----------------------------------------------------------------------===//
 
 class UnaryInstruction : public Instruction {
+  constexpr static IntrusiveOperandsAllocMarker AllocMarker{1};
+
 protected:
   UnaryInstruction(Type *Ty, unsigned iType, Value *V, BasicBlock::iterator IB)
-      : Instruction(Ty, iType, &Op<0>(), 1, IB) {
+      : Instruction(Ty, iType, AllocMarker, IB) {
     Op<0>() = V;
   }
   UnaryInstruction(Type *Ty, unsigned iType, Value *V,
                    Instruction *IB = nullptr)
-    : Instruction(Ty, iType, &Op<0>(), 1, IB) {
+      : Instruction(Ty, iType, AllocMarker, IB) {
     Op<0>() = V;
   }
   UnaryInstruction(Type *Ty, unsigned iType, Value *V, BasicBlock *IAE)
-    : Instruction(Ty, iType, &Op<0>(), 1, IAE) {
+      : Instruction(Ty, iType, AllocMarker, IAE) {
     Op<0>() = V;
   }
 
 public:
   // allocate space for exactly one operand
-  void *operator new(size_t S) { return User::operator new(S, 1); }
+  void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
   void operator delete(void *Ptr) { User::operator delete(Ptr); }
 
   /// Transparently provide more efficient getOperand methods.
@@ -186,6 +188,8 @@ public:
 //===----------------------------------------------------------------------===//
 
 class BinaryOperator : public Instruction {
+  constexpr static IntrusiveOperandsAllocMarker AllocMarker{2};
+
   void AssertOK();
 
 protected:
@@ -199,7 +203,7 @@ protected:
 
 public:
   // allocate space for exactly two operands
-  void *operator new(size_t S) { return User::operator new(S, 2); }
+  void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
   void operator delete(void *Ptr) { User::operator delete(Ptr); }
 
   /// Transparently provide more efficient getOperand methods.
@@ -745,6 +749,8 @@ public:
 /// This class is the base class for the comparison instructions.
 /// Abstract base class of comparison instructions.
 class CmpInst : public Instruction {
+  constexpr static IntrusiveOperandsAllocMarker AllocMarker{2};
+
 public:
   /// This enumeration lists the possible predicates for CmpInst subclasses.
   /// Values in the range 0-31 are reserved for FCmpInst, while values in the
@@ -814,7 +820,7 @@ protected:
 
 public:
   // allocate space for exactly two operands
-  void *operator new(size_t S) { return User::operator new(S, 2); }
+  void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
   void operator delete(void *Ptr) { User::operator delete(Ptr); }
 
   /// Construct a compare instruction, given the opcode, the predicate and
@@ -2416,10 +2422,10 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(CallBase, Value)
 //===----------------------------------------------------------------------===//
 class FuncletPadInst : public Instruction {
 private:
-  FuncletPadInst(const FuncletPadInst &CPI);
+  FuncletPadInst(const FuncletPadInst &CPI, AllocInfo AllocInfo);
 
   explicit FuncletPadInst(Instruction::FuncletPadOps Op, Value *ParentPad,
-                          ArrayRef<Value *> Args, unsigned Values,
+                          ArrayRef<Value *> Args, AllocInfo AllocInfo,
                           const Twine &NameStr, InsertPosition InsertBefore);
 
   void init(Value *ParentPad, ArrayRef<Value *> Args, const Twine &NameStr);

@@ -124,6 +124,11 @@ class ConstantAggregateZero;
 class ConstantPointerNull;
 class PoisonValue;
 class BlockAddress;
+class DSOLocalEquivalent;
+class ConstantTokenNone;
+class GlobalValue;
+class GlobalObject;
+class GlobalIFunc;
 class Context;
 class Function;
 class Instruction;
@@ -325,6 +330,10 @@ protected:
   friend class UndefValue;            // For `Val`.
   friend class PoisonValue;           // For `Val`.
   friend class BlockAddress;          // For `Val`.
+  friend class GlobalValue;           // For `Val`.
+  friend class DSOLocalEquivalent;    // For `Val`.
+  friend class GlobalObject;          // For `Val`.
+  friend class GlobalIFunc;           // For `Val`.
 
   /// All values point to the context.
   Context &Ctx;
@@ -1114,6 +1123,253 @@ public:
 #endif
 };
 
+class GlobalValue : public Constant {
+protected:
+  GlobalValue(ClassID ID, llvm::GlobalValue *C, Context &Ctx)
+      : Constant(ID, C, Ctx) {}
+  friend class Context; // For constructor.
+
+public:
+  using LinkageTypes = llvm::GlobalValue::LinkageTypes;
+  /// For isa/dyn_cast.
+  static bool classof(const sandboxir::Value *From) {
+    switch (From->getSubclassID()) {
+    case ClassID::Function:
+    case ClassID::GlobalVariable:
+    case ClassID::GlobalAlias:
+    case ClassID::GlobalIFunc:
+      return true;
+    default:
+      return false;
+    }
+  }
+
+  unsigned getAddressSpace() const {
+    return cast<llvm::GlobalValue>(Val)->getAddressSpace();
+  }
+  bool hasGlobalUnnamedAddr() const {
+    return cast<llvm::GlobalValue>(Val)->hasGlobalUnnamedAddr();
+  }
+
+  /// Returns true if this value's address is not significant in this module.
+  /// This attribute is intended to be used only by the code generator and LTO
+  /// to allow the linker to decide whether the global needs to be in the symbol
+  /// table. It should probably not be used in optimizations, as the value may
+  /// have uses outside the module; use hasGlobalUnnamedAddr() instead.
+  bool hasAtLeastLocalUnnamedAddr() const {
+    return cast<llvm::GlobalValue>(Val)->hasAtLeastLocalUnnamedAddr();
+  }
+
+  using UnnamedAddr = llvm::GlobalValue::UnnamedAddr;
+
+  UnnamedAddr getUnnamedAddr() const {
+    return cast<llvm::GlobalValue>(Val)->getUnnamedAddr();
+  }
+  void setUnnamedAddr(UnnamedAddr V);
+
+  static UnnamedAddr getMinUnnamedAddr(UnnamedAddr A, UnnamedAddr B) {
+    return llvm::GlobalValue::getMinUnnamedAddr(A, B);
+  }
+
+  bool hasComdat() const { return cast<llvm::GlobalValue>(Val)->hasComdat(); }
+
+  // TODO: We need a SandboxIR Comdat if we want to implement getComdat().
+  using VisibilityTypes = llvm::GlobalValue::VisibilityTypes;
+  VisibilityTypes getVisibility() const {
+    return cast<llvm::GlobalValue>(Val)->getVisibility();
+  }
+  bool hasDefaultVisibility() const {
+    return cast<llvm::GlobalValue>(Val)->hasDefaultVisibility();
+  }
+  bool hasHiddenVisibility() const {
+    return cast<llvm::GlobalValue>(Val)->hasHiddenVisibility();
+  }
+  bool hasProtectedVisibility() const {
+    return cast<llvm::GlobalValue>(Val)->hasProtectedVisibility();
+  }
+  void setVisibility(VisibilityTypes V);
+
+  // TODO: Add missing functions.
+};
+
+class GlobalObject : public GlobalValue {
+protected:
+  GlobalObject(ClassID ID, llvm::GlobalObject *C, Context &Ctx)
+      : GlobalValue(ID, C, Ctx) {}
+  friend class Context; // For constructor.
+  Use getOperandUseInternal(unsigned OpIdx, bool Verify) const final {
+    return getOperandUseDefault(OpIdx, Verify);
+  }
+
+public:
+  unsigned getUseOperandNo(const Use &Use) const final {
+    return getUseOperandNoDefault(Use);
+  }
+  /// For isa/dyn_cast.
+  static bool classof(const sandboxir::Value *From) {
+    switch (From->getSubclassID()) {
+    case ClassID::Function:
+    case ClassID::GlobalVariable:
+    case ClassID::GlobalIFunc:
+      return true;
+    default:
+      return false;
+    }
+  }
+
+  /// FIXME: Remove this function once transition to Align is over.
+  uint64_t getAlignment() const {
+    return cast<llvm::GlobalObject>(Val)->getAlignment();
+  }
+
+  /// Returns the alignment of the given variable or function.
+  ///
+  /// Note that for functions this is the alignment of the code, not the
+  /// alignment of a function pointer.
+  MaybeAlign getAlign() const {
+    return cast<llvm::GlobalObject>(Val)->getAlign();
+  }
+
+  // TODO: Add missing: setAlignment(Align)
+
+  /// Sets the alignment attribute of the GlobalObject.
+  /// This method will be deprecated as the alignment property should always be
+  /// defined.
+  void setAlignment(MaybeAlign Align);
+
+  unsigned getGlobalObjectSubClassData() const {
+    return cast<llvm::GlobalObject>(Val)->getGlobalObjectSubClassData();
+  }
+
+  void setGlobalObjectSubClassData(unsigned V);
+
+  /// Check if this global has a custom object file section.
+  ///
+  /// This is more efficient than calling getSection() and checking for an empty
+  /// string.
+  bool hasSection() const {
+    return cast<llvm::GlobalObject>(Val)->hasSection();
+  }
+
+  /// Get the custom section of this global if it has one.
+  ///
+  /// If this global does not have a custom section, this will be empty and the
+  /// default object file section (.text, .data, etc) will be used.
+  StringRef getSection() const {
+    return cast<llvm::GlobalObject>(Val)->getSection();
+  }
+
+  /// Change the section for this global.
+  ///
+  /// Setting the section to the empty string tells LLVM to choose an
+  /// appropriate default object file section.
+  void setSection(StringRef S);
+
+  bool hasComdat() const { return cast<llvm::GlobalObject>(Val)->hasComdat(); }
+
+  // TODO: implement get/setComdat(), etc. once we have a sandboxir::Comdat.
+
+  // TODO: We currently don't support Metadata in sandboxir so all
+  // Metadata-related functions are missing.
+
+  using VCallVisibility = llvm::GlobalObject::VCallVisibility;
+
+  VCallVisibility getVCallVisibility() const {
+    return cast<llvm::GlobalObject>(Val)->getVCallVisibility();
+  }
+
+  /// Returns true if the alignment of the value can be unilaterally
+  /// increased.
+  ///
+  /// Note that for functions this is the alignment of the code, not the
+  /// alignment of a function pointer.
+  bool canIncreaseAlignment() const {
+    return cast<llvm::GlobalObject>(Val)->canIncreaseAlignment();
+  }
+};
+
+/// Provides API functions, like getIterator() and getReverseIterator() to
+/// GlobalIFunc, Function, GlobalVariable and GlobalAlias. In LLVM IR these are
+/// provided by ilist_node.
+template <typename GlobalT, typename LLVMGlobalT, typename ParentT,
+          typename LLVMParentT>
+class GlobalWithNodeAPI : public ParentT {
+  /// Helper for mapped_iterator.
+  struct LLVMGVToGV {
+    Context &Ctx;
+    LLVMGVToGV(Context &Ctx) : Ctx(Ctx) {}
+    GlobalT &operator()(LLVMGlobalT &LLVMGV) const;
+  };
+
+public:
+  GlobalWithNodeAPI(Value::ClassID ID, LLVMParentT *C, Context &Ctx)
+      : ParentT(ID, C, Ctx) {}
+
+  // TODO: Missing getParent(). Should be added once Module is available.
+
+  using iterator = mapped_iterator<
+      decltype(static_cast<LLVMGlobalT *>(nullptr)->getIterator()), LLVMGVToGV>;
+  using reverse_iterator = mapped_iterator<
+      decltype(static_cast<LLVMGlobalT *>(nullptr)->getReverseIterator()),
+      LLVMGVToGV>;
+  iterator getIterator() const {
+    auto *LLVMGV = cast<LLVMGlobalT>(this->Val);
+    LLVMGVToGV ToGV(this->Ctx);
+    return map_iterator(LLVMGV->getIterator(), ToGV);
+  }
+  reverse_iterator getReverseIterator() const {
+    auto *LLVMGV = cast<LLVMGlobalT>(this->Val);
+    LLVMGVToGV ToGV(this->Ctx);
+    return map_iterator(LLVMGV->getReverseIterator(), ToGV);
+  }
+};
+
+class GlobalIFunc final
+    : public GlobalWithNodeAPI<GlobalIFunc, llvm::GlobalIFunc, GlobalObject,
+                               llvm::GlobalObject> {
+  GlobalIFunc(llvm::GlobalObject *C, Context &Ctx)
+      : GlobalWithNodeAPI(ClassID::GlobalIFunc, C, Ctx) {}
+  friend class Context; // For constructor.
+
+public:
+  /// For isa/dyn_cast.
+  static bool classof(const sandboxir::Value *From) {
+    return From->getSubclassID() == ClassID::GlobalIFunc;
+  }
+
+  // TODO: Missing create() because we don't have a sandboxir::Module yet.
+
+  // TODO: Missing functions: copyAttributesFrom(), removeFromParent(),
+  // eraseFromParent()
+
+  void setResolver(Constant *Resolver);
+
+  Constant *getResolver() const;
+
+  // Return the resolver function after peeling off potential ConstantExpr
+  // indirection.
+  Function *getResolverFunction();
+  const Function *getResolverFunction() const {
+    return const_cast<GlobalIFunc *>(this)->getResolverFunction();
+  }
+
+  static bool isValidLinkage(LinkageTypes L) {
+    return llvm::GlobalIFunc::isValidLinkage(L);
+  }
+
+  // TODO: Missing applyAlongResolverPath().
+
+#ifndef NDEBUG
+  void verify() const override {
+    assert(isa<llvm::GlobalIFunc>(Val) && "Expected a GlobalIFunc!");
+  }
+  void dumpOS(raw_ostream &OS) const override {
+    dumpCommonPrefix(OS);
+    dumpCommonSuffix(OS);
+  }
+#endif
+};
+
 class BlockAddress final : public Constant {
   BlockAddress(llvm::BlockAddress *C, Context &Ctx)
       : Constant(ClassID::BlockAddress, C, Ctx) {}
@@ -1139,6 +1395,69 @@ public:
   static bool classof(const sandboxir::Value *From) {
     return From->getSubclassID() == ClassID::BlockAddress;
   }
+};
+
+class DSOLocalEquivalent final : public Constant {
+  DSOLocalEquivalent(llvm::DSOLocalEquivalent *C, Context &Ctx)
+      : Constant(ClassID::DSOLocalEquivalent, C, Ctx) {}
+  friend class Context; // For constructor.
+
+public:
+  /// Return a DSOLocalEquivalent for the specified global value.
+  static DSOLocalEquivalent *get(GlobalValue *GV);
+
+  GlobalValue *getGlobalValue() const;
+
+  /// For isa/dyn_cast.
+  static bool classof(const sandboxir::Value *From) {
+    return From->getSubclassID() == ClassID::DSOLocalEquivalent;
+  }
+
+  unsigned getUseOperandNo(const Use &Use) const final {
+    llvm_unreachable("DSOLocalEquivalent has no operands!");
+  }
+
+#ifndef NDEBUG
+  void verify() const override {
+    assert(isa<llvm::DSOLocalEquivalent>(Val) &&
+           "Expected a DSOLocalEquivalent!");
+  }
+  void dumpOS(raw_ostream &OS) const override {
+    dumpCommonPrefix(OS);
+    dumpCommonSuffix(OS);
+  }
+#endif
+};
+
+// TODO: This should inherit from ConstantData.
+class ConstantTokenNone final : public Constant {
+  ConstantTokenNone(llvm::ConstantTokenNone *C, Context &Ctx)
+      : Constant(ClassID::ConstantTokenNone, C, Ctx) {}
+  friend class Context; // For constructor.
+
+public:
+  /// Return the ConstantTokenNone.
+  static ConstantTokenNone *get(Context &Ctx);
+
+  /// For isa/dyn_cast.
+  static bool classof(const sandboxir::Value *From) {
+    return From->getSubclassID() == ClassID::ConstantTokenNone;
+  }
+
+  unsigned getUseOperandNo(const Use &Use) const final {
+    llvm_unreachable("ConstantTokenNone has no operands!");
+  }
+
+#ifndef NDEBUG
+  void verify() const override {
+    assert(isa<llvm::ConstantTokenNone>(Val) &&
+           "Expected a ConstantTokenNone!");
+  }
+  void dumpOS(raw_ostream &OS) const override {
+    dumpCommonPrefix(OS);
+    dumpCommonSuffix(OS);
+  }
+#endif
 };
 
 /// Iterator for `Instruction`s in a `BasicBlock.
@@ -1324,6 +1643,14 @@ public:
   void moveAfter(Instruction *After) {
     moveBefore(*After->getParent(), std::next(After->getIterator()));
   }
+  // TODO: This currently relies on LLVM IR Instruction::comesBefore which is
+  // can be linear-time.
+  /// Given an instruction Other in the same basic block as this instruction,
+  /// return true if this instruction comes before Other.
+  bool comesBefore(const Instruction *Other) const {
+    return cast<llvm::Instruction>(Val)->comesBefore(
+        cast<llvm::Instruction>(Other->Val));
+  }
   /// \Returns the BasicBlock containing this Instruction, or null if it is
   /// detached.
   BasicBlock *getParent() const;
@@ -1506,6 +1833,10 @@ public:
   static Value *create(Value *Cond, Value *True, Value *False,
                        BasicBlock *InsertAtEnd, Context &Ctx,
                        const Twine &Name = "");
+
+  const Value *getCondition() const { return getOperand(0); }
+  const Value *getTrueValue() const { return getOperand(1); }
+  const Value *getFalseValue() const { return getOperand(2); }
   Value *getCondition() { return getOperand(0); }
   Value *getTrueValue() { return getOperand(1); }
   Value *getFalseValue() { return getOperand(2); }
@@ -1513,7 +1844,16 @@ public:
   void setCondition(Value *New) { setOperand(0, New); }
   void setTrueValue(Value *New) { setOperand(1, New); }
   void setFalseValue(Value *New) { setOperand(2, New); }
-  void swapValues() { cast<llvm::SelectInst>(Val)->swapValues(); }
+  void swapValues();
+
+  /// Return a string if the specified operands are invalid for a select
+  /// operation, otherwise return null.
+  static const char *areInvalidOperands(Value *Cond, Value *True,
+                                        Value *False) {
+    return llvm::SelectInst::areInvalidOperands(Cond->Val, True->Val,
+                                                False->Val);
+  }
+
   /// For isa/dyn_cast.
   static bool classof(const Value *From);
 };
@@ -3800,8 +4140,9 @@ protected:
   friend class PointerType; // For LLVMCtx.
   friend class CmpInst; // For LLVMCtx. TODO: cleanup when sandboxir::VectorType
                         // is complete
-  friend class IntegerType; // For LLVMCtx.
-  friend class StructType;  // For LLVMCtx.
+  friend class IntegerType;   // For LLVMCtx.
+  friend class StructType;    // For LLVMCtx.
+  friend class TargetExtType; // For LLVMCtx.
   Tracker IRTracker;
 
   /// Maps LLVM Value to the corresponding sandboxir::Value. Owns all
@@ -3971,7 +4312,8 @@ public:
   size_t getNumValues() const { return LLVMValueToValueMap.size(); }
 };
 
-class Function : public Constant {
+class Function : public GlobalWithNodeAPI<Function, llvm::Function,
+                                          GlobalObject, llvm::GlobalObject> {
   /// Helper for mapped_iterator.
   struct LLVMBBToBB {
     Context &Ctx;
@@ -3982,7 +4324,7 @@ class Function : public Constant {
   };
   /// Use Context::createFunction() instead.
   Function(llvm::Function *F, sandboxir::Context &Ctx)
-      : Constant(ClassID::Function, F, Ctx) {}
+      : GlobalWithNodeAPI(ClassID::Function, F, Ctx) {}
   friend class Context; // For constructor.
 
 public:

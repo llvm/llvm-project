@@ -6249,7 +6249,7 @@ struct AAAddressSpace : public StateWrapper<BooleanState, AbstractAttribute> {
   /// Return the address space of the associated value. \p NoAddressSpace is
   /// returned if the associated value is dead. This functions is not supposed
   /// to be called if the AA is invalid.
-  virtual int32_t getAddressSpace() const = 0;
+  virtual uint32_t getAddressSpace() const = 0;
 
   /// Create an abstract attribute view for the position \p IRP.
   static AAAddressSpace &createForPosition(const IRPosition &IRP,
@@ -6268,7 +6268,7 @@ struct AAAddressSpace : public StateWrapper<BooleanState, AbstractAttribute> {
   }
 
   // No address space which indicates the associated value is dead.
-  static const int32_t NoAddressSpace = -1;
+  static const uint32_t NoAddressSpace = ~0U;
 
   /// Unique ID (due to the unique address)
   static const char ID;
