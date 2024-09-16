@@ -1788,7 +1788,8 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     }
 
     auto SrcMinLen = SrcTy.getElementCount().getKnownMinValue();
-    if (Idx < SrcMinLen && Idx + DstMinLen <= SrcMinLen) {
+    if (SrcTy.isScalable() && DstTy.isScalable() &&
+        (Idx >= SrcMinLen || Idx + DstMinLen > SrcMinLen)) {
       report("Source type and index must not cause extract to overrun to the "
              "destination type",
              MI);
