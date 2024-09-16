@@ -168,8 +168,12 @@ MemprofThread *CreateMainThread() {
 // OS-specific implementations that need more information passed through.
 void MemprofThread::SetThreadStackAndTls(const InitOptions *options) {
   DCHECK_EQ(options, nullptr);
-  GetThreadStackAndTls(tid() == kMainTid, &stack_bottom_, &stack_top_,
-                       &tls_begin_, &tls_end_);
+  uptr tls_size = 0;
+  uptr stack_size = 0;
+  GetThreadStackAndTls(tid() == kMainTid, &stack_bottom_, &stack_size,
+                       &tls_begin_, &tls_size);
+  stack_top_ = stack_bottom_ + stack_size;
+  tls_end_ = tls_begin_ + tls_size;
   dtls_ = DTLS_Get();
 
   if (stack_top_ != stack_bottom_) {
