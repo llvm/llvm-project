@@ -58,7 +58,7 @@ struct LLVM_LIBRARY_VISIBILITY Shape {
   SmallVector<CoroAwaitSuspendInst *, 4> CoroAwaitSuspends;
   SmallVector<CallInst *, 2> SymmetricTransfers;
 
-  // Values invalidated by invalidateCoroutine() and tidyCoroutine()
+  // Values invalidated by invalidateCoroutine() and cleanCoroutine()
   SmallVector<CoroFrameInst *, 8> CoroFrames;
   SmallVector<CoroSaveInst *, 2> UnusedCoroSaves;
 
@@ -91,7 +91,7 @@ struct LLVM_LIBRARY_VISIBILITY Shape {
   // Perform ABI related initial transformation
   void initABI();
   // Remove orphaned and unnecessary intrinsics
-  void tidyCoroutine();
+  void cleanCoroutine();
 
   // Field indexes for special fields in the switch lowering.
   struct SwitchFieldIndex {
@@ -277,7 +277,7 @@ struct LLVM_LIBRARY_VISIBILITY Shape {
       return;
     }
     initABI();
-    tidyCoroutine();
+    cleanCoroutine();
   }
 };
 

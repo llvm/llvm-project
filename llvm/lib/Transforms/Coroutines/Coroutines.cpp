@@ -292,8 +292,8 @@ void coro::Shape::analyze(Function &F) {
 
   // Determination of ABI and initializing lowering info
   auto Id = CoroBegin->getId();
-  auto IntrID = Id->getIntrinsicID();
-  if (IntrID == Intrinsic::coro_id) {
+  switch (auto IntrID = Id->getIntrinsicID()) {
+  case Intrinsic::coro_id: {
     ABI = coro::ABI::Switch;
     SwitchLowering.HasFinalSuspend = HasFinalSuspend;
     SwitchLowering.HasUnwindCoroEnd = HasUnwindCoroEnd;
@@ -307,7 +307,9 @@ void coro::Shape::analyze(Function &F) {
     if (SwitchLowering.HasFinalSuspend &&
         FinalSuspendIndex != CoroSuspends.size() - 1)
       std::swap(CoroSuspends[FinalSuspendIndex], CoroSuspends.back());
-  } else if (IntrID == Intrinsic::coro_id_async) {
+    break;
+  }
+  case Intrinsic::coro_id_async: {
     ABI = coro::ABI::Async;
     auto *AsyncId = getAsyncCoroId();
     AsyncId->checkWellFormed();
@@ -317,8 +319,10 @@ void coro::Shape::analyze(Function &F) {
     AsyncLowering.ContextAlignment = AsyncId->getStorageAlignment().value();
     AsyncLowering.AsyncFuncPointer = AsyncId->getAsyncFunctionPointer();
     AsyncLowering.AsyncCC = F.getCallingConv();
-  } else if (IntrID == Intrinsic::coro_id_retcon ||
-             IntrID == Intrinsic::coro_id_retcon_once) {
+    break;
+  }
+  case Intrinsic::coro_id_retcon:
+  case Intrinsic::coro_id_retcon_once: {
     ABI = IntrID == Intrinsic::coro_id_retcon ? coro::ABI::Retcon
                                               : coro::ABI::RetconOnce;
     auto ContinuationId = getRetconCoroId();
@@ -329,7 +333,9 @@ void coro::Shape::analyze(Function &F) {
     RetconLowering.Dealloc = ContinuationId->getDeallocFunction();
     RetconLowering.ReturnBlock = nullptr;
     RetconLowering.IsFrameInlineInStorage = false;
-  } else {
+    break;
+  }
+  default:
     llvm_unreachable("coro.begin is not dependent on a coro.id call");
   }
 }
@@ -345,6 +351,7 @@ void coro::Shape::invalidateCoroutine(Function &F) {
       CF->replaceAllUsesWith(Undef);
       CF->eraseFromParent();
     }
+    CoroFrames.clear();
 
     // Replace all coro.suspend with undef and remove related coro.saves if
     // present.
@@ -354,6 +361,7 @@ void coro::Shape::invalidateCoroutine(Function &F) {
       if (auto *CoroSave = CS->getCoroSave())
         CoroSave->eraseFromParent();
     }
+    CoroSuspends.clear();
 
     // Replace all coro.ends with unreachable instruction.
     for (AnyCoroEndInst *CE : CoroEnds)
@@ -466,16 +474,18 @@ void coro::Shape::initABI() {
   }
 }
 
-void coro::Shape::tidyCoroutine() {
-  // The coro.free intrinsic is always lowered to the result of coro.begin.
+void coro::Shape::cleanCoroutine() {
+  // The coro.frame intrinsic is always lowered to the result of coro.begin.
   for (CoroFrameInst *CF : CoroFrames) {
     CF->replaceAllUsesWith(CoroBegin);
     CF->eraseFromParent();
   }
+  CoroFrames.clear();
 
   // Remove orphaned coro.saves.
   for (CoroSaveInst *CoroSave : UnusedCoroSaves)
     CoroSave->eraseFromParent();
+  UnusedCoroSaves.clear();
 }
 
 static void propagateCallAttrsFromCallee(CallInst *Call, Function *Callee) {
