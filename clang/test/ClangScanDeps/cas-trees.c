@@ -83,13 +83,13 @@
 // COMBINED:      remark: compile job cache miss for '[[T1_CACHE_KEY]]'
 // COMBINED-NEXT: remark: compile job cache miss for '[[T2_CACHE_KEY]]'
 
-// RUN: clang-scan-deps -compilation-database %t/cdb.json -cas-path %t/cas -format experimental-tree -emit-cas-compdb | FileCheck %s -DPREFIX=%/t -check-prefix=COMPDB
+// RUN: clang-scan-deps -compilation-database %t/cdb.json -cas-path %t/cas -format experimental-tree -emit-cas-compdb | FileCheck %s -DPREFIX=%/t -DCLANG=%clang -check-prefix=COMPDB
 // COMPDB: [
 // COMPDB:   {
 // COMPDB:     "file": "[[PREFIX]]/t1.c",
 // COMPDB:     "directory": "[[PREFIX]]",
 // COMPDB:     "arguments": [
-// COMPDB:       "clang",
+// COMPDB:       "[[CLANG]]",
 // COMPDB:       "-cc1",
 // COMPDB:       "-fcas-path",
 // COMPDB:       "[[PREFIX]]/cas",
