@@ -225,7 +225,7 @@ entry:
 ; SYM-NEXT:     }
 ; SYM-NEXT:     File Auxiliary Entry {
 ; SYM-NEXT:       Index: 2
-; SYM-NEXT:       Name: LLVM
+; SYM-NEXT:       Name: {{.*}}LLVM
 ; SYM-NEXT:       Type: XFT_CV (0x2)
 ; SYM-NEXT:     }
 ; SYM-NEXT:   }

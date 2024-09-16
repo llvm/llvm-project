@@ -140,7 +140,7 @@ Lsection_abbrev:
 	.byte	5                               ; DW_FORM_data2
 	.ascii	"\211|"                         ; DW_AT_LLVM_ptrauth_authenticates_null_values
 	.byte	25                              ; DW_FORM_flag_present
-	.ascii	"\212|"                         ; DW_AT_LLVM_ptrauth_authentication_mode
+	.ascii	"\217|"                         ; DW_AT_LLVM_ptrauth_authentication_mode
 	.byte	11                              ; DW_FORM_data1
 	.byte	0                               ; EOM(1)
 	.byte	0                               ; EOM(2)
@@ -159,7 +159,7 @@ Lsection_abbrev:
 	.byte	25                              ; DW_FORM_flag_present
 	.ascii	"\211|"                         ; DW_AT_LLVM_ptrauth_authenticates_null_values
 	.byte	25                              ; DW_FORM_flag_present
-	.ascii	"\212|"                         ; DW_AT_LLVM_ptrauth_authentication_mode
+	.ascii	"\217|"                         ; DW_AT_LLVM_ptrauth_authentication_mode
 	.byte	11                              ; DW_FORM_data1
 	.byte	0                               ; EOM(1)
 	.byte	0                               ; EOM(2)

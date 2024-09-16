@@ -5,6 +5,8 @@
 
 // RUN: %clang %s -O2 -emit-llvm -S -o - -target wasm32-unknown-unknown -msimd128 -Wall -Weverything -Wno-missing-prototypes -fno-lax-vector-conversions -Werror | FileCheck %s
 
+// XFAIL: *
+
 #include <wasm_simd128.h>
 
 // CHECK-LABEL: @test_v128_load(

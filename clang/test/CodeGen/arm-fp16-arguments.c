@@ -2,8 +2,6 @@
 // RUN: %clang_cc1 -triple armv7a--none-eabi -target-abi aapcs -mfloat-abi hard -emit-llvm -o - -O2 %s | FileCheck %s --check-prefix=CHECK --check-prefix=HARD
 // RUN: %clang_cc1 -triple armv7a--none-eabi -target-abi aapcs -mfloat-abi soft -fnative-half-arguments-and-returns -emit-llvm -o - -O2 %s | FileCheck %s --check-prefix=CHECK --check-prefix=NATIVE
 
-// XFAIL: *
-
 __fp16 g;
 
 void t1(__fp16 a) { g = a; }

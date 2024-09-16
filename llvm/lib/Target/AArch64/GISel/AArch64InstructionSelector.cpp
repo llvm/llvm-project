@@ -6873,8 +6873,8 @@ bool AArch64InstructionSelector::selectPtrAuthGlobalValue(
         "constant discriminator in ptrauth global out of range [0, 0xffff]");
 
   // Choosing between 3 lowering alternatives is target-specific.
-  if (!STI.isTargetELF())
-    report_fatal_error("ptrauth global lowering is only implemented for ELF");
+  if (!STI.isTargetELF() && !STI.isTargetMachO())
+    report_fatal_error("ptrauth global lowering only supported on MachO/ELF");
 
   if (!MRI.hasOneDef(Addr))
     return false;

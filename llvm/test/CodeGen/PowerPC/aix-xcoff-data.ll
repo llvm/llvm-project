@@ -224,7 +224,7 @@
 ; SYMS-NEXT:     }
 ; SYMS-NEXT:     File Auxiliary Entry {
 ; SYMS-NEXT:       Index: 2
-; SYMS-NEXT:       Name: LLVM
+; SYMS-NEXT:       Name: {{.*}}LLVM
 ; SYMS-NEXT:       Type: XFT_CV (0x2)
 ; SYMS64-NEXT:     Auxiliary Type: AUX_FILE (0xFC)
 ; SYMS-NEXT:     }

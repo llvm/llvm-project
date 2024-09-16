@@ -642,6 +642,7 @@ HANDLE_DW_AT(0x3e0b, LLVM_lane_pc, 0, LLVM)
 HANDLE_DW_AT(0x3e0c, LLVM_vector_size, 0, LLVM)
 HANDLE_DW_AT(0x3e0d, LLVM_memory_space, 0, LLVM)
 HANDLE_DW_AT(0x3e0e, LLVM_address_space, 0, LLVM)
+HANDLE_DW_AT(0x3e0f, LLVM_ptrauth_authentication_mode, 0, LLVM)
 
 // https://www.llvm.org/docs/AMDGPUDwarfExtensionsForHeterogeneousDebugging.html#a-7-15-memory-space-encodings
 HANDLE_DW_MSPACE(0x0, none)
@@ -657,7 +658,6 @@ HANDLE_DW_ASPACE_PRED(0x2, AMDGPU_region, SELECT_AMDGPU)
 HANDLE_DW_ASPACE_PRED(0x3, AMDGPU_local, SELECT_AMDGPU)
 HANDLE_DW_ASPACE_PRED(0x5, AMDGPU_private_lane, SELECT_AMDGPU)
 HANDLE_DW_ASPACE_PRED(0x6, AMDGPU_private_wave, SELECT_AMDGPU)
-HANDLE_DW_AT(0x3e0f, LLVM_ptrauth_authentication_mode, 0, LLVM)
 
 // Apple extensions.
 

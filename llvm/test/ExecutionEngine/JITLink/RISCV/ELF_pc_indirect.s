@@ -1,4 +1,3 @@
-# XFAIL: *
 # RUN: rm -rf %t && mkdir -p %t
 # RUN: llvm-mc -triple=riscv64 -position-independent -filetype=obj \
 # RUN:     -o %t/elf_riscv64_sm_pic_reloc.o %s

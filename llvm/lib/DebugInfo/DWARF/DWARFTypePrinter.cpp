@@ -143,6 +143,9 @@ DWARFTypePrinter::appendUnqualifiedNameBefore(DWARFDie D,
     Word = false;
     break;
   }
+  case DW_TAG_LLVM_ptrauth_type:
+    appendQualifiedNameBefore(Inner());
+    break;
   case DW_TAG_const_type:
   case DW_TAG_volatile_type:
     appendConstVolatileQualifierBefore(D);
@@ -237,7 +240,6 @@ void DWARFTypePrinter::appendUnqualifiedNameAfter(
                                    DW_TAG_ptr_to_member_type);
     break;
   }
-#if 0 // seems to be missing upstream patches
   case DW_TAG_LLVM_ptrauth_type: {
     auto getValOrNull = [&](dwarf::Attribute Attr) -> uint64_t {
       if (auto Form = D.find(Attr))
@@ -282,7 +284,6 @@ void DWARFTypePrinter::appendUnqualifiedNameAfter(
     OS << PtrauthStream.str();
     break;
   }
-#endif //>>>>>>> 41bdb8cd36388ccd0c020798a7b9ce9014af753c
     /*
   case DW_TAG_structure_type:
   case DW_TAG_class_type:

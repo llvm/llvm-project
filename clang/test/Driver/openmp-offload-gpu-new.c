@@ -5,6 +5,7 @@
 // REQUIRES: x86-registered-target
 // REQUIRES: nvptx-registered-target
 // REQUIRES: amdgpu-registered-target
+// REQUIRES: host-supports-cuda
 
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp -fopenmp-targets=nvptx64-nvidia-cuda \
 // RUN:          --no-opaque-offload-linker -Xopenmp-target=nvptx64-nvidia-cuda -march=sm_52 \

@@ -1,8 +1,6 @@
 // RUN: %clang_cc1 -emit-llvm -o - -triple arm-arm-none-eabi %s | FileCheck %s
 // RUN: %clang_cc1 -emit-llvm -o - -triple aarch64 %s | FileCheck %s
 
-// XFAIL: *
-
 // Test name-mangling of __fp16 passed directly as a function argument
 // (when that is permitted).
 
