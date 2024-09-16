@@ -29,9 +29,6 @@
 // NEWPM-O3: Running pass: ForceFunctionAttrsPass
 // NEWPM-O3: Running pass: GCOVProfilerPass
 
-// Check for gcov initialization function pointers.
-// CHECK-XCOFF: @__llvm_covinit_functions = private constant { ptr, ptr } { ptr @__llvm_gcov_writeout, ptr @__llvm_gcov_reset }, section "__llvm_covinit"
-
 int test1(int a) {
   switch (a % 2) {
   case 0:
@@ -57,6 +54,9 @@ int test2(int b) {
 // 407-SAME: i32 875575082
 /// 0x3430382a '4' '0' '8' '*'
 // 408-SAME: i32 875575338
+
+// Check for gcov initialization function pointers.
+// CHECK-XCOFF: @__llvm_covinit_functions = private constant { ptr, ptr } { ptr @__llvm_gcov_writeout, ptr @__llvm_gcov_reset }, section "__llvm_covinit"
 
 // Check that the noredzone flag is set on the generated functions.
 
