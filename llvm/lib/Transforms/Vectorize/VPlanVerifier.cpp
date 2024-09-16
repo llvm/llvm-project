@@ -36,9 +36,9 @@ class VPlanVerifier {
   // VPHeaderPHIRecipes.
   bool verifyPhiRecipes(const VPBasicBlock *VPBB);
 
-  // Verify that \p EVL is used correctly. The user must be  either in EVL-based
-  // recipes as a last operand or VPInstruction::Add which is incoming value
-  // into EVL's recipe.
+  /// Verify that \p EVL is used correctly. The user must be either in
+  /// EVL-based recipes as a last operand or VPInstruction::Add which is
+  /// incoming value into EVL's recipe.
   bool verifyEVLRecipe(const VPInstruction &EVL) const;
 
   bool verifyVPBasicBlock(const VPBasicBlock *VPBB);
