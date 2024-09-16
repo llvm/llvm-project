@@ -60,6 +60,7 @@ end subroutine
 block data
   common /blk2/ n
   data n/100/
+  !PORTABILITY: specification expression refers to local object 'n' (initialized and saved)
   !ERROR: Automatic data object 'a' may not appear in a BLOCK DATA subprogram
   real a(n)
 end
