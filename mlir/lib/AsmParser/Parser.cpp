@@ -2439,8 +2439,8 @@ ParseResult OperationParser::codeCompleteSSAUse() {
       if (it.second.size() > 1)
         detailOS << ", ...";
 
-      state.codeCompleteContext->appendSSAValueCompletion(
-          it.getKey(), std::move(detailOS.str()));
+      state.codeCompleteContext->appendSSAValueCompletion(it.getKey(),
+                                                          detailData);
     }
   }
 
