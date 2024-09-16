@@ -52,16 +52,18 @@ class [[nodiscard]] ConstantFPRange {
   void makeFull();
   bool isNaNOnly() const;
 
-public:
   /// Initialize a full or empty set for the specified semantics.
   explicit ConstantFPRange(const fltSemantics &Sem, bool IsFullSet);
 
+public:
   /// Initialize a range to hold the single specified value.
-  ConstantFPRange(const APFloat &Value);
+  explicit ConstantFPRange(const APFloat &Value);
 
   /// Initialize a range of values explicitly.
-  ConstantFPRange(APFloat LowerVal, APFloat UpperVal, bool MayBeQNaN = true,
-                  bool MayBeSNaN = true);
+  /// Note: If \p LowerVal is greater than \p UpperVal, please use the canonical
+  /// form [Inf, -Inf].
+  ConstantFPRange(APFloat LowerVal, APFloat UpperVal, bool MayBeQNaN,
+                  bool MayBeSNaN);
 
   /// Create empty constant range with the given semantics.
   static ConstantFPRange getEmpty(const fltSemantics &Sem) {
@@ -82,12 +84,22 @@ public:
                            /*MayBeQNaN=*/false, /*MayBeSNaN=*/false);
   }
 
+  /// Create a range which may contain NaNs.
+  static ConstantFPRange getMayBeNaN(APFloat LowerVal, APFloat UpperVal) {
+    return ConstantFPRange(std::move(LowerVal), std::move(UpperVal),
+                           /*MayBeQNaN=*/true, /*MayBeSNaN=*/true);
+  }
+
+  /// Create a range which only contains NaNs.
+  static ConstantFPRange getNaNOnly(const fltSemantics &Sem, bool MayBeQNaN,
+                                    bool MayBeSNaN);
+
   /// Produce the smallest range such that all values that may satisfy the given
   /// predicate with any value contained within Other is contained in the
   /// returned range.  Formally, this returns a superset of
   /// 'union over all y in Other . { x : fcmp op x y is true }'.  If the exact
-  /// answer is not representable as a ConstantRange, the return value will be a
-  /// proper superset of the above.
+  /// answer is not representable as a ConstantFPRange, the return value will be
+  /// a proper superset of the above.
   ///
   /// Example: Pred = ole and Other = float [2, 5] returns Result = [-inf, 5]
   static ConstantFPRange makeAllowedFCmpRegion(FCmpInst::Predicate Pred,
@@ -97,7 +109,7 @@ public:
   /// satisfy the given predicate with all values contained within Other.
   /// Formally, this returns a subset of
   /// 'intersection over all y in Other . { x : fcmp op x y is true }'.  If the
-  /// exact answer is not representable as a ConstantRange, the return value
+  /// exact answer is not representable as a ConstantFPRange, the return value
   /// will be a proper subset of the above.
   ///
   /// Example: Pred = ole and Other = float [2, 5] returns [-inf, 2]

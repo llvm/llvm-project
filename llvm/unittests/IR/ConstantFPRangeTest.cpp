@@ -62,8 +62,8 @@ ConstantFPRange ConstantFPRangeTest::PosInf =
     ConstantFPRange(APFloat::getInf(APFloat::IEEEdouble(), /*Negative=*/false));
 ConstantFPRange ConstantFPRangeTest::NegInf =
     ConstantFPRange(APFloat::getInf(APFloat::IEEEdouble(), /*Negative=*/true));
-ConstantFPRange ConstantFPRangeTest::NaN =
-    ConstantFPRange(APFloat(1.0), APFloat(-1.0));
+ConstantFPRange ConstantFPRangeTest::NaN = ConstantFPRange::getNaNOnly(
+    APFloat::IEEEdouble(), /*MayBeQNaN=*/true, /*MayBeSNaN=*/true);
 ConstantFPRange ConstantFPRangeTest::SNaN =
     ConstantFPRange(APFloat::getSNaN(APFloat::IEEEdouble()));
 ConstantFPRange ConstantFPRangeTest::QNaN =

@@ -69,13 +69,22 @@ static APFloat::cmpResult strictCompare(const APFloat &LHS,
   return LHS.compare(RHS);
 }
 
+static bool isNonCanonicalEmptySet(const APFloat &Lower, const APFloat &Upper) {
+  return strictCompare(Lower, Upper) == APFloat::cmpGreaterThan &&
+         !(Lower.isInfinity() && Upper.isInfinity());
+}
+
+static void canonicalizeRange(APFloat &Lower, APFloat &Upper) {
+  if (isNonCanonicalEmptySet(Lower, Upper)) {
+    Lower = APFloat::getInf(Lower.getSemantics(), /*Negative=*/false);
+    Upper = APFloat::getInf(Upper.getSemantics(), /*Negative=*/true);
+  }
+}
+
 ConstantFPRange::ConstantFPRange(APFloat LowerVal, APFloat UpperVal,
                                  bool MayBeQNaN, bool MayBeSNaN)
     : Lower(std::move(LowerVal)), Upper(std::move(UpperVal)) {
-  // Canonicalize empty set into [Inf, -Inf].
-  if (strictCompare(Lower, Upper) == APFloat::cmpGreaterThan &&
-      !(Lower.isInfinity() && Upper.isInfinity()))
-    makeEmpty();
+  assert(!isNonCanonicalEmptySet(Lower, Upper) && "Non-canonical form");
   this->MayBeQNaN = MayBeQNaN;
   this->MayBeSNaN = MayBeSNaN;
 }
@@ -84,6 +93,13 @@ ConstantFPRange ConstantFPRange::getFinite(const fltSemantics &Sem) {
   return ConstantFPRange(APFloat::getLargest(Sem, /*Negative=*/true),
                          APFloat::getLargest(Sem, /*Negative=*/false),
                          /*MayBeQNaN=*/false, /*MayBeSNaN=*/false);
+}
+
+ConstantFPRange ConstantFPRange::getNaNOnly(const fltSemantics &Sem,
+                                            bool MayBeQNaN, bool MayBeSNaN) {
+  return ConstantFPRange(APFloat::getInf(Sem, /*Negative=*/false),
+                         APFloat::getInf(Sem, /*Negative=*/true), MayBeQNaN,
+                         MayBeSNaN);
 }
 
 ConstantFPRange
@@ -102,7 +118,7 @@ ConstantFPRange::makeSatisfyingFCmpRegion(FCmpInst::Predicate Pred,
 
 ConstantFPRange ConstantFPRange::makeExactFCmpRegion(FCmpInst::Predicate Pred,
                                                      const APFloat &Other) {
-  return makeAllowedFCmpRegion(Pred, Other);
+  return makeAllowedFCmpRegion(Pred, ConstantFPRange(Other));
 }
 
 bool ConstantFPRange::fcmp(FCmpInst::Predicate Pred,
@@ -221,7 +237,10 @@ LLVM_DUMP_METHOD void ConstantFPRange::dump() const { print(dbgs()); }
 
 ConstantFPRange
 ConstantFPRange::intersectWith(const ConstantFPRange &CR) const {
-  return ConstantFPRange(maxnum(Lower, CR.Lower), minnum(Upper, CR.Upper),
+  APFloat NewLower = maxnum(Lower, CR.Lower);
+  APFloat NewUpper = minnum(Upper, CR.Upper);
+  canonicalizeRange(NewLower, NewUpper);
+  return ConstantFPRange(std::move(NewLower), std::move(NewUpper),
                          MayBeQNaN & CR.MayBeQNaN, MayBeSNaN & CR.MayBeSNaN);
 }
 
