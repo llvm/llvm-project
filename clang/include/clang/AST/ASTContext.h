@@ -783,11 +783,14 @@ public:
   const QualType GetHigherPrecisionFPType(QualType ElementType) const {
     const auto *CurrentBT = cast<BuiltinType>(ElementType);
     switch (CurrentBT->getKind()) {
+    case BuiltinType::Kind::Half:
     case BuiltinType::Kind::Float16:
       return FloatTy;
     case BuiltinType::Kind::Float:
     case BuiltinType::Kind::BFloat16:
       return DoubleTy;
+    case BuiltinType::Kind::Float128:
+    case BuiltinType::Kind::Ibm128:
     case BuiltinType::Kind::Double:
       return LongDoubleTy;
     default:

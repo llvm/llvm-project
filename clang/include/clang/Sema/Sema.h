@@ -7965,7 +7965,6 @@ public:
   void maybeExtendBlockObject(ExprResult &E);
 
   std::vector<std::pair<QualType, unsigned>> ExcessPrecisionNotSatisfied;
-  unsigned NumExcessPrecisionNotSatisfied = 0;
   SourceLocation LocationOfExcessPrecisionNotSatisfied;
   void DiagnosePrecisionLossInComplexDivision();
 

@@ -15101,7 +15101,6 @@ static void DetectPrecisionLossInComplexDivision(Sema &S, SourceLocation OpLoc,
         // Retain the location of the first use of higher precision type.
         if (!S.LocationOfExcessPrecisionNotSatisfied.isValid())
           S.LocationOfExcessPrecisionNotSatisfied = OpLoc;
-        S.NumExcessPrecisionNotSatisfied++;
         for (auto &[Type, Num] : S.ExcessPrecisionNotSatisfied) {
           if (Type == HigherElementType) {
             Num++;
@@ -15109,7 +15108,7 @@ static void DetectPrecisionLossInComplexDivision(Sema &S, SourceLocation OpLoc,
           }
         }
         S.ExcessPrecisionNotSatisfied.push_back(std::make_pair(
-            HigherElementType, S.NumExcessPrecisionNotSatisfied));
+            HigherElementType, S.ExcessPrecisionNotSatisfied.size()));
       }
     }
   }
