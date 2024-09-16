@@ -312,7 +312,8 @@ static LogicalResult doVerifyRoundTrip(Operation *op,
     FallbackAsmResourceMap fallbackResourceMap;
     ParserConfig parseConfig(&roundtripContext, /*verifyAfterParse=*/true,
                              &fallbackResourceMap);
-    roundtripModule = parseSourceString<Operation *>(buffer, parseConfig);
+    roundtripModule =
+        parseSourceString<Operation *>(ostream.str(), parseConfig);
     if (!roundtripModule) {
       op->emitOpError() << "failed to parse " << testType
                         << " content back, cannot verify round-trip.\n";

@@ -25,7 +25,7 @@ mlir::LLVM::createSourceLocStrFromLocation(Location loc,
   std::string locStr;
   llvm::raw_string_ostream locOS(locStr);
   locOS << loc;
-  return builder.getOrCreateSrcLocStr(locStr, strLen);
+  return builder.getOrCreateSrcLocStr(locOS.str(), strLen);
 }
 
 llvm::Constant *
