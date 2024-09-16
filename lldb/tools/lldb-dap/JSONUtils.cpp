@@ -112,6 +112,22 @@ bool ObjectContainsKey(const llvm::json::Object &obj, llvm::StringRef key) {
   return obj.find(key) != obj.end();
 }
 
+std::string EncodeMemoryReference(lldb::addr_t addr) {
+  return "0x" + llvm::utohexstr(addr);
+}
+
+std::optional<lldb::addr_t>
+DecodeMemoryReference(llvm::StringRef memoryReference) {
+  if (!memoryReference.starts_with("0x"))
+    return std::nullopt;
+
+  lldb::addr_t addr;
+  if (memoryReference.consumeInteger(0, addr))
+    return std::nullopt;
+
+  return addr;
+}
+
 std::vector<std::string> GetStrings(const llvm::json::Object *obj,
                                     llvm::StringRef key) {
   std::vector<std::string> strs;
@@ -690,8 +706,7 @@ std::optional<llvm::json::Value> CreateSource(lldb::SBFrame &frame) {
 //     "instructionPointerReference": {
 // 	     "type": "string",
 // 	     "description": "A memory reference for the current instruction
-// pointer
-//                       in this frame."
+//                         pointer in this frame."
 //     },
 //     "moduleId": {
 //       "type": ["integer", "string"],
@@ -1239,8 +1254,16 @@ std::string VariableDescription::GetResult(llvm::StringRef context) {
 //                       can use this optional information to present the
 //                       children in a paged UI and fetch them in chunks."
 //     }
-//
-//
+//     "memoryReference": {
+//        "type": "string",
+//        "description": "A memory reference associated with this variable.
+//                        For pointer type variables, this is generally a
+//                        reference to the memory address contained in the
+//                        pointer. For executable data, this reference may later
+//                        be used in a `disassemble` request. This attribute may
+//                        be returned by a debug adapter if corresponding
+//                        capability `supportsMemoryReferences` is true."
+//      },
 //     "$__lldb_extensions": {
 //       "description": "Unofficial extensions to the protocol",
 //       "properties": {
@@ -1347,6 +1370,9 @@ llvm::json::Value CreateVariable(lldb::SBValue v, int64_t variablesReference,
     object.try_emplace("variablesReference", variablesReference);
   else
     object.try_emplace("variablesReference", (int64_t)0);
+
+  if (lldb::addr_t addr = v.GetLoadAddress(); addr != LLDB_INVALID_ADDRESS)
+    object.try_emplace("memoryReference", EncodeMemoryReference(addr));
 
   object.try_emplace("$__lldb_extensions", desc.GetVariableExtensionsJSON());
   return llvm::json::Value(std::move(object));
