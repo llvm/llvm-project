@@ -421,7 +421,8 @@ bool RISCVMakeCompressibleOpt::runOnMachineFunction(MachineFunction &Fn) {
             .addImm(RegImm.Imm);
       } else if (RISCV::GPRF16RegClass.contains(RegImm.Reg)) {
         assert(RegImm.Imm == 0);
-        BuildMI(MBB, MI, MI.getDebugLoc(), TII.get(RISCV::PseudoMV_FPR16INX), NewReg)
+        BuildMI(MBB, MI, MI.getDebugLoc(), TII.get(RISCV::PseudoMV_FPR16INX),
+                NewReg)
             .addReg(RegImm.Reg);
       } else {
         // If we are looking at replacing an FPR register we don't expect to
