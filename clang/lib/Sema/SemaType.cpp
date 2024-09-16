@@ -5816,8 +5816,10 @@ static void fillAttributedTypeLoc(AttributedTypeLoc TL,
 
 static void fillHLSLAttributedResourceTypeLoc(HLSLAttributedResourceTypeLoc TL,
                                               TypeProcessingState &State) {
-  TL.setSourceRange(
-      State.getSema().HLSL().TakeLocForHLSLAttribute(TL.getTypePtr()));
+  HLSLAttributedResourceLocInfo LocInfo =
+      State.getSema().HLSL().TakeLocForHLSLAttribute(TL.getTypePtr());
+  TL.setSourceRange(LocInfo.Range);
+  TL.setContainedTypeSourceInfo(LocInfo.ContainedTyInfo);
 }
 
 static void fillMatrixTypeLoc(MatrixTypeLoc MTL,
@@ -9007,7 +9009,8 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
       break;
     }
     case ParsedAttr::AT_HLSLResourceClass:
-    case ParsedAttr::AT_HLSLROV: {
+    case ParsedAttr::AT_HLSLROV:
+    case ParsedAttr::AT_HLSLContainedType: {
       // Only collect HLSL resource type attributes that are in
       // decl-specifier-seq; do not collect attributes on declarations or those
       // that get to slide after declaration name.
