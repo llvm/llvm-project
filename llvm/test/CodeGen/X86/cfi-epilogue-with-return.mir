@@ -21,8 +21,22 @@ liveins:
 frameInfo:
   maxAlignment:    1
   hasCalls:        true
-  savePoint:       '%bb.1'
-  restorePoint:    '%bb.1'
+  savePoint:
+    - point:           '%bb.1'
+      registers:
+        - '$rbx'
+        - '$r12'
+        - '$r13'
+        - '$r14'
+        - '$r15'
+  restorePoint:
+    - point:           '%bb.1'
+      registers:
+        - '$rbx'
+        - '$r12'
+        - '$r13'
+        - '$r14'
+        - '$r15'
 machineFunctionInfo: {}
 body:             |
   bb.0:
