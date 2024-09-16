@@ -932,21 +932,21 @@ private:
 
 private:
   __iter_pointer __begin_node_;
-  __compressed_pair<__end_node_t, __node_allocator> __pair1_;
-  __compressed_pair<size_type, value_compare> __pair3_;
+  _LIBCPP_COMPRESSED_PAIR(__end_node_t, __end_node_, __node_allocator, __node_alloc_);
+  _LIBCPP_COMPRESSED_PAIR(size_type, __size_, value_compare, __value_comp_);
 
 public:
   _LIBCPP_HIDE_FROM_ABI __iter_pointer __end_node() _NOEXCEPT {
-    return static_cast<__iter_pointer>(pointer_traits<__end_node_ptr>::pointer_to(__pair1_.first()));
+    return static_cast<__iter_pointer>(pointer_traits<__end_node_ptr>::pointer_to(__end_node_));
   }
   _LIBCPP_HIDE_FROM_ABI __iter_pointer __end_node() const _NOEXCEPT {
     return static_cast<__iter_pointer>(
-        pointer_traits<__end_node_ptr>::pointer_to(const_cast<__end_node_t&>(__pair1_.first())));
+        pointer_traits<__end_node_ptr>::pointer_to(const_cast<__end_node_t&>(__end_node_)));
   }
-  _LIBCPP_HIDE_FROM_ABI __node_allocator& __node_alloc() _NOEXCEPT { return __pair1_.second(); }
+  _LIBCPP_HIDE_FROM_ABI __node_allocator& __node_alloc() _NOEXCEPT { return __node_alloc_; }
 
 private:
-  _LIBCPP_HIDE_FROM_ABI const __node_allocator& __node_alloc() const _NOEXCEPT { return __pair1_.second(); }
+  _LIBCPP_HIDE_FROM_ABI const __node_allocator& __node_alloc() const _NOEXCEPT { return __node_alloc_; }
   _LIBCPP_HIDE_FROM_ABI __iter_pointer& __begin_node() _NOEXCEPT { return __begin_node_; }
   _LIBCPP_HIDE_FROM_ABI const __iter_pointer& __begin_node() const _NOEXCEPT { return __begin_node_; }
 
@@ -954,12 +954,12 @@ public:
   _LIBCPP_HIDE_FROM_ABI allocator_type __alloc() const _NOEXCEPT { return allocator_type(__node_alloc()); }
 
 private:
-  _LIBCPP_HIDE_FROM_ABI size_type& size() _NOEXCEPT { return __pair3_.first(); }
+  _LIBCPP_HIDE_FROM_ABI size_type& size() _NOEXCEPT { return __size_; }
 
 public:
-  _LIBCPP_HIDE_FROM_ABI const size_type& size() const _NOEXCEPT { return __pair3_.first(); }
-  _LIBCPP_HIDE_FROM_ABI value_compare& value_comp() _NOEXCEPT { return __pair3_.second(); }
-  _LIBCPP_HIDE_FROM_ABI const value_compare& value_comp() const _NOEXCEPT { return __pair3_.second(); }
+  _LIBCPP_HIDE_FROM_ABI const size_type& size() const _NOEXCEPT { return __size_; }
+  _LIBCPP_HIDE_FROM_ABI value_compare& value_comp() _NOEXCEPT { return __value_comp_; }
+  _LIBCPP_HIDE_FROM_ABI const value_compare& value_comp() const _NOEXCEPT { return __value_comp_; }
 
 public:
   _LIBCPP_HIDE_FROM_ABI __node_pointer __root() const _NOEXCEPT {
@@ -1324,21 +1324,19 @@ private:
 template <class _Tp, class _Compare, class _Allocator>
 __tree<_Tp, _Compare, _Allocator>::__tree(const value_compare& __comp) _NOEXCEPT_(
     is_nothrow_default_constructible<__node_allocator>::value&& is_nothrow_copy_constructible<value_compare>::value)
-    : __pair3_(0, __comp) {
+    : __size_(0), __value_comp_(__comp) {
   __begin_node() = __end_node();
 }
 
 template <class _Tp, class _Compare, class _Allocator>
 __tree<_Tp, _Compare, _Allocator>::__tree(const allocator_type& __a)
-    : __begin_node_(__iter_pointer()),
-      __pair1_(__default_init_tag(), __node_allocator(__a)),
-      __pair3_(0, __default_init_tag()) {
+    : __begin_node_(__iter_pointer()), __node_alloc_(__node_allocator(__a)), __size_(0) {
   __begin_node() = __end_node();
 }
 
 template <class _Tp, class _Compare, class _Allocator>
 __tree<_Tp, _Compare, _Allocator>::__tree(const value_compare& __comp, const allocator_type& __a)
-    : __begin_node_(__iter_pointer()), __pair1_(__default_init_tag(), __node_allocator(__a)), __pair3_(0, __comp) {
+    : __begin_node_(__iter_pointer()), __node_alloc_(__node_allocator(__a)), __size_(0), __value_comp_(__comp) {
   __begin_node() = __end_node();
 }
 
@@ -1437,8 +1435,9 @@ void __tree<_Tp, _Compare, _Allocator>::__assign_multi(_InputIterator __first, _
 template <class _Tp, class _Compare, class _Allocator>
 __tree<_Tp, _Compare, _Allocator>::__tree(const __tree& __t)
     : __begin_node_(__iter_pointer()),
-      __pair1_(__default_init_tag(), __node_traits::select_on_container_copy_construction(__t.__node_alloc())),
-      __pair3_(0, __t.value_comp()) {
+      __node_alloc_(__node_traits::select_on_container_copy_construction(__t.__node_alloc())),
+      __size_(0),
+      __value_comp_(__t.value_comp()) {
   __begin_node() = __end_node();
 }
 
@@ -1446,8 +1445,10 @@ template <class _Tp, class _Compare, class _Allocator>
 __tree<_Tp, _Compare, _Allocator>::__tree(__tree&& __t) _NOEXCEPT_(
     is_nothrow_move_constructible<__node_allocator>::value&& is_nothrow_move_constructible<value_compare>::value)
     : __begin_node_(std::move(__t.__begin_node_)),
-      __pair1_(std::move(__t.__pair1_)),
-      __pair3_(std::move(__t.__pair3_)) {
+      __end_node_(std::move(__t.__end_node_)),
+      __node_alloc_(std::move(__t.__node_alloc_)),
+      __size_(__t.__size_),
+      __value_comp_(std::move(__t.__value_comp_)) {
   if (size() == 0)
     __begin_node() = __end_node();
   else {
@@ -1460,7 +1461,7 @@ __tree<_Tp, _Compare, _Allocator>::__tree(__tree&& __t) _NOEXCEPT_(
 
 template <class _Tp, class _Compare, class _Allocator>
 __tree<_Tp, _Compare, _Allocator>::__tree(__tree&& __t, const allocator_type& __a)
-    : __pair1_(__default_init_tag(), __node_allocator(__a)), __pair3_(0, std::move(__t.value_comp())) {
+    : __node_alloc_(__node_allocator(__a)), __size_(0), __value_comp_(std::move(__t.value_comp())) {
   if (__a == __t.__alloc()) {
     if (__t.size() == 0)
       __begin_node() = __end_node();
@@ -1482,10 +1483,11 @@ template <class _Tp, class _Compare, class _Allocator>
 void __tree<_Tp, _Compare, _Allocator>::__move_assign(__tree& __t, true_type)
     _NOEXCEPT_(is_nothrow_move_assignable<value_compare>::value&& is_nothrow_move_assignable<__node_allocator>::value) {
   destroy(static_cast<__node_pointer>(__end_node()->__left_));
-  __begin_node_    = __t.__begin_node_;
-  __pair1_.first() = __t.__pair1_.first();
+  __begin_node_ = __t.__begin_node_;
+  __end_node_   = __t.__end_node_;
   __move_assign_alloc(__t);
-  __pair3_ = std::move(__t.__pair3_);
+  __size_       = __t.__size_;
+  __value_comp_ = std::move(__t.__value_comp_);
   if (size() == 0)
     __begin_node() = __end_node();
   else {
@@ -1554,9 +1556,10 @@ void __tree<_Tp, _Compare, _Allocator>::swap(__tree& __t)
 {
   using std::swap;
   swap(__begin_node_, __t.__begin_node_);
-  swap(__pair1_.first(), __t.__pair1_.first());
+  swap(__end_node_, __t.__end_node_);
   std::__swap_allocator(__node_alloc(), __t.__node_alloc());
-  __pair3_.swap(__t.__pair3_);
+  swap(__size_, __t.__size_);
+  swap(__value_comp_, __t.__value_comp_);
   if (size() == 0)
     __begin_node() = __end_node();
   else
