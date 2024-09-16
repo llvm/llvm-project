@@ -638,9 +638,9 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
         // dynamic loaders require the presence of an attribute section for
         // dlopen to work. In a full implementation we would merge all attribute
         // sections.
-        if (in.attributes == nullptr) {
-          in.attributes = std::make_unique<InputSection>(*this, sec, name);
-          this->sections[i] = in.attributes.get();
+        if (ctx.in.attributes == nullptr) {
+          ctx.in.attributes = std::make_unique<InputSection>(*this, sec, name);
+          this->sections[i] = ctx.in.attributes.get();
         }
       }
     }
