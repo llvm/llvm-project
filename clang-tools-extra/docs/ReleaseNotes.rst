@@ -111,6 +111,10 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/casting-through-void>` check to suggest replacing
   the offending code with ``reinterpret_cast``, to more clearly express intent.
 
+- Improved :doc:`cert-flp30-c<clang-tidy/checks/cert/flp30-c>` check to 
+  fix false positive that floating point variable is only used in increment
+  expression.
+
 - Improved :doc:`cppcoreguidelines-prefer-member-initializer
   <clang-tidy/checks/cppcoreguidelines/prefer-member-initializer>` check to avoid
   false positive when member initialization depends on a structured binging
