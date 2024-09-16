@@ -114,20 +114,25 @@ void checkAndPrintAuxHeaderParseError(const char *PartialFieldName,
                                       uint16_t AuxSize, T &AuxHeader,
                                       XCOFFDumper *Dumper) {
   if (PartialFieldOffset < AuxSize) {
+    std::string Buf;
+    raw_string_ostream OS(Buf);
+    OS.flush();
+    OS << FormattedString("Raw data", 0, FormattedString::JustifyLeft) << " ("
+       << format_bytes(
+              ArrayRef<uint8_t>(reinterpret_cast<const uint8_t *>(&AuxHeader) +
+                                    PartialFieldOffset,
+                                AuxSize - PartialFieldOffset))
+       << ")\n";
     Dumper->reportUniqueWarning(Twine("only partial field for ") +
                                 PartialFieldName + " at offset (" +
-                                Twine(PartialFieldOffset) + ")");
-    Dumper->printBinary(
-        "Raw data",
-        ArrayRef<uint8_t>(reinterpret_cast<const uint8_t *>(&AuxHeader) +
-                              PartialFieldOffset,
-                          AuxSize - PartialFieldOffset));
-  } else if (sizeof(AuxHeader) < AuxSize)
+                                Twine(PartialFieldOffset) + ")\n" + OS.str());
+  } else if (sizeof(AuxHeader) < AuxSize) {
     Dumper->printBinary(
         "Extra raw data",
         ArrayRef<uint8_t>(reinterpret_cast<const uint8_t *>(&AuxHeader) +
                               sizeof(AuxHeader),
                           AuxSize - sizeof(AuxHeader)));
+  }
 }
 
 void XCOFFDumper::printAuxiliaryHeader(
@@ -166,7 +171,6 @@ void XCOFFDumper::printAuxiliaryHeader(
   PrintAuxMember(Hex, "Maxium alignment of .data:", AuxHeader->MaxAlignOfData);
   PrintAuxMember(Hex, "Module type;", AuxHeader->ModuleType);
   PrintAuxMember(Hex, "CPU type of objects:", AuxHeader->CpuFlag);
-  PrintAuxMember(Hex, "(Reserved):", AuxHeader->CpuType);
   PrintAuxMember(Hex, "Maximum stack size:", AuxHeader->MaxStackSize);
   PrintAuxMember(Hex, "Maximum data size:", AuxHeader->MaxDataSize);
   PrintAuxMember(Hex, "Reserved for debugger:", AuxHeader->ReservedForDebugger);
@@ -222,7 +226,6 @@ void XCOFFDumper::printAuxiliaryHeader(
   PrintAuxMember(Hex, "Maxium alignment of .data:", AuxHeader->MaxAlignOfData);
   PrintAuxMember(Hex, "Module type:", AuxHeader->ModuleType);
   PrintAuxMember(Hex, "CPU type of objects:", AuxHeader->CpuFlag);
-  PrintAuxMember(Hex, "(Reserved):", AuxHeader->CpuType);
   PrintAuxMember(Hex, "Text page size:", AuxHeader->TextPageSize);
   PrintAuxMember(Hex, "Data page size:", AuxHeader->DataPageSize);
   PrintAuxMember(Hex, "Stack page size:", AuxHeader->StackPageSize);
