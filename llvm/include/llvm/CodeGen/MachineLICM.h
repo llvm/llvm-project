@@ -1,4 +1,3 @@
-
 //===- llvm/CodeGen/MachineLICM.h -------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -27,5 +26,9 @@ class EarlyMachineLICMPass
 class MachineLICMPass : public MachineLICMBasePass<MachineLICMPass, false> {};
 
 } // namespace llvm
+
+extern template class llvm::MachineLICMBasePass<llvm::EarlyMachineLICMPass,
+                                                true>;
+extern template class llvm::MachineLICMBasePass<llvm::MachineLICMPass, false>;
 
 #endif // LLVM_CODEGEN_MACHINELICM_H
