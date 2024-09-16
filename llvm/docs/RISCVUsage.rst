@@ -448,12 +448,12 @@ LLD will relax (rewrite) any code sequences that materialize an address within 2
 
 There can only be one ``gp`` value in a process (as ``gp`` is not changed when calling into a function in a shared library), so the symbol is is only defined and this relaxation is only done for executables, and not for shared libraries. The linker expects executable startup code to put the value of ``__global_pointer$`` (from the executable) into ``gp`` before any user code is run.
 
-Arguably, the most efficient use for this addressing mode is for smaller global variables, as larger global variables are likely to need many more loads or stores when they are being accessed anyway.
+Arguably, the most efficient use for this addressing mode is for smaller global variables, as larger global variables likely need many more loads or stores when they are being accessed anyway, so the cost of materializing the upper bits can be shared.
 
-Therefore the compiler can place smaller global variables into sections with with names starting ``.sdata`` or ``.sbss`` (matching sections with names starting ``.data`` and ``.bss`` respectively). LLD knows to define the ``global_pointer$`` symbol close to these sections, and to lay these sections out adjacent to the ``.data`` section.
+Therefore the compiler can place smaller global variables into sections with names starting with ``.sdata`` or ``.sbss`` (matching sections with names starting with ``.data`` and ``.bss`` respectively). LLD knows to define the ``global_pointer$`` symbol close to these sections, and to lay these sections out adjacent to the ``.data`` section.
 
 Clang's ``-msmall-data-limit=`` option controls what the threshold size is (in bytes) for a global variable to be considered small. ``-msmall-data-limit=0`` disables the use of sections starting ``.sdata`` and ``.sbss``. The ``-msmall-data-limit=`` option will not move global variables that have an explicit data section, and will keep globals in separate sections if you are using ``-fdata-sections``.
 
-The small data limit threshold is also used to separate small constants into sections with names starting ``.srodata``. LLD does not place these with the ``.sdata`` and ``.sbss`` sections as ``.srodata`` sections are read only and the other two are writable. Instead the ``.srodata`` sections are placed adjacent to ``.rodata``.
+The small data limit threshold is also used to separate small constants into sections with names starting with ``.srodata``. LLD does not place these with the ``.sdata`` and ``.sbss`` sections as ``.srodata`` sections are read only and the other two are writable. Instead the ``.srodata`` sections are placed adjacent to ``.rodata``.
 
 Data suggests that these options can produce significant improvements across a range of benchmarks.
