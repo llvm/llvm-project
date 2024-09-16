@@ -790,12 +790,6 @@ void X86FrameLowering::emitStackProbeInlineGenericLoop(
   MachineBasicBlock *testMBB = MF.CreateMachineBasicBlock(LLVM_BB);
   MachineBasicBlock *tailMBB = MF.CreateMachineBasicBlock(LLVM_BB);
 
-  // Set call-frame sizes in each new BB, in case we are in a call sequence.
-  std::optional<unsigned> CallFrameSizeBefore =
-      TII.getCallFrameSizeAt(MBB, MBBI);
-  testMBB->setCallFrameSize(CallFrameSizeBefore);
-  tailMBB->setCallFrameSize(CallFrameSizeBefore);
-
   MachineFunction::iterator MBBIter = ++MBB.getIterator();
   MF.insert(MBBIter, testMBB);
   MF.insert(MBBIter, tailMBB);
@@ -937,13 +931,6 @@ void X86FrameLowering::emitStackProbeInlineWindowsCoreCLR64(
   MachineBasicBlock *RoundMBB = MF.CreateMachineBasicBlock(LLVM_BB);
   MachineBasicBlock *LoopMBB = MF.CreateMachineBasicBlock(LLVM_BB);
   MachineBasicBlock *ContinueMBB = MF.CreateMachineBasicBlock(LLVM_BB);
-
-  // Set call-frame sizes in each new BB, in case we are in a call sequence.
-  std::optional<unsigned> CallFrameSizeBefore =
-      TII.getCallFrameSizeAt(MBB, MBBI);
-  RoundMBB->setCallFrameSize(CallFrameSizeBefore);
-  LoopMBB->setCallFrameSize(CallFrameSizeBefore);
-  ContinueMBB->setCallFrameSize(CallFrameSizeBefore);
 
   MachineFunction::iterator MBBIter = std::next(MBB.getIterator());
   MF.insert(MBBIter, RoundMBB);
@@ -1298,19 +1285,6 @@ void X86FrameLowering::BuildStackAlignAND(MachineBasicBlock &MBB,
       Register FinalStackProbed = Uses64BitFramePtr ? X86::R11
                                   : Is64Bit         ? X86::R11D
                                                     : X86::EAX;
-
-      std::optional<unsigned> CallFrameSizeBefore =
-          TII.getCallFrameSizeAt(MBB, MBBI);
-      // entryMBB takes the place of MBB, so give it its stored call frame size.
-      entryMBB->setCallFrameSize(MBB.getCallFrameSize());
-      // MBB contains only a tail of its original instructions, so update its
-      // stored call frame size.
-      MBB.setCallFrameSize(CallFrameSizeBefore);
-      // For the other basic blocks, take the state at the insertion point as
-      // well.
-      headMBB->setCallFrameSize(CallFrameSizeBefore);
-      bodyMBB->setCallFrameSize(CallFrameSizeBefore);
-      footMBB->setCallFrameSize(CallFrameSizeBefore);
 
       // Setup entry block
       {

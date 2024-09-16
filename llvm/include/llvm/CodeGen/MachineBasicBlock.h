@@ -145,15 +145,6 @@ private:
   const BasicBlock *BB;
   int Number;
 
-  /// The call frame size on entry to this basic block due to call frame setup
-  /// instructions in a predecessor. Usually does not contain a value, unless
-  /// basic blocks are split in the middle of a call sequence. Zero-sized call
-  /// frames are possible.
-  ///
-  /// This information is only maintained until PrologEpilogInserter eliminates
-  /// call frame pseudos.
-  std::optional<unsigned> CallFrameSize;
-
   MachineFunction *xParent;
   Instructions Insts;
 
@@ -1215,19 +1206,6 @@ public:
   /// they're not in a MachineFunction yet, in which case this will return -1.
   int getNumber() const { return Number; }
   void setNumber(int N) { Number = N; }
-
-  /// Return the call frame size on entry to this basic block.
-  std::optional<unsigned> getCallFrameSize() const { return CallFrameSize; }
-
-  /// Return the call frame size on entry to this basic block if it is part of a
-  /// call sequence and 0 otherwise.
-  unsigned getCallFrameSizeOrZero() const { return CallFrameSize.value_or(0); }
-
-  /// Set the call frame size on entry to this basic block.
-  void setCallFrameSize(std::optional<unsigned> N) { CallFrameSize = N; }
-
-  /// Reset the stored call frame size.
-  void clearCallFrameSize() { CallFrameSize.reset(); }
 
   /// Return the MCSymbol for this basic block.
   MCSymbol *getSymbol() const;

@@ -285,7 +285,6 @@ static MIToken::TokenKind getIdentifierKind(StringRef Identifier) {
       .Case("ir-block-address-taken", MIToken::kw_ir_block_address_taken)
       .Case("machine-block-address-taken",
             MIToken::kw_machine_block_address_taken)
-      .Case("call-frame-size", MIToken::kw_call_frame_size)
       .Case("noconvergent", MIToken::kw_noconvergent)
       .Default(MIToken::Identifier);
 }

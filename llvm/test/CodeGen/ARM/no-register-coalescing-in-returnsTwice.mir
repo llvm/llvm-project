@@ -123,7 +123,7 @@ body:             |
     %61:gpr = COPY killed %29
     %62:gpr = COPY killed %4
     %63:gpr = COPY killed %27
-  bb.2 (call-frame-size 72):
+  bb.2:
     %35:gpr = COPY killed %63
     %33:gpr = COPY killed %62
     %31:gpr = COPY killed %61
@@ -136,7 +136,7 @@ body:             |
     %62:gpr = COPY killed %32
     %63:gpr = COPY killed %34
     Bcc %bb.2, 1, killed $cpsr
-  bb.3 (call-frame-size 72):
+  bb.3:
     successors:
     %28:gpr = ADDri %stack.1.jb1, 0, 14, $noreg, $noreg
     $r0 = COPY killed %28

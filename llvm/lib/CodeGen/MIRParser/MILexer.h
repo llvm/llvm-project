@@ -139,7 +139,6 @@ struct MIToken {
     kw_unknown_address,
     kw_ir_block_address_taken,
     kw_machine_block_address_taken,
-    kw_call_frame_size,
     kw_noconvergent,
 
     // Metadata types.

@@ -22,10 +22,10 @@ define i32 @_ZNK2cv12LMSolverImpl3runERKNS_17_InputOutputArrayE(i1 %cmp436) {
   ; CHECK-NEXT:   [[ADDI1:%[0-9]+]]:gpr = ADDI $x0, 32
   ; CHECK-NEXT:   BNE [[ANDI]], $x0, %bb.3
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.2.for.cond (call-frame-size 8):
+  ; CHECK-NEXT: bb.2.for.cond:
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.3.for.cond (call-frame-size 8):
+  ; CHECK-NEXT: bb.3.for.cond:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[PHI:%[0-9]+]]:gpr = PHI [[ADDI1]], %bb.1, [[ADDI]], %bb.2

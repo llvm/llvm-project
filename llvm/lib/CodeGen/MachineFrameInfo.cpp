@@ -13,6 +13,7 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
@@ -23,6 +24,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
+#include <optional>
 
 #define DEBUG_TYPE "codegen"
 
@@ -243,6 +245,152 @@ void MachineFrameInfo::print(const MachineFunction &MF, raw_ostream &OS) const{
       OS << "]";
     }
     OS << "\n";
+  }
+}
+
+std::optional<unsigned>
+MachineFrameSizeInfo::getCallFrameSizeAt(MachineInstr &MI) {
+  return this->getCallFrameSizeAt(*MI.getParent(), MI.getIterator());
+}
+
+std::optional<unsigned>
+MachineFrameSizeInfo::getCallFrameSizeAtBegin(MachineBasicBlock &MBB) {
+  if (!IsComputed)
+    computeSizes();
+  if (HasNoBrokenUpCallSeqs || !HasFrameOpcodes)
+    return std::nullopt;
+  return State[MBB.getNumber()].Entry;
+}
+
+std::optional<unsigned>
+MachineFrameSizeInfo::getCallFrameSizeAtEnd(MachineBasicBlock &MBB) {
+  if (!IsComputed)
+    computeSizes();
+  if (HasNoBrokenUpCallSeqs || !HasFrameOpcodes)
+    return std::nullopt;
+  return State[MBB.getNumber()].Exit;
+}
+
+std::optional<unsigned>
+MachineFrameSizeInfo::getCallFrameSizeAt(MachineBasicBlock &MBB,
+                                         MachineBasicBlock::iterator MII) {
+  if (!IsComputed)
+    computeSizes();
+
+  if (!HasFrameOpcodes)
+    return std::nullopt;
+
+  if (MII == MBB.end()) {
+    if (HasNoBrokenUpCallSeqs)
+      return std::nullopt;
+    return State[MBB.getNumber()].Exit;
+  }
+
+  if (MII == MBB.begin()) {
+    if (HasNoBrokenUpCallSeqs)
+      return std::nullopt;
+    return State[MBB.getNumber()].Entry;
+  }
+
+  // Search backwards from MI for the most recent call frame instruction.
+  for (auto &AdjI : reverse(make_range(MBB.begin(), MII))) {
+    if (AdjI.getOpcode() == FrameSetupOpcode)
+      return TII->getFrameTotalSize(AdjI);
+    if (AdjI.getOpcode() == FrameDestroyOpcode)
+      return std::nullopt;
+  }
+
+  // If none was found, use the call frame size from the start of the basic
+  // block.
+  if (HasNoBrokenUpCallSeqs)
+    return std::nullopt;
+  return State[MBB.getNumber()].Entry;
+}
+
+void MachineFrameSizeInfo::computeSizes() {
+  if (!IsComputed) {
+    // Populate fields that are only required once we compute the frame sizes.
+    TII = MF.getSubtarget().getInstrInfo();
+    FrameSetupOpcode = TII->getCallFrameSetupOpcode();
+    FrameDestroyOpcode = TII->getCallFrameDestroyOpcode();
+    HasFrameOpcodes = FrameSetupOpcode != ~0u || FrameDestroyOpcode != ~0u;
+    assert(!HasFrameOpcodes || FrameSetupOpcode != FrameDestroyOpcode);
+    IsComputed = true;
+  }
+  // If the target has no call frame pseudo instructions, don't compute
+  // anything, we always return std::nullopt if queried.
+  if (!HasFrameOpcodes)
+    return;
+
+  // Returns true if a call sequence in MF is broken up over multiple blocks.
+  auto FindBrokenUpCallSeq = [](const MachineFunction &MF,
+                                unsigned FrameSetupOpcode,
+                                unsigned FrameDestroyOpcode) {
+    for (const auto &MBB : MF) {
+      for (const auto &I : MBB) {
+        unsigned Opcode = I.getOpcode();
+        if (Opcode == FrameSetupOpcode)
+          break;
+        if (Opcode == FrameDestroyOpcode) {
+          // A FrameDestroy without a preceeding FrameSetup in the MBB. If
+          // FrameInstructions are placed correctly (which we assume), this
+          // occurs if and only if a call sequence is broken into multiple
+          // blocks.
+          return true;
+        }
+      }
+    }
+    return false;
+  };
+
+  HasNoBrokenUpCallSeqs =
+      !FindBrokenUpCallSeq(MF, FrameSetupOpcode, FrameDestroyOpcode);
+
+  // If every call sequence is limited to a single basic block, the frame sizes
+  // at entry and exit of each basic block need to be std::nullopt, so there is
+  // nothing to compute.
+  if (HasNoBrokenUpCallSeqs)
+    return;
+
+  State.resize(MF.getNumBlockIDs());
+
+  df_iterator_default_set<const MachineBasicBlock *> Reachable;
+
+  // Visit the MBBs in DFS order.
+  for (df_ext_iterator<MachineFunction *,
+                       df_iterator_default_set<const MachineBasicBlock *>>
+           DFI = df_ext_begin(&MF, Reachable),
+           DFE = df_ext_end(&MF, Reachable);
+       DFI != DFE; ++DFI) {
+    const MachineBasicBlock *MBB = *DFI;
+
+    MachineFrameSizeInfoForBB BBState;
+
+    // Use the exit state of the DFS stack predecessor as entry state for this
+    // block. With correctly placed call frame instructions, all other
+    // predecessors must have the same call frame size at exit.
+    if (DFI.getPathLength() >= 2) {
+      const MachineBasicBlock *StackPred = DFI.getPath(DFI.getPathLength() - 2);
+      assert(Reachable.count(StackPred) &&
+             "DFS stack predecessor is already visited.\n");
+      BBState.Entry = State[StackPred->getNumber()].Exit;
+      BBState.Exit = BBState.Entry;
+    }
+
+    // Search backwards for the last call frame instruction and use its implied
+    // state for the block exit. Otherwise, the exit state remains equal to the
+    // entry state.
+    for (auto &AdjI : reverse(make_range(MBB->begin(), MBB->end()))) {
+      if (AdjI.getOpcode() == FrameSetupOpcode) {
+        BBState.Exit = TII->getFrameTotalSize(AdjI);
+        break;
+      }
+      if (AdjI.getOpcode() == FrameDestroyOpcode) {
+        BBState.Exit = std::nullopt;
+        break;
+      }
+    }
+    State[MBB->getNumber()] = BBState;
   }
 }
 
