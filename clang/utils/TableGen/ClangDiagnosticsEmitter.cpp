@@ -131,12 +131,12 @@ namespace {
   };
 
   struct GroupInfo {
-    llvm::StringRef GroupName;
+    StringRef GroupName;
     std::vector<const Record*> DiagsInGroup;
     std::vector<std::string> SubGroups;
     unsigned IDNo = 0;
 
-    llvm::SmallVector<const Record *, 1> Defs;
+    SmallVector<const Record *, 1> Defs;
 
     GroupInfo() = default;
   };
@@ -213,7 +213,7 @@ static void groupDiagnostics(ArrayRef<const Record *> Diags,
       if (IsImplicit)
         continue;
 
-      llvm::SMLoc Loc = Def->getLoc().front();
+      SMLoc Loc = Def->getLoc().front();
       if (First) {
         SrcMgr.PrintMessage(Loc, SourceMgr::DK_Error,
                             Twine("group '") + Group.first +
@@ -228,7 +228,7 @@ static void groupDiagnostics(ArrayRef<const Record *> Diags,
       if (!cast<DefInit>(Diag->getValueInit("Group"))->getDef()->isAnonymous())
         continue;
 
-      llvm::SMLoc Loc = Diag->getLoc().front();
+      SMLoc Loc = Diag->getLoc().front();
       if (First) {
         SrcMgr.PrintMessage(Loc, SourceMgr::DK_Error,
                             Twine("group '") + Group.first +
@@ -247,20 +247,19 @@ static void groupDiagnostics(ArrayRef<const Record *> Diags,
 //===----------------------------------------------------------------------===//
 
 typedef std::vector<const Record *> RecordVec;
-typedef llvm::DenseSet<const Record *> RecordSet;
-typedef llvm::PointerUnion<RecordVec*, RecordSet*> VecOrSet;
+typedef DenseSet<const Record *> RecordSet;
+typedef PointerUnion<RecordVec *, RecordSet *> VecOrSet;
 
 namespace {
 class InferPedantic {
-  typedef llvm::DenseMap<const Record *,
-                         std::pair<unsigned, std::optional<unsigned>>>
+  typedef DenseMap<const Record *, std::pair<unsigned, std::optional<unsigned>>>
       GMap;
 
   DiagGroupParentMap &DiagGroupParents;
   ArrayRef<const Record *> Diags;
   const std::vector<const Record *> DiagGroups;
   std::map<std::string, GroupInfo> &DiagsInGroup;
-  llvm::DenseSet<const Record*> DiagsSet;
+  DenseSet<const Record *> DiagsSet;
   GMap GroupCount;
 public:
   InferPedantic(DiagGroupParentMap &DiagGroupParents,
@@ -277,8 +276,7 @@ public:
 
 private:
   /// Determine whether a group is a subgroup of another group.
-  bool isSubGroupOfGroup(const Record *Group,
-                         llvm::StringRef RootGroupName);
+  bool isSubGroupOfGroup(const Record *Group, StringRef RootGroupName);
 
   /// Determine if the diagnostic is an extension.
   bool isExtension(const Record *Diag);
@@ -295,8 +293,7 @@ private:
 };
 } // end anonymous namespace
 
-bool InferPedantic::isSubGroupOfGroup(const Record *Group,
-                                      llvm::StringRef GName) {
+bool InferPedantic::isSubGroupOfGroup(const Record *Group, StringRef GName) {
   const std::string &GroupName =
       std::string(Group->getValueAsString("GroupName"));
   if (GName == GroupName)
@@ -409,8 +406,8 @@ void InferPedantic::compute(VecOrSet DiagsInPedantic,
 
     const std::vector<const Record *> &Parents =
         DiagGroupParents.getParents(Group);
-    bool AllParentsInPedantic = llvm::all_of(
-        Parents, [&](const Record *R) { return groupInPedantic(R); });
+    bool AllParentsInPedantic =
+        all_of(Parents, [&](const Record *R) { return groupInPedantic(R); });
     // If all the parents are in -Wpedantic, this means that this diagnostic
     // group will be indirectly included by -Wpedantic already.  In that
     // case, do not add it directly to -Wpedantic.  If the group has no
@@ -613,11 +610,12 @@ struct DiagnosticTextBuilder {
   Piece *getSubstitution(SubstitutionPiece *S) const {
     auto It = Substitutions.find(S->Name);
     if (It == Substitutions.end())
-      PrintFatalError("Failed to find substitution with name: " + S->Name);
+      llvm::PrintFatalError("Failed to find substitution with name: " +
+                            S->Name);
     return It->second.Root;
   }
 
-  [[noreturn]] void PrintFatalError(llvm::Twine const &Msg) const {
+  [[noreturn]] void PrintFatalError(Twine const &Msg) const {
     assert(EvaluatingRecord && "not evaluating a record?");
     llvm::PrintFatalError(EvaluatingRecord->getLoc(), Msg);
   }
@@ -1022,8 +1020,8 @@ Piece *DiagnosticTextBuilder::DiagText::parseDiagText(StringRef &Text,
                                                       StopAt Stop) {
   std::vector<Piece *> Parsed;
 
-  constexpr llvm::StringLiteral StopSets[] = {"%", "%|}", "%|}$"};
-  llvm::StringRef StopSet = StopSets[static_cast<int>(Stop)];
+  constexpr StringLiteral StopSets[] = {"%", "%|}", "%|}$"};
+  StringRef StopSet = StopSets[static_cast<int>(Stop)];
 
   while (!Text.empty()) {
     size_t End = (size_t)-2;
@@ -1050,7 +1048,7 @@ Piece *DiagnosticTextBuilder::DiagText::parseDiagText(StringRef &Text,
     size_t ModLength = Text.find_first_of("0123456789{");
     StringRef Modifier = Text.slice(0, ModLength);
     Text = Text.slice(ModLength, StringRef::npos);
-    ModifierType ModType = llvm::StringSwitch<ModifierType>{Modifier}
+    ModifierType ModType = StringSwitch<ModifierType>{Modifier}
                                .Case("select", MT_Select)
                                .Case("sub", MT_Sub)
                                .Case("diff", MT_Diff)
@@ -1227,7 +1225,7 @@ static bool isExemptAtStart(StringRef Text) {
   // OBJECT_MODE. However, if there's only a single letter other than "C", we
   // do not exempt it so that we catch a case like "A really bad idea" while
   // still allowing a case like "C does not allow...".
-  if (llvm::all_of(Text, [](char C) {
+  if (all_of(Text, [](char C) {
         return isUpper(C) || isDigit(C) || C == '+' || C == '_';
       }))
     return Text.size() > 1 || Text[0] == 'C';
@@ -1530,11 +1528,11 @@ void clang::EmitClangDiagsDefs(const RecordKeeper &Records, raw_ostream &OS,
 // Warning Group Tables generation
 //===----------------------------------------------------------------------===//
 
-static std::string getDiagCategoryEnum(llvm::StringRef name) {
+static std::string getDiagCategoryEnum(StringRef name) {
   if (name.empty())
     return "DiagCat_None";
-  SmallString<256> enumName = llvm::StringRef("DiagCat_");
-  for (llvm::StringRef::iterator I = name.begin(), E = name.end(); I != E; ++I)
+  SmallString<256> enumName = StringRef("DiagCat_");
+  for (StringRef::iterator I = name.begin(), E = name.end(); I != E; ++I)
     enumName += isalnum(*I) ? *I : '_';
   return std::string(enumName);
 }
@@ -1841,10 +1839,9 @@ void clang::EmitClangDiagsIndexName(const RecordKeeper &Records,
     Index.push_back(RecordIndexElement(R));
   }
 
-  llvm::sort(Index,
-             [](const RecordIndexElement &Lhs, const RecordIndexElement &Rhs) {
-               return Lhs.Name < Rhs.Name;
-             });
+  sort(Index, [](const RecordIndexElement &Lhs, const RecordIndexElement &Rhs) {
+    return Lhs.Name < Rhs.Name;
+  });
 
   for (unsigned i = 0, e = Index.size(); i != e; ++i) {
     const RecordIndexElement &R = Index[i];
@@ -1941,7 +1938,7 @@ void clang::EmitClangDiagDocs(const RecordKeeper &Records, raw_ostream &OS) {
 
   std::vector<const Record *> DiagGroups =
       Records.getAllDerivedDefinitions("DiagGroup");
-  llvm::sort(DiagGroups, diagGroupBeforeByName);
+  sort(DiagGroups, diagGroupBeforeByName);
 
   DiagGroupParentMap DGParentMap(Records);
 
@@ -1960,8 +1957,8 @@ void clang::EmitClangDiagDocs(const RecordKeeper &Records, raw_ostream &OS) {
                               DiagsInPedanticSet.end());
     RecordVec GroupsInPedantic(GroupsInPedanticSet.begin(),
                                GroupsInPedanticSet.end());
-    llvm::sort(DiagsInPedantic, beforeThanCompare);
-    llvm::sort(GroupsInPedantic, beforeThanCompare);
+    sort(DiagsInPedantic, beforeThanCompare);
+    sort(GroupsInPedantic, beforeThanCompare);
     PedDiags.DiagsInGroup.insert(PedDiags.DiagsInGroup.end(),
                                  DiagsInPedantic.begin(),
                                  DiagsInPedantic.end());
@@ -2012,7 +2009,7 @@ void clang::EmitClangDiagDocs(const RecordKeeper &Records, raw_ostream &OS) {
         OS << "Also controls ";
 
       bool First = true;
-      llvm::sort(GroupInfo.SubGroups);
+      sort(GroupInfo.SubGroups);
       for (const auto &Name : GroupInfo.SubGroups) {
         if (!First) OS << ", ";
         OS << "`" << (IsRemarkGroup ? "-R" : "-W") << Name << "`_";

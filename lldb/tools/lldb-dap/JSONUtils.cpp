@@ -1480,7 +1480,6 @@ std::string JSONToString(const llvm::json::Value &json) {
   std::string data;
   llvm::raw_string_ostream os(data);
   os << json;
-  os.flush();
   return data;
 }
 

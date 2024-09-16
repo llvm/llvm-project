@@ -171,7 +171,11 @@ static void AfterFork(bool fork_child) {
 }
 
 void InstallAtForkHandler() {
-#  if SANITIZER_SOLARIS || SANITIZER_NETBSD || SANITIZER_APPLE
+#  if SANITIZER_SOLARIS || SANITIZER_NETBSD || SANITIZER_APPLE || \
+      (SANITIZER_LINUX && SANITIZER_SPARC)
+  // While other Linux targets use clone in internal_fork which doesn't
+  // trigger pthread_atfork handlers, Linux/sparc64 uses __fork, causing a
+  // hang.
   return;  // FIXME: Implement FutexWait.
 #  endif
   pthread_atfork(

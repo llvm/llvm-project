@@ -40,6 +40,10 @@
 #  include <sys/resource.h>
 #  include <syslog.h>
 
+#  ifdef SANITIZER_GLIBC
+#    include <gnu/libc-version.h>
+#  endif
+
 #  if !defined(ElfW)
 #    define ElfW(type) Elf_##type
 #  endif
@@ -198,17 +202,11 @@ bool SetEnv(const char *name, const char *value) {
 
 __attribute__((unused)) static bool GetLibcVersion(int *major, int *minor,
                                                    int *patch) {
-#  ifdef _CS_GNU_LIBC_VERSION
-  char buf[64];
-  uptr len = confstr(_CS_GNU_LIBC_VERSION, buf, sizeof(buf));
-  if (len >= sizeof(buf))
-    return false;
-  buf[len] = 0;
-  static const char kGLibC[] = "glibc ";
-  if (internal_strncmp(buf, kGLibC, sizeof(kGLibC) - 1) != 0)
-    return false;
-  const char *p = buf + sizeof(kGLibC) - 1;
+#  ifdef SANITIZER_GLIBC
+  const char *p = gnu_get_libc_version();
   *major = internal_simple_strtoll(p, &p, 10);
+  // Caller does not expect anything else.
+  CHECK_EQ(*major, 2);
   *minor = (*p == '.') ? internal_simple_strtoll(p + 1, &p, 10) : 0;
   *patch = (*p == '.') ? internal_simple_strtoll(p + 1, &p, 10) : 0;
   return true;
@@ -234,7 +232,7 @@ void InitTlsSize() {
 
 #    if defined(__aarch64__) || defined(__x86_64__) || \
         defined(__powerpc64__) || defined(__loongarch__)
-  void *get_tls_static_info = dlsym(RTLD_NEXT, "_dl_get_tls_static_info");
+  void *get_tls_static_info = dlsym(RTLD_DEFAULT, "_dl_get_tls_static_info");
   size_t tls_align;
   ((void (*)(size_t *, size_t *))get_tls_static_info)(&g_tls_size, &tls_align);
 #    endif
@@ -648,9 +646,8 @@ void GetThreadStackAndTls(bool main, uptr *stk_begin, uptr *stk_end,
 
   if (!main) {
     // If stack and tls intersect, make them non-intersecting.
-    CHECK_GE(*tls_begin, *stk_begin);
     if (*tls_begin > *stk_begin && *tls_begin < *stk_end) {
-      if (*stk_end > *tls_end)
+      if (*stk_end < *tls_end)
         *tls_end = *stk_end;
       *stk_end = *tls_begin;
     }
