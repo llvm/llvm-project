@@ -3489,7 +3489,7 @@ unsigned X86TargetLowering::preferedOpcodeForCmpEqPiecesOfOperand(
 
   // We prefer rotate for vectors of if we won't get a zext mask with SRL
   // (PreferRotate will be set in the latter case).
-  if (PreferRotate || VT.isVector())
+  if (PreferRotate || !MayTransformRotate || VT.isVector())
     return ShiftOpc;
 
   // Non-vector type and we have a zext mask with SRL.
