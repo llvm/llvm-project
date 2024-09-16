@@ -102,6 +102,12 @@ LLVM 21
 ABI Affecting Changes
 ---------------------
 
+- The ABI breaks for removing undefined behaviour in ``std::forward_list``, ``std::list``, ``std::map``, ``std::set``,
+  ``std::multimap``, ``std::multiset``, ``std::unordered_map``, ``std::unordered_set``, ``std::unordered_multimap`` and
+  ``std::unordered_multiset`` are now applied unconditionally. This only affects fancy pointers which have a different
+  value representation when pointing at the base of an internal node type instead of the type itself. A size or
+  alignment difference is diagnosed, but more subtle ABI breaks may result in unexpected behaviour.
+
 - The internal structure ``__compressed_pair`` has been replaced with ``[[no_unique_address]]``. The ABI impact is:
 
   - When using the Itanium ABI (most non-MSVC platforms), empty types are now placed at the beginning of the enclosing
