@@ -48,6 +48,7 @@ class BitcodeCompiler;
 class OutputSection;
 class LinkerScript;
 class TargetInfo;
+struct Ctx;
 struct Partition;
 struct PhdrEntry;
 
@@ -149,11 +150,14 @@ struct VersionDefinition {
 
 class LinkerDriver {
 public:
+  LinkerDriver(Ctx &ctx);
+  LinkerDriver(LinkerDriver &) = delete;
   void linkerMain(ArrayRef<const char *> args);
   void addFile(StringRef path, bool withLOption);
   void addLibrary(StringRef name);
 
 private:
+  Ctx &ctx;
   void createFiles(llvm::opt::InputArgList &args);
   void inferMachineType();
   template <class ELFT> void link(llvm::opt::InputArgList &args);
@@ -652,6 +656,7 @@ struct Ctx {
   // STT_SECTION symbol associated to the .toc input section.
   llvm::DenseSet<std::pair<const Symbol *, uint64_t>> ppc64noTocRelax;
 
+  Ctx();
   void reset();
 
   llvm::raw_fd_ostream openAuxiliaryFile(llvm::StringRef, std::error_code &);
