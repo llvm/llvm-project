@@ -63,11 +63,11 @@ long        abs(     long j);
 long long   abs(long long j);                                             // C++0X
 long       labs(     long j);
 long long llabs(long long j);                                             // C99
-div_t     div(      int numer,       int denom);
-ldiv_t    div(     long numer,      long denom);
-lldiv_t   div(long long numer, long long denom);                          // C++0X
-ldiv_t   ldiv(     long numer,      long denom);
-lldiv_t lldiv(long long numer, long long denom);                          // C99
+constexpr div_t     div(      int numer,       int denom);
+constexpr ldiv_t    div(     long numer,      long denom);
+constexpr lldiv_t   div(long long numer, long long denom);                          // C++0X
+constexpr ldiv_t   ldiv(     long numer,      long denom);
+constexpr lldiv_t lldiv(long long numer, long long denom);                          // C99
 int mblen(const char* s, size_t n);
 int mbtowc(wchar_t* restrict pwc, const char* restrict s, size_t n);
 int wctomb(char* s, wchar_t wchar);
@@ -131,9 +131,6 @@ using ::qsort _LIBCPP_USING_IF_EXISTS;
 using ::abs _LIBCPP_USING_IF_EXISTS;
 using ::labs _LIBCPP_USING_IF_EXISTS;
 using ::llabs _LIBCPP_USING_IF_EXISTS;
-using ::div _LIBCPP_USING_IF_EXISTS;
-using ::ldiv _LIBCPP_USING_IF_EXISTS;
-using ::lldiv _LIBCPP_USING_IF_EXISTS;
 using ::mblen _LIBCPP_USING_IF_EXISTS;
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 using ::mbtowc _LIBCPP_USING_IF_EXISTS;
@@ -148,6 +145,36 @@ using ::quick_exit _LIBCPP_USING_IF_EXISTS;
 #if _LIBCPP_STD_VER >= 17
 using ::aligned_alloc _LIBCPP_USING_IF_EXISTS;
 #endif
+
+#if _LIBCPP_STD_VER < 23
+// use non-constexpr versions from libc
+using ::div _LIBCPP_USING_IF_EXISTS;
+using ::ldiv _LIBCPP_USING_IF_EXISTS;
+using ::lldiv _LIBCPP_USING_IF_EXISTS;
+
+#else // _LIBCPP_STD_VER >= 23
+
+template <class _Div_t, class _Int>
+_LIBCPP_HIDE_FROM_ABI constexpr _Div_t __div(_Int __x, _Int __y) {
+  _Div_t __d;
+  __d.quot = __x / __y;
+  __d.rem  = __x % __y;
+  return __d;
+}
+
+inline _LIBCPP_HIDE_FROM_ABI constexpr div_t div(int __x, int __y) { return std::__div<std::div_t>(__x, __y); }
+
+inline _LIBCPP_HIDE_FROM_ABI constexpr ldiv_t div(long __x, long __y) { return std::__div<std::ldiv_t>(__x, __y); }
+
+inline _LIBCPP_HIDE_FROM_ABI constexpr lldiv_t div(long long __x, long long __y) {
+  return std::__div<std::lldiv_t>(__x, __y);
+}
+
+inline _LIBCPP_HIDE_FROM_ABI constexpr ldiv_t ldiv(long __x, long __y) { return std::div(__x, __y); }
+
+inline _LIBCPP_HIDE_FROM_ABI constexpr lldiv_t lldiv(long long __x, long long __y) { return std::div(__x, __y); }
+
+#endif // _LIBCPP_STD_VER
 
 _LIBCPP_END_NAMESPACE_STD
 
