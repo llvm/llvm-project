@@ -3537,9 +3537,11 @@ static bool isNonEqualPHIs(const PHINode *PN1, const PHINode *PN2,
       continue; // Don't reprocess blocks that we have dealt with already.
     const Value *IV1 = PN1->getIncomingValueForBlock(IncomBB);
     const Value *IV2 = PN2->getIncomingValueForBlock(IncomBB);
+    const unsigned PhiRecursionLimit =
+        std::max(Depth, MaxAnalysisRecursionDepth - 2);
     SimplifyQuery RecQ = Q.getWithoutCondContext();
     RecQ.CxtI = IncomBB->getTerminator();
-    if (!isKnownNonEqual(IV1, IV2, DemandedElts, Depth + 1, RecQ))
+    if (!isKnownNonEqual(IV1, IV2, DemandedElts, PhiRecursionLimit, RecQ))
       return false;
   }
   return true;
