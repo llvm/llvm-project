@@ -53,10 +53,25 @@ public:
   _T1 &first() { return static_cast<_Base1 &>(*this).__get(); }
 };
 #elif COMPRESSED_PAIR_REV == 1
+// From libc++ datasizeof.h
+template <class _Tp> struct _FirstPaddingByte {
+  [[no_unique_address]] _Tp __v_;
+  char __first_padding_byte_;
+};
+
+template <class _Tp>
+inline const size_t __datasizeof_v =
+    __builtin_offsetof(_FirstPaddingByte<_Tp>, __first_padding_byte_);
+
+template <class _Tp>
+struct __lldb_is_final : public integral_constant<bool, __is_final(_Tp)> {};
+
 template <class _ToPad> class __compressed_pair_padding {
-  char __padding_[(is_empty<_ToPad>::value && !__libcpp_is_final<_ToPad>::value)
+  char __padding_[((is_empty<_ToPad>::value &&
+                    !__lldb_is_final<_ToPad>::value) ||
+                   is_reference<_ToPad>::value)
                       ? 0
-                      : sizeof(_ToPad) - __datasizeof(_ToPad)];
+                      : sizeof(_ToPad) - __datasizeof_v<_ToPad>];
 };
 
 #define _LLDB_COMPRESSED_PAIR(T1, Initializer1, T2, Initializer2)              \
