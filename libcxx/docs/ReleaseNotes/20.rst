@@ -49,6 +49,9 @@ Improvements and New Features
 - The ``lexicographical_compare`` and ``ranges::lexicographical_compare`` algorithms have been optimized for trivially
   equality comparable types, resulting in a performance improvement of up to 40x.
 
+- The ``_LIBCPP_ENABLE_CXX20_REMOVED_TEMPORARY_BUFFER`` macro has been added to make ``std::get_temporary_buffer`` and
+  ``std::return_temporary_buffer`` available.
+
 - The ``_LIBCPP_ENABLE_CXX20_REMOVED_UNCAUGHT_EXCEPTION`` macro has been added to make ``std::uncaught_exception``
   available in C++20 and later modes.
 
