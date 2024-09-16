@@ -22,6 +22,8 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
+#include <queue>
+#include <vector>
 
 namespace llvm {
 
@@ -432,6 +434,161 @@ Type *parseBasicTypeName(StringRef &TypeName, LLVMContext &Ctx) {
 
   // Unable to recognize SPIRV type name
   return nullptr;
+}
+
+std::unordered_set<BasicBlock *>
+PartialOrderingVisitor::getReachableFrom(BasicBlock *Start) {
+  std::queue<BasicBlock *> ToVisit;
+  ToVisit.push(Start);
+
+  std::unordered_set<BasicBlock *> Output;
+  while (ToVisit.size() != 0) {
+    BasicBlock *BB = ToVisit.front();
+    ToVisit.pop();
+
+    if (Output.count(BB) != 0)
+      continue;
+    Output.insert(BB);
+
+    for (BasicBlock *Successor : successors(BB)) {
+      if (DT.dominates(Successor, BB))
+        continue;
+      ToVisit.push(Successor);
+    }
+  }
+
+  return Output;
+}
+
+size_t PartialOrderingVisitor::visit(BasicBlock *BB, size_t Rank) {
+  if (Visited.count(BB) != 0)
+    return Rank;
+
+  Loop *L = LI.getLoopFor(BB);
+  const bool isLoopHeader = LI.isLoopHeader(BB);
+
+  if (BlockToOrder.count(BB) == 0) {
+    OrderInfo Info = {Rank, Visited.size()};
+    BlockToOrder.emplace(BB, Info);
+  } else {
+    BlockToOrder[BB].Rank = std::max(BlockToOrder[BB].Rank, Rank);
+  }
+
+  for (BasicBlock *Predecessor : predecessors(BB)) {
+    if (isLoopHeader && L->contains(Predecessor)) {
+      continue;
+    }
+
+    if (BlockToOrder.count(Predecessor) == 0) {
+      return Rank;
+    }
+  }
+
+  Visited.insert(BB);
+
+  SmallVector<BasicBlock *, 2> OtherSuccessors;
+  SmallVector<BasicBlock *, 2> LoopSuccessors;
+
+  for (BasicBlock *Successor : successors(BB)) {
+    // Ignoring back-edges.
+    if (DT.dominates(Successor, BB))
+      continue;
+
+    if (isLoopHeader && L->contains(Successor)) {
+      LoopSuccessors.push_back(Successor);
+    } else
+      OtherSuccessors.push_back(Successor);
+  }
+
+  for (BasicBlock *BB : LoopSuccessors)
+    Rank = std::max(Rank, visit(BB, Rank + 1));
+
+  size_t OutputRank = Rank;
+  for (BasicBlock *Item : OtherSuccessors)
+    OutputRank = std::max(OutputRank, visit(Item, Rank + 1));
+  return OutputRank;
+}
+
+PartialOrderingVisitor::PartialOrderingVisitor(Function &F) {
+  DT.recalculate(F);
+  LI = LoopInfo(DT);
+
+  visit(&*F.begin(), 0);
+
+  Order.reserve(F.size());
+  for (auto &[BB, Info] : BlockToOrder)
+    Order.emplace_back(BB);
+
+  std::sort(Order.begin(), Order.end(), [&](const auto &LHS, const auto &RHS) {
+    return compare(LHS, RHS);
+  });
+}
+
+bool PartialOrderingVisitor::compare(const BasicBlock *LHS,
+                                     const BasicBlock *RHS) const {
+  const OrderInfo &InfoLHS = BlockToOrder.at(const_cast<BasicBlock *>(LHS));
+  const OrderInfo &InfoRHS = BlockToOrder.at(const_cast<BasicBlock *>(RHS));
+  if (InfoLHS.Rank != InfoRHS.Rank)
+    return InfoLHS.Rank < InfoRHS.Rank;
+  return InfoLHS.TraversalIndex < InfoRHS.TraversalIndex;
+}
+
+void PartialOrderingVisitor::partialOrderVisit(
+    BasicBlock &Start, std::function<bool(BasicBlock *)> Op) {
+  std::unordered_set<BasicBlock *> Reachable = getReachableFrom(&Start);
+  assert(BlockToOrder.count(&Start) != 0);
+
+  // Skipping blocks with a rank inferior to |Start|'s rank.
+  auto It = Order.begin();
+  while (It != Order.end() && *It != &Start)
+    ++It;
+
+  // This is unexpected. Worst case |Start| is the last block,
+  // so It should point to the last block, not past-end.
+  assert(It != Order.end());
+
+  // By default, there is no rank limit. Setting it to the maximum value.
+  std::optional<size_t> EndRank = std::nullopt;
+  for (; It != Order.end(); ++It) {
+    if (EndRank.has_value() && BlockToOrder[*It].Rank > *EndRank)
+      break;
+
+    if (Reachable.count(*It) == 0) {
+      continue;
+    }
+
+    if (!Op(*It)) {
+      EndRank = BlockToOrder[*It].Rank;
+    }
+  }
+}
+
+bool sortBlocks(Function &F) {
+  if (F.size() == 0)
+    return false;
+
+  bool Modified = false;
+
+  std::vector<BasicBlock *> Order;
+  Order.reserve(F.size());
+
+  PartialOrderingVisitor Visitor(F);
+  Visitor.partialOrderVisit(*F.begin(), [&Order](BasicBlock *Block) {
+    Order.push_back(Block);
+    return true;
+  });
+
+  assert(&*F.begin() == Order[0]);
+  BasicBlock *LastBlock = &*F.begin();
+  for (BasicBlock *BB : Order) {
+    if (BB != LastBlock && &*LastBlock->getNextNode() != BB) {
+      Modified = true;
+      BB->moveAfter(LastBlock);
+    }
+    LastBlock = BB;
+  }
+
+  return Modified;
 }
 
 } // namespace llvm

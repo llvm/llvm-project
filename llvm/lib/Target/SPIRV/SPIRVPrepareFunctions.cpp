@@ -546,8 +546,10 @@ SPIRVPrepareFunctions::removeAggregateTypesFromSignature(Function *F) {
 
 bool SPIRVPrepareFunctions::runOnModule(Module &M) {
   bool Changed = false;
-  for (Function &F : M)
+  for (Function &F : M) {
     Changed |= substituteIntrinsicCalls(&F);
+    Changed |= sortBlocks(F);
+  }
 
   std::vector<Function *> FuncsWorklist;
   for (auto &F : M)
