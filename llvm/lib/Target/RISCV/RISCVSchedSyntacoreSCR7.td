@@ -8,7 +8,7 @@
 
 //===----------------------------------------------------------------------===//
 
-// This file covers scheduling model for rv64imafdc_zba_zbb_zbc_zbs
+// This file covers scheduling model for rv64imafdcv_zba_zbb_zbc_zbs
 // configuration of Syntacore SCR7 processor.
 // Overview: https://syntacore.com/products/scr7
 
