@@ -184,12 +184,11 @@ void DAP::SendJSON(const std::string &json_str) {
 // Serialize the JSON value into a string and send the JSON packet to
 // the "out" stream.
 void DAP::SendJSON(const llvm::json::Value &json) {
-  std::string s;
-  llvm::raw_string_ostream strm(s);
+  std::string json_str;
+  llvm::raw_string_ostream strm(json_str);
   strm << json;
   static std::mutex mutex;
   std::lock_guard<std::mutex> locker(mutex);
-  std::string json_str = strm.str();
   SendJSON(json_str);
 
   if (log) {
@@ -660,7 +659,6 @@ PacketStatus DAP::GetNextObject(llvm::json::Object &object) {
       std::string error_str;
       llvm::raw_string_ostream strm(error_str);
       strm << error;
-      strm.flush();
       *log << "error: failed to parse JSON: " << error_str << std::endl
            << json << std::endl;
     }
