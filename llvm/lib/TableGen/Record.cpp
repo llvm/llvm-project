@@ -3027,6 +3027,21 @@ Record::getValueAsListOfDefs(StringRef FieldName) const {
   return Defs;
 }
 
+std::vector<const Record *>
+Record::getValueAsListOfConstDefs(StringRef FieldName) const {
+  ListInit *List = getValueAsListInit(FieldName);
+  std::vector<const Record *> Defs;
+  for (const Init *I : List->getValues()) {
+    if (const DefInit *DI = dyn_cast<DefInit>(I))
+      Defs.push_back(DI->getDef());
+    else
+      PrintFatalError(getLoc(), "Record `" + getName() + "', field `" +
+                                    FieldName +
+                                    "' list is not entirely DefInit!");
+  }
+  return Defs;
+}
+
 int64_t Record::getValueAsInt(StringRef FieldName) const {
   const RecordVal *R = getValue(FieldName);
   if (!R || !R->getValue())
