@@ -492,14 +492,15 @@ TEST_F(AArch64GISelMITest, BuildExtractSubvector) {
   B.buildExtractSubvector(SubVecTy, Vec, 0);
 
   VecTy = LLT::scalable_vector(4, 32);
+  SubVecTy = LLT::scalable_vector(2, 32);
   Vec = B.buildUndef(VecTy);
-  B.buildExtractSubvector(VecTy, Vec, 0);
+  B.buildExtractSubvector(SubVecTy, Vec, 0);
 
   auto CheckStr = R"(
   ; CHECK: [[DEF:%[0-9]+]]:_(<4 x s32>) = G_IMPLICIT_DEF
   ; CHECK-NEXT: [[EXTRACT_SUBVECTOR:%[0-9]+]]:_(<2 x s32>) = G_EXTRACT_SUBVECTOR [[DEF]](<4 x s32>), 0
   ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(<vscale x 4 x s32>) = G_IMPLICIT_DEF
-  ; CHECK-NEXT: [[EXTRACT_SUBVECTOR1:%[0-9]+]]:_(<vscale x 4 x s32>) = G_EXTRACT_SUBVECTOR [[DEF1]](<vscale x 4 x s32>), 0
+  ; CHECK-NEXT: [[EXTRACT_SUBVECTOR1:%[0-9]+]]:_(<vscale x 2 x s32>) = G_EXTRACT_SUBVECTOR [[DEF1]](<vscale x 4 x s32>), 0
   )";
 
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;

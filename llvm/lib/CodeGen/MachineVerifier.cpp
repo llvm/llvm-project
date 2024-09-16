@@ -1778,9 +1778,19 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
       break;
     }
 
-    if (IndexOp.getImm() % DstTy.getElementCount().getKnownMinValue() != 0) {
+    int64_t Idx = IndexOp.getImm();
+    auto DstMinLen = DstTy.getElementCount().getKnownMinValue();
+    if (Idx % DstMinLen != 0) {
       report("Index must be a multiple of the destination vector's minimum "
              "vector length",
+             MI);
+      break;
+    }
+
+    auto SrcMinLen = SrcTy.getElementCount().getKnownMinValue();
+    if (Idx < SrcMinLen && Idx + DstMinLen <= SrcMinLen) {
+      report("Source type and index must not cause extract to overrun to the "
+             "destination type",
              MI);
       break;
     }
