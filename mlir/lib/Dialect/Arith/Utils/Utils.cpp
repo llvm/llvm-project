@@ -357,4 +357,26 @@ Value createProduct(OpBuilder &builder, Location loc, ArrayRef<Value> values,
       [&arithBuilder](Value acc, Value v) { return arithBuilder.mul(acc, v); });
 }
 
+/// Map strings to float types.
+std::optional<FloatType> parseFloatType(MLIRContext *ctx, StringRef name) {
+  Builder b(ctx);
+  return llvm::StringSwitch<std::optional<FloatType>>(name)
+      .Case("f4E2M1FN", b.getFloat4E2M1FNType())
+      .Case("f6E2M3FN", b.getFloat6E2M3FNType())
+      .Case("f6E3M2FN", b.getFloat6E3M2FNType())
+      .Case("f8E5M2", b.getFloat8E5M2Type())
+      .Case("f8E4M3", b.getFloat8E4M3Type())
+      .Case("f8E4M3FN", b.getFloat8E4M3FNType())
+      .Case("f8E5M2FNUZ", b.getFloat8E5M2FNUZType())
+      .Case("f8E4M3FNUZ", b.getFloat8E4M3FNUZType())
+      .Case("f8E3M4", b.getFloat8E3M4Type())
+      .Case("bf16", b.getBF16Type())
+      .Case("f16", b.getF16Type())
+      .Case("f32", b.getF32Type())
+      .Case("f64", b.getF64Type())
+      .Case("f80", b.getF80Type())
+      .Case("f128", b.getF128Type())
+      .Default(std::nullopt);
+}
+
 } // namespace mlir::arith
