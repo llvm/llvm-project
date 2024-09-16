@@ -957,6 +957,7 @@ bool ShrinkWrapImpl::run(MachineFunction &MF) {
   bool HasCandidate = performShrinkWrapping(RPOT, RS.get());
   StackAddressUsedBlockInfo.clear();
   Changed = postShrinkWrapping(HasCandidate, MF, RS.get());
+
   if (!HasCandidate && !Changed)
     return false;
   if (!ArePointsInteresting())

@@ -244,6 +244,7 @@ void MachineFrameInfo::print(const MachineFunction &MF, raw_ostream &OS) const{
     }
     OS << "\n";
   }
+
   OS << "save/restore points:\n";
 
   if (!SavePoints.empty()) {
