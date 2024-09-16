@@ -40,6 +40,10 @@
 #  include <sys/resource.h>
 #  include <syslog.h>
 
+#  if SANITIZER_GLIBC
+#    include <gnu/libc-version.h>
+#  endif
+
 #  if !defined(ElfW)
 #    define ElfW(type) Elf_##type
 #  endif
@@ -198,17 +202,11 @@ bool SetEnv(const char *name, const char *value) {
 
 __attribute__((unused)) static bool GetLibcVersion(int *major, int *minor,
                                                    int *patch) {
-#  ifdef _CS_GNU_LIBC_VERSION
-  char buf[64];
-  uptr len = confstr(_CS_GNU_LIBC_VERSION, buf, sizeof(buf));
-  if (len >= sizeof(buf))
-    return false;
-  buf[len] = 0;
-  static const char kGLibC[] = "glibc ";
-  if (internal_strncmp(buf, kGLibC, sizeof(kGLibC) - 1) != 0)
-    return false;
-  const char *p = buf + sizeof(kGLibC) - 1;
+#  if SANITIZER_GLIBC
+  const char *p = gnu_get_libc_version();
   *major = internal_simple_strtoll(p, &p, 10);
+  // Caller does not expect anything else.
+  CHECK_EQ(*major, 2);
   *minor = (*p == '.') ? internal_simple_strtoll(p + 1, &p, 10) : 0;
   *patch = (*p == '.') ? internal_simple_strtoll(p + 1, &p, 10) : 0;
   return true;
