@@ -1778,6 +1778,11 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
       break;
     }
 
+    if (DstTy.isScalable() && SrcTy.isScalable() && DstTy != SrcTy) {
+      report("Scalable vector types must match", MI);
+      break;
+    }
+
     if (IndexOp.getImm() != 0 &&
         SrcTy.getElementCount().getKnownMinValue() % IndexOp.getImm() != 0) {
       report("Index must be a multiple of the source vector's minimum vector "

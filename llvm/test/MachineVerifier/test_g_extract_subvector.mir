@@ -29,4 +29,7 @@ body:             |
 
     ; CHECK: Index must be a multiple of the source vector's minimum vector length
     %9:_(<vscale x 4 x s32>) = G_EXTRACT_SUBVECTOR  %1, 3
+
+    ; CHECK: Scalable vector types must match
+    %10:_(<vscale x 4 x s32>) = G_EXTRACT_SUBVECTOR  %1, 2
 ...
