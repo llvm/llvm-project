@@ -1617,7 +1617,8 @@ void request_evaluate(const llvm::json::Object &request) {
       } else {
         body.try_emplace("variablesReference", (int64_t)0);
       }
-      if (lldb::addr_t addr = value.GetLoadAddress(); addr != LLDB_INVALID_ADDRESS)
+      if (lldb::addr_t addr = value.GetLoadAddress();
+          addr != LLDB_INVALID_ADDRESS)
         body.try_emplace("memoryReference", EncodeMemoryReference(addr));
     }
   }
@@ -3792,7 +3793,8 @@ void request_setVariable(const llvm::json::Object &request) {
             variable, /*is_permanent=*/false);
       body.try_emplace("variablesReference", newVariablesReference);
 
-      if (lldb::addr_t addr = variable.GetLoadAddress(); addr != LLDB_INVALID_ADDRESS)
+      if (lldb::addr_t addr = variable.GetLoadAddress();
+          addr != LLDB_INVALID_ADDRESS)
         body.try_emplace("memoryReference", EncodeMemoryReference(addr));
     } else {
       EmplaceSafeString(body, "message", std::string(error.GetCString()));
@@ -4300,7 +4302,7 @@ void request_disassemble(const llvm::json::Object &request) {
 void request_readMemory(const llvm::json::Object &request) {
   llvm::json::Object response;
   FillResponse(request, response);
-  auto* arguments = request.getObject("arguments");
+  auto *arguments = request.getObject("arguments");
 
   lldb::SBProcess process = g_dap.target.GetProcess();
   if (!process.IsValid()) {

@@ -119,11 +119,11 @@ std::string EncodeMemoryReference(lldb::addr_t addr) {
 std::optional<lldb::addr_t>
 DecodeMemoryReference(llvm::StringRef memoryReference) {
   if (!memoryReference.starts_with("0x"))
-     return std::nullopt;
+    return std::nullopt;
 
   lldb::addr_t addr;
   if (memoryReference.consumeInteger(0, addr))
-     return std::nullopt;
+    return std::nullopt;
 
   return addr;
 }
