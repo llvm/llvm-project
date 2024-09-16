@@ -112,7 +112,8 @@ Changes in existing checks
   the offending code with ``reinterpret_cast``, to more clearly express intent.
 
 - Improved :doc:`cert-flp30-c<clang-tidy/checks/cert/flp30-c>` check to 
-  fix false positive that floating point variable only used in increment expr.
+  fix false positive that floating point variable is only used in increment
+  expression.
 
 - Improved :doc:`modernize-use-std-format
   <clang-tidy/checks/modernize/use-std-format>` check to support replacing

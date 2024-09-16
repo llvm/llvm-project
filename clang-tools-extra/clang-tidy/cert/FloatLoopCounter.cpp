@@ -16,21 +16,26 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::cert {
 
 void FloatLoopCounter::registerMatchers(MatchFinder *Finder) {
-  Finder->addMatcher(forStmt(hasIncrement(forEachDescendant(
-                                 declRefExpr(hasType(realFloatingPointType()),
-                                             to(varDecl().bind("var"))))),
-                             hasCondition(forEachDescendant(declRefExpr(
-                                 hasType(realFloatingPointType()),
-                                 to(varDecl(equalsBoundNode("var")))))))
-                         .bind("for"),
-                     this);
+  Finder->addMatcher(
+      forStmt(hasIncrement(forEachDescendant(
+                  declRefExpr(hasType(realFloatingPointType()),
+                              to(varDecl().bind("var")))
+                      .bind("inc"))),
+              hasCondition(forEachDescendant(
+                  declRefExpr(hasType(realFloatingPointType()),
+                              to(varDecl(equalsBoundNode("var"))))
+                      .bind("cond"))))
+          .bind("for"),
+      this);
 }
 
 void FloatLoopCounter::check(const MatchFinder::MatchResult &Result) {
   const auto *FS = Result.Nodes.getNodeAs<ForStmt>("for");
 
   diag(FS->getInc()->getBeginLoc(), "loop induction expression should not have "
-                                    "floating-point type");
+                                    "floating-point type")
+      << Result.Nodes.getNodeAs<DeclRefExpr>("inc")->getSourceRange()
+      << Result.Nodes.getNodeAs<DeclRefExpr>("cond")->getSourceRange();
 
   if (!FS->getInc()->getType()->isRealFloatingType())
     if (const auto *V = Result.Nodes.getNodeAs<VarDecl>("var"))
