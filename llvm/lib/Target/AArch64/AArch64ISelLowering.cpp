@@ -21866,9 +21866,8 @@ SDValue tryLowerPartialReductionToDot(SDNode *N,
       return SDValue();
 
     Opcode = AArch64ISD::USDOT;
-    // USDOT expects the first operand to be unsigned, so swap the operands if
-    // the first is signed and the second is unsigned
-    if (AIsSExt && BIsZExt)
+    // USDOT expects the signed operand to be last
+    if (BIsZExt)
       std::swap(A, B);
   } else if (AIsSExt)
     Opcode = AArch64ISD::SDOT;
