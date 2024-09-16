@@ -34,6 +34,7 @@ Type AbstractType::replaceImmediateSubElements(Type type,
 
 MLIRContext *Type::getContext() const { return getDialect().getContext(); }
 
+bool Type::isFloat6E2M3FN() const { return llvm::isa<Float6E2M3FNType>(*this); }
 bool Type::isFloat6E3M2FN() const { return llvm::isa<Float6E3M2FNType>(*this); }
 bool Type::isFloat8E5M2() const { return llvm::isa<Float8E5M2Type>(*this); }
 bool Type::isFloat8E4M3() const { return llvm::isa<Float8E4M3Type>(*this); }

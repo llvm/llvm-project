@@ -79,6 +79,16 @@ MLIR_CAPI_EXPORTED bool mlirTypeIsAFloat(MlirType type);
 /// Returns the bitwidth of a floating-point type.
 MLIR_CAPI_EXPORTED unsigned mlirFloatTypeGetWidth(MlirType type);
 
+/// Returns the typeID of an Float6E2M3FN type.
+MLIR_CAPI_EXPORTED MlirTypeID mlirFloat6E2M3FNTypeGetTypeID(void);
+
+/// Checks whether the given type is an f6E2M3FN type.
+MLIR_CAPI_EXPORTED bool mlirTypeIsAFloat6E2M3FN(MlirType type);
+
+/// Creates an f6E2M3FN type in the given context. The type is owned by the
+/// context.
+MLIR_CAPI_EXPORTED MlirType mlirFloat6E2M3FNTypeGet(MlirContext ctx);
+
 /// Returns the typeID of an Float6E3M2FN type.
 MLIR_CAPI_EXPORTED MlirTypeID mlirFloat6E3M2FNTypeGetTypeID(void);
 
