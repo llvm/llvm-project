@@ -10,12 +10,15 @@
 
 #include "clang/Sema/SemaHLSL.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/Attr.h"
+#include "clang/AST/Attrs.inc"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Type.h"
+#include "clang/AST/TypeLoc.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/LLVM.h"
@@ -564,18 +567,23 @@ void SemaHLSL::handleShaderAttr(Decl *D, const ParsedAttr &AL) {
     D->addAttr(NewAttr);
 }
 
-bool clang::CreateHLSLAttributedResourceType(Sema &S, QualType Wrapped,
-                                             ArrayRef<const Attr *> AttrList,
-                                             QualType &ResType) {
+bool clang::CreateHLSLAttributedResourceType(
+    Sema &S, QualType Wrapped, ArrayRef<const Attr *> AttrList,
+    QualType &ResType, HLSLAttributedResourceLocInfo *LocInfo) {
   assert(AttrList.size() && "expected list of resource attributes");
 
-  QualType Contained = QualType();
+  QualType ContainedTy = QualType();
+  TypeSourceInfo *ContainedTyInfo;
+  SourceLocation LocBegin = AttrList[0]->getRange().getBegin();
+  SourceLocation LocEnd = AttrList[0]->getRange().getEnd();
+
   HLSLAttributedResourceType::Attributes ResAttrs = {};
 
   bool HasResourceClass = false;
   for (const Attr *A : AttrList) {
     if (!A)
       continue;
+    LocEnd = A->getRange().getEnd();
     switch (A->getKind()) {
     case attr::HLSLResourceClass: {
       llvm::dxil::ResourceClass RC =
@@ -598,6 +606,20 @@ bool clang::CreateHLSLAttributedResourceType(Sema &S, QualType Wrapped,
       }
       ResAttrs.IsROV = true;
       break;
+    case attr::HLSLContainedType: {
+      const HLSLContainedTypeAttr *CTAttr = cast<HLSLContainedTypeAttr>(A);
+      QualType Ty = CTAttr->getType();
+      if (!ContainedTy.isNull()) {
+        S.Diag(A->getLocation(), ContainedTy == Ty
+                                     ? diag::warn_duplicate_attribute_exact
+                                     : diag::warn_duplicate_attribute)
+            << A;
+        return false;
+      }
+      ContainedTy = Ty;
+      ContainedTyInfo = CTAttr->getTypeLoc();
+      break;
+    }
     default:
       llvm_unreachable("unhandled resource attribute type");
     }
@@ -609,8 +631,13 @@ bool clang::CreateHLSLAttributedResourceType(Sema &S, QualType Wrapped,
     return false;
   }
 
-  ResType = S.getASTContext().getHLSLAttributedResourceType(Wrapped, Contained,
-                                                            ResAttrs);
+  ResType = S.getASTContext().getHLSLAttributedResourceType(
+      Wrapped, ContainedTy, ResAttrs);
+
+  if (LocInfo) {
+    LocInfo->Range = SourceRange(LocBegin, LocEnd);
+    LocInfo->ContainedTyInfo = ContainedTyInfo;
+  }
   return true;
 }
 
@@ -647,9 +674,27 @@ bool SemaHLSL::handleResourceTypeAttr(const ParsedAttr &AL) {
     A = HLSLResourceClassAttr::Create(getASTContext(), RC, AL.getLoc());
     break;
   }
+
   case ParsedAttr::AT_HLSLROV:
     A = HLSLROVAttr::Create(getASTContext(), AL.getLoc());
     break;
+
+  case ParsedAttr::AT_HLSLContainedType: {
+    if (AL.getNumArgs() != 1 && !AL.hasParsedType()) {
+      Diag(AL.getLoc(), diag::err_attribute_wrong_number_arguments) << AL << 1;
+      return false;
+    }
+
+    TypeSourceInfo *TSI = nullptr;
+    QualType QT = SemaRef.GetTypeFromParser(AL.getTypeArg(), &TSI);
+    assert(TSI && "no type source info for attribute argument");
+    if (SemaRef.RequireCompleteType(TSI->getTypeLoc().getBeginLoc(), QT,
+                                    diag::err_incomplete_type))
+      return false;
+    A = HLSLContainedTypeAttr::Create(getASTContext(), TSI, AL.getLoc());
+    break;
+  }
+
   default:
     llvm_unreachable("unhandled HLSL attribute");
   }
@@ -664,30 +709,34 @@ QualType SemaHLSL::ProcessResourceTypeAttributes(QualType CurrentType) {
     return CurrentType;
 
   QualType QT = CurrentType;
+  HLSLAttributedResourceLocInfo LocInfo;
   if (CreateHLSLAttributedResourceType(SemaRef, CurrentType,
-                                       HLSLResourcesTypeAttrs, QT)) {
+                                       HLSLResourcesTypeAttrs, QT, &LocInfo)) {
     const HLSLAttributedResourceType *RT =
-        dyn_cast<HLSLAttributedResourceType>(QT.getTypePtr());
-    // Use the location of the first attribute as the location of the aggregated
-    // type. The attributes are stored in HLSLResourceTypeAttrs in the same
-    // order as they are parsed.
-    SourceLocation Loc = HLSLResourcesTypeAttrs[0]->getLoc();
-    LocsForHLSLAttributedResources.insert(std::pair(RT, Loc));
+        cast<HLSLAttributedResourceType>(QT.getTypePtr());
+
+    // Temporarily store TypeLoc information for the new type.
+    // It will be transferred to HLSLAttributesResourceTypeLoc
+    // shortly after the type is created by TypeSpecLocFiller which
+    // will call the TakeLocForHLSLAttribute method below.
+    LocsForHLSLAttributedResources.insert(std::pair(RT, LocInfo));
   }
   HLSLResourcesTypeAttrs.clear();
   return QT;
 }
 
 // Returns source location for the HLSLAttributedResourceType
-SourceLocation
+HLSLAttributedResourceLocInfo
 SemaHLSL::TakeLocForHLSLAttribute(const HLSLAttributedResourceType *RT) {
+  HLSLAttributedResourceLocInfo LocInfo = {};
   auto I = LocsForHLSLAttributedResources.find(RT);
   if (I != LocsForHLSLAttributedResources.end()) {
-    SourceLocation Loc = I->second;
+    LocInfo = I->second;
     LocsForHLSLAttributedResources.erase(I);
-    return Loc;
+    return LocInfo;
   }
-  return SourceLocation();
+  LocInfo.Range = SourceRange();
+  return LocInfo;
 }
 
 struct RegisterBindingFlags {

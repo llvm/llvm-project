@@ -247,7 +247,6 @@ public:
     // The cache is initially empty
     LRUHead = CachedBlock::InvalidEntry;
     LRUTail = CachedBlock::InvalidEntry;
-    LastUnreleasedEntry = CachedBlock::InvalidEntry;
 
     // Available entries will be retrieved starting from the beginning of the
     // Entries array
@@ -322,10 +321,9 @@ public:
         }
         CachedBlock PrevEntry = Quarantine[QuarantinePos];
         Quarantine[QuarantinePos] = Entry;
+        if (OldestTime == 0)
+          OldestTime = Entry.Time;
         Entry = PrevEntry;
-        // Update the entry time to reflect the time that the
-        // quarantined memory is placed in the Entries array
-        Entry.Time = Time;
       }
 
       // All excess entries are evicted from the cache
@@ -336,6 +334,9 @@ public:
       }
 
       insert(Entry);
+
+      if (OldestTime == 0)
+        OldestTime = Entry.Time;
     } while (0);
 
     for (MemMapT &EvictMemMap : EvictionMemMaps)
@@ -534,9 +535,6 @@ private:
       Entries[LRUHead].Prev = static_cast<u16>(FreeIndex);
     }
 
-    if (LastUnreleasedEntry == CachedBlock::InvalidEntry)
-      LastUnreleasedEntry = static_cast<u16>(FreeIndex);
-
     Entries[FreeIndex] = Entry;
     Entries[FreeIndex].Next = LRUHead;
     Entries[FreeIndex].Prev = CachedBlock::InvalidEntry;
@@ -553,9 +551,6 @@ private:
     DCHECK(Entries[I].isValid());
 
     Entries[I].invalidate();
-
-    if (I == LastUnreleasedEntry)
-      LastUnreleasedEntry = Entries[LastUnreleasedEntry].Prev;
 
     if (I == LRUHead)
       LRUHead = Entries[I].Next;
@@ -598,37 +593,35 @@ private:
     }
   }
 
-  inline void release(CachedBlock &Entry) {
-    DCHECK(Entry.Time != 0);
+  void releaseIfOlderThan(CachedBlock &Entry, u64 Time) REQUIRES(Mutex) {
+    if (!Entry.isValid() || !Entry.Time)
+      return;
+    if (Entry.Time > Time) {
+      if (OldestTime == 0 || Entry.Time < OldestTime)
+        OldestTime = Entry.Time;
+      return;
+    }
     Entry.MemMap.releaseAndZeroPagesToOS(Entry.CommitBase, Entry.CommitSize);
     Entry.Time = 0;
   }
 
   void releaseOlderThan(u64 Time) EXCLUDES(Mutex) {
     ScopedLock L(Mutex);
-    if (!EntriesCount)
+    if (!EntriesCount || OldestTime == 0 || OldestTime > Time)
       return;
-
-    for (uptr I = 0; I < Config::getQuarantineSize(); I++) {
-      CachedBlock &ReleaseEntry = Quarantine[I];
-      if (!ReleaseEntry.isValid() || !ReleaseEntry.Time ||
-          ReleaseEntry.Time > Time)
-        continue;
-      release(ReleaseEntry);
-    }
-
-    // Release oldest entries first by releasing from decommit base
-    while (LastUnreleasedEntry != CachedBlock::InvalidEntry &&
-           Entries[LastUnreleasedEntry].Time <= Time) {
-      release(Entries[LastUnreleasedEntry]);
-      LastUnreleasedEntry = Entries[LastUnreleasedEntry].Prev;
-    }
+    OldestTime = 0;
+    for (uptr I = 0; I < Config::getQuarantineSize(); I++)
+      releaseIfOlderThan(Quarantine[I], Time);
+    for (uptr I = 0; I < Config::getEntriesArraySize(); I++)
+      releaseIfOlderThan(Entries[I], Time);
   }
+
   HybridMutex Mutex;
   u32 EntriesCount GUARDED_BY(Mutex) = 0;
   u32 QuarantinePos GUARDED_BY(Mutex) = 0;
   atomic_u32 MaxEntriesCount = {};
   atomic_uptr MaxEntrySize = {};
+  u64 OldestTime GUARDED_BY(Mutex) = 0;
   atomic_s32 ReleaseToOsIntervalMs = {};
   u32 CallsToRetrieve GUARDED_BY(Mutex) = 0;
   u32 SuccessfulRetrieves GUARDED_BY(Mutex) = 0;
@@ -643,9 +636,6 @@ private:
   u16 LRUTail GUARDED_BY(Mutex) = 0;
   // The AvailableHead is the top of the stack of available entries
   u16 AvailableHead GUARDED_BY(Mutex) = 0;
-  // The LastUnreleasedEntry is the least recently used entry that has not
-  // been released
-  u16 LastUnreleasedEntry GUARDED_BY(Mutex) = 0;
 };
 
 template <typename Config> class MapAllocator {
