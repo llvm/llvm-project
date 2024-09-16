@@ -389,6 +389,8 @@ Bug Fixes to C++ Support
 - Fixed a crash when clang tries to subtitute parameter pack while retaining the parameter
   pack. #GH63819, #GH107560
 - Fix a crash when a static assert declaration has an invalid close location. (#GH108687)
+- Fixed a bug in computing result type of conditional operator with omitted middle operand
+  (a GNU extension). (#GH15998)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
