@@ -60,7 +60,3 @@ RWBuffer<int> g : register(u2, space0);
 
 // valid
 RWBuffer<int> h : register(u2, space0);
-
-struct S {
-    RWBuffer<int> a;
-};
