@@ -20,6 +20,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Parallel.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <utility>
@@ -562,6 +563,9 @@ void SymbolTable::addExitThunk(Symbol *from, Symbol *to) {
 }
 
 void SymbolTable::initializeECThunks() {
+  if (!isArm64EC(ctx.config.machine))
+    return;
+
   for (auto it : entryThunks) {
     auto *to = dyn_cast<Defined>(it.second);
     if (!to)
@@ -587,6 +591,19 @@ void SymbolTable::initializeECThunks() {
       sym = exitThunks.lookup(file->impECSym);
     file->impchkThunk->exitThunk = dyn_cast_or_null<Defined>(sym);
   }
+
+  // On ARM64EC, the __imp_ symbol references the auxiliary IAT, while the
+  // __imp_aux_ symbol references the regular IAT. However, x86_64 code expects
+  // both to reference the regular IAT, so adjust the symbol if necessary.
+  parallelForEach(ctx.objFileInstances, [&](ObjFile *file) {
+    if (file->getMachineType() != AMD64)
+      return;
+    for (auto &sym : file->getMutableSymbols()) {
+      auto impSym = dyn_cast_or_null<DefinedImportData>(sym);
+      if (impSym && impSym->file->impchkThunk && sym == impSym->file->impECSym)
+        sym = impSym->file->impSym;
+    }
+  });
 }
 
 Symbol *SymbolTable::addUndefined(StringRef name, InputFile *f,
