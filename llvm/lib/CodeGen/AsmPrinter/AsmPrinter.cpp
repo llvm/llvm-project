@@ -1737,11 +1737,10 @@ void AsmPrinter::emitFunctionBody() {
   bool IsEHa = MMI->getModule()->getModuleFlag("eh-asynch");
 
   bool CanDoExtraAnalysis = ORE->allowExtraAnalysis(DEBUG_TYPE);
-  /* Create a slot for the entry basic block section so that the section
-     order is preserved when iterating over MBBSectionRanges. */
-  if (!MF->empty()) {
+  // Create a slot for the entry basic block section so that the section
+  // order is preserved when iterating over MBBSectionRanges.
+  if (!MF->empty())
     MBBSectionRanges[MF->front().getSectionID()] = MBBSectionRange{CurrentFnBegin, nullptr};
-  }
 
   for (auto &MBB : *MF) {
     // Print a label for the basic block.
