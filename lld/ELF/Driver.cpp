@@ -91,8 +91,11 @@ void elf::errorOrWarn(const Twine &msg) {
     error(msg);
 }
 
+Ctx::Ctx() : driver(*this) {}
+
 void Ctx::reset() {
-  driver = LinkerDriver();
+  driver.~LinkerDriver();
+  new (&driver) LinkerDriver(*this);
   script = nullptr;
   target = nullptr;
 
@@ -612,6 +615,8 @@ static void checkZOptions(opt::InputArgList &args) {
 constexpr const char *saveTempsValues[] = {
     "resolution", "preopt",     "promote", "internalize",  "import",
     "opt",        "precodegen", "prelink", "combinedindex"};
+
+LinkerDriver::LinkerDriver(Ctx &ctx) : ctx(ctx) {}
 
 void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   ELFOptTable parser;
