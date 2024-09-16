@@ -6178,9 +6178,8 @@ public:
     Attributes(llvm::dxil::ResourceClass ResourceClass, bool IsROV,
                bool RawBuffer)
         : ResourceClass(ResourceClass), IsROV(IsROV), RawBuffer(RawBuffer) {}
-    Attributes()
-        : ResourceClass(llvm::dxil::ResourceClass::UAV), IsROV(false),
-          RawBuffer(false) {}
+
+    Attributes() : Attributes(llvm::dxil::ResourceClass::UAV, false, false) {}
   };
 
 private:

@@ -570,7 +570,7 @@ bool clang::CreateHLSLAttributedResourceType(Sema &S, QualType Wrapped,
   assert(AttrList.size() && "expected list of resource attributes");
 
   QualType Contained = QualType();
-  HLSLAttributedResourceType::Attributes ResAttrs = {};
+  HLSLAttributedResourceType::Attributes ResAttrs;
 
   bool HasResourceClass = false;
   for (const Attr *A : AttrList) {
