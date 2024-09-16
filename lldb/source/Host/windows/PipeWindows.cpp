@@ -74,7 +74,6 @@ Status PipeWindows::CreateNew(bool child_process_inherit) {
   std::string pipe_name;
   llvm::raw_string_ostream pipe_name_stream(pipe_name);
   pipe_name_stream << "lldb.pipe." << ::GetCurrentProcessId() << "." << serial;
-  pipe_name_stream.flush();
 
   return CreateNew(pipe_name.c_str(), child_process_inherit);
 }

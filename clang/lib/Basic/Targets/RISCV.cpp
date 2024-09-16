@@ -459,6 +459,8 @@ ParsedTargetAttr RISCVTargetInfo::parseTargetAttr(StringRef Features) const {
         Ret.Duplicate = "tune=";
 
       Ret.Tune = AttrString;
+    } else if (Feature.starts_with("priority")) {
+      // Skip because it only use for FMV.
     }
   }
   return Ret;

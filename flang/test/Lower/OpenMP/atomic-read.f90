@@ -25,9 +25,9 @@
 !CHECK:    %[[X_DECL:.*]]:2 = hlfir.declare %[[X_REF]] {uniq_name = "_QFEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:    %[[Y_REF:.*]] = fir.alloca i32 {bindc_name = "y", uniq_name = "_QFEy"}
 !CHECK:    %[[Y_DECL:.*]]:2 = hlfir.declare %[[Y_REF]] {uniq_name = "_QFEy"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK:    omp.atomic.read %[[X_DECL]]#1 = %[[Y_DECL]]#1   memory_order(acquire) hint(uncontended) : !fir.ref<i32>, i32
+!CHECK:    omp.atomic.read %[[X_DECL]]#1 = %[[Y_DECL]]#1   hint(uncontended) memory_order(acquire) : !fir.ref<i32>, i32
 !CHECK:    omp.atomic.read %[[A_DECL]]#1 = %[[B_DECL]]#1   memory_order(relaxed) : !fir.ref<i32>, i32
-!CHECK:    omp.atomic.read %[[C_DECL]]#1 = %[[D_DECL]]#1   memory_order(seq_cst) hint(contended) : !fir.ref<!fir.logical<4>>, !fir.logical<4>
+!CHECK:    omp.atomic.read %[[C_DECL]]#1 = %[[D_DECL]]#1   hint(contended) memory_order(seq_cst) : !fir.ref<!fir.logical<4>>, !fir.logical<4>
 !CHECK:    omp.atomic.read %[[E_DECL]]#1 = %[[F_DECL]]#1   hint(speculative) : !fir.ref<i32>, i32
 !CHECK:    omp.atomic.read %[[G_DECL]]#1 = %[[H_DECL]]#1   hint(nonspeculative) : !fir.ref<f32>, f32
 !CHECK:    omp.atomic.read %[[G_DECL]]#1 = %[[H_DECL]]#1   : !fir.ref<f32>, f32

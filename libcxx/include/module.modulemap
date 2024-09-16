@@ -1542,6 +1542,11 @@ module std_private_memory_unique_ptr                      [system] {
   export std_private_type_traits_is_pointer
   export std_private_type_traits_type_identity
 }
+module std_private_memory_unique_temporary_buffer         [system] {
+  header "__memory/unique_temporary_buffer.h"
+  export std_private_memory_unique_ptr
+  export std_private_type_traits_is_constant_evaluated
+}
 module std_private_memory_uses_allocator                  [system] { header "__memory/uses_allocator.h" }
 module std_private_memory_uses_allocator_construction     [system] { header "__memory/uses_allocator_construction.h" }
 module std_private_memory_voidify                         [system] { header "__memory/voidify.h" }
