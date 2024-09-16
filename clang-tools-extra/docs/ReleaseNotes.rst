@@ -111,6 +111,15 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/casting-through-void>` check to suggest replacing
   the offending code with ``reinterpret_cast``, to more clearly express intent.
 
+- Improved :doc:`cert-flp30-c<clang-tidy/checks/cert/flp30-c>` check to 
+  fix false positive that floating point variable is only used in increment
+  expression.
+
+- Improved :doc:`cppcoreguidelines-prefer-member-initializer
+  <clang-tidy/checks/cppcoreguidelines/prefer-member-initializer>` check to avoid
+  false positive when member initialization depends on a structured binging
+  variable.
+
 - Improved :doc:`modernize-use-std-format
   <clang-tidy/checks/modernize/use-std-format>` check to support replacing
   member function calls too.
@@ -123,7 +132,11 @@ Changes in existing checks
   <clang-tidy/checks/modernize/use-std-print>` check to support replacing
   member function calls too.
 
-- Improved :doc:`readablility-implicit-bool-conversion
+- Improved :doc:`performance-avoid-endl
+  <clang-tidy/checks/performance/avoid-endl>` check to use ``std::endl`` as
+  placeholder when lexer cannot get source text.
+
+- Improved :doc:`readability-implicit-bool-conversion
   <clang-tidy/checks/readability/implicit-bool-conversion>` check
   by adding the option `UseUpperCaseLiteralSuffix` to select the
   case of the literal suffix in fixes.

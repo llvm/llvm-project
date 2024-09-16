@@ -262,7 +262,7 @@ static bool isRIPRelative(const MCInst &MI, const MCInstrInfo &MCII) {
   if (MemoryOperand < 0)
     return false;
   unsigned BaseRegNum = MemoryOperand + CurOp + X86::AddrBaseReg;
-  unsigned BaseReg = MI.getOperand(BaseRegNum).getReg();
+  MCRegister BaseReg = MI.getOperand(BaseRegNum).getReg();
   return (BaseReg == X86::RIP);
 }
 
@@ -302,7 +302,7 @@ uint8_t X86AsmBackend::determinePaddingPrefix(const MCInst &Inst) const {
   if (MemoryOperand != -1)
     MemoryOperand += X86II::getOperandBias(Desc);
 
-  unsigned SegmentReg = 0;
+  MCRegister SegmentReg;
   if (MemoryOperand >= 0) {
     // Check for explicit segment override on memory operand.
     SegmentReg = Inst.getOperand(MemoryOperand + X86::AddrSegmentReg).getReg();
@@ -338,7 +338,7 @@ uint8_t X86AsmBackend::determinePaddingPrefix(const MCInst &Inst) const {
 
   if (MemoryOperand >= 0) {
     unsigned BaseRegNum = MemoryOperand + X86::AddrBaseReg;
-    unsigned BaseReg = Inst.getOperand(BaseRegNum).getReg();
+    MCRegister BaseReg = Inst.getOperand(BaseRegNum).getReg();
     if (BaseReg == X86::ESP || BaseReg == X86::EBP)
       return X86::SS_Encoding;
   }

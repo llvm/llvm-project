@@ -1583,9 +1583,8 @@ multiclass BufferAtomicPat<string OpPrefix, ValueType vt, string Inst, bit isInt
   defm : BufferAtomicPat_Common<OpPrefix, vt, Inst # "_VBUFFER", isIntr>;
 }
 
-multiclass BufferAtomicIntrPat<string OpPrefix, ValueType vt, string Inst> {
-  defm : BufferAtomicPat<OpPrefix, vt, Inst, /* isIntr */ 1>;
-}
+multiclass BufferAtomicIntrPat<string OpPrefix, ValueType vt, string Inst> :
+  BufferAtomicPat<OpPrefix, vt, Inst, /* isIntr */ 1>;
 
 multiclass BufferAtomicCmpSwapPat_Common<ValueType vt, ValueType data_vt, string Inst> {
   foreach RtnMode = ["ret", "noret"] in {

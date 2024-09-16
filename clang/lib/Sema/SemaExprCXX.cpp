@@ -1540,9 +1540,6 @@ Sema::BuildCXXTypeConstructExpr(TypeSourceInfo *TInfo,
                                 bool ListInitialization) {
   QualType Ty = TInfo->getType();
   SourceLocation TyBeginLoc = TInfo->getTypeLoc().getBeginLoc();
-
-  assert((!ListInitialization || Exprs.size() == 1) &&
-         "List initialization must have exactly one expression.");
   SourceRange FullRange = SourceRange(TyBeginLoc, RParenOrBraceLoc);
 
   InitializedEntity Entity =
@@ -4313,8 +4310,10 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
 // from type to the elements of the to type without resizing the vector.
 static QualType adjustVectorType(ASTContext &Context, QualType FromTy,
                                  QualType ToType, QualType *ElTy = nullptr) {
-  auto *ToVec = ToType->castAs<VectorType>();
-  QualType ElType = ToVec->getElementType();
+  QualType ElType = ToType;
+  if (auto *ToVec = ToType->getAs<VectorType>())
+    ElType = ToVec->getElementType();
+
   if (ElTy)
     *ElTy = ElType;
   if (!FromTy->isVectorType())
@@ -4475,7 +4474,7 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
   case ICK_Integral_Conversion: {
     QualType ElTy = ToType;
     QualType StepTy = ToType;
-    if (ToType->isVectorType())
+    if (FromType->isVectorType() || ToType->isVectorType())
       StepTy = adjustVectorType(Context, FromType, ToType, &ElTy);
     if (ElTy->isBooleanType()) {
       assert(FromType->castAs<EnumType>()->getDecl()->isFixed() &&
@@ -4495,7 +4494,7 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
   case ICK_Floating_Promotion:
   case ICK_Floating_Conversion: {
     QualType StepTy = ToType;
-    if (ToType->isVectorType())
+    if (FromType->isVectorType() || ToType->isVectorType())
       StepTy = adjustVectorType(Context, FromType, ToType);
     From = ImpCastExprToType(From, StepTy, CK_FloatingCast, VK_PRValue,
                              /*BasePath=*/nullptr, CCK)
@@ -4527,7 +4526,7 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
   case ICK_Floating_Integral: {
     QualType ElTy = ToType;
     QualType StepTy = ToType;
-    if (ToType->isVectorType())
+    if (FromType->isVectorType() || ToType->isVectorType())
       StepTy = adjustVectorType(Context, FromType, ToType, &ElTy);
     if (ElTy->isRealFloatingType())
       From = ImpCastExprToType(From, StepTy, CK_IntegralToFloating, VK_PRValue,
@@ -4669,11 +4668,11 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
     }
     QualType ElTy = FromType;
     QualType StepTy = ToType;
-    if (FromType->isVectorType()) {
-      if (getLangOpts().HLSL)
-        StepTy = adjustVectorType(Context, FromType, ToType);
+    if (FromType->isVectorType())
       ElTy = FromType->castAs<VectorType>()->getElementType();
-    }
+    if (getLangOpts().HLSL &&
+        (FromType->isVectorType() || ToType->isVectorType()))
+      StepTy = adjustVectorType(Context, FromType, ToType);
 
     From = ImpCastExprToType(From, StepTy, ScalarTypeToBooleanCastKind(ElTy),
                              VK_PRValue,
@@ -4828,8 +4827,8 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
     // TODO: Support HLSL matrices.
     assert((!From->getType()->isMatrixType() && !ToType->isMatrixType()) &&
            "Dimension conversion for matrix types is not implemented yet.");
-    assert(ToType->isVectorType() &&
-           "Dimension conversion is only supported for vector types.");
+    assert((ToType->isVectorType() || ToType->isBuiltinType()) &&
+           "Dimension conversion output must be vector or scalar type.");
     switch (SCS.Dimension) {
     case ICK_HLSL_Vector_Splat: {
       // Vector splat from any arithmetic type to a vector.
@@ -4841,18 +4840,18 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
     }
     case ICK_HLSL_Vector_Truncation: {
       // Note: HLSL built-in vectors are ExtVectors. Since this truncates a
-      // vector to a smaller vector, this can only operate on arguments where
-      // the source and destination types are ExtVectors.
-      assert(From->getType()->isExtVectorType() && ToType->isExtVectorType() &&
-             "HLSL vector truncation should only apply to ExtVectors");
+      // vector to a smaller vector or to a scalar, this can only operate on
+      // arguments where the source type is an ExtVector and the destination
+      // type is destination type is either an ExtVectorType or a builtin scalar
+      // type.
       auto *FromVec = From->getType()->castAs<VectorType>();
-      auto *ToVec = ToType->castAs<VectorType>();
-      QualType ElType = FromVec->getElementType();
-      QualType TruncTy =
-          Context.getExtVectorType(ElType, ToVec->getNumElements());
+      QualType TruncTy = FromVec->getElementType();
+      if (auto *ToVec = ToType->getAs<VectorType>())
+        TruncTy = Context.getExtVectorType(TruncTy, ToVec->getNumElements());
       From = ImpCastExprToType(From, TruncTy, CK_HLSLVectorTruncation,
                                From->getValueKind())
                  .get();
+
       break;
     }
     case ICK_Identity:
@@ -5171,7 +5170,8 @@ static bool HasNonDeletedDefaultedEqualityComparison(Sema &S,
 
     // const ClassT& obj;
     OpaqueValueExpr Operand(
-        {}, Decl->getTypeForDecl()->getCanonicalTypeUnqualified().withConst(),
+        KeyLoc,
+        Decl->getTypeForDecl()->getCanonicalTypeUnqualified().withConst(),
         ExprValueKind::VK_LValue);
     UnresolvedSet<16> Functions;
     // obj == obj;
@@ -7966,6 +7966,18 @@ ExprResult Sema::ActOnStartCXXMemberReference(Scope *S, Expr *Base,
 
   QualType BaseType = Base->getType();
   MayBePseudoDestructor = false;
+  if (BaseType->isDependentType()) {
+    // If we have a pointer to a dependent type and are using the -> operator,
+    // the object type is the type that the pointer points to. We might still
+    // have enough information about that type to do something useful.
+    if (OpKind == tok::arrow)
+      if (const PointerType *Ptr = BaseType->getAs<PointerType>())
+        BaseType = Ptr->getPointeeType();
+
+    ObjectType = ParsedType::make(BaseType);
+    MayBePseudoDestructor = true;
+    return Base;
+  }
 
   // C++ [over.match.oper]p8:
   //   [...] When operator->returns, the operator-> is applied  to the value
@@ -7980,8 +7992,7 @@ ExprResult Sema::ActOnStartCXXMemberReference(Scope *S, Expr *Base,
     SmallVector<FunctionDecl*, 8> OperatorArrows;
     CTypes.insert(Context.getCanonicalType(BaseType));
 
-    while (
-        isa<InjectedClassNameType, RecordType>(BaseType.getCanonicalType())) {
+    while (BaseType->isRecordType()) {
       if (OperatorArrows.size() >= getLangOpts().ArrowDepth) {
         Diag(OpLoc, diag::err_operator_arrow_depth_exceeded)
           << StartingType << getLangOpts().ArrowDepth << Base->getSourceRange();
@@ -7991,26 +8002,15 @@ ExprResult Sema::ActOnStartCXXMemberReference(Scope *S, Expr *Base,
         return ExprError();
       }
 
-      bool IsDependent;
       Result = BuildOverloadedArrowExpr(
-          Base, OpLoc,
+          S, Base, OpLoc,
           // When in a template specialization and on the first loop iteration,
           // potentially give the default diagnostic (with the fixit in a
           // separate note) instead of having the error reported back to here
           // and giving a diagnostic with a fixit attached to the error itself.
           (FirstIteration && CurFD && CurFD->isFunctionTemplateSpecialization())
               ? nullptr
-              : &NoArrowOperatorFound,
-          IsDependent);
-
-      if (IsDependent) {
-        // BuildOverloadedArrowExpr sets IsDependent to indicate that we need
-        // to build a dependent overloaded arrow expression.
-        assert(BaseType->isDependentType());
-        BaseType = Context.DependentTy;
-        break;
-      }
-
+              : &NoArrowOperatorFound);
       if (Result.isInvalid()) {
         if (NoArrowOperatorFound) {
           if (FirstIteration) {
@@ -8030,7 +8030,6 @@ ExprResult Sema::ActOnStartCXXMemberReference(Scope *S, Expr *Base,
         }
         return ExprError();
       }
-
       Base = Result.get();
       if (CXXOperatorCallExpr *OpCall = dyn_cast<CXXOperatorCallExpr>(Base))
         OperatorArrows.push_back(OpCall->getDirectCallee());
@@ -8068,7 +8067,7 @@ ExprResult Sema::ActOnStartCXXMemberReference(Scope *S, Expr *Base,
   // it's legal for the type to be incomplete if this is a pseudo-destructor
   // call.  We'll do more incomplete-type checks later in the lookup process,
   // so just skip this check for ObjC types.
-  if (!isa<InjectedClassNameType, RecordType>(BaseType.getCanonicalType())) {
+  if (!BaseType->isRecordType()) {
     ObjectType = ParsedType::make(BaseType);
     MayBePseudoDestructor = true;
     return Base;
@@ -8085,10 +8084,6 @@ ExprResult Sema::ActOnStartCXXMemberReference(Scope *S, Expr *Base,
                           diag::err_incomplete_member_access)) {
     return CreateRecoveryExpr(Base->getBeginLoc(), Base->getEndLoc(), {Base});
   }
-
-  // We can't implicitly declare the destructor for a templated class.
-  if (BaseType->isDependentType())
-    MayBePseudoDestructor = true;
 
   // C++ [basic.lookup.classref]p2:
   //   If the id-expression in a class member access (5.2.5) is an
