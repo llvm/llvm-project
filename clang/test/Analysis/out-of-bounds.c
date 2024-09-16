@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -Wno-array-bounds -analyzer-checker=core,alpha.security.ArrayBoundV2,debug.ExprInspection -verify %s
+// RUN: %clang_analyze_cc1 -Wno-array-bounds -Wno-pointer-sign -analyzer-checker=core,alpha.security.ArrayBoundV2,debug.ExprInspection -verify %s
 
 void clang_analyzer_eval(int);
 
@@ -194,3 +194,19 @@ char test_comparison_with_extent_symbol(struct incomplete *p) {
   return ((char *)p)[-1]; // no-warning
 }
 
+
+typedef unsigned char uint8_t;
+static int string_is_ascii(const uint8_t *str) {
+  while (*str && *str < 128) str++;
+  // expected-warning@-1 {{Out of bound access to memory}}
+  return !*str;
+}
+void test_charptr_ucharptr_conversion(void) {
+  const char *s = "";
+  // NOTE: This code passes a `const char *` to a `const unsigned char *`
+  // parameter, which is a bit dodgy (it would be reported by -Wpointer-sign),
+  // but works on platforms where `char` is unsigned.
+  // FIXME: The analyzer is confused by this conversion and cannot deduce that
+  // `*str` is immediately equal to zero within `string_is_ascii()`.
+  string_is_ascii(s);
+}
