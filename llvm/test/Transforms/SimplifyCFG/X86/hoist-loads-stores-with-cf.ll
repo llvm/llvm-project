@@ -72,10 +72,9 @@ define i32 @succ1to0_phi(ptr %p)  {
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq ptr [[P:%.*]], null
 ; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[COND]], true
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i1 [[TMP0]] to <1 x i1>
-; CHECK-NEXT:    [[TMP2:%.*]] = call <1 x i32> @llvm.masked.load.v1i32.p0(ptr [[P]], i32 4, <1 x i1> [[TMP1]], <1 x i32> poison)
+; CHECK-NEXT:    [[TMP2:%.*]] = call <1 x i32> @llvm.masked.load.v1i32.p0(ptr [[P]], i32 4, <1 x i1> [[TMP1]], <1 x i32> zeroinitializer)
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <1 x i32> [[TMP2]] to i32
-; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[COND]], i32 0, i32 [[TMP3]]
-; CHECK-NEXT:    ret i32 [[SPEC_SELECT]]
+; CHECK-NEXT:    ret i32 [[TMP3]]
 ;
 entry:
   %cond = icmp eq ptr %p, null
@@ -184,10 +183,9 @@ define i32 @load_from_gep(ptr %p)  {
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 16
 ; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[COND]], true
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i1 [[TMP0]] to <1 x i1>
-; CHECK-NEXT:    [[TMP2:%.*]] = call <1 x i32> @llvm.masked.load.v1i32.p0(ptr [[ARRAYIDX]], i32 4, <1 x i1> [[TMP1]], <1 x i32> poison)
+; CHECK-NEXT:    [[TMP2:%.*]] = call <1 x i32> @llvm.masked.load.v1i32.p0(ptr [[ARRAYIDX]], i32 4, <1 x i1> [[TMP1]], <1 x i32> zeroinitializer)
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <1 x i32> [[TMP2]] to i32
-; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[COND]], i32 0, i32 [[TMP3]]
-; CHECK-NEXT:    ret i32 [[SPEC_SELECT]]
+; CHECK-NEXT:    ret i32 [[TMP3]]
 ;
 entry:
   %cond = icmp eq ptr %p, null
@@ -672,6 +670,62 @@ if.true:
 
 if.false:
   ret void
+}
+
+define i32 @str_transcode0(i1 %cond1, ptr %p, i1 %cond2) {
+; CHECK-LABEL: @str_transcode0(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND1:%.*]], label [[BB3:%.*]], label [[BB1:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i1 [[COND2:%.*]] to <1 x i1>
+; CHECK-NEXT:    [[TMP1:%.*]] = call <1 x i64> @llvm.masked.load.v1i64.p0(ptr [[P:%.*]], i32 8, <1 x i1> [[TMP0]], <1 x i64> zeroinitializer)
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <1 x i64> [[TMP1]] to i64
+; CHECK-NEXT:    br label [[BB3]]
+; CHECK:       bb3:
+; CHECK-NEXT:    [[Y:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[TMP2]], [[BB1]] ]
+; CHECK-NEXT:    store i64 [[Y]], ptr [[P]], align 8
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  br i1 %cond1, label %bb3, label %bb1
+
+bb1:                                                ; preds = %entry
+  br i1 %cond2, label %bb2, label %bb3
+
+bb2:                                                ; preds = %bb1
+  %x = load i64, ptr %p, align 8
+  br label %bb3
+
+bb3:                                                ; preds = %bb2, %bb1, %entry
+  %y = phi i64 [ %x, %bb2 ], [ 0, %bb1 ], [ 0, %entry ]
+  store i64 %y, ptr %p, align 8
+  ret i32 0
+}
+
+define i32 @succ1to0_phi2(ptr %p, ptr %p2) {
+; CHECK-LABEL: @succ1to0_phi2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq ptr [[P:%.*]], null
+; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[COND]], true
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i1 [[TMP0]] to <1 x i1>
+; CHECK-NEXT:    [[TMP2:%.*]] = call <1 x i32> @llvm.masked.load.v1i32.p0(ptr [[P]], i32 4, <1 x i1> [[TMP1]], <1 x i32> zeroinitializer)
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <1 x i32> [[TMP2]] to i32
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i32 [[TMP3]] to <1 x i32>
+; CHECK-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> [[TMP4]], ptr [[P2:%.*]], i32 4, <1 x i1> [[TMP1]])
+; CHECK-NEXT:    ret i32 [[TMP3]]
+;
+entry:
+  %cond = icmp eq ptr %p, null
+  br i1 %cond, label %if.true, label %if.false
+
+if.false:
+  %0 = load i32, ptr %p
+  store i32 %0, ptr %p2
+  br label %if.true
+
+if.true:
+  %res = phi i32 [ %0, %if.false ], [ 0, %entry ]
+  ret i32 %res
 }
 
 declare i32 @read_memory_only() readonly nounwind willreturn speculatable

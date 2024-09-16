@@ -385,7 +385,7 @@ static void maybeReportRelocationToDiscarded(const SectionChunk *fromChunk,
   os << "relocation against symbol in discarded section: " + name;
   for (const std::string &s : symbolLocations)
     os << s;
-  error(os.str());
+  error(out);
 }
 
 void SectionChunk::writeTo(uint8_t *buf) const {
@@ -773,6 +773,10 @@ void StringChunk::writeTo(uint8_t *buf) const {
   memcpy(buf, str.data(), str.size());
   buf[str.size()] = '\0';
 }
+
+ImportThunkChunk::ImportThunkChunk(COFFLinkerContext &ctx, Defined *s)
+    : NonSectionCodeChunk(ImportThunkKind), live(!ctx.config.doGC),
+      impSymbol(s), ctx(ctx) {}
 
 ImportThunkChunkX64::ImportThunkChunkX64(COFFLinkerContext &ctx, Defined *s)
     : ImportThunkChunk(ctx, s) {

@@ -348,6 +348,11 @@ def FeatureStdExtZfinx
 def HasStdExtZfinx : Predicate<"Subtarget->hasStdExtZfinx()">,
                      AssemblerPredicate<(all_of FeatureStdExtZfinx),
                                         "'Zfinx' (Float in Integer)">;
+def HasStdExtFOrZfinx : Predicate<"Subtarget->hasStdExtFOrZfinx()">,
+                        AssemblerPredicate<(any_of FeatureStdExtF,
+                                                   FeatureStdExtZfinx),
+                            "'F' (Single-Precision Floating-Point) or "
+                            "'Zfinx' (Float in Integer)">;
 
 def FeatureStdExtZdinx
     : RISCVExtension<"zdinx", 1, 0,
@@ -508,9 +513,6 @@ def FeatureStdExtB
     : RISCVExtension<"b", 1, 0,
                      "'B' (the collection of the Zba, Zbb, Zbs extensions)",
                      [FeatureStdExtZba, FeatureStdExtZbb, FeatureStdExtZbs]>;
-def HasStdExtB : Predicate<"Subtarget->hasStdExtB()">,
-                           AssemblerPredicate<(all_of FeatureStdExtB),
-                           "'B' (the collection of the Zba, Zbb, Zbs extensions)">;
 
 def FeatureStdExtZbkb
     : RISCVExtension<"zbkb", 1, 0,
