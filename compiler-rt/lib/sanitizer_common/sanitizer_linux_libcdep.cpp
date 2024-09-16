@@ -205,7 +205,7 @@ __attribute__((unused)) static bool GetLibcVersion(int *major, int *minor,
 #  ifdef SANITIZER_GLIBC
   const char *p = gnu_get_libc_version();
   *major = internal_simple_strtoll(p, &p, 10);
-  // Caller do not expect anything else.
+  // Caller does not expect anything else.
   CHECK_EQ(*major, 2);
   *minor = (*p == '.') ? internal_simple_strtoll(p + 1, &p, 10) : 0;
   *patch = (*p == '.') ? internal_simple_strtoll(p + 1, &p, 10) : 0;
