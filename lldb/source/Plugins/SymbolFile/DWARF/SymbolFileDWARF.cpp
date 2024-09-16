@@ -3377,16 +3377,13 @@ VariableSP SymbolFileDWARF::ParseVariableDIECached(const SymbolContext &sc,
 
   DIEToVariableSP &die_to_variable = die.GetDWARF()->GetDIEToVariable();
 
-  VariableSP var_sp = die_to_variable[die.GetDIE()];
-  if (var_sp)
-    return var_sp;
+  if (auto it = die_to_variable.find(die.GetDIE()); it != die_to_variable.end())
+    return it->second;
 
-  var_sp = ParseVariableDIE(sc, die, LLDB_INVALID_ADDRESS);
-  if (var_sp) {
-    die_to_variable[die.GetDIE()] = var_sp;
-    if (DWARFDIE spec_die = die.GetReferencedDIE(DW_AT_specification))
-      die_to_variable[spec_die.GetDIE()] = var_sp;
-  }
+  VariableSP var_sp = ParseVariableDIE(sc, die, LLDB_INVALID_ADDRESS);
+  die_to_variable.insert_or_assign(die.GetDIE(), var_sp);
+  if (DWARFDIE spec_die = die.GetReferencedDIE(DW_AT_specification))
+    die_to_variable.insert_or_assign(spec_die.GetDIE(), var_sp);
   return var_sp;
 }
 
@@ -3799,9 +3796,10 @@ void SymbolFileDWARF::ParseAndAppendGlobalVariable(
     return;
 
   // Check to see if we have already parsed this variable or constant?
-  VariableSP var_sp = GetDIEToVariable()[die.GetDIE()];
-  if (var_sp) {
-    cc_variable_list.AddVariableIfUnique(var_sp);
+  DIEToVariableSP &die_to_variable = GetDIEToVariable();
+  if (auto it = die_to_variable.find(die.GetDIE());
+      it != die_to_variable.end()) {
+    cc_variable_list.AddVariableIfUnique(it->second);
     return;
   }
 
@@ -3835,7 +3833,7 @@ void SymbolFileDWARF::ParseAndAppendGlobalVariable(
     return;
   }
 
-  var_sp = ParseVariableDIECached(sc, die);
+  VariableSP var_sp = ParseVariableDIECached(sc, die);
   if (!var_sp)
     return;
 
