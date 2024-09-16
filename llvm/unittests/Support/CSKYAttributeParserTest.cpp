@@ -77,8 +77,8 @@ static bool testAttributeInt(unsigned Tag, unsigned Value, unsigned ExpectedTag,
   raw_string_ostream OS(buffer);
   CSKYAttributeSection Section(Tag, Value);
   Section.writeInt(OS);
-  ArrayRef<uint8_t> Bytes(reinterpret_cast<const uint8_t *>(OS.str().c_str()),
-                          OS.str().size());
+  ArrayRef<uint8_t> Bytes(reinterpret_cast<const uint8_t *>(buffer.c_str()),
+                          buffer.size());
 
   CSKYAttributeParser Parser;
   cantFail(Parser.parse(Bytes, llvm::endianness::little));
@@ -94,8 +94,8 @@ static bool testAttributeString(unsigned Tag, const char *Value,
   raw_string_ostream OS(buffer);
   CSKYAttributeSection Section(Tag, Value);
   Section.writeString(OS);
-  ArrayRef<uint8_t> Bytes(reinterpret_cast<const uint8_t *>(OS.str().c_str()),
-                          OS.str().size());
+  ArrayRef<uint8_t> Bytes(reinterpret_cast<const uint8_t *>(buffer.c_str()),
+                          buffer.size());
 
   CSKYAttributeParser Parser;
   cantFail(Parser.parse(Bytes, llvm::endianness::little));
@@ -109,8 +109,8 @@ static void testParseError(unsigned Tag, unsigned Value, const char *msg) {
   raw_string_ostream OS(buffer);
   CSKYAttributeSection Section(Tag, Value);
   Section.writeInt(OS);
-  ArrayRef<uint8_t> Bytes(reinterpret_cast<const uint8_t *>(OS.str().c_str()),
-                          OS.str().size());
+  ArrayRef<uint8_t> Bytes(reinterpret_cast<const uint8_t *>(buffer.c_str()),
+                          buffer.size());
 
   CSKYAttributeParser Parser;
   Error e = Parser.parse(Bytes, llvm::endianness::little);

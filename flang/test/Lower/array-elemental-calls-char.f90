@@ -227,7 +227,7 @@ subroutine foo6(c)
   ! CHECK:         %[[VAL_16:.*]] = fir.convert %[[VAL_15]] : (i32) -> index
   ! CHECK:         %[[CMPI:.*]] = arith.cmpi sgt, %[[VAL_16]], %{{.*}} : index
   ! CHECK:         %[[SELECT:.*]] = arith.select %[[CMPI]], %[[VAL_16]], %{{.*}} : index
-  ! CHECK:         %[[VAL_17:.*]] = fir.call @llvm.stacksave.p0() {{.*}}: () -> !fir.ref<i8>
+  ! CHECK:         %[[VAL_17:.*]] = llvm.intr.stacksave : !llvm.ptr
   ! CHECK:         %[[VAL_18:.*]] = fir.alloca !fir.char<1,?>(%[[SELECT]] : index) {bindc_name = ".result"}
   ! CHECK:         %[[VAL_19:.*]] = fir.call @_QMchar_elemPelem_return_char(%[[VAL_18]], %[[SELECT]], %[[VAL_14]]) {{.*}}: (!fir.ref<!fir.char<1,?>>, index, !fir.boxchar<1>) -> !fir.boxchar<1>
   ! CHECK:         %[[VAL_20:.*]] = arith.cmpi slt, %[[VAL_6]]#1, %[[SELECT]] : index
@@ -253,7 +253,7 @@ subroutine foo6(c)
   ! CHECK:         %[[VAL_36:.*]] = arith.subi %[[VAL_31]], %[[VAL_2]] : index
   ! CHECK:         br ^bb3(%[[VAL_35]], %[[VAL_36]] : index, index)
   ! CHECK:       ^bb5:
-  ! CHECK:         fir.call @llvm.stackrestore.p0(%[[VAL_17]]) {{.*}}: (!fir.ref<i8>) -> ()
+  ! CHECK:         llvm.intr.stackrestore %[[VAL_17]] : !llvm.ptr
   ! CHECK:         %[[VAL_37:.*]] = arith.subi %[[VAL_10]], %[[VAL_2]] : index
   ! CHECK:         br ^bb1(%[[VAL_12]], %[[VAL_37]] : index, index)
   ! CHECK:       ^bb6:

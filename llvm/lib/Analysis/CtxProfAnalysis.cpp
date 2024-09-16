@@ -234,7 +234,7 @@ PreservedAnalyses CtxProfAnalysisPrinterPass::run(Module &M,
 }
 
 InstrProfCallsite *CtxProfAnalysis::getCallsiteInstrumentation(CallBase &CB) {
-  while (auto *Prev = CB.getPrevNode())
+  for (auto *Prev = CB.getPrevNode(); Prev; Prev = Prev->getPrevNode())
     if (auto *IPC = dyn_cast<InstrProfCallsite>(Prev))
       return IPC;
   return nullptr;

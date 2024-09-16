@@ -635,7 +635,6 @@ void SetSourceMapFromArguments(const llvm::json::Object &arguments) {
     // Do any source remapping needed before we create our targets
     strm << "\".\" \"" << sourcePath << "\"";
   }
-  strm.flush();
   if (!sourceMapCommand.empty()) {
     g_dap.RunLLDBCommands("Setting source map:", {sourceMapCommand});
   }
@@ -4127,7 +4126,6 @@ void request_disassemble(const llvm::json::Object &request) {
         sb << llvm::format("%2.2x ", b);
       }
     }
-    sb.flush();
 
     llvm::json::Object disassembled_inst{
         {"address", "0x" + llvm::utohexstr(inst_addr)},
@@ -4158,7 +4156,6 @@ void request_disassemble(const llvm::json::Object &request) {
     if (c && c[0]) {
       si << " ; " << c;
     }
-    si.flush();
 
     disassembled_inst.try_emplace("instruction", instruction);
 
