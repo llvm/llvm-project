@@ -952,6 +952,16 @@ public:
   };
 };
 
+/// Represents a splat vector.
+class GSplatVector : public GenericMachineInstr {
+public:
+  Register getScalarReg() const { return getOperand(1).getReg(); }
+
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_SPLAT_VECTOR;
+  };
+};
+
 } // namespace llvm
 
 #endif // LLVM_CODEGEN_GLOBALISEL_GENERICMACHINEINSTRS_H
