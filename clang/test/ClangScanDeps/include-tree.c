@@ -36,7 +36,7 @@
 // RUN: echo "FULL DEPS START" >> %t/full.txt
 // RUN: cat %t/deps.json | sed 's:\\\\\?:/:g' >> %t/full.txt
 
-// RUN: FileCheck %s -DPREFIX=%/t -check-prefix=FULL -input-file %t/full.txt
+// RUN: FileCheck %s -DPREFIX=%/t -DCLANG=%clang -check-prefix=FULL -input-file %t/full.txt
 
 // Capture the tree id from experimental-include-tree ; ensure that it matches
 // the result from experimental-full.
@@ -67,7 +67,7 @@
 // FULL-NEXT:             "t.c"
 // FULL-NOT:              "t.c"
 // FULL:                ]
-// FULL:                "executable": "clang"
+// FULL:                "executable": "[[CLANG]]"
 // FULL:                "file-deps": [
 // FULL-NEXT:             "[[PREFIX]]/t.c"
 // FULL-NEXT:             "[[PREFIX]]/top.h"
