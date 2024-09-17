@@ -3164,6 +3164,7 @@ void MicrosoftCXXNameMangler::mangleCallingConvention(CallingConv CC,
   switch (CC) {
     default:
       break;
+    case CC_SpirFunction:
     case CC_Win64:
     case CC_X86_64SysV:
     case CC_C:
