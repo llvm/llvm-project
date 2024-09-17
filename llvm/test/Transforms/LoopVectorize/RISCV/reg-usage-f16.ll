@@ -1,3 +1,4 @@
+; REQUIRES: asserts
 ; RUN: opt -passes=loop-vectorize -mtriple riscv64 -mattr=+v,+zvfh -debug-only=loop-vectorize -riscv-v-register-bit-width-lmul=1 -S < %s 2>&1 | FileCheck %s --check-prefix=ZVFH
 ; RUN: opt -passes=loop-vectorize -mtriple riscv64 -mattr=+v,+zvfhmin -debug-only=loop-vectorize -riscv-v-register-bit-width-lmul=1 -S < %s 2>&1 | FileCheck %s --check-prefix=ZVFHMIN
 
