@@ -749,8 +749,8 @@ def testNanoTime():
             ]
         else:
             shared_libs = [
-                LIB_DIR + "/libmlir_runner_utils.so",
-                LIB_DIR + "/libmlir_c_runner_utils.so",
+                MLIR_RUNNER_UTILS,
+                MLIR_C_RUNNER_UTILS,
             ]
 
         execution_engine = ExecutionEngine(
