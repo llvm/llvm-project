@@ -81,8 +81,13 @@ public:
 
   /// Returns source locations for pointers that were checked when known to be
   // null, and checked after already dereferenced, respectively.
-  using ResultType =
-      std::pair<std::vector<SourceLocation>, std::vector<SourceLocation>>;
+  enum class DiagnosticType { CheckWhenNull, CheckAfterDeref };
+
+  struct DiagnosticEntry {
+    SourceLocation Location;
+    DiagnosticType Type;
+  };
+  using ResultType = llvm::SmallVector<DiagnosticEntry>;
 
   // Maps a pointer's Value to a dereference, null-assignment, etc.
   // This is used later to construct the Note tag.
@@ -96,8 +101,8 @@ private:
 public:
   NullCheckAfterDereferenceDiagnoser();
 
-  ResultType diagnose(ASTContext &Ctx, const CFGElement *Elt,
-                      const Environment &Env);
+  ResultType operator()(const CFGElement &Elt, ASTContext &Ctx,
+                        const TransferStateForDiagnostics<NoopLattice> &State);
 };
 
 } // namespace clang::dataflow

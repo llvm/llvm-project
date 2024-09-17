@@ -36,6 +36,7 @@ namespace clang::dataflow {
 
 namespace {
 using namespace ast_matchers;
+using Diagnoser = NullCheckAfterDereferenceDiagnoser;
 
 constexpr char kCond[] = "condition";
 constexpr char kVar[] = "var";
@@ -423,9 +424,9 @@ void matchAnyPointerExpr(const Expr *fncall,
   setUnknownValue(*Var, *RootValue, Env);
 }
 
-NullCheckAfterDereferenceDiagnoser::ResultType
+Diagnoser::ResultType
 diagnoseDerefLocation(const Expr *Deref, const MatchFinder::MatchResult &Result,
-                      NullCheckAfterDereferenceDiagnoser::DiagnoseArgs &Data) {
+                      Diagnoser::DiagnoseArgs &Data) {
   auto [ValToDerefLoc, WarningLocToVal, Env] = Data;
 
   const auto *Var = Result.Nodes.getNodeAs<Expr>(kVar);
@@ -444,10 +445,9 @@ diagnoseDerefLocation(const Expr *Deref, const MatchFinder::MatchResult &Result,
   return {};
 }
 
-NullCheckAfterDereferenceDiagnoser::ResultType
-diagnoseAssignLocation(const Expr *Assign,
-                       const MatchFinder::MatchResult &Result,
-                       NullCheckAfterDereferenceDiagnoser::DiagnoseArgs &Data) {
+Diagnoser::ResultType diagnoseAssignLocation(const Expr *Assign,
+                                             const MatchFinder::MatchResult &Result,
+                                             Diagnoser::DiagnoseArgs &Data) {
   auto [ValToDerefLoc, WarningLocToVal, Env] = Data;
 
   const auto *RHSVar = Result.Nodes.getNodeAs<Expr>(kValue);
@@ -468,7 +468,7 @@ diagnoseAssignLocation(const Expr *Assign,
 NullCheckAfterDereferenceDiagnoser::ResultType
 diagnoseNullCheckExpr(const Expr *NullCheck,
       const MatchFinder::MatchResult &Result,
-      const NullCheckAfterDereferenceDiagnoser::DiagnoseArgs &Data) {
+      const Diagnoser::DiagnoseArgs &Data) {
   auto [ValToDerefLoc, WarningLocToVal, Env] = Data;
 
   const auto *Var = Result.Nodes.getNodeAs<Expr>(kVar);
@@ -488,7 +488,7 @@ diagnoseNullCheckExpr(const Expr *NullCheck,
         assert(Inserted && "multiple warnings at the same source location");
         (void)Inserted;
 
-        return {{}, {Var->getBeginLoc()}};
+        return {{Var->getBeginLoc(), Diagnoser::DiagnosticType::CheckAfterDeref}};
       }
 
       if (IsNull && !IsNonnull) {
@@ -497,7 +497,7 @@ diagnoseNullCheckExpr(const Expr *NullCheck,
         assert(Inserted && "multiple warnings at the same source location");
         (void)Inserted;
 
-        return {{Var->getBeginLoc()}, {}};
+        return {{Var->getBeginLoc(), Diagnoser::DiagnosticType::CheckWhenNull}};
       }
     }
 
@@ -513,7 +513,7 @@ diagnoseNullCheckExpr(const Expr *NullCheck,
 
 NullCheckAfterDereferenceDiagnoser::ResultType
 diagnoseEqualExpr(const Expr *PtrCheck, const MatchFinder::MatchResult &Result,
-                  NullCheckAfterDereferenceDiagnoser::DiagnoseArgs &Data) {
+                  Diagnoser::DiagnoseArgs &Data) {
   auto [ValToDerefLoc, WarningLocToVal, Env] = Data;
 
   const auto *LHSVar = Result.Nodes.getNodeAs<Expr>(kVar);
@@ -522,23 +522,23 @@ diagnoseEqualExpr(const Expr *PtrCheck, const MatchFinder::MatchResult &Result,
   assert(RHSVar != nullptr);
   
   Arena &A = Env.arena();
-  std::vector<SourceLocation> NullVarLocations;
+  llvm::SmallVector<Diagnoser::DiagnosticEntry> NullVarLocations;
 
   if (Value *LHSValue = Env.getValue(*LHSVar);
       LHSValue->getProperty(kIsNonnull) && 
       Env.proves(A.makeNot(getVal(kIsNonnull, *LHSValue).formula()))) {
     WarningLocToVal.try_emplace(LHSVar->getBeginLoc(), LHSValue);
-    NullVarLocations.push_back(LHSVar->getBeginLoc());
+    NullVarLocations.push_back({LHSVar->getBeginLoc(), Diagnoser::DiagnosticType::CheckWhenNull});
   }
 
   if (Value *RHSValue = Env.getValue(*RHSVar);
       RHSValue->getProperty(kIsNonnull) && 
       Env.proves(A.makeNot(getVal(kIsNonnull, *RHSValue).formula()))) {
     WarningLocToVal.try_emplace(RHSVar->getBeginLoc(), RHSValue);
-    NullVarLocations.push_back(RHSVar->getBeginLoc());
+    NullVarLocations.push_back({RHSVar->getBeginLoc(), Diagnoser::DiagnosticType::CheckWhenNull});
   }
 
-  return {NullVarLocations, {}};
+  return NullVarLocations;
 }
 
 auto buildTransferMatchSwitch() {
@@ -556,8 +556,7 @@ auto buildTransferMatchSwitch() {
 }
 
 auto buildDiagnoseMatchSwitch() {
-  return CFGMatchSwitchBuilder<NullCheckAfterDereferenceDiagnoser::DiagnoseArgs,
-                               NullCheckAfterDereferenceDiagnoser::ResultType>()
+  return CFGMatchSwitchBuilder<Diagnoser::DiagnoseArgs, Diagnoser::ResultType>()
       .CaseOfCFGStmt<Expr>(derefMatcher(), diagnoseDerefLocation)
       .CaseOfCFGStmt<Expr>(arrowMatcher(), diagnoseDerefLocation)
       .CaseOfCFGStmt<Expr>(assignMatcher(), diagnoseAssignLocation)
@@ -761,11 +760,11 @@ NullCheckAfterDereferenceDiagnoser::NullCheckAfterDereferenceDiagnoser()
     : DiagnoseMatchSwitch(buildDiagnoseMatchSwitch()) {}
 
 NullCheckAfterDereferenceDiagnoser::ResultType
-NullCheckAfterDereferenceDiagnoser::diagnose(ASTContext &Ctx,
-                                             const CFGElement *Elt,
-                                             const Environment &Env) {
-  DiagnoseArgs Args = {ValToDerefLoc, WarningLocToVal, Env};
-  return DiagnoseMatchSwitch(*Elt, Ctx, Args);
+NullCheckAfterDereferenceDiagnoser::operator()(
+    const CFGElement &Elt, ASTContext &Ctx, 
+    const TransferStateForDiagnostics<NoopLattice> &State) {
+  DiagnoseArgs Args = {ValToDerefLoc, WarningLocToVal, State.Env};
+  return DiagnoseMatchSwitch(Elt, Ctx, Args);
 }
 
 } // namespace clang::dataflow
