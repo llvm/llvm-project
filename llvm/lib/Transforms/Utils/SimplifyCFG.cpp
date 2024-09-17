@@ -1954,6 +1954,16 @@ static bool isLifeTimeMarker(const Instruction *I) {
 // into variables.
 static bool replacingOperandWithVariableIsCheap(const Instruction *I,
                                                 int OpIdx) {
+  switch (I->getOpcode()) {
+    // Divide/Remainder by constant is typically much cheaper than by variable.
+  case Instruction::UDiv:
+  case Instruction::SDiv:
+  case Instruction::URem:
+  case Instruction::SRem:
+    return OpIdx != 1;
+  default:
+    break;
+  }
   return !isa<IntrinsicInst>(I);
 }
 
