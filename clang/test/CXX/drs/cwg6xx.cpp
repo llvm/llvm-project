@@ -1265,7 +1265,7 @@ namespace cwg687 { // cwg687 (9 c++20, but the issue is still considered open)
 
     // This is not.
     template g<int>(a);
-    // expected-error@-1 {{expected expression}}
+    // expected-error@-1 {{expected '<' after 'template'}}
   }
 }
 

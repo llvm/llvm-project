@@ -1864,10 +1864,10 @@ void FilterChooser::emitTableEntries(DecoderTableInfo &TableInfo) const {
   }
 }
 
-static std::string findOperandDecoderMethod(Record *Record) {
+static std::string findOperandDecoderMethod(const Record *Record) {
   std::string Decoder;
 
-  RecordVal *DecoderString = Record->getValue("DecoderMethod");
+  const RecordVal *DecoderString = Record->getValue("DecoderMethod");
   StringInit *String =
       DecoderString ? dyn_cast<StringInit>(DecoderString->getValue()) : nullptr;
   if (String) {
@@ -1877,7 +1877,8 @@ static std::string findOperandDecoderMethod(Record *Record) {
   }
 
   if (Record->isSubClassOf("RegisterOperand"))
-    Record = Record->getValueAsDef("RegClass");
+    // Allows use of a DecoderMethod in referenced RegisterClass if set.
+    return findOperandDecoderMethod(Record->getValueAsDef("RegClass"));
 
   if (Record->isSubClassOf("RegisterClass")) {
     Decoder = "Decode" + Record->getName().str() + "RegisterClass";
@@ -1889,10 +1890,11 @@ static std::string findOperandDecoderMethod(Record *Record) {
   return Decoder;
 }
 
-OperandInfo getOpInfo(Record *TypeRecord) {
+OperandInfo getOpInfo(const Record *TypeRecord) {
   std::string Decoder = findOperandDecoderMethod(TypeRecord);
 
-  RecordVal *HasCompleteDecoderVal = TypeRecord->getValue("hasCompleteDecoder");
+  const RecordVal *HasCompleteDecoderVal =
+      TypeRecord->getValue("hasCompleteDecoder");
   BitInit *HasCompleteDecoderBit =
       HasCompleteDecoderVal
           ? dyn_cast<BitInit>(HasCompleteDecoderVal->getValue())
@@ -1903,9 +1905,9 @@ OperandInfo getOpInfo(Record *TypeRecord) {
   return OperandInfo(Decoder, HasCompleteDecoder);
 }
 
-void parseVarLenInstOperand(const Record &Def,
-                            std::vector<OperandInfo> &Operands,
-                            const CodeGenInstruction &CGI) {
+static void parseVarLenInstOperand(const Record &Def,
+                                   std::vector<OperandInfo> &Operands,
+                                   const CodeGenInstruction &CGI) {
 
   const RecordVal *RV = Def.getValue("Inst");
   VarLenInst VLI(cast<DagInit>(RV->getValue()), RV);
@@ -1960,12 +1962,11 @@ void parseVarLenInstOperand(const Record &Def,
 }
 
 static void debugDumpRecord(const Record &Rec) {
-  // Dump the record, so we can see what's going on...
-  std::string E;
-  raw_string_ostream S(E);
-  S << "Dumping record for previous error:\n";
-  S << Rec;
-  PrintNote(E);
+  // Dump the record, so we can see what's going on.
+  PrintNote([&Rec](raw_ostream &OS) {
+    OS << "Dumping record for previous error:\n";
+    OS << Rec;
+  });
 }
 
 /// For an operand field named OpName: populate OpInfo.InitValue with the
@@ -2268,9 +2269,7 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
       return MCDisassembler::Fail;
     case MCD::OPC_ExtractField: {
       // Decode the start value.
-      unsigned DecodedLen;
-      unsigned Start = decodeULEB128(++Ptr, &DecodedLen);
-      Ptr += DecodedLen;
+      unsigned Start = decodeULEB128AndIncUnsafe(++Ptr);
       unsigned Len = *Ptr++;)";
   if (IsVarLenInst)
     OS << "\n      makeUp(insn, Start + Len);";
@@ -2282,9 +2281,7 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
     }
     case MCD::OPC_FilterValue: {
       // Decode the field value.
-      unsigned Len;
-      uint64_t Val = decodeULEB128(++Ptr, &Len);
-      Ptr += Len;
+      uint64_t Val = decodeULEB128AndIncUnsafe(++Ptr);
       // NumToSkip is a plain 24-bit integer.
       unsigned NumToSkip = *Ptr++;
       NumToSkip |= (*Ptr++) << 8;

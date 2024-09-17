@@ -55,7 +55,7 @@ extern uptr kHighMemEnd; // Initialized in __memprof_init.
 // computed by summing up all individual 1 byte counters. This can incur an
 // accuracy penalty.
 
-#define HISTOGRAM_GRANULARITY 8U
+#define HISTOGRAM_GRANULARITY 8ULL
 
 #define HISTOGRAM_MAX_COUNTER 255U
 

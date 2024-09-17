@@ -81,6 +81,20 @@ enum : unsigned {
   UNKNOWN_ADDRESS_SPACE = ~0u,
 };
 } // end namespace AMDGPUAS
+
+namespace AMDGPU {
+inline bool isFlatGlobalAddrSpace(unsigned AS) {
+  return AS == AMDGPUAS::GLOBAL_ADDRESS || AS == AMDGPUAS::FLAT_ADDRESS ||
+         AS == AMDGPUAS::CONSTANT_ADDRESS || AS > AMDGPUAS::MAX_AMDGPU_ADDRESS;
+}
+
+inline bool isExtendedGlobalAddrSpace(unsigned AS) {
+  return AS == AMDGPUAS::GLOBAL_ADDRESS || AS == AMDGPUAS::CONSTANT_ADDRESS ||
+         AS == AMDGPUAS::CONSTANT_ADDRESS_32BIT ||
+         AS > AMDGPUAS::MAX_AMDGPU_ADDRESS;
+}
+} // end namespace AMDGPU
+
 } // end namespace llvm
 
 #endif // LLVM_SUPPORT_AMDGPUADDRSPACE_H

@@ -3,8 +3,8 @@
 // RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx14,cxx98-14,cxx11-17,since-cxx11,since-cxx14 -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx14,since-cxx17,cxx11-17,since-cxx11,since-cxx14,cxx17 -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx14,since-cxx17,since-cxx20,since-cxx11,since-cxx14 -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++23 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx14,since-cxx17,since-cxx20,since-cxx11,since-cxx14 -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++2c -triple x86_64-unknown-unknown %s -verify=expected,since-cxx14,since-cxx17,since-cxx20,since-cxx11,since-cxx14 -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++23 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx14,since-cxx17,since-cxx20,since-cxx23,since-cxx11,since-cxx14 -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++2c -triple x86_64-unknown-unknown %s -verify=expected,since-cxx14,since-cxx17,since-cxx20,since-cxx23,since-cxx11,since-cxx14 -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
 
 #if __cplusplus == 199711L
 #define static_assert(...) __extension__ _Static_assert(__VA_ARGS__)
@@ -206,21 +206,32 @@ namespace cwg1814 { // cwg1814: yes
 #endif
 }
 
-namespace cwg1815 { // cwg1815: no
+namespace cwg1815 { // cwg1815: 20
 #if __cplusplus >= 201402L
-  // FIXME: needs codegen test
-  struct A { int &&r = 0; }; // #cwg1815-A
+  struct A { int &&r = 0; };
   A a = {};
-  // since-cxx14-warning@-1 {{lifetime extension of temporary created by aggregate initialization using a default member initializer is not yet supported; lifetime of temporary will end at the end of the full-expression}} FIXME
-  //   since-cxx14-note@#cwg1815-A {{initializing field 'r' with default member initializer}}
 
   struct B { int &&r = 0; }; // #cwg1815-B
   // since-cxx14-error@-1 {{reference member 'r' binds to a temporary object whose lifetime would be shorter than the lifetime of the constructed object}}
   //   since-cxx14-note@#cwg1815-B {{initializing field 'r' with default member initializer}}
   //   since-cxx14-note@#cwg1815-b {{in implicit default constructor for 'cwg1815::B' first required here}}
   B b; // #cwg1815-b
+
+#if __cplusplus >= 201703L
+  struct C { const int &r = 0; };
+  constexpr C c = {}; // OK, since cwg1815
+  static_assert(c.r == 0);
+
+  constexpr int f() {
+    A a = {}; // OK, since cwg1815
+    return a.r;
+  }
+  static_assert(f() == 0);
+#endif
 #endif
 }
+
+// cwg1818 is in cwg1818.cpp
 
 namespace cwg1820 { // cwg1820: 3.5
 typedef int A;
@@ -480,8 +491,12 @@ namespace cwg1872 { // cwg1872: 9
   static_assert(y == 0);
 #endif
   constexpr int z = A<Z>().f();
-  // since-cxx11-error@-1 {{constexpr variable 'z' must be initialized by a constant expression}}
-  //   since-cxx11-note@-2 {{non-literal type 'A<Z>' cannot be used in a constant expression}}
+  // since-cxx11-error@-1 {{constexpr variable 'z' must be initialized by a constant expression}}a
+#if __cplusplus < 202302L
+  //   since-cxx11-note@-3 {{non-literal type 'A<Z>' cannot be used in a constant expression}}
+#else
+  //   since-cxx23-note@-5 {{cannot construct object of type 'A<cwg1872::Z>' with virtual base class in a constant expression}}
+#endif
 #endif
 }
 

@@ -24,6 +24,7 @@ using namespace acc;
 
 #include "mlir/Dialect/OpenACC/OpenACCOpsDialect.cpp.inc"
 #include "mlir/Dialect/OpenACC/OpenACCOpsEnums.cpp.inc"
+#include "mlir/Dialect/OpenACC/OpenACCOpsInterfaces.cpp.inc"
 #include "mlir/Dialect/OpenACC/OpenACCTypeInterfaces.cpp.inc"
 #include "mlir/Dialect/OpenACCMPCommon/Interfaces/OpenACCMPOpsInterfaces.cpp.inc"
 
@@ -1789,9 +1790,8 @@ bool hasDuplicateDeviceTypes(
     return false;
   for (auto attr : *segments) {
     auto deviceTypeAttr = mlir::dyn_cast<mlir::acc::DeviceTypeAttr>(attr);
-    if (deviceTypes.contains(deviceTypeAttr.getValue()))
+    if (!deviceTypes.insert(deviceTypeAttr.getValue()).second)
       return true;
-    deviceTypes.insert(deviceTypeAttr.getValue());
   }
   return false;
 }
@@ -1806,9 +1806,8 @@ LogicalResult checkDeviceTypes(mlir::ArrayAttr deviceTypes) {
         mlir::dyn_cast_or_null<mlir::acc::DeviceTypeAttr>(attr);
     if (!deviceTypeAttr)
       return failure();
-    if (crtDeviceTypes.contains(deviceTypeAttr.getValue()))
+    if (!crtDeviceTypes.insert(deviceTypeAttr.getValue()).second)
       return failure();
-    crtDeviceTypes.insert(deviceTypeAttr.getValue());
   }
   return success();
 }

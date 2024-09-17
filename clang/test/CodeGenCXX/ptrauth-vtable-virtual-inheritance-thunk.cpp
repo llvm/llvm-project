@@ -1,4 +1,7 @@
-// RUN: %clang_cc1 %s -x c++ -std=c++11 -triple arm64-apple-ios -fptrauth-intrinsics -fptrauth-calls -fptrauth-vtable-pointer-type-discrimination -emit-llvm -O0 -disable-llvm-passes -o - | FileCheck --check-prefix=CHECK %s
+// RUN: %clang_cc1 %s -x c++ -std=c++11 -triple arm64-apple-ios   -disable-llvm-passes -fptrauth-intrinsics -fptrauth-calls \
+// RUN:   -fptrauth-vtable-pointer-type-discrimination -emit-llvm -O0 -o - | FileCheck --check-prefixes=CHECK,DARWIN %s
+// RUN: %clang_cc1 %s -x c++ -std=c++11 -triple aarch64-linux-gnu -disable-llvm-passes -fptrauth-intrinsics -fptrauth-calls \
+// RUN:   -fptrauth-vtable-pointer-type-discrimination -emit-llvm -O0 -o - | FileCheck --check-prefixes=CHECK,ELF %s
 
 // The actual vtable construction
 
@@ -103,9 +106,11 @@
 
 // CHECK: @_ZTVN10__cxxabiv120__si_class_type_infoE = external global [0 x ptr]
 
-// CHECK: @_ZTS1B = linkonce_odr hidden constant [3 x i8] c"1B\00", align 1
+// DARWIN: @_ZTS1B = linkonce_odr hidden constant [3 x i8] c"1B\00", align 1
+// ELF:    @_ZTS1B = linkonce_odr constant [3 x i8] c"1B\00", comdat, align 1
 
-// CHECK: @_ZTI1B = linkonce_odr hidden constant { ptr, ptr, ptr } { ptr ptrauth (ptr getelementptr inbounds (ptr, ptr @_ZTVN10__cxxabiv120__si_class_type_infoE, i64 2), i32 2), ptr inttoptr (i64 add (i64 ptrtoint (ptr @_ZTS1B to i64), i64 -9223372036854775808) to ptr), ptr @_ZTI1A }, align 8
+// DARWIN: @_ZTI1B = linkonce_odr hidden constant { ptr, ptr, ptr } { ptr ptrauth (ptr getelementptr inbounds (ptr, ptr @_ZTVN10__cxxabiv120__si_class_type_infoE, i64 2), i32 2), ptr inttoptr (i64 add (i64 ptrtoint (ptr @_ZTS1B to i64), i64 -9223372036854775808) to ptr), ptr @_ZTI1A }, align 8
+// ELF:    @_ZTI1B = linkonce_odr constant { ptr, ptr, ptr } { ptr ptrauth (ptr getelementptr inbounds (ptr, ptr @_ZTVN10__cxxabiv120__si_class_type_infoE, i64 2), i32 2), ptr @_ZTS1B, ptr @_ZTI1A }, comdat, align 8
 
 // CHECK: @_ZTI1C = constant { ptr, ptr, i32, i32, ptr, i64 } { ptr ptrauth (ptr getelementptr inbounds (ptr, ptr @_ZTVN10__cxxabiv121__vmi_class_type_infoE, i64 2), i32 2), ptr @_ZTS1C, i32 0, i32 1, ptr @_ZTI1B, i64 -6141 }, align 8
 
@@ -177,7 +182,8 @@
 // CHECK-SAME: ptr ptrauth (ptr @_ZN1A1gEv, i32 0, i64 19402, ptr getelementptr inbounds ({ [7 x ptr] }, ptr @_ZTV1B, i32 0, i32 0, i32 3)),
 // CHECK-SAME: ptr ptrauth (ptr @_ZN1A1hEz, i32 0, i64 31735, ptr getelementptr inbounds ({ [7 x ptr] }, ptr @_ZTV1B, i32 0, i32 0, i32 4)),
 // CHECK-SAME: ptr ptrauth (ptr @_ZN1BD1Ev, i32 0, i64 2043, ptr getelementptr inbounds ({ [7 x ptr] }, ptr @_ZTV1B, i32 0, i32 0, i32 5)),
-// CHECK-SAME: ptr ptrauth (ptr @_ZN1BD0Ev, i32 0, i64 63674, ptr getelementptr inbounds ({ [7 x ptr] }, ptr @_ZTV1B, i32 0, i32 0, i32 6))] }, align 8
+// DARWIN-SAME: ptr ptrauth (ptr @_ZN1BD0Ev, i32 0, i64 63674, ptr getelementptr inbounds ({ [7 x ptr] }, ptr @_ZTV1B, i32 0, i32 0, i32 6))] }, align 8
+// ELF-SAME:    ptr ptrauth (ptr @_ZN1BD0Ev, i32 0, i64 63674, ptr getelementptr inbounds ({ [7 x ptr] }, ptr @_ZTV1B, i32 0, i32 0, i32 6))] }, comdat, align 8
 
 extern "C" int printf(const char *format, ...);
 
@@ -284,13 +290,15 @@ int main() {
 }
 
 // And check the thunks
-// CHECK: ptr @_ZTv0_n48_N1CD1Ev(ptr noundef %this)
+// DARWIN: ptr @_ZTv0_n48_N1CD1Ev(ptr noundef %this)
+// ELF:    void @_ZTv0_n48_N1CD1Ev(ptr noundef %this)
 // CHECK: [[TEMP:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[TEMP:%.*]], i32 2, i64 62866)
 
 // CHECK: void @_ZTv0_n48_N1CD0Ev(ptr noundef %this)
 // CHECK: [[TEMP:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[TEMP:%.*]], i32 2, i64 62866)
 
-// CHECK: ptr @_ZTv0_n48_N1DD1Ev(ptr noundef %this)
+// DARWIN: ptr @_ZTv0_n48_N1DD1Ev(ptr noundef %this)
+// ELF:    void @_ZTv0_n48_N1DD1Ev(ptr noundef %this)
 // CHECK: [[TEMP:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[TEMP:%.*]], i32 2, i64 62866)
 
 // CHECK: void @_ZTv0_n48_N1DD0Ev(ptr noundef %this)

@@ -191,6 +191,7 @@ void mlir::populateMathToLibmConversionPatterns(RewritePatternSet &patterns) {
   populatePatternsForOp<math::SinOp>(patterns, ctx, "sinf", "sin");
   populatePatternsForOp<math::SinhOp>(patterns, ctx, "sinhf", "sinh");
   populatePatternsForOp<math::SqrtOp>(patterns, ctx, "sqrtf", "sqrt");
+  populatePatternsForOp<math::RsqrtOp>(patterns, ctx, "rsqrtf", "rsqrt");
   populatePatternsForOp<math::TanOp>(patterns, ctx, "tanf", "tan");
   populatePatternsForOp<math::TanhOp>(patterns, ctx, "tanhf", "tanh");
   populatePatternsForOp<math::TruncOp>(patterns, ctx, "truncf", "trunc");

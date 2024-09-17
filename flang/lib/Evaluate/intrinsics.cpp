@@ -587,7 +587,7 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
     {"izext", {{"i", AnyInt}}, TypePattern{IntType, KindCode::exactKind, 2}},
     {"jzext", {{"i", AnyInt}}, DefaultInt},
     {"kind",
-        {{"x", AnyIntrinsic, Rank::elemental, Optionality::required,
+        {{"x", AnyIntrinsic, Rank::anyOrAssumedRank, Optionality::required,
             common::Intent::In, {ArgFlag::canBeMoldNull}}},
         DefaultInt, Rank::elemental, IntrinsicClass::inquiryFunction},
     {"lbound",
@@ -795,6 +795,10 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
             {"identity", SameType, Rank::scalar, Optionality::optional},
             {"ordered", AnyLogical, Rank::scalar, Optionality::optional}},
         SameType, Rank::scalar, IntrinsicClass::transformationalFunction},
+    {"rename",
+        {{"path1", DefaultChar, Rank::scalar},
+            {"path2", DefaultChar, Rank::scalar}},
+        DefaultInt, Rank::scalar},
     {"repeat",
         {{"string", SameCharNoLen, Rank::scalar},
             {"ncopies", AnyInt, Rank::scalar}},
@@ -818,6 +822,7 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
             {"back", AnyLogical, Rank::elemental, Optionality::optional},
             DefaultingKIND},
         KINDInt},
+    {"second", {}, DefaultReal, Rank::scalar},
     {"selected_char_kind", {{"name", DefaultChar, Rank::scalar}}, DefaultInt,
         Rank::scalar, IntrinsicClass::transformationalFunction},
     {"selected_int_kind", {{"r", AnyInt, Rank::scalar}}, DefaultInt,
@@ -1464,6 +1469,14 @@ static const IntrinsicInterface intrinsicSubroutine[]{
             {"get", DefaultInt, Rank::vector, Optionality::optional,
                 common::Intent::Out}},
         {}, Rank::elemental, IntrinsicClass::impureSubroutine},
+    {"rename",
+        {{"path1", DefaultChar, Rank::scalar},
+            {"path2", DefaultChar, Rank::scalar},
+            {"status", DefaultInt, Rank::scalar, Optionality::optional,
+                common::Intent::Out}},
+        {}, Rank::scalar, IntrinsicClass::impureSubroutine},
+    {"second", {{"time", DefaultReal, Rank::scalar}}, {}, Rank::scalar,
+        IntrinsicClass::impureSubroutine},
     {"system",
         {{"command", DefaultChar, Rank::scalar},
             {"exitstat", DefaultInt, Rank::scalar, Optionality::optional,
@@ -2251,7 +2264,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
         messages.Say("'kind=' argument must be a constant scalar integer "
                      "whose value is a supported kind for the "
                      "intrinsic result type"_err_en_US);
-        return std::nullopt;
+        // use default kind below for error recovery
       } else if (kindDummyArg->flags.test(ArgFlag::defaultsToSameKind)) {
         CHECK(sameArg);
         resultType = *sameArg->GetType();
@@ -2261,6 +2274,8 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
             DynamicType{TypeCategory::Integer, defaults.sizeIntegerKind()};
       } else {
         CHECK(kindDummyArg->flags.test(ArgFlag::defaultsToDefaultForResult));
+      }
+      if (!resultType) {
         int kind{defaults.GetDefaultKind(*category)};
         if (*category == TypeCategory::Character) { // ACHAR & CHAR
           resultType = DynamicType{kind, 1};
@@ -2612,12 +2627,10 @@ bool IntrinsicProcTable::Implementation::IsDualIntrinsic(
     const std::string &name) const {
   // Collection for some intrinsics with function and subroutine form,
   // in order to pass the semantic check.
-  static const std::string dualIntrinsic[]{{"etime"}, {"getcwd"}};
+  static const std::string dualIntrinsic[]{
+      {"etime"s}, {"getcwd"s}, {"rename"s}, {"second"s}};
 
-  return std::find_if(std::begin(dualIntrinsic), std::end(dualIntrinsic),
-             [&name](const std::string &dualName) {
-               return dualName == name;
-             }) != std::end(dualIntrinsic);
+  return llvm::is_contained(dualIntrinsic, name);
 }
 
 IntrinsicClass IntrinsicProcTable::Implementation::GetIntrinsicClass(
@@ -2800,8 +2813,10 @@ IntrinsicProcTable::Implementation::HandleC_F_Pointer(
       if (auto type{expr->GetType()}) {
         if (type->category() != TypeCategory::Derived ||
             type->IsPolymorphic() ||
-            type->GetDerivedTypeSpec().typeSymbol().name() !=
-                "__builtin_c_ptr") {
+            (type->GetDerivedTypeSpec().typeSymbol().name() !=
+                    "__builtin_c_ptr" &&
+                type->GetDerivedTypeSpec().typeSymbol().name() !=
+                    "__builtin_c_devptr")) {
           context.messages().Say(arguments[0]->sourceLocation(),
               "CPTR= argument to C_F_POINTER() must be a C_PTR"_err_en_US);
         }

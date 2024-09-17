@@ -110,7 +110,7 @@ add_clang_library(clangCodeGen
   MacroPPCallbacks.cpp
   MicrosoftCXXABI.cpp
   ModuleBuilder.cpp
-  ObjectFilePCHContainerOperations.cpp
+  ObjectFilePCHContainerWriter.cpp
   PatternInit.cpp
   SanitizerMetadata.cpp
   SwiftCallingConv.cpp
@@ -122,6 +122,7 @@ add_clang_library(clangCodeGen
   Targets/AVR.cpp
   Targets/BPF.cpp
   Targets/CSKY.cpp
+  Targets/DirectX.cpp
   Targets/Hexagon.cpp
   Targets/Lanai.cpp
   Targets/LoongArch.cpp

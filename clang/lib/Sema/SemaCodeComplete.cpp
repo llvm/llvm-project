@@ -520,7 +520,6 @@ static QualType getPreferredTypeOfBinaryRHS(Sema &S, Expr *LHS,
   // Logical operators, assume we want bool.
   case tok::ampamp:
   case tok::pipepipe:
-  case tok::caretcaret:
     return S.getASTContext().BoolTy;
   // Operators often used for bit manipulation are typically used with the type
   // of the left argument.
@@ -6864,7 +6863,7 @@ void SemaCodeCompletion::CodeCompleteNamespaceDecl(Scope *S) {
              NS(Ctx->decls_begin()),
          NSEnd(Ctx->decls_end());
          NS != NSEnd; ++NS)
-      OrigToLatest[NS->getOriginalNamespace()] = *NS;
+      OrigToLatest[NS->getFirstDecl()] = *NS;
 
     // Add the most recent definition (or extended definition) of each
     // namespace to the list of results.

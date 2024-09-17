@@ -44,14 +44,14 @@ static std::string getOperationName(const Record &def) {
   return std::string(llvm::formatv("{0}.{1}", prefix, opName));
 }
 
-std::vector<Record *>
+std::vector<const Record *>
 mlir::tblgen::getRequestedOpDefinitions(const RecordKeeper &recordKeeper) {
-  Record *classDef = recordKeeper.getClass("Op");
+  const Record *classDef = recordKeeper.getClass("Op");
   if (!classDef)
     PrintFatalError("ERROR: Couldn't find the 'Op' class!\n");
 
   llvm::Regex includeRegex(opIncFilter), excludeRegex(opExcFilter);
-  std::vector<Record *> defs;
+  std::vector<const Record *> defs;
   for (const auto &def : recordKeeper.getDefs()) {
     if (!def.second->isSubClassOf(classDef))
       continue;
@@ -86,8 +86,8 @@ bool mlir::tblgen::isPythonReserved(StringRef str) {
 }
 
 void mlir::tblgen::shardOpDefinitions(
-    ArrayRef<llvm::Record *> defs,
-    SmallVectorImpl<ArrayRef<llvm::Record *>> &shardedDefs) {
+    ArrayRef<const llvm::Record *> defs,
+    SmallVectorImpl<ArrayRef<const llvm::Record *>> &shardedDefs) {
   assert(opShardCount > 0 && "expected a positive shard count");
   if (opShardCount == 1) {
     shardedDefs.push_back(defs);

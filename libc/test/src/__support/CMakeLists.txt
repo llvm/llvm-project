@@ -34,6 +34,7 @@ if(LLVM_LIBC_FULL_BUILD)
     SUITE
       libc-support-tests
     SRCS
+      fake_heap.s
       freelist_heap_test.cpp
       freelist_malloc_test.cpp
     DEPENDS
@@ -131,20 +132,22 @@ add_libc_test(
     libc.src.__support.uint128
 )
 
-# NVPTX does not support varargs currently.
-if(NOT LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
-  add_libc_test(
-    arg_list_test
-    SUITE
-      libc-support-tests
-    SRCS
-      arg_list_test.cpp
-    DEPENDS
-      libc.src.__support.arg_list
-  )
-endif()
+add_libc_test(
+  arg_list_test
+  SUITE
+    libc-support-tests
+  SRCS
+    arg_list_test.cpp
+  DEPENDS
+    libc.src.__support.arg_list
+    libc.src.__support.macros.properties.os
+)
 
-if(NOT LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
+# TODO: clang-cl generates calls into runtime library functions to
+# handle 128-bit integer arithmetics and conversions which are not yet
+# available on Windows. Re-enable 128-bit integer support on Windows once
+# these functions are ready.
+if(NOT LIBC_TARGET_ARCHITECTURE_IS_NVPTX AND NOT LIBC_TARGET_OS_IS_WINDOWS)
   add_libc_test(
     big_int_test
     SUITE
@@ -203,6 +206,8 @@ add_libc_test(
     libc.src.stdlib.rand
     libc.src.stdlib.srand
     libc.src.string.memset
+  COMPILE_OPTIONS
+    -O3
   UNIT_TEST_ONLY
     # Aligned Allocation is not supported in hermetic builds.
 )

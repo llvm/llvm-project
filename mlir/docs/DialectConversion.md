@@ -352,7 +352,8 @@ class TypeConverter {
 
   /// This method registers a materialization that will be called when
   /// converting (potentially multiple) block arguments that were the result of
-  /// a signature conversion of a single block argument, to a single SSA value.
+  /// a signature conversion of a single block argument, to a single SSA value
+  /// with the old argument type.
   template <typename FnT,
             typename T = typename llvm::function_traits<FnT>::template arg_t<1>>
   void addArgumentMaterialization(FnT &&callback) {
@@ -381,6 +382,11 @@ class TypeConverter {
   }
 };
 ```
+
+Materializations through the type converter are optional. If the
+`ConversionConfig::buildMaterializations` flag is set to "false", the dialect
+conversion driver builds an `unrealized_conversion_cast` op instead of calling
+the respective type converter callback whenever a materialization is required.
 
 ### Region Signature Conversion
 

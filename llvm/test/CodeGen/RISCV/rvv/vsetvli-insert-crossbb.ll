@@ -719,11 +719,9 @@ define void @vector_init_vsetvli_N(i64 %N, ptr %c) {
 ; CHECK-NEXT:    li a2, 0
 ; CHECK-NEXT:    vsetvli a3, a0, e64, m1, ta, ma
 ; CHECK-NEXT:    slli a4, a3, 3
-; CHECK-NEXT:    vsetvli a5, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:  .LBB14_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; CHECK-NEXT:    vse64.v v8, (a1)
 ; CHECK-NEXT:    add a2, a2, a3
 ; CHECK-NEXT:    add a1, a1, a4
@@ -755,11 +753,9 @@ define void @vector_init_vsetvli_fv(i64 %N, ptr %c) {
 ; CHECK-NEXT:    li a2, 0
 ; CHECK-NEXT:    vsetivli a3, 4, e64, m1, ta, ma
 ; CHECK-NEXT:    slli a4, a3, 3
-; CHECK-NEXT:    vsetvli a5, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:  .LBB15_1: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vsetivli zero, 4, e64, m1, ta, ma
 ; CHECK-NEXT:    vse64.v v8, (a1)
 ; CHECK-NEXT:    add a2, a2, a3
 ; CHECK-NEXT:    add a1, a1, a4
@@ -789,11 +785,10 @@ define void @vector_init_vsetvli_fv2(i64 %N, ptr %c) {
 ; CHECK-LABEL: vector_init_vsetvli_fv2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li a2, 0
-; CHECK-NEXT:    vsetvli a3, zero, e64, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e64, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:  .LBB16_1: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vsetivli zero, 4, e64, m1, ta, ma
 ; CHECK-NEXT:    vse64.v v8, (a1)
 ; CHECK-NEXT:    addi a2, a2, 4
 ; CHECK-NEXT:    addi a1, a1, 32
@@ -823,11 +818,10 @@ define void @vector_init_vsetvli_fv3(i64 %N, ptr %c) {
 ; CHECK-LABEL: vector_init_vsetvli_fv3:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li a2, 0
-; CHECK-NEXT:    vsetvli a3, zero, e64, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e64, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:  .LBB17_1: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vsetivli zero, 4, e64, m1, ta, ma
 ; CHECK-NEXT:    vse64.v v8, (a1)
 ; CHECK-NEXT:    addi a2, a2, 4
 ; CHECK-NEXT:    addi a1, a1, 32
@@ -1126,12 +1120,13 @@ exit:
   ret void
 }
 
-; Check that we don't forward an AVL if we wouldn't be able to extend its
-; LiveInterval without clobbering other val nos.
-define <vscale x 4 x i32> @unforwardable_avl(i64 %n, <vscale x 4 x i32> %v, i1 %cmp) {
-; CHECK-LABEL: unforwardable_avl:
+; Check that if we forward an AVL whose value is clobbered in its LiveInterval
+; we emit a copy instead.
+define <vscale x 4 x i32> @clobbered_forwarded_avl(i64 %n, <vscale x 4 x i32> %v, i1 %cmp) {
+; CHECK-LABEL: clobbered_forwarded_avl:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a2, a0, e32, m2, ta, ma
+; CHECK-NEXT:    mv a2, a0
+; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; CHECK-NEXT:    andi a1, a1, 1
 ; CHECK-NEXT:  .LBB27_1: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1

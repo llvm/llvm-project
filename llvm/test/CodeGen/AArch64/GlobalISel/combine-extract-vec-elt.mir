@@ -49,8 +49,8 @@ body:             |
     ; CHECK: liveins: $x0, $x1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %arg1:_(s64) = COPY $x0
-    ; CHECK-NEXT: %extract:_(s32) = G_TRUNC %arg1(s64)
-    ; CHECK-NEXT: %zext:_(s64) = G_ZEXT %extract(s32)
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC %arg1(s64)
+    ; CHECK-NEXT: %zext:_(s64) = G_ZEXT [[TRUNC]](s32)
     ; CHECK-NEXT: $x0 = COPY %zext(s64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %arg1:_(s64) = COPY $x0

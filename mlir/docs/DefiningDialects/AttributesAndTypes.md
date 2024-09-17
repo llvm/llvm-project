@@ -551,13 +551,13 @@ For Types, these methods will have the form:
 
 - `static Type MyType::parse(AsmParser &parser)`
 
-- `Type MyType::print(AsmPrinter &p) const`
+- `void MyType::print(AsmPrinter &p) const`
 
 For Attributes, these methods will have the form:
 
 - `static Attribute MyAttr::parse(AsmParser &parser, Type attrType)`
 
-- `Attribute MyAttr::print(AsmPrinter &p) const`
+- `void MyAttr::print(AsmPrinter &p) const`
 
 #### Using `assemblyFormat`
 

@@ -106,11 +106,16 @@ SymbolVendorELF::CreateInstance(const lldb::ModuleSP &module_sp,
   FileSpec dsym_fspec =
       PluginManager::LocateExecutableSymbolFile(module_spec, search_paths);
   if (!dsym_fspec || IsDwpSymbolFile(module_sp, dsym_fspec)) {
-    // If we have a stripped binary or if we got a DWP file, we should prefer
-    // symbols in the executable acquired through a plugin.
+    // If we have a stripped binary or if we have a DWP file, SymbolLocator
+    // plugins may be able to give us an unstripped binary or an
+    // 'only-keep-debug' stripped file.
     ModuleSpec unstripped_spec =
         PluginManager::LocateExecutableObjectFile(module_spec);
     if (!unstripped_spec)
+      return nullptr;
+    // The default SymbolLocator plugin returns the original binary if no other
+    // plugin finds something better.
+    if (unstripped_spec.GetFileSpec() == module_spec.GetFileSpec())
       return nullptr;
     dsym_fspec = unstripped_spec.GetFileSpec();
   }

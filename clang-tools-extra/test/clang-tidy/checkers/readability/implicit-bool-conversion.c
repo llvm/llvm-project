@@ -1,4 +1,8 @@
 // RUN: %check_clang_tidy %s readability-implicit-bool-conversion %t -- -- -std=c23
+// RUN: %check_clang_tidy -check-suffix=UPPER-CASE %s readability-implicit-bool-conversion %t -- \
+// RUN:     -config='{CheckOptions: { \
+// RUN:         readability-implicit-bool-conversion.UseUpperCaseLiteralSuffix: true \
+// RUN:     }}' -- -std=c23
 
 #undef NULL
 #define NULL 0L
@@ -95,6 +99,7 @@ void implicitConversionFromBoolLiterals() {
   functionTakingUnsignedLong(false);
   // CHECK-MESSAGES: :[[@LINE-1]]:30: warning: implicit conversion 'bool' -> 'unsigned long'
   // CHECK-FIXES: functionTakingUnsignedLong(0u);
+  // CHECK-FIXES-UPPER-CASE: functionTakingUnsignedLong(0U);
 
   functionTakingSignedChar(true);
   // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: implicit conversion 'bool' -> 'signed char'
@@ -103,6 +108,7 @@ void implicitConversionFromBoolLiterals() {
   functionTakingFloat(false);
   // CHECK-MESSAGES: :[[@LINE-1]]:23: warning: implicit conversion 'bool' -> 'float'
   // CHECK-FIXES: functionTakingFloat(0.0f);
+  // CHECK-FIXES-UPPER-CASE: functionTakingFloat(0.0F);
 
   functionTakingDouble(true);
   // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: implicit conversion 'bool' -> 'double'
@@ -160,11 +166,13 @@ void implicitConversionToBoolSimpleCases() {
   functionTakingBool(unsignedLong);
   // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: implicit conversion 'unsigned long' -> 'bool'
   // CHECK-FIXES: functionTakingBool(unsignedLong != 0u);
+  // CHECK-FIXES-UPPER-CASE: functionTakingBool(unsignedLong != 0U);
 
   float floating = 0.0f;
   functionTakingBool(floating);
   // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: implicit conversion 'float' -> 'bool'
   // CHECK-FIXES: functionTakingBool(floating != 0.0f);
+  // CHECK-FIXES-UPPER-CASE: functionTakingBool(floating != 0.0F);
 
   double doubleFloating = 1.0f;
   functionTakingBool(doubleFloating);
@@ -194,6 +202,7 @@ void implicitConversionToBoolInSingleExpressions() {
   boolComingFromFloat = floating;
   // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: implicit conversion 'float' -> 'bool'
   // CHECK-FIXES: boolComingFromFloat = (floating != 0.0f);
+  // CHECK-FIXES-UPPER-CASE: boolComingFromFloat = (floating != 0.0F);
 
   signed char character = 'a';
   bool boolComingFromChar;
@@ -288,6 +297,7 @@ void implicitConversionToBoolFromUnaryMinusAndZeroLiterals() {
   functionTakingBool(-0.0f);
   // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: implicit conversion 'float' -> 'bool'
   // CHECK-FIXES: functionTakingBool((-0.0f) != 0.0f);
+  // CHECK-FIXES-UPPER-CASE: functionTakingBool((-0.0f) != 0.0F);
 
   functionTakingBool(-0.0);
   // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: implicit conversion 'double' -> 'bool'

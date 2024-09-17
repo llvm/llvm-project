@@ -482,17 +482,17 @@ define i1 @andflag16rr(i16 %a, i16 %b) {
 define i1 @andflag32rr(i32 %a, i32 %b) {
 ; CHECK-LABEL: andflag32rr:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    andl %esi, %edi, %ecx # encoding: [0x62,0xf4,0x74,0x18,0x21,0xf7]
+; CHECK-NEXT:    andl %edi, %esi # EVEX TO LEGACY Compression encoding: [0x21,0xfe]
 ; CHECK-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
-; CHECK-NEXT:    movl %ecx, d64(%rip) # encoding: [0x89,0x0d,A,A,A,A]
+; CHECK-NEXT:    movl %esi, d64(%rip) # encoding: [0x89,0x35,A,A,A,A]
 ; CHECK-NEXT:    # fixup A - offset: 2, value: d64-4, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
 ; NF-LABEL: andflag32rr:
 ; NF:       # %bb.0:
-; NF-NEXT:    andl %esi, %edi, %ecx # encoding: [0x62,0xf4,0x74,0x18,0x21,0xf7]
+; NF-NEXT:    andl %edi, %esi # EVEX TO LEGACY Compression encoding: [0x21,0xfe]
 ; NF-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
-; NF-NEXT:    movl %ecx, d64(%rip) # encoding: [0x89,0x0d,A,A,A,A]
+; NF-NEXT:    movl %esi, d64(%rip) # encoding: [0x89,0x35,A,A,A,A]
 ; NF-NEXT:    # fixup A - offset: 2, value: d64-4, kind: reloc_riprel_4byte
 ; NF-NEXT:    retq # encoding: [0xc3]
   %v0 = and i32 %a, %b  ; 0xff << 50
@@ -504,17 +504,17 @@ define i1 @andflag32rr(i32 %a, i32 %b) {
 define i1 @andflag64rr(i64 %a, i64 %b) {
 ; CHECK-LABEL: andflag64rr:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    andq %rsi, %rdi, %rcx # encoding: [0x62,0xf4,0xf4,0x18,0x21,0xf7]
+; CHECK-NEXT:    andq %rdi, %rsi # EVEX TO LEGACY Compression encoding: [0x48,0x21,0xfe]
 ; CHECK-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
-; CHECK-NEXT:    movq %rcx, d64(%rip) # encoding: [0x48,0x89,0x0d,A,A,A,A]
+; CHECK-NEXT:    movq %rsi, d64(%rip) # encoding: [0x48,0x89,0x35,A,A,A,A]
 ; CHECK-NEXT:    # fixup A - offset: 3, value: d64-4, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
 ; NF-LABEL: andflag64rr:
 ; NF:       # %bb.0:
-; NF-NEXT:    andq %rsi, %rdi, %rcx # encoding: [0x62,0xf4,0xf4,0x18,0x21,0xf7]
+; NF-NEXT:    andq %rdi, %rsi # EVEX TO LEGACY Compression encoding: [0x48,0x21,0xfe]
 ; NF-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
-; NF-NEXT:    movq %rcx, d64(%rip) # encoding: [0x48,0x89,0x0d,A,A,A,A]
+; NF-NEXT:    movq %rsi, d64(%rip) # encoding: [0x48,0x89,0x35,A,A,A,A]
 ; NF-NEXT:    # fixup A - offset: 3, value: d64-4, kind: reloc_riprel_4byte
 ; NF-NEXT:    retq # encoding: [0xc3]
   %v0 = and i64 %a, %b  ; 0xff << 50
@@ -578,17 +578,17 @@ define i1 @andflag16rm(ptr %ptr, i16 %b) {
 define i1 @andflag32rm(ptr %ptr, i32 %b) {
 ; CHECK-LABEL: andflag32rm:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    andl (%rdi), %esi, %ecx # encoding: [0x62,0xf4,0x74,0x18,0x23,0x37]
+; CHECK-NEXT:    andl (%rdi), %esi # EVEX TO LEGACY Compression encoding: [0x23,0x37]
 ; CHECK-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
-; CHECK-NEXT:    movl %ecx, d64(%rip) # encoding: [0x89,0x0d,A,A,A,A]
+; CHECK-NEXT:    movl %esi, d64(%rip) # encoding: [0x89,0x35,A,A,A,A]
 ; CHECK-NEXT:    # fixup A - offset: 2, value: d64-4, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
 ; NF-LABEL: andflag32rm:
 ; NF:       # %bb.0:
-; NF-NEXT:    andl (%rdi), %esi, %ecx # encoding: [0x62,0xf4,0x74,0x18,0x23,0x37]
+; NF-NEXT:    andl (%rdi), %esi # EVEX TO LEGACY Compression encoding: [0x23,0x37]
 ; NF-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
-; NF-NEXT:    movl %ecx, d64(%rip) # encoding: [0x89,0x0d,A,A,A,A]
+; NF-NEXT:    movl %esi, d64(%rip) # encoding: [0x89,0x35,A,A,A,A]
 ; NF-NEXT:    # fixup A - offset: 2, value: d64-4, kind: reloc_riprel_4byte
 ; NF-NEXT:    retq # encoding: [0xc3]
   %a = load i32, ptr %ptr
@@ -601,17 +601,17 @@ define i1 @andflag32rm(ptr %ptr, i32 %b) {
 define i1 @andflag64rm(ptr %ptr, i64 %b) {
 ; CHECK-LABEL: andflag64rm:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    andq (%rdi), %rsi, %rcx # encoding: [0x62,0xf4,0xf4,0x18,0x23,0x37]
+; CHECK-NEXT:    andq (%rdi), %rsi # EVEX TO LEGACY Compression encoding: [0x48,0x23,0x37]
 ; CHECK-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
-; CHECK-NEXT:    movq %rcx, d64(%rip) # encoding: [0x48,0x89,0x0d,A,A,A,A]
+; CHECK-NEXT:    movq %rsi, d64(%rip) # encoding: [0x48,0x89,0x35,A,A,A,A]
 ; CHECK-NEXT:    # fixup A - offset: 3, value: d64-4, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
 ; NF-LABEL: andflag64rm:
 ; NF:       # %bb.0:
-; NF-NEXT:    andq (%rdi), %rsi, %rcx # encoding: [0x62,0xf4,0xf4,0x18,0x23,0x37]
+; NF-NEXT:    andq (%rdi), %rsi # EVEX TO LEGACY Compression encoding: [0x48,0x23,0x37]
 ; NF-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
-; NF-NEXT:    movq %rcx, d64(%rip) # encoding: [0x48,0x89,0x0d,A,A,A,A]
+; NF-NEXT:    movq %rsi, d64(%rip) # encoding: [0x48,0x89,0x35,A,A,A,A]
 ; NF-NEXT:    # fixup A - offset: 3, value: d64-4, kind: reloc_riprel_4byte
 ; NF-NEXT:    retq # encoding: [0xc3]
   %a = load i64, ptr %ptr
@@ -672,19 +672,19 @@ define i1 @andflag16ri(i16 %a) {
 define i1 @andflag32ri(i32 %a) {
 ; CHECK-LABEL: andflag32ri:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    andl $123456, %edi, %ecx # encoding: [0x62,0xf4,0x74,0x18,0x81,0xe7,0x40,0xe2,0x01,0x00]
+; CHECK-NEXT:    andl $123456, %edi # EVEX TO LEGACY Compression encoding: [0x81,0xe7,0x40,0xe2,0x01,0x00]
 ; CHECK-NEXT:    # imm = 0x1E240
 ; CHECK-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
-; CHECK-NEXT:    movl %ecx, d64(%rip) # encoding: [0x89,0x0d,A,A,A,A]
+; CHECK-NEXT:    movl %edi, d64(%rip) # encoding: [0x89,0x3d,A,A,A,A]
 ; CHECK-NEXT:    # fixup A - offset: 2, value: d64-4, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
 ; NF-LABEL: andflag32ri:
 ; NF:       # %bb.0:
-; NF-NEXT:    andl $123456, %edi, %ecx # encoding: [0x62,0xf4,0x74,0x18,0x81,0xe7,0x40,0xe2,0x01,0x00]
+; NF-NEXT:    andl $123456, %edi # EVEX TO LEGACY Compression encoding: [0x81,0xe7,0x40,0xe2,0x01,0x00]
 ; NF-NEXT:    # imm = 0x1E240
 ; NF-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
-; NF-NEXT:    movl %ecx, d64(%rip) # encoding: [0x89,0x0d,A,A,A,A]
+; NF-NEXT:    movl %edi, d64(%rip) # encoding: [0x89,0x3d,A,A,A,A]
 ; NF-NEXT:    # fixup A - offset: 2, value: d64-4, kind: reloc_riprel_4byte
 ; NF-NEXT:    retq # encoding: [0xc3]
   %v0 = and i32 %a, 123456  ; 0xff << 50
@@ -696,19 +696,19 @@ define i1 @andflag32ri(i32 %a) {
 define i1 @andflag64ri(i64 %a) {
 ; CHECK-LABEL: andflag64ri:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    andq $123456, %rdi, %rcx # encoding: [0x62,0xf4,0xf4,0x18,0x81,0xe7,0x40,0xe2,0x01,0x00]
+; CHECK-NEXT:    andq $123456, %rdi # EVEX TO LEGACY Compression encoding: [0x48,0x81,0xe7,0x40,0xe2,0x01,0x00]
 ; CHECK-NEXT:    # imm = 0x1E240
 ; CHECK-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
-; CHECK-NEXT:    movq %rcx, d64(%rip) # encoding: [0x48,0x89,0x0d,A,A,A,A]
+; CHECK-NEXT:    movq %rdi, d64(%rip) # encoding: [0x48,0x89,0x3d,A,A,A,A]
 ; CHECK-NEXT:    # fixup A - offset: 3, value: d64-4, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
 ; NF-LABEL: andflag64ri:
 ; NF:       # %bb.0:
-; NF-NEXT:    andq $123456, %rdi, %rcx # encoding: [0x62,0xf4,0xf4,0x18,0x81,0xe7,0x40,0xe2,0x01,0x00]
+; NF-NEXT:    andq $123456, %rdi # EVEX TO LEGACY Compression encoding: [0x48,0x81,0xe7,0x40,0xe2,0x01,0x00]
 ; NF-NEXT:    # imm = 0x1E240
 ; NF-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
-; NF-NEXT:    movq %rcx, d64(%rip) # encoding: [0x48,0x89,0x0d,A,A,A,A]
+; NF-NEXT:    movq %rdi, d64(%rip) # encoding: [0x48,0x89,0x3d,A,A,A,A]
 ; NF-NEXT:    # fixup A - offset: 3, value: d64-4, kind: reloc_riprel_4byte
 ; NF-NEXT:    retq # encoding: [0xc3]
   %v0 = and i64 %a, 123456  ; 0xff << 50
@@ -743,17 +743,17 @@ define i1 @andflag16ri8(i16 %a) {
 define i1 @andflag32ri8(i32 %a) {
 ; CHECK-LABEL: andflag32ri8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    andl $123, %edi, %ecx # encoding: [0x62,0xf4,0x74,0x18,0x83,0xe7,0x7b]
+; CHECK-NEXT:    andl $123, %edi # EVEX TO LEGACY Compression encoding: [0x83,0xe7,0x7b]
 ; CHECK-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
-; CHECK-NEXT:    movl %ecx, d64(%rip) # encoding: [0x89,0x0d,A,A,A,A]
+; CHECK-NEXT:    movl %edi, d64(%rip) # encoding: [0x89,0x3d,A,A,A,A]
 ; CHECK-NEXT:    # fixup A - offset: 2, value: d64-4, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
 ; NF-LABEL: andflag32ri8:
 ; NF:       # %bb.0:
-; NF-NEXT:    andl $123, %edi, %ecx # encoding: [0x62,0xf4,0x74,0x18,0x83,0xe7,0x7b]
+; NF-NEXT:    andl $123, %edi # EVEX TO LEGACY Compression encoding: [0x83,0xe7,0x7b]
 ; NF-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
-; NF-NEXT:    movl %ecx, d64(%rip) # encoding: [0x89,0x0d,A,A,A,A]
+; NF-NEXT:    movl %edi, d64(%rip) # encoding: [0x89,0x3d,A,A,A,A]
 ; NF-NEXT:    # fixup A - offset: 2, value: d64-4, kind: reloc_riprel_4byte
 ; NF-NEXT:    retq # encoding: [0xc3]
   %v0 = and i32 %a, 123  ; 0xff << 50
@@ -765,17 +765,17 @@ define i1 @andflag32ri8(i32 %a) {
 define i1 @andflag64ri8(i64 %a) {
 ; CHECK-LABEL: andflag64ri8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    andq $123, %rdi, %rcx # encoding: [0x62,0xf4,0xf4,0x18,0x83,0xe7,0x7b]
+; CHECK-NEXT:    andq $123, %rdi # EVEX TO LEGACY Compression encoding: [0x48,0x83,0xe7,0x7b]
 ; CHECK-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
-; CHECK-NEXT:    movq %rcx, d64(%rip) # encoding: [0x48,0x89,0x0d,A,A,A,A]
+; CHECK-NEXT:    movq %rdi, d64(%rip) # encoding: [0x48,0x89,0x3d,A,A,A,A]
 ; CHECK-NEXT:    # fixup A - offset: 3, value: d64-4, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
 ; NF-LABEL: andflag64ri8:
 ; NF:       # %bb.0:
-; NF-NEXT:    andq $123, %rdi, %rcx # encoding: [0x62,0xf4,0xf4,0x18,0x83,0xe7,0x7b]
+; NF-NEXT:    andq $123, %rdi # EVEX TO LEGACY Compression encoding: [0x48,0x83,0xe7,0x7b]
 ; NF-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
-; NF-NEXT:    movq %rcx, d64(%rip) # encoding: [0x48,0x89,0x0d,A,A,A,A]
+; NF-NEXT:    movq %rdi, d64(%rip) # encoding: [0x48,0x89,0x3d,A,A,A,A]
 ; NF-NEXT:    # fixup A - offset: 3, value: d64-4, kind: reloc_riprel_4byte
 ; NF-NEXT:    retq # encoding: [0xc3]
   %v0 = and i64 %a, 123  ; 0xff << 50

@@ -263,6 +263,9 @@ set(FMA_OPT_FLAG "FMA_OPT")
 set(ROUND_OPT_FLAG "ROUND_OPT")
 # This flag controls whether we use explicit SIMD instructions or not.
 set(EXPLICIT_SIMD_OPT_FLAG "EXPLICIT_SIMD_OPT")
+# This flag controls whether we use compiler builtin functions to implement
+# various basic math operations or not.
+set(MISC_MATH_BASIC_OPS_OPT_FLAG "MISC_MATH_BASIC_OPS_OPT")
 
 # Skip FMA_OPT flag for targets that don't support fma.
 if(NOT((LIBC_TARGET_ARCHITECTURE_IS_X86 AND (LIBC_CPU_FEATURES MATCHES "FMA")) OR
@@ -276,7 +279,23 @@ if(NOT(LIBC_TARGET_ARCHITECTURE_IS_X86 AND (LIBC_CPU_FEATURES MATCHES "SSE2")))
   set(SKIP_FLAG_EXPANSION_EXPLICIT_SIMD_OPT TRUE)
 endif()
 
-# Skip ROUND_OPT flag for targets that don't support SSE 4.2.
-if(NOT(LIBC_TARGET_ARCHITECTURE_IS_X86 AND (LIBC_CPU_FEATURES MATCHES "SSE4_2")))
+# Skip ROUND_OPT flag for targets that don't support rounding instructions. On
+# x86, these are SSE4.1 instructions, but we already had code to check for
+# SSE4.2 support.
+if(NOT((LIBC_TARGET_ARCHITECTURE_IS_X86 AND (LIBC_CPU_FEATURES MATCHES "SSE4_2")) OR
+       LIBC_TARGET_ARCHITECTURE_IS_AARCH64 OR LIBC_TARGET_OS_IS_GPU))
   set(SKIP_FLAG_EXPANSION_ROUND_OPT TRUE)
+endif()
+
+# Choose whether time_t is 32- or 64-bit, based on target architecture
+# and config options. This will be used to set a #define during the
+# library build, and also to select the right version of time_t.h for
+# the output headers.
+if(LIBC_TARGET_ARCHITECTURE_IS_ARM AND NOT (LIBC_CONF_TIME_64BIT))
+  # Set time_t to 32 bit for compatibility with glibc, unless
+  # configuration says otherwise
+  set(LIBC_TYPES_TIME_T_IS_32_BIT TRUE)
+else()
+  # Other platforms default to 64-bit time_t
+  set(LIBC_TYPES_TIME_T_IS_32_BIT FALSE)
 endif()

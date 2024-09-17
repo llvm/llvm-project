@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.20.0)
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   project(libclc VERSION 0.2.0 LANGUAGES CXX C)
 endif()
+set(LLVM_SUBPROJECT_TITLE "libclc")
 
 set(CMAKE_CXX_STANDARD 17)
 
@@ -73,10 +74,10 @@ else()
   endif()
 
   if( NOT EXISTS ${LIBCLC_CUSTOM_LLVM_TOOLS_BINARY_DIR} )
-    setup_host_tool( clang CLANG clang_exe clang_target )
-    setup_host_tool( llvm-as LLVM_AS llvm-as_exe llvm-as_target )
-    setup_host_tool( llvm-link LLVM_LINK llvm-link_exe llvm-link_target )
-    setup_host_tool( opt OPT opt_exe opt_target )
+    get_host_tool_path( clang CLANG clang_exe clang_target )
+    get_host_tool_path( llvm-as LLVM_AS llvm-as_exe llvm-as_target )
+    get_host_tool_path( llvm-link LLVM_LINK llvm-link_exe llvm-link_target )
+    get_host_tool_path( opt OPT opt_exe opt_target )
   endif()
 endif()
 
@@ -97,17 +98,19 @@ if( EXISTS ${LIBCLC_CUSTOM_LLVM_TOOLS_BINARY_DIR} )
 endif()
 
 foreach( tool IN ITEMS clang opt llvm-as llvm-link )
-  if( NOT EXISTS "${${tool}_exe}" AND NOT TARGET "${${tool}_target}" )
+  if( NOT EXISTS "${${tool}_exe}" AND "${tool}_target" STREQUAL "" )
     message( FATAL_ERROR "libclc toolchain incomplete - missing tool ${tool}!" )
   endif()
 endforeach()
 
 # llvm-spirv is an optional dependency, used to build spirv-* targets.
-find_program( LLVM_SPIRV llvm-spirv PATHS ${LLVM_TOOLS_BINARY_DIR} NO_DEFAULT_PATH )
-
-if( LLVM_SPIRV )
-  add_executable( libclc::llvm-spirv IMPORTED GLOBAL )
-  set_target_properties( libclc::llvm-spirv PROPERTIES IMPORTED_LOCATION ${LLVM_SPIRV} )
+# It may be provided in-tree or externally.
+if( TARGET llvm-spirv )
+  get_host_tool_path( llvm-spirv LLVM_SPIRV llvm-spirv_exe llvm-spirv_target )
+else()
+  find_program( LLVM_SPIRV llvm-spirv PATHS ${LLVM_TOOLS_BINARY_DIR} NO_DEFAULT_PATH )
+  set( llvm-spirv_exe "${LLVM_SPIRV}" )
+  set( llvm-spirv_target )
 endif()
 
 # List of all targets. Note that some are added dynamically below.
@@ -130,7 +133,7 @@ endif()
 
 # spirv-mesa3d and spirv64-mesa3d targets can only be built with the (optional)
 # llvm-spirv external tool.
-if( TARGET libclc::llvm-spirv )
+if( llvm-spirv_exe )
   list( APPEND LIBCLC_TARGETS_ALL  spirv-mesa3d- spirv64-mesa3d- )
 endif()
 
@@ -143,7 +146,7 @@ list( SORT LIBCLC_TARGETS_TO_BUILD )
 # Verify that the user hasn't requested mesa3d targets without an available
 # llvm-spirv tool.
 if( "spirv-mesa3d-" IN_LIST LIBCLC_TARGETS_TO_BUILD OR "spirv64-mesa3d-" IN_LIST LIBCLC_TARGETS_TO_BUILD )
-  if( NOT TARGET libclc::llvm-spirv )
+  if( NOT llvm-spirv_exe )
     message( FATAL_ERROR "SPIR-V targets requested, but spirv-tools is not installed" )
   endif()
 endif()
@@ -230,12 +233,14 @@ add_custom_command(
   COMMAND ${Python3_EXECUTABLE} ${script_loc} > convert.cl
   DEPENDS ${script_loc} )
 add_custom_target( "generate_convert.cl" DEPENDS convert.cl )
+set_target_properties( "generate_convert.cl" PROPERTIES FOLDER "libclc/Sourcegenning" )
 
 add_custom_command(
   OUTPUT clspv-convert.cl
   COMMAND ${Python3_EXECUTABLE} ${script_loc} --clspv > clspv-convert.cl
   DEPENDS ${script_loc} )
 add_custom_target( "clspv-generate_convert.cl" DEPENDS clspv-convert.cl )
+set_target_properties( "clspv-generate_convert.cl" PROPERTIES FOLDER "libclc/Sourcegenning" )
 
 enable_testing()
 
@@ -388,6 +393,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
     add_custom_target( ${builtins_comp_lib_tgt}
       DEPENDS ${bytecode_files}
     )
+    set_target_properties( ${builtins_comp_lib_tgt} PROPERTIES FOLDER "libclc/Device IR/Comp" )
 
     set( builtins_link_lib_tgt builtins.link.${arch_suffix} )
     link_bc(
@@ -401,10 +407,11 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
     if( ARCH STREQUAL spirv OR ARCH STREQUAL spirv64 )
       set( spv_suffix ${arch_suffix}.spv )
       add_custom_command( OUTPUT ${spv_suffix}
-        COMMAND libclc::llvm-spirv ${spvflags} -o ${spv_suffix} ${builtins_link_lib}
-        DEPENDS ${builtins_link_lib} ${builtins_link_lib_tgt}
+        COMMAND ${llvm-spirv_exe} ${spvflags} -o ${spv_suffix} ${builtins_link_lib}
+        DEPENDS ${llvm-spirv_target} ${builtins_link_lib} ${builtins_link_lib_tgt}
       )
       add_custom_target( "prepare-${spv_suffix}" ALL DEPENDS "${spv_suffix}" )
+      set_target_properties( "prepare-${spv_suffix}" PROPERTIES FOLDER "libclc/Device IR/Prepare" )
       install( FILES ${CMAKE_CURRENT_BINARY_DIR}/${spv_suffix}
          DESTINATION "${CMAKE_INSTALL_DATADIR}/clc" )
     else()
@@ -421,6 +428,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
       )
       set_target_properties( ${builtins_opt_lib_tgt}
         PROPERTIES TARGET_FILE ${builtins_opt_lib_tgt}.bc
+                   FOLDER "libclc/Device IR/Opt"
       )
 
       set( builtins_opt_lib $<TARGET_PROPERTY:${builtins_opt_lib_tgt},TARGET_FILE> )
@@ -431,6 +439,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
         COMMAND ${prepare_builtins_exe} -o ${obj_suffix} ${builtins_opt_lib}
         DEPENDS ${builtins_opt_lib} ${builtins_opt_lib_tgt} ${prepare_builtins_target} )
       add_custom_target( prepare-${obj_suffix} ALL DEPENDS ${obj_suffix} )
+      set_target_properties( "prepare-${obj_suffix}" PROPERTIES FOLDER "libclc/Device IR/Prepare" )
 
       # nvptx-- targets don't include workitem builtins
       if( NOT clang_triple MATCHES ".*ptx.*--$" )
@@ -445,6 +454,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
         add_custom_target( ${alias_suffix} ALL
           COMMAND ${CMAKE_COMMAND} -E create_symlink ${obj_suffix} ${alias_suffix}
           DEPENDS prepare-${obj_suffix} )
+        set_target_properties( "${alias_suffix}" PROPERTIES FOLDER "libclc/Device IR/Aliases" )
         install( FILES ${CMAKE_CURRENT_BINARY_DIR}/${alias_suffix} DESTINATION "${CMAKE_INSTALL_DATADIR}/clc" )
       endforeach( a )
     endif()

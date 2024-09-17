@@ -755,3 +755,64 @@ define <4 x i1> @boolvec_udiv(<4 x i1> %x, <4 x i1> %y) {
   %r = udiv <4 x i1> %x, %y
   ret <4 x i1> %r
 }
+
+define <4 x i32> @vector_div_leading_zeros(<4 x i32> %x) {
+; SSE2-LABEL: vector_div_leading_zeros:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [613566757,613566757,613566757,613566757]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,3,3]
+; SSE2-NEXT:    pmuludq %xmm1, %xmm0
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,3,2,3]
+; SSE2-NEXT:    pmuludq %xmm1, %xmm2
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[1,3,2,3]
+; SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: vector_div_leading_zeros:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; SSE41-NEXT:    movdqa {{.*#+}} xmm2 = [613566757,613566757,613566757,613566757]
+; SSE41-NEXT:    pmuludq %xmm2, %xmm1
+; SSE41-NEXT:    pmuludq %xmm2, %xmm0
+; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; SSE41-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3],xmm0[4,5],xmm1[6,7]
+; SSE41-NEXT:    retq
+;
+; AVX1-LABEL: vector_div_leading_zeros:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [613566757,613566757,613566757,613566757]
+; AVX1-NEXT:    vpmuludq %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vpmuludq %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3],xmm0[4,5],xmm1[6,7]
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: vector_div_leading_zeros:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [613566757,613566757,613566757,613566757]
+; AVX2-NEXT:    vpmuludq %xmm2, %xmm1, %xmm1
+; AVX2-NEXT:    vpmuludq %xmm2, %xmm0, %xmm0
+; AVX2-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; AVX2-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3]
+; AVX2-NEXT:    retq
+;
+; XOP-LABEL: vector_div_leading_zeros:
+; XOP:       # %bb.0:
+; XOP-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; XOP-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; XOP-NEXT:    vbroadcastss {{.*#+}} xmm2 = [613566757,613566757,613566757,613566757]
+; XOP-NEXT:    vpmuludq %xmm2, %xmm1, %xmm1
+; XOP-NEXT:    vpmuludq %xmm2, %xmm0, %xmm0
+; XOP-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; XOP-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3],xmm0[4,5],xmm1[6,7]
+; XOP-NEXT:    retq
+  %a = and <4 x i32> %x, <i32 255, i32 255, i32 255, i32 255>
+  %b = udiv <4 x i32> %a, <i32 7, i32 7, i32 7, i32 7>
+  ret <4 x i32> %b
+}

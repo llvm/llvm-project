@@ -228,6 +228,11 @@ bool PEI::runOnMachineFunction(MachineFunction &MF) {
   FrameIndexVirtualScavenging = TRI->requiresFrameIndexScavenging(MF);
   ORE = &getAnalysis<MachineOptimizationRemarkEmitterPass>().getORE();
 
+  // Spill frame pointer and/or base pointer registers if they are clobbered.
+  // It is placed before call frame instruction elimination so it will not mess
+  // with stack arguments.
+  TFI->spillFPBP(MF);
+
   // Calculate the MaxCallFrameSize value for the function's frame
   // information. Also eliminates call frame pseudo instructions.
   calculateCallFrameInfo(MF);
@@ -341,6 +346,9 @@ bool PEI::runOnMachineFunction(MachineFunction &MF) {
            << ore::NV("Function", MF.getFunction().getName()) << "'";
   });
 
+  // Emit any remarks implemented for the target, based on final frame layout.
+  TFI->emitRemarks(MF, ORE);
+
   delete RS;
   SaveBlocks.clear();
   RestoreBlocks.clear();
@@ -366,8 +374,8 @@ void PEI::calculateCallFrameInfo(MachineFunction &MF) {
     return;
 
   // (Re-)Compute the MaxCallFrameSize.
-  [[maybe_unused]] uint32_t MaxCFSIn =
-      MFI.isMaxCallFrameSizeComputed() ? MFI.getMaxCallFrameSize() : UINT32_MAX;
+  [[maybe_unused]] uint64_t MaxCFSIn =
+      MFI.isMaxCallFrameSizeComputed() ? MFI.getMaxCallFrameSize() : UINT64_MAX;
   std::vector<MachineBasicBlock::iterator> FrameSDOps;
   MFI.computeMaxCallFrameSize(MF, &FrameSDOps);
   assert(MFI.getMaxCallFrameSize() <= MaxCFSIn &&

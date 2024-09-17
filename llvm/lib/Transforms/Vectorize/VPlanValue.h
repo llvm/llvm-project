@@ -339,8 +339,10 @@ public:
     VPBranchOnMaskSC,
     VPDerivedIVSC,
     VPExpandSCEVSC,
+    VPIRInstructionSC,
     VPInstructionSC,
     VPInterleaveSC,
+    VPReductionEVLSC,
     VPReductionSC,
     VPReplicateSC,
     VPScalarCastSC,
@@ -355,6 +357,7 @@ public:
     VPWidenStoreEVLSC,
     VPWidenStoreSC,
     VPWidenSC,
+    VPWidenEVLSC,
     VPWidenSelectSC,
     VPBlendSC,
     // START: Phi-like recipes. Need to be kept together.

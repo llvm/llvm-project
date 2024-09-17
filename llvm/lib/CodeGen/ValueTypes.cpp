@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Type.h"
@@ -161,6 +162,12 @@ TypeSize EVT::getExtendedSizeInBits() const {
 std::string EVT::getEVTString() const {
   switch (V.SimpleTy) {
   default:
+    if (isRISCVVectorTuple()) {
+      unsigned Sz = getSizeInBits();
+      unsigned NF = getRISCVVectorTupleNumFields();
+      unsigned MinNumElts = Sz / (NF * 8);
+      return "riscv_nxv" + utostr(MinNumElts) + "i8x" + utostr(NF);
+    }
     if (isVector())
       return (isScalableVector() ? "nxv" : "v") +
              utostr(getVectorElementCount().getKnownMinValue()) +
@@ -207,7 +214,7 @@ Type *EVT::getTypeForEVT(LLVMContext &Context) const {
     assert(isExtended() && "Type is not extended!");
     return LLVMTy;
   case MVT::isVoid:  return Type::getVoidTy(Context);
-  case MVT::x86mmx:  return Type::getX86_MMXTy(Context);
+  case MVT::x86mmx:  return llvm::FixedVectorType::get(llvm::IntegerType::get(Context, 64), 1);
   case MVT::aarch64svcount:
     return TargetExtType::get(Context, "aarch64.svcount");
   case MVT::x86amx:  return Type::getX86_AMXTy(Context);
@@ -241,14 +248,22 @@ MVT MVT::getVT(Type *Ty, bool HandleUnknown){
   case Type::BFloatTyID:    return MVT(MVT::bf16);
   case Type::FloatTyID:     return MVT(MVT::f32);
   case Type::DoubleTyID:    return MVT(MVT::f64);
-  case Type::X86_FP80TyID:  return MVT(MVT::f80);
-  case Type::X86_MMXTyID:   return MVT(MVT::x86mmx);
+  case Type::X86_FP80TyID:
+    return MVT(MVT::f80);
   case Type::TargetExtTyID: {
     TargetExtType *TargetExtTy = cast<TargetExtType>(Ty);
     if (TargetExtTy->getName() == "aarch64.svcount")
       return MVT(MVT::aarch64svcount);
     else if (TargetExtTy->getName().starts_with("spirv."))
       return MVT(MVT::spirvbuiltin);
+    if (TargetExtTy->getName() == "riscv.vector.tuple") {
+      unsigned Sz = cast<ScalableVectorType>(TargetExtTy->getTypeParameter(0))
+                        ->getMinNumElements() *
+                    8;
+      unsigned NF = TargetExtTy->getIntParameter(0);
+
+      return MVT::getRISCVVectorTupleVT(Sz * NF, NF);
+    }
     if (HandleUnknown)
       return MVT(MVT::Other);
     llvm_unreachable("Unknown target ext type!");
@@ -289,6 +304,23 @@ EVT EVT::getEVT(Type *Ty, bool HandleUnknown){
   }
 }
 
+const fltSemantics &MVT::getFltSemantics() const {
+  switch (getScalarType().SimpleTy) {
+  default: llvm_unreachable("Unknown FP format");
+  case MVT::f16:     return APFloat::IEEEhalf();
+  case MVT::bf16:    return APFloat::BFloat();
+  case MVT::f32:     return APFloat::IEEEsingle();
+  case MVT::f64:     return APFloat::IEEEdouble();
+  case MVT::f80:     return APFloat::x87DoubleExtended();
+  case MVT::f128:    return APFloat::IEEEquad();
+  case MVT::ppcf128: return APFloat::PPCDoubleDouble();
+  }
+}
+
+const fltSemantics &EVT::getFltSemantics() const {
+  return getScalarType().getSimpleVT().getFltSemantics();
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void MVT::dump() const {
   print(dbgs());
@@ -302,4 +334,3 @@ void MVT::print(raw_ostream &OS) const {
   else
     OS << EVT(*this).getEVTString();
 }
-

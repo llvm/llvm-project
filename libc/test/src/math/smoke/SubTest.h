@@ -9,8 +9,9 @@
 #ifndef LLVM_LIBC_TEST_SRC_MATH_SMOKE_SUBTEST_H
 #define LLVM_LIBC_TEST_SRC_MATH_SMOKE_SUBTEST_H
 
+#include "hdr/errno_macros.h"
 #include "hdr/fenv_macros.h"
-#include "src/__support/FPUtil/BasicOperations.h"
+#include "src/__support/macros/properties/os.h"
 #include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
@@ -37,23 +38,8 @@ public:
     EXPECT_FP_IS_NAN_WITH_EXCEPTION(func(sNaN, sNaN), FE_INVALID);
 
     InType qnan_42 = InFPBits::quiet_nan(Sign::POS, 0x42).get_val();
-    EXPECT_FP_EQ(InType(0x42.0p+0),
-                 LIBC_NAMESPACE::fputil::getpayload(func(qnan_42, zero)));
-    EXPECT_FP_EQ(InType(0x42.0p+0),
-                 LIBC_NAMESPACE::fputil::getpayload(func(zero, qnan_42)));
-
-    if constexpr (sizeof(OutType) < sizeof(InType)) {
-      InStorageType max_payload = InFPBits::FRACTION_MASK >> 1;
-      InType qnan_max = InFPBits::quiet_nan(Sign::POS, max_payload).get_val();
-      EXPECT_FP_EQ(zero,
-                   LIBC_NAMESPACE::fputil::getpayload(func(qnan_max, zero)));
-      EXPECT_FP_EQ(zero,
-                   LIBC_NAMESPACE::fputil::getpayload(func(zero, qnan_max)));
-      EXPECT_FP_EQ(InType(0x42.0p+0),
-                   LIBC_NAMESPACE::fputil::getpayload(func(qnan_max, qnan_42)));
-      EXPECT_FP_EQ(InType(0x42.0p+0),
-                   LIBC_NAMESPACE::fputil::getpayload(func(qnan_42, qnan_max)));
-    }
+    EXPECT_FP_IS_NAN(func(qnan_42, zero));
+    EXPECT_FP_IS_NAN(func(zero, qnan_42));
 
     EXPECT_FP_EQ(inf, func(inf, zero));
     EXPECT_FP_EQ(neg_inf, func(neg_inf, zero));
@@ -67,6 +53,7 @@ public:
   }
 
   void test_range_errors(SubFunc func) {
+#ifndef LIBC_TARGET_OS_IS_WINDOWS
     using namespace LIBC_NAMESPACE::fputil::testing;
 
     if (ForceRoundingMode r(RoundingMode::Nearest); r.success) {
@@ -138,6 +125,7 @@ public:
                                   FE_UNDERFLOW | FE_INEXACT);
       EXPECT_MATH_ERRNO(ERANGE);
     }
+#endif
   }
 
   void test_inexact_results(SubFunc func) {

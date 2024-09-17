@@ -66,9 +66,15 @@ bool llvm::isTriviallyVectorizable(Intrinsic::ID ID) {
   case Intrinsic::umul_fix:
   case Intrinsic::umul_fix_sat:
   case Intrinsic::sqrt: // Begin floating-point.
+  case Intrinsic::asin:
+  case Intrinsic::acos:
+  case Intrinsic::atan:
   case Intrinsic::sin:
   case Intrinsic::cos:
   case Intrinsic::tan:
+  case Intrinsic::sinh:
+  case Intrinsic::cosh:
+  case Intrinsic::tanh:
   case Intrinsic::exp:
   case Intrinsic::exp2:
   case Intrinsic::log:
@@ -97,6 +103,8 @@ bool llvm::isTriviallyVectorizable(Intrinsic::ID ID) {
   case Intrinsic::fptoui_sat:
   case Intrinsic::lrint:
   case Intrinsic::llrint:
+  case Intrinsic::ucmp:
+  case Intrinsic::scmp:
     return true;
   default:
     return false;
@@ -132,6 +140,8 @@ bool llvm::isVectorIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID,
   case Intrinsic::fptoui_sat:
   case Intrinsic::lrint:
   case Intrinsic::llrint:
+  case Intrinsic::ucmp:
+  case Intrinsic::scmp:
     return OpdIdx == -1 || OpdIdx == 0;
   case Intrinsic::is_fpclass:
     return OpdIdx == 0;
@@ -563,6 +573,34 @@ void llvm::processShuffleMasks(
       } while (SecondIdx >= 0);
       break;
     }
+    }
+  }
+}
+
+void llvm::getHorizDemandedEltsForFirstOperand(unsigned VectorBitWidth,
+                                               const APInt &DemandedElts,
+                                               APInt &DemandedLHS,
+                                               APInt &DemandedRHS) {
+  assert(VectorBitWidth >= 128 && "Vectors smaller than 128 bit not supported");
+  int NumLanes = VectorBitWidth / 128;
+  int NumElts = DemandedElts.getBitWidth();
+  int NumEltsPerLane = NumElts / NumLanes;
+  int HalfEltsPerLane = NumEltsPerLane / 2;
+
+  DemandedLHS = APInt::getZero(NumElts);
+  DemandedRHS = APInt::getZero(NumElts);
+
+  // Map DemandedElts to the horizontal operands.
+  for (int Idx = 0; Idx != NumElts; ++Idx) {
+    if (!DemandedElts[Idx])
+      continue;
+    int LaneIdx = (Idx / NumEltsPerLane) * NumEltsPerLane;
+    int LocalIdx = Idx % NumEltsPerLane;
+    if (LocalIdx < HalfEltsPerLane) {
+      DemandedLHS.setBit(LaneIdx + 2 * LocalIdx);
+    } else {
+      LocalIdx -= HalfEltsPerLane;
+      DemandedRHS.setBit(LaneIdx + 2 * LocalIdx);
     }
   }
 }

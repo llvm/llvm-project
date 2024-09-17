@@ -113,8 +113,14 @@ struct PluginManager {
     return Devices.getExclusiveAccessor();
   }
 
-  // Initialize all plugins.
-  void initAllPlugins();
+  /// Initialize \p Plugin. Returns true on success.
+  bool initializePlugin(GenericPluginTy &Plugin);
+
+  /// Initialize device \p DeviceNo of \p Plugin. Returns true on success.
+  bool initializeDevice(GenericPluginTy &Plugin, int32_t DeviceId);
+
+  /// Eagerly initialize all plugins and their devices.
+  void initializeAllDevices();
 
   /// Iterator range for all plugins (in use or not, but always valid).
   auto plugins() { return llvm::make_pointee_range(Plugins); }

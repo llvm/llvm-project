@@ -570,7 +570,7 @@ void LookupResult::resolveKind() {
 
     // For non-type declarations, check for a prior lookup result naming this
     // canonical declaration.
-    if (!D->isPlaceholderVar(getSema().getLangOpts()) && !ExistingI) {
+    if (!ExistingI) {
       auto UniqueResult = Unique.insert(std::make_pair(D, I));
       if (!UniqueResult.second) {
         // We've seen this entity before.
@@ -2325,7 +2325,7 @@ static bool LookupQualifiedNameInUsingDirectives(Sema &S, LookupResult &R,
   // We have already looked into the initial namespace; seed the queue
   // with its using-children.
   for (auto *I : StartDC->using_directives()) {
-    NamespaceDecl *ND = I->getNominatedNamespace()->getOriginalNamespace();
+    NamespaceDecl *ND = I->getNominatedNamespace()->getFirstDecl();
     if (S.isVisible(I) && Visited.insert(ND).second)
       Queue.push_back(ND);
   }

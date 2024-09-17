@@ -13,7 +13,10 @@ tablegen("X86GenDAGISel") {
 }
 
 tablegen("X86GenInstrMapping") {
-  visibility = [ ":LLVMX86CodeGen" ]
+  visibility = [
+    ":LLVMX86CodeGen",
+    "AsmParser",
+  ]
   args = [ "-gen-x86-instr-mapping" ]
   td_file = "X86.td"
 }

@@ -137,12 +137,10 @@ define amdgpu_kernel void @workgroup_release_fence() {
 ;
 ; GFX12-WGP-LABEL: workgroup_release_fence:
 ; GFX12-WGP:       ; %bb.0: ; %entry
-; GFX12-WGP-NEXT:    s_wait_dscnt 0x0
 ; GFX12-WGP-NEXT:    s_endpgm
 ;
 ; GFX12-CU-LABEL: workgroup_release_fence:
 ; GFX12-CU:       ; %bb.0: ; %entry
-; GFX12-CU-NEXT:    s_wait_dscnt 0x0
 ; GFX12-CU-NEXT:    s_endpgm
 entry:
   fence syncscope("workgroup") release, !mmra !{!"amdgpu-as", !"local"}
@@ -205,12 +203,10 @@ define amdgpu_kernel void @workgroup_acq_rel_fence() {
 ;
 ; GFX12-WGP-LABEL: workgroup_acq_rel_fence:
 ; GFX12-WGP:       ; %bb.0: ; %entry
-; GFX12-WGP-NEXT:    s_wait_dscnt 0x0
 ; GFX12-WGP-NEXT:    s_endpgm
 ;
 ; GFX12-CU-LABEL: workgroup_acq_rel_fence:
 ; GFX12-CU:       ; %bb.0: ; %entry
-; GFX12-CU-NEXT:    s_wait_dscnt 0x0
 ; GFX12-CU-NEXT:    s_endpgm
 entry:
   fence syncscope("workgroup") acq_rel, !mmra !{!"amdgpu-as", !"local"}
@@ -273,12 +269,10 @@ define amdgpu_kernel void @workgroup_seq_cst_fence() {
 ;
 ; GFX12-WGP-LABEL: workgroup_seq_cst_fence:
 ; GFX12-WGP:       ; %bb.0: ; %entry
-; GFX12-WGP-NEXT:    s_wait_dscnt 0x0
 ; GFX12-WGP-NEXT:    s_endpgm
 ;
 ; GFX12-CU-LABEL: workgroup_seq_cst_fence:
 ; GFX12-CU:       ; %bb.0: ; %entry
-; GFX12-CU-NEXT:    s_wait_dscnt 0x0
 ; GFX12-CU-NEXT:    s_endpgm
 entry:
   fence syncscope("workgroup") seq_cst, !mmra !{!"amdgpu-as", !"local"}
@@ -637,12 +631,10 @@ define amdgpu_kernel void @agent_release_fence() {
 ;
 ; GFX12-WGP-LABEL: agent_release_fence:
 ; GFX12-WGP:       ; %bb.0: ; %entry
-; GFX12-WGP-NEXT:    s_wait_dscnt 0x0
 ; GFX12-WGP-NEXT:    s_endpgm
 ;
 ; GFX12-CU-LABEL: agent_release_fence:
 ; GFX12-CU:       ; %bb.0: ; %entry
-; GFX12-CU-NEXT:    s_wait_dscnt 0x0
 ; GFX12-CU-NEXT:    s_endpgm
 entry:
   fence syncscope("agent") release, !mmra !{!"amdgpu-as", !"local"}
@@ -705,12 +697,10 @@ define amdgpu_kernel void @agent_acq_rel_fence() {
 ;
 ; GFX12-WGP-LABEL: agent_acq_rel_fence:
 ; GFX12-WGP:       ; %bb.0: ; %entry
-; GFX12-WGP-NEXT:    s_wait_dscnt 0x0
 ; GFX12-WGP-NEXT:    s_endpgm
 ;
 ; GFX12-CU-LABEL: agent_acq_rel_fence:
 ; GFX12-CU:       ; %bb.0: ; %entry
-; GFX12-CU-NEXT:    s_wait_dscnt 0x0
 ; GFX12-CU-NEXT:    s_endpgm
 entry:
   fence syncscope("agent") acq_rel, !mmra !{!"amdgpu-as", !"local"}
@@ -773,12 +763,10 @@ define amdgpu_kernel void @agent_seq_cst_fence() {
 ;
 ; GFX12-WGP-LABEL: agent_seq_cst_fence:
 ; GFX12-WGP:       ; %bb.0: ; %entry
-; GFX12-WGP-NEXT:    s_wait_dscnt 0x0
 ; GFX12-WGP-NEXT:    s_endpgm
 ;
 ; GFX12-CU-LABEL: agent_seq_cst_fence:
 ; GFX12-CU:       ; %bb.0: ; %entry
-; GFX12-CU-NEXT:    s_wait_dscnt 0x0
 ; GFX12-CU-NEXT:    s_endpgm
 entry:
   fence syncscope("agent") seq_cst, !mmra !{!"amdgpu-as", !"local"}
@@ -1137,12 +1125,10 @@ define amdgpu_kernel void @system_release_fence() {
 ;
 ; GFX12-WGP-LABEL: system_release_fence:
 ; GFX12-WGP:       ; %bb.0: ; %entry
-; GFX12-WGP-NEXT:    s_wait_dscnt 0x0
 ; GFX12-WGP-NEXT:    s_endpgm
 ;
 ; GFX12-CU-LABEL: system_release_fence:
 ; GFX12-CU:       ; %bb.0: ; %entry
-; GFX12-CU-NEXT:    s_wait_dscnt 0x0
 ; GFX12-CU-NEXT:    s_endpgm
 entry:
   fence release, !mmra !{!"amdgpu-as", !"local"}
@@ -1205,12 +1191,10 @@ define amdgpu_kernel void @system_acq_rel_fence() {
 ;
 ; GFX12-WGP-LABEL: system_acq_rel_fence:
 ; GFX12-WGP:       ; %bb.0: ; %entry
-; GFX12-WGP-NEXT:    s_wait_dscnt 0x0
 ; GFX12-WGP-NEXT:    s_endpgm
 ;
 ; GFX12-CU-LABEL: system_acq_rel_fence:
 ; GFX12-CU:       ; %bb.0: ; %entry
-; GFX12-CU-NEXT:    s_wait_dscnt 0x0
 ; GFX12-CU-NEXT:    s_endpgm
 entry:
   fence acq_rel, !mmra !{!"amdgpu-as", !"local"}
@@ -1273,12 +1257,10 @@ define amdgpu_kernel void @system_seq_cst_fence() {
 ;
 ; GFX12-WGP-LABEL: system_seq_cst_fence:
 ; GFX12-WGP:       ; %bb.0: ; %entry
-; GFX12-WGP-NEXT:    s_wait_dscnt 0x0
 ; GFX12-WGP-NEXT:    s_endpgm
 ;
 ; GFX12-CU-LABEL: system_seq_cst_fence:
 ; GFX12-CU:       ; %bb.0: ; %entry
-; GFX12-CU-NEXT:    s_wait_dscnt 0x0
 ; GFX12-CU-NEXT:    s_endpgm
 entry:
   fence seq_cst, !mmra !{!"amdgpu-as", !"local"}

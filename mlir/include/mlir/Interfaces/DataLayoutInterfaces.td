@@ -20,6 +20,29 @@ include "mlir/IR/OpBase.td"
 // Attribute interfaces
 //===----------------------------------------------------------------------===//
 
+def DLTIQueryInterface : AttrInterface<"DLTIQueryInterface"> {
+  let cppNamespace = "::mlir";
+
+  let description = [{
+    Attribute interface exposing querying-mechanism for key-value associations.
+
+    The central feature of DLTI attributes is to allow looking up values at
+    keys. This interface represent the core functionality to do so - as such
+    most DLTI attributes should be implementing this interface.
+
+    Note that as the `query` method returns an attribute, this attribute can
+    be recursively queried when it also implements this interface.
+  }];
+  let methods = [
+    InterfaceMethod<
+      /*description=*/"Returns the attribute associated with the key.",
+      /*retTy=*/"::mlir::FailureOr<::mlir::Attribute>",
+      /*methodName=*/"query",
+      /*args=*/(ins "::mlir::DataLayoutEntryKey":$key)
+    >
+  ];
+}
+
 def DataLayoutEntryInterface : AttrInterface<"DataLayoutEntryInterface"> {
   let cppNamespace = "::mlir";
 
@@ -68,7 +91,7 @@ def DataLayoutEntryInterface : AttrInterface<"DataLayoutEntryInterface"> {
   }];
 }
 
-def DataLayoutSpecInterface : AttrInterface<"DataLayoutSpecInterface"> {
+def DataLayoutSpecInterface : AttrInterface<"DataLayoutSpecInterface", [DLTIQueryInterface]> {
   let cppNamespace = "::mlir";
 
   let description = [{
@@ -173,7 +196,7 @@ def DataLayoutSpecInterface : AttrInterface<"DataLayoutSpecInterface"> {
       /*defaultImplementation=*/[{
         return ::mlir::detail::verifyDataLayoutSpec($_attr, loc);
       }]
-    >,
+    >
   ];
 
   let extraClassDeclaration = [{
@@ -182,6 +205,15 @@ def DataLayoutSpecInterface : AttrInterface<"DataLayoutSpecInterface"> {
     template <typename Ty>
     DataLayoutEntryList getSpecForType() {
       return getSpecForType(TypeID::get<Ty>());
+    }
+
+    /// Helper for default implementation of `DLTIQueryInterface`'s `query`.
+    inline ::mlir::FailureOr<::mlir::Attribute>
+    queryHelper(::mlir::DataLayoutEntryKey key) const {
+      for (DataLayoutEntryInterface entry : getEntries())
+        if (entry.getKey() == key)
+            return entry.getValue();
+      return ::mlir::failure();
     }
 
     /// Populates the given maps with lists of entries grouped by the type or
@@ -194,7 +226,7 @@ def DataLayoutSpecInterface : AttrInterface<"DataLayoutSpecInterface"> {
   }];
 }
 
-def TargetDeviceSpecInterface : AttrInterface<"TargetDeviceSpecInterface"> {
+def TargetDeviceSpecInterface : AttrInterface<"TargetDeviceSpecInterface", [DLTIQueryInterface]> {
   let cppNamespace = "::mlir";
 
   let description = [{
@@ -239,9 +271,20 @@ def TargetDeviceSpecInterface : AttrInterface<"TargetDeviceSpecInterface"> {
       /*defaultImplementation=*/[{ return ::mlir::success(); }]
     >
   ];
+
+  let extraClassDeclaration = [{
+    /// Helper for default implementation of `DLTIQueryInterface`'s `query`.
+    ::mlir::FailureOr<::mlir::Attribute>
+    queryHelper(::mlir::DataLayoutEntryKey key) const {
+      if (auto strKey = llvm::dyn_cast<StringAttr>(key))
+        if (DataLayoutEntryInterface spec = getSpecForIdentifier(strKey))
+          return spec.getValue();
+      return ::mlir::failure();
+    }
+  }];
 }
 
-def TargetSystemSpecInterface : AttrInterface<"TargetSystemSpecInterface"> {
+def TargetSystemSpecInterface : AttrInterface<"TargetSystemSpecInterface", [DLTIQueryInterface]> {
   let cppNamespace = "::mlir";
 
   let description = [{
@@ -287,6 +330,15 @@ def TargetSystemSpecInterface : AttrInterface<"TargetSystemSpecInterface"> {
 
   let extraClassDeclaration = [{
     using DeviceID = StringAttr;
+
+    /// Helper for default implementation of `DLTIQueryInterface`'s `query`.
+    ::mlir::FailureOr<::mlir::Attribute>
+    queryHelper(::mlir::DataLayoutEntryKey key) const {
+      if (auto strKey = llvm::dyn_cast<::mlir::StringAttr>(key))
+        if (auto deviceSpec = getDeviceSpecForDeviceID(strKey))
+          return *deviceSpec;
+      return ::mlir::failure();
+    }
   }];
 }
 

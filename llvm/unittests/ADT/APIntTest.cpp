@@ -220,11 +220,12 @@ TEST(APIntTest, i256) {
 }
 
 TEST(APIntTest, i1) {
-  const APInt neg_two(1, static_cast<uint64_t>(-2), true);
+  const APInt neg_two(1, static_cast<uint64_t>(-2), true,
+                      /*implicitTrunc=*/true);
   const APInt neg_one(1, static_cast<uint64_t>(-1), true);
   const APInt zero(1, 0);
   const APInt one(1, 1);
-  const APInt two(1, 2);
+  const APInt two(1, 2, false, /*implicitTrunc=*/true);
 
   EXPECT_EQ(0, neg_two.getSExtValue());
   EXPECT_EQ(-1, neg_one.getSExtValue());

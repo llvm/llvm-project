@@ -230,7 +230,7 @@ define i1 @and_logic_and_logic_or_5(i1 %c, i1 %a, i1 %b) {
 define i1 @and_logic_and_logic_or_6(i1 %c, i1 %a, i1 %b) {
 ; CHECK-LABEL: @and_logic_and_logic_or_6(
 ; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[B:%.*]], i1 true, i1 [[A:%.*]]
-; CHECK-NEXT:    [[OR:%.*]] = and i1 [[TMP1]], [[C:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = and i1 [[C:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %ac = and i1 %c, %a
@@ -254,7 +254,7 @@ define i1 @and_logic_and_logic_or_7(i1 %c, i1 %a, i1 %b) {
 define i1 @and_logic_and_logic_or_8(i1 %c, i1 %a, i1 %b) {
 ; CHECK-LABEL: @and_logic_and_logic_or_8(
 ; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[B:%.*]], i1 true, i1 [[A:%.*]]
-; CHECK-NEXT:    [[OR:%.*]] = and i1 [[TMP1]], [[C:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = and i1 [[C:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %ac = and i1 %a, %c
@@ -319,7 +319,7 @@ define i1 @and_logic_and_logic_or_not_one_use(i1 %c, i1 %a, i1 %b) {
 define i1 @and_and_logic_or_1(i1 %c, i1 %a, i1 %b) {
 ; CHECK-LABEL: @and_and_logic_or_1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[A:%.*]], i1 true, i1 [[B:%.*]]
-; CHECK-NEXT:    [[OR:%.*]] = and i1 [[TMP1]], [[C:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = and i1 [[C:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %ac = and i1 %c, %a
@@ -331,7 +331,7 @@ define i1 @and_and_logic_or_1(i1 %c, i1 %a, i1 %b) {
 define i1 @and_and_logic_or_2(i1 %c, i1 %a, i1 %b) {
 ; CHECK-LABEL: @and_and_logic_or_2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[B:%.*]], i1 true, i1 [[A:%.*]]
-; CHECK-NEXT:    [[OR:%.*]] = and i1 [[TMP1]], [[C:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = and i1 [[C:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %ac = and i1 %a, %c
@@ -343,7 +343,7 @@ define i1 @and_and_logic_or_2(i1 %c, i1 %a, i1 %b) {
 define <3 x i1>  @and_and_logic_or_vector(<3 x i1> %c, <3 x i1> %a, <3 x i1> %b) {
 ; CHECK-LABEL: @and_and_logic_or_vector(
 ; CHECK-NEXT:    [[TMP1:%.*]] = select <3 x i1> [[A:%.*]], <3 x i1> <i1 true, i1 true, i1 true>, <3 x i1> [[B:%.*]]
-; CHECK-NEXT:    [[OR:%.*]] = and <3 x i1> [[TMP1]], [[C:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = and <3 x i1> [[C:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret <3 x i1> [[OR]]
 ;
   %ac = and <3 x i1> %c, %a
@@ -355,7 +355,7 @@ define <3 x i1>  @and_and_logic_or_vector(<3 x i1> %c, <3 x i1> %a, <3 x i1> %b)
 define <3 x i1>  @and_and_logic_or_vector_poison(<3 x i1> %c, <3 x i1> %a, <3 x i1> %b) {
 ; CHECK-LABEL: @and_and_logic_or_vector_poison(
 ; CHECK-NEXT:    [[TMP1:%.*]] = select <3 x i1> [[A:%.*]], <3 x i1> <i1 true, i1 true, i1 true>, <3 x i1> [[B:%.*]]
-; CHECK-NEXT:    [[OR:%.*]] = and <3 x i1> [[TMP1]], [[C:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = and <3 x i1> [[C:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret <3 x i1> [[OR]]
 ;
   %ac = and <3 x i1> %c, %a
@@ -584,7 +584,7 @@ define i1 @or_logic_or_logic_and_3(i1 %c, i1 %a, i1 %b) {
 define i1 @or_logic_or_logic_and_4(i1 %c, i1 %a, i1 %b) {
 ; CHECK-LABEL: @or_logic_or_logic_and_4(
 ; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[B:%.*]], i1 [[A:%.*]], i1 false
-; CHECK-NEXT:    [[OR:%.*]] = or i1 [[TMP1]], [[C:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = or i1 [[C:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %ac = or i1 %c, %a
@@ -632,7 +632,7 @@ define i1 @or_logic_or_logic_and_7(i1 %c, i1 %a, i1 %b) {
 define i1 @or_logic_or_logic_and_8(i1 %c, i1 %a, i1 %b) {
 ; CHECK-LABEL: @or_logic_or_logic_and_8(
 ; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[B:%.*]], i1 [[A:%.*]], i1 false
-; CHECK-NEXT:    [[OR:%.*]] = or i1 [[TMP1]], [[C:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = or i1 [[C:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %ac = or i1 %a, %c
@@ -697,7 +697,7 @@ define i1 @or_logic_or_logic_and_not_one_use(i1 %c, i1 %a, i1 %b) {
 define i1 @or_or_logic_and_1(i1 %c, i1 %a, i1 %b) {
 ; CHECK-LABEL: @or_or_logic_and_1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[A:%.*]], i1 [[B:%.*]], i1 false
-; CHECK-NEXT:    [[OR:%.*]] = or i1 [[TMP1]], [[C:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = or i1 [[C:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %ac = or i1 %c, %a
@@ -709,7 +709,7 @@ define i1 @or_or_logic_and_1(i1 %c, i1 %a, i1 %b) {
 define i1 @or_or_logic_and_2(i1 %c, i1 %a, i1 %b) {
 ; CHECK-LABEL: @or_or_logic_and_2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[B:%.*]], i1 [[A:%.*]], i1 false
-; CHECK-NEXT:    [[OR:%.*]] = or i1 [[TMP1]], [[C:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = or i1 [[C:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %ac = or i1 %c, %a
@@ -721,7 +721,7 @@ define i1 @or_or_logic_and_2(i1 %c, i1 %a, i1 %b) {
 define <3 x i1> @or_or_logic_and_vector(<3 x i1> %c, <3 x i1> %a, <3 x i1> %b) {
 ; CHECK-LABEL: @or_or_logic_and_vector(
 ; CHECK-NEXT:    [[TMP1:%.*]] = select <3 x i1> [[A:%.*]], <3 x i1> [[B:%.*]], <3 x i1> zeroinitializer
-; CHECK-NEXT:    [[OR:%.*]] = or <3 x i1> [[TMP1]], [[C:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = or <3 x i1> [[C:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret <3 x i1> [[OR]]
 ;
   %ac = or <3 x i1> %c, %a
@@ -733,7 +733,7 @@ define <3 x i1> @or_or_logic_and_vector(<3 x i1> %c, <3 x i1> %a, <3 x i1> %b) {
 define <3 x i1> @or_or_logic_and_vector_poison(<3 x i1> %c, <3 x i1> %a, <3 x i1> %b) {
 ; CHECK-LABEL: @or_or_logic_and_vector_poison(
 ; CHECK-NEXT:    [[TMP1:%.*]] = select <3 x i1> [[A:%.*]], <3 x i1> [[B:%.*]], <3 x i1> zeroinitializer
-; CHECK-NEXT:    [[OR:%.*]] = or <3 x i1> [[TMP1]], [[C:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = or <3 x i1> [[C:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret <3 x i1> [[OR]]
 ;
   %ac = or <3 x i1> %c, %a

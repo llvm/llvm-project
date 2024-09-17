@@ -1,5 +1,5 @@
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1100 -mattr=+real-true16,+wavefrontsize32,-wavefrontsize64 -show-encoding %s 2>&1 | FileCheck --check-prefix=GFX11 --implicit-check-not=error: %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1100 -mattr=+real-true16,-wavefrontsize32,+wavefrontsize64 -show-encoding %s 2>&1 | FileCheck --check-prefix=GFX11 --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1100 -mattr=+real-true16,+wavefrontsize32 -show-encoding %s 2>&1 | FileCheck --check-prefix=GFX11 --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1100 -mattr=+real-true16,+wavefrontsize64 -show-encoding %s 2>&1 | FileCheck --check-prefix=GFX11 --implicit-check-not=error: %s
 
 v_ceil_f16_e32 v128.l, 0xfe0b
 // GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
@@ -209,6 +209,18 @@ v_sqrt_f16_e32 v255.l, v1.l
 // GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_sqrt_f16_e32 v5.l, v199.l
+// GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+v_swap_b16_e32 v128.l, v0.l
+// GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+v_swap_b16_e32 v0.l, s0
+// GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+v_swap_b16_e32 v0.l, 0
+// GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+v_swap_b16_e32 v0.l, 0xfe0b
 // GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_trunc_f16_e32 v128, 0xfe0b

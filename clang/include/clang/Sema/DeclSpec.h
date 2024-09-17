@@ -322,6 +322,9 @@ public:
 #define GENERIC_IMAGE_TYPE(ImgType, Id) \
   static const TST TST_##ImgType##_t = clang::TST_##ImgType##_t;
 #include "clang/Basic/OpenCLImageTypes.def"
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId)                            \
+  static const TST TST_##Name = clang::TST_##Name;
+#include "clang/Basic/HLSLIntangibleTypes.def"
   static const TST TST_error = clang::TST_error;
 
   // type-qualifiers

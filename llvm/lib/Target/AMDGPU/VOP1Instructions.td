@@ -88,6 +88,7 @@ class VOP1_Real <VOP1_Pseudo ps, int EncodingFamily, string real_name = ps.Mnemo
   let mayLoad              = ps.mayLoad;
   let mayStore             = ps.mayStore;
   let TRANS                = ps.TRANS;
+  let isConvergent         = ps.isConvergent;
 }
 
 class VOP1_Real_Gen <VOP1_Pseudo ps, GFXGen Gen, string real_name = ps.Mnemonic> :
@@ -293,16 +294,22 @@ defm V_CVT_F32_U32 : VOP1Inst <"v_cvt_f32_u32", VOP1_F32_I32, uint_to_fp>;
 defm V_CVT_U32_F32 : VOP1Inst <"v_cvt_u32_f32", VOP_I32_F32_SPECIAL_OMOD, fp_to_uint>;
 defm V_CVT_I32_F32 : VOP1Inst <"v_cvt_i32_f32", VOP_I32_F32_SPECIAL_OMOD, fp_to_sint>;
 let FPDPRounding = 1, isReMaterializable = 0 in {
+  // V_CVT_F16_F32 and V_CVT_F32_F16 are special cases because they are
+  // present in targets without Has16BitInsts. Otherwise they could use
+  // class VOP1Inst_t16
   let OtherPredicates = [NotHasTrue16BitInsts] in
-  defm V_CVT_F16_F32 : VOP1Inst <"v_cvt_f16_f32", VOP_F16_F32, any_fpround>;
-  let OtherPredicates = [HasTrue16BitInsts] in
-  defm V_CVT_F16_F32_t16 : VOP1Inst <"v_cvt_f16_f32_t16", VOPProfile_Fake16<VOP_F16_F32>, any_fpround>;
+    defm V_CVT_F16_F32 : VOP1Inst <"v_cvt_f16_f32", VOP_F16_F32, any_fpround>;
+  let OtherPredicates = [UseRealTrue16Insts] in
+    defm V_CVT_F16_F32_t16 : VOP1Inst <"v_cvt_f16_f32_t16", VOPProfile_True16<VOP_F16_F32>, any_fpround>;
+  let OtherPredicates = [UseFakeTrue16Insts] in
+    defm V_CVT_F16_F32_fake16 : VOP1Inst <"v_cvt_f16_f32_fake16", VOPProfile_Fake16<VOP_F16_F32>, any_fpround>;
 } // End FPDPRounding = 1, isReMaterializable = 0
-
 let OtherPredicates = [NotHasTrue16BitInsts] in
-defm V_CVT_F32_F16 : VOP1Inst <"v_cvt_f32_f16", VOP_F32_F16, any_fpextend>;
-let OtherPredicates = [HasTrue16BitInsts] in
-defm V_CVT_F32_F16_t16 : VOP1Inst <"v_cvt_f32_f16_t16", VOPProfile_Fake16<VOP_F32_F16>, any_fpextend>;
+  defm V_CVT_F32_F16 : VOP1Inst <"v_cvt_f32_f16", VOP_F32_F16, any_fpextend>;
+let OtherPredicates = [UseRealTrue16Insts] in
+  defm V_CVT_F32_F16_t16 : VOP1Inst <"v_cvt_f32_f16_t16", VOPProfile_True16<VOP_F32_F16>, any_fpextend>;
+let OtherPredicates = [UseFakeTrue16Insts] in
+  defm V_CVT_F32_F16_fake16 : VOP1Inst <"v_cvt_f32_f16_fake16", VOPProfile_Fake16<VOP_F32_F16>, any_fpextend>;
 
 let ReadsModeReg = 0, mayRaiseFPException = 0 in {
 defm V_CVT_RPI_I32_F32 : VOP1Inst <"v_cvt_rpi_i32_f32", VOP_I32_F32, cvt_rpi_i32_f32>;
@@ -729,14 +736,28 @@ def V_ACCVGPR_MOV_B32 : VOP1_Pseudo<"v_accvgpr_mov_b32", VOPProfileAccMov, [], 1
   let isAsCheapAsAMove = 1;
 }
 
+def VOP_SWAP_I16 : VOPProfile_True16<VOP_I16_I16> {
+  let Outs32 = (outs VOPDstOperand_t16Lo128:$vdst,
+                     VOPSrcEncodedDstOperand_t16Lo128:$vdst1);
+  let Ins32 = (ins VOPSrcEncodedDstOperand_t16Lo128:$src0,
+                   VOPDstOperand_t16Lo128:$src1);
+  let Asm32 = " $vdst, $src0";
+}
+
 let SubtargetPredicate = isGFX11Plus in {
+  def V_SWAP_B16 : VOP1_Pseudo<"v_swap_b16", VOP_SWAP_I16, [], /* VOP1Only= */true> {
+    let Constraints = "$vdst = $src1, $vdst1 = $src0";
+    let DisableEncoding = "$vdst1, $src1";
+    let SchedRW = [Write64Bit, Write64Bit];
+    let True16Predicate = UseRealTrue16Insts;
+  }
   // Restrict src0 to be VGPR
   def V_PERMLANE64_B32 : VOP1_Pseudo<"v_permlane64_b32", VOP_MOVRELS,
                                       [], /*VOP1Only=*/ 1> {
     let IsInvalidSingleUseConsumer = 1;
     let IsInvalidSingleUseProducer = 1;
   }
-  defm V_MOV_B16_t16    : VOP1Inst<"v_mov_b16_t16", VOPProfile_True16<VOP_I16_I16>>;
+  defm V_MOV_B16        : VOP1Inst_t16<"v_mov_b16", VOP_I16_I16>;
   defm V_NOT_B16        : VOP1Inst_t16<"v_not_b16", VOP_I16_I16>;
   defm V_CVT_I32_I16    : VOP1Inst_t16<"v_cvt_i32_i16", VOP_I32_I16>;
   defm V_CVT_U32_U16    : VOP1Inst_t16<"v_cvt_u32_u16", VOP_I32_I16>;
@@ -867,9 +888,8 @@ multiclass VOP1_Real_dpp8_with_name<GFXGen Gen, bits<9> op, string opName,
   }
 }
 
-multiclass VOP1_Realtriple_e64<GFXGen Gen, bits<9> op> {
-  defm NAME : VOP3_Realtriple<Gen, {0, 1, 1, op{6-0}}, /*isSingle=*/ 0, NAME>;
-}
+multiclass VOP1_Realtriple_e64<GFXGen Gen, bits<9> op> :
+  VOP3_Realtriple<Gen, {0, 1, 1, op{6-0}}, /*isSingle=*/ 0, NAME>;
 
 multiclass VOP1_Realtriple_e64_with_name<GFXGen Gen, bits<9> op, string opName,
   string asmName> {
@@ -952,7 +972,8 @@ defm V_CTZ_I32_B32         : VOP1_Real_FULL_with_name_gfx11_gfx12<0x03a,
   "V_FFBL_B32", "v_ctz_i32_b32">;
 defm V_CLS_I32             : VOP1_Real_FULL_with_name_gfx11_gfx12<0x03b,
   "V_FFBH_I32", "v_cls_i32">;
-defm V_PERMLANE64_B32      : VOP1Only_Real_gfx11_gfx12<0x067>;
+defm V_SWAP_B16              : VOP1Only_Real_gfx11_gfx12<0x066>;
+defm V_PERMLANE64_B32        : VOP1Only_Real_gfx11_gfx12<0x067>;
 defm V_MOV_B16_t16           : VOP1_Real_FULL_t16_gfx11_gfx12<0x01c, "v_mov_b16">;
 defm V_NOT_B16_fake16        : VOP1_Real_FULL_t16_gfx11_gfx12<0x069, "v_not_b16">;
 defm V_CVT_I32_I16_fake16    : VOP1_Real_FULL_t16_gfx11_gfx12<0x06a, "v_cvt_i32_i16">;
@@ -988,7 +1009,9 @@ defm V_CVT_NORM_I16_F16_t16  : VOP1_Real_FULL_t16_gfx11_gfx12<0x063, "v_cvt_norm
 defm V_CVT_NORM_U16_F16_t16  : VOP1_Real_FULL_t16_gfx11_gfx12<0x064, "v_cvt_norm_u16_f16">;
 
 defm V_CVT_F16_F32_t16       : VOP1_Real_FULL_t16_gfx11_gfx12<0x00a, "v_cvt_f16_f32">;
+defm V_CVT_F16_F32_fake16    : VOP1_Real_FULL_t16_gfx11_gfx12<0x00a, "v_cvt_f16_f32">;
 defm V_CVT_F32_F16_t16       : VOP1_Real_FULL_t16_gfx11_gfx12<0x00b, "v_cvt_f32_f16">;
+defm V_CVT_F32_F16_fake16    : VOP1_Real_FULL_t16_gfx11_gfx12<0x00b, "v_cvt_f32_f16">;
 
 //===----------------------------------------------------------------------===//
 // GFX10.
@@ -1381,7 +1404,8 @@ def : GCNPat <
 
 } // End OtherPredicates = [isGFX8Plus]
 
-let OtherPredicates = [isGFX8Plus] in {
+foreach p = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in
+let OtherPredicates = [isGFX8Plus, p] in {
 def : GCNPat<
   (i32 (anyext i16:$src)),
   (COPY $src)
@@ -1404,7 +1428,43 @@ def : GCNPat <
   (EXTRACT_SUBREG $src, sub0)
 >;
 
-} // End OtherPredicates = [isGFX8Plus]
+} // End OtherPredicates = [isGFX8Plus, p]
+
+let OtherPredicates = [UseFakeTrue16Insts] in {
+def : GCNPat<
+  (i32 (DivergentUnaryFrag<anyext> i16:$src)),
+  (COPY $src)
+>;
+} // End OtherPredicates = [UseFakeTrue16Insts]
+
+
+let OtherPredicates = [UseRealTrue16Insts] in {
+def : GCNPat<
+  (i32 (UniformUnaryFrag<anyext> (i16 SReg_32:$src))),
+  (COPY $src)
+>;
+
+def : GCNPat<
+  (i32 (DivergentUnaryFrag<anyext> i16:$src)),
+  (REG_SEQUENCE VGPR_32, $src, lo16, (i16 (IMPLICIT_DEF)), hi16)
+>;
+
+def : GCNPat<
+  (i64 (anyext i16:$src)),
+  (REG_SEQUENCE VReg_64, $src, lo16, (i16 (IMPLICIT_DEF)), hi16, (i32 (IMPLICIT_DEF)), sub1)
+>;
+
+def : GCNPat<
+  (i16 (trunc i32:$src)),
+  (EXTRACT_SUBREG $src, lo16)
+>;
+
+def : GCNPat <
+  (i16 (trunc i64:$src)),
+  (EXTRACT_SUBREG $src, lo16)
+>;
+
+} // End OtherPredicates = [UseRealTrue16Insts]
 
 //===----------------------------------------------------------------------===//
 // GFX9

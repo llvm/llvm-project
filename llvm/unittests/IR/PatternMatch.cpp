@@ -71,7 +71,7 @@ TEST_F(PatternMatchTest, SpecificIntEQ) {
 
   Value *Zero = ConstantInt::get(IntTy, 0);
   Value *One = ConstantInt::get(IntTy, 1);
-  Value *NegOne = ConstantInt::get(IntTy, -1);
+  Value *NegOne = Constant::getAllOnesValue(IntTy);
 
   EXPECT_TRUE(
       m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_EQ, APInt(BitWidth, 0))
@@ -93,15 +93,15 @@ TEST_F(PatternMatchTest, SpecificIntEQ) {
       m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_EQ, APInt(BitWidth, 1))
           .match(NegOne));
 
-  EXPECT_FALSE(
-      m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_EQ, APInt(BitWidth, -1))
-          .match(Zero));
-  EXPECT_FALSE(
-      m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_EQ, APInt(BitWidth, -1))
-          .match(One));
-  EXPECT_TRUE(
-      m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_EQ, APInt(BitWidth, -1))
-          .match(NegOne));
+  EXPECT_FALSE(m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_EQ,
+                                  APInt::getAllOnes(BitWidth))
+                   .match(Zero));
+  EXPECT_FALSE(m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_EQ,
+                                  APInt::getAllOnes(BitWidth))
+                   .match(One));
+  EXPECT_TRUE(m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_EQ,
+                                 APInt::getAllOnes(BitWidth))
+                  .match(NegOne));
 }
 
 TEST_F(PatternMatchTest, SpecificIntNE) {
@@ -110,7 +110,7 @@ TEST_F(PatternMatchTest, SpecificIntNE) {
 
   Value *Zero = ConstantInt::get(IntTy, 0);
   Value *One = ConstantInt::get(IntTy, 1);
-  Value *NegOne = ConstantInt::get(IntTy, -1);
+  Value *NegOne = Constant::getAllOnesValue(IntTy);
 
   EXPECT_FALSE(
       m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_NE, APInt(BitWidth, 0))
@@ -132,15 +132,15 @@ TEST_F(PatternMatchTest, SpecificIntNE) {
       m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_NE, APInt(BitWidth, 1))
           .match(NegOne));
 
-  EXPECT_TRUE(
-      m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_NE, APInt(BitWidth, -1))
-          .match(Zero));
-  EXPECT_TRUE(
-      m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_NE, APInt(BitWidth, -1))
-          .match(One));
-  EXPECT_FALSE(
-      m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_NE, APInt(BitWidth, -1))
-          .match(NegOne));
+  EXPECT_TRUE(m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_NE,
+                                 APInt::getAllOnes(BitWidth))
+                  .match(Zero));
+  EXPECT_TRUE(m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_NE,
+                                 APInt::getAllOnes(BitWidth))
+                  .match(One));
+  EXPECT_FALSE(m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_NE,
+                                  APInt::getAllOnes(BitWidth))
+                   .match(NegOne));
 }
 
 TEST_F(PatternMatchTest, SpecificIntUGT) {
@@ -149,7 +149,7 @@ TEST_F(PatternMatchTest, SpecificIntUGT) {
 
   Value *Zero = ConstantInt::get(IntTy, 0);
   Value *One = ConstantInt::get(IntTy, 1);
-  Value *NegOne = ConstantInt::get(IntTy, -1);
+  Value *NegOne = Constant::getAllOnesValue(IntTy);
 
   EXPECT_FALSE(
       m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_UGT, APInt(BitWidth, 0))
@@ -171,15 +171,15 @@ TEST_F(PatternMatchTest, SpecificIntUGT) {
       m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_UGT, APInt(BitWidth, 1))
           .match(NegOne));
 
-  EXPECT_FALSE(
-      m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_UGT, APInt(BitWidth, -1))
-          .match(Zero));
-  EXPECT_FALSE(
-      m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_UGT, APInt(BitWidth, -1))
-          .match(One));
-  EXPECT_FALSE(
-      m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_UGT, APInt(BitWidth, -1))
-          .match(NegOne));
+  EXPECT_FALSE(m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_UGT,
+                                  APInt::getAllOnes(BitWidth))
+                   .match(Zero));
+  EXPECT_FALSE(m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_UGT,
+                                  APInt::getAllOnes(BitWidth))
+                   .match(One));
+  EXPECT_FALSE(m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_UGT,
+                                  APInt::getAllOnes(BitWidth))
+                   .match(NegOne));
 }
 
 TEST_F(PatternMatchTest, SignbitZeroChecks) {
@@ -187,7 +187,7 @@ TEST_F(PatternMatchTest, SignbitZeroChecks) {
 
   Value *Zero = ConstantInt::get(IntTy, 0);
   Value *One = ConstantInt::get(IntTy, 1);
-  Value *NegOne = ConstantInt::get(IntTy, -1);
+  Value *NegOne = Constant::getAllOnesValue(IntTy);
 
   EXPECT_TRUE(m_Negative().match(NegOne));
   EXPECT_FALSE(m_NonNegative().match(NegOne));
@@ -211,7 +211,7 @@ TEST_F(PatternMatchTest, SpecificIntUGE) {
 
   Value *Zero = ConstantInt::get(IntTy, 0);
   Value *One = ConstantInt::get(IntTy, 1);
-  Value *NegOne = ConstantInt::get(IntTy, -1);
+  Value *NegOne = Constant::getAllOnesValue(IntTy);
 
   EXPECT_TRUE(
       m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_UGE, APInt(BitWidth, 0))
@@ -233,15 +233,15 @@ TEST_F(PatternMatchTest, SpecificIntUGE) {
       m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_UGE, APInt(BitWidth, 1))
           .match(NegOne));
 
-  EXPECT_FALSE(
-      m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_UGE, APInt(BitWidth, -1))
-          .match(Zero));
-  EXPECT_FALSE(
-      m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_UGE, APInt(BitWidth, -1))
-          .match(One));
-  EXPECT_TRUE(
-      m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_UGE, APInt(BitWidth, -1))
-          .match(NegOne));
+  EXPECT_FALSE(m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_UGE,
+                                  APInt::getAllOnes(BitWidth))
+                   .match(Zero));
+  EXPECT_FALSE(m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_UGE,
+                                  APInt::getAllOnes(BitWidth))
+                   .match(One));
+  EXPECT_TRUE(m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_UGE,
+                                 APInt::getAllOnes(BitWidth))
+                  .match(NegOne));
 }
 
 TEST_F(PatternMatchTest, SpecificIntULT) {
@@ -250,7 +250,7 @@ TEST_F(PatternMatchTest, SpecificIntULT) {
 
   Value *Zero = ConstantInt::get(IntTy, 0);
   Value *One = ConstantInt::get(IntTy, 1);
-  Value *NegOne = ConstantInt::get(IntTy, -1);
+  Value *NegOne = Constant::getAllOnesValue(IntTy);
 
   EXPECT_FALSE(
       m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_ULT, APInt(BitWidth, 0))
@@ -272,15 +272,15 @@ TEST_F(PatternMatchTest, SpecificIntULT) {
       m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_ULT, APInt(BitWidth, 1))
           .match(NegOne));
 
-  EXPECT_TRUE(
-      m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_ULT, APInt(BitWidth, -1))
-          .match(Zero));
-  EXPECT_TRUE(
-      m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_ULT, APInt(BitWidth, -1))
-          .match(One));
-  EXPECT_FALSE(
-      m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_ULT, APInt(BitWidth, -1))
-          .match(NegOne));
+  EXPECT_TRUE(m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_ULT,
+                                 APInt::getAllOnes(BitWidth))
+                  .match(Zero));
+  EXPECT_TRUE(m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_ULT,
+                                 APInt::getAllOnes(BitWidth))
+                  .match(One));
+  EXPECT_FALSE(m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_ULT,
+                                  APInt::getAllOnes(BitWidth))
+                   .match(NegOne));
 }
 
 TEST_F(PatternMatchTest, SpecificIntULE) {
@@ -289,7 +289,7 @@ TEST_F(PatternMatchTest, SpecificIntULE) {
 
   Value *Zero = ConstantInt::get(IntTy, 0);
   Value *One = ConstantInt::get(IntTy, 1);
-  Value *NegOne = ConstantInt::get(IntTy, -1);
+  Value *NegOne = Constant::getAllOnesValue(IntTy);
 
   EXPECT_TRUE(
       m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_ULE, APInt(BitWidth, 0))
@@ -311,15 +311,15 @@ TEST_F(PatternMatchTest, SpecificIntULE) {
       m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_ULE, APInt(BitWidth, 1))
           .match(NegOne));
 
-  EXPECT_TRUE(
-      m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_ULE, APInt(BitWidth, -1))
-          .match(Zero));
-  EXPECT_TRUE(
-      m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_ULE, APInt(BitWidth, -1))
-          .match(One));
-  EXPECT_TRUE(
-      m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_ULE, APInt(BitWidth, -1))
-          .match(NegOne));
+  EXPECT_TRUE(m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_ULE,
+                                 APInt::getAllOnes(BitWidth))
+                  .match(Zero));
+  EXPECT_TRUE(m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_ULE,
+                                 APInt::getAllOnes(BitWidth))
+                  .match(One));
+  EXPECT_TRUE(m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_ULE,
+                                 APInt::getAllOnes(BitWidth))
+                  .match(NegOne));
 }
 
 TEST_F(PatternMatchTest, SpecificIntSGT) {
@@ -328,7 +328,7 @@ TEST_F(PatternMatchTest, SpecificIntSGT) {
 
   Value *Zero = ConstantInt::get(IntTy, 0);
   Value *One = ConstantInt::get(IntTy, 1);
-  Value *NegOne = ConstantInt::get(IntTy, -1);
+  Value *NegOne = Constant::getAllOnesValue(IntTy);
 
   EXPECT_FALSE(
       m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_SGT, APInt(BitWidth, 0))
@@ -350,15 +350,15 @@ TEST_F(PatternMatchTest, SpecificIntSGT) {
       m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_SGT, APInt(BitWidth, 1))
           .match(NegOne));
 
-  EXPECT_TRUE(
-      m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_SGT, APInt(BitWidth, -1))
-          .match(Zero));
-  EXPECT_TRUE(
-      m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_SGT, APInt(BitWidth, -1))
-          .match(One));
-  EXPECT_FALSE(
-      m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_SGT, APInt(BitWidth, -1))
-          .match(NegOne));
+  EXPECT_TRUE(m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_SGT,
+                                 APInt::getAllOnes(BitWidth))
+                  .match(Zero));
+  EXPECT_TRUE(m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_SGT,
+                                 APInt::getAllOnes(BitWidth))
+                  .match(One));
+  EXPECT_FALSE(m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_SGT,
+                                  APInt::getAllOnes(BitWidth))
+                   .match(NegOne));
 }
 
 TEST_F(PatternMatchTest, SpecificIntSGE) {
@@ -367,7 +367,7 @@ TEST_F(PatternMatchTest, SpecificIntSGE) {
 
   Value *Zero = ConstantInt::get(IntTy, 0);
   Value *One = ConstantInt::get(IntTy, 1);
-  Value *NegOne = ConstantInt::get(IntTy, -1);
+  Value *NegOne = Constant::getAllOnesValue(IntTy);
 
   EXPECT_TRUE(
       m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_SGE, APInt(BitWidth, 0))
@@ -389,15 +389,15 @@ TEST_F(PatternMatchTest, SpecificIntSGE) {
       m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_SGE, APInt(BitWidth, 1))
           .match(NegOne));
 
-  EXPECT_TRUE(
-      m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_SGE, APInt(BitWidth, -1))
-          .match(Zero));
-  EXPECT_TRUE(
-      m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_SGE, APInt(BitWidth, -1))
-          .match(One));
-  EXPECT_TRUE(
-      m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_SGE, APInt(BitWidth, -1))
-          .match(NegOne));
+  EXPECT_TRUE(m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_SGE,
+                                 APInt::getAllOnes(BitWidth))
+                  .match(Zero));
+  EXPECT_TRUE(m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_SGE,
+                                 APInt::getAllOnes(BitWidth))
+                  .match(One));
+  EXPECT_TRUE(m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_SGE,
+                                 APInt::getAllOnes(BitWidth))
+                  .match(NegOne));
 }
 
 TEST_F(PatternMatchTest, SpecificIntSLT) {
@@ -406,7 +406,7 @@ TEST_F(PatternMatchTest, SpecificIntSLT) {
 
   Value *Zero = ConstantInt::get(IntTy, 0);
   Value *One = ConstantInt::get(IntTy, 1);
-  Value *NegOne = ConstantInt::get(IntTy, -1);
+  Value *NegOne = Constant::getAllOnesValue(IntTy);
 
   EXPECT_FALSE(
       m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_SLT, APInt(BitWidth, 0))
@@ -428,15 +428,15 @@ TEST_F(PatternMatchTest, SpecificIntSLT) {
       m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_SLT, APInt(BitWidth, 1))
           .match(NegOne));
 
-  EXPECT_FALSE(
-      m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_SLT, APInt(BitWidth, -1))
-          .match(Zero));
-  EXPECT_FALSE(
-      m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_SLT, APInt(BitWidth, -1))
-          .match(One));
-  EXPECT_FALSE(
-      m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_SLT, APInt(BitWidth, -1))
-          .match(NegOne));
+  EXPECT_FALSE(m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_SLT,
+                                  APInt::getAllOnes(BitWidth))
+                   .match(Zero));
+  EXPECT_FALSE(m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_SLT,
+                                  APInt::getAllOnes(BitWidth))
+                   .match(One));
+  EXPECT_FALSE(m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_SLT,
+                                  APInt::getAllOnes(BitWidth))
+                   .match(NegOne));
 }
 
 TEST_F(PatternMatchTest, SpecificIntSLE) {
@@ -445,7 +445,7 @@ TEST_F(PatternMatchTest, SpecificIntSLE) {
 
   Value *Zero = ConstantInt::get(IntTy, 0);
   Value *One = ConstantInt::get(IntTy, 1);
-  Value *NegOne = ConstantInt::get(IntTy, -1);
+  Value *NegOne = Constant::getAllOnesValue(IntTy);
 
   EXPECT_TRUE(
       m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_SLE, APInt(BitWidth, 0))
@@ -467,15 +467,15 @@ TEST_F(PatternMatchTest, SpecificIntSLE) {
       m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_SLE, APInt(BitWidth, 1))
           .match(NegOne));
 
-  EXPECT_FALSE(
-      m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_SLE, APInt(BitWidth, -1))
-          .match(Zero));
-  EXPECT_FALSE(
-      m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_SLE, APInt(BitWidth, -1))
-          .match(One));
-  EXPECT_TRUE(
-      m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_SLE, APInt(BitWidth, -1))
-          .match(NegOne));
+  EXPECT_FALSE(m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_SLE,
+                                  APInt::getAllOnes(BitWidth))
+                   .match(Zero));
+  EXPECT_FALSE(m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_SLE,
+                                  APInt::getAllOnes(BitWidth))
+                   .match(One));
+  EXPECT_TRUE(m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_SLE,
+                                 APInt::getAllOnes(BitWidth))
+                  .match(NegOne));
 }
 
 TEST_F(PatternMatchTest, Unless) {
@@ -2250,9 +2250,159 @@ TYPED_TEST(MutableConstTest, ICmp) {
   ICmpInst::Predicate MatchPred;
 
   EXPECT_TRUE(m_ICmp(MatchPred, m_Value(MatchL), m_Value(MatchR))
-              .match((InstructionType)IRB.CreateICmp(Pred, L, R)));
+                  .match((InstructionType)IRB.CreateICmp(Pred, L, R)));
   EXPECT_EQ(L, MatchL);
   EXPECT_EQ(R, MatchR);
+
+  EXPECT_TRUE(m_Cmp(MatchPred, m_Value(MatchL), m_Value(MatchR))
+                  .match((InstructionType)IRB.CreateICmp(Pred, L, R)));
+  EXPECT_EQ(L, MatchL);
+  EXPECT_EQ(R, MatchR);
+
+  EXPECT_TRUE(m_ICmp(m_Specific(L), m_Specific(R))
+                  .match((InstructionType)IRB.CreateICmp(Pred, L, R)));
+
+  EXPECT_TRUE(m_Cmp(m_Specific(L), m_Specific(R))
+                  .match((InstructionType)IRB.CreateICmp(Pred, L, R)));
+
+  EXPECT_FALSE(m_ICmp(m_Specific(R), m_Specific(L))
+                   .match((InstructionType)IRB.CreateICmp(Pred, L, R)));
+  EXPECT_FALSE(m_Cmp(m_Specific(R), m_Specific(L))
+                   .match((InstructionType)IRB.CreateICmp(Pred, L, R)));
+
+  EXPECT_TRUE(m_c_ICmp(m_Specific(R), m_Specific(L))
+                  .match((InstructionType)IRB.CreateICmp(Pred, L, R)));
+
+  EXPECT_FALSE(m_c_ICmp(m_Specific(R), m_Specific(R))
+                   .match((InstructionType)IRB.CreateICmp(Pred, L, R)));
+
+  EXPECT_TRUE(m_SpecificICmp(Pred, m_Specific(L), m_Specific(R))
+                  .match((InstructionType)IRB.CreateICmp(Pred, L, R)));
+  EXPECT_TRUE(m_SpecificCmp(Pred, m_Specific(L), m_Specific(R))
+                  .match((InstructionType)IRB.CreateICmp(Pred, L, R)));
+
+  EXPECT_FALSE(m_SpecificICmp(Pred, m_Specific(R), m_Specific(L))
+                   .match((InstructionType)IRB.CreateICmp(Pred, L, R)));
+  EXPECT_FALSE(m_SpecificCmp(Pred, m_Specific(R), m_Specific(L))
+                   .match((InstructionType)IRB.CreateICmp(Pred, L, R)));
+
+  MatchL = nullptr;
+  MatchR = nullptr;
+  EXPECT_TRUE(m_SpecificICmp(Pred, m_Value(MatchL), m_Value(MatchR))
+                  .match((InstructionType)IRB.CreateICmp(Pred, L, R)));
+  EXPECT_EQ(L, MatchL);
+  EXPECT_EQ(R, MatchR);
+  MatchL = nullptr;
+  MatchR = nullptr;
+  EXPECT_TRUE(m_SpecificCmp(Pred, m_Value(MatchL), m_Value(MatchR))
+                  .match((InstructionType)IRB.CreateICmp(Pred, L, R)));
+  EXPECT_EQ(L, MatchL);
+  EXPECT_EQ(R, MatchR);
+
+  EXPECT_FALSE(m_SpecificICmp(Pred, m_Specific(R), m_Specific(L))
+                   .match((InstructionType)IRB.CreateICmp(Pred, L, R)));
+  EXPECT_FALSE(m_SpecificCmp(Pred, m_Specific(R), m_Specific(L))
+                   .match((InstructionType)IRB.CreateICmp(Pred, L, R)));
+
+  EXPECT_FALSE(m_SpecificICmp(ICmpInst::getInversePredicate(Pred),
+                              m_Specific(L), m_Specific(R))
+                   .match((InstructionType)IRB.CreateICmp(Pred, L, R)));
+  EXPECT_FALSE(m_SpecificCmp(ICmpInst::getInversePredicate(Pred), m_Specific(L),
+                             m_Specific(R))
+                   .match((InstructionType)IRB.CreateICmp(Pred, L, R)));
+
+  EXPECT_FALSE(m_SpecificICmp(ICmpInst::getInversePredicate(Pred),
+                              m_Value(MatchL), m_Value(MatchR))
+                   .match((InstructionType)IRB.CreateICmp(Pred, L, R)));
+  EXPECT_FALSE(m_SpecificCmp(ICmpInst::getInversePredicate(Pred),
+                             m_Value(MatchL), m_Value(MatchR))
+                   .match((InstructionType)IRB.CreateICmp(Pred, L, R)));
+
+  EXPECT_TRUE(m_c_SpecificICmp(Pred, m_Specific(L), m_Specific(R))
+                  .match((InstructionType)IRB.CreateICmp(Pred, L, R)));
+  EXPECT_TRUE(m_c_SpecificICmp(ICmpInst::getSwappedPredicate(Pred),
+                               m_Specific(R), m_Specific(L))
+                  .match((InstructionType)IRB.CreateICmp(Pred, L, R)));
+  EXPECT_FALSE(m_c_SpecificICmp(Pred, m_Specific(R), m_Specific(L))
+                   .match((InstructionType)IRB.CreateICmp(Pred, L, R)));
+}
+
+TYPED_TEST(MutableConstTest, FCmp) {
+  auto &IRB = PatternMatchTest::IRB;
+
+  typedef std::tuple_element_t<0, TypeParam> ValueType;
+  typedef std::tuple_element_t<1, TypeParam> InstructionType;
+
+  Value *L = Constant::getNullValue(IRB.getFloatTy());
+  Value *R = ConstantFP::getInfinity(IRB.getFloatTy(), true);
+  FCmpInst::Predicate Pred = FCmpInst::FCMP_OGT;
+
+  ValueType MatchL;
+  ValueType MatchR;
+  FCmpInst::Predicate MatchPred;
+
+  EXPECT_TRUE(m_FCmp(MatchPred, m_Value(MatchL), m_Value(MatchR))
+                  .match((InstructionType)IRB.CreateFCmp(Pred, L, R)));
+  EXPECT_EQ(L, MatchL);
+  EXPECT_EQ(R, MatchR);
+
+  EXPECT_TRUE(m_Cmp(MatchPred, m_Value(MatchL), m_Value(MatchR))
+                  .match((InstructionType)IRB.CreateFCmp(Pred, L, R)));
+  EXPECT_EQ(L, MatchL);
+  EXPECT_EQ(R, MatchR);
+
+  EXPECT_TRUE(m_FCmp(m_Specific(L), m_Specific(R))
+                  .match((InstructionType)IRB.CreateFCmp(Pred, L, R)));
+
+  EXPECT_TRUE(m_Cmp(m_Specific(L), m_Specific(R))
+                  .match((InstructionType)IRB.CreateFCmp(Pred, L, R)));
+
+  EXPECT_FALSE(m_FCmp(m_Specific(R), m_Specific(L))
+                   .match((InstructionType)IRB.CreateFCmp(Pred, L, R)));
+  EXPECT_FALSE(m_Cmp(m_Specific(R), m_Specific(L))
+                   .match((InstructionType)IRB.CreateFCmp(Pred, L, R)));
+
+  EXPECT_TRUE(m_SpecificFCmp(Pred, m_Specific(L), m_Specific(R))
+                  .match((InstructionType)IRB.CreateFCmp(Pred, L, R)));
+  EXPECT_TRUE(m_SpecificCmp(Pred, m_Specific(L), m_Specific(R))
+                  .match((InstructionType)IRB.CreateFCmp(Pred, L, R)));
+
+  EXPECT_FALSE(m_SpecificFCmp(Pred, m_Specific(R), m_Specific(L))
+                   .match((InstructionType)IRB.CreateFCmp(Pred, L, R)));
+  EXPECT_FALSE(m_SpecificCmp(Pred, m_Specific(R), m_Specific(L))
+                   .match((InstructionType)IRB.CreateFCmp(Pred, L, R)));
+
+  MatchL = nullptr;
+  MatchR = nullptr;
+  EXPECT_TRUE(m_SpecificFCmp(Pred, m_Value(MatchL), m_Value(MatchR))
+                  .match((InstructionType)IRB.CreateFCmp(Pred, L, R)));
+  EXPECT_EQ(L, MatchL);
+  EXPECT_EQ(R, MatchR);
+  MatchL = nullptr;
+  MatchR = nullptr;
+  EXPECT_TRUE(m_SpecificCmp(Pred, m_Value(MatchL), m_Value(MatchR))
+                  .match((InstructionType)IRB.CreateFCmp(Pred, L, R)));
+  EXPECT_EQ(L, MatchL);
+  EXPECT_EQ(R, MatchR);
+
+  EXPECT_FALSE(m_SpecificFCmp(Pred, m_Specific(R), m_Specific(L))
+                   .match((InstructionType)IRB.CreateFCmp(Pred, L, R)));
+  EXPECT_FALSE(m_SpecificCmp(Pred, m_Specific(R), m_Specific(L))
+                   .match((InstructionType)IRB.CreateFCmp(Pred, L, R)));
+
+  EXPECT_FALSE(m_SpecificFCmp(FCmpInst::getInversePredicate(Pred),
+                              m_Specific(L), m_Specific(R))
+                   .match((InstructionType)IRB.CreateFCmp(Pred, L, R)));
+  EXPECT_FALSE(m_SpecificCmp(FCmpInst::getInversePredicate(Pred), m_Specific(L),
+                             m_Specific(R))
+                   .match((InstructionType)IRB.CreateFCmp(Pred, L, R)));
+
+  EXPECT_FALSE(m_SpecificFCmp(FCmpInst::getInversePredicate(Pred),
+                              m_Value(MatchL), m_Value(MatchR))
+                   .match((InstructionType)IRB.CreateFCmp(Pred, L, R)));
+  EXPECT_FALSE(m_SpecificCmp(FCmpInst::getInversePredicate(Pred),
+                             m_Value(MatchL), m_Value(MatchR))
+                   .match((InstructionType)IRB.CreateFCmp(Pred, L, R)));
 }
 
 TEST_F(PatternMatchTest, ConstExpr) {

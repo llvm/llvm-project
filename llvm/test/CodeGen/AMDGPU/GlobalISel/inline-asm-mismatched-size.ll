@@ -19,6 +19,9 @@ define amdgpu_kernel void @return_type_is_too_big_vector() {
   ; CHECK-LABEL: name: return_type_is_too_big_vector
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT:   liveins: $sgpr2_sgpr3
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr2_sgpr3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   INLINEASM &"; def $0", 1 /* sideeffect attdialect */, 10 /* regdef */, implicit-def $sgpr8_sgpr9_sgpr10_sgpr11_sgpr12

@@ -84,8 +84,12 @@ public:
 
   /// Hook for derived dialect interfaces to publish the supported metadata
   /// kinds. As every metadata kind has a unique integer identifier, the
-  /// function returns the list of supported metadata identifiers.
-  virtual ArrayRef<unsigned> getSupportedMetadata() const { return {}; }
+  /// function returns the list of supported metadata identifiers. `ctx` can be
+  /// used to obtain IDs of metadata kinds that do not have a fixed static one.
+  virtual ArrayRef<unsigned>
+  getSupportedMetadata(llvm::LLVMContext &ctx) const {
+    return {};
+  }
 };
 
 /// Interface collection for the import of LLVM IR that dispatches to a concrete
@@ -101,7 +105,7 @@ public:
   /// intrinsic and metadata kinds and builds the dispatch tables for the
   /// conversion. Returns failure if multiple dialect interfaces translate the
   /// same LLVM IR intrinsic.
-  LogicalResult initializeImport() {
+  LogicalResult initializeImport(llvm::LLVMContext &llvmContext) {
     for (const LLVMImportDialectInterface &iface : *this) {
       // Verify the supported intrinsics have not been mapped before.
       const auto *intrinsicIt =
@@ -139,7 +143,7 @@ public:
       for (unsigned id : iface.getSupportedInstructions())
         instructionToDialect[id] = &iface;
       // Add a mapping for all supported metadata kinds.
-      for (unsigned kind : iface.getSupportedMetadata())
+      for (unsigned kind : iface.getSupportedMetadata(llvmContext))
         metadataToDialect[kind].push_back(iface.getDialect());
     }
 

@@ -25,6 +25,7 @@
 ; CHECK-SAME:                 ptr {{.*}} %[[frame:.*]])
 ; CHECK-SAME:  !dbg ![[RESUME_FN_DBG_NUM:[0-9]+]]
 ; CHECK:         %[[frame_alloca:.*]] = alloca ptr
+; CHECK-NEXT:    #dbg_declare(ptr %begin.debug, ![[FRAME_DI_NUM:[0-9]+]],
 ; CHECK-NEXT:    store ptr %[[frame]], ptr %[[frame_alloca]]
 ; CHECK:       init.ready:
 ; CHECK:         #dbg_value(ptr %[[frame_alloca]], ![[XVAR_RESUME:[0-9]+]],
@@ -38,6 +39,7 @@
 ; CHECK-SAME:        !DIExpression(DW_OP_deref, DW_OP_plus_uconst, [[OffsetJ]], DW_OP_deref)
 ;
 ; CHECK: ![[RESUME_FN_DBG_NUM]] = distinct !DISubprogram(name: "foo", linkageName: "_Z3foov"
+; CHECK: ![[FRAME_DI_NUM]] = !DILocalVariable(name: "__coro_frame"
 ; CHECK: ![[IVAR_RESUME]] = !DILocalVariable(name: "i"
 ; CHECK: ![[XVAR_RESUME]] = !DILocalVariable(name: "x"
 ; CHECK: ![[JVAR_RESUME]] = !DILocalVariable(name: "j"

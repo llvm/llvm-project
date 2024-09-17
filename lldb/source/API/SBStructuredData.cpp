@@ -86,8 +86,13 @@ lldb::SBError SBStructuredData::SetFromJSON(lldb::SBStream &stream) {
       StructuredData::ParseJSON(stream.GetData());
   m_impl_up->SetObjectSP(json_obj);
 
-  if (!json_obj || json_obj->GetType() != eStructuredDataTypeDictionary)
-    error.SetErrorString("Invalid Syntax");
+  static constexpr StructuredDataType unsupported_type[] = {
+      eStructuredDataTypeInvalid,
+      eStructuredDataTypeGeneric,
+  };
+
+  if (!json_obj || llvm::is_contained(unsupported_type, json_obj->GetType()))
+    error = Status::FromErrorString("Invalid Syntax");
   return error;
 }
 
@@ -128,7 +133,7 @@ lldb::SBError SBStructuredData::GetDescription(lldb::SBStream &stream) const {
 
   Status error = m_impl_up->GetDescription(stream.ref());
   SBError sb_error;
-  sb_error.SetError(error);
+  sb_error.SetError(std::move(error));
   return sb_error;
 }
 

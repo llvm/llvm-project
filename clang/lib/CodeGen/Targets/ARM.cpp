@@ -151,9 +151,8 @@ public:
               D->getLocation(),
               diag::warn_target_unsupported_branch_protection_attribute)
               << Arch;
-        } else {
-          BPI.setFnAttributes(*Fn);
-        }
+        } else
+          setBranchProtectionFnAttributes(BPI, (*Fn));
       } else if (CGM.getLangOpts().BranchTargetEnforcement ||
                  CGM.getLangOpts().hasSignReturnAddress()) {
         // If the Branch Protection attribute is missing, validate the target
@@ -168,7 +167,7 @@ public:
     } else if (CGM.getTarget().isBranchProtectionSupportedArch(
                    CGM.getTarget().getTargetOpts().CPU)) {
       TargetInfo::BranchProtectionInfo BPI(CGM.getLangOpts());
-      BPI.setFnAttributes(*Fn);
+      setBranchProtectionFnAttributes(BPI, (*Fn));
     }
 
     const ARMInterruptAttr *Attr = FD->getAttr<ARMInterruptAttr>();
@@ -355,8 +354,9 @@ ABIArgInfo ARMABIInfo::classifyArgumentType(QualType Ty, bool isVariadic,
       if (EIT->getNumBits() > 64)
         return getNaturalAlignIndirect(Ty, /*ByVal=*/true);
 
-    return (isPromotableIntegerTypeForABI(Ty) ? ABIArgInfo::getExtend(Ty)
-                                              : ABIArgInfo::getDirect());
+    return (isPromotableIntegerTypeForABI(Ty)
+                ? ABIArgInfo::getExtend(Ty, CGT.ConvertType(Ty))
+                : ABIArgInfo::getDirect());
   }
 
   if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, getCXXABI())) {

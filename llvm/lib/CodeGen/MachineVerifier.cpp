@@ -20,6 +20,7 @@
 // -verify-machineinstrs.
 //===----------------------------------------------------------------------===//
 
+#include "llvm/CodeGen/MachineVerifier.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
@@ -93,6 +94,9 @@ using namespace llvm;
 namespace {
 
   struct MachineVerifier {
+    MachineVerifier(MachineFunctionAnalysisManager &MFAM, const char *b)
+        : MFAM(&MFAM), Banner(b) {}
+
     MachineVerifier(Pass *pass, const char *b) : PASS(pass), Banner(b) {}
 
     MachineVerifier(const char *b, LiveVariables *LiveVars,
@@ -103,6 +107,7 @@ namespace {
 
     unsigned verify(const MachineFunction &MF);
 
+    MachineFunctionAnalysisManager *MFAM = nullptr;
     Pass *const PASS = nullptr;
     const char *Banner;
     const MachineFunction *MF = nullptr;
@@ -302,15 +307,15 @@ namespace {
     void verifyProperties(const MachineFunction &MF);
   };
 
-  struct MachineVerifierPass : public MachineFunctionPass {
+  struct MachineVerifierLegacyPass : public MachineFunctionPass {
     static char ID; // Pass ID, replacement for typeid
 
     const std::string Banner;
 
-    MachineVerifierPass(std::string banner = std::string())
-      : MachineFunctionPass(ID), Banner(std::move(banner)) {
-        initializeMachineVerifierPassPass(*PassRegistry::getPassRegistry());
-      }
+    MachineVerifierLegacyPass(std::string banner = std::string())
+        : MachineFunctionPass(ID), Banner(std::move(banner)) {
+      initializeMachineVerifierLegacyPassPass(*PassRegistry::getPassRegistry());
+    }
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
       AU.addUsedIfAvailable<LiveStacks>();
@@ -338,13 +343,28 @@ namespace {
 
 } // end anonymous namespace
 
-char MachineVerifierPass::ID = 0;
+PreservedAnalyses
+MachineVerifierPass::run(MachineFunction &MF,
+                         MachineFunctionAnalysisManager &MFAM) {
+  // Skip functions that have known verification problems.
+  // FIXME: Remove this mechanism when all problematic passes have been
+  // fixed.
+  if (MF.getProperties().hasProperty(
+          MachineFunctionProperties::Property::FailsVerification))
+    return PreservedAnalyses::all();
+  unsigned FoundErrors = MachineVerifier(MFAM, Banner.c_str()).verify(MF);
+  if (FoundErrors)
+    report_fatal_error("Found " + Twine(FoundErrors) + " machine code errors.");
+  return PreservedAnalyses::all();
+}
 
-INITIALIZE_PASS(MachineVerifierPass, "machineverifier",
+char MachineVerifierLegacyPass::ID = 0;
+
+INITIALIZE_PASS(MachineVerifierLegacyPass, "machineverifier",
                 "Verify generated machine code", false, false)
 
 FunctionPass *llvm::createMachineVerifierPass(const std::string &Banner) {
-  return new MachineVerifierPass(Banner);
+  return new MachineVerifierLegacyPass(Banner);
 }
 
 void llvm::verifyMachineFunction(const std::string &Banner,
@@ -437,6 +457,14 @@ unsigned MachineVerifier::verify(const MachineFunction &MF) {
     LiveStks = PASS->getAnalysisIfAvailable<LiveStacks>();
     auto *SIWrapper = PASS->getAnalysisIfAvailable<SlotIndexesWrapperPass>();
     Indexes = SIWrapper ? &SIWrapper->getSI() : nullptr;
+  }
+  if (MFAM) {
+    MachineFunction &Func = const_cast<MachineFunction &>(MF);
+    LiveInts = MFAM->getCachedResult<LiveIntervalsAnalysis>(Func);
+    if (!LiveInts)
+      LiveVars = MFAM->getCachedResult<LiveVariablesAnalysis>(Func);
+    // TODO: LiveStks = MFAM->getCachedResult<LiveStacksAnalysis>(Func);
+    Indexes = MFAM->getCachedResult<SlotIndexesAnalysis>(Func);
   }
 
   verifySlotIndexes();
@@ -1516,6 +1544,36 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
 
     break;
   }
+  case TargetOpcode::G_SCMP:
+  case TargetOpcode::G_UCMP: {
+    LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
+    LLT SrcTy = MRI->getType(MI->getOperand(1).getReg());
+    LLT SrcTy2 = MRI->getType(MI->getOperand(2).getReg());
+
+    if (SrcTy.isPointerOrPointerVector() || SrcTy2.isPointerOrPointerVector()) {
+      report("Generic scmp/ucmp does not support pointers as operands", MI);
+      break;
+    }
+
+    if (DstTy.isPointerOrPointerVector()) {
+      report("Generic scmp/ucmp does not support pointers as a result", MI);
+      break;
+    }
+
+    if ((DstTy.isVector() != SrcTy.isVector()) ||
+        (DstTy.isVector() &&
+         DstTy.getElementCount() != SrcTy.getElementCount())) {
+      report("Generic vector scmp/ucmp must preserve number of lanes", MI);
+      break;
+    }
+
+    if (SrcTy != SrcTy2) {
+      report("Generic scmp/ucmp must have same input types", MI);
+      break;
+    }
+
+    break;
+  }
   case TargetOpcode::G_EXTRACT: {
     const MachineOperand &SrcOp = MI->getOperand(1);
     if (!SrcOp.isReg()) {
@@ -1720,10 +1778,25 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
       break;
     }
 
-    if (IndexOp.getImm() != 0 &&
-        SrcTy.getElementCount().getKnownMinValue() % IndexOp.getImm() != 0) {
-      report("Index must be a multiple of the source vector's minimum vector "
-             "length",
+    if (SrcTy.isScalable() != DstTy.isScalable()) {
+      report("Vector types must both be fixed or both be scalable", MI);
+      break;
+    }
+
+    uint64_t Idx = IndexOp.getImm();
+    uint64_t DstMinLen = DstTy.getElementCount().getKnownMinValue();
+    if (Idx % DstMinLen != 0) {
+      report("Index must be a multiple of the destination vector's minimum "
+             "vector length",
+             MI);
+      break;
+    }
+
+    uint64_t SrcMinLen = SrcTy.getElementCount().getKnownMinValue();
+    if (SrcTy.isScalable() == DstTy.isScalable() &&
+        (Idx >= SrcMinLen || Idx + DstMinLen > SrcMinLen)) {
+      report("Source type and index must not cause extract to overrun to the "
+             "destination type",
              MI);
       break;
     }
@@ -1777,8 +1850,8 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
       break;
     }
 
-    if (!SrcTy.isScalar()) {
-      report("Source type must be a scalar", MI);
+    if (!SrcTy.isScalar() && !SrcTy.isPointer()) {
+      report("Source type must be a scalar or pointer", MI);
       break;
     }
 
@@ -2004,7 +2077,20 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
   }
   case TargetOpcode::G_LLROUND:
   case TargetOpcode::G_LROUND: {
-    verifyAllRegOpsScalar(*MI, *MRI);
+    LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
+    LLT SrcTy = MRI->getType(MI->getOperand(1).getReg());
+    if (!DstTy.isValid() || !SrcTy.isValid())
+      break;
+    if (SrcTy.isPointer() || DstTy.isPointer()) {
+      StringRef Op = SrcTy.isPointer() ? "Source" : "Destination";
+      report(Twine(Op, " operand must not be a pointer type"), MI);
+    } else if (SrcTy.isScalar()) {
+      verifyAllRegOpsScalar(*MI, *MRI);
+      break;
+    } else if (SrcTy.isVector()) {
+      verifyVectorElementMatch(SrcTy, DstTy, MI);
+      break;
+    }
     break;
   }
   case TargetOpcode::G_IS_FPCLASS: {

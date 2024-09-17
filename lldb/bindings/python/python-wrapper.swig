@@ -306,11 +306,11 @@ PythonObject lldb_private::python::SWIGBridge::LLDBSwigPythonCreateScriptedStopH
     const char *session_dictionary_name, const StructuredDataImpl &args_impl,
     Status &error) {
   if (python_class_name == NULL || python_class_name[0] == '\0') {
-    error.SetErrorString("Empty class name.");
+    error = Status::FromErrorString("Empty class name.");
     return PythonObject();
   }
   if (!session_dictionary_name) {
-    error.SetErrorString("No session dictionary");
+    error = Status::FromErrorString("No session dictionary");
     return PythonObject();
   }
 
@@ -322,7 +322,7 @@ PythonObject lldb_private::python::SWIGBridge::LLDBSwigPythonCreateScriptedStopH
       python_class_name, dict);
 
   if (!pfunc.IsAllocated()) {
-    error.SetErrorStringWithFormat("Could not find class: %s.",
+    error = Status::FromErrorStringWithFormat("Could not find class: %s.",
                                    python_class_name);
     return PythonObject();
   }
@@ -337,7 +337,7 @@ PythonObject lldb_private::python::SWIGBridge::LLDBSwigPythonCreateScriptedStopH
       if (auto args_info = callback_func.GetArgInfo()) {
         size_t num_args = (*args_info).max_positional_args;
         if (num_args != 2) {
-          error.SetErrorStringWithFormat(
+          error = Status::FromErrorStringWithFormat(
               "Wrong number of args for "
               "handle_stop callback, should be 2 (excluding self), got: %zu",
               num_args);
@@ -345,15 +345,17 @@ PythonObject lldb_private::python::SWIGBridge::LLDBSwigPythonCreateScriptedStopH
         } else
           return result;
       } else {
-        error.SetErrorString("Couldn't get num arguments for handle_stop "
-                             "callback.");
+        error = Status::FromErrorString(
+            "Couldn't get num arguments for handle_stop "
+            "callback.");
         return PythonObject();
       }
       return result;
     } else {
-      error.SetErrorStringWithFormat("Class \"%s\" is missing the required "
-                                     "handle_stop callback.",
-                                     python_class_name);
+      error = Status::FromErrorStringWithFormat(
+          "Class \"%s\" is missing the required "
+          "handle_stop callback.",
+          python_class_name);
     }
   }
   return PythonObject();
@@ -813,7 +815,7 @@ PythonObject lldb_private::python::SWIGBridge::LLDBSWIGPython_CreateFrameRecogni
 }
 
 PyObject *lldb_private::python::SWIGBridge::LLDBSwigPython_GetRecognizedArguments(
-    PyObject * implementor, const lldb::StackFrameSP &frame_sp) {
+    PyObject *implementor, const lldb::StackFrameSP &frame_sp) {
   static char callee_name[] = "get_recognized_arguments";
 
   PythonObject arg = SWIGBridge::ToSWIGWrapper(frame_sp);
@@ -822,6 +824,22 @@ PyObject *lldb_private::python::SWIGBridge::LLDBSwigPython_GetRecognizedArgument
   PyObject *result =
       PyObject_CallMethodObjArgs(implementor, str.get(), arg.get(), NULL);
   return result;
+}
+
+bool lldb_private::python::SWIGBridge::LLDBSwigPython_ShouldHide(
+    PyObject *implementor, const lldb::StackFrameSP &frame_sp) {
+  static char callee_name[] = "should_hide";
+
+  PythonObject arg = SWIGBridge::ToSWIGWrapper(frame_sp);
+
+  PythonString str(callee_name);
+
+  PyObject *result =
+      PyObject_CallMethodObjArgs(implementor, str.get(), arg.get(), NULL);
+  bool ret_val = result ? PyObject_IsTrue(result) : false;
+  Py_XDECREF(result);
+
+  return ret_val;
 }
 
 void *lldb_private::python::SWIGBridge::LLDBSWIGPython_GetDynamicSetting(

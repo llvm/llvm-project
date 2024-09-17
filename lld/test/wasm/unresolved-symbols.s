@@ -85,7 +85,7 @@
 # RUN: llvm-readobj %t4.wasm > /dev/null 2>&1
 
 ## import-dynamic should fail due to incompatible relocations.
-# RUN: not wasm-ld %t/main.o -o %t5.wasm --unresolved-symbols=import-dynamic 2>&1 | FileCheck -check-prefix=ERRNOPIC %s
+# RUN: not wasm-ld %t/main.o -o %t5.wasm --experimental-pic --unresolved-symbols=import-dynamic 2>&1 | FileCheck -check-prefix=ERRNOPIC %s
 # ERRNOPIC: relocation R_WASM_MEMORY_ADDR_SLEB cannot be used against symbol `undef_data`; recompile with -fPIC
 # ERRNOPIC: relocation R_WASM_TABLE_INDEX_SLEB cannot be used against symbol `undef_func`; recompile with -fPIC
 

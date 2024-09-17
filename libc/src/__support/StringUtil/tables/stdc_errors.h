@@ -16,10 +16,11 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-LIBC_INLINE_VAR constexpr const MsgTable<3> STDC_ERRORS = {
+LIBC_INLINE_VAR constexpr const MsgTable<4> STDC_ERRORS = {
     MsgMapping(0, "Success"),
     MsgMapping(EDOM, "Numerical argument out of domain"),
     MsgMapping(ERANGE, "Numerical result out of range"),
+    MsgMapping(EILSEQ, "Invalid or incomplete multibyte or wide character"),
 };
 
 } // namespace LIBC_NAMESPACE_DECL
