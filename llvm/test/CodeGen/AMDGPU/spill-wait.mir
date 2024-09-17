@@ -87,3 +87,40 @@ body: |
     SCRATCH_STORE_DWORD_SADDR $vgpr0, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr
     S_ENDPGM 0
 ...
+
+# Check that implicit spill defs do not force wait to zero on the first store
+
+---
+name: spill_load_store
+
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32
+
+    ; GCN-LABEL: name: spill_load_store
+    ; GCN: liveins: $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: S_WAITCNT 0
+    ; GCN-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 8, 0, 0, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3
+    ; GCN-NEXT: $vgpr1 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 12, 0, 0, implicit $exec
+    ; GCN-NEXT: $vgpr2 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 16, 0, 0, implicit $exec
+    ; GCN-NEXT: $vgpr3 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 20, 0, 0, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3
+    ; GCN-NEXT: S_WAITCNT 3955
+    ; GCN-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 40, 0, 0, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3, implicit $vgpr0_vgpr1_vgpr2_vgpr3
+    ; GCN-NEXT: S_WAITCNT 3955
+    ; GCN-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr1, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 44, 0, 0, implicit $exec
+    ; GCN-NEXT: S_WAITCNT 3955
+    ; GCN-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 48, 0, 0, implicit $exec
+    ; GCN-NEXT: S_WAITCNT 3955
+    ; GCN-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr3, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 52, 0, 0, implicit $exec, implicit killed $vgpr0_vgpr1_vgpr2_vgpr3
+    ; GCN-NEXT: S_ENDPGM 0
+    $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 8, 0, 0, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 12, 0, 0, implicit $exec
+    $vgpr2 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 16, 0, 0, implicit $exec
+    $vgpr3 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 20, 0, 0, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3
+    BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 40, 0, 0, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3, implicit $vgpr0_vgpr1_vgpr2_vgpr3
+    BUFFER_STORE_DWORD_OFFSET killed $vgpr1, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 44, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_OFFSET killed $vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 48, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_OFFSET killed $vgpr3, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 52, 0, 0, implicit $exec, implicit killed $vgpr0_vgpr1_vgpr2_vgpr3
+    S_ENDPGM 0
+...
