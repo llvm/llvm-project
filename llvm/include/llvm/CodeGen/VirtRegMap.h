@@ -34,7 +34,6 @@ class TargetInstrInfo;
   public:
     enum {
       NO_STACK_SLOT = (1L << 30)-1,
-      MAX_STACK_SLOT = (1L << 18)-1
     };
 
   private:

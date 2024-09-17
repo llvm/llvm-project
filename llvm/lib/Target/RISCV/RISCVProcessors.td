@@ -384,7 +384,7 @@ def SYNTACORE_SCR5_RV64 : RISCVProcessorModel<"syntacore-scr5-rv64",
                                               [TuneNoDefaultUnroll, FeaturePostRAScheduler]>;
 
 def SYNTACORE_SCR7 : RISCVProcessorModel<"syntacore-scr7",
-                                              NoSchedModel,
+                                              SyntacoreSCR7Model,
                                               [Feature64Bit,
                                                FeatureStdExtI,
                                                FeatureStdExtZicsr,
