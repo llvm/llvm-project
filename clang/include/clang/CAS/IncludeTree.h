@@ -239,6 +239,13 @@ public:
   static Expected<File> create(ObjectStore &DB, StringRef Filename,
                                ObjectRef Contents);
 
+  static Expected<File> get(ObjectStore &DB, ObjectRef Ref) {
+    auto Node = DB.getProxy(Ref);
+    if (!Node)
+      return Node.takeError();
+    return File(std::move(*Node));
+  }
+
   llvm::Error print(llvm::raw_ostream &OS, unsigned Indent = 0);
 
   static bool isValid(const ObjectProxy &Node) {
@@ -304,13 +311,6 @@ private:
 
   size_t getNumFilesCurrentList() const;
   FileSizeTy getFileSize(size_t I) const;
-
-  Expected<File> getFile(ObjectRef Ref) {
-    auto Node = getCAS().getProxy(Ref);
-    if (!Node)
-      return Node.takeError();
-    return File(std::move(*Node));
-  }
 
   llvm::Error
   forEachFileImpl(llvm::DenseSet<ObjectRef> &Seen,
@@ -869,10 +869,11 @@ private:
 Expected<IntrusiveRefCntPtr<llvm::vfs::FileSystem>>
 createIncludeTreeFileSystem(IncludeTreeRoot &Root);
 
-/// Create the same IncludeTreeFileSystem but from IncludeTree::FileList.
-Expected<IntrusiveRefCntPtr<llvm::vfs::FileSystem>>
-createIncludeTreeFileSystem(llvm::cas::ObjectStore &CAS,
-                            IncludeTree::FileList &List);
+/// Create the same IncludeTreeFileSystem but from
+/// ArrayRef<IncludeTree::FileEntry>.
+Expected<IntrusiveRefCntPtr<llvm::vfs::FileSystem>> createIncludeTreeFileSystem(
+    llvm::cas::ObjectStore &CAS,
+    llvm::ArrayRef<IncludeTree::FileList::FileEntry> List);
 
 } // namespace cas
 } // namespace clang
