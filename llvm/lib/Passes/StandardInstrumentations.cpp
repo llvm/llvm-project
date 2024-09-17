@@ -2447,8 +2447,7 @@ StandardInstrumentations::StandardInstrumentations(
     : PrintPass(DebugLogging, PrintPassOpts),
       TimePasses(EnableTimePasses ? *EnableTimePasses : TimePassesIsEnabled,
                  EnablePerRunTiming ? *EnablePerRunTiming : TimePassesPerRun),
-      OptNone(DebugLogging),
-      OptPassGate(Context),
+      OptNone(DebugLogging), OptPassGate(Context),
       PrintChangedIR(PrintChanged == ChangePrinter::Verbose),
       PrintChangedDiff(PrintChanged == ChangePrinter::DiffVerbose ||
                            PrintChanged == ChangePrinter::ColourDiffVerbose,
