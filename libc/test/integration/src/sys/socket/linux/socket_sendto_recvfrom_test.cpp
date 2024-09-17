@@ -10,8 +10,8 @@
 
 #include "src/stdio/puts.h"
 #include "src/stdio/remove.h"
-#include "src/sys/socket/recv.h"
-#include "src/sys/socket/send.h"
+#include "src/sys/socket/recvfrom.h"
+#include "src/sys/socket/sendto.h"
 #include "src/sys/socket/socketpair.h"
 #include "src/unistd/close.h"
 #include "src/unistd/fork.h"
@@ -24,7 +24,8 @@
 const char TEST_MESSAGE[] = "connection successful";
 const size_t MESSAGE_LEN = sizeof(TEST_MESSAGE);
 
-#define SEND_TEST_NAME "Send/Recv"
+// macro for easy string pasting, we don't need printf here
+#define SEND_TEST_NAME "Sendto/Recvfrom"
 
 TEST_MAIN(int argc, char **argv, char **envp) {
 
@@ -54,8 +55,8 @@ TEST_MAIN(int argc, char **argv, char **envp) {
     LIBC_NAMESPACE::puts(SEND_TEST_NAME " Child Start");
     LIBC_NAMESPACE::close(sockpair[1]); // close parent sock
 
-    ssize_t send_result =
-        LIBC_NAMESPACE::send(sockpair[0], TEST_MESSAGE, MESSAGE_LEN, 0);
+    ssize_t send_result = LIBC_NAMESPACE::sendto(sockpair[0], TEST_MESSAGE,
+                                                 MESSAGE_LEN, 0, nullptr, 0);
     EXPECT_EQ(send_result, static_cast<ssize_t>(MESSAGE_LEN));
     ASSERT_ERRNO_SUCCESS();
 
@@ -67,8 +68,8 @@ TEST_MAIN(int argc, char **argv, char **envp) {
 
     char buffer[256];
 
-    ssize_t recv_result =
-        LIBC_NAMESPACE::recv(sockpair[1], buffer, sizeof(buffer), 0);
+    ssize_t recv_result = LIBC_NAMESPACE::recvfrom(
+        sockpair[1], buffer, sizeof(buffer), 0, nullptr, 0);
     ASSERT_EQ(recv_result, MESSAGE_LEN);
     ASSERT_ERRNO_SUCCESS();
 

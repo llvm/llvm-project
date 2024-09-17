@@ -10,6 +10,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  socketpair
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.socketpair
+)
+
+add_entrypoint_object(
   bind
   ALIAS
   DEPENDS
