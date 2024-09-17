@@ -151,7 +151,9 @@ def get_num_commits(gh: github.Github, user: str, start_date: datetime.datetime)
         }
      """
     count = 0
-    res_header, d = gh._Github__requester.graphql_query(query=query, variables=variables)
+    res_header, d = gh._Github__requester.graphql_query(
+        query=query, variables=variables
+    )
     data = d["data"]
     for repo in data["organization"]["teams"]["nodes"][0]["repositories"]["nodes"]:
         count += int(repo["ref"]["target"]["history"]["totalCount"])
@@ -179,7 +181,9 @@ def is_new_committer_query_repo(
         }
     """
 
-    res_header, d = gh._Github__requester.graphql_query(query=user_query, variables=variables)
+    res_header, d = gh._Github__requester.graphql_query(
+        query=user_query, variables=variables
+    )
     data = d["data"]
     variables["owner"] = "llvm"
     variables["user_id"] = data["user"]["id"]
@@ -205,7 +209,9 @@ def is_new_committer_query_repo(
         }
      """
 
-    res_header, d = gh._Github__requester.graphql_query(query=query, variables=variables)
+    res_header, d = gh._Github__requester.graphql_query(
+        query=query, variables=variables
+    )
     data = d["data"]
     repo = data["organization"]["repository"]
     commits = repo["ref"]["target"]["history"]["nodes"]
