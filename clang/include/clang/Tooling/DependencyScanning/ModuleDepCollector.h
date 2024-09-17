@@ -143,7 +143,7 @@ struct ModuleDeps {
   std::vector<ModuleID> ClangModuleDeps;
 
   /// The CASID for the module input dependency tree, if any.
-  std::optional<llvm::cas::CASID> CASFileSystemRootID;
+  std::optional<std::string> CASFileSystemRootID;
 
   /// The CASID for the module include-tree, if any.
   std::optional<std::string> IncludeTreeID;

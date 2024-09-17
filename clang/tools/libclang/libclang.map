@@ -520,6 +520,7 @@ LLVM_16 {
     clang_experimental_DepGraph_getTUCommand;
     clang_experimental_DepGraph_getTUContextHash;
     clang_experimental_DepGraph_getTUFileDeps;
+    clang_experimental_DepGraph_getTUFileSystemRootID;
     clang_experimental_DepGraph_getTUIncludeTreeID;
     clang_experimental_DepGraph_getTUModuleDeps;
     clang_experimental_DepGraphModule_dispose;
@@ -527,6 +528,7 @@ LLVM_16 {
     clang_experimental_DepGraphModule_getCacheKey;
     clang_experimental_DepGraphModule_getContextHash;
     clang_experimental_DepGraphModule_getFileDeps;
+    clang_experimental_DepGraphModule_getFileSystemRootID;
     clang_experimental_DepGraphModule_getIncludeTreeID;
     clang_experimental_DepGraphModule_getModuleDeps;
     clang_experimental_DepGraphModule_getModuleMapPath;

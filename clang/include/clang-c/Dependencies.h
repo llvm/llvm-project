@@ -394,6 +394,15 @@ CINDEX_LINKAGE CXCStringArray
     clang_experimental_DepGraphModule_getBuildArguments(CXDepGraphModule);
 
 /**
+ * @returns the CASID of the filesystem root for this module, if any.
+ *
+ * The string is only valid to use while the \c CXDepGraphModule object is
+ * valid.
+ */
+CINDEX_LINKAGE const char *
+    clang_experimental_DepGraphModule_getFileSystemRootID(CXDepGraphModule);
+
+/**
  * @returns the CASID of the include-tree for this module, if any.
  *
  * The string is only valid to use while the \c CXDepGraphModule object is
@@ -476,6 +485,14 @@ CXCStringArray clang_experimental_DepGraph_getTUFileDeps(CXDepGraph);
  */
 CINDEX_LINKAGE
 CXCStringArray clang_experimental_DepGraph_getTUModuleDeps(CXDepGraph);
+
+/**
+ * @returns the CASID of the filesystem root for this TU, if any.
+ *
+ * This string is only valid to use while the \c CXDepGraph object is valid.
+ */
+CINDEX_LINKAGE
+const char *clang_experimental_DepGraph_getTUFileSystemRootID(CXDepGraph);
 
 /**
  * @returns the CASID of the include-tree for this TU, if any.

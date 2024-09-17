@@ -701,15 +701,8 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
   if (!MF->IncludeTreeID.empty())
     MD.IncludeTreeID = MF->IncludeTreeID;
 
-  if (!MF->CASFileSystemRootID.empty()) {
-    auto &CAS = MDC.ScanInstance.getOrCreateObjectStore();
-    if (auto Err = CAS.parseID(MF->CASFileSystemRootID)
-                       .moveInto(MD.CASFileSystemRootID)) {
-      MDC.ScanInstance.getDiagnostics().Report(
-          diag::err_cas_cannot_parse_root_id_for_module)
-          << MF->CASFileSystemRootID << MD.ID.ModuleName;
-    }
-  }
+  if (!MF->CASFileSystemRootID.empty())
+    MD.CASFileSystemRootID = MF->CASFileSystemRootID;
 
   CowCompilerInvocation CI =
       MDC.getInvocationAdjustedForModuleBuildWithoutOutputs(

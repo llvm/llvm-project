@@ -422,6 +422,14 @@ clang_experimental_DepGraphModule_getBuildArguments(CXDepGraphModule CXDepMod) {
       ModDeps.getBuildArguments());
 }
 
+const char *clang_experimental_DepGraphModule_getFileSystemRootID(
+    CXDepGraphModule CXDepMod) {
+  ModuleDeps &ModDeps = *unwrap(CXDepMod)->ModDeps;
+  if (ModDeps.CASFileSystemRootID)
+    return ModDeps.CASFileSystemRootID->c_str();
+  return nullptr;
+}
+
 const char *
 clang_experimental_DepGraphModule_getIncludeTreeID(CXDepGraphModule CXDepMod) {
   ModuleDeps &ModDeps = *unwrap(CXDepMod)->ModDeps;
@@ -485,6 +493,14 @@ CXCStringArray clang_experimental_DepGraph_getTUModuleDeps(CXDepGraph Graph) {
   for (const ModuleID &MID : TUDeps.ClangModuleDeps)
     Modules.push_back(MID.ModuleName + ":" + MID.ContextHash);
   return unwrap(Graph)->StrMgr.createCStringsOwned(std::move(Modules));
+}
+
+const char *
+clang_experimental_DepGraph_getTUFileSystemRootID(CXDepGraph Graph) {
+  TranslationUnitDeps &TUDeps = unwrap(Graph)->TUDeps;
+  if (TUDeps.CASFileSystemRootID)
+    return TUDeps.CASFileSystemRootID->c_str();
+  return nullptr;
 }
 
 const char *clang_experimental_DepGraph_getTUIncludeTreeID(CXDepGraph Graph) {

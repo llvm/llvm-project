@@ -27,8 +27,6 @@ def err_cas_cannot_get_module_cache_key : Error<
   "CAS cannot load module with key '%0' from %1: %2">, DefaultFatal;
 def err_cas_missing_root_id : Error<
   "CAS missing expected root-id '%0'">, DefaultFatal;
-def err_cas_cannot_parse_root_id_for_module : Error<
-  "CAS cannot parse root-id '%0' for module '%1'">, DefaultFatal;
 def err_cas_cannot_parse_include_tree_id : Error<
   "CAS cannot parse include-tree-id '%0'">, DefaultFatal;
 def err_cas_missing_include_tree_id : Error<

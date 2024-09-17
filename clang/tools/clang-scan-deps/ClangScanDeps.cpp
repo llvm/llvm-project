@@ -724,7 +724,7 @@ public:
       if (MD.ModuleCacheKey)
         O.try_emplace("cache-key", MD.ModuleCacheKey);
       if (MD.CASFileSystemRootID)
-        O.try_emplace("casfs-root-id", MD.CASFileSystemRootID->toString());
+        O.try_emplace("casfs-root-id", MD.CASFileSystemRootID);
       if (MD.IncludeTreeID)
         O.try_emplace("cas-include-tree-id", MD.IncludeTreeID);
       OutModules.push_back(std::move(O));
