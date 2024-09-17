@@ -109,12 +109,10 @@ template <class NodeT> class DomTreeNodeBase {
       OtherChildren.insert(Nd);
     }
 
-    for (const DomTreeNodeBase *I : *this) {
+    return llvm::any_of(*this, [&](const DomTreeNodeBase *I) {
       const NodeT *N = I->getBlock();
-      if (OtherChildren.count(N) == 0)
-        return true;
-    }
-    return false;
+      return OtherChildren.count(N) == 0;
+    });
   }
 
   void setIDom(DomTreeNodeBase *NewIDom) {
@@ -927,14 +925,11 @@ protected:
 
     assert(!PredBlocks.empty() && "No predblocks?");
 
-    bool NewBBDominatesNewBBSucc = true;
-    for (auto *Pred : inverse_children<N>(NewBBSucc)) {
-      if (Pred != NewBB && !dominates(NewBBSucc, Pred) &&
-          isReachableFromEntry(Pred)) {
-        NewBBDominatesNewBBSucc = false;
-        break;
-      }
-    }
+    bool NewBBDominatesNewBBSucc =
+        llvm::none_of(inverse_children<N>(NewBBSucc), [&](const auto *Pred) {
+          return Pred != NewBB && !dominates(NewBBSucc, Pred) &&
+                 isReachableFromEntry(Pred);
+        });
 
     // Find NewBB's immediate dominator and create new dominator tree node for
     // NewBB.

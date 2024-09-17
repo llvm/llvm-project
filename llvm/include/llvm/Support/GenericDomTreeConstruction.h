@@ -213,10 +213,9 @@ struct SemiNCAInfo {
       constexpr bool Direction = IsReverse != IsPostDom;  // XOR.
       auto Successors = getChildren<Direction>(BB, BatchUpdates);
       if (SuccOrder && Successors.size() > 1)
-        llvm::sort(
-            Successors.begin(), Successors.end(), [=](NodePtr A, NodePtr B) {
-              return SuccOrder->find(A)->second < SuccOrder->find(B)->second;
-            });
+        llvm::sort(Successors, [&](NodePtr A, NodePtr B) {
+          return SuccOrder->find(A)->second < SuccOrder->find(B)->second;
+        });
 
       for (const NodePtr Succ : Successors) {
         if (!Condition(BB, Succ)) continue;
@@ -698,10 +697,7 @@ struct SemiNCAInfo {
     if (A.size() != B.size())
       return false;
     SmallPtrSet<NodePtr, 4> Set(A.begin(), A.end());
-    for (NodePtr N : B)
-      if (Set.count(N) == 0)
-        return false;
-    return true;
+    return llvm::none_of(B, [&](NodePtr N) { return Set.count(N) == 0; });
   }
 
   // Updates the set of roots after insertion or deletion. This ensures that
