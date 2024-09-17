@@ -2962,6 +2962,10 @@ bool AddressSanitizer::instrumentFunction(Function &F,
 
   bool FunctionModified = false;
 
+  // Do not apply any instrumentation for naked functions.
+  if (F.hasFnAttribute(Attribute::Naked))
+    return FunctionModified;
+
   // If needed, insert __asan_init before checking for SanitizeAddress attr.
   // This function needs to be called even if the function body is not
   // instrumented.
