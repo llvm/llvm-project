@@ -925,18 +925,15 @@ define i8 @udiv_by_zero(i8 %x, i8 %i, i8 %v) {
 ; CHECK-LABEL: @udiv_by_zero(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i8 [[I:%.*]], label [[SW_DEFAULT:%.*]] [
-; CHECK-NEXT:      i8 0, label [[RETURN:%.*]]
-; CHECK-NEXT:      i8 2, label [[SW_BB1:%.*]]
 ; CHECK-NEXT:      i8 9, label [[SW_BB2:%.*]]
+; CHECK-NEXT:      i8 2, label [[RETURN:%.*]]
 ; CHECK-NEXT:    ]
-; CHECK:       sw.bb1:
-; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       sw.bb2:
 ; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       sw.default:
 ; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       return:
-; CHECK-NEXT:    [[Y:%.*]] = phi i8 [ 2, [[SW_BB1]] ], [ 9, [[SW_BB2]] ], [ [[V:%.*]], [[SW_DEFAULT]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[Y:%.*]] = phi i8 [ 9, [[SW_BB2]] ], [ [[V:%.*]], [[SW_DEFAULT]] ], [ 2, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[R:%.*]] = udiv i8 [[X:%.*]], [[Y]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
@@ -976,9 +973,9 @@ define i8 @urem_by_zero(i8 %x, i8 %i, i8 %v) {
 ; CHECK:       sw.bb2:
 ; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       sw.default:
-; CHECK-NEXT:    br label [[RETURN]]
+; CHECK-NEXT:    unreachable
 ; CHECK:       return:
-; CHECK-NEXT:    [[Y:%.*]] = phi i8 [ 2, [[SW_BB1]] ], [ 9, [[SW_BB2]] ], [ 0, [[SW_DEFAULT]] ], [ [[V:%.*]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[Y:%.*]] = phi i8 [ 2, [[SW_BB1]] ], [ 9, [[SW_BB2]] ], [ [[V:%.*]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[R:%.*]] = urem i8 [[X:%.*]], [[Y]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
@@ -1054,13 +1051,10 @@ define i8 @srem_by_zero(i8 %x, i8 %i) {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    call void @side.effect()
-; CHECK-NEXT:    br label [[IF_END:%.*]]
+; CHECK-NEXT:    unreachable
 ; CHECK:       if.else:
 ; CHECK-NEXT:    [[V:%.*]] = call i8 @get.i8()
-; CHECK-NEXT:    br label [[IF_END]]
-; CHECK:       if.end:
-; CHECK-NEXT:    [[Y:%.*]] = phi i8 [ 0, [[IF_THEN]] ], [ [[V]], [[IF_ELSE]] ]
-; CHECK-NEXT:    [[R:%.*]] = srem i8 [[X:%.*]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = srem i8 [[X:%.*]], [[V]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
 entry:
@@ -1162,19 +1156,16 @@ define i8 @sdiv_overflow_ub_2x(i8 %i) {
 ; CHECK-LABEL: @sdiv_overflow_ub_2x(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i8 [[I:%.*]], label [[SW_DEFAULT:%.*]] [
-; CHECK-NEXT:      i8 0, label [[RETURN:%.*]]
+; CHECK-NEXT:      i8 9, label [[RETURN:%.*]]
 ; CHECK-NEXT:      i8 2, label [[SW_BB1:%.*]]
-; CHECK-NEXT:      i8 9, label [[SW_BB2:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       sw.bb1:
 ; CHECK-NEXT:    [[V:%.*]] = call i8 @get.i8()
 ; CHECK-NEXT:    br label [[RETURN]]
-; CHECK:       sw.bb2:
-; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       sw.default:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       return:
-; CHECK-NEXT:    [[Y:%.*]] = phi i8 [ [[V]], [[SW_BB1]] ], [ -1, [[SW_BB2]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[Y:%.*]] = phi i8 [ [[V]], [[SW_BB1]] ], [ -1, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[R:%.*]] = sdiv i8 -128, [[Y]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
