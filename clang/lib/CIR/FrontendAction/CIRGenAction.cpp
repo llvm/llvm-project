@@ -355,7 +355,7 @@ getOutputStream(CompilerInstance &ci, StringRef inFile,
   case CIRGenAction::OutputType::EmitMLIR:
     return ci.createDefaultOutputFile(false, inFile, "mlir");
   case CIRGenAction::OutputType::EmitLLVM:
-    return ci.createDefaultOutputFile(false, inFile, "llvm");
+    return ci.createDefaultOutputFile(false, inFile, "ll");
   case CIRGenAction::OutputType::EmitBC:
     return ci.createDefaultOutputFile(true, inFile, "bc");
   case CIRGenAction::OutputType::EmitObj:
