@@ -136,6 +136,11 @@ Changes in existing checks
   <clang-tidy/checks/misc/unconventional-assign-operator>` check to avoid
   false positive for C++23 deducing this.
 
+- Improved :doc:`modernize-min-max-use-initializer-list
+  <clang-tidy/checks/modernize/min-max-use-initializer-list>` check by fixing
+  a false positive when only an implicit conversion happened inside an
+  initializer list.
+
 - Improved :doc:`modernize-use-std-print
   <clang-tidy/checks/modernize/use-std-print>` check to support replacing
   member function calls too.
