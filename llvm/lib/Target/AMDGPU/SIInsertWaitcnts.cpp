@@ -819,37 +819,40 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
                  Inst.getOpcode() != AMDGPU::DS_APPEND &&
                  Inst.getOpcode() != AMDGPU::DS_CONSUME &&
                  Inst.getOpcode() != AMDGPU::DS_ORDERED_COUNT) {
-        for (const MachineOperand &Op : Inst.uses()) {
+        for (const MachineOperand &Op : Inst.all_uses()) {
           if (Op.isReg() && TRI->isVectorRegister(*MRI, Op.getReg()))
             setExpScore(&Inst, TRI, MRI, Op, CurrScore);
         }
       }
     } else if (TII->isFLAT(Inst)) {
-      if (Inst.mayStore())
+      if (Inst.mayStore()) {
         setExpScore(&Inst, TRI, MRI,
                     *TII->getNamedOperand(Inst, AMDGPU::OpName::data),
                     CurrScore);
-      else if (SIInstrInfo::isAtomicRet(Inst))
+      } else if (SIInstrInfo::isAtomicRet(Inst)) {
         setExpScore(&Inst, TRI, MRI,
                     *TII->getNamedOperand(Inst, AMDGPU::OpName::data),
                     CurrScore);
+      }
     } else if (TII->isMIMG(Inst)) {
-      if (Inst.mayStore())
+      if (Inst.mayStore()) {
         setExpScore(&Inst, TRI, MRI, Inst.getOperand(0), CurrScore);
-      else if (SIInstrInfo::isAtomicRet(Inst))
+      } else if (SIInstrInfo::isAtomicRet(Inst)) {
         setExpScore(&Inst, TRI, MRI,
                     *TII->getNamedOperand(Inst, AMDGPU::OpName::data),
                     CurrScore);
+      }
     } else if (TII->isMTBUF(Inst)) {
       if (Inst.mayStore())
         setExpScore(&Inst, TRI, MRI, Inst.getOperand(0), CurrScore);
     } else if (TII->isMUBUF(Inst)) {
-      if (Inst.mayStore())
+      if (Inst.mayStore()) {
         setExpScore(&Inst, TRI, MRI, Inst.getOperand(0), CurrScore);
-      else if (SIInstrInfo::isAtomicRet(Inst))
+      } else if (SIInstrInfo::isAtomicRet(Inst)) {
         setExpScore(&Inst, TRI, MRI,
                     *TII->getNamedOperand(Inst, AMDGPU::OpName::data),
                     CurrScore);
+      }
     } else if (TII->isLDSDIR(Inst)) {
       // LDSDIR instructions attach the score to the destination.
       setExpScore(&Inst, TRI, MRI,
@@ -868,7 +871,7 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
           }
         }
       }
-      for (const MachineOperand &Op : Inst.uses()) {
+      for (const MachineOperand &Op : Inst.all_uses()) {
         if (Op.isReg() && TRI->isVectorRegister(*MRI, Op.getReg()))
           setExpScore(&Inst, TRI, MRI, Op, CurrScore);
       }
@@ -1662,10 +1665,10 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
       // load). We also need to check WAW dependency with saved PC.
       Wait = AMDGPU::Waitcnt();
 
-      const auto *CallAddrOp = TII->getNamedOperand(MI, AMDGPU::OpName::src0);
-      if (CallAddrOp->isReg()) {
+      const auto &CallAddrOp = *TII->getNamedOperand(MI, AMDGPU::OpName::src0);
+      if (CallAddrOp.isReg()) {
         RegInterval CallAddrOpInterval =
-            ScoreBrackets.getRegInterval(&MI, MRI, TRI, *CallAddrOp);
+            ScoreBrackets.getRegInterval(&MI, MRI, TRI, CallAddrOp);
 
         for (int RegNo = CallAddrOpInterval.first;
              RegNo < CallAddrOpInterval.second; ++RegNo)
@@ -2323,7 +2326,7 @@ bool SIInsertWaitcnts::shouldFlushVmCnt(MachineLoop *ML,
         if (MI.mayStore())
           HasVMemStore = true;
       }
-      for (const MachineOperand &Op : MI.uses()) {
+      for (const MachineOperand &Op : MI.all_uses()) {
         if (!Op.isReg() || !TRI->isVectorRegister(*MRI, Op.getReg()))
           continue;
         RegInterval Interval = Brackets.getRegInterval(&MI, MRI, TRI, Op);
@@ -2350,7 +2353,7 @@ bool SIInsertWaitcnts::shouldFlushVmCnt(MachineLoop *ML,
 
       // VMem load vgpr def
       if (isVMEMOrFlatVMEM(MI) && MI.mayLoad()) {
-        for (const MachineOperand &Op : MI.defs()) {
+        for (const MachineOperand &Op : MI.all_defs()) {
           RegInterval Interval = Brackets.getRegInterval(&MI, MRI, TRI, Op);
           for (int RegNo = Interval.first; RegNo < Interval.second; ++RegNo) {
             // If we find a register that is loaded inside the loop, 1. and 2.
