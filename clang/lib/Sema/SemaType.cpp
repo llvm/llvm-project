@@ -5675,6 +5675,9 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
   assert(!T.isNull() && "T must not be null at the end of this function");
   if (!AreDeclaratorChunksValid)
     return Context.getTrivialTypeSourceInfo(T);
+
+  if (state.didParseHLSLParamMod() && !T->isConstantArrayType())
+    T = S.HLSL().getInoutParameterType(T);
   return GetTypeSourceInfoForDeclarator(state, T, TInfo);
 }
 
@@ -8616,7 +8619,6 @@ static void HandleHLSLParamModifierAttr(TypeProcessingState &State,
     return;
   if (Attr.getSemanticSpelling() == HLSLParamModifierAttr::Keyword_inout ||
       Attr.getSemanticSpelling() == HLSLParamModifierAttr::Keyword_out) {
-    CurType = S.HLSL().getInoutParameterType(CurType);
     State.setParsedHLSLParamMod(true);
   }
 }
