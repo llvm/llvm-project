@@ -65,12 +65,17 @@ private:
   bool NoStackArgProbe = false;
 
   StringRef getPassName() const override { return "X86 DynAlloca Expander"; }
+
+public:
   static char ID;
 };
 
 char X86DynAllocaExpander::ID = 0;
 
 } // end anonymous namespace
+
+INITIALIZE_PASS(X86DynAllocaExpander, "x86-dyn-alloca-expander",
+                "X86 DynAlloca Expander", false, false)
 
 FunctionPass *llvm::createX86DynAllocaExpander() {
   return new X86DynAllocaExpander();

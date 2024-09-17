@@ -173,8 +173,9 @@ llvm::findSplitPointForStackProtector(MachineBasicBlock *BB,
   return SplitPoint;
 }
 
-FPClassTest llvm::invertFPClassTestIfSimpler(FPClassTest Test) {
+FPClassTest llvm::invertFPClassTestIfSimpler(FPClassTest Test, bool UseFCmp) {
   FPClassTest InvertedTest = ~Test;
+
   // Pick the direction with fewer tests
   // TODO: Handle more combinations of cases that can be handled together
   switch (static_cast<unsigned>(InvertedTest)) {
@@ -200,6 +201,13 @@ FPClassTest llvm::invertFPClassTestIfSimpler(FPClassTest Test) {
   case fcSubnormal | fcZero:
   case fcSubnormal | fcZero | fcNan:
     return InvertedTest;
+  case fcInf | fcNan:
+  case fcPosInf | fcNan:
+  case fcNegInf | fcNan:
+    // If we're trying to use fcmp, we can take advantage of the nan check
+    // behavior of the compare (but this is more instructions in the integer
+    // expansion).
+    return UseFCmp ? InvertedTest : fcNone;
   default:
     return fcNone;
   }

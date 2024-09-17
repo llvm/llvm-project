@@ -11,13 +11,15 @@ define <4 x half> @interleave2_v4f16(<2 x half> %vec0, <2 x half> %vec1) {
 ; CHECK-GI-LABEL: interleave2_v4f16:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    dup v2.4s, w8
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-GI-NEXT:    xtn v2.4h, v2.4s
-; CHECK-GI-NEXT:    fmov w8, s2
-; CHECK-GI-NEXT:    mov v0.s[1], w8
+; CHECK-GI-NEXT:    fmov w8, s0
+; CHECK-GI-NEXT:    fmov w9, s1
+; CHECK-GI-NEXT:    xtn v0.4h, v2.4s
+; CHECK-GI-NEXT:    mov v1.s[0], w8
+; CHECK-GI-NEXT:    mov v2.s[0], w9
+; CHECK-GI-NEXT:    fmov w8, s0
 ; CHECK-GI-NEXT:    mov v1.s[1], w8
-; CHECK-GI-NEXT:    zip1 v0.4h, v0.4h, v1.4h
+; CHECK-GI-NEXT:    mov v2.s[1], w8
+; CHECK-GI-NEXT:    zip1 v0.4h, v1.4h, v2.4h
 ; CHECK-GI-NEXT:    ret
   %retval = call <4 x half> @llvm.vector.interleave2.v4f16(<2 x half> %vec0, <2 x half> %vec1)
   ret <4 x half> %retval

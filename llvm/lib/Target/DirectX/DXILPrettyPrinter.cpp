@@ -45,6 +45,7 @@ static StringRef getRCPrefix(dxil::ResourceClass RC) {
   case dxil::ResourceClass::Sampler:
     return "s";
   }
+  llvm_unreachable("covered switch");
 }
 
 static StringRef getFormatName(const dxil::ResourceInfo &RI) {

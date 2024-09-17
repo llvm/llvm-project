@@ -334,25 +334,40 @@ entry:
 }
 
 define <2 x i32> @f(i32 %a, i32 %b) nounwind readnone  {
-; CHECK-LABEL: f:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov s0, w0
-; CHECK-NEXT:    mov.s v0[1], w1
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: f:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    fmov s0, w0
+; CHECK-SD-NEXT:    mov.s v0[1], w1
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: f:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov.s v0[0], w0
+; CHECK-GI-NEXT:    mov.s v0[1], w1
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NEXT:    ret
   %vecinit = insertelement <2 x i32> undef, i32 %a, i32 0
   %vecinit1 = insertelement <2 x i32> %vecinit, i32 %b, i32 1
   ret <2 x i32> %vecinit1
 }
 
 define <4 x i32> @g(i32 %a, i32 %b) nounwind readnone  {
-; CHECK-LABEL: g:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov s0, w0
-; CHECK-NEXT:    mov.s v0[1], w1
-; CHECK-NEXT:    mov.s v0[2], w1
-; CHECK-NEXT:    mov.s v0[3], w0
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: g:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    fmov s0, w0
+; CHECK-SD-NEXT:    mov.s v0[1], w1
+; CHECK-SD-NEXT:    mov.s v0[2], w1
+; CHECK-SD-NEXT:    mov.s v0[3], w0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: g:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov.s v0[0], w0
+; CHECK-GI-NEXT:    mov.s v0[1], w1
+; CHECK-GI-NEXT:    mov.s v0[2], w1
+; CHECK-GI-NEXT:    mov.s v0[3], w0
+; CHECK-GI-NEXT:    ret
   %vecinit = insertelement <4 x i32> undef, i32 %a, i32 0
   %vecinit1 = insertelement <4 x i32> %vecinit, i32 %b, i32 1
   %vecinit2 = insertelement <4 x i32> %vecinit1, i32 %b, i32 2
@@ -361,11 +376,17 @@ define <4 x i32> @g(i32 %a, i32 %b) nounwind readnone  {
 }
 
 define <2 x i64> @h(i64 %a, i64 %b) nounwind readnone  {
-; CHECK-LABEL: h:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov d0, x0
-; CHECK-NEXT:    mov.d v0[1], x1
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: h:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    fmov d0, x0
+; CHECK-SD-NEXT:    mov.d v0[1], x1
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: h:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov.d v0[0], x0
+; CHECK-GI-NEXT:    mov.d v0[1], x1
+; CHECK-GI-NEXT:    ret
   %vecinit = insertelement <2 x i64> undef, i64 %a, i32 0
   %vecinit1 = insertelement <2 x i64> %vecinit, i64 %b, i32 1
   ret <2 x i64> %vecinit1
@@ -386,8 +407,8 @@ define <4 x i16> @test_build_illegal(<4 x i32> %in) {
 ;
 ; CHECK-GI-LABEL: test_build_illegal:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov s0, v0[3]
-; CHECK-GI-NEXT:    mov.h v0[3], v0[0]
+; CHECK-GI-NEXT:    mov.s w8, v0[3]
+; CHECK-GI-NEXT:    mov.h v0[3], w8
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
   %val = extractelement <4 x i32> %in, i32 3

@@ -14,7 +14,6 @@
 #include "GCNSubtarget.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/Analysis/CycleAnalysis.h"
-#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
@@ -32,6 +31,12 @@ using namespace llvm;
 static cl::opt<unsigned> KernargPreloadCount(
     "amdgpu-kernarg-preload-count",
     cl::desc("How many kernel arguments to preload onto SGPRs"), cl::init(0));
+
+static cl::opt<unsigned> IndirectCallSpecializationThreshold(
+    "amdgpu-indirect-call-specialization-threshold",
+    cl::desc(
+        "A threshold controls whether an indirect call will be specialized"),
+    cl::init(3));
 
 #define AMDGPU_ATTRIBUTE(Name, Str) Name##_POS,
 
@@ -1049,16 +1054,10 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
   AC.IsModulePass = true;
   AC.DefaultInitializeLiveInternals = false;
   AC.IndirectCalleeSpecializationCallback =
-      [&TM](Attributor &A, const AbstractAttribute &AA, CallBase &CB,
-            Function &Callee, unsigned NumAssumedCallees) {
-        if (AMDGPU::isEntryFunctionCC(Callee.getCallingConv()))
-          return false;
-        // Singleton functions can be specialized.
-        if (NumAssumedCallees == 1)
-          return true;
-        // Otherwise specialize uniform values.
-        const auto &TTI = TM.getTargetTransformInfo(*CB.getCaller());
-        return TTI.isAlwaysUniform(CB.getCalledOperand());
+      [](Attributor &A, const AbstractAttribute &AA, CallBase &CB,
+         Function &Callee, unsigned NumAssumedCallees) {
+        return !AMDGPU::isEntryFunctionCC(Callee.getCallingConv()) &&
+               (NumAssumedCallees <= IndirectCallSpecializationThreshold);
       };
   AC.IPOAmendableCB = [](const Function &F) {
     return F.getCallingConv() == CallingConv::AMDGPU_KERNEL;
@@ -1066,33 +1065,31 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
 
   Attributor A(Functions, InfoCache, AC);
 
-  LLVM_DEBUG(dbgs() << "Module " << M.getName() << " is "
-                    << (AC.IsClosedWorldModule ? "" : "not ")
-                    << "assumed to be a closed world.\n");
-
-  for (Function &F : M) {
-    if (F.isIntrinsic())
-      continue;
-
-    A.getOrCreateAAFor<AAAMDAttributes>(IRPosition::function(F));
-    A.getOrCreateAAFor<AAUniformWorkGroupSize>(IRPosition::function(F));
-    A.getOrCreateAAFor<AAAMDGPUNoAGPR>(IRPosition::function(F));
-    CallingConv::ID CC = F.getCallingConv();
+  for (auto *F : Functions) {
+    A.getOrCreateAAFor<AAAMDAttributes>(IRPosition::function(*F));
+    A.getOrCreateAAFor<AAUniformWorkGroupSize>(IRPosition::function(*F));
+    A.getOrCreateAAFor<AAAMDGPUNoAGPR>(IRPosition::function(*F));
+    CallingConv::ID CC = F->getCallingConv();
     if (!AMDGPU::isEntryFunctionCC(CC)) {
-      A.getOrCreateAAFor<AAAMDFlatWorkGroupSize>(IRPosition::function(F));
-      A.getOrCreateAAFor<AAAMDWavesPerEU>(IRPosition::function(F));
+      A.getOrCreateAAFor<AAAMDFlatWorkGroupSize>(IRPosition::function(*F));
+      A.getOrCreateAAFor<AAAMDWavesPerEU>(IRPosition::function(*F));
     } else if (CC == CallingConv::AMDGPU_KERNEL) {
-      addPreloadKernArgHint(F, TM);
+      addPreloadKernArgHint(*F, TM);
     }
 
     for (auto &I : instructions(F)) {
       if (auto *LI = dyn_cast<LoadInst>(&I)) {
         A.getOrCreateAAFor<AAAddressSpace>(
             IRPosition::value(*LI->getPointerOperand()));
-      }
-      if (auto *SI = dyn_cast<StoreInst>(&I)) {
+      } else if (auto *SI = dyn_cast<StoreInst>(&I)) {
         A.getOrCreateAAFor<AAAddressSpace>(
             IRPosition::value(*SI->getPointerOperand()));
+      } else if (auto *RMW = dyn_cast<AtomicRMWInst>(&I)) {
+        A.getOrCreateAAFor<AAAddressSpace>(
+            IRPosition::value(*RMW->getPointerOperand()));
+      } else if (auto *CmpX = dyn_cast<AtomicCmpXchgInst>(&I)) {
+        A.getOrCreateAAFor<AAAddressSpace>(
+            IRPosition::value(*CmpX->getPointerOperand()));
       }
     }
   }

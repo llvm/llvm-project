@@ -255,6 +255,25 @@ struct HostRuntimeLibrary<HostT, LibraryVersion::Libm> {
   static constexpr HostRuntimeMap map{table};
   static_assert(map.Verify(), "map must be sorted");
 };
+
+// Helpers to map complex std::pow whose resolution in F2{std::pow} is
+// ambiguous as of clang++ 20.
+template <typename HostT>
+static std::complex<HostT> StdPowF2(
+    const std::complex<HostT> &x, const std::complex<HostT> &y) {
+  return std::pow(x, y);
+}
+template <typename HostT>
+static std::complex<HostT> StdPowF2A(
+    const HostT &x, const std::complex<HostT> &y) {
+  return std::pow(x, y);
+}
+template <typename HostT>
+static std::complex<HostT> StdPowF2B(
+    const std::complex<HostT> &x, const HostT &y) {
+  return std::pow(x, y);
+}
+
 template <typename HostT>
 struct HostRuntimeLibrary<std::complex<HostT>, LibraryVersion::Libm> {
   using F = FuncPointer<std::complex<HostT>, const std::complex<HostT> &>;
@@ -275,9 +294,9 @@ struct HostRuntimeLibrary<std::complex<HostT>, LibraryVersion::Libm> {
       FolderFactory<F, F{std::cosh}>::Create("cosh"),
       FolderFactory<F, F{std::exp}>::Create("exp"),
       FolderFactory<F, F{std::log}>::Create("log"),
-      FolderFactory<F2, F2{std::pow}>::Create("pow"),
-      FolderFactory<F2A, F2A{std::pow}>::Create("pow"),
-      FolderFactory<F2B, F2B{std::pow}>::Create("pow"),
+      FolderFactory<F2, F2{StdPowF2}>::Create("pow"),
+      FolderFactory<F2A, F2A{StdPowF2A}>::Create("pow"),
+      FolderFactory<F2B, F2B{StdPowF2B}>::Create("pow"),
       FolderFactory<F, F{std::sin}>::Create("sin"),
       FolderFactory<F, F{std::sinh}>::Create("sinh"),
       FolderFactory<F, F{std::sqrt}>::Create("sqrt"),

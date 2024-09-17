@@ -3032,10 +3032,10 @@ define amdgpu_kernel void @global_sextload_v32i32_to_v32i64(ptr addrspace(1) %ou
 ; SI-NOHSA-NEXT:    v_mov_b32_e32 v44, v30
 ; SI-NOHSA-NEXT:    v_mov_b32_e32 v46, v31
 ; SI-NOHSA-NEXT:    buffer_store_dword v44, off, s[12:15], 0 ; 4-byte Folded Spill
-; SI-NOHSA-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NOHSA-NEXT:    buffer_store_dword v45, off, s[12:15], 0 offset:4 ; 4-byte Folded Spill
 ; SI-NOHSA-NEXT:    buffer_store_dword v46, off, s[12:15], 0 offset:8 ; 4-byte Folded Spill
 ; SI-NOHSA-NEXT:    buffer_store_dword v47, off, s[12:15], 0 offset:12 ; 4-byte Folded Spill
+; SI-NOHSA-NEXT:    s_waitcnt vmcnt(9)
 ; SI-NOHSA-NEXT:    v_ashrrev_i32_e32 v15, 31, v7
 ; SI-NOHSA-NEXT:    v_ashrrev_i32_e32 v13, 31, v6
 ; SI-NOHSA-NEXT:    s_waitcnt expcnt(0)
@@ -3045,6 +3045,7 @@ define amdgpu_kernel void @global_sextload_v32i32_to_v32i64(ptr addrspace(1) %ou
 ; SI-NOHSA-NEXT:    v_mov_b32_e32 v46, v5
 ; SI-NOHSA-NEXT:    v_mov_b32_e32 v12, v6
 ; SI-NOHSA-NEXT:    v_mov_b32_e32 v14, v7
+; SI-NOHSA-NEXT:    s_waitcnt vmcnt(8)
 ; SI-NOHSA-NEXT:    v_ashrrev_i32_e32 v7, 31, v3
 ; SI-NOHSA-NEXT:    v_ashrrev_i32_e32 v5, 31, v2
 ; SI-NOHSA-NEXT:    v_ashrrev_i32_e32 v51, 31, v1
@@ -3053,6 +3054,7 @@ define amdgpu_kernel void @global_sextload_v32i32_to_v32i64(ptr addrspace(1) %ou
 ; SI-NOHSA-NEXT:    v_mov_b32_e32 v50, v1
 ; SI-NOHSA-NEXT:    v_mov_b32_e32 v4, v2
 ; SI-NOHSA-NEXT:    v_mov_b32_e32 v6, v3
+; SI-NOHSA-NEXT:    s_waitcnt vmcnt(7)
 ; SI-NOHSA-NEXT:    v_ashrrev_i32_e32 v3, 31, v19
 ; SI-NOHSA-NEXT:    v_ashrrev_i32_e32 v1, 31, v18
 ; SI-NOHSA-NEXT:    v_ashrrev_i32_e32 v55, 31, v17
@@ -3061,6 +3063,7 @@ define amdgpu_kernel void @global_sextload_v32i32_to_v32i64(ptr addrspace(1) %ou
 ; SI-NOHSA-NEXT:    v_mov_b32_e32 v54, v17
 ; SI-NOHSA-NEXT:    v_mov_b32_e32 v0, v18
 ; SI-NOHSA-NEXT:    v_mov_b32_e32 v2, v19
+; SI-NOHSA-NEXT:    s_waitcnt vmcnt(6)
 ; SI-NOHSA-NEXT:    v_ashrrev_i32_e32 v19, 31, v23
 ; SI-NOHSA-NEXT:    v_ashrrev_i32_e32 v17, 31, v22
 ; SI-NOHSA-NEXT:    v_ashrrev_i32_e32 v59, 31, v21
@@ -3069,6 +3072,7 @@ define amdgpu_kernel void @global_sextload_v32i32_to_v32i64(ptr addrspace(1) %ou
 ; SI-NOHSA-NEXT:    v_mov_b32_e32 v58, v21
 ; SI-NOHSA-NEXT:    v_mov_b32_e32 v16, v22
 ; SI-NOHSA-NEXT:    v_mov_b32_e32 v18, v23
+; SI-NOHSA-NEXT:    s_waitcnt vmcnt(5)
 ; SI-NOHSA-NEXT:    v_ashrrev_i32_e32 v23, 31, v27
 ; SI-NOHSA-NEXT:    v_ashrrev_i32_e32 v21, 31, v26
 ; SI-NOHSA-NEXT:    v_ashrrev_i32_e32 v63, 31, v25
@@ -3077,6 +3081,7 @@ define amdgpu_kernel void @global_sextload_v32i32_to_v32i64(ptr addrspace(1) %ou
 ; SI-NOHSA-NEXT:    v_mov_b32_e32 v62, v25
 ; SI-NOHSA-NEXT:    v_mov_b32_e32 v20, v26
 ; SI-NOHSA-NEXT:    v_mov_b32_e32 v22, v27
+; SI-NOHSA-NEXT:    s_waitcnt vmcnt(4)
 ; SI-NOHSA-NEXT:    v_ashrrev_i32_e32 v27, 31, v11
 ; SI-NOHSA-NEXT:    v_ashrrev_i32_e32 v25, 31, v10
 ; SI-NOHSA-NEXT:    v_ashrrev_i32_e32 v31, 31, v9
@@ -3091,7 +3096,6 @@ define amdgpu_kernel void @global_sextload_v32i32_to_v32i64(ptr addrspace(1) %ou
 ; SI-NOHSA-NEXT:    buffer_store_dwordx4 v[36:39], off, s[0:3], 0 offset:240
 ; SI-NOHSA-NEXT:    buffer_store_dwordx4 v[32:35], off, s[0:3], 0 offset:192
 ; SI-NOHSA-NEXT:    buffer_load_dword v8, off, s[12:15], 0 ; 4-byte Folded Reload
-; SI-NOHSA-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NOHSA-NEXT:    buffer_load_dword v9, off, s[12:15], 0 offset:4 ; 4-byte Folded Reload
 ; SI-NOHSA-NEXT:    buffer_load_dword v10, off, s[12:15], 0 offset:8 ; 4-byte Folded Reload
 ; SI-NOHSA-NEXT:    s_waitcnt vmcnt(0)
@@ -3614,10 +3618,11 @@ define amdgpu_kernel void @global_sextload_v32i32_to_v32i64(ptr addrspace(1) %ou
 ; GCN-GFX900-HSA-NEXT:    v_mov_b32_e32 v4, v0
 ; GCN-GFX900-HSA-NEXT:    v_mov_b32_e32 v6, v1
 ; GCN-GFX900-HSA-NEXT:    buffer_store_dword v25, off, s[16:19], 0 ; 4-byte Folded Spill
-; GCN-GFX900-HSA-NEXT:    s_waitcnt vmcnt(0)
+; GCN-GFX900-HSA-NEXT:    s_nop 0
 ; GCN-GFX900-HSA-NEXT:    buffer_store_dword v26, off, s[16:19], 0 offset:4 ; 4-byte Folded Spill
 ; GCN-GFX900-HSA-NEXT:    buffer_store_dword v27, off, s[16:19], 0 offset:8 ; 4-byte Folded Spill
 ; GCN-GFX900-HSA-NEXT:    buffer_store_dword v28, off, s[16:19], 0 offset:12 ; 4-byte Folded Spill
+; GCN-GFX900-HSA-NEXT:    s_waitcnt vmcnt(7)
 ; GCN-GFX900-HSA-NEXT:    v_ashrrev_i32_e32 v28, 31, v12
 ; GCN-GFX900-HSA-NEXT:    v_ashrrev_i32_e32 v26, 31, v11
 ; GCN-GFX900-HSA-NEXT:    v_ashrrev_i32_e32 v40, 31, v10
@@ -3626,6 +3631,7 @@ define amdgpu_kernel void @global_sextload_v32i32_to_v32i64(ptr addrspace(1) %ou
 ; GCN-GFX900-HSA-NEXT:    v_mov_b32_e32 v39, v10
 ; GCN-GFX900-HSA-NEXT:    v_mov_b32_e32 v25, v11
 ; GCN-GFX900-HSA-NEXT:    v_mov_b32_e32 v27, v12
+; GCN-GFX900-HSA-NEXT:    s_waitcnt vmcnt(6)
 ; GCN-GFX900-HSA-NEXT:    v_ashrrev_i32_e32 v12, 31, v16
 ; GCN-GFX900-HSA-NEXT:    v_ashrrev_i32_e32 v10, 31, v15
 ; GCN-GFX900-HSA-NEXT:    v_ashrrev_i32_e32 v44, 31, v14
@@ -3634,6 +3640,7 @@ define amdgpu_kernel void @global_sextload_v32i32_to_v32i64(ptr addrspace(1) %ou
 ; GCN-GFX900-HSA-NEXT:    v_mov_b32_e32 v43, v14
 ; GCN-GFX900-HSA-NEXT:    v_mov_b32_e32 v9, v15
 ; GCN-GFX900-HSA-NEXT:    v_mov_b32_e32 v11, v16
+; GCN-GFX900-HSA-NEXT:    s_waitcnt vmcnt(5)
 ; GCN-GFX900-HSA-NEXT:    v_ashrrev_i32_e32 v16, 31, v20
 ; GCN-GFX900-HSA-NEXT:    v_ashrrev_i32_e32 v14, 31, v19
 ; GCN-GFX900-HSA-NEXT:    v_ashrrev_i32_e32 v48, 31, v18
@@ -3643,6 +3650,7 @@ define amdgpu_kernel void @global_sextload_v32i32_to_v32i64(ptr addrspace(1) %ou
 ; GCN-GFX900-HSA-NEXT:    v_mov_b32_e32 v13, v19
 ; GCN-GFX900-HSA-NEXT:    global_load_dwordx4 v[49:52], v8, s[2:3] offset:16
 ; GCN-GFX900-HSA-NEXT:    v_mov_b32_e32 v15, v20
+; GCN-GFX900-HSA-NEXT:    s_waitcnt vmcnt(5)
 ; GCN-GFX900-HSA-NEXT:    v_ashrrev_i32_e32 v20, 31, v24
 ; GCN-GFX900-HSA-NEXT:    v_ashrrev_i32_e32 v18, 31, v23
 ; GCN-GFX900-HSA-NEXT:    v_ashrrev_i32_e32 v56, 31, v22

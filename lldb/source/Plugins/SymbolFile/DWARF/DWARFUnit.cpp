@@ -90,18 +90,18 @@ void DWARFUnit::ExtractUnitDIEIfNeeded() {
   DWARFUnit *dwo_cu = dwo_symbol_file->GetDWOCompileUnitForHash(*m_dwo_id);
 
   if (!dwo_cu) {
-    SetDwoError(Status::createWithFormat(
+    SetDwoError(Status::FromErrorStringWithFormatv(
         "unable to load .dwo file from \"{0}\" due to ID ({1:x16}) mismatch "
         "for skeleton DIE at {2:x8}",
-        dwo_symbol_file->GetObjectFile()->GetFileSpec().GetPath().c_str(),
-        *m_dwo_id, m_first_die.GetOffset()));
+        dwo_symbol_file->GetObjectFile()->GetFileSpec().GetPath(), *m_dwo_id,
+        m_first_die.GetOffset()));
     return; // Can't fetch the compile unit from the dwo file.
   }
 
   // Link the DWO unit to this object, if it hasn't been linked already (this
   // can happen when we have an index, and the DWO unit is parsed first).
   if (!dwo_cu->LinkToSkeletonUnit(*this)) {
-    SetDwoError(Status::createWithFormat(
+    SetDwoError(Status::FromErrorStringWithFormatv(
         "multiple compile units with Dwo ID {0:x16}", *m_dwo_id));
     return;
   }
@@ -109,7 +109,7 @@ void DWARFUnit::ExtractUnitDIEIfNeeded() {
   DWARFBaseDIE dwo_cu_die = dwo_cu->GetUnitDIEOnly();
   if (!dwo_cu_die.IsValid()) {
     // Can't fetch the compile unit DIE from the dwo file.
-    SetDwoError(Status::createWithFormat(
+    SetDwoError(Status::FromErrorStringWithFormatv(
         "unable to extract compile unit DIE from .dwo file for skeleton "
         "DIE at {0:x16}",
         m_first_die.GetOffset()));
@@ -655,7 +655,7 @@ DWARFUnit::GetDIE(dw_offset_t die_offset) {
 
   if (!ContainsDIEOffset(die_offset)) {
     GetSymbolFileDWARF().GetObjectFile()->GetModule()->ReportError(
-        "GetDIE for DIE {0:x16} is outside of its CU {0:x16}", die_offset,
+        "GetDIE for DIE {0:x16} is outside of its CU {1:x16}", die_offset,
         GetOffset());
     return DWARFDIE(); // Not found
   }

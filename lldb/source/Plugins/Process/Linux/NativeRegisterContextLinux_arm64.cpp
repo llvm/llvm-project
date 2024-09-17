@@ -239,16 +239,16 @@ NativeRegisterContextLinux_arm64::ReadRegister(const RegisterInfo *reg_info,
   Status error;
 
   if (!reg_info) {
-    error.SetErrorString("reg_info NULL");
+    error = Status::FromErrorString("reg_info NULL");
     return error;
   }
 
   const uint32_t reg = reg_info->kinds[lldb::eRegisterKindLLDB];
 
   if (reg == LLDB_INVALID_REGNUM)
-    return Status("no lldb regnum for %s", reg_info && reg_info->name
-                                               ? reg_info->name
-                                               : "<unknown register>");
+    return Status::FromErrorStringWithFormat(
+        "no lldb regnum for %s",
+        reg_info && reg_info->name ? reg_info->name : "<unknown register>");
 
   uint8_t *src;
   uint32_t offset = LLDB_INVALID_INDEX32;
@@ -320,7 +320,7 @@ NativeRegisterContextLinux_arm64::ReadRegister(const RegisterInfo *reg_info,
     src = (uint8_t *)GetTLSBuffer() + offset;
   } else if (IsSVE(reg)) {
     if (m_sve_state == SVEState::Disabled || m_sve_state == SVEState::Unknown)
-      return Status("SVE disabled or not supported");
+      return Status::FromErrorString("SVE disabled or not supported");
 
     if (GetRegisterInfo().IsSVERegVG(reg)) {
       sve_vg = GetSVERegVG();
@@ -414,8 +414,9 @@ NativeRegisterContextLinux_arm64::ReadRegister(const RegisterInfo *reg_info,
       src = (uint8_t *)GetSMEPseudoBuffer() + offset;
     }
   } else
-    return Status("failed - register wasn't recognized to be a GPR or an FPR, "
-                  "write strategy unknown");
+    return Status::FromErrorString(
+        "failed - register wasn't recognized to be a GPR or an FPR, "
+        "write strategy unknown");
 
   reg_value.SetFromMemoryData(*reg_info, src, reg_info->byte_size,
                               eByteOrderLittle, error);
@@ -428,14 +429,14 @@ Status NativeRegisterContextLinux_arm64::WriteRegister(
   Status error;
 
   if (!reg_info)
-    return Status("reg_info NULL");
+    return Status::FromErrorString("reg_info NULL");
 
   const uint32_t reg = reg_info->kinds[lldb::eRegisterKindLLDB];
 
   if (reg == LLDB_INVALID_REGNUM)
-    return Status("no lldb regnum for %s", reg_info && reg_info->name
-                                               ? reg_info->name
-                                               : "<unknown register>");
+    return Status::FromErrorStringWithFormat(
+        "no lldb regnum for %s",
+        reg_info && reg_info->name ? reg_info->name : "<unknown register>");
 
   uint8_t *dst;
   uint32_t offset = LLDB_INVALID_INDEX32;
@@ -502,7 +503,7 @@ Status NativeRegisterContextLinux_arm64::WriteRegister(
     }
   } else if (IsSVE(reg)) {
     if (m_sve_state == SVEState::Disabled || m_sve_state == SVEState::Unknown)
-      return Status("SVE disabled or not supported");
+      return Status::FromErrorString("SVE disabled or not supported");
     else {
       // Target has SVE enabled, we will read and cache SVE ptrace data
       error = ReadAllSVE();
@@ -530,7 +531,7 @@ Status NativeRegisterContextLinux_arm64::WriteRegister(
             return error;
         }
 
-        return Status("SVE vector length update failed.");
+        return Status::FromErrorString("SVE vector length update failed.");
       }
 
       // If target supports SVE but currently in FPSIMD mode.
@@ -566,7 +567,8 @@ Status NativeRegisterContextLinux_arm64::WriteRegister(
 
           return WriteAllSVE();
         } else
-          return Status("SVE state change operation not supported");
+          return Status::FromErrorString(
+              "SVE state change operation not supported");
       } else {
         offset = CalculateSVEOffset(reg_info);
         assert(offset < GetSVEBufferSize());
@@ -622,10 +624,11 @@ Status NativeRegisterContextLinux_arm64::WriteRegister(
 
       return WriteZT();
     } else
-      return Status("Writing to SVG or SVCR is not supported.");
+      return Status::FromErrorString(
+          "Writing to SVG or SVCR is not supported.");
   }
 
-  return Status("Failed to write register value");
+  return Status::FromErrorString("Failed to write register value");
 }
 
 enum RegisterSetType : uint32_t {
@@ -849,7 +852,7 @@ Status NativeRegisterContextLinux_arm64::WriteAllRegisterValues(
 
   Status error;
   if (!data_sp) {
-    error.SetErrorStringWithFormat(
+    error = Status::FromErrorStringWithFormat(
         "NativeRegisterContextLinux_arm64::%s invalid data_sp provided",
         __FUNCTION__);
     return error;
@@ -857,17 +860,18 @@ Status NativeRegisterContextLinux_arm64::WriteAllRegisterValues(
 
   const uint8_t *src = data_sp->GetBytes();
   if (src == nullptr) {
-    error.SetErrorStringWithFormat("NativeRegisterContextLinux_arm64::%s "
-                                   "DataBuffer::GetBytes() returned a null "
-                                   "pointer",
-                                   __FUNCTION__);
+    error = Status::FromErrorStringWithFormat(
+        "NativeRegisterContextLinux_arm64::%s "
+        "DataBuffer::GetBytes() returned a null "
+        "pointer",
+        __FUNCTION__);
     return error;
   }
 
   uint64_t reg_data_min_size =
       GetGPRBufferSize() + GetFPRSize() + 2 * (sizeof(RegisterSetType));
   if (data_sp->GetByteSize() < reg_data_min_size) {
-    error.SetErrorStringWithFormat(
+    error = Status::FromErrorStringWithFormat(
         "NativeRegisterContextLinux_arm64::%s data_sp contained insufficient "
         "register data bytes, expected at least %" PRIu64 ", actual %" PRIu64,
         __FUNCTION__, reg_data_min_size, data_sp->GetByteSize());
@@ -896,9 +900,10 @@ Status NativeRegisterContextLinux_arm64::WriteAllRegisterValues(
       ::memcpy(GetSVEHeader(), src, GetSVEHeaderSize());
       if (!sve::vl_valid(m_sve_header.vl)) {
         m_sve_header_is_valid = false;
-        error.SetErrorStringWithFormat("NativeRegisterContextLinux_arm64::%s "
-                                       "Invalid SVE header in data_sp",
-                                       __FUNCTION__);
+        error = Status::FromErrorStringWithFormat(
+            "NativeRegisterContextLinux_arm64::%s "
+            "Invalid SVE header in data_sp",
+            __FUNCTION__);
         return error;
       }
       m_sve_header_is_valid = true;

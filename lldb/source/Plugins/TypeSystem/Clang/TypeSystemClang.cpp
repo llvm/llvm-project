@@ -4241,6 +4241,9 @@ TypeSystemClang::GetTypeClass(lldb::opaque_compiler_type_t type) {
   // We don't handle pack indexing yet
   case clang::Type::PackIndexing:
     break;
+
+  case clang::Type::HLSLAttributedResource:
+    break;
   }
   // We don't know hot to display this type...
   return lldb::eTypeClassOther;
@@ -5148,6 +5151,9 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type,
   // We don't handle pack indexing yet
   case clang::Type::PackIndexing:
     break;
+
+  case clang::Type::HLSLAttributedResource:
+    break;
   }
   count = 0;
   return lldb::eEncodingInvalid;
@@ -5308,6 +5314,9 @@ lldb::Format TypeSystemClang::GetFormat(lldb::opaque_compiler_type_t type) {
 
   // We don't handle pack indexing yet
   case clang::Type::PackIndexing:
+    break;
+
+  case clang::Type::HLSLAttributedResource:
     break;
   }
   // We don't know hot to display this type...

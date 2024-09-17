@@ -241,7 +241,7 @@ TEST_F(IRBuilderTest, CreateStepVector) {
   CallInst *Call = cast<CallInst>(StepVec);
   FunctionType *FTy = Call->getFunctionType();
   EXPECT_EQ(FTy->getReturnType(), DstVecTy);
-  EXPECT_EQ(Call->getIntrinsicID(), Intrinsic::experimental_stepvector);
+  EXPECT_EQ(Call->getIntrinsicID(), Intrinsic::stepvector);
 }
 
 TEST_F(IRBuilderTest, CreateStepVectorI3) {
@@ -260,7 +260,7 @@ TEST_F(IRBuilderTest, CreateStepVectorI3) {
   CallInst *Call = cast<CallInst>(Trunc->getOperand(0));
   FunctionType *FTy = Call->getFunctionType();
   EXPECT_EQ(FTy->getReturnType(), VecI8Ty);
-  EXPECT_EQ(Call->getIntrinsicID(), Intrinsic::experimental_stepvector);
+  EXPECT_EQ(Call->getIntrinsicID(), Intrinsic::stepvector);
 }
 
 TEST_F(IRBuilderTest, ConstrainedFP) {

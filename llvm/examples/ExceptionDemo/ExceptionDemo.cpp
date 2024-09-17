@@ -879,7 +879,6 @@ void generateStringPrint(llvm::LLVMContext &context,
   builder.CreateCall(printFunct, cast);
 }
 
-
 /// Generates code to print given runtime integer according to constant
 /// string format, and a given print function.
 /// @param context llvm context
@@ -887,7 +886,7 @@ void generateStringPrint(llvm::LLVMContext &context,
 /// @param builder builder instance
 /// @param printFunct function used to "print" integer
 /// @param toPrint string to print
-/// @param format printf like formating string for print
+/// @param format printf like formatting string for print
 /// @param useGlobal A value of true (default) indicates a GlobalValue is
 ///        generated, and is used to hold the constant string. A value of
 ///        false indicates that the constant string will be stored on the

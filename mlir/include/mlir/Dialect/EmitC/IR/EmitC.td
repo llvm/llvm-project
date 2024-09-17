@@ -730,7 +730,7 @@ def EmitC_ReturnOp : EmitC_Op<"return", [Pure, HasParent<"FuncOp">,
 }
 
 def EmitC_IncludeOp
-    : EmitC_Op<"include", [HasParent<"ModuleOp">]> {
+    : EmitC_Op<"include", []> {
   let summary = "Include operation";
   let description = [{
     The `emitc.include` operation allows to define a source file inclusion via the

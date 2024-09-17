@@ -116,8 +116,8 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertBoxedSequenceType(
   unsigned offset = dimsOffset;
   const unsigned indexSize = dimsSize / 3;
   for ([[maybe_unused]] auto _ : seqTy.getShape()) {
-    // For each dimension, find the offset of count and lower bound in the
-    // descriptor and generate the dwarf expression to extract it.
+    // For each dimension, find the offset of count, lower bound and stride in
+    // the descriptor and generate the dwarf expression to extract it.
     // FIXME: If `indexSize` happens to be bigger than address size on the
     // system then we may have to change 'DW_OP_deref' here.
     addOp(llvm::dwarf::DW_OP_push_object_address, {});
@@ -139,15 +139,23 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertBoxedSequenceType(
         mlir::LLVM::DIExpressionAttr::get(context, ops);
     ops.clear();
 
+    addOp(llvm::dwarf::DW_OP_push_object_address, {});
+    addOp(llvm::dwarf::DW_OP_plus_uconst,
+          {offset + (indexSize * kDimStridePos)});
+    addOp(llvm::dwarf::DW_OP_deref, {});
+    // stride[i] = *(base_addr + offset + (indexSize * kDimStridePos))
+    mlir::LLVM::DIExpressionAttr strideAttr =
+        mlir::LLVM::DIExpressionAttr::get(context, ops);
+    ops.clear();
+
     offset += dimsSize;
     mlir::LLVM::DISubrangeAttr subrangeTy = mlir::LLVM::DISubrangeAttr::get(
-        context, countAttr, lowerAttr, /*upperBound=*/nullptr,
-        /*stride=*/nullptr);
+        context, countAttr, lowerAttr, /*upperBound=*/nullptr, strideAttr);
     elements.push_back(subrangeTy);
   }
   return mlir::LLVM::DICompositeTypeAttr::get(
-      context, llvm::dwarf::DW_TAG_array_type, /*recursive_id=*/{},
-      /*name=*/nullptr, /*file=*/nullptr, /*line=*/0, /*scope=*/nullptr, elemTy,
+      context, llvm::dwarf::DW_TAG_array_type, /*name=*/nullptr,
+      /*file=*/nullptr, /*line=*/0, /*scope=*/nullptr, elemTy,
       mlir::LLVM::DIFlags::Zero, /*sizeInBits=*/0, /*alignInBits=*/0, elements,
       dataLocation, /*rank=*/nullptr, allocated, associated);
 }
@@ -188,7 +196,7 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertRecordType(
   }
 
   return mlir::LLVM::DICompositeTypeAttr::get(
-      context, llvm::dwarf::DW_TAG_structure_type, /*recursive_id=*/{},
+      context, llvm::dwarf::DW_TAG_structure_type,
       mlir::StringAttr::get(context, result.second.name), fileAttr, line, scope,
       /*baseType=*/nullptr, mlir::LLVM::DIFlags::Zero, offset * 8,
       /*alignInBits=*/0, elements, /*dataLocation=*/nullptr, /*rank=*/nullptr,
@@ -205,23 +213,26 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertSequenceType(
       convertType(seqTy.getEleTy(), fileAttr, scope, declOp);
 
   unsigned index = 0;
+  auto intTy = mlir::IntegerType::get(context, 64);
   for (fir::SequenceType::Extent dim : seqTy.getShape()) {
+    int64_t shift = 1;
+    if (declOp && declOp.getShift().size() > index) {
+      if (std::optional<std::int64_t> optint =
+              getIntIfConstant(declOp.getShift()[index]))
+        shift = *optint;
+    }
     if (dim == seqTy.getUnknownExtent()) {
+      mlir::IntegerAttr lowerAttr = nullptr;
+      if (declOp && declOp.getShift().size() > index)
+        lowerAttr = mlir::IntegerAttr::get(intTy, llvm::APInt(64, shift));
       // FIXME: This path is taken for assumed size arrays but also for arrays
       // with non constant extent. For the latter case, the DISubrangeAttr
       // should point to a variable which will have the extent at runtime.
       auto subrangeTy = mlir::LLVM::DISubrangeAttr::get(
-          context, /*count=*/nullptr, /*lowerBound=*/nullptr,
-          /*upperBound*/ nullptr, /*stride*/ nullptr);
+          context, /*count=*/nullptr, lowerAttr, /*upperBound*/ nullptr,
+          /*stride*/ nullptr);
       elements.push_back(subrangeTy);
     } else {
-      auto intTy = mlir::IntegerType::get(context, 64);
-      int64_t shift = 1;
-      if (declOp && declOp.getShift().size() > index) {
-        if (std::optional<std::int64_t> optint =
-                getIntIfConstant(declOp.getShift()[index]))
-          shift = *optint;
-      }
       auto countAttr = mlir::IntegerAttr::get(intTy, llvm::APInt(64, dim));
       auto lowerAttr = mlir::IntegerAttr::get(intTy, llvm::APInt(64, shift));
       auto subrangeTy = mlir::LLVM::DISubrangeAttr::get(
@@ -236,8 +247,8 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertSequenceType(
   // have been set to some valid default values.
 
   return mlir::LLVM::DICompositeTypeAttr::get(
-      context, llvm::dwarf::DW_TAG_array_type, /*recursive_id=*/{},
-      /*name=*/nullptr, /*file=*/nullptr, /*line=*/0, /*scope=*/nullptr, elemTy,
+      context, llvm::dwarf::DW_TAG_array_type, /*name=*/nullptr,
+      /*file=*/nullptr, /*line=*/0, /*scope=*/nullptr, elemTy,
       mlir::LLVM::DIFlags::Zero, /*sizeInBits=*/0, /*alignInBits=*/0, elements,
       /*dataLocation=*/nullptr, /*rank=*/nullptr, /*allocated=*/nullptr,
       /*associated=*/nullptr);
