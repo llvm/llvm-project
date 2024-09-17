@@ -23,7 +23,8 @@ StructLayout::StructLayout(mlir::cir::StructType ST, const CIRDataLayout &DL)
 
     assert(!::cir::MissingFeatures::recordDeclIsPacked() &&
            "Cannot identify packed structs");
-    const llvm::Align TyAlign = DL.getABITypeAlign(Ty);
+    const llvm::Align TyAlign =
+        ST.getPacked() ? llvm::Align(1) : DL.getABITypeAlign(Ty);
 
     // Add padding if necessary to align the data element properly.
     // Currently the only structure with scalable size will be the homogeneous
@@ -170,6 +171,10 @@ llvm::Align CIRDataLayout::getAlignment(mlir::Type Ty, bool abiOrPref) const {
     // Packed structure types always have an ABI alignment of one.
     if (::cir::MissingFeatures::recordDeclIsPacked() && abiOrPref)
       llvm_unreachable("NYI");
+
+    auto stTy = llvm::dyn_cast<mlir::cir::StructType>(Ty);
+    if (stTy && stTy.getPacked() && abiOrPref)
+      return llvm::Align(1);
 
     // Get the layout annotation... which is lazily created on demand.
     const StructLayout *Layout =

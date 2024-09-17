@@ -69,6 +69,8 @@ struct CIRRecordLowering final {
 
   /// Determines if we need a packed llvm struct.
   void determinePacked(bool NVBaseType);
+  /// Inserts padding everywhere it's needed.
+  void insertPadding();
 
   void computeVolatileBitfields();
   void accumulateBases();
@@ -294,6 +296,7 @@ void CIRRecordLowering::lower(bool nonVirtualBaseType) {
 
   members.push_back(StorageInfo(Size, getUIntNType(8)));
   determinePacked(nonVirtualBaseType);
+  insertPadding();
   members.pop_back();
 
   fillOutputFields();
@@ -657,6 +660,33 @@ void CIRRecordLowering::determinePacked(bool NVBaseType) {
     members.back().data = getUIntNType(astContext.toBits(Alignment));
 }
 
+void CIRRecordLowering::insertPadding() {
+  std::vector<std::pair<CharUnits, CharUnits>> Padding;
+  CharUnits Size = CharUnits::Zero();
+  for (std::vector<MemberInfo>::const_iterator Member = members.begin(),
+                                               MemberEnd = members.end();
+       Member != MemberEnd; ++Member) {
+    if (!Member->data)
+      continue;
+    CharUnits Offset = Member->offset;
+    assert(Offset >= Size);
+    // Insert padding if we need to.
+    if (Offset !=
+        Size.alignTo(isPacked ? CharUnits::One() : getAlignment(Member->data)))
+      Padding.push_back(std::make_pair(Size, Offset - Size));
+    Size = Offset + getSize(Member->data);
+  }
+  if (Padding.empty())
+    return;
+  // Add the padding to the Members list and sort it.
+  for (std::vector<std::pair<CharUnits, CharUnits>>::const_iterator
+           Pad = Padding.begin(),
+           PadEnd = Padding.end();
+       Pad != PadEnd; ++Pad)
+    members.push_back(StorageInfo(Pad->first, getByteArrayType(Pad->second)));
+  llvm::stable_sort(members);
+}
+
 std::unique_ptr<CIRGenRecordLayout>
 CIRGenTypes::computeRecordLayout(const RecordDecl *D,
                                  mlir::cir::StructType *Ty) {
@@ -674,9 +704,8 @@ CIRGenTypes::computeRecordLayout(const RecordDecl *D,
       CIRRecordLowering baseBuilder(*this, D, /*Packed=*/builder.isPacked);
       baseBuilder.lower(/*NonVirtualBaseType=*/true);
       auto baseIdentifier = getRecordTypeName(D, ".base");
-      BaseTy =
-          Builder.getCompleteStructTy(baseBuilder.fieldTypes, baseIdentifier,
-                                      /*packed=*/false, D);
+      BaseTy = Builder.getCompleteStructTy(
+          baseBuilder.fieldTypes, baseIdentifier, baseBuilder.isPacked, D);
       // TODO(cir): add something like addRecordTypeName
 
       // BaseTy and Ty must agree on their packedness for getCIRFieldNo to work
