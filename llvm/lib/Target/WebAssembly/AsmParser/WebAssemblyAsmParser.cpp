@@ -70,9 +70,9 @@ struct WebAssemblyOperand : public MCParsedAsmOperand {
   };
 
   struct CaLOpElem {
-    int64_t Opcode;
+    uint8_t Opcode;
     const MCExpr *Tag;
-    int64_t Dest;
+    unsigned Dest;
   };
 
   struct CaLOp {
@@ -842,14 +842,14 @@ public:
       auto CatchStr = expectIdent();
       if (CatchStr.empty())
         return true;
-      int64_t CatchOpcode =
-          StringSwitch<int64_t>(CatchStr)
+      uint8_t CatchOpcode =
+          StringSwitch<uint8_t>(CatchStr)
               .Case("catch", wasm::WASM_OPCODE_CATCH)
               .Case("catch_ref", wasm::WASM_OPCODE_CATCH_REF)
               .Case("catch_all", wasm::WASM_OPCODE_CATCH_ALL)
               .Case("catch_all_ref", wasm::WASM_OPCODE_CATCH_ALL_REF)
-              .Default(-1);
-      if (CatchOpcode == -1)
+              .Default(0xff);
+      if (CatchOpcode == 0xff)
         return error(
             "Expected catch/catch_ref/catch_all/catch_all_ref, instead got: " +
             CatchStr);
@@ -864,7 +864,7 @@ public:
       auto &DestTok = Lexer.getTok();
       if (DestTok.isNot(AsmToken::Integer))
         return error("Expected integer constant, instead got: ", DestTok);
-      int64_t Dest = DestTok.getIntVal();
+      unsigned Dest = DestTok.getIntVal();
       Parser.Lex();
 
       EndLoc = Lexer.getTok().getEndLoc();
