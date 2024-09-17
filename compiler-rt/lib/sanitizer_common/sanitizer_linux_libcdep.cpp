@@ -259,26 +259,26 @@ static uptr ThreadDescriptorSizeFallback() {
     if (SANITIZER_X32)
       return 1728;  // Assume only one particular version for x32.
     // For ARM sizeof(struct pthread) changed in Glibc 2.23.
-    else if (SANITIZER_ARM)
+    if (SANITIZER_ARM)
       return minor <= 22 ? 1120 : 1216;
-    else if (minor <= 3)
+    if (minor <= 3)
       return FIRST_32_SECOND_64(1104, 1696);
-    else if (minor == 4)
+    if (minor == 4)
       return FIRST_32_SECOND_64(1120, 1728);
-    else if (minor == 5)
+    if (minor == 5)
       return FIRST_32_SECOND_64(1136, 1728);
-    else if (minor <= 9)
+    if (minor <= 9)
       return FIRST_32_SECOND_64(1136, 1712);
-    else if (minor == 10)
+    if (minor == 10)
       return FIRST_32_SECOND_64(1168, 1776);
-    else if (minor == 11 || (minor == 12 && patch == 1))
+    if (minor == 11 || (minor == 12 && patch == 1))
       return FIRST_32_SECOND_64(1168, 2288);
-    else if (minor <= 14)
+    if (minor <= 14)
       return FIRST_32_SECOND_64(1168, 2304);
-    else if (minor < 32)  // Unknown version
+    if (minor < 32)  // Unknown version
       return FIRST_32_SECOND_64(1216, 2304);
-    else  // minor == 32
-      return FIRST_32_SECOND_64(1344, 2496);
+    // minor == 32
+    return FIRST_32_SECOND_64(1344, 2496);
   }
   return 0;
 #    elif defined(__s390__) || defined(__sparc__)
@@ -302,10 +302,9 @@ static uptr ThreadDescriptorSizeFallback() {
     // glibc version
     if (minor <= 28)  // WARNING: the highest tested version is 2.29
       return 1772;    // no guarantees for this one
-    else if (minor <= 31)
+    if (minor <= 31)
       return 1772;  // tested against glibc 2.29, 2.31
-    else
-      return 1936;  // tested against glibc 2.32
+    return 1936;    // tested against glibc 2.32
   }
   return 0;
 #    elif defined(__aarch64__)
