@@ -7867,7 +7867,7 @@ static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I, bool PtrValu
   if (C->isNullValue() || isa<UndefValue>(C)) {
     // Only look at the first use we can handle, avoid hurting compile time with
     // long uselists
-    auto FindUse = llvm::find_if(I->users(), [C](auto *U) {
+    auto FindUse = llvm::find_if(I->users(), [](auto *U) {
       auto *Use = cast<Instruction>(U);
       // Change this list when we want to add new instructions.
       switch (Use->getOpcode()) {
@@ -7881,7 +7881,6 @@ static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I, bool PtrValu
       case Instruction::Call:
       case Instruction::CallBr:
       case Instruction::Invoke:
-        return true;
       case Instruction::UDiv:
       case Instruction::URem:
         // Note: signed div/rem of INT_MIN / -1 is also immediate UB, not
@@ -7889,7 +7888,7 @@ static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I, bool PtrValu
         // logic is.
       case Instruction::SDiv:
       case Instruction::SRem:
-        return C->isNullValue();
+        return true;
       }
     });
     if (FindUse == I->user_end())
