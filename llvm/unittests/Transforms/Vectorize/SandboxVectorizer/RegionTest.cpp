@@ -78,6 +78,4 @@ define i8 @foo(i8 %v0, i8 %v1) {
   Other.add(T1);
   EXPECT_EQ(Rgn, Other);
 #endif
-
 }
-
