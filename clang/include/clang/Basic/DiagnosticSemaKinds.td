@@ -6800,6 +6800,12 @@ def warn_arc_lifetime_result_type : Warning<
   "ARC %select{unused|__unsafe_unretained|__strong|__weak|__autoreleasing}0 "
   "lifetime qualifier on return type is ignored">,
   InGroup<IgnoredQualifiers>;
+def warn_excess_precision_not_supported : Warning<
+  "excess precision is requested but the target does not support excess "
+  "precision which may result in observable differences in complex division "
+  "behavior%select{|, additional uses where the requested higher precision "
+  "cannot be honored were found but not diagnosed}0">,
+  InGroup<DiagGroup<"higher-precision-for-complex-division">>;
 
 let CategoryName = "ARC Retain Cycle" in {
 

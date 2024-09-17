@@ -7957,6 +7957,10 @@ public:
   /// Do an explicit extend of the given block pointer if we're in ARC.
   void maybeExtendBlockObject(ExprResult &E);
 
+  std::vector<std::pair<QualType, unsigned>> ExcessPrecisionNotSatisfied;
+  SourceLocation LocationOfExcessPrecisionNotSatisfied;
+  void DiagnosePrecisionLossInComplexDivision();
+
 private:
   static BinaryOperatorKind ConvertTokenKindToBinaryOpcode(tok::TokenKind Kind);
 
