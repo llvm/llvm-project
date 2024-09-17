@@ -8642,8 +8642,7 @@ const SCEV *ScalarEvolution::BackedgeTakenInfo::getConstantMax(
     if (!ENT.hasAlwaysTruePredicate()) {
       if (!Predicates)
         return SE->getCouldNotCompute();
-      else
-        Predicates->append(ENT.Predicates.begin(), ENT.Predicates.end());
+      append_range(*Predicates, ENT.Predicates);
     }
 
   assert((isa<SCEVCouldNotCompute>(getConstantMax()) ||
@@ -13762,8 +13761,26 @@ static void PrintLoopInfo(raw_ostream &OS, ScalarEvolution *SE,
     for (const auto *P : Preds)
       P->print(OS, 4);
   }
-
   Preds.clear();
+
+  auto *PredConstantMax =
+      SE->getPredicatedConstantMaxBackedgeTakenCount(L, Preds);
+  if (PredConstantMax != ConstantBTC || !Preds.empty()) {
+    OS << "Loop ";
+    L->getHeader()->printAsOperand(OS, /*PrintType=*/false);
+    OS << ": ";
+    if (!isa<SCEVCouldNotCompute>(PredConstantMax)) {
+      OS << "Predicated constant max backedge-taken count is ";
+      PrintSCEVWithTypeHint(OS, PredConstantMax);
+    } else
+      OS << "Unpredictable predicated constant max backedge-taken count.";
+    OS << "\n";
+    OS << " Predicates:\n";
+    for (const auto *P : Preds)
+      P->print(OS, 4);
+  }
+  Preds.clear();
+
   auto *PredSymbolicMax =
       SE->getPredicatedSymbolicMaxBackedgeTakenCount(L, Preds);
   if (SymbolicBTC != PredSymbolicMax) {
