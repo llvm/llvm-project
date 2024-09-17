@@ -60,7 +60,7 @@ LIBC_INLINE void write_all_to_stderr(const cpp::string_view (&msgs)[N]) {
     if (delta < 0)
       return;
 
-    size_t udelta = delta;
+    auto udelta = static_cast<size_t>(delta);
     written += udelta;
     for (size_t i = 0; i < N; ++i) {
       if (udelta == 0)
