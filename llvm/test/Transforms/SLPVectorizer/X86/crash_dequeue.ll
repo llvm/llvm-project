@@ -10,8 +10,10 @@ define void @_ZSt6uniqueISt15_Deque_iteratorIdRdPdEET_S4_S4_(ptr %__first, ptr n
 ; CHECK-LABEL: @_ZSt6uniqueISt15_Deque_iteratorIdRdPdEET_S4_S4_(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__FIRST:%.*]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x ptr>, ptr [[__LAST:%.*]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x ptr> [[TMP1]], ptr [[TMP0]], i32 0
+; CHECK-NEXT:    [[_M_FIRST3_I_I:%.*]] = getelementptr inbounds %"struct.std::_Deque_iterator.4.157.174.208.259.276.344.731", ptr [[__FIRST]], i64 0, i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[__LAST:%.*]], align 8
+; CHECK-NEXT:    [[_M_FIRST3_I_I83:%.*]] = getelementptr inbounds %"struct.std::_Deque_iterator.4.157.174.208.259.276.344.731", ptr [[__LAST]], i64 0, i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[_M_FIRST3_I_I83]], align 8
 ; CHECK-NEXT:    br i1 undef, label [[_ZST13ADJACENT_FINDIST15_DEQUE_ITERATORIDRDPDEET_S4_S4__EXIT:%.*]], label [[WHILE_COND_I_PREHEADER:%.*]]
 ; CHECK:       while.cond.i.preheader:
 ; CHECK-NEXT:    br label [[WHILE_COND_I:%.*]]
@@ -20,8 +22,10 @@ define void @_ZSt6uniqueISt15_Deque_iteratorIdRdPdEET_S4_S4_(ptr %__first, ptr n
 ; CHECK:       while.body.i:
 ; CHECK-NEXT:    br i1 undef, label [[_ZST13ADJACENT_FINDIST15_DEQUE_ITERATORIDRDPDEET_S4_S4__EXIT]], label [[WHILE_COND_I]]
 ; CHECK:       _ZSt13adjacent_findISt15_Deque_iteratorIdRdPdEET_S4_S4_.exit:
-; CHECK-NEXT:    [[TMP3:%.*]] = phi <2 x ptr> [ [[TMP2]], [[ENTRY:%.*]] ], [ [[TMP1]], [[WHILE_COND_I]] ], [ undef, [[WHILE_BODY_I]] ]
-; CHECK-NEXT:    store <2 x ptr> [[TMP3]], ptr [[__FIRST]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = phi ptr [ [[TMP2]], [[ENTRY:%.*]] ], [ [[TMP2]], [[WHILE_COND_I]] ], [ undef, [[WHILE_BODY_I]] ]
+; CHECK-NEXT:    [[TMP4:%.*]] = phi ptr [ [[TMP0]], [[ENTRY]] ], [ [[TMP1]], [[WHILE_COND_I]] ], [ undef, [[WHILE_BODY_I]] ]
+; CHECK-NEXT:    store ptr [[TMP4]], ptr [[__FIRST]], align 8
+; CHECK-NEXT:    store ptr [[TMP3]], ptr [[_M_FIRST3_I_I]], align 8
 ; CHECK-NEXT:    br i1 undef, label [[IF_THEN_I55:%.*]], label [[WHILE_COND:%.*]]
 ; CHECK:       if.then.i55:
 ; CHECK-NEXT:    br label [[WHILE_COND]]
