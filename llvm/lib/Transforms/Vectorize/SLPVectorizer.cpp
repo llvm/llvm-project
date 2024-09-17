@@ -2883,7 +2883,8 @@ private:
   /// Create a new vector from a list of scalar values.  Produces a sequence
   /// which exploits values reused across lanes, and arranges the inserts
   /// for ease of later optimization.
-  Value *createBuildVector(const TreeEntry *E, Type *ScalarTy);
+  Value *createBuildVector(const TreeEntry *E, Type *ScalarTy,
+                           bool PostponedPHIs);
 
   /// Returns the instruction in the bundle, which can be used as a base point
   /// for scheduling. Usually it is the last instruction in the bundle, except
@@ -7481,7 +7482,16 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
                 PrevMaxBW),
             std::min<unsigned>(DL->getTypeSizeInBits(VL0->getType()),
                                PrevMinBW));
-        ExtraBitWidthNodes.insert(VectorizableTree.size() + 1);
+      }
+      TreeEntry *TE = newTreeEntry(VL, Bundle /*vectorized*/, S, UserTreeIdx,
+                                   ReuseShuffleIndices);
+      LLVM_DEBUG(dbgs() << "SLP: added a vector of casts.\n");
+
+      TE->setOperandsInOrder();
+      for (unsigned I : seq<unsigned>(0, VL0->getNumOperands()))
+        buildTree_rec(TE->getOperand(I), Depth + 1, {TE, I});
+      if (ShuffleOrOp == Instruction::Trunc) {
+        ExtraBitWidthNodes.insert(getOperandEntry(TE, 0)->Idx);
       } else if (ShuffleOrOp == Instruction::SIToFP ||
                  ShuffleOrOp == Instruction::UIToFP) {
         unsigned NumSignBits =
@@ -7492,15 +7502,8 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
         }
         if (NumSignBits * 2 >=
             DL->getTypeSizeInBits(VL0->getOperand(0)->getType()))
-          ExtraBitWidthNodes.insert(VectorizableTree.size() + 1);
+          ExtraBitWidthNodes.insert(getOperandEntry(TE, 0)->Idx);
       }
-      TreeEntry *TE = newTreeEntry(VL, Bundle /*vectorized*/, S, UserTreeIdx,
-                                   ReuseShuffleIndices);
-      LLVM_DEBUG(dbgs() << "SLP: added a vector of casts.\n");
-
-      TE->setOperandsInOrder();
-      for (unsigned I : seq<unsigned>(0, VL0->getNumOperands()))
-        buildTree_rec(TE->getOperand(I), Depth + 1, {TE, I});
       return;
     }
     case Instruction::ICmp:
@@ -13196,9 +13199,10 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
   return Res;
 }
 
-Value *BoUpSLP::createBuildVector(const TreeEntry *E, Type *ScalarTy) {
+Value *BoUpSLP::createBuildVector(const TreeEntry *E, Type *ScalarTy,
+                                  bool PostponedPHIs) {
   for (auto [EIdx, _] : E->CombinedEntriesWithIndices)
-    (void)vectorizeTree(VectorizableTree[EIdx].get(), /*PostponedPHIs=*/false);
+    (void)vectorizeTree(VectorizableTree[EIdx].get(), PostponedPHIs);
   return processBuildVector<ShuffleInstructionBuilder, Value *>(E, ScalarTy,
                                                                 Builder, *this);
 }
@@ -13229,7 +13233,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
     // Set insert point for non-reduction initial nodes.
     if (E->getMainOp() && E->Idx == 0 && !UserIgnoreList)
       setInsertPointAfterBundle(E);
-    Value *Vec = createBuildVector(E, ScalarTy);
+    Value *Vec = createBuildVector(E, ScalarTy, PostponedPHIs);
     E->VectorizedValue = Vec;
     return Vec;
   }

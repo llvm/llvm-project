@@ -224,11 +224,9 @@ VPBasicBlock::iterator VPBasicBlock::getFirstNonPhi() {
 
 VPTransformState::VPTransformState(ElementCount VF, unsigned UF, LoopInfo *LI,
                                    DominatorTree *DT, IRBuilderBase &Builder,
-                                   InnerLoopVectorizer *ILV, VPlan *Plan,
-                                   LLVMContext &Ctx)
+                                   InnerLoopVectorizer *ILV, VPlan *Plan)
     : VF(VF), UF(UF), CFG(DT), LI(LI), Builder(Builder), ILV(ILV), Plan(Plan),
-      LVer(nullptr),
-      TypeAnalysis(Plan->getCanonicalIV()->getScalarType(), Ctx) {}
+      LVer(nullptr), TypeAnalysis(Plan->getCanonicalIV()->getScalarType()) {}
 
 Value *VPTransformState::get(VPValue *Def, const VPIteration &Instance) {
   if (Def->isLiveIn())
