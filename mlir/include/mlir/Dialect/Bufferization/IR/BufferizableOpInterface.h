@@ -9,6 +9,7 @@
 #ifndef MLIR_DIALECT_BUFFERIZATION_IR_BUFFERIZABLEOPINTERFACE_H_
 #define MLIR_DIALECT_BUFFERIZATION_IR_BUFFERIZABLEOPINTERFACE_H_
 
+#include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Support/LLVM.h"
@@ -262,7 +263,7 @@ struct BufferizationOptions {
   /// Parameters: Value, memory space, func op, bufferization options
   using FunctionArgTypeConverterFn =
       std::function<BaseMemRefType(TensorType, Attribute memorySpace,
-                                   func::FuncOp, const BufferizationOptions &)>;
+                                   FunctionOpInterface, const BufferizationOptions &)>;
   /// Tensor -> MemRef type converter.
   /// Parameters: Value, memory space, bufferization options
   using UnknownTypeConverterFn = std::function<BaseMemRefType(

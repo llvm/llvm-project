@@ -18,6 +18,7 @@
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
+#include "mlir/Interfaces/FunctionInterfaces.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/Debug.h"
 
@@ -314,7 +315,7 @@ namespace {
 /// Default function arg type converter: Use a fully dynamic layout map.
 BaseMemRefType
 defaultFunctionArgTypeConverter(TensorType type, Attribute memorySpace,
-                                func::FuncOp funcOp,
+                                FunctionOpInterface funcOp,
                                 const BufferizationOptions &options) {
   return getMemRefTypeWithFullyDynamicLayout(type, memorySpace);
 }
@@ -361,7 +362,7 @@ BufferizationOptions::dynCastBufferizableOp(Value value) const {
 void BufferizationOptions::setFunctionBoundaryTypeConversion(
     LayoutMapOption layoutMapOption) {
   functionArgTypeConverterFn = [=](TensorType tensorType, Attribute memorySpace,
-                                   func::FuncOp funcOp,
+                                   FunctionOpInterface funcOp,
                                    const BufferizationOptions &options) {
     if (layoutMapOption == LayoutMapOption::IdentityLayoutMap)
       return bufferization::getMemRefTypeWithStaticIdentityLayout(tensorType,
