@@ -52,19 +52,19 @@ void f(A &a) {
   // CIR: %[[a:.*]] = cir.load %1 : !cir.ptr<!cir.ptr<!ty_A>>, !cir.ptr<!ty_A>
   // CIR: {{.*}} = cir.get_member %[[a]][0] {name = "a"} : !cir.ptr<!ty_A> -> !cir.ptr<!ty_B>
   // CIR: %[[a:.*]] = cir.load %1 : !cir.ptr<!cir.ptr<!ty_A>>, !cir.ptr<!ty_A>
-  // CIR: {{.*}} = cir.get_member %[[a]][1] {name = "b"} : !cir.ptr<!ty_A> -> !cir.ptr<!s32i>
+  // CIR: {{.*}} = cir.get_member %[[a]][2] {name = "b"} : !cir.ptr<!ty_A> -> !cir.ptr<!s32i>
   // CIR: %[[a:.*]] = cir.load %1 : !cir.ptr<!cir.ptr<!ty_A>>, !cir.ptr<!ty_A>
-  // CIR: {{.*}} = cir.get_member %[[a]][2] {name = "c"} : !cir.ptr<!ty_A> -> !cir.ptr<!s8i>
+  // CIR: {{.*}} = cir.get_member %[[a]][3] {name = "c"} : !cir.ptr<!ty_A> -> !cir.ptr<!s8i>
   // LLVM: {{.*}} = getelementptr %struct.A, ptr {{.*}}, i32 0, i32 0
-  // LLVM: {{.*}} = getelementptr %struct.A, ptr {{.*}}, i32 0, i32 1
   // LLVM: {{.*}} = getelementptr %struct.A, ptr {{.*}}, i32 0, i32 2
+  // LLVM: {{.*}} = getelementptr %struct.A, ptr {{.*}}, i32 0, i32 3
 
   auto [x2, y2, z2] = a;
   (x2, y2, z2);
   // CIR: cir.call @_ZN1AC1ERKS_(%2, {{.*}}) : (!cir.ptr<!ty_A>, !cir.ptr<!ty_A>) -> ()
   // CIR: {{.*}} = cir.get_member %2[0] {name = "a"} : !cir.ptr<!ty_A> -> !cir.ptr<!ty_B>
-  // CIR: {{.*}} = cir.get_member %2[1] {name = "b"} : !cir.ptr<!ty_A> -> !cir.ptr<!s32i>
-  // CIR: {{.*}} = cir.get_member %2[2] {name = "c"} : !cir.ptr<!ty_A> -> !cir.ptr<!s8i>
+  // CIR: {{.*}} = cir.get_member %2[2] {name = "b"} : !cir.ptr<!ty_A> -> !cir.ptr<!s32i>
+  // CIR: {{.*}} = cir.get_member %2[3] {name = "c"} : !cir.ptr<!ty_A> -> !cir.ptr<!s8i>
 
   // for the rest, just expect the codegen does't crash
   auto &&[x3, y3, z3] = a;
