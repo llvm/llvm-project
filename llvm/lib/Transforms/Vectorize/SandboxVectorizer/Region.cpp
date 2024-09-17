@@ -10,18 +10,18 @@
 
 using namespace llvm;
 
-sandboxir::Region::Region(sandboxir::Context &Ctx, sandboxir::BasicBlock &SBBB)
-    : Ctx(Ctx), SBBB(SBBB) {
+sandboxir::Region::Region(sandboxir::Context &Ctx, sandboxir::BasicBlock &BB)
+    : Ctx(Ctx), BB(BB) {
   static unsigned StaticRegionID;
   RegionID = StaticRegionID++;
 }
 
 sandboxir::Region::~Region() {}
 
-void sandboxir::Region::add(sandboxir::Instruction *SBI) { Insts.insert(SBI); }
+void sandboxir::Region::add(sandboxir::Instruction *I) { Insts.insert(I); }
 
-void sandboxir::Region::remove(sandboxir::Instruction *SBI) {
-  Insts.remove(SBI);
+void sandboxir::Region::remove(sandboxir::Instruction *I) {
+  Insts.remove(I);
 }
 
 #ifndef NDEBUG
@@ -34,8 +34,7 @@ bool sandboxir::Region::operator==(const sandboxir::Region &Other) const {
 }
 
 void sandboxir::Region::dump(raw_ostream &OS) const {
-  OS << "RegionID: " << getID() << " ScalarCost=" << ScalarCost
-     << " VectorCost=" << VectorCost << "\n";
+  OS << "RegionID: " << getID() << "\n";
   for (auto *I : Insts)
     OS << *I << "\n";
 }
