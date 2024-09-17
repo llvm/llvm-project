@@ -233,8 +233,6 @@ void addMCModel(const Driver &D, const llvm::opt::ArgList &Args,
                 const llvm::Reloc::Model &RelocationModel,
                 llvm::opt::ArgStringList &CmdArgs);
 
-} // end namespace tools
-
 /// Add backslashes to escape spaces and other backslashes.
 /// This is used for the space-separated argument list specified with
 /// the -dwarf-debug-flags option.
@@ -260,6 +258,7 @@ bool ShouldRecordCommandLine(const ToolChain &TC,
                              bool &FRecordCommandLine,
                              bool &GRecordCommandLine);
 
+} // end namespace tools
 } // end namespace driver
 } // end namespace clang
 

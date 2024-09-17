@@ -2961,8 +2961,8 @@ void tools::addMCModel(const Driver &D, const llvm::opt::ArgList &Args,
   }
 }
 
-void driver::EscapeSpacesAndBackslashes(const char *Arg,
-                                        llvm::SmallVectorImpl<char> &Res) {
+void tools::EscapeSpacesAndBackslashes(const char *Arg,
+                                       llvm::SmallVectorImpl<char> &Res) {
   for (; *Arg; ++Arg) {
     switch (*Arg) {
     default:
@@ -2976,8 +2976,8 @@ void driver::EscapeSpacesAndBackslashes(const char *Arg,
   }
 }
 
-const char *driver::RenderEscapedCommandLine(const ToolChain &TC,
-                                             const llvm::opt::ArgList &Args) {
+const char *tools::RenderEscapedCommandLine(const ToolChain &TC,
+                                            const llvm::opt::ArgList &Args) {
   const Driver &D = TC.getDriver();
   const char *Exec = D.getClangProgramPath();
 
@@ -2997,10 +2997,10 @@ const char *driver::RenderEscapedCommandLine(const ToolChain &TC,
   return Args.MakeArgString(Flags);
 }
 
-bool driver::ShouldRecordCommandLine(const ToolChain &TC,
-                                     const llvm::opt::ArgList &Args,
-                                     bool &FRecordCommandLine,
-                                     bool &GRecordCommandLine) {
+bool tools::ShouldRecordCommandLine(const ToolChain &TC,
+                                    const llvm::opt::ArgList &Args,
+                                    bool &FRecordCommandLine,
+                                    bool &GRecordCommandLine) {
   const Driver &D = TC.getDriver();
   const llvm::Triple &Triple = TC.getEffectiveTriple();
   const std::string &TripleStr = Triple.getTriple();
