@@ -38365,8 +38365,7 @@ static bool matchUnaryShuffle(MVT MaskVT, ArrayRef<int> Mask,
 
   // Match against a VZEXT_MOVL instruction, SSE1 only supports 32-bits (MOVSS).
   if (((MaskEltSize == 32) || (MaskEltSize == 64 && Subtarget.hasSSE2()) ||
-       (MaskEltSize == 16 &&
-        (Subtarget.hasFP16() || Subtarget.hasAVX10_2()))) &&
+       (MaskEltSize == 16 && Subtarget.hasFP16())) &&
       isUndefOrEqual(Mask[0], 0) &&
       isUndefOrZeroInRange(Mask, 1, NumMaskElts - 1)) {
     Shuffle = X86ISD::VZEXT_MOVL;
