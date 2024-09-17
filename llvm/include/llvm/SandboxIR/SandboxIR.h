@@ -54,11 +54,17 @@
 //                                      |                   |
 //                                      |                   +- ZExtInst
 //                                      |
-//                                      +- CallBase -----------+- CallBrInst
-//                                      |                      |
-//                                      +- CmpInst             +- CallInst
-//                                      |                      |
-//                                      +- ExtractElementInst  +- InvokeInst
+//                                      +- CallBase --------+- CallBrInst
+//                                      |                   |
+//                                      |                   +- CallInst
+//                                      |                   |
+//                                      |                   +- InvokeInst
+//                                      |
+//                                      +- CmpInst ---------+- ICmpInst
+//                                      |                   |
+//                                      |                   +- FCmpInst
+//                                      |
+//                                      +- ExtractElementInst
 //                                      |
 //                                      +- GetElementPtrInst
 //                                      |
@@ -114,6 +120,15 @@ namespace sandboxir {
 class BasicBlock;
 class ConstantInt;
 class ConstantFP;
+class ConstantAggregateZero;
+class ConstantPointerNull;
+class PoisonValue;
+class BlockAddress;
+class DSOLocalEquivalent;
+class ConstantTokenNone;
+class GlobalValue;
+class GlobalObject;
+class GlobalIFunc;
 class Context;
 class Function;
 class Instruction;
@@ -158,6 +173,9 @@ class BinaryOperator;
 class PossiblyDisjointInst;
 class AtomicRMWInst;
 class AtomicCmpXchgInst;
+class CmpInst;
+class ICmpInst;
+class FCmpInst;
 
 /// Iterator for the `Use` edges of a User's operands.
 /// \Returns the operand `Use` when dereferenced.
@@ -304,8 +322,18 @@ protected:
   friend class PHINode;               // For getting `Val`.
   friend class UnreachableInst;       // For getting `Val`.
   friend class CatchSwitchAddHandler; // For `Val`.
+  friend class CmpInst;               // For getting `Val`.
   friend class ConstantArray;         // For `Val`.
   friend class ConstantStruct;        // For `Val`.
+  friend class ConstantAggregateZero; // For `Val`.
+  friend class ConstantPointerNull;   // For `Val`.
+  friend class UndefValue;            // For `Val`.
+  friend class PoisonValue;           // For `Val`.
+  friend class BlockAddress;          // For `Val`.
+  friend class GlobalValue;           // For `Val`.
+  friend class DSOLocalEquivalent;    // For `Val`.
+  friend class GlobalObject;          // For `Val`.
+  friend class GlobalIFunc;           // For `Val`.
 
   /// All values point to the context.
   Context &Ctx;
@@ -933,6 +961,505 @@ public:
   }
 };
 
+// TODO: Inherit from ConstantData.
+class ConstantAggregateZero final : public Constant {
+  ConstantAggregateZero(llvm::ConstantAggregateZero *C, Context &Ctx)
+      : Constant(ClassID::ConstantAggregateZero, C, Ctx) {}
+  friend class Context; // For constructor.
+
+public:
+  static ConstantAggregateZero *get(Type *Ty);
+  /// If this CAZ has array or vector type, return a zero with the right element
+  /// type.
+  Constant *getSequentialElement() const;
+  /// If this CAZ has struct type, return a zero with the right element type for
+  /// the specified element.
+  Constant *getStructElement(unsigned Elt) const;
+  /// Return a zero of the right value for the specified GEP index if we can,
+  /// otherwise return null (e.g. if C is a ConstantExpr).
+  Constant *getElementValue(Constant *C) const;
+  /// Return a zero of the right value for the specified GEP index.
+  Constant *getElementValue(unsigned Idx) const;
+  /// Return the number of elements in the array, vector, or struct.
+  ElementCount getElementCount() const {
+    return cast<llvm::ConstantAggregateZero>(Val)->getElementCount();
+  }
+
+  /// For isa/dyn_cast.
+  static bool classof(const sandboxir::Value *From) {
+    return From->getSubclassID() == ClassID::ConstantAggregateZero;
+  }
+  unsigned getUseOperandNo(const Use &Use) const final {
+    llvm_unreachable("ConstantAggregateZero has no operands!");
+  }
+#ifndef NDEBUG
+  void verify() const override {
+    assert(isa<llvm::ConstantAggregateZero>(Val) && "Expected a CAZ!");
+  }
+  void dumpOS(raw_ostream &OS) const override {
+    dumpCommonPrefix(OS);
+    dumpCommonSuffix(OS);
+  }
+#endif
+};
+
+// TODO: Inherit from ConstantData.
+class ConstantPointerNull final : public Constant {
+  ConstantPointerNull(llvm::ConstantPointerNull *C, Context &Ctx)
+      : Constant(ClassID::ConstantPointerNull, C, Ctx) {}
+  friend class Context; // For constructor.
+
+public:
+  static ConstantPointerNull *get(PointerType *Ty);
+
+  PointerType *getType() const;
+
+  /// For isa/dyn_cast.
+  static bool classof(const sandboxir::Value *From) {
+    return From->getSubclassID() == ClassID::ConstantPointerNull;
+  }
+  unsigned getUseOperandNo(const Use &Use) const final {
+    llvm_unreachable("ConstantPointerNull has no operands!");
+  }
+#ifndef NDEBUG
+  void verify() const override {
+    assert(isa<llvm::ConstantPointerNull>(Val) && "Expected a CPNull!");
+  }
+  void dumpOS(raw_ostream &OS) const override {
+    dumpCommonPrefix(OS);
+    dumpCommonSuffix(OS);
+  }
+#endif
+};
+
+// TODO: Inherit from ConstantData.
+class UndefValue : public Constant {
+protected:
+  UndefValue(llvm::UndefValue *C, Context &Ctx)
+      : Constant(ClassID::UndefValue, C, Ctx) {}
+  UndefValue(ClassID ID, llvm::Constant *C, Context &Ctx)
+      : Constant(ID, C, Ctx) {}
+  friend class Context; // For constructor.
+
+public:
+  /// Static factory methods - Return an 'undef' object of the specified type.
+  static UndefValue *get(Type *T);
+
+  /// If this Undef has array or vector type, return a undef with the right
+  /// element type.
+  UndefValue *getSequentialElement() const;
+
+  /// If this undef has struct type, return a undef with the right element type
+  /// for the specified element.
+  UndefValue *getStructElement(unsigned Elt) const;
+
+  /// Return an undef of the right value for the specified GEP index if we can,
+  /// otherwise return null (e.g. if C is a ConstantExpr).
+  UndefValue *getElementValue(Constant *C) const;
+
+  /// Return an undef of the right value for the specified GEP index.
+  UndefValue *getElementValue(unsigned Idx) const;
+
+  /// Return the number of elements in the array, vector, or struct.
+  unsigned getNumElements() const {
+    return cast<llvm::UndefValue>(Val)->getNumElements();
+  }
+
+  /// For isa/dyn_cast.
+  static bool classof(const sandboxir::Value *From) {
+    return From->getSubclassID() == ClassID::UndefValue ||
+           From->getSubclassID() == ClassID::PoisonValue;
+  }
+  unsigned getUseOperandNo(const Use &Use) const final {
+    llvm_unreachable("UndefValue has no operands!");
+  }
+#ifndef NDEBUG
+  void verify() const override {
+    assert(isa<llvm::UndefValue>(Val) && "Expected an UndefValue!");
+  }
+  void dumpOS(raw_ostream &OS) const override {
+    dumpCommonPrefix(OS);
+    dumpCommonSuffix(OS);
+  }
+#endif
+};
+
+class PoisonValue final : public UndefValue {
+  PoisonValue(llvm::PoisonValue *C, Context &Ctx)
+      : UndefValue(ClassID::PoisonValue, C, Ctx) {}
+  friend class Context; // For constructor.
+
+public:
+  /// Static factory methods - Return an 'poison' object of the specified type.
+  static PoisonValue *get(Type *T);
+
+  /// If this poison has array or vector type, return a poison with the right
+  /// element type.
+  PoisonValue *getSequentialElement() const;
+
+  /// If this poison has struct type, return a poison with the right element
+  /// type for the specified element.
+  PoisonValue *getStructElement(unsigned Elt) const;
+
+  /// Return an poison of the right value for the specified GEP index if we can,
+  /// otherwise return null (e.g. if C is a ConstantExpr).
+  PoisonValue *getElementValue(Constant *C) const;
+
+  /// Return an poison of the right value for the specified GEP index.
+  PoisonValue *getElementValue(unsigned Idx) const;
+
+  /// For isa/dyn_cast.
+  static bool classof(const sandboxir::Value *From) {
+    return From->getSubclassID() == ClassID::PoisonValue;
+  }
+#ifndef NDEBUG
+  void verify() const override {
+    assert(isa<llvm::PoisonValue>(Val) && "Expected a PoisonValue!");
+  }
+  void dumpOS(raw_ostream &OS) const override {
+    dumpCommonPrefix(OS);
+    dumpCommonSuffix(OS);
+  }
+#endif
+};
+
+class GlobalValue : public Constant {
+protected:
+  GlobalValue(ClassID ID, llvm::GlobalValue *C, Context &Ctx)
+      : Constant(ID, C, Ctx) {}
+  friend class Context; // For constructor.
+
+public:
+  using LinkageTypes = llvm::GlobalValue::LinkageTypes;
+  /// For isa/dyn_cast.
+  static bool classof(const sandboxir::Value *From) {
+    switch (From->getSubclassID()) {
+    case ClassID::Function:
+    case ClassID::GlobalVariable:
+    case ClassID::GlobalAlias:
+    case ClassID::GlobalIFunc:
+      return true;
+    default:
+      return false;
+    }
+  }
+
+  unsigned getAddressSpace() const {
+    return cast<llvm::GlobalValue>(Val)->getAddressSpace();
+  }
+  bool hasGlobalUnnamedAddr() const {
+    return cast<llvm::GlobalValue>(Val)->hasGlobalUnnamedAddr();
+  }
+
+  /// Returns true if this value's address is not significant in this module.
+  /// This attribute is intended to be used only by the code generator and LTO
+  /// to allow the linker to decide whether the global needs to be in the symbol
+  /// table. It should probably not be used in optimizations, as the value may
+  /// have uses outside the module; use hasGlobalUnnamedAddr() instead.
+  bool hasAtLeastLocalUnnamedAddr() const {
+    return cast<llvm::GlobalValue>(Val)->hasAtLeastLocalUnnamedAddr();
+  }
+
+  using UnnamedAddr = llvm::GlobalValue::UnnamedAddr;
+
+  UnnamedAddr getUnnamedAddr() const {
+    return cast<llvm::GlobalValue>(Val)->getUnnamedAddr();
+  }
+  void setUnnamedAddr(UnnamedAddr V);
+
+  static UnnamedAddr getMinUnnamedAddr(UnnamedAddr A, UnnamedAddr B) {
+    return llvm::GlobalValue::getMinUnnamedAddr(A, B);
+  }
+
+  bool hasComdat() const { return cast<llvm::GlobalValue>(Val)->hasComdat(); }
+
+  // TODO: We need a SandboxIR Comdat if we want to implement getComdat().
+  using VisibilityTypes = llvm::GlobalValue::VisibilityTypes;
+  VisibilityTypes getVisibility() const {
+    return cast<llvm::GlobalValue>(Val)->getVisibility();
+  }
+  bool hasDefaultVisibility() const {
+    return cast<llvm::GlobalValue>(Val)->hasDefaultVisibility();
+  }
+  bool hasHiddenVisibility() const {
+    return cast<llvm::GlobalValue>(Val)->hasHiddenVisibility();
+  }
+  bool hasProtectedVisibility() const {
+    return cast<llvm::GlobalValue>(Val)->hasProtectedVisibility();
+  }
+  void setVisibility(VisibilityTypes V);
+
+  // TODO: Add missing functions.
+};
+
+class GlobalObject : public GlobalValue {
+protected:
+  GlobalObject(ClassID ID, llvm::GlobalObject *C, Context &Ctx)
+      : GlobalValue(ID, C, Ctx) {}
+  friend class Context; // For constructor.
+  Use getOperandUseInternal(unsigned OpIdx, bool Verify) const final {
+    return getOperandUseDefault(OpIdx, Verify);
+  }
+
+public:
+  unsigned getUseOperandNo(const Use &Use) const final {
+    return getUseOperandNoDefault(Use);
+  }
+  /// For isa/dyn_cast.
+  static bool classof(const sandboxir::Value *From) {
+    switch (From->getSubclassID()) {
+    case ClassID::Function:
+    case ClassID::GlobalVariable:
+    case ClassID::GlobalIFunc:
+      return true;
+    default:
+      return false;
+    }
+  }
+
+  /// FIXME: Remove this function once transition to Align is over.
+  uint64_t getAlignment() const {
+    return cast<llvm::GlobalObject>(Val)->getAlignment();
+  }
+
+  /// Returns the alignment of the given variable or function.
+  ///
+  /// Note that for functions this is the alignment of the code, not the
+  /// alignment of a function pointer.
+  MaybeAlign getAlign() const {
+    return cast<llvm::GlobalObject>(Val)->getAlign();
+  }
+
+  // TODO: Add missing: setAlignment(Align)
+
+  /// Sets the alignment attribute of the GlobalObject.
+  /// This method will be deprecated as the alignment property should always be
+  /// defined.
+  void setAlignment(MaybeAlign Align);
+
+  unsigned getGlobalObjectSubClassData() const {
+    return cast<llvm::GlobalObject>(Val)->getGlobalObjectSubClassData();
+  }
+
+  void setGlobalObjectSubClassData(unsigned V);
+
+  /// Check if this global has a custom object file section.
+  ///
+  /// This is more efficient than calling getSection() and checking for an empty
+  /// string.
+  bool hasSection() const {
+    return cast<llvm::GlobalObject>(Val)->hasSection();
+  }
+
+  /// Get the custom section of this global if it has one.
+  ///
+  /// If this global does not have a custom section, this will be empty and the
+  /// default object file section (.text, .data, etc) will be used.
+  StringRef getSection() const {
+    return cast<llvm::GlobalObject>(Val)->getSection();
+  }
+
+  /// Change the section for this global.
+  ///
+  /// Setting the section to the empty string tells LLVM to choose an
+  /// appropriate default object file section.
+  void setSection(StringRef S);
+
+  bool hasComdat() const { return cast<llvm::GlobalObject>(Val)->hasComdat(); }
+
+  // TODO: implement get/setComdat(), etc. once we have a sandboxir::Comdat.
+
+  // TODO: We currently don't support Metadata in sandboxir so all
+  // Metadata-related functions are missing.
+
+  using VCallVisibility = llvm::GlobalObject::VCallVisibility;
+
+  VCallVisibility getVCallVisibility() const {
+    return cast<llvm::GlobalObject>(Val)->getVCallVisibility();
+  }
+
+  /// Returns true if the alignment of the value can be unilaterally
+  /// increased.
+  ///
+  /// Note that for functions this is the alignment of the code, not the
+  /// alignment of a function pointer.
+  bool canIncreaseAlignment() const {
+    return cast<llvm::GlobalObject>(Val)->canIncreaseAlignment();
+  }
+};
+
+/// Provides API functions, like getIterator() and getReverseIterator() to
+/// GlobalIFunc, Function, GlobalVariable and GlobalAlias. In LLVM IR these are
+/// provided by ilist_node.
+template <typename GlobalT, typename LLVMGlobalT, typename ParentT,
+          typename LLVMParentT>
+class GlobalWithNodeAPI : public ParentT {
+  /// Helper for mapped_iterator.
+  struct LLVMGVToGV {
+    Context &Ctx;
+    LLVMGVToGV(Context &Ctx) : Ctx(Ctx) {}
+    GlobalT &operator()(LLVMGlobalT &LLVMGV) const;
+  };
+
+public:
+  GlobalWithNodeAPI(Value::ClassID ID, LLVMParentT *C, Context &Ctx)
+      : ParentT(ID, C, Ctx) {}
+
+  // TODO: Missing getParent(). Should be added once Module is available.
+
+  using iterator = mapped_iterator<
+      decltype(static_cast<LLVMGlobalT *>(nullptr)->getIterator()), LLVMGVToGV>;
+  using reverse_iterator = mapped_iterator<
+      decltype(static_cast<LLVMGlobalT *>(nullptr)->getReverseIterator()),
+      LLVMGVToGV>;
+  iterator getIterator() const {
+    auto *LLVMGV = cast<LLVMGlobalT>(this->Val);
+    LLVMGVToGV ToGV(this->Ctx);
+    return map_iterator(LLVMGV->getIterator(), ToGV);
+  }
+  reverse_iterator getReverseIterator() const {
+    auto *LLVMGV = cast<LLVMGlobalT>(this->Val);
+    LLVMGVToGV ToGV(this->Ctx);
+    return map_iterator(LLVMGV->getReverseIterator(), ToGV);
+  }
+};
+
+class GlobalIFunc final
+    : public GlobalWithNodeAPI<GlobalIFunc, llvm::GlobalIFunc, GlobalObject,
+                               llvm::GlobalObject> {
+  GlobalIFunc(llvm::GlobalObject *C, Context &Ctx)
+      : GlobalWithNodeAPI(ClassID::GlobalIFunc, C, Ctx) {}
+  friend class Context; // For constructor.
+
+public:
+  /// For isa/dyn_cast.
+  static bool classof(const sandboxir::Value *From) {
+    return From->getSubclassID() == ClassID::GlobalIFunc;
+  }
+
+  // TODO: Missing create() because we don't have a sandboxir::Module yet.
+
+  // TODO: Missing functions: copyAttributesFrom(), removeFromParent(),
+  // eraseFromParent()
+
+  void setResolver(Constant *Resolver);
+
+  Constant *getResolver() const;
+
+  // Return the resolver function after peeling off potential ConstantExpr
+  // indirection.
+  Function *getResolverFunction();
+  const Function *getResolverFunction() const {
+    return const_cast<GlobalIFunc *>(this)->getResolverFunction();
+  }
+
+  static bool isValidLinkage(LinkageTypes L) {
+    return llvm::GlobalIFunc::isValidLinkage(L);
+  }
+
+  // TODO: Missing applyAlongResolverPath().
+
+#ifndef NDEBUG
+  void verify() const override {
+    assert(isa<llvm::GlobalIFunc>(Val) && "Expected a GlobalIFunc!");
+  }
+  void dumpOS(raw_ostream &OS) const override {
+    dumpCommonPrefix(OS);
+    dumpCommonSuffix(OS);
+  }
+#endif
+};
+
+class BlockAddress final : public Constant {
+  BlockAddress(llvm::BlockAddress *C, Context &Ctx)
+      : Constant(ClassID::BlockAddress, C, Ctx) {}
+  friend class Context; // For constructor.
+
+public:
+  /// Return a BlockAddress for the specified function and basic block.
+  static BlockAddress *get(Function *F, BasicBlock *BB);
+
+  /// Return a BlockAddress for the specified basic block.  The basic
+  /// block must be embedded into a function.
+  static BlockAddress *get(BasicBlock *BB);
+
+  /// Lookup an existing \c BlockAddress constant for the given BasicBlock.
+  ///
+  /// \returns 0 if \c !BB->hasAddressTaken(), otherwise the \c BlockAddress.
+  static BlockAddress *lookup(const BasicBlock *BB);
+
+  Function *getFunction() const;
+  BasicBlock *getBasicBlock() const;
+
+  /// For isa/dyn_cast.
+  static bool classof(const sandboxir::Value *From) {
+    return From->getSubclassID() == ClassID::BlockAddress;
+  }
+};
+
+class DSOLocalEquivalent final : public Constant {
+  DSOLocalEquivalent(llvm::DSOLocalEquivalent *C, Context &Ctx)
+      : Constant(ClassID::DSOLocalEquivalent, C, Ctx) {}
+  friend class Context; // For constructor.
+
+public:
+  /// Return a DSOLocalEquivalent for the specified global value.
+  static DSOLocalEquivalent *get(GlobalValue *GV);
+
+  GlobalValue *getGlobalValue() const;
+
+  /// For isa/dyn_cast.
+  static bool classof(const sandboxir::Value *From) {
+    return From->getSubclassID() == ClassID::DSOLocalEquivalent;
+  }
+
+  unsigned getUseOperandNo(const Use &Use) const final {
+    llvm_unreachable("DSOLocalEquivalent has no operands!");
+  }
+
+#ifndef NDEBUG
+  void verify() const override {
+    assert(isa<llvm::DSOLocalEquivalent>(Val) &&
+           "Expected a DSOLocalEquivalent!");
+  }
+  void dumpOS(raw_ostream &OS) const override {
+    dumpCommonPrefix(OS);
+    dumpCommonSuffix(OS);
+  }
+#endif
+};
+
+// TODO: This should inherit from ConstantData.
+class ConstantTokenNone final : public Constant {
+  ConstantTokenNone(llvm::ConstantTokenNone *C, Context &Ctx)
+      : Constant(ClassID::ConstantTokenNone, C, Ctx) {}
+  friend class Context; // For constructor.
+
+public:
+  /// Return the ConstantTokenNone.
+  static ConstantTokenNone *get(Context &Ctx);
+
+  /// For isa/dyn_cast.
+  static bool classof(const sandboxir::Value *From) {
+    return From->getSubclassID() == ClassID::ConstantTokenNone;
+  }
+
+  unsigned getUseOperandNo(const Use &Use) const final {
+    llvm_unreachable("ConstantTokenNone has no operands!");
+  }
+
+#ifndef NDEBUG
+  void verify() const override {
+    assert(isa<llvm::ConstantTokenNone>(Val) &&
+           "Expected a ConstantTokenNone!");
+  }
+  void dumpOS(raw_ostream &OS) const override {
+    dumpCommonPrefix(OS);
+    dumpCommonSuffix(OS);
+  }
+#endif
+};
+
 /// Iterator for `Instruction`s in a `BasicBlock.
 /// \Returns an sandboxir::Instruction & when derereferenced.
 class BBIterator {
@@ -1015,9 +1542,7 @@ public:
   Instruction &back() const;
 
 #ifndef NDEBUG
-  void verify() const final {
-    assert(isa<llvm::BasicBlock>(Val) && "Expected BasicBlock!");
-  }
+  void verify() const final;
   void dumpOS(raw_ostream &OS) const final;
 #endif
 };
@@ -1076,6 +1601,7 @@ protected:
   friend class CastInst;           // For getTopmostLLVMInstruction().
   friend class PHINode;            // For getTopmostLLVMInstruction().
   friend class UnreachableInst;    // For getTopmostLLVMInstruction().
+  friend class CmpInst;            // For getTopmostLLVMInstruction().
 
   /// \Returns the LLVM IR Instructions that this SandboxIR maps to in program
   /// order.
@@ -1116,6 +1642,14 @@ public:
   /// Move this instruction after \p After.
   void moveAfter(Instruction *After) {
     moveBefore(*After->getParent(), std::next(After->getIterator()));
+  }
+  // TODO: This currently relies on LLVM IR Instruction::comesBefore which is
+  // can be linear-time.
+  /// Given an instruction Other in the same basic block as this instruction,
+  /// return true if this instruction comes before Other.
+  bool comesBefore(const Instruction *Other) const {
+    return cast<llvm::Instruction>(Val)->comesBefore(
+        cast<llvm::Instruction>(Other->Val));
   }
   /// \Returns the BasicBlock containing this Instruction, or null if it is
   /// detached.
@@ -1232,6 +1766,7 @@ template <typename LLVMT> class SingleLLVMInstructionImpl : public Instruction {
   friend class UnaryInstruction;
   friend class CallBase;
   friend class FuncletPadInst;
+  friend class CmpInst;
 
   Use getOperandUseInternal(unsigned OpIdx, bool Verify) const final {
     return getOperandUseDefault(OpIdx, Verify);
@@ -1254,7 +1789,7 @@ public:
 #endif
 };
 
-class FenceInst : public SingleLLVMInstructionImpl<llvm::SelectInst> {
+class FenceInst : public SingleLLVMInstructionImpl<llvm::FenceInst> {
   FenceInst(llvm::FenceInst *FI, Context &Ctx)
       : SingleLLVMInstructionImpl(ClassID::Fence, Opcode::Fence, FI, Ctx) {}
   friend Context; // For constructor;
@@ -1298,6 +1833,10 @@ public:
   static Value *create(Value *Cond, Value *True, Value *False,
                        BasicBlock *InsertAtEnd, Context &Ctx,
                        const Twine &Name = "");
+
+  const Value *getCondition() const { return getOperand(0); }
+  const Value *getTrueValue() const { return getOperand(1); }
+  const Value *getFalseValue() const { return getOperand(2); }
   Value *getCondition() { return getOperand(0); }
   Value *getTrueValue() { return getOperand(1); }
   Value *getFalseValue() { return getOperand(2); }
@@ -1305,7 +1844,16 @@ public:
   void setCondition(Value *New) { setOperand(0, New); }
   void setTrueValue(Value *New) { setOperand(1, New); }
   void setFalseValue(Value *New) { setOperand(2, New); }
-  void swapValues() { cast<llvm::SelectInst>(Val)->swapValues(); }
+  void swapValues();
+
+  /// Return a string if the specified operands are invalid for a select
+  /// operation, otherwise return null.
+  static const char *areInvalidOperands(Value *Cond, Value *True,
+                                        Value *False) {
+    return llvm::SelectInst::areInvalidOperands(Cond->Val, True->Val,
+                                                False->Val);
+  }
+
   /// For isa/dyn_cast.
   static bool classof(const Value *From);
 };
@@ -3425,6 +3973,151 @@ public:
   //                         uint32_t ToIdx = 0)
 };
 
+// Wraps a static function that takes a single Predicate parameter
+// LLVMValType should be the type of the wrapped class
+#define WRAP_STATIC_PREDICATE(FunctionName)                                    \
+  static auto FunctionName(Predicate P) { return LLVMValType::FunctionName(P); }
+// Wraps a member function that takes no parameters
+// LLVMValType should be the type of the wrapped class
+#define WRAP_MEMBER(FunctionName)                                              \
+  auto FunctionName() const { return cast<LLVMValType>(Val)->FunctionName(); }
+// Wraps both--a common idiom in the CmpInst classes
+#define WRAP_BOTH(FunctionName)                                                \
+  WRAP_STATIC_PREDICATE(FunctionName)                                          \
+  WRAP_MEMBER(FunctionName)
+
+class CmpInst : public SingleLLVMInstructionImpl<llvm::CmpInst> {
+protected:
+  using LLVMValType = llvm::CmpInst;
+  /// Use Context::createCmpInst(). Don't call the constructor directly.
+  CmpInst(llvm::CmpInst *CI, Context &Ctx, ClassID Id, Opcode Opc)
+      : SingleLLVMInstructionImpl(Id, Opc, CI, Ctx) {}
+  friend Context; // for CmpInst()
+  static Value *createCommon(Value *Cond, Value *True, Value *False,
+                             const Twine &Name, IRBuilder<> &Builder,
+                             Context &Ctx);
+
+public:
+  using Predicate = llvm::CmpInst::Predicate;
+
+  static CmpInst *create(Predicate Pred, Value *S1, Value *S2,
+                         Instruction *InsertBefore, Context &Ctx,
+                         const Twine &Name = "");
+  static CmpInst *createWithCopiedFlags(Predicate Pred, Value *S1, Value *S2,
+                                        const Instruction *FlagsSource,
+                                        Instruction *InsertBefore, Context &Ctx,
+                                        const Twine &Name = "");
+  void setPredicate(Predicate P);
+  void swapOperands();
+
+  WRAP_MEMBER(getPredicate);
+  WRAP_BOTH(isFPPredicate);
+  WRAP_BOTH(isIntPredicate);
+  WRAP_STATIC_PREDICATE(getPredicateName);
+  WRAP_BOTH(getInversePredicate);
+  WRAP_BOTH(getOrderedPredicate);
+  WRAP_BOTH(getUnorderedPredicate);
+  WRAP_BOTH(getSwappedPredicate);
+  WRAP_BOTH(isStrictPredicate);
+  WRAP_BOTH(isNonStrictPredicate);
+  WRAP_BOTH(getStrictPredicate);
+  WRAP_BOTH(getNonStrictPredicate);
+  WRAP_BOTH(getFlippedStrictnessPredicate);
+  WRAP_MEMBER(isCommutative);
+  WRAP_BOTH(isEquality);
+  WRAP_BOTH(isRelational);
+  WRAP_BOTH(isSigned);
+  WRAP_BOTH(getSignedPredicate);
+  WRAP_BOTH(getUnsignedPredicate);
+  WRAP_BOTH(getFlippedSignednessPredicate);
+  WRAP_BOTH(isTrueWhenEqual);
+  WRAP_BOTH(isFalseWhenEqual);
+  WRAP_BOTH(isUnsigned);
+  WRAP_STATIC_PREDICATE(isOrdered);
+  WRAP_STATIC_PREDICATE(isUnordered);
+
+  static bool isImpliedTrueByMatchingCmp(Predicate Pred1, Predicate Pred2) {
+    return llvm::CmpInst::isImpliedTrueByMatchingCmp(Pred1, Pred2);
+  }
+  static bool isImpliedFalseByMatchingCmp(Predicate Pred1, Predicate Pred2) {
+    return llvm::CmpInst::isImpliedFalseByMatchingCmp(Pred1, Pred2);
+  }
+
+  /// Method for support type inquiry through isa, cast, and dyn_cast:
+  static bool classof(const Value *From) {
+    return From->getSubclassID() == ClassID::ICmp ||
+           From->getSubclassID() == ClassID::FCmp;
+  }
+
+  /// Create a result type for fcmp/icmp
+  static Type *makeCmpResultType(Type *OpndType);
+
+#ifndef NDEBUG
+  void dumpOS(raw_ostream &OS) const override;
+  LLVM_DUMP_METHOD void dump() const;
+#endif
+};
+
+class ICmpInst : public CmpInst {
+  /// Use Context::createICmpInst(). Don't call the constructor directly.
+  ICmpInst(llvm::ICmpInst *CI, Context &Ctx)
+      : CmpInst(CI, Ctx, ClassID::ICmp, Opcode::ICmp) {}
+  friend class Context; // For constructor.
+  using LLVMValType = llvm::ICmpInst;
+
+public:
+  void swapOperands();
+
+  WRAP_BOTH(getSignedPredicate);
+  WRAP_BOTH(getUnsignedPredicate);
+  WRAP_BOTH(isEquality);
+  WRAP_MEMBER(isCommutative);
+  WRAP_MEMBER(isRelational);
+  WRAP_STATIC_PREDICATE(isGT);
+  WRAP_STATIC_PREDICATE(isLT);
+  WRAP_STATIC_PREDICATE(isGE);
+  WRAP_STATIC_PREDICATE(isLE);
+
+  static auto predicates() { return llvm::ICmpInst::predicates(); }
+  static bool compare(const APInt &LHS, const APInt &RHS,
+                      ICmpInst::Predicate Pred) {
+    return llvm::ICmpInst::compare(LHS, RHS, Pred);
+  }
+
+  static bool classof(const Value *From) {
+    return From->getSubclassID() == ClassID::ICmp;
+  }
+};
+
+class FCmpInst : public CmpInst {
+  /// Use Context::createFCmpInst(). Don't call the constructor directly.
+  FCmpInst(llvm::FCmpInst *CI, Context &Ctx)
+      : CmpInst(CI, Ctx, ClassID::FCmp, Opcode::FCmp) {}
+  friend class Context; // For constructor.
+  using LLVMValType = llvm::FCmpInst;
+
+public:
+  void swapOperands();
+
+  WRAP_BOTH(isEquality);
+  WRAP_MEMBER(isCommutative);
+  WRAP_MEMBER(isRelational);
+
+  static auto predicates() { return llvm::FCmpInst::predicates(); }
+  static bool compare(const APFloat &LHS, const APFloat &RHS,
+                      FCmpInst::Predicate Pred) {
+    return llvm::FCmpInst::compare(LHS, RHS, Pred);
+  }
+
+  static bool classof(const Value *From) {
+    return From->getSubclassID() == ClassID::FCmp;
+  }
+};
+
+#undef WRAP_STATIC_PREDICATE
+#undef WRAP_MEMBER
+#undef WRAP_BOTH
+
 /// An LLLVM Instruction that has no SandboxIR equivalent class gets mapped to
 /// an OpaqueInstr.
 class OpaqueInst : public SingleLLVMInstructionImpl<llvm::Instruction> {
@@ -3445,8 +4138,11 @@ protected:
   LLVMContext &LLVMCtx;
   friend class Type;        // For LLVMCtx.
   friend class PointerType; // For LLVMCtx.
-  friend class IntegerType; // For LLVMCtx.
-  friend class StructType;  // For LLVMCtx.
+  friend class CmpInst; // For LLVMCtx. TODO: cleanup when sandboxir::VectorType
+                        // is complete
+  friend class IntegerType;   // For LLVMCtx.
+  friend class StructType;    // For LLVMCtx.
+  friend class TargetExtType; // For LLVMCtx.
   Tracker IRTracker;
 
   /// Maps LLVM Value to the corresponding sandboxir::Value. Owns all
@@ -3572,6 +4268,12 @@ protected:
   friend PHINode; // For createPHINode()
   UnreachableInst *createUnreachableInst(llvm::UnreachableInst *UI);
   friend UnreachableInst; // For createUnreachableInst()
+  CmpInst *createCmpInst(llvm::CmpInst *I);
+  friend CmpInst; // For createCmpInst()
+  ICmpInst *createICmpInst(llvm::ICmpInst *I);
+  friend ICmpInst; // For createICmpInst()
+  FCmpInst *createFCmpInst(llvm::FCmpInst *I);
+  friend FCmpInst; // For createFCmpInst()
 
 public:
   Context(LLVMContext &LLVMCtx)
@@ -3610,7 +4312,8 @@ public:
   size_t getNumValues() const { return LLVMValueToValueMap.size(); }
 };
 
-class Function : public Constant {
+class Function : public GlobalWithNodeAPI<Function, llvm::Function,
+                                          GlobalObject, llvm::GlobalObject> {
   /// Helper for mapped_iterator.
   struct LLVMBBToBB {
     Context &Ctx;
@@ -3621,7 +4324,7 @@ class Function : public Constant {
   };
   /// Use Context::createFunction() instead.
   Function(llvm::Function *F, sandboxir::Context &Ctx)
-      : Constant(ClassID::Function, F, Ctx) {}
+      : GlobalWithNodeAPI(ClassID::Function, F, Ctx) {}
   friend class Context; // For constructor.
 
 public:

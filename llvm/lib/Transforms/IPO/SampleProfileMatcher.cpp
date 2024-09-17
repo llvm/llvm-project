@@ -36,6 +36,13 @@ static cl::opt<unsigned> MinCallCountForCGMatching(
     cl::desc("The minimum number of call anchors required for a function to "
              "run stale profile call graph matching."));
 
+static cl::opt<bool> LoadFuncProfileforCGMatching(
+    "load-func-profile-for-cg-matching", cl::Hidden, cl::init(false),
+    cl::desc(
+        "Load top-level profiles that the sample reader initially skipped for "
+        "the call-graph matching (only meaningful for extended binary "
+        "format)"));
+
 extern cl::opt<bool> SalvageStaleProfile;
 extern cl::opt<bool> SalvageUnusedProfile;
 extern cl::opt<bool> PersistProfileStaleness;
@@ -410,18 +417,19 @@ void SampleProfileMatcher::runOnFunction(Function &F) {
   // callsites in one context may differ from those in another context. To get
   // the maximum number of callsites, we merge the function profiles from all
   // contexts, aka, the flattened profile to find profile anchors.
-  const auto *FSFlattened = getFlattenedSamplesFor(F);
-  if (SalvageUnusedProfile && !FSFlattened) {
+  const auto *FSForMatching = getFlattenedSamplesFor(F);
+  if (SalvageUnusedProfile && !FSForMatching) {
     // Apply the matching in place to find the new function's matched profile.
-    // TODO: For extended profile format, if a function profile is unused and
-    // it's top-level, even if the profile is matched, it's not found in the
-    // profile. This is because sample reader only read the used profile at the
-    // beginning, we need to support loading the profile on-demand in future.
     auto R = FuncToProfileNameMap.find(&F);
-    if (R != FuncToProfileNameMap.end())
-      FSFlattened = getFlattenedSamplesFor(R->second);
+    if (R != FuncToProfileNameMap.end()) {
+      FSForMatching = getFlattenedSamplesFor(R->second);
+      // Try to find the salvaged top-level profiles that are explicitly loaded
+      // for the matching, see "functionMatchesProfileHelper" for the details.
+      if (!FSForMatching && LoadFuncProfileforCGMatching)
+        FSForMatching = Reader.getSamplesFor(R->second.stringRef());
+    }
   }
-  if (!FSFlattened)
+  if (!FSForMatching)
     return;
 
   // Anchors for IR. It's a map from IR location to callee name, callee name is
@@ -432,7 +440,7 @@ void SampleProfileMatcher::runOnFunction(Function &F) {
   // Anchors for profile. It's a map from callsite location to a set of callee
   // name.
   AnchorMap ProfileAnchors;
-  findProfileAnchors(*FSFlattened, ProfileAnchors);
+  findProfileAnchors(*FSForMatching, ProfileAnchors);
 
   // Compute the callsite match states for profile staleness report.
   if (ReportProfileStaleness || PersistProfileStaleness)
@@ -443,7 +451,7 @@ void SampleProfileMatcher::runOnFunction(Function &F) {
   // For probe-based profiles, run matching only when profile checksum is
   // mismatched.
   bool ChecksumMismatch = FunctionSamples::ProfileIsProbeBased &&
-                          !ProbeManager->profileIsValid(F, *FSFlattened);
+                          !ProbeManager->profileIsValid(F, *FSForMatching);
   bool RunCFGMatching =
       !FunctionSamples::ProfileIsProbeBased || ChecksumMismatch;
   bool RunCGMatching = SalvageUnusedProfile;
@@ -781,14 +789,30 @@ bool SampleProfileMatcher::functionMatchesProfileHelper(
   // two sequences are.
   float Similarity = 0.0;
 
-  const auto *FSFlattened = getFlattenedSamplesFor(ProfFunc);
-  if (!FSFlattened)
+  const auto *FSForMatching = getFlattenedSamplesFor(ProfFunc);
+  // With extbinary profile format, initial profile loading only reads profile
+  // based on current function names in the module.
+  // However, if a function is renamed, sample loader skips to load its original
+  // profile(which has a different name), we will miss this case. To address
+  // this, we load the top-level profile candidate explicitly for the matching.
+  if (!FSForMatching && LoadFuncProfileforCGMatching) {
+    DenseSet<StringRef> TopLevelFunc({ProfFunc.stringRef()});
+    if (std::error_code EC = Reader.read(TopLevelFunc))
+      return false;
+    FSForMatching = Reader.getSamplesFor(ProfFunc.stringRef());
+    LLVM_DEBUG({
+      if (FSForMatching)
+        dbgs() << "Read top-level function " << ProfFunc
+               << " for call-graph matching\n";
+    });
+  }
+  if (!FSForMatching)
     return false;
   // The check for similarity or checksum may not be reliable if the function is
   // tiny, we use the number of basic block as a proxy for the function
   // complexity and skip the matching if it's too small.
   if (IRFunc.size() < MinFuncCountForCGMatching ||
-      FSFlattened->getBodySamples().size() < MinFuncCountForCGMatching)
+      FSForMatching->getBodySamples().size() < MinFuncCountForCGMatching)
     return false;
 
   // For probe-based function, we first trust the checksum info. If the checksum
@@ -796,7 +820,7 @@ bool SampleProfileMatcher::functionMatchesProfileHelper(
   if (FunctionSamples::ProfileIsProbeBased) {
     const auto *FuncDesc = ProbeManager->getDesc(IRFunc);
     if (FuncDesc &&
-        !ProbeManager->profileIsHashMismatched(*FuncDesc, *FSFlattened)) {
+        !ProbeManager->profileIsHashMismatched(*FuncDesc, *FSForMatching)) {
       LLVM_DEBUG(dbgs() << "The checksums for " << IRFunc.getName()
                         << "(IR) and " << ProfFunc << "(Profile) match.\n");
 
@@ -807,7 +831,7 @@ bool SampleProfileMatcher::functionMatchesProfileHelper(
   AnchorMap IRAnchors;
   findIRAnchors(IRFunc, IRAnchors);
   AnchorMap ProfileAnchors;
-  findProfileAnchors(*FSFlattened, ProfileAnchors);
+  findProfileAnchors(*FSForMatching, ProfileAnchors);
 
   AnchorList FilteredIRAnchorsList;
   AnchorList FilteredProfileAnchorList;
@@ -863,6 +887,29 @@ bool SampleProfileMatcher::functionMatchesProfile(Function &IRFunc,
   return Matched;
 }
 
+void SampleProfileMatcher::UpdateWithSalvagedProfiles() {
+  DenseSet<StringRef> ProfileSalvagedFuncs;
+  // Update FuncNameToProfNameMap and SymbolMap.
+  for (auto &I : FuncToProfileNameMap) {
+    assert(I.first && "New function is null");
+    FunctionId FuncName(I.first->getName());
+    ProfileSalvagedFuncs.insert(I.second.stringRef());
+    FuncNameToProfNameMap->emplace(FuncName, I.second);
+
+    // We need to remove the old entry to avoid duplicating the function
+    // processing.
+    SymbolMap->erase(FuncName);
+    SymbolMap->emplace(I.second, I.first);
+  }
+
+  // With extbinary profile format, initial profile loading only reads profile
+  // based on current function names in the module, so we need to load top-level
+  // profiles for functions with different profile name explicitly after
+  // function-profile name map is established with stale profile matching.
+  Reader.read(ProfileSalvagedFuncs);
+  Reader.setFuncNameToProfNameMap(*FuncNameToProfNameMap);
+}
+
 void SampleProfileMatcher::runOnModule() {
   ProfileConverter::flattenProfile(Reader.getProfiles(), FlattenedProfiles,
                                    FunctionSamples::ProfileIsCS);
@@ -880,17 +927,8 @@ void SampleProfileMatcher::runOnModule() {
     runOnFunction(*F);
   }
 
-  // Update the data in SampleLoader.
   if (SalvageUnusedProfile)
-    for (auto &I : FuncToProfileNameMap) {
-      assert(I.first && "New function is null");
-      FunctionId FuncName(I.first->getName());
-      FuncNameToProfNameMap->emplace(FuncName, I.second);
-      // We need to remove the old entry to avoid duplicating the function
-      // processing.
-      SymbolMap->erase(FuncName);
-      SymbolMap->emplace(I.second, I.first);
-    }
+    UpdateWithSalvagedProfiles();
 
   if (SalvageStaleProfile)
     distributeIRToProfileLocationMap();

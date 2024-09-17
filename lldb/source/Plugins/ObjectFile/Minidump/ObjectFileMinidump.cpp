@@ -55,6 +55,21 @@ size_t ObjectFileMinidump::GetModuleSpecifications(
   return 0;
 }
 
+struct DumpFailRemoveHolder {
+  DumpFailRemoveHolder(MinidumpFileBuilder &builder) : m_builder(builder) {}
+
+  ~DumpFailRemoveHolder() {
+    if (!m_success)
+      m_builder.DeleteFile();
+  }
+
+  void SetSuccess() { m_success = true; }
+
+private:
+  MinidumpFileBuilder &m_builder;
+  bool m_success = false;
+};
+
 bool ObjectFileMinidump::SaveCore(const lldb::ProcessSP &process_sp,
                                   lldb_private::SaveCoreOptions &options,
                                   lldb_private::Status &error) {
@@ -70,11 +85,12 @@ bool ObjectFileMinidump::SaveCore(const lldb::ProcessSP &process_sp,
       options.GetOutputFile().value(),
       File::eOpenOptionWriteOnly | File::eOpenOptionCanCreate);
   if (!maybe_core_file) {
-    error = maybe_core_file.takeError();
+    error = Status::FromError(maybe_core_file.takeError());
     return false;
   }
   MinidumpFileBuilder builder(std::move(maybe_core_file.get()), process_sp,
                               options);
+  DumpFailRemoveHolder request(builder);
 
   Log *log = GetLog(LLDBLog::Object);
   error = builder.AddHeaderAndCalculateDirectories();
@@ -132,6 +148,8 @@ bool ObjectFileMinidump::SaveCore(const lldb::ProcessSP &process_sp,
     LLDB_LOGF(log, "DumpFile failed: %s", error.AsCString());
     return false;
   }
+
+  request.SetSuccess();
 
   return true;
 }

@@ -1192,8 +1192,7 @@ define half @test_neg_f16(half noundef %arg) #0 {
 ; CHECK-LABEL: test_neg_f16x2(
 ; CHECK-F16-NOFTZ: neg.f16x2
 ; CHECK-F16-FTZ: neg.ftz.f16x2
-; CHECK-NOF16: xor.b16  	%rs{{.*}}, %rs{{.*}}, -32768
-; CHECK-NOF16: xor.b16  	%rs{{.*}}, %rs{{.*}}, -32768
+; CHECK-NOF16: xor.b32 %r{{.*}}, %r{{.*}}, -2147450880
 define <2 x half> @test_neg_f16x2(<2 x half> noundef %arg) #0 {
   %res = fneg <2 x half> %arg
   ret <2 x half> %res

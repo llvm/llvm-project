@@ -1636,6 +1636,41 @@ public:
         const DstOp &OldValRes, const SrcOp &Addr, const SrcOp &Val,
         MachineMemOperand &MMO);
 
+  /// Build and insert `OldValRes<def> = G_ATOMICRMW_USUB_COND Addr, Val, MMO`.
+  ///
+  /// Atomically replace the value at \p Addr with the original value minus \p
+  /// Val if the original value is greater than or equal to \p Val, or leaves it
+  /// unchanged otherwise. Puts the original value from \p Addr in \p OldValRes.
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  /// \pre \p OldValRes must be a generic virtual register.
+  /// \pre \p Addr must be a generic virtual register with pointer type.
+  /// \pre \p OldValRes, and \p Val must be generic virtual registers of the
+  ///      same type.
+  ///
+  /// \return a MachineInstrBuilder for the newly created instruction.
+  MachineInstrBuilder buildAtomicRMWUSubCond(const DstOp &OldValRes,
+                                             const SrcOp &Addr,
+                                             const SrcOp &Val,
+                                             MachineMemOperand &MMO);
+
+  /// Build and insert `OldValRes<def> = G_ATOMICRMW_USUB_SAT Addr, Val, MMO`.
+  ///
+  /// Atomically replace the value at \p Addr with the original value minus \p
+  /// Val, with clamping to zero if the unsigned subtraction would overflow.
+  /// Puts the original value from \p Addr in \p OldValRes.
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  /// \pre \p OldValRes must be a generic virtual register.
+  /// \pre \p Addr must be a generic virtual register with pointer type.
+  /// \pre \p OldValRes, and \p Val must be generic virtual registers of the
+  ///      same type.
+  ///
+  /// \return a MachineInstrBuilder for the newly created instruction.
+  MachineInstrBuilder buildAtomicRMWUSubSat(const DstOp &OldValRes,
+                                            const SrcOp &Addr, const SrcOp &Val,
+                                            MachineMemOperand &MMO);
+
   /// Build and insert `G_FENCE Ordering, Scope`.
   MachineInstrBuilder buildFence(unsigned Ordering, unsigned Scope);
 
@@ -1998,6 +2033,16 @@ public:
   /// Build and insert \p Res = G_FPTOSI \p Src0
   MachineInstrBuilder buildFPTOSI(const DstOp &Dst, const SrcOp &Src0) {
     return buildInstr(TargetOpcode::G_FPTOSI, {Dst}, {Src0});
+  }
+
+  /// Build and insert \p Res = G_FPTOUI_SAT \p Src0
+  MachineInstrBuilder buildFPTOUI_SAT(const DstOp &Dst, const SrcOp &Src0) {
+    return buildInstr(TargetOpcode::G_FPTOUI_SAT, {Dst}, {Src0});
+  }
+
+  /// Build and insert \p Res = G_FPTOSI_SAT \p Src0
+  MachineInstrBuilder buildFPTOSI_SAT(const DstOp &Dst, const SrcOp &Src0) {
+    return buildInstr(TargetOpcode::G_FPTOSI_SAT, {Dst}, {Src0});
   }
 
   /// Build and insert \p Dst = G_INTRINSIC_ROUNDEVEN \p Src0, \p Src1

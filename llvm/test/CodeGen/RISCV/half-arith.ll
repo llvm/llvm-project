@@ -2910,35 +2910,18 @@ define half @fsgnjx_f16(half %x, half %y) nounwind {
 ; RV64IZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; RV64IZFHMIN-NEXT:    ret
 ;
-; RV32IZHINXMIN-LABEL: fsgnjx_f16:
-; RV32IZHINXMIN:       # %bb.0:
-; RV32IZHINXMIN-NEXT:    lui a2, %hi(.LCPI23_0)
-; RV32IZHINXMIN-NEXT:    lh a2, %lo(.LCPI23_0)(a2)
-; RV32IZHINXMIN-NEXT:    lui a3, 1048568
-; RV32IZHINXMIN-NEXT:    and a0, a0, a3
-; RV32IZHINXMIN-NEXT:    slli a2, a2, 17
-; RV32IZHINXMIN-NEXT:    srli a2, a2, 17
-; RV32IZHINXMIN-NEXT:    or a0, a2, a0
-; RV32IZHINXMIN-NEXT:    fcvt.s.h a0, a0
-; RV32IZHINXMIN-NEXT:    fcvt.s.h a1, a1
-; RV32IZHINXMIN-NEXT:    fmul.s a0, a0, a1
-; RV32IZHINXMIN-NEXT:    fcvt.h.s a0, a0
-; RV32IZHINXMIN-NEXT:    ret
-;
-; RV64IZHINXMIN-LABEL: fsgnjx_f16:
-; RV64IZHINXMIN:       # %bb.0:
-; RV64IZHINXMIN-NEXT:    lui a2, %hi(.LCPI23_0)
-; RV64IZHINXMIN-NEXT:    lh a2, %lo(.LCPI23_0)(a2)
-; RV64IZHINXMIN-NEXT:    lui a3, 1048568
-; RV64IZHINXMIN-NEXT:    and a0, a0, a3
-; RV64IZHINXMIN-NEXT:    slli a2, a2, 49
-; RV64IZHINXMIN-NEXT:    srli a2, a2, 49
-; RV64IZHINXMIN-NEXT:    or a0, a2, a0
-; RV64IZHINXMIN-NEXT:    fcvt.s.h a0, a0
-; RV64IZHINXMIN-NEXT:    fcvt.s.h a1, a1
-; RV64IZHINXMIN-NEXT:    fmul.s a0, a0, a1
-; RV64IZHINXMIN-NEXT:    fcvt.h.s a0, a0
-; RV64IZHINXMIN-NEXT:    ret
+; CHECKIZHINXMIN-LABEL: fsgnjx_f16:
+; CHECKIZHINXMIN:       # %bb.0:
+; CHECKIZHINXMIN-NEXT:    lui a2, 1048568
+; CHECKIZHINXMIN-NEXT:    and a0, a0, a2
+; CHECKIZHINXMIN-NEXT:    li a2, 15
+; CHECKIZHINXMIN-NEXT:    slli a2, a2, 10
+; CHECKIZHINXMIN-NEXT:    or a0, a0, a2
+; CHECKIZHINXMIN-NEXT:    fcvt.s.h a0, a0
+; CHECKIZHINXMIN-NEXT:    fcvt.s.h a1, a1
+; CHECKIZHINXMIN-NEXT:    fmul.s a0, a0, a1
+; CHECKIZHINXMIN-NEXT:    fcvt.h.s a0, a0
+; CHECKIZHINXMIN-NEXT:    ret
   %z = call half @llvm.copysign.f16(half 1.0, half %x)
   %mul = fmul half %z, %y
   ret half %mul

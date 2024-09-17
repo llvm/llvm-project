@@ -3,6 +3,8 @@ add_llvm_component_library(LLVMVectorize
   LoopIdiomVectorize.cpp
   LoopVectorizationLegality.cpp
   LoopVectorize.cpp
+  SandboxVectorizer/Passes/BottomUpVec.cpp
+  SandboxVectorizer/SandboxVectorizer.cpp
   SLPVectorizer.cpp
   Vectorize.cpp
   VectorCombine.cpp
@@ -18,6 +20,7 @@ add_llvm_component_library(LLVMVectorize
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/Transforms
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/Transforms/Vectorize
+  ${LLVM_MAIN_INCLUDE_DIR}/llvm/Transforms/Vectorize/SandboxVectorizer
 
   DEPENDS
   intrinsics_gen
@@ -27,4 +30,5 @@ add_llvm_component_library(LLVMVectorize
   Core
   Support
   TransformUtils
+  SandboxIR
   )

@@ -237,7 +237,12 @@
               },
               "exitCommands": {
                 "type": "array",
-                "description": "Commands executed at the end of debugging session.",
+                "description": "Commands executed when the program exits.",
+                "default": []
+              },
+              "terminateCommands": {
+                "type": "array",
+                "description": "Commands executed when the debugging session ends.",
                 "default": []
               },
               "runInTerminal": {
@@ -252,6 +257,11 @@
               "enableAutoVariableSummaries": {
                 "type": "boolean",
                 "description": "Enable auto generated summaries for variables when no summaries exist for a given type. This feature can cause performance delays in large projects when viewing variables.",
+                "default": false
+              },
+              "enableDisplayExtendedBacktrace": {
+                "type": "boolean",
+                "description": "Enable language specific extended backtraces.",
                 "default": false
               },
               "enableSyntheticChildDebugging": {
@@ -342,7 +352,12 @@
               },
               "exitCommands": {
                 "type": "array",
-                "description": "Commands executed at the end of debugging session.",
+                "description": "Commands executed when the program exits.",
+                "default": []
+              },
+              "terminateCommands": {
+                "type": "array",
+                "description": "Commands executed when the debugging session ends.",
                 "default": []
               },
               "coreFile": {
@@ -367,6 +382,11 @@
               "enableAutoVariableSummaries": {
                 "type": "boolean",
                 "description": "Enable auto generated summaries for variables when no summaries exist for a given type. This feature can cause performance delays in large projects when viewing variables.",
+                "default": false
+              },
+              "enableDisplayExtendedBacktrace": {
+                "type": "boolean",
+                "description": "Enable language specific extended backtraces.",
                 "default": false
               },
               "enableSyntheticChildDebugging": {

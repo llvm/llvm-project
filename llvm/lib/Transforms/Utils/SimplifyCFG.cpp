@@ -1000,20 +1000,20 @@ bool SimplifyCFGOpt::simplifyEqualityComparisonWithOnlyPredecessor(
   // which value (or set of values) this is.
   ConstantInt *TIV = nullptr;
   BasicBlock *TIBB = TI->getParent();
-  for (unsigned i = 0, e = PredCases.size(); i != e; ++i)
-    if (PredCases[i].Dest == TIBB) {
+  for (const auto &[Value, Dest] : PredCases)
+    if (Dest == TIBB) {
       if (TIV)
         return false; // Cannot handle multiple values coming to this block.
-      TIV = PredCases[i].Value;
+      TIV = Value;
     }
   assert(TIV && "No edge from pred to succ?");
 
   // Okay, we found the one constant that our value can be if we get into TI's
   // BB.  Find out which successor will unconditionally be branched to.
   BasicBlock *TheRealDest = nullptr;
-  for (unsigned i = 0, e = ThisCases.size(); i != e; ++i)
-    if (ThisCases[i].Value == TIV) {
-      TheRealDest = ThisCases[i].Dest;
+  for (const auto &[Value, Dest] : ThisCases)
+    if (Value == TIV) {
+      TheRealDest = Dest;
       break;
     }
 
@@ -3040,7 +3040,7 @@ static bool isSafeCheapLoadStore(const Instruction *I,
 ///     %sub = sub %x, %y
 ///     br label BB2
 ///   EndBB:
-///     %phi = phi [ %sub, %ThenBB ], [ 0, %EndBB ]
+///     %phi = phi [ %sub, %ThenBB ], [ 0, %BB ]
 ///     ...
 /// \endcode
 ///
@@ -3338,9 +3338,20 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
     if (auto *LI = dyn_cast<LoadInst>(I)) {
       // Handle Load.
       auto *Ty = I->getType();
-      MaskedLoadStore = Builder.CreateMaskedLoad(FixedVectorType::get(Ty, 1),
-                                                 Op0, LI->getAlign(), Mask);
-      I->replaceAllUsesWith(Builder.CreateBitCast(MaskedLoadStore, Ty));
+      PHINode *PN = nullptr;
+      Value *PassThru = nullptr;
+      for (User *U : I->users())
+        if ((PN = dyn_cast<PHINode>(U))) {
+          PassThru = Builder.CreateBitCast(PN->getIncomingValueForBlock(BB),
+                                           FixedVectorType::get(Ty, 1));
+          break;
+        }
+      MaskedLoadStore = Builder.CreateMaskedLoad(
+          FixedVectorType::get(Ty, 1), Op0, LI->getAlign(), Mask, PassThru);
+      Value *NewLoadStore = Builder.CreateBitCast(MaskedLoadStore, Ty);
+      if (PN)
+        PN->setIncomingValue(PN->getBasicBlockIndex(BB), NewLoadStore);
+      I->replaceAllUsesWith(NewLoadStore);
     } else {
       // Handle Store.
       auto *StoredVal =

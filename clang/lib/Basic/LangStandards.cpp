@@ -78,6 +78,7 @@ LangStandard::Kind LangStandard::getHLSLLangKind(StringRef Name) {
       .Case("2018", LangStandard::lang_hlsl2018)
       .Case("2021", LangStandard::lang_hlsl2021)
       .Case("202x", LangStandard::lang_hlsl202x)
+      .Case("202y", LangStandard::lang_hlsl202y)
       .Default(LangStandard::lang_unspecified);
 }
 
@@ -116,7 +117,7 @@ LangStandard::Kind clang::getDefaultLanguageStandard(clang::Language Lang,
   case Language::RenderScript:
     return LangStandard::lang_c99;
   case Language::HLSL:
-    return LangStandard::lang_hlsl2021;
+    return LangStandard::lang_hlsl202x;
   }
   llvm_unreachable("unhandled Language kind!");
 }
