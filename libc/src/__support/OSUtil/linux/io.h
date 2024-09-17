@@ -49,7 +49,7 @@ LIBC_INLINE void write_all_to_stderr(const cpp::string_view (&msgs)[N]) {
   }
 
   size_t written = 0;
-  while (written != total_len) {
+  for (;;) {
     auto delta =
         LIBC_NAMESPACE::syscall_impl<long>(SYS_writev, 2 /* stderr */, iovs, N);
 
@@ -62,6 +62,10 @@ LIBC_INLINE void write_all_to_stderr(const cpp::string_view (&msgs)[N]) {
 
     auto udelta = static_cast<size_t>(delta);
     written += udelta;
+
+    if (written == total_len)
+      break;
+
     for (size_t i = 0; i < N; ++i) {
       if (udelta == 0)
         break;
