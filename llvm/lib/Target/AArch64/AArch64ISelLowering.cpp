@@ -21831,7 +21831,9 @@ SDValue tryLowerPartialReductionToDot(SDNode *N,
   auto ExtA = MulOp->getOperand(0);
   auto ExtB = MulOp->getOperand(1);
 
-  if (!ISD::isExtOpcode(ExtA->getOpcode()) || !ISD::isExtOpcode(ExtB->getOpcode())) return SDValue();
+  if (!ISD::isExtOpcode(ExtA->getOpcode()) ||
+      !ISD::isExtOpcode(ExtB->getOpcode()))
+    return SDValue();
   bool AIsSigned = ExtA->getOpcode() == ISD::SIGN_EXTEND;
   bool BIsSigned = ExtB->getOpcode() == ISD::SIGN_EXTEND;
 
