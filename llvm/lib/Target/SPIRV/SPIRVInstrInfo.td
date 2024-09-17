@@ -519,8 +519,8 @@ def OpMatrixTimesMatrix: BinOp<"OpMatrixTimesMatrix", 146>;
 def OpOuterProduct: BinOp<"OpOuterProduct", 147>;
 def OpDot: BinOp<"OpDot", 148>;
 
-def OpIAddCarry: BinOpTyped<"OpIAddCarry", 149, iID, addc>;
-def OpISubBorrow: BinOpTyped<"OpISubBorrow", 150, iID, subc>;
+defm OpIAddCarry: BinOpTypedGen<"OpIAddCarry", 149, addc, 0, 1>;
+defm OpISubBorrow: BinOpTypedGen<"OpISubBorrow", 150, subc, 0, 1>;
 def OpUMulExtended: BinOp<"OpUMulExtended", 151>;
 def OpSMulExtended: BinOp<"OpSMulExtended", 152>;
 

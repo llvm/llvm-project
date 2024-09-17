@@ -598,13 +598,19 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
         "Selection of a signed addition with overflow is not implemented",
         false);
   case TargetOpcode::G_UADDO:
-    return selectOverflowArith(ResVReg, ResType, I, SPIRV::OpIAddCarry);
+    return selectOverflowArith(ResVReg, ResType, I,
+                               ResType->getOpcode() == SPIRV::OpTypeVector
+                                   ? SPIRV::OpIAddCarryV
+                                   : SPIRV::OpIAddCarryS);
   case TargetOpcode::G_SSUBO:
     report_fatal_error(
         "Selection of a signed subtraction with overflow is not implemented",
         false);
   case TargetOpcode::G_USUBO:
-    return selectOverflowArith(ResVReg, ResType, I, SPIRV::OpISubBorrow);
+    return selectOverflowArith(ResVReg, ResType, I,
+                               ResType->getOpcode() == SPIRV::OpTypeVector
+                                   ? SPIRV::OpISubBorrowV
+                                   : SPIRV::OpISubBorrowS);
   case TargetOpcode::G_UMULO:
     return selectOverflowArith(ResVReg, ResType, I, SPIRV::OpUMulExtended);
   case TargetOpcode::G_SMULO:
