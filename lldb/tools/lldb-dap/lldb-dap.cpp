@@ -8,6 +8,7 @@
 
 #include "DAP.h"
 #include "Watchpoint.h"
+#include "lldb/API/SBDeclaration.h"
 #include "lldb/API/SBMemoryRegionInfo.h"
 #include "llvm/Support/Base64.h"
 
@@ -1611,7 +1612,7 @@ void request_evaluate(const llvm::json::Object &request) {
       EmplaceSafeString(body, "result", desc.GetResult(context));
       EmplaceSafeString(body, "type", desc.display_type_name);
       if (value.MightHaveChildren()) {
-        auto variableReference = g_dap.variables.InsertExpandableVariable(
+        auto variableReference = g_dap.variables.InsertVariable(
             value, /*is_permanent=*/context == "repl");
         body.try_emplace("variablesReference", variableReference);
       } else {
@@ -3789,8 +3790,8 @@ void request_setVariable(const llvm::json::Object &request) {
       // is_permanent is false because debug console does not support
       // setVariable request.
       if (variable.MightHaveChildren())
-        newVariablesReference = g_dap.variables.InsertExpandableVariable(
-            variable, /*is_permanent=*/false);
+        newVariablesReference =
+            g_dap.variables.InsertVariable(variable, /*is_permanent=*/false);
       body.try_emplace("variablesReference", newVariablesReference);
 
       if (lldb::addr_t addr = variable.GetLoadAddress();
@@ -3964,13 +3965,10 @@ void request_variables(const llvm::json::Object &request) {
       if (!variable.IsValid())
         break;
 
-      int64_t var_ref = 0;
-      if (variable.MightHaveChildren() || variable.IsSynthetic()) {
-        var_ref = g_dap.variables.InsertExpandableVariable(
-            variable, /*is_permanent=*/false);
-      }
+      int64_t var_ref =
+          g_dap.variables.InsertVariable(variable, /*is_permanent=*/false);
       variables.emplace_back(CreateVariable(
-          variable, var_ref, var_ref != 0 ? var_ref : UINT64_MAX, hex,
+          variable, var_ref, hex,
           variable_name_counts[GetNonNullVariableName(variable)] > 1));
     }
   } else {
@@ -3982,19 +3980,11 @@ void request_variables(const llvm::json::Object &request) {
                           std::optional<std::string> custom_name = {}) {
         if (!child.IsValid())
           return;
-        if (child.MightHaveChildren()) {
-          auto is_permanent =
-              g_dap.variables.IsPermanentVariableReference(variablesReference);
-          auto childVariablesReferences =
-              g_dap.variables.InsertExpandableVariable(child, is_permanent);
-          variables.emplace_back(CreateVariable(
-              child, childVariablesReferences, childVariablesReferences, hex,
-              /*is_name_duplicated=*/false, custom_name));
-        } else {
-          variables.emplace_back(CreateVariable(child, 0, INT64_MAX, hex,
-                                                /*is_name_duplicated=*/false,
-                                                custom_name));
-        }
+        bool is_permanent =
+            g_dap.variables.IsPermanentVariableReference(variablesReference);
+        int64_t var_ref = g_dap.variables.InsertVariable(child, is_permanent);
+        variables.emplace_back(CreateVariable(
+            child, var_ref, hex, /*is_name_duplicated=*/false, custom_name));
       };
       const int64_t num_children = variable.GetNumChildren();
       int64_t end_idx = start + ((count == 0) ? num_children : count);
@@ -4013,6 +4003,117 @@ void request_variables(const llvm::json::Object &request) {
   }
   llvm::json::Object body;
   body.try_emplace("variables", std::move(variables));
+  response.try_emplace("body", std::move(body));
+  g_dap.SendJSON(llvm::json::Value(std::move(response)));
+}
+
+// "LocationsRequest": {
+//   "allOf": [ { "$ref": "#/definitions/Request" }, {
+//     "type": "object",
+//     "description": "Looks up information about a location reference
+//                     previously returned by the debug adapter.",
+//     "properties": {
+//       "command": {
+//         "type": "string",
+//         "enum": [ "locations" ]
+//       },
+//       "arguments": {
+//         "$ref": "#/definitions/LocationsArguments"
+//       }
+//     },
+//     "required": [ "command", "arguments" ]
+//   }]
+// },
+// "LocationsArguments": {
+//   "type": "object",
+//   "description": "Arguments for `locations` request.",
+//   "properties": {
+//     "locationReference": {
+//       "type": "integer",
+//       "description": "Location reference to resolve."
+//     }
+//   },
+//   "required": [ "locationReference" ]
+// },
+// "LocationsResponse": {
+//   "allOf": [ { "$ref": "#/definitions/Response" }, {
+//     "type": "object",
+//     "description": "Response to `locations` request.",
+//     "properties": {
+//       "body": {
+//         "type": "object",
+//         "properties": {
+//           "source": {
+//             "$ref": "#/definitions/Source",
+//             "description": "The source containing the location; either
+//                             `source.path` or `source.sourceReference` must be
+//                             specified."
+//           },
+//           "line": {
+//             "type": "integer",
+//             "description": "The line number of the location. The client
+//                             capability `linesStartAt1` determines whether it
+//                             is 0- or 1-based."
+//           },
+//           "column": {
+//             "type": "integer",
+//             "description": "Position of the location within the `line`. It is
+//                             measured in UTF-16 code units and the client
+//                             capability `columnsStartAt1` determines whether
+//                             it is 0- or 1-based. If no column is given, the
+//                             first position in the start line is assumed."
+//           },
+//           "endLine": {
+//             "type": "integer",
+//             "description": "End line of the location, present if the location
+//                             refers to a range.  The client capability
+//                             `linesStartAt1` determines whether it is 0- or
+//                             1-based."
+//           },
+//           "endColumn": {
+//             "type": "integer",
+//             "description": "End position of the location within `endLine`,
+//                             present if the location refers to a range. It is
+//                             measured in UTF-16 code units and the client
+//                             capability `columnsStartAt1` determines whether
+//                             it is 0- or 1-based."
+//           }
+//         },
+//         "required": [ "source", "line" ]
+//       }
+//     }
+//   }]
+// },
+void request_locations(const llvm::json::Object &request) {
+  llvm::json::Object response;
+  FillResponse(request, response);
+  auto arguments = request.getObject("arguments");
+
+  uint64_t reference_id = GetUnsigned(arguments, "locationReference", 0);
+  lldb::SBValue variable = g_dap.variables.GetVariable(reference_id);
+  if (!variable.IsValid()) {
+    response["success"] = false;
+    response["message"] = "Invalid variable reference";
+    g_dap.SendJSON(llvm::json::Value(std::move(response)));
+    return;
+  }
+
+  // Get the declaration location
+  lldb::SBDeclaration decl = variable.GetDeclaration();
+  if (!decl.IsValid()) {
+    response["success"] = false;
+    response["message"] = "No declaration location available";
+    g_dap.SendJSON(llvm::json::Value(std::move(response)));
+    return;
+  }
+
+  llvm::json::Object body;
+  body.try_emplace("source", CreateSource(decl.GetFileSpec()));
+  if (int line = decl.GetLine())
+    body.try_emplace("line", line);
+  if (int column = decl.GetColumn())
+    body.try_emplace("column", column);
+
   response.try_emplace("body", std::move(body));
   g_dap.SendJSON(llvm::json::Value(std::move(response)));
 }
@@ -4673,6 +4774,7 @@ void RegisterRequestCallbacks() {
   g_dap.RegisterRequestCallback("stepOut", request_stepOut);
   g_dap.RegisterRequestCallback("threads", request_threads);
   g_dap.RegisterRequestCallback("variables", request_variables);
+  g_dap.RegisterRequestCallback("locations", request_locations);
   g_dap.RegisterRequestCallback("disassemble", request_disassemble);
   g_dap.RegisterRequestCallback("readMemory", request_readMemory);
   g_dap.RegisterRequestCallback("setInstructionBreakpoints",
