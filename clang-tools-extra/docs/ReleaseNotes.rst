@@ -145,6 +145,11 @@ Changes in existing checks
   <clang-tidy/checks/modernize/use-std-print>` check to support replacing
   member function calls too.
 
+- Improved :doc:`readability-enum-initial-value
+  <clang-tidy/checks/readability/enum-initial-value>` check by only issuing
+  diagnostics for the definition of an ``enum``, and by fixing a typo in the
+  diagnostic.
+
 - Improved :doc:`performance-avoid-endl
   <clang-tidy/checks/performance/avoid-endl>` check to use ``std::endl`` as
   placeholder when lexer cannot get source text.
