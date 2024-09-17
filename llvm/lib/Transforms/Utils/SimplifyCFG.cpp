@@ -3334,7 +3334,7 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
     // extended for vector types in the future.
     assert(!getLoadStoreType(I)->isVectorTy() && "not implemented");
     auto *Op0 = I->getOperand(0);
-    Instruction *MaskedLoadStore = nullptr;
+    CallInst *MaskedLoadStore = nullptr;
     if (auto *LI = dyn_cast<LoadInst>(I)) {
       // Handle Load.
       auto *Ty = I->getType();
@@ -3367,8 +3367,9 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
     //         vector specifies a per-element range, so the semantics stay the
     //         same. Keep it.
     // !annotation: Not impact semantics. Keep it.
-    I->dropUBImplyingAttrsAndUnknownMetadata(
-        {LLVMContext::MD_range, LLVMContext::MD_annotation});
+    if (const MDNode *Ranges = I->getMetadata(LLVMContext::MD_range))
+      MaskedLoadStore->addRangeRetAttr(getConstantRangeFromMetadata(*Ranges));
+    I->dropUBImplyingAttrsAndUnknownMetadata({LLVMContext::MD_annotation});
     // FIXME: DIAssignID is not supported for masked store yet.
     // (Verifier::visitDIAssignIDMetadata)
     at::deleteAssignmentMarkers(I);
