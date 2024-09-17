@@ -74,6 +74,10 @@ class TestDAP_memory(lldbdap_testcase.DAPTestCaseBase):
             ].keys(),
         )
 
+    # lldb-dap assumes that all reads will be within the same region. On Windows
+    # the target string is at the very start of a region so the -1 offset causes
+    # the read to only read from the previous region and only return 1 byte.
+    @skipIfWindows
     def test_readMemory(self):
         """
         Tests the 'readMemory' request
