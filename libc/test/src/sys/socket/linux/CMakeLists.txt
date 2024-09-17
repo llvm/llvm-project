@@ -27,3 +27,48 @@ add_libc_unittest(
     libc.src.stdio.remove
     libc.src.unistd.close
 )
+
+add_libc_unittest(
+  send_recv_test
+  SUITE
+    libc_sys_socket_unittests
+  SRCS
+    send_recv_test.cpp
+  DEPENDS
+    libc.include.sys_socket
+    libc.src.errno.errno
+    libc.src.sys.socket.socketpair
+    libc.src.sys.socket.send
+    libc.src.sys.socket.recv
+    libc.src.unistd.close
+)
+
+add_libc_unittest(
+  sendto_recvfrom_test
+  SUITE
+    libc_sys_socket_unittests
+  SRCS
+    sendto_recvfrom_test.cpp
+  DEPENDS
+    libc.include.sys_socket
+    libc.src.errno.errno
+    libc.src.sys.socket.socketpair
+    libc.src.sys.socket.sendto
+    libc.src.sys.socket.recvfrom
+    libc.src.unistd.close
+)
+
+add_libc_unittest(
+  sendmsg_recvmsg_test
+  SUITE
+    libc_sys_socket_unittests
+  SRCS
+    sendmsg_recvmsg_test.cpp
+  DEPENDS
+    libc.include.sys_socket
+    libc.src.errno.errno
+    libc.src.sys.socket.socketpair
+    libc.src.sys.socket.sendmsg
+    libc.src.sys.socket.recvmsg
+    libc.src.unistd.close
+)
