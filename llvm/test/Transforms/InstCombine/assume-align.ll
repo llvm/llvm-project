@@ -133,6 +133,17 @@ define ptr @fold_assume_align_pow2_of_loaded_pointer_into_align_metadata(ptr %p)
   ret ptr %p2
 }
 
+define ptr @dont_fold_assume_align_i32_pow2_of_loaded_pointer_into_align_metadata(ptr %p) {
+; CHECK-LABEL: @dont_fold_assume_align_i32_pow2_of_loaded_pointer_into_align_metadata(
+; CHECK-NEXT:    [[P2:%.*]] = load ptr, ptr [[P:%.*]], align 8
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[P2]], i32 8) ]
+; CHECK-NEXT:    ret ptr [[P2]]
+;
+  %p2 = load ptr, ptr %p
+  call void @llvm.assume(i1 true) [ "align"(ptr %p2, i32 8) ]
+  ret ptr %p2
+}
+
 define ptr @dont_fold_assume_align_pow2_of_loaded_pointer_into_align_metadata_due_to_call(ptr %p) {
 ; CHECK-LABEL: @dont_fold_assume_align_pow2_of_loaded_pointer_into_align_metadata_due_to_call(
 ; CHECK-NEXT:    [[P2:%.*]] = load ptr, ptr [[P:%.*]], align 8

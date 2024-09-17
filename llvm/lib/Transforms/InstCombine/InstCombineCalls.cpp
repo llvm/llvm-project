@@ -3105,7 +3105,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
             !isValidAssumeForContext(II, LI, &DT, /*AllowEphemerals=*/true))
           continue;
         auto *Align = dyn_cast<ConstantInt>(OBU.Inputs[1]);
-        if (!Align || !isPowerOf2_64(Align->getZExtValue()))
+        if (!Align || !isPowerOf2_64(Align->getZExtValue()) || Align->getType()->getScalarSizeInBits() != 64)
           continue;
         LI->setMetadata(
             LLVMContext::MD_align,
