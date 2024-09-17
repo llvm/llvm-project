@@ -911,6 +911,7 @@ public:
                               const MachineInstr &BVMI, BuildFnTy &MatchInfo);
 
   bool matchCanonicalizeICmp(const MachineInstr &MI, BuildFnTy &MatchInfo);
+  bool matchCanonicalizeFCmp(const MachineInstr &MI, BuildFnTy &MatchInfo);
 
 private:
   /// Checks for legality of an indexed variant of \p LdSt.
@@ -1029,6 +1030,8 @@ private:
 
   bool constantFoldICmp(const GICmp &ICmp, const GIConstant &LHSCst,
                         const GIConstant &RHSCst, BuildFnTy &MatchInfo);
+  bool constantFoldFCmp(const GFCmp &FCmp, const GFConstant &LHSCst,
+                        const GFConstant &RHSCst, BuildFnTy &MatchInfo);
 };
 } // namespace llvm
 

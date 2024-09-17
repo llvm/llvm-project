@@ -1921,8 +1921,15 @@ def canonicalize_icmp : GICombineRule<
          [{ return Helper.matchCanonicalizeICmp(*${cmp}, ${matchinfo}); }]),
   (apply [{ Helper.applyBuildFn(*${cmp}, ${matchinfo}); }])>;
 
-def icmp_combines: GICombineGroup<[
+def canonicalize_fcmp : GICombineRule<
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (match (G_FCMP $root, $pred, $lhs, $rhs):$cmp,
+         [{ return Helper.matchCanonicalizeFCmp(*${cmp}, ${matchinfo}); }]),
+  (apply [{ Helper.applyBuildFn(*${cmp}, ${matchinfo}); }])>;
+
+def cmp_combines: GICombineGroup<[
   canonicalize_icmp,
+  canonicalize_fcmp,
   icmp_to_true_false_known_bits,
   icmp_to_lhs_known_bits,
   double_icmp_zero_and_combine,
@@ -1995,7 +2002,7 @@ def all_combines : GICombineGroup<[integer_reassoc_combines, trivial_combines,
     combine_extracted_vector_load,
     undef_combines, identity_combines, phi_combines,
     simplify_add_to_sub, hoist_logic_op_with_same_opcode_hands, shifts_too_big,
-    reassocs, ptr_add_immed_chain, icmp_combines,
+    reassocs, ptr_add_immed_chain, cmp_combines,
     shl_ashr_to_sext_inreg, sext_inreg_of_load,
     width_reduction_combines, select_combines,
     known_bits_simplifications,
