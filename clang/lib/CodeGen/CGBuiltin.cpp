@@ -689,12 +689,11 @@ static Value *EmitSignBit(CodeGenFunction &CGF, Value *V) {
 static bool hasPointerArgsOrPointerReturnType(Value *V) {
   if (V) {
     if (const CallBase *CB = dyn_cast<CallBase>(V)) {
-      for (const Value *A : CB->args()) {
-        if (A->getType()->isPointerTy())
+      if (llvm::any_of(CB->args(), [](const Value *A) {
+            return A->getType()->isPointerTy();
+          }))
+        if (CB->getFunctionType()->getReturnType()->isPointerTy())
           return true;
-      }
-      if (CB->getFunctionType()->getReturnType()->isPointerTy())
-        return true;
     }
   }
   return false;
