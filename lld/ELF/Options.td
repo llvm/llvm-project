@@ -353,6 +353,10 @@ def omagic: FF<"omagic">, MetaVarName<"<magic>">,
 defm orphan_handling:
   Eq<"orphan-handling", "Control how orphan sections are handled when linker script used">;
 
+defm override_section_flags:
+  EEq<"override-section-flags", "Override section flags">,
+  MetaVarName<"<section-glob>=[awx]+">;
+
 defm pack_dyn_relocs:
   EEq<"pack-dyn-relocs", "Pack dynamic relocations in the given format">,
   MetaVarName<"[none,android,relr,android+relr]">;

@@ -47,13 +47,21 @@ static ArrayRef<uint8_t> getSectionContents(ObjFile<ELFT> &file,
   return check(file.getObj().getSectionContents(hdr));
 }
 
+uint32_t effectiveSectionFlags(uint32_t flags, StringRef name) {
+  for (auto &[glob, overriddenFlags] : config->overrideSectionFlags) {
+    if (glob.match(name))
+      return overriddenFlags;
+  }
+  return flags;
+}
+
 InputSectionBase::InputSectionBase(InputFile *file, uint64_t flags,
                                    uint32_t type, uint64_t entsize,
                                    uint32_t link, uint32_t info,
                                    uint32_t addralign, ArrayRef<uint8_t> data,
                                    StringRef name, Kind sectionKind)
-    : SectionBase(sectionKind, name, flags, entsize, addralign, type, info,
-                  link),
+    : SectionBase(sectionKind, name, effectiveSectionFlags(flags, name),
+                  entsize, addralign, type, info, link),
       file(file), content_(data.data()), size(data.size()) {
   // In order to reduce memory allocation, we assume that mergeable
   // sections are smaller than 4 GiB, which is not an unreasonable
