@@ -244,7 +244,6 @@ define float @mubuf_vgpr(<4 x i32> %i, i32 %c) #0 {
 ; W64-O0-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:24 ; 4-byte Folded Reload
 ; W64-O0-NEXT:    ; kill: killed $vgpr1
 ; W64-O0-NEXT:    s_xor_saveexec_b64 s[4:5], -1
-; W64-O0-NEXT:    s_waitcnt vmcnt(0)
 ; W64-O0-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:28 ; 4-byte Folded Reload
 ; W64-O0-NEXT:    s_nop 0
 ; W64-O0-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:32 ; 4-byte Folded Reload
