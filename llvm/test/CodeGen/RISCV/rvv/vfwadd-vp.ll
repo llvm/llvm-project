@@ -18,7 +18,8 @@ bb:
   ret <vscale x 2 x float> %tmp2
 }
 
-; Make sure we don't widen vfmadd.vv -> vfwmaccvbf16.vv if there's multiple uses
+; Make sure we don't widen vfmadd.vv -> vfwmaccvbf16.vv if there's other
+; unwidenable uses
 define <vscale x 2 x float> @vfwadd_same_operand_nxv2bf16_multiuse(<vscale x 2 x bfloat> %arg, <vscale x 2 x float> %acc, i32 signext %vl, ptr %p) {
 ; CHECK-LABEL: vfwadd_same_operand_nxv2bf16_multiuse:
 ; CHECK:       # %bb.0: # %bb
