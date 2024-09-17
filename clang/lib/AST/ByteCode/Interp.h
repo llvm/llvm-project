@@ -159,8 +159,10 @@ bool CallBI(InterpState &S, CodePtr OpPC, const Function *Func,
 bool CallPtr(InterpState &S, CodePtr OpPC, uint32_t ArgSize,
              const CallExpr *CE);
 
+enum class ShiftDir { Left, Right };
+
 /// Checks if the shift operation is legal.
-template <typename LT, typename RT>
+template <ShiftDir Dir, typename LT, typename RT>
 bool CheckShift(InterpState &S, CodePtr OpPC, const LT &LHS, const RT &RHS,
                 unsigned Bits) {
   if (RHS.isNegative()) {
@@ -181,19 +183,21 @@ bool CheckShift(InterpState &S, CodePtr OpPC, const LT &LHS, const RT &RHS,
       return false;
   }
 
-  if (LHS.isSigned() && !S.getLangOpts().CPlusPlus20) {
-    const Expr *E = S.Current->getExpr(OpPC);
-    // C++11 [expr.shift]p2: A signed left shift must have a non-negative
-    // operand, and must not overflow the corresponding unsigned type.
-    if (LHS.isNegative()) {
-      S.CCEDiag(E, diag::note_constexpr_lshift_of_negative) << LHS.toAPSInt();
-      if (!S.noteUndefinedBehavior())
-        return false;
-    } else if (LHS.toUnsigned().countLeadingZeros() <
-               static_cast<unsigned>(RHS)) {
-      S.CCEDiag(E, diag::note_constexpr_lshift_discards);
-      if (!S.noteUndefinedBehavior())
-        return false;
+  if constexpr (Dir == ShiftDir::Left) {
+    if (LHS.isSigned() && !S.getLangOpts().CPlusPlus20) {
+      const Expr *E = S.Current->getExpr(OpPC);
+      // C++11 [expr.shift]p2: A signed left shift must have a non-negative
+      // operand, and must not overflow the corresponding unsigned type.
+      if (LHS.isNegative()) {
+        S.CCEDiag(E, diag::note_constexpr_lshift_of_negative) << LHS.toAPSInt();
+        if (!S.noteUndefinedBehavior())
+          return false;
+      } else if (LHS.toUnsigned().countLeadingZeros() <
+                 static_cast<unsigned>(RHS)) {
+        S.CCEDiag(E, diag::note_constexpr_lshift_discards);
+        if (!S.noteUndefinedBehavior())
+          return false;
+      }
     }
   }
 
@@ -2394,7 +2398,6 @@ inline bool RVOPtr(InterpState &S, CodePtr OpPC) {
 //===----------------------------------------------------------------------===//
 // Shr, Shl
 //===----------------------------------------------------------------------===//
-enum class ShiftDir { Left, Right };
 
 template <class LT, class RT, ShiftDir Dir>
 inline bool DoShift(InterpState &S, CodePtr OpPC, LT &LHS, RT &RHS) {
@@ -2431,7 +2434,7 @@ inline bool DoShift(InterpState &S, CodePtr OpPC, LT &LHS, RT &RHS) {
     }
   }
 
-  if (!CheckShift(S, OpPC, LHS, RHS, Bits))
+  if (!CheckShift<Dir>(S, OpPC, LHS, RHS, Bits))
     return false;
 
   // Limit the shift amount to Bits - 1. If this happened,
