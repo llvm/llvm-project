@@ -377,10 +377,15 @@ void WebAssemblyInstPrinter::printCatchList(const MCInst *MI, unsigned OpNo,
   auto PrintTagOp = [&](const MCOperand &Op) {
     const MCSymbolRefExpr *TagExpr = nullptr;
     const MCSymbolWasm *TagSym = nullptr;
-    assert(Op.isExpr());
-    TagExpr = dyn_cast<MCSymbolRefExpr>(Op.getExpr());
-    TagSym = cast<MCSymbolWasm>(&TagExpr->getSymbol());
-    O << TagSym->getName() << " ";
+    if (Op.isExpr()) {
+      TagExpr = dyn_cast<MCSymbolRefExpr>(Op.getExpr());
+      TagSym = cast<MCSymbolWasm>(&TagExpr->getSymbol());
+      O << TagSym->getName() << " ";
+    } else {
+      // When instructions are parsed from the disassembler, we have an
+      // immediate tag index and not a tag expr
+      O << Op.getImm() << " ";
+    }
   };
 
   for (unsigned I = 0; I < NumCatches; I++) {
