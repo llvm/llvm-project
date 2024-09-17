@@ -44,3 +44,85 @@ bb5:
   call void @llvm.lifetime.end.p0(i64 1, ptr nonnull %y)
   ret void
 }
+
+define i64 @dont_make_div_variable(i64 noundef %x, i64 noundef %i) {
+; CHECK-LABEL: define i64 @dont_make_div_variable(
+; CHECK-SAME: i64 noundef [[X:%.*]], i64 noundef [[I:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[SWITCH_TABLEIDX:%.*]] = sub nsw i64 [[I]], 9
+; CHECK-NEXT:    [[SWITCH_OFFSET:%.*]] = add nsw i64 [[SWITCH_TABLEIDX]], 9
+; CHECK-NEXT:    [[DIV6:%.*]] = udiv i64 [[X]], [[SWITCH_OFFSET]]
+; CHECK-NEXT:    ret i64 [[DIV6]]
+;
+entry:
+  switch i64 %i, label %sw.default [
+  i64 9, label %sw.bb
+  i64 10, label %sw.bb1
+  i64 11, label %sw.bb3
+  i64 12, label %sw.bb5
+  ]
+
+sw.bb:
+  %div = udiv i64 %x, 9
+  br label %return
+
+sw.bb1:
+  %div2 = udiv i64 %x, 10
+  br label %return
+
+sw.bb3:
+  %div4 = udiv i64 %x, 11
+  br label %return
+
+sw.bb5:
+  %div6 = udiv i64 %x, 12
+  br label %return
+
+sw.default:
+  unreachable
+
+return:
+  %retval.0 = phi i64 [ %div6, %sw.bb5 ], [ %div4, %sw.bb3 ], [ %div2, %sw.bb1 ], [ %div, %sw.bb ]
+  ret i64 %retval.0
+}
+
+define i64 @okay_to_make_div_variable(i64 noundef %x, i64 noundef %i) {
+; CHECK-LABEL: define i64 @okay_to_make_div_variable(
+; CHECK-SAME: i64 noundef [[X:%.*]], i64 noundef [[I:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[SWITCH_TABLEIDX:%.*]] = sub nsw i64 [[I]], 9
+; CHECK-NEXT:    [[SWITCH_OFFSET:%.*]] = add nsw i64 [[SWITCH_TABLEIDX]], 9
+; CHECK-NEXT:    [[DIV6:%.*]] = udiv i64 [[SWITCH_OFFSET]], [[X]]
+; CHECK-NEXT:    ret i64 [[DIV6]]
+;
+entry:
+  switch i64 %i, label %sw.default [
+  i64 9, label %sw.bb
+  i64 10, label %sw.bb1
+  i64 11, label %sw.bb3
+  i64 12, label %sw.bb5
+  ]
+
+sw.bb:
+  %div = udiv i64 9, %x
+  br label %return
+
+sw.bb1:
+  %div2 = udiv i64 10, %x
+  br label %return
+
+sw.bb3:
+  %div4 = udiv i64 11, %x
+  br label %return
+
+sw.bb5:
+  %div6 = udiv i64 12, %x
+  br label %return
+
+sw.default:
+  unreachable
+
+return:
+  %retval.0 = phi i64 [ %div6, %sw.bb5 ], [ %div4, %sw.bb3 ], [ %div2, %sw.bb1 ], [ %div, %sw.bb ]
+  ret i64 %retval.0
+}
