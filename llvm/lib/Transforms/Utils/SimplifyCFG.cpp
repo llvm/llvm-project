@@ -7864,10 +7864,10 @@ static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I, bool PtrValu
   if (I->use_empty())
     return false;
 
-  if (C->isNullValue() || isa<UndefValue>(C)) {
+  if (C->isNullValue() || isa<UndefValue>(C) || C->isAllOnesValue()) {
     // Only look at the first use we can handle, avoid hurting compile time with
     // long uselists
-    auto FindUse = llvm::find_if(I->users(), [](auto *U) {
+    auto FindUse = llvm::find_if(I->users(), [C](auto *U) {
       auto *Use = cast<Instruction>(U);
       // Change this list when we want to add new instructions.
       switch (Use->getOpcode()) {
@@ -7881,7 +7881,13 @@ static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I, bool PtrValu
       case Instruction::Call:
       case Instruction::CallBr:
       case Instruction::Invoke:
-        return true;
+        return C->isNullValue() || isa<UndefValue>(C);
+      case Instruction::UDiv:
+      case Instruction::URem:
+        return C->isNullValue();
+      case Instruction::SDiv:
+      case Instruction::SRem:
+        return C->isNullValue() || C->isAllOnesValue();
       }
     });
     if (FindUse == I->user_end())
@@ -7981,6 +7987,17 @@ static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I, bool PtrValu
             }
           }
       }
+    }
+    if (match(Use, m_BinOp(m_Value(), m_Specific(I)))) {
+      // Immediate UB to divide by zero
+      if (Use->getOpcode() == Instruction::UDiv ||
+          Use->getOpcode() == Instruction::URem)
+        return C->isNullValue();
+      // Immediate UB to signed-divide INT_MIN by -1
+      if (Use->getOpcode() == Instruction::SDiv ||
+          Use->getOpcode() == Instruction::SRem)
+        return C->isNullValue() ||
+               (C->isAllOnesValue() && match(Use->getOperand(0), m_SignMask()));
     }
   }
   return false;
