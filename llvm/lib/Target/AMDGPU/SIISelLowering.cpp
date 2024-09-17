@@ -6776,22 +6776,10 @@ SDValue SITargetLowering::promoteUniformOpToI32(SDValue Op,
 
   EVT OpTy = (Opc != ISD::SETCC) ? Op.getValueType()
                                  : Op->getOperand(0).getValueType();
+  auto ExtTy = OpTy.changeElementType(MVT::i32);
 
-  if (DCI.isBeforeLegalizeOps())
-    return SDValue();
-
-  // Promote only if:
-  //    - We have 16 bit insts (not true 16 bit insts).
-  //    - We don't have packed instructions (for vector types only).
-  // TODO: For vector types, the set of packed operations is more limited, so
-  // may want to promote some anyway.
-  if (!Subtarget->has16BitInsts() ||
-      (OpTy.isVector() ? Subtarget->hasVOP3PInsts() : false))
-    return SDValue();
-
-  // Promote uniform scalar and vector integers between 2 and 16 bits.
-  if (Op->isDivergent() || !OpTy.isInteger() ||
-      OpTy.getScalarSizeInBits() == 1 || OpTy.getScalarSizeInBits() > 16)
+  if (DCI.isBeforeLegalizeOps() ||
+      isNarrowingProfitable(Op.getNode(), ExtTy, OpTy))
     return SDValue();
 
   auto &DAG = DCI.DAG;
@@ -6806,8 +6794,6 @@ SDValue SITargetLowering::promoteUniformOpToI32(SDValue Op,
     LHS = Op->getOperand(0);
     RHS = Op->getOperand(1);
   }
-
-  auto ExtTy = OpTy.changeElementType(MVT::i32);
 
   const unsigned ExtOp = getExtOpcodeForPromotedOp(Op);
   LHS = DAG.getNode(ExtOp, DL, ExtTy, {LHS});
@@ -6829,7 +6815,7 @@ SDValue SITargetLowering::promoteUniformOpToI32(SDValue Op,
   // truncate back to the original type.
   SDValue NewVal;
   if (Opc == ISD::SELECT)
-    NewVal = DAG.getSelect(DL, ExtTy, Op->getOperand(0), LHS, RHS);
+    NewVal = DAG.getNode(ISD::SELECT, DL, ExtTy, {Op->getOperand(0), LHS, RHS});
   else
     NewVal = DAG.getNode(Opc, DL, ExtTy, {LHS, RHS});
 
