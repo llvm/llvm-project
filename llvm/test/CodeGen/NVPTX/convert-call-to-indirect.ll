@@ -1,5 +1,5 @@
 ; RUN: llc < %s -march=nvptx64 -mcpu=sm_90 | FileCheck %s
-; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_90 | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_90 | %ptxas-verify -arch=sm_90 %}
 
 %struct.64 = type <{ i64 }>
 declare i64 @callee(ptr %p);
