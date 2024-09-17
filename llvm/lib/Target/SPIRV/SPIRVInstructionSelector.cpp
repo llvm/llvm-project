@@ -1156,15 +1156,30 @@ bool SPIRVInstructionSelector::selectOverflowArith(Register ResVReg,
     MIB.addUse(I.getOperand(i).getReg());
   bool Status = MIB.constrainAllUses(TII, TRI, RBI);
   // Build instructions to extract fields of the instruction's result.
+  // A new virtual register to store the higher part of the result struct.
+  Register HigherVReg = MRI->createGenericVirtualRegister(LLT::scalar(64));
+  MRI->setRegClass(HigherVReg, &SPIRV::iIDRegClass);
   for (unsigned i = 0; i < I.getNumDefs(); ++i) {
     auto MIB =
         BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpCompositeExtract))
-            .addDef(I.getOperand(i).getReg())
+            .addDef(i == 1 ? HigherVReg : I.getOperand(i).getReg())
             .addUse(GR.getSPIRVTypeID(ResType))
             .addUse(StructVReg)
             .addImm(i);
     Status &= MIB.constrainAllUses(TII, TRI, RBI);
   }
+  // Build boolean value from the higher part.
+  assert(I.getNumDefs() > 1 && "Not enought operands");
+  SPIRVType *BoolType = GR.getOrCreateSPIRVBoolType(I, TII);
+  unsigned N = GR.getScalarOrVectorComponentCount(ResType);
+  if (N > 1)
+    BoolType = GR.getOrCreateSPIRVVectorType(BoolType, N, I, TII);
+  Status &= BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpINotEqual))
+      .addDef(I.getOperand(1).getReg())
+      .addUse(GR.getSPIRVTypeID(BoolType))
+      .addUse(HigherVReg)
+      .addUse(buildZerosVal(ResType, I))
+      .constrainAllUses(TII, TRI, RBI);
   return Status;
 }
 

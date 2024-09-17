@@ -342,30 +342,6 @@ static void lowerFunnelShifts(IntrinsicInst *FSHIntrinsic) {
   FSHIntrinsic->setCalledFunction(FSHFunc);
 }
 
-static void buildUMulWithOverflowFunc(Function *UMulFunc) {
-  // The function body is already created.
-  if (!UMulFunc->empty())
-    return;
-
-  BasicBlock *EntryBB = BasicBlock::Create(UMulFunc->getParent()->getContext(),
-                                           "entry", UMulFunc);
-  IRBuilder<> IRB(EntryBB);
-  // Build the actual unsigned multiplication logic with the overflow
-  // indication. Do unsigned multiplication Mul = A * B. Then check
-  // if unsigned division Div = Mul / A is not equal to B. If so,
-  // then overflow has happened.
-  Value *Mul = IRB.CreateNUWMul(UMulFunc->getArg(0), UMulFunc->getArg(1));
-  Value *Div = IRB.CreateUDiv(Mul, UMulFunc->getArg(0));
-  Value *Overflow = IRB.CreateICmpNE(UMulFunc->getArg(0), Div);
-
-  // umul.with.overflow intrinsic return a structure, where the first element
-  // is the multiplication result, and the second is an overflow bit.
-  Type *StructTy = UMulFunc->getReturnType();
-  Value *Agg = IRB.CreateInsertValue(PoisonValue::get(StructTy), Mul, {0});
-  Value *Res = IRB.CreateInsertValue(Agg, Overflow, {1});
-  IRB.CreateRet(Res);
-}
-
 static void lowerExpectAssume(IntrinsicInst *II) {
   // If we cannot use the SPV_KHR_expect_assume extension, then we need to
   // ignore the intrinsic and move on. It should be removed later on by LLVM.
@@ -407,20 +383,6 @@ static bool toSpvOverloadedIntrinsic(IntrinsicInst *II, Intrinsic::ID NewID,
   return true;
 }
 
-static void lowerUMulWithOverflow(IntrinsicInst *UMulIntrinsic) {
-  // Get a separate function - otherwise, we'd have to rework the CFG of the
-  // current one. Then simply replace the intrinsic uses with a call to the new
-  // function.
-  Module *M = UMulIntrinsic->getModule();
-  FunctionType *UMulFuncTy = UMulIntrinsic->getFunctionType();
-  Type *FSHLRetTy = UMulFuncTy->getReturnType();
-  const std::string FuncName = lowerLLVMIntrinsicName(UMulIntrinsic);
-  Function *UMulFunc =
-      getOrCreateFunction(M, FSHLRetTy, UMulFuncTy->params(), FuncName);
-  buildUMulWithOverflowFunc(UMulFunc);
-  UMulIntrinsic->setCalledFunction(UMulFunc);
-}
-
 // Substitutes calls to LLVM intrinsics with either calls to SPIR-V intrinsics
 // or calls to proper generated functions. Returns True if F was modified.
 bool SPIRVPrepareFunctions::substituteIntrinsicCalls(Function *F) {
@@ -444,10 +406,6 @@ bool SPIRVPrepareFunctions::substituteIntrinsicCalls(Function *F) {
         lowerFunnelShifts(II);
         Changed = true;
         break;
-//      case Intrinsic::umul_with_overflow:
-//        lowerUMulWithOverflow(II);
-//        Changed = true;
-//        break;
       case Intrinsic::assume:
       case Intrinsic::expect: {
         const SPIRVSubtarget &STI = TM.getSubtarget<SPIRVSubtarget>(*F);
@@ -482,24 +440,6 @@ SPIRVPrepareFunctions::removeAggregateTypesFromSignature(Function *F) {
   // Allow intrinsics with aggregate return type to reach GlobalISel
   if (F->isIntrinsic() && IsRetAggr)
     return F;
-  /*
-    // Allow intrinsics with aggregate return type to reach GlobalISel
-    switch (F->getIntrinsicID()) {
-    // Standard C/C++ Library Intrinsics
-    case Intrinsic::frexp:
-      // Vector Reduction Intrinsics
-    case Intrinsic::vector_interleave2:
-    case Intrinsic::vector_deinterleave2:
-    // Arithmetic with Overflow Intrinsics
-    case Intrinsic::smul_with_overflow:
-    case Intrinsic::umul_with_overflow:
-    case Intrinsic::sadd_with_overflow:
-    case Intrinsic::uadd_with_overflow:
-    case Intrinsic::ssub_with_overflow:
-    case Intrinsic::usub_with_overflow:
-      return F;
-    }
-*/
 
   IRBuilder<> B(F->getContext());
 
