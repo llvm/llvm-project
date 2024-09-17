@@ -1339,7 +1339,6 @@ public:
     MustGather.clear();
     NonScheduledFirst.clear();
     EntryToLastInstruction.clear();
-    GatheredLoadsEntriesFirst = NoGatheredLoads;
     ExternalUses.clear();
     ExternalUsesAsOriginalScalar.clear();
     for (auto &Iter : BlocksSchedules) {
@@ -1356,11 +1355,7 @@ public:
     ValueToGatherNodes.clear();
   }
 
-  unsigned getTreeSize() const {
-    return GatheredLoadsEntriesFirst == NoGatheredLoads
-               ? VectorizableTree.size()
-               : GatheredLoadsEntriesFirst;
-  }
+  unsigned getTreeSize() const { return VectorizableTree.size(); }
 
   /// Perform LICM and CSE on the newly generated gather sequences.
   void optimizeGatherSequence();
@@ -1480,14 +1475,11 @@ public:
   /// \param VL0 main load value.
   /// \param Order returned order of load instructions.
   /// \param PointerOps returned list of pointer operands.
-  /// \param BestVF return best vector factor, if recursive check found better
-  /// vectorization sequences rather than masked gather.
   /// \param TryRecursiveCheck used to check if long masked gather can be
   /// represented as a serie of loads/insert subvector, if profitable.
   LoadsState canVectorizeLoads(ArrayRef<Value *> VL, const Value *VL0,
                                SmallVectorImpl<unsigned> &Order,
                                SmallVectorImpl<Value *> &PointerOps,
-                               unsigned *BestVF = nullptr,
                                bool TryRecursiveCheck = true) const;
 
   OptimizationRemarkEmitter *getORE() { return ORE; }
@@ -2971,12 +2963,6 @@ private:
   /// be beneficial even the tree height is tiny.
   bool isFullyVectorizableTinyTree(bool ForReduction) const;
 
-  /// Run through the list of all gathered loads in the graph and try to find
-  /// vector loads/masked gathers instead of regular gathers. Later these loads
-  /// are reshufled to build final gathered nodes.
-  void tryToVectorizeGatheredLoads(
-      ArrayRef<SmallVector<std::pair<LoadInst *, int>>> GatheredLoads);
-
   /// Reorder commutative or alt operands to get better probability of
   /// generating vectorized code.
   static void reorderInputsAccordingToOpcode(ArrayRef<Value *> VL,
@@ -3049,7 +3035,7 @@ private:
     }
 
     bool isOperandGatherNode(const EdgeInfo &UserEI) const {
-      return isGather() && !UserTreeIndices.empty() &&
+      return isGather() && (Idx > 0 || !UserTreeIndices.empty()) &&
              UserTreeIndices.front().EdgeIdx == UserEI.EdgeIdx &&
              UserTreeIndices.front().UserTE == UserEI.UserTE;
     }
@@ -3396,12 +3382,6 @@ private:
     assert(((!Bundle && EntryState == TreeEntry::NeedToGather) ||
             (Bundle && EntryState != TreeEntry::NeedToGather)) &&
            "Need to vectorize gather entry?");
-    // Gathered loads still gathered? Do not create entry, use the original one.
-    if (GatheredLoadsEntriesFirst != NoGatheredLoads &&
-        EntryState == TreeEntry::NeedToGather &&
-        S.getOpcode() == Instruction::Load && UserTreeIdx.EdgeIdx == UINT_MAX &&
-        !UserTreeIdx.UserTE)
-      return nullptr;
     VectorizableTree.push_back(std::make_unique<TreeEntry>(VectorizableTree));
     TreeEntry *Last = VectorizableTree.back().get();
     Last->Idx = VectorizableTree.size() - 1;
@@ -3546,10 +3526,6 @@ private:
   using ValueToGatherNodesMap =
       DenseMap<Value *, SmallPtrSet<const TreeEntry *, 4>>;
   ValueToGatherNodesMap ValueToGatherNodes;
-
-  /// The index of the first gathered load entry in the VectorizeTree.
-  constexpr static int NoGatheredLoads = -1;
-  int GatheredLoadsEntriesFirst = NoGatheredLoads;
 
   /// This POD struct describes one external user in the vectorized tree.
   struct ExternalUser {
@@ -4722,19 +4698,15 @@ getShuffleCost(const TargetTransformInfo &TTI, TTI::ShuffleKind Kind,
   return TTI.getShuffleCost(Kind, Tp, Mask, CostKind, Index, SubTp, Args);
 }
 
-BoUpSLP::LoadsState
-BoUpSLP::canVectorizeLoads(ArrayRef<Value *> VL, const Value *VL0,
-                           SmallVectorImpl<unsigned> &Order,
-                           SmallVectorImpl<Value *> &PointerOps,
-                           unsigned *BestVF, bool TryRecursiveCheck) const {
+BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
+    ArrayRef<Value *> VL, const Value *VL0, SmallVectorImpl<unsigned> &Order,
+    SmallVectorImpl<Value *> &PointerOps, bool TryRecursiveCheck) const {
   // Check that a vectorized load would load the same memory as a scalar
   // load. For example, we don't want to vectorize loads that are smaller
   // than 8-bit. Even though we have a packed struct {<i2, i2, i2, i2>} LLVM
   // treats loading/storing it as an i8 struct. If we vectorize loads/stores
   // from such a struct, we read/write packed bits disagreeing with the
   // unvectorized version.
-  if (BestVF)
-    *BestVF = 0;
   Type *ScalarTy = VL0->getType();
 
   if (DL->getTypeSizeInBits(ScalarTy) != DL->getTypeAllocSizeInBits(ScalarTy))
@@ -4844,10 +4816,7 @@ BoUpSLP::canVectorizeLoads(ArrayRef<Value *> VL, const Value *VL0,
   // strided/masked gather loads. Returns true if vectorized + shuffles
   // representation is better than just gather.
   auto CheckForShuffledLoads = [&, &TTI = *TTI](Align CommonAlignment,
-                                                unsigned *BestVF,
                                                 bool ProfitableGatherPointers) {
-    if (BestVF)
-      *BestVF = 0;
     // Compare masked gather cost and loads + insert subvector costs.
     TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
     auto [ScalarGEPCost, VectorGEPCost] =
@@ -4916,14 +4885,10 @@ BoUpSLP::canVectorizeLoads(ArrayRef<Value *> VL, const Value *VL0,
         SmallVector<unsigned> Order;
         SmallVector<Value *> PointerOps;
         LoadsState LS =
-            canVectorizeLoads(Slice, Slice.front(), Order, PointerOps, BestVF,
+            canVectorizeLoads(Slice, Slice.front(), Order, PointerOps,
                               /*TryRecursiveCheck=*/false);
         // Check that the sorted loads are consecutive.
         if (LS == LoadsState::Gather) {
-          if (BestVF) {
-            DemandedElts.setAllBits();
-            break;
-          }
           DemandedElts.setBits(Cnt, Cnt + VF);
           continue;
         }
@@ -5016,11 +4981,8 @@ BoUpSLP::canVectorizeLoads(ArrayRef<Value *> VL, const Value *VL0,
       // consider it as a gather node. It will be better estimated
       // later.
       if (MaskedGatherCost >= VecLdCost &&
-          VecLdCost - GatherCost < -SLPCostThreshold) {
-        if (BestVF)
-          *BestVF = VF;
+          VecLdCost - GatherCost < -SLPCostThreshold)
         return true;
-      }
     }
     return MaskedGatherCost - GatherCost >= -SLPCostThreshold;
   };
@@ -5044,8 +5006,7 @@ BoUpSLP::canVectorizeLoads(ArrayRef<Value *> VL, const Value *VL0,
       // Check if potential masked gather can be represented as series
       // of loads + insertsubvectors.
       if (TryRecursiveCheck &&
-          CheckForShuffledLoads(CommonAlignment, BestVF,
-                                ProfitableGatherPointers)) {
+          CheckForShuffledLoads(CommonAlignment, ProfitableGatherPointers)) {
         // If masked gather cost is higher - better to vectorize, so
         // consider it as a gather node. It will be better estimated
         // later.
@@ -5466,16 +5427,7 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom) {
     if (TE.Scalars.size() >= 3)
       if (std::optional<OrdersType> Order = findPartiallyOrderedLoads(TE))
         return Order;
-    // Check if can include the order of vectorized loads. For masked gathers do
-    // extra analysis later, so include such nodes into a special list.
-    if (TE.isGather() && TE.getOpcode() == Instruction::Load) {
-      SmallVector<Value *> PointerOps;
-      OrdersType CurrentOrder;
-      LoadsState Res = canVectorizeLoads(TE.Scalars, TE.Scalars.front(),
-                                         CurrentOrder, PointerOps);
-      if (Res == LoadsState::Vectorize || Res == LoadsState::StridedVectorize)
-        return std::move(CurrentOrder);
-    }
+
     // FIXME: Remove the non-power-of-two check once findReusedOrderedScalars
     // has been auditted for correctness with non-power-of-two vectors.
     if (!TE.isNonPowOf2Vec())
@@ -6365,406 +6317,6 @@ void BoUpSLP::buildTree(ArrayRef<Value *> Roots) {
   buildTree_rec(Roots, 0, EdgeInfo());
 }
 
-/// Tries to find subvector of loads and builds new vector of only loads if can
-/// be profitable.
-static void gatherPossiblyVectorizableLoads(
-    const BoUpSLP &R, ArrayRef<Value *> VL, const DataLayout &DL,
-    ScalarEvolution &SE, const TargetTransformInfo &TTI,
-    SmallVectorImpl<SmallVector<std::pair<LoadInst *, int>>> &GatheredLoads,
-    bool AddNew = true) {
-  if (VL.empty())
-    return;
-  Type *ScalarTy = getValueType(VL.front());
-  if (!isValidElementType(ScalarTy))
-    return;
-  int NumScalars = VL.size();
-  auto *VecTy = getWidenedType(ScalarTy, NumScalars);
-  int NumParts = TTI.getNumberOfParts(VecTy);
-  if (NumParts == 0 || NumParts >= NumScalars)
-    NumParts = 1;
-  unsigned VF = PowerOf2Ceil(NumScalars / NumParts);
-  SmallVector<SmallVector<std::pair<LoadInst *, int>>> ClusteredLoads;
-  for (int I : seq<int>(0, NumParts)) {
-    for (Value *V :
-         VL.slice(I * VF, std::min<unsigned>(VF, VL.size() - I * VF))) {
-      auto *LI = dyn_cast<LoadInst>(V);
-      if (!LI)
-        continue;
-      if (R.isDeleted(LI) || R.isVectorized(LI) || !LI->isSimple())
-        continue;
-      bool IsFound = false;
-      for (auto &Data : ClusteredLoads) {
-        if (LI->getParent() != Data.front().first->getParent())
-          continue;
-        std::optional<int> Dist =
-            getPointersDiff(LI->getType(), LI->getPointerOperand(),
-                            Data.front().first->getType(),
-                            Data.front().first->getPointerOperand(), DL, SE,
-                            /*StrictCheck=*/true);
-        if (Dist && all_of(Data, [&](const std::pair<LoadInst *, int> &Pair) {
-              IsFound |= Pair.first == LI;
-              return IsFound || Pair.second != *Dist;
-            })) {
-          if (!IsFound)
-            Data.emplace_back(LI, *Dist);
-          IsFound = true;
-          break;
-        }
-      }
-      if (!IsFound)
-        ClusteredLoads.emplace_back().emplace_back(LI, 0);
-    }
-  }
-  auto FindMatchingLoads =
-      [&](ArrayRef<std::pair<LoadInst *, int>> Loads,
-          SmallVectorImpl<SmallVector<std::pair<LoadInst *, int>>>
-              &GatheredLoads,
-          SetVector<unsigned> &ToAdd, SetVector<unsigned> &Repeated,
-          int &Offset, unsigned &Start) {
-        SmallVector<std::pair<int, int>> Res;
-        if (Loads.empty())
-          return GatheredLoads.end();
-        LoadInst *LI = Loads.front().first;
-        for (auto [Idx, Data] : enumerate(GatheredLoads)) {
-          if (Idx < Start)
-            continue;
-          ToAdd.clear();
-          if (LI->getParent() != Data.front().first->getParent())
-            continue;
-          std::optional<int> Dist =
-              getPointersDiff(LI->getType(), LI->getPointerOperand(),
-                              Data.front().first->getType(),
-                              Data.front().first->getPointerOperand(), DL, SE,
-                              /*StrictCheck=*/true);
-          if (Dist) {
-            // Found matching gathered loads - check if all loads are unique or
-            // can be effectively vectorized.
-            unsigned NumUniques = 0;
-            for (auto [Cnt, Pair] : enumerate(Loads)) {
-              bool Used = any_of(
-                  Data, [&, &P = Pair](const std::pair<LoadInst *, int> &PD) {
-                    return PD.first == P.first;
-                  });
-              if (none_of(Data,
-                          [&, &P = Pair](const std::pair<LoadInst *, int> &PD) {
-                            return *Dist + P.second == PD.second;
-                          }) &&
-                  !Used) {
-                ++NumUniques;
-                ToAdd.insert(Cnt);
-              }
-              if (Used)
-                Repeated.insert(Cnt);
-            }
-            if (NumUniques > 0 &&
-                (Loads.size() == NumUniques ||
-                 (Loads.size() - NumUniques >= 2 &&
-                  Loads.size() - NumUniques >= Loads.size() / 2 &&
-                  (isPowerOf2_64(Data.size() + NumUniques) ||
-                   PowerOf2Ceil(Data.size()) <
-                       PowerOf2Ceil(Data.size() + NumUniques))))) {
-              Offset = *Dist;
-              Start = Idx + 1;
-              return std::next(GatheredLoads.begin(), Idx);
-            }
-          }
-        }
-        ToAdd.clear();
-        return GatheredLoads.end();
-      };
-  for (ArrayRef<std::pair<LoadInst *, int>> Data : ClusteredLoads) {
-    unsigned Start = 0;
-    SetVector<unsigned> ToAdd, LocalToAdd, Repeated;
-    int Offset = 0;
-    auto *It = FindMatchingLoads(Data, GatheredLoads, LocalToAdd, Repeated,
-                                 Offset, Start);
-    while (It != GatheredLoads.end()) {
-      assert(!LocalToAdd.empty() && "Expected some elements to add.");
-      for (unsigned Idx : LocalToAdd)
-        It->emplace_back(Data[Idx].first, Data[Idx].second + Offset);
-      ToAdd.insert(LocalToAdd.begin(), LocalToAdd.end());
-      It = FindMatchingLoads(Data, GatheredLoads, LocalToAdd, Repeated, Offset,
-                             Start);
-    }
-    if (any_of(seq<unsigned>(Data.size()), [&](unsigned Idx) {
-          return !ToAdd.contains(Idx) && !Repeated.contains(Idx);
-        })) {
-      auto AddNewLoads =
-          [&](SmallVectorImpl<std::pair<LoadInst *, int>> &Loads) {
-            for (unsigned Idx : seq<unsigned>(Data.size())) {
-              if (ToAdd.contains(Idx) || Repeated.contains(Idx))
-                continue;
-              Loads.push_back(Data[Idx]);
-            }
-          };
-      if (!AddNew) {
-        LoadInst *LI = Data.front().first;
-        It = find_if(
-            GatheredLoads, [&](ArrayRef<std::pair<LoadInst *, int>> PD) {
-              return PD.front().first->getParent() == LI->getParent() &&
-                     PD.front().first->getType() == LI->getType();
-            });
-        while (It != GatheredLoads.end()) {
-          AddNewLoads(*It);
-          It = std::find_if(
-              std::next(It), GatheredLoads.end(),
-              [&](ArrayRef<std::pair<LoadInst *, int>> PD) {
-                return PD.front().first->getParent() == LI->getParent() &&
-                       PD.front().first->getType() == LI->getType();
-              });
-        }
-      }
-      GatheredLoads.emplace_back().append(Data.begin(), Data.end());
-      AddNewLoads(GatheredLoads.emplace_back());
-    }
-  }
-}
-
-void BoUpSLP::tryToVectorizeGatheredLoads(
-    ArrayRef<SmallVector<std::pair<LoadInst *, int>>> GatheredLoads) {
-  GatheredLoadsEntriesFirst = VectorizableTree.size();
-
-  // Sort loads by distance.
-  auto LoadSorter = [](const std::pair<LoadInst *, int> &L1,
-                       const std::pair<LoadInst *, int> &L2) {
-    return L1.second > L2.second;
-  };
-
-  auto GetVectorizedRanges = [this](
-                                 ArrayRef<LoadInst *> Loads,
-                                 BoUpSLP::ValueSet &VectorizedLoads,
-                                 SmallVectorImpl<LoadInst *> &NonVectorized) {
-    SmallVector<std::pair<ArrayRef<Value *>, LoadsState>> Results;
-    unsigned StartIdx = 0;
-    SmallVector<int> CandidateVFs;
-    if (VectorizeNonPowerOf2 && isPowerOf2_32(Loads.size() + 1))
-      CandidateVFs.push_back(Loads.size());
-    for (int NumElts = bit_floor(Loads.size()); NumElts > 1; NumElts /= 2) {
-      CandidateVFs.push_back(NumElts);
-      if (VectorizeNonPowerOf2 && NumElts > 2)
-        CandidateVFs.push_back(NumElts - 1);
-    }
-
-    for (int NumElts : CandidateVFs) {
-      SmallVector<unsigned> MaskedGatherVectorized;
-      for (unsigned Cnt = StartIdx, E = Loads.size(); Cnt + NumElts <= E;
-           ++Cnt) {
-        ArrayRef<LoadInst *> Slice = ArrayRef(Loads).slice(Cnt, NumElts);
-        if (VectorizedLoads.count(Slice.front()) ||
-            VectorizedLoads.count(Slice.back()))
-          continue;
-        // Check if it is profitable to try vectorizing gathered loads. It is
-        // profitable if we have more than 3 consecutive loads or if we have
-        // less but all users are vectorized or deleted.
-        bool AllowToVectorize =
-            NumElts >= 3 ||
-            any_of(VectorizableTree, [=](const std::unique_ptr<TreeEntry> &TE) {
-              return TE->isGather() && TE->Scalars.size() == 2 &&
-                     (equal(TE->Scalars, Slice) ||
-                      equal(TE->Scalars, reverse(Slice)));
-            });
-        // Check if it is profitable to vectorize 2-elements loads.
-        if (NumElts == 2) {
-          bool IsLegalBroadcastLoad = TTI->isLegalBroadcastLoad(
-              Slice.front()->getType(), ElementCount::getFixed(NumElts));
-          auto CheckIfAllowed = [=](ArrayRef<LoadInst *> Slice) {
-            for (LoadInst *LI : Slice) {
-              // If single use/user - allow to vectorize.
-              if (LI->hasOneUse())
-                continue;
-              // 1. Check if number of uses equal number of users.
-              // 2. All users are deleted.
-              // 3. The load broadcasts are not allowed or the load is not
-              // broadcasted.
-              if (std::distance(LI->user_begin(), LI->user_end()) !=
-                  LI->getNumUses())
-                return false;
-              for (User *U : LI->users()) {
-                if (auto *UI = dyn_cast<Instruction>(U); UI && isDeleted(UI))
-                  continue;
-                if (const TreeEntry *UTE = getTreeEntry(U)) {
-                  if (!IsLegalBroadcastLoad)
-                    // The broadcast is illegal - vectorize loads.
-                    continue;
-                  for (int I = 0, End = UTE->getNumOperands(); I < End; ++I) {
-                    if (all_of(UTE->getOperand(I),
-                               [LI](Value *V) { return V == LI; }))
-                      // Found legal broadcast - do not vectorize.
-                      return false;
-                  }
-                }
-              }
-            }
-            return true;
-          };
-          AllowToVectorize = CheckIfAllowed(Slice);
-        }
-        if (AllowToVectorize) {
-          SmallVector<Value *> PointerOps;
-          OrdersType CurrentOrder;
-          // Try to build vector load.
-          ArrayRef<Value *> Values(
-              reinterpret_cast<Value *const *>(Slice.begin()), Slice.size());
-          unsigned BestVF = 0;
-          LoadsState LS = canVectorizeLoads(Values, Slice.front(), CurrentOrder,
-                                            PointerOps, &BestVF);
-          if (LS != LoadsState::Gather ||
-              (BestVF > 1 && static_cast<unsigned>(NumElts) == 2 * BestVF)) {
-            if (LS == LoadsState::ScatterVectorize) {
-              if (MaskedGatherVectorized.empty() ||
-                  Cnt >= MaskedGatherVectorized.back() + NumElts)
-                MaskedGatherVectorized.push_back(Cnt);
-              continue;
-            }
-            if (LS != LoadsState::Gather) {
-              Results.emplace_back(Values, LS);
-              VectorizedLoads.insert(Slice.begin(), Slice.end());
-              // If we vectorized initial block, no need to try to vectorize it
-              // again.
-              if (Cnt == StartIdx)
-                StartIdx += NumElts;
-            }
-            // Erase last masked gather candidate, if another candidate within
-            // the range is found to be better.
-            if (!MaskedGatherVectorized.empty() &&
-                Cnt < MaskedGatherVectorized.back() + NumElts)
-              MaskedGatherVectorized.pop_back();
-            Cnt += NumElts - 1;
-            continue;
-          }
-        }
-        // Check if the whole array was vectorized already - exit.
-        if (StartIdx >= Loads.size())
-          break;
-      }
-      // Mark masked gathers candidates as vectorized, if any.
-      for (unsigned Cnt : MaskedGatherVectorized) {
-        ArrayRef<LoadInst *> Slice = ArrayRef(Loads).slice(Cnt, NumElts);
-        ArrayRef<Value *> Values(
-            reinterpret_cast<Value *const *>(Slice.begin()), Slice.size());
-        Results.emplace_back(Values, LoadsState::ScatterVectorize);
-        VectorizedLoads.insert(Slice.begin(), Slice.end());
-        // If we vectorized initial block, no need to try to vectorize it again.
-        if (Cnt == StartIdx)
-          StartIdx += NumElts;
-      }
-    }
-    for (LoadInst *LI : Loads) {
-      if (!VectorizedLoads.contains(LI))
-        NonVectorized.push_back(LI);
-    }
-    return Results;
-  };
-  auto ProcessGatheredLoads =
-      [&](ArrayRef<SmallVector<std::pair<LoadInst *, int>>> GatheredLoads) {
-        SmallVector<LoadInst *> NonVectorized;
-        for (ArrayRef<std::pair<LoadInst *, int>> LoadsDists : GatheredLoads) {
-          SmallVector<std::pair<LoadInst *, int>> LocalLoadsDists(LoadsDists);
-          SmallVector<LoadInst *> OriginalLoads(LocalLoadsDists.size());
-          transform(
-              LoadsDists, OriginalLoads.begin(),
-              [](const std::pair<LoadInst *, int> &L) { return L.first; });
-          stable_sort(LocalLoadsDists, LoadSorter);
-          SmallVector<LoadInst *> Loads;
-          for (const std::pair<LoadInst *, int> &L : LocalLoadsDists) {
-            if (!getTreeEntry(L.first))
-              Loads.push_back(L.first);
-          }
-          if (Loads.empty())
-            continue;
-          BoUpSLP::ValueSet VectorizedLoads;
-          SmallVector<LoadInst *> SortedNonVectorized;
-          SmallVector<std::pair<ArrayRef<Value *>, LoadsState>> Results =
-              GetVectorizedRanges(Loads, VectorizedLoads, SortedNonVectorized);
-          if (!Results.empty() && !SortedNonVectorized.empty() &&
-              all_of(Results,
-                     [](const std::pair<ArrayRef<Value *>, LoadsState> &P) {
-                       return P.second == LoadsState::ScatterVectorize;
-                     })) {
-            VectorizedLoads.clear();
-            SmallVector<LoadInst *> UnsortedNonVectorized;
-            SmallVector<std::pair<ArrayRef<Value *>, LoadsState>>
-                UnsortedResults = GetVectorizedRanges(
-                    OriginalLoads, VectorizedLoads, UnsortedNonVectorized);
-            if (SortedNonVectorized.size() >= UnsortedNonVectorized.size()) {
-              SortedNonVectorized.swap(UnsortedNonVectorized);
-              Results.swap(UnsortedResults);
-            }
-          }
-          for (auto [Slice, _] : Results) {
-            LLVM_DEBUG(dbgs() << "SLP: Trying to vectorize gathered loads ("
-                              << Slice.size() << ")\n");
-            if (any_of(Slice, [&](Value *V) { return getTreeEntry(V); })) {
-              for (Value *L : Slice)
-                if (!getTreeEntry(L))
-                  SortedNonVectorized.push_back(cast<LoadInst>(L));
-              continue;
-            }
-
-            // Select maximum VF as a maximum of user gathered nodes and
-            // distance between scalar loads in these nodes.
-            unsigned MaxVF = Slice.size();
-            unsigned UserMaxVF = 0;
-            std::optional<unsigned> CommonVF = 0;
-            DenseMap<const TreeEntry *, unsigned> EntryToPosition;
-            for (auto [Idx, V] : enumerate(Slice)) {
-              for (const TreeEntry *E : ValueToGatherNodes.at(V)) {
-                UserMaxVF = std::max<unsigned>(UserMaxVF, E->Scalars.size());
-                unsigned Pos =
-                    EntryToPosition.try_emplace(E, Idx).first->second;
-                UserMaxVF = std::max<unsigned>(UserMaxVF, Idx - Pos + 1);
-                if (CommonVF) {
-                  if (*CommonVF == 0) {
-                    CommonVF = E->Scalars.size();
-                    continue;
-                  }
-                  if (*CommonVF != E->Scalars.size())
-                    CommonVF.reset();
-                }
-              }
-            }
-            // Try to build long masked gather loads.
-            UserMaxVF = PowerOf2Ceil(UserMaxVF);
-            for (unsigned VF = MaxVF; VF >= 2; VF /= 2) {
-              bool IsVectorized = true;
-              for (unsigned I = 0, E = Slice.size(); I < E; I += VF) {
-                ArrayRef<Value *> SubSlice =
-                    Slice.slice(I, std::min(VF, E - I));
-                if (getTreeEntry(SubSlice.front()))
-                  continue;
-                unsigned Sz = VectorizableTree.size();
-                buildTree_rec(SubSlice, 0, EdgeInfo());
-                if (Sz == VectorizableTree.size()) {
-                  IsVectorized = false;
-                  continue;
-                }
-              }
-              if (IsVectorized)
-                break;
-            }
-          }
-          NonVectorized.append(SortedNonVectorized);
-        }
-        return NonVectorized;
-      };
-  SmallVector<LoadInst *> NonVectorized = ProcessGatheredLoads(GatheredLoads);
-  SmallVector<SmallVector<std::pair<LoadInst *, int>>> FinalGatheredLoads;
-  for (LoadInst *LI : NonVectorized) {
-    // Reinsert non-vectorized loads to other list of loads with the same
-    // base pointers.
-    gatherPossiblyVectorizableLoads(*this, LI, *DL, *SE, *TTI,
-                                    FinalGatheredLoads,
-                                    /*AddNew=*/false);
-  }
-  // Final attempt to vectorize non-vectorized loads.
-  (void)ProcessGatheredLoads(FinalGatheredLoads);
-  // If no new entries created, consider it as no gathered loads entries must be
-  // handled.
-  if (static_cast<unsigned>(GatheredLoadsEntriesFirst) ==
-      VectorizableTree.size())
-    GatheredLoadsEntriesFirst = NoGatheredLoads;
-}
-
 /// \return true if the specified list of values has only one instruction that
 /// requires scheduling, false otherwise.
 #ifndef NDEBUG
@@ -7490,7 +7042,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
   // Check if this is a duplicate of another entry.
   if (TreeEntry *E = getTreeEntry(S.OpValue)) {
     LLVM_DEBUG(dbgs() << "SLP: \tChecking bundle: " << *S.OpValue << ".\n");
-    if (GatheredLoadsEntriesFirst != NoGatheredLoads || !E->isSame(VL)) {
+    if (!E->isSame(VL)) {
       auto It = MultiNodeScalars.find(S.OpValue);
       if (It != MultiNodeScalars.end()) {
         auto *TEIt = find_if(It->getSecond(),
@@ -9017,19 +8569,6 @@ void BoUpSLP::transformNodes() {
       break;
     }
   }
-  // A list of loads to be gathered during the vectorization process. We can
-  // try to vectorize them at the end, if profitable.
-  SmallVector<SmallVector<std::pair<LoadInst *, int>>> GatheredLoads;
-
-  for (std::unique_ptr<TreeEntry> &TE : VectorizableTree) {
-    TreeEntry &E = *TE;
-    if (E.isGather() && !isSplat(E.Scalars))
-      gatherPossiblyVectorizableLoads(*this, E.Scalars, *DL, *SE, *TTI,
-                                      GatheredLoads);
-  }
-  // Try to vectorize gathered loads if this is not just a gather of loads.
-  if (!GatheredLoads.empty())
-    tryToVectorizeGatheredLoads(GatheredLoads);
 }
 
 /// Merges shuffle masks and emits final shuffle instruction, if required. It
@@ -10061,9 +9600,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         InstructionCost VecCost = VectorCost(CommonCost);
         // Check if the current node must be resized, if the parent node is not
         // resized.
-        if (!UnaryInstruction::isCast(E->getOpcode()) && E->Idx != 0 &&
-            (E->getOpcode() != Instruction::Load ||
-             !E->UserTreeIndices.empty())) {
+        if (!UnaryInstruction::isCast(E->getOpcode()) && E->Idx != 0) {
           const EdgeInfo &EI = E->UserTreeIndices.front();
           if ((EI.UserTE->getOpcode() != Instruction::Select ||
                EI.EdgeIdx != 0) &&
@@ -10771,8 +10308,8 @@ bool BoUpSLP::isFullyVectorizableTinyTree(bool ForReduction) const {
             ((TE->getOpcode() == Instruction::ExtractElement ||
               all_of(TE->Scalars, IsaPred<ExtractElementInst, UndefValue>)) &&
              isFixedVectorShuffle(TE->Scalars, Mask)) ||
-            (TE->getOpcode() == Instruction::Load && !TE->isAltShuffle()) ||
-            any_of(TE->Scalars, IsaPred<LoadInst>));
+            (TE->isGather() && TE->getOpcode() == Instruction::Load &&
+             !TE->isAltShuffle()));
   };
 
   // We only handle trees of heights 1 and 2.
@@ -11248,11 +10785,6 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
       }
     }
 
-    // Exclude cost of gather loads nodes which are not used. These nodes were
-    // built as part of the final attempt to vectorize gathered loads.
-    assert((!TE.isGather() || TE.Idx == 0 || !TE.UserTreeIndices.empty()) &&
-           "Expected gather nodes with users only.");
-
     InstructionCost C = getEntryCost(&TE, VectorizedVals, CheckedExtracts);
     Cost += C;
     LLVM_DEBUG(dbgs() << "SLP: Adding cost " << C << " for bundle "
@@ -11441,9 +10973,7 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
         if (IsProfitablePHIUser) {
           KeepScalar = true;
         } else if (KeepScalar && ScalarCost != TTI::TCC_Free &&
-                   ExtraCost - ScalarCost <= TTI::TCC_Basic &&
-                   (GatheredLoadsEntriesFirst == NoGatheredLoads ||
-                    Entry->Idx < GatheredLoadsEntriesFirst)) {
+                   ExtraCost - ScalarCost <= TTI::TCC_Basic) {
           unsigned ScalarUsesCount = count_if(Entry->Scalars, [&](Value *V) {
             return ValueToExtUses->contains(V);
           });
@@ -11778,9 +11308,7 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
   Entries.clear();
   // TODO: currently checking only for Scalars in the tree entry, need to count
   // reused elements too for better cost estimation.
-  const EdgeInfo &TEUseEI = TE == VectorizableTree.front().get()
-                                ? EdgeInfo(const_cast<TreeEntry *>(TE), 0)
-                                : TE->UserTreeIndices.front();
+  const EdgeInfo &TEUseEI = TE->UserTreeIndices.front();
   const Instruction *TEInsertPt = &getLastInstructionInBundle(TEUseEI.UserTE);
   const BasicBlock *TEInsertBlock = nullptr;
   // Main node of PHI entries keeps the correct order of operands/incoming
@@ -11875,7 +11403,7 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
       VToTEs.insert(TEPtr);
     }
     if (const TreeEntry *VTE = getTreeEntry(V)) {
-      if (ForOrder && VTE->Idx < GatheredLoadsEntriesFirst) {
+      if (ForOrder) {
         if (VTE->State != TreeEntry::Vectorize) {
           auto It = MultiNodeScalars.find(V);
           if (It == MultiNodeScalars.end())
@@ -12153,19 +11681,13 @@ BoUpSLP::isGatherShuffledEntry(
          "Expected positive number of registers.");
   Entries.clear();
   // No need to check for the topmost gather node.
-  if (TE == VectorizableTree.front().get() &&
-      (GatheredLoadsEntriesFirst == NoGatheredLoads ||
-       none_of(ArrayRef(VectorizableTree).drop_front(),
-               [](const std::unique_ptr<TreeEntry> &TE) {
-                 return !TE->isGather();
-               })))
+  if (TE == VectorizableTree.front().get())
     return {};
   // FIXME: Gathering for non-power-of-2 nodes not implemented yet.
   if (TE->isNonPowOf2Vec())
     return {};
   Mask.assign(VL.size(), PoisonMaskElem);
-  assert((TE->UserTreeIndices.size() == 1 ||
-          TE == VectorizableTree.front().get()) &&
+  assert(TE->UserTreeIndices.size() == 1 &&
          "Expected only single user of the gather node.");
   assert(VL.size() % NumParts == 0 &&
          "Number of scalars must be divisible by NumParts.");
@@ -12284,23 +11806,17 @@ Instruction &BoUpSLP::getLastInstructionInBundle(const TreeEntry *E) {
     return *Res;
   // Get the basic block this bundle is in. All instructions in the bundle
   // should be in this block (except for extractelement-like instructions with
-  // constant indices or gathered loads).
+  // constant indeces).
   auto *Front = E->getMainOp();
   auto *BB = Front->getParent();
-  assert(((GatheredLoadsEntriesFirst != NoGatheredLoads &&
-           E->getOpcode() == Instruction::Load && E->isGather() &&
-           E->Idx < GatheredLoadsEntriesFirst) ||
-          all_of(E->Scalars,
-                 [=](Value *V) -> bool {
-                   if (E->getOpcode() == Instruction::GetElementPtr &&
-                       !isa<GetElementPtrInst>(V))
-                     return true;
-                   auto *I = cast<Instruction>(V);
-                   return !E->isOpcodeOrAlt(I) || I->getParent() == BB ||
-                          isVectorLikeInstWithConstOps(I);
-                 })) &&
-         "Expected gathered loads or GEPs or instructions from same basic "
-         "block.");
+  assert(llvm::all_of(E->Scalars, [=](Value *V) -> bool {
+    if (E->getOpcode() == Instruction::GetElementPtr &&
+        !isa<GetElementPtrInst>(V))
+      return true;
+    auto *I = cast<Instruction>(V);
+    return !E->isOpcodeOrAlt(I) || I->getParent() == BB ||
+           isVectorLikeInstWithConstOps(I);
+  }));
 
   auto FindLastInst = [&]() {
     Instruction *LastInst = Front;
@@ -12316,10 +11832,7 @@ Instruction &BoUpSLP::getLastInstructionInBundle(const TreeEntry *E) {
       assert(((E->getOpcode() == Instruction::GetElementPtr &&
                !isa<GetElementPtrInst>(I)) ||
               (isVectorLikeInstWithConstOps(LastInst) &&
-               isVectorLikeInstWithConstOps(I)) ||
-              (GatheredLoadsEntriesFirst != NoGatheredLoads &&
-               E->getOpcode() == Instruction::Load && E->isGather() &&
-               E->Idx < GatheredLoadsEntriesFirst)) &&
+               isVectorLikeInstWithConstOps(I))) &&
              "Expected vector-like or non-GEP in GEP node insts only.");
       if (!DT->isReachableFromEntry(LastInst->getParent())) {
         LastInst = I;
@@ -12375,14 +11888,6 @@ Instruction &BoUpSLP::getLastInstructionInBundle(const TreeEntry *E) {
     }
     return FirstInst;
   };
-
-  // Set insertpoint for gathered loads to the very first load.
-  if (GatheredLoadsEntriesFirst != NoGatheredLoads &&
-      E->Idx >= GatheredLoadsEntriesFirst && !E->isGather() &&
-      E->getOpcode() == Instruction::Load) {
-    Res = FindFirstInst();
-    return *Res;
-  }
 
   // Set the insert point to the beginning of the basic block if the entry
   // should not be scheduled.
@@ -13364,12 +12869,6 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
     }
     // Gather extracts after we check for full matched gathers only.
     if (!ExtractShuffles.empty() || E->getOpcode() != Instruction::Load ||
-        ((E->getOpcode() == Instruction::Load ||
-          any_of(E->Scalars, IsaPred<LoadInst>)) &&
-         any_of(E->Scalars,
-                [this](Value *V) {
-                  return isa<LoadInst>(V) && getTreeEntry(V);
-                })) ||
         E->isAltShuffle() ||
         all_of(E->Scalars, [this](Value *V) { return getTreeEntry(V); }) ||
         isSplat(E->Scalars) ||
@@ -14744,18 +14243,6 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
   else
     Builder.SetInsertPoint(&F->getEntryBlock(), F->getEntryBlock().begin());
 
-  // Emit gathered loads first to emit better code for the users of those
-  // gathered loads.
-  for (const std::unique_ptr<TreeEntry> &TE : VectorizableTree) {
-    if (GatheredLoadsEntriesFirst != NoGatheredLoads &&
-        TE->Idx >= GatheredLoadsEntriesFirst &&
-        (!TE->isGather() || !TE->UserTreeIndices.empty())) {
-      assert((!TE->UserTreeIndices.empty() ||
-              (TE->getOpcode() == Instruction::Load && !TE->isGather())) &&
-             "Expected gathered load node.");
-      (void)vectorizeTree(TE.get(), /*PostponedPHIs=*/false);
-    }
-  }
   // Postpone emission of PHIs operands to avoid cyclic dependencies issues.
   (void)vectorizeTree(VectorizableTree[0].get(), /*PostponedPHIs=*/true);
   for (const std::unique_ptr<TreeEntry> &TE : VectorizableTree)
@@ -15315,15 +14802,10 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
       if (IE->Idx != 0 &&
           !(VectorizableTree.front()->isGather() && isa<LoadInst>(I) &&
             !IE->UserTreeIndices.empty() &&
-            any_of(IE->UserTreeIndices,
-                   [&](const EdgeInfo &EI) {
-                     return EI.UserTE == VectorizableTree.front().get() &&
-                            EI.EdgeIdx == UINT_MAX;
-                   })) &&
-          !(GatheredLoadsEntriesFirst != NoGatheredLoads &&
-            IE->Idx >= GatheredLoadsEntriesFirst &&
-            VectorizableTree.front()->isGather() &&
-            is_contained(VectorizableTree.front()->Scalars, I)))
+            any_of(IE->UserTreeIndices, [&](const EdgeInfo &EI) {
+              return EI.UserTE == VectorizableTree.front().get() &&
+                     EI.EdgeIdx == UINT_MAX;
+            })))
         continue;
       SmallVector<SelectInst *> LogicalOpSelects;
       I->replaceUsesWithIf(PoisonValue::get(I->getType()), [&](Use &U) {
