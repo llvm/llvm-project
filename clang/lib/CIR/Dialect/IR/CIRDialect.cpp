@@ -2856,22 +2856,6 @@ static ::mlir::ParseResult parseCallCommon(::mlir::OpAsmParser &parser,
   allResultTypes = opsFnTy.getResults();
   result.addTypes(allResultTypes);
 
-  auto &builder = parser.getBuilder();
-  Attribute extraAttrs;
-  if (::mlir::succeeded(parser.parseOptionalKeyword("extra"))) {
-    if (parser.parseLParen().failed())
-      return failure();
-    if (parser.parseAttribute(extraAttrs).failed())
-      return failure();
-    if (parser.parseRParen().failed())
-      return failure();
-  } else {
-    NamedAttrList empty;
-    extraAttrs = mlir::cir::ExtraFuncAttributesAttr::get(
-        builder.getContext(), empty.getDictionary(builder.getContext()));
-  }
-  result.addAttribute(extraAttrsAttrName, extraAttrs);
-
   if (parser.resolveOperands(ops, operandsTypes, opsLoc, result.operands))
     return ::mlir::failure();
 
@@ -2891,6 +2875,7 @@ static ::mlir::ParseResult parseCallCommon(::mlir::OpAsmParser &parser,
       return ::mlir::failure();
   }
 
+  auto &builder = parser.getBuilder();
   if (parser.parseOptionalKeyword("cc").succeeded()) {
     if (parser.parseLParen().failed())
       return failure();
@@ -2902,6 +2887,21 @@ static ::mlir::ParseResult parseCallCommon(::mlir::OpAsmParser &parser,
     result.addAttribute("calling_conv", mlir::cir::CallingConvAttr::get(
                                             builder.getContext(), callingConv));
   }
+
+  Attribute extraAttrs;
+  if (::mlir::succeeded(parser.parseOptionalKeyword("extra"))) {
+    if (parser.parseLParen().failed())
+      return failure();
+    if (parser.parseAttribute(extraAttrs).failed())
+      return failure();
+    if (parser.parseRParen().failed())
+      return failure();
+  } else {
+    NamedAttrList empty;
+    extraAttrs = mlir::cir::ExtraFuncAttributesAttr::get(
+        builder.getContext(), empty.getDictionary(builder.getContext()));
+  }
+  result.addAttribute(extraAttrsAttrName, extraAttrs);
 
   // If exception is present and there are cleanups, this should be latest thing
   // present (after all attributes, etc).
