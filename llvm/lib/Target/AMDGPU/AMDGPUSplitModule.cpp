@@ -486,9 +486,11 @@ void SplitGraph::Node::visitAllDependencies(
 /// in \p Callees.
 ///
 /// \returns true if there was metadata and it was parsed correctly. false if
-/// there was no MD or if it contained unknown entries.
+/// there was no MD or if it contained unknown entries and parsing failed.
+/// If this returns false, \p Callees will contain incomplete information
+/// and must not be used.
 static bool handleCalleesMD(const Instruction &I,
-                            SmallVectorImpl<Function *> &Callees) {
+                            SetVector<Function *> &Callees) {
   auto *MD = I.getMetadata(LLVMContext::MD_callees);
   if (!MD)
     return false;
@@ -497,7 +499,7 @@ static bool handleCalleesMD(const Instruction &I,
     Function *Callee = mdconst::extract_or_null<Function>(Op);
     if (!Callee)
       return false;
-    Callees.push_back(Callee);
+    Callees.insert(Callee);
   }
 
   return true;
@@ -540,7 +542,7 @@ void SplitGraph::buildGraph(CallGraph &CG) {
                  Fn.printAsOperand(dbgs());
                  dbgs() << " - analyzing function\n");
 
-      SmallVector<Function *> KnownCallees;
+      SetVector<Function *> KnownCallees;
       bool HasUnknownIndirectCall = false;
       for (const auto &Inst : instructions(Fn)) {
         // look at all calls without a direct callee.
@@ -559,6 +561,9 @@ void SplitGraph::buildGraph(CallGraph &CG) {
 
         if (handleCalleesMD(Inst, KnownCallees))
           continue;
+        // If we failed to parse any !callees MD, or some was missing,
+        // the entire KnownCallees list is now unreliable.
+        KnownCallees.clear();
 
         // Everything else is handled conservatively. If we fall into the
         // conservative case don't bother analyzing further.
