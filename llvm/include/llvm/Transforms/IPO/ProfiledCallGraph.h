@@ -58,6 +58,20 @@ struct ProfiledCallGraphNode {
   edges Edges;
 };
 
+struct PrehashedFunctionId {
+
+  PrehashedFunctionId() = default;
+
+  /* implicit */ PrehashedFunctionId(FunctionId FId) : Id(FId), Hash(hash_value(Id)) {}
+
+  FunctionId Id;
+  uint64_t Hash;
+};
+
+inline uint64_t hash_value(const PrehashedFunctionId& Obj) {
+  return Obj.Hash;
+}
+
 class ProfiledCallGraph {
 public:
   using iterator = ProfiledCallGraphNode::iterator;
@@ -135,19 +149,23 @@ public:
   ProfiledCallGraphNode *getEntryNode() { return &Root; }
   
   void addProfiledFunction(FunctionId Name) {
+    addProfiledFunction(PrehashedFunctionId{Name});
+  }
+
+private:
+  void addProfiledFunction(PrehashedFunctionId Name) {
     if (!ProfiledFunctions.count(Name)) {
       // Link to synthetic root to make sure every node is reachable
       // from root. This does not affect SCC order.
       // Store the pointer of the node because the map can be rehashed.
       auto &Node =
-          ProfiledCallGraphNodeList.emplace_back(ProfiledCallGraphNode(Name));
+          ProfiledCallGraphNodeList.emplace_back(ProfiledCallGraphNode(Name.Id));
       ProfiledFunctions[Name] = &Node;
       Root.Edges.emplace(&Root, ProfiledFunctions[Name], 0);
     }
   }
 
-private:
-  void addProfiledCall(FunctionId CallerName, FunctionId CalleeName,
+  void addProfiledCall(PrehashedFunctionId CallerName, PrehashedFunctionId CalleeName,
                        uint64_t Weight = 0) {
     assert(ProfiledFunctions.count(CallerName));
     auto CalleeIt = ProfiledFunctions.find(CalleeName);
@@ -155,7 +173,7 @@ private:
       return;
     ProfiledCallGraphEdge Edge(ProfiledFunctions[CallerName],
                                CalleeIt->second, Weight);
-    auto &Edges = ProfiledFunctions[CallerName]->Edges;
+    auto &Edges = Edge.Source->Edges;
     auto [EdgeIt, Inserted] = Edges.insert(Edge);
     if (!Inserted) {
       // Accumulate weight to the existing edge.
@@ -166,19 +184,21 @@ private:
   }
 
   void addProfiledCalls(const FunctionSamples &Samples) {
-    addProfiledFunction(Samples.getFunction());
+    const PrehashedFunctionId SamplesFunction{Samples.getFunction()};
+
+    addProfiledFunction(SamplesFunction);
 
     for (const auto &Sample : Samples.getBodySamples()) {
       for (const auto &[Target, Frequency] : Sample.second.getCallTargets()) {
         addProfiledFunction(Target);
-        addProfiledCall(Samples.getFunction(), Target, Frequency);
+        addProfiledCall(SamplesFunction, Target, Frequency);
       }
     }
 
     for (const auto &CallsiteSamples : Samples.getCallsiteSamples()) {
       for (const auto &InlinedSamples : CallsiteSamples.second) {
         addProfiledFunction(InlinedSamples.first);
-        addProfiledCall(Samples.getFunction(), InlinedSamples.first,
+        addProfiledCall(SamplesFunction, InlinedSamples.first,
                         InlinedSamples.second.getHeadSamplesEstimate());
         addProfiledCalls(InlinedSamples.second);
       }
@@ -206,7 +226,7 @@ private:
   ProfiledCallGraphNode Root;
   // backing buffer for ProfiledCallGraphNodes.
   std::list<ProfiledCallGraphNode> ProfiledCallGraphNodeList;
-  HashKeyMap<llvm::DenseMap, FunctionId, ProfiledCallGraphNode*>
+  HashKeyMap<llvm::DenseMap, PrehashedFunctionId, ProfiledCallGraphNode*>
       ProfiledFunctions;
 };
 
