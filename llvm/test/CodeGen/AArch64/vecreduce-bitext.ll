@@ -4,13 +4,13 @@
 define zeroext i16 @and_sext_v8i8_i16(<8 x i8> %x) {
 ; CHECK-LABEL: and_sext_v8i8_i16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sshll v0.8h, v0.8b, #0
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    fmov x8, d0
 ; CHECK-NEXT:    and x8, x8, x8, lsr #32
 ; CHECK-NEXT:    lsr x9, x8, #16
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    and w8, w8, w9
+; CHECK-NEXT:    and w8, w8, w8, lsr #8
+; CHECK-NEXT:    sxtb w8, w8
+; CHECK-NEXT:    and w0, w8, #0xffff
 ; CHECK-NEXT:    ret
 entry:
   %y = sext <8 x i8> %x to <8 x i16>
@@ -21,13 +21,12 @@ entry:
 define zeroext i16 @and_zext_v8i8_i16(<8 x i8> %x) {
 ; CHECK-LABEL: and_zext_v8i8_i16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    fmov x8, d0
 ; CHECK-NEXT:    and x8, x8, x8, lsr #32
 ; CHECK-NEXT:    lsr x9, x8, #16
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    and w8, w8, w9
+; CHECK-NEXT:    and w8, w8, w8, lsr #8
+; CHECK-NEXT:    and w0, w8, #0xff
 ; CHECK-NEXT:    ret
 entry:
   %y = zext <8 x i8> %x to <8 x i16>
@@ -40,13 +39,13 @@ define zeroext i16 @and_sext_v16i8_i16(<16 x i8> %x) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    sshll v0.8h, v0.8b, #0
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    fmov x8, d0
 ; CHECK-NEXT:    and x8, x8, x8, lsr #32
 ; CHECK-NEXT:    lsr x9, x8, #16
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    and w8, w8, w9
+; CHECK-NEXT:    and w8, w8, w8, lsr #8
+; CHECK-NEXT:    sxtb w8, w8
+; CHECK-NEXT:    and w0, w8, #0xffff
 ; CHECK-NEXT:    ret
 entry:
   %y = sext <16 x i8> %x to <16 x i16>
@@ -59,13 +58,12 @@ define zeroext i16 @and_zext_v16i8_i16(<16 x i8> %x) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    fmov x8, d0
 ; CHECK-NEXT:    and x8, x8, x8, lsr #32
 ; CHECK-NEXT:    lsr x9, x8, #16
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    and w8, w8, w9
+; CHECK-NEXT:    and w8, w8, w8, lsr #8
+; CHECK-NEXT:    and w0, w8, #0xff
 ; CHECK-NEXT:    ret
 entry:
   %y = zext <16 x i8> %x to <16 x i16>
@@ -76,15 +74,12 @@ entry:
 define i32 @and_sext_v8i8_i32(<8 x i8> %x) {
 ; CHECK-LABEL: and_sext_v8i8_i32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sshll v0.8h, v0.8b, #0
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    sshll v0.4s, v0.4h, #0
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    lsr x9, x8, #32
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    and x8, x8, x8, lsr #32
+; CHECK-NEXT:    lsr x9, x8, #16
+; CHECK-NEXT:    and w8, w8, w9
+; CHECK-NEXT:    and w8, w8, w8, lsr #8
+; CHECK-NEXT:    sxtb w0, w8
 ; CHECK-NEXT:    ret
 entry:
   %y = sext <8 x i8> %x to <8 x i32>
@@ -95,15 +90,12 @@ entry:
 define i32 @and_zext_v8i8_i32(<8 x i8> %x) {
 ; CHECK-LABEL: and_zext_v8i8_i32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    lsr x9, x8, #32
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    and x8, x8, x8, lsr #32
+; CHECK-NEXT:    lsr x9, x8, #16
+; CHECK-NEXT:    and w8, w8, w9
+; CHECK-NEXT:    and w8, w8, w8, lsr #8
+; CHECK-NEXT:    and w0, w8, #0xff
 ; CHECK-NEXT:    ret
 entry:
   %y = zext <8 x i8> %x to <8 x i32>
@@ -114,19 +106,14 @@ entry:
 define i32 @and_sext_v16i8_i32(<16 x i8> %x) {
 ; CHECK-LABEL: and_sext_v16i8_i32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sshll2 v1.8h, v0.16b, #0
-; CHECK-NEXT:    sshll v0.8h, v0.8b, #0
-; CHECK-NEXT:    ext v2.16b, v1.16b, v1.16b, #8
-; CHECK-NEXT:    ext v3.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    and v1.8b, v3.8b, v2.8b
-; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    sshll v0.4s, v0.4h, #0
 ; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    lsr x9, x8, #32
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    and x8, x8, x8, lsr #32
+; CHECK-NEXT:    lsr x9, x8, #16
+; CHECK-NEXT:    and w8, w8, w9
+; CHECK-NEXT:    and w8, w8, w8, lsr #8
+; CHECK-NEXT:    sxtb w0, w8
 ; CHECK-NEXT:    ret
 entry:
   %y = sext <16 x i8> %x to <16 x i32>
@@ -137,19 +124,14 @@ entry:
 define i32 @and_zext_v16i8_i32(<16 x i8> %x) {
 ; CHECK-LABEL: and_zext_v16i8_i32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ushll2 v1.8h, v0.16b, #0
-; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-NEXT:    ushll2 v2.4s, v1.8h, #0
-; CHECK-NEXT:    ushll2 v3.4s, v0.8h, #0
-; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    and v1.16b, v3.16b, v2.16b
-; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    lsr x9, x8, #32
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    and x8, x8, x8, lsr #32
+; CHECK-NEXT:    lsr x9, x8, #16
+; CHECK-NEXT:    and w8, w8, w9
+; CHECK-NEXT:    and w8, w8, w8, lsr #8
+; CHECK-NEXT:    and w0, w8, #0xff
 ; CHECK-NEXT:    ret
 entry:
   %y = zext <16 x i8> %x to <16 x i32>
@@ -160,18 +142,12 @@ entry:
 define i64 @and_sext_v8i8_i64(<8 x i8> %x) {
 ; CHECK-LABEL: and_sext_v8i8_i64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sshll v0.8h, v0.8b, #0
-; CHECK-NEXT:    sshll2 v1.4s, v0.8h, #0
-; CHECK-NEXT:    sshll v0.4s, v0.4h, #0
-; CHECK-NEXT:    ext v2.16b, v1.16b, v1.16b, #8
-; CHECK-NEXT:    ext v3.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    and v1.8b, v3.8b, v2.8b
-; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    sshll v0.2d, v0.2s, #0
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    and x8, x8, x8, lsr #32
+; CHECK-NEXT:    lsr x9, x8, #16
+; CHECK-NEXT:    and w8, w8, w9
+; CHECK-NEXT:    and w8, w8, w8, lsr #8
+; CHECK-NEXT:    sxtb x0, w8
 ; CHECK-NEXT:    ret
 entry:
   %y = sext <8 x i8> %x to <8 x i64>
@@ -182,18 +158,12 @@ entry:
 define i64 @and_zext_v8i8_i64(<8 x i8> %x) {
 ; CHECK-LABEL: and_zext_v8i8_i64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-NEXT:    ushll2 v1.4s, v0.8h, #0
-; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-NEXT:    ushll2 v2.2d, v1.4s, #0
-; CHECK-NEXT:    ushll2 v3.2d, v0.4s, #0
-; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    and v1.16b, v3.16b, v2.16b
-; CHECK-NEXT:    ushll v0.2d, v0.2s, #0
-; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    and x8, x8, x8, lsr #32
+; CHECK-NEXT:    lsr x9, x8, #16
+; CHECK-NEXT:    and w8, w8, w9
+; CHECK-NEXT:    and w8, w8, w8, lsr #8
+; CHECK-NEXT:    and x0, x8, #0xff
 ; CHECK-NEXT:    ret
 entry:
   %y = zext <8 x i8> %x to <8 x i64>
@@ -204,27 +174,14 @@ entry:
 define i64 @and_sext_v16i8_i64(<16 x i8> %x) {
 ; CHECK-LABEL: and_sext_v16i8_i64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sshll2 v1.8h, v0.16b, #0
-; CHECK-NEXT:    sshll v0.8h, v0.8b, #0
-; CHECK-NEXT:    sshll v2.4s, v1.4h, #0
-; CHECK-NEXT:    sshll v3.4s, v0.4h, #0
-; CHECK-NEXT:    sshll2 v1.4s, v1.8h, #0
-; CHECK-NEXT:    sshll2 v0.4s, v0.8h, #0
-; CHECK-NEXT:    ext v4.16b, v2.16b, v2.16b, #8
-; CHECK-NEXT:    ext v5.16b, v3.16b, v3.16b, #8
-; CHECK-NEXT:    ext v6.16b, v1.16b, v1.16b, #8
-; CHECK-NEXT:    ext v7.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    and v1.8b, v3.8b, v2.8b
-; CHECK-NEXT:    and v3.8b, v5.8b, v4.8b
-; CHECK-NEXT:    and v0.8b, v1.8b, v0.8b
-; CHECK-NEXT:    and v2.8b, v7.8b, v6.8b
-; CHECK-NEXT:    and v1.8b, v3.8b, v2.8b
-; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    sshll v0.2d, v0.2s, #0
 ; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    and x8, x8, x8, lsr #32
+; CHECK-NEXT:    lsr x9, x8, #16
+; CHECK-NEXT:    and w8, w8, w9
+; CHECK-NEXT:    and w8, w8, w8, lsr #8
+; CHECK-NEXT:    sxtb x0, w8
 ; CHECK-NEXT:    ret
 entry:
   %y = sext <16 x i8> %x to <16 x i64>
@@ -235,28 +192,14 @@ entry:
 define i64 @and_zext_v16i8_i64(<16 x i8> %x) {
 ; CHECK-LABEL: and_zext_v16i8_i64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ushll2 v1.8h, v0.16b, #0
-; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-NEXT:    ushll v2.4s, v1.4h, #0
-; CHECK-NEXT:    ushll v3.4s, v0.4h, #0
-; CHECK-NEXT:    ushll2 v1.4s, v1.8h, #0
-; CHECK-NEXT:    ushll2 v0.4s, v0.8h, #0
-; CHECK-NEXT:    and v5.8b, v3.8b, v2.8b
-; CHECK-NEXT:    ext v2.16b, v2.16b, v2.16b, #8
-; CHECK-NEXT:    ext v3.16b, v3.16b, v3.16b, #8
-; CHECK-NEXT:    and v4.8b, v0.8b, v1.8b
-; CHECK-NEXT:    ushll2 v1.2d, v1.4s, #0
-; CHECK-NEXT:    ushll2 v0.2d, v0.4s, #0
-; CHECK-NEXT:    and v4.8b, v5.8b, v4.8b
-; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    and v1.8b, v3.8b, v2.8b
-; CHECK-NEXT:    ushll v2.2d, v4.2s, #0
-; CHECK-NEXT:    ushll v1.2d, v1.2s, #0
-; CHECK-NEXT:    and v0.16b, v2.16b, v0.16b
-; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    and x8, x8, x8, lsr #32
+; CHECK-NEXT:    lsr x9, x8, #16
+; CHECK-NEXT:    and w8, w8, w9
+; CHECK-NEXT:    and w8, w8, w8, lsr #8
+; CHECK-NEXT:    and x0, x8, #0xff
 ; CHECK-NEXT:    ret
 entry:
   %y = zext <16 x i8> %x to <16 x i64>
@@ -267,12 +210,11 @@ entry:
 define i32 @and_sext_v4i16_i32(<4 x i16> %x) {
 ; CHECK-LABEL: and_sext_v4i16_i32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sshll v0.4s, v0.4h, #0
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    fmov x8, d0
 ; CHECK-NEXT:    lsr x9, x8, #32
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    and w8, w8, w9
+; CHECK-NEXT:    and w8, w8, w8, lsr #16
+; CHECK-NEXT:    sxth w0, w8
 ; CHECK-NEXT:    ret
 entry:
   %y = sext <4 x i16> %x to <4 x i32>
@@ -283,11 +225,9 @@ entry:
 define i32 @and_zext_v4i16_i32(<4 x i16> %x) {
 ; CHECK-LABEL: and_zext_v4i16_i32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    lsr x9, x8, #32
+; CHECK-NEXT:    and x8, x8, x8, lsr #32
+; CHECK-NEXT:    lsr x9, x8, #16
 ; CHECK-NEXT:    and w0, w8, w9
 ; CHECK-NEXT:    ret
 entry:
@@ -301,12 +241,11 @@ define i32 @and_sext_v8i16_i32(<8 x i16> %x) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    sshll v0.4s, v0.4h, #0
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    fmov x8, d0
 ; CHECK-NEXT:    lsr x9, x8, #32
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    and w8, w8, w9
+; CHECK-NEXT:    and w8, w8, w8, lsr #16
+; CHECK-NEXT:    sxth w0, w8
 ; CHECK-NEXT:    ret
 entry:
   %y = sext <8 x i16> %x to <8 x i32>
@@ -319,11 +258,9 @@ define i32 @and_zext_v8i16_i32(<8 x i16> %x) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    lsr x9, x8, #32
+; CHECK-NEXT:    and x8, x8, x8, lsr #32
+; CHECK-NEXT:    lsr x9, x8, #16
 ; CHECK-NEXT:    and w0, w8, w9
 ; CHECK-NEXT:    ret
 entry:
@@ -335,13 +272,11 @@ entry:
 define i64 @and_sext_v4i16_i64(<4 x i16> %x) {
 ; CHECK-LABEL: and_sext_v4i16_i64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sshll v0.4s, v0.4h, #0
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    sshll v0.2d, v0.2s, #0
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    lsr x9, x8, #32
+; CHECK-NEXT:    and w8, w8, w9
+; CHECK-NEXT:    and w8, w8, w8, lsr #16
+; CHECK-NEXT:    sxth x0, w8
 ; CHECK-NEXT:    ret
 entry:
   %y = sext <4 x i16> %x to <4 x i64>
@@ -352,13 +287,10 @@ entry:
 define i64 @and_zext_v4i16_i64(<4 x i16> %x) {
 ; CHECK-LABEL: and_zext_v4i16_i64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    ushll v0.2d, v0.2s, #0
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    and x8, x8, x8, lsr #32
+; CHECK-NEXT:    lsr x9, x8, #16
+; CHECK-NEXT:    and w0, w8, w9
 ; CHECK-NEXT:    ret
 entry:
   %y = zext <4 x i16> %x to <4 x i64>
@@ -369,17 +301,13 @@ entry:
 define i64 @and_sext_v8i16_i64(<8 x i16> %x) {
 ; CHECK-LABEL: and_sext_v8i16_i64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sshll2 v1.4s, v0.8h, #0
-; CHECK-NEXT:    sshll v0.4s, v0.4h, #0
-; CHECK-NEXT:    ext v2.16b, v1.16b, v1.16b, #8
-; CHECK-NEXT:    ext v3.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    and v1.8b, v3.8b, v2.8b
-; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    sshll v0.2d, v0.2s, #0
 ; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    lsr x9, x8, #32
+; CHECK-NEXT:    and w8, w8, w9
+; CHECK-NEXT:    and w8, w8, w8, lsr #16
+; CHECK-NEXT:    sxth x0, w8
 ; CHECK-NEXT:    ret
 entry:
   %y = sext <8 x i16> %x to <8 x i64>
@@ -390,17 +318,12 @@ entry:
 define i64 @and_zext_v8i16_i64(<8 x i16> %x) {
 ; CHECK-LABEL: and_zext_v8i16_i64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ushll2 v1.4s, v0.8h, #0
-; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-NEXT:    ushll2 v2.2d, v1.4s, #0
-; CHECK-NEXT:    ushll2 v3.2d, v0.4s, #0
-; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    and v1.16b, v3.16b, v2.16b
-; CHECK-NEXT:    ushll v0.2d, v0.2s, #0
-; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    and x8, x8, x8, lsr #32
+; CHECK-NEXT:    lsr x9, x8, #16
+; CHECK-NEXT:    and w0, w8, w9
 ; CHECK-NEXT:    ret
 entry:
   %y = zext <8 x i16> %x to <8 x i64>
@@ -411,10 +334,10 @@ entry:
 define i64 @and_sext_v2i32_i64(<2 x i32> %x) {
 ; CHECK-LABEL: and_sext_v2i32_i64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sshll v0.2d, v0.2s, #0
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    lsr x9, x8, #32
+; CHECK-NEXT:    and w8, w8, w9
+; CHECK-NEXT:    sxtw x0, w8
 ; CHECK-NEXT:    ret
 entry:
   %y = sext <2 x i32> %x to <2 x i64>
@@ -425,10 +348,9 @@ entry:
 define i64 @and_zext_v2i32_i64(<2 x i32> %x) {
 ; CHECK-LABEL: and_zext_v2i32_i64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ushll v0.2d, v0.2s, #0
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    lsr x9, x8, #32
+; CHECK-NEXT:    and w0, w8, w9
 ; CHECK-NEXT:    ret
 entry:
   %y = zext <2 x i32> %x to <2 x i64>
@@ -441,10 +363,10 @@ define i64 @and_sext_v4i32_i64(<4 x i32> %x) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    sshll v0.2d, v0.2s, #0
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    lsr x9, x8, #32
+; CHECK-NEXT:    and w8, w8, w9
+; CHECK-NEXT:    sxtw x0, w8
 ; CHECK-NEXT:    ret
 entry:
   %y = sext <4 x i32> %x to <4 x i64>
@@ -457,10 +379,9 @@ define i64 @and_zext_v4i32_i64(<4 x i32> %x) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    ushll v0.2d, v0.2s, #0
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    lsr x9, x8, #32
+; CHECK-NEXT:    and w0, w8, w9
 ; CHECK-NEXT:    ret
 entry:
   %y = zext <4 x i32> %x to <4 x i64>
@@ -471,13 +392,12 @@ entry:
 define zeroext i16 @or_sext_v8i8_i16(<8 x i8> %x) {
 ; CHECK-LABEL: or_sext_v8i8_i16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sshll v0.8h, v0.8b, #0
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    lsr x9, x8, #32
+; CHECK-NEXT:    orr x8, x8, x8, lsr #32
+; CHECK-NEXT:    lsr x9, x8, #16
 ; CHECK-NEXT:    orr w8, w8, w9
-; CHECK-NEXT:    orr w8, w8, w8, lsr #16
+; CHECK-NEXT:    orr w8, w8, w8, lsr #8
+; CHECK-NEXT:    sxtb w8, w8
 ; CHECK-NEXT:    and w0, w8, #0xffff
 ; CHECK-NEXT:    ret
 entry:
@@ -489,14 +409,12 @@ entry:
 define zeroext i16 @or_zext_v8i8_i16(<8 x i8> %x) {
 ; CHECK-LABEL: or_zext_v8i8_i16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    lsr x9, x8, #32
+; CHECK-NEXT:    orr x8, x8, x8, lsr #32
+; CHECK-NEXT:    lsr x9, x8, #16
 ; CHECK-NEXT:    orr w8, w8, w9
-; CHECK-NEXT:    orr w8, w8, w8, lsr #16
-; CHECK-NEXT:    and w0, w8, #0xffff
+; CHECK-NEXT:    orr w8, w8, w8, lsr #8
+; CHECK-NEXT:    and w0, w8, #0xff
 ; CHECK-NEXT:    ret
 entry:
   %y = zext <8 x i8> %x to <8 x i16>
@@ -509,13 +427,12 @@ define zeroext i16 @or_sext_v16i8_i16(<16 x i8> %x) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    sshll v0.8h, v0.8b, #0
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    lsr x9, x8, #32
+; CHECK-NEXT:    orr x8, x8, x8, lsr #32
+; CHECK-NEXT:    lsr x9, x8, #16
 ; CHECK-NEXT:    orr w8, w8, w9
-; CHECK-NEXT:    orr w8, w8, w8, lsr #16
+; CHECK-NEXT:    orr w8, w8, w8, lsr #8
+; CHECK-NEXT:    sxtb w8, w8
 ; CHECK-NEXT:    and w0, w8, #0xffff
 ; CHECK-NEXT:    ret
 entry:
@@ -529,14 +446,12 @@ define zeroext i16 @or_zext_v16i8_i16(<16 x i8> %x) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    lsr x9, x8, #32
+; CHECK-NEXT:    orr x8, x8, x8, lsr #32
+; CHECK-NEXT:    lsr x9, x8, #16
 ; CHECK-NEXT:    orr w8, w8, w9
-; CHECK-NEXT:    orr w8, w8, w8, lsr #16
-; CHECK-NEXT:    and w0, w8, #0xffff
+; CHECK-NEXT:    orr w8, w8, w8, lsr #8
+; CHECK-NEXT:    and w0, w8, #0xff
 ; CHECK-NEXT:    ret
 entry:
   %y = zext <16 x i8> %x to <16 x i16>
@@ -547,15 +462,12 @@ entry:
 define i32 @or_sext_v8i8_i32(<8 x i8> %x) {
 ; CHECK-LABEL: or_sext_v8i8_i32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sshll v0.8h, v0.8b, #0
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    sshll v0.4s, v0.4h, #0
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    lsr x9, x8, #32
-; CHECK-NEXT:    orr w0, w8, w9
+; CHECK-NEXT:    orr x8, x8, x8, lsr #32
+; CHECK-NEXT:    lsr x9, x8, #16
+; CHECK-NEXT:    orr w8, w8, w9
+; CHECK-NEXT:    orr w8, w8, w8, lsr #8
+; CHECK-NEXT:    sxtb w0, w8
 ; CHECK-NEXT:    ret
 entry:
   %y = sext <8 x i8> %x to <8 x i32>
@@ -566,15 +478,12 @@ entry:
 define i32 @or_zext_v8i8_i32(<8 x i8> %x) {
 ; CHECK-LABEL: or_zext_v8i8_i32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    lsr x9, x8, #32
-; CHECK-NEXT:    orr w0, w8, w9
+; CHECK-NEXT:    orr x8, x8, x8, lsr #32
+; CHECK-NEXT:    lsr x9, x8, #16
+; CHECK-NEXT:    orr w8, w8, w9
+; CHECK-NEXT:    orr w8, w8, w8, lsr #8
+; CHECK-NEXT:    and w0, w8, #0xff
 ; CHECK-NEXT:    ret
 entry:
   %y = zext <8 x i8> %x to <8 x i32>
@@ -585,19 +494,14 @@ entry:
 define i32 @or_sext_v16i8_i32(<16 x i8> %x) {
 ; CHECK-LABEL: or_sext_v16i8_i32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sshll2 v1.8h, v0.16b, #0
-; CHECK-NEXT:    sshll v0.8h, v0.8b, #0
-; CHECK-NEXT:    ext v2.16b, v1.16b, v1.16b, #8
-; CHECK-NEXT:    ext v3.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    orr v1.8b, v3.8b, v2.8b
-; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    sshll v0.4s, v0.4h, #0
 ; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    lsr x9, x8, #32
-; CHECK-NEXT:    orr w0, w8, w9
+; CHECK-NEXT:    orr x8, x8, x8, lsr #32
+; CHECK-NEXT:    lsr x9, x8, #16
+; CHECK-NEXT:    orr w8, w8, w9
+; CHECK-NEXT:    orr w8, w8, w8, lsr #8
+; CHECK-NEXT:    sxtb w0, w8
 ; CHECK-NEXT:    ret
 entry:
   %y = sext <16 x i8> %x to <16 x i32>
@@ -608,19 +512,14 @@ entry:
 define i32 @or_zext_v16i8_i32(<16 x i8> %x) {
 ; CHECK-LABEL: or_zext_v16i8_i32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ushll2 v1.8h, v0.16b, #0
-; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-NEXT:    ext v2.16b, v1.16b, v1.16b, #8
-; CHECK-NEXT:    ext v3.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    orr v1.8b, v3.8b, v2.8b
-; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
 ; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    lsr x9, x8, #32
-; CHECK-NEXT:    orr w0, w8, w9
+; CHECK-NEXT:    orr x8, x8, x8, lsr #32
+; CHECK-NEXT:    lsr x9, x8, #16
+; CHECK-NEXT:    orr w8, w8, w9
+; CHECK-NEXT:    orr w8, w8, w8, lsr #8
+; CHECK-NEXT:    and w0, w8, #0xff
 ; CHECK-NEXT:    ret
 entry:
   %y = zext <16 x i8> %x to <16 x i32>
@@ -631,18 +530,12 @@ entry:
 define i64 @or_sext_v8i8_i64(<8 x i8> %x) {
 ; CHECK-LABEL: or_sext_v8i8_i64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sshll v0.8h, v0.8b, #0
-; CHECK-NEXT:    sshll2 v1.4s, v0.8h, #0
-; CHECK-NEXT:    sshll v0.4s, v0.4h, #0
-; CHECK-NEXT:    ext v2.16b, v1.16b, v1.16b, #8
-; CHECK-NEXT:    ext v3.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    orr v1.8b, v3.8b, v2.8b
-; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    sshll v0.2d, v0.2s, #0
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    orr x8, x8, x8, lsr #32
+; CHECK-NEXT:    lsr x9, x8, #16
+; CHECK-NEXT:    orr w8, w8, w9
+; CHECK-NEXT:    orr w8, w8, w8, lsr #8
+; CHECK-NEXT:    sxtb x0, w8
 ; CHECK-NEXT:    ret
 entry:
   %y = sext <8 x i8> %x to <8 x i64>
@@ -653,18 +546,12 @@ entry:
 define i64 @or_zext_v8i8_i64(<8 x i8> %x) {
 ; CHECK-LABEL: or_zext_v8i8_i64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-NEXT:    ushll2 v1.4s, v0.8h, #0
-; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-NEXT:    ext v2.16b, v1.16b, v1.16b, #8
-; CHECK-NEXT:    ext v3.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    orr v1.8b, v3.8b, v2.8b
-; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    ushll v0.2d, v0.2s, #0
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    orr x8, x8, x8, lsr #32
+; CHECK-NEXT:    lsr x9, x8, #16
+; CHECK-NEXT:    orr w8, w8, w9
+; CHECK-NEXT:    orr w8, w8, w8, lsr #8
+; CHECK-NEXT:    and x0, x8, #0xff
 ; CHECK-NEXT:    ret
 entry:
   %y = zext <8 x i8> %x to <8 x i64>
@@ -675,27 +562,14 @@ entry:
 define i64 @or_sext_v16i8_i64(<16 x i8> %x) {
 ; CHECK-LABEL: or_sext_v16i8_i64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sshll2 v1.8h, v0.16b, #0
-; CHECK-NEXT:    sshll v0.8h, v0.8b, #0
-; CHECK-NEXT:    sshll v2.4s, v1.4h, #0
-; CHECK-NEXT:    sshll v3.4s, v0.4h, #0
-; CHECK-NEXT:    sshll2 v1.4s, v1.8h, #0
-; CHECK-NEXT:    sshll2 v0.4s, v0.8h, #0
-; CHECK-NEXT:    ext v4.16b, v2.16b, v2.16b, #8
-; CHECK-NEXT:    ext v5.16b, v3.16b, v3.16b, #8
-; CHECK-NEXT:    ext v6.16b, v1.16b, v1.16b, #8
-; CHECK-NEXT:    ext v7.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    orr v1.8b, v3.8b, v2.8b
-; CHECK-NEXT:    orr v3.8b, v5.8b, v4.8b
-; CHECK-NEXT:    orr v0.8b, v1.8b, v0.8b
-; CHECK-NEXT:    orr v2.8b, v7.8b, v6.8b
-; CHECK-NEXT:    orr v1.8b, v3.8b, v2.8b
-; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    sshll v0.2d, v0.2s, #0
 ; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    orr x8, x8, x8, lsr #32
+; CHECK-NEXT:    lsr x9, x8, #16
+; CHECK-NEXT:    orr w8, w8, w9
+; CHECK-NEXT:    orr w8, w8, w8, lsr #8
+; CHECK-NEXT:    sxtb x0, w8
 ; CHECK-NEXT:    ret
 entry:
   %y = sext <16 x i8> %x to <16 x i64>
@@ -706,27 +580,14 @@ entry:
 define i64 @or_zext_v16i8_i64(<16 x i8> %x) {
 ; CHECK-LABEL: or_zext_v16i8_i64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ushll2 v1.8h, v0.16b, #0
-; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-NEXT:    ushll v2.4s, v1.4h, #0
-; CHECK-NEXT:    ushll v3.4s, v0.4h, #0
-; CHECK-NEXT:    ushll2 v1.4s, v1.8h, #0
-; CHECK-NEXT:    ushll2 v0.4s, v0.8h, #0
-; CHECK-NEXT:    ext v4.16b, v2.16b, v2.16b, #8
-; CHECK-NEXT:    ext v5.16b, v3.16b, v3.16b, #8
-; CHECK-NEXT:    ext v6.16b, v1.16b, v1.16b, #8
-; CHECK-NEXT:    ext v7.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    orr v1.8b, v3.8b, v2.8b
-; CHECK-NEXT:    orr v3.8b, v5.8b, v4.8b
-; CHECK-NEXT:    orr v0.8b, v1.8b, v0.8b
-; CHECK-NEXT:    orr v2.8b, v7.8b, v6.8b
-; CHECK-NEXT:    orr v1.8b, v3.8b, v2.8b
-; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    ushll v0.2d, v0.2s, #0
 ; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    orr x8, x8, x8, lsr #32
+; CHECK-NEXT:    lsr x9, x8, #16
+; CHECK-NEXT:    orr w8, w8, w9
+; CHECK-NEXT:    orr w8, w8, w8, lsr #8
+; CHECK-NEXT:    and x0, x8, #0xff
 ; CHECK-NEXT:    ret
 entry:
   %y = zext <16 x i8> %x to <16 x i64>
@@ -737,12 +598,11 @@ entry:
 define i32 @or_sext_v4i16_i32(<4 x i16> %x) {
 ; CHECK-LABEL: or_sext_v4i16_i32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sshll v0.4s, v0.4h, #0
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    fmov x8, d0
 ; CHECK-NEXT:    lsr x9, x8, #32
-; CHECK-NEXT:    orr w0, w8, w9
+; CHECK-NEXT:    orr w8, w8, w9
+; CHECK-NEXT:    orr w8, w8, w8, lsr #16
+; CHECK-NEXT:    sxth w0, w8
 ; CHECK-NEXT:    ret
 entry:
   %y = sext <4 x i16> %x to <4 x i32>
@@ -753,12 +613,11 @@ entry:
 define i32 @or_zext_v4i16_i32(<4 x i16> %x) {
 ; CHECK-LABEL: or_zext_v4i16_i32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    fmov x8, d0
 ; CHECK-NEXT:    lsr x9, x8, #32
-; CHECK-NEXT:    orr w0, w8, w9
+; CHECK-NEXT:    orr w8, w8, w9
+; CHECK-NEXT:    orr w8, w8, w8, lsr #16
+; CHECK-NEXT:    and w0, w8, #0xffff
 ; CHECK-NEXT:    ret
 entry:
   %y = zext <4 x i16> %x to <4 x i32>
@@ -771,12 +630,11 @@ define i32 @or_sext_v8i16_i32(<8 x i16> %x) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    sshll v0.4s, v0.4h, #0
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    fmov x8, d0
 ; CHECK-NEXT:    lsr x9, x8, #32
-; CHECK-NEXT:    orr w0, w8, w9
+; CHECK-NEXT:    orr w8, w8, w9
+; CHECK-NEXT:    orr w8, w8, w8, lsr #16
+; CHECK-NEXT:    sxth w0, w8
 ; CHECK-NEXT:    ret
 entry:
   %y = sext <8 x i16> %x to <8 x i32>
@@ -789,12 +647,11 @@ define i32 @or_zext_v8i16_i32(<8 x i16> %x) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    fmov x8, d0
 ; CHECK-NEXT:    lsr x9, x8, #32
-; CHECK-NEXT:    orr w0, w8, w9
+; CHECK-NEXT:    orr w8, w8, w9
+; CHECK-NEXT:    orr w8, w8, w8, lsr #16
+; CHECK-NEXT:    and w0, w8, #0xffff
 ; CHECK-NEXT:    ret
 entry:
   %y = zext <8 x i16> %x to <8 x i32>
@@ -805,13 +662,11 @@ entry:
 define i64 @or_sext_v4i16_i64(<4 x i16> %x) {
 ; CHECK-LABEL: or_sext_v4i16_i64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sshll v0.4s, v0.4h, #0
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    sshll v0.2d, v0.2s, #0
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    lsr x9, x8, #32
+; CHECK-NEXT:    orr w8, w8, w9
+; CHECK-NEXT:    orr w8, w8, w8, lsr #16
+; CHECK-NEXT:    sxth x0, w8
 ; CHECK-NEXT:    ret
 entry:
   %y = sext <4 x i16> %x to <4 x i64>
@@ -822,13 +677,11 @@ entry:
 define i64 @or_zext_v4i16_i64(<4 x i16> %x) {
 ; CHECK-LABEL: or_zext_v4i16_i64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    ushll v0.2d, v0.2s, #0
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    lsr x9, x8, #32
+; CHECK-NEXT:    orr w8, w8, w9
+; CHECK-NEXT:    orr w8, w8, w8, lsr #16
+; CHECK-NEXT:    and x0, x8, #0xffff
 ; CHECK-NEXT:    ret
 entry:
   %y = zext <4 x i16> %x to <4 x i64>
@@ -839,17 +692,13 @@ entry:
 define i64 @or_sext_v8i16_i64(<8 x i16> %x) {
 ; CHECK-LABEL: or_sext_v8i16_i64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sshll2 v1.4s, v0.8h, #0
-; CHECK-NEXT:    sshll v0.4s, v0.4h, #0
-; CHECK-NEXT:    ext v2.16b, v1.16b, v1.16b, #8
-; CHECK-NEXT:    ext v3.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    orr v1.8b, v3.8b, v2.8b
-; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    sshll v0.2d, v0.2s, #0
 ; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    lsr x9, x8, #32
+; CHECK-NEXT:    orr w8, w8, w9
+; CHECK-NEXT:    orr w8, w8, w8, lsr #16
+; CHECK-NEXT:    sxth x0, w8
 ; CHECK-NEXT:    ret
 entry:
   %y = sext <8 x i16> %x to <8 x i64>
@@ -860,17 +709,13 @@ entry:
 define i64 @or_zext_v8i16_i64(<8 x i16> %x) {
 ; CHECK-LABEL: or_zext_v8i16_i64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ushll2 v1.4s, v0.8h, #0
-; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-NEXT:    ext v2.16b, v1.16b, v1.16b, #8
-; CHECK-NEXT:    ext v3.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    orr v1.8b, v3.8b, v2.8b
-; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    ushll v0.2d, v0.2s, #0
 ; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    lsr x9, x8, #32
+; CHECK-NEXT:    orr w8, w8, w9
+; CHECK-NEXT:    orr w8, w8, w8, lsr #16
+; CHECK-NEXT:    and x0, x8, #0xffff
 ; CHECK-NEXT:    ret
 entry:
   %y = zext <8 x i16> %x to <8 x i64>
@@ -881,10 +726,10 @@ entry:
 define i64 @or_sext_v2i32_i64(<2 x i32> %x) {
 ; CHECK-LABEL: or_sext_v2i32_i64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sshll v0.2d, v0.2s, #0
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    lsr x9, x8, #32
+; CHECK-NEXT:    orr w8, w8, w9
+; CHECK-NEXT:    sxtw x0, w8
 ; CHECK-NEXT:    ret
 entry:
   %y = sext <2 x i32> %x to <2 x i64>
@@ -895,10 +740,9 @@ entry:
 define i64 @or_zext_v2i32_i64(<2 x i32> %x) {
 ; CHECK-LABEL: or_zext_v2i32_i64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ushll v0.2d, v0.2s, #0
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    lsr x9, x8, #32
+; CHECK-NEXT:    orr w0, w8, w9
 ; CHECK-NEXT:    ret
 entry:
   %y = zext <2 x i32> %x to <2 x i64>
@@ -911,10 +755,10 @@ define i64 @or_sext_v4i32_i64(<4 x i32> %x) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    sshll v0.2d, v0.2s, #0
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    lsr x9, x8, #32
+; CHECK-NEXT:    orr w8, w8, w9
+; CHECK-NEXT:    sxtw x0, w8
 ; CHECK-NEXT:    ret
 entry:
   %y = sext <4 x i32> %x to <4 x i64>
@@ -927,10 +771,9 @@ define i64 @or_zext_v4i32_i64(<4 x i32> %x) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    ushll v0.2d, v0.2s, #0
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    lsr x9, x8, #32
+; CHECK-NEXT:    orr w0, w8, w9
 ; CHECK-NEXT:    ret
 entry:
   %y = zext <4 x i32> %x to <4 x i64>
@@ -941,13 +784,12 @@ entry:
 define zeroext i16 @xor_sext_v8i8_i16(<8 x i8> %x) {
 ; CHECK-LABEL: xor_sext_v8i8_i16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sshll v0.8h, v0.8b, #0
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    lsr x9, x8, #32
+; CHECK-NEXT:    eor x8, x8, x8, lsr #32
+; CHECK-NEXT:    lsr x9, x8, #16
 ; CHECK-NEXT:    eor w8, w8, w9
-; CHECK-NEXT:    eor w8, w8, w8, lsr #16
+; CHECK-NEXT:    eor w8, w8, w8, lsr #8
+; CHECK-NEXT:    sxtb w8, w8
 ; CHECK-NEXT:    and w0, w8, #0xffff
 ; CHECK-NEXT:    ret
 entry:
@@ -959,14 +801,12 @@ entry:
 define zeroext i16 @xor_zext_v8i8_i16(<8 x i8> %x) {
 ; CHECK-LABEL: xor_zext_v8i8_i16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    lsr x9, x8, #32
+; CHECK-NEXT:    eor x8, x8, x8, lsr #32
+; CHECK-NEXT:    lsr x9, x8, #16
 ; CHECK-NEXT:    eor w8, w8, w9
-; CHECK-NEXT:    eor w8, w8, w8, lsr #16
-; CHECK-NEXT:    and w0, w8, #0xffff
+; CHECK-NEXT:    eor w8, w8, w8, lsr #8
+; CHECK-NEXT:    and w0, w8, #0xff
 ; CHECK-NEXT:    ret
 entry:
   %y = zext <8 x i8> %x to <8 x i16>
@@ -979,13 +819,12 @@ define zeroext i16 @xor_sext_v16i8_i16(<16 x i8> %x) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    sshll v0.8h, v0.8b, #0
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    lsr x9, x8, #32
+; CHECK-NEXT:    eor x8, x8, x8, lsr #32
+; CHECK-NEXT:    lsr x9, x8, #16
 ; CHECK-NEXT:    eor w8, w8, w9
-; CHECK-NEXT:    eor w8, w8, w8, lsr #16
+; CHECK-NEXT:    eor w8, w8, w8, lsr #8
+; CHECK-NEXT:    sxtb w8, w8
 ; CHECK-NEXT:    and w0, w8, #0xffff
 ; CHECK-NEXT:    ret
 entry:
@@ -999,14 +838,12 @@ define zeroext i16 @xor_zext_v16i8_i16(<16 x i8> %x) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    lsr x9, x8, #32
+; CHECK-NEXT:    eor x8, x8, x8, lsr #32
+; CHECK-NEXT:    lsr x9, x8, #16
 ; CHECK-NEXT:    eor w8, w8, w9
-; CHECK-NEXT:    eor w8, w8, w8, lsr #16
-; CHECK-NEXT:    and w0, w8, #0xffff
+; CHECK-NEXT:    eor w8, w8, w8, lsr #8
+; CHECK-NEXT:    and w0, w8, #0xff
 ; CHECK-NEXT:    ret
 entry:
   %y = zext <16 x i8> %x to <16 x i16>
@@ -1017,15 +854,12 @@ entry:
 define i32 @xor_sext_v8i8_i32(<8 x i8> %x) {
 ; CHECK-LABEL: xor_sext_v8i8_i32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sshll v0.8h, v0.8b, #0
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    sshll v0.4s, v0.4h, #0
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    lsr x9, x8, #32
-; CHECK-NEXT:    eor w0, w8, w9
+; CHECK-NEXT:    eor x8, x8, x8, lsr #32
+; CHECK-NEXT:    lsr x9, x8, #16
+; CHECK-NEXT:    eor w8, w8, w9
+; CHECK-NEXT:    eor w8, w8, w8, lsr #8
+; CHECK-NEXT:    sxtb w0, w8
 ; CHECK-NEXT:    ret
 entry:
   %y = sext <8 x i8> %x to <8 x i32>
@@ -1036,15 +870,12 @@ entry:
 define i32 @xor_zext_v8i8_i32(<8 x i8> %x) {
 ; CHECK-LABEL: xor_zext_v8i8_i32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    lsr x9, x8, #32
-; CHECK-NEXT:    eor w0, w8, w9
+; CHECK-NEXT:    eor x8, x8, x8, lsr #32
+; CHECK-NEXT:    lsr x9, x8, #16
+; CHECK-NEXT:    eor w8, w8, w9
+; CHECK-NEXT:    eor w8, w8, w8, lsr #8
+; CHECK-NEXT:    and w0, w8, #0xff
 ; CHECK-NEXT:    ret
 entry:
   %y = zext <8 x i8> %x to <8 x i32>
@@ -1055,19 +886,14 @@ entry:
 define i32 @xor_sext_v16i8_i32(<16 x i8> %x) {
 ; CHECK-LABEL: xor_sext_v16i8_i32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sshll2 v1.8h, v0.16b, #0
-; CHECK-NEXT:    sshll v0.8h, v0.8b, #0
-; CHECK-NEXT:    ext v2.16b, v1.16b, v1.16b, #8
-; CHECK-NEXT:    ext v3.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    eor v1.8b, v3.8b, v2.8b
-; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    sshll v0.4s, v0.4h, #0
 ; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    lsr x9, x8, #32
-; CHECK-NEXT:    eor w0, w8, w9
+; CHECK-NEXT:    eor x8, x8, x8, lsr #32
+; CHECK-NEXT:    lsr x9, x8, #16
+; CHECK-NEXT:    eor w8, w8, w9
+; CHECK-NEXT:    eor w8, w8, w8, lsr #8
+; CHECK-NEXT:    sxtb w0, w8
 ; CHECK-NEXT:    ret
 entry:
   %y = sext <16 x i8> %x to <16 x i32>
@@ -1078,19 +904,14 @@ entry:
 define i32 @xor_zext_v16i8_i32(<16 x i8> %x) {
 ; CHECK-LABEL: xor_zext_v16i8_i32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ushll2 v1.8h, v0.16b, #0
-; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-NEXT:    ext v2.16b, v1.16b, v1.16b, #8
-; CHECK-NEXT:    ext v3.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    eor v1.8b, v3.8b, v2.8b
-; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
 ; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    lsr x9, x8, #32
-; CHECK-NEXT:    eor w0, w8, w9
+; CHECK-NEXT:    eor x8, x8, x8, lsr #32
+; CHECK-NEXT:    lsr x9, x8, #16
+; CHECK-NEXT:    eor w8, w8, w9
+; CHECK-NEXT:    eor w8, w8, w8, lsr #8
+; CHECK-NEXT:    and w0, w8, #0xff
 ; CHECK-NEXT:    ret
 entry:
   %y = zext <16 x i8> %x to <16 x i32>
@@ -1101,18 +922,12 @@ entry:
 define i64 @xor_sext_v8i8_i64(<8 x i8> %x) {
 ; CHECK-LABEL: xor_sext_v8i8_i64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sshll v0.8h, v0.8b, #0
-; CHECK-NEXT:    sshll2 v1.4s, v0.8h, #0
-; CHECK-NEXT:    sshll v0.4s, v0.4h, #0
-; CHECK-NEXT:    ext v2.16b, v1.16b, v1.16b, #8
-; CHECK-NEXT:    ext v3.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    eor v1.8b, v3.8b, v2.8b
-; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    sshll v0.2d, v0.2s, #0
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    eor x8, x8, x8, lsr #32
+; CHECK-NEXT:    lsr x9, x8, #16
+; CHECK-NEXT:    eor w8, w8, w9
+; CHECK-NEXT:    eor w8, w8, w8, lsr #8
+; CHECK-NEXT:    sxtb x0, w8
 ; CHECK-NEXT:    ret
 entry:
   %y = sext <8 x i8> %x to <8 x i64>
@@ -1123,18 +938,12 @@ entry:
 define i64 @xor_zext_v8i8_i64(<8 x i8> %x) {
 ; CHECK-LABEL: xor_zext_v8i8_i64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-NEXT:    ushll2 v1.4s, v0.8h, #0
-; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-NEXT:    ext v2.16b, v1.16b, v1.16b, #8
-; CHECK-NEXT:    ext v3.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    eor v1.8b, v3.8b, v2.8b
-; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    ushll v0.2d, v0.2s, #0
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    eor x8, x8, x8, lsr #32
+; CHECK-NEXT:    lsr x9, x8, #16
+; CHECK-NEXT:    eor w8, w8, w9
+; CHECK-NEXT:    eor w8, w8, w8, lsr #8
+; CHECK-NEXT:    and x0, x8, #0xff
 ; CHECK-NEXT:    ret
 entry:
   %y = zext <8 x i8> %x to <8 x i64>
@@ -1145,27 +954,14 @@ entry:
 define i64 @xor_sext_v16i8_i64(<16 x i8> %x) {
 ; CHECK-LABEL: xor_sext_v16i8_i64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sshll2 v1.8h, v0.16b, #0
-; CHECK-NEXT:    sshll v0.8h, v0.8b, #0
-; CHECK-NEXT:    sshll v2.4s, v1.4h, #0
-; CHECK-NEXT:    sshll v3.4s, v0.4h, #0
-; CHECK-NEXT:    sshll2 v1.4s, v1.8h, #0
-; CHECK-NEXT:    sshll2 v0.4s, v0.8h, #0
-; CHECK-NEXT:    ext v4.16b, v2.16b, v2.16b, #8
-; CHECK-NEXT:    ext v5.16b, v3.16b, v3.16b, #8
-; CHECK-NEXT:    ext v6.16b, v1.16b, v1.16b, #8
-; CHECK-NEXT:    ext v7.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    eor v1.8b, v3.8b, v2.8b
-; CHECK-NEXT:    eor v3.8b, v5.8b, v4.8b
-; CHECK-NEXT:    eor v0.8b, v1.8b, v0.8b
-; CHECK-NEXT:    eor v2.8b, v7.8b, v6.8b
-; CHECK-NEXT:    eor v1.8b, v3.8b, v2.8b
-; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    sshll v0.2d, v0.2s, #0
 ; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    eor x8, x8, x8, lsr #32
+; CHECK-NEXT:    lsr x9, x8, #16
+; CHECK-NEXT:    eor w8, w8, w9
+; CHECK-NEXT:    eor w8, w8, w8, lsr #8
+; CHECK-NEXT:    sxtb x0, w8
 ; CHECK-NEXT:    ret
 entry:
   %y = sext <16 x i8> %x to <16 x i64>
@@ -1176,27 +972,14 @@ entry:
 define i64 @xor_zext_v16i8_i64(<16 x i8> %x) {
 ; CHECK-LABEL: xor_zext_v16i8_i64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ushll2 v1.8h, v0.16b, #0
-; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-NEXT:    ushll v2.4s, v1.4h, #0
-; CHECK-NEXT:    ushll v3.4s, v0.4h, #0
-; CHECK-NEXT:    ushll2 v1.4s, v1.8h, #0
-; CHECK-NEXT:    ushll2 v0.4s, v0.8h, #0
-; CHECK-NEXT:    ext v4.16b, v2.16b, v2.16b, #8
-; CHECK-NEXT:    ext v5.16b, v3.16b, v3.16b, #8
-; CHECK-NEXT:    ext v6.16b, v1.16b, v1.16b, #8
-; CHECK-NEXT:    ext v7.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    eor v1.8b, v3.8b, v2.8b
-; CHECK-NEXT:    eor v3.8b, v5.8b, v4.8b
-; CHECK-NEXT:    eor v0.8b, v1.8b, v0.8b
-; CHECK-NEXT:    eor v2.8b, v7.8b, v6.8b
-; CHECK-NEXT:    eor v1.8b, v3.8b, v2.8b
-; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    ushll v0.2d, v0.2s, #0
 ; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    eor x8, x8, x8, lsr #32
+; CHECK-NEXT:    lsr x9, x8, #16
+; CHECK-NEXT:    eor w8, w8, w9
+; CHECK-NEXT:    eor w8, w8, w8, lsr #8
+; CHECK-NEXT:    and x0, x8, #0xff
 ; CHECK-NEXT:    ret
 entry:
   %y = zext <16 x i8> %x to <16 x i64>
@@ -1207,12 +990,11 @@ entry:
 define i32 @xor_sext_v4i16_i32(<4 x i16> %x) {
 ; CHECK-LABEL: xor_sext_v4i16_i32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sshll v0.4s, v0.4h, #0
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    fmov x8, d0
 ; CHECK-NEXT:    lsr x9, x8, #32
-; CHECK-NEXT:    eor w0, w8, w9
+; CHECK-NEXT:    eor w8, w8, w9
+; CHECK-NEXT:    eor w8, w8, w8, lsr #16
+; CHECK-NEXT:    sxth w0, w8
 ; CHECK-NEXT:    ret
 entry:
   %y = sext <4 x i16> %x to <4 x i32>
@@ -1223,12 +1005,11 @@ entry:
 define i32 @xor_zext_v4i16_i32(<4 x i16> %x) {
 ; CHECK-LABEL: xor_zext_v4i16_i32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    fmov x8, d0
 ; CHECK-NEXT:    lsr x9, x8, #32
-; CHECK-NEXT:    eor w0, w8, w9
+; CHECK-NEXT:    eor w8, w8, w9
+; CHECK-NEXT:    eor w8, w8, w8, lsr #16
+; CHECK-NEXT:    and w0, w8, #0xffff
 ; CHECK-NEXT:    ret
 entry:
   %y = zext <4 x i16> %x to <4 x i32>
@@ -1241,12 +1022,11 @@ define i32 @xor_sext_v8i16_i32(<8 x i16> %x) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    sshll v0.4s, v0.4h, #0
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    fmov x8, d0
 ; CHECK-NEXT:    lsr x9, x8, #32
-; CHECK-NEXT:    eor w0, w8, w9
+; CHECK-NEXT:    eor w8, w8, w9
+; CHECK-NEXT:    eor w8, w8, w8, lsr #16
+; CHECK-NEXT:    sxth w0, w8
 ; CHECK-NEXT:    ret
 entry:
   %y = sext <8 x i16> %x to <8 x i32>
@@ -1259,12 +1039,11 @@ define i32 @xor_zext_v8i16_i32(<8 x i16> %x) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    fmov x8, d0
 ; CHECK-NEXT:    lsr x9, x8, #32
-; CHECK-NEXT:    eor w0, w8, w9
+; CHECK-NEXT:    eor w8, w8, w9
+; CHECK-NEXT:    eor w8, w8, w8, lsr #16
+; CHECK-NEXT:    and w0, w8, #0xffff
 ; CHECK-NEXT:    ret
 entry:
   %y = zext <8 x i16> %x to <8 x i32>
@@ -1275,13 +1054,11 @@ entry:
 define i64 @xor_sext_v4i16_i64(<4 x i16> %x) {
 ; CHECK-LABEL: xor_sext_v4i16_i64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sshll v0.4s, v0.4h, #0
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    sshll v0.2d, v0.2s, #0
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    lsr x9, x8, #32
+; CHECK-NEXT:    eor w8, w8, w9
+; CHECK-NEXT:    eor w8, w8, w8, lsr #16
+; CHECK-NEXT:    sxth x0, w8
 ; CHECK-NEXT:    ret
 entry:
   %y = sext <4 x i16> %x to <4 x i64>
@@ -1292,13 +1069,11 @@ entry:
 define i64 @xor_zext_v4i16_i64(<4 x i16> %x) {
 ; CHECK-LABEL: xor_zext_v4i16_i64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    ushll v0.2d, v0.2s, #0
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    lsr x9, x8, #32
+; CHECK-NEXT:    eor w8, w8, w9
+; CHECK-NEXT:    eor w8, w8, w8, lsr #16
+; CHECK-NEXT:    and x0, x8, #0xffff
 ; CHECK-NEXT:    ret
 entry:
   %y = zext <4 x i16> %x to <4 x i64>
@@ -1309,17 +1084,13 @@ entry:
 define i64 @xor_sext_v8i16_i64(<8 x i16> %x) {
 ; CHECK-LABEL: xor_sext_v8i16_i64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sshll2 v1.4s, v0.8h, #0
-; CHECK-NEXT:    sshll v0.4s, v0.4h, #0
-; CHECK-NEXT:    ext v2.16b, v1.16b, v1.16b, #8
-; CHECK-NEXT:    ext v3.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    eor v1.8b, v3.8b, v2.8b
-; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    sshll v0.2d, v0.2s, #0
 ; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    lsr x9, x8, #32
+; CHECK-NEXT:    eor w8, w8, w9
+; CHECK-NEXT:    eor w8, w8, w8, lsr #16
+; CHECK-NEXT:    sxth x0, w8
 ; CHECK-NEXT:    ret
 entry:
   %y = sext <8 x i16> %x to <8 x i64>
@@ -1330,17 +1101,13 @@ entry:
 define i64 @xor_zext_v8i16_i64(<8 x i16> %x) {
 ; CHECK-LABEL: xor_zext_v8i16_i64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ushll2 v1.4s, v0.8h, #0
-; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-NEXT:    ext v2.16b, v1.16b, v1.16b, #8
-; CHECK-NEXT:    ext v3.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    eor v1.8b, v3.8b, v2.8b
-; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    ushll v0.2d, v0.2s, #0
 ; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    lsr x9, x8, #32
+; CHECK-NEXT:    eor w8, w8, w9
+; CHECK-NEXT:    eor w8, w8, w8, lsr #16
+; CHECK-NEXT:    and x0, x8, #0xffff
 ; CHECK-NEXT:    ret
 entry:
   %y = zext <8 x i16> %x to <8 x i64>
@@ -1351,10 +1118,10 @@ entry:
 define i64 @xor_sext_v2i32_i64(<2 x i32> %x) {
 ; CHECK-LABEL: xor_sext_v2i32_i64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sshll v0.2d, v0.2s, #0
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    lsr x9, x8, #32
+; CHECK-NEXT:    eor w8, w8, w9
+; CHECK-NEXT:    sxtw x0, w8
 ; CHECK-NEXT:    ret
 entry:
   %y = sext <2 x i32> %x to <2 x i64>
@@ -1365,10 +1132,9 @@ entry:
 define i64 @xor_zext_v2i32_i64(<2 x i32> %x) {
 ; CHECK-LABEL: xor_zext_v2i32_i64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ushll v0.2d, v0.2s, #0
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    lsr x9, x8, #32
+; CHECK-NEXT:    eor w0, w8, w9
 ; CHECK-NEXT:    ret
 entry:
   %y = zext <2 x i32> %x to <2 x i64>
@@ -1381,10 +1147,10 @@ define i64 @xor_sext_v4i32_i64(<4 x i32> %x) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    sshll v0.2d, v0.2s, #0
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    lsr x9, x8, #32
+; CHECK-NEXT:    eor w8, w8, w9
+; CHECK-NEXT:    sxtw x0, w8
 ; CHECK-NEXT:    ret
 entry:
   %y = sext <4 x i32> %x to <4 x i64>
@@ -1397,10 +1163,9 @@ define i64 @xor_zext_v4i32_i64(<4 x i32> %x) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    ushll v0.2d, v0.2s, #0
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    lsr x9, x8, #32
+; CHECK-NEXT:    eor w0, w8, w9
 ; CHECK-NEXT:    ret
 entry:
   %y = zext <4 x i32> %x to <4 x i64>
