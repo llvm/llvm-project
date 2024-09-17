@@ -111,6 +111,10 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/casting-through-void>` check to suggest replacing
   the offending code with ``reinterpret_cast``, to more clearly express intent.
 
+- Improved :doc:`bugprone-forwarding-reference-overload
+  <clang-tidy/checks/bugprone/forwarding-reference-overload>` check by fixing
+  a crash when determining if an ``enable_if[_t]`` was found.
+
 - Improved :doc:`cert-flp30-c<clang-tidy/checks/cert/flp30-c>` check to 
   fix false positive that floating point variable is only used in increment
   expression.
