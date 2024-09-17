@@ -130,6 +130,7 @@ class GlobalValue;
 class GlobalObject;
 class GlobalIFunc;
 class GlobalVariable;
+class GlobalAlias;
 class Context;
 class Function;
 class Instruction;
@@ -336,6 +337,7 @@ protected:
   friend class GlobalObject;          // For `Val`.
   friend class GlobalIFunc;           // For `Val`.
   friend class GlobalVariable;        // For `Val`.
+  friend class GlobalAlias;           // For `Val`.
 
   /// All values point to the context.
   Context &Ctx;
@@ -1526,6 +1528,38 @@ public:
     dumpCommonSuffix(OS);
   }
 #endif
+};
+
+class GlobalAlias final
+    : public GlobalWithNodeAPI<GlobalAlias, llvm::GlobalAlias, GlobalValue,
+                               llvm::GlobalValue> {
+  GlobalAlias(llvm::GlobalAlias *C, Context &Ctx)
+      : GlobalWithNodeAPI(ClassID::GlobalAlias, C, Ctx) {}
+  friend class Context; // For constructor.
+
+public:
+  /// For isa/dyn_cast.
+  static bool classof(const sandboxir::Value *From) {
+    return From->getSubclassID() == ClassID::GlobalAlias;
+  }
+
+  // TODO: Missing create() due to unimplemented sandboxir::Module.
+
+  // TODO: Missing copyAttributresFrom().
+  // TODO: Missing removeFromParent(), eraseFromParent().
+
+  void setAliasee(Constant *Aliasee);
+  Constant *getAliasee() const;
+
+  const GlobalObject *getAliaseeObject() const;
+  GlobalObject *getAliaseeObject() {
+    return const_cast<GlobalObject *>(
+        static_cast<const GlobalAlias *>(this)->getAliaseeObject());
+  }
+
+  static bool isValidLinkage(LinkageTypes L) {
+    return llvm::GlobalAlias::isValidLinkage(L);
+  }
 };
 
 class BlockAddress final : public Constant {
