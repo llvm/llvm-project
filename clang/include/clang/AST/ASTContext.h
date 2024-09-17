@@ -789,8 +789,6 @@ public:
     case BuiltinType::Kind::Float:
     case BuiltinType::Kind::BFloat16:
       return DoubleTy;
-    case BuiltinType::Kind::Float128:
-    case BuiltinType::Kind::Ibm128:
     case BuiltinType::Kind::Double:
       return LongDoubleTy;
     default:

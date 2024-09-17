@@ -6787,7 +6787,7 @@ def warn_arc_lifetime_result_type : Warning<
 def warn_excess_precision_not_supported : Warning<
   "excess precision is requested but the target does not support excess "
   "precision which may result in observable differences in complex division "
-  "behavior%select{|,additional uses where the requested higher precision "
+  "behavior%select{|, additional uses where the requested higher precision "
   "cannot be honored were found but not diagnosed}0">,
   InGroup<DiagGroup<"higher-precision-for-complex-division">>;
 
