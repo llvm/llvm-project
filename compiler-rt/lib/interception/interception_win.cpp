@@ -390,13 +390,14 @@ static uptr AllocateMemoryForTrampoline(uptr func_address, size_t size) {
   uptr image_address = func_address;
 
 #if SANITIZER_WINDOWS64
-  // Since we may copy code to the trampoline which could reference data
-  // inside the original module, we really want the trampoline to be within
-  // 2 GB of not just the original function, but within 2 GB of that function's
-  // whole module. Since the allocated trampoline's address is always greater
-  // than image_address, we achieve this by setting image_address to the base
-  // address of the module, if we can find it (which is not the case if
-  // func_address is in mmap'ed memory for example).
+  // Allocate memory after the module (DLL or EXE file), but within 2GB
+  // of the start of the module so that any address within the module can be
+  // referenced with PC-relative operands.
+  // This allows us to not just jump to the trampoline with a PC-relative
+  // offset, but to relocate any instructions that we copy to the trampoline
+  // which have references to the original module. If we can't find the base
+  // address of the module (e.g. if func_address is in mmap'ed memory), just
+  // use func_address as is.
   HMODULE module;
   if (::GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
                            GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
