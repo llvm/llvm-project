@@ -193,7 +193,7 @@ private:
 
   /// Determines if the attribute will be printed as macro in the diagnostics.
   LLVM_PREFERRED_TYPE(bool)
-  mutable unsigned PrintAsMacro : 1;
+  mutable unsigned PrintMacroName : 1;
 
   /// The location of the 'unavailable' keyword in an
   /// availability attribute.
@@ -229,7 +229,7 @@ private:
         UsedAsTypeAttr(false), IsAvailability(false),
         IsTypeTagForDatatype(false), IsProperty(false), HasParsedType(false),
         HasProcessingCache(false), IsPragmaClangAttribute(false),
-        PrintAsMacro(false), Info(ParsedAttrInfo::get(*this)) {
+        PrintMacroName(false), Info(ParsedAttrInfo::get(*this)) {
     if (numArgs)
       memcpy(getArgsBuffer(), args, numArgs * sizeof(ArgsUnion));
   }
@@ -246,7 +246,7 @@ private:
         NumArgs(1), Invalid(false), UsedAsTypeAttr(false), IsAvailability(true),
         IsTypeTagForDatatype(false), IsProperty(false), HasParsedType(false),
         HasProcessingCache(false), IsPragmaClangAttribute(false),
-        PrintAsMacro(false), UnavailableLoc(unavailable),
+        PrintMacroName(false), UnavailableLoc(unavailable),
         MessageExpr(messageExpr), Info(ParsedAttrInfo::get(*this)) {
     ArgsUnion PVal(Parm);
     memcpy(getArgsBuffer(), &PVal, sizeof(ArgsUnion));
@@ -264,7 +264,7 @@ private:
         NumArgs(3), Invalid(false), UsedAsTypeAttr(false),
         IsAvailability(false), IsTypeTagForDatatype(false), IsProperty(false),
         HasParsedType(false), HasProcessingCache(false),
-        IsPragmaClangAttribute(false), PrintAsMacro(false),
+        IsPragmaClangAttribute(false), PrintMacroName(false),
         Info(ParsedAttrInfo::get(*this)) {
     ArgsUnion *Args = getArgsBuffer();
     Args[0] = Parm1;
@@ -281,7 +281,7 @@ private:
         NumArgs(1), Invalid(false), UsedAsTypeAttr(false),
         IsAvailability(false), IsTypeTagForDatatype(true), IsProperty(false),
         HasParsedType(false), HasProcessingCache(false),
-        IsPragmaClangAttribute(false), PrintAsMacro(false),
+        IsPragmaClangAttribute(false), PrintMacroName(false),
         Info(ParsedAttrInfo::get(*this)) {
     ArgsUnion PVal(ArgKind);
     memcpy(getArgsBuffer(), &PVal, sizeof(ArgsUnion));
@@ -300,7 +300,7 @@ private:
         UsedAsTypeAttr(false), IsAvailability(false),
         IsTypeTagForDatatype(false), IsProperty(false), HasParsedType(true),
         HasProcessingCache(false), IsPragmaClangAttribute(false),
-        PrintAsMacro(false), Info(ParsedAttrInfo::get(*this)) {
+        PrintMacroName(false), Info(ParsedAttrInfo::get(*this)) {
     new (&getTypeBuffer()) ParsedType(typeArg);
   }
 
@@ -312,7 +312,7 @@ private:
         NumArgs(0), Invalid(false), UsedAsTypeAttr(false),
         IsAvailability(false), IsTypeTagForDatatype(false), IsProperty(true),
         HasParsedType(false), HasProcessingCache(false),
-        IsPragmaClangAttribute(false), PrintAsMacro(false),
+        IsPragmaClangAttribute(false), PrintMacroName(false),
         Info(ParsedAttrInfo::get(*this)) {
     new (&getPropertyDataBuffer()) detail::PropertyData(getterId, setterId);
   }
@@ -501,10 +501,10 @@ public:
   /// declared in if it was declared in a macro. Also set the expansion location
   /// of the macro.
   void setMacroIdentifier(IdentifierInfo *MacroName, SourceLocation Loc,
-                          bool PrintAsMac) {
+                          bool PrintMcrName) {
     MacroII = MacroName;
     MacroExpansionLoc = Loc;
-    PrintAsMacro = PrintAsMac;
+    PrintMacroName = PrintMcrName;
   }
 
   /// Returns true if this attribute was declared in a macro.
@@ -520,10 +520,10 @@ public:
     return MacroExpansionLoc;
   }
 
-  bool printAsMacro() const {
+  bool printMacroName() const {
     if (!hasMacroIdentifier())
       return false;
-    return PrintAsMacro;
+    return PrintMacroName;
   }
 
   /// Check if the attribute has exactly as many args as Num. May output an
@@ -1121,7 +1121,7 @@ enum AttributeDeclKind {
 inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
                                              const ParsedAttr &At) {
   const IdentifierInfo *AttrName =
-      At.printAsMacro() ? At.getMacroIdentifier() : At.getAttrName();
+      At.printMacroName() ? At.getMacroIdentifier() : At.getAttrName();
   DB.AddTaggedVal(reinterpret_cast<uint64_t>(AttrName),
                   DiagnosticsEngine::ak_identifierinfo);
   return DB;

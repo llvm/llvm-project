@@ -835,16 +835,14 @@ void Parser::ParseLexedAttribute(LateParsedAttribute &LA,
     Diag(Tok, diag::warn_attribute_on_function_definition)
       << &LA.AttrName;
 
-  const auto &SM = PP.getSourceManager();
-  CharSourceRange ExpansionRange = SM.getExpansionRange(LA.AttrNameLoc);
-  StringRef FoundName =
-      Lexer::getSourceText(ExpansionRange, SM, PP.getLangOpts())
-          .split('(')
-          .first;
-  IdentifierInfo *MacroII = PP.getIdentifierInfo(FoundName);
-  for (unsigned i = 0; i < Attrs.size(); ++i)
-    Attrs[i].setMacroIdentifier(MacroII, ExpansionRange.getBegin(),
-                                SM.isInSystemMacro(LA.AttrNameLoc));
+  if (LA.MacroII) {
+    const auto &SM = PP.getSourceManager();
+    CharSourceRange ExpansionRange = SM.getExpansionRange(LA.AttrNameLoc);
+
+    for (unsigned i = 0; i < Attrs.size(); ++i)
+      Attrs[i].setMacroIdentifier(LA.MacroII, ExpansionRange.getBegin(),
+                                  SM.isInSystemMacro(LA.AttrNameLoc));
+  }
 
   for (unsigned i = 0, ni = LA.Decls.size(); i < ni; ++i)
     Actions.ActOnFinishDelayedAttribute(getCurScope(), LA.Decls[i], Attrs);
