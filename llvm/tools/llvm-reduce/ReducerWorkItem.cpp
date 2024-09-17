@@ -101,14 +101,8 @@ static void cloneFrameInfo(
   DstMFI.setCVBytesOfCalleeSavedRegisters(
       SrcMFI.getCVBytesOfCalleeSavedRegisters());
 
-  assert(SrcMFI.getSavePoints().size() < 2 &&
-         "Multiple restore points not yet supported!");
-
   DstMFI.setSavePoints(
       constructSaveRestorePoints(SrcMFI.getSavePoints(), Src2DstMBB));
-
-  assert(SrcMFI.getRestorePoints().size() < 2 &&
-         "Multiple restore points not yet supported!");
 
   DstMFI.setRestorePoints(
       constructSaveRestorePoints(SrcMFI.getRestorePoints(), Src2DstMBB));

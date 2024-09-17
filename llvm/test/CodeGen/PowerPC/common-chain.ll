@@ -728,23 +728,23 @@ define signext i32 @spill_reduce_succ(ptr %input1, ptr %input2, ptr %output, i64
 ; CHECK-NEXT:    std r26, -48(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    mr r26, r10
 ; CHECK-NEXT:    cmpdi r6, 1
-; CHECK-NEXT:    std r14, -144(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    std r15, -136(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    std r16, -128(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    std r17, -120(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    std r18, -112(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    std r19, -104(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    std r20, -96(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    std r21, -88(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    std r22, -80(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    std r23, -72(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    std r24, -64(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    std r25, -56(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    std r27, -40(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    std r28, -32(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    std r29, -24(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std r31, -8(r1) # 8-byte Folded Spill
+; CHECK-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
+; CHECK-NEXT:    std r29, -24(r1) # 8-byte Folded Spill
+; CHECK-NEXT:    std r28, -32(r1) # 8-byte Folded Spill
+; CHECK-NEXT:    std r27, -40(r1) # 8-byte Folded Spill
+; CHECK-NEXT:    std r25, -56(r1) # 8-byte Folded Spill
+; CHECK-NEXT:    std r24, -64(r1) # 8-byte Folded Spill
+; CHECK-NEXT:    std r23, -72(r1) # 8-byte Folded Spill
+; CHECK-NEXT:    std r22, -80(r1) # 8-byte Folded Spill
+; CHECK-NEXT:    std r21, -88(r1) # 8-byte Folded Spill
+; CHECK-NEXT:    std r20, -96(r1) # 8-byte Folded Spill
+; CHECK-NEXT:    std r19, -104(r1) # 8-byte Folded Spill
+; CHECK-NEXT:    std r18, -112(r1) # 8-byte Folded Spill
+; CHECK-NEXT:    std r17, -120(r1) # 8-byte Folded Spill
+; CHECK-NEXT:    std r16, -128(r1) # 8-byte Folded Spill
+; CHECK-NEXT:    std r15, -136(r1) # 8-byte Folded Spill
+; CHECK-NEXT:    std r14, -144(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std r2, -152(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    iselgt r11, r6, r11
 ; CHECK-NEXT:    addi r12, r11, -1
@@ -963,24 +963,24 @@ define signext i32 @spill_reduce_succ(ptr %input1, ptr %input2, ptr %output, i64
 ; CHECK-NEXT:    bne cr0, .LBB7_7
 ; CHECK-NEXT:  .LBB7_8:
 ; CHECK-NEXT:    ld r2, -152(r1) # 8-byte Folded Reload
-; CHECK-NEXT:    ld r31, -8(r1) # 8-byte Folded Reload
-; CHECK-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
-; CHECK-NEXT:    ld r29, -24(r1) # 8-byte Folded Reload
-; CHECK-NEXT:    ld r28, -32(r1) # 8-byte Folded Reload
-; CHECK-NEXT:    ld r27, -40(r1) # 8-byte Folded Reload
-; CHECK-NEXT:    ld r26, -48(r1) # 8-byte Folded Reload
-; CHECK-NEXT:    ld r25, -56(r1) # 8-byte Folded Reload
-; CHECK-NEXT:    ld r24, -64(r1) # 8-byte Folded Reload
-; CHECK-NEXT:    ld r23, -72(r1) # 8-byte Folded Reload
-; CHECK-NEXT:    ld r22, -80(r1) # 8-byte Folded Reload
-; CHECK-NEXT:    ld r21, -88(r1) # 8-byte Folded Reload
-; CHECK-NEXT:    ld r20, -96(r1) # 8-byte Folded Reload
-; CHECK-NEXT:    ld r19, -104(r1) # 8-byte Folded Reload
-; CHECK-NEXT:    ld r18, -112(r1) # 8-byte Folded Reload
-; CHECK-NEXT:    ld r17, -120(r1) # 8-byte Folded Reload
-; CHECK-NEXT:    ld r16, -128(r1) # 8-byte Folded Reload
-; CHECK-NEXT:    ld r15, -136(r1) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld r14, -144(r1) # 8-byte Folded Reload
+; CHECK-NEXT:    ld r15, -136(r1) # 8-byte Folded Reload
+; CHECK-NEXT:    ld r16, -128(r1) # 8-byte Folded Reload
+; CHECK-NEXT:    ld r17, -120(r1) # 8-byte Folded Reload
+; CHECK-NEXT:    ld r18, -112(r1) # 8-byte Folded Reload
+; CHECK-NEXT:    ld r19, -104(r1) # 8-byte Folded Reload
+; CHECK-NEXT:    ld r20, -96(r1) # 8-byte Folded Reload
+; CHECK-NEXT:    ld r21, -88(r1) # 8-byte Folded Reload
+; CHECK-NEXT:    ld r22, -80(r1) # 8-byte Folded Reload
+; CHECK-NEXT:    ld r23, -72(r1) # 8-byte Folded Reload
+; CHECK-NEXT:    ld r24, -64(r1) # 8-byte Folded Reload
+; CHECK-NEXT:    ld r25, -56(r1) # 8-byte Folded Reload
+; CHECK-NEXT:    ld r26, -48(r1) # 8-byte Folded Reload
+; CHECK-NEXT:    ld r27, -40(r1) # 8-byte Folded Reload
+; CHECK-NEXT:    ld r28, -32(r1) # 8-byte Folded Reload
+; CHECK-NEXT:    ld r29, -24(r1) # 8-byte Folded Reload
+; CHECK-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
+; CHECK-NEXT:    ld r31, -8(r1) # 8-byte Folded Reload
 ; CHECK-NEXT:  .LBB7_9: # %for.cond.cleanup
 ; CHECK-NEXT:    li r3, 0
 ; CHECK-NEXT:    blr
