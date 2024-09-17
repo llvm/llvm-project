@@ -8455,8 +8455,8 @@ getGEPCosts(const TargetTransformInfo &TTI, ArrayRef<Value *> Ptrs,
 void BoUpSLP::transformNodes() {
   constexpr TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
   BaseGraphSize = VectorizableTree.size();
-  // Operands are profitable if all of them are:
-  // 1. Constants
+  // Operands are profitable if they are:
+  // 1. At least one constant
   // or
   // 2. Splats
   // or
@@ -8468,15 +8468,15 @@ void BoUpSLP::transformNodes() {
     for (unsigned Op : seq<unsigned>(S.MainOp->getNumOperands()))
       Candidates.emplace_back().emplace_back(I1->getOperand(Op),
                                              I2->getOperand(Op));
-    return all_of(Candidates, [this](
-                                  ArrayRef<std::pair<Value *, Value *>> Cand) {
-      return all_of(Cand,
-                    [](const std::pair<Value *, Value *> &P) {
-                      return isa<Constant>(P.first) ||
-                             isa<Constant>(P.second) || (P.first == P.second);
-                    }) ||
-             findBestRootPair(Cand, LookAheadHeuristics::ScoreSplatLoads);
-    });
+    return all_of(
+        Candidates, [this](ArrayRef<std::pair<Value *, Value *>> Cand) {
+          return all_of(Cand,
+                        [](const std::pair<Value *, Value *> &P) {
+                          return isa<Constant>(P.first) ||
+                                 isa<Constant>(P.second) || P.first == P.second;
+                        }) ||
+                 findBestRootPair(Cand, LookAheadHeuristics::ScoreSplatLoads);
+        });
   };
   // The tree may grow here, so iterate over nodes, built before.
   for (unsigned Idx : seq<unsigned>(BaseGraphSize)) {
