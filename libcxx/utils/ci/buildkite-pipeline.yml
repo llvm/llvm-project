@@ -173,6 +173,19 @@ steps:
       os: freebsd
     <<: *common
 
+
+- group: ':openbsd: OpenBSD'
+  steps:
+  - label: OpenBSD -current amd64
+    command: libcxx/utils/ci/run-buildbot generic-cxx23
+    env:
+      CC: clang
+      CXX: clang++
+    agents:
+      queue: libcxx-builders
+      os: openbsd
+    <<: *common
+
 - group: ':android: Android'
   steps:
   - label: Android 5.0, x86 NDK
