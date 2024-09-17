@@ -7,8 +7,12 @@ from mlir.execution_engine import *
 from mlir.runtime import *
 from ml_dtypes import bfloat16, float8_e5m2
 
-MLIR_RUNNER_UTILS = os.getenv("MLIR_RUNNER_UTILS", "../../../../lib/libmlir_runner_utils.so")
-MLIR_C_RUNNER_UTILS = os.getenv("MLIR_C_RUNNER_UTILS", "../../../../lib/libmlir_c_runner_utils.so")
+MLIR_RUNNER_UTILS = os.getenv(
+    "MLIR_RUNNER_UTILS", "../../../../lib/libmlir_runner_utils.so"
+)
+MLIR_C_RUNNER_UTILS = os.getenv(
+    "MLIR_C_RUNNER_UTILS", "../../../../lib/libmlir_c_runner_utils.so"
+)
 
 # Log everything to stderr and flush so that we have a unified stream to match
 # errors/info emitted by MLIR to stderr.
