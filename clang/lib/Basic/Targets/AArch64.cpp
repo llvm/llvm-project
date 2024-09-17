@@ -401,12 +401,11 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   // ACLE predefines. Many can only have one possible value on v8 AArch64.
   Builder.defineMacro("__ARM_ACLE_VERSION(year, quarter, patch)",
                       "(100 * (year) + 10 * (quarter) + (patch))");
-#define __ARM_ACLE_VERSION(Y, Q, P) (100 * (Y) + 10 * (Q) + (P))
-  Builder.defineMacro("__ARM_ACLE",
-                      std::to_string(__ARM_ACLE_VERSION(2024, 2, 0)));
+#define ARM_ACLE_VERSION(Y, Q, P) (100 * (Y) + 10 * (Q) + (P))
+  Builder.defineMacro("__ARM_ACLE", Twine(ARM_ACLE_VERSION(2024, 2, 0)));
   Builder.defineMacro("__FUNCTION_MULTI_VERSIONING_SUPPORT_LEVEL",
-                      std::to_string(__ARM_ACLE_VERSION(2024, 2, 0)));
-#undef __ARM_ACLE_VERSION
+                      Twine(ARM_ACLE_VERSION(2024, 2, 0)));
+#undef ARM_ACLE_VERSION
   Builder.defineMacro("__ARM_ARCH",
                       std::to_string(ArchInfo->Version.getMajor()));
   Builder.defineMacro("__ARM_ARCH_PROFILE",
