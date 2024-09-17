@@ -100,6 +100,11 @@ We use here the command-line, non-interactive CMake interface.
 
      $ cmake -DCMAKE_INSTALL_PREFIX=/tmp/llvm -P cmake_install.cmake
 
+Additional Resources
+====================
+
+- [YouTube: Building LLVM - Best Practices](https://www.youtube.com/watch?v=Dnubzx8-E1M)
+
 .. _Basic CMake usage:
 .. _Usage:
 
