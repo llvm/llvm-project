@@ -1175,11 +1175,11 @@ bool SPIRVInstructionSelector::selectOverflowArith(Register ResVReg,
   if (N > 1)
     BoolType = GR.getOrCreateSPIRVVectorType(BoolType, N, I, TII);
   Status &= BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpINotEqual))
-      .addDef(I.getOperand(1).getReg())
-      .addUse(GR.getSPIRVTypeID(BoolType))
-      .addUse(HigherVReg)
-      .addUse(buildZerosVal(ResType, I))
-      .constrainAllUses(TII, TRI, RBI);
+                .addDef(I.getOperand(1).getReg())
+                .addUse(GR.getSPIRVTypeID(BoolType))
+                .addUse(HigherVReg)
+                .addUse(buildZerosVal(ResType, I))
+                .constrainAllUses(TII, TRI, RBI);
   return Status;
 }
 
