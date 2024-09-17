@@ -356,7 +356,7 @@ define <2 x half> @fmul_sel_op1(i1 %b, <2 x half> %p) {
 ; CHECK-LABEL: @fmul_sel_op1(
 ; CHECK-NEXT:    ret <2 x half> zeroinitializer
 ;
-  %x = fadd <2 x half> %p, <half 1.0, half 2.0>  ; thwart complexity-based canonicalization
+  %x = fadd <2 x half> %p, <half 1.0, half 2.0> ; thwart complexity-based canonicalization
   %s = select i1 %b, <2 x half> zeroinitializer, <2 x half> <half 0xHffff, half 0xHffff>
   %r = fmul nnan nsz <2 x half> %x, %s
   ret <2 x half> %r
@@ -370,7 +370,7 @@ define <2 x half> @fmul_sel_op1_use(i1 %b, <2 x half> %p) {
 ; CHECK-NEXT:    [[R:%.*]] = fmul nnan nsz <2 x half> [[X]], [[S]]
 ; CHECK-NEXT:    ret <2 x half> [[R]]
 ;
-  %x = fadd <2 x half> %p, <half 1.0, half 2.0>  ; thwart complexity-based canonicalization
+  %x = fadd <2 x half> %p, <half 1.0, half 2.0> ; thwart complexity-based canonicalization
   %s = select i1 %b, <2 x half> zeroinitializer, <2 x half> <half 0xHffff, half 0xHffff>
   call void @use_v2f16(<2 x half> %s)
   %r = fmul nnan nsz <2 x half> %x, %s
