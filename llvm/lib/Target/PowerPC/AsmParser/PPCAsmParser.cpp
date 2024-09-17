@@ -1510,8 +1510,8 @@ const MCExpr *PPCAsmParser::fixupVariantKind(const MCExpr *E) {
   llvm_unreachable("Invalid expression kind!");
 }
 
-/// parseExpression.  This differs from the default "parseExpression" in that
-/// it handles modifiers.
+/// This differs from the default "parseExpression" in that it handles
+/// modifiers.
 bool PPCAsmParser::parseExpression(const MCExpr *&EVal) {
   // (ELF Platforms)
   // Handle \code @l/@ha \endcode
@@ -1528,7 +1528,6 @@ bool PPCAsmParser::parseExpression(const MCExpr *&EVal) {
   return false;
 }
 
-/// parseOperand
 /// This handles registers in the form 'NN', '%rNN' for ELF platforms and
 /// rNN for MachO.
 bool PPCAsmParser::parseOperand(OperandVector &Operands) {
@@ -1729,7 +1728,7 @@ bool PPCAsmParser::parseInstruction(ParseInstructionInfo &Info, StringRef Name,
   return false;
 }
 
-/// ParseDirective parses the PPC specific directives
+/// Parses the PPC specific directives
 bool PPCAsmParser::ParseDirective(AsmToken DirectiveID) {
   StringRef IDVal = DirectiveID.getIdentifier();
   if (IDVal == ".word")
@@ -1751,7 +1750,6 @@ bool PPCAsmParser::ParseDirective(AsmToken DirectiveID) {
   return false;
 }
 
-/// parseDirectiveWord
 ///  ::= .word [ expression (, expression)* ]
 bool PPCAsmParser::parseDirectiveWord(unsigned Size, AsmToken ID) {
   auto parseOp = [&]() -> bool {
@@ -1776,7 +1774,6 @@ bool PPCAsmParser::parseDirectiveWord(unsigned Size, AsmToken ID) {
   return false;
 }
 
-/// parseDirectiveTC
 ///  ::= .tc [ symbol (, expression)* ]
 bool PPCAsmParser::parseDirectiveTC(unsigned Size, AsmToken ID) {
   MCAsmParser &Parser = getParser();
@@ -1794,7 +1791,7 @@ bool PPCAsmParser::parseDirectiveTC(unsigned Size, AsmToken ID) {
   return parseDirectiveWord(Size, ID);
 }
 
-/// parseDirectiveMachine (ELF platforms)
+/// ELF platforms.
 ///  ::= .machine [ cpu | "push" | "pop" ]
 bool PPCAsmParser::parseDirectiveMachine(SMLoc L) {
   MCAsmParser &Parser = getParser();
@@ -1821,7 +1818,6 @@ bool PPCAsmParser::parseDirectiveMachine(SMLoc L) {
   return false;
 }
 
-/// parseDirectiveAbiVersion
 ///  ::= .abiversion constant-expression
 bool PPCAsmParser::parseDirectiveAbiVersion(SMLoc L) {
   int64_t AbiVersion;
@@ -1838,7 +1834,6 @@ bool PPCAsmParser::parseDirectiveAbiVersion(SMLoc L) {
   return false;
 }
 
-/// parseDirectiveLocalEntry
 ///  ::= .localentry symbol, expression
 bool PPCAsmParser::parseDirectiveLocalEntry(SMLoc L) {
   StringRef Name;
