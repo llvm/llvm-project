@@ -185,12 +185,12 @@ public:
     return Other->isContradictoryImpl(this);
   }
 
-  void print(raw_ostream &OS, unsigned indent = 0) const;
+  void print(raw_ostream &OS, indent Indent = indent(0)) const;
   void printOne(raw_ostream &OS) const;
   void dump() const;
 
 protected:
-  virtual void printImpl(raw_ostream &OS, unsigned indent) const = 0;
+  virtual void printImpl(raw_ostream &OS, indent Indent) const = 0;
   virtual bool isEqualImpl(const Matcher *M) const = 0;
   virtual bool isContradictoryImpl(const Matcher *M) const { return false; }
 };
@@ -234,7 +234,7 @@ public:
   static bool classof(const Matcher *N) { return N->getKind() == Scope; }
 
 private:
-  void printImpl(raw_ostream &OS, unsigned indent) const override;
+  void printImpl(raw_ostream &OS, indent Indent) const override;
   bool isEqualImpl(const Matcher *M) const override { return false; }
 };
 
@@ -258,7 +258,7 @@ public:
   static bool classof(const Matcher *N) { return N->getKind() == RecordNode; }
 
 private:
-  void printImpl(raw_ostream &OS, unsigned indent) const override;
+  void printImpl(raw_ostream &OS, indent Indent) const override;
   bool isEqualImpl(const Matcher *M) const override { return true; }
 };
 
@@ -289,7 +289,7 @@ public:
   static bool classof(const Matcher *N) { return N->getKind() == RecordChild; }
 
 private:
-  void printImpl(raw_ostream &OS, unsigned indent) const override;
+  void printImpl(raw_ostream &OS, indent Indent) const override;
   bool isEqualImpl(const Matcher *M) const override {
     return cast<RecordChildMatcher>(M)->getChildNo() == getChildNo();
   }
@@ -303,7 +303,7 @@ public:
   static bool classof(const Matcher *N) { return N->getKind() == RecordMemRef; }
 
 private:
-  void printImpl(raw_ostream &OS, unsigned indent) const override;
+  void printImpl(raw_ostream &OS, indent Indent) const override;
   bool isEqualImpl(const Matcher *M) const override { return true; }
 };
 
@@ -318,7 +318,7 @@ public:
   }
 
 private:
-  void printImpl(raw_ostream &OS, unsigned indent) const override;
+  void printImpl(raw_ostream &OS, indent Indent) const override;
   bool isEqualImpl(const Matcher *M) const override { return true; }
 };
 
@@ -335,7 +335,7 @@ public:
   static bool classof(const Matcher *N) { return N->getKind() == MoveChild; }
 
 private:
-  void printImpl(raw_ostream &OS, unsigned indent) const override;
+  void printImpl(raw_ostream &OS, indent Indent) const override;
   bool isEqualImpl(const Matcher *M) const override {
     return cast<MoveChildMatcher>(M)->getChildNo() == getChildNo();
   }
@@ -355,7 +355,7 @@ public:
   static bool classof(const Matcher *N) { return N->getKind() == MoveSibling; }
 
 private:
-  void printImpl(raw_ostream &OS, unsigned Indent) const override;
+  void printImpl(raw_ostream &OS, indent Indent) const override;
   bool isEqualImpl(const Matcher *M) const override {
     return cast<MoveSiblingMatcher>(M)->getSiblingNo() == getSiblingNo();
   }
@@ -370,7 +370,7 @@ public:
   static bool classof(const Matcher *N) { return N->getKind() == MoveParent; }
 
 private:
-  void printImpl(raw_ostream &OS, unsigned Indent) const override;
+  void printImpl(raw_ostream &OS, indent Indent) const override;
   bool isEqualImpl(const Matcher *M) const override { return true; }
 };
 
@@ -389,7 +389,7 @@ public:
   static bool classof(const Matcher *N) { return N->getKind() == CheckSame; }
 
 private:
-  void printImpl(raw_ostream &OS, unsigned Indent) const override;
+  void printImpl(raw_ostream &OS, indent Indent) const override;
   bool isEqualImpl(const Matcher *M) const override {
     return cast<CheckSameMatcher>(M)->getMatchNumber() == getMatchNumber();
   }
@@ -414,7 +414,7 @@ public:
   }
 
 private:
-  void printImpl(raw_ostream &OS, unsigned Indent) const override;
+  void printImpl(raw_ostream &OS, indent Indent) const override;
   bool isEqualImpl(const Matcher *M) const override {
     return cast<CheckChildSameMatcher>(M)->ChildNo == ChildNo &&
            cast<CheckChildSameMatcher>(M)->MatchNumber == MatchNumber;
@@ -438,7 +438,7 @@ public:
   }
 
 private:
-  void printImpl(raw_ostream &OS, unsigned indent) const override;
+  void printImpl(raw_ostream &OS, indent Indent) const override;
   bool isEqualImpl(const Matcher *M) const override {
     return cast<CheckPatternPredicateMatcher>(M)->getPredicate() == Predicate;
   }
@@ -463,7 +463,7 @@ public:
   }
 
 private:
-  void printImpl(raw_ostream &OS, unsigned indent) const override;
+  void printImpl(raw_ostream &OS, indent Indent) const override;
   bool isEqualImpl(const Matcher *M) const override {
     return cast<CheckPredicateMatcher>(M)->Pred == Pred;
   }
@@ -483,7 +483,7 @@ public:
   static bool classof(const Matcher *N) { return N->getKind() == CheckOpcode; }
 
 private:
-  void printImpl(raw_ostream &OS, unsigned indent) const override;
+  void printImpl(raw_ostream &OS, indent Indent) const override;
   bool isEqualImpl(const Matcher *M) const override;
   bool isContradictoryImpl(const Matcher *M) const override;
 };
@@ -510,7 +510,7 @@ public:
   const Matcher *getCaseMatcher(unsigned i) const { return Cases[i].second; }
 
 private:
-  void printImpl(raw_ostream &OS, unsigned indent) const override;
+  void printImpl(raw_ostream &OS, indent Indent) const override;
   bool isEqualImpl(const Matcher *M) const override { return false; }
 };
 
@@ -530,7 +530,7 @@ public:
   static bool classof(const Matcher *N) { return N->getKind() == CheckType; }
 
 private:
-  void printImpl(raw_ostream &OS, unsigned indent) const override;
+  void printImpl(raw_ostream &OS, indent Indent) const override;
   bool isEqualImpl(const Matcher *M) const override {
     return cast<CheckTypeMatcher>(M)->Type == Type;
   }
@@ -559,7 +559,7 @@ public:
   const Matcher *getCaseMatcher(unsigned i) const { return Cases[i].second; }
 
 private:
-  void printImpl(raw_ostream &OS, unsigned indent) const override;
+  void printImpl(raw_ostream &OS, indent Indent) const override;
   bool isEqualImpl(const Matcher *M) const override { return false; }
 };
 
@@ -581,7 +581,7 @@ public:
   }
 
 private:
-  void printImpl(raw_ostream &OS, unsigned indent) const override;
+  void printImpl(raw_ostream &OS, indent Indent) const override;
   bool isEqualImpl(const Matcher *M) const override {
     return cast<CheckChildTypeMatcher>(M)->ChildNo == ChildNo &&
            cast<CheckChildTypeMatcher>(M)->Type == Type;
@@ -602,7 +602,7 @@ public:
   static bool classof(const Matcher *N) { return N->getKind() == CheckInteger; }
 
 private:
-  void printImpl(raw_ostream &OS, unsigned indent) const override;
+  void printImpl(raw_ostream &OS, indent Indent) const override;
   bool isEqualImpl(const Matcher *M) const override {
     return cast<CheckIntegerMatcher>(M)->Value == Value;
   }
@@ -627,7 +627,7 @@ public:
   }
 
 private:
-  void printImpl(raw_ostream &OS, unsigned indent) const override;
+  void printImpl(raw_ostream &OS, indent Indent) const override;
   bool isEqualImpl(const Matcher *M) const override {
     return cast<CheckChildIntegerMatcher>(M)->ChildNo == ChildNo &&
            cast<CheckChildIntegerMatcher>(M)->Value == Value;
@@ -651,7 +651,7 @@ public:
   }
 
 private:
-  void printImpl(raw_ostream &OS, unsigned indent) const override;
+  void printImpl(raw_ostream &OS, indent Indent) const override;
   bool isEqualImpl(const Matcher *M) const override {
     return cast<CheckCondCodeMatcher>(M)->CondCodeName == CondCodeName;
   }
@@ -674,7 +674,7 @@ public:
   }
 
 private:
-  void printImpl(raw_ostream &OS, unsigned indent) const override;
+  void printImpl(raw_ostream &OS, indent Indent) const override;
   bool isEqualImpl(const Matcher *M) const override {
     return cast<CheckChild2CondCodeMatcher>(M)->CondCodeName == CondCodeName;
   }
@@ -697,7 +697,7 @@ public:
   }
 
 private:
-  void printImpl(raw_ostream &OS, unsigned indent) const override;
+  void printImpl(raw_ostream &OS, indent Indent) const override;
   bool isEqualImpl(const Matcher *M) const override {
     return cast<CheckValueTypeMatcher>(M)->VT == VT;
   }
@@ -737,7 +737,7 @@ public:
   }
 
 private:
-  void printImpl(raw_ostream &OS, unsigned indent) const override;
+  void printImpl(raw_ostream &OS, indent Indent) const override;
   bool isEqualImpl(const Matcher *M) const override {
     return &cast<CheckComplexPatMatcher>(M)->Pattern == &Pattern &&
            cast<CheckComplexPatMatcher>(M)->MatchNumber == MatchNumber;
@@ -757,7 +757,7 @@ public:
   static bool classof(const Matcher *N) { return N->getKind() == CheckAndImm; }
 
 private:
-  void printImpl(raw_ostream &OS, unsigned indent) const override;
+  void printImpl(raw_ostream &OS, indent Indent) const override;
   bool isEqualImpl(const Matcher *M) const override {
     return cast<CheckAndImmMatcher>(M)->Value == Value;
   }
@@ -776,7 +776,7 @@ public:
   static bool classof(const Matcher *N) { return N->getKind() == CheckOrImm; }
 
 private:
-  void printImpl(raw_ostream &OS, unsigned indent) const override;
+  void printImpl(raw_ostream &OS, indent Indent) const override;
   bool isEqualImpl(const Matcher *M) const override {
     return cast<CheckOrImmMatcher>(M)->Value == Value;
   }
@@ -793,7 +793,7 @@ public:
   }
 
 private:
-  void printImpl(raw_ostream &OS, unsigned indent) const override;
+  void printImpl(raw_ostream &OS, indent Indent) const override;
   bool isEqualImpl(const Matcher *M) const override { return true; }
   bool isContradictoryImpl(const Matcher *M) const override;
 };
@@ -809,7 +809,7 @@ public:
   }
 
 private:
-  void printImpl(raw_ostream &OS, unsigned indent) const override;
+  void printImpl(raw_ostream &OS, indent Indent) const override;
   bool isEqualImpl(const Matcher *M) const override { return true; }
   bool isContradictoryImpl(const Matcher *M) const override;
 };
@@ -825,7 +825,7 @@ public:
   }
 
 private:
-  void printImpl(raw_ostream &OS, unsigned indent) const override;
+  void printImpl(raw_ostream &OS, indent Indent) const override;
   bool isEqualImpl(const Matcher *M) const override { return true; }
 };
 
@@ -845,7 +845,7 @@ public:
   static bool classof(const Matcher *N) { return N->getKind() == EmitInteger; }
 
 private:
-  void printImpl(raw_ostream &OS, unsigned indent) const override;
+  void printImpl(raw_ostream &OS, indent Indent) const override;
   bool isEqualImpl(const Matcher *M) const override {
     return cast<EmitIntegerMatcher>(M)->Val == Val &&
            cast<EmitIntegerMatcher>(M)->VT == VT;
@@ -870,7 +870,7 @@ public:
   }
 
 private:
-  void printImpl(raw_ostream &OS, unsigned indent) const override;
+  void printImpl(raw_ostream &OS, indent Indent) const override;
   bool isEqualImpl(const Matcher *M) const override {
     return cast<EmitStringIntegerMatcher>(M)->Val == Val &&
            cast<EmitStringIntegerMatcher>(M)->VT == VT;
@@ -894,7 +894,7 @@ public:
   static bool classof(const Matcher *N) { return N->getKind() == EmitRegister; }
 
 private:
-  void printImpl(raw_ostream &OS, unsigned indent) const override;
+  void printImpl(raw_ostream &OS, indent Indent) const override;
   bool isEqualImpl(const Matcher *M) const override {
     return cast<EmitRegisterMatcher>(M)->Reg == Reg &&
            cast<EmitRegisterMatcher>(M)->VT == VT;
@@ -918,7 +918,7 @@ public:
   }
 
 private:
-  void printImpl(raw_ostream &OS, unsigned indent) const override;
+  void printImpl(raw_ostream &OS, indent Indent) const override;
   bool isEqualImpl(const Matcher *M) const override {
     return cast<EmitConvertToTargetMatcher>(M)->Slot == Slot;
   }
@@ -947,7 +947,7 @@ public:
   }
 
 private:
-  void printImpl(raw_ostream &OS, unsigned indent) const override;
+  void printImpl(raw_ostream &OS, indent Indent) const override;
   bool isEqualImpl(const Matcher *M) const override {
     return cast<EmitMergeInputChainsMatcher>(M)->ChainNodes == ChainNodes;
   }
@@ -972,7 +972,7 @@ public:
   }
 
 private:
-  void printImpl(raw_ostream &OS, unsigned indent) const override;
+  void printImpl(raw_ostream &OS, indent Indent) const override;
   bool isEqualImpl(const Matcher *M) const override {
     return cast<EmitCopyToRegMatcher>(M)->SrcSlot == SrcSlot &&
            cast<EmitCopyToRegMatcher>(M)->DestPhysReg == DestPhysReg;
@@ -997,7 +997,7 @@ public:
   }
 
 private:
-  void printImpl(raw_ostream &OS, unsigned indent) const override;
+  void printImpl(raw_ostream &OS, indent Indent) const override;
   bool isEqualImpl(const Matcher *M) const override {
     return cast<EmitNodeXFormMatcher>(M)->Slot == Slot &&
            cast<EmitNodeXFormMatcher>(M)->NodeXForm == NodeXForm;
@@ -1056,7 +1056,7 @@ public:
   }
 
 private:
-  void printImpl(raw_ostream &OS, unsigned indent) const override;
+  void printImpl(raw_ostream &OS, indent Indent) const override;
   bool isEqualImpl(const Matcher *M) const override;
 };
 
@@ -1122,7 +1122,7 @@ public:
   }
 
 private:
-  void printImpl(raw_ostream &OS, unsigned indent) const override;
+  void printImpl(raw_ostream &OS, indent Indent) const override;
   bool isEqualImpl(const Matcher *M) const override {
     return cast<CompleteMatchMatcher>(M)->Results == Results &&
            &cast<CompleteMatchMatcher>(M)->Pattern == &Pattern;
