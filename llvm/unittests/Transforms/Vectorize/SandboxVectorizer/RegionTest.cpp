@@ -75,6 +75,7 @@ define i8 @foo(i8 %v0, i8 %v1) {
   // that comparison is order-independent.
   sandboxir::Region Other(Ctx, *BB);
   Other.add(Ret);
+  EXPECT_NE(Rgn, Other);
   Other.add(T1);
   EXPECT_EQ(Rgn, Other);
 #endif

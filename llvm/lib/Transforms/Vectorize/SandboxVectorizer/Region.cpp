@@ -8,22 +8,21 @@
 
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Region.h"
 
-using namespace llvm;
+namespace llvm::sandboxir {
 
-sandboxir::Region::Region(sandboxir::Context &Ctx, sandboxir::BasicBlock &BB)
-    : Ctx(Ctx), BB(BB) {
+Region::Region(Context &Ctx, BasicBlock &BB) : Ctx(Ctx), BB(BB) {
   static unsigned StaticRegionID;
   RegionID = StaticRegionID++;
 }
 
-sandboxir::Region::~Region() {}
+Region::~Region() {}
 
-void sandboxir::Region::add(sandboxir::Instruction *I) { Insts.insert(I); }
+void Region::add(Instruction *I) { Insts.insert(I); }
 
-void sandboxir::Region::remove(sandboxir::Instruction *I) { Insts.remove(I); }
+void Region::remove(Instruction *I) { Insts.remove(I); }
 
 #ifndef NDEBUG
-bool sandboxir::Region::operator==(const sandboxir::Region &Other) const {
+bool Region::operator==(const Region &Other) const {
   if (Insts.size() != Other.Insts.size())
     return false;
   if (!std::is_permutation(Insts.begin(), Insts.end(), Other.Insts.begin()))
@@ -31,15 +30,17 @@ bool sandboxir::Region::operator==(const sandboxir::Region &Other) const {
   return true;
 }
 
-void sandboxir::Region::dump(raw_ostream &OS) const {
+void Region::dump(raw_ostream &OS) const {
   OS << "RegionID: " << getID() << "\n";
   for (auto *I : Insts)
     OS << *I << "\n";
 }
 
-void sandboxir::Region::dump() const {
+void Region::dump() const {
   dump(dbgs());
   dbgs() << "\n";
 }
+
+} // namespace llvm::sandboxir
 
 #endif // NDEBUG
