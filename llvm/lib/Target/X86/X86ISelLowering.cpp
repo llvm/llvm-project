@@ -39710,13 +39710,23 @@ static SDValue combineX86ShuffleChainWithExtract(
   unsigned RootEltSizeInBits = RootSizeInBits / NumMaskElts;
   assert((RootSizeInBits % NumMaskElts) == 0 && "Unexpected root shuffle mask");
 
-  // Peek through extract_subvector to find widest legal vector.
+  // Peek through subvectors to find widest legal vector.
   // TODO: Handle ISD::TRUNCATE
   unsigned WideSizeInBits = RootSizeInBits;
-  for (unsigned I = 0; I != NumInputs; ++I) {
-    SDValue Input = peekThroughBitcasts(Inputs[I]);
-    while (Input.getOpcode() == ISD::EXTRACT_SUBVECTOR)
-      Input = peekThroughBitcasts(Input.getOperand(0));
+  for (SDValue Input : Inputs) {
+    Input = peekThroughBitcasts(Input);
+    while (1) {
+      if (Input.getOpcode() == ISD::EXTRACT_SUBVECTOR) {
+        Input = peekThroughBitcasts(Input.getOperand(0));
+        continue;
+      }
+      if (Input.getOpcode() == ISD::INSERT_SUBVECTOR &&
+          Input.getOperand(0).isUndef()) {
+        Input = peekThroughBitcasts(Input.getOperand(1));
+        continue;
+      }
+      break;
+    }
     if (DAG.getTargetLoweringInfo().isTypeLegal(Input.getValueType()) &&
         WideSizeInBits < Input.getValueSizeInBits())
       WideSizeInBits = Input.getValueSizeInBits();
@@ -39744,21 +39754,32 @@ static SDValue combineX86ShuffleChainWithExtract(
   for (unsigned I = 0; I != NumInputs; ++I) {
     SDValue &Input = WideInputs[I];
     Input = peekThroughBitcasts(Input);
-    while (Input.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
-           Input.getOperand(0).getValueSizeInBits() <= WideSizeInBits) {
-      uint64_t Idx = Input.getConstantOperandVal(1);
-      if (Idx != 0) {
-        ++AdjustedMasks;
-        unsigned InputEltSizeInBits = Input.getScalarValueSizeInBits();
-        Idx = (Idx * InputEltSizeInBits) / RootEltSizeInBits;
+    while (1) {
+      if (Input.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
+          Input.getOperand(0).getValueSizeInBits() <= WideSizeInBits) {
+        uint64_t Idx = Input.getConstantOperandVal(1);
+        if (Idx != 0) {
+          ++AdjustedMasks;
+          unsigned InputEltSizeInBits = Input.getScalarValueSizeInBits();
+          Idx = (Idx * InputEltSizeInBits) / RootEltSizeInBits;
 
-        int lo = I * WideMask.size();
-        int hi = (I + 1) * WideMask.size();
-        for (int &M : WideMask)
-          if (lo <= M && M < hi)
-            M += Idx;
+          int lo = I * WideMask.size();
+          int hi = (I + 1) * WideMask.size();
+          for (int &M : WideMask)
+            if (lo <= M && M < hi)
+              M += Idx;
+        }
+        Input = peekThroughBitcasts(Input.getOperand(0));
+        continue;
       }
-      Input = peekThroughBitcasts(Input.getOperand(0));
+      // TODO: Handle insertions into upper subvectors.
+      if (Input.getOpcode() == ISD::INSERT_SUBVECTOR &&
+          Input.getOperand(0).isUndef() &&
+          isNullConstant(Input.getOperand(2))) {
+        Input = peekThroughBitcasts(Input.getOperand(1));
+        continue;
+      }
+      break;
     }
   }
 
