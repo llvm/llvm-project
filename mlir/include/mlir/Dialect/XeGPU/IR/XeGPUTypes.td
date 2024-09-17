@@ -88,11 +88,14 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
     TypeBuilderWithInferredContext<(ins
       "llvm::ArrayRef<int64_t>": $shape,
       "mlir::Type": $elementType,
-      CArg<"bool", "false">: $scattered,
       CArg<"int", "1">: $array_length,
-      CArg<"xegpu::MemoryScope", "xegpu::MemoryScope::Global">:$memory_scope,
-      CArg<"bool", "true">: $boundary_check
-    )>
+      CArg<"bool", "true">: $boundary_check,
+      CArg<"xegpu::MemoryScope", "xegpu::MemoryScope::Global">:$memory_scope)>,
+    TypeBuilderWithInferredContext<(ins
+      "llvm::ArrayRef<int64_t>": $shape,
+      "mlir::Type": $elementType,
+      CArg<"int", "1">: $chunk_size,
+      CArg<"xegpu::MemoryScope", "xegpu::MemoryScope::Global">:$memory_scope)>
   ];
 
   let extraClassDeclaration = [{
@@ -110,40 +113,58 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
       return llvm::cast<TensorDescType>(cloneWith(getShape(), elementType));
     }
 
-    TensorDescAttr getEncodingAsTensorDescAttr() const {
-      return llvm::dyn_cast_if_present<TensorDescAttr>(getEncoding());
+    BlockTensorDescAttr getEncodingAsBlockTensorDescAttr() const {
+      return llvm::dyn_cast_if_present<BlockTensorDescAttr>(getEncoding());
+    }
+
+    ScatterTensorDescAttr getEncodingAsScatterTensorDescAttr() const {
+      return llvm::dyn_cast_if_present<ScatterTensorDescAttr>(getEncoding());
     }
 
     xegpu::MemoryScope getMemoryScope() const {
-      auto attr = getEncodingAsTensorDescAttr();
-      if (attr && attr.getMemoryScope())
-        return attr.getMemoryScope().getValue();
+      auto block_attr = getEncodingAsBlockTensorDescAttr();
+      if (block_attr && block_attr.getMemoryScope())
+        return block_attr.getMemoryScope().getValue();
+
+      auto scatter_attr = getEncodingAsScatterTensorDescAttr();
+      if (scatter_attr && scatter_attr.getMemoryScope())
+        return scatter_attr.getMemoryScope().getValue();
+
       // return default value
       return MemoryScope::Global;
     }
 
     int getArrayLength() {
-      auto attr = getEncodingAsTensorDescAttr();
-      if (attr && attr.getArrayLength())
-        return attr.getArrayLength().getInt();
+      auto attr = getEncoding();
+      auto block_attr = mlir::dyn_cast_if_present<BlockTensorDescAttr>(attr);
+      assert((!attr || block_attr) && "invalid on non BlockTensorDescAttr.");
+      if (block_attr && block_attr.getArrayLength())
+        return block_attr.getArrayLength().getInt();
       // return default value
       return 1;
     }
 
     bool getBoundaryCheck() {
-      auto attr = getEncodingAsTensorDescAttr();
-      if (attr && attr.getBoundaryCheck())
-        return attr.getBoundaryCheck().getValue();
+      auto attr = getEncoding();
+      auto block_attr = mlir::dyn_cast_if_present<BlockTensorDescAttr>(attr);
+      assert((!attr || block_attr) && "invalid on non BlockTensorDescAttr.");
+      if (block_attr && block_attr.getBoundaryCheck())
+        return block_attr.getBoundaryCheck().getValue();
       // return default value
       return true;
     }
 
-    bool getScattered() {
-      auto attr = getEncodingAsTensorDescAttr();
-      if (attr && attr.getScattered())
-        return attr.getScattered().getValue();
-      // return default value
-      return false;
+    bool isScattered() {
+      return bool(getEncodingAsScatterTensorDescAttr());
+    }
+
+    int getChunkSize() {
+      auto attr = getEncoding();
+      auto scatter_attr = mlir::dyn_cast_if_present<ScatterTensorDescAttr>(attr);
+      assert((!attr || scatter_attr) && "invalid on non ScatterTensorDescAttr.");
+      if (scatter_attr && scatter_attr.getChunkSize())
+        return scatter_attr.getChunkSize().getInt();
+      return 1;
     }
   }];
 

@@ -19,9 +19,15 @@ class XeGPUAttr<string name, string attrMnemonic, list<Trait> traits = [],
   let mnemonic = attrMnemonic;
 }
 
-def XeGPU_TensorDescAttr: XeGPUAttr<"TensorDesc", "tdesc_attr"> {
+class XeGPU_TensorDescAttr<string name, string attrMnemonic, list<Trait> traits = [],
+                         string baseCppClass = "::mlir::Attribute">
+    : XeGPUAttr<name, attrMnemonic, traits, baseCppClass> {
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+def XeGPU_BlockTensorDescAttr: XeGPU_TensorDescAttr<"BlockTensorDesc", "block_tdesc_attr"> {
   let summary = [{a composite attribute for `TensorDescType`}];
-  let description = [{`TensorDescAttr` (or `tdesc_attr`) is a composite
+  let description = [{`BlockTensorDesc` (or `block_tdesc_attr`) is a composite
     attribute defined for `TensorDescType` for describing following
     properties of a `TensorDesc`.
     1. `memory_scope`: It describes where the data block described by the
@@ -33,28 +39,48 @@ def XeGPU_TensorDescAttr: XeGPUAttr<"TensorDesc", "tdesc_attr"> {
         8x32. Its default value is 1.
     3. `boundary_check`: It is used to indicates the hardware whether to do
         out-of-boundary check. The default value is true.
-    4. `scattered`: It is used to differenciate TensorDescs created from
-       `create_nd_tdesc` vs from `create_tdesc`.
   }];
 
   let parameters = (ins
     OptionalParameter<"MemoryScopeAttr">: $memory_scope,
     OptionalParameter<"IntegerAttr", "1">: $array_length,
-    OptionalParameter<"BoolAttr", "true">: $boundary_check,
-    OptionalParameter<"BoolAttr", "false">: $scattered
+    OptionalParameter<"BoolAttr", "true">: $boundary_check
   );
 
   let builders = [
     AttrBuilder<(ins
       CArg<"xegpu::MemoryScope", "xegpu::MemoryScope::Global">:$memory_scope,
       CArg<"int", "1">:$array_length,
-      CArg<"bool", "true">: $boundary_check,
-      CArg<"bool", "false">: $scattered
+      CArg<"bool", "true">: $boundary_check
     )>
   ];
 
-  let assemblyFormat = "`<` struct(params) `>`";
 }
+
+def XeGPU_ScatterTensorDescAttr: XeGPU_TensorDescAttr<"ScatterTensorDesc", "scatter_tdesc_attr"> {
+  let summary = [{a composite attribute for `TensorDescType`}];
+  let description = [{`ScatterTensorDesc` (or `scatter_tdesc_attr`) is a composite
+    attribute defined for `TensorDescType` for describing following
+    properties of a `TensorDesc`.
+    1. `memory_scope`: It describes where the data block described by the
+        TensorDesc is located, `Global` device memory or `Shared` local memory.
+        It is default to `Global`.
+    2.  `chunk_size`: indicates number of continious elements accessed for each
+        offset, default is 1. It is used with `scattered` attr only.
+  }];
+
+  let parameters = (ins
+    OptionalParameter<"MemoryScopeAttr">: $memory_scope,
+    OptionalParameter<"IntegerAttr", "1">: $chunk_size
+  );
+
+  let builders = [
+    AttrBuilder<(ins
+      CArg<"xegpu::MemoryScope", "xegpu::MemoryScope::Global">:$memory_scope,
+      CArg<"int", "1">: $chunk_size
+    )>
+  ];
+ }
 
 //===----------------------------------------------------------------------===//
 // XeGPU Memory Scope Enums.

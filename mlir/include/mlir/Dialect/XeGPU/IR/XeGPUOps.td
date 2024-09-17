@@ -411,41 +411,32 @@ def XeGPU_CreateDescOp: XeGPU_Op<"create_tdesc", [Pure, ViewLikeOpInterface]> {
       is fixed to the hardware supportted subgroup size, e.g., 16 on PVC,
       implying each element in the array corresponds to a work-item (SIMT lane)
       in the subgroup.
-    * chunk_size: [optional attribute] indicates number of continious
-      elements accessed for each offset, default is 1.
 
     Example 1. It assumes subgroup size is 4, and accesses a[0], a[16], a[32], a[64]
     ```mlir
     %a = memref.alloc() : memref<1024xf32>
-    %1 = xegpu.create_tdesc %a[0, 16, 32, 64]: memref<1024xf32> -> TensorDesc<4xf32>
+    %1 = xegpu.create_tdesc %a[0, 16, 32, 64]: memref<1024xf32> -> TensorDesc<4xf32, chunk_size_per_lane = 1>
     ```
 
     Example 2. It assumes subgroup size is 4, and each workitem access 8 elements.
                It will access totally 32 data elements: a[0:7], a[16:23], a[32:39], a[64:71]
     ```mlir
     %0 = memref.alloc() : memref<1024xf32>
-    %1 = xegpu.create_tdesc %0[0, 16, 32, 64] {chunk_size = 8}: memref<1024xf32> -> TensorDesc<4x8xf32>
+    %1 = xegpu.create_tdesc %0[0, 16, 32, 64] : memref<1024xf32> -> TensorDesc<4x8xf32, chunk_size_per_lane = 8>
     ```
 
     Example 3. It is similar to Example 2, but there is some overlaps among workitems.
                It accesses: a[0:7], a[4:11], a[8:15], a[12:19]
     ```mlir
     %0 = memref.alloc() : memref<1024xf32>
-    %1 = xegpu.create_tdesc %0[0, 4, 8, 12] {chunk_size = 8}: memref<1024xf32> -> TensorDesc<4x8xf32>
+    %1 = xegpu.create_tdesc %0[0, 4, 8, 12] : memref<1024xf32> -> TensorDesc<4x8xf32, chunk_size_per_lane = 8>>
     ```
   }];
 
   let arguments = (ins XeGPU_BaseAddrType: $source,
                        Variadic<Index>: $offsets,
-                       DenseI64ArrayAttr: $const_offsets,
-                       DefaultValuedAttr<I64Attr, "1">: $chunk_size);
+                       DenseI64ArrayAttr: $const_offsets);
   let results = (outs XeGPU_TensorDesc:$TensorDesc);
-
-  let builders = [
-    OpBuilder<(ins "xegpu::TensorDescType": $TensorDesc, "Value": $source,
-                   "llvm::ArrayRef<OpFoldResult>": $offsets,
-                   CArg<"uint32_t", "1"> : $chunk_size)>,
-  ];
 
   let assemblyFormat = [{
     $source
@@ -723,7 +714,7 @@ def XeGPU_DpasOp : XeGPU_Op<"dpas", [Pure, AllElementTypesMatch<["lhs", "rhs"]>]
 
 def XeGPU_AtomicRMWOp: XeGPU_Op<"atomic_rmw", [Pure,
       AllElementTypesMatch<["tensorDesc", "value", "result"]>,
-      AllShapesMatch<["tensorDesc", "mask", "value", "result"]>]> {
+      AllShapesMatch<["tensorDesc", "value", "result"]>]> {
   let summary = "Atomic ready-modify-write operation on the TensorDesc. ";
 
   let description = [{

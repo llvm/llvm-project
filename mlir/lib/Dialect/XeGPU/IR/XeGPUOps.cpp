@@ -152,7 +152,7 @@ LogicalResult CreateNdDescOp::verify() {
     return emitOpError("TensorDesc should have the same element "
                        "type with the source if it is a memref.\n");
 
-  if (getType().getScattered())
+  if (getType().isScattered())
     return emitOpError("Expects a non-scattered TensorDesc.\n");
 
   return success();
@@ -163,7 +163,7 @@ LogicalResult CreateNdDescOp::verify() {
 //===----------------------------------------------------------------------===//
 LogicalResult PrefetchNdOp::verify() {
   auto tdescTy = getTensorDescType();
-  if (tdescTy.getScattered())
+  if (tdescTy.isScattered())
     return emitOpError("Expects a non-scattered TensorDesc.\n");
 
   if (!isReadHintOrNone(getL1HintAttr()))
@@ -188,7 +188,7 @@ LogicalResult LoadNdOp::verify() {
   if (tdescTy.getRank() > 2)
     return emitOpError("Expecting a 1D/2D TensorDesc.\n");
 
-  if (tdescTy.getScattered())
+  if (tdescTy.isScattered())
     return emitOpError("Expects a non-scattered TensorDesc.\n");
 
   if (!valueTy)
@@ -256,7 +256,7 @@ LogicalResult StoreNdOp::verify() {
   if (dstTy.getRank() > 2)
     return emitOpError("Expecting a 1D/2D TensorDesc.\n");
 
-  if (dstTy.getScattered())
+  if (dstTy.isScattered())
     return emitOpError("Expects a non-scattered TensorDesc.\n");
 
   if (!valTy)
@@ -279,7 +279,7 @@ LogicalResult StoreNdOp::verify() {
 //===----------------------------------------------------------------------===//
 LogicalResult UpdateNdOffsetOp::verify() {
   auto ty = getTensorDescType();
-  if (ty.getScattered())
+  if (ty.isScattered())
     return emitOpError("Expects a non-scattered TensorDesc.\n");
 
   // number of offsets specified must match the rank of the tensor descriptor
@@ -292,27 +292,18 @@ LogicalResult UpdateNdOffsetOp::verify() {
 //===----------------------------------------------------------------------===//
 // XeGPU_CreateDescOp
 //===----------------------------------------------------------------------===//
-void CreateDescOp::build(OpBuilder &builder, OperationState &state,
-                         TensorDescType TensorDesc, Value source,
-                         llvm::ArrayRef<OpFoldResult> offsets,
-                         uint32_t chunk_size) {
-  llvm::SmallVector<int64_t> staticOffsets;
-  llvm::SmallVector<Value> dynamicOffsets;
-  dispatchIndexOpFoldResults(offsets, dynamicOffsets, staticOffsets);
-  build(builder, state, TensorDesc, source, dynamicOffsets, staticOffsets,
-        chunk_size);
-}
 
 LogicalResult CreateDescOp::verify() {
   auto tdescTy = getTensorDescType();
-  auto chunkSize = getChunkSize();
 
   if (getRankOf(getSource()) > 1)
     return emitOpError(
         "Expecting the source is a 1D memref or pointer (uint64_t).");
 
-  if (!tdescTy.getScattered())
+  if (!tdescTy.isScattered())
     return emitOpError("Expects a scattered TensorDesc.\n");
+
+  auto chunkSize = tdescTy.getChunkSize();
 
   SmallVector<int64_t> shape({(int64_t)getNumOffsets()});
   if (chunkSize != 1)
@@ -331,7 +322,7 @@ LogicalResult CreateDescOp::verify() {
 //===----------------------------------------------------------------------===//
 LogicalResult PrefetchOp::verify() {
   auto tdescTy = getTensorDescType();
-  if (!tdescTy.getScattered())
+  if (!tdescTy.isScattered())
     return emitOpError("Expects a scattered TensorDesc.\n");
 
   if (!isReadHintOrNone(getL1HintAttr()))
@@ -354,7 +345,7 @@ LogicalResult LoadGatherOp::verify() {
   auto maskTy = getMaskType();
   auto valueTy = getValueType();
 
-  if (!tdescTy.getScattered())
+  if (!tdescTy.isScattered())
     return emitOpError("Expects a scattered TensorDesc.\n");
 
   if (!isReadHintOrNone(getL1HintAttr()))
@@ -400,7 +391,7 @@ LogicalResult LoadGatherOp::verify() {
 //===----------------------------------------------------------------------===//
 LogicalResult StoreScatterOp::verify() {
   auto tdescTy = getTensorDescType();
-  if (!tdescTy.getScattered())
+  if (!tdescTy.isScattered())
     return emitOpError("Expects a scattered TensorDesc.\n");
 
   if (!isWriteHintOrNone(getL1HintAttr()))

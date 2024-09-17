@@ -30,18 +30,28 @@ void XeGPUDialect::initialize() {
 }
 
 //===----------------------------------------------------------------------===//
-// XeGPU_TensorDescAttr
+// XeGPU_BlockTensorDescAttr
 //===----------------------------------------------------------------------===//
-TensorDescAttr TensorDescAttr::get(mlir::MLIRContext *context,
-                                   xegpu::MemoryScope memory_scope,
-                                   int array_length, bool boundary_check,
-                                   bool scattered) {
+BlockTensorDescAttr BlockTensorDescAttr::get(mlir::MLIRContext *context,
+                                        xegpu::MemoryScope memory_scope,
+                                        int array_length, bool boundary_check) {
   auto scopeAttr = MemoryScopeAttr::get(context, memory_scope);
   auto lengthAttr =
       IntegerAttr::get(IntegerType::get(context, 64), array_length);
   auto boundaryAttr = BoolAttr::get(context, boundary_check);
-  auto scatteredAttr = BoolAttr::get(context, scattered);
-  return Base::get(context, scopeAttr, lengthAttr, boundaryAttr, scatteredAttr);
+  return Base::get(context, scopeAttr, lengthAttr, boundaryAttr);
+}
+
+//===----------------------------------------------------------------------===//
+// XeGPU_ScatterTensorDescAttr
+//===----------------------------------------------------------------------===//
+ScatterTensorDescAttr ScatterTensorDescAttr::get(mlir::MLIRContext *context,
+                                            xegpu::MemoryScope memory_scope,
+                                            int chunk_size) {
+  auto scopeAttr = MemoryScopeAttr::get(context, memory_scope);
+  auto chunkSizeAttr =
+      IntegerAttr::get(IntegerType::get(context, 64), chunk_size);
+  return Base::get(context, scopeAttr, chunkSizeAttr);
 }
 
 //===----------------------------------------------------------------------===//
@@ -108,12 +118,18 @@ void TensorDescType::print(::mlir::AsmPrinter &printer) const {
 }
 
 TensorDescType TensorDescType::get(llvm::ArrayRef<int64_t> shape,
-                                   mlir::Type elementType, bool scattered,
-                                   int array_length, MemoryScope memory_scope,
-                                   bool boundary_check) {
+                                   mlir::Type elementType, int array_length,
+                                   bool boundary_check, MemoryScope memory_scope) {
   auto context = elementType.getContext();
-  auto attr = TensorDescAttr::get(context, memory_scope, array_length,
-                                  boundary_check, scattered);
+  auto attr = BlockTensorDescAttr::get(context, memory_scope, array_length, boundary_check);
+  return Base::get(context, shape, elementType, attr);
+}
+
+TensorDescType TensorDescType::get(llvm::ArrayRef<int64_t> shape,
+                                   mlir::Type elementType, int chunk_size,
+                                   MemoryScope memory_scope) {
+  auto context = elementType.getContext();
+  auto attr = ScatterTensorDescAttr::get(context, memory_scope, chunk_size);
   return Base::get(context, shape, elementType, attr);
 }
 
