@@ -1972,7 +1972,7 @@ unsigned DWARFVerifier::verifyDebugNames(const DWARFSection &AccelSection,
             CUDie.getDwarfUnit()->getNonSkeletonUnitDIE(false);
         if (CUDie != NonSkeletonUnitDie) {
           for (const DWARFDebugInfoEntry &Die :
-                NonSkeletonUnitDie.getDwarfUnit()->dies())
+               NonSkeletonUnitDie.getDwarfUnit()->dies())
             NumErrors += verifyNameIndexCompleteness(
                 DWARFDie(NonSkeletonUnitDie.getDwarfUnit(), &Die), *NI);
         }
