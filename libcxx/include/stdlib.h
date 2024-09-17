@@ -73,8 +73,9 @@ void *aligned_alloc(size_t alignment, size_t size);                       // C11
 
 */
 
-#if 0
-#else // 0
+#if defined(__cplusplus) && __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/stdlib.h>
+#else
 #  include <__config>
 
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -147,7 +148,7 @@ inline _LIBCPP_HIDE_FROM_ABI lldiv_t div(long long __x, long long __y) _NOEXCEPT
 #        endif
 #      endif // _LIBCPP_MSVCRT
 } // extern "C++"
-#    endif // __cplusplus
-#  endif   // 0
+#    endif   // __cplusplus
+#  endif     // defined(__cplusplus) && __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_STDLIB_H
