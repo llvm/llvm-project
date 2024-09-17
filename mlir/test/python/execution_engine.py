@@ -1,4 +1,4 @@
-# RUN: env LLVM_SHLIB_DIR=%llvm_shlib_dir %PYTHON %s 2>&1 | FileCheck %s
+# RUN: env MLIR_RUNNER_UTILS=%mlir_runner_utils MLIR_C_RUNNER_UTILS=%mlir_c_runner_utils %PYTHON %s 2>&1 | FileCheck %s
 # REQUIRES: host-supports-jit
 import gc, sys, os, tempfile
 from mlir.ir import *
@@ -7,8 +7,8 @@ from mlir.execution_engine import *
 from mlir.runtime import *
 from ml_dtypes import bfloat16, float8_e5m2
 
-_DEFAULT_LIB_DIR = "../../../../lib"
-LIB_DIR = os.getenv("LLVM_SHLIB_DIR", _DEFAULT_LIB_DIR)
+MLIR_RUNNER_UTILS = os.getenv("MLIR_RUNNER_UTILS", "../../../../lib/libmlir_runner_utils.so")
+MLIR_C_RUNNER_UTILS = os.getenv("MLIR_C_RUNNER_UTILS", "../../../../lib/libmlir_c_runner_utils.so")
 
 # Log everything to stderr and flush so that we have a unified stream to match
 # errors/info emitted by MLIR to stderr.
@@ -702,8 +702,8 @@ def testSharedLibLoad():
             ]
         else:
             shared_libs = [
-                LIB_DIR + "/libmlir_runner_utils.so",
-                LIB_DIR + "/libmlir_c_runner_utils.so",
+                MLIR_RUNNER_UTILS,
+                MLIR_C_RUNNER_UTILS,
             ]
 
         execution_engine = ExecutionEngine(
