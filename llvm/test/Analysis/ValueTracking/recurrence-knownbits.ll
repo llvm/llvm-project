@@ -21,6 +21,106 @@ exit:
   ret i64 %res
 }
 
+define i64 @test_add(i1 %c) {
+; CHECK-LABEL: @test_add(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i64 0
+;
+entry:
+  br label %loop
+loop:
+  %iv = phi i64 [8, %entry], [%iv.next, %loop]
+  %iv.next = add nuw i64 %iv, 4
+  br i1 %c, label %exit, label %loop
+exit:
+  %res = and i64 %iv, 1
+  ret i64 %res
+}
+
+define i64 @test_sub(i1 %c) {
+; CHECK-LABEL: @test_sub(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i64 0
+;
+entry:
+  br label %loop
+loop:
+  %iv = phi i64 [8, %entry], [%iv.next, %loop]
+  %iv.next = sub nuw i64 %iv, 4
+  br i1 %c, label %exit, label %loop
+exit:
+  %res = and i64 %iv, 1
+  ret i64 %res
+}
+
+define i64 @test_mul(i1 %c) {
+; CHECK-LABEL: @test_mul(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i64 0
+;
+entry:
+  br label %loop
+loop:
+  %iv = phi i64 [8, %entry], [%iv.next, %loop]
+  %iv.next = mul i64 %iv, 2
+  br i1 %c, label %exit, label %loop
+exit:
+  %res = and i64 %iv, 2
+  ret i64 %res
+}
+
+define i64 @test_and(i1 %c) {
+; CHECK-LABEL: @test_and(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i64 2047
+;
+entry:
+  br label %loop
+loop:
+  %iv = phi i64 [1025, %entry], [%iv.next, %loop]
+  %iv.next = and i64 %iv, 1024
+  br i1 %c, label %exit, label %loop
+exit:
+  %res = or i64 %iv, 1023
+  ret i64 %res
+}
+
+define i64 @test_or(i1 %c) {
+; CHECK-LABEL: @test_or(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i64 2047
+;
+entry:
+  br label %loop
+loop:
+  %iv = phi i64 [1025, %entry], [%iv.next, %loop]
+  %iv.next = or i64 %iv, 1024
+  br i1 %c, label %exit, label %loop
+exit:
+  %res = or i64 %iv, 1023
+  ret i64 %res
+}
+
 define i64 @test_ashr_zeros(i1 %c) {
 ; CHECK-LABEL: @test_ashr_zeros(
 ; CHECK-NEXT:  entry:
