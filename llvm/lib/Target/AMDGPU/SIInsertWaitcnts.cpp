@@ -1754,10 +1754,11 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
           if (IsVGPR) {
             // Implicit VGPR defs and uses are never a part of the memory
             // instructions description and usually present to account for
-            // super-register liveness.
+            // super-register liveness. Tied implicit sources on loads though
+            // are real uses.
             // TODO: Most of the other instructions also have implicit uses
             // for the liveness accounting only.
-            if (Op.isImplicit() && MI.mayLoadOrStore())
+            if (Op.isImplicit() && MI.mayLoadOrStore() && !Op.isTied())
               continue;
 
             // RAW always needs an s_waitcnt. WAW needs an s_waitcnt unless the
