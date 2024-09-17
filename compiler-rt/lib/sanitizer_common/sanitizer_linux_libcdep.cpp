@@ -281,19 +281,27 @@ static uptr ThreadDescriptorSizeFallback() {
     return FIRST_32_SECOND_64(1344, 2496);
   }
   return 0;
-#    elif defined(__s390__) || defined(__sparc__)
+#    endif
+
+#    if defined(__s390__) || defined(__sparc__)
   // The size of a prefix of TCB including pthread::{specific_1stblock,specific}
   // suffices. Just return offsetof(struct pthread, specific_used), which hasn't
   // changed since 2007-05. Technically this applies to i386/x86_64 as well but
   // we call _dl_get_tls_static_info and need the precise size of struct
   // pthread.
   return FIRST_32_SECOND_64(524, 1552);
-#    elif defined(__mips__)
+#    endif
+
+#    if defined(__mips__)
   // TODO(sagarthakur): add more values as per different glibc versions.
   return FIRST_32_SECOND_64(1152, 1776);
-#    elif SANITIZER_LOONGARCH64
+#    endif
+
+#    if SANITIZER_LOONGARCH64
   return 1856;  // from glibc 2.36
-#    elif SANITIZER_RISCV64
+#    endif
+
+#    if SANITIZER_RISCV64
   int major;
   int minor;
   int patch;
@@ -307,10 +315,14 @@ static uptr ThreadDescriptorSizeFallback() {
     return 1936;    // tested against glibc 2.32
   }
   return 0;
-#    elif defined(__aarch64__)
+#    endif
+
+#    if defined(__aarch64__)
   // The sizeof (struct pthread) is the same from GLIBC 2.17 to 2.22.
   return 1776;
-#    elif defined(__powerpc64__)
+#    endif
+
+#    if defined(__powerpc64__)
   return 1776;  // from glibc.ppc64le 2.20-8.fc21
 #    endif
 }
