@@ -2356,17 +2356,14 @@ void SelectionDAGLegalize::ExpandSinCosLibCall(
   // Find users of the node that store the results. The destination pointers
   // can be used instead of creating stack allocations.
   std::array<StoreSDNode *, 2> ResultStores = {nullptr};
-  for (SDNode::use_iterator UI = Node->use_begin(), UE = Node->use_end();
-       UI != UE; ++UI) {
-    SDUse &Use = UI.getUse();
-    SDNode *User = Use.getUser();
+  for (SDNode *User : Node->uses()) {
     if (!ISD::isNormalStore(User))
       continue;
     auto *ST = cast<StoreSDNode>(User);
     if (!ST->isSimple() || ST->getAddressSpace() != 0 ||
         ST->getAlign() < DAG.getDataLayout().getABITypeAlign(Ty))
       continue;
-    ResultStores[Use.getResNo()] = ST;
+    ResultStores[ST->getValue().getResNo()] = ST;
   }
 
   // Collect input chains (and avoid chains referring to one of the stores).
