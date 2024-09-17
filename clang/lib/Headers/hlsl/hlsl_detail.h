@@ -23,7 +23,7 @@ template <bool B, class T = void>
 using enable_if_t = typename enable_if<B, T>::Type;
 
 template <typename U, typename T, int N>
-constexpr enable_if_t<sizeof(U) == sizeof(T), vector<U, N> >
+constexpr enable_if_t<sizeof(U) == sizeof(T), vector<U, N>>
 bit_cast(vector<T, N> V) {
   return __builtin_bit_cast(vector<U, N>, V);
 }
