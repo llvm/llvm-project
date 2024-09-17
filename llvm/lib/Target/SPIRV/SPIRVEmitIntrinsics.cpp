@@ -319,10 +319,13 @@ void SPIRVEmitIntrinsics::buildAssignType(IRBuilder<> &B, Type *Ty,
   Value *OfType = PoisonValue::get(Ty);
   CallInst *AssignCI = nullptr;
   if (Ty->isAggregateType() && allowEmitFakeUse(Arg)) {
+    LLVMContext &Ctx = Arg->getContext();
+    SmallVector<Metadata *, 2> ArgMDs{
+        MDNode::get(Ctx, ValueAsMetadata::getConstant(OfType)),
+        MDString::get(Ctx, Arg->getName())};
+    B.CreateIntrinsic(Intrinsic::spv_value_md, {},
+                      {MetadataAsValue::get(Ctx, MDTuple::get(Ctx, ArgMDs))});
     AssignCI = B.CreateIntrinsic(Intrinsic::fake_use, {}, {Arg});
-    AssignCI->setMetadata(
-        "spirv.__BE.assign_type",
-        MDNode::get(Arg->getContext(), ValueAsMetadata::getConstant(OfType)));
   } else {
     AssignCI = buildIntrWithMD(Intrinsic::spv_assign_type, {Arg->getType()},
                                OfType, Arg, {}, B);
@@ -1577,7 +1580,7 @@ void SPIRVEmitIntrinsics::processInstrAfterVisit(Instruction *I,
       I->setOperand(OpNo, NewOp);
     }
   }
-  if (I->hasName()) {
+  if (I->hasName() && !I->getType()->isAggregateType()) {
     reportFatalOnTokenType(I);
     setInsertPointAfterDef(B, I);
     std::vector<Value *> Args = {I};

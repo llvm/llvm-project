@@ -376,9 +376,9 @@ Register insertAssignInstr(Register Reg, Type *Ty, SPIRVType *SpvType,
       .addUse(NewReg)
       .addUse(GR->getSPIRVTypeID(SpvType))
       .setMIFlags(Flags);
-  for (unsigned I = 0, E = Def->getNumExplicitDefs(); I != E; ++I) {
+  for (unsigned I = 0, E = Def->getNumDefs(); I != E; ++I) {
     MachineOperand &MO = Def->getOperand(I);
-    if (MO.isReg() && MO.isDef() && MO.getReg() == Reg) {
+    if (MO.getReg() == Reg) {
       MO.setReg(NewReg);
       break;
     }
@@ -468,6 +468,24 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
             Def->getOpcode() != SPIRV::ASSIGN_TYPE)
           insertAssignInstr(Reg, Ty, nullptr, GR, MIB, MF.getRegInfo());
         ToErase.push_back(&MI);
+      } else if (MIOp == TargetOpcode::FAKE_USE && MI.getNumOperands() > 0) {
+        MachineInstr *MdMI = MI.getPrevNode();
+        if (MdMI && isSpvIntrinsic(*MdMI, Intrinsic::spv_value_md)) {
+          // It's an internal service info from before IRTranslator passes.
+          MachineInstr *Def = MRI.getVRegDef(MI.getOperand(0).getReg());
+          for (unsigned I = 1, E = MI.getNumOperands(); I != E && Def; ++I)
+            if (MRI.getVRegDef(MI.getOperand(I).getReg()) != Def)
+              Def = nullptr;
+          if (Def) {
+            const MDNode *MD = MdMI->getOperand(1).getMetadata();
+            Type *ValueTy = cast<ValueAsMetadata>(MD->getOperand(0))->getType();
+            StringRef ValueName =
+                cast<MDString>(MD->getOperand(1))->getString();
+            GR->addValueAttrs(Def, std::make_pair(ValueTy, ValueName));
+          }
+        }
+        ToErase.push_back(&MI);
+        ToErase.push_back(MdMI);
       } else if (MIOp == TargetOpcode::G_CONSTANT ||
                  MIOp == TargetOpcode::G_FCONSTANT ||
                  MIOp == TargetOpcode::G_BUILD_VECTOR) {

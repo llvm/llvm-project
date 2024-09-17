@@ -444,10 +444,10 @@ bool SPIRVPrepareFunctions::substituteIntrinsicCalls(Function *F) {
         lowerFunnelShifts(II);
         Changed = true;
         break;
-      case Intrinsic::umul_with_overflow:
-        lowerUMulWithOverflow(II);
-        Changed = true;
-        break;
+//      case Intrinsic::umul_with_overflow:
+//        lowerUMulWithOverflow(II);
+//        Changed = true;
+//        break;
       case Intrinsic::assume:
       case Intrinsic::expect: {
         const SPIRVSubtarget &STI = TM.getSubtarget<SPIRVSubtarget>(*F);
@@ -478,7 +478,11 @@ bool SPIRVPrepareFunctions::substituteIntrinsicCalls(Function *F) {
 // noted in 'spv.cloned_funcs' metadata for later restoration.
 Function *
 SPIRVPrepareFunctions::removeAggregateTypesFromSignature(Function *F) {
-  if (F->isIntrinsic())
+  bool IsRetAggr = F->getReturnType()->isAggregateType();
+  // Allow intrinsics with aggregate return type to reach GlobalISel
+  if (F->isIntrinsic() && IsRetAggr)
+    return F;
+  /*
     // Allow intrinsics with aggregate return type to reach GlobalISel
     switch (F->getIntrinsicID()) {
     // Standard C/C++ Library Intrinsics
@@ -495,10 +499,10 @@ SPIRVPrepareFunctions::removeAggregateTypesFromSignature(Function *F) {
     case Intrinsic::usub_with_overflow:
       return F;
     }
+*/
 
   IRBuilder<> B(F->getContext());
 
-  bool IsRetAggr = F->getReturnType()->isAggregateType();
   bool HasAggrArg =
       std::any_of(F->arg_begin(), F->arg_end(), [](Argument &Arg) {
         return Arg.getType()->isAggregateType();
@@ -581,7 +585,6 @@ bool SPIRVPrepareFunctions::runOnModule(Module &M) {
       Changed = true;
     }
   }
-
   return Changed;
 }
 
