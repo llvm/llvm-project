@@ -519,9 +519,10 @@ static InstructionCost getHistogramCost(const IntrinsicCostAttributes &ICA) {
   Type *EltTy = ICA.getArgTypes()[1];        // Type of bucket elements
   unsigned TotalHistCnts = 1;
 
+  unsigned EltSize = EltTy->getScalarSizeInBits();
   // Only allow (up to 64b) integers or pointers
   if ((!EltTy->isIntegerTy() && !EltTy->isPointerTy()) ||
-      EltTy->getScalarSizeInBits() > 64)
+      EltSize > 64)
     return InstructionCost::getInvalid();
 
   // FIXME: We should be able to generate histcnt for fixed-length vectors
@@ -531,13 +532,13 @@ static InstructionCost getHistogramCost(const IntrinsicCostAttributes &ICA) {
     if (!isPowerOf2_64(EC) || !VTy->isScalableTy())
       return InstructionCost::getInvalid();
 
-    bool Element64b = EltTy->isIntegerTy(64);
+    // HistCnt only supports 32b and 64b element types
+    unsigned LegalEltSize = EltSize <= 32 ? 32 : 64;
 
-    if (EC == 2 || (!Element64b && EC == 4))
+    if (EC == 2 || (!LegalEltSize == 32 && EC == 4))
       return InstructionCost(BaseHistCntCost);
 
-    unsigned NaturalVectorWidth = Element64b ? AArch64::SVEBitsPerBlock / 64
-                                             : AArch64::SVEBitsPerBlock / 32;
+    unsigned NaturalVectorWidth = AArch64::SVEBitsPerBlock / LegalEltSize;
     TotalHistCnts = EC / NaturalVectorWidth;
   }
 
