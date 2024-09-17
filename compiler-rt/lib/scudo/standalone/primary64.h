@@ -59,14 +59,13 @@ public:
   // Local cache stores the pointers in the type of compacted pointer and the
   // compaction is done by calculating the offset to the base address of a
   // region. Currently, we don't support decompacting through multiple regions
-  // because of the concern of performance and so we disable the pointer
-  // compaction.
+  // duo to performance concern, we disable the pointer compaction.
   // TODO(chiahungduan): Allow local cache store the raw pointer and keep
   // storing the compacted pointers in each region to save memory.
   static const bool DisablePtrCompaction = Config::getEnableMultiRegions();
   static_assert(!DisablePtrCompaction || sizeof(CompactPtrT) == sizeof(uptr),
                 "Pointer compaction is disabled, `CompactPtrT` needs to be the "
-                "same size of `uptr`");
+                "same size as `uptr`");
   typedef SizeClassAllocator64<Config> ThisT;
   typedef SizeClassAllocatorLocalCache<ThisT> CacheT;
   typedef TransferBatch<ThisT> TransferBatchT;
@@ -143,7 +142,8 @@ public:
       // Block grouping requires the base address of a Region to be aligned
       // with GrouopSize and pointer is compacted according to the offset to the
       // base of a region so it always meets the requirement. As a result when
-      // the compaction is disabled, it relies the base address to be aligned.
+      // the compaction is disabled, it relies on the base address to be
+      // aligned.
       const uptr Alignment =
           DisablePtrCompaction ? (1UL << GroupSizeLog) : PageSize;
       // Reserve the space required for the Primary.
@@ -358,10 +358,9 @@ public:
     };
 
     // When multiple-regions is enabled, we need to sort the array to dispatch
-    // the blocks to different regions efficiently. Thus even we don't put
-    // BatchClass into groups, sorting is still necessary and it'll be handled
-    // later in the function.
-    // TODO: Reorder the use of variable
+    // the blocks to different regions efficiently. If we don't put BatchClass
+    // into groups, sorting is still necessary and it'll be handled later in the
+    // function.
     RegionInfo *Region = RegionInfoManager.getCurRegionInfo(ClassId);
     if (ClassId == SizeClassMap::BatchClassId &&
         !Config::getEnableMultiRegions()) {
@@ -548,9 +547,9 @@ public:
     auto RegionInfoIter = RegionInfoManager.getRegionInfoIter(ClassId);
 
     do {
-      // Note that the tryLock() may fail spuriously, given that it should
-      // rarely happen and page releasing is fine to skip, we don't take certain
-      // approaches to ensure one page release is done.
+      // Note that the tryLock() can fail under certain circumstances. Since
+      // this should be a rare occurrence, there is no need to do anything to
+      // force at least one `releaseToOSMaybe()` is called().
       if (RegionInfoIter->MMLock.tryLock()) {
         uptr BytesReleased =
             releaseToOSMaybe(RegionInfoIter.get(), ClassId, ReleaseType);
@@ -612,7 +611,7 @@ public:
   static BlockInfo findNearestBlock(const char *RegionInfoData,
                                     uptr Ptr) NO_THREAD_SAFETY_ANALYSIS {
     if (Config::getEnableMultiRegions()) {
-      Printf("MultiRegions hasn't supported finding nearest block yet.\n");
+      Printf("MultiRegions doesn't supported finding nearest block yet.\n");
       return {};
     }
     const RegionInfo *RegionInfoArray =
@@ -758,8 +757,8 @@ private:
           return nullptr;
         return &Array[Size++];
       }
-      // The amount memory used by this allocator is about (NumEntries *
-      // RegionSize). For example, region with size 256 KB will have 2GB space
+      // The amount of memory used by this allocator is about (NumEntries *
+      // RegionSize). For example, a 256 KB region will have 2GB space
       // available.
       // TODO(chiahungduan): Consider having this configurable.
       static constexpr uptr NumEntries = 1UL << 13;
@@ -846,15 +845,15 @@ private:
                             RegionInfoLock[ClassId]);
     }
 
-    // RegionInfos for the same size class will be stored in the order of base
-    // address. Which means every RegionInfo visiting will be starting from
-    // lowest address and which aligns with how pointer grouping works.
+    // RegionInfos for the same size class will be ordered by base address.
+    // Which means every RegionInfo visiting will be starting from lowest
+    // address and which aligns with how pointer grouping works.
     void pushRegionInfo(RegionInfo *Region, uptr ClassId)
         REQUIRES(Region->MMLock) {
       DCHECK_LT(ClassId, NumClasses);
       DCHECK(Region->MemMapInfo.MemMap.isAllocated());
 
-      // The creation of new region requires holding the MMLock of current
+      // The creation of a new region requires holding the MMLock of the current
       // region to ensure only one thread is allocating the new region.
       CurrentRegionInfo[ClassId].P->MMLock.assertHeld();
 
@@ -903,8 +902,8 @@ private:
              sizeof(RegionInfoPointer) * NumClasses);
     }
 
-    // Scudo requires the data member constant initializable. Array of raw
-    // pointers doesn't meet the condition. Therefore, wrap the pointer in the
+    // Scudo requires the data member constant initializable. An array of raw
+    // pointers doesn't meet this condition. Therefore, wrap the pointer in the
     // struct to make it a compound type which is constant intializable.
     struct RegionInfoPointer {
       RegionInfo *P = nullptr;
