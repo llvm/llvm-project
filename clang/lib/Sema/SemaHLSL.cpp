@@ -577,7 +577,7 @@ bool clang::CreateHLSLAttributedResourceType(
   SourceLocation LocBegin = AttrList[0]->getRange().getBegin();
   SourceLocation LocEnd = AttrList[0]->getRange().getEnd();
 
-  HLSLAttributedResourceType::Attributes ResAttrs = {};
+  HLSLAttributedResourceType::Attributes ResAttrs;
 
   bool HasResourceClass = false;
   for (const Attr *A : AttrList) {
@@ -605,6 +605,13 @@ bool clang::CreateHLSLAttributedResourceType(
         return false;
       }
       ResAttrs.IsROV = true;
+      break;
+    case attr::HLSLRawBuffer:
+      if (ResAttrs.RawBuffer) {
+        S.Diag(A->getLocation(), diag::warn_duplicate_attribute_exact) << A;
+        return false;
+      }
+      ResAttrs.RawBuffer = true;
       break;
     case attr::HLSLContainedType: {
       const HLSLContainedTypeAttr *CTAttr = cast<HLSLContainedTypeAttr>(A);
@@ -677,6 +684,10 @@ bool SemaHLSL::handleResourceTypeAttr(const ParsedAttr &AL) {
 
   case ParsedAttr::AT_HLSLROV:
     A = HLSLROVAttr::Create(getASTContext(), AL.getLoc());
+    break;
+
+  case ParsedAttr::AT_HLSLRawBuffer:
+    A = HLSLRawBufferAttr::Create(getASTContext(), AL.getLoc());
     break;
 
   case ParsedAttr::AT_HLSLContainedType: {
