@@ -1122,7 +1122,7 @@ enum PredefinedTypeIDs {
 #define WASM_TYPE(Name, Id, SingletonId) PREDEF_TYPE_##Id##_ID,
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
 // \brief AMDGPU types with auto numeration
-#define AMDGPU_TYPE(Name, Id, SingletonId) PREDEF_TYPE_##Id##_ID,
+#define AMDGPU_TYPE(Name, Id, SingletonId, Width, Align) PREDEF_TYPE_##Id##_ID,
 #include "clang/Basic/AMDGPUTypes.def"
 // \brief HLSL intangible types with auto numeration
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) PREDEF_TYPE_##Id##_ID,

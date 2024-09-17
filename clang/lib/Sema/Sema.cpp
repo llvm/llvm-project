@@ -509,7 +509,7 @@ void Sema::Initialize() {
   if (Context.getTargetInfo().getTriple().isAMDGPU() ||
       (Context.getAuxTargetInfo() &&
        Context.getAuxTargetInfo()->getTriple().isAMDGPU())) {
-#define AMDGPU_TYPE(Name, Id, SingletonId)                                     \
+#define AMDGPU_TYPE(Name, Id, SingletonId, Width, Align)                       \
   addImplicitTypedef(Name, Context.SingletonId);
 #include "clang/Basic/AMDGPUTypes.def"
   }
