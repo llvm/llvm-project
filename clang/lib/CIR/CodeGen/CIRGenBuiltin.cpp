@@ -13,6 +13,7 @@
 
 #include "CIRGenCXXABI.h"
 #include "CIRGenCall.h"
+#include "CIRGenCstEmitter.h"
 #include "CIRGenFunction.h"
 #include "CIRGenModule.h"
 #include "TargetInfo.h"
@@ -821,6 +822,44 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     if (CGM.getCodeGenOpts().OptimizationLevel != 0)
       assert(!MissingFeatures::insertBuiltinUnpredictable());
     return RValue::get(buildScalarExpr(E->getArg(0)));
+  }
+
+  case Builtin::BI__builtin_assume_aligned: {
+    const Expr *ptr = E->getArg(0);
+    mlir::Value ptrValue = buildScalarExpr(ptr);
+    mlir::Value offsetValue =
+        (E->getNumArgs() > 2) ? buildScalarExpr(E->getArg(2)) : nullptr;
+
+    mlir::Attribute alignmentAttr = ConstantEmitter(*this).emitAbstract(
+        E->getArg(1), E->getArg(1)->getType());
+    std::int64_t alignment = cast<mlir::cir::IntAttr>(alignmentAttr).getSInt();
+
+    ptrValue = buildAlignmentAssumption(ptrValue, ptr, ptr->getExprLoc(),
+                                        builder.getI64IntegerAttr(alignment),
+                                        offsetValue);
+    return RValue::get(ptrValue);
+  }
+
+  case Builtin::BI__assume:
+  case Builtin::BI__builtin_assume: {
+    if (E->getArg(0)->HasSideEffects(getContext()))
+      return RValue::get(nullptr);
+
+    mlir::Value argValue = buildScalarExpr(E->getArg(0));
+    builder.create<mlir::cir::AssumeOp>(getLoc(E->getExprLoc()), argValue);
+    return RValue::get(nullptr);
+  }
+
+  case Builtin::BI__builtin_assume_separate_storage: {
+    const Expr *arg0 = E->getArg(0);
+    const Expr *arg1 = E->getArg(1);
+
+    mlir::Value value0 = buildScalarExpr(arg0);
+    mlir::Value value1 = buildScalarExpr(arg1);
+
+    builder.create<mlir::cir::AssumeSepStorageOp>(getLoc(E->getExprLoc()),
+                                                  value0, value1);
+    return RValue::get(nullptr);
   }
 
   case Builtin::BI__builtin_prefetch: {

@@ -1854,3 +1854,22 @@ CIRGenFunction::buildArrayLength(const clang::ArrayType *origArrayType,
 
   return numElements;
 }
+
+mlir::Value CIRGenFunction::buildAlignmentAssumption(
+    mlir::Value ptrValue, QualType ty, SourceLocation loc,
+    SourceLocation assumptionLoc, mlir::IntegerAttr alignment,
+    mlir::Value offsetValue) {
+  if (SanOpts.has(SanitizerKind::Alignment))
+    llvm_unreachable("NYI");
+  return builder.create<mlir::cir::AssumeAlignedOp>(
+      getLoc(assumptionLoc), ptrValue, alignment, offsetValue);
+}
+
+mlir::Value CIRGenFunction::buildAlignmentAssumption(
+    mlir::Value ptrValue, const Expr *expr, SourceLocation assumptionLoc,
+    mlir::IntegerAttr alignment, mlir::Value offsetValue) {
+  QualType ty = expr->getType();
+  SourceLocation loc = expr->getExprLoc();
+  return buildAlignmentAssumption(ptrValue, ty, loc, assumptionLoc, alignment,
+                                  offsetValue);
+}

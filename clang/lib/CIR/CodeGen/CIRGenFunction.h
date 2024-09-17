@@ -969,6 +969,17 @@ public:
                                      ReturnValueSlot ReturnValue,
                                      llvm::Triple::ArchType Arch);
 
+  mlir::Value buildAlignmentAssumption(mlir::Value ptrValue, QualType ty,
+                                       SourceLocation loc,
+                                       SourceLocation assumptionLoc,
+                                       mlir::IntegerAttr alignment,
+                                       mlir::Value offsetValue = nullptr);
+
+  mlir::Value buildAlignmentAssumption(mlir::Value ptrValue, const Expr *expr,
+                                       SourceLocation assumptionLoc,
+                                       mlir::IntegerAttr alignment,
+                                       mlir::Value offsetValue = nullptr);
+
   /// Build a debug stoppoint if we are emitting debug info.
   void buildStopPoint(const Stmt *S);
 
