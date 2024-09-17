@@ -132,6 +132,8 @@ Options
 .. option:: ReportDefaultFunctions
 
     When `true`, the check reports the default set of functions.
+    Copnsider changing the setting to false if you only want to see custom
+    functions matched via :ref:`custom functions<CustomFunctions>`.
     Default is `true`.
 
 .. option:: CustomFunctions

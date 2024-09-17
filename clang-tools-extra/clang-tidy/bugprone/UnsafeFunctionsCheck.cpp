@@ -142,12 +142,11 @@ parseCheckedFunctions(StringRef Option, ClangTidyContext *Context) {
   Result.reserve(Functions.size());
 
   for (StringRef Function : Functions) {
-    if (Function.empty()) {
+    if (Function.empty())
       continue;
-    }
 
-    auto [Name, Rest] = Function.split(',');
-    auto [Replacement, Reason] = Rest.split(',');
+    const auto [Name, Rest] = Function.split(',');
+    const auto [Replacement, Reason] = Rest.split(',');
 
     if (Name.trim().empty()) {
       Context->configurationDiag("invalid configuration value for option '%0'; "
