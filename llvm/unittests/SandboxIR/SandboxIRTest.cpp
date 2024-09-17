@@ -1575,12 +1575,16 @@ bb1:
   for (sandboxir::Instruction &I : BB0) {
     EXPECT_EQ(&I, Ctx.getValue(LLVMI));
     LLVMI = LLVMI->getNextNode();
+    // Check getNodeParent().
+    EXPECT_EQ(I.getIterator().getNodeParent(), &BB0);
   }
   LLVMI = &*LLVMBB1->begin();
   for (sandboxir::Instruction &I : BB1) {
     EXPECT_EQ(&I, Ctx.getValue(LLVMI));
     LLVMI = LLVMI->getNextNode();
   }
+  // Check NodeParent() for BB::end().
+  EXPECT_EQ(BB0.end().getNodeParent(), &BB0);
 
   // Check BB.getTerminator()
   EXPECT_EQ(BB0.getTerminator(), Ctx.getValue(LLVMBB0->getTerminator()));
