@@ -706,6 +706,8 @@ vector must be valid indices of that vector. If this condition cannot be
 determined statically but is false at runtime, then the result vector is
 undefined.
 
+Mixing scalable vectors and fixed vectors are not allowed.
+
 .. code-block:: none
 
   %3:_(<vscale x 4 x i64>) = G_EXTRACT_SUBVECTOR %2:_(<vscale x 8 x i64>), 2
