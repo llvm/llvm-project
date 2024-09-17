@@ -989,6 +989,8 @@ void SystemZInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   unsigned Opcode;
   if (SystemZ::GR64BitRegClass.contains(DestReg, SrcReg))
     Opcode = SystemZ::LGR;
+  else if (SystemZ::FP16BitRegClass.contains(DestReg, SrcReg))
+    Opcode = STI.hasVector() ? SystemZ::LDR16 : SystemZ::LER16;
   else if (SystemZ::FP32BitRegClass.contains(DestReg, SrcReg))
     // For z13 we prefer LDR over LER to avoid partial register dependencies.
     Opcode = STI.hasVector() ? SystemZ::LDR32 : SystemZ::LER;
@@ -1022,7 +1024,30 @@ void SystemZInstrInfo::storeRegToStackSlot(
     bool isKill, int FrameIdx, const TargetRegisterClass *RC,
     const TargetRegisterInfo *TRI, Register VReg,
     MachineInstr::MIFlag Flags) const {
+  MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
   DebugLoc DL = MBBI != MBB.end() ? MBBI->getDebugLoc() : DebugLoc();
+
+  // Without vector support, there are no fp16 load/store instructions, so
+  // need to save/restore via GPR.
+  if (RC == &SystemZ::FP16BitRegClass && !STI.hasVector()) {
+    assert(!MRI.isSSA() && MRI.getNumVirtRegs() &&
+           "Expected non-SSA form with virtual registers.");
+    Register GR64Reg = MRI.createVirtualRegister(&SystemZ::GR64BitRegClass);
+    Register FP64Reg = MRI.createVirtualRegister(&SystemZ::FP64BitRegClass);
+    BuildMI(MBB, MBBI, DL, get(SystemZ::COPY))
+      .addReg(FP64Reg, RegState::DefineNoRead, SystemZ::subreg_h16)
+      .addReg(SrcReg, getKillRegState(isKill));
+    BuildMI(MBB, MBBI, DL, get(SystemZ::LGDR), GR64Reg)
+      .addReg(FP64Reg, RegState::Kill);
+    BuildMI(MBB, MBBI, DL, get(SystemZ::SRLG), GR64Reg)
+      .addReg(GR64Reg)
+      .addReg(0)
+      .addImm(48);
+    addFrameReference(BuildMI(MBB, MBBI, DL, get(SystemZ::STH))
+                        .addReg(GR64Reg, RegState::Kill, SystemZ::subreg_l32),
+                      FrameIdx);
+    return;
+  }
 
   // Callers may expect a single instruction, so keep 128-bit moves
   // together for now and lower them after register allocation.
@@ -1037,7 +1062,30 @@ void SystemZInstrInfo::loadRegFromStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, Register DestReg,
     int FrameIdx, const TargetRegisterClass *RC, const TargetRegisterInfo *TRI,
     Register VReg, MachineInstr::MIFlag Flags) const {
+  MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
   DebugLoc DL = MBBI != MBB.end() ? MBBI->getDebugLoc() : DebugLoc();
+
+  // Without vector support, there are no fp16 load/store instructions, so
+  // need to save/restore via GPR.
+  if (RC == &SystemZ::FP16BitRegClass && !STI.hasVector()) {
+    assert(!MRI.isSSA() && MRI.getNumVirtRegs() &&
+           "Expected non-SSA form with virtual registers.");
+    Register GR64Reg = MRI.createVirtualRegister(&SystemZ::GR64BitRegClass);
+    Register FP64Reg = MRI.createVirtualRegister(&SystemZ::FP64BitRegClass);
+    addFrameReference(BuildMI(MBB, MBBI, DL, get(SystemZ::LH))
+                        .addReg(GR64Reg, RegState::DefineNoRead,
+                                SystemZ::subreg_l32),
+                      FrameIdx);
+    BuildMI(MBB, MBBI, DL, get(SystemZ::SLLG), GR64Reg)
+      .addReg(GR64Reg)
+      .addReg(0)
+      .addImm(48);
+    BuildMI(MBB, MBBI, DL, get(SystemZ::LDGR), FP64Reg)
+      .addReg(GR64Reg, RegState::Kill);
+    BuildMI(MBB, MBBI, DL, get(SystemZ::COPY), DestReg)
+      .addReg(FP64Reg, RegState::Kill, SystemZ::subreg_h16);
+    return;
+  }
 
   // Callers may expect a single instruction, so keep 128-bit moves
   // together for now and lower them after register allocation.
@@ -1909,6 +1957,10 @@ void SystemZInstrInfo::getLoadStoreOpcodes(const TargetRegisterClass *RC,
   } else if (RC == &SystemZ::FP128BitRegClass) {
     LoadOpcode = SystemZ::LX;
     StoreOpcode = SystemZ::STX;
+  } else if (RC == &SystemZ::FP16BitRegClass ||
+             RC == &SystemZ::VR16BitRegClass) {
+    LoadOpcode = SystemZ::VL16;
+    StoreOpcode = SystemZ::VST16;
   } else if (RC == &SystemZ::VR32BitRegClass) {
     LoadOpcode = SystemZ::VL32;
     StoreOpcode = SystemZ::VST32;
