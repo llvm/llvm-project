@@ -24,12 +24,14 @@ namespace llvm::sandboxir {
 /// The region allows us to stack transformations horizontally, meaning that
 /// each transformation operates on a single region and the resulting region is
 /// the input to the next transformation, as opposed to vertically, which is the
-/// common way of applying a transformation across the whole BB. This enables us
-/// to check for profitability and decide whether we accept or rollback at a
-/// region granularity, which is much better than doing this at the BB level.
+/// common way of applying a transformation across the whole function. This
+/// enables us to check for profitability and decide whether we accept or
+/// rollback at a region granularity, which is much better than doing this at
+/// the function level.
 ///
-//  Traditional approach: transformations applied vertically for the whole BB
-//    BB
+//  Traditional approach: transformations applied vertically for the whole
+//  function
+//    F
 //  +----+
 //  |    |
 //  |    |
@@ -39,7 +41,7 @@ namespace llvm::sandboxir {
 //  +----+
 //
 //  Region-based approach: transformations applied horizontally, for each Region
-//    BB
+//    F
 //  +----+
 //  |Rgn1| -> Transform1 ->  ... -> TransformN -> Check Cost
 //  |    |
@@ -58,17 +60,13 @@ class Region {
 
   Context &Ctx;
 
-  /// The basic block containing this region.
-  BasicBlock &BB;
-
   // TODO: Add cost modeling.
   // TODO: Add a way to encode/decode region info to/from metadata.
 
 public:
-  Region(Context &Ctx, BasicBlock &BB);
+  Region(Context &Ctx);
   ~Region();
 
-  BasicBlock *getParent() const { return &BB; }
   Context &getContext() const { return Ctx; }
   /// Returns the region's unique ID.
   unsigned getID() const { return RegionID; }

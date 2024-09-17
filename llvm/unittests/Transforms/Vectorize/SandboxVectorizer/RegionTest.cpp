@@ -43,10 +43,9 @@ define i8 @foo(i8 %v0, i8 %v1) {
   auto *T0 = cast<sandboxir::Instruction>(&*It++);
   auto *T1 = cast<sandboxir::Instruction>(&*It++);
   auto *Ret = cast<sandboxir::Instruction>(&*It++);
-  sandboxir::Region Rgn(Ctx, *BB);
+  sandboxir::Region Rgn(Ctx);
 
   // Check getters
-  EXPECT_EQ(BB, Rgn.getParent());
   EXPECT_EQ(&Ctx, &Rgn.getContext());
   EXPECT_EQ(0U, Rgn.getID());
 
@@ -73,7 +72,7 @@ define i8 @foo(i8 %v0, i8 %v1) {
 #ifndef NDEBUG
   // Check equality comparison. Insert in reverse order into `Other` to check
   // that comparison is order-independent.
-  sandboxir::Region Other(Ctx, *BB);
+  sandboxir::Region Other(Ctx);
   Other.add(Ret);
   EXPECT_NE(Rgn, Other);
   Other.add(T1);

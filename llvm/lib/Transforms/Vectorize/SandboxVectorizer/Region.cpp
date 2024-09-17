@@ -10,7 +10,7 @@
 
 namespace llvm::sandboxir {
 
-Region::Region(Context &Ctx, BasicBlock &BB) : Ctx(Ctx), BB(BB) {
+Region::Region(Context &Ctx) : Ctx(Ctx) {
   static unsigned StaticRegionID;
   RegionID = StaticRegionID++;
 }
