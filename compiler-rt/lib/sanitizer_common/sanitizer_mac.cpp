@@ -575,7 +575,7 @@ uptr TlsSize() {
 void GetThreadStackAndTls(bool main, uptr *stk_begin, uptr *stk_end,
                           uptr *tls_begin, uptr *tls_end) {
 #  if !SANITIZER_GO
-  GetThreadStackTopAndBottom(main, stk_begin, stk_end);
+  GetThreadStackTopAndBottom(main, stk_end, stk_begin);
   *tls_begin = TlsBaseAddr();
   *tls_end = *tls_begin + TlsSize();
 #  else
