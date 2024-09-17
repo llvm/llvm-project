@@ -151,22 +151,22 @@ stzgm	xzr, [x2]
 # CHECK-NEXT:  2      1     0.50           *            stzg	x2, [sp, #16]
 # CHECK-NEXT:  2      1     0.50           *            stzg	x3, [x1]
 # CHECK-NEXT:  2      1     0.50           *            stzg	sp, [x1]
-# CHECK-NEXT:  4      1     0.50           *      U     stg	x0, [x1, #-4096]!
-# CHECK-NEXT:  4      1     0.50           *      U     stg	x1, [x2, #4080]!
-# CHECK-NEXT:  4      1     0.50           *      U     stg	x2, [sp, #16]!
-# CHECK-NEXT:  4      1     0.50           *      U     stg	sp, [sp, #16]!
-# CHECK-NEXT:  4      1     0.50           *      U     stzg	x0, [x1, #-4096]!
-# CHECK-NEXT:  4      1     0.50           *      U     stzg	x1, [x2, #4080]!
-# CHECK-NEXT:  4      1     0.50           *      U     stzg	x2, [sp, #16]!
-# CHECK-NEXT:  4      1     0.50           *      U     stzg	sp, [sp, #16]!
-# CHECK-NEXT:  4      1     0.50           *      U     stg	x0, [x1], #-4096
-# CHECK-NEXT:  4      1     0.50           *      U     stg	x1, [x2], #4080
-# CHECK-NEXT:  4      1     0.50           *      U     stg	x2, [sp], #16
-# CHECK-NEXT:  4      1     0.50           *      U     stg	sp, [sp], #16
-# CHECK-NEXT:  4      1     0.50           *      U     stzg	x0, [x1], #-4096
-# CHECK-NEXT:  4      1     0.50           *      U     stzg	x1, [x2], #4080
-# CHECK-NEXT:  4      1     0.50           *      U     stzg	x2, [sp], #16
-# CHECK-NEXT:  4      1     0.50           *      U     stzg	sp, [sp], #16
+# CHECK-NEXT:  3      1     0.50           *      U     stg	x0, [x1, #-4096]!
+# CHECK-NEXT:  3      1     0.50           *      U     stg	x1, [x2, #4080]!
+# CHECK-NEXT:  3      1     0.50           *      U     stg	x2, [sp, #16]!
+# CHECK-NEXT:  3      1     0.50           *      U     stg	sp, [sp, #16]!
+# CHECK-NEXT:  3      1     0.50           *      U     stzg	x0, [x1, #-4096]!
+# CHECK-NEXT:  3      1     0.50           *      U     stzg	x1, [x2, #4080]!
+# CHECK-NEXT:  3      1     0.50           *      U     stzg	x2, [sp, #16]!
+# CHECK-NEXT:  3      1     0.50           *      U     stzg	sp, [sp, #16]!
+# CHECK-NEXT:  3      1     0.50           *      U     stg	x0, [x1], #-4096
+# CHECK-NEXT:  3      1     0.50           *      U     stg	x1, [x2], #4080
+# CHECK-NEXT:  3      1     0.50           *      U     stg	x2, [sp], #16
+# CHECK-NEXT:  3      1     0.50           *      U     stg	sp, [sp], #16
+# CHECK-NEXT:  3      1     0.50           *      U     stzg	x0, [x1], #-4096
+# CHECK-NEXT:  3      1     0.50           *      U     stzg	x1, [x2], #4080
+# CHECK-NEXT:  3      1     0.50           *      U     stzg	x2, [sp], #16
+# CHECK-NEXT:  3      1     0.50           *      U     stzg	sp, [sp], #16
 # CHECK-NEXT:  2      1     0.50           *            st2g	x0, [x1, #-4096]
 # CHECK-NEXT:  2      1     0.50           *            st2g	x1, [x2, #4080]
 # CHECK-NEXT:  2      1     0.50           *            st2g	x2, [sp, #16]
@@ -177,38 +177,38 @@ stzgm	xzr, [x2]
 # CHECK-NEXT:  2      1     0.50           *            stz2g	x2, [sp, #16]
 # CHECK-NEXT:  2      1     0.50           *            stz2g	x3, [x1]
 # CHECK-NEXT:  2      1     0.50           *            stz2g	sp, [x1]
-# CHECK-NEXT:  4      1     0.50           *      U     st2g	x0, [x1, #-4096]!
-# CHECK-NEXT:  4      1     0.50           *      U     st2g	x1, [x2, #4080]!
-# CHECK-NEXT:  4      1     0.50           *      U     st2g	x2, [sp, #16]!
-# CHECK-NEXT:  4      1     0.50           *      U     st2g	sp, [sp, #16]!
-# CHECK-NEXT:  4      1     0.50           *      U     stz2g	x0, [x1, #-4096]!
-# CHECK-NEXT:  4      1     0.50           *      U     stz2g	x1, [x2, #4080]!
-# CHECK-NEXT:  4      1     0.50           *      U     stz2g	x2, [sp, #16]!
-# CHECK-NEXT:  4      1     0.50           *      U     stz2g	sp, [sp, #16]!
-# CHECK-NEXT:  4      1     0.50           *      U     st2g	x0, [x1], #-4096
-# CHECK-NEXT:  4      1     0.50           *      U     st2g	x1, [x2], #4080
-# CHECK-NEXT:  4      1     0.50           *      U     st2g	x2, [sp], #16
-# CHECK-NEXT:  4      1     0.50           *      U     st2g	sp, [sp], #16
-# CHECK-NEXT:  4      1     0.50           *      U     stz2g	x0, [x1], #-4096
-# CHECK-NEXT:  4      1     0.50           *      U     stz2g	x1, [x2], #4080
-# CHECK-NEXT:  4      1     0.50           *      U     stz2g	x2, [sp], #16
-# CHECK-NEXT:  4      1     0.50           *      U     stz2g	sp, [sp], #16
+# CHECK-NEXT:  3      1     0.50           *      U     st2g	x0, [x1, #-4096]!
+# CHECK-NEXT:  3      1     0.50           *      U     st2g	x1, [x2, #4080]!
+# CHECK-NEXT:  3      1     0.50           *      U     st2g	x2, [sp, #16]!
+# CHECK-NEXT:  3      1     0.50           *      U     st2g	sp, [sp, #16]!
+# CHECK-NEXT:  3      1     0.50           *      U     stz2g	x0, [x1, #-4096]!
+# CHECK-NEXT:  3      1     0.50           *      U     stz2g	x1, [x2, #4080]!
+# CHECK-NEXT:  3      1     0.50           *      U     stz2g	x2, [sp, #16]!
+# CHECK-NEXT:  3      1     0.50           *      U     stz2g	sp, [sp, #16]!
+# CHECK-NEXT:  3      1     0.50           *      U     st2g	x0, [x1], #-4096
+# CHECK-NEXT:  3      1     0.50           *      U     st2g	x1, [x2], #4080
+# CHECK-NEXT:  3      1     0.50           *      U     st2g	x2, [sp], #16
+# CHECK-NEXT:  3      1     0.50           *      U     st2g	sp, [sp], #16
+# CHECK-NEXT:  3      1     0.50           *      U     stz2g	x0, [x1], #-4096
+# CHECK-NEXT:  3      1     0.50           *      U     stz2g	x1, [x2], #4080
+# CHECK-NEXT:  3      1     0.50           *      U     stz2g	x2, [sp], #16
+# CHECK-NEXT:  3      1     0.50           *      U     stz2g	sp, [sp], #16
 # CHECK-NEXT:  2      1     0.50           *            stgp	x0, x1, [x2, #-1024]
 # CHECK-NEXT:  2      1     0.50           *            stgp	x0, x1, [x2, #1008]
 # CHECK-NEXT:  2      1     0.50           *            stgp	x0, x1, [sp, #16]
 # CHECK-NEXT:  2      1     0.50           *            stgp	xzr, x1, [x2, #16]
 # CHECK-NEXT:  2      1     0.50           *            stgp	x0, xzr, [x2, #16]
 # CHECK-NEXT:  2      1     0.50           *            stgp	x0, xzr, [x2]
-# CHECK-NEXT:  4      1     0.50           *            stgp	x0, x1, [x2, #-1024]!
-# CHECK-NEXT:  4      1     0.50           *            stgp	x0, x1, [x2, #1008]!
-# CHECK-NEXT:  4      1     0.50           *            stgp	x0, x1, [sp, #16]!
-# CHECK-NEXT:  4      1     0.50           *            stgp	xzr, x1, [x2, #16]!
-# CHECK-NEXT:  4      1     0.50           *            stgp	x0, xzr, [x2, #16]!
-# CHECK-NEXT:  4      1     0.50           *            stgp	x0, x1, [x2], #-1024
-# CHECK-NEXT:  4      1     0.50           *            stgp	x0, x1, [x2], #1008
-# CHECK-NEXT:  4      1     0.50           *            stgp	x0, x1, [sp], #16
-# CHECK-NEXT:  4      1     0.50           *            stgp	xzr, x1, [x2], #16
-# CHECK-NEXT:  4      1     0.50           *            stgp	x0, xzr, [x2], #16
+# CHECK-NEXT:  3      1     0.50           *            stgp	x0, x1, [x2, #-1024]!
+# CHECK-NEXT:  3      1     0.50           *            stgp	x0, x1, [x2, #1008]!
+# CHECK-NEXT:  3      1     0.50           *            stgp	x0, x1, [sp, #16]!
+# CHECK-NEXT:  3      1     0.50           *            stgp	xzr, x1, [x2, #16]!
+# CHECK-NEXT:  3      1     0.50           *            stgp	x0, xzr, [x2, #16]!
+# CHECK-NEXT:  3      1     0.50           *            stgp	x0, x1, [x2], #-1024
+# CHECK-NEXT:  3      1     0.50           *            stgp	x0, x1, [x2], #1008
+# CHECK-NEXT:  3      1     0.50           *            stgp	x0, x1, [sp], #16
+# CHECK-NEXT:  3      1     0.50           *            stgp	xzr, x1, [x2], #16
+# CHECK-NEXT:  3      1     0.50           *            stgp	x0, xzr, [x2], #16
 # CHECK-NEXT:  2      5     0.33    *                   ldg	x0, [x1]
 # CHECK-NEXT:  2      5     0.33    *                   ldg	x2, [sp, #-4096]
 # CHECK-NEXT:  2      5     0.33    *                   ldg	x3, [x4, #4080]
@@ -239,7 +239,7 @@ stzgm	xzr, [x2]
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2]    [3.0]  [3.1]  [4]    [5]    [6.0]  [6.1]  [7]    [8]
-# CHECK-NEXT:  -      -     37.00  37.00  2.00   39.00  39.00  31.75  26.75  26.75  26.75   -      -
+# CHECK-NEXT:  -      -     37.00  37.00  2.00   39.00  39.00  21.25  16.25  16.25  16.25   -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2]    [3.0]  [3.1]  [4]    [5]    [6.0]  [6.1]  [7]    [8]    Instructions:
@@ -278,22 +278,22 @@ stzgm	xzr, [x2]
 # CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50    -      -      -      -      -      -     stzg	x2, [sp, #16]
 # CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50    -      -      -      -      -      -     stzg	x3, [x1]
 # CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50    -      -      -      -      -      -     stzg	sp, [x1]
-# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.50   0.50   0.50   0.50    -      -     stg	x0, [x1, #-4096]!
-# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.50   0.50   0.50   0.50    -      -     stg	x1, [x2, #4080]!
-# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.50   0.50   0.50   0.50    -      -     stg	x2, [sp, #16]!
-# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.50   0.50   0.50   0.50    -      -     stg	sp, [sp, #16]!
-# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.50   0.50   0.50   0.50    -      -     stzg	x0, [x1, #-4096]!
-# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.50   0.50   0.50   0.50    -      -     stzg	x1, [x2, #4080]!
-# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.50   0.50   0.50   0.50    -      -     stzg	x2, [sp, #16]!
-# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.50   0.50   0.50   0.50    -      -     stzg	sp, [sp, #16]!
-# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.50   0.50   0.50   0.50    -      -     stg	x0, [x1], #-4096
-# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.50   0.50   0.50   0.50    -      -     stg	x1, [x2], #4080
-# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.50   0.50   0.50   0.50    -      -     stg	x2, [sp], #16
-# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.50   0.50   0.50   0.50    -      -     stg	sp, [sp], #16
-# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.50   0.50   0.50   0.50    -      -     stzg	x0, [x1], #-4096
-# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.50   0.50   0.50   0.50    -      -     stzg	x1, [x2], #4080
-# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.50   0.50   0.50   0.50    -      -     stzg	x2, [sp], #16
-# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.50   0.50   0.50   0.50    -      -     stzg	sp, [sp], #16
+# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.25   0.25   0.25   0.25    -      -     stg	x0, [x1, #-4096]!
+# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.25   0.25   0.25   0.25    -      -     stg	x1, [x2, #4080]!
+# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.25   0.25   0.25   0.25    -      -     stg	x2, [sp, #16]!
+# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.25   0.25   0.25   0.25    -      -     stg	sp, [sp, #16]!
+# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.25   0.25   0.25   0.25    -      -     stzg	x0, [x1, #-4096]!
+# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.25   0.25   0.25   0.25    -      -     stzg	x1, [x2, #4080]!
+# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.25   0.25   0.25   0.25    -      -     stzg	x2, [sp, #16]!
+# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.25   0.25   0.25   0.25    -      -     stzg	sp, [sp, #16]!
+# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.25   0.25   0.25   0.25    -      -     stg	x0, [x1], #-4096
+# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.25   0.25   0.25   0.25    -      -     stg	x1, [x2], #4080
+# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.25   0.25   0.25   0.25    -      -     stg	x2, [sp], #16
+# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.25   0.25   0.25   0.25    -      -     stg	sp, [sp], #16
+# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.25   0.25   0.25   0.25    -      -     stzg	x0, [x1], #-4096
+# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.25   0.25   0.25   0.25    -      -     stzg	x1, [x2], #4080
+# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.25   0.25   0.25   0.25    -      -     stzg	x2, [sp], #16
+# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.25   0.25   0.25   0.25    -      -     stzg	sp, [sp], #16
 # CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50    -      -      -      -      -      -     st2g	x0, [x1, #-4096]
 # CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50    -      -      -      -      -      -     st2g	x1, [x2, #4080]
 # CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50    -      -      -      -      -      -     st2g	x2, [sp, #16]
@@ -304,38 +304,38 @@ stzgm	xzr, [x2]
 # CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50    -      -      -      -      -      -     stz2g	x2, [sp, #16]
 # CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50    -      -      -      -      -      -     stz2g	x3, [x1]
 # CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50    -      -      -      -      -      -     stz2g	sp, [x1]
-# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.50   0.50   0.50   0.50    -      -     st2g	x0, [x1, #-4096]!
-# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.50   0.50   0.50   0.50    -      -     st2g	x1, [x2, #4080]!
-# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.50   0.50   0.50   0.50    -      -     st2g	x2, [sp, #16]!
-# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.50   0.50   0.50   0.50    -      -     st2g	sp, [sp, #16]!
-# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.50   0.50   0.50   0.50    -      -     stz2g	x0, [x1, #-4096]!
-# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.50   0.50   0.50   0.50    -      -     stz2g	x1, [x2, #4080]!
-# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.50   0.50   0.50   0.50    -      -     stz2g	x2, [sp, #16]!
-# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.50   0.50   0.50   0.50    -      -     stz2g	sp, [sp, #16]!
-# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.50   0.50   0.50   0.50    -      -     st2g	x0, [x1], #-4096
-# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.50   0.50   0.50   0.50    -      -     st2g	x1, [x2], #4080
-# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.50   0.50   0.50   0.50    -      -     st2g	x2, [sp], #16
-# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.50   0.50   0.50   0.50    -      -     st2g	sp, [sp], #16
-# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.50   0.50   0.50   0.50    -      -     stz2g	x0, [x1], #-4096
-# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.50   0.50   0.50   0.50    -      -     stz2g	x1, [x2], #4080
-# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.50   0.50   0.50   0.50    -      -     stz2g	x2, [sp], #16
-# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.50   0.50   0.50   0.50    -      -     stz2g	sp, [sp], #16
+# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.25   0.25   0.25   0.25    -      -     st2g	x0, [x1, #-4096]!
+# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.25   0.25   0.25   0.25    -      -     st2g	x1, [x2, #4080]!
+# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.25   0.25   0.25   0.25    -      -     st2g	x2, [sp, #16]!
+# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.25   0.25   0.25   0.25    -      -     st2g	sp, [sp, #16]!
+# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.25   0.25   0.25   0.25    -      -     stz2g	x0, [x1, #-4096]!
+# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.25   0.25   0.25   0.25    -      -     stz2g	x1, [x2, #4080]!
+# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.25   0.25   0.25   0.25    -      -     stz2g	x2, [sp, #16]!
+# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.25   0.25   0.25   0.25    -      -     stz2g	sp, [sp, #16]!
+# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.25   0.25   0.25   0.25    -      -     st2g	x0, [x1], #-4096
+# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.25   0.25   0.25   0.25    -      -     st2g	x1, [x2], #4080
+# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.25   0.25   0.25   0.25    -      -     st2g	x2, [sp], #16
+# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.25   0.25   0.25   0.25    -      -     st2g	sp, [sp], #16
+# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.25   0.25   0.25   0.25    -      -     stz2g	x0, [x1], #-4096
+# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.25   0.25   0.25   0.25    -      -     stz2g	x1, [x2], #4080
+# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.25   0.25   0.25   0.25    -      -     stz2g	x2, [sp], #16
+# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.25   0.25   0.25   0.25    -      -     stz2g	sp, [sp], #16
 # CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50    -      -      -      -      -      -     stgp	x0, x1, [x2, #-1024]
 # CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50    -      -      -      -      -      -     stgp	x0, x1, [x2, #1008]
 # CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50    -      -      -      -      -      -     stgp	x0, x1, [sp, #16]
 # CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50    -      -      -      -      -      -     stgp	xzr, x1, [x2, #16]
 # CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50    -      -      -      -      -      -     stgp	x0, xzr, [x2, #16]
 # CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50    -      -      -      -      -      -     stgp	x0, xzr, [x2]
-# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.50   0.50   0.50   0.50    -      -     stgp	x0, x1, [x2, #-1024]!
-# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.50   0.50   0.50   0.50    -      -     stgp	x0, x1, [x2, #1008]!
-# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.50   0.50   0.50   0.50    -      -     stgp	x0, x1, [sp, #16]!
-# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.50   0.50   0.50   0.50    -      -     stgp	xzr, x1, [x2, #16]!
-# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.50   0.50   0.50   0.50    -      -     stgp	x0, xzr, [x2, #16]!
-# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.50   0.50   0.50   0.50    -      -     stgp	x0, x1, [x2], #-1024
-# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.50   0.50   0.50   0.50    -      -     stgp	x0, x1, [x2], #1008
-# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.50   0.50   0.50   0.50    -      -     stgp	x0, x1, [sp], #16
-# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.50   0.50   0.50   0.50    -      -     stgp	xzr, x1, [x2], #16
-# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.50   0.50   0.50   0.50    -      -     stgp	x0, xzr, [x2], #16
+# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.25   0.25   0.25   0.25    -      -     stgp	x0, x1, [x2, #-1024]!
+# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.25   0.25   0.25   0.25    -      -     stgp	x0, x1, [x2, #1008]!
+# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.25   0.25   0.25   0.25    -      -     stgp	x0, x1, [sp, #16]!
+# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.25   0.25   0.25   0.25    -      -     stgp	xzr, x1, [x2, #16]!
+# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.25   0.25   0.25   0.25    -      -     stgp	x0, xzr, [x2, #16]!
+# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.25   0.25   0.25   0.25    -      -     stgp	x0, x1, [x2], #-1024
+# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.25   0.25   0.25   0.25    -      -     stgp	x0, x1, [x2], #1008
+# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.25   0.25   0.25   0.25    -      -     stgp	x0, x1, [sp], #16
+# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.25   0.25   0.25   0.25    -      -     stgp	xzr, x1, [x2], #16
+# CHECK-NEXT:  -      -     0.50   0.50    -     0.50   0.50   0.25   0.25   0.25   0.25    -      -     stgp	x0, xzr, [x2], #16
 # CHECK-NEXT:  -      -      -      -     0.33   0.33   0.33   0.25   0.25   0.25   0.25    -      -     ldg	x0, [x1]
 # CHECK-NEXT:  -      -      -      -     0.33   0.33   0.33   0.25   0.25   0.25   0.25    -      -     ldg	x2, [sp, #-4096]
 # CHECK-NEXT:  -      -      -      -     0.33   0.33   0.33   0.25   0.25   0.25   0.25    -      -     ldg	x3, [x4, #4080]

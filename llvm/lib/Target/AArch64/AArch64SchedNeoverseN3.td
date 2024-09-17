@@ -19,7 +19,7 @@ def NeoverseN3Model : SchedMachineModel {
     let CompleteModel         =   1;
 
     list<Predicate> UnsupportedFeatures = !listconcat(SMEUnsupported.F,
-        [HasSVE2p1, HasPAuthLR, HasCPA, HasCSSC]);
+        [HasSVE2p1, HasSVEB16B16, HasPAuthLR, HasCPA, HasCSSC]);
 }
 
 //===----------------------------------------------------------------------===//
@@ -38,16 +38,16 @@ def N3UnitB   : ProcResource<2>;  // Branch 0/1
 def N3UnitS   : ProcResource<2>;  // Integer Single-Cycle 0/1
 def N3UnitM0  : ProcResource<1>;  // Integer Single/Multi-Cycle 0
 def N3UnitM1  : ProcResource<1>;  // Integer Single/Multi-Cycle 1
-def N3UnitV0  : ProcResource<1>;  // FP/ASIMD 0
-def N3UnitV1  : ProcResource<1>;  // FP/ASIMD 1
-def N3UnitD   : ProcResource<2>;  // Integer Store data 0/1
 def N3UnitL01 : ProcResource<2>;  // Load/Store 0/1
 def N3UnitL2  : ProcResource<1>;  // Load 2
+def N3UnitD   : ProcResource<2>;  // Integer Store data 0/1
+def N3UnitV0  : ProcResource<1>;  // FP/ASIMD 0
+def N3UnitV1  : ProcResource<1>;  // FP/ASIMD 1
 
-def N3UnitI : ProcResGroup<[N3UnitS, N3UnitM0, N3UnitM1]>;
+def N3UnitV : ProcResGroup<[N3UnitV0, N3UnitV1]>;
 def N3UnitM : ProcResGroup<[N3UnitM0, N3UnitM1]>;
 def N3UnitL : ProcResGroup<[N3UnitL01, N3UnitL2]>;
-def N3UnitV : ProcResGroup<[N3UnitV0, N3UnitV1]>;
+def N3UnitI : ProcResGroup<[N3UnitS, N3UnitM0, N3UnitM1]>;
 
 //===----------------------------------------------------------------------===//
 
@@ -112,12 +112,12 @@ def N3Write_2c_1V1  : SchedWriteRes<[N3UnitV1]>  { let Latency = 2; }
 def N3Write_5c_1V   : SchedWriteRes<[N3UnitV]>   { let Latency = 5; }
 def N3Write_1c_1L01 : SchedWriteRes<[N3UnitL01]> { let Latency = 1; }
 
-def N3Write_12c_1M0 : SchedWriteRes<[N3UnitM0]> {
+def N3Write_12c_1M0_12 : SchedWriteRes<[N3UnitM0]> {
     let Latency = 12;
     let ReleaseAtCycles = [12];
 }
 
-def N3Write_20c_1M0 : SchedWriteRes<[N3UnitM0]> {
+def N3Write_20c_1M0_20 : SchedWriteRes<[N3UnitM0]> {
     let Latency = 20;
     let ReleaseAtCycles = [20];
 }
@@ -142,11 +142,6 @@ def N3Write_5c_1L_1S : SchedWriteRes<[N3UnitL, N3UnitS]> {
 
 def N3Write_4c_2L : SchedWriteRes<[N3UnitL, N3UnitL]> {
     let Latency = 4;
-    let NumMicroOps = 2;
-}
-
-def N3Write_3c_1L01_1V : SchedWriteRes<[N3UnitL01, N3UnitV]> {
-    let Latency = 3;
     let NumMicroOps = 2;
 }
 
@@ -215,11 +210,6 @@ def N3Write_5c_2V0 : SchedWriteRes<[N3UnitV0, N3UnitV0]> {
     let NumMicroOps = 2;
 }
 
-def N3Write_6c_2V0 : SchedWriteRes<[N3UnitV0, N3UnitV0]> {
-    let Latency = 6;
-    let NumMicroOps = 2;
-}
-
 def N3Write_7c_1L_1M : SchedWriteRes<[N3UnitL, N3UnitM]> {
     let Latency = 7;
     let NumMicroOps = 2;
@@ -245,10 +235,33 @@ def N3Write_8c_1M0_1V : SchedWriteRes<[N3UnitM0, N3UnitV]> {
     let NumMicroOps = 2;
 }
 
+def N3Write_5c_1M_1L : SchedWriteRes<[N3UnitM, N3UnitL]> {
+    let Latency = 5;
+    let NumMicroOps = 2;
+}
+
+def N3Write_7c_1V_1V1 : SchedWriteRes<[N3UnitV, N3UnitV1]> {
+    let Latency = 7;
+    let NumMicroOps = 2;
+}
+
+def N3Write_5c_1V_1V1 : SchedWriteRes<[N3UnitV, N3UnitV1]> {
+    let Latency = 5;
+    let NumMicroOps = 2;
+}
+
 //===----------------------------------------------------------------------===//
 // Define generic 3 micro-op types
 
+def N3Write_3c_1L01_1V_1I : SchedWriteRes<[N3UnitL01, N3UnitV, N3UnitI]> {
+    let Latency = 3;
+    let NumMicroOps = 3;
+}
 
+def N3Write_2c_1L01_1V_1I : SchedWriteRes<[N3UnitL01, N3UnitV, N3UnitI]> {
+    let Latency = 2;
+    let NumMicroOps = 3;
+}
 
 def N3Write_6c_3V : SchedWriteRes<[N3UnitV, N3UnitV, N3UnitV]> {
     let Latency = 6;
@@ -270,42 +283,41 @@ def N3Write_8c_2L_1V : SchedWriteRes<[N3UnitL, N3UnitL, N3UnitV]> {
     let NumMicroOps = 3;
 }
 
-
-def N3Write_7c_2V_1V1 : SchedWriteRes<[N3UnitV, N3UnitV, N3UnitV1]> {
+def N3Write_7c_1M_1M0_1V : SchedWriteRes<[N3UnitM, N3UnitM0, N3UnitV]> {
     let Latency = 7;
     let NumMicroOps = 3;
 }
 
-def N3Write_5c_2V_1V1 : SchedWriteRes<[N3UnitV, N3UnitV, N3UnitV1]> {
+def N3Write_5c_1M_1L_1I : SchedWriteRes<[N3UnitM, N3UnitL, N3UnitI]> {
     let Latency = 5;
     let NumMicroOps = 3;
 }
 
-def N3Write_7c_1M_1M0_1V : SchedWriteRes<[N3UnitM, N3UnitM0, N3UnitV]> {
-    let Latency = 7;
+def N3Write_4c_1I_2L : SchedWriteRes<[N3UnitI, N3UnitL, N3UnitL]> {
+    let Latency = 4;
+    let NumMicroOps = 3;
+}
+
+def N3Write_1c_1L01_1D_1I : SchedWriteRes<[N3UnitL01, N3UnitD, N3UnitI]> {
+    let Latency = 1;
+    let NumMicroOps = 3;
+}
+
+def N3Write_2c_1L01_1I_1V : SchedWriteRes<[N3UnitL01, N3UnitI, N3UnitV]> {
+    let Latency = 2;
     let NumMicroOps = 3;
 }
 
 //===----------------------------------------------------------------------===//
 // Define generic 4 micro-op types
 
-def N3Write_5c_1M_1L_2I : SchedWriteRes<[N3UnitM, N3UnitL, N3UnitI, N3UnitI]> {
-    let Latency = 5;
+def N3Write_8c_2V_2V1 : SchedWriteRes<[N3UnitV, N3UnitV, N3UnitV1, N3UnitV1]> {
+    let Latency = 8;
     let NumMicroOps = 4;
 }
 
-def N3Write_4c_2I_2L : SchedWriteRes<[N3UnitI, N3UnitI, N3UnitL, N3UnitL]> {
-    let Latency = 4;
-    let NumMicroOps = 4;
-}
-
-def N3Write_1c_1L01_1D_2I : SchedWriteRes<[N3UnitL01, N3UnitD, N3UnitI, N3UnitI]> {
-    let Latency = 1;
-    let NumMicroOps = 4;
-}
-
-def N3Write_2c_2I_1L01_1V : SchedWriteRes<[N3UnitI, N3UnitI, N3UnitL01, N3UnitV]> {
-    let Latency = 2;
+def N3Write_6c_2I_2L : SchedWriteRes<[N3UnitI, N3UnitI, N3UnitL, N3UnitL]> {
+    let Latency = 6;
     let NumMicroOps = 4;
 }
 
@@ -354,11 +366,6 @@ def N3Write_8c_4V : SchedWriteRes<[N3UnitV, N3UnitV, N3UnitV, N3UnitV]> {
     let NumMicroOps = 4;
 }
 
-def N3Write_2c_1L01_2I_1V : SchedWriteRes<[N3UnitL01, N3UnitI, N3UnitI, N3UnitV]> {
-    let Latency = 2;
-    let NumMicroOps = 4;
-}
-
 //===----------------------------------------------------------------------===//
 // Define generic 6 micro-op types
 
@@ -371,12 +378,6 @@ def N3Write_4c_3V_3L01 : SchedWriteRes<[N3UnitV, N3UnitV, N3UnitV,
 def N3Write_2c_3V_3L01 : SchedWriteRes<[N3UnitV, N3UnitV, N3UnitV,
                                         N3UnitL01, N3UnitL01, N3UnitL01]> {
     let Latency = 2;
-    let NumMicroOps = 6;
-}
-
-def N3Write_8c_4V_2V1 : SchedWriteRes<[N3UnitV, N3UnitV, N3UnitV, N3UnitV,
-                                       N3UnitV1, N3UnitV1]> {
-    let Latency = 8;
     let NumMicroOps = 6;
 }
 
@@ -398,23 +399,23 @@ def N3Write_6c_3L01_3V : SchedWriteRes<[N3UnitL01, N3UnitL01, N3UnitL01,
     let NumMicroOps = 6;
 }
 
+def N3Write_8c_3L_3V : SchedWriteRes<[N3UnitL, N3UnitL, N3UnitL,
+                                      N3UnitV, N3UnitV, N3UnitV]> {
+    let Latency = 8;
+    let NumMicroOps = 6;
+}
+
+def N3Write_10c_3L_3V : SchedWriteRes<[N3UnitL, N3UnitL, N3UnitL,
+                                       N3UnitV, N3UnitV, N3UnitV]> {
+    let Latency = 10;
+    let NumMicroOps = 6;
+}
+
 //===----------------------------------------------------------------------===//
 // Define generic 7 micro-op types
 
 def N3Write_8c_4L_3V : SchedWriteRes<[N3UnitL, N3UnitL, N3UnitL, N3UnitL,
                                       N3UnitV, N3UnitV, N3UnitV]> {
-    let Latency = 8;
-    let NumMicroOps = 7;
-}
-
-def N3Write_10c_4L_3V : SchedWriteRes<[N3UnitL, N3UnitL, N3UnitL, N3UnitL,
-                                       N3UnitV, N3UnitV, N3UnitV]> {
-    let Latency = 10;
-    let NumMicroOps = 7;
-}
-
-def N3Write_8c_3V_4L : SchedWriteRes<[N3UnitV, N3UnitV, N3UnitV,
-                                      N3UnitL, N3UnitL, N3UnitL, N3UnitL]> {
     let Latency = 8;
     let NumMicroOps = 7;
 }
@@ -452,77 +453,92 @@ def N3Write_3c_4L01_4V : SchedWriteRes<[N3UnitL01, N3UnitL01, N3UnitL01, N3UnitL
     let NumMicroOps = 8;
 }
 
-//===----------------------------------------------------------------------===//
-// Define generic 10 micro-op types
-
-def N3Write_8c_6L_4V : SchedWriteRes<[N3UnitL, N3UnitL, N3UnitL,
-                                      N3UnitL, N3UnitL, N3UnitL,
+def N3Write_8c_4L_4V : SchedWriteRes<[N3UnitL, N3UnitL, N3UnitL, N3UnitL,
                                       N3UnitV, N3UnitV, N3UnitV, N3UnitV]> {
     let Latency = 8;
-    let NumMicroOps = 10;
+    let NumMicroOps = 8;
 }
 
-def N3Write_8c_4V_6L : SchedWriteRes<[N3UnitV, N3UnitV, N3UnitV, N3UnitV,
-                                      N3UnitL, N3UnitL, N3UnitL,
-                                      N3UnitL, N3UnitL, N3UnitL]> {
-    let Latency = 8;
-    let NumMicroOps = 10;
+//===----------------------------------------------------------------------===//
+// Define generic 9 micro-op types
+
+def N3Write_10c_6V_3L : SchedWriteRes<[N3UnitV, N3UnitV, N3UnitV,
+                                       N3UnitV, N3UnitV, N3UnitV,
+                                       N3UnitL, N3UnitL, N3UnitL]> {
+    let Latency = 10;
+    let NumMicroOps = 9;
+}
+
+def N3Write_4c_3L01_3I_3V : SchedWriteRes<[N3UnitL01, N3UnitL01, N3UnitL01,
+                                           N3UnitI, N3UnitI, N3UnitI,
+                                           N3UnitV, N3UnitV, N3UnitV]> {
+    let Latency = 4;
+    let NumMicroOps = 9;
+}
+
+def N3Write_3c_3L01_3I_3V : SchedWriteRes<[N3UnitL01, N3UnitL01, N3UnitL01,
+                                           N3UnitI, N3UnitI, N3UnitI,
+                                           N3UnitV, N3UnitV, N3UnitV]> {
+    let Latency = 3;
+    let NumMicroOps = 9;
+}
+
+def N3Write_6c_3L01_3I_3V : SchedWriteRes<[N3UnitL01, N3UnitL01, N3UnitL01,
+                                           N3UnitI, N3UnitI, N3UnitI,
+                                           N3UnitV, N3UnitV, N3UnitV]> {
+    let Latency = 6;
+    let NumMicroOps = 9;
+}
+
+def N3Write_12c_5V_4L : SchedWriteRes<[N3UnitV, N3UnitV, N3UnitV, N3UnitV, N3UnitV,
+                                       N3UnitL, N3UnitL, N3UnitL, N3UnitL]> {
+    let Latency = 12;
+    let NumMicroOps = 9;
+}
+
+def N3Write_9c_3V_3L_3I : SchedWriteRes<[N3UnitV, N3UnitV, N3UnitV,
+                                         N3UnitL, N3UnitL, N3UnitL,
+                                         N3UnitI, N3UnitI, N3UnitI]> {
+    let Latency = 9;
+    let NumMicroOps = 9;
 }
 
 //===----------------------------------------------------------------------===//
 // Define generic 12 micro-op types
 
-def N3Write_12c_5V_7L : SchedWriteRes<[N3UnitV, N3UnitV, N3UnitV, N3UnitV, N3UnitV,
-                                       N3UnitL, N3UnitL, N3UnitL, N3UnitL,
-                                       N3UnitL, N3UnitL, N3UnitL]> {
-    let Latency = 12;
-    let NumMicroOps = 12;
-}
-
-def N3Write_4c_3L01_6I_3V : SchedWriteRes<[N3UnitL01, N3UnitL01, N3UnitL01,
-                                           N3UnitI, N3UnitI, N3UnitI,
-                                           N3UnitI, N3UnitI, N3UnitI,
-                                           N3UnitV, N3UnitV, N3UnitV]> {
-    let Latency = 4;
-    let NumMicroOps = 12;
-}
-
-def N3Write_3c_3L01_6I_3V : SchedWriteRes<[N3UnitL01, N3UnitL01, N3UnitL01,
-                                           N3UnitI, N3UnitI, N3UnitI,
-                                           N3UnitI, N3UnitI, N3UnitI,
-                                           N3UnitV, N3UnitV, N3UnitV]> {
+def N3Write_3c_4L01_4I_4V : SchedWriteRes<[N3UnitL01, N3UnitL01, N3UnitL01, N3UnitL01,
+                                           N3UnitI, N3UnitI, N3UnitI, N3UnitI,
+                                           N3UnitV, N3UnitV, N3UnitV, N3UnitV]> {
     let Latency = 3;
     let NumMicroOps = 12;
 }
 
-def N3Write_6c_3L01_6I_3V : SchedWriteRes<[N3UnitL01, N3UnitL01, N3UnitL01,
-                                           N3UnitI, N3UnitI, N3UnitI,
-                                           N3UnitI, N3UnitI, N3UnitI,
-                                           N3UnitV, N3UnitV, N3UnitV]> {
-    let Latency = 6;
+def N3Write_9c_4L_4V_4I : SchedWriteRes<[N3UnitL, N3UnitL, N3UnitL, N3UnitL,
+                                         N3UnitV, N3UnitV, N3UnitV, N3UnitV,
+                                         N3UnitI, N3UnitI, N3UnitI, N3UnitI]> {
+    let Latency = 9;
     let NumMicroOps = 12;
 }
 
 //===----------------------------------------------------------------------===//
-// Define generic 13 micro-op types
+// Define generic 14 micro-op types
 
-def N3Write_9c_3V_4L_6I : SchedWriteRes<[N3UnitV, N3UnitV, N3UnitV,
-                                         N3UnitL, N3UnitL, N3UnitL, N3UnitL,
-                                         N3UnitI, N3UnitI, N3UnitI,
-                                         N3UnitI, N3UnitI, N3UnitI]> {
-    let Latency = 9;
-    let NumMicroOps = 13;
+def N3Write_13c_4L_5V_5I : SchedWriteRes<[N3UnitL, N3UnitL, N3UnitL, N3UnitL,
+                                          N3UnitV, N3UnitV, N3UnitV, N3UnitV, N3UnitV,
+                                          N3UnitI, N3UnitI, N3UnitI, N3UnitI, N3UnitI]> {
+    let Latency = 13;
+    let NumMicroOps = 14;
 }
 
 //===----------------------------------------------------------------------===//
 // Define generic 15 micro-op types
 
-def N3Write_10c_6V_9L : SchedWriteRes<[N3UnitV, N3UnitV, N3UnitV,
-                                       N3UnitV, N3UnitV, N3UnitV,
-                                       N3UnitL, N3UnitL, N3UnitL,
-                                       N3UnitL, N3UnitL, N3UnitL,
-                                       N3UnitL, N3UnitL, N3UnitL]> {
-    let Latency = 10;
+def N3Write_11c_6V_3L_6I : SchedWriteRes<[N3UnitV, N3UnitV, N3UnitV,
+                                          N3UnitV, N3UnitV, N3UnitV,
+                                          N3UnitL, N3UnitL, N3UnitL,
+                                          N3UnitI, N3UnitI, N3UnitI,
+                                          N3UnitI, N3UnitI, N3UnitI]> {
+    let Latency = 11;
     let NumMicroOps = 15;
 }
 
@@ -535,56 +551,6 @@ def N3Write_16c_16V0 : SchedWriteRes<[N3UnitV0, N3UnitV0, N3UnitV0, N3UnitV0,
                                       N3UnitV0, N3UnitV0, N3UnitV0, N3UnitV0]> {
     let Latency = 16;
     let NumMicroOps = 16;
-}
-
-def N3Write_3c_4L01_8I_4V : SchedWriteRes<[N3UnitL01, N3UnitL01, N3UnitL01, N3UnitL01,
-                                           N3UnitI, N3UnitI, N3UnitI, N3UnitI,
-                                           N3UnitI, N3UnitI, N3UnitI, N3UnitI,
-                                           N3UnitV, N3UnitV, N3UnitV, N3UnitV]> {
-    let Latency = 3;
-    let NumMicroOps = 16;
-}
-
-//===----------------------------------------------------------------------===//
-// Define generic 18 micro-op types
-
-def N3Write_9c_6L_4V_8I : SchedWriteRes<[N3UnitL, N3UnitL, N3UnitL,
-                                         N3UnitL, N3UnitL, N3UnitL,
-                                         N3UnitV, N3UnitV, N3UnitV, N3UnitV,
-                                         N3UnitI, N3UnitI, N3UnitI, N3UnitI,
-                                         N3UnitI, N3UnitI, N3UnitI, N3UnitI]> {
-    let Latency = 9;
-    let NumMicroOps = 18;
-}
-
-//===----------------------------------------------------------------------===//
-// Define generic 22 micro-op types
-
-def N3Write_13c_7L_5V_10I : SchedWriteRes<[N3UnitL, N3UnitL, N3UnitL, N3UnitL,
-                                           N3UnitL, N3UnitL, N3UnitL,
-                                           N3UnitV, N3UnitV, N3UnitV,
-                                           N3UnitV, N3UnitV,
-                                           N3UnitI, N3UnitI, N3UnitI, N3UnitI,
-                                           N3UnitI, N3UnitI, N3UnitI, N3UnitI,
-                                           N3UnitI, N3UnitI]> {
-    let Latency = 13;
-    let NumMicroOps = 22;
-}
-
-//===----------------------------------------------------------------------===//
-// Define generic 27 micro-op types
-
-def N3Write_11c_6V_9L_12I : SchedWriteRes<[N3UnitV, N3UnitV, N3UnitV,
-                                           N3UnitV, N3UnitV, N3UnitV,
-                                           N3UnitL, N3UnitL, N3UnitL,
-                                           N3UnitL, N3UnitL, N3UnitL,
-                                           N3UnitL, N3UnitL, N3UnitL,
-                                           N3UnitI, N3UnitI, N3UnitI,
-                                           N3UnitI, N3UnitI, N3UnitI,
-                                           N3UnitI, N3UnitI, N3UnitI,
-                                           N3UnitI, N3UnitI, N3UnitI]> {
-    let Latency = 11;
-    let NumMicroOps = 27;
 }
 
 // Miscellaneous
@@ -656,10 +622,10 @@ def : InstRW<[N3Write_2c_1M], (instregex "^(AND|BIC)S[WX]rs$")>;
 // subsequent divide operations until complete.
 
 // Divide, W-form
-def : SchedAlias<WriteID32, N3Write_12c_1M0>;
+def : SchedAlias<WriteID32, N3Write_12c_1M0_12>;
 
 // Divide, X-form
-def : SchedAlias<WriteID64, N3Write_20c_1M0>;
+def : SchedAlias<WriteID64, N3Write_20c_1M0_20>;
 
 def N3Wr_IM   : SchedWriteRes<[N3UnitM]>  { let Latency = 2; }
 def N3Wr_IMA  : SchedWriteRes<[N3UnitM0]> { let Latency = 2; }
@@ -714,7 +680,8 @@ def : InstRW<[N3Write_4c_1M], (instrs PACIA, PACIB, PACIA1716, PACIB1716,
                                       PACIZB)>;
 
 // Load register, with pointer authentication
-def : InstRW<[N3Write_5c_1M_1L_2I], (instregex "^LDRA[AB](indexed|writeback)")>;
+def : InstRW<[N3Write_5c_1M_1L], (instregex "^LDRA[AB]indexed")>;
+def : InstRW<[N3Write_5c_1M_1L_1I], (instregex "^LDRA[AB]writeback")>;
 
 // Strip pointer authentication code
 def : InstRW<[N3Write_1c_1M], (instrs XPACD, XPACI, XPACLRI)>;
@@ -771,7 +738,7 @@ def : InstRW<[WriteLD, WriteLDHi], (instrs LDPWi, LDNPWi)>;
 def : InstRW<[N3Write_4c_2L, WriteLDHi], (instrs LDPXi, LDNPXi)>;
 
 // Load pair, signed immed offset, signed words
-def : InstRW<[N3Write_4c_2I_2L, WriteLDHi], (instrs LDPSWi)>;
+def : InstRW<[N3Write_4c_1I_2L, WriteLDHi], (instrs LDPSWi)>;
 
 // Load pair, immed post-index or immed pre-index, normal, W-form
 def : InstRW<[WriteAdr, WriteLD, WriteLDHi], (instrs LDPWpost, LDPWpre)>;
@@ -780,7 +747,7 @@ def : InstRW<[WriteAdr, WriteLD, WriteLDHi], (instrs LDPWpost, LDPWpre)>;
 def : InstRW<[WriteAdr, N3Write_4c_2L, WriteLDHi], (instrs LDPXpost, LDPXpre)>;
 
 // Load pair, immed post-index or immed pre-index, signed words
-def : InstRW<[N3Write_0c, N3Write_4c_2I_2L, WriteLDHi], (instrs LDPSWpost, LDPSWpre)>;
+def : InstRW<[WriteAdr, N3Write_4c_1I_2L, WriteLDHi], (instrs LDPSWpost, LDPSWpre)>;
 
 // Store instructions
 // -----------------------------------------------------------------------------
@@ -788,11 +755,9 @@ def : InstRW<[N3Write_0c, N3Write_4c_2I_2L, WriteLDHi], (instrs LDPSWpost, LDPSW
 // Store register, unscaled immed
 // Store register, immed unprivileged
 // Store register, unsigned immed
-def : SchedAlias<WriteST, N3Write_1c_1L01_1D>;
-
 // Store register, immed post-index
 // Store register, immed pre-index
-def : InstRW<[WriteAdr, WriteST], (instregex "^STR(BB|HH|W|X)(post|pre)$")>;
+def : SchedAlias<WriteST, N3Write_1c_1L01_1D>;
 
 // Store register, register offset, basic
 // Store register, register offset, scaled by 4/8
@@ -803,11 +768,9 @@ def : InstRW<[WriteAdr, WriteST], (instregex "^STR(BB|HH|W|X)(post|pre)$")>;
 def : SchedAlias<WriteSTIdx, N3Write_1c_1L01_1D>;
 
 // Store pair, immed offset
-def : SchedAlias<WriteSTP, N3Write_1c_1L01_1D>;
-
 // Store pair, immed post-index
 // Store pair, immed pre-index
-def : InstRW<[WriteAdr, WriteSTP], (instregex "^STP[WX](post|pre)$")>;
+def : SchedAlias<WriteSTP, N3Write_1c_1L01_1D>;
 
 // Tag Load instructions
 // -----------------------------------------------------------------------------
@@ -824,8 +787,8 @@ def : InstRW<[N3Write_4c_1L], (instrs LDGM)>;
 // Store allocation tags to one or two granules, post-index
 // Store allocation tags to one or two granules, pre-index
 // Store allocation tag to one or two granules, zeroing, post-index
-// Store Allocation Tag to one or two granules, zeroing, pre-index
-def : InstRW<[N3Write_1c_1L01_1D_2I], (instregex "^STZ?2?G(Post|Pre)Index$")>;
+// Store allocation Tag to one or two granules, zeroing, pre-index
+def : InstRW<[N3Write_1c_1L01_1D_1I], (instregex "^STZ?2?G(Post|Pre)Index$")>;
 
 // Store allocation tags to one or two granules, signed offset
 // Store allocation tag to two granules, zeroing, signed offset
@@ -833,16 +796,12 @@ def : InstRW<[N3Write_1c_1L01_1D], (instregex "^STZ?2?Gi$")>;
 
 // Store allocation tag and reg pair to memory, post-Index
 // Store allocation tag and reg pair to memory, pre-Index
-def : InstRW<[N3Write_1c_1L01_1D_2I], (instrs STGPpost, STGPpre)>;
+def : InstRW<[N3Write_1c_1L01_1D_1I], (instrs STGPpost, STGPpre)>;
 
 // Store allocation tag and reg pair to memory, signed offset
-def : InstRW<[N3Write_1c_1L01_1D], (instrs STGPi)>;
-
 // Store multiple allocation tags
-def : InstRW<[N3Write_1c_1L01_1D], (instrs STGM)>;
-
 // Store multiple allocation tags, zeroing
-def : InstRW<[N3Write_1c_1L01_1D], (instrs STZGM)>;
+def : InstRW<[N3Write_1c_1L01_1D], (instrs STGPi, STGM, STZGM)>;
 
 // FP data processing instructions
 // -----------------------------------------------------------------------------
@@ -917,6 +876,7 @@ def : InstRW<[N3Write_6c_1L], (instregex "^LDR[SDQ]l$",
                                          "^LDUR[BHSDQ]i$",
                                          "^LDR[BHSDQ]ui$")>;
 // Load vector reg, immed post-index
+// Load vector reg, immed pre-index
 def : InstRW<[WriteAdr, N3Write_6c_1L], (instregex "^LDR[BHSDQ](post|pre)$")>;
 
 // Load vector reg, register offset, basic
@@ -934,10 +894,10 @@ def : InstRW<[N3Write_6c_1L, WriteLDHi], (instregex "^LDN?P[SD]i$")>;
 def : InstRW<[N3Write_6c_2L, WriteLDHi], (instrs LDPQi, LDNPQi)>;
 
 // Load vector pair, immed post-index, S/D-form
-// Load vector pair, immed post-index, Q-form
 // Load vector pair, immed pre-index, S/D-form
+// Load vector pair, immed post-index, Q-form
 // Load vector pair, immed pre-index, Q-form
-def : InstRW<[WriteAdr, N3Write_6c_2L, WriteLDHi], (instregex "^LDP[SDQ](post|pre)$")>;
+def : InstRW<[WriteAdr, N3Write_6c_2I_2L, WriteLDHi], (instregex "^LDP[SDQ](post|pre)$")>;
 
 // FP store instructions
 // -----------------------------------------------------------------------------
@@ -948,13 +908,13 @@ def : InstRW<[N3Write_2c_1L01_1V], (instregex "^STUR[BHSDQ]i$")>;
 
 // Store vector reg, immed post-index, B/H/S/D-form
 // Store vector reg, immed post-index, Q-form
-def : InstRW<[WriteAdr, N3Write_2c_1L01_1V], (instregex "^STR[BHSDQ]post$")>;
+def : InstRW<[WriteAdr, N3Write_2c_1L01_1V_1I], (instregex "^STR[BHSDQ]post$")>;
 
 // Store vector reg, immed pre-index, B/H/S/D-form
-def : InstRW<[WriteAdr, N3Write_3c_1L01_1V], (instregex "^STR[BHSD]pre$")>;
+def : InstRW<[WriteAdr, N3Write_3c_1L01_1V_1I], (instregex "^STR[BHSD]pre$")>;
 
 // Store vector reg, immed pre-index, Q-form
-def : InstRW<[WriteAdr, N3Write_2c_1L01_1V], (instrs STRQpre)>;
+def : InstRW<[WriteAdr, N3Write_2c_1L01_1V_1I], (instrs STRQpre)>;
 
 // Store vector reg, unsigned immed, B/H/S/D-form
 // Store vector reg, unsigned immed, Q-form
@@ -969,7 +929,7 @@ def : InstRW<[N3Write_2c_1L01_1V], (instregex "^STR[BHSDQ]ui$")>;
 def : InstRW<[N3Write_2c_1L01_1V], (instregex "^STR[BHSD]ro[WX]$")>;
 
 def N3WriteSTRQro : SchedWriteVariant<[
-  SchedVar<ScaledIdxPred, [N3Write_2c_2I_1L01_1V]>,
+  SchedVar<ScaledIdxPred, [N3Write_2c_1L01_1V_1I]>,
   SchedVar<NoSchedPred,   [N3Write_2c_1L01_1V]>]>;
 
 // Store vector reg, register offset, basic, Q-form
@@ -989,7 +949,7 @@ def : InstRW<[N3Write_2c_1L01_1V], (instregex "^STN?P[SDQ]i$")>;
 // Store vector pair, immed pre-index, S-form
 // Store vector pair, immed pre-index, D-form
 // Store vector pair, immed pre-index, Q-form
-def : InstRW<[WriteAdr, N3Write_2c_1L01_1V], (instregex "^STP[SDQ](post|pre)$")>;
+def : InstRW<[WriteAdr, N3Write_2c_1L01_1V_1I], (instregex "^STP[SDQ](post|pre)$")>;
 
 // ASIMD integer instructions
 // -----------------------------------------------------------------------------
@@ -1363,22 +1323,22 @@ def : InstRW<[N3Write_6c_2L], (instregex "LD2Rv(16b|8h|4s|2d)$")>;
 def : InstRW<[WriteAdr, N3Write_6c_2L], (instregex "LD2Rv(16b|8h|4s|2d)_POST$")>;
 
 // ASIMD load, 3 element, multiple, D-form, B/H/S
-def : InstRW<[N3Write_8c_4L_3V], (instregex "LD3Threev(8b|4h|2s)$")>;
-def : InstRW<[WriteAdr, N3Write_8c_4L_3V], (instregex "LD3Threev(8b|4h|2s)_POST$")>;
+def : InstRW<[N3Write_8c_3L_3V], (instregex "LD3Threev(8b|4h|2s)$")>;
+def : InstRW<[WriteAdr, N3Write_8c_3L_3V], (instregex "LD3Threev(8b|4h|2s)_POST$")>;
 
 // ASIMD load, 3 element, multiple, Q-form, B/H/S
-def : InstRW<[N3Write_10c_4L_3V], (instregex "LD3Threev(16b|8h|4s)$")>;
-def : InstRW<[WriteAdr, N3Write_10c_4L_3V], (instregex "LD3Threev(16b|8h|4s)_POST$")>;
+def : InstRW<[N3Write_10c_3L_3V], (instregex "LD3Threev(16b|8h|4s)$")>;
+def : InstRW<[WriteAdr, N3Write_10c_3L_3V], (instregex "LD3Threev(16b|8h|4s)_POST$")>;
 
 // ASIMD load, 3 element, multiple, Q-form, D
-def : InstRW<[N3Write_10c_4L_3V], (instregex "LD3Threev(2d)$")>;
-def : InstRW<[WriteAdr, N3Write_10c_4L_3V], (instregex "LD3Threev(2d)_POST$")>;
+def : InstRW<[N3Write_10c_3L_3V], (instregex "LD3Threev(2d)$")>;
+def : InstRW<[WriteAdr, N3Write_10c_3L_3V], (instregex "LD3Threev(2d)_POST$")>;
 
 // ASIMD load, 3 element, one lane, B/H
 // ASIMD load, 3 element, one lane, S
 // ASIMD load, 3 element, one lane, D
-def : InstRW<[N3Write_8c_4L_3V], (instregex "LD3i(8|16|32|64)$")>;
-def : InstRW<[WriteAdr, N3Write_8c_4L_3V], (instregex "LD3i(8|16|32|64)_POST$")>;
+def : InstRW<[N3Write_8c_3L_3V], (instregex "LD3i(8|16|32|64)$")>;
+def : InstRW<[WriteAdr, N3Write_8c_3L_3V], (instregex "LD3i(8|16|32|64)_POST$")>;
 
 // ASIMD load, 3 element, all lanes, D-form, B/H/S
 // ASIMD load, 3 element, all lanes, D-form, D
@@ -1391,19 +1351,19 @@ def : InstRW<[N3Write_6c_3L], (instregex "LD3Rv(16b|8h|4s|2d)$")>;
 def : InstRW<[WriteAdr, N3Write_6c_3L], (instregex "LD3Rv(16b|8h|4s|2d)_POST$")>;
 
 // ASIMD load, 4 element, multiple, D-form, B/H/S
-def : InstRW<[N3Write_8c_6L_4V], (instregex "LD4Fourv(8b|4h|2s)$")>;
-def : InstRW<[WriteAdr, N3Write_8c_6L_4V], (instregex "LD4Fourv(8b|4h|2s)_POST$")>;
+def : InstRW<[N3Write_8c_4L_4V], (instregex "LD4Fourv(8b|4h|2s)$")>;
+def : InstRW<[WriteAdr, N3Write_8c_4L_4V], (instregex "LD4Fourv(8b|4h|2s)_POST$")>;
 
 // ASIMD load, 4 element, multiple, Q-form, B/H/S
 // ASIMD load, 4 element, multiple, Q-form, D
-def : InstRW<[N3Write_8c_6L_4V], (instregex "LD4Fourv(16b|8h|4s|2d)$")>;
-def : InstRW<[WriteAdr, N3Write_8c_6L_4V], (instregex "LD4Fourv(16b|8h|4s|2d)_POST$")>;
+def : InstRW<[N3Write_8c_4L_4V], (instregex "LD4Fourv(16b|8h|4s|2d)$")>;
+def : InstRW<[WriteAdr, N3Write_8c_4L_4V], (instregex "LD4Fourv(16b|8h|4s|2d)_POST$")>;
 
 // ASIMD load, 4 element, one lane, B/H
 // ASIMD load, 4 element, one lane, S
 // ASIMD load, 4 element, one lane, D
-def : InstRW<[N3Write_8c_6L_4V], (instregex "LD4i(8|16|32|64)$")>;
-def : InstRW<[WriteAdr, N3Write_8c_6L_4V], (instregex "LD4i(8|16|32|64)_POST$")>;
+def : InstRW<[N3Write_8c_4L_4V], (instregex "LD4i(8|16|32|64)$")>;
+def : InstRW<[WriteAdr, N3Write_8c_4L_4V], (instregex "LD4i(8|16|32|64)_POST$")>;
 
 // ASIMD load, 4 element, all lanes, D-form, B/H/S
 // ASIMD load, 4 element, all lanes, Q-form, B/H/S
@@ -1414,8 +1374,8 @@ def : InstRW<[WriteAdr, N3Write_8c_4L_3V], (instregex "LD4Rv(8b|4h|2s)_POST$",
 
 // ASIMD load, 4 element, all lanes, D-form, D
 // ASIMD load, 4 element, all lanes, Q-form, D
-def : InstRW<[N3Write_8c_6L_4V], (instregex "LD4Rv1d$", "LD4Rv2d$")>;
-def : InstRW<[WriteAdr, N3Write_8c_6L_4V], (instregex "LD4Rv1d_POST$", "LD4Rv2d_POST$")>;
+def : InstRW<[N3Write_8c_4L_4V], (instregex "LD4Rv1d$", "LD4Rv2d$")>;
+def : InstRW<[WriteAdr, N3Write_8c_4L_4V], (instregex "LD4Rv1d_POST$", "LD4Rv2d_POST$")>;
 
 // ASIMD store instructions
 // -----------------------------------------------------------------------------
@@ -1461,7 +1421,7 @@ def : InstRW<[WriteAdr, N3Write_2c_1L01_1V], (instregex "ST1i(8|16|32|64)_POST$"
 // ASIMD store, 2 element, multiple, Q-form, B/H/S
 // ASIMD store, 2 element, multiple, Q-form, D
 def : InstRW<[N3Write_2c_1V_1L01], (instregex "ST2Twov(8b|4h|2s)$",
-                                                        "ST2Twov(16b|8h|4s|2d)$")>;
+                                              "ST2Twov(16b|8h|4s|2d)$")>;
 def : InstRW<[WriteAdr, N3Write_2c_1V_1L01], (instregex "ST2Twov(8b|4h|2s)_POST$",
                                                         "ST2Twov(16b|8h|4s|2d)_POST$")>;
 
@@ -1563,7 +1523,6 @@ def : InstRW<[N3Write_2c_1M], (instrs BRKNS_PPzP, BRKPAS_PPzPP, BRKPBS_PPzPP)>;
 // Loop control, based on GPR
 def : InstRW<[N3Write_2c_1M],
              (instregex "^WHILE(GE|GT|HI|HS|LE|LO|LS|LT)_P(WW|XX)_[BHSD]$")>;
-
 def : InstRW<[N3Write_2c_1M], (instregex "^WHILE(RW|WR)_PXX_[BHSD]$")>;
 
 // Loop terminate
@@ -1919,15 +1878,14 @@ def : InstRW<[N3Write_2c_1V0], (instregex "^PMUL_ZZZ_B$",
 def : InstRW<[N3Write_2c_1V],
              (instregex "^(DEC|INC|SQDEC|SQINC|UQDEC|UQINC)[HWD]_ZPiI$")>;
 
-// Reciprocal estimate for B
-// Reciprocal estimate for H
+// Reciprocal estimate
 def : InstRW<[N3Write_4c_1V0], (instregex "^URECPE_ZPmZ_S", "^URSQRTE_ZPmZ_S")>;
 
 // Reduction, arithmetic, B form
-def : InstRW<[N3Write_8c_4V_2V1], (instregex "^[SU](ADD|MAX|MIN)V_VPZ_B")>;
+def : InstRW<[N3Write_8c_2V_2V1], (instregex "^[SU](ADD|MAX|MIN)V_VPZ_B")>;
 
 // Reduction, arithmetic, H form
-def : InstRW<[N3Write_7c_2V_1V1], (instregex "^[SU](ADD|MAX|MIN)V_VPZ_H")>;
+def : InstRW<[N3Write_7c_1V_1V1], (instregex "^[SU](ADD|MAX|MIN)V_VPZ_H")>;
 
 // Reduction, arithmetic, S form
 def : InstRW<[N3Write_4c_1V], (instregex "^[SU](ADD|MAX|MIN)V_VPZ_S")>;
@@ -1936,7 +1894,7 @@ def : InstRW<[N3Write_4c_1V], (instregex "^[SU](ADD|MAX|MIN)V_VPZ_S")>;
 def : InstRW<[N3Write_4c_1V], (instregex "^[SU](ADD|MAX|MIN)V_VPZ_D")>;
 
 // Reduction, logical
-def : InstRW<[N3Write_5c_2V_1V1], (instregex "^(AND|EOR|OR)V_VPZ_[BHSD]$")>;
+def : InstRW<[N3Write_5c_1V_1V1], (instregex "^(AND|EOR|OR)V_VPZ_[BHSD]$")>;
 
 // Reverse, vector
 def : InstRW<[N3Write_2c_1V], (instregex "^REV_ZZ_[BHSD]$",
@@ -2172,8 +2130,8 @@ def : InstRW<[N3Write_7c_4L], (instregex "^LDNT1[BHW]_ZZR_S$",
                                          "^LDNT1S[BH]_ZZR_S$")>;
 
 // Non temporal gather load, vector + scalar 64-bit element size
-def : InstRW<[N3Write_6c_3L], (instregex "^LDNT1S?[BHW]_ZZR_D$")>;
-def : InstRW<[N3Write_6c_3L], (instrs LDNT1D_ZZR_D)>;
+def : InstRW<[N3Write_6c_2L], (instregex "^LDNT1S?[BHW]_ZZR_D$")>;
+def : InstRW<[N3Write_6c_2L], (instrs LDNT1D_ZZR_D)>;
 
 // Contiguous first faulting load, scalar + scalar
 def : InstRW<[N3Write_6c_1L], (instregex "^LDFF1[BHWD]$",
@@ -2194,39 +2152,39 @@ def : InstRW<[N3Write_8c_1V_1L], (instregex "^LD2[BHWD]_IMM$")>;
 def : InstRW<[N3Write_8c_1V_1L], (instregex "^LD2[BHWD]$")>;
 
 // Contiguous Load three structures to three vectors, scalar + imm
-def : InstRW<[N3Write_8c_3V_4L], (instregex "^LD3D_IMM$")>;
+def : InstRW<[N3Write_8c_3L_3V], (instregex "^LD3D_IMM$")>;
 
 // Contiguous Load three structures to three vectors, scalar + imm
-def : InstRW<[N3Write_10c_6V_9L], (instregex "^LD3[BHW]_IMM$")>;
+def : InstRW<[N3Write_10c_6V_3L], (instregex "^LD3[BHW]_IMM$")>;
 
 // Contiguous Load three structures to three vectors, scalar + scalar
-def : InstRW<[N3Write_9c_3V_4L_6I], (instregex "^LD3D$")>;
+def : InstRW<[N3Write_9c_3V_3L_3I], (instregex "^LD3D$")>;
 
 // Contiguous Load three structures to three vectors, scalar + scalar
-def : InstRW<[N3Write_11c_6V_9L_12I], (instregex "^LD3[BHW]$")>;
+def : InstRW<[N3Write_11c_6V_3L_6I], (instregex "^LD3[BHW]$")>;
 
 // Contiguous Load four structures to four vectors, scalar + imm
-def : InstRW<[N3Write_8c_4V_6L], (instregex "^LD4D_IMM$")>;
+def : InstRW<[N3Write_8c_4L_4V], (instregex "^LD4D_IMM$")>;
 
 // Contiguous Load four structures to four vectors, scalar + imm
-def : InstRW<[N3Write_12c_5V_7L], (instregex "^LD4[BHW]_IMM$")>;
+def : InstRW<[N3Write_12c_5V_4L], (instregex "^LD4[BHW]_IMM$")>;
 
 // Contiguous Load four structures to four vectors, scalar + scalar
-def : InstRW<[N3Write_9c_6L_4V_8I], (instregex "^LD4D$")>;
+def : InstRW<[N3Write_9c_4L_4V_4I], (instregex "^LD4D$")>;
 
 // Contiguous Load four structures to four vectors, scalar + scalar
-def : InstRW<[N3Write_13c_7L_5V_10I], (instregex "^LD4[BHW]$")>;
+def : InstRW<[N3Write_13c_4L_5V_5I], (instregex "^LD4[BHW]$")>;
 
 // Gather load, vector + imm, 32-bit element size
 def : InstRW<[N3Write_7c_4L], (instregex "^GLD(FF)?1S?[BH]_S_IMM$",
                                          "^GLD(FF)?1W_IMM$")>;
 
 // Gather load, vector + imm, 64-bit element size
-def : InstRW<[N3Write_6c_3L], (instregex "^GLD(FF)?1S?[BHW]_D_IMM$",
+def : InstRW<[N3Write_6c_2L], (instregex "^GLD(FF)?1S?[BHW]_D_IMM$",
                                          "^GLD(FF)?1D_IMM$")>;
 
 // Gather load, 64-bit element size
-def : InstRW<[N3Write_6c_3L],
+def : InstRW<[N3Write_6c_2L],
              (instregex "^GLD(FF)?1S?[BHW]_D_[SU]XTW(_SCALED)?$",
                         "^GLD(FF)?1S?[BHW]_D(_SCALED)?$",
                         "^GLD(FF)?1D_[SU]XTW(_SCALED)?$",
@@ -2255,7 +2213,7 @@ def : InstRW<[N3Write_2c_1L01_1V], (instregex "^ST1[BHWD]_IMM$",
                                               "^ST1W_D_IMM$")>;
 
 // Contiguous store, scalar + scalar
-def : InstRW<[N3Write_2c_1L01_2I_1V], (instregex "^ST1H(_[SD])?$")>;
+def : InstRW<[N3Write_2c_1L01_1I_1V], (instregex "^ST1H(_[SD])?$")>;
 
 // Contiguous store, scalar + scalar
 def : InstRW<[N3Write_2c_1L01_1V], (instregex "^ST1[BWD]$",
@@ -2275,10 +2233,10 @@ def : InstRW<[N3Write_4c_3L01_3V], (instregex "^ST3[BHW]_IMM$")>;
 def : InstRW<[N3Write_3c_3L01_3V], (instregex "^ST3D_IMM$")>;
 
 // Contiguous store three structures from three vectors, scalar + scalar
-def : InstRW<[N3Write_4c_3L01_6I_3V], (instregex "^ST3[BHW]$")>;
+def : InstRW<[N3Write_4c_3L01_3I_3V], (instregex "^ST3[BHW]$")>;
 
 // Contiguous store three structures from three vectors, scalar + scalar
-def : InstRW<[N3Write_3c_3L01_6I_3V], (instregex "^ST3D$")>;
+def : InstRW<[N3Write_3c_3L01_3I_3V], (instregex "^ST3D$")>;
 
 // Contiguous store four structures from four vectors, scalar + imm
 def : InstRW<[N3Write_6c_3L01_3V], (instregex "^ST4[BHW]_IMM$")>;
@@ -2287,10 +2245,10 @@ def : InstRW<[N3Write_6c_3L01_3V], (instregex "^ST4[BHW]_IMM$")>;
 def : InstRW<[N3Write_3c_4L01_4V], (instregex "^ST4D_IMM$")>;
 
 // Contiguous store four structures from four vectors, scalar + scalar
-def : InstRW<[N3Write_3c_4L01_8I_4V], (instregex "^ST4D$")>;
+def : InstRW<[N3Write_3c_4L01_4I_4V], (instregex "^ST4D$")>;
 
 // Contiguous store four structures from four vectors, scalar + scalar
-def : InstRW<[N3Write_6c_3L01_6I_3V], (instregex "^ST4[BHW]$")>;
+def : InstRW<[N3Write_6c_3L01_3I_3V], (instregex "^ST4[BHW]$")>;
 
 // Non temporal store, scalar + imm
 def : InstRW<[N3Write_2c_1L01_1V], (instregex "^STNT1[BHWD]_ZRI$")>;
