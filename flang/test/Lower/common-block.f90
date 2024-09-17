@@ -1,3 +1,4 @@
+! REQUIRES: flang-supports-f128-math
 ! RUN: bbc %s -o - | tco | FileCheck %s
 ! RUN: %flang -emit-llvm -S -mmlir -disable-external-name-interop %s -o - | FileCheck %s
 
@@ -78,4 +79,3 @@ subroutine s7()
   real(16) r16
   common /co1/ r16
 end subroutine
-

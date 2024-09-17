@@ -110,6 +110,7 @@ static_library("CodeGen") {
     "Targets/AVR.cpp",
     "Targets/BPF.cpp",
     "Targets/CSKY.cpp",
+    "Targets/DirectX.cpp",
     "Targets/Hexagon.cpp",
     "Targets/Lanai.cpp",
     "Targets/LoongArch.cpp",

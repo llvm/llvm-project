@@ -102,7 +102,7 @@ define i1 @test60_addrspacecast_larger(ptr addrspace(1) %foo, i32 %i, i16 %j) {
 ; CHECK-LABEL: @test60_addrspacecast_larger(
 ; CHECK-NEXT:    [[I_TR:%.*]] = trunc i32 [[I:%.*]] to i16
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i16 [[I_TR]], 2
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i16 [[TMP1]], [[J:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i16 [[J:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %bit = addrspacecast ptr addrspace(1) %foo to ptr addrspace(2)

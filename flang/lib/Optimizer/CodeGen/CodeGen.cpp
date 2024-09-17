@@ -36,6 +36,7 @@
 #include "mlir/Conversion/MathToFuncs/MathToFuncs.h"
 #include "mlir/Conversion/MathToLLVM/MathToLLVM.h"
 #include "mlir/Conversion/MathToLibm/MathToLibm.h"
+#include "mlir/Conversion/MathToROCDL/MathToROCDL.h"
 #include "mlir/Conversion/OpenMPToLLVM/ConvertOpenMPToLLVM.h"
 #include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVM.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
@@ -1201,7 +1202,9 @@ struct EmboxCommonConversion : public fir::FIROpConversion<OP> {
                                 mlir::Location loc,
                                 fir::RecordType recType) const {
     std::string name =
-        fir::NameUniquer::getTypeDescriptorName(recType.getName());
+        this->options.typeDescriptorsRenamedForAssembly
+            ? fir::NameUniquer::getTypeDescriptorAssemblyName(recType.getName())
+            : fir::NameUniquer::getTypeDescriptorName(recType.getName());
     mlir::Type llvmPtrTy = ::getLlvmPtrType(mod.getContext());
     if (auto global = mod.template lookupSymbol<fir::GlobalOp>(name)) {
       return rewriter.create<mlir::LLVM::AddressOfOp>(loc, llvmPtrTy,
@@ -1227,7 +1230,8 @@ struct EmboxCommonConversion : public fir::FIROpConversion<OP> {
                                  mlir::ConversionPatternRewriter &rewriter,
                                  unsigned rank, mlir::Value eleSize,
                                  mlir::Value cfiTy, mlir::Value typeDesc,
-                                 int allocatorIdx = kDefaultAllocator) const {
+                                 int allocatorIdx = kDefaultAllocator,
+                                 mlir::Value extraField = {}) const {
     auto llvmBoxTy = this->lowerTy().convertBoxTypeAsStruct(boxTy, rank);
     bool isUnlimitedPolymorphic = fir::isUnlimitedPolymorphicType(boxTy);
     bool useInputType = fir::isPolymorphicType(boxTy) || isUnlimitedPolymorphic;
@@ -1246,16 +1250,40 @@ struct EmboxCommonConversion : public fir::FIROpConversion<OP> {
 
     const bool hasAddendum = fir::boxHasAddendum(boxTy);
 
-    // Descriptor used to set the correct value of the extra field.
-    Fortran::runtime::StaticDescriptor<0> staticDescriptor;
-    Fortran::runtime::Descriptor &desc{staticDescriptor.descriptor()};
-    desc.raw().extra = 0;
-    desc.SetAllocIdx(allocatorIdx);
-    if (hasAddendum)
-      desc.SetHasAddendum();
-    descriptor =
-        insertField(rewriter, loc, descriptor, {kExtraPosInBox},
-                    this->genI32Constant(loc, rewriter, desc.raw().extra));
+    if (extraField) {
+      // Make sure to set the addendum presence flag according to the
+      // destination box.
+      if (hasAddendum) {
+        auto maskAttr = mlir::IntegerAttr::get(
+            rewriter.getIntegerType(8, /*isSigned=*/false),
+            llvm::APInt(8, (uint64_t)_CFI_ADDENDUM_FLAG, /*isSigned=*/false));
+        mlir::LLVM::ConstantOp mask = rewriter.create<mlir::LLVM::ConstantOp>(
+            loc, rewriter.getI8Type(), maskAttr);
+        extraField = rewriter.create<mlir::LLVM::OrOp>(loc, extraField, mask);
+      } else {
+        auto maskAttr = mlir::IntegerAttr::get(
+            rewriter.getIntegerType(8, /*isSigned=*/false),
+            llvm::APInt(8, (uint64_t)~_CFI_ADDENDUM_FLAG, /*isSigned=*/true));
+        mlir::LLVM::ConstantOp mask = rewriter.create<mlir::LLVM::ConstantOp>(
+            loc, rewriter.getI8Type(), maskAttr);
+        extraField = rewriter.create<mlir::LLVM::AndOp>(loc, extraField, mask);
+      }
+      // Extra field value is provided so just use it.
+      descriptor =
+          insertField(rewriter, loc, descriptor, {kExtraPosInBox}, extraField);
+    } else {
+      // Compute the value of the extra field based on allocator_idx and
+      // addendum present using a Descriptor object.
+      Fortran::runtime::StaticDescriptor staticDescriptor;
+      Fortran::runtime::Descriptor &desc{staticDescriptor.descriptor()};
+      desc.raw().extra = 0;
+      desc.SetAllocIdx(allocatorIdx);
+      if (hasAddendum)
+        desc.SetHasAddendum();
+      descriptor =
+          insertField(rewriter, loc, descriptor, {kExtraPosInBox},
+                      this->genI32Constant(loc, rewriter, desc.raw().extra));
+    }
 
     if (hasAddendum) {
       unsigned typeDescFieldId = getTypeDescFieldId(boxTy);
@@ -1325,6 +1353,7 @@ struct EmboxCommonConversion : public fir::FIROpConversion<OP> {
         loc, rewriter, useInputType ? inputType : boxTy.getEleTy(), typeparams);
 
     mlir::Value typeDesc;
+    mlir::Value extraField;
     // When emboxing to a polymorphic box, get the type descriptor, type code
     // and element size from the source box if any.
     if (fir::isPolymorphicType(boxTy) && sourceBox) {
@@ -1336,11 +1365,13 @@ struct EmboxCommonConversion : public fir::FIROpConversion<OP> {
                                             sourceBox, rewriter);
       cfiTy = this->getValueFromBox(loc, sourceBoxTyPair, sourceBox,
                                     cfiTy.getType(), rewriter, kTypePosInBox);
+      extraField =
+          this->getExtraFromBox(loc, sourceBoxTyPair, sourceBox, rewriter);
     }
     auto mod = box->template getParentOfType<mlir::ModuleOp>();
     mlir::Value descriptor =
         populateDescriptor(loc, mod, boxTy, inputType, rewriter, rank, eleSize,
-                           cfiTy, typeDesc, allocatorIdx);
+                           cfiTy, typeDesc, allocatorIdx, extraField);
 
     return {boxTy, descriptor, eleSize};
   }
@@ -1380,10 +1411,14 @@ struct EmboxCommonConversion : public fir::FIROpConversion<OP> {
                                              rewriter);
     }
 
+    mlir::Value extraField =
+        this->getExtraFromBox(loc, inputBoxTyPair, loweredBox, rewriter);
+
     auto mod = box->template getParentOfType<mlir::ModuleOp>();
     mlir::Value descriptor =
         populateDescriptor(loc, mod, boxTy, box.getBox().getType(), rewriter,
-                           rank, eleSize, cfiTy, typeDesc);
+                           rank, eleSize, cfiTy, typeDesc,
+                           /*allocatorIdx=*/kDefaultAllocator, extraField);
 
     return {boxTy, descriptor, eleSize};
   }
@@ -2672,7 +2707,10 @@ struct TypeDescOpConversion : public fir::FIROpConversion<fir::TypeDescOp> {
     auto recordType = mlir::dyn_cast<fir::RecordType>(inTy);
     auto module = typeDescOp.getOperation()->getParentOfType<mlir::ModuleOp>();
     std::string typeDescName =
-        fir::NameUniquer::getTypeDescriptorName(recordType.getName());
+        this->options.typeDescriptorsRenamedForAssembly
+            ? fir::NameUniquer::getTypeDescriptorAssemblyName(
+                  recordType.getName())
+            : fir::NameUniquer::getTypeDescriptorName(recordType.getName());
     auto llvmPtrTy = ::getLlvmPtrType(typeDescOp.getContext());
     if (auto global = module.lookupSymbol<mlir::LLVM::GlobalOp>(typeDescName)) {
       rewriter.replaceOpWithNewOp<mlir::LLVM::AddressOfOp>(
@@ -3621,6 +3659,10 @@ public:
     if (!forcedTargetFeatures.empty())
       fir::setTargetFeatures(mod, forcedTargetFeatures);
 
+    if (typeDescriptorsRenamedForAssembly)
+      options.typeDescriptorsRenamedForAssembly =
+          typeDescriptorsRenamedForAssembly;
+
     // Run dynamic pass pipeline for converting Math dialect
     // operations into other dialects (llvm, func, etc.).
     // Some conversions of Math operations cannot be done
@@ -3629,6 +3671,14 @@ public:
     // function operations in it. We have to run such conversions
     // as passes here.
     mlir::OpPassManager mathConvertionPM("builtin.module");
+
+    bool isAMDGCN = fir::getTargetTriple(mod).isAMDGCN();
+    // If compiling for AMD target some math operations must be lowered to AMD
+    // GPU library calls, the rest can be converted to LLVM intrinsics, which
+    // is handled in the mathToLLVM conversion. The lowering to libm calls is
+    // not needed since all math operations are handled this way.
+    if (isAMDGCN)
+      mathConvertionPM.addPass(mlir::createConvertMathToROCDL());
 
     // Convert math::FPowI operations to inline implementation
     // only if the exponent's width is greater than 32, otherwise,
@@ -3669,7 +3719,8 @@ public:
                                                           pattern);
     // Math operations that have not been converted yet must be converted
     // to Libm.
-    mlir::populateMathToLibmConversionPatterns(pattern);
+    if (!isAMDGCN)
+      mlir::populateMathToLibmConversionPatterns(pattern);
     mlir::populateComplexToLLVMConversionPatterns(typeConverter, pattern);
     mlir::populateVectorToLLVMConversionPatterns(typeConverter, pattern);
 

@@ -105,8 +105,8 @@ static std::string generateReproducerMetaInfo(const ClangInvocationInfo &Info) {
   OS << '}';
   // FIXME: Compare unsaved file hashes and report mismatch in the reproducer.
   if (Info.Dump)
-    llvm::outs() << "REPRODUCER METAINFO: " << OS.str() << "\n";
-  return std::move(OS.str());
+    llvm::outs() << "REPRODUCER METAINFO: " << Result << "\n";
+  return Result;
 }
 
 /// Generates a reproducer for a set of arguments from a specific invocation.

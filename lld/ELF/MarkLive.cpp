@@ -75,8 +75,8 @@ private:
 template <class ELFT>
 static uint64_t getAddend(InputSectionBase &sec,
                           const typename ELFT::Rel &rel) {
-  return target->getImplicitAddend(sec.content().begin() + rel.r_offset,
-                                   rel.getType(config->isMips64EL));
+  return ctx.target->getImplicitAddend(sec.content().begin() + rel.r_offset,
+                                       rel.getType(config->isMips64EL));
 }
 
 template <class ELFT>
@@ -234,7 +234,7 @@ template <class ELFT> void MarkLive<ELFT>::run() {
   markSymbol(symtab.find(config->fini));
   for (StringRef s : config->undefined)
     markSymbol(symtab.find(s));
-  for (StringRef s : script->referencedSymbols)
+  for (StringRef s : ctx.script->referencedSymbols)
     markSymbol(symtab.find(s));
   for (auto [symName, _] : symtab.cmseSymMap) {
     markSymbol(symtab.cmseSymMap[symName].sym);
@@ -293,7 +293,7 @@ template <class ELFT> void MarkLive<ELFT>::run() {
 
     // Preserve special sections and those which are specified in linker
     // script KEEP command.
-    if (isReserved(sec) || script->shouldKeep(sec)) {
+    if (isReserved(sec) || ctx.script->shouldKeep(sec)) {
       enqueue(sec, 0);
     } else if ((!config->zStartStopGC || sec->name.starts_with("__libc_")) &&
                isValidCIdentifier(sec->name)) {
@@ -377,13 +377,13 @@ template <class ELFT> void elf::markLive() {
     sec->markDead();
 
   // Follow the graph to mark all live sections.
-  for (unsigned curPart = 1; curPart <= partitions.size(); ++curPart)
-    MarkLive<ELFT>(curPart).run();
+  for (unsigned i = 1, e = ctx.partitions.size(); i <= e; ++i)
+    MarkLive<ELFT>(i).run();
 
   // If we have multiple partitions, some sections need to live in the main
   // partition even if they were allocated to a loadable partition. Move them
   // there now.
-  if (partitions.size() != 1)
+  if (ctx.partitions.size() != 1)
     MarkLive<ELFT>(1).moveToMain();
 
   // Report garbage-collected sections.

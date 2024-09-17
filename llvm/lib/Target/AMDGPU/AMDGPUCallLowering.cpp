@@ -1371,12 +1371,12 @@ bool AMDGPUCallLowering::lowerChainCall(MachineIRBuilder &MIRBuilder,
   // The function that we're calling cannot be vararg (only the intrinsic is).
   Info.IsVarArg = false;
 
-  assert(std::all_of(SGPRArgs.Flags.begin(), SGPRArgs.Flags.end(),
-                     [](ISD::ArgFlagsTy F) { return F.isInReg(); }) &&
-         "SGPR arguments should be marked inreg");
-  assert(std::none_of(VGPRArgs.Flags.begin(), VGPRArgs.Flags.end(),
-                      [](ISD::ArgFlagsTy F) { return F.isInReg(); }) &&
-         "VGPR arguments should not be marked inreg");
+  assert(
+      all_of(SGPRArgs.Flags, [](ISD::ArgFlagsTy F) { return F.isInReg(); }) &&
+      "SGPR arguments should be marked inreg");
+  assert(
+      none_of(VGPRArgs.Flags, [](ISD::ArgFlagsTy F) { return F.isInReg(); }) &&
+      "VGPR arguments should not be marked inreg");
 
   SmallVector<ArgInfo, 8> OutArgs;
   splitToValueTypes(SGPRArgs, OutArgs, DL, Info.CallConv);

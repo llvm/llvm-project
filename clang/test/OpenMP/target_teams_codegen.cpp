@@ -127,13 +127,13 @@ int foo(int n) {
     aa += 1;
   }
 
-  #pragma omp target teams ompx_bare num_teams(1, 2) thread_limit(1)
+  #pragma omp target teams ompx_bare num_teams(1, 2) thread_limit(1, 2)
   {
     a += 1;
     aa += 1;
   }
 
-  #pragma omp target teams ompx_bare num_teams(1, 2, 3) thread_limit(1)
+  #pragma omp target teams ompx_bare num_teams(1, 2, 3) thread_limit(1, 2, 3)
   {
     a += 1;
     aa += 1;
@@ -667,7 +667,7 @@ int bar(int n){
 // CHECK1-NEXT:    [[TMP144:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS29]], i32 0, i32 10
 // CHECK1-NEXT:    store [3 x i32] [i32 1, i32 2, i32 0], ptr [[TMP144]], align 4
 // CHECK1-NEXT:    [[TMP145:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS29]], i32 0, i32 11
-// CHECK1-NEXT:    store [3 x i32] [i32 1, i32 0, i32 0], ptr [[TMP145]], align 4
+// CHECK1-NEXT:    store [3 x i32] [i32 1, i32 2, i32 0], ptr [[TMP145]], align 4
 // CHECK1-NEXT:    [[TMP146:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS29]], i32 0, i32 12
 // CHECK1-NEXT:    store i32 0, ptr [[TMP146]], align 4
 // CHECK1-NEXT:    [[TMP147:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB1]], i64 -1, i32 1, i32 1, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3fooi_l130.region_id, ptr [[KERNEL_ARGS29]])
@@ -720,7 +720,7 @@ int bar(int n){
 // CHECK1-NEXT:    [[TMP171:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS37]], i32 0, i32 10
 // CHECK1-NEXT:    store [3 x i32] [i32 1, i32 2, i32 3], ptr [[TMP171]], align 4
 // CHECK1-NEXT:    [[TMP172:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS37]], i32 0, i32 11
-// CHECK1-NEXT:    store [3 x i32] [i32 1, i32 0, i32 0], ptr [[TMP172]], align 4
+// CHECK1-NEXT:    store [3 x i32] [i32 1, i32 2, i32 3], ptr [[TMP172]], align 4
 // CHECK1-NEXT:    [[TMP173:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS37]], i32 0, i32 12
 // CHECK1-NEXT:    store i32 0, ptr [[TMP173]], align 4
 // CHECK1-NEXT:    [[TMP174:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB1]], i64 -1, i32 1, i32 1, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3fooi_l136.region_id, ptr [[KERNEL_ARGS37]])
@@ -2458,7 +2458,7 @@ int bar(int n){
 // CHECK3-NEXT:    [[TMP142:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS29]], i32 0, i32 10
 // CHECK3-NEXT:    store [3 x i32] [i32 1, i32 2, i32 0], ptr [[TMP142]], align 4
 // CHECK3-NEXT:    [[TMP143:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS29]], i32 0, i32 11
-// CHECK3-NEXT:    store [3 x i32] [i32 1, i32 0, i32 0], ptr [[TMP143]], align 4
+// CHECK3-NEXT:    store [3 x i32] [i32 1, i32 2, i32 0], ptr [[TMP143]], align 4
 // CHECK3-NEXT:    [[TMP144:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS29]], i32 0, i32 12
 // CHECK3-NEXT:    store i32 0, ptr [[TMP144]], align 4
 // CHECK3-NEXT:    [[TMP145:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB1]], i64 -1, i32 1, i32 1, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3fooi_l130.region_id, ptr [[KERNEL_ARGS29]])
@@ -2511,7 +2511,7 @@ int bar(int n){
 // CHECK3-NEXT:    [[TMP169:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS37]], i32 0, i32 10
 // CHECK3-NEXT:    store [3 x i32] [i32 1, i32 2, i32 3], ptr [[TMP169]], align 4
 // CHECK3-NEXT:    [[TMP170:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS37]], i32 0, i32 11
-// CHECK3-NEXT:    store [3 x i32] [i32 1, i32 0, i32 0], ptr [[TMP170]], align 4
+// CHECK3-NEXT:    store [3 x i32] [i32 1, i32 2, i32 3], ptr [[TMP170]], align 4
 // CHECK3-NEXT:    [[TMP171:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS37]], i32 0, i32 12
 // CHECK3-NEXT:    store i32 0, ptr [[TMP171]], align 4
 // CHECK3-NEXT:    [[TMP172:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB1]], i64 -1, i32 1, i32 1, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3fooi_l136.region_id, ptr [[KERNEL_ARGS37]])

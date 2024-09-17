@@ -20,6 +20,8 @@
 #include "src/__support/detailed_powers_of_ten.h"
 #include "src/__support/high_precision_decimal.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/null_check.h"
+#include "src/__support/macros/optimization.h"
 #include "src/__support/str_to_integer.h"
 #include "src/__support/str_to_num_result.h"
 #include "src/__support/uint128.h"
@@ -1159,13 +1161,11 @@ LIBC_INLINE StrToNumResult<T> strtofloatingpoint(const char *__restrict src) {
       index += 3;
       StorageType nan_mantissa = 0;
       // this handles the case of `NaN(n-character-sequence)`, where the
-      // n-character-sequence is made of 0 or more letters and numbers in any
-      // order.
+      // n-character-sequence is made of 0 or more letters, numbers, or
+      // underscore characters in any order.
       if (src[index] == '(') {
         size_t left_paren = index;
         ++index;
-        // Apparently it's common for underscores to also be accepted. No idea
-        // why, but it's causing fuzz failures.
         while (isalnum(src[index]) || src[index] == '_')
           ++index;
         if (src[index] == ')') {
@@ -1209,6 +1209,8 @@ LIBC_INLINE StrToNumResult<T> strtofloatingpoint(const char *__restrict src) {
 template <class T> LIBC_INLINE StrToNumResult<T> strtonan(const char *arg) {
   using FPBits = typename fputil::FPBits<T>;
   using StorageType = typename FPBits::StorageType;
+
+  LIBC_CRASH_ON_NULLPTR(arg);
 
   FPBits result;
   int error = 0;

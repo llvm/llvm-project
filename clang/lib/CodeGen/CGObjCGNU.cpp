@@ -278,9 +278,9 @@ protected:
       Fields.addInt(IntTy, count);
       // int size; (only in GNUstep v2 ABI.
       if (isRuntime(ObjCRuntime::GNUstep, 2)) {
-        llvm::DataLayout td(&TheModule);
-        Fields.addInt(IntTy, td.getTypeSizeInBits(PropertyMetadataTy) /
-            CGM.getContext().getCharWidth());
+        const llvm::DataLayout &DL = TheModule.getDataLayout();
+        Fields.addInt(IntTy, DL.getTypeSizeInBits(PropertyMetadataTy) /
+                                 CGM.getContext().getCharWidth());
       }
       // struct objc_property_list *next;
       Fields.add(NULLPtr);
@@ -1190,9 +1190,9 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
     // int count;
     MethodList.addInt(IntTy, Methods.size());
     // int size; // sizeof(struct objc_method_description)
-    llvm::DataLayout td(&TheModule);
-    MethodList.addInt(IntTy, td.getTypeSizeInBits(ObjCMethodDescTy) /
-        CGM.getContext().getCharWidth());
+    const llvm::DataLayout &DL = TheModule.getDataLayout();
+    MethodList.addInt(IntTy, DL.getTypeSizeInBits(ObjCMethodDescTy) /
+                                 CGM.getContext().getCharWidth());
     // struct objc_method_description[]
     auto MethodArray = MethodList.beginArray(ObjCMethodDescTy);
     for (auto *M : Methods) {
@@ -1699,11 +1699,18 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
   llvm::Value *EmitIvarOffset(CodeGenFunction &CGF,
                               const ObjCInterfaceDecl *Interface,
                               const ObjCIvarDecl *Ivar) override {
-    const std::string Name = GetIVarOffsetVariableName(Ivar->getContainingInterface(), Ivar);
+    const ObjCInterfaceDecl *ContainingInterface =
+        Ivar->getContainingInterface();
+    const std::string Name =
+        GetIVarOffsetVariableName(ContainingInterface, Ivar);
     llvm::GlobalVariable *IvarOffsetPointer = TheModule.getNamedGlobal(Name);
-    if (!IvarOffsetPointer)
+    if (!IvarOffsetPointer) {
       IvarOffsetPointer = new llvm::GlobalVariable(TheModule, IntTy, false,
               llvm::GlobalValue::ExternalLinkage, nullptr, Name);
+      if (Ivar->getAccessControl() != ObjCIvarDecl::Private &&
+          Ivar->getAccessControl() != ObjCIvarDecl::Package)
+        CGM.setGVProperties(IvarOffsetPointer, ContainingInterface);
+    }
     CharUnits Align = CGM.getIntAlign();
     llvm::Value *Offset =
         CGF.Builder.CreateAlignedLoad(IntTy, IvarOffsetPointer, Align);
@@ -1828,7 +1835,7 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
       int ivar_count = 0;
       for (const ObjCIvarDecl *IVD = classDecl->all_declared_ivar_begin(); IVD;
            IVD = IVD->getNextIvar()) ivar_count++;
-      llvm::DataLayout td(&TheModule);
+      const llvm::DataLayout &DL = TheModule.getDataLayout();
       // struct objc_ivar_list *ivars;
       ConstantInitBuilder b(CGM);
       auto ivarListBuilder = b.beginStruct();
@@ -1841,8 +1848,8 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
         PtrToInt8Ty,
         Int32Ty,
         Int32Ty);
-      ivarListBuilder.addInt(SizeTy, td.getTypeSizeInBits(ObjCIvarTy) /
-          CGM.getContext().getCharWidth());
+      ivarListBuilder.addInt(SizeTy, DL.getTypeSizeInBits(ObjCIvarTy) /
+                                         CGM.getContext().getCharWidth());
       // struct objc_ivar ivars[]
       auto ivarArrayBuilder = ivarListBuilder.beginArray();
       for (const ObjCIvarDecl *IVD = classDecl->all_declared_ivar_begin(); IVD;
@@ -3019,9 +3026,9 @@ GenerateMethodList(StringRef ClassName,
   bool isV2ABI = isRuntime(ObjCRuntime::GNUstep, 2);
   if (isV2ABI) {
     // size_t size;
-    llvm::DataLayout td(&TheModule);
-    MethodList.addInt(SizeTy, td.getTypeSizeInBits(ObjCMethodTy) /
-        CGM.getContext().getCharWidth());
+    const llvm::DataLayout &DL = TheModule.getDataLayout();
+    MethodList.addInt(SizeTy, DL.getTypeSizeInBits(ObjCMethodTy) /
+                                  CGM.getContext().getCharWidth());
     ObjCMethodTy =
       llvm::StructType::get(CGM.getLLVMContext(), {
         IMPTy,       // Method pointer
@@ -3161,10 +3168,9 @@ llvm::Constant *CGObjCGNU::GenerateClassStructure(
   Elements.addInt(LongTy, info);
   // instance_size
   if (isMeta) {
-    llvm::DataLayout td(&TheModule);
-    Elements.addInt(LongTy,
-                    td.getTypeSizeInBits(ClassTy) /
-                      CGM.getContext().getCharWidth());
+    const llvm::DataLayout &DL = TheModule.getDataLayout();
+    Elements.addInt(LongTy, DL.getTypeSizeInBits(ClassTy) /
+                                CGM.getContext().getCharWidth());
   } else
     Elements.add(InstanceSize);
   // ivars

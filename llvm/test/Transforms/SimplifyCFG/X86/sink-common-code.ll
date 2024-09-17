@@ -801,14 +801,8 @@ define i32 @test_pr30188(i1 zeroext %flag, i32 %x) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[Y:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[Z:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    br i1 [[FLAG:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
-; CHECK:       if.then:
-; CHECK-NEXT:    store i32 [[X:%.*]], ptr [[Y]], align 4
-; CHECK-NEXT:    br label [[IF_END:%.*]]
-; CHECK:       if.else:
-; CHECK-NEXT:    store i32 [[X]], ptr [[Z]], align 4
-; CHECK-NEXT:    br label [[IF_END]]
-; CHECK:       if.end:
+; CHECK-NEXT:    [[Y_Z:%.*]] = select i1 [[FLAG:%.*]], ptr [[Y]], ptr [[Z]]
+; CHECK-NEXT:    store i32 [[X:%.*]], ptr [[Y_Z]], align 4
 ; CHECK-NEXT:    ret i32 1
 ;
 entry:
@@ -834,19 +828,15 @@ define i32 @test_pr30188a(i1 zeroext %flag, i32 %x) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[Y:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[Z:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    br i1 [[FLAG:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK-NEXT:    br i1 [[FLAG:%.*]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    call void @g()
-; CHECK-NEXT:    [[ONE:%.*]] = load i32, ptr [[Y]], align 4
-; CHECK-NEXT:    [[TWO:%.*]] = add i32 [[ONE]], 2
-; CHECK-NEXT:    store i32 [[TWO]], ptr [[Y]], align 4
-; CHECK-NEXT:    br label [[IF_END:%.*]]
-; CHECK:       if.else:
-; CHECK-NEXT:    [[THREE:%.*]] = load i32, ptr [[Z]], align 4
-; CHECK-NEXT:    [[FOUR:%.*]] = add i32 [[THREE]], 2
-; CHECK-NEXT:    store i32 [[FOUR]], ptr [[Y]], align 4
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
+; CHECK-NEXT:    [[Z_SINK:%.*]] = phi ptr [ [[Y]], [[IF_THEN]] ], [ [[Z]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[THREE:%.*]] = load i32, ptr [[Z_SINK]], align 4
+; CHECK-NEXT:    [[FOUR:%.*]] = add i32 [[THREE]], 2
+; CHECK-NEXT:    store i32 [[FOUR]], ptr [[Y]], align 4
 ; CHECK-NEXT:    ret i32 1
 ;
 entry:
@@ -914,15 +904,16 @@ define zeroext i1 @test_pr30244(i1 zeroext %flag, i1 zeroext %flag2, i32 %blksA,
 ; CHECK-NEXT:    br i1 [[FLAG:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i32 [[BLKSA:%.*]], [[NBLKS:%.*]]
-; CHECK-NEXT:    [[FROMBOOL1:%.*]] = zext i1 [[CMP]] to i8
-; CHECK-NEXT:    store i8 [[FROMBOOL1]], ptr [[P]], align 1
-; CHECK-NEXT:    br label [[IF_END:%.*]]
+; CHECK-NEXT:    br label [[IF_END_SINK_SPLIT:%.*]]
 ; CHECK:       if.else:
-; CHECK-NEXT:    br i1 [[FLAG2:%.*]], label [[IF_THEN2:%.*]], label [[IF_END]]
+; CHECK-NEXT:    br i1 [[FLAG2:%.*]], label [[IF_THEN2:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then2:
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[NBLKS]], [[BLKSB:%.*]]
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ule i32 [[ADD]], [[BLKSA]]
-; CHECK-NEXT:    [[FROMBOOL3:%.*]] = zext i1 [[CMP2]] to i8
+; CHECK-NEXT:    br label [[IF_END_SINK_SPLIT]]
+; CHECK:       if.end.sink.split:
+; CHECK-NEXT:    [[CMP2_SINK:%.*]] = phi i1 [ [[CMP2]], [[IF_THEN2]] ], [ [[CMP]], [[IF_THEN]] ]
+; CHECK-NEXT:    [[FROMBOOL3:%.*]] = zext i1 [[CMP2_SINK]] to i8
 ; CHECK-NEXT:    store i8 [[FROMBOOL3]], ptr [[P]], align 1
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:

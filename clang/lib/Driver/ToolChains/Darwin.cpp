@@ -476,6 +476,13 @@ void darwin::Linker::AddLinkArgs(Compilation &C, const ArgList &Args,
         llvm::sys::path::append(Path, "default.profdata");
       CmdArgs.push_back(Args.MakeArgString(Twine("--cs-profile-path=") + Path));
     }
+
+    auto *CodeGenDataGenArg =
+        Args.getLastArg(options::OPT_fcodegen_data_generate_EQ);
+    if (CodeGenDataGenArg)
+      CmdArgs.push_back(
+          Args.MakeArgString(Twine("--codegen-data-generate-path=") +
+                             CodeGenDataGenArg->getValue()));
   }
 }
 
@@ -632,6 +639,32 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // independently of -moutline.
   CmdArgs.push_back("-mllvm");
   CmdArgs.push_back("-enable-linkonceodr-outlining");
+
+  // Propagate codegen data flags to the linker for the LLVM backend.
+  auto *CodeGenDataGenArg =
+      Args.getLastArg(options::OPT_fcodegen_data_generate_EQ);
+  auto *CodeGenDataUseArg = Args.getLastArg(options::OPT_fcodegen_data_use_EQ);
+
+  // We only allow one of them to be specified.
+  const Driver &D = getToolChain().getDriver();
+  if (CodeGenDataGenArg && CodeGenDataUseArg)
+    D.Diag(diag::err_drv_argument_not_allowed_with)
+        << CodeGenDataGenArg->getAsString(Args)
+        << CodeGenDataUseArg->getAsString(Args);
+
+  // For codegen data gen, the output file is passed to the linker
+  // while a boolean flag is passed to the LLVM backend.
+  if (CodeGenDataGenArg) {
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back("-codegen-data-generate");
+  }
+
+  // For codegen data use, the input file is passed to the LLVM backend.
+  if (CodeGenDataUseArg) {
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back(Args.MakeArgString(Twine("-codegen-data-use-path=") +
+                                         CodeGenDataUseArg->getValue()));
+  }
 
   // Setup statistics file output.
   SmallString<128> StatsFile =
@@ -1519,6 +1552,8 @@ void DarwinClang::AddLinkRuntimeLibArgs(const ArgList &Args,
     const char *sanitizer = nullptr;
     if (Sanitize.needsUbsanRt()) {
       sanitizer = "UndefinedBehaviorSanitizer";
+    } else if (Sanitize.needsRtsanRt()) {
+      sanitizer = "RealtimeSanitizer";
     } else if (Sanitize.needsAsanRt()) {
       sanitizer = "AddressSanitizer";
     } else if (Sanitize.needsTsanRt()) {
@@ -1540,6 +1575,11 @@ void DarwinClang::AddLinkRuntimeLibArgs(const ArgList &Args,
                "Static sanitizer runtimes not supported");
         AddLinkSanitizerLibArgs(Args, CmdArgs, "asan");
       }
+    }
+    if (Sanitize.needsRtsanRt()) {
+      assert(Sanitize.needsSharedRt() &&
+             "Static sanitizer runtimes not supported");
+      AddLinkSanitizerLibArgs(Args, CmdArgs, "rtsan");
     }
     if (Sanitize.needsLsanRt())
       AddLinkSanitizerLibArgs(Args, CmdArgs, "lsan");
@@ -2953,7 +2993,15 @@ static bool sdkSupportsBuiltinModules(
   case Darwin::MacOS:
     return SDKVersion >= VersionTuple(15U);
   case Darwin::IPhoneOS:
-    return SDKVersion >= VersionTuple(18U);
+    switch (TargetEnvironment) {
+    case Darwin::MacCatalyst:
+      // Mac Catalyst uses `-target arm64-apple-ios18.0-macabi` so the platform
+      // is iOS, but it builds with the macOS SDK, so it's the macOS SDK version
+      // that's relevant.
+      return SDKVersion >= VersionTuple(15U);
+    default:
+      return SDKVersion >= VersionTuple(18U);
+    }
   case Darwin::TvOS:
     return SDKVersion >= VersionTuple(18U);
   case Darwin::WatchOS:
@@ -3531,6 +3579,7 @@ SanitizerMask Darwin::getSupportedSanitizers() const {
   Res |= SanitizerKind::Address;
   Res |= SanitizerKind::PointerCompare;
   Res |= SanitizerKind::PointerSubtract;
+  Res |= SanitizerKind::Realtime;
   Res |= SanitizerKind::Leak;
   Res |= SanitizerKind::Fuzzer;
   Res |= SanitizerKind::FuzzerNoLink;

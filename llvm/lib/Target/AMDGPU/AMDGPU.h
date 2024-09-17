@@ -35,12 +35,12 @@ void initializeAMDGPURegBankSelectPass(PassRegistry &);
 // SI Passes
 FunctionPass *createGCNDPPCombinePass();
 FunctionPass *createSIAnnotateControlFlowLegacyPass();
-FunctionPass *createSIFoldOperandsPass();
-FunctionPass *createSIPeepholeSDWAPass();
+FunctionPass *createSIFoldOperandsLegacyPass();
+FunctionPass *createSIPeepholeSDWALegacyPass();
 FunctionPass *createSILowerI1CopiesLegacyPass();
 FunctionPass *createAMDGPUGlobalISelDivergenceLoweringPass();
-FunctionPass *createSIShrinkInstructionsPass();
-FunctionPass *createSILoadStoreOptimizerPass();
+FunctionPass *createSIShrinkInstructionsLegacyPass();
+FunctionPass *createSILoadStoreOptimizerLegacyPass();
 FunctionPass *createSIWholeQuadModePass();
 FunctionPass *createSIFixControlFlowLiveIntervalsPass();
 FunctionPass *createSIOptimizeExecMaskingPreRAPass();
@@ -56,8 +56,7 @@ FunctionPass *createSIPostRABundlerPass();
 FunctionPass *createAMDGPUImageIntrinsicOptimizerPass(const TargetMachine *);
 ModulePass *createAMDGPURemoveIncompatibleFunctionsPass(const TargetMachine *);
 FunctionPass *createAMDGPUCodeGenPreparePass();
-FunctionPass *createAMDGPULateCodeGenPreparePass();
-FunctionPass *createAMDGPUMachineCFGStructurizerPass();
+FunctionPass *createAMDGPULateCodeGenPrepareLegacyPass();
 FunctionPass *createAMDGPURewriteOutArgumentsPass();
 ModulePass *
 createAMDGPULowerModuleLDSLegacyPass(const AMDGPUTargetMachine *TM = nullptr);
@@ -91,9 +90,6 @@ public:
 };
 
 void initializeAMDGPUDAGToDAGISelLegacyPass(PassRegistry &);
-
-void initializeAMDGPUMachineCFGStructurizerPass(PassRegistry&);
-extern char &AMDGPUMachineCFGStructurizerID;
 
 void initializeAMDGPUAlwaysInlinePass(PassRegistry&);
 
@@ -161,17 +157,17 @@ private:
 void initializeAMDGPURewriteOutArgumentsPass(PassRegistry &);
 extern char &AMDGPURewriteOutArgumentsID;
 
-void initializeGCNDPPCombinePass(PassRegistry &);
-extern char &GCNDPPCombineID;
+void initializeGCNDPPCombineLegacyPass(PassRegistry &);
+extern char &GCNDPPCombineLegacyID;
 
-void initializeSIFoldOperandsPass(PassRegistry &);
-extern char &SIFoldOperandsID;
+void initializeSIFoldOperandsLegacyPass(PassRegistry &);
+extern char &SIFoldOperandsLegacyID;
 
-void initializeSIPeepholeSDWAPass(PassRegistry &);
-extern char &SIPeepholeSDWAID;
+void initializeSIPeepholeSDWALegacyPass(PassRegistry &);
+extern char &SIPeepholeSDWALegacyID;
 
-void initializeSIShrinkInstructionsPass(PassRegistry&);
-extern char &SIShrinkInstructionsID;
+void initializeSIShrinkInstructionsLegacyPass(PassRegistry &);
+extern char &SIShrinkInstructionsLegacyID;
 
 void initializeSIFixSGPRCopiesLegacyPass(PassRegistry &);
 extern char &SIFixSGPRCopiesLegacyID;
@@ -194,8 +190,8 @@ extern char &AMDGPUMarkLastScratchLoadID;
 void initializeSILowerSGPRSpillsPass(PassRegistry &);
 extern char &SILowerSGPRSpillsID;
 
-void initializeSILoadStoreOptimizerPass(PassRegistry &);
-extern char &SILoadStoreOptimizerID;
+void initializeSILoadStoreOptimizerLegacyPass(PassRegistry &);
+extern char &SILoadStoreOptimizerLegacyID;
 
 void initializeSIWholeQuadModePass(PassRegistry &);
 extern char &SIWholeQuadModeID;
@@ -218,8 +214,8 @@ extern char &SIPreAllocateWWMRegsID;
 void initializeAMDGPUImageIntrinsicOptimizerPass(PassRegistry &);
 extern char &AMDGPUImageIntrinsicOptimizerID;
 
-void initializeAMDGPUPerfHintAnalysisPass(PassRegistry &);
-extern char &AMDGPUPerfHintAnalysisID;
+void initializeAMDGPUPerfHintAnalysisLegacyPass(PassRegistry &);
+extern char &AMDGPUPerfHintAnalysisLegacyID;
 
 void initializeGCNRegPressurePrinterPass(PassRegistry &);
 extern char &GCNRegPressurePrinterID;
@@ -272,6 +268,17 @@ private:
   bool GlobalOpt;
 };
 
+void initializeAMDGPUSwLowerLDSLegacyPass(PassRegistry &);
+extern char &AMDGPUSwLowerLDSLegacyPassID;
+ModulePass *
+createAMDGPUSwLowerLDSLegacyPass(const AMDGPUTargetMachine *TM = nullptr);
+
+struct AMDGPUSwLowerLDSPass : PassInfoMixin<AMDGPUSwLowerLDSPass> {
+  const AMDGPUTargetMachine &TM;
+  AMDGPUSwLowerLDSPass(const AMDGPUTargetMachine &TM_) : TM(TM_) {}
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+};
+
 class AMDGPUCodeGenPreparePass
     : public PassInfoMixin<AMDGPUCodeGenPreparePass> {
 private:
@@ -279,6 +286,16 @@ private:
 
 public:
   AMDGPUCodeGenPreparePass(TargetMachine &TM) : TM(TM){};
+  PreservedAnalyses run(Function &, FunctionAnalysisManager &);
+};
+
+class AMDGPULateCodeGenPreparePass
+    : public PassInfoMixin<AMDGPULateCodeGenPreparePass> {
+private:
+  const GCNTargetMachine &TM;
+
+public:
+  AMDGPULateCodeGenPreparePass(const GCNTargetMachine &TM) : TM(TM) {};
   PreservedAnalyses run(Function &, FunctionAnalysisManager &);
 };
 
@@ -352,8 +369,8 @@ extern char &AMDGPUCodeGenPrepareID;
 void initializeAMDGPURemoveIncompatibleFunctionsPass(PassRegistry &);
 extern char &AMDGPURemoveIncompatibleFunctionsID;
 
-void initializeAMDGPULateCodeGenPreparePass(PassRegistry &);
-extern char &AMDGPULateCodeGenPrepareID;
+void initializeAMDGPULateCodeGenPrepareLegacyPass(PassRegistry &);
+extern char &AMDGPULateCodeGenPrepareLegacyID;
 
 FunctionPass *createAMDGPURewriteUndefForPHILegacyPass();
 void initializeAMDGPURewriteUndefForPHILegacyPass(PassRegistry &);
@@ -443,20 +460,6 @@ enum TargetIndex {
   TI_SCRATCH_RSRC_DWORD2,
   TI_SCRATCH_RSRC_DWORD3
 };
-
-// FIXME: Missing constant_32bit
-inline bool isFlatGlobalAddrSpace(unsigned AS) {
-  return AS == AMDGPUAS::GLOBAL_ADDRESS ||
-         AS == AMDGPUAS::FLAT_ADDRESS ||
-         AS == AMDGPUAS::CONSTANT_ADDRESS ||
-         AS > AMDGPUAS::MAX_AMDGPU_ADDRESS;
-}
-
-inline bool isExtendedGlobalAddrSpace(unsigned AS) {
-  return AS == AMDGPUAS::GLOBAL_ADDRESS || AS == AMDGPUAS::CONSTANT_ADDRESS ||
-         AS == AMDGPUAS::CONSTANT_ADDRESS_32BIT ||
-         AS > AMDGPUAS::MAX_AMDGPU_ADDRESS;
-}
 
 static inline bool addrspacesMayAlias(unsigned AS1, unsigned AS2) {
   static_assert(AMDGPUAS::MAX_AMDGPU_ADDRESS <= 9, "Addr space out of range");

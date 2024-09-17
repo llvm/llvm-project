@@ -22,6 +22,7 @@
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TimeProfiler.h"
+#undef in
 #if LLVM_ENABLE_ZLIB
 // Avoid introducing max as a macro from Windows headers.
 #define NOMINMAX
@@ -278,7 +279,7 @@ static void nopInstrFill(uint8_t *buf, size_t size) {
   unsigned i = 0;
   if (size == 0)
     return;
-  std::vector<std::vector<uint8_t>> nopFiller = *target->nopInstrs;
+  std::vector<std::vector<uint8_t>> nopFiller = *ctx.target->nopInstrs;
   unsigned num = size / nopFiller.back().size();
   for (unsigned c = 0; c < num; ++c) {
     memcpy(buf + i, nopFiller.back().data(), nopFiller.back().size());
@@ -541,7 +542,7 @@ void OutputSection::writeTo(uint8_t *buf, parallel::TaskGroup &tg) {
         else
           end = buf + sections[i + 1]->outSecOff;
         if (isec->nopFiller) {
-          assert(target->nopInstrs);
+          assert(ctx.target->nopInstrs);
           nopInstrFill(start, end - start);
         } else
           fill(start, end - start, filler);
@@ -584,7 +585,7 @@ void OutputSection::writeTo(uint8_t *buf, parallel::TaskGroup &tg) {
 static void finalizeShtGroup(OutputSection *os, InputSection *section) {
   // sh_link field for SHT_GROUP sections should contain the section index of
   // the symbol table.
-  os->link = in.symTab->getParent()->sectionIndex;
+  os->link = ctx.in.symTab->getParent()->sectionIndex;
 
   if (!section)
     return;
@@ -592,7 +593,7 @@ static void finalizeShtGroup(OutputSection *os, InputSection *section) {
   // sh_info then contain index of an entry in symbol table section which
   // provides signature of the section group.
   ArrayRef<Symbol *> symbols = section->file->getSymbols();
-  os->info = in.symTab->getSymbolIndex(*symbols[section->info]);
+  os->info = ctx.in.symTab->getSymbolIndex(*symbols[section->info]);
 
   // Some group members may be combined or discarded, so we need to compute the
   // new size. The content will be rewritten in InputSection::copyShtGroup.
@@ -610,7 +611,7 @@ encodeOneCrel(raw_svector_ostream &os, Elf_Crel<sizeof(uint) == 8> &out,
               uint offset, const Symbol &sym, uint32_t type, uint addend) {
   const auto deltaOffset = static_cast<uint64_t>(offset - out.r_offset);
   out.r_offset = offset;
-  int64_t symidx = in.symTab->getSymbolIndex(sym);
+  int64_t symidx = ctx.in.symTab->getSymbolIndex(sym);
   if (sym.type == STT_SECTION) {
     auto *d = dyn_cast<Defined>(&sym);
     if (d) {
@@ -731,7 +732,7 @@ void OutputSection::finalize() {
   if (!first || isa<SyntheticSection>(first))
     return;
 
-  link = in.symTab->getParent()->sectionIndex;
+  link = ctx.in.symTab->getParent()->sectionIndex;
   // sh_info for SHT_REL[A] sections should contain the section header index of
   // the section to which the relocation applies.
   InputSectionBase *s = first->getRelocatedSection();
@@ -857,7 +858,7 @@ std::array<uint8_t, 4> OutputSection::getFiller() {
   if (filler)
     return *filler;
   if (flags & SHF_EXECINSTR)
-    return target->trapInstr;
+    return ctx.target->trapInstr;
   return {0, 0, 0, 0};
 }
 
@@ -881,8 +882,8 @@ void OutputSection::checkDynRelAddends(const uint8_t *bufStart) {
       // Some targets have NOBITS synthetic sections with dynamic relocations
       // with non-zero addends. Skip such sections.
       if (is_contained({EM_PPC, EM_PPC64}, config->emachine) &&
-          (rel.inputSec == in.ppc64LongBranchTarget.get() ||
-           rel.inputSec == in.igotPlt.get()))
+          (rel.inputSec == ctx.in.ppc64LongBranchTarget.get() ||
+           rel.inputSec == ctx.in.igotPlt.get()))
         continue;
       const uint8_t *relocTarget =
           bufStart + relOsec->offset + rel.inputSec->getOffset(rel.offsetInSec);
@@ -890,7 +891,7 @@ void OutputSection::checkDynRelAddends(const uint8_t *bufStart) {
       int64_t writtenAddend =
           relOsec->type == SHT_NOBITS
               ? 0
-              : target->getImplicitAddend(relocTarget, rel.type);
+              : ctx.target->getImplicitAddend(relocTarget, rel.type);
       if (addend != writtenAddend)
         internalLinkerError(
             getErrorLocation(relocTarget),

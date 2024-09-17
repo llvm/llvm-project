@@ -2384,7 +2384,7 @@ CGDebugInfo::CollectTemplateParams(std::optional<TemplateArgs> OArgs,
       TA.getAsTemplate().getAsTemplateDecl()->printQualifiedName(
           OS, getPrintingPolicy());
       TemplateParams.push_back(DBuilder.createTemplateTemplateParameter(
-          TheCU, Name, nullptr, OS.str(), defaultParameter));
+          TheCU, Name, nullptr, QualName, defaultParameter));
       break;
     }
     case TemplateArgument::Pack:
@@ -3561,6 +3561,7 @@ llvm::DIType *CGDebugInfo::CreateTypeDefinition(const EnumType *Ty) {
 
   SmallVector<llvm::Metadata *, 16> Enumerators;
   ED = ED->getDefinition();
+  assert(ED && "An enumeration definition is required");
   for (const auto *Enum : ED->enumerators()) {
     Enumerators.push_back(
         DBuilder.createEnumerator(Enum->getName(), Enum->getInitVal()));
@@ -3850,6 +3851,7 @@ llvm::DIType *CGDebugInfo::CreateTypeNode(QualType Ty, llvm::DIFile *Unit) {
   case Type::Auto:
   case Type::Attributed:
   case Type::BTFTagAttributed:
+  case Type::HLSLAttributedResource:
   case Type::Adjusted:
   case Type::Decayed:
   case Type::DeducedTemplateSpecialization:
@@ -5651,7 +5653,7 @@ std::string CGDebugInfo::GetName(const Decl *D, bool Qualified) const {
       std::string CanonicalOriginalName;
       llvm::raw_string_ostream OriginalOS(CanonicalOriginalName);
       ND->getNameForDiagnostic(OriginalOS, PP, Qualified);
-      assert(EncodedOriginalNameOS.str() == OriginalOS.str());
+      assert(EncodedOriginalName == CanonicalOriginalName);
 #endif
     }
   }

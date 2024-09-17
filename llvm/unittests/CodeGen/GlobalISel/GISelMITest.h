@@ -53,11 +53,9 @@ std::ostream &
 operator<<(std::ostream &OS, const MachineFunction &MF);
 }
 
-static std::unique_ptr<Module> parseMIR(LLVMContext &Context,
-                                        std::unique_ptr<MIRParser> &MIR,
-                                        const TargetMachine &TM,
-                                        StringRef MIRCode, const char *FuncName,
-                                        MachineModuleInfo &MMI) {
+static std::unique_ptr<Module>
+parseMIR(LLVMContext &Context, std::unique_ptr<MIRParser> &MIR,
+         const TargetMachine &TM, StringRef MIRCode, MachineModuleInfo &MMI) {
   SMDiagnostic Diagnostic;
   std::unique_ptr<MemoryBuffer> MBuffer = MemoryBuffer::getMemBuffer(MIRCode);
   MIR = createMIRParser(std::move(MBuffer), Context);
@@ -80,8 +78,7 @@ createDummyModule(LLVMContext &Context, const LLVMTargetMachine &TM,
                   StringRef MIRString, const char *FuncName) {
   std::unique_ptr<MIRParser> MIR;
   auto MMI = std::make_unique<MachineModuleInfo>(&TM);
-  std::unique_ptr<Module> M =
-      parseMIR(Context, MIR, TM, MIRString, FuncName, *MMI);
+  std::unique_ptr<Module> M = parseMIR(Context, MIR, TM, MIRString, *MMI);
   return make_pair(std::move(M), std::move(MMI));
 }
 

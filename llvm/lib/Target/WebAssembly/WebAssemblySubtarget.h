@@ -43,7 +43,7 @@ class WebAssemblySubtarget final : public WebAssemblyGenSubtargetInfo {
   bool HasBulkMemory = false;
   bool HasExceptionHandling = false;
   bool HasExtendedConst = false;
-  bool HasHalfPrecision = false;
+  bool HasFP16 = false;
   bool HasMultiMemory = false;
   bool HasMultivalue = false;
   bool HasMutableGlobals = false;
@@ -96,7 +96,7 @@ public:
   bool hasBulkMemory() const { return HasBulkMemory; }
   bool hasExceptionHandling() const { return HasExceptionHandling; }
   bool hasExtendedConst() const { return HasExtendedConst; }
-  bool hasHalfPrecision() const { return HasHalfPrecision; }
+  bool hasFP16() const { return HasFP16; }
   bool hasMultiMemory() const { return HasMultiMemory; }
   bool hasMultivalue() const { return HasMultivalue; }
   bool hasMutableGlobals() const { return HasMutableGlobals; }

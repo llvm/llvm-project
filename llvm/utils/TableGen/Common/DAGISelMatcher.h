@@ -836,7 +836,8 @@ class EmitIntegerMatcher : public Matcher {
 
 public:
   EmitIntegerMatcher(int64_t val, MVT::SimpleValueType vt)
-      : Matcher(EmitInteger), Val(val), VT(vt) {}
+      : Matcher(EmitInteger), Val(SignExtend64(val, MVT(vt).getSizeInBits())),
+        VT(vt) {}
 
   int64_t getValue() const { return Val; }
   MVT::SimpleValueType getVT() const { return VT; }
@@ -982,14 +983,14 @@ private:
 /// recorded node and records the result.
 class EmitNodeXFormMatcher : public Matcher {
   unsigned Slot;
-  Record *NodeXForm;
+  const Record *NodeXForm;
 
 public:
-  EmitNodeXFormMatcher(unsigned slot, Record *nodeXForm)
+  EmitNodeXFormMatcher(unsigned slot, const Record *nodeXForm)
       : Matcher(EmitNodeXForm), Slot(slot), NodeXForm(nodeXForm) {}
 
   unsigned getSlot() const { return Slot; }
-  Record *getNodeXForm() const { return NodeXForm; }
+  const Record *getNodeXForm() const { return NodeXForm; }
 
   static bool classof(const Matcher *N) {
     return N->getKind() == EmitNodeXForm;

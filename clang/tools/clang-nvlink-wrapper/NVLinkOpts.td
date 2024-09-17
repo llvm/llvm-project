@@ -39,6 +39,9 @@ def library_S : Separate<["--", "-"], "library">, Flags<[HelpHidden]>,
 def library_EQ : Joined<["--", "-"], "library=">, Flags<[HelpHidden]>,
   Alias<library_path>;
 
+def plugin : Joined<["--", "-"], "plugin">, 
+  Flags<[HelpHidden, WrapperOnlyOption]>;
+
 def arch : Separate<["--", "-"], "arch">,
   HelpText<"Specify the 'sm_' name of the target architecture.">;
 def : Joined<["--", "-"], "plugin-opt=mcpu=">,

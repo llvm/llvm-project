@@ -275,7 +275,7 @@ public:
 
 class AttributeBitSet {
   /// Bitset with a bit for each available attribute Attribute::AttrKind.
-  uint8_t AvailableAttrs[12] = {};
+  uint8_t AvailableAttrs[16] = {};
   static_assert(Attribute::EndAttrKinds <= sizeof(AvailableAttrs) * CHAR_BIT,
                 "Too many attributes");
 

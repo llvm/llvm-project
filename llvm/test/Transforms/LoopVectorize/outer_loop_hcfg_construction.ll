@@ -52,8 +52,6 @@ define void @non_outermost_loop_hcfg_construction(i64 %n, ptr %a) {
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i1> [[TMP6]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[MIDDLE_LOOP_LATCH4]], label [[INNERMOST_LOOP1]]
 ; CHECK:       vector.latch:
-; CHECK-NEXT:    [[TMP8:%.*]] = add nuw nsw <4 x i64> [[VEC_IND]], <i64 1, i64 1, i64 1, i64 1>
-; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq <4 x i64> [[TMP8]], [[BROADCAST_SPLAT3]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], <i64 4, i64 4, i64 4, i64 4>
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -197,8 +195,6 @@ define void @non_outermost_loop_hcfg_construction_other_loops_at_same_level(i64 
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i1> [[TMP6]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[MIDDLE_LOOP_J0_CLEANUP4]], label [[INNERMOST_LOOP1]]
 ; CHECK:       vector.latch:
-; CHECK-NEXT:    [[TMP8:%.*]] = add nuw nsw <4 x i64> [[VEC_IND]], <i64 1, i64 1, i64 1, i64 1>
-; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq <4 x i64> [[TMP8]], [[BROADCAST_SPLAT3]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], <i64 4, i64 4, i64 4, i64 4>
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]

@@ -2450,8 +2450,7 @@ bool DependenceInfo::gcdMIVtest(const SCEV *Src, const SCEV *Dst,
   const SCEVConstant *Constant = dyn_cast<SCEVConstant>(Delta);
   if (const SCEVAddExpr *Sum = dyn_cast<SCEVAddExpr>(Delta)) {
     // If Delta is a sum of products, we may be able to make further progress.
-    for (unsigned Op = 0, Ops = Sum->getNumOperands(); Op < Ops; Op++) {
-      const SCEV *Operand = Sum->getOperand(Op);
+    for (const SCEV *Operand : Sum->operands()) {
       if (isa<SCEVConstant>(Operand)) {
         assert(!Constant && "Surprised to find multiple constants");
         Constant = cast<SCEVConstant>(Operand);

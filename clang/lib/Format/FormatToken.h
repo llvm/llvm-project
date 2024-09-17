@@ -102,6 +102,7 @@ namespace format {
   TYPE(JsTypeColon)                                                            \
   TYPE(JsTypeOperator)                                                         \
   TYPE(JsTypeOptionalQuestion)                                                 \
+  TYPE(LambdaArrow)                                                            \
   TYPE(LambdaDefinitionLParen)                                                 \
   TYPE(LambdaLBrace)                                                           \
   TYPE(LambdaLSquare)                                                          \
@@ -726,7 +727,7 @@ public:
   bool isMemberAccess() const {
     return isOneOf(tok::arrow, tok::period, tok::arrowstar) &&
            !isOneOf(TT_DesignatedInitializerPeriod, TT_TrailingReturnArrow,
-                    TT_LeadingJavaAnnotation);
+                    TT_LambdaArrow, TT_LeadingJavaAnnotation);
   }
 
   bool isPointerOrReference() const {
@@ -1977,6 +1978,9 @@ inline bool continuesLineComment(const FormatToken &FormatTok,
          isLineComment(*Previous) &&
          FormatTok.OriginalColumn >= MinContinueColumn;
 }
+
+// Returns \c true if \c Current starts a new parameter.
+bool startsNextParameter(const FormatToken &Current, const FormatStyle &Style);
 
 } // namespace format
 } // namespace clang

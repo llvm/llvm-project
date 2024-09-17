@@ -137,11 +137,10 @@ llvm::StringRef DagNode::getSymbol() const { return node->getNameStr(); }
 
 Operator &DagNode::getDialectOp(RecordOperatorMap *mapper) const {
   llvm::Record *opDef = cast<llvm::DefInit>(node->getOperator())->getDef();
-  auto it = mapper->find(opDef);
-  if (it != mapper->end())
-    return *it->second;
-  return *mapper->try_emplace(opDef, std::make_unique<Operator>(opDef))
-              .first->second;
+  auto [it, inserted] = mapper->try_emplace(opDef);
+  if (inserted)
+    it->second = std::make_unique<Operator>(opDef);
+  return *it->second;
 }
 
 int DagNode::getNumOps() const {

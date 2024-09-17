@@ -32,7 +32,7 @@ enum SDNP {
   SDNPWantParent
 };
 
-unsigned parseSDPatternOperatorProperties(Record *R);
+unsigned parseSDPatternOperatorProperties(const Record *R);
 
 } // namespace llvm
 

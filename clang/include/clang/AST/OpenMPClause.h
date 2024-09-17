@@ -191,7 +191,7 @@ public:
 };
 
 /// Class that handles pre-initialization statement for some clauses, like
-/// 'shedule', 'firstprivate' etc.
+/// 'schedule', 'firstprivate' etc.
 class OMPClauseWithPreInit {
   friend class OMPClauseReader;
 

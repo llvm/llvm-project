@@ -45,7 +45,7 @@ namespace {
 /// WebAssemblyOperand - Instances of this class represent the operands in a
 /// parsed Wasm machine instruction.
 struct WebAssemblyOperand : public MCParsedAsmOperand {
-  enum KindTy { Token, Integer, Float, Symbol, BrList } Kind;
+  enum KindTy { Token, Integer, Float, Symbol, BrList, CatchList } Kind;
 
   SMLoc StartLoc, EndLoc;
 
@@ -77,16 +77,16 @@ struct WebAssemblyOperand : public MCParsedAsmOperand {
     struct BrLOp BrL;
   };
 
-  WebAssemblyOperand(KindTy K, SMLoc Start, SMLoc End, TokOp T)
-      : Kind(K), StartLoc(Start), EndLoc(End), Tok(T) {}
-  WebAssemblyOperand(KindTy K, SMLoc Start, SMLoc End, IntOp I)
-      : Kind(K), StartLoc(Start), EndLoc(End), Int(I) {}
-  WebAssemblyOperand(KindTy K, SMLoc Start, SMLoc End, FltOp F)
-      : Kind(K), StartLoc(Start), EndLoc(End), Flt(F) {}
-  WebAssemblyOperand(KindTy K, SMLoc Start, SMLoc End, SymOp S)
-      : Kind(K), StartLoc(Start), EndLoc(End), Sym(S) {}
-  WebAssemblyOperand(KindTy K, SMLoc Start, SMLoc End)
-      : Kind(K), StartLoc(Start), EndLoc(End), BrL() {}
+  WebAssemblyOperand(SMLoc Start, SMLoc End, TokOp T)
+      : Kind(Token), StartLoc(Start), EndLoc(End), Tok(T) {}
+  WebAssemblyOperand(SMLoc Start, SMLoc End, IntOp I)
+      : Kind(Integer), StartLoc(Start), EndLoc(End), Int(I) {}
+  WebAssemblyOperand(SMLoc Start, SMLoc End, FltOp F)
+      : Kind(Float), StartLoc(Start), EndLoc(End), Flt(F) {}
+  WebAssemblyOperand(SMLoc Start, SMLoc End, SymOp S)
+      : Kind(Symbol), StartLoc(Start), EndLoc(End), Sym(S) {}
+  WebAssemblyOperand(SMLoc Start, SMLoc End)
+      : Kind(BrList), StartLoc(Start), EndLoc(End), BrL() {}
 
   ~WebAssemblyOperand() {
     if (isBrList())
@@ -99,6 +99,7 @@ struct WebAssemblyOperand : public MCParsedAsmOperand {
   bool isMem() const override { return false; }
   bool isReg() const override { return false; }
   bool isBrList() const { return Kind == BrList; }
+  bool isCatchList() const { return Kind == CatchList; }
 
   MCRegister getReg() const override {
     llvm_unreachable("Assembly inspects a register operand");
@@ -151,6 +152,10 @@ struct WebAssemblyOperand : public MCParsedAsmOperand {
       Inst.addOperand(MCOperand::createImm(Br));
   }
 
+  void addCatchListOperands(MCInst &Inst, unsigned N) const {
+    // TODO
+  }
+
   void print(raw_ostream &OS) const override {
     switch (Kind) {
     case Token:
@@ -167,6 +172,9 @@ struct WebAssemblyOperand : public MCParsedAsmOperand {
       break;
     case BrList:
       OS << "BrList:" << BrL.List.size();
+      break;
+    case CatchList:
+      // TODO
       break;
     }
   }
@@ -388,8 +396,7 @@ public:
     if (IsNegative)
       Val = -Val;
     Operands.push_back(std::make_unique<WebAssemblyOperand>(
-        WebAssemblyOperand::Integer, Int.getLoc(), Int.getEndLoc(),
-        WebAssemblyOperand::IntOp{Val}));
+        Int.getLoc(), Int.getEndLoc(), WebAssemblyOperand::IntOp{Val}));
     Parser.Lex();
   }
 
@@ -401,8 +408,7 @@ public:
     if (IsNegative)
       Val = -Val;
     Operands.push_back(std::make_unique<WebAssemblyOperand>(
-        WebAssemblyOperand::Float, Flt.getLoc(), Flt.getEndLoc(),
-        WebAssemblyOperand::FltOp{Val}));
+        Flt.getLoc(), Flt.getEndLoc(), WebAssemblyOperand::FltOp{Val}));
     Parser.Lex();
     return false;
   }
@@ -423,8 +429,7 @@ public:
     if (IsNegative)
       Val = -Val;
     Operands.push_back(std::make_unique<WebAssemblyOperand>(
-        WebAssemblyOperand::Float, Flt.getLoc(), Flt.getEndLoc(),
-        WebAssemblyOperand::FltOp{Val}));
+        Flt.getLoc(), Flt.getEndLoc(), WebAssemblyOperand::FltOp{Val}));
     Parser.Lex();
     return false;
   }
@@ -459,8 +464,7 @@ public:
         // up later.
         auto Tok = Lexer.getTok();
         Operands.push_back(std::make_unique<WebAssemblyOperand>(
-            WebAssemblyOperand::Integer, Tok.getLoc(), Tok.getEndLoc(),
-            WebAssemblyOperand::IntOp{-1}));
+            Tok.getLoc(), Tok.getEndLoc(), WebAssemblyOperand::IntOp{-1}));
       }
     }
     return false;
@@ -474,8 +478,7 @@ public:
       NestingStack.back().Sig = Sig;
     }
     Operands.push_back(std::make_unique<WebAssemblyOperand>(
-        WebAssemblyOperand::Integer, NameLoc, NameLoc,
-        WebAssemblyOperand::IntOp{static_cast<int64_t>(BT)}));
+        NameLoc, NameLoc, WebAssemblyOperand::IntOp{static_cast<int64_t>(BT)}));
   }
 
   bool parseLimits(wasm::WasmLimits *Limits) {
@@ -512,16 +515,14 @@ public:
             GetOrCreateFunctionTableSymbol(getContext(), Tok.getString(), is64);
         const auto *Val = MCSymbolRefExpr::create(Sym, getContext());
         *Op = std::make_unique<WebAssemblyOperand>(
-            WebAssemblyOperand::Symbol, Tok.getLoc(), Tok.getEndLoc(),
-            WebAssemblyOperand::SymOp{Val});
+            Tok.getLoc(), Tok.getEndLoc(), WebAssemblyOperand::SymOp{Val});
         Parser.Lex();
         return expect(AsmToken::Comma, ",");
       } else {
         const auto *Val =
             MCSymbolRefExpr::create(DefaultFunctionTable, getContext());
         *Op = std::make_unique<WebAssemblyOperand>(
-            WebAssemblyOperand::Symbol, SMLoc(), SMLoc(),
-            WebAssemblyOperand::SymOp{Val});
+            SMLoc(), SMLoc(), WebAssemblyOperand::SymOp{Val});
         return false;
       }
     } else {
@@ -529,8 +530,7 @@ public:
       // write a table symbol or issue relocations.  Instead we just ensure the
       // table is live and write a zero.
       getStreamer().emitSymbolAttribute(DefaultFunctionTable, MCSA_NoDeadStrip);
-      *Op = std::make_unique<WebAssemblyOperand>(WebAssemblyOperand::Integer,
-                                                 SMLoc(), SMLoc(),
+      *Op = std::make_unique<WebAssemblyOperand>(SMLoc(), SMLoc(),
                                                  WebAssemblyOperand::IntOp{0});
       return false;
     }
@@ -564,7 +564,7 @@ public:
 
     // Now construct the name as first operand.
     Operands.push_back(std::make_unique<WebAssemblyOperand>(
-        WebAssemblyOperand::Token, NameLoc, SMLoc::getFromPointer(Name.end()),
+        NameLoc, SMLoc::getFromPointer(Name.end()),
         WebAssemblyOperand::TokOp{Name}));
 
     // If this instruction is part of a control flow structure, ensure
@@ -645,8 +645,7 @@ public:
       const MCExpr *Expr = MCSymbolRefExpr::create(
           WasmSym, MCSymbolRefExpr::VK_WASM_TYPEINDEX, Ctx);
       Operands.push_back(std::make_unique<WebAssemblyOperand>(
-          WebAssemblyOperand::Symbol, Loc.getLoc(), Loc.getEndLoc(),
-          WebAssemblyOperand::SymOp{Expr}));
+          Loc.getLoc(), Loc.getEndLoc(), WebAssemblyOperand::SymOp{Expr}));
     }
 
     while (Lexer.isNot(AsmToken::EndOfStatement)) {
@@ -671,8 +670,7 @@ public:
           if (Parser.parseExpression(Val, End))
             return error("Cannot parse symbol: ", Lexer.getTok());
           Operands.push_back(std::make_unique<WebAssemblyOperand>(
-              WebAssemblyOperand::Symbol, Start, End,
-              WebAssemblyOperand::SymOp{Val}));
+              Start, End, WebAssemblyOperand::SymOp{Val}));
           if (checkForP2AlignIfLoadStore(Operands, Name))
             return true;
         }
@@ -705,8 +703,8 @@ public:
       }
       case AsmToken::LCurly: {
         Parser.Lex();
-        auto Op = std::make_unique<WebAssemblyOperand>(
-            WebAssemblyOperand::BrList, Tok.getLoc(), Tok.getEndLoc());
+        auto Op =
+            std::make_unique<WebAssemblyOperand>(Tok.getLoc(), Tok.getEndLoc());
         if (!Lexer.is(AsmToken::RCurly))
           for (;;) {
             Op->BrL.List.push_back(Lexer.getTok().getIntVal());

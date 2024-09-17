@@ -13,11 +13,10 @@
 #include "flang/Runtime/entry-names.h"
 
 #define CUDA_REPORT_IF_ERROR(expr) \
-  [](CUresult result) { \
-    if (!result) \
+  [](cudaError_t err) { \
+    if (err == cudaSuccess) \
       return; \
-    const char *name = nullptr; \
-    cuGetErrorName(result, &name); \
+    const char *name = cudaGetErrorName(err); \
     if (!name) \
       name = "<unknown>"; \
     Terminator terminator{__FILE__, __LINE__}; \

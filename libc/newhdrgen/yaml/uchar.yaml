@@ -7,6 +7,7 @@ types:
   - type_name: char16_t
   - type_name: char8_t
   - type_name: mbstate_t
+  - type_name: size_t
 enums: []
 objects: []
 functions: []

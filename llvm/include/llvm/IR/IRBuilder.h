@@ -1015,6 +1015,18 @@ public:
     return CreateBinaryIntrinsic(Intrinsic::maximum, LHS, RHS, nullptr, Name);
   }
 
+  /// Create call to the minimumnum intrinsic.
+  Value *CreateMinimumNum(Value *LHS, Value *RHS, const Twine &Name = "") {
+    return CreateBinaryIntrinsic(Intrinsic::minimumnum, LHS, RHS, nullptr,
+                                 Name);
+  }
+
+  /// Create call to the maximum intrinsic.
+  Value *CreateMaximumNum(Value *LHS, Value *RHS, const Twine &Name = "") {
+    return CreateBinaryIntrinsic(Intrinsic::maximumnum, LHS, RHS, nullptr,
+                                 Name);
+  }
+
   /// Create call to the copysign intrinsic.
   Value *CreateCopySign(Value *LHS, Value *RHS,
                         Instruction *FMFSource = nullptr,
@@ -1065,6 +1077,15 @@ public:
   CallInst *CreateStackRestore(Value *Ptr, const Twine &Name = "") {
     return CreateIntrinsic(Intrinsic::stackrestore, {Ptr->getType()}, {Ptr},
                            nullptr, Name);
+  }
+
+  /// Create a call to llvm.experimental_cttz_elts
+  Value *CreateCountTrailingZeroElems(Type *ResTy, Value *Mask,
+                                      bool ZeroIsPoison = true,
+                                      const Twine &Name = "") {
+    return CreateIntrinsic(Intrinsic::experimental_cttz_elts,
+                           {ResTy, Mask->getType()},
+                           {Mask, getInt1(ZeroIsPoison)}, nullptr, Name);
   }
 
 private:

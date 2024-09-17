@@ -196,7 +196,7 @@ define void @PR36225(i32 %a, i32 %b, i1 %c1, i3 %v1, i3 %v2) {
 ; CHECK:       for.end:
 ; CHECK-NEXT:    [[H:%.*]] = phi i8 [ [[SPEC_SELECT]], [[FOR_BODY3_US]] ], [ [[SPEC_SELECT]], [[FOR_BODY3_US]] ], [ 0, [[FOR_BODY3]] ], [ 0, [[FOR_BODY3]] ]
 ; CHECK-NEXT:    [[CONV:%.*]] = zext nneg i8 [[H]] to i32
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[CONV]], [[A:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[A:%.*]], [[CONV]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[EXIT]], label [[EXIT2:%.*]]
 ; CHECK:       exit2:
 ; CHECK-NEXT:    unreachable
@@ -228,7 +228,7 @@ define void @PR36225(i32 %a, i32 %b, i1 %c1, i3 %v1, i3 %v2) {
 ; DBGINFO-NEXT:      #dbg_value(i8 [[H]], [[META91:![0-9]+]], !DIExpression(), [[DBG100]])
 ; DBGINFO-NEXT:    [[CONV:%.*]] = zext nneg i8 [[H]] to i32, !dbg [[DBG101:![0-9]+]]
 ; DBGINFO-NEXT:      #dbg_value(i32 [[CONV]], [[META92:![0-9]+]], !DIExpression(), [[DBG101]])
-; DBGINFO-NEXT:    [[CMP:%.*]] = icmp slt i32 [[CONV]], [[A:%.*]], !dbg [[DBG102:![0-9]+]]
+; DBGINFO-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[A:%.*]], [[CONV]], !dbg [[DBG102:![0-9]+]]
 ; DBGINFO-NEXT:      #dbg_value(i1 [[CMP]], [[META93:![0-9]+]], !DIExpression(), [[DBG102]])
 ; DBGINFO-NEXT:    br i1 [[CMP]], label [[EXIT]], label [[EXIT2:%.*]], !dbg [[DBG103:![0-9]+]]
 ; DBGINFO:       exit2:

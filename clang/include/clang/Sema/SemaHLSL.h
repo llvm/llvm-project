@@ -13,19 +13,27 @@
 #ifndef LLVM_CLANG_SEMA_SEMAHLSL_H
 #define LLVM_CLANG_SEMA_SEMAHLSL_H
 
+#include "clang/AST/ASTFwd.h"
 #include "clang/AST/Attr.h"
-#include "clang/AST/Decl.h"
-#include "clang/AST/DeclBase.h"
-#include "clang/AST/Expr.h"
-#include "clang/Basic/AttributeCommonInfo.h"
-#include "clang/Basic/IdentifierTable.h"
+#include "clang/AST/Type.h"
+#include "clang/AST/TypeLoc.h"
 #include "clang/Basic/SourceLocation.h"
-#include "clang/Sema/Scope.h"
 #include "clang/Sema/SemaBase.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/TargetParser/Triple.h"
 #include <initializer_list>
 
 namespace clang {
+class AttributeCommonInfo;
+class IdentifierInfo;
 class ParsedAttr;
+class Scope;
+
+// FIXME: This can be hidden (as static function in SemaHLSL.cpp) once we no
+// longer need to create builtin buffer types in HLSLExternalSemaSource.
+bool CreateHLSLAttributedResourceType(
+    Sema &S, QualType Wrapped, ArrayRef<const Attr *> AttrList,
+    QualType &ResType, HLSLAttributedResourceLocInfo *LocInfo = nullptr);
 
 class SemaHLSL : public SemaBase {
 public:
@@ -38,6 +46,9 @@ public:
   HLSLNumThreadsAttr *mergeNumThreadsAttr(Decl *D,
                                           const AttributeCommonInfo &AL, int X,
                                           int Y, int Z);
+  HLSLWaveSizeAttr *mergeWaveSizeAttr(Decl *D, const AttributeCommonInfo &AL,
+                                      int Min, int Max, int Preferred,
+                                      int SpelledArgsCount);
   HLSLShaderAttr *mergeShaderAttr(Decl *D, const AttributeCommonInfo &AL,
                                   llvm::Triple::EnvironmentType ShaderType);
   HLSLParamModifierAttr *
@@ -53,14 +64,39 @@ public:
   void DiagnoseAvailabilityViolations(TranslationUnitDecl *TU);
 
   void handleNumThreadsAttr(Decl *D, const ParsedAttr &AL);
+  void handleWaveSizeAttr(Decl *D, const ParsedAttr &AL);
   void handleSV_DispatchThreadIDAttr(Decl *D, const ParsedAttr &AL);
   void handlePackOffsetAttr(Decl *D, const ParsedAttr &AL);
   void handleShaderAttr(Decl *D, const ParsedAttr &AL);
-  void handleResourceClassAttr(Decl *D, const ParsedAttr &AL);
   void handleResourceBindingAttr(Decl *D, const ParsedAttr &AL);
   void handleParamModifierAttr(Decl *D, const ParsedAttr &AL);
+  bool handleResourceTypeAttr(const ParsedAttr &AL);
 
   bool CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
+  QualType ProcessResourceTypeAttributes(QualType Wrapped);
+  HLSLAttributedResourceLocInfo
+  TakeLocForHLSLAttribute(const HLSLAttributedResourceType *RT);
+
+  // HLSL Type trait implementations
+  bool IsScalarizedLayoutCompatible(QualType T1, QualType T2) const;
+  bool IsIntangibleType(QualType T1);
+
+  bool CheckCompatibleParameterABI(FunctionDecl *New, FunctionDecl *Old);
+
+  ExprResult ActOnOutParamExpr(ParmVarDecl *Param, Expr *Arg);
+
+  QualType getInoutParameterType(QualType Ty);
+
+private:
+  // HLSL resource type attributes need to be processed all at once.
+  // This is a list to collect them.
+  llvm::SmallVector<const Attr *> HLSLResourcesTypeAttrs;
+
+  /// TypeLoc data for HLSLAttributedResourceType instances that we
+  /// have not yet populated.
+  llvm::DenseMap<const HLSLAttributedResourceType *,
+                 HLSLAttributedResourceLocInfo>
+      LocsForHLSLAttributedResources;
 };
 
 } // namespace clang

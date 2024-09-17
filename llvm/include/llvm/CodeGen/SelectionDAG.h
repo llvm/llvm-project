@@ -14,8 +14,6 @@
 #ifndef LLVM_CODEGEN_SELECTIONDAG_H
 #define LLVM_CODEGEN_SELECTIONDAG_H
 
-#include "llvm/ADT/APFloat.h"
-#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
@@ -674,11 +672,11 @@ public:
   SDValue getConstant(const APInt &Val, const SDLoc &DL, EVT VT,
                       bool isTarget = false, bool isOpaque = false);
 
+  SDValue getSignedConstant(int64_t Val, const SDLoc &DL, EVT VT,
+                            bool isTarget = false, bool isOpaque = false);
+
   SDValue getAllOnesConstant(const SDLoc &DL, EVT VT, bool IsTarget = false,
-                             bool IsOpaque = false) {
-    return getConstant(APInt::getAllOnes(VT.getScalarSizeInBits()), DL, VT,
-                       IsTarget, IsOpaque);
-  }
+                             bool IsOpaque = false);
 
   SDValue getConstant(const ConstantInt &Val, const SDLoc &DL, EVT VT,
                       bool isTarget = false, bool isOpaque = false);
@@ -1166,7 +1164,12 @@ public:
   SDValue getNode(unsigned Opcode, const SDLoc &DL, EVT VT, SDValue N1,
                   SDValue N2, SDValue N3, SDValue N4);
   SDValue getNode(unsigned Opcode, const SDLoc &DL, EVT VT, SDValue N1,
+                  SDValue N2, SDValue N3, SDValue N4, const SDNodeFlags Flags);
+  SDValue getNode(unsigned Opcode, const SDLoc &DL, EVT VT, SDValue N1,
                   SDValue N2, SDValue N3, SDValue N4, SDValue N5);
+  SDValue getNode(unsigned Opcode, const SDLoc &DL, EVT VT, SDValue N1,
+                  SDValue N2, SDValue N3, SDValue N4, SDValue N5,
+                  const SDNodeFlags Flags);
 
   // Specialize again based on number of operands for nodes with a VTList
   // rather than a single VT.
@@ -1591,6 +1594,11 @@ public:
   /// the target's desired shift amount type.
   SDValue getShiftAmountOperand(EVT LHSTy, SDValue Op);
 
+  /// Create the DAG equivalent of vector_partial_reduce where Op1 and Op2 are
+  /// its operands and ReducedTY is the intrinsic's return type.
+  SDValue getPartialReduceAdd(SDLoc DL, EVT ReducedTy, SDValue Op1,
+                              SDValue Op2);
+
   /// Expand the specified \c ISD::VAARG node as the Legalize pass would.
   SDValue expandVAArg(SDNode *Node);
 
@@ -1822,21 +1830,6 @@ public:
   /// topological ordering when the list of nodes is modified.
   void RepositionNode(allnodes_iterator Position, SDNode *N) {
     AllNodes.insert(Position, AllNodes.remove(N));
-  }
-
-  /// Returns an APFloat semantics tag appropriate for the given type. If VT is
-  /// a vector type, the element semantics are returned.
-  static const fltSemantics &EVTToAPFloatSemantics(EVT VT) {
-    switch (VT.getScalarType().getSimpleVT().SimpleTy) {
-    default: llvm_unreachable("Unknown FP format");
-    case MVT::f16:     return APFloat::IEEEhalf();
-    case MVT::bf16:    return APFloat::BFloat();
-    case MVT::f32:     return APFloat::IEEEsingle();
-    case MVT::f64:     return APFloat::IEEEdouble();
-    case MVT::f80:     return APFloat::x87DoubleExtended();
-    case MVT::f128:    return APFloat::IEEEquad();
-    case MVT::ppcf128: return APFloat::PPCDoubleDouble();
-    }
   }
 
   /// Add a dbg_value SDNode. If SD is non-null that means the
@@ -2379,7 +2372,7 @@ public:
   /// Return the current function's default denormal handling kind for the given
   /// floating point type.
   DenormalMode getDenormalMode(EVT VT) const {
-    return MF->getDenormalMode(EVTToAPFloatSemantics(VT));
+    return MF->getDenormalMode(VT.getFltSemantics());
   }
 
   bool shouldOptForSize() const;

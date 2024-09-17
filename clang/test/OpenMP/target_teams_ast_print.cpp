@@ -58,6 +58,8 @@ T tmain(T argc, T *argv) {
   foo();
 #pragma omp target teams allocate(my_allocator:f) reduction(^:e, f) reduction(&& : g) uses_allocators(my_allocator(traits))
   foo();
+#pragma omp target teams ompx_bare num_teams(C, C, C) thread_limit(d*C, d*C, d*C)
+  foo();
   return 0;
 }
 
@@ -97,6 +99,8 @@ T tmain(T argc, T *argv) {
 // CHECK-NEXT: foo()
 // CHECK-NEXT: #pragma omp target teams allocate(my_allocator: f) reduction(^: e,f) reduction(&&: g) uses_allocators(my_allocator(traits))
 // CHECK-NEXT: foo()
+// CHECK-NEXT: #pragma omp target teams ompx_bare num_teams(1,1,1) thread_limit(d * 1,d * 1,d * 1)
+// CHECK-NEXT: foo();
 
 enum Enum { };
 

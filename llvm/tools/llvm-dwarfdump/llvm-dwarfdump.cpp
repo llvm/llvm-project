@@ -272,7 +272,7 @@ static cl::opt<bool>
                               "expressed in bytes."),
                      cat(DwarfDumpCategory));
 static cl::opt<bool> ManuallyGenerateUnitIndex(
-    "manaully-generate-unit-index",
+    "manually-generate-unit-index",
     cl::desc("if the input is dwp file, parse .debug_info "
              "section and use it to populate "
              "DW_SECT_INFO contributions in cu-index. "
@@ -681,7 +681,7 @@ static bool dumpObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
   auto GetRegName = [&MCRegInfo](uint64_t DwarfRegNum, bool IsEH) -> StringRef {
     if (!MCRegInfo)
       return {};
-    if (std::optional<unsigned> LLVMRegNum =
+    if (std::optional<MCRegister> LLVMRegNum =
             MCRegInfo->getLLVMRegNum(DwarfRegNum, IsEH))
       if (const char *RegName = MCRegInfo->getName(*LLVMRegNum))
         return StringRef(RegName);

@@ -84,6 +84,9 @@ public:
   /// <-1, -1> if not supported.
   static std::pair<int, int> getRISCVFeaturesBitsInfo(StringRef Ext);
 
+  // The maximum value of the group ID obtained from getRISCVFeaturesBitsInfo.
+  static constexpr unsigned FeatureBitSize = 2;
+
 private:
   RISCVISAInfo(unsigned XLen) : XLen(XLen) {}
 

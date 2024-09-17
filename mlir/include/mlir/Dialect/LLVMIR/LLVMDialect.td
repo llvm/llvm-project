@@ -32,6 +32,7 @@ def LLVM_Dialect : Dialect {
     static StringRef getNoAliasScopesAttrName() { return "noalias_scopes"; }
     static StringRef getAliasScopesAttrName() { return "alias_scopes"; }
     static StringRef getAccessGroupsAttrName() { return "access_groups"; }
+    static StringRef getIdentAttrName() { return "llvm.ident"; }
 
     /// Names of llvm parameter attributes.
     static StringRef getAlignAttrName() { return "llvm.align"; }

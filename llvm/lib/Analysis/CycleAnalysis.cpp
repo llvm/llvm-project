@@ -35,6 +35,13 @@ PreservedAnalyses CycleInfoPrinterPass::run(Function &F,
   return PreservedAnalyses::all();
 }
 
+PreservedAnalyses CycleInfoVerifierPass::run(Function &F,
+                                             FunctionAnalysisManager &AM) {
+  CycleInfo &CI = AM.getResult<CycleAnalysis>(F);
+  CI.verify();
+  return PreservedAnalyses::all();
+}
+
 //===----------------------------------------------------------------------===//
 //  CycleInfoWrapperPass Implementation
 //===----------------------------------------------------------------------===//
