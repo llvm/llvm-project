@@ -290,10 +290,10 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertCharacterType(
     sizeInBits =
         charTy.getLen() * kindMapping.getCharacterBitsize(charTy.getFKind());
   } else {
-    // In some situations, the len of the character is not part of the type but
-    // can be found at the runtime. Here we create an artificial variable that
-    // will contain that length. This variable is used as 'stringLength' in
-    // DIStringTypeAttr.
+    // In assumed length string, the len of the character is not part of the
+    // type but can be found at the runtime. Here we create an artificial
+    // variable that will contain that length. This variable is used as
+    // 'stringLength' in DIStringTypeAttr.
     if (declOp && !declOp.getTypeparams().empty()) {
       mlir::Operation *op = declOp.getTypeparams()[0].getDefiningOp();
       if (auto unbox = mlir::dyn_cast_or_null<fir::UnboxCharOp>(op)) {
