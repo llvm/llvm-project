@@ -2580,6 +2580,12 @@ LogicalResult cir::FuncOp::verifyType() {
   return success();
 }
 
+LogicalResult cir::IntrinsicCallOp::verify() {
+  if (!getIntrinsicName().starts_with("llvm."))
+    return emitOpError() << "intrinsic name must start with 'llvm.'";
+  return success();
+}
+
 // Verifies linkage types
 // - functions don't have 'common' linkage
 // - external functions have 'external' or 'extern_weak' linkage

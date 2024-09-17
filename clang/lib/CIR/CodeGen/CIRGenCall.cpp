@@ -442,7 +442,6 @@ void CIRGenModule::constructAttributeList(StringRef Name,
   }
 
   getDefaultFunctionAttributes(Name, HasOptnone, AttrOnCallSite, funcAttrs);
-
 }
 
 static mlir::cir::CIRCallOpInterface
@@ -1588,9 +1587,9 @@ void CIRGenModule::getTrivialDefaultFunctionAttributes(
                                         funcAttrs);
 }
 
-void CIRGenModule::getDefaultFunctionAttributes(StringRef name, bool hasOptnone,
-                                                bool attrOnCallSite,
-                                                mlir::NamedAttrList &funcAttrs) {
+void CIRGenModule::getDefaultFunctionAttributes(
+    StringRef name, bool hasOptnone, bool attrOnCallSite,
+    mlir::NamedAttrList &funcAttrs) {
   getTrivialDefaultFunctionAttributes(name, hasOptnone, attrOnCallSite,
                                       funcAttrs);
   // If we're just getting the default, get the default values for mergeable

@@ -1569,6 +1569,44 @@ mlir::Value CIRGenFunction::buildScalarOrConstFoldImmArg(unsigned ICEArguments,
   return Arg;
 }
 
+static mlir::Value buildArmLdrexNon128Intrinsic(unsigned int builtinID,
+                                                const CallExpr *clangCallExpr,
+                                                CIRGenFunction &cgf) {
+  StringRef intrinsicName;
+  if (builtinID == clang::AArch64::BI__builtin_arm_ldrex) {
+    intrinsicName = "llvm.aarch64.ldxr";
+  } else {
+    llvm_unreachable("Unknown builtinID");
+  }
+  // Argument
+  mlir::Value loadAddr = cgf.buildScalarExpr(clangCallExpr->getArg(0));
+  // Get Instrinc call
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+  QualType clangResTy = clangCallExpr->getType();
+  mlir::Type realResTy = cgf.ConvertType(clangResTy);
+  // Return type of LLVM intrinsic is defined in Intrinsic<arch_type>.td,
+  // which can be found under LLVM IR directory.
+  mlir::Type funcResTy = builder.getSInt64Ty();
+  mlir::Location loc = cgf.getLoc(clangCallExpr->getExprLoc());
+  mlir::cir::IntrinsicCallOp op = builder.create<mlir::cir::IntrinsicCallOp>(
+      loc, builder.getStringAttr(intrinsicName), funcResTy, loadAddr);
+  mlir::Value res = op.getResult();
+
+  // Convert result type to the expected type.
+  if (mlir::isa<mlir::cir::PointerType>(realResTy)) {
+    return builder.createIntToPtr(res, realResTy);
+  }
+  mlir::cir::IntType intResTy =
+      builder.getSIntNTy(cgf.CGM.getDataLayout().getTypeSizeInBits(realResTy));
+  mlir::Value intCastRes = builder.createIntCast(res, intResTy);
+  if (mlir::isa<mlir::cir::IntType>(realResTy)) {
+    return builder.createIntCast(intCastRes, realResTy);
+  } else {
+    // Above cases should cover most situations and we have test coverage.
+    llvm_unreachable("Unsupported return type for now");
+  }
+}
+
 mlir::Value
 CIRGenFunction::buildAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
                                         ReturnValueSlot ReturnValue,
@@ -1708,7 +1746,7 @@ CIRGenFunction::buildAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
     llvm_unreachable("NYI");
   } else if (BuiltinID == clang::AArch64::BI__builtin_arm_ldrex ||
              BuiltinID == clang::AArch64::BI__builtin_arm_ldaex) {
-    llvm_unreachable("NYI");
+    return buildArmLdrexNon128Intrinsic(BuiltinID, E, *this);
   }
 
   if ((BuiltinID == clang::AArch64::BI__builtin_arm_strex ||
