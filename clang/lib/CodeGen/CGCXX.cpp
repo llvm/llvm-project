@@ -203,26 +203,62 @@ bool CodeGenModule::TryEmitBaseDestructorAsAlias(const CXXDestructorDecl *D) {
 
   return false;
 }
-/*
+
 /// Emit a definition as a global alias for another definition, unconditionally.
 /// Use this function with care as it can produce invalid aliases.  Generally
 /// this function should be used only where there is an ABI requirement to emit
 /// an alias.
-void CodeGenModule::EmitDefinitionAsAlias(GlobalDecl AliasDecl,
-                                          GlobalDecl TargetDecl) {
+void CodeGenModule::EmitDefinitionAsAlias(GlobalDecl AliasDecl, GlobalDecl TargetDecl) {
+  // Get the mangled names for the alias and the target.
+  StringRef AliasName = getMangledName(AliasDecl);
+  StringRef TargetName = getMangledName(TargetDecl);
+
+  // Get the LLVM function for the target.
+  llvm::Function *TargetFunction = cast<llvm::Function>(GetOrCreateLLVMFunction(
+        TargetName, /*FnType=*/nullptr, TargetDecl, /*ForVTable=*/false,
+      /*DontDefer=*/true, /*IsThunk=*/false, /*ExtraAttrs=*/llvm::AttributeList(),
+      ForDefinition));
+
+  // Determine the linkage type for the alias.
   llvm::GlobalValue::LinkageTypes Linkage = getFunctionLinkage(AliasDecl);
+
+  // Ensure that the target has the correct linkage.
+  TargetFunction->setLinkage(Linkage);
+  llvm::Type *ElementType = TargetFunction->getValueType();
+  llvm::GlobalAlias *GA = llvm::GlobalAlias::create(
+     ElementType, // Type of the aliased value
+     0, // Address space, usually 0 for the default address space
+     Linkage, // Linkage of the alias
+     AliasName, // Name of the alias
+     TargetFunction, // The aliased value
+     &getModule()); // The module in which to create the alias
+
+  // Set any additional necessary attributes for the alias.
+  SetCommonAttributes(AliasDecl, GA);
 }
-*/
+
 llvm::Function *CodeGenModule::codegenCXXStructor(GlobalDecl GD) {
-  /*
   // The Microsoft ABI requires that the vector deleting destructor
   // be weak aliased to the scalar deleting destructor.
-  // TODO: emission of the vector deleting destructor (when required).
   if (getTarget().getCXXABI().isMicrosoft() && GD.getDtorType() == Dtor_VectorDeleting) {
-    EmitDefinitionAsAlias(GlobalDecl(dtor, Dtor_VectorDeleting),
-                          GlobalDecl(dtor, Dtor_Deleting));
-    return;
-  } */
+    const CXXDestructorDecl *DtorDecl = cast<CXXDestructorDecl>(GD.getDecl());
+
+    // Create GlobalDecl objects with the correct type for the vector and scalar deleting destructors.
+    GlobalDecl VectorDtorGD(DtorDecl, Dtor_VectorDeleting);
+    GlobalDecl ScalarDtorGD(DtorDecl, Dtor_Deleting);
+
+    // Emit an alias from the vector deleting destructor to the scalar deleting destructor.
+    EmitDefinitionAsAlias(VectorDtorGD, ScalarDtorGD);
+
+    // Return the scalar deleting destructor, which is now aliased by the vector deleting destructor.
+    // Use the mangled name of the scalar deleting destructor.
+    StringRef MangledName = getMangledName(ScalarDtorGD);
+    return cast<llvm::Function>(GetOrCreateLLVMFunction(
+        MangledName, /*FnType=*/nullptr,
+	ScalarDtorGD, /*ForVTable=*/false,
+        /*DontDefer=*/true, /*IsThunk=*/false, /*ExtraAttrs=*/llvm::AttributeList(),
+        ForDefinition));
+  }
   const CGFunctionInfo &FnInfo = getTypes().arrangeCXXStructorDeclaration(GD);
   auto *Fn = cast<llvm::Function>(
       getAddrOfCXXStructor(GD, &FnInfo, /*FnType=*/nullptr,
