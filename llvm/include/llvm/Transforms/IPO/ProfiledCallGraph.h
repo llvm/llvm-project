@@ -62,15 +62,14 @@ struct PrehashedFunctionId {
 
   PrehashedFunctionId() = default;
 
-  /* implicit */ PrehashedFunctionId(FunctionId FId) : Id(FId), Hash(hash_value(Id)) {}
+  /* implicit */ PrehashedFunctionId(FunctionId FId)
+      : Id(FId), Hash(hash_value(Id)) {}
 
   FunctionId Id;
   uint64_t Hash;
 };
 
-inline uint64_t hash_value(const PrehashedFunctionId& Obj) {
-  return Obj.Hash;
-}
+inline uint64_t hash_value(const PrehashedFunctionId &Obj) { return Obj.Hash; }
 
 class ProfiledCallGraph {
 public:
@@ -158,15 +157,15 @@ private:
       // Link to synthetic root to make sure every node is reachable
       // from root. This does not affect SCC order.
       // Store the pointer of the node because the map can be rehashed.
-      auto &Node =
-          ProfiledCallGraphNodeList.emplace_back(ProfiledCallGraphNode(Name.Id));
+      auto &Node = ProfiledCallGraphNodeList.emplace_back(
+          ProfiledCallGraphNode(Name.Id));
       ProfiledFunctions[Name] = &Node;
       Root.Edges.emplace(&Root, ProfiledFunctions[Name], 0);
     }
   }
 
-  void addProfiledCall(PrehashedFunctionId CallerName, PrehashedFunctionId CalleeName,
-                       uint64_t Weight = 0) {
+  void addProfiledCall(PrehashedFunctionId CallerName,
+                       PrehashedFunctionId CalleeName, uint64_t Weight = 0) {
     assert(ProfiledFunctions.count(CallerName));
     auto CalleeIt = ProfiledFunctions.find(CalleeName);
     if (CalleeIt == ProfiledFunctions.end())
@@ -226,7 +225,7 @@ private:
   ProfiledCallGraphNode Root;
   // backing buffer for ProfiledCallGraphNodes.
   std::list<ProfiledCallGraphNode> ProfiledCallGraphNodeList;
-  HashKeyMap<llvm::DenseMap, PrehashedFunctionId, ProfiledCallGraphNode*>
+  HashKeyMap<llvm::DenseMap, PrehashedFunctionId, ProfiledCallGraphNode *>
       ProfiledFunctions;
 };
 
