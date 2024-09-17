@@ -1431,7 +1431,7 @@ class BaseSIMDSUDOTIndex<bit Q, string dst_kind, string lhs_kind,
                                         lhs_kind, rhs_kind, RegType, AccumType,
                                         InputType, null_frag> {
   let Pattern = [(set (AccumType RegType:$dst),
-                      (AccumType (int_aarch64_neon_usdot (AccumType RegType:$Rd),
+                      (AccumType (AArch64usdot (AccumType RegType:$Rd),
                                  (InputType (bitconvert (AccumType
                                     (AArch64duplane32 (v4i32 V128:$Rm),
                                         VectorIndexS:$idx)))),
