@@ -1594,6 +1594,12 @@ public:
     // the nop.
     return true;
   }
+
+  bool requiresDisjointEarlyClobberAndUndef() const override {
+    // AMDGPU doesn't care if early-clobber and undef operands are allocated
+    // to the same register.
+    return false;
+  }
 };
 
 class GCNUserSGPRUsageInfo {

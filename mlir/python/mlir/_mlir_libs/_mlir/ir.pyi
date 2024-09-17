@@ -120,6 +120,7 @@ __all__ = [
     "F32Type",
     "F64Type",
     "FlatSymbolRefAttr",
+    "Float6E2M3FNType",
     "Float6E3M2FNType",
     "Float8E3M4Type",
     "Float8E4M3B11FNUZType",
@@ -1540,6 +1541,19 @@ class FlatSymbolRefAttr(Attribute):
         """
         Returns the value of the FlatSymbolRef attribute as a string
         """
+
+class Float6E2M3FNType(FloatType):
+    static_typeid: ClassVar[TypeID]
+    @staticmethod
+    def get(context: Optional[Context] = None) -> Float6E2M3FNType:
+        """
+        Create a float6_e2m3fn type.
+        """
+    @staticmethod
+    def isinstance(other: Type) -> bool: ...
+    def __init__(self, cast_from_type: Type) -> None: ...
+    @property
+    def typeid(self) -> TypeID: ...
 
 class Float6E3M2FNType(FloatType):
     static_typeid: ClassVar[TypeID]

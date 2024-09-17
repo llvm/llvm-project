@@ -305,6 +305,8 @@ Improvements to Clang's diagnostics
 
 - Clang now diagnose when importing module implementation partition units in module interface units.
 
+- Don't emit bogus dangling diagnostics when ``[[gsl::Owner]]`` and `[[clang::lifetimebound]]` are used together (#GH108272).
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -388,7 +390,7 @@ Bug Fixes to C++ Support
 - Fixed a crash in the typo correction of an invalid CTAD guide. (#GH107887)
 - Fixed a crash when clang tries to subtitute parameter pack while retaining the parameter
   pack. #GH63819, #GH107560
-
+- Fix a crash when a static assert declaration has an invalid close location. (#GH108687)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -503,6 +505,8 @@ AST Matchers
 
 - Fixed an ordering issue with the `hasOperands` matcher occurring when setting a
   binding in the first matcher and using it in the second matcher.
+
+- Fixed a crash when traverse lambda expr with invalid captures. (#GH106444)
 
 clang-format
 ------------
