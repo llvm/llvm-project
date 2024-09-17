@@ -3,199 +3,351 @@
 ; The optimization should appear only with +c, otherwise default isel should be
 ; choosen.
 ;
-; RUN: cat %s | sed 's/CMPCOND/eq/g' | sed 's/RESBRNORMAL/beq/g' | \
-; RUN: sed 's/RESBROPT/c.beqz/g' > %t.compress_eq
 ; RUN: llc -mtriple=riscv32 -target-abi ilp32d -mattr=+c,+f,+d -filetype=obj \
-; RUN:   -disable-block-placement < %t.compress_eq \
+; RUN:   -disable-block-placement < %s \
 ; RUN:   | llvm-objdump -d --triple=riscv32 --mattr=+c,+f,+d -M no-aliases - \
-; RUN:   | FileCheck -check-prefix=RV32IFDC %t.compress_eq
+; RUN:   | FileCheck -check-prefix=RV32IFDC %s
 ;
-; RUN: cat %s | sed -e 's/CMPCOND/eq/g' | sed -e 's/RESBRNORMAL/beq/g'\
-; RUN:   | sed -e 's/RESBROPT/c.beqz/g' > %t.nocompr_eq
 ; RUN: llc -mtriple=riscv32 -target-abi ilp32d -mattr=-c,+f,+d -filetype=obj \
-; RUN:   -disable-block-placement < %t.nocompr_eq \
+; RUN:   -disable-block-placement < %s \
 ; RUN:   | llvm-objdump -d --triple=riscv32 --mattr=-c,+f,+d -M no-aliases - \
-; RUN:   | FileCheck -check-prefix=RV32IFD %t.nocompr_eq
-;
-; RUN: cat %s | sed 's/CMPCOND/ne/g' | sed 's/RESBRNORMAL/bne/g' | \
-; RUN: sed 's/RESBROPT/c.bnez/g' > %t.compress_neq
-; RUN: llc -mtriple=riscv32 -target-abi ilp32d -mattr=+c,+f,+d -filetype=obj \
-; RUN:   -disable-block-placement < %t.compress_neq \
-; RUN:   | llvm-objdump -d --triple=riscv32 --mattr=+c,+f,+d -M no-aliases - \
-; RUN:   | FileCheck -check-prefix=RV32IFDC %t.compress_neq
-;
-; RUN: cat %s | sed -e 's/CMPCOND/ne/g' | sed -e 's/RESBRNORMAL/bne/g'\
-; RUN:   | sed -e 's/RESBROPT/c.bnez/g' > %t.nocompr_neq
-; RUN: llc -mtriple=riscv32 -target-abi ilp32d -mattr=-c,+f,+d -filetype=obj \
-; RUN:   -disable-block-placement < %t.nocompr_neq \
-; RUN:   | llvm-objdump -d --triple=riscv32 --mattr=-c,+f,+d -M no-aliases - \
-; RUN:   | FileCheck -check-prefix=RV32IFD %t.nocompr_neq
-
+; RUN:   | FileCheck -check-prefix=RV32IFD %s
 
 ; constant is small and fit in 6 bit (compress imm)
-; RV32IFDC-LABEL: <f_small_pos>:
+; RV32IFDC-LABEL: <ne_small_pos>:
 ; RV32IFDC: c.li [[REG:.*]], 0x14
-; RV32IFDC: RESBRNORMAL [[ANOTHER:.*]], [[REG]], [[PLACE:.*]]
+; RV32IFDC: [[COND:b.*]] [[ANOTHER:.*]], [[REG]], [[PLACE:.*]]
 ; --- no compress extension
-; RV32IFD-LABEL: <f_small_pos>:
+; RV32IFD-LABEL: <ne_small_pos>:
 ; RV32IFD: addi [[REG:.*]], zero, 0x14
-; RV32IFD: RESBRNORMAL [[ANOTHER:.*]], [[REG]], [[PLACE:.*]]
-define i32 @f_small_pos(i32 %in0) minsize {
-  %cmp = icmp CMPCOND i32 %in0, 20
+; RV32IFD: [[COND:b.*]] [[ANOTHER:.*]], [[REG]], [[PLACE:.*]]
+define i32 @ne_small_pos(i32 %in0) minsize {
+  %cmp = icmp ne i32 %in0, 20
   %toRet = select i1 %cmp, i32 -99, i32 42
   ret i32 %toRet
 }
 
 ; constant is small and fit in 6 bit (compress imm)
-; RV32IFDC-LABEL: <f_small_neg>:
+; RV32IFDC-LABEL: <ne_small_neg>:
 ; RV32IFDC: c.li [[REG:.*]], -0x14
-; RV32IFDC: RESBRNORMAL [[ANOTHER:.*]], [[REG]], [[PLACE:.*]]
+; RV32IFDC: [[COND:b.*]] [[ANOTHER:.*]], [[REG]], [[PLACE:.*]]
 ; --- no compress extension
-; RV32IFD-LABEL: <f_small_neg>:
+; RV32IFD-LABEL: <ne_small_neg>:
 ; RV32IFD: addi [[REG:.*]], zero, -0x14
-; RV32IFD: RESBRNORMAL [[ANOTHER:.*]], [[REG]], [[PLACE:.*]]
-define i32 @f_small_neg(i32 %in0) minsize {
-  %cmp = icmp CMPCOND i32 %in0, -20
+; RV32IFD: [[COND:b.*]] [[ANOTHER:.*]], [[REG]], [[PLACE:.*]]
+define i32 @ne_small_neg(i32 %in0) minsize {
+  %cmp = icmp ne i32 %in0, -20
   %toRet = select i1 %cmp, i32 -99, i32 42
   ret i32 %toRet
 }
 
 ; constant is small and fit in 6 bit (compress imm)
-; RV32IFDC-LABEL: <f_small_edge_pos>:
+; RV32IFDC-LABEL: <ne_small_edge_pos>:
 ; RV32IFDC: c.li [[REG:.*]], 0x1f
-; RV32IFDC: RESBRNORMAL [[ANOTHER:.*]], [[REG]], [[PLACE:.*]]
+; RV32IFDC: [[COND:b.*]] [[ANOTHER:.*]], [[REG]], [[PLACE:.*]]
 ; --- no compress extension
-; RV32IFD-LABEL: <f_small_edge_pos>:
+; RV32IFD-LABEL: <ne_small_edge_pos>:
 ; RV32IFD: addi [[REG:.*]], zero, 0x1f
-; RV32IFD: RESBRNORMAL [[ANOTHER:.*]], [[REG]], [[PLACE:.*]]
-define i32 @f_small_edge_pos(i32 %in0) minsize {
-  %cmp = icmp CMPCOND i32 %in0, 31
+; RV32IFD: [[COND:b.*]] [[ANOTHER:.*]], [[REG]], [[PLACE:.*]]
+define i32 @ne_small_edge_pos(i32 %in0) minsize {
+  %cmp = icmp ne i32 %in0, 31
   %toRet = select i1 %cmp, i32 -99, i32 42
   ret i32 %toRet
 }
 
 ; constant is small and fit in 6 bit (compress imm)
-; RV32IFDC-LABEL: <f_small_edge_neg>:
+; RV32IFDC-LABEL: <ne_small_edge_neg>:
 ; RV32IFDC: c.li [[REG:.*]], -0x20
-; RV32IFDC: RESBRNORMAL [[ANOTHER:.*]], [[REG]], [[PLACE:.*]]
+; RV32IFDC: [[COND:b.*]] [[ANOTHER:.*]], [[REG]], [[PLACE:.*]]
 ; --- no compress extension
-; RV32IFD-LABEL: <f_small_edge_neg>:
+; RV32IFD-LABEL: <ne_small_edge_neg>:
 ; RV32IFD: addi [[REG:.*]], zero, -0x20
-; RV32IFD: RESBRNORMAL [[ANOTHER:.*]], [[REG]], [[PLACE:.*]]
-define i32 @f_small_edge_neg(i32 %in0) minsize {
-  %cmp = icmp CMPCOND i32 %in0, -32
+; RV32IFD: [[COND:b.*]] [[ANOTHER:.*]], [[REG]], [[PLACE:.*]]
+define i32 @ne_small_edge_neg(i32 %in0) minsize {
+  %cmp = icmp ne i32 %in0, -32
   %toRet = select i1 %cmp, i32 -99, i32 42
   ret i32 %toRet
 }
 
 ; constant is medium and not fit in 6 bit (compress imm),
 ; but fit in 12 bit (imm)
-; RV32IFDC-LABEL: <f_medium_ledge_pos>:
+; RV32IFDC-LABEL: <ne_medium_ledge_pos>:
 ; RV32IFDC: addi [[MAYZEROREG:.*]], [[REG:.*]], -0x21
-; RV32IFDC: RESBROPT [[MAYZEROREG]], [[PLACE:.*]]
+; RV32IFDC: [[COND:c.*]] [[MAYZEROREG]], [[PLACE:.*]]
 ; --- no compress extension
-; RV32IFD-LABEL: <f_medium_ledge_pos>:
+; RV32IFD-LABEL: <ne_medium_ledge_pos>:
 ; RV32IFD: addi [[REG:.*]], zero, 0x21
-; RV32IFD: RESBRNORMAL [[ANOTHER:.*]], [[REG]], [[PLACE:.*]]
-define i32 @f_medium_ledge_pos(i32 %in0) minsize {
-  %cmp = icmp CMPCOND i32 %in0, 33
+; RV32IFD: [[COND:b.*]] [[ANOTHER:.*]], [[REG]], [[PLACE:.*]]
+define i32 @ne_medium_ledge_pos(i32 %in0) minsize {
+  %cmp = icmp ne i32 %in0, 33
   %toRet = select i1 %cmp, i32 -99, i32 42
   ret i32 %toRet
 }
 
 ; constant is medium and not fit in 6 bit (compress imm),
 ; but fit in 12 bit (imm)
-; RV32IFDC-LABEL: <f_medium_ledge_neg>:
+; RV32IFDC-LABEL: <ne_medium_ledge_neg>:
 ; RV32IFDC: addi [[MAYZEROREG:.*]], [[REG:.*]], 0x21
-; RV32IFDC: RESBROPT [[MAYZEROREG]], [[PLACE:.*]]
+; RV32IFDC: [[COND:c.*]] [[MAYZEROREG]], [[PLACE:.*]]
 ; --- no compress extension
-; RV32IFD-LABEL: <f_medium_ledge_neg>:
+; RV32IFD-LABEL: <ne_medium_ledge_neg>:
 ; RV32IFD: addi [[REG:.*]], zero, -0x21
-; RV32IFD: RESBRNORMAL [[ANOTHER:.*]], [[REG]], [[PLACE:.*]]
-define i32 @f_medium_ledge_neg(i32 %in0) minsize {
-  %cmp = icmp CMPCOND i32 %in0, -33
+; RV32IFD: [[COND:b.*]] [[ANOTHER:.*]], [[REG]], [[PLACE:.*]]
+define i32 @ne_medium_ledge_neg(i32 %in0) minsize {
+  %cmp = icmp ne i32 %in0, -33
   %toRet = select i1 %cmp, i32 -99, i32 42
   ret i32 %toRet
 }
 
 ; constant is medium and not fit in 6 bit (compress imm),
 ; but fit in 12 bit (imm)
-; RV32IFDC-LABEL: <f_medium_pos>:
+; RV32IFDC-LABEL: <ne_medium_pos>:
 ; RV32IFDC: addi [[MAYZEROREG:.*]], [[REG:.*]], -0x3f
-; RV32IFDC: RESBROPT [[MAYZEROREG]], [[PLACE:.*]]
+; RV32IFDC: [[COND:c.*]] [[MAYZEROREG]], [[PLACE:.*]]
 ; --- no compress extension
-; RV32IFD-LABEL: <f_medium_pos>:
+; RV32IFD-LABEL: <ne_medium_pos>:
 ; RV32IFD: addi [[REG:.*]], zero, 0x3f
-; RV32IFD: RESBRNORMAL [[ANOTHER:.*]], [[REG]], [[PLACE:.*]]
-define i32 @f_medium_pos(i32 %in0) minsize {
-  %cmp = icmp CMPCOND i32 %in0, 63
+; RV32IFD: [[COND:b.*]] [[ANOTHER:.*]], [[REG]], [[PLACE:.*]]
+define i32 @ne_medium_pos(i32 %in0) minsize {
+  %cmp = icmp ne i32 %in0, 63
   %toRet = select i1 %cmp, i32 -99, i32 42
   ret i32 %toRet
 }
 
 ; constant is medium and not fit in 6 bit (compress imm),
 ; but fit in 12 bit (imm)
-; RV32IFDC-LABEL: <f_medium_neg>:
+; RV32IFDC-LABEL: <ne_medium_neg>:
 ; RV32IFDC: addi [[MAYZEROREG:.*]], [[REG:.*]], 0x3f
-; RV32IFDC: RESBROPT [[MAYZEROREG]], [[PLACE:.*]]
+; RV32IFDC: [[COND:c.*]] [[MAYZEROREG]], [[PLACE:.*]]
 ; --- no compress extension
-; RV32IFD-LABEL: <f_medium_neg>:
+; RV32IFD-LABEL: <ne_medium_neg>:
 ; RV32IFD: addi [[REG:.*]], zero, -0x3f
-; RV32IFD: RESBRNORMAL [[ANOTHER:.*]], [[REG]], [[PLACE:.*]]
-define i32 @f_medium_neg(i32 %in0) minsize {
-  %cmp = icmp CMPCOND i32 %in0, -63
+; RV32IFD: [[COND:b.*]] [[ANOTHER:.*]], [[REG]], [[PLACE:.*]]
+define i32 @ne_medium_neg(i32 %in0) minsize {
+  %cmp = icmp ne i32 %in0, -63
   %toRet = select i1 %cmp, i32 -99, i32 42
   ret i32 %toRet
 }
 
 ; constant is medium and not fit in 6 bit (compress imm),
 ; but fit in 12 bit (imm)
-; RV32IFDC-LABEL: <f_medium_bedge_pos>:
+; RV32IFDC-LABEL: <ne_medium_bedge_pos>:
 ; RV32IFDC: addi [[MAYZEROREG:.*]], [[REG:.*]], -0x7ff
-; RV32IFDC: RESBROPT [[MAYZEROREG]], [[PLACE:.*]]
+; RV32IFDC: [[COND:c.*]] [[MAYZEROREG]], [[PLACE:.*]]
 ; --- no compress extension
-; RV32IFD-LABEL: <f_medium_bedge_pos>:
+; RV32IFD-LABEL: <ne_medium_bedge_pos>:
 ; RV32IFD: addi [[REG:.*]], zero, 0x7ff
-; RV32IFD: RESBRNORMAL [[ANOTHER:.*]], [[REG]], [[PLACE:.*]]
-define i32 @f_medium_bedge_pos(i32 %in0) minsize {
-  %cmp = icmp CMPCOND i32 %in0, 2047
+; RV32IFD: [[COND:b.*]] [[ANOTHER:.*]], [[REG]], [[PLACE:.*]]
+define i32 @ne_medium_bedge_pos(i32 %in0) minsize {
+  %cmp = icmp ne i32 %in0, 2047
   %toRet = select i1 %cmp, i32 -99, i32 42
   ret i32 %toRet
 }
 
 ; constant is medium and not fit in 6 bit (compress imm),
 ; but fit in 12 bit (imm), negative value fit in 12 bit too.
-; RV32IFDC-LABEL: <f_medium_bedge_neg>:
+; RV32IFDC-LABEL: <ne_medium_bedge_neg>:
 ; RV32IFDC: addi [[MAYZEROREG:.*]], [[REG:.*]], 0x7ff
-; RV32IFDC: RESBROPT [[MAYZEROREG]], [[PLACE:.*]]
+; RV32IFDC: [[COND:c.*]] [[MAYZEROREG]], [[PLACE:.*]]
 ; --- no compress extension
-; RV32IFD-LABEL: <f_medium_bedge_neg>:
+; RV32IFD-LABEL: <ne_medium_bedge_neg>:
 ; RV32IFD: addi [[REG:.*]], zero, -0x7ff
-; RV32IFD: RESBRNORMAL [[ANOTHER:.*]], [[REG]], [[PLACE:.*]]
-define i32 @f_medium_bedge_neg(i32 %in0) minsize {
-  %cmp = icmp CMPCOND i32 %in0, -2047
+; RV32IFD: [[COND:b.*]] [[ANOTHER:.*]], [[REG]], [[PLACE:.*]]
+define i32 @ne_medium_bedge_neg(i32 %in0) minsize {
+  %cmp = icmp ne i32 %in0, -2047
   %toRet = select i1 %cmp, i32 -99, i32 42
   ret i32 %toRet
 }
 
 ; constant is big and do not fit in 12 bit (imm), fit in i32
-; RV32IFDC-LABEL: <f_big_ledge_pos>:
-; RV32IFDC-NOT: RESBROPT
+; RV32IFDC-LABEL: <ne_big_ledge_pos>:
+; RV32IFDC-NOT: [[COND:c.b.*]]
 ; --- no compress extension
 ; nothing to check.
-define i32 @f_big_ledge_pos(i32 %in0) minsize {
-  %cmp = icmp CMPCOND i32 %in0, 2048
+define i32 @ne_big_ledge_pos(i32 %in0) minsize {
+  %cmp = icmp ne i32 %in0, 2048
   %toRet = select i1 %cmp, i32 -99, i32 42
   ret i32 %toRet
 }
 
 ; constant is big and do not fit in 12 bit (imm), fit in i32
-; RV32IFDC-LABEL: <f_big_ledge_neg>:
-; RV32IFDC-NOT: c.beqz
+; RV32IFDC-LABEL: <ne_big_ledge_neg>:
+; RV32IFDC-NOT: [[COND:c.b.*]]
 ; --- no compress extension
 ; nothing to check.
-define i32 @f_big_ledge_neg(i32 %in0) minsize {
-  %cmp = icmp CMPCOND i32 %in0, -2048
+define i32 @ne_big_ledge_neg(i32 %in0) minsize {
+  %cmp = icmp ne i32 %in0, -2048
+  %toRet = select i1 %cmp, i32 -99, i32 42
+  ret i32 %toRet
+}
+
+
+;; Same as above, but for eq
+
+; constant is small and fit in 6 bit (compress imm)
+; RV32IFDC-LABEL: <eq_small_pos>:
+; RV32IFDC: c.li [[REG:.*]], 0x14
+; RV32IFDC: [[COND:b.*]] [[ANOTHER:.*]], [[REG]], [[PLACE:.*]]
+; --- no compress extension
+; RV32IFD-LABEL: <eq_small_pos>:
+; RV32IFD: addi [[REG:.*]], zero, 0x14
+; RV32IFD: [[COND:b.*]] [[ANOTHER:.*]], [[REG]], [[PLACE:.*]]
+define i32 @eq_small_pos(i32 %in0) minsize {
+  %cmp = icmp eq i32 %in0, 20
+  %toRet = select i1 %cmp, i32 -99, i32 42
+  ret i32 %toRet
+}
+
+; constant is small and fit in 6 bit (compress imm)
+; RV32IFDC-LABEL: <eq_small_neg>:
+; RV32IFDC: c.li [[REG:.*]], -0x14
+; RV32IFDC: [[COND:b.*]] [[ANOTHER:.*]], [[REG]], [[PLACE:.*]]
+; --- no compress extension
+; RV32IFD-LABEL: <eq_small_neg>:
+; RV32IFD: addi [[REG:.*]], zero, -0x14
+; RV32IFD: [[COND:b.*]] [[ANOTHER:.*]], [[REG]], [[PLACE:.*]]
+define i32 @eq_small_neg(i32 %in0) minsize {
+  %cmp = icmp eq i32 %in0, -20
+  %toRet = select i1 %cmp, i32 -99, i32 42
+  ret i32 %toRet
+}
+
+; constant is small and fit in 6 bit (compress imm)
+; RV32IFDC-LABEL: <eq_small_edge_pos>:
+; RV32IFDC: c.li [[REG:.*]], 0x1f
+; RV32IFDC: [[COND:b.*]] [[ANOTHER:.*]], [[REG]], [[PLACE:.*]]
+; --- no compress extension
+; RV32IFD-LABEL: <eq_small_edge_pos>:
+; RV32IFD: addi [[REG:.*]], zero, 0x1f
+; RV32IFD: [[COND:b.*]] [[ANOTHER:.*]], [[REG]], [[PLACE:.*]]
+define i32 @eq_small_edge_pos(i32 %in0) minsize {
+  %cmp = icmp eq i32 %in0, 31
+  %toRet = select i1 %cmp, i32 -99, i32 42
+  ret i32 %toRet
+}
+
+; constant is small and fit in 6 bit (compress imm)
+; RV32IFDC-LABEL: <eq_small_edge_neg>:
+; RV32IFDC: c.li [[REG:.*]], -0x20
+; RV32IFDC: [[COND:b.*]] [[ANOTHER:.*]], [[REG]], [[PLACE:.*]]
+; --- no compress extension
+; RV32IFD-LABEL: <eq_small_edge_neg>:
+; RV32IFD: addi [[REG:.*]], zero, -0x20
+; RV32IFD: [[COND:b.*]] [[ANOTHER:.*]], [[REG]], [[PLACE:.*]]
+define i32 @eq_small_edge_neg(i32 %in0) minsize {
+  %cmp = icmp eq i32 %in0, -32
+  %toRet = select i1 %cmp, i32 -99, i32 42
+  ret i32 %toRet
+}
+
+; constant is medium and not fit in 6 bit (compress imm),
+; but fit in 12 bit (imm)
+; RV32IFDC-LABEL: <eq_medium_ledge_pos>:
+; RV32IFDC: addi [[MAYZEROREG:.*]], [[REG:.*]], -0x21
+; RV32IFDC: [[COND:c.*]] [[MAYZEROREG]], [[PLACE:.*]]
+; --- no compress extension
+; RV32IFD-LABEL: <eq_medium_ledge_pos>:
+; RV32IFD: addi [[REG:.*]], zero, 0x21
+; RV32IFD: [[COND:b.*]] [[ANOTHER:.*]], [[REG]], [[PLACE:.*]]
+define i32 @eq_medium_ledge_pos(i32 %in0) minsize {
+  %cmp = icmp eq i32 %in0, 33
+  %toRet = select i1 %cmp, i32 -99, i32 42
+  ret i32 %toRet
+}
+
+; constant is medium and not fit in 6 bit (compress imm),
+; but fit in 12 bit (imm)
+; RV32IFDC-LABEL: <eq_medium_ledge_neg>:
+; RV32IFDC: addi [[MAYZEROREG:.*]], [[REG:.*]], 0x21
+; RV32IFDC: [[COND:c.*]] [[MAYZEROREG]], [[PLACE:.*]]
+; --- no compress extension
+; RV32IFD-LABEL: <eq_medium_ledge_neg>:
+; RV32IFD: addi [[REG:.*]], zero, -0x21
+; RV32IFD: [[COND:b.*]] [[ANOTHER:.*]], [[REG]], [[PLACE:.*]]
+define i32 @eq_medium_ledge_neg(i32 %in0) minsize {
+  %cmp = icmp eq i32 %in0, -33
+  %toRet = select i1 %cmp, i32 -99, i32 42
+  ret i32 %toRet
+}
+
+; constant is medium and not fit in 6 bit (compress imm),
+; but fit in 12 bit (imm)
+; RV32IFDC-LABEL: <eq_medium_pos>:
+; RV32IFDC: addi [[MAYZEROREG:.*]], [[REG:.*]], -0x3f
+; RV32IFDC: [[COND:c.*]] [[MAYZEROREG]], [[PLACE:.*]]
+; --- no compress extension
+; RV32IFD-LABEL: <eq_medium_pos>:
+; RV32IFD: addi [[REG:.*]], zero, 0x3f
+; RV32IFD: [[COND:b.*]] [[ANOTHER:.*]], [[REG]], [[PLACE:.*]]
+define i32 @eq_medium_pos(i32 %in0) minsize {
+  %cmp = icmp eq i32 %in0, 63
+  %toRet = select i1 %cmp, i32 -99, i32 42
+  ret i32 %toRet
+}
+
+; constant is medium and not fit in 6 bit (compress imm),
+; but fit in 12 bit (imm)
+; RV32IFDC-LABEL: <eq_medium_neg>:
+; RV32IFDC: addi [[MAYZEROREG:.*]], [[REG:.*]], 0x3f
+; RV32IFDC: [[COND:c.*]] [[MAYZEROREG]], [[PLACE:.*]]
+; --- no compress extension
+; RV32IFD-LABEL: <eq_medium_neg>:
+; RV32IFD: addi [[REG:.*]], zero, -0x3f
+; RV32IFD: [[COND:b.*]] [[ANOTHER:.*]], [[REG]], [[PLACE:.*]]
+define i32 @eq_medium_neg(i32 %in0) minsize {
+  %cmp = icmp eq i32 %in0, -63
+  %toRet = select i1 %cmp, i32 -99, i32 42
+  ret i32 %toRet
+}
+
+; constant is medium and not fit in 6 bit (compress imm),
+; but fit in 12 bit (imm)
+; RV32IFDC-LABEL: <eq_medium_bedge_pos>:
+; RV32IFDC: addi [[MAYZEROREG:.*]], [[REG:.*]], -0x7ff
+; RV32IFDC: [[COND:c.*]] [[MAYZEROREG]], [[PLACE:.*]]
+; --- no compress extension
+; RV32IFD-LABEL: <eq_medium_bedge_pos>:
+; RV32IFD: addi [[REG:.*]], zero, 0x7ff
+; RV32IFD: [[COND:b.*]] [[ANOTHER:.*]], [[REG]], [[PLACE:.*]]
+define i32 @eq_medium_bedge_pos(i32 %in0) minsize {
+  %cmp = icmp eq i32 %in0, 2047
+  %toRet = select i1 %cmp, i32 -99, i32 42
+  ret i32 %toRet
+}
+
+; constant is medium and not fit in 6 bit (compress imm),
+; but fit in 12 bit (imm), negative value fit in 12 bit too.
+; RV32IFDC-LABEL: <eq_medium_bedge_neg>:
+; RV32IFDC: addi [[MAYZEROREG:.*]], [[REG:.*]], 0x7ff
+; RV32IFDC: [[COND:c.*]] [[MAYZEROREG]], [[PLACE:.*]]
+; --- no compress extension
+; RV32IFD-LABEL: <eq_medium_bedge_neg>:
+; RV32IFD: addi [[REG:.*]], zero, -0x7ff
+; RV32IFD: [[COND:b.*]] [[ANOTHER:.*]], [[REG]], [[PLACE:.*]]
+define i32 @eq_medium_bedge_neg(i32 %in0) minsize {
+  %cmp = icmp eq i32 %in0, -2047
+  %toRet = select i1 %cmp, i32 -99, i32 42
+  ret i32 %toRet
+}
+
+; constant is big and do not fit in 12 bit (imm), fit in i32
+; RV32IFDC-LABEL: <eq_big_ledge_pos>:
+; RV32IFDC-NOT: [[COND:c.b.*]]
+; --- no compress extension
+; nothing to check.
+define i32 @eq_big_ledge_pos(i32 %in0) minsize {
+  %cmp = icmp eq i32 %in0, 2048
+  %toRet = select i1 %cmp, i32 -99, i32 42
+  ret i32 %toRet
+}
+
+; constant is big and do not fit in 12 bit (imm), fit in i32
+; RV32IFDC-LABEL: <eq_big_ledge_neg>:
+; RV32IFDC-NOT: [[COND:c.b.*]]
+; --- no compress extension
+; nothing to check.
+define i32 @eq_big_ledge_neg(i32 %in0) minsize {
+  %cmp = icmp eq i32 %in0, -2048
   %toRet = select i1 %cmp, i32 -99, i32 42
   ret i32 %toRet
 }
