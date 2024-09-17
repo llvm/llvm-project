@@ -81,7 +81,7 @@ using namespace lld::elf;
 ConfigWrapper elf::config;
 Ctx elf::ctx;
 
-static void setConfigs(opt::InputArgList &args);
+static void setConfigs(Ctx &ctx, opt::InputArgList &args);
 static void readConfigs(opt::InputArgList &args);
 
 void elf::errorOrWarn(const Twine &msg) {
@@ -91,7 +91,7 @@ void elf::errorOrWarn(const Twine &msg) {
     error(msg);
 }
 
-Ctx::Ctx() : driver(*this) {}
+Ctx::Ctx() : arg(config.c), driver(*this) {}
 
 void Ctx::reset() {
   driver.~LinkerDriver();
@@ -106,7 +106,7 @@ void Ctx::reset() {
   outputSections.clear();
   partitions.clear();
 
-  ctx.in.reset();
+  in.reset();
   sym = ElfSym{};
 
   memoryBuffers.clear();
@@ -265,7 +265,7 @@ static bool isBitcode(MemoryBufferRef mb) {
 
 bool LinkerDriver::tryAddFatLTOFile(MemoryBufferRef mb, StringRef archiveName,
                                     uint64_t offsetInArchive, bool lazy) {
-  if (!config->fatLTOObjects)
+  if (!ctx.arg.fatLTOObjects)
     return false;
   Expected<MemoryBufferRef> fatLTOData =
       IRObjectFile::findBitcodeInMemBuffer(mb);
@@ -285,7 +285,7 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
     return;
   MemoryBufferRef mbref = *buffer;
 
-  if (config->formatBinary) {
+  if (ctx.arg.formatBinary) {
     files.push_back(make<BinaryFile>(mbref));
     return;
   }
@@ -339,7 +339,7 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
     return;
   }
   case file_magic::elf_shared_object: {
-    if (config->isStatic) {
+    if (ctx.arg.isStatic) {
       error("attempted static link of dynamic object " + path);
       return;
     }
@@ -388,109 +388,109 @@ static void initLLVM() {
 
 // Some command line options or some combinations of them are not allowed.
 // This function checks for such errors.
-static void checkOptions() {
+static void checkOptions(Ctx &ctx) {
   // The MIPS ABI as of 2016 does not support the GNU-style symbol lookup
   // table which is a relatively new feature.
-  if (config->emachine == EM_MIPS && config->gnuHash)
+  if (ctx.arg.emachine == EM_MIPS && ctx.arg.gnuHash)
     error("the .gnu.hash section is not compatible with the MIPS target");
 
-  if (config->emachine == EM_ARM) {
-    if (!config->cmseImplib) {
-      if (!config->cmseInputLib.empty())
+  if (ctx.arg.emachine == EM_ARM) {
+    if (!ctx.arg.cmseImplib) {
+      if (!ctx.arg.cmseInputLib.empty())
         error("--in-implib may not be used without --cmse-implib");
-      if (!config->cmseOutputLib.empty())
+      if (!ctx.arg.cmseOutputLib.empty())
         error("--out-implib may not be used without --cmse-implib");
     }
   } else {
-    if (config->cmseImplib)
+    if (ctx.arg.cmseImplib)
       error("--cmse-implib is only supported on ARM targets");
-    if (!config->cmseInputLib.empty())
+    if (!ctx.arg.cmseInputLib.empty())
       error("--in-implib is only supported on ARM targets");
-    if (!config->cmseOutputLib.empty())
+    if (!ctx.arg.cmseOutputLib.empty())
       error("--out-implib is only supported on ARM targets");
   }
 
-  if (config->fixCortexA53Errata843419 && config->emachine != EM_AARCH64)
+  if (ctx.arg.fixCortexA53Errata843419 && ctx.arg.emachine != EM_AARCH64)
     error("--fix-cortex-a53-843419 is only supported on AArch64 targets");
 
-  if (config->fixCortexA8 && config->emachine != EM_ARM)
+  if (ctx.arg.fixCortexA8 && ctx.arg.emachine != EM_ARM)
     error("--fix-cortex-a8 is only supported on ARM targets");
 
-  if (config->armBe8 && config->emachine != EM_ARM)
+  if (ctx.arg.armBe8 && ctx.arg.emachine != EM_ARM)
     error("--be8 is only supported on ARM targets");
 
-  if (config->fixCortexA8 && !config->isLE)
+  if (ctx.arg.fixCortexA8 && !ctx.arg.isLE)
     error("--fix-cortex-a8 is not supported on big endian targets");
 
-  if (config->tocOptimize && config->emachine != EM_PPC64)
+  if (ctx.arg.tocOptimize && ctx.arg.emachine != EM_PPC64)
     error("--toc-optimize is only supported on PowerPC64 targets");
 
-  if (config->pcRelOptimize && config->emachine != EM_PPC64)
+  if (ctx.arg.pcRelOptimize && ctx.arg.emachine != EM_PPC64)
     error("--pcrel-optimize is only supported on PowerPC64 targets");
 
-  if (config->relaxGP && config->emachine != EM_RISCV)
+  if (ctx.arg.relaxGP && ctx.arg.emachine != EM_RISCV)
     error("--relax-gp is only supported on RISC-V targets");
 
-  if (config->pie && config->shared)
+  if (ctx.arg.pie && ctx.arg.shared)
     error("-shared and -pie may not be used together");
 
-  if (!config->shared && !config->filterList.empty())
+  if (!ctx.arg.shared && !ctx.arg.filterList.empty())
     error("-F may not be used without -shared");
 
-  if (!config->shared && !config->auxiliaryList.empty())
+  if (!ctx.arg.shared && !ctx.arg.auxiliaryList.empty())
     error("-f may not be used without -shared");
 
-  if (config->strip == StripPolicy::All && config->emitRelocs)
+  if (ctx.arg.strip == StripPolicy::All && ctx.arg.emitRelocs)
     error("--strip-all and --emit-relocs may not be used together");
 
-  if (config->zText && config->zIfuncNoplt)
+  if (ctx.arg.zText && ctx.arg.zIfuncNoplt)
     error("-z text and -z ifunc-noplt may not be used together");
 
-  if (config->relocatable) {
-    if (config->shared)
+  if (ctx.arg.relocatable) {
+    if (ctx.arg.shared)
       error("-r and -shared may not be used together");
-    if (config->gdbIndex)
+    if (ctx.arg.gdbIndex)
       error("-r and --gdb-index may not be used together");
-    if (config->icf != ICFLevel::None)
+    if (ctx.arg.icf != ICFLevel::None)
       error("-r and --icf may not be used together");
-    if (config->pie)
+    if (ctx.arg.pie)
       error("-r and -pie may not be used together");
-    if (config->exportDynamic)
+    if (ctx.arg.exportDynamic)
       error("-r and --export-dynamic may not be used together");
-    if (config->debugNames)
+    if (ctx.arg.debugNames)
       error("-r and --debug-names may not be used together");
-    if (!config->zSectionHeader)
+    if (!ctx.arg.zSectionHeader)
       error("-r and -z nosectionheader may not be used together");
   }
 
-  if (config->executeOnly) {
-    if (config->emachine != EM_AARCH64)
+  if (ctx.arg.executeOnly) {
+    if (ctx.arg.emachine != EM_AARCH64)
       error("--execute-only is only supported on AArch64 targets");
 
-    if (config->singleRoRx && !ctx.script->hasSectionsCommand)
+    if (ctx.arg.singleRoRx && !ctx.script->hasSectionsCommand)
       error("--execute-only and --no-rosegment cannot be used together");
   }
 
-  if (config->zRetpolineplt && config->zForceIbt)
+  if (ctx.arg.zRetpolineplt && ctx.arg.zForceIbt)
     error("-z force-ibt may not be used with -z retpolineplt");
 
-  if (config->emachine != EM_AARCH64) {
-    if (config->zPacPlt)
+  if (ctx.arg.emachine != EM_AARCH64) {
+    if (ctx.arg.zPacPlt)
       error("-z pac-plt only supported on AArch64");
-    if (config->zForceBti)
+    if (ctx.arg.zForceBti)
       error("-z force-bti only supported on AArch64");
-    if (config->zBtiReport != "none")
+    if (ctx.arg.zBtiReport != "none")
       error("-z bti-report only supported on AArch64");
-    if (config->zPauthReport != "none")
+    if (ctx.arg.zPauthReport != "none")
       error("-z pauth-report only supported on AArch64");
-    if (config->zGcsReport != "none")
+    if (ctx.arg.zGcsReport != "none")
       error("-z gcs-report only supported on AArch64");
-    if (config->zGcs != GcsPolicy::Implicit)
+    if (ctx.arg.zGcs != GcsPolicy::Implicit)
       error("-z gcs only supported on AArch64");
   }
 
-  if (config->emachine != EM_386 && config->emachine != EM_X86_64 &&
-      config->zCetReport != "none")
+  if (ctx.arg.emachine != EM_386 && ctx.arg.emachine != EM_X86_64 &&
+      ctx.arg.zCetReport != "none")
     error("-z cet-report only supported on X86 and X86_64");
 }
 
@@ -680,8 +680,8 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     return;
 
   // Initialize time trace profiler.
-  if (config->timeTraceEnabled)
-    timeTraceProfilerInitialize(config->timeTraceGranularity, config->progName);
+  if (ctx.arg.timeTraceEnabled)
+    timeTraceProfilerInitialize(ctx.arg.timeTraceGranularity, config->progName);
 
   {
     llvm::TimeTraceScope timeScope("ExecuteLinker");
@@ -692,17 +692,17 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
       return;
 
     inferMachineType();
-    setConfigs(args);
-    checkOptions();
+    setConfigs(ctx, args);
+    checkOptions(ctx);
     if (errorCount())
       return;
 
     invokeELFT(link, args);
   }
 
-  if (config->timeTraceEnabled) {
+  if (ctx.arg.timeTraceEnabled) {
     checkError(timeTraceProfilerWrite(
-        args.getLastArgValue(OPT_time_trace_eq).str(), config->outputFile));
+        args.getLastArgValue(OPT_time_trace_eq).str(), ctx.arg.outputFile));
     timeTraceProfilerCleanup();
   }
 }
@@ -1823,18 +1823,18 @@ static void readConfigs(opt::InputArgList &args) {
 // command line options, but computed based on other Config values.
 // This function initialize such members. See Config.h for the details
 // of these values.
-static void setConfigs(opt::InputArgList &args) {
-  ELFKind k = config->ekind;
-  uint16_t m = config->emachine;
+static void setConfigs(Ctx &ctx, opt::InputArgList &args) {
+  ELFKind k = ctx.arg.ekind;
+  uint16_t m = ctx.arg.emachine;
 
-  config->copyRelocs = (config->relocatable || config->emitRelocs);
-  config->is64 = (k == ELF64LEKind || k == ELF64BEKind);
-  config->isLE = (k == ELF32LEKind || k == ELF64LEKind);
-  config->endianness = config->isLE ? endianness::little : endianness::big;
-  config->isMips64EL = (k == ELF64LEKind && m == EM_MIPS);
-  config->isPic = config->pie || config->shared;
-  config->picThunk = args.hasArg(OPT_pic_veneer, config->isPic);
-  config->wordsize = config->is64 ? 8 : 4;
+  ctx.arg.copyRelocs = (ctx.arg.relocatable || ctx.arg.emitRelocs);
+  ctx.arg.is64 = (k == ELF64LEKind || k == ELF64BEKind);
+  ctx.arg.isLE = (k == ELF32LEKind || k == ELF64LEKind);
+  ctx.arg.endianness = ctx.arg.isLE ? endianness::little : endianness::big;
+  ctx.arg.isMips64EL = (k == ELF64LEKind && m == EM_MIPS);
+  ctx.arg.isPic = ctx.arg.pie || ctx.arg.shared;
+  ctx.arg.picThunk = args.hasArg(OPT_pic_veneer, ctx.arg.isPic);
+  ctx.arg.wordsize = ctx.arg.is64 ? 8 : 4;
 
   // ELF defines two different ways to store relocation addends as shown below:
   //
@@ -1850,16 +1850,16 @@ static void setConfigs(opt::InputArgList &args) {
   // We pick the format for dynamic relocations according to the psABI for each
   // processor, but a contrary choice can be made if the dynamic loader
   // supports.
-  config->isRela = getIsRela(args);
+  ctx.arg.isRela = getIsRela(args);
 
   // If the output uses REL relocations we must store the dynamic relocation
   // addends to the output sections. We also store addends for RELA relocations
   // if --apply-dynamic-relocs is used.
   // We default to not writing the addends when using RELA relocations since
   // any standard conforming tool can find it in r_addend.
-  config->writeAddends = args.hasFlag(OPT_apply_dynamic_relocs,
+  ctx.arg.writeAddends = args.hasFlag(OPT_apply_dynamic_relocs,
                                       OPT_no_apply_dynamic_relocs, false) ||
-                         !config->isRela;
+                         !ctx.arg.isRela;
   // Validation of dynamic relocation addends is on by default for assertions
   // builds and disabled otherwise. This check is enabled when writeAddends is
   // true.
@@ -1868,42 +1868,42 @@ static void setConfigs(opt::InputArgList &args) {
 #else
   bool checkDynamicRelocsDefault = false;
 #endif
-  config->checkDynamicRelocs =
+  ctx.arg.checkDynamicRelocs =
       args.hasFlag(OPT_check_dynamic_relocations,
                    OPT_no_check_dynamic_relocations, checkDynamicRelocsDefault);
-  config->tocOptimize =
+  ctx.arg.tocOptimize =
       args.hasFlag(OPT_toc_optimize, OPT_no_toc_optimize, m == EM_PPC64);
-  config->pcRelOptimize =
+  ctx.arg.pcRelOptimize =
       args.hasFlag(OPT_pcrel_optimize, OPT_no_pcrel_optimize, m == EM_PPC64);
 
   if (!args.hasArg(OPT_hash_style)) {
-    if (config->emachine == EM_MIPS)
-      config->sysvHash = true;
+    if (ctx.arg.emachine == EM_MIPS)
+      ctx.arg.sysvHash = true;
     else
-      config->sysvHash = config->gnuHash = true;
+      ctx.arg.sysvHash = ctx.arg.gnuHash = true;
   }
 
   // Set default entry point and output file if not specified by command line or
   // linker scripts.
-  config->warnMissingEntry =
-      (!config->entry.empty() || (!config->shared && !config->relocatable));
-  if (config->entry.empty() && !config->relocatable)
-    config->entry = config->emachine == EM_MIPS ? "__start" : "_start";
-  if (config->outputFile.empty())
-    config->outputFile = "a.out";
+  ctx.arg.warnMissingEntry =
+      (!ctx.arg.entry.empty() || (!ctx.arg.shared && !ctx.arg.relocatable));
+  if (ctx.arg.entry.empty() && !ctx.arg.relocatable)
+    ctx.arg.entry = ctx.arg.emachine == EM_MIPS ? "__start" : "_start";
+  if (ctx.arg.outputFile.empty())
+    ctx.arg.outputFile = "a.out";
 
   // Fail early if the output file or map file is not writable. If a user has a
   // long link, e.g. due to a large LTO link, they do not wish to run it and
   // find that it failed because there was a mistake in their command-line.
   {
     llvm::TimeTraceScope timeScope("Create output files");
-    if (auto e = tryCreateFile(config->outputFile))
-      error("cannot open output file " + config->outputFile + ": " +
+    if (auto e = tryCreateFile(ctx.arg.outputFile))
+      error("cannot open output file " + ctx.arg.outputFile + ": " +
             e.message());
-    if (auto e = tryCreateFile(config->mapFile))
-      error("cannot open map file " + config->mapFile + ": " + e.message());
-    if (auto e = tryCreateFile(config->whyExtract))
-      error("cannot open --why-extract= file " + config->whyExtract + ": " +
+    if (auto e = tryCreateFile(ctx.arg.mapFile))
+      error("cannot open map file " + ctx.arg.mapFile + ": " + e.message());
+    if (auto e = tryCreateFile(ctx.arg.whyExtract))
+      error("cannot open --why-extract= file " + ctx.arg.whyExtract + ": " +
             e.message());
   }
 }
@@ -1924,7 +1924,7 @@ void LinkerDriver::createFiles(opt::InputArgList &args) {
   std::vector<std::tuple<bool, bool, bool>> stack;
 
   // -r implies -Bstatic and has precedence over -Bdynamic.
-  config->isStatic = config->relocatable;
+  ctx.arg.isStatic = ctx.arg.relocatable;
 
   // Iterate over argv to process input files and positional arguments.
   std::optional<MemoryBufferRef> defaultScript;
@@ -1960,22 +1960,22 @@ void LinkerDriver::createFiles(opt::InputArgList &args) {
       error(Twine("cannot find linker script ") + arg->getValue());
       break;
     case OPT_as_needed:
-      config->asNeeded = true;
+      ctx.arg.asNeeded = true;
       break;
     case OPT_format:
-      config->formatBinary = isFormatBinary(arg->getValue());
+      ctx.arg.formatBinary = isFormatBinary(arg->getValue());
       break;
     case OPT_no_as_needed:
-      config->asNeeded = false;
+      ctx.arg.asNeeded = false;
       break;
     case OPT_Bstatic:
     case OPT_omagic:
     case OPT_nmagic:
-      config->isStatic = true;
+      ctx.arg.isStatic = true;
       break;
     case OPT_Bdynamic:
-      if (!config->relocatable)
-        config->isStatic = false;
+      if (!ctx.arg.relocatable)
+        ctx.arg.isStatic = false;
       break;
     case OPT_whole_archive:
       inWholeArchive = true;
@@ -2022,14 +2022,15 @@ void LinkerDriver::createFiles(opt::InputArgList &args) {
       ++InputFile::nextGroupId;
       break;
     case OPT_push_state:
-      stack.emplace_back(config->asNeeded, config->isStatic, inWholeArchive);
+      stack.emplace_back(ctx.arg.asNeeded, ctx.arg.isStatic, inWholeArchive);
       break;
     case OPT_pop_state:
       if (stack.empty()) {
         error("unbalanced --push-state/--pop-state");
         break;
       }
-      std::tie(config->asNeeded, config->isStatic, inWholeArchive) = stack.back();
+      std::tie(ctx.arg.asNeeded, ctx.arg.isStatic, inWholeArchive) =
+          stack.back();
       stack.pop_back();
       break;
     }
@@ -2043,7 +2044,7 @@ void LinkerDriver::createFiles(opt::InputArgList &args) {
 
 // If -m <machine_type> was not given, infer it from object files.
 void LinkerDriver::inferMachineType() {
-  if (config->ekind != ELFNoneKind)
+  if (ctx.arg.ekind != ELFNoneKind)
     return;
 
   bool inferred = false;
@@ -2052,11 +2053,11 @@ void LinkerDriver::inferMachineType() {
       continue;
     if (!inferred) {
       inferred = true;
-      config->ekind = f->ekind;
-      config->emachine = f->emachine;
-      config->mipsN32Abi = config->emachine == EM_MIPS && isMipsN32Abi(f);
+      ctx.arg.ekind = f->ekind;
+      ctx.arg.emachine = f->emachine;
+      ctx.arg.mipsN32Abi = ctx.arg.emachine == EM_MIPS && isMipsN32Abi(f);
     }
-    config->osabi = f->osabi;
+    ctx.arg.osabi = f->osabi;
     if (f->osabi != ELFOSABI_NONE)
       return;
   }
@@ -2537,7 +2538,7 @@ void LinkerDriver::compileBitcodeFiles(bool skipLinkedOutput) {
     obj->parse(/*ignoreComdats=*/true);
 
     // Parse '@' in symbol names for non-relocatable output.
-    if (!config->relocatable)
+    if (!ctx.arg.relocatable)
       for (Symbol *sym : obj->getGlobalSymbols())
         if (sym->hasVersionSuffix)
           sym->parseSymbolVersion();
@@ -2872,10 +2873,10 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   parseFiles(files, armCmseImpLib);
 
   // Create dynamic sections for dynamic linking and static PIE.
-  config->hasDynSymTab = !ctx.sharedFiles.empty() || config->isPic;
+  ctx.arg.hasDynSymTab = !ctx.sharedFiles.empty() || ctx.arg.isPic;
 
   // If an entry symbol is in a static archive, pull out that file now.
-  if (Symbol *sym = symtab.find(config->entry))
+  if (Symbol *sym = symtab.find(ctx.arg.entry))
     handleUndefined(sym, "--entry");
 
   // Handle the `--undefined-glob <pattern>` options.
@@ -2888,14 +2889,14 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   ctx.script->addScriptReferencedSymbolsToSymTable();
 
   // Prevent LTO from removing any definition referenced by -u.
-  for (StringRef name : config->undefined)
+  for (StringRef name : ctx.arg.undefined)
     if (Defined *sym = dyn_cast_or_null<Defined>(symtab.find(name)))
       sym->isUsedInRegularObj = true;
 
   // Mark -init and -fini symbols so that the LTO doesn't eliminate them.
-  if (Symbol *sym = dyn_cast_or_null<Defined>(symtab.find(config->init)))
+  if (Symbol *sym = dyn_cast_or_null<Defined>(symtab.find(ctx.arg.init)))
     sym->isUsedInRegularObj = true;
-  if (Symbol *sym = dyn_cast_or_null<Defined>(symtab.find(config->fini)))
+  if (Symbol *sym = dyn_cast_or_null<Defined>(symtab.find(ctx.arg.fini)))
     sym->isUsedInRegularObj = true;
 
   // If any of our inputs are bitcode files, the LTO code generator may create
@@ -2966,7 +2967,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   ctx.out.elfHeader = make<OutputSection>("", 0, SHF_ALLOC);
 
   // We need to create some reserved symbols such as _end. Create them.
-  if (!config->relocatable)
+  if (!ctx.arg.relocatable)
     addReservedSymbols();
 
   // Apply version scripts.
@@ -2974,7 +2975,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // For a relocatable output, version scripts don't make sense, and
   // parsing a symbol version string (e.g. dropping "@ver1" from a symbol
   // name "foo@ver1") rather do harm, so we don't call this if -r is given.
-  if (!config->relocatable) {
+  if (!ctx.arg.relocatable) {
     llvm::TimeTraceScope timeScope("Process symbol versions");
     symtab.scanVersionScript();
   }
@@ -2986,12 +2987,12 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // --plugin-opt=emit-asm create output files in bitcode or assembly code,
   // respectively. When only certain thinLTO modules are specified for
   // compilation, the intermediate object file are the expected output.
-  const bool skipLinkedOutput = config->thinLTOIndexOnly || config->emitLLVM ||
-                                config->ltoEmitAsm ||
-                                !config->thinLTOModulesToCompile.empty();
+  const bool skipLinkedOutput = ctx.arg.thinLTOIndexOnly || ctx.arg.emitLLVM ||
+                                ctx.arg.ltoEmitAsm ||
+                                !ctx.arg.thinLTOModulesToCompile.empty();
 
   // Handle --lto-validate-all-vtables-have-type-infos.
-  if (config->ltoValidateAllVtablesHaveTypeInfos)
+  if (ctx.arg.ltoValidateAllVtablesHaveTypeInfos)
     ltoValidateAllVtablesHaveTypeInfos<ELFT>(args);
 
   // Do link-time optimization if given files are LLVM bitcode files.
@@ -3086,7 +3087,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
     }
     // We do not want to emit debug sections if --strip-all
     // or --strip-debug are given.
-    if (config->strip != StripPolicy::None) {
+    if (ctx.arg.strip != StripPolicy::None) {
       llvm::erase_if(ctx.inputSections, [](InputSectionBase *s) {
         if (isDebugSection(*s))
           return true;
@@ -3102,7 +3103,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
 
   // Since we now have a complete set of input files, we can create
   // a .d file to record build dependencies.
-  if (!config->dependencyFile.empty())
+  if (!ctx.arg.dependencyFile.empty())
     writeDependencyFile();
 
   // Now that the number of partitions is fixed, save a pointer to the main
@@ -3118,23 +3119,23 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // values such as a default image base address.
   ctx.target = getTarget();
 
-  config->eflags = ctx.target->calcEFlags();
+  ctx.arg.eflags = ctx.target->calcEFlags();
   // maxPageSize (sometimes called abi page size) is the maximum page size that
   // the output can be run on. For example if the OS can use 4k or 64k page
   // sizes then maxPageSize must be 64k for the output to be useable on both.
   // All important alignment decisions must use this value.
-  config->maxPageSize = getMaxPageSize(args);
+  ctx.arg.maxPageSize = getMaxPageSize(args);
   // commonPageSize is the most common page size that the output will be run on.
   // For example if an OS can use 4k or 64k page sizes and 4k is more common
   // than 64k then commonPageSize is set to 4k. commonPageSize can be used for
   // optimizations such as DATA_SEGMENT_ALIGN in linker scripts. LLD's use of it
   // is limited to writing trap instructions on the last executable segment.
-  config->commonPageSize = getCommonPageSize(args);
+  ctx.arg.commonPageSize = getCommonPageSize(args);
 
-  config->imageBase = getImageBase(args);
+  ctx.arg.imageBase = getImageBase(args);
 
   // This adds a .comment section containing a version string.
-  if (!config->relocatable)
+  if (!ctx.arg.relocatable)
     ctx.inputSections.push_back(createCommentSection());
 
   // Split SHF_MERGE and .eh_frame sections into pieces in preparation for garbage collection.
@@ -3159,11 +3160,11 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // Some input sections that are used for exception handling need to be moved
   // into synthetic sections. Do that now so that they aren't assigned to
   // output sections in the usual way.
-  if (!config->relocatable)
+  if (!ctx.arg.relocatable)
     combineEhSections();
 
   // Merge .riscv.attributes sections.
-  if (config->emachine == EM_RISCV)
+  if (ctx.arg.emachine == EM_RISCV)
     mergeRISCVAttributesSections();
 
   {
@@ -3193,13 +3194,13 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
 
   // Two input sections with different output sections should not be folded.
   // ICF runs after processSectionCommands() so that we know the output sections.
-  if (config->icf != ICFLevel::None) {
+  if (ctx.arg.icf != ICFLevel::None) {
     findKeepUniqueSections<ELFT>(args);
     doIcf<ELFT>();
   }
 
   // Read the callgraph now that we know what was gced or icfed
-  if (config->callGraphProfileSort != CGProfileSortKind::None) {
+  if (ctx.arg.callGraphProfileSort != CGProfileSortKind::None) {
     if (auto *arg = args.getLastArg(OPT_call_graph_ordering_file))
       if (std::optional<MemoryBufferRef> buffer = readFile(arg->getValue()))
         readCallGraph(*buffer);
