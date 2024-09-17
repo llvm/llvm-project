@@ -129,7 +129,8 @@ DTLS::DTV *DTLS_on_tls_get_addr(void *arg_void, void *res,
   uptr dso_id = arg->dso_id;
   DTLS::DTV *dtv = DTLS_Find(dso_id);
   if (!dtv || dtv->beg)
-    return 0;
+    return nullptr;
+  CHECK_LE(static_tls_begin, static_tls_end);
   uptr tls_size = 0;
   uptr tls_beg = reinterpret_cast<uptr>(res) - arg->offset - kDtvOffset;
   VReport(2,

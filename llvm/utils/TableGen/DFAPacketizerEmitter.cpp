@@ -100,13 +100,13 @@ int DFAPacketizerEmitter::collectAllFuncUnits(
   LLVM_DEBUG(dbgs() << "collectAllFuncUnits");
   LLVM_DEBUG(dbgs() << " (" << ProcModels.size() << " itineraries)\n");
 
-  std::set<Record *> ProcItinList;
+  std::set<const Record *> ProcItinList;
   for (const CodeGenProcModel *Model : ProcModels)
     ProcItinList.insert(Model->ItinsDef);
 
   int totalFUs = 0;
   // Parse functional units for all the itineraries.
-  for (Record *Proc : ProcItinList) {
+  for (const Record *Proc : ProcItinList) {
     std::vector<Record *> FUs = Proc->getValueAsListOfDefs("FU");
 
     LLVM_DEBUG(dbgs() << "    FU:"

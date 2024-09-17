@@ -1,6 +1,7 @@
 ; RUN: llc < %s -asm-verbose=false -wasm-enable-eh -exception-model=wasm -mattr=+exception-handling -wasm-enable-exnref -verify-machineinstrs | FileCheck --implicit-check-not=ehgcr -allow-deprecated-dag-overlap %s
 ; RUN: llc < %s -asm-verbose=false -wasm-enable-eh -exception-model=wasm -mattr=+exception-handling -wasm-enable-exnref -verify-machineinstrs -O0
 ; RUN: llc < %s -wasm-enable-eh -exception-model=wasm -mattr=+exception-handling -wasm-enable-exnref
+; RUN: llc < %s -wasm-enable-eh -exception-model=wasm -mattr=+exception-handling -wasm-enable-exnref -filetype=obj
 
 target triple = "wasm32-unknown-unknown"
 

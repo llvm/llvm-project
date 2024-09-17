@@ -152,8 +152,7 @@ void RegisterInfoEmitter::runEnums(raw_ostream &OS, CodeGenTarget &Target,
       OS << "} // end namespace " << Namespace << "\n\n";
   }
 
-  const std::vector<Record *> &RegAltNameIndices =
-      Target.getRegAltNameIndices();
+  ArrayRef<const Record *> RegAltNameIndices = Target.getRegAltNameIndices();
   // If the only definition is the default NoRegAltName, we don't need to
   // emit anything.
   if (RegAltNameIndices.size() > 1) {
