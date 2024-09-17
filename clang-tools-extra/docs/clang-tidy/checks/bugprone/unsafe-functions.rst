@@ -86,8 +86,8 @@ checked. The format is the following, without newlines:
 .. code::
 
    bugprone-unsafe-functions.CustomFunctions="
-     functionRegex1, replacement1[, reason1]; 
-     functionRegex2, replacement2[, reason2];
+     functionRegex1[, replacement1[, reason1]]; 
+     functionRegex2[, replacement2[, reason2]];
      ...
    "
 
@@ -96,6 +96,9 @@ The functions are matched using POSIX extended regular expressions.
 
 The `reason` is optional and is used to provide additional information about the
 reasoning behind the replacement. The default reason is `is marked as unsafe`.
+
+If `replacement` is empty, the text `it should not be used` will be shown
+instead of the suggestion for a replacement.
 
 As an example, the configuration `^original$, replacement, is deprecated;`
 will produce the following diagnostic message.
@@ -134,7 +137,7 @@ Options
 .. option:: CustomFunctions
 
     A semicolon-separated list of custom functions to be matched. A matched
-    function contains a regular expression, the name of the replacement
+    function contains a regular expression, an optional name of the replacement
     function, and an optional reason, separated by comma. For more information,
     see :ref:`Custom functions<CustomFunctions>`.
 

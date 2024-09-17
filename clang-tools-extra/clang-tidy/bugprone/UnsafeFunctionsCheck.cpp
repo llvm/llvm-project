@@ -156,14 +156,6 @@ parseCheckedFunctions(StringRef Option, ClangTidyContext *Context) {
       continue;
     }
 
-    if (Replacement.trim().empty()) {
-      Context->configurationDiag(
-          "invalid configuration value '%0' for option '%1'; "
-          "expected a replacement function name")
-          << Name.trim() << OptionNameCustomFunctions;
-      continue;
-    }
-
     Result.push_back(
         {Name.trim().str(),
          matchers::MatchesAnyListedNameMatcher::NameMatcher(Name.trim()),
@@ -294,10 +286,17 @@ void UnsafeFunctionsCheck::check(const MatchFinder::MatchResult &Result) {
         StringRef Reason =
             Entry.Reason.empty() ? "is marked as unsafe" : Entry.Reason.c_str();
 
-        diag(DeclRef->getExprLoc(),
-             "function %0 %1; '%2' should be used instead")
-            << FuncDecl << Reason << Entry.Replacement
-            << DeclRef->getSourceRange();
+        if (Entry.Replacement.empty()) {
+          diag(DeclRef->getExprLoc(), "function %0 %1; it should not be used")
+              << FuncDecl << Reason << Entry.Replacement
+              << DeclRef->getSourceRange();
+        } else {
+          diag(DeclRef->getExprLoc(),
+               "function %0 %1; '%2' should be used instead")
+              << FuncDecl << Reason << Entry.Replacement
+              << DeclRef->getSourceRange();
+        }
+
         return;
       }
     }
