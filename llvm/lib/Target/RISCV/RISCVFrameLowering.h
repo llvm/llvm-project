@@ -90,6 +90,8 @@ public:
                      uint64_t ProbeSize, bool DynAllocation,
                      MachineInstr::MIFlag Flag) const;
 
+  bool enableCSRSaveRestorePointsSplit() const override;
+
 protected:
   const RISCVSubtarget &STI;
 

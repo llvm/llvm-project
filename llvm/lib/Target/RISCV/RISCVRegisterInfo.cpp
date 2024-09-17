@@ -503,10 +503,33 @@ void RISCVRegisterInfo::lowerSegmentSpillReload(MachineBasicBlock::iterator II,
   II->eraseFromParent();
 }
 
+int64_t RISCVRegisterInfo::getCSIFrameOffset(MachineFunction *MF) const {
+  uint64_t FirstSPAdjustAmount =
+      getFrameLowering(*MF)->getFirstSPAdjustAmount(*MF);
+  if (FirstSPAdjustAmount)
+    return getFrameLowering(*MF)->getStackSizeWithRVVPadding(*MF) -
+           FirstSPAdjustAmount;
+  return 0;
+}
+
+bool RISCVRegisterInfo::isCSIFrameIndex(MachineFunction *MF,
+                                        int FrameIndex) const {
+  const MachineFrameInfo &MFI = MF->getFrameInfo();
+  const auto &CSI =
+      getFrameLowering(*MF)->getUnmanagedCSI(*MF, MFI.getCalleeSavedInfo());
+  if (!CSI.empty()) {
+    int MinCSFI = CSI.front().getFrameIdx();
+    int MaxCSFI = CSI.back().getFrameIdx();
+    if (FrameIndex >= MinCSFI && FrameIndex <= MaxCSFI)
+      return true;
+  }
+  return false;
+}
+
 bool RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
                                             int SPAdj, unsigned FIOperandNum,
                                             RegScavenger *RS) const {
-  assert(SPAdj == 0 && "Unexpected non-zero SPAdj value");
+  // assert(SPAdj == 0 && "Unexpected non-zero SPAdj value");
 
   MachineInstr &MI = *II;
   MachineFunction &MF = *MI.getParent()->getParent();
@@ -519,57 +542,7 @@ bool RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   StackOffset Offset =
       getFrameLowering(MF)->getFrameIndexReference(MF, FrameIndex, FrameReg);
 
-  const auto &CSI =
-      getFrameLowering(MF)->getUnmanagedCSI(MF, MFI.getCalleeSavedInfo());
-
-  if (!CSI.empty()) {
-    int MinCSFI = CSI.front().getFrameIdx();
-    int MaxCSFI = CSI.back().getFrameIdx();
-
-    // If our FrameIndex is CSI FrameIndex we in some cases need additional
-    // adjustment
-    if (FrameIndex >= MinCSFI && FrameIndex <= MaxCSFI) {
-      MachineBasicBlock *SpilledIn = nullptr;
-      MachineBasicBlock *RestoredIn = nullptr;
-      auto It = std::find_if(CSI.begin(), CSI.end(), [FrameIndex](auto &CS) {
-        return CS.getFrameIdx() == FrameIndex;
-      });
-
-      assert(It != CSI.end() &&
-             "Did't find CalleeSavedInfo for CalleeSaved FrameIndex");
-
-      assert(!(MI.mayLoad() && MI.mayStore()) &&
-             "Instruction with frame index operand may load and store "
-             "simultaneously!");
-
-      if (MI.mayStore())
-        SpilledIn = MFI.findSpilledIn(*It);
-      else if (MI.mayLoad())
-        RestoredIn = MFI.findRestoredIn(*It);
-      else
-        llvm_unreachable(
-            "Instruction with frame index operand neither loads nor stores!");
-
-      bool SpilledRestoredInPrologEpilog = true;
-      // If we didn't managed to find NCD (NCPD) for the list of Save (Restore)
-      // blocks, spill (restore) will be unconditionally in Prolog (Epilog)
-      if (MI.mayStore() && MFI.getProlog())
-        SpilledRestoredInPrologEpilog = SpilledIn == MFI.getProlog();
-      else if (MI.mayLoad() && MFI.getEpilog())
-        SpilledRestoredInPrologEpilog = RestoredIn == MFI.getEpilog();
-
-      // For spills/restores performed not in Prolog/Epilog we need to add full
-      // SP offset, despite SPAdjusment optimization, because at the end of
-      // Prolog or at the start of Epilog SP has maximum offset
-      uint64_t FirstSPAdjustAmount =
-          getFrameLowering(MF)->getFirstSPAdjustAmount(MF);
-      if (FirstSPAdjustAmount && !SpilledRestoredInPrologEpilog) {
-        Offset += StackOffset::getFixed(
-            getFrameLowering(MF)->getStackSizeWithRVVPadding(MF) -
-            FirstSPAdjustAmount);
-      }
-    }
-  }
+  Offset += StackOffset::getFixed(SPAdj);
 
   bool IsRVVSpill = RISCV::isRVVSpill(MI);
   if (!IsRVVSpill)

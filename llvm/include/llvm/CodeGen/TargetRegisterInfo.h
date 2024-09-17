@@ -1172,6 +1172,12 @@ public:
     return false;
   }
 
+  virtual bool isCSIFrameIndex(MachineFunction *MF, int FrameIndex) const {
+    return false;
+  }
+
+  virtual int64_t getCSIFrameOffset(MachineFunction *MF) const { return 0; }
+
   /// Process frame indices in reverse block order. This changes the behavior of
   /// the RegScavenger passed to eliminateFrameIndex. If this is true targets
   /// should scavengeRegisterBackwards in eliminateFrameIndex. New targets
