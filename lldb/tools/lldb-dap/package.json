@@ -79,7 +79,7 @@
           "type": "string",
           "description": "The log path for lldb-dap (if any)"
         },
-		"lldb-dap.environment": {
+        "lldb-dap.environment": {
           "scope": "resource",
           "type": "object",
           "default": {},
