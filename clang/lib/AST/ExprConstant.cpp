@@ -15344,11 +15344,11 @@ bool ComplexExprEvaluator::VisitCastExpr(const CastExpr *E) {
   case CK_NoOp:
   case CK_LValueToRValueBitCast:
   case CK_HLSLArrayRValue:
+  case CK_UserDefinedConversion:
     return ExprEvaluatorBaseTy::VisitCastExpr(E);
 
   case CK_Dependent:
   case CK_LValueBitCast:
-  case CK_UserDefinedConversion:
     return Error(E);
 
   case CK_FloatingRealToComplex: {
