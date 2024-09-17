@@ -31,10 +31,6 @@ class raw_ostream;
 class TargetInstrInfo;
 
   class VirtRegMap : public MachineFunctionPass {
-  public:
-    static constexpr int NO_STACK_SLOT = (1u << 30) - 1;
-
-  private:
     MachineRegisterInfo *MRI = nullptr;
     const TargetInstrInfo *TII = nullptr;
     const TargetRegisterInfo *TRI = nullptr;
@@ -66,6 +62,8 @@ class TargetInstrInfo;
 
   public:
     static char ID;
+
+    static constexpr int NO_STACK_SLOT = (1u << 30) - 1;
 
     VirtRegMap() : MachineFunctionPass(ID), Virt2StackSlotMap(NO_STACK_SLOT) {}
     VirtRegMap(const VirtRegMap &) = delete;
