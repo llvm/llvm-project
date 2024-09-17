@@ -110,6 +110,20 @@ void WebAssemblyInstPrinter::printInst(const MCInst *MI, uint64_t Address,
   // Print any added annotation.
   printAnnotation(OS, Annot);
 
+  auto PrintBranchAnnotation = [&](const MCOperand &Op,
+                                   SmallSet<uint64_t, 8> &Printed) {
+    uint64_t Depth = Op.getImm();
+    if (!Printed.insert(Depth).second)
+      return;
+    if (Depth >= ControlFlowStack.size()) {
+      printAnnotation(OS, "Invalid depth argument!");
+    } else {
+      const auto &Pair = ControlFlowStack.rbegin()[Depth];
+      printAnnotation(OS, utostr(Depth) + ": " + (Pair.second ? "up" : "down") +
+                              " to label" + utostr(Pair.first));
+    }
+  };
+
   if (CommentStream) {
     // Observe any effects on the control flow stack, for use in annotating
     // control flow label references.
@@ -136,6 +150,23 @@ void WebAssemblyInstPrinter::printInst(const MCInst *MI, uint64_t Address,
       EHInstStack.push_back(TRY);
       return;
 
+    case WebAssembly::TRY_TABLE:
+    case WebAssembly::TRY_TABLE_S: {
+      SmallSet<uint64_t, 8> Printed;
+      unsigned OpIdx = 1;
+      const MCOperand &Op = MI->getOperand(OpIdx++);
+      unsigned NumCatches = Op.getImm();
+      for (unsigned I = 0; I < NumCatches; I++) {
+        int64_t CatchOpcode = MI->getOperand(OpIdx++).getImm();
+        if (CatchOpcode == wasm::WASM_OPCODE_CATCH ||
+            CatchOpcode == wasm::WASM_OPCODE_CATCH_REF)
+          OpIdx++; // Skip tag
+        PrintBranchAnnotation(MI->getOperand(OpIdx++), Printed);
+      }
+      ControlFlowStack.push_back(std::make_pair(ControlFlowCounter++, false));
+      return;
+    }
+
     case WebAssembly::END_LOOP:
     case WebAssembly::END_LOOP_S:
       if (ControlFlowStack.empty()) {
@@ -147,6 +178,8 @@ void WebAssemblyInstPrinter::printInst(const MCInst *MI, uint64_t Address,
 
     case WebAssembly::END_BLOCK:
     case WebAssembly::END_BLOCK_S:
+    case WebAssembly::END_TRY_TABLE:
+    case WebAssembly::END_TRY_TABLE_S:
       if (ControlFlowStack.empty()) {
         printAnnotation(OS, "End marker mismatch!");
       } else {
@@ -251,17 +284,7 @@ void WebAssemblyInstPrinter::printInst(const MCInst *MI, uint64_t Address,
         if (!MI->getOperand(I).isImm())
           continue;
       }
-      uint64_t Depth = MI->getOperand(I).getImm();
-      if (!Printed.insert(Depth).second)
-        continue;
-      if (Depth >= ControlFlowStack.size()) {
-        printAnnotation(OS, "Invalid depth argument!");
-      } else {
-        const auto &Pair = ControlFlowStack.rbegin()[Depth];
-        printAnnotation(OS, utostr(Depth) + ": " +
-                                (Pair.second ? "up" : "down") + " to label" +
-                                utostr(Pair.first));
-      }
+      PrintBranchAnnotation(MI->getOperand(I), Printed);
     }
   }
 }
