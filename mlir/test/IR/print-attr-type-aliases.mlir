@@ -32,16 +32,16 @@
 // CHECK-DAG: tensor<32x!test_ui8_>
 "test.op"() : () -> tensor<32x!test.int<unsigned, 8>>
 
-// CHECK-DAG: #loc = loc("nested")
-// CHECK-DAG: #loc1 = loc("test.mlir":10:8)
-// CHECK-DAG: #loc2 = loc(fused<#loc>[#loc1])
+// CHECK-DAG: #[[LOC_NESTED:.+]] = loc("nested")
+// CHECK-DAG: #[[LOC_RAW:.+]] = loc("test.mlir":10:8)
+// CHECK-DAG: = loc(fused<#[[LOC_NESTED]]>[#[[LOC_RAW]]])
 "test.op"() {alias_test = loc(fused<loc("nested")>["test.mlir":10:8])} : () -> ()
 
 // -----
 
 // Check proper ordering of intermixed attribute/type aliases.
 // CHECK: !tuple = tuple<
-// CHECK: #loc1 = loc(fused<!tuple
+// CHECK: = loc(fused<!tuple
 "test.op"() {alias_test = loc(fused<tuple<i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32>>["test.mlir":10:8])} : () -> ()
 
 // -----
@@ -54,7 +54,7 @@
 // -----
 
 // Check that we don't print aliases for things that aren't printed.
-// CHECK: #loc1 = loc(fused<memref<1xi32>
+// CHECK: = loc(fused<memref<1xi32>
 // CHECK-NOT: #map
 "test.op"() {alias_test = loc(fused<memref<1xi32, affine_map<(d0) -> (d0)>>>["test.mlir":10:8])} : () -> ()
 
