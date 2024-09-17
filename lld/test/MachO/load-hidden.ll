@@ -6,7 +6,7 @@
 
 ; RUN: %lld -dylib -lSystem %t/obj.o -load_hidden %t/archive.a -o %t/test.dylib
 ; RUN: llvm-nm %t/test.dylib | FileCheck %s
-; CHECK: t _foo
+; CHECK: T _foo
 
 ;--- archive.ll
 target triple = "x86_64-apple-macosx10.15.0"
