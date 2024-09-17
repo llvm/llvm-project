@@ -40,7 +40,6 @@ void Region::dump() const {
   dump(dbgs());
   dbgs() << "\n";
 }
+#endif // NDEBUG
 
 } // namespace llvm::sandboxir
-
-#endif // NDEBUG
