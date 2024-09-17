@@ -1363,14 +1363,13 @@ void request_evaluate(const llvm::json::Object &request) {
   lldb::SBFrame frame = g_dap.GetLLDBFrame(*arguments);
   std::string expression = GetString(arguments, "expression").str();
   llvm::StringRef context = GetString(arguments, "context");
-  bool repeat_last_command = expression.empty() &&
-                             g_dap.last_nonempty_var_expression.empty();
+  bool repeat_last_command =
+      expression.empty() && g_dap.last_nonempty_var_expression.empty();
 
-  if (context == "repl" &&
-      (repeat_last_command ||
-       (!expression.empty() &&
-        g_dap.DetectExpressionContext(frame, expression) ==
-        ExpressionContext::Command))) {
+  if (context == "repl" && (repeat_last_command ||
+                            (!expression.empty() &&
+                             g_dap.DetectExpressionContext(frame, expression) ==
+                                 ExpressionContext::Command))) {
     // Since the current expression is not for a variable, clear the
     // last_nonempty_var_expression field.
     g_dap.last_nonempty_var_expression.clear();

@@ -63,11 +63,11 @@ class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
         self.assertEvaluate("var1", "20")
         # Empty expression should equate to the previous expression.
         if context == "repl":
-          self.assertEvaluate("", "20")
+            self.assertEvaluate("", "20")
         self.assertEvaluate("var2", "21")
         if context == "repl":
-          self.assertEvaluate("", "21")
-          self.assertEvaluate("", "21")
+            self.assertEvaluate("", "21")
+            self.assertEvaluate("", "21")
         self.assertEvaluate("static_int", "42")
         self.assertEvaluate("non_static_int", "43")
         self.assertEvaluate("struct1.foo", "15")
@@ -200,12 +200,12 @@ class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
 
         # Test memory read, especially with 'empty' repeat commands.
         if context == "repl":
-          self.continue_to_next_stop()
-          self.assertEvaluate("memory read -c 1 &my_ints", ".* 05 .*\n")
-          self.assertEvaluate("", ".* 0a .*\n")
-          self.assertEvaluate("", ".* 0f .*\n")
-          self.assertEvaluate("", ".* 14 .*\n")
-          self.assertEvaluate("", ".* 19 .*\n")
+            self.continue_to_next_stop()
+            self.assertEvaluate("memory read -c 1 &my_ints", ".* 05 .*\n")
+            self.assertEvaluate("", ".* 0a .*\n")
+            self.assertEvaluate("", ".* 0f .*\n")
+            self.assertEvaluate("", ".* 14 .*\n")
+            self.assertEvaluate("", ".* 19 .*\n")
 
     @skipIfWindows
     def test_generic_evaluate_expressions(self):

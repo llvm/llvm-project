@@ -46,7 +46,7 @@ bool RunLLDBCommands(llvm::StringRef prefix,
       static std::mutex handle_command_mutex;
       std::lock_guard<std::mutex> locker(handle_command_mutex);
       interp.HandleCommand(command.str().c_str(), result,
-                           /*add_to_history=*/ true);
+                           /*add_to_history=*/true);
     }
 
     const bool got_error = !result.Succeeded();
