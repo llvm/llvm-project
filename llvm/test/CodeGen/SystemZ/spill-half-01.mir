@@ -1,0 +1,47 @@
+# RUN: llc -o - %s -mtriple=s390x-linux-gnu -mcpu=zEC12 -verify-machineinstrs \
+# RUN:   -start-before=greedy | FileCheck %s -check-prefix=CHECK
+# RUN: llc -o - %s -mtriple=s390x-linux-gnu -mcpu=z16 -verify-machineinstrs \
+# RUN:   -start-before=greedy | FileCheck %s -check-prefix=VECTOR
+
+# Test spilling / reloading of an fp16bit virtual register.
+
+---
+name: fun0
+alignment:       16
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: fp16bit }
+liveins:
+  - { reg: '$f0h', virtual-reg: '%0' }
+frameInfo:
+  maxAlignment:    1
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $f0h
+
+    ; CHECK-LABEL: fun0:
+    ; CHECK-NOT: $f0
+    ; CHECK:                             # kill: def $f0h killed $f0h killed $f0d def $f0d
+    ; CHECK-NEXT: lgdr    %r0, %f0
+    ; CHECK-NEXT: srlg    %r0, %r0, 48
+    ; CHECK-NEXT: sth     %r0, 166(%r15)     # 2-byte Folded Spill
+    ; CHECK-NEXT: #APP
+    ; CHECK-NEXT: #NO_APP
+    ; CHECK:      lh      %r0, 166(%r15)     # 2-byte Folded Reload
+    ; CHECK-NEXT: sllg    %r0, %r0, 48
+    ; CHECK-NEXT: ldgr    %f0, %r0
+    ; CHECK:                             # kill: def $f0h killed $f0h killed $f0d
+    ; CHECK-NOT: $f0
+
+    ; VECTOR-LABEL: fun0:
+    ; VECTOR:       vsteh %v0, 166(%r15), 0  # 2-byte Folded Spill
+    ; VECTOR-NEXT:  #APP
+    ; VECTOR-NEXT:  #NO_APP
+    ; VECTOR-NEXT:  vlreph %v0, 166(%r15)    # 2-byte Folded Reload
+  
+    %0:fp16bit = COPY $f0h
+    INLINEASM &"", 1, 12, implicit-def dead early-clobber $r0d, 12, implicit-def dead early-clobber $r1d, 12, implicit-def dead early-clobber $r2d, 12, implicit-def dead early-clobber $r3d, 12, implicit-def dead early-clobber $r4d, 12, implicit-def dead early-clobber $r5d, 12, implicit-def dead early-clobber $r6d, 12, implicit-def dead early-clobber $r7d, 12, implicit-def dead early-clobber $r8d, 12, implicit-def dead early-clobber $r9d, 12, implicit-def dead early-clobber $r10d, 12, implicit-def dead early-clobber $r11d, 12, implicit-def dead early-clobber $r12d, 12, implicit-def dead early-clobber $r13d, 12, implicit-def dead early-clobber $r14d, 12, implicit-def dead early-clobber $f0d, 12, implicit-def dead early-clobber $f1d, 12, implicit-def dead early-clobber $f2d, 12, implicit-def dead early-clobber $f3d, 12, implicit-def dead early-clobber $f4d, 12, implicit-def dead early-clobber $f5d, 12, implicit-def dead early-clobber $f6d, 12, implicit-def dead early-clobber $f7d, 12, implicit-def dead early-clobber $f8d, 12, implicit-def dead early-clobber $f9d, 12, implicit-def dead early-clobber $f10d, 12, implicit-def dead early-clobber $f11d, 12, implicit-def dead early-clobber $f12d, 12, implicit-def dead early-clobber $f13d, 12, implicit-def dead early-clobber $f14d, 12, implicit-def dead early-clobber $f14d, 12, implicit-def dead early-clobber $f15d
+    $f0h = COPY %0
+    Return implicit $f0h
+...
