@@ -34,9 +34,6 @@
 #  define _LIBCPP_ASSUME(expression) ((void)0)
 #endif
 
-// Historically, disabled assertions below expanded to `_LIBCPP_ASSUME`, but this both triggers the
-// issue described above, and also causes every debug assertion to be a safety risk.
-
 // clang-format off
 // Fast hardening mode checks.
 
