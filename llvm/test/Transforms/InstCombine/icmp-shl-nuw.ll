@@ -134,6 +134,16 @@ define i1 @fold_icmp_shl_nuw_c2_div_non_pow2(i32 %x) {
   ret i1 %cmp
 }
 
+define i1 @fold_icmp_shl_nuw_c3(i32 %x) {
+; CHECK-LABEL: @fold_icmp_shl_nuw_c3(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[X:%.*]], 1
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %shl = shl nuw i32 48, %x
+  %cmp = icmp uge i32 %shl, 144
+  ret i1 %cmp
+}
+
 ; Negative tests
 
 define i1 @fold_icmp_shl_nuw_c2_indivisible(i32 %x) {
