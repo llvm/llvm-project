@@ -29,6 +29,7 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "riscv-vl-optimizer"
+#define PASS_NAME "RISC-V VL Optimizer"
 
 namespace {
 
@@ -49,7 +50,7 @@ public:
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
-  StringRef getPassName() const override { return "RISC-V VL Optimizer"; }
+  StringRef getPassName() const override { return PASS_NAME; }
 
 private:
   bool tryReduceVL(MachineInstr &MI);
@@ -59,11 +60,9 @@ private:
 } // end anonymous namespace
 
 char RISCVVLOptimizer::ID = 0;
-INITIALIZE_PASS_BEGIN(RISCVVLOptimizer, DEBUG_TYPE, "RISC-V VL Optimizer",
-                      false, false)
+INITIALIZE_PASS_BEGIN(RISCVVLOptimizer, DEBUG_TYPE, PASS_NAME, false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
-INITIALIZE_PASS_END(RISCVVLOptimizer, DEBUG_TYPE, "RISC-V VL Optimizer", false,
-                    false)
+INITIALIZE_PASS_END(RISCVVLOptimizer, DEBUG_TYPE, PASS_NAME, false, false)
 
 FunctionPass *llvm::createRISCVVLOptimizerPass() {
   return new RISCVVLOptimizer();
@@ -74,10 +73,7 @@ static bool isVectorRegClass(Register R, const MachineRegisterInfo *MRI) {
   if (R.isPhysical())
     return RISCV::VRRegClass.contains(R);
   const TargetRegisterClass *RC = MRI->getRegClass(R);
-  return RISCV::VRRegClass.hasSubClassEq(RC) ||
-         RISCV::VRM2RegClass.hasSubClassEq(RC) ||
-         RISCV::VRM4RegClass.hasSubClassEq(RC) ||
-         RISCV::VRM8RegClass.hasSubClassEq(RC);
+  return RISCVRI::isVRegClass(RC->TSFlags);
 }
 
 /// Represents the EMUL and EEW of a MachineOperand.
@@ -134,6 +130,8 @@ static raw_ostream &operator<<(raw_ostream &OS, const OperandInfo &OI) {
   return OS;
 }
 
+namespace llvm {
+namespace RISCVVType {
 /// Return the RISCVII::VLMUL that is two times VLMul.
 /// Precondition: VLMul is not LMUL_RESERVED or LMUL_8.
 static RISCVII::VLMUL twoTimesVLMUL(RISCVII::VLMUL VLMul) {
@@ -198,6 +196,8 @@ getEMULEqualsEEWDivSEWTimesLMUL(unsigned Log2EEW, const MachineInstr &MI) {
   Denom = MILMULIsFractional ? Denom * MILMUL / GCD : Denom / GCD;
   return std::make_pair(Num > Denom ? Num : Denom, Denom > Num);
 }
+} // end namespace RISCVVType
+} // end namespace llvm
 
 static bool isOpN(const MachineOperand &MO, unsigned OpN) {
   const MachineInstr &MI = *MO.getParent();
@@ -229,7 +229,8 @@ static OperandInfo getIndexSegmentLoadStoreOperandInfo(unsigned Log2EEW,
   // v.*seg<nf>ei<eeew>.v
   // Index vector register group has EEW=<eew>, EMUL=(EEW/SEW)*LMUL.
   if (isOpN(MO, 2))
-    return OperandInfo(getEMULEqualsEEWDivSEWTimesLMUL(Log2EEW, MI), Log2EEW);
+    return OperandInfo(RISCVVType::getEMULEqualsEEWDivSEWTimesLMUL(Log2EEW, MI),
+                       Log2EEW);
 
   llvm_unreachable("Could not get OperandInfo for non-vector register of an "
                    "indexed segment load or store instruction");
@@ -251,7 +252,8 @@ static OperandInfo getIntegerExtensionOperandInfo(unsigned Factor,
   unsigned EEW = MISEW / Factor;
   unsigned Log2EEW = Log2_32(EEW);
 
-  return OperandInfo(getEMULEqualsEEWDivSEWTimesLMUL(Log2EEW, MI), Log2EEW);
+  return OperandInfo(RISCVVType::getEMULEqualsEEWDivSEWTimesLMUL(Log2EEW, MI),
+                     Log2EEW);
 }
 
 /// Check whether MO is a mask operand of MI.
@@ -296,7 +298,7 @@ static OperandInfo getOperandInfo(const MachineInstr &MI,
 
   // All mask operands have EEW=1, EMUL=(EEW/SEW)*LMUL
   if (isMaskOperand(MI, MO, MRI))
-    return OperandInfo(getEMULEqualsEEWDivSEWTimesLMUL(0, MI), 0);
+    return OperandInfo(RISCVVType::getEMULEqualsEEWDivSEWTimesLMUL(0, MI), 0);
 
   // switch against BaseInstr to reduce number of cases that need to be
   // considered.
@@ -322,25 +324,25 @@ static OperandInfo getOperandInfo(const MachineInstr &MI,
   case RISCV::VLSE8_V:
   case RISCV::VSSE8_V:
   case RISCV::VLE8FF_V:
-    return OperandInfo(getEMULEqualsEEWDivSEWTimesLMUL(3, MI), 3);
+    return OperandInfo(RISCVVType::getEMULEqualsEEWDivSEWTimesLMUL(3, MI), 3);
   case RISCV::VLE16_V:
   case RISCV::VSE16_V:
   case RISCV::VLSE16_V:
   case RISCV::VSSE16_V:
   case RISCV::VLE16FF_V:
-    return OperandInfo(getEMULEqualsEEWDivSEWTimesLMUL(4, MI), 4);
+    return OperandInfo(RISCVVType::getEMULEqualsEEWDivSEWTimesLMUL(4, MI), 4);
   case RISCV::VLE32_V:
   case RISCV::VSE32_V:
   case RISCV::VLSE32_V:
   case RISCV::VSSE32_V:
   case RISCV::VLE32FF_V:
-    return OperandInfo(getEMULEqualsEEWDivSEWTimesLMUL(5, MI), 5);
+    return OperandInfo(RISCVVType::getEMULEqualsEEWDivSEWTimesLMUL(5, MI), 5);
   case RISCV::VLE64_V:
   case RISCV::VSE64_V:
   case RISCV::VLSE64_V:
   case RISCV::VSSE64_V:
   case RISCV::VLE64FF_V:
-    return OperandInfo(getEMULEqualsEEWDivSEWTimesLMUL(6, MI), 6);
+    return OperandInfo(RISCVVType::getEMULEqualsEEWDivSEWTimesLMUL(6, MI), 6);
 
   // 7.6. Vector Indexed Instructions
   // Data EEW=SEW, EMUL=LMUL. Index EEW=<eew> and EMUL=(EEW/SEW)*LMUL
@@ -350,28 +352,28 @@ static OperandInfo getOperandInfo(const MachineInstr &MI,
   case RISCV::VSOXEI8_V:
     if (MO.getOperandNo() == 0)
       return OperandInfo(MIVLMul, MILog2SEW);
-    return OperandInfo(getEMULEqualsEEWDivSEWTimesLMUL(3, MI), 3);
+    return OperandInfo(RISCVVType::getEMULEqualsEEWDivSEWTimesLMUL(3, MI), 3);
   case RISCV::VLUXEI16_V:
   case RISCV::VLOXEI16_V:
   case RISCV::VSUXEI16_V:
   case RISCV::VSOXEI16_V:
     if (MO.getOperandNo() == 0)
       return OperandInfo(MIVLMul, MILog2SEW);
-    return OperandInfo(getEMULEqualsEEWDivSEWTimesLMUL(4, MI), 4);
+    return OperandInfo(RISCVVType::getEMULEqualsEEWDivSEWTimesLMUL(4, MI), 4);
   case RISCV::VLUXEI32_V:
   case RISCV::VLOXEI32_V:
   case RISCV::VSUXEI32_V:
   case RISCV::VSOXEI32_V:
     if (MO.getOperandNo() == 0)
       return OperandInfo(MIVLMul, MILog2SEW);
-    return OperandInfo(getEMULEqualsEEWDivSEWTimesLMUL(5, MI), 5);
+    return OperandInfo(RISCVVType::getEMULEqualsEEWDivSEWTimesLMUL(5, MI), 5);
   case RISCV::VLUXEI64_V:
   case RISCV::VLOXEI64_V:
   case RISCV::VSUXEI64_V:
   case RISCV::VSOXEI64_V:
     if (MO.getOperandNo() == 0)
       return OperandInfo(MIVLMul, MILog2SEW);
-    return OperandInfo(getEMULEqualsEEWDivSEWTimesLMUL(6, MI), 6);
+    return OperandInfo(RISCVVType::getEMULEqualsEEWDivSEWTimesLMUL(6, MI), 6);
 
   // 7.8. Vector Load/Store Segment Instructions
   // 7.8.1. Vector Unit-Stride Segment Loads and Stores
@@ -707,7 +709,8 @@ static OperandInfo getOperandInfo(const MachineInstr &MI,
   case RISCV::VWSUB_VX:
   case RISCV::VWSLL_VI: {
     unsigned Log2EEW = IsMODef ? MILog2SEW + 1 : MILog2SEW;
-    RISCVII::VLMUL EMUL = IsMODef ? twoTimesVLMUL(MIVLMul) : MIVLMul;
+    RISCVII::VLMUL EMUL =
+        IsMODef ? RISCVVType::twoTimesVLMUL(MIVLMul) : MIVLMul;
     return OperandInfo(EMUL, Log2EEW);
   }
   // Def and Op1 uses EEW=2*SEW and EMUL=2*LMUL. Op2 uses EEW=SEW and EMUL=LMUL
@@ -721,7 +724,8 @@ static OperandInfo getOperandInfo(const MachineInstr &MI,
   case RISCV::VWSUB_WX: {
     bool TwoTimes = IsMODef || IsOp1;
     unsigned Log2EEW = TwoTimes ? MILog2SEW + 1 : MILog2SEW;
-    RISCVII::VLMUL EMUL = TwoTimes ? twoTimesVLMUL(MIVLMul) : MIVLMul;
+    RISCVII::VLMUL EMUL =
+        TwoTimes ? RISCVVType::twoTimesVLMUL(MIVLMul) : MIVLMul;
     return OperandInfo(EMUL, Log2EEW);
   }
   // 11.3. Vector Integer Extension
@@ -743,7 +747,8 @@ static OperandInfo getOperandInfo(const MachineInstr &MI,
   case RISCV::VSBC_VVM:
   case RISCV::VSBC_VXM:
     return MO.getOperandNo() == 3
-               ? OperandInfo(getEMULEqualsEEWDivSEWTimesLMUL(0, MI), 0)
+               ? OperandInfo(RISCVVType::getEMULEqualsEEWDivSEWTimesLMUL(0, MI),
+                             0)
                : OperandInfo(MIVLMul, MILog2SEW);
   // Dest EEW=1 and EMUL=(EEW/SEW)*LMUL. Source EEW=SEW and EMUL=LMUL. Mask
   // operand EEW=1 and EMUL=(EEW/SEW)*LMUL
@@ -753,7 +758,8 @@ static OperandInfo getOperandInfo(const MachineInstr &MI,
   case RISCV::VMSBC_VVM:
   case RISCV::VMSBC_VXM:
     return IsMODef || MO.getOperandNo() == 3
-               ? OperandInfo(getEMULEqualsEEWDivSEWTimesLMUL(0, MI), 0)
+               ? OperandInfo(RISCVVType::getEMULEqualsEEWDivSEWTimesLMUL(0, MI),
+                             0)
                : OperandInfo(MIVLMul, MILog2SEW);
   // Dest EEW=1 and EMUL=(EEW/SEW)*LMUL. Source EEW=SEW and EMUL=LMUL.
   case RISCV::VMADC_VV:
@@ -761,7 +767,8 @@ static OperandInfo getOperandInfo(const MachineInstr &MI,
   case RISCV::VMADC_VX:
   case RISCV::VMSBC_VV:
   case RISCV::VMSBC_VX:
-    return IsMODef ? OperandInfo(getEMULEqualsEEWDivSEWTimesLMUL(0, MI), 0)
+    return IsMODef ? OperandInfo(
+                         RISCVVType::getEMULEqualsEEWDivSEWTimesLMUL(0, MI), 0)
                    : OperandInfo(MIVLMul, MILog2SEW);
 
   // 11.5. Vector Bitwise Logical Instructions
@@ -798,7 +805,8 @@ static OperandInfo getOperandInfo(const MachineInstr &MI,
   case RISCV::VNSRA_WX: {
     bool TwoTimes = IsOp1;
     unsigned Log2EEW = TwoTimes ? MILog2SEW + 1 : MILog2SEW;
-    RISCVII::VLMUL EMUL = TwoTimes ? twoTimesVLMUL(MIVLMul) : MIVLMul;
+    RISCVII::VLMUL EMUL =
+        TwoTimes ? RISCVVType::twoTimesVLMUL(MIVLMul) : MIVLMul;
     return OperandInfo(EMUL, Log2EEW);
   }
   // 11.8. Vector Integer Compare Instructions
@@ -824,7 +832,7 @@ static OperandInfo getOperandInfo(const MachineInstr &MI,
   case RISCV::VMSGT_VI:
   case RISCV::VMSGT_VX:
     if (IsMODef)
-      return OperandInfo(getEMULEqualsEEWDivSEWTimesLMUL(0, MI), 0);
+      return OperandInfo(RISCVVType::getEMULEqualsEEWDivSEWTimesLMUL(0, MI), 0);
     return OperandInfo(MIVLMul, MILog2SEW);
 
   // 11.9. Vector Integer Min/Max Instructions
@@ -872,7 +880,8 @@ static OperandInfo getOperandInfo(const MachineInstr &MI,
   case RISCV::VWMULU_VV:
   case RISCV::VWMULU_VX: {
     unsigned Log2EEW = IsMODef ? MILog2SEW + 1 : MILog2SEW;
-    RISCVII::VLMUL EMUL = IsMODef ? twoTimesVLMUL(MIVLMul) : MIVLMul;
+    RISCVII::VLMUL EMUL =
+        IsMODef ? RISCVVType::twoTimesVLMUL(MIVLMul) : MIVLMul;
     return OperandInfo(EMUL, Log2EEW);
   }
   // 11.13. Vector Single-Width Integer Multiply-Add Instructions
@@ -902,7 +911,8 @@ static OperandInfo getOperandInfo(const MachineInstr &MI,
     // due to SSA.
     bool TwoTimes = IsMODef || IsOp1;
     unsigned Log2EEW = TwoTimes ? MILog2SEW + 1 : MILog2SEW;
-    RISCVII::VLMUL EMUL = TwoTimes ? twoTimesVLMUL(MIVLMul) : MIVLMul;
+    RISCVII::VLMUL EMUL =
+        TwoTimes ? RISCVVType::twoTimesVLMUL(MIVLMul) : MIVLMul;
     return OperandInfo(EMUL, Log2EEW);
   }
   // 11.15. Vector Integer Merge Instructions
@@ -912,7 +922,7 @@ static OperandInfo getOperandInfo(const MachineInstr &MI,
   case RISCV::VMERGE_VVM:
   case RISCV::VMERGE_VXM:
     if (MO.getOperandNo() == 3)
-      return OperandInfo(getEMULEqualsEEWDivSEWTimesLMUL(0, MI), 0);
+      return OperandInfo(RISCVVType::getEMULEqualsEEWDivSEWTimesLMUL(0, MI), 0);
     return OperandInfo(MIVLMul, MILog2SEW);
 
   // 11.16. Vector Integer Move Instructions
@@ -948,7 +958,8 @@ static OperandInfo getOperandInfo(const MachineInstr &MI,
   case RISCV::VSMUL_VV:
   case RISCV::VSMUL_VX: {
     unsigned Log2EEW = IsMODef ? MILog2SEW + 1 : MILog2SEW;
-    RISCVII::VLMUL EMUL = IsMODef ? twoTimesVLMUL(MIVLMul) : MIVLMul;
+    RISCVII::VLMUL EMUL =
+        IsMODef ? RISCVVType::twoTimesVLMUL(MIVLMul) : MIVLMul;
     return OperandInfo(EMUL, Log2EEW);
   }
   // 12.4. Vector Single-Width Scaling Shift Instructions
@@ -971,7 +982,8 @@ static OperandInfo getOperandInfo(const MachineInstr &MI,
   case RISCV::VNCLIP_WX: {
     bool TwoTimes = !IsMODef && IsOp1;
     unsigned Log2EEW = TwoTimes ? MILog2SEW + 1 : MILog2SEW;
-    RISCVII::VLMUL EMUL = TwoTimes ? twoTimesVLMUL(MIVLMul) : MIVLMul;
+    RISCVII::VLMUL EMUL =
+        TwoTimes ? RISCVVType::twoTimesVLMUL(MIVLMul) : MIVLMul;
     return OperandInfo(EMUL, Log2EEW);
   }
   // 13. Vector Floating-Point Instructions
@@ -991,7 +1003,8 @@ static OperandInfo getOperandInfo(const MachineInstr &MI,
   case RISCV::VFWSUB_VV:
   case RISCV::VFWSUB_VF: {
     unsigned Log2EEW = IsMODef ? MILog2SEW + 1 : MILog2SEW;
-    RISCVII::VLMUL EMUL = IsMODef ? twoTimesVLMUL(MIVLMul) : MIVLMul;
+    RISCVII::VLMUL EMUL =
+        IsMODef ? RISCVVType::twoTimesVLMUL(MIVLMul) : MIVLMul;
     return OperandInfo(EMUL, Log2EEW);
   }
   // Dest and Op1 EEW=2*SEW and EMUL=2*LMUL. Op2 EEW=SEW and EMUL=LMUL.
@@ -1001,7 +1014,8 @@ static OperandInfo getOperandInfo(const MachineInstr &MI,
   case RISCV::VFWSUB_WV: {
     bool TwoTimes = IsMODef || IsOp1;
     unsigned Log2EEW = TwoTimes ? MILog2SEW + 1 : MILog2SEW;
-    RISCVII::VLMUL EMUL = TwoTimes ? twoTimesVLMUL(MIVLMul) : MIVLMul;
+    RISCVII::VLMUL EMUL =
+        TwoTimes ? RISCVVType::twoTimesVLMUL(MIVLMul) : MIVLMul;
     return OperandInfo(EMUL, Log2EEW);
   }
   // 13.4. Vector Single-Width Floating-Point Multiply/Divide Instructions
@@ -1055,7 +1069,8 @@ static OperandInfo getOperandInfo(const MachineInstr &MI,
     // due to SSA.
     bool TwoTimes = IsMODef || IsOp1;
     unsigned Log2EEW = TwoTimes ? MILog2SEW + 1 : MILog2SEW;
-    RISCVII::VLMUL EMUL = TwoTimes ? twoTimesVLMUL(MIVLMul) : MIVLMul;
+    RISCVII::VLMUL EMUL =
+        TwoTimes ? RISCVVType::twoTimesVLMUL(MIVLMul) : MIVLMul;
     return OperandInfo(EMUL, Log2EEW);
   }
   // 13.8. Vector Floating-Point Square-Root Instruction
@@ -1103,7 +1118,7 @@ static OperandInfo getOperandInfo(const MachineInstr &MI,
   case RISCV::VMFGT_VF:
   case RISCV::VMFGE_VF:
     if (IsMODef)
-      return OperandInfo(getEMULEqualsEEWDivSEWTimesLMUL(0, MI), 0);
+      return OperandInfo(RISCVVType::getEMULEqualsEEWDivSEWTimesLMUL(0, MI), 0);
     return OperandInfo(MIVLMul, MILog2SEW);
 
   // 13.15. Vector Floating-Point Merge Instruction
@@ -1111,7 +1126,7 @@ static OperandInfo getOperandInfo(const MachineInstr &MI,
   // (EEW/SEW)*LMUL.
   case RISCV::VFMERGE_VFM:
     if (IsOp3)
-      return OperandInfo(getEMULEqualsEEWDivSEWTimesLMUL(0, MI), 0);
+      return OperandInfo(RISCVVType::getEMULEqualsEEWDivSEWTimesLMUL(0, MI), 0);
     return OperandInfo(MIVLMul, MILog2SEW);
 
   // 13.18. Widening Floating-Point/Integer Type-Convert Instructions
@@ -1124,7 +1139,8 @@ static OperandInfo getOperandInfo(const MachineInstr &MI,
   case RISCV::VFWCVT_F_X_V:
   case RISCV::VFWCVT_F_F_V: {
     unsigned Log2EEW = IsMODef ? MILog2SEW + 1 : MILog2SEW;
-    RISCVII::VLMUL EMUL = IsMODef ? twoTimesVLMUL(MIVLMul) : MIVLMul;
+    RISCVII::VLMUL EMUL =
+        IsMODef ? RISCVVType::twoTimesVLMUL(MIVLMul) : MIVLMul;
     return OperandInfo(EMUL, Log2EEW);
   }
   // 13.19. Narrowing Floating-Point/Integer Type-Convert Instructions
@@ -1138,7 +1154,7 @@ static OperandInfo getOperandInfo(const MachineInstr &MI,
   case RISCV::VFNCVT_F_F_W:
   case RISCV::VFNCVT_ROD_F_F_W: {
     unsigned Log2EEW = IsMODef ? MILog2SEW - 1 : MILog2SEW;
-    RISCVII::VLMUL EMUL = IsMODef ? halfVLMUL(MIVLMul) : MIVLMul;
+    RISCVII::VLMUL EMUL = IsMODef ? RISCVVType::halfVLMUL(MIVLMul) : MIVLMul;
     return OperandInfo(EMUL, Log2EEW);
   }
   // 14. Vector Reduction Operations
@@ -1164,7 +1180,8 @@ static OperandInfo getOperandInfo(const MachineInstr &MI,
   case RISCV::VWREDSUM_VS:
   case RISCV::VWREDSUMU_VS: {
     unsigned Log2EEW = IsMODef ? MILog2SEW + 1 : MILog2SEW;
-    RISCVII::VLMUL EMUL = IsMODef ? twoTimesVLMUL(MIVLMul) : MIVLMul;
+    RISCVII::VLMUL EMUL =
+        IsMODef ? RISCVVType::twoTimesVLMUL(MIVLMul) : MIVLMul;
     return OperandInfo(EMUL, Log2EEW);
   }
   // 14.3. Vector Single-Width Floating-Point Reduction Instructions
@@ -1180,7 +1197,8 @@ static OperandInfo getOperandInfo(const MachineInstr &MI,
   case RISCV::VFWREDOSUM_VS:
   case RISCV::VFWREDUSUM_VS: {
     unsigned Log2EEW = IsMODef ? MILog2SEW + 1 : MILog2SEW;
-    RISCVII::VLMUL EMUL = IsMODef ? twoTimesVLMUL(MIVLMul) : MIVLMul;
+    RISCVII::VLMUL EMUL =
+        IsMODef ? RISCVVType::twoTimesVLMUL(MIVLMul) : MIVLMul;
     return OperandInfo(EMUL, Log2EEW);
   }
 
@@ -1203,7 +1221,7 @@ static OperandInfo getOperandInfo(const MachineInstr &MI,
   case RISCV::VMSBF_M:
   case RISCV::VMSIF_M:
   case RISCV::VMSOF_M: {
-    return OperandInfo(getEMULEqualsEEWDivSEWTimesLMUL(0, MI), 0);
+    return OperandInfo(RISCVVType::getEMULEqualsEEWDivSEWTimesLMUL(0, MI), 0);
   }
   // 15.8. Vector Iota Instruction
   // Dest and Op1 EEW=SEW and EMUL=LMUL. Op2 EEW=1 and EMUL(EEW/SEW)*LMUL.
@@ -1212,7 +1230,8 @@ static OperandInfo getOperandInfo(const MachineInstr &MI,
     unsigned Log2EEW = IsDefOrOp1 ? 0 : MILog2SEW;
     if (IsDefOrOp1)
       return OperandInfo(MIVLMul, Log2EEW);
-    return OperandInfo(getEMULEqualsEEWDivSEWTimesLMUL(MILog2SEW, MI), Log2EEW);
+    return OperandInfo(
+        RISCVVType::getEMULEqualsEEWDivSEWTimesLMUL(MILog2SEW, MI), Log2EEW);
   }
   // 15.9. Vector Element Index Instruction
   // Dest EEW=SEW EMUL=LMUL. Mask Operand EEW=1 and EMUL(EEW/SEW)*LMUL.
@@ -1220,7 +1239,8 @@ static OperandInfo getOperandInfo(const MachineInstr &MI,
     unsigned Log2EEW = IsMODef ? MILog2SEW : 0;
     if (IsMODef)
       return OperandInfo(MIVLMul, Log2EEW);
-    return OperandInfo(getEMULEqualsEEWDivSEWTimesLMUL(Log2EEW, MI), Log2EEW);
+    return OperandInfo(RISCVVType::getEMULEqualsEEWDivSEWTimesLMUL(Log2EEW, MI),
+                       Log2EEW);
   }
   // 16. Vector Permutation Instructions
   // 16.1. Integer Scalar Move Instructions
@@ -1255,7 +1275,7 @@ static OperandInfo getOperandInfo(const MachineInstr &MI,
   case RISCV::VRGATHEREI16_VV: {
     if (IsMODef || IsOp2)
       return OperandInfo(MIVLMul, MILog2SEW);
-    return OperandInfo(getEMULEqualsEEWDivSEWTimesLMUL(4, MI), 4);
+    return OperandInfo(RISCVVType::getEMULEqualsEEWDivSEWTimesLMUL(4, MI), 4);
   }
   // 16.5. Vector Compress Instruction
   // EMUL=LMUL. EEW=SEW.

@@ -103,7 +103,7 @@ static cl::opt<bool> EnableVSETVLIAfterRVVRegAlloc(
     cl::desc("Insert vsetvls after vector register allocation"),
     cl::init(true));
 
-static cl::opt<bool> EnableVLOptimizer("riscv-enable-vloptimizer",
+static cl::opt<bool> EnableVLOptimizer("riscv-enable-vl-optimizer",
                                        cl::desc("Enable the VL Optimizer pass"),
                                        cl::init(true), cl::Hidden);
 
