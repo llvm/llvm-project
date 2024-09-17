@@ -1081,18 +1081,18 @@ def Zn4WriteVecOpMask : SchedWriteRes<[Zn4FPOpMask01]> {
   let ReleaseAtCycles = [1];
   let NumMicroOps = 1;
 }
-def : InstRW<[Zn4WriteVecOpMask], (instrs   KADDBrr, KADDDrr, KADDQrr, KADDWrr,
-                                            KANDBrr, KANDDrr, KANDQrr, KANDWrr,
-                                            KANDNBrr, KANDNDrr, KANDNQrr, KANDNWrr,
+def : InstRW<[Zn4WriteVecOpMask], (instrs   KADDBkk, KADDDkk, KADDQkk, KADDWkk,
+                                            KANDBkk, KANDDkk, KANDQkk, KANDWkk,
+                                            KANDNBkk, KANDNDkk, KANDNQkk, KANDNWkk,
                                             KMOVBkk, KMOVDkk, KMOVQkk, KMOVWkk,
                                             KMOVBrk, KMOVDrk, KMOVQrk, KMOVWrk,
-                                            KNOTBrr, KNOTDrr, KNOTQrr, KNOTWrr,
-                                            KORBrr, KORDrr, KORQrr, KORWrr,
-                                            KORTESTBrr, KORTESTDrr, KORTESTQrr, KORTESTWrr,
-                                            KTESTBrr, KTESTDrr, KTESTQrr, KTESTWrr,
-                                            KUNPCKBWrr, KUNPCKDQrr, KUNPCKWDrr,
-                                            KXNORBrr, KXNORDrr, KXNORQrr, KXNORWrr,
-                                            KXORBrr, KXORDrr, KXORQrr, KXORWrr)>;
+                                            KNOTBkk, KNOTDkk, KNOTQkk, KNOTWkk,
+                                            KORBkk, KORDkk, KORQkk, KORWkk,
+                                            KORTESTBkk, KORTESTDkk, KORTESTQkk, KORTESTWkk,
+                                            KTESTBkk, KTESTDkk, KTESTQkk, KTESTWkk,
+                                            KUNPCKBWkk, KUNPCKDQkk, KUNPCKWDkk,
+                                            KXNORBkk, KXNORDkk, KXNORQkk, KXNORWkk,
+                                            KXORBkk, KXORDkk, KXORQkk, KXORWkk)>;
 
 def Zn4WriteVecOpMaskMemMov : SchedWriteRes<[Zn4FPOpMask4]> {
   let Latency = 1;
