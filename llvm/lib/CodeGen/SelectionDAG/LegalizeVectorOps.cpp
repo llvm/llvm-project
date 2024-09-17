@@ -1804,13 +1804,9 @@ SDValue VectorLegalizer::ExpandFNEG(SDNode *Node) {
   EVT VT = Node->getValueType(0);
   EVT IntVT = VT.changeVectorElementTypeToInteger();
 
-  if (!TLI.isOperationLegalOrCustom(ISD::XOR, IntVT))
-    return SDValue();
-
-  // FIXME: This is to force unrolling v1f64 vectors for AArch64.
-  if (VT.isFixedLengthVector() && VT.getVectorNumElements() == 1 &&
-      !TLI.isOperationLegalOrCustom(ISD::FSUB, VT) &&
-      TLI.isOperationLegal(ISD::FNEG, VT.getVectorElementType()))
+  // FIXME: The FSUB check is here to force unrolling v1f64 vectors on AArch64.
+  if (!TLI.isOperationLegalOrCustom(ISD::XOR, IntVT) ||
+      !(TLI.isOperationLegalOrCustom(ISD::FSUB, VT) || VT.isScalableVector()))
     return SDValue();
 
   SDLoc DL(Node);
