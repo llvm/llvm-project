@@ -942,7 +942,7 @@ static void DiagnoseHLSLRegisterAttribute(Sema &S, SourceLocation &ArgLoc,
   // check if the declaration contains resource matching the register type
   CheckContainsResourceForRegisterType(S, ArgLoc, D, RegType);
 
-  // check multiple register annotations
+  // next, if multiple register annotations exist, check that none conflict.
   ValidateMultipleRegisterAnnotations(S, D, RegType);
 }
 
