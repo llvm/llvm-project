@@ -701,6 +701,9 @@ let Class = HLSLAttributedResourceType in {
   def : Property<"isROV", Bool> {
     let Read = [{ node->getAttrs().IsROV }];
   }
+  def : Property<"rawBuffer", Bool> {
+    let Read = [{ node->getAttrs().RawBuffer }];
+  }
   def : Property<"wrappedTy", QualType> {
     let Read = [{ node->getWrappedType() }];
   }
@@ -708,7 +711,7 @@ let Class = HLSLAttributedResourceType in {
     let Read = [{ node->getContainedType() }];
   }
   def : Creator<[{
-    HLSLAttributedResourceType::Attributes attrs(static_cast<llvm::dxil::ResourceClass>(resClass), isROV);
+    HLSLAttributedResourceType::Attributes attrs(static_cast<llvm::dxil::ResourceClass>(resClass), isROV, rawBuffer);
     return ctx.getHLSLAttributedResourceType(wrappedTy, containedTy, attrs);
   }]>;
 }
