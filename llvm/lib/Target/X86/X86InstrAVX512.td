@@ -2782,7 +2782,7 @@ multiclass avx512_mask_unop<bits<8> opc, string OpcodeStr,
                             RegisterClass KRC, SDPatternOperator OpNode,
                             X86FoldableSchedWrite sched, Predicate prd> {
   let Predicates = [prd] in
-    def rr : I<opc, MRMSrcReg, (outs KRC:$dst), (ins KRC:$src),
+    def kk : I<opc, MRMSrcReg, (outs KRC:$dst), (ins KRC:$src),
                !strconcat(OpcodeStr, "\t{$src, $dst|$dst, $src}"),
                [(set KRC:$dst, (OpNode KRC:$src))]>,
                Sched<[sched]>;
@@ -2807,14 +2807,14 @@ defm KNOT : avx512_mask_unop_all<0x44, "knot", vnot, SchedWriteVecLogic.XMM>;
 // KNL does not support KMOVB, 8-bit mask is promoted to 16-bit
 let Predicates = [HasAVX512, NoDQI] in
 def : Pat<(vnot VK8:$src),
-          (COPY_TO_REGCLASS (KNOTWrr (COPY_TO_REGCLASS VK8:$src, VK16)), VK8)>;
+          (COPY_TO_REGCLASS (KNOTWkk (COPY_TO_REGCLASS VK8:$src, VK16)), VK8)>;
 
 def : Pat<(vnot VK4:$src),
-          (COPY_TO_REGCLASS (KNOTWrr (COPY_TO_REGCLASS VK4:$src, VK16)), VK4)>;
+          (COPY_TO_REGCLASS (KNOTWkk (COPY_TO_REGCLASS VK4:$src, VK16)), VK4)>;
 def : Pat<(vnot VK2:$src),
-          (COPY_TO_REGCLASS (KNOTWrr (COPY_TO_REGCLASS VK2:$src, VK16)), VK2)>;
+          (COPY_TO_REGCLASS (KNOTWkk (COPY_TO_REGCLASS VK2:$src, VK16)), VK2)>;
 def : Pat<(vnot VK1:$src),
-          (COPY_TO_REGCLASS (KNOTWrr (COPY_TO_REGCLASS VK1:$src, VK16)), VK2)>;
+          (COPY_TO_REGCLASS (KNOTWkk (COPY_TO_REGCLASS VK1:$src, VK16)), VK2)>;
 
 // Mask binary operation
 // - KAND, KANDN, KOR, KXNOR, KXOR
@@ -2823,7 +2823,7 @@ multiclass avx512_mask_binop<bits<8> opc, string OpcodeStr,
                            X86FoldableSchedWrite sched, Predicate prd,
                            bit IsCommutable> {
   let Predicates = [prd], isCommutable = IsCommutable in
-    def rr : I<opc, MRMSrcReg, (outs KRC:$dst), (ins KRC:$src1, KRC:$src2),
+    def kk : I<opc, MRMSrcReg, (outs KRC:$dst), (ins KRC:$src1, KRC:$src2),
                !strconcat(OpcodeStr,
                           "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
                [(set KRC:$dst, (OpNode KRC:$src1, KRC:$src2))]>,
@@ -2877,11 +2877,11 @@ multiclass avx512_binop_pat<SDPatternOperator VOpNode,
                            (COPY_TO_REGCLASS VK4:$src2, VK16)), VK4)>;
 }
 
-defm : avx512_binop_pat<and,   KANDWrr>;
-defm : avx512_binop_pat<vandn, KANDNWrr>;
-defm : avx512_binop_pat<or,    KORWrr>;
-defm : avx512_binop_pat<vxnor, KXNORWrr>;
-defm : avx512_binop_pat<xor,   KXORWrr>;
+defm : avx512_binop_pat<and,   KANDWkk>;
+defm : avx512_binop_pat<vandn, KANDNWkk>;
+defm : avx512_binop_pat<or,    KORWkk>;
+defm : avx512_binop_pat<vxnor, KXNORWkk>;
+defm : avx512_binop_pat<xor,   KXORWkk>;
 
 // Mask unpacking
 multiclass avx512_mask_unpck<string Suffix, X86KVectorVTInfo Dst,
@@ -2889,13 +2889,13 @@ multiclass avx512_mask_unpck<string Suffix, X86KVectorVTInfo Dst,
                              Predicate prd> {
   let Predicates = [prd] in {
     let hasSideEffects = 0 in
-    def rr : I<0x4b, MRMSrcReg, (outs Dst.KRC:$dst),
+    def kk : I<0x4b, MRMSrcReg, (outs Dst.KRC:$dst),
                (ins Src.KRC:$src1, Src.KRC:$src2),
                "kunpck"#Suffix#"\t{$src2, $src1, $dst|$dst, $src1, $src2}", []>,
                VEX, VVVV, VEX_L, Sched<[sched]>;
 
     def : Pat<(Dst.KVT (concat_vectors Src.KRC:$src1, Src.KRC:$src2)),
-              (!cast<Instruction>(NAME#rr) Src.KRC:$src2, Src.KRC:$src1)>;
+              (!cast<Instruction>(NAME#kk) Src.KRC:$src2, Src.KRC:$src1)>;
   }
 }
 
@@ -2908,7 +2908,7 @@ multiclass avx512_mask_testop<bits<8> opc, string OpcodeStr, RegisterClass KRC,
                               SDNode OpNode, X86FoldableSchedWrite sched,
                               Predicate prd> {
   let Predicates = [prd], Defs = [EFLAGS] in
-    def rr : I<opc, MRMSrcReg, (outs), (ins KRC:$src1, KRC:$src2),
+    def kk : I<opc, MRMSrcReg, (outs), (ins KRC:$src1, KRC:$src2),
                !strconcat(OpcodeStr, "\t{$src2, $src1|$src1, $src2}"),
                [(set EFLAGS, (OpNode KRC:$src1, KRC:$src2))]>,
                Sched<[sched]>;
@@ -2935,7 +2935,7 @@ defm KTEST   : avx512_mask_testop_w<0x99, "ktest", X86ktest, SchedWriteVecLogic.
 multiclass avx512_mask_shiftop<bits<8> opc, string OpcodeStr, RegisterClass KRC,
                                SDNode OpNode, X86FoldableSchedWrite sched> {
   let Predicates = [HasAVX512] in
-    def ri : Ii8<opc, MRMSrcReg, (outs KRC:$dst), (ins KRC:$src, u8imm:$imm),
+    def ki : Ii8<opc, MRMSrcReg, (outs KRC:$dst), (ins KRC:$src, u8imm:$imm),
                  !strconcat(OpcodeStr,
                             "\t{$imm, $src, $dst|$dst, $src, $imm}"),
                             [(set KRC:$dst, (OpNode KRC:$src, (i8 timm:$imm)))]>,
@@ -3463,12 +3463,12 @@ def VMOVUPSZ256mr_NOVLX : I<0, Pseudo, (outs), (ins f256mem:$dst, VR256X:$src),
 
 def : Pat<(v8i64 (vselect VK8WM:$mask, (v8i64 immAllZerosV),
                           (v8i64 VR512:$src))),
-   (VMOVDQA64Zrrkz (COPY_TO_REGCLASS (KNOTWrr (COPY_TO_REGCLASS VK8:$mask, VK16)),
+   (VMOVDQA64Zrrkz (COPY_TO_REGCLASS (KNOTWkk (COPY_TO_REGCLASS VK8:$mask, VK16)),
                                               VK8), VR512:$src)>;
 
 def : Pat<(v16i32 (vselect VK16WM:$mask, (v16i32 immAllZerosV),
                            (v16i32 VR512:$src))),
-                  (VMOVDQA32Zrrkz (KNOTWrr VK16WM:$mask), VR512:$src)>;
+                  (VMOVDQA32Zrrkz (KNOTWkk VK16WM:$mask), VR512:$src)>;
 
 // These patterns exist to prevent the above patterns from introducing a second
 // mask inversion when one already exists.
@@ -10425,7 +10425,7 @@ defm VSCATTERPF1QPD: avx512_gather_scatter_prefetch<0xC7, MRM6m, "vscatterpf1qpd
                      VK8WM, vz512mem>, EVEX_V512, REX_W, EVEX_CD8<64, CD8VT1>;
 
 multiclass cvt_by_vec_width<bits<8> opc, X86VectorVTInfo Vec, string OpcodeStr, SchedWrite Sched> {
-def rr : AVX512XS8I<opc, MRMSrcReg, (outs Vec.RC:$dst), (ins Vec.KRC:$src),
+def rk : AVX512XS8I<opc, MRMSrcReg, (outs Vec.RC:$dst), (ins Vec.KRC:$src),
                   !strconcat(OpcodeStr#Vec.Suffix, "\t{$src, $dst|$dst, $src}"),
                   [(set Vec.RC:$dst, (Vec.VT (sext Vec.KRC:$src)))]>,
                   EVEX, Sched<[Sched]>;
@@ -10448,7 +10448,7 @@ defm VPMOVM2D : cvt_mask_by_elt_width<0x38, avx512vl_i32_info, "vpmovm2", HasDQI
 defm VPMOVM2Q : cvt_mask_by_elt_width<0x38, avx512vl_i64_info, "vpmovm2", HasDQI> , REX_W;
 
 multiclass convert_vector_to_mask_common<bits<8> opc, X86VectorVTInfo _, string OpcodeStr > {
-    def rr : AVX512XS8I<opc, MRMSrcReg, (outs _.KRC:$dst), (ins _.RC:$src),
+    def kr : AVX512XS8I<opc, MRMSrcReg, (outs _.KRC:$dst), (ins _.RC:$src),
                         !strconcat(OpcodeStr, "\t{$src, $dst|$dst, $src}"),
                         [(set _.KRC:$dst, (X86pcmpgtm _.ImmAllZerosV, (_.VT _.RC:$src)))]>,
                         EVEX, Sched<[WriteMove]>;
@@ -10461,7 +10461,7 @@ multiclass convert_vector_to_mask_lowering<X86VectorVTInfo ExtendInfo,
 
   def : Pat<(_.KVT (X86pcmpgtm _.ImmAllZerosV, (_.VT _.RC:$src))),
             (_.KVT (COPY_TO_REGCLASS
-                     (!cast<Instruction>(Name#"Zrr")
+                     (!cast<Instruction>(Name#"Zkr")
                        (INSERT_SUBREG (ExtendInfo.VT (IMPLICIT_DEF)),
                                       _.RC:$src, _.SubRegIdx)),
                    _.KRC))>;
@@ -10499,14 +10499,14 @@ defm VPMOVQ2M : avx512_convert_vector_to_mask<0x39, "vpmovq2m",
 // a target independent DAG combine likes to combine sext and trunc.
 let Predicates = [HasDQI, NoBWI] in {
   def : Pat<(v16i8 (sext (v16i1 VK16:$src))),
-            (VPMOVDBZrr (v16i32 (VPMOVM2DZrr VK16:$src)))>;
+            (VPMOVDBZrr (v16i32 (VPMOVM2DZrk VK16:$src)))>;
   def : Pat<(v16i16 (sext (v16i1 VK16:$src))),
-            (VPMOVDWZrr (v16i32 (VPMOVM2DZrr VK16:$src)))>;
+            (VPMOVDWZrr (v16i32 (VPMOVM2DZrk VK16:$src)))>;
 }
 
 let Predicates = [HasDQI, NoBWI, HasVLX] in {
   def : Pat<(v8i16 (sext (v8i1 VK8:$src))),
-            (VPMOVDWZ256rr (v8i32 (VPMOVM2DZ256rr VK8:$src)))>;
+            (VPMOVDWZ256rr (v8i32 (VPMOVM2DZ256rk VK8:$src)))>;
 }
 
 //===----------------------------------------------------------------------===//

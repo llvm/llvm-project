@@ -633,13 +633,13 @@ def ICXWriteResGroup1 : SchedWriteRes<[ICXPort0]> {
   let NumMicroOps = 1;
   let ReleaseAtCycles = [1];
 }
-def: InstRW<[ICXWriteResGroup1], (instregex "KAND(B|D|Q|W)rr",
-                                            "KANDN(B|D|Q|W)rr",
+def: InstRW<[ICXWriteResGroup1], (instregex "KAND(B|D|Q|W)kk",
+                                            "KANDN(B|D|Q|W)kk",
                                             "KMOV(B|D|Q|W)kk",
-                                            "KNOT(B|D|Q|W)rr",
-                                            "KOR(B|D|Q|W)rr",
-                                            "KXNOR(B|D|Q|W)rr",
-                                            "KXOR(B|D|Q|W)rr",
+                                            "KNOT(B|D|Q|W)kk",
+                                            "KOR(B|D|Q|W)kk",
+                                            "KXNOR(B|D|Q|W)kk",
+                                            "KXOR(B|D|Q|W)kk",
                                             "KSET0(B|D|Q|W)", // Same as KXOR
                                             "KSET1(B|D|Q|W)", // Same as KXNOR
                                             "MMX_PADDS(B|W)rr",
@@ -651,10 +651,10 @@ def: InstRW<[ICXWriteResGroup1], (instregex "KAND(B|D|Q|W)rr",
                                             "MMX_P(MAX|MIN)UBrr",
                                             "MMX_PSUBS(B|W)rr",
                                             "MMX_PSUBUS(B|W)rr",
-                                            "VPMOVB2M(Z|Z128|Z256)rr",
-                                            "VPMOVD2M(Z|Z128|Z256)rr",
-                                            "VPMOVQ2M(Z|Z128|Z256)rr",
-                                            "VPMOVW2M(Z|Z128|Z256)rr")>;
+                                            "VPMOVB2M(Z|Z128|Z256)kr",
+                                            "VPMOVD2M(Z|Z128|Z256)kr",
+                                            "VPMOVQ2M(Z|Z128|Z256)kr",
+                                            "VPMOVW2M(Z|Z128|Z256)kr")>;
 
 def ICXWriteResGroup3 : SchedWriteRes<[ICXPort5]> {
   let Latency = 1;
@@ -826,8 +826,8 @@ def ICXWriteResGroup30 : SchedWriteRes<[ICXPort0]> {
   let ReleaseAtCycles = [1];
 }
 def: InstRW<[ICXWriteResGroup30], (instregex "KMOV(B|D|Q|W)rk",
-                                             "KORTEST(B|D|Q|W)rr",
-                                             "KTEST(B|D|Q|W)rr")>;
+                                             "KORTEST(B|D|Q|W)kk",
+                                             "KTEST(B|D|Q|W)kk")>;
 
 def ICXWriteResGroup31 : SchedWriteRes<[ICXPort1]> {
   let Latency = 3;
@@ -854,10 +854,10 @@ def ICXWriteResGroup33 : SchedWriteRes<[ICXPort5]> {
   let NumMicroOps = 1;
   let ReleaseAtCycles = [1];
 }
-def: InstRW<[ICXWriteResGroup33], (instregex "KADD(B|D|Q|W)rr",
-                                             "KSHIFTL(B|D|Q|W)ri",
-                                             "KSHIFTR(B|D|Q|W)ri",
-                                             "KUNPCK(BW|DQ|WD)rr",
+def: InstRW<[ICXWriteResGroup33], (instregex "KADD(B|D|Q|W)kk",
+                                             "KSHIFTL(B|D|Q|W)ki",
+                                             "KSHIFTR(B|D|Q|W)ki",
+                                             "KUNPCK(BW|DQ|WD)kk",
                                              "VCMPPD(Z|Z128|Z256)rri",
                                              "VCMPPS(Z|Z128|Z256)rri",
                                              "VCMP(SD|SS)Zrr",

@@ -1318,17 +1318,17 @@ def : InstRW<[SPRWriteResGroup90], (instrs VZEROUPPER)>;
 def SPRWriteResGroup91 : SchedWriteRes<[SPRPort05]> {
   let Latency = 4;
 }
-def : InstRW<[SPRWriteResGroup91], (instregex "^KADD(B|D|Q|W)rr$",
-                                              "^KSHIFT(LB|RD|RQ|RW)ri$",
-                                              "^KSHIFT(LD|RB)ri$",
-                                              "^KSHIFTL(Q|W)ri$",
-                                              "^KUNPCK(BW|DQ|WD)rr$")>;
+def : InstRW<[SPRWriteResGroup91], (instregex "^KADD(B|D|Q|W)kk",
+                                              "^KSHIFT(LB|RD|RQ|RW)ki$",
+                                              "^KSHIFT(LD|RB)ki$",
+                                              "^KSHIFTL(Q|W)ki$",
+                                              "^KUNPCK(BW|DQ|WD)kk$")>;
 
 def SPRWriteResGroup92 : SchedWriteRes<[SPRPort00]>;
-def : InstRW<[SPRWriteResGroup92], (instregex "^KAND(B|D|Q|W|ND|NQ|NW)rr$",
+def : InstRW<[SPRWriteResGroup92], (instregex "^KAND(B|D|Q|W|ND|NQ|NW)kk$",
                                               "^KMOV(B|D|Q|W)kk$",
-                                              "^KNOT(B|D|Q|W)rr$",
-                                              "^K((X|XN)?)OR(B|D|Q|W)rr$",
+                                              "^KNOT(B|D|Q|W)kk$",
+                                              "^K((X|XN)?)OR(B|D|Q|W)kk$",
                                               "^VP(A|SU)BSBZrr$",
                                               "^VPABS(D|Q|W)Zrr$",
                                               "^VPABS(D|Q)Zrrk(z?)$",
@@ -1342,7 +1342,7 @@ def : InstRW<[SPRWriteResGroup92], (instregex "^KAND(B|D|Q|W|ND|NQ|NW)rr$",
                                               "^VPSH(L|R)DV(D|Q|W)Zr$",
                                               "^VPSH(L|R)DV(D|Q)Zrk(z?)$",
                                               "^VPSUB(U?)SWZrr$")>;
-def : InstRW<[SPRWriteResGroup92], (instrs KANDNBrr,
+def : InstRW<[SPRWriteResGroup92], (instrs KANDNBkk,
                                            VPSUBUSBZrr)>;
 
 def SPRWriteResGroup93 : SchedWriteRes<[SPRPort02_03_11, SPRPort05]> {
@@ -1378,7 +1378,7 @@ def : InstRW<[SPRWriteResGroup95], (instrs KMOVQkr,
 def SPRWriteResGroup96 : SchedWriteRes<[SPRPort00]> {
   let Latency = 3;
 }
-def : InstRW<[SPRWriteResGroup96], (instregex "^K((OR)?)TEST(B|D|Q|W)rr$",
+def : InstRW<[SPRWriteResGroup96], (instregex "^K((OR)?)TEST(B|D|Q|W)kk$",
                                               "^VP(A|SU)BS(B|W)Zrrk(z?)$",
                                               "^VPADD(U?)S(B|W)Zrrk(z?)$",
                                               "^VPAVG(B|W)Zrrk(z?)$",
@@ -1867,7 +1867,7 @@ def : InstRW<[SPRWriteResGroup160], (instregex "^(V?)MOVS(D|S)rr((_REV)?)$",
                                                "^VP(ADD|SUB)(B|D|Q|W)Yrr$",
                                                "^VP(ADD|SUB)(B|D|Q|W)Z(128|256)rr$",
                                                "^VP(ADD|SUB)(D|Q)Z(128|256)rrk(z?)$",
-                                               "^VPMOVM2(D|Q)Z128rr$",
+                                               "^VPMOVM2(D|Q)Z128rk$",
                                                "^VPTERNLOG(D|Q)Z(128|256)rri((k|kz)?)$")>;
 def : InstRW<[SPRWriteResGroup160], (instrs VPBLENDDrri)>;
 
@@ -2534,7 +2534,7 @@ def : InstRW<[SPRWriteResGroup250], (instregex "^V(ADD|SUB)P(D|S)Zrr(b?)$",
                                                "^VMOVDQU(8|16)Zrrk(z?)((_REV)?)$",
                                                "^VP(ADD|SUB)(B|W)Zrrk(z?)$",
                                                "^VPBLENDM(B|W)Zrrk(z?)$",
-                                               "^VPMOVM2(B|W)Zrr$")>;
+                                               "^VPMOVM2(B|W)Zrk$")>;
 
 def SPRWriteResGroup251 : SchedWriteRes<[SPRPort00_01]> {
   let Latency = 6;
@@ -4001,7 +4001,7 @@ def : InstRW<[SPRWriteResGroup418], (instregex "^VMOVDQU(8|16)Z(128|256)rrk(z?)(
                                                "^VMOVSHZrrk(z?)((_REV)?)$",
                                                "^VP(ADD|SUB)(B|W)Z(128|256)rrk(z?)$",
                                                "^VPBLENDM(B|W)Z(128|256)rrk(z?)$",
-                                               "^VPMOVM2(B|W)Z(128|256)rr$")>;
+                                               "^VPMOVM2(B|W)Z(128|256)rk$")>;
 
 def SPRWriteResGroup419 : SchedWriteRes<[SPRPort00_01_05_06_10, SPRPort04_09, SPRPort07_08]> {
   let ReleaseAtCycles = [1, 2, 2];
