@@ -209,20 +209,21 @@ void SILowerSGPRSpills::calculateSaveRestoreBlocks(MachineFunction &MF) {
   // So set the save points for those.
 
   // Use the points found by shrink-wrapping, if any.
+
   if (!MFI.getSavePoints().empty()) {
-    assert(MFI.getSavePoints().size() == 1 &&
-           "Multiple save points not yet supported!");
-    const auto &SavePoint = *MFI.getSavePoints().begin();
-    SaveBlocks.push_back(SavePoint.first);
-    assert(MFI.getRestorePoints().size() == 1 &&
-           "Multiple restore points not yet supported!");
-    const auto &RestorePoint = *MFI.getRestorePoints().begin();
-    MachineBasicBlock *RestoreBlock = RestorePoint.first;
-    // If RestoreBlock does not have any successor and is not a return block
-    // then the end point is unreachable and we do not need to insert any
-    // epilogue.
-    if (!RestoreBlock->succ_empty() || RestoreBlock->isReturnBlock())
-      RestoreBlocks.push_back(RestoreBlock);
+    assert(!MFI.getRestorePoints().empty() &&
+           "Both restores and saves must be set");
+    for (auto &item : MFI.getSavePoints())
+      SaveBlocks.push_back(item.first);
+
+    for (auto &item : MFI.getRestorePoints()) {
+      MachineBasicBlock *RestoreBlock = item.first;
+      // If RestoreBlock does not have any successor and is not a return block
+      // then the end point is unreachable and we do not need to insert any
+      // epilogue.
+      if (!RestoreBlock->succ_empty() || RestoreBlock->isReturnBlock())
+        RestoreBlocks.push_back(RestoreBlock);
+    }
     return;
   }
 
