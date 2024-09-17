@@ -1419,7 +1419,7 @@ def  SMMLA : SIMDThreeSameVectorMatMul<0, 0, "smmla", int_aarch64_neon_smmla>;
 def  UMMLA : SIMDThreeSameVectorMatMul<0, 1, "ummla", int_aarch64_neon_ummla>;
 def USMMLA : SIMDThreeSameVectorMatMul<1, 0, "usmmla", int_aarch64_neon_usmmla>;
 defm USDOT : SIMDThreeSameVectorDot<0, 1, "usdot", AArch64usdot>;
-defm USDOTlane : SIMDThreeSameVectorDotIndex<0, 1, 0b10, "usdot", int_aarch64_neon_usdot>;
+defm USDOTlane : SIMDThreeSameVectorDotIndex<0, 1, 0b10, "usdot", AArch64usdot>;
 
 // sudot lane has a pattern where usdot is expected (there is no sudot).
 // The second operand is used in the dup operation to repeat the indexed
