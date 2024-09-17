@@ -124,6 +124,10 @@ Changes in existing checks
   false positive when member initialization depends on a structured binging
   variable.
 
+- Improved :doc:`misc-definitions-in-headers
+  <clang-tidy/checks/misc/definitions-in-headers>` check by rewording the
+  diagnostic note that suggests adding ``inline``.
+
 - Improved :doc:`modernize-use-std-format
   <clang-tidy/checks/modernize/use-std-format>` check to support replacing
   member function calls too.
