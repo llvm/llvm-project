@@ -74,9 +74,15 @@ mlirPassManagerGetAsOpPassManager(MlirPassManager passManager);
 MLIR_CAPI_EXPORTED MlirLogicalResult
 mlirPassManagerRunOnOp(MlirPassManager passManager, MlirOperation op);
 
-/// Enable mlir-print-ir-after-all.
+/// Configure IR printing options for the provided `passManager`.
+MLIR_CAPI_EXPORTED void mlirPassManagerEnableIRPrinting(
+    MlirPassManager passManager, bool shouldPrintBeforePass,
+    bool shouldPrintAfterPass, bool printModuleScope,
+    bool printAfterOnlyOnChange, bool printAfterOnlyOnFailure);
+
+// Enable timing of passes
 MLIR_CAPI_EXPORTED void
-mlirPassManagerEnableIRPrinting(MlirPassManager passManager);
+mlirPassManagerEnableTiming(MlirPassManager passManager);
 
 /// Enable / disable verify-each.
 MLIR_CAPI_EXPORTED void

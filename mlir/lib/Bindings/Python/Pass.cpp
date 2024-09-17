@@ -74,10 +74,26 @@ void mlir::python::populatePassManagerSubmodule(py::module &m) {
            "Releases (leaks) the backing pass manager (testing)")
       .def(
           "enable_ir_printing",
-          [](PyPassManager &passManager) {
-            mlirPassManagerEnableIRPrinting(passManager.get());
+          [](PyPassManager &passManager, bool printBeforePass,
+             bool printAfterPass, bool printModuleScope,
+             bool printAfterOnlyOnChange, bool printAfterOnlyOnFailure) {
+            mlirPassManagerEnableIRPrinting(passManager.get(), printBeforePass,
+                                            printAfterPass, printModuleScope,
+                                            printAfterOnlyOnChange,
+                                            printAfterOnlyOnFailure);
           },
-          "Enable mlir-print-ir-after-all.")
+          "print_before_pass"_a = true, "print_after_pass"_a = true,
+          "printModuleScope"_a = true, "print_after_only_on_change"_a = true,
+          "print_after_only_on_failure"_a = false,
+          "Enable IR printing for the pass manager with configurable options "
+          "to print before and/or after each pass, at module scope, only"
+          "on changes, or on failure.")
+      .def(
+          "enable_timing",
+          [](PyPassManager &PyPassManager) {
+            mlirPassManagerEnableTiming(PyPassManager.get());
+          },
+          "Enable timing of passes")
       .def(
           "enable_verifier",
           [](PyPassManager &passManager, bool enable) {
