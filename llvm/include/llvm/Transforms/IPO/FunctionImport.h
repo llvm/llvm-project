@@ -270,11 +270,18 @@ public:
   // A map from destination modules to lists of imports.
   class ImportListsTy {
   public:
-    ImportListsTy() = default;
-    ImportListsTy(size_t Size) : ListsImpl(Size) {}
+    ImportListsTy() : EmptyList(ImportIDs) {}
+    ImportListsTy(size_t Size) : EmptyList(ImportIDs), ListsImpl(Size) {}
 
     ImportMapTy &operator[](StringRef DestMod) {
       return ListsImpl.try_emplace(DestMod, ImportIDs).first->second;
+    }
+
+    const ImportMapTy &lookup(StringRef DestMod) const {
+      auto It = ListsImpl.find(DestMod);
+      if (It != ListsImpl.end())
+        return It->second;
+      return EmptyList;
     }
 
     size_t size() const { return ListsImpl.size(); }
@@ -284,6 +291,7 @@ public:
     const_iterator end() const { return ListsImpl.end(); }
 
   private:
+    ImportMapTy EmptyList;
     DenseMap<StringRef, ImportMapTy> ListsImpl;
     ImportIDTable ImportIDs;
   };
