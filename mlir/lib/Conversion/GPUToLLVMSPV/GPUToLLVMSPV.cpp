@@ -382,11 +382,11 @@ struct GPUToLLVMSPVConversionPass final
     LLVMTypeConverter converter(context, options);
     LLVMConversionTarget target(*context);
 
-    target.addIllegalOp<gpu::ThreadIdOp, gpu::BlockIdOp, gpu::GlobalIdOp,
-                        gpu::BlockDimOp, gpu::GridDimOp, gpu::BarrierOp,
-                        gpu::GPUFuncOp, gpu::ReturnOp, gpu::ShuffleOp,
-                        gpu::SubgroupIdOp, gpu::LaneIdOp, gpu::NumSubgroupsOp,
-                        gpu::SubgroupSizeOp>();
+    target.addIllegalOp<gpu::BarrierOp, gpu::BlockDimOp, gpu::BlockIdOp,
+                        gpu::GPUFuncOp, gpu::GlobalIdOp, gpu::GridDimOp,
+                        gpu::LaneIdOp, gpu::NumSubgroupsOp, gpu::ReturnOp,
+                        gpu::ShuffleOp, gpu::SubgroupIdOp, gpu::SubgroupSizeOp,
+                        gpu::ThreadIdOp>();
 
     populateGpuToLLVMSPVConversionPatterns(converter, patterns);
     populateGpuMemorySpaceAttributeConversions(converter);
@@ -415,15 +415,15 @@ gpuAddressSpaceToOCLAddressSpace(gpu::AddressSpace addressSpace) {
 void populateGpuToLLVMSPVConversionPatterns(LLVMTypeConverter &typeConverter,
                                             RewritePatternSet &patterns) {
   patterns.add<GPUBarrierConversion, GPUReturnOpLowering, GPUShuffleConversion,
-               LaunchConfigOpConversion<gpu::BlockIdOp>,
-               LaunchConfigOpConversion<gpu::GridDimOp>,
-               LaunchConfigOpConversion<gpu::BlockDimOp>,
-               LaunchConfigOpConversion<gpu::ThreadIdOp>,
-               LaunchConfigOpConversion<gpu::GlobalIdOp>,
-               GPUSubgroupOpConversion<gpu::SubgroupIdOp>,
                GPUSubgroupOpConversion<gpu::LaneIdOp>,
                GPUSubgroupOpConversion<gpu::NumSubgroupsOp>,
-               GPUSubgroupOpConversion<gpu::SubgroupSizeOp>>(typeConverter);
+               GPUSubgroupOpConversion<gpu::SubgroupIdOp>,
+               GPUSubgroupOpConversion<gpu::SubgroupSizeOp>,
+               LaunchConfigOpConversion<gpu::BlockDimOp>,
+               LaunchConfigOpConversion<gpu::BlockIdOp>,
+               LaunchConfigOpConversion<gpu::GlobalIdOp>,
+               LaunchConfigOpConversion<gpu::GridDimOp>,
+               LaunchConfigOpConversion<gpu::ThreadIdOp>>(typeConverter);
   MLIRContext *context = &typeConverter.getContext();
   unsigned privateAddressSpace =
       gpuAddressSpaceToOCLAddressSpace(gpu::AddressSpace::Private);
