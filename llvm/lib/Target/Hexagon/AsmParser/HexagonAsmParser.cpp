@@ -188,7 +188,7 @@ public:
   bool parseInstruction(ParseInstructionInfo &Info, StringRef Name, AsmToken ID,
                         OperandVector &Operands) override;
 
-  bool parseDirectives(AsmToken DirectiveID) override;
+  bool ParseDirective(AsmToken DirectiveID) override;
 };
 
 /// HexagonOperand - Instances of this class represent a parsed Hexagon machine
@@ -710,8 +710,8 @@ bool HexagonAsmParser::parseDirectiveAttribute(SMLoc L) {
   return false;
 }
 
-/// parseDirectives parses the Hexagon specific directives
-bool HexagonAsmParser::parseDirectives(AsmToken DirectiveID) {
+/// ParseDirective parses the Hexagon specific directives
+bool HexagonAsmParser::ParseDirective(AsmToken DirectiveID) {
   StringRef IDVal = DirectiveID.getIdentifier();
   if (IDVal.lower() == ".falign")
     return ParseDirectiveFalign(256, DirectiveID.getLoc());

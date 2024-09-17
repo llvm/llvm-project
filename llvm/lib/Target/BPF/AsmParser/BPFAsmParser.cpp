@@ -483,8 +483,7 @@ ParseStatus BPFAsmParser::parseImmediate(OperandVector &Operands) {
   return ParseStatus::Success;
 }
 
-/// parseInstruction - Parse an BPF instruction which is in BPF verifier
-/// format.
+/// Parse an BPF instruction which is in BPF verifier format.
 bool BPFAsmParser::parseInstruction(ParseInstructionInfo &Info, StringRef Name,
                                     SMLoc NameLoc, OperandVector &Operands) {
   // The first operand could be either register or actually an operator.

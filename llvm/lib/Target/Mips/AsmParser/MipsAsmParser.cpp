@@ -193,7 +193,7 @@ class MipsAsmParser : public MCTargetAsmParser {
   bool parseInstruction(ParseInstructionInfo &Info, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override;
 
-  bool parseDirectives(AsmToken DirectiveID) override;
+  bool ParseDirective(AsmToken DirectiveID) override;
 
   ParseStatus parseMemOperand(OperandVector &Operands);
   ParseStatus matchAnyRegisterNameWithoutDollar(OperandVector &Operands,
@@ -8630,7 +8630,7 @@ bool MipsAsmParser::parseFpABIValue(MipsABIFlagsSection::FpABIKind &FpABI,
   return false;
 }
 
-bool MipsAsmParser::parseDirectives(AsmToken DirectiveID) {
+bool MipsAsmParser::ParseDirective(AsmToken DirectiveID) {
   // This returns false if this function recognizes the directive
   // regardless of whether it is successfully handles or reports an
   // error. Otherwise it returns true to give the generic parser a

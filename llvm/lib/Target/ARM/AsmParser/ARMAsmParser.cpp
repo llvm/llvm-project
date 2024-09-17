@@ -714,7 +714,7 @@ public:
                                SMLoc &EndLoc) override;
   bool parseInstruction(ParseInstructionInfo &Info, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override;
-  bool parseDirectives(AsmToken DirectiveID) override;
+  bool ParseDirective(AsmToken DirectiveID) override;
 
   unsigned validateTargetOperandClass(MCParsedAsmOperand &Op,
                                       unsigned Kind) override;
@@ -11427,8 +11427,8 @@ bool ARMAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   llvm_unreachable("Implement any new match types added!");
 }
 
-/// parseDirectives parses the arm specific directives
-bool ARMAsmParser::parseDirectives(AsmToken DirectiveID) {
+/// ParseDirective parses the arm specific directives
+bool ARMAsmParser::ParseDirective(AsmToken DirectiveID) {
   const MCContext::Environment Format = getContext().getObjectFileType();
   bool IsMachO = Format == MCContext::IsMachO;
   bool IsCOFF = Format == MCContext::IsCOFF;

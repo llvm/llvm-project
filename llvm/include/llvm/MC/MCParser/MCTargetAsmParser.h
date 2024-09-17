@@ -426,7 +426,7 @@ public:
   virtual ParseStatus tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
                                        SMLoc &EndLoc) = 0;
 
-  /// ParseInstruction - Parse one assembly instruction.
+  /// Parse one assembly instruction.
   ///
   /// The parser is positioned following the instruction name. The target
   /// specific instruction parser should parse the entire instruction and
@@ -446,7 +446,7 @@ public:
     return parseInstruction(Info, Name, Token.getLoc(), Operands);
   }
 
-  /// parseDirectives - Parse a target specific assembler directive
+  /// ParseDirective - Parse a target specific assembler directive
   /// This method is deprecated, use 'parseDirective' instead.
   ///
   /// The parser is positioned following the directive name.  The target
@@ -457,7 +457,7 @@ public:
   /// end-of-statement token and false is returned.
   ///
   /// \param DirectiveID - the identifier token of the directive.
-  virtual bool parseDirectives(AsmToken DirectiveID) { return true; }
+  virtual bool ParseDirective(AsmToken DirectiveID) { return true; }
 
   /// Parses a target-specific assembler directive.
   ///
@@ -471,7 +471,7 @@ public:
   /// \param DirectiveID - The token identifying the directive.
   virtual ParseStatus parseDirective(AsmToken DirectiveID);
 
-  /// MatchAndEmitInstruction - Recognize a series of operands of a parsed
+  /// Recognize a series of operands of a parsed
   /// instruction as an actual MCInst and emit it to the specified MCStreamer.
   /// This returns false on success and returns true on failure to match.
   ///

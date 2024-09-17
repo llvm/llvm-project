@@ -326,7 +326,7 @@ public:
   bool parseRegister(MCRegister &Reg, SMLoc &StartLoc, SMLoc &EndLoc) override;
   ParseStatus tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
                                SMLoc &EndLoc) override;
-  bool parseDirectives(AsmToken DirectiveID) override;
+  bool ParseDirective(AsmToken DirectiveID) override;
   unsigned validateTargetOperandClass(MCParsedAsmOperand &Op,
                                       unsigned Kind) override;
 
@@ -5086,8 +5086,7 @@ bool AArch64AsmParser::areEqualRegs(const MCParsedAsmOperand &Op1,
   return false;
 }
 
-/// parseInstruction - Parse an AArch64 instruction mnemonic followed by its
-/// operands.
+/// Parse an AArch64 instruction mnemonic followed by its operands.
 bool AArch64AsmParser::parseInstruction(ParseInstructionInfo &Info,
                                         StringRef Name, SMLoc NameLoc,
                                         OperandVector &Operands) {
@@ -6798,8 +6797,8 @@ bool AArch64AsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   llvm_unreachable("Implement any new match types added!");
 }
 
-/// parseDirectives parses the arm specific directives
-bool AArch64AsmParser::parseDirectives(AsmToken DirectiveID) {
+/// ParseDirectives parses the arm specific directives
+bool AArch64AsmParser::ParseDirective(AsmToken DirectiveID) {
   const MCContext::Environment Format = getContext().getObjectFileType();
   bool IsMachO = Format == MCContext::IsMachO;
   bool IsCOFF = Format == MCContext::IsCOFF;

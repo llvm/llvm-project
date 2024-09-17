@@ -1601,7 +1601,7 @@ public:
                                OperandVector &Operands, MCStreamer &Out,
                                uint64_t &ErrorInfo,
                                bool MatchingInlineAsm) override;
-  bool parseDirectives(AsmToken DirectiveID) override;
+  bool ParseDirective(AsmToken DirectiveID) override;
   ParseStatus parseOperand(OperandVector &Operands, StringRef Mnemonic,
                            OperandMode Mode = OperandMode_Default);
   StringRef parseMnemonicSuffix(StringRef Name);
@@ -6194,7 +6194,7 @@ bool AMDGPUAsmParser::ParseDirectiveAMDGPULDS() {
   return false;
 }
 
-bool AMDGPUAsmParser::parseDirectives(AsmToken DirectiveID) {
+bool AMDGPUAsmParser::ParseDirective(AsmToken DirectiveID) {
   StringRef IDVal = DirectiveID.getString();
 
   if (isHsaAbi(getSTI())) {
