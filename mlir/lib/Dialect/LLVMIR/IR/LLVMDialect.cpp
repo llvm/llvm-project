@@ -3247,7 +3247,7 @@ LogicalResult LLVMDialect::verifyDataLayoutString(
   std::string message;
   llvm::raw_string_ostream messageStream(message);
   llvm::logAllUnhandledErrors(maybeDataLayout.takeError(), messageStream);
-  reportError("invalid data layout descriptor: " + messageStream.str());
+  reportError("invalid data layout descriptor: " + message);
   return failure();
 }
 

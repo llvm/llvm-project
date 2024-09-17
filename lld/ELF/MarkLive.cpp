@@ -377,13 +377,13 @@ template <class ELFT> void elf::markLive() {
     sec->markDead();
 
   // Follow the graph to mark all live sections.
-  for (unsigned curPart = 1; curPart <= partitions.size(); ++curPart)
-    MarkLive<ELFT>(curPart).run();
+  for (unsigned i = 1, e = ctx.partitions.size(); i <= e; ++i)
+    MarkLive<ELFT>(i).run();
 
   // If we have multiple partitions, some sections need to live in the main
   // partition even if they were allocated to a loadable partition. Move them
   // there now.
-  if (partitions.size() != 1)
+  if (ctx.partitions.size() != 1)
     MarkLive<ELFT>(1).moveToMain();
 
   // Report garbage-collected sections.

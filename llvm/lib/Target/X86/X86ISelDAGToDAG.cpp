@@ -1647,10 +1647,10 @@ void X86DAGToDAGISel::PostprocessISelDAG() {
     // used. We're doing this late so we can prefer to fold the AND into masked
     // comparisons. Doing that can be better for the live range of the mask
     // register.
-    case X86::KORTESTBrr:
-    case X86::KORTESTWrr:
-    case X86::KORTESTDrr:
-    case X86::KORTESTQrr: {
+    case X86::KORTESTBkk:
+    case X86::KORTESTWkk:
+    case X86::KORTESTDkk:
+    case X86::KORTESTQkk: {
       SDValue Op0 = N->getOperand(0);
       if (Op0 != N->getOperand(1) || !N->isOnlyUserOf(Op0.getNode()) ||
           !Op0.isMachineOpcode() || !onlyUsesZeroFlag(SDValue(N, 0)))
@@ -1661,10 +1661,10 @@ void X86DAGToDAGISel::PostprocessISelDAG() {
       switch (Op0.getMachineOpcode()) {
       default:
         continue;
-        CASE(KANDBrr)
-        CASE(KANDWrr)
-        CASE(KANDDrr)
-        CASE(KANDQrr)
+        CASE(KANDBkk)
+        CASE(KANDWkk)
+        CASE(KANDDkk)
+        CASE(KANDQkk)
       }
       unsigned NewOpc;
 #define FROM_TO(A, B)                                                          \
@@ -1672,14 +1672,14 @@ void X86DAGToDAGISel::PostprocessISelDAG() {
     NewOpc = X86::B;                                                           \
     break;
       switch (Opc) {
-        FROM_TO(KORTESTBrr, KTESTBrr)
-        FROM_TO(KORTESTWrr, KTESTWrr)
-        FROM_TO(KORTESTDrr, KTESTDrr)
-        FROM_TO(KORTESTQrr, KTESTQrr)
+        FROM_TO(KORTESTBkk, KTESTBkk)
+        FROM_TO(KORTESTWkk, KTESTWkk)
+        FROM_TO(KORTESTDkk, KTESTDkk)
+        FROM_TO(KORTESTQkk, KTESTQkk)
       }
       // KANDW is legal with AVX512F, but KTESTW requires AVX512DQ. The other
       // KAND instructions and KTEST use the same ISA feature.
-      if (NewOpc == X86::KTESTWrr && !Subtarget->hasDQI())
+      if (NewOpc == X86::KTESTWkk && !Subtarget->hasDQI())
         continue;
 #undef FROM_TO
       MachineSDNode *KTest = CurDAG->getMachineNode(

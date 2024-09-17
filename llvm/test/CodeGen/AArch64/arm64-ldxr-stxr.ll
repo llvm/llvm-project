@@ -354,11 +354,10 @@ define dso_local i32 @test_store_release_i64(i32, i64 %val, ptr %addr) {
 }
 
 ; The stxp result cannot be allocated to the same register as the inputs.
-; FIXME: This is a miscompile.
 define dso_local i32 @test_stxp_undef(ptr %p, i64 %x) nounwind {
 ; CHECK-LABEL: test_stxp_undef:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    stxp w8, x8, x1, [x0]
+; CHECK-NEXT:    stxp w8, x9, x1, [x0]
 ; CHECK-NEXT:    mov w0, w8
 ; CHECK-NEXT:    ret
   %res = call i32 @llvm.aarch64.stxp(i64 undef, i64 %x, ptr %p)

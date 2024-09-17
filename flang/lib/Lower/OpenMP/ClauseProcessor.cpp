@@ -1009,6 +1009,37 @@ bool ClauseProcessor::processMap(
   return clauseFound;
 }
 
+bool ClauseProcessor::processMotionClauses(lower::StatementContext &stmtCtx,
+                                           mlir::omp::MapClauseOps &result) {
+  std::map<const semantics::Symbol *,
+           llvm::SmallVector<OmpMapMemberIndicesData>>
+      parentMemberIndices;
+  llvm::SmallVector<const semantics::Symbol *> mapSymbols;
+
+  auto callbackFn = [&](const auto &clause, const parser::CharBlock &source) {
+    mlir::Location clauseLocation = converter.genLocation(source);
+
+    // TODO Support motion modifiers: present, mapper, iterator.
+    constexpr llvm::omp::OpenMPOffloadMappingFlags mapTypeBits =
+        std::is_same_v<llvm::remove_cvref_t<decltype(clause)>, omp::clause::To>
+            ? llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO
+            : llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
+
+    processMapObjects(stmtCtx, clauseLocation, std::get<ObjectList>(clause.t),
+                      mapTypeBits, parentMemberIndices, result.mapVars,
+                      &mapSymbols);
+  };
+
+  bool clauseFound = findRepeatableClause<omp::clause::To>(callbackFn);
+  clauseFound =
+      findRepeatableClause<omp::clause::From>(callbackFn) || clauseFound;
+
+  insertChildMapInfoIntoParent(converter, parentMemberIndices, result.mapVars,
+                               mapSymbols,
+                               /*mapSymTypes=*/nullptr, /*mapSymLocs=*/nullptr);
+  return clauseFound;
+}
+
 bool ClauseProcessor::processNontemporal(
     mlir::omp::NontemporalClauseOps &result) const {
   return findRepeatableClause<omp::clause::Nontemporal>(

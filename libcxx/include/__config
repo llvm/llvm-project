@@ -31,6 +31,7 @@
 
 #  define _LIBCPP_CONCAT_IMPL(_X, _Y) _X##_Y
 #  define _LIBCPP_CONCAT(_X, _Y) _LIBCPP_CONCAT_IMPL(_X, _Y)
+#  define _LIBCPP_CONCAT3(X, Y, Z) _LIBCPP_CONCAT(X, _LIBCPP_CONCAT(Y, Z))
 
 #  if __STDC_HOSTED__ == 0
 #    define _LIBCPP_FREESTANDING
@@ -189,25 +190,6 @@ _LIBCPP_HARDENING_MODE_DEBUG
 
 #  if !defined(_LIBCPP_COMPILER_CLANG_BASED) && __cplusplus < 201103L
 #    error "libc++ only supports C++03 with Clang-based compilers. Please enable C++11"
-#  endif
-
-// FIXME: ABI detection should be done via compiler builtin macros. This
-// is just a placeholder until Clang implements such macros. For now assume
-// that Windows compilers pretending to be MSVC++ target the Microsoft ABI,
-// and allow the user to explicitly specify the ABI to handle cases where this
-// heuristic falls short.
-#  if defined(_LIBCPP_ABI_FORCE_ITANIUM) && defined(_LIBCPP_ABI_FORCE_MICROSOFT)
-#    error "Only one of _LIBCPP_ABI_FORCE_ITANIUM and _LIBCPP_ABI_FORCE_MICROSOFT can be defined"
-#  elif defined(_LIBCPP_ABI_FORCE_ITANIUM)
-#    define _LIBCPP_ABI_ITANIUM
-#  elif defined(_LIBCPP_ABI_FORCE_MICROSOFT)
-#    define _LIBCPP_ABI_MICROSOFT
-#  else
-#    if defined(_WIN32) && defined(_MSC_VER)
-#      define _LIBCPP_ABI_MICROSOFT
-#    else
-#      define _LIBCPP_ABI_ITANIUM
-#    endif
 #  endif
 
 #  if defined(_LIBCPP_ABI_MICROSOFT) && !defined(_LIBCPP_NO_VCRUNTIME)

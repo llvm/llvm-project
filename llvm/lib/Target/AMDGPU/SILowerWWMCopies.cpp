@@ -90,9 +90,8 @@ void SILowerWWMCopies::addToWWMSpills(MachineFunction &MF, Register Reg) {
   if (Reg.isPhysical())
     return;
 
-  Register PhysReg = VRM->getPhys(Reg);
-  assert(PhysReg != VirtRegMap::NO_PHYS_REG &&
-         "should have allocated a physical register");
+  MCRegister PhysReg = VRM->getPhys(Reg);
+  assert(PhysReg && "should have allocated a physical register");
 
   MFI->allocateWWMSpill(MF, PhysReg);
 }

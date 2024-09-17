@@ -11,10 +11,13 @@
 #define _LIBCPP___ITERATOR_OSTREAMBUF_ITERATOR_H
 
 #include <__config>
+#include <__fwd/ios.h>
+#include <__fwd/ostream.h>
+#include <__fwd/streambuf.h>
 #include <__iterator/iterator.h>
 #include <__iterator/iterator_traits.h>
 #include <cstddef>
-#include <iosfwd> // for forward declaration of basic_streambuf
+#include <iosfwd> // for forward declaration of ostreambuf_iterator
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

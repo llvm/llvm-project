@@ -182,7 +182,7 @@ ModuleToObject::translateToISA(llvm::Module &llvmModule,
 
     codegenPasses.run(llvmModule);
   }
-  return stream.str();
+  return targetISA;
 }
 
 void ModuleToObject::setDataLayoutAndTriple(llvm::Module &module) {

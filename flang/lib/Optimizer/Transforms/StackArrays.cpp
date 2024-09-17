@@ -734,28 +734,12 @@ void AllocMemConversion::insertStackSaveRestore(
   auto mod = oldAlloc->getParentOfType<mlir::ModuleOp>();
   fir::FirOpBuilder builder{rewriter, mod};
 
-  mlir::func::FuncOp stackSaveFn = fir::factory::getLlvmStackSave(builder);
-  mlir::SymbolRefAttr stackSaveSym =
-      builder.getSymbolRefAttr(stackSaveFn.getName());
-
   builder.setInsertionPoint(oldAlloc);
-  mlir::Value sp =
-      builder
-          .create<fir::CallOp>(oldAlloc.getLoc(), stackSaveSym,
-                               stackSaveFn.getFunctionType().getResults(),
-                               mlir::ValueRange{})
-          .getResult(0);
-
-  mlir::func::FuncOp stackRestoreFn =
-      fir::factory::getLlvmStackRestore(builder);
-  mlir::SymbolRefAttr stackRestoreSym =
-      builder.getSymbolRefAttr(stackRestoreFn.getName());
+  mlir::Value sp = builder.genStackSave(oldAlloc.getLoc());
 
   auto createStackRestoreCall = [&](mlir::Operation *user) {
     builder.setInsertionPoint(user);
-    builder.create<fir::CallOp>(user->getLoc(), stackRestoreSym,
-                                stackRestoreFn.getFunctionType().getResults(),
-                                mlir::ValueRange{sp});
+    builder.genStackRestore(user->getLoc(), sp);
   };
 
   for (mlir::Operation *user : oldAlloc->getUsers()) {

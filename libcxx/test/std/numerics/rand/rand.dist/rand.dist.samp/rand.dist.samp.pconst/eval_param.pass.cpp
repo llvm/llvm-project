@@ -17,11 +17,12 @@
 
 #include <random>
 #include <algorithm>
-#include <vector>
+#include <cassert>
+#include <cmath>
+#include <cstddef>
 #include <iterator>
 #include <numeric>
-#include <cassert>
-#include <cstddef>
+#include <vector>
 
 #include "test_macros.h"
 

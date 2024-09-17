@@ -45,7 +45,6 @@ void setMLIRDataLayoutFromAttributes(mlir::ModuleOp mlirModule,
 /// std::nullopt.
 std::optional<mlir::DataLayout>
 getOrSetDataLayout(mlir::ModuleOp mlirModule, bool allowDefaultLayout = false);
-
 } // namespace fir::support
 
 #endif // FORTRAN_OPTIMIZER_SUPPORT_DATALAYOUT_H

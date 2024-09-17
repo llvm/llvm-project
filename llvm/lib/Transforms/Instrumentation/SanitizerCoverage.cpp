@@ -629,6 +629,9 @@ void ModuleSanitizerCoverage::instrumentFunction(Function &F) {
     return;
   if (Blocklist && Blocklist->inSection("coverage", "fun", F.getName()))
     return;
+  // Do not apply any instrumentation for naked functions.
+  if (F.hasFnAttribute(Attribute::Naked))
+    return;
   if (F.hasFnAttribute(Attribute::NoSanitizeCoverage))
     return;
   if (F.hasFnAttribute(Attribute::DisableSanitizerInstrumentation))

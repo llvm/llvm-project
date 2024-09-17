@@ -454,7 +454,7 @@ struct MatchableInfo {
       int64_t ImmVal;
 
       /// Register - This is the register record.
-      Record *Register;
+      const Record *Register;
     };
 
     /// MINumOperands - The number of MCInst operands populated by this
@@ -486,7 +486,7 @@ struct MatchableInfo {
       return X;
     }
 
-    static ResOperand getRegOp(Record *Reg) {
+    static ResOperand getRegOp(const Record *Reg) {
       ResOperand X;
       X.Kind = RegOperand;
       X.Register = Reg;
@@ -1946,7 +1946,7 @@ void MatchableInfo::buildAliasResultOperands(bool AliasConstraintsAreChecked) {
         break;
       }
       case CodeGenInstAlias::ResultOperand::K_Reg: {
-        Record *Reg = CGA.ResultOperands[AliasOpNo].getRegister();
+        const Record *Reg = CGA.ResultOperands[AliasOpNo].getRegister();
         ResOperands.push_back(ResOperand::getRegOp(Reg));
         break;
       }

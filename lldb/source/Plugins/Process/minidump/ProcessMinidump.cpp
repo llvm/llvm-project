@@ -289,8 +289,8 @@ void ProcessMinidump::RefreshStateAfterStop() {
                   << " encountered at address "
                   << llvm::format_hex(
                          exception_stream.ExceptionRecord.ExceptionAddress, 8);
-      stop_info = StopInfo::CreateStopReasonWithException(
-          *stop_thread, desc_stream.str().c_str());
+      stop_info =
+          StopInfo::CreateStopReasonWithException(*stop_thread, desc.c_str());
     }
 
     stop_thread->SetStopInfo(stop_info);

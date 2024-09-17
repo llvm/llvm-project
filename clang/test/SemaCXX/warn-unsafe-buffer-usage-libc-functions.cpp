@@ -20,6 +20,7 @@ int snwprintf_s( char* buffer, unsigned buf_size, const char* format, ... );
 int vsnprintf( char* buffer, unsigned buf_size, const char* format, ... );
 int sscanf_s(const char * buffer, const char * format, ...);
 int sscanf(const char * buffer, const char * format, ... );
+int wprintf(const wchar_t* format, ... );
 int __asan_printf();
 
 namespace std {
@@ -83,9 +84,11 @@ void f(char * p, char * q, std::span<char> s, std::span<char> s2) {
   sscanf(p, "%s%d", "hello", *p);    // expected-warning{{function 'sscanf' is unsafe}}
   sscanf_s(p, "%s%d", "hello", *p);  // expected-warning{{function 'sscanf_s' is unsafe}}
   fprintf((FILE*)p, "%P%d%p%i hello world %32s", *p, *p, p, *p, p); // expected-warning{{function 'fprintf' is unsafe}} expected-note{{string argument is not guaranteed to be null-terminated}}
+  wprintf(L"hello %s", p); // expected-warning{{function 'wprintf' is unsafe}} expected-note{{string argument is not guaranteed to be null-terminated}}
 
   char a[10], b[11];
   int c[10];
+  std::wstring WS;
 
   snprintf(a, sizeof(b), "%s", __PRETTY_FUNCTION__);         // expected-warning{{function 'snprintf' is unsafe}} expected-note{{buffer pointer and size may not match}}
   snprintf((char*)c, sizeof(c), "%s", __PRETTY_FUNCTION__);  // expected-warning{{function 'snprintf' is unsafe}} expected-note{{buffer pointer and size may not match}}
@@ -95,6 +98,8 @@ void f(char * p, char * q, std::span<char> s, std::span<char> s2) {
   snprintf(s.data(), s.size_bytes(), "%s%d", __PRETTY_FUNCTION__, *p); // no warn
   snwprintf(s.data(), s.size_bytes(), "%s%d", __PRETTY_FUNCTION__, *p); // no warn
   snwprintf_s(s.data(), s.size_bytes(), "%s%d", __PRETTY_FUNCTION__, *p); // no warn
+  wprintf(L"hello %ls", L"world"); // no warn
+  wprintf(L"hello %ls", WS.c_str()); // no warn
   strlen("hello");// no warn
   __asan_printf();// a printf but no argument, so no warn
 }

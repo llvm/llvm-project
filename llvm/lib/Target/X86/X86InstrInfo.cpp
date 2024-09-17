@@ -6323,17 +6323,17 @@ bool X86InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   // FIXME: A more advanced approach would be to choose the best input mask
   // register based on context.
   case X86::KSET0W:
-    return Expand2AddrKreg(MIB, get(X86::KXORWrr), X86::K0);
+    return Expand2AddrKreg(MIB, get(X86::KXORWkk), X86::K0);
   case X86::KSET0D:
-    return Expand2AddrKreg(MIB, get(X86::KXORDrr), X86::K0);
+    return Expand2AddrKreg(MIB, get(X86::KXORDkk), X86::K0);
   case X86::KSET0Q:
-    return Expand2AddrKreg(MIB, get(X86::KXORQrr), X86::K0);
+    return Expand2AddrKreg(MIB, get(X86::KXORQkk), X86::K0);
   case X86::KSET1W:
-    return Expand2AddrKreg(MIB, get(X86::KXNORWrr), X86::K0);
+    return Expand2AddrKreg(MIB, get(X86::KXNORWkk), X86::K0);
   case X86::KSET1D:
-    return Expand2AddrKreg(MIB, get(X86::KXNORDrr), X86::K0);
+    return Expand2AddrKreg(MIB, get(X86::KXNORDkk), X86::K0);
   case X86::KSET1Q:
-    return Expand2AddrKreg(MIB, get(X86::KXNORQrr), X86::K0);
+    return Expand2AddrKreg(MIB, get(X86::KXNORQkk), X86::K0);
   case TargetOpcode::LOAD_STACK_GUARD:
     expandLoadStackGuard(MIB, *this);
     return true;
@@ -9805,22 +9805,22 @@ bool X86InstrInfo::isAssociativeAndCommutative(const MachineInstr &Inst,
   case X86::VXORPSZ256rr:
   case X86::VXORPDZrr:
   case X86::VXORPSZrr:
-  case X86::KADDBrr:
-  case X86::KADDWrr:
-  case X86::KADDDrr:
-  case X86::KADDQrr:
-  case X86::KANDBrr:
-  case X86::KANDWrr:
-  case X86::KANDDrr:
-  case X86::KANDQrr:
-  case X86::KORBrr:
-  case X86::KORWrr:
-  case X86::KORDrr:
-  case X86::KORQrr:
-  case X86::KXORBrr:
-  case X86::KXORWrr:
-  case X86::KXORDrr:
-  case X86::KXORQrr:
+  case X86::KADDBkk:
+  case X86::KADDWkk:
+  case X86::KADDDkk:
+  case X86::KADDQkk:
+  case X86::KANDBkk:
+  case X86::KANDWkk:
+  case X86::KANDDkk:
+  case X86::KANDQkk:
+  case X86::KORBkk:
+  case X86::KORWkk:
+  case X86::KORDkk:
+  case X86::KORQkk:
+  case X86::KXORBkk:
+  case X86::KXORWkk:
+  case X86::KXORDkk:
+  case X86::KXORQkk:
   case X86::VPADDBrr:
   case X86::VPADDWrr:
   case X86::VPADDDrr:
@@ -10729,7 +10729,7 @@ void X86InstrInfo::buildClearRegister(Register Reg, MachineBasicBlock &MBB,
       return;
 
     // KXOR is safe to use because it doesn't affect flags.
-    unsigned Op = ST.hasBWI() ? X86::KXORQrr : X86::KXORWrr;
+    unsigned Op = ST.hasBWI() ? X86::KXORQkk : X86::KXORWkk;
     BuildMI(MBB, Iter, DL, get(Op), Reg)
         .addReg(Reg, RegState::Undef)
         .addReg(Reg, RegState::Undef);

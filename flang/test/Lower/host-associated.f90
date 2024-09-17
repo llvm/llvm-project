@@ -515,12 +515,12 @@ end subroutine test_proc_dummy_other
 ! CHECK:         %[[VAL_35:.*]] = fir.undefined tuple<!fir.boxproc<() -> ()>, i64>
 ! CHECK:         %[[VAL_36:.*]] = fir.insert_value %[[VAL_35]], %[[VAL_34]], [0 : index] : (tuple<!fir.boxproc<() -> ()>, i64>, !fir.boxproc<() -> ()>) -> tuple<!fir.boxproc<() -> ()>, i64>
 ! CHECK:         %[[VAL_37:.*]] = fir.insert_value %[[VAL_36]], %[[VAL_8]], [1 : index] : (tuple<!fir.boxproc<() -> ()>, i64>, i64) -> tuple<!fir.boxproc<() -> ()>, i64>
-! CHECK:         %[[VAL_38:.*]] = fir.call @llvm.stacksave.p0() {{.*}}: () -> !fir.ref<i8>
+! CHECK:         %[[VAL_38:.*]] = llvm.intr.stacksave : !llvm.ptr
 ! CHECK:         %[[VAL_39:.*]] = fir.call @_QPget_message(%[[VAL_11]], %[[VAL_9]], %[[VAL_37]]) {{.*}}: (!fir.ref<!fir.char<1,40>>, index, tuple<!fir.boxproc<() -> ()>, i64>) -> !fir.boxchar<1>
 ! CHECK:         %[[VAL_40:.*]] = fir.convert %[[VAL_11]] : (!fir.ref<!fir.char<1,40>>) -> !fir.ref<i8>
 ! CHECK:         %[[VAL_41:.*]] = fir.convert %[[VAL_9]] : (index) -> i64
 ! CHECK:         %[[VAL_42:.*]] = fir.call @_FortranAioOutputAscii(%[[VAL_32]], %[[VAL_40]], %[[VAL_41]]) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64) -> i1
-! CHECK:         fir.call @llvm.stackrestore.p0(%[[VAL_38]]) {{.*}}: (!fir.ref<i8>) -> ()
+! CHECK:         llvm.intr.stackrestore %[[VAL_38]] : !llvm.ptr
 ! CHECK:         %[[VAL_43:.*]] = fir.call @_FortranAioEndIoStatement(%[[VAL_32]]) {{.*}}: (!fir.ref<i8>) -> i32
 ! CHECK:         return
 ! CHECK:       }
@@ -577,7 +577,7 @@ end subroutine test_proc_dummy_other
 ! CHECK:         %[[VAL_11:.*]] = fir.extract_value %[[VAL_2]], [0 : index] : (tuple<!fir.boxproc<() -> ()>, i64>) -> !fir.boxproc<() -> ()>
 ! CHECK:         %[[VAL_12:.*]] = fir.box_addr %[[VAL_11]] : (!fir.boxproc<() -> ()>) -> (() -> ())
 ! CHECK:         %[[VAL_13:.*]] = fir.extract_value %[[VAL_2]], [1 : index] : (tuple<!fir.boxproc<() -> ()>, i64>) -> i64
-! CHECK:         %[[VAL_14:.*]] = fir.call @llvm.stacksave.p0() {{.*}}: () -> !fir.ref<i8>
+! CHECK:         %[[VAL_14:.*]] = llvm.intr.stacksave : !llvm.ptr
 ! CHECK:         %[[VAL_15:.*]] = fir.alloca !fir.char<1,?>(%[[VAL_13]] : i64) {bindc_name = ".result"}
 ! CHECK:         %[[VAL_16:.*]] = fir.convert %[[VAL_12]] : (() -> ()) -> ((!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>)
 ! CHECK:         %[[VAL_17:.*]] = fir.convert %[[VAL_13]] : (i64) -> index
@@ -624,7 +624,7 @@ end subroutine test_proc_dummy_other
 ! CHECK:         %[[VAL_48:.*]] = arith.subi %[[VAL_43]], %[[VAL_6]] : index
 ! CHECK:         br ^bb4(%[[VAL_47]], %[[VAL_48]] : index, index)
 ! CHECK:       ^bb6:
-! CHECK:         fir.call @llvm.stackrestore.p0(%[[VAL_14]]) {{.*}}: (!fir.ref<i8>) -> ()
+! CHECK:         llvm.intr.stackrestore %[[VAL_14]] : !llvm.ptr
 ! CHECK:         %[[VAL_49:.*]] = fir.emboxchar %[[VAL_0]], %[[VAL_3]] : (!fir.ref<!fir.char<1,40>>, index) -> !fir.boxchar<1>
 ! CHECK:         return %[[VAL_49]] : !fir.boxchar<1>
 ! CHECK:       }

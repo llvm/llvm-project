@@ -765,6 +765,11 @@ Attribute Function::getAttributeAtIndex(unsigned i, StringRef Kind) const {
   return AttributeSets.getAttributeAtIndex(i, Kind);
 }
 
+bool Function::hasAttributeAtIndex(unsigned Idx,
+                                   Attribute::AttrKind Kind) const {
+  return AttributeSets.hasAttributeAtIndex(Idx, Kind);
+}
+
 Attribute Function::getFnAttribute(Attribute::AttrKind Kind) const {
   return AttributeSets.getFnAttr(Kind);
 }

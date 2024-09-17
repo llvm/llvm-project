@@ -148,6 +148,7 @@ formatv_object_base::parseFormatString(StringRef Fmt, size_t NumArgs,
 #if ENABLE_VALIDATION
   const StringRef SavedFmtStr = Fmt;
   unsigned NumExpectedArgs = 0;
+  bool HasExplicitIndex = false;
 #endif
 
   while (!Fmt.empty()) {
@@ -155,14 +156,17 @@ formatv_object_base::parseFormatString(StringRef Fmt, size_t NumArgs,
     std::tie(I, Fmt) = splitLiteralAndReplacement(Fmt);
     if (!I)
       continue;
-    if (I->Index == ~0U)
-      I->Index = NextAutomaticIndex++;
-
-    Replacements.emplace_back(*I);
+    if (I->Type == ReplacementType::Format) {
+      if (I->Index == ~0U)
+        I->Index = NextAutomaticIndex++;
 #if ENABLE_VALIDATION
-    if (I->Type == ReplacementType::Format)
+      else
+        HasExplicitIndex = true;
       NumExpectedArgs = std::max(NumExpectedArgs, I->Index + 1);
 #endif
+    }
+
+    Replacements.emplace_back(*I);
   }
 
 #if ENABLE_VALIDATION
@@ -208,9 +212,8 @@ formatv_object_base::parseFormatString(StringRef Fmt, size_t NumArgs,
     return getErrorReplacements("Replacement indices have holes");
   }
 
-  // If we had automatic numbering of replacement indices, verify that all
-  // indices used automatic numbering.
-  if (NextAutomaticIndex != 0 && NextAutomaticIndex != Count) {
+  // Fail validation if we see both automatic index and explicit index.
+  if (NextAutomaticIndex != 0 && HasExplicitIndex) {
     errs() << formatv(
         "Cannot mix automatic and explicit indices for format string '{}'\n",
         SavedFmtStr);

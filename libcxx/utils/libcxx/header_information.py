@@ -30,13 +30,6 @@ header_restrictions = {
     "streambuf": "!defined(_LIBCPP_HAS_NO_LOCALIZATION)",
     "strstream": "!defined(_LIBCPP_HAS_NO_LOCALIZATION)",
     "syncstream": "!defined(_LIBCPP_HAS_NO_LOCALIZATION)",
-
-    # headers with #error directives
-    "wchar.h": "!defined(_LIBCPP_HAS_NO_WIDE_CHARACTERS)",
-    "wctype.h": "!defined(_LIBCPP_HAS_NO_WIDE_CHARACTERS)",
-    # transitive includers of the above headers
-    "cwchar": "!defined(_LIBCPP_HAS_NO_WIDE_CHARACTERS)",
-    "cwctype": "!defined(_LIBCPP_HAS_NO_WIDE_CHARACTERS)",
 }
 
 lit_header_restrictions = {

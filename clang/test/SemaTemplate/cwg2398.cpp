@@ -379,3 +379,13 @@ namespace regression1 {
     bar(input);
   }
 } // namespace regression1
+
+namespace regression2 {
+  template <class> struct D {};
+
+  template <class ET, template <class> class VT>
+  struct D<VT<ET>>;
+
+  template <typename, int> struct Matrix;
+  template struct D<Matrix<double, 3>>;
+} // namespace regression2

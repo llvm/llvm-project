@@ -40,6 +40,7 @@ subroutine workshare(aa, bb, cc, dd, ee, ff, n)
     cc = ee + my_func()
   end where
 
+  !WARNING: Impure procedure 'my_func' should not be referenced in a FORALL header
   !ERROR: User defined non-ELEMENTAL function 'my_func' is not allowed in a WORKSHARE construct
   forall (j = 1:my_func()) aa(j) = aa(j) + bb(j)
 

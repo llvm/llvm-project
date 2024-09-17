@@ -548,7 +548,7 @@ NativeProcessWindows::OnDebugException(bool first_chance,
                   << " encountered at address "
                   << llvm::format_hex(record.GetExceptionAddress(), 8);
       StopThread(record.GetThreadID(), StopReason::eStopReasonException,
-                 desc_stream.str().c_str());
+                 desc.c_str());
 
       SetState(eStateStopped, true);
     }

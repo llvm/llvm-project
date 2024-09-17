@@ -84,7 +84,6 @@ std::string RunLLDBCommands(llvm::StringRef prefix,
   llvm::raw_string_ostream strm(s);
   required_command_failed =
       !RunLLDBCommands(prefix, commands, strm, parse_command_directives);
-  strm.flush();
   return s;
 }
 

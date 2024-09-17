@@ -101,6 +101,8 @@ unsigned FloatType::getWidth() {
 
 /// Returns the floating semantics for the given type.
 const llvm::fltSemantics &FloatType::getFloatSemantics() {
+  if (llvm::isa<Float6E2M3FNType>(*this))
+    return APFloat::Float6E2M3FN();
   if (llvm::isa<Float6E3M2FNType>(*this))
     return APFloat::Float6E3M2FN();
   if (llvm::isa<Float8E5M2Type>(*this))

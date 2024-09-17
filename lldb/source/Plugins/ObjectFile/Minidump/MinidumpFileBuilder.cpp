@@ -837,14 +837,16 @@ Status MinidumpFileBuilder::AddMemoryList() {
   error = m_process_sp->CalculateCoreFileSaveRanges(m_save_core_options,
                                                     all_core_memory_ranges);
 
+  if (error.Fail())
+    return error;
+
+  lldb_private::Progress progress("Saving Minidump File", "",
+                                  all_core_memory_ranges.GetSize());
   std::vector<CoreFileMemoryRange> all_core_memory_vec;
   // Extract all the data into just a vector of data. So we can mutate this in
   // place.
   for (const auto &core_range : all_core_memory_ranges)
     all_core_memory_vec.push_back(core_range.data);
-
-  if (error.Fail())
-    return error;
 
   // Start by saving all of the stacks and ensuring they fit under the 32b
   // limit.
@@ -892,13 +894,13 @@ Status MinidumpFileBuilder::AddMemoryList() {
     }
   }
 
-  error = AddMemoryList_32(ranges_32);
+  error = AddMemoryList_32(ranges_32, progress);
   if (error.Fail())
     return error;
 
   // Add the remaining memory as a 64b range.
   if (!ranges_64.empty()) {
-    error = AddMemoryList_64(ranges_64);
+    error = AddMemoryList_64(ranges_64, progress);
     if (error.Fail())
       return error;
   }
@@ -972,8 +974,9 @@ GetLargestRangeSize(const std::vector<CoreFileMemoryRange> &ranges) {
   return max_size;
 }
 
-Status MinidumpFileBuilder::AddMemoryList_32(
-    std::vector<CoreFileMemoryRange> &ranges) {
+Status
+MinidumpFileBuilder::AddMemoryList_32(std::vector<CoreFileMemoryRange> &ranges,
+                                      Progress &progress) {
   std::vector<MemoryDescriptor> descriptors;
   Status error;
   if (ranges.size() == 0)
@@ -996,6 +999,7 @@ Status MinidumpFileBuilder::AddMemoryList_32(
               region_index, ranges.size(), size, addr, addr + size);
     ++region_index;
 
+    progress.Increment(1, "Adding Memory Range " + core_range.Dump());
     const size_t bytes_read =
         m_process_sp->ReadMemory(addr, data_up->GetBytes(), size, error);
     if (error.Fail() || bytes_read == 0) {
@@ -1049,8 +1053,9 @@ Status MinidumpFileBuilder::AddMemoryList_32(
   return error;
 }
 
-Status MinidumpFileBuilder::AddMemoryList_64(
-    std::vector<CoreFileMemoryRange> &ranges) {
+Status
+MinidumpFileBuilder::AddMemoryList_64(std::vector<CoreFileMemoryRange> &ranges,
+                                      Progress &progress) {
   Status error;
   if (ranges.empty())
     return error;
@@ -1111,6 +1116,7 @@ Status MinidumpFileBuilder::AddMemoryList_64(
               region_index, ranges.size(), size, addr, addr + size);
     ++region_index;
 
+    progress.Increment(1, "Adding Memory Range " + core_range.Dump());
     const size_t bytes_read =
         m_process_sp->ReadMemory(addr, data_up->GetBytes(), size, error);
     if (error.Fail()) {

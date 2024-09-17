@@ -5360,7 +5360,7 @@ std::string ProcessGDBRemote::HarmonizeThreadIdsForProfileData(
   output_stream << end_delimiter;
   m_thread_id_to_used_usec_map = new_thread_id_to_used_usec_map;
 
-  return output_stream.str();
+  return output;
 }
 
 void ProcessGDBRemote::HandleStopReply() {

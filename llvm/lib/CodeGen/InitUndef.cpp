@@ -120,8 +120,6 @@ bool InitUndef::handleReg(MachineInstr *MI) {
       continue;
     if (!UseMO.getReg().isVirtual())
       continue;
-    if (!TRI->doesRegClassHavePseudoInitUndef(MRI->getRegClass(UseMO.getReg())))
-      continue;
 
     if (UseMO.isUndef() || findImplictDefMIFromReg(UseMO.getReg(), MRI))
       Changed |= fixupIllOperand(MI, UseMO);
@@ -139,8 +137,6 @@ bool InitUndef::handleSubReg(MachineFunction &MF, MachineInstr &MI,
     if (!UseMO.getReg().isVirtual())
       continue;
     if (UseMO.isTied())
-      continue;
-    if (!TRI->doesRegClassHavePseudoInitUndef(MRI->getRegClass(UseMO.getReg())))
       continue;
 
     Register Reg = UseMO.getReg();
@@ -246,13 +242,9 @@ bool InitUndef::processBasicBlock(MachineFunction &MF, MachineBasicBlock &MBB,
 bool InitUndef::runOnMachineFunction(MachineFunction &MF) {
   ST = &MF.getSubtarget();
 
-  // supportsInitUndef is implemented to reflect if an architecture has support
-  // for the InitUndef pass. Support comes from having the relevant Pseudo
-  // instructions that can be used to initialize the register. The function
-  // returns false by default so requires an implementation per architecture.
-  // Support can be added by overriding the function in a way that best fits
-  // the architecture.
-  if (!ST->supportsInitUndef())
+  // The pass is only needed if early-clobber defs and undef ops cannot be
+  // allocated to the same register.
+  if (!ST->requiresDisjointEarlyClobberAndUndef())
     return false;
 
   MRI = &MF.getRegInfo();

@@ -473,9 +473,9 @@ public:
       : PPC64LongBranchThunk(dest, addend) {
     assert(!dest.isPreemptible);
     if (std::optional<uint32_t> index =
-            in.ppc64LongBranchTarget->addEntry(&dest, addend)) {
+            ctx.in.ppc64LongBranchTarget->addEntry(&dest, addend)) {
       ctx.mainPart->relaDyn->addRelativeReloc(
-          ctx.target->relativeRel, *in.ppc64LongBranchTarget,
+          ctx.target->relativeRel, *ctx.in.ppc64LongBranchTarget,
           *index * UINT64_C(8), dest,
           addend + getPPC64GlobalEntryToLocalEntryOffset(dest.stOther),
           ctx.target->symbolicRel, R_ABS);
@@ -487,7 +487,7 @@ class PPC64PDLongBranchThunk final : public PPC64LongBranchThunk {
 public:
   PPC64PDLongBranchThunk(Symbol &dest, int64_t addend)
       : PPC64LongBranchThunk(dest, addend) {
-    in.ppc64LongBranchTarget->addEntry(&dest, addend);
+    ctx.in.ppc64LongBranchTarget->addEntry(&dest, addend);
   }
 };
 
@@ -1052,12 +1052,12 @@ void elf::writePPC32PltCallStub(uint8_t *buf, uint64_t gotPltVA,
     // almost always 0x8000. The address of .got2 is different in another object
     // file, so a stub cannot be shared.
     offset = gotPltVA -
-             (in.ppc32Got2->getParent()->getVA() +
+             (ctx.in.ppc32Got2->getParent()->getVA() +
               (file->ppc32Got2 ? file->ppc32Got2->outSecOff : 0) + addend);
   } else {
     // The stub loads an address relative to _GLOBAL_OFFSET_TABLE_ (which is
     // currently the address of .got).
-    offset = gotPltVA - in.got->getVA();
+    offset = gotPltVA - ctx.in.got->getVA();
   }
   uint16_t ha = (offset + 0x8000) >> 16, l = (uint16_t)offset;
   if (ha == 0) {
@@ -1176,9 +1176,9 @@ void PPC64R2SaveStub::writeTo(uint8_t *buf) {
     write32(buf + nextInstOffset, MTCTR_R12); // mtctr r12
     write32(buf + nextInstOffset + 4, BCTR);  // bctr
   } else {
-    in.ppc64LongBranchTarget->addEntry(&destination, addend);
+    ctx.in.ppc64LongBranchTarget->addEntry(&destination, addend);
     const int64_t offsetFromTOC =
-        in.ppc64LongBranchTarget->getEntryVA(&destination, addend) -
+        ctx.in.ppc64LongBranchTarget->getEntryVA(&destination, addend) -
         getPPC64TocBase();
     writePPC64LoadAndBranch(buf + 4, offsetFromTOC);
   }
@@ -1238,8 +1238,9 @@ bool PPC64R12SetupStub::isCompatibleWith(const InputSection &isec,
 }
 
 void PPC64LongBranchThunk::writeTo(uint8_t *buf) {
-  int64_t offset = in.ppc64LongBranchTarget->getEntryVA(&destination, addend) -
-                   getPPC64TocBase();
+  int64_t offset =
+      ctx.in.ppc64LongBranchTarget->getEntryVA(&destination, addend) -
+      getPPC64TocBase();
   writePPC64LoadAndBranch(buf, offset);
 }
 

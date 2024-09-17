@@ -3411,7 +3411,7 @@ DeduceTemplateArguments(Sema &S, T *Partial,
   if (TemplateDeductionResult Result = ::DeduceTemplateArguments(
           S, Partial->getTemplateParameters(),
           Partial->getTemplateArgs().asArray(), TemplateArgs, Info, Deduced,
-          /*NumberOfArgumentsMustMatch=*/false, /*PartialOrdering=*/true,
+          /*NumberOfArgumentsMustMatch=*/false, /*PartialOrdering=*/false,
           PackFold::ParameterToArgument,
           /*HasDeducedAnyParam=*/nullptr);
       Result != TemplateDeductionResult::Success)

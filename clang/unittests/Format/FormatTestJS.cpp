@@ -579,8 +579,13 @@ TEST_F(FormatTestJS, GoogScopes) {
                "});");
 }
 
-TEST_F(FormatTestJS, GoogAnonymousClass) {
+TEST_F(FormatTestJS, ClassExtends) {
   verifyFormat("a = class extends goog.structs.a {\n"
+               "  a() {\n"
+               "    return 0;\n"
+               "  }\n"
+               "};");
+  verifyFormat("a = class Foo extends goog.structs.a {\n"
                "  a() {\n"
                "    return 0;\n"
                "  }\n"

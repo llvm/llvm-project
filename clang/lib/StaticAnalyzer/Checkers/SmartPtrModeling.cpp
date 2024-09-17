@@ -241,7 +241,7 @@ bool SmartPtrModeling::isBoolConversionMethod(const CallEvent &Call) const {
 
 constexpr llvm::StringLiteral BASIC_OSTREAM_NAMES[] = {"basic_ostream"};
 
-bool isStdBasicOstream(const Expr *E) {
+static bool isStdBasicOstream(const Expr *E) {
   const auto *RD = E->getType()->getAsCXXRecordDecl();
   return hasStdClassWithName(RD, BASIC_OSTREAM_NAMES);
 }
@@ -250,7 +250,7 @@ static bool isStdFunctionCall(const CallEvent &Call) {
   return Call.getDecl() && Call.getDecl()->getDeclContext()->isStdNamespace();
 }
 
-bool isStdOstreamOperatorCall(const CallEvent &Call) {
+static bool isStdOstreamOperatorCall(const CallEvent &Call) {
   if (Call.getNumArgs() != 2 || !isStdFunctionCall(Call))
     return false;
   const auto *FC = dyn_cast<SimpleFunctionCall>(&Call);

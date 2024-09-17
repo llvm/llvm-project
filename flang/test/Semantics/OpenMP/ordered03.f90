@@ -52,6 +52,7 @@ subroutine sub1()
   end do
   !$omp end target parallel do
 
+  !ERROR: ORDERED clause is not allowed on the TARGET TEAMS DISTRIBUTE PARALLEL DO directive
   !$omp target teams distribute parallel do ordered(1)
   do i = 1, N
     !ERROR: An ORDERED construct with the DEPEND clause must be closely nested in a worksharing-loop (or parallel worksharing-loop) construct with ORDERED clause with a parameter

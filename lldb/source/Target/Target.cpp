@@ -4603,7 +4603,7 @@ void TargetProperties::CheckJITObjectsDir() {
   std::optional<lldb::user_id_t> debugger_id;
   if (m_target)
     debugger_id = m_target->GetDebugger().GetID();
-  Debugger::ReportError(os.str(), debugger_id);
+  Debugger::ReportError(buffer, debugger_id);
 }
 
 bool TargetProperties::GetEnableSyntheticValue() const {

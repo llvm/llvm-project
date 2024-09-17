@@ -362,6 +362,23 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_any)
 bool any(double4);
 
 //===----------------------------------------------------------------------===//
+// asfloat builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn float asfloat(T Val)
+/// \brief Interprets the bit pattern of x as float point number.
+/// \param Val The input value.
+
+template <typename T, int N>
+_HLSL_INLINE vector<float, N> asfloat(vector<T, N> V) {
+  return __detail::bit_cast<float, T, N>(V);
+}
+
+template <typename T> _HLSL_INLINE float asfloat(T F) {
+  return __detail::bit_cast<float, T>(F);
+}
+
+//===----------------------------------------------------------------------===//
 // asin builtins
 //===----------------------------------------------------------------------===//
 

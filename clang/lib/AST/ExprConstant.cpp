@@ -2146,7 +2146,7 @@ static bool IsLiteralLValue(const LValue &Value) {
   if (Value.getLValueCallIndex())
     return false;
   const Expr *E = Value.Base.dyn_cast<const Expr*>();
-  return E && !isa<MaterializeTemporaryExpr, StringLiteral>(E);
+  return E && !isa<MaterializeTemporaryExpr>(E);
 }
 
 static bool IsWeakLValue(const LValue &Value) {

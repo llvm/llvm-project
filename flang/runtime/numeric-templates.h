@@ -88,12 +88,16 @@ struct MaxOrMinIdentity<TypeCategory::Real, 16, IS_MAXVAL,
 
 // Minimum finite representable value.
 // For floating-point types, returns minimum positive normalized value.
-template <typename T> struct MinValue {
+template <int PREC, typename T> struct MinValue {
   static RT_API_ATTRS T get() { return std::numeric_limits<T>::min(); }
+};
+template <typename T> struct MinValue<11, T> {
+  // TINY(0._2)
+  static constexpr RT_API_ATTRS T get() { return 0.00006103515625E-04; }
 };
 
 #if HAS_FLOAT128
-template <> struct MinValue<CppTypeFor<TypeCategory::Real, 16>> {
+template <> struct MinValue<113, CppTypeFor<TypeCategory::Real, 16>> {
   using Type = CppTypeFor<TypeCategory::Real, 16>;
   static RT_API_ATTRS Type get() {
     // Create a buffer to store binary representation of __float128 constant.
@@ -167,8 +171,8 @@ template <> struct MAXTy<CppTypeFor<TypeCategory::Real, 16>> {
 };
 #endif
 
-template <typename T> struct MINTy {
-  static constexpr RT_API_ATTRS T compute() { return MinValue<T>::get(); }
+template <int PREC, typename T> struct MINTy {
+  static constexpr RT_API_ATTRS T compute() { return MinValue<PREC, T>::get(); }
 };
 
 template <typename T> struct QNANTy {
@@ -339,23 +343,20 @@ template <int PREC, typename T> inline RT_API_ATTRS T RRSpacing(T x) {
 
 // SPACING (16.9.180)
 template <int PREC, typename T> inline RT_API_ATTRS T Spacing(T x) {
+  T tiny{MINTy<PREC, T>::compute()};
   if (ISNANTy<T>::compute(x)) {
     return x; // NaN -> same NaN
   } else if (ISINFTy<T>::compute(x)) {
     return QNANTy<T>::compute(); // +/-Inf -> NaN
   } else if (x == 0) { // 0 -> TINY(x)
-    // The standard-mandated behavior seems broken, since TINY() can't be
-    // subnormal.
-    if constexpr (PREC == 11) { // REAL(2)
-      return 0.00006103515625E-04; // TINY(0._2)
-    } else {
-      // N.B. TINY(0._3) == TINY(0._4) so this works even if no std::bfloat16_t.
-      return MINTy<T>::compute();
-    }
+    return tiny;
   } else {
     T result{LDEXPTy<T>::compute(
         static_cast<T>(1.0), ILOGBTy<T>::compute(x) + 1 - PREC)}; // 2**(e-p)
-    return result == 0 ? /*TINY(x)*/ MINTy<T>::compute() : result;
+    // All compilers return TINY(x) for |x| <= TINY(x), but differ over whether
+    // SPACING(x) can be < TINY(x) for |x| > TINY(x).  The most common precedent
+    // is to never return a value < TINY(x).
+    return result <= tiny ? tiny : result;
   }
 }
 

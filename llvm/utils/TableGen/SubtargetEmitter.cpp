@@ -43,6 +43,8 @@ using namespace llvm;
 
 namespace {
 
+using FeatureMapTy = DenseMap<const Record *, unsigned>;
+
 /// Sorting predicate to sort record pointers by their
 /// FieldName field.
 struct LessRecordFieldFieldName {
@@ -81,22 +83,22 @@ class SubtargetEmitter {
   };
 
   CodeGenTarget TGT;
-  RecordKeeper &Records;
+  const RecordKeeper &Records;
   CodeGenSchedModels &SchedModels;
   std::string Target;
 
-  void Enumeration(raw_ostream &OS, DenseMap<Record *, unsigned> &FeatureMap);
+  FeatureMapTy Enumeration(raw_ostream &OS);
   void EmitSubtargetInfoMacroCalls(raw_ostream &OS);
-  unsigned FeatureKeyValues(raw_ostream &OS,
-                            const DenseMap<Record *, unsigned> &FeatureMap);
-  unsigned CPUKeyValues(raw_ostream &OS,
-                        const DenseMap<Record *, unsigned> &FeatureMap);
-  void FormItineraryStageString(const std::string &Names, Record *ItinData,
-                                std::string &ItinString, unsigned &NStages);
-  void FormItineraryOperandCycleString(Record *ItinData,
+  unsigned FeatureKeyValues(raw_ostream &OS, const FeatureMapTy &FeatureMap);
+  unsigned CPUKeyValues(raw_ostream &OS, const FeatureMapTy &FeatureMap);
+  void FormItineraryStageString(const std::string &Names,
+                                const Record *ItinData, std::string &ItinString,
+                                unsigned &NStages);
+  void FormItineraryOperandCycleString(const Record *ItinData,
                                        std::string &ItinString,
                                        unsigned &NOperandCycles);
-  void FormItineraryBypassString(const std::string &Names, Record *ItinData,
+  void FormItineraryBypassString(const std::string &Names,
+                                 const Record *ItinData,
                                  std::string &ItinString,
                                  unsigned NOperandCycles);
   void EmitStageAndOperandCycleData(
@@ -139,7 +141,7 @@ class SubtargetEmitter {
   void ParseFeaturesFunction(raw_ostream &OS);
 
 public:
-  SubtargetEmitter(RecordKeeper &R)
+  SubtargetEmitter(const RecordKeeper &R)
       : TGT(R), Records(R), SchedModels(TGT.getSchedModels()),
         Target(TGT.getName()) {}
 
@@ -151,16 +153,13 @@ public:
 //
 // Enumeration - Emit the specified class as an enumeration.
 //
-void SubtargetEmitter::Enumeration(raw_ostream &OS,
-                                   DenseMap<Record *, unsigned> &FeatureMap) {
-  // Get all records of class and sort
-  std::vector<Record *> DefList =
+FeatureMapTy SubtargetEmitter::Enumeration(raw_ostream &OS) {
+  ArrayRef<const Record *> DefList =
       Records.getAllDerivedDefinitions("SubtargetFeature");
-  llvm::sort(DefList, LessRecord());
 
   unsigned N = DefList.size();
   if (N == 0)
-    return;
+    return FeatureMapTy();
   if (N + 1 > MAX_SUBTARGET_FEATURES)
     PrintFatalError(
         "Too many subtarget features! Bump MAX_SUBTARGET_FEATURES.");
@@ -170,10 +169,11 @@ void SubtargetEmitter::Enumeration(raw_ostream &OS,
   // Open enumeration.
   OS << "enum {\n";
 
+  FeatureMapTy FeatureMap;
   // For each record
   for (unsigned i = 0; i < N; ++i) {
     // Next record
-    Record *Def = DefList[i];
+    const Record *Def = DefList[i];
 
     // Get and emit name
     OS << "  " << Def->getName() << " = " << i << ",\n";
@@ -188,10 +188,12 @@ void SubtargetEmitter::Enumeration(raw_ostream &OS,
   // Close enumeration and namespace
   OS << "};\n";
   OS << "} // end namespace " << Target << "\n";
+  return FeatureMap;
 }
 
-static void printFeatureMask(raw_ostream &OS, RecVec &FeatureList,
-                             const DenseMap<Record *, unsigned> &FeatureMap) {
+static void printFeatureMask(raw_ostream &OS,
+                             ArrayRef<const Record *> FeatureList,
+                             const FeatureMapTy &FeatureMap) {
   std::array<uint64_t, MAX_SUBTARGET_WORDS> Mask = {};
   for (const Record *Feature : FeatureList) {
     unsigned Bit = FeatureMap.lookup(Feature);
@@ -212,7 +214,7 @@ static void printFeatureMask(raw_ostream &OS, RecVec &FeatureList,
 void SubtargetEmitter::EmitSubtargetInfoMacroCalls(raw_ostream &OS) {
   OS << "\n#ifdef GET_SUBTARGETINFO_MACRO\n";
 
-  std::vector<Record *> FeatureList =
+  std::vector<const Record *> FeatureList =
       Records.getAllDerivedDefinitions("SubtargetFeature");
   llvm::sort(FeatureList, LessRecordFieldFieldName());
 
@@ -250,11 +252,10 @@ void SubtargetEmitter::EmitSubtargetInfoMacroCalls(raw_ostream &OS) {
 // FeatureKeyValues - Emit data of all the subtarget features.  Used by the
 // command line.
 //
-unsigned SubtargetEmitter::FeatureKeyValues(
-    raw_ostream &OS, const DenseMap<Record *, unsigned> &FeatureMap) {
-  const RecordKeeper &RCConst = Records;
+unsigned SubtargetEmitter::FeatureKeyValues(raw_ostream &OS,
+                                            const FeatureMapTy &FeatureMap) {
   std::vector<const Record *> FeatureList =
-      RCConst.getAllDerivedDefinitions("SubtargetFeature");
+      Records.getAllDerivedDefinitions("SubtargetFeature");
 
   // Remove features with empty name.
   llvm::erase_if(FeatureList, [](const Record *Rec) {
@@ -300,11 +301,10 @@ unsigned SubtargetEmitter::FeatureKeyValues(
 // CPUKeyValues - Emit data of all the subtarget processors.  Used by command
 // line.
 //
-unsigned
-SubtargetEmitter::CPUKeyValues(raw_ostream &OS,
-                               const DenseMap<Record *, unsigned> &FeatureMap) {
+unsigned SubtargetEmitter::CPUKeyValues(raw_ostream &OS,
+                                        const FeatureMapTy &FeatureMap) {
   // Gather and sort processor information
-  std::vector<Record *> ProcessorList =
+  std::vector<const Record *> ProcessorList =
       Records.getAllDerivedDefinitions("Processor");
   llvm::sort(ProcessorList, LessRecordFieldName());
 
@@ -318,7 +318,7 @@ SubtargetEmitter::CPUKeyValues(raw_ostream &OS,
      << "extern const llvm::SubtargetSubTypeKV " << Target
      << "SubTypeKV[] = {\n";
 
-  for (Record *Processor : ProcessorList) {
+  for (const Record *Processor : ProcessorList) {
     StringRef Name = Processor->getValueAsString("Name");
     RecVec FeatureList = Processor->getValueAsListOfDefs("Features");
     RecVec TuneFeatureList = Processor->getValueAsListOfDefs("TuneFeatures");
@@ -349,11 +349,11 @@ SubtargetEmitter::CPUKeyValues(raw_ostream &OS,
 // of stages.
 //
 void SubtargetEmitter::FormItineraryStageString(const std::string &Name,
-                                                Record *ItinData,
+                                                const Record *ItinData,
                                                 std::string &ItinString,
                                                 unsigned &NStages) {
   // Get states list
-  RecVec StageList = ItinData->getValueAsListOfDefs("Stages");
+  ConstRecVec StageList = ItinData->getValueAsListOfConstDefs("Stages");
 
   // For each stage
   unsigned N = NStages = StageList.size();
@@ -395,7 +395,7 @@ void SubtargetEmitter::FormItineraryStageString(const std::string &Name,
 // number of operands that has cycles specified.
 //
 void SubtargetEmitter::FormItineraryOperandCycleString(
-    Record *ItinData, std::string &ItinString, unsigned &NOperandCycles) {
+    const Record *ItinData, std::string &ItinString, unsigned &NOperandCycles) {
   // Get operand cycle list
   std::vector<int64_t> OperandCycleList =
       ItinData->getValueAsListOfInts("OperandCycles");
@@ -411,10 +411,10 @@ void SubtargetEmitter::FormItineraryOperandCycleString(
 }
 
 void SubtargetEmitter::FormItineraryBypassString(const std::string &Name,
-                                                 Record *ItinData,
+                                                 const Record *ItinData,
                                                  std::string &ItinString,
                                                  unsigned NOperandCycles) {
-  RecVec BypassList = ItinData->getValueAsListOfDefs("Bypasses");
+  ConstRecVec BypassList = ItinData->getValueAsListOfConstDefs("Bypasses");
   unsigned N = BypassList.size();
   unsigned i = 0;
   ListSeparator LS;
@@ -511,7 +511,7 @@ void SubtargetEmitter::EmitStageAndOperandCycleData(
          SchedClassIdx < SchedClassEnd; ++SchedClassIdx) {
 
       // Next itinerary data
-      Record *ItinData = ProcModel.ItinDefList[SchedClassIdx];
+      const Record *ItinData = ProcModel.ItinDefList[SchedClassIdx];
 
       // Get string and stage count
       std::string ItinStageString;
@@ -746,7 +746,7 @@ SubtargetEmitter::EmitRegisterFileTables(const CodeGenProcModel &ProcModel,
     // Add entries to the cost table.
     for (const CodeGenRegisterCost &RC : RF.Costs) {
       OS << "  { ";
-      Record *Rec = RC.RCDef;
+      const Record *Rec = RC.RCDef;
       if (Rec->getValue("Namespace"))
         OS << Rec->getValueAsString("Namespace") << "::";
       OS << Rec->getName() << "RegClassID, " << RC.Cost << ", "
@@ -843,7 +843,7 @@ void SubtargetEmitter::EmitProcessorResources(const CodeGenProcModel &ProcModel,
     int BufferSize = PRDef->getValueAsInt("BufferSize");
     if (PRDef->isSubClassOf("ProcResGroup")) {
       RecVec ResUnits = PRDef->getValueAsListOfDefs("Resources");
-      for (Record *RU : ResUnits) {
+      for (const Record *RU : ResUnits) {
         NumUnits += RU->getValueAsInt("NumUnits");
         SubUnitsOffset += RU->getValueAsInt("NumUnits");
       }
@@ -1279,7 +1279,7 @@ void SubtargetEmitter::GenSchedClassTables(const CodeGenProcModel &ProcModel,
       if (ValidWrites.empty())
         WriteIDs.push_back(0);
       else {
-        for (Record *VW : ValidWrites) {
+        for (const Record *VW : ValidWrites) {
           unsigned WriteID = SchedModels.getSchedRWIdx(VW, /*IsRead=*/false);
           assert(WriteID != 0 &&
                  "Expected a valid SchedRW in the list of ValidWrites");
@@ -1548,16 +1548,12 @@ void SubtargetEmitter::EmitSchedModel(raw_ostream &OS) {
   EmitProcessorModels(OS);
 }
 
-static void emitPredicateProlog(RecordKeeper &Records, raw_ostream &OS) {
+static void emitPredicateProlog(const RecordKeeper &Records, raw_ostream &OS) {
   std::string Buffer;
   raw_string_ostream Stream(Buffer);
 
-  // Collect all the PredicateProlog records and print them to the output
-  // stream.
-  std::vector<Record *> Prologs =
-      Records.getAllDerivedDefinitions("PredicateProlog");
-  llvm::sort(Prologs, LessRecord());
-  for (Record *P : Prologs)
+  // Print all PredicateProlog records to the output stream.
+  for (const Record *P : Records.getAllDerivedDefinitions("PredicateProlog"))
     Stream << P->getValueAsString("Code") << '\n';
 
   OS << Buffer;
@@ -1878,9 +1874,8 @@ void SubtargetEmitter::emitGetMacroFusions(const std::string &ClassName,
 // Produces a subtarget specific function for parsing
 // the subtarget features string.
 void SubtargetEmitter::ParseFeaturesFunction(raw_ostream &OS) {
-  std::vector<Record *> Features =
+  ArrayRef<const Record *> Features =
       Records.getAllDerivedDefinitions("SubtargetFeature");
-  llvm::sort(Features, LessRecord());
 
   OS << "// ParseSubtargetFeatures - Parses features string setting specified\n"
      << "// subtarget options.\n"
@@ -1904,7 +1899,7 @@ void SubtargetEmitter::ParseFeaturesFunction(raw_ostream &OS) {
   OS << "  InitMCProcessorInfo(CPU, TuneCPU, FS);\n"
      << "  const FeatureBitset &Bits = getFeatureBits();\n";
 
-  for (Record *R : Features) {
+  for (const Record *R : Features) {
     // Next record
     StringRef Instance = R->getName();
     StringRef Value = R->getValueAsString("Value");
@@ -1995,28 +1990,20 @@ void SubtargetEmitter::run(raw_ostream &OS) {
   OS << "\n#ifdef GET_SUBTARGETINFO_ENUM\n";
   OS << "#undef GET_SUBTARGETINFO_ENUM\n\n";
 
-  DenseMap<Record *, unsigned> FeatureMap;
-
   OS << "namespace llvm {\n";
-  Enumeration(OS, FeatureMap);
+  auto FeatureMap = Enumeration(OS);
   OS << "} // end namespace llvm\n\n";
   OS << "#endif // GET_SUBTARGETINFO_ENUM\n\n";
 
   EmitSubtargetInfoMacroCalls(OS);
 
   OS << "namespace llvm {\n";
-#if 0
-  OS << "namespace {\n";
-#endif
   unsigned NumFeatures = FeatureKeyValues(OS, FeatureMap);
   OS << "\n";
   EmitSchedModel(OS);
   OS << "\n";
   unsigned NumProcs = CPUKeyValues(OS, FeatureMap);
   OS << "\n";
-#if 0
-  OS << "} // end anonymous namespace\n\n";
-#endif
 
   // MCInstrInfo initialization routine.
   emitGenMCSubtargetInfo(OS);

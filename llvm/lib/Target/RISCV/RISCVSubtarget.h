@@ -306,8 +306,6 @@ public:
   unsigned getTailDupAggressiveThreshold() const {
     return TuneInfo->TailDupAggressiveThreshold;
   }
-
-  bool supportsInitUndef() const override { return hasVInstructions(); }
 };
 } // End llvm namespace
 

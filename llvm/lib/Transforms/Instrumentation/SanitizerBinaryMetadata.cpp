@@ -258,6 +258,9 @@ bool SanitizerBinaryMetadata::run() {
 void SanitizerBinaryMetadata::runOn(Function &F, MetadataInfoSet &MIS) {
   if (F.empty())
     return;
+  // Do not apply any instrumentation for naked functions.
+  if (F.hasFnAttribute(Attribute::Naked))
+    return;
   if (F.hasFnAttribute(Attribute::DisableSanitizerInstrumentation))
     return;
   if (Ignorelist && Ignorelist->inSection("metadata", "fun", F.getName()))

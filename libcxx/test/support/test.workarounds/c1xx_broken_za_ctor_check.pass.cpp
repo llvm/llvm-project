@@ -11,6 +11,7 @@
 // Verify TEST_WORKAROUND_MSVC_BROKEN_ZA_CTOR_CHECK.
 
 #include <type_traits>
+#include <utility>
 
 #include "test_macros.h"
 #include "test_workarounds.h"

@@ -514,8 +514,7 @@ void BuiltinNameEmitter::GetOverloads() {
 
     auto Signature = B->getValueAsListOfDefs("Signature");
     // Reuse signatures to avoid unnecessary duplicates.
-    auto it =
-        llvm::find_if(SignaturesList,
+    auto it = find_if(SignaturesList,
                       [&](const std::pair<std::vector<Record *>, unsigned> &a) {
                         return a.first == Signature;
                       });
@@ -687,7 +686,7 @@ void BuiltinNameEmitter::GroupBySignature() {
       CurSignatureList->push_back(Signature.second);
     }
     // Sort the list to facilitate future comparisons.
-    llvm::sort(*CurSignatureList);
+    sort(*CurSignatureList);
 
     // Check if we have already seen another function with the same list of
     // signatures.  If so, just add the name of the function.
@@ -1276,7 +1275,7 @@ void OpenCLBuiltinHeaderEmitter::emit() {
   // Iterate over all builtins; sort to follow order of definition in .td file.
   std::vector<const Record *> Builtins =
       Records.getAllDerivedDefinitions("Builtin");
-  llvm::sort(Builtins, LessRecord());
+  sort(Builtins, LessRecord());
 
   for (const auto *B : Builtins) {
     StringRef Name = B->getValueAsString("Name");

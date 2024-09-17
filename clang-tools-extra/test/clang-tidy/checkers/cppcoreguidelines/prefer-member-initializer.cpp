@@ -639,3 +639,14 @@ struct S3 {
   T M;
 };
 }
+
+namespace GH82970 {
+struct InitFromBingingDecl {
+  int m;
+  InitFromBingingDecl() {
+    struct { int i; } a;
+    auto [n] = a;
+    m = n;
+  }
+};
+} // namespace GH82970

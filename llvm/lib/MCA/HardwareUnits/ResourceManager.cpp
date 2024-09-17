@@ -344,9 +344,90 @@ uint64_t ResourceManager::checkAvailability(const InstrDesc &Desc) const {
   return BusyResourceMask;
 }
 
-void ResourceManager::issueInstruction(
-    const InstrDesc &Desc,
-    SmallVectorImpl<std::pair<ResourceRef, ReleaseAtCycles>> &Pipes) {
+void ResourceManager::issueInstructionImpl(
+    const InstrDesc &Desc, SmallVectorImpl<ResourceWithCycles> &Pipes) {
+
+  // Step 1.
+  // - Issue writes to non-group resources.
+  // - Issue writes to groups with only a single resource unit available.
+  // - Update reserved groups (if any)
+  // - Add any remaining resource usage requests to a Worklist.
+  SmallVector<std::pair<uint64_t, ResourceUsage>, 4> Worklist;
+
+  using ResourceWithUsage = std::pair<uint64_t, ResourceUsage>;
+
+  for (const ResourceWithUsage &R : Desc.Resources) {
+    const CycleSegment &CS = R.second.CS;
+    if (!CS.size()) {
+      releaseResource(R.first);
+      continue;
+    }
+
+    assert(CS.begin() == 0 && "Invalid {Start, End} cycles!");
+    if (R.second.isReserved()) {
+      assert((llvm::popcount(R.first) > 1) && "Expected a group!");
+      // Mark this group as reserved.
+      assert(R.second.isReserved());
+      reserveResource(R.first);
+      BusyResources[ResourceRef(R.first, R.first)] += CS.size();
+      continue;
+    }
+
+    const ResourceState &RS = *Resources[getResourceStateIndex(R.first)];
+    if (RS.isAResourceGroup() && RS.getNumReadyUnits() > 1) {
+      Worklist.push_back(R);
+      continue;
+    }
+
+    ResourceRef Pipe = selectPipe(R.first);
+    use(Pipe);
+    BusyResources[Pipe] += CS.size();
+    Pipes.emplace_back(std::make_pair(Pipe, ReleaseAtCycles(CS.size())));
+  }
+
+  // Step 2.
+  // Prioritize writes to groups with less available resources.
+  // NOTE: this algorithm has quadratic complexity in the worst case scenario.
+  // On average, this algorithm is expected to perform quite well and always
+  // converge in very few iterations. That is mainly because instructions rarely
+  // consume more than two or three resource groups.
+
+  while (!Worklist.empty()) {
+    sort(Worklist, [&](const ResourceWithUsage &Lhs,
+                       const ResourceWithUsage &Rhs) {
+      const ResourceState &LhsRS = *Resources[getResourceStateIndex(Lhs.first)];
+      const ResourceState &RhsRS = *Resources[getResourceStateIndex(Rhs.first)];
+      uint64_t LhsReadyUnits = LhsRS.getNumReadyUnits();
+      uint64_t RhsReadyUnits = RhsRS.getNumReadyUnits();
+      if (LhsReadyUnits == RhsReadyUnits)
+        return Lhs.first < Rhs.first;
+      return LhsReadyUnits < RhsReadyUnits;
+    });
+
+    SmallVector<ResourceWithUsage, 4> NewWorklist;
+
+    for (unsigned I = 0, E = Worklist.size(); I < E; ++I) {
+      const auto &Elt = Worklist[I];
+      const ResourceState &RS = *Resources[getResourceStateIndex(Elt.first)];
+
+      if (I == 0 || RS.getNumReadyUnits() == 1) {
+        ResourceRef Pipe = selectPipe(Elt.first);
+        use(Pipe);
+        const CycleSegment &CS = Elt.second.CS;
+        BusyResources[Pipe] += CS.size();
+        Pipes.emplace_back(std::make_pair(Pipe, ReleaseAtCycles(CS.size())));
+        continue;
+      }
+
+      NewWorklist.push_back(Elt);
+    }
+
+    swap(NewWorklist, Worklist);
+  };
+}
+
+void ResourceManager::fastIssueInstruction(
+    const InstrDesc &Desc, SmallVectorImpl<ResourceWithCycles> &Pipes) {
   for (const std::pair<uint64_t, ResourceUsage> &R : Desc.Resources) {
     const CycleSegment &CS = R.second.CS;
     if (!CS.size()) {

@@ -232,9 +232,9 @@ Experts Should Review Code
 --------------------------
 
 If you are an expert in an area of the compiler affected by a proposed patch,
-then you are highly encouraged to review the code. If you are a relevant code
-owner, and no other experts are reviewing a patch, you must either help arrange
-for an expert to review the patch or review it yourself.
+then you are highly encouraged to review the code. If you are a relevant
+maintainer, and no other experts are reviewing a patch, you must either help
+arrange for an expert to review the patch or review it yourself.
 
 Code Reviews, Speed, and Reciprocity
 ------------------------------------

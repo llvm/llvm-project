@@ -218,6 +218,16 @@ def AArch64fsub_p_contract : PatFrag<(ops node:$op1, node:$op2, node:$op3),
   return N->getFlags().hasAllowContract();
 }]>;
 
+def AArch64fminnm_p_nnan : PatFrag<(ops node:$op1, node:$op2, node:$op3),
+                                   (AArch64fminnm_p node:$op1, node:$op2, node:$op3), [{
+  return N->getFlags().hasNoNaNs();
+}]>;
+
+def AArch64fmaxnm_p_nnan : PatFrag<(ops node:$op1, node:$op2, node:$op3),
+                                   (AArch64fmaxnm_p node:$op1, node:$op2, node:$op3), [{
+  return N->getFlags().hasNoNaNs();
+}]>;
+
 def SDT_AArch64Arith_Imm : SDTypeProfile<1, 3, [
   SDTCisVec<0>, SDTCisVec<1>, SDTCisVec<2>, SDTCisVT<3,i32>,
   SDTCVecEltisVT<1,i1>, SDTCisSameAs<0,2>
@@ -468,6 +478,24 @@ def AArch64fmls_m1 : PatFrags<(ops node:$pg, node:$za, node:$zn, node:$zm),
                               [(int_aarch64_sve_fmls node:$pg, node:$za, node:$zn, node:$zm),
                                (vselect node:$pg, (AArch64fsub_p_contract (SVEAllActive), node:$za, (AArch64fmul_p_oneuse (SVEAllActive), node:$zn, node:$zm)), node:$za),
                                (vselect node:$pg, (AArch64fma_p (SVEAllActive), (AArch64fneg_mt (SVEAllActive), node:$zn, (undef)), node:$zm, node:$za), node:$za)]>;
+
+def AArch64famin_p : PatFrags<(ops node:$pred, node:$op1, node:$op2),
+                              [(int_aarch64_sve_famin_u node:$pred, node:$op1, node:$op2),
+                               (AArch64fmin_p node:$pred,
+                                  (AArch64fabs_mt node:$pred, node:$op1, undef),
+                                  (AArch64fabs_mt node:$pred, node:$op2, undef)),
+                               (AArch64fminnm_p_nnan node:$pred,
+                                  (AArch64fabs_mt node:$pred, node:$op1, undef),
+                                  (AArch64fabs_mt node:$pred, node:$op2, undef))]>;
+
+def AArch64famax_p : PatFrags<(ops node:$pred, node:$op1, node:$op2),
+                              [(int_aarch64_sve_famax_u node:$pred, node:$op1, node:$op2),
+                               (AArch64fmax_p node:$pred,
+                                  (AArch64fabs_mt node:$pred, node:$op1, undef),
+                                  (AArch64fabs_mt node:$pred, node:$op2, undef)),
+                               (AArch64fmaxnm_p_nnan node:$pred,
+                                  (AArch64fabs_mt node:$pred, node:$op1, undef),
+                                  (AArch64fabs_mt node:$pred, node:$op2, undef))]>;
 
 def AArch64add_m1 : VSelectUnpredOrPassthruPatFrags<int_aarch64_sve_add, add>;
 def AArch64sub_m1 : VSelectUnpredOrPassthruPatFrags<int_aarch64_sve_sub, sub>;
@@ -4184,8 +4212,8 @@ let Predicates = [HasSVE2orSME2, HasFAMINMAX] in {
 defm FAMIN_ZPmZ : sve_fp_2op_p_zds<0b1111, "famin", "FAMIN_ZPZZ", int_aarch64_sve_famin, DestructiveBinaryComm>;
 defm FAMAX_ZPmZ : sve_fp_2op_p_zds<0b1110, "famax", "FAMAX_ZPZZ", int_aarch64_sve_famax, DestructiveBinaryComm>;
 
-defm FAMAX_ZPZZ : sve_fp_bin_pred_hfd<int_aarch64_sve_famax_u>;
-defm FAMIN_ZPZZ : sve_fp_bin_pred_hfd<int_aarch64_sve_famin_u>;
+defm FAMAX_ZPZZ : sve_fp_bin_pred_hfd<AArch64famax_p>;
+defm FAMIN_ZPZZ : sve_fp_bin_pred_hfd<AArch64famin_p>;
 } // End HasSVE2orSME2, HasFAMINMAX
 
 let Predicates = [HasSSVE_FP8FMA] in {

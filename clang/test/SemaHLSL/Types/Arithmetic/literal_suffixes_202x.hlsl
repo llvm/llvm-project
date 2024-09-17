@@ -37,7 +37,7 @@ _Static_assert(is_same<__decltype(4294967296), int64_t>::value, "4294967296 is i
 // Clang emits a warning that it is interpreting it as unsigned because that is
 // not conforming to the C standard.
 
-// expected-warning@+1{{integer literal is too large to be represented in type 'long' and is subject to undefined behavior under C++98, interpreting as 'unsigned long'; this literal will be ill-formed in C++11 onwards}}
+// expected-warning@+1{{integer literal is too large to be represented in a signed integer type, interpreting as unsigned}}
 static const uint64_t V = 9223372036854775808;
 
 _Static_assert(is_same<__decltype(0x0), int>::value, "0x0 is int");

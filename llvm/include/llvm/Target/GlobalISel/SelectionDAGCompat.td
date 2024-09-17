@@ -98,6 +98,8 @@ def : GINodeEquiv<G_FPTOSI, fp_to_sint>;
 def : GINodeEquiv<G_FPTOUI, fp_to_uint>;
 def : GINodeEquiv<G_SITOFP, sint_to_fp>;
 def : GINodeEquiv<G_UITOFP, uint_to_fp>;
+def : GINodeEquiv<G_FPTOSI_SAT, fp_to_sint_sat_gi>;
+def : GINodeEquiv<G_FPTOUI_SAT, fp_to_uint_sat_gi>;
 def : GINodeEquiv<G_FADD, fadd>;
 def : GINodeEquiv<G_FSUB, fsub>;
 def : GINodeEquiv<G_FMA, fma>;

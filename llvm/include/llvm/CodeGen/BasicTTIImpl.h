@@ -2451,7 +2451,8 @@ public:
                                       CmpIntrinsic::getLTPredicate(IID),
                                       CostKind);
 
-      if (TLI->shouldExpandCmpUsingSelects()) {
+      EVT VT = TLI->getValueType(DL, CmpTy, true);
+      if (TLI->shouldExpandCmpUsingSelects(VT)) {
         // x < y ? -1 : (x > y ? 1 : 0)
         Cost += 2 * thisT()->getCmpSelInstrCost(
                         BinaryOperator::Select, RetTy, CondTy,

@@ -3,7 +3,7 @@
 
 define internal i32 @f1(i32 %x) {
 ; CHECK-LABEL: define {{[^@]+}}@f1
-; CHECK-SAME: (i32 [[X:%.*]]) {
+; CHECK-SAME: (i32 range(i32 0, 2) [[X:%.*]]) {
 ; CHECK-NEXT:    ret i32 poison
 ;
   %cmp = icmp sgt i32 %x, 300
@@ -40,7 +40,7 @@ end:
 
 define internal i32 @f2(i32 %x, i32 %y, i32 %z, i1 %cmp.1, i1 %cmp.2) {
 ; CHECK-LABEL: define {{[^@]+}}@f2
-; CHECK-SAME: (i32 [[X:%.*]], i32 [[Y:%.*]], i32 [[Z:%.*]], i1 [[CMP_1:%.*]], i1 [[CMP_2:%.*]]) {
+; CHECK-SAME: (i32 range(i32 0, 2) [[X:%.*]], i32 range(i32 -10, 2) [[Y:%.*]], i32 range(i32 1, 11) [[Z:%.*]], i1 [[CMP_1:%.*]], i1 [[CMP_2:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[CMP_1]], label [[IF_TRUE_1:%.*]], label [[END:%.*]]
 ; CHECK:       if.true.1:
@@ -133,7 +133,7 @@ end:
 
 define internal i32 @f3(i32 %x, i32 %y, i1 %cmp.1) {
 ; CHECK-LABEL: define {{[^@]+}}@f3
-; CHECK-SAME: (i32 [[X:%.*]], i32 [[Y:%.*]], i1 [[CMP_1:%.*]]) {
+; CHECK-SAME: (i32 range(i32 0, 6) [[X:%.*]], i32 [[Y:%.*]], i1 [[CMP_1:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[CMP_1]], label [[IF_TRUE_1:%.*]], label [[END:%.*]]
 ; CHECK:       if.true.1:

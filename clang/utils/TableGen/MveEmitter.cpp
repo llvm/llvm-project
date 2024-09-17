@@ -893,8 +893,8 @@ public:
   }
   bool hasCode() const { return Code != nullptr; }
 
-  static std::string signedHexLiteral(const llvm::APInt &iOrig) {
-    llvm::APInt i = iOrig.trunc(64);
+  static std::string signedHexLiteral(const APInt &iOrig) {
+    APInt i = iOrig.trunc(64);
     SmallString<40> s;
     i.toString(s, 16, true, true);
     return std::string(s);
@@ -907,7 +907,7 @@ public:
     for (const auto &kv : ImmediateArgs) {
       const ImmediateArg &IA = kv.second;
 
-      llvm::APInt lo(128, 0), hi(128, 0);
+      APInt lo(128, 0), hi(128, 0);
       switch (IA.boundsType) {
       case ImmediateArg::BoundsType::ExplicitRange:
         lo = IA.i1;
@@ -915,7 +915,7 @@ public:
         break;
       case ImmediateArg::BoundsType::UInt:
         lo = 0;
-        hi = llvm::APInt::getMaxValue(IA.i1).zext(128);
+        hi = APInt::getMaxValue(IA.i1).zext(128);
         break;
       }
 
@@ -925,8 +925,8 @@ public:
       // immediate is smaller than the _possible_ range of values for
       // its type.
       unsigned ArgTypeBits = IA.ArgType->sizeInBits();
-      llvm::APInt ArgTypeRange = llvm::APInt::getMaxValue(ArgTypeBits).zext(128);
-      llvm::APInt ActualRange = (hi-lo).trunc(64).sext(128);
+      APInt ArgTypeRange = APInt::getMaxValue(ArgTypeBits).zext(128);
+      APInt ActualRange = (hi - lo).trunc(64).sext(128);
       if (ActualRange.ult(ArgTypeRange))
         SemaChecks.push_back("SemaRef.BuiltinConstantArgRange(TheCall, " +
                              Index + ", " + signedHexLiteral(lo) + ", " +

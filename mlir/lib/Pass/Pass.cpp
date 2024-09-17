@@ -66,7 +66,6 @@ LogicalResult Pass::initializeOptions(
   std::string errStr;
   llvm::raw_string_ostream os(errStr);
   if (failed(passOptions.parseFromString(options, os))) {
-    os.flush();
     return errorHandler(errStr);
   }
   return success();
@@ -700,7 +699,7 @@ std::string OpToOpPassAdaptor::getAdaptorName() {
     os << '\'' << pm.getOpAnchorName() << '\'';
   });
   os << ']';
-  return os.str();
+  return name;
 }
 
 void OpToOpPassAdaptor::runOnOperation() {

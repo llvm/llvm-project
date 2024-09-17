@@ -18,7 +18,7 @@ TEST(FormatTest, SingleLine) {
   raw_indented_ostream ros(os);
   ros << 10;
   ros.flush();
-  EXPECT_THAT(os.str(), StrEq("10"));
+  EXPECT_THAT(str, StrEq("10"));
 }
 
 TEST(FormatTest, SimpleMultiLine) {
@@ -31,7 +31,7 @@ TEST(FormatTest, SimpleMultiLine) {
   ros << "c";
   ros << "\n";
   ros.flush();
-  EXPECT_THAT(os.str(), StrEq("ab\nc\n"));
+  EXPECT_THAT(str, StrEq("ab\nc\n"));
 }
 
 TEST(FormatTest, SimpleMultiLineIndent) {
@@ -44,7 +44,7 @@ TEST(FormatTest, SimpleMultiLineIndent) {
   ros << "c";
   ros << "\n";
   ros.flush();
-  EXPECT_THAT(os.str(), StrEq("  a    b\n    c\n"));
+  EXPECT_THAT(str, StrEq("  a    b\n    c\n"));
 }
 
 TEST(FormatTest, SingleRegion) {
@@ -71,7 +71,7 @@ TEST(FormatTest, SingleRegion) {
     inner inner
   }
 after)";
-  EXPECT_THAT(os.str(), StrEq(expected));
+  EXPECT_THAT(str, StrEq(expected));
 
   // Repeat the above with inline form.
   str.clear();
@@ -106,7 +106,7 @@ TEST(FormatTest, Reindent) {
 
 
 )";
-  EXPECT_THAT(os.str(), StrEq(expected));
+  EXPECT_THAT(str, StrEq(expected));
 }
 
 TEST(FormatTest, ReindentLineEndings) {
@@ -122,5 +122,5 @@ TEST(FormatTest, ReindentLineEndings) {
   ros.printReindented(desc);
   ros.flush();
   const auto *expected = "First line\r\n        second line";
-  EXPECT_THAT(os.str(), StrEq(expected));
+  EXPECT_THAT(str, StrEq(expected));
 }

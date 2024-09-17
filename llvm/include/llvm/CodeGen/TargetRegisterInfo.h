@@ -1203,19 +1203,6 @@ public:
   virtual bool isNonallocatableRegisterCalleeSave(MCRegister Reg) const {
     return false;
   }
-
-  /// Returns if the architecture being targeted has the required Pseudo
-  /// Instructions for initializing the register. By default this returns false,
-  /// but where it is overriden for an architecture, the behaviour will be
-  /// different. This can either be a check to ensure the Register Class is
-  /// present, or to return true as an indication the architecture supports the
-  /// pass. If using the method that does not check for the Register Class, it
-  /// is imperative to ensure all required Pseudo Instructions are implemented,
-  /// otherwise compilation may fail with an `Unexpected register class` error.
-  virtual bool
-  doesRegClassHavePseudoInitUndef(const TargetRegisterClass *RC) const {
-    return false;
-  }
 };
 
 //===----------------------------------------------------------------------===//

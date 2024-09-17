@@ -75,9 +75,10 @@ static void writeFromHalf16(uint8_t *loc, uint32_t insn) {
 void elf::writePPC32GlinkSection(uint8_t *buf, size_t numEntries) {
   // Create canonical PLT entries for non-PIE code. Compilers don't generate
   // non-GOT-non-PLT relocations referencing external functions for -fpie/-fPIE.
-  uint32_t glink = in.plt->getVA(); // VA of .glink
+  uint32_t glink = ctx.in.plt->getVA(); // VA of .glink
   if (!config->isPic) {
-    for (const Symbol *sym : cast<PPC32GlinkSection>(*in.plt).canonical_plts) {
+    for (const Symbol *sym :
+         cast<PPC32GlinkSection>(*ctx.in.plt).canonical_plts) {
       writePPC32PltCallStub(buf, sym->getGotPltVA(), nullptr, 0);
       buf += 16;
       glink += 16;
@@ -101,10 +102,10 @@ void elf::writePPC32GlinkSection(uint8_t *buf, size_t numEntries) {
   // Then write PLTresolve(), which has two forms: PIC and non-PIC. PLTresolve()
   // computes the PLT index (by computing the distance from the landing b to
   // itself) and calls _dl_runtime_resolve() (in glibc).
-  uint32_t got = in.got->getVA();
+  uint32_t got = ctx.in.got->getVA();
   const uint8_t *end = buf + 64;
   if (config->isPic) {
-    uint32_t afterBcl = 4 * in.plt->getNumEntries() + 12;
+    uint32_t afterBcl = 4 * ctx.in.plt->getNumEntries() + 12;
     uint32_t gotBcl = got + 4 - (glink + afterBcl);
     write32(buf + 0, 0x3d6b0000 | ha(afterBcl));  // addis r11,r11,1f-glink@ha
     write32(buf + 4, 0x7c0802a6);                 // mflr r0
@@ -192,7 +193,8 @@ void PPC::writeGotHeader(uint8_t *buf) const {
 
 void PPC::writeGotPlt(uint8_t *buf, const Symbol &s) const {
   // Address of the symbol resolver stub in .glink .
-  write32(buf, in.plt->getVA() + in.plt->headerSize + 4 * s.getPltIdx());
+  write32(buf,
+          ctx.in.plt->getVA() + ctx.in.plt->headerSize + 4 * s.getPltIdx());
 }
 
 bool PPC::needsThunk(RelExpr expr, RelType type, const InputFile *file,

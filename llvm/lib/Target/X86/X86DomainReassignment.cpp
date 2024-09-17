@@ -636,21 +636,21 @@ void X86DomainReassignment::initConverters() {
   createReplacer(X86::MOV16rm, GET_EGPR_IF_ENABLED(X86::KMOVWkm));
   createReplacer(X86::MOV16mr, GET_EGPR_IF_ENABLED(X86::KMOVWmk));
   createReplacer(X86::MOV16rr, GET_EGPR_IF_ENABLED(X86::KMOVWkk));
-  createReplacer(X86::SHR16ri, X86::KSHIFTRWri);
-  createReplacer(X86::SHL16ri, X86::KSHIFTLWri);
-  createReplacer(X86::NOT16r, X86::KNOTWrr);
-  createReplacer(X86::OR16rr, X86::KORWrr);
-  createReplacer(X86::AND16rr, X86::KANDWrr);
-  createReplacer(X86::XOR16rr, X86::KXORWrr);
+  createReplacer(X86::SHR16ri, X86::KSHIFTRWki);
+  createReplacer(X86::SHL16ri, X86::KSHIFTLWki);
+  createReplacer(X86::NOT16r, X86::KNOTWkk);
+  createReplacer(X86::OR16rr, X86::KORWkk);
+  createReplacer(X86::AND16rr, X86::KANDWkk);
+  createReplacer(X86::XOR16rr, X86::KXORWkk);
 
   bool HasNDD = STI->hasNDD();
   if (HasNDD) {
-    createReplacer(X86::SHR16ri_ND, X86::KSHIFTRWri);
-    createReplacer(X86::SHL16ri_ND, X86::KSHIFTLWri);
-    createReplacer(X86::NOT16r_ND, X86::KNOTWrr);
-    createReplacer(X86::OR16rr_ND, X86::KORWrr);
-    createReplacer(X86::AND16rr_ND, X86::KANDWrr);
-    createReplacer(X86::XOR16rr_ND, X86::KXORWrr);
+    createReplacer(X86::SHR16ri_ND, X86::KSHIFTRWki);
+    createReplacer(X86::SHL16ri_ND, X86::KSHIFTLWki);
+    createReplacer(X86::NOT16r_ND, X86::KNOTWkk);
+    createReplacer(X86::OR16rr_ND, X86::KORWkk);
+    createReplacer(X86::AND16rr_ND, X86::KANDWkk);
+    createReplacer(X86::XOR16rr_ND, X86::KXORWkk);
   }
 
   if (STI->hasBWI()) {
@@ -663,86 +663,86 @@ void X86DomainReassignment::initConverters() {
     createReplacer(X86::MOV32rr, GET_EGPR_IF_ENABLED(X86::KMOVDkk));
     createReplacer(X86::MOV64rr, GET_EGPR_IF_ENABLED(X86::KMOVQkk));
 
-    createReplacer(X86::SHR32ri, X86::KSHIFTRDri);
-    createReplacer(X86::SHR64ri, X86::KSHIFTRQri);
+    createReplacer(X86::SHR32ri, X86::KSHIFTRDki);
+    createReplacer(X86::SHR64ri, X86::KSHIFTRQki);
 
-    createReplacer(X86::SHL32ri, X86::KSHIFTLDri);
-    createReplacer(X86::SHL64ri, X86::KSHIFTLQri);
+    createReplacer(X86::SHL32ri, X86::KSHIFTLDki);
+    createReplacer(X86::SHL64ri, X86::KSHIFTLQki);
 
-    createReplacer(X86::ADD32rr, X86::KADDDrr);
-    createReplacer(X86::ADD64rr, X86::KADDQrr);
+    createReplacer(X86::ADD32rr, X86::KADDDkk);
+    createReplacer(X86::ADD64rr, X86::KADDQkk);
 
-    createReplacer(X86::NOT32r, X86::KNOTDrr);
-    createReplacer(X86::NOT64r, X86::KNOTQrr);
+    createReplacer(X86::NOT32r, X86::KNOTDkk);
+    createReplacer(X86::NOT64r, X86::KNOTQkk);
 
-    createReplacer(X86::OR32rr, X86::KORDrr);
-    createReplacer(X86::OR64rr, X86::KORQrr);
+    createReplacer(X86::OR32rr, X86::KORDkk);
+    createReplacer(X86::OR64rr, X86::KORQkk);
 
-    createReplacer(X86::AND32rr, X86::KANDDrr);
-    createReplacer(X86::AND64rr, X86::KANDQrr);
+    createReplacer(X86::AND32rr, X86::KANDDkk);
+    createReplacer(X86::AND64rr, X86::KANDQkk);
 
-    createReplacer(X86::ANDN32rr, X86::KANDNDrr);
-    createReplacer(X86::ANDN64rr, X86::KANDNQrr);
+    createReplacer(X86::ANDN32rr, X86::KANDNDkk);
+    createReplacer(X86::ANDN64rr, X86::KANDNQkk);
 
-    createReplacer(X86::XOR32rr, X86::KXORDrr);
-    createReplacer(X86::XOR64rr, X86::KXORQrr);
+    createReplacer(X86::XOR32rr, X86::KXORDkk);
+    createReplacer(X86::XOR64rr, X86::KXORQkk);
 
     if (HasNDD) {
-      createReplacer(X86::SHR32ri_ND, X86::KSHIFTRDri);
-      createReplacer(X86::SHL32ri_ND, X86::KSHIFTLDri);
-      createReplacer(X86::ADD32rr_ND, X86::KADDDrr);
-      createReplacer(X86::NOT32r_ND, X86::KNOTDrr);
-      createReplacer(X86::OR32rr_ND, X86::KORDrr);
-      createReplacer(X86::AND32rr_ND, X86::KANDDrr);
-      createReplacer(X86::XOR32rr_ND, X86::KXORDrr);
-      createReplacer(X86::SHR64ri_ND, X86::KSHIFTRQri);
-      createReplacer(X86::SHL64ri_ND, X86::KSHIFTLQri);
-      createReplacer(X86::ADD64rr_ND, X86::KADDQrr);
-      createReplacer(X86::NOT64r_ND, X86::KNOTQrr);
-      createReplacer(X86::OR64rr_ND, X86::KORQrr);
-      createReplacer(X86::AND64rr_ND, X86::KANDQrr);
-      createReplacer(X86::XOR64rr_ND, X86::KXORQrr);
+      createReplacer(X86::SHR32ri_ND, X86::KSHIFTRDki);
+      createReplacer(X86::SHL32ri_ND, X86::KSHIFTLDki);
+      createReplacer(X86::ADD32rr_ND, X86::KADDDkk);
+      createReplacer(X86::NOT32r_ND, X86::KNOTDkk);
+      createReplacer(X86::OR32rr_ND, X86::KORDkk);
+      createReplacer(X86::AND32rr_ND, X86::KANDDkk);
+      createReplacer(X86::XOR32rr_ND, X86::KXORDkk);
+      createReplacer(X86::SHR64ri_ND, X86::KSHIFTRQki);
+      createReplacer(X86::SHL64ri_ND, X86::KSHIFTLQki);
+      createReplacer(X86::ADD64rr_ND, X86::KADDQkk);
+      createReplacer(X86::NOT64r_ND, X86::KNOTQkk);
+      createReplacer(X86::OR64rr_ND, X86::KORQkk);
+      createReplacer(X86::AND64rr_ND, X86::KANDQkk);
+      createReplacer(X86::XOR64rr_ND, X86::KXORQkk);
     }
 
     // TODO: KTEST is not a replacement for TEST due to flag differences. Need
     // to prove only Z flag is used.
-    // createReplacer(X86::TEST32rr, X86::KTESTDrr);
-    // createReplacer(X86::TEST64rr, X86::KTESTQrr);
+    // createReplacer(X86::TEST32rr, X86::KTESTDkk);
+    // createReplacer(X86::TEST64rr, X86::KTESTQkk);
   }
 
   if (STI->hasDQI()) {
-    createReplacer(X86::ADD8rr, X86::KADDBrr);
-    createReplacer(X86::ADD16rr, X86::KADDWrr);
+    createReplacer(X86::ADD8rr, X86::KADDBkk);
+    createReplacer(X86::ADD16rr, X86::KADDWkk);
 
-    createReplacer(X86::AND8rr, X86::KANDBrr);
+    createReplacer(X86::AND8rr, X86::KANDBkk);
 
     createReplacer(X86::MOV8rm, GET_EGPR_IF_ENABLED(X86::KMOVBkm));
     createReplacer(X86::MOV8mr, GET_EGPR_IF_ENABLED(X86::KMOVBmk));
     createReplacer(X86::MOV8rr, GET_EGPR_IF_ENABLED(X86::KMOVBkk));
 
-    createReplacer(X86::NOT8r, X86::KNOTBrr);
+    createReplacer(X86::NOT8r, X86::KNOTBkk);
 
-    createReplacer(X86::OR8rr, X86::KORBrr);
+    createReplacer(X86::OR8rr, X86::KORBkk);
 
-    createReplacer(X86::SHR8ri, X86::KSHIFTRBri);
-    createReplacer(X86::SHL8ri, X86::KSHIFTLBri);
+    createReplacer(X86::SHR8ri, X86::KSHIFTRBki);
+    createReplacer(X86::SHL8ri, X86::KSHIFTLBki);
 
     // TODO: KTEST is not a replacement for TEST due to flag differences. Need
     // to prove only Z flag is used.
-    // createReplacer(X86::TEST8rr, X86::KTESTBrr);
-    // createReplacer(X86::TEST16rr, X86::KTESTWrr);
+    // createReplacer(X86::TEST8rr, X86::KTESTBkk);
+    // createReplacer(X86::TEST16rr, X86::KTESTWkk);
 
-    createReplacer(X86::XOR8rr, X86::KXORBrr);
+    createReplacer(X86::XOR8rr, X86::KXORBkk);
 
     if (HasNDD) {
-      createReplacer(X86::ADD8rr_ND, X86::KADDBrr);
-      createReplacer(X86::ADD16rr_ND, X86::KADDWrr);
-      createReplacer(X86::AND8rr_ND, X86::KANDBrr);
-      createReplacer(X86::NOT8r_ND, X86::KNOTBrr);
-      createReplacer(X86::OR8rr_ND, X86::KORBrr);
-      createReplacer(X86::SHR8ri_ND, X86::KSHIFTRBri);
-      createReplacer(X86::SHL8ri_ND, X86::KSHIFTLBri);
-      createReplacer(X86::XOR8rr_ND, X86::KXORBrr);
+      createReplacer(X86::ADD8rr_ND, X86::KADDBkk);
+      createReplacer(X86::ADD16rr_ND, X86::KADDWkk);
+      createReplacer(X86::AND8rr_ND, X86::KANDBkk);
+      createReplacer(X86::NOT8r_ND, X86::KNOTBkk);
+      createReplacer(X86::OR8rr_ND, X86::KORBkk);
+      createReplacer(X86::SHR8ri_ND, X86::KSHIFTRBki);
+      createReplacer(X86::SHL8ri_ND, X86::KSHIFTLBki);
+      createReplacer(X86::XOR8rr_ND, X86::KXORBkk);
     }
   }
 #undef GET_EGPR_IF_ENABLED

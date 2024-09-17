@@ -1408,7 +1408,7 @@ cc_library(
         "lib/Transforms/Instrumentation/*.inc",
     ]),
     hdrs = glob(["include/llvm/Transforms/Instrumentation/*.h"]) + [
-        "include/llvm/Transforms/Instrumentation.h",
+        "include/llvm/Transforms/Utils/Instrumentation.h",
     ],
     copts = llvm_copts,
     deps = [

@@ -16,7 +16,6 @@
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
-#include <cctype>
 #include <map>
 #include <set>
 #include <string>
@@ -42,17 +41,12 @@ class ClangASTNodesEmitter {
   ChildMap Tree;
 
   // Create a macro-ized version of a name
-  static std::string macroName(std::string S) {
-    for (unsigned i = 0; i < S.size(); ++i)
-      S[i] = std::toupper(S[i]);
-
-    return S;
-  }
+  static std::string macroName(StringRef S) { return S.upper(); }
 
   const std::string &macroHierarchyName() {
     assert(Root && "root node not yet derived!");
     if (MacroHierarchyName.empty())
-      MacroHierarchyName = macroName(std::string(Root.getName()));
+      MacroHierarchyName = macroName(Root.getName());
     return MacroHierarchyName;
   }
 
@@ -93,34 +87,30 @@ public:
 // Called recursively to ensure that nodes remain contiguous
 std::pair<ASTNode, ASTNode> ClangASTNodesEmitter::EmitNode(raw_ostream &OS,
                                                            ASTNode Base) {
-  std::string BaseName = macroName(std::string(Base.getName()));
+  std::string BaseName = macroName(Base.getName());
 
-  ChildIterator i = Tree.lower_bound(Base), e = Tree.upper_bound(Base);
-  bool HasChildren = (i != e);
+  auto [II, E] = Tree.equal_range(Base);
+  bool HasChildren = II != E;
 
   ASTNode First, Last;
   if (!Base.isAbstract())
     First = Last = Base;
 
-  auto comp = [this](ASTNode LHS, ASTNode RHS) {
-    auto LHSPrioritized = PrioritizedClasses.count(LHS) > 0;
-    auto RHSPrioritized = PrioritizedClasses.count(RHS) > 0;
-    if (LHSPrioritized && !RHSPrioritized)
-      return true;
-    if (!LHSPrioritized && RHSPrioritized)
-      return false;
-
-    return LHS.getName() > RHS.getName();
+  auto Comp = [this](const ASTNode &LHS, const ASTNode &RHS) {
+    bool LHSPrioritized = PrioritizedClasses.count(LHS) > 0;
+    bool RHSPrioritized = PrioritizedClasses.count(RHS) > 0;
+    return std::tuple(LHSPrioritized, LHS.getName()) >
+           std::tuple(RHSPrioritized, RHS.getName());
   };
-  auto SortedChildren = std::set<ASTNode, decltype(comp)>(comp);
+  auto SortedChildren = std::set<ASTNode, decltype(Comp)>(Comp);
 
-  for (; i != e; ++i) {
-    SortedChildren.insert(i->second);
+  for (; II != E; ++II) {
+    SortedChildren.insert(II->second);
   }
 
   for (const auto &Child : SortedChildren) {
     bool Abstract = Child.isAbstract();
-    std::string NodeName = macroName(std::string(Child.getName()));
+    std::string NodeName = macroName(Child.getName());
 
     OS << "#ifndef " << NodeName << "\n";
     OS << "#  define " << NodeName << "(Type, Base) "
@@ -144,9 +134,8 @@ std::pair<ASTNode, ASTNode> ClangASTNodesEmitter::EmitNode(raw_ostream &OS,
 
   // If there aren't first/last nodes, it must be because there were no
   // children and this node was abstract, which is not a sensible combination.
-  if (!First) {
+  if (!First)
     PrintFatalError(Base.getLoc(), "abstract node has no children");
-  }
   assert(Last && "set First without Last");
 
   if (HasChildren) {
@@ -169,7 +158,7 @@ void ClangASTNodesEmitter::deriveChildTree() {
   // Emit statements
   for (const Record *R : Records.getAllDerivedDefinitions(NodeClassName)) {
     if (auto B = R->getValueAsOptionalDef(BaseFieldName))
-      Tree.insert(std::make_pair(B, R));
+      Tree.insert({B, R});
     else if (Root)
       PrintFatalError(R->getLoc(),
                       Twine("multiple root nodes in \"") + NodeClassName
@@ -222,10 +211,9 @@ void printDeclContext(const std::multimap<const Record *, const Record *> &Tree,
                       const Record *DeclContext, raw_ostream &OS) {
   if (!DeclContext->getValueAsBit(AbstractFieldName))
     OS << "DECL_CONTEXT(" << DeclContext->getName() << ")\n";
-  auto i = Tree.lower_bound(DeclContext);
-  auto end = Tree.upper_bound(DeclContext);
-  for (; i != end; ++i) {
-    printDeclContext(Tree, i->second, OS);
+  auto [II, E] = Tree.equal_range(DeclContext);
+  for (; II != E; ++II) {
+    printDeclContext(Tree, II->second, OS);
   }
 }
 
@@ -244,7 +232,7 @@ void clang::EmitClangDeclContext(const RecordKeeper &Records, raw_ostream &OS) {
 
   for (const Record *R : Records.getAllDerivedDefinitions(DeclNodeClassName)) {
     if (auto *B = R->getValueAsOptionalDef(BaseFieldName))
-      Tree.insert(std::make_pair(B, R));
+      Tree.insert({B, R});
   }
 
   for (const Record *DeclContext :

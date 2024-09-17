@@ -282,9 +282,9 @@ test()
     assert(array[9] == P(0, 2));
   }
 #if TEST_STD_VER >= 11 && !defined(TEST_HAS_NO_EXCEPTIONS)
-  // TODO: Re-enable this test once we're no longer using get_temporary_buffer().
+  // TODO: Re-enable this test once we get recursive inlining fixed.
   // For now it trips up GCC due to the use of always_inline.
-#if 0
+#  if 0
   { // check that the algorithm still works when no memory is available
     std::vector<int> vec(150, 3);
     vec[5]                             = 6;
@@ -300,7 +300,7 @@ test()
     assert(std::is_partitioned(vec.begin(), vec.end(), [](int i) { return i < 5; }));
     getGlobalMemCounter()->reset();
   }
-#endif
+#  endif
 #endif // TEST_STD_VER >= 11 && !defined(TEST_HAS_NO_EXCEPTIONS)
 }
 

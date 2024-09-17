@@ -13,8 +13,8 @@
 #include <__algorithm/comp_ref_type.h>
 #include <__config>
 #include <__functional/identity.h>
-#include <__functional/invoke.h>
 #include <__iterator/iterator_traits.h>
+#include <__type_traits/invoke.h>
 #include <__type_traits/is_callable.h>
 #include <__utility/move.h>
 

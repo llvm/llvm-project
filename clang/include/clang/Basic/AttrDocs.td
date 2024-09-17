@@ -6849,7 +6849,7 @@ def UnsafeBufferUsageDocs : Documentation {
 The attribute ``[[clang::unsafe_buffer_usage]]`` should be placed on functions
 that need to be avoided as they are prone to buffer overflows or unsafe buffer
 struct fields. It is designed to work together with the off-by-default compiler
-warning ``-Wunsafe-buffer-usage``to help codebases transition away from raw pointer
+warning ``-Wunsafe-buffer-usage`` to help codebases transition away from raw pointer
 based buffer management, in favor of safer abstractions such as C++20 ``std::span``.
 The attribute causes ``-Wunsafe-buffer-usage`` to warn on every use of the function or
 the field it is attached to, and it may also lead to emission of automatic fix-it

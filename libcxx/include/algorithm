@@ -313,6 +313,9 @@ namespace ranges {
   template<class I, class F>
     using for_each_result = in_fun_result<I, F>;                                            // since C++20
 
+  template<class I, class F>
+    using for_each_n_result = in_fun_result<I, F>;                                          // since C++20
+
   template<input_iterator I, sentinel_for<I> S, class Proj = identity,
            indirectly_unary_invocable<projected<I, Proj>> Fun>
     constexpr ranges::for_each_result<I, Fun>
@@ -699,6 +702,12 @@ namespace ranges {
     constexpr bool
       ranges::lexicographical_compare(R1&& r1, R2&& r2, Comp comp = {},
                                       Proj1 proj1 = {}, Proj2 proj2 = {});                          // since C++20
+
+  template<class I, class O>
+    using move_result = in_out_result<I, O>;                                                        // since C++20
+
+  template<class I, class O>
+    using move_backward_result = in_out_result<I, O>;                                               // since C++20
 
   template<bidirectional_iterator I1, sentinel_for<I1> S1, bidirectional_iterator I2>
     requires indirectly_movable<I1, I2>

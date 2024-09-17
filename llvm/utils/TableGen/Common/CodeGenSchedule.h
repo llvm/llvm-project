@@ -489,7 +489,7 @@ public:
     return ModelDef;
   }
 
-  const CodeGenProcModel &getModelForProc(Record *ProcDef) const {
+  const CodeGenProcModel &getModelForProc(const Record *ProcDef) const {
     const Record *ModelDef = getModelOrItinDef(ProcDef);
     ProcModelMapTy::const_iterator I = ProcModelMap.find(ModelDef);
     assert(I != ProcModelMap.end() && "missing machine model");

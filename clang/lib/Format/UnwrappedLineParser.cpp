@@ -4042,7 +4042,7 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
   }
 
   auto IsListInitialization = [&] {
-    if (!ClassName || IsDerived)
+    if (!ClassName || IsDerived || JSPastExtendsOrImplements)
       return false;
     assert(FormatTok->is(tok::l_brace));
     const auto *Prev = FormatTok->getPreviousNonComment();
