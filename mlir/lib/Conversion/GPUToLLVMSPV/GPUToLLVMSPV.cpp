@@ -352,9 +352,9 @@ struct GPUSubgroupOpConversion final : ConvertOpToLLVMPattern<SubgroupOp> {
 
     Type indexTy = getTypeConverter()->getIndexType();
     if (resultTy != indexTy) {
-      assert(indexTy.getIntOrFloatBitWidth() >
-                 resultTy.getIntOrFloatBitWidth() &&
-             "expected that index type would be >= i32");
+      if (indexTy.getIntOrFloatBitWidth() < resultTy.getIntOrFloatBitWidth()) {
+        return failure();
+      }
       result = rewriter.create<LLVM::ZExtOp>(loc, indexTy, result);
     }
 
