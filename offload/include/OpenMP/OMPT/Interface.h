@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef OPENMP_LIBOMPTARGET_SRC_OMPTINTERFACE_H
-#define OPENMP_LIBOMPTARGET_SRC_OMPTINTERFACE_H
+#ifndef OFFLOAD_INCLUDE_OPENMP_OMPT_INTERFACE_H
+#define OFFLOAD_INCLUDE_OPENMP_OMPT_INTERFACE_H
 
 // Only provide functionality if target OMPT support is enabled
 #ifdef OMPT_SUPPORT
@@ -44,9 +44,9 @@ namespace ompt {
 
 /// Function pointers that will be used to track task_data and
 /// target_task_data.
-extern ompt_get_task_data_t ompt_get_task_data_fn;
-extern ompt_get_target_task_data_t ompt_get_target_task_data_fn;
-extern ompt_set_frame_enter_t ompt_set_frame_enter_fn;
+static ompt_get_task_data_t ompt_get_task_data_fn;
+static ompt_get_target_task_data_t ompt_get_target_task_data_fn;
+static ompt_set_frame_enter_t ompt_set_frame_enter_fn;
 
 /// OMPT global tracing status. Indicates if at least one device is traced.
 extern bool TracingActive;
@@ -567,4 +567,4 @@ private:
 
 #endif // OMPT_SUPPORT
 
-#endif // OPENMP_LIBOMPTARGET_SRC_OMPTINTERFACE_H
+#endif // OFFLOAD_INCLUDE_OPENMP_OMPT_INTERFACE_H

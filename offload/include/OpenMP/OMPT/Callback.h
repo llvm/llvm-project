@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef OMPTARGET_OPENMP_OMPT_CALLBACK_H
-#define OMPTARGET_OPENMP_OMPT_CALLBACK_H
+#ifndef OFFLOAD_INCLUDE_OPENMP_OMPT_CALLBACK_H
+#define OFFLOAD_INCLUDE_OPENMP_OMPT_CALLBACK_H
 
 #ifdef OMPT_SUPPORT
 
@@ -67,7 +67,7 @@ void finalizeLibrary(ompt_data_t *tool_data);
 void connectLibrary();
 
 /// OMPT initialization status; false if initializeLibrary has not been executed
-extern bool CallbacksInitialized;
+extern bool Initialized;
 
 } // namespace ompt
 } // namespace target
@@ -78,4 +78,4 @@ extern bool CallbacksInitialized;
 
 #endif // OMPT_SUPPORT
 
-#endif // OMPTARGET_OPENMP_OMPT_CALLBACK_H
+#endif // OFFLOAD_INCLUDE_OPENMP_OMPT_CALLBACK_H

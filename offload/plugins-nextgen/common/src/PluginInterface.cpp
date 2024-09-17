@@ -919,7 +919,7 @@ GenericDeviceTy::GenericDeviceTy(GenericPluginTy &Plugin, int32_t DeviceId,
   OmptInitialized.store(false);
   // Bind the callbacks to this device's member functions
 #define bindOmptCallback(Name, Type, Code)                                     \
-  if (ompt::CallbacksInitialized && ompt::lookupCallbackByCode) {              \
+  if (ompt::Initialized && ompt::lookupCallbackByCode) {                       \
     ompt::lookupCallbackByCode((ompt_callbacks_t)(Code),                       \
                                ((ompt_callback_t *)&(Name##_fn)));             \
     DP("class bound %s=%p\n", #Name, ((void *)(uint64_t)Name##_fn));           \
@@ -929,7 +929,7 @@ GenericDeviceTy::GenericDeviceTy(GenericPluginTy &Plugin, int32_t DeviceId,
 #undef bindOmptCallback
 
 #define bindOmptTracingFunction(FunctionName)                                  \
-  if (ompt::CallbacksInitialized && ompt::lookupDeviceTracingFn) {             \
+  if (ompt::Initialized && ompt::lookupDeviceTracingFn) {                      \
     FunctionName##_fn = ompt::lookupDeviceTracingFn(#FunctionName);            \
     DP("device tracing fn bound %s=%p\n", #FunctionName,                       \
        ((void *)(uint64_t)FunctionName##_fn));                                 \
@@ -948,7 +948,7 @@ Error GenericDeviceTy::init(GenericPluginTy &Plugin) {
 #ifdef OMPT_SUPPORT
   auto DevicePtr = reinterpret_cast<ompt_device_t *>(this);
   ompt::setDeviceId(DevicePtr, Plugin.getUserId(DeviceId));
-  if (ompt::CallbacksInitialized) {
+  if (ompt::Initialized) {
     bool ExpectedStatus = false;
     if (OmptInitialized.compare_exchange_strong(ExpectedStatus, true))
       performOmptCallback(device_initialize, Plugin.getUserId(DeviceId),
@@ -1060,7 +1060,7 @@ Error GenericDeviceTy::deinit(GenericPluginTy &Plugin) {
       return Err;
 
 #ifdef OMPT_SUPPORT
-  if (ompt::CallbacksInitialized) {
+  if (ompt::Initialized) {
     bool ExpectedStatus = true;
     if (OmptInitialized.compare_exchange_strong(ExpectedStatus, false))
       performOmptCallback(device_finalize, Plugin.getUserId(DeviceId));
@@ -1119,7 +1119,7 @@ GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
     return std::move(Err);
 
 #ifdef OMPT_SUPPORT
-  if (ompt::CallbacksInitialized) {
+  if (ompt::Initialized) {
     size_t Bytes =
         utils::getPtrDiff(InputTgtImage->ImageEnd, InputTgtImage->ImageStart);
     performOmptCallback(

@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef OPENMP_LIBOMPTARGET_INCLUDE_OMPTCOMMONDEFS_H
-#define OPENMP_LIBOMPTARGET_INCLUDE_OMPTCOMMONDEFS_H
+#ifndef OFFLOAD_INCLUDE_OMPTCOMMONDEFS_H
+#define OFFLOAD_INCLUDE_OMPTCOMMONDEFS_H
 
 #ifdef OMPT_SUPPORT
 
@@ -47,14 +47,13 @@
 
 #define OMPT_API_ROUTINE static
 
-#define OMPT_CALLBACK_AVAILABLE(fn)                                            \
-  (llvm::omp::target::ompt::CallbacksInitialized && fn)
+#define OMPT_CALLBACK_AVAILABLE(fn) (llvm::omp::target::ompt::Initialized && fn)
 
 #define OMPT_IF_BUILT(stmt) stmt
 
 #define OMPT_IF_ENABLED(stmts)                                                 \
   do {                                                                         \
-    if (llvm::omp::target::ompt::CallbacksInitialized) {                       \
+    if (llvm::omp::target::ompt::Initialized) {                                \
       stmts                                                                    \
     }                                                                          \
   } while (0)
@@ -80,7 +79,7 @@
 
 #define performIfOmptInitialized(stmt)                                         \
   do {                                                                         \
-    if (llvm::omp::target::ompt::CallbacksInitialized) {                       \
+    if (llvm::omp::target::ompt::Initialized) {                                \
       stmt;                                                                    \
     }                                                                          \
   } while (0)
@@ -125,4 +124,4 @@ typedef uint64_t (*IdInterfaceTy)();
 #define OMPT_IF_TRACING_ENABLED(stmts)
 #endif // OMPT_SUPPORT
 
-#endif // OPENMP_LIBOMPTARGET_INCLUDE_OMPTCOMMONDEFS_H
+#endif // OFFLOAD_INCLUDE_OMPTCOMMONDEFS_H
