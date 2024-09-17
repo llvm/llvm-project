@@ -245,8 +245,10 @@ int main(int argc, char *argv[]) {
   Status = amd_comgr_action_data_get_data(DataSetExec,
                                           AMD_COMGR_DATA_KIND_EXECUTABLE,
                                           0, &DataExec);
+  checkError(Status, "amd_comgr_action_data_get_data");
 
   Status = amd_comgr_populate_mangled_names(DataExec, &numNames);
+  checkError(Status, "amd_comgr_populate_mangled_names");
 
   if (numNames != 4) {
     printf("amd_populate_mangled_names Failed: "
