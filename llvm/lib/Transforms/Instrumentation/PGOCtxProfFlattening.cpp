@@ -217,7 +217,7 @@ class ProfileAnnotator final {
 
   // validation function after we propagate the counters: all BBs and edges'
   // counters must have a value.
-  bool allCountersAreAssinged() const {
+  bool allCountersAreAssigned() const {
     for (const auto &BBInfo : BBInfos)
       if (!BBInfo.second.hasCount())
         return false;
@@ -333,7 +333,7 @@ public:
       if (MaxCount != 0)
         setProfMetadata(F.getParent(), Term, EdgeCounts, MaxCount);
     }
-    assert(allCountersAreAssinged() &&
+    assert(allCountersAreAssigned() &&
            "Expected all counters have been assigned.");
     assert(allTakenPathsExit() &&
            "[ctx-prof] Encountered a BB with more than one successor, where "
