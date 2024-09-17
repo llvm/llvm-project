@@ -506,6 +506,8 @@ AST Matchers
 - Fixed an ordering issue with the `hasOperands` matcher occurring when setting a
   binding in the first matcher and using it in the second matcher.
 
+- Fixed a crash when traverse lambda expr with invalid captures. (#GH106444)
+
 clang-format
 ------------
 
