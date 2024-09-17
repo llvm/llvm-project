@@ -15,9 +15,6 @@ static const __constant uchar kAsanHeapFreeMagic = (uchar)0xfd;
 
 extern ulong __ockl_devmem_request(ulong addr, ulong size);
 
-// Minimum Number of bytes we want to quarantine
-#define QUARANTINE_BYTES (SLAB_BYTES * 16)
-
 // Whether we track non-slab allocations
 #define NON_SLAB_TRACKING 1
 
@@ -43,39 +40,63 @@ typedef struct alloc_struct {
 
 // Assumes 4096 byte minimum alignment of slab
 #define SLAB_ALIGN 4096
-#define SLAB_CTR_MASK (ulong)(SLAB_ALIGN - 1)
 #define SLAB_BUSY ((__global slab_t *)1UL)
 #define SLAB_TICKS 20000
 #define SLAB_BYTES (1UL << 21)
 #define SLAB_THRESHOLD (SLAB_BYTES / 64)
 #define SLAB_HEADER_BYTES 32
-#define SLAB_RECYCLE_THRESHOLD ((QUARANTINE_BYTES+SLAB_BYTES-1) / SLAB_BYTES)
+
+// Use 24 bit counter to avoid ABA
+// Assume SLAB_ALIGN so low 12 bits are already clear
+// XXX Reduce if virtual address > 52 bits
+#define SLAB_SHIFT 12
+#define SLAB_CTR_MASK (ulong)0xffffff
+
+#define LINE 128
+#define PAD(N,M) ulong pad##N[LINE/8 - M];
+
+#define F_POISON_START 0x01
+#define F_POISON_DONE 0x02
 
 // A slab of memory used to provide malloc returned blocks
 typedef struct slab_s {
     atomic_ulong next;   // link to next slab on queue chain, must be first
-    atomic_ulong next2;  // link to next slab on stack chain, must be second
     atomic_ulong ap;     // Pointer to next allocation (>= &space[0] )
     atomic_uint rb;      // returned bytes
     atomic_uint flags;   // flags
+    ulong pad;
     ulong space[(SLAB_BYTES-SLAB_HEADER_BYTES)/8];  // Space for allocations.  Must  be aligned 16
 } slab_t;
 
-// The heap
+// A LIFO for storing available slabs
+typedef struct lifo_s {
+    atomic_ulong top;
+    PAD(0,1);
+} lifo_t;
+
+// Number of LIFO we use, need to size to keep heap_s under 128K
+// Current initialization must change if this exceeds 256
+#define NLA 256
+#define LP(H,I) (H->la + (I) % NLA)
+
+// State for mechanism
 typedef struct heap_s {
-    atomic_ulong fake_next;               // Heap is a fake slab, must be first
-    atomic_ulong fake_next2;              // Heap is a fake slab, must be second
-    atomic_ulong head;                    // points to dummy or most recently dequeued slab
-    atomic_ulong tail;                    // usually points to most recently enqueued slab
-    atomic_ulong top;                     // Top of slab stack
     atomic_ulong cs;                      // current slab pointer
+    PAD(0,1);
     atomic_ulong atime;                   // Time most recent allocation started
+    PAD(1,1);
+    atomic_ulong rid;                     // Next read index
+    PAD(2,1);
+    atomic_ulong wid;                     // Next write index
+    PAD(3,1);
     atomic_ulong initial_slabs;           // pointer to next preallocated slab
     ulong initial_slabs_end;              // pointer to end of preallocated slabs
-    atomic_uint nas;                      // Number of allocated slabs
+    PAD(4,2);
 #if defined NON_SLAB_TRACKING
     atomic_ulong num_nonslab_allocations; // Count of number of non-slab allocations that have not been freed
+    PAD(5,1);
 #endif
+    lifo_t la[NLA];                       // Storage for available slabs
 } heap_t;
 
 // Inhibit control flow optimizations
@@ -125,16 +146,16 @@ round_16(ulong n)
     return ((n + 15) >> 4) << 4;
 }
 
-static __global slab_t *
-slabptr(ulong p)
-{
-    return (__global slab_t *)(p & ~SLAB_CTR_MASK);
-}
-
 static ulong
 addcnt(ulong p, ulong c)
 {
-    return p | (((c & SLAB_CTR_MASK) + 1UL) & SLAB_CTR_MASK);
+    return (p << SLAB_SHIFT) | ((c + 1UL) & SLAB_CTR_MASK);
+}
+
+static __global slab_t *
+slabptr(ulong p)
+{
+    return (__global slab_t *)((p & ~SLAB_CTR_MASK) >> SLAB_SHIFT);
 }
 
 NO_SANITIZE_ADDR
@@ -162,73 +183,49 @@ added_redzone(uint sz)
 static void
 slab_pause(void)
 {
-    __builtin_amdgcn_s_sleep(2);
+    __builtin_amdgcn_s_sleep(3);
 }
 
 // Intended to be called from only one lane of a wave
+__attribute__((optnone))
 NO_SANITIZE_ADDR
 static void
 put_free_slab(__global heap_t *hp, __global slab_t *sp)
 {
-    ulong head = AL(&hp->head);
-    if (slabptr(head) == sp) {
-        ulong top = AL(&hp->top);
-        for (;;) {
-          AS(&sp->next2, (ulong)slabptr(top));
-          if (ACE(&hp->top, &top, addcnt((ulong)sp, top)))
-              return;
-          slab_pause();
+    __global lifo_t *lp = LP(hp, AA(&hp->wid, 1UL));
+
+    for (ulong i=1;;++i) {
+        ulong top = AL(&lp->top);
+        AS(&sp->next, (ulong)slabptr(top));
+        if (ACE(&lp->top, &top, addcnt((ulong)sp, top))) {
+            return;
         }
-    }
-    AS(&sp->next, 0UL);
-
-    ulong tail = AL(&hp->tail);
-    for (;;) {
-        __global slab_t *last = slabptr(tail);
-        ulong next = 0;
-        if (ACE(&last->next, &next, (ulong)sp))
-            break;
-
-        ACE(&hp->tail, &tail, addcnt(next, tail));
         slab_pause();
     }
-
-    ACE(&hp->tail, &tail, addcnt((ulong)sp, tail));
-    return;
 }
 
 // Intended to be called from only one lane of a wave
+__attribute__((optnone))
 NO_SANITIZE_ADDR
 static __global slab_t *
 get_free_slab(__global heap_t *hp)
 {
-    for (;;) {
-        ulong head = AL(&hp->head);
-        __global slab_t *first = slabptr(head);
-        ulong next = AL(&first->next);
-        if (head == AL(&hp->head)) {
-            ulong tail = AL(&hp->tail);
-            if (first == slabptr(tail)) {
-                if (!next)
-                    break;
-                ACE(&hp->tail, &next, addcnt(next, tail));
-            } else if (next) {
-                if (ACE(&hp->head, &head, addcnt(next, head)))
-                    return slabptr(next);
-            }
-        }
-        slab_pause();
-    }
+    if (AL(&hp->rid) >= AL(&hp->wid))
+        return 0;
 
-    ulong top = AL(&hp->top);
-    for (;;) {
+    __global lifo_t *lp = LP(hp, AA(&hp->rid, 1UL));
+
+    for (ulong i=1;;++i) {
+        ulong top = AL(&lp->top);
         __global slab_t *sp = slabptr(top);
         if (sp) {
-            ulong next2 = AL(&sp->next2);
-            if (ACE(&hp->top, &top, addcnt(next2, top)))
+            ulong next = AL(&sp->next);
+            if (ACE(&lp->top, &top, addcnt(next, top))) {
                 return sp;
-        } else
+            }
+        } else {
             return 0;
+        }
         slab_pause();
     }
 }
@@ -388,9 +385,6 @@ obtain_new_slab(__global heap_t *hp)
         ret = __ockl_devmem_request(0, SLAB_BYTES);
     }
 
-    if (ret)
-        AA(&hp->nas, 1);
-
     return (__global slab_t *)ret;
 }
 
@@ -408,7 +402,6 @@ try_new_slab(__global heap_t *hp)
     __global slab_t *sp = obtain_new_slab(hp);
     if (sp) {
         AS(&sp->next, 0UL);
-        AS(&sp->next2, 0UL);
         AS(&sp->ap, (ulong)sp->space);
         AS(&sp->rb, 0U);
         AS(&sp->flags, 0U);
@@ -429,11 +422,12 @@ new_slab_wait(__global heap_t *hp)
 }
 
 // Called by a single workitem
+__attribute__((optnone))
 NO_SANITIZE_ADDR
 static __global slab_t *
 get_current_slab(__global heap_t *hp)
 {
-    for (;;) {
+    for (ulong i=1;;++i) {
         ulong cs = AL(&hp->cs);
         if (cs)
             return (__global slab_t *)cs;
@@ -450,15 +444,13 @@ get_current_slab(__global heap_t *hp)
         if (cs)
             return (__global slab_t *)cs;
 
-        if (AL(&hp->nas) >= SLAB_RECYCLE_THRESHOLD) {
-            __global slab_t *fs = get_free_slab(hp);
-            if (fs) {
-                reset_slab(fs);
-                if (ACE(&hp->cs, &cs, (ulong)fs))
-                    return fs;
-                put_free_slab(hp, fs);
-                return (__global slab_t *)cs;
-            }
+        __global slab_t *fs = get_free_slab(hp);
+        if (fs) {
+            reset_slab(fs);
+            if (ACE(&hp->cs, &cs, (ulong)fs))
+                return fs;
+            put_free_slab(hp, fs);
+            return (__global slab_t *)cs;
         }
 
         __global slab_t *ns = try_new_slab(hp);
@@ -488,14 +480,14 @@ poison_slab(__global slab_t *sp, int aid, int na)
     __builtin_amdgcn_fence(__ATOMIC_RELEASE, "agent");
 
     if (!aid)
-        AO(&sp->flags, 2);
+        AO(&sp->flags, F_POISON_DONE);
 }
 
 NO_SANITIZE_ADDR
 static void
 poison_slab_wait(__global slab_t *sp)
 {
-    while (AL(&sp->flags) != 3)
+    while ((AL(&sp->flags) & F_POISON_DONE) == 0U)
         slab_pause();
 }
 
@@ -555,12 +547,12 @@ slab_malloc(ulong lsz, ulong pc)
 
             uint f = 0U;
             if (!aid) {
-                f = AO(&cs->flags, 1U);
+                f = AO(&cs->flags, F_POISON_START);
             }
             f = first(f);
-            if (!f) {
+            if ((f & F_POISON_START) == 0) {
                 poison_slab(cs, aid, active_lane_count());
-            } else if (f == 1) {
+            } else if ((f & F_POISON_DONE) == 0) {
                 if (!aid)
                     poison_slab_wait(cs);
             }
@@ -629,20 +621,23 @@ __ockl_dm_init_v1(ulong ha, ulong sa, uint hb, uint nis)
     hs[lid+6*256] = kAsanHeapLeftRedzoneMagicx8;
     hs[lid+7*256] = kAsanHeapLeftRedzoneMagicx8;
 
-    if (lid == 0) {
-        __global heap_t *hp = (__global heap_t *)ha;
-        AS(&hp->fake_next, 0UL);
-        AS(&hp->fake_next2, 0UL);
-        AS(&hp->head, (ulong)&hp->fake_next);
-        AS(&hp->tail, (ulong)&hp->fake_next);
-        AS(&hp->top, 0UL);
+    __global heap_t *hp = (__global heap_t *)ha;
+
+    if (!lid) {
         AS(&hp->cs, 0UL);
+        AS(&hp->atime, 0UL);
+        AS(&hp->rid, 0UL);
+        AS(&hp->wid, 0UL);
         AS(&hp->initial_slabs, sa);
         hp->initial_slabs_end = sa + ((ulong)nis << 21);
-        AS(&hp->nas, 0U);
 #if defined NON_SLAB_TRACKING
         AS(&hp->num_nonslab_allocations, 0UL);
 #endif
+    }
+
+    if (lid < NLA) {
+        __global lifo_t *lp = LP(hp, lid);
+        AS(&lp->top, 0UL);
     }
 }
 
