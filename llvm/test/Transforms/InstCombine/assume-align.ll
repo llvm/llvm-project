@@ -169,6 +169,19 @@ define ptr @dont_fold_assume_align_zero_of_loaded_pointer_into_align_metadata(pt
   call void @llvm.assume(i1 true) [ "align"(ptr %p2, i64 0) ]
   ret ptr %p2
 }
+
+; !align must have a constant integer alignment.
+define ptr @dont_fold_assume_align_not_constant_of_loaded_pointer_into_align_metadata(ptr %p, i64 %align) {
+; CHECK-LABEL: @dont_fold_assume_align_not_constant_of_loaded_pointer_into_align_metadata(
+; CHECK-NEXT:    [[P2:%.*]] = load ptr, ptr [[P:%.*]], align 8
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[P2]], i64 [[ALIGN:%.*]]) ]
+; CHECK-NEXT:    ret ptr [[P2]]
+;
+  %p2 = load ptr, ptr %p
+  call void @llvm.assume(i1 true) [ "align"(ptr %p2, i64 %align) ]
+  ret ptr %p2
+}
+
 ;.
 ; CHECK: [[META0]] = !{i64 8}
 ;.
