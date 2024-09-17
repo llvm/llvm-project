@@ -1,11 +1,8 @@
-from __future__ import print_function
-
 import argparse
 import bisect
 import collections
 import copy
 import glob
-import itertools
 import os
 import re
 import subprocess
@@ -517,12 +514,13 @@ def invoke_tool(exe, cmd_args, ir, preprocess_cmd=None, verbose=False):
                     sep="",
                     file=sys.stderr,
                 )
-            # Python 2.7 doesn't have subprocess.DEVNULL:
-            with open(os.devnull, "w") as devnull:
-                pp = subprocess.Popen(
-                    preprocess_cmd, shell=True, stdin=devnull, stdout=subprocess.PIPE
-                )
-                ir_file = pp.stdout
+            pp = subprocess.Popen(
+                preprocess_cmd,
+                shell=True,
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.PIPE,
+            )
+            ir_file = pp.stdout
 
         if isinstance(cmd_args, list):
             args = [applySubstitutions(a, substitutions) for a in cmd_args]
@@ -569,7 +567,7 @@ ANALYZE_FUNCTION_RE = re.compile(
     flags=(re.X | re.S),
 )
 
-LV_DEBUG_RE = re.compile(
+LOOP_PASS_DEBUG_RE = re.compile(
     r"^\s*\'(?P<func>[\w.$-]+?)\'[^\n]*" r"\s*\n(?P<body>.*)$", flags=(re.X | re.S)
 )
 
@@ -636,6 +634,7 @@ def get_triple_from_march(march):
         "amdgcn": "amdgcn",
         "r600": "r600",
         "mips": "mips",
+        "nvptx64": "nvptx64",
         "sparc": "sparc",
         "hexagon": "hexagon",
         "ve": "ve",
@@ -973,6 +972,7 @@ class NamelessValue:
     name (as in e.g. `@some_global` or `%x`) or just a number (as in e.g. `%12`
     or `!4`).
     """
+
     def __init__(
         self,
         check_prefix,
@@ -1635,8 +1635,9 @@ def generalize_check_lines(
         regexp = ginfo.get_regexp()
 
     multiple_braces_re = re.compile(r"({{+)|(}}+)")
+
     def escape_braces(match_obj):
-        return '{{' + re.escape(match_obj.group(0)) + '}}'
+        return "{{" + re.escape(match_obj.group(0)) + "}}"
 
     if ginfo.is_ir():
         for i, line in enumerate(lines):

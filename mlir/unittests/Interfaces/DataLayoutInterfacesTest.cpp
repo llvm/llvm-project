@@ -58,9 +58,9 @@ public:
 /// Simple data layout spec containing a list of entries that always verifies
 /// as valid.
 struct CustomDataLayoutSpec
-    : public Attribute::AttrBase<CustomDataLayoutSpec, Attribute,
-                                 DataLayoutSpecStorage,
-                                 DataLayoutSpecInterface::Trait> {
+    : public Attribute::AttrBase<
+          CustomDataLayoutSpec, Attribute, DataLayoutSpecStorage,
+          DLTIQueryInterface::Trait, DataLayoutSpecInterface::Trait> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(CustomDataLayoutSpec)
 
   using Base::Base;
@@ -92,6 +92,9 @@ struct CustomDataLayoutSpec
   StringAttr getStackAlignmentIdentifier(MLIRContext *context) const {
     return Builder(context).getStringAttr(kStackAlignmentKeyName);
   }
+  FailureOr<Attribute> query(DataLayoutEntryKey key) const {
+    return llvm::cast<mlir::DataLayoutSpecInterface>(*this).queryHelper(key);
+  }
 };
 
 class TargetSystemSpecStorage : public AttributeStorage {
@@ -113,9 +116,9 @@ public:
 };
 
 struct CustomTargetSystemSpec
-    : public Attribute::AttrBase<CustomTargetSystemSpec, Attribute,
-                                 TargetSystemSpecStorage,
-                                 TargetSystemSpecInterface::Trait> {
+    : public Attribute::AttrBase<
+          CustomTargetSystemSpec, Attribute, TargetSystemSpecStorage,
+          DLTIQueryInterface::Trait, TargetSystemSpecInterface::Trait> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(CustomDataLayoutSpec)
 
   using Base::Base;
@@ -137,6 +140,9 @@ struct CustomTargetSystemSpec
         return entry.second;
     }
     return std::nullopt;
+  }
+  FailureOr<Attribute> query(DataLayoutEntryKey key) const {
+    return llvm::cast<mlir::TargetSystemSpecInterface>(*this).queryHelper(key);
   }
 };
 
@@ -495,11 +501,11 @@ TEST(DataLayout, NullSpec) {
   EXPECT_EQ(layout.getGlobalMemorySpace(), Attribute());
   EXPECT_EQ(layout.getStackAlignment(), 0u);
 
-  EXPECT_EQ(layout.getDevicePropertyValueAsInt(
+  EXPECT_EQ(layout.getDevicePropertyValue(
                 Builder(&ctx).getStringAttr("CPU" /* device ID*/),
                 Builder(&ctx).getStringAttr("L1_cache_size_in_bytes")),
             std::nullopt);
-  EXPECT_EQ(layout.getDevicePropertyValueAsInt(
+  EXPECT_EQ(layout.getDevicePropertyValue(
                 Builder(&ctx).getStringAttr("CPU" /* device ID*/),
                 Builder(&ctx).getStringAttr("max_vector_width")),
             std::nullopt);
@@ -535,11 +541,11 @@ TEST(DataLayout, EmptySpec) {
   EXPECT_EQ(layout.getGlobalMemorySpace(), Attribute());
   EXPECT_EQ(layout.getStackAlignment(), 0u);
 
-  EXPECT_EQ(layout.getDevicePropertyValueAsInt(
+  EXPECT_EQ(layout.getDevicePropertyValue(
                 Builder(&ctx).getStringAttr("CPU" /* device ID*/),
                 Builder(&ctx).getStringAttr("L1_cache_size_in_bytes")),
             std::nullopt);
-  EXPECT_EQ(layout.getDevicePropertyValueAsInt(
+  EXPECT_EQ(layout.getDevicePropertyValue(
                 Builder(&ctx).getStringAttr("CPU" /* device ID*/),
                 Builder(&ctx).getStringAttr("max_vector_width")),
             std::nullopt);
@@ -599,8 +605,8 @@ TEST(DataLayout, SpecWithTargetSystemDescEntries) {
   module attributes { dl_target_sys_desc_test.target_system_spec =
     #dl_target_sys_desc_test.target_system_spec<
       "CPU": #dlti.target_device_spec<
-              #dlti.dl_entry<"L1_cache_size_in_bytes", 4096 : ui32>,
-              #dlti.dl_entry<"max_vector_op_width", 128 : ui32>>
+              #dlti.dl_entry<"L1_cache_size_in_bytes", "4096">,
+              #dlti.dl_entry<"max_vector_op_width", "128">>
     > } {}
   )MLIR";
 
@@ -610,14 +616,14 @@ TEST(DataLayout, SpecWithTargetSystemDescEntries) {
 
   OwningOpRef<ModuleOp> module = parseSourceString<ModuleOp>(ir, &ctx);
   DataLayout layout(*module);
-  EXPECT_EQ(layout.getDevicePropertyValueAsInt(
+  EXPECT_EQ(layout.getDevicePropertyValue(
                 Builder(&ctx).getStringAttr("CPU") /* device ID*/,
                 Builder(&ctx).getStringAttr("L1_cache_size_in_bytes")),
-            std::optional<int64_t>(4096));
-  EXPECT_EQ(layout.getDevicePropertyValueAsInt(
+            std::optional<Attribute>(Builder(&ctx).getStringAttr("4096")));
+  EXPECT_EQ(layout.getDevicePropertyValue(
                 Builder(&ctx).getStringAttr("CPU") /* device ID*/,
                 Builder(&ctx).getStringAttr("max_vector_op_width")),
-            std::optional<int64_t>(128));
+            std::optional<Attribute>(Builder(&ctx).getStringAttr("128")));
 }
 
 TEST(DataLayout, Caching) {

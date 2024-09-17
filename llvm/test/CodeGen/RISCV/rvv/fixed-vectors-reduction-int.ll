@@ -32,6 +32,22 @@ define i8 @vreduce_add_v2i8(ptr %x) {
   ret i8 %red
 }
 
+declare i8 @llvm.vector.reduce.add.v3i8(<3 x i8>)
+
+define i8 @vreduce_add_v3i8(ptr %x) {
+; CHECK-LABEL: vreduce_add_v3i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 3, e8, mf4, ta, ma
+; CHECK-NEXT:    vle8.v v8, (a0)
+; CHECK-NEXT:    vmv.s.x v9, zero
+; CHECK-NEXT:    vredsum.vs v8, v8, v9
+; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    ret
+  %v = load <3 x i8>, ptr %x
+  %red = call i8 @llvm.vector.reduce.add.v3i8(<3 x i8> %v)
+  ret i8 %red
+}
+
 declare i8 @llvm.vector.reduce.add.v4i8(<4 x i8>)
 
 define i8 @vreduce_add_v4i8(ptr %x) {
@@ -1743,6 +1759,24 @@ define i8 @vreduce_and_v2i8(ptr %x) {
   ret i8 %red
 }
 
+declare i8 @llvm.vector.reduce.and.v3i8(<3 x i8>)
+
+define i8 @vreduce_and_v3i8(ptr %x) {
+; CHECK-LABEL: vreduce_and_v3i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 3, e8, mf4, ta, ma
+; CHECK-NEXT:    vle8.v v8, (a0)
+; CHECK-NEXT:    li a0, -1
+; CHECK-NEXT:    vmv.s.x v9, a0
+; CHECK-NEXT:    vredand.vs v8, v8, v9
+; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    ret
+  %v = load <3 x i8>, ptr %x
+  %red = call i8 @llvm.vector.reduce.and.v3i8(<3 x i8> %v)
+  ret i8 %red
+}
+
+
 declare i8 @llvm.vector.reduce.and.v4i8(<4 x i8>)
 
 define i8 @vreduce_and_v4i8(ptr %x) {
@@ -2325,6 +2359,22 @@ define i8 @vreduce_or_v2i8(ptr %x) {
 ; CHECK-NEXT:    ret
   %v = load <2 x i8>, ptr %x
   %red = call i8 @llvm.vector.reduce.or.v2i8(<2 x i8> %v)
+  ret i8 %red
+}
+
+declare i8 @llvm.vector.reduce.or.v3i8(<3 x i8>)
+
+define i8 @vreduce_or_v3i8(ptr %x) {
+; CHECK-LABEL: vreduce_or_v3i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 3, e8, mf4, ta, ma
+; CHECK-NEXT:    vle8.v v8, (a0)
+; CHECK-NEXT:    vmv.s.x v9, zero
+; CHECK-NEXT:    vredor.vs v8, v8, v9
+; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    ret
+  %v = load <3 x i8>, ptr %x
+  %red = call i8 @llvm.vector.reduce.or.v3i8(<3 x i8> %v)
   ret i8 %red
 }
 
@@ -2911,6 +2961,22 @@ define i8 @vreduce_xor_v2i8(ptr %x) {
 ; CHECK-NEXT:    ret
   %v = load <2 x i8>, ptr %x
   %red = call i8 @llvm.vector.reduce.xor.v2i8(<2 x i8> %v)
+  ret i8 %red
+}
+
+declare i8 @llvm.vector.reduce.xor.v3i8(<3 x i8>)
+
+define i8 @vreduce_xor_v3i8(ptr %x) {
+; CHECK-LABEL: vreduce_xor_v3i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 3, e8, mf4, ta, ma
+; CHECK-NEXT:    vle8.v v8, (a0)
+; CHECK-NEXT:    vmv.s.x v9, zero
+; CHECK-NEXT:    vredxor.vs v8, v8, v9
+; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    ret
+  %v = load <3 x i8>, ptr %x
+  %red = call i8 @llvm.vector.reduce.xor.v3i8(<3 x i8> %v)
   ret i8 %red
 }
 
@@ -3531,6 +3597,23 @@ define i8 @vreduce_smin_v2i8(ptr %x) {
   ret i8 %red
 }
 
+declare i8 @llvm.vector.reduce.smin.v3i8(<3 x i8>)
+
+define i8 @vreduce_smin_v3i8(ptr %x) {
+; CHECK-LABEL: vreduce_smin_v3i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 3, e8, mf4, ta, ma
+; CHECK-NEXT:    vle8.v v8, (a0)
+; CHECK-NEXT:    li a0, 127
+; CHECK-NEXT:    vmv.s.x v9, a0
+; CHECK-NEXT:    vredmin.vs v8, v8, v9
+; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    ret
+  %v = load <3 x i8>, ptr %x
+  %red = call i8 @llvm.vector.reduce.smin.v3i8(<3 x i8> %v)
+  ret i8 %red
+}
+
 declare i8 @llvm.vector.reduce.smin.v4i8(<4 x i8>)
 
 define i8 @vreduce_smin_v4i8(ptr %x) {
@@ -4113,6 +4196,23 @@ define i8 @vreduce_smax_v2i8(ptr %x) {
 ; CHECK-NEXT:    ret
   %v = load <2 x i8>, ptr %x
   %red = call i8 @llvm.vector.reduce.smax.v2i8(<2 x i8> %v)
+  ret i8 %red
+}
+
+declare i8 @llvm.vector.reduce.smax.v3i8(<3 x i8>)
+
+define i8 @vreduce_smax_v3i8(ptr %x) {
+; CHECK-LABEL: vreduce_smax_v3i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 3, e8, mf4, ta, ma
+; CHECK-NEXT:    vle8.v v8, (a0)
+; CHECK-NEXT:    li a0, -128
+; CHECK-NEXT:    vmv.s.x v9, a0
+; CHECK-NEXT:    vredmax.vs v8, v8, v9
+; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    ret
+  %v = load <3 x i8>, ptr %x
+  %red = call i8 @llvm.vector.reduce.smax.v3i8(<3 x i8> %v)
   ret i8 %red
 }
 
@@ -4701,6 +4801,23 @@ define i8 @vreduce_umin_v2i8(ptr %x) {
   ret i8 %red
 }
 
+declare i8 @llvm.vector.reduce.umin.v3i8(<3 x i8>)
+
+define i8 @vreduce_umin_v3i8(ptr %x) {
+; CHECK-LABEL: vreduce_umin_v3i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 3, e8, mf4, ta, ma
+; CHECK-NEXT:    vle8.v v8, (a0)
+; CHECK-NEXT:    li a0, -1
+; CHECK-NEXT:    vmv.s.x v9, a0
+; CHECK-NEXT:    vredminu.vs v8, v8, v9
+; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    ret
+  %v = load <3 x i8>, ptr %x
+  %red = call i8 @llvm.vector.reduce.umin.v3i8(<3 x i8> %v)
+  ret i8 %red
+}
+
 declare i8 @llvm.vector.reduce.umin.v4i8(<4 x i8>)
 
 define i8 @vreduce_umin_v4i8(ptr %x) {
@@ -5286,6 +5403,22 @@ define i8 @vreduce_umax_v2i8(ptr %x) {
   ret i8 %red
 }
 
+declare i8 @llvm.vector.reduce.umax.v3i8(<3 x i8>)
+
+define i8 @vreduce_umax_v3i8(ptr %x) {
+; CHECK-LABEL: vreduce_umax_v3i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 3, e8, mf4, ta, ma
+; CHECK-NEXT:    vle8.v v8, (a0)
+; CHECK-NEXT:    vmv.s.x v9, zero
+; CHECK-NEXT:    vredmaxu.vs v8, v8, v9
+; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    ret
+  %v = load <3 x i8>, ptr %x
+  %red = call i8 @llvm.vector.reduce.umax.v3i8(<3 x i8> %v)
+  ret i8 %red
+}
+
 declare i8 @llvm.vector.reduce.umax.v4i8(<4 x i8>)
 
 define i8 @vreduce_umax_v4i8(ptr %x) {
@@ -5863,12 +5996,36 @@ define i8 @vreduce_mul_v2i8(ptr %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    lb a0, 1(a0)
+; CHECK-NEXT:    lbu a0, 1(a0)
 ; CHECK-NEXT:    vmul.vx v8, v8, a0
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
   %v = load <2 x i8>, ptr %x
   %red = call i8 @llvm.vector.reduce.mul.v2i8(<2 x i8> %v)
+  ret i8 %red
+}
+
+declare i8 @llvm.vector.reduce.mul.v3i8(<3 x i8>)
+
+define i8 @vreduce_mul_v3i8(ptr %x) {
+; CHECK-LABEL: vreduce_mul_v3i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 3, e8, mf4, ta, ma
+; CHECK-NEXT:    vle8.v v8, (a0)
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
+; CHECK-NEXT:    vmv.v.i v9, 1
+; CHECK-NEXT:    vslideup.vi v8, v9, 3
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
+; CHECK-NEXT:    vslidedown.vi v9, v8, 2
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
+; CHECK-NEXT:    vmul.vv v8, v8, v9
+; CHECK-NEXT:    vslidedown.vi v9, v8, 1
+; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
+; CHECK-NEXT:    vmul.vv v8, v8, v9
+; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    ret
+  %v = load <3 x i8>, ptr %x
+  %red = call i8 @llvm.vector.reduce.mul.v3i8(<3 x i8> %v)
   ret i8 %red
 }
 

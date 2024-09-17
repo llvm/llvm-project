@@ -143,6 +143,10 @@ bool InstCombinerImpl::foldIntegerTypedPHI(PHINode &PN) {
     BasicBlock *BB = std::get<0>(Incoming);
     Value *Arg = std::get<1>(Incoming);
 
+    // Arg could be a constant, constant expr, etc., which we don't cover here.
+    if (!isa<Instruction>(Arg) && !isa<Argument>(Arg))
+      return false;
+
     // First look backward:
     if (auto *PI = dyn_cast<PtrToIntInst>(Arg)) {
       AvailablePtrVals.emplace_back(PI->getOperand(0));

@@ -241,7 +241,7 @@ TEST_F(IRBuilderTest, CreateStepVector) {
   CallInst *Call = cast<CallInst>(StepVec);
   FunctionType *FTy = Call->getFunctionType();
   EXPECT_EQ(FTy->getReturnType(), DstVecTy);
-  EXPECT_EQ(Call->getIntrinsicID(), Intrinsic::experimental_stepvector);
+  EXPECT_EQ(Call->getIntrinsicID(), Intrinsic::stepvector);
 }
 
 TEST_F(IRBuilderTest, CreateStepVectorI3) {
@@ -260,7 +260,7 @@ TEST_F(IRBuilderTest, CreateStepVectorI3) {
   CallInst *Call = cast<CallInst>(Trunc->getOperand(0));
   FunctionType *FTy = Call->getFunctionType();
   EXPECT_EQ(FTy->getReturnType(), VecI8Ty);
-  EXPECT_EQ(Call->getIntrinsicID(), Intrinsic::experimental_stepvector);
+  EXPECT_EQ(Call->getIntrinsicID(), Intrinsic::stepvector);
 }
 
 TEST_F(IRBuilderTest, ConstrainedFP) {
@@ -521,11 +521,10 @@ TEST_F(IRBuilderTest, GetIntTy) {
   IntegerType *Ty1 = Builder.getInt1Ty();
   EXPECT_EQ(Ty1, IntegerType::get(Ctx, 1));
 
-  DataLayout* DL = new DataLayout(M.get());
-  IntegerType *IntPtrTy = Builder.getIntPtrTy(*DL);
-  unsigned IntPtrBitSize =  DL->getPointerSizeInBits(0);
+  const DataLayout &DL = M->getDataLayout();
+  IntegerType *IntPtrTy = Builder.getIntPtrTy(DL);
+  unsigned IntPtrBitSize = DL.getPointerSizeInBits(0);
   EXPECT_EQ(IntPtrTy, IntegerType::get(Ctx, IntPtrBitSize));
-  delete DL;
 }
 
 TEST_F(IRBuilderTest, UnaryOperators) {

@@ -4,7 +4,7 @@
 // DEFINE: %{compile} = mlir-opt %s -test-lower-to-llvm
 // DEFINE: %{run} = %mcr_aarch64_cmd -march=aarch64 -mattr=+sve \
 // DEFINE:  -e %{entry_point} -entry-point-result=void \
-// DEFINE:  -shared-libs=%mlir_c_runner_utils,%mlir_arm_runner_utils
+// DEFINE:  -shared-libs=%native_mlir_c_runner_utils,%native_mlir_arm_runner_utils
 
 // RUN: %{compile} | %{run} | FileCheck %s
 
@@ -18,7 +18,7 @@ func.func @entry() {
 }
 
 func.func @test_deinterleave() {
-  %step_vector = llvm.intr.experimental.stepvector : vector<[4]xi8>
+  %step_vector = llvm.intr.stepvector : vector<[4]xi8>
   vector.print %step_vector : vector<[4]xi8>
   // CHECK: ( 0, 1, 2, 3, 4, 5, 6, 7 )
   %v1, %v2 = vector.deinterleave %step_vector : vector<[4]xi8> -> vector<[2]xi8>

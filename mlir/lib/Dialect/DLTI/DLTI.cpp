@@ -109,12 +109,11 @@ void DataLayoutEntryAttr::print(AsmPrinter &os) const {
 }
 
 //===----------------------------------------------------------------------===//
-// DataLayoutSpecAttr
+// DLTIMapAttr
 //===----------------------------------------------------------------------===//
 
-LogicalResult
-DataLayoutSpecAttr::verify(function_ref<InFlightDiagnostic()> emitError,
-                           ArrayRef<DataLayoutEntryInterface> entries) {
+static LogicalResult verifyEntries(function_ref<InFlightDiagnostic()> emitError,
+                                   ArrayRef<DataLayoutEntryInterface> entries) {
   DenseSet<Type> types;
   DenseSet<StringAttr> ids;
   for (DataLayoutEntryInterface entry : entries) {
@@ -128,6 +127,21 @@ DataLayoutSpecAttr::verify(function_ref<InFlightDiagnostic()> emitError,
     }
   }
   return success();
+}
+
+LogicalResult MapAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                              ArrayRef<DataLayoutEntryInterface> entries) {
+  return verifyEntries(emitError, entries);
+}
+
+//===----------------------------------------------------------------------===//
+// DataLayoutSpecAttr
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+DataLayoutSpecAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                           ArrayRef<DataLayoutEntryInterface> entries) {
+  return verifyEntries(emitError, entries);
 }
 
 /// Given a list of old and a list of new entries, overwrites old entries with
@@ -352,6 +366,7 @@ TargetDeviceSpecAttr::verify(function_ref<InFlightDiagnostic()> emitError,
              << "dlti.target_device_spec does not allow type as a key: "
              << type;
     } else {
+      // Check that keys in a target device spec are unique.
       auto id = entry.getKey().get<StringAttr>();
       if (!ids.insert(id).second)
         return emitError() << "repeated layout entry key: " << id.getValue();
@@ -391,6 +406,88 @@ TargetSystemSpecAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 //===----------------------------------------------------------------------===//
 // DLTIDialect
 //===----------------------------------------------------------------------===//
+
+/// Retrieve the first `DLTIQueryInterface`-implementing attribute that is
+/// attached to `op` or such an attr on as close as possible an ancestor. The
+/// op the attribute is attached to is returned as well.
+static std::pair<DLTIQueryInterface, Operation *>
+getClosestQueryable(Operation *op) {
+  DLTIQueryInterface queryable = {};
+
+  // Search op and its ancestors for the first attached DLTIQueryInterface attr.
+  do {
+    for (NamedAttribute attr : op->getAttrs())
+      if ((queryable = llvm::dyn_cast<DLTIQueryInterface>(attr.getValue())))
+        break;
+  } while (!queryable && (op = op->getParentOp()));
+
+  return std::pair(queryable, op);
+}
+
+FailureOr<Attribute>
+dlti::query(Operation *op, ArrayRef<DataLayoutEntryKey> keys, bool emitError) {
+  if (keys.empty()) {
+    if (emitError) {
+      auto diag = op->emitError() << "target op of failed DLTI query";
+      diag.attachNote(op->getLoc()) << "no keys provided to attempt query with";
+    }
+    return failure();
+  }
+
+  auto [queryable, queryOp] = getClosestQueryable(op);
+  Operation *reportOp = (queryOp ? queryOp : op);
+
+  if (!queryable) {
+    if (emitError) {
+      auto diag = op->emitError() << "target op of failed DLTI query";
+      diag.attachNote(reportOp->getLoc())
+          << "no DLTI-queryable attrs on target op or any of its ancestors";
+    }
+    return failure();
+  }
+
+  auto keyToStr = [](DataLayoutEntryKey key) -> std::string {
+    std::string buf;
+    llvm::TypeSwitch<DataLayoutEntryKey>(key)
+        .Case<StringAttr, Type>( // The only two kinds of key we know of.
+            [&](auto key) { llvm::raw_string_ostream(buf) << key; })
+        .Default([](auto) { llvm_unreachable("unexpected entry key kind"); });
+    return buf;
+  };
+
+  Attribute currentAttr = queryable;
+  for (auto &&[idx, key] : llvm::enumerate(keys)) {
+    if (auto map = llvm::dyn_cast<DLTIQueryInterface>(currentAttr)) {
+      auto maybeAttr = map.query(key);
+      if (failed(maybeAttr)) {
+        if (emitError) {
+          auto diag = op->emitError() << "target op of failed DLTI query";
+          diag.attachNote(reportOp->getLoc())
+              << "key " << keyToStr(key)
+              << " has no DLTI-mapping per attr: " << map;
+        }
+        return failure();
+      }
+      currentAttr = *maybeAttr;
+    } else {
+      if (emitError) {
+        std::string commaSeparatedKeys;
+        llvm::interleave(
+            keys.take_front(idx), // All prior keys.
+            [&](auto key) { commaSeparatedKeys += keyToStr(key); },
+            [&]() { commaSeparatedKeys += ","; });
+
+        auto diag = op->emitError() << "target op of failed DLTI query";
+        diag.attachNote(reportOp->getLoc())
+            << "got non-DLTI-queryable attribute upon looking up keys ["
+            << commaSeparatedKeys << "] at op";
+      }
+      return failure();
+    }
+  }
+
+  return currentAttr;
+}
 
 constexpr const StringLiteral mlir::DLTIDialect::kDataLayoutAttrName;
 constexpr const StringLiteral mlir::DLTIDialect::kDataLayoutEndiannessKey;
@@ -444,11 +541,21 @@ LogicalResult DLTIDialect::verifyOperationAttribute(Operation *op,
     if (isa<ModuleOp>(op))
       return detail::verifyDataLayoutOp(op);
     return success();
-  } else if (attr.getName() == DLTIDialect::kTargetSystemDescAttrName) {
+  }
+
+  if (attr.getName() == DLTIDialect::kTargetSystemDescAttrName) {
     if (!llvm::isa<TargetSystemSpecAttr>(attr.getValue())) {
       return op->emitError()
              << "'" << DLTIDialect::kTargetSystemDescAttrName
              << "' is expected to be a #dlti.target_system_spec attribute";
+    }
+    return success();
+  }
+
+  if (attr.getName() == DLTIDialect::kMapAttrName) {
+    if (!llvm::isa<MapAttr>(attr.getValue())) {
+      return op->emitError() << "'" << DLTIDialect::kMapAttrName
+                             << "' is expected to be a #dlti.map attribute";
     }
     return success();
   }

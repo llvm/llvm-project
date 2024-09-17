@@ -157,7 +157,7 @@ TEST_F(MDStringTest, PrintingSimple) {
   std::string Str;
   raw_string_ostream oss(Str);
   s->print(oss);
-  EXPECT_STREQ("!\"testing 1 2 3\"", oss.str().c_str());
+  EXPECT_STREQ("!\"testing 1 2 3\"", Str.c_str());
 }
 
 // Test printing of MDString with non-printable characters.
@@ -167,7 +167,7 @@ TEST_F(MDStringTest, PrintingComplex) {
   std::string Str;
   raw_string_ostream oss(Str);
   s->print(oss);
-  EXPECT_STREQ("!\"\\00\\0A\\22\\\\\\FF\"", oss.str().c_str());
+  EXPECT_STREQ("!\"\\00\\0A\\22\\\\\\FF\"", Str.c_str());
 }
 
 typedef MetadataTest MDNodeTest;
@@ -299,7 +299,6 @@ TEST_F(MDNodeTest, Print) {
     std::string Actual_;                                                       \
     raw_string_ostream OS(Actual_);                                            \
     PRINT;                                                                     \
-    OS.flush();                                                                \
     std::string Expected_(EXPECTED);                                           \
     EXPECT_EQ(Expected_, Actual_);                                             \
   } while (false)
@@ -3870,6 +3869,85 @@ TEST_F(DIExpressionTest, createFragmentExpression) {
 #undef EXPECT_INVALID_FRAGMENT
 }
 
+TEST_F(DIExpressionTest, extractLeadingOffset) {
+  int64_t Offset;
+  SmallVector<uint64_t> Remaining;
+  using namespace dwarf;
+#define OPS(...) SmallVector<uint64_t>(ArrayRef<uint64_t>{__VA_ARGS__})
+#define EXTRACT_FROM(...)                                                      \
+  DIExpression::get(Context, {__VA_ARGS__})                                    \
+      ->extractLeadingOffset(Offset, Remaining)
+  // Test the number of expression inputs
+  // ------------------------------------
+  //
+  // Single location expressions are permitted.
+  EXPECT_TRUE(EXTRACT_FROM(DW_OP_plus_uconst, 2));
+  EXPECT_EQ(Offset, 2);
+  EXPECT_EQ(Remaining.size(), 0u);
+  // This is also a single-location.
+  EXPECT_TRUE(EXTRACT_FROM(DW_OP_LLVM_arg, 0, DW_OP_plus_uconst, 2));
+  EXPECT_EQ(Offset, 2);
+  EXPECT_EQ(Remaining.size(), 0u);
+  // Variadic locations are not permitted. A non-zero arg is assumed to
+  // indicate multiple inputs.
+  EXPECT_FALSE(EXTRACT_FROM(DW_OP_LLVM_arg, 1));
+  EXPECT_FALSE(EXTRACT_FROM(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus));
+
+  // Test offsets expressions
+  // ------------------------
+  EXPECT_TRUE(EXTRACT_FROM());
+  EXPECT_EQ(Offset, 0);
+  EXPECT_EQ(Remaining.size(), 0u);
+
+  EXPECT_TRUE(EXTRACT_FROM(DW_OP_constu, 4, DW_OP_plus));
+  EXPECT_EQ(Offset, 4);
+  EXPECT_EQ(Remaining.size(), 0u);
+
+  EXPECT_TRUE(EXTRACT_FROM(DW_OP_constu, 2, DW_OP_minus));
+  EXPECT_EQ(Offset, -2);
+  EXPECT_EQ(Remaining.size(), 0u);
+
+  EXPECT_TRUE(EXTRACT_FROM(DW_OP_plus_uconst, 8));
+  EXPECT_EQ(Offset, 8);
+  EXPECT_EQ(Remaining.size(), 0u);
+
+  EXPECT_TRUE(EXTRACT_FROM(DW_OP_plus_uconst, 4, DW_OP_constu, 2, DW_OP_minus));
+  EXPECT_EQ(Offset, 2);
+  EXPECT_EQ(Remaining.size(), 0u);
+
+  // Not all operations are permitted for simplicity. Can be added
+  // if needed in future.
+  EXPECT_FALSE(EXTRACT_FROM(DW_OP_constu, 2, DW_OP_mul));
+
+  // Test "remaining ops"
+  // --------------------
+  EXPECT_TRUE(EXTRACT_FROM(DW_OP_plus_uconst, 4, DW_OP_constu, 8, DW_OP_minus,
+                           DW_OP_LLVM_fragment, 0, 32));
+  EXPECT_EQ(Remaining, OPS(DW_OP_LLVM_fragment, 0, 32));
+  EXPECT_EQ(Offset, -4);
+
+  EXPECT_TRUE(EXTRACT_FROM(DW_OP_deref));
+  EXPECT_EQ(Remaining, OPS(DW_OP_deref));
+  EXPECT_EQ(Offset, 0);
+
+  // Check things after the non-offset ops are added too.
+  EXPECT_TRUE(EXTRACT_FROM(DW_OP_plus_uconst, 2, DW_OP_deref_size, 4,
+                           DW_OP_stack_value));
+  EXPECT_EQ(Remaining, OPS(DW_OP_deref_size, 4, DW_OP_stack_value));
+  EXPECT_EQ(Offset, 2);
+
+  // DW_OP_deref_type isn't supported in LLVM so this currently fails.
+  EXPECT_FALSE(EXTRACT_FROM(DW_OP_deref_type, 0));
+
+  EXPECT_TRUE(EXTRACT_FROM(DW_OP_LLVM_extract_bits_zext, 0, 8));
+  EXPECT_EQ(Remaining, OPS(DW_OP_LLVM_extract_bits_zext, 0, 8));
+
+  EXPECT_TRUE(EXTRACT_FROM(DW_OP_LLVM_extract_bits_sext, 4, 4));
+  EXPECT_EQ(Remaining, OPS(DW_OP_LLVM_extract_bits_sext, 4, 4));
+#undef EXTRACT_FROM
+#undef OPS
+}
+
 TEST_F(DIExpressionTest, convertToUndefExpression) {
 #define EXPECT_UNDEF_OPS_EQUAL(TestExpr, Expected)                             \
   do {                                                                         \
@@ -4525,8 +4603,7 @@ TEST(NamedMDNodeTest, Search) {
   std::string Str;
   raw_string_ostream oss(Str);
   NMD->print(oss);
-  EXPECT_STREQ("!llvm.NMD1 = !{!0, !1}\n",
-               oss.str().c_str());
+  EXPECT_STREQ("!llvm.NMD1 = !{!0, !1}\n", Str.c_str());
 }
 
 typedef MetadataTest FunctionAttachmentTest;

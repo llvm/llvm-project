@@ -23,7 +23,16 @@
 
 namespace clang {
 
+/// Constant discriminator to be used with function pointers in .init_array and
+/// .fini_array. The value is ptrauth_string_discriminator("init_fini")
+constexpr uint16_t InitFiniPointerConstantDiscriminator = 0xD9D4;
+
 constexpr unsigned PointerAuthKeyNone = -1;
+
+/// Constant discriminator for std::type_info vtable pointers: 0xB1EA/45546
+/// The value is ptrauth_string_discriminator("_ZTVSt9type_info"), i.e.,
+/// the vtable type discriminator for classes derived from std::type_info.
+constexpr uint16_t StdTypeInfoVTablePointerConstantDiscrimination = 0xB1EA;
 
 class PointerAuthSchema {
 public:
@@ -46,6 +55,12 @@ public:
   enum class Discrimination : unsigned {
     /// No additional discrimination.
     None,
+
+    /// Include a hash of the entity's type.
+    Type,
+
+    /// Include a hash of the entity's identity.
+    Decl,
 
     /// Discriminate using a constant value.
     Constant,
@@ -148,8 +163,42 @@ public:
 };
 
 struct PointerAuthOptions {
+  /// Should return addresses be authenticated?
+  bool ReturnAddresses = false;
+
+  /// Do authentication failures cause a trap?
+  bool AuthTraps = false;
+
+  /// Do indirect goto label addresses need to be authenticated?
+  bool IndirectGotos = false;
+
   /// The ABI for C function pointers.
   PointerAuthSchema FunctionPointers;
+
+  /// The ABI for C++ virtual table pointers (the pointer to the table
+  /// itself) as installed in an actual class instance.
+  PointerAuthSchema CXXVTablePointers;
+
+  /// TypeInfo has external ABI requirements and is emitted without
+  /// actually having parsed the libcxx definition, so we can't simply
+  /// perform a look up. The settings for this should match the exact
+  /// specification in type_info.h
+  PointerAuthSchema CXXTypeInfoVTablePointer;
+
+  /// The ABI for C++ virtual table pointers as installed in a VTT.
+  PointerAuthSchema CXXVTTVTablePointers;
+
+  /// The ABI for most C++ virtual function pointers, i.e. v-table entries.
+  PointerAuthSchema CXXVirtualFunctionPointers;
+
+  /// The ABI for variadic C++ virtual function pointers.
+  PointerAuthSchema CXXVirtualVariadicFunctionPointers;
+
+  /// The ABI for C++ member function pointers.
+  PointerAuthSchema CXXMemberFunctionPointers;
+
+  /// The ABI for function addresses in .init_array and .fini_array
+  PointerAuthSchema InitFiniPointers;
 };
 
 } // end namespace clang

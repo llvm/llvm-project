@@ -636,7 +636,7 @@ void AsmWriterEmitter::EmitGetRegisterName(raw_ostream &O) {
   Record *AsmWriter = Target.getAsmWriter();
   StringRef ClassName = AsmWriter->getValueAsString("AsmWriterClassName");
   const auto &Registers = Target.getRegBank().getRegisters();
-  const std::vector<Record *> &AltNameIndices = Target.getRegAltNameIndices();
+  ArrayRef<const Record *> AltNameIndices = Target.getRegAltNameIndices();
   bool hasAltNames = AltNameIndices.size() > 1;
   StringRef Namespace = Registers.front().TheDef->getValueAsString("Namespace");
 
@@ -953,7 +953,7 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
           if (Rec->isSubClassOf("RegisterClass")) {
             if (!IAP.isOpMapped(ROName)) {
               IAP.addOperand(ROName, MIOpNum, PrintMethodIdx);
-              Record *R = CGA.ResultOperands[i].getRecord();
+              const Record *R = CGA.ResultOperands[i].getRecord();
               if (R->isSubClassOf("RegisterOperand"))
                 R = R->getValueAsDef("RegClass");
               IAP.addCond(std::string(
@@ -1162,8 +1162,8 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
                        PatternCount - PatternStart);
   }
 
-  if (OpcodeO.str().empty()) {
-    O << HeaderO.str();
+  if (PatternsForOpcode.empty()) {
+    O << Header;
     O << "  return false;\n";
     O << "}\n\n";
     O << "#endif // PRINT_ALIAS_INSTR\n";
@@ -1177,15 +1177,15 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
       << "                  const MCSubtargetInfo &STI,\n"
       << "                  unsigned PredicateIndex);\n";
 
-  O << HeaderO.str();
+  O << Header;
   O.indent(2) << "static const PatternsForOpcode OpToPatterns[] = {\n";
-  O << OpcodeO.str();
+  O << PatternsForOpcode;
   O.indent(2) << "};\n\n";
   O.indent(2) << "static const AliasPattern Patterns[] = {\n";
-  O << PatternO.str();
+  O << Patterns;
   O.indent(2) << "};\n\n";
   O.indent(2) << "static const AliasPatternCond Conds[] = {\n";
-  O << CondO.str();
+  O << Conds;
   O.indent(2) << "};\n\n";
   O.indent(2) << "static const char AsmStrings[] =\n";
   for (const auto &P : AsmStrings) {

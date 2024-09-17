@@ -120,11 +120,13 @@ MyLongPointerFromConversion global2;
 
 void initLocalGslPtrWithTempOwner() {
   MyIntPointer p = MyIntOwner{}; // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}}
-  p = MyIntOwner{}; // TODO ?
-  global = MyIntOwner{}; // TODO ?
+  MyIntPointer pp = p = MyIntOwner{}; // expected-warning {{object backing the pointer p will be}}
+  p = MyIntOwner{}; // expected-warning {{object backing the pointer p }}
+  pp = p; // no warning
+  global = MyIntOwner{}; // expected-warning {{object backing the pointer global }}
   MyLongPointerFromConversion p2 = MyLongOwnerWithConversion{}; // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}}
-  p2 = MyLongOwnerWithConversion{}; // TODO ?
-  global2 = MyLongOwnerWithConversion{}; // TODO ?
+  p2 = MyLongOwnerWithConversion{}; // expected-warning {{object backing the pointer p2 }}
+  global2 = MyLongOwnerWithConversion{}; // expected-warning {{object backing the pointer global2 }}
 }
 
 namespace __gnu_cxx {
@@ -170,6 +172,7 @@ struct basic_string_view {
   basic_string_view(const T *);
   const T *begin() const;
 };
+using string_view = basic_string_view<char>;
 
 template<class _Mystr> struct iter {
     iter& operator-=(int);
@@ -188,7 +191,7 @@ struct basic_string {
   operator basic_string_view<T> () const;
   using const_iterator = iter<T>;
 };
-
+using string = basic_string<char>;
 
 template<typename T>
 struct unique_ptr {
@@ -272,6 +275,34 @@ int &danglingRawPtrFromLocal3() {
   return *o; // expected-warning {{reference to stack memory associated with local variable 'o' returned}}
 }
 
+// GH100384
+std::string_view containerWithAnnotatedElements() {
+  std::string_view c1 = std::vector<std::string>().at(0); // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}}
+  c1 = std::vector<std::string>().at(0); // expected-warning {{object backing the pointer}}
+
+  // no warning on constructing from gsl-pointer
+  std::string_view c2 = std::vector<std::string_view>().at(0);
+
+  std::vector<std::string> local;
+  return local.at(0); // expected-warning {{address of stack memory associated with local variable}}
+}
+
+std::string_view localUniquePtr(int i) {
+  std::unique_ptr<std::string> c1;
+  if (i)
+    return *c1; // expected-warning {{address of stack memory associated with local variable}}
+  std::unique_ptr<std::string_view> c2;
+  return *c2; // expect no-warning.
+}
+
+std::string_view localOptional(int i) {
+  std::optional<std::string> o;
+  if (i)
+    return o.value(); // expected-warning {{address of stack memory associated with local variable}}
+  std::optional<std::string_view> abc;
+  return abc.value(); // expect no warning
+}
+
 const char *danglingRawPtrFromTemp() {
   return std::basic_string<char>().c_str(); // expected-warning {{returning address of local temporary object}}
 }
@@ -344,6 +375,12 @@ void handleGslPtrInitsThroughReference2() {
 void handleTernaryOperator(bool cond) {
     std::basic_string<char> def;
     std::basic_string_view<char> v = cond ? def : ""; // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}}
+}
+
+std::string operator+(std::string_view s1, std::string_view s2);
+void danglingStringviewAssignment(std::string_view a1, std::string_view a2) {
+  a1 = std::string(); // expected-warning {{object backing}}
+  a2 = a1 + a1; // expected-warning {{object backing}}
 }
 
 std::reference_wrapper<int> danglingPtrFromNonOwnerLocal() {
@@ -470,3 +507,83 @@ void testForBug49342()
 {
   auto it = std::iter<char>{} - 2; // Used to be false positive.
 }
+
+namespace GH93386 {
+// verify no duplicated diagnostics are emitted.
+struct [[gsl::Pointer]] S {
+  S(const std::vector<int>& abc [[clang::lifetimebound]]);
+};
+
+S test(std::vector<int> a) {
+  return S(a);  // expected-warning {{address of stack memory associated with}}
+}
+
+auto s = S(std::vector<int>()); // expected-warning {{temporary whose address is used as value of local variable}}
+
+// Verify no regression on the follow case.
+std::string_view test2(int i, std::optional<std::string_view> a) {
+  if (i)
+    return std::move(*a);
+  return std::move(a.value());
+}
+
+struct Foo;
+struct FooView {
+  FooView(const Foo& foo [[clang::lifetimebound]]);
+};
+FooView test3(int i, std::optional<Foo> a) {
+  if (i)
+    return *a; // expected-warning {{address of stack memory}}
+  return a.value(); // expected-warning {{address of stack memory}}
+}
+} // namespace GH93386
+
+namespace GH100549 {
+struct UrlAnalyzed {
+  UrlAnalyzed(std::string_view url [[clang::lifetimebound]]);
+};
+std::string StrCat(std::string_view, std::string_view);
+void test1() {
+  UrlAnalyzed url(StrCat("abc", "bcd")); // expected-warning {{object backing the pointer will be destroyed}}
+}
+
+std::string_view ReturnStringView(std::string_view abc [[clang::lifetimebound]]);
+
+void test() {
+  std::string_view svjkk1 = ReturnStringView(StrCat("bar", "x")); // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}}
+}
+} // namespace GH100549
+
+namespace GH108272 {
+template <typename T>
+struct [[gsl::Owner]] StatusOr {
+  const T &value() [[clang::lifetimebound]];
+};
+
+template <typename V>
+class Wrapper1 {
+ public:
+  operator V() const;
+  V value;
+};
+std::string_view test1() {
+  StatusOr<Wrapper1<std::string_view>> k;
+  // Be conservative in this case, as there is not enough information available
+  // to infer the lifetime relationship for the Wrapper1 type.
+  std::string_view good = StatusOr<Wrapper1<std::string_view>>().value();
+  return k.value();
+}
+
+template <typename V>
+class Wrapper2 {
+ public:
+  operator V() const [[clang::lifetimebound]];
+  V value;
+};
+std::string_view test2() {
+  StatusOr<Wrapper2<std::string_view>> k;
+  // We expect dangling issues as the conversion operator is lifetimebound。
+  std::string_view bad = StatusOr<Wrapper2<std::string_view>>().value(); // expected-warning {{temporary whose address is used as value of}}
+  return k.value(); // expected-warning {{address of stack memory associated}}
+}
+} // namespace GH108272

@@ -10,10 +10,11 @@
 #include "include/llvm-libc-macros/linux/fcntl-macros.h"
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/errno/libc_errno.h"
 #include <sys/syscall.h> // For syscall numbers.
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, rename, (const char *oldpath, const char *newpath)) {
   int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_renameat2, AT_FDCWD, oldpath,
@@ -25,4 +26,4 @@ LLVM_LIBC_FUNCTION(int, rename, (const char *oldpath, const char *newpath)) {
   return -1;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

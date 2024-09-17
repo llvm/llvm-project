@@ -419,7 +419,7 @@ std::optional<Expr<SomeType>> NonPointerInitializationExpr(const Symbol &symbol,
     if (converted) {
       auto folded{Fold(context, std::move(*converted))};
       if (IsActuallyConstant(folded)) {
-        int symRank{GetRank(symTS->shape())};
+        int symRank{symTS->Rank()};
         if (IsImpliedShape(symbol)) {
           if (folded.Rank() == symRank) {
             return ArrayConstantBoundChanger{
@@ -442,7 +442,8 @@ std::optional<Expr<SomeType>> NonPointerInitializationExpr(const Symbol &symbol,
                     context, GetRawLowerBounds(context, NamedEntity{symbol}))}
                 .Expand(std::move(folded));
           } else if (auto resultShape{GetShape(context, folded)}) {
-            if (CheckConformance(context.messages(), symTS->shape(),
+            CHECK(symTS->shape()); // Assumed-ranks cannot be initialized.
+            if (CheckConformance(context.messages(), *symTS->shape(),
                     *resultShape, CheckConformanceFlags::None,
                     "initialized object", "initialization expression")
                     .value_or(false /*fail if not known now to conform*/)) {
@@ -492,7 +493,7 @@ std::optional<Expr<SomeType>> NonPointerInitializationExpr(const Symbol &symbol,
       } else {
         context.messages().Say(
             "Initialization expression for '%s' (%s) cannot be computed as a constant value"_err_en_US,
-            symbol.name(), folded.AsFortran());
+            symbol.name(), x.AsFortran());
       }
     } else if (xType) {
       context.messages().Say(
@@ -524,6 +525,11 @@ public:
 
   Result operator()(const semantics::Symbol &symbol) const {
     const auto &ultimate{symbol.GetUltimate()};
+    const auto *object{ultimate.detailsIf<semantics::ObjectEntityDetails>()};
+    bool isInitialized{semantics::IsSaved(ultimate) &&
+        !IsAllocatable(ultimate) && object &&
+        (ultimate.test(Symbol::Flag::InDataStmt) ||
+            object->init().has_value())};
     if (const auto *assoc{
             ultimate.detailsIf<semantics::AssocEntityDetails>()}) {
       return (*this)(assoc->expr());
@@ -553,6 +559,17 @@ public:
       }
     } else if (&symbol.owner() != &scope_ || &ultimate.owner() != &scope_) {
       return std::nullopt; // host association is in play
+    } else if (isInitialized &&
+        context_.languageFeatures().IsEnabled(
+            common::LanguageFeature::SavedLocalInSpecExpr)) {
+      if (!scope_.IsModuleFile() &&
+          context_.languageFeatures().ShouldWarn(
+              common::LanguageFeature::SavedLocalInSpecExpr)) {
+        context_.messages().Say(
+            "specification expression refers to local object '%s' (initialized and saved)"_port_en_US,
+            ultimate.name().ToString());
+      }
+      return std::nullopt;
     } else if (const auto *object{
                    ultimate.detailsIf<semantics::ObjectEntityDetails>()}) {
       if (object->commonBlock()) {
@@ -649,7 +666,8 @@ public:
               return std::holds_alternative<characteristics::DummyProcedure>(
                   dummy.u);
             })};
-        if (iter != procChars->dummyArguments.end()) {
+        if (iter != procChars->dummyArguments.end() &&
+            ultimate.name().ToString() != "__builtin_c_funloc") {
           return "reference to function '"s + ultimate.name().ToString() +
               "' with dummy procedure argument '" + iter->name + '\'';
         }
@@ -779,8 +797,9 @@ bool CheckSpecificationExprHelper::IsPermissibleInquiry(
 template <typename A>
 void CheckSpecificationExpr(const A &x, const semantics::Scope &scope,
     FoldingContext &context, bool forElementalFunctionResult) {
-  if (auto why{CheckSpecificationExprHelper{
-          scope, context, forElementalFunctionResult}(x)}) {
+  CheckSpecificationExprHelper helper{
+      scope, context, forElementalFunctionResult};
+  if (auto why{helper(x)}) {
     context.messages().Say("Invalid specification expression%s: %s"_err_en_US,
         forElementalFunctionResult ? " for elemental function result" : "",
         *why);

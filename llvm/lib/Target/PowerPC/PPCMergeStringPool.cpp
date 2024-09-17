@@ -170,8 +170,9 @@ void PPCMergeStringPool::collectCandidateConstants(Module &M) {
     LLVM_DEBUG(dbgs() << "hasInitializer() " << Global.hasInitializer()
                       << "\n");
 
-    // We can only pool constants.
-    if (!Global.isConstant() || !Global.hasInitializer())
+    // We can only pool non-thread-local constants.
+    if (!Global.isConstant() || !Global.hasInitializer() ||
+        Global.isThreadLocal())
       continue;
 
     // If a global constant has a section we do not try to pool it because
@@ -244,7 +245,7 @@ bool PPCMergeStringPool::mergeModuleStringPool(Module &M) {
     return false;
 
   // Sort the global constants to make access more efficient.
-  llvm::sort(MergeableStrings, CompareConstants);
+  std::sort(MergeableStrings.begin(), MergeableStrings.end(), CompareConstants);
 
   SmallVector<Constant *> ConstantsInStruct;
   for (GlobalVariable *GV : MergeableStrings)

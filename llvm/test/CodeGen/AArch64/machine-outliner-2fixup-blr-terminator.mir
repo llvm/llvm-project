@@ -8,7 +8,7 @@
   define void @f2() #0 { ret void }
   define void @f3() #0 { ret void }
   define void @f4() #0 { ret void }
-  attributes #0 = { minsize noredzone "branch-target-enforcement"="true" }
+  attributes #0 = { minsize noredzone "branch-target-enforcement" }
 ...
 ---
 name: f1

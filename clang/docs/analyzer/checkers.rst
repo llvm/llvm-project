@@ -420,20 +420,55 @@ around, such as ``std::string_view``.
 
 cplusplus.Move (C++)
 """"""""""""""""""""
-Method calls on a moved-from object and copying a moved-from object will be reported.
-
+Find use-after-move bugs in C++. This includes method calls on moved-from
+objects, assignment of a moved-from object, and repeated move of a moved-from
+object.
 
 .. code-block:: cpp
 
-  struct A {
+ struct A {
    void foo() {}
  };
 
- void f() {
+ void f1() {
    A a;
    A b = std::move(a); // note: 'a' became 'moved-from' here
    a.foo();            // warn: method call on a 'moved-from' object 'a'
  }
+
+ void f2() {
+   A a;
+   A b = std::move(a);
+   A c(std::move(a)); // warn: move of an already moved-from object
+ }
+
+ void f3() {
+   A a;
+   A b = std::move(a);
+   b = a; // warn: copy of moved-from object
+ }
+
+The checker option ``WarnOn`` controls on what objects the use-after-move is
+checked:
+
+* The most strict value is ``KnownsOnly``, in this mode only objects are
+  checked whose type is known to be move-unsafe. These include most STL objects
+  (but excluding move-safe ones) and smart pointers.
+* With option value ``KnownsAndLocals`` local variables (of any type) are
+  additionally checked. The idea behind this is that local variables are
+  usually not tempting to be re-used so an use after move is more likely a bug
+  than with member variables.
+* With option value ``All`` any use-after move condition is checked on all
+  kinds of variables, excluding global variables and known move-safe cases.
+
+Default value is ``KnownsAndLocals``.
+
+Calls of methods named ``empty()`` or ``isEmpty()`` are allowed on moved-from
+objects because these methods are considered as move-safe. Functions called
+``reset()``, ``destroy()``, ``clear()``, ``assign``, ``resize``,  ``shrink`` are
+treated as state-reset functions and are allowed on moved-from objects, these
+make the object valid again. This applies to any type of object (not only STL
+ones).
 
 .. _cplusplus-NewDelete:
 
@@ -536,7 +571,7 @@ if ((y = make_int())) {
 nullability
 ^^^^^^^^^^^
 
-Objective C checkers that warn for null pointer passing and dereferencing errors.
+Checkers (mostly Objective C) that warn for null pointer passing and dereferencing errors.
 
 .. _nullability-NullPassedToNonnull:
 
@@ -553,8 +588,8 @@ Warns when a null pointer is passed to a pointer which has a _Nonnull type.
 
 .. _nullability-NullReturnedFromNonnull:
 
-nullability.NullReturnedFromNonnull (ObjC)
-""""""""""""""""""""""""""""""""""""""""""
+nullability.NullReturnedFromNonnull (C, C++, ObjC)
+""""""""""""""""""""""""""""""""""""""""""""""""""
 Warns when a null pointer is returned from a function that has _Nonnull return type.
 
 .. code-block:: objc
@@ -567,6 +602,22 @@ Warns when a null pointer is returned from a function that has _Nonnull return t
    // Warning: nil returned from a method that is expected
    // to return a non-null value
    return result;
+ }
+
+Warns when a null pointer is returned from a function annotated with ``__attribute__((returns_nonnull))``
+
+.. code-block:: cpp
+
+ int global;
+ __attribute__((returns_nonnull)) void* getPtr(void* p);
+
+ void* getPtr(void* p) {
+   if (p) { // forgot to negate the condition
+     return &global;
+   }
+   // Warning: nullptr returned from a function that is expected
+   // to return a non-null value
+   return p;
  }
 
 .. _nullability-NullableDereferenced:
@@ -968,9 +1019,6 @@ array new C++ operator is tainted (potentially attacker controlled).
 If an attacker can inject a large value as the size parameter, memory exhaustion
 denial of service attack can be carried out.
 
-The ``alpha.security.taint.TaintPropagation`` checker also needs to be enabled for
-this checker to give warnings.
-
 The analyzer emits warning only if it cannot prove that the size parameter is
 within reasonable bounds (``<= SIZE_MAX/4``). This functionality partially
 covers the SEI Cert coding standard rule `INT04-C
@@ -978,7 +1026,7 @@ covers the SEI Cert coding standard rule `INT04-C
 
 You can silence this warning either by bound checking the ``size`` parameter, or
 by explicitly marking the ``size`` parameter as sanitized. See the
-:ref:`alpha-security-taint-TaintPropagation` checker for more details.
+:ref:`alpha-security-taint-GenericTaint` checker for an example.
 
 .. code-block:: c
 
@@ -1243,6 +1291,22 @@ security.insecureAPI.DeprecatedOrUnsafeBufferHandling (C)
  void test() {
    char buf [5];
    strncpy(buf, "a", 1); // warn
+ }
+
+.. _security-MmapWriteExec:
+
+security.MmapWriteExec (C)
+""""""""""""""""""""""""""
+Warn on ``mmap()`` calls with both writable and executable access.
+
+.. code-block:: c
+
+ void test(int n) {
+   void *c = mmap(NULL, 32, PROT_READ | PROT_WRITE | PROT_EXEC,
+                  MAP_PRIVATE | MAP_ANON, -1, 0);
+   // warn: Both PROT_WRITE and PROT_EXEC flags are set. This can lead to
+   //       exploitable memory regions, which could be overwritten with malicious
+   //       code
  }
 
 .. _security-putenv-stack-array:
@@ -1671,7 +1735,13 @@ are detected:
 * Invalid 3rd ("``whence``") argument to ``fseek``.
 
 The stream operations are by this checker usually split into two cases, a success
-and a failure case. However, in the case of write operations (like ``fwrite``,
+and a failure case.
+On the success case it also assumes that the current value of ``stdout``,
+``stderr``, or ``stdin`` can't be equal to the file pointer returned by ``fopen``.
+Operations performed on ``stdout``, ``stderr``, or ``stdin`` are not checked by
+this checker in contrast to the streams opened by ``fopen``.
+
+In the case of write operations (like ``fwrite``,
 ``fprintf`` and even ``fsetpos``) this behavior could produce a large amount of
 unwanted reports on projects that don't have error checks around the write
 operations, so by default the checker assumes that write operations always succeed.
@@ -1737,9 +1807,7 @@ are assumed to succeed.)
 **Limitations**
 
 The checker does not track the correspondence between integer file descriptors
-and ``FILE *`` pointers. Operations on standard streams like ``stdin`` are not
-treated specially and are therefore often not recognized (because these streams
-are usually not opened explicitly by the program, and are global variables).
+and ``FILE *`` pointers.
 
 .. _osx-checkers:
 
@@ -2462,19 +2530,49 @@ Check for pointer arithmetic on locations other than array elements.
 
 alpha.core.PointerSub (C)
 """""""""""""""""""""""""
-Check for pointer subtractions on two pointers pointing to different memory chunks.
+Check for pointer subtractions on two pointers pointing to different memory
+chunks. According to the C standard §6.5.6 only subtraction of pointers that
+point into (or one past the end) the same array object is valid (for this
+purpose non-array variables are like arrays of size 1). This checker only
+searches for different memory objects at subtraction, but does not check if the
+array index is correct. Furthermore, only cases are reported where
+stack-allocated objects are involved (no warnings on pointers to memory
+allocated by `malloc`).
 
 .. code-block:: c
 
  void test() {
-   int x, y;
-   int d = &y - &x; // warn
+   int a, b, c[10], d[10];
+   int x = &c[3] - &c[1];
+   x = &d[4] - &c[1]; // warn: 'c' and 'd' are different arrays
+   x = (&a + 1) - &a;
+   x = &b - &a; // warn: 'a' and 'b' are different variables
  }
+
+ struct S {
+   int x[10];
+   int y[10];
+ };
+
+ void test1() {
+   struct S a[10];
+   struct S b;
+   int d = &a[4] - &a[6];
+   d = &a[0].x[3] - &a[0].x[1];
+   d = a[0].y - a[0].x; // warn: 'S.b' and 'S.a' are different objects
+   d = (char *)&b.y - (char *)&b.x; // warn: different members of the same object
+   d = (char *)&b.y - (char *)&b; // warn: object of type S is not the same array as a member of it
+ }
+
+There may be existing applications that use code like above for calculating
+offsets of members in a structure, using pointer subtractions. This is still
+undefined behavior according to the standard and code like this can be replaced
+with the `offsetof` macro.
 
 .. _alpha-core-StackAddressAsyncEscape:
 
-alpha.core.StackAddressAsyncEscape (C)
-""""""""""""""""""""""""""""""""""""""
+alpha.core.StackAddressAsyncEscape (ObjC)
+"""""""""""""""""""""""""""""""""""""""""
 Check that addresses to stack memory do not escape the function that involves dispatch_after or dispatch_async.
 This checker is a part of ``core.StackAddressEscape``, but is temporarily disabled until some false positives are fixed.
 
@@ -2885,65 +2983,6 @@ Warn about buffer overflows (newer checker).
    char c = s[x]; // warn: index is tainted
  }
 
-.. _alpha-security-MallocOverflow:
-
-alpha.security.MallocOverflow (C)
-"""""""""""""""""""""""""""""""""
-Check for overflows in the arguments to ``malloc()``.
-It tries to catch ``malloc(n * c)`` patterns, where:
-
- - ``n``: a variable or member access of an object
- - ``c``: a constant foldable integral
-
-This checker was designed for code audits, so expect false-positive reports.
-One is supposed to silence this checker by ensuring proper bounds checking on
-the variable in question using e.g. an ``assert()`` or a branch.
-
-.. code-block:: c
-
- void test(int n) {
-   void *p = malloc(n * sizeof(int)); // warn
- }
-
- void test2(int n) {
-   if (n > 100) // gives an upper-bound
-     return;
-   void *p = malloc(n * sizeof(int)); // no warning
- }
-
- void test3(int n) {
-   assert(n <= 100 && "Contract violated.");
-   void *p = malloc(n * sizeof(int)); // no warning
- }
-
-Limitations:
-
- - The checker won't warn for variables involved in explicit casts,
-   since that might limit the variable's domain.
-   E.g.: ``(unsigned char)int x`` would limit the domain to ``[0,255]``.
-   The checker will miss the true-positive cases when the explicit cast would
-   not tighten the domain to prevent the overflow in the subsequent
-   multiplication operation.
-
- - It is an AST-based checker, thus it does not make use of the
-   path-sensitive taint-analysis.
-
-.. _alpha-security-MmapWriteExec:
-
-alpha.security.MmapWriteExec (C)
-""""""""""""""""""""""""""""""""
-Warn on mmap() calls that are both writable and executable.
-
-.. code-block:: c
-
- void test(int n) {
-   void *c = mmap(NULL, 32, PROT_READ | PROT_WRITE | PROT_EXEC,
-                  MAP_PRIVATE | MAP_ANON, -1, 0);
-   // warn: Both PROT_WRITE and PROT_EXEC flags are set. This can lead to
-   //       exploitable memory regions, which could be overwritten with malicious
-   //       code
- }
-
 .. _alpha-security-ReturnPtrRange:
 
 alpha.security.ReturnPtrRange (C)
@@ -2976,10 +3015,10 @@ alpha.security.taint
 Checkers implementing
 `taint analysis <https://en.wikipedia.org/wiki/Taint_checking>`_.
 
-.. _alpha-security-taint-TaintPropagation:
+.. _alpha-security-taint-GenericTaint:
 
-alpha.security.taint.TaintPropagation (C, C++)
-""""""""""""""""""""""""""""""""""""""""""""""
+alpha.security.taint.GenericTaint (C, C++)
+""""""""""""""""""""""""""""""""""""""""""
 
 Taint analysis identifies potential security vulnerabilities where the
 attacker can inject malicious data to the program to execute an attack

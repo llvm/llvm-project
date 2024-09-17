@@ -40,6 +40,10 @@
 #  include <sys/resource.h>
 #  include <syslog.h>
 
+#  if SANITIZER_GLIBC
+#    include <gnu/libc-version.h>
+#  endif
+
 #  if !defined(ElfW)
 #    define ElfW(type) Elf_##type
 #  endif
@@ -149,6 +153,19 @@ void GetThreadStackTopAndBottom(bool at_initialization, uptr *stack_top,
       stacksize = kMaxThreadStackSize;
     *stack_top = segment.end;
     *stack_bottom = segment.end - stacksize;
+
+    uptr maxAddr = GetMaxUserVirtualAddress();
+    // Edge case: the stack mapping on some systems may be off-by-one e.g.,
+    //     fffffffdf000-1000000000000 rw-p 00000000 00:00 0 [stack]
+    // instead of:
+    //     fffffffdf000- ffffffffffff
+    // The out-of-range stack_top can result in an invalid shadow address
+    // calculation, since those usually assume the parameters are in range.
+    if (*stack_top == maxAddr + 1)
+      *stack_top = maxAddr;
+    else
+      CHECK_LE(*stack_top, maxAddr);
+
     return;
   }
   uptr stacksize = 0;
@@ -185,17 +202,11 @@ bool SetEnv(const char *name, const char *value) {
 
 __attribute__((unused)) static bool GetLibcVersion(int *major, int *minor,
                                                    int *patch) {
-#  ifdef _CS_GNU_LIBC_VERSION
-  char buf[64];
-  uptr len = confstr(_CS_GNU_LIBC_VERSION, buf, sizeof(buf));
-  if (len >= sizeof(buf))
-    return false;
-  buf[len] = 0;
-  static const char kGLibC[] = "glibc ";
-  if (internal_strncmp(buf, kGLibC, sizeof(kGLibC) - 1) != 0)
-    return false;
-  const char *p = buf + sizeof(kGLibC) - 1;
+#  if SANITIZER_GLIBC
+  const char *p = gnu_get_libc_version();
   *major = internal_simple_strtoll(p, &p, 10);
+  // Caller does not expect anything else.
+  CHECK_EQ(*major, 2);
   *minor = (*p == '.') ? internal_simple_strtoll(p + 1, &p, 10) : 0;
   *patch = (*p == '.') ? internal_simple_strtoll(p + 1, &p, 10) : 0;
   return true;
@@ -221,7 +232,7 @@ void InitTlsSize() {
 
 #    if defined(__aarch64__) || defined(__x86_64__) || \
         defined(__powerpc64__) || defined(__loongarch__)
-  void *get_tls_static_info = dlsym(RTLD_NEXT, "_dl_get_tls_static_info");
+  void *get_tls_static_info = dlsym(RTLD_DEFAULT, "_dl_get_tls_static_info");
   size_t tls_align;
   ((void (*)(size_t *, size_t *))get_tls_static_info)(&g_tls_size, &tls_align);
 #    endif
@@ -239,7 +250,6 @@ void InitTlsSize() {}
 static atomic_uintptr_t thread_descriptor_size;
 
 static uptr ThreadDescriptorSizeFallback() {
-  uptr val = 0;
 #    if defined(__x86_64__) || defined(__i386__) || defined(__arm__)
   int major;
   int minor;
@@ -247,29 +257,30 @@ static uptr ThreadDescriptorSizeFallback() {
   if (GetLibcVersion(&major, &minor, &patch) && major == 2) {
     /* sizeof(struct pthread) values from various glibc versions.  */
     if (SANITIZER_X32)
-      val = 1728;  // Assume only one particular version for x32.
+      return 1728;  // Assume only one particular version for x32.
     // For ARM sizeof(struct pthread) changed in Glibc 2.23.
-    else if (SANITIZER_ARM)
-      val = minor <= 22 ? 1120 : 1216;
-    else if (minor <= 3)
-      val = FIRST_32_SECOND_64(1104, 1696);
-    else if (minor == 4)
-      val = FIRST_32_SECOND_64(1120, 1728);
-    else if (minor == 5)
-      val = FIRST_32_SECOND_64(1136, 1728);
-    else if (minor <= 9)
-      val = FIRST_32_SECOND_64(1136, 1712);
-    else if (minor == 10)
-      val = FIRST_32_SECOND_64(1168, 1776);
-    else if (minor == 11 || (minor == 12 && patch == 1))
-      val = FIRST_32_SECOND_64(1168, 2288);
-    else if (minor <= 14)
-      val = FIRST_32_SECOND_64(1168, 2304);
-    else if (minor < 32)  // Unknown version
-      val = FIRST_32_SECOND_64(1216, 2304);
-    else  // minor == 32
-      val = FIRST_32_SECOND_64(1344, 2496);
+    if (SANITIZER_ARM)
+      return minor <= 22 ? 1120 : 1216;
+    if (minor <= 3)
+      return FIRST_32_SECOND_64(1104, 1696);
+    if (minor == 4)
+      return FIRST_32_SECOND_64(1120, 1728);
+    if (minor == 5)
+      return FIRST_32_SECOND_64(1136, 1728);
+    if (minor <= 9)
+      return FIRST_32_SECOND_64(1136, 1712);
+    if (minor == 10)
+      return FIRST_32_SECOND_64(1168, 1776);
+    if (minor == 11 || (minor == 12 && patch == 1))
+      return FIRST_32_SECOND_64(1168, 2288);
+    if (minor <= 14)
+      return FIRST_32_SECOND_64(1168, 2304);
+    if (minor < 32)  // Unknown version
+      return FIRST_32_SECOND_64(1216, 2304);
+    // minor == 32
+    return FIRST_32_SECOND_64(1344, 2496);
   }
+  return 0;
 #    elif defined(__s390__) || defined(__sparc__)
   // The size of a prefix of TCB including pthread::{specific_1stblock,specific}
   // suffices. Just return offsetof(struct pthread, specific_used), which hasn't
@@ -279,9 +290,9 @@ static uptr ThreadDescriptorSizeFallback() {
   return FIRST_32_SECOND_64(524, 1552);
 #    elif defined(__mips__)
   // TODO(sagarthakur): add more values as per different glibc versions.
-  val = FIRST_32_SECOND_64(1152, 1776);
+  return FIRST_32_SECOND_64(1152, 1776);
 #    elif SANITIZER_LOONGARCH64
-  val = 1856;  // from glibc 2.36
+  return 1856;  // from glibc 2.36
 #    elif SANITIZER_RISCV64
   int major;
   int minor;
@@ -290,20 +301,18 @@ static uptr ThreadDescriptorSizeFallback() {
     // TODO: consider adding an optional runtime check for an unknown (untested)
     // glibc version
     if (minor <= 28)  // WARNING: the highest tested version is 2.29
-      val = 1772;     // no guarantees for this one
-    else if (minor <= 31)
-      val = 1772;  // tested against glibc 2.29, 2.31
-    else
-      val = 1936;  // tested against glibc 2.32
+      return 1772;    // no guarantees for this one
+    if (minor <= 31)
+      return 1772;  // tested against glibc 2.29, 2.31
+    return 1936;    // tested against glibc 2.32
   }
-
+  return 0;
 #    elif defined(__aarch64__)
   // The sizeof (struct pthread) is the same from GLIBC 2.17 to 2.22.
-  val = 1776;
+  return 1776;
 #    elif defined(__powerpc64__)
-  val = 1776;  // from glibc.ppc64le 2.20-8.fc21
+  return 1776;  // from glibc.ppc64le 2.20-8.fc21
 #    endif
-  return val;
 }
 
 uptr ThreadDescriptorSize() {
@@ -613,25 +622,32 @@ uptr GetTlsSize() {
 }
 #  endif
 
-void GetThreadStackAndTls(bool main, uptr *stk_addr, uptr *stk_size,
-                          uptr *tls_addr, uptr *tls_size) {
+void GetThreadStackAndTls(bool main, uptr *stk_begin, uptr *stk_end,
+                          uptr *tls_begin, uptr *tls_end) {
 #  if SANITIZER_GO
   // Stub implementation for Go.
-  *stk_addr = *stk_size = *tls_addr = *tls_size = 0;
+  *stk_begin = 0;
+  *stk_end = 0;
+  *tls_begin = 0;
+  *tls_end = 0;
 #  else
-  GetTls(tls_addr, tls_size);
+  uptr tls_addr = 0;
+  uptr tls_size = 0;
+  GetTls(&tls_addr, &tls_size);
+  *tls_begin = tls_addr;
+  *tls_end = tls_addr + tls_size;
 
   uptr stack_top, stack_bottom;
   GetThreadStackTopAndBottom(main, &stack_top, &stack_bottom);
-  *stk_addr = stack_bottom;
-  *stk_size = stack_top - stack_bottom;
+  *stk_begin = stack_bottom;
+  *stk_end = stack_top;
 
   if (!main) {
     // If stack and tls intersect, make them non-intersecting.
-    if (*tls_addr > *stk_addr && *tls_addr < *stk_addr + *stk_size) {
-      if (*stk_addr + *stk_size < *tls_addr + *tls_size)
-        *tls_size = *stk_addr + *stk_size - *tls_addr;
-      *stk_size = *tls_addr - *stk_addr;
+    if (*tls_begin > *stk_begin && *tls_begin < *stk_end) {
+      if (*stk_end < *tls_end)
+        *tls_end = *stk_end;
+      *stk_end = *tls_begin;
     }
   }
 #  endif

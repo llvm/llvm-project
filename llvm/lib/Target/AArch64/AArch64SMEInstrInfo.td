@@ -71,15 +71,17 @@ let usesCustomInserter = 1 in {
 def SDT_AArch64RDSVL  : SDTypeProfile<1, 1, [SDTCisInt<0>, SDTCisInt<1>]>;
 def AArch64rdsvl : SDNode<"AArch64ISD::RDSVL", SDT_AArch64RDSVL>;
 
-let Predicates = [HasSME] in {
+let Predicates = [HasSMEandIsNonStreamingSafe] in {
 def RDSVLI_XI  : sve_int_read_vl_a<0b0, 0b11111, "rdsvl", /*streaming_sve=*/0b1>;
 def ADDSPL_XXI : sve_int_arith_vl<0b1, "addspl", /*streaming_sve=*/0b1>;
 def ADDSVL_XXI : sve_int_arith_vl<0b0, "addsvl", /*streaming_sve=*/0b1>;
 
+def : Pat<(AArch64rdsvl (i32 simm6_32b:$imm)), (RDSVLI_XI simm6_32b:$imm)>;
+}
+
+let Predicates = [HasSME] in {
 defm ADDHA_MPPZ_S : sme_add_vector_to_tile_u32<0b0, "addha", int_aarch64_sme_addha>;
 defm ADDVA_MPPZ_S : sme_add_vector_to_tile_u32<0b1, "addva", int_aarch64_sme_addva>;
-
-def : Pat<(AArch64rdsvl (i32 simm6_32b:$imm)), (RDSVLI_XI simm6_32b:$imm)>;
 }
 
 let Predicates = [HasSMEI16I64] in {
@@ -138,18 +140,20 @@ defm LD1_MXIPXX : sme_mem_ld_ss<"ld1">;
 defm ST1_MXIPXX : sme_mem_st_ss<"st1">;
 
 //===----------------------------------------------------------------------===//
-// Spill + fill
-//===----------------------------------------------------------------------===//
-
-defm LDR_ZA : sme_fill<"ldr">;
-defm STR_ZA : sme_spill<"str">;
-
-//===----------------------------------------------------------------------===//
 // Move instructions
 //===----------------------------------------------------------------------===//
 
 defm INSERT_MXIPZ  : sme_vector_to_tile<"mova">;
 defm EXTRACT_ZPMXI : sme_tile_to_vector<"mova">;
+} // End let Predicates = [HasSME]
+
+let Predicates = [HasSMEandIsNonStreamingSafe] in {
+//===----------------------------------------------------------------------===//
+// Spill + fill
+//===----------------------------------------------------------------------===//
+
+defm LDR_ZA : sme_fill<"ldr">;
+defm STR_ZA : sme_spill<"str">;
 
 //===----------------------------------------------------------------------===//
 // Zero instruction
@@ -185,7 +189,7 @@ def : Pat<(int_aarch64_sme_set_tpidr2 i64:$val),
 def : Pat<(i64 (int_aarch64_sme_get_tpidr2)),
           (MRS 0xde85)>;
 
-} // End let Predicates = [HasSME]
+} // End let Predicates = [HasSMEandIsNonStreamingSafe]
 
 multiclass CoalescerBarrierPseudo<RegisterClass rc, list<ValueType> vts> {
   def NAME : Pseudo<(outs rc:$dst), (ins rc:$src), []>, Sched<[]> {
@@ -580,11 +584,6 @@ defm SMOPS_MPPZZ_HtoS : sme2_int_mopx_tile<"smops", 0b001, int_aarch64_sme_smops
 defm UMOPA_MPPZZ_HtoS : sme2_int_mopx_tile<"umopa", 0b100, int_aarch64_sme_umopa_za32>;
 defm UMOPS_MPPZZ_HtoS : sme2_int_mopx_tile<"umops", 0b101, int_aarch64_sme_umops_za32>;
 
-defm ZERO_T : sme2_zero_zt<"zero", 0b0001>;
-
-defm LDR_TX : sme2_spill_fill_vector<"ldr", 0b01111100, AArch64_restore_zt>;
-defm STR_TX : sme2_spill_fill_vector<"str", 0b11111100, AArch64_save_zt>;
-
 def MOVT_XTI : sme2_movt_zt_to_scalar<"movt", 0b0011111>;
 def MOVT_TIX : sme2_movt_scalar_to_zt<"movt", 0b0011111>;
 
@@ -710,7 +709,15 @@ def  STNT1D_2Z_STRIDED     : sme2_st_vector_vg2_multi_scalar_scalar<0b11, 0b1,  
 def  STNT1D_4Z_STRIDED     : sme2_st_vector_vg4_multi_scalar_scalar<0b11, 0b1,    ZZZZ_d_strided, GPR64shifted64, "stnt1d">;
 defm STNT1D_2Z_STRIDED_IMM : sme2_st_vector_vg2_multi_scalar_immediate<0b11, 0b1, ZZ_d_strided,   simm4s2, "stnt1d">;
 defm STNT1D_4Z_STRIDED_IMM : sme2_st_vector_vg4_multi_scalar_immediate<0b11, 0b1, ZZZZ_d_strided, simm4s4, "stnt1d">;
-}
+} // End let Predicates = [HasSME2]
+
+
+let Predicates = [HasSME2andIsNonStreamingSafe] in {
+defm ZERO_T : sme2_zero_zt<"zero", 0b0001>;
+
+defm LDR_TX : sme2_spill_fill_vector<"ldr", 0b01111100, AArch64_restore_zt>;
+defm STR_TX : sme2_spill_fill_vector<"str", 0b11111100, AArch64_save_zt>;
+} // End let Predicates = [HasSME2andIsNonStreamingSafe]
 
 let Predicates = [HasSME2, HasSMEI16I64] in {
 defm ADD_VG2_M2ZZ_D  : sme2_dot_mla_add_sub_array_vg2_single<"add", 0b1011010, MatrixOp64, ZZ_d, ZPR4b64, nxv2i64, int_aarch64_sme_add_write_single_za_vg1x2>;
@@ -807,11 +814,12 @@ defm FSUB_VG4_M4Z_D : sme2_multivec_accum_add_sub_vg4<"fsub", 0b1001, MatrixOp64
 }
 
 let Predicates = [HasSME2p1] in {
-defm MOVAZ_ZMI  : sme2p1_movaz_tile_to_vec<"movaz">;
+defm MOVAZ_ZMI  : sme2p1_movaz_tile_to_vec<"movaz", int_aarch64_sme_readz_horiz, int_aarch64_sme_readz_vert,
+                                           int_aarch64_sme_readz_q_horiz, int_aarch64_sme_readz_q_vert>;
 defm MOVAZ_2ZMI  : sme2p1_movaz_tile_to_vec_vg2<"movaz">;
 defm MOVAZ_4ZMI  : sme2p1_movaz_tile_to_vec_vg4<"movaz">;
-defm MOVAZ_VG2_2ZM : sme2_mova_array_to_vec_vg2_multi<0b010, "movaz">;
-defm MOVAZ_VG4_4ZM : sme2_mova_array_to_vec_vg4_multi<0b1100, "movaz">;
+defm MOVAZ_VG2_2ZMXI : sme2_movaz_array_to_vec_vg2_multi<"movaz">;
+defm MOVAZ_VG4_4ZMXI : sme2_movaz_array_to_vec_vg4_multi<"movaz">;
 
 defm ZERO_MXI :  sme2p1_zero_matrix<"zero">;
 
@@ -849,7 +857,8 @@ defm FMOPA_MPPZZ_H : sme2p1_fmop_tile_fp16<"fmopa", 0b0, 0b0, nxv8f16, int_aarch
 defm FMOPS_MPPZZ_H : sme2p1_fmop_tile_fp16<"fmops", 0b0, 0b1, nxv8f16, int_aarch64_sme_mops>;
 }
 
-let Predicates = [HasSME2, HasB16B16] in {
+// SME2 ZA-targeting non-widening BFloat16 instructions
+let Predicates = [HasSMEB16B16] in {
 defm BFADD_VG2_M2Z_H : sme2_multivec_accum_add_sub_vg2<"bfadd", 0b1100, MatrixOp16, ZZ_h_mul_r, nxv8bf16,    int_aarch64_sme_add_za16_vg1x2>;
 defm BFADD_VG4_M4Z_H : sme2_multivec_accum_add_sub_vg4<"bfadd", 0b1100, MatrixOp16, ZZZZ_h_mul_r, nxv8bf16,  int_aarch64_sme_add_za16_vg1x4>;
 defm BFSUB_VG2_M2Z_H : sme2_multivec_accum_add_sub_vg2<"bfsub", 0b1101, MatrixOp16, ZZ_h_mul_r,  nxv8bf16,   int_aarch64_sme_sub_za16_vg1x2>;
@@ -869,6 +878,12 @@ defm BFMLS_VG4_M4ZZ  : sme2_dot_mla_add_sub_array_vg4_single<"bfmls", 0b1111101,
 defm BFMLS_VG2_M2Z2Z : sme2_dot_mla_add_sub_array_vg2_multi<"bfmls", 0b1100011, MatrixOp16, ZZ_h_mul_r, nxv8bf16, int_aarch64_sme_fmls_vg1x2>;
 defm BFMLS_VG4_M4Z4Z : sme2_dot_mla_add_sub_array_vg4_multi<"bfmls", 0b1100011, MatrixOp16, ZZZZ_h_mul_r, nxv8bf16, int_aarch64_sme_fmls_vg1x4>;
 
+defm BFMOPA_MPPZZ_H : sme2p1_fmop_tile_fp16<"bfmopa", 0b1, 0b0, nxv8bf16, int_aarch64_sme_mopa>;
+defm BFMOPS_MPPZZ_H : sme2p1_fmop_tile_fp16<"bfmops", 0b1, 0b1, nxv8bf16, int_aarch64_sme_mops>;
+}
+
+// SME2 Z-targeting non-widening BFloat16 instructions
+let Predicates = [HasSME2, HasSVEB16B16] in {
 defm BFMAX_VG2_2ZZ  : sme2p1_bf_max_min_vector_vg2_single<"bfmax", 0b0010000>;
 defm BFMAX_VG4_4ZZ  : sme2p1_bf_max_min_vector_vg4_single<"bfmax", 0b0010000>;
 defm BFMAX_VG2_2Z2Z : sme2p1_bf_max_min_vector_vg2_multi<"bfmax",  0b0010000>;
@@ -891,9 +906,6 @@ defm BFMINNM_VG4_4Z2Z : sme2p1_bf_max_min_vector_vg4_multi<"bfminnm",  0b0010011
 
 defm BFCLAMP_VG2_2ZZZ: sme2p1_bfclamp_vector_vg2_multi<"bfclamp">;
 defm BFCLAMP_VG4_4ZZZ: sme2p1_bfclamp_vector_vg4_multi<"bfclamp">;
-
-defm BFMOPA_MPPZZ_H : sme2p1_fmop_tile_fp16<"bfmopa", 0b1, 0b0, nxv8bf16, int_aarch64_sme_mopa>;
-defm BFMOPS_MPPZZ_H : sme2p1_fmop_tile_fp16<"bfmops", 0b1, 0b1, nxv8bf16, int_aarch64_sme_mops>;
 }
 
 let Predicates = [HasSME2, HasFP8] in {

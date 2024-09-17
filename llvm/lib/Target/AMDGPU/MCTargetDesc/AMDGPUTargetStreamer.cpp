@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUTargetStreamer.h"
+#include "AMDGPUMCExpr.h"
 #include "AMDGPUMCKernelDescriptor.h"
 #include "AMDGPUPTNote.h"
 #include "Utils/AMDGPUBaseInfo.h"
@@ -19,8 +20,8 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCELFStreamer.h"
-#include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/AMDGPUMetadata.h"
@@ -244,8 +245,13 @@ void AMDGPUTargetAsmStreamer::EmitDirectiveAMDHSACodeObjectVersion(
 }
 
 void AMDGPUTargetAsmStreamer::EmitAMDKernelCodeT(AMDGPUMCKernelCodeT &Header) {
+  auto FoldAndPrint = [&](const MCExpr *Expr, raw_ostream &OS,
+                          const MCAsmInfo *MAI) {
+    printAMDGPUMCExpr(foldAMDGPUMCExpr(Expr, getContext()), OS, MAI);
+  };
+
   OS << "\t.amd_kernel_code_t\n";
-  Header.EmitKernelCodeT(OS, getContext());
+  Header.EmitKernelCodeT(OS, getContext(), FoldAndPrint);
   OS << "\t.end_amd_kernel_code_t\n";
 }
 
@@ -319,8 +325,9 @@ bool AMDGPUTargetAsmStreamer::EmitCodeEnd(const MCSubtargetInfo &STI) {
 
 void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
     const MCSubtargetInfo &STI, StringRef KernelName,
-    const MCKernelDescriptor &KD, uint64_t NextVGPR, uint64_t NextSGPR,
-    bool ReserveVCC, bool ReserveFlatScr) {
+    const MCKernelDescriptor &KD, const MCExpr *NextVGPR,
+    const MCExpr *NextSGPR, const MCExpr *ReserveVCC,
+    const MCExpr *ReserveFlatScr) {
   IsaVersion IVersion = getIsaVersion(STI.getCPU());
   const MCAsmInfo *MAI = getContext().getAsmInfo();
 
@@ -328,27 +335,29 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
 
   auto PrintField = [&](const MCExpr *Expr, uint32_t Shift, uint32_t Mask,
                         StringRef Directive) {
-    int64_t IVal;
     OS << "\t\t" << Directive << ' ';
-    const MCExpr *pgm_rsrc1_bits =
+    const MCExpr *ShiftedAndMaskedExpr =
         MCKernelDescriptor::bits_get(Expr, Shift, Mask, getContext());
-    if (pgm_rsrc1_bits->evaluateAsAbsolute(IVal))
-      OS << static_cast<uint64_t>(IVal);
-    else
-      pgm_rsrc1_bits->print(OS, MAI);
+    const MCExpr *New = foldAMDGPUMCExpr(ShiftedAndMaskedExpr, getContext());
+    printAMDGPUMCExpr(New, OS, MAI);
     OS << '\n';
   };
 
+  auto EmitMCExpr = [&](const MCExpr *Value) {
+    const MCExpr *NewExpr = foldAMDGPUMCExpr(Value, getContext());
+    printAMDGPUMCExpr(NewExpr, OS, MAI);
+  };
+
   OS << "\t\t.amdhsa_group_segment_fixed_size ";
-  KD.group_segment_fixed_size->print(OS, MAI);
+  EmitMCExpr(KD.group_segment_fixed_size);
   OS << '\n';
 
   OS << "\t\t.amdhsa_private_segment_fixed_size ";
-  KD.private_segment_fixed_size->print(OS, MAI);
+  EmitMCExpr(KD.private_segment_fixed_size);
   OS << '\n';
 
   OS << "\t\t.amdhsa_kernarg_size ";
-  KD.kernarg_size->print(OS, MAI);
+  EmitMCExpr(KD.kernarg_size);
   OS << '\n';
 
   PrintField(
@@ -433,8 +442,13 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
              ".amdhsa_system_vgpr_workitem_id");
 
   // These directives are required.
-  OS << "\t\t.amdhsa_next_free_vgpr " << NextVGPR << '\n';
-  OS << "\t\t.amdhsa_next_free_sgpr " << NextSGPR << '\n';
+  OS << "\t\t.amdhsa_next_free_vgpr ";
+  EmitMCExpr(NextVGPR);
+  OS << '\n';
+
+  OS << "\t\t.amdhsa_next_free_sgpr ";
+  EmitMCExpr(NextSGPR);
+  OS << '\n';
 
   if (AMDGPU::isGFX90A(STI)) {
     // MCExpr equivalent of taking the (accum_offset + 1) * 4.
@@ -447,19 +461,20 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
     accum_bits = MCBinaryExpr::createMul(
         accum_bits, MCConstantExpr::create(4, getContext()), getContext());
     OS << "\t\t.amdhsa_accum_offset ";
-    int64_t IVal;
-    if (accum_bits->evaluateAsAbsolute(IVal)) {
-      OS << static_cast<uint64_t>(IVal);
-    } else {
-      accum_bits->print(OS, MAI);
-    }
+    const MCExpr *New = foldAMDGPUMCExpr(accum_bits, getContext());
+    printAMDGPUMCExpr(New, OS, MAI);
     OS << '\n';
   }
 
-  if (!ReserveVCC)
-    OS << "\t\t.amdhsa_reserve_vcc " << ReserveVCC << '\n';
-  if (IVersion.Major >= 7 && !ReserveFlatScr && !hasArchitectedFlatScratch(STI))
-    OS << "\t\t.amdhsa_reserve_flat_scratch " << ReserveFlatScr << '\n';
+  OS << "\t\t.amdhsa_reserve_vcc ";
+  EmitMCExpr(ReserveVCC);
+  OS << '\n';
+
+  if (IVersion.Major >= 7 && !hasArchitectedFlatScratch(STI)) {
+    OS << "\t\t.amdhsa_reserve_flat_scratch ";
+    EmitMCExpr(ReserveFlatScr);
+    OS << '\n';
+  }
 
   switch (CodeObjectVersion) {
   default:
@@ -590,9 +605,9 @@ MCELFStreamer &AMDGPUTargetELFStreamer::getStreamer() {
 // We use it for emitting the accumulated PAL metadata as a .note record.
 // The PAL metadata is reset after it is emitted.
 void AMDGPUTargetELFStreamer::finish() {
-  MCAssembler &MCA = getStreamer().getAssembler();
-  MCA.setELFHeaderEFlags(getEFlags());
-  MCA.getWriter().setOverrideABIVersion(
+  ELFObjectWriter &W = getStreamer().getWriter();
+  W.setELFHeaderEFlags(getEFlags());
+  W.setOverrideABIVersion(
       getELFABIVersion(STI.getTargetTriple(), CodeObjectVersion));
 
   std::string Blob;
@@ -813,10 +828,8 @@ void AMDGPUTargetELFStreamer::emitAMDGPULDS(MCSymbol *Symbol, unsigned Size,
   MCSymbolELF *SymbolELF = cast<MCSymbolELF>(Symbol);
   SymbolELF->setType(ELF::STT_OBJECT);
 
-  if (!SymbolELF->isBindingSet()) {
+  if (!SymbolELF->isBindingSet())
     SymbolELF->setBinding(ELF::STB_GLOBAL);
-    SymbolELF->setExternal(true);
-  }
 
   if (SymbolELF->declareCommon(Size, Alignment, true)) {
     report_fatal_error("Symbol: " + Symbol->getName() +
@@ -915,8 +928,9 @@ bool AMDGPUTargetELFStreamer::EmitCodeEnd(const MCSubtargetInfo &STI) {
 
 void AMDGPUTargetELFStreamer::EmitAmdhsaKernelDescriptor(
     const MCSubtargetInfo &STI, StringRef KernelName,
-    const MCKernelDescriptor &KernelDescriptor, uint64_t NextVGPR,
-    uint64_t NextSGPR, bool ReserveVCC, bool ReserveFlatScr) {
+    const MCKernelDescriptor &KernelDescriptor, const MCExpr *NextVGPR,
+    const MCExpr *NextSGPR, const MCExpr *ReserveVCC,
+    const MCExpr *ReserveFlatScr) {
   auto &Streamer = getStreamer();
   auto &Context = Streamer.getContext();
 

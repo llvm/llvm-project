@@ -60,7 +60,7 @@ typedef struct {
 // CHECK-NEXT:    [[ARGP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR]], i32 4
 // CHECK-NEXT:    store ptr [[ARGP_NEXT]], ptr [[LIST_ADDR]], align 4
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[RETVAL]], ptr align 4 [[ARGP_CUR]], i32 4, i1 false)
-// CHECK-NEXT:    [[COERCE_DIVE:%.*]] = getelementptr inbounds [[STRUCT_ONE_INT_T]], ptr [[RETVAL]], i32 0, i32 0
+// CHECK-NEXT:    [[COERCE_DIVE:%.*]] = getelementptr inbounds nuw [[STRUCT_ONE_INT_T]], ptr [[RETVAL]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[COERCE_DIVE]], align 4
 // CHECK-NEXT:    ret i32 [[TMP0]]
 //
@@ -120,7 +120,7 @@ typedef struct {
 // CHECK-NEXT:    [[ARGP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR_ALIGNED]], i32 8
 // CHECK-NEXT:    store ptr [[ARGP_NEXT]], ptr [[LIST_ADDR]], align 4
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 8 [[RETVAL]], ptr align 8 [[ARGP_CUR_ALIGNED]], i32 8, i1 false)
-// CHECK-NEXT:    [[COERCE_DIVE:%.*]] = getelementptr inbounds [[STRUCT_ONE_DOUBLE_T]], ptr [[RETVAL]], i32 0, i32 0
+// CHECK-NEXT:    [[COERCE_DIVE:%.*]] = getelementptr inbounds nuw [[STRUCT_ONE_DOUBLE_T]], ptr [[RETVAL]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP1:%.*]] = load double, ptr [[COERCE_DIVE]], align 8
 // CHECK-NEXT:    ret double [[TMP1]]
 //
@@ -162,7 +162,7 @@ typedef struct {
 // CHECK-NEXT:    [[ARGP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR]], i32 4
 // CHECK-NEXT:    store ptr [[ARGP_NEXT]], ptr [[LIST_ADDR]], align 4
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[RETVAL]], ptr align 4 [[ARGP_CUR]], i32 1, i1 false)
-// CHECK-NEXT:    [[COERCE_DIVE:%.*]] = getelementptr inbounds [[STRUCT_ONE_CHAR_T]], ptr [[RETVAL]], i32 0, i32 0
+// CHECK-NEXT:    [[COERCE_DIVE:%.*]] = getelementptr inbounds nuw [[STRUCT_ONE_CHAR_T]], ptr [[RETVAL]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[COERCE_DIVE]], align 1
 // CHECK-NEXT:    ret i8 [[TMP0]]
 //
@@ -183,7 +183,7 @@ typedef struct {
 // CHECK-NEXT:    [[ARGP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR]], i32 4
 // CHECK-NEXT:    store ptr [[ARGP_NEXT]], ptr [[LIST_ADDR]], align 4
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 2 [[RETVAL]], ptr align 4 [[ARGP_CUR]], i32 2, i1 false)
-// CHECK-NEXT:    [[COERCE_DIVE:%.*]] = getelementptr inbounds [[STRUCT_ONE_SHORT_T]], ptr [[RETVAL]], i32 0, i32 0
+// CHECK-NEXT:    [[COERCE_DIVE:%.*]] = getelementptr inbounds nuw [[STRUCT_ONE_SHORT_T]], ptr [[RETVAL]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr [[COERCE_DIVE]], align 2
 // CHECK-NEXT:    ret i16 [[TMP0]]
 //
@@ -245,7 +245,8 @@ typedef struct {
 // CHECK-NEXT:    [[ARGP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR]], i32 4
 // CHECK-NEXT:    store ptr [[ARGP_NEXT]], ptr [[LIST_ADDR]], align 4
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[RETVAL]], ptr align 4 [[ARGP_CUR]], i32 4, i1 false)
-// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[RETVAL]], align 4
+// CHECK-NEXT:    [[COERCE_DIVE:%.*]] = getelementptr inbounds nuw [[STRUCT_EMPTY_INT_T]], ptr [[RETVAL]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[COERCE_DIVE]], align 4
 // CHECK-NEXT:    ret i32 [[TMP0]]
 //
 empty_int_t empty_int(__builtin_va_list list) {
@@ -266,7 +267,7 @@ typedef struct {
 // CHECK-NEXT:    [[ARGP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR]], i32 4
 // CHECK-NEXT:    store ptr [[ARGP_NEXT]], ptr [[LIST_ADDR]], align 4
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[RETVAL]], ptr align 4 [[ARGP_CUR]], i32 4, i1 false)
-// CHECK-NEXT:    [[COERCE_DIVE:%.*]] = getelementptr inbounds [[STRUCT_INT_EMPTY_T]], ptr [[RETVAL]], i32 0, i32 0
+// CHECK-NEXT:    [[COERCE_DIVE:%.*]] = getelementptr inbounds nuw [[STRUCT_INT_EMPTY_T]], ptr [[RETVAL]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[COERCE_DIVE]], align 4
 // CHECK-NEXT:    ret i32 [[TMP0]]
 //

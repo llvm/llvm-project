@@ -22,6 +22,8 @@ class AssumptionCache;
 class StringRef;
 class Value;
 class CallInst;
+class DominatorTree;
+class DomConditionCache;
 class DataLayout;
 class Instruction;
 class IRBuilderBase;
@@ -103,6 +105,8 @@ private:
   FortifiedLibCallSimplifier FortifiedSimplifier;
   const DataLayout &DL;
   const TargetLibraryInfo *TLI;
+  DominatorTree *DT;
+  DomConditionCache *DC;
   AssumptionCache *AC;
   OptimizationRemarkEmitter &ORE;
   BlockFrequencyInfo *BFI;
@@ -136,7 +140,8 @@ private:
 
 public:
   LibCallSimplifier(
-      const DataLayout &DL, const TargetLibraryInfo *TLI, AssumptionCache *AC,
+      const DataLayout &DL, const TargetLibraryInfo *TLI, DominatorTree *DT,
+      DomConditionCache *DC, AssumptionCache *AC,
       OptimizationRemarkEmitter &ORE, BlockFrequencyInfo *BFI,
       ProfileSummaryInfo *PSI,
       function_ref<void(Instruction *, Value *)> Replacer =
@@ -205,6 +210,7 @@ private:
   Value *optimizeSinCosPi(CallInst *CI, bool IsSin, IRBuilderBase &B);
   Value *optimizeTrigInversionPairs(CallInst *CI, IRBuilderBase &B);
   Value *optimizeSymmetric(CallInst *CI, LibFunc Func, IRBuilderBase &B);
+  Value *optimizeRemquo(CallInst *CI, IRBuilderBase &B);
   // Wrapper for all floating point library call optimizations
   Value *optimizeFloatingPointLibCall(CallInst *CI, LibFunc Func,
                                       IRBuilderBase &B);
@@ -243,6 +249,9 @@ private:
   Value *optimizeSPrintFString(CallInst *CI, IRBuilderBase &B);
   Value *optimizeSnPrintFString(CallInst *CI, IRBuilderBase &B);
   Value *optimizeFPrintFString(CallInst *CI, IRBuilderBase &B);
+
+  /// Exit functions
+  Value *optimizeExit(CallInst *CI);
 
   /// hasFloatVersion - Checks if there is a float version of the specified
   /// function by checking for an existing function with name FuncName + f

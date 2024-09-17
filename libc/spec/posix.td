@@ -132,6 +132,9 @@ def POSIX : StandardSpec<"POSIX"> {
   PtrType PThreadRWLockTPtr = PtrType<PThreadRWLockTType>;
   RestrictedPtrType RestrictedPThreadRWLockTPtr = RestrictedPtrType<PThreadRWLockTType>;
 
+  NamedType PThreadSpinLockTType = NamedType<"pthread_spinlock_t">;
+  PtrType PThreadSpinLockTPtr = PtrType<PThreadSpinLockTType>;
+
   PtrType PThreadTPtr = PtrType<PThreadTType>;
   RestrictedPtrType RestrictedPThreadTPtr = RestrictedPtrType<PThreadTType>;
 
@@ -220,6 +223,40 @@ def POSIX : StandardSpec<"POSIX"> {
       [], // Types
       [], // Enumerations
       []  // Functions
+  >;
+
+  HeaderSpec DlFcn = HeaderSpec<
+    "dlfcn.h",
+    [
+      Macro<"RTLD_LAZY">,
+      Macro<"RTLD_NOW">,
+      Macro<"RTLD_GLOBAL">,
+      Macro<"RTLD_LOCAL">,
+    ],
+    [],  // Types
+    [], // Enumerations
+    [
+      FunctionSpec<
+          "dlclose",
+          RetValSpec<IntType>,
+          [ArgSpec<VoidPtr>]
+      >,
+      FunctionSpec<
+          "dlerror",
+          RetValSpec<CharPtr>,
+          []
+      >,
+      FunctionSpec<
+          "dlopen",
+          RetValSpec<VoidPtr>,
+          [ArgSpec<ConstCharPtr>, ArgSpec<IntType>]
+      >,
+      FunctionSpec<
+          "dlsym",
+          RetValSpec<VoidPtr>,
+          [ArgSpec<VoidRestrictedPtr>, ArgSpec<ConstCharRestrictedPtr>]
+      >,
+    ]
   >;
 
   HeaderSpec FCntl = HeaderSpec<
@@ -509,6 +546,11 @@ def POSIX : StandardSpec<"POSIX"> {
         >,
         FunctionSpec<
           "getppid",
+          RetValSpec<PidT>,
+          [ArgSpec<VoidType>]
+        >,
+        FunctionSpec<
+          "gettid",
           RetValSpec<PidT>,
           [ArgSpec<VoidType>]
         >,
@@ -1010,6 +1052,7 @@ def POSIX : StandardSpec<"POSIX"> {
         PThreadOnceT,
         PThreadRWLockAttrTType,
         PThreadRWLockTType,
+        PThreadSpinLockTType,
         PThreadStartT,
         PThreadTSSDtorT,
         PThreadTType,
@@ -1292,6 +1335,16 @@ def POSIX : StandardSpec<"POSIX"> {
         [ArgSpec<RestrictedPThreadRWLockTPtr>, ArgSpec<ConstRestrictStructTimeSpecPtr>]
       >,
       FunctionSpec<
+        "pthread_rwlock_clockrdlock",
+        RetValSpec<IntType>,
+        [ArgSpec<RestrictedPThreadRWLockTPtr>, ArgSpec<ClockIdT>, ArgSpec<ConstRestrictStructTimeSpecPtr>]
+      >,
+      FunctionSpec<
+        "pthread_rwlock_clockwrlock",
+        RetValSpec<IntType>,
+        [ArgSpec<RestrictedPThreadRWLockTPtr>, ArgSpec<ClockIdT>, ArgSpec<ConstRestrictStructTimeSpecPtr>]
+      >,
+      FunctionSpec<
         "pthread_rwlock_rdlock",
         RetValSpec<IntType>,
         [ArgSpec<PThreadRWLockTPtr>]
@@ -1311,6 +1364,31 @@ def POSIX : StandardSpec<"POSIX"> {
         RetValSpec<IntType>,
         [ArgSpec<PThreadRWLockTPtr>]
       >,
+      FunctionSpec<
+        "pthread_spin_init",
+        RetValSpec<IntType>,
+        [ArgSpec<PThreadSpinLockTPtr>, ArgSpec<IntType>]
+      >,
+      FunctionSpec<
+        "pthread_spin_destroy",
+        RetValSpec<IntType>,
+        [ArgSpec<PThreadSpinLockTPtr>]
+      >,
+      FunctionSpec<
+        "pthread_spin_lock",
+        RetValSpec<IntType>,
+        [ArgSpec<PThreadSpinLockTPtr>]
+      >,
+      FunctionSpec<
+        "pthread_spin_trylock",
+        RetValSpec<IntType>,
+        [ArgSpec<PThreadSpinLockTPtr>]
+      >,
+      FunctionSpec<
+        "pthread_spin_unlock",
+        RetValSpec<IntType>,
+        [ArgSpec<PThreadSpinLockTPtr>]
+      >
     ]
   >;
 
@@ -1690,6 +1768,7 @@ def POSIX : StandardSpec<"POSIX"> {
     ArpaInet,
     CType,
     Dirent,
+    DlFcn,
     Errno,
     FCntl,
     PThread,

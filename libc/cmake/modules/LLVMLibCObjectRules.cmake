@@ -65,25 +65,6 @@ function(create_object_library fq_target_name)
   target_include_directories(${fq_target_name} PRIVATE ${LIBC_SOURCE_DIR})
   target_compile_options(${fq_target_name} PRIVATE ${compile_options})
 
-  # The NVPTX target is installed as LLVM-IR but the internal testing toolchain
-  # cannot handle it natively. Make a separate internal target for testing.
-  if(LIBC_TARGET_ARCHITECTURE_IS_NVPTX AND NOT LIBC_GPU_TESTS_DISABLED)
-    add_library(
-      ${internal_target_name}
-      EXCLUDE_FROM_ALL
-      OBJECT
-      ${ADD_OBJECT_SRCS}
-      ${ADD_OBJECT_HDRS}
-    )
-    target_include_directories(${internal_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
-    target_include_directories(${internal_target_name} PRIVATE ${LIBC_SOURCE_DIR})
-    target_compile_options(${internal_target_name} PRIVATE ${compile_options}
-                           -fno-lto -march=${LIBC_GPU_TARGET_ARCHITECTURE})
-    set_target_properties(${internal_target_name}
-                          PROPERTIES
-                          CXX_STANDARD ${ADD_OBJECT_CXX_STANDARD})
-  endif()
-
   if(SHOW_INTERMEDIATE_OBJECTS)
     message(STATUS "Adding object library ${fq_target_name}")
     if(${SHOW_INTERMEDIATE_OBJECTS} STREQUAL "DEPS")
@@ -93,11 +74,11 @@ function(create_object_library fq_target_name)
     endif()
   endif()
 
-  if(fq_deps_list)
-    add_dependencies(${fq_target_name} ${fq_deps_list})
-    # Add deps as link libraries to inherit interface compile and link options.
-    target_link_libraries(${fq_target_name} PUBLIC ${fq_deps_list})
-  endif()
+  list(APPEND fq_deps_list libc.src.__support.macros.config)
+  list(REMOVE_DUPLICATES fq_deps_list)
+  add_dependencies(${fq_target_name} ${fq_deps_list})
+  # Add deps as link libraries to inherit interface compile and link options.
+  target_link_libraries(${fq_target_name} PUBLIC ${fq_deps_list})
 
   set_target_properties(
     ${fq_target_name}
@@ -283,12 +264,6 @@ function(create_entrypoint_object fq_target_name)
   add_dependencies(${internal_target_name} ${full_deps_list})
   target_link_libraries(${internal_target_name} ${full_deps_list})
 
-  # The NVPTX target cannot use LTO for the internal targets used for testing.
-  if(LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
-    target_compile_options(${internal_target_name} PRIVATE
-                           -fno-lto -march=${LIBC_GPU_TARGET_ARCHITECTURE})
-  endif()
-
   add_library(
     ${fq_target_name}
     # We want an object library as the objects will eventually get packaged into
@@ -303,6 +278,17 @@ function(create_entrypoint_object fq_target_name)
   target_include_directories(${fq_target_name} PRIVATE ${LIBC_SOURCE_DIR})
   add_dependencies(${fq_target_name} ${full_deps_list})
   target_link_libraries(${fq_target_name} ${full_deps_list})
+
+  # Builtin recognition causes issues when trying to implement the builtin
+  # functions themselves. The GPU backends do not use libcalls so we disable the
+  # known problematic ones on the entrypoints that implement them.
+  if(LIBC_TARGET_OS_IS_GPU)
+    set(libc_builtins bcmp strlen memmem bzero memcmp memcpy memmem memmove
+                      memset strcmp strstr)
+    if(${ADD_ENTRYPOINT_OBJ_NAME} IN_LIST libc_builtins)
+      target_compile_options(${fq_target_name} PRIVATE -fno-builtin-${ADD_ENTRYPOINT_OBJ_NAME})
+    endif()
+  endif()
 
   set_target_properties(
     ${fq_target_name}

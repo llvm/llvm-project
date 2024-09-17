@@ -94,6 +94,18 @@ WebAssemblyTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
   return Cost;
 }
 
+TTI::ReductionShuffle WebAssemblyTTIImpl::getPreferredExpandedReductionShuffle(
+    const IntrinsicInst *II) const {
+
+  switch (II->getIntrinsicID()) {
+  default:
+    break;
+  case Intrinsic::vector_reduce_fadd:
+    return TTI::ReductionShuffle::Pairwise;
+  }
+  return TTI::ReductionShuffle::SplitHalf;
+}
+
 bool WebAssemblyTTIImpl::areInlineCompatible(const Function *Caller,
                                              const Function *Callee) const {
   // Allow inlining only when the Callee has a subset of the Caller's

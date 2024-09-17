@@ -51,7 +51,7 @@ struct X86TileConfig : public MachineFunctionPass {
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
     AU.addRequired<VirtRegMap>();
-    AU.addRequired<LiveIntervals>();
+    AU.addRequired<LiveIntervalsWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -86,7 +86,7 @@ bool X86TileConfig::runOnMachineFunction(MachineFunction &MF) {
   const TargetRegisterInfo *TRI = ST.getRegisterInfo();
   const TargetInstrInfo *TII = ST.getInstrInfo();
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  LiveIntervals &LIS = getAnalysis<LiveIntervals>();
+  LiveIntervals &LIS = getAnalysis<LiveIntervalsWrapperPass>().getLIS();
   VirtRegMap &VRM = getAnalysis<VirtRegMap>();
 
   if (VRM.isShapeMapEmpty())
@@ -128,9 +128,10 @@ bool X86TileConfig::runOnMachineFunction(MachineFunction &MF) {
       continue;
     if (MRI.getRegClass(VirtReg)->getID() != X86::TILERegClassID)
       continue;
-    if (VRM.getPhys(VirtReg) == VirtRegMap::NO_PHYS_REG)
+    MCRegister PhysReg = VRM.getPhys(VirtReg);
+    if (!PhysReg)
       continue;
-    unsigned Index = VRM.getPhys(VirtReg) - X86::TMM0;
+    unsigned Index = PhysReg - X86::TMM0;
     if (!Phys2Virt[Index])
       Phys2Virt[Index] = VirtReg;
   }

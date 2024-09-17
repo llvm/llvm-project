@@ -15,14 +15,17 @@
 #ifndef LLVM_LTO_LTO_H
 #define LLVM_LTO_LTO_H
 
+#include <memory>
+
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/LTO/Config.h"
 #include "llvm/Object/IRSymtab.h"
 #include "llvm/Support/Caching.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/StringSaver.h"
 #include "llvm/Support/thread.h"
 #include "llvm/Transforms/IPO/FunctionAttrs.h"
 #include "llvm/Transforms/IPO/FunctionImport.h"
@@ -62,16 +65,14 @@ void thinLTOInternalizeAndPromoteInIndex(
 
 /// Computes a unique hash for the Module considering the current list of
 /// export/import and other global analysis results.
-/// The hash is produced in \p Key.
-void computeLTOCacheKey(
-    SmallString<40> &Key, const lto::Config &Conf,
-    const ModuleSummaryIndex &Index, StringRef ModuleID,
-    const FunctionImporter::ImportMapTy &ImportList,
+std::string computeLTOCacheKey(
+    const lto::Config &Conf, const ModuleSummaryIndex &Index,
+    StringRef ModuleID, const FunctionImporter::ImportMapTy &ImportList,
     const FunctionImporter::ExportSetTy &ExportList,
     const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes> &ResolvedODR,
     const GVSummaryMapTy &DefinedGlobals,
-    const std::set<GlobalValue::GUID> &CfiFunctionDefs = {},
-    const std::set<GlobalValue::GUID> &CfiFunctionDecls = {});
+    const DenseSet<GlobalValue::GUID> &CfiFunctionDefs = {},
+    const DenseSet<GlobalValue::GUID> &CfiFunctionDecls = {});
 
 namespace lto {
 
@@ -110,7 +111,7 @@ class ThinBackendProc;
 /// information that an LTO client should need in order to do symbol resolution.
 class InputFile {
 public:
-  class Symbol;
+  struct Symbol;
 
 private:
   // FIXME: Remove LTO class friendship once we have bitcode symbol tables.
@@ -134,9 +135,9 @@ public:
   /// Create an InputFile.
   static Expected<std::unique_ptr<InputFile>> create(MemoryBufferRef Object);
 
-  /// The purpose of this class is to only expose the symbol information that an
-  /// LTO client should need in order to do symbol resolution.
-  class Symbol : irsymtab::Symbol {
+  /// The purpose of this struct is to only expose the symbol information that
+  /// an LTO client should need in order to do symbol resolution.
+  struct Symbol : irsymtab::Symbol {
     friend LTO;
 
   public:
@@ -301,7 +302,7 @@ public:
 
   /// Static method that returns a list of libcall symbols that can be generated
   /// by LTO but might not be visible from bitcode symbol table.
-  static ArrayRef<const char*> getRuntimeLibcallSymbols();
+  static SmallVector<const char *> getRuntimeLibcallSymbols(const Triple &TT);
 
 private:
   Config Conf;
@@ -405,10 +406,19 @@ private:
     };
   };
 
+  // GlobalResolutionSymbolSaver allocator.
+  std::unique_ptr<llvm::BumpPtrAllocator> Alloc;
+
+  // Symbol saver for global resolution map.
+  std::unique_ptr<llvm::StringSaver> GlobalResolutionSymbolSaver;
+
   // Global mapping from mangled symbol names to resolutions.
-  // Make this an optional to guard against accessing after it has been reset
+  // Make this an unique_ptr to guard against accessing after it has been reset
   // (to reduce memory after we're done with it).
-  std::optional<StringMap<GlobalResolution>> GlobalResolutions;
+  std::unique_ptr<llvm::DenseMap<StringRef, GlobalResolution>>
+      GlobalResolutions;
+
+  void releaseGlobalResolutionsMemory();
 
   void addModuleToGlobalRes(ArrayRef<InputFile::Symbol> Syms,
                             ArrayRef<SymbolResolution> Res, unsigned Partition,

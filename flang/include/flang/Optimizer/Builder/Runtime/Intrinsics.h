@@ -53,6 +53,10 @@ void genRandomNumber(fir::FirOpBuilder &, mlir::Location, mlir::Value harvest);
 void genRandomSeed(fir::FirOpBuilder &, mlir::Location, mlir::Value size,
                    mlir::Value put, mlir::Value get);
 
+/// generate rename runtime call
+void genRename(fir::FirOpBuilder &builder, mlir::Location loc,
+               mlir::Value path1, mlir::Value path2, mlir::Value status);
+
 /// generate runtime call to transfer intrinsic with no size argument
 void genTransfer(fir::FirOpBuilder &builder, mlir::Location loc,
                  mlir::Value resultBox, mlir::Value sourceBox,

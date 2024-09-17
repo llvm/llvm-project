@@ -6,7 +6,7 @@
 !
 !===------------------------------------------------------------------------===!
 
-include '../include/flang/Runtime/magic-numbers.h'
+#include '../include/flang/Runtime/magic-numbers.h'
 
 ! These naming shenanigans prevent names from Fortran intrinsic modules
 ! from being usable on INTRINSIC statements, and force the program
@@ -102,6 +102,10 @@ module __fortran_builtins
     __builtin_threadIdx, __builtin_blockDim, __builtin_blockIdx, &
     __builtin_gridDim
   integer, parameter, public :: __builtin_warpsize = 32
+  
+  type, public, bind(c) :: __builtin_c_devptr
+    type(__builtin_c_ptr) :: cptr
+  end type
 
   intrinsic :: __builtin_fma
   intrinsic :: __builtin_ieee_is_nan, __builtin_ieee_is_negative, &
@@ -182,7 +186,10 @@ module __fortran_builtins
     __builtin_c_ptr_ne = x%__address /= y%__address
   end function
 
-  function __builtin_c_funloc(x)
+  ! Semantics has some special-case code that allows c_funloc()
+  ! to appear in a specification expression and exempts it
+  ! from the requirement that "x" be a pure dummy procedure.
+  pure function __builtin_c_funloc(x)
     type(__builtin_c_funptr) :: __builtin_c_funloc
     external :: x
     __builtin_c_funloc = __builtin_c_funptr(loc(x))

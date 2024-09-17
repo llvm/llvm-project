@@ -1760,6 +1760,45 @@ bool DIExpression::extractIfOffset(int64_t &Offset) const {
   return false;
 }
 
+bool DIExpression::extractLeadingOffset(
+    int64_t &OffsetInBytes, SmallVectorImpl<uint64_t> &RemainingOps) const {
+  OffsetInBytes = 0;
+  RemainingOps.clear();
+
+  auto SingleLocEltsOpt = getSingleLocationExpressionElements();
+  if (!SingleLocEltsOpt)
+    return false;
+
+  auto ExprOpEnd = expr_op_iterator(SingleLocEltsOpt->end());
+  auto ExprOpIt = expr_op_iterator(SingleLocEltsOpt->begin());
+  while (ExprOpIt != ExprOpEnd) {
+    uint64_t Op = ExprOpIt->getOp();
+    if (Op == dwarf::DW_OP_deref || Op == dwarf::DW_OP_deref_size ||
+        Op == dwarf::DW_OP_deref_type || Op == dwarf::DW_OP_LLVM_fragment ||
+        Op == dwarf::DW_OP_LLVM_extract_bits_zext ||
+        Op == dwarf::DW_OP_LLVM_extract_bits_sext) {
+      break;
+    } else if (Op == dwarf::DW_OP_plus_uconst) {
+      OffsetInBytes += ExprOpIt->getArg(0);
+    } else if (Op == dwarf::DW_OP_constu) {
+      uint64_t Value = ExprOpIt->getArg(0);
+      ++ExprOpIt;
+      if (ExprOpIt->getOp() == dwarf::DW_OP_plus)
+        OffsetInBytes += Value;
+      else if (ExprOpIt->getOp() == dwarf::DW_OP_minus)
+        OffsetInBytes -= Value;
+      else
+        return false;
+    } else {
+      // Not a const plus/minus operation or deref.
+      return false;
+    }
+    ++ExprOpIt;
+  }
+  RemainingOps.append(ExprOpIt.getBase(), ExprOpEnd.getBase());
+  return true;
+}
+
 bool DIExpression::hasAllLocationOps(unsigned N) const {
   SmallDenseSet<uint64_t, 4> SeenOps;
   for (auto ExprOp : expr_ops())
@@ -1822,7 +1861,7 @@ DIExpression *DIExpression::appendOpsToArg(const DIExpression *Expr,
               [](auto Op) { return Op.getOp() == dwarf::DW_OP_LLVM_arg; })) {
     assert(ArgNo == 0 &&
            "Location Index must be 0 for a non-variadic expression.");
-    SmallVector<uint64_t, 8> NewOps(Ops.begin(), Ops.end());
+    SmallVector<uint64_t, 8> NewOps(Ops);
     return DIExpression::prependOpcodes(Expr, NewOps, StackValue);
   }
 
@@ -2050,6 +2089,75 @@ std::optional<DIExpression *> DIExpression::createFragmentExpression(
     Ops.push_back(SizeInBits);
   }
   return DIExpression::get(Expr->getContext(), Ops);
+}
+
+/// See declaration for more info.
+bool DIExpression::calculateFragmentIntersect(
+    const DataLayout &DL, const Value *SliceStart, uint64_t SliceOffsetInBits,
+    uint64_t SliceSizeInBits, const Value *DbgPtr, int64_t DbgPtrOffsetInBits,
+    int64_t DbgExtractOffsetInBits, DIExpression::FragmentInfo VarFrag,
+    std::optional<DIExpression::FragmentInfo> &Result,
+    int64_t &OffsetFromLocationInBits) {
+
+  if (VarFrag.SizeInBits == 0)
+    return false; // Variable size is unknown.
+
+  // Difference between mem slice start and the dbg location start.
+  // 0   4   8   12   16 ...
+  // |       |
+  // dbg location start
+  //         |
+  //         mem slice start
+  // Here MemStartRelToDbgStartInBits is 8. Note this can be negative.
+  int64_t MemStartRelToDbgStartInBits;
+  {
+    auto MemOffsetFromDbgInBytes = SliceStart->getPointerOffsetFrom(DbgPtr, DL);
+    if (!MemOffsetFromDbgInBytes)
+      return false; // Can't calculate difference in addresses.
+    // Difference between the pointers.
+    MemStartRelToDbgStartInBits = *MemOffsetFromDbgInBytes * 8;
+    // Add the difference of the offsets.
+    MemStartRelToDbgStartInBits +=
+        SliceOffsetInBits - (DbgPtrOffsetInBits + DbgExtractOffsetInBits);
+  }
+
+  // Out-param. Invert offset to get offset from debug location.
+  OffsetFromLocationInBits = -MemStartRelToDbgStartInBits;
+
+  // Check if the variable fragment sits outside (before) this memory slice.
+  int64_t MemEndRelToDbgStart = MemStartRelToDbgStartInBits + SliceSizeInBits;
+  if (MemEndRelToDbgStart < 0) {
+    Result = {0, 0}; // Out-param.
+    return true;
+  }
+
+  // Work towards creating SliceOfVariable which is the bits of the variable
+  // that the memory region covers.
+  // 0   4   8   12   16 ...
+  // |       |
+  // dbg location start with VarFrag offset=32
+  //         |
+  //         mem slice start: SliceOfVariable offset=40
+  int64_t MemStartRelToVarInBits =
+      MemStartRelToDbgStartInBits + VarFrag.OffsetInBits;
+  int64_t MemEndRelToVarInBits = MemStartRelToVarInBits + SliceSizeInBits;
+  // If the memory region starts before the debug location the fragment
+  // offset would be negative, which we can't encode. Limit those to 0. This
+  // is fine because those bits necessarily don't overlap with the existing
+  // variable fragment.
+  int64_t MemFragStart = std::max<int64_t>(0, MemStartRelToVarInBits);
+  int64_t MemFragSize =
+      std::max<int64_t>(0, MemEndRelToVarInBits - MemFragStart);
+  DIExpression::FragmentInfo SliceOfVariable(MemFragSize, MemFragStart);
+
+  // Intersect the memory region fragment with the variable location fragment.
+  DIExpression::FragmentInfo TrimmedSliceOfVariable =
+      DIExpression::FragmentInfo::intersect(SliceOfVariable, VarFrag);
+  if (TrimmedSliceOfVariable == VarFrag)
+    Result = std::nullopt; // Out-param.
+  else
+    Result = TrimmedSliceOfVariable; // Out-param.
+  return true;
 }
 
 std::pair<DIExpression *, const ConstantInt *>

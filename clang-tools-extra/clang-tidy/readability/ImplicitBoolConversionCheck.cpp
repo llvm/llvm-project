@@ -66,7 +66,8 @@ bool isUnaryLogicalNotOperator(const Stmt *Statement) {
 
 void fixGenericExprCastToBool(DiagnosticBuilder &Diag,
                               const ImplicitCastExpr *Cast, const Stmt *Parent,
-                              ASTContext &Context) {
+                              ASTContext &Context,
+                              bool UseUpperCaseLiteralSuffix) {
   // In case of expressions like (! integer), we should remove the redundant not
   // operator and use inverted comparison (integer == 0).
   bool InvertComparison =
@@ -112,8 +113,13 @@ void fixGenericExprCastToBool(DiagnosticBuilder &Diag,
     EndLocInsertion += " != ";
   }
 
-  EndLocInsertion += getZeroLiteralToCompareWithForType(
+  const StringRef ZeroLiteral = getZeroLiteralToCompareWithForType(
       Cast->getCastKind(), SubExpr->getType(), Context);
+
+  if (UseUpperCaseLiteralSuffix)
+    EndLocInsertion += ZeroLiteral.upper();
+  else
+    EndLocInsertion += ZeroLiteral;
 
   if (NeedOuterParens) {
     EndLocInsertion += ")";
@@ -248,12 +254,15 @@ ImplicitBoolConversionCheck::ImplicitBoolConversionCheck(
     StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       AllowIntegerConditions(Options.get("AllowIntegerConditions", false)),
-      AllowPointerConditions(Options.get("AllowPointerConditions", false)) {}
+      AllowPointerConditions(Options.get("AllowPointerConditions", false)),
+      UseUpperCaseLiteralSuffix(
+          Options.get("UseUpperCaseLiteralSuffix", false)) {}
 
 void ImplicitBoolConversionCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "AllowIntegerConditions", AllowIntegerConditions);
   Options.store(Opts, "AllowPointerConditions", AllowPointerConditions);
+  Options.store(Opts, "UseUpperCaseLiteralSuffix", UseUpperCaseLiteralSuffix);
 }
 
 void ImplicitBoolConversionCheck::registerMatchers(MatchFinder *Finder) {
@@ -378,7 +387,8 @@ void ImplicitBoolConversionCheck::handleCastToBool(const ImplicitCastExpr *Cast,
   if (!EquivalentLiteral.empty()) {
     Diag << tooling::fixit::createReplacement(*Cast, EquivalentLiteral);
   } else {
-    fixGenericExprCastToBool(Diag, Cast, Parent, Context);
+    fixGenericExprCastToBool(Diag, Cast, Parent, Context,
+                             UseUpperCaseLiteralSuffix);
   }
 }
 
@@ -392,8 +402,16 @@ void ImplicitBoolConversionCheck::handleCastFromBool(
 
   if (const auto *BoolLiteral =
           dyn_cast<CXXBoolLiteralExpr>(Cast->getSubExpr()->IgnoreParens())) {
-    Diag << tooling::fixit::createReplacement(
-        *Cast, getEquivalentForBoolLiteral(BoolLiteral, DestType, Context));
+
+    const auto EquivalentForBoolLiteral =
+        getEquivalentForBoolLiteral(BoolLiteral, DestType, Context);
+    if (UseUpperCaseLiteralSuffix)
+      Diag << tooling::fixit::createReplacement(
+          *Cast, EquivalentForBoolLiteral.upper());
+    else
+      Diag << tooling::fixit::createReplacement(*Cast,
+                                                EquivalentForBoolLiteral);
+
   } else {
     fixGenericExprCastFromBool(Diag, Cast, Context, DestType.getAsString());
   }

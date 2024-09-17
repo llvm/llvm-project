@@ -707,6 +707,7 @@ MALLOC
 ```
 CALL FDATE(TIME)
 CALL GETLOG(USRNAME)
+CALL GETENV(NAME [, VALUE, LENGTH, STATUS, TRIM_NAME, ERRMSG ])
 ```
 
 ## Intrinsic Procedure Name Resolution
@@ -768,7 +769,7 @@ This phase currently supports all the intrinsic procedures listed above but the 
 | Intrinsic subroutines |MVBITS (elemental), CPU_TIME, DATE_AND_TIME, EVENT_QUERY, EXECUTE_COMMAND_LINE, GET_COMMAND, GET_COMMAND_ARGUMENT, GET_ENVIRONMENT_VARIABLE, MOVE_ALLOC, RANDOM_INIT, RANDOM_NUMBER, RANDOM_SEED, SIGNAL, SLEEP, SYSTEM, SYSTEM_CLOCK |
 | Atomic intrinsic subroutines | ATOMIC_ADD |
 | Collective intrinsic subroutines | CO_REDUCE |
-| Library subroutines | FDATE, GETLOG |
+| Library subroutines | FDATE, GETLOG, GETENV |
 
 
 ### Intrinsic Function Folding
@@ -893,16 +894,17 @@ used in constant expressions have currently no folding support at all.
 ##### `CMDSTAT`:
 
 - Synchronous execution:
-  - -2: No error condition occurs, but `WAIT` is present with the value `false`, and the processor does not support asynchronous execution.
-  - -1: The processor does not support command line execution.
+  - -2: `ASYNC_NO_SUPPORT_ERR` - No error condition occurs, but `WAIT` is present with the value `false`, and the processor does not support asynchronous execution.
+  - -1: `NO_SUPPORT_ERR` - The processor does not support command line execution. (system returns -1 with errno `ENOENT`)
+  - 0: `CMD_EXECUTED` - Command executed with no error.
   - \+ (positive value): An error condition occurs.
-    - 1: Fork Error (occurs only on POSIX-compatible systems).
-    - 2: Execution Error (command exits with status -1).
-    - 3: Invalid Command Error (determined by the exit code depending on the system).
-      - On Windows: exit code is 1.
-      - On POSIX-compatible systems: exit code is 127 or 126.
-    - 4: Signal error (either stopped or killed by signal, occurs only on POSIX-compatible systems).
-  - 0: Otherwise.
+    - 1: `FORK_ERR` - Fork Error (occurs only on POSIX-compatible systems).
+    - 2: `EXECL_ERR` - Execution Error (system returns -1 with other errno).
+    - 3: `COMMAND_EXECUTION_ERR` - Invalid Command Error (exit code 1).
+    - 4: `COMMAND_CANNOT_EXECUTE_ERR` - Command Cannot Execute Error (Linux exit code 126).
+    - 5: `COMMAND_NOT_FOUND_ERR` - Command Not Found Error (Linux exit code 127).
+    - 6: `INVALID_CL_ERR` - Invalid Command Line Error (covers all other non-zero exit codes).
+    - 7: `SIGNAL_ERR` - Signal error (either stopped or killed by signal, occurs only on POSIX-compatible systems).
 - Asynchronous execution:
   - 0 will always be assigned.
 
@@ -999,3 +1001,62 @@ PROGRAM example_getcwd
   PRINT *, status
 END PROGRAM
 ```
+
+### Non-standard Intrinsics: RENAME
+`RENAME(OLD, NEW[, STATUS])` renames/moves a file on the filesystem.
+
+This intrinsic is provided in both subroutine and function form; however, only one form can be used in any given program unit.
+
+#### Usage and Info
+
+- **Standard:** GNU extension
+- **Class:** Subroutine, function
+- **Syntax:** `CALL RENAME(SRC, DST[, STATUS])`
+- **Arguments:**
+- **Return value** status code (0: success, non-zero for errors)
+
+| Argument | Description                       |
+|----------|-----------------------------------|
+| `SRC`    | Source path                       |
+| `DST`    | Destination path                  |
+| `STATUS` | Status code (for subroutine form) |
+
+The status code returned by both the subroutine and function form corresponds to the value of `errno` if the invocation of `rename(2)` was not successful.
+
+#### Example
+
+Function form:
+```
+program rename_func
+    implicit none
+    integer :: status
+    status = rename('src', 'dst')
+    print *, 'status:', status
+    status = rename('dst', 'src')
+    print *, 'status:', status
+end program rename_func
+```
+
+Subroutine form:
+```
+program rename_proc
+    implicit none
+    integer :: status
+    call rename('src', 'dst', status)
+    print *, 'status:', status
+    call rename('dst', 'src')
+end program rename_proc
+```
+
+### Non-standard Intrinsics: SECOND
+This intrinsic is an alias for `CPU_TIME`: supporting both a subroutine and a
+function form.
+
+#### Usage and Info
+
+- **Standard:** GNU extension
+- **Class:** Subroutine, function
+- **Syntax:** `CALL SECOND(TIME)` or `TIME = SECOND()`
+- **Arguments:** `TIME` - a REAL value into which the elapsed CPU time in
+                          seconds is written
+- **RETURN value:** same as TIME argument

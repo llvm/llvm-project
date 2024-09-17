@@ -124,6 +124,13 @@ struct PortableMemInfoBlock {
   OS << "        " << #Name << ": " << Name << "\n";
 #include "llvm/ProfileData/MIBEntryDef.inc"
 #undef MIBEntryDef
+    if (AccessHistogramSize > 0) {
+      OS << "        " << "AccessHistogramValues" << ":";
+      for (uint32_t I = 0; I < AccessHistogramSize; ++I) {
+        OS << " " << ((uint64_t *)AccessHistogram)[I];
+      }
+      OS << "\n";
+    }
   }
 
   // Return the schema, only for unit tests.
@@ -345,7 +352,7 @@ struct IndexedAllocationInfo {
   IndexedAllocationInfo(ArrayRef<FrameId> CS, CallStackId CSId,
                         const MemInfoBlock &MB,
                         const MemProfSchema &Schema = getFullSchema())
-      : CallStack(CS.begin(), CS.end()), CSId(CSId), Info(MB, Schema) {}
+      : CallStack(CS), CSId(CSId), Info(MB, Schema) {}
 
   // Returns the size in bytes when this allocation info struct is serialized.
   size_t serializedSize(const MemProfSchema &Schema,

@@ -594,12 +594,12 @@ vpxor           (%rax), %ymm1, %ymm2
 # CHECK-NEXT:  2      12    0.50    *                   vpmaddwd	(%rax), %ymm1, %ymm2
 # CHECK-NEXT:  2      7     0.50    *                   vpmaskmovd	(%rax), %xmm0, %xmm2
 # CHECK-NEXT:  2      8     0.50    *                   vpmaskmovd	(%rax), %ymm0, %ymm2
-# CHECK-NEXT:  2      2     1.00    *      *            vpmaskmovd	%xmm0, %xmm1, (%rax)
-# CHECK-NEXT:  2      2     1.00    *      *            vpmaskmovd	%ymm0, %ymm1, (%rax)
+# CHECK-NEXT:  3      2     1.00    *      *            vpmaskmovd	%xmm0, %xmm1, (%rax)
+# CHECK-NEXT:  3      2     1.00    *      *            vpmaskmovd	%ymm0, %ymm1, (%rax)
 # CHECK-NEXT:  2      7     0.50    *                   vpmaskmovq	(%rax), %xmm0, %xmm2
 # CHECK-NEXT:  2      8     0.50    *                   vpmaskmovq	(%rax), %ymm0, %ymm2
-# CHECK-NEXT:  2      2     1.00    *      *            vpmaskmovq	%xmm0, %xmm1, (%rax)
-# CHECK-NEXT:  2      2     1.00    *      *            vpmaskmovq	%ymm0, %ymm1, (%rax)
+# CHECK-NEXT:  3      2     1.00    *      *            vpmaskmovq	%xmm0, %xmm1, (%rax)
+# CHECK-NEXT:  3      2     1.00    *      *            vpmaskmovq	%ymm0, %ymm1, (%rax)
 # CHECK-NEXT:  1      1     0.50                        vpmaxsb	%ymm0, %ymm1, %ymm2
 # CHECK-NEXT:  2      8     0.50    *                   vpmaxsb	(%rax), %ymm1, %ymm2
 # CHECK-NEXT:  1      1     0.50                        vpmaxsd	%ymm0, %ymm1, %ymm2

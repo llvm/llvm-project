@@ -47,15 +47,12 @@ void UseStdFormatCheck::registerPPCallbacks(const SourceManager &SM,
 }
 
 void UseStdFormatCheck::registerMatchers(MatchFinder *Finder) {
-  auto CharPointerType =
-      hasType(pointerType(pointee(matchers::isSimpleChar())));
   Finder->addMatcher(
-      callExpr(
-          argumentCountAtLeast(1), hasArgument(0, stringLiteral(isOrdinary())),
-          callee(functionDecl(
-                     unless(cxxMethodDecl()), hasParameter(0, CharPointerType),
-                     matchers::matchesAnyListedName(StrFormatLikeFunctions))
-                     .bind("func_decl")))
+      callExpr(argumentCountAtLeast(1),
+               hasArgument(0, stringLiteral(isOrdinary())),
+               callee(functionDecl(matchers::matchesAnyListedName(
+                                       StrFormatLikeFunctions))
+                          .bind("func_decl")))
           .bind("strformat"),
       this);
 }
@@ -95,7 +92,8 @@ void UseStdFormatCheck::check(const MatchFinder::MatchResult &Result) {
       diag(StrFormatCall->getBeginLoc(), "use '%0' instead of %1")
       << ReplacementFormatFunction << OldFunction->getIdentifier();
   Diag << FixItHint::CreateReplacement(
-      CharSourceRange::getTokenRange(StrFormatCall->getSourceRange()),
+      CharSourceRange::getTokenRange(StrFormatCall->getExprLoc(),
+                                     StrFormatCall->getEndLoc()),
       ReplacementFormatFunction);
   Converter.applyFixes(Diag, *Result.SourceManager);
 

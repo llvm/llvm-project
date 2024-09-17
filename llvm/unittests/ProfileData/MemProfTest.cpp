@@ -247,7 +247,7 @@ TEST(MemProf, FillsValue) {
 TEST(MemProf, PortableWrapper) {
   MemInfoBlock Info(/*size=*/16, /*access_count=*/7, /*alloc_timestamp=*/1000,
                     /*dealloc_timestamp=*/2000, /*alloc_cpu=*/3,
-                    /*dealloc_cpu=*/4);
+                    /*dealloc_cpu=*/4, /*Histogram=*/0, /*HistogramSize=*/0);
 
   const auto Schema = llvm::memprof::getFullSchema();
   PortableMemInfoBlock WriteBlock(Info, Schema);
@@ -255,7 +255,6 @@ TEST(MemProf, PortableWrapper) {
   std::string Buffer;
   llvm::raw_string_ostream OS(Buffer);
   WriteBlock.serialize(Schema, OS);
-  OS.flush();
 
   PortableMemInfoBlock ReadBlock(
       Schema, reinterpret_cast<const unsigned char *>(Buffer.data()));
@@ -276,7 +275,7 @@ TEST(MemProf, RecordSerializationRoundTripVersion0And1) {
 
   MemInfoBlock Info(/*size=*/16, /*access_count=*/7, /*alloc_timestamp=*/1000,
                     /*dealloc_timestamp=*/2000, /*alloc_cpu=*/3,
-                    /*dealloc_cpu=*/4);
+                    /*dealloc_cpu=*/4, /*Histogram=*/0, /*HistogramSize=*/0);
 
   llvm::SmallVector<llvm::SmallVector<FrameId>> AllocCallStacks = {
       {0x123, 0x345}, {0x123, 0x567}};
@@ -296,7 +295,6 @@ TEST(MemProf, RecordSerializationRoundTripVersion0And1) {
   std::string Buffer;
   llvm::raw_string_ostream OS(Buffer);
   Record.serialize(Schema, OS, llvm::memprof::Version0);
-  OS.flush();
 
   const IndexedMemProfRecord GotRecord = IndexedMemProfRecord::deserialize(
       Schema, reinterpret_cast<const unsigned char *>(Buffer.data()),
@@ -310,7 +308,7 @@ TEST(MemProf, RecordSerializationRoundTripVerion2) {
 
   MemInfoBlock Info(/*size=*/16, /*access_count=*/7, /*alloc_timestamp=*/1000,
                     /*dealloc_timestamp=*/2000, /*alloc_cpu=*/3,
-                    /*dealloc_cpu=*/4);
+                    /*dealloc_cpu=*/4, /*Histogram=*/0, /*HistogramSize=*/0);
 
   llvm::SmallVector<llvm::memprof::CallStackId> CallStackIds = {0x123, 0x456};
 
@@ -326,7 +324,6 @@ TEST(MemProf, RecordSerializationRoundTripVerion2) {
   std::string Buffer;
   llvm::raw_string_ostream OS(Buffer);
   Record.serialize(Schema, OS, llvm::memprof::Version2);
-  OS.flush();
 
   const IndexedMemProfRecord GotRecord = IndexedMemProfRecord::deserialize(
       Schema, reinterpret_cast<const unsigned char *>(Buffer.data()),
@@ -378,7 +375,6 @@ TEST(MemProf, RecordSerializationRoundTripVersion2HotColdSchema) {
   std::string Buffer;
   llvm::raw_string_ostream OS(Buffer);
   Record.serialize(Schema, OS, llvm::memprof::Version2);
-  OS.flush();
 
   const IndexedMemProfRecord GotRecord = IndexedMemProfRecord::deserialize(
       Schema, reinterpret_cast<const unsigned char *>(Buffer.data()),

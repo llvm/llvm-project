@@ -16,30 +16,15 @@ if(NOT LLVM_LIBC_FULL_BUILD)
                       "GPU.")
 endif()
 
-# Identify the program used to package multiple images into a single binary.
-get_filename_component(compiler_path ${CMAKE_CXX_COMPILER} DIRECTORY)
-if(TARGET clang-offload-packager)
-  get_target_property(LIBC_CLANG_OFFLOAD_PACKAGER clang-offload-packager LOCATION)
-else()
-  find_program(LIBC_CLANG_OFFLOAD_PACKAGER
-               NAMES clang-offload-packager NO_DEFAULT_PATH
-               PATHS ${LLVM_BINARY_DIR}/bin ${compiler_path})
-  if(NOT LIBC_CLANG_OFFLOAD_PACKAGER)
-    message(FATAL_ERROR "Cannot find the 'clang-offload-packager' for the GPU "
-                        "build")
-  endif()
+# Set the required flags globally so standard CMake utilities can compile.
+if(LIBC_TARGET_TRIPLE)
+  set(CMAKE_REQUIRED_FLAGS "--target=${LIBC_TARGET_TRIPLE}")
 endif()
-
-# Identify llvm-link program so we can merge the output IR into a single blob.
-if(TARGET llvm-link)
-  get_target_property(LIBC_LLVM_LINK llvm-link LOCATION)
-else()
-  find_program(LIBC_LLVM_LINK
-               NAMES llvm-link NO_DEFAULT_PATH
-               PATHS ${LLVM_BINARY_DIR}/bin ${compiler_path})
-  if(NOT LIBC_LLVM_LINK)
-    message(FATAL_ERROR "Cannot find 'llvm-link' for the GPU build")
-  endif()
+if(LIBC_TARGET_ARCHITECTURE_IS_AMDGPU)
+  set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nogpulib -nostdlib")
+elseif(LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
+  set(CMAKE_REQUIRED_FLAGS
+      "${CMAKE_REQUIRED_FLAGS} -flto -c -Wno-unused-command-line-argument -nostdlib")
 endif()
 
 # Optionally set up a job pool to limit the number of GPU tests run in parallel.
@@ -56,39 +41,9 @@ endif()
 
 set(LIBC_GPU_TEST_ARCHITECTURE "" CACHE STRING "Architecture for the GPU tests")
 if(LIBC_TARGET_ARCHITECTURE_IS_AMDGPU)
-  # Identify any locally installed AMD GPUs on the system using 'amdgpu-arch'.
-  if(TARGET amdgpu-arch)
-    get_target_property(LIBC_AMDGPU_ARCH amdgpu-arch LOCATION)
-  else()
-    find_program(LIBC_AMDGPU_ARCH
-                 NAMES amdgpu-arch NO_DEFAULT_PATH
-                 PATHS ${LLVM_BINARY_DIR}/bin ${compiler_path})
-  endif()
-  if(LIBC_AMDGPU_ARCH)
-    execute_process(COMMAND ${LIBC_AMDGPU_ARCH}
-                    OUTPUT_VARIABLE arch_tool_output
-                    ERROR_QUIET OUTPUT_STRIP_TRAILING_WHITESPACE)
-    if(arch_tool_output MATCHES "^gfx[0-9]+")
-      set(PLATFORM_HAS_GPU TRUE)
-    endif()
-  endif()
+  check_cxx_compiler_flag(-mcpu=native PLATFORM_HAS_GPU)
 elseif(LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
-  # Identify any locally installed NVIDIA GPUs on the system using 'nvptx-arch'.
-  if(TARGET nvptx-arch)
-    get_target_property(LIBC_NVPTX_ARCH nvptx-arch LOCATION)
-  else()
-    find_program(LIBC_NVPTX_ARCH
-                 NAMES nvptx-arch NO_DEFAULT_PATH
-                 PATHS ${LLVM_BINARY_DIR}/bin ${compiler_path})
-  endif()
-  if(LIBC_NVPTX_ARCH)
-    execute_process(COMMAND ${LIBC_NVPTX_ARCH}
-                    OUTPUT_VARIABLE arch_tool_output
-                    ERROR_QUIET OUTPUT_STRIP_TRAILING_WHITESPACE)
-    if(arch_tool_output MATCHES "^sm_[0-9]+")
-      set(PLATFORM_HAS_GPU TRUE)
-    endif()
-  endif()
+  check_cxx_compiler_flag(-march=native PLATFORM_HAS_GPU)
 endif()
 
 set(gpu_test_architecture "")
@@ -96,7 +51,7 @@ if(DEFINED LLVM_TARGETS_TO_BUILD AND LIBC_TARGET_ARCHITECTURE_IS_AMDGPU
    AND NOT "AMDGPU" IN_LIST LLVM_TARGETS_TO_BUILD)
   set(LIBC_GPU_TESTS_DISABLED TRUE)
   message(STATUS "AMDGPU backend is not available, tests will not be built")
-elseif(DEFINED LLVM_TARGETS_TO_BUILD AND LIBC_TARGET_ARCHITECTURE_IS_AMDGPU
+elseif(DEFINED LLVM_TARGETS_TO_BUILD AND LIBC_TARGET_ARCHITECTURE_IS_NVPTX
        AND NOT "NVPTX" IN_LIST LLVM_TARGETS_TO_BUILD)
   set(LIBC_GPU_TESTS_DISABLED TRUE)
   message(STATUS "NVPTX backend is not available, tests will not be built")

@@ -15,36 +15,35 @@ func.func @arith_cast_vector(%arg0: vector<5xf32>) -> vector<5xi32> {
 }
 
 // -----
-
-func.func @arith_cast_bf16(%arg0: bf16) -> i32 {
+func.func @arith_cast_f80(%arg0: f80) -> i32 {
   // expected-error @+1 {{failed to legalize operation 'arith.fptosi'}}
-  %t = arith.fptosi %arg0 : bf16 to i32
+  %t = arith.fptosi %arg0 : f80 to i32
   return %t: i32
 }
 
 // -----
 
-func.func @arith_cast_f16(%arg0: f16) -> i32 {
+func.func @arith_cast_f128(%arg0: f128) -> i32 {
   // expected-error @+1 {{failed to legalize operation 'arith.fptosi'}}
-  %t = arith.fptosi %arg0 : f16 to i32
+  %t = arith.fptosi %arg0 : f128 to i32
   return %t: i32
 }
 
 
 // -----
 
-func.func @arith_cast_to_bf16(%arg0: i32) -> bf16 {
+func.func @arith_cast_to_f80(%arg0: i32) -> f80 {
   // expected-error @+1 {{failed to legalize operation 'arith.sitofp'}}
-  %t = arith.sitofp %arg0 : i32 to bf16
-  return %t: bf16
+  %t = arith.sitofp %arg0 : i32 to f80
+  return %t: f80
 }
 
 // -----
 
-func.func @arith_cast_to_f16(%arg0: i32) -> f16 {
+func.func @arith_cast_to_f128(%arg0: i32) -> f128 {
   // expected-error @+1 {{failed to legalize operation 'arith.sitofp'}}
-  %t = arith.sitofp %arg0 : i32 to f16
-  return %t: f16
+  %t = arith.sitofp %arg0 : i32 to f128
+  return %t: f128
 }
 
 // -----
@@ -109,4 +108,44 @@ func.func @arith_extsi_i1_to_i32(%arg0: i1) {
   // expected-error @+1 {{failed to legalize operation 'arith.extsi'}}
   %idx = arith.extsi %arg0 : i1 to i32
   return
+}
+
+// -----
+
+func.func @arith_shli_i1(%arg0: i1, %arg1: i1) {
+  // expected-error @+1 {{failed to legalize operation 'arith.shli'}}
+  %shli = arith.shli %arg0, %arg1 : i1
+  return
+}
+
+// -----
+
+func.func @arith_shrsi_i1(%arg0: i1, %arg1: i1) {
+  // expected-error @+1 {{failed to legalize operation 'arith.shrsi'}}
+  %shrsi = arith.shrsi %arg0, %arg1 : i1
+  return
+}
+
+// -----
+
+func.func @arith_shrui_i1(%arg0: i1, %arg1: i1) {
+  // expected-error @+1 {{failed to legalize operation 'arith.shrui'}}
+  %shrui = arith.shrui %arg0, %arg1 : i1
+  return
+}
+
+// -----
+
+func.func @arith_divui_vector(%arg0: vector<5xi32>, %arg1: vector<5xi32>) -> vector<5xi32> {
+  // expected-error @+1 {{failed to legalize operation 'arith.divui'}}
+  %divui = arith.divui %arg0, %arg1 : vector<5xi32>
+  return %divui: vector<5xi32>
+}
+
+// -----
+
+func.func @arith_remui_vector(%arg0: vector<5xi32>, %arg1: vector<5xi32>) -> vector<5xi32> {
+  // expected-error @+1 {{failed to legalize operation 'arith.remui'}}
+  %divui = arith.remui %arg0, %arg1 : vector<5xi32>
+  return %divui: vector<5xi32>
 }

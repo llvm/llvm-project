@@ -125,6 +125,24 @@ template <typename A> LLVM_DUMP_METHOD void ExpressionBase<A>::dump() const {
 
 // Equality testing
 
+template <typename A> bool Extremum<A>::operator==(const Extremum &that) const {
+  return ordering == that.ordering && Base::operator==(that);
+}
+
+template <int KIND>
+bool LogicalOperation<KIND>::operator==(const LogicalOperation &that) const {
+  return logicalOperator == that.logicalOperator && Base::operator==(that);
+}
+
+template <typename A>
+bool Relational<A>::operator==(const Relational &that) const {
+  return opr == that.opr && Base::operator==(that);
+}
+
+bool Relational<SomeType>::operator==(const Relational &that) const {
+  return u == that.u;
+}
+
 bool ImpliedDoIndex::operator==(const ImpliedDoIndex &that) const {
   return name == that.name;
 }
@@ -179,10 +197,6 @@ StructureConstructor::StructureConstructor(
 
 bool StructureConstructor::operator==(const StructureConstructor &that) const {
   return result_ == that.result_ && values_ == that.values_;
-}
-
-bool Relational<SomeType>::operator==(const Relational<SomeType> &that) const {
-  return u == that.u;
 }
 
 template <int KIND>

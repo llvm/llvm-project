@@ -1,0 +1,54 @@
+## Verify that --add-section warns on invalid note sections.
+
+## Add [namesz, descsz, type, name, desc] for a build id.
+
+## Notes should be padded to 8 bytes.
+# RUN: printf "\x04\x00\x00\x00" >  %t-miss-padding-note.bin
+# RUN: printf "\x07\x00\x00\x00" >> %t-miss-padding-note.bin
+# RUN: printf "\x03\x00\x00\x00" >> %t-miss-padding-note.bin
+# RUN: printf "GNU\x00"          >> %t-miss-padding-note.bin
+# RUN: printf "\x0c\x0d\x0e"     >> %t-miss-padding-note.bin
+
+## The namesz field bit is incorrect.
+# RUN: printf "\x08\x00\x00\x00" >  %t-invalid-size-note.bin
+# RUN: printf "\x07\x00\x00\x00" >> %t-invalid-size-note.bin
+# RUN: printf "\x03\x00\x00\x00" >> %t-invalid-size-note.bin
+# RUN: printf "GNU\x00"          >> %t-invalid-size-note.bin
+# RUN: printf "\x0c\x0d\x0e\x00" >> %t-invalid-size-note.bin
+
+## Missing type field.
+# RUN: printf "\x08\x00\x00\x00" >  %t-short-note.bin
+# RUN: printf "\x07\x00\x00\x00" >> %t-short-note.bin
+
+# RUN: yaml2obj %s -o %t.o
+
+## Test each invalid note.
+# RUN: not llvm-objcopy --add-section=.note.miss.padding=%t-miss-padding-note.bin %t.o %t-with-note.o 2>&1 | FileCheck --check-prefix=CHECK-MISS-PADDING %s
+# CHECK-MISS-PADDING: .note.miss.padding data size must be a multiple of 4 bytes
+
+# RUN: not llvm-objcopy --add-section=.note.invalid.size=%t-invalid-size-note.bin %t.o %t-with-note.o 2>&1 | FileCheck --check-prefix=CHECK-INVALID-SIZE %s
+# CHECK-INVALID-SIZE: .note.invalid.size data size is incompatible with the content of the name and description size fields: expecting 28, found 20
+
+# RUN: not llvm-objcopy --add-section=.note.short=%t-short-note.bin %t.o %t-with-note.o 2>&1 | FileCheck --check-prefix=CHECK-SHORT %s
+# CHECK-SHORT: .note.short data must be either empty or at least 12 bytes long
+
+## Test compatibility with .note.gnu.property, which has 8-byte alignment.
+# RUN: printf "\x04\x00\x00\x00\x40\x00\x00\x00\x05\x00\x00\x00\x47\x4e\x55\x00" >  %t-note-gnu-property.bin
+# RUN: printf "\x02\x00\x00\xc0\x04\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00" >> %t-note-gnu-property.bin
+# RUN: printf "\x01\x80\x01\xc0\x04\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00" >> %t-note-gnu-property.bin
+# RUN: printf "\x01\x00\x01\xc0\x04\x00\x00\x00\x0b\x00\x00\x00\x00\x00\x00\x00" >> %t-note-gnu-property.bin
+# RUN: printf "\x02\x00\x01\xc0\x04\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00" >> %t-note-gnu-property.bin
+# RUN: llvm-objcopy --add-section=.note.gnu.property=%t-note-gnu-property.bin %t.o %t-with-note-gnu-property.o
+
+## Test that verification can be disabled.
+# RUN: llvm-objcopy --add-section=.note.short=%t-short-note.bin --no-verify-note-sections %t.o %t-with-note.o
+
+## Test that last argument has precedence.
+# RUN: llvm-objcopy --add-section=.note.short=%t-short-note.bin --verify-note-sections --no-verify-note-sections %t.o %t-with-note.o
+# RUN: not llvm-objcopy --add-section=.note.short=%t-short-note.bin --no-verify-note-sections --verify-note-sections %t.o %t-with-note.o 2>&1 | FileCheck --check-prefix=CHECK-SHORT %s
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL

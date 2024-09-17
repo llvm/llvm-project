@@ -548,9 +548,18 @@ void AIX::addClangTargetOptions(
                   options::OPT_mtocdata))
     addTocDataOptions(Args, CC1Args, getDriver());
 
+  if (Args.hasArg(options::OPT_msave_reg_params))
+    CC1Args.push_back("-msave-reg-params");
+
   if (Args.hasFlag(options::OPT_fxl_pragma_pack,
                    options::OPT_fno_xl_pragma_pack, true))
     CC1Args.push_back("-fxl-pragma-pack");
+
+  // Pass "-fno-sized-deallocation" only when the user hasn't manually enabled
+  // or disabled sized deallocations.
+  if (!Args.getLastArgNoClaim(options::OPT_fsized_deallocation,
+                              options::OPT_fno_sized_deallocation))
+    CC1Args.push_back("-fno-sized-deallocation");
 }
 
 void AIX::addProfileRTLibs(const llvm::opt::ArgList &Args,

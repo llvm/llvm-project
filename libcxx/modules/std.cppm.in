@@ -23,9 +23,7 @@ module;
 #if !defined(_LIBCPP_HAS_NO_ATOMIC_HEADER)
 #  include <atomic>
 #endif
-#if !defined(_LIBCPP_HAS_NO_THREADS)
-#  include <barrier>
-#endif
+#include <barrier>
 #include <bit>
 #include <bitset>
 #include <cassert>
@@ -59,12 +57,8 @@ module;
 #include <cstring>
 #include <ctime>
 #include <cuchar>
-#if !defined(_LIBCPP_HAS_NO_WIDE_CHARACTERS)
-#  include <cwchar>
-#endif
-#if !defined(_LIBCPP_HAS_NO_WIDE_CHARACTERS)
-#  include <cwctype>
-#endif
+#include <cwchar>
+#include <cwctype>
 #include <deque>
 #include <exception>
 #include <execution>
@@ -76,9 +70,7 @@ module;
 #  include <fstream>
 #endif
 #include <functional>
-#if !defined(_LIBCPP_HAS_NO_THREADS)
-#  include <future>
-#endif
+#include <future>
 #include <initializer_list>
 #if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
 #  include <iomanip>
@@ -94,9 +86,7 @@ module;
 #  include <istream>
 #endif
 #include <iterator>
-#if !defined(_LIBCPP_HAS_NO_THREADS)
-#  include <latch>
-#endif
+#include <latch>
 #include <limits>
 #include <list>
 #if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
@@ -123,13 +113,9 @@ module;
 #  include <regex>
 #endif
 #include <scoped_allocator>
-#if !defined(_LIBCPP_HAS_NO_THREADS)
-#  include <semaphore>
-#endif
+#include <semaphore>
 #include <set>
-#if !defined(_LIBCPP_HAS_NO_THREADS)
-#  include <shared_mutex>
-#endif
+#include <shared_mutex>
 #include <source_location>
 #include <span>
 #if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
@@ -137,9 +123,7 @@ module;
 #endif
 #include <stack>
 #include <stdexcept>
-#if !defined(_LIBCPP_HAS_NO_THREADS)
-#  include <stop_token>
-#endif
+#include <stop_token>
 #if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
 #  include <streambuf>
 #endif
@@ -152,9 +136,7 @@ module;
 #  include <syncstream>
 #endif
 #include <system_error>
-#if !defined(_LIBCPP_HAS_NO_THREADS)
-#  include <thread>
-#endif
+#include <thread>
 #include <tuple>
 #include <type_traits>
 #include <typeindex>
@@ -191,6 +173,9 @@ module;
 #  if __has_include(<hazard_pointer>)
 #    error "please update the header information for <hazard_pointer> in headers_not_available in utils/libcxx/header_information.py"
 #  endif // __has_include(<hazard_pointer>)
+#  if __has_include(<inplace_vector>)
+#    error "please update the header information for <inplace_vector> in headers_not_available in utils/libcxx/header_information.py"
+#  endif // __has_include(<inplace_vector>)
 #  if __has_include(<linalg>)
 #    error "please update the header information for <linalg> in headers_not_available in utils/libcxx/header_information.py"
 #  endif // __has_include(<linalg>)

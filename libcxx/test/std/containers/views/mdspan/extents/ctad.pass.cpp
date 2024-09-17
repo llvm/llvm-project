@@ -13,10 +13,13 @@
 // explicit extents(Integrals...) -> see below;
 //   Constraints: (is_convertible_v<Integrals, size_t> && ...) is true.
 //
-// Remarks: The deduced type is dextents<size_t, sizeof...(Integrals)>.
+// Remarks: The deduced type is dextents<size_t, sizeof...(Integrals)>.           // until C++26
+// Remarks: The deduced type is extents<size_t, maybe-static-ext<Integrals>...>.  // since C++26
 
 #include <mdspan>
 #include <cassert>
+#include <span> // dynamic_extent
+#include <type_traits>
 
 #include "../ConvertibleToIntegral.h"
 #include "test_macros.h"
@@ -43,6 +46,15 @@ constexpr bool test() {
   test(std::extents(1, 2u, 3, 4, 5, 6, 7, 8, 9),
        std::extents<std::size_t, D, D, D, D, D, D, D, D, D>(1, 2u, 3, 4, 5, 6, 7, 8, 9));
   test(std::extents(NoDefaultCtorIndex{1}, NoDefaultCtorIndex{2}), std::extents<std::size_t, D, D>(1, 2));
+
+#if _LIBCPP_STD_VER >= 26
+  // P3029R1: deduction from `integral_constant`
+  test(std::extents(std::integral_constant<size_t, 5>{}), std::extents<std::size_t, 5>());
+  test(std::extents(std::integral_constant<size_t, 5>{}, 6), std::extents<std::size_t, 5, std::dynamic_extent>(6));
+  test(std::extents(std::integral_constant<size_t, 5>{}, 6, std::integral_constant<size_t, 7>{}),
+       std::extents<std::size_t, 5, std::dynamic_extent, 7>(6));
+#endif
+
   return true;
 }
 

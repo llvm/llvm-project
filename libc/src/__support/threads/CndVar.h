@@ -9,13 +9,14 @@
 #ifndef LLVM_LIBC___SUPPORT_SRC_THREADS_LINUX_CNDVAR_H
 #define LLVM_LIBC___SUPPORT_SRC_THREADS_LINUX_CNDVAR_H
 
+#include "src/__support/macros/config.h"
 #include "src/__support/threads/linux/futex_utils.h" // Futex
 #include "src/__support/threads/linux/raw_mutex.h"   // RawMutex
 #include "src/__support/threads/mutex.h"             // Mutex
 
 #include <stdint.h> // uint32_t
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 class CndVar {
   enum CndWaiterStatus : uint32_t {
@@ -49,6 +50,6 @@ public:
   void broadcast();
 };
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_THREADS_LINUX_CNDVAR_H

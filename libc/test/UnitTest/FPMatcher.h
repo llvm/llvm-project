@@ -14,13 +14,14 @@
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/fpbits_str.h"
+#include "src/__support/macros/config.h"
 #include "test/UnitTest/RoundingModeUtils.h"
 #include "test/UnitTest/StringUtils.h"
 #include "test/UnitTest/Test.h"
 
 #include "hdr/math_macros.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace testing {
 
 template <typename T, TestCond Condition> class FPMatcher : public Matcher<T> {
@@ -73,7 +74,8 @@ template <typename T> struct FPTest : public Test {
   static constexpr T inf = FPBits::inf(Sign::POS).get_val();
   static constexpr T neg_inf = FPBits::inf(Sign::NEG).get_val();
   static constexpr T min_normal = FPBits::min_normal().get_val();
-  static constexpr T max_normal = FPBits::max_normal().get_val();
+  static constexpr T max_normal = FPBits::max_normal(Sign::POS).get_val();
+  static constexpr T neg_max_normal = FPBits::max_normal(Sign::NEG).get_val();
   static constexpr T min_denormal = FPBits::min_subnormal().get_val();
   static constexpr T max_denormal = FPBits::max_subnormal().get_val();
 
@@ -87,7 +89,7 @@ template <typename T> struct FPTest : public Test {
 };
 
 } // namespace testing
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #define DECLARE_SPECIAL_CONSTANTS(T)                                           \
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;                            \
@@ -231,5 +233,37 @@ template <typename T> struct FPTest : public Test {
 
 #define EXPECT_FP_EQ_ROUNDING_TOWARD_ZERO(expected, actual)                    \
   EXPECT_FP_EQ_ROUNDING_MODE((expected), (actual), RoundingMode::TowardZero)
+
+#define EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_MODE(                             \
+    expected, actual, expected_except, rounding_mode)                          \
+  do {                                                                         \
+    using namespace LIBC_NAMESPACE::fputil::testing;                           \
+    ForceRoundingMode __r((rounding_mode));                                    \
+    if (__r.success) {                                                         \
+      LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);                     \
+      EXPECT_FP_EQ((expected), (actual));                                      \
+      EXPECT_FP_EXCEPTION(expected_except);                                    \
+    }                                                                          \
+  } while (0)
+
+#define EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_NEAREST(expected, actual,         \
+                                                     expected_except)          \
+  EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_MODE(                                   \
+      (expected), (actual), (expected_except), RoundingMode::Nearest)
+
+#define EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_UPWARD(expected, actual,          \
+                                                    expected_except)           \
+  EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_MODE(                                   \
+      (expected), (actual), (expected_except), RoundingMode::Upward)
+
+#define EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_DOWNWARD(expected, actual,        \
+                                                      expected_except)         \
+  EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_MODE(                                   \
+      (expected), (actual), (expected_except), RoundingMode::Downward)
+
+#define EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_TOWARD_ZERO(expected, actual,     \
+                                                         expected_except)      \
+  EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_MODE(                                   \
+      (expected), (actual), (expected_except), RoundingMode::TowardZero)
 
 #endif // LLVM_LIBC_TEST_UNITTEST_FPMATCHER_H

@@ -204,7 +204,8 @@ AArch64TargetInfo::AArch64TargetInfo(const llvm::Triple &Triple,
 StringRef AArch64TargetInfo::getABI() const { return ABI; }
 
 bool AArch64TargetInfo::setABI(const std::string &Name) {
-  if (Name != "aapcs" && Name != "aapcs-soft" && Name != "darwinpcs")
+  if (Name != "aapcs" && Name != "aapcs-soft" && Name != "darwinpcs" &&
+      Name != "pauthtest")
     return false;
 
   ABI = Name;
@@ -216,6 +217,12 @@ bool AArch64TargetInfo::validateTarget(DiagnosticsEngine &Diags) const {
     // aapcs-soft is not allowed for targets with an FPU, to avoid there being
     // two incomatible ABIs.
     Diags.Report(diag::err_target_unsupported_abi_with_fpu) << ABI;
+    return false;
+  }
+  if (getTriple().getEnvironment() == llvm::Triple::PAuthTest &&
+      getTriple().getOS() != llvm::Triple::Linux) {
+    Diags.Report(diag::err_target_unsupported_abi_for_triple)
+        << getTriple().getEnvironmentName() << getTriple().getTriple();
     return false;
   }
   return true;
@@ -449,6 +456,9 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   if (HasSVE2)
     Builder.defineMacro("__ARM_FEATURE_SVE2", "1");
 
+  if (HasSVE2p1)
+    Builder.defineMacro("__ARM_FEATURE_SVE2p1", "1");
+
   if (HasSVE2 && HasSVE2AES)
     Builder.defineMacro("__ARM_FEATURE_SVE2_AES", "1");
 
@@ -461,16 +471,25 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   if (HasSVE2 && HasSVE2SM4)
     Builder.defineMacro("__ARM_FEATURE_SVE2_SM4", "1");
 
+  if (HasSVEB16B16)
+    Builder.defineMacro("__ARM_FEATURE_SVE_B16B16", "1");
+
   if (HasSME) {
     Builder.defineMacro("__ARM_FEATURE_SME");
     Builder.defineMacro("__ARM_FEATURE_LOCALLY_STREAMING", "1");
   }
 
-  if (HasSME2) {
-    Builder.defineMacro("__ARM_FEATURE_SME");
-    Builder.defineMacro("__ARM_FEATURE_SME2");
-    Builder.defineMacro("__ARM_FEATURE_LOCALLY_STREAMING", "1");
-  }
+  if (HasSME2)
+    Builder.defineMacro("__ARM_FEATURE_SME2", "1");
+
+  if (HasSME2p1)
+    Builder.defineMacro("__ARM_FEATURE_SME2p1", "1");
+
+  if (HasSMEF16F16)
+    Builder.defineMacro("__ARM_FEATURE_SME_F16F16", "1");
+
+  if (HasSMEB16B16)
+    Builder.defineMacro("__ARM_FEATURE_SME_B16B16", "1");
 
   if (HasCRC)
     Builder.defineMacro("__ARM_FEATURE_CRC32", "1");
@@ -732,6 +751,7 @@ bool AArch64TargetInfo::hasFeature(StringRef Feature) const {
       .Case("sve", FPU & SveMode)
       .Case("sve-bf16", FPU & SveMode && HasBFloat16)
       .Case("sve-i8mm", FPU & SveMode && HasMatMul)
+      .Case("sve-b16b16", HasSVEB16B16)
       .Case("f32mm", FPU & SveMode && HasMatmulFP32)
       .Case("f64mm", FPU & SveMode && HasMatmulFP64)
       .Case("sve2", FPU & SveMode && HasSVE2)
@@ -739,11 +759,15 @@ bool AArch64TargetInfo::hasFeature(StringRef Feature) const {
       .Case("sve2-bitperm", FPU & SveMode && HasSVE2BitPerm)
       .Case("sve2-sha3", FPU & SveMode && HasSVE2SHA3)
       .Case("sve2-sm4", FPU & SveMode && HasSVE2SM4)
+      .Case("sve2p1", FPU & SveMode && HasSVE2p1)
       .Case("sme", HasSME)
       .Case("sme2", HasSME2)
+      .Case("sme2p1", HasSME2p1)
       .Case("sme-f64f64", HasSMEF64F64)
       .Case("sme-i16i64", HasSMEI16I64)
       .Case("sme-fa64", HasSMEFA64)
+      .Case("sme-f16f16", HasSMEF16F16)
+      .Case("sme-b16b16", HasSMEB16B16)
       .Cases("memtag", "memtag2", HasMTE)
       .Case("sb", HasSB)
       .Case("predres", HasPredRes)
@@ -816,6 +840,13 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasFullFP16 = true;
       HasSVE2 = true;
     }
+    if (Feature == "+sve2p1") {
+      FPU |= NeonMode;
+      FPU |= SveMode;
+      HasFullFP16 = true;
+      HasSVE2 = true;
+      HasSVE2p1 = true;
+    }
     if (Feature == "+sve2-aes") {
       FPU |= NeonMode;
       FPU |= SveMode;
@@ -837,6 +868,8 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasSVE2 = true;
       HasSVE2SM4 = true;
     }
+    if (Feature == "+sve-b16b16")
+      HasSVEB16B16 = true;
     if (Feature == "+sve2-bitperm") {
       FPU |= NeonMode;
       FPU |= SveMode;
@@ -867,6 +900,13 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasBFloat16 = true;
       HasFullFP16 = true;
     }
+    if (Feature == "+sme2p1") {
+      HasSME = true;
+      HasSME2 = true;
+      HasSME2p1 = true;
+      HasBFloat16 = true;
+      HasFullFP16 = true;
+    }
     if (Feature == "+sme-f64f64") {
       HasSME = true;
       HasSMEF64F64 = true;
@@ -885,6 +925,21 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasSME = true;
       HasSVE2 = true;
       HasSMEFA64 = true;
+    }
+    if (Feature == "+sme-f16f16") {
+      HasSME = true;
+      HasSME2 = true;
+      HasBFloat16 = true;
+      HasFullFP16 = true;
+      HasSMEF16F16 = true;
+    }
+    if (Feature == "+sme-b16b16") {
+      HasSME = true;
+      HasSME2 = true;
+      HasBFloat16 = true;
+      HasFullFP16 = true;
+      HasSVEB16B16 = true;
+      HasSMEB16B16 = true;
     }
     if (Feature == "+sb")
       HasSB = true;
@@ -1536,6 +1591,7 @@ WindowsARM64TargetInfo::checkCallingConvention(CallingConv CC) const {
   case CC_OpenCLKernel:
   case CC_PreserveMost:
   case CC_PreserveAll:
+  case CC_PreserveNone:
   case CC_Swift:
   case CC_SwiftAsync:
   case CC_Win64:

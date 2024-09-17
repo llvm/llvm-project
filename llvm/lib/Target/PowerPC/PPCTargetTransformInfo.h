@@ -37,7 +37,7 @@ class PPCTTIImpl : public BasicTTIImplBase<PPCTTIImpl> {
 
 public:
   explicit PPCTTIImpl(const PPCTargetMachine *TM, const Function &F)
-      : BaseT(TM, F.getParent()->getDataLayout()), ST(TM->getSubtargetImpl(F)),
+      : BaseT(TM, F.getDataLayout()), ST(TM->getSubtargetImpl(F)),
         TLI(ST->getTargetLowering()) {}
 
   std::optional<Instruction *> instCombineIntrinsic(InstCombiner & IC,

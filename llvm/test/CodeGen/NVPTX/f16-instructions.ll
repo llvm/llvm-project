@@ -265,7 +265,10 @@ declare half @test_callee(half %a, half %b) #0
 ; CHECK-DAG:  .param .align 2 .b8 retval0[2];
 ; CHECK:      call.uni (retval0),
 ; CHECK-NEXT:        test_callee,
-; CHECK:      );
+; CHECK-NEXT: (
+; CHECK-NEXT:        param0,
+; CHECK-NEXT:        param1
+; CHECK-NEXT: );
 ; CHECK-NEXT: ld.param.b16    [[R:%rs[0-9]+]], [retval0+0];
 ; CHECK-NEXT: }
 ; CHECK-NEXT: st.param.b16    [func_retval0+0], [[R]];
@@ -286,7 +289,10 @@ define half @test_call(half %a, half %b) #0 {
 ; CHECK-DAG:  .param .align 2 .b8 retval0[2];
 ; CHECK:      call.uni (retval0),
 ; CHECK-NEXT:        test_callee,
-; CHECK:      );
+; CHECK-NEXT: (
+; CHECK-NEXT:        param0,
+; CHECK-NEXT:        param1
+; CHECK-NEXT: );
 ; CHECK-NEXT: ld.param.b16    [[R:%rs[0-9]+]], [retval0+0];
 ; CHECK-NEXT: }
 ; CHECK-NEXT: st.param.b16    [func_retval0+0], [[R]];
@@ -307,7 +313,10 @@ define half @test_call_flipped(half %a, half %b) #0 {
 ; CHECK-DAG:  .param .align 2 .b8 retval0[2];
 ; CHECK:      call.uni (retval0),
 ; CHECK-NEXT:        test_callee,
-; CHECK:      );
+; CHECK-NEXT: (
+; CHECK-NEXT:        param0,
+; CHECK-NEXT:        param1
+; CHECK-NEXT: );
 ; CHECK-NEXT: ld.param.b16    [[R:%rs[0-9]+]], [retval0+0];
 ; CHECK-NEXT: }
 ; CHECK-NEXT: st.param.b16    [func_retval0+0], [[R]];
@@ -1183,8 +1192,7 @@ define half @test_neg_f16(half noundef %arg) #0 {
 ; CHECK-LABEL: test_neg_f16x2(
 ; CHECK-F16-NOFTZ: neg.f16x2
 ; CHECK-F16-FTZ: neg.ftz.f16x2
-; CHECK-NOF16: xor.b16  	%rs{{.*}}, %rs{{.*}}, -32768
-; CHECK-NOF16: xor.b16  	%rs{{.*}}, %rs{{.*}}, -32768
+; CHECK-NOF16: xor.b32 %r{{.*}}, %r{{.*}}, -2147450880
 define <2 x half> @test_neg_f16x2(<2 x half> noundef %arg) #0 {
   %res = fneg <2 x half> %arg
   ret <2 x half> %res

@@ -127,8 +127,9 @@ class CompressInstEmitter {
                             IndexedMap<OpData> &OperandMap, bool IsSourceInst);
   void evaluateCompressPat(Record *Compress);
   void emitCompressInstEmitter(raw_ostream &OS, EmitterType EType);
-  bool validateTypes(Record *SubType, Record *Type, bool IsSourceInst);
-  bool validateRegister(Record *Reg, Record *RegClass);
+  bool validateTypes(const Record *DagOpType, const Record *InstOpType,
+                     bool IsSourceInst);
+  bool validateRegister(const Record *Reg, const Record *RegClass);
   void createDagOperandMapping(Record *Rec, StringMap<unsigned> &SourceOperands,
                                StringMap<unsigned> &DestOperands,
                                DagInit *SourceDag, DagInit *DestDag,
@@ -148,7 +149,8 @@ public:
 };
 } // End anonymous namespace.
 
-bool CompressInstEmitter::validateRegister(Record *Reg, Record *RegClass) {
+bool CompressInstEmitter::validateRegister(const Record *Reg,
+                                           const Record *RegClass) {
   assert(Reg->isSubClassOf("Register") && "Reg record should be a Register");
   assert(RegClass->isSubClassOf("RegisterClass") &&
          "RegClass record should be a RegisterClass");
@@ -158,7 +160,8 @@ bool CompressInstEmitter::validateRegister(Record *Reg, Record *RegClass) {
   return RC.contains(R);
 }
 
-bool CompressInstEmitter::validateTypes(Record *DagOpType, Record *InstOpType,
+bool CompressInstEmitter::validateTypes(const Record *DagOpType,
+                                        const Record *InstOpType,
                                         bool IsSourceInst) {
   if (DagOpType == InstOpType)
     return true;
@@ -522,7 +525,7 @@ getReqFeatures(std::set<std::pair<bool, StringRef>> &FeaturesSet,
 
 static unsigned getPredicates(DenseMap<const Record *, unsigned> &PredicateMap,
                               std::vector<const Record *> &Predicates,
-                              Record *Rec, StringRef Name) {
+                              const Record *Rec, StringRef Name) {
   unsigned &Entry = PredicateMap[Rec];
   if (Entry)
     return Entry;
@@ -618,7 +621,7 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
   }
 
   if (CompressPatterns.empty()) {
-    OS << FuncH.str();
+    OS << FH;
     OS.indent(2) << "return false;\n}\n";
     if (EType == EmitterType::Compress)
       OS << "\n#endif //GEN_COMPRESS_INSTR\n";
@@ -835,10 +838,10 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
     }
     if (CompressOrUncompress)
       CodeStream.indent(6) << "OutInst.setLoc(MI.getLoc());\n";
-    mergeCondAndCode(CaseStream, CondStream.str(), CodeStream.str());
+    mergeCondAndCode(CaseStream, CondString, CodeString);
     PrevOp = CurOp;
   }
-  Func << CaseStream.str() << "\n";
+  Func << CaseString << "\n";
   // Close brace for the last case.
   Func.indent(4) << "} // case " << CurOp << "\n";
   Func.indent(2) << "} // switch\n";
@@ -876,8 +879,8 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
        << "}\n\n";
   }
 
-  OS << FuncH.str();
-  OS << Func.str();
+  OS << FH;
+  OS << F;
 
   if (EType == EmitterType::Compress)
     OS << "\n#endif //GEN_COMPRESS_INSTR\n";

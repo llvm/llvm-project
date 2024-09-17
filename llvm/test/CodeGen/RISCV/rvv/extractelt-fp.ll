@@ -7,7 +7,7 @@
 define half @extractelt_nxv1f16_0(<vscale x 1 x half> %v) {
 ; CHECK-LABEL: extractelt_nxv1f16_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 1 x half> %v, i32 0
@@ -39,7 +39,7 @@ define half @extractelt_nxv1f16_idx(<vscale x 1 x half> %v, i32 zeroext %idx) {
 define half @extractelt_nxv2f16_0(<vscale x 2 x half> %v) {
 ; CHECK-LABEL: extractelt_nxv2f16_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e16, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 2 x half> %v, i32 0
@@ -199,7 +199,7 @@ define half @extractelt_nxv32f16_idx(<vscale x 32 x half> %v, i32 zeroext %idx) 
 define float @extractelt_nxv1f32_0(<vscale x 1 x float> %v) {
 ; CHECK-LABEL: extractelt_nxv1f32_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 1 x float> %v, i32 0

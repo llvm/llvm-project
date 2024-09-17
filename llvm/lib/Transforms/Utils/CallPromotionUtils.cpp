@@ -12,13 +12,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/CallPromotionUtils.h"
-#include "llvm/ADT/STLExtras.h"
+#include "llvm/Analysis/CtxProfAnalysis.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/TypeMetadataUtils.h"
 #include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Module.h"
+#include "llvm/ProfileData/PGOCtxProfReader.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
 using namespace llvm;
@@ -395,7 +398,7 @@ bool llvm::isLegalToPromote(const CallBase &CB, Function *Callee,
                             const char **FailureReason) {
   assert(!CB.getCalledFunction() && "Only indirect call sites can be promoted");
 
-  auto &DL = Callee->getParent()->getDataLayout();
+  auto &DL = Callee->getDataLayout();
 
   // Check the return type. The callee's return value type must be bitcast
   // compatible with the call site's type.
@@ -569,6 +572,88 @@ CallBase &llvm::promoteCallWithIfThenElse(CallBase &CB, Function *Callee,
 
   // Promote 'NewInst' so that it directly calls the desired function.
   return promoteCall(NewInst, Callee);
+}
+
+CallBase *llvm::promoteCallWithIfThenElse(CallBase &CB, Function &Callee,
+                                          PGOContextualProfile &CtxProf) {
+  assert(CB.isIndirectCall());
+  if (!CtxProf.isFunctionKnown(Callee))
+    return nullptr;
+  auto &Caller = *CB.getFunction();
+  auto *CSInstr = CtxProfAnalysis::getCallsiteInstrumentation(CB);
+  if (!CSInstr)
+    return nullptr;
+  const uint64_t CSIndex = CSInstr->getIndex()->getZExtValue();
+
+  CallBase &DirectCall = promoteCall(
+      versionCallSite(CB, &Callee, /*BranchWeights=*/nullptr), &Callee);
+  CSInstr->moveBefore(&CB);
+  const auto NewCSID = CtxProf.allocateNextCallsiteIndex(Caller);
+  auto *NewCSInstr = cast<InstrProfCallsite>(CSInstr->clone());
+  NewCSInstr->setIndex(NewCSID);
+  NewCSInstr->setCallee(&Callee);
+  NewCSInstr->insertBefore(&DirectCall);
+  auto &DirectBB = *DirectCall.getParent();
+  auto &IndirectBB = *CB.getParent();
+
+  assert((CtxProfAnalysis::getBBInstrumentation(IndirectBB) == nullptr) &&
+         "The ICP direct BB is new, it shouldn't have instrumentation");
+  assert((CtxProfAnalysis::getBBInstrumentation(DirectBB) == nullptr) &&
+         "The ICP indirect BB is new, it shouldn't have instrumentation");
+
+  // Allocate counters for the new basic blocks.
+  const uint32_t DirectID = CtxProf.allocateNextCounterIndex(Caller);
+  const uint32_t IndirectID = CtxProf.allocateNextCounterIndex(Caller);
+  auto *EntryBBIns =
+      CtxProfAnalysis::getBBInstrumentation(Caller.getEntryBlock());
+  auto *DirectBBIns = cast<InstrProfCntrInstBase>(EntryBBIns->clone());
+  DirectBBIns->setIndex(DirectID);
+  DirectBBIns->insertInto(&DirectBB, DirectBB.getFirstInsertionPt());
+
+  auto *IndirectBBIns = cast<InstrProfCntrInstBase>(EntryBBIns->clone());
+  IndirectBBIns->setIndex(IndirectID);
+  IndirectBBIns->insertInto(&IndirectBB, IndirectBB.getFirstInsertionPt());
+
+  const GlobalValue::GUID CalleeGUID = AssignGUIDPass::getGUID(Callee);
+  const uint32_t NewCountersSize = IndirectID + 1;
+
+  auto ProfileUpdater = [&](PGOCtxProfContext &Ctx) {
+    assert(Ctx.guid() == AssignGUIDPass::getGUID(Caller));
+    assert(NewCountersSize - 2 == Ctx.counters().size());
+    // All the ctx-es belonging to a function must have the same size counters.
+    Ctx.resizeCounters(NewCountersSize);
+
+    // Maybe in this context, the indirect callsite wasn't observed at all
+    if (!Ctx.hasCallsite(CSIndex))
+      return;
+    auto &CSData = Ctx.callsite(CSIndex);
+    auto It = CSData.find(CalleeGUID);
+
+    // Maybe we did notice the indirect callsite, but to other targets.
+    if (It == CSData.end())
+      return;
+
+    assert(CalleeGUID == It->second.guid());
+
+    uint32_t DirectCount = It->second.getEntrycount();
+    uint32_t TotalCount = 0;
+    for (const auto &[_, V] : CSData)
+      TotalCount += V.getEntrycount();
+    assert(TotalCount >= DirectCount);
+    uint32_t IndirectCount = TotalCount - DirectCount;
+    // The ICP's effect is as-if the direct BB would have been taken DirectCount
+    // times, and the indirect BB, IndirectCount times
+    Ctx.counters()[DirectID] = DirectCount;
+    Ctx.counters()[IndirectID] = IndirectCount;
+
+    // This particular indirect target needs to be moved to this caller under
+    // the newly-allocated callsite index.
+    assert(Ctx.callsites().count(NewCSID) == 0);
+    Ctx.ingestContext(NewCSID, std::move(It->second));
+    CSData.erase(CalleeGUID);
+  };
+  CtxProf.update(ProfileUpdater, &Caller);
+  return &DirectCall;
 }
 
 CallBase &llvm::promoteCallWithVTableCmp(CallBase &CB, Instruction *VPtr,
