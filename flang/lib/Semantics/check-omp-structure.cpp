@@ -1977,6 +1977,7 @@ void OmpStructureChecker::CheckAtomicUpdateStmt(
   ErrIfAllocatableVariable(var);
 }
 
+// TODO: Allow cond-update-stmt once compare clause is supported.
 void OmpStructureChecker::CheckAtomicCaptureConstruct(
     const parser::OmpAtomicCapture &atomicCaptureConstruct) {
   const Fortran::parser::AssignmentStmt &stmt1 =
