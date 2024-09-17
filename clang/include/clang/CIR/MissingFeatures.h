@@ -256,6 +256,7 @@ struct MissingFeatures {
   static bool csmeCall() { return false; }
   static bool undef() { return false; }
   static bool noFPClass() { return false; }
+  static bool llvmIntrinsicElementTypeSupport() { return false; }
 
   //-- Other missing features
 

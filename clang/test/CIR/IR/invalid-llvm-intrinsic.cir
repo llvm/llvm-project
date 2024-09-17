@@ -1,0 +1,11 @@
+// Test attempt to construct ill-formed global annotations
+// RUN: cir-opt %s -verify-diagnostics
+
+!s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
+cir.func @foo()  {
+    %a = cir.alloca !s32i, !cir.ptr<!s32i>, ["a"] {alignment = 4 : i64}
+    // expected-error @below {{'cir.llvm.intrinsic' op intrinsic name must start with 'llvm.'}}
+    %i = cir.llvm.intrinsic "ll.aarch64.ldxr" %a : (!cir.ptr<!s32i>) -> !s64i
+    cir.return
+}

@@ -2538,6 +2538,35 @@ static mlir::LLVM::CallIntrinsicOp replaceOpWithCallLLVMIntrinsicOp(
   return callIntrinOp;
 }
 
+class CIRIntrinsicCallLowering
+    : public mlir::OpConversionPattern<mlir::cir::IntrinsicCallOp> {
+public:
+  using OpConversionPattern<mlir::cir::IntrinsicCallOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::IntrinsicCallOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    mlir::Type llvmResTy =
+        getTypeConverter()->convertType(op->getResultTypes()[0]);
+    if (!llvmResTy)
+      return op.emitError("expected LLVM result type");
+    StringRef name = op.getIntrinsicName();
+    // Some llvm intrinsics require ElementType attribute to be attached to
+    // the argument of pointer type. That prevents us from generating LLVM IR
+    // because from LLVM dialect, we have LLVM IR like the below which fails
+    // LLVM IR verification.
+    // %3 = call i64 @llvm.aarch64.ldxr.p0(ptr %2)
+    // The expected LLVM IR should be like
+    // %3 = call i64 @llvm.aarch64.ldxr.p0(ptr elementtype(i32) %2)
+    // TODO(cir): MLIR LLVM dialect should handle this part as CIR has no way
+    // to set LLVM IR attribute.
+    assert(!::cir::MissingFeatures::llvmIntrinsicElementTypeSupport());
+    replaceOpWithCallLLVMIntrinsicOp(rewriter, op, name, llvmResTy,
+                                     adaptor.getOperands());
+    return mlir::success();
+  }
+};
+
 static mlir::Value createLLVMBitOp(mlir::Location loc,
                                    const llvm::Twine &llvmIntrinBaseName,
                                    mlir::Type resultTy, mlir::Value operand,
@@ -3795,7 +3824,7 @@ void populateCIRToLLVMConversionPatterns(mlir::RewritePatternSet &patterns,
       CIRPrefetchLowering, CIRObjSizeOpLowering, CIRIsConstantOpLowering,
       CIRCmpThreeWayOpLowering, CIRClearCacheOpLowering, CIRUndefOpLowering,
       CIREhTypeIdOpLowering, CIRCatchParamOpLowering, CIRResumeOpLowering,
-      CIRAllocExceptionOpLowering, CIRThrowOpLowering
+      CIRAllocExceptionOpLowering, CIRThrowOpLowering, CIRIntrinsicCallLowering
 #define GET_BUILTIN_LOWERING_LIST
 #include "clang/CIR/Dialect/IR/CIRBuiltinsLowering.inc"
 #undef GET_BUILTIN_LOWERING_LIST
