@@ -378,7 +378,7 @@ void WebAssemblyInstPrinter::printCatchList(const MCInst *MI, unsigned OpNo,
     const MCSymbolRefExpr *TagExpr = nullptr;
     const MCSymbolWasm *TagSym = nullptr;
     if (Op.isExpr()) {
-      TagExpr = dyn_cast<MCSymbolRefExpr>(Op.getExpr());
+      TagExpr = cast<MCSymbolRefExpr>(Op.getExpr());
       TagSym = cast<MCSymbolWasm>(&TagExpr->getSymbol());
       O << TagSym->getName() << " ";
     } else {
