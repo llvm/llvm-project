@@ -77,14 +77,17 @@ exit:
   ret i64 %res
 }
 
-; FIXME: This is a miscompile.
 define i64 @deref_no_hoist(i1 %c, ptr align 8 dereferenceable(8) %p1) {
 ; CHECK-LABEL: define i64 @deref_no_hoist(
 ; CHECK-SAME: i1 [[C:%.*]], ptr align 8 dereferenceable(8) [[P1:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[P2:%.*]] = load ptr, ptr [[P1]], align 8, !align [[META0:![0-9]+]]
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br i1 [[C]], label %[[IF:.*]], label %[[EXIT:.*]]
+; CHECK:       [[IF]]:
+; CHECK-NEXT:    [[P2:%.*]] = load ptr, ptr [[P1]], align 8, !dereferenceable [[META0:![0-9]+]], !align [[META0]]
 ; CHECK-NEXT:    [[V:%.*]] = load i64, ptr [[P2]], align 8
-; CHECK-NEXT:    [[RES:%.*]] = select i1 [[C]], i64 [[V]], i64 0
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[RES:%.*]] = phi i64 [ [[V]], %[[IF]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    ret i64 [[RES]]
 ;
 entry:

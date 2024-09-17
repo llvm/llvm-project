@@ -104,6 +104,17 @@ static bool isDereferenceableAndAlignedPointer(
     if (CheckForNonNull &&
         !isKnownNonZero(V, SimplifyQuery(DL, DT, AC, CtxI)))
       return false;
+    // When using something like !dereferenceable on a load, the
+    // dereferenceability may only be valid on a specific control-flow path.
+    // If the instruction doesn't dominate the context instruction, we're
+    // asking about dereferenceability under the assumption that the
+    // instruction has been speculated to the point of the context instruction,
+    // in which case we don't know if the dereferenceability info still holds.
+    // We don't bother handling allocas here, as they aren't speculatable
+    // anyway.
+    auto *I = dyn_cast<Instruction>(V);
+    if (I && !isa<AllocaInst>(I))
+      return CtxI && isValidAssumeForContext(I, CtxI, DT);
     return true;
   };
   if (IsKnownDeref()) {
