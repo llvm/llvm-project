@@ -1803,7 +1803,7 @@ bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
   // (b).  Note that this problem exists only for exits with the same exit
   // count, and we could be more aggressive when exit counts are known inequal.
   llvm::sort(ExitingBlocks, [&](BasicBlock *A, BasicBlock *B) {
-    // std::sort sorts in ascending order, so we want the inverse of
+    // llvm::sort sorts in ascending order, so we want the inverse of
     // the normal dominance relation.
     if (A == B)
       return false;
