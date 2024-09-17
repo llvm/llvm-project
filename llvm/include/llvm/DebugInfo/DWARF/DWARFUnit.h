@@ -421,7 +421,7 @@ public:
 
   /// Extracts only the abbreviation declaration with code 1, which is
   /// typically the compile unit DIE (DW_TAG_compile_unit).
-  const DWARFAbbreviationDeclaration *tryExtractCUAbbrevFast() const;
+  Expected<const DWARFAbbreviationDeclaration *> tryExtractCUAbbrevFast() const;
 
   const DWARFAbbreviationDeclarationSet *getAbbreviations() const;
 

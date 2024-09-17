@@ -13,6 +13,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include "llvm/Support/Errc.h"
+#include "llvm/Support/Error.h"
 #include <cstddef>
 #include <cstdint>
 
@@ -44,9 +45,13 @@ bool DWARFDebugInfoEntry::extractFast(const DWARFUnit &U, uint64_t *OffsetPtr,
 
   // Fast path: parsing the entire abbreviation table is wasteful if we only
   // need the unit DIE (typically AbbrCode == 1).
-  if (1 == AbbrCode) {
-    AbbrevDecl = U.tryExtractCUAbbrevFast();
-    assert(!AbbrevDecl || AbbrevDecl->getCode() == AbbrCode);
+  if (AbbrCode == 1) {
+    Expected<const DWARFAbbreviationDeclaration *> DeclOrError =
+        U.tryExtractCUAbbrevFast();
+    if (DeclOrError)
+      AbbrevDecl = *DeclOrError;
+    else
+      consumeError(DeclOrError.takeError()); // Retry full parsing below.
   }
 
   if (!AbbrevDecl) {
@@ -76,6 +81,8 @@ bool DWARFDebugInfoEntry::extractFast(const DWARFUnit &U, uint64_t *OffsetPtr,
       return false;
     }
   }
+
+  assert(AbbrevDecl && AbbrevDecl->getCode() == AbbrCode);
 
   // See if all attributes in this DIE have fixed byte sizes. If so, we can
   // just add this size to the offset to skip to the next DIE.
