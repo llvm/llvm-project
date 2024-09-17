@@ -62,7 +62,9 @@ class User:
         )
 
 
-def check_manual_requests(gh: github.Github, start_date: datetime.datetime) -> list[str]:
+def check_manual_requests(
+    gh: github.Github, start_date: datetime.datetime
+) -> list[str]:
     """
     Return a list of users who have been asked since ``start_date`` if they
     want to keep their commit access.
@@ -90,7 +92,9 @@ def check_manual_requests(gh: github.Github, start_date: datetime.datetime) -> l
         "query": f"type:issue created:>{formatted_start_date} org:llvm repo:llvm-project label:infrastructure:commit-access"
     }
 
-    res_header, d = gh._Github__requester.graphql_query(query=query, variables=variables)
+    res_header, d = gh._Github__requester.graphql_query(
+        query=query, variables=variables
+    )
     data = d["data"]
     users = []
     for issue in data["search"]["nodes"]:
@@ -117,7 +121,9 @@ def get_num_commits(gh: github.Github, user: str, start_date: datetime.datetime)
         }
     """
 
-    res_header, d = gh._Github__requester.graphql_query(query=user_query, variables=variables)
+    res_header, d = gh._Github__requester.graphql_query(
+        query=user_query, variables=variables
+    )
     data = d["data"]
     variables["user_id"] = data["user"]["id"]
 
@@ -155,7 +161,7 @@ def get_num_commits(gh: github.Github, user: str, start_date: datetime.datetime)
 
 
 def is_new_committer_query_repo(
-  gh: github.Github, user: str, start_date: datetime.datetime
+    gh: github.Github, user: str, start_date: datetime.datetime
 ) -> bool:
     """
     Determine if ``user`` is a new committer.  A new committer can keep their
@@ -211,7 +217,9 @@ def is_new_committer_query_repo(
     return True
 
 
-def is_new_committer(gh: github.Github, user: str, start_date: datetime.datetime) -> bool:
+def is_new_committer(
+    gh: github.Github, user: str, start_date: datetime.datetime
+) -> bool:
     """
     Wrapper around is_new_commiter_query_repo to handle exceptions.
     """
@@ -222,7 +230,9 @@ def is_new_committer(gh: github.Github, user: str, start_date: datetime.datetime
     return True
 
 
-def get_review_count(gh: github.Github, user: str, start_date: datetime.datetime) -> int:
+def get_review_count(
+    gh: github.Github, user: str, start_date: datetime.datetime
+) -> int:
     """
     Return the number of reviews that ``user`` has done since ``start_date``.
     """
@@ -241,7 +251,9 @@ def get_review_count(gh: github.Github, user: str, start_date: datetime.datetime
         "query": f"type:pr commenter:{user} -author:{user} merged:>{formatted_start_date} org:llvm",
     }
 
-    res_header, d = gh._Github__requester.graphql_query(query=query, variables=variables)
+    res_header, d = gh._Github__requester.graphql_query(
+        query=query, variables=variables
+    )
     data = d["data"]
     return int(data["search"]["issueCount"])
 
@@ -285,7 +297,9 @@ def count_prs(gh: github.Github, triage_list: dict, start_date: datetime.datetim
         has_next_page = True
         while has_next_page:
             print(variables)
-            res_header, d = gh._Github__requester.graphql_query(query=query, variables=variables)
+            res_header, d = gh._Github__requester.graphql_query(
+                query=query, variables=variables
+            )
             data = d["data"]
             for pr in data["search"]["nodes"]:
                 # Users can be None if the user has been deleted.
