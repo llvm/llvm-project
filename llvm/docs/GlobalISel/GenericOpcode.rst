@@ -504,6 +504,11 @@ G_FPTOSI, G_FPTOUI, G_SITOFP, G_UITOFP
 
 Convert between integer and floating point.
 
+G_FPTOSI_SAT, G_FPTOUI_SAT
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Saturating convert between integer and floating point.
+
 G_FABS
 ^^^^^^
 
@@ -700,6 +705,8 @@ scaled by the runtime scaling factor. The indices extracted from the source
 vector must be valid indices of that vector. If this condition cannot be
 determined statically but is false at runtime, then the result vector is
 undefined.
+
+Mixing scalable vectors and fixed vectors are not allowed.
 
 .. code-block:: none
 

@@ -916,6 +916,8 @@ void Writer::addSyntheticIdata() {
   add(".idata$7", idata.dllNames);
   if (!idata.auxIat.empty())
     add(".idata$9", idata.auxIat);
+  if (!idata.auxIatCopy.empty())
+    add(".idata$a", idata.auxIatCopy);
 }
 
 void Writer::appendECImportTables() {
@@ -1252,14 +1254,22 @@ void Writer::appendImportThunks() {
     if (!file->live)
       continue;
 
-    if (!file->thunkSym)
-      continue;
+    if (file->thunkSym) {
+      if (!isa<DefinedImportThunk>(file->thunkSym))
+        fatal(toString(ctx, *file->thunkSym) + " was replaced");
+      auto *chunk = cast<DefinedImportThunk>(file->thunkSym)->getChunk();
+      if (chunk->live)
+        textSec->addChunk(chunk);
+    }
 
-    if (!isa<DefinedImportThunk>(file->thunkSym))
-      fatal(toString(ctx, *file->thunkSym) + " was replaced");
-    DefinedImportThunk *thunk = cast<DefinedImportThunk>(file->thunkSym);
-    if (file->thunkLive)
-      textSec->addChunk(thunk->getChunk());
+    if (file->auxThunkSym) {
+      if (!isa<DefinedImportThunk>(file->auxThunkSym))
+        fatal(toString(ctx, *file->auxThunkSym) + " was replaced");
+      auto *chunk = cast<DefinedImportThunk>(file->auxThunkSym)->getChunk();
+      if (chunk->live)
+        textSec->addChunk(chunk);
+    }
+
     if (file->impchkThunk)
       textSec->addChunk(file->impchkThunk);
   }
@@ -2271,6 +2281,11 @@ void Writer::setECSymbols() {
   replaceSymbol<DefinedSynthetic>(iatSym, "__hybrid_auxiliary_iat",
                                   idata.auxIat.empty() ? nullptr
                                                        : idata.auxIat.front());
+
+  Symbol *iatCopySym = ctx.symtab.findUnderscore("__hybrid_auxiliary_iat_copy");
+  replaceSymbol<DefinedSynthetic>(
+      iatCopySym, "__hybrid_auxiliary_iat_copy",
+      idata.auxIatCopy.empty() ? nullptr : idata.auxIatCopy.front());
 }
 
 // Write section contents to a mmap'ed file.

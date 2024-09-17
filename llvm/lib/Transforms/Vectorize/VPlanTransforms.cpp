@@ -527,26 +527,24 @@ static VPScalarIVStepsRecipe *
 createScalarIVSteps(VPlan &Plan, InductionDescriptor::InductionKind Kind,
                     Instruction::BinaryOps InductionOpcode,
                     FPMathOperator *FPBinOp, Instruction *TruncI,
-                    VPValue *StartV, VPValue *Step, VPBasicBlock::iterator IP) {
+                    VPValue *StartV, VPValue *Step, VPBuilder &Builder) {
   VPBasicBlock *HeaderVPBB = Plan.getVectorLoopRegion()->getEntryBasicBlock();
   VPCanonicalIVPHIRecipe *CanonicalIV = Plan.getCanonicalIV();
   VPSingleDefRecipe *BaseIV = CanonicalIV;
   if (!CanonicalIV->isCanonical(Kind, StartV, Step)) {
-    BaseIV = new VPDerivedIVRecipe(Kind, FPBinOp, StartV, CanonicalIV, Step);
-    HeaderVPBB->insert(BaseIV, IP);
+    BaseIV = Builder.createDerivedIV(Kind, FPBinOp, StartV, CanonicalIV, Step);
   }
 
   // Truncate base induction if needed.
   Type *CanonicalIVType = CanonicalIV->getScalarType();
-  VPTypeAnalysis TypeInfo(CanonicalIVType, CanonicalIVType->getContext());
+  VPTypeAnalysis TypeInfo(CanonicalIVType);
   Type *ResultTy = TypeInfo.inferScalarType(BaseIV);
   if (TruncI) {
     Type *TruncTy = TruncI->getType();
     assert(ResultTy->getScalarSizeInBits() > TruncTy->getScalarSizeInBits() &&
            "Not truncating.");
     assert(ResultTy->isIntegerTy() && "Truncation requires an integer type");
-    BaseIV = new VPScalarCastRecipe(Instruction::Trunc, BaseIV, TruncTy);
-    HeaderVPBB->insert(BaseIV, IP);
+    BaseIV = Builder.createScalarCast(Instruction::Trunc, BaseIV, TruncTy);
     ResultTy = TruncTy;
   }
 
@@ -556,17 +554,13 @@ createScalarIVSteps(VPlan &Plan, InductionDescriptor::InductionKind Kind,
     assert(StepTy->getScalarSizeInBits() > ResultTy->getScalarSizeInBits() &&
            "Not truncating.");
     assert(StepTy->isIntegerTy() && "Truncation requires an integer type");
-    Step = new VPScalarCastRecipe(Instruction::Trunc, Step, ResultTy);
     auto *VecPreheader =
         cast<VPBasicBlock>(HeaderVPBB->getSingleHierarchicalPredecessor());
-    VecPreheader->appendRecipe(Step->getDefiningRecipe());
+    VPBuilder::InsertPointGuard Guard(Builder);
+    Builder.setInsertPoint(VecPreheader);
+    Step = Builder.createScalarCast(Instruction::Trunc, Step, ResultTy);
   }
-
-  VPScalarIVStepsRecipe *Steps = new VPScalarIVStepsRecipe(
-      BaseIV, Step, InductionOpcode,
-      FPBinOp ? FPBinOp->getFastMathFlags() : FastMathFlags());
-  HeaderVPBB->insert(Steps, IP);
-  return Steps;
+  return Builder.createScalarIVSteps(InductionOpcode, FPBinOp, BaseIV, Step);
 }
 
 /// Legalize VPWidenPointerInductionRecipe, by replacing it with a PtrAdd
@@ -582,7 +576,7 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
   SmallVector<VPRecipeBase *> ToRemove;
   VPBasicBlock *HeaderVPBB = Plan.getVectorLoopRegion()->getEntryBasicBlock();
   bool HasOnlyVectorVFs = !Plan.hasVF(ElementCount::getFixed(1));
-  VPBasicBlock::iterator InsertPt = HeaderVPBB->getFirstNonPhi();
+  VPBuilder Builder(HeaderVPBB, HeaderVPBB->getFirstNonPhi());
   for (VPRecipeBase &Phi : HeaderVPBB->phis()) {
     // Replace wide pointer inductions which have only their scalars used by
     // PtrAdd(IndStart, ScalarIVSteps (0, Step)).
@@ -596,7 +590,7 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
       VPValue *StepV = PtrIV->getOperand(1);
       VPScalarIVStepsRecipe *Steps = createScalarIVSteps(
           Plan, InductionDescriptor::IK_IntInduction, Instruction::Add, nullptr,
-          nullptr, StartV, StepV, InsertPt);
+          nullptr, StartV, StepV, Builder);
 
       auto *Recipe = new VPInstruction(VPInstruction::PtrAdd,
                                        {PtrIV->getStartValue(), Steps},
@@ -622,7 +616,7 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
         Plan, ID.getKind(), ID.getInductionOpcode(),
         dyn_cast_or_null<FPMathOperator>(ID.getInductionBinOp()),
         WideIV->getTruncInst(), WideIV->getStartValue(), WideIV->getStepValue(),
-        InsertPt);
+        Builder);
 
     // Update scalar users of IV to use Step instead.
     if (!HasOnlyVectorVFs)
@@ -946,8 +940,7 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
     // Verify that the cached type info is for both A and its users is still
     // accurate by comparing it to freshly computed types.
     VPTypeAnalysis TypeInfo2(
-        R.getParent()->getPlan()->getCanonicalIV()->getScalarType(),
-        TypeInfo.getContext());
+        R.getParent()->getPlan()->getCanonicalIV()->getScalarType());
     assert(TypeInfo.inferScalarType(A) == TypeInfo2.inferScalarType(A));
     for (VPUser *U : A->users()) {
       auto *R = dyn_cast<VPRecipeBase>(U);
@@ -982,7 +975,7 @@ static void simplifyRecipes(VPlan &Plan) {
   ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> RPOT(
       Plan.getEntry());
   Type *CanonicalIVType = Plan.getCanonicalIV()->getScalarType();
-  VPTypeAnalysis TypeInfo(CanonicalIVType, CanonicalIVType->getContext());
+  VPTypeAnalysis TypeInfo(CanonicalIVType);
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
       simplifyRecipe(R, TypeInfo);
@@ -1003,8 +996,7 @@ void VPlanTransforms::truncateToMinimalBitwidths(
   // typed.
   DenseMap<VPValue *, VPWidenCastRecipe *> ProcessedTruncs;
   Type *CanonicalIVType = Plan.getCanonicalIV()->getScalarType();
-  LLVMContext &Ctx = CanonicalIVType->getContext();
-  VPTypeAnalysis TypeInfo(CanonicalIVType, Ctx);
+  VPTypeAnalysis TypeInfo(CanonicalIVType);
   VPBasicBlock *PH = Plan.getEntry();
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_deep(Plan.getVectorLoopRegion()))) {
@@ -1058,6 +1050,7 @@ void VPlanTransforms::truncateToMinimalBitwidths(
       assert(OldResTy->isIntegerTy() && "only integer types supported");
       (void)OldResSizeInBits;
 
+      LLVMContext &Ctx = CanonicalIVType->getContext();
       auto *NewResTy = IntegerType::get(Ctx, NewResSizeInBits);
 
       // Any wrapping introduced by shrinking this operation shouldn't be
