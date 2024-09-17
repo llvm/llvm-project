@@ -472,14 +472,10 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
         MachineInstr *MdMI = MI.getPrevNode();
         if (MdMI && isSpvIntrinsic(*MdMI, Intrinsic::spv_value_md)) {
           // It's an internal service info from before IRTranslator passes.
-          MachineInstr *Def = MRI.getVRegDef(MI.getOperand(0).getReg());
-          for (unsigned I = 1, E = MI.getNumOperands(); I != E && Def; ++I) {
-            MachineInstr *MaybeDef = MRI.getVRegDef(MI.getOperand(I).getReg());
-            if (MaybeDef && MaybeDef->getOpcode() == SPIRV::ASSIGN_TYPE)
-              MaybeDef = MRI.getVRegDef(MaybeDef->getOperand(1).getReg());
-            if (MaybeDef != Def)
+          MachineInstr *Def = getVRegDef(MRI, MI.getOperand(0).getReg());
+          for (unsigned I = 1, E = MI.getNumOperands(); I != E && Def; ++I)
+            if (getVRegDef(MRI, MI.getOperand(I).getReg()) != Def)
               Def = nullptr;
-          }
           if (Def) {
             const MDNode *MD = MdMI->getOperand(1).getMetadata();
             StringRef ValueName =
