@@ -60,7 +60,7 @@ LIBC_INLINE void unsafe_assume([[maybe_unused]] bool cond) {
 // implementation.
 // - LIBC_CHECK(COND): similar to LIBC_ASSERT(COND) but will not be disabled in
 // release builds.
-// - LIBC_ASSUME(COND): LIBC_ASSERT + __builtin_assume.
+// - LIBC_ASSUME(COND): LIBC_CHECK in debug builds, __builtin_assume in release.
 // - LIBC_UNREACHABLE(): similar to `__builtin_unreachable()` but checks in
 // debug mode.
 // - LIBC_CHECK_UNREACHABLE(): checks in both debug and release builds.
@@ -109,19 +109,13 @@ LIBC_INLINE void unsafe_assume([[maybe_unused]] bool cond) {
 #endif // NDEBUG
 #endif // LIBC_COPT_USE_C_ASSERT
 
-#define LIBC_ASSUME(COND)                                                      \
-  do {                                                                         \
-    LIBC_ASSERT(COND);                                                         \
-    LIBC_NAMESPACE::unsafe_assume(COND);                                       \
-  } while (false)
+#ifdef NDEBUG
+#define LIBC_ASSUME() LIBC_NAMESPACE::unsafe_assume(true)
+#else
+#define LIBC_ASSUME(COND) LIBC_CHECK(COND)
+#endif // NDEBUG
 
-#define LIBC_CHECK_UNREACHABLE()                                               \
-  do {                                                                         \
-    LIBC_NAMESPACE::report_assertion_failure("unreachable region", __FILE__,   \
-                                             __LIBC_LINE_STR__,                \
-                                             __PRETTY_FUNCTION__);             \
-    LIBC_NAMESPACE::internal::exit(0xFF);                                      \
-  } while (false)
+#define LIBC_CHECK_UNREACHABLE() LIBC_CHECK(false && "Unreachable code reached")
 
 #ifdef NDEBUG
 #define LIBC_UNREACHABLE() LIBC_NAMESPACE::unsafe_unreachable()
