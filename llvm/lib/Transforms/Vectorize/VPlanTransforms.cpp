@@ -771,6 +771,92 @@ sinkRecurrenceUsersAfterPrevious(VPFirstOrderRecurrencePHIRecipe *FOR,
   return true;
 }
 
+/// Try to hoist \p Previous and its operands before all users of \p FOR.
+static bool hoistPreviousBeforeFORUsers(VPFirstOrderRecurrencePHIRecipe *FOR,
+                                        VPRecipeBase *Previous,
+                                        VPDominatorTree &VPDT) {
+  using namespace llvm::VPlanPatternMatch;
+  if (Previous->mayHaveSideEffects() || Previous->mayReadFromMemory())
+    return false;
+
+  // Collect recipes that need hoisting.
+  SmallVector<VPRecipeBase *> WorkList;
+  SmallPtrSet<VPRecipeBase *, 8> Seen;
+  VPBasicBlock *HoistBlock = FOR->getParent();
+  auto HoistPoint = HoistBlock->getFirstNonPhi();
+  auto TryToPushHoistCandidate = [&](VPRecipeBase *HoistCandidate) {
+    // If we reach FOR, it means the original Previous depends on some other
+    // recurrence that in turn depends on FOR. If that is the case, we would
+    // also need to hoist recipes involving the other FOR, which may break
+    // dependencies.
+    if (HoistCandidate == FOR)
+      return false;
+
+    // Hoist candidate outside any region, no need to hoist.
+    if (!HoistCandidate->getParent()->getParent())
+      return true;
+
+    // Hoist candidate is a header phi or already visited, no need to hoist.
+    if (isa<VPHeaderPHIRecipe>(HoistCandidate) ||
+        !Seen.insert(HoistCandidate).second)
+      return true;
+
+    // If we reached a recipe that dominates all users of FOR, we don't need to
+    // hoist the recipe.
+    if (all_of(FOR->users(), [&VPDT, HoistCandidate](VPUser *U) {
+          return VPDT.properlyDominates(HoistCandidate, cast<VPRecipeBase>(U));
+        })) {
+      if (VPDT.properlyDominates(&*HoistPoint, HoistCandidate)) {
+        // This HoistCandidate domiantes all users of FOR and is closer to them
+        // than the previous HoistPoint.
+        HoistPoint = std::next(HoistCandidate->getIterator());
+        HoistBlock = HoistCandidate->getParent();
+      }
+      return true;
+    }
+
+    // Don't move candiates with sideeffects, as we do not yet analyze recipes
+    // between candidate and hoist destination yet.
+    if (HoistCandidate->mayHaveSideEffects())
+      return false;
+
+    WorkList.push_back(HoistCandidate);
+    return true;
+  };
+
+  // Recursively try to hoist Previous and its operands before all users of FOR.
+  // Update HoistPoint to the closest recipe that dominates all users of FOR.
+  if (!TryToPushHoistCandidate(Previous))
+    return false;
+
+  for (unsigned I = 0; I != WorkList.size(); ++I) {
+    VPRecipeBase *Current = WorkList[I];
+    assert(Current->getNumDefinedValues() == 1 &&
+           "only recipes with a single defined value expected");
+
+    for (VPValue *Op : Current->operands())
+      if (auto *R = Op->getDefiningRecipe())
+        if (!TryToPushHoistCandidate(R))
+          return false;
+  }
+
+  // Keep recipes to hoist ordered by dominance so earlier instructions are
+  // processed first.
+  sort(WorkList, [&VPDT](const VPRecipeBase *A, const VPRecipeBase *B) {
+    return VPDT.properlyDominates(A, B);
+  });
+
+  for (VPRecipeBase *HoistCandidate : WorkList) {
+    if (HoistPoint == HoistCandidate->getIterator()) {
+      HoistPoint = std::next(HoistCandidate->getIterator());
+      continue;
+    }
+    HoistCandidate->moveBefore(*HoistBlock, HoistPoint);
+  }
+
+  return true;
+}
+
 bool VPlanTransforms::adjustFixedOrderRecurrences(VPlan &Plan,
                                                   VPBuilder &LoopBuilder) {
   VPDominatorTree VPDT;
@@ -795,7 +881,8 @@ bool VPlanTransforms::adjustFixedOrderRecurrences(VPlan &Plan,
     }
 
     if (!sinkRecurrenceUsersAfterPrevious(FOR, Previous, VPDT))
-      return false;
+      if (!hoistPreviousBeforeFORUsers(FOR, Previous, VPDT))
+        return false;
 
     // Introduce a recipe to combine the incoming and previous values of a
     // fixed-order recurrence.
