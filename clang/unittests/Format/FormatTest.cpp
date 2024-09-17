@@ -28460,8 +28460,8 @@ TEST_F(FormatTest, WrapNamespaceBodyWithEmptyLinesNever) {
   Style.CompactNamespaces = true;
 
   // Empty namespace
-  verifyNoChange("namespace N {\n"
-                 "};",
+  verifyNoChange("namespace N1 { namespace N2 {\n"
+                 "}};",
                  Style);
 
   // Single namespace
@@ -28656,7 +28656,9 @@ TEST_F(FormatTest, WrapNamespaceBodyWithEmptyLinesLeave) {
   Style.CompactNamespaces = true;
 
   // Empty namespace
-  verifyNoChange("namespace N {\n};", Style);
+  verifyNoChange("namespace N1 { namespace N2 {\n"
+                 "}};",
+                 Style);
 
   // Nested namespace
   verifyNoChange("namespace N1 { namespace N2 { namespace N3 {\n"
