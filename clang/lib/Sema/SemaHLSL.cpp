@@ -807,8 +807,10 @@ findAttributedResourceTypeOnField(VarDecl *VD) {
   return nullptr;
 }
 
-// Iterate over RecordType fields and return true if any of them matched the register type
-static bool ContainsResourceForRegisterType(Sema &S, const RecordType *RT, RegisterType RegType) {
+// Iterate over RecordType fields and return true if any of them matched the
+// register type
+static bool ContainsResourceForRegisterType(Sema &S, const RecordType *RT,
+                                            RegisterType RegType) {
   llvm::SmallVector<const Type *> TypesToScan;
   TypesToScan.emplace_back(RT);
 
@@ -840,7 +842,10 @@ static bool ContainsResourceForRegisterType(Sema &S, const RecordType *RT, Regis
   return false;
 }
 
-static void CheckContainsResourceForRegisterType(Sema &S, SourceLocation &ArgLoc, Decl *D, RegisterType RegType) {
+static void CheckContainsResourceForRegisterType(Sema &S,
+                                                 SourceLocation &ArgLoc,
+                                                 Decl *D,
+                                                 RegisterType RegType) {
   int RegTypeNum = static_cast<int>(RegType);
 
   // check if the decl type is groupshared
@@ -851,9 +856,12 @@ static void CheckContainsResourceForRegisterType(Sema &S, SourceLocation &ArgLoc
 
   // Cbuffers and Tbuffers are HLSLBufferDecl types
   if (HLSLBufferDecl *CBufferOrTBuffer = dyn_cast<HLSLBufferDecl>(D)) {
-    llvm::dxil::ResourceClass RC = CBufferOrTBuffer->isCBuffer() ? llvm::dxil::ResourceClass::CBuffer : llvm::dxil::ResourceClass::SRV;
+    llvm::dxil::ResourceClass RC = CBufferOrTBuffer->isCBuffer()
+                                       ? llvm::dxil::ResourceClass::CBuffer
+                                       : llvm::dxil::ResourceClass::SRV;
     if (RegType != getRegisterType(RC))
-      S.Diag(D->getLocation(), diag::err_hlsl_binding_type_mismatch) << RegTypeNum;
+      S.Diag(D->getLocation(), diag::err_hlsl_binding_type_mismatch)
+          << RegTypeNum;
     return;
   }
   // Samplers, UAVs, and SRVs are VarDecl types
@@ -862,10 +870,11 @@ static void CheckContainsResourceForRegisterType(Sema &S, SourceLocation &ArgLoc
     if (const HLSLAttributedResourceType *AttrResType =
             findAttributedResourceTypeOnField(TheVarDecl)) {
       if (RegType != getRegisterType(AttrResType->getAttrs().ResourceClass))
-        S.Diag(D->getLocation(), diag::err_hlsl_binding_type_mismatch) << RegTypeNum;
+        S.Diag(D->getLocation(), diag::err_hlsl_binding_type_mismatch)
+            << RegTypeNum;
       return;
-    } 
-    
+    }
+
     const clang::Type *TheBaseType = TheVarDecl->getType().getTypePtr();
     while (TheBaseType->isArrayType())
       TheBaseType = TheBaseType->getArrayElementTypeNoTypeQual();
@@ -874,7 +883,7 @@ static void CheckContainsResourceForRegisterType(Sema &S, SourceLocation &ArgLoc
     if (TheBaseType->isArithmeticType()) {
       if (!isa<HLSLBufferDecl>(D->getDeclContext()) &&
           (TheBaseType->isIntegralType(S.getASTContext()) ||
-            TheBaseType->isFloatingType())) {
+           TheBaseType->isFloatingType())) {
         // Default Globals
         if (RegType == RegisterType::CBuffer)
           S.Diag(ArgLoc, diag::warn_hlsl_deprecated_register_type_b);
@@ -887,9 +896,13 @@ static void CheckContainsResourceForRegisterType(Sema &S, SourceLocation &ArgLoc
           S.Diag(ArgLoc, diag::err_hlsl_binding_type_mismatch) << RegTypeNum;
       }
     } else if (TheBaseType->isRecordType()) {
-      // Class/struct types - walk the declaration and check each field and subclass
-      if (!ContainsResourceForRegisterType(S, TheBaseType->getAs<RecordType>(), RegType))
-            S.Diag(D->getLocation(), diag::warn_hlsl_user_defined_type_missing_member) << RegTypeNum;
+      // Class/struct types - walk the declaration and check each field and
+      // subclass
+      if (!ContainsResourceForRegisterType(S, TheBaseType->getAs<RecordType>(),
+                                           RegType))
+        S.Diag(D->getLocation(),
+               diag::warn_hlsl_user_defined_type_missing_member)
+            << RegTypeNum;
     } else {
       // Anything else is an error
       S.Diag(ArgLoc, diag::err_hlsl_binding_type_mismatch) << RegTypeNum;
