@@ -473,14 +473,19 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
         if (MdMI && isSpvIntrinsic(*MdMI, Intrinsic::spv_value_md)) {
           // It's an internal service info from before IRTranslator passes.
           MachineInstr *Def = MRI.getVRegDef(MI.getOperand(0).getReg());
-          for (unsigned I = 1, E = MI.getNumOperands(); I != E && Def; ++I)
-            if (MRI.getVRegDef(MI.getOperand(I).getReg()) != Def)
+          for (unsigned I = 1, E = MI.getNumOperands(); I != E && Def; ++I) {
+            MachineInstr *MaybeDef = MRI.getVRegDef(MI.getOperand(I).getReg());
+            if (MaybeDef && MaybeDef->getOpcode() == SPIRV::ASSIGN_TYPE)
+              MaybeDef = MRI.getVRegDef(MaybeDef->getOperand(1).getReg());
+            if (MaybeDef != Def)
               Def = nullptr;
+          }
           if (Def) {
             const MDNode *MD = MdMI->getOperand(1).getMetadata();
-            Type *ValueTy = cast<ValueAsMetadata>(MD->getOperand(0))->getType();
             StringRef ValueName =
                 cast<MDString>(MD->getOperand(1))->getString();
+            const MDNode *TypeMD = cast<MDNode>(MD->getOperand(0));
+            Type *ValueTy = getMDOperandAsType(TypeMD, 0);
             GR->addValueAttrs(Def, std::make_pair(ValueTy, ValueName));
           }
         }

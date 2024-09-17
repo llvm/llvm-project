@@ -318,7 +318,8 @@ void SPIRVEmitIntrinsics::buildAssignType(IRBuilder<> &B, Type *Ty,
                                           Value *Arg) {
   Value *OfType = PoisonValue::get(Ty);
   CallInst *AssignCI = nullptr;
-  if (Ty->isAggregateType() && allowEmitFakeUse(Arg)) {
+  if (Arg->getType()->isAggregateType() && Ty->isAggregateType() &&
+      allowEmitFakeUse(Arg)) {
     LLVMContext &Ctx = Arg->getContext();
     SmallVector<Metadata *, 2> ArgMDs{
         MDNode::get(Ctx, ValueAsMetadata::getConstant(OfType)),
