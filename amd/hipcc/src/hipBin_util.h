@@ -126,9 +126,6 @@ string HipBinUtil::mktempFile(string name) {
 #else
   fileName = mktemp(&name[0]);
 #endif
-  if (fileName.c_str() == NULL) {
-    cout << "Failed tmp file creation:" << &name[0] << "with errno:" <<  errno << endl;
-  }
   tmpFiles_.push_back(fileName);
   return fileName;
 }
@@ -213,17 +210,6 @@ void HipBinUtil::deleteTempFiles() {
     catch(...) {
       std::cerr << "Error deleting temp name: "<< tmpFiles_.at(i) <<endl;
     }
-  }
-  // cleaning up previously created canRunXXXXXX tmpfiles
-  for (const auto & entry : fs::directory_iterator(getTempDir())) {
-    if (fs::is_regular_file(entry) &&
-        stringRegexMatch(entry.path().filename().string(), "canRun.*")){
-          try {
-              fs::remove(entry);
-          } catch (const fs::filesystem_error& e) {
-              std::cerr << "Error deleting file: " << e.what() << std::endl;
-          }
-      }
   }
 }
 
