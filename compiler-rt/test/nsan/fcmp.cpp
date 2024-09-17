@@ -1,6 +1,6 @@
 // RUN: %clangxx_nsan -O2 -g %s -o %t
 // RUN: env NSAN_OPTIONS=check_cmp=true,halt_on_error=0 %run %t 2>&1 | FileCheck %s -check-prefix=CMP
-// RUN: env NSAN_OPTIONS=check_cmp=false,halt_on_error=0 %run %t 2>&1 | FileCheck %s
+// RUN: env NSAN_OPTIONS=check_cmp=false,halt_on_error=0 %run %t 2>&1 | FileCheck %s --allow-empty
 
 #include <cmath>
 #include <cstdio>
