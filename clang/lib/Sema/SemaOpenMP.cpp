@@ -2862,7 +2862,7 @@ void SemaOpenMP::EndOpenMPDSABlock(Stmt *CurDirective) {
   //  class type, unless the list item is also specified in a firstprivate
   //  clause.
 
-  auto finalizeLastprivate = [&](OMPLastprivateClause *Clause) {
+  auto FinalizeLastprivate = [&](OMPLastprivateClause *Clause) {
     SmallVector<Expr *, 8> PrivateCopies;
     for (Expr *DE : Clause->varlist()) {
       if (DE->isValueDependent() || DE->isTypeDependent()) {
@@ -2874,32 +2874,32 @@ void SemaOpenMP::EndOpenMPDSABlock(Stmt *CurDirective) {
       QualType Type = VD->getType().getNonReferenceType();
       const DSAStackTy::DSAVarData DVar =
           DSAStack->getTopDSA(VD, /*FromParent=*/false);
-      if (DVar.CKind == OMPC_lastprivate) {
-        // Generate helper private variable and initialize it with the
-        // default value. The address of the original variable is replaced
-        // by the address of the new private variable in CodeGen. This new
-        // variable is not added to IdResolver, so the code in the OpenMP
-        // region uses original variable for proper diagnostics.
-        VarDecl *VDPrivate = buildVarDecl(
-            SemaRef, DE->getExprLoc(), Type.getUnqualifiedType(), VD->getName(),
-            VD->hasAttrs() ? &VD->getAttrs() : nullptr, DRE);
-        SemaRef.ActOnUninitializedDecl(VDPrivate);
-        if (VDPrivate->isInvalidDecl()) {
-          PrivateCopies.push_back(nullptr);
-          continue;
-        }
-        PrivateCopies.push_back(buildDeclRefExpr(
-            SemaRef, VDPrivate, DE->getType(), DE->getExprLoc()));
-      } else {
+      if (DVar.CKind != OMPC_lastprivate) {
         // The variable is also a firstprivate, so initialization sequence
         // for private copy is generated already.
         PrivateCopies.push_back(nullptr);
+        continue;
       }
+      // Generate helper private variable and initialize it with the
+      // default value. The address of the original variable is replaced
+      // by the address of the new private variable in CodeGen. This new
+      // variable is not added to IdResolver, so the code in the OpenMP
+      // region uses original variable for proper diagnostics.
+      VarDecl *VDPrivate = buildVarDecl(
+          SemaRef, DE->getExprLoc(), Type.getUnqualifiedType(), VD->getName(),
+          VD->hasAttrs() ? &VD->getAttrs() : nullptr, DRE);
+      SemaRef.ActOnUninitializedDecl(VDPrivate);
+      if (VDPrivate->isInvalidDecl()) {
+        PrivateCopies.push_back(nullptr);
+        continue;
+      }
+      PrivateCopies.push_back(buildDeclRefExpr(
+          SemaRef, VDPrivate, DE->getType(), DE->getExprLoc()));
     }
     Clause->setPrivateCopies(PrivateCopies);
   };
 
-  auto finalizeNontemporal = [&](OMPNontemporalClause *Clause) {
+  auto FinalizeNontemporal = [&](OMPNontemporalClause *Clause) {
     // Finalize nontemporal clause by handling private copies, if any.
     SmallVector<Expr *, 8> PrivateRefs;
     for (Expr *RefExpr : Clause->varlist()) {
@@ -2923,7 +2923,7 @@ void SemaOpenMP::EndOpenMPDSABlock(Stmt *CurDirective) {
     Clause->setPrivateRefs(PrivateRefs);
   };
 
-  auto finalizeAllocators = [&](OMPUsesAllocatorsClause *Clause) {
+  auto FinalizeAllocators = [&](OMPUsesAllocatorsClause *Clause) {
     for (unsigned I = 0, E = Clause->getNumberOfAllocators(); I < E; ++I) {
       OMPUsesAllocatorsClause::Data D = Clause->getAllocatorData(I);
       auto *DRE = dyn_cast<DeclRefExpr>(D.Allocator->IgnoreParenImpCasts());
@@ -2970,11 +2970,11 @@ void SemaOpenMP::EndOpenMPDSABlock(Stmt *CurDirective) {
   if (const auto *D = dyn_cast_or_null<OMPExecutableDirective>(CurDirective)) {
     for (OMPClause *C : D->clauses()) {
       if (auto *Clause = dyn_cast<OMPLastprivateClause>(C)) {
-        finalizeLastprivate(Clause);
+        FinalizeLastprivate(Clause);
       } else if (auto *Clause = dyn_cast<OMPNontemporalClause>(C)) {
-        finalizeNontemporal(Clause);
+        FinalizeNontemporal(Clause);
       } else if (auto *Clause = dyn_cast<OMPUsesAllocatorsClause>(C)) {
-        finalizeAllocators(Clause);
+        FinalizeAllocators(Clause);
       }
     }
     // Check allocate clauses.
