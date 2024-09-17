@@ -91,14 +91,14 @@ define i32 @f_small_edge_neg(i32 %in0) minsize {
 ; constant is medium and not fit in 6 bit (compress imm),
 ; but fit in 12 bit (imm)
 ; RV32IFDC-LABEL: <f_medium_ledge_pos>:
-; RV32IFDC: addi [[MAYZEROREG:.*]], [[REG:.*]], -0x20
+; RV32IFDC: addi [[MAYZEROREG:.*]], [[REG:.*]], -0x21
 ; RV32IFDC: RESBROPT [[MAYZEROREG]], [[PLACE:.*]]
 ; --- no compress extension
 ; RV32IFD-LABEL: <f_medium_ledge_pos>:
-; RV32IFD: addi [[REG:.*]], zero, 0x20
+; RV32IFD: addi [[REG:.*]], zero, 0x21
 ; RV32IFD: RESBRNORMAL [[ANOTHER:.*]], [[REG]], [[PLACE:.*]]
 define i32 @f_medium_ledge_pos(i32 %in0) minsize {
-  %cmp = icmp CMPCOND i32 %in0, 32
+  %cmp = icmp CMPCOND i32 %in0, 33
   %toRet = select i1 %cmp, i32 -99, i32 42
   ret i32 %toRet
 }
