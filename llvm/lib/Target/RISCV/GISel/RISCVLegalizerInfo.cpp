@@ -292,8 +292,9 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   // Return the alignment needed for scalar memory ops. If unaligned scalar mem
   // is supported, we only require byte alignment. Otherwise, we need the memory
   // op to be natively aligned.
-  auto getScalarMemAlign =
-      [&ST](unsigned Size) { return ST.enableUnalignedScalarMem() ? 8 : Size; };
+  auto getScalarMemAlign = [&ST](unsigned Size) {
+    return ST.enableUnalignedScalarMem() ? 8 : Size;
+  };
 
   LoadActions.legalForTypesWithMemDesc(
       {{s32, p0, s8, getScalarMemAlign(8)},
